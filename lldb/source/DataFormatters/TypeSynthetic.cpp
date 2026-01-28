@@ -101,7 +101,7 @@ bool SyntheticChildren::IsScripted() { return false; }
 
 std::string SyntheticChildren::GetDescription() { return ""; }
 
-SyntheticChildrenFrontEnd::AutoPointer
+SyntheticChildrenFrontEnd::UniquePointer
 SyntheticChildren::GetFrontEnd(ValueObject &backend) {
   return nullptr;
 }
@@ -138,9 +138,9 @@ lldb::ValueObjectSP SyntheticChildrenFrontEnd::CreateValueObjectFromExpression(
 
 lldb::ValueObjectSP SyntheticChildrenFrontEnd::CreateValueObjectFromAddress(
     llvm::StringRef name, uint64_t address, const ExecutionContext &exe_ctx,
-    CompilerType type) {
-  ValueObjectSP valobj_sp(
-      ValueObject::CreateValueObjectFromAddress(name, address, exe_ctx, type));
+    CompilerType type, bool do_deref) {
+  ValueObjectSP valobj_sp(ValueObject::CreateValueObjectFromAddress(
+      name, address, exe_ctx, type, do_deref));
   if (valobj_sp)
     valobj_sp->SetSyntheticChildrenGenerated(true);
   return valobj_sp;

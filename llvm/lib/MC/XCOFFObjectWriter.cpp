@@ -14,14 +14,12 @@
 #include "llvm/MC/MCAsmBackend.h"
 #include "llvm/MC/MCAssembler.h"
 #include "llvm/MC/MCFixup.h"
-#include "llvm/MC/MCFixupKindInfo.h"
 #include "llvm/MC/MCObjectWriter.h"
 #include "llvm/MC/MCSectionXCOFF.h"
 #include "llvm/MC/MCSymbolXCOFF.h"
 #include "llvm/MC/MCValue.h"
 #include "llvm/MC/MCXCOFFObjectWriter.h"
 #include "llvm/MC/StringTableBuilder.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/EndianStream.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/MathExtras.h"
@@ -186,7 +184,7 @@ struct CsectSectionEntry : public SectionEntry {
       Group->clear();
   }
 
-  virtual ~CsectSectionEntry() = default;
+  ~CsectSectionEntry() override = default;
 };
 
 struct DwarfSectionEntry : public SectionEntry {
@@ -222,7 +220,7 @@ struct DwarfSectionEntry : public SectionEntry {
 
   DwarfSectionEntry(DwarfSectionEntry &&s) = default;
 
-  virtual ~DwarfSectionEntry() = default;
+  ~DwarfSectionEntry() override = default;
 };
 
 struct ExceptionTableEntry {
@@ -251,7 +249,7 @@ struct ExceptionSectionEntry : public SectionEntry {
     memcpy(Name, N.data(), N.size());
   }
 
-  virtual ~ExceptionSectionEntry() = default;
+  ~ExceptionSectionEntry() override = default;
 };
 
 struct CInfoSymInfo {
@@ -278,7 +276,7 @@ struct CInfoSymSectionEntry : public SectionEntry {
   std::unique_ptr<CInfoSymInfo> Entry;
 
   CInfoSymSectionEntry(StringRef N, int32_t Flags) : SectionEntry(N, Flags) {}
-  virtual ~CInfoSymSectionEntry() = default;
+  ~CInfoSymSectionEntry() override = default;
   void addEntry(std::unique_ptr<CInfoSymInfo> NewEntry) {
     Entry = std::move(NewEntry);
     Entry->Offset = sizeof(uint32_t);
@@ -348,12 +346,12 @@ class XCOFFWriter final : public XCOFFObjectWriter {
 
   void reset() override;
 
-  void executePostLayoutBinding(MCAssembler &) override;
+  void executePostLayoutBinding() override;
 
-  void recordRelocation(MCAssembler &, const MCFragment *, const MCFixup &,
-                        MCValue, uint64_t &) override;
+  void recordRelocation(const MCFragment &, const MCFixup &, MCValue,
+                        uint64_t &) override;
 
-  uint64_t writeObject(MCAssembler &) override;
+  uint64_t writeObject() override;
 
   bool is64Bit() const { return TargetObjectWriter->is64Bit(); }
   bool nameShouldBeInStringTable(const StringRef &);
@@ -551,13 +549,13 @@ CsectGroup &XCOFFWriter::getCsectGroup(const MCSectionXCOFF *MCSec) {
 
 static MCSectionXCOFF *getContainingCsect(const MCSymbolXCOFF *XSym) {
   if (XSym->isDefined())
-    return cast<MCSectionXCOFF>(XSym->getFragment()->getParent());
+    return static_cast<MCSectionXCOFF *>(XSym->getFragment()->getParent());
   return XSym->getRepresentedCsect();
 }
 
-void XCOFFWriter::executePostLayoutBinding(MCAssembler &Asm) {
-  for (const auto &S : Asm) {
-    const auto *MCSec = cast<const MCSectionXCOFF>(&S);
+void XCOFFWriter::executePostLayoutBinding() {
+  for (const auto &S : *Asm) {
+    auto *MCSec = static_cast<const MCSectionXCOFF *>(&S);
     assert(!SectionMap.contains(MCSec) && "Cannot add a section twice.");
 
     // If the name does not fit in the storage provided in the symbol table
@@ -587,12 +585,12 @@ void XCOFFWriter::executePostLayoutBinding(MCAssembler &Asm) {
       llvm_unreachable("unsupport section type!");
   }
 
-  for (const MCSymbol &S : Asm.symbols()) {
+  for (const MCSymbol &S : Asm->symbols()) {
     // Nothing to do for temporary symbols.
     if (S.isTemporary())
       continue;
 
-    const MCSymbolXCOFF *XSym = cast<MCSymbolXCOFF>(&S);
+    auto *XSym = static_cast<const MCSymbolXCOFF *>(&S);
     const MCSectionXCOFF *ContainingCsect = getContainingCsect(XSym);
 
     if (ContainingCsect->isDwarfSect())
@@ -653,12 +651,11 @@ void XCOFFWriter::executePostLayoutBinding(MCAssembler &Asm) {
     Strings.add(Vers);
 
   Strings.finalize();
-  assignAddressesAndIndices(Asm);
+  assignAddressesAndIndices(*Asm);
 }
 
-void XCOFFWriter::recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
-                                   const MCFixup &Fixup, MCValue Target,
-                                   uint64_t &FixedValue) {
+void XCOFFWriter::recordRelocation(const MCFragment &F, const MCFixup &Fixup,
+                                   MCValue Target, uint64_t &FixedValue) {
   auto getIndex = [this](const MCSymbol *Sym,
                          const MCSectionXCOFF *ContainingCsect) {
     // If we could not find the symbol directly in SymbolIndexMap, this symbol
@@ -671,11 +668,11 @@ void XCOFFWriter::recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
   };
 
   auto getVirtualAddress =
-      [this, &Asm](const MCSymbol *Sym,
-                   const MCSectionXCOFF *ContainingSect) -> uint64_t {
+      [this](const MCSymbol *Sym,
+             const MCSectionXCOFF *ContainingSect) -> uint64_t {
     // A DWARF section.
     if (ContainingSect->isDwarfSect())
-      return Asm.getSymbolOffset(*Sym);
+      return Asm->getSymbolOffset(*Sym);
 
     // A csect.
     if (!Sym->isDefined())
@@ -683,29 +680,23 @@ void XCOFFWriter::recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
 
     // A label.
     assert(Sym->isDefined() && "not a valid object that has address!");
-    return SectionMap[ContainingSect]->Address + Asm.getSymbolOffset(*Sym);
+    return SectionMap[ContainingSect]->Address + Asm->getSymbolOffset(*Sym);
   };
 
   const MCSymbol *const SymA = Target.getAddSym();
-
-  MCAsmBackend &Backend = Asm.getBackend();
-  bool IsPCRel = Backend.getFixupKindInfo(Fixup.getKind()).Flags &
-                 MCFixupKindInfo::FKF_IsPCRel;
-
   uint8_t Type;
   uint8_t SignAndSize;
-  std::tie(Type, SignAndSize) =
-      TargetObjectWriter->getRelocTypeAndSignSize(Target, Fixup, IsPCRel);
+  std::tie(Type, SignAndSize) = TargetObjectWriter->getRelocTypeAndSignSize(
+      Target, Fixup, Fixup.isPCRel());
 
-  const MCSectionXCOFF *SymASec = getContainingCsect(cast<MCSymbolXCOFF>(SymA));
+  const MCSectionXCOFF *SymASec =
+      getContainingCsect(static_cast<const MCSymbolXCOFF *>(SymA));
   assert(SectionMap.contains(SymASec) &&
          "Expected containing csect to exist in map.");
 
-  assert((Fixup.getOffset() <=
-          MaxRawDataSize - Asm.getFragmentOffset(*Fragment)) &&
+  assert((Fixup.getOffset() <= MaxRawDataSize - Asm->getFragmentOffset(F)) &&
          "Fragment offset + fixup offset is overflowed.");
-  uint32_t FixupOffsetInCsect =
-      Asm.getFragmentOffset(*Fragment) + Fixup.getOffset();
+  uint32_t FixupOffsetInCsect = Asm->getFragmentOffset(F) + Fixup.getOffset();
 
   const uint32_t Index = getIndex(SymA, SymASec);
   if (Type == XCOFF::RelocationType::R_POS ||
@@ -756,7 +747,7 @@ void XCOFFWriter::recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
       FixedValue = TOCEntryOffset;
     }
   } else if (Type == XCOFF::RelocationType::R_RBR) {
-    MCSectionXCOFF *ParentSec = cast<MCSectionXCOFF>(Fragment->getParent());
+    auto *ParentSec = static_cast<MCSectionXCOFF *>(F.getParent());
     assert((SymASec->getMappingClass() == XCOFF::XMC_PR &&
             ParentSec->getMappingClass() == XCOFF::XMC_PR) &&
            "Only XMC_PR csect may have the R_RBR relocation.");
@@ -777,18 +768,18 @@ void XCOFFWriter::recordRelocation(MCAssembler &Asm, const MCFragment *Fragment,
   }
 
   XCOFFRelocation Reloc = {Index, FixupOffsetInCsect, SignAndSize, Type};
-  MCSectionXCOFF *RelocationSec = cast<MCSectionXCOFF>(Fragment->getParent());
+  auto *RelocationSec = static_cast<MCSectionXCOFF *>(F.getParent());
   assert(SectionMap.contains(RelocationSec) &&
          "Expected containing csect to exist in map.");
   SectionMap[RelocationSec]->Relocations.push_back(Reloc);
 
-  const MCSymbol *const SymB = Target.getSubSym();
+  auto SymB = static_cast<const MCSymbolXCOFF *>(Target.getSubSym());
   if (!SymB)
     return;
   if (SymA == SymB)
     report_fatal_error("relocation for opposite term is not yet supported");
 
-  const MCSectionXCOFF *SymBSec = getContainingCsect(cast<MCSymbolXCOFF>(SymB));
+  const MCSectionXCOFF *SymBSec = getContainingCsect(SymB);
   assert(SectionMap.contains(SymBSec) &&
          "Expected containing csect to exist in map.");
   if (SymASec == SymBSec)
@@ -821,7 +812,7 @@ void XCOFFWriter::writeSections(const MCAssembler &Asm) {
                                       CurrentAddressLocation);
 }
 
-uint64_t XCOFFWriter::writeObject(MCAssembler &Asm) {
+uint64_t XCOFFWriter::writeObject() {
   // We always emit a timestamp of 0 for reproducibility, so ensure incremental
   // linking is not enabled, in case, like with Windows COFF, such a timestamp
   // is incompatible with incremental linking of XCOFF.
@@ -832,9 +823,9 @@ uint64_t XCOFFWriter::writeObject(MCAssembler &Asm) {
   writeFileHeader();
   writeAuxFileHeader();
   writeSectionHeaderTable();
-  writeSections(Asm);
+  writeSections(*Asm);
   writeRelocations();
-  writeSymbolTable(Asm);
+  writeSymbolTable(*Asm);
   // Write the string table.
   Strings.write(W.OS);
 

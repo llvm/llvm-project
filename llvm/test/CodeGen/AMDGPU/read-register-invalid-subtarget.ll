@@ -1,6 +1,6 @@
-; RUN: not --crash llc -mtriple=amdgcn -mcpu=tahiti -verify-machineinstrs < %s 2>&1 | FileCheck %s
+; RUN: not llc -mtriple=amdgcn -mcpu=tahiti < %s 2>&1 | FileCheck %s
 
-; CHECK: invalid register "flat_scratch_lo" for subtarget.
+; CHECK: error: invalid register "flat_scratch_lo" for subtarget.
 
 declare i32 @llvm.read_register.i32(metadata) #0
 

@@ -1,5 +1,5 @@
-// RUN: %clang -target powerpc64-unknown-aix -S -emit-llvm %s -o - | FileCheck --check-prefixes=CHECK-AIX,CHECK-AIX-OFF %s
-// RUN: %clang -target powerpc-unknown-aix -S -emit-llvm %s -o - | FileCheck --check-prefixes=CHECK-AIX,CHECK-AIX-OFF %s
+// RUN: %clang -target powerpc64-unknown-aix -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK-AIX %s
+// RUN: %clang -target powerpc-unknown-aix -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK-AIX %s
 // RUN: %clang -target powerpc64le-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK-LINUX %s
 // RUN: %clang -target powerpc64-unknown-linux-gnu -S -emit-llvm %s -o - | FileCheck --check-prefix=CHECK-LINUX %s
 
@@ -19,9 +19,8 @@ int test(void) {
 
 // CHECK-AIX: test() #0 {
 // CHECK-AIX: attributes #0 = {
-// CHECK-AIX-OFF-SAME: -aix-shared-lib-tls-model-opt
 // CHECK-AIX-ON-SAME: +aix-shared-lib-tls-model-opt
 
-// CHECK-LINUX-NOT: {{[-+]aix-shared-lib-tls-model-opt}}
+// CHECK-LINUX-NOT: {{[+]aix-shared-lib-tls-model-opt}}
 
 // CHECK-UNSUPPORTED-TARGET: option '-maix-shared-lib-tls-model-opt' cannot be specified on this target

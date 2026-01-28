@@ -49,7 +49,7 @@ class TsanMultipleTestCase(TestBase):
             stop_description = (
                 self.dbg.GetSelectedTarget()
                 .process.GetSelectedThread()
-                .GetStopDescription(100)
+                .stop_description
             )
 
             self.assertTrue(

@@ -11,6 +11,8 @@
 
 ; CHECK: _Z1bv()
 ; CHECK: store i32 1, ptr @g, align 4, !dbg [[DBG:!.*]]
+
+; CHECK: distinct !DISubprogram(name: "b", {{.*}}keyInstructions: true)
 ; CHECK: [[DBG]] = !DILocation(line: 3, scope: ![[#]])
 
 @g = hidden global i32 0, align 4
@@ -36,7 +38,7 @@ entry:
 !2 = !{i32 7, !"Dwarf Version", i32 5}
 !3 = !{i32 2, !"Debug Info Version", i32 3}
 !10 = !{!"clang version 19.0.0"}
-!15 = distinct !DISubprogram(name: "b", scope: !1, file: !1, line: 3, type: !16, scopeLine: 3, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0)
+!15 = distinct !DISubprogram(name: "b", scope: !1, file: !1, line: 3, type: !16, scopeLine: 3, flags: DIFlagPrototyped | DIFlagAllCallsDescribed, spFlags: DISPFlagDefinition | DISPFlagOptimized, unit: !0, keyInstructions: true)
 !16 = !DISubroutineType(types: !17)
 !17 = !{}
 !18 = !DILocation(line: 3, scope: !15, atomGroup: 1, atomRank: 1)

@@ -319,7 +319,7 @@ StructuredData::ObjectSP InstrumentationRuntimeTSan::RetrieveReportData(
   options.SetTimeout(process_sp->GetUtilityExpressionTimeout());
   options.SetPrefix(thread_sanitizer_retrieve_report_data_prefix);
   options.SetAutoApplyFixIts(false);
-  options.SetLanguage(eLanguageTypeObjC_plus_plus);
+  options.SetLanguage(eLanguageTypeC);
 
   ValueObjectSP main_value;
   ExecutionContext exe_ctx;
@@ -549,7 +549,7 @@ static std::string GetSymbolNameFromAddress(ProcessSP process_sp, addr_t addr) {
   if (!process_sp->GetTarget().ResolveLoadAddress(addr, so_addr))
     return "";
 
-  lldb_private::Symbol *symbol = so_addr.CalculateSymbolContextSymbol();
+  const lldb_private::Symbol *symbol = so_addr.CalculateSymbolContextSymbol();
   if (!symbol)
     return "";
 

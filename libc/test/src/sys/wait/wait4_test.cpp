@@ -7,16 +7,19 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/sys/wait/wait4.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/ErrnoSetterMatcher.h"
 #include "test/UnitTest/Test.h"
 
 #include <sys/wait.h>
 
+using namespace LIBC_NAMESPACE::testing::ErrnoSetterMatcher;
+using LlvmLibcWait4Test = LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+
 // The test here is a simpl test for WNOHANG functionality. For a more
 // involved test, look at fork_test.
 
-TEST(LlvmLibcwait4Test, NoHangTest) {
-  using LIBC_NAMESPACE::testing::ErrnoSetterMatcher::Fails;
+TEST_F(LlvmLibcWait4Test, NoHangTest) {
   int status;
   ASSERT_THAT(LIBC_NAMESPACE::wait4(-1, &status, WNOHANG, nullptr),
               Fails(ECHILD));

@@ -17,7 +17,6 @@
 #include "Config.h"
 #include "InputFiles.h"
 #include "Symbols.h"
-#include "lld/Common/ErrorHandler.h"
 #include "lld/Common/Memory.h"
 #include "lld/Common/Strings.h"
 #include "llvm/ADT/STLExtras.h"
@@ -28,12 +27,6 @@ using namespace llvm::object;
 using namespace llvm::ELF;
 using namespace lld;
 using namespace lld::elf;
-
-void SymbolTable::redirect(Symbol *from, Symbol *to) {
-  int &fromIdx = symMap[CachedHashStringRef(from->getName())];
-  const int toIdx = symMap[CachedHashStringRef(to->getName())];
-  fromIdx = toIdx;
-}
 
 void SymbolTable::wrap(Symbol *sym, Symbol *real, Symbol *wrap) {
   // Redirect __real_foo to the original foo and foo to the original __wrap_foo.

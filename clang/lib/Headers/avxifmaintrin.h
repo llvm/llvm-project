@@ -15,12 +15,28 @@
 #define __AVXIFMAINTRIN_H
 
 /* Define the default attributes for the functions in this file. */
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __DEFAULT_FN_ATTRS128                                                  \
+  __attribute__((__always_inline__, __nodebug__, __target__("avxifma"),        \
+                 __min_vector_width__(128))) constexpr
+#define __DEFAULT_FN_ATTRS256                                                  \
+  __attribute__((__always_inline__, __nodebug__, __target__("avxifma"),        \
+                 __min_vector_width__(256))) constexpr
+#else
 #define __DEFAULT_FN_ATTRS128                                                  \
   __attribute__((__always_inline__, __nodebug__, __target__("avxifma"),        \
                  __min_vector_width__(128)))
 #define __DEFAULT_FN_ATTRS256                                                  \
   __attribute__((__always_inline__, __nodebug__, __target__("avxifma"),        \
                  __min_vector_width__(256)))
+#endif
+
+#if !defined(__AVX512IFMA__) && defined(__AVXIFMA__)
+#define _mm_madd52hi_epu64(X, Y, Z) _mm_madd52hi_avx_epu64(X, Y, Z)
+#define _mm_madd52lo_epu64(X, Y, Z) _mm_madd52lo_avx_epu64(X, Y, Z)
+#define _mm256_madd52hi_epu64(X, Y, Z) _mm256_madd52hi_avx_epu64(X, Y, Z)
+#define _mm256_madd52lo_epu64(X, Y, Z) _mm256_madd52lo_avx_epu64(X, Y, Z)
+#endif
 
 // must vex-encoding
 

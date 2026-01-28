@@ -3,7 +3,7 @@
 #map0 = affine_map<(d0) -> (d0)>
 
 // In-depth checking of a basic case, this is testing
-// - bufferization.to_memref / bufferization.to_tensor materializations are
+// - bufferization.to_buffer / bufferization.to_tensor materializations are
 //   properly inserted
 // - payload is correctly carried over
 // - affine maps are correctly carried over
@@ -12,7 +12,7 @@
 // CHECK: #map = affine_map<(d0) -> (d0)>
 // CHECK-LABEL:   func @basic(
 // CHECK-SAME:                %[[TENSOR:.*]]: tensor<4xf32>) -> tensor<4xf32> {
-// CHECK-DAG:       %[[MEMREF:.*]] = bufferization.to_memref %[[TENSOR]] : tensor<4xf32> to memref<4xf32>
+// CHECK-DAG:       %[[MEMREF:.*]] = bufferization.to_buffer %[[TENSOR]] : tensor<4xf32> to memref<4xf32>
 // CHECK-DAG:       %[[RESULT_MEMREF:.*]] = memref.alloc() {{.*}} : memref<4xf32>
 // CHECK:           linalg.generic {indexing_maps = [#map, #map], iterator_types = ["parallel"]}
 // CHECK-SAME:      ins(%[[MEMREF]] : memref<4xf32>)
@@ -46,7 +46,7 @@ func.func @basic(%arg0: tensor<4xf32>) -> tensor<4xf32> {
 // CHECK: #map = affine_map<(d0) -> (d0)>
 // CHECK-LABEL: func @empty_tensor(
 // CHECK-SAME:      %[[IN:.*]]: tensor<?xf32>, %[[SIZE:.*]]: index)
-// CHECK-DAG:     %[[MEMREF:.*]] = bufferization.to_memref %[[IN]] : tensor<?xf32> to memref<?xf32>
+// CHECK-DAG:     %[[MEMREF:.*]] = bufferization.to_buffer %[[IN]] : tensor<?xf32> to memref<?xf32>
 // CHECK-DAG:     %[[OUT_BUF:.*]] = memref.alloc(%[[SIZE]]) {{.*}} : memref<?xf32>
 // CHECK:         linalg.generic
 // CHECK-SAME:    ins(%[[MEMREF]] : memref<?xf32>)
@@ -105,7 +105,7 @@ func.func @multiple_results(%arg0: tensor<4xf32>) -> (tensor<4xf32>, tensor<4xf3
 // CHECK-DAG:       %[[DIM1:.*]] = tensor.dim %[[ARG]], %[[C1]] : tensor<?x?xf32>
 // CHECK-DAG:       %[[RESULT0:.*]] = memref.alloc(%[[DIM0]], %[[DIM1]]) {{.*}} : memref<?x?xf32>
 // CHECK-DAG:       %[[RESULT1:.*]] = memref.alloc(%[[DIM0]], %[[DIM1]]) {{.*}} : memref<?x?xf32>
-// CHECK-DAG:       %[[MEMREF_ARG:.*]] = bufferization.to_memref %[[ARG]] : tensor<?x?xf32> to memref<?x?xf32>
+// CHECK-DAG:       %[[MEMREF_ARG:.*]] = bufferization.to_buffer %[[ARG]] : tensor<?x?xf32> to memref<?x?xf32>
 // CHECK:           linalg.generic
 // CHECK-SAME:      ins(%[[MEMREF_ARG]] : memref<?x?xf32>)
 // CHECK-SAME:      outs(%[[RESULT0]], %[[RESULT1]] : memref<?x?xf32>, memref<?x?xf32>)
@@ -141,8 +141,8 @@ func.func @dynamic_results(%arg0: tensor<?x?xf32>)
 // CHECK-SAME:                                   %[[ARG0_TENSOR:.*]]: tensor<2x3x4xvector<3x4xi4>>,
 // CHECK-SAME:                                   %[[ARG1_TENSOR:.*]]: tensor<3x2xf32>) -> tensor<3x2xf32> {
 // CHECK-DAG:       %[[INIT_BUFFER:.*]] = memref.alloc() {{.*}} : memref<3x2xf32>
-// CHECK-DAG:       %[[ARG0_MEMREF:.*]] = bufferization.to_memref %[[ARG0_TENSOR]] : tensor<2x3x4xvector<3x4xi4>>
-// CHECK-DAG:       %[[ARG1_MEMREF:.*]] = bufferization.to_memref %[[ARG1_TENSOR]] : tensor<3x2xf32>
+// CHECK-DAG:       %[[ARG0_MEMREF:.*]] = bufferization.to_buffer %[[ARG0_TENSOR]] : tensor<2x3x4xvector<3x4xi4>>
+// CHECK-DAG:       %[[ARG1_MEMREF:.*]] = bufferization.to_buffer %[[ARG1_TENSOR]] : tensor<3x2xf32>
 // CHECK:           memref.copy %[[ARG1_MEMREF]], %[[INIT_BUFFER]] : memref<3x2xf32> to memref<3x2xf32>
 // CHECK:           linalg.generic
 // CHECK-SAME:      ins(%[[ARG0_MEMREF]] : memref<2x3x4xvector<3x4xi4>>)
@@ -194,7 +194,7 @@ func.func @bufferize_dot(%in: tensor<4xf32>, %out: tensor<f32>) -> tensor<f32> {
 
 // CHECK-LABEL: func @bufferize_softmax(
 //  CHECK-SAME:     %[[arg0:.*]]: tensor<2x16x32xf32>, %[[arg1:.*]]: tensor<2x16x32xf32>
-//       CHECK:   %[[m0:.*]] = bufferization.to_memref %[[arg0]]
+//       CHECK:   %[[m0:.*]] = bufferization.to_buffer %[[arg0]]
 //       CHECK:   %[[alloc:.*]] = memref.alloc()
 //   CHECK-NOT:   memref.copy
 //       CHECK:   linalg.softmax dimension(2) ins(%[[m0]] : {{.*}}) outs(%[[alloc:.*]] : {{.*}})
@@ -206,3 +206,23 @@ func.func @bufferize_softmax(%arg0: tensor<2x16x32xf32>, %arg1: tensor<2x16x32xf
       outs(%arg1: tensor<2x16x32xf32>) -> tensor<2x16x32xf32>
   return %1 : tensor<2x16x32xf32>
 }
+
+// -----
+
+// CHECK-LABEL: func @bufferize_pack(
+// CHECK-SAME:   %[[SRC:.*]]: tensor<200x127x256xf32>, %[[DST:.*]]: tensor<256x64x200x2xf32>) -> tensor<256x64x200x2xf32> {
+// CHECK-DAG:     %[[CST:.*]] = arith.constant 0.000000e+00 : f32
+// CHECK-DAG:     %[[SRC_BUF:.*]] = bufferization.to_buffer %[[SRC]] : tensor<200x127x256xf32> to memref<200x127x256xf32>
+// CHECK-DAG:     %[[DST_BUF:.*]] = memref.alloc() {{.*}} : memref<256x64x200x2xf32>
+// CHECK-NOT:     memref.copy
+// CHECK:         linalg.pack %[[SRC_BUF]] padding_value(%[[CST]] : f32) outer_dims_perm = [2, 1, 0] inner_dims_pos = [1] inner_tiles = [2] into %[[DST_BUF]] : memref<200x127x256xf32> -> memref<256x64x200x2xf32>
+// CHECK:         %[[RESULT:.*]] = bufferization.to_tensor %[[DST_BUF]] : memref<256x64x200x2xf32> to tensor<256x64x200x2xf32>
+// CHECK:         return %[[RESULT]] : tensor<256x64x200x2xf32>
+func.func @bufferize_pack(%arg0: tensor<200x127x256xf32>, %arg1: tensor<256x64x200x2xf32>) -> tensor<256x64x200x2xf32> {
+  %pad = arith.constant 0.0 : f32
+  %0 = linalg.pack %arg0 padding_value(%pad : f32) outer_dims_perm = [2, 1, 0]
+      inner_dims_pos = [1] inner_tiles = [2] into %arg1
+      : tensor<200x127x256xf32> -> tensor<256x64x200x2xf32>
+  return %0 : tensor<256x64x200x2xf32>
+}
+

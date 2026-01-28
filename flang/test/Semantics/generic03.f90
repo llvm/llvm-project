@@ -15,7 +15,7 @@ end module
 
 program test
   use m1
-  !WARNING: Generic interface 'g1' has both a function and a subroutine
+  !WARNING: Generic interface 'g1' has both a function and a subroutine [-Wsubroutine-and-function-specifics]
   interface g1
     subroutine s1(x, a)
       import t1

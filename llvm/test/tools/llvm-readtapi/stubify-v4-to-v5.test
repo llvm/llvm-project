@@ -1,0 +1,23 @@
+; RUN: rm -rf %t
+; RUN: split-file %s %t
+
+; RUN: llvm-readtapi %t/input.tbd --filetype=tbd-v5 -o %t/output.tbd 2>&1 | FileCheck \
+; RUN:    %s --allow-empty  --implicit-check-not warning: --implicit-check-not error:
+
+; RUN: cat %t/output.tbd 2>&1 | FileCheck %s -check-prefix=SYMS
+
+; SYMS:                  "_asym",
+; SYMS-NEXT:             "_bar",
+; SYMS-NEXT:             "_foo",
+; SYMS-NEXT:             "_zsym"
+
+;--- input.tbd
+--- !tapi-tbd
+tbd-version:     4
+targets:         [ x86_64-macos ]
+flags:           [ not_app_extension_safe ]
+install-name:    '/System/Library/Frameworks/Foo.framework/Versions/A/Foo'
+exports:
+  - targets:         [ x86_64-macos ]
+    symbols:         [ _zsym, _asym, _foo, _bar]
+...

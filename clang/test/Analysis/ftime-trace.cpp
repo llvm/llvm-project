@@ -39,7 +39,7 @@
 
 // Finally, each checker call back is also present:
 //
-// CHECK:          "name": "Total Stmt:core.DivideZero",
+// CHECK:          "name": "Total Stmt:DivZeroChecker",
 // CHECK-NEXT:     "args": {
 // CHECK-NEXT:         "count": {{[0-9]+}},
 // CHECK-NEXT:         "avg ms": {{[0-9]+}}

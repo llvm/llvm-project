@@ -12,7 +12,7 @@
 #include "rpc.h"
 
 #define LLVM_LIBC_RPC_BASE 'c'
-#define LLVM_LIBC_OPCODE(n) (LLVM_LIBC_RPC_BASE << 24 | n)
+#define LLVM_LIBC_OPCODE(n) (((LLVM_LIBC_RPC_BASE << 24) | n))
 
 typedef enum {
   LIBC_NOOP = LLVM_LIBC_OPCODE(0),
@@ -45,6 +45,11 @@ typedef enum {
   LIBC_REMOVE = LLVM_LIBC_OPCODE(27),
   LIBC_RENAME = LLVM_LIBC_OPCODE(28),
   LIBC_SYSTEM = LLVM_LIBC_OPCODE(29),
+
+  // Internal opcodes for testing.
+  LIBC_TEST_INCREMENT = LLVM_LIBC_OPCODE((1 << 15)),
+  LIBC_TEST_INTERFACE = LLVM_LIBC_OPCODE(((1 << 15) + 1)),
+  LIBC_TEST_STREAM = LLVM_LIBC_OPCODE(((1 << 15) + 2)),
   LIBC_LAST = 0xFFFFFFFF,
 } rpc_opcode_t;
 

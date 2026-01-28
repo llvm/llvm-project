@@ -161,6 +161,13 @@ DEFINE_COMPILERRT_FUNCTION(__arm_za_disable)
   ldr x14, [x14, CPU_FEATS_SYMBOL_OFFSET]
   tbz x14, #FEAT_SME_BIT, 0f
 
+  // If TPIDR2_EL0 is zero then nothing needs doing because
+  // __arm_za_disable is a private-ZA function and is only
+  // ever entered with ZA state 'off' or 'dormant', so
+  // we can assume PSTATE.ZA=0.
+  mrs x14, TPIDR2_EL0
+  cbz x14, 0f
+
   // Otherwise, the subroutine behaves as if it did the following:
   // * Call __arm_tpidr2_save.
   stp x29, x30, [sp, #-16]!
@@ -280,17 +287,17 @@ DEFINE_COMPILERRT_FUNCTION(__arm_sme_save)
   mov     w16, #1
   str     x16, [x0]
 
-  add     x18, x0, #32
+  add     x16, x0, #32
   tbz     x17, #FEAT_SME2_BIT, 1f
 
   // Store ZT0
-  str     zt0, [x18]
-  add     x18, x18, #64
+  str     zt0, [x16]
+  add     x16, x16, #64
 
 1:
-  // Set up lazy-save (x18 = pointer to buffer)
+  // Set up lazy-save (x16 = pointer to buffer)
   rdsvl   x17, #1
-  str     x18, [x0, #16]!
+  str     x16, [x0, #16]!
   strh    w17, [x0, #8]
   strh    wzr, [x0, #10]
   str     wzr, [x0, #12]
@@ -371,5 +378,5 @@ END_COMPILERRT_FUNCTION(__arm_sme_restore)
 
 NO_EXEC_STACK_DIRECTIVE
 
-// GNU property note for BTI and PAC
-GNU_PROPERTY_BTI_PAC
+// GNU property note for BTI, PAC, and GCS
+GNU_PROPERTY_BTI_PAC_GCS

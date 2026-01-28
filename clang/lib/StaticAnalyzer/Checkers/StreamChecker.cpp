@@ -224,18 +224,16 @@ SVal getStreamArg(const FnDescription *Desc, const CallEvent &Call) {
 }
 
 /// Create a conjured symbol return value for a call expression.
-DefinedSVal makeRetVal(CheckerContext &C, const CallExpr *CE) {
-  assert(CE && "Expecting a call expression.");
-
-  const LocationContext *LCtx = C.getLocationContext();
+DefinedSVal makeRetVal(CheckerContext &C, ConstCFGElementRef Elem) {
   return C.getSValBuilder()
-      .conjureSymbolVal(nullptr, CE, LCtx, C.blockCount())
+      .conjureSymbolVal(/*symbolTag=*/nullptr, Elem, C.getLocationContext(),
+                        C.blockCount())
       .castAs<DefinedSVal>();
 }
 
 ProgramStateRef bindAndAssumeTrue(ProgramStateRef State, CheckerContext &C,
-                                  const CallExpr *CE) {
-  DefinedSVal RetVal = makeRetVal(C, CE);
+                                  const CallExpr *CE, ConstCFGElementRef Elem) {
+  DefinedSVal RetVal = makeRetVal(C, Elem);
   State = State->BindExpr(CE, C.getLocationContext(), RetVal);
   State = State->assume(RetVal, true);
   assert(State && "Assumption on new value should not fail.");
@@ -645,6 +643,7 @@ struct StreamOperationEvaluator {
   SymbolRef StreamSym = nullptr;
   const StreamState *SS = nullptr;
   const CallExpr *CE = nullptr;
+  std::optional<ConstCFGElementRef> Elem;
   StreamErrorState NewES;
 
   StreamOperationEvaluator(CheckerContext &C)
@@ -664,6 +663,7 @@ struct StreamOperationEvaluator {
     CE = dyn_cast_or_null<CallExpr>(Call.getOriginExpr());
     if (!CE)
       return false;
+    Elem = Call.getCFGElementRef();
 
     assertStreamStateOpened(SS);
 
@@ -683,7 +683,7 @@ struct StreamOperationEvaluator {
   }
 
   ProgramStateRef makeAndBindRetVal(ProgramStateRef State, CheckerContext &C) {
-    NonLoc RetVal = makeRetVal(C, CE).castAs<NonLoc>();
+    NonLoc RetVal = makeRetVal(C, Elem.value()).castAs<NonLoc>();
     return State->BindExpr(CE, C.getLocationContext(), RetVal);
   }
 
@@ -716,7 +716,7 @@ struct StreamOperationEvaluator {
 
   ConstraintManager::ProgramStatePair
   makeRetValAndAssumeDual(ProgramStateRef State, CheckerContext &C) {
-    DefinedSVal RetVal = makeRetVal(C, CE);
+    DefinedSVal RetVal = makeRetVal(C, Elem.value());
     State = State->BindExpr(CE, C.getLocationContext(), RetVal);
     return C.getConstraintManager().assumeDual(State, RetVal);
   }
@@ -858,7 +858,7 @@ escapeByStartIndexAndCount(ProgramStateRef State, const CallEvent &Call,
     ITraits.setTrait(Element, DoNotInvalidateSuperRegion);
   }
   return State->invalidateRegions(
-      EscapingVals, Call.getOriginExpr(), BlockCount, LCtx,
+      EscapingVals, Call.getCFGElementRef(), BlockCount, LCtx,
       /*CausesPointerEscape=*/false,
       /*InvalidatedSymbols=*/nullptr, &Call, &ITraits);
 }
@@ -868,7 +868,7 @@ static ProgramStateRef escapeArgs(ProgramStateRef State, CheckerContext &C,
                                   ArrayRef<unsigned int> EscapingArgs) {
   auto GetArgSVal = [&Call](int Idx) { return Call.getArgSVal(Idx); };
   auto EscapingVals = to_vector(map_range(EscapingArgs, GetArgSVal));
-  State = State->invalidateRegions(EscapingVals, Call.getOriginExpr(),
+  State = State->invalidateRegions(EscapingVals, Call.getCFGElementRef(),
                                    C.blockCount(), C.getLocationContext(),
                                    /*CausesPointerEscape=*/false,
                                    /*InvalidatedSymbols=*/nullptr);
@@ -931,7 +931,7 @@ void StreamChecker::evalFopen(const FnDescription *Desc, const CallEvent &Call,
   if (!CE)
     return;
 
-  DefinedSVal RetVal = makeRetVal(C, CE);
+  DefinedSVal RetVal = makeRetVal(C, Call.getCFGElementRef());
   SymbolRef RetSym = RetVal.getAsSymbol();
   assert(RetSym && "RetVal must be a symbol here.");
 
@@ -1200,7 +1200,7 @@ void StreamChecker::evalFreadFwrite(const FnDescription *Desc,
   if (!IsFread && !PedanticMode)
     return;
 
-  NonLoc RetVal = makeRetVal(C, E.CE).castAs<NonLoc>();
+  NonLoc RetVal = makeRetVal(C, E.Elem.value()).castAs<NonLoc>();
   ProgramStateRef StateFailed =
       State->BindExpr(E.CE, C.getLocationContext(), RetVal);
   StateFailed = E.assumeBinOpNN(StateFailed, BO_LT, RetVal, *NMembVal);
@@ -1235,7 +1235,7 @@ void StreamChecker::evalFgetx(const FnDescription *Desc, const CallEvent &Call,
     State = escapeArgs(State, C, Call, {0});
     if (SingleChar) {
       // Generate a transition for the success state of `fgetc`.
-      NonLoc RetVal = makeRetVal(C, E.CE).castAs<NonLoc>();
+      NonLoc RetVal = makeRetVal(C, E.Elem.value()).castAs<NonLoc>();
       ProgramStateRef StateNotFailed =
           State->BindExpr(E.CE, C.getLocationContext(), RetVal);
       // The returned 'unsigned char' of `fgetc` is converted to 'int',
@@ -1300,7 +1300,7 @@ void StreamChecker::evalFputx(const FnDescription *Desc, const CallEvent &Call,
     C.addTransition(StateNotFailed);
   } else {
     // Generate a transition for the success state of `fputs`.
-    NonLoc RetVal = makeRetVal(C, E.CE).castAs<NonLoc>();
+    NonLoc RetVal = makeRetVal(C, E.Elem.value()).castAs<NonLoc>();
     ProgramStateRef StateNotFailed =
         State->BindExpr(E.CE, C.getLocationContext(), RetVal);
     StateNotFailed =
@@ -1334,7 +1334,7 @@ void StreamChecker::evalFprintf(const FnDescription *Desc,
   if (!E.Init(Desc, Call, C, State))
     return;
 
-  NonLoc RetVal = makeRetVal(C, E.CE).castAs<NonLoc>();
+  NonLoc RetVal = makeRetVal(C, E.Elem.value()).castAs<NonLoc>();
   State = State->BindExpr(E.CE, C.getLocationContext(), RetVal);
   auto Cond =
       E.SVB
@@ -1379,7 +1379,7 @@ void StreamChecker::evalFscanf(const FnDescription *Desc, const CallEvent &Call,
   // case, and no error flags are set on the stream. This is probably not
   // accurate, and the POSIX documentation does not tell more.
   if (!E.isStreamEof()) {
-    NonLoc RetVal = makeRetVal(C, E.CE).castAs<NonLoc>();
+    NonLoc RetVal = makeRetVal(C, E.Elem.value()).castAs<NonLoc>();
     ProgramStateRef StateNotFailed =
         State->BindExpr(E.CE, C.getLocationContext(), RetVal);
     StateNotFailed =
@@ -1460,7 +1460,7 @@ void StreamChecker::evalGetdelim(const FnDescription *Desc,
     State = escapeArgs(State, C, Call, {0, 1});
 
     // Add transition for the successful state.
-    NonLoc RetVal = makeRetVal(C, E.CE).castAs<NonLoc>();
+    NonLoc RetVal = makeRetVal(C, E.Elem.value()).castAs<NonLoc>();
     ProgramStateRef StateNotFailed = E.bindReturnValue(State, C, RetVal);
     StateNotFailed =
         E.assumeBinOpNN(StateNotFailed, BO_GE, RetVal, E.getZeroVal(Call));
@@ -1601,7 +1601,7 @@ void StreamChecker::evalFtell(const FnDescription *Desc, const CallEvent &Call,
   if (!E.Init(Desc, Call, C, State))
     return;
 
-  NonLoc RetVal = makeRetVal(C, E.CE).castAs<NonLoc>();
+  NonLoc RetVal = makeRetVal(C, E.Elem.value()).castAs<NonLoc>();
   ProgramStateRef StateNotFailed =
       State->BindExpr(E.CE, C.getLocationContext(), RetVal);
   StateNotFailed =
@@ -1735,7 +1735,8 @@ void StreamChecker::evalFeofFerror(const FnDescription *Desc,
     // Execution path with error of ErrorKind.
     // Function returns true.
     // From now on it is the only one error state.
-    ProgramStateRef TrueState = bindAndAssumeTrue(State, C, E.CE);
+    ProgramStateRef TrueState =
+        bindAndAssumeTrue(State, C, E.CE, E.Elem.value());
     C.addTransition(E.setStreamState(
         TrueState, StreamState::getOpened(Desc, ErrorKind,
                                           E.SS->FilePositionIndeterminate &&
@@ -1769,7 +1770,7 @@ void StreamChecker::evalFileno(const FnDescription *Desc, const CallEvent &Call,
   if (!E.Init(Desc, Call, C, State))
     return;
 
-  NonLoc RetVal = makeRetVal(C, E.CE).castAs<NonLoc>();
+  NonLoc RetVal = makeRetVal(C, E.Elem.value()).castAs<NonLoc>();
   State = State->BindExpr(E.CE, C.getLocationContext(), RetVal);
   State = E.assumeBinOpNN(State, BO_GE, RetVal, E.getZeroVal(Call));
   if (!State)

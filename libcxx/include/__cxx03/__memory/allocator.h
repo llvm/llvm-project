@@ -32,32 +32,30 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp>
 class allocator;
 
-// These specializations shouldn't be marked _LIBCPP_DEPRECATED_IN_CXX17.
-// Specializing allocator<void> is deprecated, but not using it.
 template <>
 class _LIBCPP_TEMPLATE_VIS allocator<void> {
 public:
-  _LIBCPP_DEPRECATED_IN_CXX17 typedef void* pointer;
-  _LIBCPP_DEPRECATED_IN_CXX17 typedef const void* const_pointer;
-  _LIBCPP_DEPRECATED_IN_CXX17 typedef void value_type;
+  typedef void* pointer;
+  typedef const void* const_pointer;
+  typedef void value_type;
 
   template <class _Up>
-  struct _LIBCPP_DEPRECATED_IN_CXX17 rebind {
+  struct rebind {
     typedef allocator<_Up> other;
   };
 };
 
 // TODO(LLVM 20): Remove the escape hatch
-#  ifdef _LIBCPP_ENABLE_REMOVED_ALLOCATOR_CONST
+#ifdef _LIBCPP_ENABLE_REMOVED_ALLOCATOR_CONST
 template <>
 class _LIBCPP_TEMPLATE_VIS allocator<const void> {
 public:
-  _LIBCPP_DEPRECATED_IN_CXX17 typedef const void* pointer;
-  _LIBCPP_DEPRECATED_IN_CXX17 typedef const void* const_pointer;
-  _LIBCPP_DEPRECATED_IN_CXX17 typedef const void value_type;
+  typedef const void* pointer;
+  typedef const void* const_pointer;
+  typedef const void value_type;
 
   template <class _Up>
-  struct _LIBCPP_DEPRECATED_IN_CXX17 rebind {
+  struct rebind {
     typedef allocator<_Up> other;
   };
 };
@@ -80,7 +78,7 @@ struct __non_trivial_if {};
 
 template <class _Unique>
 struct __non_trivial_if<true, _Unique> {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR __non_trivial_if() _NOEXCEPT {}
+  _LIBCPP_HIDE_FROM_ABI __non_trivial_if() _NOEXCEPT {}
 };
 
 // allocator
@@ -98,14 +96,14 @@ public:
   typedef ptrdiff_t difference_type;
   typedef _Tp value_type;
   typedef true_type propagate_on_container_move_assignment;
-  _LIBCPP_DEPRECATED_IN_CXX23 typedef true_type is_always_equal;
+  typedef true_type is_always_equal;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 allocator() _NOEXCEPT = default;
+  _LIBCPP_HIDE_FROM_ABI allocator() _NOEXCEPT = default;
 
   template <class _Up>
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 allocator(const allocator<_Up>&) _NOEXCEPT {}
+  _LIBCPP_HIDE_FROM_ABI allocator(const allocator<_Up>&) _NOEXCEPT {}
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp* allocate(size_t __n) {
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _Tp* allocate(size_t __n) {
     if (__n > allocator_traits<allocator>::max_size(*this))
       __throw_bad_array_new_length();
     if (__libcpp_is_constant_evaluated()) {
@@ -115,7 +113,7 @@ public:
     }
   }
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 void deallocate(_Tp* __p, size_t __n) _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI void deallocate(_Tp* __p, size_t __n) _NOEXCEPT {
     if (__libcpp_is_constant_evaluated()) {
       ::operator delete(__p);
     } else {
@@ -124,42 +122,33 @@ public:
   }
 
   // C++20 Removed members
-  _LIBCPP_DEPRECATED_IN_CXX17 typedef _Tp* pointer;
-  _LIBCPP_DEPRECATED_IN_CXX17 typedef const _Tp* const_pointer;
-  _LIBCPP_DEPRECATED_IN_CXX17 typedef _Tp& reference;
-  _LIBCPP_DEPRECATED_IN_CXX17 typedef const _Tp& const_reference;
+  typedef _Tp* pointer;
+  typedef const _Tp* const_pointer;
+  typedef _Tp& reference;
+  typedef const _Tp& const_reference;
 
   template <class _Up>
-  struct _LIBCPP_DEPRECATED_IN_CXX17 rebind {
+  struct rebind {
     typedef allocator<_Up> other;
   };
 
-  _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI pointer address(reference __x) const _NOEXCEPT {
-    return std::addressof(__x);
-  }
-  _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI const_pointer address(const_reference __x) const _NOEXCEPT {
-    return std::addressof(__x);
-  }
+  _LIBCPP_HIDE_FROM_ABI pointer address(reference __x) const _NOEXCEPT { return std::addressof(__x); }
+  _LIBCPP_HIDE_FROM_ABI const_pointer address(const_reference __x) const _NOEXCEPT { return std::addressof(__x); }
 
-  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_IN_CXX17 _Tp* allocate(size_t __n, const void*) {
-    return allocate(__n);
-  }
+  _LIBCPP_NODISCARD _LIBCPP_HIDE_FROM_ABI _Tp* allocate(size_t __n, const void*) { return allocate(__n); }
 
-  _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI size_type max_size() const _NOEXCEPT {
-    return size_type(~0) / sizeof(_Tp);
-  }
+  _LIBCPP_HIDE_FROM_ABI size_type max_size() const _NOEXCEPT { return size_type(~0) / sizeof(_Tp); }
 
   template <class _Up, class... _Args>
-  _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI void construct(_Up* __p, _Args&&... __args) {
+  _LIBCPP_HIDE_FROM_ABI void construct(_Up* __p, _Args&&... __args) {
     ::new ((void*)__p) _Up(std::forward<_Args>(__args)...);
   }
 
-  _LIBCPP_DEPRECATED_IN_CXX17 _LIBCPP_HIDE_FROM_ABI void destroy(pointer __p) { __p->~_Tp(); }
+  _LIBCPP_HIDE_FROM_ABI void destroy(pointer __p) { __p->~_Tp(); }
 };
 
 template <class _Tp, class _Up>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
-operator==(const allocator<_Tp>&, const allocator<_Up>&) _NOEXCEPT {
+inline _LIBCPP_HIDE_FROM_ABI bool operator==(const allocator<_Tp>&, const allocator<_Up>&) _NOEXCEPT {
   return true;
 }
 

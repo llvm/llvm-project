@@ -1,9 +1,6 @@
-import os
-
 from clang.cindex import (
     AvailabilityKind,
     BinaryOperator,
-    Config,
     Cursor,
     CursorKind,
     PrintingPolicy,
@@ -12,10 +9,9 @@ from clang.cindex import (
     TemplateArgumentKind,
     TranslationUnit,
     TypeKind,
+    conf,
 )
 
-if "CLANG_LIBRARY_PATH" in os.environ:
-    Config.set_library_path(os.environ["CLANG_LIBRARY_PATH"])
 
 import gc
 import unittest
@@ -783,6 +779,21 @@ int count(int a, int b){
         cursor = get_cursor(tu, "reg")
         self.assertEqual(cursor.storage_class, StorageClass.REGISTER)
 
+    def test_function_inlined(self):
+        tu = get_tu(
+            """
+inline void f_inline(void);
+void f_noninline(void);
+int d_noninline;
+"""
+        )
+        cursor = get_cursor(tu, "f_inline")
+        self.assertEqual(cursor.is_function_inlined(), True)
+        cursor = get_cursor(tu, "f_noninline")
+        self.assertEqual(cursor.is_function_inlined(), False)
+        cursor = get_cursor(tu, "d_noninline")
+        self.assertEqual(cursor.is_function_inlined(), False)
+
     def test_availability(self):
         tu = get_tu("class A { A(A const&) = delete; };", lang="cpp")
 
@@ -1050,3 +1061,16 @@ struct B {};
         self.assertEqual(cursor1, cursor1_2)
         self.assertNotEqual(cursor1, cursor2)
         self.assertNotEqual(cursor1, "foo")
+
+    def test_null_cursor(self):
+        tu = get_tu("int a = 729;")
+
+        for cursor in tu.cursor.walk_preorder():
+            self.assertFalse(cursor.is_null())
+
+        nc = conf.lib.clang_getNullCursor()
+        self.assertTrue(nc.is_null())
+        with self.assertRaises(Exception):
+            nc.is_definition()
+        with self.assertRaises(Exception):
+            nc.spelling

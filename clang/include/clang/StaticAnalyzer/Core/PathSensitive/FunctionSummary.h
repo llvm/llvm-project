@@ -48,6 +48,9 @@ class FunctionSummariesTy {
     /// The number of times the function has been inlined.
     unsigned TimesInlined : 32;
 
+    /// Running time for syntax-based AST analysis in milliseconds.
+    std::optional<unsigned> SyntaxRunningTime = std::nullopt;
+
     FunctionSummary()
         : TotalBasicBlocks(0), InlineChecked(0), MayInline(0),
           TimesInlined(0) {}
@@ -69,6 +72,11 @@ public:
     return I;
   }
 
+  FunctionSummary const *findSummary(const Decl *D) const {
+    auto I = Map.find(D);
+    return I == Map.end() ? nullptr : &I->second;
+  }
+
   void markMayInline(const Decl *D) {
     MapTy::iterator I = findOrInsertSummary(D);
     I->second.InlineChecked = 1;
@@ -79,10 +87,6 @@ public:
     MapTy::iterator I = findOrInsertSummary(D);
     I->second.InlineChecked = 1;
     I->second.MayInline = 0;
-  }
-
-  void markReachedMaxBlockCount(const Decl *D) {
-    markShouldNotInline(D);
   }
 
   std::optional<bool> mayInline(const Decl *D) {

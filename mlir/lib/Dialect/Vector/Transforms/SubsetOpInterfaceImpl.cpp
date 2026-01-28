@@ -37,7 +37,7 @@ struct TransferReadOpSubsetExtractionOpInterface
     : public SubsetExtractionOpInterface::ExternalModel<
           TransferReadOpSubsetExtractionOpInterface, vector::TransferReadOp> {
   OpOperand &getSourceOperand(Operation *op) const {
-    return cast<vector::TransferReadOp>(op).getSourceMutable();
+    return cast<vector::TransferReadOp>(op).getBaseMutable();
   }
 };
 
@@ -49,7 +49,7 @@ struct TransferWriteOpSubsetInsertionOpInterface
   }
 
   OpOperand &getDestinationOperand(Operation *op) const {
-    return cast<vector::TransferWriteOp>(op).getSourceMutable();
+    return cast<vector::TransferWriteOp>(op).getBaseMutable();
   }
 
   Value buildSubsetExtraction(Operation *op, OpBuilder &builder,

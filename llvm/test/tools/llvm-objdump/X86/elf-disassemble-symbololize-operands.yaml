@@ -4,6 +4,9 @@
 # RUN: llvm-objdump %t -d --symbolize-operands -M att --no-show-raw-insn --no-leading-addr | \
 # RUN:   FileCheck %s --match-full-lines --check-prefix=ATT
 
+# RUN: llvm-objdump %t -d --symbolize-operands -M intel --no-show-raw-insn --no-leading-addr --adjust-vma=0x2000 | \
+# RUN:   FileCheck %s --match-full-lines --check-prefix=INTEL
+
 ## Expect to find the branch labels and global variable name.
 # ATT:      <_start>:
 # ATT-NEXT:   pushq %rax

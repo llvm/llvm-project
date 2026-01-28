@@ -66,6 +66,7 @@ CHECK-NEXT:    -Wuninitialized
 CHECK-NEXT:      -Wsometimes-uninitialized
 CHECK-NEXT:      -Wstatic-self-init
 CHECK-NEXT:      -Wuninitialized-const-reference
+CHECK-NEXT:      -Wuninitialized-const-pointer
 CHECK-NEXT:    -Wunknown-pragmas
 CHECK-NEXT:    -Wunused
 CHECK-NEXT:      -Wunused-argument
@@ -108,6 +109,5 @@ CHECK-NEXT:  -Wmisleading-indentation
 CHECK-NEXT:  -Wpacked-non-pod
 CHECK-NEXT:  -Wvla-cxx-extension
 CHECK-NEXT:    -Wvla-extension-static-assert
-CHECK-NEXT:  -Wperf-constraint-implies-noexcept
 
 CHECK-NOT:-W

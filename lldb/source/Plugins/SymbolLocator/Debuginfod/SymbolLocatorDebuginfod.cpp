@@ -87,9 +87,8 @@ private:
   void ServerURLsChangedCallback() {
     m_server_urls = GetDebugInfoDURLs();
     llvm::SmallVector<llvm::StringRef> dbginfod_urls;
-    llvm::for_each(m_server_urls, [&](const auto &obj) {
+    for (const auto &obj : m_server_urls)
       dbginfod_urls.push_back(obj.ref());
-    });
     llvm::setDefaultDebuginfodUrls(dbginfod_urls);
   }
   // Storage for the StringRef's used within the Debuginfod library.

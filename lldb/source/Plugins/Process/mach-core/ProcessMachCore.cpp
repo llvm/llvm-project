@@ -95,8 +95,9 @@ bool ProcessMachCore::CanDebug(lldb::TargetSP target_sp,
     // header but we should still try to use it -
     // ModuleSpecList::FindMatchingModuleSpec enforces a strict arch mach.
     ModuleSpec core_module_spec(m_core_file);
+    core_module_spec.SetTarget(target_sp);
     Status error(ModuleList::GetSharedModule(core_module_spec, m_core_module_sp,
-                                             nullptr, nullptr, nullptr));
+                                             nullptr, nullptr));
 
     if (m_core_module_sp) {
       ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
@@ -658,7 +659,6 @@ bool ProcessMachCore::DoUpdateThreadList(ThreadList &old_thread_list,
     ObjectFile *core_objfile = m_core_module_sp->GetObjectFile();
 
     if (core_objfile) {
-      std::set<lldb::tid_t> used_tids;
       const uint32_t num_threads = core_objfile->GetNumThreadContexts();
       std::vector<lldb::tid_t> tids;
       if (core_objfile->GetCorefileThreadExtraInfos(tids)) {
@@ -800,6 +800,23 @@ Status ProcessMachCore::DoGetMemoryRegionInfo(addr_t load_addr,
       region_info.SetMapped(MemoryRegionInfo::eNo);
     }
     return Status();
+  } else {
+    // The corefile has no LC_SEGMENT at this virtual address,
+    // but see if there is a binary whose Section has been
+    // loaded at that address in the current Target.
+    Address addr;
+    if (GetTarget().ResolveLoadAddress(load_addr, addr)) {
+      SectionSP section_sp(addr.GetSection());
+      if (section_sp) {
+        region_info.GetRange().SetRangeBase(
+            section_sp->GetLoadBaseAddress(&GetTarget()));
+        region_info.GetRange().SetByteSize(section_sp->GetByteSize());
+        if (region_info.GetRange().Contains(load_addr)) {
+          region_info.SetLLDBPermissions(section_sp->GetPermissions());
+          return Status();
+        }
+      }
+    }
   }
 
   region_info.GetRange().SetRangeBase(load_addr);

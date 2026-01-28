@@ -104,7 +104,7 @@ TEST(Perf, RealLogicalCoreIDs) {
   ASSERT_GT((int)cpu_ids->size(), 0) << "We must see at least one core";
 }
 
-TEST(Perf, RealPtraceScope) {
+TEST(Perf, RealPtraceScopeWhenExist) {
   // We first check we can read /proc/sys/kernel/yama/ptrace_scope
   auto buffer_or_error =
       errorOrToExpected(getProcFile("sys/kernel/yama/ptrace_scope"));
@@ -118,6 +118,21 @@ TEST(Perf, RealPtraceScope) {
       << "Sensible values of ptrace_scope are between 0 and 3";
   ASSERT_LE(*ptrace_scope, 3)
       << "Sensible values of ptrace_scope are between 0 and 3";
+}
+
+TEST(Perf, RealPtraceScopeWhenNotExist) {
+  // We first check we can NOT read /proc/sys/kernel/yama/ptrace_scope
+  auto buffer_or_error =
+      errorOrToExpected(getProcFile("sys/kernel/yama/ptrace_scope"));
+  if (buffer_or_error)
+    GTEST_SKIP() << "In order for this test to run, "
+                    "/proc/sys/kernel/yama/ptrace_scope should not exist";
+  consumeError(buffer_or_error.takeError());
+
+  // At this point we should fail parsing the ptrace_scope value.
+  Expected<int> ptrace_scope = GetPtraceScope();
+  ASSERT_FALSE((bool)ptrace_scope);
+  consumeError(ptrace_scope.takeError());
 }
 
 #ifdef LLVM_ENABLE_THREADING

@@ -9,6 +9,7 @@ respective anchor symbols, and prints the resulting file to stdout.
 
 import argparse
 import os
+import platform
 import shutil
 import subprocess
 import sys
@@ -19,7 +20,11 @@ parser.add_argument("input")
 parser.add_argument("objfile", help="Object file to extract symbol values from")
 parser.add_argument("output")
 parser.add_argument("prefix", nargs="?", default="FDATA", help="Custom FDATA prefix")
-parser.add_argument("--nmtool", default="nm", help="Path to nm tool")
+parser.add_argument(
+    "--nmtool",
+    default="llvm-nm" if platform.system() == "Windows" else "nm",
+    help="Path to nm tool",
+)
 parser.add_argument("--no-lbr", action="store_true")
 parser.add_argument("--no-redefine", action="store_true")
 
@@ -27,18 +32,18 @@ args = parser.parse_args()
 
 # Regexes to extract FDATA lines from input and parse FDATA and pre-aggregated
 # profile data
-prefix_pat = re.compile(f"^# {args.prefix}: (.*)")
+prefix_pat = re.compile(f"^(#|//) {args.prefix}: (.*)")
 
 # FDATA records:
 # <is symbol?> <closest elf symbol or DSO name> <relative FROM address>
 # <is symbol?> <closest elf symbol or DSO name> <relative TO address>
 # <number of mispredictions> <number of branches>
-fdata_pat = re.compile(r"([01].*) (?P<exec>\d+) (?P<mispred>\d+)")
+fdata_pat = re.compile(r"([01].*) (?P<mispred>\d+) (?P<exec>\d+)")
 
 # Pre-aggregated profile:
-# {T|B|F|f} [<start_id>:]<start_offset> [<end_id>:]<end_offset> [<ft_end>]
-# <count> [<mispred_count>]
-preagg_pat = re.compile(r"(?P<type>[TBFf]) (?P<offsets_count>.*)")
+# {T|R|S|E|B|F|f|r} <start> [<end>] [<ft_end>] <count> [<mispred_count>]
+# <loc>: [<id>:]<offset>
+preagg_pat = re.compile(r"(?P<type>[TRSBFfr]) (?P<offsets_count>.*)")
 
 # No-LBR profile:
 # <is symbol?> <closest elf symbol or DSO name> <relative address> <count>
@@ -56,12 +61,12 @@ with open(args.input, "r") as f:
         prefix_match = prefix_pat.match(line)
         if not prefix_match:
             continue
-        profile_line = prefix_match.group(1)
+        profile_line = prefix_match.group(2)
         fdata_match = fdata_pat.match(profile_line)
         preagg_match = preagg_pat.match(profile_line)
         nolbr_match = nolbr_pat.match(profile_line)
         if fdata_match:
-            src_dst, execnt, mispred = fdata_match.groups()
+            src_dst, mispred, execnt = fdata_match.groups()
             # Split by whitespaces not preceded by a backslash (negative lookbehind)
             chunks = re.split(r"(?<!\\) +", src_dst)
             # Check if the number of records separated by non-escaped whitespace
@@ -69,7 +74,7 @@ with open(args.input, "r") as f:
             assert (
                 len(chunks) == 6
             ), f"ERROR: wrong format/whitespaces must be escaped:\n{line}"
-            exprs.append(("FDATA", (*chunks, execnt, mispred)))
+            exprs.append(("FDATA", (*chunks, mispred, execnt)))
         elif nolbr_match:
             loc, count = nolbr_match.groups()
             # Split by whitespaces not preceded by a backslash (negative lookbehind)
@@ -86,7 +91,10 @@ with open(args.input, "r") as f:
             exit("ERROR: unexpected input:\n%s" % line)
 
 # Read nm output: <symbol value> <symbol type> <symbol name>
-is_llvm_nm = os.path.basename(os.path.realpath(shutil.which(args.nmtool))) == "llvm-nm"
+# Ignore .exe on Windows host.
+is_llvm_nm = os.path.basename(os.path.realpath(shutil.which(args.nmtool))).startswith(
+    "llvm-nm"
+)
 nm_output = subprocess.run(
     [
         args.nmtool,

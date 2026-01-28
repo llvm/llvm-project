@@ -14,6 +14,7 @@ intermediate LLVM representation.
 
    AArch64SME
    AddingConstrainedIntrinsics
+   AdminTasks
    AdvancedBuilds
    AliasAnalysis
    AMDGPUUsage
@@ -32,6 +33,7 @@ intermediate LLVM representation.
    DebuggingJITedCode
    DirectXUsage
    Docker
+   DTLTO
    FatLTO
    ExtendingLLVM
    GitHub
@@ -46,10 +48,13 @@ intermediate LLVM representation.
    InstCombineContributorGuide
    InstrProfileFormat
    InstrRefDebugInfo
+   KeyInstructionsDebugInfo
+   LFI
    LinkTimeOptimization
    LoopTerminology
    MarkdownQuickstartTemplate
    MemorySSA
+   MemProf
    MergeFunctions
    MCJITDesignAndImplementation
    MisExpect
@@ -151,6 +156,9 @@ Optimizations
 :doc:`MemorySSA`
    Information about the MemorySSA utility in LLVM, as well as how to use it.
 
+:doc:`MemProf`
+   User guide and internals of MemProf, profile guided optimizations for memory.
+
 :doc:`LoopTerminology`
   A document describing Loops and associated terms as used in LLVM.
 
@@ -163,6 +171,11 @@ Optimizations
 :doc:`LinkTimeOptimization`
    This document describes the interface between LLVM intermodular optimizer
    and the linker and its design
+
+:doc:`DTLTO`
+   This document describes the DTLTO implementation, which allows for
+   distributing ThinLTO backend compilations without requiring support from
+   the build system.
 
 :doc:`GoldPlugin`
    How to build your programs with link-time optimization on Linux.
@@ -186,6 +199,10 @@ Optimizations
 :doc:`RemoveDIsDebugInfo`
    This is a migration guide describing how to move from debug info using
    intrinsics such as dbg.value to using the non-instruction DbgRecord object.
+
+:doc:`KeyInstructionsDebugInfo`
+   This document explains how the debug info feature Key Instructions is
+   implemented in LLVM.
 
 :doc:`InstrProfileFormat`
    This document explains two binary formats of instrumentation-based profiles.
@@ -297,3 +314,6 @@ Additional Topics
 
 :doc:`Telemetry`
    This document describes the Telemetry framework in LLVM.
+
+:doc:`LFI <LFI>`
+    This document describes the Lightweight Fault Isolation (LFI) target in LLVM.

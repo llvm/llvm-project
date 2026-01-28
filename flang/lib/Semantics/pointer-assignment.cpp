@@ -59,6 +59,7 @@ public:
   PointerAssignmentChecker &set_isBoundsRemapping(bool);
   PointerAssignmentChecker &set_isAssumedRank(bool);
   PointerAssignmentChecker &set_pointerComponentLHS(const Symbol *);
+  PointerAssignmentChecker &set_isRHSPointerActualArgument(bool);
   bool CheckLeftHandSide(const SomeExpr &);
   bool Check(const SomeExpr &);
 
@@ -94,6 +95,7 @@ private:
   bool isVolatile_{false};
   bool isBoundsRemapping_{false};
   bool isAssumedRank_{false};
+  bool isRHSPointerActualArgument_{false};
   const Symbol *pointerComponentLHS_{nullptr};
 };
 
@@ -133,6 +135,12 @@ PointerAssignmentChecker &PointerAssignmentChecker::set_pointerComponentLHS(
   return *this;
 }
 
+PointerAssignmentChecker &
+PointerAssignmentChecker::set_isRHSPointerActualArgument(bool isPointerActual) {
+  isRHSPointerActualArgument_ = isPointerActual;
+  return *this;
+}
+
 bool PointerAssignmentChecker::CharacterizeProcedure() {
   if (!characterizedProcedure_) {
     characterizedProcedure_ = true;
@@ -151,7 +159,7 @@ bool PointerAssignmentChecker::CheckLeftHandSide(const SomeExpr &lhs) {
       msg->Attach(std::move(whyNot->set_severity(parser::Severity::Because)));
     }
     return false;
-  } else if (evaluate::IsAssumedRank(lhs)) {
+  } else if (IsAssumedRank(lhs)) {
     Say("The left-hand side of a pointer assignment must not be an assumed-rank dummy argument"_err_en_US);
     return false;
   } else if (evaluate::ExtractCoarrayRef(lhs)) { // F'2023 C1027
@@ -221,6 +229,9 @@ bool PointerAssignmentChecker::Check(const SomeExpr &rhs) {
         Say("CONTIGUOUS pointer may not be associated with a discontiguous target"_err_en_US);
         return false;
       }
+    } else if (isRHSPointerActualArgument_) {
+      Say("CONTIGUOUS pointer dummy argument may not be associated with non-CONTIGUOUS pointer actual argument"_err_en_US);
+      return false;
     } else {
       Warn(common::UsageWarning::PointerToPossibleNoncontiguous,
           "Target of CONTIGUOUS pointer association is not known to be contiguous"_warn_en_US);
@@ -259,18 +270,18 @@ bool PointerAssignmentChecker::Check(const evaluate::FunctionRef<T> &f) {
   std::optional<MessageFixedText> msg;
   const auto &funcResult{proc->functionResult}; // C1025
   if (!funcResult) {
-    msg = "%s is associated with the non-existent result of reference to"
-          " procedure"_err_en_US;
+    msg =
+        "%s is associated with the non-existent result of reference to procedure"_err_en_US;
   } else if (CharacterizeProcedure()) {
     // Shouldn't be here in this function unless lhs is an object pointer.
-    msg = "Procedure %s is associated with the result of a reference to"
-          " function '%s' that does not return a procedure pointer"_err_en_US;
+    msg =
+        "Procedure %s is associated with the result of a reference to function '%s' that does not return a procedure pointer"_err_en_US;
   } else if (funcResult->IsProcedurePointer()) {
-    msg = "Object %s is associated with the result of a reference to"
-          " function '%s' that is a procedure pointer"_err_en_US;
+    msg =
+        "Object %s is associated with the result of a reference to function '%s' that is a procedure pointer"_err_en_US;
   } else if (!funcResult->attrs.test(FunctionResult::Attr::Pointer)) {
-    msg = "%s is associated with the result of a reference to function '%s'"
-          " that is a not a pointer"_err_en_US;
+    msg =
+        "%s is associated with the result of a reference to function '%s' that is not a pointer"_err_en_US;
   } else if (isContiguous_ &&
       !funcResult->attrs.test(FunctionResult::Attr::Contiguous)) {
     auto restorer{common::ScopedSet(lhs_, symbol)};
@@ -590,12 +601,14 @@ bool CheckStructConstructorPointerComponent(SemanticsContext &context,
 
 bool CheckPointerAssignment(SemanticsContext &context, parser::CharBlock source,
     const std::string &description, const DummyDataObject &lhs,
-    const SomeExpr &rhs, const Scope &scope, bool isAssumedRank) {
+    const SomeExpr &rhs, const Scope &scope, bool isAssumedRank,
+    bool isPointerActualArgument) {
   return PointerAssignmentChecker{context, scope, source, description}
       .set_lhsType(common::Clone(lhs.type))
       .set_isContiguous(lhs.attrs.test(DummyDataObject::Attr::Contiguous))
       .set_isVolatile(lhs.attrs.test(DummyDataObject::Attr::Volatile))
       .set_isAssumedRank(isAssumedRank)
+      .set_isRHSPointerActualArgument(isPointerActualArgument)
       .Check(rhs);
 }
 

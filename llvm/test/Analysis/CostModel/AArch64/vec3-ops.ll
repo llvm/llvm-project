@@ -206,8 +206,8 @@ define void @vec3_float(<3 x float> %a, <3 x float> %b, ptr %src, ptr %dst) {
 define void @vec3_half(<3 x half> %a, <3 x half> %b, ptr %src, ptr %dst) {
 ; CHECK-LABEL: 'vec3_half'
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:4 SizeLat:1 for: %l = load <3 x half>, ptr %src, align 1
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %add = fadd <3 x half> %l, %b
-; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:3 SizeLat:1 for: %sub = fsub <3 x half> %add, %a
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %add = fadd <3 x half> %l, %b
+; CHECK-NEXT:  Cost Model: Found costs of RThru:4 CodeSize:1 Lat:3 SizeLat:1 for: %sub = fsub <3 x half> %add, %a
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: store <3 x half> %sub, ptr %dst, align 1
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;

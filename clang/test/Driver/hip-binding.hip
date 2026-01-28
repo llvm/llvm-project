@@ -61,7 +61,7 @@
 // MULTI-D-ONLY-NEXT: # "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT]]"], output: "[[GFX90a:.+]]"
 // MULTI-D-ONLY-NEXT: # "amdgcn-amd-amdhsa" - "AMDGCN::Linker", inputs: ["[[GFX90a]]"], output: "[[GFX90a_OUT:.+]]"
 //
-// RUN: not %clang -### --target=x86_64-linux-gnu --offload-new-driver -ccc-print-bindings -nogpulib -nogpuinc \
+// RUN: not %clang -### --target=x86_64-linux-gnu --offload-new-driver -ccc-print-bindings -nogpulib -nogpuinc -emit-llvm \
 // RUN:        --no-gpu-bundle-output --offload-arch=gfx90a --offload-arch=gfx908 --offload-device-only -c -o %t %s 2>&1 \
 // RUN: | FileCheck -check-prefix=MULTI-D-ONLY-NO-BUNDLE-O %s
 // MULTI-D-ONLY-NO-BUNDLE-O: error: cannot specify -o when generating multiple output files
@@ -74,6 +74,13 @@
 // MULTI-D-ONLY-O-NEXT: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT]]"], output: "[[GFX90A_OBJ:.+]]"
 // MULTI-D-ONLY-O-NEXT: "amdgcn-amd-amdhsa" - "AMDGCN::Linker", inputs: ["[[GFX90A_OBJ]]"], output: "[[GFX90A:.+]]"
 // MULTI-D-ONLY-O-NEXT: "amdgcn-amd-amdhsa" - "AMDGCN::Linker", inputs: ["[[GFX908]]", "[[GFX90A]]"], output: "a.out"
+
+// RUN: %clang -### --target=x86_64-linux-gnu --offload-new-driver -ccc-print-bindings -nogpulib -nogpuinc -emit-llvm \
+// RUN:        --gpu-bundle-output --offload-arch=gfx90a --offload-arch=gfx908 --offload-device-only -c -o a.out %s 2>&1 \
+// RUN: | FileCheck -check-prefix=MULTI-D-ONLY-BC %s
+//      MULTI-D-ONLY-BC: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[GFX908_BC:.+]]"
+// MULTI-D-ONLY-BC-NEXT: "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT]]"], output: "[[GFX90A_BC:.+]]"
+// MULTI-D-ONLY-BC-NEXT: "amdgcn-amd-amdhsa" - "AMDGCN::Linker", inputs: ["[[GFX908_BC]]", "[[GFX90A_BC]]"], output: "a.out"
 
 //
 // Check to ensure that we can use '-fsyntax-only' for HIP output with the new
@@ -94,6 +101,6 @@
 // RUN: | FileCheck -check-prefix=LTO-NO-RDC %s
 //      LTO-NO-RDC: # "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT:.+]]"], output: "[[LTO_908:.+]]"
 // LTO-NO-RDC-NEXT: # "amdgcn-amd-amdhsa" - "clang", inputs: ["[[INPUT]]"], output: "[[LTO_90A:.+]]"
-// LTO-NO-RDC-NEXT: # "x86_64-unknown-linux-gnu" - "Offload::Packager", inputs: ["[[LTO_908]]", "[[LTO_90A]]"], output: "[[PKG:.+]]"
-// LTO-NO-RDC-NEXT: # "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[INPUT]]", "[[PKG]]"], output: "[[OBJ:.+]]"
-// LTO-NO-RDC-NEXT: # "x86_64-unknown-linux-gnu" - "Offload::Linker", inputs: ["[[OBJ]]"], output: "hip-binding.o"
+// LTO-NO-RDC-NEXT: # "amdgcn-amd-amdhsa" - "Offload::Packager", inputs: ["[[LTO_908]]", "[[LTO_90A]]"], output: "[[PKG:.+]]"
+// LTO-NO-RDC-NEXT: # "amdgcn-amd-amdhsa" - "Offload::Linker", inputs: ["[[PKG]]"], output: "[[HIPFB:.+]]"
+// LTO-NO-RDC-NEXT: # "x86_64-unknown-linux-gnu" - "clang", inputs: ["[[INPUT]]", "[[HIPFB]]"], output: "hip-binding.o"

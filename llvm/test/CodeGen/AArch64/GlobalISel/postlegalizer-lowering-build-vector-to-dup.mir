@@ -57,15 +57,12 @@ body:             |
     ; SELECT-NEXT: %r:gpr32 = COPY $w0
     ; SELECT-NEXT: %q:gpr32 = COPY $w1
     ; SELECT-NEXT: [[DEF:%[0-9]+]]:fpr64 = IMPLICIT_DEF
+    ; SELECT-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr64 = INSERT_SUBREG [[DEF]], %r, %subreg.ssub
     ; SELECT-NEXT: [[DEF1:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; SELECT-NEXT: [[INSERT_SUBREG:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[DEF]], %subreg.dsub
-    ; SELECT-NEXT: [[INSvi32gpr:%[0-9]+]]:fpr128 = INSvi32gpr [[INSERT_SUBREG]], 0, %r
+    ; SELECT-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF1]], [[INSERT_SUBREG]], %subreg.dsub
+    ; SELECT-NEXT: [[INSvi32gpr:%[0-9]+]]:fpr128 = INSvi32gpr [[INSERT_SUBREG1]], 1, %q
     ; SELECT-NEXT: [[COPY:%[0-9]+]]:fpr64 = COPY [[INSvi32gpr]].dsub
-    ; SELECT-NEXT: [[DEF2:%[0-9]+]]:fpr128 = IMPLICIT_DEF
-    ; SELECT-NEXT: [[INSERT_SUBREG1:%[0-9]+]]:fpr128 = INSERT_SUBREG [[DEF2]], [[COPY]], %subreg.dsub
-    ; SELECT-NEXT: [[INSvi32gpr1:%[0-9]+]]:fpr128 = INSvi32gpr [[INSERT_SUBREG1]], 1, %q
-    ; SELECT-NEXT: [[COPY1:%[0-9]+]]:fpr64 = COPY [[INSvi32gpr1]].dsub
-    ; SELECT-NEXT: $d0 = COPY [[COPY1]]
+    ; SELECT-NEXT: $d0 = COPY [[COPY]]
     ; SELECT-NEXT: RET_ReallyLR implicit $d0
     %r:_(s32) = COPY $w0
     %q:_(s32) = COPY $w1

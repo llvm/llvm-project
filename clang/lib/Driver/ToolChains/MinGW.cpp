@@ -7,14 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 #include "MinGW.h"
-#include "CommonArgs.h"
 #include "clang/Config/config.h"
+#include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/DriverDiagnostic.h"
 #include "clang/Driver/InputInfo.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/Config/llvm-config.h" // for LLVM_HOST_TRIPLE
 #include "llvm/Option/ArgList.h"
 #include "llvm/Support/FileSystem.h"
@@ -86,11 +85,18 @@ void tools::MinGW::Linker::AddLibGCC(const ArgList &Args,
 
   CmdArgs.push_back("-lmoldname");
   CmdArgs.push_back("-lmingwex");
-  for (auto Lib : Args.getAllArgValues(options::OPT_l))
+  for (auto Lib : Args.getAllArgValues(options::OPT_l)) {
     if (StringRef(Lib).starts_with("msvcr") ||
         StringRef(Lib).starts_with("ucrt") ||
-        StringRef(Lib).starts_with("crtdll"))
+        StringRef(Lib).starts_with("crtdll")) {
+      std::string CRTLib = (llvm::Twine("-l") + Lib).str();
+      // Respect the user's chosen crt variant, but still provide it
+      // again as the last linker argument, because some of the libraries
+      // we added above may depend on it.
+      CmdArgs.push_back(Args.MakeArgStringRef(CRTLib));
       return;
+    }
+  }
   CmdArgs.push_back("-lmsvcrt");
 }
 
@@ -133,7 +139,9 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
     CmdArgs.push_back("thumb2pe");
     break;
   case llvm::Triple::aarch64:
-    if (TC.getEffectiveTriple().isWindowsArm64EC())
+    if (Args.hasArg(options::OPT_marm64x))
+      CmdArgs.push_back("arm64xpe");
+    else if (TC.getEffectiveTriple().isWindowsArm64EC())
       CmdArgs.push_back("arm64ecpe");
     else
       CmdArgs.push_back("arm64pe");
@@ -251,11 +259,9 @@ void tools::MinGW::Linker::ConstructJob(Compilation &C, const JobAction &JA,
 
   AddLinkerInputs(TC, Inputs, Args, CmdArgs, JA);
 
-  if (D.isUsingLTO()) {
-    assert(!Inputs.empty() && "Must have at least one input.");
-    addLTOOptions(TC, Args, CmdArgs, Output, Inputs[0],
+  if (D.isUsingLTO())
+    addLTOOptions(TC, Args, CmdArgs, Output, Inputs,
                   D.getLTOMode() == LTOK_Thin);
-  }
 
   if (C.getDriver().IsFlangMode() &&
       !Args.hasArg(options::OPT_nostdlib, options::OPT_nodefaultlibs)) {
@@ -549,7 +555,7 @@ toolchains::MinGW::MinGW(const Driver &D, const llvm::Triple &Triple,
     getFilePaths().push_back(Base + "lib");
 
   NativeLLVMSupport =
-      Args.getLastArgValue(options::OPT_fuse_ld_EQ, CLANG_DEFAULT_LINKER)
+      Args.getLastArgValue(options::OPT_fuse_ld_EQ, D.getPreferredLinker())
           .equals_insensitive("lld");
 }
 

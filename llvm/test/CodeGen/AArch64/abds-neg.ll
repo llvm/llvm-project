@@ -9,8 +9,7 @@ define i8 @abd_ext_i8(i8 %a, i8 %b) nounwind {
 ; CHECK-LABEL: abd_ext_i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sxtb w8, w0
-; CHECK-NEXT:    sub w8, w8, w1, sxtb
-; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    subs w8, w8, w1, sxtb
 ; CHECK-NEXT:    cneg w0, w8, pl
 ; CHECK-NEXT:    ret
   %aext = sext i8 %a to i64
@@ -26,8 +25,7 @@ define i8 @abd_ext_i8_i16(i8 %a, i16 %b) nounwind {
 ; CHECK-LABEL: abd_ext_i8_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sxtb w8, w0
-; CHECK-NEXT:    sub w8, w8, w1, sxth
-; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    subs w8, w8, w1, sxth
 ; CHECK-NEXT:    cneg w0, w8, pl
 ; CHECK-NEXT:    ret
   %aext = sext i8 %a to i64
@@ -43,8 +41,7 @@ define i8 @abd_ext_i8_undef(i8 %a, i8 %b) nounwind {
 ; CHECK-LABEL: abd_ext_i8_undef:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sxtb w8, w0
-; CHECK-NEXT:    sub w8, w8, w1, sxtb
-; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    subs w8, w8, w1, sxtb
 ; CHECK-NEXT:    cneg w0, w8, pl
 ; CHECK-NEXT:    ret
   %aext = sext i8 %a to i64
@@ -60,8 +57,7 @@ define i16 @abd_ext_i16(i16 %a, i16 %b) nounwind {
 ; CHECK-LABEL: abd_ext_i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sxth w8, w0
-; CHECK-NEXT:    sub w8, w8, w1, sxth
-; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    subs w8, w8, w1, sxth
 ; CHECK-NEXT:    cneg w0, w8, pl
 ; CHECK-NEXT:    ret
   %aext = sext i16 %a to i64
@@ -77,10 +73,8 @@ define i16 @abd_ext_i16_i32(i16 %a, i32 %b) nounwind {
 ; CHECK-LABEL: abd_ext_i16_i32:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sxth w8, w0
-; CHECK-NEXT:    sub w9, w1, w8
 ; CHECK-NEXT:    subs w8, w8, w1
-; CHECK-NEXT:    csel w8, w8, w9, gt
-; CHECK-NEXT:    neg w0, w8
+; CHECK-NEXT:    cneg w0, w8, gt
 ; CHECK-NEXT:    ret
   %aext = sext i16 %a to i64
   %bext = sext i32 %b to i64
@@ -95,8 +89,7 @@ define i16 @abd_ext_i16_undef(i16 %a, i16 %b) nounwind {
 ; CHECK-LABEL: abd_ext_i16_undef:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sxth w8, w0
-; CHECK-NEXT:    sub w8, w8, w1, sxth
-; CHECK-NEXT:    cmp w8, #0
+; CHECK-NEXT:    subs w8, w8, w1, sxth
 ; CHECK-NEXT:    cneg w0, w8, pl
 ; CHECK-NEXT:    ret
   %aext = sext i16 %a to i64
@@ -111,10 +104,8 @@ define i16 @abd_ext_i16_undef(i16 %a, i16 %b) nounwind {
 define i32 @abd_ext_i32(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: abd_ext_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub w8, w1, w0
-; CHECK-NEXT:    subs w9, w0, w1
-; CHECK-NEXT:    csel w8, w9, w8, gt
-; CHECK-NEXT:    neg w0, w8
+; CHECK-NEXT:    subs w8, w0, w1
+; CHECK-NEXT:    cneg w0, w8, gt
 ; CHECK-NEXT:    ret
   %aext = sext i32 %a to i64
   %bext = sext i32 %b to i64
@@ -128,11 +119,8 @@ define i32 @abd_ext_i32(i32 %a, i32 %b) nounwind {
 define i32 @abd_ext_i32_i16(i32 %a, i16 %b) nounwind {
 ; CHECK-LABEL: abd_ext_i32_i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sxth w8, w1
-; CHECK-NEXT:    sub w9, w8, w0
-; CHECK-NEXT:    subs w8, w0, w8
-; CHECK-NEXT:    csel w8, w8, w9, gt
-; CHECK-NEXT:    neg w0, w8
+; CHECK-NEXT:    subs w8, w0, w1, sxth
+; CHECK-NEXT:    cneg w0, w8, gt
 ; CHECK-NEXT:    ret
   %aext = sext i32 %a to i64
   %bext = sext i16 %b to i64
@@ -146,10 +134,8 @@ define i32 @abd_ext_i32_i16(i32 %a, i16 %b) nounwind {
 define i32 @abd_ext_i32_undef(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: abd_ext_i32_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub w8, w1, w0
-; CHECK-NEXT:    subs w9, w0, w1
-; CHECK-NEXT:    csel w8, w9, w8, gt
-; CHECK-NEXT:    neg w0, w8
+; CHECK-NEXT:    subs w8, w0, w1
+; CHECK-NEXT:    cneg w0, w8, gt
 ; CHECK-NEXT:    ret
   %aext = sext i32 %a to i64
   %bext = sext i32 %b to i64
@@ -163,10 +149,8 @@ define i32 @abd_ext_i32_undef(i32 %a, i32 %b) nounwind {
 define i64 @abd_ext_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: abd_ext_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub x8, x1, x0
-; CHECK-NEXT:    subs x9, x0, x1
-; CHECK-NEXT:    csel x8, x9, x8, gt
-; CHECK-NEXT:    neg x0, x8
+; CHECK-NEXT:    subs x8, x0, x1
+; CHECK-NEXT:    cneg x0, x8, gt
 ; CHECK-NEXT:    ret
   %aext = sext i64 %a to i128
   %bext = sext i64 %b to i128
@@ -180,10 +164,8 @@ define i64 @abd_ext_i64(i64 %a, i64 %b) nounwind {
 define i64 @abd_ext_i64_undef(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: abd_ext_i64_undef:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub x8, x1, x0
-; CHECK-NEXT:    subs x9, x0, x1
-; CHECK-NEXT:    csel x8, x9, x8, gt
-; CHECK-NEXT:    neg x0, x8
+; CHECK-NEXT:    subs x8, x0, x1
+; CHECK-NEXT:    cneg x0, x8, gt
 ; CHECK-NEXT:    ret
   %aext = sext i64 %a to i128
   %bext = sext i64 %b to i128
@@ -200,8 +182,7 @@ define i128 @abd_ext_i128(i128 %a, i128 %b) nounwind {
 ; CHECK-NEXT:    subs x8, x0, x2
 ; CHECK-NEXT:    sbc x9, x1, x3
 ; CHECK-NEXT:    subs x10, x2, x0
-; CHECK-NEXT:    sbc x11, x3, x1
-; CHECK-NEXT:    sbcs xzr, x3, x1
+; CHECK-NEXT:    sbcs x11, x3, x1
 ; CHECK-NEXT:    csel x8, x8, x10, lt
 ; CHECK-NEXT:    csel x9, x9, x11, lt
 ; CHECK-NEXT:    negs x0, x8
@@ -222,8 +203,7 @@ define i128 @abd_ext_i128_undef(i128 %a, i128 %b) nounwind {
 ; CHECK-NEXT:    subs x8, x0, x2
 ; CHECK-NEXT:    sbc x9, x1, x3
 ; CHECK-NEXT:    subs x10, x2, x0
-; CHECK-NEXT:    sbc x11, x3, x1
-; CHECK-NEXT:    sbcs xzr, x3, x1
+; CHECK-NEXT:    sbcs x11, x3, x1
 ; CHECK-NEXT:    csel x8, x8, x10, lt
 ; CHECK-NEXT:    csel x9, x9, x11, lt
 ; CHECK-NEXT:    negs x0, x8
@@ -361,9 +341,8 @@ define i16 @abd_cmp_i16(i16 %a, i16 %b) nounwind {
 define i32 @abd_cmp_i32(i32 %a, i32 %b) nounwind {
 ; CHECK-LABEL: abd_cmp_i32:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub w8, w1, w0
-; CHECK-NEXT:    subs w9, w0, w1
-; CHECK-NEXT:    csel w0, w8, w9, ge
+; CHECK-NEXT:    subs w8, w0, w1
+; CHECK-NEXT:    cneg w0, w8, ge
 ; CHECK-NEXT:    ret
   %cmp = icmp sge i32 %a, %b
   %ab = sub i32 %a, %b
@@ -375,9 +354,8 @@ define i32 @abd_cmp_i32(i32 %a, i32 %b) nounwind {
 define i64 @abd_cmp_i64(i64 %a, i64 %b) nounwind {
 ; CHECK-LABEL: abd_cmp_i64:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    sub x8, x1, x0
-; CHECK-NEXT:    subs x9, x0, x1
-; CHECK-NEXT:    csel x0, x9, x8, lt
+; CHECK-NEXT:    subs x8, x0, x1
+; CHECK-NEXT:    cneg x0, x8, ge
 ; CHECK-NEXT:    ret
   %cmp = icmp slt i64 %a, %b
   %ab = sub i64 %a, %b
@@ -389,14 +367,12 @@ define i64 @abd_cmp_i64(i64 %a, i64 %b) nounwind {
 define i128 @abd_cmp_i128(i128 %a, i128 %b) nounwind {
 ; CHECK-LABEL: abd_cmp_i128:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    cmp x0, x2
-; CHECK-NEXT:    sbc x8, x1, x3
-; CHECK-NEXT:    subs x9, x2, x0
-; CHECK-NEXT:    sbc x10, x3, x1
-; CHECK-NEXT:    subs x11, x0, x2
-; CHECK-NEXT:    sbcs xzr, x1, x3
-; CHECK-NEXT:    csel x0, x11, x9, lt
-; CHECK-NEXT:    csel x1, x8, x10, lt
+; CHECK-NEXT:    subs x8, x2, x0
+; CHECK-NEXT:    sbc x9, x3, x1
+; CHECK-NEXT:    subs x10, x0, x2
+; CHECK-NEXT:    sbcs x11, x1, x3
+; CHECK-NEXT:    csel x0, x10, x8, lt
+; CHECK-NEXT:    csel x1, x11, x9, lt
 ; CHECK-NEXT:    ret
   %cmp = icmp slt i128 %a, %b
   %ab = sub i128 %a, %b

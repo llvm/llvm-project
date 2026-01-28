@@ -7,13 +7,13 @@
 //===----------------------------------------------------------------------===//
 
 def FeatureFP64 : SubtargetFeature<"fp64",
-  "FP64",
+  "HasFP64",
   "true",
   "Enable double precision operations"
 >;
 
 def FeatureFMA : SubtargetFeature<"fmaf",
-  "FMA",
+  "HasFMA",
   "true",
   "Enable single precision FMA (not as fast as mul+add, but fused)"
 >;
@@ -30,6 +30,7 @@ class SubtargetFeatureAddressableLocalMemorySize <int Value> : SubtargetFeature<
 def FeatureAddressableLocalMemorySize32768 : SubtargetFeatureAddressableLocalMemorySize<32768>;
 def FeatureAddressableLocalMemorySize65536 : SubtargetFeatureAddressableLocalMemorySize<65536>;
 def FeatureAddressableLocalMemorySize163840 : SubtargetFeatureAddressableLocalMemorySize<163840>;
+def FeatureAddressableLocalMemorySize327680 : SubtargetFeatureAddressableLocalMemorySize<327680>;
 
 class SubtargetFeatureWavefrontSize <int ValueLog2> : SubtargetFeature<
   "wavefrontsize"#!shl(1, ValueLog2),

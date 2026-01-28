@@ -88,6 +88,8 @@ void ModList() {
   // expected-error@+1{{OpenACC 'zero' modifier not valid on 'copyin' clause}}
 #pragma acc kernels copyin(zero: V1)
   for(int i = 5; i < 10;++i);
-#pragma acc parallel copyin(always, alwaysin, readonly: V1)
+#pragma acc parallel copyin(capture:V1)
+  for(int i = 5; i < 10;++i);
+#pragma acc parallel copyin(always, alwaysin, readonly, capture: V1)
   for(int i = 5; i < 10;++i);
 }

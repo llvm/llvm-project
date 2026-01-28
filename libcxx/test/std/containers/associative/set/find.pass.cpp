@@ -71,6 +71,21 @@ int main(int, char**) {
       assert(r == std::next(m.begin(), 8));
     }
   }
+  { // Check with std::greater to ensure we're actually using the correct comparator
+    using Set = std::set<int, std::greater<int> >;
+    int ar[]  = {5, 6, 7, 8, 9, 10, 11, 12};
+    Set m(ar, ar + sizeof(ar) / sizeof(ar[0]));
+    assert(m.find(12) == std::next(m.begin(), 0));
+    assert(m.find(11) == std::next(m.begin(), 1));
+    assert(m.find(10) == std::next(m.begin(), 2));
+    assert(m.find(9) == std::next(m.begin(), 3));
+    assert(m.find(8) == std::next(m.begin(), 4));
+    assert(m.find(7) == std::next(m.begin(), 5));
+    assert(m.find(6) == std::next(m.begin(), 6));
+    assert(m.find(5) == std::next(m.begin(), 7));
+    assert(m.find(4) == std::next(m.begin(), 8));
+    assert(std::next(m.begin(), 8) == m.end());
+  }
 #if TEST_STD_VER >= 11
   {
     typedef int V;

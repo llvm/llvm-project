@@ -1,0 +1,3 @@
+# RUN: llvm-mc -triple=mips64el-unknown-linux -disassemble -mattr=+ptr64 -mcpu=mips3 %s | FileCheck %s
+
+0xd8 0x49 0x6f 0xe2 # CHECK: sc $15, 18904($19)

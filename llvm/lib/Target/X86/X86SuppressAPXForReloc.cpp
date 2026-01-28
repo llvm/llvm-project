@@ -25,9 +25,7 @@
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
-#include "llvm/InitializePasses.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Target/TargetMachine.h"
 
 using namespace llvm;
 
@@ -40,9 +38,9 @@ cl::opt<bool> X86EnableAPXForRelocation(
     cl::init(false));
 
 namespace {
-class X86SuppressAPXForRelocationPass : public MachineFunctionPass {
+class X86SuppressAPXForRelocationLegacy : public MachineFunctionPass {
 public:
-  X86SuppressAPXForRelocationPass() : MachineFunctionPass(ID) {}
+  X86SuppressAPXForRelocationLegacy() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "X86 Suppress APX features for relocation";
@@ -54,20 +52,19 @@ public:
 };
 } // namespace
 
-char X86SuppressAPXForRelocationPass::ID = 0;
+char X86SuppressAPXForRelocationLegacy::ID = 0;
 
-INITIALIZE_PASS_BEGIN(X86SuppressAPXForRelocationPass, DEBUG_TYPE,
+INITIALIZE_PASS_BEGIN(X86SuppressAPXForRelocationLegacy, DEBUG_TYPE,
                       "X86 Suppress APX features for relocation", false, false)
-INITIALIZE_PASS_END(X86SuppressAPXForRelocationPass, DEBUG_TYPE,
+INITIALIZE_PASS_END(X86SuppressAPXForRelocationLegacy, DEBUG_TYPE,
                     "X86 Suppress APX features for relocation", false, false)
 
-FunctionPass *llvm::createX86SuppressAPXForRelocationPass() {
-  return new X86SuppressAPXForRelocationPass();
+FunctionPass *llvm::createX86SuppressAPXForRelocationLegacyPass() {
+  return new X86SuppressAPXForRelocationLegacy();
 }
 
-static void suppressEGPRRegClass(MachineFunction &MF, MachineInstr &MI,
+static void suppressEGPRRegClass(MachineRegisterInfo *MRI, MachineInstr &MI,
                                  const X86Subtarget &ST, unsigned int OpNum) {
-  MachineRegisterInfo *MRI = &MF.getRegInfo();
   Register Reg = MI.getOperand(OpNum).getReg();
   if (!Reg.isVirtual()) {
     assert(!X86II::isApxExtendedReg(Reg) && "APX EGPR is used unexpectedly.");
@@ -79,11 +76,30 @@ static void suppressEGPRRegClass(MachineFunction &MF, MachineInstr &MI,
   MRI->setRegClass(Reg, NewRC);
 }
 
+// Suppress EGPR in operand 0 of uses to avoid APX relocation types emitted. The
+// register in operand 0 of instruction with relocation may be replaced with
+// operand 0 of uses which may be EGPR. That may lead to emit APX relocation
+// types which breaks the backward compatibility with builtin linkers on
+// existing OS. For example, the register in operand 0 of instruction with
+// relocation is used in PHI instruction, and it may be replaced with operand 0
+// of PHI instruction after PHI elimination and Machine Copy Propagation pass.
+static void suppressEGPRRegClassInRegAndUses(MachineRegisterInfo *MRI,
+                                             MachineInstr &MI,
+                                             const X86Subtarget &ST,
+                                             unsigned int OpNum) {
+  suppressEGPRRegClass(MRI, MI, ST, OpNum);
+  Register Reg = MI.getOperand(OpNum).getReg();
+  for (MachineInstr &Use : MRI->use_instructions(Reg))
+    if (Use.getOpcode() == X86::PHI)
+      suppressEGPRRegClass(MRI, Use, ST, 0);
+}
+
 static bool handleInstructionWithEGPR(MachineFunction &MF,
                                       const X86Subtarget &ST) {
   if (!ST.hasEGPR())
     return false;
 
+  MachineRegisterInfo *MRI = &MF.getRegInfo();
   auto suppressEGPRInInstrWithReloc = [&](MachineInstr &MI,
                                           ArrayRef<unsigned> OpNoArray) {
     int MemOpNo = X86II::getMemoryOperandNo(MI.getDesc().TSFlags) +
@@ -94,7 +110,7 @@ static bool handleInstructionWithEGPR(MachineFunction &MF,
       LLVM_DEBUG(dbgs() << "Transform instruction with relocation type:\n  "
                         << MI);
       for (unsigned OpNo : OpNoArray)
-        suppressEGPRRegClass(MF, MI, ST, OpNo);
+        suppressEGPRRegClassInRegAndUses(MRI, MI, ST, OpNo);
       LLVM_DEBUG(dbgs() << "to:\n  " << MI << "\n");
     }
   };
@@ -167,7 +183,8 @@ static bool handleNDDOrNFInstructions(MachineFunction &MF,
         int MemOpNo = X86II::getMemoryOperandNo(MI.getDesc().TSFlags) +
                       X86II::getOperandBias(MI.getDesc());
         const MachineOperand &MO = MI.getOperand(X86::AddrDisp + MemOpNo);
-        if (MO.getTargetFlags() == X86II::MO_GOTTPOFF) {
+        if (MO.getTargetFlags() == X86II::MO_GOTTPOFF ||
+            MO.getTargetFlags() == X86II::MO_GOTPCREL) {
           LLVM_DEBUG(dbgs() << "Transform instruction with relocation type:\n  "
                             << MI);
           Register Reg = MRI->createVirtualRegister(&X86::GR64_NOREX2RegClass);
@@ -178,7 +195,7 @@ static bool handleNDDOrNFInstructions(MachineFunction &MF,
           MI.getOperand(1).setReg(Reg);
           const MCInstrDesc &NewDesc = TII->get(X86::ADD64rm);
           MI.setDesc(NewDesc);
-          suppressEGPRRegClass(MF, MI, ST, 0);
+          suppressEGPRRegClassInRegAndUses(MRI, MI, ST, 0);
           MI.tieOperands(0, 1);
           LLVM_DEBUG(dbgs() << "to:\n  " << *CopyMIB << "\n");
           LLVM_DEBUG(dbgs() << "  " << MI << "\n");
@@ -191,7 +208,7 @@ static bool handleNDDOrNFInstructions(MachineFunction &MF,
         if (MO.getTargetFlags() == X86II::MO_GOTTPOFF) {
           LLVM_DEBUG(dbgs() << "Transform instruction with relocation type:\n  "
                             << MI);
-          suppressEGPRRegClass(MF, MI, ST, 0);
+          suppressEGPRRegClassInRegAndUses(MRI, MI, ST, 0);
           Register Reg = MRI->createVirtualRegister(&X86::GR64_NOREX2RegClass);
           [[maybe_unused]] MachineInstrBuilder CopyMIB =
               BuildMI(MBB, MI, MI.getDebugLoc(), TII->get(TargetOpcode::COPY),
@@ -226,8 +243,7 @@ static bool handleNDDOrNFInstructions(MachineFunction &MF,
   return true;
 }
 
-bool X86SuppressAPXForRelocationPass::runOnMachineFunction(
-    MachineFunction &MF) {
+static bool suppressAPXForRelocation(MachineFunction &MF) {
   if (X86EnableAPXForRelocation)
     return false;
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
@@ -235,4 +251,18 @@ bool X86SuppressAPXForRelocationPass::runOnMachineFunction(
   Changed |= handleNDDOrNFInstructions(MF, ST);
 
   return Changed;
+}
+
+bool X86SuppressAPXForRelocationLegacy::runOnMachineFunction(
+    MachineFunction &MF) {
+  return suppressAPXForRelocation(MF);
+}
+
+PreservedAnalyses
+X86SuppressAPXForRelocationPass::run(MachineFunction &MF,
+                                     MachineFunctionAnalysisManager &MFAM) {
+  return suppressAPXForRelocation(MF)
+             ? getMachineFunctionPassPreservedAnalyses()
+                   .preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
 }

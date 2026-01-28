@@ -5,8 +5,8 @@ define void @test(float %0) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: float [[TMP0:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> <float poison, float 0.000000e+00>, float [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP5:%.*]] = fdiv <2 x float> [[TMP4]], zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = shufflevector <2 x float> [[TMP4]], <2 x float> <float 0.000000e+00, float poison>, <2 x i32> <i32 2, i32 0>
+; CHECK-NEXT:    [[TMP5:%.*]] = fdiv <2 x float> [[TMP4]], zeroinitializer
 ; CHECK-NEXT:    [[TMP3:%.*]] = fdiv <2 x float> [[TMP6]], zeroinitializer
 ; CHECK-NEXT:    br label %[[BB6:.*]]
 ; CHECK:       [[BB6]]:

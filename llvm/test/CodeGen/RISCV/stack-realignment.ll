@@ -1340,7 +1340,7 @@ define void @caller4096() {
 ; RV64I-NEXT:    addi s0, sp, 2032
 ; RV64I-NEXT:    .cfi_def_cfa s0, 0
 ; RV64I-NEXT:    lui a0, 2
-; RV64I-NEXT:    addiw a0, a0, -2032
+; RV64I-NEXT:    addi a0, a0, -2032
 ; RV64I-NEXT:    sub sp, sp, a0
 ; RV64I-NEXT:    srli a0, sp, 12
 ; RV64I-NEXT:    slli sp, a0, 12
@@ -1368,7 +1368,7 @@ define void @caller4096() {
 ; RV64I-LP64E-NEXT:    addi s0, sp, 2040
 ; RV64I-LP64E-NEXT:    .cfi_def_cfa s0, 0
 ; RV64I-LP64E-NEXT:    lui a0, 2
-; RV64I-LP64E-NEXT:    addiw a0, a0, -2040
+; RV64I-LP64E-NEXT:    addi a0, a0, -2040
 ; RV64I-LP64E-NEXT:    sub sp, sp, a0
 ; RV64I-LP64E-NEXT:    srli a0, sp, 12
 ; RV64I-LP64E-NEXT:    slli sp, a0, 12

@@ -10,17 +10,14 @@ define i8 @widget(ptr %arr, i8 %t9) {
 ; CHECK-NEXT:    br label [[BB6:%.*]]
 ; CHECK:       bb6:
 ; CHECK-NEXT:    [[T1_0:%.*]] = phi ptr [ [[ARR]], [[BB:%.*]] ], [ null, [[BB6]] ]
+; CHECK-NEXT:    [[T1_0_LCSSA2:%.*]] = ptrtoint ptr [[T1_0]] to i64
 ; CHECK-NEXT:    [[C:%.*]] = call i1 @cond()
 ; CHECK-NEXT:    br i1 [[C]], label [[FOR_PREHEADER:%.*]], label [[BB6]]
 ; CHECK:       for.preheader:
-; CHECK-NEXT:    [[T1_0_LCSSA:%.*]] = phi ptr [ [[T1_0]], [[BB6]] ]
-; CHECK-NEXT:    [[T1_0_LCSSA4:%.*]] = phi ptr [ [[T1_0]], [[BB6]] ]
 ; CHECK-NEXT:    [[T1_0_LCSSA1:%.*]] = phi ptr [ [[T1_0]], [[BB6]] ]
-; CHECK-NEXT:    [[T1_0_LCSSA3:%.*]] = ptrtoint ptr [[T1_0_LCSSA]] to i64
-; CHECK-NEXT:    [[T1_0_LCSSA2:%.*]] = ptrtoint ptr [[T1_0_LCSSA4]] to i64
 ; CHECK-NEXT:    [[TMP0:%.*]] = trunc i64 [[ARR1]] to i32
 ; CHECK-NEXT:    [[TMP1:%.*]] = sub i32 0, [[TMP0]]
-; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[T1_0_LCSSA3]] to i32
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i64 [[T1_0_LCSSA2]] to i32
 ; CHECK-NEXT:    [[TMP3:%.*]] = add i32 [[TMP1]], [[TMP2]]
 ; CHECK-NEXT:    [[MIN_ITERS_CHECK:%.*]] = icmp ult i32 [[TMP3]], 4
 ; CHECK-NEXT:    br i1 [[MIN_ITERS_CHECK]], label [[SCALAR_PH:%.*]], label [[VECTOR_SCEVCHECK:%.*]]
@@ -48,8 +45,7 @@ define i8 @widget(ptr %arr, i8 %t9) {
 ; CHECK-NEXT:    [[TMP13:%.*]] = getelementptr inbounds i8, ptr [[ARR]], i8 [[TMP12]]
 ; CHECK-NEXT:    [[TMP14:%.*]] = icmp slt <4 x i8> [[TMP11]], [[BROADCAST_SPLAT]]
 ; CHECK-NEXT:    [[TMP15:%.*]] = zext <4 x i1> [[TMP14]] to <4 x i8>
-; CHECK-NEXT:    [[TMP16:%.*]] = getelementptr inbounds i8, ptr [[TMP13]], i32 0
-; CHECK-NEXT:    store <4 x i8> [[TMP15]], ptr [[TMP16]], align 1
+; CHECK-NEXT:    store <4 x i8> [[TMP15]], ptr [[TMP13]], align 1
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 4
 ; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <4 x i8> [[VEC_IND]], splat (i8 4)
 ; CHECK-NEXT:    [[TMP17:%.*]] = icmp eq i32 [[INDEX_NEXT]], [[N_VEC]]

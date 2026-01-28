@@ -135,3 +135,66 @@ define <2 x ptr> @test_v2p0(<2 x ptr> %a, <2 x ptr> %b) {
   %s = shufflevector <2 x ptr> %a, <2 x ptr> %b, <2 x i32> <i32 3, i32 0>
   ret <2 x ptr> %s
 }
+
+define <16 x i8> @reverse_vector_s8x16b(<16 x i8> noundef %x) {
+; CHECK-SD-LABEL: reverse_vector_s8x16b:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    rev64 v0.16b, v0.16b
+; CHECK-SD-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: reverse_vector_s8x16b:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    rev64 v1.16b, v0.16b
+; CHECK-GI-NEXT:    mov d0, v1.d[1]
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    ret
+entry:
+  %shuffle.i = shufflevector <16 x i8> %x, <16 x i8> poison, <16 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0, i32 15, i32 14, i32 13, i32 12, i32 11, i32 10, i32 9, i32 8>
+  %shuffle.i6 = shufflevector <16 x i8> %shuffle.i, <16 x i8> poison, <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  %shuffle.i7 = shufflevector <16 x i8> %shuffle.i, <16 x i8> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  %shuffle.i5 = shufflevector <8 x i8> %shuffle.i6, <8 x i8> %shuffle.i7, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
+  ret <16 x i8> %shuffle.i5
+}
+
+define <8 x i16> @reverse_vector_s16x8b(<8 x i16> noundef %x) {
+; CHECK-SD-LABEL: reverse_vector_s16x8b:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    rev64 v0.8h, v0.8h
+; CHECK-SD-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: reverse_vector_s16x8b:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    rev64 v1.8h, v0.8h
+; CHECK-GI-NEXT:    mov d0, v1.d[1]
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    ret
+entry:
+  %shuffle.i = shufflevector <8 x i16> %x, <8 x i16> poison, <8 x i32> <i32 3, i32 2, i32 1, i32 0, i32 7, i32 6, i32 5, i32 4>
+  %shuffle.i6 = shufflevector <8 x i16> %shuffle.i, <8 x i16> poison, <4 x i32> <i32 4, i32 5, i32 6, i32 7>
+  %shuffle.i7 = shufflevector <8 x i16> %shuffle.i, <8 x i16> poison, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  %shuffle.i5 = shufflevector <4 x i16> %shuffle.i6, <4 x i16> %shuffle.i7, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+  ret <8 x i16> %shuffle.i5
+}
+
+define <4 x i32> @reverse_vector_s32x4b(<4 x i32> noundef %x) {
+; CHECK-SD-LABEL: reverse_vector_s32x4b:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-SD-NEXT:    ext v0.16b, v0.16b, v0.16b, #8
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: reverse_vector_s32x4b:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    rev64 v1.4s, v0.4s
+; CHECK-GI-NEXT:    mov d0, v1.d[1]
+; CHECK-GI-NEXT:    mov v0.d[1], v1.d[0]
+; CHECK-GI-NEXT:    ret
+entry:
+  %shuffle.i = shufflevector <4 x i32> %x, <4 x i32> poison, <4 x i32> <i32 1, i32 0, i32 3, i32 2>
+  %shuffle.i6 = shufflevector <4 x i32> %shuffle.i, <4 x i32> poison, <2 x i32> <i32 2, i32 3>
+  %shuffle.i7 = shufflevector <4 x i32> %shuffle.i, <4 x i32> poison, <2 x i32> <i32 0, i32 1>
+  %shuffle.i5 = shufflevector <2 x i32> %shuffle.i6, <2 x i32> %shuffle.i7, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
+  ret <4 x i32> %shuffle.i5
+}

@@ -63,11 +63,8 @@ class StdUnorderedMapSynthProvider:
         self.count = None
 
     def extract_type(self):
-        type = self.valobj.GetType()
-        # The last template argument is the allocator type.
-        template_arg_num = type.GetNumberOfTemplateArguments() - 1
-        allocator_type = type.GetTemplateArgumentType(template_arg_num)
-        data_type = allocator_type.GetTemplateArgumentType(0)
+        head_type = self.head.GetType().GetCanonicalType()
+        data_type = head_type.GetTemplateArgumentType(1)
         return data_type
 
     def update(self):
@@ -880,38 +877,6 @@ class StdDequeSynthProvider:
         except:
             pass
         return False
-
-
-def VariantSummaryProvider(valobj, dict):
-    raw_obj = valobj.GetNonSyntheticValue()
-    index_obj = raw_obj.GetChildMemberWithName("_M_index")
-    data_obj = raw_obj.GetChildMemberWithName("_M_u")
-    if not (index_obj and index_obj.IsValid() and data_obj and data_obj.IsValid()):
-        return "<Can't find _M_index or _M_u>"
-
-    def get_variant_npos_value(index_byte_size):
-        if index_byte_size == 1:
-            return 0xFF
-        elif index_byte_size == 2:
-            return 0xFFFF
-        else:
-            return 0xFFFFFFFF
-
-    npos_value = get_variant_npos_value(index_obj.GetByteSize())
-    index = index_obj.GetValueAsUnsigned(0)
-    if index == npos_value:
-        return " No Value"
-
-    # Strip references and typedefs.
-    variant_type = raw_obj.GetType().GetCanonicalType().GetDereferencedType()
-    template_arg_count = variant_type.GetNumberOfTemplateArguments()
-
-    # Invalid index can happen when the variant is not initialized yet.
-    if index >= template_arg_count:
-        return " <Invalid>"
-
-    active_type = variant_type.GetTemplateArgumentType(index)
-    return f" Active Type = {active_type.GetDisplayTypeName()} "
 
 
 class VariantSynthProvider:

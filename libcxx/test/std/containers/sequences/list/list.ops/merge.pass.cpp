@@ -8,7 +8,7 @@
 
 // <list>
 
-// void merge(list& x);
+// void merge(list& x); // constexpr since C++26
 // If (addressof(x) == this) does nothing; otherwise ...
 
 #include <list>
@@ -17,7 +17,7 @@
 #include "test_macros.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     int a1[] = {1, 3, 7, 9, 10};
     int a2[] = {0, 2, 4, 5, 6, 8, 11};
@@ -47,6 +47,15 @@ int main(int, char**) {
     assert((c1 == std::list<int, min_allocator<int>>(a3, a3 + sizeof(a3) / sizeof(a3[0]))));
     assert(c2.empty());
   }
+#endif
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
 #endif
 
   return 0;

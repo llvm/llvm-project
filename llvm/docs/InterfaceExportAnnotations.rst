@@ -123,7 +123,7 @@ class declaration must be annotated with ``LLVM_ABI``.
 
    class ExampleClass {
    public:
-     // Public methods defined externally must be annotatated.
+     // Public methods defined externally must be annotated.
      LLVM_ABI int sourceDefinedPublicMethod(int a, int b);
 
      // Methods defined in the class definition do not need annotation.
@@ -135,7 +135,7 @@ class declaration must be annotated with ``LLVM_ABI``.
      ExampleClass() {}
      LLVM_ABI ~ExampleClass();
 
-     // Public static methods defined externally must be annotatated.
+     // Public static methods defined externally must be annotated.
      LLVM_ABI static int sourceDefinedPublicStaticMethod(int a, int b);
    };
 
@@ -222,7 +222,7 @@ method in a C++ class, it may be annotated for export.
 Friend Functions
 ~~~~~~~~~~~~~~~~
 Friend functions declared in a class, struct or union must be annotated with
-``LLVM_ABI_FRIEND`` if the corresponding function declaration is annotated with
+``LLVM_ABI`` if the corresponding function declaration is annotated with
 ``LLVM_ABI``. This requirement applies even when the class containing the friend
 declaration is annotated with ``LLVM_ABI``.
 
@@ -236,14 +236,13 @@ declaration is annotated with ``LLVM_ABI``.
    class ExampleClass {
      // Friend declaration of a function must be annotated the same as the actual
      // function declaration.
-     LLVM_ABI_FRIEND friend int friend_function(ExampleClass &obj);
+     LLVM_ABI friend int friend_function(ExampleClass &obj);
    };
 
 .. note::
 
    Annotating the friend declaration avoids an “inconsistent dll linkage”
-   compiler error when building a DLL for Windows. The ``LLVM_ABI_FRIEND``
-   annotation is a no-op when building ELF or Mach-O shared libraries.
+   compiler error when building a DLL for Windows.
 
 Virtual Table and Type Info
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~

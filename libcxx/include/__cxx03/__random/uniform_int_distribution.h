@@ -50,10 +50,10 @@ private:
   _Engine_result_type __mask0_;
   _Engine_result_type __mask1_;
 
-  static const _Working_result_type _Rp      = _Engine::_Max - _Engine::_Min + _Working_result_type(1);
-  static _LIBCPP_CONSTEXPR const size_t __m  = __log2<_Working_result_type, _Rp>::value;
-  static _LIBCPP_CONSTEXPR const size_t _WDt = numeric_limits<_Working_result_type>::digits;
-  static _LIBCPP_CONSTEXPR const size_t _EDt = numeric_limits<_Engine_result_type>::digits;
+  static const _Working_result_type _Rp = _Engine::_Max - _Engine::_Min + _Working_result_type(1);
+  static const size_t __m               = __log2<_Working_result_type, _Rp>::value;
+  static const size_t _WDt              = numeric_limits<_Working_result_type>::digits;
+  static const size_t _EDt              = numeric_limits<_Engine_result_type>::digits;
 
 public:
   // constructors and seeding functions

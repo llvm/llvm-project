@@ -124,6 +124,11 @@ public:
   bool initializeFrameInfo(PerFunctionMIParsingState &PFS,
                            const yaml::MachineFunction &YamlMF);
 
+  bool initializeSaveRestorePoints(
+      PerFunctionMIParsingState &PFS,
+      const std::vector<yaml::SaveRestorePointEntry> &YamlSRPoints,
+      llvm::SaveRestorePoints &SaveRestorePoints);
+
   bool initializeCallSiteInfo(PerFunctionMIParsingState &PFS,
                               const yaml::MachineFunction &YamlMF);
 
@@ -434,7 +439,7 @@ bool MIRParserImpl::computeFunctionProperties(
   MF.setHasInlineAsm(HasInlineAsm);
 
   if (HasTiedOps && AllTiedOpsRewritten)
-    Properties.set(MachineFunctionProperties::Property::TiedOpsRewritten);
+    Properties.setTiedOpsRewritten();
 
   if (ComputedPropertyHelper(YamlMF.IsSSA, isSSA(MF),
                              MachineFunctionProperties::Property::IsSSA)) {
@@ -504,13 +509,21 @@ bool MIRParserImpl::initializeCallSiteInfo(
         return error(Error, ArgRegPair.Reg.SourceRange);
       CSInfo.ArgRegPairs.emplace_back(Reg, ArgRegPair.ArgNo);
     }
+    if (!YamlCSInfo.CalleeTypeIds.empty()) {
+      for (auto CalleeTypeId : YamlCSInfo.CalleeTypeIds) {
+        IntegerType *Int64Ty = Type::getInt64Ty(Context);
+        CSInfo.CalleeTypeIds.push_back(ConstantInt::get(Int64Ty, CalleeTypeId,
+                                                        /*isSigned=*/false));
+      }
+    }
 
-    if (TM.Options.EmitCallSiteInfo)
+    if (TM.Options.EmitCallSiteInfo || TM.Options.EmitCallGraphSection)
       MF.addCallSiteInfo(&*CallI, std::move(CSInfo));
   }
 
-  if (YamlMF.CallSitesInfo.size() && !TM.Options.EmitCallSiteInfo)
-    return error(Twine("Call site info provided but not used"));
+  if (!YamlMF.CallSitesInfo.empty() &&
+      !(TM.Options.EmitCallSiteInfo || TM.Options.EmitCallGraphSection))
+    return error("call site info provided but not used");
   return false;
 }
 
@@ -521,7 +534,7 @@ void MIRParserImpl::setupDebugValueTracking(
   unsigned MaxInstrNum = 0;
   for (auto &MBB : MF)
     for (auto &MI : MBB)
-      MaxInstrNum = std::max((unsigned)MI.peekDebugInstrNum(), MaxInstrNum);
+      MaxInstrNum = std::max(MI.peekDebugInstrNum(), MaxInstrNum);
   MF.setDebugInstrNumberingCount(MaxInstrNum);
 
   // Load any substitutions.
@@ -556,21 +569,19 @@ MIRParserImpl::initializeMachineFunction(const yaml::MachineFunction &YamlMF,
   MF.setHasEHFunclets(YamlMF.HasEHFunclets);
   MF.setIsOutlined(YamlMF.IsOutlined);
 
+  MachineFunctionProperties &Props = MF.getProperties();
   if (YamlMF.Legalized)
-    MF.getProperties().set(MachineFunctionProperties::Property::Legalized);
+    Props.setLegalized();
   if (YamlMF.RegBankSelected)
-    MF.getProperties().set(
-        MachineFunctionProperties::Property::RegBankSelected);
+    Props.setRegBankSelected();
   if (YamlMF.Selected)
-    MF.getProperties().set(MachineFunctionProperties::Property::Selected);
+    Props.setSelected();
   if (YamlMF.FailedISel)
-    MF.getProperties().set(MachineFunctionProperties::Property::FailedISel);
+    Props.setFailedISel();
   if (YamlMF.FailsVerification)
-    MF.getProperties().set(
-        MachineFunctionProperties::Property::FailsVerification);
+    Props.setFailsVerification();
   if (YamlMF.TracksDebugUserValues)
-    MF.getProperties().set(
-        MachineFunctionProperties::Property::TracksDebugUserValues);
+    Props.setTracksDebugUserValues();
 
   PerFunctionMIParsingState PFS(MF, SM, IRSlots, *Target);
   if (parseRegisterInfo(PFS, YamlMF))
@@ -765,22 +776,25 @@ bool MIRParserImpl::setupRegisterInfo(const PerFunctionMIParsingState &PFS,
   MachineRegisterInfo &MRI = MF.getRegInfo();
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
 
-  bool Error = false;
+  SmallVector<std::string> Errors;
+
   // Create VRegs
   auto populateVRegInfo = [&](const VRegInfo &Info, const Twine &Name) {
     Register Reg = Info.VReg;
     switch (Info.Kind) {
     case VRegInfo::UNKNOWN:
-      error(Twine("Cannot determine class/bank of virtual register ") +
-            Name + " in function '" + MF.getName() + "'");
-      Error = true;
+      Errors.push_back(
+          (Twine("Cannot determine class/bank of virtual register ") + Name +
+           " in function '" + MF.getName() + "'")
+              .str());
       break;
     case VRegInfo::NORMAL:
       if (!Info.D.RC->isAllocatable()) {
-        error(Twine("Cannot use non-allocatable class '") +
-              TRI->getRegClassName(Info.D.RC) + "' for virtual register " +
-              Name + " in function '" + MF.getName() + "'");
-        Error = true;
+        Errors.push_back((Twine("Cannot use non-allocatable class '") +
+                          TRI->getRegClassName(Info.D.RC) +
+                          "' for virtual register " + Name + " in function '" +
+                          MF.getName() + "'")
+                             .str());
         break;
       }
 
@@ -822,7 +836,14 @@ bool MIRParserImpl::setupRegisterInfo(const PerFunctionMIParsingState &PFS,
     }
   }
 
-  return Error;
+  if (Errors.empty())
+    return false;
+
+  // Report errors in a deterministic order.
+  sort(Errors);
+  for (auto &E : Errors)
+    error(E);
+  return true;
 }
 
 bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
@@ -851,18 +872,14 @@ bool MIRParserImpl::initializeFrameInfo(PerFunctionMIParsingState &PFS,
   MFI.setHasTailCall(YamlMFI.HasTailCall);
   MFI.setCalleeSavedInfoValid(YamlMFI.IsCalleeSavedInfoValid);
   MFI.setLocalFrameSize(YamlMFI.LocalFrameSize);
-  if (!YamlMFI.SavePoint.Value.empty()) {
-    MachineBasicBlock *MBB = nullptr;
-    if (parseMBBReference(PFS, MBB, YamlMFI.SavePoint))
-      return true;
-    MFI.setSavePoint(MBB);
-  }
-  if (!YamlMFI.RestorePoint.Value.empty()) {
-    MachineBasicBlock *MBB = nullptr;
-    if (parseMBBReference(PFS, MBB, YamlMFI.RestorePoint))
-      return true;
-    MFI.setRestorePoint(MBB);
-  }
+  llvm::SaveRestorePoints SavePoints;
+  if (initializeSaveRestorePoints(PFS, YamlMFI.SavePoints, SavePoints))
+    return true;
+  MFI.setSavePoints(SavePoints);
+  llvm::SaveRestorePoints RestorePoints;
+  if (initializeSaveRestorePoints(PFS, YamlMFI.RestorePoints, RestorePoints))
+    return true;
+  MFI.setRestorePoints(RestorePoints);
 
   std::vector<CalleeSavedInfo> CSIInfo;
   // Initialize the fixed frame objects.
@@ -1073,6 +1090,29 @@ bool MIRParserImpl::initializeConstantPool(PerFunctionMIParsingState &PFS,
       return error(YamlConstant.ID.SourceRange.Start,
                    Twine("redefinition of constant pool item '%const.") +
                        Twine(YamlConstant.ID.Value) + "'");
+  }
+  return false;
+}
+
+// Return true if basic block was incorrectly specified in MIR
+bool MIRParserImpl::initializeSaveRestorePoints(
+    PerFunctionMIParsingState &PFS,
+    const std::vector<yaml::SaveRestorePointEntry> &YamlSRPoints,
+    llvm::SaveRestorePoints &SaveRestorePoints) {
+  SMDiagnostic Error;
+  MachineBasicBlock *MBB = nullptr;
+  for (const yaml::SaveRestorePointEntry &Entry : YamlSRPoints) {
+    if (parseMBBReference(PFS, MBB, Entry.Point.Value))
+      return true;
+
+    std::vector<CalleeSavedInfo> Registers;
+    for (auto &RegStr : Entry.Registers) {
+      Register Reg;
+      if (parseNamedRegisterReference(PFS, Reg, RegStr.Value, Error))
+        return error(Error, RegStr.SourceRange);
+      Registers.push_back(CalleeSavedInfo(Reg));
+    }
+    SaveRestorePoints.try_emplace(MBB, std::move(Registers));
   }
   return false;
 }

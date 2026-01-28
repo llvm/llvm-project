@@ -13,6 +13,9 @@
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBEnvironment.h"
 #include "lldb/API/SBError.h"
+#include "lldb/API/SBFileSpec.h"
+#include "lldb/API/SBLineEntry.h"
+#include "lldb/API/SBTarget.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
@@ -122,7 +125,7 @@ bool ThreadHasStopReason(lldb::SBThread &thread);
 /// \return
 ///     A unique integer that allows us to easily find the right
 ///     stack frame within a thread on subsequent VS code requests.
-int64_t MakeDAPFrameID(lldb::SBFrame &frame);
+uint64_t MakeDAPFrameID(lldb::SBFrame &frame);
 
 /// Given a DAP frame ID, convert to a LLDB thread index id.
 ///
@@ -160,6 +163,27 @@ uint32_t GetLLDBFrameID(uint64_t dap_frame_id);
 ///     The environment variables stored in the env key
 lldb::SBEnvironment
 GetEnvironmentFromArguments(const llvm::json::Object &arguments);
+
+/// Gets an SBFileSpec and returns its path as a string.
+///
+/// \param[in] file_spec
+///     The file spec.
+///
+/// \return
+///     The file path as a string.
+std::string GetSBFileSpecPath(const lldb::SBFileSpec &file_spec);
+
+/// Gets the line entry for a given address.
+/// \param[in] target
+///     The target that has the address.
+///
+/// \param[in] address
+///     The address for which to get the line entry.
+///
+/// \return
+///     The line entry for the given address.
+lldb::SBLineEntry GetLineEntryForAddress(lldb::SBTarget &target,
+                                         const lldb::SBAddress &address);
 
 /// Helper for sending telemetry to lldb server, if client-telemetry is enabled.
 class TelemetryDispatcher {
@@ -219,11 +243,29 @@ private:
 lldb::StopDisassemblyType GetStopDisassemblyDisplay(lldb::SBDebugger &debugger);
 
 /// Take ownership of the stored error.
-llvm::Error ToError(const lldb::SBError &error);
+llvm::Error ToError(const lldb::SBError &error, bool show_user = true);
 
 /// Provides the string value if this data structure is a string type.
 std::string GetStringValue(const lldb::SBStructuredData &data);
 
+/// Converts UTF16 column codeunits to bytes.
+/// we are recieving utf8 from the specification.
+/// UTF16 codunit size => 2 bytes.
+/// UTF8 codunit size => 1 byte.
+/// Example
+/// | info     | info  | utf16_cu | size in bytes |
+/// | fake f   | ƒ     | 1        | 2             |
+/// | fake c   | ç     | 1        | 3             |
+/// | poop char| 💩    | 2        | 4             |
+///
+/// so with inputs string of
+/// (`ƒ💩`, 3) we have 3 utf16_u and ( 2 + 4 ) bytes.
+/// (`ƒ💩`, 2) we have 3 utf16_u and ( 2 + 4 ) bytes but the position is in
+///  between the 💩 char so we return null since the codepoint is not complete.
+///
+/// see https://utf8everywhere.org/#characters for more info.
+std::optional<size_t> UTF16CodeunitToBytes(llvm::StringRef line,
+                                           uint32_t utf16_codeunits);
 } // namespace lldb_dap
 
 #endif

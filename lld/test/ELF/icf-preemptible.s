@@ -17,12 +17,6 @@
 # EXE-NEXT: selected section {{.*}}:(.text.h1)
 # EXE-NEXT:   removing identical section {{.*}}:(.text.h2)
 # EXE-NEXT:   removing identical section {{.*}}:(.text.h3)
-# EXE-NEXT: redirecting 'f2' in symtab to 'f1'
-# EXE-NEXT: redirecting 'g2' in symtab to 'g1'
-# EXE-NEXT: redirecting 'g3' in symtab to 'g1'
-# EXE-NEXT: redirecting 'f2' to 'f1'
-# EXE-NEXT: redirecting 'g2' to 'g1'
-# EXE-NEXT: redirecting 'g3' to 'g1'
 # EXE-NOT:  {{.}}
 
 ## Definitions are preemptible in a DSO. Only leaf functions can be folded.

@@ -16,7 +16,7 @@
 #define TSAN_INTERFACE_H
 
 #include <sanitizer_common/sanitizer_internal_defs.h>
-using __sanitizer::tid_t;
+using __sanitizer::ThreadID;
 using __sanitizer::uptr;
 
 // This header should NOT include any other headers.
@@ -175,7 +175,7 @@ int __tsan_get_report_mutex(void *report, uptr idx, uptr *mutex_id, void **addr,
 
 // Returns information about threads included in the report.
 SANITIZER_INTERFACE_ATTRIBUTE
-int __tsan_get_report_thread(void *report, uptr idx, int *tid, tid_t *os_id,
+int __tsan_get_report_thread(void *report, uptr idx, int *tid, ThreadID *os_id,
                              int *running, const char **name, int *parent_tid,
                              void **trace, uptr trace_size);
 
@@ -192,7 +192,7 @@ const char *__tsan_locate_address(uptr addr, char *name, uptr name_size,
 // Returns the allocation stack for a heap pointer.
 SANITIZER_INTERFACE_ATTRIBUTE
 int __tsan_get_alloc_stack(uptr addr, uptr *trace, uptr size, int *thread_id,
-                           tid_t *os_id);
+                           ThreadID *os_id);
 
 #endif  // SANITIZER_GO
 

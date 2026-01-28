@@ -62,7 +62,7 @@ public:
   static std::unique_ptr<WorkListMaintainer>
   create(Level Lvl, WorkListTy &WorkList, MachineRegisterInfo &MRI);
 
-  virtual ~WorkListMaintainer() = default;
+  ~WorkListMaintainer() override = default;
 
   void reportFullyCreatedInstrs() {
     LLVM_DEBUG({
@@ -95,7 +95,7 @@ public:
   WorkListMaintainerImpl(WorkListTy &WorkList, MachineRegisterInfo &MRI)
       : WorkList(WorkList), MRI(MRI) {}
 
-  virtual ~WorkListMaintainerImpl() = default;
+  ~WorkListMaintainerImpl() override = default;
 
   void reset() override {
     DeferList.clear();
@@ -255,8 +255,7 @@ bool Combiner::tryDCE(MachineInstr &MI, MachineRegisterInfo &MRI) {
 bool Combiner::combineMachineInstrs() {
   // If the ISel pipeline failed, do not bother running this pass.
   // FIXME: Should this be here or in individual combiner passes.
-  if (MF.getProperties().hasProperty(
-          MachineFunctionProperties::Property::FailedISel))
+  if (MF.getProperties().hasFailedISel())
     return false;
 
   // We can't call this in the constructor because the derived class is

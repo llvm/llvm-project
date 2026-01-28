@@ -41,13 +41,51 @@ public:
 private:
   void calculateFrameObjectOffsets(MachineFunction &Fn);
 };
-}
+} // end anonymous namespace
 
 MachineFunctionPass *llvm::createNVPTXPrologEpilogPass() {
   return new NVPTXPrologEpilogPass();
 }
 
 char NVPTXPrologEpilogPass::ID = 0;
+
+INITIALIZE_PASS(NVPTXPrologEpilogPass, DEBUG_TYPE,
+                "NVPTX Prologue/Epilogue Insertion", false, false)
+
+static bool replaceFrameIndexDebugInstr(MachineFunction &MF, MachineInstr &MI,
+                                        unsigned OpIdx) {
+  const TargetFrameLowering *TFI = MF.getSubtarget().getFrameLowering();
+  const TargetRegisterInfo &TRI = *MF.getSubtarget().getRegisterInfo();
+  if (MI.isDebugValue()) {
+
+    MachineOperand &Op = MI.getOperand(OpIdx);
+    assert(MI.isDebugOperand(&Op) &&
+           "Frame indices can only appear as a debug operand in a DBG_VALUE*"
+           " machine instruction");
+    Register Reg;
+    unsigned FrameIdx = Op.getIndex();
+
+    StackOffset Offset = TFI->getFrameIndexReference(MF, FrameIdx, Reg);
+    Op.ChangeToRegister(Reg, false /*isDef*/);
+
+    const DIExpression *DIExpr = MI.getDebugExpression();
+    if (MI.isNonListDebugValue()) {
+      DIExpr = TRI.prependOffsetExpression(MI.getDebugExpression(),
+                                           DIExpression::ApplyOffset, Offset);
+    } else {
+      // The debug operand at DebugOpIndex was a frame index at offset
+      // `Offset`; now the operand has been replaced with the frame
+      // register, we must add Offset with `register x, plus Offset`.
+      unsigned DebugOpIndex = MI.getDebugOperandIndex(&Op);
+      SmallVector<uint64_t, 3> Ops;
+      TRI.getOffsetOpcodes(Offset, Ops);
+      DIExpr = DIExpression::appendOpsToArg(DIExpr, Ops, DebugOpIndex);
+    }
+    MI.getDebugExpressionOp().setMetadata(DIExpr);
+    return true;
+  }
+  return false;
+}
 
 bool NVPTXPrologEpilogPass::runOnMachineFunction(MachineFunction &MF) {
   const TargetSubtargetInfo &STI = MF.getSubtarget();
@@ -57,41 +95,27 @@ bool NVPTXPrologEpilogPass::runOnMachineFunction(MachineFunction &MF) {
 
   calculateFrameObjectOffsets(MF);
 
-  for (MachineBasicBlock &MBB : MF) {
-    for (MachineInstr &MI : MBB) {
-      for (unsigned i = 0, e = MI.getNumOperands(); i != e; ++i) {
-        if (!MI.getOperand(i).isFI())
+  for (MachineBasicBlock &BB : MF) {
+    for (MachineBasicBlock::iterator I = BB.end(); I != BB.begin();) {
+      MachineInstr &MI = *std::prev(I);
+
+      bool RemovedMI = false;
+      for (const auto &[Idx, Op] : enumerate(MI.operands())) {
+        if (!Op.isFI())
           continue;
 
-        // Frame indices in debug values are encoded in a target independent
-        // way with simply the frame index and offset rather than any
-        // target-specific addressing mode.
-        if (MI.isDebugValue()) {
-          MachineOperand &Op = MI.getOperand(i);
-          assert(
-              MI.isDebugOperand(&Op) &&
-              "Frame indices can only appear as a debug operand in a DBG_VALUE*"
-              " machine instruction");
-          Register Reg;
-          auto Offset =
-              TFI.getFrameIndexReference(MF, Op.getIndex(), Reg);
-          Op.ChangeToRegister(Reg, /*isDef=*/false);
-          const DIExpression *DIExpr = MI.getDebugExpression();
-          if (MI.isNonListDebugValue()) {
-            DIExpr = TRI.prependOffsetExpression(MI.getDebugExpression(), DIExpression::ApplyOffset, Offset);
-          } else {
-	    SmallVector<uint64_t, 3> Ops;
-            TRI.getOffsetOpcodes(Offset, Ops);
-            unsigned OpIdx = MI.getDebugOperandIndex(&Op);
-            DIExpr = DIExpression::appendOpsToArg(DIExpr, Ops, OpIdx);
-          }
-          MI.getDebugExpressionOp().setMetadata(DIExpr);
+        if (replaceFrameIndexDebugInstr(MF, MI, Idx))
           continue;
-        }
 
-        TRI.eliminateFrameIndex(MI, 0, i, nullptr);
+        // Eliminate this FrameIndex operand.
+        RemovedMI = TRI.eliminateFrameIndex(MI, 0, Idx, nullptr);
         Modified = true;
+        if (RemovedMI)
+          break;
       }
+
+      if (!RemovedMI)
+        --I;
     }
   }
 

@@ -13,6 +13,7 @@
 #include "RISCVCallingConv.h"
 #include "RISCVSubtarget.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/Module.h"
 #include "llvm/MC/MCRegister.h"
 
 using namespace llvm;
@@ -323,7 +324,7 @@ static MCRegister allocateRVVReg(MVT ValVT, unsigned ValNo, CCState &State,
 // Implements the RISC-V calling convention. Returns true upon failure.
 bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
                     CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                    CCState &State, bool IsFixed, bool IsRet, Type *OrigTy) {
+                    CCState &State, bool IsRet, Type *OrigTy) {
   const MachineFunction &MF = State.getMachineFunction();
   const DataLayout &DL = MF.getDataLayout();
   const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
@@ -332,10 +333,24 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
   unsigned XLen = Subtarget.getXLen();
   MVT XLenVT = Subtarget.getXLenVT();
 
-  // Static chain parameter must not be passed in normal argument registers,
-  // so we assign t2 for it as done in GCC's __builtin_call_with_static_chain
   if (ArgFlags.isNest()) {
-    if (MCRegister Reg = State.AllocateReg(RISCV::X7)) {
+    // Static chain parameter must not be passed in normal argument registers,
+    // so we assign t2/t3 for it as done in GCC's
+    // __builtin_call_with_static_chain
+    bool HasCFBranch =
+        Subtarget.hasStdExtZicfilp() &&
+        MF.getFunction().getParent()->getModuleFlag("cf-protection-branch");
+
+    // Normal: t2, Branch control flow protection: t3
+    const auto StaticChainReg = HasCFBranch ? RISCV::X28 : RISCV::X7;
+
+    RISCVABI::ABI ABI = Subtarget.getTargetABI();
+    if (HasCFBranch &&
+        (ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E))
+      reportFatalUsageError(
+          "Nested functions with control flow protection are not "
+          "usable with ILP32E or LP64E ABI.");
+    if (MCRegister Reg = State.AllocateReg(StaticChainReg)) {
       State.addLoc(CCValAssign::getReg(ValNo, ValVT, Reg, LocVT, LocInfo));
       return false;
     }
@@ -343,7 +358,8 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
 
   // Any return value split in to more than two values can't be returned
   // directly. Vectors are returned via the available vector registers.
-  if (!LocVT.isVector() && IsRet && ValNo > 1)
+  if ((!LocVT.isVector() || Subtarget.isPExtPackedType(ValVT)) && IsRet &&
+      ValNo > 1)
     return true;
 
   // UseGPRForF16_F32 if targeting one of the soft-float ABIs, if passing a
@@ -364,12 +380,12 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
     break;
   case RISCVABI::ABI_ILP32F:
   case RISCVABI::ABI_LP64F:
-    UseGPRForF16_F32 = !IsFixed;
+    UseGPRForF16_F32 = ArgFlags.isVarArg();
     break;
   case RISCVABI::ABI_ILP32D:
   case RISCVABI::ABI_LP64D:
-    UseGPRForF16_F32 = !IsFixed;
-    UseGPRForF64 = !IsFixed;
+    UseGPRForF16_F32 = ArgFlags.isVarArg();
+    UseGPRForF64 = ArgFlags.isVarArg();
     break;
   }
 
@@ -450,7 +466,7 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
   // currently if we are using ILP32E calling convention. This behavior may be
   // changed when RV32E/ILP32E is ratified.
   unsigned TwoXLenInBytes = (2 * XLen) / 8;
-  if (!IsFixed && ArgFlags.getNonZeroOrigAlign() == TwoXLenInBytes &&
+  if (ArgFlags.isVarArg() && ArgFlags.getNonZeroOrigAlign() == TwoXLenInBytes &&
       DL.getTypeAllocSize(OrigTy) == TwoXLenInBytes &&
       ABI != RISCVABI::ABI_ILP32E) {
     unsigned RegIdx = State.getFirstUnallocated(ArgGPRs);
@@ -495,25 +511,11 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
     return false;
   }
 
-  // Split arguments might be passed indirectly, so keep track of the pending
-  // values. Split vectors are passed via a mix of registers and indirectly, so
-  // treat them as we would any other argument.
-  if (ValVT.isScalarInteger() && (ArgFlags.isSplit() || !PendingLocs.empty())) {
-    LocVT = XLenVT;
-    LocInfo = CCValAssign::Indirect;
-    PendingLocs.push_back(
-        CCValAssign::getPending(ValNo, ValVT, LocVT, LocInfo));
-    PendingArgFlags.push_back(ArgFlags);
-    if (!ArgFlags.isSplitEnd()) {
-      return false;
-    }
-  }
-
   // If the split argument only had two elements, it should be passed directly
   // in registers or on the stack.
-  if (ValVT.isScalarInteger() && ArgFlags.isSplitEnd() &&
-      PendingLocs.size() <= 2) {
-    assert(PendingLocs.size() == 2 && "Unexpected PendingLocs.size()");
+  if ((ValVT.isScalarInteger() || Subtarget.isPExtPackedType(ValVT)) &&
+      ArgFlags.isSplitEnd() && PendingLocs.size() <= 1) {
+    assert(PendingLocs.size() == 1 && "Unexpected PendingLocs.size()");
     // Apply the normal calling convention rules to the first half of the
     // split argument.
     CCValAssign VA = PendingLocs[0];
@@ -525,12 +527,29 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
         ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E);
   }
 
+  // Split arguments might be passed indirectly, so keep track of the pending
+  // values. Split vectors excluding P extension packed vectors(see
+  // isPExtPackedType) are passed via a mix of registers and indirectly, so
+  // treat them as we would any other argument.
+  if ((ValVT.isScalarInteger() || Subtarget.isPExtPackedType(ValVT)) &&
+      (ArgFlags.isSplit() || !PendingLocs.empty())) {
+    PendingLocs.push_back(
+        CCValAssign::getPending(ValNo, ValVT, LocVT, LocInfo));
+    PendingArgFlags.push_back(ArgFlags);
+    if (!ArgFlags.isSplitEnd()) {
+      return false;
+    }
+  }
+
   // Allocate to a register if possible, or else a stack slot.
   MCRegister Reg;
   unsigned StoreSizeBytes = XLen / 8;
   Align StackAlign = Align(XLen / 8);
 
-  if (ValVT.isVector() || ValVT.isRISCVVectorTuple()) {
+  // FIXME: If P extension and V extension are enabled at the same time,
+  // who should go first?
+  if (!Subtarget.isPExtPackedType(ValVT) &&
+      (ValVT.isVector() || ValVT.isRISCVVectorTuple())) {
     Reg = allocateRVVReg(ValVT, ValNo, State, TLI);
     if (Reg) {
       // Fixed-length vectors are located in the corresponding scalable-vector
@@ -544,8 +563,6 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
     } else {
       // For return values, the vector must be passed fully via registers or
       // via the stack.
-      // FIXME: The proposed vector ABI only mandates v8-v15 for return values,
-      // but we're using all of them.
       if (IsRet)
         return true;
       // Try using a GPR to pass the address
@@ -577,10 +594,12 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
 
     for (auto &It : PendingLocs) {
       if (Reg)
-        It.convertToReg(Reg);
+        State.addLoc(CCValAssign::getReg(It.getValNo(), It.getValVT(), Reg,
+                                         XLenVT, CCValAssign::Indirect));
       else
-        It.convertToMem(StackOffset);
-      State.addLoc(It);
+        State.addLoc(CCValAssign::getMem(It.getValNo(), It.getValVT(),
+                                         StackOffset, XLenVT,
+                                         CCValAssign::Indirect));
     }
     PendingLocs.clear();
     PendingArgFlags.clear();
@@ -588,6 +607,7 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
   }
 
   assert(((ValVT.isFloatingPoint() && !ValVT.isVector()) || LocVT == XLenVT ||
+          Subtarget.isPExtPackedType(LocVT) ||
           (TLI.getSubtarget().hasVInstructions() &&
            (ValVT.isVector() || ValVT.isRISCVVectorTuple()))) &&
          "Expected an XLenVT or vector types at this stage");
@@ -605,8 +625,8 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
 // benchmark. But theoretically, it may have benefit for some cases.
 bool llvm::CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
                            CCValAssign::LocInfo LocInfo,
-                           ISD::ArgFlagsTy ArgFlags, CCState &State,
-                           bool IsFixed, bool IsRet, Type *OrigTy) {
+                           ISD::ArgFlagsTy ArgFlags, CCState &State, bool IsRet,
+                           Type *OrigTy) {
   const MachineFunction &MF = State.getMachineFunction();
   const RISCVSubtarget &Subtarget = MF.getSubtarget<RISCVSubtarget>();
   const RISCVTargetLowering &TLI = *Subtarget.getTargetLowering();
@@ -726,7 +746,7 @@ bool llvm::CC_RISCV_FastCC(unsigned ValNo, MVT ValVT, MVT LocVT,
 
 bool llvm::CC_RISCV_GHC(unsigned ValNo, MVT ValVT, MVT LocVT,
                         CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                        CCState &State) {
+                        Type *OrigTy, CCState &State) {
   if (ArgFlags.isNest()) {
     report_fatal_error(
         "Attribute 'nest' is not supported in GHC calling convention");

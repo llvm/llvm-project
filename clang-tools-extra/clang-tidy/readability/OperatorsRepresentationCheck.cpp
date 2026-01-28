@@ -1,5 +1,4 @@
-//===--- OperatorsRepresentationCheck.cpp - clang-tidy
-//--------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -24,7 +23,7 @@ static StringRef getOperatorSpelling(SourceLocation Loc, ASTContext &Context) {
   if (Loc.isInvalid())
     return {};
 
-  SourceManager &SM = Context.getSourceManager();
+  const SourceManager &SM = Context.getSourceManager();
 
   Loc = SM.getSpellingLoc(Loc);
   if (Loc.isInvalid())
@@ -42,7 +41,7 @@ AST_MATCHER_P2(BinaryOperator, hasInvalidBinaryOperatorRepresentation,
   if (Node.getOpcode() != Kind || ExpectedRepresentation.empty())
     return false;
 
-  StringRef Spelling =
+  const StringRef Spelling =
       getOperatorSpelling(Node.getOperatorLoc(), Finder->getASTContext());
   return !Spelling.empty() && Spelling != ExpectedRepresentation;
 }
@@ -53,7 +52,7 @@ AST_MATCHER_P2(UnaryOperator, hasInvalidUnaryOperatorRepresentation,
   if (Node.getOpcode() != Kind || ExpectedRepresentation.empty())
     return false;
 
-  StringRef Spelling =
+  const StringRef Spelling =
       getOperatorSpelling(Node.getOperatorLoc(), Finder->getASTContext());
   return !Spelling.empty() && Spelling != ExpectedRepresentation;
 }
@@ -64,7 +63,7 @@ AST_MATCHER_P2(CXXOperatorCallExpr, hasInvalidOverloadedOperatorRepresentation,
   if (Node.getOperator() != Kind || ExpectedRepresentation.empty())
     return false;
 
-  StringRef Spelling =
+  const StringRef Spelling =
       getOperatorSpelling(Node.getOperatorLoc(), Finder->getASTContext());
   return !Spelling.empty() && Spelling != ExpectedRepresentation;
 }
@@ -137,11 +136,9 @@ getRepresentation(const std::vector<llvm::StringRef> &Config,
 template <typename T>
 static bool isAnyOperatorEnabled(const std::vector<llvm::StringRef> &Config,
                                  const T &Operators) {
-  for (const auto &[traditional, alternative] : Operators) {
-    if (!getRepresentation(Config, traditional, alternative).empty())
-      return true;
-  }
-  return false;
+  return llvm::any_of(Operators, [&](const auto &Op) {
+    return !getRepresentation(Config, Op.first, Op.second).empty();
+  });
 }
 
 OperatorsRepresentationCheck::OperatorsRepresentationCheck(
@@ -276,7 +273,6 @@ void OperatorsRepresentationCheck::registerMatchers(MatchFinder *Finder) {
 
 void OperatorsRepresentationCheck::check(
     const MatchFinder::MatchResult &Result) {
-
   SourceLocation Loc;
 
   if (const auto *Op = Result.Nodes.getNodeAs<BinaryOperator>("binary_op"))
@@ -298,9 +294,9 @@ void OperatorsRepresentationCheck::check(
   if (TokenRange.isInvalid())
     return;
 
-  StringRef Spelling = Lexer::getSourceText(TokenRange, *Result.SourceManager,
-                                            Result.Context->getLangOpts());
-  StringRef TranslatedSpelling = translate(Spelling);
+  const StringRef Spelling = Lexer::getSourceText(
+      TokenRange, *Result.SourceManager, Result.Context->getLangOpts());
+  const StringRef TranslatedSpelling = translate(Spelling);
 
   if (TranslatedSpelling.empty())
     return;
@@ -313,7 +309,7 @@ void OperatorsRepresentationCheck::check(
     SourceRepresentation = "a traditional";
     TargetRepresentation = "an alternative";
 
-    StringRef SpellingEx = Lexer::getSourceText(
+    const StringRef SpellingEx = Lexer::getSourceText(
         CharSourceRange::getCharRange(
             TokenRange.getBegin().getLocWithOffset(-1),
             TokenRange.getBegin().getLocWithOffset(Spelling.size() + 1U)),

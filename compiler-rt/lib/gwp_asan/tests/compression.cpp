@@ -11,6 +11,7 @@
 
 namespace gwp_asan {
 namespace compression {
+namespace {
 
 TEST(GwpAsanCompressionTest, SingleByteVarInt) {
   uint8_t Compressed[1];
@@ -263,5 +264,7 @@ TEST(GwpAsanCompressionTest, CompressPartiallySucceedsWithTooSmallBuffer) {
   EXPECT_EQ(pack(Uncompressed, 3u, Compressed, 6u), 5u);
   EXPECT_EQ(pack(Uncompressed, 3u, Compressed, 3 * kBytesForLargestVarInt), 5u);
 }
+
+} // namespace
 } // namespace compression
 } // namespace gwp_asan

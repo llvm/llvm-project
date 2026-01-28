@@ -39,7 +39,7 @@
 ; CHECK-SPIRV: OpOrdered %[[#BoolVectorTypeID]]
 ; CHECK-SPIRV: OpUnordered %[[#BoolVectorTypeID]]
 
-define dso_local spir_func void @test_scalar(i32 addrspace(4)* nocapture writeonly %out, float %f) local_unnamed_addr {
+define dso_local spir_func void @test_scalar(ptr addrspace(4) nocapture writeonly %out, float %f) local_unnamed_addr {
 entry:
   %call = tail call spir_func i32 @_Z8isfinitef(float %f)
   %call1 = tail call spir_func i32 @_Z5isinff(float %f)
@@ -68,7 +68,7 @@ entry:
   %add23 = add nsw i32 %add21, %call22
   %call24 = tail call spir_func i32 @_Z11isunorderedff(float %f, float %f)
   %add25 = add nsw i32 %add23, %call24
-  store i32 %add25, i32 addrspace(4)* %out, align 4
+  store i32 %add25, ptr addrspace(4) %out, align 4
   ret void
 }
 
@@ -100,7 +100,7 @@ declare spir_func i32 @_Z9isorderedff(float, float) local_unnamed_addr
 
 declare spir_func i32 @_Z11isunorderedff(float, float) local_unnamed_addr
 
-define dso_local spir_func void @test_vector(<2 x i32> addrspace(4)* nocapture writeonly %out, <2 x float> %f) local_unnamed_addr {
+define dso_local spir_func void @test_vector(ptr addrspace(4) nocapture writeonly %out, <2 x float> %f) local_unnamed_addr {
 entry:
   %call = tail call spir_func <2 x i32> @_Z8isfiniteDv2_f(<2 x float> %f)
   %call1 = tail call spir_func <2 x i32> @_Z5isinfDv2_f(<2 x float> %f)
@@ -129,7 +129,7 @@ entry:
   %add23 = add <2 x i32> %add21, %call22
   %call24 = tail call spir_func <2 x i32> @_Z11isunorderedDv2_fS_(<2 x float> %f, <2 x float> %f)
   %add25 = add <2 x i32> %add23, %call24
-  store <2 x i32> %add25, <2 x i32> addrspace(4)* %out, align 8
+  store <2 x i32> %add25, ptr addrspace(4) %out, align 8
   ret void
 }
 

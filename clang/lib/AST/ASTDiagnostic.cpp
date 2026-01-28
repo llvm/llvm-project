@@ -20,6 +20,8 @@
 #include "clang/AST/TemplateBase.h"
 #include "clang/AST/Type.h"
 #include "llvm/ADT/StringExtras.h"
+#include "llvm/Support/ConvertUTF.h"
+#include "llvm/Support/Format.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace clang;
@@ -34,11 +36,6 @@ QualType clang::desugarForDiagnostic(ASTContext &Context, QualType QT,
   while (true) {
     const Type *Ty = QC.strip(QT);
 
-    // Don't aka just because we saw an elaborated type...
-    if (const ElaboratedType *ET = dyn_cast<ElaboratedType>(Ty)) {
-      QT = ET->desugar();
-      continue;
-    }
     // ... or a using type ...
     if (const UsingType *UT = dyn_cast<UsingType>(Ty)) {
       QT = UT->desugar();
@@ -128,7 +125,8 @@ QualType clang::desugarForDiagnostic(ASTContext &Context, QualType QT,
         if (DesugarArgument) {
           ShouldAKA = true;
           QT = Context.getTemplateSpecializationType(
-              TST->getTemplateName(), Args, /*CanonicalArgs=*/std::nullopt, QT);
+              TST->getKeyword(), TST->getTemplateName(), Args,
+              /*CanonicalArgs=*/{}, QT);
         }
         break;
       }
@@ -226,7 +224,7 @@ break; \
           desugarForDiagnostic(Context, Ty->getBaseType(), ShouldAKA);
       QT = Context.getObjCObjectType(
           BaseType, Ty->getTypeArgsAsWritten(),
-          llvm::ArrayRef(Ty->qual_begin(), Ty->getNumProtocols()),
+          ArrayRef(Ty->qual_begin(), Ty->getNumProtocols()),
           Ty->isKindOfTypeAsWritten());
     }
   }
@@ -459,13 +457,12 @@ void clang::FormatASTNodeDiagnosticArgument(
       ND->getNameForDiagnostic(OS, Context.getPrintingPolicy(), Qualified);
       break;
     }
-    case DiagnosticsEngine::ak_nestednamespec: {
-      NestedNameSpecifier *NNS = reinterpret_cast<NestedNameSpecifier*>(Val);
-      NNS->print(OS, Context.getPrintingPolicy(),
+    case DiagnosticsEngine::ak_nestednamespec:
+      NestedNameSpecifier::getFromVoidPointer(reinterpret_cast<void *>(Val))
+          .print(OS, Context.getPrintingPolicy(),
                  /*ResolveTemplateArguments=*/false,
                  /*PrintFinalScopeResOp=*/false);
       break;
-    }
     case DiagnosticsEngine::ak_declcontext: {
       DeclContext *DC = reinterpret_cast<DeclContext *> (Val);
       assert(DC && "Should never have a null declaration context");
@@ -482,9 +479,8 @@ void clang::FormatASTNodeDiagnosticArgument(
       } else if (isLambdaCallOperator(DC)) {
         OS << "lambda expression";
       } else if (TypeDecl *Type = dyn_cast<TypeDecl>(DC)) {
-        OS << ConvertTypeToDiagnosticString(Context,
-                                            Context.getTypeDeclType(Type),
-                                            PrevArgs, QualTypeVals);
+        OS << ConvertTypeToDiagnosticString(
+            Context, Context.getTypeDeclType(Type), PrevArgs, QualTypeVals);
       } else {
         assert(isa<NamedDecl>(DC) && "Expected a NamedDecl");
         NamedDecl *ND = cast<NamedDecl>(DC);
@@ -504,7 +500,15 @@ void clang::FormatASTNodeDiagnosticArgument(
     case DiagnosticsEngine::ak_attr: {
       const Attr *At = reinterpret_cast<Attr *>(Val);
       assert(At && "Received null Attr object!");
-      OS << '\'' << At->getSpelling() << '\'';
+
+      OS << '\'';
+      if (At->hasScope()) {
+        OS << At->getNormalizedFullName(At->getScopeName()->getName(),
+                                        At->getSpelling());
+      } else {
+        OS << At->getSpelling();
+      }
+      OS << '\'';
       NeedQuotes = false;
       break;
     }
@@ -512,6 +516,20 @@ void clang::FormatASTNodeDiagnosticArgument(
       const Expr *E = reinterpret_cast<Expr *>(Val);
       assert(E && "Received null Expr!");
       E->printPretty(OS, /*Helper=*/nullptr, Context.getPrintingPolicy());
+      break;
+    }
+    case DiagnosticsEngine::ak_attr_info: {
+      AttributeCommonInfo *AT = reinterpret_cast<AttributeCommonInfo *>(Val);
+      assert(AT && "Received null AttributeCommonInfo object!");
+
+      OS << '\'';
+      if (AT->isStandardAttributeSyntax()) {
+        OS << AT->getNormalizedFullName();
+      } else {
+        OS << AT->getAttrName()->getName();
+      }
+      OS << '\'';
+      NeedQuotes = false;
       break;
     }
   }
@@ -558,7 +576,7 @@ class TemplateDiff {
   /// IsBold - Keeps track of the bold formatting for the output string.
   bool IsBold;
 
-  /// DiffTree - A tree representation the differences between two types.
+  /// DiffTree - A tree representation of the differences between two types.
   class DiffTree {
   public:
     /// DiffKind - The difference in a DiffNode.  Fields of
@@ -778,7 +796,7 @@ class TemplateDiff {
       CurrentNode = FlatTree[CurrentNode].ParentNode;
     }
 
-    /// AddNode - Adds a child node to the current node, then sets that node
+    /// AddNode - Adds a child node to the current node, then sets that
     /// node as the current node.
     void AddNode() {
       assert(FlatTree[CurrentNode].Kind == Template &&
@@ -913,12 +931,12 @@ class TemplateDiff {
       return FlatTree[ReadNode].ToArgInfo.IsDefault;
     }
 
-    /// NodeIsSame - Returns true the arguments are the same.
+    /// NodeIsSame - Returns true if the arguments are the same.
     bool NodeIsSame() {
       return FlatTree[ReadNode].Same;
     }
 
-    /// HasChildrend - Returns true if the node has children.
+    /// HasChildren - Returns true if the node has children.
     bool HasChildren() {
       return FlatTree[ReadNode].ChildNode != 0;
     }
@@ -958,7 +976,7 @@ class TemplateDiff {
 
   /// TSTiterator - a pair of iterators that walks the
   /// TemplateSpecializationType and the desugared TemplateSpecializationType.
-  /// The deseguared TemplateArgument should provide the canonical argument
+  /// The desugared TemplateArgument should provide the canonical argument
   /// for comparisons.
   class TSTiterator {
     typedef const TemplateArgument& reference;
@@ -969,7 +987,7 @@ class TemplateDiff {
     /// parameter packs in order with the rest of the TemplateArguments.
     struct InternalIterator {
       /// TST - the template specialization whose arguments this iterator
-      /// traverse over.
+      /// traverses over.
       const TemplateSpecializationType *TST;
 
       /// Index - the index of the template argument in TST.
@@ -1128,20 +1146,18 @@ class TemplateDiff {
     if (const auto* SubstType = Ty->getAs<SubstTemplateTypeParmType>())
       Ty = SubstType->getReplacementType();
 
-    const RecordType *RT = Ty->getAs<RecordType>();
-
+    const auto *RT = Ty->getAs<RecordType>();
     if (!RT)
       return nullptr;
 
-    const ClassTemplateSpecializationDecl *CTSD =
-        dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl());
-
+    const auto *CTSD = dyn_cast<ClassTemplateSpecializationDecl>(RT->getDecl());
     if (!CTSD)
       return nullptr;
 
     Ty = Context.getTemplateSpecializationType(
+        ElaboratedTypeKeyword::None,
         TemplateName(CTSD->getSpecializedTemplate()),
-        CTSD->getTemplateArgs().asArray(), /*CanonicalArgs=*/std::nullopt,
+        CTSD->getTemplateArgs().asArray(), /*CanonicalArgs=*/{},
         Ty.getLocalUnqualifiedType().getCanonicalType());
 
     return Ty->getAs<TemplateSpecializationType>();
@@ -1719,25 +1735,10 @@ class TemplateDiff {
 
     std::string FromTypeStr = FromType.isNull() ? "(no argument)"
                                                 : FromType.getAsString(Policy);
-    std::string ToTypeStr = ToType.isNull() ? "(no argument)"
-                                            : ToType.getAsString(Policy);
-    // Print without ElaboratedType sugar if it is better.
+    std::string ToTypeStr =
+        ToType.isNull() ? "(no argument)" : ToType.getAsString(Policy);
     // TODO: merge this with other aka printing above.
     if (FromTypeStr == ToTypeStr) {
-      const auto *FromElTy = dyn_cast<ElaboratedType>(FromType),
-                 *ToElTy = dyn_cast<ElaboratedType>(ToType);
-      if (FromElTy || ToElTy) {
-        std::string FromNamedTypeStr =
-            FromElTy ? FromElTy->getNamedType().getAsString(Policy)
-                     : FromTypeStr;
-        std::string ToNamedTypeStr =
-            ToElTy ? ToElTy->getNamedType().getAsString(Policy) : ToTypeStr;
-        if (FromNamedTypeStr != ToNamedTypeStr) {
-          FromTypeStr = FromNamedTypeStr;
-          ToTypeStr = ToNamedTypeStr;
-          goto PrintTypes;
-        }
-      }
       // Switch to canonical typename if it is better.
       std::string FromCanTypeStr =
           FromType.getCanonicalType().getAsString(Policy);
@@ -1748,8 +1749,8 @@ class TemplateDiff {
       }
     }
 
-  PrintTypes:
-    if (PrintTree) OS << '[';
+    if (PrintTree)
+      OS << '[';
     OS << (FromDefault ? "(default) " : "");
     Bold();
     OS << FromTypeStr;
@@ -2189,4 +2190,32 @@ static bool FormatTemplateTypeDiff(ASTContext &Context, QualType FromType,
                   ElideType, ShowColors);
   TD.DiffTemplate();
   return TD.Emit();
+}
+
+std::string clang::FormatUTFCodeUnitAsCodepoint(unsigned Value, QualType T) {
+  auto IsSingleCodeUnitCP = [](unsigned Value, QualType T) {
+    if (T->isChar8Type()) {
+      assert(Value <= 0xFF && "not a valid UTF-8 code unit");
+      return Value <= 0x7F;
+    }
+    if (T->isChar16Type()) {
+      assert(Value <= 0xFFFF && "not a valid UTF-16 code unit");
+      return llvm::IsSingleCodeUnitUTF16Codepoint(Value);
+    }
+    assert(T->isChar32Type());
+    return llvm::IsSingleCodeUnitUTF32Codepoint(Value);
+  };
+  llvm::SmallVector<char, 16> Str;
+  if (!IsSingleCodeUnitCP(Value, T)) {
+    llvm::raw_svector_ostream OS(Str);
+    OS << "<" << llvm::format_hex(Value, 1, /*Upper=*/true) << ">";
+    return std::string(Str.begin(), Str.end());
+  }
+
+  char Buffer[UNI_MAX_UTF8_BYTES_PER_CODE_POINT];
+  char *Ptr = Buffer;
+  [[maybe_unused]] bool Converted = llvm::ConvertCodePointToUTF8(Value, Ptr);
+  assert(Converted && "trying to encode invalid code unit");
+  EscapeStringForDiagnostic(StringRef(Buffer, Ptr - Buffer), Str);
+  return std::string(Str.begin(), Str.end());
 }

@@ -5,7 +5,7 @@ target datalayout = "e-m:e-i8:8:32-i16:16:32-i64:64-i128:128-n32:64-S128"
 
 define <8 x i8> @sel_v8i8(<8 x i8> %v0, <8 x i8> %v1) {
 ; CHECK-LABEL: 'sel_v8i8'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:14 Lat:28 SizeLat:28 for: %tmp0 = shufflevector <8 x i8> %v0, <8 x i8> %v1, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:16 Lat:32 SizeLat:32 for: %tmp0 = shufflevector <8 x i8> %v0, <8 x i8> %v1, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i8> %tmp0
 ;
   %tmp0 = shufflevector <8 x i8> %v0, <8 x i8> %v1, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
@@ -14,7 +14,7 @@ define <8 x i8> @sel_v8i8(<8 x i8> %v0, <8 x i8> %v1) {
 
 define <16 x i8> @sel_v16i8(<16 x i8> %v0, <16 x i8> %v1) {
 ; CHECK-LABEL: 'sel_v16i8'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:60 CodeSize:30 Lat:60 SizeLat:60 for: %tmp0 = shufflevector <16 x i8> %v0, <16 x i8> %v1, <16 x i32> <i32 0, i32 17, i32 2, i32 19, i32 4, i32 21, i32 6, i32 23, i32 8, i32 25, i32 10, i32 27, i32 12, i32 29, i32 14, i32 31>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:64 CodeSize:32 Lat:64 SizeLat:64 for: %tmp0 = shufflevector <16 x i8> %v0, <16 x i8> %v1, <16 x i32> <i32 0, i32 17, i32 2, i32 19, i32 4, i32 21, i32 6, i32 23, i32 8, i32 25, i32 10, i32 27, i32 12, i32 29, i32 14, i32 31>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <16 x i8> %tmp0
 ;
   %tmp0 = shufflevector <16 x i8> %v0, <16 x i8> %v1, <16 x i32> <i32 0, i32 17, i32 2, i32 19, i32 4, i32 21, i32 6, i32 23, i32 8, i32 25, i32 10, i32 27, i32 12, i32 29, i32 14, i32 31>
@@ -32,7 +32,7 @@ define <4 x i16> @sel_v4i16(<4 x i16> %v0, <4 x i16> %v1) {
 
 define <8 x i16> @sel_v8i16(<8 x i16> %v0, <8 x i16> %v1) {
 ; CHECK-LABEL: 'sel_v8i16'
-; CHECK-NEXT:  Cost Model: Found costs of RThru:28 CodeSize:14 Lat:28 SizeLat:28 for: %tmp0 = shufflevector <8 x i16> %v0, <8 x i16> %v1, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
+; CHECK-NEXT:  Cost Model: Found costs of RThru:32 CodeSize:16 Lat:32 SizeLat:32 for: %tmp0 = shufflevector <8 x i16> %v0, <8 x i16> %v1, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret <8 x i16> %tmp0
 ;
   %tmp0 = shufflevector <8 x i16> %v0, <8 x i16> %v1, <8 x i32> <i32 0, i32 9, i32 2, i32 11, i32 4, i32 13, i32 6, i32 15>

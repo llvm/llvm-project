@@ -521,11 +521,9 @@ void StackMaps::recordStackMapOpers(const MCSymbol &MILabel,
       MFI.hasVarSizedObjects() || RegInfo->hasStackRealignment(*(AP.MF));
   uint64_t FrameSize = HasDynamicFrameSize ? UINT64_MAX : MFI.getStackSize();
 
-  auto CurrentIt = FnInfos.find(AP.CurrentFnSym);
-  if (CurrentIt != FnInfos.end())
+  auto [CurrentIt, Inserted] = FnInfos.try_emplace(AP.CurrentFnSym, FrameSize);
+  if (!Inserted)
     CurrentIt->second.RecordCount++;
-  else
-    FnInfos.insert(std::make_pair(AP.CurrentFnSym, FunctionInfo(FrameSize)));
 }
 
 void StackMaps::recordStackMap(const MCSymbol &L, const MachineInstr &MI) {

@@ -137,9 +137,9 @@ void Analysis::printInstructionRowCsv(const size_t PointId,
   std::tie(SchedClassId, std::ignore) = ResolvedSchedClass::resolveSchedClassId(
       State_.getSubtargetInfo(), State_.getInstrInfo(), MCI);
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  const MCSchedClassDesc *const SCDesc =
-      State_.getSubtargetInfo().getSchedModel().getSchedClassDesc(SchedClassId);
-  writeEscaped<kEscapeCsv>(OS, SCDesc->Name);
+  StringRef SCDescName =
+      State_.getSubtargetInfo().getSchedModel().getSchedClassName(SchedClassId);
+  writeEscaped<kEscapeCsv>(OS, SCDescName);
 #else
   OS << SchedClassId;
 #endif
@@ -244,12 +244,9 @@ static void writeParallelSnippetHtml(raw_ostream &OS,
 static void writeLatencySnippetHtml(raw_ostream &OS,
                                     const std::vector<MCInst> &Instructions,
                                     const MCInstrInfo &InstrInfo) {
-  bool First = true;
+  ListSeparator LS(" &rarr; ");
   for (const MCInst &Instr : Instructions) {
-    if (First)
-      First = false;
-    else
-      OS << " &rarr; ";
+    OS << LS;
     writeEscaped<kEscapeHtml>(OS, InstrInfo.getName(Instr.getOpcode()));
   }
 }
@@ -446,7 +443,7 @@ void Analysis::printClusterRawHtml(const BenchmarkClustering::ClusterId &Id,
 
 } // namespace exegesis
 
-static constexpr const char kHtmlHead[] = R"(
+static constexpr char kHtmlHead[] = R"(
 <head>
 <title>llvm-exegesis Analysis Results</title>
 <style>
@@ -563,7 +560,8 @@ Error Analysis::run<Analysis::PrintSchedClassInconsistencies>(
     OS << "<div class=\"inconsistency\"><p>Sched Class <span "
           "class=\"sched-class-name\">";
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-    writeEscaped<kEscapeHtml>(OS, RSCAndPoints.RSC.SCDesc->Name);
+    writeEscaped<kEscapeHtml>(OS, SI.getSchedModel().getSchedClassName(
+                                      RSCAndPoints.RSC.SchedClassId));
 #else
     OS << RSCAndPoints.RSC.SchedClassId;
 #endif

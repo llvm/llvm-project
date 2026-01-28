@@ -422,12 +422,6 @@ void SectionChunk::writeTo(uint8_t *buf) const {
 
     applyRelocation(buf + rel.VirtualAddress, rel);
   }
-
-  // Write the offset to EC entry thunk preceding section contents. The low bit
-  // is always set, so it's effectively an offset from the last byte of the
-  // offset.
-  if (Defined *entryThunk = getEntryThunk())
-    write32le(buf - sizeof(uint32_t), entryThunk->getRVA() - rva + 1);
 }
 
 void SectionChunk::applyRelocation(uint8_t *off,
@@ -570,7 +564,7 @@ void SectionChunk::getBaserels(std::vector<Baserel> *res) {
     if (ty == IMAGE_REL_BASED_ABSOLUTE)
       continue;
     Symbol *target = file->getSymbol(rel.SymbolTableIndex);
-    if (!target || isa<DefinedAbsolute>(target))
+    if (!isa_and_nonnull<Defined>(target) || isa<DefinedAbsolute>(target))
       continue;
     res->emplace_back(rva + rel.VirtualAddress, ty);
   }
@@ -580,7 +574,7 @@ void SectionChunk::getBaserels(std::vector<Baserel> *res) {
   // to match the value in the EC load config, which is expected to be
   // a relocatable pointer to the __chpe_metadata symbol.
   COFFLinkerContext &ctx = file->symtab.ctx;
-  if (ctx.hybridSymtab && ctx.hybridSymtab->loadConfigSym &&
+  if (ctx.config.machine == ARM64X && ctx.hybridSymtab->loadConfigSym &&
       ctx.hybridSymtab->loadConfigSym->getChunk() == this &&
       ctx.symtab.loadConfigSym &&
       ctx.hybridSymtab->loadConfigSize >=
@@ -783,7 +777,7 @@ uint32_t SectionChunk::getSectionNumber() const {
   return s.getIndex() + 1;
 }
 
-CommonChunk::CommonChunk(const COFFSymbolRef s) : sym(s) {
+CommonChunk::CommonChunk(const COFFSymbolRef s) : live(false), sym(s) {
   // The value of a common symbol is its size. Align all common symbols smaller
   // than 32 bytes naturally, i.e. round the size up to the next power of two.
   // This is what MSVC link.exe does.
@@ -881,6 +875,19 @@ void RangeExtensionThunkARM64::writeTo(uint8_t *buf) const {
   applyArm64Imm(buf + 4, target->getRVA() & 0xfff, 0);
 }
 
+void SameAddressThunkARM64EC::setDynamicRelocs(COFFLinkerContext &ctx) const {
+  // Add ARM64X relocations replacing adrp/add instructions with a version using
+  // the hybrid target.
+  RangeExtensionThunkARM64 hybridView(ARM64EC, hybridTarget);
+  uint8_t buf[sizeof(arm64Thunk)];
+  hybridView.setRVA(rva);
+  hybridView.writeTo(buf);
+  uint32_t addrp = *reinterpret_cast<ulittle32_t *>(buf);
+  uint32_t add = *reinterpret_cast<ulittle32_t *>(buf + sizeof(uint32_t));
+  ctx.dynamicRelocs->set(this, addrp);
+  ctx.dynamicRelocs->set(Arm64XRelocVal(this, sizeof(uint32_t)), add);
+}
+
 LocalImportChunk::LocalImportChunk(COFFLinkerContext &c, Defined *s)
     : sym(s), ctx(c) {
   setAlignment(ctx.config.wordsize);
@@ -939,7 +946,7 @@ void ECCodeMapChunk::writeTo(uint8_t *buf) const {
   auto table = reinterpret_cast<chpe_range_entry *>(buf);
   for (uint32_t i = 0; i < map.size(); i++) {
     const ECCodeMapEntry &entry = map[i];
-    uint32_t start = entry.first->getRVA();
+    uint32_t start = entry.first->getRVA() & ~0xfff;
     table[i].StartOffset = start | entry.type;
     table[i].Length = entry.last->getRVA() + entry.last->getSize() - start;
   }
@@ -1264,7 +1271,8 @@ void DynamicRelocsChunk::finalize() {
 }
 
 // Set the reloc value. The reloc entry must be allocated beforehand.
-void DynamicRelocsChunk::set(uint32_t rva, Arm64XRelocVal value) {
+void DynamicRelocsChunk::set(Arm64XRelocVal offset, Arm64XRelocVal value) {
+  uint32_t rva = offset.get();
   auto entry =
       llvm::find_if(arm64xRelocs, [rva](const Arm64XDynamicRelocEntry &e) {
         return e.offset.get() == rva;

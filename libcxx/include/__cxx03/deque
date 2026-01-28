@@ -541,10 +541,7 @@ private:
 
 public:
   // construct/copy/destroy:
-  _LIBCPP_HIDE_FROM_ABI deque() _NOEXCEPT_(is_nothrow_default_constructible<allocator_type>::value)
-      : __start_(0), __size_(0, __default_init_tag()) {
-    __annotate_new(0);
-  }
+  _LIBCPP_HIDE_FROM_ABI deque() : __start_(0), __size_(0, __default_init_tag()) { __annotate_new(0); }
 
   _LIBCPP_HIDE_FROM_ABI ~deque() {
     clear();
@@ -672,8 +669,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __p);
   _LIBCPP_HIDE_FROM_ABI iterator erase(const_iterator __f, const_iterator __l);
 
-  _LIBCPP_HIDE_FROM_ABI void swap(deque& __c)
-      _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<allocator_type>);
+  _LIBCPP_HIDE_FROM_ABI void swap(deque& __c);
   _LIBCPP_HIDE_FROM_ABI void clear() _NOEXCEPT;
 
   _LIBCPP_HIDE_FROM_ABI bool __invariants() const {
@@ -698,22 +694,14 @@ public:
     return true;
   }
 
-  _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(deque& __c)
-      _NOEXCEPT_(!__alloc_traits::propagate_on_container_move_assignment::value ||
-                 is_nothrow_move_assignable<allocator_type>::value) {
+  _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(deque& __c) {
     __move_assign_alloc(__c, integral_constant<bool, __alloc_traits::propagate_on_container_move_assignment::value>());
   }
 
-  _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(deque& __c, true_type)
-      _NOEXCEPT_(is_nothrow_move_assignable<allocator_type>::value) {
-    __alloc() = std::move(__c.__alloc());
-  }
-
+  _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(deque& __c, true_type) { __alloc() = std::move(__c.__alloc()); }
   _LIBCPP_HIDE_FROM_ABI void __move_assign_alloc(deque&, false_type) _NOEXCEPT {}
 
-  _LIBCPP_HIDE_FROM_ABI void __move_assign(deque& __c)
-      _NOEXCEPT_(__alloc_traits::propagate_on_container_move_assignment::value&&
-                     is_nothrow_move_assignable<allocator_type>::value) {
+  _LIBCPP_HIDE_FROM_ABI void __move_assign(deque& __c) {
     __map_   = std::move(__c.__map_);
     __start_ = __c.__start_;
     __size() = __c.size();
@@ -930,7 +918,7 @@ public:
     // This function tests deque object annotations.
     if (empty()) {
       for (__map_const_iterator __it = __map_.begin(); __it != __map_.end(); ++__it) {
-        if (!__sanitizer_verify_double_ended_contiguous_container(
+        if (!::__sanitizer_verify_double_ended_contiguous_container(
                 std::__to_address(*__it),
                 std::__to_address(*__it),
                 std::__to_address(*__it),
@@ -962,7 +950,7 @@ public:
 
       // Is the block before or after deque blocks that contain elements?
       if (__it < __first_mp || __it > __last_mp) {
-        if (!__sanitizer_verify_double_ended_contiguous_container(
+        if (!::__sanitizer_verify_double_ended_contiguous_container(
                 std::__to_address(*__it),
                 std::__to_address(*__it),
                 std::__to_address(*__it),
@@ -972,7 +960,7 @@ public:
         const void* __containers_buffer_beg = (__it == __first_mp) ? __p_beg : (const void*)std::__to_address(*__it);
         const void* __containers_buffer_end =
             (__it == __last_mp) ? __p_end : (const void*)std::__to_address(*__it + __block_size);
-        if (!__sanitizer_verify_double_ended_contiguous_container(
+        if (!::__sanitizer_verify_double_ended_contiguous_container(
                 std::__to_address(*__it),
                 __containers_buffer_beg,
                 __containers_buffer_end,
@@ -1066,13 +1054,12 @@ private:
 
   _LIBCPP_HIDE_FROM_ABI void __copy_assign_alloc(const deque&, false_type) {}
 
-  _LIBCPP_HIDE_FROM_ABI void __move_assign(deque& __c, true_type)
-      _NOEXCEPT_(is_nothrow_move_assignable<allocator_type>::value);
+  _LIBCPP_HIDE_FROM_ABI void __move_assign(deque& __c, true_type);
   _LIBCPP_HIDE_FROM_ABI void __move_assign(deque& __c, false_type);
 };
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR const typename allocator_traits<_Alloc>::difference_type deque<_Tp, _Alloc>::__block_size =
+const typename allocator_traits<_Alloc>::difference_type deque<_Tp, _Alloc>::__block_size =
     __deque_block_size<value_type, difference_type>::value;
 
 template <class _Tp, class _Allocator>
@@ -2064,8 +2051,7 @@ void deque<_Tp, _Allocator>::__erase_to_end(const_iterator __f) {
 }
 
 template <class _Tp, class _Allocator>
-inline void deque<_Tp, _Allocator>::swap(deque& __c)
-    _NOEXCEPT_(!__alloc_traits::propagate_on_container_swap::value || __is_nothrow_swappable_v<allocator_type>) {
+inline void deque<_Tp, _Allocator>::swap(deque& __c) {
   __map_.swap(__c.__map_);
   std::swap(__start_, __c.__start_);
   std::swap(__size(), __c.__size());
@@ -2126,8 +2112,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator<=(const deque<_Tp, _Allocator>& __x, 
 }
 
 template <class _Tp, class _Allocator>
-inline _LIBCPP_HIDE_FROM_ABI void swap(deque<_Tp, _Allocator>& __x, deque<_Tp, _Allocator>& __y)
-    _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
+inline _LIBCPP_HIDE_FROM_ABI void swap(deque<_Tp, _Allocator>& __x, deque<_Tp, _Allocator>& __y) {
   __x.swap(__y);
 }
 

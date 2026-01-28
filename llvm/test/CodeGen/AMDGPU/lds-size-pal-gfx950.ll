@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx950 -verify-machineinstrs < %s | FileCheck -check-prefix=PAL %s
+; RUN: llc -mtriple=amdgcn-amd-amdpal -mcpu=gfx950 < %s | FileCheck -check-prefix=PAL %s
 
 ; GFX950supports upto 160 KB configurable LDS memory.
 ; This test checks the min and max size of LDS that can be allocated.

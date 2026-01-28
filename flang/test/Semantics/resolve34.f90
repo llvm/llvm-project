@@ -90,16 +90,37 @@ module m7
     integer :: i2
     integer, private :: i3
   end type
+  type :: t3
+    private
+    integer :: i4 = 0
+    procedure(real), pointer, nopass :: pp1 => null()
+  end type
+  type, extends(t3) :: t4
+    private
+    integer :: i5
+    procedure(real), pointer, nopass :: pp2
+  end type
 end
 subroutine s7
   use m7
   type(t2) :: x
+  type(t4) :: y
   integer :: j
   j = x%i2
-  !ERROR: PRIVATE name 'i3' is only accessible within module 'm7'
+  !ERROR: PRIVATE name 'i3' is accessible only within module 'm7'
   j = x%i3
-  !ERROR: PRIVATE name 't1' is only accessible within module 'm7'
+  !ERROR: PRIVATE name 't1' is accessible only within module 'm7'
   j = x%t1%i1
+  !ok, parent component is not affected by PRIVATE in t4
+  y%t3 = t3()
+  !ERROR: PRIVATE name 'i4' is accessible only within module 'm7'
+  y%i4 = 0
+  !ERROR: PRIVATE name 'pp1' is accessible only within module 'm7'
+  y%pp1 => null()
+  !ERROR: PRIVATE name 'i5' is accessible only within module 'm7'
+  y%i5 = 0
+  !ERROR: PRIVATE name 'pp2' is accessible only within module 'm7'
+  y%pp2 => null()
 end
 
 ! 7.5.4.8(2)
@@ -122,11 +143,11 @@ end
 subroutine s8
   use m8
   type(t) :: x
-  !ERROR: PRIVATE name 'i2' is only accessible within module 'm8'
+  !ERROR: PRIVATE name 'i2' is accessible only within module 'm8'
   x = t(2, 5)
-  !ERROR: PRIVATE name 'i2' is only accessible within module 'm8'
+  !ERROR: PRIVATE name 'i2' is accessible only within module 'm8'
   x = t(i1=2, i2=5)
-  !ERROR: PRIVATE name 'i2' is only accessible within module 'm8'
+  !ERROR: PRIVATE name 'i2' is accessible only within module 'm8'
   a = [y%i2]
 end
 
@@ -166,6 +187,6 @@ subroutine s10
   use m10
   type(t) x
   x = t(1)
-  !ERROR: PRIVATE name 'operator(+)' is only accessible within module 'm10'
+  !ERROR: PRIVATE name 'operator(+)' is accessible only within module 'm10'
   x = x + x
 end subroutine

@@ -6,13 +6,14 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "llvm/Option/Arg.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/Option/Arg.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/Option/Option.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/raw_ostream.h"
 
 using namespace llvm;
@@ -39,8 +40,8 @@ Arg::Arg(const Option Opt, StringRef S, unsigned Index, const char *Value0,
 
 Arg::~Arg() {
   if (OwnsValues) {
-    for (unsigned i = 0, e = Values.size(); i != e; ++i)
-      delete[] Values[i];
+    for (const char *V : Values)
+      delete[] V;
   }
 }
 
@@ -72,13 +73,7 @@ std::string Arg::getAsString(const ArgList &Args) const {
 
   ArgStringList ASL;
   render(Args, ASL);
-  for (ArgStringList::iterator
-         it = ASL.begin(), ie = ASL.end(); it != ie; ++it) {
-    if (it != ASL.begin())
-      OS << ' ';
-    OS << *it;
-  }
-
+  OS << llvm::interleaved(ASL, " ");
   return std::string(OS.str());
 }
 
@@ -100,11 +95,7 @@ void Arg::render(const ArgList &Args, ArgStringList &Output) const {
   case Option::RenderCommaJoinedStyle: {
     SmallString<256> Res;
     raw_svector_ostream OS(Res);
-    OS << getSpelling();
-    for (unsigned i = 0, e = getNumValues(); i != e; ++i) {
-      if (i) OS << ',';
-      OS << getValue(i);
-    }
+    OS << getSpelling() << llvm::interleaved(getValues(), ",");
     Output.push_back(Args.MakeArgString(OS.str()));
     break;
   }

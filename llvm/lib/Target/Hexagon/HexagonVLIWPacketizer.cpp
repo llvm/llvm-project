@@ -101,8 +101,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &Fn) override;
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
   private:
@@ -198,8 +197,7 @@ static MachineBasicBlock::iterator moveInstrOut(MachineInstr &MI,
 
 bool HexagonPacketizer::runOnMachineFunction(MachineFunction &MF) {
   // FIXME: This pass causes verification failures.
-  MF.getProperties().set(
-      MachineFunctionProperties::Property::FailsVerification);
+  MF.getProperties().setFailsVerification();
 
   auto &HST = MF.getSubtarget<HexagonSubtarget>();
   HII = HST.getInstrInfo();
@@ -655,7 +653,7 @@ bool HexagonPacketizerList::canPromoteToNewValueStore(const MachineInstr &MI,
   const MCInstrDesc& MCID = PacketMI.getDesc();
 
   // First operand is always the result.
-  const TargetRegisterClass *PacketRC = HII->getRegClass(MCID, 0, HRI, MF);
+  const TargetRegisterClass *PacketRC = HII->getRegClass(MCID, 0);
   // Double regs can not feed into new value store: PRM section: 5.4.2.2.
   if (PacketRC == &Hexagon::DoubleRegsRegClass)
     return false;
@@ -868,7 +866,7 @@ bool HexagonPacketizerList::canPromoteToDotNew(const MachineInstr &MI,
     return false;
 
   const MCInstrDesc& MCID = PI.getDesc();
-  const TargetRegisterClass *VecRC = HII->getRegClass(MCID, 0, HRI, MF);
+  const TargetRegisterClass *VecRC = HII->getRegClass(MCID, 0);
   if (DisableVecDblNVStores && VecRC == &Hexagon::HvxWRRegClass)
     return false;
 

@@ -8,6 +8,7 @@
 # using the frame pointer register and the are deliberately adjusting the stack
 # pointer to test that we're using the correct unwind row.
 
+        .att_syntax
         .text
 
         .type   baz,@function
@@ -18,67 +19,6 @@ baz:
         .cfi_endproc
 .Lbaz_end:
         .size   baz, .Lbaz_end-baz
-
-        .type   foo,@function
-foo:
-        .cfi_startproc
-        pushq   %rbx
-        .cfi_def_cfa_offset 16
-        .cfi_offset %rbx, -16
-        movl    %edi, %ebx
-        cmpl    $0, %ebx
-        je      foo.__part.2
-        jmp     foo.__part.1
-        .cfi_endproc
-.Lfoo_end:
-        .size   foo, .Lfoo_end-foo
-
-# NB: Deliberately inserting padding to separate the two parts of the function
-# as we're currently only parsing a single FDE entry from a (coalesced) address
-# range.
-        nop
-
-foo.__part.1:
-        .cfi_startproc
-        .cfi_def_cfa_offset 16
-        .cfi_offset %rbx, -16
-        subq    $16, %rsp
-        .cfi_def_cfa_offset 32
-        callq   bar
-        jmp     foo.__part.3
-.Lfoo.__part.1_end:
-        .size   foo.__part.1, .Lfoo.__part.1_end-foo.__part.1
-        .cfi_endproc
-
-bar:
-        .cfi_startproc
-        subq    $24, %rsp
-        .cfi_def_cfa_offset 32
-        xorl    %edi, %edi
-        callq   foo
-        addq    $24, %rsp
-        .cfi_def_cfa %rsp, 8
-        retq
-        .cfi_endproc
-.Lbar_end:
-        .size   bar, .Lbar_end-bar
-
-foo.__part.2:
-        .cfi_startproc
-        .cfi_def_cfa_offset 16
-        .cfi_offset %rbx, -16
-        subq    $16, %rsp
-        .cfi_def_cfa_offset 32
-        callq   baz
-        jmp     foo.__part.3
-.Lfoo.__part.2_end:
-        .size   foo.__part.2, .Lfoo.__part.2_end-foo.__part.2
-        .cfi_endproc
-
-# NB: Deliberately inserting padding to separate the two parts of the function
-# as we're currently only parsing a single FDE entry from a (coalesced) address
-# range.
-        nop
 
 foo.__part.3:
         .cfi_startproc
@@ -91,6 +31,70 @@ foo.__part.3:
         .size   foo.__part.3, .Lfoo.__part.3_end-foo.__part.3
         .cfi_endproc
 
+# NB: Deliberately inserting padding to separate the two parts of the function
+# as we're currently only parsing a single FDE entry from a (coalesced) address
+# range.
+        nop
+
+foo.__part.1:
+        .cfi_startproc
+        .cfi_def_cfa_offset 32
+        .cfi_offset %rbx, -16
+        subq    $16, %rsp
+        .cfi_def_cfa_offset 48
+        callq   bar
+        addq    $16, %rsp
+        .cfi_def_cfa_offset 32
+        jmp     foo.__part.3
+.Lfoo.__part.1_end:
+        .size   foo.__part.1, .Lfoo.__part.1_end-foo.__part.1
+        .cfi_endproc
+
+bar:
+        .cfi_startproc
+        subq    $88, %rsp
+        .cfi_def_cfa_offset 96
+        xorl    %edi, %edi
+        callq   foo
+        addq    $88, %rsp
+        .cfi_def_cfa %rsp, 8
+        retq
+        .cfi_endproc
+.Lbar_end:
+        .size   bar, .Lbar_end-bar
+
+        .type   foo,@function
+foo:
+        .cfi_startproc
+        pushq   %rbx
+        .cfi_def_cfa_offset 16
+        .cfi_offset %rbx, -16
+        movl    %edi, %ebx
+        cmpl    $0, %ebx
+        je      foo.__part.2
+        subq    $16, %rsp
+        .cfi_def_cfa_offset 32
+        jmp     foo.__part.1
+        .cfi_endproc
+.Lfoo_end:
+        .size   foo, .Lfoo_end-foo
+
+# NB: Deliberately inserting padding to separate the two parts of the function
+# as we're currently only parsing a single FDE entry from a (coalesced) address
+# range.
+        nop
+
+foo.__part.2:
+        .cfi_startproc
+        .cfi_def_cfa_offset 16
+        .cfi_offset %rbx, -16
+        subq    $16, %rsp
+        .cfi_def_cfa_offset 32
+        callq   baz
+        jmp     foo.__part.3
+.Lfoo.__part.2_end:
+        .size   foo.__part.2, .Lfoo.__part.2_end-foo.__part.2
+        .cfi_endproc
 
         .globl  main
         .type   main,@function

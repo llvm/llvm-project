@@ -15,7 +15,6 @@
 #include "llvm/DWARFLinker/Utils.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugAbbrev.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugMacro.h"
-#include "llvm/Support/DJB.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/Path.h"
@@ -102,10 +101,8 @@ void CompileUnit::maybeResetToLoadedStage() {
   OutUnitDIE = nullptr;
   DebugAddrIndexMap.clear();
 
-  for (uint64_t &Offset : OutDieOffsetArray)
-    Offset = 0;
-  for (TypeEntry *&Name : TypeEntries)
-    Name = nullptr;
+  llvm::fill(OutDieOffsetArray, 0);
+  llvm::fill(TypeEntries, nullptr);
   eraseSections();
 
   setStage(Stage::CreatedNotLoaded);

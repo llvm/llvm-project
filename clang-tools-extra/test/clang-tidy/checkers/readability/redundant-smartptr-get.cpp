@@ -13,9 +13,23 @@ struct unique_ptr {
 };
 
 template <typename T>
+struct unique_ptr<T[]> {
+  T& operator[](unsigned) const;
+  T* get() const;
+  explicit operator bool() const noexcept;
+};
+
+template <typename T>
 struct shared_ptr {
   T& operator*() const;
   T* operator->() const;
+  T* get() const;
+  explicit operator bool() const noexcept;
+};
+
+template <typename T>
+struct shared_ptr<T[]> {
+  T& operator[](unsigned) const;
   T* get() const;
   explicit operator bool() const noexcept;
 };
@@ -282,4 +296,32 @@ void test_redundant_get_with_member() {
     // CHECK-MESSAGES: :[[@LINE-1]]:8: warning: redundant get() call
     // CHECK-FIXES: f(**i->get()->getValue());
  }
+}
+
+void test_smart_ptr_to_array() {
+  std::unique_ptr<int[]> i;
+  // The array specialization does not have operator*(), so make sure
+  // we do not incorrectly suggest sizeof(*i) here.
+  // FIXME: alternatively, we could suggest sizeof(i[0])
+  auto sz = sizeof(*i.get());
+
+  std::shared_ptr<Inner[]> s;
+  // The array specialization does not have operator->() either
+  s.get()->getValue();
+
+  bool b1 = !s.get();
+  // CHECK-MESSAGES: :[[@LINE-1]]:14: warning: redundant get() call
+  // CHECK-FIXES: bool b1 = !s;
+
+  if (s.get()) {}
+  // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: redundant get() call
+  // CHECK-FIXES: if (s) {}
+
+  int x = s.get() ? 1 : 2;
+  // CHECK-MESSAGES: :[[@LINE-1]]:11: warning: redundant get() call
+  // CHECK-FIXES: int x = s ? 1 : 2;
+
+  bool b2 = s.get() == nullptr;
+  // CHECK-MESSAGES: :[[@LINE-1]]:13: warning: redundant get() call
+  // CHECK-FIXES: bool b2 = s == nullptr;
 }

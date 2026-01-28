@@ -20,18 +20,21 @@
 
 #include "llvm/ExecutionEngine/JITLink/JITLinkMemoryManager.h"
 #include "llvm/ExecutionEngine/Orc/Core.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace orc {
 
-class EPCGenericJITLinkMemoryManager : public jitlink::JITLinkMemoryManager {
+class LLVM_ABI EPCGenericJITLinkMemoryManager
+    : public jitlink::JITLinkMemoryManager {
 public:
   /// Function addresses for memory access.
   struct SymbolAddrs {
     ExecutorAddr Allocator;
     ExecutorAddr Reserve;
-    ExecutorAddr Finalize;
-    ExecutorAddr Deallocate;
+    ExecutorAddr Initialize;
+    ExecutorAddr Deinitialize;
+    ExecutorAddr Release;
   };
 
   /// Create an EPCGenericJITLinkMemoryManager instance from a given set of

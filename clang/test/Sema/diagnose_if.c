@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 %s -verify -fno-builtin
+// RUN: %clang_cc1 %s -verify -fno-builtin -fexperimental-new-constant-interpreter
 
 #define _diagnose_if(...) __attribute__((diagnose_if(__VA_ARGS__)))
 

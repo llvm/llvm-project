@@ -11,6 +11,7 @@ static_library("GSYM") {
     "ExtractRanges.cpp",
     "FileWriter.cpp",
     "FunctionInfo.cpp",
+    "GsymContext.cpp",
     "GsymCreator.cpp",
     "GsymReader.cpp",
     "Header.cpp",

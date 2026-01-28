@@ -8,7 +8,7 @@
 
 // <list>
 
-// void resize(size_type sz, const value_type& x);
+// void resize(size_type sz, const value_type& x); // constexpr since C++26
 
 #include <list>
 #include <cassert>
@@ -16,7 +16,7 @@
 #include "DefaultOnly.h"
 #include "min_allocator.h"
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   {
     std::list<double> l(5, 2);
     l.resize(2, 3.5);
@@ -48,6 +48,15 @@ int main(int, char**) {
     assert(l.front() == 2);
     assert(l.back() == 3.5);
   }
+#endif
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
 #endif
 
   return 0;

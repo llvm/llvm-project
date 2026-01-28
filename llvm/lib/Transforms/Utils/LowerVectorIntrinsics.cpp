@@ -8,8 +8,6 @@
 
 #include "llvm/Transforms/Utils/LowerVectorIntrinsics.h"
 #include "llvm/IR/IRBuilder.h"
-#include "llvm/IR/IntrinsicInst.h"
-#include "llvm/Support/Debug.h"
 
 #define DEBUG_TYPE "lower-vector-intrinsics"
 
@@ -23,6 +21,7 @@ bool llvm::lowerUnaryVectorIntrinsicAsLoop(Module &M, CallInst *CI) {
   BasicBlock *PostLoopBB = nullptr;
   Function *ParentFunc = PreLoopBB->getParent();
   LLVMContext &Ctx = PreLoopBB->getContext();
+  Type *Int64Ty = IntegerType::get(Ctx, 64);
 
   PostLoopBB = PreLoopBB->splitBasicBlock(CI);
   BasicBlock *LoopBB = BasicBlock::Create(Ctx, "", ParentFunc, PostLoopBB);
@@ -30,22 +29,11 @@ bool llvm::lowerUnaryVectorIntrinsicAsLoop(Module &M, CallInst *CI) {
 
   // Loop preheader
   IRBuilder<> PreLoopBuilder(PreLoopBB->getTerminator());
-  Value *LoopEnd = nullptr;
-  if (auto *ScalableVecTy = dyn_cast<ScalableVectorType>(VecTy)) {
-    Value *VScale = PreLoopBuilder.CreateVScale(
-        ConstantInt::get(PreLoopBuilder.getInt64Ty(), 1));
-    Value *N = ConstantInt::get(PreLoopBuilder.getInt64Ty(),
-                                ScalableVecTy->getMinNumElements());
-    LoopEnd = PreLoopBuilder.CreateMul(VScale, N);
-  } else {
-    FixedVectorType *FixedVecTy = cast<FixedVectorType>(VecTy);
-    LoopEnd = ConstantInt::get(PreLoopBuilder.getInt64Ty(),
-                               FixedVecTy->getNumElements());
-  }
+  Value *LoopEnd =
+      PreLoopBuilder.CreateElementCount(Int64Ty, VecTy->getElementCount());
 
   // Loop body
   IRBuilder<> LoopBuilder(LoopBB);
-  Type *Int64Ty = LoopBuilder.getInt64Ty();
 
   PHINode *LoopIndex = LoopBuilder.CreatePHI(Int64Ty, 2);
   LoopIndex->addIncoming(ConstantInt::get(Int64Ty, 0U), PreLoopBB);

@@ -10,7 +10,8 @@
 #define LLVM_LIBC_SRC_SCHED_SCHED_GETCPUCOUNT_H
 
 #include "src/__support/macros/config.h"
-#include <sched.h>
+
+#include "hdr/types/cpu_set_t.h"
 #include <stddef.h>
 
 namespace LIBC_NAMESPACE_DECL {

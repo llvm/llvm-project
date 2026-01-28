@@ -10,7 +10,7 @@ Performance analysis using ``-ftime-trace``
 
 You can add the ``-ftime-trace=file.json`` option to break down the analysis time into individual entry points and steps within each entry point.
 You can explore the generated JSON file in a Chromium browser using the ``chrome://tracing`` URL,
-or using `speedscope <https://speedscope.app>`_.
+or using `perfetto <https://ui.perfetto.dev>`_ or `speedscope <https://speedscope.app>`_.
 Once you narrow down to specific analysis steps you are interested in, you can more effectively employ heavier profilers,
 such as `Perf <https://perfwiki.github.io/main/>`_ and `Callgrind <https://valgrind.org/docs/manual/cl-manual.html>`_.
 

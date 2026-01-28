@@ -1,4 +1,4 @@
-//===--- StandaloneEmptyCheck.cpp - clang-tidy ----------------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -21,8 +21,6 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Sema/HeuristicResolver.h"
-#include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Casting.h"
 
 namespace clang::tidy::bugprone {
@@ -48,7 +46,8 @@ using ast_matchers::stmtExpr;
 using ast_matchers::unless;
 using ast_matchers::voidType;
 
-const Expr *getCondition(const BoundNodes &Nodes, const StringRef NodeId) {
+static const Expr *getCondition(const BoundNodes &Nodes,
+                                const StringRef NodeId) {
   const auto *If = Nodes.getNodeAs<IfStmt>(NodeId);
   if (If != nullptr)
     return If->getCond();
@@ -118,12 +117,13 @@ void StandaloneEmptyCheck::check(const MatchFinder::MatchResult &Result) {
     if (ParentReturnStmt)
       return;
 
-    SourceLocation MemberLoc = MemberCall->getBeginLoc();
-    SourceLocation ReplacementLoc = MemberCall->getExprLoc();
-    SourceRange ReplacementRange = SourceRange(ReplacementLoc, ReplacementLoc);
+    const SourceLocation MemberLoc = MemberCall->getBeginLoc();
+    const SourceLocation ReplacementLoc = MemberCall->getExprLoc();
+    const SourceRange ReplacementRange =
+        SourceRange(ReplacementLoc, ReplacementLoc);
 
     ASTContext &Context = MemberCall->getRecordDecl()->getASTContext();
-    DeclarationName Name =
+    const DeclarationName Name =
         Context.DeclarationNames.getIdentifier(&Context.Idents.get("clear"));
 
     auto Candidates = HeuristicResolver(Context).lookupDependentName(
@@ -134,11 +134,12 @@ void StandaloneEmptyCheck::check(const MatchFinder::MatchResult &Result) {
                  !llvm::cast<CXXMethodDecl>(ND)->isConst();
         });
 
-    bool HasClear = !Candidates.empty();
+    const bool HasClear = !Candidates.empty();
     if (HasClear) {
       const auto *Clear = llvm::cast<CXXMethodDecl>(Candidates.at(0));
-      QualType RangeType = MemberCall->getImplicitObjectArgument()->getType();
-      bool QualifierIncompatible =
+      const QualType RangeType =
+          MemberCall->getImplicitObjectArgument()->getType();
+      const bool QualifierIncompatible =
           (!Clear->isVolatile() && RangeType.isVolatileQualified()) ||
           RangeType.isConstQualified();
       if (!QualifierIncompatible) {
@@ -163,8 +164,8 @@ void StandaloneEmptyCheck::check(const MatchFinder::MatchResult &Result) {
     if (NonMemberCall->getNumArgs() != 1)
       return;
 
-    SourceLocation NonMemberLoc = NonMemberCall->getExprLoc();
-    SourceLocation NonMemberEndLoc = NonMemberCall->getEndLoc();
+    const SourceLocation NonMemberLoc = NonMemberCall->getExprLoc();
+    const SourceLocation NonMemberEndLoc = NonMemberCall->getEndLoc();
 
     const Expr *Arg = NonMemberCall->getArg(0);
     CXXRecordDecl *ArgRecordDecl = Arg->getType()->getAsCXXRecordDecl();
@@ -172,7 +173,7 @@ void StandaloneEmptyCheck::check(const MatchFinder::MatchResult &Result) {
       return;
 
     ASTContext &Context = ArgRecordDecl->getASTContext();
-    DeclarationName Name =
+    const DeclarationName Name =
         Context.DeclarationNames.getIdentifier(&Context.Idents.get("clear"));
 
     auto Candidates = HeuristicResolver(Context).lookupDependentName(
@@ -183,20 +184,20 @@ void StandaloneEmptyCheck::check(const MatchFinder::MatchResult &Result) {
                  !llvm::cast<CXXMethodDecl>(ND)->isConst();
         });
 
-    bool HasClear = !Candidates.empty();
+    const bool HasClear = !Candidates.empty();
 
     if (HasClear) {
       const auto *Clear = llvm::cast<CXXMethodDecl>(Candidates.at(0));
-      bool QualifierIncompatible =
+      const bool QualifierIncompatible =
           (!Clear->isVolatile() && Arg->getType().isVolatileQualified()) ||
           Arg->getType().isConstQualified();
       if (!QualifierIncompatible) {
-        std::string ReplacementText =
+        const std::string ReplacementText =
             std::string(Lexer::getSourceText(
                 CharSourceRange::getTokenRange(Arg->getSourceRange()),
                 *Result.SourceManager, getLangOpts())) +
             ".clear()";
-        SourceRange ReplacementRange =
+        const SourceRange ReplacementRange =
             SourceRange(NonMemberLoc, NonMemberEndLoc);
         diag(NonMemberLoc,
              "ignoring the result of '%0'; did you mean 'clear()'?")

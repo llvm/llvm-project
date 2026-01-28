@@ -8,7 +8,7 @@
 ; Note that these two assembly files number the nodes identically, even though
 ; the nodes are in a different order.  This is for the reader's convenience.
 
-; CHECK: !named = !{!0, !0}
+; CHECK: !named = !{!0}
 !named = !{!0}
 
 ; CHECK: !0 = !{!1}

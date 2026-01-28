@@ -17,7 +17,7 @@ body:             |
     ; CHECK-NEXT: stp d9, d8, [sp, #16]
     ; CHECK-NEXT: str x29, [sp, #32]
     ; CHECK-NEXT: addvl sp, sp, #-2
-    ; CHECK-NEXT: .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x30, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 48 + 16 * VG
+    ; CHECK-NEXT: .cfi_escape 0x0f, 0x08, 0x8f, 0x30, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 48 + 16 * VG
     ; CHECK-NEXT: .cfi_offset w29, -16
     ; CHECK-NEXT: .cfi_offset b8, -24
     ; CHECK-NEXT: .cfi_offset b9, -32
@@ -97,7 +97,7 @@ body:             |
 
     ; CHECK: str x29, [sp, #-16]!
     ; CHECK-NEXT: addvl	sp, sp, #-2
-    ; CHECK-NEXT: .cfi_escape 0x0f, 0x0c, 0x8f, 0x00, 0x11, 0x10, 0x22, 0x11, 0x10, 0x92, 0x2e, 0x00, 0x1e, 0x22 // sp + 16 + 16 * VG
+    ; CHECK-NEXT: .cfi_escape 0x0f, 0x08, 0x8f, 0x10, 0x92, 0x2e, 0x00, 0x40, 0x1e, 0x22 // sp + 16 + 16 * VG
     ; CHECK-NEXT: .cfi_offset w29, -16
     ; CHECK-NEXT: lsl x9, x1, #1
     ; CHECK-NEXT: ptrue	pn8.b

@@ -79,21 +79,18 @@ namespace canon {
   // expected-note@#canon-t3-3 {{candidate function}}
 
   template <class T> constexpr int t4(typename T::template X<int>* = 0) { return 0; }
-  // expected-note@-1 3{{candidate function}}
+  // expected-note@-1 2{{candidate function}}
   template <class T> constexpr int t4(struct   T::template X<int>* = 0) { return 1; }
-  // expected-note@-1 3{{candidate function}}
+  // expected-note@-1 2{{candidate function}}
   template <class T> constexpr int t4(union    T::template X<int>* = 0) { return 2; }
-  // expected-note@-1 3{{candidate function}}
+  // expected-note@-1 2{{candidate function}}
 
-  // FIXME: This should work.
   struct E { template <class T> using X = T; };
-  static_assert(t4<E>() == 0); // expected-error {{call to 't4' is ambiguous}}
+  static_assert(t4<E>() == 0);
 
-  // FIXME: Should not match the union overload.
   struct F { template <class> struct X {}; };
   static_assert(t4<F>() == 1); // expected-error {{call to 't4' is ambiguous}}
 
-  // FIXME: Should not match the struct overload.
   struct G { template <class> union X {}; };
   static_assert(t4<G>() == 2); // expected-error {{call to 't4' is ambiguous}}
 } // namespace canon

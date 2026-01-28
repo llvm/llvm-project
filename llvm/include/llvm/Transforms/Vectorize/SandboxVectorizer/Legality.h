@@ -16,6 +16,7 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/Support/Casting.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/InstrMaps.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/Scheduler.h"
@@ -166,7 +167,7 @@ protected:
   LegalityResult &operator=(const LegalityResult &) = delete;
 
 public:
-  virtual ~LegalityResult() {}
+  virtual ~LegalityResult() = default;
   LegalityResultID getSubclassID() const { return ID; }
 #ifndef NDEBUG
   virtual void print(raw_ostream &OS) const {
@@ -347,13 +348,13 @@ public:
   /// \Returns a LegalityResult object owned by LegalityAnalysis.
   /// \p SkipScheduling skips the scheduler check and is only meant for testing.
   // TODO: Try to remove the SkipScheduling argument by refactoring the tests.
-  const LegalityResult &canVectorize(ArrayRef<Value *> Bndl,
-                                     bool SkipScheduling = false);
+  LLVM_ABI const LegalityResult &canVectorize(ArrayRef<Value *> Bndl,
+                                              bool SkipScheduling = false);
   /// \Returns a Pack with reason 'ForcePackForDebugging'.
   const LegalityResult &getForcedPackForDebugging() {
     return createLegalityResult<Pack>(ResultReason::ForcePackForDebugging);
   }
-  void clear();
+  LLVM_ABI void clear();
 };
 
 } // namespace llvm::sandboxir

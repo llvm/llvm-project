@@ -5,19 +5,19 @@
 
     This file defines the template for functions/methods
 }}
-<div class="delimiter-container">
-    <div id="{{ID}}">
+<div id="{{USR}}" class="delimiter-container">
+        {{#Template}}
+        <pre><code class="language-cpp code-clang-doc">template &lt;{{#Parameters}}{{Param}}{{^End}}, {{/End}}{{/Parameters}}&gt;</code></pre>
+        {{/Template}}
         {{! Function Prototype }}
-        <pre>
-            <code class="language-cpp code-clang-doc">
-{{ReturnType.Name}} {{Name}} ({{#Params}}{{^End}}{{Type}} {{Name}}, {{/End}}{{#End}}{{Type}} {{Name}}{{/End}}{{/Params}})
-            </code>
-        </pre>
+        <pre><code class="language-cpp code-clang-doc">{{ReturnType.QualName}} {{Name}}{{#Template}}{{#Specialization}}&lt;{{#Parameters}}{{Param}}{{^End}}, {{/End}}{{/Parameters}}&gt;{{/Specialization}}{{/Template}} ({{#Params}}{{Type.QualName}} {{Name}}{{^End}}, {{/End}}{{/Params}})</code></pre>
         {{! Function Comments }}
-        {{#FunctionComments}}
-        <div>
+        {{#Description}}
+        <div class="doc-card">
             {{>Comments}}
         </div>
-        {{/FunctionComments}}
-    </div>
+        {{/Description}}
+        {{#Location}}
+        <p>Defined at line {{LineNumber}} of file {{^FileURL}}{{Filename}}{{/FileURL}}{{#FileURL}}<a href="{{FileURL}}">{{Filename}}</a>{{/FileURL}}</p>
+        {{/Location}}
 </div>

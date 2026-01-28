@@ -19,9 +19,19 @@ add_libc_fuzzer(
   SRCS
     hashtable_fuzz.cpp
   DEPENDS
+    libc.hdr.types.ENTRY
     libc.src.__support.HashTable.table
   COMPILE_OPTIONS
     -D__LIBC_EXPLICIT_SIMD_OPT
+)
+
+add_libc_fuzzer(
+  weak_avl_fuzz
+  SRCS
+    weak_avl_fuzz.cpp
+  DEPENDS
+    libc.src.__support.weak_avl
+    libc.src.__support.CPP.optional
 )
 
 # TODO: FreeListHeap uses the _end symbol which conflicts with the _end symbol

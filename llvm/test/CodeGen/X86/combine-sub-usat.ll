@@ -73,17 +73,17 @@ define <8 x i16> @combine_constfold_v8i16() {
 define <8 x i16> @combine_constfold_undef_v8i16() {
 ; SSE-LABEL: combine_constfold_undef_v8i16:
 ; SSE:       # %bb.0:
-; SSE-NEXT:    movaps {{.*#+}} xmm0 = [0,0,0,0,65534,0,0,0]
+; SSE-NEXT:    movaps {{.*#+}} xmm0 = [0,0,u,0,65534,0,0,0]
 ; SSE-NEXT:    retq
 ;
 ; AVX1-LABEL: combine_constfold_undef_v8i16:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [0,0,0,0,65534,0,0,0]
+; AVX1-NEXT:    vmovaps {{.*#+}} xmm0 = [0,0,u,0,65534,0,0,0]
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: combine_constfold_undef_v8i16:
 ; AVX2:       # %bb.0:
-; AVX2-NEXT:    vmovaps {{.*#+}} xmm0 = [0,0,0,0,65534,0,0,0]
+; AVX2-NEXT:    vmovaps {{.*#+}} xmm0 = [0,0,u,0,65534,0,0,0]
 ; AVX2-NEXT:    retq
 ;
 ; AVX512-LABEL: combine_constfold_undef_v8i16:
@@ -110,6 +110,69 @@ define <8 x i16> @combine_zero_v8i16(<8 x i16> %a0) {
 ; CHECK-NEXT:    retq
   %1 = call <8 x i16> @llvm.usub.sat.v8i16(<8 x i16> %a0, <8 x i16> zeroinitializer)
   ret <8 x i16> %1
+}
+
+; fold (usub_sat x, 1) -> sub(x, zext(x != 0))
+define i32 @combine_dec_i32(i32 %a0) {
+; CHECK-LABEL: combine_dec_i32:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movl %edi, %eax
+; CHECK-NEXT:    cmpl $1, %edi
+; CHECK-NEXT:    adcl $-1, %eax
+; CHECK-NEXT:    retq
+  %1 = call i32 @llvm.usub.sat.i32(i32 %a0, i32 1)
+  ret i32 %1
+}
+
+; fold (usub_sat x, 1) -> add(x, sext(x != 0))
+define <4 x i32> @combine_dec_v4i32(<4 x i32> %a0) {
+; SSE2-LABEL: combine_dec_v4i32:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE2-NEXT:    paddd %xmm0, %xmm1
+; SSE2-NEXT:    pxor {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    pcmpgtd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE2-NEXT:    pand %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSE41-LABEL: combine_dec_v4i32:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pmaxud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE41-NEXT:    paddd %xmm1, %xmm0
+; SSE41-NEXT:    retq
+;
+; SSE42-LABEL: combine_dec_v4i32:
+; SSE42:       # %bb.0:
+; SSE42-NEXT:    pmaxud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; SSE42-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE42-NEXT:    paddd %xmm1, %xmm0
+; SSE42-NEXT:    retq
+;
+; AVX1-LABEL: combine_dec_v4i32:
+; AVX1:       # %bb.0:
+; AVX1-NEXT:    vpmaxud {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; AVX1-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX1-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX1-NEXT:    retq
+;
+; AVX2-LABEL: combine_dec_v4i32:
+; AVX2:       # %bb.0:
+; AVX2-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1,1,1,1]
+; AVX2-NEXT:    vpmaxud %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX2-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX2-NEXT:    retq
+;
+; AVX512-LABEL: combine_dec_v4i32:
+; AVX512:       # %bb.0:
+; AVX512-NEXT:    vpbroadcastd {{.*#+}} xmm1 = [1,1,1,1]
+; AVX512-NEXT:    vpmaxud %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX512-NEXT:    vpaddd %xmm1, %xmm0, %xmm0
+; AVX512-NEXT:    retq
+  %1 = call <4 x i32> @llvm.usub.sat.v4i32(<4 x i32> %a0, <4 x i32> splat (i32 1))
+  ret <4 x i32> %1
 }
 
 ; fold (usub_sat x, x) -> 0

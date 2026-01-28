@@ -120,8 +120,10 @@ func::FuncOp buildDeallocationLibraryFunction(OpBuilder &builder, Location loc,
                                               SymbolTable &symbolTable);
 
 /// Run the ownership-based buffer deallocation.
-LogicalResult deallocateBuffersOwnershipBased(FunctionOpInterface op,
-                                              DeallocationOptions options);
+LogicalResult
+deallocateBuffersOwnershipBased(FunctionOpInterface op,
+                                DeallocationOptions options,
+                                SymbolTableCollection &symbolTables);
 
 // Options struct for BufferResultsToOutParams pass.
 // Note: defined only here, not in tablegen.
@@ -129,8 +131,8 @@ struct BufferResultsToOutParamsOpts {
   /// Allocator function: Generate a memref allocation with the given type.
   /// Since `promoteBufferResultsToOutParams` doesn't allow dynamically shaped
   /// results, we don't allow passing a range of values for dynamic dims.
-  using AllocationFn =
-      std::function<FailureOr<Value>(OpBuilder &, Location, MemRefType)>;
+  using AllocationFn = std::function<FailureOr<Value>(OpBuilder &, Location,
+                                                      MemRefType, ValueRange)>;
 
   /// Memcpy function: Generate a memcpy between two memrefs.
   using MemCpyFn =
@@ -145,15 +147,16 @@ struct BufferResultsToOutParamsOpts {
   /// Allocation function; used to allocate a memref.
   /// Default memref.alloc is used
   AllocationFn allocationFn = [](OpBuilder &builder, Location loc,
-                                 MemRefType type) {
-    return builder.create<memref::AllocOp>(loc, type).getResult();
+                                 MemRefType type, ValueRange dynamicSizes) {
+    return memref::AllocOp::create(builder, loc, type, dynamicSizes)
+        .getResult();
   };
 
   /// Memcpy function; used to create a copy between two memrefs.
   /// Default memref.copy is used.
   MemCpyFn memCpyFn = [](OpBuilder &builder, Location loc, Value from,
                          Value to) {
-    builder.create<memref::CopyOp>(loc, from, to);
+    memref::CopyOp::create(builder, loc, from, to);
     return success();
   };
 
@@ -164,6 +167,13 @@ struct BufferResultsToOutParamsOpts {
   /// If true, the pass eliminates the memref.alloc and memcpy if the returned
   /// memref is allocated in the current function.
   bool hoistStaticAllocs = false;
+
+  /// If true, the pass eliminates the memref.alloc and memcpy if the returned
+  /// memref is allocated in the current function and has dynamic shape.
+  bool hoistDynamicAllocs = false;
+
+  /// If true, the pass modifies the function signatures of public functions.
+  bool modifyPublicFunctions = false;
 };
 
 /// Replace buffers that are returned from a function with an out parameter.

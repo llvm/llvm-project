@@ -30,8 +30,6 @@ let Namespace = "X86" in {
   def sub_ymm      : SubRegIndex<256>;
   def sub_mask_0   : SubRegIndex<-1>;
   def sub_mask_1   : SubRegIndex<-1, -1>;
-  def sub_t0       : SubRegIndex<8192>;
-  def sub_t1       : SubRegIndex<8192, 8192>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -432,10 +430,6 @@ def TMM4:  X86Reg<"tmm4",   4>;
 def TMM5:  X86Reg<"tmm5",   5>;
 def TMM6:  X86Reg<"tmm6",   6>;
 def TMM7:  X86Reg<"tmm7",   7>;
-// TMM register pairs
-def TPAIRS : RegisterTuples<[sub_t0, sub_t1],
-                            [(add TMM0, TMM2, TMM4, TMM6),
-                             (add TMM1, TMM3, TMM5, TMM7)]>;
 }
 
 // Floating point stack registers. These don't map one-to-one to the FP
@@ -716,10 +710,7 @@ def GR64_NOREX2_NOSP : RegisterClass<"X86", [i64], 64,
 // which we do not have right now.
 def LOW32_ADDR_ACCESS : RegisterClass<"X86", [i32], 32, (add GR32, RIP)>;
 
-// When RBP is used as a base pointer in a 32-bit addresses environment,
-// this is also safe to use the full register to access addresses.
-// Since RBP will never be spilled, stick to a 32 alignment to save
-// on memory consumption.
+// FIXME: This is unused, but deleting it results in codegen changes
 def LOW32_ADDR_ACCESS_RBP : RegisterClass<"X86", [i32], 32,
                                           (add LOW32_ADDR_ACCESS, RBP)>;
 
@@ -736,6 +727,10 @@ def GR32_BSI : RegisterClass<"X86", [i32], 32, (add EBX, ESI)>;
 def GR32_SIDI : RegisterClass<"X86", [i32], 32, (add ESI, EDI)>;
 def GR32_DIBP : RegisterClass<"X86", [i32], 32, (add EDI, EBP)>;
 def GR32_BPSP : RegisterClass<"X86", [i32], 32, (add EBP, ESP)>;
+
+// Class to support Windows Import Call Optimization: all indirect jumps must
+// happen through RAX.
+def GR64_A : RegisterClass<"X86", [i64], 64, (add RAX)>;
 
 // Scalar SSE2 floating point registers.
 def FR32 : RegisterClass<"X86", [f32], 32, (sequence "XMM%u", 0, 15)>;
@@ -802,17 +797,37 @@ def VR512_0_15 : RegisterClass<"X86", [v16f32, v8f64, v64i8, v32i16, v16i32, v8i
                                512, (sequence "ZMM%u", 0, 15)>;
 
 // Scalar AVX-512 floating point registers.
-def FR32X : RegisterClass<"X86", [f32], 32, (sequence "XMM%u", 0, 31)>;
+def FR32X : RegisterClass<"X86", [f32], 32, (sequence "XMM%u", 0, 31)> {
+  let AltOrders = [(add (sequence "XMM%u", 16, 31), (sequence "XMM%u", 0, 15))];
+  let AltOrderSelect = [{
+    return Rev;
+  }];
+}
 
-def FR64X : RegisterClass<"X86", [f64], 64, (add FR32X)>;
+def FR64X : RegisterClass<"X86", [f64], 64, (add FR32X)> {
+  let AltOrders = [(add (sequence "XMM%u", 16, 31), (sequence "XMM%u", 0, 15))];
+  let AltOrderSelect = [{
+    return Rev;
+  }];
+}
 
 def FR16X : RegisterClass<"X86", [f16], 16, (add FR32X)> {let Size = 32;}
 
 // Extended VR128 and VR256 for AVX-512 instructions
 def VR128X : RegisterClass<"X86", [v4f32, v2f64, v8f16, v8bf16, v16i8, v8i16, v4i32, v2i64, f128],
-                           128, (add FR32X)>;
+                           128, (add FR32X)> {
+  let AltOrders = [(add (sequence "XMM%u", 16, 31), (sequence "XMM%u", 0, 15))];
+  let AltOrderSelect = [{
+    return Rev;
+  }];
+}
 def VR256X : RegisterClass<"X86", [v8f32, v4f64, v16f16, v16bf16, v32i8, v16i16, v8i32, v4i64],
-                           256, (sequence "YMM%u", 0, 31)>;
+                           256, (sequence "YMM%u", 0, 31)> {
+  let AltOrders = [(add (sequence "YMM%u", 16, 31), (sequence "YMM%u", 0, 15))];
+  let AltOrderSelect = [{
+    return Rev;
+  }];
+}
 
 // Mask registers
 def VK1     : RegisterClass<"X86", [v1i1],  16,  (sequence "K%u", 0, 7)> {let Size = 16;}
@@ -841,9 +856,6 @@ def VK64WM  : RegisterClass<"X86", [v64i1], 64, (add VK32WM)> {let Size = 64;}
 let CopyCost = -1 in // Don't allow copying of tile registers
 def TILE : RegisterClass<"X86", [x86amx], 8192,
                          (sequence "TMM%u", 0, 7)> {let Size = 8192;}
-// Need check alignment 3rd operand size=1024*2*8
-let isAllocatable = 1 in
-def TILEPAIR : RegisterClass<"X86", [untyped], 512, (add TPAIRS)> {let Size = 16384;}
 
 //===----------------------------------------------------------------------===//
 // Register categories.

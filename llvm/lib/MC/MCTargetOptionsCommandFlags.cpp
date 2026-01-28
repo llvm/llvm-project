@@ -24,6 +24,13 @@ using namespace llvm;
     return *NAME##View;                                                        \
   }
 
+#define MCSTROPT(NAME)                                                         \
+  static cl::opt<std::string> *NAME##View;                                     \
+  StringRef llvm::mc::get##NAME() {                                            \
+    assert(NAME##View && "RegisterMCTargetOptionsFlags not created.");         \
+    return *NAME##View;                                                        \
+  }
+
 #define MCOPT_EXP(TY, NAME)                                                    \
   MCOPT(TY, NAME)                                                              \
   std::optional<TY> llvm::mc::getExplicit##NAME() {                            \
@@ -41,6 +48,7 @@ MCOPT(int, DwarfVersion)
 MCOPT(bool, Dwarf64)
 MCOPT(EmitDwarfUnwindType, EmitDwarfUnwind)
 MCOPT(bool, EmitCompactUnwindNonCanonical)
+MCOPT(bool, EmitSFrameUnwind)
 MCOPT(bool, ShowMCInst)
 MCOPT(bool, FatalWarnings)
 MCOPT(bool, NoWarn)
@@ -51,8 +59,8 @@ MCOPT(bool, Crel)
 MCOPT(bool, ImplicitMapSyms)
 MCOPT(bool, X86RelaxRelocations)
 MCOPT(bool, X86Sse2Avx)
-MCOPT(std::string, ABIName)
-MCOPT(std::string, AsSecureLogFile)
+MCSTROPT(ABIName)
+MCSTROPT(AsSecureLogFile)
 
 llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
 #define MCBINDOPT(NAME)                                                        \
@@ -104,6 +112,11 @@ llvm::mc::RegisterMCTargetOptionsFlags::RegisterMCTargetOptionsFlags() {
       cl::init(
           false)); // By default, use DWARF for non-canonical personalities.
   MCBINDOPT(EmitCompactUnwindNonCanonical);
+
+  static cl::opt<bool> EmitSFrameUnwind(
+      "gsframe", cl::desc("Whether to emit .sframe unwind sections."),
+      cl::init(false));
+  MCBINDOPT(EmitSFrameUnwind);
 
   static cl::opt<bool> ShowMCInst(
       "asm-show-inst",
@@ -188,6 +201,7 @@ MCTargetOptions llvm::mc::InitMCTargetOptionsFromFlags() {
   Options.X86Sse2Avx = getX86Sse2Avx();
   Options.EmitDwarfUnwind = getEmitDwarfUnwind();
   Options.EmitCompactUnwindNonCanonical = getEmitCompactUnwindNonCanonical();
+  Options.EmitSFrameUnwind = getEmitSFrameUnwind();
   Options.AsSecureLogFile = getAsSecureLogFile();
 
   return Options;

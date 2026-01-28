@@ -232,7 +232,7 @@ define i64 @uaddo3_math_overflow_used(i64 %a, i64 %b, ptr %res) nounwind ssp {
   ret i64 %Q
 }
 
-; TODO? CGP sinks the compare before we have a chance to form the overflow intrinsic.
+; Ensure CGP doesn't sink the compare before we have a chance to form the overflow intrinsic.
 
 define i64 @uaddo4(i64 %a, i64 %b, i1 %c) nounwind ssp {
 ; RV32-LABEL: uaddo4:
@@ -594,7 +594,6 @@ define i1 @uaddo_i16_increment_noncanonical_3(i16 %x, ptr %p) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    addi a2, a0, 1
 ; RV32-NEXT:    slli a0, a2, 16
-; RV32-NEXT:    srli a0, a0, 16
 ; RV32-NEXT:    seqz a0, a0
 ; RV32-NEXT:    sh a2, 0(a1)
 ; RV32-NEXT:    ret
@@ -603,7 +602,6 @@ define i1 @uaddo_i16_increment_noncanonical_3(i16 %x, ptr %p) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi a2, a0, 1
 ; RV64-NEXT:    slli a0, a2, 48
-; RV64-NEXT:    srli a0, a0, 48
 ; RV64-NEXT:    seqz a0, a0
 ; RV64-NEXT:    sh a2, 0(a1)
 ; RV64-NEXT:    ret
@@ -759,10 +757,9 @@ define i1 @uaddo_i42_increment_illegal_type(i42 %x, ptr %p) {
 ; RV64-LABEL: uaddo_i42_increment_illegal_type:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    addi a2, a0, 1
-; RV64-NEXT:    slli a0, a2, 22
-; RV64-NEXT:    srli a3, a0, 22
+; RV64-NEXT:    slli a3, a2, 22
 ; RV64-NEXT:    seqz a0, a3
-; RV64-NEXT:    srli a3, a3, 32
+; RV64-NEXT:    srli a3, a3, 54
 ; RV64-NEXT:    sw a2, 0(a1)
 ; RV64-NEXT:    sh a3, 4(a1)
 ; RV64-NEXT:    ret
@@ -836,7 +833,7 @@ define i1 @usubo_ugt_i32(i32 %x, i32 %y, ptr %p) {
 ; RV64-NEXT:    sext.w a3, a1
 ; RV64-NEXT:    sext.w a4, a0
 ; RV64-NEXT:    sltu a3, a4, a3
-; RV64-NEXT:    subw a0, a0, a1
+; RV64-NEXT:    sub a0, a0, a1
 ; RV64-NEXT:    sw a0, 0(a2)
 ; RV64-NEXT:    mv a0, a3
 ; RV64-NEXT:    ret
@@ -863,7 +860,7 @@ define i1 @usubo_ugt_constant_op0_i8(i8 %x, ptr %p) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    zext.b a2, a0
 ; RV64-NEXT:    li a3, 42
-; RV64-NEXT:    subw a3, a3, a0
+; RV64-NEXT:    sub a3, a3, a0
 ; RV64-NEXT:    sltiu a0, a2, 43
 ; RV64-NEXT:    xori a0, a0, 1
 ; RV64-NEXT:    sb a3, 0(a1)
@@ -893,7 +890,7 @@ define i1 @usubo_ult_constant_op0_i16(i16 %x, ptr %p) {
 ; RV64-NEXT:    slli a2, a0, 48
 ; RV64-NEXT:    li a3, 43
 ; RV64-NEXT:    srli a2, a2, 48
-; RV64-NEXT:    subw a3, a3, a0
+; RV64-NEXT:    sub a3, a3, a0
 ; RV64-NEXT:    sltiu a0, a2, 44
 ; RV64-NEXT:    xori a0, a0, 1
 ; RV64-NEXT:    sh a3, 0(a1)
@@ -990,7 +987,7 @@ define i1 @usubo_ne_constant0_op1_i32(i32 %x, ptr %p) {
 ; RV64-LABEL: usubo_ne_constant0_op1_i32:
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    sext.w a2, a0
-; RV64-NEXT:    negw a3, a0
+; RV64-NEXT:    neg a3, a0
 ; RV64-NEXT:    snez a0, a2
 ; RV64-NEXT:    sw a3, 0(a1)
 ; RV64-NEXT:    ret
@@ -1079,41 +1076,37 @@ define i1 @usubo_ult_cmp_dominates_i64(i64 %x, i64 %y, ptr %p, i1 %cond) {
 ; RV32-NEXT:    .cfi_offset s4, -24
 ; RV32-NEXT:    .cfi_offset s5, -28
 ; RV32-NEXT:    .cfi_offset s6, -32
-; RV32-NEXT:    mv s5, a5
-; RV32-NEXT:    mv s3, a1
+; RV32-NEXT:    mv s1, a5
+; RV32-NEXT:    mv s4, a1
 ; RV32-NEXT:    andi a1, a5, 1
-; RV32-NEXT:    beqz a1, .LBB32_8
+; RV32-NEXT:    beqz a1, .LBB32_6
 ; RV32-NEXT:  # %bb.1: # %t
 ; RV32-NEXT:    mv s0, a4
-; RV32-NEXT:    mv s2, a3
-; RV32-NEXT:    mv s1, a2
-; RV32-NEXT:    mv s4, a0
-; RV32-NEXT:    beq s3, a3, .LBB32_3
+; RV32-NEXT:    mv s3, a3
+; RV32-NEXT:    mv s2, a2
+; RV32-NEXT:    mv s5, a0
+; RV32-NEXT:    beq s4, a3, .LBB32_3
 ; RV32-NEXT:  # %bb.2: # %t
-; RV32-NEXT:    sltu s6, s3, s2
+; RV32-NEXT:    sltu s6, s4, s3
 ; RV32-NEXT:    j .LBB32_4
 ; RV32-NEXT:  .LBB32_3:
-; RV32-NEXT:    sltu s6, s4, s1
+; RV32-NEXT:    sltu s6, s5, s2
 ; RV32-NEXT:  .LBB32_4: # %t
 ; RV32-NEXT:    mv a0, s6
 ; RV32-NEXT:    call call
-; RV32-NEXT:    beqz s6, .LBB32_8
+; RV32-NEXT:    beqz s6, .LBB32_6
 ; RV32-NEXT:  # %bb.5: # %end
-; RV32-NEXT:    sltu a1, s4, s1
-; RV32-NEXT:    mv a0, a1
-; RV32-NEXT:    beq s3, s2, .LBB32_7
-; RV32-NEXT:  # %bb.6: # %end
-; RV32-NEXT:    sltu a0, s3, s2
-; RV32-NEXT:  .LBB32_7: # %end
-; RV32-NEXT:    sub a2, s3, s2
-; RV32-NEXT:    sub a3, s4, s1
-; RV32-NEXT:    sub a2, a2, a1
-; RV32-NEXT:    sw a3, 0(s0)
-; RV32-NEXT:    sw a2, 4(s0)
-; RV32-NEXT:    j .LBB32_9
-; RV32-NEXT:  .LBB32_8: # %f
-; RV32-NEXT:    mv a0, s5
-; RV32-NEXT:  .LBB32_9: # %f
+; RV32-NEXT:    sltu a0, s5, s2
+; RV32-NEXT:    sub a1, s4, s3
+; RV32-NEXT:    sub a2, s5, s2
+; RV32-NEXT:    sub a1, a1, a0
+; RV32-NEXT:    sw a2, 0(s0)
+; RV32-NEXT:    sw a1, 4(s0)
+; RV32-NEXT:    mv a0, s6
+; RV32-NEXT:    j .LBB32_7
+; RV32-NEXT:  .LBB32_6: # %f
+; RV32-NEXT:    mv a0, s1
+; RV32-NEXT:  .LBB32_7: # %f
 ; RV32-NEXT:    lw ra, 28(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s0, 24(sp) # 4-byte Folded Reload
 ; RV32-NEXT:    lw s1, 20(sp) # 4-byte Folded Reload
@@ -1330,7 +1323,7 @@ define i16 @overflow_not_used(i16 %a, i16 %b, ptr %res) {
 ; RV64:       # %bb.0:
 ; RV64-NEXT:    lui a3, 16
 ; RV64-NEXT:    add a0, a1, a0
-; RV64-NEXT:    addiw a3, a3, -1
+; RV64-NEXT:    addi a3, a3, -1
 ; RV64-NEXT:    and a4, a1, a3
 ; RV64-NEXT:    and a3, a0, a3
 ; RV64-NEXT:    bltu a3, a4, .LBB38_2

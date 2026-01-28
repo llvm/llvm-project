@@ -9,6 +9,7 @@
 #ifndef LLVM_IR_MODULESLOTTRACKER_H
 #define LLVM_IR_MODULESLOTTRACKER_H
 
+#include "llvm/Support/Compiler.h"
 #include <functional>
 #include <memory>
 #include <utility>
@@ -23,7 +24,7 @@ class Value;
 class MDNode;
 
 /// Abstract interface of slot tracker storage.
-class AbstractSlotTrackerStorage {
+class LLVM_ABI AbstractSlotTrackerStorage {
 public:
   virtual ~AbstractSlotTrackerStorage();
 
@@ -41,7 +42,7 @@ public:
 ///
 /// If the IR changes from underneath \a ModuleSlotTracker, strings like
 /// "<badref>" will be printed, or, worse, the wrong slots entirely.
-class ModuleSlotTracker {
+class LLVM_ABI ModuleSlotTracker {
   /// Storage for a slot tracker.
   std::unique_ptr<SlotTracker> MachineStorage;
   bool ShouldCreateStorage = false;

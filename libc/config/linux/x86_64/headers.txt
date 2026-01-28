@@ -18,6 +18,8 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.locale
     libc.include.malloc
     libc.include.math
+    libc.include.netinet_in
+    libc.include.nl_types
     libc.include.poll
     libc.include.pthread
     libc.include.sched
@@ -57,4 +59,5 @@ set(TARGET_PUBLIC_HEADERS
     libc.include.uchar
     libc.include.unistd
     libc.include.wchar
+    libc.include.wctype
 )

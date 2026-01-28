@@ -15,6 +15,7 @@
 
 #include "llvm/Pass.h"
 #include "llvm/Support/CodeGen.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include <cassert>
 #include <string>
@@ -80,7 +81,7 @@ public:
 ///
 /// This is an ImmutablePass solely for the purpose of exposing CodeGen options
 /// to the internals of other CodeGen passes.
-class TargetPassConfig : public ImmutablePass {
+class LLVM_ABI TargetPassConfig : public ImmutablePass {
 private:
   PassManagerBase *PM = nullptr;
   AnalysisID StartBefore = nullptr;
@@ -474,8 +475,8 @@ protected:
   virtual bool addRegAssignAndRewriteOptimized();
 };
 
-void registerCodeGenCallback(PassInstrumentationCallbacks &PIC,
-                             TargetMachine &);
+LLVM_ABI void registerCodeGenCallback(PassInstrumentationCallbacks &PIC,
+                                      TargetMachine &);
 
 } // end namespace llvm
 

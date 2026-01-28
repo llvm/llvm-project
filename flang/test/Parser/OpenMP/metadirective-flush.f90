@@ -25,7 +25,7 @@ end
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = flush
 !PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | | OmpClauseList -> OmpClause -> SeqCst
-!PARSE-TREE: | | | Flags = DeprecatedSyntax
+!PARSE-TREE: | | | Flags = {DeprecatedSyntax}
 
 subroutine f01()
   integer :: x
@@ -51,4 +51,4 @@ end
 !PARSE-TREE: | | | OmpDirectiveName -> llvm::omp::Directive = flush
 !PARSE-TREE: | | | OmpArgumentList -> OmpArgument -> OmpLocator -> OmpObject -> Designator -> DataRef -> Name = 'x'
 !PARSE-TREE: | | | OmpClauseList -> OmpClause -> SeqCst
-!PARSE-TREE: | | | Flags = None
+!PARSE-TREE: | | | Flags = {}

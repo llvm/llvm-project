@@ -10,7 +10,8 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Config/llvm-config.h"
-#include "llvm/MC/MCParser/MCAsmLexer.h"
+#include "llvm/MC/MCAsmInfo.h"
+#include "llvm/MC/MCParser/AsmLexer.h"
 #include "llvm/MC/MCParser/MCParsedAsmOperand.h"
 #include "llvm/MC/MCParser/MCTargetAsmParser.h"
 #include "llvm/Support/CommandLine.h"
@@ -162,9 +163,19 @@ bool MCAsmParser::parseGNUAttribute(SMLoc L, int64_t &Tag,
   return true;
 }
 
+bool MCAsmParser::parseSymbol(MCSymbol *&Res) {
+  StringRef Name;
+  if (parseIdentifier(Name))
+    return true;
+
+  Res = getContext().parseSymbol(Name);
+  return false;
+}
+
 void MCParsedAsmOperand::dump() const {
   // Cannot completely remove virtual function even in release mode.
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  dbgs() << "  " << *this;
+  dbgs() << "  ";
+  print(dbgs(), MCAsmInfo());
 #endif
 }

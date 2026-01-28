@@ -56,6 +56,7 @@ protected:
   static std::string FindComponentInPath(llvm::StringRef path,
                                          llvm::StringRef component);
 };
-}
+
+} // namespace lldb_private
 
 #endif

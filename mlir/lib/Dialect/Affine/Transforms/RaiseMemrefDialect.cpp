@@ -12,7 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "mlir/Dialect/Affine/Analysis/Utils.h"
-#include "mlir/Dialect/Affine/Passes.h"
+#include "mlir/Dialect/Affine/Transforms/Passes.h"
 #include "mlir/Dialect/Affine/Transforms/Transforms.h"
 #include "mlir/Dialect/Affine/Utils.h"
 #include "mlir/Dialect/Func/IR/FuncOps.h"
@@ -27,7 +27,7 @@
 namespace mlir {
 namespace affine {
 #define GEN_PASS_DEF_RAISEMEMREFDIALECT
-#include "mlir/Dialect/Affine/Passes.h.inc"
+#include "mlir/Dialect/Affine/Transforms/Passes.h.inc"
 } // namespace affine
 } // namespace mlir
 
@@ -48,7 +48,7 @@ static std::optional<size_t>
 findInListOrAdd(Value value, llvm::SmallVectorImpl<Value> &dims,
                 function_ref<bool(Value)> isValidElement) {
 
-  Value *loopIV = std::find(dims.begin(), dims.end(), value);
+  Value *loopIV = llvm::find(dims, value);
   if (loopIV != dims.end()) {
     // We found an IV that already has an index, return that index.
     return {std::distance(dims.begin(), loopIV)};

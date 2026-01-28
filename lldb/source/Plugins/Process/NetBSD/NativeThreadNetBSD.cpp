@@ -26,7 +26,6 @@
 #include <sstream>
 
 // clang-format off
-#include <sys/types.h>
 #include <sys/sysctl.h>
 // clang-format on
 

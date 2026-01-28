@@ -8,7 +8,7 @@
 
 #include "AArch64TargetObjectFile.h"
 #include "AArch64TargetMachine.h"
-#include "MCTargetDesc/AArch64MCExpr.h"
+#include "MCTargetDesc/AArch64MCAsmInfo.h"
 #include "MCTargetDesc/AArch64TargetStreamer.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/CodeGen/MachineModuleInfoImpls.h"
@@ -25,7 +25,7 @@ using namespace dwarf;
 void AArch64_ELFTargetObjectFile::Initialize(MCContext &Ctx,
                                              const TargetMachine &TM) {
   TargetLoweringObjectFileELF::Initialize(Ctx, TM);
-  PLTRelativeSpecifier = AArch64MCExpr::VK_PLT;
+  PLTRelativeSpecifier = AArch64::S_PLT;
   SupportIndirectSymViaGOTPCRel = true;
 
   // AARCH64 ELF ABI does not define static relocation type for TLS offset
@@ -36,7 +36,7 @@ void AArch64_ELFTargetObjectFile::Initialize(MCContext &Ctx,
   // SHF_AARCH64_PURECODE flag set if the "+execute-only" target feature is
   // present.
   if (TM.getMCSubtargetInfo()->hasFeature(AArch64::FeatureExecuteOnly)) {
-    auto *Text = cast<MCSectionELF>(TextSection);
+    auto *Text = static_cast<MCSectionELF *>(TextSection);
     Text->setFlags(Text->getFlags() | ELF::SHF_AARCH64_PURECODE);
   }
 }
@@ -61,7 +61,7 @@ const MCExpr *AArch64_ELFTargetObjectFile::getIndirectSymViaGOTPCRel(
     int64_t Offset, MachineModuleInfo *MMI, MCStreamer &Streamer) const {
   int64_t FinalOffset = Offset + MV.getConstant();
   const MCExpr *Res =
-      MCSymbolRefExpr::create(Sym, AArch64MCExpr::VK_GOTPCREL, getContext());
+      MCSymbolRefExpr::create(Sym, AArch64::S_GOTPCREL, getContext());
   const MCExpr *Off = MCConstantExpr::create(FinalOffset, getContext());
   return MCBinaryExpr::createAdd(Res, Off, getContext());
 }
@@ -80,7 +80,7 @@ const MCExpr *AArch64_MachoTargetObjectFile::getTTypeGlobalReference(
   if (Encoding & (DW_EH_PE_indirect | DW_EH_PE_pcrel)) {
     const MCSymbol *Sym = TM.getSymbol(GV);
     const MCExpr *Res =
-        MCSymbolRefExpr::create(Sym, AArch64MCExpr::M_GOT, getContext());
+        MCSymbolRefExpr::create(Sym, AArch64::S_MACHO_GOT, getContext());
     MCSymbol *PCSym = getContext().createTempSymbol();
     Streamer.emitLabel(PCSym);
     const MCExpr *PC = MCSymbolRefExpr::create(PCSym, getContext());
@@ -105,7 +105,7 @@ const MCExpr *AArch64_MachoTargetObjectFile::getIndirectSymViaGOTPCRel(
   // On ARM64 Darwin, we can reference symbols with foo@GOT-., which
   // is an indirect pc-relative reference.
   const MCExpr *Res =
-      MCSymbolRefExpr::create(Sym, AArch64MCExpr::M_GOT, getContext());
+      MCSymbolRefExpr::create(Sym, AArch64::S_MACHO_GOT, getContext());
   MCSymbol *PCSym = getContext().createTempSymbol();
   Streamer.emitLabel(PCSym);
   const MCExpr *PC = MCSymbolRefExpr::create(PCSym, getContext());

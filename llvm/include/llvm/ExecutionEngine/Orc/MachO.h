@@ -13,7 +13,10 @@
 #ifndef LLVM_EXECUTIONENGINE_ORC_MACHO_H
 #define LLVM_EXECUTIONENGINE_ORC_MACHO_H
 
+#include "llvm/ExecutionEngine/Orc/CoreContainers.h"
 #include "llvm/ExecutionEngine/Orc/LoadLinkableFile.h"
+#include "llvm/Object/Archive.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/TargetParser/Triple.h"
@@ -22,12 +25,14 @@ namespace llvm {
 
 namespace object {
 
+class Archive;
 class MachOUniversalBinary;
 
 } // namespace object
 
 namespace orc {
 
+class ExecutionSession;
 class JITDylib;
 class ObjectLayer;
 
@@ -35,21 +40,21 @@ class ObjectLayer;
 /// given triple.
 /// ObjIsSlice should be set to true if Obj is a slice of a universal binary
 /// (that fact will then be reported in the error messages).
-Error checkMachORelocatableObject(MemoryBufferRef Obj, const Triple &TT,
-                                  bool ObjIsSlice);
+LLVM_ABI Error checkMachORelocatableObject(MemoryBufferRef Obj,
+                                           const Triple &TT, bool ObjIsSlice);
 
 /// Check that the given buffer contains a MachO object file compatible with the
 /// given triple.
 /// This convenience overload returns the buffer if it passes all checks,
 /// otherwise it returns an error.
-Expected<std::unique_ptr<MemoryBuffer>>
+LLVM_ABI Expected<std::unique_ptr<MemoryBuffer>>
 checkMachORelocatableObject(std::unique_ptr<MemoryBuffer> Obj, const Triple &TT,
                             bool ObjIsSlice);
 
 /// Load a relocatable object compatible with TT from Path.
 /// If Path is a universal binary, this function will return a buffer for the
 /// slice compatible with Triple (if one is present).
-Expected<std::pair<std::unique_ptr<MemoryBuffer>, LinkableFileKind>>
+LLVM_ABI Expected<std::pair<std::unique_ptr<MemoryBuffer>, LinkableFileKind>>
 loadMachOLinkableFile(
     StringRef Path, const Triple &TT, LoadArchives LA,
     std::optional<StringRef> IdentifierOverride = std::nullopt);
@@ -58,7 +63,7 @@ loadMachOLinkableFile(
 /// binary.
 /// Path is only used for error reporting. Identifier will be used to name the
 /// resulting buffer.
-Expected<std::pair<std::unique_ptr<MemoryBuffer>, LinkableFileKind>>
+LLVM_ABI Expected<std::pair<std::unique_ptr<MemoryBuffer>, LinkableFileKind>>
 loadLinkableSliceFromMachOUniversalBinary(sys::fs::file_t FD,
                                           std::unique_ptr<MemoryBuffer> UBBuf,
                                           const Triple &TT, LoadArchives LA,
@@ -67,12 +72,12 @@ loadLinkableSliceFromMachOUniversalBinary(sys::fs::file_t FD,
 
 /// Utility for identifying the file-slice compatible with TT in a universal
 /// binary.
-Expected<std::pair<size_t, size_t>>
+LLVM_ABI Expected<std::pair<size_t, size_t>>
 getMachOSliceRangeForTriple(object::MachOUniversalBinary &UB, const Triple &TT);
 
 /// Utility for identifying the file-slice compatible with TT in a universal
 /// binary.
-Expected<std::pair<size_t, size_t>>
+LLVM_ABI Expected<std::pair<size_t, size_t>>
 getMachOSliceRangeForTriple(MemoryBufferRef UBBuf, const Triple &TT);
 
 /// For use with StaticLibraryDefinitionGenerators.
@@ -81,13 +86,45 @@ public:
   ForceLoadMachOArchiveMembers(ObjectLayer &L, JITDylib &JD, bool ObjCOnly)
       : L(L), JD(JD), ObjCOnly(ObjCOnly) {}
 
-  Error operator()(MemoryBufferRef MemberBuf);
+  LLVM_ABI Expected<bool> operator()(object::Archive &A,
+                                     MemoryBufferRef MemberBuf, size_t Index);
 
 private:
   ObjectLayer &L;
   JITDylib &JD;
   bool ObjCOnly;
 };
+
+using GetFallbackArchsFn =
+    unique_function<SmallVector<std::pair<uint32_t, uint32_t>>(
+        uint32_t CPUType, uint32_t CPUSubType)>;
+
+/// Match the exact CPU type/subtype only.
+LLVM_ABI SmallVector<std::pair<uint32_t, uint32_t>>
+noFallbackArchs(uint32_t CPUType, uint32_t CPUSubType);
+
+/// Match standard dynamic loader fallback rules.
+LLVM_ABI SmallVector<std::pair<uint32_t, uint32_t>>
+standardMachOFallbackArchs(uint32_t CPUType, uint32_t CPUSubType);
+
+/// Returns a SymbolNameSet containing the exported symbols defined in the
+/// given dylib.
+LLVM_ABI Expected<SymbolNameSet> getDylibInterfaceFromDylib(
+    ExecutionSession &ES, Twine Path,
+    GetFallbackArchsFn GetFallbackArchs = standardMachOFallbackArchs);
+
+/// Returns a SymbolNameSet containing the exported symbols defined in the
+/// relevant slice of the TapiUniversal file.
+LLVM_ABI Expected<SymbolNameSet> getDylibInterfaceFromTapiFile(
+    ExecutionSession &ES, Twine Path,
+    GetFallbackArchsFn GetFallbackArchs = standardMachOFallbackArchs);
+
+/// Returns a SymbolNameSet containing the exported symbols defined in the
+/// relevant slice of the given file, which may be either a dylib or a tapi
+/// file.
+LLVM_ABI Expected<SymbolNameSet> getDylibInterface(
+    ExecutionSession &ES, Twine Path,
+    GetFallbackArchsFn GetFallbackArchs = standardMachOFallbackArchs);
 
 } // namespace orc
 } // namespace llvm

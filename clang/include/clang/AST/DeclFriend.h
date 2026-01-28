@@ -52,7 +52,7 @@ class ASTContext;
 class FriendDecl final
     : public Decl,
       private llvm::TrailingObjects<FriendDecl, TemplateParameterList *> {
-  virtual void anchor();
+  LLVM_DECLARE_VIRTUAL_ANCHOR_FUNCTION();
 
 public:
   using FriendUnion = llvm::PointerUnion<NamedDecl *, TypeSourceInfo *>;
@@ -90,8 +90,7 @@ private:
       : Decl(Decl::Friend, DC, L), Friend(Friend), FriendLoc(FriendL),
         EllipsisLoc(EllipsisLoc), UnsupportedFriend(false),
         NumTPLists(FriendTypeTPLists.size()) {
-    for (unsigned i = 0; i < NumTPLists; ++i)
-      getTrailingObjects<TemplateParameterList *>()[i] = FriendTypeTPLists[i];
+    llvm::copy(FriendTypeTPLists, getTrailingObjects());
   }
 
   FriendDecl(EmptyShell Empty, unsigned NumFriendTypeTPLists)
@@ -132,8 +131,7 @@ public:
   }
 
   TemplateParameterList *getFriendTypeTemplateParameterList(unsigned N) const {
-    assert(N < NumTPLists);
-    return getTrailingObjects<TemplateParameterList *>()[N];
+    return getTrailingObjects(NumTPLists)[N];
   }
 
   /// If this friend declaration doesn't name a type, return the inner
@@ -153,10 +151,9 @@ public:
   /// Retrieves the source range for the friend declaration.
   SourceRange getSourceRange() const override LLVM_READONLY {
     if (TypeSourceInfo *TInfo = getFriendType()) {
-      SourceLocation StartL =
-          (NumTPLists == 0) ? getFriendLoc()
-                            : getTrailingObjects<TemplateParameterList *>()[0]
-                                  ->getTemplateLoc();
+      SourceLocation StartL = (NumTPLists == 0)
+                                  ? getFriendLoc()
+                                  : getTrailingObjects()[0]->getTemplateLoc();
       SourceLocation EndL = isPackExpansion() ? getEllipsisLoc()
                                               : TInfo->getTypeLoc().getEndLoc();
       return SourceRange(StartL, EndL);

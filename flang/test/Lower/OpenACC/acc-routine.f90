@@ -2,13 +2,14 @@
 
 ! RUN: bbc -fopenacc -emit-hlfir %s -o - | FileCheck %s
 
-! CHECK: acc.routine @[[r14:.*]] func(@_QPacc_routine19) bind("_QPacc_routine17" [#acc.device_type<host>], "_QPacc_routine17" [#acc.device_type<default>], "_QPacc_routine16" [#acc.device_type<multicore>])
-! CHECK: acc.routine @[[r13:.*]] func(@_QPacc_routine18) bind("_QPacc_routine17" [#acc.device_type<host>], "_QPacc_routine16" [#acc.device_type<multicore>])
+! CHECK: acc.routine @[[r14:.*]] func(@_QPacc_routine19) bind(@_QPacc_routine17 [#acc.device_type<host>], @_QPacc_routine17
+! [#acc.device_type<default>], @_QPacc_routine16 [#acc.device_type<multicore>])
+! CHECK: acc.routine @[[r13:.*]] func(@_QPacc_routine18) bind(@_QPacc_routine17 [#acc.device_type<host>], @_QPacc_routine16 [#acc.device_type<multicore>])
 ! CHECK: acc.routine @[[r12:.*]] func(@_QPacc_routine17) worker ([#acc.device_type<host>]) vector ([#acc.device_type<multicore>])
 ! CHECK: acc.routine @[[r11:.*]] func(@_QPacc_routine16) gang([#acc.device_type<nvidia>]) seq ([#acc.device_type<host>])
 ! CHECK: acc.routine @[[r10:.*]] func(@_QPacc_routine11) seq
 ! CHECK: acc.routine @[[r09:.*]] func(@_QPacc_routine10) seq
-! CHECK: acc.routine @[[r08:.*]] func(@_QPacc_routine9) bind("_QPacc_routine9a")
+! CHECK: acc.routine @[[r08:.*]] func(@_QPacc_routine9) bind(@_QPacc_routine9a)
 ! CHECK: acc.routine @[[r07:.*]] func(@_QPacc_routine8) bind("routine8_")
 ! CHECK: acc.routine @[[r06:.*]] func(@_QPacc_routine7) gang(dim: 1 : i64)
 ! CHECK: acc.routine @[[r05:.*]] func(@_QPacc_routine6) nohost
@@ -126,13 +127,13 @@ subroutine acc_routine16()
 end subroutine
 
 subroutine acc_routine17()
-  !$acc routine device_type(host) worker dtype(multicore) vector 
+  !$acc routine device_type(host) worker dtype(multicore) vector
 end subroutine
 
 subroutine acc_routine18()
-  !$acc routine device_type(host) bind(acc_routine17) dtype(multicore) bind(acc_routine16) 
+  !$acc routine device_type(host) bind(acc_routine17) dtype(multicore) bind(acc_routine16)
 end subroutine
 
 subroutine acc_routine19()
-  !$acc routine device_type(host,default) bind(acc_routine17) dtype(multicore) bind(acc_routine16) 
+  !$acc routine device_type(host,default) bind(acc_routine17) dtype(multicore) bind(acc_routine16)
 end subroutine

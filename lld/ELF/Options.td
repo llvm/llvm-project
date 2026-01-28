@@ -59,6 +59,10 @@ def build_id: J<"build-id=">, HelpText<"Generate build ID note">,
   MetaVarName<"[fast,md5,sha1,uuid,0x<hexstring>]">;
 def : F<"build-id">, Alias<build_id>, AliasArgs<["sha1"]>, HelpText<"Alias for --build-id=sha1">;
 
+defm branch_to_branch: BB<"branch-to-branch",
+    "Enable branch-to-branch optimization (default at -O2)",
+    "Disable branch-to-branch optimization (default at -O0 and -O1)">;
+
 defm check_sections: B<"check-sections",
     "Check section addresses for overlaps (default)",
     "Do not check section addresses for overlaps">;
@@ -150,7 +154,7 @@ def bp_startup_sort: JJ<"bp-startup-sort=">, MetaVarName<"[none,function]">,
 
 // Auxiliary options related to balanced partition
 defm bp_compression_sort_startup_functions: BB<"bp-compression-sort-startup-functions",
-  "When --irpgo-profile is pecified, prioritize function similarity for compression in addition to startup time", "">;
+  "When --irpgo-profile is specified, prioritize function similarity for compression in addition to startup time", "">;
 def verbose_bp_section_orderer: FF<"verbose-bp-section-orderer">,
   HelpText<"Print information on balanced partitioning">;
 
@@ -384,6 +388,9 @@ defm pie: B<"pie",
 defm print_gc_sections: B<"print-gc-sections",
     "List removed unused sections",
     "Do not list removed unused sections (default)">;
+def print_gc_sections_eq: JJ<"print-gc-sections=">,
+  HelpText<"List removed unused sections to <file>">,
+  MetaVarName<"<file>">;
 
 defm print_icf_sections: B<"print-icf-sections",
     "List identical folded sections",
@@ -710,7 +717,20 @@ def thinlto_object_suffix_replace_eq: JJ<"thinlto-object-suffix-replace=">;
 def thinlto_prefix_replace_eq: JJ<"thinlto-prefix-replace=">;
 def thinlto_single_module_eq: JJ<"thinlto-single-module=">,
   HelpText<"Specify a single module to compile in ThinLTO mode, for debugging only">;
-
+def thinlto_distributor_eq: JJ<"thinlto-distributor=">,
+  HelpText<"Distributor to use for ThinLTO backend compilations. If specified, "
+  "ThinLTO backend compilations will be distributed">;
+defm thinlto_distributor_arg: EEq<"thinlto-distributor-arg", "Arguments to "
+  "pass to the ThinLTO distributor">;
+def thinlto_remote_compiler_eq: JJ<"thinlto-remote-compiler=">,
+  HelpText<"Compiler for the ThinLTO distributor to invoke for ThinLTO backend "
+  "compilations">;
+defm thinlto_remote_compiler_prepend_arg: EEq<"thinlto-remote-compiler-prepend-arg",
+  "Compiler prepend arguments for the ThinLTO distributor to pass for ThinLTO backend "
+  "compilations">;
+defm thinlto_remote_compiler_arg: EEq<"thinlto-remote-compiler-arg",
+  "Compiler arguments for the ThinLTO distributor to pass for ThinLTO backend "
+  "compilations">;
 defm fat_lto_objects: BB<"fat-lto-objects",
     "Use the .llvm.lto section, which contains LLVM bitcode, in fat LTO object files to perform LTO.",
     "Ignore the .llvm.lto section in relocatable object files (default).">;

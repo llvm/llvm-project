@@ -52,7 +52,8 @@ module __fortran_type_info
     integer(1) :: noInitializationNeeded ! 1 if no component w/ init
     integer(1) :: noDestructionNeeded ! 1 if no component w/ dealloc/final
     integer(1) :: noFinalizationNeeded ! 1 if nothing finalizeable
-    integer(1) :: __padding0(4)
+    integer(1) :: noDefinedAssignment ! 1 if no defined ASSIGNMENT(=)
+    integer(1) :: __padding0(3)
   end type
 
   type :: Binding
@@ -77,6 +78,10 @@ module __fortran_type_info
     enumerator :: Data = 1, Pointer = 2, Allocatable = 3, Automatic = 4
   end enum
 
+  enum, bind(c) ! Component::MemorySpace
+    enumerator :: Host = 0, Device = 1, Managed = 2, Unified = 3
+  end enum
+
   enum, bind(c) ! common::TypeCategory
     enumerator :: CategoryInteger = 0, CategoryReal = 1, &
       CategoryComplex = 2, CategoryCharacter = 3, &
@@ -89,7 +94,8 @@ module __fortran_type_info
     integer(1) :: category
     integer(1) :: kind
     integer(1) :: rank
-    integer(1) :: __padding0(4)
+    integer(1) :: memorySpace ! Component::MemorySpace
+    integer(1) :: __padding0(3)
     integer(kind=int64) :: offset
     type(Value) :: characterLen ! for category == Character
     type(DerivedType), pointer :: derived ! for category == Derived
@@ -116,8 +122,8 @@ module __fortran_type_info
   type, bind(c) :: SpecialBinding
     integer(1) :: which ! SpecialBinding::Which
     integer(1) :: isArgDescriptorSet
-    integer(1) :: isTypeBound
-    integer(1) :: isArgContiguousSet
+    integer(1) :: isTypeBound ! binding index + 1, if any
+    integer(1) :: specialCaseFlag
     integer(1) :: __padding0(4)
     type(__builtin_c_funptr) :: proc
   end type

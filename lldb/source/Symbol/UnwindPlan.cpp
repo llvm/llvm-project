@@ -17,7 +17,8 @@
 #include "lldb/Utility/Log.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/DebugInfo/DIContext.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/DebugInfo/DWARF/DWARFExpressionPrinter.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include <optional>
 
 using namespace lldb;
@@ -87,8 +88,9 @@ static void DumpDWARFExpr(Stream &s, llvm::ArrayRef<uint8_t> expr, Thread *threa
   if (auto order_and_width = GetByteOrderAndAddrSize(thread)) {
     llvm::DataExtractor data(expr, order_and_width->first == eByteOrderLittle,
                              order_and_width->second);
-    llvm::DWARFExpression(data, order_and_width->second, llvm::dwarf::DWARF32)
-        .print(s.AsRawOstream(), llvm::DIDumpOptions(), nullptr);
+    llvm::DWARFExpression E(data, order_and_width->second,
+                            llvm::dwarf::DWARF32);
+    printDwarfExpression(&E, s.AsRawOstream(), llvm::DIDumpOptions(), nullptr);
   } else
     s.PutCString("dwarf-expr");
 }

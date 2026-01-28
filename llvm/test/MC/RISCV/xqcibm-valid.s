@@ -1,14 +1,14 @@
 # Xqcibm - Qualcomm uC Bit Manipulation Extension
 # Zbs is needed for checking compress instructions patterns for bexti/bseti
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcibm,+zbs -M no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+xqcibm,+zbs -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST,CHECK-NOALIAS %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcibm,+zbs  < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqcibm,+zbs -M no-aliases --no-print-imm-hex -d - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+xqcibm,+zbs  < %s \
+# RUN:     | llvm-objdump --mattr=+xqcibm,+zbs -M no-aliases --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcibm,+zbs  -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+xqcibm,+zbs  -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST,CHECK-ALIAS %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcibm,+zbs < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqcibm,+zbs --no-print-imm-hex -d - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+xqcibm,+zbs < %s \
+# RUN:     | llvm-objdump --mattr=+xqcibm,+zbs --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefix=CHECK-INST %s
 
 # CHECK-INST: qc.compress2   t2, t0
@@ -132,6 +132,11 @@ qc.c.extu x15, 32
 # CHECK-ALIAS: qc.extu a1, a1, 11, 0
 # CHECK-ENC: encoding: [0xaa,0x15]
 qc.extu x11, x11, 11, 0
+
+# CHECK-NOALIAS: qc.c.bexti  a1, 5
+# CHECK-ALIAS: bexti   a1, a1, 5
+# CHECK-ENC: encoding: [0x95,0x91]
+qc.extu x11, x11, 1, 5
 
 # CHECK-NOALIAS: qc.c.bexti  s1, 8
 # CHECK-ALIAS: bexti s1, s1, 8

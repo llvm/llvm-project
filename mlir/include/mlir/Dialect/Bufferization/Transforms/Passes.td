@@ -47,7 +47,7 @@ def OwnershipBasedBufferDeallocationPass
     Otherwise, the pass that bufferizes the remaining tensors is responsible to
     add the corresponding deallocation operations. Note that this pass does not
     consider any values of tensor type and assumes that MemRef values defined by
-    `bufferization.to_memref` do not return ownership and do not have to be
+    `bufferization.to_buffer` do not return ownership and do not have to be
     deallocated. `bufferization.to_tensor` operations are handled similarly to
     `bufferization.clone` operations with the exception that the result value is
     not handled because it's a tensor (not a MemRef).
@@ -256,6 +256,11 @@ def BufferResultsToOutParamsPass
               "Add the attribute 'bufferize.result' to all output parameters.">,
        Option<"hoistStaticAllocs", "hoist-static-allocs", "bool",
               /*default=*/"false", "Hoist static allocations to call sites.">,
+       Option<"hoistDynamicAllocs", "hoist-dynamic-allocs", "bool",
+              /*default=*/"false", "Hoist dynamic allocations to call sites.">,
+       Option<"modifyPublicFunctions", "modify-public-functions", "bool",
+              /*default=*/"false", "Modify function signatures of public "
+              "functions.">,
   ];
   let dependentDialects = ["memref::MemRefDialect"];
 }
@@ -321,7 +326,7 @@ def OneShotBufferizePass : Pass<"one-shot-bufferize", "ModuleOp"> {
 
     One-Shot Bufferize will by default reject IR that contains non-bufferizable
     op, i.e., ops that do not implemement BufferizableOpInterface. Such IR can
-    be allowed with `allow-unknown-ops=1`. In that case, to_memref and to_tensor
+    be allowed with `allow-unknown-ops=1`. In that case, to_buffer and to_tensor
     ops will be generated at the bufferization boundary. This is useful for
     compatibility with existing partial bufferization passes: These can
     bufferize the remaining IR after running One-Shot Bufferize.
@@ -341,7 +346,7 @@ def OneShotBufferizePass : Pass<"one-shot-bufferize", "ModuleOp"> {
 
     One-Shot Bufferize will by default assume memref types with fully dynamic
     layout maps when a precise layout cannot be inferred. E.g., this is the case
-    when wrapping a non-bufferizable op in to_memref/to_tensor ops. This
+    when wrapping a non-bufferizable op in to_buffer/to_tensor ops. This
     behavior can be overridden with `unknown-type-conversion`. Valid values are
     `fully-dynamic-layout-map` and `identity-layout-map`.
 

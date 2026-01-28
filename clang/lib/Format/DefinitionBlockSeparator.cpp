@@ -14,7 +14,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "DefinitionBlockSeparator.h"
-#include "llvm/Support/Debug.h"
 #define DEBUG_TYPE "definition-block-separator"
 
 namespace clang {
@@ -170,7 +169,7 @@ void DefinitionBlockSeparator::separateBlocks(
         }
       }
 
-      if (Style.isCSharp() && OperateLine->First->is(TT_AttributeSquare))
+      if (Style.isCSharp() && OperateLine->First->is(TT_AttributeLSquare))
         return true;
       return false;
     };

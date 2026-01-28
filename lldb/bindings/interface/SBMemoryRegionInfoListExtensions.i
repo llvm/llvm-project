@@ -9,8 +9,8 @@
       '''Iterate over all the memory regions in a lldb.SBMemoryRegionInfoList object.'''
       import lldb
       size = self.GetSize()
-      region = lldb.SBMemoryRegionInfo()
       for i in range(size):
+        region = lldb.SBMemoryRegionInfo()
         self.GetMemoryRegionAtIndex(i, region)
         yield region
     %}

@@ -23,7 +23,7 @@
 _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _InputIter, __enable_if_t<__has_input_iterator_category<_InputIter>::value, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX17 _InputIter
+inline _LIBCPP_HIDE_FROM_ABI _InputIter
 next(_InputIter __x, typename iterator_traits<_InputIter>::difference_type __n = 1) {
   // Calling `advance` with a negative value on a non-bidirectional iterator is a no-op in the current implementation.
   // Note that this check duplicates the similar check in `std::advance`.

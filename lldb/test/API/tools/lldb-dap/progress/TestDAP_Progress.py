@@ -7,6 +7,7 @@ from lldbsuite.test.lldbtest import *
 import json
 import os
 import time
+import re
 
 import lldbdap_testcase
 
@@ -16,10 +17,11 @@ class TestDAP_progress(lldbdap_testcase.DAPTestCaseBase):
         self,
         expected_title,
         expected_message=None,
+        expected_message_regex=None,
         expected_not_in_message=None,
         only_verify_first_update=False,
     ):
-        self.dap_server.wait_for_event("progressEnd")
+        self.dap_server.wait_for_event(["progressEnd"])
         self.assertTrue(len(self.dap_server.progress_events) > 0)
         start_found = False
         update_found = False
@@ -36,6 +38,8 @@ class TestDAP_progress(lldbdap_testcase.DAPTestCaseBase):
                     continue
                 if expected_message is not None:
                     self.assertIn(expected_message, message)
+                if expected_message_regex is not None:
+                    self.assertTrue(re.match(expected_message_regex, message))
                 if expected_not_in_message is not None:
                     self.assertNotIn(expected_not_in_message, message)
                 update_found = True
@@ -81,8 +85,7 @@ class TestDAP_progress(lldbdap_testcase.DAPTestCaseBase):
 
         self.verify_progress_events(
             expected_title="Progress tester: Initial Indeterminate Detail",
-            expected_message="Step 1",
-            only_verify_first_update=True,
+            expected_message_regex=r"Step [0-9]+",
         )
 
         # Test no details indeterminate.

@@ -1,9 +1,9 @@
-// RUN: %clang_cc1 -Wno-hlsl-implicit-binding -triple dxil-pc-shadermodel6.3-library -ast-dump -o - %s | FileCheck %s
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -ast-dump -o - %s | FileCheck %s
 
 // CHECK: VarDecl {{.*}} global_scalar 'hlsl_private int' static cinit
 static int global_scalar = 0;
 
-// CHECK: VarDecl {{.*}} global_buffer 'RWBuffer<float>':'hlsl::RWBuffer<float>' static callinit
+// CHECK: VarDecl {{.*}} global_buffer 'RWBuffer<float>':'hlsl::RWBuffer<float>' callinit
 RWBuffer<float> global_buffer;
 
 class A {

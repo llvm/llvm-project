@@ -105,7 +105,7 @@ entry:
 ; CHECK4-NEXT: Jump Tables:
 ; CHECK8-NEXT: Jump Tables:
 ; CHECK12-NEXT: Jump Tables:
-; CHECK-DEFAULT-NOT: {{^}}Jump Tables:
+; CHECK-DEFAULT: {{^}}Jump Tables:
 
 bb1: tail call void @ext(i32 1, i32 0) br label %return
 bb2: tail call void @ext(i32 2, i32 2) br label %return

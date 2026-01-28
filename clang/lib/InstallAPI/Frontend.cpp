@@ -9,7 +9,6 @@
 #include "clang/InstallAPI/Frontend.h"
 #include "clang/AST/Availability.h"
 #include "clang/InstallAPI/FrontendRecords.h"
-#include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
 
 using namespace llvm;

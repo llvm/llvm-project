@@ -8,7 +8,7 @@
 
 // <list>
 
-// iterator insert(const_iterator position, const value_type& x);
+// iterator insert(const_iterator position, const value_type& x); // constexpr since C++26
 
 #include <list>
 #include <cstdlib>
@@ -19,7 +19,7 @@
 #include "count_new.h"
 
 template <class List>
-void test() {
+TEST_CONSTEXPR_CXX26 void test() {
   int a1[] = {1, 2, 3};
   int a2[] = {1, 4, 2, 3};
   List l1(a1, a1 + 3);
@@ -30,22 +30,33 @@ void test() {
   assert(l1 == List(a2, a2 + 4));
 
 #if !defined(TEST_HAS_NO_EXCEPTIONS) && !defined(DISABLE_NEW_COUNT)
-  globalMemCounter.throw_after = 0;
-  int save_count               = globalMemCounter.outstanding_new;
-  try {
-    i = l1.insert(i, 5);
-    assert(false);
-  } catch (...) {
+  if (!TEST_IS_CONSTANT_EVALUATED) {
+    globalMemCounter.throw_after = 0;
+    int save_count               = globalMemCounter.outstanding_new;
+    try {
+      i = l1.insert(i, 5);
+      assert(false);
+    } catch (...) {
+    }
+    assert(globalMemCounter.checkOutstandingNewEq(save_count));
+    assert(l1 == List(a2, a2 + 4));
   }
-  assert(globalMemCounter.checkOutstandingNewEq(save_count));
-  assert(l1 == List(a2, a2 + 4));
 #endif
 }
 
-int main(int, char**) {
+TEST_CONSTEXPR_CXX26 bool test() {
   test<std::list<int> >();
 #if TEST_STD_VER >= 11
   test<std::list<int, min_allocator<int>>>();
+#endif
+
+  return true;
+}
+
+int main(int, char**) {
+  assert(test());
+#if TEST_STD_VER >= 26
+  static_assert(test());
 #endif
 
   return 0;

@@ -20,6 +20,11 @@
 // RUN:   --rocm-path=%S/Inputs/rocm %t.o -frtlib-add-rpath 2>&1 \
 // RUN:   | FileCheck -check-prefixes=ROCM-RPATH %s
 
+// Test that a canonical HIP runtime path is passed to the -rpath flag
+// RUN: %clang -### --hip-link --target=x86_64-linux-gnu \
+// RUN:   --rocm-path=%S/Inputs/rocm/./bin/../include/../ %t.o -frtlib-add-rpath 2>&1 \
+// RUN:   | FileCheck -check-prefixes=ROCM-RPATH-CANONICAL %s
+
 // Test detecting latest /opt/rocm-{release} directory.
 // RUN: rm -rf %t && mkdir -p %t/opt
 // RUN: cp -r %S/Inputs/rocm %t/opt/rocm-3.9.0-1234
@@ -53,9 +58,10 @@
 // RUN:   --rocm-path=%S/Inputs/rocm %s 2>&1 \
 // RUN:   | FileCheck -check-prefixes=ROCM-PATH %s
 
-// ROCM-PATH: "-L[[HIPRT:.*/Inputs/rocm/lib]]" "-lamdhip64"
-// ROCM-RPATH: "-L[[HIPRT:.*/Inputs/rocm/lib]]" "-rpath" "[[HIPRT]]" "-lamdhip64"
-// ROCM-REL: "-L[[HIPRT:.*/opt/rocm-3.10.0/lib]]" "-lamdhip64"
+// ROCM-PATH: "{{.*/Inputs/rocm/lib/libamdhip64.so}}" "-L[[HIPRT:.*/Inputs/rocm/lib]]"
+// ROCM-RPATH: "-rpath" "{{.*/Inputs/rocm/lib}}"
+// ROCM-RPATH-CANONICAL: "-rpath" "{{.*/rocm/lib}}"
+// ROCM-REL: "{{.*/opt/rocm-3.10.0/lib/libamdhip64.so}}"
 // NOHIPRT-NOT: "-L{{.*/Inputs/rocm/lib}}"
 // NOHIPRT-NOT: "-rpath" "{{.*/Inputs/rocm/lib}}"
-// NOHIPRT-NOT: "-lamdhip64"
+// NOHIPRT-NOT: "libamdhip64.so"

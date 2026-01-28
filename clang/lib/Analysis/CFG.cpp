@@ -46,13 +46,13 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/Allocator.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Format.h"
 #include "llvm/Support/GraphWriter.h"
 #include "llvm/Support/SaveAndRestore.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <memory>
@@ -899,8 +899,7 @@ private:
       return;
     }
 
-    B->appendStmt(const_cast<ObjCMessageExpr *>(ME),
-                  cfg->getBumpVectorContext());
+    B->appendStmt(ME, cfg->getBumpVectorContext());
   }
 
   void appendTemporaryDtor(CFGBlock *B, CXXBindTemporaryExpr *E) {
@@ -1262,6 +1261,28 @@ private:
         L2Result.Val.getKind() == APValue::Float) {
       llvm::APFloat L1 = L1Result.Val.getFloat();
       llvm::APFloat L2 = L2Result.Val.getFloat();
+      // Note that L1 and L2 do not necessarily have the same type.  For example
+      // `x != 0 || x != 1.0`, if `x` is a float16, the two literals `0` and
+      // `1.0` are float16 and double respectively.  In this case, we should do
+      // a conversion before comparing L1 and L2.  Their types must be
+      // compatible since they are comparing with the same DRE.
+      int Order = Context->getFloatingTypeSemanticOrder(NumExpr1->getType(),
+                                                        NumExpr2->getType());
+      bool Ignored = false;
+
+      if (Order > 0) {
+        // type rank L1 > L2:
+        if (llvm::APFloat::opOK !=
+            L2.convert(L1.getSemantics(), llvm::APFloat::rmNearestTiesToEven,
+                       &Ignored))
+          return {};
+      } else if (Order < 0)
+        // type rank L1 < L2:
+        if (llvm::APFloat::opOK !=
+            L1.convert(L2.getSemantics(), llvm::APFloat::rmNearestTiesToEven,
+                       &Ignored))
+          return {};
+
       llvm::APFloat MidValue = L1;
       MidValue.add(L2, llvm::APFloat::rmNearestTiesToEven);
       MidValue.divide(llvm::APFloat(MidValue.getSemantics(), "2.0"),
@@ -1646,6 +1667,20 @@ std::unique_ptr<CFG> CFGBuilder::buildCFG(const Decl *D, Stmt *Statement) {
   assert(Succ == &cfg->getExit());
   Block = nullptr;  // the EXIT block is empty.  Create all other blocks lazily.
 
+  if (BuildOpts.AddLifetime && BuildOpts.AddParameterLifetimes) {
+    // Add parameters to the initial scope to handle lifetime ends.
+    LocalScope *paramScope = nullptr;
+    if (const auto *FD = dyn_cast_or_null<FunctionDecl>(D))
+      for (ParmVarDecl *PD : FD->parameters()) {
+        paramScope = addLocalScopeForVarDecl(PD, paramScope);
+      }
+    if (auto *C = dyn_cast<CompoundStmt>(Statement))
+      if (C->body_empty() || !isa<ReturnStmt>(*C->body_rbegin()))
+        // If the body ends with a ReturnStmt, the dtors will be added in
+        // VisitReturnStmt.
+        addAutomaticObjHandling(ScopePos, LocalScope::const_iterator(),
+                                Statement);
+  }
   if (BuildOpts.AddImplicitDtors)
     if (const CXXDestructorDecl *DD = dyn_cast_or_null<CXXDestructorDecl>(D))
       addImplicitDtorsForDestructor(DD);
@@ -1733,10 +1768,9 @@ std::unique_ptr<CFG> CFGBuilder::buildCFG(const Decl *D, Stmt *Statement) {
 
   // Add successors to the Indirect Goto Dispatch block (if we have one).
   if (CFGBlock *B = cfg->getIndirectGotoBlock())
-    for (LabelSetTy::iterator I = AddressTakenLabels.begin(),
-                              E = AddressTakenLabels.end(); I != E; ++I ) {
+    for (LabelDecl *LD : AddressTakenLabels) {
       // Lookup the target block.
-      LabelMapTy::iterator LI = LabelMap.find(*I);
+      LabelMapTy::iterator LI = LabelMap.find(LD);
 
       // If there is no target block that contains label, then we are looking
       // at an incomplete AST.  Handle this by not registering a successor.
@@ -2225,6 +2259,11 @@ LocalScope* CFGBuilder::addLocalScopeForVarDecl(VarDecl *VD,
 
   // Check if variable is local.
   if (!VD->hasLocalStorage())
+    return Scope;
+
+  // Reference parameters are aliases to objects that live elsewhere, so they
+  // don't require automatic destruction or lifetime tracking.
+  if (isa<ParmVarDecl>(VD) && VD->getType()->isReferenceType())
     return Scope;
 
   if (!BuildOpts.AddLifetime && !BuildOpts.AddScopes &&
@@ -2814,7 +2853,8 @@ CFGBlock *CFGBuilder::VisitCallExpr(CallExpr *C, AddStmtChoice asc) {
     if (!FD->isVariadic())
       findConstructionContextsForArguments(C);
 
-    if (FD->isNoReturn() || C->isBuiltinAssumeFalse(*Context))
+    if (FD->isNoReturn() || FD->isAnalyzerNoReturn() ||
+        C->isBuiltinAssumeFalse(*Context))
       NoReturn = true;
     if (FD->hasAttr<NoThrowAttr>())
       AddEHEdge = false;
@@ -4496,10 +4536,13 @@ CFGBlock *CFGBuilder::VisitSwitchStmt(SwitchStmt *Terminator) {
   //
   // Note: We add a successor to a switch that is considered covered yet has no
   //       case statements if the enumeration has no enumerators.
+  //       We also consider this successor reachable if
+  //       BuildOpts.SwitchReqDefaultCoveredEnum is true.
   bool SwitchAlwaysHasSuccessor = false;
   SwitchAlwaysHasSuccessor |= switchExclusivelyCovered;
-  SwitchAlwaysHasSuccessor |= Terminator->isAllEnumCasesCovered() &&
-                              Terminator->getSwitchCaseList();
+  SwitchAlwaysHasSuccessor |=
+      !BuildOpts.AssumeReachableDefaultInSwitchStatements &&
+      Terminator->isAllEnumCasesCovered() && Terminator->getSwitchCaseList();
   addSuccessor(SwitchTerminatedBlock, DefaultCaseBlock,
                !SwitchAlwaysHasSuccessor);
 
@@ -4772,7 +4815,10 @@ CFGBlock *CFGBuilder::VisitCXXForRangeStmt(CXXForRangeStmt *S) {
   // Save local scope position before the addition of the implicit variables.
   SaveAndRestore save_scope_pos(ScopePos);
 
-  // Create local scopes and destructors for range, begin and end variables.
+  // Create local scopes and destructors for init, range, begin and end
+  // variables.
+  if (Stmt *Init = S->getInit())
+    addLocalScopeForStmt(Init);
   if (Stmt *Range = S->getRangeStmt())
     addLocalScopeForStmt(Range);
   if (Stmt *Begin = S->getBeginStmt())
@@ -5325,6 +5371,7 @@ CFGBlock *CFG::createBlock() {
 /// buildCFG - Constructs a CFG from an AST.
 std::unique_ptr<CFG> CFG::buildCFG(const Decl *D, Stmt *Statement,
                                    ASTContext *C, const BuildOptions &BO) {
+  llvm::TimeTraceScope TimeProfile("BuildCFG");
   CFGBuilder Builder(C, BO);
   return Builder.buildCFG(D, Statement);
 }
@@ -5593,8 +5640,15 @@ public:
   bool handleDecl(const Decl *D, raw_ostream &OS) {
     DeclMapTy::iterator I = DeclMap.find(D);
 
-    if (I == DeclMap.end())
+    if (I == DeclMap.end()) {
+      // ParmVarDecls are not declared in the CFG itself, so they do not appear
+      // in DeclMap.
+      if (auto *PVD = dyn_cast_or_null<ParmVarDecl>(D)) {
+        OS << "[Parm: " << PVD->getNameAsString() << "]";
+        return true;
+      }
       return false;
+    }
 
     if (currentBlock >= 0 && I->second.first == (unsigned) currentBlock
                           && I->second.second == currStmt) {
@@ -5841,16 +5895,17 @@ static void print_construction_context(raw_ostream &OS,
 }
 
 static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
-                       const CFGElement &E);
+                       const CFGElement &E, bool TerminateWithNewLine = true);
 
-void CFGElement::dumpToStream(llvm::raw_ostream &OS) const {
+void CFGElement::dumpToStream(llvm::raw_ostream &OS,
+                              bool TerminateWithNewLine) const {
   LangOptions LangOpts;
   StmtPrinterHelper Helper(nullptr, LangOpts);
-  print_elem(OS, Helper, *this);
+  print_elem(OS, Helper, *this, TerminateWithNewLine);
 }
 
 static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
-                       const CFGElement &E) {
+                       const CFGElement &E, bool TerminateWithNewLine) {
   switch (E.getKind()) {
   case CFGElement::Kind::Statement:
   case CFGElement::Kind::CXXRecordTypedCall:
@@ -5867,7 +5922,9 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
       if (Children.begin() != Children.end()) {
         OS << "({ ... ; ";
         Helper.handledStmt(*SE->getSubStmt()->body_rbegin(),OS);
-        OS << " })\n";
+        OS << " })";
+        if (TerminateWithNewLine)
+          OS << '\n';
         return;
       }
     }
@@ -5876,7 +5933,8 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
       if (B->getOpcode() == BO_Comma) {
         OS << "... , ";
         Helper.handledStmt(B->getRHS(),OS);
-        OS << '\n';
+        if (TerminateWithNewLine)
+          OS << '\n';
         return;
       }
     }
@@ -5904,15 +5962,14 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
     }
 
     // Expressions need a newline.
-    if (isa<Expr>(S))
+    if (isa<Expr>(S) && TerminateWithNewLine)
       OS << '\n';
 
-    break;
+    return;
   }
 
   case CFGElement::Kind::Initializer:
     print_initializer(OS, Helper, E.castAs<CFGInitializer>().getInitializer());
-    OS << '\n';
     break;
 
   case CFGElement::Kind::AutomaticObjectDtor: {
@@ -5926,43 +5983,44 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
 
     OS << ".~";
     T.getUnqualifiedType().print(OS, PrintingPolicy(Helper.getLangOpts()));
-    OS << "() (Implicit destructor)\n";
+    OS << "() (Implicit destructor)";
     break;
   }
 
   case CFGElement::Kind::CleanupFunction:
     OS << "CleanupFunction ("
-       << E.castAs<CFGCleanupFunction>().getFunctionDecl()->getName() << ")\n";
+       << E.castAs<CFGCleanupFunction>().getFunctionDecl()->getName() << ")";
     break;
 
   case CFGElement::Kind::LifetimeEnds:
     Helper.handleDecl(E.castAs<CFGLifetimeEnds>().getVarDecl(), OS);
-    OS << " (Lifetime ends)\n";
+    OS << " (Lifetime ends)";
     break;
 
   case CFGElement::Kind::LoopExit:
-    OS << E.castAs<CFGLoopExit>().getLoopStmt()->getStmtClassName() << " (LoopExit)\n";
+    OS << E.castAs<CFGLoopExit>().getLoopStmt()->getStmtClassName()
+       << " (LoopExit)";
     break;
 
   case CFGElement::Kind::ScopeBegin:
     OS << "CFGScopeBegin(";
     if (const VarDecl *VD = E.castAs<CFGScopeBegin>().getVarDecl())
       OS << VD->getQualifiedNameAsString();
-    OS << ")\n";
+    OS << ")";
     break;
 
   case CFGElement::Kind::ScopeEnd:
     OS << "CFGScopeEnd(";
     if (const VarDecl *VD = E.castAs<CFGScopeEnd>().getVarDecl())
       OS << VD->getQualifiedNameAsString();
-    OS << ")\n";
+    OS << ")";
     break;
 
   case CFGElement::Kind::NewAllocator:
     OS << "CFGNewAllocator(";
     if (const CXXNewExpr *AllocExpr = E.castAs<CFGNewAllocator>().getAllocatorExpr())
       AllocExpr->getType().print(OS, PrintingPolicy(Helper.getLangOpts()));
-    OS << ")\n";
+    OS << ")";
     break;
 
   case CFGElement::Kind::DeleteDtor: {
@@ -5974,14 +6032,14 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
         const_cast<CXXDeleteExpr*>(DE.getDeleteExpr());
     Helper.handledStmt(cast<Stmt>(DelExpr->getArgument()), OS);
     OS << "->~" << RD->getName().str() << "()";
-    OS << " (Implicit destructor)\n";
+    OS << " (Implicit destructor)";
     break;
   }
 
   case CFGElement::Kind::BaseDtor: {
     const CXXBaseSpecifier *BS = E.castAs<CFGBaseDtor>().getBaseSpecifier();
     OS << "~" << BS->getType()->getAsCXXRecordDecl()->getName() << "()";
-    OS << " (Base object destructor)\n";
+    OS << " (Base object destructor)";
     break;
   }
 
@@ -5990,7 +6048,7 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
     const Type *T = FD->getType()->getBaseElementTypeUnsafe();
     OS << "this->" << FD->getName();
     OS << ".~" << T->getAsCXXRecordDecl()->getName() << "()";
-    OS << " (Member object destructor)\n";
+    OS << " (Member object destructor)";
     break;
   }
 
@@ -5999,10 +6057,12 @@ static void print_elem(raw_ostream &OS, StmtPrinterHelper &Helper,
         E.castAs<CFGTemporaryDtor>().getBindTemporaryExpr();
     OS << "~";
     BT->getType().print(OS, PrintingPolicy(Helper.getLangOpts()));
-    OS << "() (Temporary object destructor)\n";
+    OS << "() (Temporary object destructor)";
     break;
   }
   }
+  if (TerminateWithNewLine)
+    OS << '\n';
 }
 
 static void print_block(raw_ostream &OS, const CFG* cfg,
@@ -6349,12 +6409,12 @@ const Expr *CFGBlock::getLastCondition() const {
   return cast<Expr>(Cond)->IgnoreParens();
 }
 
-Stmt *CFGBlock::getTerminatorCondition(bool StripParens) {
-  Stmt *Terminator = getTerminatorStmt();
+const Stmt *CFGBlock::getTerminatorCondition(bool StripParens) const {
+  const Stmt *Terminator = getTerminatorStmt();
   if (!Terminator)
     return nullptr;
 
-  Expr *E = nullptr;
+  const Expr *E = nullptr;
 
   switch (Terminator->getStmtClass()) {
     default:

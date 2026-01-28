@@ -210,8 +210,8 @@ module {
   }
 
   // CHECK-LABEL: llvm.func @memory_attr
-  // CHECK-SAME: attributes {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = readwrite>} {
-  llvm.func @memory_attr() attributes {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = readwrite>} {
+  // CHECK-SAME: attributes {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>} {
+  llvm.func @memory_attr() attributes {memory = #llvm.memory_effects<other = none, argMem = read, inaccessibleMem = readwrite, errnoMem = none, targetMem0 = none, targetMem1 = none>} {
     llvm.return
   }
 
@@ -258,12 +258,6 @@ module {
     llvm.return
   }
 
-  llvm.func @unsafe_fp_math_roundtrip() attributes {unsafe_fp_math = true} {
-    // CHECK: @unsafe_fp_math_roundtrip
-    // CHECK-SAME: attributes {unsafe_fp_math = true}
-    llvm.return
-  }
-
   llvm.func @no_infs_fp_math_roundtrip() attributes {no_infs_fp_math = true} {
     // CHECK: @no_infs_fp_math_roundtrip
     // CHECK-SAME: attributes {no_infs_fp_math = true}
@@ -273,12 +267,6 @@ module {
   llvm.func @no_nans_fp_math_roundtrip() attributes {no_nans_fp_math = true} {
     // CHECK: @no_nans_fp_math_roundtrip
     // CHECK-SAME: attributes {no_nans_fp_math = true}
-    llvm.return
-  }
-
-  llvm.func @approx_func_fp_math_roundtrip() attributes {approx_func_fp_math = true} {
-    // CHECK: @approx_func_fp_math_roundtrip
-    // CHECK-SAME: attributes {approx_func_fp_math = true}
     llvm.return
   }
 
@@ -336,6 +324,35 @@ module {
     llvm.return
   }
 
+  llvm.func @noreturn_function() attributes {noreturn} {
+    // CHECK: @noreturn_function
+    // CHECK-SAME: attributes {noreturn}
+    llvm.return
+  }
+
+  llvm.func @returnstwice_function() attributes {returnstwice} {
+    // CHECK: @returnstwice_function
+    // CHECK-SAME: attributes {returnstwice}
+    llvm.return
+  }
+
+  llvm.func @hot_function() attributes {hot} {
+    // CHECK: @hot_function
+    // CHECK-SAME: attributes {hot}
+    llvm.return
+  }
+
+  llvm.func @cold_function() attributes {cold} {
+    // CHECK: @cold_function
+    // CHECK-SAME: attributes {cold}
+    llvm.return
+  }
+
+  llvm.func @noduplicate_function() attributes {noduplicate} {
+    // CHECK: @noduplicate_function
+    // CHECK-SAME: attributes {noduplicate}
+    llvm.return
+  }
 
 }
 

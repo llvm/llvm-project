@@ -189,3 +189,46 @@ define fp128 @fminimum(fp128 %x, fp128 %y) {
   %a = call fp128 @llvm.minimum.fp128(fp128 %x, fp128 %y)
   ret fp128 %a
 }
+
+define { fp128, fp128 } @modf(fp128 %a) nounwind {
+; RV32I-LABEL: modf:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    addi sp, sp, -64
+; RV32I-NEXT:    sw ra, 60(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    sw s0, 56(sp) # 4-byte Folded Spill
+; RV32I-NEXT:    lw a3, 0(a1)
+; RV32I-NEXT:    lw a4, 4(a1)
+; RV32I-NEXT:    lw a5, 8(a1)
+; RV32I-NEXT:    lw a6, 12(a1)
+; RV32I-NEXT:    mv s0, a0
+; RV32I-NEXT:    addi a0, sp, 24
+; RV32I-NEXT:    addi a1, sp, 8
+; RV32I-NEXT:    addi a2, sp, 40
+; RV32I-NEXT:    sw a3, 8(sp)
+; RV32I-NEXT:    sw a4, 12(sp)
+; RV32I-NEXT:    sw a5, 16(sp)
+; RV32I-NEXT:    sw a6, 20(sp)
+; RV32I-NEXT:    call modfl
+; RV32I-NEXT:    lw a0, 24(sp)
+; RV32I-NEXT:    lw a1, 28(sp)
+; RV32I-NEXT:    lw a2, 32(sp)
+; RV32I-NEXT:    lw a3, 36(sp)
+; RV32I-NEXT:    lw a4, 40(sp)
+; RV32I-NEXT:    lw a5, 44(sp)
+; RV32I-NEXT:    lw a6, 48(sp)
+; RV32I-NEXT:    lw a7, 52(sp)
+; RV32I-NEXT:    sw a4, 16(s0)
+; RV32I-NEXT:    sw a5, 20(s0)
+; RV32I-NEXT:    sw a6, 24(s0)
+; RV32I-NEXT:    sw a7, 28(s0)
+; RV32I-NEXT:    sw a0, 0(s0)
+; RV32I-NEXT:    sw a1, 4(s0)
+; RV32I-NEXT:    sw a2, 8(s0)
+; RV32I-NEXT:    sw a3, 12(s0)
+; RV32I-NEXT:    lw ra, 60(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    lw s0, 56(sp) # 4-byte Folded Reload
+; RV32I-NEXT:    addi sp, sp, 64
+; RV32I-NEXT:    ret
+  %result = call { fp128, fp128 } @llvm.modf.f128(fp128 %a)
+  ret { fp128, fp128 } %result
+}

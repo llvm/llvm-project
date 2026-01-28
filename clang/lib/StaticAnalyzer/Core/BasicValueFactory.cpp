@@ -173,7 +173,7 @@ const PointerToMemberData *BasicValueFactory::getPointerToMemberData(
   return D;
 }
 
-LLVM_ATTRIBUTE_UNUSED static bool hasNoRepeatedElements(
+[[maybe_unused]] static bool hasNoRepeatedElements(
     llvm::ImmutableList<const CXXBaseSpecifier *> BaseSpecList) {
   llvm::SmallPtrSet<QualType, 16> BaseSpecSeen;
   for (const CXXBaseSpecifier *BaseSpec : BaseSpecList) {

@@ -33,12 +33,12 @@ name:            hoge
 alignment:       1
 tracksRegLiveness: true
 registers:
-  - { id: 0, class: int64regs }
-  - { id: 1, class: int64regs }
-  - { id: 2, class: int1regs }
-  - { id: 3, class: int64regs }
-  - { id: 4, class: int1regs }
-  - { id: 5, class: int64regs }
+  - { id: 0, class: b64 }
+  - { id: 1, class: b64 }
+  - { id: 2, class: b1 }
+  - { id: 3, class: b64 }
+  - { id: 4, class: b1 }
+  - { id: 5, class: b64 }
 frameInfo:
   maxAlignment:    1
 machineFunctionInfo: {}
@@ -47,18 +47,18 @@ body:             |
   ; CHECK: bb.0.bb:
   ; CHECK-NEXT:   successors: %bb.1(0x40000000), %bb.3(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   CBranch undef %2:int1regs, %bb.3
+  ; CHECK-NEXT:   CBranch undef %2:b1, %bb.3
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.1.bb1.preheader:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:int64regs = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:b64 = IMPLICIT_DEF
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.bb1:
   ; CHECK-NEXT:   successors: %bb.2(0x7c000000), %bb.3(0x04000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[ADDi64ri:%[0-9]+]]:int64regs = ADDi64ri [[ADDi64ri]], 1
-  ; CHECK-NEXT:   [[SETP_s64ri:%[0-9]+]]:int1regs = SETP_s64ri [[ADDi64ri]], 1, 2
+  ; CHECK-NEXT:   [[ADDi64ri:%[0-9]+]]:b64 = ADD64ri [[ADDi64ri]], 1
+  ; CHECK-NEXT:   [[SETP_s64ri:%[0-9]+]]:b1 = SETP_i64ri [[ADDi64ri]], 1, 2
   ; CHECK-NEXT:   CBranch [[SETP_s64ri]], %bb.2
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3.bb4:
@@ -68,16 +68,16 @@ body:             |
   bb.0.bb:
     successors: %bb.1, %bb.3
 
-    CBranch undef %2:int1regs, %bb.3
+    CBranch undef %2:b1, %bb.3
 
   bb.1.bb1.preheader:
-    %5:int64regs = IMPLICIT_DEF
+    %5:b64 = IMPLICIT_DEF
 
   bb.2.bb1:
     successors: %bb.2(0x7c000000), %bb.3(0x04000000)
 
-    %5:int64regs = ADDi64ri %5, 1
-    %4:int1regs = SETP_s64ri %5, 1, 2
+    %5:b64 = ADD64ri %5, 1
+    %4:b1 = SETP_i64ri %5, 1, 2
     CBranch %4, %bb.2
 
   bb.3.bb4:

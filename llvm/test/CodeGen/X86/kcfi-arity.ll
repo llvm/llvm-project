@@ -1,4 +1,5 @@
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs < %s | FileCheck %s --check-prefix=ASM
+; RUN: llc -mtriple=x86_64-unknown-none -verify-machineinstrs < %s | FileCheck %s --check-prefix=ASM
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -stop-after=finalize-isel < %s | FileCheck %s --check-prefixes=MIR,ISEL
 ; RUN: llc -mtriple=x86_64-unknown-linux-gnu -verify-machineinstrs -stop-after=kcfi < %s | FileCheck %s --check-prefixes=MIR,KCFI
 
@@ -192,9 +193,33 @@ entry:
   ret void
 }
 
+;; Ensure that floating-point values are not counted toward the arity
+; ASM-LABEL: __cfi_f12:
+; ASM: movl $2253188362, %ebp
+define dso_local void @f12(i32 noundef %v1, i32 noundef %v2, float noundef %v3, double noundef %v4, float noundef %v5, i32 noundef %v6, i32 noundef %v7, i32 noundef %v8) #0 !kcfi_type !7 {
+entry:
+  %v1.addr = alloca i32, align 4
+  %v2.addr = alloca i32, align 4
+  %v3.addr = alloca float, align 4
+  %v4.addr = alloca double, align 4
+  %v5.addr = alloca float, align 4
+  %v6.addr = alloca i32, align 4
+  %v7.addr = alloca i32, align 4
+  %v8.addr = alloca i32, align 4
+  store i32 %v1, ptr %v1.addr, align 4
+  store i32 %v2, ptr %v2.addr, align 4
+  store float %v3, ptr %v3.addr, align 4
+  store double %v4, ptr %v4.addr, align 4
+  store float %v5, ptr %v5.addr, align 4
+  store i32 %v6, ptr %v6.addr, align 4
+  store i32 %v7, ptr %v7.addr, align 4
+  store i32 %v8, ptr %v8.addr, align 4
+  ret void
+}
+
 attributes #0 = { "target-features"="+retpoline-indirect-branches,+retpoline-indirect-calls" }
 
-!llvm.module.flags = !{!0, !7}
+!llvm.module.flags = !{!0, !8}
 !0 = !{i32 4, !"kcfi", i32 1}
 !1 = !{i32 12345678}
 !2 = !{i32 4196274163}
@@ -202,4 +227,5 @@ attributes #0 = { "target-features"="+retpoline-indirect-branches,+retpoline-ind
 !4 = !{i32 199571451}
 !5 = !{i32 1046421190}
 !6 = !{i32 1342488295}
-!7 = !{i32 4, !"kcfi-arity", i32 1}
+!7 = !{i32 2253188362}
+!8 = !{i32 4, !"kcfi-arity", i32 1}

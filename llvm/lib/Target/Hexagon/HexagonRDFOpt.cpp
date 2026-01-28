@@ -34,7 +34,6 @@
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
 #include <limits>
-#include <utility>
 
 using namespace llvm;
 using namespace rdf;
@@ -70,8 +69,7 @@ namespace {
     bool runOnMachineFunction(MachineFunction &MF) override;
 
     MachineFunctionProperties getRequiredProperties() const override {
-      return MachineFunctionProperties().set(
-          MachineFunctionProperties::Property::NoVRegs);
+      return MachineFunctionProperties().setNoVRegs();
     }
 
     static char ID;

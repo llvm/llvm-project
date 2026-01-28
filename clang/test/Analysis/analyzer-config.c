@@ -31,6 +31,7 @@
 // CHECK-NEXT: core.BitwiseShift:Pedantic = false
 // CHECK-NEXT: core.CallAndMessage:ArgInitializedness = true
 // CHECK-NEXT: core.CallAndMessage:ArgPointeeInitializedness = false
+// CHECK-NEXT: core.CallAndMessage:ArgPointeeInitializednessComplete = false
 // CHECK-NEXT: core.CallAndMessage:CXXDeallocationArg = true
 // CHECK-NEXT: core.CallAndMessage:CXXThisMethodCall = true
 // CHECK-NEXT: core.CallAndMessage:FunctionPointer = true
@@ -89,6 +90,7 @@
 // CHECK-NEXT: graph-trim-interval = 1000
 // CHECK-NEXT: ignore-bison-generated-files = true
 // CHECK-NEXT: ignore-flex-generated-files = true
+// CHECK-NEXT: inline-functions-with-ambiguous-loops = false
 // CHECK-NEXT: inline-lambdas = true
 // CHECK-NEXT: ipa = dynamic-bifurcate
 // CHECK-NEXT: ipa-always-inline-size = 3
@@ -120,6 +122,7 @@
 // CHECK-NEXT: region-store-small-struct-limit = 2
 // CHECK-NEXT: report-in-main-source-file = false
 // CHECK-NEXT: security.cert.env.InvalidPtr:InvalidatingGetEnv = false
+// CHECK-NEXT: security.insecureAPI.DeprecatedOrUnsafeBufferHandling:ReportMode = c11-only
 // CHECK-NEXT: serialize-stats = false
 // CHECK-NEXT: silence-checkers = ""
 // CHECK-NEXT: stable-report-filename = false

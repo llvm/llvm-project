@@ -52,11 +52,12 @@ define <2 x float> @replace_through_casts_and_binop(i16 %inp) {
 ; CHECK-SAME: i16 [[INP:%.*]]) {
 ; CHECK-NEXT:    [[ADD:%.*]] = add nsw i16 [[INP]], -10
 ; CHECK-NEXT:    [[MUL:%.*]] = mul nsw i16 [[INP]], 5
-; CHECK-NEXT:    [[TMP1:%.*]] = uitofp i16 [[MUL]] to float
-; CHECK-NEXT:    [[TMP2:%.*]] = fadd float [[TMP1]], 2.000000e+00
-; CHECK-NEXT:    [[TMP3:%.*]] = sitofp i16 [[ADD]] to float
-; CHECK-NEXT:    [[TMP4:%.*]] = insertelement <2 x float> poison, float [[TMP2]], i64 0
-; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x float> [[TMP4]], float [[TMP3]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <2 x i16> poison, i16 [[MUL]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <2 x i16> [[TMP1]], i16 [[ADD]], i32 1
+; CHECK-NEXT:    [[TMP3:%.*]] = uitofp <2 x i16> [[TMP2]] to <2 x float>
+; CHECK-NEXT:    [[TMP4:%.*]] = sitofp <2 x i16> [[TMP2]] to <2 x float>
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <2 x float> [[TMP3]], <2 x float> [[TMP4]], <2 x i32> <i32 0, i32 3>
+; CHECK-NEXT:    [[R:%.*]] = fadd <2 x float> [[TMP5]], <float 2.000000e+00, float -0.000000e+00>
 ; CHECK-NEXT:    ret <2 x float> [[R]]
 ;
   %add = add nsw i16 %inp, -10
@@ -150,9 +151,9 @@ define <2 x i32> @replace_through_int_casts_ele0_only(i16 %inp, <2 x i16> %dead)
 define <2 x i8> @replace_through_binop_fail_cant_speculate(i8 %inp, <2 x i8> %d, <2 x i8> %any) {
 ; CHECK-LABEL: define <2 x i8> @replace_through_binop_fail_cant_speculate(
 ; CHECK-SAME: i8 [[INP:%.*]], <2 x i8> [[D:%.*]], <2 x i8> [[ANY:%.*]]) {
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[INP]], 5
-; CHECK-NEXT:    [[V0:%.*]] = insertelement <2 x i8> poison, i8 [[INP]], i64 0
-; CHECK-NEXT:    [[V:%.*]] = insertelement <2 x i8> [[V0]], i8 [[ADD]], i64 1
+; CHECK-NEXT:    [[TMP3:%.*]] = insertelement <2 x i8> poison, i8 [[INP]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = shufflevector <2 x i8> [[TMP3]], <2 x i8> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    [[V:%.*]] = add <2 x i8> [[TMP2]], <i8 0, i8 5>
 ; CHECK-NEXT:    [[DIV0:%.*]] = sdiv <2 x i8> splat (i8 -128), [[V]]
 ; CHECK-NEXT:    [[TMP1:%.*]] = xor i8 [[INP]], 123
 ; CHECK-NEXT:    [[R:%.*]] = insertelement <2 x i8> [[DIV0]], i8 [[TMP1]], i64 0

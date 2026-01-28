@@ -10,10 +10,12 @@
 #include "mlir/Dialect/Func/Transforms/Passes.h"
 
 namespace mlir {
-namespace {
-
+namespace func {
 #define GEN_PASS_DEF_DUPLICATEFUNCTIONELIMINATIONPASS
 #include "mlir/Dialect/Func/Transforms/Passes.h.inc"
+} // namespace func
+
+namespace {
 
 // Define a notion of function equivalence that allows for reuse. Ignore the
 // symbol name for this purpose.
@@ -80,7 +82,7 @@ struct DuplicateFuncOpEquivalenceInfo
 };
 
 struct DuplicateFunctionEliminationPass
-    : public impl::DuplicateFunctionEliminationPassBase<
+    : public func::impl::DuplicateFunctionEliminationPassBase<
           DuplicateFunctionEliminationPass> {
 
   using DuplicateFunctionEliminationPassBase<
@@ -115,9 +117,4 @@ struct DuplicateFunctionEliminationPass
 };
 
 } // namespace
-
-std::unique_ptr<Pass> mlir::func::createDuplicateFunctionEliminationPass() {
-  return std::make_unique<DuplicateFunctionEliminationPass>();
-}
-
 } // namespace mlir

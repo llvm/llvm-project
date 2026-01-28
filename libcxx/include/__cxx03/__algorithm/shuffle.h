@@ -46,8 +46,8 @@ public:
     return __oldstate >> 32;
   }
 
-  static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR result_type min() { return _Min; }
-  static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR result_type max() { return _Max; }
+  static _LIBCPP_HIDE_FROM_ABI result_type min() { return _Min; }
+  static _LIBCPP_HIDE_FROM_ABI result_type max() { return _Max; }
 
 private:
   uint_fast64_t __state_;
@@ -82,8 +82,8 @@ public:
 
   result_type operator()();
 
-  static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR result_type min() { return _Min; }
-  static _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR result_type max() { return _Max; }
+  static _LIBCPP_HIDE_FROM_ABI result_type min() { return _Min; }
+  static _LIBCPP_HIDE_FROM_ABI result_type max() { return _Max; }
 
   friend _LIBCPP_EXPORTED_FROM_ABI __rs_default __rs_get();
 };
@@ -91,8 +91,7 @@ public:
 _LIBCPP_EXPORTED_FROM_ABI __rs_default __rs_get();
 
 template <class _RandomAccessIterator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_IN_CXX14 void
-random_shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last) {
+_LIBCPP_HIDE_FROM_ABI void random_shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last) {
   typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
   typedef uniform_int_distribution<ptrdiff_t> _Dp;
   typedef typename _Dp::param_type _Pp;
@@ -109,7 +108,7 @@ random_shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last) {
 }
 
 template <class _RandomAccessIterator, class _RandomNumberGenerator>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_DEPRECATED_IN_CXX14 void
+_LIBCPP_HIDE_FROM_ABI void
 random_shuffle(_RandomAccessIterator __first, _RandomAccessIterator __last, _RandomNumberGenerator&& __rand) {
   typedef typename iterator_traits<_RandomAccessIterator>::difference_type difference_type;
   difference_type __d = __last - __first;

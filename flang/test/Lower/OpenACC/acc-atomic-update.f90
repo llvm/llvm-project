@@ -3,6 +3,11 @@
 ! RUN: %flang_fc1 -fopenacc -emit-hlfir %s -o - | FileCheck %s
 
 program acc_atomic_update_test
+    interface
+       integer function func(x)
+         integer :: x
+       end function func
+    end interface
     integer :: x, y, z
     integer, pointer :: a, b
     integer, target :: c, d
@@ -37,7 +42,7 @@ program acc_atomic_update_test
 !CHECK: }
 
     !$acc atomic update
-        a = a + b 
+        a = a + b
 
 !CHECK: {{.*}} = arith.constant 1 : i32
 !CHECK: acc.atomic.update %[[Y_DECL]]#0 : !fir.ref<i32> {
@@ -51,10 +56,10 @@ program acc_atomic_update_test
 !CHECK:    %[[RESULT:.*]] = arith.muli %[[LOADED_X]], %[[ARG]] : i32
 !CHECK:    acc.yield %[[RESULT]] : i32
 !CHECK:  }
-    !$acc atomic 
+    !$acc atomic
         y = y + 1
     !$acc atomic update
-        z = x * z 
+        z = x * z
 
 !CHECK:  %[[C1_VAL:.*]] = arith.constant 1 : i32
 !CHECK:  acc.atomic.update %[[I1_DECL]]#0 : !fir.ref<i8> {
@@ -67,7 +72,18 @@ program acc_atomic_update_test
     !$acc atomic
       i1 = i1 + 1
     !$acc end atomic
+
+!CHECK:  %[[VAL_44:.*]]:3 = hlfir.associate %{{.*}} {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
+!CHECK:  %[[VAL_45:.*]] = fir.call @_QPfunc(%[[VAL_44]]#0) fastmath<contract> : (!fir.ref<i32>) -> i32
+!CHECK:  acc.atomic.update %[[X_DECL]]#0 : !fir.ref<i32> {
+!CHECK:  ^bb0(%[[VAL_46:.*]]: i32):
+!CHECK:    %[[VAL_47:.*]] = arith.addi %[[VAL_46]], %[[VAL_45]] : i32
+!CHECK:    acc.yield %[[VAL_47]] : i32
+!CHECK:  }
+!CHECK:  hlfir.end_associate %[[VAL_44]]#1, %[[VAL_44]]#2 : !fir.ref<i32>, i1
+    !$acc atomic update
+    x = x + func(z + 1)
+    !$acc end atomic
 !CHECK:  return
 !CHECK: }
 end program acc_atomic_update_test
-

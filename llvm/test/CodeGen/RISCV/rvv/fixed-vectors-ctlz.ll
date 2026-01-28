@@ -80,7 +80,6 @@ define void @ctlz_v16i8(ptr %x, ptr %y) nounwind {
   store <16 x i8> %c, ptr %x
   ret void
 }
-declare <16 x i8> @llvm.ctlz.v16i8(<16 x i8>, i1)
 
 define void @ctlz_v8i16(ptr %x, ptr %y) nounwind {
 ; RVI-LABEL: ctlz_v8i16:
@@ -157,7 +156,6 @@ define void @ctlz_v8i16(ptr %x, ptr %y) nounwind {
   store <8 x i16> %c, ptr %x
   ret void
 }
-declare <8 x i16> @llvm.ctlz.v8i16(<8 x i16>, i1)
 
 define void @ctlz_v4i32(ptr %x, ptr %y) nounwind {
 ; RVI-LABEL: ctlz_v4i32:
@@ -240,7 +238,6 @@ define void @ctlz_v4i32(ptr %x, ptr %y) nounwind {
   store <4 x i32> %c, ptr %x
   ret void
 }
-declare <4 x i32> @llvm.ctlz.v4i32(<4 x i32>, i1)
 
 define void @ctlz_v2i64(ptr %x, ptr %y) nounwind {
 ; RV32I-LABEL: ctlz_v2i64:
@@ -305,10 +302,10 @@ define void @ctlz_v2i64(ptr %x, ptr %y) nounwind {
 ; RV64I-NEXT:    lui a2, 209715
 ; RV64I-NEXT:    lui a3, 61681
 ; RV64I-NEXT:    lui a4, 4112
-; RV64I-NEXT:    addiw a1, a1, 1365
-; RV64I-NEXT:    addiw a2, a2, 819
-; RV64I-NEXT:    addiw a3, a3, -241
-; RV64I-NEXT:    addiw a4, a4, 257
+; RV64I-NEXT:    addi a1, a1, 1365
+; RV64I-NEXT:    addi a2, a2, 819
+; RV64I-NEXT:    addi a3, a3, -241
+; RV64I-NEXT:    addi a4, a4, 257
 ; RV64I-NEXT:    slli a5, a1, 32
 ; RV64I-NEXT:    add a1, a1, a5
 ; RV64I-NEXT:    slli a5, a2, 32
@@ -393,7 +390,6 @@ define void @ctlz_v2i64(ptr %x, ptr %y) nounwind {
   store <2 x i64> %c, ptr %x
   ret void
 }
-declare <2 x i64> @llvm.ctlz.v2i64(<2 x i64>, i1)
 
 define void @ctlz_v32i8(ptr %x, ptr %y) nounwind {
 ; RVI-LABEL: ctlz_v32i8:
@@ -471,7 +467,6 @@ define void @ctlz_v32i8(ptr %x, ptr %y) nounwind {
   store <32 x i8> %c, ptr %x
   ret void
 }
-declare <32 x i8> @llvm.ctlz.v32i8(<32 x i8>, i1)
 
 define void @ctlz_v16i16(ptr %x, ptr %y) nounwind {
 ; RVI-LABEL: ctlz_v16i16:
@@ -548,7 +543,6 @@ define void @ctlz_v16i16(ptr %x, ptr %y) nounwind {
   store <16 x i16> %c, ptr %x
   ret void
 }
-declare <16 x i16> @llvm.ctlz.v16i16(<16 x i16>, i1)
 
 define void @ctlz_v8i32(ptr %x, ptr %y) nounwind {
 ; RVI-LABEL: ctlz_v8i32:
@@ -631,7 +625,6 @@ define void @ctlz_v8i32(ptr %x, ptr %y) nounwind {
   store <8 x i32> %c, ptr %x
   ret void
 }
-declare <8 x i32> @llvm.ctlz.v8i32(<8 x i32>, i1)
 
 define void @ctlz_v4i64(ptr %x, ptr %y) nounwind {
 ; RV32I-LABEL: ctlz_v4i64:
@@ -696,10 +689,10 @@ define void @ctlz_v4i64(ptr %x, ptr %y) nounwind {
 ; RV64I-NEXT:    lui a2, 209715
 ; RV64I-NEXT:    lui a3, 61681
 ; RV64I-NEXT:    lui a4, 4112
-; RV64I-NEXT:    addiw a1, a1, 1365
-; RV64I-NEXT:    addiw a2, a2, 819
-; RV64I-NEXT:    addiw a3, a3, -241
-; RV64I-NEXT:    addiw a4, a4, 257
+; RV64I-NEXT:    addi a1, a1, 1365
+; RV64I-NEXT:    addi a2, a2, 819
+; RV64I-NEXT:    addi a3, a3, -241
+; RV64I-NEXT:    addi a4, a4, 257
 ; RV64I-NEXT:    slli a5, a1, 32
 ; RV64I-NEXT:    add a1, a1, a5
 ; RV64I-NEXT:    slli a5, a2, 32
@@ -784,7 +777,6 @@ define void @ctlz_v4i64(ptr %x, ptr %y) nounwind {
   store <4 x i64> %c, ptr %x
   ret void
 }
-declare <4 x i64> @llvm.ctlz.v4i64(<4 x i64>, i1)
 
 define void @ctlz_zero_undef_v16i8(ptr %x, ptr %y) nounwind {
 ; RVI-LABEL: ctlz_zero_undef_v16i8:
@@ -1068,10 +1060,10 @@ define void @ctlz_zero_undef_v2i64(ptr %x, ptr %y) nounwind {
 ; RV64I-NEXT:    lui a2, 209715
 ; RV64I-NEXT:    lui a3, 61681
 ; RV64I-NEXT:    lui a4, 4112
-; RV64I-NEXT:    addiw a1, a1, 1365
-; RV64I-NEXT:    addiw a2, a2, 819
-; RV64I-NEXT:    addiw a3, a3, -241
-; RV64I-NEXT:    addiw a4, a4, 257
+; RV64I-NEXT:    addi a1, a1, 1365
+; RV64I-NEXT:    addi a2, a2, 819
+; RV64I-NEXT:    addi a3, a3, -241
+; RV64I-NEXT:    addi a4, a4, 257
 ; RV64I-NEXT:    slli a5, a1, 32
 ; RV64I-NEXT:    add a1, a1, a5
 ; RV64I-NEXT:    slli a5, a2, 32
@@ -1438,10 +1430,10 @@ define void @ctlz_zero_undef_v4i64(ptr %x, ptr %y) nounwind {
 ; RV64I-NEXT:    lui a2, 209715
 ; RV64I-NEXT:    lui a3, 61681
 ; RV64I-NEXT:    lui a4, 4112
-; RV64I-NEXT:    addiw a1, a1, 1365
-; RV64I-NEXT:    addiw a2, a2, 819
-; RV64I-NEXT:    addiw a3, a3, -241
-; RV64I-NEXT:    addiw a4, a4, 257
+; RV64I-NEXT:    addi a1, a1, 1365
+; RV64I-NEXT:    addi a2, a2, 819
+; RV64I-NEXT:    addi a3, a3, -241
+; RV64I-NEXT:    addi a4, a4, 257
 ; RV64I-NEXT:    slli a5, a1, 32
 ; RV64I-NEXT:    add a1, a1, a5
 ; RV64I-NEXT:    slli a5, a2, 32

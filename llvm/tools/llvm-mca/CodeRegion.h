@@ -210,7 +210,7 @@ struct InstrumentRegions : public CodeRegions {
                    UniqueInstrument Instrument) override;
   void endRegion(llvm::StringRef Description, llvm::SMLoc Loc) override;
 
-  const SmallVector<Instrument *> getActiveInstruments(llvm::SMLoc Loc) const;
+  SmallVector<Instrument *> getActiveInstruments(llvm::SMLoc Loc) const;
 };
 
 } // namespace mca

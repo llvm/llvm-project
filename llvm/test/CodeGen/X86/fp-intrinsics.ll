@@ -2018,7 +2018,7 @@ define double @sifdb(i8 %x) #0 {
 ; AVX-LABEL: sifdb:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    movsbl %dil, %eax
-; AVX-NEXT:    vcvtsi2sd %eax, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2sd %eax, %xmm15, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %result = call double @llvm.experimental.constrained.sitofp.f64.i8(i8 %x,
@@ -2062,7 +2062,7 @@ define double @sifdw(i16 %x) #0 {
 ; AVX-LABEL: sifdw:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    movswl %di, %eax
-; AVX-NEXT:    vcvtsi2sd %eax, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2sd %eax, %xmm15, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %result = call double @llvm.experimental.constrained.sitofp.f64.i16(i16 %x,
@@ -2103,7 +2103,7 @@ define double @sifdi(i32 %x) #0 {
 ;
 ; AVX-LABEL: sifdi:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vcvtsi2sd %edi, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2sd %edi, %xmm15, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %result = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %x,
@@ -2147,7 +2147,7 @@ define float @siffb(i8 %x) #0 {
 ; AVX-LABEL: siffb:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    movsbl %dil, %eax
-; AVX-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %result = call float @llvm.experimental.constrained.sitofp.f32.i8(i8 %x,
@@ -2191,7 +2191,7 @@ define float @siffw(i16 %x) #0 {
 ; AVX-LABEL: siffw:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    movswl %di, %eax
-; AVX-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %result = call float @llvm.experimental.constrained.sitofp.f32.i16(i16 %x,
@@ -2232,7 +2232,7 @@ define float @siffi(i32 %x) #0 {
 ;
 ; AVX-LABEL: siffi:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vcvtsi2ss %edi, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ss %edi, %xmm15, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %result = call float @llvm.experimental.constrained.sitofp.f32.i32(i32 %x,
@@ -2267,7 +2267,7 @@ define double @sifdl(i64 %x) #0 {
 ;
 ; AVX-LABEL: sifdl:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vcvtsi2sd %rdi, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2sd %rdi, %xmm15, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %result = call double @llvm.experimental.constrained.sitofp.f64.i64(i64 %x,
@@ -2302,7 +2302,7 @@ define float @siffl(i64 %x) #0 {
 ;
 ; AVX-LABEL: siffl:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    vcvtsi2ss %rdi, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ss %rdi, %xmm15, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %result = call float @llvm.experimental.constrained.sitofp.f32.i64(i64 %x,
@@ -2349,7 +2349,7 @@ define double @uifdb(i8 %x) #0 {
 ; AVX-LABEL: uifdb:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    movzbl %dil, %eax
-; AVX-NEXT:    vcvtsi2sd %eax, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2sd %eax, %xmm15, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %result = call double @llvm.experimental.constrained.uitofp.f64.i8(i8 %x,
@@ -2393,7 +2393,7 @@ define double @uifdw(i16 %x) #0 {
 ; AVX-LABEL: uifdw:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    movzwl %di, %eax
-; AVX-NEXT:    vcvtsi2sd %eax, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2sd %eax, %xmm15, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %result = call double @llvm.experimental.constrained.uitofp.f64.i16(i16 %x,
@@ -2440,12 +2440,12 @@ define double @uifdi(i32 %x) #0 {
 ; AVX1-LABEL: uifdi:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    movl %edi, %eax
-; AVX1-NEXT:    vcvtsi2sd %rax, %xmm0, %xmm0
+; AVX1-NEXT:    vcvtsi2sd %rax, %xmm15, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: uifdi:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvtusi2sd %edi, %xmm0, %xmm0
+; AVX512-NEXT:    vcvtusi2sd %edi, %xmm15, %xmm0
 ; AVX512-NEXT:    retq
 entry:
   %result = call double @llvm.experimental.constrained.uitofp.f64.i32(i32 %x,
@@ -2518,7 +2518,7 @@ define double @uifdl(i64 %x) #0 {
 ; AVX1-NEXT:    orq %rax, %rcx
 ; AVX1-NEXT:    testq %rdi, %rdi
 ; AVX1-NEXT:    cmovnsq %rdi, %rcx
-; AVX1-NEXT:    vcvtsi2sd %rcx, %xmm0, %xmm0
+; AVX1-NEXT:    vcvtsi2sd %rcx, %xmm15, %xmm0
 ; AVX1-NEXT:    jns .LBB48_2
 ; AVX1-NEXT:  # %bb.1:
 ; AVX1-NEXT:    vaddsd %xmm0, %xmm0, %xmm0
@@ -2527,7 +2527,7 @@ define double @uifdl(i64 %x) #0 {
 ;
 ; AVX512-LABEL: uifdl:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvtusi2sd %rdi, %xmm0, %xmm0
+; AVX512-NEXT:    vcvtusi2sd %rdi, %xmm15, %xmm0
 ; AVX512-NEXT:    retq
 entry:
   %result = call double @llvm.experimental.constrained.uitofp.f64.i64(i64 %x,
@@ -2571,7 +2571,7 @@ define float @uiffb(i8 %x) #0 {
 ; AVX-LABEL: uiffb:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    movzbl %dil, %eax
-; AVX-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %result = call float @llvm.experimental.constrained.uitofp.f32.i8(i8 %x,
@@ -2615,7 +2615,7 @@ define float @uiffw(i16 %x) #0 {
 ; AVX-LABEL: uiffw:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    movzwl %di, %eax
-; AVX-NEXT:    vcvtsi2ss %eax, %xmm0, %xmm0
+; AVX-NEXT:    vcvtsi2ss %eax, %xmm15, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %result = call float @llvm.experimental.constrained.uitofp.f32.i16(i16 %x,
@@ -2662,12 +2662,12 @@ define float @uiffi(i32 %x) #0 {
 ; AVX1-LABEL: uiffi:
 ; AVX1:       # %bb.0: # %entry
 ; AVX1-NEXT:    movl %edi, %eax
-; AVX1-NEXT:    vcvtsi2ss %rax, %xmm0, %xmm0
+; AVX1-NEXT:    vcvtsi2ss %rax, %xmm15, %xmm0
 ; AVX1-NEXT:    retq
 ;
 ; AVX512-LABEL: uiffi:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvtusi2ss %edi, %xmm0, %xmm0
+; AVX512-NEXT:    vcvtusi2ss %edi, %xmm15, %xmm0
 ; AVX512-NEXT:    retq
 entry:
   %result = call float @llvm.experimental.constrained.uitofp.f32.i32(i32 %x,
@@ -2740,7 +2740,7 @@ define float @uiffl(i64 %x) #0 {
 ; AVX1-NEXT:    orq %rax, %rcx
 ; AVX1-NEXT:    testq %rdi, %rdi
 ; AVX1-NEXT:    cmovnsq %rdi, %rcx
-; AVX1-NEXT:    vcvtsi2ss %rcx, %xmm0, %xmm0
+; AVX1-NEXT:    vcvtsi2ss %rcx, %xmm15, %xmm0
 ; AVX1-NEXT:    jns .LBB52_2
 ; AVX1-NEXT:  # %bb.1:
 ; AVX1-NEXT:    vaddss %xmm0, %xmm0, %xmm0
@@ -2749,7 +2749,7 @@ define float @uiffl(i64 %x) #0 {
 ;
 ; AVX512-LABEL: uiffl:
 ; AVX512:       # %bb.0: # %entry
-; AVX512-NEXT:    vcvtusi2ss %rdi, %xmm0, %xmm0
+; AVX512-NEXT:    vcvtusi2ss %rdi, %xmm15, %xmm0
 ; AVX512-NEXT:    retq
 entry:
   %result = call float @llvm.experimental.constrained.uitofp.f32.i64(i64 %x,

@@ -263,16 +263,14 @@ define <16 x i16> @load_v16i8(ptr %p) {
 define <2 x i16> @std_v2i8_v2i16(ptr %p) {
 ; CHECK-LABEL: std_v2i8_v2i16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldrb w8, [x0, #2]
-; CHECK-NEXT:    ldrb w9, [x0, #3]
-; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    ldrb w8, [x0]
-; CHECK-NEXT:    fmov s1, w8
-; CHECK-NEXT:    mov v0.s[1], w9
-; CHECK-NEXT:    ldrb w9, [x0, #1]
-; CHECK-NEXT:    mov v1.s[1], w9
+; CHECK-NEXT:    ldr h0, [x0, #2]
+; CHECK-NEXT:    ldr h1, [x0]
+; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
 ; CHECK-NEXT:    shl v0.2s, v0.2s, #3
-; CHECK-NEXT:    add v0.2s, v1.2s, v0.2s
+; CHECK-NEXT:    uaddw v0.4s, v0.4s, v1.4h
+; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
 ; CHECK-NEXT:    ret
   %l1 = load <2 x i8>, ptr %p
   %q = getelementptr i8, ptr %p, i32 2
@@ -667,30 +665,30 @@ define <16 x i32> @extrause_load(ptr %p, ptr %q, ptr %r, ptr %s, ptr %z) {
 ; CHECK-NEXT:    add x10, x3, #12
 ; CHECK-NEXT:    bic v1.8h, #255, lsl #8
 ; CHECK-NEXT:    ld1 { v0.s }[3], [x3], #4
-; CHECK-NEXT:    ldr s3, [x0, #12]
-; CHECK-NEXT:    ldp s2, s7, [x0, #4]
+; CHECK-NEXT:    ldr s4, [x0, #12]
+; CHECK-NEXT:    ldp s5, s2, [x2, #4]
 ; CHECK-NEXT:    ldr s6, [x2, #12]
-; CHECK-NEXT:    ldp s5, s4, [x2, #4]
-; CHECK-NEXT:    ld1 { v3.s }[1], [x11]
+; CHECK-NEXT:    ldp s3, s7, [x0, #4]
+; CHECK-NEXT:    ld1 { v4.s }[1], [x11]
 ; CHECK-NEXT:    ld1 { v6.s }[1], [x10]
-; CHECK-NEXT:    ld1 { v2.s }[1], [x9]
-; CHECK-NEXT:    ld1 { v4.s }[1], [x8]
+; CHECK-NEXT:    ld1 { v2.s }[1], [x8]
 ; CHECK-NEXT:    ld1 { v5.s }[1], [x3]
 ; CHECK-NEXT:    add x8, x1, #8
+; CHECK-NEXT:    ld1 { v3.s }[1], [x9]
 ; CHECK-NEXT:    ld1 { v7.s }[1], [x8]
-; CHECK-NEXT:    uaddl v2.8h, v2.8b, v3.8b
-; CHECK-NEXT:    ushll v4.8h, v4.8b, #0
-; CHECK-NEXT:    uaddl v3.8h, v5.8b, v6.8b
+; CHECK-NEXT:    ushll v2.8h, v2.8b, #0
+; CHECK-NEXT:    uaddl v3.8h, v3.8b, v4.8b
+; CHECK-NEXT:    uaddl v4.8h, v5.8b, v6.8b
 ; CHECK-NEXT:    uaddw v1.8h, v1.8h, v7.8b
-; CHECK-NEXT:    uaddw2 v4.8h, v4.8h, v0.16b
-; CHECK-NEXT:    ushll v0.4s, v2.4h, #3
-; CHECK-NEXT:    ushll v5.4s, v3.4h, #3
+; CHECK-NEXT:    uaddw2 v2.8h, v2.8h, v0.16b
+; CHECK-NEXT:    ushll v0.4s, v3.4h, #3
+; CHECK-NEXT:    ushll v5.4s, v4.4h, #3
+; CHECK-NEXT:    ushll2 v4.4s, v4.8h, #3
 ; CHECK-NEXT:    ushll2 v3.4s, v3.8h, #3
-; CHECK-NEXT:    ushll2 v2.4s, v2.8h, #3
 ; CHECK-NEXT:    uaddw v0.4s, v0.4s, v1.4h
-; CHECK-NEXT:    uaddw2 v1.4s, v2.4s, v1.8h
-; CHECK-NEXT:    uaddw2 v3.4s, v3.4s, v4.8h
-; CHECK-NEXT:    uaddw v2.4s, v5.4s, v4.4h
+; CHECK-NEXT:    uaddw2 v1.4s, v3.4s, v1.8h
+; CHECK-NEXT:    uaddw2 v3.4s, v4.4s, v2.8h
+; CHECK-NEXT:    uaddw v2.4s, v5.4s, v2.4h
 ; CHECK-NEXT:    ret
   %lp1 = load <4 x i8>, ptr %p
   store <4 x i8> %lp1, ptr %z
@@ -861,7 +859,7 @@ define <16 x i32> @extrause_shuffle(ptr %p, ptr %q, ptr %r, ptr %s, ptr %z) {
 define <16 x i32> @extrause_ext(ptr %p, ptr %q, ptr %r, ptr %s, ptr %z) {
 ; CHECK-LABEL: extrause_ext:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp s0, s3, [x2]
+; CHECK-NEXT:    ldp s0, s5, [x2]
 ; CHECK-NEXT:    add x8, x3, #8
 ; CHECK-NEXT:    add x9, x3, #12
 ; CHECK-NEXT:    add x10, x1, #8
@@ -871,26 +869,26 @@ define <16 x i32> @extrause_ext(ptr %p, ptr %q, ptr %r, ptr %s, ptr %z) {
 ; CHECK-NEXT:    ld1 { v1.s }[1], [x1], #4
 ; CHECK-NEXT:    ld1 { v2.s }[1], [x1]
 ; CHECK-NEXT:    ldp s7, s4, [x0, #8]
-; CHECK-NEXT:    ld1 { v3.s }[1], [x3]
-; CHECK-NEXT:    ldp s6, s5, [x2, #8]
+; CHECK-NEXT:    ld1 { v5.s }[1], [x3]
+; CHECK-NEXT:    ldp s6, s3, [x2, #8]
 ; CHECK-NEXT:    ld1 { v4.s }[1], [x11]
 ; CHECK-NEXT:    ld1 { v7.s }[1], [x10]
-; CHECK-NEXT:    ld1 { v5.s }[1], [x9]
+; CHECK-NEXT:    ld1 { v3.s }[1], [x9]
 ; CHECK-NEXT:    ld1 { v6.s }[1], [x8]
 ; CHECK-NEXT:    uaddl v2.8h, v2.8b, v4.8b
 ; CHECK-NEXT:    uaddl v1.8h, v1.8b, v7.8b
 ; CHECK-NEXT:    ushll v4.8h, v4.8b, #0
-; CHECK-NEXT:    uaddl v3.8h, v3.8b, v5.8b
+; CHECK-NEXT:    uaddl v5.8h, v5.8b, v3.8b
 ; CHECK-NEXT:    uaddl v6.8h, v0.8b, v6.8b
-; CHECK-NEXT:    ushll v5.8h, v5.8b, #0
+; CHECK-NEXT:    ushll v16.8h, v3.8b, #0
 ; CHECK-NEXT:    ushll v0.4s, v2.4h, #3
 ; CHECK-NEXT:    ushll2 v2.4s, v2.8h, #3
-; CHECK-NEXT:    ushll v7.4s, v3.4h, #3
-; CHECK-NEXT:    ushll2 v3.4s, v3.8h, #3
-; CHECK-NEXT:    stp q4, q5, [x4]
+; CHECK-NEXT:    ushll v7.4s, v5.4h, #3
+; CHECK-NEXT:    ushll2 v5.4s, v5.8h, #3
+; CHECK-NEXT:    stp q4, q16, [x4]
 ; CHECK-NEXT:    uaddw v0.4s, v0.4s, v1.4h
 ; CHECK-NEXT:    uaddw2 v1.4s, v2.4s, v1.8h
-; CHECK-NEXT:    uaddw2 v3.4s, v3.4s, v6.8h
+; CHECK-NEXT:    uaddw2 v3.4s, v5.4s, v6.8h
 ; CHECK-NEXT:    uaddw v2.4s, v7.4s, v6.4h
 ; CHECK-NEXT:    ret
   %lp1 = load <4 x i8>, ptr %p
@@ -960,7 +958,7 @@ define <16 x i32> @extrause_ext(ptr %p, ptr %q, ptr %r, ptr %s, ptr %z) {
 define <16 x i32> @extrause_add(ptr %p, ptr %q, ptr %r, ptr %s, ptr %z) {
 ; CHECK-LABEL: extrause_add:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    ldp s0, s4, [x2]
+; CHECK-NEXT:    ldp s0, s5, [x2]
 ; CHECK-NEXT:    add x8, x3, #8
 ; CHECK-NEXT:    add x9, x3, #12
 ; CHECK-NEXT:    add x10, x1, #8
@@ -970,15 +968,15 @@ define <16 x i32> @extrause_add(ptr %p, ptr %q, ptr %r, ptr %s, ptr %z) {
 ; CHECK-NEXT:    ld1 { v1.s }[1], [x1], #4
 ; CHECK-NEXT:    ld1 { v2.s }[1], [x1]
 ; CHECK-NEXT:    ldp s7, s3, [x0, #8]
-; CHECK-NEXT:    ld1 { v4.s }[1], [x3]
-; CHECK-NEXT:    ldp s6, s5, [x2, #8]
+; CHECK-NEXT:    ld1 { v5.s }[1], [x3]
+; CHECK-NEXT:    ldp s6, s4, [x2, #8]
 ; CHECK-NEXT:    ld1 { v3.s }[1], [x11]
 ; CHECK-NEXT:    ld1 { v7.s }[1], [x10]
-; CHECK-NEXT:    ld1 { v5.s }[1], [x9]
+; CHECK-NEXT:    ld1 { v4.s }[1], [x9]
 ; CHECK-NEXT:    ld1 { v6.s }[1], [x8]
 ; CHECK-NEXT:    uaddl v16.8h, v2.8b, v3.8b
 ; CHECK-NEXT:    uaddl v1.8h, v1.8b, v7.8b
-; CHECK-NEXT:    uaddl v4.8h, v4.8b, v5.8b
+; CHECK-NEXT:    uaddl v4.8h, v5.8b, v4.8b
 ; CHECK-NEXT:    uaddl v2.8h, v0.8b, v6.8b
 ; CHECK-NEXT:    ushll v0.4s, v16.4h, #3
 ; CHECK-NEXT:    ushll2 v6.4s, v16.8h, #3
@@ -1073,24 +1071,24 @@ define <16 x i32> @extrause_ext2(ptr %p, ptr %q, ptr %r, ptr %s, ptr %z) {
 ; CHECK-NEXT:    ld1 { v6.s }[1], [x10]
 ; CHECK-NEXT:    ld1 { v5.s }[1], [x9]
 ; CHECK-NEXT:    ld1 { v7.s }[1], [x8]
-; CHECK-NEXT:    uaddl v16.8h, v2.8b, v3.8b
-; CHECK-NEXT:    uaddl v3.8h, v1.8b, v6.8b
-; CHECK-NEXT:    uaddl v2.8h, v4.8b, v5.8b
+; CHECK-NEXT:    uaddl v2.8h, v2.8b, v3.8b
+; CHECK-NEXT:    uaddl v1.8h, v1.8b, v6.8b
+; CHECK-NEXT:    uaddl v3.8h, v4.8b, v5.8b
 ; CHECK-NEXT:    uaddl v4.8h, v0.8b, v7.8b
-; CHECK-NEXT:    ushll v0.4s, v16.4h, #3
-; CHECK-NEXT:    ushll2 v1.4s, v16.8h, #3
-; CHECK-NEXT:    ushll2 v18.4s, v16.8h, #0
-; CHECK-NEXT:    ushll v6.4s, v2.4h, #3
-; CHECK-NEXT:    ushll2 v7.4s, v2.8h, #3
-; CHECK-NEXT:    ushll2 v5.4s, v2.8h, #0
+; CHECK-NEXT:    ushll2 v0.4s, v2.8h, #0
+; CHECK-NEXT:    ushll v5.4s, v2.4h, #3
+; CHECK-NEXT:    ushll2 v16.4s, v2.8h, #3
+; CHECK-NEXT:    ushll v6.4s, v3.4h, #3
+; CHECK-NEXT:    ushll2 v7.4s, v3.8h, #3
 ; CHECK-NEXT:    ushll v17.4s, v2.4h, #0
-; CHECK-NEXT:    uaddw2 v1.4s, v1.4s, v3.8h
-; CHECK-NEXT:    uaddw v0.4s, v0.4s, v3.4h
+; CHECK-NEXT:    ushll2 v18.4s, v3.8h, #0
+; CHECK-NEXT:    ushll v19.4s, v3.4h, #0
+; CHECK-NEXT:    stp q17, q0, [x4]
+; CHECK-NEXT:    uaddw v0.4s, v5.4s, v1.4h
+; CHECK-NEXT:    uaddw2 v1.4s, v16.4s, v1.8h
 ; CHECK-NEXT:    uaddw2 v3.4s, v7.4s, v4.8h
 ; CHECK-NEXT:    uaddw v2.4s, v6.4s, v4.4h
-; CHECK-NEXT:    ushll v4.4s, v16.4h, #0
-; CHECK-NEXT:    stp q17, q5, [x4, #32]
-; CHECK-NEXT:    stp q4, q18, [x4]
+; CHECK-NEXT:    stp q19, q18, [x4, #32]
 ; CHECK-NEXT:    ret
   %lp1 = load <4 x i8>, ptr %p
   %p2 = getelementptr i8, ptr %p, i32 4
@@ -1176,19 +1174,20 @@ define <16 x i32> @extrause_shl(ptr %p, ptr %q, ptr %r, ptr %s, ptr %z) {
 ; CHECK-NEXT:    ld1 { v5.s }[1], [x9]
 ; CHECK-NEXT:    ld1 { v7.s }[1], [x8]
 ; CHECK-NEXT:    uaddl v2.8h, v2.8b, v3.8b
+; CHECK-NEXT:    uaddl v1.8h, v1.8b, v6.8b
 ; CHECK-NEXT:    uaddl v3.8h, v4.8b, v5.8b
-; CHECK-NEXT:    uaddl v4.8h, v1.8b, v6.8b
-; CHECK-NEXT:    ushll v5.4s, v2.4h, #3
-; CHECK-NEXT:    ushll2 v6.4s, v2.8h, #3
-; CHECK-NEXT:    uaddl v2.8h, v0.8b, v7.8b
-; CHECK-NEXT:    ushll v7.4s, v3.4h, #3
-; CHECK-NEXT:    ushll2 v16.4s, v3.8h, #3
-; CHECK-NEXT:    uaddw2 v1.4s, v6.4s, v4.8h
-; CHECK-NEXT:    uaddw v0.4s, v5.4s, v4.4h
-; CHECK-NEXT:    stp q5, q6, [x4]
-; CHECK-NEXT:    uaddw2 v3.4s, v16.4s, v2.8h
-; CHECK-NEXT:    uaddw v2.4s, v7.4s, v2.4h
-; CHECK-NEXT:    stp q7, q16, [x4, #32]
+; CHECK-NEXT:    uaddl v5.8h, v0.8b, v7.8b
+; CHECK-NEXT:    ushll v4.4s, v2.4h, #3
+; CHECK-NEXT:    ushll2 v2.4s, v2.8h, #3
+; CHECK-NEXT:    ushll v6.4s, v3.4h, #3
+; CHECK-NEXT:    ushll2 v7.4s, v3.8h, #3
+; CHECK-NEXT:    uaddw v0.4s, v4.4s, v1.4h
+; CHECK-NEXT:    uaddw2 v1.4s, v2.4s, v1.8h
+; CHECK-NEXT:    str q4, [x4]
+; CHECK-NEXT:    stp q2, q6, [x4, #16]
+; CHECK-NEXT:    uaddw2 v3.4s, v7.4s, v5.8h
+; CHECK-NEXT:    uaddw v2.4s, v6.4s, v5.4h
+; CHECK-NEXT:    str q7, [x4, #48]
 ; CHECK-NEXT:    ret
   %lp1 = load <4 x i8>, ptr %p
   %p2 = getelementptr i8, ptr %p, i32 4
@@ -1393,12 +1392,12 @@ define <4 x i32> @volatile(ptr %p) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    ldr s0, [x0]
-; CHECK-NEXT:    ldr s1, [x0, #4]
-; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-NEXT:    ldr s0, [x0, #4]
+; CHECK-NEXT:    ldr s1, [x0]
 ; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ushll v1.4s, v1.4h, #3
-; CHECK-NEXT:    uaddw v0.4s, v1.4s, v0.4h
+; CHECK-NEXT:    ushll v1.8h, v1.8b, #0
+; CHECK-NEXT:    ushll v0.4s, v0.4h, #3
+; CHECK-NEXT:    uaddw v0.4s, v0.4s, v1.4h
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
   %l1b = load volatile float, ptr %p

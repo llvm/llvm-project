@@ -80,7 +80,7 @@ Combiner
   alternatives but Combiners can also focus on code size or other metrics.
 
 Additional passes such as these can be inserted to support higher optimization
-levels or target specific needs. A likely pipeline is:
+levels or target-specific needs. A likely pipeline is:
 
 .. image:: pipeline-overview-with-combiners.png
 

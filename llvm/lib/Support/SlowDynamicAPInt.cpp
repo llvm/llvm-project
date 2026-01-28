@@ -283,4 +283,6 @@ SlowDynamicAPInt &SlowDynamicAPInt::operator--() {
 /// ---------------------------------------------------------------------------
 void SlowDynamicAPInt::print(raw_ostream &OS) const { OS << Val; }
 
-void SlowDynamicAPInt::dump() const { print(dbgs()); }
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_DUMP_METHOD void SlowDynamicAPInt::dump() const { print(dbgs()); }
+#endif

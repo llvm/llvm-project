@@ -9,9 +9,9 @@
 !$omp end parallel
       end
 
-!CHECK-E:{{^}}!$     thread = OMP_GET_MAX_THREADS()
+!CHECK-E:{{^}}!$    thread = OMP_GET_MAX_THREADS()
 !CHECK-E:{{^}}!$omp parallel private(ia)
-!CHECK-E:{{^}}!$     continue
+!CHECK-E:{{^}}!$    continue
 !CHECK-E:{{^}}!$omp end parallel
 
 !CHECK-OMP:thread=omp_get_max_threads()

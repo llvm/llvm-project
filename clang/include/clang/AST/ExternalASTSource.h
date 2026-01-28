@@ -51,6 +51,7 @@ class RecordDecl;
 class Selector;
 class Stmt;
 class TagDecl;
+class VarDecl;
 
 /// Abstract interface for external sources of AST nodes.
 ///

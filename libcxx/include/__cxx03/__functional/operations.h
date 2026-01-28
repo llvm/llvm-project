@@ -27,9 +27,7 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS plus : __binary_function<_Tp, _Tp, _Tp> {
   typedef _Tp __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _Tp operator()(const _Tp& __x, const _Tp& __y) const {
-    return __x + __y;
-  }
+  _LIBCPP_HIDE_FROM_ABI _Tp operator()(const _Tp& __x, const _Tp& __y) const { return __x + __y; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(plus);
 
@@ -44,43 +42,35 @@ inline const bool __desugars_to_v<__plus_tag, plus<void>, _Tp, _Up> = true;
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS minus : __binary_function<_Tp, _Tp, _Tp> {
   typedef _Tp __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _Tp operator()(const _Tp& __x, const _Tp& __y) const {
-    return __x - __y;
-  }
+  _LIBCPP_HIDE_FROM_ABI _Tp operator()(const _Tp& __x, const _Tp& __y) const { return __x - __y; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(minus);
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS multiplies : __binary_function<_Tp, _Tp, _Tp> {
   typedef _Tp __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _Tp operator()(const _Tp& __x, const _Tp& __y) const {
-    return __x * __y;
-  }
+  _LIBCPP_HIDE_FROM_ABI _Tp operator()(const _Tp& __x, const _Tp& __y) const { return __x * __y; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(multiplies);
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS divides : __binary_function<_Tp, _Tp, _Tp> {
   typedef _Tp __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _Tp operator()(const _Tp& __x, const _Tp& __y) const {
-    return __x / __y;
-  }
+  _LIBCPP_HIDE_FROM_ABI _Tp operator()(const _Tp& __x, const _Tp& __y) const { return __x / __y; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(divides);
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS modulus : __binary_function<_Tp, _Tp, _Tp> {
   typedef _Tp __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _Tp operator()(const _Tp& __x, const _Tp& __y) const {
-    return __x % __y;
-  }
+  _LIBCPP_HIDE_FROM_ABI _Tp operator()(const _Tp& __x, const _Tp& __y) const { return __x % __y; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(modulus);
 
 template <class _Tp = void>
 struct _LIBCPP_TEMPLATE_VIS negate : __unary_function<_Tp, _Tp> {
   typedef _Tp __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _Tp operator()(const _Tp& __x) const { return -__x; }
+  _LIBCPP_HIDE_FROM_ABI _Tp operator()(const _Tp& __x) const { return -__x; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(negate);
 
@@ -89,27 +79,21 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(negate);
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS bit_and : __binary_function<_Tp, _Tp, _Tp> {
   typedef _Tp __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _Tp operator()(const _Tp& __x, const _Tp& __y) const {
-    return __x & __y;
-  }
+  _LIBCPP_HIDE_FROM_ABI _Tp operator()(const _Tp& __x, const _Tp& __y) const { return __x & __y; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(bit_and);
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS bit_or : __binary_function<_Tp, _Tp, _Tp> {
   typedef _Tp __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _Tp operator()(const _Tp& __x, const _Tp& __y) const {
-    return __x | __y;
-  }
+  _LIBCPP_HIDE_FROM_ABI _Tp operator()(const _Tp& __x, const _Tp& __y) const { return __x | __y; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(bit_or);
 
 template <class _Tp = void>
 struct _LIBCPP_TEMPLATE_VIS bit_xor : __binary_function<_Tp, _Tp, _Tp> {
   typedef _Tp __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI _Tp operator()(const _Tp& __x, const _Tp& __y) const {
-    return __x ^ __y;
-  }
+  _LIBCPP_HIDE_FROM_ABI _Tp operator()(const _Tp& __x, const _Tp& __y) const { return __x ^ __y; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(bit_xor);
 
@@ -118,9 +102,7 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(bit_xor);
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS equal_to : __binary_function<_Tp, _Tp, bool> {
   typedef bool __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI bool operator()(const _Tp& __x, const _Tp& __y) const {
-    return __x == __y;
-  }
+  _LIBCPP_HIDE_FROM_ABI bool operator()(const _Tp& __x, const _Tp& __y) const { return __x == __y; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(equal_to);
 
@@ -136,18 +118,14 @@ inline const bool __desugars_to_v<__equal_tag, equal_to<void>, _Tp, _Up> = true;
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS not_equal_to : __binary_function<_Tp, _Tp, bool> {
   typedef bool __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI bool operator()(const _Tp& __x, const _Tp& __y) const {
-    return __x != __y;
-  }
+  _LIBCPP_HIDE_FROM_ABI bool operator()(const _Tp& __x, const _Tp& __y) const { return __x != __y; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(not_equal_to);
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS less : __binary_function<_Tp, _Tp, bool> {
   typedef bool __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI bool operator()(const _Tp& __x, const _Tp& __y) const {
-    return __x < __y;
-  }
+  _LIBCPP_HIDE_FROM_ABI bool operator()(const _Tp& __x, const _Tp& __y) const { return __x < __y; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(less);
 
@@ -157,27 +135,21 @@ inline const bool __desugars_to_v<__less_tag, less<_Tp>, _Tp, _Tp> = true;
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS less_equal : __binary_function<_Tp, _Tp, bool> {
   typedef bool __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI bool operator()(const _Tp& __x, const _Tp& __y) const {
-    return __x <= __y;
-  }
+  _LIBCPP_HIDE_FROM_ABI bool operator()(const _Tp& __x, const _Tp& __y) const { return __x <= __y; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(less_equal);
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS greater_equal : __binary_function<_Tp, _Tp, bool> {
   typedef bool __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI bool operator()(const _Tp& __x, const _Tp& __y) const {
-    return __x >= __y;
-  }
+  _LIBCPP_HIDE_FROM_ABI bool operator()(const _Tp& __x, const _Tp& __y) const { return __x >= __y; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(greater_equal);
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS greater : __binary_function<_Tp, _Tp, bool> {
   typedef bool __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI bool operator()(const _Tp& __x, const _Tp& __y) const {
-    return __x > __y;
-  }
+  _LIBCPP_HIDE_FROM_ABI bool operator()(const _Tp& __x, const _Tp& __y) const { return __x > __y; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(greater);
 
@@ -186,25 +158,21 @@ _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(greater);
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS logical_and : __binary_function<_Tp, _Tp, bool> {
   typedef bool __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI bool operator()(const _Tp& __x, const _Tp& __y) const {
-    return __x && __y;
-  }
+  _LIBCPP_HIDE_FROM_ABI bool operator()(const _Tp& __x, const _Tp& __y) const { return __x && __y; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(logical_and);
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS logical_not : __unary_function<_Tp, bool> {
   typedef bool __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI bool operator()(const _Tp& __x) const { return !__x; }
+  _LIBCPP_HIDE_FROM_ABI bool operator()(const _Tp& __x) const { return !__x; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(logical_not);
 
 template <class _Tp>
 struct _LIBCPP_TEMPLATE_VIS logical_or : __binary_function<_Tp, _Tp, bool> {
   typedef bool __result_type; // used by valarray
-  _LIBCPP_CONSTEXPR_SINCE_CXX14 _LIBCPP_HIDE_FROM_ABI bool operator()(const _Tp& __x, const _Tp& __y) const {
-    return __x || __y;
-  }
+  _LIBCPP_HIDE_FROM_ABI bool operator()(const _Tp& __x, const _Tp& __y) const { return __x || __y; }
 };
 _LIBCPP_CTAD_SUPPORTED_FOR_TYPE(logical_or);
 

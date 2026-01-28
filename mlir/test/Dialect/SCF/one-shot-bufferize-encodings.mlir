@@ -13,14 +13,14 @@ func.func @scf_for_iter_arg(%arg0: tensor<128xf32, 1>, %arg1: index, %arg2: inde
 
 // CHECK-LABEL: func.func @scf_for_iter_arg
 //  CHECK-SAME: (%[[arg0:.+]]: tensor<128xf32, 1 : i64>, %[[arg1:.+]]: index, %[[arg2:.+]]: index, %[[arg3:.+]]: index)
-//       CHECK:     %[[v0:.+]] = bufferization.to_memref %[[arg0]] : tensor<128xf32, 1 : i64> to memref<128xf32, strided<[?], offset: ?>, 1>
+//       CHECK:     %[[v0:.+]] = bufferization.to_buffer %[[arg0]] : tensor<128xf32, 1 : i64> to memref<128xf32, strided<[?], offset: ?>, 1>
 //       CHECK:     %[[alloc:.+]] = memref.alloc() {alignment = 64 : i64} : memref<128xf32, 1>
 //       CHECK:     memref.copy %[[v0]], %[[alloc]] : memref<128xf32, strided<[?], offset: ?>, 1> to memref<128xf32, 1>
 //       CHECK:     %[[cast:.+]] = memref.cast %[[alloc]] : memref<128xf32, 1> to memref<128xf32, strided<[?], offset: ?>, 1>
 //       CHECK:     %[[v1:.+]] = scf.for %{{.+}} = %[[arg1]] to %[[arg2]] step %[[arg3]] iter_args(%[[arg6:.+]] = %[[cast]]) -> (memref<128xf32, strided<[?], offset: ?>, 1>)
 //  CHECK-NEXT:       %[[v3:.+]] = bufferization.to_tensor %[[arg6]] : memref<128xf32, strided<[?], offset: ?>, 1> to tensor<128xf32, 1 : i64>
 //  CHECK-NEXT:       %[[v4:.+]] = "some.use"(%[[v3]]) : (tensor<128xf32, 1 : i64>) -> tensor<128xf32, 1 : i64>
-//  CHECK-NEXT:       %[[v5:.+]] = bufferization.to_memref %[[v4]] : tensor<128xf32, 1 : i64> to memref<128xf32, strided<[?], offset: ?>, 1>
+//  CHECK-NEXT:       %[[v5:.+]] = bufferization.to_buffer %[[v4]] : tensor<128xf32, 1 : i64> to memref<128xf32, strided<[?], offset: ?>, 1>
 //  CHECK-NEXT:       scf.yield %[[v5]] : memref<128xf32, strided<[?], offset: ?>, 1>
 //       CHECK:     %[[v2:.+]] = bufferization.to_tensor %[[v1]] : memref<128xf32, strided<[?], offset: ?>, 1> to tensor<128xf32, 1 : i64>
 //       CHECK:     return %[[v2]] : tensor<128xf32, 1 : i64>
@@ -49,7 +49,7 @@ func.func @scf_forall(
 //       CHECK:     scf.forall
 //       CHECK:       %[[v2:.+]] = bufferization.to_tensor %{{.+}} : memref<?xf32, 1> to tensor<?xf32, 1 : i64>
 //       CHECK:       %[[v3:.+]] = "some.use"(%[[v2]]) : (tensor<?xf32, 1 : i64>) -> tensor<?xf32, 1 : i64>
-//       CHECK:       bufferization.to_memref %[[v3]] : tensor<?xf32, 1 : i64> to memref<?xf32, strided<[?], offset: ?>, 1>
+//       CHECK:       bufferization.to_buffer %[[v3]] : tensor<?xf32, 1 : i64> to memref<?xf32, strided<[?], offset: ?>, 1>
 //       CHECK:     %[[v1:.+]] = bufferization.to_tensor %{{.+}} : memref<?xf32, 1> to tensor<?xf32, 1 : i64>
 //       CHECK:     return %[[v1]] : tensor<?xf32, 1 : i64>
 
@@ -65,7 +65,7 @@ func.func @scf_execute_region(%arg0: tensor<128xf32, 1>) -> tensor<128xf32, 1> {
 
 // CHECK-LABEL: func.func @scf_execute_region
 //  CHECK-SAME: (%[[arg0:.+]]: tensor<128xf32, 1 : i64>)
-//       CHECK:     %[[v0:.+]] = bufferization.to_memref %[[arg0]] : tensor<128xf32, 1 : i64> to memref<128xf32, strided<[?], offset: ?>, 1>
+//       CHECK:     %[[v0:.+]] = bufferization.to_buffer %[[arg0]] : tensor<128xf32, 1 : i64> to memref<128xf32, strided<[?], offset: ?>, 1>
 //       CHECK:     %[[v1:.+]] = scf.execute_region -> memref<128xf32, strided<[?], offset: ?>, 1>
 //       CHECK:       scf.yield %[[v0]] : memref<128xf32, strided<[?], offset: ?>, 1>
 //       CHECK:     %[[v2:.+]] = bufferization.to_tensor %[[v1]] : memref<128xf32, strided<[?], offset: ?>, 1> to tensor<128xf32, 1 : i64>

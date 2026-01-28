@@ -187,9 +187,7 @@ public:
   // Helper APIs
   //
 
-  clang::NamespaceDecl *
-  AddNamespace(NameSearchContext &context,
-               ClangASTImporter::NamespaceMapSP &namespace_decls);
+  clang::NamespaceDecl *AddNamespace(NameSearchContext &context);
 
   /// The worker function for FindExternalVisibleDeclsByName.
   ///
@@ -253,8 +251,8 @@ public:
     ClangASTSource &m_original;
   };
 
-  clang::ExternalASTSource *CreateProxy() {
-    return new ClangASTSourceProxy(*this);
+  llvm::IntrusiveRefCntPtr<clang::ExternalASTSource> CreateProxy() {
+    return llvm::makeIntrusiveRefCnt<ClangASTSourceProxy>(*this);
   }
 
 protected:

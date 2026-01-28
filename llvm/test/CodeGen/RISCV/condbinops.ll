@@ -459,7 +459,7 @@ define i64 @shl64(i64 %x, i64 %y, i1 %c) {
 ; RV32ZICOND-NEXT:    addi a4, a2, -32
 ; RV32ZICOND-NEXT:    sll a1, a1, a2
 ; RV32ZICOND-NEXT:    not a2, a2
-; RV32ZICOND-NEXT:    slti a4, a4, 0
+; RV32ZICOND-NEXT:    srli a4, a4, 31
 ; RV32ZICOND-NEXT:    srl a2, a3, a2
 ; RV32ZICOND-NEXT:    czero.nez a3, a0, a4
 ; RV32ZICOND-NEXT:    or a1, a1, a2
@@ -534,7 +534,7 @@ define i64 @ashr64(i64 %x, i64 %y, i1 %c) {
 ; RV32ZICOND-NEXT:    addi a4, a2, -32
 ; RV32ZICOND-NEXT:    srl a0, a0, a2
 ; RV32ZICOND-NEXT:    not a2, a2
-; RV32ZICOND-NEXT:    slti a4, a4, 0
+; RV32ZICOND-NEXT:    srli a4, a4, 31
 ; RV32ZICOND-NEXT:    sll a2, a3, a2
 ; RV32ZICOND-NEXT:    czero.nez a3, a1, a4
 ; RV32ZICOND-NEXT:    or a0, a0, a2
@@ -610,7 +610,7 @@ define i64 @lshr64(i64 %x, i64 %y, i1 %c) {
 ; RV32ZICOND-NEXT:    addi a4, a2, -32
 ; RV32ZICOND-NEXT:    srl a0, a0, a2
 ; RV32ZICOND-NEXT:    not a2, a2
-; RV32ZICOND-NEXT:    slti a4, a4, 0
+; RV32ZICOND-NEXT:    srli a4, a4, 31
 ; RV32ZICOND-NEXT:    sll a2, a3, a2
 ; RV32ZICOND-NEXT:    czero.nez a3, a1, a4
 ; RV32ZICOND-NEXT:    or a0, a0, a2

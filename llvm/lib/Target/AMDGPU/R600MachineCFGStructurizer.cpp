@@ -121,8 +121,7 @@ public:
 
   bool runOnMachineFunction(MachineFunction &MF) override {
     // FIXME: This pass causes verification failures.
-    MF.getProperties().set(
-        MachineFunctionProperties::Property::FailsVerification);
+    MF.getProperties().setFailsVerification();
 
     TII = MF.getSubtarget<R600Subtarget>().getInstrInfo();
     TRI = &TII->getRegisterInfo();
@@ -465,7 +464,7 @@ void R600MachineCFGStructurizer::insertCondBranchBefore(
   MachineInstr *NewMI = MF->CreateMachineInstr(TII->get(NewOpcode), DL);
   MBB->insert(I, NewMI);
   MachineInstrBuilder MIB(*MF, NewMI);
-  MIB.addReg(OldMI->getOperand(1).getReg(), false);
+  MIB.addReg(OldMI->getOperand(1).getReg());
   SHOWNEWINSTR(NewMI);
   //erase later oldInstr->eraseFromParent();
 }
@@ -477,7 +476,7 @@ void R600MachineCFGStructurizer::insertCondBranchBefore(
   MachineInstr *NewInstr = MF->CreateMachineInstr(TII->get(NewOpcode), DL);
   //insert before
   blk->insert(I, NewInstr);
-  MachineInstrBuilder(*MF, NewInstr).addReg(RegNum, false);
+  MachineInstrBuilder(*MF, NewInstr).addReg(RegNum);
   SHOWNEWINSTR(NewInstr);
 }
 
@@ -1402,7 +1401,7 @@ void R600MachineCFGStructurizer::mergeLoopbreakBlock(MachineBasicBlock *ExitingM
                     << LandMBB->getNumber() << "\n";);
   MachineInstr *BranchMI = getLoopendBlockBranchInstr(ExitingMBB);
   assert(BranchMI && isCondBranch(BranchMI));
-  DebugLoc DL = BranchMI->getDebugLoc();
+  const DebugLoc &DL = BranchMI->getDebugLoc();
   MachineBasicBlock *TrueBranch = getTrueBranch(BranchMI);
   MachineBasicBlock::iterator I = BranchMI;
   if (TrueBranch != LandMBB)
@@ -1428,7 +1427,7 @@ void R600MachineCFGStructurizer::settleLoopcontBlock(MachineBasicBlock *ContingM
     MachineBasicBlock::iterator I = MI;
     MachineBasicBlock *TrueBranch = getTrueBranch(MI);
     int OldOpcode = MI->getOpcode();
-    DebugLoc DL = MI->getDebugLoc();
+    const DebugLoc &DL = MI->getDebugLoc();
 
     bool UseContinueLogical = ((&*ContingMBB->rbegin()) == MI);
 

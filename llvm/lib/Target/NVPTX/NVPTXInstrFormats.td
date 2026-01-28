@@ -11,15 +11,9 @@
 //
 //===----------------------------------------------------------------------===//
 
-// Vector instruction type enum
-class VecInstTypeEnum<bits<4> val> {
-  bits<4> Value=val;
-}
-def VecNOP : VecInstTypeEnum<0>;
-
 // Generic NVPTX Format
 
-class NVPTXInst<dag outs, dag ins, string asmstr, list<dag> pattern>
+class NVPTXInst<dag outs, dag ins, string asmstr, list<dag> pattern = []>
   : Instruction {
   field bits<14> Inst;
 
@@ -30,7 +24,6 @@ class NVPTXInst<dag outs, dag ins, string asmstr, list<dag> pattern>
   let Pattern = pattern;
 
   // TSFlagFields
-  bits<4> VecInstType = VecNOP.Value;
   bit IsLoad = false;
   bit IsStore = false;
 
@@ -45,7 +38,6 @@ class NVPTXInst<dag outs, dag ins, string asmstr, list<dag> pattern>
   // 2**(2-1) = 2.
   bits<2> IsSuld = 0;
 
-  let TSFlags{3...0}  = VecInstType;
   let TSFlags{4}      = IsLoad;
   let TSFlags{5}      = IsStore;
   let TSFlags{6}      = IsTex;

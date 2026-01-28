@@ -1,4 +1,4 @@
-; RUN: llc -mattr=avr6,sram < %s -mtriple=avr -verify-machineinstrs | FileCheck %s
+; RUN: llc -mattr=avr6,sram < %s -mtriple=avr-none -verify-machineinstrs | FileCheck %s
 
 define i8 @load8(ptr %x) {
 ; CHECK-LABEL: load8:
@@ -98,9 +98,33 @@ while.end:                                        ; preds = %while.body, %entry
   ret i16 %r.0.lcssa
 }
 
+define i16 @load16postincloopreduce(ptr %p, i16 %cnt) {
+; CHECK-LABEL: load16postincloopreduce:
+; CHECK: ld {{.*}}, {{[XYZ]}}+
+; CHECK: ld {{.*}}, {{[XYZ]}}+
+entry:
+  %cmp3 = icmp sgt i16 %cnt, 0
+  br i1 %cmp3, label %for.body, label %for.cond.cleanup
+for.cond.cleanup:                                 ; preds = %for.body, %entry
+  %sum.0.lcssa = phi i16 [ 0, %entry ], [ %add, %for.body ]
+  ret i16 %sum.0.lcssa
+for.body:                                         ; preds = %entry, %for.body
+  %i.06 = phi i16 [ %inc, %for.body ], [ 0, %entry ]
+  %sum.05 = phi i16 [ %add, %for.body ], [ 0, %entry ]
+  %p.addr.04 = phi ptr [ %incdec.ptr, %for.body ], [ %p, %entry ]
+  %incdec.ptr = getelementptr inbounds nuw i8, ptr %p.addr.04, i16 2
+  %0 = load i16, ptr %p.addr.04, align 1
+  %add = add nsw i16 %0, %sum.05
+  %inc = add nuw nsw i16 %i.06, 1
+  %exitcond.not = icmp eq i16 %inc, %cnt
+  br i1 %exitcond.not, label %for.cond.cleanup, label %for.body
+}
+
 define i8 @load8predec(ptr %x, i8 %y) {
 ; CHECK-LABEL: load8predec:
-; CHECK: ld {{.*}}, -{{[XYZ]}}
+; TODO: ld {{.*}}, -{{[XYZ]}}
+; CHECK: sbiw r26, 1
+; CHECK: ld {{.*}}, X
 entry:
   %tobool6 = icmp eq i8 %y, 0
   br i1 %tobool6, label %while.end, label %while.body
@@ -121,8 +145,12 @@ while.end:                                        ; preds = %while.body, %entry
 
 define i16 @load16predec(ptr %x, i16 %y) {
 ; CHECK-LABEL: load16predec:
-; CHECK: ld {{.*}}, -{{[XYZ]}}
-; CHECK: ld {{.*}}, -{{[XYZ]}}
+; TODO: ld {{.*}}, -{{[XYZ]}}
+; TODO: ld {{.*}}, -{{[XYZ]}}
+; CHECK: sbiw r24, 2
+; CHECK: movw r30, r24
+; CHECK: ld {{.*}}, Z
+; CHECK: ldd {{.*}}, Z+1
 entry:
   %tobool2 = icmp eq i16 %y, 0
   br i1 %tobool2, label %while.end, label %while.body

@@ -152,7 +152,7 @@ protected:
   container_type c;
 
 public:
-  _LIBCPP_HIDE_FROM_ABI stack() _NOEXCEPT_(is_nothrow_default_constructible<container_type>::value) : c() {}
+  _LIBCPP_HIDE_FROM_ABI stack() : c() {}
 
   _LIBCPP_HIDE_FROM_ABI stack(const stack& __q) : c(__q.c) {}
 
@@ -185,7 +185,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI void pop() { c.pop_back(); }
 
-  _LIBCPP_HIDE_FROM_ABI void swap(stack& __s) _NOEXCEPT_(__is_nothrow_swappable_v<container_type>) {
+  _LIBCPP_HIDE_FROM_ABI void swap(stack& __s) {
     using std::swap;
     swap(c, __s.c);
   }
@@ -230,8 +230,7 @@ inline _LIBCPP_HIDE_FROM_ABI bool operator<=(const stack<_Tp, _Container>& __x, 
 }
 
 template <class _Tp, class _Container, __enable_if_t<__is_swappable_v<_Container>, int> = 0>
-inline _LIBCPP_HIDE_FROM_ABI void swap(stack<_Tp, _Container>& __x, stack<_Tp, _Container>& __y)
-    _NOEXCEPT_(_NOEXCEPT_(__x.swap(__y))) {
+inline _LIBCPP_HIDE_FROM_ABI void swap(stack<_Tp, _Container>& __x, stack<_Tp, _Container>& __y) {
   __x.swap(__y);
 }
 

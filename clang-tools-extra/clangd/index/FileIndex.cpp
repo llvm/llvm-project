@@ -79,7 +79,8 @@ SlabTuple indexSymbols(ASTContext &AST, Preprocessor &PP,
 
   SymbolCollector Collector(std::move(CollectorOpts));
   Collector.setPreprocessor(PP);
-  index::indexTopLevelDecls(AST, PP, DeclsToIndex, Collector, IndexOpts);
+  index::indexTopLevelDecls(AST, PP, DeclsToIndex, Collector,
+                            std::move(IndexOpts));
   if (MacroRefsToIndex)
     Collector.handleMacros(*MacroRefsToIndex);
 
@@ -142,7 +143,7 @@ FileShardedIndex::FileShardedIndex(IndexFileIn Input)
       }
     }
   }
-  // Attribute references into each file they occured in.
+  // Attribute references into each file they occurred in.
   if (Index.Refs) {
     for (const auto &SymRefs : *Index.Refs) {
       for (const auto &R : SymRefs.second) {

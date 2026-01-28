@@ -8,9 +8,9 @@
 
 #include "Function.h"
 #include "Program.h"
+#include "clang/AST/ASTLambda.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
-#include "clang/Basic/Builtins.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -22,10 +22,13 @@ Function::Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
                    bool HasThisPointer, bool HasRVO, bool IsLambdaStaticInvoker)
     : P(P), Kind(FunctionKind::Normal), Source(Source), ArgSize(ArgSize),
       ParamTypes(std::move(ParamTypes)), Params(std::move(Params)),
-      ParamOffsets(std::move(ParamOffsets)), HasThisPointer(HasThisPointer),
-      HasRVO(HasRVO) {
+      ParamOffsets(std::move(ParamOffsets)), IsValid(false),
+      IsFullyCompiled(false), HasThisPointer(HasThisPointer), HasRVO(HasRVO),
+      HasBody(false), Defined(false) {
   if (const auto *F = dyn_cast<const FunctionDecl *>(Source)) {
     Variadic = F->isVariadic();
+    Immediate = F->isImmediateFunction();
+    Constexpr = F->isConstexpr();
     if (const auto *CD = dyn_cast<CXXConstructorDecl>(F)) {
       Virtual = CD->isVirtual();
       Kind = FunctionKind::Ctor;
@@ -40,7 +43,14 @@ Function::Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
         Kind = FunctionKind::LambdaCallOperator;
       else if (MD->isCopyAssignmentOperator() || MD->isMoveAssignmentOperator())
         Kind = FunctionKind::CopyOrMoveOperator;
+    } else {
+      Virtual = false;
     }
+  } else {
+    Variadic = false;
+    Virtual = false;
+    Immediate = false;
+    Constexpr = false;
   }
 }
 

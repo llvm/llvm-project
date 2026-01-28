@@ -1,0 +1,199 @@
+# RUN: llc -o - %s -mtriple=x86_64-unknown-windows-msvc \
+# RUN:  -run-pass=x86-wineh-unwindv2 | FileCheck %s
+
+# Regression test for Win x64 unwind v2: in some cases it is better to use
+# push+pop to adjust the stack, rather than sub+add. This is permitted with
+# unwind v2 as the requirement is that the epilog finishes adjusting the stack
+# before popping the registers listed in the unwind table.
+
+# Pushes and pops the same register.
+# CHECK-LABEL:  name:            push_pop_same
+# CHECK:        body:
+# CHECK-NEXT:     bb.0
+# CHECK-NEXT:       SEH_UnwindVersion 2
+# CHECK-NEXT:       frame-setup PUSH64r undef $rax
+# CHECK-NEXT:       frame-setup SEH_StackAlloc 8
+# CHECK-NEXT:       frame-setup SEH_EndPrologue
+# CHECK-NEXT:       SEH_BeginEpilogue
+# CHECK-NEXT:       $rax = frame-destroy
+# CHECK-NEXT:       SEH_UnwindV2Start
+# CHECK-NEXT:       SEH_EndEpilogue
+# CHECK-NEXT:       RET64
+
+# Pushes and pops a different register.
+# CHECK-LABEL:  name:            push_pop_different
+# CHECK:        body:
+# CHECK-NEXT:     bb.0
+# CHECK-NEXT:       SEH_UnwindVersion 2
+# CHECK-NEXT:       frame-setup PUSH64r undef $rax
+# CHECK-NEXT:       frame-setup SEH_StackAlloc 8
+# CHECK-NEXT:       frame-setup SEH_EndPrologue
+# CHECK:            SEH_BeginEpilogue
+# CHECK-NEXT:       $rcx = frame-destroy POP64r
+# CHECK-NEXT:       SEH_UnwindV2Start
+# CHECK-NEXT:       SEH_EndEpilogue
+# CHECK-NEXT:       RET64 $eax
+
+# Pushes in the prolog, adds in the epilog.
+# CHECK-LABEL:  name:            push_add
+# CHECK:        body:
+# CHECK-NEXT:     bb.0
+# CHECK-NEXT:       SEH_UnwindVersion 2
+# CHECK-NEXT:       frame-setup PUSH64r killed $r15
+# CHECK-NEXT:       frame-setup SEH_PushReg 126
+# CHECK-NEXT:       frame-setup PUSH64r killed $r14
+# CHECK-NEXT:       frame-setup SEH_PushReg 125
+# CHECK-NEXT:       frame-setup PUSH64r killed $rsi
+# CHECK-NEXT:       frame-setup SEH_PushReg 60
+# CHECK-NEXT:       frame-setup PUSH64r killed $rdi
+# CHECK-NEXT:       frame-setup SEH_PushReg 55
+# CHECK-NEXT:       frame-setup PUSH64r killed $rbx
+# CHECK-NEXT:       frame-setup SEH_PushReg 53
+# CHECK-NEXT:       frame-setup PUSH64r undef $rax
+# CHECK-NEXT:       frame-setup SEH_StackAlloc 8
+# CHECK-NEXT:       frame-setup SEH_EndPrologue
+# CHECK:            SEH_BeginEpilogue
+# CHECK-NEXT:       $rsp = frame-destroy ADD64ri32 $rsp, 8
+# CHECK-NEXT:       SEH_UnwindV2Start
+# CHECK-NEXT:       $rbx = frame-destroy POP64r
+# CHECK-NEXT:       $rdi = frame-destroy POP64r
+# CHECK-NEXT:       $rsi = frame-destroy POP64r
+# CHECK-NEXT:       $r14 = frame-destroy POP64r
+# CHECK-NEXT:       $r15 = frame-destroy POP64r
+# CHECK-NEXT:       SEH_EndEpilogue
+# CHECK-NEXT:       RET64
+
+--- |
+  define void @push_pop_same() {
+    %small_alloca = alloca i32, align 4
+    ret void
+  }
+  
+  define i32 @push_pop_different(i32 %x, i32 %y) {
+    %small_alloca = alloca i32, align 4
+    %sum = add i32 %x, %y
+    ret i32 %sum
+  }
+  
+  define void @push_add(ptr %a, ptr %b, ptr %out) {
+    %small_alloca = alloca i32, align 4
+    %av = load i256, ptr %a, align 16
+    %bv = load i256, ptr %b, align 16
+    %r = mul i256 %av, %bv
+    store i256 %r, ptr %out, align 16
+    ret void
+  }
+  
+  !llvm.module.flags = !{!0}
+  
+  !0 = !{i32 1, !"winx64-eh-unwindv2", i32 2}
+...
+---
+name:            push_pop_same
+body:             |
+  bb.0 (%ir-block.0):
+    frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
+    frame-setup SEH_StackAlloc 8
+    frame-setup SEH_EndPrologue
+    SEH_BeginEpilogue
+    $rax = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    SEH_EndEpilogue
+    RET64
+...
+---
+name:            push_pop_different
+body:             |
+  bb.0 (%ir-block.0):
+    frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
+    frame-setup SEH_StackAlloc 8
+    frame-setup SEH_EndPrologue
+    renamable $edx = KILL $edx, implicit-def $rdx
+    renamable $ecx = KILL $ecx, implicit-def $rcx
+    renamable $eax = LEA64_32r killed renamable $rcx, 1, killed renamable $rdx, 0, $noreg
+    SEH_BeginEpilogue
+    $rcx = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    SEH_EndEpilogue
+    RET64 $eax
+...
+---
+name:            push_add
+body:             |
+  bb.0 (%ir-block.0):
+
+    frame-setup PUSH64r killed $r15, implicit-def $rsp, implicit $rsp
+    frame-setup SEH_PushReg 126
+    frame-setup PUSH64r killed $r14, implicit-def $rsp, implicit $rsp
+    frame-setup SEH_PushReg 125
+    frame-setup PUSH64r killed $rsi, implicit-def $rsp, implicit $rsp
+    frame-setup SEH_PushReg 60
+    frame-setup PUSH64r killed $rdi, implicit-def $rsp, implicit $rsp
+    frame-setup SEH_PushReg 55
+    frame-setup PUSH64r killed $rbx, implicit-def $rsp, implicit $rsp
+    frame-setup SEH_PushReg 53
+    frame-setup PUSH64r undef $rax, implicit-def $rsp, implicit $rsp
+    frame-setup SEH_StackAlloc 8
+    frame-setup SEH_EndPrologue
+    $rsi = MOV64rr $rdx
+    renamable $r9 = MOV64rm renamable $rcx, 1, $noreg, 0, $noreg :: (load (s64) from %ir.a, align 16)
+    renamable $rdi = MOV64rm renamable $rcx, 1, $noreg, 8, $noreg :: (load (s64) from %ir.a + 8, basealign 16)
+    renamable $rbx = MOV64rm renamable $rcx, 1, $noreg, 16, $noreg :: (load (s64) from %ir.a + 16, align 16)
+    renamable $r10 = MOV64rm $rdx, 1, $noreg, 16, $noreg :: (load (s64) from %ir.b + 16, align 16)
+    renamable $r11 = MOV64rm $rdx, 1, $noreg, 0, $noreg :: (load (s64) from %ir.b, align 16)
+    renamable $r14 = MOV64rm $rdx, 1, $noreg, 8, $noreg :: (load (s64) from %ir.b + 8, basealign 16)
+    renamable $r15 = MOV64rm killed renamable $rcx, 1, $noreg, 24, $noreg :: (load (s64) from %ir.a + 24, basealign 16)
+    renamable $r15 = IMUL64rr killed renamable $r15, renamable $r11, implicit-def dead $eflags
+    $rax = MOV64rr $r11
+    MUL64r renamable $rbx, implicit-def $rax, implicit-def $rdx, implicit-def dead $eflags, implicit $rax
+    $rcx = MOV64rr $rax
+    renamable $rbx = IMUL64rr killed renamable $rbx, renamable $r14, implicit-def dead $eflags
+    renamable $rbx = ADD64rr killed renamable $rbx, killed renamable $rdx, implicit-def dead $eflags
+    renamable $rbx = ADD64rr killed renamable $rbx, killed renamable $r15, implicit-def dead $eflags
+    $r15 = MOV64rr $r10
+    renamable $r15 = IMUL64rr killed renamable $r15, renamable $rdi, implicit-def dead $eflags
+    $rax = MOV64rr killed $r10
+    MUL64r renamable $r9, implicit-def $rax, implicit-def $rdx, implicit-def dead $eflags, implicit $rax
+    $r10 = MOV64rr $rax
+    renamable $rdx = ADD64rr killed renamable $rdx, killed renamable $r15, implicit-def dead $eflags
+    renamable $r15 = MOV64rm killed renamable $rsi, 1, $noreg, 24, $noreg :: (load (s64) from %ir.b + 24, basealign 16)
+    renamable $r15 = IMUL64rr killed renamable $r15, renamable $r9, implicit-def dead $eflags
+    renamable $r15 = ADD64rr killed renamable $r15, killed renamable $rdx, implicit-def dead $eflags
+    renamable $r10 = ADD64rr killed renamable $r10, killed renamable $rcx, implicit-def $eflags
+    renamable $r15 = ADC64rr killed renamable $r15, killed renamable $rbx, implicit-def dead $eflags, implicit killed $eflags
+    $rax = MOV64rr $r9
+    MUL64r renamable $r11, implicit-def $rax, implicit-def $rdx, implicit-def dead $eflags, implicit $rax
+    $rcx = MOV64rr $rdx
+    $rsi = MOV64rr $rax
+    $rax = MOV64rr $rdi
+    MUL64r killed renamable $r11, implicit-def $rax, implicit-def $rdx, implicit-def dead $eflags, implicit $rax
+    $r11 = MOV64rr $rdx
+    $rbx = MOV64rr $rax
+    renamable $rbx = ADD64rr killed renamable $rbx, killed renamable $rcx, implicit-def $eflags
+    renamable $r11 = ADC64ri32 killed renamable $r11, 0, implicit-def dead $eflags, implicit killed $eflags
+    $rax = MOV64rr killed $r9
+    MUL64r renamable $r14, implicit-def $rax, implicit-def $rdx, implicit-def dead $eflags, implicit $rax
+    $rcx = MOV64rr $rdx
+    $r9 = MOV64rr $rax
+    renamable $r9 = ADD64rr killed renamable $r9, killed renamable $rbx, implicit-def $eflags
+    renamable $rcx = ADC64rr killed renamable $rcx, killed renamable $r11, implicit-def $eflags, implicit killed $eflags
+    renamable $al = SETCCr 2, implicit killed $eflags
+    renamable $r11d = MOVZX32rr8 killed renamable $al, implicit-def $r11
+    $rax = MOV64rr killed $rdi
+    MUL64r killed renamable $r14, implicit-def $rax, implicit-def $rdx, implicit-def dead $eflags, implicit $rax
+    renamable $rax = ADD64rr killed renamable $rax, killed renamable $rcx, implicit-def $eflags
+    renamable $rdx = ADC64rr killed renamable $rdx, killed renamable $r11, implicit-def dead $eflags, implicit killed $eflags
+    renamable $rax = ADD64rr killed renamable $rax, killed renamable $r10, implicit-def $eflags
+    renamable $rdx = ADC64rr killed renamable $rdx, killed renamable $r15, implicit-def dead $eflags, implicit killed $eflags
+    MOV64mr renamable $r8, 1, $noreg, 0, $noreg, killed renamable $rsi :: (store (s64) into %ir.out, align 16)
+    MOV64mr renamable $r8, 1, $noreg, 8, $noreg, killed renamable $r9 :: (store (s64) into %ir.out + 8, basealign 16)
+    MOV64mr renamable $r8, 1, $noreg, 16, $noreg, killed renamable $rax :: (store (s64) into %ir.out + 16, align 16)
+    MOV64mr killed renamable $r8, 1, $noreg, 24, $noreg, killed renamable $rdx :: (store (s64) into %ir.out + 24, basealign 16)
+    SEH_BeginEpilogue
+    $rsp = frame-destroy ADD64ri32 $rsp, 8, implicit-def dead $eflags
+    $rbx = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    $rdi = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    $rsi = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    $r14 = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    $r15 = frame-destroy POP64r implicit-def $rsp, implicit $rsp
+    SEH_EndEpilogue
+    RET64
+...

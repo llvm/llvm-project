@@ -9,20 +9,20 @@
 ; Aggregate data are wrapped into @llvm.fake.use(),
 ; and their attributes are packed into a metadata for @llvm.spv.value.md().
 ; CHECK-IR: %[[R1:.*]] = call { i32, i1 } @llvm.uadd.with.overflow.i32
-; CHECK-IR: call void @llvm.spv.value.md(metadata !1)
+; CHECK-IR: call void @llvm.spv.value.md(metadata ![[#MD1:]])
 ; CHECK-IR: call void (...) @llvm.fake.use({ i32, i1 } %[[R1]])
 ; CHECK-IR: %math = extractvalue { i32, i1 } %[[R1]], 0
 ; CHECK-IR: %ov = extractvalue { i32, i1 } %[[R1]], 1
 ; Type/Name attributes of the value.
-; CHECK-IR: !1 = !{{[{]}}!2, !""{{[}]}}
+; CHECK-IR: ![[#MD1]] = !{{[{]}}![[#MD2:]], !""{{[}]}}
 ; Origin data type of the value.
-; CHECK-IR: !2 = !{{[{]}}{{[{]}} i32, i1 {{[}]}} poison{{[}]}}
+; CHECK-IR: ![[#MD2]] = !{{[{]}}{{[{]}} i32, i1 {{[}]}} poison{{[}]}}
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -print-after=irtranslator 2>&1 | FileCheck %s  --check-prefix=CHECK-GMIR
 ; Required info succeeded to get through IRTranslator.
 ; CHECK-GMIR: %[[phires:.*]]:_(s32) = G_PHI
 ; CHECK-GMIR: %[[math:.*]]:id(s32), %[[ov:.*]]:_(s1) = G_UADDO %[[phires]]:_, %[[#]]:_
-; CHECK-GMIR: G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.spv.value.md), !1
+; CHECK-GMIR: G_INTRINSIC_W_SIDE_EFFECTS intrinsic(@llvm.spv.value.md), ![[MD1:]]
 ; CHECK-GMIR: FAKE_USE %[[math]]:id(s32), %[[ov]]:_(s1)
 
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -print-after=spirv-prelegalizer 2>&1 | FileCheck %s  --check-prefix=CHECK-PRE
@@ -41,8 +41,6 @@
 ; CHECK-ISEL-DAG: %[[math:.*]]:id = OpCompositeExtract %[[int32]]:type, %[[res]]:iid, 0
 ; CHECK-ISEL-DAG: %[[ov32:.*]]:iid = OpCompositeExtract %[[int32]]:type, %[[res]]:iid, 1
 ; CHECK-ISEL-DAG: %[[ov:.*]]:iid = OpINotEqual %[[bool]]:type, %[[ov32]]:iid, %[[zero32:.*]]:iid
-; CHECK-ISEL-DAG: OpName %[[math]]:id, 1752457581, 0
-; CHECK-ISEL-DAG: OpName %[[ov]]:iid, 30319
 
 define spir_func i32 @foo(i32 %a, ptr addrspace(4) %p) {
 entry:

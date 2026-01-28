@@ -4,12 +4,14 @@ add_clang_unittest(ClangAnalysisTests
   CloneDetectionTest.cpp
   ExprMutationAnalyzerTest.cpp
   IntervalPartitionTest.cpp
+  LifetimeSafetyTest.cpp
   MacroExpansionContextTest.cpp
   UnsafeBufferUsageTest.cpp
   CLANG_LIBS
   clangAST
   clangASTMatchers
   clangAnalysis
+  clangAnalysisLifetimeSafety
   clangBasic
   clangFrontend
   clangLex
@@ -24,3 +26,4 @@ add_clang_unittest(ClangAnalysisTests
   )
 
 add_subdirectory(FlowSensitive)
+add_subdirectory(Scalable)

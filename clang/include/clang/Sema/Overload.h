@@ -198,11 +198,17 @@ class Sema;
     /// HLSL vector truncation.
     ICK_HLSL_Vector_Truncation,
 
+    /// HLSL Matrix truncation.
+    ICK_HLSL_Matrix_Truncation,
+
     /// HLSL non-decaying array rvalue cast.
     ICK_HLSL_Array_RValue,
 
     // HLSL vector splat from scalar or boolean type.
     ICK_HLSL_Vector_Splat,
+
+    /// HLSL matrix splat from scalar or boolean type.
+    ICK_HLSL_Matrix_Splat,
 
     /// The number of conversion kinds
     ICK_Num_Conversion_Kinds,
@@ -430,8 +436,16 @@ class Sema;
       if (!ReferenceBinding) {
 #ifndef NDEBUG
         auto Decay = [&](QualType T) {
-          return (T->isArrayType() || T->isFunctionType()) ? C.getDecayedType(T)
-                                                           : T;
+          if (T->isArrayType() || T->isFunctionType())
+            T = C.getDecayedType(T);
+
+          // A function pointer type can be resolved to a member function type,
+          // which is still an identity conversion.
+          if (auto *N = T->getAs<MemberPointerType>();
+              N && N->isMemberFunctionPointer())
+            T = C.getDecayedType(N->getPointeeType());
+
+          return T.getAtomicUnqualifiedType();
         };
         // The types might differ if there is an array-to-pointer conversion
         // an function-to-pointer conversion, or lvalue-to-rvalue conversion.
@@ -980,7 +994,8 @@ class Sema;
     /// Have we matched any packs on the parameter side, versus any non-packs on
     /// the argument side, in a context where the opposite matching is also
     /// allowed?
-    bool StrictPackMatch : 1;
+    LLVM_PREFERRED_TYPE(bool)
+    unsigned StrictPackMatch : 1;
 
     /// True if the candidate was found using ADL.
     LLVM_PREFERRED_TYPE(CallExpr::ADLCallKind)
@@ -996,7 +1011,8 @@ class Sema;
 
     /// FailureKind - The reason why this candidate is not viable.
     /// Actually an OverloadFailureKind.
-    unsigned char FailureKind;
+    LLVM_PREFERRED_TYPE(OverloadFailureKind)
+    unsigned FailureKind : 8;
 
     /// The number of call arguments that were explicitly provided,
     /// to be used while performing partial ordering of function templates.
@@ -1193,12 +1209,12 @@ class Sema;
 
       /// Would use of this function result in a rewrite using a different
       /// operator?
-      bool isRewrittenOperator(const FunctionDecl *FD) {
+      bool isRewrittenOperator(const FunctionDecl *FD) const {
         return OriginalOperator &&
                FD->getDeclName().getCXXOverloadedOperator() != OriginalOperator;
       }
 
-      bool isAcceptableCandidate(const FunctionDecl *FD) {
+      bool isAcceptableCandidate(const FunctionDecl *FD) const {
         if (!OriginalOperator)
           return true;
 
@@ -1225,7 +1241,7 @@ class Sema;
       }
       /// Determines whether this operator could be implemented by a function
       /// with reversed parameter order.
-      bool isReversible() {
+      bool isReversible() const {
         return AllowRewrittenCandidates && OriginalOperator &&
                (getRewrittenOverloadedOperator(OriginalOperator) != OO_None ||
                 allowsReversed(OriginalOperator));
@@ -1233,13 +1249,13 @@ class Sema;
 
       /// Determine whether reversing parameter order is allowed for operator
       /// Op.
-      bool allowsReversed(OverloadedOperatorKind Op);
+      bool allowsReversed(OverloadedOperatorKind Op) const;
 
       /// Determine whether we should add a rewritten candidate for \p FD with
       /// reversed parameter order.
       /// \param OriginalArgs are the original non reversed arguments.
       bool shouldAddReversed(Sema &S, ArrayRef<Expr *> OriginalArgs,
-                             FunctionDecl *FD);
+                             FunctionDecl *FD) const;
     };
 
   private:
@@ -1482,8 +1498,6 @@ class Sema;
     OverloadingResult
     BestViableFunctionImpl(Sema &S, SourceLocation Loc,
                            OverloadCandidateSet::iterator &Best);
-    void PerfectViableFunction(Sema &S, SourceLocation Loc,
-                               OverloadCandidateSet::iterator &Best);
   };
 
   bool isBetterOverloadCandidate(Sema &S, const OverloadCandidate &Cand1,

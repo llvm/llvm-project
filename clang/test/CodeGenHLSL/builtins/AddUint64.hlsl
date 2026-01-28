@@ -4,7 +4,7 @@
 // RUN:  FileCheck %s --check-prefixes=CHECK
 
 
-// CHECK-LABEL: define noundef <2 x i32> @_Z20test_AddUint64_uint2Dv2_jS_(
+// CHECK-LABEL: define hidden noundef <2 x i32> @_Z20test_AddUint64_uint2Dv2_jS_(
 // CHECK-SAME: <2 x i32> noundef [[A:%.*]], <2 x i32> noundef [[B:%.*]]) #[[ATTR0:[0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <2 x i32>, align 8
@@ -31,7 +31,7 @@ uint2 test_AddUint64_uint2(uint2 a, uint2 b) {
   return AddUint64(a, b);
 }
 
-// CHECK-LABEL: define noundef <4 x i32> @_Z20test_AddUint64_uint4Dv4_jS_(
+// CHECK-LABEL: define hidden noundef <4 x i32> @_Z20test_AddUint64_uint4Dv4_jS_(
 // CHECK-SAME: <4 x i32> noundef [[A:%.*]], <4 x i32> noundef [[B:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[A_ADDR:%.*]] = alloca <4 x i32>, align 16

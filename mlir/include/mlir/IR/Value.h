@@ -187,8 +187,22 @@ public:
   /// Returns a range of all uses, which is useful for iterating over all uses.
   use_range getUses() const { return {use_begin(), use_end()}; }
 
+  /// This method computes the number of uses of this Value.
+  ///
+  /// This is a linear time operation.  Use hasOneUse, hasNUses, or
+  /// hasNUsesOrMore to check for specific values.
+  unsigned getNumUses() const;
+
   /// Returns true if this value has exactly one use.
   bool hasOneUse() const { return impl->hasOneUse(); }
+
+  /// Return true if this Value has exactly n uses.
+  bool hasNUses(unsigned n) const;
+
+  /// Return true if this value has n uses or more.
+  ///
+  /// This is logically equivalent to getNumUses() >= N.
+  bool hasNUsesOrMore(unsigned n) const;
 
   /// Returns true if this value has no uses.
   bool use_empty() const { return impl->use_empty(); }
@@ -419,8 +433,18 @@ inline unsigned OpResultImpl::getResultNumber() const {
 template <typename Ty>
 struct TypedValue : Value {
   using Value::Value;
+  using ValueType = Ty;
 
   static bool classof(Value value) { return llvm::isa<Ty>(value.getType()); }
+
+  /// TypedValue<B> can implicitly convert to TypedValue<A> if B is assignable
+  /// to A.
+  template <typename ToTy,
+            typename = typename std::enable_if<std::is_assignable<
+                typename ToTy::ValueType &, Ty>::value>::type>
+  operator ToTy() const {
+    return llvm::cast<ToTy>(*this);
+  }
 
   /// Return the known Type
   Ty getType() const { return llvm::cast<Ty>(Value::getType()); }

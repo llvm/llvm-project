@@ -27,7 +27,6 @@ body:             |
   bb.1.entry:
     liveins: $w0
     ; Fold (x + 0) -> x
-    ;
     ; CHECK-LABEL: name: right_ident_add
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
@@ -48,7 +47,6 @@ body:             |
   bb.1.entry:
     liveins: $w0
     ; Fold (x * 0) -> 0
-    ;
     ; CHECK-LABEL: name: mul_0
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
@@ -70,7 +68,6 @@ body:             |
   bb.1.entry:
     liveins: $w0
     ; Fold (x * 0) -> 0
-    ;
     ; CHECK-LABEL: name: mul_0_cant_replace
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
@@ -94,7 +91,6 @@ body:             |
   bb.1.entry:
     liveins: $w0
     ; Fold (0 / x) -> 0
-    ;
     ; CHECK-LABEL: name: sdiv_0
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
@@ -115,7 +111,6 @@ body:             |
   bb.1.entry:
     liveins: $w0
     ; Fold (0 / x) -> 0
-    ;
     ; CHECK-LABEL: name: udiv_0
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
@@ -136,7 +131,6 @@ body:             |
   bb.1.entry:
     liveins: $w0
     ; Fold (0 % x) -> 0
-    ;
     ; CHECK-LABEL: name: srem_0
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
@@ -157,7 +151,6 @@ body:             |
   bb.1.entry:
     liveins: $w0
     ; Fold (0 % x) -> 0
-    ;
     ; CHECK-LABEL: name: urem_0
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
@@ -179,7 +172,6 @@ body:             |
   bb.1.entry:
     liveins: $w0
     ; Fold (x || 0) -> x
-    ;
     ; CHECK-LABEL: name: right_ident_or
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
@@ -200,7 +192,6 @@ body:             |
   bb.1.entry:
     liveins: $w0
     ; Fold (x | 0) -> x
-    ;
     ; CHECK-LABEL: name: right_ident_xor
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
@@ -221,7 +212,6 @@ body:             |
   bb.1.entry:
     liveins: $w0
     ; Fold (x << 0) -> x
-    ;
     ; CHECK-LABEL: name: right_ident_shl
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
@@ -242,7 +232,6 @@ body:             |
   bb.1.entry:
     liveins: $w0
     ; Fold (x ashr 0) -> x
-    ;
     ; CHECK-LABEL: name: right_ident_ashr
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
@@ -263,7 +252,6 @@ body:             |
   bb.1.entry:
     liveins: $w0
     ; Fold (x lshr 0) -> x
-    ;
     ; CHECK-LABEL: name: right_ident_lshr
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
@@ -284,7 +272,6 @@ body:             |
   bb.1.entry:
     liveins: $w0
     ; Not an identity, no folding.
-    ;
     ; CHECK-LABEL: name: dont_fold_sub
     ; CHECK: liveins: $w0
     ; CHECK-NEXT: {{  $}}
@@ -326,7 +313,6 @@ body:             |
   bb.1.entry:
     liveins: $x0
     ; Fold (x + 0) -> x
-    ;
     ; CHECK-LABEL: name: right_ident_ptr_add
     ; CHECK: liveins: $x0
     ; CHECK-NEXT: {{  $}}

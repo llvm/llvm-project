@@ -253,7 +253,7 @@ namespace {
       bool operator!=(Register R) const { return !operator==(R); }
       bool operator<(Register R) const {
         // For std::map.
-        return Reg < R.Reg || (Reg == R.Reg && Sub < R.Sub);
+        return std::tie(Reg, Sub) < std::tie(R.Reg, R.Sub);
       }
       llvm::Register Reg;
       unsigned Sub = 0;
@@ -298,11 +298,7 @@ namespace {
         return !operator==(Ex);
       }
       bool operator<(const ExtExpr &Ex) const {
-        if (Rs != Ex.Rs)
-          return Rs < Ex.Rs;
-        if (S != Ex.S)
-          return S < Ex.S;
-        return !Neg && Ex.Neg;
+        return std::tie(Rs, S, Neg) < std::tie(Ex.Rs, Ex.S, Ex.Neg);
       }
     };
 
@@ -423,8 +419,8 @@ namespace {
 
   using HCE = HexagonConstExtenders;
 
-  LLVM_ATTRIBUTE_UNUSED
-  raw_ostream &operator<< (raw_ostream &OS, const OffsetRange &OR) {
+  [[maybe_unused]]
+  raw_ostream &operator<<(raw_ostream &OS, const OffsetRange &OR) {
     if (OR.Min > OR.Max)
       OS << '!';
     OS << '[' << OR.Min << ',' << OR.Max << "]a" << unsigned(OR.Align)
@@ -439,8 +435,8 @@ namespace {
     const HexagonRegisterInfo &HRI;
   };
 
-  LLVM_ATTRIBUTE_UNUSED
-  raw_ostream &operator<< (raw_ostream &OS, const PrintRegister &P) {
+  [[maybe_unused]]
+  raw_ostream &operator<<(raw_ostream &OS, const PrintRegister &P) {
     if (P.Rs.Reg != 0)
       OS << printReg(P.Rs.Reg, &P.HRI, P.Rs.Sub);
     else
@@ -455,8 +451,8 @@ namespace {
     const HexagonRegisterInfo &HRI;
   };
 
-  LLVM_ATTRIBUTE_UNUSED
-  raw_ostream &operator<< (raw_ostream &OS, const PrintExpr &P) {
+  [[maybe_unused]]
+  raw_ostream &operator<<(raw_ostream &OS, const PrintExpr &P) {
     OS << "## " << (P.Ex.Neg ? "- " : "+ ");
     if (P.Ex.Rs.Reg != 0)
       OS << printReg(P.Ex.Rs.Reg, &P.HRI, P.Ex.Rs.Sub);
@@ -473,15 +469,15 @@ namespace {
     const HexagonRegisterInfo &HRI;
   };
 
-  LLVM_ATTRIBUTE_UNUSED
-  raw_ostream &operator<< (raw_ostream &OS, const PrintInit &P) {
+  [[maybe_unused]]
+  raw_ostream &operator<<(raw_ostream &OS, const PrintInit &P) {
     OS << '[' << P.ExtI.first << ", "
        << PrintExpr(P.ExtI.second, P.HRI) << ']';
     return OS;
   }
 
-  LLVM_ATTRIBUTE_UNUSED
-  raw_ostream &operator<< (raw_ostream &OS, const HCE::ExtDesc &ED) {
+  [[maybe_unused]]
+  raw_ostream &operator<<(raw_ostream &OS, const HCE::ExtDesc &ED) {
     assert(ED.OpNum != -1u);
     const MachineBasicBlock &MBB = *ED.getOp().getParent()->getParent();
     const MachineFunction &MF = *MBB.getParent();
@@ -497,8 +493,8 @@ namespace {
     return OS;
   }
 
-  LLVM_ATTRIBUTE_UNUSED
-  raw_ostream &operator<< (raw_ostream &OS, const HCE::ExtRoot &ER) {
+  [[maybe_unused]]
+  raw_ostream &operator<<(raw_ostream &OS, const HCE::ExtRoot &ER) {
     switch (ER.Kind) {
       case MachineOperand::MO_Immediate:
         OS << "imm:" << ER.V.ImmVal;
@@ -531,8 +527,8 @@ namespace {
     return OS;
   }
 
-  LLVM_ATTRIBUTE_UNUSED
-  raw_ostream &operator<< (raw_ostream &OS, const HCE::ExtValue &EV) {
+  [[maybe_unused]]
+  raw_ostream &operator<<(raw_ostream &OS, const HCE::ExtValue &EV) {
     OS << HCE::ExtRoot(EV) << "  off:" << EV.Offset;
     return OS;
   }
@@ -544,8 +540,8 @@ namespace {
     const HexagonRegisterInfo &HRI;
   };
 
-  LLVM_ATTRIBUTE_UNUSED
-  raw_ostream &operator<< (raw_ostream &OS, const PrintIMap &P) {
+  [[maybe_unused]]
+  raw_ostream &operator<<(raw_ostream &OS, const PrintIMap &P) {
     OS << "{\n";
     for (const std::pair<const HCE::ExtenderInit, HCE::IndexList> &Q : P.IMap) {
       OS << "  " << PrintInit(Q.first, P.HRI) << " -> {";

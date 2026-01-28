@@ -66,7 +66,7 @@ struct ErasurePredicate {
 };
 
 void test() {
-  const int expected[] = {1, 2, 3, 4, 5, 6, 7, 8};
+  [[maybe_unused]] const int expected[] = {1, 2, 3, 4, 5, 6, 7, 8};
   {
     using M = std::flat_set<ThrowingAssignment, ThrowingComparator>;
     for (int first_throw = 1; first_throw < 99; ++first_throw) {

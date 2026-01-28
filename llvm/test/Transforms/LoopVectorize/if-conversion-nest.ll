@@ -3,7 +3,7 @@
 
 target datalayout = "e-p:64:64:64-i1:8:8-i8:8:8-i16:16:16-i32:32:32-i64:64:64-f32:32:32-f64:64:64-v64:64:64-v128:128:128-a0:0:64-s0:64:64-f80:128:128-n8:16:32:64-S128"
 
-define i32 @foo(ptr nocapture %A, ptr nocapture %B, i32 %n) {
+define void @foo(ptr nocapture %A, ptr nocapture %B, i32 %n) {
 ; CHECK-LABEL: @foo(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP26:%.*]] = icmp sgt i32 [[N:%.*]], 0
@@ -33,10 +33,10 @@ define i32 @foo(ptr nocapture %A, ptr nocapture %B, i32 %n) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = getelementptr inbounds i32, ptr [[B]], i64 [[INDEX]]
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i32>, ptr [[TMP6]], align 4, !alias.scope [[META3]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], [[WIDE_LOAD2]]
-; CHECK-NEXT:    [[TMP8:%.*]] = icmp slt <4 x i32> [[WIDE_LOAD]], splat (i32 20)
+; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], splat (i32 19)
 ; CHECK-NEXT:    [[TMP9:%.*]] = icmp slt <4 x i32> [[WIDE_LOAD2]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP10:%.*]] = select <4 x i1> [[TMP9]], <4 x i32> splat (i32 4), <4 x i32> splat (i32 5)
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP8]], <4 x i32> [[TMP10]], <4 x i32> splat (i32 3)
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP8]], <4 x i32> splat (i32 3), <4 x i32> [[TMP10]]
 ; CHECK-NEXT:    [[PREDPHI3:%.*]] = select <4 x i1> [[TMP7]], <4 x i32> [[PREDPHI]], <4 x i32> splat (i32 9)
 ; CHECK-NEXT:    store <4 x i32> [[PREDPHI3]], ptr [[TMP5]], align 4, !alias.scope [[META0]], !noalias [[META3]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -73,7 +73,7 @@ define i32 @foo(ptr nocapture %A, ptr nocapture %B, i32 %n) {
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret void
 ;
 entry:
   %cmp26 = icmp sgt i32 %n, 0
@@ -106,11 +106,11 @@ if.end14:
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:
-  ret i32 undef
+  ret void
 }
 
 ; As above but with multiple variables set per block.
-define i32 @multi_variable_if_nest(ptr nocapture %A, ptr nocapture %B, i32 %n) {
+define void @multi_variable_if_nest(ptr nocapture %A, ptr nocapture %B, i32 %n) {
 ; CHECK-LABEL: @multi_variable_if_nest(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[CMP26:%.*]] = icmp sgt i32 [[N:%.*]], 0
@@ -141,16 +141,14 @@ define i32 @multi_variable_if_nest(ptr nocapture %A, ptr nocapture %B, i32 %n) {
 ; CHECK-NEXT:    [[WIDE_LOAD2:%.*]] = load <4 x i32>, ptr [[TMP6]], align 4, !alias.scope [[META12]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], [[WIDE_LOAD2]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = icmp sgt <4 x i32> [[WIDE_LOAD]], splat (i32 19)
-; CHECK-NEXT:    [[TMP9:%.*]] = xor <4 x i1> [[TMP8]], splat (i1 true)
-; CHECK-NEXT:    [[TMP10:%.*]] = and <4 x i1> [[TMP7]], [[TMP9]]
 ; CHECK-NEXT:    [[TMP11:%.*]] = icmp slt <4 x i32> [[WIDE_LOAD2]], splat (i32 4)
 ; CHECK-NEXT:    [[TMP12:%.*]] = select <4 x i1> [[TMP11]], <4 x i32> splat (i32 4), <4 x i32> splat (i32 5)
 ; CHECK-NEXT:    [[TMP13:%.*]] = select <4 x i1> [[TMP11]], <4 x i32> splat (i32 6), <4 x i32> splat (i32 11)
 ; CHECK-NEXT:    [[TMP14:%.*]] = and <4 x i1> [[TMP7]], [[TMP8]]
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP14]], <4 x i32> splat (i32 3), <4 x i32> splat (i32 9)
-; CHECK-NEXT:    [[PREDPHI3:%.*]] = select <4 x i1> [[TMP10]], <4 x i32> [[TMP12]], <4 x i32> [[PREDPHI]]
-; CHECK-NEXT:    [[PREDPHI4:%.*]] = select <4 x i1> [[TMP14]], <4 x i32> splat (i32 7), <4 x i32> splat (i32 18)
-; CHECK-NEXT:    [[PREDPHI5:%.*]] = select <4 x i1> [[TMP10]], <4 x i32> [[TMP13]], <4 x i32> [[PREDPHI4]]
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select <4 x i1> [[TMP14]], <4 x i32> splat (i32 3), <4 x i32> [[TMP12]]
+; CHECK-NEXT:    [[PREDPHI3:%.*]] = select <4 x i1> [[TMP7]], <4 x i32> [[PREDPHI]], <4 x i32> splat (i32 9)
+; CHECK-NEXT:    [[PREDPHI4:%.*]] = select <4 x i1> [[TMP14]], <4 x i32> splat (i32 7), <4 x i32> [[TMP13]]
+; CHECK-NEXT:    [[PREDPHI5:%.*]] = select <4 x i1> [[TMP7]], <4 x i32> [[PREDPHI4]], <4 x i32> splat (i32 18)
 ; CHECK-NEXT:    store <4 x i32> [[PREDPHI3]], ptr [[TMP5]], align 4, !alias.scope [[META9]], !noalias [[META12]]
 ; CHECK-NEXT:    store <4 x i32> [[PREDPHI5]], ptr [[TMP6]], align 4, !alias.scope [[META12]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4
@@ -190,7 +188,7 @@ define i32 @multi_variable_if_nest(ptr nocapture %A, ptr nocapture %B, i32 %n) {
 ; CHECK:       for.end.loopexit:
 ; CHECK-NEXT:    br label [[FOR_END]]
 ; CHECK:       for.end:
-; CHECK-NEXT:    ret i32 undef
+; CHECK-NEXT:    ret void
 ;
 entry:
   %cmp26 = icmp sgt i32 %n, 0
@@ -226,5 +224,5 @@ if.end14:
   br i1 %exitcond, label %for.end, label %for.body
 
 for.end:
-  ret i32 undef
+  ret void
 }

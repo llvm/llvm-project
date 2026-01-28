@@ -28,7 +28,8 @@ enum class MemoryOrder : int {
   SEQ_CST = __ATOMIC_SEQ_CST
 };
 
-// These are a clang extension, see the clang documenation for more information:
+// These are a clang extension, see the clang documentation for more
+// information:
 // https://clang.llvm.org/docs/LanguageExtensions.html#scoped-atomic-builtins.
 enum class MemoryScope : int {
 #if defined(__MEMORY_SCOPE_SYSTEM) && defined(__MEMORY_SCOPE_DEVICE)

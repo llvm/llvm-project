@@ -4,7 +4,7 @@
 
 module {
   cir.func @foo(%arg0: !s32i) -> !s32i {
-    %4 = cir.cast(int_to_bool, %arg0 : !s32i), !cir.bool
+    %4 = cir.cast int_to_bool %arg0 : !s32i -> !cir.bool
     cir.if %4 {
       %5 = cir.const #cir.int<1> : !s32i
       cir.return %5 : !s32i
@@ -44,7 +44,7 @@ module {
 //  LLVM-NEXT: }
 
   cir.func @onlyIf(%arg0: !s32i) -> !s32i {
-    %4 = cir.cast(int_to_bool, %arg0 : !s32i), !cir.bool
+    %4 = cir.cast int_to_bool %arg0 : !s32i -> !cir.bool
     cir.if %4 {
       %5 = cir.const #cir.int<1> : !s32i
       cir.return %5 : !s32i
@@ -66,7 +66,7 @@ module {
   // Verify empty if clause is properly lowered to empty block
   cir.func @emptyIfClause(%arg0: !s32i) -> !s32i {
     // MLIR-LABEL: llvm.func @emptyIfClause
-    %4 = cir.cast(int_to_bool, %arg0 : !s32i), !cir.bool
+    %4 = cir.cast int_to_bool %arg0 : !s32i -> !cir.bool
     // MLIR: llvm.cond_br {{%.*}}, ^[[T:.*]], ^[[PHI:.*]]
     cir.if %4 {
       // MLIR-NEXT: ^[[T]]:
@@ -82,7 +82,7 @@ module {
   // addressed
   cir.func @emptyIfElseClause(%arg0: !s32i) -> !s32i {
     // MLIR-LABEL: llvm.func @emptyIfElseClause
-    %4 = cir.cast(int_to_bool, %arg0 : !s32i), !cir.bool
+    %4 = cir.cast int_to_bool %arg0 : !s32i -> !cir.bool
     // MLIR: llvm.cond_br {{%.*}}, ^[[T:.*]], ^[[F:.*]]
     cir.if %4 {
     // MLIR-NEXT: ^[[T]]:

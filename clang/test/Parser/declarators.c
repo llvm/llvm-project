@@ -57,7 +57,7 @@ myenum c;      // expected-error {{must use 'enum' tag to refer to type 'myenum'
 float *test7(void) {
   // We should recover 'b' by parsing it with a valid type of "struct xyz", which
   // allows us to diagnose other bad things done with y, such as this.
-  return &b.y;   // expected-warning {{incompatible pointer types returning 'int *' from a function with result type 'float *'}}
+  return &b.y;   // expected-error {{incompatible pointer types returning 'int *' from a function with result type 'float *'}}
 }
 
 struct xyz test8(void) { return a; }  // a should be marked invalid, no diag.

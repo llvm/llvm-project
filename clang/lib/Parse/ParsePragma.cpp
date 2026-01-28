@@ -25,6 +25,7 @@
 #include "clang/Sema/SemaCodeCompletion.h"
 #include "clang/Sema/SemaRISCV.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringSwitch.h"
 #include <optional>
 using namespace clang;
@@ -300,12 +301,6 @@ struct PragmaMSRuntimeChecksHandler : public EmptyPragmaHandler {
   PragmaMSRuntimeChecksHandler() : EmptyPragmaHandler("runtime_checks") {}
 };
 
-struct PragmaMSIntrinsicHandler : public PragmaHandler {
-  PragmaMSIntrinsicHandler() : PragmaHandler("intrinsic") {}
-  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
-                    Token &FirstToken) override;
-};
-
 // "\#pragma fenv_access (on)".
 struct PragmaMSFenvAccessHandler : public PragmaHandler {
   PragmaMSFenvAccessHandler() : PragmaHandler("fenv_access") {}
@@ -397,6 +392,12 @@ struct PragmaMaxTokensHereHandler : public PragmaHandler {
 
 struct PragmaMaxTokensTotalHandler : public PragmaHandler {
   PragmaMaxTokensTotalHandler() : PragmaHandler("max_tokens_total") {}
+  void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
+                    Token &FirstToken) override;
+};
+
+struct PragmaExportHandler : public PragmaHandler {
+  explicit PragmaExportHandler() : PragmaHandler("export") {}
   void HandlePragma(Preprocessor &PP, PragmaIntroducer Introducer,
                     Token &FirstToken) override;
 };
@@ -517,7 +518,7 @@ void Parser::initializePragmaHandlers() {
     PP.AddPragmaHandler(MSOptimize.get());
     MSRuntimeChecks = std::make_unique<PragmaMSRuntimeChecksHandler>();
     PP.AddPragmaHandler(MSRuntimeChecks.get());
-    MSIntrinsic = std::make_unique<PragmaMSIntrinsicHandler>();
+    MSIntrinsic = std::make_unique<PragmaMSPragma>("intrinsic");
     PP.AddPragmaHandler(MSIntrinsic.get());
     MSFenvAccess = std::make_unique<PragmaMSFenvAccessHandler>();
     PP.AddPragmaHandler(MSFenvAccess.get());
@@ -563,6 +564,11 @@ void Parser::initializePragmaHandlers() {
 
   MaxTokensTotalPragmaHandler = std::make_unique<PragmaMaxTokensTotalHandler>();
   PP.AddPragmaHandler("clang", MaxTokensTotalPragmaHandler.get());
+
+  if (getLangOpts().ZOSExt) {
+    ExportHandler = std::make_unique<PragmaExportHandler>();
+    PP.AddPragmaHandler(ExportHandler.get());
+  }
 
   if (getTargetInfo().getTriple().isRISCV()) {
     RISCVPragmaHandler = std::make_unique<PragmaRISCVHandler>(Actions);
@@ -698,17 +704,17 @@ void Parser::resetPragmaHandlers() {
   PP.RemovePragmaHandler("clang", MaxTokensTotalPragmaHandler.get());
   MaxTokensTotalPragmaHandler.reset();
 
+  if (getLangOpts().ZOSExt) {
+    PP.RemovePragmaHandler(ExportHandler.get());
+    ExportHandler.reset();
+  }
+
   if (getTargetInfo().getTriple().isRISCV()) {
     PP.RemovePragmaHandler("clang", RISCVPragmaHandler.get());
     RISCVPragmaHandler.reset();
   }
 }
 
-/// Handle the annotation token produced for #pragma unused(...)
-///
-/// Each annot_pragma_unused is followed by the argument token so e.g.
-/// "#pragma unused(x,y)" becomes:
-/// annot_pragma_unused 'x' annot_pragma_unused 'y'
 void Parser::HandlePragmaUnused() {
   assert(Tok.is(tok::annot_pragma_unused));
   SourceLocation UnusedLoc = ConsumeAnnotationToken();
@@ -1051,7 +1057,8 @@ void Parser::HandlePragmaMSPragma() {
           .Case("strict_gs_check", &Parser::HandlePragmaMSStrictGuardStackCheck)
           .Case("function", &Parser::HandlePragmaMSFunction)
           .Case("alloc_text", &Parser::HandlePragmaMSAllocText)
-          .Case("optimize", &Parser::HandlePragmaMSOptimize);
+          .Case("optimize", &Parser::HandlePragmaMSOptimize)
+          .Case("intrinsic", &Parser::HandlePragmaMSIntrinsic);
 
   if (!(this->*Handler)(PragmaName, PragmaLocation)) {
     // Pragma handling failed, and has been diagnosed.  Slurp up the tokens
@@ -1226,7 +1233,6 @@ bool Parser::HandlePragmaMSSegment(StringRef PragmaName,
   return true;
 }
 
-// #pragma init_seg({ compiler | lib | user | "section-name" [, func-name]} )
 bool Parser::HandlePragmaMSInitSeg(StringRef PragmaName,
                                    SourceLocation PragmaLocation) {
   if (getTargetInfo().getTriple().getEnvironment() != llvm::Triple::MSVC) {
@@ -1288,9 +1294,6 @@ bool Parser::HandlePragmaMSInitSeg(StringRef PragmaName,
   return true;
 }
 
-// #pragma strict_gs_check(pop)
-// #pragma strict_gs_check(push, "on" | "off")
-// #pragma strict_gs_check("on" | "off")
 bool Parser::HandlePragmaMSStrictGuardStackCheck(
     StringRef PragmaName, SourceLocation PragmaLocation) {
   if (ExpectAndConsume(tok::l_paren, diag::warn_pragma_expected_lparen,
@@ -1400,6 +1403,74 @@ bool Parser::HandlePragmaMSAllocText(StringRef PragmaName,
   return true;
 }
 
+void Parser::zOSHandlePragmaHelper(tok::TokenKind PragmaKind) {
+  assert(Tok.is(PragmaKind));
+
+  StringRef PragmaName = "export";
+
+  using namespace clang::charinfo;
+  auto *TheTokens = static_cast<std::pair<std::unique_ptr<Token[]>, size_t> *>(
+      Tok.getAnnotationValue());
+  PP.EnterTokenStream(std::move(TheTokens->first), TheTokens->second, true,
+                      /*IsReinject=*/true);
+  Tok.setAnnotationValue(nullptr);
+  ConsumeAnnotationToken();
+
+  llvm::scope_exit OnReturn([this]() {
+    while (Tok.isNot(tok::eof))
+      PP.Lex(Tok);
+    PP.Lex(Tok);
+  });
+
+  do {
+    PP.Lex(Tok);
+    if (Tok.isNot(tok::l_paren)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_lparen)
+          << PragmaName;
+      return;
+    }
+
+    PP.Lex(Tok);
+    if (Tok.isNot(tok::identifier)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_identifier)
+          << PragmaName;
+      return;
+    }
+
+    IdentifierInfo *IdentName = Tok.getIdentifierInfo();
+    SourceLocation IdentNameLoc = Tok.getLocation();
+    PP.Lex(Tok);
+
+    if (Tok.isNot(tok::r_paren)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_rparen)
+          << PragmaName;
+      return;
+    }
+
+    PP.Lex(Tok);
+    Actions.ActOnPragmaExport(IdentName, IdentNameLoc, getCurScope());
+
+    // Because export is also a C++ keyword, we also check for that.
+    if (Tok.is(tok::identifier) || Tok.is(tok::kw_export)) {
+      PragmaName = Tok.getIdentifierInfo()->getName();
+      if (PragmaName != "export")
+        PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
+            << PragmaName;
+    } else if (Tok.isNot(tok::eof)) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
+          << PragmaName;
+      return;
+    }
+  } while (Tok.isNot(tok::eof));
+  return;
+}
+
+void Parser::HandlePragmaExport() {
+  assert(Tok.is(tok::annot_pragma_export));
+
+  zOSHandlePragmaHelper(tok::annot_pragma_export);
+}
+
 static std::string PragmaLoopHintString(Token PragmaName, Token Option) {
   StringRef Str = PragmaName.getIdentifierInfo()->getName();
   std::string ClangLoopStr("clang loop ");
@@ -1433,10 +1504,11 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
 
   // Return a valid hint if pragma unroll or nounroll were specified
   // without an argument.
-  auto IsLoopHint = llvm::StringSwitch<bool>(PragmaNameInfo->getName())
-                        .Cases("unroll", "nounroll", "unroll_and_jam",
-                               "nounroll_and_jam", true)
-                        .Default(false);
+  auto IsLoopHint =
+      llvm::StringSwitch<bool>(PragmaNameInfo->getName())
+          .Cases({"unroll", "nounroll", "unroll_and_jam", "nounroll_and_jam"},
+                 true)
+          .Default(false);
 
   if (Toks.empty() && IsLoopHint) {
     ConsumeAnnotationToken();
@@ -1544,7 +1616,7 @@ bool Parser::HandlePragmaLoopHint(LoopHint &Hint) {
         PP.Lex(Tok); // ,
 
         StateInfo = Tok.getIdentifierInfo();
-        IsScalableStr = StateInfo->getName();
+        IsScalableStr = StateInfo ? StateInfo->getName() : "";
 
         if (IsScalableStr != "scalable" && IsScalableStr != "fixed") {
           Diag(Tok.getLocation(),
@@ -1940,7 +2012,7 @@ void Parser::HandlePragmaAttribute() {
       SourceLocation AttrNameLoc = ConsumeToken();
 
       if (Tok.isNot(tok::l_paren))
-        Attrs.addNew(AttrName, AttrNameLoc, nullptr, AttrNameLoc, nullptr, 0,
+        Attrs.addNew(AttrName, AttrNameLoc, AttributeScopeInfo(), nullptr, 0,
                      ParsedAttr::Form::GNU());
       else
         ParseGNUAttributeArgs(AttrName, AttrNameLoc, Attrs, /*EndLoc=*/nullptr,
@@ -3771,56 +3843,6 @@ void PragmaUnrollHintHandler::HandlePragma(Preprocessor &PP,
                       /*DisableMacroExpansion=*/false, /*IsReinject=*/false);
 }
 
-/// Handle the Microsoft \#pragma intrinsic extension.
-///
-/// The syntax is:
-/// \code
-///  #pragma intrinsic(memset)
-///  #pragma intrinsic(strlen, memcpy)
-/// \endcode
-///
-/// Pragma intrisic tells the compiler to use a builtin version of the
-/// function. Clang does it anyway, so the pragma doesn't really do anything.
-/// Anyway, we emit a warning if the function specified in \#pragma intrinsic
-/// isn't an intrinsic in clang and suggest to include intrin.h.
-void PragmaMSIntrinsicHandler::HandlePragma(Preprocessor &PP,
-                                            PragmaIntroducer Introducer,
-                                            Token &Tok) {
-  PP.Lex(Tok);
-
-  if (Tok.isNot(tok::l_paren)) {
-    PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_lparen)
-        << "intrinsic";
-    return;
-  }
-  PP.Lex(Tok);
-
-  bool SuggestIntrinH = !PP.isMacroDefined("__INTRIN_H");
-
-  while (Tok.is(tok::identifier)) {
-    IdentifierInfo *II = Tok.getIdentifierInfo();
-    if (!II->getBuiltinID())
-      PP.Diag(Tok.getLocation(), diag::warn_pragma_intrinsic_builtin)
-          << II << SuggestIntrinH;
-
-    PP.Lex(Tok);
-    if (Tok.isNot(tok::comma))
-      break;
-    PP.Lex(Tok);
-  }
-
-  if (Tok.isNot(tok::r_paren)) {
-    PP.Diag(Tok.getLocation(), diag::warn_pragma_expected_rparen)
-        << "intrinsic";
-    return;
-  }
-  PP.Lex(Tok);
-
-  if (Tok.isNot(tok::eod))
-    PP.Diag(Tok.getLocation(), diag::warn_pragma_extra_tokens_at_eol)
-        << "intrinsic";
-}
-
 bool Parser::HandlePragmaMSFunction(StringRef PragmaName,
                                     SourceLocation PragmaLocation) {
   Token FirstTok = Tok;
@@ -3856,7 +3878,6 @@ bool Parser::HandlePragmaMSFunction(StringRef PragmaName,
   return true;
 }
 
-// #pragma optimize("gsty", on|off)
 bool Parser::HandlePragmaMSOptimize(StringRef PragmaName,
                                     SourceLocation PragmaLocation) {
   Token FirstTok = Tok;
@@ -3914,6 +3935,56 @@ bool Parser::HandlePragmaMSOptimize(StringRef PragmaName,
     return false;
 
   Actions.ActOnPragmaMSOptimize(FirstTok.getLocation(), IsOn);
+  return true;
+}
+
+/// Handle the Microsoft \#pragma intrinsic extension.
+///
+/// The syntax is:
+/// \code
+///  #pragma intrinsic(memset)
+///  #pragma intrinsic(strlen, memcpy)
+/// \endcode
+///
+/// Pragma intrisic tells the compiler to use a builtin version of the
+/// function. Clang does it anyway, so the pragma doesn't really do anything.
+/// Anyway, we emit a warning if the function specified in \#pragma intrinsic
+/// isn't an intrinsic in clang and suggest to include intrin.h, as well as
+/// declare the builtin if it has not been declared.
+bool Parser::HandlePragmaMSIntrinsic(StringRef PragmaName,
+                                     SourceLocation PragmaLocation) {
+  if (ExpectAndConsume(tok::l_paren, diag::warn_pragma_expected_lparen,
+                       PragmaName))
+    return false;
+
+  bool SuggestIntrinH = !PP.isMacroDefined("__INTRIN_H");
+
+  while (Tok.is(tok::identifier)) {
+    IdentifierInfo *II = Tok.getIdentifierInfo();
+    if (!II->getBuiltinID())
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_intrinsic_builtin)
+          << II << SuggestIntrinH;
+    // If the builtin hasn't already been declared, declare it now.
+    DeclarationNameInfo NameInfo(II, Tok.getLocation());
+    LookupResult Previous(Actions, NameInfo, Sema::LookupOrdinaryName,
+                          RedeclarationKind::NotForRedeclaration);
+    Actions.LookupName(Previous, Actions.getCurScope(),
+                       /*CreateBuiltins*/ false);
+    if (Previous.empty())
+      Actions.LazilyCreateBuiltin(II, II->getBuiltinID(), Actions.getCurScope(),
+                                  /*ForRedeclaration*/ true, Tok.getLocation());
+    PP.Lex(Tok);
+    if (Tok.isNot(tok::comma))
+      break;
+    PP.Lex(Tok);
+  }
+  if (ExpectAndConsume(tok::r_paren, diag::warn_pragma_expected_rparen,
+                       PragmaName))
+    return false;
+
+  if (ExpectAndConsume(tok::eof, diag::warn_pragma_extra_tokens_at_eol,
+                       PragmaName))
+    return false;
   return true;
 }
 
@@ -4147,8 +4218,47 @@ void PragmaMaxTokensTotalHandler::HandlePragma(Preprocessor &PP,
   PP.overrideMaxTokens(MaxTokens, Loc);
 }
 
+static void zOSPragmaHandlerHelper(Preprocessor &PP, Token &Tok,
+                                   tok::TokenKind TokKind) {
+  Token AnnotTok;
+  AnnotTok.startToken();
+  AnnotTok.setKind(TokKind);
+  AnnotTok.setLocation(Tok.getLocation());
+  AnnotTok.setAnnotationEndLoc(Tok.getLocation());
+  SmallVector<Token, 8> TokenVector;
+  // Suck up all of the tokens before the eod.
+  for (; Tok.isNot(tok::eod); PP.Lex(Tok)) {
+    TokenVector.push_back(Tok);
+    AnnotTok.setAnnotationEndLoc(Tok.getLocation());
+  }
+  // Add a sentinel EoF token to the end of the list.
+  Token EoF;
+  EoF.startToken();
+  EoF.setKind(tok::eof);
+  EoF.setLocation(Tok.getLocation());
+  TokenVector.push_back(EoF);
+  // We must allocate this array with new because EnterTokenStream is going to
+  // delete it later.
+  markAsReinjectedForRelexing(TokenVector);
+  auto TokenArray = std::make_unique<Token[]>(TokenVector.size());
+  std::copy(TokenVector.begin(), TokenVector.end(), TokenArray.get());
+  auto Value = new (PP.getPreprocessorAllocator())
+      std::pair<std::unique_ptr<Token[]>, size_t>(std::move(TokenArray),
+                                                  TokenVector.size());
+  AnnotTok.setAnnotationValue(Value);
+  PP.EnterToken(AnnotTok, /*IsReinject*/ false);
+}
+
+/// Handle #pragma export.
+void PragmaExportHandler::HandlePragma(Preprocessor &PP,
+                                       PragmaIntroducer Introducer,
+                                       Token &FirstToken) {
+  zOSPragmaHandlerHelper(PP, FirstToken, tok::annot_pragma_export);
+}
+
 // Handle '#pragma clang riscv intrinsic vector'.
 //        '#pragma clang riscv intrinsic sifive_vector'.
+//        '#pragma clang riscv intrinsic andes_vector'.
 void PragmaRISCVHandler::HandlePragma(Preprocessor &PP,
                                       PragmaIntroducer Introducer,
                                       Token &FirstToken) {
@@ -4164,10 +4274,11 @@ void PragmaRISCVHandler::HandlePragma(Preprocessor &PP,
 
   PP.Lex(Tok);
   II = Tok.getIdentifierInfo();
-  if (!II || !(II->isStr("vector") || II->isStr("sifive_vector"))) {
+  if (!II || !(II->isStr("vector") || II->isStr("sifive_vector") ||
+               II->isStr("andes_vector"))) {
     PP.Diag(Tok.getLocation(), diag::warn_pragma_invalid_argument)
         << PP.getSpelling(Tok) << "riscv" << /*Expected=*/true
-        << "'vector' or 'sifive_vector'";
+        << "'vector', 'sifive_vector' or 'andes_vector'";
     return;
   }
 
@@ -4182,4 +4293,6 @@ void PragmaRISCVHandler::HandlePragma(Preprocessor &PP,
     Actions.RISCV().DeclareRVVBuiltins = true;
   else if (II->isStr("sifive_vector"))
     Actions.RISCV().DeclareSiFiveVectorBuiltins = true;
+  else if (II->isStr("andes_vector"))
+    Actions.RISCV().DeclareAndesVectorBuiltins = true;
 }

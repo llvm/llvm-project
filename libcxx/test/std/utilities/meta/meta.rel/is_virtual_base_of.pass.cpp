@@ -9,7 +9,7 @@
 // UNSUPPORTED: c++03, c++11, c++14, c++17, c++20, c++23
 
 // These compilers don't support __builtin_is_virtual_base_of yet.
-// UNSUPPORTED: clang-18, clang-19, gcc-14, apple-clang-16, apple-clang-17
+// UNSUPPORTED: apple-clang-17
 
 // <type_traits>
 
@@ -17,6 +17,8 @@
 
 #include <type_traits>
 #include <cassert>
+
+#include "test_macros.h"
 
 template <bool expected, class Base, class Derived>
 void test() {
@@ -98,8 +100,13 @@ int main(int, char**) {
 
   // Test with virtual inheritance
   {
+#ifdef TEST_COMPILER_GCC // FIXME: Is this a GCC or Clang bug? Or is the standards wording ambiguous?
+    test<true, Base, Derived3Virtual>();
+    test<true, Derived, Derived3Virtual>();
+#else
     test<false, Base, Derived3Virtual>();
     test<false, Derived, Derived3Virtual>();
+#endif
     test<true, Derived2b, Derived3Virtual>();
     test<true, Derived2a, Derived3Virtual>();
     test<true, Base, DerivedPrivate>();

@@ -30,7 +30,7 @@ struct __uninitialized_tag {};
 // initialization using __emplace.
 template <class _Tp>
 struct __no_destroy {
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR explicit __no_destroy(__uninitialized_tag) : __obj_() {}
+  _LIBCPP_HIDE_FROM_ABI explicit __no_destroy(__uninitialized_tag) : __obj_() {}
 
   template <class... _Args>
   _LIBCPP_HIDE_FROM_ABI explicit __no_destroy(_Args&&... __args) {

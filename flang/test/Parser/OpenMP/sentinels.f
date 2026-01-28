@@ -61,12 +61,12 @@ c$  +&         , "comment"
 
 ! Test valid chars in initial and continuation lines.
 ! CHECK: !$ 20 PRINT *, "msg2"
-! CHECK: !$ & , "msg3"
+! CHECK: !$   &, "msg3"
 c$ 20 PRINT *, "msg2"
 c$   &         , "msg3"
 
 ! CHECK: !$ PRINT *, "msg4",
-! CHECK: !$ & "msg5"
+! CHECK: !$   &"msg5"
 c$   0PRINT *, "msg4",
 c$   +         "msg5"
       end

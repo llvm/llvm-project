@@ -847,7 +847,7 @@ enum syntax_option_type {
   multiline = 1 << 10
 };
 
-_LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR syntax_option_type __get_grammar(syntax_option_type __g) {
+_LIBCPP_HIDE_FROM_ABI inline syntax_option_type __get_grammar(syntax_option_type __g) {
 #ifdef _LIBCPP_ABI_REGEX_CONSTANTS_NONZERO
   return static_cast<syntax_option_type>(__g & 0x3F0);
 #else
@@ -855,22 +855,19 @@ _LIBCPP_HIDE_FROM_ABI inline _LIBCPP_CONSTEXPR syntax_option_type __get_grammar(
 #endif
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR syntax_option_type operator~(syntax_option_type __x) {
+inline _LIBCPP_HIDE_FROM_ABI syntax_option_type operator~(syntax_option_type __x) {
   return syntax_option_type(~int(__x) & 0x1FF);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR syntax_option_type
-operator&(syntax_option_type __x, syntax_option_type __y) {
+inline _LIBCPP_HIDE_FROM_ABI syntax_option_type operator&(syntax_option_type __x, syntax_option_type __y) {
   return syntax_option_type(int(__x) & int(__y));
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR syntax_option_type
-operator|(syntax_option_type __x, syntax_option_type __y) {
+inline _LIBCPP_HIDE_FROM_ABI syntax_option_type operator|(syntax_option_type __x, syntax_option_type __y) {
   return syntax_option_type(int(__x) | int(__y));
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR syntax_option_type
-operator^(syntax_option_type __x, syntax_option_type __y) {
+inline _LIBCPP_HIDE_FROM_ABI syntax_option_type operator^(syntax_option_type __x, syntax_option_type __y) {
   return syntax_option_type(int(__x) ^ int(__y));
 }
 
@@ -909,19 +906,19 @@ enum match_flag_type {
   __full_match      = 1 << 12
 };
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR match_flag_type operator~(match_flag_type __x) {
+inline _LIBCPP_HIDE_FROM_ABI match_flag_type operator~(match_flag_type __x) {
   return match_flag_type(~int(__x) & 0x0FFF);
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR match_flag_type operator&(match_flag_type __x, match_flag_type __y) {
+inline _LIBCPP_HIDE_FROM_ABI match_flag_type operator&(match_flag_type __x, match_flag_type __y) {
   return match_flag_type(int(__x) & int(__y));
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR match_flag_type operator|(match_flag_type __x, match_flag_type __y) {
+inline _LIBCPP_HIDE_FROM_ABI match_flag_type operator|(match_flag_type __x, match_flag_type __y) {
   return match_flag_type(int(__x) | int(__y));
 }
 
-inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR match_flag_type operator^(match_flag_type __x, match_flag_type __y) {
+inline _LIBCPP_HIDE_FROM_ABI match_flag_type operator^(match_flag_type __x, match_flag_type __y) {
   return match_flag_type(int(__x) ^ int(__y));
 }
 
@@ -987,7 +984,7 @@ public:
   typedef _CharT char_type;
   typedef basic_string<char_type> string_type;
   typedef locale locale_type;
-#if defined(__BIONIC__) || defined(_NEWLIB_VERSION)
+#if defined(__BIONIC__) || _LIBCPP_LIBC_NEWLIB
   // Originally bionic's ctype_base used its own ctype masks because the
   // builtin ctype implementation wasn't in libc++ yet. Bionic's ctype mask
   // was only 8 bits wide and already saturated, so it used a wider type here
@@ -996,9 +993,7 @@ public:
   // implementation, but this was not updated to match. Since then Android has
   // needed to maintain a stable libc++ ABI, and this can't be changed without
   // an ABI break.
-  // We also need this workaround for newlib since _NEWLIB_VERSION is not
-  // defined yet inside __config, so we can't set the
-  // _LIBCPP_PROVIDES_DEFAULT_RUNE_TABLE macro. Additionally, newlib is
+  // We also need this workaround for newlib since newlib is
   // often used for space constrained environments, so it makes sense not to
   // duplicate the ctype table.
   typedef uint16_t char_class_type;
@@ -1822,7 +1817,7 @@ void __word_boundary<_CharT, _Traits>::__exec(__state& __s) const {
 // __l_anchor
 
 template <class _CharT>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool __is_eol(_CharT __c) {
+_LIBCPP_HIDE_FROM_ABI bool __is_eol(_CharT __c) {
   return __c == '\r' || __c == '\n';
 }
 
@@ -2103,7 +2098,7 @@ public:
       __ranges_.push_back(
           std::make_pair(__traits_.transform(__b.begin(), __b.end()), __traits_.transform(__e.begin(), __e.end())));
     } else {
-      if (__b.size() != 1 || __e.size() != 1)
+      if (__b.size() != 1 || __e.size() != 1 || char_traits<typename string_type::value_type>::lt(__e[0], __b[0]))
         __throw_regex_error<regex_constants::error_range>();
       if (__icase_) {
         __b[0] = __traits_.translate_nocase(__b[0]);
@@ -3914,7 +3909,7 @@ _ForwardIterator basic_regex<_CharT, _Traits>::__parse_character_escape(
       ++__first;
       break;
     default:
-      if (*__first != '_' && !__traits_.isctype(*__first, ctype_base::alnum)) {
+      if (!__traits_.isctype(*__first, ctype_base::alnum)) {
         if (__str)
           *__str = *__first;
         else
@@ -4162,7 +4157,7 @@ public:
 
   bool matched;
 
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR sub_match() : matched() {}
+  _LIBCPP_HIDE_FROM_ABI sub_match() : matched() {}
 
   _LIBCPP_HIDE_FROM_ABI difference_type length() const {
     return matched ? std::distance(this->first, this->second) : 0;
@@ -4176,7 +4171,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI int compare(const string_type& __s) const { return str().compare(__s); }
   _LIBCPP_HIDE_FROM_ABI int compare(const value_type* __s) const { return str().compare(__s); }
 
-  _LIBCPP_HIDE_FROM_ABI void swap(sub_match& __s) _NOEXCEPT_(__is_nothrow_swappable_v<_BidirectionalIterator>) {
+  _LIBCPP_HIDE_FROM_ABI void swap(sub_match& __s) {
     this->pair<_BidirectionalIterator, _BidirectionalIterator>::swap(__s);
     std::swap(matched, __s.matched);
   }

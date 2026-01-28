@@ -26,6 +26,7 @@
 namespace llvm {
 class SPIRVSubtarget;
 using SPIRVType = const MachineInstr;
+using StructOffsetDecorator = std::function<void(Register)>;
 
 class SPIRVGlobalRegistry : public SPIRVIRMapping {
   // Registers holding values which have types associated with them.
@@ -213,6 +214,8 @@ public:
       if (Value *GlobalElem =
               Global->getNumOperands() > 0 ? Global->getOperand(0) : nullptr)
         ElementTy = findDeducedCompositeType(GlobalElem);
+      else if (const Function *Fn = dyn_cast<Function>(Global))
+        ElementTy = SPIRV::getOriginalFunctionType(*Fn);
     }
     return ElementTy ? ElementTy : Global->getValueType();
   }
@@ -275,7 +278,7 @@ public:
   }
 
   // Get or create a SPIR-V type corresponding the given LLVM IR type,
-  // and map it to the given VReg by creating an ASSIGN_TYPE instruction.
+  // and map it to the given VReg.
   SPIRVType *assignTypeToVReg(const Type *Type, Register VReg,
                               MachineIRBuilder &MIRBuilder,
                               SPIRV::AccessQualifier::AccessQualifier AQ,
@@ -289,7 +292,7 @@ public:
                                   const SPIRVInstrInfo &TII);
 
   // In cases where the SPIR-V type is already known, this function can be
-  // used to map it to the given VReg via an ASSIGN_TYPE instruction.
+  // used to map it to the given VReg.
   void assignSPIRVTypeToVReg(SPIRVType *Type, Register VReg,
                              const MachineFunction &MF);
 
@@ -437,6 +440,9 @@ private:
 
   SPIRVType *getOpTypeFloat(uint32_t Width, MachineIRBuilder &MIRBuilder);
 
+  SPIRVType *getOpTypeFloat(uint32_t Width, MachineIRBuilder &MIRBuilder,
+                            SPIRV::FPEncoding::FPEncoding FPEncode);
+
   SPIRVType *getOpTypeVoid(MachineIRBuilder &MIRBuilder);
 
   SPIRVType *getOpTypeVector(uint32_t NumElems, SPIRVType *ElemType,
@@ -451,7 +457,7 @@ private:
 
   SPIRVType *getOpTypeStruct(const StructType *Ty, MachineIRBuilder &MIRBuilder,
                              SPIRV::AccessQualifier::AccessQualifier AccQual,
-                             bool ExplicitLayoutRequired, bool EmitIR);
+                             StructOffsetDecorator Decorator, bool EmitIR);
 
   SPIRVType *getOpTypePointer(SPIRV::StorageClass::StorageClass SC,
                               SPIRVType *ElemType, MachineIRBuilder &MIRBuilder,
@@ -460,7 +466,7 @@ private:
   SPIRVType *getOpTypeForwardPointer(SPIRV::StorageClass::StorageClass SC,
                                      MachineIRBuilder &MIRBuilder);
 
-  SPIRVType *getOpTypeFunction(SPIRVType *RetType,
+  SPIRVType *getOpTypeFunction(const FunctionType *Ty, SPIRVType *RetType,
                                const SmallVectorImpl<SPIRVType *> &ArgTypes,
                                MachineIRBuilder &MIRBuilder);
 
@@ -500,6 +506,13 @@ private:
                                  MachineIRBuilder &MIRBuilder);
   bool hasBlockDecoration(SPIRVType *Type) const;
 
+  SPIRVType *
+  getOrCreateOpTypeImage(MachineIRBuilder &MIRBuilder, SPIRVType *SampledType,
+                         SPIRV::Dim::Dim Dim, uint32_t Depth, uint32_t Arrayed,
+                         uint32_t Multisampled, uint32_t Sampled,
+                         SPIRV::ImageFormat::ImageFormat ImageFormat,
+                         SPIRV::AccessQualifier::AccessQualifier AccQual);
+
 public:
   Register buildConstantInt(uint64_t Val, MachineIRBuilder &MIRBuilder,
                             SPIRVType *SpvType, bool EmitIR,
@@ -537,16 +550,15 @@ public:
                                 MachineIRBuilder &MIRBuilder);
   Register getOrCreateUndef(MachineInstr &I, SPIRVType *SpvType,
                             const SPIRVInstrInfo &TII);
-  Register buildGlobalVariable(Register Reg, SPIRVType *BaseType,
-                               StringRef Name, const GlobalValue *GV,
-                               SPIRV::StorageClass::StorageClass Storage,
-                               const MachineInstr *Init, bool IsConst,
-                               bool HasLinkageTy,
-                               SPIRV::LinkageType::LinkageType LinkageType,
-                               MachineIRBuilder &MIRBuilder,
-                               bool IsInstSelector);
+  Register buildGlobalVariable(
+      Register Reg, SPIRVType *BaseType, StringRef Name, const GlobalValue *GV,
+      SPIRV::StorageClass::StorageClass Storage, const MachineInstr *Init,
+      bool IsConst,
+      const std::optional<SPIRV::LinkageType::LinkageType> &LinkageType,
+      MachineIRBuilder &MIRBuilder, bool IsInstSelector);
   Register getOrCreateGlobalVariableWithBinding(const SPIRVType *VarType,
                                                 uint32_t Set, uint32_t Binding,
+                                                StringRef Name,
                                                 MachineIRBuilder &MIRBuilder);
 
   // Convenient helpers for getting types with check for duplicates.
@@ -601,12 +613,18 @@ public:
                                          SPIRV::StorageClass::StorageClass SC,
                                          bool IsWritable, bool EmitIr = false);
 
+  SPIRVType *getOrCreatePaddingType(MachineIRBuilder &MIRBuilder);
+
+  SPIRVType *getOrCreateVulkanPushConstantType(MachineIRBuilder &MIRBuilder,
+                                               Type *ElemType);
+
+  SPIRVType *getOrCreateLayoutType(MachineIRBuilder &MIRBuilder,
+                                   const TargetExtType *T, bool EmitIr = false);
+
   SPIRVType *
-  getOrCreateOpTypeImage(MachineIRBuilder &MIRBuilder, SPIRVType *SampledType,
-                         SPIRV::Dim::Dim Dim, uint32_t Depth, uint32_t Arrayed,
-                         uint32_t Multisampled, uint32_t Sampled,
-                         SPIRV::ImageFormat::ImageFormat ImageFormat,
-                         SPIRV::AccessQualifier::AccessQualifier AccQual);
+  getImageType(const TargetExtType *ExtensionType,
+               const SPIRV::AccessQualifier::AccessQualifier Qualifier,
+               MachineIRBuilder &MIRBuilder);
 
   SPIRVType *getOrCreateOpTypeSampler(MachineIRBuilder &MIRBuilder);
 

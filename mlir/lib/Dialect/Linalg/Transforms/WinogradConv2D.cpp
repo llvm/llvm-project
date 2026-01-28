@@ -18,7 +18,6 @@
 #include "mlir/Dialect/Linalg/Utils/Utils.h"
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
-#include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/Support/MathExtras.h"
 
 namespace mlir {
@@ -38,6 +37,15 @@ namespace {
 ///
 /// The following tables define these constant transformation matrices for
 /// F(2 x 2, 3 x 3), F(4 x 4, 3 x 3), and F(2 x 2, 5 x 5)
+///
+/// To add more transformation matrices, we need to add the following
+/// items:
+/// 1. Add the constant transformation matrix to the corresponding
+///   G, GT, BT, B, AT, or A array.
+/// 2. Add the corresponding TransformMatrix to the GMatrices, GTMatrices,
+///   BTMatrices, BMatrices, ATMatrices, or AMatrices map.
+/// 3. Add a enum value F_m_r to WinogradConv2DFmr enum.
+///
 constexpr float G_2x2_3x3[] = {
    -1,     0,   0,
  1./2, -1./2, 1./2,
@@ -176,26 +184,13 @@ constexpr float A_2x2_5x5[] = {
 };
 // clang-format on
 
-using TransformMapKeyTy = std::pair<int, int>;
-
-/// We use F(m, r) to define the size of minimal filtering algorithms.
-/// m is the output dimension and r is the filter dimension. We can get
-/// the input dimension, alpha, from the formula, alpha = m + r - 1.
-///
-/// For example, when m = 2 and r = 3, we know its input size is 4.
-/// The Conv2D will operate on 4x4 input data with 3x3 filter and get
-/// 2x2 output result.
-constexpr TransformMapKeyTy F_2_3{2, 3};
-constexpr TransformMapKeyTy F_4_3{4, 3};
-constexpr TransformMapKeyTy F_2_5{2, 5};
-
 /// Structure to keep information of constant transform matrices.
 struct TransformMatrix {
-  TransformMatrix(const float *table, int64_t rows, int64_t cols,
+  TransformMatrix(ArrayRef<float> table, int64_t rows, int64_t cols,
                   int64_t scalarFactor = 1)
       : table(table), rows(rows), cols(cols), scalarFactor(scalarFactor) {}
 
-  const float *table;
+  ArrayRef<float> table;
   int64_t rows;
   int64_t cols;
   int64_t scalarFactor;
@@ -204,13 +199,20 @@ struct TransformMatrix {
 /// Utility function to convert constant array to arith.constant Value.
 Value create2DTransformMatrix(OpBuilder &builder, Location loc,
                               TransformMatrix transform, Type type) {
-  ArrayRef<float> constVec(transform.table, transform.rows * transform.cols);
-
-  return builder.create<arith::ConstantOp>(
-      loc, DenseFPElementsAttr::get(
-               RankedTensorType::get(
-                   SmallVector<int64_t>{transform.rows, transform.cols}, type),
-               constVec));
+  assert(transform.table.size() ==
+         static_cast<size_t>(transform.rows * transform.cols));
+  assert(type.isFloat() && "Only floats are supported by Winograd");
+  ArrayRef<float> constVec(transform.table.data(),
+                           transform.rows * transform.cols);
+  auto constAttrVec =
+      llvm::map_to_vector<>(constVec, [&](const float v) -> Attribute {
+        return builder.getFloatAttr(type, v);
+      });
+  SmallVector<int64_t, 2> shape{transform.rows, transform.cols};
+  return arith::ConstantOp::create(
+      builder, loc,
+      DenseFPElementsAttr::get(RankedTensorType::get(shape, type),
+                               constAttrVec));
 }
 
 /// Extract height x width data from 4D tensors.
@@ -238,8 +240,8 @@ Value extract2DDataFrom4D(OpBuilder &builder, Location loc, Value source,
 
   auto extractFilterType =
       RankedTensorType::get({extractHeight, extractWidth}, elementType);
-  auto extractFilterOp = builder.create<tensor::ExtractSliceOp>(
-      loc, extractFilterType, source, offsets, sizes, strides);
+  auto extractFilterOp = tensor::ExtractSliceOp::create(
+      builder, loc, extractFilterType, source, offsets, sizes, strides);
 
   return extractFilterOp;
 }
@@ -272,8 +274,8 @@ Value extract2DDataFrom6D(OpBuilder &builder, Location loc, Value source,
   SmallVector<OpFoldResult> strides(srcSize, oneIndex);
 
   auto extractFilterType = RankedTensorType::get({height, width}, elementType);
-  auto extractFilterOp = builder.create<tensor::ExtractSliceOp>(
-      loc, extractFilterType, source, offsets, sizes, strides);
+  auto extractFilterOp = tensor::ExtractSliceOp::create(
+      builder, loc, extractFilterType, source, offsets, sizes, strides);
 
   return extractFilterOp;
 }
@@ -298,8 +300,8 @@ Value insert2DDataTo4D(OpBuilder &builder, Location loc, Value source,
   retSizes[widthIdx] = builder.getIndexAttr(width);
   SmallVector<OpFoldResult> strides(destSize, oneIndex);
 
-  auto insertSliceOp = builder.create<tensor::InsertSliceOp>(
-      loc, source, dest, retOffsets, retSizes, strides);
+  auto insertSliceOp = tensor::InsertSliceOp::create(
+      builder, loc, source, dest, retOffsets, retSizes, strides);
 
   return insertSliceOp;
 }
@@ -326,8 +328,8 @@ Value insert2DDataTo6D(OpBuilder &builder, Location loc, Value source,
   retSizes[widthIdx] = builder.getIndexAttr(width);
   SmallVector<OpFoldResult> strides(destSize, oneIndex);
 
-  auto insertSliceOp = builder.create<tensor::InsertSliceOp>(
-      loc, source, dest, retOffsets, retSizes, strides);
+  auto insertSliceOp = tensor::InsertSliceOp::create(
+      builder, loc, source, dest, retOffsets, retSizes, strides);
 
   return insertSliceOp;
 }
@@ -344,22 +346,22 @@ Value insert2DDataTo6D(OpBuilder &builder, Location loc, Value source,
 ///     %ret = linalg.matmul %ret, GT
 ///     %inserted = insert %ret into filter<h x w x c x f>
 Value filterTransform(RewriterBase &rewriter, Location loc, Value filter,
-                      Value retValue, int64_t m, int64_t r,
+                      Value retValue, WinogradConv2DFmr fmr,
                       bool leftTransform = true, bool rightTransform = true) {
   // Map from (m, r) to G transform matrix.
-  static const llvm::SmallDenseMap<TransformMapKeyTy, TransformMatrix>
+  static const llvm::SmallDenseMap<WinogradConv2DFmr, TransformMatrix>
       GMatrices = {
-          {F_2_3, TransformMatrix(G_2x2_3x3, 4, 3)},
-          {F_4_3, TransformMatrix(G_4x4_3x3, 6, 3)},
-          {F_2_5, TransformMatrix(G_2x2_5x5, 6, 5)},
+          {WinogradConv2DFmr::F_2_3, TransformMatrix(G_2x2_3x3, 4, 3)},
+          {WinogradConv2DFmr::F_4_3, TransformMatrix(G_4x4_3x3, 6, 3)},
+          {WinogradConv2DFmr::F_2_5, TransformMatrix(G_2x2_5x5, 6, 5)},
       };
 
   // Map from (m, r) to GT transform matrix.
-  static const llvm::SmallDenseMap<TransformMapKeyTy, TransformMatrix>
+  static const llvm::SmallDenseMap<WinogradConv2DFmr, TransformMatrix>
       GTMatrices = {
-          {F_2_3, TransformMatrix(GT_2x2_3x3, 3, 4)},
-          {F_4_3, TransformMatrix(GT_4x4_3x3, 3, 6)},
-          {F_2_5, TransformMatrix(GT_2x2_5x5, 5, 6)},
+          {WinogradConv2DFmr::F_2_3, TransformMatrix(GT_2x2_3x3, 3, 4)},
+          {WinogradConv2DFmr::F_4_3, TransformMatrix(GT_4x4_3x3, 3, 6)},
+          {WinogradConv2DFmr::F_2_5, TransformMatrix(GT_2x2_5x5, 5, 6)},
       };
 
   auto filterType = cast<ShapedType>(filter.getType());
@@ -370,12 +372,14 @@ Value filterTransform(RewriterBase &rewriter, Location loc, Value filter,
   int64_t filterW = filterShape[2];
   int64_t filterC = filterShape[3];
 
+  int64_t m, r;
+  std::tie(m, r) = getFmrFromWinogradConv2DFmr(fmr);
   if (filterH != r && filterH != 1)
     return Value();
   if (filterW != r && filterW != 1)
     return Value();
 
-  Value zeroIdx = rewriter.create<arith::ConstantIndexOp>(loc, 0);
+  Value zeroIdx = arith::ConstantIndexOp::create(rewriter, loc, 0);
   auto buildBody = [&](OpBuilder &builder, Location loc, ValueRange ivs,
                        ValueRange args) -> scf::ValueVector {
     Value FIter = ivs[0];
@@ -387,52 +391,53 @@ Value filterTransform(RewriterBase &rewriter, Location loc, Value filter,
                             zeroIdx, filterH, filterW, /*loopNorFIdx=*/0,
                             /*loopCorFIdx=*/3, /*heightIdx=*/1, /*widthIdx=*/2);
 
-    TransformMapKeyTy key = {m, r};
     int64_t retRows = 1;
     Value matmulRetValue = extractFilter;
-    Value zero = builder.create<arith::ConstantOp>(
-        loc, rewriter.getZeroAttr(elementType));
+    Value zero = arith::ConstantOp::create(builder, loc,
+                                           rewriter.getZeroAttr(elementType));
     if (leftTransform) {
       // Get constant transform matrix G.
-      auto it = GMatrices.find(key);
+      auto it = GMatrices.find(fmr);
       if (it == GMatrices.end())
         return {};
       const TransformMatrix &GMatrix = it->second;
 
       retRows = GMatrix.rows;
       auto matmulType = RankedTensorType::get({retRows, filterW}, elementType);
-      auto empty =
-          builder
-              .create<tensor::EmptyOp>(loc, matmulType.getShape(), elementType)
-              .getResult();
-      auto init = builder.create<linalg::FillOp>(loc, zero, empty).getResult(0);
+      auto empty = tensor::EmptyOp::create(builder, loc, matmulType.getShape(),
+                                           elementType)
+                       .getResult();
+      auto init =
+          linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
 
       Value G = create2DTransformMatrix(builder, loc, GMatrix, elementType);
       // Multiply G x g.
-      auto matmulOp = builder.create<linalg::MatmulOp>(
-          loc, matmulType, ValueRange{G, extractFilter}, ValueRange{init});
+      auto matmulOp = linalg::MatmulOp::create(builder, loc, matmulType,
+                                               ValueRange{G, extractFilter},
+                                               ValueRange{init});
       matmulRetValue = matmulOp.getResult(0);
     }
 
     if (rightTransform) {
       // Get constant transform matrix GT.
-      auto it = GTMatrices.find(key);
+      auto it = GTMatrices.find(fmr);
       if (it == GTMatrices.end())
         return {};
       const TransformMatrix &GTMatrix = it->second;
 
       auto matmulType =
           RankedTensorType::get({retRows, GTMatrix.cols}, elementType);
-      auto empty =
-          builder
-              .create<tensor::EmptyOp>(loc, matmulType.getShape(), elementType)
-              .getResult();
-      auto init = builder.create<linalg::FillOp>(loc, zero, empty).getResult(0);
+      auto empty = tensor::EmptyOp::create(builder, loc, matmulType.getShape(),
+                                           elementType)
+                       .getResult();
+      auto init =
+          linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
 
       Value GT = create2DTransformMatrix(builder, loc, GTMatrix, elementType);
       // Multiply u = (G x g) x GT.
-      auto matmulOp = builder.create<linalg::MatmulOp>(
-          loc, matmulType, ValueRange{matmulRetValue, GT}, ValueRange{init});
+      auto matmulOp = linalg::MatmulOp::create(builder, loc, matmulType,
+                                               ValueRange{matmulRetValue, GT},
+                                               ValueRange{init});
       matmulRetValue = matmulOp.getResult(0);
     }
 
@@ -449,9 +454,9 @@ Value filterTransform(RewriterBase &rewriter, Location loc, Value filter,
     return {insertSliceOp};
   };
 
-  auto fUpperBound = rewriter.create<arith::ConstantIndexOp>(loc, filterF);
-  auto cUpperBound = rewriter.create<arith::ConstantIndexOp>(loc, filterC);
-  auto oneStep = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+  auto fUpperBound = arith::ConstantIndexOp::create(rewriter, loc, filterF);
+  auto cUpperBound = arith::ConstantIndexOp::create(rewriter, loc, filterC);
+  auto oneStep = arith::ConstantIndexOp::create(rewriter, loc, 1);
   scf::LoopNest loops = scf::buildLoopNest(
       rewriter, loc, {zeroIdx, zeroIdx}, {fUpperBound, cUpperBound},
       {oneStep, oneStep}, {retValue}, buildBody);
@@ -476,24 +481,26 @@ Value filterTransform(RewriterBase &rewriter, Location loc, Value filter,
 ///                            %output<alphaH x alphaW x tileH x tileW x N x C>
 ///                            at [0, 0, %h, %w, %n, %c]
 Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
-                     Value retValue, int64_t m, int64_t r,
+                     Value retValue, WinogradConv2DFmr fmr,
                      bool leftTransform = true, bool rightTransform = true) {
   // Map from (m, r) to BT transform matrix.
-  static const llvm::SmallDenseMap<TransformMapKeyTy, TransformMatrix>
+  static const llvm::SmallDenseMap<WinogradConv2DFmr, TransformMatrix>
       BTMatrices = {
-          {F_2_3, TransformMatrix(BT_2x2_3x3, 4, 4)},
-          {F_4_3, TransformMatrix(BT_4x4_3x3, 6, 6)},
-          {F_2_5, TransformMatrix(BT_2x2_5x5, 6, 6)},
+          {WinogradConv2DFmr::F_2_3, TransformMatrix(BT_2x2_3x3, 4, 4)},
+          {WinogradConv2DFmr::F_4_3, TransformMatrix(BT_4x4_3x3, 6, 6)},
+          {WinogradConv2DFmr::F_2_5, TransformMatrix(BT_2x2_5x5, 6, 6)},
       };
 
   // Map from (m, r) to B transform matrix.
-  static const llvm::SmallDenseMap<TransformMapKeyTy, TransformMatrix>
+  static const llvm::SmallDenseMap<WinogradConv2DFmr, TransformMatrix>
       BMatrices = {
-          {F_2_3, TransformMatrix(B_2x2_3x3, 4, 4)},
-          {F_4_3, TransformMatrix(B_4x4_3x3, 6, 6)},
-          {F_2_5, TransformMatrix(B_2x2_5x5, 6, 6)},
+          {WinogradConv2DFmr::F_2_3, TransformMatrix(B_2x2_3x3, 4, 4)},
+          {WinogradConv2DFmr::F_4_3, TransformMatrix(B_4x4_3x3, 6, 6)},
+          {WinogradConv2DFmr::F_2_5, TransformMatrix(B_2x2_5x5, 6, 6)},
       };
 
+  int64_t m, r;
+  std::tie(m, r) = getFmrFromWinogradConv2DFmr(fmr);
   auto inputType = cast<ShapedType>(input.getType());
   Type elementType = inputType.getElementType();
   auto inputShape = inputType.getShape(); // N, H, W, C
@@ -513,15 +520,16 @@ Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
     Value NIter = ivs[2];
     Value CIter = ivs[3];
 
-    auto context = builder.getContext();
+    auto *context = builder.getContext();
 
     auto identityAffineMap = rewriter.getMultiDimIdentityMap(1);
     auto affineMap =
         AffineMap::get(1, 0, {builder.getAffineDimExpr(0) * m}, context);
-    Value heightOffset = builder.create<affine::AffineApplyOp>(
-        loc, leftTransform ? affineMap : identityAffineMap, tileHIter);
-    Value widthOffset = builder.create<affine::AffineApplyOp>(
-        loc, rightTransform ? affineMap : identityAffineMap, tileWIter);
+    Value heightOffset = affine::AffineApplyOp::create(
+        builder, loc, leftTransform ? affineMap : identityAffineMap, tileHIter);
+    Value widthOffset = affine::AffineApplyOp::create(
+        builder, loc, rightTransform ? affineMap : identityAffineMap,
+        tileWIter);
 
     // Extract (H, W) from (N, H, W, C).
     auto extractInput =
@@ -529,54 +537,53 @@ Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
                             widthOffset, alphaH, alphaW, /*loopNorFIdx=*/0,
                             /*loopCorFIdx=*/3, /*heightIdx=*/1, /*widthIdx=*/2);
 
-    TransformMapKeyTy key = {m, r};
     int64_t retRows = 1;
     int64_t retCols = 1;
     Value matmulRetValue = extractInput;
-    Value zero = builder.create<arith::ConstantOp>(
-        loc, rewriter.getZeroAttr(elementType));
+    Value zero = arith::ConstantOp::create(builder, loc,
+                                           rewriter.getZeroAttr(elementType));
     if (leftTransform) {
       // Get constant transform matrix BT.
-      auto it = BTMatrices.find(key);
+      auto it = BTMatrices.find(fmr);
       if (it == BTMatrices.end())
         return {};
       const TransformMatrix &BTMatrix = it->second;
 
       retRows = BTMatrix.rows;
       auto matmulType = RankedTensorType::get({retRows, alphaW}, elementType);
-      auto empty =
-          builder
-              .create<tensor::EmptyOp>(loc, matmulType.getShape(), elementType)
-              .getResult();
-      auto init = builder.create<linalg::FillOp>(loc, zero, empty).getResult(0);
+      auto empty = tensor::EmptyOp::create(builder, loc, matmulType.getShape(),
+                                           elementType)
+                       .getResult();
+      auto init =
+          linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
 
-      Value BT =
-          create2DTransformMatrix(builder, loc, BTMatrix, builder.getF32Type());
+      Value BT = create2DTransformMatrix(builder, loc, BTMatrix, elementType);
       // Multiply BT x d.
-      auto matmulOp = builder.create<linalg::MatmulOp>(
-          loc, matmulType, ValueRange{BT, matmulRetValue}, ValueRange{init});
+      auto matmulOp = linalg::MatmulOp::create(builder, loc, matmulType,
+                                               ValueRange{BT, matmulRetValue},
+                                               ValueRange{init});
       matmulRetValue = matmulOp.getResult(0);
     }
 
     if (rightTransform) {
       // Get constant transform matrix B.
-      auto it = BMatrices.find(key);
+      auto it = BMatrices.find(fmr);
       if (it == BMatrices.end())
         return {};
       const TransformMatrix &BMatrix = it->second;
 
       retCols = BMatrix.cols;
       auto matmulType = RankedTensorType::get({retRows, retCols}, elementType);
-      auto empty =
-          builder
-              .create<tensor::EmptyOp>(loc, matmulType.getShape(), elementType)
-              .getResult();
-      auto init = builder.create<linalg::FillOp>(loc, zero, empty).getResult(0);
-      Value B =
-          create2DTransformMatrix(builder, loc, BMatrix, builder.getF32Type());
+      auto empty = tensor::EmptyOp::create(builder, loc, matmulType.getShape(),
+                                           elementType)
+                       .getResult();
+      auto init =
+          linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
+      Value B = create2DTransformMatrix(builder, loc, BMatrix, elementType);
       // Multiply v = (BT x d) x B.
-      auto matmulOp = builder.create<linalg::MatmulOp>(
-          loc, matmulType, ValueRange{matmulRetValue, B}, ValueRange{init});
+      auto matmulOp = linalg::MatmulOp::create(builder, loc, matmulType,
+                                               ValueRange{matmulRetValue, B},
+                                               ValueRange{init});
       matmulRetValue = matmulOp.getResult(0);
     }
 
@@ -589,12 +596,12 @@ Value inputTransform(RewriterBase &rewriter, Location loc, Value input,
     return {combinedVal};
   };
 
-  auto zeroIdx = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-  auto tileHBound = rewriter.create<arith::ConstantIndexOp>(loc, tileH);
-  auto tileWBound = rewriter.create<arith::ConstantIndexOp>(loc, tileW);
-  auto nUpperBound = rewriter.create<arith::ConstantIndexOp>(loc, inputN);
-  auto cUpperBound = rewriter.create<arith::ConstantIndexOp>(loc, inputC);
-  auto oneStep = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+  auto zeroIdx = arith::ConstantIndexOp::create(rewriter, loc, 0);
+  auto tileHBound = arith::ConstantIndexOp::create(rewriter, loc, tileH);
+  auto tileWBound = arith::ConstantIndexOp::create(rewriter, loc, tileW);
+  auto nUpperBound = arith::ConstantIndexOp::create(rewriter, loc, inputN);
+  auto cUpperBound = arith::ConstantIndexOp::create(rewriter, loc, inputC);
+  auto oneStep = arith::ConstantIndexOp::create(rewriter, loc, 1);
   scf::LoopNest loops = scf::buildLoopNest(
       rewriter, loc, {zeroIdx, zeroIdx, zeroIdx, zeroIdx},
       {tileHBound, tileWBound, nUpperBound, cUpperBound},
@@ -632,8 +639,8 @@ static Value matrixMultiply(RewriterBase &rewriter, Location loc,
       {filterShape[0] * filterShape[1], filterShape[2], filterShape[3]},
       filterElementType);
   SmallVector<ReassociationIndices> filterReassoc = {{0, 1}, {2}, {3}};
-  Value collapseFilter = rewriter.create<tensor::CollapseShapeOp>(
-      loc, filterReassocType, transformedFilter, filterReassoc);
+  Value collapseFilter = tensor::CollapseShapeOp::create(
+      rewriter, loc, filterReassocType, transformedFilter, filterReassoc);
 
   // Convert (alphaH, alphaW, tileH, tileW, N, C) to
   // (alphaH x alphaW, tileH x tileW x N, C) for input.
@@ -646,24 +653,23 @@ static Value matrixMultiply(RewriterBase &rewriter, Location loc,
        inputShape[2] * inputShape[3] * inputShape[4], inputShape[5]},
       inputElementType);
   SmallVector<ReassociationIndices> inputReassoc = {{0, 1}, {2, 3, 4}, {5}};
-  Value collapseInput = rewriter.create<tensor::CollapseShapeOp>(
-      loc, inputReassocType, transformedInput, inputReassoc);
+  Value collapseInput = tensor::CollapseShapeOp::create(
+      rewriter, loc, inputReassocType, transformedInput, inputReassoc);
 
   // Batched matrix multiply.
   auto matmulType = RankedTensorType::get(
       {inputShape[0] * inputShape[1],
        inputShape[2] * inputShape[3] * inputShape[4], filterShape[3]},
       outputElementType);
-  Value empty = rewriter
-                    .create<tensor::EmptyOp>(loc, matmulType.getShape(),
-                                             outputElementType)
+  Value empty = tensor::EmptyOp::create(rewriter, loc, matmulType.getShape(),
+                                        outputElementType)
                     .getResult();
-  Value zero = rewriter.create<arith::ConstantOp>(
-      loc, rewriter.getZeroAttr(outputElementType));
-  Value init = rewriter.create<linalg::FillOp>(loc, zero, empty).getResult(0);
+  Value zero = arith::ConstantOp::create(
+      rewriter, loc, rewriter.getZeroAttr(outputElementType));
+  Value init = linalg::FillOp::create(rewriter, loc, zero, empty).getResult(0);
 
-  auto matmulOp = rewriter.create<linalg::BatchMatmulOp>(
-      loc, matmulType, ValueRange({collapseInput, collapseFilter}),
+  auto matmulOp = linalg::BatchMatmulOp::create(
+      rewriter, loc, matmulType, ValueRange({collapseInput, collapseFilter}),
       ValueRange{init});
 
   // The result shape of batch matmul is (alphaH x alphaW, tileH x tileW x N, F)
@@ -673,8 +679,8 @@ static Value matrixMultiply(RewriterBase &rewriter, Location loc,
       RankedTensorType::get({inputShape[0], inputShape[1], inputShape[2],
                              inputShape[3], inputShape[4], filterShape[3]},
                             outputElementType);
-  auto expandOutput = rewriter.create<tensor::ExpandShapeOp>(
-      loc, outputReassocType, matmulOp.getResult(0), outputReassoc);
+  auto expandOutput = tensor::ExpandShapeOp::create(
+      rewriter, loc, outputReassocType, matmulOp.getResult(0), outputReassoc);
   return expandOutput;
 }
 
@@ -696,24 +702,26 @@ static Value matrixMultiply(RewriterBase &rewriter, Location loc,
 ///                            output<N x H x W x F>
 ///                            at [%n, (%h x m), (%w x m), %f]
 Value outputTransform(RewriterBase &rewriter, Location loc, Value value,
-                      Value output, int64_t m, int64_t r,
+                      Value output, WinogradConv2DFmr fmr,
                       bool leftTransform = true, bool rightTransform = true) {
   // Map from (m, r) to AT transform matrix.
-  static const llvm::SmallDenseMap<TransformMapKeyTy, TransformMatrix>
+  static const llvm::SmallDenseMap<WinogradConv2DFmr, TransformMatrix>
       ATMatrices = {
-          {F_2_3, TransformMatrix(AT_2x2_3x3, 2, 4)},
-          {F_4_3, TransformMatrix(AT_4x4_3x3, 4, 6, 32)},
-          {F_2_5, TransformMatrix(AT_2x2_5x5, 2, 6, 16)},
+          {WinogradConv2DFmr::F_2_3, TransformMatrix(AT_2x2_3x3, 2, 4)},
+          {WinogradConv2DFmr::F_4_3, TransformMatrix(AT_4x4_3x3, 4, 6, 32)},
+          {WinogradConv2DFmr::F_2_5, TransformMatrix(AT_2x2_5x5, 2, 6, 16)},
       };
 
   // Map from (m, r) to A transform matrix.
-  static const llvm::SmallDenseMap<TransformMapKeyTy, TransformMatrix>
+  static const llvm::SmallDenseMap<WinogradConv2DFmr, TransformMatrix>
       AMatrices = {
-          {F_2_3, TransformMatrix(A_2x2_3x3, 4, 2)},
-          {F_4_3, TransformMatrix(A_4x4_3x3, 6, 4, 32)},
-          {F_2_5, TransformMatrix(A_2x2_5x5, 6, 2, 16)},
+          {WinogradConv2DFmr::F_2_3, TransformMatrix(A_2x2_3x3, 4, 2)},
+          {WinogradConv2DFmr::F_4_3, TransformMatrix(A_4x4_3x3, 6, 4, 32)},
+          {WinogradConv2DFmr::F_2_5, TransformMatrix(A_2x2_5x5, 6, 2, 16)},
       };
 
+  int64_t m, r;
+  std::tie(m, r) = getFmrFromWinogradConv2DFmr(fmr);
   auto valueType = cast<ShapedType>(value.getType());
   Type elementType = valueType.getElementType();
   auto valueShape = valueType.getShape(); // H, W, TileH, TileW, N, F
@@ -731,7 +739,7 @@ Value outputTransform(RewriterBase &rewriter, Location loc, Value value,
 
   auto buildBody = [&](OpBuilder &builder, Location loc, ValueRange ivs,
                        ValueRange args) -> scf::ValueVector {
-    auto context = builder.getContext();
+    auto *context = builder.getContext();
     Value tileHIter = ivs[0];
     Value tileWIter = ivs[1];
     Value NIter = ivs[2];
@@ -743,25 +751,25 @@ Value outputTransform(RewriterBase &rewriter, Location loc, Value value,
                             FIter, 2, 3, /*loopNorFIdx=*/4,
                             /*loopCorFIdx=*/5, /*heightIdx=*/0, /*widthIdx=*/1);
 
-    const TransformMapKeyTy key = {m, r};
-    const TransformMatrix &AMatrix = AMatrices.at(key);
-    const TransformMatrix &ATMatrix = ATMatrices.at(key);
+    const TransformMatrix &AMatrix = AMatrices.at(fmr);
+    const TransformMatrix &ATMatrix = ATMatrices.at(fmr);
     int64_t scalarFactor = (rightTransform ? AMatrix.scalarFactor : 1) *
                            (leftTransform ? ATMatrix.scalarFactor : 1);
     int64_t retCols = rightTransform ? AMatrix.cols : 1;
     int64_t retRows = leftTransform ? ATMatrix.rows : 1;
 
     Value matmulRetValue = extractValue;
-    Value zero = builder.create<arith::ConstantOp>(
-        loc, rewriter.getZeroAttr(elementType));
+    Value zero = arith::ConstantOp::create(builder, loc,
+                                           rewriter.getZeroAttr(elementType));
 
     auto identityAffineMap = rewriter.getMultiDimIdentityMap(1);
     auto affineMap =
         AffineMap::get(1, 0, {builder.getAffineDimExpr(0) * m}, context);
-    Value heightOffset = builder.create<affine::AffineApplyOp>(
-        loc, leftTransform ? affineMap : identityAffineMap, tileHIter);
-    Value widthOffset = builder.create<affine::AffineApplyOp>(
-        loc, rightTransform ? affineMap : identityAffineMap, tileWIter);
+    Value heightOffset = affine::AffineApplyOp::create(
+        builder, loc, leftTransform ? affineMap : identityAffineMap, tileHIter);
+    Value widthOffset = affine::AffineApplyOp::create(
+        builder, loc, rightTransform ? affineMap : identityAffineMap,
+        tileWIter);
 
     Value outInitVal =
         extract2DDataFrom4D(builder, loc, args[0], NIter, FIter, heightOffset,
@@ -773,17 +781,17 @@ Value outputTransform(RewriterBase &rewriter, Location loc, Value value,
       auto matmulType = RankedTensorType::get({retRows, valueW}, elementType);
       Value init = outInitVal;
       if (rightTransform || scalarFactor != 1) {
-        auto empty = builder
-                         .create<tensor::EmptyOp>(loc, matmulType.getShape(),
-                                                  elementType)
+        auto empty = tensor::EmptyOp::create(builder, loc,
+                                             matmulType.getShape(), elementType)
                          .getResult();
-        init = builder.create<linalg::FillOp>(loc, zero, empty).getResult(0);
+        init = linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
       }
 
       Value AT = create2DTransformMatrix(builder, loc, ATMatrix, elementType);
       // Multiply AT x m.
-      auto matmulOp = builder.create<linalg::MatmulOp>(
-          loc, matmulType, ValueRange{AT, matmulRetValue}, ValueRange{init});
+      auto matmulOp = linalg::MatmulOp::create(builder, loc, matmulType,
+                                               ValueRange{AT, matmulRetValue},
+                                               ValueRange{init});
       matmulRetValue = matmulOp.getResult(0);
     }
 
@@ -792,47 +800,45 @@ Value outputTransform(RewriterBase &rewriter, Location loc, Value value,
           RankedTensorType::get({retRows, AMatrix.cols}, elementType);
       Value init = outInitVal;
       if (scalarFactor != 1) {
-        auto empty = builder
-                         .create<tensor::EmptyOp>(loc, matmulType.getShape(),
-                                                  elementType)
+        auto empty = tensor::EmptyOp::create(builder, loc,
+                                             matmulType.getShape(), elementType)
                          .getResult();
-        init = builder.create<linalg::FillOp>(loc, zero, empty).getResult(0);
+        init = linalg::FillOp::create(builder, loc, zero, empty).getResult(0);
       }
 
       Value A = create2DTransformMatrix(builder, loc, AMatrix, elementType);
       // Multiply y = (AT x m) x A.
-      auto matmulOp = builder.create<linalg::MatmulOp>(
-          loc, matmulType, ValueRange{matmulRetValue, A}, ValueRange{init});
+      auto matmulOp = linalg::MatmulOp::create(builder, loc, matmulType,
+                                               ValueRange{matmulRetValue, A},
+                                               ValueRange{init});
       matmulRetValue = matmulOp.getResult(0);
     }
 
     if (scalarFactor != 1) {
       // Multiply by scalar factor and add outInitVal.
-      Value scalarFactorValue = builder.create<arith::ConstantOp>(
-          loc, FloatAttr::get(elementType, scalarFactor));
+      Value scalarFactorValue = arith::ConstantOp::create(
+          builder, loc, FloatAttr::get(elementType, scalarFactor));
       auto matmulType = RankedTensorType::get({retRows, retCols}, elementType);
       auto identityAffineMap = rewriter.getMultiDimIdentityMap(2);
       SmallVector<AffineMap> affineMaps = {
           AffineMap::get(2, 0, context), identityAffineMap, identityAffineMap};
 
       matmulRetValue =
-          rewriter
-              .create<linalg::GenericOp>(
-                  loc, matmulType,
-                  ValueRange{scalarFactorValue, matmulRetValue},
-                  ValueRange{outInitVal}, affineMaps,
-                  llvm::ArrayRef<utils::IteratorType>{
-                      utils::IteratorType::parallel,
-                      utils::IteratorType::parallel},
-                  [&](OpBuilder &nestedBuilder, Location nestedLoc,
-                      ValueRange args) {
-                    auto mulf = nestedBuilder.create<arith::MulFOp>(
-                        nestedLoc, args[0], args[1]);
-                    auto addf = nestedBuilder.create<arith::AddFOp>(
-                        nestedLoc, mulf.getResult(), args[2]);
-                    nestedBuilder.create<linalg::YieldOp>(nestedLoc,
-                                                          addf.getResult());
-                  })
+          linalg::GenericOp::create(
+              rewriter, loc, matmulType,
+              ValueRange{scalarFactorValue, matmulRetValue},
+              ValueRange{outInitVal}, affineMaps,
+              llvm::ArrayRef<utils::IteratorType>{
+                  utils::IteratorType::parallel, utils::IteratorType::parallel},
+              [&](OpBuilder &nestedBuilder, Location nestedLoc,
+                  ValueRange args) {
+                auto mulf = arith::MulFOp::create(nestedBuilder, nestedLoc,
+                                                  args[0], args[1]);
+                auto addf = arith::AddFOp::create(nestedBuilder, nestedLoc,
+                                                  mulf.getResult(), args[2]);
+                linalg::YieldOp::create(nestedBuilder, nestedLoc,
+                                        addf.getResult());
+              })
               .getResult(0);
     }
 
@@ -849,12 +855,12 @@ Value outputTransform(RewriterBase &rewriter, Location loc, Value value,
 
   int64_t tilwH = valueShape[2];
   int64_t tileW = valueShape[3];
-  auto zeroIdx = rewriter.create<arith::ConstantIndexOp>(loc, 0);
-  auto tileHBound = rewriter.create<arith::ConstantIndexOp>(loc, tilwH);
-  auto tileWBound = rewriter.create<arith::ConstantIndexOp>(loc, tileW);
-  auto nUpperBound = rewriter.create<arith::ConstantIndexOp>(loc, valueN);
-  auto fUpperBound = rewriter.create<arith::ConstantIndexOp>(loc, valueF);
-  auto oneStep = rewriter.create<arith::ConstantIndexOp>(loc, 1);
+  auto zeroIdx = arith::ConstantIndexOp::create(rewriter, loc, 0);
+  auto tileHBound = arith::ConstantIndexOp::create(rewriter, loc, tilwH);
+  auto tileWBound = arith::ConstantIndexOp::create(rewriter, loc, tileW);
+  auto nUpperBound = arith::ConstantIndexOp::create(rewriter, loc, valueN);
+  auto fUpperBound = arith::ConstantIndexOp::create(rewriter, loc, valueF);
+  auto oneStep = arith::ConstantIndexOp::create(rewriter, loc, 1);
   scf::LoopNest loops = scf::buildLoopNest(
       rewriter, loc, {zeroIdx, zeroIdx, zeroIdx, zeroIdx},
       {tileHBound, tileWBound, nUpperBound, fUpperBound},
@@ -869,8 +875,8 @@ static Value padToAlignedTensor(RewriterBase &rewriter, Location loc,
   auto valueType = cast<ShapedType>(value.getType());
   Type elementType = valueType.getElementType();
   auto alignedType = RankedTensorType::get(alignedShape, elementType);
-  Value padValue = rewriter.create<arith::ConstantOp>(
-      loc, elementType, rewriter.getZeroAttr(elementType));
+  Value padValue = arith::ConstantOp::create(rewriter, loc, elementType,
+                                             rewriter.getZeroAttr(elementType));
 
   return linalg::makeComposedPadHighOp(rewriter, loc, alignedType, value,
                                        padValue, false);
@@ -889,8 +895,8 @@ static Value extractFromAlignedTensor(RewriterBase &rewriter, Location loc,
   SmallVector<OpFoldResult> sizes =
       getAsOpFoldResult(rewriter.getI64ArrayAttr(extractedShape));
 
-  return rewriter.create<tensor::ExtractSliceOp>(loc, extractedType, value,
-                                                 offsets, sizes, strides);
+  return tensor::ExtractSliceOp::create(rewriter, loc, extractedType, value,
+                                        offsets, sizes, strides);
 }
 
 /// Utility function to check all values in the attribute are 1.
@@ -903,7 +909,11 @@ static bool hasAllOneValues(DenseIntElementsAttr attr) {
 /// linalg.winograd_*_transform ops.
 static FailureOr<Operation *>
 winogradConv2DHelper(RewriterBase &rewriter, linalg::Conv2DNhwcFhwcOp convOp,
-                     int64_t m, int64_t r) {
+                     WinogradConv2DFmr fmr) {
+  if (!convOp.hasPureTensorSemantics())
+    return rewriter.notifyMatchFailure(
+        convOp, "expected pure tensor semantics for linalg.conv_2d_nhwc_fhwc");
+
   Value input = convOp.getInputs()[0];
   Value filter = convOp.getInputs()[1];
   Value output = convOp.getOutputs()[0];
@@ -942,6 +952,8 @@ winogradConv2DHelper(RewriterBase &rewriter, linalg::Conv2DNhwcFhwcOp convOp,
   int64_t outputW = outputShape[2];
   int64_t outputF = outputShape[3];
 
+  int64_t m, r;
+  std::tie(m, r) = getFmrFromWinogradConv2DFmr(fmr);
   // Only support F(m x m, r x r), F(m x 1, r x 1) or F(1 x m, 1 x r).
   bool isSupportedFilter = false;
   if (filterH == filterW && filterH == r)
@@ -954,17 +966,6 @@ winogradConv2DHelper(RewriterBase &rewriter, linalg::Conv2DNhwcFhwcOp convOp,
   if (!isSupportedFilter)
     return rewriter.notifyMatchFailure(
         convOp, "only support filter (r x r), (r x 1) or (1 x r)");
-
-  // Currently, we support (m, r) = (2, 3) or (4, 3) or (2, 5).
-  static const llvm::SmallVector<TransformMapKeyTy, 3> validConfigs = {
-      F_2_3, F_4_3, F_2_5};
-
-  TransformMapKeyTy key = {m, r};
-  auto it = std::find(validConfigs.begin(), validConfigs.end(), key);
-  // If we cannot find the constant transformation matrix, it means we do
-  // not support this configuration yet.
-  if (it == validConfigs.end())
-    return failure();
 
   // All the criterias are satisfied. We can do Winograd Conv2D.
   Location loc = convOp.getLoc();
@@ -986,10 +987,10 @@ winogradConv2DHelper(RewriterBase &rewriter, linalg::Conv2DNhwcFhwcOp convOp,
   int64_t tileW = llvm::divideCeilSigned(outputW, widthM);
   auto retType = RankedTensorType::get({alphaH, alphaW, filterC, filterF},
                                        filterElementType);
-  Value retValue = rewriter.create<tensor::EmptyOp>(loc, retType.getShape(),
-                                                    filterElementType);
-  auto transformedFilter = rewriter.create<linalg::WinogradFilterTransformOp>(
-      loc, retType, filter, retValue, m, r);
+  Value retValue = tensor::EmptyOp::create(rewriter, loc, retType.getShape(),
+                                           filterElementType);
+  auto transformedFilter = linalg::WinogradFilterTransformOp::create(
+      rewriter, loc, retType, filter, retValue, fmr);
 
   // --- Create operation for input transform ---
 
@@ -1005,10 +1006,10 @@ winogradConv2DHelper(RewriterBase &rewriter, linalg::Conv2DNhwcFhwcOp convOp,
 
   retType = RankedTensorType::get(
       {alphaH, alphaW, tileH, tileW, inputN, inputC}, inputElementType);
-  retValue = rewriter.create<tensor::EmptyOp>(loc, retType.getShape(),
-                                              inputElementType);
-  auto transformedInput = rewriter.create<linalg::WinogradInputTransformOp>(
-      loc, retType, input, retValue, m, r);
+  retValue = tensor::EmptyOp::create(rewriter, loc, retType.getShape(),
+                                     inputElementType);
+  auto transformedInput = linalg::WinogradInputTransformOp::create(
+      rewriter, loc, retType, input, retValue, fmr);
 
   Type outputElementType = outputType.getElementType();
   Value matmulRet = matrixMultiply(rewriter, loc, transformedFilter,
@@ -1030,8 +1031,8 @@ winogradConv2DHelper(RewriterBase &rewriter, linalg::Conv2DNhwcFhwcOp convOp,
     outputType = alignedOutputType;
   }
 
-  Value transformedOutput = rewriter.create<linalg::WinogradOutputTransformOp>(
-      loc, outputType, matmulRet, output, m, r);
+  Value transformedOutput = linalg::WinogradOutputTransformOp::create(
+      rewriter, loc, outputType, matmulRet, output, fmr);
 
   // When output size is not aligned with output tile size, extract the
   // value from the padded buffer.
@@ -1063,8 +1064,8 @@ decomposeWinogradFilterTransformHelper(RewriterBase &rewriter,
   // For F(1 x m, 1 x r), we only need to do right side transform.
   bool rightTransform = filterW != 1;
   Value transformedFilter =
-      filterTransform(rewriter, loc, filter, op.getOutput(), op.getM(),
-                      op.getR(), leftTransform, rightTransform);
+      filterTransform(rewriter, loc, filter, op.getOutput(), op.getFmr(),
+                      leftTransform, rightTransform);
   if (!transformedFilter)
     return failure();
 
@@ -1090,8 +1091,8 @@ decomposeWinogradInputTransformHelper(RewriterBase &rewriter,
   // For F(1 x m, 1 x r), we only need to do right side transform.
   bool rightTransform = outputW != 1;
   Value transformedInput =
-      inputTransform(rewriter, loc, op.getInput(), op.getOutput(), op.getM(),
-                     op.getR(), leftTransform, rightTransform);
+      inputTransform(rewriter, loc, op.getInput(), op.getOutput(), op.getFmr(),
+                     leftTransform, rightTransform);
   if (!transformedInput)
     return failure();
 
@@ -1116,8 +1117,8 @@ decomposeWinogradOutputTransformHelper(RewriterBase &rewriter,
   // For F(1 x m, 1 x r), we only need to do right side transform.
   bool rightTransform = valueW != 1;
   Value transformedOutput =
-      outputTransform(rewriter, loc, value, op.getOutput(), op.getM(),
-                      op.getR(), leftTransform, rightTransform);
+      outputTransform(rewriter, loc, value, op.getOutput(), op.getFmr(),
+                      leftTransform, rightTransform);
   if (!transformedOutput)
     return failure();
 
@@ -1167,28 +1168,28 @@ class WinogradConv2DNhwcFhwc final
     : public OpRewritePattern<linalg::Conv2DNhwcFhwcOp> {
 public:
   using OpRewritePattern::OpRewritePattern;
-  WinogradConv2DNhwcFhwc(mlir::MLIRContext *context, int64_t m, int64_t r)
-      : OpRewritePattern(context), m(m), r(r) {}
+  WinogradConv2DNhwcFhwc(mlir::MLIRContext *context, WinogradConv2DFmr fmr)
+      : OpRewritePattern(context), fmr(fmr) {}
 
   LogicalResult matchAndRewrite(linalg::Conv2DNhwcFhwcOp convOp,
                                 PatternRewriter &rewriter) const override {
-    if (failed(winogradConv2DHelper(rewriter, convOp, m, r)))
+    if (failed(winogradConv2DHelper(rewriter, convOp, fmr)))
       return failure();
 
     return success();
   }
 
 private:
-  int64_t m;
-  int64_t r;
+  WinogradConv2DFmr fmr;
 };
+
 } // end anonymous namespace
 
 //===----------------------------------------------------------------------===//
 FailureOr<Operation *> winogradConv2D(RewriterBase &rewriter,
-                                      linalg::Conv2DNhwcFhwcOp op, int64_t m,
-                                      int64_t r) {
-  return winogradConv2DHelper(rewriter, op, m, r);
+                                      linalg::Conv2DNhwcFhwcOp op,
+                                      linalg::WinogradConv2DFmr fmr) {
+  return winogradConv2DHelper(rewriter, op, fmr);
 }
 
 FailureOr<Operation *>
@@ -1209,11 +1210,11 @@ decomposeWinogradOutputTransformOp(RewriterBase &rewriter,
   return decomposeWinogradOutputTransformHelper(rewriter, op);
 }
 
-void populateWinogradConv2DPatterns(RewritePatternSet &patterns, int64_t m,
-                                    int64_t r) {
+void populateWinogradConv2DPatterns(RewritePatternSet &patterns,
+                                    WinogradConv2DFmr fmr) {
   MLIRContext *context = patterns.getContext();
   // TODO: Support more Conv2D data layout, e.g., conv_2d_nchw_fchw
-  patterns.insert<WinogradConv2DNhwcFhwc>(context, m, r);
+  patterns.insert<WinogradConv2DNhwcFhwc>(context, fmr);
 }
 
 void populateDecomposeWinogradOpsPatterns(RewritePatternSet &patterns) {

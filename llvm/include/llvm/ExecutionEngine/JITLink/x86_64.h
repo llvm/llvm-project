@@ -15,6 +15,7 @@
 
 #include "llvm/ExecutionEngine/JITLink/JITLink.h"
 #include "llvm/ExecutionEngine/JITLink/TableManager.h"
+#include "llvm/Support/Compiler.h"
 
 namespace llvm {
 namespace jitlink {
@@ -432,7 +433,7 @@ enum EdgeKind_x86_64 : Edge::Kind {
 
 /// Returns a string name for the given x86-64 edge. For debugging purposes
 /// only.
-const char *getEdgeKindName(Edge::Kind K);
+LLVM_ABI const char *getEdgeKindName(Edge::Kind K);
 
 /// Apply fixup expression for edge to block content.
 inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
@@ -586,14 +587,14 @@ inline Error applyFixup(LinkGraph &G, Block &B, const Edge &E,
 constexpr uint64_t PointerSize = 8;
 
 /// x86-64 null pointer content.
-extern const char NullPointerContent[PointerSize];
+LLVM_ABI extern const char NullPointerContent[PointerSize];
 
 /// x86-64 pointer jump stub content.
 ///
 /// Contains the instruction sequence for an indirect jump via an in-memory
 /// pointer:
 ///   jmpq *ptr(%rip)
-extern const char PointerJumpStubContent[6];
+LLVM_ABI extern const char PointerJumpStubContent[6];
 
 /// Creates a new pointer block in the given section and returns an anonymous
 /// symbol pointing to it.
@@ -646,7 +647,7 @@ inline Symbol &createAnonymousPointerJumpStub(LinkGraph &G,
 /// Contains the instruction sequence for a trampoline that stores its return
 /// address on the stack and calls <reentry-symbol>:
 ///   call  <reentry-symbol>
-extern const char ReentryTrampolineContent[5];
+LLVM_ABI extern const char ReentryTrampolineContent[5];
 
 /// Create a block of N reentry trampolines.
 inline Block &createReentryTrampolineBlock(LinkGraph &G,
@@ -726,7 +727,7 @@ private:
     return *GOTSection;
   }
 
-  void registerExistingEntries();
+  LLVM_ABI void registerExistingEntries();
 
   Section *GOTSection = nullptr;
 };
@@ -770,7 +771,7 @@ public:
     return *StubsSection;
   }
 
-  void registerExistingEntries();
+  LLVM_ABI void registerExistingEntries();
 
   GOTTableManager &GOT;
   Section *StubsSection = nullptr;
@@ -782,7 +783,7 @@ public:
 /// 2. BranchPCRel32ToPtrJumpStubRelaxable. For this edge kind, if the target is
 /// in range, replace a indirect jump by plt stub with a direct jump to the
 /// target
-Error optimizeGOTAndStubAccesses(LinkGraph &G);
+LLVM_ABI Error optimizeGOTAndStubAccesses(LinkGraph &G);
 
 } // namespace x86_64
 } // end namespace jitlink

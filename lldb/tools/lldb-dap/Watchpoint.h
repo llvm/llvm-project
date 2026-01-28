@@ -22,7 +22,7 @@ namespace lldb_dap {
 
 class Watchpoint : public BreakpointBase {
 public:
-  Watchpoint(DAP &d, const protocol::DataBreakpointInfo &breakpoint);
+  Watchpoint(DAP &d, const protocol::DataBreakpoint &breakpoint);
   Watchpoint(DAP &d, lldb::SBWatchpoint wp) : BreakpointBase(d), m_wp(wp) {}
 
   void SetCondition() override;

@@ -5,43 +5,37 @@
     
     This file defines the template for enums
 }}
-<div id="{{ID}}" class="delimiter-container">
+<div id="{{USR}}" class="delimiter-container">
     <div>
-        <pre>
-            <code class="language-cpp code-clang-doc">
-{{EnumName}}
-            </code>
-        </pre>
+        <pre><code class="language-cpp code-clang-doc">enum {{Name}}</code></pre>
     </div>
     {{! Enum Values }}
     <table class="table-wrapper">
         <tbody>
-        <tr>
-            <th>Name</th>
-            <th>Value</th>
-            {{#HasComment}}
-                <th>Comment</th>
-            {{/HasComment}}
-        </tr>
-        {{#EnumValues}}
+            <tr>
+                <th>Name</th>
+                <th>Value</th>
+            </tr>
+            {{#Members}}
             <tr>
                 <td>{{Name}}</td>
+                {{! A ValueExpr is an explicitly assigned enum value }}
+                {{#Value}}
                 <td>{{Value}}</td>
-                {{#EnumValueComments}}
-                    <td>{{>Comments}}</td>
-                {{/EnumValueComments}}
+                {{/Value}}
+                {{^Value}}
+                <td>{{ValueExpr}}</td>
+                {{/Value}}
             </tr>
-        {{/EnumValues}}
+            {{/Members}}
         </tbody>
     </table>
-    {{#EnumComments}}
-    <div>
+    {{#Description}}
+    <div class="doc-card">
         {{>Comments}}
     </div>
-    {{/EnumComments}}
+    {{/Description}}
     {{#Location}}
-    <div>
-        Defined at line {{LineNumber}} of file {{Filename}}
-    </div>
+    <p>Defined at line {{LineNumber}} of file {{^FileURL}}{{Filename}}{{/FileURL}}{{#FileURL}}<a href="{{FileURL}}">{{Filename}}</a>{{/FileURL}}</p>
     {{/Location}}
 </div>

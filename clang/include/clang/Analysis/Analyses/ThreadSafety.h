@@ -166,10 +166,12 @@ public:
   /// \param LocEndOfScope -- The location of the end of the scope where the
   ///               mutex is no longer held
   /// \param LEK -- which of the three above cases we should warn for
+  /// \param ReentrancyMismatch -- mismatching reentrancy depth
   virtual void handleMutexHeldEndOfScope(StringRef Kind, Name LockName,
                                          SourceLocation LocLocked,
                                          SourceLocation LocEndOfScope,
-                                         LockErrorKind LEK) {}
+                                         LockErrorKind LEK,
+                                         bool ReentrancyMismatch = false) {}
 
   /// Warn when a mutex is held exclusively and shared at the same point. For
   /// example, if a mutex is locked exclusively during an if branch and shared

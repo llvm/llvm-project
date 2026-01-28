@@ -44,7 +44,7 @@ static std::string getSourceLocationString(Preprocessor &PP,
     std::string Result = SS.str();
 
     // YAML treats backslash as escape, so use forward slashes.
-    std::replace(Result.begin(), Result.end(), '\\', '/');
+    llvm::replace(Result, '\\', '/');
 
     return Result;
   }
@@ -653,7 +653,7 @@ void PPCallbacksTracker::appendFilePathArgument(const char *Name,
                                                 llvm::StringRef Value) {
   std::string Path(Value);
   // YAML treats backslash as escape, so use forward slashes.
-  std::replace(Path.begin(), Path.end(), '\\', '/');
+  llvm::replace(Path, '\\', '/');
   appendQuotedArgument(Name, Path);
 }
 

@@ -1,13 +1,13 @@
 # Xqcilb - Qualcomm uC Long Branch Extension
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcilb -M no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+xqcilb -M no-aliases -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST,CHECK-NOALIAS %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcilb < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqcilb -M no-aliases --no-print-imm-hex -d - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+xqcilb < %s \
+# RUN:     | llvm-objdump --mattr=+xqcilb -M no-aliases --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefixes=CHECK-OBJ,CHECK-OBJ-NOALIAS %s
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-xqcilb -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+xqcilb -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ENC,CHECK-INST,CHECK-ALIAS %s
-# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+experimental-xqcilb < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-xqcilb --no-print-imm-hex -d - \
+# RUN: llvm-mc -filetype=obj -triple riscv32 -mattr=+xqcilb < %s \
+# RUN:     | llvm-objdump --mattr=+xqcilb --no-print-imm-hex -d - \
 # RUN:     | FileCheck -check-prefixes=CHECK-OBJ,CHECK-OBJ-ALIAS %s
 
 # CHECK-INST: qc.e.j  -2147483648
@@ -35,3 +35,17 @@ qc.e.jal 0xffffff8c
 # CHECK-OBJ-ALIAS: j 0x40e
 # CHECK-ENC: encoding: [0x01,0xa1]
 qc.e.j 1024
+
+# CHECK-NOALIAS: jal ra, 3000
+# CHECK-ALIAS: jal 3000
+# CHECK-OBJ-NOALIAS: jal ra, 0xbc8
+# CHECK-OBJ-ALIAS: jal 0xbc8
+# CHECK-ENC: encoding: [0xef,0x00,0x90,0x3b]
+qc.e.jal 3000
+
+# CHECK-NOALIAS: jal zero, -3000
+# CHECK-ALIAS: j -3000
+# CHECK-OBJ-NOALIAS: jal zero, 0xfffff45c
+# CHECK-OBJ-ALIAS: j 0xfffff45c
+# CHECK-ENC: encoding: [0x6f,0xf0,0x8f,0xc4]
+qc.e.j -3000

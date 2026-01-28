@@ -696,6 +696,43 @@ class LinuxCoreTestCase(TestBase):
 
         self.expect("register read --all")
 
+    @skipIfLLVMTargetMissing("ARM")
+    def test_arm_core_vfp(self):
+        # check reading VFP registers
+        target = self.dbg.CreateTarget(None)
+        self.assertTrue(target, VALID_TARGET)
+        process = target.LoadCore("linux-arm-vfp.core")
+
+        values = {
+            "d0": "0.5",
+            "d1": "1.5",
+            "d14": "14.5",
+            "d15": "15.5",
+            "s4": "4.5",
+            "s5": "5.5",
+            "s6": "6.5",
+            "s7": "7.5",
+            "fpscr": "0x20000000",
+            # s0 and s1 overlap d0, s2 and s3 overlap d1 and so on. Therefore,
+            # the following values are not as neat as those in the explicitly
+            # set registers.
+            "s0": "0",
+            "s1": "1.75",
+            "s2": "0",
+            "s3": "1.9375",
+            "s28": "0",
+            "s29": "2.703125",
+            "s30": "0",
+            "s31": "2.734375",
+        }
+        for regname, value in values.items():
+            self.expect(
+                "register read {}".format(regname),
+                substrs=["{} = {}".format(regname, value)],
+            )
+
+        self.expect("register read --all")
+
     @skipIfLLVMTargetMissing("RISCV")
     def test_riscv64_regs_gpr_fpr(self):
         # check basic registers using 64 bit RISC-V core file
@@ -976,6 +1013,34 @@ class LinuxCoreTestCase(TestBase):
         self.assertTrue(process, PROCESS_IS_VALID)
         self.assertEqual(process.GetCoreFile().GetFilename(), core_file_name)
         self.dbg.DeleteTarget(target)
+
+    @skipIfLLVMTargetMissing("X86")
+    def test_read_only_cstring(self):
+        """
+        Test that we can show the summary for a cstring variable that points
+        to a read-only memory page which is not dumped to a core file.
+        """
+        target = self.dbg.CreateTarget("altmain2.out")
+        process = target.LoadCore("altmain2.core")
+        self.assertTrue(process, PROCESS_IS_VALID)
+
+        frame = process.GetSelectedThread().GetFrameAtIndex(0)
+        self.assertEqual(frame.GetFunctionName(), "_start")
+
+        var = frame.FindVariable("F")
+
+        # The variable points to a read-only segment that is not dumped to
+        # the core file and thus 'process.ReadCStringFromMemory()' cannot get
+        # the value.
+        error = lldb.SBError()
+        cstr = process.ReadCStringFromMemory(var.GetValueAsUnsigned(), 256, error)
+        self.assertFailure(error, error_str="core file does not contain 0x804a000")
+        self.assertEqual(cstr, "")
+
+        # Nevertheless, when getting the summary, the value can be read from the
+        # application binary.
+        cstr = var.GetSummary()
+        self.assertEqual(cstr, '"_start"')
 
     def check_memory_regions(self, process, region_count):
         region_list = process.GetMemoryRegions()

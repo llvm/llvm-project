@@ -425,7 +425,7 @@ define ptr @test25(ptr %p) nounwind {
 ; CHECK-NEXT:    [[P_4:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 4
 ; CHECK-NEXT:    [[TMP:%.*]] = load i8, ptr [[P_4]], align 1
 ; CHECK-NEXT:    store i8 0, ptr [[P_4]], align 1
-; CHECK-NEXT:    [[Q:%.*]] = call ptr @strdup(ptr [[P]]) #[[ATTR13:[0-9]+]]
+; CHECK-NEXT:    [[Q:%.*]] = call ptr @strdup(ptr [[P]]) #[[ATTR14:[0-9]+]]
 ; CHECK-NEXT:    store i8 [[TMP]], ptr [[P_4]], align 1
 ; CHECK-NEXT:    ret ptr [[Q]]
 ;
@@ -697,26 +697,26 @@ define void @test39_atomic(ptr %P, ptr %Q, ptr %R) {
 declare void @llvm.memmove.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i1)
 declare void @llvm.memmove.element.unordered.atomic.p0.p0.i64(ptr nocapture, ptr nocapture readonly, i64, i32)
 
-declare void @llvm.lifetime.start.p0(i64, ptr nocapture) nounwind
-declare void @llvm.lifetime.end.p0(i64, ptr nocapture) nounwind
+declare void @llvm.lifetime.start.p0(ptr nocapture) nounwind
+declare void @llvm.lifetime.end.p0(ptr nocapture) nounwind
 define void @test40(ptr noalias %Pp, ptr noalias %Q)  {
 ; CHECK-LABEL: @test40(
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[A:%.*]] = alloca i32, align 4
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 4, ptr nonnull [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[A]])
 ; CHECK-NEXT:    [[PC:%.*]] = load ptr, ptr [[PP:%.*]], align 8
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 4 [[A]], ptr align 4 [[Q:%.*]], i64 4, i1 false)
 ; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[PC]], ptr nonnull align 4 [[A]], i64 4, i1 true)
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 4, ptr nonnull [[A]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[A]])
 ; CHECK-NEXT:    ret void
 ;
 entry:
   %A = alloca i32, align 4
-  call void @llvm.lifetime.start.p0(i64 4, ptr nonnull %A)
+  call void @llvm.lifetime.start.p0(ptr nonnull %A)
   %Pc = load ptr, ptr %Pp, align 8
   call void @llvm.memcpy.p0.p0.i64(ptr nonnull align 4 %A, ptr align 4 %Q, i64 4, i1 false)
   call void @llvm.memcpy.p0.p0.i64(ptr align 4 %Pc, ptr nonnull align 4 %A, i64 4, i1 true)
-  call void @llvm.lifetime.end.p0(i64 4, ptr nonnull %A)
+  call void @llvm.lifetime.end.p0(ptr nonnull %A)
   ret void
 }
 
@@ -855,3 +855,105 @@ bb:
   store ptr null, ptr null, align 8
   ret void
 }
+
+define void @test_dead_on_return(ptr dead_on_return %p) {
+; CHECK-LABEL: @test_dead_on_return(
+; CHECK-NEXT:    ret void
+;
+  store i8 0, ptr %p
+  ret void
+}
+
+define void @test_dead_on_return_maythrow(ptr dead_on_return %p) {
+; CHECK-LABEL: @test_dead_on_return_maythrow(
+; CHECK-NEXT:    call void @maythrow()
+; CHECK-NEXT:    ret void
+;
+  store i8 0, ptr %p
+  call void @maythrow()
+  ret void
+}
+
+define ptr @test_dead_on_return_ptr_returned(ptr dead_on_return %p) {
+; CHECK-LABEL: @test_dead_on_return_ptr_returned(
+; CHECK-NEXT:    [[LOCAL_VAR:%.*]] = alloca ptr, align 8
+; CHECK-NEXT:    call void @opaque(ptr [[LOCAL_VAR]])
+; CHECK-NEXT:    ret ptr [[P:%.*]]
+;
+  %local.var = alloca ptr
+  call void @opaque(ptr %local.var)
+  store ptr %local.var, ptr %p
+  ret ptr %p
+}
+
+define void @test_dead_on_return_oob(ptr dead_on_return(4) %p) {
+; CHECK-LABEL: @test_dead_on_return_oob(
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr i8, ptr [[P:%.*]], i64 8
+; CHECK-NEXT:    store i64 0, ptr [[P1]], align 4
+; CHECK-NEXT:    ret void
+;
+  %p1 = getelementptr i8, ptr %p, i64 8
+  store i64 0, ptr %p1
+  ret void
+}
+
+define void @test_dead_on_return_zero_offset(ptr dead_on_return(8) %p) {
+; CHECK-LABEL: @test_dead_on_return_zero_offset(
+; CHECK-NEXT:    ret void
+;
+  store i64 0, ptr %p
+  ret void
+}
+
+define void @test_dead_on_return_inbounds(ptr dead_on_return(16) %p) {
+; CHECK-LABEL: @test_dead_on_return_inbounds(
+; CHECK-NEXT:    ret void
+;
+  %p1 = getelementptr inbounds i8, ptr %p, i64 2
+  store i64 0, ptr %p1
+  ret void
+}
+
+define void @test_dead_on_return_overlapping_oob(ptr dead_on_return(8) %p) {
+; CHECK-LABEL: @test_dead_on_return_overlapping_oob(
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 4
+; CHECK-NEXT:    store i64 0, ptr [[P1]], align 4
+; CHECK-NEXT:    ret void
+;
+  %p1 = getelementptr inbounds i8, ptr %p, i64 4
+  store i64 0, ptr %p1
+  ret void
+}
+
+define void @test_dead_on_return_negative_oob(ptr dead_on_return(8) %p) {
+; CHECK-LABEL: @test_dead_on_return_negative_oob(
+; CHECK-NEXT:    [[P1:%.*]] = getelementptr inbounds i8, ptr [[P:%.*]], i64 -4
+; CHECK-NEXT:    store i64 0, ptr [[P1]], align 4
+; CHECK-NEXT:    ret void
+;
+  %p1 = getelementptr inbounds i8, ptr %p, i64 -4
+  store i64 0, ptr %p1
+  ret void
+}
+
+define void @test_dead_on_return_two_stores(ptr dead_on_return(16) %p) {
+; CHECK-LABEL: @test_dead_on_return_two_stores(
+; CHECK-NEXT:    ret void
+;
+  store i64 0, ptr %p
+  %p1 = getelementptr inbounds i8, ptr %p, i64 8
+  store i64 0, ptr %p1
+  ret void
+}
+
+define void @test_dead_on_return_variable_memset(ptr dead_on_return(8) %p, i64 %s) {
+; CHECK-LABEL: @test_dead_on_return_variable_memset(
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[P:%.*]], i8 0, i64 [[S:%.*]], i1 false)
+; CHECK-NEXT:    ret void
+;
+  call void @llvm.memset.p0.i64(ptr %p, i8 0, i64 %s, i1 false)
+  ret void
+}
+
+declare void @opaque(ptr)
+declare void @maythrow() memory(none)

@@ -1843,7 +1843,7 @@ define <2 x double> @test_mm_cvtu64_sd(<2 x double> %__A, i64 %__B) {
 ; X86-NEXT:    vsubpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1
 ; X86-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
 ; X86-NEXT:    vaddsd %xmm1, %xmm2, %xmm1
-; X86-NEXT:    vblendpd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
+; X86-NEXT:    vmovsd {{.*#+}} xmm0 = xmm1[0],xmm0[1]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: test_mm_cvtu64_sd:
@@ -1891,7 +1891,7 @@ define <4 x float> @test_mm_cvtu64_ss(<4 x float> %__A, i64 %__B) {
 ; X86-NEXT:    fadds {{\.?LCPI[0-9]+_[0-9]+}}(,%eax,4)
 ; X86-NEXT:    fstps {{[0-9]+}}(%esp)
 ; X86-NEXT:    vmovss {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; X86-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
+; X86-NEXT:    vmovss {{.*#+}} xmm0 = xmm1[0],xmm0[1,2,3]
 ; X86-NEXT:    movl %ebp, %esp
 ; X86-NEXT:    popl %ebp
 ; X86-NEXT:    .cfi_def_cfa %esp, 4

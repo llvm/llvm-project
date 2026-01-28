@@ -144,7 +144,7 @@ public:
 
   bool IsDefined() const;
 
-  bool IsFloatingPointType(uint32_t &count, bool &is_complex) const;
+  bool IsFloatingPointType(bool &is_complex) const;
 
   bool IsFunctionType() const;
 
@@ -276,6 +276,11 @@ public:
   /// TypeSystem::TypeSystemSPWrapper can be compared for equality.
   TypeSystemSPWrapper GetTypeSystem() const;
 
+  template <typename TypeSystemType>
+  std::shared_ptr<TypeSystemType> GetTypeSystem() const {
+    return GetTypeSystem().dyn_cast_or_null<TypeSystemType>();
+  }
+
   ConstString GetTypeName(bool BaseOnly = false) const;
 
   ConstString GetDisplayTypeName() const;
@@ -395,7 +400,7 @@ public:
   /// Return the size of the type in bits.
   llvm::Expected<uint64_t> GetBitSize(ExecutionContextScope *exe_scope) const;
 
-  lldb::Encoding GetEncoding(uint64_t &count) const;
+  lldb::Encoding GetEncoding() const;
 
   lldb::Format GetFormat() const;
 
@@ -432,6 +437,11 @@ public:
                                           uint32_t *bit_offset_ptr) const;
 
   CompilerDecl GetStaticFieldWithName(llvm::StringRef name) const;
+
+  llvm::Expected<CompilerType>
+  GetDereferencedType(ExecutionContext *exe_ctx, std::string &deref_name,
+                      uint32_t &deref_byte_size, int32_t &deref_byte_offset,
+                      ValueObject *valobj, uint64_t &language_flags) const;
 
   llvm::Expected<CompilerType> GetChildCompilerTypeAtIndex(
       ExecutionContext *exe_ctx, size_t idx, bool transparent_pointers,

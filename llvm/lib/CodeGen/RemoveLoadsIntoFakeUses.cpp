@@ -47,10 +47,7 @@ class RemoveLoadsIntoFakeUsesLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  RemoveLoadsIntoFakeUsesLegacy() : MachineFunctionPass(ID) {
-    initializeRemoveLoadsIntoFakeUsesLegacyPass(
-        *PassRegistry::getPassRegistry());
-  }
+  RemoveLoadsIntoFakeUsesLegacy() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();
@@ -58,8 +55,7 @@ public:
   }
 
   MachineFunctionProperties getRequiredProperties() const override {
-    return MachineFunctionProperties().set(
-        MachineFunctionProperties::Property::NoVRegs);
+    return MachineFunctionProperties().setNoVRegs();
   }
 
   StringRef getPassName() const override {

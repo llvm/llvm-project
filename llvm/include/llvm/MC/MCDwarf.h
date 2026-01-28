@@ -19,6 +19,7 @@
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/MC/StringTableBuilder.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/Error.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/SMLoc.h"
@@ -28,6 +29,7 @@
 #include <optional>
 #include <string>
 #include <utility>
+#include <variant>
 #include <vector>
 
 namespace llvm {
@@ -44,7 +46,7 @@ class SourceMgr;
 
 namespace mcdwarf {
 // Emit the common part of the DWARF 5 range/locations list tables header.
-MCSymbol *emitListsTableHeaderStart(MCStreamer &S);
+LLVM_ABI MCSymbol *emitListsTableHeaderStart(MCStreamer &S);
 } // namespace mcdwarf
 
 /// Manage the .debug_line_str section contents, if we use it.
@@ -58,22 +60,22 @@ class MCDwarfLineStr {
 public:
   /// Construct an instance that can emit .debug_line_str (for use in a normal
   /// v5 line table).
-  explicit MCDwarfLineStr(MCContext &Ctx);
+  LLVM_ABI explicit MCDwarfLineStr(MCContext &Ctx);
 
   StringSaver &getSaver() { return Saver; }
 
   /// Emit a reference to the string.
-  void emitRef(MCStreamer *MCOS, StringRef Path);
+  LLVM_ABI void emitRef(MCStreamer *MCOS, StringRef Path);
 
   /// Emit the .debug_line_str section if appropriate.
-  void emitSection(MCStreamer *MCOS);
+  LLVM_ABI void emitSection(MCStreamer *MCOS);
 
   /// Returns finalized section.
-  SmallString<0> getFinalizedData();
+  LLVM_ABI SmallString<0> getFinalizedData();
 
   /// Adds path \p Path to the line string. Returns offset in the
   /// .debug_line_str section.
-  size_t addString(StringRef Path);
+  LLVM_ABI size_t addString(StringRef Path);
 };
 
 /// Instances of this class represent the name of the dwarf .file directive and
@@ -216,6 +218,9 @@ public:
 
   // Override the label with the given EndLabel.
   void setEndLabel(MCSymbol *EndLabel) {
+    // If we're setting this to be an end entry, make sure we don't have
+    // LineStreamLabel set.
+    assert(LineStreamLabel == nullptr);
     Label = EndLabel;
     IsEndEntry = true;
   }
@@ -223,7 +228,7 @@ public:
   // This is called when an instruction is assembled into the specified
   // section and if there is information from the last .loc directive that
   // has yet to have a line entry made for it is made.
-  static void make(MCStreamer *MCOS, MCSection *Section);
+  LLVM_ABI static void make(MCStreamer *MCOS, MCSection *Section);
 };
 
 /// Instances of this class represent the line information for a compile
@@ -239,7 +244,7 @@ public:
 
   // Add an end entry by cloning the last entry, if exists, for the section
   // the given EndLabel belongs to. The label is replaced by the given EndLabel.
-  void addEndEntry(MCSymbol *EndLabel);
+  LLVM_ABI void addEndEntry(MCSymbol *EndLabel);
 
   using MCDwarfLineEntryCollection = std::vector<MCDwarfLineEntry>;
   using iterator = MCDwarfLineEntryCollection::iterator;
@@ -286,14 +291,16 @@ private:
 public:
   MCDwarfLineTableHeader() = default;
 
-  Expected<unsigned> tryGetFile(StringRef &Directory, StringRef &FileName,
-                                std::optional<MD5::MD5Result> Checksum,
-                                std::optional<StringRef> Source,
-                                uint16_t DwarfVersion, unsigned FileNumber = 0);
-  std::pair<MCSymbol *, MCSymbol *>
+  LLVM_ABI Expected<unsigned> tryGetFile(StringRef &Directory,
+                                         StringRef &FileName,
+                                         std::optional<MD5::MD5Result> Checksum,
+                                         std::optional<StringRef> Source,
+                                         uint16_t DwarfVersion,
+                                         unsigned FileNumber = 0);
+  LLVM_ABI std::pair<MCSymbol *, MCSymbol *>
   Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
        std::optional<MCDwarfLineStr> &LineStr) const;
-  std::pair<MCSymbol *, MCSymbol *>
+  LLVM_ABI std::pair<MCSymbol *, MCSymbol *>
   Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
        ArrayRef<char> SpecialOpcodeLengths,
        std::optional<MCDwarfLineStr> &LineStr) const;
@@ -356,8 +363,8 @@ public:
                                       DwarfVersion));
   }
 
-  void Emit(MCStreamer &MCOS, MCDwarfLineTableParams Params,
-            MCSection *Section) const;
+  LLVM_ABI void Emit(MCStreamer &MCOS, MCDwarfLineTableParams Params,
+                     MCSection *Section) const;
 };
 
 class MCDwarfLineTable {
@@ -366,24 +373,27 @@ class MCDwarfLineTable {
 
 public:
   // This emits the Dwarf file and the line tables for all Compile Units.
-  static void emit(MCStreamer *MCOS, MCDwarfLineTableParams Params);
+  LLVM_ABI static void emit(MCStreamer *MCOS, MCDwarfLineTableParams Params);
 
   // This emits the Dwarf file and the line tables for a given Compile Unit.
-  void emitCU(MCStreamer *MCOS, MCDwarfLineTableParams Params,
-              std::optional<MCDwarfLineStr> &LineStr) const;
+  LLVM_ABI void emitCU(MCStreamer *MCOS, MCDwarfLineTableParams Params,
+                       std::optional<MCDwarfLineStr> &LineStr) const;
 
   // This emits a single line table associated with a given Section.
-  static void
+  LLVM_ABI static void
   emitOne(MCStreamer *MCOS, MCSection *Section,
           const MCLineSection::MCDwarfLineEntryCollection &LineEntries);
 
-  void endCurrentSeqAndEmitLineStreamLabel(MCStreamer *MCOS, SMLoc DefLoc,
-                                           StringRef Name);
+  LLVM_ABI void endCurrentSeqAndEmitLineStreamLabel(MCStreamer *MCOS,
+                                                    SMLoc DefLoc,
+                                                    StringRef Name);
 
-  Expected<unsigned> tryGetFile(StringRef &Directory, StringRef &FileName,
-                                std::optional<MD5::MD5Result> Checksum,
-                                std::optional<StringRef> Source,
-                                uint16_t DwarfVersion, unsigned FileNumber = 0);
+  LLVM_ABI Expected<unsigned> tryGetFile(StringRef &Directory,
+                                         StringRef &FileName,
+                                         std::optional<MD5::MD5Result> Checksum,
+                                         std::optional<StringRef> Source,
+                                         uint16_t DwarfVersion,
+                                         unsigned FileNumber = 0);
   unsigned getFile(StringRef &Directory, StringRef &FileName,
                    std::optional<MD5::MD5Result> Checksum,
                    std::optional<StringRef> Source, uint16_t DwarfVersion,
@@ -449,12 +459,13 @@ public:
 class MCDwarfLineAddr {
 public:
   /// Utility function to encode a Dwarf pair of LineDelta and AddrDeltas.
-  static void encode(MCContext &Context, MCDwarfLineTableParams Params,
-                     int64_t LineDelta, uint64_t AddrDelta, SmallVectorImpl<char> &OS);
+  LLVM_ABI static void encode(MCContext &Context, MCDwarfLineTableParams Params,
+                              int64_t LineDelta, uint64_t AddrDelta,
+                              SmallVectorImpl<char> &OS);
 
   /// Utility function to emit the encoding to a streamer.
-  static void Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
-                   int64_t LineDelta, uint64_t AddrDelta);
+  LLVM_ABI static void Emit(MCStreamer *MCOS, MCDwarfLineTableParams Params,
+                            int64_t LineDelta, uint64_t AddrDelta);
 };
 
 class MCGenDwarfInfo {
@@ -463,7 +474,7 @@ public:
   // When generating dwarf for assembly source files this emits the Dwarf
   // sections.
   //
-  static void Emit(MCStreamer *MCOS);
+  LLVM_ABI static void Emit(MCStreamer *MCOS);
 };
 
 // When generating dwarf for assembly source files this is the info that is
@@ -492,8 +503,8 @@ public:
 
   // This is called when label is created when we are generating dwarf for
   // assembly source files.
-  static void Make(MCSymbol *Symbol, MCStreamer *MCOS, SourceMgr &SrcMgr,
-                   SMLoc &Loc);
+  LLVM_ABI static void Make(MCSymbol *Symbol, MCStreamer *MCOS,
+                            SourceMgr &SrcMgr, SMLoc &Loc);
 };
 
 class MCCFIInstruction {
@@ -521,67 +532,57 @@ public:
     OpValOffset,
   };
 
+  // Held in ExtraFields for most common OpTypes, exceptions follow.
+  struct CommonFields {
+    unsigned Register;
+    int64_t Offset;
+    unsigned Register2;
+    unsigned AddressSpace;
+    // FIXME: Workaround for GCC7 bug with nested class used as std::variant
+    // alternative where the compiler really wants a user-defined default
+    // constructor. Once we no longer support GCC7 these constructors can be
+    // replaced with default member initializers and aggregate initialization.
+    CommonFields(unsigned Reg, int64_t Off = 0,
+                 unsigned Reg2 = std::numeric_limits<unsigned>::max(),
+                 unsigned AddrSpace = 0)
+        : Register(Reg), Offset(Off), Register2(Reg2), AddressSpace(AddrSpace) {
+    }
+    CommonFields() : CommonFields(std::numeric_limits<unsigned>::max()) {}
+  };
+  // Held in ExtraFields when OpEscape.
+  struct EscapeFields {
+    std::vector<char> Values;
+    std::string Comment;
+  };
+  // Held in ExtraFields when OpLabel.
+  struct LabelFields {
+    MCSymbol *CfiLabel = nullptr;
+  };
+
 private:
   MCSymbol *Label;
-  union {
-    struct {
-      unsigned Register;
-      int64_t Offset;
-    } RI;
-    struct {
-      unsigned Register;
-      int64_t Offset;
-      unsigned AddressSpace;
-    } RIA;
-    struct {
-      unsigned Register;
-      unsigned Register2;
-    } RR;
-    MCSymbol *CfiLabel;
-  } U;
+  std::variant<CommonFields, EscapeFields, LabelFields> ExtraFields;
   OpType Operation;
   SMLoc Loc;
-  std::vector<char> Values;
-  std::string Comment;
 
-  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R, int64_t O, SMLoc Loc,
-                   StringRef V = "", StringRef Comment = "")
-      : Label(L), Operation(Op), Loc(Loc), Values(V.begin(), V.end()),
-        Comment(Comment) {
-    assert(Op != OpRegister && Op != OpLLVMDefAspaceCfa);
-    U.RI = {R, O};
-  }
-  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R1, unsigned R2, SMLoc Loc)
-      : Label(L), Operation(Op), Loc(Loc) {
-    assert(Op == OpRegister);
-    U.RR = {R1, R2};
-  }
-  MCCFIInstruction(OpType Op, MCSymbol *L, unsigned R, int64_t O, unsigned AS,
-                   SMLoc Loc)
-      : Label(L), Operation(Op), Loc(Loc) {
-    assert(Op == OpLLVMDefAspaceCfa);
-    U.RIA = {R, O, AS};
-  }
-
-  MCCFIInstruction(OpType Op, MCSymbol *L, MCSymbol *CfiLabel, SMLoc Loc)
-      : Label(L), Operation(Op), Loc(Loc) {
-    assert(Op == OpLabel);
-    U.CfiLabel = CfiLabel;
-  }
+  template <class FieldsType>
+  MCCFIInstruction(OpType Op, MCSymbol *L, FieldsType &&EF, SMLoc Loc)
+      : Label(L), ExtraFields(std::forward<FieldsType>(EF)), Operation(Op),
+        Loc(Loc) {}
 
 public:
   /// .cfi_def_cfa defines a rule for computing CFA as: take address from
   /// Register and add Offset to it.
   static MCCFIInstruction cfiDefCfa(MCSymbol *L, unsigned Register,
                                     int64_t Offset, SMLoc Loc = {}) {
-    return MCCFIInstruction(OpDefCfa, L, Register, Offset, Loc);
+    return {OpDefCfa, L, CommonFields{Register, Offset}, Loc};
   }
 
   /// .cfi_def_cfa_register modifies a rule for computing CFA. From now
   /// on Register will be used instead of the old one. Offset remains the same.
   static MCCFIInstruction createDefCfaRegister(MCSymbol *L, unsigned Register,
                                                SMLoc Loc = {}) {
-    return MCCFIInstruction(OpDefCfaRegister, L, Register, INT64_C(0), Loc);
+    return {OpDefCfaRegister, L, CommonFields{Register}, Loc};
   }
 
   /// .cfi_def_cfa_offset modifies a rule for computing CFA. Register
@@ -589,7 +590,7 @@ public:
   /// that will be added to a defined register to the compute CFA address.
   static MCCFIInstruction cfiDefCfaOffset(MCSymbol *L, int64_t Offset,
                                           SMLoc Loc = {}) {
-    return MCCFIInstruction(OpDefCfaOffset, L, 0, Offset, Loc);
+    return {OpDefCfaOffset, L, CommonFields{0, Offset}, Loc};
   }
 
   /// .cfi_adjust_cfa_offset Same as .cfi_def_cfa_offset, but
@@ -597,7 +598,7 @@ public:
   /// offset.
   static MCCFIInstruction createAdjustCfaOffset(MCSymbol *L, int64_t Adjustment,
                                                 SMLoc Loc = {}) {
-    return MCCFIInstruction(OpAdjustCfaOffset, L, 0, Adjustment, Loc);
+    return {OpAdjustCfaOffset, L, CommonFields{0, Adjustment}, Loc};
   }
 
   // FIXME: Update the remaining docs to use the new proposal wording.
@@ -608,15 +609,15 @@ public:
                                                  int64_t Offset,
                                                  unsigned AddressSpace,
                                                  SMLoc Loc) {
-    return MCCFIInstruction(OpLLVMDefAspaceCfa, L, Register, Offset,
-                            AddressSpace, Loc);
+    return {OpLLVMDefAspaceCfa, L,
+            CommonFields{Register, Offset, 0, AddressSpace}, Loc};
   }
 
   /// .cfi_offset Previous value of Register is saved at offset Offset
   /// from CFA.
   static MCCFIInstruction createOffset(MCSymbol *L, unsigned Register,
                                        int64_t Offset, SMLoc Loc = {}) {
-    return MCCFIInstruction(OpOffset, L, Register, Offset, Loc);
+    return {OpOffset, L, CommonFields{Register, Offset}, Loc};
   }
 
   /// .cfi_rel_offset Previous value of Register is saved at offset
@@ -624,30 +625,30 @@ public:
   /// using the known displacement of the CFA register from the CFA.
   static MCCFIInstruction createRelOffset(MCSymbol *L, unsigned Register,
                                           int64_t Offset, SMLoc Loc = {}) {
-    return MCCFIInstruction(OpRelOffset, L, Register, Offset, Loc);
+    return {OpRelOffset, L, CommonFields{Register, Offset}, Loc};
   }
 
   /// .cfi_register Previous value of Register1 is saved in
   /// register Register2.
   static MCCFIInstruction createRegister(MCSymbol *L, unsigned Register1,
                                          unsigned Register2, SMLoc Loc = {}) {
-    return MCCFIInstruction(OpRegister, L, Register1, Register2, Loc);
+    return {OpRegister, L, CommonFields{Register1, 0, Register2}, Loc};
   }
 
   /// .cfi_window_save SPARC register window is saved.
   static MCCFIInstruction createWindowSave(MCSymbol *L, SMLoc Loc = {}) {
-    return MCCFIInstruction(OpWindowSave, L, 0, INT64_C(0), Loc);
+    return {OpWindowSave, L, CommonFields{}, Loc};
   }
 
   /// .cfi_negate_ra_state AArch64 negate RA state.
   static MCCFIInstruction createNegateRAState(MCSymbol *L, SMLoc Loc = {}) {
-    return MCCFIInstruction(OpNegateRAState, L, 0, INT64_C(0), Loc);
+    return {OpNegateRAState, L, CommonFields{}, Loc};
   }
 
   /// .cfi_negate_ra_state_with_pc AArch64 negate RA state with PC.
   static MCCFIInstruction createNegateRAStateWithPC(MCSymbol *L,
                                                     SMLoc Loc = {}) {
-    return MCCFIInstruction(OpNegateRAStateWithPC, L, 0, INT64_C(0), Loc);
+    return {OpNegateRAStateWithPC, L, CommonFields{}, Loc};
   }
 
   /// .cfi_restore says that the rule for Register is now the same as it
@@ -655,104 +656,106 @@ public:
   /// by .cfi_startproc were executed.
   static MCCFIInstruction createRestore(MCSymbol *L, unsigned Register,
                                         SMLoc Loc = {}) {
-    return MCCFIInstruction(OpRestore, L, Register, INT64_C(0), Loc);
+    return {OpRestore, L, CommonFields{Register}, Loc};
   }
 
   /// .cfi_undefined From now on the previous value of Register can't be
   /// restored anymore.
   static MCCFIInstruction createUndefined(MCSymbol *L, unsigned Register,
                                           SMLoc Loc = {}) {
-    return MCCFIInstruction(OpUndefined, L, Register, INT64_C(0), Loc);
+    return {OpUndefined, L, CommonFields{Register}, Loc};
   }
 
   /// .cfi_same_value Current value of Register is the same as in the
   /// previous frame. I.e., no restoration is needed.
   static MCCFIInstruction createSameValue(MCSymbol *L, unsigned Register,
                                           SMLoc Loc = {}) {
-    return MCCFIInstruction(OpSameValue, L, Register, INT64_C(0), Loc);
+    return {OpSameValue, L, CommonFields{Register}, Loc};
   }
 
   /// .cfi_remember_state Save all current rules for all registers.
   static MCCFIInstruction createRememberState(MCSymbol *L, SMLoc Loc = {}) {
-    return MCCFIInstruction(OpRememberState, L, 0, INT64_C(0), Loc);
+    return {OpRememberState, L, CommonFields{}, Loc};
   }
 
   /// .cfi_restore_state Restore the previously saved state.
   static MCCFIInstruction createRestoreState(MCSymbol *L, SMLoc Loc = {}) {
-    return MCCFIInstruction(OpRestoreState, L, 0, INT64_C(0), Loc);
+    return {OpRestoreState, L, CommonFields{}, Loc};
   }
 
   /// .cfi_escape Allows the user to add arbitrary bytes to the unwind
   /// info.
   static MCCFIInstruction createEscape(MCSymbol *L, StringRef Vals,
                                        SMLoc Loc = {}, StringRef Comment = "") {
-    return MCCFIInstruction(OpEscape, L, 0, 0, Loc, Vals, Comment);
+    return {OpEscape, L,
+            EscapeFields{std::vector<char>(Vals.begin(), Vals.end()),
+                         Comment.str()},
+            Loc};
   }
 
   /// A special wrapper for .cfi_escape that indicates GNU_ARGS_SIZE
   static MCCFIInstruction createGnuArgsSize(MCSymbol *L, int64_t Size,
                                             SMLoc Loc = {}) {
-    return MCCFIInstruction(OpGnuArgsSize, L, 0, Size, Loc);
+    return {OpGnuArgsSize, L, CommonFields{0, Size}, Loc};
   }
 
   static MCCFIInstruction createLabel(MCSymbol *L, MCSymbol *CfiLabel,
                                       SMLoc Loc) {
-    return MCCFIInstruction(OpLabel, L, CfiLabel, Loc);
+    return {OpLabel, L, LabelFields{CfiLabel}, Loc};
   }
 
   /// .cfi_val_offset Previous value of Register is offset Offset from the
   /// current CFA register.
   static MCCFIInstruction createValOffset(MCSymbol *L, unsigned Register,
                                           int64_t Offset, SMLoc Loc = {}) {
-    return MCCFIInstruction(OpValOffset, L, Register, Offset, Loc);
+    return {OpValOffset, L, CommonFields{Register, Offset}, Loc};
   }
 
   OpType getOperation() const { return Operation; }
   MCSymbol *getLabel() const { return Label; }
 
   unsigned getRegister() const {
-    if (Operation == OpRegister)
-      return U.RR.Register;
-    if (Operation == OpLLVMDefAspaceCfa)
-      return U.RIA.Register;
     assert(Operation == OpDefCfa || Operation == OpOffset ||
            Operation == OpRestore || Operation == OpUndefined ||
            Operation == OpSameValue || Operation == OpDefCfaRegister ||
-           Operation == OpRelOffset || Operation == OpValOffset);
-    return U.RI.Register;
+           Operation == OpRelOffset || Operation == OpValOffset ||
+           Operation == OpRegister || Operation == OpLLVMDefAspaceCfa);
+    return std::get<CommonFields>(ExtraFields).Register;
   }
 
   unsigned getRegister2() const {
     assert(Operation == OpRegister);
-    return U.RR.Register2;
+    return std::get<CommonFields>(ExtraFields).Register2;
   }
 
   unsigned getAddressSpace() const {
     assert(Operation == OpLLVMDefAspaceCfa);
-    return U.RIA.AddressSpace;
+    return std::get<CommonFields>(ExtraFields).AddressSpace;
   }
 
   int64_t getOffset() const {
-    if (Operation == OpLLVMDefAspaceCfa)
-      return U.RIA.Offset;
     assert(Operation == OpDefCfa || Operation == OpOffset ||
            Operation == OpRelOffset || Operation == OpDefCfaOffset ||
            Operation == OpAdjustCfaOffset || Operation == OpGnuArgsSize ||
-           Operation == OpValOffset);
-    return U.RI.Offset;
+           Operation == OpValOffset || Operation == OpLLVMDefAspaceCfa);
+    return std::get<CommonFields>(ExtraFields).Offset;
   }
 
   MCSymbol *getCfiLabel() const {
     assert(Operation == OpLabel);
-    return U.CfiLabel;
+    return std::get<LabelFields>(ExtraFields).CfiLabel;
   }
 
   StringRef getValues() const {
     assert(Operation == OpEscape);
+    auto &Values = std::get<EscapeFields>(ExtraFields).Values;
     return StringRef(&Values[0], Values.size());
   }
 
-  StringRef getComment() const { return Comment; }
+  StringRef getComment() const {
+    assert(Operation == OpEscape);
+    return std::get<EscapeFields>(ExtraFields).Comment;
+  }
   SMLoc getLoc() const { return Loc; }
 };
 
@@ -780,9 +783,10 @@ public:
   //
   // This emits the frame info section.
   //
-  static void Emit(MCObjectStreamer &streamer, MCAsmBackend *MAB, bool isEH);
-  static void encodeAdvanceLoc(MCContext &Context, uint64_t AddrDelta,
-                               SmallVectorImpl<char> &OS);
+  LLVM_ABI static void Emit(MCObjectStreamer &streamer, MCAsmBackend *MAB,
+                            bool isEH);
+  LLVM_ABI static void encodeAdvanceLoc(MCContext &Context, uint64_t AddrDelta,
+                                        SmallVectorImpl<char> &OS);
 };
 
 } // end namespace llvm

@@ -274,9 +274,26 @@ public:
   using Scalar = value::Integer<8 * KIND>;
 };
 
+// Records when a default REAL literal constant is inexactly converted to binary
+// (e.g., 0.1 but not 0.125) to enable a usage warning if the expression in
+// which it appears undergoes an implicit widening conversion.
+class TrackInexactLiteralConversion {
+public:
+  constexpr bool isFromInexactLiteralConversion() const {
+    return isFromInexactLiteralConversion_;
+  }
+  void set_isFromInexactLiteralConversion(bool yes = true) {
+    isFromInexactLiteralConversion_ = yes;
+  }
+
+private:
+  bool isFromInexactLiteralConversion_{false};
+};
+
 template <int KIND>
 class Type<TypeCategory::Real, KIND>
-    : public TypeBase<TypeCategory::Real, KIND> {
+    : public TypeBase<TypeCategory::Real, KIND>,
+      public TrackInexactLiteralConversion {
 public:
   static constexpr int precision{common::PrecisionOfRealKind(KIND)};
   static constexpr int bits{common::BitsForBinaryPrecision(precision)};
@@ -289,7 +306,8 @@ public:
 // The KIND type parameter on COMPLEX is the kind of each of its components.
 template <int KIND>
 class Type<TypeCategory::Complex, KIND>
-    : public TypeBase<TypeCategory::Complex, KIND> {
+    : public TypeBase<TypeCategory::Complex, KIND>,
+      public TrackInexactLiteralConversion {
 public:
   using Part = Type<TypeCategory::Real, KIND>;
   using Scalar = value::Complex<typename Part::Scalar>;

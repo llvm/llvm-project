@@ -449,7 +449,7 @@ define float @test_shrink_intrin_fabs_fast_double_src(double %D) {
 ; CHECK-NEXT:    ret float [[F]]
 ;
   %E = call fast double @llvm.fabs.f64(double %D)
-  %F = fptrunc double %E to float
+  %F = fptrunc fast double %E to float
   ret float %F
 }
 
@@ -611,7 +611,7 @@ define half @test_mismatched_type_intrin_fabs_fast_double_src(double %D) {
 ; CHECK-NEXT:    ret half [[F]]
 ;
   %E = call fast double @llvm.fabs.f64(double %D)
-  %F = fptrunc double %E to half
+  %F = fptrunc fast double %E to half
   ret half %F
 }
 

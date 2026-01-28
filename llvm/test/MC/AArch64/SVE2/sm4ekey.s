@@ -13,5 +13,5 @@
 sm4ekey z0.s, z1.s, z31.s
 // CHECK-INST: sm4ekey z0.s, z1.s, z31.s
 // CHECK-ENCODING: [0x20,0xf0,0x3f,0x45]
-// CHECK-ERROR: instruction requires: sve2-sm4
+// CHECK-ERROR: instruction requires: sve-sm4
 // CHECK-UNKNOWN: 453ff020 <unknown>

@@ -28,6 +28,7 @@
 #include "X86MachineFunctionInfo.h"
 #include "X86RegisterInfo.h"
 #include "X86Subtarget.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
 #include "llvm/CodeGen/MachineInstr.h"
@@ -42,7 +43,7 @@
 
 using namespace llvm;
 
-#define DEBUG_TYPE "tile-pre-config"
+#define DEBUG_TYPE "x86-pre-tile-config"
 
 static void emitErrorMsg(MachineFunction &MF) {
   LLVMContext &Context = MF.getFunction().getContext();
@@ -80,12 +81,12 @@ struct MIRef {
   bool operator<(const MIRef &RHS) const {
     // Comparison between different BBs happens when inserting a MIRef into set.
     // So we compare MBB first to make the insertion happy.
-    return MBB < RHS.MBB || (MBB == RHS.MBB && Pos < RHS.Pos);
+    return std::tie(MBB, Pos) < std::tie(RHS.MBB, RHS.Pos);
   }
   bool operator>(const MIRef &RHS) const {
     // Comparison between different BBs happens when inserting a MIRef into set.
     // So we compare MBB first to make the insertion happy.
-    return MBB > RHS.MBB || (MBB == RHS.MBB && Pos > RHS.Pos);
+    return std::tie(MBB, Pos) > std::tie(RHS.MBB, RHS.Pos);
   }
 };
 
@@ -97,10 +98,11 @@ struct BBInfo {
   bool NeedTileCfgLiveIn = false;
 };
 
-class X86PreTileConfig : public MachineFunctionPass {
+class X86PreTileConfigImpl {
+  std::function<MachineLoopInfo *()> GetMLI;
   MachineRegisterInfo *MRI = nullptr;
   const MachineLoopInfo *MLI = nullptr;
-  SmallSet<MachineInstr *, 8> DefVisited;
+  SmallPtrSet<MachineInstr *, 8> DefVisited;
   DenseMap<MachineBasicBlock *, BBInfo> BBVisitedInfo;
   DenseMap<MachineBasicBlock *, SmallVector<MIRef, 8>> ShapeBBs;
 
@@ -141,15 +143,10 @@ class X86PreTileConfig : public MachineFunctionPass {
     if (!MO.isReg() || !MO.getReg().isVirtual())
       return false;
 
-    unsigned Shapes = 0;
-    if (MRI->getRegClass(MO.getReg())->getID() == X86::TILERegClassID)
-      Shapes = 1;
-    if (MRI->getRegClass(MO.getReg())->getID() == X86::TILEPAIRRegClassID)
-      Shapes = 2;
-    if (!Shapes)
+    if (MRI->getRegClass(MO.getReg())->getID() != X86::TILERegClassID)
       return false;
 
-    collectShapeInfo(MI, Shapes);
+    collectShapeInfo(MI);
     return true;
   }
 
@@ -165,7 +162,7 @@ class X86PreTileConfig : public MachineFunctionPass {
   }
 
   /// Collect the shape def information for later use.
-  void collectShapeInfo(MachineInstr &MI, unsigned Shapes);
+  void collectShapeInfo(MachineInstr &MI);
 
   /// Try to hoist shapes definded below AMX instructions.
   bool hoistShapesInBB(MachineBasicBlock *MBB, SmallVectorImpl<MIRef> &Shapes) {
@@ -193,8 +190,22 @@ class X86PreTileConfig : public MachineFunctionPass {
     return true;
   }
 
+  /// Clear MF related structures.
+  void releaseMemory() {
+    ShapeBBs.clear();
+    DefVisited.clear();
+    BBVisitedInfo.clear();
+  }
+
 public:
-  X86PreTileConfig() : MachineFunctionPass(ID) {}
+  X86PreTileConfigImpl(std::function<MachineLoopInfo *()> GetMLI)
+      : GetMLI(GetMLI) {}
+  bool runOnMachineFunction(MachineFunction &MF);
+};
+
+class X86PreTileConfigLegacy : public MachineFunctionPass {
+public:
+  X86PreTileConfigLegacy() : MachineFunctionPass(ID) {}
 
   /// Return the pass name.
   StringRef getPassName() const override {
@@ -208,13 +219,6 @@ public:
     MachineFunctionPass::getAnalysisUsage(AU);
   }
 
-  /// Clear MF related structures.
-  void releaseMemory() override {
-    ShapeBBs.clear();
-    DefVisited.clear();
-    BBVisitedInfo.clear();
-  }
-
   /// Perform ldtilecfg instructions inserting.
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -223,15 +227,15 @@ public:
 
 } // end anonymous namespace
 
-char X86PreTileConfig::ID = 0;
+char X86PreTileConfigLegacy::ID = 0;
 
-INITIALIZE_PASS_BEGIN(X86PreTileConfig, "tilepreconfig",
+INITIALIZE_PASS_BEGIN(X86PreTileConfigLegacy, "tilepreconfig",
                       "Tile Register Pre-configure", false, false)
 INITIALIZE_PASS_DEPENDENCY(MachineLoopInfoWrapperPass)
-INITIALIZE_PASS_END(X86PreTileConfig, "tilepreconfig",
+INITIALIZE_PASS_END(X86PreTileConfigLegacy, "tilepreconfig",
                     "Tile Register Pre-configure", false, false)
 
-void X86PreTileConfig::collectShapeInfo(MachineInstr &MI, unsigned Shapes) {
+void X86PreTileConfigImpl::collectShapeInfo(MachineInstr &MI) {
   auto RecordShape = [&](MachineInstr *MI, MachineBasicBlock *MBB) {
     MIRef MIR(MI, MBB);
     auto &Refs = ShapeBBs[MBB];
@@ -240,10 +244,8 @@ void X86PreTileConfig::collectShapeInfo(MachineInstr &MI, unsigned Shapes) {
       Refs.insert(I, MIR);
   };
 
-  // All shapes have same row in multi-tile operand.
-  SmallVector<Register, 8> WorkList;
-  for (unsigned I = 1; I < Shapes + 2; ++I)
-    WorkList.push_back(MI.getOperand(I).getReg());
+  SmallVector<Register, 8> WorkList(
+      {MI.getOperand(1).getReg(), MI.getOperand(2).getReg()});
   while (!WorkList.empty()) {
     Register R = WorkList.pop_back_val();
     MachineInstr *DefMI = MRI->getVRegDef(R);
@@ -251,13 +253,6 @@ void X86PreTileConfig::collectShapeInfo(MachineInstr &MI, unsigned Shapes) {
     MachineBasicBlock *DefMBB = DefMI->getParent();
     if (DefMI->isMoveImmediate() || !DefVisited.insert(DefMI).second)
       continue;
-
-    // This happens when column = 0 in multi-tile operand.
-    if (DefMI->getOpcode() == X86::COPY) {
-      MachineInstr *MI = MRI->getVRegDef(DefMI->getOperand(1).getReg());
-      if (MI && MI->isMoveImmediate())
-        continue;
-    }
 
     if (DefMI->isPHI()) {
       for (unsigned I = 1; I < DefMI->getNumOperands(); I += 2)
@@ -271,7 +266,9 @@ void X86PreTileConfig::collectShapeInfo(MachineInstr &MI, unsigned Shapes) {
   }
 }
 
-bool X86PreTileConfig::runOnMachineFunction(MachineFunction &MF) {
+bool X86PreTileConfigImpl::runOnMachineFunction(MachineFunction &MF) {
+  scope_exit ClearStateOnExit([this] { releaseMemory(); });
+
   X86MachineFunctionInfo *X86FI = MF.getInfo<X86MachineFunctionInfo>();
   // Early exit in the common case of non-AMX code.
   if (X86FI->getAMXProgModel() != AMXProgModelEnum::ManagedRA)
@@ -288,7 +285,7 @@ bool X86PreTileConfig::runOnMachineFunction(MachineFunction &MF) {
 
   // Iterate MF to collect information.
   MRI = &MF.getRegInfo();
-  MLI = &getAnalysis<MachineLoopInfoWrapperPass>().getLI();
+  MLI = GetMLI();
   SmallSet<MIRef, 8> CfgNeedInsert;
   SmallVector<MachineBasicBlock *, 8> CfgLiveInBBs;
   for (auto &MBB : MF) {
@@ -450,6 +447,23 @@ bool X86PreTileConfig::runOnMachineFunction(MachineFunction &MF) {
   return true;
 }
 
-FunctionPass *llvm::createX86PreTileConfigPass() {
-  return new X86PreTileConfig();
+FunctionPass *llvm::createX86PreTileConfigLegacyPass() {
+  return new X86PreTileConfigLegacy();
+}
+
+bool X86PreTileConfigLegacy::runOnMachineFunction(MachineFunction &MF) {
+  X86PreTileConfigImpl Impl(
+      [this]() { return &getAnalysis<MachineLoopInfoWrapperPass>().getLI(); });
+  return Impl.runOnMachineFunction(MF);
+}
+
+PreservedAnalyses
+X86PreTileConfigPass::run(MachineFunction &MF,
+                          MachineFunctionAnalysisManager &MFAM) {
+  X86PreTileConfigImpl Impl(
+      [&MFAM, &MF]() { return &MFAM.getResult<MachineLoopAnalysis>(MF); });
+  return Impl.runOnMachineFunction(MF)
+             ? getMachineFunctionPassPreservedAnalyses()
+                   .preserveSet<CFGAnalyses>()
+             : PreservedAnalyses::all();
 }

@@ -12,7 +12,7 @@ from lldbsuite.test.lldbpexpect import PExpectTest
 class EditlineTest(PExpectTest):
     @skipIfAsan
     @skipIfEditlineSupportMissing
-    @skipIf(oslist=["linux"], archs=["arm", "aarch64"])
+    @skipIf(oslist=["linux"], archs=["arm$", "aarch64"])
     def test_left_right_arrow(self):
         """Test that ctrl+left/right arrow navigates words correctly.
 
@@ -94,7 +94,7 @@ class EditlineTest(PExpectTest):
         # after the prompt.
         self.child.send("foo")
         # Check that there are no escape codes.
-        self.child.expect(re.escape("\n(lldb) foo"))
+        self.child.expect(re.escape("\n\r\x1b[K(lldb) foo"))
 
     @skipIfAsan
     @skipIfEditlineSupportMissing

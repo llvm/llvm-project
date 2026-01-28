@@ -206,7 +206,7 @@ void LoopAnnotationConversion::convertLocation(FusedLoc location) {
 
 llvm::MDNode *LoopAnnotationConversion::convert() {
   // Reserve operand 0 for loop id self reference.
-  auto dummy = llvm::MDNode::getTemporary(ctx, std::nullopt);
+  auto dummy = llvm::MDNode::getTemporary(ctx, {});
   metadataNodes.push_back(dummy.get());
 
   if (FusedLoc startLoc = attr.getStartLoc())
@@ -280,7 +280,7 @@ LoopAnnotationTranslation::translateLoopAnnotation(LoopAnnotationAttr attr,
 llvm::MDNode *
 LoopAnnotationTranslation::getAccessGroup(AccessGroupAttr accessGroupAttr) {
   auto [result, inserted] =
-      accessGroupMetadataMapping.insert({accessGroupAttr, nullptr});
+      accessGroupMetadataMapping.try_emplace(accessGroupAttr);
   if (inserted)
     result->second = llvm::MDNode::getDistinct(llvmModule.getContext(), {});
   return result->second;

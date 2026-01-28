@@ -12,7 +12,7 @@ module test_0
 !ERROR: No explicit type declared for 'no_implicit_materialization_2'
 !$omp declare target link(no_implicit_materialization_2)
 
-!WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead.
+!WARNING: The usage of TO clause on DECLARE TARGET directive has been deprecated. Use ENTER clause instead. [-Wopen-mp-usage]
 !ERROR: No explicit type declared for 'no_implicit_materialization_3'
 !$omp declare target to(no_implicit_materialization_3)
 

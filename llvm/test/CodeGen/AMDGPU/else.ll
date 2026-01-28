@@ -1,5 +1,5 @@
-; RUN: llc -mtriple=amdgcn -mcpu=verde -verify-machineinstrs < %s | FileCheck %s
-; RUN: llc -mtriple=amdgcn -mcpu=tonga -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=verde < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=tonga < %s | FileCheck %s
 
 ; CHECK-LABEL: {{^}}else_no_execfix:
 ; CHECK: ; %Flow

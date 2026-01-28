@@ -152,6 +152,10 @@ _LIBCPP_HARDENING_MODE_EXTENSIVE, \
 _LIBCPP_HARDENING_MODE_DEBUG
 #  endif
 
+#  ifdef _LIBCPP_ASSERTION_SEMANTIC
+#    error "Assertion semantics are not available in the C++03 mode."
+#  endif
+
 // } HARDENING
 
 #  define _LIBCPP_TOSTRING2(x) #x
@@ -213,15 +217,6 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    ifndef _LIBCPP_ENABLE_EXPERIMENTAL
 #      define _LIBCPP_ENABLE_EXPERIMENTAL
 #    endif
-#  endif
-
-// Incomplete features get their own specific disabling flags. This makes it
-// easier to grep for target specific flags once the feature is complete.
-#  if !defined(_LIBCPP_ENABLE_EXPERIMENTAL) && !defined(_LIBCPP_BUILDING_LIBRARY)
-#    define _LIBCPP_HAS_NO_INCOMPLETE_PSTL
-#    define _LIBCPP_HAS_NO_EXPERIMENTAL_STOP_TOKEN
-#    define _LIBCPP_HAS_NO_EXPERIMENTAL_TZDB
-#    define _LIBCPP_HAS_NO_EXPERIMENTAL_SYNCSTREAM
 #  endif
 
 #  if defined(__MVS__)
@@ -302,17 +297,14 @@ _LIBCPP_HARDENING_MODE_DEBUG
 #    define _LIBCPP_USING_DEV_RANDOM
 #  endif
 
-#    define _LIBCPP_ALIGNOF(_Tp) _Alignof(_Tp)
-#    define _ALIGNAS_TYPE(x) __attribute__((__aligned__(_LIBCPP_ALIGNOF(x))))
-#    define _ALIGNAS(x) __attribute__((__aligned__(x)))
-#    define _LIBCPP_NORETURN __attribute__((__noreturn__))
-#    define _LIBCPP_HAS_NO_NOEXCEPT
-#    define nullptr __nullptr
-#    define _NOEXCEPT throw()
-#    define _NOEXCEPT_(...)
-#    define static_assert(...) _Static_assert(__VA_ARGS__)
-#    define decltype(...) __decltype(__VA_ARGS__)
-#    define _LIBCPP_CONSTEXPR
+#  define _LIBCPP_ALIGNOF(_Tp) _Alignof(_Tp)
+#  define _ALIGNAS_TYPE(x) __attribute__((__aligned__(_LIBCPP_ALIGNOF(x))))
+#  define _ALIGNAS(x) __attribute__((__aligned__(x)))
+#  define _LIBCPP_NORETURN __attribute__((__noreturn__))
+#  define nullptr __nullptr
+#  define _NOEXCEPT throw()
+#  define static_assert(...) _Static_assert(__VA_ARGS__)
+#  define decltype(...) __decltype(__VA_ARGS__)
 
 typedef __char16_t char16_t;
 typedef __char32_t char32_t;
@@ -630,18 +622,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_HAS_NO_ALIGNED_ALLOCATION
 #  endif
 
-// It is not yet possible to use aligned_alloc() on all Apple platforms since
-// 10.15 was the first version to ship an implementation of aligned_alloc().
-#  if defined(__APPLE__)
-#    if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__) &&                                                     \
-         __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__ < 101500)
-#      define _LIBCPP_HAS_NO_C11_ALIGNED_ALLOC
-#    endif
-#  elif defined(__ANDROID__) && __ANDROID_API__ < 28
-// Android only provides aligned_alloc when targeting API 28 or higher.
-#    define _LIBCPP_HAS_NO_C11_ALIGNED_ALLOC
-#  endif
-
 #  if defined(__APPLE__) || defined(__FreeBSD__)
 #    define _LIBCPP_HAS_DEFAULTRUNELOCALE
 #  endif
@@ -666,14 +646,6 @@ typedef __char32_t char32_t;
 
 #  define _LIBCPP_DEPRECATED_ATOMIC_SYNC /* nothing */
 
-#  define _LIBCPP_DEPRECATED_IN_CXX11
-
-#  define _LIBCPP_DEPRECATED_IN_CXX14
-#  define _LIBCPP_DEPRECATED_IN_CXX17
-#  define _LIBCPP_DEPRECATED_IN_CXX20
-#  define _LIBCPP_DEPRECATED_IN_CXX23
-#  define _LIBCPP_DEPRECATED_IN_CXX26
-
 #  if !defined(_LIBCPP_HAS_NO_CHAR8_T)
 #    define _LIBCPP_DEPRECATED_WITH_CHAR8_T _LIBCPP_DEPRECATED
 #  else
@@ -690,13 +662,6 @@ typedef __char32_t char32_t;
 #    define _LIBCPP_SUPPRESS_DEPRECATED_PUSH
 #    define _LIBCPP_SUPPRESS_DEPRECATED_POP
 #  endif
-
-#  define _LIBCPP_EXPLICIT_SINCE_CXX14
-#  define _LIBCPP_EXPLICIT_SINCE_CXX23
-#  define _LIBCPP_CONSTEXPR_SINCE_CXX14
-#  define _LIBCPP_CONSTEXPR_SINCE_CXX17
-#  define _LIBCPP_CONSTEXPR_SINCE_CXX20
-#  define _LIBCPP_CONSTEXPR_SINCE_CXX23
 
 #  ifndef _LIBCPP_WEAK
 #    define _LIBCPP_WEAK __attribute__((__weak__))

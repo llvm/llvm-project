@@ -60,7 +60,7 @@ struct TestEmulateWideIntPass
     // casts (and vice versa) and using it insted of `llvm.bitcast`.
     auto addBitcast = [](OpBuilder &builder, Type type, ValueRange inputs,
                          Location loc) -> Value {
-      auto cast = builder.create<LLVM::BitcastOp>(loc, type, inputs);
+      auto cast = LLVM::BitcastOp::create(builder, loc, type, inputs);
       return cast->getResult(0);
     };
     typeConverter.addSourceMaterialization(addBitcast);

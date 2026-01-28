@@ -20,7 +20,6 @@ body:             |
     ; %load1 || %load2 == %load1 is not necessarily true, even though they
     ; both load from the same address. Whatever is in that address may be
     ; changed by another instruction which appears between them.
-    ;
     ; Check that we don't remove the G_OR.
 
     ; CHECK-LABEL: name: not_necessarily_equiv_loads

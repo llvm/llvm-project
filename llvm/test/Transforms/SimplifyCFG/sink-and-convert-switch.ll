@@ -8,16 +8,16 @@ define void @pr104567(i8 %x, ptr %f) {
 ; CHECK-SAME: i8 [[X:%.*]], ptr [[F:%.*]]) {
 ; CHECK-NEXT:  [[START:.*:]]
 ; CHECK-NEXT:    [[Y:%.*]] = alloca [1 x i8], align 1
-; CHECK-NEXT:    call void @llvm.lifetime.start.p0(i64 1, ptr nonnull [[Y]])
+; CHECK-NEXT:    call void @llvm.lifetime.start.p0(ptr nonnull [[Y]])
 ; CHECK-NEXT:    [[SWITCH_OFFSET:%.*]] = add nsw i8 [[X]], 4
 ; CHECK-NEXT:    store i8 [[SWITCH_OFFSET]], ptr [[Y]], align 1
 ; CHECK-NEXT:    call void [[F]](ptr [[Y]])
-; CHECK-NEXT:    call void @llvm.lifetime.end.p0(i64 1, ptr nonnull [[Y]])
+; CHECK-NEXT:    call void @llvm.lifetime.end.p0(ptr nonnull [[Y]])
 ; CHECK-NEXT:    ret void
 ;
 start:
   %y = alloca [1 x i8], align 1
-  call void @llvm.lifetime.start.p0(i64 1, ptr nonnull %y)
+  call void @llvm.lifetime.start.p0(ptr nonnull %y)
   switch i8 %x, label %default.unreachable [
   i8 0, label %bb4
   i8 1, label %bb3
@@ -41,7 +41,7 @@ bb2:
 
 bb5:
   call void %f(ptr %y)
-  call void @llvm.lifetime.end.p0(i64 1, ptr nonnull %y)
+  call void @llvm.lifetime.end.p0(ptr nonnull %y)
   ret void
 }
 

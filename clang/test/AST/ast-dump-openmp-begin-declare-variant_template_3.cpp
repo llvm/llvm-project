@@ -54,7 +54,7 @@ int test() {
 // CHECK-NEXT: | | | |-CopyAssignment simple trivial has_const_param needs_implicit implicit_has_const_param
 // CHECK-NEXT: | | | |-MoveAssignment exists simple trivial needs_implicit
 // CHECK-NEXT: | | | `-Destructor simple irrelevant trivial {{(constexpr )?}}needs_implicit
-// CHECK-NEXT: | | |-CXXRecordDecl [[ADDR_3:0x[a-z0-9]*]] <col:23, col:30> col:30 implicit referenced struct S
+// CHECK-NEXT: | | |-CXXRecordDecl [[ADDR_3:0x[a-z0-9]*]] <col:23, col:30> col:30 implicit struct S
 // CHECK-NEXT: | | `-CXXConstructorDecl [[ADDR_4:0x[a-z0-9]*]] <line:6:3, col:16> col:3 S<T> 'void (int, T *)'
 // CHECK-NEXT: | |   |-ParmVarDecl [[ADDR_5:0x[a-z0-9]*]] <col:5> col:8 'int'
 // CHECK-NEXT: | |   |-ParmVarDecl [[ADDR_6:0x[a-z0-9]*]] <col:10, col:12> col:13 'T *'

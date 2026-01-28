@@ -37,7 +37,7 @@ class LocationListLookupTestCase(TestBase):
                     process.selected_thread.selected_frame = f
                     self.expect_expr("this", result_type="Foo *")
 
-    @skipIf(oslist=["linux"], archs=["arm"])
+    @skipIf(oslist=["linux"], archs=["arm$"])
     @skipIfDarwin
     def test_loclist_frame_var(self):
         self.build()

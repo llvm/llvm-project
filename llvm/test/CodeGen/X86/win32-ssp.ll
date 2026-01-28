@@ -1,7 +1,9 @@
 ; RUN: llc -mtriple=x86_64-w64-mingw32        < %s -o - | FileCheck --check-prefix=MINGW %s
+; RUN: llc -mtriple=x86_64-pc-cygwin          < %s -o - | FileCheck --check-prefix=MINGW %s
 ; RUN: llc -mtriple=x86_64-pc-windows-itanium < %s -o - | FileCheck --check-prefix=MSVC  %s
 ; RUN: llc -mtriple=x86_64-pc-windows-msvc    < %s -o - | FileCheck --check-prefix=MSVC  %s
 ; RUN: llc -mtriple=i686-w64-mingw32          < %s -o - | FileCheck --check-prefix=MINGW %s
+; RUN: llc -mtriple=i686-pc-cygwin            < %s -o - | FileCheck --check-prefix=MINGW %s
 
 declare void @llvm.lifetime.start.p0(i64, ptr nocapture)
 declare dso_local void @other(ptr)

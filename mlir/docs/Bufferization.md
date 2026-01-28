@@ -202,13 +202,13 @@ e.g.:
 %2 = "my_dialect.yet_another_op"(%0) : (tensor<?xf32>) -> (tensor<?xf32>)
 ```
 
-## Tensor / MemRef Boundary
+## Tensor / Buffer Boundary
 
 The bufferization dialect provides a few helper ops to connect tensor IR (that
 should be bufferized) with existing buffers (that may be allocated/provided by
 a different runtime/library/etc.).
 
-`bufferization.to_memref %t` returns the future buffer of a tensor SSA value.
+`bufferization.to_buffer %t` returns the future buffer of a tensor SSA value.
 `bufferization.to_tensor %m` returns a tensor SSA value for a given MemRef
 buffer. `bufferization.materialize_in_destination` indicates that a tensor value
 should materialize in a certain buffer.
@@ -268,7 +268,7 @@ By default, One-Shot Bufferize fails when it encounters an op with tensor
 semantics (i.e., tensor result or tensor operand) that is not bufferizable
 (i.e., does not implement `BufferizableOpInterface`). This can be avoided with
 `allow-unknown-ops`. In that case, One-Shot Bufferize inserts
-`to_memref`/`to_tensor` ops around the bufferization boundary.
+`to_buffer`/`to_tensor` ops around the bufferization boundary.
 
 One-Shot Bufferize can be configured to bufferize only ops from a set of
 dialects with `dialect-filter`.
@@ -291,7 +291,7 @@ memref. The layout map of the memref type can be controlled with
 
 One-Shot Bufferize bufferizes ops from top to bottom. This works well when all
 ops are bufferizable. However, when encountering a non-bufferizable tensor with
-`allow-unknown-ops`, One-Shot Bufferize must insert `to_memref` ops at the
+`allow-unknown-ops`, One-Shot Bufferize must insert `to_buffer` ops at the
 bufferization boundary and decide on a memref type. By default, One-Shot
 Bufferize choose the most dynamic memref type wrt. layout maps. E.g.:
 
@@ -300,12 +300,12 @@ Bufferize choose the most dynamic memref type wrt. layout maps. E.g.:
 %1 = tensor.extract %0[%idx1, %idx2] : tensor<?xf32>
 ```
 
-When bufferizing the above IR, One-Shot Bufferize inserts a `to_memref` ops with
+When bufferizing the above IR, One-Shot Bufferize inserts a `to_buffer` ops with
 dynamic offset and strides:
 
 ```mlir
 %0 = "my_dialect.unbufferizable_op(%t) : (tensor<?x?xf32>) -> (tensor<?x?xf32>)
-%0_m = bufferization.to_memref %0 : memref<?x?xf32, strided<[?, ?], offset: ?>>
+%0_m = bufferization.to_buffer %0 : memref<?x?xf32, strided<[?, ?], offset: ?>>
 %1 = memref.load %0_m[%idx1, %idx2] : memref<?x?xf32, strided<[?, ?], offset: ?>>
 ```
 
@@ -335,7 +335,7 @@ generation of layout maps when no precise layout can be inferred:
 *   `identity-layout-map` uses static identity layout maps. This option can be
     useful for legacy code that cannot handle memref types with layout maps.
     Note that this setting can lead to additional buffer copies when folding a
-    `to_tensor`/`to_memref` pair with memref types that are not cast-compatible.
+    `to_tensor`/`to_buffer` pair with memref types that are not cast-compatible.
 
 Note: The `unknown-type-conversion` option does not affect layout maps of
 function signatures. There is a separate `function-signature-type-conversion`

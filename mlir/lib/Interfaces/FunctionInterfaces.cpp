@@ -44,14 +44,14 @@ function_interface_impl::getResultAttrDict(FunctionOpInterface op,
 ArrayRef<NamedAttribute>
 function_interface_impl::getArgAttrs(FunctionOpInterface op, unsigned index) {
   auto argDict = getArgAttrDict(op, index);
-  return argDict ? argDict.getValue() : std::nullopt;
+  return argDict ? argDict.getValue() : ArrayRef<NamedAttribute>();
 }
 
 ArrayRef<NamedAttribute>
 function_interface_impl::getResultAttrs(FunctionOpInterface op,
                                         unsigned index) {
   auto resultDict = getResultAttrDict(op, index);
-  return resultDict ? resultDict.getValue() : std::nullopt;
+  return resultDict ? resultDict.getValue() : ArrayRef<NamedAttribute>();
 }
 
 /// Get either the argument or result attributes array.

@@ -39,6 +39,12 @@ cl::opt<bool> ignoreMissingTypeDescriptors(
              "translating FIR to LLVM"),
     cl::init(false), cl::Hidden);
 
+cl::opt<bool> skipExternalRttiDefinition(
+    "skip-external-rtti-definition", llvm::cl::init(false),
+    llvm::cl::desc("do not define rtti static objects for types belonging to "
+                   "other compilation units"),
+    cl::Hidden);
+
 OptimizationLevel defaultOptLevel{OptimizationLevel::O0};
 
 codegenoptions::DebugInfoKind noDebugInfo{codegenoptions::NoDebugInfo};
@@ -55,6 +61,7 @@ cl::opt<bool> useOldAliasTags(
     cl::desc("Use a single TBAA tree for all functions and do not use "
              "the FIR alias tags pass"),
     cl::init(false), cl::Hidden);
+EnableOption(FirLICM, "fir-licm", "FIR loop invariant code motion");
 
 /// CodeGen Passes
 DisableOption(CodeGenRewrite, "codegen-rewrite", "rewrite FIR for codegen");

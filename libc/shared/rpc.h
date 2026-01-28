@@ -551,6 +551,9 @@ template <uint32_t opcode> RPC_ATTRS Client::Port Client::open() {
 /// port if it has a pending receive operation
 RPC_ATTRS rpc::optional<typename Server::Port>
 Server::try_open(uint32_t lane_size, uint32_t start) {
+  if (rpc::get_lane_id() >= lane_size)
+    return rpc::nullopt;
+
   // Perform a naive linear scan for a port that has a pending request.
   for (uint32_t index = start; index < process.port_count; ++index) {
     uint64_t lane_mask = rpc::get_lane_mask();
