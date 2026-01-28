@@ -14,6 +14,7 @@
 #include "MCTargetDesc/MipsABIInfo.h"
 #include "Mips.h"
 #include "MipsMachineFunction.h"
+#include "MipsRegisterBankInfo.h"
 #include "MipsSubtarget.h"
 #include "MipsTargetMachine.h"
 #include "llvm/ADT/BitVector.h"
@@ -318,4 +319,34 @@ bool MipsRegisterInfo::canRealignStack(const MachineFunction &MF) const {
   // We have to reserve the base pointer register in the presence of variable
   // sized objects.
   return MF.getRegInfo().canReserveReg(BP);
+}
+
+const TargetRegisterClass *MipsRegisterInfo::getRegClassForTypeOnBank(
+    LLT Ty, const RegisterBank &RB, const TargetSubtargetInfo *STI) const {
+  const unsigned TySize = Ty.getSizeInBits();
+
+  if (RB.getID() == Mips::GPRBRegBankID) {
+    assert((Ty.isScalar() || Ty.isPointer()) &&
+           (TySize == 32 || TySize == 64) &&
+           "Register class not available for LLT, register bank combination");
+    if (TySize == 32)
+      return &Mips::GPR32RegClass;
+    if (TySize == 64)
+      return &Mips::GPR64RegClass;
+  }
+
+  if (RB.getID() == Mips::FPRBRegBankID) {
+    if (Ty.isScalar()) {
+      assert((TySize == 32 || TySize == 64) &&
+             "Register class not available for LLT, register bank combination");
+      if (TySize == 32)
+        return &Mips::FGR32RegClass;
+      assert(STI != nullptr);
+      return static_cast<const MipsSubtarget *>(STI)->isFP64bit()
+                 ? &Mips::FGR64RegClass
+                 : &Mips::AFGR64RegClass;
+    }
+  }
+
+  llvm_unreachable("Unsupported register bank.");
 }

@@ -45,8 +45,6 @@ private:
   bool materialize32BitImm(Register DestReg, APInt Imm,
                            MachineIRBuilder &B) const;
   bool selectCopy(MachineInstr &I, MachineRegisterInfo &MRI) const;
-  const TargetRegisterClass *
-  getRegClassForTypeOnBank(Register Reg, MachineRegisterInfo &MRI) const;
   unsigned selectLoadStoreOpCode(MachineInstr &I,
                                  MachineRegisterInfo &MRI) const;
   bool buildUnalignedStore(MachineInstr &I, unsigned Opc,
@@ -108,41 +106,15 @@ bool MipsInstructionSelector::selectCopy(MachineInstr &I,
   if (DstReg.isPhysical())
     return true;
 
-  const TargetRegisterClass *RC = getRegClassForTypeOnBank(DstReg, MRI);
+  const TargetRegisterClass *RC = TRI.getRegClassForTypeOnBank(
+      MRI.getType(DstReg), *RBI.getRegBank(DstReg, MRI, TRI),
+      &MF->getSubtarget());
   if (!RBI.constrainGenericRegister(DstReg, *RC, MRI)) {
     LLVM_DEBUG(dbgs() << "Failed to constrain " << TII.getName(I.getOpcode())
                       << " operand\n");
     return false;
   }
   return true;
-}
-
-const TargetRegisterClass *MipsInstructionSelector::getRegClassForTypeOnBank(
-    Register Reg, MachineRegisterInfo &MRI) const {
-  const LLT Ty = MRI.getType(Reg);
-  const unsigned TySize = Ty.getSizeInBits();
-
-  if (isRegInGprb(Reg, MRI)) {
-    assert((Ty.isScalar() || Ty.isPointer()) &&
-           (TySize == 32 || TySize == 64) &&
-           "Register class not available for LLT, register bank combination");
-    if (TySize == 32)
-      return &Mips::GPR32RegClass;
-    if (TySize == 64)
-      return &Mips::GPR64RegClass;
-  }
-
-  if (isRegInFprb(Reg, MRI)) {
-    if (Ty.isScalar()) {
-      assert((TySize == 32 || TySize == 64) &&
-             "Register class not available for LLT, register bank combination");
-      if (TySize == 32)
-        return &Mips::FGR32RegClass;
-      return STI.isFP64bit() ? &Mips::FGR64RegClass : &Mips::AFGR64RegClass;
-    }
-  }
-
-  llvm_unreachable("Unsupported register bank.");
 }
 
 bool MipsInstructionSelector::materialize32BitImm(Register DestReg, APInt Imm,
@@ -428,7 +400,9 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
     if (DestReg.isPhysical())
       DefRC = TRI.getRegClass(DestReg);
     else
-      DefRC = getRegClassForTypeOnBank(DestReg, MRI);
+      DefRC = TRI.getRegClassForTypeOnBank(MRI.getType(DestReg),
+                                           *RBI.getRegBank(DestReg, MRI, TRI),
+                                           &MF.getSubtarget());
 
     I.setDesc(TII.get(TargetOpcode::PHI));
     return RBI.constrainGenericRegister(DestReg, *DefRC, MRI);
@@ -576,7 +550,9 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
              .addDef(Dst);
 
     // Set class based on register bank, there can be fpr and gpr implicit def.
-    MRI.setRegClass(Dst, getRegClassForTypeOnBank(Dst, MRI));
+    MRI.setRegClass(Dst, TRI.getRegClassForTypeOnBank(
+                             MRI.getType(Dst), *RBI.getRegBank(Dst, MRI, TRI),
+                             &MF.getSubtarget()));
     break;
   }
   case G_CONSTANT: {

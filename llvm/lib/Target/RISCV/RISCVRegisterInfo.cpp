@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "RISCVRegisterInfo.h"
+#include "GISel/RISCVRegisterBankInfo.h"
 #include "RISCV.h"
 #include "RISCVSubtarget.h"
 #include "llvm/ADT/SmallSet.h"
@@ -1090,4 +1091,40 @@ RISCVRegisterInfo::findVRegWithEncoding(const TargetRegisterClass &RegClass,
   if (RISCVRI::getLMul(RegClass.TSFlags) == RISCVVType::LMUL_1)
     return Reg;
   return getMatchingSuperReg(Reg, RISCV::sub_vrm1_0, &RegClass);
+}
+
+const TargetRegisterClass *RISCVRegisterInfo::getRegClassForTypeOnBank(
+    LLT Ty, const RegisterBank &RB, const TargetSubtargetInfo *STI) const {
+  assert(STI != nullptr);
+  if (RB.getID() == RISCV::GPRBRegBankID) {
+    if (Ty.getSizeInBits() <= 32 ||
+        (static_cast<const RISCVSubtarget *>(STI)->is64Bit() &&
+         Ty.getSizeInBits() == 64))
+      return &RISCV::GPRRegClass;
+  }
+
+  if (RB.getID() == RISCV::FPRBRegBankID) {
+    if (Ty.getSizeInBits() == 16)
+      return &RISCV::FPR16RegClass;
+    if (Ty.getSizeInBits() == 32)
+      return &RISCV::FPR32RegClass;
+    if (Ty.getSizeInBits() == 64)
+      return &RISCV::FPR64RegClass;
+  }
+
+  if (RB.getID() == RISCV::VRBRegBankID) {
+    if (Ty.getSizeInBits().getKnownMinValue() <= 64)
+      return &RISCV::VRRegClass;
+
+    if (Ty.getSizeInBits().getKnownMinValue() == 128)
+      return &RISCV::VRM2RegClass;
+
+    if (Ty.getSizeInBits().getKnownMinValue() == 256)
+      return &RISCV::VRM4RegClass;
+
+    if (Ty.getSizeInBits().getKnownMinValue() == 512)
+      return &RISCV::VRM8RegClass;
+  }
+
+  return nullptr;
 }

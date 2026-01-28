@@ -17,6 +17,7 @@
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64SMEAttributes.h"
 #include "AArch64Subtarget.h"
+#include "GISel/AArch64RegisterBankInfo.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64InstPrinter.h"
 #include "llvm/ADT/BitVector.h"
@@ -1441,4 +1442,37 @@ bool AArch64RegisterInfo::shouldAnalyzePhysregInMachineLoopInfo(
 bool AArch64RegisterInfo::isIgnoredCVReg(MCRegister LLVMReg) const {
   return (LLVMReg >= AArch64::Z0 && LLVMReg <= AArch64::Z31) ||
          (LLVMReg >= AArch64::P0 && LLVMReg <= AArch64::P15);
+}
+
+// FIXME: This should be target-independent, inferred from the types declared
+// for each class in the bank.
+const TargetRegisterClass *AArch64RegisterInfo::getRegClassForTypeOnBank(
+    LLT Ty, const RegisterBank &RB, const TargetSubtargetInfo *STI) const {
+  if (RB.getID() == AArch64::GPRRegBankID) {
+    if (Ty.getSizeInBits() <= 32)
+      return &AArch64::GPR32RegClass;
+    if (Ty.getSizeInBits() == 64)
+      return &AArch64::GPR64RegClass;
+    if (Ty.getSizeInBits() == 128)
+      return &AArch64::XSeqPairsClassRegClass;
+    return nullptr;
+  }
+
+  if (RB.getID() == AArch64::FPRRegBankID) {
+    switch (Ty.getSizeInBits()) {
+    case 8:
+      return &AArch64::FPR8RegClass;
+    case 16:
+      return &AArch64::FPR16RegClass;
+    case 32:
+      return &AArch64::FPR32RegClass;
+    case 64:
+      return &AArch64::FPR64RegClass;
+    case 128:
+      return &AArch64::FPR128RegClass;
+    }
+    return nullptr;
+  }
+
+  return nullptr;
 }

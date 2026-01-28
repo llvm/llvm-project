@@ -168,6 +168,10 @@ struct RISCVRegisterInfo : public RISCVGenRegisterInfo {
   static bool isRVVRegClass(const TargetRegisterClass *RC) {
     return RISCVRI::isVRegClass(RC->TSFlags);
   }
+
+  const TargetRegisterClass *
+  getRegClassForTypeOnBank(LLT Ty, const RegisterBank &Bank,
+                           const TargetSubtargetInfo *STI) const override;
 };
 } // namespace llvm
 
