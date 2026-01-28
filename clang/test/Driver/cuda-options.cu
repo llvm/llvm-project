@@ -104,12 +104,12 @@
 // RUN: | FileCheck -check-prefixes ARCH-SM52,NOARCH-SM60,NOARCH-SM70 %s
 
 // c) if --no-cuda-gpu-arch=X negates all preceding --cuda-gpu-arch=X
-//    we default to sm_75 -- same as if no --cuda-gpu-arch were passed.
+//    we default to sm_52 -- same as if no --cuda-gpu-arch were passed.
 // RUN: %clang -### --target=x86_64-linux-gnu --cuda-device-only \
 // RUN:   -nogpulib -nogpuinc --cuda-gpu-arch=sm_70 --cuda-gpu-arch=sm_60 \
 // RUN:   --no-cuda-gpu-arch=sm_70 --no-cuda-gpu-arch=sm_60 \
 // RUN:   -c %s 2>&1 \
-// RUN: | FileCheck -check-prefixes ARCH-SM75,NOARCH-SM60,NOARCH-SM70 %s
+// RUN: | FileCheck -check-prefixes ARCH-SM52,NOARCH-SM60,NOARCH-SM70 %s
 
 // d) --no-cuda-gpu-arch=X is a no-op if there's no preceding --cuda-gpu-arch=X
 // RUN: %clang -### --target=x86_64-linux-gnu --cuda-device-only \
@@ -193,8 +193,6 @@
 // NOARCH-SM60-NOT: "-cc1"{{.*}}"-target-cpu" "sm_60"
 // ARCH-SM70: "-cc1"{{.*}}"-target-cpu" "sm_70"
 // NOARCH-SM70-NOT: "-cc1"{{.*}}"-target-cpu" "sm_70"
-// ARCH-SM75: "-cc1"{{.*}}"-target-cpu" "sm_75"
-// NOARCH-SM75-NOT: "-cc1"{{.*}}"-target-cpu" "sm_75"
 // ARCHALLERROR: error: unsupported CUDA gpu architecture: all
 
 // Match device-side preprocessor and compiler phases with -save-temps.

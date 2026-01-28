@@ -228,10 +228,6 @@ CUDA/HIP Language Changes
 CUDA Support
 ^^^^^^^^^^^^
 
-- The default CUDA architecture has been changed from ``sm_52`` to ``sm_75``.
-  ``sm_75`` is the oldest GPU variant compatible with the widest range of recent
-  major CUDA Toolkit versions (11/12/13).
-
 AIX Support
 ^^^^^^^^^^^
 

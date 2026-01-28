@@ -117,7 +117,7 @@ enum class OffloadArch {
   BMG_G21,
   LAST,
 
-  CudaDefault = OffloadArch::SM_75,
+  CudaDefault = OffloadArch::SM_52,
   HIPDefault = OffloadArch::GFX906,
 };
 

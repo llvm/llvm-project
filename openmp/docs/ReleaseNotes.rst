@@ -20,12 +20,6 @@ from the `LLVM releases web site <https://llvm.org/releases/>`_.
 Non-comprehensive list of changes in this release
 =================================================
 
-CUDA Offloading
----------------
-- The default CUDA architecture for GPU offloading has been changed from
-  ``sm_52`` to ``sm_75``. ``sm_75`` is the oldest GPU variant compatible with
-  the widest range of recent major CUDA Toolkit versions (11/12/13).
-
 Device Runtime
 --------------
 - Changed the OpenMP DeviceRTL to use 'generic' IR. The
