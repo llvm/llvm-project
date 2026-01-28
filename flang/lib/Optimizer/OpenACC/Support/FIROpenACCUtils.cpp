@@ -55,33 +55,32 @@ std::string fir::acc::getVariableName(Value v, bool preferDemangledName) {
   while (v && (defOp = v.getDefiningOp()) && iterate) {
     iterate =
         llvm::TypeSwitch<mlir::Operation *, bool>(defOp)
-            .Case<mlir::ViewLikeOpInterface>(
-                [&v](mlir::ViewLikeOpInterface op) {
-                  v = op.getViewSource();
-                  return true;
-                })
-            .Case<fir::ReboxOp>([&v](fir::ReboxOp op) {
+            .Case([&v](mlir::ViewLikeOpInterface op) {
+              v = op.getViewSource();
+              return true;
+            })
+            .Case([&v](fir::ReboxOp op) {
               v = op.getBox();
               return true;
             })
-            .Case<fir::EmboxOp>([&v](fir::EmboxOp op) {
+            .Case([&v](fir::EmboxOp op) {
               v = op.getMemref();
               return true;
             })
-            .Case<fir::ConvertOp>([&v](fir::ConvertOp op) {
+            .Case([&v](fir::ConvertOp op) {
               v = op.getValue();
               return true;
             })
-            .Case<fir::LoadOp>([&v](fir::LoadOp op) {
+            .Case([&v](fir::LoadOp op) {
               v = op.getMemref();
               return true;
             })
-            .Case<fir::BoxAddrOp>([&v](fir::BoxAddrOp op) {
+            .Case([&v](fir::BoxAddrOp op) {
               // The box holds the name of the variable.
               v = op.getVal();
               return true;
             })
-            .Case<fir::AddrOfOp>([&](fir::AddrOfOp op) {
+            .Case([&](fir::AddrOfOp op) {
               // Only use address_of symbol if mangled name is preferred
               if (!preferDemangledName) {
                 auto symRef = op.getSymbol();
@@ -89,7 +88,7 @@ std::string fir::acc::getVariableName(Value v, bool preferDemangledName) {
               }
               return false;
             })
-            .Case<fir::ArrayCoorOp>([&](fir::ArrayCoorOp op) {
+            .Case([&](fir::ArrayCoorOp op) {
               v = op.getMemref();
               for (auto coor : op.getIndices()) {
                 auto idxName = getVariableName(coor, preferDemangledName);
@@ -97,7 +96,7 @@ std::string fir::acc::getVariableName(Value v, bool preferDemangledName) {
               }
               return true;
             })
-            .Case<fir::CoordinateOp>([&](fir::CoordinateOp op) {
+            .Case([&](fir::CoordinateOp op) {
               std::optional<llvm::ArrayRef<int32_t>> fieldIndices =
                   op.getFieldIndices();
               if (fieldIndices && fieldIndices->size() > 0 &&
@@ -117,7 +116,7 @@ std::string fir::acc::getVariableName(Value v, bool preferDemangledName) {
               }
               return false;
             })
-            .Case<hlfir::DesignateOp>([&](hlfir::DesignateOp op) {
+            .Case([&](hlfir::DesignateOp op) {
               if (op.getComponent()) {
                 srcName = op.getComponent().value().str();
                 prefix =
@@ -135,7 +134,7 @@ std::string fir::acc::getVariableName(Value v, bool preferDemangledName) {
               srcName = op.getUniqName().str();
               return false;
             })
-            .Case<fir::AllocaOp>([&](fir::AllocaOp op) {
+            .Case([&](fir::AllocaOp op) {
               if (preferDemangledName) {
                 // Prefer demangled name (bindc_name over uniq_name)
                 srcName = op.getBindcName()  ? *op.getBindcName()
