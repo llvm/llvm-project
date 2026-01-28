@@ -1,6 +1,7 @@
-; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-sjlj -S | FileCheck %s -DPTR=i32
-; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-sjlj -S --mattr=+atomics,+bulk-memory | FileCheck %s -DPTR=i32
-; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-sjlj --mtriple=wasm64-unknown-unknown -data-layout="e-m:e-p:64:64-i64:64-n32:64-S128" -S | FileCheck %s -DPTR=i64
+; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-sjlj -mattr=+exception-handling -S | FileCheck %s -DPTR=i32
+; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-sjlj -S -mattr=+exception-handling,+atomics,+bulk-memory | FileCheck %s -DPTR=i32
+; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-sjlj -mattr=+exception-handling --mtriple=wasm64-unknown-unknown -data-layout="e-m:e-p:64:64-i64:64-n32:64-S128" -S | FileCheck %s -DPTR=i64
+; RUN: opt < %s -wasm-lower-em-ehsjlj -wasm-enable-sjlj -S 2>&1 | FileCheck %s --check-prefix=NO-EH-ATTR
 
 target datalayout = "e-m:e-p:32:32-i64:64-n32:64-S128"
 target triple = "wasm32-unknown-unknown"
@@ -69,6 +70,16 @@ entry:
 ; CHECK:    if.end:
 ; CHECK-NEXT: catchret from %1 to label %setjmp.dispatch
 }
+
+; If "target-features"="+exception-handling" attribute is missing and
+; -mattr=+exception-handling is not used in opt/llc command line, we emit a
+; warning and does not do Wasm SjLj transformation.
+; NO-EH-ATTR: Function setjmp_longjmp was not compiled with 'exception-handling' target feature enabled
+; NO-EH-ATTR-LABEL: @setjmp_longjmp()
+; NO-EH-ATTR: entry:
+; NO-EH-ATTR-NEXT: alloca
+; NO-EH-ATTR-NEXT: call i32 @setjmp
+; NO-EH-ATTR-NEXT: call void @longjmp
 
 ; When there are multiple longjmpable calls after setjmp. This will turn each of
 ; longjmpable call into an invoke whose unwind destination is

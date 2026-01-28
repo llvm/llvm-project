@@ -272,6 +272,7 @@
 #include "llvm/IR/IntrinsicsWebAssembly.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/raw_ostream.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
@@ -480,6 +481,14 @@ static Type *getAddrPtrType(Module *M) {
 static Value *getAddrSizeInt(Module *M, uint64_t C) {
   IRBuilder<> IRB(M->getContext());
   return IRB.getIntN(M->getDataLayout().getPointerSizeInBits(), C);
+}
+
+// Returns true if the function has "target-features"="+exception-handling"
+// attribute.
+static bool hasEHTargetFeatureAttr(const Function &F) {
+  Attribute FeaturesAttr = F.getFnAttribute("target-features");
+  return FeaturesAttr.isValid() &&
+         FeaturesAttr.getValueAsString().contains("+exception-handling");
 }
 
 // Returns __cxa_find_matching_catch_N function, where N = NumClauses + 2.
@@ -842,6 +851,8 @@ void WebAssemblyLowerEmscriptenEHSjLj::replaceLongjmpWith(Function *LongjmpF,
   for (User *U : LongjmpF->users()) {
     auto *CI = dyn_cast<CallInst>(U);
     if (CI && CI->getCalledFunction() == LongjmpF) {
+      if (EnableWasmSjLj && !hasEHTargetFeatureAttr(*CI->getFunction()))
+        continue;
       IRB.SetInsertPoint(CI);
       Value *Env = nullptr;
       if (NewF == EmLongjmpF)
@@ -861,7 +872,12 @@ void WebAssemblyLowerEmscriptenEHSjLj::replaceLongjmpWith(Function *LongjmpF,
   if (!LongjmpF->uses().empty()) {
     Value *NewLongjmp =
         IRB.CreateBitCast(NewF, LongjmpF->getType(), "longjmp.cast");
-    LongjmpF->replaceAllUsesWith(NewLongjmp);
+    LongjmpF->replaceUsesWithIf(NewLongjmp, [&](Use &U) {
+      if (EnableWasmSjLj)
+        if (auto *I = dyn_cast<Instruction>(U.getUser()))
+          return hasEHTargetFeatureAttr(*I->getFunction());
+      return true;
+    });
   }
 }
 
@@ -1280,6 +1296,13 @@ static DebugLoc getOrCreateDebugLoc(const Instruction *InsertBefore,
 
 bool WebAssemblyLowerEmscriptenEHSjLj::runSjLjOnFunction(Function &F) {
   assert(EnableEmSjLj || EnableWasmSjLj);
+  if (EnableWasmSjLj && !hasEHTargetFeatureAttr(F)) {
+    errs() << "Function " << F.getName()
+           << " was not compiled with 'exception-handling' target feature "
+              "enabled\n";
+    return false;
+  }
+
   Module &M = *F.getParent();
   LLVMContext &C = F.getContext();
   IRBuilder<> IRB(C);
