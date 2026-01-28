@@ -4,8 +4,6 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-// This file was written by the LFI and Native Client authors.
-//
 //===----------------------------------------------------------------------===//
 //
 // This file declares the MCLFIRewriter class. This is an abstract
@@ -43,8 +41,8 @@ public:
 
   LLVM_ABI void error(const MCInst &Inst, const char Msg[]);
 
-  LLVM_ABI void disable();
-  LLVM_ABI void enable();
+  void disable() { Enabled = false; }
+  void enable() { Enabled = true; }
 
   LLVM_ABI bool isCall(const MCInst &Inst) const;
   LLVM_ABI bool isBranch(const MCInst &Inst) const;

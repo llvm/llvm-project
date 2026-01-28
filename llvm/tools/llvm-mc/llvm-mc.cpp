@@ -652,7 +652,6 @@ int main(int argc, char **argv) {
     if (NoExecStack)
       Str->switchSection(
           Ctx.getAsmInfo()->getStackSection(Ctx, /*Exec=*/false));
-
     Str->emitVersionForTarget(TheTriple, VersionTuple(), nullptr,
                               VersionTuple());
   }

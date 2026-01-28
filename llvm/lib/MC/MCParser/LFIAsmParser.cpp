@@ -5,10 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// This file was written by the LFI and Native Client authors.
-//
-//===----------------------------------------------------------------------===//
 
 #include "llvm/MC/MCLFIRewriter.h"
 #include "llvm/MC/MCParser/MCAsmParserExtension.h"

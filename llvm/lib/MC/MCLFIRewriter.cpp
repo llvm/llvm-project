@@ -4,8 +4,6 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-// This file was written by the LFI and Native Client authors.
-//
 //===----------------------------------------------------------------------===//
 //
 // This file implements the MCLFIRewriter class. This is a base
@@ -23,10 +21,6 @@ namespace llvm {
 void MCLFIRewriter::error(const MCInst &Inst, const char Msg[]) {
   Ctx.reportError(Inst.getLoc(), Msg);
 }
-
-void MCLFIRewriter::disable() { Enabled = false; }
-
-void MCLFIRewriter::enable() { Enabled = true; }
 
 bool MCLFIRewriter::isCall(const MCInst &Inst) const {
   return InstInfo->get(Inst.getOpcode()).isCall();
