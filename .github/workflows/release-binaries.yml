@@ -301,6 +301,7 @@ jobs:
       if: runner.os == 'Windows'
       env:
         LLVM_VERSION: ${{ needs.prepare.outputs.release-version }}
+        LIBXML2_ROOT: C:\vcpkg\packages\libxml2_x64-windows-static\
       run: |
         subst S: ${{ github.workspace }}
         cd S:\llvm\utils\release\
