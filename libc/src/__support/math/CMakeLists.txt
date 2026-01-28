@@ -1120,6 +1120,7 @@ add_header_library(
   HDRS
     sinpif.h
   DEPENDS
+    .sincosf_utils
     libc.src.__support.FPUtil.FEnvImpl
     libc.src.__support.FPUtil.FPBits
     libc.src.__support.FPUtil.PolyEval
@@ -1127,7 +1128,6 @@ add_header_library(
     libc.src.__support.common
     libc.src.__support.macros.config
     libc.src.__support.macros.optimization
-    libc.src.__support.math.sincosf_utils
 )
 
 add_header_library(
