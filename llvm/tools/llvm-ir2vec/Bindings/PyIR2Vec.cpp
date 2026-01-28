@@ -31,8 +31,8 @@ std::unique_ptr<Module> getLLVMIR(const std::string &Filename,
   SMDiagnostic Err;
   auto M = parseIRFile(Filename, Err, Context);
   if (!M)
-    throw std::runtime_error("Failed to parse IR file '" + Filename +
-                           "': " + Err.getMessage().str());
+    throw nb::value_error(("Failed to parse IR file '" + Filename +
+                           "': " + Err.getMessage().str()).c_str());
   return M;
 }
 
@@ -46,18 +46,18 @@ public:
   PyIR2VecTool(const std::string &Filename, const std::string &Mode,
                const std::string &VocabPath) {
     if (Mode != "sym" && Mode != "fa")
-      throw std::runtime_error("Invalid mode. Use 'sym' or 'fa'");
+      throw nb::value_error("Invalid mode. Use 'sym' or 'fa'");
 
     if (VocabPath.empty())
-      throw std::runtime_error("Empty Vocab Path not allowed");
+      throw nb::value_error("Empty Vocab Path not allowed");
 
     Ctx = std::make_unique<LLVMContext>();
     M = getLLVMIR(Filename, *Ctx);
     Tool = std::make_unique<IR2VecTool>(*M);
 
     if (auto Err = Tool->initializeVocabulary(VocabPath)) {
-      throw std::runtime_error("Failed to initialize IR2Vec vocabulary: " +
-                               toString(std::move(Err)));
+      throw nb::value_error(("Failed to initialize IR2Vec vocabulary: " +
+                             toString(std::move(Err))).c_str());
     }
   }
 };
