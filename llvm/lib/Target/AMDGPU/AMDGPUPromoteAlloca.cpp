@@ -421,8 +421,10 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
   SetVector<IntrinsicInst *> DeferredIntrs;
   for (AllocaAnalysis &AA : Allocas) {
     if (AA.Vector.Ty) {
-      const unsigned AllocaCost =
-          DL->getTypeSizeInBits(AA.Alloca->getAllocatedType());
+      std::optional<TypeSize> Size = AA.Alloca->getAllocationSize(*DL);
+      if (!Size)
+        continue; // Skip dynamic allocas
+      const unsigned AllocaCost = Size->getFixedValue() * 8;
       // First, check if we have enough budget to vectorize this alloca.
       if (AllocaCost <= VectorizationBudget) {
         promoteAllocaToVector(AA);
@@ -1612,8 +1614,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
   const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, ContainingFunction);
   unsigned WorkGroupSize = ST.getFlatWorkGroupSizes(ContainingFunction).second;
 
-  Align Alignment = DL.getValueOrABITypeAlignment(
-      AA.Alloca->getAlign(), AA.Alloca->getAllocatedType());
+  Align Alignment = AA.Alloca->getAlign();
 
   // FIXME: This computed padding is likely wrong since it depends on inverse
   // usage order.
@@ -1622,9 +1623,11 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
   // could end up using more than the maximum due to alignment padding.
 
   uint32_t NewSize = alignTo(CurrentLocalMemUsage, Alignment);
-  uint32_t AllocSize =
-      WorkGroupSize * DL.getTypeAllocSize(AA.Alloca->getAllocatedType());
-  NewSize += AllocSize;
+  std::optional<TypeSize> ElemSize = AA.Alloca->getAllocationSize(DL);
+  if (!ElemSize || ElemSize->isScalable())
+    return false;
+  TypeSize AllocSize = WorkGroupSize * *ElemSize;
+  NewSize += AllocSize.getFixedValue();
 
   if (NewSize > LocalMemLimit) {
     LLVM_DEBUG(dbgs() << "  " << AllocSize
