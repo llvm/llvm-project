@@ -12,11 +12,13 @@
 
 #include "llvm/CodeGen/LiveRegMatrix.h"
 #include "RegisterCoalescer.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/Statistic.h"
 #include "llvm/CodeGen/LiveInterval.h"
 #include "llvm/CodeGen/LiveIntervalUnion.h"
 #include "llvm/CodeGen/LiveIntervals.h"
 #include "llvm/CodeGen/MachineFunction.h"
+#include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/TargetRegisterInfo.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
@@ -125,18 +127,25 @@ void LiveRegMatrix::assign(const LiveInterval &VirtReg, MCRegister PhysReg) {
   LLVM_DEBUG(dbgs() << '\n');
 }
 
-void LiveRegMatrix::unassign(const LiveInterval &VirtReg) {
+void LiveRegMatrix::unassign(const LiveInterval &VirtReg,
+                             bool ClearAllReferencingSegments) {
   Register PhysReg = VRM->getPhys(VirtReg.reg());
   LLVM_DEBUG(dbgs() << "unassigning " << printReg(VirtReg.reg(), TRI)
                     << " from " << printReg(PhysReg, TRI) << ':');
   VRM->clearVirt(VirtReg.reg());
 
-  foreachUnit(TRI, VirtReg, PhysReg,
-              [&](MCRegUnit Unit, const LiveRange &Range) {
-                LLVM_DEBUG(dbgs() << ' ' << printRegUnit(Unit, TRI));
-                Matrix[Unit].extract(VirtReg, Range);
-                return false;
-              });
+  if (!ClearAllReferencingSegments) {
+    foreachUnit(TRI, VirtReg, PhysReg,
+                [&](MCRegUnit Unit, const LiveRange &Range) {
+                  LLVM_DEBUG(dbgs() << ' ' << printRegUnit(Unit, TRI));
+                  Matrix[Unit].extract(VirtReg, Range);
+                  return false;
+                });
+  } else {
+    for (MCRegUnit Unit : TRI->regunits(PhysReg)) {
+      Matrix[Unit].clearAllSegmentsReferencing(VirtReg);
+    }
+  }
 
   ++NumUnassigned;
   LLVM_DEBUG(dbgs() << '\n');
@@ -289,6 +298,35 @@ Register LiveRegMatrix::getOneVReg(unsigned PhysReg) const {
 
   return MCRegister::NoRegister;
 }
+
+#ifndef NDEBUG
+bool LiveRegMatrix::isValid() const {
+  // Build set of all valid LiveInterval pointers from LiveIntervals.
+  DenseSet<const LiveInterval *> ValidIntervals;
+  for (unsigned RegIdx = 0, NumRegs = VRM->getRegInfo().getNumVirtRegs();
+       RegIdx < NumRegs; ++RegIdx) {
+    Register VReg = Register::index2VirtReg(RegIdx);
+    // Only track assigned registers since unassigned ones won't be in Matrix
+    if (VRM->hasPhys(VReg) && LIS->hasInterval(VReg))
+      ValidIntervals.insert(&LIS->getInterval(VReg));
+  }
+
+  // Now scan all LiveIntervalUnions in the matrix and verify each pointer
+  unsigned NumDanglingPointers = 0;
+  for (unsigned I = 0, Size = Matrix.size(); I < Size; ++I) {
+    MCRegUnit Unit = static_cast<MCRegUnit>(I);
+    for (const LiveInterval *LI : Matrix[Unit]) {
+      if (!ValidIntervals.contains(LI)) {
+        ++NumDanglingPointers;
+        dbgs() << "ERROR: LiveInterval pointer is not found in LiveIntervals:\n"
+               << "  Register Unit: " << printRegUnit(Unit, TRI) << '\n'
+               << "  LiveInterval pointer: " << LI << '\n';
+      }
+    }
+  }
+  return NumDanglingPointers == 0;
+}
+#endif
 
 AnalysisKey LiveRegMatrixAnalysis::Key;
 
