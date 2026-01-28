@@ -63,27 +63,26 @@ namespace llvm::SPIRV {
 
 namespace {
 // This class keeps track of which functions reference which global variables.
-class GlobalVariableReferences {
+class GlobalVariableUsers {
   template <typename T1, typename T2>
   using OneToManyMapTy = DenseMap<T1, SmallPtrSet<T2, 4>>;
 
-  OneToManyMapTy<GlobalVariable *, Function *> GlobalIsReferencedByFun;
+  OneToManyMapTy<GlobalVariable *, Function *> GlobalIsUsedByFun;
 
-  void collectGlobalReferences(
-      GlobalVariable *GV,
-      OneToManyMapTy<GlobalVariable *, GlobalVariable *> &Global2Global,
-      OneToManyMapTy<GlobalVariable *, Function *> &Global2Function) {
+  void collectGlobalUsers(GlobalVariable *GV,
+                          OneToManyMapTy<GlobalVariable *, GlobalVariable *>
+                              &GlobalIsUsedByGlobal) {
     SmallVector<Value *> Stack = {GV->user_begin(), GV->user_end()};
     while (!Stack.empty()) {
       Value *V = Stack.pop_back_val();
 
       if (Instruction *I = dyn_cast<Instruction>(V)) {
-        Global2Function[GV].insert(I->getFunction());
+        GlobalIsUsedByFun[GV].insert(I->getFunction());
         continue;
       }
 
       if (GlobalVariable *UserGV = dyn_cast<GlobalVariable>(V)) {
-        Global2Global[GV].insert(UserGV);
+        GlobalIsUsedByGlobal[GV].insert(UserGV);
         continue;
       }
 
@@ -92,18 +91,18 @@ class GlobalVariableReferences {
     }
   }
 
-  bool propagateGlobalToGlobalReferences(
+  bool propagateGlobalToGlobalUsers(
       OneToManyMapTy<GlobalVariable *, GlobalVariable *>
-          &GlobalIsReferencedByGlobal) {
+          &GlobalIsUsedByGlobal) {
     bool Changed = false;
-    for (auto &[GV, ReferencedBy] : GlobalIsReferencedByGlobal) {
-      SmallVector<GlobalVariable *> OldReferencedBy(ReferencedBy.begin(),
-                                                    ReferencedBy.end());
-      for (GlobalVariable *ReferencedGV : OldReferencedBy) {
-        auto It = GlobalIsReferencedByGlobal.find(ReferencedGV);
-        if (It == GlobalIsReferencedByGlobal.end())
+    for (auto &[GV, UserGlobals] : GlobalIsUsedByGlobal) {
+      SmallVector<GlobalVariable *> OldUsersGlobals(UserGlobals.begin(),
+                                                    UserGlobals.end());
+      for (GlobalVariable *UserGV : OldUsersGlobals) {
+        auto It = GlobalIsUsedByGlobal.find(UserGV);
+        if (It == GlobalIsUsedByGlobal.end())
           continue;
-        Changed |= set_union(ReferencedBy, It->second);
+        Changed |= set_union(UserGlobals, It->second);
       }
     }
     return Changed;
@@ -111,14 +110,14 @@ class GlobalVariableReferences {
 
   void propagateGlobalToFunctionReferences(
       OneToManyMapTy<GlobalVariable *, GlobalVariable *>
-          &GlobalIsReferencedByGlobal) {
-    for (auto &[GV, ReferencedBy] : GlobalIsReferencedByGlobal) {
-      auto &ReferencedByF = GlobalIsReferencedByFun[GV];
-      for (GlobalVariable *ReferencedGV : ReferencedBy) {
-        auto It = GlobalIsReferencedByFun.find(ReferencedGV);
-        if (It == GlobalIsReferencedByFun.end())
+          &GlobalIsUsedByGlobal) {
+    for (auto &[GV, UserGlobals] : GlobalIsUsedByGlobal) {
+      auto &UserFunctions = GlobalIsUsedByFun[GV];
+      for (GlobalVariable *UserGV : UserGlobals) {
+        auto It = GlobalIsUsedByFun.find(UserGV);
+        if (It == GlobalIsUsedByFun.end())
           continue;
-        set_union(ReferencedByF, It->second);
+        set_union(UserFunctions, It->second);
       }
     }
   }
@@ -127,23 +126,21 @@ public:
   void init(Module &M) {
     // Collect which global variables are referenced by which global variables
     // and which functions reference each global variables.
-    OneToManyMapTy<GlobalVariable *, GlobalVariable *>
-        GlobalIsReferencedByGlobal;
-    GlobalIsReferencedByFun.clear();
+    OneToManyMapTy<GlobalVariable *, GlobalVariable *> GlobalIsUsedByGlobal;
+    GlobalIsUsedByFun.clear();
     for (GlobalVariable &GV : M.globals())
-      collectGlobalReferences(&GV, GlobalIsReferencedByGlobal,
-                              GlobalIsReferencedByFun);
+      collectGlobalUsers(&GV, GlobalIsUsedByGlobal);
 
     // Compute indirect references by iterating until a fixed point is reached.
-    while (propagateGlobalToGlobalReferences(GlobalIsReferencedByGlobal))
+    while (propagateGlobalToGlobalUsers(GlobalIsUsedByGlobal))
       (void)0;
 
-    propagateGlobalToFunctionReferences(GlobalIsReferencedByGlobal);
+    propagateGlobalToFunctionReferences(GlobalIsUsedByGlobal);
   }
 
-  const auto &getReferencedBy(GlobalVariable &GV) const {
-    auto It = GlobalIsReferencedByFun.find(&GV);
-    if (It != GlobalIsReferencedByFun.end())
+  const auto &getTransitiveUserFunctions(GlobalVariable &GV) const {
+    auto It = GlobalIsUsedByFun.find(&GV);
+    if (It != GlobalIsUsedByFun.end())
       return It->second;
 
     const static SmallPtrSet<Function *, 4> Empty;
@@ -162,7 +159,7 @@ class SPIRVEmitIntrinsics
   DenseMap<Instruction *, Constant *> AggrConsts;
   DenseMap<Instruction *, Type *> AggrConstTypes;
   DenseSet<Instruction *> AggrStores;
-  GlobalVariableReferences GlobalRefs;
+  GlobalVariableUsers GlobalRefs;
   std::unordered_set<Value *> Named;
 
   // map of function declarations to <pointer arg index => element type>
@@ -2206,7 +2203,7 @@ Instruction *SPIRVEmitIntrinsics::visitUnreachableInst(UnreachableInst &I) {
 }
 
 static bool
-shouldEmitIntrinsicsForGlobalValue(const GlobalVariableReferences &GlobalRefs,
+shouldEmitIntrinsicsForGlobalValue(const GlobalVariableUsers &GlobalRefs,
                                    GlobalVariable &GV, Function *F) {
   // Skip special artificial variables.
   static const StringSet<> ArtificialGlobals{"llvm.global.annotations",
@@ -2214,7 +2211,7 @@ shouldEmitIntrinsicsForGlobalValue(const GlobalVariableReferences &GlobalRefs,
   if (ArtificialGlobals.contains(GV.getName()))
     return false;
 
-  auto &ReferencedBy = GlobalRefs.getReferencedBy(GV);
+  auto &ReferencedBy = GlobalRefs.getTransitiveUserFunctions(GV);
   if (ReferencedBy.contains(F))
     return true;
 
