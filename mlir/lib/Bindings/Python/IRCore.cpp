@@ -1476,16 +1476,18 @@ static void populateResultTypes(std::string_view name, nb::list resultTypeList,
   resultTypes.reserve(resultTypeList.size());
   if (resultSegmentSpecObj.is_none()) {
     // Non-variadic result unpacking.
-    for (const auto &it : llvm::enumerate(resultTypeList)) {
+    size_t index = 0;
+    for (const auto &resultType : resultTypeList) {
       try {
-        resultTypes.push_back(nb::cast<PyType *>(it.value()));
+        resultTypes.push_back(nb::cast<PyType *>(resultType));
         if (!resultTypes.back())
           throw nb::cast_error();
       } catch (nb::cast_error &err) {
-        throw nb::value_error(join("Result ", it.index(), " of operation \"",
-                                   name, "\" must be a Type (", err.what(), ")")
+        throw nb::value_error(join("Result ", index, " of operation \"", name,
+                                   "\" must be a Type (", err.what(), ")")
                                   .c_str());
       }
+      ++index;
     }
   } else {
     // Sized result unpacking.
@@ -1497,13 +1499,13 @@ static void populateResultTypes(std::string_view name, nb::list resultTypeList,
               .c_str());
     }
     resultSegmentLengths.reserve(resultTypeList.size());
-    for (const auto &it :
-         llvm::enumerate(llvm::zip(resultTypeList, resultSegmentSpec))) {
-      int segmentSpec = std::get<1>(it.value());
+    size_t size = resultSegmentSpec.size();
+    for (size_t index = 0; index < size; ++index) {
+      int segmentSpec = resultSegmentSpec[index];
       if (segmentSpec == 1 || segmentSpec == 0) {
         // Unpack unary element.
         try {
-          auto *resultType = nb::cast<PyType *>(std::get<0>(it.value()));
+          auto *resultType = nb::cast<PyType *>(resultTypeList[index]);
           if (resultType) {
             resultTypes.push_back(resultType);
             resultSegmentLengths.push_back(1);
@@ -1512,25 +1514,24 @@ static void populateResultTypes(std::string_view name, nb::list resultTypeList,
             resultSegmentLengths.push_back(0);
           } else {
             throw nb::value_error(
-                join("Result ", it.index(), " of operation \"", name,
+                join("Result ", index, " of operation \"", name,
                      "\" must be a Type (was None and result is not optional)")
                     .c_str());
           }
         } catch (nb::cast_error &err) {
-          throw nb::value_error(join("Result ", it.index(), " of operation \"",
-                                     name, "\" must be a Type (", err.what(),
-                                     ")")
+          throw nb::value_error(join("Result ", index, " of operation \"", name,
+                                     "\" must be a Type (", err.what(), ")")
                                     .c_str());
         }
       } else if (segmentSpec == -1) {
         // Unpack sequence by appending.
         try {
-          if (std::get<0>(it.value()).is_none()) {
+          if (resultTypeList[index].is_none()) {
             // Treat it as an empty list.
             resultSegmentLengths.push_back(0);
           } else {
             // Unpack the list.
-            auto segment = nb::cast<nb::sequence>(std::get<0>(it.value()));
+            auto segment = nb::cast<nb::sequence>(resultTypeList[index]);
             for (nb::handle segmentItem : segment) {
               resultTypes.push_back(nb::cast<PyType *>(segmentItem));
               if (!resultTypes.back()) {
@@ -1543,8 +1544,8 @@ static void populateResultTypes(std::string_view name, nb::list resultTypeList,
           // NOTE: Sloppy to be using a catch-all here, but there are at least
           // three different unrelated exceptions that can be thrown in the
           // above "casts". Just keep the scope above small and catch them all.
-          throw nb::value_error(join("Result ", it.index(), " of operation \"",
-                                     name, "\" must be a Sequence of Types (",
+          throw nb::value_error(join("Result ", index, " of operation \"", name,
+                                     "\" must be a Sequence of Types (",
                                      err.what(), ")")
                                     .c_str());
         }
@@ -1637,17 +1638,18 @@ nb::object PyOpView::buildGeneric(
   // Unpack operands.
   std::vector<MlirValue> operands;
   operands.reserve(operands.size());
+  size_t index = 0;
   if (operandSegmentSpecObj.is_none()) {
     // Non-sized operand unpacking.
-    for (const auto &it : llvm::enumerate(operandList)) {
+    for (const auto &operand : operandList) {
       try {
-        operands.push_back(getOpResultOrValue(it.value()));
+        operands.push_back(getOpResultOrValue(operand));
       } catch (nb::builtin_exception &err) {
-        throw nb::value_error(join("Operand ", it.index(), " of operation \"",
-                                   name, "\" must be a Value (", err.what(),
-                                   ")")
+        throw nb::value_error(join("Operand ", index, " of operation \"", name,
+                                   "\" must be a Value (", err.what(), ")")
                                   .c_str());
       }
+      ++index;
     }
   } else {
     // Sized operand unpacking.
@@ -1659,20 +1661,19 @@ nb::object PyOpView::buildGeneric(
               .c_str());
     }
     operandSegmentLengths.reserve(operandList.size());
-    for (const auto &it :
-         llvm::enumerate(llvm::zip(operandList, operandSegmentSpec))) {
-      int segmentSpec = std::get<1>(it.value());
+    size_t size = operandSegmentSpec.size();
+    for (size_t index = 0; index < size; ++index) {
+      int segmentSpec = operandSegmentSpec[index];
       if (segmentSpec == 1 || segmentSpec == 0) {
         // Unpack unary element.
-        auto &operand = std::get<0>(it.value());
+        const auto operand = operandList[index];
         if (!operand.is_none()) {
           try {
-
             operands.push_back(getOpResultOrValue(operand));
           } catch (nb::builtin_exception &err) {
-            throw nb::value_error(join("Operand ", it.index(),
-                                       " of operation \"", name,
-                                       "\" must be a Value (", err.what(), ")")
+            throw nb::value_error(join("Operand ", index, " of operation \"",
+                                       name, "\" must be a Value (", err.what(),
+                                       ")")
                                       .c_str());
           }
 
@@ -1682,19 +1683,19 @@ nb::object PyOpView::buildGeneric(
           operandSegmentLengths.push_back(0);
         } else {
           throw nb::value_error(
-              join("Operand ", it.index(), " of operation \"", name,
+              join("Operand ", index, " of operation \"", name,
                    "\" must be a Value (was None and operand is not optional)")
                   .c_str());
         }
       } else if (segmentSpec == -1) {
         // Unpack sequence by appending.
         try {
-          if (std::get<0>(it.value()).is_none()) {
+          if (operandList[index].is_none()) {
             // Treat it as an empty list.
             operandSegmentLengths.push_back(0);
           } else {
             // Unpack the list.
-            auto segment = nb::cast<nb::sequence>(std::get<0>(it.value()));
+            auto segment = nb::cast<nb::sequence>(operandList[index]);
             for (nb::handle segmentItem : segment) {
               operands.push_back(getOpResultOrValue(segmentItem));
             }
@@ -1704,7 +1705,7 @@ nb::object PyOpView::buildGeneric(
           // NOTE: Sloppy to be using a catch-all here, but there are at least
           // three different unrelated exceptions that can be thrown in the
           // above "casts". Just keep the scope above small and catch them all.
-          throw nb::value_error(join("Operand ", it.index(), " of operation \"",
+          throw nb::value_error(join("Operand ", index, " of operation \"",
                                      name, "\" must be a Sequence of Values (",
                                      err.what(), ")")
                                     .c_str());
