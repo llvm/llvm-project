@@ -72,7 +72,7 @@ jobs:
         python-version: '3.14'
 
     - name: Install Windows dependencies
-      if: runner.os == 'Windows'
+      if: false
       run: |
         # Some of the python modules we install require this package to be installed on the system.
         vcpkg install openssl:arm64-windows-static-md
@@ -81,11 +81,6 @@ jobs:
         echo "SODIUM_INSTALL=system" >> $env:GITHUB_ENV
         echo "SODIUM_INSTALL_DIR=$env:VCPKG_INSTALLATION_ROOT\installed\arm64-windows-static-md" >> $env:GITHUB_ENV
 
-    - name: Debug
-      shell: bash
-      run: |
-        find /c/vcpkg -iname '*ssl*'
-    
     - name: Checkout LLVM
       uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
@@ -245,17 +240,6 @@ jobs:
       run: |
         echo "LIB=$env:LIB;C:\hostedtoolcache\windows\Python\3.11.9\$($env:RUNNER_ARCH.ToLower())\libs" >> $env:GITHUB_ENV
 
-    - name: Debug
-      shell: bash
-      run: |
-        find /c/hostedtoolcache/windows -iname python3.lib
-
-    # Install Windows dependncies
-    - name: Windows Depenencies
-      if: runner.os == 'Windows'
-      run: |
-        vcpkg install libxml2[core]:x64-windows-static
-
     - name: Setup crlf
       if: runner.os == 'Windows'
       run: |
@@ -301,7 +285,6 @@ jobs:
       if: runner.os == 'Windows'
       env:
         LLVM_VERSION: ${{ needs.prepare.outputs.release-version }}
-        LIBXML2_ROOT: C:\vcpkg\packages\libxml2_x64-windows-static\
       run: |
         subst S: ${{ github.workspace }}
         cd S:\llvm\utils\release\
