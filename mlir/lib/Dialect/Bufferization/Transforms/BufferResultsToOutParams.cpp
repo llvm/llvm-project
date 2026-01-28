@@ -13,6 +13,8 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Operation.h"
 
+#include "llvm/ADT/SmallVectorExtras.h"
+
 namespace mlir {
 namespace bufferization {
 #define GEN_PASS_DEF_BUFFERRESULTSTOOUTPARAMSPASS
@@ -278,8 +280,8 @@ updateCalls(ModuleOp module, const AllocDynamicSizesMap &map,
 
     auto newOperands = llvm::to_vector<6>(op.getOperands());
     newOperands.append(outParams.begin(), outParams.end());
-    auto newResultTypes = llvm::to_vector<6>(llvm::map_range(
-        replaceWithNewCallResults, [](Value v) { return v.getType(); }));
+    auto newResultTypes = llvm::map_to_vector<6>(
+        replaceWithNewCallResults, [](Value v) { return v.getType(); });
     auto newCall = func::CallOp::create(
         builder, op.getLoc(), op.getCalleeAttr(), newResultTypes, newOperands);
     for (auto t : llvm::zip(replaceWithNewCallResults, newCall.getResults()))

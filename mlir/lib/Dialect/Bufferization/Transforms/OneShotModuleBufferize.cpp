@@ -60,6 +60,7 @@
 // as "not reading" and/or "not writing".
 
 #include "mlir/Dialect/Bufferization/Transforms/OneShotModuleBufferize.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
@@ -99,9 +100,9 @@ static void annotateEquivalentReturnBbArg(OpOperand &returnVal,
   SmallVector<int64_t> equivBbArgs;
   if (op->hasAttr(kEquivalentArgsAttr)) {
     auto attr = cast<ArrayAttr>(op->getAttr(kEquivalentArgsAttr));
-    equivBbArgs = llvm::to_vector<4>(llvm::map_range(attr, [](Attribute a) {
+    equivBbArgs = llvm::map_to_vector<4>(attr, [](Attribute a) {
       return cast<IntegerAttr>(a).getValue().getSExtValue();
-    }));
+    });
   } else {
     equivBbArgs.append(op->getNumOperands(), -1);
   }
