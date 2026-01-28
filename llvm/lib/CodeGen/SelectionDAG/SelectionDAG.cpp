@@ -14466,7 +14466,7 @@ void SelectionDAG::copyExtraInfo(SDNode *From, SDNode *To) {
         return false;
     }
     // Copy only if entry node was not reached.
-    SDEI[N] = NEI;
+    SDEI[N] = std::move(NEI);
     return true;
   };
 

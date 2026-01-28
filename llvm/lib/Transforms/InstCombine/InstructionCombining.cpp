@@ -1122,6 +1122,10 @@ InstCombinerImpl::foldBinOpOfSelectAndCastOfSelectCondition(BinaryOperator &I) {
   else
     return nullptr;
 
+  SelectInst *SI = ProfcheckDisableMetadataFixes
+                       ? nullptr
+                       : cast<SelectInst>(CastOp == LHS ? RHS : LHS);
+
   auto NewFoldedConst = [&](bool IsTrueArm, Value *V) {
     bool IsCastOpRHS = (CastOp == RHS);
     bool IsZExt = isa<ZExtInst>(CastOp);
@@ -1145,13 +1149,13 @@ InstCombinerImpl::foldBinOpOfSelectAndCastOfSelectCondition(BinaryOperator &I) {
   if (CondVal == A) {
     Value *NewTrueVal = NewFoldedConst(false, TrueVal);
     return SelectInst::Create(CondVal, NewTrueVal,
-                              NewFoldedConst(true, FalseVal));
+                              NewFoldedConst(true, FalseVal), "", nullptr, SI);
   }
 
   if (match(A, m_Not(m_Specific(CondVal)))) {
     Value *NewTrueVal = NewFoldedConst(true, TrueVal);
     return SelectInst::Create(CondVal, NewTrueVal,
-                              NewFoldedConst(false, FalseVal));
+                              NewFoldedConst(false, FalseVal), "", nullptr, SI);
   }
 
   return nullptr;
@@ -1916,7 +1920,9 @@ Instruction *InstCombinerImpl::foldBinOpSelectBinOp(BinaryOperator &Op) {
   if (!NewTV || !NewFV)
     return nullptr;
 
-  Value *NewSI = Builder.CreateSelect(SI->getCondition(), NewTV, NewFV);
+  Value *NewSI =
+      Builder.CreateSelect(SI->getCondition(), NewTV, NewFV, "",
+                           ProfcheckDisableMetadataFixes ? nullptr : SI);
   return BinaryOperator::Create(Op.getOpcode(), NewSI, Input);
 }
 
@@ -4278,6 +4284,21 @@ Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
             m_OneUse(m_LogicalAnd(m_Value(X), m_OneUse(m_Not(m_Value(Y))))))) {
     Value *NotX = Builder.CreateNot(X, "not." + X->getName());
     Value *Or = Builder.CreateLogicalOr(NotX, Y);
+
+    // Set weights for the new OR select instruction too.
+    if (!ProfcheckDisableMetadataFixes) {
+      if (auto *OrInst = dyn_cast<Instruction>(Or)) {
+        if (auto *CondInst = dyn_cast<Instruction>(Cond)) {
+          SmallVector<uint32_t> Weights;
+          if (extractBranchWeights(*CondInst, Weights)) {
+            assert(Weights.size() == 2 &&
+                   "Unexpected number of branch weights!");
+            std::swap(Weights[0], Weights[1]);
+            setBranchWeights(*OrInst, Weights, /*IsExpected=*/false);
+          }
+        }
+      }
+    }
     BI.swapSuccessors();
     if (BPI)
       BPI->swapSuccEdgesProbabilities(BI.getParent());
