@@ -466,6 +466,7 @@ foreach( t ${LIBCLC_TARGETS_TO_BUILD} )
       OPT_FLAGS ${opt_flags}
       LIB_FILES ${opencl_lib_files}
       ALIASES ${${d}_aliases}
+      OUTPUT_FILENAME libclc
       PARENT_TARGET libclc-opencl-builtins
       # Link in the CLC builtins and internalize their symbols
       INTERNAL_LINK_DEPENDENCIES builtins.link.clc-${arch_suffix}

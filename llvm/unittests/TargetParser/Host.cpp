@@ -606,7 +606,7 @@ TEST(HostTest, AIXTargetVersionDetect) {
     GTEST_SKIP(); // The version was configured explicitly; skip.
 
 #ifdef LLVM_TARGET_TRIPLE_ENV
-  if (const char *EnvTriple = std::getenv(LLVM_TARGET_TRIPLE_ENV))
+  if (std::getenv(LLVM_TARGET_TRIPLE_ENV))
     GTEST_SKIP(); // The target was configured by env; skip.
 #endif
 
