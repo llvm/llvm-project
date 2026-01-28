@@ -339,6 +339,8 @@ private:
                    MachineInstr &I) const;
   bool selectDerivativeInst(Register ResVReg, const SPIRVType *ResType,
                             MachineInstr &I, const unsigned DPdOpCode) const;
+  bool selectFCanonicalize(Register ResVReg, const SPIRVType *ResType,
+                           MachineInstr &I) const;
   // Utilities
   std::pair<Register, bool>
   buildI32Constant(uint32_t Val, MachineInstr &I,
@@ -986,6 +988,9 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
   case TargetOpcode::G_FMAXNUM:
   case TargetOpcode::G_FMAXIMUM:
     return selectExtInst(ResVReg, ResType, I, CL::fmax, GL::NMax);
+
+  case TargetOpcode::G_FCANONICALIZE:
+    return selectFCanonicalize(ResVReg, ResType, I);
 
   case TargetOpcode::G_FCOPYSIGN:
     return selectExtInst(ResVReg, ResType, I, CL::copysign);
@@ -3005,6 +3010,33 @@ SPIRVInstructionSelector::buildI32Constant(uint32_t Val, MachineInstr &I,
     GR.add(ConstInt, MI);
   }
   return {NewReg, Result};
+}
+
+bool SPIRVInstructionSelector::selectFCanonicalize(Register ResVReg,
+                                                   const SPIRVType *ResType,
+                                                   MachineInstr &I) const {
+  // There is no native fcanonicalize instruction in SPIRV. We can lower it to:
+  // - fmin(x, x) or
+  // - fmul(x, 1.0)
+  //
+  // We use fmul(x, 1.0) here, because:
+  // - llvm-spirv translates fmin to a function call, whereas
+  //   fmul is translated to the LLVM fmul instruction.
+  // - fmin requires either OpenCL or GLSL extended instruction set, whereas
+  //   fmul does not.
+
+  // fcanonicalize(x) -> fmul(x, 1.0)
+  SPIRVType *SpirvScalarType = GR.getScalarOrVectorComponentType(ResType);
+  auto Opcode = ResType->getOpcode() == SPIRV::OpTypeVector
+                    ? SPIRV::OpVectorTimesScalar
+                    : SPIRV::OpFMulS;
+
+  return BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Opcode))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(I.getOperand(1).getReg())
+      .addUse(buildOnesValF(SpirvScalarType, I))
+      .constrainAllUses(TII, TRI, RBI);
 }
 
 bool SPIRVInstructionSelector::selectFCmp(Register ResVReg,

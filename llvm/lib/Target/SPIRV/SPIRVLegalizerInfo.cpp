@@ -467,6 +467,9 @@ SPIRVLegalizerInfo::SPIRVLegalizerInfo(const SPIRVSubtarget &ST) {
                                G_INTRINSIC_ROUNDEVEN})
       .legalFor(allFloatScalarsAndVectors);
 
+  getActionDefinitionsBuilder(G_FCANONICALIZE)
+      .legalFor(allFloatScalarsAndVectors);
+
   getActionDefinitionsBuilder(G_FCOPYSIGN)
       .legalForCartesianProduct(allFloatScalarsAndVectors,
                                 allFloatScalarsAndVectors);
