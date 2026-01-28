@@ -418,6 +418,10 @@ private:
   void visitShapeCastOp(vector::ShapeCastOp shapeCast,
                         ArrayRef<LayoutInfoLattice *> operands,
                         ArrayRef<const LayoutInfoLattice *> results);
+  void
+  visitInsertStridedSliceOp(vector::InsertStridedSliceOp insertStridedSlice,
+                            ArrayRef<LayoutInfoLattice *> operands,
+                            ArrayRef<const LayoutInfoLattice *> results);
 
   void visitLoadMatrixOp(xegpu::LoadMatrixOp load,
                          ArrayRef<LayoutInfoLattice *> operands,
@@ -507,6 +511,9 @@ LogicalResult LayoutInfoPropagation::visitOperation(
       })
       .Case<vector::ShapeCastOp>([&](auto shapeCastOp) {
         visitShapeCastOp(shapeCastOp, operands, results);
+      })
+      .Case<vector::InsertStridedSliceOp>([&](auto insertStridedSliceOp) {
+        visitInsertStridedSliceOp(insertStridedSliceOp, operands, results);
       })
       .Case<xegpu::LoadMatrixOp>([&](auto loadMatrixOp) {
         visitLoadMatrixOp(loadMatrixOp, operands, results);
@@ -795,7 +802,6 @@ void LayoutInfoPropagation::visitUpdateNdOffsetOp(
 void LayoutInfoPropagation::visitDpasOp(
     xegpu::DpasOp dpas, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
-
   LayoutInfo dpasALayout;
   LayoutInfo dpasBLayout;
   LayoutInfo dpasCDLayout;
@@ -992,7 +998,6 @@ void LayoutInfoPropagation::visitDpasOp(
 void LayoutInfoPropagation::visitStoreNdOp(
     xegpu::StoreNdOp store, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
-
   LayoutInfo storeLayout;
   xegpu::DistributeLayoutAttr anchorLayout = store.getLayoutAttr();
   if (hasParamsOfLayoutKind(anchorLayout)) {
@@ -1073,7 +1078,6 @@ void LayoutInfoPropagation::visitStoreNdOp(
 void LayoutInfoPropagation::visitLoadNdOp(
     xegpu::LoadNdOp load, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
-
   LayoutInfo loadLayout;
   xegpu::DistributeLayoutAttr anchorLayout = load.getLayoutAttr();
   if (hasParamsOfLayoutKind(anchorLayout)) {
@@ -1144,6 +1148,37 @@ void LayoutInfoPropagation::visitVectorBitcastOp(
   propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
 }
 
+void LayoutInfoPropagation::visitInsertStridedSliceOp(
+    vector::InsertStridedSliceOp insertStridedSlice,
+    ArrayRef<LayoutInfoLattice *> operands,
+    ArrayRef<const LayoutInfoLattice *> results) {
+  // The layout of the result must be present.
+  LayoutInfo resLayoutInfo = results[0]->getValue();
+  if (!resLayoutInfo.isAssigned())
+    return;
+
+  auto srcVecType = insertStridedSlice.getSourceVectorType();
+  auto resVecType = insertStridedSlice.getDestVectorType();
+
+  auto consumerLayoutAttr =
+      dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
+  auto uArch = getUArch(xegpu::getChipStr(insertStridedSlice).value_or(""));
+
+  auto requiredResLayoutAttr =
+      xegpu::setupInsertStridedSliceResultLayout(layoutKind, resVecType, uArch);
+
+  xegpu::setTemporaryLayout(insertStridedSlice->getResult(0),
+                            requiredResLayoutAttr);
+
+  auto srcLayoutAttr = xegpu::inferInsertStridedSliceSourceLayout(
+      requiredResLayoutAttr, resVecType.getShape(), srcVecType.getShape());
+
+  propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
+  propagateIfChanged(operands[1],
+                     operands[1]->meet(LayoutInfo(requiredResLayoutAttr)));
+  return;
+}
+
 // /// For vector::BitCastOp, the lane_data of the source layout is changed
 // based
 // /// on the bit width of the source and result types.
@@ -1183,7 +1218,6 @@ void LayoutInfoPropagation::visitVectorBitcastOp(
 void LayoutInfoPropagation::visitLoadGatherOp(
     xegpu::LoadGatherOp load, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
-
   xegpu::DistributeLayoutAttr requiredAnchorLayoutAttr;
   xegpu::DistributeLayoutAttr anchorLayoutAttr = load.getLayoutAttr();
   auto uArch = getUArch(getChipStr(load).value_or(""));
@@ -1257,7 +1291,6 @@ void LayoutInfoPropagation::visitCreateDescOp(
 void LayoutInfoPropagation::visitStoreScatterOp(
     xegpu::StoreScatterOp storeScatter, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
-
   LLVM_DEBUG(DBGS() << "visitStoreScatterOp: Processing store scatter op\n");
 
   xegpu::DistributeLayoutAttr requiredAnchorLayoutAttr;
@@ -1338,7 +1371,6 @@ void LayoutInfoPropagation::visitStoreScatterOp(
 void LayoutInfoPropagation::visitLoadMatrixOp(
     xegpu::LoadMatrixOp loadMatrixOp, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
-
   LLVM_DEBUG(DBGS() << "visitLoadMatrixOp: Processing load matrix op\n");
 
   LayoutInfo resLayoutInfo = results[0]->getValue();
@@ -1385,7 +1417,6 @@ void LayoutInfoPropagation::visitLoadMatrixOp(
 void LayoutInfoPropagation::visitStoreMatrixOp(
     xegpu::StoreMatrixOp storeMatrix, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
-
   xegpu::DistributeLayoutAttr anchorLayout = storeMatrix.getLayoutAttr();
   LayoutInfo layout;
   if (hasParamsOfLayoutKind(anchorLayout)) {
@@ -1681,7 +1712,14 @@ void XeGPUPropagateLayoutPass::runOnOperation() {
     if (auto opResult = dyn_cast<OpResult>(val)) {
 
       Operation *defOp = opResult.getDefiningOp();
+      LLVM_DEBUG(DBGS() << "Try op: " << *defOp << "\n");
       if (auto anchorOp = dyn_cast<xegpu::AnchorLayoutInterface>(defOp)) {
+        // inject debug print here
+        LLVM_DEBUG(DBGS() << "AnchorLayoutInterface found for op: " << *defOp
+                          << "\n");
+        // print the anchor layout
+        LLVM_DEBUG(DBGS() << "Anchor layout: " << anchorOp.getAnchorLayout()
+                          << "\n");
         return anchorOp.getAnchorLayout();
       }
 

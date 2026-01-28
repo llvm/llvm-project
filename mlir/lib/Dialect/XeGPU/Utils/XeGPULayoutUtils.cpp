@@ -434,9 +434,9 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
   // 2. split dim of a high-rank dimension (e.g., 1D to 2D): to setup tensor
   // for multi-stage reduction
   // 3. combines all dims to a single dim and put in the innermost dim in 2d as
-  // [1, combinedData]. only used after workgroup distribution to save
-  // multidimension data to 1D slm buffer so no need to handle sg_layout and
-  // sg_data.
+  // [1, combinedData] or [combinedData]. Only used after workgroup
+  // distribution. Example like cross-sg reduction saves multidimension data to
+  // 1D slm buffer, shapecast inserted by cse/canonicalization passes.
 
   // Use case 1: Check if shapes only differ by expanding unit dimensions (like
   // expand_dims)
@@ -505,27 +505,47 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
   auto checkCombineToInnerMostDim = [&](ArrayRef<int64_t> src,
                                         ArrayRef<int64_t> dst) -> bool {
     // only one non-unit dim in dst which is the innermost dim
-    assert((dst.size() == 2) && "dst shape must be 2D");
+    if ((dst.size() != 2) && (dst.size() != 1))
+      return false;
     int64_t srcSize = std::accumulate(src.begin(), src.end(), 1LL,
                                       std::multiplies<int64_t>());
+    if (dst.size() == 1)
+      return (dst[0] == srcSize);
     return (dst[0] == 1) && (dst[1] == srcSize);
   };
 
   if (checkCombineToInnerMostDim(srcShape, resShape)) {
     const int subgroupSize = 16; // assuming 16 lanes per subgroup
-    const int vectorSize = 8;    // assuming 8 elements per vector lane
     int srcShapeSize = srcShape.size();
+    auto context = resLayout.getContext();
+    auto resInstData = resLayout.getEffectiveInstDataAsInt();
+    auto resLaneLayout = resLayout.getEffectiveLaneLayoutAsInt();
+    auto resLaneData = resLayout.getEffectiveLaneDataAsInt();
+    if (resInstData.size() != 0) {
+      if (resInstData.size() == 2)
+        assert(resInstData[0] == 1 &&
+               "only innermost dim can have inst_data for combine-to-1d");
+      // construct source inst_data layout like [1, ..., 1, subgroupSize]
+      SmallVector<int> inferredInstData(srcShapeSize, 1);
+      inferredInstData[srcShapeSize - 1] = resInstData[resInstData.size() - 1];
+      return xegpu::LayoutAttr::get(context, inferredInstData);
+    }
 
-    SmallVector<int64_t> instData(srcShapeSize, 1);
-    instData[srcShapeSize - 1] = subgroupSize;
-    instData[srcShapeSize - 2] =
-        vectorSize; // assuming 8 elements per instruction as starting point
+    if (resLaneLayout.size() != 0) {
+      if (resInstData.size() == 2)
+        assert(resInstData[0] == 1 &&
+               "only innermost dim can have inst_data for combine-to-1d");
+      // construct source lane_layout like [1, ..., 1, subgroupSize]
+      SmallVector<int> inferredLaneLayout(srcShapeSize, 1);
+      SmallVector<int> inferredLaneData(srcShapeSize, 1);
+      inferredLaneLayout[srcShapeSize - 1] =
+          resLaneLayout[resLaneLayout.size() - 1];
 
-    // construct a vector layout with lane_layout = [1, ..., 1, subgroupSize]
-    SmallVector<int64_t> laneLayout(srcShapeSize, 1);
-    laneLayout[srcShapeSize - 1] = subgroupSize;
-    // construct a vector layout with lane_data = [1, ..., 1]
-    SmallVector<int64_t> laneData(srcShapeSize, 1);
+      inferredLaneData[srcShapeSize - 1] =
+          resLaneLayout[resLaneLayout.size() - 1];
+      return xegpu::LayoutAttr::get(context, inferredLaneLayout,
+                                    inferredLaneData);
+    }
   }
 
   // TODO: Complete implementation for other shape cast scenarios
@@ -847,23 +867,57 @@ xegpu::DistributeLayoutAttr xegpu::setupBitCastResultLayout(
 }
 
 xegpu::DistributeLayoutAttr
+xegpu::setupLoadMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
+                                   VectorType resVectorTy,
+                                   xegpu::DistributeLayoutAttr consumerLayout,
+                                   const xegpu::uArch::uArch *uArch) {
+  xegpu::DistributeLayoutAttr requiredLayout;
+  auto subgroupSize = uArch->getSubgroupSize();
+  SmallVector<int> defaultInstData = {1, subgroupSize};
+  SmallVector<int> defaultLaneLayout = {1, subgroupSize};
+  SmallVector<int> defaultLaneData = {1, 1};
+  auto context = resVectorTy.getContext();
+
+  switch (layoutKind) {
+  case xegpu::LayoutKind::Subgroup:
+    requiredLayout = consumerLayout;
+    break;
+  case xegpu::LayoutKind::InstData:
+    requiredLayout = xegpu::LayoutAttr::get(context, defaultInstData);
+    break;
+  case xegpu::LayoutKind::Lane:
+    requiredLayout =
+        xegpu::LayoutAttr::get(context, defaultLaneData, defaultLaneLayout);
+    break;
+  default:
+    llvm_unreachable("unsupported layout kind");
+  }
+  return requiredLayout;
+}
+
+xegpu::DistributeLayoutAttr
 xegpu::setupStoreMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
-                                    VectorType vectorTy,
+                                    VectorType srcVectorTy,
                                     const xegpu::uArch::uArch *uArch) {
 
   xegpu::DistributeLayoutAttr requiredLayout;
-  SmallVector<int> instData = {1, uArch->getSubgroupSize()};
+  auto subgroupSize = uArch->getSubgroupSize();
+  SmallVector<int> defaultInstData = {1, subgroupSize};
+  SmallVector<int> defaultLaneLayout = {1, subgroupSize};
+  SmallVector<int> defaultLaneData = {1, 1};
+  auto context = srcVectorTy.getContext();
+
   switch (layoutKind) {
   case xegpu::LayoutKind::Subgroup:
     assert(true &&
            "subgroup layout assignment not supported yet for storeMatrix.");
     break;
   case xegpu::LayoutKind::InstData:
-    requiredLayout = xegpu::LayoutAttr::get(vectorTy.getContext(), instData);
+    requiredLayout = xegpu::LayoutAttr::get(context, defaultInstData);
     break;
   case xegpu::LayoutKind::Lane:
-    requiredLayout = xegpu::LayoutAttr::get(
-        vectorTy.getContext(), {1, uArch->getSubgroupSize()}, {1, 1});
+    requiredLayout =
+        xegpu::LayoutAttr::get(context, defaultLaneData, defaultLaneLayout);
 
     break;
   default:
@@ -873,30 +927,78 @@ xegpu::setupStoreMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
 }
 
 xegpu::DistributeLayoutAttr
-xegpu::setupLoadMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
-                                   VectorType vectorTy,
-                                   xegpu::DistributeLayoutAttr consumerLayout,
-                                   const xegpu::uArch::uArch *uArch) {
-  xegpu::DistributeLayoutAttr requiredLayout;
-  SmallVector<int> instData = {1, uArch->getSubgroupSize()};
+xegpu::setupInsertStridedSliceResultLayout(xegpu::LayoutKind layoutKind,
+                                           VectorType resVectorTy,
+                                           const xegpu::uArch::uArch *uArch) {
 
-  auto context = vectorTy.getContext();
+  xegpu::DistributeLayoutAttr requiredResLayout;
+  auto subgroupSize = uArch->getSubgroupSize();
+  auto context = resVectorTy.getContext();
+  auto resShape = resVectorTy.getShape();
+  int resShapeSize = resShape.size();
+  SmallVector<int> defaultInstData(resShapeSize, 1);
+  SmallVector<int> defaultLaneLayout(resShapeSize, 1);
+  SmallVector<int> defaultLaneData(resShapeSize, 1);
+
+  defaultInstData[resShapeSize - 1] = subgroupSize;
+  defaultLaneLayout[resShapeSize - 1] = subgroupSize;
 
   switch (layoutKind) {
   case xegpu::LayoutKind::Subgroup:
-    requiredLayout = consumerLayout;
+    assert(true &&
+           "subgroup layout assignment not supported for insertStridedSlice.");
     break;
   case xegpu::LayoutKind::InstData:
-    requiredLayout = xegpu::LayoutAttr::get(context, instData);
+    requiredResLayout = xegpu::LayoutAttr::get(context, defaultInstData);
     break;
   case xegpu::LayoutKind::Lane:
-    requiredLayout =
-        xegpu::LayoutAttr::get(context, {1, uArch->getSubgroupSize()}, {1, 1});
+    requiredResLayout =
+        xegpu::LayoutAttr::get(context, defaultLaneLayout, defaultLaneData);
     break;
   default:
     llvm_unreachable("unsupported layout kind");
   }
-  return requiredLayout;
+  return requiredResLayout;
+}
+
+xegpu::DistributeLayoutAttr xegpu::inferInsertStridedSliceSourceLayout(
+    xegpu::DistributeLayoutAttr resLayout, ArrayRef<int64_t> resShape,
+    ArrayRef<int64_t> srcShape) {
+
+  const int subgroupSize = 16; // assuming 16 lanes per subgroup
+  int srcShapeSize = srcShape.size();
+  int resShapeSize = resShape.size();
+  int dimDiff = resShapeSize - srcShapeSize;
+
+  // assert resLayout must be a plain layout
+  assert(isa<xegpu::LayoutAttr>(resLayout) &&
+         "insertStridedSlice result layout must be plain layout");
+  auto context = resLayout.getContext();
+  auto resInstData = resLayout.getEffectiveInstDataAsInt();
+  auto resLaneLayout = resLayout.getEffectiveLaneLayoutAsInt();
+  auto resLaneData = resLayout.getEffectiveLaneDataAsInt();
+
+  if (resInstData.size() != 0) {
+    SmallVector<int> inferredInstData(srcShapeSize);
+    // remove the initial dims in resInstData to match srcShapeSize
+    for (int i = 0; i < srcShapeSize; i++)
+      inferredInstData[i] = resInstData[i + dimDiff];
+    return xegpu::LayoutAttr::get(context, inferredInstData);
+  }
+
+  if (resLaneLayout.size() != 0) {
+    // construct source lane_layout like [1, ..., 1, subgroupSize]
+    SmallVector<int> inferredLaneLayout(srcShapeSize);
+    SmallVector<int> inferredLaneData(srcShapeSize);
+    // remove the initial dims in resInstData to match srcShapeSize
+    for (int i = 0; i < srcShapeSize; i++) {
+      inferredLaneLayout[i] = resLaneLayout[i + dimDiff];
+      inferredLaneData[i] = resLaneData[i + dimDiff];
+    }
+    return xegpu::LayoutAttr::get(context, inferredLaneLayout,
+                                  inferredLaneData);
+  }
+  return nullptr;
 }
 
 static xegpu::DistributeLayoutAttr

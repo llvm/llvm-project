@@ -90,14 +90,19 @@ DistributeLayoutAttr inferShapeCastSourceLayout(DistributeLayoutAttr resLayout,
                                                 ArrayRef<int64_t> resShape,
                                                 ArrayRef<int64_t> srcShape);
 
+DistributeLayoutAttr
+inferInsertStridedSliceSourceLayout(DistributeLayoutAttr resLayout,
+                                    ArrayRef<int64_t> resShape,
+                                    ArrayRef<int64_t> srcShape);
+
 /// Sets up layout for reduction operations by creating a SliceAttr for the
 /// result.
 ///
-/// This function first attempts to construct a source layout that, when sliced
-/// along reduction dimensions, produces a result layout compatible with the
-/// consumer's preferred layout. This minimizes data redistribution overhead.
-/// The SliceAttr for the result is then created based on the derived source
-/// layout and the specified reduction dimensions.
+/// This function first attempts to construct a source layout that, when
+/// sliced along reduction dimensions, produces a result layout compatible
+/// with the consumer's preferred layout. This minimizes data redistribution
+/// overhead. The SliceAttr for the result is then created based on the
+/// derived source layout and the specified reduction dimensions.
 SliceAttr setupMultiReductionResultLayout(xegpu::LayoutKind layoutKind,
                                           VectorType srcVectorTy,
                                           DistributeLayoutAttr consumerLayout,
@@ -116,6 +121,9 @@ SliceAttr setupMultiReductionResultLayout(xegpu::LayoutKind layoutKind,
 DistributeLayoutAttr setupBitCastResultLayout(
     LayoutKind layoutKind, VectorType srcVectorTy, VectorType resVectorTy,
     DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
+
+DistributeLayoutAttr setupInsertStridedSliceResultLayout(
+    LayoutKind layoutKind, VectorType resVectorTy, const uArch::uArch *uArch);
 
 DistributeLayoutAttr
 setupLoadMatrixAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,
