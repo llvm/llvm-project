@@ -8162,12 +8162,11 @@ static SDValue buildFromShuffleMostly(SDValue Op, const SDLoc &DL,
 static SDValue LowerBUILD_VECTORvXbf16(SDValue Op, SelectionDAG &DAG,
                                        const X86Subtarget &Subtarget) {
   MVT VT = Op.getSimpleValueType();
-  MVT IVT =
-      VT.changeVectorElementType(Subtarget.hasFP16() ? MVT::f16 : MVT::i16);
+  MVT SVT = Subtarget.hasFP16() ? MVT::f16 : MVT::i16;
+  MVT IVT = VT.changeVectorElementType(SVT);
   SmallVector<SDValue, 16> NewOps;
   for (unsigned I = 0, E = Op.getNumOperands(); I != E; ++I)
-    NewOps.push_back(DAG.getBitcast(Subtarget.hasFP16() ? MVT::f16 : MVT::i16,
-                                    Op.getOperand(I)));
+    NewOps.push_back(DAG.getBitcast(SVT, Op.getOperand(I)));
   SDValue Res = DAG.getNode(ISD::BUILD_VECTOR, SDLoc(), IVT, NewOps);
   return DAG.getBitcast(VT, Res);
 }
