@@ -5469,7 +5469,7 @@ static SDValue lowerVECTOR_SHUFFLEAsMergeGather(const SDLoc &DL, MVT VT,
   for (unsigned Idx : seq<unsigned>(NumElts)) {
     int Lane = Mask[Idx];
     auto LanePoisonOrOOB = [](int Lane, unsigned NumElts) -> bool {
-      return Lane < 0 || Lane > (int)NumElts;
+      return Lane < 0 || Lane >= (int)NumElts;
     };
     // Don't handle if the index is poison or out of bounds
     if (LanePoisonOrOOB(Lane, 2 * NumElts))
