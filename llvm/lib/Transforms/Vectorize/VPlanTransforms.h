@@ -16,6 +16,7 @@
 #include "VPlan.h"
 #include "VPlanVerifier.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 
@@ -43,7 +44,7 @@ struct VPlanTransforms {
   template <bool EnableVerify = true, typename PassTy, typename... ArgsTy>
   static decltype(auto) runPass(StringRef PassName, PassTy &&Pass, VPlan &Plan,
                                 ArgsTy &&...Args) {
-    auto PostTransformActions = [&]() {
+    scope_exit PostTransformActions{[&]() {
       // Make sure to print before verification, so that output is more useful
       // in case of failures:
       if (PrintAfterEachVPlanPass) {
@@ -52,19 +53,9 @@ struct VPlanTransforms {
       }
       if (VerifyEachVPlan && EnableVerify)
         verifyVPlanIsValid(Plan);
-    };
+    }};
 
-    using ResTy = decltype(std::forward<PassTy>(Pass)(
-        Plan, std::forward<ArgsTy>(Args)...));
-    if constexpr (std::is_same_v<ResTy, void>) {
-      std::forward<PassTy>(Pass)(Plan, std::forward<ArgsTy>(Args)...);
-      PostTransformActions();
-    } else {
-      decltype(auto) Res =
-          std::forward<PassTy>(Pass)(Plan, std::forward<ArgsTy>(Args)...);
-      PostTransformActions();
-      return Res;
-    }
+    return std::forward<PassTy>(Pass)(Plan, std::forward<ArgsTy>(Args)...);
   }
 #define RUN_VPLAN_PASS(PASS, ...)                                              \
   llvm::VPlanTransforms::runPass(#PASS, PASS, __VA_ARGS__)
