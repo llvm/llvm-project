@@ -602,8 +602,7 @@ static void FactorScope(MatcherList &ML, MatcherList::iterator Prev) {
         Entries.push_back(std::move(PrevMatcher));
         Entries.push_back(std::move(Optn));
         assert(Cases[Entry - 1].second.empty());
-        Cases[Entry - 1].second.insert_after(
-            Cases[Entry - 1].second.before_begin(),
+        Cases[Entry - 1].second.push_front(
             new ScopeMatcher(std::move(Entries)));
         continue;
       }
