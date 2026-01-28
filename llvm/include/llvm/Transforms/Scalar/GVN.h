@@ -414,7 +414,7 @@ private:
                                         BasicBlock *Preheader, BasicBlock *BB,
                                         Value *LHS, Value *RHS,
                                         CmpInst *Comparison, SelectInst *Select,
-                                        Value *BasePtr, Value *IndexVal,
+                                        Value *BasePtr, PHINode *IndexValPhi,
                                         Value *OffsetVal);
 };
 

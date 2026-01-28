@@ -3358,6 +3358,8 @@ void GVNPass::assignValNumForDeadCode() {
 //    ...
 //    br i1 %cond, label %loop, label %exit
 //
+//    We capture <TYPE> as a part of pattern matching and then later
+//    use it in the transformation.
 // *** After transformation ***
 //
 //  preheader:
@@ -3378,37 +3380,17 @@ void GVNPass::assignValNumForDeadCode() {
 bool GVNPass::transformMinFindingSelectPattern(
     Loop *L, Type *LoadType, BasicBlock *Preheader, BasicBlock *BB, Value *LHS,
     Value *LoadVal, CmpInst *Comparison, SelectInst *Select, Value *BasePtr,
-    Value *IndexVal, Value *OffsetVal) {
+    PHINode *IndexValPhi, Value *OffsetVal) {
 
-  assert(IndexVal && "IndexVal is null");
+  assert(BasePtr && "BasePtr is null");
+  assert(OffsetVal && "OffsetVal is null");
+  assert(IndexValPhi && "IndexValPhi is null");
   AAResults *AA = VN.getAliasAnalysis();
   assert(AA && "AA is null");
 
-  IRBuilder<> Builder(Preheader->getTerminator());
-  Value *InitialMinIndex =
-      dyn_cast<PHINode>(IndexVal)->getIncomingValueForBlock(Preheader);
-
-  // Insert PHI node at the top of this block.
-  // This PHI node will be used to memoize the current minimum value so far.
-  PHINode *KnownMinPhi = PHINode::Create(LoadType, 2, "known_min", BB->begin());
-
-  // Hoist the load and build the necessary operations.
-  // 1. hoist_0 = sext i32 1 to i64
-  Value *HoistedSExt =
-      Builder.CreateSExt(InitialMinIndex, Builder.getInt64Ty(), "hoist_sext");
-
-  // 2. hoist_gep1 = getelementptr float, ptr BasePtr, i64 HoistedSExt
-  Value *HoistedGEP1 =
-      Builder.CreateGEP(LoadType, BasePtr, HoistedSExt, "hoist_gep1");
-
-  // 3. hoist_gep2 = getelementptr i8, ptr HoistedGEP1, i64 OffsetVal
-  Value *HoistedGEP2 = Builder.CreateGEP(Builder.getInt8Ty(), HoistedGEP1,
-                                         OffsetVal, "hoist_gep2");
-
   MemoryLocation NewLoc = MemoryLocation(
-      HoistedGEP2,
-      LocationSize::precise(
-          L->getHeader()->getDataLayout().getTypeStoreSize(LoadType)));
+      LoadVal, LocationSize::precise(
+                   L->getHeader()->getDataLayout().getTypeStoreSize(LoadType)));
   // Check if any instruction in the loop clobbers this location.
   bool CanHoist = true;
   for (BasicBlock *BB : L->blocks()) {
@@ -3432,6 +3414,26 @@ bool GVNPass::transformMinFindingSelectPattern(
                          "instruction in the loop.\n");
     return false;
   }
+
+  IRBuilder<> Builder(Preheader->getTerminator());
+  Value *InitialMinIndex = IndexValPhi->getIncomingValueForBlock(Preheader);
+
+  // Insert PHI node at the top of this block.
+  // This PHI node will be used to memoize the current minimum value so far.
+  PHINode *KnownMinPhi = PHINode::Create(LoadType, 2, "known_min", BB->begin());
+
+  // Hoist the load and build the necessary operations.
+  // 1. hoist_0 = sext i32 1 to i64
+  Value *HoistedSExt =
+      Builder.CreateSExt(InitialMinIndex, Builder.getInt64Ty(), "hoist_sext");
+
+  // 2. hoist_gep1 = getelementptr float, ptr BasePtr, i64 HoistedSExt
+  Value *HoistedGEP1 =
+      Builder.CreateGEP(LoadType, BasePtr, HoistedSExt, "hoist_gep1");
+
+  // 3. hoist_gep2 = getelementptr i8, ptr HoistedGEP1, i64 OffsetVal
+  Value *HoistedGEP2 = Builder.CreateGEP(Builder.getInt8Ty(), HoistedGEP1,
+                                         OffsetVal, "hoist_gep2");
 
   // 4. hoisted_load = load float, ptr HoistedGEP2
   LoadInst *NewLoad = Builder.CreateLoad(LoadType, HoistedGEP2, "hoisted_load");
@@ -3486,17 +3488,13 @@ bool GVNPass::transformMinFindingSelectPattern(
 //   ...
 //   br i1 ..., label %loop, ...
 bool GVNPass::recognizeMinFindingSelectPattern(SelectInst *Select) {
-  IRBuilder<> Builder(Select);
-  Value *BasePtr = nullptr, *IndexVal = nullptr, *OffsetVal = nullptr,
-        *SExt = nullptr;
+  Value *OffsetVal = nullptr;
   BasicBlock *BB = Select->getParent();
 
   // If the block is not in a loop, bail out.
   Loop *L = LI->getLoopFor(BB);
-  if (!L) {
-    LLVM_DEBUG(dbgs() << "GVN: Could not find loop.\n");
+  if (!L)
     return false;
-  }
 
   // If preheader of the loop is not found, bail out.
   BasicBlock *Preheader = L->getLoopPreheader();
@@ -3528,31 +3526,54 @@ bool GVNPass::recognizeMinFindingSelectPattern(SelectInst *Select) {
     return false;
   }
 
-  if (!match(RHS, m_Load(m_GEP(m_GEP(m_Value(BasePtr), m_Value(SExt)),
-                               m_Value(OffsetVal))))) {
+  // Check if the type of both loads are the same.
+  if (LHS->getType() != RHS->getType()) {
+    LLVM_DEBUG(dbgs() << "GVN: Not both loads are of the same type.\n");
+    return false;
+  }
+  Type *LoadType = LHS->getType();
+  Value *InnerGEP;
+  const APInt *OffsetAPInt;
+  if (!match(RHS, m_Load(m_PtrAdd(m_Value(InnerGEP), m_APInt(OffsetAPInt))))) {
     LLVM_DEBUG(dbgs() << "GVN: Not a required load pattern.\n");
     return false;
   }
-  // Check if the SExt instruction is a sext instruction.
-  SExtInst *SEInst = dyn_cast<SExtInst>(SExt);
-  if (!SEInst) {
-    LLVM_DEBUG(dbgs() << "GVN: not a sext instruction.\n");
+  auto *TypedGEP = dyn_cast<GetElementPtrInst>(InnerGEP);
+  if (!TypedGEP) {
+    LLVM_DEBUG(dbgs() << "GVN: Not a typed GEP.\n");
     return false;
   }
+  Type *ElemTy = TypedGEP->getSourceElementType();
+  // Check if ElemTy is same as LoadType.
+  if (ElemTy != LoadType) {
+    LLVM_DEBUG(dbgs() << "GVN: Not a required element type.\n");
+    return false;
+  }
+  OffsetVal =
+      ConstantInt::get(Type::getInt64Ty(RHS->getContext()), *OffsetAPInt);
+
+  // Check if the second operand of InnerGEP is a sext instruction.
+  auto *SEInst = dyn_cast<SExtInst>(TypedGEP->getOperand(1));
+  if (!SEInst) {
+    LLVM_DEBUG(dbgs() << "GVN: Not a sext instruction.\n");
+    return false;
+  }
+
   // Check if the "To" and "from" type of the sext instruction are i64 and i32
   // respectively.
-  if (SEInst->getType() != Builder.getInt64Ty() ||
-      SEInst->getOperand(0)->getType() != Builder.getInt32Ty()) {
+  if (SEInst->getType() != Type::getInt64Ty(SEInst->getContext()) ||
+      SEInst->getOperand(0)->getType() !=
+          Type::getInt32Ty(SEInst->getContext())) {
     LLVM_DEBUG(
         dbgs()
         << "GVN: Not matching the required type for sext instruction.\n");
     return false;
   }
 
-  IndexVal = SEInst->getOperand(0);
+  Value *IndexVal = SEInst->getOperand(0);
   // Check if the IndexVal is a PHI node.
-  PHINode *Phi = dyn_cast<PHINode>(IndexVal);
-  if (!Phi) {
+  PHINode *IndexValPhi = dyn_cast<PHINode>(IndexVal);
+  if (!IndexValPhi) {
     LLVM_DEBUG(dbgs() << "GVN: IndexVal is not a PHI node\n");
     return false;
   }
@@ -3560,9 +3581,9 @@ bool GVNPass::recognizeMinFindingSelectPattern(SelectInst *Select) {
   LLVM_DEBUG(dbgs() << "GVN: Found minimum finding pattern in Block: "
                     << Select->getParent()->getName() << ".\n");
 
-  return transformMinFindingSelectPattern(L, dyn_cast<LoadInst>(LHS)->getType(),
-                                          Preheader, BB, LHS, RHS, Comparison,
-                                          Select, BasePtr, IndexVal, OffsetVal);
+  return transformMinFindingSelectPattern(
+      L, cast<LoadInst>(LHS)->getType(), Preheader, BB, LHS, RHS, Comparison,
+      Select, TypedGEP->getPointerOperand(), IndexValPhi, OffsetVal);
 }
 
 class llvm::gvn::GVNLegacyPass : public FunctionPass {
