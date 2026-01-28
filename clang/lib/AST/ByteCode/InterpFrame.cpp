@@ -158,8 +158,14 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
 
   const Expr *CallExpr = Caller->getExpr(getRetPC());
   const FunctionDecl *F = getCallee();
-  bool IsMemberCall = isa<CXXMethodDecl>(F) && !isa<CXXConstructorDecl>(F) &&
-                      cast<CXXMethodDecl>(F)->isImplicitObjectMemberFunction();
+
+  bool IsMemberCall = false;
+  bool ExplicitInstanceParam = false;
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(F)) {
+    IsMemberCall = !isa<CXXConstructorDecl>(MD) && !MD->isStatic();
+    ExplicitInstanceParam = MD->isExplicitObjectMemberFunction();
+  }
+
   if (Func->hasThisPointer() && IsMemberCall) {
     if (const auto *MCE = dyn_cast_if_present<CXXMemberCallExpr>(CallExpr)) {
       const Expr *Object = MCE->getImplicitObjectArgument();
@@ -190,14 +196,12 @@ void InterpFrame::describe(llvm::raw_ostream &OS) const {
   unsigned Off = 0;
 
   Off += Func->hasRVO() ? primSize(PT_Ptr) : 0;
-  Off += (Func->hasThisPointer() && !Func->isThisPointerExplicit())
-             ? primSize(PT_Ptr)
-             : 0;
-
+  Off += Func->hasThisPointer() ? primSize(PT_Ptr) : 0;
   llvm::ListSeparator Comma;
-  for (unsigned I = 0, N = F->getNumParams(); I < N; ++I) {
+  for (const ParmVarDecl *Param :
+       F->parameters().slice(ExplicitInstanceParam)) {
     OS << Comma;
-    QualType Ty = F->getParamDecl(I)->getType();
+    QualType Ty = Param->getType();
     PrimType PrimTy = S.Ctx.classify(Ty).value_or(PT_Ptr);
 
     TYPE_SWITCH(PrimTy, print(OS, stackRef<T>(Off), S.getASTContext(), Ty));
