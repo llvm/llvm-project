@@ -37,6 +37,14 @@ if(LLVM_ENABLE_ZSTD)
   list(APPEND imported_libs ${zstd_target})
 endif()
 
+# Link Z3 if the user wants to build it.
+# Note: Z3 must be linked before pthread because static libz3 depends on
+# pthread symbols (e.g., pthread_atfork). With static linking, library
+# order matters - dependent libraries must come before their dependencies.
+if(LLVM_WITH_Z3)
+  set(system_libs ${system_libs} ${Z3_LIBRARIES})
+endif()
+
 if( WIN32 )
   # libuuid required for FOLDERID_Profile usage in lib/Support/Windows/Path.inc.
   # advapi32 required for CryptAcquireContextW in lib/Support/Windows/Path.inc.
@@ -90,11 +98,6 @@ if (MSVC)
   # marked as `-Xlinker` to pass them directly to the linker.  As a temporary
   # workaround simply elide the delay loading.
   set (delayload_flags $<$<NOT:$<LINK_LANGUAGE:Swift>>:delayimp ${WL}-delayload:shell32.dll ${WL}-delayload:ole32.dll>)
-endif()
-
-# Link Z3 if the user wants to build it.
-if(LLVM_WITH_Z3)
-  set(system_libs ${system_libs} ${Z3_LIBRARIES})
 endif()
 
 # Override the C runtime allocator on Windows and embed it into LLVM tools & libraries
