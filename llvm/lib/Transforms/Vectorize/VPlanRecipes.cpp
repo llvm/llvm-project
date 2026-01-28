@@ -48,7 +48,7 @@ using VectorParts = SmallVector<Value *, 2>;
 #define DEBUG_TYPE LV_NAME
 
 bool VPRecipeBase::mayWriteToMemory() const {
-  switch (getVPDefID()) {
+  switch (getVPRecipeID()) {
   case VPExpressionSC:
     return cast<VPExpressionRecipe>(this)->mayReadOrWriteMemory();
   case VPInstructionSC: {
@@ -107,7 +107,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
 }
 
 bool VPRecipeBase::mayReadFromMemory() const {
-  switch (getVPDefID()) {
+  switch (getVPRecipeID()) {
   case VPExpressionSC:
     return cast<VPExpressionRecipe>(this)->mayReadOrWriteMemory();
   case VPInstructionSC:
@@ -157,7 +157,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
 }
 
 bool VPRecipeBase::mayHaveSideEffects() const {
-  switch (getVPDefID()) {
+  switch (getVPRecipeID()) {
   case VPExpressionSC:
     return cast<VPExpressionRecipe>(this)->mayHaveSideEffects();
   case VPDerivedIVSC:
@@ -302,7 +302,7 @@ InstructionCost VPRecipeBase::computeCost(ElementCount VF,
 }
 
 bool VPRecipeBase::isPhi() const {
-  return (getVPDefID() >= VPFirstPHISC && getVPDefID() <= VPLastPHISC) ||
+  return (getVPRecipeID() >= VPFirstPHISC && getVPRecipeID() <= VPLastPHISC) ||
          isa<VPPhi, VPIRPhi>(this);
 }
 
@@ -378,7 +378,7 @@ FastMathFlags VPIRFlags::getFastMathFlags() const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPSingleDefRecipe::dump() const { VPDef::dump(); }
+void VPSingleDefRecipe::dump() const { VPRecipeBase::dump(); }
 
 void VPRecipeBase::print(raw_ostream &O, const Twine &Indent,
                          VPSlotTracker &SlotTracker) const {
@@ -417,7 +417,7 @@ template class VPUnrollPartAccessor<3>;
 VPInstruction::VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
                              const VPIRFlags &Flags, const VPIRMetadata &MD,
                              DebugLoc DL, const Twine &Name)
-    : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, Flags, DL),
+    : VPRecipeWithIRFlags(VPRecipeBase::VPInstructionSC, Operands, Flags, DL),
       VPIRMetadata(MD), Opcode(Opcode), Name(Name.str()) {
   assert(flagsValidForOpcode(getOpcode()) &&
          "Set flags not supported for the provided opcode");
@@ -2826,7 +2826,7 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
 VPExpressionRecipe::VPExpressionRecipe(
     ExpressionTypes ExpressionType,
     ArrayRef<VPSingleDefRecipe *> ExpressionRecipes)
-    : VPSingleDefRecipe(VPDef::VPExpressionSC, {}, {}),
+    : VPSingleDefRecipe(VPRecipeBase::VPExpressionSC, {}, {}),
       ExpressionRecipes(ExpressionRecipes), ExpressionType(ExpressionType) {
   assert(!ExpressionRecipes.empty() && "Nothing to combine?");
   assert(
@@ -3448,8 +3448,11 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
         ResultTy = Ctx.Types.inferScalarType(this);
     }
 
+    TTI::VectorInstrContext VIC =
+        IsLoad ? TTI::VectorInstrContext::Load : TTI::VectorInstrContext::Store;
     return (ScalarCost * VF.getFixedValue()) +
-           Ctx.getScalarizationOverhead(ResultTy, OpsToScalarize, VF, true);
+           Ctx.getScalarizationOverhead(ResultTy, OpsToScalarize, VF, VIC,
+                                        true);
   }
   case Instruction::SExt:
   case Instruction::ZExt:

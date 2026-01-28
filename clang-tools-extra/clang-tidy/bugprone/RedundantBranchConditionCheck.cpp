@@ -135,15 +135,15 @@ void RedundantBranchConditionCheck::check(
     if (OtherSide && OtherSide->HasSideEffects(*Result.Context)) {
       const SourceLocation BeforeOtherSide =
           OtherSide->getBeginLoc().getLocWithOffset(-1);
-      const SourceLocation AfterOtherSide =
-          utils::lexer::findNextTokenSkippingComments(
-              OtherSide->getEndLoc(), *Result.SourceManager, getLangOpts())
-              ->getLocation();
-      Diag << FixItHint::CreateRemoval(
-                  CharSourceRange::getTokenRange(IfBegin, BeforeOtherSide))
-           << FixItHint::CreateInsertion(AfterOtherSide, ";")
-           << FixItHint::CreateRemoval(
-                  CharSourceRange::getTokenRange(AfterOtherSide, IfEnd));
+      if (const auto NextToken = utils::lexer::findNextTokenSkippingComments(
+              OtherSide->getEndLoc(), *Result.SourceManager, getLangOpts())) {
+        const SourceLocation AfterOtherSide = NextToken->getLocation();
+        Diag << FixItHint::CreateRemoval(
+                    CharSourceRange::getTokenRange(IfBegin, BeforeOtherSide))
+             << FixItHint::CreateInsertion(AfterOtherSide, ";")
+             << FixItHint::CreateRemoval(
+                    CharSourceRange::getTokenRange(AfterOtherSide, IfEnd));
+      }
     } else {
       Diag << FixItHint::CreateRemoval(
           CharSourceRange::getTokenRange(IfBegin, IfEnd));
@@ -167,13 +167,13 @@ void RedundantBranchConditionCheck::check(
       Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
           CondOp->getLHS()->getBeginLoc(), BeforeRHS));
     } else {
-      const SourceLocation AfterLHS =
-          utils::lexer::findNextTokenSkippingComments(
+      if (const auto NextToken = utils::lexer::findNextTokenSkippingComments(
               CondOp->getLHS()->getEndLoc(), *Result.SourceManager,
-              getLangOpts())
-              ->getLocation();
-      Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
-          AfterLHS, CondOp->getRHS()->getEndLoc()));
+              getLangOpts())) {
+        const SourceLocation AfterLHS = NextToken->getLocation();
+        Diag << FixItHint::CreateRemoval(CharSourceRange::getTokenRange(
+            AfterLHS, CondOp->getRHS()->getEndLoc()));
+      }
     }
   }
 }
