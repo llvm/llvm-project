@@ -631,9 +631,6 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 }
 
 bool AMDGPUTargetLowering::mayIgnoreSignedZero(SDValue Op) const {
-  if (getTargetMachine().Options.NoSignedZerosFPMath)
-    return true;
-
   const auto Flags = Op.getNode()->getFlags();
   if (Flags.hasNoSignedZeros())
     return true;
@@ -2565,10 +2562,9 @@ SDValue AMDGPUTargetLowering::LowerFROUND(SDValue Op, SelectionDAG &DAG) const {
   SDLoc SL(Op);
   SDValue X = Op.getOperand(0);
   EVT VT = Op.getValueType();
+  SelectionDAG::FlagInserter Inserter(DAG, Op->getFlags());
 
   SDValue T = DAG.getNode(ISD::FTRUNC, SL, VT, X);
-
-  // TODO: Should this propagate fast-math-flags?
 
   SDValue Diff = DAG.getNode(ISD::FSUB, SL, VT, X, T);
 
