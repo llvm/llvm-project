@@ -120,7 +120,7 @@ class TestVariableAnnotationsDisassembler(TestBase):
     @no_debug_info_test
     @skipIf(archs=no_match(["x86_64"]))
     def test_structured_annotations_api(self):
-        """Test SBInstruction.get_variable_annotations_list() Python API."""
+        """Test SBInstruction.variable_annotations() Python API."""
         obj = self._build_obj("d_original_example.o")
         target = self._create_target(obj)
 
@@ -139,7 +139,7 @@ class TestVariableAnnotationsDisassembler(TestBase):
 
         if self.TraceOn():
             print(
-                f"\nTesting SBInstruction.get_variable_annotations_list on {instructions.GetSize()} instructions"
+                f"\nTesting SBInstruction.variable_annotations on {instructions.GetSize()} instructions"
             )
 
         expected_vars = ["argc", "argv", "i"]
@@ -153,7 +153,7 @@ class TestVariableAnnotationsDisassembler(TestBase):
             self.assertTrue(inst.IsValid(), f"Invalid instruction at index {i}")
 
             # Get annotations as Python list of dicts.
-            annotations = inst.get_variable_annotations_list()
+            annotations = inst.variable_annotations()
 
             for ann in annotations:
                 # Validate required fields are present.

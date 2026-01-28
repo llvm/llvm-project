@@ -22,7 +22,7 @@ STRING_EXTENSION_OUTSIDE(SBInstruction)
         def __load_adrr_property__ (self):
             return self.GetComment (target)
 
-        def get_variable_annotations_list(self):
+        def variable_annotations(self):
             """Get variable annotations as a Python list of dictionaries.
 
             Returns:
