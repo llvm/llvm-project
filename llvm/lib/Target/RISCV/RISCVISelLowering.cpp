@@ -5468,12 +5468,9 @@ static SDValue lowerVECTOR_SHUFFLEAsMergeGather(const SDLoc &DL, MVT VT,
   SmallVector<unsigned> ShuffleLaneUses(NumElts, 0);
   for (unsigned Idx : seq<unsigned>(NumElts)) {
     int Lane = Mask[Idx];
-    auto LanePoisonOrOOB = [](int Lane, unsigned NumElts) -> bool {
-      return Lane < 0 || Lane >= (int)NumElts;
-    };
-    // Don't handle if the index is poison or out of bounds
-    if (LanePoisonOrOOB(Lane, 2 * NumElts))
-      return SDValue();
+    // Don't assign if poison
+    if (Lane == -1)
+      continue;
     unsigned OpNum;
     int OrigLane;
     if ((unsigned)Lane < NumElts) {
@@ -5483,9 +5480,10 @@ static SDValue lowerVECTOR_SHUFFLEAsMergeGather(const SDLoc &DL, MVT VT,
       OpNum = 2;
       OrigLane = V2Mask[Lane - NumElts];
     }
-    // Don't handle if the index is poison or if shuffling from a second
-    // operand
-    if (LanePoisonOrOOB(OrigLane, NumElts))
+    if (OrigLane == -1)
+      continue;
+    // Don't handle if shuffling from a second operand
+    if ((unsigned)OrigLane >= NumElts)
       return SDValue();
 
     const unsigned CurrLaneSrc = ShuffleLaneUses[OrigLane];
@@ -5524,12 +5522,20 @@ static SDValue lowerVECTOR_SHUFFLEAsMergeGather(const SDLoc &DL, MVT VT,
   // Create the constant vector for the gather
   SmallVector<SDValue> GatherVals(NumElts);
   for (unsigned Idx : seq<unsigned>(NumElts)) {
-    // In bounds checks for Mask done already
     int Lane = Mask[Idx];
+    if (Lane == -1) {
+      GatherVals[Idx] = DAG.getPOISON(XLenVT);
+      continue;
+    }
+    int SecondLane;
     if ((unsigned)Lane < NumElts)
-      GatherVals[Idx] = DAG.getConstant(V1Mask[Lane], DL, XLenVT);
+      SecondLane = V1Mask[Lane];
     else
-      GatherVals[Idx] = DAG.getConstant(V2Mask[Lane - NumElts], DL, XLenVT);
+      SecondLane = V2Mask[Lane - NumElts];
+    if (SecondLane == -1)
+      GatherVals[Idx] = DAG.getPOISON(XLenVT);
+    else
+      GatherVals[Idx] = DAG.getConstant(SecondLane, DL, XLenVT);
   }
   SDValue GatherMask = DAG.getBuildVector(VT, DL, GatherVals);
 
