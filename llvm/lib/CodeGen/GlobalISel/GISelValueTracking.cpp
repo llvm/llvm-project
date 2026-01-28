@@ -13,6 +13,8 @@
 //===----------------------------------------------------------------------===//
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/APInt.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/FloatingPointMode.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/StringExtras.h"
@@ -21,6 +23,7 @@
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
 #include "llvm/CodeGen/GlobalISel/MachineFloatingPointPredicateUtils.h"
+#include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/GlobalISel/Utils.h"
 #include "llvm/CodeGen/LowLevelTypeUtils.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
@@ -682,11 +685,23 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     break;
   }
   case TargetOpcode::G_CTLS: {
-    unsigned MinRedundantSignBits =
-        computeNumSignBits(MI.getOperand(0).getReg(), Depth + 1) - 1;
+    KnownBits SrcOpKnown;
+    auto Reg = MI.getOperand(1).getReg();
+
+    computeKnownBitsImpl(Reg, SrcOpKnown, DemandedElts, Depth + 1);
+    unsigned MinRedundantSignBits = SrcOpKnown.countMinSignBits() - 1;
+
+    if (SrcOpKnown.isConstant()) {
+      Known = KnownBits::makeConstant(APInt(BitWidth, MinRedundantSignBits));
+      break;
+    }
+
+    unsigned MaxUpperRedundantSignBits =
+        MRI.getType(Reg).getScalarSizeInBits() - 1;
 
     ConstantRange Range(APInt(BitWidth, MinRedundantSignBits),
-                        APInt(BitWidth, BitWidth));
+                        APInt(BitWidth, MaxUpperRedundantSignBits));
+
     Known = Range.toKnownBits();
     break;
   }

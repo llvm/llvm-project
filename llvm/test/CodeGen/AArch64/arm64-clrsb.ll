@@ -122,10 +122,16 @@ define i32 @cls_i32_knownbits(i32 %x) {
 
 ; There are at least 16 redundant sign bits so we don't need an ori after the cls.
 define i32 @cls_i32_knownbits_2(i16 signext %x) {
-; CHECK-LABEL: cls_i32_knownbits_2:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    cls w0, w0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: cls_i32_knownbits_2:
+; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    cls w0, w0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: cls_i32_knownbits_2:
+; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    cls w8, w0
+; CHECK-GI-NEXT:    orr w0, w8, #0x10
+; CHECK-GI-NEXT:    ret
   %sext = sext i16 %x to i32
   %a = ashr i32 %sext, 31
   %b = xor i32 %sext, %a
@@ -166,10 +172,16 @@ define i64 @cls_i64_not_32(i64 %x) {
 
 ; There are at least 24 redundant sign bits so we don't need an ori after the clsw.
 define i32 @cls_i32_knownbits_3(i8 signext %x) {
-; CHECK-LABEL: cls_i32_knownbits_3:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    cls w0, w0
-; CHECK-NEXT:    ret
+; CHECK-SD-LABEL: cls_i32_knownbits_3:
+; CHECK-SD:       ; %bb.0:
+; CHECK-SD-NEXT:    cls w0, w0
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: cls_i32_knownbits_3:
+; CHECK-GI:       ; %bb.0:
+; CHECK-GI-NEXT:    cls w8, w0
+; CHECK-GI-NEXT:    orr w0, w8, #0x18
+; CHECK-GI-NEXT:    ret
   %sext = sext i8 %x to i32
   %a = ashr i32 %sext, 31
   %b = xor i32 %sext, %a
