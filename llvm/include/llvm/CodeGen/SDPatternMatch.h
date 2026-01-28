@@ -764,13 +764,15 @@ struct umin_pred_ty {
 
 template <typename LHS, typename RHS>
 inline BinaryOpc_match<LHS, RHS> m_BinOp(unsigned Opc, const LHS &L,
-                                         const RHS &R) {
-  return BinaryOpc_match<LHS, RHS>(Opc, L, R);
+                                         const RHS &R,
+                                         SDNodeFlags Flgs = SDNodeFlags()) {
+  return BinaryOpc_match<LHS, RHS>(Opc, L, R, Flgs);
 }
 template <typename LHS, typename RHS>
-inline BinaryOpc_match<LHS, RHS, true> m_c_BinOp(unsigned Opc, const LHS &L,
-                                                 const RHS &R) {
-  return BinaryOpc_match<LHS, RHS, true>(Opc, L, R);
+inline BinaryOpc_match<LHS, RHS, true>
+m_c_BinOp(unsigned Opc, const LHS &L, const RHS &R,
+          SDNodeFlags Flgs = SDNodeFlags()) {
+  return BinaryOpc_match<LHS, RHS, true>(Opc, L, R, Flgs);
 }
 
 template <typename LHS, typename RHS>
