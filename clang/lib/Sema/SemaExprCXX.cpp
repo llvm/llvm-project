@@ -2661,6 +2661,9 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
 
 static std::string formatAddressSpaceForDiag(LangAS AS,
                                              const LangOptions &LangOpts) {
+  if (isTargetAddressSpace(AS))
+    return llvm::utostr(toTargetAddressSpace(AS));
+
   PrintingPolicy PP(LangOpts);
   Qualifiers Q;
   Q.setAddressSpace(AS);
