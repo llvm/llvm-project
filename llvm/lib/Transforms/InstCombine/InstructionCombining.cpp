@@ -4278,6 +4278,21 @@ Instruction *InstCombinerImpl::visitBranchInst(BranchInst &BI) {
             m_OneUse(m_LogicalAnd(m_Value(X), m_OneUse(m_Not(m_Value(Y))))))) {
     Value *NotX = Builder.CreateNot(X, "not." + X->getName());
     Value *Or = Builder.CreateLogicalOr(NotX, Y);
+
+    // Set weights for the new OR select instruction too.
+    if (!ProfcheckDisableMetadataFixes) {
+      if (auto *OrInst = dyn_cast<Instruction>(Or)) {
+        if (auto *CondInst = dyn_cast<Instruction>(Cond)) {
+          SmallVector<uint32_t> Weights;
+          if (extractBranchWeights(*CondInst, Weights)) {
+            assert(Weights.size() == 2 &&
+                   "Unexpected number of branch weights!");
+            std::swap(Weights[0], Weights[1]);
+            setBranchWeights(*OrInst, Weights, /*IsExpected=*/false);
+          }
+        }
+      }
+    }
     BI.swapSuccessors();
     if (BPI)
       BPI->swapSuccEdgesProbabilities(BI.getParent());
