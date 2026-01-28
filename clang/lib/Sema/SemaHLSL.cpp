@@ -3611,8 +3611,6 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (SemaRef.checkArgCount(TheCall, 1))
       return true;
 
-    // Ensure input expr type is a scalar/vector and then
-    // set the return type to the arg type
     QualType ArgType = TheCall->getArg(0)->getType();
 
     if (!(ArgType->isScalarType())) {

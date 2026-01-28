@@ -235,7 +235,6 @@ defset list<DXILOpClass> OpClasses = {
   def waveMatrix_StoreRawBuf : DXILOpClass;
   def waveMultiPrefixBitCount : DXILOpClass;
   def waveMultiPrefixOp : DXILOpClass;
-  def wavePrefixBitCount : DXILOpClass;
   def wavePrefixOp : DXILOpClass;
   def waveReadLaneAt : DXILOpClass;
   def waveReadLaneFirst : DXILOpClass;

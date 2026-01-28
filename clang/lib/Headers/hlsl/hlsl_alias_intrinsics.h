@@ -2474,7 +2474,7 @@ __attribute__((convergent)) uint WaveGetLaneCount();
 /// \return the count of bits set to 1 on prior lanes.
 _HLSL_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_count_bits)
-__attribute__((convergent)) int WavePrefixCountBits(bool Expr);
+__attribute__((convergent)) uint WavePrefixCountBits(bool Expr);
 
 //===----------------------------------------------------------------------===//
 // WaveReadLaneAt builtins

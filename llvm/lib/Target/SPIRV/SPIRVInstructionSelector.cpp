@@ -2735,7 +2735,7 @@ bool SPIRVInstructionSelector::selectWavePrefixBitCount(
   if (!InputType)
     report_fatal_error("Input Type could not be determined.");
 
-  if (!GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeBool))
+  if (InputType->getOpcode() != SPIRV::OpTypeBool)
     report_fatal_error("WavePrefixBitCount requires boolean input");
 
   // Types
