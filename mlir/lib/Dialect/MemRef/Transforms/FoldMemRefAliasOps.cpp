@@ -21,11 +21,14 @@
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/AffineMap.h"
+#include "mlir/Rewrite/FrozenRewritePatternSet.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
+#include <functional>
+#include <string>
 
 #define DEBUG_TYPE "fold-memref-alias-ops"
 #define DBGS() (llvm::dbgs() << "[" DEBUG_TYPE "]: ")
@@ -82,11 +85,29 @@ static Value getMemRefOperand(gpu::SubgroupMmaStoreMatrixOp op) {
 //===----------------------------------------------------------------------===//
 
 namespace {
+using ControlFunction = std::function<bool(Operation *)>;
+
+template <typename OpTy>
+class FoldMemRefAliasPattern : public OpRewritePattern<OpTy> {
+public:
+  FoldMemRefAliasPattern(MLIRContext *context,
+                         ControlFunction controlFn = ControlFunction())
+      : OpRewritePattern<OpTy>(context), controlFn(std::move(controlFn)) {}
+
+protected:
+  bool shouldRewrite(Operation *op) const {
+    return !controlFn || controlFn(op);
+  }
+
+private:
+  ControlFunction controlFn;
+};
+
 /// Merges subview operation with load/transferRead operation.
 template <typename OpTy>
-class LoadOpOfSubViewOpFolder final : public OpRewritePattern<OpTy> {
+class LoadOpOfSubViewOpFolder final : public FoldMemRefAliasPattern<OpTy> {
 public:
-  using OpRewritePattern<OpTy>::OpRewritePattern;
+  using FoldMemRefAliasPattern<OpTy>::FoldMemRefAliasPattern;
 
   LogicalResult matchAndRewrite(OpTy loadOp,
                                 PatternRewriter &rewriter) const override;
@@ -94,9 +115,9 @@ public:
 
 /// Merges expand_shape operation with load/transferRead operation.
 template <typename OpTy>
-class LoadOpOfExpandShapeOpFolder final : public OpRewritePattern<OpTy> {
+class LoadOpOfExpandShapeOpFolder final : public FoldMemRefAliasPattern<OpTy> {
 public:
-  using OpRewritePattern<OpTy>::OpRewritePattern;
+  using FoldMemRefAliasPattern<OpTy>::FoldMemRefAliasPattern;
 
   LogicalResult matchAndRewrite(OpTy loadOp,
                                 PatternRewriter &rewriter) const override;
@@ -104,9 +125,10 @@ public:
 
 /// Merges collapse_shape operation with load/transferRead operation.
 template <typename OpTy>
-class LoadOpOfCollapseShapeOpFolder final : public OpRewritePattern<OpTy> {
+class LoadOpOfCollapseShapeOpFolder final
+    : public FoldMemRefAliasPattern<OpTy> {
 public:
-  using OpRewritePattern<OpTy>::OpRewritePattern;
+  using FoldMemRefAliasPattern<OpTy>::FoldMemRefAliasPattern;
 
   LogicalResult matchAndRewrite(OpTy loadOp,
                                 PatternRewriter &rewriter) const override;
@@ -114,9 +136,9 @@ public:
 
 /// Merges subview operation with store/transferWriteOp operation.
 template <typename OpTy>
-class StoreOpOfSubViewOpFolder final : public OpRewritePattern<OpTy> {
+class StoreOpOfSubViewOpFolder final : public FoldMemRefAliasPattern<OpTy> {
 public:
-  using OpRewritePattern<OpTy>::OpRewritePattern;
+  using FoldMemRefAliasPattern<OpTy>::FoldMemRefAliasPattern;
 
   LogicalResult matchAndRewrite(OpTy storeOp,
                                 PatternRewriter &rewriter) const override;
@@ -124,9 +146,9 @@ public:
 
 /// Merges expand_shape operation with store/transferWriteOp operation.
 template <typename OpTy>
-class StoreOpOfExpandShapeOpFolder final : public OpRewritePattern<OpTy> {
+class StoreOpOfExpandShapeOpFolder final : public FoldMemRefAliasPattern<OpTy> {
 public:
-  using OpRewritePattern<OpTy>::OpRewritePattern;
+  using FoldMemRefAliasPattern<OpTy>::FoldMemRefAliasPattern;
 
   LogicalResult matchAndRewrite(OpTy storeOp,
                                 PatternRewriter &rewriter) const override;
@@ -134,21 +156,26 @@ public:
 
 /// Merges collapse_shape operation with store/transferWriteOp operation.
 template <typename OpTy>
-class StoreOpOfCollapseShapeOpFolder final : public OpRewritePattern<OpTy> {
+class StoreOpOfCollapseShapeOpFolder final
+    : public FoldMemRefAliasPattern<OpTy> {
 public:
-  using OpRewritePattern<OpTy>::OpRewritePattern;
+  using FoldMemRefAliasPattern<OpTy>::FoldMemRefAliasPattern;
 
   LogicalResult matchAndRewrite(OpTy storeOp,
                                 PatternRewriter &rewriter) const override;
 };
 
 /// Folds subview(subview(x)) to a single subview(x).
-class SubViewOfSubViewFolder : public OpRewritePattern<memref::SubViewOp> {
+class SubViewOfSubViewFolder
+    : public FoldMemRefAliasPattern<memref::SubViewOp> {
 public:
-  using OpRewritePattern<memref::SubViewOp>::OpRewritePattern;
+  using FoldMemRefAliasPattern<memref::SubViewOp>::FoldMemRefAliasPattern;
 
   LogicalResult matchAndRewrite(memref::SubViewOp subView,
                                 PatternRewriter &rewriter) const override {
+    if (!this->shouldRewrite(subView))
+      return failure();
+
     auto srcSubView = subView.getSource().getDefiningOp<memref::SubViewOp>();
     if (!srcSubView)
       return failure();
@@ -188,9 +215,10 @@ public:
 /// Folds nvgpu.device_async_copy subviews into the copy itself. This pattern
 /// is folds subview on src and dst memref of the copy.
 class NVGPUAsyncCopyOpSubViewOpFolder final
-    : public OpRewritePattern<nvgpu::DeviceAsyncCopyOp> {
+    : public FoldMemRefAliasPattern<nvgpu::DeviceAsyncCopyOp> {
 public:
-  using OpRewritePattern<nvgpu::DeviceAsyncCopyOp>::OpRewritePattern;
+  using FoldMemRefAliasPattern<
+      nvgpu::DeviceAsyncCopyOp>::FoldMemRefAliasPattern;
 
   LogicalResult matchAndRewrite(nvgpu::DeviceAsyncCopyOp copyOp,
                                 PatternRewriter &rewriter) const override;
@@ -234,6 +262,8 @@ static LogicalResult preconditionsFoldSubViewOp(RewriterBase &rewriter,
 template <typename OpTy>
 LogicalResult LoadOpOfSubViewOpFolder<OpTy>::matchAndRewrite(
     OpTy loadOp, PatternRewriter &rewriter) const {
+  if (!this->shouldRewrite(loadOp))
+    return failure();
   auto subViewOp =
       getMemRefOperand(loadOp).template getDefiningOp<memref::SubViewOp>();
 
@@ -290,6 +320,8 @@ LogicalResult LoadOpOfSubViewOpFolder<OpTy>::matchAndRewrite(
 template <typename OpTy>
 LogicalResult LoadOpOfExpandShapeOpFolder<OpTy>::matchAndRewrite(
     OpTy loadOp, PatternRewriter &rewriter) const {
+  if (!this->shouldRewrite(loadOp))
+    return failure();
   auto expandShapeOp =
       getMemRefOperand(loadOp).template getDefiningOp<memref::ExpandShapeOp>();
 
@@ -351,6 +383,8 @@ LogicalResult LoadOpOfExpandShapeOpFolder<OpTy>::matchAndRewrite(
 template <typename OpTy>
 LogicalResult LoadOpOfCollapseShapeOpFolder<OpTy>::matchAndRewrite(
     OpTy loadOp, PatternRewriter &rewriter) const {
+  if (!this->shouldRewrite(loadOp))
+    return failure();
   auto collapseShapeOp = getMemRefOperand(loadOp)
                              .template getDefiningOp<memref::CollapseShapeOp>();
 
@@ -383,6 +417,8 @@ LogicalResult LoadOpOfCollapseShapeOpFolder<OpTy>::matchAndRewrite(
 template <typename OpTy>
 LogicalResult StoreOpOfSubViewOpFolder<OpTy>::matchAndRewrite(
     OpTy storeOp, PatternRewriter &rewriter) const {
+  if (!this->shouldRewrite(storeOp))
+    return failure();
   auto subViewOp =
       getMemRefOperand(storeOp).template getDefiningOp<memref::SubViewOp>();
 
@@ -435,6 +471,8 @@ LogicalResult StoreOpOfSubViewOpFolder<OpTy>::matchAndRewrite(
 template <typename OpTy>
 LogicalResult StoreOpOfExpandShapeOpFolder<OpTy>::matchAndRewrite(
     OpTy storeOp, PatternRewriter &rewriter) const {
+  if (!this->shouldRewrite(storeOp))
+    return failure();
   auto expandShapeOp =
       getMemRefOperand(storeOp).template getDefiningOp<memref::ExpandShapeOp>();
 
@@ -470,6 +508,8 @@ LogicalResult StoreOpOfExpandShapeOpFolder<OpTy>::matchAndRewrite(
 template <typename OpTy>
 LogicalResult StoreOpOfCollapseShapeOpFolder<OpTy>::matchAndRewrite(
     OpTy storeOp, PatternRewriter &rewriter) const {
+  if (!this->shouldRewrite(storeOp))
+    return failure();
   auto collapseShapeOp = getMemRefOperand(storeOp)
                              .template getDefiningOp<memref::CollapseShapeOp>();
 
@@ -501,6 +541,8 @@ LogicalResult StoreOpOfCollapseShapeOpFolder<OpTy>::matchAndRewrite(
 
 LogicalResult NVGPUAsyncCopyOpSubViewOpFolder::matchAndRewrite(
     nvgpu::DeviceAsyncCopyOp copyOp, PatternRewriter &rewriter) const {
+  if (!this->shouldRewrite(copyOp))
+    return failure();
 
   LLVM_DEBUG(DBGS() << "copyOp       : " << copyOp << "\n");
 
@@ -550,7 +592,12 @@ LogicalResult NVGPUAsyncCopyOpSubViewOpFolder::matchAndRewrite(
   return success();
 }
 
-void memref::populateFoldMemRefAliasOpPatterns(RewritePatternSet &patterns) {
+void memref::populateFoldMemRefAliasOpPatterns(
+    RewritePatternSet &patterns, function_ref<bool(Operation *)> controlFn) {
+  ControlFunction controlFnStorage;
+  if (controlFn)
+    controlFnStorage = controlFn;
+
   patterns.add<LoadOpOfSubViewOpFolder<memref::LoadOp>,
                LoadOpOfSubViewOpFolder<nvgpu::LdMatrixOp>,
                LoadOpOfSubViewOpFolder<vector::LoadOp>,
@@ -576,7 +623,7 @@ void memref::populateFoldMemRefAliasOpPatterns(RewritePatternSet &patterns) {
                StoreOpOfCollapseShapeOpFolder<vector::StoreOp>,
                StoreOpOfCollapseShapeOpFolder<vector::MaskedStoreOp>,
                SubViewOfSubViewFolder, NVGPUAsyncCopyOpSubViewOpFolder>(
-      patterns.getContext());
+      patterns.getContext(), controlFnStorage);
 }
 
 //===----------------------------------------------------------------------===//
@@ -587,13 +634,37 @@ namespace {
 
 struct FoldMemRefAliasOpsPass final
     : public memref::impl::FoldMemRefAliasOpsPassBase<FoldMemRefAliasOpsPass> {
+  FoldMemRefAliasOpsPass() = default;
+  FoldMemRefAliasOpsPass(ArrayRef<StringRef> disabledPatterns,
+                         function_ref<bool(Operation *)> controlFn = nullptr)
+      : disabledPatternNames(disabledPatterns.begin(), disabledPatterns.end()) {
+    if (controlFn)
+      controlFunction = controlFn;
+  }
+
   void runOnOperation() override;
+
+private:
+  SmallVector<std::string> disabledPatternNames;
+  ControlFunction controlFunction;
 };
 
 } // namespace
 
 void FoldMemRefAliasOpsPass::runOnOperation() {
-  RewritePatternSet patterns(&getContext());
-  memref::populateFoldMemRefAliasOpPatterns(patterns);
-  (void)applyPatternsGreedily(getOperation(), std::move(patterns));
+  RewritePatternSet owningPatterns(&getContext());
+  function_ref<bool(Operation *)> controlFnRef;
+  if (controlFunction)
+    controlFnRef = controlFunction;
+  memref::populateFoldMemRefAliasOpPatterns(owningPatterns, controlFnRef);
+
+  FrozenRewritePatternSet patterns(std::move(owningPatterns),
+                                   disabledPatternNames);
+  (void)applyPatternsGreedily(getOperation(), patterns);
+}
+
+std::unique_ptr<Pass> mlir::memref::createFoldMemRefAliasOpsPass(
+    ArrayRef<StringRef> excludedPatterns,
+    function_ref<bool(Operation *)> controlFn) {
+  return std::make_unique<FoldMemRefAliasOpsPass>(excludedPatterns, controlFn);
 }

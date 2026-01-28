@@ -2,6 +2,7 @@
 add_mlir_library(MLIRMemRefTestPasses
   TestComposeSubView.cpp
   TestEmulateNarrowType.cpp
+  TestFoldMemRefAliasOptions.cpp
   TestMultiBuffer.cpp
 
   EXCLUDE_FROM_LIBMLIR

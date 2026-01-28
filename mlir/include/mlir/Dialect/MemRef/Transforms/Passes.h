@@ -14,6 +14,9 @@
 #define MLIR_DIALECT_MEMREF_TRANSFORMS_PASSES_H
 
 #include "mlir/Pass/Pass.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/StringRef.h"
 
 namespace mlir {
 
@@ -44,6 +47,14 @@ namespace memref {
 
 #define GEN_PASS_DECL
 #include "mlir/Dialect/MemRef/Transforms/Passes.h.inc"
+
+/// Additional construction for FoldMemrefAliasOps to allow disabling
+/// patterns by name, and controlling folding via a callback function.
+/// `controlFn(Operation* userOp)` will be passed the user operation of the
+/// aliasing op (e.g., a load/store that uses the result of a memref.subview).
+std::unique_ptr<Pass> createFoldMemRefAliasOpsPass(
+    ArrayRef<StringRef> excludedPatterns,
+    function_ref<bool(Operation *)> controlFn = nullptr);
 
 //===----------------------------------------------------------------------===//
 // Registration

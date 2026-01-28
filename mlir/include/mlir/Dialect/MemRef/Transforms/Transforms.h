@@ -21,6 +21,7 @@ namespace mlir {
 class OpBuilder;
 class RewritePatternSet;
 class RewriterBase;
+class Operation;
 class Value;
 class ValueRange;
 class ReifyRankedShapedTypeOpInterface;
@@ -43,8 +44,13 @@ class DeallocOp;
 void populateExpandOpsPatterns(RewritePatternSet &patterns);
 
 /// Appends patterns for folding memref aliasing ops into consumer load/store
-/// ops into `patterns`.
-void populateFoldMemRefAliasOpPatterns(RewritePatternSet &patterns);
+/// ops into `patterns`. If `controlFn` is provided, each pattern invokes it and
+/// bails out when it returns false.
+/// `controlFn(Operation* userOp)` will be passed the user operation of the
+/// aliasing op (e.g., a load/store that uses the result of a memref.subview).
+void populateFoldMemRefAliasOpPatterns(
+    RewritePatternSet &patterns,
+    function_ref<bool(Operation *)> controlFn = nullptr);
 
 /// Appends patterns that resolve `memref.dim` operations with values that are
 /// defined by operations that implement the

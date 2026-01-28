@@ -133,6 +133,7 @@ void registerTestMemRefToLLVMWithTransforms();
 void registerTestReshardingPartitionPass();
 void registerTestShardSimplificationsPass();
 void registerTestMultiBuffering();
+void registerTestFoldMemRefAliasOptionsPass();
 void registerTestNextAccessPass();
 void registerTestNVGPULowerings();
 void registerTestOpenACC();
@@ -248,6 +249,7 @@ static void registerTestPasses() {
   mlir::test::registerTestDominancePass();
   mlir::test::registerTestDynamicPipelinePass();
   mlir::test::registerTestRemarkPass();
+  mlir::test::registerTestFoldMemRefAliasOptionsPass();
   mlir::test::registerTestEmulateNarrowTypePass();
   mlir::test::registerTestFooAnalysisPass();
   mlir::test::registerTestComposeSubView();
