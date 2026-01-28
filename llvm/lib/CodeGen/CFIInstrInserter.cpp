@@ -39,9 +39,7 @@ class CFIInstrInserter : public MachineFunctionPass {
  public:
   static char ID;
 
-  CFIInstrInserter() : MachineFunctionPass(ID) {
-    initializeCFIInstrInserterPass(*PassRegistry::getPassRegistry());
-  }
+  CFIInstrInserter() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesAll();

@@ -160,6 +160,42 @@ static Value *handleHlslSplitdouble(const CallExpr *E, CodeGenFunction *CGF) {
   return LastInst;
 }
 
+static Value *handleHlslWaveActiveBallot(CodeGenFunction &CGF,
+                                         const CallExpr *E) {
+  Value *Cond = CGF.EmitScalarExpr(E->getArg(0));
+  llvm::Type *I32 = CGF.Int32Ty;
+
+  llvm::Type *Vec4I32 = llvm::FixedVectorType::get(I32, 4);
+  [[maybe_unused]] llvm::StructType *Struct4I32 =
+      llvm::StructType::get(CGF.getLLVMContext(), {I32, I32, I32, I32});
+
+  if (CGF.CGM.getTarget().getTriple().isDXIL()) {
+    // Call DXIL intrinsic: returns { i32, i32, i32, i32 }
+    llvm::Function *Fn = CGF.CGM.getIntrinsic(Intrinsic::dx_wave_ballot, {I32});
+
+    Value *StructVal = CGF.EmitRuntimeCall(Fn, Cond);
+    assert(StructVal->getType() == Struct4I32 &&
+           "dx.wave.ballot must return {i32,i32,i32,i32}");
+
+    // Reassemble struct to <4 x i32>
+    llvm::Value *VecVal = llvm::PoisonValue::get(Vec4I32);
+    for (unsigned I = 0; I < 4; ++I) {
+      Value *Elt = CGF.Builder.CreateExtractValue(StructVal, I);
+      VecVal =
+          CGF.Builder.CreateInsertElement(VecVal, Elt, CGF.Builder.getInt32(I));
+    }
+
+    return VecVal;
+  }
+
+  if (CGF.CGM.getTarget().getTriple().isSPIRV())
+    return CGF.EmitRuntimeCall(
+        CGF.CGM.getIntrinsic(Intrinsic::spv_subgroup_ballot), Cond);
+
+  llvm_unreachable(
+      "WaveActiveBallot is only supported for DXIL and SPIRV targets");
+}
+
 static Value *handleElementwiseF16ToF32(CodeGenFunction &CGF,
                                         const CallExpr *E) {
   Value *Op0 = CGF.EmitScalarExpr(E->getArg(0));
@@ -184,31 +220,84 @@ static Value *handleElementwiseF16ToF32(CodeGenFunction &CGF,
   if (CGF.CGM.getTriple().isSPIRV()) {
     // We use the SPIRV UnpackHalf2x16 operation to avoid the need for the
     // Int16 and Float16 capabilities
-    auto UnpackType =
+    auto *UnpackType =
         llvm::VectorType::get(CGF.FloatTy, ElementCount::getFixed(2));
+
     if (NumElements == 0) {
       // a scalar input - simply extract the first element of the unpacked
       // vector
       Value *Unpack = CGF.Builder.CreateIntrinsic(
           UnpackType, Intrinsic::spv_unpackhalf2x16, ArrayRef<Value *>{Op0});
       return CGF.Builder.CreateExtractElement(Unpack, (uint64_t)0);
-    } else {
-      // a vector input - build a congruent output vector by iterating through
-      // the input vector calling unpackhalf2x16 for each element
-      Value *Result = PoisonValue::get(ResType);
-      for (uint64_t i = 0; i < NumElements; i++) {
-        Value *InVal = CGF.Builder.CreateExtractElement(Op0, i);
-        Value *Unpack = CGF.Builder.CreateIntrinsic(
-            UnpackType, Intrinsic::spv_unpackhalf2x16,
-            ArrayRef<Value *>{InVal});
-        Value *Res = CGF.Builder.CreateExtractElement(Unpack, (uint64_t)0);
-        Result = CGF.Builder.CreateInsertElement(Result, Res, i);
-      }
-      return Result;
     }
+
+    // a vector input - build a congruent output vector by iterating through
+    // the input vector calling unpackhalf2x16 for each element
+    Value *Result = PoisonValue::get(ResType);
+    for (uint64_t I = 0; I < NumElements; I++) {
+      Value *InVal = CGF.Builder.CreateExtractElement(Op0, I);
+      Value *Unpack = CGF.Builder.CreateIntrinsic(
+          UnpackType, Intrinsic::spv_unpackhalf2x16, ArrayRef<Value *>{InVal});
+      Value *Res = CGF.Builder.CreateExtractElement(Unpack, (uint64_t)0);
+      Result = CGF.Builder.CreateInsertElement(Result, Res, I);
+    }
+    return Result;
   }
 
   llvm_unreachable("Intrinsic F16ToF32 not supported by target architecture");
+}
+
+static Value *handleElementwiseF32ToF16(CodeGenFunction &CGF,
+                                        const CallExpr *E) {
+  Value *Op0 = CGF.EmitScalarExpr(E->getArg(0));
+  QualType Op0Ty = E->getArg(0)->getType();
+  llvm::Type *ResType = CGF.IntTy;
+  uint64_t NumElements = 0;
+  if (Op0->getType()->isVectorTy()) {
+    NumElements =
+        E->getArg(0)->getType()->castAs<clang::VectorType>()->getNumElements();
+    ResType =
+        llvm::VectorType::get(ResType, ElementCount::getFixed(NumElements));
+  }
+  if (!Op0Ty->hasFloatingRepresentation())
+    llvm_unreachable("f32tof16 operand must have a float representation");
+
+  if (CGF.CGM.getTriple().isDXIL())
+    return CGF.Builder.CreateIntrinsic(ResType, Intrinsic::dx_legacyf32tof16,
+                                       ArrayRef<Value *>{Op0}, nullptr,
+                                       "hlsl.f32tof16");
+
+  if (CGF.CGM.getTriple().isSPIRV()) {
+    // We use the SPIRV PackHalf2x16 operation to avoid the need for the
+    // Int16 and Float16 capabilities
+    auto *PackType =
+        llvm::VectorType::get(CGF.FloatTy, ElementCount::getFixed(2));
+
+    if (NumElements == 0) {
+      // a scalar input - simply insert the scalar in the first element
+      // of the 2 element float vector
+      Value *Float2 = Constant::getNullValue(PackType);
+      Float2 = CGF.Builder.CreateInsertElement(Float2, Op0, (uint64_t)0);
+      Value *Result = CGF.Builder.CreateIntrinsic(
+          ResType, Intrinsic::spv_packhalf2x16, ArrayRef<Value *>{Float2});
+      return Result;
+    }
+
+    // a vector input - build a congruent output vector by iterating through
+    // the input vector calling packhalf2x16 for each element
+    Value *Result = PoisonValue::get(ResType);
+    for (uint64_t I = 0; I < NumElements; I++) {
+      Value *Float2 = Constant::getNullValue(PackType);
+      Value *InVal = CGF.Builder.CreateExtractElement(Op0, I);
+      Float2 = CGF.Builder.CreateInsertElement(Float2, InVal, (uint64_t)0);
+      Value *Res = CGF.Builder.CreateIntrinsic(
+          CGF.IntTy, Intrinsic::spv_packhalf2x16, ArrayRef<Value *>{Float2});
+      Result = CGF.Builder.CreateInsertElement(Result, Res, I);
+    }
+    return Result;
+  }
+
+  llvm_unreachable("Intrinsic F32ToF16 not supported by target architecture");
 }
 
 static Value *emitBufferStride(CodeGenFunction *CGF, const Expr *HandleExpr,
@@ -676,6 +765,9 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   case Builtin::BI__builtin_hlsl_elementwise_f16tof32: {
     return handleElementwiseF16ToF32(*this, E);
   }
+  case Builtin::BI__builtin_hlsl_elementwise_f32tof16: {
+    return handleElementwiseF32ToF16(*this, E);
+  }
   case Builtin::BI__builtin_hlsl_elementwise_frac: {
     Value *Op0 = EmitScalarExpr(E->getArg(0));
     if (!E->getArg(0)->getType()->hasFloatingRepresentation())
@@ -830,13 +922,11 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID), {Op});
   }
   case Builtin::BI__builtin_hlsl_wave_active_ballot: {
-    Value *Op = EmitScalarExpr(E->getArg(0));
+    [[maybe_unused]] Value *Op = EmitScalarExpr(E->getArg(0));
     assert(Op->getType()->isIntegerTy(1) &&
            "Intrinsic WaveActiveBallot operand must be a bool");
 
-    Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveActiveBallotIntrinsic();
-    return EmitRuntimeCall(
-        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), ID), {Op});
+    return handleHlslWaveActiveBallot(*this, E);
   }
   case Builtin::BI__builtin_hlsl_wave_active_count_bits: {
     Value *OpExpr = EmitScalarExpr(E->getArg(0));

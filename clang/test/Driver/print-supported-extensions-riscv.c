@@ -39,6 +39,7 @@
 // CHECK-NEXT:     zaamo                1.0       'Zaamo' (Atomic Memory Operations)
 // CHECK-NEXT:     zabha                1.0       'Zabha' (Byte and Halfword Atomic Memory Operations)
 // CHECK-NEXT:     zacas                1.0       'Zacas' (Atomic Compare-And-Swap Instructions)
+// CHECK-NEXT:     zalasr               1.0       'Zalasr' (Load-Acquire and Store-Release Instructions)
 // CHECK-NEXT:     zalrsc               1.0       'Zalrsc' (Load-Reserved/Store-Conditional)
 // CHECK-NEXT:     zama16b              1.0       'Zama16b' (Atomic 16-byte misaligned loads, stores and AMOs)
 // CHECK-NEXT:     zawrs                1.0       'Zawrs' (Wait on Reservation Set)
@@ -159,6 +160,7 @@
 // CHECK-NEXT:     svinval              1.0       'Svinval' (Fine-Grained Address-Translation Cache Invalidation)
 // CHECK-NEXT:     svnapot              1.0       'Svnapot' (NAPOT Translation Contiguity)
 // CHECK-NEXT:     svpbmt               1.0       'Svpbmt' (Page-Based Memory Types)
+// CHECK-NEXT:     svrsw60t59b          1.0       'Svrsw60t59b' (PTE Reserved-for-Software Bits 60-59)
 // CHECK-NEXT:     svvptc               1.0       'Svvptc' (Obviating Memory-Management Instructions after Marking PTEs Valid)
 // CHECK-NEXT:     xaifet               1.0       'XAIFET' (AI Foundry ET Extension)
 // CHECK-NEXT:     xandesbfhcvt         5.0       'XAndesBFHCvt' (Andes Scalar BFLOAT16 Conversion Extension)
@@ -239,10 +241,10 @@
 // CHECK-EMPTY:
 // CHECK-NEXT: Experimental extensions
 // CHECK-NEXT:     p                    0.18      'P' ('Base P' (Packed SIMD))
+// CHECK-NEXT:     y                    0.96      'Y' ('Base Y' (CHERI))
 // CHECK-NEXT:     zibi                 0.1       'Zibi' (Branch with Immediate)
 // CHECK-NEXT:     zicfilp              1.0       'Zicfilp' (Landing pad)
 // CHECK-NEXT:     zicfiss              1.0       'Zicfiss' (Shadow stack)
-// CHECK-NEXT:     zalasr               0.9       'Zalasr' (Load-Acquire and Store-Release Instructions)
 // CHECK-NEXT:     zvbc32e              0.7       'Zvbc32e' (Vector Carryless Multiplication with 32-bits elements)
 // CHECK-NEXT:     zvfbfa               0.1       'Zvfbfa' (Additional BF16 vector compute support)
 // CHECK-NEXT:     zvfofp8min           0.2       'Zvfofp8min' (Vector OFP8 Converts)
