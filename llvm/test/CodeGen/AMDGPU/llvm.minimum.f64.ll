@@ -418,13 +418,13 @@ define void @s_minimum_f64(double inreg %src0, double inreg %src1) {
 ; GFX7-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s19
-; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, s[16:17], v[0:1]
 ; GFX7-NEXT:    v_min_f64 v[2:3], s[16:17], v[0:1]
-; GFX7-NEXT:    s_and_b64 s[4:5], vcc, exec
-; GFX7-NEXT:    v_readfirstlane_b32 s6, v3
-; GFX7-NEXT:    v_readfirstlane_b32 s4, v2
-; GFX7-NEXT:    s_cselect_b32 s5, 0x7ff80000, s6
-; GFX7-NEXT:    s_cselect_b32 s4, 0, s4
+; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, s[16:17], v[0:1]
+; GFX7-NEXT:    v_mov_b32_e32 v4, 0x7ff80000
+; GFX7-NEXT:    v_cndmask_b32_e32 v0, v3, v4, vcc
+; GFX7-NEXT:    v_cndmask_b32_e64 v1, v2, 0, vcc
+; GFX7-NEXT:    v_readfirstlane_b32 s4, v1
+; GFX7-NEXT:    v_readfirstlane_b32 s5, v0
 ; GFX7-NEXT:    ;;#ASMSTART
 ; GFX7-NEXT:    ; use s[4:5]
 ; GFX7-NEXT:    ;;#ASMEND
@@ -435,13 +435,13 @@ define void @s_minimum_f64(double inreg %src0, double inreg %src1) {
 ; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s19
-; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, s[16:17], v[0:1]
 ; GFX8-NEXT:    v_min_f64 v[2:3], s[16:17], v[0:1]
-; GFX8-NEXT:    s_and_b64 s[4:5], vcc, exec
-; GFX8-NEXT:    v_readfirstlane_b32 s6, v3
-; GFX8-NEXT:    v_readfirstlane_b32 s4, v2
-; GFX8-NEXT:    s_cselect_b32 s5, 0x7ff80000, s6
-; GFX8-NEXT:    s_cselect_b32 s4, 0, s4
+; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, s[16:17], v[0:1]
+; GFX8-NEXT:    v_mov_b32_e32 v4, 0x7ff80000
+; GFX8-NEXT:    v_cndmask_b32_e32 v0, v3, v4, vcc
+; GFX8-NEXT:    v_cndmask_b32_e64 v1, v2, 0, vcc
+; GFX8-NEXT:    v_readfirstlane_b32 s4, v1
+; GFX8-NEXT:    v_readfirstlane_b32 s5, v0
 ; GFX8-NEXT:    ;;#ASMSTART
 ; GFX8-NEXT:    ; use s[4:5]
 ; GFX8-NEXT:    ;;#ASMEND
@@ -452,13 +452,13 @@ define void @s_minimum_f64(double inreg %src0, double inreg %src1) {
 ; GFX900-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX900-NEXT:    v_mov_b32_e32 v0, s18
 ; GFX900-NEXT:    v_mov_b32_e32 v1, s19
-; GFX900-NEXT:    v_cmp_u_f64_e32 vcc, s[16:17], v[0:1]
 ; GFX900-NEXT:    v_min_f64 v[2:3], s[16:17], v[0:1]
-; GFX900-NEXT:    s_and_b64 s[4:5], vcc, exec
-; GFX900-NEXT:    v_readfirstlane_b32 s6, v3
-; GFX900-NEXT:    v_readfirstlane_b32 s4, v2
-; GFX900-NEXT:    s_cselect_b32 s5, 0x7ff80000, s6
-; GFX900-NEXT:    s_cselect_b32 s4, 0, s4
+; GFX900-NEXT:    v_cmp_u_f64_e32 vcc, s[16:17], v[0:1]
+; GFX900-NEXT:    v_mov_b32_e32 v4, 0x7ff80000
+; GFX900-NEXT:    v_cndmask_b32_e32 v0, v3, v4, vcc
+; GFX900-NEXT:    v_cndmask_b32_e64 v1, v2, 0, vcc
+; GFX900-NEXT:    v_readfirstlane_b32 s4, v1
+; GFX900-NEXT:    v_readfirstlane_b32 s5, v0
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[4:5]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -468,13 +468,14 @@ define void @s_minimum_f64(double inreg %src0, double inreg %src1) {
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    v_mov_b64_e32 v[0:1], s[2:3]
+; GFX950-NEXT:    v_min_f64 v[2:3], s[0:1], v[0:1]
+; GFX950-NEXT:    v_mov_b32_e32 v4, 0x7ff80000
 ; GFX950-NEXT:    v_cmp_u_f64_e32 vcc, s[0:1], v[0:1]
-; GFX950-NEXT:    v_min_f64 v[0:1], s[0:1], v[0:1]
-; GFX950-NEXT:    s_and_b64 s[0:1], vcc, exec
-; GFX950-NEXT:    v_readfirstlane_b32 s2, v1
+; GFX950-NEXT:    s_nop 1
+; GFX950-NEXT:    v_cndmask_b32_e32 v1, v3, v4, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v0, v2, 0, vcc
+; GFX950-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX950-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX950-NEXT:    s_cselect_b32 s1, 0x7ff80000, s2
-; GFX950-NEXT:    s_cselect_b32 s0, 0, s0
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; use s[0:1]
 ; GFX950-NEXT:    ;;#ASMEND
@@ -485,11 +486,10 @@ define void @s_minimum_f64(double inreg %src0, double inreg %src1) {
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX10-NEXT:    v_min_f64 v[0:1], s[16:17], s[18:19]
 ; GFX10-NEXT:    v_cmp_u_f64_e64 s4, s[16:17], s[18:19]
+; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, 0x7ff80000, s4
+; GFX10-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s4
 ; GFX10-NEXT:    v_readfirstlane_b32 s5, v1
-; GFX10-NEXT:    v_readfirstlane_b32 s6, v0
-; GFX10-NEXT:    s_and_b32 s4, s4, exec_lo
-; GFX10-NEXT:    s_cselect_b32 s5, 0x7ff80000, s5
-; GFX10-NEXT:    s_cselect_b32 s4, 0, s6
+; GFX10-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ; use s[4:5]
 ; GFX10-NEXT:    ;;#ASMEND
@@ -500,12 +500,12 @@ define void @s_minimum_f64(double inreg %src0, double inreg %src1) {
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX11-NEXT:    v_min_f64 v[0:1], s[0:1], s[2:3]
 ; GFX11-NEXT:    v_cmp_u_f64_e64 s0, s[0:1], s[2:3]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, 0x7ff80000, s0
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX11-NEXT:    v_readfirstlane_b32 s2, v0
-; GFX11-NEXT:    s_and_b32 s0, s0, exec_lo
-; GFX11-NEXT:    s_cselect_b32 s1, 0x7ff80000, s1
-; GFX11-NEXT:    s_cselect_b32 s0, 0, s2
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-NEXT:    ;;#ASMSTART
 ; GFX11-NEXT:    ; use s[0:1]
 ; GFX11-NEXT:    ;;#ASMEND
@@ -842,18 +842,17 @@ define void @s_minimum_v2f64(<2 x double> inreg %src0, <2 x double> inreg %src1)
 ; GFX7-NEXT:    v_cmp_u_f64_e32 vcc, s[18:19], v[0:1]
 ; GFX7-NEXT:    v_mov_b32_e32 v0, s20
 ; GFX7-NEXT:    v_mov_b32_e32 v1, s21
-; GFX7-NEXT:    v_cmp_u_f64_e64 s[4:5], s[16:17], v[0:1]
 ; GFX7-NEXT:    v_min_f64 v[4:5], s[16:17], v[0:1]
-; GFX7-NEXT:    v_readfirstlane_b32 s8, v3
-; GFX7-NEXT:    s_and_b64 s[6:7], vcc, exec
-; GFX7-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX7-NEXT:    s_cselect_b32 s7, 0x7ff80000, s8
-; GFX7-NEXT:    s_cselect_b32 s6, 0, s6
-; GFX7-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; GFX7-NEXT:    v_readfirstlane_b32 s8, v5
-; GFX7-NEXT:    v_readfirstlane_b32 s4, v4
-; GFX7-NEXT:    s_cselect_b32 s5, 0x7ff80000, s8
-; GFX7-NEXT:    s_cselect_b32 s4, 0, s4
+; GFX7-NEXT:    v_cmp_u_f64_e64 s[4:5], s[16:17], v[0:1]
+; GFX7-NEXT:    v_mov_b32_e32 v6, 0x7ff80000
+; GFX7-NEXT:    v_cndmask_b32_e32 v0, v3, v6, vcc
+; GFX7-NEXT:    v_cndmask_b32_e64 v1, v2, 0, vcc
+; GFX7-NEXT:    v_readfirstlane_b32 s6, v1
+; GFX7-NEXT:    v_readfirstlane_b32 s7, v0
+; GFX7-NEXT:    v_cndmask_b32_e64 v2, v5, v6, s[4:5]
+; GFX7-NEXT:    v_cndmask_b32_e64 v3, v4, 0, s[4:5]
+; GFX7-NEXT:    v_readfirstlane_b32 s4, v3
+; GFX7-NEXT:    v_readfirstlane_b32 s5, v2
 ; GFX7-NEXT:    ;;#ASMSTART
 ; GFX7-NEXT:    ; use s[4:7]
 ; GFX7-NEXT:    ;;#ASMEND
@@ -868,18 +867,17 @@ define void @s_minimum_v2f64(<2 x double> inreg %src0, <2 x double> inreg %src1)
 ; GFX8-NEXT:    v_cmp_u_f64_e32 vcc, s[18:19], v[0:1]
 ; GFX8-NEXT:    v_mov_b32_e32 v0, s20
 ; GFX8-NEXT:    v_mov_b32_e32 v1, s21
-; GFX8-NEXT:    v_cmp_u_f64_e64 s[4:5], s[16:17], v[0:1]
 ; GFX8-NEXT:    v_min_f64 v[4:5], s[16:17], v[0:1]
-; GFX8-NEXT:    v_readfirstlane_b32 s8, v3
-; GFX8-NEXT:    s_and_b64 s[6:7], vcc, exec
-; GFX8-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX8-NEXT:    s_cselect_b32 s7, 0x7ff80000, s8
-; GFX8-NEXT:    s_cselect_b32 s6, 0, s6
-; GFX8-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; GFX8-NEXT:    v_readfirstlane_b32 s8, v5
-; GFX8-NEXT:    v_readfirstlane_b32 s4, v4
-; GFX8-NEXT:    s_cselect_b32 s5, 0x7ff80000, s8
-; GFX8-NEXT:    s_cselect_b32 s4, 0, s4
+; GFX8-NEXT:    v_cmp_u_f64_e64 s[4:5], s[16:17], v[0:1]
+; GFX8-NEXT:    v_mov_b32_e32 v6, 0x7ff80000
+; GFX8-NEXT:    v_cndmask_b32_e32 v0, v3, v6, vcc
+; GFX8-NEXT:    v_cndmask_b32_e64 v1, v2, 0, vcc
+; GFX8-NEXT:    v_readfirstlane_b32 s6, v1
+; GFX8-NEXT:    v_readfirstlane_b32 s7, v0
+; GFX8-NEXT:    v_cndmask_b32_e64 v2, v5, v6, s[4:5]
+; GFX8-NEXT:    v_cndmask_b32_e64 v3, v4, 0, s[4:5]
+; GFX8-NEXT:    v_readfirstlane_b32 s4, v3
+; GFX8-NEXT:    v_readfirstlane_b32 s5, v2
 ; GFX8-NEXT:    ;;#ASMSTART
 ; GFX8-NEXT:    ; use s[4:7]
 ; GFX8-NEXT:    ;;#ASMEND
@@ -894,18 +892,17 @@ define void @s_minimum_v2f64(<2 x double> inreg %src0, <2 x double> inreg %src1)
 ; GFX900-NEXT:    v_cmp_u_f64_e32 vcc, s[18:19], v[0:1]
 ; GFX900-NEXT:    v_mov_b32_e32 v0, s20
 ; GFX900-NEXT:    v_mov_b32_e32 v1, s21
-; GFX900-NEXT:    v_cmp_u_f64_e64 s[4:5], s[16:17], v[0:1]
 ; GFX900-NEXT:    v_min_f64 v[4:5], s[16:17], v[0:1]
-; GFX900-NEXT:    v_readfirstlane_b32 s8, v3
-; GFX900-NEXT:    s_and_b64 s[6:7], vcc, exec
-; GFX900-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX900-NEXT:    s_cselect_b32 s7, 0x7ff80000, s8
-; GFX900-NEXT:    s_cselect_b32 s6, 0, s6
-; GFX900-NEXT:    s_and_b64 s[4:5], s[4:5], exec
-; GFX900-NEXT:    v_readfirstlane_b32 s8, v5
-; GFX900-NEXT:    v_readfirstlane_b32 s4, v4
-; GFX900-NEXT:    s_cselect_b32 s5, 0x7ff80000, s8
-; GFX900-NEXT:    s_cselect_b32 s4, 0, s4
+; GFX900-NEXT:    v_cmp_u_f64_e64 s[4:5], s[16:17], v[0:1]
+; GFX900-NEXT:    v_mov_b32_e32 v6, 0x7ff80000
+; GFX900-NEXT:    v_cndmask_b32_e32 v0, v3, v6, vcc
+; GFX900-NEXT:    v_cndmask_b32_e64 v1, v2, 0, vcc
+; GFX900-NEXT:    v_readfirstlane_b32 s6, v1
+; GFX900-NEXT:    v_readfirstlane_b32 s7, v0
+; GFX900-NEXT:    v_cndmask_b32_e64 v2, v5, v6, s[4:5]
+; GFX900-NEXT:    v_cndmask_b32_e64 v3, v4, 0, s[4:5]
+; GFX900-NEXT:    v_readfirstlane_b32 s4, v3
+; GFX900-NEXT:    v_readfirstlane_b32 s5, v2
 ; GFX900-NEXT:    ;;#ASMSTART
 ; GFX900-NEXT:    ; use s[4:7]
 ; GFX900-NEXT:    ;;#ASMEND
@@ -915,21 +912,20 @@ define void @s_minimum_v2f64(<2 x double> inreg %src0, <2 x double> inreg %src1)
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    v_mov_b64_e32 v[0:1], s[18:19]
+; GFX950-NEXT:    v_min_f64 v[2:3], s[2:3], v[0:1]
+; GFX950-NEXT:    v_mov_b32_e32 v6, 0x7ff80000
 ; GFX950-NEXT:    v_cmp_u_f64_e32 vcc, s[2:3], v[0:1]
-; GFX950-NEXT:    v_min_f64 v[0:1], s[2:3], v[0:1]
-; GFX950-NEXT:    s_and_b64 s[2:3], vcc, exec
-; GFX950-NEXT:    v_readfirstlane_b32 s4, v1
-; GFX950-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX950-NEXT:    v_mov_b64_e32 v[0:1], s[16:17]
+; GFX950-NEXT:    v_min_f64 v[4:5], s[0:1], v[0:1]
+; GFX950-NEXT:    v_cndmask_b32_e32 v3, v3, v6, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v2, v2, 0, vcc
 ; GFX950-NEXT:    v_cmp_u_f64_e32 vcc, s[0:1], v[0:1]
-; GFX950-NEXT:    s_cselect_b32 s3, 0x7ff80000, s4
-; GFX950-NEXT:    s_cselect_b32 s2, 0, s2
-; GFX950-NEXT:    v_min_f64 v[0:1], s[0:1], v[0:1]
-; GFX950-NEXT:    s_and_b64 s[0:1], vcc, exec
-; GFX950-NEXT:    v_readfirstlane_b32 s4, v1
+; GFX950-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX950-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX950-NEXT:    v_cndmask_b32_e32 v1, v5, v6, vcc
+; GFX950-NEXT:    v_cndmask_b32_e64 v0, v4, 0, vcc
+; GFX950-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX950-NEXT:    v_readfirstlane_b32 s0, v0
-; GFX950-NEXT:    s_cselect_b32 s1, 0x7ff80000, s4
-; GFX950-NEXT:    s_cselect_b32 s0, 0, s0
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; use s[0:3]
 ; GFX950-NEXT:    ;;#ASMEND
@@ -938,20 +934,18 @@ define void @s_minimum_v2f64(<2 x double> inreg %src0, <2 x double> inreg %src1)
 ; GFX10-LABEL: s_minimum_v2f64:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_min_f64 v[0:1], s[18:19], s[22:23]
-; GFX10-NEXT:    v_cmp_u_f64_e64 s4, s[18:19], s[22:23]
-; GFX10-NEXT:    v_min_f64 v[2:3], s[16:17], s[20:21]
-; GFX10-NEXT:    v_cmp_u_f64_e64 s5, s[16:17], s[20:21]
-; GFX10-NEXT:    v_readfirstlane_b32 s6, v1
-; GFX10-NEXT:    v_readfirstlane_b32 s8, v0
-; GFX10-NEXT:    s_and_b32 s4, s4, exec_lo
-; GFX10-NEXT:    v_readfirstlane_b32 s4, v3
-; GFX10-NEXT:    v_readfirstlane_b32 s9, v2
-; GFX10-NEXT:    s_cselect_b32 s7, 0x7ff80000, s6
-; GFX10-NEXT:    s_cselect_b32 s6, 0, s8
-; GFX10-NEXT:    s_and_b32 s5, s5, exec_lo
-; GFX10-NEXT:    s_cselect_b32 s5, 0x7ff80000, s4
-; GFX10-NEXT:    s_cselect_b32 s4, 0, s9
+; GFX10-NEXT:    v_min_f64 v[0:1], s[16:17], s[20:21]
+; GFX10-NEXT:    v_cmp_u_f64_e64 s4, s[16:17], s[20:21]
+; GFX10-NEXT:    v_min_f64 v[2:3], s[18:19], s[22:23]
+; GFX10-NEXT:    v_cmp_u_f64_e64 s5, s[18:19], s[22:23]
+; GFX10-NEXT:    v_cndmask_b32_e64 v1, v1, 0x7ff80000, s4
+; GFX10-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s4
+; GFX10-NEXT:    v_cndmask_b32_e64 v3, v3, 0x7ff80000, s5
+; GFX10-NEXT:    v_cndmask_b32_e64 v2, v2, 0, s5
+; GFX10-NEXT:    v_readfirstlane_b32 s5, v1
+; GFX10-NEXT:    v_readfirstlane_b32 s4, v0
+; GFX10-NEXT:    v_readfirstlane_b32 s7, v3
+; GFX10-NEXT:    v_readfirstlane_b32 s6, v2
 ; GFX10-NEXT:    ;;#ASMSTART
 ; GFX10-NEXT:    ; use s[4:7]
 ; GFX10-NEXT:    ;;#ASMEND
@@ -960,21 +954,21 @@ define void @s_minimum_v2f64(<2 x double> inreg %src0, <2 x double> inreg %src1)
 ; GFX11-LABEL: s_minimum_v2f64:
 ; GFX11:       ; %bb.0:
 ; GFX11-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-NEXT:    v_min_f64 v[0:1], s[2:3], s[18:19]
-; GFX11-NEXT:    v_min_f64 v[2:3], s[0:1], s[16:17]
-; GFX11-NEXT:    v_cmp_u_f64_e64 s2, s[2:3], s[18:19]
+; GFX11-NEXT:    v_min_f64 v[0:1], s[0:1], s[16:17]
 ; GFX11-NEXT:    v_cmp_u_f64_e64 s0, s[0:1], s[16:17]
-; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4)
+; GFX11-NEXT:    v_min_f64 v[2:3], s[2:3], s[18:19]
+; GFX11-NEXT:    v_cmp_u_f64_e64 s1, s[2:3], s[18:19]
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(SKIP_1) | instid1(VALU_DEP_3)
+; GFX11-NEXT:    v_cndmask_b32_e64 v1, v1, 0x7ff80000, s0
+; GFX11-NEXT:    v_cndmask_b32_e64 v0, v0, 0, s0
+; GFX11-NEXT:    v_cndmask_b32_e64 v3, v3, 0x7ff80000, s1
+; GFX11-NEXT:    v_cndmask_b32_e64 v2, v2, 0, s1
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-NEXT:    v_readfirstlane_b32 s1, v1
-; GFX11-NEXT:    v_readfirstlane_b32 s4, v0
-; GFX11-NEXT:    v_readfirstlane_b32 s5, v3
-; GFX11-NEXT:    v_readfirstlane_b32 s6, v2
-; GFX11-NEXT:    s_and_b32 s2, s2, exec_lo
-; GFX11-NEXT:    s_cselect_b32 s3, 0x7ff80000, s1
-; GFX11-NEXT:    s_cselect_b32 s2, 0, s4
-; GFX11-NEXT:    s_and_b32 s0, s0, exec_lo
-; GFX11-NEXT:    s_cselect_b32 s1, 0x7ff80000, s5
-; GFX11-NEXT:    s_cselect_b32 s0, 0, s6
+; GFX11-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX11-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(NEXT) | instid1(VALU_DEP_4)
+; GFX11-NEXT:    v_readfirstlane_b32 s3, v3
+; GFX11-NEXT:    v_readfirstlane_b32 s2, v2
 ; GFX11-NEXT:    ;;#ASMSTART
 ; GFX11-NEXT:    ; use s[0:3]
 ; GFX11-NEXT:    ;;#ASMEND
@@ -987,14 +981,14 @@ define void @s_minimum_v2f64(<2 x double> inreg %src0, <2 x double> inreg %src1)
 ; GFX12-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
-; GFX12-NEXT:    v_minimum_f64 v[0:1], s[2:3], s[18:19]
-; GFX12-NEXT:    v_minimum_f64 v[2:3], s[0:1], s[16:17]
+; GFX12-NEXT:    v_minimum_f64 v[0:1], s[0:1], s[16:17]
+; GFX12-NEXT:    v_minimum_f64 v[2:3], s[2:3], s[18:19]
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_3)
-; GFX12-NEXT:    v_readfirstlane_b32 s3, v1
-; GFX12-NEXT:    v_readfirstlane_b32 s2, v0
+; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
+; GFX12-NEXT:    v_readfirstlane_b32 s1, v1
 ; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_4)
-; GFX12-NEXT:    v_readfirstlane_b32 s1, v3
-; GFX12-NEXT:    v_readfirstlane_b32 s0, v2
+; GFX12-NEXT:    v_readfirstlane_b32 s2, v2
+; GFX12-NEXT:    v_readfirstlane_b32 s3, v3
 ; GFX12-NEXT:    ;;#ASMSTART
 ; GFX12-NEXT:    ; use s[0:3]
 ; GFX12-NEXT:    ;;#ASMEND

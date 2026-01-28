@@ -788,11 +788,11 @@ define void @s_minimum_v2f32(<2 x float> inreg %src0, <2 x float> inreg %src1) {
 ; GFX950:       ; %bb.0:
 ; GFX950-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX950-NEXT:    v_mov_b32_e32 v0, s1
-; GFX950-NEXT:    v_mov_b32_e32 v1, s0
-; GFX950-NEXT:    v_minimum3_f32 v0, v0, s3, s3
-; GFX950-NEXT:    v_minimum3_f32 v1, v1, s2, s2
-; GFX950-NEXT:    v_readfirstlane_b32 s1, v0
-; GFX950-NEXT:    v_readfirstlane_b32 s0, v1
+; GFX950-NEXT:    v_minimum3_f32 v1, v0, s3, s3
+; GFX950-NEXT:    v_mov_b32_e32 v0, s0
+; GFX950-NEXT:    v_minimum3_f32 v0, v0, s2, s2
+; GFX950-NEXT:    v_readfirstlane_b32 s1, v1
+; GFX950-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX950-NEXT:    ;;#ASMSTART
 ; GFX950-NEXT:    ; use s[0:1]
 ; GFX950-NEXT:    ;;#ASMEND
