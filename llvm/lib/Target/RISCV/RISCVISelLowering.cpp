@@ -1087,6 +1087,9 @@ RISCVTargetLowering::RISCVTargetLowering(const TargetMachine &TM,
         }
       }
 
+      if (Subtarget.hasStdExtZvbc() && VT.getVectorElementType() == MVT::i64)
+        setOperationAction({ISD::CLMUL, ISD::CLMULH}, VT, Legal);
+
       setOperationAction(ISD::VECTOR_COMPRESS, VT, Custom);
     }
 
