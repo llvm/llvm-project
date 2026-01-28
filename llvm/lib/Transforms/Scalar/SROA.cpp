@@ -3243,7 +3243,7 @@ private:
       V = NewLI;
       IsPtrAdjusted = true;
     }
-    V = IRB.CreateCastChain(DL,  V, TargetTy);
+    V = IRB.CreateCastChain(DL, V, TargetTy);
 
     if (IsSplit) {
       assert(!LI.isVolatile());
