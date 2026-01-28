@@ -4532,10 +4532,6 @@ private:
   LLVM_DUMP_METHOD void dumpVectorizableTree() const {
     for (unsigned Id = 0, IdE = VectorizableTree.size(); Id != IdE; ++Id) {
       VectorizableTree[Id]->dump();
-      if (TransformedToGatherNodes.contains(VectorizableTree[Id].get()))
-        dbgs() << "[[TRANSFORMED TO GATHER]]";
-      else if (DeletedNodes.contains(VectorizableTree[Id].get()))
-        dbgs() << "[[DELETED NODE]]";
       dbgs() << "\n";
     }
   }
@@ -7389,7 +7385,7 @@ bool BoUpSLP::analyzeRtStrideCandidate(ArrayRef<Value *> PointerOps,
   }
 
   SortedIndices.clear();
-  SortedIndices = SortedIndicesDraft;
+  SortedIndices = std::move(SortedIndicesDraft);
   SPtrInfo.StrideSCEV = Stride0;
   SPtrInfo.Ty = StridedLoadTy;
   return true;
@@ -16649,7 +16645,7 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
     ArrayRef<Value *> VectorizedVals) {
   SmallDenseMap<const TreeEntry *, InstructionCost> NodesCosts;
   SmallPtrSet<Value *, 4> CheckedExtracts;
-  SmallSetVector<TreeEntry *, 4> GatheredLoadsNodes;
+  SmallPtrSet<const TreeEntry *, 4> GatheredLoadsNodes;
   LLVM_DEBUG(dbgs() << "SLP: Calculating cost for tree of size "
                     << VectorizableTree.size() << ".\n");
   InstructionCost Cost = 0;
@@ -16700,6 +16696,11 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
   if (SLPCostThreshold.getNumOccurrences() > 0 && SLPCostThreshold < 0 &&
       Cost < -SLPCostThreshold)
     return Cost;
+  // Bail out, if gathered loads nodes are found.
+  // TODO: add analysis for gathered load to include their cost correctly into
+  // the related subtrees.
+  if (!GatheredLoadsNodes.empty())
+    return Cost;
   // The narrow non-profitable tree in loop? Skip, may cause regressions.
   constexpr unsigned PartLimit = 2;
   const unsigned Sz =
@@ -16713,38 +16714,17 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
     return Cost;
   SmallVector<std::pair<InstructionCost, SmallVector<unsigned>>> SubtreeCosts(
       VectorizableTree.size());
-  auto UpdateParentNodes =
-      [&](const TreeEntry *UserTE, const TreeEntry *TE, InstructionCost C,
-          SmallDenseSet<std::pair<const TreeEntry *, const TreeEntry *>, 4>
-              &VisitedUser,
-          bool AddToList = true) {
-        while (UserTE &&
-               VisitedUser.insert(std::make_pair(TE, UserTE)).second) {
-          SubtreeCosts[UserTE->Idx].first += C;
-          if (AddToList)
-            SubtreeCosts[UserTE->Idx].second.push_back(TE->Idx);
-          UserTE = UserTE->UserTreeIndex.UserTE;
-        }
-      };
   for (const std::unique_ptr<TreeEntry> &Ptr : VectorizableTree) {
     TreeEntry &TE = *Ptr;
     InstructionCost C = NodesCosts.at(&TE);
     SubtreeCosts[TE.Idx].first += C;
-    if (const TreeEntry *UserTE = TE.UserTreeIndex.UserTE) {
-      SmallDenseSet<std::pair<const TreeEntry *, const TreeEntry *>, 4>
-          VisitedUser;
-      UpdateParentNodes(UserTE, &TE, C, VisitedUser);
+    const TreeEntry *UserTE = TE.UserTreeIndex.UserTE;
+    while (UserTE) {
+      SubtreeCosts[UserTE->Idx].first += C;
+      SubtreeCosts[UserTE->Idx].second.push_back(TE.Idx);
+      UserTE = UserTE->UserTreeIndex.UserTE;
     }
   }
-  SmallDenseSet<std::pair<const TreeEntry *, const TreeEntry *>, 4> Visited;
-  for (TreeEntry *TE : GatheredLoadsNodes) {
-    InstructionCost C = SubtreeCosts[TE->Idx].first;
-    for (Value *V : TE->Scalars) {
-      for (const TreeEntry *BVTE : ValueToGatherNodes.lookup(V))
-        UpdateParentNodes(BVTE, TE, C, Visited, /*AddToList=*/false);
-    }
-  }
-  Visited.clear();
   using CostIndicesTy =
       std::pair<TreeEntry *, std::pair<InstructionCost, SmallVector<unsigned>>>;
   struct FirstGreater {
@@ -16766,7 +16746,6 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
       (Worklist.top().first->Idx == 0 || Worklist.top().first->Idx == 1))
     return Cost;
 
-  constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
   bool Changed = false;
   while (!Worklist.empty() && Worklist.top().second.first > 0) {
     TreeEntry *TE = Worklist.top().first;
@@ -16808,6 +16787,7 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
       if (isConstant(V))
         DemandedElts.clearBit(Idx);
     }
+    constexpr TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
     Type *ScalarTy = getValueType(TE->Scalars.front());
     auto *VecTy = getWidenedType(ScalarTy, Sz);
@@ -16846,7 +16826,7 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
     // Erase subtree if it is non-profitable.
     if (SubtreeCost > GatherCost) {
       // If the remaining tree is just a buildvector - exit, it will cause
-      // endless attempts to vectorize.
+      // enless attempts to vectorize.
       if (VectorizableTree.front()->hasState() &&
           VectorizableTree.front()->getOpcode() == Instruction::InsertElement &&
           TE->Idx == 1)
@@ -16877,71 +16857,6 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
   if (!Changed)
     return SubtreeCosts.front().first;
 
-  SmallPtrSet<TreeEntry *, 4> GatheredLoadsToDelete;
-  InstructionCost LoadsExtractsCost = 0;
-  // Check if all loads of gathered loads nodes are marked for deletion. In this
-  // case the whole gathered loads subtree must be deleted.
-  // Also, try to account for extracts, which might be required, if only part of
-  // gathered load must be vectorized. Keep partially vectorized nodes, if
-  // extracts are cheaper than gathers.
-  for (TreeEntry *TE : GatheredLoadsNodes) {
-    if (DeletedNodes.contains(TE) || TransformedToGatherNodes.contains(TE))
-      continue;
-    GatheredLoadsToDelete.insert(TE);
-    APInt DemandedElts = APInt::getZero(TE->getVectorFactor());
-    // All loads are removed from gathered? Need to delete the subtree.
-    SmallDenseMap<const TreeEntry *, SmallVector<Value *>> ValuesToInsert;
-    for (Value *V : TE->Scalars) {
-      unsigned Pos = TE->findLaneForValue(V);
-      for (const TreeEntry *BVE : ValueToGatherNodes.lookup(V)) {
-        if (DeletedNodes.contains(BVE))
-          continue;
-        DemandedElts.setBit(Pos);
-        ValuesToInsert.try_emplace(BVE).first->second.push_back(V);
-      }
-    }
-    if (!DemandedElts.isZero()) {
-      Type *ScalarTy = TE->Scalars.front()->getType();
-      auto *VecTy = getWidenedType(ScalarTy, TE->getVectorFactor());
-      InstructionCost ExtractsCost = ::getScalarizationOverhead(
-          *TTI, ScalarTy, VecTy, DemandedElts,
-          /*Insert=*/false, /*Extract=*/true, CostKind);
-      InstructionCost BVCost = 0;
-      for (const auto &[BVE, Values] : ValuesToInsert) {
-        APInt BVDemandedElts = APInt::getZero(BVE->getVectorFactor());
-        SmallVector<Value *> BVValues(BVE->getVectorFactor(),
-                                      PoisonValue::get(ScalarTy));
-        for (Value *V : Values) {
-          unsigned Pos = BVE->findLaneForValue(V);
-          BVValues[Pos] = V;
-          BVDemandedElts.setBit(Pos);
-        }
-        auto *BVVecTy = getWidenedType(ScalarTy, BVE->getVectorFactor());
-        BVCost += ::getScalarizationOverhead(
-            *TTI, ScalarTy, BVVecTy, BVDemandedElts,
-            /*Insert=*/true, /*Extract=*/false, CostKind,
-            BVDemandedElts.isAllOnes(), BVValues);
-      }
-      if (ExtractsCost < BVCost) {
-        LoadsExtractsCost += ExtractsCost;
-        GatheredLoadsToDelete.erase(TE);
-        continue;
-      }
-      LoadsExtractsCost += BVCost;
-    }
-    NodesCosts.erase(TE);
-  }
-
-  // Deleted all subtrees rooted at gathered loads nodes.
-  for (std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
-    if (TE->UserTreeIndex &&
-        GatheredLoadsToDelete.contains(TE->UserTreeIndex.UserTE)) {
-      DeletedNodes.insert(TE.get());
-      NodesCosts.erase(TE.get());
-      GatheredLoadsToDelete.insert(TE.get());
-    }
-  }
-
   for (std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
     if (!TE->UserTreeIndex && TransformedToGatherNodes.contains(TE.get())) {
       assert(TE->getOpcode() == Instruction::Load && "Expected load only.");
@@ -16965,7 +16880,7 @@ InstructionCost BoUpSLP::calculateTreeCostAndTrimNonProfitable(
                       << ".\n"
                       << "SLP: Current total cost = " << Cost << "\n");
   }
-  if (NewCost + LoadsExtractsCost >= Cost) {
+  if (NewCost >= Cost) {
     DeletedNodes.clear();
     TransformedToGatherNodes.clear();
     NewCost = Cost;
