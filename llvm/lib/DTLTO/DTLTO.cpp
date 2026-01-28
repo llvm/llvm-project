@@ -155,7 +155,7 @@ lto::DTLTO::addInput(std::unique_ptr<lto::InputFile> InputPtr) {
         computeThinArchiveMemberPath(ArchivePath, Input->getMemberName());
   } else {
     // For regular archives and FatLTO objects, generate a unique name.
-    Input->setShouldMaterialize(true);
+    Input->setShouldSerializeForDistribution(true);
 
     // Create unique identifier using process ID and sequence number.
     std::string PID = utohexstr(sys::Process::getProcessId());
@@ -177,8 +177,8 @@ lto::DTLTO::addInput(std::unique_ptr<lto::InputFile> InputPtr) {
 // previously terminated linker process and can be safely overwritten.
 Error lto::DTLTO::saveInputArchiveMember(lto::InputFile *Input) {
   StringRef ModuleId = Input->getName();
-  if (Input->shouldMaterialize()) {
-    TimeTraceScope TimeScope("Materialize bitcode input for DTLTO", ModuleId);
+  if (Input->shouldSerializeForDistribution()) {
+    TimeTraceScope TimeScope("Serialize bitcode input for DTLTO", ModuleId);
     // Cleanup this file on abnormal process exit.
     if (!SaveTemps)
       llvm::sys::RemoveFileOnSignal(ModuleId);
@@ -218,7 +218,7 @@ void lto::DTLTO::cleanup() {
   if (!SaveTemps) {
     TimeTraceScope TimeScope("Remove temporary inputs for DTLTO");
     for (auto &Input : InputFiles) {
-      if (!Input->shouldMaterialize())
+      if (!Input->shouldSerializeForDistribution())
         continue;
       std::error_code EC =
           sys::fs::remove(Input->getName(), /*IgnoreNonExisting=*/true);
