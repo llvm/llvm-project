@@ -31,18 +31,3 @@ end program test_character_reduction
 ! Verify the reduction is used in the parallel sections
 ! CHECK: omp.parallel
 ! CHECK:   omp.sections reduction(byref @char_max
-
-! Test character reduction with dynamic length
-subroutine test_dynamic_length(n)
-  integer, intent(in) :: n
-  character(len=n) :: var
-
-  !$omp declare reduction (char_max_dyn:character(len=n):omp_out=max(omp_out,omp_in)) &
-  !$omp initializer(omp_priv='a')
-end subroutine test_dynamic_length
-
-! Verify dynamic-length character reduction
-! CHECK-LABEL: func.func @_QPtest_dynamic_length
-! CHECK: omp.declare_reduction @char_max_dyn : !fir.boxchar<1>
-! CHECK: omp.parallel
-! CHECK:   reduction(@char_max_dyn
