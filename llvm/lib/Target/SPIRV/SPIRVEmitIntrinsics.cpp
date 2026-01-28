@@ -95,10 +95,10 @@ class GlobalVariableUsers {
   bool propagateGlobalToGlobalUsers(
       OneToManyMapTy<const GlobalVariable *, const GlobalVariable *>
           &GlobalIsUsedByGlobal) {
+    SmallVector<const GlobalVariable *> OldUsersGlobals;
     bool Changed = false;
     for (auto &[GV, UserGlobals] : GlobalIsUsedByGlobal) {
-      SmallVector<const GlobalVariable *> OldUsersGlobals(UserGlobals.begin(),
-                                                          UserGlobals.end());
+      OldUsersGlobals.assign(UserGlobals.begin(), UserGlobals.end());
       for (const GlobalVariable *UserGV : OldUsersGlobals) {
         auto It = GlobalIsUsedByGlobal.find(UserGV);
         if (It == GlobalIsUsedByGlobal.end())
