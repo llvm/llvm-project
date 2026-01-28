@@ -131,6 +131,11 @@ Changes in existing checks
   ``std::get_temporary_buffer`` to the default list of unsafe functions. (This
   function is unsafe, useless, deprecated in C++17 and removed in C++20).
 
+- Improved :doc:`bugprone-use-after-move
+  <clang-tidy/checks/bugprone/use-after-move>` check by including the name of
+  the invalidating function in the warning message when a custom invalidation
+  function is used (via the `InvalidationFunctions` option).
+
 - Improved :doc:`llvm-use-ranges
   <clang-tidy/checks/llvm/use-ranges>` check by adding support for the following
   algorithms: ``std::accumulate``, ``std::replace_copy``, and
@@ -149,6 +154,13 @@ Changes in existing checks
 - Improved :doc:`modernize-use-using
   <clang-tidy/checks/modernize/use-using>` check by avoiding the generation
   of invalid code for function types with redundant parentheses.
+
+- Improved :doc:`performance-enum-size
+  <clang-tidy/checks/performance/enum-size>` check:
+
+  - Exclude ``enum`` in ``extern "C"`` blocks.
+
+  - Improved the ignore list to correctly handle ``typedef`` and  ``enum``.
 
 - Improved :doc:`performance-move-const-arg
   <clang-tidy/checks/performance/move-const-arg>` check by avoiding false
