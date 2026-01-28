@@ -5700,6 +5700,17 @@ X86TTIImpl::getArithmeticReductionCost(unsigned Opcode, VectorType *ValTy,
 
   // Handle bool allof/anyof patterns.
   if (ValVTy->getElementType()->isIntegerTy(1)) {
+    if (ISD == ISD::ADD) {
+      // vXi1 addition reduction will bitcast to scalar and perform a popcount.
+      auto *IntTy = IntegerType::getIntNTy(ValVTy->getContext(),
+                                           ValVTy->getNumElements());
+      IntrinsicCostAttributes ICA(Intrinsic::ctpop, IntTy, {IntTy});
+      return getCastInstrCost(Instruction::BitCast, IntTy, ValVTy,
+                              TargetTransformInfo::CastContextHint::None,
+                              CostKind) +
+             getIntrinsicInstrCost(ICA, CostKind);
+    }
+
     InstructionCost ArithmeticCost = 0;
     if (LT.first != 1 && MTy.isVector() &&
         MTy.getVectorNumElements() < ValVTy->getNumElements()) {
