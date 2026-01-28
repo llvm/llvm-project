@@ -1090,7 +1090,7 @@ func.func @parallel_wsloop_reduction(%lb : index, %ub : index, %step : index) {
 // CHECK-LABEL: omp_teams
 func.func @omp_teams(%lb : i32, %ub : i32, %if_cond : i1, %num_threads : i32,
                      %data_var : memref<i32>, %ub64 : i64, %ub16 : i16,
-                     %dyn_size : i32,) -> () {
+                     %dyn_size : i32) -> () {
   // Test nesting inside of omp.target
   omp.target {
     // CHECK: omp.teams
@@ -1186,7 +1186,7 @@ func.func @omp_teams(%lb : i32, %ub : i32, %if_cond : i1, %num_threads : i32,
     // CHECK: omp.terminator
     omp.terminator
   }
-  
+
   // Test dyn_groupprivate
   // CHECK: omp.teams dyn_groupprivate(cgroup, fallback(null), %{{.+}} : i32)
   omp.teams dyn_groupprivate(cgroup, fallback(null), %dyn_size : i32) {

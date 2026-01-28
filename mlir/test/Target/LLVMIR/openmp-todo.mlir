@@ -465,6 +465,17 @@ llvm.func @teams_thread_limit_multi_dim(%lb : i32, %ub : i32) {
 
 // -----
 
+llvm.func @teams_dyn_groupprivate(%dyn_size : i32) {
+  // expected-error@below {{not yet implemented: Unhandled clause dyn_groupprivate in omp.teams operation}}
+  // expected-error@below {{LLVM Translation failed for operation: omp.teams}}
+  omp.teams dyn_groupprivate(%dyn_size : i32) {
+    omp.terminator
+  }
+  llvm.return
+}
+
+// -----
+
 llvm.func @wsloop_allocate(%lb : i32, %ub : i32, %step : i32, %x : !llvm.ptr) {
   // expected-error@below {{not yet implemented: Unhandled clause allocate in omp.wsloop operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.wsloop}}

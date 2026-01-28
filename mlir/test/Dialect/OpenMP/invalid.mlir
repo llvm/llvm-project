@@ -1468,7 +1468,7 @@ func.func @omp_teams_num_teams_multidim_with_bounds() {
     // expected-error @below {{expected exactly one num_teams upper bound when lower bound is specified}}
     "omp.teams" (%lb, %v0, %v1) ({
       omp.terminator
-    }) {operandSegmentSizes = array<i32: 0,0,0,1,2,0,0,0>} : (i32, i32, i32) -> ()
+    }) {operandSegmentSizes = array<i32: 0,0,0,1,2,0,0,0,0>} : (i32, i32, i32) -> ()
     omp.terminator
   }
   return
