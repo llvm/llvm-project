@@ -831,10 +831,9 @@ void populateRewriteSubmodule(nb::module_ &m) {
           [](PyOperationBase &op, PyConversionTarget &target,
              PyFrozenRewritePatternSet &set,
              std::optional<PyConversionConfig> config) {
-            if (!config) {
+            if (!config)
               config.emplace(PyConversionConfig());
-            }
-            auto status = mlirApplyFullConversion(
+            MlirLogicalResult status = mlirApplyFullConversion(
                 op.getOperation(), target.get(), set.get(), config->get());
             if (mlirLogicalResultIsFailure(status))
               throw std::runtime_error("full conversion failed");
