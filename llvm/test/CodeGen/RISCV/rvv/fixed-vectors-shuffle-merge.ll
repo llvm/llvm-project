@@ -3,18 +3,53 @@
 
 ; Can be optimized as a merge followed by a shuffle
 define <16 x i16> @shuffle_shuffle_disjoint(<16 x i16> %op0, <16 x i16> %op1) {
+; CHECK-LABEL: LCPI0_0
+; CHECK-NEXT: 	.half	0                               # 0x0
+; CHECK-NEXT: 	.half	4                               # 0x4
+; CHECK-NEXT: 	.half	8                               # 0x8
+; CHECK-NEXT: 	.half	12                              # 0xc
+; CHECK-NEXT: 	.half	1                               # 0x1
+; CHECK-NEXT: 	.half	5                               # 0x5
+; CHECK-NEXT: 	.half	9                               # 0x9
+; CHECK-NEXT: 	.half	13                              # 0xd
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-LABEL: LCPI0_1
+; CHECK-NEXT: 	.half	3                               # 0x3
+; CHECK-NEXT: 	.half	7                               # 0x7
+; CHECK-NEXT: 	.half	11                              # 0xb
+; CHECK-NEXT: 	.half	15                              # 0xf
+; CHECK-NEXT: 	.half	2                               # 0x2
+; CHECK-NEXT: 	.half	6                               # 0x6
+; CHECK-NEXT: 	.half	10                              # 0xa
+; CHECK-NEXT: 	.half	14                              # 0xe
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
 ; CHECK-LABEL: shuffle_shuffle_disjoint:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI0_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI0_0)
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vle8.v v14, (a0)
-; CHECK-NEXT:    lui a0, 3
-; CHECK-NEXT:    addi a0, a0, 819
-; CHECK-NEXT:    vmv.s.x v0, a0
-; CHECK-NEXT:    vmerge.vvm v10, v10, v8, v0
-; CHECK-NEXT:    vsext.vf2 v12, v14
-; CHECK-NEXT:    vrgather.vv v8, v10, v12, v0.t
+; CHECK-NEXT:    vle16.v v14, (a0)
+; CHECK-NEXT:    lui a0, %hi(.LCPI0_1)
+; CHECK-NEXT:    addi a0, a0, %lo(.LCPI0_1)
+; CHECK-NEXT:    vle16.v v16, (a0)
+; CHECK-NEXT:    vrgather.vv v12, v8, v14
+; CHECK-NEXT:    vrgather.vv v8, v10, v16
+; CHECK-NEXT:    vslideup.vi v12, v8, 8
+; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
   %shuff0 = shufflevector <16 x i16> %op0, <16 x i16> poison, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %shuff1 = shufflevector <16 x i16> %op1, <16 x i16> poison, <16 x i32> <i32 3, i32 7, i32 11, i32 15, i32 2, i32 6, i32 10, i32 14, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
@@ -24,18 +59,107 @@ define <16 x i16> @shuffle_shuffle_disjoint(<16 x i16> %op0, <16 x i16> %op1) {
 
 ; Can be optimized as a merge followed by a shuffle
 define <16 x i16> @shuffle_shuffle_disjoint_unordered(<16 x i16> %op0, <16 x i16> %op1) {
+; CHECK-LABEL: LCPI1_0
+; CHECK-NEXT: 	.half	0                               # 0x0
+; CHECK-NEXT: 	.half	4                               # 0x4
+; CHECK-NEXT: 	.half	8                               # 0x8
+; CHECK-NEXT: 	.half	12                              # 0xc
+; CHECK-NEXT: 	.half	1                               # 0x1
+; CHECK-NEXT: 	.half	5                               # 0x5
+; CHECK-NEXT: 	.half	9                               # 0x9
+; CHECK-NEXT: 	.half	13                              # 0xd
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-LABEL: LCPI1_1
+; CHECK-NEXT: 	.half	3                               # 0x3
+; CHECK-NEXT: 	.half	7                               # 0x7
+; CHECK-NEXT: 	.half	11                              # 0xb
+; CHECK-NEXT: 	.half	15                              # 0xf
+; CHECK-NEXT: 	.half	2                               # 0x2
+; CHECK-NEXT: 	.half	6                               # 0x6
+; CHECK-NEXT: 	.half	10                              # 0xa
+; CHECK-NEXT: 	.half	14                              # 0xe
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-LABEL: LCPI1_2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.half	3                               # 0x3
+; CHECK-NEXT: 	.half	7                               # 0x7
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.half	4                               # 0x4
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.half	0                               # 0x0
+; CHECK-NEXT: 	.half	1                               # 0x1
+; CHECK-NEXT: 	.half	2                               # 0x2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.half	5                               # 0x5
+; CHECK-NEXT: 	.half	6                               # 0x6
+; CHECK-NEXT: 	.zero	2
+; CHECK-LABEL: LCPI1_3
+; CHECK-NEXT: 	.half	0                               # 0x0
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.half	3                               # 0x3
+; CHECK-NEXT: 	.half	4                               # 0x4
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.half	6                               # 0x6
+; CHECK-NEXT: 	.half	7                               # 0x7
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.half	1                               # 0x1
+; CHECK-NEXT: 	.half	5                               # 0x5
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.half	2                               # 0x2
 ; CHECK-LABEL: shuffle_shuffle_disjoint_unordered:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI1_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI1_0)
+; CHECK-NEXT:    lui a1, %hi(.LCPI1_1)
+; CHECK-NEXT:    addi a1, a1, %lo(.LCPI1_1)
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vle8.v v14, (a0)
-; CHECK-NEXT:    lui a0, 3
-; CHECK-NEXT:    addi a0, a0, 819
+; CHECK-NEXT:    vle16.v v12, (a1)
+; CHECK-NEXT:    lui a1, %hi(.LCPI1_2)
+; CHECK-NEXT:    addi a1, a1, %lo(.LCPI1_2)
+; CHECK-NEXT:    vle16.v v14, (a1)
+; CHECK-NEXT:    csrr a1, vlenb
+; CHECK-NEXT:    srli a1, a1, 1
+; CHECK-NEXT:    vrgather.vv v16, v10, v12
+; CHECK-NEXT:    vslidedown.vx v10, v14, a1
+; CHECK-NEXT:    vsetvli a2, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vrgather.vv v11, v16, v10
+; CHECK-NEXT:    vrgather.vv v10, v16, v14
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; CHECK-NEXT:    vle16.v v12, (a0)
+; CHECK-NEXT:    lui a0, %hi(.LCPI1_3)
+; CHECK-NEXT:    addi a0, a0, %lo(.LCPI1_3)
+; CHECK-NEXT:    vle16.v v14, (a0)
+; CHECK-NEXT:    lui a0, 6
+; CHECK-NEXT:    addi a0, a0, 1830
 ; CHECK-NEXT:    vmv.s.x v0, a0
-; CHECK-NEXT:    vmerge.vvm v10, v10, v8, v0
-; CHECK-NEXT:    vsext.vf2 v12, v14
-; CHECK-NEXT:    vrgather.vv v8, v10, v12, v0.t
+; CHECK-NEXT:    vrgather.vv v16, v8, v12
+; CHECK-NEXT:    vslidedown.vx v8, v14, a1
+; CHECK-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
+; CHECK-NEXT:    vrgather.vv v9, v16, v8
+; CHECK-NEXT:    vrgather.vv v8, v16, v14
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; CHECK-NEXT:    vmerge.vvm v8, v8, v10, v0
 ; CHECK-NEXT:    ret
   %shuff0 = shufflevector <16 x i16> %op0, <16 x i16> poison, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %shuff1 = shufflevector <16 x i16> %op1, <16 x i16> poison, <16 x i32> <i32 3, i32 7, i32 11, i32 15, i32 2, i32 6, i32 10, i32 14, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
@@ -45,18 +169,53 @@ define <16 x i16> @shuffle_shuffle_disjoint_unordered(<16 x i16> %op0, <16 x i16
 
 ; Can be optimized since the lanes are disjoint, but a single lane is used multiple times by one of the vectors
 define <16 x i16> @shuffle_shuffle_duplicated_within_operand(<16 x i16> %op0, <16 x i16> %op1) {
+; CHECK-LABEL: LCPI2_0
+; CHECK-NEXT: 	.half	0                               # 0x0
+; CHECK-NEXT: 	.half	0                               # 0x0
+; CHECK-NEXT: 	.half	8                               # 0x8
+; CHECK-NEXT: 	.half	12                              # 0xc
+; CHECK-NEXT: 	.half	1                               # 0x1
+; CHECK-NEXT: 	.half	5                               # 0x5
+; CHECK-NEXT: 	.half	9                               # 0x9
+; CHECK-NEXT: 	.half	13                              # 0xd
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-LABEL: LCPI2_1
+; CHECK-NEXT: 	.half	3                               # 0x3
+; CHECK-NEXT: 	.half	7                               # 0x7
+; CHECK-NEXT: 	.half	11                              # 0xb
+; CHECK-NEXT: 	.half	15                              # 0xf
+; CHECK-NEXT: 	.half	2                               # 0x2
+; CHECK-NEXT: 	.half	6                               # 0x6
+; CHECK-NEXT: 	.half	10                              # 0xa
+; CHECK-NEXT: 	.half	14                              # 0xe
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
 ; CHECK-LABEL: shuffle_shuffle_duplicated_within_operand:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI2_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI2_0)
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vle8.v v14, (a0)
-; CHECK-NEXT:    lui a0, 3
-; CHECK-NEXT:    addi a0, a0, 803
-; CHECK-NEXT:    vmv.s.x v0, a0
-; CHECK-NEXT:    vmerge.vvm v10, v10, v8, v0
-; CHECK-NEXT:    vsext.vf2 v12, v14
-; CHECK-NEXT:    vrgather.vv v8, v10, v12, v0.t
+; CHECK-NEXT:    vle16.v v14, (a0)
+; CHECK-NEXT:    lui a0, %hi(.LCPI2_1)
+; CHECK-NEXT:    addi a0, a0, %lo(.LCPI2_1)
+; CHECK-NEXT:    vle16.v v16, (a0)
+; CHECK-NEXT:    vrgather.vv v12, v8, v14
+; CHECK-NEXT:    vrgather.vv v8, v10, v16
+; CHECK-NEXT:    vslideup.vi v12, v8, 8
+; CHECK-NEXT:    vmv.v.v v8, v12
 ; CHECK-NEXT:    ret
   %shuff0 = shufflevector <16 x i16> %op0, <16 x i16> poison, <16 x i32> <i32 0, i32 0, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %shuff1 = shufflevector <16 x i16> %op1, <16 x i16> poison, <16 x i32> <i32 3, i32 7, i32 11, i32 15, i32 2, i32 6, i32 10, i32 14, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
@@ -66,6 +225,40 @@ define <16 x i16> @shuffle_shuffle_duplicated_within_operand(<16 x i16> %op0, <1
 
 ; Can't be optimized as merge-shuffle since the same lane (8) is used from both operands
 define <16 x i16> @shuffle_shuffle_duplicated_lane(<16 x i16> %op0, <16 x i16> %op1) {
+; CHECK-LABEL: LCPI3_0
+; CHECK-NEXT: 	.half	0                               # 0x0
+; CHECK-NEXT: 	.half	0                               # 0x0
+; CHECK-NEXT: 	.half	8                               # 0x8
+; CHECK-NEXT: 	.half	12                              # 0xc
+; CHECK-NEXT: 	.half	1                               # 0x1
+; CHECK-NEXT: 	.half	5                               # 0x5
+; CHECK-NEXT: 	.half	9                               # 0x9
+; CHECK-NEXT: 	.half	13                              # 0xd
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-LABEL: LCPI3_1
+; CHECK-NEXT: 	.half	3                               # 0x3
+; CHECK-NEXT: 	.half	7                               # 0x7
+; CHECK-NEXT: 	.half	8                               # 0x8
+; CHECK-NEXT: 	.half	15                              # 0xf
+; CHECK-NEXT: 	.half	2                               # 0x2
+; CHECK-NEXT: 	.half	6                               # 0x6
+; CHECK-NEXT: 	.half	10                              # 0xa
+; CHECK-NEXT: 	.half	14                              # 0xe
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
 ; CHECK-LABEL: shuffle_shuffle_duplicated_lane:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI3_0)
@@ -88,6 +281,40 @@ define <16 x i16> @shuffle_shuffle_duplicated_lane(<16 x i16> %op0, <16 x i16> %
 
 ; Can't be optimized since shuff0 is used twice
 define <16 x i16> @shuffle_shuffle_multiple_uses(<16 x i16> %op0, <16 x i16> %op1) {
+; CHECK-LABEL: LCPI4_0
+; CHECK-NEXT: 	.half	0                               # 0x0
+; CHECK-NEXT: 	.half	4                               # 0x4
+; CHECK-NEXT: 	.half	8                               # 0x8
+; CHECK-NEXT: 	.half	12                              # 0xc
+; CHECK-NEXT: 	.half	1                               # 0x1
+; CHECK-NEXT: 	.half	5                               # 0x5
+; CHECK-NEXT: 	.half	9                               # 0x9
+; CHECK-NEXT: 	.half	13                              # 0xd
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-LABEL: LCPI4_1
+; CHECK-NEXT: 	.half	3                               # 0x3
+; CHECK-NEXT: 	.half	7                               # 0x7
+; CHECK-NEXT: 	.half	11                              # 0xb
+; CHECK-NEXT: 	.half	15                              # 0xf
+; CHECK-NEXT: 	.half	2                               # 0x2
+; CHECK-NEXT: 	.half	6                               # 0x6
+; CHECK-NEXT: 	.half	10                              # 0xa
+; CHECK-NEXT: 	.half	14                              # 0xe
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
 ; CHECK-LABEL: shuffle_shuffle_multiple_uses:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI4_0)
@@ -112,18 +339,61 @@ define <16 x i16> @shuffle_shuffle_multiple_uses(<16 x i16> %op0, <16 x i16> %op
 
 ; Can be optimized as a merge followed by a shuffle
 define <16 x i16> @shuffle_shuffle_unbalanced(<16 x i16> %op0, <16 x i16> %op1) {
+; CHECK-LABEL: LCPI5_0
+; CHECK-NEXT: 	.half	0                               # 0x0
+; CHECK-NEXT: 	.half	4                               # 0x4
+; CHECK-NEXT: 	.half	8                               # 0x8
+; CHECK-NEXT: 	.half	12                              # 0xc
+; CHECK-NEXT: 	.half	1                               # 0x1
+; CHECK-NEXT: 	.half	5                               # 0x5
+; CHECK-NEXT: 	.half	9                               # 0x9
+; CHECK-NEXT: 	.half	13                              # 0xd
+; CHECK-NEXT: 	.half	10                              # 0xa
+; CHECK-NEXT: 	.half	14                              # 0xe
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-LABEL: LCPI5_1
+; CHECK-NEXT: 	.half	3                               # 0x3
+; CHECK-NEXT: 	.half	7                               # 0x7
+; CHECK-NEXT: 	.half	11                              # 0xb
+; CHECK-NEXT: 	.half	15                              # 0xf
+; CHECK-NEXT: 	.half	2                               # 0x2
+; CHECK-NEXT: 	.half	6                               # 0x6
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
 ; CHECK-LABEL: shuffle_shuffle_unbalanced:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI5_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI5_0)
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vle8.v v14, (a0)
-; CHECK-NEXT:    lui a0, 7
-; CHECK-NEXT:    addi a0, a0, 1843
+; CHECK-NEXT:    vle16.v v12, (a0)
+; CHECK-NEXT:    li a0, 128
 ; CHECK-NEXT:    vmv.s.x v0, a0
-; CHECK-NEXT:    vmerge.vvm v10, v10, v8, v0
-; CHECK-NEXT:    vsext.vf2 v12, v14
-; CHECK-NEXT:    vrgather.vv v8, v10, v12, v0.t
+; CHECK-NEXT:    lui a0, %hi(.LCPI5_1)
+; CHECK-NEXT:    addi a0, a0, %lo(.LCPI5_1)
+; CHECK-NEXT:    vrgather.vv v14, v8, v12
+; CHECK-NEXT:    vle16.v v12, (a0)
+; CHECK-NEXT:    vmv.v.v v8, v14
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; CHECK-NEXT:    vslideup.vi v8, v14, 3, v0.t
+; CHECK-NEXT:    li a0, 112
+; CHECK-NEXT:    vmv.s.x v0, a0
+; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
+; CHECK-NEXT:    vrgather.vv v14, v10, v12
+; CHECK-NEXT:    vsetivli zero, 8, e32, m2, ta, mu
+; CHECK-NEXT:    vslideup.vi v8, v14, 4, v0.t
 ; CHECK-NEXT:    ret
   %shuff0 = shufflevector <16 x i16> %op0, <16 x i16> poison, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 10, i32 14, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
   %shuff1 = shufflevector <16 x i16> %op1, <16 x i16> poison, <16 x i32> <i32 3, i32 7, i32 11, i32 15, i32 2, i32 6, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison, i32 poison>
@@ -133,6 +403,40 @@ define <16 x i16> @shuffle_shuffle_unbalanced(<16 x i16> %op0, <16 x i16> %op1) 
 
 ; Can't be optimized since final one of the elements used is shuffled to a poison index
 define <16 x i16> @shuffle_shuffle_poison(<16 x i16> %op0, <16 x i16> %op1) {
+; CHECK-LABEL: LCPI6_0
+; CHECK-NEXT: 	.half	0                               # 0x0
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.half	8                               # 0x8
+; CHECK-NEXT: 	.half	12                              # 0xc
+; CHECK-NEXT: 	.half	1                               # 0x1
+; CHECK-NEXT: 	.half	5                               # 0x5
+; CHECK-NEXT: 	.half	9                               # 0x9
+; CHECK-NEXT: 	.half	13                              # 0xd
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-LABEL: LCPI6_1
+; CHECK-NEXT: 	.half	3                               # 0x3
+; CHECK-NEXT: 	.half	7                               # 0x7
+; CHECK-NEXT: 	.half	11                              # 0xb
+; CHECK-NEXT: 	.half	15                              # 0xf
+; CHECK-NEXT: 	.half	2                               # 0x2
+; CHECK-NEXT: 	.half	6                               # 0x6
+; CHECK-NEXT: 	.half	10                              # 0xa
+; CHECK-NEXT: 	.half	14                              # 0xe
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
 ; CHECK-LABEL: shuffle_shuffle_poison:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI6_0)
@@ -155,6 +459,40 @@ define <16 x i16> @shuffle_shuffle_poison(<16 x i16> %op0, <16 x i16> %op1) {
 
 ; Can't be optimized since final one of the elements used is shuffled to a poison index
 define <16 x i16> @shuffle_shuffle_poison2(<16 x i16> %op0, <16 x i16> %op1) {
+; CHECK-LABEL: LCPI7_0
+; CHECK-NEXT: 	.half	0                               # 0x0
+; CHECK-NEXT: 	.half	4                               # 0x4
+; CHECK-NEXT: 	.half	8                               # 0x8
+; CHECK-NEXT: 	.half	12                              # 0xc
+; CHECK-NEXT: 	.half	1                               # 0x1
+; CHECK-NEXT: 	.half	5                               # 0x5
+; CHECK-NEXT: 	.half	9                               # 0x9
+; CHECK-NEXT: 	.half	13                              # 0xd
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-LABEL: LCPI7_1
+; CHECK-NEXT: 	.half	3                               # 0x3
+; CHECK-NEXT: 	.half	7                               # 0x7
+; CHECK-NEXT: 	.half	11                              # 0xb
+; CHECK-NEXT: 	.half	15                              # 0xf
+; CHECK-NEXT: 	.half	2                               # 0x2
+; CHECK-NEXT: 	.half	6                               # 0x6
+; CHECK-NEXT: 	.half	10                              # 0xa
+; CHECK-NEXT: 	.half	14                              # 0xe
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
+; CHECK-NEXT: 	.zero	2
 ; CHECK-LABEL: shuffle_shuffle_poison2:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI7_0)
