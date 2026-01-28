@@ -1128,17 +1128,17 @@ getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R) {
 /// Try to fold \p R using InstSimplifyFolder. Will succeed and return a
 /// non-nullptr VPValue for a handled opcode or intrinsic ID if corresponding \p
 /// Operands are foldable live-ins.
-static VPValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
-                                 ArrayRef<VPValue *> Operands,
-                                 const DataLayout &DL,
-                                 VPTypeAnalysis &TypeInfo) {
+static VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
+                                   ArrayRef<VPValue *> Operands,
+                                   const DataLayout &DL,
+                                   VPTypeAnalysis &TypeInfo) {
   auto OpcodeOrIID = getOpcodeOrIntrinsicID(&R);
   if (!OpcodeOrIID)
     return nullptr;
 
   SmallVector<Value *, 4> Ops;
   for (VPValue *Op : Operands) {
-    if (!isa<VPIRValue, VPSymbolicValue>(Op))
+    if (!match(Op, m_LiveIn()))
       return nullptr;
     Value *V = Op->getUnderlyingValue();
     if (!V)
@@ -4866,7 +4866,7 @@ VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
   }
   assert(none_of(*Entry, IsaPred<VPExpandSCEVRecipe>) &&
          "VPExpandSCEVRecipes must be at the beginning of the entry block, "
-         "after any VPIRInstructions");
+         "before any VPIRInstructions");
   // Add IR instructions in the entry basic block but not in the VPIRBasicBlock
   // to the VPIRBasicBlock.
   auto EI = Entry->begin();

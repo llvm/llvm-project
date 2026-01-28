@@ -113,6 +113,10 @@ RISCVTTIImpl::getRISCVInstructionCost(ArrayRef<unsigned> OpCodes, MVT VT,
     case RISCV::VFIRST_M:
       Cost += 1;
       break;
+    case RISCV::VDIV_VV:
+    case RISCV::VREM_VV:
+      Cost += LMULCost * TTI::TCC_Expensive;
+      break;
     default:
       Cost += LMULCost;
     }
@@ -987,8 +991,8 @@ static unsigned isM1OrSmaller(MVT VT) {
 
 InstructionCost RISCVTTIImpl::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-    TTI::TargetCostKind CostKind, bool ForPoisonSrc,
-    ArrayRef<Value *> VL) const {
+    TTI::TargetCostKind CostKind, bool ForPoisonSrc, ArrayRef<Value *> VL,
+    TTI::VectorInstrContext VIC) const {
   if (isa<ScalableVectorType>(Ty))
     return InstructionCost::getInvalid();
 
@@ -2413,11 +2417,9 @@ InstructionCost RISCVTTIImpl::getCFInstrCost(unsigned Opcode,
   return 0;
 }
 
-InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
-                                                 TTI::TargetCostKind CostKind,
-                                                 unsigned Index,
-                                                 const Value *Op0,
-                                                 const Value *Op1) const {
+InstructionCost RISCVTTIImpl::getVectorInstrCost(
+    unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
+    const Value *Op0, const Value *Op1, TTI::VectorInstrContext VIC) const {
   assert(Val->isVectorTy() && "This must be a vector type");
 
   // TODO: Add proper cost model for P extension fixed vectors (e.g., v4i16)
@@ -2429,7 +2431,8 @@ InstructionCost RISCVTTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
 
   if (Opcode != Instruction::ExtractElement &&
       Opcode != Instruction::InsertElement)
-    return BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1);
+    return BaseT::getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1,
+                                     VIC);
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Val);
@@ -2610,15 +2613,29 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
 
   // Legalize the type.
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
+  unsigned ISDOpcode = TLI->InstructionOpcodeToISD(Opcode);
 
   // TODO: Handle scalar type.
-  if (!LT.second.isVector())
+  if (!LT.second.isVector()) {
+    static const CostTblEntry DivTbl[]{
+        {ISD::UDIV, MVT::i32, TTI::TCC_Expensive},
+        {ISD::UDIV, MVT::i64, TTI::TCC_Expensive},
+        {ISD::SDIV, MVT::i32, TTI::TCC_Expensive},
+        {ISD::SDIV, MVT::i64, TTI::TCC_Expensive},
+        {ISD::UREM, MVT::i32, TTI::TCC_Expensive},
+        {ISD::UREM, MVT::i64, TTI::TCC_Expensive},
+        {ISD::SREM, MVT::i32, TTI::TCC_Expensive},
+        {ISD::SREM, MVT::i64, TTI::TCC_Expensive}};
+    if (TLI->isOperationLegalOrPromote(ISDOpcode, LT.second))
+      if (const auto *Entry = CostTableLookup(DivTbl, ISDOpcode, LT.second))
+        return Entry->Cost * LT.first;
+
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info, Op2Info,
                                          Args, CxtI);
+  }
 
   // f16 with zvfhmin and bf16 will be promoted to f32.
   // FIXME: nxv32[b]f16 will be custom lowered and split.
-  unsigned ISDOpcode = TLI->InstructionOpcodeToISD(Opcode);
   InstructionCost CastCost = 0;
   if ((LT.second.getVectorElementType() == MVT::f16 ||
        LT.second.getVectorElementType() == MVT::bf16) &&

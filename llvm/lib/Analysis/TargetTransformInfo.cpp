@@ -646,17 +646,37 @@ bool TargetTransformInfo::isTargetIntrinsicWithStructReturnOverloadAtField(
   return TTIImpl->isTargetIntrinsicWithStructReturnOverloadAtField(ID, RetIdx);
 }
 
+TargetTransformInfo::VectorInstrContext
+TargetTransformInfo::getVectorInstrContextHint(const Instruction *I) {
+  if (!I)
+    return VectorInstrContext::None;
+
+  // For inserts, check if the value being inserted comes from a single-use
+  // load.
+  if (isa<InsertElementInst>(I) && isa<LoadInst>(I->getOperand(1)) &&
+      I->getOperand(1)->hasOneUse())
+    return VectorInstrContext::Load;
+
+  // For extracts, check if it has a single use that is a store.
+  if (isa<ExtractElementInst>(I) && I->hasOneUse() &&
+      isa<StoreInst>(*I->user_begin()))
+    return VectorInstrContext::Store;
+
+  return VectorInstrContext::None;
+}
+
 InstructionCost TargetTransformInfo::getScalarizationOverhead(
     VectorType *Ty, const APInt &DemandedElts, bool Insert, bool Extract,
-    TTI::TargetCostKind CostKind, bool ForPoisonSrc,
-    ArrayRef<Value *> VL) const {
+    TTI::TargetCostKind CostKind, bool ForPoisonSrc, ArrayRef<Value *> VL,
+    TTI::VectorInstrContext VIC) const {
   return TTIImpl->getScalarizationOverhead(Ty, DemandedElts, Insert, Extract,
-                                           CostKind, ForPoisonSrc, VL);
+                                           CostKind, ForPoisonSrc, VL, VIC);
 }
 
 InstructionCost TargetTransformInfo::getOperandsScalarizationOverhead(
-    ArrayRef<Type *> Tys, TTI::TargetCostKind CostKind) const {
-  return TTIImpl->getOperandsScalarizationOverhead(Tys, CostKind);
+    ArrayRef<Type *> Tys, TTI::TargetCostKind CostKind,
+    TTI::VectorInstrContext VIC) const {
+  return TTIImpl->getOperandsScalarizationOverhead(Tys, CostKind, VIC);
 }
 
 bool TargetTransformInfo::supportsEfficientVectorElementLoadStore() const {
@@ -1130,37 +1150,37 @@ InstructionCost TargetTransformInfo::getCmpSelInstrCost(
 
 InstructionCost TargetTransformInfo::getVectorInstrCost(
     unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
-    const Value *Op0, const Value *Op1) const {
+    const Value *Op0, const Value *Op1, TTI::VectorInstrContext VIC) const {
   assert((Opcode == Instruction::InsertElement ||
           Opcode == Instruction::ExtractElement) &&
          "Expecting Opcode to be insertelement/extractelement.");
   InstructionCost Cost =
-      TTIImpl->getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1);
+      TTIImpl->getVectorInstrCost(Opcode, Val, CostKind, Index, Op0, Op1, VIC);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
 
 InstructionCost TargetTransformInfo::getVectorInstrCost(
     unsigned Opcode, Type *Val, TTI::TargetCostKind CostKind, unsigned Index,
-    Value *Scalar,
-    ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx) const {
+    Value *Scalar, ArrayRef<std::tuple<Value *, User *, int>> ScalarUserAndIdx,
+    TTI::VectorInstrContext VIC) const {
   assert((Opcode == Instruction::InsertElement ||
           Opcode == Instruction::ExtractElement) &&
          "Expecting Opcode to be insertelement/extractelement.");
   InstructionCost Cost = TTIImpl->getVectorInstrCost(
-      Opcode, Val, CostKind, Index, Scalar, ScalarUserAndIdx);
+      Opcode, Val, CostKind, Index, Scalar, ScalarUserAndIdx, VIC);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
 
-InstructionCost
-TargetTransformInfo::getVectorInstrCost(const Instruction &I, Type *Val,
-                                        TTI::TargetCostKind CostKind,
-                                        unsigned Index) const {
+InstructionCost TargetTransformInfo::getVectorInstrCost(
+    const Instruction &I, Type *Val, TTI::TargetCostKind CostKind,
+    unsigned Index, TTI::VectorInstrContext VIC) const {
   // FIXME: Assert that Opcode is either InsertElement or ExtractElement.
   // This is mentioned in the interface description and respected by all
   // callers, but never asserted upon.
-  InstructionCost Cost = TTIImpl->getVectorInstrCost(I, Val, CostKind, Index);
+  InstructionCost Cost =
+      TTIImpl->getVectorInstrCost(I, Val, CostKind, Index, VIC);
   assert(Cost >= 0 && "TTI should not produce negative costs!");
   return Cost;
 }
