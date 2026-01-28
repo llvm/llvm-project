@@ -202,7 +202,7 @@ Different access specifiers
 ~~~~~~~~~~~~~~~~~~~~~~~~~~~
 
 The tool cannot reorder fields with different access specifiers
-(public/private/protected). All fields being reordered must have the same
+(``public/private/protected``). All fields being reordered must have the same
 access level.
 
 .. code-block:: c++
