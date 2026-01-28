@@ -1229,7 +1229,7 @@ define amdgpu_kernel void @uniform_value_double(ptr addrspace(1) %out, double %i
 ; GFX12DAGISEL-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX12DAGISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12DAGISEL-NEXT:    v_mul_f64_e64 v[0:1], s[2:3], v[0:1]
+; GFX12DAGISEL-NEXT:    v_mul_f64_e32 v[0:1], s[2:3], v[0:1]
 ; GFX12DAGISEL-NEXT:    v_readfirstlane_b32 s2, v0
 ; GFX12DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_2) | instid1(VALU_DEP_2)
 ; GFX12DAGISEL-NEXT:    v_readfirstlane_b32 s3, v1
@@ -2080,7 +2080,7 @@ define amdgpu_kernel void @divergent_cfg_double(ptr addrspace(1) %out, double %i
 ; GFX12DAGISEL-NEXT:    v_cvt_f64_i32_e32 v[0:1], s6
 ; GFX12DAGISEL-NEXT:    s_wait_kmcnt 0x0
 ; GFX12DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12DAGISEL-NEXT:    v_mul_f64_e64 v[0:1], s[2:3], v[0:1]
+; GFX12DAGISEL-NEXT:    v_mul_f64_e32 v[0:1], s[2:3], v[0:1]
 ; GFX12DAGISEL-NEXT:    v_readfirstlane_b32 s6, v0
 ; GFX12DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX12DAGISEL-NEXT:    v_readfirstlane_b32 s7, v1
@@ -2100,7 +2100,7 @@ define amdgpu_kernel void @divergent_cfg_double(ptr addrspace(1) %out, double %i
 ; GFX12DAGISEL-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12DAGISEL-NEXT:    v_cvt_f64_i32_e32 v[0:1], s3
 ; GFX12DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12DAGISEL-NEXT:    v_mul_f64_e64 v[0:1], s[4:5], v[0:1]
+; GFX12DAGISEL-NEXT:    v_mul_f64_e32 v[0:1], s[4:5], v[0:1]
 ; GFX12DAGISEL-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX12DAGISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(SKIP_1) | instid1(VALU_DEP_1)
 ; GFX12DAGISEL-NEXT:    v_readfirstlane_b32 s5, v1

@@ -5810,7 +5810,7 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
                               : SISrcMods::NONE;
         unsigned MulOpc = is32BitOpc ? AMDGPU::V_MUL_F32_e64
                           : ST.getGeneration() >= AMDGPUSubtarget::GFX12
-                              ? AMDGPU::V_MUL_F64_e64_gfx12
+                              ? AMDGPU::V_MUL_F64_pseudo_e64
                               : AMDGPU::V_MUL_F64_e64;
         auto DestVregInst = BuildMI(BB, MI, DL, TII->get(MulOpc),
                                     DstVreg)
