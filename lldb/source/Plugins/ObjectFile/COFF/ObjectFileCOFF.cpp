@@ -23,9 +23,8 @@ using namespace lldb_private;
 using namespace llvm;
 using namespace llvm::object;
 
-static bool IsCOFFObjectFile(const DataBufferSP &data) {
-  return identify_magic(toStringRef(data->GetData())) ==
-         file_magic::coff_object;
+static bool IsCOFFObjectFile(const llvm::ArrayRef<uint8_t> data) {
+  return identify_magic(toStringRef(data)) == file_magic::coff_object;
 }
 
 LLDB_PLUGIN_DEFINE(ObjectFileCOFF)
@@ -71,7 +70,7 @@ ObjectFileCOFF::CreateInstance(const ModuleSP &module_sp,
   // ArrayRef of the raw bytes, and can segfault.
   DataExtractorSP contiguous_extractor_sp =
       extractor_sp->GetSubsetExtractorSP(0);
-  if (!IsCOFFObjectFile(contiguous_extractor_sp->GetSharedDataBuffer()))
+  if (!IsCOFFObjectFile(contiguous_extractor_sp->GetData()))
     return nullptr;
 
   if (contiguous_extractor_sp->GetByteSize() < length) {
@@ -87,9 +86,8 @@ ObjectFileCOFF::CreateInstance(const ModuleSP &module_sp,
     data_offset = 0;
   }
 
-  MemoryBufferRef buffer{
-      toStringRef(contiguous_extractor_sp->GetSharedDataBuffer()->GetData()),
-      file->GetFilename().GetStringRef()};
+  MemoryBufferRef buffer{toStringRef(contiguous_extractor_sp->GetData()),
+                         file->GetFilename().GetStringRef()};
 
   Expected<std::unique_ptr<Binary>> binary = createBinary(buffer);
   if (!binary) {
@@ -123,12 +121,11 @@ size_t ObjectFileCOFF::GetModuleSpecifications(
   // ArrayRef of the raw bytes, and can segfault.
   DataExtractorSP contiguous_extractor_sp =
       extractor_sp->GetSubsetExtractorSP(0);
-  if (!IsCOFFObjectFile(contiguous_extractor_sp->GetSharedDataBuffer()))
+  if (!IsCOFFObjectFile(contiguous_extractor_sp->GetData()))
     return 0;
 
-  MemoryBufferRef buffer{
-      toStringRef(contiguous_extractor_sp->GetSharedDataBuffer()->GetData()),
-      file.GetFilename().GetStringRef()};
+  MemoryBufferRef buffer{toStringRef(contiguous_extractor_sp->GetData()),
+                         file.GetFilename().GetStringRef()};
   Expected<std::unique_ptr<Binary>> binary = createBinary(buffer);
   if (!binary) {
     Log *log = GetLog(LLDBLog::Object);

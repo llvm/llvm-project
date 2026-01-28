@@ -91,8 +91,7 @@ public:
   bool SetLoadAddress(Target &target, lldb::addr_t value,
                       bool value_is_offset) override;
 
-  static bool MagicBytesMatch(lldb::DataBufferSP data_sp, lldb::addr_t offset,
-                              lldb::addr_t length);
+  static bool MagicBytesMatch(lldb::DataExtractorSP extractor_sp);
 
   struct Header {
     std::string triple;

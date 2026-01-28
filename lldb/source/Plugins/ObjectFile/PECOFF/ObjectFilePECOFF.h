@@ -89,6 +89,8 @@ public:
                        lldb_private::SaveCoreOptions &options,
                        lldb_private::Status &error);
 
+  static bool MagicBytesMatch(lldb::DataExtractorSP extractor_sp);
+
   static bool MagicBytesMatch(lldb::DataBufferSP data_sp);
 
   static lldb::SymbolType MapSymbolType(uint16_t coff_symbol_type);

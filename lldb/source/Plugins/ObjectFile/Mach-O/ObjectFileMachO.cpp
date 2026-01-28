@@ -2495,31 +2495,32 @@ void ObjectFileMachO::ParseSymtab(Symtab &symtab) {
       exports_trie_load_command.dataoff += linkedit_slide;
     }
 
-    nlist_data.SetData(*m_data_nsp, symtab_load_command.symoff,
-                       nlist_data_byte_size);
-    strtab_data.SetData(*m_data_nsp, symtab_load_command.stroff,
-                        strtab_data_byte_size);
+    nlist_data = *m_data_nsp->GetSubsetExtractorSP(symtab_load_command.symoff,
+                                                   nlist_data_byte_size);
+    strtab_data = *m_data_nsp->GetSubsetExtractorSP(symtab_load_command.stroff,
+                                                    strtab_data_byte_size);
 
     // We shouldn't have exports data from both the LC_DYLD_INFO command
     // AND the LC_DYLD_EXPORTS_TRIE command in the same binary:
     lldbassert(!((dyld_info.export_size > 0)
                  && (exports_trie_load_command.datasize > 0)));
     if (dyld_info.export_size > 0) {
-      dyld_trie_data.SetData(*m_data_nsp, dyld_info.export_off,
-                             dyld_info.export_size);
+      dyld_trie_data = *m_data_nsp->GetSubsetExtractorSP(dyld_info.export_off,
+                                                         dyld_info.export_size);
     } else if (exports_trie_load_command.datasize > 0) {
-      dyld_trie_data.SetData(*m_data_nsp, exports_trie_load_command.dataoff,
-                             exports_trie_load_command.datasize);
+      dyld_trie_data =
+          *m_data_nsp->GetSubsetExtractorSP(exports_trie_load_command.dataoff,
+                                            exports_trie_load_command.datasize);
     }
 
     if (dysymtab.nindirectsyms != 0) {
-      indirect_symbol_index_data.SetData(*m_data_nsp, dysymtab.indirectsymoff,
-                                         dysymtab.nindirectsyms * 4);
+      indirect_symbol_index_data = *m_data_nsp->GetSubsetExtractorSP(
+          dysymtab.indirectsymoff, dysymtab.nindirectsyms * 4);
     }
     if (function_starts_load_command.cmd) {
-      function_starts_data.SetData(*m_data_nsp,
-                                   function_starts_load_command.dataoff,
-                                   function_starts_load_command.datasize);
+      function_starts_data = *m_data_nsp->GetSubsetExtractorSP(
+          function_starts_load_command.dataoff,
+          function_starts_load_command.datasize);
     }
   }
 

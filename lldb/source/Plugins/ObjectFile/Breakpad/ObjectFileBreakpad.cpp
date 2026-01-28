@@ -75,8 +75,7 @@ ObjectFile *ObjectFileBreakpad::CreateInstance(const ModuleSP &module_sp,
   // ArrayRef of the raw bytes, and can segfault.
   DataExtractorSP contiguous_extractor_sp =
       extractor_sp->GetSubsetExtractorSP(0);
-  auto text =
-      toStringRef(contiguous_extractor_sp->GetSharedDataBuffer()->GetData());
+  auto text = toStringRef(contiguous_extractor_sp->GetData());
   std::optional<Header> header = Header::parse(text);
   if (!header)
     return nullptr;
@@ -110,8 +109,7 @@ size_t ObjectFileBreakpad::GetModuleSpecifications(
   // ArrayRef of the raw bytes, and can segfault.
   DataExtractorSP contiguous_extractor_sp =
       extractor_sp->GetSubsetExtractorSP(0);
-  auto text =
-      toStringRef(contiguous_extractor_sp->GetSharedDataBuffer()->GetData());
+  auto text = toStringRef(contiguous_extractor_sp->GetData());
   std::optional<Header> header = Header::parse(text);
   if (!header)
     return 0;
