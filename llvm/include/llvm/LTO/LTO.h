@@ -136,7 +136,7 @@ private:
   // For distributed compilation, each input must exist as an individual bitcode
   // file on disk and be identified by its ModuleID. Archive members and FatLTO
   // objects violate this. So, in these cases we flag that the bitcode must be
-  // written out to a new standalone file and the ModuleID must be updated.
+  // written out to a new standalone file.
   bool SerializeForDistribution = false;
   bool IsThinLTO = false;
   StringRef ArchivePath;
@@ -212,12 +212,12 @@ public:
   MemoryBufferRef getFileBuffer() const { return MbRef; }
   // Returns true if this input should be serialized to disk for distribution.
   // See the comment on SerializeForDistribution for details.
-  bool shouldSerializeForDistribution() const {
+  bool getSerializeForDistribution() const {
     return SerializeForDistribution;
   }
   // Mark whether this input should be serialized to disk for distribution.
   // See the comment on SerializeForDistribution for details.
-  void setShouldSerializeForDistribution(bool SFD) {
+  void setSerializeForDistribution(bool SFD) {
     SerializeForDistribution = SFD;
   }
   // Returns true if this bitcode came from a FatLTO object.
