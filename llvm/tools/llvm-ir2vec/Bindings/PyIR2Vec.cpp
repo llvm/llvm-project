@@ -32,7 +32,8 @@ std::unique_ptr<Module> getLLVMIR(const std::string &Filename,
   auto M = parseIRFile(Filename, Err, Context);
   if (!M)
     throw nb::value_error(("Failed to parse IR file '" + Filename +
-                           "': " + Err.getMessage().str()).c_str());
+                           "': " + Err.getMessage().str())
+                              .c_str());
   return M;
 }
 
@@ -57,7 +58,8 @@ public:
 
     if (auto Err = Tool->initializeVocabulary(VocabPath)) {
       throw nb::value_error(("Failed to initialize IR2Vec vocabulary: " +
-                             toString(std::move(Err))).c_str());
+                             toString(std::move(Err)))
+                                .c_str());
     }
   }
 };
