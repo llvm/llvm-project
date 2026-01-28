@@ -982,7 +982,6 @@ bool MemProfUsePass::annotateGlobalVariables(
       } else if (DataAccessProf->isKnownColdSymbol(HashValue)) {
         ++NumOfMemProfColdGlobalVars;
         Changed |= GVar.setSectionPrefix("unlikely");
-        Changed = true;
         LLVM_DEBUG(dbgs() << "Global variable " << Name
                           << " is annotated as unlikely\n");
       } else {
