@@ -404,7 +404,7 @@ struct ByteCodeWriter {
                 [](Type) { return PDLValue::Kind::Attribute; })
             .Case<pdl::OperationType>(
                 [](Type) { return PDLValue::Kind::Operation; })
-            .Case<pdl::RangeType>([](pdl::RangeType rangeTy) {
+            .Case([](pdl::RangeType rangeTy) {
               if (isa<pdl::TypeType>(rangeTy.getElementType()))
                 return PDLValue::Kind::TypeRange;
               return PDLValue::Kind::ValueRange;

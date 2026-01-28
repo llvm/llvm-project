@@ -523,52 +523,80 @@ bool AArch64InstrInfo::analyzeBranch(MachineBasicBlock &MBB,
 bool AArch64InstrInfo::analyzeBranchPredicate(MachineBasicBlock &MBB,
                                               MachineBranchPredicate &MBP,
                                               bool AllowModify) const {
-  // For the moment, handle only a block which ends with a cb(n)zx followed by
-  // a fallthrough.  Why this?  Because it is a common form.
-  // TODO: Should we handle b.cc?
-
-  MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();
-  if (I == MBB.end())
+  // Use analyzeBranch to validate the branch pattern.
+  MachineBasicBlock *TBB = nullptr, *FBB = nullptr;
+  SmallVector<MachineOperand, 4> Cond;
+  if (analyzeBranch(MBB, TBB, FBB, Cond, AllowModify))
     return true;
 
-  // Skip over SpeculationBarrierEndBB terminators
-  if (I->getOpcode() == AArch64::SpeculationBarrierISBDSBEndBB ||
-      I->getOpcode() == AArch64::SpeculationBarrierSBEndBB) {
-    --I;
-  }
-
-  if (!isUnpredicatedTerminator(*I))
+  // analyzeBranch returns success with empty Cond for unconditional branches.
+  if (Cond.empty())
     return true;
 
-  // Get the last instruction in the block.
-  MachineInstr *LastInst = &*I;
-  unsigned LastOpc = LastInst->getOpcode();
-  if (!isCondBranchOpcode(LastOpc))
-    return true;
-
-  switch (LastOpc) {
-  default:
-    return true;
-  case AArch64::CBZW:
-  case AArch64::CBZX:
-  case AArch64::CBNZW:
-  case AArch64::CBNZX:
-    break;
-  };
-
-  MBP.TrueDest = LastInst->getOperand(1).getMBB();
+  MBP.TrueDest = TBB;
   assert(MBP.TrueDest && "expected!");
-  MBP.FalseDest = MBB.getNextNode();
+  MBP.FalseDest = FBB ? FBB : MBB.getNextNode();
 
   MBP.ConditionDef = nullptr;
   MBP.SingleUseCondition = false;
 
-  MBP.LHS = LastInst->getOperand(0);
-  MBP.RHS = MachineOperand::CreateImm(0);
-  MBP.Predicate = (LastOpc == AArch64::CBNZX || LastOpc == AArch64::CBNZW)
-                      ? MachineBranchPredicate::PRED_NE
-                      : MachineBranchPredicate::PRED_EQ;
-  return false;
+  // Find the conditional branch. After analyzeBranch succeeds with non-empty
+  // Cond, there's exactly one conditional branch - either last (fallthrough)
+  // or second-to-last (followed by unconditional B).
+  MachineBasicBlock::iterator I = MBB.getLastNonDebugInstr();
+  if (I == MBB.end())
+    return true;
+
+  if (isUncondBranchOpcode(I->getOpcode())) {
+    if (I == MBB.begin())
+      return true;
+    --I;
+  }
+
+  MachineInstr *CondBranch = &*I;
+  MachineRegisterInfo &MRI = MBB.getParent()->getRegInfo();
+
+  switch (CondBranch->getOpcode()) {
+  default:
+    return true;
+
+  case AArch64::Bcc:
+    // Bcc takes the NZCV flag as the operand to branch on, walk up the
+    // instruction stream to find the last instruction to define NZCV.
+    for (MachineInstr &MI : llvm::drop_begin(llvm::reverse(MBB))) {
+      if (MI.modifiesRegister(AArch64::NZCV, /*TRI=*/nullptr)) {
+        MBP.ConditionDef = &MI;
+        break;
+      }
+    }
+    return false;
+
+  case AArch64::CBZW:
+  case AArch64::CBZX:
+  case AArch64::CBNZW:
+  case AArch64::CBNZX: {
+    MBP.LHS = CondBranch->getOperand(0);
+    MBP.RHS = MachineOperand::CreateImm(0);
+    unsigned Opc = CondBranch->getOpcode();
+    MBP.Predicate = (Opc == AArch64::CBNZX || Opc == AArch64::CBNZW)
+                        ? MachineBranchPredicate::PRED_NE
+                        : MachineBranchPredicate::PRED_EQ;
+    Register CondReg = MBP.LHS.getReg();
+    if (CondReg.isVirtual())
+      MBP.ConditionDef = MRI.getVRegDef(CondReg);
+    return false;
+  }
+
+  case AArch64::TBZW:
+  case AArch64::TBZX:
+  case AArch64::TBNZW:
+  case AArch64::TBNZX: {
+    Register CondReg = CondBranch->getOperand(0).getReg();
+    if (CondReg.isVirtual())
+      MBP.ConditionDef = MRI.getVRegDef(CondReg);
+    return false;
+  }
+  }
 }
 
 bool AArch64InstrInfo::reverseBranchCondition(

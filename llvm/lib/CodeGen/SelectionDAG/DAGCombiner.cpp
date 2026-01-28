@@ -12166,23 +12166,19 @@ SDValue DAGCombiner::foldShiftToAvg(SDNode *N, const SDLoc &DL) {
   bool IsUnsigned = Opcode == ISD::SRL;
 
   // Captured values.
-  SDValue A, B, Add;
+  SDValue A, B;
 
-  // Match floor average as it is common to both floor/ceil avgs.
+  // Match floor average as it is common to both floor/ceil avgs, ensure the add
+  // doesn't wrap.
+  SDNodeFlags Flags =
+      IsUnsigned ? SDNodeFlags::NoUnsignedWrap : SDNodeFlags::NoSignedWrap;
   if (sd_match(N, m_BinOp(Opcode,
-                          m_AllOf(m_Value(Add), m_Add(m_Value(A), m_Value(B))),
+                          m_c_BinOp(ISD::ADD, m_Value(A), m_Value(B), Flags),
                           m_One()))) {
     // Decide whether signed or unsigned.
     unsigned FloorISD = IsUnsigned ? ISD::AVGFLOORU : ISD::AVGFLOORS;
-    if (!hasOperation(FloorISD, VT))
-      return SDValue();
-
-    // Can't optimize adds that may wrap.
-    if ((IsUnsigned && !Add->getFlags().hasNoUnsignedWrap()) ||
-        (!IsUnsigned && !Add->getFlags().hasNoSignedWrap()))
-      return SDValue();
-
-    return DAG.getNode(FloorISD, DL, N->getValueType(0), {A, B});
+    if (hasOperation(FloorISD, VT))
+      return DAG.getNode(FloorISD, DL, VT, {A, B});
   }
 
   return SDValue();

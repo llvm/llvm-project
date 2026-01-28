@@ -420,18 +420,18 @@ public:
           return translateTypeOffsetOp(typeOffsetOp, builder,
                                        moduleTranslation);
         })
-        .Case<GatherOp>([&](GatherOp gatherOp) {
+        .Case([&](GatherOp gatherOp) {
           return translateGatherOp(gatherOp, builder, moduleTranslation);
         })
-        .Case<MaskedLoadOp>([&](MaskedLoadOp maskedLoadOp) {
+        .Case([&](MaskedLoadOp maskedLoadOp) {
           return translateMaskedLoadOp(maskedLoadOp, builder,
                                        moduleTranslation);
         })
-        .Case<MaskedStoreOp>([&](MaskedStoreOp maskedStoreOp) {
+        .Case([&](MaskedStoreOp maskedStoreOp) {
           return translateMaskedStoreOp(maskedStoreOp, builder,
                                         moduleTranslation);
         })
-        .Case<ScatterOp>([&](ScatterOp scatterOp) {
+        .Case([&](ScatterOp scatterOp) {
           return translateScatterOp(scatterOp, builder, moduleTranslation);
         })
         .Default([&](Operation *op) {

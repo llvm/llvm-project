@@ -460,43 +460,45 @@ LogicalResult LayoutInfoPropagation::visitOperation(
     Operation *op, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
   TypeSwitch<Operation *>(op)
-      .Case<xegpu::DpasOp>(
-          [&](auto dpasOp) { visitDpasOp(dpasOp, operands, results); })
-      .Case<xegpu::StoreNdOp>(
-          [&](auto storeNdOp) { visitStoreNdOp(storeNdOp, operands, results); })
-      .Case<xegpu::StoreScatterOp>([&](auto storeScatterOp) {
+      .Case(
+          [&](xegpu::DpasOp dpasOp) { visitDpasOp(dpasOp, operands, results); })
+      .Case([&](xegpu::StoreNdOp storeNdOp) {
+        visitStoreNdOp(storeNdOp, operands, results);
+      })
+      .Case([&](xegpu::StoreScatterOp storeScatterOp) {
         visitStoreScatterOp(storeScatterOp, operands, results);
       })
-      .Case<xegpu::LoadNdOp>(
-          [&](auto loadNdOp) { visitLoadNdOp(loadNdOp, operands, results); })
-      .Case<xegpu::LoadGatherOp>([&](auto loadGatherOp) {
+      .Case([&](xegpu::LoadNdOp loadNdOp) {
+        visitLoadNdOp(loadNdOp, operands, results);
+      })
+      .Case([&](xegpu::LoadGatherOp loadGatherOp) {
         visitLoadGatherOp(loadGatherOp, operands, results);
       })
-      .Case<xegpu::CreateDescOp>([&](auto createDescOp) {
+      .Case([&](xegpu::CreateDescOp createDescOp) {
         visitCreateDescOp(createDescOp, operands, results);
       })
-      .Case<xegpu::UpdateNdOffsetOp>([&](auto updateNdOffsetOp) {
+      .Case([&](xegpu::UpdateNdOffsetOp updateNdOffsetOp) {
         visitUpdateNdOffsetOp(updateNdOffsetOp, operands, results);
       })
-      .Case<xegpu::PrefetchNdOp>([&](auto prefetchNdOp) {
+      .Case([&](xegpu::PrefetchNdOp prefetchNdOp) {
         visitPrefetchNdOp(prefetchNdOp, operands, results);
       })
-      .Case<vector::TransposeOp>([&](auto transposeOp) {
+      .Case([&](vector::TransposeOp transposeOp) {
         visitTransposeOp(transposeOp, operands, results);
       })
-      .Case<vector::BitCastOp>([&](auto bitcastOp) {
+      .Case([&](vector::BitCastOp bitcastOp) {
         visitVectorBitcastOp(bitcastOp, operands, results);
       })
-      .Case<vector::MultiDimReductionOp>([&](auto reductionOp) {
+      .Case([&](vector::MultiDimReductionOp reductionOp) {
         visitVectorMultiReductionOp(reductionOp, operands, results);
       })
-      .Case<vector::BroadcastOp>([&](auto broadcastOp) {
+      .Case([&](vector::BroadcastOp broadcastOp) {
         visitVectorBroadCastOp(broadcastOp, operands, results);
       })
-      .Case<vector::ShapeCastOp>([&](auto shapeCastOp) {
+      .Case([&](vector::ShapeCastOp shapeCastOp) {
         visitShapeCastOp(shapeCastOp, operands, results);
       })
-      .Case<xegpu::StoreMatrixOp>([&](auto storeMatrixOp) {
+      .Case([&](xegpu::StoreMatrixOp storeMatrixOp) {
         visitStoreMatrixOp(storeMatrixOp, operands, results);
       })
       // All other ops.
@@ -1641,16 +1643,14 @@ void XeGPUPropagateLayoutPass::runOnOperation() {
     for (mlir::Operation &op : llvm::reverse(block->getOperations())) {
       LogicalResult r = success();
       TypeSwitch<Operation *>(&op)
-          .Case<mlir::RegionBranchTerminatorOpInterface>(
-              [&](mlir::RegionBranchTerminatorOpInterface branchTermOp) {
-                r = updateControlFlowOps(builder, branchTermOp,
-                                         getXeGPULayoutForValue);
-              })
-          .Case<mlir::FunctionOpInterface>(
-              [&](mlir::FunctionOpInterface funcOp) {
-                r = updateFunctionOpInterface(builder, funcOp,
-                                              getXeGPULayoutForValue);
-              })
+          .Case([&](mlir::RegionBranchTerminatorOpInterface branchTermOp) {
+            r = updateControlFlowOps(builder, branchTermOp,
+                                     getXeGPULayoutForValue);
+          })
+          .Case([&](mlir::FunctionOpInterface funcOp) {
+            r = updateFunctionOpInterface(builder, funcOp,
+                                          getXeGPULayoutForValue);
+          })
           .Default([&](Operation *op) {
             r = updateOp(builder, op, getXeGPULayoutForValue);
           });

@@ -852,7 +852,7 @@ bool Operator::hasAssemblyFormat() const {
 
 StringRef Operator::getAssemblyFormat() const {
   return TypeSwitch<const Init *, StringRef>(def.getValueInit("assemblyFormat"))
-      .Case<StringInit>([&](auto *init) { return init->getValue(); });
+      .Case([&](const StringInit *init) { return init->getValue(); });
 }
 
 void Operator::print(llvm::raw_ostream &os) const {

@@ -56,7 +56,7 @@ using namespace mlir::linalg;
 SmallVector<Value> mlir::linalg::peelLoop(RewriterBase &rewriter,
                                           Operation *op) {
   return llvm::TypeSwitch<Operation *, SmallVector<Value, 4>>(op)
-      .Case<scf::ForOp>([&](scf::ForOp forOp) {
+      .Case([&](scf::ForOp forOp) {
         scf::ForOp partialIteration;
         if (succeeded(scf::peelForLoopAndSimplifyBounds(rewriter, forOp,
                                                         partialIteration)))

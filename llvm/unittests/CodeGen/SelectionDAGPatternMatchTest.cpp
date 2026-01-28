@@ -319,11 +319,19 @@ TEST_F(SelectionDAGPatternMatchTest, matchBinaryOp) {
   EXPECT_TRUE(sd_match(Or, m_Or(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(Or, m_BitwiseLogic(m_Value(), m_Value())));
   EXPECT_FALSE(sd_match(Or, m_DisjointOr(m_Value(), m_Value())));
+  EXPECT_FALSE(sd_match(
+      Or, m_BinOp(ISD::OR, m_Value(), m_Value(), SDNodeFlags::Disjoint)));
+  EXPECT_FALSE(sd_match(
+      Or, m_c_BinOp(ISD::OR, m_Value(), m_Value(), SDNodeFlags::Disjoint)));
 
   EXPECT_TRUE(sd_match(DisOr, m_Or(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(DisOr, m_DisjointOr(m_Value(), m_Value())));
   EXPECT_FALSE(sd_match(DisOr, m_Add(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(DisOr, m_AddLike(m_Value(), m_Value())));
+  EXPECT_TRUE(sd_match(
+      DisOr, m_BinOp(ISD::OR, m_Value(), m_Value(), SDNodeFlags::Disjoint)));
+  EXPECT_TRUE(sd_match(
+      DisOr, m_c_BinOp(ISD::OR, m_Value(), m_Value(), SDNodeFlags::Disjoint)));
 
   EXPECT_TRUE(sd_match(Rotl, m_Rotl(m_Value(), m_Value())));
   EXPECT_TRUE(sd_match(Rotr, m_Rotr(m_Value(), m_Value())));

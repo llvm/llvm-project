@@ -267,10 +267,10 @@ struct GPUShuffleConversion final : ConvertOpToLLVMPattern<gpu::ShuffleOp> {
 
   static std::optional<StringRef> getTypeMangling(Type type) {
     return TypeSwitch<Type, std::optional<StringRef>>(type)
-        .Case<Float16Type>([](auto) { return "Dhj"; })
-        .Case<Float32Type>([](auto) { return "fj"; })
-        .Case<Float64Type>([](auto) { return "dj"; })
-        .Case<IntegerType>([](auto intTy) -> std::optional<StringRef> {
+        .Case([](Float16Type) { return "Dhj"; })
+        .Case([](Float32Type) { return "fj"; })
+        .Case([](Float64Type) { return "dj"; })
+        .Case([](IntegerType intTy) -> std::optional<StringRef> {
           switch (intTy.getWidth()) {
           case 8:
             return "cj";

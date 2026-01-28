@@ -51,12 +51,12 @@ module attributes {dlti.dl_spec = #dlti.dl_spec<#dlti.dl_entry<!llvm.ptr, dense<
 // CHECK: cuf.shared_memory[%c0{{.*}} : i32] f32 align 4 {bindc_name = "r", isStatic, uniq_name = "_QFshared_staticEr"} -> !fir.ref<f32>
 // CHECK: gpu.return
 // CHECK: }
-// CHECK: fir.global internal @_QPshared_static__shared_mem__a(dense<0> : vector<4xi8>) {alignment = 4 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<4xi8>
-// CHECK: fir.global internal @_QPshared_static__shared_mem__b(dense<0> : vector<4xi8>) {alignment = 4 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<4xi8>
-// CHECK: fir.global internal @_QPshared_static__shared_mem__c(dense<0> : vector<4xi8>) {alignment = 4 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<4xi8>
-// CHECK: fir.global internal @_QPshared_static__shared_mem__d(dense<0> : vector<4xi8>) {alignment = 4 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<4xi8>
-// CHECK: fir.global internal @_QPshared_static__shared_mem__e(dense<0> : vector<8xi8>) {alignment = 8 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<8xi8>
-// CHECK: fir.global internal @_QPshared_static__shared_mem__r(dense<0> : vector<4xi8>) {alignment = 4 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<4xi8>
+// CHECK: fir.global internal @_QPshared_static__shared_mem__a {alignment = 4 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<4xi8>
+// CHECK: fir.global internal @_QPshared_static__shared_mem__b {alignment = 4 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<4xi8>
+// CHECK: fir.global internal @_QPshared_static__shared_mem__c {alignment = 4 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<4xi8>
+// CHECK: fir.global internal @_QPshared_static__shared_mem__d {alignment = 4 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<4xi8>
+// CHECK: fir.global internal @_QPshared_static__shared_mem__e {alignment = 8 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<8xi8>
+// CHECK: fir.global internal @_QPshared_static__shared_mem__r {alignment = 4 : i64, data_attr = #cuf.cuda<shared>} : !fir.array<4xi8>
 // CHECK: }
 // CHECK: }
 
