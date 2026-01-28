@@ -912,7 +912,7 @@ bool VPlan::isExitBlock(VPBlockBase *VPBB) {
   return is_contained(ExitBlocks, VPBB);
 }
 
-/// To make RUN_VPLAN_PASS print final VPlan:
+/// To make RUN_VPLAN_PASS print final VPlan.
 static void printFinalVPlan(VPlan &) {}
 
 /// Generate the code inside the preheader and body of the vectorized loop.

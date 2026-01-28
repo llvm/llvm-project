@@ -586,7 +586,7 @@ static void simplifyLiveInsWithSCEV(VPlan &Plan,
   }
 }
 
-/// To make RUN_VPLAN_PASS print initial VPlan:
+/// To make RUN_VPLAN_PASS print initial VPlan.
 static void printAfterInitialConstruction(VPlan &) {}
 
 std::unique_ptr<VPlan>
