@@ -117,7 +117,7 @@ end subroutine omp_fuse02
 ! CHECK:           }
 ! CHECK:           %[[NEW_CLI_3:.*]] = omp.new_cli
 ! CHECK:           %[[NEW_CLI_4:.*]] = omp.new_cli
-! CHECK:           omp.fuse (%[[NEW_CLI_3]], %[[NEW_CLI_4]]) <- (%[[NEW_CLI_0]], %[[NEW_CLI_1]], %[[NEW_CLI_2]]) {count = 2 : i32, first = 2 : i32}
+! CHECK:           omp.fuse (%[[NEW_CLI_3]], %[[NEW_CLI_4]]) <- (%[[NEW_CLI_0]], %[[NEW_CLI_1]], %[[NEW_CLI_2]]) {count = 2 : i64, first = 2 : i64}
 ! CHECK:           return
 ! CHECK:         }
 

@@ -570,16 +570,13 @@ def FuseOp : OpenMPTransformBase_Op<"fuse"> {
     equal to the affected loop with most logical iterations.
 
     The first and count attributes are constant and known beforehand.
-  }]#clausesDescription;
+  }] # clausesDescription;
 
-  let extraClassDeclaration = [{
-    IntegerAttr getFirst() {
-      return this->getOperation()->getAttrOfType<mlir::IntegerAttr>("first");
-    }
-    IntegerAttr getCount() {
-      return this->getOperation()->getAttrOfType<mlir::IntegerAttr>("count");
-    }
-  }]#clausesExtraClassDeclaration;
+  let arguments =
+      !con((ins Variadic<CanonicalLoopInfoType>:$generatees,
+               Variadic<CanonicalLoopInfoType>:$applyees,
+               OptionalAttr<I64Attr>:$first, OptionalAttr<I64Attr>:$count),
+           clausesArgs);
 
   let hasVerifier = 1;
 }

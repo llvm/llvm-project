@@ -3728,13 +3728,6 @@ static LogicalResult applyFuse(omp::FuseOp op, llvm::IRBuilderBase &builder,
   llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   llvm::OpenMPIRBuilder::LocationDescription loc(builder);
 
-  unsigned int first = 0;
-  unsigned int count = 0;
-  if (op.getFirst() && op.getCount()) {
-    first = op.getFirst().getInt();
-    count = op.getCount().getInt();
-  }
-
   // Select what CLIs are going to be fused
   SmallVector<llvm::CanonicalLoopInfo *> beforeFuse, toFuse, afterFuse;
   for (size_t i = 0; i < op.getApplyees().size(); i++) {
@@ -3742,9 +3735,10 @@ static LogicalResult applyFuse(omp::FuseOp op, llvm::IRBuilderBase &builder,
     llvm::CanonicalLoopInfo *consBuilderCLI =
         moduleTranslation.lookupOMPLoop(applyee);
     assert(applyee && "Canonical loop must already been translated");
-    if (first != 0 && i < first - 1)
+    if (op.getFirst().has_value() && i < op.getFirst().value() - 1)
       beforeFuse.push_back(consBuilderCLI);
-    else if (count != 0 && i >= first + count - 1)
+    else if (op.getCount().has_value() &&
+             i >= op.getFirst().value() + op.getCount().value() - 1)
       afterFuse.push_back(consBuilderCLI);
     else
       toFuse.push_back(consBuilderCLI);

@@ -877,15 +877,10 @@ void collectLoopRelatedInfo(
   // Collect sizes from tile directive if present.
   std::int64_t sizesLengthValue = 0l;
   if (auto *ompCons{eval.getIf<parser::OpenMPConstruct>()}) {
-    if (auto *ompLoop{std::get_if<parser::OpenMPLoopConstruct>(&ompCons->u)}) {
-      const parser::OmpDirectiveSpecification &beginSpec{ompLoop->BeginDir()};
-      if (beginSpec.DirId() == llvm::omp::Directive::OMPD_tile) {
-        processTileSizesFromOpenMPConstruct(
-            ompCons, [&](const parser::OmpClause::Sizes *tclause) {
-              sizesLengthValue = tclause->v.size();
-            });
-      }
-    }
+    processTileSizesFromOpenMPConstruct(
+        ompCons, [&](const parser::OmpClause::Sizes *tclause) {
+          sizesLengthValue = tclause->v.size();
+        });
   }
 
   std::int64_t collapseValue = std::max(numCollapse, sizesLengthValue);

@@ -2041,6 +2041,21 @@ genLoopOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
   return loopOp;
 }
 
+// ´nestedEval´ is the Evaluation of a children loop of ´eval´.
+// In a regular OpenMP Construct Evaluation ´nestedEval´ is the only children.
+// Can be retrieved with getNestedDoConstruct(Evaluation).
+//   <<OpenMPConstruct>>
+//     Loop
+//   <<End OpenMPConstruct>>
+//
+// ´nestedEval´ is most useful in the case that ´eval´ contains a sequence
+// of loops. Then this function generates Canonical loop nests for individual
+// loops.
+//   <<OpenMPConstruct>>
+//     Loop 1
+//     Loop 2
+//   <<End OpenMPConstruct>>
+//
 static void genCanonicalLoopNest(
     lower::AbstractConverter &converter, lower::SymMap &symTable,
     semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
@@ -2290,28 +2305,24 @@ static void genFuseOp(Fortran::lower::AbstractConverter &converter,
                       ConstructQueue::const_iterator item) {
   fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
 
-  int32_t first = 0;
-  int32_t count = 0;
-  auto iter = llvm::find_if(item->clauses, [](const Clause &clause) {
-    return clause.id == llvm::omp::Clause::OMPC_looprange;
-  });
-  if (iter != item->clauses.end()) {
-    const auto &looprange = std::get<clause::Looprange>(iter->u);
+  int64_t first;
+  int64_t count;
+  const Clause *looprangeClause = llvm::find_singleton<const Clause>(
+      item->clauses, [](const Clause &clause, bool) { return &clause; }, false);
+  if (looprangeClause) {
+    const auto &looprange = std::get<clause::Looprange>(looprangeClause->u);
     first = evaluate::ToInt64(std::get<0>(looprange.t)).value();
     count = evaluate::ToInt64(std::get<1>(looprange.t)).value();
   }
 
   llvm::SmallVector<mlir::Value> applyees;
   for (auto &child : eval.getNestedEvaluations()) {
-    // Skip OmpEndLoopDirective
+    // Stop at OmpEndLoopDirective
     if (&child == &eval.getLastNestedEvaluation())
       break;
-    // Skip Compiler Directive
+    // Skip any Compiler Directive
     if (child.getIf<parser::CompilerDirective>())
       continue;
-    // Skip the
-    // if (nested.getIf<parser::NonLabelDoStmt>())
-    //  continue;
 
     // Emit the associated loop
     llvm::SmallVector<mlir::omp::CanonicalLoopOp> canonLoops;
@@ -2324,19 +2335,20 @@ static void genFuseOp(Fortran::lower::AbstractConverter &converter,
   // One generated loop + one for each loop not inside the specified looprange
   // if present
   llvm::SmallVector<mlir::Value> generatees;
-  int64_t numGeneratees = count == 0 ? 1 : applyees.size() - count + 1;
+  int64_t numGeneratees = !looprangeClause ? 1 : applyees.size() - count + 1;
   for (int i = 0; i < numGeneratees; i++) {
     auto fusedCLI = mlir::omp::NewCliOp::create(firOpBuilder, loc);
     generatees.push_back(fusedCLI);
   }
-  auto op = mlir::omp::FuseOp::create(firOpBuilder, loc, generatees, applyees);
 
-  if (count != 0) {
-    mlir::IntegerAttr firstAttr = firOpBuilder.getI32IntegerAttr(first);
-    mlir::IntegerAttr countAttr = firOpBuilder.getI32IntegerAttr(count);
-    op->setAttr("first", firstAttr);
-    op->setAttr("count", countAttr);
+  mlir::IntegerAttr firstAttr;
+  mlir::IntegerAttr countAttr;
+  if (looprangeClause) {
+    firstAttr = firOpBuilder.getI64IntegerAttr(first);
+    countAttr = firOpBuilder.getI64IntegerAttr(count);
   }
+  mlir::omp::FuseOp::create(firOpBuilder, loc, generatees, applyees, firstAttr,
+                            countAttr);
 }
 
 static void genUnrollOp(Fortran::lower::AbstractConverter &converter,

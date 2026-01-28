@@ -6556,7 +6556,6 @@ static void addAccessGroupMetadata(BasicBlock *Block, MDNode *AccessGroup,
 
 CanonicalLoopInfo *
 OpenMPIRBuilder::fuseLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops) {
-
   CanonicalLoopInfo *firstLoop = Loops.front();
   CanonicalLoopInfo *lastLoop = Loops.back();
   Function *F = firstLoop->getPreheader()->getParent();
@@ -6590,7 +6589,7 @@ OpenMPIRBuilder::fuseLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops) {
     }
     Value *condTP = Builder.CreateICmpSGT(fusedTripCount, origTripCount);
     fusedTripCount = Builder.CreateSelect(condTP, fusedTripCount, origTripCount,
-                                          Twine(".omp.fuse.tc"));
+                                          ".omp.fuse.tc");
   }
 
   // Generate new loop

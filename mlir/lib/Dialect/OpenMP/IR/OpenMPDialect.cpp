@@ -3455,15 +3455,10 @@ void NewCliOp::getAsmResultNames(OpAsmSetValueNameFn setNameFn) {
               llvm_unreachable("heuristic unrolling does not generate a loop");
             })
             .Case([&](FuseOp op) -> std::string {
-              unsigned int first = 0;
-              unsigned int count = 0;
-              if (op.getFirst() && op.getCount()) {
-                first = op.getFirst().getInt();
-                count = op.getCount().getInt();
-              }
               unsigned opnum = generator->getOperandNumber();
-              if ((first != 0 && opnum <= first - 1) ||
-                  (count != 0 && opnum >= first + 1))
+              // The position of the first loop to be fused is the same position
+              // as the resulting fused loop
+              if (op.getFirst().has_value() && opnum != op.getFirst().value())
                 return "canonloop_fuse";
               else
                 return "fused";
@@ -3861,10 +3856,10 @@ LogicalResult FuseOp::verify() {
   if (getApplyees().size() < 2)
     return emitOpError() << "must apply to at least two loops";
 
-  if (getFirst() && getCount()) {
-    unsigned int first = getFirst().getInt();
-    unsigned int count = getCount().getInt();
-    if (first + count - 1 > getApplyees().size())
+  if (getFirst().has_value() && getCount().has_value()) {
+    int64_t first = getFirst().value();
+    int64_t count = getCount().value();
+    if ((unsigned)(first + count - 1) > getApplyees().size())
       return emitOpError() << "the numbers of applyees must be at least first "
                               "minus one plus count attributes";
     if (!getGeneratees().empty() &&
@@ -3889,7 +3884,7 @@ LogicalResult FuseOp::verify() {
   }
   return success();
 }
-std::pair<unsigned, unsigned> FuseOp ::getApplyeesODSOperandIndexAndLength() {
+std::pair<unsigned, unsigned> FuseOp::getApplyeesODSOperandIndexAndLength() {
   return getODSOperandIndexAndLength(odsIndex_applyees);
 }
 
