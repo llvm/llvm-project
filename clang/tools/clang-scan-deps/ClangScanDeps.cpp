@@ -1085,7 +1085,6 @@ int clang_scan_deps_main(int argc, char **argv, const llvm::ToolContext &) {
             if (handleModuleResult(N, MaybeModuleDepsGraph, *FD, LocalIndex,
                                    DependencyOS, Errs)) {
               HadErrors = true;
-              break;
             }
           }
 
