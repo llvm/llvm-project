@@ -1766,33 +1766,6 @@ let TargetPrefix = "nvvm" in {
   }
 
   foreach relu = ["", "_relu"] in {
-    def int_nvvm_ff_to_s2f6x2_rn # relu # _satfinite :
-        PureIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty]>;
-
-    def int_nvvm_ff_to_s2f6x2_rn # relu # _satfinite_scale_n2_ue8m0 :
-        PureIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty, llvm_i16_ty]>;
-
-    def int_nvvm_bf16x2_to_s2f6x2_rn # relu # _satfinite :
-        PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty]>;
-
-    def int_nvvm_bf16x2_to_s2f6x2_rn # relu # _satfinite_scale_n2_ue8m0 :
-        PureIntrinsic<[llvm_i16_ty], [llvm_v2bf16_ty, llvm_i16_ty]>;
-
-    def int_nvvm_s2f6x2_to_bf16x2_rn # relu # _satfinite :
-        PureIntrinsic<[llvm_v2bf16_ty], [llvm_i16_ty]>;
-
-    def int_nvvm_s2f6x2_to_bf16x2_rn # relu # _satfinite_scale_n2_ue8m0 :
-        PureIntrinsic<[llvm_v2bf16_ty], [llvm_i16_ty, llvm_i16_ty]>;
-
-    // No satfinite variants
-    def int_nvvm_s2f6x2_to_bf16x2_rn # relu :
-        PureIntrinsic<[llvm_v2bf16_ty], [llvm_i16_ty]>;
-
-    def int_nvvm_s2f6x2_to_bf16x2_rn # relu # _scale_n2_ue8m0 :
-        PureIntrinsic<[llvm_v2bf16_ty], [llvm_i16_ty, llvm_i16_ty]>;
-  }
-
-  foreach relu = ["", "_relu"] in {
     def int_nvvm_ff_to_s2f6x2_rn # relu # _satfinite_scale_n2_ue8m0 :
         PureIntrinsic<[llvm_i16_ty], [llvm_float_ty, llvm_float_ty, llvm_i16_ty]>;
 
