@@ -243,14 +243,15 @@ constexpr bool test() {
     // operator-(default_sentinel , x) with different types
     std::array<int, 2> array1{0, 1};
     std::vector<int> array2{2, 3};
-    std::ranges::concat_view view(a, std::views::all(array1), std::views::all(array2));
+    std::array<int, 0> array3{};
+    std::ranges::concat_view view(a, std::views::all(array1), std::views::all(array2), std::views::all(array3));
     auto it1 = view.begin();
     auto res = std::default_sentinel_t{} - it1;
     assert(res == 9);
   }
 
   {
-    // operator-(x, default_sentinel )
+    // operator-(x, default_sentinel)
     std::array<int, 2> array1{0, 1};
     std::array<int, 2> array2{2, 3};
     std::array<int, 2> array3{4, 5};
@@ -258,6 +259,28 @@ constexpr bool test() {
     auto it1 = view.begin();
     auto res = it1 - std::default_sentinel_t{};
     assert(res == -6);
+  }
+
+  {
+    // operator-(x, default_sentinel) with empty ranges
+    std::array<int, 2> array1{0, 1};
+    std::array<int, 0> array2{};
+    std::array<int, 2> array3{4, 5};
+    std::ranges::concat_view view(std::views::all(array1), std::views::all(array2), std::views::all(array3));
+    auto it1 = view.begin();
+    auto res = it1 - std::default_sentinel_t{};
+    assert(res == -4);
+  }
+
+  {
+    // operator-(x, default_sentinel) with different types
+    std::array<int, 2> array1{0, 1};
+    std::array<int, 0> array2{};
+    std::vector<int> array3{4, 5};
+    std::ranges::concat_view view(std::views::all(array1), std::views::all(array2), std::views::all(array3));
+    auto it1 = view.begin();
+    auto res = it1 - std::default_sentinel_t{};
+    assert(res == -4);
   }
 
   {
