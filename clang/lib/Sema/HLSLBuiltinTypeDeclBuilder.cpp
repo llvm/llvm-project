@@ -17,6 +17,7 @@
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/HLSLResource.h"
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/SourceLocation.h"
@@ -48,6 +49,19 @@ static FunctionDecl *lookupBuiltinFunction(Sema &S, StringRef Name) {
   assert(R.isSingleResult() &&
          "Since this is a builtin it should always resolve!");
   return cast<FunctionDecl>(R.getFoundDecl());
+}
+
+static QualType lookupBuiltinType(Sema &S, StringRef Name, DeclContext *DC) {
+  IdentifierInfo &II =
+      S.getASTContext().Idents.get(Name, tok::TokenKind::identifier);
+  LookupResult Result(S, &II, SourceLocation(), Sema::LookupTagName);
+  S.LookupQualifiedName(Result, DC);
+  assert(!Result.empty() && "Builtin type not found");
+  QualType Ty =
+      S.getASTContext().getTypeDeclType(Result.getAsSingle<TypeDecl>());
+  S.RequireCompleteType(SourceLocation(), Ty,
+                        diag::err_tentative_def_incomplete_type);
+  return Ty;
 }
 
 CXXConstructorDecl *lookupCopyConstructor(QualType ResTy) {
@@ -1209,30 +1223,23 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addLoadMethods() {
   return *this;
 }
 
-BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addSampleMethods() {
+BuiltinTypeDeclBuilder &
+BuiltinTypeDeclBuilder::addSampleMethods(ResourceDimension Dim) {
   assert(!Record->isCompleteDefinition() && "record is already complete");
 
   ASTContext &AST = Record->getASTContext();
   QualType ReturnType = getFirstTemplateTypeParam();
 
-  // Look up SamplerState
-  IdentifierInfo &SamplerStateII = AST.Idents.get("SamplerState");
-  LookupResult Result(SemaRef, &SamplerStateII, SourceLocation(),
-                      Sema::LookupTagName);
-  SemaRef.LookupQualifiedName(Result, Record->getDeclContext());
-  assert(!Result.empty() && "SamplerState not found");
   QualType SamplerStateType =
-      AST.getTypeDeclType(Result.getAsSingle<TypeDecl>());
-  SemaRef.RequireCompleteType(SourceLocation(), SamplerStateType,
-                              diag::err_tentative_def_incomplete_type);
+      lookupBuiltinType(SemaRef, "SamplerState", Record->getDeclContext());
 
-  // TODO: The location type depends on the texture dimension.
-  // For Texture2D it is float2.
+  uint32_t VecSize = getResourceDimensions(Dim);
+
   QualType FloatTy = AST.FloatTy;
-  QualType Float2Ty = AST.getExtVectorType(FloatTy, 2);
+  QualType Float2Ty = AST.getExtVectorType(FloatTy, VecSize);
 
   QualType IntTy = AST.IntTy;
-  QualType Int2Ty = AST.getExtVectorType(IntTy, 2);
+  QualType Int2Ty = AST.getExtVectorType(IntTy, VecSize);
 
   auto *RT = SamplerStateType->getAsCXXRecordDecl();
   assert(RT);

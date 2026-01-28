@@ -66,17 +66,21 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
     // convert element type
     llvm::Type *ElemType = CGM.getTypes().ConvertTypeForMem(ContainedTy);
 
+    bool IsRawBuffer = ResAttrs.RawBuffer;
+    bool IsTexture = ResAttrs.ResourceDimension !=
+                     llvm::dxil::ResourceDimension::DimensionUnknown;
+    assert((!IsRawBuffer || !IsTexture) && "A resource cannot be both a raw "
+                                           "buffer and a texture.");
     llvm::StringRef TypeName = "dx.TypedBuffer";
-    if (ResAttrs.RawBuffer)
+    if (IsRawBuffer)
       TypeName = "dx.RawBuffer";
-    else if (ResAttrs.ResourceDimension !=
-             llvm::dxil::ResourceDimension::DimensionUnknown)
+    else if (IsTexture)
       TypeName = "dx.Texture";
 
     SmallVector<unsigned, 4> Ints = {/*IsWriteable*/ ResAttrs.ResourceClass ==
                                          llvm::dxil::ResourceClass::UAV,
                                      /*IsROV*/ ResAttrs.IsROV};
-    if (TypeName != "dx.RawBuffer") {
+    if (!IsRawBuffer) {
       const clang::Type *ElemType = ContainedTy->getUnqualifiedDesugaredType();
       if (ElemType->isVectorType())
         ElemType = cast<clang::VectorType>(ElemType)
@@ -85,7 +89,7 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
       Ints.push_back(/*IsSigned*/ ElemType->isSignedIntegerType());
     }
 
-    if (TypeName == "dx.Texture") {
+    if (IsTexture) {
       // Map ResourceDimension to dxil::ResourceKind
       llvm::dxil::ResourceKind RK = llvm::dxil::ResourceKind::Invalid;
       switch (ResAttrs.ResourceDimension) {
@@ -102,7 +106,7 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
         RK = llvm::dxil::ResourceKind::TextureCube;
         break;
       default:
-        break;
+        llvm_unreachable("Unsupported resource dimension for textur.");
       }
       Ints.push_back(static_cast<unsigned>(RK));
     }

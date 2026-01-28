@@ -3367,47 +3367,48 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     break;
   }
   case Builtin::BI__builtin_hlsl_resource_sample: {
-    if (SemaRef.checkArgCountRange(TheCall, 3, 5) ||
-        CheckResourceHandle(&SemaRef, TheCall, 0) ||
-        CheckResourceHandle(&SemaRef, TheCall, 1,
-                            [](const HLSLAttributedResourceType *ResType) {
-                              return ResType->getAttrs().ResourceClass !=
-                                     llvm::hlsl::ResourceClass::Sampler;
-                            }))
+    if (SemaRef.checkArgCountRange(TheCall, 3, 5))
+      return true;
+
+    if (CheckResourceHandle(
+            &SemaRef, TheCall, 0,
+            [](const HLSLAttributedResourceType *ResType) {
+              if (ResType->getAttrs().ResourceDimension ==
+                  llvm::dxil::ResourceDimension::DimensionUnknown) {
+                return true;
+              }
+              return false;
+            }))
+      return true;
+
+    if (CheckResourceHandle(
+            &SemaRef, TheCall, 1,
+            [](const HLSLAttributedResourceType *ResType) {
+              if (ResType->getAttrs().ResourceClass !=
+                  llvm::hlsl::ResourceClass::Sampler)
+                return true;
+              llvm::dbgs() << "The sampler has the wrong resource class.\n";
+              return false;
+            }))
       return true;
 
     auto *ResourceTy =
         TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
 
-    unsigned ExpectedDim = 0;
-    switch (ResourceTy->getAttrs().ResourceDimension) {
-    case llvm::dxil::ResourceDimension::Dimension1D:
-      ExpectedDim = 1;
-      break;
-    case llvm::dxil::ResourceDimension::Dimension2D:
-      ExpectedDim = 2;
-      break;
-    case llvm::dxil::ResourceDimension::Dimension3D:
-    case llvm::dxil::ResourceDimension::DimensionCube:
-      ExpectedDim = 3;
-      break;
-    case llvm::dxil::ResourceDimension::DimensionUnknown:
-      break;
-    }
+    unsigned ExpectedDim =
+        getResourceDimensions(ResourceTy->getAttrs().ResourceDimension);
+    if (CheckVectorElementCount(&SemaRef, TheCall->getArg(2)->getType(),
+                                SemaRef.Context.FloatTy, ExpectedDim,
+                                TheCall->getArg(2)->getBeginLoc()))
+      return true;
 
-    if (ExpectedDim != 0) {
-      if (CheckVectorElementCount(&SemaRef, TheCall->getArg(2)->getType(),
-                                  SemaRef.Context.FloatTy, ExpectedDim,
-                                  TheCall->getArg(2)->getBeginLoc()))
+    if (TheCall->getNumArgs() > 3) {
+      if (CheckVectorElementCount(&SemaRef, TheCall->getArg(3)->getType(),
+                                  SemaRef.Context.IntTy, ExpectedDim,
+                                  TheCall->getArg(3)->getBeginLoc()))
         return true;
-
-      if (TheCall->getNumArgs() > 3) {
-        if (CheckVectorElementCount(&SemaRef, TheCall->getArg(3)->getType(),
-                                    SemaRef.Context.IntTy, ExpectedDim,
-                                    TheCall->getArg(3)->getBeginLoc()))
-          return true;
-      }
     }
+
     if (TheCall->getNumArgs() > 4) {
       QualType ClampTy = TheCall->getArg(4)->getType();
       if (!ClampTy->isFloatingType() || ClampTy->isVectorType()) {
@@ -3418,6 +3419,9 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       }
     }
 
+    assert(ResourceTy->hasContainedType() &&
+           "Expecting a contained type for resource with a the dimension "
+           "attribute.");
     QualType ReturnType = ResourceTy->getContainedType();
     TheCall->setType(ReturnType);
 
