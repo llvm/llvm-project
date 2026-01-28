@@ -23,6 +23,7 @@
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
 #include "mlir/IR/Operation.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
+#include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
@@ -80,23 +81,16 @@ static void addAllValuelessEffects(
 
 /// Looks through known "view-like" ops to find the base memref.
 static Value getBase(Value v) {
-  while (true) {
-    Operation *definingOp = v.getDefiningOp();
-    if (!definingOp)
-      break;
-
-    bool shouldContinue = TypeSwitch<Operation *, bool>(v.getDefiningOp())
-                              .Case([&](ViewLikeOpInterface op) {
-                                v = op.getViewSource();
-                                return true;
-                              })
-                              .Case([&](memref::TransposeOp op) {
-                                v = op.getIn();
-                                return true;
-                              })
-                              .Default(false);
-    if (!shouldContinue)
-      break;
+  while (Operation *definingOp = v.getDefiningOp()) {
+    if (auto viewLike = dyn_cast<ViewLikeOpInterface>(definingOp)) {
+      v = viewLike.getViewSource();
+      continue;
+    }
+    if (auto transposeOp = dyn_cast<memref::TransposeOp>(definingOp)) {
+      v = transposeOp.getIn();
+      continue;
+    }
+    break;
   }
   return v;
 }
@@ -182,13 +176,9 @@ static bool isBarrierWithCommonFencedMemory(
   if (!fencedAddressSpaces)
     return true;
 
-  // Check if there's any intersection between the two sets.
-  for (Attribute ourSpace : *fencedAddressSpaces) {
-    if (llvm::is_contained(*otherFencedSpaces, ourSpace))
-      return true;
-  }
-
-  return false;
+  return llvm::any_of(
+      otherFencedSpaces->getAsRange<gpu::AddressSpaceAttr>(),
+      [&](auto a) { return llvm::is_contained(*fencedAddressSpaces, a); });
 }
 
 /// Collect the memory effects of the given op in 'effects'. Returns 'true' if
