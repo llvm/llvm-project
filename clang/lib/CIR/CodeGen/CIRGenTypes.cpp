@@ -508,9 +508,8 @@ mlir::Type CIRGenTypes::convertType(QualType type) {
     // In classic codegen, arrays of unsized types which it assumes are "arrays
     // of undefined struct type" are lowered to arrays of i8 "just to have a
     // concrete type", but in CIR, we can get here with abstract types like
-    // !cir.method and !cir.data_member, so let's just create an array of the
-    // type we have and handle it during lowering if we still don't have a sized
-    // type.
+    // !cir.method and !cir.data_member, so we just create an array of the type
+    // and handle it during lowering if we still don't have a sized type.
     resultType = cir::ArrayType::get(elemTy, arrTy->getSize().getZExtValue());
     break;
   }

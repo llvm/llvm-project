@@ -271,9 +271,7 @@ mlir::LogicalResult CIRGlobalOpABILowering::matchAndRewrite(
     loweredInit = lowerModule->getCXXABI().lowerMethodConstant(
         init, layout, *getTypeConverter());
   } else if (auto arrTy = mlir::dyn_cast<cir::ArrayType>(ty)) {
-    cir::ConstArrayAttr init =
-        mlir::cast_if_present<cir::ConstArrayAttr>(op.getInitialValueAttr());
-    assert(init && "array initial value must be a constant array");
+    auto init = mlir::cast<cir::ConstArrayAttr>(op.getInitialValueAttr());
     auto arrayElts = mlir::cast<ArrayAttr>(init.getElts());
     SmallVector<mlir::Attribute> loweredElements;
     loweredElements.reserve(arrTy.getSize());
