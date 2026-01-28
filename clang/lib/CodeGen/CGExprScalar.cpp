@@ -5663,13 +5663,9 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
 
     // If the dead side doesn't have labels we need, just emit the Live part.
     if (!CGF.ContainsLabel(dead)) {
-      if (CondExprBool) {
-        if (llvm::EnableSingleByteCoverage) {
-          CGF.incrementProfileCounter(lhsExpr);
-          CGF.incrementProfileCounter(rhsExpr);
-        }
-        CGF.incrementProfileCounter(E);
-      }
+      CGF.incrementProfileCounter(CondExprBool ? CGF.UseExecPath
+                                               : CGF.UseSkipPath,
+                                  E, /*UseBoth=*/true);
       Value *Result = Visit(live);
       CGF.markStmtMaybeUsed(dead);
 
@@ -5751,17 +5747,13 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   // If this is a really simple expression (like x ? 4 : 5), emit this as a
   // select instead of as control flow.  We can only do this if it is cheap and
   // safe to evaluate the LHS and RHS unconditionally.
-  if (isCheapEnoughToEvaluateUnconditionally(lhsExpr, CGF) &&
+  if (!llvm::EnableSingleByteCoverage &&
+      isCheapEnoughToEvaluateUnconditionally(lhsExpr, CGF) &&
       isCheapEnoughToEvaluateUnconditionally(rhsExpr, CGF)) {
     llvm::Value *CondV = CGF.EvaluateExprAsBool(condExpr);
     llvm::Value *StepV = Builder.CreateZExtOrBitCast(CondV, CGF.Int64Ty);
 
-    if (llvm::EnableSingleByteCoverage) {
-      CGF.incrementProfileCounter(lhsExpr);
-      CGF.incrementProfileCounter(rhsExpr);
-      CGF.incrementProfileCounter(E);
-    } else
-      CGF.incrementProfileCounter(E, StepV);
+    CGF.incrementProfileCounter(E, StepV);
 
     llvm::Value *LHS = Visit(lhsExpr);
     llvm::Value *RHS = Visit(rhsExpr);
@@ -5793,11 +5785,7 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   if (auto E = CGF.stripCond(condExpr); CGF.isMCDCDecisionExpr(E))
     CGF.maybeUpdateMCDCTestVectorBitmap(E);
 
-  if (llvm::EnableSingleByteCoverage)
-    CGF.incrementProfileCounter(lhsExpr);
-  else
-    CGF.incrementProfileCounter(E);
-
+  CGF.incrementProfileCounter(CGF.UseExecPath, E);
   eval.begin(CGF);
   Value *LHS = Visit(lhsExpr);
   eval.end(CGF);
@@ -5813,9 +5801,7 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   if (auto E = CGF.stripCond(condExpr); CGF.isMCDCDecisionExpr(E))
     CGF.maybeUpdateMCDCTestVectorBitmap(E);
 
-  if (llvm::EnableSingleByteCoverage)
-    CGF.incrementProfileCounter(rhsExpr);
-
+  CGF.incrementProfileCounter(CGF.UseSkipPath, E);
   eval.begin(CGF);
   Value *RHS = Visit(rhsExpr);
   eval.end(CGF);
@@ -5833,11 +5819,6 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   llvm::PHINode *PN = Builder.CreatePHI(LHS->getType(), 2, "cond");
   PN->addIncoming(LHS, LHSBlock);
   PN->addIncoming(RHS, RHSBlock);
-
-  // When single byte coverage mode is enabled, add a counter to continuation
-  // block.
-  if (llvm::EnableSingleByteCoverage)
-    CGF.incrementProfileCounter(E);
 
   return PN;
 }

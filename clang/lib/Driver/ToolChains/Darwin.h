@@ -355,6 +355,7 @@ public:
   // the argument translation business.
   mutable bool TargetInitialized;
 
+  // TODO: Are these useful? Can we use Triple::OSType/EnvironmentType instead?
   enum DarwinPlatformKind {
     MacOS,
     IPhoneOS,

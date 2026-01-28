@@ -2975,6 +2975,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_ilogb",
+    hdrs = ["src/__support/math/ilogb.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_ilogbf16",
     hdrs = ["src/__support/math/ilogbf16.h"],
     deps = [
@@ -3046,6 +3056,17 @@ libc_support_library(
         ":__support_common",
         ":__support_fputil_manipulation_functions",
         ":__support_macros_config",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_llogbf16",
+    hdrs = ["src/__support/math/llogbf16.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":llvm_libc_macros_float16_macros",
     ],
 )
 
@@ -3596,6 +3617,20 @@ libc_support_library(
         ":__support_macros_config",
         ":__support_macros_optimization",
         ":__support_math_sinhfcoshf_utils",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_sinpif",
+    hdrs = ["src/__support/math/sinpif.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_macros_optimization",
+        ":__support_sincosf_utils",
     ],
 )
 
@@ -4720,7 +4755,12 @@ libc_math_function(
     ],
 )
 
-libc_math_function(name = "ilogb")
+libc_math_function(
+    name = "ilogb",
+    additional_deps = [
+        ":__support_math_ilogb",
+    ],
+)
 
 libc_math_function(
     name = "ilogbf",
@@ -4789,7 +4829,10 @@ libc_math_function(name = "llogbl")
 
 libc_math_function(name = "llogbf128")
 
-libc_math_function(name = "llogbf16")
+libc_math_function(
+    name = "llogbf16",
+    additional_deps = [":__support_math_llogbf16"],
+)
 
 libc_math_function(name = "llrint")
 
@@ -5236,7 +5279,7 @@ libc_math_function(
 libc_math_function(
     name = "sinpif",
     additional_deps = [
-        ":__support_sincosf_utils",
+        ":__support_math_sinpif",
     ],
 )
 

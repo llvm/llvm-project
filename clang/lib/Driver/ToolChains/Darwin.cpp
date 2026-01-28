@@ -1914,14 +1914,16 @@ struct DarwinPlatform {
   DarwinSDKInfo inferSDKInfo() {
     assert(Kind == InferredFromSDK && "can infer SDK info only");
     llvm::Triple::OSType OS = getOSFromPlatform(Platform);
+    llvm::Triple::EnvironmentType EnvironmentType =
+        getEnvTypeFromEnvKind(Environment);
     StringRef PlatformPrefix =
         (Platform == DarwinPlatformKind::DriverKit) ? "/System/DriverKit" : "";
     return DarwinSDKInfo(
-        "", getOSVersion(), /*MaximumDeploymentTarget=*/
+        "", OS, EnvironmentType, getOSVersion(), /*MaximumDeploymentTarget=*/
         VersionTuple(getOSVersion().getMajor(), 0, 99),
         {DarwinSDKInfo::SDKPlatformInfo(llvm::Triple::Apple, OS,
-                                        llvm::Triple::UnknownEnvironment,
-                                        llvm::Triple::MachO, PlatformPrefix)});
+                                        EnvironmentType, llvm::Triple::MachO,
+                                        PlatformPrefix)});
   }
 
 private:
@@ -1980,6 +1982,19 @@ private:
       return llvm::Triple::XROS;
     }
     llvm_unreachable("Unknown DarwinPlatformKind enum");
+  }
+
+  static llvm::Triple::EnvironmentType
+  getEnvTypeFromEnvKind(DarwinEnvironmentKind EnvironmentKind) {
+    switch (EnvironmentKind) {
+    case DarwinEnvironmentKind::NativeEnvironment:
+      return llvm::Triple::UnknownEnvironment;
+    case DarwinEnvironmentKind::Simulator:
+      return llvm::Triple::Simulator;
+    case DarwinEnvironmentKind::MacCatalyst:
+      return llvm::Triple::MacABI;
+    }
+    llvm_unreachable("Unknown DarwinEnvironmentKind enum");
   }
 
   SourceKind Kind;
@@ -3138,9 +3153,7 @@ sdkSupportsBuiltinModules(const std::optional<DarwinSDKInfo> &SDKInfo) {
     // the old behavior which is to not use builtin modules.
     return false;
 
-  DarwinSDKInfo::SDKPlatformInfo PlatformInfo =
-      SDKInfo->getCanonicalPlatformInfo();
-  switch (PlatformInfo.getEnvironment()) {
+  switch (SDKInfo->getEnvironment()) {
   case llvm::Triple::UnknownEnvironment:
   case llvm::Triple::Simulator:
   case llvm::Triple::MacABI:
@@ -3153,7 +3166,7 @@ sdkSupportsBuiltinModules(const std::optional<DarwinSDKInfo> &SDKInfo) {
   }
 
   VersionTuple SDKVersion = SDKInfo->getVersion();
-  switch (PlatformInfo.getOS()) {
+  switch (SDKInfo->getOS()) {
   // Existing SDKs added support for builtin modules in the fall
   // 2024 major releases.
   case llvm::Triple::MacOSX:
