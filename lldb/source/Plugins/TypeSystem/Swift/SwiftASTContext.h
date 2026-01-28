@@ -1087,7 +1087,8 @@ public:
 
   SwiftASTContextForExpressions(std::string description,
                                 lldb::ModuleSP module_sp,
-                                TypeSystemSwiftTypeRefSP typeref_typesystem);
+                                TypeSystemSwiftTypeRefSP typeref_typesystem,
+                                bool playground);
   virtual ~SwiftASTContextForExpressions();
 
   UserExpression *GetUserExpression(llvm::StringRef expr,
@@ -1140,6 +1141,7 @@ protected:
   /// These are the names of modules that we have loaded by hand into
   /// the Contexts we make for parsing.
   HandLoadedModuleSet m_hand_loaded_modules;
+  bool m_playground = false;
 };
 
 } // namespace lldb_private

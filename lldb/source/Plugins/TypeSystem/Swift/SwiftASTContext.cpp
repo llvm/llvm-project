@@ -2871,7 +2871,7 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
     }
     swift_ast_sp.reset(new SwiftASTContextForExpressions(
         m_description, module_sp,
-        typeref_typesystem.GetTypeSystemSwiftTypeRef()));
+        typeref_typesystem.GetTypeSystemSwiftTypeRef(), playground));
     // This is a scratch AST context, mark it as such.
     swift_ast_sp->m_is_scratch_context = true;
     auto &lang_opts = swift_ast_sp->GetLanguageOptions();
@@ -3164,8 +3164,8 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
   if (target_sp) {
     discover_implicit_search_paths =
         target_sp->GetSwiftDiscoverImplicitSearchPaths();
-    use_all_compiler_flags =
-        !got_serialized_options || target_sp->GetUseAllCompilerFlags();
+    use_all_compiler_flags = !got_serialized_options ||
+                             target_sp->GetUseAllCompilerFlags() || playground;
 
     const bool is_system = false;
 
@@ -3178,22 +3178,29 @@ lldb::TypeSystemSP SwiftASTContext::CreateInstance(
   if (module_sp) {
     std::string error;
     StringRef module_filter = TypeSystemSwiftTypeRef::GetSwiftModuleFor(sc);
-    std::vector<std::string> extra_clang_args;
-    // In a per-module fallback context, the module the "main" module of that
-    // context.
-    bool is_main_executable =
-        target_sp ? (target_sp->GetExecutableModulePointer() == module_sp.get())
-                  : true;
-    ProcessModule(*module_sp, m_description, discover_implicit_search_paths,
-                  use_all_compiler_flags, is_main_executable, module_filter,
-                  triple, plugin_search_options, module_search_paths,
-                  framework_search_paths, extra_clang_args, error);
-    if (!error.empty())
-      swift_ast_sp->AddDiagnostic(eSeverityError, error);
-    StringRef override_opts =
-        target_sp ? target_sp->GetSwiftClangOverrideOptions() : "";
-    swift_ast_sp->AddExtraClangArgs(extra_clang_args, module_search_paths,
-                                    framework_search_paths, override_opts);
+    // An empty module filter means we're in a non-Swift "*" context.
+    // Only scan all modules if user opts in.
+    bool scan_module = !module_filter.empty() || use_all_compiler_flags;
+    if (scan_module) {
+      std::vector<std::string> extra_clang_args;
+      // In a per-module fallback context, the module the "main" module of that
+      // context.
+      bool is_main_executable =
+          target_sp
+              ? (target_sp->GetExecutableModulePointer() == module_sp.get())
+              : true;
+      ProcessModule(*module_sp, m_description, discover_implicit_search_paths,
+                    /*use_all_compiler_flags*/ true, is_main_executable,
+                    module_filter, triple, plugin_search_options,
+                    module_search_paths, framework_search_paths,
+                    extra_clang_args, error);
+      if (!error.empty())
+        swift_ast_sp->AddDiagnostic(eSeverityError, error);
+      StringRef override_opts =
+          target_sp ? target_sp->GetSwiftClangOverrideOptions() : "";
+      swift_ast_sp->AddExtraClangArgs(extra_clang_args, module_search_paths,
+                                      framework_search_paths, override_opts);
+    }
   }
 
   // Now fold any extra options we were passed. This has to be done
@@ -5653,7 +5660,8 @@ void SwiftASTContextForExpressions::ModulesDidLoad(ModuleList &module_list) {
 
   bool discover_implicit_search_paths =
       target_sp->GetSwiftDiscoverImplicitSearchPaths();
-  bool use_all_compiler_flags = target_sp->GetUseAllCompilerFlags();
+  bool use_all_compiler_flags =
+      target_sp->GetUseAllCompilerFlags() || m_playground;
   unsigned num_images = module_list.GetSize();
   for (size_t mi = 0; mi != num_images; ++mi) {
     std::vector<swift::PluginSearchOption> plugin_search_options;
@@ -9101,8 +9109,9 @@ SwiftASTContext::GetASTVectorForModule(const Module *module) {
 
 SwiftASTContextForExpressions::SwiftASTContextForExpressions(
     std::string description, ModuleSP module_sp,
-    TypeSystemSwiftTypeRefSP typeref_typesystem)
-    : SwiftASTContext(std::move(description), module_sp, typeref_typesystem) {
+    TypeSystemSwiftTypeRefSP typeref_typesystem, bool playground)
+    : SwiftASTContext(std::move(description), module_sp, typeref_typesystem),
+      m_playground(playground) {
   assert(llvm::isa<TypeSystemSwiftTypeRefForExpressions>(
       m_typeref_typesystem.lock().get()));
 }
