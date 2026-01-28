@@ -145,7 +145,8 @@ public:
     if (It != GlobalIsUsedByFun.end())
       return It->second;
 
-    const static SmallPtrSet<const Function *, 4> Empty;
+    using FunctionSetType = typename decltype(GlobalIsUsedByFun)::mapped_type;
+    const static FunctionSetType Empty;
     return Empty;
   }
 };
