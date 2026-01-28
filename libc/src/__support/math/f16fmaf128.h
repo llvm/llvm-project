@@ -1,4 +1,4 @@
-//===-- Implementation header for f16fmaf128 ------------------------*- C++ -*-===//
+//===-- Implementation header for f16fmaf128 --------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,8 +11,7 @@
 
 #include "include/llvm-libc-macros/float128-macros.h"
 #include "include/llvm-libc-macros/float16-macros.h"
-#include "include/llvm-libc-types/float128.h"
-#include "include/llvm-libc-types/float16.h"
+
 
 #ifdef LIBC_TYPES_HAS_FLOAT128
 #ifdef LIBC_TYPES_HAS_FLOAT16

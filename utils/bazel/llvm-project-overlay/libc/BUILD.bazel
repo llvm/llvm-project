@@ -4457,7 +4457,7 @@ libc_math_function(
 libc_math_function(
     name = "f16fmaf128",
     additional_deps = [
-        ":__support_math_f16fmaf128",   
+        ":__support_math_f16fmaf128",
     ],
 )
 

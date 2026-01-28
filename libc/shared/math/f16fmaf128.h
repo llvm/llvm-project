@@ -1,4 +1,3 @@
-
 //===-- Shared f16fmaf128 function -------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
@@ -17,8 +16,6 @@
 #ifdef LIBC_TYPES_HAS_FLOAT128
 
 #include "src/__support/math/f16fmaf128.h"
-
-
 
 namespace LIBC_NAMESPACE_DECL {
 namespace shared {
