@@ -258,6 +258,11 @@ function(runtime_default_target)
     # The target libomp-mod is a dependee of check-flang needed to run its
     # OpenMP tests
     list(APPEND extra_targets "libomp-mod")
+
+    # When building `ninja doxygen`, also build openmp's doxygen, just like
+    # `ninja check` runs the runtimes' checks.
+    # TODO: Generalize for all runtimes, but currently openmp is the only
+    #       runtime that has a doxygen target.
     if (LLVM_ENABLE_DOXYGEN)
       list(APPEND extra_targets "doxygen-openmp")
       if (TARGET doxygen)
