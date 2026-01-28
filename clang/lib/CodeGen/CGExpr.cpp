@@ -4559,7 +4559,7 @@ static Address emitArraySubscriptGEP(CodeGenFunction &CGF, Address addr,
                                      bool signedIndices, SourceLocation loc,
                                      CharUnits align,
                                      const llvm::Twine &name = "arrayidx") {
-  if (arrayType && inbounds && CGF.getLangOpts().EmitStructuredGEP)
+  if (inbounds && CGF.getLangOpts().EmitStructuredGEP)
     return RawAddress(CGF.Builder.CreateStructuredGEP(arrayType,
                                                       addr.emitRawPointer(CGF),
                                                       indices.drop_front()),
