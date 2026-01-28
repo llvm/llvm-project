@@ -1461,7 +1461,7 @@ private:
 } // namespace
 
 LogicalResult ResolveLayoutConflicts::run() {
-  // Scan all operations in the parent operation and resolve layout conflicts at
+  // Scan all operations in the parent op and resolve layout conflicts at
   // tensor descriptor and vector use points.
   auto r = parentOp->walk([&](Operation *op) -> WalkResult {
     for (OpOperand &operand : op->getOpOperands()) {
@@ -1529,7 +1529,7 @@ ResolveLayoutConflicts::resolveTensorDescConsumer(OpOperand &operand) {
   }
   Attribute currLayout = currTDescType.getLayout();
   Attribute expectedLayout = anchorOp.getAnchorLayout();
-  // A conflict exists in tensot descriptor operand if tensor descriptor's
+  // A conflict exists in tensor descriptor operand if tensor descriptor's
   // layout is different from the anchor layout expected by the consumer.
   if (expectedLayout && currLayout && expectedLayout != currLayout) {
     // Try to get the defining CreateNdDescOp of the tensor descriptor.
