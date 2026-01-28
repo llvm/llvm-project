@@ -31,9 +31,9 @@ int callable(int x) {
   return x + 1;
 }
 
-// DEFAULT: attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,42" "kernel" "no-trapping-math"="true" "omp_target_thread_limit"="42" "sample-profile-suffix-elision-policy"="selected", "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
-// CPU: attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,42" "kernel" "no-trapping-math"="true" "omp_target_thread_limit"="42" "sample-profile-suffix-elision-policy"="selected", "stack-protector-buffer-size"="8" "target-cpu"="gfx900" "uniform-work-group-size"="true" }
-// NOIEEE: attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,42" "amdgpu-ieee"="false" "kernel" "no-nans-fp-math"="true" "no-trapping-math"="true" "omp_target_thread_limit"="42" "sample-profile-suffix-elision-policy"="selected", "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
+// DEFAULT: attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,42" "kernel" "no-trapping-math"="true" "omp_target_thread_limit"="42" "sample-profile-suffix-elision-policy"="selected" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
+// CPU: attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,42" "kernel" "no-trapping-math"="true" "omp_target_thread_limit"="42" "sample-profile-suffix-elision-policy"="selected" "stack-protector-buffer-size"="8" "target-cpu"="gfx900" "uniform-work-group-size"="true" }
+// NOIEEE: attributes #0 = { convergent mustprogress noinline norecurse nounwind optnone "amdgpu-flat-work-group-size"="1,42" "amdgpu-ieee"="false" "kernel" "no-nans-fp-math"="true" "no-trapping-math"="true" "omp_target_thread_limit"="42" "sample-profile-suffix-elision-policy"="selected" "stack-protector-buffer-size"="8" "uniform-work-group-size"="true" }
 
 // DEFAULT: attributes #2 = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" }
 // CPU: attributes #2 = { convergent mustprogress noinline nounwind optnone "no-trapping-math"="true" "stack-protector-buffer-size"="8" "target-cpu"="gfx900" }
