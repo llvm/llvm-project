@@ -8,7 +8,7 @@ ClangIR Cleanup and Exception Handling Design
 Overview
 ========
 
-This document describes the proposed new design for C++ cleanups and exception
+This document describes the design for C++ cleanups and exception
 handling representation and lowering in the CIR dialect. The initial CIR
 generation will follow the general structure of the cleanup and exception
 handling code in Clang's LLVM IR generation. In particular, we will continue
@@ -41,14 +41,14 @@ operation, ``cir.cleanup.scope``.
 
   cir.cleanup.scope {
     // body region
-  } cleanup [eh_only] {
+  } cleanup [normal|eh|all] {
     // cleanup instructions
   }
 
 Execution begins with the first operation in the body region and continues
 according to normal control flow semantics until a terminating operation
-(``cir.yield``, ``cir.break``, ``cir.return``) is encountered or an exception is
-thrown.
+(``cir.yield``, ``cir.break``, ``cir.return``, ``cir.continue``) is encountered
+or an exception is thrown.
 
 If the cleanup region is marked as ``eh_only``, normal control flow exits from
 the body region skip the cleanup region and continue to their normal destination
@@ -57,16 +57,33 @@ marked as ``eh_only``, normal control flow exits from the body region must
 execute the cleanup region before control is transferred to the destination
 implied by the operation.
 
-When an exception is thrown from within a cleanup scope, the cleanup region
-must be executed before handling of the exception continues. If the cleanup
-scope is nested within another cleanup scope, the cleanup region of the inner
-scope is executed, followed by the cleanup region of the outer scope, and
-handling continues according to these rules. If the cleanup scope is nested
-within a try operation, the cleanup region is executed before control is
-transferred to the catch handlers. If an exception is thrown from within a
-cleanup region that is not nested within either another cleanup region or a
-try operation, the cleanup region is executed and then exception unwinding
-continues as if a ``cir.resume`` operation had been executed.
+If a `cir.goto` operation occurs within a cleanup scope, the behavior depends
+on the target of the operation. If the target is within the same cleanup scope,
+control is transferred to the target block directly. If the target is not within
+the cleanup scope, control is transferred to the cleanup region according to the
+rules described above for normal exits before branching to the destination of
+the goto operation.
+
+While we do not expect to encounter `cir.br` or `cir.brcond` operations that
+exit a cleanup scope, if such a thing did happen, it would follow the rules
+described above for `cir.goto` operations.
+
+The `cir.indirect_br` operation is not permitted within a cleanup scope.
+
+When an exception is thrown from within a cleanup scope and not caught within
+the scope, the cleanup region must be executed before handling of the exception
+continues. If the cleanup scope is nested within another cleanup scope, the
+cleanup region of the inner scope is executed, followed by the cleanup region
+of the outer scope, and handling continues according to these rules. If the
+cleanup scope is nested within a try operation, the cleanup region is executed
+before control is transferred to the catch handlers. If an exception is thrown
+from within a cleanup region that is not nested within either another cleanup
+region or a try operation, the cleanup region is executed and then exception
+unwinding continues as if a ``cir.resume`` operation had been executed.
+
+If a `cir.resume` operation occurs within a cleanup scope, for example, if the
+scope contains a try operation with uncaught exception types, the `cir.resume`
+operation will unwind to the cleanup region of the enclosing cleanup scope.
 
 Note that this design eliminates the need for synthetic try operations, such
 as were used to represent calls within a cleanup scope in the ClangIR
@@ -101,8 +118,10 @@ Example: Automatic storage object cleanup
     cir.call @_ZN9SomeClassC1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
     cir.cleanup.scope {
       cir.call @_ZN9SomeClass11doSomethingEv(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-    } cleanup {
+      cir.yield
+    } cleanup normal {
       cir.call @_ZN9SomeClassD1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.yield
     }
     cir.return
   }
@@ -150,14 +169,20 @@ Example: Multiple automatic objects
         cir.call @_ZN9SomeClassC1Ev(%2) : (!cir.ptr<!rec_SomeClass>) -> ()
         cir.cleanup.scope {
           cir.call @_ZN9SomeClass11doSomethingEv(%2) : (!cir.ptr<!rec_SomeClass>) -> ()
-        } cleanup {
+          cir.yield
+        } cleanup normal {
           cir.call @_ZN9SomeClassD1Ev(%2) : (!cir.ptr<!rec_SomeClass>) -> ()
+          cir.yield
         }
-      } cleanup {
+        cir.yield
+      } cleanup normal {
         cir.call @_ZN9SomeClassD1Ev(%1) : (!cir.ptr<!rec_SomeClass>) -> ()
+        cir.yield
       }
-    } cleanup {
+      cir.yield
+    } cleanup normal {
       cir.call @_ZN9SomeClassD1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.yield
     }
     cir.return
   }
@@ -236,8 +261,10 @@ Example: Branch through cleanup
             }
             %6 = cir.call @_ZN9SomeClass3getEv(%5) : (!cir.ptr<!rec_SomeClass>) -> !s32i
             cir.store align(4) %6, %1 : !s32i, !cir.ptr<!s32i>
-          } cleanup {
+            cir.yield
+          } cleanup normal {
             cir.call @_ZN9SomeClassD1Ev(%5) : (!cir.ptr<!rec_SomeClass>) -> ()
+            cir.yield
           }
         }
         cir.yield
@@ -304,9 +331,10 @@ Example: EH-only cleanup
     cir.cleanup.scope {
       cir.call exception @_Z1fv() : () -> ()
       cir.yield
-    } cleanup eh_only {
+    } cleanup eh {
       %3 = cir.base_class_addr %1 : !cir.ptr<!rec_Derived> nonnull [0] -> !cir.ptr<!rec_Base>
       cir.call @_ZN4BaseD2Ev(%3) : (!cir.ptr<!rec_Base>) -> ()
+      cir.resume
     }
     cir.return
   }
@@ -450,8 +478,10 @@ Example: Try-catch with cleanup
         cir.call @_ZN9SomeClassC1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
         cir.cleanup.scope {
           cir.call @_ZN9SomeClass11doSomethingEv(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-        } cleanup {
+          cir.yield
+        } cleanup all {
           cir.call @_ZN9SomeClassD1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+          cir.yield
         }
       } catch all {
         cir.yield
@@ -496,8 +526,10 @@ Example: Try-catch within a cleanup region
           cir.resume
         }
       }
-    } cleanup {
+      cir.yield
+    } cleanup all {
       cir.call @_ZN9SomeClassD1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.yield
     }
     cir.return
   }
@@ -569,7 +601,7 @@ scope's cleanup region to perform the partial array cleanup, as follows
         %6 = cir.cmp(ne, %5, %3) : !cir.ptr<!rec_SomeClass>, !cir.bool
         cir.condition(%6)
       }
-    } cleanup eh_only {
+    } cleanup eh {
       cir.while {
         %5 = cir.load %4 : !cir.ptr<!cir.ptr<!rec_SomeClass>>, !cir.ptr<!rec_SomeClass>
         %6 = cir.cmp(ne, %5, %2) : !cir.ptr<!rec_SomeClass>, !cir.bool
@@ -644,9 +676,13 @@ thrown and is passed as the argument to the ``cir.begin_cleanup``,
 .. code-block::
 
   cir.eh.dispatch %eh_token : !cir.eh_token [
-    cir.global_view<@_ZTIi> : ^bb6
+    catch (#cir.global_view<@_ZTIi> : !u32i) : ^bb6
     catch_all : ^bb7
-    unwind : ^bb8
+  ]
+
+  cir.eh.dispatch %eh_token : !cir.eh_token [
+    catch (#cir.global_view<@_ZTIi> : !u32i) : ^bb6
+    unwind : ^bb7
   ]
 
 The ``cir.eh.dispatch`` operation behaves similarly to the LLVM IR switch
@@ -723,8 +759,10 @@ Example: Try-catch with cleanup
         cir.call @_ZN9SomeClassC1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
         cir.cleanup.scope {
           cir.call @_ZN9SomeClass11doSomethingEv(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-        } cleanup {
+          cir.yield
+        } cleanup all {
           cir.call @_ZN9SomeClassD1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+          cir.yield
         }
       } catch all {
         cir.yield
@@ -801,8 +839,10 @@ Example: Cleanup with unhandled exception
     cir.call @_ZN9SomeClassC1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
     cir.cleanup.scope {
       cir.call @_ZN9SomeClass11doSomethingEv(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
-    } cleanup normal eh {
+      cir.yield
+    } cleanup all {
       cir.call @_ZN9SomeClassD1Ev(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+      cir.yield
     }
     cir.return
   }
@@ -890,8 +930,10 @@ Example: Shared cleanups
             }
             %6 = cir.call @_ZN9SomeClass3getEv(%5) : (!cir.ptr<!rec_SomeClass>) -> !s32i
             cir.store align(4) %6, %1 : !s32i, !cir.ptr<!s32i>
-          } cleanup {
+            cir.yield
+          } cleanup all {
             cir.call @_ZN9SomeClassD1Ev(%5) : (!cir.ptr<!rec_SomeClass>) -> ()
+            cir.yield
           }
         }
         cir.yield
@@ -1110,6 +1152,85 @@ dispatch block (``^bb6``), which branches to the catch all handler block
 ``__cxa_end_catch`` and then continues to the normal continuation block
 (``^bb8``).
 
+Example: Try-catch with multiple catch handlers
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Flattened CIR**
+
+.. code-block::
+
+  cir.func @someFunc(){
+    cir.try_call @f() ^bb1, ^bb2
+  ^bb1
+    cir.br ^bb7
+  ^bb2 // EH catch (from entry block)
+    %1 = cir.eh.initiate : !cir.eh_token
+    cir.br ^bb3(%1 : !cir.eh_token)
+  ^bb3(%eh_token : !cir.eh_token) // Catch dispatch (from ^bb2)
+    cir.eh.dispatch %eh_token : !cir.eh_token [
+      catch (#cir.global_view<@_ZTIi> : !u32i) : ^bb4
+      catch (#cir.global_view<@_ZTIf> : !u32i) : ^bb5
+      catch_all : ^bb6
+    ]
+  ^bb4(%eh_token.1 : !cir.eh_token) // Catch handler for int exception
+    %catch.token = cir.begin_catch(%eh_token.1 : !cir.eh_token) : !cir.catch_token
+    cir.end_catch(%catch.token : !cir.catch_token)
+    cir.br ^bb7
+  ^bb5(%eh_token.2 : !cir.eh_token) // Catch handler for float exception
+    %catch.token = cir.begin_catch(%eh_token.2 : !cir.eh_token) : !cir.catch_token
+    cir.end_catch(%catch.token : !cir.catch_token)
+    cir.br ^bb7
+  ^bb6(%eh_token.3 : !cir.eh_token) // Catch all handler
+    %catch.token = cir.begin_catch(%eh_token.3 : !cir.eh_token) : !cir.catch_token
+    cir.end_catch(%catch.token : !cir.catch_token)
+    cir.br ^bb7
+  ^bb7 // Normal continue (from ^bb1, ^bb4, ^bb5, or ^bb6)
+    cir.return
+  }
+
+**ABI-lowered CIR**
+
+.. code-block::
+
+  cir.func @someFunc() #personality_fn = @__gxx_personality_v0 {
+    cir.try_call @f() ^bb1, ^bb2
+  ^bb1
+    cir.br ^bb8
+  ^bb2 // EH catch (from entry block)
+    %exn, %type_id = cir.eh.landingpad [null] : (!cir.ptr<!void>, !u32i)
+    cir.br ^bb3(%exn, &type_id : !cir.ptr<!void>, !u32i)
+  ^bb3(%0: !cir.ptr<!void>, %1: !u32i) // Catch compare for int exception
+    %2 = cir.eh.typeid @_ZTIi : !u32i
+    %3 = cir.cmp(eq, %1, %2) : !u32i, !cir.bool
+    cir.brcond %3 ^bb4(%0 : !cir.ptr<!void>), ^bb5(%0, %1 : !cir.ptr<!void>, !u32i)
+  ^bb4(%4: !cir.ptr<!void>, %5: !u32i) // Catch all handler for int exception
+    %6 = cir.call @__cxa_begin_catch(%4 : !cir.ptr<!void>)
+    cir.call @__cxa_end_catch()
+    cir.br ^bb8
+  ^bb5(%7: !cir.ptr<!void>, %8: !u32i) // Catch compare for float exception
+    %9 = cir.eh.typeid @_ZTIf : !u32i
+    %10 = cir.cmp(eq, %8, %9) : !u32i, !cir.bool
+    cir.brcond %10 ^bb7(%7 : !cir.ptr<!void>), ^bb8(%7 : !cir.ptr<!void>)
+  ^bb6(%11: !cir.ptr<!void>, %12: !u32i) // Catch all handler for float exception
+    %13 = cir.call @__cxa_begin_catch(%11 : !cir.ptr<!void>)
+    cir.call @__cxa_end_catch()
+    cir.br ^bb8
+  ^bb7(%14: !cir.ptr<!void>) // Catch all handler
+    %15 = cir.call @__cxa_begin_catch(%14 : !cir.ptr<!void>)
+    cir.call @__cxa_end_catch()
+    cir.br ^bb8
+  ^bb8 // Normal continue (from ^bb1, ^bb4, ^bb6, or ^bb7)
+    cir.return
+  }
+
+In this example, if an exception is thrown by the ``f()`` call, it
+unwinds to a landing pad block (``^bb2``), which uses the `cir.eh.landingpad`
+operation to capture the exception pointer and its type id, then branches to
+^bb3 to begin searching for a catch handler that handles the type id of the
+exception. Each catch handler simply consumes the exception by calling
+``__cxa_begin_catch`` and ``__cxa_end_catch`` and then continues to the normal
+continuation block (``^bb8``).
+
 Microsoft C++ ABI Lowering
 --------------------------
 
@@ -1234,3 +1355,70 @@ Example: Try-catch with cleanup
   ^bb6 // Normal continue (from ^bb2 or ^bb6)
     cir.return
   }
+
+Example: Try-catch with multiple catch handlers
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+**Flattened CIR**
+
+.. code-block::
+
+  cir.func @someFunc(){
+    cir.try_call @f() ^bb1, ^bb2
+  ^bb1
+    cir.br ^bb7
+  ^bb2 // EH catch (from entry block)
+    %1 = cir.eh.initiate : !cir.eh_token
+    cir.br ^bb3(%1 : !cir.eh_token)
+  ^bb3(%eh_token : !cir.eh_token) // Catch dispatch (from ^bb2)
+    cir.eh.dispatch %eh_token : !cir.eh_token [
+      catch (#cir.global_view<@_ZTIi> : !u32i) : ^bb4
+      catch (#cir.global_view<@_ZTIf> : !u32i) : ^bb5
+      catch_all : ^bb6
+    ]
+  ^bb4(%eh_token.1 : !cir.eh_token) // Catch handler for int exception
+    %catch.token = cir.begin_catch(%eh_token.1 : !cir.eh_token) : !cir.catch_token
+    cir.end_catch(%catch.token : !cir.catch_token)
+    cir.br ^bb7
+  ^bb5(%eh_token.2 : !cir.eh_token) // Catch handler for float exception
+    %catch.token = cir.begin_catch(%eh_token.2 : !cir.eh_token) : !cir.catch_token
+    cir.end_catch(%catch.token : !cir.catch_token)
+    cir.br ^bb7
+  ^bb6(%eh_token.3 : !cir.eh_token) // Catch all handler
+    %catch.token = cir.begin_catch(%eh_token.3 : !cir.eh_token) : !cir.catch_token
+    cir.end_catch(%catch.token : !cir.catch_token)
+    cir.br ^bb7
+  ^bb7 // Normal continue (from ^bb1, ^bb4, ^bb5, or ^bb6)
+    cir.return
+  }
+
+**ABI-lowered CIR**
+
+.. code-block::
+
+  cir.func @someFunc() #personality_fn = @__CxxFrameHandler3 {
+    cir.try_call @f() ^bb1, ^bb2
+  ^bb1
+    cir.br ^bb6
+  ^bb2 // EH catch (from entry block)
+    %0 = cir.catchswitch within none [^bb3, ^bb4, ^bb5] unwind to caller
+  ^bb3(%0: !cir.ptr<!void>) // Catch handler for int exception
+    %1 = cir.catchpad within %0 [eh.typeid @"??_R0H@8", 0, %0 : (!cir.ptr<!void>, !u32i, !cir.ptr<!void>)] : !cir.catch_token
+    cir.catchret from %1 to ^bb6
+  ^bb4(%2: !cir.ptr<!void>) // Catch compare for float exception
+    %2 = cir.catchpad within %0 [eh.typeid @"??_R0M@8", 0, %0 : (!cir.ptr<!void>, !u32i, !cir.ptr<!void>)] : !cir.catch_token
+    cir.catchret from %2 to ^bb6
+  ^bb5(%3: !cir.ptr<!void>) // Catch all handler
+    %4 = cir.catchpad within %0 [null, 64, null : (!cir.ptr<!void>, !u32i, !cir.ptr<!void>)] : !cir.catch_token
+    cir.catchret from %4 to ^bb6
+  ^bb6 // Normal continue (from ^bb1, ^bb3, ^bb4, or ^bb5)
+    cir.return
+  }
+
+In this example, if an exception is thrown by the ``f()`` call, it
+unwinds to a catch dispatch block (``^bb2``), which uses the `cir.catchswitch`
+operation to dispatch to a catch handler (``^bb3``, ``^bb4``, or ``^bb5``) based
+on the type id of the exception. The actual comparisons in this case will be
+handled by the personality function, using tables that are generated from the
+`cir.catchpad` operations. Each catch handler simply continues to the normal
+continuation block (``^bb6``) using the `cir.catchret` operation.
