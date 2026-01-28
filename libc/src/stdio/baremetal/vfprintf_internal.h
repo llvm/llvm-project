@@ -49,9 +49,12 @@ LIBC_INLINE int vfprintf_internal(::FILE *__restrict stream,
                                  stream);
   printf_core::Writer writer(wb);
 
-  auto retval = use_modular
-                    ? printf_core::printf_main_modular(&writer, format, args)
-                    : printf_core::printf_main(&writer, format, args);
+  auto retval = [&] {
+    if constexpr (use_modular)
+      return printf_core::printf_main_modular(&writer, format, args);
+    else
+      return printf_core::printf_main(&writer, format, args);
+  }();
   if (!retval.has_value()) {
     libc_errno = printf_core::internal_error_to_errno(retval.error());
     return -1;

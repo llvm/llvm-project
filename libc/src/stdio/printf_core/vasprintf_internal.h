@@ -50,9 +50,12 @@ LIBC_INLINE ErrorOr<size_t> vasprintf_internal(char **ret,
                                  resize_overflow_hook);
   printf_core::Writer writer(wb);
 
-  auto ret_val = use_modular
-                     ? printf_core::printf_main_modular(&writer, format, args)
-                     : printf_core::printf_main(&writer, format, args);
+  auto ret_val = [&] {
+    if constexpr (use_modular)
+      return printf_core::printf_main_modular(&writer, format, args);
+    else
+      return printf_core::printf_main(&writer, format, args);
+  }();
   if (!ret_val.has_value()) {
     *ret = nullptr;
     return ret_val;
