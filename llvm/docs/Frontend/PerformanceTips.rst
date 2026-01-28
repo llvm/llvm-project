@@ -95,6 +95,19 @@ For example, when working with boolean values, store them by zero-extending
 If you do use loads/stores on non-byte-sized types, make sure that you *always*
 use those types. For example, do not first store ``i8`` and then load ``i1``.
 
+Use byte types when manipulating raw memory
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+
+The byte type represents raw memory values in SSA registers. Loads and stores of
+byte types should be used when performing raw memory copies (such as ``memmove``
+and ``memcpy``). Using integer types to represent raw memory introduces type
+punning, which discards the provenance of pointers being copied.
+
+Use a byte type if a value may hold either a pointer or any other type at run
+time (and you don't know which one), or if the value may contain uninitialized
+data. For instance, if a union may hold a pointer or another type, use byte
+types to load and store the value. Otherwise, use the specific type.
+
 Prefer zext over sext when legal
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
