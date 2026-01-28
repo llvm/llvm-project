@@ -96,7 +96,7 @@ class MatcherGen {
   MatcherList TheMatcher;
 
   /// As we emit matcher nodes, this points to the latest check which should
-  /// have future checks stuck into its Next position.
+  /// have future checks inserted after it.
   MatcherList::iterator InsertPt;
 
 public:
