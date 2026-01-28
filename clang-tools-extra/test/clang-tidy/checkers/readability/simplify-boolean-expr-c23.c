@@ -194,15 +194,15 @@ void ternary_operator() {
   int i = 0;
   bool bd = (i > 20) ? true : false;
   // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: {{.*}} in ternary expression result
-  // CHECK-FIXES: {{^  bool bd = i > 20;$}}
+  // CHECK-FIXES: {{^  bool bd = static_cast<bool>\(i > 20\);$}}
 
   bool be = (i > 20) ? false : true;
   // CHECK-MESSAGES: :[[@LINE-1]]:24: warning: {{.*}} in ternary expression result
-  // CHECK-FIXES: {{^  bool be = i <= 20;$}}
+  // CHECK-FIXES: {{^  bool be = static_cast<bool>\(i <= 20\);$}}
 
   bool bf = ((i > 20)) ? false : true;
   // CHECK-MESSAGES: :[[@LINE-1]]:26: warning: {{.*}} in ternary expression result
-  // CHECK-FIXES: {{^  bool bf = i <= 20;$}}
+  // CHECK-FIXES: {{^  bool bf = static_cast<bool>\(i <= 20\);$}}
 }
 
 void operator_not_equal() {
@@ -286,8 +286,7 @@ bool conditional_return_statements(int i) {
   if (i == 0) return true; else return false;
 }
 // CHECK-MESSAGES: :[[@LINE-2]]:22: warning: {{.*}} in conditional return statement
-// CHECK-FIXES:      {{^}}  return i == 0;{{$}}
-// CHECK-FIXES-NEXT: {{^}$}}
+// CHECK-FIXES:      {{^  return static_cast<bool>\(i == 0\);$}}
 
 bool conditional_return_statements_no_fix_1(int i) {
   if (i == 0) return true;
@@ -318,15 +317,13 @@ bool negated_conditional_return_statements(int i) {
   if (i == 0) return false; else return true;
 }
 // CHECK-MESSAGES: :[[@LINE-2]]:22: warning: {{.*}} in conditional return statement
-// CHECK-FIXES:      {{^}}  return i != 0;{{$}}
-// CHECK-FIXES-NEXT: {{^}$}}
+// CHECK-FIXES:      {{^  return static_cast<bool>\(i != 0\);$}}
 
 bool negative_condition_conditional_return_statement(int i) {
   if (!(i == 0)) return false; else return true;
 }
 // CHECK-MESSAGES: :[[@LINE-2]]:25: warning: {{.*}} in conditional return statement
-// CHECK-FIXES:      {{^}}  return i == 0;{{$}}
-// CHECK-FIXES-NEXT: {{^}$}}
+// CHECK-FIXES:      {{^  return static_cast<bool>\(i == 0\);$}}
 
 bool conditional_compound_return_statements(int i) {
   if (i == 1) {
@@ -336,9 +333,7 @@ bool conditional_compound_return_statements(int i) {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return statement
-// CHECK-FIXES:      {{^}}bool conditional_compound_return_statements(int i) {{{$}}
-// CHECK-FIXES-NEXT: {{^}}  return i == 1;{{$}}
-// CHECK-FIXES-NEXT: {{^}$}}
+// CHECK-FIXES:      {{^  return static_cast<bool>\(i == 1\);$}}
 
 bool negated_conditional_compound_return_statements(int i) {
   if (i == 1) {
@@ -348,9 +343,7 @@ bool negated_conditional_compound_return_statements(int i) {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return statement
-// CHECK-FIXES:      {{^}}bool negated_conditional_compound_return_statements(int i) {{{$}}
-// CHECK-FIXES-NEXT: {{^}}  return i != 1;{{$}}
-// CHECK-FIXES-NEXT: {{^}$}}
+// CHECK-FIXES:      {{^  return static_cast<bool>\(i != 1\);$}}
 
 bool conditional_return_statements_side_effects_then(int i) {
   if (i == 2) {
@@ -395,7 +388,7 @@ void simple_conditional_assignment_statements(int i) {
   bool bb = false;
   // CHECK-MESSAGES: :[[@LINE-4]]:9: warning: {{.*}} in conditional assignment
   // CHECK-FIXES: bool b;
-  // CHECK-FIXES: {{^  }}b = i > 10;{{$}}
+  // CHECK-FIXES: {{^  b = static_cast<bool>\(i > 10\);$}}
   // CHECK-FIXES: bool bb = false;
 
   bool c;
@@ -406,7 +399,7 @@ void simple_conditional_assignment_statements(int i) {
   bool c2 = false;
   // CHECK-MESSAGES: :[[@LINE-4]]:9: warning: {{.*}} in conditional assignment
   // CHECK-FIXES: bool c;
-  // CHECK-FIXES: {{^  }}c = i <= 20;{{$}}
+  // CHECK-FIXES: {{^  c = static_cast<bool>\(i <= 20\);$}}
   // CHECK-FIXES: bool c2 = false;
 
   // Unchanged: different variables.
@@ -447,7 +440,7 @@ void complex_conditional_assignment_statements(int i) {
   d = false;
   // CHECK-MESSAGES: :[[@LINE-5]]:9: warning: {{.*}} in conditional assignment
   // CHECK-FIXES: bool d;
-  // CHECK-FIXES: {{^  }}d = i > 30;{{$}}
+  // CHECK-FIXES: {{^  d = static_cast<bool>\(i > 30\);$}}
   // CHECK-FIXES: d = false;
 
   bool e;
@@ -459,7 +452,7 @@ void complex_conditional_assignment_statements(int i) {
   e = false;
   // CHECK-MESSAGES: :[[@LINE-5]]:9: warning: {{.*}} in conditional assignment
   // CHECK-FIXES: bool e;
-  // CHECK-FIXES: {{^  }}e = i <= 40;{{$}}
+  // CHECK-FIXES: {{^  e = static_cast<bool>\(i <= 40\);$}}
   // CHECK-FIXES: e = false;
 
   // Unchanged: no else statement.
@@ -603,7 +596,7 @@ bool simple_if_return_return(int i) {
 }
 // CHECK-MESSAGES: :[[@LINE-3]]:12: warning: {{.*}} in conditional return
 // CHECK-FIXES: {{^}}bool simple_if_return_return(int i) {{{$}}
-// CHECK-FIXES: {{^  return i > 10;$}}
+// CHECK-FIXES: {{^  return static_cast<bool>\(i > 10\);$}}
 // CHECK-FIXES: {{^}$}}
 
 bool simple_if_return_return_negated(int i) {
@@ -613,7 +606,7 @@ bool simple_if_return_return_negated(int i) {
 }
 // CHECK-MESSAGES: :[[@LINE-3]]:12: warning: {{.*}} in conditional return
 // CHECK-FIXES: {{^}}bool simple_if_return_return_negated(int i) {{{$}}
-// CHECK-FIXES: {{^  return i <= 10;$}}
+// CHECK-FIXES: {{^  return static_cast<bool>\(i <= 10\);$}}
 // CHECK-FIXES: {{^}$}}
 
 bool complex_if_return_return(int i) {
@@ -624,7 +617,7 @@ bool complex_if_return_return(int i) {
 }
 // CHECK-MESSAGES: :[[@LINE-4]]:12: warning: {{.*}} in conditional return
 // CHECK-FIXES: {{^}}bool complex_if_return_return(int i) {{{$}}
-// CHECK-FIXES: {{^  return i > 10;$}}
+// CHECK-FIXES: {{^  return static_cast<bool>\(i > 10\);$}}
 // CHECK-FIXES: {{^}$}}
 
 bool complex_if_return_return_negated(int i) {
@@ -635,7 +628,7 @@ bool complex_if_return_return_negated(int i) {
 }
 // CHECK-MESSAGES: :[[@LINE-4]]:12: warning: {{.*}} in conditional return
 // CHECK-FIXES: {{^}}bool complex_if_return_return_negated(int i) {{{$}}
-// CHECK-FIXES: {{^  return i <= 10;$}}
+// CHECK-FIXES: {{^  return static_cast<bool>\(i <= 10\);$}}
 // CHECK-FIXES: {{^}$}}
 
 bool if_implicit_bool_expr(int i) {
@@ -646,7 +639,7 @@ bool if_implicit_bool_expr(int i) {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
-// CHECK-FIXES: {{^}}  return (i & 1) != 0;{{$}}
+// CHECK-FIXES: {{^  return static_cast<bool>\(i & 1\);$}}
 
 bool negated_if_implicit_bool_expr(int i) {
   if (i - 1) {
@@ -656,7 +649,7 @@ bool negated_if_implicit_bool_expr(int i) {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
-// CHECK-FIXES: {{^}}  return (i - 1) == 0;{{$}}
+// CHECK-FIXES: {{^  return !static_cast<bool>\(i - 1\);$}}
 
 bool implicit_int(int i) {
   if (i) {
@@ -666,7 +659,7 @@ bool implicit_int(int i) {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
-// CHECK-FIXES: {{^}}  return i != 0;{{$}}
+// CHECK-FIXES: {{^  return static_cast<bool>\(i\);$}}
 
 bool explicit_bool(bool b) {
   if (b) {
@@ -686,7 +679,7 @@ bool negated_explicit_bool(bool b) {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
-// CHECK-FIXES: {{^}}  return !b;{{$}}
+// CHECK-FIXES: {{^  return static_cast<bool>\(!b\);$}}
 
 bool bitwise_complement_conversion(int i) {
   if (~i) {
@@ -696,7 +689,7 @@ bool bitwise_complement_conversion(int i) {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
-// CHECK-FIXES: {{^}}  return ~i != 0;{{$}}
+// CHECK-FIXES: {{^  return static_cast<bool>\(~i\);$}}
 
 bool logical_or(bool a, bool b) {
   if (a || b) {
@@ -706,7 +699,7 @@ bool logical_or(bool a, bool b) {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
-// CHECK-FIXES: {{^}}  return a || b;{{$}}
+// CHECK-FIXES: {{^  return static_cast<bool>\(a \|\| b\);$}}
 
 bool logical_and(bool a, bool b) {
   if (a && b) {
@@ -716,13 +709,13 @@ bool logical_and(bool a, bool b) {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
-// CHECK-FIXES: {{^}}  return a && b;{{$}}
+// CHECK-FIXES: {{^  return static_cast<bool>\(a && b\);$}}
 
 void ternary_integer_condition(int i) {
   bool b = i ? true : false;
 }
 // CHECK-MESSAGES: :[[@LINE-2]]:16: warning: {{.*}} in ternary expression result
-// CHECK-FIXES: bool b = i != 0;{{$}}
+// CHECK-FIXES: {{^  bool b = static_cast<bool>\(i\);$}}
 
 bool non_null_pointer_condition(int *p1) {
   if (p1) {
@@ -732,7 +725,7 @@ bool non_null_pointer_condition(int *p1) {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
-// CHECK-FIXES: return p1 != nullptr;{{$}}
+// CHECK-FIXES: {{^  return static_cast<bool>\(p1\);$}}
 
 bool null_pointer_condition(int *p2) {
   if (!p2) {
@@ -742,7 +735,7 @@ bool null_pointer_condition(int *p2) {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
-// CHECK-FIXES: return p2 == nullptr;{{$}}
+// CHECK-FIXES: {{^  return static_cast<bool>\(!p2\);$}}
 
 bool negated_non_null_pointer_condition(int *p3) {
   if (p3) {
@@ -752,7 +745,7 @@ bool negated_non_null_pointer_condition(int *p3) {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
-// CHECK-FIXES: return p3 == nullptr;{{$}}
+// CHECK-FIXES: {{^  return !static_cast<bool>\(p3\);$}}
 
 bool negated_null_pointer_condition(int *p4) {
   if (!p4) {
@@ -762,7 +755,7 @@ bool negated_null_pointer_condition(int *p4) {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
-// CHECK-FIXES: return p4 != nullptr;{{$}}
+// CHECK-FIXES: {{^  return static_cast<bool>\(p4\);$}}
 
 bool comments_in_the_middle(bool b) {
   if (b) {
@@ -796,4 +789,4 @@ bool integer_not_zero(int i) {
   }
 }
 // CHECK-MESSAGES: :[[@LINE-5]]:12: warning: {{.*}} in conditional return
-// CHECK-FIXES: {{^}}  return i == 0;{{$}}
+// CHECK-FIXES: {{^  return !static_cast<bool>\(i\);$}}
