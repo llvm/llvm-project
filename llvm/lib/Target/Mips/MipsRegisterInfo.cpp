@@ -206,6 +206,8 @@ getReservedRegs(const MachineFunction &MF) const {
       }
     }
   }
+  // Reserve fp control and status register
+  Reserved.set(Mips::FCR31);
 
   // Reserve hardware registers.
   Reserved.set(Mips::HWR29);

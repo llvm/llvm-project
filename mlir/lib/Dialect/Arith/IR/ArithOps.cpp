@@ -151,6 +151,9 @@ static Attribute getBoolAttribute(Type type, bool value) {
   ShapedType shapedType = dyn_cast_or_null<ShapedType>(type);
   if (!shapedType)
     return boolAttr;
+  // DenseElementsAttr requires a static shape.
+  if (!shapedType.hasStaticShape())
+    return {};
   return DenseElementsAttr::get(shapedType, boolAttr);
 }
 
@@ -221,7 +224,7 @@ LogicalResult arith::ConstantOp::verify() {
   // However, this would most likely require updating the lowerings to LLVM.
   if (isa<ScalableVectorType>(type) && !isa<SplatElementsAttr>(getValue()))
     return emitOpError(
-        "intializing scalable vectors with elements attribute is not supported"
+        "initializing scalable vectors with elements attribute is not supported"
         " unless it's a vector splat");
   return success();
 }
@@ -2527,6 +2530,9 @@ OpFoldResult arith::SelectOp::fold(FoldAdaptor adaptor) {
   // select %cst_vec, %cst0, %cst1 => %cst2
   if (auto cond =
           dyn_cast_if_present<DenseElementsAttr>(adaptor.getCondition())) {
+    // DenseElementsAttr by construction always has a static shape.
+    assert(cond.getType().hasStaticShape() &&
+           "DenseElementsAttr must have static shape");
     if (auto lhs =
             dyn_cast_if_present<DenseElementsAttr>(adaptor.getTrueValue())) {
       if (auto rhs =
@@ -2751,7 +2757,7 @@ std::optional<TypedAttr> mlir::arith::getNeutralElement(Operation *op) {
           .Case([](arith::MaxSIOp op) { return AtomicRMWKind::maxs; })
           .Case([](arith::MinSIOp op) { return AtomicRMWKind::mins; })
           .Case([](arith::MulIOp op) { return AtomicRMWKind::muli; })
-          .Default([](Operation *op) { return std::nullopt; });
+          .Default(std::nullopt);
   if (!maybeKind) {
     return std::nullopt;
   }

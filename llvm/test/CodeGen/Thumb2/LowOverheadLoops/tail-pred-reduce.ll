@@ -24,9 +24,9 @@ define i16 @reduction_i32(ptr nocapture readonly %A, ptr nocapture readonly %B, 
 ; CHECK-NEXT:    [[INSTTMP2:%.*]] = getelementptr inbounds i16, ptr [[A]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <8 x i1> @llvm.arm.mve.vctp16(i32 [[TMP4]])
 ; CHECK-NEXT:    [[TMP6]] = sub i32 [[TMP4]], 8
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr [[INSTTMP2]], i32 4, <8 x i1> [[TMP5]], <8 x i16> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr align 4 [[INSTTMP2]], <8 x i1> [[TMP5]], <8 x i16> undef)
 ; CHECK-NEXT:    [[INSTTMP5:%.*]] = getelementptr inbounds i16, ptr [[B]], i32 [[INDEX]]
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr [[INSTTMP5]], i32 4, <8 x i1> [[TMP5]], <8 x i16> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD3:%.*]] = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr align 4 [[INSTTMP5]], <8 x i1> [[TMP5]], <8 x i16> undef)
 ; CHECK-NEXT:    [[TMP7:%.*]] = add <8 x i16> [[WIDE_MASKED_LOAD]], [[VEC_PHI]]
 ; CHECK-NEXT:    [[TMP8]] = add <8 x i16> [[TMP7]], [[WIDE_MASKED_LOAD3]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add i32 [[INDEX]], 8
@@ -124,7 +124,7 @@ define i16 @reduction_i32_with_scalar(ptr nocapture readonly %A, i16 %B, i32 %N)
 ; CHECK-NEXT:    [[INSTTMP2:%.*]] = getelementptr inbounds i16, ptr [[A]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <8 x i1> @llvm.arm.mve.vctp16(i32 [[TMP4]])
 ; CHECK-NEXT:    [[TMP6]] = sub i32 [[TMP4]], 8
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr [[INSTTMP2]], i32 4, <8 x i1> [[TMP5]], <8 x i16> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr align 4 [[INSTTMP2]], <8 x i1> [[TMP5]], <8 x i16> undef)
 ; CHECK-NEXT:    [[INSTTMP5:%.*]] = add <8 x i16> [[VEC_PHI]], [[BROADCAST_SPLAT4]]
 ; CHECK-NEXT:    [[INSTTMP6]] = add <8 x i16> [[INSTTMP5]], [[WIDE_MASKED_LOAD]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw nsw i32 [[INDEX]], 8
@@ -217,7 +217,7 @@ define i16 @reduction_not_guarded(ptr nocapture readonly %A, i16 %B, i32 %N) loc
 ; CHECK-NEXT:    [[INSTTMP2:%.*]] = getelementptr inbounds i16, ptr [[A]], i32 [[INDEX]]
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <8 x i1> @llvm.arm.mve.vctp16(i32 [[TMP4]])
 ; CHECK-NEXT:    [[TMP6]] = sub i32 [[TMP4]], 8
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr [[INSTTMP2]], i32 4, <8 x i1> [[TMP5]], <8 x i16> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <8 x i16> @llvm.masked.load.v8i16.p0(ptr align 4 [[INSTTMP2]], <8 x i1> [[TMP5]], <8 x i16> undef)
 ; CHECK-NEXT:    [[INSTTMP5:%.*]] = add <8 x i16> [[VEC_PHI]], [[BROADCAST_SPLAT4]]
 ; CHECK-NEXT:    [[INSTTMP6]] = add <8 x i16> [[INSTTMP5]], [[WIDE_MASKED_LOAD]]
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw nsw i32 [[INDEX]], 8
@@ -311,9 +311,9 @@ define dso_local void @Correlation(ptr nocapture readonly %Input, ptr nocapture 
 ; CHECK-NEXT:    [[TMP11:%.*]] = phi i32 [ [[TMP2]], %[[VECTOR_PH]] ], [ [[TMP13:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP12:%.*]] = call <4 x i1> @llvm.arm.mve.vctp32(i32 [[TMP11]])
 ; CHECK-NEXT:    [[TMP13]] = sub i32 [[TMP11]], 4
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr [[LSR_IV]], i32 2, <4 x i1> [[TMP12]], <4 x i16> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD:%.*]] = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr align 2 [[LSR_IV]], <4 x i1> [[TMP12]], <4 x i16> undef)
 ; CHECK-NEXT:    [[TMP14:%.*]] = sext <4 x i16> [[WIDE_MASKED_LOAD]] to <4 x i32>
-; CHECK-NEXT:    [[WIDE_MASKED_LOAD42:%.*]] = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr [[LSR_IV48]], i32 2, <4 x i1> [[TMP12]], <4 x i16> undef)
+; CHECK-NEXT:    [[WIDE_MASKED_LOAD42:%.*]] = call <4 x i16> @llvm.masked.load.v4i16.p0(ptr align 2 [[LSR_IV48]], <4 x i1> [[TMP12]], <4 x i16> undef)
 ; CHECK-NEXT:    [[TMP15:%.*]] = sext <4 x i16> [[WIDE_MASKED_LOAD42]] to <4 x i32>
 ; CHECK-NEXT:    [[TMP16:%.*]] = mul nsw <4 x i32> [[TMP15]], [[TMP14]]
 ; CHECK-NEXT:    [[TMP17:%.*]] = insertelement <4 x i32> undef, i32 [[CONV1032]], i32 0

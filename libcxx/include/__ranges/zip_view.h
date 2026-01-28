@@ -31,6 +31,7 @@
 #include <__ranges/enable_borrowed_range.h>
 #include <__ranges/size.h>
 #include <__ranges/view_interface.h>
+#include <__tuple/tuple_transform.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/make_unsigned.h>
 #include <__utility/declval.h>
@@ -57,15 +58,6 @@ concept __zip_is_common =
     (sizeof...(_Ranges) == 1 && (common_range<_Ranges> && ...)) ||
     (!(bidirectional_range<_Ranges> && ...) && (common_range<_Ranges> && ...)) ||
     ((random_access_range<_Ranges> && ...) && (sized_range<_Ranges> && ...));
-
-template <class _Fun, class _Tuple>
-_LIBCPP_HIDE_FROM_ABI constexpr auto __tuple_transform(_Fun&& __f, _Tuple&& __tuple) {
-  return std::apply(
-      [&]<class... _Types>(_Types&&... __elements) {
-        return tuple<invoke_result_t<_Fun&, _Types>...>(std::invoke(__f, std::forward<_Types>(__elements))...);
-      },
-      std::forward<_Tuple>(__tuple));
-}
 
 template <class _Fun, class _Tuple>
 _LIBCPP_HIDE_FROM_ABI constexpr void __tuple_for_each(_Fun&& __f, _Tuple&& __tuple) {
@@ -145,24 +137,24 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr auto begin()
     requires(!(__simple_view<_Views> && ...))
   {
-    return __iterator<false>(ranges::__tuple_transform(ranges::begin, __views_));
+    return __iterator<false>(std::__tuple_transform(ranges::begin, __views_));
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto begin() const
     requires(range<const _Views> && ...)
   {
-    return __iterator<true>(ranges::__tuple_transform(ranges::begin, __views_));
+    return __iterator<true>(std::__tuple_transform(ranges::begin, __views_));
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto end()
     requires(!(__simple_view<_Views> && ...))
   {
     if constexpr (!__zip_is_common<_Views...>) {
-      return __sentinel<false>(ranges::__tuple_transform(ranges::end, __views_));
+      return __sentinel<false>(std::__tuple_transform(ranges::end, __views_));
     } else if constexpr ((random_access_range<_Views> && ...)) {
       return begin() + iter_difference_t<__iterator<false>>(size());
     } else {
-      return __iterator<false>(ranges::__tuple_transform(ranges::end, __views_));
+      return __iterator<false>(std::__tuple_transform(ranges::end, __views_));
     }
   }
 
@@ -170,11 +162,11 @@ public:
     requires(range<const _Views> && ...)
   {
     if constexpr (!__zip_is_common<const _Views...>) {
-      return __sentinel<true>(ranges::__tuple_transform(ranges::end, __views_));
+      return __sentinel<true>(std::__tuple_transform(ranges::end, __views_));
     } else if constexpr ((random_access_range<const _Views> && ...)) {
       return begin() + iter_difference_t<__iterator<true>>(size());
     } else {
-      return __iterator<true>(ranges::__tuple_transform(ranges::end, __views_));
+      return __iterator<true>(std::__tuple_transform(ranges::end, __views_));
     }
   }
 
@@ -186,7 +178,7 @@ public:
           using _CT = make_unsigned_t<common_type_t<decltype(__sizes)...>>;
           return ranges::min({_CT(__sizes)...});
         },
-        ranges::__tuple_transform(ranges::size, __views_));
+        std::__tuple_transform(ranges::size, __views_));
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
@@ -197,7 +189,7 @@ public:
           using _CT = make_unsigned_t<common_type_t<decltype(__sizes)...>>;
           return ranges::min({_CT(__sizes)...});
         },
-        ranges::__tuple_transform(ranges::size, __views_));
+        std::__tuple_transform(ranges::size, __views_));
   }
 };
 
@@ -276,7 +268,7 @@ public:
       : __current_(std::move(__i.__current_)) {}
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto operator*() const {
-    return ranges::__tuple_transform([](auto& __i) -> decltype(auto) { return *__i; }, __current_);
+    return std::__tuple_transform([](auto& __i) -> decltype(auto) { return *__i; }, __current_);
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr __iterator& operator++() {
@@ -326,7 +318,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr auto operator[](difference_type __n) const
     requires __zip_all_random_access<_Const, _Views...>
   {
-    return ranges::__tuple_transform(
+    return std::__tuple_transform(
         [&]<class _Iter>(_Iter& __i) -> decltype(auto) { return __i[iter_difference_t<_Iter>(__n)]; }, __current_);
   }
 
@@ -385,7 +377,7 @@ public:
   _LIBCPP_HIDE_FROM_ABI friend constexpr auto iter_move(const __iterator& __i) noexcept(
       (noexcept(ranges::iter_move(std::declval<const iterator_t<__maybe_const<_Const, _Views>>&>())) && ...) &&
       (is_nothrow_move_constructible_v<range_rvalue_reference_t<__maybe_const<_Const, _Views>>> && ...)) {
-    return ranges::__tuple_transform(ranges::iter_move, __i.__current_);
+    return std::__tuple_transform(ranges::iter_move, __i.__current_);
   }
 
   _LIBCPP_HIDE_FROM_ABI friend constexpr void iter_swap(const __iterator& __l, const __iterator& __r) noexcept(

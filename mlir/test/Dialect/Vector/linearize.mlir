@@ -428,6 +428,47 @@ func.func @test_linearize_across_for(%arg0 : vector<4xi8>) -> vector<4xi8> {
 
 // -----
 
+// CHECK-LABEL: linearize_vector_broadcast_scalar_source
+// CHECK-SAME: (%[[ARG:.*]]: i32) -> vector<4x2xi32>
+func.func @linearize_vector_broadcast_scalar_source(%arg0: i32) -> vector<4x2xi32> {
+
+  // CHECK: %[[BROADCAST:.*]] = vector.broadcast %[[ARG]] : i32 to vector<8xi32>
+  // CHECK: %[[CAST:.*]] = vector.shape_cast %[[BROADCAST]] : vector<8xi32> to vector<4x2xi32>
+  // CHECK: return %[[CAST]] : vector<4x2xi32>
+  %0 = vector.broadcast %arg0 : i32 to vector<4x2xi32>
+  return %0 : vector<4x2xi32>
+}
+
+// -----
+
+// CHECK-LABEL: linearize_vector_broadcast_rank_two_source
+// CHECK-SAME: (%[[ARG:.*]]: vector<1x1xi32>) -> vector<4x2xi32>
+func.func @linearize_vector_broadcast_rank_two_source(%arg0: vector<1x1xi32>) -> vector<4x2xi32> {
+
+  // CHECK: %[[CAST0:.*]] = vector.shape_cast %[[ARG]] : vector<1x1xi32> to vector<1xi32>
+  // CHECK: %[[BROADCAST:.*]] = vector.broadcast %[[CAST0]] : vector<1xi32> to vector<8xi32>
+  // CHECK: %[[CAST1:.*]] = vector.shape_cast %[[BROADCAST]] : vector<8xi32> to vector<4x2xi32>
+  // CHECK: return %[[CAST1]] : vector<4x2xi32>
+  %0 = vector.broadcast %arg0 : vector<1x1xi32> to vector<4x2xi32>
+  return %0 : vector<4x2xi32>
+}
+
+// -----
+
+// CHECK-LABEL: linearize_scalable_vector_broadcast
+// CHECK-SAME: (%[[ARG:.*]]: i32) -> vector<4x[2]xi32>
+func.func @linearize_scalable_vector_broadcast(%arg0: i32) -> vector<4x[2]xi32> {
+
+  // CHECK: %[[BROADCAST:.*]] = vector.broadcast %[[ARG]] : i32 to vector<[8]xi32>
+  // CHECK: %[[CAST:.*]] = vector.shape_cast %[[BROADCAST]] : vector<[8]xi32> to vector<4x[2]xi32>
+  // CHECK: return %[[CAST]] : vector<4x[2]xi32>
+  %0 = vector.broadcast %arg0 : i32 to vector<4x[2]xi32>
+  return %0 : vector<4x[2]xi32>
+
+}
+
+// -----
+
 // CHECK-LABEL: linearize_create_mask
 // CHECK-SAME: (%[[ARG0:.*]]: index, %[[ARG1:.*]]: index) -> vector<1x16xi1>
 func.func @linearize_create_mask(%arg0 : index, %arg1 : index) -> vector<1x16xi1> {

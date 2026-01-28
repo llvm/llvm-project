@@ -64,7 +64,7 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
         breakpoints = response["body"]["breakpoints"]
         for breakpoint in breakpoints:
             main_bp_id = breakpoint["id"]
-            dap_breakpoint_ids.append("%i" % (main_bp_id))
+            dap_breakpoint_ids.append(main_bp_id)
             self.assertTrue(
                 breakpoint["verified"], "expect main breakpoint to be verified"
             )
@@ -76,7 +76,7 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
         breakpoints = response["body"]["breakpoints"]
         for breakpoint in breakpoints:
             foo_bp_id = breakpoint["id"]
-            dap_breakpoint_ids.append("%i" % (foo_bp_id))
+            dap_breakpoint_ids.append(foo_bp_id)
             self.assertFalse(
                 breakpoint["verified"], "expect foo breakpoint to not be verified"
             )

@@ -4,8 +4,9 @@ bugprone-dangling-handle
 ========================
 
 Detect dangling references in value handles like ``std::string_view``.
-These dangling references can be a result of constructing handles from temporary
-values, where the temporary is destroyed soon after the handle is created.
+These dangling references can be a result of constructing handles from
+temporary values, where the temporary is destroyed soon after the handle
+is created.
 
 Examples:
 

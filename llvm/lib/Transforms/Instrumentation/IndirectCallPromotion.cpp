@@ -83,7 +83,7 @@ static cl::opt<unsigned>
 // ICP the candidate function even when only a declaration is present.
 static cl::opt<bool> ICPAllowDecls(
     "icp-allow-decls", cl::init(false), cl::Hidden,
-    cl::desc("Promote the target candidate even when the defintion "
+    cl::desc("Promote the target candidate even when the definition "
              " is not available"));
 
 // ICP hot candidate functions only. When setting to false, non-cold functions
@@ -213,8 +213,7 @@ static Constant *getVTableAddressPointOffset(GlobalVariable *VTable,
                                              uint32_t AddressPointOffset) {
   Module &M = *VTable->getParent();
   LLVMContext &Context = M.getContext();
-  assert(AddressPointOffset <
-             M.getDataLayout().getTypeAllocSize(VTable->getValueType()) &&
+  assert(AddressPointOffset < VTable->getGlobalSize(M.getDataLayout()) &&
          "Out-of-bound access");
 
   return ConstantExpr::getInBoundsGetElementPtr(

@@ -209,9 +209,9 @@ void boolop_loops() {           // CHECK: @LINE|{{.*}}boolop_loops()
 void conditional_operator() {   // CHECK: @LINE|{{.*}}conditional_operator()
   int i = 100;
 
-  int j = i < 50 ? i : 1;       // BRCOV: Branch ([[@LINE]]:11): [True: 0, False: 1]
+  int j = i < 50 ? i : 1;       // CHECK: Branch ([[@LINE]]:11): [True: 0, False: 1]
 
-  int k = i ?: 0;               // BRCOV: Branch ([[@LINE]]:11): [True: 1, False: 0]
+  int k = i ?: 0;               // CHECK: Branch ([[@LINE]]:11): [True: 1, False: 0]
 
 }
 

@@ -262,7 +262,7 @@ You can achieve this by refactoring the function to accept a ``std::span``
 as a parameter::
 
     int get_last_element(std::span<int> sp) {
-      return sp[size - 1];
+      return sp[sp.size() - 1];
     }
 
 This solution puts the responsibility for making sure the span is well-formed
@@ -411,7 +411,7 @@ backwards compatibility -- in terms of both API and ABI -- by adding
 a "compatibility overload"::
 
     int get_last_element(std::span<int> sp) {
-      return sp[size - 1];
+      return sp[sp.size() - 1];
     }
 
     [[clang::unsafe_buffer_usage]] // Please use the new function.

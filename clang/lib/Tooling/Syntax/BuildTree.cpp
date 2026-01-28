@@ -77,8 +77,10 @@ static Expr *IgnoreImplicit(Expr *E) {
                          IgnoreCXXFunctionalCastExprWrappingConstructor);
 }
 
-LLVM_ATTRIBUTE_UNUSED
-static bool isImplicitExpr(Expr *E) { return IgnoreImplicit(E) != E; }
+[[maybe_unused]]
+static bool isImplicitExpr(Expr *E) {
+  return IgnoreImplicit(E) != E;
+}
 
 namespace {
 /// Get start location of the Declarator from the TypeLoc.

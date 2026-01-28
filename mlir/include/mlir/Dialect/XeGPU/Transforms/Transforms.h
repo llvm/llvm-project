@@ -9,6 +9,7 @@
 #ifndef MLIR_DIALECT_XEGPU_TRANSFORMS_TRANSFORMS_H
 #define MLIR_DIALECT_XEGPU_TRANSFORMS_TRANSFORMS_H
 
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/Operation.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/LogicalResult.h"
@@ -61,7 +62,8 @@ struct UnrollOptions {
 
 /// Appends patterns for folding aliasing ops into XeGPU ops into `patterns`.
 void populateXeGPUFoldAliasOpsPatterns(RewritePatternSet &patterns);
-
+/// Appends patterns for optimizing block load operations into `patterns`.
+void populateXeGPUPeepHoleOptimizerPatterns(RewritePatternSet &patterns);
 /// Appends patterns for XeGPU SIMT distribution into `patterns`.
 void populateXeGPUSubgroupDistributePatterns(RewritePatternSet &patterns);
 /// Appends patterns for moving function body into gpu.warp_execute_on_lane0 op.
@@ -89,6 +91,12 @@ void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns);
 ///   to re-assemble the slices into the original shape.
 void populateXeGPUUnrollPatterns(RewritePatternSet &patterns,
                                  const UnrollOptions &options);
+
+enum class LayoutKind { Lane, InstData, Subgroup };
+LogicalResult propagateLayouts(OpBuilder &builder, Operation *target,
+                               LayoutKind layoutKind, bool printOnly = false);
+
+LogicalResult resolveLayoutConflicts(Operation *target);
 
 } // namespace xegpu
 } // namespace mlir

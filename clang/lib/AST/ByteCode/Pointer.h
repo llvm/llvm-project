@@ -15,6 +15,7 @@
 
 #include "Descriptor.h"
 #include "FunctionPointer.h"
+#include "InitMap.h"
 #include "InterpBlock.h"
 #include "clang/AST/ComparisonCategories.h"
 #include "clang/AST/Decl.h"
@@ -47,7 +48,8 @@ struct IntPointer {
   const Descriptor *Desc;
   uint64_t Value;
 
-  IntPointer atOffset(const ASTContext &ASTCtx, unsigned Offset) const;
+  std::optional<IntPointer> atOffset(const ASTContext &ASTCtx,
+                                     unsigned Offset) const;
   IntPointer baseCast(const ASTContext &ASTCtx, unsigned BaseOffset) const;
 };
 
@@ -199,17 +201,19 @@ public:
       return Pointer(BS.Pointee, sizeof(InlineDescriptor),
                      Offset == 0 ? Offset : PastEndMark);
 
-    // Pointer is one past end - magic offset marks that.
-    if (isOnePastEnd())
-      return Pointer(BS.Pointee, Base, PastEndMark);
+    if (inArray()) {
+      // Pointer is one past end - magic offset marks that.
+      if (isOnePastEnd())
+        return Pointer(BS.Pointee, Base, PastEndMark);
 
-    if (Offset != Base) {
-      // If we're pointing to a primitive array element, there's nothing to do.
-      if (inPrimitiveArray())
-        return *this;
-      // Pointer is to a composite array element - enter it.
-      if (Offset != Base)
+      if (Offset != Base) {
+        // If we're pointing to a primitive array element, there's nothing to
+        // do.
+        if (inPrimitiveArray())
+          return *this;
+        // Pointer is to a composite array element - enter it.
         return Pointer(BS.Pointee, Offset, Offset);
+      }
     }
 
     // Otherwise, we're pointing to a non-array element or
@@ -219,6 +223,8 @@ public:
 
   /// Expands a pointer to the containing array, undoing narrowing.
   [[nodiscard]] Pointer expand() const {
+    if (!isBlockPointer())
+      return *this;
     assert(isBlockPointer());
     Block *Pointee = BS.Pointee;
 
@@ -349,7 +355,8 @@ public:
       if (const auto *CT = getFieldDesc()->getType()->getAs<VectorType>())
         return CT->getElementType();
     }
-    return getFieldDesc()->getType();
+
+    return getFieldDesc()->getDataElemType();
   }
 
   [[nodiscard]] Pointer getDeclPtr() const { return Pointer(BS.Pointee); }
@@ -716,6 +723,9 @@ public:
   /// Like isInitialized(), but for primitive arrays.
   bool isElementInitialized(unsigned Index) const;
   bool allElementsInitialized() const;
+  bool allElementsAlive() const;
+  bool isElementAlive(unsigned Index) const;
+
   /// Activats a field.
   void activate() const;
   /// Deactivates an entire strurcutre.
@@ -726,23 +736,41 @@ public:
       return Lifetime::Started;
     if (BS.Base < sizeof(InlineDescriptor))
       return Lifetime::Started;
+
+    if (inArray() && !isArrayRoot()) {
+      InitMapPtr &IM = getInitMap();
+
+      if (!IM.hasInitMap()) {
+        if (IM.allInitialized())
+          return Lifetime::Started;
+        return getArray().getLifetime();
+      }
+
+      return IM->isElementAlive(getIndex()) ? Lifetime::Started
+                                            : Lifetime::Ended;
+    }
+
     return getInlineDesc()->LifeState;
   }
 
-  void endLifetime() const {
-    if (!isBlockPointer())
-      return;
-    if (BS.Base < sizeof(InlineDescriptor))
-      return;
-    getInlineDesc()->LifeState = Lifetime::Ended;
-  }
+  /// Start the lifetime of this pointer. This works for pointer with an
+  /// InlineDescriptor as well as primitive array elements. Pointers are usually
+  /// alive by default, unless the underlying object has been allocated with
+  /// std::allocator. This function is used by std::construct_at.
+  void startLifetime() const;
+  /// Ends the lifetime of the pointer. This works for pointer with an
+  /// InlineDescriptor as well as primitive array elements. This function is
+  /// used by std::destroy_at.
+  void endLifetime() const;
 
-  void startLifetime() const {
-    if (!isBlockPointer())
-      return;
-    if (BS.Base < sizeof(InlineDescriptor))
-      return;
-    getInlineDesc()->LifeState = Lifetime::Started;
+  /// Strip base casts from this Pointer.
+  /// The result is either a root pointer or something
+  /// that isn't a base class anymore.
+  [[nodiscard]] Pointer stripBaseCasts() const {
+    Pointer P = *this;
+    while (P.isBaseClass())
+      P = P.getBase();
+    return P;
   }
 
   /// Compare two pointers.
@@ -779,14 +807,13 @@ public:
   /// Compute an integer that can be used to compare this pointer to
   /// another one. This is usually NOT the same as the pointer offset
   /// regarding the AST record layout.
-  size_t computeOffsetForComparison() const;
+  size_t computeOffsetForComparison(const ASTContext &ASTCtx) const;
 
 private:
   friend class Block;
   friend class DeadBlock;
   friend class MemberPointer;
   friend class InterpState;
-  friend struct InitMap;
   friend class DynamicAllocator;
   friend class Program;
 
@@ -830,6 +857,11 @@ private:
 
 inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, const Pointer &P) {
   P.print(OS);
+  OS << ' ';
+  if (const Descriptor *D = P.getFieldDesc())
+    D->dump(OS);
+  if (P.isArrayElement())
+    OS << " index " << P.getIndex();
   return OS;
 }
 

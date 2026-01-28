@@ -29,43 +29,43 @@ void f(S *s, void (S::*p)()) {
 // NO-MERGE-NEXT:    [[MEMPTR_ISVIRTUAL_NOT:%.*]] = icmp eq i64 [[TMP1]], 0
 // NO-MERGE-NEXT:    br i1 [[MEMPTR_ISVIRTUAL_NOT]], label %[[MEMPTR_NONVIRTUAL:.*]], label %[[MEMPTR_VIRTUAL:.*]]
 // NO-MERGE:       [[MEMPTR_VIRTUAL]]:
-// NO-MERGE-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[VTABLE_POINTER_TBAA2:![0-9]+]]
+// NO-MERGE-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[VTABLE_POINTER_TBAA6:![0-9]+]]
 // NO-MERGE-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[VTABLE]], i64 [[P_COERCE0]]
 // NO-MERGE-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP2]], i64 -1
-// NO-MERGE-NEXT:    [[TMP4:%.*]] = tail call i1 @llvm.type.test(ptr [[TMP3]], metadata !"_ZTSM1SFvvE.virtual"), !nosanitize [[META5:![0-9]+]]
-// NO-MERGE-NEXT:    br i1 [[TMP4]], label %[[MEMPTR_VIRTUAL7:.*]], label %[[TRAP:.*]], !prof [[PROF6:![0-9]+]], !nosanitize [[META5]]
+// NO-MERGE-NEXT:    [[TMP4:%.*]] = tail call i1 @llvm.type.test(ptr [[TMP3]], metadata !"_ZTSM1SFvvE.virtual"), !nosanitize [[META8:![0-9]+]]
+// NO-MERGE-NEXT:    br i1 [[TMP4]], label %[[MEMPTR_VIRTUAL7:.*]], label %[[TRAP:.*]], !prof [[PROF9:![0-9]+]], !nosanitize [[META8]]
 // NO-MERGE:       [[TRAP]]:
-// NO-MERGE-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR3:[0-9]+]], !nosanitize [[META5]]
-// NO-MERGE-NEXT:    unreachable, !nosanitize [[META5]]
+// NO-MERGE-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR3:[0-9]+]], !nosanitize [[META8]]
+// NO-MERGE-NEXT:    unreachable, !nosanitize [[META8]]
 // NO-MERGE:       [[MEMPTR_NONVIRTUAL]]:
 // NO-MERGE-NEXT:    [[MEMPTR_NONVIRTUALFN:%.*]] = inttoptr i64 [[P_COERCE0]] to ptr
-// NO-MERGE-NEXT:    [[TMP5:%.*]] = tail call i1 @llvm.type.test(ptr [[MEMPTR_NONVIRTUALFN]], metadata !"_ZTSM2B1FvvE")
-// NO-MERGE-NEXT:    [[TMP6:%.*]] = tail call i1 @llvm.type.test(ptr [[MEMPTR_NONVIRTUALFN]], metadata !"_ZTSM2B2FvvE")
-// NO-MERGE-NEXT:    [[TMP7:%.*]] = or i1 [[TMP5]], [[TMP6]], !nosanitize [[META5]]
-// NO-MERGE-NEXT:    br i1 [[TMP7]], label %[[MEMPTR_NONVIRTUAL23:.*]], label %[[TRAP2:.*]], !prof [[PROF6]], !nosanitize [[META5]]
+// NO-MERGE-NEXT:    [[TMP5:%.*]] = tail call i1 @llvm.type.test(ptr [[MEMPTR_NONVIRTUALFN]], metadata !"_ZTSM2B1FvvE"), !nosanitize [[META8]]
+// NO-MERGE-NEXT:    [[TMP6:%.*]] = tail call i1 @llvm.type.test(ptr [[MEMPTR_NONVIRTUALFN]], metadata !"_ZTSM2B2FvvE"), !nosanitize [[META8]]
+// NO-MERGE-NEXT:    [[TMP7:%.*]] = or i1 [[TMP5]], [[TMP6]], !nosanitize [[META8]]
+// NO-MERGE-NEXT:    br i1 [[TMP7]], label %[[MEMPTR_NONVIRTUAL23:.*]], label %[[TRAP2:.*]], !prof [[PROF9]], !nosanitize [[META8]]
 // NO-MERGE:       [[TRAP2]]:
-// NO-MERGE-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR4:[0-9]+]], !nosanitize [[META5]]
-// NO-MERGE-NEXT:    unreachable, !nosanitize [[META5]]
+// NO-MERGE-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR4:[0-9]+]], !nosanitize [[META8]]
+// NO-MERGE-NEXT:    unreachable, !nosanitize [[META8]]
 // NO-MERGE:       [[MEMPTR_VIRTUAL7]]:
-// NO-MERGE-NEXT:    [[MEMPTR_VIRTUALFN:%.*]] = load ptr, ptr [[TMP3]], align 8, !nosanitize [[META5]]
+// NO-MERGE-NEXT:    [[MEMPTR_VIRTUALFN:%.*]] = load ptr, ptr [[TMP3]], align 8, !nosanitize [[META8]]
 // NO-MERGE-NEXT:    tail call void [[MEMPTR_VIRTUALFN]](ptr noundef nonnull align 1 dereferenceable(1) [[TMP0]]) #[[ATTR5:[0-9]+]]
-// NO-MERGE-NEXT:    [[VTABLE8:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[VTABLE_POINTER_TBAA2]]
+// NO-MERGE-NEXT:    [[VTABLE8:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[VTABLE_POINTER_TBAA6]]
 // NO-MERGE-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[VTABLE8]], i64 [[P_COERCE0]]
 // NO-MERGE-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP8]], i64 -1
-// NO-MERGE-NEXT:    [[TMP10:%.*]] = tail call i1 @llvm.type.test(ptr [[TMP9]], metadata !"_ZTSM1SFvvE.virtual"), !nosanitize [[META5]]
-// NO-MERGE-NEXT:    br i1 [[TMP10]], label %[[MEMPTR_VIRTUAL19:.*]], label %[[TRAP2]], !prof [[PROF6]], !nosanitize [[META5]]
+// NO-MERGE-NEXT:    [[TMP10:%.*]] = tail call i1 @llvm.type.test(ptr [[TMP9]], metadata !"_ZTSM1SFvvE.virtual"), !nosanitize [[META8]]
+// NO-MERGE-NEXT:    br i1 [[TMP10]], label %[[MEMPTR_VIRTUAL19:.*]], label %[[TRAP2]], !prof [[PROF9]], !nosanitize [[META8]]
 // NO-MERGE:       [[TRAP13:.*]]:
-// NO-MERGE-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR4]], !nosanitize [[META5]]
-// NO-MERGE-NEXT:    unreachable, !nosanitize [[META5]]
+// NO-MERGE-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR4]], !nosanitize [[META8]]
+// NO-MERGE-NEXT:    unreachable, !nosanitize [[META8]]
 // NO-MERGE:       [[MEMPTR_VIRTUAL19]]:
-// NO-MERGE-NEXT:    [[MEMPTR_VIRTUALFN9:%.*]] = load ptr, ptr [[TMP9]], align 8, !nosanitize [[META5]]
+// NO-MERGE-NEXT:    [[MEMPTR_VIRTUALFN9:%.*]] = load ptr, ptr [[TMP9]], align 8, !nosanitize [[META8]]
 // NO-MERGE-NEXT:    tail call void [[MEMPTR_VIRTUALFN9]](ptr noundef nonnull align 1 dereferenceable(1) [[TMP0]]) #[[ATTR5]]
-// NO-MERGE-NEXT:    [[VTABLE20:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[VTABLE_POINTER_TBAA2]]
+// NO-MERGE-NEXT:    [[VTABLE20:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[VTABLE_POINTER_TBAA6]]
 // NO-MERGE-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[VTABLE20]], i64 [[P_COERCE0]]
 // NO-MERGE-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP11]], i64 -1
-// NO-MERGE-NEXT:    [[TMP13:%.*]] = tail call i1 @llvm.type.test(ptr [[TMP12]], metadata !"_ZTSM1SFvvE.virtual"), !nosanitize [[META5]]
-// NO-MERGE-NEXT:    [[MEMPTR_VIRTUALFN21:%.*]] = load ptr, ptr [[TMP12]], align 8, !nosanitize [[META5]]
-// NO-MERGE-NEXT:    br i1 [[TMP13]], label %[[MEMPTR_END27:.*]], label %[[TRAP13]], !prof [[PROF6]], !nosanitize [[META5]]
+// NO-MERGE-NEXT:    [[TMP13:%.*]] = tail call i1 @llvm.type.test(ptr [[TMP12]], metadata !"_ZTSM1SFvvE.virtual"), !nosanitize [[META8]]
+// NO-MERGE-NEXT:    [[MEMPTR_VIRTUALFN21:%.*]] = load ptr, ptr [[TMP12]], align 8, !nosanitize [[META8]]
+// NO-MERGE-NEXT:    br i1 [[TMP13]], label %[[MEMPTR_END27:.*]], label %[[TRAP13]], !prof [[PROF9]], !nosanitize [[META8]]
 // NO-MERGE:       [[MEMPTR_NONVIRTUAL23]]:
 // NO-MERGE-NEXT:    tail call void [[MEMPTR_NONVIRTUALFN]](ptr noundef nonnull align 1 dereferenceable(1) [[TMP0]]) #[[ATTR5]]
 // NO-MERGE-NEXT:    tail call void [[MEMPTR_NONVIRTUALFN]](ptr noundef nonnull align 1 dereferenceable(1) [[TMP0]]) #[[ATTR5]]
@@ -84,37 +84,37 @@ void f(S *s, void (S::*p)()) {
 // MERGE-NEXT:    [[MEMPTR_ISVIRTUAL_NOT:%.*]] = icmp eq i64 [[TMP1]], 0
 // MERGE-NEXT:    br i1 [[MEMPTR_ISVIRTUAL_NOT]], label %[[MEMPTR_NONVIRTUAL:.*]], label %[[MEMPTR_VIRTUAL:.*]]
 // MERGE:       [[MEMPTR_VIRTUAL]]:
-// MERGE-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[VTABLE_POINTER_TBAA2:![0-9]+]]
+// MERGE-NEXT:    [[VTABLE:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[VTABLE_POINTER_TBAA6:![0-9]+]]
 // MERGE-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[VTABLE]], i64 [[P_COERCE0]]
 // MERGE-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP2]], i64 -1
-// MERGE-NEXT:    [[TMP4:%.*]] = tail call i1 @llvm.type.test(ptr [[TMP3]], metadata !"_ZTSM1SFvvE.virtual"), !nosanitize [[META5:![0-9]+]]
-// MERGE-NEXT:    br i1 [[TMP4]], label %[[MEMPTR_VIRTUAL6:.*]], label %[[TRAP:.*]], !prof [[PROF6:![0-9]+]], !nosanitize [[META5]]
+// MERGE-NEXT:    [[TMP4:%.*]] = tail call i1 @llvm.type.test(ptr [[TMP3]], metadata !"_ZTSM1SFvvE.virtual"), !nosanitize [[META8:![0-9]+]]
+// MERGE-NEXT:    br i1 [[TMP4]], label %[[MEMPTR_VIRTUAL6:.*]], label %[[TRAP:.*]], !prof [[PROF9:![0-9]+]], !nosanitize [[META8]]
 // MERGE:       [[TRAP]]:
-// MERGE-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR3:[0-9]+]], !nosanitize [[META5]]
-// MERGE-NEXT:    unreachable, !nosanitize [[META5]]
+// MERGE-NEXT:    tail call void @llvm.ubsantrap(i8 2) #[[ATTR3:[0-9]+]], !nosanitize [[META8]]
+// MERGE-NEXT:    unreachable, !nosanitize [[META8]]
 // MERGE:       [[MEMPTR_NONVIRTUAL]]:
 // MERGE-NEXT:    [[MEMPTR_NONVIRTUALFN:%.*]] = inttoptr i64 [[P_COERCE0]] to ptr
-// MERGE-NEXT:    [[TMP5:%.*]] = tail call i1 @llvm.type.test(ptr [[MEMPTR_NONVIRTUALFN]], metadata !"_ZTSM2B1FvvE")
-// MERGE-NEXT:    [[TMP6:%.*]] = tail call i1 @llvm.type.test(ptr [[MEMPTR_NONVIRTUALFN]], metadata !"_ZTSM2B2FvvE")
-// MERGE-NEXT:    [[TMP7:%.*]] = or i1 [[TMP5]], [[TMP6]], !nosanitize [[META5]]
-// MERGE-NEXT:    br i1 [[TMP7]], label %[[MEMPTR_NONVIRTUAL21:.*]], label %[[TRAP]], !prof [[PROF6]], !nosanitize [[META5]]
+// MERGE-NEXT:    [[TMP5:%.*]] = tail call i1 @llvm.type.test(ptr [[MEMPTR_NONVIRTUALFN]], metadata !"_ZTSM2B1FvvE"), !nosanitize [[META8]]
+// MERGE-NEXT:    [[TMP6:%.*]] = tail call i1 @llvm.type.test(ptr [[MEMPTR_NONVIRTUALFN]], metadata !"_ZTSM2B2FvvE"), !nosanitize [[META8]]
+// MERGE-NEXT:    [[TMP7:%.*]] = or i1 [[TMP5]], [[TMP6]], !nosanitize [[META8]]
+// MERGE-NEXT:    br i1 [[TMP7]], label %[[MEMPTR_NONVIRTUAL21:.*]], label %[[TRAP]], !prof [[PROF9]], !nosanitize [[META8]]
 // MERGE:       [[MEMPTR_VIRTUAL6]]:
-// MERGE-NEXT:    [[MEMPTR_VIRTUALFN:%.*]] = load ptr, ptr [[TMP3]], align 8, !nosanitize [[META5]]
+// MERGE-NEXT:    [[MEMPTR_VIRTUALFN:%.*]] = load ptr, ptr [[TMP3]], align 8, !nosanitize [[META8]]
 // MERGE-NEXT:    tail call void [[MEMPTR_VIRTUALFN]](ptr noundef nonnull align 1 dereferenceable(1) [[TMP0]]) #[[ATTR4:[0-9]+]]
-// MERGE-NEXT:    [[VTABLE7:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[VTABLE_POINTER_TBAA2]]
+// MERGE-NEXT:    [[VTABLE7:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[VTABLE_POINTER_TBAA6]]
 // MERGE-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[VTABLE7]], i64 [[P_COERCE0]]
 // MERGE-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[TMP8]], i64 -1
-// MERGE-NEXT:    [[TMP10:%.*]] = tail call i1 @llvm.type.test(ptr [[TMP9]], metadata !"_ZTSM1SFvvE.virtual"), !nosanitize [[META5]]
-// MERGE-NEXT:    br i1 [[TMP10]], label %[[MEMPTR_VIRTUAL17:.*]], label %[[TRAP]], !prof [[PROF6]], !nosanitize [[META5]]
+// MERGE-NEXT:    [[TMP10:%.*]] = tail call i1 @llvm.type.test(ptr [[TMP9]], metadata !"_ZTSM1SFvvE.virtual"), !nosanitize [[META8]]
+// MERGE-NEXT:    br i1 [[TMP10]], label %[[MEMPTR_VIRTUAL17:.*]], label %[[TRAP]], !prof [[PROF9]], !nosanitize [[META8]]
 // MERGE:       [[MEMPTR_VIRTUAL17]]:
-// MERGE-NEXT:    [[MEMPTR_VIRTUALFN8:%.*]] = load ptr, ptr [[TMP9]], align 8, !nosanitize [[META5]]
+// MERGE-NEXT:    [[MEMPTR_VIRTUALFN8:%.*]] = load ptr, ptr [[TMP9]], align 8, !nosanitize [[META8]]
 // MERGE-NEXT:    tail call void [[MEMPTR_VIRTUALFN8]](ptr noundef nonnull align 1 dereferenceable(1) [[TMP0]]) #[[ATTR4]]
-// MERGE-NEXT:    [[VTABLE18:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[VTABLE_POINTER_TBAA2]]
+// MERGE-NEXT:    [[VTABLE18:%.*]] = load ptr, ptr [[TMP0]], align 8, !tbaa [[VTABLE_POINTER_TBAA6]]
 // MERGE-NEXT:    [[TMP11:%.*]] = getelementptr i8, ptr [[VTABLE18]], i64 [[P_COERCE0]]
 // MERGE-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[TMP11]], i64 -1
-// MERGE-NEXT:    [[TMP13:%.*]] = tail call i1 @llvm.type.test(ptr [[TMP12]], metadata !"_ZTSM1SFvvE.virtual"), !nosanitize [[META5]]
-// MERGE-NEXT:    [[MEMPTR_VIRTUALFN19:%.*]] = load ptr, ptr [[TMP12]], align 8, !nosanitize [[META5]]
-// MERGE-NEXT:    br i1 [[TMP13]], label %[[MEMPTR_END24:.*]], label %[[TRAP]], !prof [[PROF6]], !nosanitize [[META5]]
+// MERGE-NEXT:    [[TMP13:%.*]] = tail call i1 @llvm.type.test(ptr [[TMP12]], metadata !"_ZTSM1SFvvE.virtual"), !nosanitize [[META8]]
+// MERGE-NEXT:    [[MEMPTR_VIRTUALFN19:%.*]] = load ptr, ptr [[TMP12]], align 8, !nosanitize [[META8]]
+// MERGE-NEXT:    br i1 [[TMP13]], label %[[MEMPTR_END24:.*]], label %[[TRAP]], !prof [[PROF9]], !nosanitize [[META8]]
 // MERGE:       [[MEMPTR_NONVIRTUAL21]]:
 // MERGE-NEXT:    tail call void [[MEMPTR_NONVIRTUALFN]](ptr noundef nonnull align 1 dereferenceable(1) [[TMP0]]) #[[ATTR4]]
 // MERGE-NEXT:    tail call void [[MEMPTR_NONVIRTUALFN]](ptr noundef nonnull align 1 dereferenceable(1) [[TMP0]]) #[[ATTR4]]
@@ -125,15 +125,15 @@ void f(S *s, void (S::*p)()) {
 // MERGE-NEXT:    ret void
 //
 //.
-// NO-MERGE: [[VTABLE_POINTER_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// NO-MERGE: [[META3]] = !{!"vtable pointer", [[META4:![0-9]+]], i64 0}
-// NO-MERGE: [[META4]] = !{!"Simple C++ TBAA"}
-// NO-MERGE: [[META5]] = !{}
-// NO-MERGE: [[PROF6]] = !{!"branch_weights", i32 1048575, i32 1}
+// NO-MERGE: [[META5:![0-9]+]] = !{!"Simple C++ TBAA"}
+// NO-MERGE: [[VTABLE_POINTER_TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
+// NO-MERGE: [[META7]] = !{!"vtable pointer", [[META5]], i64 0}
+// NO-MERGE: [[META8]] = !{}
+// NO-MERGE: [[PROF9]] = !{!"branch_weights", i32 1048575, i32 1}
 //.
-// MERGE: [[VTABLE_POINTER_TBAA2]] = !{[[META3:![0-9]+]], [[META3]], i64 0}
-// MERGE: [[META3]] = !{!"vtable pointer", [[META4:![0-9]+]], i64 0}
-// MERGE: [[META4]] = !{!"Simple C++ TBAA"}
-// MERGE: [[META5]] = !{}
-// MERGE: [[PROF6]] = !{!"branch_weights", i32 1048575, i32 1}
+// MERGE: [[META5:![0-9]+]] = !{!"Simple C++ TBAA"}
+// MERGE: [[VTABLE_POINTER_TBAA6]] = !{[[META7:![0-9]+]], [[META7]], i64 0}
+// MERGE: [[META7]] = !{!"vtable pointer", [[META5]], i64 0}
+// MERGE: [[META8]] = !{}
+// MERGE: [[PROF9]] = !{!"branch_weights", i32 1048575, i32 1}
 //.

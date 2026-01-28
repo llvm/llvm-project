@@ -57,6 +57,137 @@ TEST(Hover, Structured) {
          HI.Type = "void ()";
          HI.Parameters.emplace();
        }},
+      {R"cpp(
+          // Best foo ever.
+          void [[fo^o]](auto x) {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "Best foo ever.";
+         HI.Definition = "void foo(auto x)";
+         HI.ReturnType = "void";
+         HI.Type = "void (auto)";
+         HI.TemplateParameters = {
+             {{"class"}, std::string("x:auto"), std::nullopt},
+         };
+         HI.Parameters = {
+             {{"auto"}, std::string("x"), std::nullopt},
+         };
+       }},
+      {R"cpp(
+          // Best foo ever.
+          template <class T>
+          void [[fo^o]](T x) {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "Best foo ever.";
+         HI.Definition = "template <class T> void foo(T x)";
+         HI.ReturnType = "void";
+         HI.Type = "void (T)";
+         HI.TemplateParameters = {
+             {{"class"}, std::string("T"), std::nullopt},
+         };
+         HI.Parameters = {
+             {{"T"}, std::string("x"), std::nullopt},
+         };
+       }},
+      {R"cpp(
+          // Best foo ever.
+          template <class T>
+          void [[fo^o]](T x, auto y) {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "Best foo ever.";
+         HI.Definition = "template <class T> void foo(T x, auto y)";
+         HI.ReturnType = "void";
+         HI.Type = "void (T, auto)";
+         HI.TemplateParameters = {
+             {{"class"}, std::string("T"), std::nullopt},
+             {{"class"}, std::string("y:auto"), std::nullopt},
+         };
+         HI.Parameters = {
+             {{"T"}, std::string("x"), std::nullopt},
+             {{"auto"}, std::string("y"), std::nullopt},
+         };
+       }},
+      {R"cpp(
+          template<typename T1, typename T2>
+          concept C = requires () { true; };
+
+          // Best foo ever.
+          template<C<int> T>
+          void [[fo^o]](T x) {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "Best foo ever.";
+         HI.Definition = "template <C<int> T> void foo(T x)";
+         HI.ReturnType = "void";
+         HI.Type = "void (T)";
+         HI.TemplateParameters = {
+             {{"class"}, std::string("T"), std::nullopt},
+         };
+         HI.Parameters = {
+             {{"T"}, std::string("x"), std::nullopt},
+         };
+       }},
+      {R"cpp(
+          template<typename T1, typename T2>
+          concept C = requires () { true; };
+
+          // Best foo ever.
+          void [[fo^o]](C<int> auto x) {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "Best foo ever.";
+         HI.Definition = "void foo(C<int> auto x)";
+         HI.ReturnType = "void";
+         HI.Type = "void (C<int> auto)";
+         HI.TemplateParameters = {
+             {{"class"}, std::string("x:auto"), std::nullopt},
+         };
+         HI.Parameters = {
+             {{"C<int> auto"}, std::string("x"), std::nullopt},
+         };
+       }},
+      {R"cpp(
+          template<typename T1, typename T2>
+          concept C = requires () { true; };
+
+          // Best foo ever.
+          template<C<int> T>
+          void [[fo^o]](T x, C<int> auto y) {}
+          )cpp",
+       [](HoverInfo &HI) {
+         HI.NamespaceScope = "";
+         HI.Name = "foo";
+         HI.Kind = index::SymbolKind::Function;
+         HI.Documentation = "Best foo ever.";
+         HI.Definition = "template <C<int> T> void foo(T x, C<int> auto y)";
+         HI.ReturnType = "void";
+         HI.Type = "void (T, C<int> auto)";
+         HI.TemplateParameters = {
+             {{"class"}, std::string("T"), std::nullopt},
+             {{"class"}, std::string("y:auto"), std::nullopt},
+         };
+         HI.Parameters = {
+             {{"T"}, std::string("x"), std::nullopt},
+             {{"C<int> auto"}, std::string("y"), std::nullopt},
+         };
+       }},
       // Inside namespace
       {R"cpp(
           namespace ns1 { namespace ns2 {
@@ -4087,16 +4218,16 @@ Parameters:
 
 @brief brief doc
 
-longer doc
+longer doc  
 @note this is a note
 
-As you see, notes are "inlined".
+As you see, notes are "inlined".  
 @warning this is a warning
 
-As well as warnings
-@param a this is a param
-@return it returns something
-@retval 0 if successful
+As well as warnings  
+@param a this is a param  
+@return it returns something  
+@retval 0 if successful  
 @retval 1 if failed
 
 ---
@@ -4166,9 +4297,9 @@ Parameters:
 
 @brief brief doc
 
-longer doc
-@param a this is a param
-@param b does not exist
+longer doc  
+@param a this is a param  
+@param b does not exist  
 @return it returns something
 
 ---
@@ -4315,19 +4446,19 @@ TEST(Hover, ParseDocumentation) {
                },
                {
                    "foo.\nbar",
-                   "foo.\nbar",
-                   "foo.\nbar",
+                   "foo.  \nbar",
+                   "foo.  \nbar",
                    "foo.\nbar",
                },
                {
                    "foo. \nbar",
-                   "foo. \nbar",
-                   "foo. \nbar",
+                   "foo.   \nbar",
+                   "foo.   \nbar",
                    "foo.\nbar",
                },
                {
                    "foo\n*bar",
-                   "foo\n\\*bar",
+                   "foo  \n\\*bar",
                    "foo\n*bar",
                    "foo\n*bar",
                },
@@ -4354,6 +4485,24 @@ TEST(Hover, ParseDocumentation) {
                    "\\`not\nparsed\\`",
                    "`not\nparsed`",
                    "`not parsed`",
+               },
+               {
+                   R"(@brief this is a typical use case
+@param x this is x
+\param y this is y
+@return something)",
+                   R"(@brief this is a typical use case  
+@param x this is x  
+\\param y this is y  
+@return something)",
+                   R"(@brief this is a typical use case  
+@param x this is x  
+\param y this is y  
+@return something)",
+                   R"(@brief this is a typical use case
+@param x this is x
+\param y this is y
+@return something)",
                }};
 
   for (const auto &C : Cases) {

@@ -39,7 +39,7 @@ void MoveConstructorInitCheck::check(const MatchFinder::MatchResult &Result) {
 
   // Do not diagnose if the expression used to perform the initialization is a
   // trivially-copyable type.
-  QualType QT = Initializer->getInit()->getType();
+  const QualType QT = Initializer->getInit()->getType();
   if (QT.isTriviallyCopyableType(*Result.Context))
     return;
 

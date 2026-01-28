@@ -246,6 +246,57 @@ exit:
   ret void
 }
 
+; Test for https://github.com/llvm/llvm-project/issues/162688.
+define void @test_minbws_for_trunc(i32 %n, ptr noalias %p1, ptr noalias %p2) {
+; CHECK-LABEL: define void @test_minbws_for_trunc(
+; CHECK-SAME: i32 [[N:%.*]], ptr noalias [[P1:%.*]], ptr noalias [[P2:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i16 [ 0, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[IV_EXT:%.*]] = sext i16 [[IV]] to i64
+; CHECK-NEXT:    [[GEP1:%.*]] = getelementptr i32, ptr [[P1]], i64 [[IV_EXT]]
+; CHECK-NEXT:    [[V1:%.*]] = load i32, ptr [[GEP1]], align 4
+; CHECK-NEXT:    [[V1_TRUNC:%.*]] = trunc i32 [[V1]] to i16
+; CHECK-NEXT:    [[GEP2:%.*]] = getelementptr [1 x [1 x i16]], ptr [[P2]], i64 [[IV_EXT]]
+; CHECK-NEXT:    store i16 [[V1_TRUNC]], ptr [[GEP2]], align 2
+; CHECK-NEXT:    [[V1_TRUNC_I8:%.*]] = trunc i32 [[V1]] to i8
+; CHECK-NEXT:    [[GEP3:%.*]] = getelementptr i8, ptr [[P2]], i64 [[IV_EXT]]
+; CHECK-NEXT:    store i8 [[V1_TRUNC_I8]], ptr [[GEP3]], align 1
+; CHECK-NEXT:    [[GEP4:%.*]] = getelementptr [1 x i64], ptr [[P2]], i64 [[IV_EXT]]
+; CHECK-NEXT:    store i64 0, ptr [[GEP4]], align 8
+; CHECK-NEXT:    [[IV_NEXT]] = add i16 [[IV]], 4
+; CHECK-NEXT:    [[IV_NEXT_EXT:%.*]] = sext i16 [[IV_NEXT]] to i32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ne i32 [[IV_NEXT_EXT]], 1024
+; CHECK-NEXT:    br i1 [[CMP]], label %[[LOOP]], label %[[EXIT:.*]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    ret void
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i16 [ 0, %entry ], [ %iv.next, %loop ]
+  %iv.ext = sext i16 %iv to i64
+  %gep1 = getelementptr i32, ptr %p1, i64 %iv.ext
+  %v1 = load i32, ptr %gep1, align 4
+  %v1.trunc = trunc i32 %v1 to i16
+  %gep2 = getelementptr [1 x [1 x i16]], ptr %p2, i64 %iv.ext
+  store i16 %v1.trunc, ptr %gep2, align 2
+  %v1.trunc.i8 = trunc i32 %v1 to i8
+  %gep3 = getelementptr i8, ptr %p2, i64 %iv.ext
+  store i8 %v1.trunc.i8, ptr %gep3, align 1
+  %gep4 = getelementptr [1 x i64], ptr %p2, i64 %iv.ext
+  store i64 0, ptr %gep4, align 8
+  %iv.next = add i16 %iv, 4
+  %iv.next.ext = sext i16 %iv.next to i32
+  %cmp = icmp ne i32 %iv.next.ext, 1024
+  br i1 %cmp, label %loop, label %exit
+
+exit:
+  ret void
+}
+
 attributes #0 = { "target-features"="+64bit,+v,+zvl256b" }
 attributes #1 = { "target-features"="+64bit,+v" }
 

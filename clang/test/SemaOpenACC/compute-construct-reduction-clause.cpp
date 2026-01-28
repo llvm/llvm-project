@@ -62,10 +62,12 @@ void uses(unsigned Parm) {
   // Vars in a reduction must be a scalar or a composite of scalars.
 #pragma acc parallel reduction(&: CoS, I, F)
   // expected-error@-1{{variable of type 'float' referenced in OpenACC 'reduction' clause does not have a valid operation available}}
-  // expected-error@-2{{invalid operands to binary expression ('float' and 'float')}}
-  // expected-error@-3{{variable of type 'float' referenced in OpenACC 'reduction' clause does not have a valid operation available}}
+  // expected-note@-2{{while forming binary operator '&='}}
+  // expected-error@-3{{invalid operands to binary expression ('float' and 'float')}}
+  // expected-error@-4{{variable of type 'float' referenced in OpenACC 'reduction' clause does not have a valid operation available}}
   // expected-note@#COS_FLOAT{{while forming combiner for compound type 'CompositeOfScalars'}}
-  // expected-error@-5{{invalid operands to binary expression ('float' and 'float')}}
+  // expected-note@-6{{while forming binary operator '&='}}
+  // expected-error@-7{{invalid operands to binary expression ('float' and 'float')}}
   while (1);
   // expected-error@+3{{invalid type 'struct CompositeOfScalars' used in OpenACC 'reduction' variable reference; type is not a scalar value}}
   // expected-note@#COS_FIELD{{used as field 'COS' of composite 'CompositeHasComposite'}}
@@ -78,7 +80,8 @@ void uses(unsigned Parm) {
 #pragma acc parallel reduction(&: CoS, Array[I], Array[0:I])
   // expected-error@-1{{variable of type 'float' referenced in OpenACC 'reduction' clause does not have a valid operation available}}
   // expected-note@#COS_FLOAT{{while forming combiner for compound type 'CompositeOfScalars'}}
-  // expected-error@-3{{invalid operands to binary expression ('float' and 'float')}}
+  // expected-note@-3{{while forming binary operator '&='}}
+  // expected-error@-4{{invalid operands to binary expression ('float' and 'float')}}
   while (1);
 
   // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, or composite variable member}}
@@ -221,7 +224,8 @@ void TemplUses(T Parm, U CoS, V ChC) {
 #pragma acc parallel reduction(&: CoS, Var, Parm)
   // expected-error@-1{{variable of type 'float' referenced in OpenACC 'reduction' clause does not have a valid operation available}}
   // expected-note@#COS_FLOAT{{while forming combiner for compound type 'CompositeOfScalars'}}
-  // expected-error@-3{{invalid operands to binary expression ('float' and 'float')}}
+  // expected-note@-3{{while forming binary operator '&='}}
+  // expected-error@-4{{invalid operands to binary expression ('float' and 'float')}}
   while (1);
   // expected-error@+3{{invalid type 'struct CompositeOfScalars' used in OpenACC 'reduction' variable reference; type is not a scalar value}}
   // expected-note@#COS_FIELD{{used as field 'COS' of composite 'CompositeHasComposite'}}
@@ -236,7 +240,8 @@ void TemplUses(T Parm, U CoS, V ChC) {
 #pragma acc parallel reduction(&: CoS, Array[Var], Array[0:Var])
   // expected-error@-1{{variable of type 'float' referenced in OpenACC 'reduction' clause does not have a valid operation available}}
   // expected-note@#COS_FLOAT{{while forming combiner for compound type 'CompositeOfScalars'}}
-  // expected-error@-3{{invalid operands to binary expression ('float' and 'float')}}
+  // expected-note@-3{{while forming binary operator '&='}}
+  // expected-error@-4{{invalid operands to binary expression ('float' and 'float')}}
   while (1);
 
   // expected-error@+1{{OpenACC variable is not a valid variable name, sub-array, array element, or composite variable member}}

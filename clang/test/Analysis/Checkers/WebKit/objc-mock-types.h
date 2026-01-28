@@ -17,6 +17,12 @@ template<typename T> typename remove_reference<T>::type&& move(T&& t);
 
 #endif
 
+namespace WTF {
+
+template<typename T> typename std::remove_reference<T>::type&& move(T&& t);
+
+}
+
 namespace std {
 
 template <bool, typename U = void> struct enable_if {
@@ -453,7 +459,7 @@ public:
     }
 
     OSObjectPtr(T ptr)
-        : m_ptr(std::move(ptr))
+        : m_ptr(WTF::move(ptr))
     {
         if (m_ptr)
             retainOSObject(m_ptr);
@@ -483,7 +489,7 @@ public:
 
     OSObjectPtr& operator=(T other)
     {
-        OSObjectPtr ptr = std::move(other);
+        OSObjectPtr ptr = WTF::move(other);
         swap(ptr);
         return *this;
     }

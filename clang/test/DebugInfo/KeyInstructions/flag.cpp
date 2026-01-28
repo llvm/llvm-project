@@ -8,6 +8,9 @@
 
 // KEY-INSTRUCTIONS: "-gkey-instructions"
 // NO-KEY-INSTRUCTIONS-NOT: key-instructions
+
+// Only expect one dwarf related flag.
+// NO-DEBUG: -fdwarf2-cfi-asm
 // NO-DEBUG-NOT: debug-info-kind
 // NO-DEBUG-NOT: dwarf
 

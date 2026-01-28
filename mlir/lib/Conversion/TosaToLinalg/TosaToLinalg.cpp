@@ -200,13 +200,6 @@ static Value createLinalgBodyCalculationForElementwiseOp(
       return arith::NegFOp::create(rewriter, loc, resultTypes, args[0]);
 
     if (isa<IntegerType>(elementTy)) {
-      if (hasInZp && hasOutZp && !inZp && !outZp) {
-        auto constant = arith::ConstantOp::create(
-            rewriter, loc, IntegerAttr::get(elementTy, 0));
-        return arith::SubIOp::create(rewriter, loc, resultTypes, constant,
-                                     args[0]);
-      }
-
       Value zpAddValue;
       Type intermediateType;
       // Compute the maximum value that can occur in the intermediate buffer.
@@ -221,33 +214,34 @@ static Value createLinalgBodyCalculationForElementwiseOp(
             std::abs(zpAdd) + 1;
 
         // Convert that maximum value into the maximum bitwidth needed to
-        // represent it. We assume 48-bit numbers may be supported further in
-        // the pipeline.
+        // represent it.
         if (maxValue <= APInt::getSignedMaxValue(16).getSExtValue()) {
           intermediateBitWidth = 16;
         } else if (maxValue <= APInt::getSignedMaxValue(32).getSExtValue()) {
           intermediateBitWidth = 32;
-        } else if (maxValue <= APInt::getSignedMaxValue(48).getSExtValue()) {
-          intermediateBitWidth = 48;
         }
 
         intermediateType = rewriter.getIntegerType(intermediateBitWidth);
-        zpAddValue = rewriter.create<arith::ConstantOp>(
-            loc, rewriter.getIntegerAttr(intermediateType, zpAdd));
+        zpAddValue = arith::ConstantOp::create(
+            rewriter, loc, rewriter.getIntegerAttr(intermediateType, zpAdd));
       } else {
         intermediateType = rewriter.getIntegerType(intermediateBitWidth);
-        auto arg1 =
-            rewriter.create<arith::ExtSIOp>(loc, intermediateType, args[1]);
-        auto arg2 =
-            rewriter.create<arith::ExtSIOp>(loc, intermediateType, args[2]);
+        Value arg1 = args[1];
+        Value arg2 = args[2];
+        // Avoid verifier-invalid no-op sign-extends; only widen when needed.
+        if (arg1.getType() != intermediateType)
+          arg1 = arith::ExtSIOp::create(rewriter, loc, intermediateType, arg1);
+        if (arg2.getType() != intermediateType)
+          arg2 = arith::ExtSIOp::create(rewriter, loc, intermediateType, arg2);
         zpAddValue =
-            rewriter.create<arith::AddIOp>(loc, intermediateType, arg1, arg2);
+            arith::AddIOp::create(rewriter, loc, intermediateType, arg1, arg2);
       }
 
       // The negation can be applied by doing:
       //  outputValue = inZp + outZp - inputValue
-      auto ext =
-          arith::ExtSIOp::create(rewriter, loc, intermediateType, args[0]);
+      Value ext = args[0];
+      if (ext.getType() != intermediateType)
+        ext = arith::ExtSIOp::create(rewriter, loc, intermediateType, ext);
       auto sub = arith::SubIOp::create(rewriter, loc, zpAddValue, ext);
 
       // Clamp to the negation range.
@@ -259,7 +253,9 @@ static Value createLinalgBodyCalculationForElementwiseOp(
           APInt::getSignedMaxValue(inputBitWidth).getSExtValue());
       auto clamp = clampIntHelper(loc, sub, min, max, rewriter, false);
 
-      // Truncate to the final value.
+      // Truncate to the final value, skipping no-op trunci when widths match.
+      if (clamp.getType() == elementTy)
+        return clamp;
       return arith::TruncIOp::create(rewriter, loc, elementTy, clamp);
     }
   }
@@ -1402,8 +1398,8 @@ static Value collapse1xNTensorToN(PatternRewriter &rewriter, Value input,
   auto elemType = inputType.getElementType();
   auto collapsedType = RankedTensorType::get({}, elemType);
   // Emit the collapse op
-  return rewriter.create<tensor::CollapseShapeOp>(loc, collapsedType, input,
-                                                  reassociation);
+  return tensor::CollapseShapeOp::create(rewriter, loc, collapsedType, input,
+                                         reassociation);
 }
 
 static llvm::SmallVector<int8_t>
@@ -1443,7 +1439,7 @@ static void setupLinalgGenericOpInputAndIndexingMap(
       IntegerAttr intAttr = isShift
                                 ? rewriter.getI8IntegerAttr(values.front())
                                 : rewriter.getI32IntegerAttr(values.front());
-      constant = rewriter.create<arith::ConstantOp>(loc, intAttr);
+      constant = arith::ConstantOp::create(rewriter, loc, intAttr);
     } else {
       auto elementType =
           isShift ? rewriter.getIntegerType(8) : rewriter.getI32Type();
@@ -1511,14 +1507,14 @@ static Value getExtendZp(OpBuilder &builder, Type valueTy,
                 .getResult(0);
       }
       if (zpTy.isUnsignedInteger()) {
-        return builder.create<arith::ExtUIOp>(loc, extendType, result);
+        return arith::ExtUIOp::create(builder, loc, extendType, result);
       } else {
-        return builder.create<arith::ExtSIOp>(loc, extendType, result);
+        return arith::ExtSIOp::create(builder, loc, extendType, result);
       }
     }
   } else {
-    return builder.create<arith::ConstantOp>(
-        loc, IntegerAttr::get(extendType, *maybeZp));
+    return arith::ConstantOp::create(builder, loc,
+                                     IntegerAttr::get(extendType, *maybeZp));
   }
   return result;
 }

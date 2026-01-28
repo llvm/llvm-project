@@ -44,8 +44,7 @@ struct TestXeGPUUnrollingPatterns
   }
 
   TestXeGPUUnrollingPatterns() = default;
-  TestXeGPUUnrollingPatterns(const TestXeGPUUnrollingPatterns &pass)
-      : PassWrapper(pass) {}
+  TestXeGPUUnrollingPatterns(const TestXeGPUUnrollingPatterns &pass) = default;
 
   void runOnOperation() override {
     MLIRContext *ctx = &getContext();
@@ -184,7 +183,7 @@ class TestStepOpPattern : public OpConversionPattern<vector::StepOp> {
   matchAndRewrite(vector::StepOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
 
-    auto layoutName = xegpu::getLayoutName(op->getResult(0));
+    auto layoutName = xegpu::getTemporaryLayoutName(op->getResult(0));
     auto sliceAttr = op->getAttrOfType<xegpu::SliceAttr>(layoutName);
     if (!sliceAttr || sliceAttr.getRank() != 1)
       return failure();
@@ -200,7 +199,8 @@ class TestStepOpPattern : public OpConversionPattern<vector::StepOp> {
 
     Value sgId =
         gpu::SubgroupIdOp::create(rewriter, loc, /*upper_bound=*/nullptr);
-    auto maybeOffsets = sliceAttr.getOffsets(rewriter, loc, sgId, wgShape);
+    auto maybeOffsets =
+        sliceAttr.computeDistributedCoords(rewriter, loc, sgId, wgShape);
     if (failed(maybeOffsets))
       return failure();
 
@@ -277,6 +277,80 @@ struct TestXeGPUMoveFuncBodyToWarpOp
   }
 };
 
+struct TestXeGPUPropagateLayouts
+    : public PassWrapper<TestXeGPUPropagateLayouts,
+                         OperationPass<gpu::GPUModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestXeGPUPropagateLayouts)
+
+  StringRef getArgument() const final { return "test-xegpu-propagate-layouts"; }
+
+  StringRef getDescription() const final {
+    return "Test the implementation of XeGPU propagate layouts.";
+  }
+
+  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+    registry.insert<xegpu::XeGPUDialect>();
+    registry.insert<gpu::GPUDialect>();
+  }
+
+  TestXeGPUPropagateLayouts() = default;
+  TestXeGPUPropagateLayouts(const TestXeGPUPropagateLayouts &pass)
+      : PassWrapper(pass) {}
+
+  Option<std::string> layoutKind{
+      *this, "layout-kind",
+      llvm::cl::desc("Propagate `subgroup` / `inst` / `lane` level of xegpu "
+                     "layouts."),
+      llvm::cl::init("lane")};
+
+  void runOnOperation() override {
+    OpBuilder builder(getOperation());
+    LayoutKind kind;
+    if (layoutKind == "subgroup")
+      kind = LayoutKind::Subgroup;
+    else if (layoutKind == "inst")
+      kind = LayoutKind::InstData;
+    else if (layoutKind == "lane")
+      kind = LayoutKind::Lane;
+    else {
+      signalPassFailure();
+      return;
+    }
+    if (failed(xegpu::propagateLayouts(builder, getOperation(), kind))) {
+      signalPassFailure();
+    }
+  }
+};
+
+struct TestXeGPUResolveLayoutConflicts
+    : public PassWrapper<TestXeGPUResolveLayoutConflicts,
+                         OperationPass<gpu::GPUModuleOp>> {
+  MLIR_DEFINE_EXPLICIT_INTERNAL_INLINE_TYPE_ID(TestXeGPUResolveLayoutConflicts)
+
+  StringRef getArgument() const final {
+    return "test-xegpu-resolve-layout-conflicts";
+  }
+
+  StringRef getDescription() const final {
+    return "Test the implementation of XeGPU layout conflict resolution.";
+  }
+
+  void getDependentDialects(::mlir::DialectRegistry &registry) const override {
+    registry.insert<xegpu::XeGPUDialect>();
+    registry.insert<gpu::GPUDialect>();
+  }
+
+  TestXeGPUResolveLayoutConflicts() = default;
+  TestXeGPUResolveLayoutConflicts(const TestXeGPUResolveLayoutConflicts &pass) =
+      default;
+
+  void runOnOperation() override {
+    if (failed(xegpu::resolveLayoutConflicts(getOperation()))) {
+      signalPassFailure();
+    }
+  }
+};
+
 struct TestXeGPULayoutInterface
     : public PassWrapper<TestXeGPULayoutInterface,
                          OperationPass<gpu::GPUModuleOp>> {
@@ -297,8 +371,7 @@ struct TestXeGPULayoutInterface
   }
 
   TestXeGPULayoutInterface() = default;
-  TestXeGPULayoutInterface(const TestXeGPULayoutInterface &pass)
-      : PassWrapper(pass) {}
+  TestXeGPULayoutInterface(const TestXeGPULayoutInterface &pass) = default;
 
   void runOnOperation() override {
     MLIRContext *ctx = &getContext();
@@ -323,7 +396,7 @@ struct TestXeGPULayoutInterface
 
     target.addDynamicallyLegalOp<vector::StepOp>(
         [&](vector::StepOp op) -> bool {
-          auto layoutName = xegpu::getLayoutName(op->getResult(0));
+          auto layoutName = xegpu::getTemporaryLayoutName(op->getResult(0));
           auto sliceAttr = op->getAttrOfType<xegpu::SliceAttr>(layoutName);
           return isLegal(sliceAttr);
         });
@@ -343,6 +416,8 @@ void registerTestXeGPULowerings() {
   PassRegistration<TestXeGPULayoutInterface>();
   PassRegistration<TestXeGPUSGDistribute>();
   PassRegistration<TestXeGPUMoveFuncBodyToWarpOp>();
+  PassRegistration<TestXeGPUPropagateLayouts>();
+  PassRegistration<TestXeGPUResolveLayoutConflicts>();
 }
 } // namespace test
 } // namespace mlir

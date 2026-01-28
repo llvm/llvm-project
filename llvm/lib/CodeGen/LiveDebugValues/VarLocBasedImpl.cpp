@@ -1094,7 +1094,7 @@ public:
   /// Default construct and initialize the pass.
   VarLocBasedLDV();
 
-  ~VarLocBasedLDV();
+  ~VarLocBasedLDV() override;
 
   /// Print to ostream with a message.
   void printVarLocInMBB(const MachineFunction &MF, const VarLocInMBB &V,

@@ -19,12 +19,8 @@ namespace llvm {
 /// An auxiliary type to facilitate extraction of 3-byte entities.
 struct Uint24 {
   uint8_t Bytes[3];
-  Uint24(uint8_t U) {
-    Bytes[0] = Bytes[1] = Bytes[2] = U;
-  }
-  Uint24(uint8_t U0, uint8_t U1, uint8_t U2) {
-    Bytes[0] = U0; Bytes[1] = U1; Bytes[2] = U2;
-  }
+  Uint24(uint8_t U) : Bytes{U, U, U} {}
+  Uint24(uint8_t U0, uint8_t U1, uint8_t U2) : Bytes{U0, U1, U2} {}
   uint32_t getAsUint32(bool IsLittleEndian) const {
     int LoIx = IsLittleEndian ? 0 : 2;
     return Bytes[LoIx] + (Bytes[1] << 8) + (Bytes[2-LoIx] << 16);

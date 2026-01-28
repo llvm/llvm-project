@@ -119,15 +119,15 @@ GCNSubtarget &GCNSubtarget::initializeSubtargetDependencies(const Triple &TT,
   // that do not support ADDR64 variants of MUBUF instructions. Such targets
   // cannot use a 64 bit offset with a MUBUF instruction to access the global
   // address space
-  if (!hasAddr64() && !FS.contains("flat-for-global") && !FlatForGlobal) {
-    ToggleFeature(AMDGPU::FeatureFlatForGlobal);
-    FlatForGlobal = true;
+  if (!hasAddr64() && !FS.contains("flat-for-global") && !UseFlatForGlobal) {
+    ToggleFeature(AMDGPU::FeatureUseFlatForGlobal);
+    UseFlatForGlobal = true;
   }
   // Unless +-flat-for-global is specified, use MUBUF instructions for global
   // address space access if flat operations are not available.
-  if (!hasFlat() && !FS.contains("flat-for-global") && FlatForGlobal) {
-    ToggleFeature(AMDGPU::FeatureFlatForGlobal);
-    FlatForGlobal = false;
+  if (!hasFlat() && !FS.contains("flat-for-global") && UseFlatForGlobal) {
+    ToggleFeature(AMDGPU::FeatureUseFlatForGlobal);
+    UseFlatForGlobal = false;
   }
 
   // Set defaults if needed.
@@ -169,7 +169,6 @@ GCNSubtarget::GCNSubtarget(const Triple &TT, StringRef GPU, StringRef FS,
     : // clang-format off
     AMDGPUGenSubtargetInfo(TT, GPU, /*TuneCPU*/ GPU, FS),
     AMDGPUSubtarget(TT),
-    TargetTriple(TT),
     TargetID(*this),
     InstrItins(getInstrItineraryForCPU(GPU)),
     InstrInfo(initializeSubtargetDependencies(TT, GPU, FS)),
@@ -645,6 +644,8 @@ void GCNSubtarget::adjustSchedDependency(
     MachineBasicBlock::const_instr_iterator E(DefI->getParent()->instr_end());
     unsigned Lat = 0;
     for (++I; I != E && I->isBundledWithPred(); ++I) {
+      if (I->isMetaInstruction())
+        continue;
       if (I->modifiesRegister(Reg, TRI))
         Lat = InstrInfo.getInstrLatency(getInstrItineraryData(), *I);
       else if (Lat)
@@ -658,6 +659,8 @@ void GCNSubtarget::adjustSchedDependency(
     MachineBasicBlock::const_instr_iterator E(UseI->getParent()->instr_end());
     unsigned Lat = InstrInfo.getInstrLatency(getInstrItineraryData(), *DefI);
     for (++I; I != E && I->isBundledWithPred() && Lat; ++I) {
+      if (I->isMetaInstruction())
+        continue;
       if (I->readsRegister(Reg, TRI))
         break;
       --Lat;
@@ -699,7 +702,7 @@ GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,
     KernargSegmentPtr = true;
 
   bool IsAmdHsaOrMesa = ST.isAmdHsaOrMesa(F);
-  if (IsAmdHsaOrMesa && !ST.enableFlatScratch())
+  if (IsAmdHsaOrMesa && !ST.hasFlatScratchEnabled())
     PrivateSegmentBuffer = true;
   else if (ST.isMesaGfxShader(F))
     ImplicitBufferPtr = true;
@@ -717,13 +720,13 @@ GCNUserSGPRUsageInfo::GCNUserSGPRUsageInfo(const Function &F,
   }
 
   if (ST.hasFlatAddressSpace() && AMDGPU::isEntryFunctionCC(CC) &&
-      (IsAmdHsaOrMesa || ST.enableFlatScratch()) &&
-      // FlatScratchInit cannot be true for graphics CC if enableFlatScratch()
-      // is false.
-      (ST.enableFlatScratch() ||
+      (IsAmdHsaOrMesa || ST.hasFlatScratchEnabled()) &&
+      // FlatScratchInit cannot be true for graphics CC if
+      // hasFlatScratchEnabled() is false.
+      (ST.hasFlatScratchEnabled() ||
        (!AMDGPU::isGraphics(CC) &&
         !F.hasFnAttribute("amdgpu-no-flat-scratch-init"))) &&
-      !ST.flatScratchIsArchitected()) {
+      !ST.hasArchitectedFlatScratch()) {
     FlatScratchInit = true;
   }
 

@@ -7,7 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #ifndef _HLSL_COMPAT_OVERLOADS_H_
-#define _HLSl_COMPAT_OVERLOADS_H_
+#define _HLSL_COMPAT_OVERLOADS_H_
 
 namespace hlsl {
 

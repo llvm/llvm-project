@@ -640,3 +640,23 @@ namespace preferred_name {
   Foo<1, 2, int, float>::nosuch x; // expected-error {{no type named 'nosuch' in 'preferred_name::Bar<int, float>'}}
 }
 ::preferred_name::Foo<1, 2, int, float>::nosuch x; // expected-error {{no type named 'nosuch' in 'preferred_name::Bar<int, float>'}}
+
+// GH169072: templated attribute((constructor)) function crashes clang
+// constructor/destructor attribute without priority argument should not crash.
+namespace gh169072 {
+  template <typename T>
+  [[gnu::constructor]] void foo() {}
+  
+  template void foo<int>();
+
+  template <typename T>
+  [[gnu::destructor]] void bar() {}
+  
+  template void bar<int>();
+
+  // Also test with explicit priority argument
+  template <typename T>
+  [[gnu::constructor(101)]] void baz() {}
+  
+  template void baz<int>();
+}

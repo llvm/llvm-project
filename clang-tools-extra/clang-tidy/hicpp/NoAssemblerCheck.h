@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_HICPP_NO_ASSEMBLER_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_HICPP_NO_ASSEMBLER_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_HICPP_NOASSEMBLERCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_HICPP_NOASSEMBLERCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -27,4 +27,4 @@ public:
 
 } // namespace clang::tidy::hicpp
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_HICPP_NO_ASSEMBLER_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_HICPP_NOASSEMBLERCHECK_H

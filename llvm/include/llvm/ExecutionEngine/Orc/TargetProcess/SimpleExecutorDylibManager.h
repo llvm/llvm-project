@@ -37,7 +37,7 @@ namespace rt_bootstrap {
 /// Simple page-based allocator.
 class LLVM_ABI SimpleExecutorDylibManager : public ExecutorBootstrapService {
 public:
-  virtual ~SimpleExecutorDylibManager();
+  ~SimpleExecutorDylibManager() override;
 
   Expected<tpctypes::DylibHandle> open(const std::string &Path, uint64_t Mode);
 
@@ -47,10 +47,10 @@ public:
 private:
   using DylibSet = DenseSet<void *>;
 
-  static llvm::orc::shared::CWrapperFunctionResult
+  static llvm::orc::shared::CWrapperFunctionBuffer
   openWrapper(const char *ArgData, size_t ArgSize);
 
-  static llvm::orc::shared::CWrapperFunctionResult
+  static llvm::orc::shared::CWrapperFunctionBuffer
   resolveWrapper(const char *ArgData, size_t ArgSize);
 
   std::mutex M;

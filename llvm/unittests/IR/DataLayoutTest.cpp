@@ -309,7 +309,8 @@ TEST(DataLayoutTest, ParseAggregateSpec) {
 TEST(DataLayout, ParsePointerSpec) {
   for (StringRef Str :
        {"p:16:8", "p:16:16:64", "p:32:64:64:32", "p0:32:64", "p42:64:32:32",
-        "p16777215:32:32:64:8", "p16777215:16777215:32768:32768:16777215"})
+        "p1(global):16:8", "p(generic):32:8", "p16777215:32:32:64:8",
+        "p16777215:16777215:32768:32768:16777215"})
     EXPECT_THAT_EXPECTED(DataLayout::parse(Str), Succeeded());
 
   for (StringRef Str :
@@ -422,6 +423,17 @@ TEST(DataLayout, ParsePointerSpec) {
         DataLayout::parse(Str),
         FailedWithMessage(
             "address space 0 cannot be unstable or have external state"));
+
+  // Duplicate address space names not allowed.
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("p1(foo):32:32-p2(foo):32:32"),
+      FailedWithMessage("address space name `foo` already used"));
+
+  // Predefined address space names not allowed.
+  EXPECT_THAT_EXPECTED(
+      DataLayout::parse("p1(A):32:32"),
+      FailedWithMessage(
+          "Cannot use predefined address space names P/G/A in data layout"));
 }
 
 TEST(DataLayoutTest, ParseNativeIntegersSpec) {
@@ -574,6 +586,15 @@ TEST(DataLayout, GetPointerPrefAlignment) {
     EXPECT_EQ(DL.getPointerPrefAlignment(1).value(), V1) << Layout;
     EXPECT_EQ(DL.getPointerPrefAlignment(2).value(), V2) << Layout;
   }
+}
+
+TEST(DataLayout, AddressSpaceName) {
+  DataLayout DL =
+      cantFail(DataLayout::parse("p:16:32-p1(foo):16:32-p10(bar):16:16"));
+  EXPECT_EQ(DL.getAddressSpaceName(0), "");
+  EXPECT_EQ(DL.getAddressSpaceName(1), "foo");
+  EXPECT_EQ(DL.getAddressSpaceName(10), "bar");
+  EXPECT_EQ(DL.getAddressSpaceName(3), "");
 }
 
 TEST(DataLayout, IsNonIntegralAddressSpace) {
@@ -805,6 +826,17 @@ TEST(DataLayoutTest, VectorAlign) {
   // the natural alignment as a fallback.
   EXPECT_EQ(Align(4 * 8), DL->getABITypeAlign(V8F32Ty));
   EXPECT_EQ(Align(4 * 8), DL->getPrefTypeAlign(V8F32Ty));
+}
+
+TEST(DataLayoutTest, Equality) {
+  const char *Layout0 = "p00(global):32:8";
+  const char *Layout1 = "p0(global):32:8";
+  DataLayout DL0 = cantFail(DataLayout::parse(Layout0));
+  DataLayout DL1 = cantFail(DataLayout::parse(Layout1));
+
+  EXPECT_EQ(DL0.getStringRepresentation(), Layout0);
+  EXPECT_EQ(DL1.getStringRepresentation(), Layout1);
+  EXPECT_EQ(DL0, DL1);
 }
 
 } // anonymous namespace

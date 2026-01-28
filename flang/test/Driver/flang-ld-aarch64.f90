@@ -1,4 +1,4 @@
-! Check linker flags for AArch64 linux, since it needs both libgcc and 
+! Check linker flags for AArch64 linux, since it needs both libgcc and
 ! compiler-rt, with compiler-rt second when -rtlib=libgcc.
 
 ! RUN: %flang -### -rtlib=libgcc --target=aarch64-linux-gnu %S/Inputs/hello.f90 2>&1 | FileCheck %s

@@ -14,7 +14,7 @@ entry:
   %0 = call token @llvm.coro.id(i32 0, ptr null, ptr @flink, ptr null), !dbg !16
   %1 = call i64 @llvm.coro.size.i64(), !dbg !16
   %call = call ptr @malloc(i64 %1), !dbg !16
-  %2 = call ptr @llvm.coro.begin(token %0, ptr %call) #7, !dbg !16
+  %2 = call ptr @llvm.coro.begin(token %0, ptr %call), !dbg !16
   store ptr %2, ptr %coro_hdl, align 8, !dbg !16
   %3 = call i8 @llvm.coro.suspend(token none, i1 false), !dbg !17
   %conv = sext i8 %3 to i32, !dbg !17
@@ -69,7 +69,7 @@ coro_Cleanup:                                     ; preds = %sw.epilog, %sw.bb1
   br label %coro_Suspend, !dbg !24
 
 coro_Suspend:                                     ; preds = %coro_Cleanup, %sw.default
-  call void @llvm.coro.end(ptr null, i1 false, token none) #7, !dbg !24
+  call void @llvm.coro.end(ptr null, i1 false, token none), !dbg !24
   %7 = load ptr, ptr %coro_hdl, align 8, !dbg !24
   store i32 0, ptr %late_local, !dbg !24
   ret ptr %7, !dbg !24
@@ -82,47 +82,40 @@ ehcleanup:
 }
 
 ; Function Attrs: nounwind readnone speculatable
-declare void @llvm.dbg.value(metadata, metadata, metadata) #1
+declare void @llvm.dbg.value(metadata, metadata, metadata)
 
 ; Function Attrs: nounwind readnone speculatable
-declare void @llvm.dbg.declare(metadata, metadata, metadata) #1
+declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
 ; Function Attrs: argmemonly nounwind readonly
-declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr) #2
+declare token @llvm.coro.id(i32, ptr readnone, ptr nocapture readonly, ptr)
 
-declare ptr @malloc(i64) #3
+declare ptr @malloc(i64)
 declare ptr @allocate() 
 declare void @print({ ptr, i32 })
 declare void @log()
 
 ; Function Attrs: nounwind readnone
-declare i64 @llvm.coro.size.i64() #4
+declare i64 @llvm.coro.size.i64()
 
 ; Function Attrs: nounwind
-declare ptr @llvm.coro.begin(token, ptr writeonly) #5
+declare ptr @llvm.coro.begin(token, ptr writeonly)
 
 ; Function Attrs: nounwind
-declare i8 @llvm.coro.suspend(token, i1) #5
+declare i8 @llvm.coro.suspend(token, i1)
 
-declare void @free(ptr) #3
+declare void @free(ptr)
 
 ; Function Attrs: argmemonly nounwind readonly
-declare ptr @llvm.coro.free(token, ptr nocapture readonly) #2
+declare ptr @llvm.coro.free(token, ptr nocapture readonly)
 
 ; Function Attrs: nounwind
-declare void @llvm.coro.end(ptr, i1, token) #5
+declare void @llvm.coro.end(ptr, i1, token)
 
 ; Function Attrs: argmemonly nounwind readonly
-declare ptr @llvm.coro.subfn.addr(ptr nocapture readonly, i8) #2
+declare ptr @llvm.coro.subfn.addr(ptr nocapture readonly, i8)
 
-attributes #0 = { noinline nounwind presplitcoroutine "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { nounwind readnone speculatable }
-attributes #2 = { argmemonly nounwind readonly }
-attributes #3 = { "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="none" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-features"="+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #4 = { nounwind readnone }
-attributes #5 = { nounwind }
-attributes #6 = { alwaysinline }
-attributes #7 = { noduplicate }
+attributes #0 = { noinline nounwind presplitcoroutine }
 
 !llvm.dbg.cu = !{!0}
 !llvm.module.flags = !{!3, !4}

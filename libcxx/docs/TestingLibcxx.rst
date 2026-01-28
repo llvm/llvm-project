@@ -451,7 +451,7 @@ Instead use:
 
 .. code-block:: cpp
 
-   // UNSUPPORTED: std-at-least-c++26
+   // REQUIRES: std-at-least-c++26
 
 There is no corresponding ``std-at-most-c++23``. This could be useful when
 tests are only valid for a small set of standard versions. For example, a

@@ -1,7 +1,9 @@
 REQUIRES: system-windows, lld
 RUN: %build --compiler=clang-cl --nodefaultlib --output=%t.exe %S/Inputs/FunctionNestedBlockTest.cpp
-RUN: lldb-test symbols -find=function -file FunctionNestedBlockTest.cpp -line 4 %t.exe | FileCheck --check-prefix=CHECK-FUNCTION %s
-RUN: lldb-test symbols -find=block -file FunctionNestedBlockTest.cpp -line 4 %t.exe | FileCheck --check-prefix=CHECK-BLOCK %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=0 lldb-test symbols -find=function -file FunctionNestedBlockTest.cpp -line 4 %t.exe | FileCheck --check-prefix=CHECK-FUNCTION %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=0 lldb-test symbols -find=block -file FunctionNestedBlockTest.cpp -line 4 %t.exe | FileCheck --check-prefix=CHECK-BLOCK %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols -find=function -file FunctionNestedBlockTest.cpp -line 4 %t.exe | FileCheck --check-prefix=CHECK-FUNCTION %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=1 lldb-test symbols -find=block -file FunctionNestedBlockTest.cpp -line 4 %t.exe | FileCheck --check-prefix=CHECK-BLOCK %s
 
 CHECK-FUNCTION: Found 1 functions:
 CHECK-FUNCTION: name = "main"

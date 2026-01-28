@@ -73,12 +73,18 @@ def OpenACC_PointerLikeTypeInterface : TypeInterface<"PointerLikeType"> {
     InterfaceMethod<
       /*description=*/[{
         Generates allocation operations for the pointer-like type. It will create
-        an allocate that produces memory space for an instance of the current type.
+        an allocate operation that produces memory space for an instance of the
+        current type.
 
         The `varName` parameter is optional and can be used to provide a name
-        for the allocated variable. If the current type is represented
-        in a way that it does not capture the pointee type, `varType` must be
-        passed in to provide the necessary type information.
+        for the allocated variable. When provided, it must be used by the
+        implementation; and if the implementing dialect does not have its own
+        way to save it, the discardable `acc.var_name` attribute from the acc
+        dialect will be used.
+
+        If the current type is represented in a way that it does not capture
+        the pointee type, `varType` must be passed in to provide the necessary
+        type information.
 
         The `originalVar` parameter is optional but enables support for dynamic
         types (e.g., dynamic memrefs). When provided, implementations can extract
@@ -170,6 +176,62 @@ def OpenACC_PointerLikeTypeInterface : TypeInterface<"PointerLikeType"> {
         return false;
       }]
     >,
+    InterfaceMethod<
+      /*description=*/[{
+        Generates a load operation from the pointer-like type. This dereferences
+        the pointer and returns the loaded value.
+
+        The `srcPtr` parameter is the pointer to load from. If the current type is
+        represented in a way that it does not capture the pointee type, `valueType`
+        must be passed in to provide the necessary type information.
+
+        Returns the loaded value, or an empty Value if load generation failed.
+      }],
+      /*retTy=*/"::mlir::Value",
+      /*methodName=*/"genLoad",
+      /*args=*/(ins "::mlir::OpBuilder &":$builder,
+                    "::mlir::Location":$loc,
+                    "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$srcPtr,
+                    "::mlir::Type":$valueType),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return {};
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Generates a store operation to the pointer-like type. This stores a value
+        to the memory location pointed to by the pointer.
+
+        The `destPtr` parameter is the pointer to store to. The `valueToStore`
+        parameter is the value to be stored. The type information is derived from
+        the valueToStore parameter itself.
+
+        Returns true if store was successfully generated, false otherwise.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"genStore",
+      /*args=*/(ins "::mlir::OpBuilder &":$builder,
+                    "::mlir::Location":$loc,
+                    "::mlir::Value":$valueToStore,
+                    "::mlir::TypedValue<::mlir::acc::PointerLikeType>":$destPtr),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return false;
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Returns true if the pointer points to device data.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isDeviceData",
+      /*args=*/(ins "::mlir::Value":$var),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return false;
+      }]
+    >,
   ];
 }
 
@@ -255,6 +317,18 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
     >,
     InterfaceMethod<
       /*description=*/[{
+        Returns true if the dimensions of this type are not known. This occurs
+        when the MLIR type does not encode dimensional information and there is
+        no associated descriptor or metadata in the current entity that would
+        make this information extractable. For example, an opaque pointer type
+        pointing to an array without dimension information would have unknown
+        dimensions.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"hasUnknownDimensions"
+    >,
+    InterfaceMethod<
+      /*description=*/[{
         Returns explicit `acc.bounds` operations that envelop the whole
         data structure. These operations are inserted using the provided builder
         at the location set before calling this API.
@@ -280,7 +354,7 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
         return ::mlir::acc::VariableTypeCategory::uncategorized;
       }]
     >,
-      InterfaceMethod<
+    InterfaceMethod<
       /*description=*/[{
         Generates the operations that would be normally placed in a recipe's
         init region. It inserts at the builder's current location.
@@ -321,6 +395,38 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
     >,
     InterfaceMethod<
       /*description=*/[{
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"generateCopy",
+      /*args=*/(ins "::mlir::OpBuilder &":$builder,
+                    "::mlir::Location":$loc,
+                    "::mlir::TypedValue<::mlir::acc::MappableType>":$from,
+                    "::mlir::TypedValue<::mlir::acc::MappableType>":$to,
+                    "::mlir::ValueRange":$bounds),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return false;
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"generateCombiner",
+      /*args=*/(ins "::mlir::OpBuilder &":$builder,
+                    "::mlir::Location":$loc,
+                    "::mlir::TypedValue<::mlir::acc::MappableType>":$dest,
+                    "::mlir::TypedValue<::mlir::acc::MappableType>":$source,
+                    "::mlir::ValueRange":$bounds,
+                    "::mlir::acc::ReductionOperator":$op,
+                    "::mlir::Attribute":$fastmathFlags),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return false;
+      }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
         Generates destruction operations for a privatized value previously
         produced by `generatePrivateInit`. This is typically inserted in a
         recipe's destroy region, after all uses of the privatized value.
@@ -331,6 +437,9 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
         cleanup required for the given type. If no destruction is required,
         this function should be a no-op and return `true`.
 
+        The `bounds` must be passed when only a section of the variable was
+        privatized. 
+
         Returns true if destruction was successfully generated or deemed not
         necessary, false otherwise.
       }],
@@ -338,11 +447,53 @@ def OpenACC_MappableTypeInterface : TypeInterface<"MappableType"> {
       /*methodName=*/"generatePrivateDestroy",
       /*args=*/(ins "::mlir::OpBuilder &":$builder,
                     "::mlir::Location":$loc,
-                    "::mlir::Value":$privatized),
+                    "::mlir::Value":$privatized,
+                    "::mlir::ValueRange":$extents),
       /*methodBody=*/"",
       /*defaultImplementation=*/[{
         return true;
       }]
+    >,
+    InterfaceMethod<
+      /*description=*/[{
+        Returns true if the variable represents device data.
+      }],
+      /*retTy=*/"bool",
+      /*methodName=*/"isDeviceData",
+      /*args=*/(ins "::mlir::Value":$var),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return false;
+      }]
+    >,
+  ];
+}
+
+def OpenACC_ReducibleTypeInterface : TypeInterface<"ReducibleType"> {
+  let cppNamespace = "::mlir::acc";
+
+  let description = [{
+    This interface should be attached to value types that can participate in
+    OpenACC reductions. For PointerLikeType types, attach this interface to the
+    pointee type rather than the pointer type itself.
+  }];
+
+  let methods = [
+    InterfaceMethod<
+      /*description=*/[{
+        Returns the `arith::AtomicRMWKind` corresponding to the given OpenACC
+        reduction operator for this type. Returns `std::nullopt` if the
+        reduction operator is not valid for this type.
+
+        For example:
+        - Integer types typically map `AccAdd` to `arith::AtomicRMWKind::addi`
+        - Float types typically map `AccAdd` to `arith::AtomicRMWKind::addf`
+        - Boolean/logical types map `AccLand` to `arith::AtomicRMWKind::andi`
+        - A float type would return `std::nullopt` for `AccLand`
+      }],
+      /*retTy=*/"::std::optional<::mlir::arith::AtomicRMWKind>",
+      /*methodName=*/"getAtomicRMWKind",
+      /*args=*/(ins "::mlir::acc::ReductionOperator":$redOp)
     >,
   ];
 }

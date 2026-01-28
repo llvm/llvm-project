@@ -409,6 +409,7 @@ def HasP10Vector : Predicate<"Subtarget->hasP10Vector()">;
 def IsISA2_06 : Predicate<"Subtarget->isISA2_06()">;
 def IsISA2_07 : Predicate<"Subtarget->isISA2_07()">;
 def IsISA3_0 : Predicate<"Subtarget->isISA3_0()">;
+def IsNotISA3_0 : Predicate<"!Subtarget->isISA3_0()">;
 def IsISA3_1 : Predicate<"Subtarget->isISA3_1()">;
 def IsNotISA3_1 : Predicate<"!Subtarget->isISA3_1()">;
 def IsISAFuture : Predicate<"Subtarget->isISAFuture()">;
@@ -818,6 +819,8 @@ def PPCAsmParserVariant : AsmParserVariant {
   string RegisterPrefix = "%";
   string BreakCharacters = ".";
 }
+
+defm : RemapAllTargetPseudoPointerOperands<ppc_ptr_rc>;
 
 def PPC : Target {
   // Information about the instructions.

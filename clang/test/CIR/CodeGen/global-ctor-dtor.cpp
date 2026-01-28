@@ -13,28 +13,28 @@ void foo(void) {
   bar();
 }
 
-// CIR-BEFORE-LPP: cir.func dso_local @_Z3foov() global_ctor
+// CIR-BEFORE-LPP: cir.func {{.*}} @_Z3foov() global_ctor
 
 void foo2(void) __attribute__((constructor(777)));
 void foo2(void) {
   bar();
 }
 
-// CIR-BEFORE-LPP: cir.func dso_local @_Z4foo2v() global_ctor(777)
+// CIR-BEFORE-LPP: cir.func {{.*}} @_Z4foo2v() global_ctor(777)
 
 void foo3(void) __attribute__((destructor));
 void foo3(void) {
   bar();
 }
 
-// CIR-BEFORE-LPP: cir.func dso_local @_Z4foo3v() global_dtor
+// CIR-BEFORE-LPP: cir.func {{.*}} @_Z4foo3v() global_dtor
 
 void foo4(void) __attribute__((destructor(789)));
 void foo4(void) {
   bar();
 }
 
-// CIR-BEFORE-LPP: cir.func dso_local @_Z4foo4v() global_dtor(789)
+// CIR-BEFORE-LPP: cir.func {{.*}} @_Z4foo4v() global_dtor(789)
 
 // CIR-AFTER: module @{{.*}} attributes {cir.global_ctors = [#cir.global_ctor<"_Z3foov", 65535>, #cir.global_ctor<"_Z4foo2v", 777>], cir.global_dtors = [#cir.global_dtor<"_Z4foo3v", 65535>, #cir.global_dtor<"_Z4foo4v", 789>]
 

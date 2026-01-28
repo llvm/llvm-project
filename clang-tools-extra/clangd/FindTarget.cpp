@@ -50,7 +50,7 @@ namespace clang {
 namespace clangd {
 namespace {
 
-LLVM_ATTRIBUTE_UNUSED std::string nodeToString(const DynTypedNode &N) {
+[[maybe_unused]] std::string nodeToString(const DynTypedNode &N) {
   std::string S = std::string(N.getNodeKind().asStringRef());
   {
     llvm::raw_string_ostream OS(S);

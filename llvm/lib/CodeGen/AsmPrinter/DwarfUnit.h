@@ -216,6 +216,9 @@ public:
   void addBlock(DIE &Die, dwarf::Attribute Attribute, dwarf::Form Form,
                 DIEBlock *Block);
 
+  /// Add an expression as block data.
+  void addBlock(DIE &Die, dwarf::Attribute Attribute, const DIExpression *Expr);
+
   /// Add location information to specified debug information entry.
   void addSourceLine(DIE &Die, unsigned Line, unsigned Column,
                      const DIFile *File);
@@ -281,7 +284,7 @@ public:
   /// \returns The index of the object parameter in \c Args if one exists.
   /// Returns std::nullopt otherwise.
   std::optional<unsigned> constructSubprogramArguments(DIE &Buffer,
-                                                       DITypeRefArray Args);
+                                                       DITypeArray Args);
 
   /// Create a DIE with the given Tag, add the DIE to its parent, and
   /// call insertDIE if MD is not null.
@@ -334,7 +337,7 @@ public:
                                const DIE &TyDIE);
 
 protected:
-  ~DwarfUnit();
+  ~DwarfUnit() override;
 
   /// Create new static data member DIE.
   DIE *getOrCreateStaticMemberDIE(const DIDerivedType *DT);

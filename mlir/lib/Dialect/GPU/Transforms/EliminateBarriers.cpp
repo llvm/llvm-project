@@ -322,7 +322,7 @@ static Value getBase(Value v) {
                   v = op.getSource();
                   return true;
                 })
-            .Case<memref::TransposeOp>([&](auto op) {
+            .Case([&](memref::TransposeOp op) {
               v = op.getIn();
               return true;
             })
@@ -330,7 +330,7 @@ static Value getBase(Value v) {
               v = op.getSrc();
               return true;
             })
-            .Default([](Operation *) { return false; });
+            .Default(false);
     if (!shouldContinue)
       break;
   }
@@ -354,7 +354,7 @@ static Value propagatesCapture(Operation *op) {
       .Case([](memref::TransposeOp transpose) { return transpose.getIn(); })
       .Case<memref::ExpandShapeOp, memref::CollapseShapeOp>(
           [](auto op) { return op.getSrc(); })
-      .Default([](Operation *) { return Value(); });
+      .Default(nullptr);
 }
 
 /// Returns `true` if the given operation is known to capture the given value,
@@ -371,7 +371,7 @@ static std::optional<bool> getKnownCapturingStatus(Operation *op, Value v) {
       // These operations are known not to capture.
       .Case([](memref::DeallocOp) { return false; })
       // By default, we don't know anything.
-      .Default([](Operation *) { return std::nullopt; });
+      .Default(std::nullopt);
 }
 
 /// Returns `true` if the value may be captured by any of its users, i.e., if
@@ -506,7 +506,8 @@ static bool mayAlias(MemoryEffects::EffectInstance a,
     return false;
   if (Value v2 = b.getValue()) {
     return mayAlias(a, v2);
-  } else if (Value v = a.getValue()) {
+  }
+  if (Value v = a.getValue()) {
     return mayAlias(b, v);
   }
   return true;

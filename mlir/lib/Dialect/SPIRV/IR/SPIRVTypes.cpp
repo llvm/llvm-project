@@ -50,10 +50,10 @@ public:
             [this](auto concreteType) { addConcrete(concreteType); })
         .Case<ArrayType, ImageType, MatrixType, RuntimeArrayType, VectorType>(
             [this](auto concreteType) { add(concreteType.getElementType()); })
-        .Case<SampledImageType>([this](SampledImageType concreteType) {
+        .Case([this](SampledImageType concreteType) {
           add(concreteType.getImageType());
         })
-        .Case<StructType>([this](StructType concreteType) {
+        .Case([this](StructType concreteType) {
           for (Type elementType : concreteType.getElementTypes())
             add(elementType);
         })
@@ -97,13 +97,13 @@ public:
         .Case<CooperativeMatrixType, ImageType, MatrixType, PointerType,
               RuntimeArrayType, ScalarType, TensorArmType, VectorType>(
             [this](auto concreteType) { addConcrete(concreteType); })
-        .Case<ArrayType>([this](ArrayType concreteType) {
+        .Case([this](ArrayType concreteType) {
           add(concreteType.getElementType());
         })
-        .Case<SampledImageType>([this](SampledImageType concreteType) {
+        .Case([this](SampledImageType concreteType) {
           add(concreteType.getImageType());
         })
-        .Case<StructType>([this](StructType concreteType) {
+        .Case([this](StructType concreteType) {
           for (Type elementType : concreteType.getElementTypes())
             add(elementType);
         })
@@ -178,26 +178,25 @@ unsigned ArrayType::getArrayStride() const { return getImpl()->stride; }
 //===----------------------------------------------------------------------===//
 
 bool CompositeType::classof(Type type) {
-  if (auto vectorType = llvm::dyn_cast<VectorType>(type))
+  if (auto vectorType = dyn_cast<VectorType>(type))
     return isValid(vectorType);
-  return llvm::isa<spirv::ArrayType, spirv::CooperativeMatrixType,
-                   spirv::MatrixType, spirv::RuntimeArrayType,
-                   spirv::StructType, spirv::TensorArmType>(type);
+  return isa<spirv::ArrayType, spirv::CooperativeMatrixType, spirv::MatrixType,
+             spirv::RuntimeArrayType, spirv::StructType, spirv::TensorArmType>(
+      type);
 }
 
 bool CompositeType::isValid(VectorType type) {
   return type.getRank() == 1 &&
          llvm::is_contained({2, 3, 4, 8, 16}, type.getNumElements()) &&
-         llvm::isa<ScalarType>(type.getElementType());
+         isa<ScalarType>(type.getElementType());
 }
 
 Type CompositeType::getElementType(unsigned index) const {
   return TypeSwitch<Type, Type>(*this)
       .Case<ArrayType, CooperativeMatrixType, RuntimeArrayType, VectorType,
             TensorArmType>([](auto type) { return type.getElementType(); })
-      .Case<MatrixType>([](MatrixType type) { return type.getColumnType(); })
-      .Case<StructType>(
-          [index](StructType type) { return type.getElementType(index); })
+      .Case([](MatrixType type) { return type.getColumnType(); })
+      .Case([index](StructType type) { return type.getElementType(index); })
       .DefaultUnreachable("Invalid composite type");
 }
 
@@ -205,12 +204,12 @@ unsigned CompositeType::getNumElements() const {
   return TypeSwitch<SPIRVType, unsigned>(*this)
       .Case<ArrayType, StructType, TensorArmType, VectorType>(
           [](auto type) { return type.getNumElements(); })
-      .Case<MatrixType>([](MatrixType type) { return type.getNumColumns(); })
+      .Case([](MatrixType type) { return type.getNumColumns(); })
       .DefaultUnreachable("Invalid type for number of elements query");
 }
 
 bool CompositeType::hasCompileTimeKnownNumElements() const {
-  return !llvm::isa<CooperativeMatrixType, RuntimeArrayType>(*this);
+  return !isa<CooperativeMatrixType, RuntimeArrayType>(*this);
 }
 
 void TypeCapabilityVisitor::addConcrete(VectorType type) {
@@ -529,10 +528,10 @@ void TypeCapabilityVisitor::addConcrete(RuntimeArrayType type) {
 //===----------------------------------------------------------------------===//
 
 bool ScalarType::classof(Type type) {
-  if (auto floatType = llvm::dyn_cast<FloatType>(type)) {
+  if (auto floatType = dyn_cast<FloatType>(type)) {
     return isValid(floatType);
   }
-  if (auto intType = llvm::dyn_cast<IntegerType>(type)) {
+  if (auto intType = dyn_cast<IntegerType>(type)) {
     return isValid(intType);
   }
   return false;
@@ -676,19 +675,19 @@ void TypeCapabilityVisitor::addConcrete(ScalarType type) {
 
 bool SPIRVType::classof(Type type) {
   // Allow SPIR-V dialect types
-  if (llvm::isa<SPIRVDialect>(type.getDialect()))
+  if (isa<SPIRVDialect>(type.getDialect()))
     return true;
-  if (llvm::isa<ScalarType>(type))
+  if (isa<ScalarType>(type))
     return true;
-  if (auto vectorType = llvm::dyn_cast<VectorType>(type))
+  if (auto vectorType = dyn_cast<VectorType>(type))
     return CompositeType::isValid(vectorType);
-  if (auto tensorArmType = llvm::dyn_cast<TensorArmType>(type))
-    return llvm::isa<ScalarType>(tensorArmType.getElementType());
+  if (auto tensorArmType = dyn_cast<TensorArmType>(type))
+    return isa<ScalarType>(tensorArmType.getElementType());
   return false;
 }
 
 bool SPIRVType::isScalarOrVector() {
-  return isIntOrFloat() || llvm::isa<VectorType>(*this);
+  return isIntOrFloat() || isa<VectorType>(*this);
 }
 
 void SPIRVType::getExtensions(SPIRVType::ExtensionArrayRefVector &extensions,
@@ -704,7 +703,7 @@ void SPIRVType::getCapabilities(
 
 std::optional<int64_t> SPIRVType::getSizeInBytes() {
   return TypeSwitch<SPIRVType, std::optional<int64_t>>(*this)
-      .Case<ScalarType>([](ScalarType type) -> std::optional<int64_t> {
+      .Case([](ScalarType type) -> std::optional<int64_t> {
         // According to the SPIR-V spec:
         // "There is no physical size or bit pattern defined for values with
         // boolean type. If they are stored (in conjunction with OpVariable),
@@ -717,7 +716,7 @@ std::optional<int64_t> SPIRVType::getSizeInBytes() {
           return std::nullopt;
         return bitWidth / 8;
       })
-      .Case<ArrayType>([](ArrayType type) -> std::optional<int64_t> {
+      .Case([](ArrayType type) -> std::optional<int64_t> {
         // Since array type may have an explicit stride declaration (in bytes),
         // we also include it in the calculation.
         auto elementType = cast<SPIRVType>(type.getElementType());
@@ -731,7 +730,7 @@ std::optional<int64_t> SPIRVType::getSizeInBytes() {
           return *elementSize * type.getNumElements();
         return std::nullopt;
       })
-      .Default(std::optional<int64_t>());
+      .Default(std::nullopt);
 }
 
 //===----------------------------------------------------------------------===//
@@ -1190,7 +1189,7 @@ MatrixType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
     return emitError() << "matrix columns must be vectors of floats";
 
   /// The underlying vectors (columns) must be of size 2, 3, or 4
-  ArrayRef<int64_t> columnShape = llvm::cast<VectorType>(columnType).getShape();
+  ArrayRef<int64_t> columnShape = cast<VectorType>(columnType).getShape();
   if (columnShape.size() != 1)
     return emitError() << "matrix columns must be 1D vectors";
 
@@ -1202,8 +1201,8 @@ MatrixType::verifyInvariants(function_ref<InFlightDiagnostic()> emitError,
 
 /// Returns true if the matrix elements are vectors of float elements
 bool MatrixType::isValidColumnType(Type columnType) {
-  if (auto vectorType = llvm::dyn_cast<VectorType>(columnType)) {
-    if (llvm::isa<FloatType>(vectorType.getElementType()))
+  if (auto vectorType = dyn_cast<VectorType>(columnType)) {
+    if (isa<FloatType>(vectorType.getElementType()))
       return true;
   }
   return false;
@@ -1212,13 +1211,13 @@ bool MatrixType::isValidColumnType(Type columnType) {
 Type MatrixType::getColumnType() const { return getImpl()->columnType; }
 
 Type MatrixType::getElementType() const {
-  return llvm::cast<VectorType>(getImpl()->columnType).getElementType();
+  return cast<VectorType>(getImpl()->columnType).getElementType();
 }
 
 unsigned MatrixType::getNumColumns() const { return getImpl()->columnCount; }
 
 unsigned MatrixType::getNumRows() const {
-  return llvm::cast<VectorType>(getImpl()->columnType).getShape()[0];
+  return cast<VectorType>(getImpl()->columnType).getShape()[0];
 }
 
 unsigned MatrixType::getNumElements() const {

@@ -21,7 +21,7 @@ class GISelObserverWrapper;
 
 class LLVM_ABI InstructionSelector : public GIMatchTableExecutor {
 public:
-  virtual ~InstructionSelector();
+  ~InstructionSelector() override;
 
   /// Select the (possibly generic) instruction \p I to only use target-specific
   /// opcodes. It is OK to insert multiple instructions, but they cannot be
@@ -34,9 +34,6 @@ public:
   ///     for I in all mutated/inserted instructions:
   ///       !isPreISelGenericOpcode(I.getOpcode())
   virtual bool select(MachineInstr &I) = 0;
-
-  // FIXME: Eliminate dependency on TargetPassConfig for NewPM transition
-  const TargetPassConfig *TPC = nullptr;
 
   MachineOptimizationRemarkEmitter *MORE = nullptr;
 

@@ -31,6 +31,11 @@ Remark::Arg::Arg(llvm::StringRef k, Type t) : key(k) {
   os << t;
 }
 
+Remark::Arg::Arg(llvm::StringRef k, Attribute a) : key(k), attr(a) {
+  llvm::raw_string_ostream os(val);
+  os << a;
+}
+
 void Remark::insert(llvm::StringRef s) { args.emplace_back(s); }
 void Remark::insert(Arg a) { args.push_back(std::move(a)); }
 
@@ -254,11 +259,9 @@ llvm::LogicalResult RemarkEngine::initialize(
     std::unique_ptr<MLIRRemarkStreamerBase> streamer,
     std::unique_ptr<RemarkEmittingPolicyBase> remarkEmittingPolicy,
     std::string *errMsg) {
-
   remarkStreamer = std::move(streamer);
 
-  auto reportFunc =
-      std::bind(&RemarkEngine::reportImpl, this, std::placeholders::_1);
+  auto reportFunc = llvm::bind_front<&RemarkEngine::reportImpl>(this);
   remarkEmittingPolicy->initialize(ReportFn(std::move(reportFunc)));
 
   this->remarkEmittingPolicy = std::move(remarkEmittingPolicy);

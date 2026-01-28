@@ -12,21 +12,29 @@
 #include "lldb/Host/PosixApi.h"
 #include "lldb/Utility/Stream.h"
 
+#ifdef _WIN32
+#include "lldb/Host/windows/windows.h"
+#endif
+
 using namespace lldb_private;
 
 // FileAction member functions
 
 FileAction::FileAction() : m_file_spec() {}
 
+#ifdef _WIN32
+HANDLE FileAction::GetHandle() const {
+  if (m_fd == -1)
+    return INVALID_HANDLE_VALUE;
+  return reinterpret_cast<HANDLE>(_get_osfhandle(m_fd));
+}
+#endif
+
 void FileAction::Clear() {
   m_action = eFileActionNone;
   m_fd = -1;
   m_arg = -1;
   m_file_spec.Clear();
-}
-
-llvm::StringRef FileAction::GetPath() const {
-  return m_file_spec.GetPathAsConstString().AsCString();
 }
 
 const FileSpec &FileAction::GetFileSpec() const { return m_file_spec; }

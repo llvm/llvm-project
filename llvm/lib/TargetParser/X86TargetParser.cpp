@@ -143,8 +143,7 @@ constexpr FeatureBitset FeaturesDiamondRapids =
     FeatureAVXVNNIINT8 | FeatureAVXVNNIINT16 | FeatureSHA512 | FeatureSM3 |
     FeatureSM4 | FeatureEGPR | FeatureZU | FeatureCCMP | FeaturePush2Pop2 |
     FeaturePPX | FeatureNDD | FeatureNF | FeatureMOVRS | FeatureAMX_MOVRS |
-    FeatureAMX_AVX512 | FeatureAMX_FP8 | FeatureAMX_TF32 |
-    FeatureAMX_TRANSPOSE | FeatureUSERMSR;
+    FeatureAMX_AVX512 | FeatureAMX_FP8 | FeatureAMX_TF32;
 
 // Intel Atom processors.
 // Bonnell has feature parity with Core2 and adds MOVBE.
@@ -177,7 +176,9 @@ constexpr FeatureBitset FeaturesArrowlakeS =
 constexpr FeatureBitset FeaturesPantherlake =
     (FeaturesArrowlakeS ^ FeatureWIDEKL);
 constexpr FeatureBitset FeaturesNovalake =
-    FeaturesPantherlake | FeaturePREFETCHI;
+    FeaturesPantherlake | FeaturePREFETCHI | FeatureAVX10_2 | FeatureMOVRS |
+    FeatureEGPR | FeatureZU | FeatureCCMP | FeaturePush2Pop2 | FeaturePPX |
+    FeatureNDD | FeatureNF;
 constexpr FeatureBitset FeaturesClearwaterforest =
     (FeaturesSierraforest ^ FeatureWIDEKL) | FeatureAVXVNNIINT16 |
     FeatureSHA512 | FeatureSM3 | FeatureSM4 | FeaturePREFETCHI | FeatureUSERMSR;
@@ -543,8 +544,6 @@ constexpr FeatureBitset ImpliedFeaturesWBNOINVD = {};
 constexpr FeatureBitset ImpliedFeaturesVZEROUPPER = {};
 constexpr FeatureBitset ImpliedFeaturesX87 = {};
 constexpr FeatureBitset ImpliedFeaturesXSAVE = {};
-constexpr FeatureBitset ImpliedFeaturesDUMMYFEATURE1 = {};
-constexpr FeatureBitset ImpliedFeaturesDUMMYFEATURE2 = {};
 
 // Not really CPU features, but need to be in the table because clang uses
 // target features to communicate them to the backend.
@@ -616,7 +615,6 @@ constexpr FeatureBitset ImpliedFeaturesAMX_FP16 = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_INT8 = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_COMPLEX = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_FP8 = FeatureAMX_TILE;
-constexpr FeatureBitset ImpliedFeaturesAMX_TRANSPOSE = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_MOVRS = FeatureAMX_TILE;
 constexpr FeatureBitset ImpliedFeaturesAMX_AVX512 =
     FeatureAMX_TILE | FeatureAVX10_2;
@@ -646,8 +644,6 @@ constexpr FeatureBitset ImpliedFeaturesAVX10_1 =
     FeatureAVX512VBMI2 | FeatureAVX512BITALG | FeatureAVX512FP16 |
     FeatureAVX512DQ | FeatureAVX512VL;
 constexpr FeatureBitset ImpliedFeaturesAVX10_2 = FeatureAVX10_1;
-constexpr FeatureBitset ImpliedFeaturesAVX10_1_512 = FeatureAVX10_1;
-constexpr FeatureBitset ImpliedFeaturesAVX10_2_512 = FeatureAVX10_2;
 
 // APX Features
 constexpr FeatureBitset ImpliedFeaturesEGPR = {};
@@ -659,9 +655,14 @@ constexpr FeatureBitset ImpliedFeaturesNF = {};
 constexpr FeatureBitset ImpliedFeaturesCF = {};
 constexpr FeatureBitset ImpliedFeaturesZU = {};
 
+constexpr FeatureBitset ImpliedFeaturesAPXF =
+    ImpliedFeaturesEGPR | ImpliedFeaturesPush2Pop2 | ImpliedFeaturesPPX |
+    ImpliedFeaturesNDD | ImpliedFeaturesCCMP | ImpliedFeaturesNF |
+    ImpliedFeaturesCF | ImpliedFeaturesZU;
+
 constexpr FeatureBitset ImpliedFeaturesMOVRS = {};
 
-constexpr FeatureInfo FeatureInfos[X86::CPU_FEATURE_MAX] = {
+constexpr FeatureInfo FeatureInfos[] = {
 #define X86_FEATURE(ENUM, STR) {{"+" STR}, ImpliedFeatures##ENUM},
 #include "llvm/TargetParser/X86TargetParser.def"
 };
@@ -761,10 +762,9 @@ llvm::X86::getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
   std::array<uint32_t, 4> FeatureMask{};
   for (StringRef FeatureStr : FeatureStrs) {
     unsigned Feature = StringSwitch<unsigned>(FeatureStr)
-#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY)                                \
-  .Case(STR, llvm::X86::FEATURE_##ENUM)
-#define X86_MICROARCH_LEVEL(ENUM, STR, PRIORITY)                               \
-  .Case(STR, llvm::X86::FEATURE_##ENUM)
+#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY, ABI_VALUE) .Case(STR, ABI_VALUE)
+#define X86_MICROARCH_LEVEL(ENUM, STR, PRIORITY, ABI_VALUE)                    \
+  .Case(STR, ABI_VALUE)
 #include "llvm/TargetParser/X86TargetParser.def"
         ;
     assert(Feature / 32 < FeatureMask.size());
@@ -777,15 +777,14 @@ unsigned llvm::X86::getFeaturePriority(ProcessorFeatures Feat) {
 #ifndef NDEBUG
   // Check that priorities are set properly in the .def file. We expect that
   // "compat" features are assigned non-duplicate consecutive priorities
-  // starting from one (1, ..., 37) and multiple zeros.
-#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY) PRIORITY,
+  // starting from one (1, ..., MAX_PRIORITY) and multiple zeros.
+#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY, ABI_VALUE) PRIORITY,
   unsigned Priorities[] = {
 #include "llvm/TargetParser/X86TargetParser.def"
   };
   std::array<unsigned, std::size(Priorities)> HelperList;
-  const size_t MaxPriority = 37;
-  std::iota(HelperList.begin(), HelperList.begin() + MaxPriority + 1, 0);
-  for (size_t i = MaxPriority + 1; i != std::size(Priorities); ++i)
+  std::iota(HelperList.begin(), HelperList.begin() + MAX_PRIORITY + 1, 0);
+  for (size_t i = MAX_PRIORITY + 1; i != std::size(Priorities); ++i)
     HelperList[i] = 0;
   assert(std::is_permutation(HelperList.begin(), HelperList.end(),
                              std::begin(Priorities), std::end(Priorities)) &&
@@ -793,7 +792,7 @@ unsigned llvm::X86::getFeaturePriority(ProcessorFeatures Feat) {
 #endif
 
   switch (Feat) {
-#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY)                                \
+#define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY, ABI_VALUE)                     \
   case X86::FEATURE_##ENUM:                                                    \
     return PRIORITY;
 #include "llvm/TargetParser/X86TargetParser.def"

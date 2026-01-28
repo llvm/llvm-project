@@ -28,7 +28,6 @@
 #include <cassert>
 #include <iterator>
 #include <tuple>
-#include <utility>
 
 using namespace llvm;
 

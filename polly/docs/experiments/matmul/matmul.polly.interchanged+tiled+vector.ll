@@ -13,7 +13,7 @@ target triple = "x86_64-unknown-linux-gnu"
 @C = common dso_local local_unnamed_addr global [1536 x [1536 x float]] zeroinitializer, align 16
 
 ; Function Attrs: noinline norecurse nounwind uwtable writeonly
-define dso_local void @init_array() local_unnamed_addr #0 {
+define dso_local void @init_array() local_unnamed_addr {
 entry:
   br label %polly.loop_header
 
@@ -61,7 +61,7 @@ polly.loop_header1:                               ; preds = %polly.loop_header1,
 }
 
 ; Function Attrs: noinline nounwind uwtable
-define dso_local void @print_array() local_unnamed_addr #1 {
+define dso_local void @print_array() local_unnamed_addr {
 entry:
   br label %for.cond1.preheader
 
@@ -76,7 +76,7 @@ for.body3:                                        ; preds = %for.inc, %for.cond1
   %arrayidx5 = getelementptr inbounds [1536 x [1536 x float]], [1536 x [1536 x float]]* @C, i64 0, i64 %indvars.iv6, i64 %indvars.iv
   %2 = load float, float* %arrayidx5, align 4
   %conv = fpext float %2 to double
-  %call = tail call i32 (%struct._IO_FILE*, i8*, ...) @fprintf(%struct._IO_FILE* %1, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str, i64 0, i64 0), double %conv) #4
+  %call = tail call i32 (%struct._IO_FILE*, i8*, ...) @fprintf(%struct._IO_FILE* %1, i8* getelementptr inbounds ([5 x i8], [5 x i8]* @.str, i64 0, i64 0), double %conv)
   %3 = trunc i64 %indvars.iv to i32
   %rem = urem i32 %3, 80
   %cmp6 = icmp eq i32 %rem, 79
@@ -104,10 +104,10 @@ for.end12:                                        ; preds = %for.end
 }
 
 ; Function Attrs: nounwind
-declare dso_local i32 @fprintf(%struct._IO_FILE* nocapture, i8* nocapture readonly, ...) local_unnamed_addr #2
+declare dso_local i32 @fprintf(%struct._IO_FILE* nocapture, i8* nocapture readonly, ...) local_unnamed_addr
 
 ; Function Attrs: noinline norecurse nounwind uwtable
-define dso_local i32 @main() local_unnamed_addr #3 {
+define dso_local i32 @main() local_unnamed_addr {
 entry:
   tail call void @init_array()
   call void @llvm.memset.p0i8.i64(i8* align 16 bitcast ([1536 x [1536 x float]]* @C to i8*), i8 0, i64 9437184, i1 false)
@@ -282,17 +282,10 @@ vector.ph:                                        ; preds = %polly.loop_header26
 }
 
 ; Function Attrs: nounwind
-declare i32 @fputc(i32, %struct._IO_FILE* nocapture) local_unnamed_addr #4
+declare i32 @fputc(i32, %struct._IO_FILE* nocapture) local_unnamed_addr
 
 ; Function Attrs: argmemonly nounwind
-declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1) #5
-
-attributes #0 = { noinline norecurse nounwind uwtable writeonly "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "polly-optimized" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #1 = { noinline nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #2 = { nounwind "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #3 = { noinline norecurse nounwind uwtable "correctly-rounded-divide-sqrt-fp-math"="false" "disable-tail-calls"="false" "less-precise-fpmad"="false" "frame-pointer"="all" "no-infs-fp-math"="false" "no-jump-tables"="false" "no-nans-fp-math"="false" "no-signed-zeros-fp-math"="false" "no-trapping-math"="false" "polly-optimized" "stack-protector-buffer-size"="8" "target-cpu"="x86-64" "target-features"="+fxsr,+mmx,+sse,+sse2,+x87" "unsafe-fp-math"="false" "use-soft-float"="false" }
-attributes #4 = { nounwind }
-attributes #5 = { argmemonly nounwind }
+declare void @llvm.memset.p0i8.i64(i8* nocapture writeonly, i8, i64, i1)
 
 !llvm.module.flags = !{!0}
 !llvm.ident = !{!1}

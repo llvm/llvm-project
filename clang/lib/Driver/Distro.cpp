@@ -61,10 +61,6 @@ static Distro::DistroType DetectLsbRelease(llvm::vfs::FileSystem &VFS) {
     if (Version == Distro::UnknownDistro &&
         Line.starts_with("DISTRIB_CODENAME="))
       Version = llvm::StringSwitch<Distro::DistroType>(Line.substr(17))
-                    .Case("maverick", Distro::UbuntuMaverick)
-                    .Case("natty", Distro::UbuntuNatty)
-                    .Case("oneiric", Distro::UbuntuOneiric)
-                    .Case("precise", Distro::UbuntuPrecise)
                     .Case("quantal", Distro::UbuntuQuantal)
                     .Case("raring", Distro::UbuntuRaring)
                     .Case("saucy", Distro::UbuntuSaucy)
@@ -120,13 +116,17 @@ static Distro::DistroType DetectDistro(llvm::vfs::FileSystem &VFS) {
     if (Data.starts_with("Fedora release"))
       return Distro::Fedora;
     if (Data.starts_with("Red Hat Enterprise Linux") ||
-        Data.starts_with("CentOS") || Data.starts_with("Scientific Linux")) {
+        Data.starts_with("CentOS") || Data.starts_with("AlmaLinux") ||
+        Data.starts_with("Rocky Linux") ||
+        Data.starts_with("Scientific Linux")) {
+      if (Data.contains("release 10"))
+        return Distro::RHEL10;
+      if (Data.contains("release 9"))
+        return Distro::RHEL9;
+      if (Data.contains("release 8"))
+        return Distro::RHEL8;
       if (Data.contains("release 7"))
         return Distro::RHEL7;
-      else if (Data.contains("release 6"))
-        return Distro::RHEL6;
-      else if (Data.contains("release 5"))
-        return Distro::RHEL5;
     }
     return Distro::UnknownDistro;
   }
@@ -139,12 +139,6 @@ static Distro::DistroType DetectDistro(llvm::vfs::FileSystem &VFS) {
     int MajorVersion;
     if (!Data.split('.').first.getAsInteger(10, MajorVersion)) {
       switch (MajorVersion) {
-      case 5:
-        return Distro::DebianLenny;
-      case 6:
-        return Distro::DebianSqueeze;
-      case 7:
-        return Distro::DebianWheezy;
       case 8:
         return Distro::DebianJessie;
       case 9:
@@ -166,8 +160,6 @@ static Distro::DistroType DetectDistro(llvm::vfs::FileSystem &VFS) {
       }
     }
     return llvm::StringSwitch<Distro::DistroType>(Data.split("\n").first)
-        .Case("squeeze/sid", Distro::DebianSqueeze)
-        .Case("wheezy/sid", Distro::DebianWheezy)
         .Case("jessie/sid", Distro::DebianJessie)
         .Case("stretch/sid", Distro::DebianStretch)
         .Case("buster/sid", Distro::DebianBuster)

@@ -3,6 +3,9 @@
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu -fast-isel  | FileCheck %s --check-prefixes=X64,FASTISEL-X64
 ; RUN: llc < %s -mtriple=i686-linux-gnu -global-isel=0 -fast-isel=0  | FileCheck %s --check-prefixes=X86,SDAG-X86
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu -global-isel=0 -fast-isel=0  | FileCheck %s --check-prefixes=X64,SDAG-X64
+; RUN: llc < %s -mtriple=x86_64-apple-macosx10.9.0 -mcpu=core2 | FileCheck %s --check-prefix=MACOS-SINCOS-STRET
+; RUN: llc < %s -mtriple=x86_64-apple-macosx10.8.0 -mcpu=core2 | FileCheck %s --check-prefix=MACOS-NOSINCOS-STRET
+
 ; TODO: The below RUN line will fails GISEL selection and will fallback to DAG selection due to lack of support for loads/stores in i686 mode, support is expected soon enough, for this reason the llvm/test/CodeGen/X86/GlobalISel/llvm.sincos.mir test is added for now because of the lack of support for i686 in GlobalISel.
 ; RUN: llc < %s -mtriple=i686-linux-gnu -global-isel=1 -global-isel-abort=2 | FileCheck %s --check-prefixes=GISEL-X86
 ; RUN: llc < %s -mtriple=x86_64-linux-gnu -global-isel=1 -global-isel-abort=1 | FileCheck %s --check-prefixes=GISEL-X64
@@ -33,6 +36,29 @@ define { float, float } @test_sincos_f32(float %Val) nounwind {
 ; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X64-NEXT:    popq %rax
 ; X64-NEXT:    retq
+;
+; MACOS-SINCOS-STRET-LABEL: test_sincos_f32:
+; MACOS-SINCOS-STRET:       ## %bb.0:
+; MACOS-SINCOS-STRET-NEXT:    pushq %rax
+; MACOS-SINCOS-STRET-NEXT:    callq ___sincosf_stret
+; MACOS-SINCOS-STRET-NEXT:    movshdup {{.*#+}} xmm1 = xmm0[1,1,3,3]
+; MACOS-SINCOS-STRET-NEXT:    popq %rax
+; MACOS-SINCOS-STRET-NEXT:    retq
+;
+; MACOS-NOSINCOS-STRET-LABEL: test_sincos_f32:
+; MACOS-NOSINCOS-STRET:       ## %bb.0:
+; MACOS-NOSINCOS-STRET-NEXT:    pushq %rax
+; MACOS-NOSINCOS-STRET-NEXT:    movss %xmm0, (%rsp) ## 4-byte Spill
+; MACOS-NOSINCOS-STRET-NEXT:    callq _sinf
+; MACOS-NOSINCOS-STRET-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
+; MACOS-NOSINCOS-STRET-NEXT:    movss (%rsp), %xmm0 ## 4-byte Reload
+; MACOS-NOSINCOS-STRET-NEXT:    ## xmm0 = mem[0],zero,zero,zero
+; MACOS-NOSINCOS-STRET-NEXT:    callq _cosf
+; MACOS-NOSINCOS-STRET-NEXT:    movaps %xmm0, %xmm1
+; MACOS-NOSINCOS-STRET-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 4-byte Reload
+; MACOS-NOSINCOS-STRET-NEXT:    ## xmm0 = mem[0],zero,zero,zero
+; MACOS-NOSINCOS-STRET-NEXT:    popq %rax
+; MACOS-NOSINCOS-STRET-NEXT:    retq
 ;
 ; GISEL-X86-LABEL: test_sincos_f32:
 ; GISEL-X86:       # %bb.0:
@@ -93,6 +119,28 @@ define { double, double } @test_sincos_f64(double %Val) nounwind  {
 ; X64-NEXT:    addq $24, %rsp
 ; X64-NEXT:    retq
 ;
+; MACOS-SINCOS-STRET-LABEL: test_sincos_f64:
+; MACOS-SINCOS-STRET:       ## %bb.0:
+; MACOS-SINCOS-STRET-NEXT:    pushq %rax
+; MACOS-SINCOS-STRET-NEXT:    callq ___sincos_stret
+; MACOS-SINCOS-STRET-NEXT:    popq %rax
+; MACOS-SINCOS-STRET-NEXT:    retq
+;
+; MACOS-NOSINCOS-STRET-LABEL: test_sincos_f64:
+; MACOS-NOSINCOS-STRET:       ## %bb.0:
+; MACOS-NOSINCOS-STRET-NEXT:    subq $24, %rsp
+; MACOS-NOSINCOS-STRET-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; MACOS-NOSINCOS-STRET-NEXT:    callq _sin
+; MACOS-NOSINCOS-STRET-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 8-byte Spill
+; MACOS-NOSINCOS-STRET-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 8-byte Reload
+; MACOS-NOSINCOS-STRET-NEXT:    ## xmm0 = mem[0],zero
+; MACOS-NOSINCOS-STRET-NEXT:    callq _cos
+; MACOS-NOSINCOS-STRET-NEXT:    movaps %xmm0, %xmm1
+; MACOS-NOSINCOS-STRET-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 8-byte Reload
+; MACOS-NOSINCOS-STRET-NEXT:    ## xmm0 = mem[0],zero
+; MACOS-NOSINCOS-STRET-NEXT:    addq $24, %rsp
+; MACOS-NOSINCOS-STRET-NEXT:    retq
+;
 ; GISEL-X86-LABEL: test_sincos_f64:
 ; GISEL-X86:       # %bb.0:
 ; GISEL-X86-NEXT:    subl $44, %esp
@@ -152,6 +200,40 @@ define { x86_fp80, x86_fp80 } @test_sincos_f80(x86_fp80 %Val) nounwind {
 ; X64-NEXT:    fldt {{[0-9]+}}(%rsp)
 ; X64-NEXT:    addq $56, %rsp
 ; X64-NEXT:    retq
+;
+; MACOS-SINCOS-STRET-LABEL: test_sincos_f80:
+; MACOS-SINCOS-STRET:       ## %bb.0:
+; MACOS-SINCOS-STRET-NEXT:    subq $40, %rsp
+; MACOS-SINCOS-STRET-NEXT:    fldt {{[0-9]+}}(%rsp)
+; MACOS-SINCOS-STRET-NEXT:    fld %st(0)
+; MACOS-SINCOS-STRET-NEXT:    fstpt {{[-0-9]+}}(%r{{[sb]}}p) ## 10-byte Folded Spill
+; MACOS-SINCOS-STRET-NEXT:    fstpt (%rsp)
+; MACOS-SINCOS-STRET-NEXT:    callq _cosl
+; MACOS-SINCOS-STRET-NEXT:    fstpt {{[-0-9]+}}(%r{{[sb]}}p) ## 10-byte Folded Spill
+; MACOS-SINCOS-STRET-NEXT:    fldt {{[-0-9]+}}(%r{{[sb]}}p) ## 10-byte Folded Reload
+; MACOS-SINCOS-STRET-NEXT:    fstpt (%rsp)
+; MACOS-SINCOS-STRET-NEXT:    callq _sinl
+; MACOS-SINCOS-STRET-NEXT:    fldt {{[-0-9]+}}(%r{{[sb]}}p) ## 10-byte Folded Reload
+; MACOS-SINCOS-STRET-NEXT:    fxch %st(1)
+; MACOS-SINCOS-STRET-NEXT:    addq $40, %rsp
+; MACOS-SINCOS-STRET-NEXT:    retq
+;
+; MACOS-NOSINCOS-STRET-LABEL: test_sincos_f80:
+; MACOS-NOSINCOS-STRET:       ## %bb.0:
+; MACOS-NOSINCOS-STRET-NEXT:    subq $40, %rsp
+; MACOS-NOSINCOS-STRET-NEXT:    fldt {{[0-9]+}}(%rsp)
+; MACOS-NOSINCOS-STRET-NEXT:    fld %st(0)
+; MACOS-NOSINCOS-STRET-NEXT:    fstpt {{[-0-9]+}}(%r{{[sb]}}p) ## 10-byte Folded Spill
+; MACOS-NOSINCOS-STRET-NEXT:    fstpt (%rsp)
+; MACOS-NOSINCOS-STRET-NEXT:    callq _cosl
+; MACOS-NOSINCOS-STRET-NEXT:    fstpt {{[-0-9]+}}(%r{{[sb]}}p) ## 10-byte Folded Spill
+; MACOS-NOSINCOS-STRET-NEXT:    fldt {{[-0-9]+}}(%r{{[sb]}}p) ## 10-byte Folded Reload
+; MACOS-NOSINCOS-STRET-NEXT:    fstpt (%rsp)
+; MACOS-NOSINCOS-STRET-NEXT:    callq _sinl
+; MACOS-NOSINCOS-STRET-NEXT:    fldt {{[-0-9]+}}(%r{{[sb]}}p) ## 10-byte Folded Reload
+; MACOS-NOSINCOS-STRET-NEXT:    fxch %st(1)
+; MACOS-NOSINCOS-STRET-NEXT:    addq $40, %rsp
+; MACOS-NOSINCOS-STRET-NEXT:    retq
 ;
 ; GISEL-X86-LABEL: test_sincos_f80:
 ; GISEL-X86:       # %bb.0:
@@ -287,6 +369,57 @@ define void @can_fold_with_call_in_chain(float %x, ptr noalias %a, ptr noalias %
 ; SDAG-X64-NEXT:    popq %rbx
 ; SDAG-X64-NEXT:    popq %r14
 ; SDAG-X64-NEXT:    retq
+;
+; MACOS-SINCOS-STRET-LABEL: can_fold_with_call_in_chain:
+; MACOS-SINCOS-STRET:       ## %bb.0: ## %entry
+; MACOS-SINCOS-STRET-NEXT:    pushq %r14
+; MACOS-SINCOS-STRET-NEXT:    pushq %rbx
+; MACOS-SINCOS-STRET-NEXT:    subq $40, %rsp
+; MACOS-SINCOS-STRET-NEXT:    movq %rsi, %rbx
+; MACOS-SINCOS-STRET-NEXT:    movq %rdi, %r14
+; MACOS-SINCOS-STRET-NEXT:    callq ___sincosf_stret
+; MACOS-SINCOS-STRET-NEXT:    movaps %xmm0, (%rsp) ## 16-byte Spill
+; MACOS-SINCOS-STRET-NEXT:    movshdup {{.*#+}} xmm0 = xmm0[1,1,3,3]
+; MACOS-SINCOS-STRET-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 16-byte Spill
+; MACOS-SINCOS-STRET-NEXT:    movq %r14, %rdi
+; MACOS-SINCOS-STRET-NEXT:    movq %rbx, %rsi
+; MACOS-SINCOS-STRET-NEXT:    callq _foo
+; MACOS-SINCOS-STRET-NEXT:    movaps (%rsp), %xmm0 ## 16-byte Reload
+; MACOS-SINCOS-STRET-NEXT:    movss %xmm0, (%r14)
+; MACOS-SINCOS-STRET-NEXT:    movaps {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 16-byte Reload
+; MACOS-SINCOS-STRET-NEXT:    movss %xmm0, (%rbx)
+; MACOS-SINCOS-STRET-NEXT:    addq $40, %rsp
+; MACOS-SINCOS-STRET-NEXT:    popq %rbx
+; MACOS-SINCOS-STRET-NEXT:    popq %r14
+; MACOS-SINCOS-STRET-NEXT:    retq
+;
+; MACOS-NOSINCOS-STRET-LABEL: can_fold_with_call_in_chain:
+; MACOS-NOSINCOS-STRET:       ## %bb.0: ## %entry
+; MACOS-NOSINCOS-STRET-NEXT:    pushq %r14
+; MACOS-NOSINCOS-STRET-NEXT:    pushq %rbx
+; MACOS-NOSINCOS-STRET-NEXT:    pushq %rax
+; MACOS-NOSINCOS-STRET-NEXT:    movq %rsi, %rbx
+; MACOS-NOSINCOS-STRET-NEXT:    movq %rdi, %r14
+; MACOS-NOSINCOS-STRET-NEXT:    movss %xmm0, (%rsp) ## 4-byte Spill
+; MACOS-NOSINCOS-STRET-NEXT:    callq _sinf
+; MACOS-NOSINCOS-STRET-NEXT:    movss %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) ## 4-byte Spill
+; MACOS-NOSINCOS-STRET-NEXT:    movss (%rsp), %xmm0 ## 4-byte Reload
+; MACOS-NOSINCOS-STRET-NEXT:    ## xmm0 = mem[0],zero,zero,zero
+; MACOS-NOSINCOS-STRET-NEXT:    callq _cosf
+; MACOS-NOSINCOS-STRET-NEXT:    movss %xmm0, (%rsp) ## 4-byte Spill
+; MACOS-NOSINCOS-STRET-NEXT:    movq %r14, %rdi
+; MACOS-NOSINCOS-STRET-NEXT:    movq %rbx, %rsi
+; MACOS-NOSINCOS-STRET-NEXT:    callq _foo
+; MACOS-NOSINCOS-STRET-NEXT:    movss {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 ## 4-byte Reload
+; MACOS-NOSINCOS-STRET-NEXT:    ## xmm0 = mem[0],zero,zero,zero
+; MACOS-NOSINCOS-STRET-NEXT:    movss %xmm0, (%r14)
+; MACOS-NOSINCOS-STRET-NEXT:    movss (%rsp), %xmm0 ## 4-byte Reload
+; MACOS-NOSINCOS-STRET-NEXT:    ## xmm0 = mem[0],zero,zero,zero
+; MACOS-NOSINCOS-STRET-NEXT:    movss %xmm0, (%rbx)
+; MACOS-NOSINCOS-STRET-NEXT:    addq $8, %rsp
+; MACOS-NOSINCOS-STRET-NEXT:    popq %rbx
+; MACOS-NOSINCOS-STRET-NEXT:    popq %r14
+; MACOS-NOSINCOS-STRET-NEXT:    retq
 ;
 ; GISEL-X86-LABEL: can_fold_with_call_in_chain:
 ; GISEL-X86:       # %bb.0: # %entry

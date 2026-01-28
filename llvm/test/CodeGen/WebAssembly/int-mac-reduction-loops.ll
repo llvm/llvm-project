@@ -14,13 +14,11 @@ define hidden i32 @i32_mac_s8(ptr nocapture noundef readonly %a, ptr nocapture n
 ; CHECK:    i32x4.add
 
 ; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i16x8.extend_low_i8x16_s
 ; MAX-BANDWIDTH: v128.load
-; MAX-BANDWIDTH: i16x8.extend_low_i8x16_s
-; MAX-BANDWIDTH: i32x4.dot_i16x8_s
-; MAX-BANDWIDTH: i16x8.extend_high_i8x16_s
-; MAX-BANDWIDTH: i16x8.extend_high_i8x16_s
-; MAX-BANDWIDTH: i32x4.dot_i16x8_s
+; MAX-BANDWIDTH: i16x8.extmul_low_i8x16_s
+; MAX-BANDWIDTH: i32x4.extadd_pairwise_i16x8_s
+; MAX-BANDWIDTH: i16x8.extmul_high_i8x16_s
+; MAX-BANDWIDTH: i32x4.extadd_pairwise_i16x8_s
 ; MAX-BANDWIDTH: i32x4.add
 ; MAX-BANDWIDTH: i32x4.add
 

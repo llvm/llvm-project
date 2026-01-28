@@ -1,0 +1,22 @@
+--- !WASM
+FileHeader:
+  Version:         0x1
+Sections:
+  - Type:            TYPE
+    Signatures:
+      - Index:           0
+        ParamTypes:      []
+        ReturnTypes:     []
+  - Type:            FUNCTION
+    FunctionTypes:   [ 0 ]
+  - Type:            EXPORT
+    Exports:
+      - Name:            i_am_a_block
+        Kind:            FUNCTION
+        Index:           0
+  - Type:            CODE
+    Functions:
+      - Index:           0
+        Locals:          []
+        Body:            02400B0B
+...

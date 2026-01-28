@@ -300,6 +300,12 @@ public:
   ///     The current indentation level.
   unsigned GetIndentLevel() const;
 
+  /// Set the current indentation level.
+  ///
+  /// \param[in] level
+  ///     The new indentation level.
+  void SetIndentLevel(unsigned level);
+
   /// Indent the current line in the stream.
   ///
   /// Indent the current line using the current indentation level and print an
@@ -314,6 +320,20 @@ public:
 
   /// Increment the current indentation level.
   void IndentMore(unsigned amount = 2);
+
+  struct IndentScope {
+    IndentScope(Stream &stream)
+        : m_stream(stream), m_original_indent_level(stream.GetIndentLevel()) {}
+    ~IndentScope() { m_stream.SetIndentLevel(m_original_indent_level); }
+
+  private:
+    Stream &m_stream;
+    unsigned m_original_indent_level;
+  };
+
+  /// Create an indentation scope that restores the original indent level when
+  /// the object goes out of scope (RAII).
+  IndentScope MakeIndentScope(unsigned indent_amount = 2);
 
   /// Output an offset value.
   ///
@@ -363,12 +383,6 @@ public:
   ///     The new size in bytes of an address to use when outputting
   ///     address and pointer values.
   void SetAddressByteSize(uint32_t addr_size);
-
-  /// Set the current indentation level.
-  ///
-  /// \param[in] level
-  ///     The new indentation level.
-  void SetIndentLevel(unsigned level);
 
   /// Output a SLEB128 number to the stream.
   ///

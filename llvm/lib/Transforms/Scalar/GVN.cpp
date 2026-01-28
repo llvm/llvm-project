@@ -1594,6 +1594,9 @@ void GVNPass::eliminatePartiallyRedundantLoad(
       NewLoad->setMetadata(LLVMContext::MD_invariant_group, InvGroupMD);
     if (auto *RangeMD = Load->getMetadata(LLVMContext::MD_range))
       NewLoad->setMetadata(LLVMContext::MD_range, RangeMD);
+    if (auto *NoFPClassMD = Load->getMetadata(LLVMContext::MD_nofpclass))
+      NewLoad->setMetadata(LLVMContext::MD_nofpclass, NoFPClassMD);
+
     if (auto *AccessMD = Load->getMetadata(LLVMContext::MD_access_group))
       if (LI->getLoopFor(Load->getParent()) == LI->getLoopFor(UnavailableBlock))
         NewLoad->setMetadata(LLVMContext::MD_access_group, AccessMD);
@@ -2212,11 +2215,11 @@ bool GVNPass::processMaskedLoad(IntrinsicInst *I) {
   if (!DepInst || !Dep.isLocal() || !Dep.isDef())
     return false;
 
-  Value *Mask = I->getOperand(2);
-  Value *Passthrough = I->getOperand(3);
+  Value *Mask = I->getOperand(1);
+  Value *Passthrough = I->getOperand(2);
   Value *StoreVal;
-  if (!match(DepInst, m_MaskedStore(m_Value(StoreVal), m_Value(), m_Value(),
-                                    m_Specific(Mask))) ||
+  if (!match(DepInst,
+             m_MaskedStore(m_Value(StoreVal), m_Value(), m_Specific(Mask))) ||
       StoreVal->getType() != I->getType())
     return false;
 

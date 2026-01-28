@@ -45,7 +45,7 @@ void c0(int a, int b) {
 // CIR: %[[B6:.*]] = cir.load{{.*}} %[[B_PTR]]
 // CIR: %{{.*}} = cir.cmp(eq, %[[A6]], %[[B6]]) : !s32i, !cir.bool
 
-// LLVM-LABEL: define{{.*}} void @_Z2c0ii(i32 %0, i32 %1) {
+// LLVM-LABEL: define{{.*}} void @_Z2c0ii(i32 %0, i32 %1){{.*}} {
 // LLVM: %[[PTR1:.*]] = alloca i32, i64 1
 // LLVM: %[[PTR2:.*]] = alloca i32, i64 1
 // LLVM: %[[BOOL_PTR:.*]] = alloca i8, i64 1
@@ -170,7 +170,7 @@ void c0_unsigned(unsigned int a, unsigned int b) {
 // CIR: %[[UB6:.*]] = cir.load{{.*}} %[[U_B_PTR]]
 // CIR: %{{.*}} = cir.cmp(eq, %[[UA6]], %[[UB6]]) : !u32i, !cir.bool
 
-// LLVM-LABEL: define{{.*}} void @_Z11c0_unsignedjj(i32 %0, i32 %1) {
+// LLVM-LABEL: define{{.*}} void @_Z11c0_unsignedjj(i32 %0, i32 %1){{.*}} {
 // LLVM: %[[U_PTR1:.*]] = alloca i32, i64 1
 // LLVM: %[[U_PTR2:.*]] = alloca i32, i64 1
 // LLVM: %[[U_BOOL_PTR:.*]] = alloca i8, i64 1
@@ -265,7 +265,7 @@ void c0_float(float a, float b) {
   x = a == b;
 }
 
-// CIR-LABEL: cir.func{{.*}} @_Z8c0_floatff(%arg0: !cir.float{{.*}}, %arg1: !cir.float{{.*}}) {
+// CIR-LABEL: cir.func{{.*}} @_Z8c0_floatff(%arg0: !cir.float{{.*}}, %arg1: !cir.float{{.*}})
 // CIR: %[[A_PTR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["a", init]
 // CIR: %[[B_PTR:.*]] = cir.alloca !cir.float, !cir.ptr<!cir.float>, ["b", init]
 // CIR: %[[X_PTR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["x", init]
@@ -303,7 +303,7 @@ void c0_float(float a, float b) {
 // CIR: %[[CMP6:.*]] = cir.cmp(eq, %[[A6]], %[[B6]]) : !cir.float, !cir.bool
 // CIR: cir.store{{.*}} %[[CMP6]], %[[X_PTR]] : !cir.bool, !cir.ptr<!cir.bool>
 
-// LLVM-LABEL: define{{.*}} void @_Z8c0_floatff(float %0, float %1) {
+// LLVM-LABEL: define{{.*}} void @_Z8c0_floatff(float %0, float %1){{.*}} {
 // LLVM: %[[A_PTR:.*]] = alloca float
 // LLVM: %[[B_PTR:.*]] = alloca float
 // LLVM: store float %0, ptr %[[A_PTR]]
@@ -346,7 +346,7 @@ void pointer_cmp(int *a, int *b) {
   x = a != b;
 }
 
-// CIR-LABEL: cir.func{{.*}} @_Z11pointer_cmpPiS_(%arg0: !cir.ptr<!s32i>{{.*}}, %arg1: !cir.ptr<!s32i>{{.*}}) {
+// CIR-LABEL: cir.func{{.*}} @_Z11pointer_cmpPiS_(%arg0: !cir.ptr<!s32i>{{.*}}, %arg1: !cir.ptr<!s32i>{{.*}}){{.*}} {
 // CIR: %[[A_PTR:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["a", init]
 // CIR: %[[B_PTR:.*]] = cir.alloca !cir.ptr<!s32i>, !cir.ptr<!cir.ptr<!s32i>>, ["b", init]
 
@@ -360,7 +360,7 @@ void pointer_cmp(int *a, int *b) {
 // CIR: cir.cmp(eq, {{.*}}, {{.*}}) : !cir.ptr<!s32i>, !cir.bool
 // CIR: cir.cmp(ne, {{.*}}, {{.*}}) : !cir.ptr<!s32i>, !cir.bool
 
-// LLVM-LABEL: define{{.*}} void @_Z11pointer_cmpPiS_(ptr %0, ptr %1) {
+// LLVM-LABEL: define{{.*}} void @_Z11pointer_cmpPiS_(ptr %0, ptr %1){{.*}} {
 // LLVM: %[[A_PTR:.*]] = alloca ptr
 // LLVM: %[[B_PTR:.*]] = alloca ptr
 // LLVM: store ptr %0, ptr %[[A_PTR]]
@@ -401,7 +401,7 @@ void bool_cmp(bool a, bool b) {
   x = a != b;
 }
 
-// CIR-LABEL: cir.func{{.*}} @_Z8bool_cmpbb(%arg0: !cir.bool{{.*}}, %arg1: !cir.bool{{.*}}) {
+// CIR-LABEL: cir.func{{.*}} @_Z8bool_cmpbb(%arg0: !cir.bool{{.*}}, %arg1: !cir.bool{{.*}}){{.*}} {
 // CIR: %[[A_PTR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["a", init]
 // CIR: %[[B_PTR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["b", init]
 // CIR: %[[X_PTR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, ["x", init]
@@ -419,7 +419,7 @@ void bool_cmp(bool a, bool b) {
 // CIR: cir.cmp(eq
 // CIR: cir.cmp(ne
 
-// LLVM-LABEL: define{{.*}} void @_Z8bool_cmpbb(i1 %0, i1 %1) {
+// LLVM-LABEL: define{{.*}} void @_Z8bool_cmpbb(i1 %0, i1 %1){{.*}} {
 // LLVM: %[[A_PTR:.*]] = alloca i8
 // LLVM: %[[B_PTR:.*]] = alloca i8
 // LLVM: %[[X_PTR:.*]] = alloca i8

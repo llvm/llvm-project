@@ -34,6 +34,8 @@ TEST_F(DisconnectRequestHandlerTest, DisconnectTriggersTerminated) {
   Run();
 }
 
+// Is flaky on Linux, see https://github.com/llvm/llvm-project/issues/154763.
+#ifndef __linux__
 TEST_F(DisconnectRequestHandlerTest, DisconnectTriggersTerminateCommands) {
   CreateDebugger();
 
@@ -55,3 +57,4 @@ TEST_F(DisconnectRequestHandlerTest, DisconnectTriggersTerminateCommands) {
   EXPECT_CALL(client, Received(IsEvent("terminated", _)));
   Run();
 }
+#endif

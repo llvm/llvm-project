@@ -141,9 +141,7 @@ class InterleavedAccess : public FunctionPass {
 public:
   static char ID;
 
-  InterleavedAccess() : FunctionPass(ID) {
-    initializeInterleavedAccessPass(*PassRegistry::getPassRegistry());
-  }
+  InterleavedAccess() : FunctionPass(ID) {}
 
   StringRef getPassName() const override { return "Interleaved Access Pass"; }
 
@@ -258,13 +256,11 @@ static Value *getMaskOperand(IntrinsicInst *II) {
   default:
     llvm_unreachable("Unexpected intrinsic");
   case Intrinsic::vp_load:
-    return II->getOperand(1);
   case Intrinsic::masked_load:
-    return II->getOperand(2);
+    return II->getOperand(1);
   case Intrinsic::vp_store:
-    return II->getOperand(2);
   case Intrinsic::masked_store:
-    return II->getOperand(3);
+    return II->getOperand(2);
   }
 }
 
@@ -671,7 +667,7 @@ static std::pair<Value *, APInt> getMask(Value *WideMask, unsigned Factor,
     SmallVector<unsigned> StartIndexes;
     if (ShuffleVectorInst::isInterleaveMask(SVI->getShuffleMask(), Factor,
                                             NumSrcElts * 2, StartIndexes) &&
-        llvm::all_of(StartIndexes, [](unsigned Start) { return Start == 0; }) &&
+        llvm::all_of(StartIndexes, equal_to(0)) &&
         llvm::all_of(SVI->getShuffleMask(), [&NumSrcElts](int Idx) {
           return Idx < (int)NumSrcElts;
         })) {

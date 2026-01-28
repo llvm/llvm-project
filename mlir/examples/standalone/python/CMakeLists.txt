@@ -16,26 +16,9 @@ declare_mlir_dialect_python_bindings(
   ROOT_DIR "${CMAKE_CURRENT_SOURCE_DIR}/mlir_standalone"
   TD_FILE dialects/StandaloneOps.td
   SOURCES
-    dialects/standalone_pybind11.py
     dialects/standalone_nanobind.py
     _mlir_libs/_standaloneDialectsNanobind/py.typed
   DIALECT_NAME standalone)
-
-
-declare_mlir_python_extension(StandalonePythonSources.Pybind11Extension
-  MODULE_NAME _standaloneDialectsPybind11
-  ADD_TO_PARENT StandalonePythonSources
-  SOURCES
-    StandaloneExtensionPybind11.cpp
-  PRIVATE_LINK_LIBS
-    LLVMSupport
-  EMBED_CAPI_LINK_LIBS
-    MLIRCAPIIR
-    MLIRCAPIArith
-    MLIRCAPITransforms
-    StandaloneCAPI
-  PYTHON_BINDINGS_LIBRARY pybind11
-)
 
 declare_mlir_python_extension(StandalonePythonSources.NanobindExtension
   MODULE_NAME _standaloneDialectsNanobind
@@ -49,7 +32,6 @@ declare_mlir_python_extension(StandalonePythonSources.NanobindExtension
     MLIRCAPIArith
     MLIRCAPITransforms
     StandaloneCAPI
-  PYTHON_BINDINGS_LIBRARY nanobind
 )
 
 
@@ -74,7 +56,7 @@ add_mlir_python_common_capi_library(StandalonePythonCAPI
 
 set(StandalonePythonModules_ROOT_PREFIX "${MLIR_BINARY_DIR}/${MLIR_BINDINGS_PYTHON_INSTALL_PREFIX}")
 
-if(NOT CMAKE_CROSSCOMPILING)
+if(MLIR_PYTHON_STUBGEN_ENABLED)
   # Everything here is very tightly coupled. See the ample descriptions at the bottom of
   # mlir/python/CMakeLists.txt.
 
@@ -141,7 +123,7 @@ set(_declared_sources
 )
 # For an external projects build, the MLIRPythonExtension.Core.type_stub_gen
 # target already exists and can just be added to DECLARED_SOURCES.
-if(EXTERNAL_PROJECT_BUILD AND (NOT CMAKE_CROSSCOMPILING))
+if(EXTERNAL_PROJECT_BUILD AND MLIR_PYTHON_STUBGEN_ENABLED)
   list(APPEND _declared_sources MLIRPythonExtension.Core.type_stub_gen)
 endif()
 
@@ -153,7 +135,7 @@ add_mlir_python_modules(StandalonePythonModules
     StandalonePythonCAPI
 )
 
-if(NOT CMAKE_CROSSCOMPILING)
+if(MLIR_PYTHON_STUBGEN_ENABLED)
   if(NOT EXTERNAL_PROJECT_BUILD)
     add_dependencies(StandalonePythonModules "${_mlir_typestub_gen_target}")
   endif()

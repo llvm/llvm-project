@@ -30,7 +30,7 @@ static void BM_to_chars_good(benchmark::State& state) {
     for (auto value : input)
       benchmark::DoNotOptimize(std::to_chars(buffer, &buffer[128], value, base));
 }
-BENCHMARK(BM_to_chars_good)->DenseRange(2, 36, 1);
+BENCHMARK(BM_to_chars_good)->Arg(2)->Arg(8)->Arg(10)->Arg(16)->Arg(23);
 
 static void BM_to_chars_bad(benchmark::State& state) {
   char buffer[128];
@@ -50,6 +50,6 @@ static void BM_to_chars_bad(benchmark::State& state) {
     for (auto element : data)
       benchmark::DoNotOptimize(std::to_chars(buffer, &buffer[element.size], element.value, base));
 }
-BENCHMARK(BM_to_chars_bad)->DenseRange(2, 36, 1);
+BENCHMARK(BM_to_chars_bad)->Arg(2)->Arg(8)->Arg(10)->Arg(16)->Arg(23);
 
 BENCHMARK_MAIN();

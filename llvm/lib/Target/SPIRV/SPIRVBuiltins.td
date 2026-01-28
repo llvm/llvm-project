@@ -71,6 +71,10 @@ def TernaryBitwiseINTEL : BuiltinGroup;
 def Block2DLoadStore : BuiltinGroup;
 def Pipe : BuiltinGroup;
 def PredicatedLoadStore : BuiltinGroup;
+def ArbitraryPrecisionFixedPoint : BuiltinGroup;
+def BlockingPipes : BuiltinGroup;
+def ImageChannelDataTypes : BuiltinGroup;
+def ArbitraryFloatingPoint: BuiltinGroup;
 
 //===----------------------------------------------------------------------===//
 // Class defining a demangled builtin record. The information in the record
@@ -738,6 +742,49 @@ defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixStoreCheckedINTEL", Open
 defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixConstructCheckedINTEL", OpenCL_std, CoopMatr, 5, 5, OpCooperativeMatrixConstructCheckedINTEL>;
 defm : DemangledNativeBuiltin<"__spirv_CooperativeMatrixGetElementCoordINTEL", OpenCL_std, CoopMatr, 2, 2, OpCooperativeMatrixGetElementCoordINTEL>;
 
+// Arbitrary Precision Floating Point builtin records:
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatGTALTERA", OpenCL_std, ArbitraryFloatingPoint, 4, 4, OpArbitraryFloatGTALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatGEALTERA", OpenCL_std, ArbitraryFloatingPoint, 4, 4, OpArbitraryFloatGEALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatLTALTERA", OpenCL_std, ArbitraryFloatingPoint, 4, 4, OpArbitraryFloatLTALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatLEALTERA", OpenCL_std, ArbitraryFloatingPoint, 4, 4, OpArbitraryFloatLEALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatEQALTERA", OpenCL_std, ArbitraryFloatingPoint, 4, 4, OpArbitraryFloatEQALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatRecipALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatRecipALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatCbrtALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatCbrtALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatHypotALTERA", OpenCL_std, ArbitraryFloatingPoint, 8, 8, OpArbitraryFloatHypotALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatSqrtALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatSqrtALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatLogALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatLogALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatLog2ALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatLog2ALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatLog10ALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatLog10ALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatLog1pALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatLog1pALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatExpALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatExpALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatExp2ALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatExp2ALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatExp10ALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatExp10ALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatExpm1ALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatExpm1ALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatSinALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatSinALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatCosALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatCosALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatSinCosALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatSinCosALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatSinPiALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatSinPiALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatCosPiALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatCosPiALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatSinCosPiALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatSinCosPiALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatAddALTERA", OpenCL_std, ArbitraryFloatingPoint, 8, 8, OpArbitraryFloatAddALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatSubALTERA", OpenCL_std, ArbitraryFloatingPoint, 8, 8, OpArbitraryFloatSubALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatMulALTERA", OpenCL_std, ArbitraryFloatingPoint, 8, 8, OpArbitraryFloatMulALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatDivALTERA", OpenCL_std, ArbitraryFloatingPoint, 8, 8, OpArbitraryFloatDivALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatRSqrtALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatRSqrtALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatASinALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatASinALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatASinPiALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatASinPiALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatACosALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatACosALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatACosPiALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatACosPiALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatATanALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatATanALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatATanPiALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatATanPiALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatATan2ALTERA", OpenCL_std, ArbitraryFloatingPoint, 8, 8, OpArbitraryFloatATan2ALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatPowALTERA", OpenCL_std, ArbitraryFloatingPoint, 8, 8, OpArbitraryFloatPowALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatPowRALTERA", OpenCL_std, ArbitraryFloatingPoint, 8, 8, OpArbitraryFloatPowRALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatPowNALTERA", OpenCL_std, ArbitraryFloatingPoint, 8, 8, OpArbitraryFloatPowNALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatCastALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatCastALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatCastFromIntALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatCastFromIntALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ArbitraryFloatCastToIntALTERA", OpenCL_std, ArbitraryFloatingPoint, 6, 6, OpArbitraryFloatCastToIntALTERA>;
+
 // SPV_INTEL_bindless_images builtin records:
 defm : DemangledNativeBuiltin<"__spirv_ConvertHandleToImageINTEL", OpenCL_std, BindlessINTEL, 1, 1, OpConvertHandleToImageINTEL>;
 defm : DemangledNativeBuiltin<"__spirv_ConvertHandleToSamplerINTEL", OpenCL_std, BindlessINTEL, 1, 1, OpConvertHandleToSamplerINTEL>;
@@ -1175,6 +1222,24 @@ defm : DemangledNativeBuiltin<"clock_read_hilo_device", OpenCL_std, KernelClock,
 defm : DemangledNativeBuiltin<"clock_read_hilo_work_group", OpenCL_std, KernelClock, 0, 0, OpReadClockKHR>;
 defm : DemangledNativeBuiltin<"clock_read_hilo_sub_group", OpenCL_std, KernelClock, 0, 0, OpReadClockKHR>;
 
+//SPV_ALTERA_blocking_pipes
+defm : DemangledNativeBuiltin<"__spirv_WritePipeBlockingINTEL", OpenCL_std, BlockingPipes, 0, 0, OpWritePipeBlockingALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ReadPipeBlockingINTEL", OpenCL_std, BlockingPipes, 0, 0, OpReadPipeBlockingALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_ReadClockKHR", OpenCL_std, KernelClock, 1, 1, OpReadClockKHR>;
+
+//SPV_ALTERA_arbitrary_precision_fixed_point
+defm : DemangledNativeBuiltin<"__spirv_FixedSqrtINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedSqrtALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedRecipINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedRecipALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedRsqrtINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedRsqrtALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedSinINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedSinALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedCosINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedCosALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedSinCosINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedSinCosALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedSinPiINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedSinPiALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedCosPiINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedCosPiALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedSinCosPiINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedSinCosPiALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedLogINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedLogALTERA>;
+defm : DemangledNativeBuiltin<"__spirv_FixedExpINTEL", OpenCL_std, ArbitraryPrecisionFixedPoint, 6 , 8, OpFixedExpALTERA>;
+
 //===----------------------------------------------------------------------===//
 // Class defining an atomic instruction on floating-point numbers.
 //
@@ -1474,6 +1539,7 @@ defm : DemangledImageQueryBuiltin<"get_image_array_size", OpenCL_std, 3>;
 
 defm : DemangledNativeBuiltin<"get_image_num_samples", OpenCL_std, ImageMiscQuery, 1, 1, OpImageQuerySamples>;
 defm : DemangledNativeBuiltin<"get_image_num_mip_levels", OpenCL_std, ImageMiscQuery, 1, 1, OpImageQueryLevels>;
+defm : DemangledNativeBuiltin<"get_image_channel_data_type", OpenCL_std, ImageChannelDataTypes, 1, 1, OpImageQueryFormat>;
 
 //===----------------------------------------------------------------------===//
 // Class defining a "convert_destType<_sat><_roundingMode>" call record for

@@ -20,6 +20,7 @@
 #include <optional>
 
 namespace mlir {
+class AffineExpr;
 class ShapedDimOpInterface;
 
 namespace intrange {
@@ -150,6 +151,12 @@ std::optional<bool> evaluatePred(CmpPredicate pred,
 /// dynamic dimension is encountered, returns [0, signed_max(type(result))].
 ConstantIntRanges inferShapedDimOpInterface(ShapedDimOpInterface op,
                                             const IntegerValueRange &maybeDim);
+
+/// Infer the integer range for an affine expression given ranges for its
+/// dimensions and symbols.
+ConstantIntRanges inferAffineExpr(AffineExpr expr,
+                                  ArrayRef<ConstantIntRanges> dimRanges,
+                                  ArrayRef<ConstantIntRanges> symbolRanges);
 
 } // namespace intrange
 } // namespace mlir

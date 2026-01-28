@@ -16,6 +16,7 @@
 
 #include "llvm/IR/Analysis.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/Support/AllocToken.h"
 #include <optional>
 
 namespace llvm {
@@ -23,7 +24,8 @@ namespace llvm {
 class Module;
 
 struct AllocTokenOptions {
-  std::optional<uint64_t> MaxTokens;
+  AllocTokenMode Mode = DefaultAllocTokenMode;
+  uint64_t MaxTokens = 0;
   bool FastABI = false;
   bool Extended = false;
   AllocTokenOptions() = default;

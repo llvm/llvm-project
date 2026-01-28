@@ -100,8 +100,8 @@ template <typename Bitfield, typename StorageType> struct Impl {
   using IntegerType = typename Bitfield::IntegerType;
 
   static constexpr size_t StorageBits = sizeof(StorageType) * CHAR_BIT;
-  static_assert(Bitfield::FirstBit <= StorageBits, "Data must fit in mask");
-  static_assert(Bitfield::LastBit <= StorageBits, "Data must fit in mask");
+  static_assert(Bitfield::FirstBit < StorageBits, "Data must fit in mask");
+  static_assert(Bitfield::LastBit < StorageBits, "Data must fit in mask");
   static constexpr StorageType LowMask =
       maskTrailingOnes<StorageType>(Bitfield::Bits);
   static constexpr StorageType Mask = LowMask << Bitfield::Shift;
@@ -154,12 +154,9 @@ struct ResolveUnderlyingType {
   using type = std::underlying_type_t<T>;
 };
 template <typename T> struct ResolveUnderlyingType<T, false> {
-  using type = T;
-};
-template <> struct ResolveUnderlyingType<bool, false> {
-  /// In case sizeof(bool) != 1, replace `void` by an additionnal
-  /// std::conditional.
-  using type = std::conditional_t<sizeof(bool) == 1, uint8_t, void>;
+  static_assert(!std::is_same_v<T, bool> || sizeof(bool) == 1,
+                "T being bool requires sizeof(bool) == 1.");
+  using type = std::conditional_t<std::is_same_v<T, bool>, uint8_t, T>;
 };
 
 } // namespace bitfields_details
