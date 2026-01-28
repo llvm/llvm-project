@@ -48,7 +48,7 @@ b:
 declare tailcc void @f2()
 declare tailcc void @f1(ptr, i64, ptr, i8, ptr, ptr, ptr, ptr, ptr, ptr)
 
-define swifttailcc void @test_shrink_wrap_swifttailcc(i64 %0) {
+define tailcc void @test_shrink_wrap_swifttailcc(i64 %0) {
 ; CHECK-LABEL: test_shrink_wrap_swifttailcc:
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    subq $32, %rsp
@@ -74,12 +74,12 @@ define swifttailcc void @test_shrink_wrap_swifttailcc(i64 %0) {
   %cond = icmp ugt i64 %0, 0
   br i1 %cond, label %a, label %b
 a:
-  musttail call swifttailcc void @sf1(ptr null, i64 16, ptr null, i8 1, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null)
+  musttail call tailcc void @sf1(ptr null, i64 16, ptr null, i8 1, ptr null, ptr null, ptr null, ptr null, ptr null, ptr null)
   ret void
 b:
-  musttail call swifttailcc void @sf2()
+  musttail call tailcc void @sf2()
   ret void
 }
 
-declare swifttailcc void @sf2()
-declare swifttailcc void @sf1(ptr, i64, ptr, i8, ptr, ptr, ptr, ptr, ptr, ptr)
+declare tailcc void @sf2()
+declare tailcc void @sf1(ptr, i64, ptr, i8, ptr, ptr, ptr, ptr, ptr, ptr)
