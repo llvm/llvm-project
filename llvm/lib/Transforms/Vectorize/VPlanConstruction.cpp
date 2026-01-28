@@ -1040,7 +1040,7 @@ void VPlanTransforms::addMinimumIterationCheck(
       // an overflow to zero when updating induction variables and so an
       // additional overflow check is required before entering the vector loop.
 
-      VPValue *StepV = Builder.createExpandSCEV(Step);
+      VPValue *StepVPV = Builder.createExpandSCEV(Step);
 
       // Get the maximum unsigned value for the type.
       VPValue *MaxUIntTripCount =
@@ -1053,7 +1053,7 @@ void VPlanTransforms::addMinimumIterationCheck(
       // FIXME: Should only check VF * UF, but currently checks Step=max(VF*UF,
       // minProfitableTripCount).
       TripCountCheck =
-          Builder.createICmp(ICmpInst::ICMP_ULT, DistanceToMax, StepV, DL);
+          Builder.createICmp(ICmpInst::ICMP_ULT, DistanceToMax, StepVPV, DL);
     } else {
       // TripCountCheck = false, folding tail implies positive vector trip
       // count.

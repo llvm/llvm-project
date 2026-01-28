@@ -55,6 +55,7 @@ while.end.loopexit:                               ; preds = %while.body
   ret void
 }
 
+; Same as @foo, but with variable trip count.
 define void @foo2(i32 %val, ptr dereferenceable(1024) %ptr, i64 %n) {
 ; CHECK-LABEL: @foo2(
 ; CHECK-NEXT:  entry:
