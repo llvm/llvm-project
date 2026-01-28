@@ -429,7 +429,7 @@ class DebugCommunication(object):
             otherwise None.
         """
         assert (
-            threading.current_thread != self._recv_thread
+            threading.current_thread() != self._recv_thread
         ), "Must not be called from the _recv_thread"
 
         def process_until_match():
@@ -874,8 +874,7 @@ class DebugCommunication(object):
         *,
         program: Optional[str] = None,
         pid: Optional[int] = None,
-        debuggerId: Optional[int] = None,
-        targetId: Optional[int] = None,
+        session: Optional[dict[str, int]] = None,
         waitFor=False,
         initCommands: Optional[list[str]] = None,
         preRunCommands: Optional[list[str]] = None,
@@ -895,10 +894,8 @@ class DebugCommunication(object):
             args_dict["pid"] = pid
         if program is not None:
             args_dict["program"] = program
-        if debuggerId is not None:
-            args_dict["debuggerId"] = debuggerId
-        if targetId is not None:
-            args_dict["targetId"] = targetId
+        if session is not None:
+            args_dict["session"] = session
         if waitFor:
             args_dict["waitFor"] = waitFor
         args_dict["initCommands"] = self.init_commands
@@ -1405,7 +1402,12 @@ class DebugCommunication(object):
         return response
 
     def request_completions(self, text, frameId=None):
-        args_dict = {"text": text, "column": len(text) + 1}
+        def code_units(input: str) -> int:
+            utf16_bytes = input.encode("utf-16-le")
+            # one UTF16 codeunit = 2 bytes.
+            return len(utf16_bytes) // 2
+
+        args_dict = {"text": text, "column": code_units(text) + 1}
         if frameId:
             args_dict["frameId"] = frameId
         command_dict = {

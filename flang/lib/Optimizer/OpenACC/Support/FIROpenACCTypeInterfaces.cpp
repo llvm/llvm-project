@@ -16,6 +16,7 @@
 #include "flang/Optimizer/Builder/FIRBuilder.h"
 #include "flang/Optimizer/Builder/HLFIRTools.h"
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
+#include "flang/Optimizer/Dialect/CUF/Attributes/CUFAttr.h"
 #include "flang/Optimizer/Dialect/FIRCG/CGOps.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIROpsSupport.h"
@@ -1486,5 +1487,122 @@ template bool OpenACCPointerLikeModel<fir::LLVMPointerType>::genStore(
     mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
     mlir::Value valueToStore,
     mlir::TypedValue<mlir::acc::PointerLikeType> destPtr) const;
+
+/// Check CUDA attributes on a function argument.
+static bool hasCUDADeviceAttrOnFuncArg(mlir::BlockArgument blockArg) {
+  auto *owner = blockArg.getOwner();
+  if (!owner)
+    return false;
+
+  auto *parentOp = owner->getParentOp();
+  if (!parentOp)
+    return false;
+
+  if (auto funcLike = mlir::dyn_cast<mlir::FunctionOpInterface>(parentOp)) {
+    unsigned argIndex = blockArg.getArgNumber();
+    if (argIndex < funcLike.getNumArguments())
+      if (auto attr = funcLike.getArgAttr(argIndex, cuf::getDataAttrName()))
+        if (auto cudaAttr = mlir::dyn_cast<cuf::DataAttributeAttr>(attr))
+          return cuf::isDeviceDataAttribute(cudaAttr.getValue());
+  }
+  return false;
+}
+
+/// Shared implementation for checking if a value represents device data.
+static bool isDeviceDataImpl(mlir::Value var) {
+  // Strip casts to find the underlying value.
+  mlir::Value currentVal = stripCasts(var, /*stripDeclare=*/false);
+
+  if (auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(currentVal))
+    return hasCUDADeviceAttrOnFuncArg(blockArg);
+
+  mlir::Operation *defOp = currentVal.getDefiningOp();
+  assert(defOp && "expected defining op for non-block-argument value");
+
+  // Check for CUDA attributes on the defining operation.
+  if (cuf::hasDeviceDataAttr(defOp))
+    return true;
+
+  // Handle operations that access a partial entity - check if the base entity
+  // is device data.
+  if (auto partialAccess =
+          mlir::dyn_cast<mlir::acc::PartialEntityAccessOpInterface>(defOp))
+    if (mlir::Value base = partialAccess.getBaseEntity())
+      return isDeviceDataImpl(base);
+
+  // Handle fir.embox, fir.rebox, and similar ops via
+  // FortranObjectViewOpInterface to check if the underlying source is device
+  // data.
+  if (auto viewOp = mlir::dyn_cast<fir::FortranObjectViewOpInterface>(defOp))
+    if (mlir::Value source = viewOp.getViewSource(defOp->getResult(0)))
+      return isDeviceDataImpl(source);
+
+  // Handle address_of - check the referenced global.
+  if (auto addrOfIface =
+          mlir::dyn_cast<mlir::acc::AddressOfGlobalOpInterface>(defOp)) {
+    auto symbol = addrOfIface.getSymbol();
+    if (auto global = mlir::SymbolTable::lookupNearestSymbolFrom<
+            mlir::acc::GlobalVariableOpInterface>(defOp, symbol))
+      return global.isDeviceData();
+    return false;
+  }
+
+  return false;
+}
+
+template <typename Ty>
+bool OpenACCPointerLikeModel<Ty>::isDeviceData(mlir::Type pointer,
+                                               mlir::Value var) const {
+  return isDeviceDataImpl(var);
+}
+
+template bool OpenACCPointerLikeModel<fir::ReferenceType>::isDeviceData(
+    mlir::Type, mlir::Value) const;
+template bool
+    OpenACCPointerLikeModel<fir::PointerType>::isDeviceData(mlir::Type,
+                                                            mlir::Value) const;
+template bool
+    OpenACCPointerLikeModel<fir::HeapType>::isDeviceData(mlir::Type,
+                                                         mlir::Value) const;
+template bool OpenACCPointerLikeModel<fir::LLVMPointerType>::isDeviceData(
+    mlir::Type, mlir::Value) const;
+
+template <typename Ty>
+bool OpenACCMappableModel<Ty>::isDeviceData(mlir::Type type,
+                                            mlir::Value var) const {
+  return isDeviceDataImpl(var);
+}
+
+template bool
+    OpenACCMappableModel<fir::BaseBoxType>::isDeviceData(mlir::Type,
+                                                         mlir::Value) const;
+template bool
+    OpenACCMappableModel<fir::ReferenceType>::isDeviceData(mlir::Type,
+                                                           mlir::Value) const;
+template bool
+    OpenACCMappableModel<fir::HeapType>::isDeviceData(mlir::Type,
+                                                      mlir::Value) const;
+template bool
+    OpenACCMappableModel<fir::PointerType>::isDeviceData(mlir::Type,
+                                                         mlir::Value) const;
+
+std::optional<mlir::arith::AtomicRMWKind>
+OpenACCReducibleLogicalModel::getAtomicRMWKind(
+    mlir::Type type, mlir::acc::ReductionOperator redOp) const {
+  switch (redOp) {
+  case mlir::acc::ReductionOperator::AccLand:
+    return mlir::arith::AtomicRMWKind::andi;
+  case mlir::acc::ReductionOperator::AccLor:
+    return mlir::arith::AtomicRMWKind::ori;
+  case mlir::acc::ReductionOperator::AccEqv:
+  case mlir::acc::ReductionOperator::AccNeqv:
+    // Eqv and Neqv are valid for logical types but don't have a direct
+    // AtomicRMWKind mapping yet.
+    return std::nullopt;
+  default:
+    // Other reduction operators are not valid for logical types.
+    return std::nullopt;
+  }
+}
 
 } // namespace fir::acc

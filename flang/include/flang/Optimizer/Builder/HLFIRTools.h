@@ -66,6 +66,7 @@ public:
   bool isBoxAddressOrValue() const {
     return hlfir::isBoxAddressOrValueType(getType());
   }
+  bool isBoxAddress() const { return fir::isBoxAddress(getType()); }
 
   /// Is this entity a procedure designator?
   bool isProcedure() const { return isFortranProcedureValue(getType()); }
@@ -461,7 +462,8 @@ void genNoAliasArrayAssignment(
     bool temporaryLHS = false,
     std::function<hlfir::Entity(mlir::Location, fir::FirOpBuilder &,
                                 hlfir::Entity, hlfir::Entity)> *combiner =
-        nullptr);
+        nullptr,
+    mlir::ArrayAttr accessGroups = {});
 
 /// Generate an assignment from \p rhs to \p lhs when they are known not to
 /// alias. Handles both arrays and scalars: for arrays, delegates to
@@ -474,15 +476,17 @@ void genNoAliasAssignment(
     bool temporaryLHS = false,
     std::function<hlfir::Entity(mlir::Location, fir::FirOpBuilder &,
                                 hlfir::Entity, hlfir::Entity)> *combiner =
-        nullptr);
+        nullptr,
+    mlir::ArrayAttr accessGroups = {});
 inline void genNoAliasAssignment(
     mlir::Location loc, fir::FirOpBuilder &builder, hlfir::Entity rhs,
     hlfir::Entity lhs, bool emitWorkshareLoop, bool temporaryLHS,
     std::function<hlfir::Entity(mlir::Location, fir::FirOpBuilder &,
                                 hlfir::Entity, hlfir::Entity)>
-        combiner) {
+        combiner,
+    mlir::ArrayAttr accessGroups = {}) {
   genNoAliasAssignment(loc, builder, rhs, lhs, emitWorkshareLoop, temporaryLHS,
-                       &combiner);
+                       &combiner, accessGroups);
 }
 
 /// Create a new temporary with the shape and parameters of the provided

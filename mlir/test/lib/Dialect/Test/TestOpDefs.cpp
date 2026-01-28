@@ -34,6 +34,7 @@ static StringLiteral getVisibilityString(SymbolTable::Visibility visibility) {
   case SymbolTable::Visibility::Public:
     return "public";
   }
+  llvm_unreachable("Unknown SymbolTable::Visibility");
 }
 
 void OverriddenSymbolVisibilityOp::setVisibility(
@@ -743,15 +744,27 @@ void RegionIfOp::getSuccessorRegions(
   if (!point.isParent()) {
     if (point.getTerminatorPredecessorOrNull()->getParentRegion() !=
         &getJoinRegion())
-      regions.push_back(RegionSuccessor(&getJoinRegion(), getJoinArgs()));
+      regions.push_back(RegionSuccessor(&getJoinRegion()));
     else
-      regions.push_back(RegionSuccessor::parent(getResults()));
+      regions.push_back(RegionSuccessor::parent());
     return;
   }
 
   // The then and else regions are the entry regions of this op.
-  regions.push_back(RegionSuccessor(&getThenRegion(), getThenArgs()));
-  regions.push_back(RegionSuccessor(&getElseRegion(), getElseArgs()));
+  regions.push_back(RegionSuccessor(&getThenRegion()));
+  regions.push_back(RegionSuccessor(&getElseRegion()));
+}
+
+ValueRange RegionIfOp::getSuccessorInputs(RegionSuccessor successor) {
+  if (successor.isParent())
+    return getResults();
+  if (successor == &getThenRegion())
+    return getThenArgs();
+  if (successor == &getElseRegion())
+    return getElseArgs();
+  if (successor == &getJoinRegion())
+    return getJoinArgs();
+  llvm_unreachable("invalid region successor");
 }
 
 void RegionIfOp::getRegionInvocationBounds(
@@ -772,7 +785,11 @@ void AnyCondOp::getSuccessorRegions(RegionBranchPoint point,
   if (point.isParent())
     regions.emplace_back(&getRegion());
   else
-    regions.push_back(RegionSuccessor::parent(getResults()));
+    regions.push_back(RegionSuccessor::parent());
+}
+
+ValueRange AnyCondOp::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isParent() ? ValueRange(getResults()) : ValueRange();
 }
 
 void AnyCondOp::getRegionInvocationBounds(
@@ -1238,11 +1255,16 @@ LogicalResult TestOpWithPropertiesAndInferredType::inferReturnTypes(
 
 void LoopBlockOp::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
-  regions.emplace_back(&getBody(), getBody().getArguments());
+  regions.emplace_back(&getBody());
   if (point.isParent())
     return;
 
-  regions.push_back(RegionSuccessor::parent(getOperation()->getResults()));
+  regions.push_back(RegionSuccessor::parent());
+}
+
+ValueRange LoopBlockOp::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isParent() ? ValueRange(getOperation()->getResults())
+                              : ValueRange(getBody().getArguments());
 }
 
 OperandRange LoopBlockOp::getEntrySuccessorOperands(RegionSuccessor successor) {
@@ -1346,9 +1368,14 @@ MutableOperandRange TestCallOnDeviceOp::getArgOperandsMutable() {
 void TestStoreWithARegion::getSuccessorRegions(
     RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
   if (point.isParent())
-    regions.emplace_back(&getBody(), getBody().front().getArguments());
+    regions.emplace_back(&getBody());
   else
-    regions.push_back(RegionSuccessor::parent(getOperation()->getResults()));
+    regions.push_back(RegionSuccessor::parent());
+}
+
+ValueRange TestStoreWithARegion::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isParent() ? ValueRange(getOperation()->getResults())
+                              : ValueRange(getBody().front().getArguments());
 }
 
 //===----------------------------------------------------------------------===//
@@ -1360,9 +1387,14 @@ void TestStoreWithALoopRegion::getSuccessorRegions(
   // Both the operation itself and the region may be branching into the body or
   // back into the operation itself. It is possible for the operation not to
   // enter the body.
-  regions.emplace_back(
-      RegionSuccessor(&getBody(), getBody().front().getArguments()));
-  regions.push_back(RegionSuccessor::parent(getOperation()->getResults()));
+  regions.emplace_back(&getBody());
+  regions.push_back(RegionSuccessor::parent());
+}
+
+ValueRange
+TestStoreWithALoopRegion::getSuccessorInputs(RegionSuccessor successor) {
+  return successor.isParent() ? ValueRange(getOperation()->getResults())
+                              : ValueRange(getBody().front().getArguments());
 }
 
 //===----------------------------------------------------------------------===//

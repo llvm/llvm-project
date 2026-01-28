@@ -31,23 +31,15 @@ multiclass VCLMUL_MV_V_X<string opcodestr, bits<6> funct6> {
 
 class RVInstIVI_VROR<bits<6> funct6, dag outs, dag ins, string opcodestr,
                      string argstr>
-    : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
+    : RVInstVBase<funct6, OPIVI, outs, ins, opcodestr, argstr> {
   bits<5> vs2;
   bits<6> imm;
-  bits<5> vd;
-  bit vm;
 
-  let Inst{31-27} = funct6{5-1};
+  // This overwrites the lsb of funct6 in the RVInstVBase base class with imm{5}
+  assert !eq(funct6{0}, 0), "funct6 LSB should be zero";
   let Inst{26} = imm{5};
-  let Inst{25} = vm;
   let Inst{24-20} = vs2;
   let Inst{19-15} = imm{4-0};
-  let Inst{14-12} = OPIVI.Value;
-  let Inst{11-7} = vd;
-  let Inst{6-0} = OPC_OP_V.Value;
-
-  let Uses = [VL, VTYPE];
-  let RVVConstraint = VMConstraint;
 }
 
 multiclass VROR_IV_V_X_I<string opcodestr, bits<6> funct6>
@@ -96,8 +88,8 @@ class PALUVINoVmBinary<bits<6> funct6, string opcodestr, Operand optype>
 // regardless of tail policy
 class PALUVs2NoVmBinary<bits<6> funct6, bits<5> vs1, RISCVVFormat opv,
                         string opcodestr>
-    : RVInstV<funct6, vs1, opv, (outs VR:$vd_wb), (ins VR:$vd, VR:$vs2),
-              opcodestr, "$vd, $vs2"> {
+    : RVInstVUnary<funct6, vs1, opv, (outs VR:$vd_wb), (ins VR:$vd, VR:$vs2),
+                   opcodestr, "$vd, $vs2"> {
   let Constraints = "$vd = $vd_wb";
   let vm = 1;
   let Inst{6-0} = OPC_OP_VE.Value;
@@ -639,7 +631,7 @@ defm : VPatUnarySDNode_V<ctlz, "PseudoVCLZ">;
 defm : VPatUnarySDNode_V<cttz, "PseudoVCTZ">;
 defm : VPatUnarySDNode_V<ctpop, "PseudoVCPOP">;
 
-defm : VPatBinarySDNode_VV_VX<rotl, "PseudoVROL">;
+defm : VPatBinarySDNode_VV_VX<rotl, "PseudoVROL", ExtraPreds=[HasStdExtZvkb]>;
 
 // Invert the immediate and mask it to SEW for readability.
 def InvRot8Imm : SDNodeXForm<imm, [{
@@ -673,7 +665,7 @@ foreach vti = AllIntegerVectors in {
                  vti.AVL, vti.Log2SEW, TA_MA)>;
   }
 }
-defm : VPatBinarySDNode_VV_VX_VI<rotr, "PseudoVROR", uimm6>;
+defm : VPatBinarySDNode_VV_VX_VI<rotr, "PseudoVROR", uimm6, ExtraPreds=[HasStdExtZvkb]>;
 
 foreach vtiToWti = AllWidenableIntVectors in {
   defvar vti = vtiToWti.Vti;
@@ -787,7 +779,7 @@ defm : VPatUnaryVL_V<riscv_ctlz_vl, "PseudoVCLZ">;
 defm : VPatUnaryVL_V<riscv_cttz_vl, "PseudoVCTZ">;
 defm : VPatUnaryVL_V<riscv_ctpop_vl, "PseudoVCPOP">;
 
-defm : VPatBinaryVL_VV_VX<riscv_rotl_vl, "PseudoVROL">;
+defm : VPatBinaryVL_VV_VX<riscv_rotl_vl, "PseudoVROL", ExtraPreds=[HasStdExtZvkb]>;
 // Although there is no vrol.vi, an immediate rotate left can be achieved by
 // negating the immediate in vror.vi
 foreach vti = AllIntegerVectors in {
@@ -804,7 +796,7 @@ foreach vti = AllIntegerVectors in {
                  (vti.Mask VMV0:$vm), GPR:$vl, vti.Log2SEW, TAIL_AGNOSTIC)>;
   }
 }
-defm : VPatBinaryVL_VV_VX_VI<riscv_rotr_vl, "PseudoVROR", uimm6>;
+defm : VPatBinaryVL_VV_VX_VI<riscv_rotr_vl, "PseudoVROR", uimm6, ExtraPreds=[HasStdExtZvkb]>;
 
 foreach vtiToWti = AllWidenableIntVectors in {
   defvar vti = vtiToWti.Vti;
@@ -1057,15 +1049,8 @@ multiclass VPatBinaryV_VI_VROL<string intrinsic, string instruction,
 
 multiclass VPatBinaryV_VV_VX_VROL<string intrinsic, string instruction,
                                   string instruction2, list<VTypeInfo> vtilist>
-    : VPatBinaryV_VV<intrinsic, instruction, vtilist>,
-      VPatBinaryV_VX_VROTATE<intrinsic, instruction, vtilist>,
+    : VPatBinaryV_VV_VX<intrinsic, instruction, vtilist>,
       VPatBinaryV_VI_VROL<intrinsic, instruction2, vtilist>;
-
-multiclass VPatBinaryV_VV_VX_VI_VROR<string intrinsic, string instruction,
-                                     list<VTypeInfo> vtilist>
-    : VPatBinaryV_VV<intrinsic, instruction, vtilist>,
-      VPatBinaryV_VX_VROTATE<intrinsic, instruction, vtilist>,
-      VPatBinaryV_VI<intrinsic, instruction, vtilist, uimm6>;
 
 multiclass VPatBinaryW_VV_VX_VI_VWSLL<string intrinsic, string instruction,
                                       list<VTypeInfoToWide> vtilist>
@@ -1106,7 +1091,7 @@ let Predicates = [HasStdExtZvkb] in {
   defm : VPatUnaryV_V<"int_riscv_vbrev8", "PseudoVBREV8", AllIntegerVectors>;
   defm : VPatUnaryV_V<"int_riscv_vrev8", "PseudoVREV8", AllIntegerVectors>;
   defm : VPatBinaryV_VV_VX_VROL<"int_riscv_vrol", "PseudoVROL", "PseudoVROR", AllIntegerVectors>;
-  defm : VPatBinaryV_VV_VX_VI_VROR<"int_riscv_vror", "PseudoVROR", AllIntegerVectors>;
+  defm : VPatBinaryV_VV_VX_VI<"int_riscv_vror", "PseudoVROR", AllIntegerVectors, uimm6>;
 } // Predicates = [HasStdExtZvkb]
 
 let Predicates = [HasStdExtZvkg] in {

@@ -77,7 +77,6 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPInstruction *R) {
   case Instruction::Freeze:
   case Instruction::PHI:
   case VPInstruction::Broadcast:
-  case VPInstruction::ComputeFindIVResult:
   case VPInstruction::ComputeReductionResult:
   case VPInstruction::ExtractLastLane:
   case VPInstruction::ExtractPenultimateElement:
@@ -163,8 +162,8 @@ Type *VPTypeAnalysis::inferScalarTypeForRecipe(const VPWidenRecipe *R) {
   case Instruction::ExtractValue: {
     assert(R->getNumOperands() == 2 && "expected single level extractvalue");
     auto *StructTy = cast<StructType>(inferScalarType(R->getOperand(0)));
-    auto *CI = cast<ConstantInt>(R->getOperand(1)->getLiveInIRValue());
-    return StructTy->getTypeAtIndex(CI->getZExtValue());
+    return StructTy->getTypeAtIndex(
+        cast<VPConstantInt>(R->getOperand(1))->getZExtValue());
   }
   case Instruction::Select: {
     Type *ResTy = inferScalarType(R->getOperand(1));
