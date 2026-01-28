@@ -117,8 +117,7 @@ size_t ObjectFileJSON::GetModuleSpecifications(
 
   // Update the data to contain the entire file if it doesn't already.
   if (extractor_sp->GetByteSize() < length) {
-    DataBufferSP file_data_sp = MapFileData(file, length, file_offset);
-    if (file_data_sp)
+    if (DataBufferSP file_data_sp = MapFileData(file, length, file_offset))
       extractor_sp->SetData(file_data_sp);
     if (!extractor_sp->HasData())
       return 0;
