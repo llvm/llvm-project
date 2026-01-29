@@ -252,14 +252,14 @@ Pointer InterpFrame::getParamPointer(unsigned Off) {
   assert(!isBottomFrame());
 
   // Allocate memory to store the parameter and the block metadata.
-  const auto &Desc = Func->getParamDescriptor(Off);
-  size_t BlockSize = sizeof(Block) + Desc.second->getAllocSize();
+  const auto &PDesc = Func->getParamDescriptor(Off);
+  size_t BlockSize = sizeof(Block) + PDesc.Desc->getAllocSize();
   auto Memory = std::make_unique<char[]>(BlockSize);
-  auto *B = new (Memory.get()) Block(S.Ctx.getEvalID(), Desc.second);
+  auto *B = new (Memory.get()) Block(S.Ctx.getEvalID(), PDesc.Desc);
   B->invokeCtor();
 
   // Copy the initial value.
-  TYPE_SWITCH(Desc.first, new (B->data()) T(stackRef<T>(Off)));
+  TYPE_SWITCH(PDesc.T, new (B->data()) T(stackRef<T>(Off)));
 
   // Record the param.
   Params.insert({Off, std::move(Memory)});
