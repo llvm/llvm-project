@@ -1,0 +1,3908 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1200 \
+# RUN:     -run-pass=amdgpu-next-use-analysis \
+# RUN:     -amdgpu-next-use-analysis-compatibility-mode=compute \
+# RUN:     -amdgpu-next-use-analysis-dump-distance-as-json=- \
+# RUN:     -amdgpu-next-use-analysis-dump-distance-verbose \
+# RUN:     -o /dev/null \
+# RUN:     %s 2>&1 | FileCheck --check-prefix=CHECK-ML-JSON %s
+
+# RUN: llc -mtriple=amdgcn -mcpu=gfx1200 \
+# RUN:     -run-pass=amdgpu-next-use-analysis \
+# RUN:     -amdgpu-next-use-analysis-compatibility-mode=graphics \
+# RUN:     -amdgpu-next-use-analysis-dump-distance-as-json=- \
+# RUN:     -amdgpu-next-use-analysis-dump-distance-verbose \
+# RUN:     -o /dev/null \
+# RUN:     %s 2>&1 | FileCheck --check-prefix=CHECK-GX-JSON %s
+--- |
+  ; ModuleID = '/work1/macurtis/wt/mrg/llvm-project/llvm/test/CodeGen/AMDGPU/NextUseAnalysis/v2/test_ers_emit_restore_in_loop_preheader1.ll'
+  source_filename = "/work1/macurtis/wt/mrg/llvm-project/llvm/test/CodeGen/AMDGPU/NextUseAnalysis/v2/test_ers_emit_restore_in_loop_preheader1.ll"
+  target datalayout = "e-m:e-p:64:64-p1:64:64-p2:32:32-p3:32:32-p4:64:64-p5:32:32-p6:32:32-p7:160:256:256:32-p8:128:128:128:48-p9:192:256:256:32-i64:64-v16:16-v24:32-v32:32-v48:64-v96:128-v192:256-v256:256-v512:512-v1024:1024-v2048:2048-n32:64-S32-A5-G1-ni:7:8:9"
+  target triple = "amdgcn"
+  
+  define amdgpu_ps void @test(ptr addrspace(1) %p1, ptr addrspace(1) %p2, ptr addrspace(1) %p3, ptr addrspace(1) %p4, ptr addrspace(1) %p5, i32 %TC) #0 {
+  entry:
+    %ld1 = load i32, ptr addrspace(1) %p2, align 4
+    %ld2 = load i32, ptr addrspace(1) %p3, align 1
+    %ld3 = load i32, ptr addrspace(1) %p4, align 4
+    %add1 = add i32 %ld3, %TC
+    store i32 %add1, ptr addrspace(1) %p2, align 4
+    %mul1 = mul i32 %ld3, %add1
+    store i32 %mul1, ptr addrspace(1) %p3, align 4
+    %sub1 = sub i32 %mul1, %add1
+    %mul2 = mul i32 %sub1, %TC
+    store i32 %mul2, ptr addrspace(1) %p4, align 4
+    br label %loop, !amdgpu.uniform !0
+  
+  loop:                                             ; preds = %loop, %entry
+    %phi.broken = phi i32 [ %0, %loop ], [ 0, %entry ]
+    %phi = phi i32 [ 100, %entry ], [ %add, %loop ]
+    %phi.inc = phi i32 [ 0, %entry ], [ %inc, %loop ]
+    %sext = sext i32 %phi.inc to i64
+    %gep = getelementptr inbounds i32, ptr addrspace(1) %p1, i64 %sext
+    %ld = load i32, ptr addrspace(1) %gep, align 1
+    %add = add i32 %ld, %phi.inc
+    %inc = add i32 %phi.inc, 1
+    %cond = icmp uge i32 %inc, %TC
+    %0 = call i32 @llvm.amdgcn.if.break.i32(i1 %cond, i32 %phi.broken)
+    %1 = call i1 @llvm.amdgcn.loop.i32(i32 %0)
+    br i1 %1, label %exit, label %loop
+  
+  exit:                                             ; preds = %loop
+    %phi.lcssa = phi i32 [ %phi, %loop ]
+    %.lcssa = phi i32 [ %0, %loop ]
+    call void @llvm.amdgcn.end.cf.i32(i32 %.lcssa)
+    %mul3 = mul i32 %ld1, %phi.lcssa
+    %add2 = add i32 %mul3, %ld2
+    store i32 %add2, ptr addrspace(1) %p5, align 4
+    ret void
+  }
+  
+  ; Function Attrs: nocallback nofree nounwind willreturn memory(none)
+  declare i32 @llvm.amdgcn.if.break.i32(i1, i32) #1
+  
+  ; Function Attrs: nocallback nofree nounwind willreturn
+  declare i1 @llvm.amdgcn.loop.i32(i32) #2
+  
+  ; Function Attrs: nocallback nofree nounwind willreturn
+  declare void @llvm.amdgcn.end.cf.i32(i32) #2
+  
+  attributes #0 = { "target-cpu"="gfx1200" }
+  attributes #1 = { nocallback nofree nounwind willreturn memory(none) }
+  attributes #2 = { nocallback nofree nounwind willreturn }
+  
+  !0 = !{}
+...
+---
+name:            test
+tracksRegLiveness: true
+registers:
+  - { id: 0, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 1, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 2, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 3, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 4, class: sreg_32, preferred-register: '%6', flags: [  ] }
+  - { id: 5, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 6, class: sreg_32, preferred-register: '%4', flags: [  ] }
+  - { id: 7, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 8, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 9, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 10, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 11, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 12, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 13, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 14, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 15, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 16, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 17, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 18, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 19, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 20, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 21, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 22, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 23, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 24, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 25, class: sreg_64, preferred-register: '', flags: [  ] }
+  - { id: 26, class: sreg_64, preferred-register: '', flags: [  ] }
+  - { id: 27, class: sreg_64, preferred-register: '', flags: [  ] }
+  - { id: 28, class: sreg_64, preferred-register: '', flags: [  ] }
+  - { id: 29, class: sreg_64, preferred-register: '', flags: [  ] }
+  - { id: 30, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 31, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 32, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 33, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 34, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 35, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 36, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 37, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 38, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 39, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 40, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 41, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 42, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 43, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 44, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 45, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 46, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 47, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 48, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 49, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 50, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 51, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 52, class: sreg_32_xm0, preferred-register: '', flags: [  ] }
+  - { id: 53, class: sreg_32_xm0, preferred-register: '', flags: [  ] }
+  - { id: 54, class: sreg_64, preferred-register: '', flags: [  ] }
+  - { id: 55, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 56, class: sreg_64, preferred-register: '', flags: [  ] }
+  - { id: 57, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 58, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 59, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 60, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 61, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 62, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 63, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 64, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 65, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 66, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 67, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 68, class: sreg_32, preferred-register: '$vcc_lo', flags: [  ] }
+  - { id: 69, class: sreg_64, preferred-register: '', flags: [  ] }
+  - { id: 70, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 71, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 72, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 73, class: sreg_32, preferred-register: '', flags: [  ] }
+  - { id: 74, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 75, class: sgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 76, class: sgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 77, class: sgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 78, class: sgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 79, class: sgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 80, class: sgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 81, class: sgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 82, class: sgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 83, class: sgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 84, class: sgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 85, class: sgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 86, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 87, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 88, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 89, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 90, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 91, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 92, class: vreg_64, preferred-register: '', flags: [  ] }
+  - { id: 93, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 94, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 95, class: sreg_32_xm0_xexec, preferred-register: '$vcc_lo', 
+      flags: [  ] }
+  - { id: 96, class: sreg_32_xm0_xexec, preferred-register: '', flags: [  ] }
+  - { id: 97, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 98, class: sreg_32_xm0, preferred-register: '', flags: [  ] }
+  - { id: 99, class: vgpr_32, preferred-register: '', flags: [  ] }
+  - { id: 100, class: sreg_32_xm0, preferred-register: '', flags: [  ] }
+liveins:
+  - { reg: '$vgpr0', virtual-reg: '%10' }
+  - { reg: '$vgpr1', virtual-reg: '%11' }
+  - { reg: '$vgpr2', virtual-reg: '%12' }
+  - { reg: '$vgpr3', virtual-reg: '%13' }
+  - { reg: '$vgpr4', virtual-reg: '%14' }
+  - { reg: '$vgpr5', virtual-reg: '%15' }
+  - { reg: '$vgpr6', virtual-reg: '%16' }
+  - { reg: '$vgpr7', virtual-reg: '%17' }
+  - { reg: '$vgpr8', virtual-reg: '%18' }
+  - { reg: '$vgpr9', virtual-reg: '%19' }
+  - { reg: '$vgpr10', virtual-reg: '%20' }
+body:             |
+  bb.0.entry:
+    successors: %bb.1(0x80000000)
+    liveins: $vgpr0, $vgpr1, $vgpr2, $vgpr3, $vgpr4, $vgpr5, $vgpr6, $vgpr7, $vgpr8, $vgpr9, $vgpr10
+  
+    %20:vgpr_32 = COPY $vgpr10
+    %19:vgpr_32 = COPY $vgpr9
+    %18:vgpr_32 = COPY $vgpr8
+    %17:vgpr_32 = COPY $vgpr7
+    %16:vgpr_32 = COPY $vgpr6
+    %15:vgpr_32 = COPY $vgpr5
+    %14:vgpr_32 = COPY $vgpr4
+    %13:vgpr_32 = COPY $vgpr3
+    %12:vgpr_32 = COPY $vgpr2
+    %11:vgpr_32 = COPY $vgpr1
+    %10:vgpr_32 = COPY $vgpr0
+    %92:vreg_64 = REG_SEQUENCE %18, %subreg.sub0, %19, %subreg.sub1
+    %91:vreg_64 = REG_SEQUENCE %10, %subreg.sub0, %11, %subreg.sub1
+    %90:vreg_64 = REG_SEQUENCE %16, %subreg.sub0, %17, %subreg.sub1
+    %89:vreg_64 = REG_SEQUENCE %14, %subreg.sub0, %15, %subreg.sub1
+    %88:vreg_64 = REG_SEQUENCE %12, %subreg.sub0, %13, %subreg.sub1
+    %0:vgpr_32 = GLOBAL_LOAD_DWORD %88, 0, 0, implicit $exec :: (load (s32) from %ir.p2, addrspace 1)
+    %31:vgpr_32 = GLOBAL_LOAD_UBYTE %89, 0, 0, implicit $exec :: (load (s8) from %ir.p3, addrspace 1)
+    %33:vgpr_32 = GLOBAL_LOAD_UBYTE %89, 1, 0, implicit $exec :: (load (s8) from %ir.p3 + 1, addrspace 1)
+    %36:vgpr_32 = V_LSHL_OR_B32_e64 %33, 8, %31, implicit $exec
+    %37:vgpr_32 = GLOBAL_LOAD_UBYTE %89, 2, 0, implicit $exec :: (load (s8) from %ir.p3 + 2, addrspace 1)
+    %39:vgpr_32 = GLOBAL_LOAD_UBYTE %89, 3, 0, implicit $exec :: (load (s8) from %ir.p3 + 3, addrspace 1)
+    %41:vgpr_32 = V_LSHL_OR_B32_e64 %39, 8, %37, implicit $exec
+    %1:vgpr_32 = V_LSHL_OR_B32_e64 %41, 16, %36, implicit $exec
+    %43:vgpr_32 = GLOBAL_LOAD_DWORD %90, 0, 0, implicit $exec :: (load (s32) from %ir.p4, addrspace 1)
+    %45:vgpr_32 = V_ADD_U32_e64 %43, %20, 0, implicit $exec
+    GLOBAL_STORE_DWORD %88, %45, 0, 0, implicit $exec :: (store (s32) into %ir.p2, addrspace 1)
+    %47:vgpr_32 = V_MUL_LO_U32_e64 %43, %45, implicit $exec
+    GLOBAL_STORE_DWORD %89, %47, 0, 0, implicit $exec :: (store (s32) into %ir.p3, addrspace 1)
+    %49:vgpr_32 = V_SUB_U32_e64 %47, %45, 0, implicit $exec
+    %50:vgpr_32 = V_MUL_LO_U32_e64 %49, %20, implicit $exec
+    GLOBAL_STORE_DWORD %90, %50, 0, 0, implicit $exec :: (store (s32) into %ir.p4, addrspace 1)
+    %24:vgpr_32 = V_MOV_B32_e32 100, implicit $exec
+    %23:sreg_32 = S_MOV_B32 0
+  
+  bb.1.loop:
+    successors: %bb.2(0x04000000), %bb.1(0x7c000000)
+  
+    %2:sreg_32 = PHI %23, %bb.0, %7, %bb.1
+    %3:vgpr_32 = PHI %24, %bb.0, %5, %bb.1
+    %4:sreg_32 = PHI %23, %bb.0, %6, %bb.1
+    %52:sreg_32_xm0 = S_ASHR_I32 %4, 31, implicit-def dead $scc
+    %54:sreg_64 = REG_SEQUENCE %4, %subreg.sub0, %52, %subreg.sub1
+    %56:sreg_64 = nsw S_LSHL_B64 %54, 2, implicit-def dead $scc
+    %93:vgpr_32, %95:sreg_32_xm0_xexec = V_ADD_CO_U32_e64 %91.sub0, %56.sub0, 0, implicit $exec
+    %94:vgpr_32, dead $sgpr_null = V_ADDC_U32_e64 %56.sub1, %91.sub1, %95, 0, implicit $exec
+    %57:vreg_64 = REG_SEQUENCE %93, %subreg.sub0, %94, %subreg.sub1
+    %58:vgpr_32 = GLOBAL_LOAD_UBYTE %57, 0, 0, implicit $exec :: (load (s8) from %ir.gep, addrspace 1)
+    %59:vgpr_32 = GLOBAL_LOAD_UBYTE %57, 1, 0, implicit $exec :: (load (s8) from %ir.gep + 1, addrspace 1)
+    %61:vgpr_32 = V_LSHL_OR_B32_e64 %59, 8, %58, implicit $exec
+    %62:vgpr_32 = GLOBAL_LOAD_UBYTE %57, 2, 0, implicit $exec :: (load (s8) from %ir.gep + 2, addrspace 1)
+    %63:vgpr_32 = GLOBAL_LOAD_UBYTE %57, 3, 0, implicit $exec :: (load (s8) from %ir.gep + 3, addrspace 1)
+    %64:vgpr_32 = V_LSHL_OR_B32_e64 %63, 8, %62, implicit $exec
+    %66:vgpr_32 = V_LSHL_OR_B32_e64 %64, 16, %61, implicit $exec
+    %5:vgpr_32 = V_ADD_U32_e64 %4, %66, 0, implicit $exec
+    %6:sreg_32 = S_ADD_I32 %4, 1, implicit-def dead $scc
+    %68:sreg_32 = V_CMP_GE_U32_e64 %6, %20, implicit $exec
+    %7:sreg_32 = SI_IF_BREAK %68, %2, implicit-def dead $scc
+    SI_LOOP %7, %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    S_BRANCH %bb.2
+  
+  bb.2.exit:
+    SI_END_CF %7, implicit-def dead $exec, implicit-def dead $scc, implicit $exec
+    %86:vreg_64 = REG_SEQUENCE %1, %subreg.sub0, undef %87:vgpr_32, %subreg.sub1
+    %72:vreg_64, $sgpr_null = V_MAD_U64_U32_e64 %0, %3, %86, 0, implicit $exec
+    GLOBAL_STORE_DWORD %92, %72.sub0, 0, 0, implicit $exec :: (store (s32) into %ir.p5, addrspace 1)
+    S_ENDPGM 0
+...
+
+# NOTE: Assertions auto-generated by generate_filecheck.py
+# This file checks the structure and key values of Next Use Analysis JSON output.
+
+# CHECK-ML-JSON: {
+# CHECK-ML-JSON-NEXT:  "bb.0.entry": [
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%20",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "COPY $vgpr10",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-NEXT:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-NEXT:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-NEXT:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%19",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "COPY $vgpr9",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%20": 24.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%20"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 24.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%20"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 24.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%18",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "COPY $vgpr8",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%19": 9.0
+# CHECK-ML-JSON-DAG:        "%20": 23.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%20"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 23.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%20"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 23.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%17",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "COPY $vgpr7",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%18": 8.0
+# CHECK-ML-JSON-DAG:        "%19": 8.0
+# CHECK-ML-JSON-DAG:        "%20": 22.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%20"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 22.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%20"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 22.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%16",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "COPY $vgpr6",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%17": 9.0
+# CHECK-ML-JSON-DAG:        "%18": 7.0
+# CHECK-ML-JSON-DAG:        "%19": 7.0
+# CHECK-ML-JSON-DAG:        "%20": 21.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%20"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 21.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%20"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 21.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%15",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "COPY $vgpr5",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%16": 8.0
+# CHECK-ML-JSON-DAG:        "%17": 8.0
+# CHECK-ML-JSON-DAG:        "%18": 6.0
+# CHECK-ML-JSON-DAG:        "%19": 6.0
+# CHECK-ML-JSON-DAG:        "%20": 20.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%20"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 20.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%20"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 20.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%14",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "COPY $vgpr4",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%15": 8.0
+# CHECK-ML-JSON-DAG:        "%16": 7.0
+# CHECK-ML-JSON-DAG:        "%17": 7.0
+# CHECK-ML-JSON-DAG:        "%18": 5.0
+# CHECK-ML-JSON-DAG:        "%19": 5.0
+# CHECK-ML-JSON-DAG:        "%20": 19.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%20"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%20"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%13",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "COPY $vgpr3",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%14": 7.0
+# CHECK-ML-JSON-DAG:        "%15": 7.0
+# CHECK-ML-JSON-DAG:        "%16": 6.0
+# CHECK-ML-JSON-DAG:        "%17": 6.0
+# CHECK-ML-JSON-DAG:        "%18": 4.0
+# CHECK-ML-JSON-DAG:        "%19": 4.0
+# CHECK-ML-JSON-DAG:        "%20": 18.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%20"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 18.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%20"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 18.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%12",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "COPY $vgpr2",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%13": 7.0
+# CHECK-ML-JSON-DAG:        "%14": 6.0
+# CHECK-ML-JSON-DAG:        "%15": 6.0
+# CHECK-ML-JSON-DAG:        "%16": 5.0
+# CHECK-ML-JSON-DAG:        "%17": 5.0
+# CHECK-ML-JSON-DAG:        "%18": 3.0
+# CHECK-ML-JSON-DAG:        "%19": 3.0
+# CHECK-ML-JSON-DAG:        "%20": 17.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%20"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 17.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%20"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 17.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%11",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "COPY $vgpr1",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%12": 6.0
+# CHECK-ML-JSON-DAG:        "%13": 6.0
+# CHECK-ML-JSON-DAG:        "%14": 5.0
+# CHECK-ML-JSON-DAG:        "%15": 5.0
+# CHECK-ML-JSON-DAG:        "%16": 4.0
+# CHECK-ML-JSON-DAG:        "%17": 4.0
+# CHECK-ML-JSON-DAG:        "%18": 2.0
+# CHECK-ML-JSON-DAG:        "%19": 2.0
+# CHECK-ML-JSON-DAG:        "%20": 16.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%20"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 16.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%20"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 16.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%10",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "COPY $vgpr0",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%11": 2.0
+# CHECK-ML-JSON-DAG:        "%12": 5.0
+# CHECK-ML-JSON-DAG:        "%13": 5.0
+# CHECK-ML-JSON-DAG:        "%14": 4.0
+# CHECK-ML-JSON-DAG:        "%15": 4.0
+# CHECK-ML-JSON-DAG:        "%16": 3.0
+# CHECK-ML-JSON-DAG:        "%17": 3.0
+# CHECK-ML-JSON-DAG:        "%18": 1.0
+# CHECK-ML-JSON-DAG:        "%19": 1.0
+# CHECK-ML-JSON-DAG:        "%20": 15.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%20"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 15.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%20"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 15.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%92",
+# CHECK-ML-JSON-NEXT:      "type": "vreg_64",
+# CHECK-ML-JSON-NEXT:      "instr": "REG_SEQUENCE %18, %subreg.sub0, %19, %subreg.sub1",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%10": 1.0
+# CHECK-ML-JSON-DAG:        "%11": 1.0
+# CHECK-ML-JSON-DAG:        "%12": 4.0
+# CHECK-ML-JSON-DAG:        "%13": 4.0
+# CHECK-ML-JSON-DAG:        "%14": 3.0
+# CHECK-ML-JSON-DAG:        "%15": 3.0
+# CHECK-ML-JSON-DAG:        "%16": 2.0
+# CHECK-ML-JSON-DAG:        "%17": 2.0
+# CHECK-ML-JSON-DAG:        "%18": 0.0
+# CHECK-ML-JSON-DAG:        "%19": 0.0
+# CHECK-ML-JSON-DAG:        "%20": 14.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%20"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 14.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%20"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 14.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%91",
+# CHECK-ML-JSON-NEXT:      "type": "vreg_64",
+# CHECK-ML-JSON-NEXT:      "instr": "REG_SEQUENCE %10, %subreg.sub0, %11, %subreg.sub1",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%10": 0.0
+# CHECK-ML-JSON-DAG:        "%11": 0.0
+# CHECK-ML-JSON-DAG:        "%12": 3.0
+# CHECK-ML-JSON-DAG:        "%13": 3.0
+# CHECK-ML-JSON-DAG:        "%14": 2.0
+# CHECK-ML-JSON-DAG:        "%15": 2.0
+# CHECK-ML-JSON-DAG:        "%16": 1.0
+# CHECK-ML-JSON-DAG:        "%17": 1.0
+# CHECK-ML-JSON-DAG:        "%20": 13.0
+# CHECK-ML-JSON-DAG:        "%92": 44.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 44.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 44.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%90",
+# CHECK-ML-JSON-NEXT:      "type": "vreg_64",
+# CHECK-ML-JSON-NEXT:      "instr": "REG_SEQUENCE %16, %subreg.sub0, %17, %subreg.sub1",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%12": 2.0
+# CHECK-ML-JSON-DAG:        "%13": 2.0
+# CHECK-ML-JSON-DAG:        "%14": 1.0
+# CHECK-ML-JSON-DAG:        "%15": 1.0
+# CHECK-ML-JSON-DAG:        "%16": 0.0
+# CHECK-ML-JSON-DAG:        "%17": 0.0
+# CHECK-ML-JSON-DAG:        "%20": 12.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 20.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 20.0
+# CHECK-ML-JSON-DAG:        "%92": 43.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 43.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 43.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%89",
+# CHECK-ML-JSON-NEXT:      "type": "vreg_64",
+# CHECK-ML-JSON-NEXT:      "instr": "REG_SEQUENCE %14, %subreg.sub0, %15, %subreg.sub1",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%12": 1.0
+# CHECK-ML-JSON-DAG:        "%13": 1.0
+# CHECK-ML-JSON-DAG:        "%14": 0.0
+# CHECK-ML-JSON-DAG:        "%15": 0.0
+# CHECK-ML-JSON-DAG:        "%20": 11.0
+# CHECK-ML-JSON-DAG:        "%90": 10.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 19.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 19.0
+# CHECK-ML-JSON-DAG:        "%92": 42.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 42.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 42.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%88",
+# CHECK-ML-JSON-NEXT:      "type": "vreg_64",
+# CHECK-ML-JSON-NEXT:      "instr": "REG_SEQUENCE %12, %subreg.sub0, %13, %subreg.sub1",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%12": 0.0
+# CHECK-ML-JSON-DAG:        "%13": 0.0
+# CHECK-ML-JSON-DAG:        "%20": 10.0
+# CHECK-ML-JSON-DAG:        "%89": 2.0
+# CHECK-ML-JSON-DAG:        "%90": 9.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 18.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 18.0
+# CHECK-ML-JSON-DAG:        "%92": 41.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 41.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 41.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%0",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_LOAD_DWORD %88, 0, 0, implicit $exec :: (load (s32) from %ir.p2, addrspace 1)",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%20": 9.0
+# CHECK-ML-JSON-DAG:        "%88": 0.0
+# CHECK-ML-JSON-DAG:        "%89": 1.0
+# CHECK-ML-JSON-DAG:        "%90": 8.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 17.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 17.0
+# CHECK-ML-JSON-DAG:        "%92": 40.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 40.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 40.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%31",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %89, 0, 0, implicit $exec :: (load (s8) from %ir.p3, addrspace 1)",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 38.0
+# CHECK-ML-JSON-DAG:        "%20": 8.0
+# CHECK-ML-JSON-DAG:        "%88": 9.0
+# CHECK-ML-JSON-DAG:        "%89": 0.0
+# CHECK-ML-JSON-DAG:        "%90": 7.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 16.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 16.0
+# CHECK-ML-JSON-DAG:        "%92": 39.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 39.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 39.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%33",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %89, 1, 0, implicit $exec :: (load (s8) from %ir.p3 + 1, addrspace 1)",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 37.0
+# CHECK-ML-JSON-DAG:        "%20": 7.0
+# CHECK-ML-JSON-DAG:        "%31": 1.0
+# CHECK-ML-JSON-DAG:        "%88": 8.0
+# CHECK-ML-JSON-DAG:        "%89": 0.0
+# CHECK-ML-JSON-DAG:        "%90": 6.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 15.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 15.0
+# CHECK-ML-JSON-DAG:        "%92": 38.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 38.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 38.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%36",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "V_LSHL_OR_B32_e64 %33, 8, %31, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 36.0
+# CHECK-ML-JSON-DAG:        "%20": 6.0
+# CHECK-ML-JSON-DAG:        "%31": 0.0
+# CHECK-ML-JSON-DAG:        "%33": 0.0
+# CHECK-ML-JSON-DAG:        "%88": 7.0
+# CHECK-ML-JSON-DAG:        "%89": 1.0
+# CHECK-ML-JSON-DAG:        "%90": 5.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 14.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 14.0
+# CHECK-ML-JSON-DAG:        "%92": 37.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 37.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 37.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%37",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %89, 2, 0, implicit $exec :: (load (s8) from %ir.p3 + 2, addrspace 1)",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 35.0
+# CHECK-ML-JSON-DAG:        "%20": 5.0
+# CHECK-ML-JSON-DAG:        "%36": 3.0
+# CHECK-ML-JSON-DAG:        "%88": 6.0
+# CHECK-ML-JSON-DAG:        "%89": 0.0
+# CHECK-ML-JSON-DAG:        "%90": 4.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 13.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 13.0
+# CHECK-ML-JSON-DAG:        "%92": 36.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 36.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 36.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%39",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %89, 3, 0, implicit $exec :: (load (s8) from %ir.p3 + 3, addrspace 1)",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 34.0
+# CHECK-ML-JSON-DAG:        "%20": 4.0
+# CHECK-ML-JSON-DAG:        "%36": 2.0
+# CHECK-ML-JSON-DAG:        "%37": 1.0
+# CHECK-ML-JSON-DAG:        "%88": 5.0
+# CHECK-ML-JSON-DAG:        "%89": 0.0
+# CHECK-ML-JSON-DAG:        "%90": 3.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 12.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 12.0
+# CHECK-ML-JSON-DAG:        "%92": 35.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 35.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 35.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%41",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "V_LSHL_OR_B32_e64 %39, 8, %37, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 33.0
+# CHECK-ML-JSON-DAG:        "%20": 3.0
+# CHECK-ML-JSON-DAG:        "%36": 1.0
+# CHECK-ML-JSON-DAG:        "%37": 0.0
+# CHECK-ML-JSON-DAG:        "%39": 0.0
+# CHECK-ML-JSON-DAG:        "%88": 4.0
+# CHECK-ML-JSON-DAG:        "%89": 6.0
+# CHECK-ML-JSON-DAG:        "%90": 2.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 11.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 11.0
+# CHECK-ML-JSON-DAG:        "%92": 34.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 34.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 34.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%1",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "V_LSHL_OR_B32_e64 %41, 16, %36, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 32.0
+# CHECK-ML-JSON-DAG:        "%20": 2.0
+# CHECK-ML-JSON-DAG:        "%36": 0.0
+# CHECK-ML-JSON-DAG:        "%41": 0.0
+# CHECK-ML-JSON-DAG:        "%88": 3.0
+# CHECK-ML-JSON-DAG:        "%89": 5.0
+# CHECK-ML-JSON-DAG:        "%90": 1.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 10.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 10.0
+# CHECK-ML-JSON-DAG:        "%92": 33.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 33.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 33.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%43",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_LOAD_DWORD %90, 0, 0, implicit $exec :: (load (s32) from %ir.p4, addrspace 1)",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 31.0
+# CHECK-ML-JSON-DAG:        "%1": 30.0
+# CHECK-ML-JSON-DAG:        "%20": 1.0
+# CHECK-ML-JSON-DAG:        "%88": 2.0
+# CHECK-ML-JSON-DAG:        "%89": 4.0
+# CHECK-ML-JSON-DAG:        "%90": 0.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 9.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 9.0
+# CHECK-ML-JSON-DAG:        "%92": 32.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 32.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 32.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%45",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "V_ADD_U32_e64 %43, %20, 0, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 30.0
+# CHECK-ML-JSON-DAG:        "%1": 29.0
+# CHECK-ML-JSON-DAG:        "%20": 0.0
+# CHECK-ML-JSON-DAG:        "%43": 0.0
+# CHECK-ML-JSON-DAG:        "%88": 1.0
+# CHECK-ML-JSON-DAG:        "%89": 3.0
+# CHECK-ML-JSON-DAG:        "%90": 6.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 8.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 8.0
+# CHECK-ML-JSON-DAG:        "%92": 31.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 31.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 31.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%void",
+# CHECK-ML-JSON-NEXT:      "type": "void",
+# CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_STORE_DWORD %88, %45, 0, 0, implicit $exec :: (store (s32) into %ir.p2, addrspace 1)",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 29.0
+# CHECK-ML-JSON-DAG:        "%1": 28.0
+# CHECK-ML-JSON-DAG:        "%20": 4.0
+# CHECK-ML-JSON-DAG:        "%43": 1.0
+# CHECK-ML-JSON-DAG:        "%45": 0.0
+# CHECK-ML-JSON-DAG:        "%88": 0.0
+# CHECK-ML-JSON-DAG:        "%89": 2.0
+# CHECK-ML-JSON-DAG:        "%90": 5.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 7.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 7.0
+# CHECK-ML-JSON-DAG:        "%92": 30.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 30.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 30.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%47",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "V_MUL_LO_U32_e64 %43, %45, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 28.0
+# CHECK-ML-JSON-DAG:        "%1": 27.0
+# CHECK-ML-JSON-DAG:        "%20": 3.0
+# CHECK-ML-JSON-DAG:        "%43": 0.0
+# CHECK-ML-JSON-DAG:        "%45": 0.0
+# CHECK-ML-JSON-DAG:        "%89": 1.0
+# CHECK-ML-JSON-DAG:        "%90": 4.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 6.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 6.0
+# CHECK-ML-JSON-DAG:        "%92": 29.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 29.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 29.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%void",
+# CHECK-ML-JSON-NEXT:      "type": "void",
+# CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_STORE_DWORD %89, %47, 0, 0, implicit $exec :: (store (s32) into %ir.p3, addrspace 1)",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 27.0
+# CHECK-ML-JSON-DAG:        "%1": 26.0
+# CHECK-ML-JSON-DAG:        "%20": 2.0
+# CHECK-ML-JSON-DAG:        "%45": 1.0
+# CHECK-ML-JSON-DAG:        "%47": 0.0
+# CHECK-ML-JSON-DAG:        "%89": 0.0
+# CHECK-ML-JSON-DAG:        "%90": 3.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 5.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 5.0
+# CHECK-ML-JSON-DAG:        "%92": 28.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 28.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 28.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%49",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "V_SUB_U32_e64 %47, %45, 0, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 26.0
+# CHECK-ML-JSON-DAG:        "%1": 25.0
+# CHECK-ML-JSON-DAG:        "%20": 1.0
+# CHECK-ML-JSON-DAG:        "%45": 0.0
+# CHECK-ML-JSON-DAG:        "%47": 0.0
+# CHECK-ML-JSON-DAG:        "%90": 2.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 4.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 4.0
+# CHECK-ML-JSON-DAG:        "%92": 27.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 27.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 27.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%50",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "V_MUL_LO_U32_e64 %49, %20, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 25.0
+# CHECK-ML-JSON-DAG:        "%1": 24.0
+# CHECK-ML-JSON-DAG:        "%20": 0.0
+# CHECK-ML-JSON-DAG:        "%49": 0.0
+# CHECK-ML-JSON-DAG:        "%90": 1.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 3.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 3.0
+# CHECK-ML-JSON-DAG:        "%92": 26.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 26.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 26.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%void",
+# CHECK-ML-JSON-NEXT:      "type": "void",
+# CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_STORE_DWORD %90, %50, 0, 0, implicit $exec :: (store (s32) into %ir.p4, addrspace 1)",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 24.0
+# CHECK-ML-JSON-DAG:        "%1": 23.0
+# CHECK-ML-JSON-DAG:        "%20": 2.0
+# CHECK-ML-JSON-DAG:        "%50": 0.0
+# CHECK-ML-JSON-DAG:        "%90": 0.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 2.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 2.0
+# CHECK-ML-JSON-DAG:        "%92": 25.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 25.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 25.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%24",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "V_MOV_B32_e32 100, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 23.0
+# CHECK-ML-JSON-DAG:        "%1": 22.0
+# CHECK-ML-JSON-DAG:        "%20": 1.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 1.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 1.0
+# CHECK-ML-JSON-DAG:        "%92": 24.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 24.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 24.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%23",
+# CHECK-ML-JSON-NEXT:      "type": "sreg_32",
+# CHECK-ML-JSON-NEXT:      "instr": "S_MOV_B32 0",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 22.0
+# CHECK-ML-JSON-DAG:        "%1": 21.0
+# CHECK-ML-JSON-DAG:        "%20": 0.0
+# CHECK-ML-JSON-DAG:        "%24": 0.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 0.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 0.0
+# CHECK-ML-JSON-DAG:        "%92": 23.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 23.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 23.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    }
+# CHECK-ML-JSON-NEXT:  ],
+# CHECK-ML-JSON-NEXT:  "bb.1.loop": [
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%2",
+# CHECK-ML-JSON-NEXT:      "type": "sreg_32",
+# CHECK-ML-JSON-NEXT:      "instr": "PHI %23, %bb.0, %7, %bb.1",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 19003.0
+# CHECK-ML-JSON-DAG:        "%1": 19002.0
+# CHECK-ML-JSON-DAG:        "%20": 15.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 3.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 4.0
+# CHECK-ML-JSON-DAG:        "%92": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%3",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "PHI %24, %bb.0, %6, %bb.1",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 19003.0
+# CHECK-ML-JSON-DAG:        "%1": 19002.0
+# CHECK-ML-JSON-DAG:        "%2": 16.0
+# CHECK-ML-JSON-DAG:        "%20": 15.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 3.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 4.0
+# CHECK-ML-JSON-DAG:        "%92": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%4",
+# CHECK-ML-JSON-NEXT:      "type": "sreg_32",
+# CHECK-ML-JSON-NEXT:      "instr": "PHI %23, %bb.0, %5, %bb.1",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 19003.0
+# CHECK-ML-JSON-DAG:        "%1": 19002.0
+# CHECK-ML-JSON-DAG:        "%2": 16.0
+# CHECK-ML-JSON-DAG:        "%3": 19003.0
+# CHECK-ML-JSON-DAG:        "%20": 15.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 3.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 4.0
+# CHECK-ML-JSON-DAG:        "%92": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%52",
+# CHECK-ML-JSON-NEXT:      "type": "sreg_32_xm0",
+# CHECK-ML-JSON-NEXT:      "instr": "S_ASHR_I32 %4, 31, implicit-def dead $scc",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 19003.0
+# CHECK-ML-JSON-DAG:        "%1": 19002.0
+# CHECK-ML-JSON-DAG:        "%2": 16.0
+# CHECK-ML-JSON-DAG:        "%3": 19003.0
+# CHECK-ML-JSON-DAG:        "%4": 0.0
+# CHECK-ML-JSON-DAG:        "%20": 15.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 3.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 4.0
+# CHECK-ML-JSON-DAG:        "%92": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%54",
+# CHECK-ML-JSON-NEXT:      "type": "sreg_64",
+# CHECK-ML-JSON-NEXT:      "instr": "REG_SEQUENCE %4, %subreg.sub0, %52, %subreg.sub1",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 19003.0
+# CHECK-ML-JSON-DAG:        "%1": 19002.0
+# CHECK-ML-JSON-DAG:        "%2": 15.0
+# CHECK-ML-JSON-DAG:        "%3": 19003.0
+# CHECK-ML-JSON-DAG:        "%4": 0.0
+# CHECK-ML-JSON-DAG:        "%20": 14.0
+# CHECK-ML-JSON-DAG:        "%52": 0.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 2.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 3.0
+# CHECK-ML-JSON-DAG:        "%92": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%56",
+# CHECK-ML-JSON-NEXT:      "type": "sreg_64",
+# CHECK-ML-JSON-NEXT:      "instr": "nsw S_LSHL_B64 %54, 2, implicit-def dead $scc",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 19003.0
+# CHECK-ML-JSON-DAG:        "%1": 19002.0
+# CHECK-ML-JSON-DAG:        "%2": 14.0
+# CHECK-ML-JSON-DAG:        "%3": 19003.0
+# CHECK-ML-JSON-DAG:        "%4": 11.0
+# CHECK-ML-JSON-DAG:        "%20": 13.0
+# CHECK-ML-JSON-DAG:        "%54": 0.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 1.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 2.0
+# CHECK-ML-JSON-DAG:        "%92": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%93",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32, %95:sreg_32_xm0_xexec",
+# CHECK-ML-JSON-NEXT:      "instr": "V_ADD_CO_U32_e64 %91.sub0, %56.sub0, 0, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 19003.0
+# CHECK-ML-JSON-DAG:        "%1": 19002.0
+# CHECK-ML-JSON-DAG:        "%2": 13.0
+# CHECK-ML-JSON-DAG:        "%3": 19003.0
+# CHECK-ML-JSON-DAG:        "%4": 10.0
+# CHECK-ML-JSON-DAG:        "%20": 12.0
+# CHECK-ML-JSON-DAG:        "%56:sub0": 0.0
+# CHECK-ML-JSON-DAG:        "%56:sub1": 1.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 0.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 1.0
+# CHECK-ML-JSON-DAG:        "%92": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%94",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32, dead $sgpr_null",
+# CHECK-ML-JSON-NEXT:      "instr": "V_ADDC_U32_e64 %56.sub1, %91.sub1, %95, 0, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 19003.0
+# CHECK-ML-JSON-DAG:        "%1": 19002.0
+# CHECK-ML-JSON-DAG:        "%2": 12.0
+# CHECK-ML-JSON-DAG:        "%3": 19003.0
+# CHECK-ML-JSON-DAG:        "%4": 9.0
+# CHECK-ML-JSON-DAG:        "%20": 11.0
+# CHECK-ML-JSON-DAG:        "%56:sub1": 0.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 37.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 0.0
+# CHECK-ML-JSON-DAG:        "%92": 19004.0
+# CHECK-ML-JSON-DAG:        "%93": 1.0
+# CHECK-ML-JSON-DAG:        "%95": 0.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%57",
+# CHECK-ML-JSON-NEXT:      "type": "vreg_64",
+# CHECK-ML-JSON-NEXT:      "instr": "REG_SEQUENCE %93, %subreg.sub0, %94, %subreg.sub1",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 19003.0
+# CHECK-ML-JSON-DAG:        "%1": 19002.0
+# CHECK-ML-JSON-DAG:        "%2": 11.0
+# CHECK-ML-JSON-DAG:        "%3": 19003.0
+# CHECK-ML-JSON-DAG:        "%4": 8.0
+# CHECK-ML-JSON-DAG:        "%20": 10.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 36.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 37.0
+# CHECK-ML-JSON-DAG:        "%92": 19004.0
+# CHECK-ML-JSON-DAG:        "%93": 0.0
+# CHECK-ML-JSON-DAG:        "%94": 0.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%58",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %57, 0, 0, implicit $exec :: (load (s8) from %ir.gep, addrspace 1)",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 19003.0
+# CHECK-ML-JSON-DAG:        "%1": 19002.0
+# CHECK-ML-JSON-DAG:        "%2": 10.0
+# CHECK-ML-JSON-DAG:        "%3": 19003.0
+# CHECK-ML-JSON-DAG:        "%4": 7.0
+# CHECK-ML-JSON-DAG:        "%20": 9.0
+# CHECK-ML-JSON-DAG:        "%57": 0.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 35.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 36.0
+# CHECK-ML-JSON-DAG:        "%92": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%59",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %57, 1, 0, implicit $exec :: (load (s8) from %ir.gep + 1, addrspace 1)",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 19003.0
+# CHECK-ML-JSON-DAG:        "%1": 19002.0
+# CHECK-ML-JSON-DAG:        "%2": 9.0
+# CHECK-ML-JSON-DAG:        "%3": 19003.0
+# CHECK-ML-JSON-DAG:        "%4": 6.0
+# CHECK-ML-JSON-DAG:        "%20": 8.0
+# CHECK-ML-JSON-DAG:        "%57": 0.0
+# CHECK-ML-JSON-DAG:        "%58": 1.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 34.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 35.0
+# CHECK-ML-JSON-DAG:        "%92": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%61",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "V_LSHL_OR_B32_e64 %59, 8, %58, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 19003.0
+# CHECK-ML-JSON-DAG:        "%1": 19002.0
+# CHECK-ML-JSON-DAG:        "%2": 8.0
+# CHECK-ML-JSON-DAG:        "%3": 19003.0
+# CHECK-ML-JSON-DAG:        "%4": 5.0
+# CHECK-ML-JSON-DAG:        "%20": 7.0
+# CHECK-ML-JSON-DAG:        "%57": 1.0
+# CHECK-ML-JSON-DAG:        "%58": 0.0
+# CHECK-ML-JSON-DAG:        "%59": 0.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 33.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 34.0
+# CHECK-ML-JSON-DAG:        "%92": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%62",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %57, 2, 0, implicit $exec :: (load (s8) from %ir.gep + 2, addrspace 1)",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 19003.0
+# CHECK-ML-JSON-DAG:        "%1": 19002.0
+# CHECK-ML-JSON-DAG:        "%2": 7.0
+# CHECK-ML-JSON-DAG:        "%3": 19003.0
+# CHECK-ML-JSON-DAG:        "%4": 4.0
+# CHECK-ML-JSON-DAG:        "%20": 6.0
+# CHECK-ML-JSON-DAG:        "%57": 0.0
+# CHECK-ML-JSON-DAG:        "%61": 3.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 32.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 33.0
+# CHECK-ML-JSON-DAG:        "%92": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%63",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %57, 3, 0, implicit $exec :: (load (s8) from %ir.gep + 3, addrspace 1)",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 19003.0
+# CHECK-ML-JSON-DAG:        "%1": 19002.0
+# CHECK-ML-JSON-DAG:        "%2": 6.0
+# CHECK-ML-JSON-DAG:        "%3": 19003.0
+# CHECK-ML-JSON-DAG:        "%4": 3.0
+# CHECK-ML-JSON-DAG:        "%20": 5.0
+# CHECK-ML-JSON-DAG:        "%57": 0.0
+# CHECK-ML-JSON-DAG:        "%61": 2.0
+# CHECK-ML-JSON-DAG:        "%62": 1.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 31.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 32.0
+# CHECK-ML-JSON-DAG:        "%92": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%64",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "V_LSHL_OR_B32_e64 %63, 8, %62, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 19003.0
+# CHECK-ML-JSON-DAG:        "%1": 19002.0
+# CHECK-ML-JSON-DAG:        "%2": 5.0
+# CHECK-ML-JSON-DAG:        "%3": 19003.0
+# CHECK-ML-JSON-DAG:        "%4": 2.0
+# CHECK-ML-JSON-DAG:        "%20": 4.0
+# CHECK-ML-JSON-DAG:        "%61": 1.0
+# CHECK-ML-JSON-DAG:        "%62": 0.0
+# CHECK-ML-JSON-DAG:        "%63": 0.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 30.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 31.0
+# CHECK-ML-JSON-DAG:        "%92": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%66",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "V_LSHL_OR_B32_e64 %64, 16, %61, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 19003.0
+# CHECK-ML-JSON-DAG:        "%1": 19002.0
+# CHECK-ML-JSON-DAG:        "%2": 4.0
+# CHECK-ML-JSON-DAG:        "%3": 19003.0
+# CHECK-ML-JSON-DAG:        "%4": 1.0
+# CHECK-ML-JSON-DAG:        "%20": 3.0
+# CHECK-ML-JSON-DAG:        "%61": 0.0
+# CHECK-ML-JSON-DAG:        "%64": 0.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 29.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 30.0
+# CHECK-ML-JSON-DAG:        "%92": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%6",
+# CHECK-ML-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-ML-JSON-NEXT:      "instr": "V_ADD_U32_e64 %4, %66, 0, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 19003.0
+# CHECK-ML-JSON-DAG:        "%1": 19002.0
+# CHECK-ML-JSON-DAG:        "%2": 3.0
+# CHECK-ML-JSON-DAG:        "%3": 19003.0
+# CHECK-ML-JSON-DAG:        "%4": 0.0
+# CHECK-ML-JSON-DAG:        "%20": 2.0
+# CHECK-ML-JSON-DAG:        "%66": 0.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 28.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 29.0
+# CHECK-ML-JSON-DAG:        "%92": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%5",
+# CHECK-ML-JSON-NEXT:      "type": "sreg_32",
+# CHECK-ML-JSON-NEXT:      "instr": "S_ADD_I32 %4, 1, implicit-def dead $scc",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 19003.0
+# CHECK-ML-JSON-DAG:        "%1": 19002.0
+# CHECK-ML-JSON-DAG:        "%2": 2.0
+# CHECK-ML-JSON-DAG:        "%3": 19003.0
+# CHECK-ML-JSON-DAG:        "%4": 0.0
+# CHECK-ML-JSON-DAG:        "%6": 4.0
+# CHECK-ML-JSON-DAG:        "%20": 1.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 27.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 28.0
+# CHECK-ML-JSON-DAG:        "%92": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%68",
+# CHECK-ML-JSON-NEXT:      "type": "sreg_32",
+# CHECK-ML-JSON-NEXT:      "instr": "V_CMP_GE_U32_e64 %5, %20, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 19003.0
+# CHECK-ML-JSON-DAG:        "%1": 19002.0
+# CHECK-ML-JSON-DAG:        "%2": 1.0
+# CHECK-ML-JSON-DAG:        "%3": 19003.0
+# CHECK-ML-JSON-DAG:        "%5": 0.0
+# CHECK-ML-JSON-DAG:        "%6": 3.0
+# CHECK-ML-JSON-DAG:        "%20": 0.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 26.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 27.0
+# CHECK-ML-JSON-DAG:        "%92": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%7",
+# CHECK-ML-JSON-NEXT:      "type": "sreg_32",
+# CHECK-ML-JSON-NEXT:      "instr": "SI_IF_BREAK %68, %2, implicit-def dead $scc",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 19003.0
+# CHECK-ML-JSON-DAG:        "%1": 19002.0
+# CHECK-ML-JSON-DAG:        "%2": 0.0
+# CHECK-ML-JSON-DAG:        "%3": 19003.0
+# CHECK-ML-JSON-DAG:        "%5": 2.0
+# CHECK-ML-JSON-DAG:        "%6": 2.0
+# CHECK-ML-JSON-DAG:        "%20": 37.0
+# CHECK-ML-JSON-DAG:        "%68": 0.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 25.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 26.0
+# CHECK-ML-JSON-DAG:        "%92": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%void",
+# CHECK-ML-JSON-NEXT:      "type": "void",
+# CHECK-ML-JSON-NEXT:      "instr": "SI_LOOP %7, %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 19003.0
+# CHECK-ML-JSON-DAG:        "%1": 19002.0
+# CHECK-ML-JSON-DAG:        "%3": 19003.0
+# CHECK-ML-JSON-DAG:        "%5": 1.0
+# CHECK-ML-JSON-DAG:        "%6": 1.0
+# CHECK-ML-JSON-DAG:        "%7": 0.0
+# CHECK-ML-JSON-DAG:        "%20": 36.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 24.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 25.0
+# CHECK-ML-JSON-DAG:        "%92": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%void",
+# CHECK-ML-JSON-NEXT:      "type": "void",
+# CHECK-ML-JSON-NEXT:      "instr": "S_BRANCH %bb.2",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 19003.0
+# CHECK-ML-JSON-DAG:        "%1": 19002.0
+# CHECK-ML-JSON-DAG:        "%3": 19003.0
+# CHECK-ML-JSON-DAG:        "%5": 0.0
+# CHECK-ML-JSON-DAG:        "%6": 0.0
+# CHECK-ML-JSON-DAG:        "%7": 0.0
+# CHECK-ML-JSON-DAG:        "%20": 35.0
+# CHECK-ML-JSON-DAG:        "%91:sub0": 23.0
+# CHECK-ML-JSON-DAG:        "%91:sub1": 24.0
+# CHECK-ML-JSON-DAG:        "%92": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 19004.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    }
+# CHECK-ML-JSON-NEXT:  ],
+# CHECK-ML-JSON-NEXT:  "bb.2.exit": [
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%void",
+# CHECK-ML-JSON-NEXT:      "type": "void",
+# CHECK-ML-JSON-NEXT:      "instr": "SI_END_CF %7, implicit-def dead $exec, implicit-def dead $scc, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 2.0
+# CHECK-ML-JSON-DAG:        "%1": 1.0
+# CHECK-ML-JSON-DAG:        "%3": 2.0
+# CHECK-ML-JSON-DAG:        "%7": 0.0
+# CHECK-ML-JSON-DAG:        "%92": 3.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 3.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 3.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%86",
+# CHECK-ML-JSON-NEXT:      "type": "vreg_64",
+# CHECK-ML-JSON-NEXT:      "instr": "REG_SEQUENCE %1, %subreg.sub0, undef %87:vgpr_32, %subreg.sub1",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 1.0
+# CHECK-ML-JSON-DAG:        "%1": 0.0
+# CHECK-ML-JSON-DAG:        "%3": 1.0
+# CHECK-ML-JSON-DAG:        "%92": 2.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 2.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 2.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%72",
+# CHECK-ML-JSON-NEXT:      "type": "vreg_64, $sgpr_null",
+# CHECK-ML-JSON-NEXT:      "instr": "V_MAD_U64_U32_e64 %0, %3, %86, 0, implicit $exec",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%0": 0.0
+# CHECK-ML-JSON-DAG:        "%3": 0.0
+# CHECK-ML-JSON-DAG:        "%86": 0.0
+# CHECK-ML-JSON-DAG:        "%92": 1.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 1.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%92"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 1.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%void",
+# CHECK-ML-JSON-NEXT:      "type": "void",
+# CHECK-ML-JSON-NEXT:      "instr": "GLOBAL_STORE_DWORD %92, %72.sub0, 0, 0, implicit $exec :: (store (s32) into %ir.p5, addrspace 1)",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-DAG:        "%72:sub0": 0.0
+# CHECK-ML-JSON-DAG:        "%92": 0.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-DAG:        "register": "%72"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 0.0
+# CHECK-ML-JSON:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-DAG:        "register": "%72:sub0"
+# CHECK-ML-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-ML-JSON-DAG:        "distance": 0.0
+# CHECK-ML-JSON:      }
+# CHECK-ML-JSON-NEXT:    },
+# CHECK-ML-JSON-NEXT:    {
+# CHECK-ML-JSON-NEXT:      "name": "%void",
+# CHECK-ML-JSON-NEXT:      "type": "void",
+# CHECK-ML-JSON-NEXT:      "instr": "S_ENDPGM 0",
+# CHECK-ML-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-ML-JSON-NEXT:      "distances": {
+# CHECK-ML-JSON-NEXT:      },
+# CHECK-ML-JSON-NEXT:      "furthest": {
+# CHECK-ML-JSON-NEXT:      },
+# CHECK-ML-JSON-NEXT:      "furthest-subreg": {
+# CHECK-ML-JSON-NEXT:      }
+# CHECK-ML-JSON-NEXT:    }
+# CHECK-ML-JSON-NEXT:  ]
+# CHECK-ML-JSON-NEXT:}
+# NOTE: Assertions auto-generated by generate_filecheck.py
+# This file checks the structure and key values of Next Use Analysis JSON output.
+
+# CHECK-GX-JSON: {
+# CHECK-GX-JSON-NEXT:  "bb.0.entry": [
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%20",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "COPY $vgpr10",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-NEXT:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-NEXT:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-NEXT:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%19",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "COPY $vgpr9",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%20": 24.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%20"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 24.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%20"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 24.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%18",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "COPY $vgpr8",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%19": 9.0
+# CHECK-GX-JSON-DAG:        "%20": 23.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%20"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 23.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%20"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 23.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%17",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "COPY $vgpr7",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%18": 8.0
+# CHECK-GX-JSON-DAG:        "%19": 8.0
+# CHECK-GX-JSON-DAG:        "%20": 22.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%20"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%20"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%16",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "COPY $vgpr6",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%17": 9.0
+# CHECK-GX-JSON-DAG:        "%18": 7.0
+# CHECK-GX-JSON-DAG:        "%19": 7.0
+# CHECK-GX-JSON-DAG:        "%20": 21.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%20"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 21.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%20"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 21.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%15",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "COPY $vgpr5",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%16": 8.0
+# CHECK-GX-JSON-DAG:        "%17": 8.0
+# CHECK-GX-JSON-DAG:        "%18": 6.0
+# CHECK-GX-JSON-DAG:        "%19": 6.0
+# CHECK-GX-JSON-DAG:        "%20": 20.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%20"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 20.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%20"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 20.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%14",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "COPY $vgpr4",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%15": 8.0
+# CHECK-GX-JSON-DAG:        "%16": 7.0
+# CHECK-GX-JSON-DAG:        "%17": 7.0
+# CHECK-GX-JSON-DAG:        "%18": 5.0
+# CHECK-GX-JSON-DAG:        "%19": 5.0
+# CHECK-GX-JSON-DAG:        "%20": 19.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%20"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 19.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%20"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 19.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%13",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "COPY $vgpr3",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%14": 7.0
+# CHECK-GX-JSON-DAG:        "%15": 7.0
+# CHECK-GX-JSON-DAG:        "%16": 6.0
+# CHECK-GX-JSON-DAG:        "%17": 6.0
+# CHECK-GX-JSON-DAG:        "%18": 4.0
+# CHECK-GX-JSON-DAG:        "%19": 4.0
+# CHECK-GX-JSON-DAG:        "%20": 18.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%20"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 18.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%20"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 18.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%12",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "COPY $vgpr2",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%13": 7.0
+# CHECK-GX-JSON-DAG:        "%14": 6.0
+# CHECK-GX-JSON-DAG:        "%15": 6.0
+# CHECK-GX-JSON-DAG:        "%16": 5.0
+# CHECK-GX-JSON-DAG:        "%17": 5.0
+# CHECK-GX-JSON-DAG:        "%18": 3.0
+# CHECK-GX-JSON-DAG:        "%19": 3.0
+# CHECK-GX-JSON-DAG:        "%20": 17.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%20"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 17.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%20"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 17.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%11",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "COPY $vgpr1",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%12": 6.0
+# CHECK-GX-JSON-DAG:        "%13": 6.0
+# CHECK-GX-JSON-DAG:        "%14": 5.0
+# CHECK-GX-JSON-DAG:        "%15": 5.0
+# CHECK-GX-JSON-DAG:        "%16": 4.0
+# CHECK-GX-JSON-DAG:        "%17": 4.0
+# CHECK-GX-JSON-DAG:        "%18": 2.0
+# CHECK-GX-JSON-DAG:        "%19": 2.0
+# CHECK-GX-JSON-DAG:        "%20": 16.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%20"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 16.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%20"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 16.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%10",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "COPY $vgpr0",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%11": 2.0
+# CHECK-GX-JSON-DAG:        "%12": 5.0
+# CHECK-GX-JSON-DAG:        "%13": 5.0
+# CHECK-GX-JSON-DAG:        "%14": 4.0
+# CHECK-GX-JSON-DAG:        "%15": 4.0
+# CHECK-GX-JSON-DAG:        "%16": 3.0
+# CHECK-GX-JSON-DAG:        "%17": 3.0
+# CHECK-GX-JSON-DAG:        "%18": 1.0
+# CHECK-GX-JSON-DAG:        "%19": 1.0
+# CHECK-GX-JSON-DAG:        "%20": 15.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%20"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 15.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%20"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 15.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%92",
+# CHECK-GX-JSON-NEXT:      "type": "vreg_64",
+# CHECK-GX-JSON-NEXT:      "instr": "REG_SEQUENCE %18, %subreg.sub0, %19, %subreg.sub1",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%10": 1.0
+# CHECK-GX-JSON-DAG:        "%11": 1.0
+# CHECK-GX-JSON-DAG:        "%12": 4.0
+# CHECK-GX-JSON-DAG:        "%13": 4.0
+# CHECK-GX-JSON-DAG:        "%14": 3.0
+# CHECK-GX-JSON-DAG:        "%15": 3.0
+# CHECK-GX-JSON-DAG:        "%16": 2.0
+# CHECK-GX-JSON-DAG:        "%17": 2.0
+# CHECK-GX-JSON-DAG:        "%18": 0.0
+# CHECK-GX-JSON-DAG:        "%19": 0.0
+# CHECK-GX-JSON-DAG:        "%20": 14.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%20"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 14.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%20"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 14.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%91",
+# CHECK-GX-JSON-NEXT:      "type": "vreg_64",
+# CHECK-GX-JSON-NEXT:      "instr": "REG_SEQUENCE %10, %subreg.sub0, %11, %subreg.sub1",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%10": 0.0
+# CHECK-GX-JSON-DAG:        "%11": 0.0
+# CHECK-GX-JSON-DAG:        "%12": 3.0
+# CHECK-GX-JSON-DAG:        "%13": 3.0
+# CHECK-GX-JSON-DAG:        "%14": 2.0
+# CHECK-GX-JSON-DAG:        "%15": 2.0
+# CHECK-GX-JSON-DAG:        "%16": 1.0
+# CHECK-GX-JSON-DAG:        "%17": 1.0
+# CHECK-GX-JSON-DAG:        "%20": 13.0
+# CHECK-GX-JSON-DAG:        "%92": 22025.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22025.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22025.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%90",
+# CHECK-GX-JSON-NEXT:      "type": "vreg_64",
+# CHECK-GX-JSON-NEXT:      "instr": "REG_SEQUENCE %16, %subreg.sub0, %17, %subreg.sub1",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%12": 2.0
+# CHECK-GX-JSON-DAG:        "%13": 2.0
+# CHECK-GX-JSON-DAG:        "%14": 1.0
+# CHECK-GX-JSON-DAG:        "%15": 1.0
+# CHECK-GX-JSON-DAG:        "%16": 0.0
+# CHECK-GX-JSON-DAG:        "%17": 0.0
+# CHECK-GX-JSON-DAG:        "%20": 12.0
+# CHECK-GX-JSON-DAG:        "%91:sub0": 27.0
+# CHECK-GX-JSON-DAG:        "%91:sub1": 28.0
+# CHECK-GX-JSON-DAG:        "%92": 22024.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22024.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22024.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%89",
+# CHECK-GX-JSON-NEXT:      "type": "vreg_64",
+# CHECK-GX-JSON-NEXT:      "instr": "REG_SEQUENCE %14, %subreg.sub0, %15, %subreg.sub1",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%12": 1.0
+# CHECK-GX-JSON-DAG:        "%13": 1.0
+# CHECK-GX-JSON-DAG:        "%14": 0.0
+# CHECK-GX-JSON-DAG:        "%15": 0.0
+# CHECK-GX-JSON-DAG:        "%20": 11.0
+# CHECK-GX-JSON-DAG:        "%90": 10.0
+# CHECK-GX-JSON-DAG:        "%91:sub0": 26.0
+# CHECK-GX-JSON-DAG:        "%91:sub1": 27.0
+# CHECK-GX-JSON-DAG:        "%92": 22023.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22023.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22023.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%88",
+# CHECK-GX-JSON-NEXT:      "type": "vreg_64",
+# CHECK-GX-JSON-NEXT:      "instr": "REG_SEQUENCE %12, %subreg.sub0, %13, %subreg.sub1",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%12": 0.0
+# CHECK-GX-JSON-DAG:        "%13": 0.0
+# CHECK-GX-JSON-DAG:        "%20": 10.0
+# CHECK-GX-JSON-DAG:        "%89": 2.0
+# CHECK-GX-JSON-DAG:        "%90": 9.0
+# CHECK-GX-JSON-DAG:        "%91:sub0": 25.0
+# CHECK-GX-JSON-DAG:        "%91:sub1": 26.0
+# CHECK-GX-JSON-DAG:        "%92": 22022.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22022.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22022.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%0",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_LOAD_DWORD %88, 0, 0, implicit $exec :: (load (s32) from %ir.p2, addrspace 1)",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%20": 9.0
+# CHECK-GX-JSON-DAG:        "%88": 0.0
+# CHECK-GX-JSON-DAG:        "%89": 1.0
+# CHECK-GX-JSON-DAG:        "%90": 8.0
+# CHECK-GX-JSON-DAG:        "%91:sub0": 24.0
+# CHECK-GX-JSON-DAG:        "%91:sub1": 25.0
+# CHECK-GX-JSON-DAG:        "%92": 22021.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22021.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22021.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%31",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %89, 0, 0, implicit $exec :: (load (s8) from %ir.p3, addrspace 1)",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22019.0
+# CHECK-GX-JSON-DAG:        "%20": 8.0
+# CHECK-GX-JSON-DAG:        "%88": 9.0
+# CHECK-GX-JSON-DAG:        "%89": 0.0
+# CHECK-GX-JSON-DAG:        "%90": 7.0
+# CHECK-GX-JSON-DAG:        "%91:sub0": 23.0
+# CHECK-GX-JSON-DAG:        "%91:sub1": 24.0
+# CHECK-GX-JSON-DAG:        "%92": 22020.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22020.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22020.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%33",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %89, 1, 0, implicit $exec :: (load (s8) from %ir.p3 + 1, addrspace 1)",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22018.0
+# CHECK-GX-JSON-DAG:        "%20": 7.0
+# CHECK-GX-JSON-DAG:        "%31": 1.0
+# CHECK-GX-JSON-DAG:        "%88": 8.0
+# CHECK-GX-JSON-DAG:        "%89": 0.0
+# CHECK-GX-JSON-DAG:        "%90": 6.0
+# CHECK-GX-JSON-DAG:        "%91:sub0": 22.0
+# CHECK-GX-JSON-DAG:        "%91:sub1": 23.0
+# CHECK-GX-JSON-DAG:        "%92": 22019.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22019.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22019.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%36",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "V_LSHL_OR_B32_e64 %33, 8, %31, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22017.0
+# CHECK-GX-JSON-DAG:        "%20": 6.0
+# CHECK-GX-JSON-DAG:        "%31": 0.0
+# CHECK-GX-JSON-DAG:        "%33": 0.0
+# CHECK-GX-JSON-DAG:        "%88": 7.0
+# CHECK-GX-JSON-DAG:        "%89": 1.0
+# CHECK-GX-JSON-DAG:        "%90": 5.0
+# CHECK-GX-JSON-DAG:        "%91:sub0": 21.0
+# CHECK-GX-JSON-DAG:        "%91:sub1": 22.0
+# CHECK-GX-JSON-DAG:        "%92": 22018.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22018.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22018.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%37",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %89, 2, 0, implicit $exec :: (load (s8) from %ir.p3 + 2, addrspace 1)",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22016.0
+# CHECK-GX-JSON-DAG:        "%20": 5.0
+# CHECK-GX-JSON-DAG:        "%36": 3.0
+# CHECK-GX-JSON-DAG:        "%88": 6.0
+# CHECK-GX-JSON-DAG:        "%89": 0.0
+# CHECK-GX-JSON-DAG:        "%90": 4.0
+# CHECK-GX-JSON-DAG:        "%91:sub0": 20.0
+# CHECK-GX-JSON-DAG:        "%91:sub1": 21.0
+# CHECK-GX-JSON-DAG:        "%92": 22017.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22017.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22017.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%39",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %89, 3, 0, implicit $exec :: (load (s8) from %ir.p3 + 3, addrspace 1)",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22015.0
+# CHECK-GX-JSON-DAG:        "%20": 4.0
+# CHECK-GX-JSON-DAG:        "%36": 2.0
+# CHECK-GX-JSON-DAG:        "%37": 1.0
+# CHECK-GX-JSON-DAG:        "%88": 5.0
+# CHECK-GX-JSON-DAG:        "%89": 0.0
+# CHECK-GX-JSON-DAG:        "%90": 3.0
+# CHECK-GX-JSON-DAG:        "%91:sub0": 19.0
+# CHECK-GX-JSON-DAG:        "%91:sub1": 20.0
+# CHECK-GX-JSON-DAG:        "%92": 22016.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22016.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22016.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%41",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "V_LSHL_OR_B32_e64 %39, 8, %37, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22014.0
+# CHECK-GX-JSON-DAG:        "%20": 3.0
+# CHECK-GX-JSON-DAG:        "%36": 1.0
+# CHECK-GX-JSON-DAG:        "%37": 0.0
+# CHECK-GX-JSON-DAG:        "%39": 0.0
+# CHECK-GX-JSON-DAG:        "%88": 4.0
+# CHECK-GX-JSON-DAG:        "%89": 6.0
+# CHECK-GX-JSON-DAG:        "%90": 2.0
+# CHECK-GX-JSON-DAG:        "%91:sub0": 18.0
+# CHECK-GX-JSON-DAG:        "%91:sub1": 19.0
+# CHECK-GX-JSON-DAG:        "%92": 22015.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22015.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22015.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%1",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "V_LSHL_OR_B32_e64 %41, 16, %36, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22013.0
+# CHECK-GX-JSON-DAG:        "%20": 2.0
+# CHECK-GX-JSON-DAG:        "%36": 0.0
+# CHECK-GX-JSON-DAG:        "%41": 0.0
+# CHECK-GX-JSON-DAG:        "%88": 3.0
+# CHECK-GX-JSON-DAG:        "%89": 5.0
+# CHECK-GX-JSON-DAG:        "%90": 1.0
+# CHECK-GX-JSON-DAG:        "%91:sub0": 17.0
+# CHECK-GX-JSON-DAG:        "%91:sub1": 18.0
+# CHECK-GX-JSON-DAG:        "%92": 22014.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22014.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22014.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%43",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_LOAD_DWORD %90, 0, 0, implicit $exec :: (load (s32) from %ir.p4, addrspace 1)",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22012.0
+# CHECK-GX-JSON-DAG:        "%1": 22011.0
+# CHECK-GX-JSON-DAG:        "%20": 1.0
+# CHECK-GX-JSON-DAG:        "%88": 2.0
+# CHECK-GX-JSON-DAG:        "%89": 4.0
+# CHECK-GX-JSON-DAG:        "%90": 0.0
+# CHECK-GX-JSON-DAG:        "%91:sub0": 16.0
+# CHECK-GX-JSON-DAG:        "%91:sub1": 17.0
+# CHECK-GX-JSON-DAG:        "%92": 22013.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22013.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22013.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%45",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "V_ADD_U32_e64 %43, %20, 0, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22011.0
+# CHECK-GX-JSON-DAG:        "%1": 22010.0
+# CHECK-GX-JSON-DAG:        "%20": 0.0
+# CHECK-GX-JSON-DAG:        "%43": 0.0
+# CHECK-GX-JSON-DAG:        "%88": 1.0
+# CHECK-GX-JSON-DAG:        "%89": 3.0
+# CHECK-GX-JSON-DAG:        "%90": 6.0
+# CHECK-GX-JSON-DAG:        "%91:sub0": 15.0
+# CHECK-GX-JSON-DAG:        "%91:sub1": 16.0
+# CHECK-GX-JSON-DAG:        "%92": 22012.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22012.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22012.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%void",
+# CHECK-GX-JSON-NEXT:      "type": "void",
+# CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_STORE_DWORD %88, %45, 0, 0, implicit $exec :: (store (s32) into %ir.p2, addrspace 1)",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22010.0
+# CHECK-GX-JSON-DAG:        "%1": 22009.0
+# CHECK-GX-JSON-DAG:        "%20": 4.0
+# CHECK-GX-JSON-DAG:        "%43": 1.0
+# CHECK-GX-JSON-DAG:        "%45": 0.0
+# CHECK-GX-JSON-DAG:        "%88": 0.0
+# CHECK-GX-JSON-DAG:        "%89": 2.0
+# CHECK-GX-JSON-DAG:        "%90": 5.0
+# CHECK-GX-JSON-DAG:        "%91:sub0": 14.0
+# CHECK-GX-JSON-DAG:        "%91:sub1": 15.0
+# CHECK-GX-JSON-DAG:        "%92": 22011.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22011.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22011.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%47",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "V_MUL_LO_U32_e64 %43, %45, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22009.0
+# CHECK-GX-JSON-DAG:        "%1": 22008.0
+# CHECK-GX-JSON-DAG:        "%20": 3.0
+# CHECK-GX-JSON-DAG:        "%43": 0.0
+# CHECK-GX-JSON-DAG:        "%45": 0.0
+# CHECK-GX-JSON-DAG:        "%89": 1.0
+# CHECK-GX-JSON-DAG:        "%90": 4.0
+# CHECK-GX-JSON-DAG:        "%91:sub0": 13.0
+# CHECK-GX-JSON-DAG:        "%91:sub1": 14.0
+# CHECK-GX-JSON-DAG:        "%92": 22010.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22010.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22010.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%void",
+# CHECK-GX-JSON-NEXT:      "type": "void",
+# CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_STORE_DWORD %89, %47, 0, 0, implicit $exec :: (store (s32) into %ir.p3, addrspace 1)",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22008.0
+# CHECK-GX-JSON-DAG:        "%1": 22007.0
+# CHECK-GX-JSON-DAG:        "%20": 2.0
+# CHECK-GX-JSON-DAG:        "%45": 1.0
+# CHECK-GX-JSON-DAG:        "%47": 0.0
+# CHECK-GX-JSON-DAG:        "%89": 0.0
+# CHECK-GX-JSON-DAG:        "%90": 3.0
+# CHECK-GX-JSON-DAG:        "%91:sub0": 12.0
+# CHECK-GX-JSON-DAG:        "%91:sub1": 13.0
+# CHECK-GX-JSON-DAG:        "%92": 22009.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22009.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22009.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%49",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "V_SUB_U32_e64 %47, %45, 0, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22007.0
+# CHECK-GX-JSON-DAG:        "%1": 22006.0
+# CHECK-GX-JSON-DAG:        "%20": 1.0
+# CHECK-GX-JSON-DAG:        "%45": 0.0
+# CHECK-GX-JSON-DAG:        "%47": 0.0
+# CHECK-GX-JSON-DAG:        "%90": 2.0
+# CHECK-GX-JSON-DAG:        "%91:sub0": 11.0
+# CHECK-GX-JSON-DAG:        "%91:sub1": 12.0
+# CHECK-GX-JSON-DAG:        "%92": 22008.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22008.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22008.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%50",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "V_MUL_LO_U32_e64 %49, %20, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22006.0
+# CHECK-GX-JSON-DAG:        "%1": 22005.0
+# CHECK-GX-JSON-DAG:        "%20": 0.0
+# CHECK-GX-JSON-DAG:        "%49": 0.0
+# CHECK-GX-JSON-DAG:        "%90": 1.0
+# CHECK-GX-JSON-DAG:        "%91:sub0": 10.0
+# CHECK-GX-JSON-DAG:        "%91:sub1": 11.0
+# CHECK-GX-JSON-DAG:        "%92": 22007.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22007.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22007.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%void",
+# CHECK-GX-JSON-NEXT:      "type": "void",
+# CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_STORE_DWORD %90, %50, 0, 0, implicit $exec :: (store (s32) into %ir.p4, addrspace 1)",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22005.0
+# CHECK-GX-JSON-DAG:        "%1": 22004.0
+# CHECK-GX-JSON-DAG:        "%20": 21.0
+# CHECK-GX-JSON-DAG:        "%50": 0.0
+# CHECK-GX-JSON-DAG:        "%90": 0.0
+# CHECK-GX-JSON-DAG:        "%91:sub0": 9.0
+# CHECK-GX-JSON-DAG:        "%91:sub1": 10.0
+# CHECK-GX-JSON-DAG:        "%92": 22006.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22006.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22006.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%24",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "V_MOV_B32_e32 100, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22004.0
+# CHECK-GX-JSON-DAG:        "%1": 22003.0
+# CHECK-GX-JSON-DAG:        "%20": 20.0
+# CHECK-GX-JSON-DAG:        "%91:sub0": 8.0
+# CHECK-GX-JSON-DAG:        "%91:sub1": 9.0
+# CHECK-GX-JSON-DAG:        "%92": 22005.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22005.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22005.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%23",
+# CHECK-GX-JSON-NEXT:      "type": "sreg_32",
+# CHECK-GX-JSON-NEXT:      "instr": "S_MOV_B32 0",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22003.0
+# CHECK-GX-JSON-DAG:        "%1": 22002.0
+# CHECK-GX-JSON-DAG:        "%20": 19.0
+# CHECK-GX-JSON-DAG:        "%24": 2.0
+# CHECK-GX-JSON-DAG:        "%91:sub0": 7.0
+# CHECK-GX-JSON-DAG:        "%91:sub1": 8.0
+# CHECK-GX-JSON-DAG:        "%92": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    }
+# CHECK-GX-JSON-NEXT:  ],
+# CHECK-GX-JSON-NEXT:  "bb.1.loop": [
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%2",
+# CHECK-GX-JSON-NEXT:      "type": "sreg_32",
+# CHECK-GX-JSON-NEXT:      "instr": "PHI %23, %bb.0, %7, %bb.1",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22003.0
+# CHECK-GX-JSON-DAG:        "%1": 22002.0
+# CHECK-GX-JSON-DAG:        "%20": 18.0
+# CHECK-GX-JSON-DAG:        "%91:sub0": 6.0
+# CHECK-GX-JSON-DAG:        "%91:sub1": 7.0
+# CHECK-GX-JSON-DAG:        "%92": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%3",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "PHI %24, %bb.0, %6, %bb.1",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22003.0
+# CHECK-GX-JSON-DAG:        "%1": 22002.0
+# CHECK-GX-JSON-DAG:        "%2": 18.0
+# CHECK-GX-JSON-DAG:        "%20": 17.0
+# CHECK-GX-JSON-DAG:        "%91:sub0": 5.0
+# CHECK-GX-JSON-DAG:        "%91:sub1": 6.0
+# CHECK-GX-JSON-DAG:        "%92": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%4",
+# CHECK-GX-JSON-NEXT:      "type": "sreg_32",
+# CHECK-GX-JSON-NEXT:      "instr": "PHI %23, %bb.0, %5, %bb.1",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22003.0
+# CHECK-GX-JSON-DAG:        "%1": 22002.0
+# CHECK-GX-JSON-DAG:        "%2": 17.0
+# CHECK-GX-JSON-DAG:        "%3": 22003.0
+# CHECK-GX-JSON-DAG:        "%20": 16.0
+# CHECK-GX-JSON-DAG:        "%91:sub0": 4.0
+# CHECK-GX-JSON-DAG:        "%91:sub1": 5.0
+# CHECK-GX-JSON-DAG:        "%92": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%52",
+# CHECK-GX-JSON-NEXT:      "type": "sreg_32_xm0",
+# CHECK-GX-JSON-NEXT:      "instr": "S_ASHR_I32 %4, 31, implicit-def dead $scc",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22003.0
+# CHECK-GX-JSON-DAG:        "%1": 22002.0
+# CHECK-GX-JSON-DAG:        "%2": 16.0
+# CHECK-GX-JSON-DAG:        "%3": 22003.0
+# CHECK-GX-JSON-DAG:        "%4": 0.0
+# CHECK-GX-JSON-DAG:        "%20": 15.0
+# CHECK-GX-JSON-DAG:        "%91:sub0": 3.0
+# CHECK-GX-JSON-DAG:        "%91:sub1": 4.0
+# CHECK-GX-JSON-DAG:        "%92": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%54",
+# CHECK-GX-JSON-NEXT:      "type": "sreg_64",
+# CHECK-GX-JSON-NEXT:      "instr": "REG_SEQUENCE %4, %subreg.sub0, %52, %subreg.sub1",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22003.0
+# CHECK-GX-JSON-DAG:        "%1": 22002.0
+# CHECK-GX-JSON-DAG:        "%2": 15.0
+# CHECK-GX-JSON-DAG:        "%3": 22003.0
+# CHECK-GX-JSON-DAG:        "%4": 0.0
+# CHECK-GX-JSON-DAG:        "%20": 14.0
+# CHECK-GX-JSON-DAG:        "%52": 0.0
+# CHECK-GX-JSON-DAG:        "%91:sub0": 2.0
+# CHECK-GX-JSON-DAG:        "%91:sub1": 3.0
+# CHECK-GX-JSON-DAG:        "%92": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%56",
+# CHECK-GX-JSON-NEXT:      "type": "sreg_64",
+# CHECK-GX-JSON-NEXT:      "instr": "nsw S_LSHL_B64 %54, 2, implicit-def dead $scc",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22003.0
+# CHECK-GX-JSON-DAG:        "%1": 22002.0
+# CHECK-GX-JSON-DAG:        "%2": 14.0
+# CHECK-GX-JSON-DAG:        "%3": 22003.0
+# CHECK-GX-JSON-DAG:        "%4": 11.0
+# CHECK-GX-JSON-DAG:        "%20": 13.0
+# CHECK-GX-JSON-DAG:        "%54": 0.0
+# CHECK-GX-JSON-DAG:        "%91:sub0": 1.0
+# CHECK-GX-JSON-DAG:        "%91:sub1": 2.0
+# CHECK-GX-JSON-DAG:        "%92": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%93",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32, %95:sreg_32_xm0_xexec",
+# CHECK-GX-JSON-NEXT:      "instr": "V_ADD_CO_U32_e64 %91.sub0, %56.sub0, 0, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22003.0
+# CHECK-GX-JSON-DAG:        "%1": 22002.0
+# CHECK-GX-JSON-DAG:        "%2": 13.0
+# CHECK-GX-JSON-DAG:        "%3": 22003.0
+# CHECK-GX-JSON-DAG:        "%4": 10.0
+# CHECK-GX-JSON-DAG:        "%20": 12.0
+# CHECK-GX-JSON-DAG:        "%56:sub0": 0.0
+# CHECK-GX-JSON-DAG:        "%56:sub1": 1.0
+# CHECK-GX-JSON-DAG:        "%91:sub0": 0.0
+# CHECK-GX-JSON-DAG:        "%91:sub1": 1.0
+# CHECK-GX-JSON-DAG:        "%92": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%94",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32, dead $sgpr_null",
+# CHECK-GX-JSON-NEXT:      "instr": "V_ADDC_U32_e64 %56.sub1, %91.sub1, %95, 0, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22003.0
+# CHECK-GX-JSON-DAG:        "%1": 22002.0
+# CHECK-GX-JSON-DAG:        "%2": 12.0
+# CHECK-GX-JSON-DAG:        "%3": 22003.0
+# CHECK-GX-JSON-DAG:        "%4": 9.0
+# CHECK-GX-JSON-DAG:        "%20": 11.0
+# CHECK-GX-JSON-DAG:        "%56:sub1": 0.0
+# CHECK-GX-JSON-DAG:        "%91:sub1": 0.0
+# CHECK-GX-JSON-DAG:        "%92": 22004.0
+# CHECK-GX-JSON-DAG:        "%93": 1.0
+# CHECK-GX-JSON-DAG:        "%95": 0.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%57",
+# CHECK-GX-JSON-NEXT:      "type": "vreg_64",
+# CHECK-GX-JSON-NEXT:      "instr": "REG_SEQUENCE %93, %subreg.sub0, %94, %subreg.sub1",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22003.0
+# CHECK-GX-JSON-DAG:        "%1": 22002.0
+# CHECK-GX-JSON-DAG:        "%2": 11.0
+# CHECK-GX-JSON-DAG:        "%3": 22003.0
+# CHECK-GX-JSON-DAG:        "%4": 8.0
+# CHECK-GX-JSON-DAG:        "%20": 10.0
+# CHECK-GX-JSON-DAG:        "%92": 22004.0
+# CHECK-GX-JSON-DAG:        "%93": 0.0
+# CHECK-GX-JSON-DAG:        "%94": 0.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%58",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %57, 0, 0, implicit $exec :: (load (s8) from %ir.gep, addrspace 1)",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22003.0
+# CHECK-GX-JSON-DAG:        "%1": 22002.0
+# CHECK-GX-JSON-DAG:        "%2": 10.0
+# CHECK-GX-JSON-DAG:        "%3": 22003.0
+# CHECK-GX-JSON-DAG:        "%4": 7.0
+# CHECK-GX-JSON-DAG:        "%20": 9.0
+# CHECK-GX-JSON-DAG:        "%57": 0.0
+# CHECK-GX-JSON-DAG:        "%92": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%59",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %57, 1, 0, implicit $exec :: (load (s8) from %ir.gep + 1, addrspace 1)",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22003.0
+# CHECK-GX-JSON-DAG:        "%1": 22002.0
+# CHECK-GX-JSON-DAG:        "%2": 9.0
+# CHECK-GX-JSON-DAG:        "%3": 22003.0
+# CHECK-GX-JSON-DAG:        "%4": 6.0
+# CHECK-GX-JSON-DAG:        "%20": 8.0
+# CHECK-GX-JSON-DAG:        "%57": 0.0
+# CHECK-GX-JSON-DAG:        "%58": 1.0
+# CHECK-GX-JSON-DAG:        "%92": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%61",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "V_LSHL_OR_B32_e64 %59, 8, %58, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22003.0
+# CHECK-GX-JSON-DAG:        "%1": 22002.0
+# CHECK-GX-JSON-DAG:        "%2": 8.0
+# CHECK-GX-JSON-DAG:        "%3": 22003.0
+# CHECK-GX-JSON-DAG:        "%4": 5.0
+# CHECK-GX-JSON-DAG:        "%20": 7.0
+# CHECK-GX-JSON-DAG:        "%57": 1.0
+# CHECK-GX-JSON-DAG:        "%58": 0.0
+# CHECK-GX-JSON-DAG:        "%59": 0.0
+# CHECK-GX-JSON-DAG:        "%92": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%62",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %57, 2, 0, implicit $exec :: (load (s8) from %ir.gep + 2, addrspace 1)",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22003.0
+# CHECK-GX-JSON-DAG:        "%1": 22002.0
+# CHECK-GX-JSON-DAG:        "%2": 7.0
+# CHECK-GX-JSON-DAG:        "%3": 22003.0
+# CHECK-GX-JSON-DAG:        "%4": 4.0
+# CHECK-GX-JSON-DAG:        "%20": 6.0
+# CHECK-GX-JSON-DAG:        "%57": 0.0
+# CHECK-GX-JSON-DAG:        "%61": 3.0
+# CHECK-GX-JSON-DAG:        "%92": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%63",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_LOAD_UBYTE %57, 3, 0, implicit $exec :: (load (s8) from %ir.gep + 3, addrspace 1)",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22003.0
+# CHECK-GX-JSON-DAG:        "%1": 22002.0
+# CHECK-GX-JSON-DAG:        "%2": 6.0
+# CHECK-GX-JSON-DAG:        "%3": 22003.0
+# CHECK-GX-JSON-DAG:        "%4": 3.0
+# CHECK-GX-JSON-DAG:        "%20": 5.0
+# CHECK-GX-JSON-DAG:        "%57": 0.0
+# CHECK-GX-JSON-DAG:        "%61": 2.0
+# CHECK-GX-JSON-DAG:        "%62": 1.0
+# CHECK-GX-JSON-DAG:        "%92": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%64",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "V_LSHL_OR_B32_e64 %63, 8, %62, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22003.0
+# CHECK-GX-JSON-DAG:        "%1": 22002.0
+# CHECK-GX-JSON-DAG:        "%2": 5.0
+# CHECK-GX-JSON-DAG:        "%3": 22003.0
+# CHECK-GX-JSON-DAG:        "%4": 2.0
+# CHECK-GX-JSON-DAG:        "%20": 4.0
+# CHECK-GX-JSON-DAG:        "%61": 1.0
+# CHECK-GX-JSON-DAG:        "%62": 0.0
+# CHECK-GX-JSON-DAG:        "%63": 0.0
+# CHECK-GX-JSON-DAG:        "%92": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%66",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "V_LSHL_OR_B32_e64 %64, 16, %61, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22003.0
+# CHECK-GX-JSON-DAG:        "%1": 22002.0
+# CHECK-GX-JSON-DAG:        "%2": 4.0
+# CHECK-GX-JSON-DAG:        "%3": 22003.0
+# CHECK-GX-JSON-DAG:        "%4": 1.0
+# CHECK-GX-JSON-DAG:        "%20": 3.0
+# CHECK-GX-JSON-DAG:        "%61": 0.0
+# CHECK-GX-JSON-DAG:        "%64": 0.0
+# CHECK-GX-JSON-DAG:        "%92": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%6",
+# CHECK-GX-JSON-NEXT:      "type": "vgpr_32",
+# CHECK-GX-JSON-NEXT:      "instr": "V_ADD_U32_e64 %4, %66, 0, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22003.0
+# CHECK-GX-JSON-DAG:        "%1": 22002.0
+# CHECK-GX-JSON-DAG:        "%2": 3.0
+# CHECK-GX-JSON-DAG:        "%3": 22003.0
+# CHECK-GX-JSON-DAG:        "%4": 0.0
+# CHECK-GX-JSON-DAG:        "%20": 2.0
+# CHECK-GX-JSON-DAG:        "%66": 0.0
+# CHECK-GX-JSON-DAG:        "%92": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%5",
+# CHECK-GX-JSON-NEXT:      "type": "sreg_32",
+# CHECK-GX-JSON-NEXT:      "instr": "S_ADD_I32 %4, 1, implicit-def dead $scc",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22003.0
+# CHECK-GX-JSON-DAG:        "%1": 22002.0
+# CHECK-GX-JSON-DAG:        "%2": 2.0
+# CHECK-GX-JSON-DAG:        "%3": 22003.0
+# CHECK-GX-JSON-DAG:        "%4": 0.0
+# CHECK-GX-JSON-DAG:        "%20": 1.0
+# CHECK-GX-JSON-DAG:        "%92": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%68",
+# CHECK-GX-JSON-NEXT:      "type": "sreg_32",
+# CHECK-GX-JSON-NEXT:      "instr": "V_CMP_GE_U32_e64 %5, %20, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22003.0
+# CHECK-GX-JSON-DAG:        "%1": 22002.0
+# CHECK-GX-JSON-DAG:        "%2": 1.0
+# CHECK-GX-JSON-DAG:        "%3": 22003.0
+# CHECK-GX-JSON-DAG:        "%5": 0.0
+# CHECK-GX-JSON-DAG:        "%20": 0.0
+# CHECK-GX-JSON-DAG:        "%92": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%7",
+# CHECK-GX-JSON-NEXT:      "type": "sreg_32",
+# CHECK-GX-JSON-NEXT:      "instr": "SI_IF_BREAK %68, %2, implicit-def dead $scc",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22003.0
+# CHECK-GX-JSON-DAG:        "%1": 22002.0
+# CHECK-GX-JSON-DAG:        "%2": 0.0
+# CHECK-GX-JSON-DAG:        "%3": 22003.0
+# CHECK-GX-JSON-DAG:        "%68": 0.0
+# CHECK-GX-JSON-DAG:        "%92": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%void",
+# CHECK-GX-JSON-NEXT:      "type": "void",
+# CHECK-GX-JSON-NEXT:      "instr": "SI_LOOP %7, %bb.1, implicit-def dead $exec, implicit-def dead $scc, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22003.0
+# CHECK-GX-JSON-DAG:        "%1": 22002.0
+# CHECK-GX-JSON-DAG:        "%3": 22003.0
+# CHECK-GX-JSON-DAG:        "%7": 0.0
+# CHECK-GX-JSON-DAG:        "%92": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%void",
+# CHECK-GX-JSON-NEXT:      "type": "void",
+# CHECK-GX-JSON-NEXT:      "instr": "S_BRANCH %bb.2",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 22003.0
+# CHECK-GX-JSON-DAG:        "%1": 22002.0
+# CHECK-GX-JSON-DAG:        "%3": 22003.0
+# CHECK-GX-JSON-DAG:        "%7": 22001.0
+# CHECK-GX-JSON-DAG:        "%92": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 22004.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    }
+# CHECK-GX-JSON-NEXT:  ],
+# CHECK-GX-JSON-NEXT:  "bb.2.exit": [
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%void",
+# CHECK-GX-JSON-NEXT:      "type": "void",
+# CHECK-GX-JSON-NEXT:      "instr": "SI_END_CF %7, implicit-def dead $exec, implicit-def dead $scc, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 2.0
+# CHECK-GX-JSON-DAG:        "%1": 1.0
+# CHECK-GX-JSON-DAG:        "%3": 2.0
+# CHECK-GX-JSON-DAG:        "%7": 0.0
+# CHECK-GX-JSON-DAG:        "%92": 3.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 3.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 3.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%86",
+# CHECK-GX-JSON-NEXT:      "type": "vreg_64",
+# CHECK-GX-JSON-NEXT:      "instr": "REG_SEQUENCE %1, %subreg.sub0, undef %87:vgpr_32, %subreg.sub1",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 1.0
+# CHECK-GX-JSON-DAG:        "%1": 0.0
+# CHECK-GX-JSON-DAG:        "%3": 1.0
+# CHECK-GX-JSON-DAG:        "%92": 2.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 2.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 2.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%72",
+# CHECK-GX-JSON-NEXT:      "type": "vreg_64, $sgpr_null",
+# CHECK-GX-JSON-NEXT:      "instr": "V_MAD_U64_U32_e64 %0, %3, %86, 0, implicit $exec",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%0": 0.0
+# CHECK-GX-JSON-DAG:        "%3": 0.0
+# CHECK-GX-JSON-DAG:        "%86": 0.0
+# CHECK-GX-JSON-DAG:        "%92": 1.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 1.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%92"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 1.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%void",
+# CHECK-GX-JSON-NEXT:      "type": "void",
+# CHECK-GX-JSON-NEXT:      "instr": "GLOBAL_STORE_DWORD %92, %72.sub0, 0, 0, implicit $exec :: (store (s32) into %ir.p5, addrspace 1)",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-DAG:        "%72:sub0": 0.0
+# CHECK-GX-JSON-DAG:        "%92": 0.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-DAG:        "register": "%72"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 0.0
+# CHECK-GX-JSON:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-DAG:        "register": "%72:sub0"
+# CHECK-GX-JSON-DAG:        "use": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "use-mi": "{{[^"]+}}"
+# CHECK-GX-JSON-DAG:        "distance": 0.0
+# CHECK-GX-JSON:      }
+# CHECK-GX-JSON-NEXT:    },
+# CHECK-GX-JSON-NEXT:    {
+# CHECK-GX-JSON-NEXT:      "name": "%void",
+# CHECK-GX-JSON-NEXT:      "type": "void",
+# CHECK-GX-JSON-NEXT:      "instr": "S_ENDPGM 0",
+# CHECK-GX-JSON-NEXT:      "id": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "head-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "tail-len": {{[0-9.]+}},
+# CHECK-GX-JSON-NEXT:      "distances": {
+# CHECK-GX-JSON-NEXT:      },
+# CHECK-GX-JSON-NEXT:      "furthest": {
+# CHECK-GX-JSON-NEXT:      },
+# CHECK-GX-JSON-NEXT:      "furthest-subreg": {
+# CHECK-GX-JSON-NEXT:      }
+# CHECK-GX-JSON-NEXT:    }
+# CHECK-GX-JSON-NEXT:  ]
+# CHECK-GX-JSON-NEXT:}
