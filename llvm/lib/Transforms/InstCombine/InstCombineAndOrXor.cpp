@@ -5180,8 +5180,8 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
 }
 
 // ((X + C) & M) ^ M --> ((M − C) − X) & M
-static Instruction *foldAndWithMask(BinaryOperator &I,
-                                    InstCombiner::BuilderTy &Builder) {
+static Instruction *foldMaskedAddXorPattern(BinaryOperator &I,
+                                            InstCombiner::BuilderTy &Builder) {
   Value *InnerVal;
   const APInt *AndMask, *XorMask, *AddC;
 
@@ -5537,7 +5537,7 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   if (Instruction *Res = foldBitwiseLogicWithIntrinsics(I, Builder))
     return Res;
 
-  if (Instruction *Res = foldAndWithMask(I, Builder))
+  if (Instruction *Res = foldMaskedAddXorPattern(I, Builder))
     return Res;
 
   return nullptr;
