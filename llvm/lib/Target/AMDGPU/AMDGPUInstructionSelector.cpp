@@ -5843,24 +5843,59 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root,
 
       // It's possible voffset is an SGPR here, but the copy to VGPR will be
       // inserted later.
-      bool ScaleOffset = selectScaleOffset(Root, PtrBaseOffset,
-                                           Subtarget->hasSignedGVSOffset());
       if (Register VOffset = matchExtendFromS32OrS32(
               PtrBaseOffset, Subtarget->hasSignedGVSOffset())) {
+        if (NeedIOffset && !ImmOffset) {
+          MachineInstr *VOffsetDef = getDefIgnoringCopies(VOffset, *MRI);
+          if (VOffsetDef->getOpcode() == TargetOpcode::G_ADD) {
+            Register RHS = VOffsetDef->getOperand(2).getReg();
+            std::optional<ValueAndVReg> RHSValReg =
+                getIConstantVRegValWithLookThrough(RHS, *MRI);
+            if (RHSValReg &&
+                TII.isLegalFLATOffset(RHSValReg->Value.getSExtValue(),
+                                      AMDGPUAS::GLOBAL_ADDRESS,
+                                      SIInstrFlags::FlatGlobal)) {
+              VOffset = VOffsetDef->getOperand(1).getReg();
+              ImmOffset = RHSValReg->Value.getSExtValue();
+            }
+          }
+        }
+
+        bool ScaleOffset =
+            selectScaleOffset(Root, VOffset, Subtarget->hasSignedGVSOffset());
         if (NeedIOffset)
-          return {{[=](MachineInstrBuilder &MIB) { // saddr
-                     MIB.addReg(SAddr);
-                   },
-                   [=](MachineInstrBuilder &MIB) { // voffset
-                     MIB.addReg(VOffset);
-                   },
-                   [=](MachineInstrBuilder &MIB) { // offset
-                     MIB.addImm(ImmOffset);
-                   },
-                   [=](MachineInstrBuilder &MIB) { // cpol
+          return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(SAddr); },
+                   [=](MachineInstrBuilder &MIB) { MIB.addReg(VOffset); },
+                   [=](MachineInstrBuilder &MIB) { MIB.addImm(ImmOffset); },
+                   [=](MachineInstrBuilder &MIB) {
                      MIB.addImm(CPolBits |
                                 (ScaleOffset ? AMDGPU::CPol::SCAL : 0));
                    }}};
+        return {{[=](MachineInstrBuilder &MIB) { MIB.addReg(SAddr); },
+                 [=](MachineInstrBuilder &MIB) { MIB.addReg(VOffset); },
+                 [=](MachineInstrBuilder &MIB) {
+                   MIB.addImm(CPolBits |
+                              (ScaleOffset ? AMDGPU::CPol::SCAL : 0));
+                 }}};
+      } else {
+        bool ScaleOffset = selectScaleOffset(Root, PtrBaseOffset,
+                                             Subtarget->hasSignedGVSOffset());
+        if (Register VOffset = matchExtendFromS32OrS32(
+                PtrBaseOffset, Subtarget->hasSignedGVSOffset()))
+          if (NeedIOffset)
+            return {{[=](MachineInstrBuilder &MIB) { // saddr
+                       MIB.addReg(SAddr);
+                     },
+                     [=](MachineInstrBuilder &MIB) { // voffset
+                       MIB.addReg(VOffset);
+                     },
+                     [=](MachineInstrBuilder &MIB) { // offset
+                       MIB.addImm(ImmOffset);
+                     },
+                     [=](MachineInstrBuilder &MIB) { // cpol
+                       MIB.addImm(CPolBits |
+                                  (ScaleOffset ? AMDGPU::CPol::SCAL : 0));
+                     }}};
         return {{[=](MachineInstrBuilder &MIB) { // saddr
                    MIB.addReg(SAddr);
                  },
