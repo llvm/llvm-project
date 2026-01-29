@@ -849,15 +849,15 @@ pm2waddasu.h t3, t5, a0
 # CHECK-ASM-AND-OBJ: pmqwacc.h t5, t5, a2
 # CHECK-ASM: encoding: [0x9b,0x2f,0xcf,0x78]
 pmqwacc.h t5, t5, a2
-# CHECK-ASM-AND-OBJ: pmqwacc s2, a4, a2
+# CHECK-ASM-AND-OBJ: mqwacc s2, a4, a2
 # CHECK-ASM: encoding: [0x9b,0x29,0xc7,0x7a]
-pmqwacc s2, a4, a2
+mqwacc s2, a4, a2
 # CHECK-ASM-AND-OBJ: pmqrwacc.h a4, t3, a4
 # CHECK-ASM: encoding: [0x9b,0x27,0xee,0x7c]
 pmqrwacc.h a4, t3, a4
-# CHECK-ASM-AND-OBJ: pmqrwacc s0, s2, t5
+# CHECK-ASM-AND-OBJ: mqrwacc s0, s2, t5
 # CHECK-ASM: encoding: [0x9b,0x24,0xe9,0x7f]
-pmqrwacc s0, s2, t5
+mqrwacc s0, s2, t5
 # CHECK-ASM-AND-OBJ: predsum.dhs s0, t3, a0
 # CHECK-ASM: encoding: [0x1b,0x44,0xae,0x18]
 predsum.dhs s0, t3, a0
