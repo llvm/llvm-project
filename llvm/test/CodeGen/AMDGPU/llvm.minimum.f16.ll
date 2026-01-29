@@ -446,9 +446,8 @@ define void @s_minimum_f16(half inreg %src0, half inreg %src1) {
 ; GFX8-NEXT:    v_cmp_o_f16_e32 vcc, s16, v0
 ; GFX8-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
 ; GFX8-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX8-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX8-NEXT:    ;;#ASMSTART
-; GFX8-NEXT:    ; use s4
+; GFX8-NEXT:    ; use v0
 ; GFX8-NEXT:    ;;#ASMEND
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -461,9 +460,8 @@ define void @s_minimum_f16(half inreg %src0, half inreg %src1) {
 ; GFX900-NEXT:    v_cmp_o_f16_e32 vcc, s16, v0
 ; GFX900-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
 ; GFX900-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX900-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; use s4
+; GFX900-NEXT:    ; use v0
 ; GFX900-NEXT:    ;;#ASMEND
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -474,10 +472,8 @@ define void @s_minimum_f16(half inreg %src0, half inreg %src1) {
 ; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, s1, s1
 ; GFX950-NEXT:    s_nop 0
 ; GFX950-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX950-NEXT:    s_nop 0
-; GFX950-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX950-NEXT:    ;;#ASMSTART
-; GFX950-NEXT:    ; use s0
+; GFX950-NEXT:    ; use v0
 ; GFX950-NEXT:    ;;#ASMEND
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -488,9 +484,8 @@ define void @s_minimum_f16(half inreg %src0, half inreg %src1) {
 ; GFX10-NEXT:    v_cmp_o_f16_e64 vcc_lo, s16, s17
 ; GFX10-NEXT:    v_cndmask_b32_e32 v0, 0x7e00, v0, vcc_lo
 ; GFX10-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX10-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX10-NEXT:    ;;#ASMSTART
-; GFX10-NEXT:    ; use s4
+; GFX10-NEXT:    ; use v0
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -502,10 +497,8 @@ define void @s_minimum_f16(half inreg %src0, half inreg %src1) {
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0x7e00, v0.l, s2
 ; GFX11-TRUE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-TRUE16-NEXT:    ;;#ASMSTART
-; GFX11-TRUE16-NEXT:    ; use s0
+; GFX11-TRUE16-NEXT:    ; use v0
 ; GFX11-TRUE16-NEXT:    ;;#ASMEND
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -517,10 +510,8 @@ define void @s_minimum_f16(half inreg %src0, half inreg %src1) {
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e32 v0, 0x7e00, v0, vcc_lo
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-FAKE16-NEXT:    ;;#ASMSTART
-; GFX11-FAKE16-NEXT:    ; use s0
+; GFX11-FAKE16-NEXT:    ; use v0
 ; GFX11-FAKE16-NEXT:    ;;#ASMEND
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -817,9 +808,8 @@ define void @s_minimum_v2f16(<2 x half> inreg %src0, <2 x half> inreg %src1) {
 ; GFX8-NEXT:    v_cmp_o_f16_e32 vcc, s16, v2
 ; GFX8-NEXT:    v_cndmask_b32_e32 v1, v1, v3, vcc
 ; GFX8-NEXT:    v_or_b32_sdwa v0, v1, v0 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:WORD_0 src1_sel:DWORD
-; GFX8-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX8-NEXT:    ;;#ASMSTART
-; GFX8-NEXT:    ; use s4
+; GFX8-NEXT:    ; use v0
 ; GFX8-NEXT:    ;;#ASMEND
 ; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -839,9 +829,8 @@ define void @s_minimum_v2f16(<2 x half> inreg %src0, <2 x half> inreg %src1) {
 ; GFX900-NEXT:    v_cndmask_b32_sdwa v1, v2, v1, vcc dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX900-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX900-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
-; GFX900-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX900-NEXT:    ;;#ASMSTART
-; GFX900-NEXT:    ; use s4
+; GFX900-NEXT:    ; use v0
 ; GFX900-NEXT:    ;;#ASMEND
 ; GFX900-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -851,9 +840,8 @@ define void @s_minimum_v2f16(<2 x half> inreg %src0, <2 x half> inreg %src1) {
 ; GFX950-NEXT:    v_mov_b32_e32 v0, s0
 ; GFX950-NEXT:    v_pk_minimum3_f16 v0, v0, s1, s1
 ; GFX950-NEXT:    s_nop 0
-; GFX950-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX950-NEXT:    ;;#ASMSTART
-; GFX950-NEXT:    ; use s0
+; GFX950-NEXT:    ; use v0
 ; GFX950-NEXT:    ;;#ASMEND
 ; GFX950-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -870,9 +858,8 @@ define void @s_minimum_v2f16(<2 x half> inreg %src0, <2 x half> inreg %src1) {
 ; GFX10-NEXT:    v_cndmask_b32_sdwa v0, v1, v0, vcc_lo dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX10-NEXT:    v_and_b32_e32 v1, 0xffff, v2
 ; GFX10-NEXT:    v_lshl_or_b32 v0, v0, 16, v1
-; GFX10-NEXT:    v_readfirstlane_b32 s4, v0
 ; GFX10-NEXT:    ;;#ASMSTART
-; GFX10-NEXT:    ; use s4
+; GFX10-NEXT:    ; use v0
 ; GFX10-NEXT:    ;;#ASMEND
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -888,10 +875,8 @@ define void @s_minimum_v2f16(<2 x half> inreg %src0, <2 x half> inreg %src1) {
 ; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_3) | instskip(NEXT) | instid1(VALU_DEP_2)
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.l, 0x7e00, v0.l, s0
 ; GFX11-TRUE16-NEXT:    v_cndmask_b16 v0.h, 0x7e00, v1.l, s1
-; GFX11-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX11-TRUE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-TRUE16-NEXT:    ;;#ASMSTART
-; GFX11-TRUE16-NEXT:    ; use s0
+; GFX11-TRUE16-NEXT:    ; use v0
 ; GFX11-TRUE16-NEXT:    ;;#ASMEND
 ; GFX11-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -908,11 +893,10 @@ define void @s_minimum_v2f16(<2 x half> inreg %src0, <2 x half> inreg %src1) {
 ; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_4)
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v0, 0xffff, v0
 ; GFX11-FAKE16-NEXT:    v_cndmask_b32_e32 v1, 0x7e00, v1, vcc_lo
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_1)
 ; GFX11-FAKE16-NEXT:    v_lshl_or_b32 v0, v1, 16, v0
-; GFX11-FAKE16-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX11-FAKE16-NEXT:    ;;#ASMSTART
-; GFX11-FAKE16-NEXT:    ; use s0
+; GFX11-FAKE16-NEXT:    ; use v0
 ; GFX11-FAKE16-NEXT:    ;;#ASMEND
 ; GFX11-FAKE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -924,12 +908,9 @@ define void @s_minimum_v2f16(<2 x half> inreg %src0, <2 x half> inreg %src1) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    v_pk_minimum_f16 v0, s0, s1
-; GFX12-NEXT:    s_delay_alu instid0(VALU_DEP_1)
-; GFX12-NEXT:    v_readfirstlane_b32 s0, v0
 ; GFX12-NEXT:    ;;#ASMSTART
-; GFX12-NEXT:    ; use s0
+; GFX12-NEXT:    ; use v0
 ; GFX12-NEXT:    ;;#ASMEND
-; GFX12-NEXT:    s_wait_alu depctr_va_sdst(0)
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call <2 x half> @llvm.minimum.v2f16(<2 x half> %src0, <2 x half> %src1)
   %cast = bitcast <2 x half> %op to i32

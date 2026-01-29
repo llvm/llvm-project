@@ -139,14 +139,12 @@ define amdgpu_kernel void @kernel_callbr(i32 %a, ptr addrspace(1) %x, i32 nounde
 ; CHECK-NEXT:    s_cmpk_eq_i32 s1, 0x100
 ; CHECK-NEXT:    s_cselect_b64 s[2:3], -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[2:3]
-; CHECK-NEXT:    v_readfirstlane_b32 s1, v1
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:  ; %bb.1: ; %if.then
 ; CHECK-NEXT:    s_cmp_eq_u32 s0, 0
 ; CHECK-NEXT:    s_cselect_b64 s[2:3], -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[2:3]
-; CHECK-NEXT:    v_readfirstlane_b32 s1, v1
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:  .LBB1_2: ; %if.end6.sink.split
@@ -173,7 +171,6 @@ define amdgpu_kernel void @kernel_callbr(i32 %a, ptr addrspace(1) %x, i32 nounde
 ; CHECK-NEXT:    s_cmp_eq_u32 s0, 0
 ; CHECK-NEXT:    s_cselect_b64 s[2:3], -1, 0
 ; CHECK-NEXT:    v_cndmask_b32_e64 v1, 0, 1, s[2:3]
-; CHECK-NEXT:    v_readfirstlane_b32 s1, v1
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:    s_branch .LBB1_2

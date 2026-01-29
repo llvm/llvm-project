@@ -16,10 +16,10 @@ define <4 x float> @test_sgpr_constraint_bug(ptr addrspace(5) %buf_desc_ptr) {
 ; CHECK-NEXT:    s_mov_b64 s[4:5], exec
 ; CHECK-NEXT:    v_mov_b32_e32 v8, 1
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:    v_readfirstlane_b32 s0, v4
-; CHECK-NEXT:    v_readfirstlane_b32 s1, v5
-; CHECK-NEXT:    v_readfirstlane_b32 s2, v6
 ; CHECK-NEXT:    v_readfirstlane_b32 s3, v7
+; CHECK-NEXT:    v_readfirstlane_b32 s2, v6
+; CHECK-NEXT:    v_readfirstlane_b32 s1, v5
+; CHECK-NEXT:    v_readfirstlane_b32 s0, v4
 ; CHECK-NEXT:    ;;#ASMSTART
 ; CHECK-NEXT:    v_cmpx_le_u32 exec, 1, v8
 ; CHECK-NEXT:  buffer_load_dwordx4 v[0:3], v0, s[0:3], 0 offen offset:0
@@ -108,7 +108,7 @@ define amdgpu_kernel void @inlineasm_and_waterfall_same_value(ptr addrspace(1) %
 ; CHECK-NEXT:    global_load_dwordx4 v[0:3], v0, s[10:11]
 ; CHECK-NEXT:    s_mov_b64 s[2:3], exec
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
-; CHECK-NEXT:  .LBB4_1: ; =>This Inner Loop Header: Depth=1
+; CHECK-NEXT:  .LBB3_1: ; =>This Inner Loop Header: Depth=1
 ; CHECK-NEXT:    v_readfirstlane_b32 s4, v0
 ; CHECK-NEXT:    v_readfirstlane_b32 s5, v1
 ; CHECK-NEXT:    v_readfirstlane_b32 s6, v2
@@ -121,7 +121,7 @@ define amdgpu_kernel void @inlineasm_and_waterfall_same_value(ptr addrspace(1) %
 ; CHECK-NEXT:    buffer_load_dword v5, v4, s[4:7], 0 offen
 ; CHECK-NEXT:    ; implicit-def: $vgpr0_vgpr1_vgpr2_vgpr3
 ; CHECK-NEXT:    s_xor_b64 exec, exec, s[0:1]
-; CHECK-NEXT:    s_cbranch_execnz .LBB4_1
+; CHECK-NEXT:    s_cbranch_execnz .LBB3_1
 ; CHECK-NEXT:  ; %bb.2:
 ; CHECK-NEXT:    s_mov_b64 exec, s[2:3]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
@@ -141,5 +141,36 @@ entry:
   %combined = add i32 %asm_result, %buffer_result
   %out_ptr = getelementptr i32, ptr addrspace(1) %out, i32 %tid
   store i32 %combined, ptr addrspace(1) %out_ptr
+  ret void
+}
+
+; Test case with multiple divergent SGPR inputs to verify all are handled
+define amdgpu_kernel void @multiple_divergent_sgpr_inputs(ptr addrspace(1) %out) {
+; CHECK-LABEL: multiple_divergent_sgpr_inputs:
+; CHECK:       ; %bb.0: ; %entry
+; CHECK-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
+; CHECK-NEXT:    v_and_b32_e32 v0, 0x3ff, v0
+; CHECK-NEXT:    v_add_u32_e32 v1, 10, v0
+; CHECK-NEXT:    v_add_u32_e32 v2, 20, v0
+; CHECK-NEXT:    v_readfirstlane_b32 s2, v0
+; CHECK-NEXT:    v_readfirstlane_b32 s3, v1
+; CHECK-NEXT:    v_readfirstlane_b32 s4, v2
+; CHECK-NEXT:    ;;#ASMSTART
+; CHECK-NEXT:    s_add_u32 s2, s2, s3
+; CHECK-NEXT:    s_add_u32 s2, s2, s4
+; CHECK-NEXT:    ;;#ASMEND
+; CHECK-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
+; CHECK-NEXT:    v_mov_b32_e32 v1, s2
+; CHECK-NEXT:    s_waitcnt lgkmcnt(0)
+; CHECK-NEXT:    global_store_dword v0, v1, s[0:1]
+; CHECK-NEXT:    s_endpgm
+entry:
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %val1 = add i32 %tid, 10
+  %val2 = add i32 %tid, 20
+  ; Three separate divergent SGPR inputs
+  %result = call i32 asm sideeffect "s_add_u32 $0, $1, $2\0As_add_u32 $0, $0, $3", "=s,s,s,s"(i32 %tid, i32 %val1, i32 %val2)
+  %gep = getelementptr i32, ptr addrspace(1) %out, i32 %tid
+  store i32 %result, ptr addrspace(1) %gep
   ret void
 }

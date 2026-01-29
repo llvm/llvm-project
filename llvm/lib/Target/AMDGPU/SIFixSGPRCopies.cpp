@@ -159,15 +159,6 @@ public:
                               MachineBasicBlock *BlockToInsertTo,
                               MachineBasicBlock::iterator PointToInsertTo,
                               const DebugLoc &DL);
-
-  // Insert V_READFIRSTLANE_B32 instructions to convert a VGPR to SGPR.
-  // Handles 16-bit, 32-bit, and larger register sizes.
-  void insertReadFirstLane(Register VGPRSrc, Register SGPRDst,
-                           const TargetRegisterClass *RC,
-                           MachineBasicBlock &MBB,
-                           MachineBasicBlock::iterator InsertPt,
-                           const DebugLoc &DL,
-                           unsigned SubReg = AMDGPU::NoSubRegister);
 };
 
 class SIFixSGPRCopiesLegacy : public MachineFunctionPass {
@@ -902,63 +893,6 @@ bool SIFixSGPRCopies::tryMoveVGPRConstToSGPR(
   return true;
 }
 
-void SIFixSGPRCopies::insertReadFirstLane(Register VGPRSrc, Register SGPRDst,
-                                          const TargetRegisterClass *RC,
-                                          MachineBasicBlock &MBB,
-                                          MachineBasicBlock::iterator InsertPt,
-                                          const DebugLoc &DL, unsigned SubReg) {
-  unsigned Size = TRI->getRegSizeInBits(*RC);
-  MRI->constrainRegClass(SGPRDst, &AMDGPU::SReg_32_XM0RegClass);
-  if (Size == 16) {
-    assert(MBB.getParent()->getSubtarget<GCNSubtarget>().useRealTrue16Insts() &&
-           "We do not expect to see 16-bit copies from VGPR to SGPR unless "
-           "we have 16-bit VGPRs");
-    assert(MRI->getRegClass(SGPRDst) == &AMDGPU::SReg_32RegClass ||
-           MRI->getRegClass(SGPRDst) == &AMDGPU::SReg_32_XM0RegClass);
-    // There is no V_READFIRSTLANE_B16, so legalize the dst/src reg to 32 bits
-    MRI->setRegClass(SGPRDst, &AMDGPU::SReg_32_XM0RegClass);
-    Register VReg32 = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
-    Register Undef = MRI->createVirtualRegister(&AMDGPU::VGPR_16RegClass);
-    BuildMI(MBB, InsertPt, DL, TII->get(AMDGPU::IMPLICIT_DEF), Undef);
-    BuildMI(MBB, InsertPt, DL, TII->get(AMDGPU::REG_SEQUENCE), VReg32)
-        .addReg(VGPRSrc, 0, SubReg)
-        .addImm(AMDGPU::lo16)
-        .addReg(Undef)
-        .addImm(AMDGPU::hi16);
-    BuildMI(MBB, InsertPt, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), SGPRDst)
-        .addReg(VReg32);
-  } else if (Size == 32) {
-    const MCInstrDesc &ReadFirstLaneDesc =
-        TII->get(AMDGPU::V_READFIRSTLANE_B32);
-    const TargetRegisterClass *OpRC = TII->getRegClass(ReadFirstLaneDesc, 1);
-    BuildMI(MBB, InsertPt, DL, ReadFirstLaneDesc, SGPRDst)
-        .addReg(VGPRSrc, 0, SubReg);
-    const TargetRegisterClass *ConstrainRC =
-        SubReg == AMDGPU::NoSubRegister
-            ? OpRC
-            : TRI->getMatchingSuperRegClass(MRI->getRegClass(VGPRSrc), OpRC,
-                                            SubReg);
-
-    if (!MRI->constrainRegClass(VGPRSrc, ConstrainRC))
-      llvm_unreachable("failed to constrain register");
-  } else {
-    auto Result =
-        BuildMI(MBB, InsertPt, DL, TII->get(AMDGPU::REG_SEQUENCE), SGPRDst);
-    int N = Size / 32;
-    for (int i = 0; i < N; i++) {
-      Register PartialSrc = TII->buildExtractSubReg(
-          Result, *MRI, MachineOperand::CreateReg(VGPRSrc, false), RC,
-          TRI->getSubRegFromChannel(i), &AMDGPU::VGPR_32RegClass);
-      Register PartialDst =
-          MRI->createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
-      BuildMI(MBB, *Result, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32),
-              PartialDst)
-          .addReg(PartialSrc);
-      Result.addReg(PartialDst).addImm(TRI->getSubRegFromChannel(i));
-    }
-  }
-}
-
 bool SIFixSGPRCopies::lowerSpecialCase(MachineInstr &MI,
                                        MachineBasicBlock::iterator &I) {
   Register DstReg = MI.getOperand(0).getReg();
@@ -1069,43 +1003,8 @@ void SIFixSGPRCopies::analyzeVGPRToSGPRCopy(MachineInstr* MI) {
     } else if (Inst->getNumExplicitDefs() != 0) {
       Register Reg = Inst->getOperand(0).getReg();
       if (Reg.isVirtual() && TRI->isSGPRReg(*MRI, Reg) && !TII->isVALU(*Inst)) {
-        SmallVector<MachineInstr *, 4> InlineAsmUsers;
-        for (auto &U : MRI->use_instructions(Reg)) {
-          if (U.isInlineAsm())
-            InlineAsmUsers.push_back(&U);
-          else
-            Users.push_back(&U);
-        }
-        for (auto *U : InlineAsmUsers) {
-          // Inline assembly operands with SGPR constraints cannot be handled by
-          // the VALU conversion. If we convert the definition to VALU, we must
-          // insert a readfirstlane to restore the SGPR for the inline asm use.
-          MachineBasicBlock *MBB = U->getParent();
-          const DebugLoc &DL = U->getDebugLoc();
-
-          const TargetRegisterClass *RC = MRI->getRegClass(Reg);
-          Register VGPR =
-              MRI->createVirtualRegister(TRI->getEquivalentVGPRClass(RC));
-          MachineInstr *NewCopy =
-              BuildMI(*MBB, *U, DL, TII->get(AMDGPU::COPY), VGPR).addReg(Reg);
-          Users.push_back(NewCopy);
-
-          unsigned Size = TRI->getRegSizeInBits(*RC);
-          Register SGPR =
-              Size == 16
-                  ? MRI->createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass)
-                  : (Size == 32 ? MRI->createVirtualRegister(
-                                      &AMDGPU::SReg_32_XM0RegClass)
-                                : MRI->createVirtualRegister(RC));
-
-          insertReadFirstLane(VGPR, SGPR, RC, *MBB, *U, DL);
-
-          for (unsigned i = 0; i < U->getNumOperands(); ++i) {
-            MachineOperand &MO = U->getOperand(i);
-            if (MO.isReg() && MO.getReg() == Reg && MO.isUse())
-              MO.setReg(SGPR);
-          }
-        }
+        for (auto &U : MRI->use_instructions(Reg))
+          Users.push_back(&U);
       }
     }
     for (auto *U : Users) {
@@ -1210,13 +1109,63 @@ void SIFixSGPRCopies::lowerVGPR2SGPRCopies(MachineFunction &MF) {
                       << " is being turned to v_readfirstlane_b32"
                       << " Score: " << C.second.Score << "\n");
     Register DstReg = MI->getOperand(0).getReg();
+    MRI->constrainRegClass(DstReg, &AMDGPU::SReg_32_XM0RegClass);
+
     Register SrcReg = MI->getOperand(1).getReg();
     unsigned SubReg = MI->getOperand(1).getSubReg();
     const TargetRegisterClass *SrcRC =
         TRI->getRegClassForOperandReg(*MRI, MI->getOperand(1));
+    size_t SrcSize = TRI->getRegSizeInBits(*SrcRC);
+    if (SrcSize == 16) {
+      assert(MF.getSubtarget<GCNSubtarget>().useRealTrue16Insts() &&
+             "We do not expect to see 16-bit copies from VGPR to SGPR unless "
+             "we have 16-bit VGPRs");
+      assert(MRI->getRegClass(DstReg) == &AMDGPU::SReg_32RegClass ||
+             MRI->getRegClass(DstReg) == &AMDGPU::SReg_32_XM0RegClass);
+      // There is no V_READFIRSTLANE_B16, so legalize the dst/src reg to 32 bits
+      MRI->setRegClass(DstReg, &AMDGPU::SReg_32_XM0RegClass);
+      Register VReg32 = MRI->createVirtualRegister(&AMDGPU::VGPR_32RegClass);
+      const DebugLoc &DL = MI->getDebugLoc();
+      Register Undef = MRI->createVirtualRegister(&AMDGPU::VGPR_16RegClass);
+      BuildMI(*MBB, MI, DL, TII->get(AMDGPU::IMPLICIT_DEF), Undef);
+      BuildMI(*MBB, MI, DL, TII->get(AMDGPU::REG_SEQUENCE), VReg32)
+          .addReg(SrcReg, 0, SubReg)
+          .addImm(AMDGPU::lo16)
+          .addReg(Undef)
+          .addImm(AMDGPU::hi16);
+      BuildMI(*MBB, MI, DL, TII->get(AMDGPU::V_READFIRSTLANE_B32), DstReg)
+          .addReg(VReg32);
+    } else if (SrcSize == 32) {
+      const MCInstrDesc &ReadFirstLaneDesc =
+          TII->get(AMDGPU::V_READFIRSTLANE_B32);
+      const TargetRegisterClass *OpRC = TII->getRegClass(ReadFirstLaneDesc, 1);
+      BuildMI(*MBB, MI, MI->getDebugLoc(), ReadFirstLaneDesc, DstReg)
+          .addReg(SrcReg, 0, SubReg);
 
-    insertReadFirstLane(SrcReg, DstReg, SrcRC, *MBB, MI, MI->getDebugLoc(),
-                        SubReg);
+      const TargetRegisterClass *ConstrainRC =
+          SubReg == AMDGPU::NoSubRegister
+              ? OpRC
+              : TRI->getMatchingSuperRegClass(MRI->getRegClass(SrcReg), OpRC,
+                                              SubReg);
+
+      if (!MRI->constrainRegClass(SrcReg, ConstrainRC))
+        llvm_unreachable("failed to constrain register");
+    } else {
+      auto Result = BuildMI(*MBB, MI, MI->getDebugLoc(),
+                            TII->get(AMDGPU::REG_SEQUENCE), DstReg);
+      int N = TRI->getRegSizeInBits(*SrcRC) / 32;
+      for (int i = 0; i < N; i++) {
+        Register PartialSrc = TII->buildExtractSubReg(
+            Result, *MRI, MI->getOperand(1), SrcRC,
+            TRI->getSubRegFromChannel(i), &AMDGPU::VGPR_32RegClass);
+        Register PartialDst =
+            MRI->createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
+        BuildMI(*MBB, *Result, Result->getDebugLoc(),
+                TII->get(AMDGPU::V_READFIRSTLANE_B32), PartialDst)
+            .addReg(PartialSrc);
+        Result.addReg(PartialDst).addImm(TRI->getSubRegFromChannel(i));
+      }
+    }
     MI->eraseFromParent();
   }
 }
