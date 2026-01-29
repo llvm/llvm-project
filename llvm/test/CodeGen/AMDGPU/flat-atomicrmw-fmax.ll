@@ -40,6 +40,7 @@ define float @flat_agent_atomic_fmax_ret_f32__amdgpu_no_fine_grained_memory(ptr 
 ; GFX942-NEXT:    v_max_f32_e32 v2, v3, v3
 ; GFX942-NEXT:    v_max_f32_e32 v2, v2, v4
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -182,6 +183,7 @@ define float @flat_agent_atomic_fmax_ret_f32__offset12b_pos__amdgpu_no_fine_grai
 ; GFX942-NEXT:    v_max_f32_e32 v2, v3, v3
 ; GFX942-NEXT:    v_max_f32_e32 v2, v2, v4
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:2044 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -336,6 +338,7 @@ define float @flat_agent_atomic_fmax_ret_f32__offset12b_neg__amdgpu_no_fine_grai
 ; GFX942-NEXT:    v_max_f32_e32 v0, v3, v3
 ; GFX942-NEXT:    v_max_f32_e32 v2, v0, v1
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v0, v[4:5], v[2:3] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -494,6 +497,7 @@ define void @flat_agent_atomic_fmax_noret_f32__amdgpu_no_fine_grained_memory(ptr
 ; GFX942-NEXT:    v_max_f32_e32 v2, v3, v3
 ; GFX942-NEXT:    v_max_f32_e32 v2, v2, v4
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -634,6 +638,7 @@ define void @flat_agent_atomic_fmax_noret_f32__offset12b_pos__amdgpu_no_fine_gra
 ; GFX942-NEXT:    v_max_f32_e32 v2, v3, v3
 ; GFX942-NEXT:    v_max_f32_e32 v2, v2, v4
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:2044 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -787,6 +792,7 @@ define void @flat_agent_atomic_fmax_noret_f32__offset12b_neg__amdgpu_no_fine_gra
 ; GFX942-NEXT:    v_max_f32_e32 v2, v3, v3
 ; GFX942-NEXT:    v_max_f32_e32 v2, v2, v4
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -948,6 +954,7 @@ define float @flat_system_atomic_fmax_ret_f32__offset12b_pos__amdgpu_no_fine_gra
 ; GFX942-NEXT:    v_max_f32_e32 v2, v3, v3
 ; GFX942-NEXT:    v_max_f32_e32 v2, v2, v4
 ; GFX942-NEXT:    buffer_wbl2 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:2044 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc0 sc1
@@ -995,6 +1002,7 @@ define float @flat_system_atomic_fmax_ret_f32__offset12b_pos__amdgpu_no_fine_gra
 ; GFX90A-NEXT:    v_max_f32_e32 v2, v3, v3
 ; GFX90A-NEXT:    v_max_f32_e32 v2, v2, v4
 ; GFX90A-NEXT:    buffer_wbl2
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:2044 glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2
@@ -1099,6 +1107,7 @@ define void @flat_system_atomic_fmax_noret_f32__offset12b_pos__amdgpu_no_fine_gr
 ; GFX942-NEXT:    v_max_f32_e32 v2, v3, v3
 ; GFX942-NEXT:    v_max_f32_e32 v2, v2, v4
 ; GFX942-NEXT:    buffer_wbl2 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:2044 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc0 sc1
@@ -1147,6 +1156,7 @@ define void @flat_system_atomic_fmax_noret_f32__offset12b_pos__amdgpu_no_fine_gr
 ; GFX90A-NEXT:    v_max_f32_e32 v2, v3, v3
 ; GFX90A-NEXT:    v_max_f32_e32 v2, v2, v4
 ; GFX90A-NEXT:    buffer_wbl2
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:2044 glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2
@@ -1248,6 +1258,7 @@ define float @flat_agent_atomic_fmax_ret_f32__amdgpu_no_remote_memory(ptr %ptr, 
 ; GFX942-NEXT:    v_max_f32_e32 v2, v3, v3
 ; GFX942-NEXT:    v_max_f32_e32 v2, v2, v4
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -1440,6 +1451,7 @@ define float @flat_agent_atomic_fmax_ret_f32__amdgpu_no_fine_grained_memory__amd
 ; GFX942-NEXT:    v_max_f32_e32 v2, v3, v3
 ; GFX942-NEXT:    v_max_f32_e32 v2, v2, v4
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -1586,6 +1598,7 @@ define float @flat_agent_atomic_fmax_ret_f32__ftz__amdgpu_no_fine_grained_memory
 ; GFX942-NEXT:    v_max_f32_e32 v2, v3, v3
 ; GFX942-NEXT:    v_max_f32_e32 v2, v2, v4
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -1728,6 +1741,7 @@ define float @flat_agent_atomic_fmax_ret_f32__offset12b_pos__ftz__amdgpu_no_fine
 ; GFX942-NEXT:    v_max_f32_e32 v2, v3, v3
 ; GFX942-NEXT:    v_max_f32_e32 v2, v2, v4
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:2044 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -1882,6 +1896,7 @@ define float @flat_agent_atomic_fmax_ret_f32__offset12b_neg__ftz__amdgpu_no_fine
 ; GFX942-NEXT:    v_max_f32_e32 v0, v3, v3
 ; GFX942-NEXT:    v_max_f32_e32 v2, v0, v1
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v0, v[4:5], v[2:3] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -2040,6 +2055,7 @@ define void @flat_agent_atomic_fmax_noret_f32__ftz__amdgpu_no_fine_grained_memor
 ; GFX942-NEXT:    v_max_f32_e32 v2, v3, v3
 ; GFX942-NEXT:    v_max_f32_e32 v2, v2, v4
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -2180,6 +2196,7 @@ define void @flat_agent_atomic_fmax_noret_f32__offset12b_pos__ftz__amdgpu_no_fin
 ; GFX942-NEXT:    v_max_f32_e32 v2, v3, v3
 ; GFX942-NEXT:    v_max_f32_e32 v2, v2, v4
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:2044 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -2333,6 +2350,7 @@ define void @flat_agent_atomic_fmax_noret_f32__offset12b_neg__ftz__amdgpu_no_fin
 ; GFX942-NEXT:    v_max_f32_e32 v2, v3, v3
 ; GFX942-NEXT:    v_max_f32_e32 v2, v2, v4
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -2494,6 +2512,7 @@ define float @flat_system_atomic_fmax_ret_f32__offset12b_pos__ftz__amdgpu_no_fin
 ; GFX942-NEXT:    v_max_f32_e32 v2, v3, v3
 ; GFX942-NEXT:    v_max_f32_e32 v2, v2, v4
 ; GFX942-NEXT:    buffer_wbl2 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:2044 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc0 sc1
@@ -2541,6 +2560,7 @@ define float @flat_system_atomic_fmax_ret_f32__offset12b_pos__ftz__amdgpu_no_fin
 ; GFX90A-NEXT:    v_max_f32_e32 v2, v3, v3
 ; GFX90A-NEXT:    v_max_f32_e32 v2, v2, v4
 ; GFX90A-NEXT:    buffer_wbl2
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:2044 glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2
@@ -2645,6 +2665,7 @@ define void @flat_system_atomic_fmax_noret_f32__offset12b_pos__ftz__amdgpu_no_fi
 ; GFX942-NEXT:    v_max_f32_e32 v2, v3, v3
 ; GFX942-NEXT:    v_max_f32_e32 v2, v2, v4
 ; GFX942-NEXT:    buffer_wbl2 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:2044 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc0 sc1
@@ -2693,6 +2714,7 @@ define void @flat_system_atomic_fmax_noret_f32__offset12b_pos__ftz__amdgpu_no_fi
 ; GFX90A-NEXT:    v_max_f32_e32 v2, v3, v3
 ; GFX90A-NEXT:    v_max_f32_e32 v2, v2, v4
 ; GFX90A-NEXT:    buffer_wbl2
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:2044 glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2
@@ -2851,6 +2873,7 @@ define double @flat_agent_atomic_fmax_ret_f64__amdgpu_no_fine_grained_memory(ptr
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ; GFX942-NEXT:  .LBB18_3: ; %atomicrmw.global
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_max_f64 v[0:1], v[4:5], v[2:3] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -3247,6 +3270,7 @@ define double @flat_agent_atomic_fmax_ret_f64__offset12b_pos__amdgpu_no_fine_gra
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ; GFX942-NEXT:  .LBB19_3: ; %atomicrmw.global
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_max_f64 v[0:1], v[4:5], v[2:3] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -3659,6 +3683,7 @@ define double @flat_agent_atomic_fmax_ret_f64__offset12b_neg__amdgpu_no_fine_gra
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ; GFX942-NEXT:  .LBB20_3: ; %atomicrmw.global
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_max_f64 v[0:1], v[4:5], v[2:3] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -4063,6 +4088,7 @@ define void @flat_agent_atomic_fmax_noret_f64__amdgpu_no_fine_grained_memory(ptr
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ; GFX942-NEXT:  .LBB21_3: ; %atomicrmw.global
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_max_f64 v[0:1], v[2:3]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -4453,6 +4479,7 @@ define void @flat_agent_atomic_fmax_noret_f64__offset12b_pos__amdgpu_no_fine_gra
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ; GFX942-NEXT:  .LBB22_3: ; %atomicrmw.global
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_max_f64 v[0:1], v[2:3]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -4858,6 +4885,7 @@ define void @flat_agent_atomic_fmax_noret_f64__offset12b_neg__amdgpu_no_fine_gra
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ; GFX942-NEXT:  .LBB23_3: ; %atomicrmw.global
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_max_f64 v[0:1], v[2:3]
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -5257,6 +5285,7 @@ define double @flat_agent_atomic_fmax_ret_f64__amdgpu_no_remote_memory(ptr %ptr,
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ; GFX942-NEXT:  .LBB24_3: ; %atomicrmw.global
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_max_f64 v[0:1], v[4:5], v[2:3] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -5680,6 +5709,7 @@ define double @flat_agent_atomic_fmax_ret_f64__amdgpu_no_fine_grained_memory__am
 ; GFX942-NEXT:    s_setpc_b64 s[30:31]
 ; GFX942-NEXT:  .LBB25_3: ; %atomicrmw.global
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_max_f64 v[0:1], v[4:5], v[2:3] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -6109,6 +6139,7 @@ define half @flat_agent_atomic_fmax_ret_f16__amdgpu_no_fine_grained_memory(ptr %
 ; GFX942-NEXT:    v_lshlrev_b32_e32 v4, v3, v4
 ; GFX942-NEXT:    v_and_or_b32 v4, v5, v6, v4
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v4, v[0:1], v[4:5] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -6506,6 +6537,7 @@ define half @flat_agent_atomic_fmax_ret_f16__offset12b_pos__amdgpu_no_fine_grain
 ; GFX942-NEXT:    v_lshlrev_b32_e32 v2, v4, v2
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -6914,6 +6946,7 @@ define half @flat_agent_atomic_fmax_ret_f16__offset12b_neg__amdgpu_no_fine_grain
 ; GFX942-NEXT:    v_lshlrev_b32_e32 v2, v4, v2
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -7311,6 +7344,7 @@ define void @flat_agent_atomic_fmax_noret_f16__amdgpu_no_fine_grained_memory(ptr
 ; GFX942-NEXT:    v_lshlrev_b32_e32 v4, v3, v4
 ; GFX942-NEXT:    v_and_or_b32 v4, v5, v6, v4
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v4, v[0:1], v[4:5] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -7695,6 +7729,7 @@ define void @flat_agent_atomic_fmax_noret_f16__offset12b_pos__amdgpu_no_fine_gra
 ; GFX942-NEXT:    v_lshlrev_b32_e32 v2, v4, v2
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -8090,6 +8125,7 @@ define void @flat_agent_atomic_fmax_noret_f16__offset12b_neg__amdgpu_no_fine_gra
 ; GFX942-NEXT:    v_lshlrev_b32_e32 v2, v4, v2
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -8450,6 +8486,7 @@ define half @flat_agent_atomic_fmax_ret_f16__offset12b_pos__align4__amdgpu_no_fi
 ; GFX942-NEXT:    v_max_f16_e32 v2, v2, v4
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, s2, v2
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:2046 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -8749,6 +8786,7 @@ define void @flat_agent_atomic_fmax_noret_f16__offset12b__align4_pos__amdgpu_no_
 ; GFX942-NEXT:    v_max_f16_e32 v2, v2, v4
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, s2, v2
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:2046 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -9083,6 +9121,7 @@ define half @flat_system_atomic_fmax_ret_f16__offset12b_pos__amdgpu_no_fine_grai
 ; GFX942-NEXT:    v_lshlrev_b32_e32 v2, v4, v2
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc0 sc1
@@ -9243,6 +9282,7 @@ define half @flat_system_atomic_fmax_ret_f16__offset12b_pos__amdgpu_no_fine_grai
 ; GFX90A-NEXT:    v_lshlrev_b32_e32 v2, v4, v2
 ; GFX90A-NEXT:    v_and_or_b32 v2, v3, v5, v2
 ; GFX90A-NEXT:    buffer_wbl2
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2
@@ -9491,6 +9531,7 @@ define void @flat_system_atomic_fmax_noret_f16__offset12b_pos__amdgpu_no_fine_gr
 ; GFX942-NEXT:    v_lshlrev_b32_e32 v2, v4, v2
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc0 sc1
@@ -9646,6 +9687,7 @@ define void @flat_system_atomic_fmax_noret_f16__offset12b_pos__amdgpu_no_fine_gr
 ; GFX90A-NEXT:    v_lshlrev_b32_e32 v2, v4, v2
 ; GFX90A-NEXT:    v_and_or_b32 v2, v3, v5, v2
 ; GFX90A-NEXT:    buffer_wbl2
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2
@@ -9911,6 +9953,7 @@ define bfloat @flat_agent_atomic_fmax_ret_bf16__amdgpu_no_fine_grained_memory(pt
 ; GFX942-NEXT:    v_lshlrev_b32_sdwa v4, v3, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_or_b32 v4, v5, v6, v4
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v4, v[0:1], v[4:5] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -10368,6 +10411,7 @@ define bfloat @flat_agent_atomic_fmax_ret_bf16__offset12b_pos__amdgpu_no_fine_gr
 ; GFX942-NEXT:    v_lshlrev_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -10835,6 +10879,7 @@ define bfloat @flat_agent_atomic_fmax_ret_bf16__offset12b_neg__amdgpu_no_fine_gr
 ; GFX942-NEXT:    v_lshlrev_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -11291,6 +11336,7 @@ define void @flat_agent_atomic_fmax_noret_bf16__amdgpu_no_fine_grained_memory(pt
 ; GFX942-NEXT:    v_lshlrev_b32_sdwa v4, v3, v4 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_or_b32 v4, v5, v6, v4
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v4, v[0:1], v[4:5] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -11733,6 +11779,7 @@ define void @flat_agent_atomic_fmax_noret_bf16__offset12b_pos__amdgpu_no_fine_gr
 ; GFX942-NEXT:    v_lshlrev_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -12185,6 +12232,7 @@ define void @flat_agent_atomic_fmax_noret_bf16__offset12b_neg__amdgpu_no_fine_gr
 ; GFX942-NEXT:    v_lshlrev_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -12606,6 +12654,7 @@ define bfloat @flat_agent_atomic_fmax_ret_bf16__offset12b_pos__align4__amdgpu_no
 ; GFX942-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, s3, v2
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:2046 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -12974,6 +13023,7 @@ define void @flat_agent_atomic_fmax_noret_bf16__offset12b__align4_pos__amdgpu_no
 ; GFX942-NEXT:    v_lshrrev_b32_e32 v2, 16, v2
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, s3, v2
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:2046 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -13374,6 +13424,7 @@ define bfloat @flat_system_atomic_fmax_ret_bf16__offset12b_pos__amdgpu_no_fine_g
 ; GFX942-NEXT:    v_lshlrev_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc0 sc1
@@ -13559,6 +13610,7 @@ define bfloat @flat_system_atomic_fmax_ret_bf16__offset12b_pos__amdgpu_no_fine_g
 ; GFX90A-NEXT:    v_lshlrev_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX90A-NEXT:    v_and_or_b32 v2, v3, v5, v2
 ; GFX90A-NEXT:    buffer_wbl2
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2
@@ -13840,6 +13892,7 @@ define void @flat_system_atomic_fmax_noret_bf16__offset12b_pos__amdgpu_no_fine_g
 ; GFX942-NEXT:    v_lshlrev_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX942-NEXT:    v_and_or_b32 v2, v3, v5, v2
 ; GFX942-NEXT:    buffer_wbl2 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc0 sc1
@@ -14019,6 +14072,7 @@ define void @flat_system_atomic_fmax_noret_bf16__offset12b_pos__amdgpu_no_fine_g
 ; GFX90A-NEXT:    v_lshlrev_b32_sdwa v2, v4, v2 dst_sel:DWORD dst_unused:UNUSED_PAD src0_sel:DWORD src1_sel:WORD_1
 ; GFX90A-NEXT:    v_and_or_b32 v2, v3, v5, v2
 ; GFX90A-NEXT:    buffer_wbl2
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2
@@ -14202,6 +14256,7 @@ define <2 x half> @flat_agent_atomic_fmax_ret_v2f16__amdgpu_no_fine_grained_memo
 ; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_pk_max_f16 v2, v2, v4
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -14437,6 +14492,7 @@ define <2 x half> @flat_agent_atomic_fmax_ret_v2f16__offset12b_pos__amdgpu_no_fi
 ; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_pk_max_f16 v2, v2, v4
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:2044 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -14681,6 +14737,7 @@ define <2 x half> @flat_agent_atomic_fmax_ret_v2f16__offset12b_neg__amdgpu_no_fi
 ; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_pk_max_f16 v2, v0, v1
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v0, v[4:5], v[2:3] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -14927,6 +14984,7 @@ define void @flat_agent_atomic_fmax_noret_v2f16__amdgpu_no_fine_grained_memory(p
 ; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_pk_max_f16 v2, v2, v4
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -15153,6 +15211,7 @@ define void @flat_agent_atomic_fmax_noret_v2f16__offset12b_pos__amdgpu_no_fine_g
 ; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_pk_max_f16 v2, v2, v4
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:2044 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -15392,6 +15451,7 @@ define void @flat_agent_atomic_fmax_noret_v2f16__offset12b_neg__amdgpu_no_fine_g
 ; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_pk_max_f16 v2, v2, v4
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -15640,6 +15700,7 @@ define <2 x half> @flat_system_atomic_fmax_ret_v2f16__offset12b_pos__amdgpu_no_f
 ; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_pk_max_f16 v2, v2, v4
 ; GFX942-NEXT:    buffer_wbl2 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:2044 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc0 sc1
@@ -15720,6 +15781,7 @@ define <2 x half> @flat_system_atomic_fmax_ret_v2f16__offset12b_pos__amdgpu_no_f
 ; GFX90A-NEXT:    v_pk_max_f16 v2, v3, v3
 ; GFX90A-NEXT:    v_pk_max_f16 v2, v2, v4
 ; GFX90A-NEXT:    buffer_wbl2
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:2044 glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2
@@ -15880,6 +15942,7 @@ define void @flat_system_atomic_fmax_noret_v2f16__offset12b_pos__amdgpu_no_fine_
 ; GFX942-NEXT:    s_nop 0
 ; GFX942-NEXT:    v_pk_max_f16 v2, v2, v4
 ; GFX942-NEXT:    buffer_wbl2 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:2044 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc0 sc1
@@ -15958,6 +16021,7 @@ define void @flat_system_atomic_fmax_noret_v2f16__offset12b_pos__amdgpu_no_fine_
 ; GFX90A-NEXT:    v_pk_max_f16 v2, v3, v3
 ; GFX90A-NEXT:    v_pk_max_f16 v2, v2, v4
 ; GFX90A-NEXT:    buffer_wbl2
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:2044 glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2
@@ -16207,6 +16271,7 @@ define <2 x bfloat> @flat_agent_atomic_fmax_ret_v2bf16__amdgpu_no_fine_grained_m
 ; GFX942-NEXT:    v_cndmask_b32_e64 v2, v7, v8, s[0:1]
 ; GFX942-NEXT:    v_perm_b32 v2, v6, v2, s5
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -16652,6 +16717,7 @@ define <2 x bfloat> @flat_agent_atomic_fmax_ret_v2bf16__offset12b_pos__amdgpu_no
 ; GFX942-NEXT:    v_cndmask_b32_e64 v2, v7, v8, s[0:1]
 ; GFX942-NEXT:    v_perm_b32 v2, v6, v2, s5
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:2044 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -17106,6 +17172,7 @@ define <2 x bfloat> @flat_agent_atomic_fmax_ret_v2bf16__offset12b_neg__amdgpu_no
 ; GFX942-NEXT:    v_cndmask_b32_e64 v0, v7, v8, s[0:1]
 ; GFX942-NEXT:    v_perm_b32 v2, v2, v0, s5
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v0, v[4:5], v[2:3] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -17560,6 +17627,7 @@ define void @flat_agent_atomic_fmax_noret_v2bf16__amdgpu_no_fine_grained_memory(
 ; GFX942-NEXT:    v_cndmask_b32_e64 v2, v7, v8, s[0:1]
 ; GFX942-NEXT:    v_perm_b32 v2, v6, v2, s5
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -17990,6 +18058,7 @@ define void @flat_agent_atomic_fmax_noret_v2bf16__offset12b_pos__amdgpu_no_fine_
 ; GFX942-NEXT:    v_cndmask_b32_e64 v2, v7, v8, s[0:1]
 ; GFX942-NEXT:    v_perm_b32 v2, v6, v2, s5
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:2044 sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -18433,6 +18502,7 @@ define void @flat_agent_atomic_fmax_noret_v2bf16__offset12b_neg__amdgpu_no_fine_
 ; GFX942-NEXT:    v_cndmask_b32_e64 v2, v7, v8, s[0:1]
 ; GFX942-NEXT:    v_perm_b32 v2, v6, v2, s5
 ; GFX942-NEXT:    buffer_wbl2 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] sc0
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc1
@@ -18892,6 +18962,7 @@ define <2 x bfloat> @flat_system_atomic_fmax_ret_v2bf16__offset12b_pos__amdgpu_n
 ; GFX942-NEXT:    v_cndmask_b32_e64 v2, v7, v8, s[0:1]
 ; GFX942-NEXT:    v_perm_b32 v2, v6, v2, s5
 ; GFX942-NEXT:    buffer_wbl2 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:2044 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc0 sc1
@@ -19070,6 +19141,7 @@ define <2 x bfloat> @flat_system_atomic_fmax_ret_v2bf16__offset12b_pos__amdgpu_n
 ; GFX90A-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX90A-NEXT:    v_perm_b32 v2, v6, v2, s9
 ; GFX90A-NEXT:    buffer_wbl2
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:2044 glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2
@@ -19340,6 +19412,7 @@ define void @flat_system_atomic_fmax_noret_v2bf16__offset12b_pos__amdgpu_no_fine
 ; GFX942-NEXT:    v_cndmask_b32_e64 v2, v7, v8, s[0:1]
 ; GFX942-NEXT:    v_perm_b32 v2, v6, v2, s5
 ; GFX942-NEXT:    buffer_wbl2 sc0 sc1
+; GFX942-NEXT:    s_waitcnt vmcnt(0)
 ; GFX942-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:2044 sc0 sc1
 ; GFX942-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX942-NEXT:    buffer_inv sc0 sc1
@@ -19513,6 +19586,7 @@ define void @flat_system_atomic_fmax_noret_v2bf16__offset12b_pos__amdgpu_no_fine
 ; GFX90A-NEXT:    v_cndmask_b32_e32 v6, v9, v10, vcc
 ; GFX90A-NEXT:    v_perm_b32 v2, v6, v2, s9
 ; GFX90A-NEXT:    buffer_wbl2
+; GFX90A-NEXT:    s_waitcnt vmcnt(0)
 ; GFX90A-NEXT:    flat_atomic_cmpswap v2, v[0:1], v[2:3] offset:2044 glc
 ; GFX90A-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; GFX90A-NEXT:    buffer_invl2

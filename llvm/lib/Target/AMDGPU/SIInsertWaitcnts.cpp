@@ -742,8 +742,6 @@ public:
   void applyWaitcnt(InstCounterType T, unsigned Count);
   void updateByEvent(WaitEventType E, MachineInstr &MI);
 
-  bool hasVmemStore() const { return HadVmemStore; }
-
   unsigned hasPendingEvent() const { return PendingEvents; }
   unsigned hasPendingEvent(WaitEventType E) const {
     return PendingEvents & (1 << E);
@@ -943,9 +941,6 @@ private:
   // Store representative LDS DMA operations. The only useful info here is
   // alias info. One store is kept per unique AAInfo.
   SmallVector<const MachineInstr *> LDSDMAStores;
-
-  // True if a non-scratch VMEM store has been seen.
-  bool HadVmemStore = false;
 };
 
 class SIInsertWaitcntsLegacy : public MachineFunctionPass {
@@ -1017,12 +1012,6 @@ void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
   // Examples including vm_cnt when buffer-store or lgkm_cnt when send-message.
   PendingEvents |= 1 << E;
   setScoreUB(T, CurrScore);
-
-  // Track non-scratch VMEM stores for BUFFER_WBL2 handling.
-  if ((E == VMEM_WRITE_ACCESS || E == VMEM_ACCESS) && Inst.mayStore() &&
-      !Context->TII->mayAccessScratch(Inst)) {
-    HadVmemStore = true;
-  }
 
   const SIRegisterInfo *TRI = Context->TRI;
   const MachineRegisterInfo *MRI = Context->MRI;
@@ -2722,20 +2711,17 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
     if (!SIInstrInfo::isLDSDMA(Inst) && FlatASCount > 1)
       ScoreBrackets->setPendingFlat();
   } else if (SIInstrInfo::isVMEM(Inst) &&
-             !llvm::AMDGPU::getMUBUFIsBufferInv(Inst.getOpcode())) {
+             ((!llvm::AMDGPU::getMUBUFIsBufferInv(Inst.getOpcode()) ||
+               Inst.getOpcode() == AMDGPU::BUFFER_WBL2))) {
+    // BUFFER_WBL2 is included here because unlike  invalidates, has to be
+    // followed "S_WAITCNT vmcnt(0)" is needed after to ensure the writeback has
+    // completed.
     IsVMEMAccess = true;
     ScoreBrackets->updateByEvent(getVmemWaitEventType(Inst), Inst);
 
     if (ST->vmemWriteNeedsExpWaitcnt() &&
         (Inst.mayStore() || SIInstrInfo::isAtomicRet(Inst))) {
       ScoreBrackets->updateByEvent(VMW_GPR_LOCK, Inst);
-    }
-  } else if (Inst.getOpcode() == AMDGPU::BUFFER_WBL2) {
-    // BUFFER_WBL2 needs vmcnt waitcnt only when there have been stores
-    // that need to be written back.
-    if (ScoreBrackets->hasVmemStore()) {
-      IsVMEMAccess = true;
-      ScoreBrackets->updateByEvent(VMEM_ACCESS, Inst);
     }
   } else if (TII->isSMRD(Inst)) {
     IsSMEMAccess = true;
@@ -2849,11 +2835,6 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
           PendingSCCWrite = nullptr;
         }
       }
-    }
-
-    if (Other.HadVmemStore && !HadVmemStore) {
-      HadVmemStore = true;
-      StrictDom = true;
     }
 
     for (auto &[RegID, Info] : VMem)
@@ -3389,7 +3370,7 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
       Modified |= insertWaitcntInBlock(MF, *MBB, *Brackets);
       BI.Dirty = false;
 
-      if (Brackets->hasPendingEvent() || Brackets->hasVmemStore()) {
+      if (Brackets->hasPendingEvent()) {
         BlockInfo *MoveBracketsToSucc = nullptr;
         for (MachineBasicBlock *Succ : MBB->successors()) {
           auto *SuccBII = BlockInfos.find(Succ);
