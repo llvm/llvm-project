@@ -365,6 +365,7 @@ private:
     // Construct split preheader and the dummy switch to thread edges from it to
     // dead exits.
     BasicBlock *Preheader = L.getLoopPreheader();
+    if (Preheader == NULL) return;
     BasicBlock *NewPreheader = llvm::SplitBlock(
         Preheader, Preheader->getTerminator(), &DT, &LI, MSSAU);
 
