@@ -97,6 +97,12 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`llvm-type-switch-case-types
+  <clang-tidy/checks/llvm/type-switch-case-types>` check.
+
+  Finds ``llvm::TypeSwitch::Case`` calls with redundant explicit template
+  arguments that can be inferred from the lambda parameter type.
+
 - New :doc:`llvm-use-vector-utils
   <clang-tidy/checks/llvm/use-vector-utils>` check.
 
@@ -131,6 +137,11 @@ Changes in existing checks
   ``std::get_temporary_buffer`` to the default list of unsafe functions. (This
   function is unsafe, useless, deprecated in C++17 and removed in C++20).
 
+- Improved :doc:`bugprone-use-after-move
+  <clang-tidy/checks/bugprone/use-after-move>` check by including the name of
+  the invalidating function in the warning message when a custom invalidation
+  function is used (via the `InvalidationFunctions` option).
+
 - Improved :doc:`llvm-use-ranges
   <clang-tidy/checks/llvm/use-ranges>` check by adding support for the following
   algorithms: ``std::accumulate``, ``std::replace_copy``, and
@@ -150,6 +161,13 @@ Changes in existing checks
   <clang-tidy/checks/modernize/use-using>` check by avoiding the generation
   of invalid code for function types with redundant parentheses.
 
+- Improved :doc:`performance-enum-size
+  <clang-tidy/checks/performance/enum-size>` check:
+
+  - Exclude ``enum`` in ``extern "C"`` blocks.
+
+  - Improved the ignore list to correctly handle ``typedef`` and  ``enum``.
+
 - Improved :doc:`performance-move-const-arg
   <clang-tidy/checks/performance/move-const-arg>` check by avoiding false
   positives on trivially copyable types with a non-public copy constructor.
@@ -158,6 +176,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/enum-initial-value>` check: the warning message
   now uses separate note diagnostics for each uninitialized enumerator, making
   it easier to see which specific enumerators need explicit initialization.
+
+- Improved :doc:`readability-non-const-parameter
+  <clang-tidy/checks/readability/non-const-parameter>` check by avoiding false
+  positives on parameters used in dependent expressions.
 
 Removed checks
 ^^^^^^^^^^^^^^

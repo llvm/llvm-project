@@ -46,7 +46,7 @@ default:
     copies               = 1
     threads              = 1
     CC                   = cc -O3 -std=c18 -Wno-implicit-function-declaration
-    CXX                  = {cxx} {compile_flags} {flags} {link_flags} -Wno-error
+    CXX                  = {cxx} {compile_flags} {flags} {link_flags} -w # we don't care about warnings in SPEC
     CC_VERSION_OPTION    = --version
     CXX_VERSION_OPTION   = --version
     EXTRA_PORTABILITY    = -DSPEC_NO_CXX17_SPECIAL_MATH_FUNCTIONS # because libc++ doesn't implement the special math functions yet
