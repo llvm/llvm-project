@@ -138,7 +138,7 @@ ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
     if (image_info.uuid &&
         (!module_spec.GetUUID() || module_spec.GetUUID() == image_info.uuid)) {
       ModuleSpec shared_cache_spec(module_spec.GetFileSpec(), image_info.uuid,
-                                   image_info.data_sp);
+                                   image_info.extractor_sp);
       module_sp =
           target.GetOrCreateModule(shared_cache_spec, false /* notify */);
     }

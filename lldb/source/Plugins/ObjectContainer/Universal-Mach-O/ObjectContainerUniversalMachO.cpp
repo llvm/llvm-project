@@ -188,18 +188,19 @@ ObjectContainerUniversalMachO::GetObjectFile(const FileSpec *file) {
 }
 
 size_t ObjectContainerUniversalMachO::GetModuleSpecifications(
-    const lldb_private::FileSpec &file, lldb::DataBufferSP &data_sp,
+    const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
     lldb::offset_t data_offset, lldb::offset_t file_offset,
     lldb::offset_t file_size, lldb_private::ModuleSpecList &specs) {
   const size_t initial_count = specs.GetSize();
+  if (!extractor_sp)
+    return initial_count;
 
-  DataExtractor extractor;
-  extractor.SetData(data_sp, data_offset, data_sp->GetByteSize());
-
-  if (ObjectContainerUniversalMachO::MagicBytesMatch(extractor)) {
+  DataExtractorSP data_extractor_sp = extractor_sp->GetSubsetExtractorSP(
+      data_offset, extractor_sp->GetByteSize());
+  if (ObjectContainerUniversalMachO::MagicBytesMatch(*data_extractor_sp)) {
     llvm::MachO::fat_header header;
     std::vector<FatArch> fat_archs;
-    if (ParseHeader(extractor, header, fat_archs)) {
+    if (ParseHeader(*data_extractor_sp, header, fat_archs)) {
       for (const FatArch &fat_arch : fat_archs) {
         const lldb::offset_t slice_file_offset =
             fat_arch.GetOffset() + file_offset;
