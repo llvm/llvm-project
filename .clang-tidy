@@ -26,7 +26,11 @@ CheckOptions:
   - key:             readability-identifier-naming.MemberCase
     value:           CamelCase
   - key:             readability-identifier-naming.ParameterCase
-    value:           CamelCase
+    value:           camelBack
+  - key:             readability-identifier-naming.ConstantParameterCase
+    value:           camelBack
+  - key:             readability-identifier-naming.ConstantPointerParameterCase
+    value:           camelBack
   - key:             readability-identifier-naming.UnionCase
     value:           CamelCase
   - key:             readability-identifier-naming.VariableCase
