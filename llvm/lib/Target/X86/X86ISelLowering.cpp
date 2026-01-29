@@ -42646,9 +42646,10 @@ static SDValue canonicalizeShuffleWithOp(SDValue N, SelectionDAG &DAG,
 }
 
 /// Attempt to fold vpermf128(op(),op()) -> op(vpermf128(),vpermf128()).
-static SDValue canonicalizeLaneShuffleWithRepeatedOps(SDValue V,
-                                                      SelectionDAG &DAG,
-                                                      const SDLoc &DL) {
+static SDValue
+canonicalizeLaneShuffleWithRepeatedOps(SDValue V, SelectionDAG &DAG,
+                                       const SDLoc &DL,
+                                       const X86Subtarget &Subtarget) {
   assert(V.getOpcode() == X86ISD::VPERM2X128 && "Unknown lane shuffle");
 
   MVT VT = V.getSimpleValueType();
@@ -42679,10 +42680,15 @@ static SDValue canonicalizeLaneShuffleWithRepeatedOps(SDValue V,
         break;
     }
     [[fallthrough]];
+  case X86ISD::PSHUFD:
+    // Don't prefer a folded vpermf128 to a folded pshufd/vpermilp.
+    if ((Src1.isUndef() || Src0.getOperand(1) == Src1.getOperand(1)) &&
+        X86::mayFoldLoad(Src0.getOperand(0), Subtarget))
+      break;
+    [[fallthrough]];
   case X86ISD::VSHLI:
   case X86ISD::VSRLI:
   case X86ISD::VSRAI:
-  case X86ISD::PSHUFD:
     if (Src1.isUndef() || Src0.getOperand(1) == Src1.getOperand(1)) {
       SDValue LHS = Src0.getOperand(0);
       SDValue RHS = Src1.isUndef() ? Src1 : Src1.getOperand(0);
@@ -43219,7 +43225,8 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
     }
 
     // Fold vperm2x128(op(),op()) -> op(vperm2x128(),vperm2x128()).
-    if (SDValue Res = canonicalizeLaneShuffleWithRepeatedOps(N, DAG, DL))
+    if (SDValue Res =
+            canonicalizeLaneShuffleWithRepeatedOps(N, DAG, DL, Subtarget))
       return Res;
 
     // Fold vperm2x128 subvector shuffle with an inner concat pattern.

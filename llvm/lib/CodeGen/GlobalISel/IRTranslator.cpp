@@ -4130,11 +4130,25 @@ static bool checkForMustTailInVarArgFn(bool IsVarArg, const BasicBlock &BB) {
 bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   MF = &CurMF;
   const Function &F = MF->getFunction();
+  ORE = std::make_unique<OptimizationRemarkEmitter>(&F);
+  CLI = MF->getSubtarget().getCallLowering();
+
+  if (CLI->fallBackToDAGISel(*MF)) {
+    OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
+                               F.getSubprogram(), &F.getEntryBlock());
+    R << "unable to lower function: "
+      << ore::NV("Prototype", F.getFunctionType());
+
+    reportTranslationError(*MF, *ORE, R);
+    return false;
+  }
+
   GISelCSEAnalysisWrapper &Wrapper =
       getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
   // Set the CSEConfig and run the analysis.
   GISelCSEInfo *CSEInfo = nullptr;
   TPC = &getAnalysis<TargetPassConfig>();
+
   bool EnableCSE = EnableCSEInIRTranslator.getNumOccurrences()
                        ? EnableCSEInIRTranslator
                        : TPC->isGISelCSEEnabled();
@@ -4157,7 +4171,6 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
   EntryBuilder->setMF(*MF);
   MRI = &MF->getRegInfo();
   DL = &F.getDataLayout();
-  ORE = std::make_unique<OptimizationRemarkEmitter>(&F);
   const TargetMachine &TM = MF->getTarget();
   TM.resetTargetOptions(F);
   EnableOpts = OptLevel != CodeGenOptLevel::None && !skipFunction(F);
@@ -4234,15 +4247,6 @@ bool IRTranslator::runOnMachineFunction(MachineFunction &CurMF) {
 
   // Make our arguments/constants entry block fallthrough to the IR entry block.
   EntryBB->addSuccessor(&getMBB(F.front()));
-
-  if (CLI->fallBackToDAGISel(*MF)) {
-    OptimizationRemarkMissed R("gisel-irtranslator", "GISelFailure",
-                               F.getSubprogram(), &F.getEntryBlock());
-    R << "unable to lower function: "
-      << ore::NV("Prototype", F.getFunctionType());
-    reportTranslationError(*MF, *ORE, R);
-    return false;
-  }
 
   // Lower the actual args into this basic block.
   SmallVector<ArrayRef<Register>, 8> VRegArgs;
