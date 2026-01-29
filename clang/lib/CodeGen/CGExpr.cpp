@@ -6356,6 +6356,35 @@ static CGCallee EmitDirectCallee(CodeGenFunction &CGF, GlobalDecl GD) {
       return CGCallee::forBuiltin(builtinID, FD);
   }
 
+  // Resolves corresponding callee for this version of multi-versioning caller
+  // if they share the same features.
+  if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0 &&
+      FD->isTargetClonesMultiVersion()) {
+    if (auto *TC = CGF.CurFuncDecl->getAttr<TargetClonesAttr>()) {
+      llvm::Constant *CalleePtr = nullptr;
+      CGF.getContext().forEachMultiversionedFunctionVersion(
+          FD, [&](const FunctionDecl *CurFD) {
+            if (const auto *CalleeTC = FD->getAttr<TargetClonesAttr>()) {
+              StringRef FeatStr =
+                  TC->getFeatureStr(CGF.CurGD.getMultiVersionIndex());
+              auto It = llvm::find(CalleeTC->featuresStrs(), FeatStr);
+              if (It != CalleeTC->featuresStrs_end()) {
+                GD = GlobalDecl(CurFD, It - CalleeTC->featuresStrs_begin());
+                const CGFunctionInfo &FI =
+                    CGF.CGM.getTypes().arrangeGlobalDeclaration(GD);
+                llvm::FunctionType *Ty = CGF.CGM.getTypes().GetFunctionType(FI);
+                CalleePtr = CGF.CGM.GetAddrOfFunction(
+                    GD, Ty, /*ForVTable=*/false,
+                    /*DontDefer=*/false, ForDefinition);
+              }
+            }
+          });
+
+      if (CalleePtr)
+        return CGCallee::forDirect(CalleePtr, GD);
+    }
+  }
+
   llvm::Constant *CalleePtr = CGF.CGM.getRawFunctionPointer(GD);
   if (CGF.CGM.getLangOpts().CUDA && !CGF.CGM.getLangOpts().CUDAIsDevice &&
       FD->hasAttr<CUDAGlobalAttr>())
