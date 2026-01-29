@@ -55,7 +55,13 @@ LLVM_LIBC_FUNCTION(int, setenv,
       return 0;
     }
 
-    // Need to replace the value
+    // Need to replace the value. Ensure we own the environ storage and have
+    // ownership tracking before updating in-place.
+    if (!env_mgr.ensure_capacity(env_mgr.get_size())) {
+      libc_errno = ENOMEM;
+      return -1;
+    }
+
     // Calculate size for "name=value" string
     size_t name_len = LIBC_NAMESPACE::internal::string_length(name);
     size_t value_len = LIBC_NAMESPACE::internal::string_length(value);

@@ -77,7 +77,6 @@ add_object_library(
     libc.src.__support.CPP.string_view
     libc.hdr.func.free
     libc.hdr.func.malloc
-    libc.hdr.func.realloc
 )
 
 add_entrypoint_object(

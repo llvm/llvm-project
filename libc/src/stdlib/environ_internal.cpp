@@ -10,7 +10,6 @@
 #include "config/app.h"
 #include "hdr/func/free.h"
 #include "hdr/func/malloc.h"
-#include "hdr/func/realloc.h"
 #include "src/__support/CPP/string_view.h"
 #include "src/__support/macros/config.h"
 

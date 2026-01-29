@@ -19,6 +19,7 @@ if(TARGET libc.src.stdlib.environ_internal)
       ../setenv.h
     DEPENDS
       libc.src.stdlib.environ_internal
+      libc.src.__support.common
       libc.src.__support.CPP.string_view
       libc.src.__support.libc_errno
       libc.hdr.func.malloc
