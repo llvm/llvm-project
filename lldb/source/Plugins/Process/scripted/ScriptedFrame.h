@@ -26,7 +26,9 @@ public:
                 lldb::ScriptedFrameInterfaceSP interface_sp,
                 lldb::user_id_t frame_idx, lldb::addr_t pc,
                 SymbolContext &sym_ctx, lldb::RegisterContextSP reg_ctx_sp,
-                StructuredData::GenericSP script_object_sp = nullptr);
+                StructuredData::GenericSP script_object_sp = nullptr,
+                lldb::VariableListSP variables_sp = nullptr,
+                lldb::ValueObjectListSP values_sp = nullptr);
 
   ~ScriptedFrame() override;
 
@@ -63,6 +65,21 @@ public:
 
   lldb::RegisterContextSP GetRegisterContext() override;
 
+  VariableList *GetVariableList(bool get_file_globals,
+                                lldb_private::Status *error_ptr) override;
+
+  lldb::VariableListSP
+  GetInScopeVariableList(bool get_file_globals,
+                         bool must_have_valid_location = false) override;
+
+  lldb::ValueObjectSP
+  GetValueObjectForFrameVariable(const lldb::VariableSP &variable_sp,
+                                 lldb::DynamicValueType use_dynamic) override;
+
+  lldb::ValueObjectSP GetValueForVariableExpressionPath(
+      llvm::StringRef var_expr, lldb::DynamicValueType use_dynamic,
+      uint32_t options, lldb::VariableSP &var_sp, Status &error) override;
+
   bool isA(const void *ClassID) const override {
     return ClassID == &ID || StackFrame::isA(ClassID);
   }
@@ -82,6 +99,8 @@ private:
 
   lldb::ScriptedFrameInterfaceSP m_scripted_frame_interface_sp;
   lldb_private::StructuredData::GenericSP m_script_object_sp;
+  lldb::VariableListSP m_variable_list_sp;
+  lldb::ValueObjectListSP m_value_objects_sp;
 
   static char ID;
 };
