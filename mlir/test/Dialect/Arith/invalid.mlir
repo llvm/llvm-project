@@ -869,3 +869,14 @@ func.func @bitcast_index_1(%arg0 : index) -> i64 {
   %0 = arith.bitcast %arg0 : index to i64
   return %0 : i64
 }
+
+// -----
+
+func.func @select_vector_condition_scalar_operands() {
+  %0 = vector.vscale
+  %1 = vector.constant_mask [1] : vector<1xi1>
+  %3 = arith.index_castui %0 : index to i32
+  // expected-error @+1 {{'arith.select' op failed to verify that condition is signless i1 or has matching shape}}
+  %4 = arith.select %1, %3, %3 : vector<1xi1>, i32
+  return
+}
