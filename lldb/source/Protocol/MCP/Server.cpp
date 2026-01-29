@@ -14,6 +14,7 @@
 #include "lldb/Protocol/MCP/Protocol.h"
 #include "lldb/Protocol/MCP/Transport.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Signals.h"

@@ -270,15 +270,14 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
         continue;
       Register Dst = MI.getOperand(0).getReg();
       Register Src = MI.getOperand(1).getReg();
-      if (Dst.isVirtual() &&
-          MRI->getRegClass(Dst) == &AMDGPU::VGPR_16RegClass &&
-          Src.isPhysical() &&
+      const TargetRegisterClass *DstRC = TRI->getRegClassForReg(*MRI, Dst);
+      bool IsDst16Bit = AMDGPU::VGPR_16RegClass.hasSubClassEq(DstRC);
+      if (Dst.isVirtual() && IsDst16Bit && Src.isPhysical() &&
           TRI->getRegClassForReg(*MRI, Src) == &AMDGPU::VGPR_32RegClass)
         MRI->setRegAllocationHint(Dst, 0, TRI->getSubReg(Src, AMDGPU::lo16));
       if (Src.isVirtual() &&
           MRI->getRegClass(Src) == &AMDGPU::VGPR_16RegClass &&
-          Dst.isPhysical() &&
-          TRI->getRegClassForReg(*MRI, Dst) == &AMDGPU::VGPR_32RegClass)
+          Dst.isPhysical() && DstRC == &AMDGPU::VGPR_32RegClass)
         MRI->setRegAllocationHint(Src, 0, TRI->getSubReg(Dst, AMDGPU::lo16));
       if (!Dst.isVirtual() || !Src.isVirtual())
         continue;
@@ -287,8 +286,7 @@ bool GCNPreRAOptimizationsImpl::run(MachineFunction &MF) {
         MRI->setRegAllocationHint(Dst, AMDGPURI::Size32, Src);
         MRI->setRegAllocationHint(Src, AMDGPURI::Size16, Dst);
       }
-      if (MRI->getRegClass(Dst) == &AMDGPU::VGPR_16RegClass &&
-          MRI->getRegClass(Src) == &AMDGPU::VGPR_32RegClass)
+      if (IsDst16Bit && MRI->getRegClass(Src) == &AMDGPU::VGPR_32RegClass)
         MRI->setRegAllocationHint(Dst, AMDGPURI::Size16, Src);
     }
   }

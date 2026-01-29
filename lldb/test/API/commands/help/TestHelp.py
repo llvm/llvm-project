@@ -237,12 +237,38 @@ class HelpCommandTestCase(TestBase):
 
     @no_debug_info_test
     def test_help_format_output(self):
-        """Test that help output reaches TerminalWidth."""
+        """Test that help output reaches TerminalWidth and wraps to the next
+        line if needed."""
+        self.runCmd("settings set term-width 118")
+        self.expect(
+            "help format",
+            matching=True,
+            patterns=[
+                r"^<format> -- One of the format names \(or one-character names\) that can be used to show a variable's value:\n"
+                r"\s+\"default\"\n"
+            ],
+        )
+
+        # The length of the first line will not be exactly 108 because we split
+        # at the last whitespace point before the limit.
         self.runCmd("settings set term-width 108")
         self.expect(
             "help format",
             matching=True,
-            substrs=["<format> -- One of the format names"],
+            patterns=[
+                r"^<format> -- One of the format names \(or one-character names\) that can be used to show a variable's\n"
+                r"\s+value:\n"
+            ],
+        )
+
+        self.runCmd("settings set term-width 90")
+        self.expect(
+            "help format",
+            matching=True,
+            patterns=[
+                r"<format> -- One of the format names \(or one-character names\) that can be used to show a\n"
+                r"\s+variable's value:\n"
+            ],
         )
 
     @no_debug_info_test

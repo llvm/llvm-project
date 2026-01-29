@@ -840,7 +840,7 @@ static Operation *createExpandedOp(PatternRewriter &rewriter, LinalgOp linalgOp,
                                    ExpansionInfo &expansionInfo) {
 
   return TypeSwitch<Operation *, Operation *>(linalgOp.getOperation())
-      .Case<TransposeOp>([&](TransposeOp transposeOp) {
+      .Case([&](TransposeOp transposeOp) {
         return createExpandedTransposeOp(rewriter, transposeOp,
                                          expandedOpOperands[0], outputs[0],
                                          expansionInfo);
