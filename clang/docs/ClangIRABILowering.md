@@ -30,36 +30,75 @@ This document proposes a comprehensive design for creating an MLIR-agnostic call
 ## I. Executive Summary
 
 ### 1.1 Problem Statement
-- Calling convention lowering is currently duplicated per-dialect
-- CIR incubator has partial implementation but CIR-specific
-- FIR and future dialects need similar functionality
-- Classic Clang codegen can't be reused directly (AST/LLVM IR specific)
+
+Calling convention lowering is currently implemented separately for each MLIR dialect that needs it. The CIR incubator has a partial implementation, but it's tightly coupled to CIR-specific types and operations, making it unsuitable for reuse by other dialects. This means that FIR (Fortran IR) and future MLIR dialects would need to duplicate this complex logic. While classic Clang codegen contains mature ABI lowering code, it cannot be reused directly because it's tightly coupled to Clang's AST representation and LLVM IR generation.
 
 ### 1.2 Proposed Solution
-Three-layer architecture:
-1. **Layer 1 (Dialect-Agnostic)**: Pure ABI classification logic
-2. **Layer 2 (Interface-Based)**: Type and layout abstractions
-3. **Layer 3 (Dialect-Specific)**: Operation rewriting per dialect
+
+This design proposes a three-layer architecture that separates concerns and enables code reuse. The first layer contains pure ABI classification logic that is completely dialect-agnostic, operating only on abstract type representations. The second layer provides interface-based abstractions for querying type properties and layout information, allowing the classification logic to work with any dialect's types. The third layer handles dialect-specific operation rewriting, where each dialect implements its own operation creation logic while reusing the classification results from the lower layers.
+
+```
+┌─────────────────────────────────────────────────────────────────────┐
+│                    MLIR-Agnostic ABI Lowering                       │
+│                         (Three-Layer Design)                        │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ Layer 3: Dialect-Specific Operation Rewriting                       │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                  │
+│  │ CIR Rewrite │  │ FIR Rewrite │  │ Other       │                  │
+│  │ Context     │  │ Context     │  │ Dialects    │                  │
+│  └──────┬──────┘  └───────┬─────┘  └────────┬────┘                  │
+│         │                 │                 │                       │
+│         └─────────────────┼─────────────────┘                       │
+│                           │                                         │
+└───────────────────────────┼─────────────────────────────────────────┘
+                            │ ABIRewriteContext Interface
+┌───────────────────────────┼─────────────────────────────────────────┐
+│ Layer 2: Interface-Based Type Abstractions                          │
+│                           │                                         │
+│  ┌────────────────────────▼──────────────────────────┐              │
+│  │ ABITypeInterface (TypeInterface)                  │              │
+│  │  - isRecord(), isInteger(), isFloatingPoint()     │              │
+│  │  - getNumFields(), getFieldType()                 │              │
+│  │  - getAlignof(), getSizeof()                      │              │
+│  └────────────────────────┬──────────────────────────┘              │
+│                           │                                         │
+└───────────────────────────┼─────────────────────────────────────────┘
+                            │ Abstract Type Queries
+┌───────────────────────────┼─────────────────────────────────────────┐
+│ Layer 1: Pure ABI Classification Logic (Dialect-Agnostic)           │
+│                           │                                         │
+│  ┌────────────────────────▼──────────────────────────┐              │
+│  │ ABIInfo (Target-Specific)                         │              │
+│  │  - classifyArgumentType()                         │              │
+│  │  - classifyReturnType()                           │              │
+│  └──────┬─────────────────────────┬──────────────┬───┘              │
+│         │                         │              │                  │
+│  ┌──────▼──────┐  ┌───────────────▼───┐  ┌───────▼──────┐           │
+│  │ X86_64      │  │ AArch64           │  │ Other        │           │
+│  │ ABIInfo     │  │ ABIInfo           │  │ Targets      │           │
+│  └─────────────┘  └───────────────────┘  └──────────────┘           │
+│                                                                     │
+│  Output: LowerFunctionInfo + ABIArgInfo                             │
+└─────────────────────────────────────────────────────────────────────┘
+
+```
 
 ### 1.3 Key Benefits
-- Avoids duplicating complex ABI logic across dialects
-- Maintains correct ABI compliance for all targets
-- Enables easier testing and validation
-- Provides migration path from CIR incubator
+
+This architecture avoids duplicating complex ABI logic across MLIR dialects, reducing the maintenance burden and risk of inconsistencies. It maintains correct ABI compliance for all targets by reusing proven classification algorithms. The clear separation of concerns enables easier testing and validation, as each layer can be tested independently. Additionally, the design provides a straightforward migration path from the existing CIR incubator implementation.
 
 ### 1.4 Success Criteria
-- CIR can lower x86_64 and AArch64 calling conventions correctly
-- FIR can adopt the same infrastructure
-- Test suite validates ABI compliance
-- Performance overhead < 5% vs direct implementation
 
-## II. Background and Context
+The framework will be considered successful when CIR can correctly lower x86_64 and AArch64 calling conventions with full ABI compliance. FIR should be able to adopt the same infrastructure with minimal dialect-specific adaptation. A comprehensive test suite must validate ABI compliance across all supported targets. Finally, the performance overhead should remain under 5% compared to a direct, dialect-specific implementation.
+
+## 2. Background and Context
 
 ### 2.1 What is Calling Convention Lowering?
 
-**Definition**: Transform high-level function signatures to match target ABI requirements.
+Calling convention lowering transforms high-level function signatures to match target ABI (Application Binary Interface) requirements. When a function is declared at the source level with convenient, language-level types, these types must be translated into the specific register assignments, memory layouts, and calling sequences that the target architecture expects. For example, on x86_64 System V ABI, a struct containing two 64-bit integers might be "expanded" into two separate arguments passed in registers, rather than being passed as a single aggregate:
 
-**Example** (x86_64 System V ABI):
 ```
 // High-level CIR
 func @foo(i32, struct<i64, i64>) -> i32
@@ -74,134 +113,27 @@ func @foo(i32 %arg0, i64 %arg1, i64 %arg2) -> i32
 
 ### 2.2 Why It's Complex
 
-- **Target-specific**: Each architecture has different rules
-- **Type-dependent**: Rules differ for integers, floats, structs, unions, etc.
-- **Context-sensitive**: Varargs, virtual calls, special calling conventions
-- **ABI versions**: Same target may have multiple ABI variants
+Calling convention lowering is complex for several reasons. First, it's highly target-specific: each architecture (x86_64, AArch64, RISC-V, etc.) has different rules for how arguments are passed in registers versus memory. Second, it's type-dependent: the rules differ significantly for integers, floating-point values, structs, unions, and arrays. Third, it's context-sensitive: special handling is required for varargs functions, virtual method calls, and alternative calling conventions like vectorcall or preserve_most. Finally, the same target may have multiple ABI variants (e.g., x86_64 System V vs. Windows x64), adding another dimension of complexity.
 
 ### 2.3 Existing Implementations
 
 #### Classic Clang CodeGen
-- **Location**: `clang/lib/CodeGen/`
-- **Approach**: AST → LLVM IR during codegen
-- **Pros**: Mature, handles all targets, well-tested
-- **Cons**: Tightly coupled to Clang AST and LLVM IR
+
+Classic Clang codegen (located in `clang/lib/CodeGen/`) transforms calling conventions during the AST-to-LLVM-IR lowering process. This implementation is mature and well-tested, handling all supported targets with comprehensive ABI coverage. However, it's tightly coupled to both Clang's AST representation and LLVM IR, making it difficult to reuse for MLIR-based frontends.
 
 #### CIR Incubator
-- **Location**: `clang/lib/CIR/Dialect/Transforms/TargetLowering/`
-- **Approach**: CIR ops → ABI-lowered CIR ops (MLIR pass)
-- **Pros**: Works with MLIR, adapted classic logic
-- **Cons**: CIR-specific types and operations
+
+The CIR incubator includes a calling convention lowering pass in `clang/lib/CIR/Dialect/Transforms/TargetLowering/` that transforms CIR operations into ABI-lowered CIR operations as an MLIR pass. This implementation successfully adapted logic from classic codegen to work within the MLIR framework. However, it relies on CIR-specific types and operations, preventing reuse by other MLIR dialects.
 
 #### GSoC ABI Lowering Library (WIP)
-- **Status**: PR #140112, not yet merged
-- **Approach**: Independent ABI type system, extracted from Clang
-- **Pros**: Frontend-agnostic, reusable
-- **Cons**: Still in development, Clang/LLVM IR focused
+
+The Google Summer of Code project (PR #140112, not yet merged) proposes an independent ABI type system extracted from Clang's codegen. This library aims to be frontend-agnostic and reusable across different language frontends. While promising, it's still under development and currently focuses on Clang and LLVM IR rather than MLIR abstractions.
 
 ### 2.4 Requirements for MLIR Dialects
 
-**CIR Needs**:
-- Lower C/C++ calling conventions correctly
-- Support x86_64 and AArch64 initially
-- Handle structs, unions, complex types
-- Support instance methods, virtual calls
+CIR needs to lower C/C++ calling conventions correctly, with initial support for x86_64 and AArch64 targets. It must handle structs, unions, and complex types, as well as support instance methods and virtual calls. FIR will have similar but distinct requirements in the future, needing to lower Fortran calling conventions with Fortran-specific types like complex numbers and derived types, while supporting Fortran's unique calling semantics. Both dialects share common requirements: strict target ABI compliance, efficient lowering with minimal overhead, extensibility for adding new target architectures, and comprehensive testability and validation capabilities.
 
-**FIR Needs** (future):
-- Lower Fortran calling conventions
-- Handle Fortran-specific types (complex, derived types)
-- Support Fortran calling semantics
-
-**Common Needs**:
-- Target ABI compliance
-- Efficient lowering (minimal overhead)
-- Extensibility for new targets
-- Testability and validation
-
-### 2.4.1 Fortran-Specific Considerations (FIR)
-
-**Context**: FIR team (NVIDIA Fortran frontend) will be a major consumer of this infrastructure. Fortran has unique type system features and ABI semantics that differ from C/C++.
-
-**Fortran Types**:
-
-1. **Derived Types** (Fortran's version of structs):
-   ```fortran
-   type :: MyType
-     integer :: field1
-     real :: field2
-     type(OtherType) :: field3  ! Nested derived type
-   end type
-   ```
-   - **Handling**: Similar to C structs; ABITypeInterface `getNumFields()`, `getFieldType()`, `getFieldOffsetInBits()` should work
-   - **Status**: ✅ Covered by existing design
-
-2. **COMPLEX Types**:
-   ```fortran
-   complex :: z  ! 2 floats (real part + imaginary part)
-   ```
-   - **Handling**: Struct of 2 floats; ABITypeInterface includes `isComplexType()` + `getComplexElementType()` methods
-   - **Status**: ✅ Added in interface design
-
-3. **CHARACTER Types** (with hidden length parameter):
-   ```fortran
-   subroutine foo(str)
-     character(len=*) :: str  ! str is passed + hidden length parameter
-   end subroutine
-   ```
-   - **Fortran ABI Quirk**: Character strings are passed with TWO arguments:
-     1. Pointer to string data (explicit)
-     2. Hidden length parameter (integer, passed AFTER all explicit args)
-   - **Example**: `foo(x, str, y)` → lowered to `foo(x, str_data, y, str_len)`
-   - **Challenge**: ABIRewriteContext must support hidden argument insertion at arbitrary positions
-   - **Status**: ⚠️ **Week 4 FIR check-in will design solution**
-
-4. **Arrays** (descriptor-based, not C-style):
-   ```fortran
-   real, dimension(:,:) :: matrix  ! Allocatable, rank-2
-   ```
-   - **Fortran Reality**: Arrays have **descriptors** (hidden metadata: bounds, strides, pointer to data)
-   - Descriptor is passed, not the array itself
-   - **Challenge**: How to represent descriptor in ABITypeInterface?
-   - **Options**: 
-     - A) Add descriptor-specific methods (`isDescriptorType()`, `getDescriptorElementType()`)
-     - B) Treat as opaque struct (don't expose internals to ABI classification)
-   - **Status**: ⚠️ **Week 4 FIR check-in will decide approach**
-
-**Fortran ABI Semantics**:
-
-1. **Default Pass-by-Reference**:
-   - C/C++: Small types passed by value, large types by pointer
-   - **Fortran**: EVERYTHING passed by reference (except `INTENT(IN) VALUE`)
-   ```fortran
-   subroutine foo(x)
-     integer :: x  ! Passed by REFERENCE (pointer to integer)
-   end subroutine
-   ```
-   - **Handling**: ABIArgInfo `Indirect` kind (already exists)
-   - **Status**: ✅ Should work (FIR classifies everything as `Indirect` by default)
-
-2. **CHARACTER Hidden Length Argument Reordering**:
-   - gfortran ABI: CHARACTER lengths passed AFTER all explicit args
-   - Requires non-trivial argument reordering
-   - **Requires**: ABIRewriteContext extension for hidden arguments
-   - **Status**: ⚠️ **Design TBD in Week 4**
-
-**FIR Integration Estimate**:
-- **Per-Dialect Cost**: 1,000-1,200 lines (vs 800-1,000 for dialects without hidden args)
-- **Why Higher**: CHARACTER + descriptor handling, type-bound procedures
-- **FIR Types to Implement**: 8-10 types (IntegerType, RealType, LogicalType, ComplexType, CharacterType, RecordType, SequenceType, BoxType, PointerType, ReferenceType)
-
-**Testing Challenges**:
-- **No "Classic Fortran Codegen" Baseline**: Unlike CIR (compare with classic Clang), FIR has no equivalent
-- **Validation Approach**: Differential testing against `gfortran` or `ifort`
-- **Test Coverage**: 50-100 Fortran-specific test cases (CHARACTER, arrays, derived types, COMPLEX, interop with C)
-
-**Week 4 Validation Will Determine**:
-- Feasibility of CHARACTER hidden length mechanism
-- Array descriptor representation approach
-- Whether ABITypeInterface/ABIRewriteContext need Fortran-specific extensions
-
-## III. Design Overview
+## 3. Design Overview
 
 ### 3.1 Architecture Diagram
 
@@ -257,7 +189,179 @@ func @foo(i32 %arg0, i64 %arg1, i64 %arg2) -> i32
 5. **ABIRewriteContext**: Dialect-specific operation rewriting
 6. **TargetRegistry**: Maps target triple to ABI implementation
 
-## IV. Detailed Component Design
+### 3.4 ABI Lowering Flow: How the Pieces Fit Together
+
+This section describes the end-to-end flow of ABI lowering, showing how all interfaces and components work together.
+
+#### Step 1: Function Signature Analysis
+
+When the ABI lowering pass encounters a function operation:
+
+```
+Input: func @foo(%arg0: !cir.int<u, 32>, %arg1: !cir.struct<{!cir.int<u, 64>, !cir.int<u, 64>}>) -> !cir.int<u, 32>
+```
+
+#### Step 2: Type Classification via ABITypeInterface
+
+For each argument and the return type, the target-specific `ABIInfo` queries type properties through `ABITypeInterface`:
+
+```cpp
+// For %arg1 (struct type)
+ABITypeInterface typeIface = arg1Type.cast<ABITypeInterface>();
+bool isRecord = typeIface.isRecord();           // true
+unsigned numFields = typeIface.getNumFields();  // 2
+Type field0 = typeIface.getFieldType(0);        // i64
+Type field1 = typeIface.getFieldType(1);        // i64
+```
+
+**Key Point**: `ABITypeInterface` allows the `ABIInfo` to inspect types without knowing about CIR-specific type classes.
+
+#### Step 3: ABI Classification
+
+The target `ABIInfo` (e.g., `X86_64ABIInfo`) applies platform-specific rules:
+
+```cpp
+X86_64ABIInfo::classifyArgumentType(mlir::Type argType, LowerFunctionInfo &FI) {
+  // For struct<i64, i64>:
+  // - Check size: 16 bytes (fits in 2 registers)
+  // - Classify: INTEGER (x86_64 System V ABI rule)
+  // - Result: Expand into two i64 arguments
+  return ABIArgInfo::getExpand();
+}
+```
+
+Output: `LowerFunctionInfo` containing classification for all arguments:
+- `%arg0 (i32)` → `ABIArgInfo::Direct` (pass as-is)
+- `%arg1 (struct)` → `ABIArgInfo::Expand` (split into two i64 fields)
+- Return type → `ABIArgInfo::Direct`
+
+#### Step 4: Function Signature Rewriting
+
+Using `ABIRewriteContext`, the dialect-specific pass rewrites the function:
+
+```cpp
+ABIRewriteContext &ctx = getDialectRewriteContext();
+
+// Create new function with lowered signature
+FunctionType newType = ...; // (i32, i64, i64) -> i32
+Operation *newFunc = ctx.createFunction(loc, "foo", newType);
+```
+
+#### Step 5: Argument Expansion
+
+For each call site, expand struct arguments using `ABIRewriteContext`:
+
+```cpp
+// Original call: call @foo(%val0, %structVal)
+// Need to extract struct fields:
+
+Value field0 = ctx.createExtractValue(loc, structVal, {0}); // extract first i64
+Value field1 = ctx.createExtractValue(loc, structVal, {1}); // extract second i64
+
+// New call with expanded arguments
+ctx.createCall(loc, newFunc, {resultType}, {val0, field0, field1});
+```
+
+**Key Point**: `ABIRewriteContext` abstracts the dialect-specific operation creation, so the lowering logic doesn't need to know about CIR operations.
+
+#### Step 6: Return Value Handling
+
+For functions returning large structs (indirect return):
+
+```cpp
+// If return type is classified as Indirect:
+Value sretPtr = ctx.createAlloca(loc, retType, alignment);
+ctx.createCall(loc, func, {}, {sretPtr, ...otherArgs});
+Value result = ctx.createLoad(loc, sretPtr);
+```
+
+#### Complete Flow Diagram
+
+```
+┌─────────────────────────────────────────────────────────────────┐
+│ Input: High-Level Function (CIR/FIR/other dialect)              │
+│         func @foo(%arg0: i32, %arg1: struct<i64,i64>) -> i32    │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ Step 1: Extract Types                                           │
+│   For each parameter: mlir::Type                                │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ Step 2: Query Type Properties (ABITypeInterface)                │
+│   typeIface.isRecord(), getNumFields(), getFieldType()          │
+│   └─> Type-agnostic inspection (no CIR/FIR knowledge)           │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ Step 3: Classify (Target ABIInfo)                               │
+│   X86_64ABIInfo::classifyArgumentType(type, functionInfo)       │
+│   Applies x86_64 System V rules                                 │
+│   └─> Produces: ABIArgInfo (Direct, Indirect, Expand, etc.)     │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ Step 4: Build LowerFunctionInfo                                 │
+│   Aggregate all ABIArgInfo results                              │
+│   └─> Complete calling convention specification                 │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ Step 5: Rewrite Function (ABIRewriteContext)                    │
+│   ctx.createFunction(loc, name, newType)                        │
+│   New signature: (i32, i64, i64) -> i32                         │
+│   └─> Dialect-specific operation creation                       │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ Step 6: Rewrite Call Sites (ABIRewriteContext)                  │
+│   ctx.createExtractValue() - expand struct                      │
+│   ctx.createCall() - call with expanded args                    │
+│   └─> Dialect-specific operation creation                       │
+└────────────────────────┬────────────────────────────────────────┘
+                         │
+                         ▼
+┌─────────────────────────────────────────────────────────────────┐
+│ Output: ABI-Lowered Function                                    │
+│         func @foo(%arg0: i32, %arg1: i64, %arg2: i64) -> i32    │
+└─────────────────────────────────────────────────────────────────┘
+```
+
+#### Key Interactions Between Components
+
+**ABITypeInterface ↔ ABIInfo**:
+- `ABIInfo` calls `ABITypeInterface` methods to inspect types
+- Enables target logic to work with any dialect's types
+- Example: `isRecord()`, `getNumFields()`, `getFieldType()`
+
+**ABIInfo → ABIArgInfo**:
+- `ABIInfo` produces `ABIArgInfo` for each argument
+- `ABIArgInfo` is dialect-agnostic (just describes "how to pass")
+- Stored in `LowerFunctionInfo`
+
+**LowerFunctionInfo → ABIRewriteContext**:
+- Pass reads `LowerFunctionInfo` to know what transformations to apply
+- Calls `ABIRewriteContext` methods to perform actual IR rewriting
+- Example: If `ABIArgInfo::Expand`, call `createExtractValue()` for each field
+
+**ABIRewriteContext ↔ Dialect Operations**:
+- Dialect implements `ABIRewriteContext` interface
+- Returns dialect-specific operations (cir.call, fir.call, etc.)
+- ABI lowering logic never directly creates dialect operations
+
+This separation enables:
+1. **Target logic reuse**: `ABIInfo` works with any dialect via interfaces
+2. **Dialect flexibility**: Each dialect controls its own operation creation
+3. **Testability**: Can test ABIInfo classification independently of dialect operations
+
+## 4. Detailed Component Design
 
 ### 4.1 ABIArgInfo (Already Exists in CIR)
 
@@ -811,7 +915,7 @@ std::unique_ptr<ABIInfo> TargetABIRegistry::createABIInfo(
 
 **Note**: This phase is post-graduation and not included in the 17-19 week timeline.
 
-## VI. Target-Specific Details
+## 6. Target-Specific Details
 
 ### 6.1 x86_64 System V ABI
 
@@ -941,7 +1045,7 @@ TEST(CIRCallConv, FunctionRewrite) {
 - Check for unnecessary copies or spills
 - Verify register allocation is similar
 
-## VIII. Migration from CIR Incubator
+## 8. Migration from CIR Incubator
 
 ### 8.1 Migration Steps
 
@@ -990,7 +1094,7 @@ Once new implementation is stable:
 3. Keep old code for 1-2 releases for safety (Months 1-6)
 4. Remove old implementation (Month 6+)
 
-## IX. Future Work
+## 9. Future Work
 
 ### 9.1 Additional Targets
 
@@ -1358,7 +1462,7 @@ class ABILowering {
 - **Description**: Edge cases and corner cases in ABI handling are complex
 - **Mitigation**: Incremental development, frequent validation against classic codegen, comprehensive testing
 
-## XI. Success Metrics
+## 11. Success Metrics
 
 ### 11.1 Functional Metrics
 
@@ -1390,7 +1494,7 @@ class ABILowering {
 - ✅ New target can be added with < 1 week effort (given ABI spec)
 - ✅ ABITypeInterface requires < 10 methods implementation per dialect
 
-## XII. References
+## 12. References
 
 ### 12.1 ABI Specifications
 
@@ -1416,7 +1520,7 @@ class ABILowering {
 - CIR Incubator: `clang/lib/CIR/Dialect/Transforms/TargetLowering/`
 - SPIR-V ABI: `mlir/lib/Dialect/SPIRV/IR/TargetAndABI.cpp`
 
-## XIII. Appendices
+## 13. Appendices
 
 ### A. Glossary
 
