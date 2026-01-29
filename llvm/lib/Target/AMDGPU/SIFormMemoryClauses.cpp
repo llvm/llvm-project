@@ -276,10 +276,29 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
   unsigned FuncMaxClause = MF.getFunction().getFnAttributeAsParsedInteger(
       "amdgpu-max-memory-clause", MaxClause);
 
-  for (MachineBasicBlock &MBB : MF) {
-    GCNDownwardRPTracker RPT(*LIS);
+  SmallVector<MachineInstr *, 16> FirstBBClauseMI;
+  for (auto &MBB : MF) {
+    for (auto &MI : MBB) {
+      if (!MI.isMetaInstruction() &&
+          isValidClauseInst(MI, isVMEMClauseInst(MI))) {
+        FirstBBClauseMI.push_back(&MI);
+        break;
+      }
+    }
+  }
+  if (FirstBBClauseMI.empty())
+    return false;
+
+  auto LRM = getLiveRegMap(FirstBBClauseMI, false /*After*/, *LIS);
+
+  GCNDownwardRPTracker RPT(*LIS);
+  for (auto *FirstMI : FirstBBClauseMI) {
+    auto &MBB = *FirstMI->getParent();
+    RPT.reset(*FirstMI, &LRM[FirstMI]);
     MachineBasicBlock::instr_iterator Next;
-    for (auto I = MBB.instr_begin(), E = MBB.instr_end(); I != E; I = Next) {
+    for (auto I = MachineBasicBlock::instr_iterator(FirstMI),
+              E = MBB.instr_end();
+         I != E; I = Next) {
       MachineInstr &MI = *I;
       Next = std::next(I);
 
@@ -288,12 +307,11 @@ bool SIFormMemoryClausesImpl::run(MachineFunction &MF) {
 
       bool IsVMEM = isVMEMClauseInst(MI);
 
-      if (!isValidClauseInst(MI, IsVMEM))
-        continue;
+      if (&MI != FirstMI) {
+        if (!isValidClauseInst(MI, IsVMEM))
+          continue;
 
-      if (!RPT.getNext().isValid())
-        RPT.reset(MI);
-      else { // Advance the state to the current MI.
+        // Advance the state to the current MI.
         RPT.advance(MachineBasicBlock::const_iterator(MI));
         RPT.advanceBeforeNext();
       }
