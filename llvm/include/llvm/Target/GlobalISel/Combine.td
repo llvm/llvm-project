@@ -859,7 +859,6 @@ def merge_unmerge : GICombineRule<
            // Check if first source comes from G_UNMERGE_VALUES.
            Register FirstMergeSrc = ${merge_srcs}[0].getReg();
            MachineInstr *UnmergeMI = MRI.getVRegDef(FirstMergeSrc);
-
            if (!UnmergeMI || UnmergeMI->getOpcode() != TargetOpcode::G_UNMERGE_VALUES)
              return false;
 
@@ -881,17 +880,17 @@ def merge_unmerge : GICombineRule<
                return false;
            }
 
-           // Get the source of the unmerge.
-           ${src} = UnmergeMI->getOperand(NumUnmergeDefs).getReg();
-
            // Check size compatibility.
+           ${src} = UnmergeMI->getOperand(NumUnmergeDefs).getReg();
            LLT SrcTy = MRI.getType(${src});
            LLT DstTy = MRI.getType(${dst}.getReg());
            if (SrcTy.getSizeInBits() != DstTy.getSizeInBits())
              return false;
 
+           // Check bitcast legality.
            if (SrcTy != DstTy) {
-             LegalityQuery Query(TargetOpcode::G_BITCAST, {DstTy, SrcTy});
+             std::array<LLT, 2> Types = {{DstTy, SrcTy}};
+             LegalityQuery Query(TargetOpcode::G_BITCAST, Types);
              if (!Helper.isLegalOrBeforeLegalizer(Query))
                return false;
            }
@@ -907,7 +906,6 @@ def merge_unmerge : GICombineRule<
            if (SrcTy == DstTy) {
              Helper.replaceRegWith(MRI, ${dst}.getReg(), ${src});
            } else {
-
              Helper.getBuilder().buildBitcast(${dst}.getReg(), ${src});
            }
 
