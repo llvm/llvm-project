@@ -855,7 +855,8 @@ define nofpclass(snan) float @fneg_nsz_fabs_src_known_negative_or_poszero_multip
 ; CHECK-SAME: (float nofpclass(nan pinf psub pnorm) [[ALWAYS_NEGATIVE_OR_PZERO:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ALWAYS_NEGATIVE_OR_PZERO]])
 ; CHECK-NEXT:    store float [[FABS]], ptr [[PTR]], align 4
-; CHECK-NEXT:    ret float [[ALWAYS_NEGATIVE_OR_PZERO]]
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg nsz float [[FABS]]
+; CHECK-NEXT:    ret float [[FNEG_FABS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %always.negative.or.pzero)
   store float %fabs, ptr %ptr
@@ -892,7 +893,8 @@ define nofpclass(snan) float @fneg_fabs_src_known_negative_multiple_uses_fabs(fl
 ; CHECK-SAME: (float nofpclass(nan pinf pzero psub pnorm) [[ALWAYS_NEGATIVE:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ALWAYS_NEGATIVE]])
 ; CHECK-NEXT:    store float [[FABS]], ptr [[PTR]], align 4
-; CHECK-NEXT:    ret float [[ALWAYS_NEGATIVE]]
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    ret float [[FNEG_FABS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %always.negative)
   store float %fabs, ptr %ptr
@@ -964,7 +966,7 @@ define nofpclass(snan) float @fneg_nsz_fabs__known_positive__sign_known_positive
 ; CHECK-SAME: (float nofpclass(nan ninf nsub nnorm) [[KNOWN_POSITIVE_OR_NEG_ZERO:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[KNOWN_POSITIVE_OR_NEG_ZERO]])
 ; CHECK-NEXT:    store float [[FABS]], ptr [[PTR]], align 4
-; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg nsz float [[KNOWN_POSITIVE_OR_NEG_ZERO]]
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg nsz float [[FABS]]
 ; CHECK-NEXT:    ret float [[FNEG_FABS]]
 ;
   %fabs = call float @llvm.fabs.f32(float %known.positive.or.neg.zero)
@@ -1103,7 +1105,8 @@ define nofpclass(nan) float @fneg_fabs_multiple_uses_fabs(i1 %cond, float %x, pt
 ; CHECK-LABEL: define nofpclass(nan) float @fneg_fabs_multiple_uses_fabs
 ; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[NAN:%.*]] = call float @nan_only()
-; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    [[SEL:%.*]] = select i1 [[COND]], float [[X]], float [[NAN]]
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[SEL]])
 ; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
 ; CHECK-NEXT:    store float [[FABS]], ptr [[PTR]], align 4
 ; CHECK-NEXT:    ret float [[FNEG_FABS]]

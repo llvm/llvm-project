@@ -2287,7 +2287,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
     Value *FNegSrc = I->getOperand(0);
     Value *FNegFAbsSrc;
-    if (match(FNegSrc, m_FAbs(m_Value(FNegFAbsSrc)))) {
+    if (match(FNegSrc, m_OneUse(m_FAbs(m_Value(FNegFAbsSrc))))) {
       KnownFPClass KnownSrc;
       if (SimplifyDemandedFPClass(cast<Instruction>(FNegSrc), 0,
                                   llvm::unknown_sign(DemandedMask), KnownSrc,
