@@ -469,8 +469,8 @@ Use the system clang libraries installed in I<path>.
 
 =back
 
-It is best to use the latest release of the clang libraries (14.0),
-although any release since 2.9 should work as well.
+It is best to use the latest release of the clang libraries (16.0),
+although any release since 3.5 should work as well.
 Note that if you build the clang libraries from source,
 then you need to make sure they are also installed (using C<make install>).
 If the compiler that was used to compile the clang libraries
@@ -708,9 +708,13 @@ went wrong.
 The function C<isl_stat_non_null> converts an isl object pointer
 to an C<isl_stat>, returning C<isl_stat_ok> if the object pointer is valid and
 C<isl_stat_error> if it is C<NULL>.
+Similarly, the function C<isl_stat_non_error_bool> converts an C<isl_bool>
+to an C<isl_stat>, returning C<isl_stat_ok> if the C<isl_bool>
+represents a valid result and C<isl_stat_error> if it is C<isl_bool_error>.
 
 	#include <isl/ctx.h>
 	isl_stat isl_stat_non_null(void *obj);
+	isl_stat isl_stat_non_error_bool(isl_bool b);
 
 See L</"Error Handling"> for more information on
 C<isl_size_error>, C<isl_bool_error> and C<isl_stat_error>.
@@ -3048,6 +3052,15 @@ Some simple quasipolynomials can be created using the following functions.
 Recall that the space in which a quasipolynomial lives is a map space
 with a one-dimensional range.  The C<domain> argument in some of
 the functions above corresponds to the domain of this map space.
+
+A quasi-polynomial that can also be represented as a quasi-affine expression
+can be converted using the function below.
+
+	#include <isl/polynomial.h>
+	isl_bool isl_qpolynomial_isa_aff(
+		__isl_keep isl_qpolynomial *qp);
+	__isl_give isl_aff *isl_qpolynomial_as_aff(
+		__isl_take isl_qpolynomial *qp);
 
 Quasipolynomials can be copied and freed again using the following
 functions.
@@ -5418,13 +5431,38 @@ earlier dimensions before those that involve later dimensions.
 	#include <isl/space.h>
 	__isl_give isl_space *isl_space_reverse(
 		__isl_take isl_space *space);
+	__isl_give isl_space *isl_space_wrapped_reverse(
+		__isl_take isl_space *space);
+	__isl_give isl_space *isl_space_domain_reverse(
+		__isl_take isl_space *space);
 	__isl_give isl_space *isl_space_range_reverse(
 		__isl_take isl_space *space);
+
+	#include <isl/aff.h>
+	__isl_give isl_aff *isl_aff_domain_reverse(
+		__isl_take isl_aff *aff);
+	__isl_give isl_multi_aff *
+	isl_multi_aff_domain_reverse(
+		__isl_take isl_multi_aff *ma);
+	__isl_give isl_pw_aff *isl_pw_aff_domain_reverse(
+		__isl_take isl_pw_aff *pa);
+	__isl_give isl_pw_multi_aff *
+	isl_pw_multi_aff_domain_reverse(
+		__isl_take isl_pw_multi_aff *pma);
+	__isl_give isl_multi_pw_aff *
+	isl_multi_pw_aff_domain_reverse(
+		__isl_take isl_multi_pw_aff *mpa);
+
+	#include <isl/set.h>
+	__isl_give isl_set *isl_set_wrapped_reverse(
+		__isl_take isl_set *set);
 
 	#include <isl/map.h>
 	__isl_give isl_basic_map *isl_basic_map_reverse(
 		__isl_take isl_basic_map *bmap);
 	__isl_give isl_map *isl_map_reverse(
+		__isl_take isl_map *map);
+	__isl_give isl_map *isl_map_domain_reverse(
 		__isl_take isl_map *map);
 	__isl_give isl_map *isl_map_range_reverse(
 		__isl_take isl_map *map);
@@ -5432,13 +5470,29 @@ earlier dimensions before those that involve later dimensions.
 	#include <isl/union_map.h>
 	__isl_give isl_union_map *isl_union_map_reverse(
 		__isl_take isl_union_map *umap);
+	__isl_give isl_union_map *isl_union_map_domain_reverse(
+		__isl_take isl_union_map *umap);
 	__isl_give isl_union_map *isl_union_map_range_reverse(
 		__isl_take isl_union_map *umap);
+
+	#include <isl/polynomial.h>
+	__isl_give isl_qpolynomial *
+	isl_qpolynomial_domain_reverse(
+		__isl_take isl_qpolynomial *qp);
+	__isl_give isl_pw_qpolynomial *
+	isl_pw_qpolynomial_domain_reverse(
+		__isl_take isl_pw_qpolynomial *pwqp);
+	__isl_give isl_union_pw_qpolynomial *
+	isl_union_pw_qpolynomial_domain_reverse(
+		__isl_take isl_union_pw_qpolynomial *upwqp);
 
 The function C<isl_space_range_reverse> reverses the relation
 that is embedded in the range of the input map space.
 The identifier of the range, if any, is only preserved
 if this embedded relation has identical input and output tuples.
+Similarly for C<isl_space_domain_reverse>.
+Along the same lines, C<isl_space_wrapped_reverse> reverses
+the relation that is embedded in a set space.
 
 =item * Tuple binding
 
@@ -6499,6 +6553,14 @@ The box can be copied and freed using the following functions.
 	__isl_null isl_fixed_box *isl_fixed_box_free(
 		__isl_take isl_fixed_box *box);
 
+An object of type C<isl_fixed_box> can be read from input
+using the following function.
+
+	#include <isl/fixed_box.h>
+	__isl_give isl_fixed_box *
+	isl_fixed_box_read_from_str(isl_ctx *ctx,
+		const char *str);
+
 A representation of the information contained in an object
 of type C<isl_fixed_box> can be obtained using
 
@@ -7063,12 +7125,28 @@ All parameters need to be named.
 	__isl_give isl_map *isl_map_drop_unused_params(
 		__isl_take isl_map *map);
 
+	#include <isl/union_set.h>
+	__isl_give isl_union_set *
+	isl_union_set_drop_unused_params(
+		__isl_take isl_union_set *uset);
+
+	#include <isl/union_map.h>
+	__isl_give isl_union_map *
+	isl_union_map_drop_unused_params(
+		__isl_take isl_union_map *umap);
+
 	#include <isl/aff.h>
 	__isl_give isl_pw_aff *isl_pw_aff_drop_unused_params(
 		__isl_take isl_pw_aff *pa);
 	__isl_give isl_pw_multi_aff *
 	isl_pw_multi_aff_drop_unused_params(
 		__isl_take isl_pw_multi_aff *pma);
+	__isl_give isl_union_pw_aff *
+	isl_union_pw_aff_drop_unused_params(
+		__isl_take isl_union_pw_aff *upa);
+	__isl_give isl_union_pw_multi_aff *
+	isl_union_pw_multi_aff_drop_unused_params(
+		__isl_take isl_union_pw_multi_aff *upma);
 
 	#include <isl/polynomial.h>
 	__isl_give isl_pw_qpolynomial *
@@ -7077,6 +7155,12 @@ All parameters need to be named.
 	__isl_give isl_pw_qpolynomial_fold *
 	isl_pw_qpolynomial_fold_drop_unused_params(
 		__isl_take isl_pw_qpolynomial_fold *pwf);
+	__isl_give isl_union_pw_qpolynomial *
+	isl_union_pw_qpolynomial_drop_unused_params(
+		__isl_take isl_union_pw_qpolynomial *upwqp);
+	__isl_give isl_union_pw_qpolynomial_fold *
+	isl_union_pw_qpolynomial_fold_drop_unused_params(
+		__isl_take isl_union_pw_qpolynomial_fold *upwf);
 
 =item * Unary Arithmetic Operations
 
@@ -7409,6 +7493,9 @@ the same (number of) parameters.
 		__isl_take isl_set *range);
 
 	#include <isl/map.h>
+	__isl_give isl_basic_map *isl_basic_map_intersect_params(
+		__isl_take isl_basic_map *bmap,
+		__isl_take isl_basic_set *bset);
 	__isl_give isl_basic_map *isl_basic_map_intersect_domain(
 		__isl_take isl_basic_map *bmap,
 		__isl_take isl_basic_set *bset);

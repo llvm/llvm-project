@@ -258,9 +258,8 @@ int IRTranslator::getOrCreateFrameIndex(const AllocaInst &AI) {
   if (!Inserted)
     return MapEntry->second;
 
-  uint64_t ElementSize = DL->getTypeAllocSize(AI.getAllocatedType());
   uint64_t Size =
-      ElementSize * cast<ConstantInt>(AI.getArraySize())->getZExtValue();
+      AI.getAllocationSize(*DL).value_or(TypeSize::getZero()).getFixedValue();
 
   // Always allocate at least one byte.
   Size = std::max<uint64_t>(Size, 1u);
@@ -2355,18 +2354,6 @@ bool IRTranslator::translateKnownIntrinsic(const CallInst &CI, Intrinsic::ID ID,
     }
     return true;
   }
-  case Intrinsic::convert_from_fp16:
-    // FIXME: This intrinsic should probably be removed from the IR.
-    MIRBuilder.buildFPExt(getOrCreateVReg(CI),
-                          getOrCreateVReg(*CI.getArgOperand(0)),
-                          MachineInstr::copyFlagsFromInstruction(CI));
-    return true;
-  case Intrinsic::convert_to_fp16:
-    // FIXME: This intrinsic should probably be removed from the IR.
-    MIRBuilder.buildFPTrunc(getOrCreateVReg(CI),
-                            getOrCreateVReg(*CI.getArgOperand(0)),
-                            MachineInstr::copyFlagsFromInstruction(CI));
-    return true;
   case Intrinsic::frexp: {
     ArrayRef<Register> VRegs = getOrCreateVRegs(CI);
     MIRBuilder.buildFFrexp(VRegs[0], VRegs[1],
@@ -3227,7 +3214,7 @@ bool IRTranslator::translateAlloca(const User &U,
       MIRBuilder.buildConstant(IntPtrTy, ~(uint64_t)(StackAlign.value() - 1));
   auto AlignedAlloc = MIRBuilder.buildAnd(IntPtrTy, AllocAdd, AlignCst);
 
-  Align Alignment = std::max(AI.getAlign(), DL->getPrefTypeAlign(Ty));
+  Align Alignment = AI.getAlign();
   if (Alignment <= StackAlign)
     Alignment = Align(1);
   MIRBuilder.buildDynStackAlloc(getOrCreateVReg(AI), AlignedAlloc, Alignment);

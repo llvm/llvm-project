@@ -123,7 +123,7 @@ public:
     EmitCommentsAndEOL();
   }
 
-  void emitSyntaxDirective() override;
+  void emitSyntaxDirective(StringRef Syntax, StringRef Options) override;
 
   void EmitCommentsAndEOL();
 
@@ -274,6 +274,7 @@ public:
 
   void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                          unsigned MaxBytesToEmit = 0) override;
+  void emitPrefAlign(Align Alignment) override;
 
   void emitValueToOffset(const MCExpr *Offset,
                          unsigned char Value,
@@ -798,14 +799,11 @@ void MCAsmStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
   EmitEOL();
 }
 
-void MCAsmStreamer::emitSyntaxDirective() {
-  if (MAI->getAssemblerDialect() == 1) {
-    OS << "\t.intel_syntax noprefix";
-    EmitEOL();
-  }
-  // FIXME: Currently emit unprefix'ed registers.
-  // The intel_syntax directive has one optional argument
-  // with may have a value of prefix or noprefix.
+void MCAsmStreamer::emitSyntaxDirective(StringRef Syntax, StringRef Options) {
+  OS << "\t." << Syntax << "_syntax";
+  if (!Options.empty())
+    OS << " " << Options;
+  EmitEOL();
 }
 
 void MCAsmStreamer::beginCOFFSymbolDef(const MCSymbol *Symbol) {
@@ -1540,6 +1538,11 @@ void MCAsmStreamer::emitCodeAlignment(Align Alignment,
                            MaxBytesToEmit);
   else
     emitAlignmentDirective(Alignment.value(), std::nullopt, 1, MaxBytesToEmit);
+}
+
+void MCAsmStreamer::emitPrefAlign(Align Alignment) {
+  OS << "\t.prefalign\t" << Alignment.value();
+  EmitEOL();
 }
 
 void MCAsmStreamer::emitValueToOffset(const MCExpr *Offset,
