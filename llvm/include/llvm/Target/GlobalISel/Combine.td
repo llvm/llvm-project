@@ -854,8 +854,6 @@ def merge_unmerge : GICombineRule<
   (defs root:$dst, register_matchinfo:$src),
   (match (G_MERGE_VALUES $dst, GIVariadic<1>:$merge_srcs):$merge,
          [{
-           assert(!${merge_srcs}.empty() && "GIVariadic<1> should guarantee non-empty.");
-
            // Check if first source comes from G_UNMERGE_VALUES.
            Register FirstMergeSrc = ${merge_srcs}[0].getReg();
            MachineInstr *UnmergeMI = MRI.getVRegDef(FirstMergeSrc);
