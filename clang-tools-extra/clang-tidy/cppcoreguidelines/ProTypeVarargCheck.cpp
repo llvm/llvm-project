@@ -55,6 +55,7 @@ static constexpr StringRef AllowedVariadics[] = {
     "__builtin_preserve_access_index",
     "__builtin_nontemporal_store",
     "__builtin_nontemporal_load",
+    "__builtin_popcountg",              
     "__builtin_ms_va_start",
     // clang-format on
 };

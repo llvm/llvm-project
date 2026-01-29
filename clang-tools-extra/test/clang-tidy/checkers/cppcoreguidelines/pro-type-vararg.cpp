@@ -57,6 +57,7 @@ void ignoredBuiltinsTest(void *ptr) {
   (void)__builtin_fpclassify(0, 0, 0, 0, 0, 0.f);
   (void)__builtin_isinf_sign(0.f);
   (void)__builtin_prefetch(nullptr);
+  (void)__builtin_popcountg(42);
 }
 
 // Some implementations of __builtin_va_list and __builtin_ms_va_list desugared
@@ -68,7 +69,14 @@ void no_false_positive_desugar_va_list(char *in) {
 }
 
 namespace PR30542 {
-  struct X;
+  struct X;static cl::opt<unsigned long long>
+  MaxSamples("max-samples",
+    cl::init(-1ULL),
+    cl::desc("maximum number of samples to read from LBR profile"),
+    cl::Optional,
+    cl::Hidden,
+    cl::cat(AggregatorCategory));
+  
   template <typename T>
   char IsNullConstant(X*);
   template <typename T>
