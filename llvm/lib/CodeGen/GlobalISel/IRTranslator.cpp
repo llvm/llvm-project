@@ -936,7 +936,14 @@ void IRTranslator::emitSwitchCase(SwitchCG::CaseBlock &CB,
 
   const LLT i1Ty = LLT::scalar(1);
   // Build the compare.
-  if (!CB.CmpMHS) {
+  if (CB.EmitAnd) {
+    const LLT Ty = getLLTForType(*CB.CmpRHS->getType(), *DL);
+    Register CondLHS = getOrCreateVReg(*CB.CmpLHS);
+    Register C = getOrCreateVReg(*CB.CmpRHS);
+    Register And = MIB.buildAnd(Ty, CondLHS, C).getReg(0);
+    auto Zero = MIB.buildConstant(Ty, 0);
+    Cond = MIB.buildICmp(CmpInst::ICMP_EQ, i1Ty, And, Zero).getReg(0);
+  } else if (!CB.CmpMHS) {
     const auto *CI = dyn_cast<ConstantInt>(CB.CmpRHS);
     // For conditional branch lowering, we might try to do something silly like
     // emit an G_ICMP to compare an existing G_ICMP i1 result with true. If so,
@@ -1064,18 +1071,15 @@ bool IRTranslator::lowerJumpTableWorkItem(SwitchCG::SwitchWorkListItem W,
   }
   return true;
 }
-bool IRTranslator::lowerSwitchRangeWorkItem(SwitchCG::CaseClusterIt I,
-                                            Value *Cond,
-                                            MachineBasicBlock *Fallthrough,
-                                            bool FallthroughUnreachable,
-                                            BranchProbability UnhandledProbs,
-                                            MachineBasicBlock *CurMBB,
-                                            MachineIRBuilder &MIB,
-                                            MachineBasicBlock *SwitchMBB) {
+bool IRTranslator::lowerSwitchAndOrRangeWorkItem(
+    SwitchCG::CaseClusterIt I, Value *Cond, MachineBasicBlock *Fallthrough,
+    bool FallthroughUnreachable, BranchProbability UnhandledProbs,
+    MachineBasicBlock *CurMBB, MachineIRBuilder &MIB,
+    MachineBasicBlock *SwitchMBB) {
   using namespace SwitchCG;
   const Value *RHS, *LHS, *MHS;
   CmpInst::Predicate Pred;
-  if (I->Low == I->High) {
+  if (I->Low == I->High || I->Kind == CC_And) {
     // Check Cond == I->Low.
     Pred = CmpInst::ICMP_EQ;
     LHS = Cond;
@@ -1093,6 +1097,7 @@ bool IRTranslator::lowerSwitchRangeWorkItem(SwitchCG::CaseClusterIt I,
   // The false probability is the sum of all unhandled cases.
   CaseBlock CB(Pred, FallthroughUnreachable, LHS, RHS, MHS, I->MBB, Fallthrough,
                CurMBB, MIB.getDebugLoc(), I->Prob, UnhandledProbs);
+  CB.EmitAnd = I->Kind == CC_And;
 
   emitSwitchCase(CB, SwitchMBB, MIB);
   return true;
@@ -1332,10 +1337,11 @@ bool IRTranslator::lowerSwitchWorkItem(SwitchCG::SwitchWorkListItem W,
       }
       break;
     }
+    case CC_And:
     case CC_Range: {
-      if (!lowerSwitchRangeWorkItem(I, Cond, Fallthrough,
-                                    FallthroughUnreachable, UnhandledProbs,
-                                    CurMBB, MIB, SwitchMBB)) {
+      if (!lowerSwitchAndOrRangeWorkItem(I, Cond, Fallthrough,
+                                         FallthroughUnreachable, UnhandledProbs,
+                                         CurMBB, MIB, SwitchMBB)) {
         LLVM_DEBUG(dbgs() << "Failed to lower switch range");
         return false;
       }

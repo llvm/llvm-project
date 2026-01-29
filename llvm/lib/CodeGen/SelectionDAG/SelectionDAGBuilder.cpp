@@ -2927,7 +2927,17 @@ void SelectionDAGBuilder::visitSwitchCase(CaseBlock &CB,
   EVT MemVT = TLI.getMemValueType(DAG.getDataLayout(), CB.CmpLHS->getType());
 
   // Build the setcc now.
-  if (!CB.CmpMHS) {
+  if (CB.EmitAnd) {
+    SDLoc dl = getCurSDLoc();
+
+    const TargetLowering &TLI = DAG.getTargetLoweringInfo();
+    EVT VT = TLI.getValueType(DAG.getDataLayout(), CB.CmpRHS->getType(), true);
+    SDValue C = DAG.getConstant(*cast<ConstantInt>(CB.CmpRHS), dl, VT);
+    SDValue Zero = DAG.getConstant(0, dl, VT);
+    SDValue CondLHS = getValue(CB.CmpLHS);
+    SDValue And = DAG.getNode(ISD::AND, dl, C.getValueType(), CondLHS, C);
+    Cond = DAG.getSetCC(dl, MVT::i1, And, Zero, ISD::SETEQ);
+  } else if (!CB.CmpMHS) {
     // Fold "(X == true)" to X and "(X == false)" to !X to
     // handle common cases produced by branch lowering.
     if (CB.CmpRHS == ConstantInt::getTrue(*DAG.getContext()) &&
@@ -12464,6 +12474,7 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
         }
         break;
       }
+      case CC_And:
       case CC_Range: {
         const Value *RHS, *LHS, *MHS;
         ISD::CondCode CC;
@@ -12475,6 +12486,7 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
           MHS = nullptr;
         } else {
           // Check I->Low <= Cond <= I->High.
+          assert(I->Kind != CC_And && "CC_And must be handled above");
           CC = ISD::SETLE;
           LHS = I->Low;
           MHS = Cond;
@@ -12489,6 +12501,7 @@ void SelectionDAGBuilder::lowerWorkItem(SwitchWorkListItem W, Value *Cond,
         CaseBlock CB(CC, LHS, RHS, MHS, I->MBB, Fallthrough, CurMBB,
                      getCurSDLoc(), I->Prob, UnhandledProbs);
 
+        CB.EmitAnd = I->Kind == CC_And;
         if (CurMBB == SwitchMBB)
           visitSwitchCase(CB, SwitchMBB);
         else
