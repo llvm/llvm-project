@@ -290,9 +290,8 @@ llvm.func @_QPtest6() {
   %c1_i32 = llvm.mlir.constant(1 :i32) : i32
   %c5_i32 = llvm.mlir.constant(5 : i32) : i32
   %c10_i32 = llvm.mlir.constant(10 : i32) : i32
-  %c15_i32 = llvm.mlir.constant(15 : i32) : i32
   omp.taskloop private(@_QFtestEa_firstprivate_i32 %3 -> %arg0, @_QFtestEi_private_i32 %1 -> %arg1 : !llvm.ptr, !llvm.ptr) {
-    omp.loop_nest (%arg2, %arg3) : i32 = (%c5_i32, %c1_i32) to (%c10_i32, %c15_i32) inclusive step (%cneg1_i32, %c1_i32) collapse(2) {
+    omp.loop_nest (%arg2, %arg3) : i32 = (%c10_i32, %c1_i32) to (%c5_i32, %c5_i32) inclusive step (%cneg1_i32, %c1_i32) collapse(2) {
       llvm.store %arg2, %arg1 : i32, !llvm.ptr
       %10 = llvm.load %arg0 : !llvm.ptr -> i32
       %11 = llvm.mlir.constant(1 : i32) : i32
@@ -322,11 +321,11 @@ llvm.func @_QPtest6() {
 
 // CHECK: %[[VAL_7:.*]] = sub i32 %[[VAL_6]], 1
 // CHECK: %[[VAL_8:.*]] = add i32 %omp_collapsed.iv, %[[VAL_7]]
-// CHECK: %[[VAL_9:.*]] = urem i32 %[[VAL_8]], 15
-// CHECK: %[[VAL_10:.*]] = udiv i32 %[[VAL_8]], 15
+// CHECK: %[[VAL_9:.*]] = urem i32 %[[VAL_8]], 5
+// CHECK: %[[VAL_10:.*]] = udiv i32 %[[VAL_8]], 5
 
 // CHECK: %[[VAL_11:.*]] = mul i32 %[[VAL_10]], -1
-// CHECK: %[[VAL_12:.*]] = add i32 %[[VAL_11]], 5
+// CHECK: %[[VAL_12:.*]] = add i32 %[[VAL_11]], 10
 
 // CHECK: %[[VAL_13:.*]] = mul i32 %[[VAL_9]], 1
 // CHECK: %[[VAL_14:.*]] = add i32 %[[VAL_13]], 1
