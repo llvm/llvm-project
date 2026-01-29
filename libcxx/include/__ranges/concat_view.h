@@ -166,7 +166,7 @@ public:
   {
     return std::apply(
         [](auto... __sizes) { return (make_unsigned_t<common_type_t<decltype(__sizes)...>>(__sizes) + ...); },
-        ranges::__tuple_transform(ranges::size, __views_));
+        std::__tuple_transform(ranges::size, __views_));
   }
 
   _LIBCPP_HIDE_FROM_ABI constexpr auto size() const
@@ -174,7 +174,7 @@ public:
   {
     return std::apply(
         [](auto... __sizes) { return (make_unsigned_t<common_type_t<decltype(__sizes)...>>(__sizes) + ...); },
-        ranges::__tuple_transform(ranges::size, __views_));
+        std::__tuple_transform(ranges::size, __views_));
   }
 };
 
