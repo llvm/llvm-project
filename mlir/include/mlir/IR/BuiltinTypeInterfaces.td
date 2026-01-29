@@ -280,8 +280,8 @@ def ShapedTypeInterface : TypeInterface<"ShapedType"> {
       return ::mlir::ShapedType::getNumElements($_type.getShape());
     }
 
-    /// If it has static shape, return the number of elements, or std::nullopt
-    /// if the computation would overflow. Otherwise, abort.
+    /// Return the number of elements, or std::nullopt if the computation would overflow.
+    /// Precondition: `hasStaticShape()`, otherwise abort.
     std::optional<int64_t> tryGetNumElements() const {
       assert(hasStaticShape() && "cannot get element count of dynamic shaped type");
       return ::mlir::ShapedType::tryGetNumElements($_type.getShape());

@@ -47,7 +47,14 @@ std::optional<int64_t> ShapedType::tryGetNumElements(ArrayRef<int64_t> shape) {
 }
 
 int64_t ShapedType::getNumElements(ArrayRef<int64_t> shape) {
+#ifndef NDEBUG
   std::optional<int64_t> num = tryGetNumElements(shape);
   assert(num.has_value() && "integer overflow in element count computation");
   return *num;
+#else
+  int64_t num = 1;
+  for (int64_t dim : shape)
+    num *= dim;
+  return num;
+#endif
 }
