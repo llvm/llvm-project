@@ -56,3 +56,16 @@ define void @test_stlf_late_byval(ptr %ptr) nounwind {
   call void @ext_func(ptr byval(%struct.Data) align 4 %ptr)
   ret void
 }
+
+define float @test_stlf_variable(ptr %p, i32 %val, float %v) {
+; CHECK-LABEL: test_stlf_variable:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    movd %esi, %xmm1
+; CHECK-NEXT:    movl %esi, (%rdi)
+; CHECK-NEXT:    mulss %xmm1, %xmm0
+; CHECK-NEXT:    retq
+  store i32 %val, ptr %p, align 4
+  %f = load float, ptr %p, align 4
+  %r = fmul float %f, %v
+  ret float %r
+}
