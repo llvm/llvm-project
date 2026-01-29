@@ -2758,6 +2758,16 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
         return BinaryOperator::CreateAnd(Op1, Builder.CreateNot(C));
     }
 
+    // (((A & B) ^ 1) & C) & A -> ((B ^ 1) & A) & C
+    if (match(&I, m_And(m_And(m_Xor(m_And(m_Value(A), m_Value(B)), m_One()),
+                              m_Value(C)),
+                        m_Value(A))) &&
+        A->getType()->isIntOrIntVectorTy(1) &&
+        B->getType()->isIntOrIntVectorTy(1) &&
+        C->getType()->isIntOrIntVectorTy(1))
+      return BinaryOperator::CreateAnd(
+          Builder.CreateAnd(Builder.CreateXor(B, 1), A), C);
+
     // (A | B) & (~A ^ B) -> A & B
     // (A | B) & (B ^ ~A) -> A & B
     // (B | A) & (~A ^ B) -> A & B
