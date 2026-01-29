@@ -5939,13 +5939,15 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         switch (I->getIntrinsicID()) {
         case Intrinsic::fma:
         case Intrinsic::fmuladd: {
-          KnownFPClass KnownStart;
+          KnownFPClass KnownStart, KnownL;
           computeKnownFPClass(Init, DemandedElts,
                               KnownFPClass::OrderedGreaterThanZeroMask,
                               KnownStart, Q, Depth + 1);
-          if (KnownStart.cannotBeOrderedLessThanZero() && L == R &&
-              isGuaranteedNotToBeUndef(L, Q.AC, Q.CxtI, Q.DT, Depth + 1))
-            Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
+          computeKnownFPClass(L, DemandedElts,
+                              KnownFPClass::OrderedGreaterThanZeroMask,
+                              KnownL, Q, Depth + 1);
+          if (L == R && isGuaranteedNotToBeUndef(L, Q.AC, Q.CxtI, Q.DT, Depth + 1)) 
+            Known = KnownFPClass::fma_square(KnownL, KnownStart);
           break;
         }
         }
