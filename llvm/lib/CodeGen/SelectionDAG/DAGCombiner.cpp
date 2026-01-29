@@ -14627,6 +14627,7 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
                                   ISD::NodeType ExtOpc,
                                   bool NonNegZExt = false) {
   bool Frozen = N0.getOpcode() == ISD::FREEZE;
+  SDValue Freeze = Frozen ? N0 : SDValue();
   auto *Load = dyn_cast<LoadSDNode>(Frozen ? N0.getOperand(0) : N0);
   // TODO: Support multiple uses of the load when frozen.
   if (!Load || !ISD::isNON_EXTLoad(Load) || !ISD::isUNINDEXEDLoad(Load) ||
@@ -14658,8 +14659,8 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
 
   bool DoXform = true;
   SmallVector<SDNode *, 4> SetCCs;
-  if (!Load->hasOneUse() || (Frozen && !N0->hasOneUse()))
-    DoXform = ExtendUsesToFormExtLoad(VT, N, Frozen ? N0 : SDValue(Load, 0),
+  if (!N0->hasOneUse())
+    DoXform = ExtendUsesToFormExtLoad(VT, N, Frozen ? Freeze : SDValue(Load, 0),
                                       ExtOpc, SetCCs, TLI);
   if (VT.isVector())
     DoXform &= TLI.isVectorLoadExtDesirable(SDValue(N, 0));
@@ -14667,20 +14668,18 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
     return {};
 
   SDLoc DL(Load);
+  // If the load value is used only by N, replace it via CombineTo N.
+  bool NoReplaceTrunc = Frozen ? Freeze->hasOneUse() : Load->hasOneUse();
   SDValue ExtLoad =
       DAG.getExtLoad(ExtLoadType, DL, VT, Load->getChain(), Load->getBasePtr(),
                      Load->getValueType(0), Load->getMemOperand());
-  // If the load value is used only by N, replace it via CombineTo N.
-  bool NoReplaceTrunc = Frozen ? N0->hasOneUse() : Load->hasOneUse();
-  SDValue Res;
+  SDValue Res = ExtLoad;
   if (Frozen) {
     Res = DAG.getFreeze(ExtLoad);
     Res = DAG.getNode(ExtLoadType == ISD::SEXTLOAD ? ISD::AssertSext
                                                    : ISD::AssertZext,
                       DL, Res.getValueType(), Res,
                       DAG.getValueType(Load->getValueType(0).getScalarType()));
-  } else {
-    Res = ExtLoad;
   }
   Combiner.ExtendSetCCUses(SetCCs, N0, Res, ExtOpc);
   Combiner.CombineTo(N, Res);
@@ -14690,7 +14689,7 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
   } else {
     SDValue Trunc = DAG.getNode(ISD::TRUNCATE, DL, Load->getValueType(0), Res);
     if (Frozen) {
-      Combiner.CombineTo(N0.getNode(), Trunc);
+      Combiner.CombineTo(Freeze.getNode(), Trunc);
       DAG.ReplaceAllUsesOfValueWith(SDValue(Load, 1), ExtLoad.getValue(1));
     } else {
       Combiner.CombineTo(Load, Trunc, ExtLoad.getValue(1));
