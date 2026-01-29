@@ -147,6 +147,7 @@ public:
   void handleCXXStaticMemberVarInstantiation(VarDecl *vd);
 
   llvm::DenseMap<const Decl *, cir::GlobalOp> staticLocalDeclMap;
+  llvm::DenseMap<const VarDecl *, cir::GlobalOp> initializerConstants;
 
   mlir::Operation *getGlobalValue(llvm::StringRef ref);
 
@@ -160,6 +161,9 @@ public:
 
   cir::GlobalOp getOrCreateStaticVarDecl(const VarDecl &d,
                                          cir::GlobalLinkageKind linkage);
+
+  Address createUnnamedGlobalFrom(const VarDecl &d, mlir::Attribute constAttr,
+                                  CharUnits align);
 
   /// If the specified mangled name is not in the module, create and return an
   /// mlir::GlobalOp value

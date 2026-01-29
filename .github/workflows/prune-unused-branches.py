@@ -13,7 +13,9 @@ def get_branches() -> list[str]:
     ]
 
     def branch_filter(branch_name):
-        return "users/" in branch_name or "revert-" in branch_name
+        user_or_revert = "users/" in branch_name or "revert-" in branch_name
+        origin_branch = branch_name.startswith("remotes/origin/")
+        return user_or_revert and origin_branch
 
     filtered_branches = list(filter(branch_filter, branches))
     return [branch.replace("remotes/origin/", "") for branch in filtered_branches]
