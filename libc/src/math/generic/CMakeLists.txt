@@ -2985,7 +2985,6 @@ add_entrypoint_object(
     libc.src.__support.math.sqrt
 )
 
-
 add_entrypoint_object(
   sqrtf
   SRCS
@@ -2993,7 +2992,7 @@ add_entrypoint_object(
   HDRS
     ../sqrtf.h
   DEPENDS
-    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.math.sqrtf
 )
 
 add_entrypoint_object(
