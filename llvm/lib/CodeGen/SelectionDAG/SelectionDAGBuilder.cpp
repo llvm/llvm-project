@@ -4614,7 +4614,7 @@ void SelectionDAGBuilder::visitAlloca(const AllocaInst &I) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   auto &DL = DAG.getDataLayout();
   TypeSize TySize = DL.getTypeAllocSize(Ty);
-  MaybeAlign Alignment = std::max(DL.getPrefTypeAlign(Ty), I.getAlign());
+  MaybeAlign Alignment = I.getAlign();
 
   SDValue AllocSize = getValue(I.getArraySize());
 

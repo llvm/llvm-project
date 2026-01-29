@@ -80,6 +80,8 @@ jobs:
     runs-on: ubuntu-24.04
     permissions:
       id-token: write # Requred for pypi publishing
+    needs:
+      - validate-tag
     environment: pypi
     steps:
       - name: Checkout LLVM
