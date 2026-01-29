@@ -57,6 +57,12 @@ static std::string join(const Ts &...args) {
   return oss.str();
 }
 
+/// Local helper to compute std::hash for a value.
+template <typename T>
+static size_t hash(const T &value) {
+  return std::hash<T>{}(value);
+}
+
 /// Helper for creating an @classmethod.
 template <class Func, typename... Args>
 static nb::object classmethod(Func f, Args... args) {
@@ -4095,11 +4101,7 @@ void populateIRCore(nb::module_ &m) {
           "__eq__", [](PyBlock &self, nb::object &other) { return false; },
           "Compares block with non-block object (always returns False).")
       .def(
-          "__hash__",
-          [](PyBlock &self) {
-            return static_cast<size_t>(
-                std::hash<decltype(self.get().ptr)>{}(self.get().ptr));
-          },
+          "__hash__", [](PyBlock &self) { return hash(self.get().ptr); },
           "Returns the hash value of the block.")
       .def(
           "__str__",
@@ -4284,11 +4286,7 @@ void populateIRCore(nb::module_ &m) {
           "Compares attribute with non-attribute object (always returns "
           "False).")
       .def(
-          "__hash__",
-          [](PyAttribute &self) {
-            return static_cast<size_t>(
-                std::hash<decltype(self.get().ptr)>{}(self.get().ptr));
-          },
+          "__hash__", [](PyAttribute &self) { return hash(self.get().ptr); },
           "Returns the hash value of the attribute.")
       .def(
           "dump", [](PyAttribute &self) { mlirAttributeDump(self); },
@@ -4410,11 +4408,7 @@ void populateIRCore(nb::module_ &m) {
           "other"_a.none(),
           "Compares type with non-type object (always returns False).")
       .def(
-          "__hash__",
-          [](PyType &self) {
-            return static_cast<size_t>(
-                std::hash<decltype(self.get().ptr)>{}(self.get().ptr));
-          },
+          "__hash__", [](PyType &self) { return hash(self.get().ptr); },
           "Returns the hash value of the `Type`.")
       .def(
           "dump", [](PyType &self) { mlirTypeDump(self); }, kDumpDocstring)
@@ -4553,11 +4547,7 @@ void populateIRCore(nb::module_ &m) {
           "__eq__", [](PyValue &self, nb::object other) { return false; },
           "Compares value with non-value object (always returns False).")
       .def(
-          "__hash__",
-          [](PyValue &self) {
-            return static_cast<size_t>(
-                std::hash<decltype(self.get().ptr)>{}(self.get().ptr));
-          },
+          "__hash__", [](PyValue &self) { return hash(self.get().ptr); },
           "Returns the hash value of the value.")
       .def(
           "__str__",
