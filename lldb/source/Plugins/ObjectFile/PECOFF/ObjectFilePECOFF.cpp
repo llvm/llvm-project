@@ -215,7 +215,7 @@ ObjectFile *ObjectFilePECOFF::CreateInstance(
     extractor_sp = std::make_shared<DataExtractor>(data_sp);
   }
 
-  if (!ObjectFilePECOFF::MagicBytesMatch(extractor_sp->GetSharedDataBuffer()))
+  if (!ObjectFilePECOFF::MagicBytesMatch(extractor_sp))
     return nullptr;
 
   // Update the data to contain the entire file if it doesn't already
@@ -240,7 +240,11 @@ ObjectFile *ObjectFilePECOFF::CreateInstance(
 ObjectFile *ObjectFilePECOFF::CreateMemoryInstance(
     const lldb::ModuleSP &module_sp, lldb::WritableDataBufferSP data_sp,
     const lldb::ProcessSP &process_sp, lldb::addr_t header_addr) {
-  if (!data_sp || !ObjectFilePECOFF::MagicBytesMatch(data_sp))
+  if (!data_sp)
+    return nullptr;
+  DataExtractorSP extractor_sp =
+      std::make_shared<DataExtractor>(data_sp, eByteOrderLittle, 4);
+  if (!ObjectFilePECOFF::MagicBytesMatch(extractor_sp))
     return nullptr;
   auto objfile_up = std::make_unique<ObjectFilePECOFF>(
       module_sp, data_sp, process_sp, header_addr);
@@ -251,20 +255,22 @@ ObjectFile *ObjectFilePECOFF::CreateMemoryInstance(
 }
 
 size_t ObjectFilePECOFF::GetModuleSpecifications(
-    const lldb_private::FileSpec &file, lldb::DataBufferSP &data_sp,
+    const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
     lldb::offset_t data_offset, lldb::offset_t file_offset,
     lldb::offset_t length, lldb_private::ModuleSpecList &specs) {
   const size_t initial_count = specs.GetSize();
-  if (!data_sp || !ObjectFilePECOFF::MagicBytesMatch(data_sp))
+  if (!extractor_sp || !extractor_sp->HasData() ||
+      !ObjectFilePECOFF::MagicBytesMatch(extractor_sp))
     return initial_count;
 
   Log *log = GetLog(LLDBLog::Object);
 
-  if (data_sp->GetByteSize() < length)
+  if (extractor_sp->GetByteSize() < length)
     if (DataBufferSP full_sp = MapFileData(file, -1, file_offset))
-      data_sp = std::move(full_sp);
+      extractor_sp->SetData(std::move(full_sp));
   auto binary = llvm::object::createBinary(llvm::MemoryBufferRef(
-      toStringRef(data_sp->GetData()), file.GetFilename().GetStringRef()));
+      toStringRef(extractor_sp->GetSharedDataBuffer()->GetData()),
+      file.GetFilename().GetStringRef()));
 
   if (!binary) {
     LLDB_LOG_ERROR(log, binary.takeError(),
@@ -366,10 +372,9 @@ bool ObjectFilePECOFF::SaveCore(const lldb::ProcessSP &process_sp,
   return SaveMiniDump(process_sp, options, error);
 }
 
-bool ObjectFilePECOFF::MagicBytesMatch(DataBufferSP data_sp) {
-  DataExtractor data(data_sp, eByteOrderLittle, 4);
+bool ObjectFilePECOFF::MagicBytesMatch(DataExtractorSP extractor_sp) {
   lldb::offset_t offset = 0;
-  uint16_t magic = data.GetU16(&offset);
+  uint16_t magic = extractor_sp->GetU16(&offset);
   return magic == IMAGE_DOS_SIGNATURE;
 }
 
