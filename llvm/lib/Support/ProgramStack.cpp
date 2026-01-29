@@ -70,6 +70,9 @@ __asm__ (
     ".p2align  2\n\t"
     "_ZN4llvm17runOnNewStackImplEPvPFvS0_ES0_:\n\t"
     ".cfi_startproc\n\t"
+#if __arm64e__
+    "pacibsp\n\t"                            // sign x30 using sp
+#endif
     "mov       x16, sp\n\t"
     "sub       x0, x0, #0x20\n\t"            // subtract space from stack
     "stp       xzr, x16, [x0, #0x00]\n\t"    // save old sp
@@ -81,12 +84,20 @@ __asm__ (
     ".cfi_offset w29, -16\n\t"               // fp
 
     "mov       x0, x2\n\t"                   // Ctx is the only argument
+#if __arm64e__
+    "blraaz    x1\n\t"                       // authenticate x1 then call Fn
+#else
     "blr       x1\n\t"                       // call Fn
+#endif
 
     "ldp       x29, x30, [sp, #0x10]\n\t"    // restore fp, lr
     "ldp       xzr, x16, [sp, #0x00]\n\t"    // load old sp
     "mov       sp, x16\n\t"
+#if __arm64e__
+    "retab\n\t"                              // authenticate x30 then return
+#else
     "ret\n\t"
+#endif
     ".cfi_endproc"
 );
 #endif
