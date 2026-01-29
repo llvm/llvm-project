@@ -1606,6 +1606,22 @@ mlir::LogicalResult CIRToLLVMRotateOpLowering::matchAndRewrite(
   return mlir::LogicalResult::success();
 }
 
+static void lowerCallAttributes(cir::CIRCallOpInterface op,
+                                SmallVectorImpl<mlir::NamedAttribute> &result) {
+  for (mlir::NamedAttribute attr : op->getAttrs()) {
+    assert(!cir::MissingFeatures::opFuncCallingConv());
+    if (attr.getName() == CIRDialect::getCalleeAttrName() ||
+        attr.getName() == CIRDialect::getSideEffectAttrName() ||
+        attr.getName() == CIRDialect::getNoThrowAttrName() ||
+        attr.getName() == CIRDialect::getNoUnwindAttrName() ||
+        attr.getName() == CIRDialect::getNoReturnAttrName())
+      continue;
+
+    assert(!cir::MissingFeatures::opFuncExtraAttrs());
+    result.push_back(attr);
+  }
+}
+
 static mlir::LogicalResult
 rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
                     mlir::ConversionPatternRewriter &rewriter,
@@ -1626,6 +1642,9 @@ rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
   bool noReturn = false;
   convertSideEffectForCall(op, call.getNothrow(), call.getSideEffect(),
                            memoryEffects, noUnwind, willReturn, noReturn);
+
+  SmallVector<mlir::NamedAttribute, 4> attributes;
+  lowerCallAttributes(call, attributes);
 
   mlir::LLVM::LLVMFunctionType llvmFnTy;
 
@@ -1684,6 +1703,7 @@ rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
 
   auto newOp = rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
       op, llvmFnTy, calleeAttr, callOperands);
+  newOp->setAttrs(attributes);
   if (memoryEffects)
     newOp.setMemoryEffectsAttr(memoryEffects);
   newOp.setNoUnwind(noUnwind);
@@ -1715,6 +1735,19 @@ mlir::LogicalResult CIRToLLVMFrameAddrOpLowering::matchAndRewrite(
   const mlir::Type llvmPtrTy = getTypeConverter()->convertType(op.getType());
   replaceOpWithCallLLVMIntrinsicOp(rewriter, op, "llvm.frameaddress", llvmPtrTy,
                                    adaptor.getOperands());
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMClearCacheOpLowering::matchAndRewrite(
+    cir::ClearCacheOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Value begin = adaptor.getBegin();
+  mlir::Value end = adaptor.getEnd();
+  auto intrinNameAttr =
+      mlir::StringAttr::get(op.getContext(), "llvm.clear_cache");
+  rewriter.replaceOpWithNewOp<mlir::LLVM::CallIntrinsicOp>(
+      op, mlir::Type{}, intrinNameAttr, mlir::ValueRange{begin, end});
+
   return mlir::success();
 }
 
@@ -4440,6 +4473,26 @@ mlir::LogicalResult CIRToLLVMCpuIdOpLowering::matchAndRewrite(
   }
 
   rewriter.eraseOp(op);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMMemChrOpLowering::matchAndRewrite(
+    cir::MemChrOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
+  mlir::Type srcTy = getTypeConverter()->convertType(op.getSrc().getType());
+  mlir::Type patternTy =
+      getTypeConverter()->convertType(op.getPattern().getType());
+  mlir::Type lenTy = getTypeConverter()->convertType(op.getLen().getType());
+  auto fnTy =
+      mlir::LLVM::LLVMFunctionType::get(llvmPtrTy, {srcTy, patternTy, lenTy},
+                                        /*isVarArg=*/false);
+  llvm::StringRef fnName = "memchr";
+  createLLVMFuncOpIfNotExist(rewriter, op, fnName, fnTy);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
+      op, mlir::TypeRange{llvmPtrTy}, fnName,
+      mlir::ValueRange{adaptor.getSrc(), adaptor.getPattern(),
+                       adaptor.getLen()});
   return mlir::success();
 }
 
