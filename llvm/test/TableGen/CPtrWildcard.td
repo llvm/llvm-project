@@ -20,8 +20,7 @@
 // CHECK-NEXT:            // Src: (intrinsic_wo_chain:{ *:[i64] } [[#]]:{ *:[iPTR] }, c128:{ *:[c128] }:$src) - Complexity = 8
 // CHECK-NEXT:            // Dst: (C128_TO_I64:{ *:[i64] } ?:{ *:[c128] }:$src)
 // CHECK-NEXT:/*    27*/ 0, // End of Scope
-// CHECK-NEXT:    0
-// CHECK-NEXT:  }; // Total Array size is 29 bytes
+// CHECK-NEXT:  }; // Total Array size is 28 bytes
 
 include "llvm/Target/Target.td"
 
