@@ -2722,7 +2722,7 @@ void RewriteInstance::readDynamicRelocations(const SectionRef &Section,
     );
 
     if (IsJmpRel)
-      IsJmpRelocation[RType] = true;
+      RelaPLTJmpRelocations.insert(Rel.getOffset());
 
     if (Symbol)
       SymbolIndex[Symbol] = getRelocationSymbol(InputFile, Rel);
@@ -5784,10 +5784,10 @@ RewriteInstance::patchELFAllocatableRelaSections(ELFObjectFile<ELFT> *File) {
         NewRelA.r_offset = RelOffset;
         NewRelA.r_addend = Addend;
 
-        const bool IsJmpRel = IsJmpRelocation.contains(Rel.Type);
-        uint64_t &Offset = IsJmpRel ? RelPltOffset : RelDynOffset;
+        const bool IsPltJmpRel = RelaPLTJmpRelocations.contains(RelOffset);
+        uint64_t &Offset = IsPltJmpRel ? RelPltOffset : RelDynOffset;
         const uint64_t &EndOffset =
-            IsJmpRel ? RelPltEndOffset : RelDynEndOffset;
+            IsPltJmpRel ? RelPltEndOffset : RelDynEndOffset;
         if (!Offset || !EndOffset) {
           BC->errs() << "BOLT-ERROR: Invalid offsets for dynamic relocation\n";
           exit(1);
