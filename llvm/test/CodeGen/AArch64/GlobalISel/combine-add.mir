@@ -416,6 +416,34 @@ body:             |
 ...
 
 ---
+name:            add_shl_neg_commuted_wide
+tracksRegLiveness: true
+body:             |
+  bb.0:
+    liveins: $q0, $q1, $q2
+
+    ; CHECK-LABEL: name: add_shl_neg_commuted_wide
+    ; CHECK: liveins: $q0, $q1, $q2
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: [[COPY:%[0-9]+]]:_(s128) = COPY $q0
+    ; CHECK-NEXT: [[COPY1:%[0-9]+]]:_(s128) = COPY $q1
+    ; CHECK-NEXT: [[COPY2:%[0-9]+]]:_(s128) = COPY $q2
+    ; CHECK-NEXT: [[SHL:%[0-9]+]]:_(s128) = G_SHL [[COPY1]], [[COPY2]](s128)
+    ; CHECK-NEXT: [[SUB:%[0-9]+]]:_(s128) = G_SUB [[COPY]], [[SHL]]
+    ; CHECK-NEXT: $q0 = COPY [[SUB]](s128)
+    ; CHECK-NEXT: RET_ReallyLR implicit $q0
+    %0:_(s128) = COPY $q0
+    %1:_(s128) = COPY $q1
+    %2:_(s128) = COPY $q2
+    %3:_(s128) = G_CONSTANT i128 0
+    %4:_(s128) = G_SUB %3, %1
+    %5:_(s128) = G_SHL %4, %2
+    %6:_(s128) = G_ADD %5, %0
+    $q0 = COPY %6
+    RET_ReallyLR implicit $q0
+...
+
+---
 name:            add_shl_neg_multiple_uses
 tracksRegLiveness: true
 body: |
@@ -445,6 +473,42 @@ body: |
     %neg_y:_(s64) = G_SUB %zero, %y
     %shl_neg:_(s64) = G_SHL %neg_y, %n
     %dst:_(s64) = G_ADD %x, %shl_neg
+    %other:_(s64) = G_MUL %shl_neg, %z
+    %mul:_(s64) = G_MUL %dst, %other
+    $x0 = COPY %mul
+    RET_ReallyLR implicit $x0
+...
+
+---
+name:            add_shl_neg_commuted_multiple_uses
+tracksRegLiveness: true
+body: |
+  bb.0:
+    liveins: $x0, $x1, $x2, $x3
+
+    ; CHECK-LABEL: name: add_shl_neg_commuted_multiple_uses
+    ; CHECK: liveins: $x0, $x1, $x2, $x3
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: %x:_(s64) = COPY $x0
+    ; CHECK-NEXT: %y:_(s64) = COPY $x1
+    ; CHECK-NEXT: %n:_(s64) = COPY $x2
+    ; CHECK-NEXT: %z:_(s64) = COPY $x3
+    ; CHECK-NEXT: %zero:_(s64) = G_CONSTANT i64 0
+    ; CHECK-NEXT: %neg_y:_(s64) = G_SUB %zero, %y
+    ; CHECK-NEXT: %shl_neg:_(s64) = G_SHL %neg_y, %n(s64)
+    ; CHECK-NEXT: %dst:_(s64) = G_ADD %shl_neg, %x
+    ; CHECK-NEXT: %other:_(s64) = G_MUL %shl_neg, %z
+    ; CHECK-NEXT: %mul:_(s64) = G_MUL %dst, %other
+    ; CHECK-NEXT: $x0 = COPY %mul(s64)
+    ; CHECK-NEXT: RET_ReallyLR implicit $x0
+    %x:_(s64) = COPY $x0
+    %y:_(s64) = COPY $x1
+    %n:_(s64) = COPY $x2
+    %z:_(s64) = COPY $x3
+    %zero:_(s64) = G_CONSTANT i64 0
+    %neg_y:_(s64) = G_SUB %zero, %y
+    %shl_neg:_(s64) = G_SHL %neg_y, %n
+    %dst:_(s64) = G_ADD %shl_neg, %x
     %other:_(s64) = G_MUL %shl_neg, %z
     %mul:_(s64) = G_MUL %dst, %other
     $x0 = COPY %mul
