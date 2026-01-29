@@ -239,6 +239,14 @@ public:
     return *this;
   }
 
+  /// Reset all properties and re-establish baseline invariants.
+  MachineFunctionProperties &resetToInitial() {
+    reset();
+    setIsSSA();
+    setTracksLiveness();
+    return *this;
+  }
+
   MachineFunctionProperties &set(const MachineFunctionProperties &MFP) {
     Properties |= MFP.Properties;
     return *this;
