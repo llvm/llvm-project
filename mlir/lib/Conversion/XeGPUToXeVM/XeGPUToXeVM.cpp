@@ -1180,7 +1180,7 @@ struct ConvertXeGPUToXeVMPass
     };
 
     // Materialization to convert
-    //   - single element 1D vector to scalar
+    //   - single element vector to scalar
     //   - bitcast vector of same rank
     //   - shape vector of different rank but same element type
     auto vectorMaterializationCast = [](OpBuilder &builder, Type type,
@@ -1190,10 +1190,18 @@ struct ConvertXeGPUToXeVMPass
         return {};
       auto input = inputs.front();
       if (auto vecTy = dyn_cast<VectorType>(input.getType())) {
-        if (vecTy.getRank() == 1 && vecTy.getNumElements() == 1) {
+        if (vecTy.getNumElements() == 1) {
           // If the vector has a single element, return the element type.
-          Value cast =
-              vector::ExtractOp::create(builder, loc, input, 0).getResult();
+          auto rank = vecTy.getRank();
+          Value cast;
+          if (rank > 1) {
+            cast = vector::ExtractOp::create(builder, loc, input,
+                                             SmallVector<int64_t>(rank, 0))
+                       .getResult();
+          } else {
+            cast =
+                vector::ExtractOp::create(builder, loc, input, 0).getResult();
+          }
           if (vecTy.getElementType() == builder.getIndexType())
             cast = arith::IndexCastUIOp::create(builder, loc, type, cast)
                        .getResult();
