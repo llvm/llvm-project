@@ -27773,7 +27773,6 @@ performSignExtendInRegCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     SDValue ExtOp = Src->getOperand(0);
     auto VT = cast<VTSDNode>(N->getOperand(1))->getVT();
     EVT EltTy = VT.getVectorElementType();
-    (void)EltTy;
 
     if (EltTy.getSizeInBits() >
         ExtOp.getValueType().getScalarType().getSizeInBits())
