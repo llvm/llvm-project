@@ -1,7 +1,6 @@
 add_llvm_component_library(LLVMFrontendOpenMP
   OMP.cpp
   OMPContext.cpp
-  OMPDeclareSimd.cpp
   OMPIRBuilder.cpp
   DirectiveNameParser.cpp
 

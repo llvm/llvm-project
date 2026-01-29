@@ -26,7 +26,6 @@
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
-#include "llvm/Frontend/OpenMP/OMPDeclareSimd.h"
 #include "llvm/Frontend/OpenMP/OMPIRBuilder.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/DebugInfoMetadata.h"
@@ -7176,17 +7175,17 @@ static std::optional<unsigned> getFuncArgIndex(mlir::LLVM::LLVMFuncOp func,
 
 static void
 applyUniform(LLVM::LLVMFuncOp funcOp, mlir::omp::DeclareSimdOp ds,
-             llvm::SmallVectorImpl<llvm::omp::DeclareSimdAttrTy> &attrs) {
+             llvm::SmallVectorImpl<llvm::DeclareSimdAttrTy> &attrs) {
   for (mlir::Value u : ds.getUniformVars()) {
     auto idx = getFuncArgIndex(funcOp, u);
     assert(idx && "uniform variable must be a function argument");
-    attrs[*idx].Kind = llvm::omp::DeclareSimdKindTy::Uniform;
+    attrs[*idx].Kind = llvm::DeclareSimdKindTy::Uniform;
   }
 }
 
 static void
 applyAligned(LLVM::LLVMFuncOp funcOp, mlir::omp::DeclareSimdOp ds,
-             llvm::SmallVectorImpl<llvm::omp::DeclareSimdAttrTy> &attrs) {
+             llvm::SmallVectorImpl<llvm::DeclareSimdAttrTy> &attrs) {
   auto alignedVars = ds.getAlignedVars();
   std::optional<mlir::ArrayAttr> maybeAlignArr = ds.getAlignments();
   if (alignedVars.empty() || !maybeAlignArr || !*maybeAlignArr)
@@ -7214,9 +7213,8 @@ applyAligned(LLVM::LLVMFuncOp funcOp, mlir::omp::DeclareSimdOp ds,
 /// linear(%arg2 = %2 : !llvm.ptr)
 /// - linear var: %arg2 (must be function arg)
 /// - step value: %2 (may be constant) or another function arg (var stride)
-static void
-applyLinear(LLVM::LLVMFuncOp func, mlir::omp::DeclareSimdOp ds,
-            llvm::SmallVectorImpl<llvm::omp::DeclareSimdAttrTy> &attrs) {
+static void applyLinear(LLVM::LLVMFuncOp func, mlir::omp::DeclareSimdOp ds,
+                        llvm::SmallVectorImpl<llvm::DeclareSimdAttrTy> &attrs) {
   auto linearVars = ds.getLinearVars();
   auto linearSteps = ds.getLinearStepVars();
 
@@ -7232,8 +7230,8 @@ applyLinear(LLVM::LLVMFuncOp func, mlir::omp::DeclareSimdOp ds,
     auto idx = getFuncArgIndex(func, linearVars[i]);
     assert(idx && "linear variable must be a function argument");
 
-    llvm::omp::DeclareSimdAttrTy &paramAttr = attrs[*idx];
-    paramAttr.Kind = llvm::omp::DeclareSimdKindTy::Linear;
+    llvm::DeclareSimdAttrTy &paramAttr = attrs[*idx];
+    paramAttr.Kind = llvm::DeclareSimdKindTy::Linear;
     paramAttr.HasVarStride = false;
     paramAttr.StrideOrArg = one;
 
@@ -7268,18 +7266,19 @@ applyLinear(LLVM::LLVMFuncOp func, mlir::omp::DeclareSimdOp ds,
   }
 }
 
-static llvm::omp::DeclareSimdBranch
+static llvm::DeclareSimdBranch
 getDeclareSimdBranch(mlir::omp::DeclareSimdOp &op) {
   if (op.getInbranch())
-    return llvm::omp::DeclareSimdBranch::Inbranch;
+    return llvm::DeclareSimdBranch::Inbranch;
   if (op.getNotinbranch())
-    return llvm::omp::DeclareSimdBranch::Notinbranch;
-  return llvm::omp::DeclareSimdBranch::Undefined;
+    return llvm::DeclareSimdBranch::Notinbranch;
+  return llvm::DeclareSimdBranch::Undefined;
 }
 
 static LogicalResult
 convertDeclareSimdOp(Operation &opInst, llvm::IRBuilderBase &builder,
                      LLVM::ModuleTranslation &moduleTranslation) {
+  llvm::OpenMPIRBuilder *ompBuilder = moduleTranslation.getOpenMPBuilder();
   auto funcOp = opInst.getParentOfType<LLVM::LLVMFuncOp>();
   assert(funcOp && "declare_simd must be defined inside an LLVM function");
 
@@ -7293,12 +7292,12 @@ convertDeclareSimdOp(Operation &opInst, llvm::IRBuilderBase &builder,
            << ")";
 
   funcOp.walk([&](mlir::omp::DeclareSimdOp ds) {
-    llvm::SmallVector<llvm::omp::DeclareSimdAttrTy, 8> paramAttrs(
+    llvm::SmallVector<llvm::DeclareSimdAttrTy, 8> ParamAttrs(
         funcOp.getNumArguments());
 
-    applyUniform(funcOp, ds, paramAttrs);
-    applyAligned(funcOp, ds, paramAttrs);
-    applyLinear(funcOp, ds, paramAttrs);
+    applyUniform(funcOp, ds, ParamAttrs);
+    applyAligned(funcOp, ds, ParamAttrs);
+    applyLinear(funcOp, ds, ParamAttrs);
 
     llvm::APSInt VLENVal;
     if (std::optional<int64_t> simdlen = ds.getSimdlen()) {
@@ -7306,8 +7305,8 @@ convertDeclareSimdOp(Operation &opInst, llvm::IRBuilderBase &builder,
                              /*isUnsigned=*/false);
     }
 
-    llvm::omp::emitDeclareSimdFunction(fn, VLENVal, paramAttrs,
-                                       getDeclareSimdBranch(ds));
+    ompBuilder->emitDeclareSimdFunction(fn, VLENVal, ParamAttrs,
+                                        getDeclareSimdBranch(ds));
   });
 
   return success();

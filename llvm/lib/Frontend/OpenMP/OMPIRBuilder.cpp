@@ -6956,6 +6956,161 @@ void OpenMPIRBuilder::applySimd(CanonicalLoopInfo *CanonicalLoop,
   addLoopMetadata(CanonicalLoop, LoopMDList);
 }
 
+/// Return type size in bits for `Ty` using DL.
+/// If scalable, return known-min as a conservative approximation.
+static unsigned getTypeSizeInBits(llvm::Type *Ty, const llvm::DataLayout &DL) {
+  if (!Ty)
+    return 0;
+  llvm::TypeSize TS = DL.getTypeSizeInBits(Ty);
+
+  if (TS.isScalable())
+    return (unsigned)TS.getKnownMinValue();
+  return (unsigned)TS.getFixedValue();
+}
+
+/// Returns size in *bits* of the Characteristic Data Type (CDT).
+static unsigned evaluateCDTSize(const llvm::Function *Fn,
+                                llvm::ArrayRef<DeclareSimdAttrTy> ParamAttrs) {
+  const llvm::DataLayout &DL = Fn->getParent()->getDataLayout();
+
+  llvm::Type *RetTy = Fn->getReturnType();
+  llvm::Type *CDT = nullptr;
+
+  // Non-void return => CDT = return type
+  if (RetTy && !RetTy->isVoidTy()) {
+    CDT = RetTy;
+  } else {
+    // First "Vector" param (ParamAttrs aligned with function params)
+    // If ParamAttrs is shorter than the parameter list, treat missing as Vector
+    // (matches the idea "default Kind is Vector").
+    unsigned NumParams = Fn->getFunctionType()->getNumParams();
+    for (unsigned I = 0; I < NumParams; ++I) {
+      bool IsVector = (I < ParamAttrs.size())
+                          ? ParamAttrs[I].Kind == DeclareSimdKindTy::Vector
+                          : true;
+      if (!IsVector)
+        continue;
+      CDT = Fn->getFunctionType()->getParamType(I);
+      break;
+    }
+  }
+
+  llvm::Type *IntTy = llvm::Type::getInt32Ty(Fn->getContext());
+  if (!CDT || CDT->isStructTy() || CDT->isArrayTy())
+    CDT = IntTy;
+
+  return getTypeSizeInBits(CDT, DL);
+}
+
+/// Mangle the parameter part of the vector function name according to
+/// their OpenMP classification. The mangling function is defined in
+/// section 4.5 of the AAVFABI(2021Q1).
+std::string OpenMPIRBuilder::mangleVectorParameters(
+    llvm::ArrayRef<DeclareSimdAttrTy> ParamAttrs) {
+  llvm::SmallString<256> Buffer;
+  llvm::raw_svector_ostream Out(Buffer);
+  for (const auto &ParamAttr : ParamAttrs) {
+    switch (ParamAttr.Kind) {
+    case llvm::DeclareSimdKindTy::Linear:
+      Out << 'l';
+      break;
+    case llvm::DeclareSimdKindTy::LinearRef:
+      Out << 'R';
+      break;
+    case llvm::DeclareSimdKindTy::LinearUVal:
+      Out << 'U';
+      break;
+    case llvm::DeclareSimdKindTy::LinearVal:
+      Out << 'L';
+      break;
+    case llvm::DeclareSimdKindTy::Uniform:
+      Out << 'u';
+      break;
+    case llvm::DeclareSimdKindTy::Vector:
+      Out << 'v';
+      break;
+    }
+    if (ParamAttr.HasVarStride)
+      Out << "s" << ParamAttr.StrideOrArg;
+    else if (ParamAttr.Kind == llvm::DeclareSimdKindTy::Linear ||
+             ParamAttr.Kind == llvm::DeclareSimdKindTy::LinearRef ||
+             ParamAttr.Kind == llvm::DeclareSimdKindTy::LinearUVal ||
+             ParamAttr.Kind == llvm::DeclareSimdKindTy::LinearVal) {
+      // Don't print the step value if it is not present or if it is
+      // equal to 1.
+      if (ParamAttr.StrideOrArg < 0)
+        Out << 'n' << -ParamAttr.StrideOrArg;
+      else if (ParamAttr.StrideOrArg != 1)
+        Out << ParamAttr.StrideOrArg;
+    }
+
+    if (!!ParamAttr.Alignment)
+      Out << 'a' << ParamAttr.Alignment;
+  }
+
+  return std::string(Out.str());
+}
+
+void OpenMPIRBuilder::emitX86DeclareSimdFunction(
+    llvm::Function *Fn, unsigned NumElts, const llvm::APSInt &VLENVal,
+    llvm::ArrayRef<DeclareSimdAttrTy> ParamAttrs, DeclareSimdBranch Branch) {
+  struct ISADataTy {
+    char ISA;
+    unsigned VecRegSize;
+  };
+  ISADataTy ISAData[] = {
+      {'b', 128}, // SSE
+      {'c', 256}, // AVX
+      {'d', 256}, // AVX2
+      {'e', 512}, // AVX512
+  };
+  llvm::SmallVector<char, 2> Masked;
+  switch (Branch) {
+  case DeclareSimdBranch::Undefined:
+    Masked.push_back('N');
+    Masked.push_back('M');
+    break;
+  case DeclareSimdBranch::Notinbranch:
+    Masked.push_back('N');
+    break;
+  case DeclareSimdBranch::Inbranch:
+    Masked.push_back('M');
+    break;
+  }
+  for (char Mask : Masked) {
+    for (const ISADataTy &Data : ISAData) {
+      llvm::SmallString<256> Buffer;
+      llvm::raw_svector_ostream Out(Buffer);
+      Out << "_ZGV" << Data.ISA << Mask;
+      if (!VLENVal) {
+        // unsigned NumElts = evaluateCDTSize(Fn, ParamAttrs);
+        // assert(NumElts && "Non-zero simdlen/cdtsize expected");
+        Out << llvm::APSInt::getUnsigned(Data.VecRegSize / NumElts);
+      } else {
+        Out << VLENVal;
+      }
+      Out << mangleVectorParameters(ParamAttrs);
+      Out << '_' << Fn->getName();
+      Fn->addFnAttr(Out.str());
+    }
+  }
+}
+
+void OpenMPIRBuilder::emitDeclareSimdFunction(
+    llvm::Function *Fn, const llvm::APSInt &VLENVal,
+    llvm::ArrayRef<DeclareSimdAttrTy> ParamAttrs,
+    llvm::DeclareSimdBranch Branch) {
+  Module *M = Fn->getParent();
+  const llvm::Triple &Triple = M->getTargetTriple();
+
+  if (Triple.isX86()) {
+    unsigned NumElts = evaluateCDTSize(Fn, ParamAttrs);
+    assert(NumElts && "Non-zero simdlen/cdtsize expected");
+    emitX86DeclareSimdFunction(Fn, NumElts, VLENVal, ParamAttrs, Branch);
+  } else
+    llvm_unreachable("Unsupported target for declare simd");
+}
+
 /// Create the TargetMachine object to query the backend for optimization
 /// preferences.
 ///

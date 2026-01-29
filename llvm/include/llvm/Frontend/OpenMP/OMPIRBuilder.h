@@ -14,6 +14,7 @@
 #ifndef LLVM_FRONTEND_OPENMP_OMPIRBUILDER_H
 #define LLVM_FRONTEND_OPENMP_OMPIRBUILDER_H
 
+#include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Frontend/Atomic/Atomic.h"
 #include "llvm/Frontend/OpenMP/OMPConstants.h"
@@ -496,6 +497,31 @@ private:
   typedef StringMap<OffloadEntryInfoDeviceGlobalVar>
       OffloadEntriesDeviceGlobalVarTy;
   OffloadEntriesDeviceGlobalVarTy OffloadEntriesDeviceGlobalVar;
+};
+
+/// Kind of parameter in a function with 'declare simd' directive.
+enum class DeclareSimdKindTy {
+  Linear,
+  LinearRef,
+  LinearUVal,
+  LinearVal,
+  Uniform,
+  Vector,
+};
+
+/// Attribute set of the `declare simd` parameter.
+struct DeclareSimdAttrTy {
+  DeclareSimdKindTy Kind = DeclareSimdKindTy::Vector;
+  llvm::APSInt StrideOrArg;
+  llvm::APSInt Alignment;
+  bool HasVarStride = false;
+};
+
+/// Type of branch clause of the `declare simd` directive.
+enum class DeclareSimdBranch {
+  Undefined,
+  Inbranch,
+  Notinbranch,
 };
 
 /// An interface to create LLVM-IR for OpenMP directives.
@@ -1483,6 +1509,66 @@ public:
                           MapVector<Value *, Value *> AlignedVars,
                           Value *IfCond, omp::OrderKind Order,
                           ConstantInt *Simdlen, ConstantInt *Safelen);
+
+  /// Mangle the parameter portion of a vector function name according to the
+  /// OpenMP declare simd rules.
+  ///
+  /// The mangling follows the Vector Function ABI (AAVFABI) specification and
+  /// encodes, for each function parameter, its OpenMP classification
+  /// (vector, uniform, linear, etc.), optional linear step information, and
+  /// optional alignment.
+  ///
+  /// This helper produces only the parameter-encoding suffix; the caller is
+  /// responsible for adding ISA, masking, VLEN, and the base function name.
+  ///
+  /// \param ParamAttrs  A list of per-parameter attributes describing how each
+  ///                    argument participates in SIMD execution.
+  ///
+  /// \returns A string encoding the parameter attributes suitable for inclusion
+  ///          in a vector function name.
+  LLVM_ABI std::string
+  mangleVectorParameters(llvm::ArrayRef<DeclareSimdAttrTy> ParamAttrs);
+
+  /// Emit x86-specific vector function attributes for an OpenMP `declare simd`
+  /// directive.
+  ///
+  /// This function attaches one or more mangled vector-function-name attributes
+  /// to the given LLVM function, following the x86 Vector Function ABI.
+  ///
+  /// Depending on the branch clause, masked and/or unmasked variants are
+  /// emitted. The vector length is either taken from the explicit `simdlen`
+  /// clause or derived from the characteristic data type (CDT).
+  ///
+  /// \param Fn          The LLVM function corresponding to the scalar version.
+  /// \param NumElements The number of SIMD lanes derived from the target ISA.
+  /// \param VLENVal     Optional explicit SIMD length from the `simdlen`
+  /// clause.
+  /// \param ParamAttrs  Per-parameter SIMD attributes (uniform, linear, etc.).
+  /// \param Branch      The branch behavior specified by the `inbranch` or
+  ///                    `notinbranch` clause.
+  LLVM_ABI void emitX86DeclareSimdFunction(
+      llvm::Function *Fn, unsigned NumElements, const llvm::APSInt &VLENVal,
+      llvm::ArrayRef<DeclareSimdAttrTy> ParamAttrs, DeclareSimdBranch Branch);
+
+  /// Emit vector function attributes for an OpenMP `declare simd` directive.
+  ///
+  /// This is the target-independent entry point used by frontends and IR
+  /// translation layers. It dispatches to a target-specific implementation
+  /// based on the module target triple.
+  ///
+  /// If the target does not support `declare simd` lowering, this function
+  /// reports an error and performs no emission.
+  ///
+  /// \param Fn          The LLVM function corresponding to the scalar version.
+  /// \param VLENVal     Optional explicit SIMD length from the `simdlen`
+  /// clause.
+  /// \param ParamAttrs  Per-parameter SIMD attributes (uniform, linear, etc.).
+  /// \param Branch      The branch behavior specified by the `inbranch` or
+  ///                    `notinbranch` clause.
+  LLVM_ABI void
+  emitDeclareSimdFunction(llvm::Function *Fn, const llvm::APSInt &VLENVal,
+                          llvm::ArrayRef<DeclareSimdAttrTy> ParamAttrs,
+                          llvm::DeclareSimdBranch Branch);
 
   /// Generator for '#omp flush'
   ///
