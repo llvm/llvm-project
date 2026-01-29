@@ -609,12 +609,16 @@ def binop_same_val: GICombineRule<
 >;
 
 // Fold (0 op x) - > 0
+def binop_left_to_zero_frags : GICombinePatFrag<
+  (outs root:$dst, $zero), (ins $rhs),
+  !foreach(op,
+           [G_SHL, G_LSHR, G_ASHR, G_SDIV, G_UDIV, G_SREM, G_UREM, G_MUL],
+           (pattern (G_CONSTANT $zero, 0), (op $dst, $zero, $rhs)))>;
+
 def binop_left_to_zero: GICombineRule<
-  (defs root:$root),
-  (match (wip_match_opcode G_SHL, G_LSHR, G_ASHR, G_SDIV, G_UDIV, G_SREM,
-                           G_UREM):$root,
-    [{ return Helper.matchOperandIsZero(*${root}, 1); }]),
-  (apply [{ Helper.replaceSingleDefInstWithOperand(*${root}, 1); }])
+  (defs root:$dst),
+  (match (binop_left_to_zero_frags $dst, $zero, $rhs)),
+  (apply (GIReplaceReg $dst, $zero))
 >;
 
 def urem_pow2_to_mask : GICombineRule<
@@ -689,6 +693,13 @@ def constant_fold_fsqrt : constant_fold_unary_fp_op_rule<G_FSQRT>;
 def constant_fold_flog2 : constant_fold_unary_fp_op_rule<G_FLOG2>;
 def constant_fold_fptrunc : constant_fold_unary_fp_op_rule<G_FPTRUNC>;
 def constant_fold_fpext : constant_fold_unary_fp_op_rule<G_FPEXT>;
+def constant_fold_fceil : constant_fold_unary_fp_op_rule<G_FCEIL>;
+def constant_fold_ffloor : constant_fold_unary_fp_op_rule<G_FFLOOR>;
+def constant_fold_intrinsic_trunc : constant_fold_unary_fp_op_rule<G_INTRINSIC_TRUNC>;
+def constant_fold_intrinsic_round : constant_fold_unary_fp_op_rule<G_INTRINSIC_ROUND>;
+def constant_fold_intrinsic_roundeven : constant_fold_unary_fp_op_rule<G_INTRINSIC_ROUNDEVEN>;
+def constant_fold_frint : constant_fold_unary_fp_op_rule<G_FRINT>;
+def constant_fold_fnearbyint : constant_fold_unary_fp_op_rule<G_FNEARBYINT>;
 
 // Fold constant zero int to fp conversions.
 class itof_const_zero_fold_rule<Instruction opcode> : GICombineRule <
@@ -708,6 +719,13 @@ def constant_fold_fp_ops : GICombineGroup<[
   constant_fold_flog2,
   constant_fold_fptrunc,
   constant_fold_fpext,
+  constant_fold_fceil,
+  constant_fold_ffloor,
+  constant_fold_intrinsic_trunc,
+  constant_fold_intrinsic_round,
+  constant_fold_intrinsic_roundeven,
+  constant_fold_frint,
+  constant_fold_fnearbyint,
   itof_const_zero_fold_si,
   itof_const_zero_fold_ui
 ]>;
@@ -1799,6 +1817,21 @@ shl_of_vscale,
 sub_of_vscale,
 ]>;
 
+// fold ((A+(B-C))-B) -> A-C
+def APlusBMinusCMinusB : GICombineRule<
+   (defs root:$root),
+   (match (G_SUB $sub1, $B, $C),
+          (G_ADD $add1, $A, $sub1),
+          (G_SUB $root, $add1, $B)),
+   (apply (G_SUB $root, $A, $C))>;
+
+// fold ((A-(B-C))-C) -> A-B
+def AMinusBMinusCMinusC : GICombineRule<
+    (defs root:$root),
+    (match (G_SUB $sub1, $B, $C),
+            (G_SUB $sub2, $A, $sub1),
+            (G_SUB $root, $sub2, $C)),
+    (apply (G_SUB $root, $A, $B))>;
 
 // fold ((0-A) + B) -> B-A
 def ZeroMinusAPlusB : GICombineRule<
@@ -1911,6 +1944,8 @@ def AMinusC1PlusC2: GICombineRule<
    (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
 def integer_reassoc_combines: GICombineGroup<[
+  APlusBMinusCMinusB,
+  AMinusBMinusCMinusC,
   ZeroMinusAPlusB,
   APlusZeroMinusB,
   APlusBMinusB,

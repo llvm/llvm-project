@@ -495,6 +495,59 @@ bool Pointer::isElementInitialized(unsigned Index) const {
   return isInitialized();
 }
 
+bool Pointer::isElementAlive(unsigned Index) const {
+  assert(getFieldDesc()->isPrimitiveArray());
+
+  InitMapPtr &IM = getInitMap();
+  if (!IM.hasInitMap())
+    return true;
+
+  if (IM.allInitialized())
+    return true;
+
+  return IM->isElementAlive(Index);
+}
+
+void Pointer::startLifetime() const {
+  if (!isBlockPointer())
+    return;
+  if (BS.Base < sizeof(InlineDescriptor))
+    return;
+
+  if (inArray()) {
+    const Descriptor *Desc = getFieldDesc();
+    InitMapPtr &IM = getInitMap();
+    if (!IM.hasInitMap())
+      IM.setInitMap(new InitMap(Desc->getNumElems(), IM.allInitialized()));
+
+    IM->startElementLifetime(getIndex());
+    assert(isArrayRoot() || (this->getLifetime() == Lifetime::Started));
+    return;
+  }
+
+  getInlineDesc()->LifeState = Lifetime::Started;
+}
+
+void Pointer::endLifetime() const {
+  if (!isBlockPointer())
+    return;
+  if (BS.Base < sizeof(InlineDescriptor))
+    return;
+
+  if (inArray()) {
+    const Descriptor *Desc = getFieldDesc();
+    InitMapPtr &IM = getInitMap();
+    if (!IM.hasInitMap())
+      IM.setInitMap(new InitMap(Desc->getNumElems(), IM.allInitialized()));
+
+    IM->endElementLifetime(getIndex());
+    assert(isArrayRoot() || (this->getLifetime() == Lifetime::Ended));
+    return;
+  }
+
+  getInlineDesc()->LifeState = Lifetime::Ended;
+}
+
 void Pointer::initialize() const {
   if (!isBlockPointer())
     return;
@@ -529,7 +582,6 @@ void Pointer::initializeElement(unsigned Index) const {
   assert(Index < getFieldDesc()->getNumElems());
 
   InitMapPtr &IM = getInitMap();
-
   if (IM.allInitialized())
     return;
 
@@ -565,6 +617,23 @@ bool Pointer::allElementsInitialized() const {
 
   InitMapPtr IM = getInitMap();
   return IM.allInitialized();
+}
+
+bool Pointer::allElementsAlive() const {
+  assert(getFieldDesc()->isPrimitiveArray());
+  assert(isArrayRoot());
+
+  if (isStatic() && BS.Base == 0)
+    return true;
+
+  if (isRoot() && BS.Base == sizeof(GlobalInlineDescriptor) &&
+      Offset == BS.Base) {
+    const auto &GD = block()->getBlockDesc<GlobalInlineDescriptor>();
+    return GD.InitState == GlobalInitState::Initialized;
+  }
+
+  InitMapPtr &IM = getInitMap();
+  return IM.allInitialized() || (IM.hasInitMap() && IM->allElementsAlive());
 }
 
 void Pointer::activate() const {
