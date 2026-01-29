@@ -202,6 +202,34 @@ enum {
 #include "CorePropertiesEnum.inc"
 };
 
+#ifndef NDEBUG
+#define LLDB_PROPERTIES_testing
+#include "CoreProperties.inc"
+
+enum {
+#define LLDB_PROPERTIES_testing
+#include "CorePropertiesEnum.inc"
+};
+#endif
+
+#ifndef NDEBUG
+TestingProperties::TestingProperties() {
+  m_collection_sp = std::make_shared<OptionValueProperties>("testing");
+  m_collection_sp->Initialize(g_testing_properties);
+}
+
+bool TestingProperties::GetInjectVarLocListError() const {
+  const uint32_t idx = ePropertyInjectVarLocListError;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_testing_properties[idx].default_uint_value != 0);
+}
+
+TestingProperties &TestingProperties::GetGlobalTestingProperties() {
+  static TestingProperties g_testing_properties;
+  return g_testing_properties;
+}
+#endif
+
 LoadPluginCallbackType Debugger::g_load_plugin_callback = nullptr;
 
 Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,

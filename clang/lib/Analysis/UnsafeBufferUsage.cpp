@@ -128,10 +128,10 @@ public:
   // descendants of a given node "n" except for the ones
   // belonging to a different callable of "n".
   MatchDescendantVisitor(ASTContext &Context, FastMatcher &Matcher,
-                         bool FindAll, bool ignoreUnevaluatedContext,
+                         bool FindAll, bool IgnoreUnevaluatedContext,
                          const UnsafeBufferUsageHandler &NewHandler)
       : Matcher(&Matcher), FindAll(FindAll), Matches(false),
-        ignoreUnevaluatedContext(ignoreUnevaluatedContext),
+        IgnoreUnevaluatedContext(IgnoreUnevaluatedContext),
         ActiveASTContext(&Context), Handler(&NewHandler) {
     ShouldVisitTemplateInstantiations = true;
     ShouldVisitImplicitCode = false; // TODO: let's ignore implicit code for now
@@ -169,7 +169,7 @@ public:
 
   bool TraverseGenericSelectionExpr(GenericSelectionExpr *Node) override {
     // These are unevaluated, except the result expression.
-    if (ignoreUnevaluatedContext)
+    if (IgnoreUnevaluatedContext)
       return TraverseStmt(Node->getResultExpr());
     return DynamicRecursiveASTVisitor::TraverseGenericSelectionExpr(Node);
   }
@@ -177,7 +177,7 @@ public:
   bool
   TraverseUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *Node) override {
     // Unevaluated context.
-    if (ignoreUnevaluatedContext)
+    if (IgnoreUnevaluatedContext)
       return true;
     return DynamicRecursiveASTVisitor::TraverseUnaryExprOrTypeTraitExpr(Node);
   }
@@ -185,7 +185,7 @@ public:
   bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc Node,
                                  bool TraverseQualifier) override {
     // Unevaluated context.
-    if (ignoreUnevaluatedContext)
+    if (IgnoreUnevaluatedContext)
       return true;
     return DynamicRecursiveASTVisitor::TraverseTypeOfExprTypeLoc(
         Node, TraverseQualifier);
@@ -194,7 +194,7 @@ public:
   bool TraverseDecltypeTypeLoc(DecltypeTypeLoc Node,
                                bool TraverseQualifier) override {
     // Unevaluated context.
-    if (ignoreUnevaluatedContext)
+    if (IgnoreUnevaluatedContext)
       return true;
     return DynamicRecursiveASTVisitor::TraverseDecltypeTypeLoc(
         Node, TraverseQualifier);
@@ -202,14 +202,14 @@ public:
 
   bool TraverseCXXNoexceptExpr(CXXNoexceptExpr *Node) override {
     // Unevaluated context.
-    if (ignoreUnevaluatedContext)
+    if (IgnoreUnevaluatedContext)
       return true;
     return DynamicRecursiveASTVisitor::TraverseCXXNoexceptExpr(Node);
   }
 
   bool TraverseCXXTypeidExpr(CXXTypeidExpr *Node) override {
     // Unevaluated context.
-    if (ignoreUnevaluatedContext)
+    if (IgnoreUnevaluatedContext)
       return true;
     return DynamicRecursiveASTVisitor::TraverseCXXTypeidExpr(Node);
   }
@@ -247,7 +247,7 @@ private:
   // When true, finds all matches. When false, finds the first match and stops.
   const bool FindAll;
   bool Matches;
-  bool ignoreUnevaluatedContext;
+  bool IgnoreUnevaluatedContext;
   ASTContext *ActiveASTContext;
   const UnsafeBufferUsageHandler *Handler;
 };
@@ -266,7 +266,7 @@ forEachDescendantEvaluatedStmt(const Stmt *S, ASTContext &Ctx,
                                const UnsafeBufferUsageHandler &Handler,
                                FastMatcher &Matcher) {
   MatchDescendantVisitor Visitor(Ctx, Matcher, /*FindAll=*/true,
-                                 /*ignoreUnevaluatedContext=*/true, Handler);
+                                 /*IgnoreUnevaluatedContext=*/true, Handler);
   Visitor.findMatch(DynTypedNode::create(*S));
 }
 
@@ -274,7 +274,7 @@ static void forEachDescendantStmt(const Stmt *S, ASTContext &Ctx,
                                   const UnsafeBufferUsageHandler &Handler,
                                   FastMatcher &Matcher) {
   MatchDescendantVisitor Visitor(Ctx, Matcher, /*FindAll=*/true,
-                                 /*ignoreUnevaluatedContext=*/false, Handler);
+                                 /*IgnoreUnevaluatedContext=*/false, Handler);
   Visitor.findMatch(DynTypedNode::create(*S));
 }
 
@@ -667,7 +667,8 @@ static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
 }
 
 static bool isSafeArraySubscript(const ArraySubscriptExpr &Node,
-                                 const ASTContext &Ctx) {
+                                 const ASTContext &Ctx,
+                                 const bool IgnoreStaticSizedArrays) {
   // FIXME: Proper solution:
   //  - refactor Sema::CheckArrayAccess
   //    - split safe/OOB/unknown decision logic from diagnostics emitting code
@@ -687,6 +688,12 @@ static bool isSafeArraySubscript(const ArraySubscriptExpr &Node,
     limit = SLiteral->getLength() + 1;
   } else {
     return false;
+  }
+
+  if (IgnoreStaticSizedArrays) {
+    // If we made it here, it means a size was found for the var being accessed
+    // (either string literal or array). If it's fixed size, we can ignore it.
+    return true;
   }
 
   Expr::EvalResult EVResult;
@@ -756,14 +763,25 @@ static const Expr *tryConstantFoldConditionalExpr(const Expr *E,
 // form: E.c_str(), for any expression E of `std::string` type.
 static bool isNullTermPointer(const Expr *Ptr, ASTContext &Ctx) {
   // Strip CXXDefaultArgExpr before check:
+  Ptr = Ptr->IgnoreParenImpCasts();
   if (const auto *DefaultArgE = dyn_cast<CXXDefaultArgExpr>(Ptr))
-    Ptr = DefaultArgE->getExpr();
-  Ptr = tryConstantFoldConditionalExpr(Ptr, Ctx);
-  if (isa<clang::StringLiteral>(Ptr->IgnoreParenImpCasts()))
+    Ptr = DefaultArgE->getExpr()->IgnoreParenImpCasts();
+  // Try to perform constant fold recursively:
+  if (const auto *NewPtr = tryConstantFoldConditionalExpr(Ptr, Ctx);
+      NewPtr != Ptr)
+    return isNullTermPointer(NewPtr, Ctx);
+  // Split the analysis for conditional expressions that cannot be
+  // constant-folded:
+  if (const auto *CondE = dyn_cast<ConditionalOperator>(Ptr)) {
+    return isNullTermPointer(CondE->getLHS(), Ctx) &&
+           isNullTermPointer(CondE->getRHS(), Ctx);
+  }
+
+  if (isa<clang::StringLiteral>(Ptr))
     return true;
-  if (isa<PredefinedExpr>(Ptr->IgnoreParenImpCasts()))
+  if (isa<PredefinedExpr>(Ptr))
     return true;
-  if (auto *MCE = dyn_cast<CXXMemberCallExpr>(Ptr->IgnoreParenImpCasts())) {
+  if (auto *MCE = dyn_cast<CXXMemberCallExpr>(Ptr)) {
     const CXXMethodDecl *MD = MCE->getMethodDecl();
     const CXXRecordDecl *RD = MCE->getRecordDecl()->getCanonicalDecl();
 
@@ -774,7 +792,7 @@ static bool isNullTermPointer(const Expr *Ptr, ASTContext &Ctx) {
 
   // Functions known to return properly null terminated strings.
   static const llvm::StringSet<> NullTermFunctions = {"strerror"};
-  if (auto *CE = dyn_cast<CallExpr>(Ptr->IgnoreParenImpCasts())) {
+  if (auto *CE = dyn_cast<CallExpr>(Ptr)) {
     const FunctionDecl *F = CE->getDirectCallee();
     if (F && F->getIdentifier() && NullTermFunctions.contains(F->getName()))
       return true;
@@ -1568,6 +1586,7 @@ public:
   }
 
   static bool matches(const Stmt *S, const ASTContext &Ctx,
+                      const UnsafeBufferUsageHandler *Handler,
                       MatchResult &Result) {
     const auto *ASE = dyn_cast<ArraySubscriptExpr>(S);
     if (!ASE)
@@ -1578,7 +1597,10 @@ public:
     const auto *Idx = dyn_cast<IntegerLiteral>(ASE->getIdx());
     bool IsSafeIndex = (Idx && Idx->getValue().isZero()) ||
                        isa<ArrayInitIndexExpr>(ASE->getIdx());
-    if (IsSafeIndex || isSafeArraySubscript(*ASE, Ctx))
+    if (IsSafeIndex ||
+        isSafeArraySubscript(
+            *ASE, Ctx,
+            Handler->ignoreUnsafeBufferInStaticSizedArray(S->getBeginLoc())))
       return false;
     Result.addNode(ArraySubscrTag, DynTypedNode::create(*ASE));
     return true;
@@ -2098,6 +2120,7 @@ public:
                  // guarantee null-termination
     VA_LIST = 4, // one of the `-printf`s function that take va_list, which is
                  // considered unsafe as it is not compile-time check
+    FORMAT_ATTR = 8, // flag: the callee has the format attribute
   } WarnedFunKind = OTHERS;
 
   UnsafeLibcFunctionCallGadget(const MatchResult &Result)
@@ -2120,14 +2143,14 @@ public:
                       MatchResult &Result) {
     if (ignoreUnsafeLibcCall(Ctx, *S, Handler))
       return false;
-    auto *CE = dyn_cast<CallExpr>(S);
-    if (!CE || !CE->getDirectCallee())
+    const auto *CE = dyn_cast<CallExpr>(S);
+    if (!CE)
       return false;
-    const auto *FD = dyn_cast<FunctionDecl>(CE->getDirectCallee());
+    const auto *FD = CE->getDirectCallee();
     if (!FD)
       return false;
 
-    bool IsGlobalAndNotInAnyNamespace =
+    const bool IsGlobalAndNotInAnyNamespace =
         FD->isGlobal() && !FD->getEnclosingNamespaceContext()->isNamespace();
 
     // A libc function must either be in the std:: namespace or a global
@@ -2138,11 +2161,10 @@ public:
     //  printf, atoi, we consider it safe:
     if (CE->getNumArgs() == 1 && isNullTermPointer(CE->getArg(0), Ctx))
       return false;
-    auto isSingleStringLiteralArg = false;
-    if (CE->getNumArgs() == 1) {
-      isSingleStringLiteralArg =
-          isa<clang::StringLiteral>(CE->getArg(0)->IgnoreParenImpCasts());
-    }
+
+    const bool isSingleStringLiteralArg =
+        CE->getNumArgs() == 1 &&
+        isa<clang::StringLiteral>(CE->getArg(0)->IgnoreParenImpCasts());
     if (!isSingleStringLiteralArg) {
       // (unless the call has a sole string literal argument):
       if (libc_func_matchers::isPredefinedUnsafeLibcFunc(*FD)) {
@@ -2282,11 +2304,16 @@ public:
                              ASTContext &Ctx) const override {
     if (UnsafeArg)
       Handler.handleUnsafeLibcCall(
-          Call, UnsafeLibcFunctionCallGadget::UnsafeKind::STRING, Ctx,
-          UnsafeArg);
+          Call,
+          UnsafeLibcFunctionCallGadget::UnsafeKind::STRING |
+              UnsafeLibcFunctionCallGadget::UnsafeKind::FORMAT_ATTR,
+          Ctx, UnsafeArg);
     else
       Handler.handleUnsafeLibcCall(
-          Call, UnsafeLibcFunctionCallGadget::UnsafeKind::OTHERS, Ctx);
+          Call,
+          UnsafeLibcFunctionCallGadget::UnsafeKind::OTHERS |
+              UnsafeLibcFunctionCallGadget::UnsafeKind::FORMAT_ATTR,
+          Ctx);
   }
 
   DeclUseList getClaimedVarUseSites() const override { return {}; }
@@ -2886,6 +2913,10 @@ std::set<const Expr *> clang::findUnsafePointers(const FunctionDecl *FD) {
       return false;
     }
     bool ignoreUnsafeBufferInLibcCall(const SourceLocation &) const override {
+      return false;
+    }
+    bool ignoreUnsafeBufferInStaticSizedArray(
+        const SourceLocation &Loc) const override {
       return false;
     }
     std::string getUnsafeBufferUsageAttributeTextAt(
@@ -4275,7 +4306,7 @@ getNaiveStrategy(llvm::iterator_range<VarDeclIterTy> UnsafeVars) {
 
 //  Manages variable groups:
 class VariableGroupsManagerImpl : public VariableGroupsManager {
-  const std::vector<VarGrpTy> Groups;
+  const std::vector<VarGrpTy> &Groups;
   const std::map<const VarDecl *, unsigned> &VarGrpMap;
   const llvm::SetVector<const VarDecl *> &GrpsUnionForParms;
 
@@ -4594,6 +4625,10 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   SmallVector<Stmt *> Stmts;
 
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+    // Consteval functions are free of UB by the spec, so we don't need to
+    // visit them or produce diagnostics.
+    if (FD->isConsteval())
+      return;
     // We do not want to visit a Lambda expression defined inside a method
     // independently. Instead, it should be visited along with the outer method.
     // FIXME: do we want to do the same thing for `BlockDecl`s?

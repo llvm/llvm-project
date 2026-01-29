@@ -764,18 +764,18 @@ declare void @f.align8() align 8
 ; CHECK: declare void @f.align8() align 8
 
 ; Functions -- prefalign
-define void @f.prefalign2() prefalign 2 {
+define void @f.prefalign2() prefalign(2) {
   ret void
 }
-; CHECK: define void @f.prefalign2() prefalign 2
-define void @f.prefalign4() prefalign 4 {
+; CHECK: define void @f.prefalign2() prefalign(2)
+define void @f.prefalign4() prefalign(4) {
   ret void
 }
-; CHECK: define void @f.prefalign4() prefalign 4
-define void @f.prefalign8() prefalign 8 {
+; CHECK: define void @f.prefalign4() prefalign(4)
+define void @f.prefalign8() prefalign(8) {
   ret void
 }
-; CHECK: define void @f.prefalign8() prefalign 8
+; CHECK: define void @f.prefalign8() prefalign(8)
 
 ; Functions -- GC
 declare void @f.gcshadow() gc "shadow-stack"

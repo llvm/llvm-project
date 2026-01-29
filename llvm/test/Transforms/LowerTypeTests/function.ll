@@ -62,9 +62,9 @@ define i1 @foo(ptr %p) {
   ret i1 %x
 }
 
-; JT4:  define private void @[[JT]]() #[[ATTR:.*]] prefalign 4 !elf_section_properties ![[PROP:[0-9]*]] {
-; JT8:  define private void @[[JT]]() #[[ATTR:.*]] prefalign 8 !elf_section_properties ![[PROP:[0-9]*]] {
-; JT16: define private void @[[JT]]() #[[ATTR:.*]] prefalign 16 !elf_section_properties ![[PROP:[0-9]*]] {
+; JT4:  define private void @[[JT]]() #[[ATTR:.*]] prefalign(4) !elf_section_properties ![[PROP:[0-9]*]] {
+; JT8:  define private void @[[JT]]() #[[ATTR:.*]] prefalign(8) !elf_section_properties ![[PROP:[0-9]*]] {
+; JT16: define private void @[[JT]]() #[[ATTR:.*]] prefalign(16) !elf_section_properties ![[PROP:[0-9]*]] {
 
 ; X86:      jmp ${0:c}@plt
 ; X86-SAME: int3

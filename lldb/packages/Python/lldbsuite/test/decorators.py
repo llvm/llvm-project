@@ -6,6 +6,7 @@ from __future__ import annotations
 from collections.abc import Callable
 from functools import wraps
 from packaging import version
+import contextlib
 import ctypes
 import locale
 import os
@@ -100,11 +101,13 @@ def _match_decorator_property(expected, actual):
     return expected == actual
 
 
-def _compiler_supports(
-    compiler, flag, source="int main() {}", output_file=temp_file.OnDiskTempFile()
-):
+def _compiler_supports(compiler, flag, source="int main() {}", output_file=None):
     """Test whether the compiler supports the given flag."""
-    with output_file:
+    if output_file:
+        context = contextlib.nullcontext(output_file)
+    else:
+        context = temp_file.OnDiskTempFile()
+    with context as ctx:
         if platform.system() == "Darwin":
             compiler = "xcrun " + compiler
         try:
@@ -112,7 +115,7 @@ def _compiler_supports(
                 source,
                 compiler,
                 flag,
-                output_file.path,
+                ctx.path,
             )
             subprocess.check_call(cmd, shell=True)
         except subprocess.CalledProcessError:
@@ -811,13 +814,6 @@ def skipIfWindows(func=None, windows_version=None):
     return decorator
 
 
-def skipIfWindowsWithoutConPTY(func: Callable):
-    """Decorator to skip tests on Windows without ConPTY support.
-    see https://devblogs.microsoft.com/commandline/windows-command-line-introducing-the-windows-pseudo-console-conpty/
-    """
-    return skipIfWindows(func=func, windows_version=["<", "10.0.17763"])
-
-
 def skipIfWindowsAndNonEnglish(func):
     """Decorate the item to skip tests that should be skipped on non-English locales on Windows."""
 
@@ -1034,46 +1030,27 @@ def skipUnlessUndefinedBehaviorSanitizer(func):
             )
 
         # We need to write out the object into a named temp file for inspection.
-        outputf = temp_file.OnDiskTempFile()
+        with temp_file.OnDiskTempFile() as outputf:
+            # Try to compile with ubsan turned on.
+            if not _compiler_supports(
+                lldbplatformutil.getCompiler(),
+                "-fsanitize=undefined",
+                "int main() { int x = 0; return x / x; }",
+                outputf,
+            ):
+                return "Compiler cannot compile with -fsanitize=undefined"
+            if not outputf.path:
+                return "Cannot create Temp file path."
 
-        # Try to compile with ubsan turned on.
-        if not _compiler_supports(
-            lldbplatformutil.getCompiler(),
-            "-fsanitize=undefined",
-            "int main() { int x = 0; return x / x; }",
-            outputf,
-        ):
-            return "Compiler cannot compile with -fsanitize=undefined"
+            nm_bin = configuration.get_nm_path()
+            if not nm_bin:
+                return "No llvm-nm or nm binary."
 
-        # Check that we actually see ubsan instrumentation in the binary.
-        cmd = "nm %s" % outputf.path
-        with os.popen(cmd) as nm_output:
-            if "___ubsan_handle_divrem_overflow" not in nm_output.read():
+            # Check that we actually see ubsan instrumentation in the binary.
+            nm_output = subprocess.check_output([nm_bin, outputf.path], text=True)
+            if "__ubsan_handle_divrem_overflow" not in nm_output:
                 return "Division by zero instrumentation is missing"
 
-        # Find the ubsan dylib.
-        # FIXME: This check should go away once compiler-rt gains support for __ubsan_on_report.
-        cmd = (
-            "%s -fsanitize=undefined -x c - -o - -### 2>&1"
-            % lldbplatformutil.getCompiler()
-        )
-        with os.popen(cmd) as cc_output:
-            driver_jobs = cc_output.read()
-            m = re.search(r'"([^"]+libclang_rt.ubsan_osx_dynamic.dylib)"', driver_jobs)
-            if not m:
-                return "Could not find the ubsan dylib used by the driver"
-            ubsan_dylib = m.group(1)
-
-        # Check that the ubsan dylib has special monitor hooks.
-        cmd = "nm -gU %s" % ubsan_dylib
-        with os.popen(cmd) as nm_output:
-            syms = nm_output.read()
-            if "___ubsan_on_report" not in syms:
-                return "Missing ___ubsan_on_report"
-            if "___ubsan_get_current_report_data" not in syms:
-                return "Missing ___ubsan_get_current_report_data"
-
-        # OK, this dylib + compiler works for us.
         return None
 
     return skipTestIfFn(is_compiler_clang_with_ubsan)(func)
@@ -1113,6 +1090,7 @@ def skipUnlessBoundsSafety(func):
         return None
 
     return skipTestIfFn(is_compiler_with_bounds_safety)(func)
+
 
 def skipIfAsan(func):
     """Skip this test if the environment is set up to run LLDB *itself* under ASAN."""

@@ -2645,6 +2645,44 @@ define float @test_pow_f32__y_known_integral_nearbyint(float %x, float nofpclass
   ret float %pow
 }
 
+define float @test_pow_f32__y_known_integral_nearbyint_assume(float %x, float %y.arg) {
+; CHECK-LABEL: define float @test_pow_f32__y_known_integral_nearbyint_assume
+; CHECK-SAME: (float [[X:%.*]], float [[Y_ARG:%.*]]) {
+; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.nearbyint.f32(float [[Y_ARG]])
+; CHECK-NEXT:    [[Y_FABS:%.*]] = call float @llvm.fabs.f32(float [[Y]])
+; CHECK-NEXT:    [[Y_IS_FINITE:%.*]] = fcmp one float [[Y_FABS]], 0x7FF0000000000000
+; CHECK-NEXT:    call void @llvm.assume(i1 [[Y_IS_FINITE]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fptosi float [[Y]] to i32
+; CHECK-NEXT:    [[POW:%.*]] = tail call float @_Z4pownfi(float [[X]], i32 [[TMP1]])
+; CHECK-NEXT:    ret float [[POW]]
+;
+  %y = call float @llvm.nearbyint.f32(float %y.arg)
+  %y.fabs = call float @llvm.fabs.f32(float %y)
+  %y.is.finite = fcmp one float %y.fabs, 0x7FF0000000000000
+  call void @llvm.assume(i1 %y.is.finite)
+  %pow = tail call float @_Z3powff(float %x, float %y)
+  ret float %pow
+}
+
+define float @test_pow_f32__y_known_integral_nearbyint_assume_arg_input(float %x, float %y.arg) {
+; CHECK-LABEL: define float @test_pow_f32__y_known_integral_nearbyint_assume_arg_input
+; CHECK-SAME: (float [[X:%.*]], float [[Y_ARG:%.*]]) {
+; CHECK-NEXT:    [[Y_ARG_FABS:%.*]] = call float @llvm.fabs.f32(float [[Y_ARG]])
+; CHECK-NEXT:    [[IS_FINITE:%.*]] = fcmp one float [[Y_ARG_FABS]], 0x7FF0000000000000
+; CHECK-NEXT:    call void @llvm.assume(i1 [[IS_FINITE]])
+; CHECK-NEXT:    [[Y:%.*]] = call float @llvm.nearbyint.f32(float [[Y_ARG]])
+; CHECK-NEXT:    [[TMP1:%.*]] = fptosi float [[Y]] to i32
+; CHECK-NEXT:    [[POW:%.*]] = tail call float @_Z4pownfi(float [[X]], i32 [[TMP1]])
+; CHECK-NEXT:    ret float [[POW]]
+;
+  %y.arg.fabs = call float @llvm.fabs.f32(float %y.arg)
+  %is.finite = fcmp one float %y.arg.fabs, 0x7FF0000000000000
+  call void @llvm.assume(i1 %is.finite)
+  %y = call float @llvm.nearbyint.f32(float %y.arg)
+  %pow = tail call float @_Z3powff(float %x, float %y)
+  ret float %pow
+}
+
 define float @test_pow_f32__y_known_integral_round(float %x, float nofpclass(inf nan) %y.arg) {
 ; CHECK-LABEL: define float @test_pow_f32__y_known_integral_round
 ; CHECK-SAME: (float [[X:%.*]], float nofpclass(nan inf) [[Y_ARG:%.*]]) {
