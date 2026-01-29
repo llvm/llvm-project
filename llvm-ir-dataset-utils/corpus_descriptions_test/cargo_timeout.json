@@ -1,0 +1,13 @@
+{
+  "sources": [
+    {
+      "type": "git",
+      "repo_url": "https://github.com/tetcoin/tetcore",
+      "commit_sha": null
+    }
+  ],
+  "folder_name": "tetcore",
+  "build_system": "cargo",
+  "license": "Apache-2.0",
+  "license_source": "manual"
+}

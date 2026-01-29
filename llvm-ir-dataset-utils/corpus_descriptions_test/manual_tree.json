@@ -1,0 +1,16 @@
+{
+  "sources": [
+    {
+      "type": "git",
+      "repo_url": "https://gitlab.com/OldManProgrammer/unix-tree",
+      "commit_sha": "84fa3ddff51b30835a0f9c4a9e4c9225970f9aff"
+    }
+  ],
+  "folder_name": "tree",
+  "build_system": "manual",
+  "commands": [
+    "make CC=clang CFLAGS='-Xclang -fembed-bitcode=all -O3' -j${jobs}"
+  ],
+  "license": "GPL-2.0-or-later",
+  "license_source": "manual"
+}

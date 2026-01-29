@@ -1,0 +1,17 @@
+{
+  "sources": [
+    {
+      "type": "git",
+      "repo_url": "https://github.com/efm32-rs/efm32wg-pacs",
+      "commit_sha": null
+    },
+    {
+      "type": "tar",
+      "archive_url": "https://crates.io/api/v1/crates/efm32wg940-pac/0.1.0/download"
+    }
+  ],
+  "folder_name": "efm32wg-pacs",
+  "build_system": "cargo",
+  "license": "BSD-3-Clause",
+  "license_source": "manual"
+}

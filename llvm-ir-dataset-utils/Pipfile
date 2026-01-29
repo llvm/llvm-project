@@ -1,0 +1,15 @@
+[packages]
+absl-py = ">=1.4.0"
+mlgo-utils = ">=18.0.0.dev202401210722"
+ray = ">=2.5.1"
+toml = ">=0.10.2"
+pandas = ">=2.0.3"
+plotly = ">=5.16.1"
+# Kaleido is a dependency of plotly not explicitly declared needed for image
+# export.
+kaleido = ">=0.2.1"
+umap-learn = ">=0.5.3"
+
+[dev-packages]
+yapf = ">=0.33.0"
+pytest = ">=7.4.0"
