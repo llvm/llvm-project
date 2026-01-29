@@ -265,6 +265,10 @@ public:
                                   lldb::SymbolType symbol_type,
                                   SymbolContextList &sc_list);
 
+  void FindSymbolsContainingFileAddress(const Address &addr,
+                                        lldb::SymbolType symbol_type,
+                                        SymbolContextList &sc_list);
+
   void FindSymbolsMatchingRegExAndType(
       const RegularExpression &regex, lldb::SymbolType symbol_type,
       SymbolContextList &sc_list,
