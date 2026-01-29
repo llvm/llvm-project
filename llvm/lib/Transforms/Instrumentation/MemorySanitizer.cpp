@@ -3994,9 +3994,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       Sa = getShadow(&I, 1);
       Sb = getShadow(&I, 2);
 
-      if (Lanes == kBothLanes) {
-        // Default
-      } else if (Lanes == kEvenLanes || Lanes == kOddLanes) {
+      if (Lanes == kEvenLanes || Lanes == kOddLanes) {
         // Convert < S0, S1, S2, S3, S4, S5, S6, S7 >
         //      to < S0, S0, S2, S2, S4, S4, S6, S6 > (if even)
         //      to < S1, S1, S3, S3, S5, S5, S7, S7 > (if odd)
