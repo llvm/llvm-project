@@ -315,7 +315,7 @@ namespace ReturnLocalPtr {
   }
 
   static_assert(p2() == 12, ""); // both-error {{not an integral constant expression}} \
-                                 // both-note {{read of variable whose lifetime has ended}}
+                                 // both-note {{read of object outside its lifetime}}
 }
 
 namespace VoidReturn {
@@ -734,4 +734,34 @@ namespace LocalVarForParmVarDecl {
 namespace PtrPtrCast {
   void foo() { ; }
   void bar(int *a) { a = (int *)(void *)(foo); }
+}
+namespace GH176536 {
+  constexpr void foo(int n) {
+    return n > 1 ? foo(n - 1) : 0; // both-error {{left operand to ? is void, but right operand is of type 'int'}}
+  }
+  static_assert((foo(2), true), ""); // both-error {{static assertion expression is not an integral constant expression}}
+}
+
+namespace NestedDiags {
+  constexpr int foo() { // both-error {{never produces a constant expression}}
+    throw; // both-note {{not valid in a constant expression}} \
+           // both-error {{cannot use 'throw' with exceptions disabled}}
+    return 0;
+  }
+  constexpr int bar() {
+    foo();
+    return 0;
+  }
+
+
+  struct S {
+    constexpr S() { // both-error {{never produces a constant expression}}
+      throw; // both-note {{not valid in a constant expression}} \
+             // both-error {{cannot use 'throw' with exceptions disabled}}
+    }
+  };
+  constexpr bool callS() {
+    S s;
+    return true;
+  }
 }

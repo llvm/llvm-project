@@ -199,6 +199,8 @@ def DIDerivedTypeAttr : DialectAttribute<(attr
   VarInt:$alignInBits,
   VarInt:$offsetInBits,
   OptionalInt<"unsigned">:$dwarfAddressSpace,
+  EnumClassFlag<"DIFlags", "getFlags()">:$_rawflags,
+  LocalVar<"DIFlags", "(DIFlags)_rawflags">:$flags,
   OptionalAttribute<"DINodeAttr">:$extraData
 )>;
 

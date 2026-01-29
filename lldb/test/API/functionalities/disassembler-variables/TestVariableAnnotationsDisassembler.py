@@ -116,3 +116,100 @@ class TestVariableAnnotationsDisassembler(TestBase):
         print(out)
         self.assertRegex(out, r"\b(i|argc)\s*=\s*(DW_OP_reg\d+\b|R[A-Z0-9]+)")
         self.assertNotIn("<decoding error>", out)
+
+    @no_debug_info_test
+    @skipIf(archs=no_match(["x86_64"]))
+    def test_structured_annotations_api(self):
+        """Test SBInstruction.variable_annotations() Python API."""
+        obj = self._build_obj("d_original_example.o")
+        target = self._create_target(obj)
+
+        main_symbols = target.FindSymbols("main")
+        self.assertTrue(
+            main_symbols.IsValid() and main_symbols.GetSize() > 0,
+            "Could not find 'main' symbol",
+        )
+
+        main_symbol = main_symbols.GetContextAtIndex(0).GetSymbol()
+        start_addr = main_symbol.GetStartAddress()
+        self.assertTrue(start_addr.IsValid(), "Invalid start address for main")
+
+        instructions = target.ReadInstructions(start_addr, 16)
+        self.assertGreater(instructions.GetSize(), 0, "No instructions read")
+
+        if self.TraceOn():
+            print(
+                f"\nTesting SBInstruction.variable_annotations on {instructions.GetSize()} instructions"
+            )
+
+        expected_vars = ["argc", "argv", "i"]
+
+        # Track current state of variables across instructions.
+        found_variables = set()
+
+        # Test each instruction.
+        for i in range(instructions.GetSize()):
+            inst = instructions.GetInstructionAtIndex(i)
+            self.assertTrue(inst.IsValid(), f"Invalid instruction at index {i}")
+
+            # Get annotations as Python list of dicts.
+            annotations = inst.variable_annotations()
+
+            for ann in annotations:
+                # Validate required fields are present.
+                self.assertIn("variable_name", ann, "Missing 'variable_name' field")
+                self.assertIn(
+                    "location_description", ann, "Missing 'location_description' field"
+                )
+                self.assertIn("start_address", ann, "Missing 'start_address' field")
+                self.assertIn("end_address", ann, "Missing 'end_address' field")
+                self.assertIn("register_kind", ann, "Missing 'register_kind' field")
+
+                var_name = ann["variable_name"]
+
+                # Validate types and values.
+                self.assertIsInstance(var_name, str, "variable_name should be string")
+                self.assertIsInstance(
+                    ann["location_description"],
+                    str,
+                    "location_description should be string",
+                )
+                self.assertIsInstance(
+                    ann["start_address"], int, "start_address should be integer"
+                )
+                self.assertIsInstance(
+                    ann["end_address"], int, "end_address should be integer"
+                )
+                self.assertIsInstance(
+                    ann["register_kind"], int, "register_kind should be integer"
+                )
+
+                self.assertGreater(
+                    len(var_name), 0, "variable_name should not be empty"
+                )
+                self.assertGreater(
+                    len(ann["location_description"]),
+                    0,
+                    "location_description should not be empty",
+                )
+                self.assertGreater(
+                    ann["end_address"],
+                    ann["start_address"],
+                    "end_address should be > start_address",
+                )
+
+                self.assertIn(
+                    var_name, expected_vars, f"Unexpected variable name: {var_name}"
+                )
+
+                found_variables.add(var_name)
+
+        # Validate we find all expected variables.
+        self.assertEqual(
+            found_variables,
+            set(expected_vars),
+            f"Did not find all expected variables. Expected: {expected_vars}, find: {found_variables}",
+        )
+
+        if self.TraceOn():
+            print(f"\nTest complete. All expected variables found: {found_variables}")
