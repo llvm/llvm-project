@@ -1,4 +1,4 @@
-//=== X86PostLegalizerCombiner.cpp --------------------------*- C++ -*-===//
+//===--------------- X86PostLegalizerCombiner.cpp ---------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -90,7 +90,7 @@ X86PostLegalizerCombinerImpl::X86PostLegalizerCombinerImpl(
     const X86PostLegalizerCombinerImplRuleConfig &RuleConfig,
     const X86Subtarget &STI, MachineDominatorTree *MDT, const LegalizerInfo *LI)
     : Combiner(MF, CInfo, TPC, &VT, CSEInfo),
-      Helper(Observer, B, /*IsPreLegalize*/ false, &VT, MDT, LI),
+      Helper(Observer, B, /*IsPreLegalize=*/false, &VT, MDT, LI),
       RuleConfig(RuleConfig), STI(STI),
 #define GET_GICOMBINER_CONSTRUCTOR_INITS
 #include "X86GenPostLegalizeGICombiner.inc"
@@ -135,7 +135,7 @@ void X86PostLegalizerCombiner::getAnalysisUsage(AnalysisUsage &AU) const {
 
 X86PostLegalizerCombiner::X86PostLegalizerCombiner() : MachineFunctionPass(ID) {
   if (!RuleConfig.parseCommandLineOption())
-    report_fatal_error("Invalid rule identifier");
+    reportFatalInternalError("Invalid rule identifier");
 }
 
 bool X86PostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
@@ -144,8 +144,6 @@ bool X86PostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   assert(MF.getProperties().hasLegalized() && "Expected a legalized function?");
   auto *TPC = &getAnalysis<TargetPassConfig>();
   const Function &F = MF.getFunction();
-  bool EnableOpt =
-      MF.getTarget().getOptLevel() != CodeGenOptLevel::None && !skipFunction(F);
 
   const X86Subtarget &ST = MF.getSubtarget<X86Subtarget>();
   const auto *LI = ST.getLegalizerInfo();
@@ -158,9 +156,10 @@ bool X86PostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
       getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
   auto *CSEInfo = &Wrapper.get(TPC->getCSEConfig());
 
-  CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
-                     /*LegalizerInfo*/ nullptr, EnableOpt, F.hasOptSize(),
-                     F.hasMinSize());
+  CombinerInfo CInfo(/*AllowIllegalOps=*/true,
+                     /*ShouldLegalizeIllegal=*/false,
+                     /*LegalizerInfo=*/nullptr, !skipFunction(F),
+                     F.hasOptSize(), F.hasMinSize());
   // Disable fixed-point iteration to reduce compile-time
   CInfo.MaxIterations = 1;
   CInfo.ObserverLvl = CombinerInfo::ObserverLevel::SinglePass;
@@ -168,8 +167,7 @@ bool X86PostLegalizerCombiner::runOnMachineFunction(MachineFunction &MF) {
   CInfo.EnableFullDCE = false;
   X86PostLegalizerCombinerImpl Impl(MF, CInfo, TPC, *VT, CSEInfo, RuleConfig,
                                     ST, MDT, LI);
-  bool Changed = Impl.combineMachineInstrs();
-  return Changed;
+  return Impl.combineMachineInstrs();
 }
 
 char X86PostLegalizerCombiner::ID = 0;
