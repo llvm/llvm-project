@@ -2034,7 +2034,8 @@ TypeInfo ASTContext::getTypeInfoImpl(const Type *T) const {
                 : EltInfo.Width * VT->getNumElements();
     // Enforce at least byte size and alignment.
     Width = std::max<unsigned>(8, Width);
-    Align = std::max<unsigned>(8, Width);
+    Align = std::max<unsigned>(
+        8, Target->vectorsAreElementAligned() ? EltInfo.Width : Width);
 
     // If the alignment is not a power of 2, round up to the next power of 2.
     // This happens for non-power-of-2 length vectors.

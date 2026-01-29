@@ -32,7 +32,7 @@ void cbarrays() {
   use(c3[9][5]);
   // CHECK: load i64, ptr addrspace(2) getelementptr (<{ i64, target("dx.Padding", 8) }>, ptr addrspace(2) @c4, i32 6, i32 0), align 16
   use(c4[6]);
-  // CHECK:  load <4 x i32>, ptr addrspace(2) getelementptr inbounds ([40 x <4 x i32>], ptr addrspace(2) getelementptr inbounds ([30 x [40 x <4 x i32>]], ptr addrspace(2) getelementptr inbounds ([20 x [30 x [40 x <4 x i32>]]], ptr addrspace(2) @c5, i32 0, i32 1), i32 0, i32 12), i32 0, i32 15), align 16
+  // CHECK:  load <4 x i32>, ptr addrspace(2) getelementptr inbounds ([40 x <4 x i32>], ptr addrspace(2) getelementptr inbounds ([30 x [40 x <4 x i32>]], ptr addrspace(2) getelementptr inbounds ([20 x [30 x [40 x <4 x i32>]]], ptr addrspace(2) @c5, i32 0, i32 1), i32 0, i32 12), i32 0, i32 15), align 4
   use(c5[1][12][15]);
   // CHECK: load i16, ptr addrspace(2) getelementptr (<{ i16, target("dx.Padding", 14) }>, ptr addrspace(2) @c6, i32 4, i32 0), align 16
   use(c6[4]);
