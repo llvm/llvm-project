@@ -5678,10 +5678,10 @@ static void TryReferenceInitializationCore(Sema &S,
       T4Quals.setObjCLifetime(T1Quals.getObjCLifetime());
       // Apply T4Quals to the unqualified base type to avoid conflicting
       // ObjC lifetime qualifiers in getQualifiedType.
-      QualType cv1T4WithLifetime =
+      QualType CV1T4WithLifetime =
           S.Context.getQualifiedType(cv1T4.getUnqualifiedType(), T4Quals);
-      Sequence.AddQualificationConversionStep(cv1T4WithLifetime, ValueKind);
-      cv1T4 = cv1T4WithLifetime;
+      Sequence.AddQualificationConversionStep(CV1T4WithLifetime, ValueKind);
+      cv1T4 = CV1T4WithLifetime;
     }
 
     //   In any case, the reference is bound to the resulting glvalue (or to
