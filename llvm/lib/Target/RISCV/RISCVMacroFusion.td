@@ -201,7 +201,7 @@ def TuneFusionMulAdd
              >,
              // Check that both instructions have the same width
              FusionPredicateWithCode<[{
-               if ((FirstMI->getDesc().TSFlags & RISCVII::IsSignExtendingOpWMask) ^
+               if ((FirstMI->getDesc().TSFlags & RISCVII::IsSignExtendingOpWMask) !=
                    (SecondMI.getDesc().TSFlags & RISCVII::IsSignExtendingOpWMask))
                  return false;
              }]>,
@@ -255,7 +255,7 @@ def TuneFusionShiftBitExtract
              >,
              // Check that both instructions have the same width
              FusionPredicateWithCode<[{
-               if ((FirstMI->getDesc().TSFlags & RISCVII::IsSignExtendingOpWMask) ^
+               if ((FirstMI->getDesc().TSFlags & RISCVII::IsSignExtendingOpWMask) !=
                    (SecondMI.getDesc().TSFlags & RISCVII::IsSignExtendingOpWMask))
                  return false;
              }]>,
