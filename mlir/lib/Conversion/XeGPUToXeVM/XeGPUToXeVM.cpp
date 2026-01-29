@@ -1057,7 +1057,7 @@ struct ConvertXeGPUToXeVMPass
       if (llvm::isa<IndexType>(elemType))
         elemType = IntegerType::get(&getContext(), 64);
       // If the vector is a scalar or has a single element, return the element
-      if (rank < 1 || type.getNumElements() == 1)
+      if (rank == 0 || type.getNumElements() == 1)
         return elemType;
       // Otherwise, convert the vector to a flat vector type.
       int64_t sum = llvm::product_of(type.getShape());
@@ -1190,17 +1190,17 @@ struct ConvertXeGPUToXeVMPass
         return {};
       auto input = inputs.front();
       if (auto vecTy = dyn_cast<VectorType>(input.getType())) {
-        if (vecTy.getNumElements() == 1) {
+        if (type.isIntOrIndexOrFloat()) {
           // If the vector has a single element, return the element type.
           auto rank = vecTy.getRank();
           Value cast;
-          if (rank > 1) {
+          if (rank == 0) {
+            cast =
+                vector::ExtractOp::create(builder, loc, input, {}).getResult();
+          } else {
             cast = vector::ExtractOp::create(builder, loc, input,
                                              SmallVector<int64_t>(rank, 0))
                        .getResult();
-          } else {
-            cast =
-                vector::ExtractOp::create(builder, loc, input, 0).getResult();
           }
           if (vecTy.getElementType() == builder.getIndexType())
             cast = arith::IndexCastUIOp::create(builder, loc, type, cast)
