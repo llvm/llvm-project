@@ -141,14 +141,14 @@ cc_library(
     srcs = glob(["Protocol/MCP/*.cpp"]),
     hdrs = glob(["Protocol/MCP/*.h"]),
     deps = [
-        "//llvm:Support",
-        "//lldb:Utility",
         "//lldb:CoreHeaders",
-        "//lldb:Host",
         "//lldb:Headers",
-        "//lldb:ProtocolHeaders",
+        "//lldb:Host",
         "//lldb:InterpreterHeaders",
+        "//lldb:ProtocolHeaders",
         "//lldb:ProtocolMCP",
+        "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 
