@@ -1505,7 +1505,7 @@ def CIR_LabelOp : CIR_Op<"label", [AlwaysSpeculatable]> {
   let hasVerifier = 1;
 
   let customLLVMLoweringConstructorDecl =
-    LoweringBuilders<(ins "[[maybe_unused]] LLVMBlockAddressInfo &":$blockInfoAddr)>;
+    LoweringBuilders<(ins "LLVMBlockAddressInfo &":$blockInfoAddr)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -6236,7 +6236,7 @@ def CIR_BlockAddressOp : CIR_Op<"block_address", [Pure]> {
   }];
 
   let customLLVMLoweringConstructorDecl =
-    LoweringBuilders<(ins "[[maybe_unused]] LLVMBlockAddressInfo &":$blockInfoAddr)>;
+    LoweringBuilders<(ins "LLVMBlockAddressInfo &":$blockInfoAddr)>;
 }
 
 //===----------------------------------------------------------------------===//
