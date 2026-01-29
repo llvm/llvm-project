@@ -5881,7 +5881,7 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root,
         bool ScaleOffset = selectScaleOffset(Root, PtrBaseOffset,
                                              Subtarget->hasSignedGVSOffset());
         if (Register VOffset = matchExtendFromS32OrS32(
-                PtrBaseOffset, Subtarget->hasSignedGVSOffset()))
+                PtrBaseOffset, Subtarget->hasSignedGVSOffset())) {
           if (NeedIOffset)
             return {{[=](MachineInstrBuilder &MIB) { // saddr
                        MIB.addReg(SAddr);
@@ -5896,16 +5896,17 @@ AMDGPUInstructionSelector::selectGlobalSAddr(MachineOperand &Root,
                        MIB.addImm(CPolBits |
                                   (ScaleOffset ? AMDGPU::CPol::SCAL : 0));
                      }}};
-        return {{[=](MachineInstrBuilder &MIB) { // saddr
-                   MIB.addReg(SAddr);
-                 },
-                 [=](MachineInstrBuilder &MIB) { // voffset
-                   MIB.addReg(VOffset);
-                 },
-                 [=](MachineInstrBuilder &MIB) { // cpol
-                   MIB.addImm(CPolBits |
-                              (ScaleOffset ? AMDGPU::CPol::SCAL : 0));
-                 }}};
+          return {{[=](MachineInstrBuilder &MIB) { // saddr
+                     MIB.addReg(SAddr);
+                   },
+                   [=](MachineInstrBuilder &MIB) { // voffset
+                     MIB.addReg(VOffset);
+                   },
+                   [=](MachineInstrBuilder &MIB) { // cpol
+                     MIB.addImm(CPolBits |
+                                (ScaleOffset ? AMDGPU::CPol::SCAL : 0));
+                   }}};
+        }
       }
     }
   }
