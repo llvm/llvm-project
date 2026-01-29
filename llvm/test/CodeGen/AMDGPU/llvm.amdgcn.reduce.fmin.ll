@@ -1148,8 +1148,8 @@ define void @divergent_value_double(ptr addrspace(1) %out, double %in) {
 ; GFX8DAGISEL-NEXT:    s_ff1_i32_b64 s10, s[4:5]
 ; GFX8DAGISEL-NEXT:    v_mov_b32_e32 v4, s6
 ; GFX8DAGISEL-NEXT:    v_readlane_b32 s8, v2, s10
-; GFX8DAGISEL-NEXT:    v_mov_b32_e32 v5, s7
 ; GFX8DAGISEL-NEXT:    v_readlane_b32 s9, v3, s10
+; GFX8DAGISEL-NEXT:    v_mov_b32_e32 v5, s7
 ; GFX8DAGISEL-NEXT:    v_min_f64 v[4:5], s[8:9], v[4:5]
 ; GFX8DAGISEL-NEXT:    s_bitset0_b64 s[4:5], s10
 ; GFX8DAGISEL-NEXT:    s_cmp_lg_u64 s[4:5], 0
@@ -1173,8 +1173,8 @@ define void @divergent_value_double(ptr addrspace(1) %out, double %in) {
 ; GFX8GISEL-NEXT:    s_ff1_i32_b64 s10, s[4:5]
 ; GFX8GISEL-NEXT:    v_mov_b32_e32 v4, s6
 ; GFX8GISEL-NEXT:    v_readlane_b32 s8, v2, s10
-; GFX8GISEL-NEXT:    v_mov_b32_e32 v5, s7
 ; GFX8GISEL-NEXT:    v_readlane_b32 s9, v3, s10
+; GFX8GISEL-NEXT:    v_mov_b32_e32 v5, s7
 ; GFX8GISEL-NEXT:    v_min_f64 v[4:5], s[8:9], v[4:5]
 ; GFX8GISEL-NEXT:    s_bitset0_b64 s[4:5], s10
 ; GFX8GISEL-NEXT:    s_cmp_lg_u64 s[4:5], 0
@@ -1198,8 +1198,8 @@ define void @divergent_value_double(ptr addrspace(1) %out, double %in) {
 ; GFX9DAGISEL-NEXT:    s_ff1_i32_b64 s10, s[4:5]
 ; GFX9DAGISEL-NEXT:    v_mov_b32_e32 v4, s6
 ; GFX9DAGISEL-NEXT:    v_readlane_b32 s8, v2, s10
-; GFX9DAGISEL-NEXT:    v_mov_b32_e32 v5, s7
 ; GFX9DAGISEL-NEXT:    v_readlane_b32 s9, v3, s10
+; GFX9DAGISEL-NEXT:    v_mov_b32_e32 v5, s7
 ; GFX9DAGISEL-NEXT:    v_min_f64 v[4:5], s[8:9], v[4:5]
 ; GFX9DAGISEL-NEXT:    s_bitset0_b64 s[4:5], s10
 ; GFX9DAGISEL-NEXT:    s_cmp_lg_u64 s[4:5], 0
@@ -1223,8 +1223,8 @@ define void @divergent_value_double(ptr addrspace(1) %out, double %in) {
 ; GFX9GISEL-NEXT:    s_ff1_i32_b64 s10, s[4:5]
 ; GFX9GISEL-NEXT:    v_mov_b32_e32 v4, s6
 ; GFX9GISEL-NEXT:    v_readlane_b32 s8, v2, s10
-; GFX9GISEL-NEXT:    v_mov_b32_e32 v5, s7
 ; GFX9GISEL-NEXT:    v_readlane_b32 s9, v3, s10
+; GFX9GISEL-NEXT:    v_mov_b32_e32 v5, s7
 ; GFX9GISEL-NEXT:    v_min_f64 v[4:5], s[8:9], v[4:5]
 ; GFX9GISEL-NEXT:    s_bitset0_b64 s[4:5], s10
 ; GFX9GISEL-NEXT:    s_cmp_lg_u64 s[4:5], 0
@@ -1477,8 +1477,8 @@ define void @divergent_cfg_double(ptr addrspace(1) %out, double %in, double %in2
 ; GFX8DAGISEL-NEXT:    s_ff1_i32_b64 s12, s[6:7]
 ; GFX8DAGISEL-NEXT:    v_mov_b32_e32 v4, s8
 ; GFX8DAGISEL-NEXT:    v_readlane_b32 s10, v2, s12
-; GFX8DAGISEL-NEXT:    v_mov_b32_e32 v5, s9
 ; GFX8DAGISEL-NEXT:    v_readlane_b32 s11, v3, s12
+; GFX8DAGISEL-NEXT:    v_mov_b32_e32 v5, s9
 ; GFX8DAGISEL-NEXT:    v_min_f64 v[4:5], s[10:11], v[4:5]
 ; GFX8DAGISEL-NEXT:    s_bitset0_b64 s[6:7], s12
 ; GFX8DAGISEL-NEXT:    s_cmp_lg_u64 s[6:7], 0
@@ -1501,8 +1501,8 @@ define void @divergent_cfg_double(ptr addrspace(1) %out, double %in, double %in2
 ; GFX8DAGISEL-NEXT:    s_ff1_i32_b64 s12, s[6:7]
 ; GFX8DAGISEL-NEXT:    v_mov_b32_e32 v2, s8
 ; GFX8DAGISEL-NEXT:    v_readlane_b32 s10, v4, s12
-; GFX8DAGISEL-NEXT:    v_mov_b32_e32 v3, s9
 ; GFX8DAGISEL-NEXT:    v_readlane_b32 s11, v5, s12
+; GFX8DAGISEL-NEXT:    v_mov_b32_e32 v3, s9
 ; GFX8DAGISEL-NEXT:    v_min_f64 v[2:3], s[10:11], v[2:3]
 ; GFX8DAGISEL-NEXT:    s_bitset0_b64 s[6:7], s12
 ; GFX8DAGISEL-NEXT:    s_cmp_lg_u64 s[6:7], 0
@@ -1535,8 +1535,8 @@ define void @divergent_cfg_double(ptr addrspace(1) %out, double %in, double %in2
 ; GFX8GISEL-NEXT:    s_ff1_i32_b64 s12, s[8:9]
 ; GFX8GISEL-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX8GISEL-NEXT:    v_readlane_b32 s10, v2, s12
-; GFX8GISEL-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX8GISEL-NEXT:    v_readlane_b32 s11, v3, s12
+; GFX8GISEL-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX8GISEL-NEXT:    v_min_f64 v[4:5], s[10:11], v[4:5]
 ; GFX8GISEL-NEXT:    s_bitset0_b64 s[8:9], s12
 ; GFX8GISEL-NEXT:    s_cmp_lg_u64 s[8:9], 0
@@ -1556,8 +1556,8 @@ define void @divergent_cfg_double(ptr addrspace(1) %out, double %in, double %in2
 ; GFX8GISEL-NEXT:    s_ff1_i32_b64 s12, s[8:9]
 ; GFX8GISEL-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX8GISEL-NEXT:    v_readlane_b32 s10, v4, s12
-; GFX8GISEL-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX8GISEL-NEXT:    v_readlane_b32 s11, v5, s12
+; GFX8GISEL-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX8GISEL-NEXT:    v_min_f64 v[2:3], s[10:11], v[2:3]
 ; GFX8GISEL-NEXT:    s_bitset0_b64 s[8:9], s12
 ; GFX8GISEL-NEXT:    s_cmp_lg_u64 s[8:9], 0
@@ -1589,8 +1589,8 @@ define void @divergent_cfg_double(ptr addrspace(1) %out, double %in, double %in2
 ; GFX9DAGISEL-NEXT:    s_ff1_i32_b64 s12, s[6:7]
 ; GFX9DAGISEL-NEXT:    v_mov_b32_e32 v4, s8
 ; GFX9DAGISEL-NEXT:    v_readlane_b32 s10, v2, s12
-; GFX9DAGISEL-NEXT:    v_mov_b32_e32 v5, s9
 ; GFX9DAGISEL-NEXT:    v_readlane_b32 s11, v3, s12
+; GFX9DAGISEL-NEXT:    v_mov_b32_e32 v5, s9
 ; GFX9DAGISEL-NEXT:    v_min_f64 v[4:5], s[10:11], v[4:5]
 ; GFX9DAGISEL-NEXT:    s_bitset0_b64 s[6:7], s12
 ; GFX9DAGISEL-NEXT:    s_cmp_lg_u64 s[6:7], 0
@@ -1613,8 +1613,8 @@ define void @divergent_cfg_double(ptr addrspace(1) %out, double %in, double %in2
 ; GFX9DAGISEL-NEXT:    s_ff1_i32_b64 s12, s[6:7]
 ; GFX9DAGISEL-NEXT:    v_mov_b32_e32 v2, s8
 ; GFX9DAGISEL-NEXT:    v_readlane_b32 s10, v4, s12
-; GFX9DAGISEL-NEXT:    v_mov_b32_e32 v3, s9
 ; GFX9DAGISEL-NEXT:    v_readlane_b32 s11, v5, s12
+; GFX9DAGISEL-NEXT:    v_mov_b32_e32 v3, s9
 ; GFX9DAGISEL-NEXT:    v_min_f64 v[2:3], s[10:11], v[2:3]
 ; GFX9DAGISEL-NEXT:    s_bitset0_b64 s[6:7], s12
 ; GFX9DAGISEL-NEXT:    s_cmp_lg_u64 s[6:7], 0
@@ -1647,8 +1647,8 @@ define void @divergent_cfg_double(ptr addrspace(1) %out, double %in, double %in2
 ; GFX9GISEL-NEXT:    s_ff1_i32_b64 s12, s[8:9]
 ; GFX9GISEL-NEXT:    v_mov_b32_e32 v4, s4
 ; GFX9GISEL-NEXT:    v_readlane_b32 s10, v2, s12
-; GFX9GISEL-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX9GISEL-NEXT:    v_readlane_b32 s11, v3, s12
+; GFX9GISEL-NEXT:    v_mov_b32_e32 v5, s5
 ; GFX9GISEL-NEXT:    v_min_f64 v[4:5], s[10:11], v[4:5]
 ; GFX9GISEL-NEXT:    s_bitset0_b64 s[8:9], s12
 ; GFX9GISEL-NEXT:    s_cmp_lg_u64 s[8:9], 0
@@ -1668,8 +1668,8 @@ define void @divergent_cfg_double(ptr addrspace(1) %out, double %in, double %in2
 ; GFX9GISEL-NEXT:    s_ff1_i32_b64 s12, s[8:9]
 ; GFX9GISEL-NEXT:    v_mov_b32_e32 v2, s4
 ; GFX9GISEL-NEXT:    v_readlane_b32 s10, v4, s12
-; GFX9GISEL-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX9GISEL-NEXT:    v_readlane_b32 s11, v5, s12
+; GFX9GISEL-NEXT:    v_mov_b32_e32 v3, s5
 ; GFX9GISEL-NEXT:    v_min_f64 v[2:3], s[10:11], v[2:3]
 ; GFX9GISEL-NEXT:    s_bitset0_b64 s[8:9], s12
 ; GFX9GISEL-NEXT:    s_cmp_lg_u64 s[8:9], 0

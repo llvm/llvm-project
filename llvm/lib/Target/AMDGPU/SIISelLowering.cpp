@@ -5970,7 +5970,7 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
             MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
         Register LaneValHi =
             MRI.createVirtualRegister(&AMDGPU::SReg_32_XM0RegClass);
-        BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::V_MOV_B64_PSEUDO),
+        BuildMI(*ComputeLoop, I, DL, TII->get(AMDGPU::COPY),
                 AccumulatorVReg)
             .addReg(Accumulator->getOperand(0).getReg());
         auto DstVregInst = BuildMI(*ComputeLoop, I, DL, TII->get(Opc), DstVreg)
