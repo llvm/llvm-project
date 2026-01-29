@@ -51,13 +51,7 @@ namespace {
 /// Returns the enclosing offload region interface, or nullptr if not inside
 /// one.
 static acc::OffloadRegionOpInterface getEnclosingOffloadRegion(Operation *op) {
-  Operation *parent = op->getParentOp();
-  while (parent) {
-    if (auto offloadOp = dyn_cast<acc::OffloadRegionOpInterface>(parent))
-      return offloadOp;
-    parent = parent->getParentOp();
-  }
-  return nullptr;
+  return op->getParentOfType<acc::OffloadRegionOpInterface>();
 }
 
 /// Returns true if the value is defined by an OpenACC data clause operation.
