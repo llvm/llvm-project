@@ -8,6 +8,8 @@
 ; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-apple-ios -mattr=-fpregs | FileCheck %s --check-prefix=ARM-NOVFP
 ; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armv7-linux-gnueabi -mattr=-fpregs | FileCheck %s --check-prefix=ARM-NOVFP
 ; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=thumbv7-apple-ios -mattr=-fpregs | FileCheck %s --check-prefix=THUMB-NOVFP
+; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armebv7-linux -mattr=+vfpv3 | FileCheck %s --check-prefix=ARMEB-SOFTFP
+; RUN: llc < %s -O0 -verify-machineinstrs -fast-isel-abort=1 -relocation-model=dynamic-no-pic -mtriple=armebv7 -mattr=+vfpv3 | FileCheck %s --check-prefix=ARMEB-SOFTFP
 
 ; Note that some of these tests assume that relocations are either
 ; movw/movt or constant pool loads. Different platforms will select
@@ -296,4 +298,13 @@ define void @call_undef_args() {
   ret void
 }
 
+define void @double_softfp_call() ssp {
+entry:
+; ARMEB-SOFTFP-LABEL: double_softfp_call:
+; ARMEB-SOFTFP: vmov r1, r0, {{d[0-9]+}}
+  call void @double_callee(double 0x3FC99999A0000000)
+  ret void
+}
+
 declare void @print(float)
+declare void @double_callee(double)
