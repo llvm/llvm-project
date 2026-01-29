@@ -68,7 +68,6 @@
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/raw_ostream.h"
-#include "support/Logger.h"
 #include <algorithm>
 #include <optional>
 #include <string>
@@ -1756,9 +1755,9 @@ public:
   bool HasWrite = false;
   bool HasRead = false;
   const ValueDecl *TargetParam;
-  
+
   ParamUsageVisitor(const ValueDecl *P) : TargetParam(P) {}
-  
+
   // Any reference to the target is at least a read, unless we later
   // identify it specifically as a write (e.g. assignment/inc/dec on LHS).
   bool VisitDeclRefExpr(DeclRefExpr *DRE) {
@@ -1778,7 +1777,6 @@ public:
     }
     return true;
   }
-  
   bool VisitBinaryOperator(BinaryOperator *BO) {
     // Check for assignment to parameter
     if (BO->isAssignmentOp()) {
@@ -1860,8 +1858,6 @@ declToHierarchyItem(const NamedDecl &ND, llvm::StringRef TUPath) {
     // reports unrelated ranges we need to reconcile somehow.
     HI.range = HI.selectionRange;
   }
-
-  //determineParameterUsage(ND, HI);
 
   HI.uri = URIForFile::canonicalize(*FilePath, TUPath);
 
@@ -2441,7 +2437,8 @@ const NamedDecl *getNamedDeclFromSymbol(const Symbol &Sym,
 }
 
 std::vector<CallHierarchyIncomingCall>
-incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index, ParsedAST &AST) {
+incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index,
+              ParsedAST &AST) {
   std::vector<CallHierarchyIncomingCall> Results;
   if (!Index || Item.data.empty())
     return Results;
@@ -2451,20 +2448,22 @@ incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index, ParsedAST
     return Results;
   }
 
-
   LookupRequest LR;
   LR.IDs.insert(*ID);
 
-  std::optional<const NamedDecl*> PVD;
-  Index->lookup(LR, [&ID, &AST, &PVD](const Symbol &Sym) {
+  std::optional<const NamedDecl *> Decl;
+  Index->lookup(LR, [&ID, &AST, &Decl](const Symbol &Sym) {
     // This callback is called once per found symbol; here we expect exactly one
     if (Sym.ID == *ID) {
-      PVD = getNamedDeclFromSymbol(Sym, AST);
+      Decl = getNamedDeclFromSymbol(Sym, AST);
     }
   });
 
-  if (PVD == nullptr || !PVD.has_value()) {
-    // Not found in index
+  // Note: Decl may be nullptr if the symbol is in a header file (not the main
+  // file). In that case, we still want to continue and use index-based
+  // resolution.
+  if (!Decl.has_value()) {
+    // Symbol not found in index
     return Results;
   }
 
@@ -2509,9 +2508,12 @@ incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index, ParsedAST
       if (auto *ND = getNamedDeclFromSymbol(Caller, AST)) {
         CHI = declToCallHierarchyItem(*ND, AST.tuPath());
         if (const auto *FD = llvm::dyn_cast<clang::FunctionDecl>(ND)) {
-          if (isa<ValueDecl>(PVD.value())) {
-            const auto *VD = llvm::dyn_cast<clang::ValueDecl>(PVD.value());
-            CHI->referenceTags = analyseParameterUsage(FD, VD); // FD is the caller of var
+          if (Decl.has_value() && Decl.value() != nullptr) {
+            if (const auto *VD =
+                    llvm::dyn_cast<clang::ValueDecl>(Decl.value())) {
+              CHI->referenceTags =
+                  analyseParameterUsage(FD, VD); // FD is the caller of var
+            }
           }
         }
       } else {

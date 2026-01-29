@@ -67,6 +67,12 @@ template <class... RangeMatchers>
                UnorderedElementsAre(M...));
 }
 
+template <typename... References>
+::testing::Matcher<CallHierarchyItem> withReferenceTags(References... refs) {
+  return Field(&CallHierarchyItem::referenceTags,
+               UnorderedElementsAre(refs...));
+}
+
 TEST(CallHierarchy, IncomingOneFileCpp) {
   Annotations Source(R"cpp(
     void call^ee(int);
@@ -402,7 +408,8 @@ TEST(CallHierarchy, MultiFileCpp) {
                                              withDetail("nsa::caller1"))),
                                   iFromRanges(Caller1C.range()))));
 
-    auto IncomingLevel2 = incomingCalls(IncomingLevel1[0].from, Index.get(), AST);
+    auto IncomingLevel2 =
+        incomingCalls(IncomingLevel1[0].from, Index.get(), AST);
     ASSERT_THAT(
         IncomingLevel2,
         ElementsAre(
@@ -411,13 +418,15 @@ TEST(CallHierarchy, MultiFileCpp) {
             AllOf(from(AllOf(withName("caller3"), withDetail("nsa::caller3"))),
                   iFromRanges(Caller3C.range("Caller1")))));
 
-    auto IncomingLevel3 = incomingCalls(IncomingLevel2[0].from, Index.get(), AST);
+    auto IncomingLevel3 =
+        incomingCalls(IncomingLevel2[0].from, Index.get(), AST);
     ASSERT_THAT(IncomingLevel3,
                 ElementsAre(AllOf(from(AllOf(withName("caller3"),
                                              withDetail("nsa::caller3"))),
                                   iFromRanges(Caller3C.range("Caller2")))));
 
-    auto IncomingLevel4 = incomingCalls(IncomingLevel3[0].from, Index.get(), AST);
+    auto IncomingLevel4 =
+        incomingCalls(IncomingLevel3[0].from, Index.get(), AST);
     EXPECT_THAT(IncomingLevel4, IsEmpty());
   };
 
@@ -558,7 +567,8 @@ TEST(CallHierarchy, IncomingMultiFileObjC) {
                 ElementsAre(AllOf(from(withName("caller1")),
                                   iFromRanges(Caller1C.range()))));
 
-    auto IncomingLevel2 = incomingCalls(IncomingLevel1[0].from, Index.get(), AST);
+    auto IncomingLevel2 =
+        incomingCalls(IncomingLevel1[0].from, Index.get(), AST);
     ASSERT_THAT(IncomingLevel2,
                 ElementsAre(AllOf(from(withName("caller2")),
                                   iFromRanges(Caller2C.range("A"),
@@ -566,12 +576,14 @@ TEST(CallHierarchy, IncomingMultiFileObjC) {
                             AllOf(from(withName("caller3")),
                                   iFromRanges(Caller3C.range("Caller1")))));
 
-    auto IncomingLevel3 = incomingCalls(IncomingLevel2[0].from, Index.get(), AST);
+    auto IncomingLevel3 =
+        incomingCalls(IncomingLevel2[0].from, Index.get(), AST);
     ASSERT_THAT(IncomingLevel3,
                 ElementsAre(AllOf(from(withName("caller3")),
                                   iFromRanges(Caller3C.range("Caller2")))));
 
-    auto IncomingLevel4 = incomingCalls(IncomingLevel3[0].from, Index.get(), AST);
+    auto IncomingLevel4 =
+        incomingCalls(IncomingLevel3[0].from, Index.get(), AST);
     EXPECT_THAT(IncomingLevel4, IsEmpty());
   };
 
@@ -671,7 +683,8 @@ TEST(CallHierarchy, HierarchyOnVar) {
 }
 
 TEST(CallHierarchy, HierarchyOnVarWithReadReference) {
-  // Tests that the call hierarchy works on non-local variables and read/write tags are set.
+  // Tests that the call hierarchy works on non-local variables and a read is
+  // set.
   Annotations Source(R"cpp(
     int v^ar = 1;
     void caller() {
@@ -687,11 +700,14 @@ TEST(CallHierarchy, HierarchyOnVarWithReadReference) {
       prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
   ASSERT_THAT(Items, ElementsAre(withName("var")));
   auto IncomingLevel1 = incomingCalls(Items[0], Index.get(), AST);
-  EXPECT_TRUE(IncomingLevel1.front().from.referenceTags.at(0) == ReferenceTag::Read);
+  ASSERT_FALSE(IncomingLevel1.empty());
+  EXPECT_THAT(
+      IncomingLevel1,
+      ElementsAre(AllOf(from(
+          AllOf(withName("caller"), withReferenceTags(ReferenceTag::Read))))));
 }
 
 TEST(CallHierarchy, HierarchyOnVarWithWriteReference) {
-  // Tests that the call hierarchy works on non-local variables and read/write tags are set.
   Annotations Source(R"cpp(
     int v^ar = 1;
     void caller() {
@@ -706,11 +722,15 @@ TEST(CallHierarchy, HierarchyOnVarWithWriteReference) {
       prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
   ASSERT_THAT(Items, ElementsAre(withName("var")));
   auto IncomingLevel1 = incomingCalls(Items[0], Index.get(), AST);
-  EXPECT_TRUE(IncomingLevel1.front().from.referenceTags.at(0) == ReferenceTag::Write);
+  ASSERT_FALSE(IncomingLevel1.empty());
+  EXPECT_THAT(
+      IncomingLevel1,
+      ElementsAre(AllOf(from(
+          AllOf(withName("caller"),
+                withReferenceTags(ReferenceTag::Write, ReferenceTag::Read))))));
 }
 
-TEST(CallHierarchy, HierarchyOnVarWithUnaryWriteReference) {
-  // Tests that the call hierarchy works on non-local variables and read/write tags are set.
+TEST(CallHierarchy, HierarchyOnVarWithUnaryReadWriteReference) {
   Annotations Source(R"cpp(
     int v^ar = 1;
     void caller() {
@@ -725,31 +745,13 @@ TEST(CallHierarchy, HierarchyOnVarWithUnaryWriteReference) {
       prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
   ASSERT_THAT(Items, ElementsAre(withName("var")));
   auto IncomingLevel1 = incomingCalls(Items[0], Index.get(), AST);
-  EXPECT_TRUE(IncomingLevel1.front().from.referenceTags.at(0) == ReferenceTag::Write);
+  ASSERT_FALSE(IncomingLevel1.empty());
+  EXPECT_THAT(
+      IncomingLevel1,
+      UnorderedElementsAre(AllOf(from(
+          AllOf(withName("caller"),
+                withReferenceTags(ReferenceTag::Write, ReferenceTag::Read))))));
 }
-
-// TEST(CallHierarchy, HierarchyOnFieldWithReadWriteReference) {
-//   // Tests that the call hierarchy works on non-local variables and read/write tags are set.
-//   Annotations Source(R"cpp(
-//     struct Vars {
-//       int v^ar1 = 1;
-//     };
-//     void caller() {
-//       Vars values;
-//       values.var1 = 2;
-//     }
-//   )cpp");
-//   TestTU TU = TestTU::withCode(Source.code());
-//   auto AST = TU.build();
-//   auto Index = TU.index();
-//
-//   std::vector<CallHierarchyItem> Items =
-//       prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
-//   ASSERT_THAT(Items, ElementsAre(withName("var1")));
-//   auto IncomingLevel1 = incomingCalls(Items[0], Index.get(), AST);
-//   EXPECT_TRUE(IncomingLevel1.front().from.referenceTags.at(0) == ReferenceTag::Read);
-//   //EXPECT_TRUE(IncomingLevel1.front().from.referenceTags.at(1) == ReferenceTag::Read);
-// }
 
 TEST(CallHierarchy, HierarchyOnEnumConstant) {
   // Tests that the call hierarchy works on enum constants.
