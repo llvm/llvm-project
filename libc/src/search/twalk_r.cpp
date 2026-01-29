@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "src/search/twalk_r.h"
+#include "hdr/types/posix_tnode.h"
 #include "src/__support/common.h"
 #include "src/__support/macros/config.h"
 #include "src/__support/weak_avl.h"
@@ -19,7 +20,7 @@ LLVM_LIBC_FUNCTION(void, twalk_r,
                    (const __llvm_libc_tnode *root,
                     void (*action)(const __llvm_libc_tnode *, VISIT, void *),
                     void *closure)) {
-  if (!root || !action)
+  if (!root)
     return;
   const Node *node = reinterpret_cast<const Node *>(root);
   Node::walk(node, [action, closure](const Node *n, Node::WalkType type, int) {

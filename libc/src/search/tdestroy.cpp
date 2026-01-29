@@ -20,8 +20,7 @@ LLVM_LIBC_FUNCTION(void, tdestroy,
   using Node = WeakAVLNode<const void *>;
   Node *node = reinterpret_cast<Node *>(root);
   Node::destroy(node, [free_node](const void *&data) {
-    if (free_node)
-      free_node(const_cast<void *>(data));
+    free_node(const_cast<void *>(data));
   });
 }
 

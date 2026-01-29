@@ -237,7 +237,7 @@ public:
     destroy(node->children[0], finalizer);
     destroy(node->children[1], finalizer);
     finalizer(node->data);
-    ::delete node;
+    delete node;
   }
   // Rotate the subtree rooted at node in the given direction.
   //
