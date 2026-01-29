@@ -1260,11 +1260,14 @@ unsigned AMDGPURegisterBankInfo::setBufferOffsets(
     }
   }
 
+  const bool CheckNUW = Subtarget.hasGFX1250Insts();
   Register Base;
   unsigned Offset;
 
   std::tie(Base, Offset) =
-      AMDGPU::getBaseWithConstantOffset(*MRI, CombinedOffset);
+      AMDGPU::getBaseWithConstantOffset(*MRI, CombinedOffset,
+                                        /*KnownBits=*/nullptr,
+                                        /*CheckNUW=*/CheckNUW);
 
   uint32_t SOffset, ImmOffset;
   if ((int)Offset > 0 &&
@@ -1289,7 +1292,8 @@ unsigned AMDGPURegisterBankInfo::setBufferOffsets(
 
   // Handle the variable sgpr + vgpr case.
   MachineInstr *Add = getOpcodeDef(AMDGPU::G_ADD, CombinedOffset, *MRI);
-  if (Add && (int)Offset >= 0) {
+  if (Add && (int)Offset >= 0 &&
+      (!CheckNUW || Add->getFlag(MachineInstr::NoUWrap))) {
     Register Src0 = getSrcRegIgnoringCopies(Add->getOperand(1).getReg(), *MRI);
     Register Src1 = getSrcRegIgnoringCopies(Add->getOperand(2).getReg(), *MRI);
 
