@@ -4068,6 +4068,9 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   List<Clause> clauses = makeClauses(construct.v.Clauses(), semaCtx);
   mlir::Location currentLocation = converter.genLocation(directive.source);
 
+  if (directive.v == llvm::omp::Directive::OMPD_taskwait && !clauses.empty())
+    TODO(converter.getCurrentLocation(), "taskwait with depend unsupported");
+
   ConstructQueue queue{
       buildConstructQueue(converter.getFirOpBuilder().getModule(), semaCtx,
                           eval, directive.source, directive.v, clauses)};
