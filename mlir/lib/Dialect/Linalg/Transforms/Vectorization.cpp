@@ -644,19 +644,19 @@ mlir::linalg::getCombinerOpKind(Operation *combinerOp) {
   return llvm::TypeSwitch<Operation *, std::optional<CombiningKind>>(combinerOp)
       .Case<arith::AddIOp, arith::AddFOp>(
           [&](auto op) { return CombiningKind::ADD; })
-      .Case<arith::AndIOp>([&](auto op) { return CombiningKind::AND; })
-      .Case<arith::MaxSIOp>([&](auto op) { return CombiningKind::MAXSI; })
-      .Case<arith::MaxUIOp>([&](auto op) { return CombiningKind::MAXUI; })
-      .Case<arith::MaximumFOp>([&](auto op) { return CombiningKind::MAXIMUMF; })
-      .Case<arith::MaxNumFOp>([&](auto op) { return CombiningKind::MAXNUMF; })
-      .Case<arith::MinSIOp>([&](auto op) { return CombiningKind::MINSI; })
-      .Case<arith::MinUIOp>([&](auto op) { return CombiningKind::MINUI; })
-      .Case<arith::MinimumFOp>([&](auto op) { return CombiningKind::MINIMUMF; })
-      .Case<arith::MinNumFOp>([&](auto op) { return CombiningKind::MINNUMF; })
+      .Case([&](arith::AndIOp op) { return CombiningKind::AND; })
+      .Case([&](arith::MaxSIOp op) { return CombiningKind::MAXSI; })
+      .Case([&](arith::MaxUIOp op) { return CombiningKind::MAXUI; })
+      .Case([&](arith::MaximumFOp op) { return CombiningKind::MAXIMUMF; })
+      .Case([&](arith::MaxNumFOp op) { return CombiningKind::MAXNUMF; })
+      .Case([&](arith::MinSIOp op) { return CombiningKind::MINSI; })
+      .Case([&](arith::MinUIOp op) { return CombiningKind::MINUI; })
+      .Case([&](arith::MinimumFOp op) { return CombiningKind::MINIMUMF; })
+      .Case([&](arith::MinNumFOp op) { return CombiningKind::MINNUMF; })
       .Case<arith::MulIOp, arith::MulFOp>(
           [&](auto op) { return CombiningKind::MUL; })
-      .Case<arith::OrIOp>([&](auto op) { return CombiningKind::OR; })
-      .Case<arith::XOrIOp>([&](auto op) { return CombiningKind::XOR; })
+      .Case([&](arith::OrIOp op) { return CombiningKind::OR; })
+      .Case([&](arith::XOrIOp op) { return CombiningKind::XOR; })
       .Default(std::nullopt);
 }
 
@@ -1712,7 +1712,8 @@ createWriteOrMaskedWrite(OpBuilder &builder, Location loc, Value vecToStore,
   }
 
   // If missing, initialize the write indices to 0.
-  assert((writeIndices.empty() ||
+  bool useDefaultWriteIdxs = writeIndices.empty();
+  assert((useDefaultWriteIdxs ||
           writeIndices.size() == static_cast<size_t>(destRank)) &&
          "Invalid number of write indices!");
   if (writeIndices.empty()) {
@@ -1743,8 +1744,22 @@ createWriteOrMaskedWrite(OpBuilder &builder, Location loc, Value vecToStore,
       isa<MemRefType>(dest.getType())
           ? memref::getMixedSizes(builder, loc, dest)
           : tensor::getMixedSizes(builder, loc, dest);
-  SmallVector<OpFoldResult> maskSizes(destSizes.end() - vecToStoreRank,
-                                      destSizes.end());
+
+  // Compute sizes for write-mask
+  SmallVector<OpFoldResult> maskSizes;
+  if (useDefaultWriteIdxs) {
+    maskSizes = SmallVector<OpFoldResult>(destSizes.end() - vecToStoreRank,
+                                          destSizes.end());
+  } else {
+    size_t diff = destShape.size() - vecToStoreRank;
+    for (int64_t idx = 0; idx < vecToStoreRank; idx++) {
+      auto value =
+          getValueOrCreateConstantIndexOp(builder, loc, destSizes[diff + idx]);
+      auto neg =
+          builder.createOrFold<arith::SubIOp>(loc, value, writeIndices[idx]);
+      maskSizes.push_back(OpFoldResult(neg));
+    }
+  }
 
   if (isMaskTriviallyFoldable(maskSizes, writeIndices, destShape,
                               vecToStoreShape))
@@ -2669,21 +2684,21 @@ LogicalResult mlir::linalg::vectorizeOpPrecondition(
     return failure();
 
   return TypeSwitch<Operation *, LogicalResult>(op)
-      .Case<linalg::LinalgOp>([&](auto linalgOp) {
+      .Case([&](linalg::LinalgOp linalgOp) {
         return vectorizeLinalgOpPrecondition(linalgOp, inputVectorSizes,
                                              vectorizeNDExtract,
                                              flatten1DDepthwiseConv);
       })
-      .Case<tensor::PadOp>([&](auto padOp) {
+      .Case([&](tensor::PadOp padOp) {
         return vectorizePadOpPrecondition(padOp, inputVectorSizes);
       })
-      .Case<linalg::PackOp>([&](auto packOp) {
+      .Case([&](linalg::PackOp packOp) {
         return vectorizePackOpPrecondition(packOp, inputVectorSizes);
       })
-      .Case<linalg::UnPackOp>([&](auto unpackOp) {
+      .Case([&](linalg::UnPackOp unpackOp) {
         return vectorizeUnPackOpPrecondition(unpackOp, inputVectorSizes);
       })
-      .Case<tensor::InsertSliceOp>([&](auto sliceOp) {
+      .Case([&](tensor::InsertSliceOp sliceOp) {
         return vectorizeInsertSliceOpPrecondition(sliceOp, inputVectorSizes);
       })
       .Default(failure());
@@ -2740,7 +2755,7 @@ FailureOr<VectorizationResult> mlir::linalg::vectorize(
   SmallVector<Value> results;
   auto vectorizeResult =
       TypeSwitch<Operation *, LogicalResult>(op)
-          .Case<linalg::LinalgOp>([&](auto linalgOp) {
+          .Case([&](linalg::LinalgOp linalgOp) {
             // Check for both named as well as generic convolution ops.
             if (isaConvolutionOpInterface(linalgOp)) {
               FailureOr<Operation *> convOr = vectorizeConvolution(
@@ -2774,20 +2789,20 @@ FailureOr<VectorizationResult> mlir::linalg::vectorize(
             // notified and we will end up with read-after-free issues!
             return vectorizeAsLinalgGeneric(rewriter, state, linalgOp, results);
           })
-          .Case<tensor::PadOp>([&](auto padOp) {
+          .Case([&](tensor::PadOp padOp) {
             return vectorizeAsTensorPadOp(rewriter, padOp, inputVectorSizes,
                                           results);
           })
-          .Case<linalg::PackOp>([&](auto packOp) {
+          .Case([&](linalg::PackOp packOp) {
             return vectorizeAsTensorPackOp(rewriter, packOp, inputVectorSizes,
                                            results);
           })
-          .Case<linalg::UnPackOp>([&](auto unpackOp) {
+          .Case([&](linalg::UnPackOp unpackOp) {
             return vectorizeAsTensorUnpackOp(rewriter, unpackOp,
                                              inputVectorSizes,
                                              inputScalableVecDims, results);
           })
-          .Case<tensor::InsertSliceOp>([&](auto sliceOp) {
+          .Case([&](tensor::InsertSliceOp sliceOp) {
             return vectorizeAsInsertSliceOp(rewriter, sliceOp, inputVectorSizes,
                                             results);
           })

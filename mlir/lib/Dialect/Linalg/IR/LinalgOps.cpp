@@ -63,10 +63,10 @@ static OpFoldResult getDimValue(OpBuilder &builder, Location loc, Value v,
 
   return getAsOpFoldResult(
       TypeSwitch<Type, Value>(v.getType())
-          .Case<RankedTensorType>([&](RankedTensorType t) -> Value {
+          .Case([&](RankedTensorType t) -> Value {
             return tensor::DimOp::create(builder, loc, v, dim);
           })
-          .Case<MemRefType>([&](MemRefType t) -> Value {
+          .Case([&](MemRefType t) -> Value {
             return memref::DimOp::create(builder, loc, v, dim);
           }));
 }
@@ -78,11 +78,11 @@ static Operation *getSlice(OpBuilder &b, Location loc, Value source,
                            ArrayRef<OpFoldResult> sizes,
                            ArrayRef<OpFoldResult> strides) {
   return TypeSwitch<Type, Operation *>(source.getType())
-      .Case<RankedTensorType>([&](RankedTensorType t) -> Operation * {
+      .Case([&](RankedTensorType t) -> Operation * {
         return tensor::ExtractSliceOp::create(b, loc, source, offsets, sizes,
                                               strides);
       })
-      .Case<MemRefType>([&](MemRefType type) -> Operation * {
+      .Case([&](MemRefType type) -> Operation * {
         return memref::SubViewOp::create(b, loc, source, offsets, sizes,
                                          strides);
       })
@@ -3774,6 +3774,7 @@ std::pair<int64_t, int64_t> getFmrFromWinogradConv2DFmr(WinogradConv2DFmr fmr) {
   case WinogradConv2DFmr::F_2_5:
     return {2, 5};
   }
+  llvm_unreachable("Unkown WinogradConv2DFmr");
 }
 
 //===----------------------------------------------------------------------===//
