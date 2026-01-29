@@ -258,6 +258,7 @@
 // MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zvknc"
 // MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zvkned"
 // MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zvkng"
+// MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zvknha"
 // MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zvknhb"
 // MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zvkt"
 // MCPU-TT-ASCALON-X-SAME: "-target-feature" "+zvl128b"

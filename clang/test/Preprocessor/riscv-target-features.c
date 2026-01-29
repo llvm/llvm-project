@@ -1471,6 +1471,17 @@
 // RUN:   -o - | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZVKNG %s
 // CHECK-COMBINE-INTO-ZVKNG: __riscv_zvkn 1000000{{$}}
 // CHECK-COMBINE-INTO-ZVKNG: __riscv_zvkng 1000000{{$}}
+// CHECK-COMBINE-INTO-ZVKNG: __riscv_zvknha 1000000{{$}}
+// CHECK-COMBINE-INTO-ZVKNG: __riscv_zvknhb 1000000{{$}}
+
+// RUN: %clang --target=riscv32 \
+// RUN:   -march=rv32iv_zvknhb1p0 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZVKNHB %s
+// RUN: %clang --target=riscv64 \
+// RUN:   -march=rv64iv_zvknhb1p0 -E -dM %s \
+// RUN:   -o - | FileCheck --check-prefix=CHECK-COMBINE-INTO-ZVKNHB %s
+// CHECK-COMBINE-INTO-ZVKNHB: __riscv_zvknha 1000000{{$}}
+// CHECK-COMBINE-INTO-ZVKNHB: __riscv_zvknhb 1000000{{$}}
 
 // RUN: %clang --target=riscv32 \
 // RUN:   -march=rv32i_zve32x_zvknha1p0 -E -dM %s \
