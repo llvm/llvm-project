@@ -17,7 +17,7 @@ add_offload_unittest("event"
 
 add_offload_unittest("init"
     init/olInit.cpp)
-target_compile_definitions("init.unittests" PRIVATE DISABLE_WRAPPER)
+target_compile_definitions("init.unittests" PRIVATE DISABLE_OL_INIT)
 
 add_offload_unittest("kernel"
     kernel/olCalculateOptimalOccupancy.cpp

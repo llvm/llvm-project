@@ -11,19 +11,10 @@
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/MemoryBuffer.h"
 #include <OffloadAPI.h>
+#include <OffloadPrint.hpp>
 #include <fstream>
 
 using namespace llvm;
-
-// Wrapper so we don't have to constantly init and shutdown Offload in every
-// test, while having sensible lifetime for the platform environment
-#ifndef DISABLE_WRAPPER
-struct OffloadInitWrapper {
-  OffloadInitWrapper() { olInit(); }
-  ~OffloadInitWrapper() { olShutDown(); }
-};
-static OffloadInitWrapper Wrapper{};
-#endif
 
 static cl::opt<std::string>
     SelectedPlatform("platform", cl::desc("Only test the specified platform"),
@@ -195,4 +186,25 @@ bool TestEnvironment::loadDeviceBinary(
 
   BinaryOut = std::move(SourceFile.get());
   return true;
+}
+
+int main(int argc, char **argv) {
+#ifndef DISABLE_OL_INIT
+  if (auto Err = olInit()) {
+    errs() << "Failed to initialize liboffload: " << Err->Code << "\n";
+    return -1;
+  }
+#endif
+
+  ::testing::InitGoogleTest(&argc, argv);
+  int Result = RUN_ALL_TESTS();
+
+#ifndef DISABLE_OL_INIT
+  if (auto Err = olShutDown()) {
+    errs() << "Failed to shut down liboffload: " << Err->Code << "\n";
+    return -1;
+  }
+#endif
+
+  return Result;
 }

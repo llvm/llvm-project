@@ -116,13 +116,24 @@ function(add_offload_unittest test_dirname)
   set(target_name "${test_dirname}.unittests")
 
   list(TRANSFORM ARGN PREPEND "${CMAKE_CURRENT_SOURCE_DIR}/" OUTPUT_VARIABLE files)
+  list(APPEND files ${CMAKE_CURRENT_SOURCE_DIR}/common/Environment.cpp)
 
-  add_unittest(OffloadUnitTests "${target_name}"
-    ${CMAKE_CURRENT_SOURCE_DIR}/common/Environment.cpp
-    ${files})
+  if( NOT LLVM_BUILD_TESTS )
+    set(EXCLUDE_FROM_ALL ON)
+  endif()
+  add_llvm_executable(${target_name} IGNORE_EXTERNALIZE_DEBUGINFO NO_INSTALL_RPATH ${files})
+  get_subproject_title(subproject_title)
+  set_target_properties(${target_name} PROPERTIES FOLDER "${subproject_title}/Tests/Unit")
+
+  target_link_options(${target_name} PRIVATE "${LLVM_UNITTEST_LINK_FLAGS}")
+
+  set(outdir ${CMAKE_CURRENT_BINARY_DIR}/${CMAKE_CFG_INTDIR})
+  set_output_directory(${target_name} BINARY_DIR ${outdir} LIBRARY_DIR ${outdir})
+  target_link_libraries(${target_name} PRIVATE llvm_gtest ${LLVM_PTHREAD_LIB} ${PLUGINS_TEST_COMMON})
+
+  add_dependencies(OffloadUnitTests ${target_name})
   add_dependencies(${target_name} ${PLUGINS_TEST_COMMON} offload_device_binaries)
   target_compile_definitions(${target_name} PRIVATE DEVICE_CODE_PATH="${OFFLOAD_TEST_DEVICE_CODE_PATH}")
-  target_link_libraries(${target_name} PRIVATE ${PLUGINS_TEST_COMMON})
   target_include_directories(${target_name} PRIVATE ${PLUGINS_TEST_INCLUDE})
 endfunction()
 
