@@ -19,12 +19,12 @@ body:             |
   bb.0:
     liveins: $sgpr4_sgpr5
 
-    %3:sgpr_64(p4) = COPY $sgpr4_sgpr5
-    %8:sreg_64_xexec = S_LOAD_DWORDX2_IMM %3:sgpr_64(p4), 0, 0 :: (dereferenceable invariant load (s64), align 16, addrspace 4)
-    %9:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
-    %10:vreg_64_align2 = COPY %8:sreg_64_xexec
-    %11:vreg_64_align2 = V_MOV_B64_PSEUDO 0, implicit $exec
-    %13:vreg_96_align2 = REG_SEQUENCE killed %9:vgpr_32, %subreg.sub0, killed %11:vreg_64_align2, %subreg.sub1_sub2
-    FLAT_STORE_DWORDX3 %10:vreg_64_align2, killed %13:vreg_96_align2, 0, 0, implicit $exec, implicit $flat_scr :: (store (s96) into `ptr addrspace(1) undef`, align 4)
+    %0:sgpr_64 = COPY $sgpr4_sgpr5
+    %1:sreg_64_xexec = S_LOAD_DWORDX2_IMM %0, 0, 0 :: (dereferenceable invariant load (s64), align 16, addrspace 4)
+    %2:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %3:vreg_64_align2 = COPY %1
+    %4:vreg_64_align2 = V_MOV_B64_PSEUDO 0, implicit $exec
+    %5:vreg_96_align2 = REG_SEQUENCE killed %2, %subreg.sub0, killed %4, %subreg.sub1_sub2
+    FLAT_STORE_DWORDX3 %3, killed %5, 0, 0, implicit $exec, implicit $flat_scr :: (store (s96), align 4)
     S_ENDPGM 0
 ...
