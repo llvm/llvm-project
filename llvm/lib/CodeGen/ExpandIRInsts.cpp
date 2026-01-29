@@ -561,8 +561,8 @@ static void expandFPToI(Instruction *FPToI) {
     FloatVal0 =
         Builder.CreateFPExt(FloatVal, Type::getFP128Ty(Builder.getContext()));
   Value *ARep = Builder.CreateBitCast(FloatVal0, FloatIntTy);
-  Value *PosOrNeg = Builder.CreateICmpSGT(
-      ARep, ConstantInt::getSigned(Builder.getIntNTy(FloatWidth), -1));
+  Value *PosOrNeg =
+      Builder.CreateICmpSGT(ARep, ConstantInt::getSigned(FloatIntTy, -1));
   Value *Sign = Builder.CreateSelect(PosOrNeg, ConstantInt::getSigned(IntTy, 1),
                                      ConstantInt::getSigned(IntTy, -1), "sign");
   Value *And =
