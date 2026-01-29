@@ -781,8 +781,10 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
 
   // If NextInChain is 0 and not the LHS of a sub, we can simplify the
   // sub-expression to be just TheOther.
-  if (!(BO->getOpcode() == Instruction::Sub && OpNo == 0))
-    return TheOther;
+  if (ConstantInt *CI = dyn_cast<ConstantInt>(NextInChain))
+    if (CI->isZero())
+      if (!(BO->getOpcode() == Instruction::Sub && OpNo == 0))
+        return TheOther;
 
   BinaryOperator::BinaryOps NewOp = BO->getOpcode();
   if (BO->getOpcode() == Instruction::Or) {
