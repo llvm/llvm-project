@@ -3,7 +3,7 @@
 
 ; This function uses scratch_store to spill some values to the stack. While
 ; these stores are potentially outstanding it should not send the DEALLOC_VGPRS
-; message. FIXME.
+; message.
 
 define amdgpu_kernel void @f(ptr %ptr, i32 %arg) "amdgpu-flat-work-group-size"="64,64" {
 ; CHECK-LABEL: f:
@@ -32,8 +32,6 @@ define amdgpu_kernel void @f(ptr %ptr, i32 %arg) "amdgpu-flat-work-group-size"="
 ; CHECK-NEXT:    s_waitcnt vmcnt(0)
 ; CHECK-NEXT:    global_store_b32 v[0:1], v2, off
 ; CHECK-NEXT:  .LBB0_2: ; %false
-; CHECK-NEXT:    s_nop 0
-; CHECK-NEXT:    s_sendmsg sendmsg(MSG_DEALLOC_VGPRS)
 ; CHECK-NEXT:    s_endpgm
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr i32, ptr %ptr, i32 %tid
