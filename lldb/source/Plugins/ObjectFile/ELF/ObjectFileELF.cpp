@@ -2358,6 +2358,16 @@ ObjectFileELF::ParseSymbols(Symtab *symtab, user_id_t start_id,
     // linkage.
     if (llvm::StringRef(symbol_name).starts_with(".L"))
       continue;
+
+    // The mold linker emits an extra function symbol like "foo$plt" in
+    // .symtab/.dynsym that overlaps the PLT stub which ParsePLTRelocations
+    // will synthesize as an eSymbolTypeTrampoline named "foo". Drop the
+    // redundant sibling here so the finalized symbol table has a single
+    // clean entry per PLT function.
+    if (symbol.getType() == STT_FUNC &&
+        llvm::StringRef(symbol_name).ends_with("$plt"))
+      continue;
+
     // No need to add non-section symbols that have no names
     if (symbol.getType() != STT_SECTION &&
         (symbol_name == nullptr || symbol_name[0] == '\0'))
