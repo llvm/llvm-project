@@ -609,6 +609,9 @@ public:
   lldb::StackFrameListSP
   GetOpaqueTypeFromSBFrameList(const lldb::SBFrameList &exe_ctx) const;
 
+  lldb::ValueObjectSP
+  GetOpaqueTypeFromSBValue(const lldb::SBValue &value) const;
+
 protected:
   Debugger &m_debugger;
   lldb::ScriptLanguage m_script_lang;

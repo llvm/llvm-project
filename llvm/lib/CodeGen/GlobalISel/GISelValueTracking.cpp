@@ -33,6 +33,7 @@
 #include "llvm/IR/ConstantRange.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/FMF.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/KnownFPClass.h"
@@ -882,8 +883,8 @@ void GISelValueTracking::computeKnownFPClass(Register R,
   // assume this from flags/attributes.
   InterestedClasses &= ~KnownNotFromFlags;
 
-  auto ClearClassesFromFlags =
-      make_scope_exit([=, &Known] { Known.knownNot(KnownNotFromFlags); });
+  llvm::scope_exit ClearClassesFromFlags(
+      [=, &Known] { Known.knownNot(KnownNotFromFlags); });
 
   // All recursive calls that increase depth must come after this.
   if (Depth == MaxAnalysisRecursionDepth)

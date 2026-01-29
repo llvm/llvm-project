@@ -67,12 +67,14 @@ AbstractSparseForwardDataFlowAnalysis::initialize(Operation *top) {
 
 LogicalResult
 AbstractSparseForwardDataFlowAnalysis::initializeRecursively(Operation *op) {
-  LDBG() << "Initializing recursively for operation: " << op->getName();
+  LDBG() << "Initializing recursively for operation: "
+         << OpWithFlags(op, OpPrintingFlags().skipRegions());
 
   // Initialize the analysis by visiting every owner of an SSA value (all
   // operations and blocks).
   if (failed(visitOperation(op))) {
-    LDBG() << "Failed to visit operation: " << op->getName();
+    LDBG() << "Failed to visit operation: "
+           << OpWithFlags(op, OpPrintingFlags().skipRegions());
     return failure();
   }
 
@@ -86,9 +88,11 @@ AbstractSparseForwardDataFlowAnalysis::initializeRecursively(Operation *op) {
           ->blockContentSubscribe(this);
       visitBlock(&block);
       for (Operation &op : block) {
-        LDBG() << "Recursively initializing nested operation: " << op.getName();
+        LDBG() << "Recursively initializing nested operation: "
+               << OpWithFlags(&op, OpPrintingFlags().skipRegions());
         if (failed(initializeRecursively(&op))) {
-          LDBG() << "Failed to initialize nested operation: " << op.getName();
+          LDBG() << "Failed to initialize nested operation: "
+                 << OpWithFlags(&op, OpPrintingFlags().skipRegions());
           return failure();
         }
       }
@@ -96,7 +100,7 @@ AbstractSparseForwardDataFlowAnalysis::initializeRecursively(Operation *op) {
   }
 
   LDBG() << "Successfully completed recursive initialization for operation: "
-         << op->getName();
+         << OpWithFlags(op, OpPrintingFlags().skipRegions());
   return success();
 }
 
@@ -130,8 +134,7 @@ AbstractSparseForwardDataFlowAnalysis::visitOperation(Operation *op) {
   // The results of a region branch operation are determined by control-flow.
   if (auto branch = dyn_cast<RegionBranchOpInterface>(op)) {
     visitRegionSuccessors(getProgramPointAfter(branch), branch,
-                          /*successor=*/{branch, branch->getResults()},
-                          resultLattices);
+                          RegionSuccessor::parent(), resultLattices);
     return success();
   }
 
@@ -182,10 +185,10 @@ void AbstractSparseForwardDataFlowAnalysis::visitBlock(Block *block) {
                                    block->getParent(), argLattices);
     }
 
-    // Otherwise, we can't reason about the data-flow.
+    // All block arguments are non-successor-inputs.
     return visitNonControlFlowArgumentsImpl(block->getParentOp(),
                                             RegionSuccessor(block->getParent()),
-                                            argLattices, /*firstIndex=*/0);
+                                            block->getArguments(), argLattices);
   }
 
   // Iterate over the predecessors of the non-entry block.
@@ -306,30 +309,36 @@ void AbstractSparseForwardDataFlowAnalysis::visitRegionSuccessors(
     assert(inputs.size() == operands->size() &&
            "expected the same number of successor inputs as operands");
 
+    auto valueToLattices = [&](Value v) { return getLatticeElement(v); };
     unsigned firstIndex = 0;
     if (inputs.size() != lattices.size()) {
       if (!point->isBlockStart()) {
         if (!inputs.empty())
           firstIndex = cast<OpResult>(inputs.front()).getResultNumber();
-        visitNonControlFlowArgumentsImpl(
-            branch,
-            RegionSuccessor(
-                branch, branch->getResults().slice(firstIndex, inputs.size())),
-            lattices, firstIndex);
+        SmallVector<Value> nonSuccessorInputs =
+            branch.getNonSuccessorInputs(RegionSuccessor::parent());
+        SmallVector<AbstractSparseLattice *> nonSuccessorInputLattices =
+            llvm::map_to_vector(nonSuccessorInputs, valueToLattices);
+        visitNonControlFlowArgumentsImpl(branch, RegionSuccessor::parent(),
+                                         nonSuccessorInputs,
+                                         nonSuccessorInputLattices);
       } else {
         if (!inputs.empty())
           firstIndex = cast<BlockArgument>(inputs.front()).getArgNumber();
         Region *region = point->getBlock()->getParent();
-        visitNonControlFlowArgumentsImpl(
-            branch,
-            RegionSuccessor(region, region->getArguments().slice(
-                                        firstIndex, inputs.size())),
-            lattices, firstIndex);
+        SmallVector<Value> nonSuccessorInputs =
+            branch.getNonSuccessorInputs(RegionSuccessor(region));
+        SmallVector<AbstractSparseLattice *> nonSuccessorInputLattices =
+            llvm::map_to_vector(nonSuccessorInputs, valueToLattices);
+        visitNonControlFlowArgumentsImpl(branch, RegionSuccessor(region),
+                                         nonSuccessorInputs,
+                                         nonSuccessorInputLattices);
       }
     }
 
-    for (auto it : llvm::zip(*operands, lattices.drop_front(firstIndex)))
-      join(std::get<1>(it), *getLatticeElementFor(point, std::get<0>(it)));
+    for (auto [lattice, operand] :
+         llvm::zip(lattices.drop_front(firstIndex), *operands))
+      join(lattice, *getLatticeElementFor(point, operand));
   }
 }
 
@@ -428,7 +437,8 @@ static MutableArrayRef<OpOperand> operandsToOpOperands(OperandRange &operands) {
 
 LogicalResult
 AbstractSparseBackwardDataFlowAnalysis::visitOperation(Operation *op) {
-  LDBG() << "Visiting operation: " << op->getName() << " with "
+  LDBG() << "Visiting operation: "
+         << OpWithFlags(op, OpPrintingFlags().skipRegions()) << " with "
          << op->getNumOperands() << " operands and " << op->getNumResults()
          << " results";
 
@@ -563,7 +573,8 @@ AbstractSparseBackwardDataFlowAnalysis::visitOperation(Operation *op) {
     }
   }
 
-  LDBG() << "Using default visitOperationImpl for operation: " << op->getName();
+  LDBG() << "Using default visitOperationImpl for operation: "
+         << OpWithFlags(op, OpPrintingFlags().skipRegions());
   return visitOperationImpl(op, operandLattices, resultLattices);
 }
 
@@ -594,7 +605,6 @@ void AbstractSparseBackwardDataFlowAnalysis::visitRegionSuccessors(
   // Not all operands are forwarded to a successor. This set can be
   // non-contiguous in the presence of multiple successors.
   BitVector unaccounted(branch->getNumOperands(), true);
-
   RegionBranchSuccessorMapping mapping;
   branch.getSuccessorOperandInputMapping(mapping, RegionBranchPoint::parent());
   for (const auto &[operand, inputs] : mapping) {
@@ -603,6 +613,20 @@ void AbstractSparseBackwardDataFlowAnalysis::visitRegionSuccessors(
            *getLatticeElementFor(getProgramPointAfter(branch), input));
       unaccounted.reset(operand->getOperandNumber());
     }
+  }
+  Operation *op = branch.getOperation();
+  SmallVector<RegionSuccessor> successors;
+  SmallVector<Attribute> operands(op->getNumOperands(), nullptr);
+  branch.getEntrySuccessorRegions(operands, successors);
+  for (RegionSuccessor &successor : successors) {
+    if (successor.isParent())
+      continue;
+    auto valueToArgument = [](Value value) {
+      return cast<BlockArgument>(value);
+    };
+    SmallVector<BlockArgument> noControlFlowArguments = llvm::map_to_vector(
+        branch.getNonSuccessorInputs(successor), valueToArgument);
+    visitNonControlFlowArguments(successor, noControlFlowArguments);
   }
 
   // All operands not forwarded to regions are typically parameters of the
@@ -616,8 +640,6 @@ void AbstractSparseBackwardDataFlowAnalysis::
     visitRegionSuccessorsFromTerminator(
         RegionBranchTerminatorOpInterface terminator,
         RegionBranchOpInterface branch) {
-  assert(isa<RegionBranchTerminatorOpInterface>(terminator) &&
-         "expected a `RegionBranchTerminatorOpInterface` op");
   assert(terminator->getParentOp() == branch.getOperation() &&
          "expected `branch` to be the parent op of `terminator`");
 

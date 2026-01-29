@@ -102,6 +102,10 @@ lto::Config BitcodeCompiler::createConfig() {
     checkError(c.addSaveTemps(std::string(ctx.config.outputFile) + ".",
                               /*UseInputModulePath*/ true,
                               ctx.config.saveTempsArgs));
+
+  c.PTO.LoopVectorization = c.OptLevel > 1;
+  c.PTO.SLPVectorization = c.OptLevel > 1;
+
   return c;
 }
 
@@ -138,8 +142,10 @@ BitcodeCompiler::BitcodeCompiler(COFFLinkerContext &c) : ctx(c) {
     ltoObj = std::make_unique<lto::LTO>(createConfig(), backend,
                                         ctx.config.ltoPartitions);
   else
-    ltoObj = std::make_unique<lto::DTLTO>(createConfig(), backend,
-                                          ctx.config.ltoPartitions);
+    ltoObj = std::make_unique<lto::DTLTO>(
+        createConfig(), backend, ctx.config.ltoPartitions,
+        llvm::lto::LTO::LTOKind::LTOK_Default, ctx.config.outputFile,
+        !ctx.config.saveTempsArgs.empty());
 }
 
 BitcodeCompiler::~BitcodeCompiler() = default;

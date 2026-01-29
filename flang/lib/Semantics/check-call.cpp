@@ -18,6 +18,7 @@
 #include "flang/Parser/message.h"
 #include "flang/Semantics/scope.h"
 #include "flang/Semantics/tools.h"
+#include "llvm/ADT/StringSet.h"
 #include <map>
 #include <string>
 
@@ -337,6 +338,13 @@ static bool DefersSameTypeParameters(
   return true;
 }
 
+// List of intrinsics that are skipped when checking for device actual
+// arguments.
+static const llvm::StringSet<> cudaSkippedIntrinsics = {"__builtin_c_devloc",
+    "__builtin_c_f_pointer", "__builtin_c_loc", "__builtin_show_descriptor",
+    "allocated", "associated", "kind", "lbound", "loc", "present", "shape",
+    "size", "sizeof", "ubound"};
+
 static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
     const std::string &dummyName, evaluate::Expr<evaluate::SomeType> &actual,
     characteristics::TypeAndShape &actualType, bool isElemental,
@@ -566,6 +574,12 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           "Assumed-size array may not be associated with assumed-shape %s"_err_en_US,
           dummyName);
     }
+  } else if (dummyIsAssumedSize && dummy.type.type().IsAssumedType() &&
+      actualRank == 0 && !actualIsAssumedRank) {
+    // F'2023 15.5.2.5 p14 third bullet allows a scalar actual
+    // argument to associate with a TYPE(*) assumed-size dummy
+    foldingContext.Warn(common::UsageWarning::AssumedTypeSizeDummy,
+        "A scalar actual argument for an assumed-size TYPE(*) dummy is not portable"_port_en_US);
   } else if (dummyRank > 0) {
     bool basicError{false};
     if (actualRank == 0 && !actualIsAssumedRank &&
@@ -582,9 +596,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
           actualType.type().category() == TypeCategory::Character &&
           actualType.type().kind() == 1};
       if (!actualIsCKindCharacter) {
-        if (!actualIsArrayElement &&
-            !(dummy.type.type().IsAssumedType() && dummyIsAssumedSize) &&
-            !dummyIsAssumedRank &&
+        if (!actualIsArrayElement && !dummyIsAssumedRank &&
             !dummy.ignoreTKR.test(common::IgnoreTKR::Rank)) {
           basicError = true;
           messages.Say(
@@ -776,7 +788,8 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         }
       }
     } else if (dummy.intent != common::Intent::In ||
-        (dummyIsPointer && !actualIsPointer)) {
+        (dummyIsPointer && !actualIsPointer) ||
+        (intrinsic && intrinsic->name == "loc")) {
       if (auto named{evaluate::ExtractNamedEntity(actual)}) {
         context.NoteDefinedSymbol(named->GetFirstSymbol());
       }
@@ -1132,6 +1145,24 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
       messages.Say(
           "%s has %s but its associated actual argument has %s"_err_en_US,
           dummyName, toStr(dummyDataAttr), toStr(actualDataAttr));
+    }
+  }
+  // Emit an error message if an actual argument passed to a host intrinsic is
+  // on the device.
+  if (intrinsic && !FindCUDADeviceContext(scope) &&
+      !FindOpenACCConstructContaining(scope)) {
+    if (!cudaSkippedIntrinsics.contains(intrinsic->name)) {
+      std::optional<common::CUDADataAttr> actualDataAttr;
+      if (const auto *actualObject{actualLastSymbol
+                  ? actualLastSymbol->detailsIf<ObjectEntityDetails>()
+                  : nullptr}) {
+        actualDataAttr = actualObject->cudaDataAttr();
+      }
+      if (actualDataAttr && *actualDataAttr == common::CUDADataAttr::Device) {
+        messages.Say(
+            "Actual argument %s associated with host intrinsic %s is on the device"_err_en_US,
+            actualLastSymbol ? actualLastSymbol->name() : "", intrinsic->name);
+      }
     }
   }
 

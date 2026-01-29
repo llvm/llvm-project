@@ -89,6 +89,7 @@ llvm.func @sectionsreduction_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attribute
 // CHECK:         %[[VAL_20:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, i64 1, align 8
 // CHECK:         %[[VAL_21:.*]] = alloca ptr, align 8
 // CHECK:         %[[VAL_14:.*]] = alloca [1 x ptr], align 8
+// CHECK:         %[[VAL_19:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, i64 1, align 8
 // CHECK:         br label %[[VAL_15:.*]]
 
 // CHECK:       [[VAL_15]]:
@@ -97,7 +98,6 @@ llvm.func @sectionsreduction_(%arg0: !llvm.ptr {fir.bindc_name = "x"}) attribute
 // CHECK:       [[PAR_REG]]:                                   ; preds = %[[VAL_15]]
 // CHECK:         br label %[[VAL_18:.*]]
 // CHECK:       omp.par.region1:                                  ; preds = %[[PAR_REG]]
-// CHECK:         %[[VAL_19:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, i64 1, align 8
 // CHECK:         br label %[[VAL_22:.*]]
 
 // CHECK:       omp.reduction.init:                               ; preds = %[[VAL_16:.*]]

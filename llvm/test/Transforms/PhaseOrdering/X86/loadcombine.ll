@@ -70,10 +70,7 @@ define i32 @loadCombine_4consecutive_1243(ptr %p) {
 
 define i32 @loadCombine_4consecutive_1324(ptr %p) {
 ; CHECK-LABEL: @loadCombine_4consecutive_1324(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw <4 x i32> [[TMP2]], <i32 0, i32 8, i32 16, i32 24>
-; CHECK-NEXT:    [[O3:%.*]] = tail call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP3]])
+; CHECK-NEXT:    [[O3:%.*]] = load i32, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    ret i32 [[O3]]
 ;
   %p1 = getelementptr i8, ptr %p, i32 1
@@ -101,10 +98,7 @@ define i32 @loadCombine_4consecutive_1324(ptr %p) {
 
 define i32 @loadCombine_4consecutive_1342(ptr %p) {
 ; CHECK-LABEL: @loadCombine_4consecutive_1342(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw <4 x i32> [[TMP2]], <i32 0, i32 8, i32 16, i32 24>
-; CHECK-NEXT:    [[O3:%.*]] = tail call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP3]])
+; CHECK-NEXT:    [[O3:%.*]] = load i32, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    ret i32 [[O3]]
 ;
   %p1 = getelementptr i8, ptr %p, i32 1
@@ -132,10 +126,7 @@ define i32 @loadCombine_4consecutive_1342(ptr %p) {
 
 define i32 @loadCombine_4consecutive_1423(ptr %p) {
 ; CHECK-LABEL: @loadCombine_4consecutive_1423(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw <4 x i32> [[TMP2]], <i32 0, i32 8, i32 16, i32 24>
-; CHECK-NEXT:    [[O3:%.*]] = tail call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP3]])
+; CHECK-NEXT:    [[O3:%.*]] = load i32, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    ret i32 [[O3]]
 ;
   %p1 = getelementptr i8, ptr %p, i32 1
@@ -163,10 +154,7 @@ define i32 @loadCombine_4consecutive_1423(ptr %p) {
 
 define i32 @loadCombine_4consecutive_1432(ptr %p) {
 ; CHECK-LABEL: @loadCombine_4consecutive_1432(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw <4 x i32> [[TMP2]], <i32 0, i32 8, i32 16, i32 24>
-; CHECK-NEXT:    [[O3:%.*]] = tail call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP3]])
+; CHECK-NEXT:    [[O3:%.*]] = load i32, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    ret i32 [[O3]]
 ;
   %p1 = getelementptr i8, ptr %p, i32 1
@@ -317,10 +305,7 @@ define i32 @loadCombine_4consecutive_2341(ptr %p) {
 
 define i32 @loadCombine_4consecutive_2413(ptr %p) {
 ; CHECK-LABEL: @loadCombine_4consecutive_2413(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw <4 x i32> [[TMP2]], <i32 0, i32 8, i32 16, i32 24>
-; CHECK-NEXT:    [[O3:%.*]] = tail call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP3]])
+; CHECK-NEXT:    [[O3:%.*]] = load i32, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    ret i32 [[O3]]
 ;
   %p1 = getelementptr i8, ptr %p, i32 1
@@ -348,10 +333,7 @@ define i32 @loadCombine_4consecutive_2413(ptr %p) {
 
 define i32 @loadCombine_4consecutive_2431(ptr %p) {
 ; CHECK-LABEL: @loadCombine_4consecutive_2431(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw <4 x i32> [[TMP2]], <i32 0, i32 8, i32 16, i32 24>
-; CHECK-NEXT:    [[O3:%.*]] = tail call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP3]])
+; CHECK-NEXT:    [[O3:%.*]] = load i32, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    ret i32 [[O3]]
 ;
   %p1 = getelementptr i8, ptr %p, i32 1
@@ -379,10 +361,7 @@ define i32 @loadCombine_4consecutive_2431(ptr %p) {
 
 define i32 @loadCombine_4consecutive_3124(ptr %p) {
 ; CHECK-LABEL: @loadCombine_4consecutive_3124(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw <4 x i32> [[TMP2]], <i32 0, i32 8, i32 16, i32 24>
-; CHECK-NEXT:    [[O3:%.*]] = tail call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP3]])
+; CHECK-NEXT:    [[O3:%.*]] = load i32, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    ret i32 [[O3]]
 ;
   %p1 = getelementptr i8, ptr %p, i32 1
@@ -410,10 +389,7 @@ define i32 @loadCombine_4consecutive_3124(ptr %p) {
 
 define i32 @loadCombine_4consecutive_3142(ptr %p) {
 ; CHECK-LABEL: @loadCombine_4consecutive_3142(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw <4 x i32> [[TMP2]], <i32 0, i32 8, i32 16, i32 24>
-; CHECK-NEXT:    [[O3:%.*]] = tail call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP3]])
+; CHECK-NEXT:    [[O3:%.*]] = load i32, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    ret i32 [[O3]]
 ;
   %p1 = getelementptr i8, ptr %p, i32 1
@@ -564,10 +540,7 @@ define i32 @loadCombine_4consecutive_3421(ptr %p) {
 
 define i32 @loadCombine_4consecutive_4123(ptr %p) {
 ; CHECK-LABEL: @loadCombine_4consecutive_4123(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw <4 x i32> [[TMP2]], <i32 0, i32 8, i32 16, i32 24>
-; CHECK-NEXT:    [[O3:%.*]] = tail call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP3]])
+; CHECK-NEXT:    [[O3:%.*]] = load i32, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    ret i32 [[O3]]
 ;
   %p1 = getelementptr i8, ptr %p, i32 1
@@ -595,10 +568,7 @@ define i32 @loadCombine_4consecutive_4123(ptr %p) {
 
 define i32 @loadCombine_4consecutive_4132(ptr %p) {
 ; CHECK-LABEL: @loadCombine_4consecutive_4132(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw <4 x i32> [[TMP2]], <i32 0, i32 8, i32 16, i32 24>
-; CHECK-NEXT:    [[O3:%.*]] = tail call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP3]])
+; CHECK-NEXT:    [[O3:%.*]] = load i32, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    ret i32 [[O3]]
 ;
   %p1 = getelementptr i8, ptr %p, i32 1
@@ -626,10 +596,7 @@ define i32 @loadCombine_4consecutive_4132(ptr %p) {
 
 define i32 @loadCombine_4consecutive_4213(ptr %p) {
 ; CHECK-LABEL: @loadCombine_4consecutive_4213(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw <4 x i32> [[TMP2]], <i32 0, i32 8, i32 16, i32 24>
-; CHECK-NEXT:    [[O3:%.*]] = tail call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP3]])
+; CHECK-NEXT:    [[O3:%.*]] = load i32, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    ret i32 [[O3]]
 ;
   %p1 = getelementptr i8, ptr %p, i32 1
@@ -657,10 +624,7 @@ define i32 @loadCombine_4consecutive_4213(ptr %p) {
 
 define i32 @loadCombine_4consecutive_4231(ptr %p) {
 ; CHECK-LABEL: @loadCombine_4consecutive_4231(
-; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i8>, ptr [[P:%.*]], align 1
-; CHECK-NEXT:    [[TMP2:%.*]] = zext <4 x i8> [[TMP1]] to <4 x i32>
-; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw <4 x i32> [[TMP2]], <i32 0, i32 8, i32 16, i32 24>
-; CHECK-NEXT:    [[O3:%.*]] = tail call i32 @llvm.vector.reduce.or.v4i32(<4 x i32> [[TMP3]])
+; CHECK-NEXT:    [[O3:%.*]] = load i32, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    ret i32 [[O3]]
 ;
   %p1 = getelementptr i8, ptr %p, i32 1

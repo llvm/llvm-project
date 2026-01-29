@@ -399,7 +399,7 @@ llvm::Error Host::OpenFileInExternalEditor(llvm::StringRef editor,
                       error));
 
   // Deallocate the descriptor on exit.
-  auto on_exit = llvm::make_scope_exit(
+  llvm::scope_exit on_exit(
       [&]() { AEDisposeDesc(&(file_and_line_desc.descContent)); });
 
   if (editor.empty()) {
@@ -1175,8 +1175,7 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
   }
 
   // Make sure we clean up the posix spawn attributes before exiting this scope.
-  auto cleanup_attr =
-      llvm::make_scope_exit([&]() { posix_spawnattr_destroy(&attr); });
+  llvm::scope_exit cleanup_attr([&]() { posix_spawnattr_destroy(&attr); });
 
   sigset_t no_signals;
   sigset_t all_signals;
@@ -1349,7 +1348,7 @@ static Status LaunchProcessPosixSpawn(const char *exe_path,
     }
 
     // Make sure we clean up the posix file actions before exiting this scope.
-    auto cleanup_fileact = llvm::make_scope_exit(
+    llvm::scope_exit cleanup_fileact(
         [&]() { posix_spawn_file_actions_destroy(&file_actions); });
 
     for (size_t i = 0; i < num_file_actions; ++i) {

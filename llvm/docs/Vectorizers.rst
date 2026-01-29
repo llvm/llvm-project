@@ -200,7 +200,19 @@ reduction operations, such as addition, multiplication, XOR, AND and OR.
     return sum;
   }
 
-We support floating point reduction operations when `-ffast-math` is used.
+Fully vectorizing reductions requires reordering operations, which is
+problematic for floating-point arithmetic because it is not associative;
+therefore results may depend on the evaluation order.
+
+Changing floating-point results is implicitly prohibited by the C and C++
+standards, therefore LLVM supports vectorizing floating point reductions only
+when at least the `-fassociative-math -fno-signed-zeros -fno-trapping-math`
+subset of `-ffast-math` is used on most targets. On some targets, such as
+AArch64 and RISC-V, LLVM can generate ordered reductions that preserve the
+exact result, enabling limited, standards-compliant vectorization. However,
+ordered reductions are typically less efficient than traditionally vectorized
+reductions, therefore enabling floating-point reordering may still result in
+more performant reductions on these targets.
 
 Inductions
 ^^^^^^^^^^
@@ -416,9 +428,12 @@ header.
 
 .. image:: vplan-early-exit.png
 
-BranchOnTwoConds is lowered to a chain of conditional branches after dissolving loop regions:
+BranchOnTwoConds is lowered to a chain of conditional branches exiting
+the vector loop after dissolving loop regions:
 
 .. image:: vplan-early-exit-lowered.png
+
+
 
 Performance
 -----------

@@ -174,6 +174,34 @@ static void printAllocatableOp(mlir::OpAsmPrinter &p, OP &op) {
   p.printOptionalAttrDict(op->getAttrs(), {"in_type", "operandSegmentSizes"});
 }
 
+/// Returns true if the given box value may be absent.
+/// The given value must have BaseBoxType.
+static bool mayBeAbsentBox(mlir::Value val) {
+  assert(mlir::isa<fir::BaseBoxType>(val.getType()) && "expected box argument");
+  while (val) {
+    mlir::Operation *defOp = val.getDefiningOp();
+    if (!defOp)
+      return true;
+
+    if (auto varIface = mlir::dyn_cast<fir::FortranVariableOpInterface>(defOp))
+      return varIface.isOptional();
+
+    // Check for fir.embox and fir.rebox before checking for
+    // FortranObjectViewOpInterface, which they support.
+    // A box created by fir.embox/rebox cannot be absent.
+    if (mlir::isa<fir::ReboxOp, fir::EmboxOp, fir::LoadOp>(defOp))
+      return false;
+
+    if (auto viewIface =
+            mlir::dyn_cast<fir::FortranObjectViewOpInterface>(defOp)) {
+      val = viewIface.getViewSource(mlir::cast<mlir::OpResult>(val));
+      continue;
+    }
+    break;
+  }
+  return true;
+}
+
 //===----------------------------------------------------------------------===//
 // AllocaOp
 //===----------------------------------------------------------------------===//
@@ -1089,17 +1117,16 @@ void fir::BoxAddrOp::build(mlir::OpBuilder &builder,
                            mlir::OperationState &result, mlir::Value val) {
   mlir::Type type =
       llvm::TypeSwitch<mlir::Type, mlir::Type>(val.getType())
-          .Case<fir::BaseBoxType>([&](fir::BaseBoxType ty) -> mlir::Type {
+          .Case([&](fir::BaseBoxType ty) -> mlir::Type {
             mlir::Type eleTy = ty.getEleTy();
             if (fir::isa_ref_type(eleTy))
               return eleTy;
             return fir::ReferenceType::get(eleTy);
           })
-          .Case<fir::BoxCharType>([&](fir::BoxCharType ty) -> mlir::Type {
+          .Case([&](fir::BoxCharType ty) -> mlir::Type {
             return fir::ReferenceType::get(ty.getEleTy());
           })
-          .Case<fir::BoxProcType>(
-              [&](fir::BoxProcType ty) { return ty.getEleTy(); })
+          .Case([&](fir::BoxProcType ty) { return ty.getEleTy(); })
           .Default([&](const auto &) { return mlir::Type{}; });
   assert(type && "bad val type");
   build(builder, result, type, val);
@@ -1128,6 +1155,15 @@ std::optional<std::int64_t> fir::BoxAddrOp::getViewOffset(mlir::OpResult) {
   return 0;
 }
 
+mlir::Speculation::Speculatability fir::BoxAddrOp::getSpeculatability() {
+  // Do not speculate fir.box_addr with BoxProcType and BoxCharType
+  // inputs.
+  if (!mlir::isa<fir::BaseBoxType>(getVal().getType()))
+    return mlir::Speculation::NotSpeculatable;
+  return mayBeAbsentBox(getVal()) ? mlir::Speculation::NotSpeculatable
+                                  : mlir::Speculation::Speculatable;
+}
+
 //===----------------------------------------------------------------------===//
 // BoxCharLenOp
 //===----------------------------------------------------------------------===//
@@ -1150,6 +1186,11 @@ mlir::Type fir::BoxDimsOp::getTupleType() {
   llvm::SmallVector<mlir::Type> triple{
       getResult(0).getType(), getResult(1).getType(), getResult(2).getType()};
   return mlir::TupleType::get(getContext(), triple);
+}
+
+mlir::Speculation::Speculatability fir::BoxDimsOp::getSpeculatability() {
+  return mayBeAbsentBox(getVal()) ? mlir::Speculation::NotSpeculatable
+                                  : mlir::Speculation::Speculatable;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1630,6 +1671,22 @@ llvm::LogicalResult fir::ConvertOp::verify() {
          << getValue().getType() << " / " << getType();
 }
 
+mlir::Speculation::Speculatability fir::ConvertOp::getSpeculatability() {
+  // fir.convert is speculatable, in general. The only concern may be
+  // converting from or/and to floating point types, which may trigger
+  // some FP exceptions. Disallow speculating such converts for the time being.
+  // Also disallow speculation for converts to/from non-FIR types, except
+  // for some builtin types.
+  auto canSpeculateType = [](mlir::Type ty) {
+    if (fir::isa_fir_type(ty) || fir::isa_integer(ty))
+      return true;
+    return false;
+  };
+  return (canSpeculateType(getValue().getType()) && canSpeculateType(getType()))
+             ? mlir::Speculation::Speculatable
+             : mlir::Speculation::NotSpeculatable;
+}
+
 //===----------------------------------------------------------------------===//
 // CoordinateOp
 //===----------------------------------------------------------------------===//
@@ -1669,11 +1726,11 @@ void fir::CoordinateOp::build(mlir::OpBuilder &builder,
   bool anyField = false;
   for (fir::IntOrValue index : coor) {
     llvm::TypeSwitch<fir::IntOrValue>(index)
-        .Case<mlir::IntegerAttr>([&](mlir::IntegerAttr intAttr) {
+        .Case([&](mlir::IntegerAttr intAttr) {
           fieldIndices.push_back(intAttr.getInt());
           anyField = true;
         })
-        .Case<mlir::Value>([&](mlir::Value value) {
+        .Case([&](mlir::Value value) {
           dynamicIndices.push_back(value);
           fieldIndices.push_back(fir::CoordinateOp::kDynamicIndex);
         });
@@ -1696,7 +1753,7 @@ void fir::CoordinateOp::print(mlir::OpAsmPrinter &p) {
     for (auto index : getIndices()) {
       p << ", ";
       llvm::TypeSwitch<fir::IntOrValue>(index)
-          .Case<mlir::IntegerAttr>([&](mlir::IntegerAttr intAttr) {
+          .Case([&](mlir::IntegerAttr intAttr) {
             if (auto recordType = llvm::dyn_cast<fir::RecordType>(eleTy)) {
               int fieldId = intAttr.getInt();
               if (fieldId < static_cast<int>(recordType.getNumFields())) {
@@ -1711,7 +1768,7 @@ void fir::CoordinateOp::print(mlir::OpAsmPrinter &p) {
             // investigated.
             p << intAttr;
           })
-          .Case<mlir::Value>([&](mlir::Value value) { p << value; });
+          .Case([&](mlir::Value value) { p << value; });
     }
   }
   p.printOptionalAttrDict(
@@ -2119,6 +2176,12 @@ std::optional<std::int64_t> fir::EmboxOp::getViewOffset(mlir::OpResult) {
   if (!getSlice())
     return 0;
   return std::nullopt;
+}
+
+mlir::Speculation::Speculatability fir::EmboxOp::getSpeculatability() {
+  return (getSourceBox() && mayBeAbsentBox(getSourceBox()))
+             ? mlir::Speculation::NotSpeculatable
+             : mlir::Speculation::Speculatable;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3417,6 +3480,11 @@ std::optional<std::int64_t> fir::ReboxOp::getViewOffset(mlir::OpResult) {
   return std::nullopt;
 }
 
+mlir::Speculation::Speculatability fir::ReboxOp::getSpeculatability() {
+  return mayBeAbsentBox(getBox()) ? mlir::Speculation::NotSpeculatable
+                                  : mlir::Speculation::Speculatable;
+}
+
 //===----------------------------------------------------------------------===//
 // ReboxAssumedRankOp
 //===----------------------------------------------------------------------===//
@@ -4402,6 +4470,84 @@ void fir::StoreOp::getEffects(
 }
 
 //===----------------------------------------------------------------------===//
+// PrefetchOp
+//===----------------------------------------------------------------------===//
+
+mlir::ParseResult fir::PrefetchOp::parse(mlir::OpAsmParser &parser,
+                                         mlir::OperationState &result) {
+  mlir::OpAsmParser::UnresolvedOperand memref;
+  if (parser.parseOperand(memref))
+    return mlir::failure();
+
+  if (mlir::succeeded(parser.parseLBrace())) {
+    llvm::StringRef kw;
+    if (parser.parseKeyword(&kw))
+      return mlir::failure();
+
+    if (kw == "read")
+      result.addAttribute("rw", parser.getBuilder().getBoolAttr(false));
+    else if (kw == "write")
+      result.addAttribute("rw", parser.getBuilder().getUnitAttr());
+    else
+      return parser.emitError(parser.getCurrentLocation(),
+                              "Expected either read or write keyword");
+
+    if (parser.parseComma())
+      return mlir::failure();
+
+    if (parser.parseKeyword(&kw))
+      return mlir::failure();
+    if (kw == "instruction") {
+      result.addAttribute("cacheType", parser.getBuilder().getBoolAttr(false));
+    } else if (kw == "data") {
+      result.addAttribute("cacheType", parser.getBuilder().getUnitAttr());
+    } else
+      return parser.emitError(parser.getCurrentLocation(),
+                              "Expected either intruction or data keyword");
+
+    if (parser.parseComma())
+      return mlir::failure();
+
+    if (mlir::succeeded(parser.parseKeyword("localityHint"))) {
+      if (parser.parseEqual())
+        return mlir::failure();
+      mlir::Attribute intAttr;
+      if (parser.parseAttribute(intAttr))
+        return mlir::failure();
+      result.addAttribute("localityHint", intAttr);
+    }
+    if (parser.parseRBrace())
+      return mlir::failure();
+  }
+  mlir::Type type;
+  if (parser.parseColonType(type))
+    return mlir::failure();
+
+  if (parser.resolveOperand(memref, type, result.operands))
+    return mlir::failure();
+  return mlir::success();
+}
+
+void fir::PrefetchOp::print(mlir::OpAsmPrinter &p) {
+  p << " ";
+  p.printOperand(getMemref());
+  p << " {";
+  if (getRw())
+    p << "write";
+  else
+    p << "read";
+  p << ", ";
+  if (getCacheType())
+    p << "data";
+  else
+    p << "instruction";
+  p << ", localityHint = ";
+  p << getLocalityHint();
+  p << " : " << getLocalityHintAttr().getType();
+  p << "} : " << getMemref().getType();
+}
+
+//===----------------------------------------------------------------------===//
 // CopyOp
 //===----------------------------------------------------------------------===//
 
@@ -4621,7 +4767,7 @@ void fir::IfOp::getSuccessorRegions(
     llvm::SmallVectorImpl<mlir::RegionSuccessor> &regions) {
   // The `then` and the `else` region branch back to the parent operation.
   if (!point.isParent()) {
-    regions.push_back(mlir::RegionSuccessor(getOperation(), getResults()));
+    regions.push_back(mlir::RegionSuccessor::parent());
     return;
   }
 
@@ -4631,10 +4777,16 @@ void fir::IfOp::getSuccessorRegions(
   // Don't consider the else region if it is empty.
   mlir::Region *elseRegion = &this->getElseRegion();
   if (elseRegion->empty())
-    regions.push_back(
-        mlir::RegionSuccessor(getOperation(), getOperation()->getResults()));
+    regions.push_back(mlir::RegionSuccessor::parent());
   else
     regions.push_back(mlir::RegionSuccessor(elseRegion));
+}
+
+mlir::ValueRange
+fir::IfOp::getSuccessorInputs(mlir::RegionSuccessor successor) {
+  if (successor.isParent())
+    return getOperation()->getResults();
+  return mlir::ValueRange();
 }
 
 void fir::IfOp::getEntrySuccessorRegions(
@@ -4651,7 +4803,7 @@ void fir::IfOp::getEntrySuccessorRegions(
     if (!getElseRegion().empty())
       regions.emplace_back(&getElseRegion());
     else
-      regions.emplace_back(getOperation(), getOperation()->getResults());
+      regions.push_back(mlir::RegionSuccessor::parent());
   }
 }
 
@@ -5025,7 +5177,7 @@ bool fir::isDummyArgument(mlir::Value v) {
 mlir::Type fir::applyPathToType(mlir::Type eleTy, mlir::ValueRange path) {
   for (auto i = path.begin(), end = path.end(); eleTy && i < end;) {
     eleTy = llvm::TypeSwitch<mlir::Type, mlir::Type>(eleTy)
-                .Case<fir::RecordType>([&](fir::RecordType ty) {
+                .Case([&](fir::RecordType ty) {
                   if (auto *op = (*i++).getDefiningOp()) {
                     if (auto off = mlir::dyn_cast<fir::FieldIndexOp>(op))
                       return ty.getType(off.getFieldName());
@@ -5034,7 +5186,7 @@ mlir::Type fir::applyPathToType(mlir::Type eleTy, mlir::ValueRange path) {
                   }
                   return mlir::Type{};
                 })
-                .Case<fir::SequenceType>([&](fir::SequenceType ty) {
+                .Case([&](fir::SequenceType ty) {
                   bool valid = true;
                   const auto rank = ty.getDimension();
                   for (std::remove_const_t<decltype(rank)> ii = 0;
@@ -5042,13 +5194,13 @@ mlir::Type fir::applyPathToType(mlir::Type eleTy, mlir::ValueRange path) {
                     valid = i < end && fir::isa_integer((*i++).getType());
                   return valid ? ty.getEleTy() : mlir::Type{};
                 })
-                .Case<mlir::TupleType>([&](mlir::TupleType ty) {
+                .Case([&](mlir::TupleType ty) {
                   if (auto *op = (*i++).getDefiningOp())
                     if (auto off = mlir::dyn_cast<mlir::arith::ConstantOp>(op))
                       return ty.getType(fir::toInt(off));
                   return mlir::Type{};
                 })
-                .Case<mlir::ComplexType>([&](mlir::ComplexType ty) {
+                .Case([&](mlir::ComplexType ty) {
                   if (fir::isa_integer((*i++).getType()))
                     return ty.getElementType();
                   return mlir::Type{};

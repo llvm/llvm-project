@@ -17,7 +17,7 @@ declare nofpclass(pnorm inf nan zero psub) float @returns_nsub_nnorm()
 define nofpclass(inf) float @ret_nofpclass_inf__canonicalize_select_pinf_rhs(i1 %cond, float %x) {
 ; CHECK-LABEL: define nofpclass(inf) float @ret_nofpclass_inf__canonicalize_select_pinf_rhs(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[X:%.*]]) {
-; CHECK-NEXT:    [[TMP1:%.*]] = call float @llvm.canonicalize.f32(float [[X]])
+; CHECK-NEXT:    [[TMP1:%.*]] = call ninf float @llvm.canonicalize.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[TMP1]]
 ;
   %select = select i1 %cond, float %x, float 0x7FF0000000000000
@@ -30,7 +30,7 @@ define nofpclass(nan pzero) float @ret_nofpclass_nan_pzero__canonicalize_select_
 ; CHECK-SAME: float [[X:%.*]], i1 [[COND:%.*]]) #[[ATTR0:[0-9]+]] {
 ; CHECK-NEXT:    [[PSUB:%.*]] = call float @returns_psub_pnorm()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[X]], float [[PSUB]]
-; CHECK-NEXT:    [[CANON:%.*]] = call float @llvm.canonicalize.f32(float [[SELECT]])
+; CHECK-NEXT:    [[CANON:%.*]] = call nnan float @llvm.canonicalize.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[CANON]]
 ;
   %psub = call float @returns_psub_pnorm()
@@ -44,7 +44,7 @@ define nofpclass(nan nzero) float @ret_nofpclass_nan_nzero__canonicalize_select_
 ; CHECK-SAME: float [[X:%.*]], i1 [[COND:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call float @returns_nsub_nnorm()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[X]], float [[NSUB]]
-; CHECK-NEXT:    [[CANON:%.*]] = call float @llvm.canonicalize.f32(float [[SELECT]])
+; CHECK-NEXT:    [[CANON:%.*]] = call nnan float @llvm.canonicalize.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[CANON]]
 ;
   %nsub = call float @returns_nsub_nnorm()
@@ -58,8 +58,7 @@ define nofpclass(nan zero) float @ret_nofpclass_nan_zero__canonicalize_select_su
 ; CHECK-SAME: float [[X:%.*]], i1 [[COND:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[SUB:%.*]] = call float @returns_sub_norm()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[X]], float [[SUB]]
-; CHECK-NEXT:    [[CANON:%.*]] = call float @llvm.canonicalize.f32(float [[SELECT]])
-; CHECK-NEXT:    ret float [[CANON]]
+; CHECK-NEXT:    ret float [[SELECT]]
 ;
   %sub = call float @returns_sub_norm()
   %select = select i1 %cond, float %x, float %sub
@@ -71,7 +70,7 @@ define nofpclass(nan pzero) float @ret_nofpclass_nan_pzero__canonicalize_select_
 ; CHECK-LABEL: define nofpclass(nan pzero) float @ret_nofpclass_nan_pzero__canonicalize_select_psub_daz(
 ; CHECK-SAME: float [[X:%.*]], i1 [[COND:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[PSUB:%.*]] = call float @returns_psub()
-; CHECK-NEXT:    [[CANON:%.*]] = call float @llvm.canonicalize.f32(float [[X]])
+; CHECK-NEXT:    [[CANON:%.*]] = call nnan float @llvm.canonicalize.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[CANON]]
 ;
   %psub = call float @returns_psub()
@@ -84,7 +83,7 @@ define nofpclass(nan nzero) float @ret_nofpclass_nan_nzero__canonicalize_select_
 ; CHECK-LABEL: define nofpclass(nan nzero) float @ret_nofpclass_nan_nzero__canonicalize_select_nsub_daz(
 ; CHECK-SAME: float [[X:%.*]], i1 [[COND:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call float @returns_nsub()
-; CHECK-NEXT:    [[CANON:%.*]] = call float @llvm.canonicalize.f32(float [[X]])
+; CHECK-NEXT:    [[CANON:%.*]] = call nnan float @llvm.canonicalize.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[CANON]]
 ;
   %nsub = call float @returns_nsub()
@@ -97,8 +96,7 @@ define nofpclass(nan zero) float @ret_nofpclass_nan_zero__canonicalize_select_su
 ; CHECK-LABEL: define nofpclass(nan zero) float @ret_nofpclass_nan_zero__canonicalize_select_sub_daz(
 ; CHECK-SAME: float [[X:%.*]], i1 [[COND:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:    [[SUB:%.*]] = call float @returns_sub()
-; CHECK-NEXT:    [[CANON:%.*]] = call float @llvm.canonicalize.f32(float [[X]])
-; CHECK-NEXT:    ret float [[CANON]]
+; CHECK-NEXT:    ret float [[X]]
 ;
   %sub = call float @returns_sub()
   %select = select i1 %cond, float %x, float %sub
@@ -162,7 +160,7 @@ define nofpclass(nan) float @ret_nofpclass_nan__canonicalize_only_sub_daz() #0 {
 ; CHECK-LABEL: define nofpclass(nan) float @ret_nofpclass_nan__canonicalize_only_sub_daz(
 ; CHECK-SAME: ) #[[ATTR0]] {
 ; CHECK-NEXT:    [[SUB:%.*]] = call float @returns_sub()
-; CHECK-NEXT:    [[CANON:%.*]] = call float @llvm.canonicalize.f32(float [[SUB]])
+; CHECK-NEXT:    [[CANON:%.*]] = call nnan ninf float @llvm.canonicalize.f32(float [[SUB]])
 ; CHECK-NEXT:    ret float [[CANON]]
 ;
   %sub = call float @returns_sub()
@@ -218,7 +216,7 @@ define nofpclass(qnan) float @ret_nofpclass_qnan__canonicalize_ieee(float %unkno
 define nofpclass(nan) float @ret_nofpclass_nan__canonicalize_daz(float %unknown) #0 {
 ; CHECK-LABEL: define nofpclass(nan) float @ret_nofpclass_nan__canonicalize_daz(
 ; CHECK-SAME: float [[UNKNOWN:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CANON:%.*]] = call float @llvm.canonicalize.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    [[CANON:%.*]] = call nnan float @llvm.canonicalize.f32(float [[UNKNOWN]])
 ; CHECK-NEXT:    ret float [[CANON]]
 ;
   %canon = call float @llvm.canonicalize.f32(float %unknown)
@@ -228,7 +226,7 @@ define nofpclass(nan) float @ret_nofpclass_nan__canonicalize_daz(float %unknown)
 define nofpclass(nan) float @ret_nofpclass_nan__canonicalize_dynamic(float %unknown) #1 {
 ; CHECK-LABEL: define nofpclass(nan) float @ret_nofpclass_nan__canonicalize_dynamic(
 ; CHECK-SAME: float [[UNKNOWN:%.*]]) #[[ATTR1:[0-9]+]] {
-; CHECK-NEXT:    [[CANON:%.*]] = call float @llvm.canonicalize.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    [[CANON:%.*]] = call nnan float @llvm.canonicalize.f32(float [[UNKNOWN]])
 ; CHECK-NEXT:    ret float [[CANON]]
 ;
   %canon = call float @llvm.canonicalize.f32(float %unknown)
@@ -271,7 +269,7 @@ define nofpclass(nan) x86_fp80 @ret_nofpclass_zero_sub_canonicalize_fp80_daz(x86
 define nofpclass(nan sub) float @ret_nofpclass_nan_sub__canonicalize_dynamic(float %unknown) #1 {
 ; CHECK-LABEL: define nofpclass(nan sub) float @ret_nofpclass_nan_sub__canonicalize_dynamic(
 ; CHECK-SAME: float [[UNKNOWN:%.*]]) #[[ATTR1]] {
-; CHECK-NEXT:    [[CANON:%.*]] = call float @llvm.canonicalize.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    [[CANON:%.*]] = call nnan float @llvm.canonicalize.f32(float [[UNKNOWN]])
 ; CHECK-NEXT:    ret float [[CANON]]
 ;
   %canon = call float @llvm.canonicalize.f32(float %unknown)
@@ -353,8 +351,7 @@ define nofpclass(zero) float @ret_nofpclass_zero__canonicalize_nnan_src_ieee(flo
 define nofpclass(zero) float @ret_nofpclass_zero__canonicalize_nnan_src_daz(float nofpclass(nan) %x, i1 %cond) #0 {
 ; CHECK-LABEL: define nofpclass(zero) float @ret_nofpclass_zero__canonicalize_nnan_src_daz(
 ; CHECK-SAME: float nofpclass(nan) [[X:%.*]], i1 [[COND:%.*]]) #[[ATTR0]] {
-; CHECK-NEXT:    [[CANON:%.*]] = call float @llvm.canonicalize.f32(float [[X]])
-; CHECK-NEXT:    ret float [[CANON]]
+; CHECK-NEXT:    ret float [[X]]
 ;
   %canon = call float @llvm.canonicalize.f32(float %x)
   ret float %canon
@@ -466,7 +463,7 @@ define nofpclass(nan) float @ret_nofpclass_nan__canonicalize_only_nsub_dynamic()
 ; CHECK-LABEL: define nofpclass(nan) float @ret_nofpclass_nan__canonicalize_only_nsub_dynamic(
 ; CHECK-SAME: ) #[[ATTR1]] {
 ; CHECK-NEXT:    [[NSUB:%.*]] = call float @returns_nsub()
-; CHECK-NEXT:    [[CANON:%.*]] = call float @llvm.canonicalize.f32(float [[NSUB]])
+; CHECK-NEXT:    [[CANON:%.*]] = call nnan ninf float @llvm.canonicalize.f32(float [[NSUB]])
 ; CHECK-NEXT:    ret float [[CANON]]
 ;
   %nsub = call float @returns_nsub()
@@ -478,7 +475,7 @@ define nofpclass(nan) float @ret_nofpclass_nan__canonicalize_only_psub_dynamic()
 ; CHECK-LABEL: define nofpclass(nan) float @ret_nofpclass_nan__canonicalize_only_psub_dynamic(
 ; CHECK-SAME: ) #[[ATTR1]] {
 ; CHECK-NEXT:    [[PSUB:%.*]] = call float @returns_psub()
-; CHECK-NEXT:    [[CANON:%.*]] = call float @llvm.canonicalize.f32(float [[PSUB]])
+; CHECK-NEXT:    [[CANON:%.*]] = call nnan ninf float @llvm.canonicalize.f32(float [[PSUB]])
 ; CHECK-NEXT:    ret float [[CANON]]
 ;
   %psub = call float @returns_psub()
@@ -490,7 +487,7 @@ define nofpclass(nan) float @ret_nofpclass_nan__canonicalize_only_sub_dynamic() 
 ; CHECK-LABEL: define nofpclass(nan) float @ret_nofpclass_nan__canonicalize_only_sub_dynamic(
 ; CHECK-SAME: ) #[[ATTR1]] {
 ; CHECK-NEXT:    [[SUB:%.*]] = call float @returns_sub()
-; CHECK-NEXT:    [[CANON:%.*]] = call float @llvm.canonicalize.f32(float [[SUB]])
+; CHECK-NEXT:    [[CANON:%.*]] = call nnan ninf float @llvm.canonicalize.f32(float [[SUB]])
 ; CHECK-NEXT:    ret float [[CANON]]
 ;
   %sub = call float @returns_sub()
@@ -576,6 +573,16 @@ define nofpclass(nan) float @ret_nofpclass_nan__canonicalize_only_sub__dapz(i1 %
 ; CHECK-NEXT:    ret float 0.000000e+00
 ;
   %canon = call float @llvm.canonicalize.f32(float %must.be.sub.or.nan)
+  ret float %canon
+}
+
+define nofpclass(nan) float @ret_nofpclass_nan__canonicalize_drop_noundef(float %x) #1 {
+; CHECK-LABEL: define nofpclass(nan) float @ret_nofpclass_nan__canonicalize_drop_noundef(
+; CHECK-SAME: float [[X:%.*]]) #[[ATTR1]] {
+; CHECK-NEXT:    [[CANON:%.*]] = call nnan float @llvm.canonicalize.f32(float [[X]])
+; CHECK-NEXT:    ret float [[CANON]]
+;
+  %canon = call noundef float @llvm.canonicalize.f32(float %x), !unknown.md !{}
   ret float %canon
 }
 

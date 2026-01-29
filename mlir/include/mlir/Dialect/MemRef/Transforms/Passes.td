@@ -22,7 +22,7 @@ def FoldMemRefAliasOpsPass : Pass<"fold-memref-alias-ops"> {
     from/to the original memref.
   }];
   let dependentDialects = [
-      "affine::AffineDialect", "memref::MemRefDialect", "vector::VectorDialect"
+      "memref::MemRefDialect", "vector::VectorDialect"
   ];
 }
 
@@ -197,7 +197,7 @@ def ReifyResultShapesPass : Pass<"reify-result-shapes"> {
   let description = [{
     This pass reifies the shapes of a subset of `ReifyRankedShapedTypeOpInterface`
     ops with `tensor` results.
-    
+
     The pass currently only supports result shape type reification for:
       - tensor::PadOp
       - tensor::ConcatOp

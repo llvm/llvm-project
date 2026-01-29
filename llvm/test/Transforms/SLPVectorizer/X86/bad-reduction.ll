@@ -219,6 +219,208 @@ define i64 @load64le_nop_shift(ptr %arg) {
   ret i64 %o7
 }
 
+define i64 @load_bswap_disjoint(ptr %p) {
+; CHECK-LABEL: @load_bswap_disjoint(
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP1]])
+; CHECK-NEXT:    ret i64 [[TMP2]]
+;
+  %g1 = getelementptr inbounds %v8i8, ptr %p, i64 0, i32 1
+  %g2 = getelementptr inbounds %v8i8, ptr %p, i64 0, i32 2
+  %g3 = getelementptr inbounds %v8i8, ptr %p, i64 0, i32 3
+  %g4 = getelementptr inbounds %v8i8, ptr %p, i64 0, i32 4
+  %g5 = getelementptr inbounds %v8i8, ptr %p, i64 0, i32 5
+  %g6 = getelementptr inbounds %v8i8, ptr %p, i64 0, i32 6
+  %g7 = getelementptr inbounds %v8i8, ptr %p, i64 0, i32 7
+
+  %t0 = load i8, ptr %p
+  %t1 = load i8, ptr %g1
+  %t2 = load i8, ptr %g2
+  %t3 = load i8, ptr %g3
+  %t4 = load i8, ptr %g4
+  %t5 = load i8, ptr %g5
+  %t6 = load i8, ptr %g6
+  %t7 = load i8, ptr %g7
+
+  %z0 = zext i8 %t0 to i64
+  %z1 = zext i8 %t1 to i64
+  %z2 = zext i8 %t2 to i64
+  %z3 = zext i8 %t3 to i64
+  %z4 = zext i8 %t4 to i64
+  %z5 = zext i8 %t5 to i64
+  %z6 = zext i8 %t6 to i64
+  %z7 = zext i8 %t7 to i64
+
+  %sh0 = shl nuw i64 %z0, 56
+  %sh1 = shl nuw nsw i64 %z1, 48
+  %sh2 = shl nuw nsw i64 %z2, 40
+  %sh3 = shl nuw nsw i64 %z3, 32
+  %sh4 = shl nuw nsw i64 %z4, 24
+  %sh5 = shl nuw nsw i64 %z5, 16
+  %sh6 = shl nuw nsw i64 %z6, 8
+;  %sh7 = shl nuw nsw i64 %z7, 0 <-- missing phantom shift
+
+  %or01 = or disjoint i64 %sh0, %sh1
+  %or012 = or disjoint i64 %or01, %sh2
+  %or0123 = or disjoint i64 %or012, %sh3
+  %or01234 = or disjoint i64 %or0123, %sh4
+  %or012345 = or disjoint i64 %or01234, %sh5
+  %or0123456 = or disjoint i64 %or012345, %sh6
+  %or01234567 = or disjoint i64 %or0123456, %z7
+  ret i64 %or01234567
+}
+
+define i64 @load_bswap_nop_shift_disjoint(ptr %p) {
+; CHECK-LABEL: @load_bswap_nop_shift_disjoint(
+; CHECK-NEXT:    [[TMP1:%.*]] = load i64, ptr [[P:%.*]], align 1
+; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP1]])
+; CHECK-NEXT:    ret i64 [[TMP2]]
+;
+  %g1 = getelementptr inbounds %v8i8, ptr %p, i64 0, i32 1
+  %g2 = getelementptr inbounds %v8i8, ptr %p, i64 0, i32 2
+  %g3 = getelementptr inbounds %v8i8, ptr %p, i64 0, i32 3
+  %g4 = getelementptr inbounds %v8i8, ptr %p, i64 0, i32 4
+  %g5 = getelementptr inbounds %v8i8, ptr %p, i64 0, i32 5
+  %g6 = getelementptr inbounds %v8i8, ptr %p, i64 0, i32 6
+  %g7 = getelementptr inbounds %v8i8, ptr %p, i64 0, i32 7
+
+  %t0 = load i8, ptr %p
+  %t1 = load i8, ptr %g1
+  %t2 = load i8, ptr %g2
+  %t3 = load i8, ptr %g3
+  %t4 = load i8, ptr %g4
+  %t5 = load i8, ptr %g5
+  %t6 = load i8, ptr %g6
+  %t7 = load i8, ptr %g7
+
+  %z0 = zext i8 %t0 to i64
+  %z1 = zext i8 %t1 to i64
+  %z2 = zext i8 %t2 to i64
+  %z3 = zext i8 %t3 to i64
+  %z4 = zext i8 %t4 to i64
+  %z5 = zext i8 %t5 to i64
+  %z6 = zext i8 %t6 to i64
+  %z7 = zext i8 %t7 to i64
+
+  %sh0 = shl nuw i64 %z0, 56
+  %sh1 = shl nuw nsw i64 %z1, 48
+  %sh2 = shl nuw nsw i64 %z2, 40
+  %sh3 = shl nuw nsw i64 %z3, 32
+  %sh4 = shl nuw nsw i64 %z4, 24
+  %sh5 = shl nuw nsw i64 %z5, 16
+  %sh6 = shl nuw nsw i64 %z6, 8
+  %sh7 = shl nuw nsw i64 %z7, 0
+
+  %or01 = or disjoint i64 %sh0, %sh1
+  %or012 = or disjoint i64 %or01, %sh2
+  %or0123 = or disjoint i64 %or012, %sh3
+  %or01234 = or disjoint i64 %or0123, %sh4
+  %or012345 = or disjoint i64 %or01234, %sh5
+  %or0123456 = or disjoint i64 %or012345, %sh6
+  %or01234567 = or disjoint i64 %or0123456, %sh7
+  ret i64 %or01234567
+}
+
+define i64 @load64le_disjoint(ptr %arg) {
+; CHECK-LABEL: @load64le_disjoint(
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[ARG:%.*]], align 1
+; CHECK-NEXT:    ret i64 [[TMP2]]
+;
+  %g1 = getelementptr inbounds i8, ptr %arg, i64 1
+  %g2 = getelementptr inbounds i8, ptr %arg, i64 2
+  %g3 = getelementptr inbounds i8, ptr %arg, i64 3
+  %g4 = getelementptr inbounds i8, ptr %arg, i64 4
+  %g5 = getelementptr inbounds i8, ptr %arg, i64 5
+  %g6 = getelementptr inbounds i8, ptr %arg, i64 6
+  %g7 = getelementptr inbounds i8, ptr %arg, i64 7
+
+  %ld0 = load i8, ptr %arg, align 1
+  %ld1 = load i8, ptr %g1, align 1
+  %ld2 = load i8, ptr %g2, align 1
+  %ld3 = load i8, ptr %g3, align 1
+  %ld4 = load i8, ptr %g4, align 1
+  %ld5 = load i8, ptr %g5, align 1
+  %ld6 = load i8, ptr %g6, align 1
+  %ld7 = load i8, ptr %g7, align 1
+
+  %z0 = zext i8 %ld0 to i64
+  %z1 = zext i8 %ld1 to i64
+  %z2 = zext i8 %ld2 to i64
+  %z3 = zext i8 %ld3 to i64
+  %z4 = zext i8 %ld4 to i64
+  %z5 = zext i8 %ld5 to i64
+  %z6 = zext i8 %ld6 to i64
+  %z7 = zext i8 %ld7 to i64
+
+;  %s0 = shl nuw nsw i64 %z0, 0 <-- missing phantom shift
+  %s1 = shl nuw nsw i64 %z1, 8
+  %s2 = shl nuw nsw i64 %z2, 16
+  %s3 = shl nuw nsw i64 %z3, 24
+  %s4 = shl nuw nsw i64 %z4, 32
+  %s5 = shl nuw nsw i64 %z5, 40
+  %s6 = shl nuw nsw i64 %z6, 48
+  %s7 = shl nuw i64 %z7, 56
+
+  %o1 = or disjoint i64 %s1, %z0
+  %o2 = or disjoint i64 %o1, %s2
+  %o3 = or disjoint i64 %o2, %s3
+  %o4 = or disjoint i64 %o3, %s4
+  %o5 = or disjoint i64 %o4, %s5
+  %o6 = or disjoint i64 %o5, %s6
+  %o7 = or disjoint i64 %o6, %s7
+  ret i64 %o7
+}
+
+define i64 @load64le_nop_shift_disjoint(ptr %arg) {
+; CHECK-LABEL: @load64le_nop_shift_disjoint(
+; CHECK-NEXT:    [[TMP2:%.*]] = load i64, ptr [[ARG:%.*]], align 1
+; CHECK-NEXT:    ret i64 [[TMP2]]
+;
+  %g1 = getelementptr inbounds i8, ptr %arg, i64 1
+  %g2 = getelementptr inbounds i8, ptr %arg, i64 2
+  %g3 = getelementptr inbounds i8, ptr %arg, i64 3
+  %g4 = getelementptr inbounds i8, ptr %arg, i64 4
+  %g5 = getelementptr inbounds i8, ptr %arg, i64 5
+  %g6 = getelementptr inbounds i8, ptr %arg, i64 6
+  %g7 = getelementptr inbounds i8, ptr %arg, i64 7
+
+  %ld0 = load i8, ptr %arg, align 1
+  %ld1 = load i8, ptr %g1, align 1
+  %ld2 = load i8, ptr %g2, align 1
+  %ld3 = load i8, ptr %g3, align 1
+  %ld4 = load i8, ptr %g4, align 1
+  %ld5 = load i8, ptr %g5, align 1
+  %ld6 = load i8, ptr %g6, align 1
+  %ld7 = load i8, ptr %g7, align 1
+
+  %z0 = zext i8 %ld0 to i64
+  %z1 = zext i8 %ld1 to i64
+  %z2 = zext i8 %ld2 to i64
+  %z3 = zext i8 %ld3 to i64
+  %z4 = zext i8 %ld4 to i64
+  %z5 = zext i8 %ld5 to i64
+  %z6 = zext i8 %ld6 to i64
+  %z7 = zext i8 %ld7 to i64
+
+  %s0 = shl nuw nsw i64 %z0, 0
+  %s1 = shl nuw nsw i64 %z1, 8
+  %s2 = shl nuw nsw i64 %z2, 16
+  %s3 = shl nuw nsw i64 %z3, 24
+  %s4 = shl nuw nsw i64 %z4, 32
+  %s5 = shl nuw nsw i64 %z5, 40
+  %s6 = shl nuw nsw i64 %z6, 48
+  %s7 = shl nuw i64 %z7, 56
+
+  %o1 = or disjoint i64 %s1, %s0
+  %o2 = or disjoint i64 %o1, %s2
+  %o3 = or disjoint i64 %o2, %s3
+  %o4 = or disjoint i64 %o3, %s4
+  %o5 = or disjoint i64 %o4, %s5
+  %o6 = or disjoint i64 %o5, %s6
+  %o7 = or disjoint i64 %o6, %s7
+  ret i64 %o7
+}
+
 define void @PR39538(ptr %t0, ptr %t1) {
 ; CHECK-LABEL: @PR39538(
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <16 x i8>, ptr [[T0:%.*]], align 1
