@@ -4614,7 +4614,7 @@ void SelectionDAGBuilder::visitAlloca(const AllocaInst &I) {
   const TargetLowering &TLI = DAG.getTargetLoweringInfo();
   auto &DL = DAG.getDataLayout();
   TypeSize TySize = DL.getTypeAllocSize(Ty);
-  MaybeAlign Alignment = std::max(DL.getPrefTypeAlign(Ty), I.getAlign());
+  MaybeAlign Alignment = I.getAlign();
 
   SDValue AllocSize = getValue(I.getArraySize());
 
@@ -9607,13 +9607,6 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
                                    LHS.getValueType(), LHS, RHS));
           return;
         }
-        break;
-      case LibFunc_fabs:
-      case LibFunc_fabsf:
-      case LibFunc_fabsl:
-        // TODO: Remove this, already canonicalized by the middle-end.
-        if (visitUnaryFloatCall(I, ISD::FABS))
-          return;
         break;
       case LibFunc_sin:
       case LibFunc_sinf:
