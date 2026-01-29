@@ -88,14 +88,14 @@ MlirBlock createBlock(const nb::sequence &pyArgTypes,
                       const std::optional<nb::sequence> &pyArgLocs) {
   std::vector<MlirType> argTypes;
   argTypes.reserve(nb::len(pyArgTypes));
-  for (const auto &pyType : pyArgTypes)
+  for (nb::handle pyType : pyArgTypes)
     argTypes.push_back(
         nb::cast<python::MLIR_BINDINGS_PYTHON_DOMAIN::PyType &>(pyType));
 
   std::vector<MlirLocation> argLocs;
   if (pyArgLocs) {
     argLocs.reserve(nb::len(*pyArgLocs));
-    for (const auto &pyLoc : *pyArgLocs)
+    for (nb::handle pyLoc : *pyArgLocs)
       argLocs.push_back(
           nb::cast<python::MLIR_BINDINGS_PYTHON_DOMAIN::PyLocation &>(pyLoc));
   } else if (!argTypes.empty()) {
@@ -1315,7 +1315,7 @@ nb::object PyOperation::create(std::string_view name,
   // Unpack/validate successors.
   if (successors) {
     mlirSuccessors.reserve(successors->size());
-    for (auto *successor : *successors) {
+    for (PyBlock *successor : *successors) {
       // TODO: Verify successor originate from the same context.
       if (!successor)
         throw nb::value_error("successor block cannot be None");
@@ -1339,7 +1339,7 @@ nb::object PyOperation::create(std::string_view name,
     // on.
     std::vector<MlirNamedAttribute> mlirNamedAttributes;
     mlirNamedAttributes.reserve(mlirAttributes.size());
-    for (auto &it : mlirAttributes)
+    for (const std::pair<std::string, MlirAttribute> &it : mlirAttributes)
       mlirNamedAttributes.push_back(mlirNamedAttributeGet(
           mlirIdentifierGet(mlirAttributeGetContext(it.second),
                             toMlirStringRef(it.first)),
@@ -1478,7 +1478,7 @@ static void populateResultTypes(std::string_view name, nb::list resultTypeList,
   if (resultSegmentSpecObj.is_none()) {
     // Non-variadic result unpacking.
     size_t index = 0;
-    for (const auto &resultType : resultTypeList) {
+    for (nb::handle resultType : resultTypeList) {
       try {
         resultTypes.push_back(nb::cast<PyType *>(resultType));
         if (!resultTypes.back())
@@ -1642,7 +1642,7 @@ nb::object PyOpView::buildGeneric(
   size_t index = 0;
   if (operandSegmentSpecObj.is_none()) {
     // Non-sized operand unpacking.
-    for (const auto &operand : operandList) {
+    for (nb::handle operand : operandList) {
       try {
         operands.push_back(getOpResultOrValue(operand));
       } catch (nb::builtin_exception &err) {
@@ -3239,7 +3239,7 @@ void populateIRCore(nb::module_ &m) {
              DefaultingPyMlirContext context) {
             std::vector<MlirLocation> locations;
             locations.reserve(pyLocations.size());
-            for (auto &pyLocation : pyLocations)
+            for (const PyLocation &pyLocation : pyLocations)
               locations.push_back(pyLocation.get());
             MlirLocation location = mlirLocationFusedGet(
                 context->get(), locations.size(), locations.data(),
