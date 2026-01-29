@@ -240,7 +240,11 @@ ObjectFile *ObjectFilePECOFF::CreateInstance(
 ObjectFile *ObjectFilePECOFF::CreateMemoryInstance(
     const lldb::ModuleSP &module_sp, lldb::WritableDataBufferSP data_sp,
     const lldb::ProcessSP &process_sp, lldb::addr_t header_addr) {
-  if (!data_sp || !ObjectFilePECOFF::MagicBytesMatch(data_sp))
+  if (!data_sp)
+    return nullptr;
+  DataExtractorSP extractor_sp =
+      std::make_shared<DataExtractor>(data_sp, eByteOrderLittle, 4);
+  if (!ObjectFilePECOFF::MagicBytesMatch(extractor_sp))
     return nullptr;
   auto objfile_up = std::make_unique<ObjectFilePECOFF>(
       module_sp, data_sp, process_sp, header_addr);
@@ -371,13 +375,6 @@ bool ObjectFilePECOFF::SaveCore(const lldb::ProcessSP &process_sp,
 bool ObjectFilePECOFF::MagicBytesMatch(DataExtractorSP extractor_sp) {
   lldb::offset_t offset = 0;
   uint16_t magic = extractor_sp->GetU16(&offset);
-  return magic == IMAGE_DOS_SIGNATURE;
-}
-
-bool ObjectFilePECOFF::MagicBytesMatch(DataBufferSP data_sp) {
-  DataExtractor data(data_sp, eByteOrderLittle, 4);
-  lldb::offset_t offset = 0;
-  uint16_t magic = data.GetU16(&offset);
   return magic == IMAGE_DOS_SIGNATURE;
 }
 

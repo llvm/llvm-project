@@ -438,6 +438,9 @@ size_t ObjectContainerBSDArchive::GetModuleSpecifications(
     lldb::offset_t data_offset, lldb::offset_t file_offset,
     lldb::offset_t file_size, lldb_private::ModuleSpecList &specs) {
 
+  if (!file || !extractor_sp)
+    return 0;
+
   DataExtractorSP data_extractor_sp = extractor_sp->GetSubsetExtractorSP(
       data_offset,
       extractor_sp->GetSharedDataBuffer()->GetByteSize() - data_offset);
@@ -446,7 +449,7 @@ size_t ObjectContainerBSDArchive::GetModuleSpecifications(
   // contents for the archive and cache it
   ArchiveType archive_type =
       ObjectContainerBSDArchive::MagicBytesMatch(*data_extractor_sp.get());
-  if (!file || !data_extractor_sp || archive_type == ArchiveType::Invalid)
+  if (archive_type == ArchiveType::Invalid)
     return 0;
 
   const size_t initial_count = specs.GetSize();

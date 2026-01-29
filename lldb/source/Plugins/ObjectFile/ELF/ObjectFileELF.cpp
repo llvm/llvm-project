@@ -593,10 +593,15 @@ size_t ObjectFileELF::GetModuleSpecifications(
 
   const size_t initial_count = specs.GetSize();
 
+  if (!extractor_sp || !extractor_sp->HasData())
+    return 0;
   if (ObjectFileELF::MagicBytesMatch(extractor_sp->GetSharedDataBuffer(), 0,
                                      extractor_sp->GetByteSize())) {
     DataExtractor data;
-    data.SetData(extractor_sp->GetSharedDataBuffer());
+    if (extractor_sp && extractor_sp->HasData()) {
+      data = *extractor_sp->GetSubsetExtractorSP(data_offset);
+      data_offset = 0;
+    }
     elf::ELFHeader header;
     lldb::offset_t header_offset = data_offset;
     if (header.Parse(data, &header_offset)) {
@@ -641,15 +646,15 @@ size_t ObjectFileELF::GetModuleSpecifications(
                       __FUNCTION__, file.GetPath().c_str());
           }
 
-          DataBufferSP data_sp = extractor_sp->GetSharedDataBuffer();
           // When ELF file does not contain GNU build ID, the later code will
-          // calculate CRC32 with this extractor_sp file_offset and
+          // calculate CRC32 with this data file_offset and
           // length. It is important for Android zip .so file, which is a slice
           // of a file, to not access the outside of the file slice range.
-          if (data_sp->GetByteSize() < length)
-            data_sp = MapFileData(file, length, file_offset);
-          if (data_sp)
-            data.SetData(data_sp);
+          if (data.GetByteSize() < length)
+            if (DataBufferSP data_sp = MapFileData(file, length, file_offset)) {
+              data.SetData(data_sp);
+              data_offset = 0;
+            }
           // In case there is header extension in the section #0, the header we
           // parsed above could have sentinel values for e_phnum, e_shnum, and
           // e_shstrndx.  In this case we need to reparse the header with a
@@ -3016,19 +3021,15 @@ unsigned ObjectFileELF::RelocateDebugSections(const ELFSectionHeader *rel_hdr,
   if (!debug)
     return 0;
 
-  DataExtractor rel_data;
-  DataExtractor symtab_data;
-  DataExtractor debug_data;
-  DataExtractorSP rel_data_sp, symtab_data_sp, debug_data_sp;
+  DataExtractorSP rel_data_sp = std::make_shared<DataExtractor>();
+  DataExtractorSP symtab_data_sp = std::make_shared<DataExtractor>();
+  DataExtractorSP debug_data_sp = std::make_shared<DataExtractor>();
 
   if (GetData(rel->GetFileOffset(), rel->GetFileSize(), rel_data_sp) &&
       GetData(symtab->GetFileOffset(), symtab->GetFileSize(), symtab_data_sp) &&
       GetData(debug->GetFileOffset(), debug->GetFileSize(), debug_data_sp)) {
-    rel_data = *rel_data_sp;
-    symtab_data = *symtab_data_sp;
-    debug_data = *debug_data_sp;
     ApplyRelocations(thetab, &m_header, rel_hdr, symtab_hdr, debug_hdr,
-                     rel_data, symtab_data, debug_data, debug);
+                     *rel_data_sp, *symtab_data_sp, *debug_data_sp, debug);
   }
 
   return 0;

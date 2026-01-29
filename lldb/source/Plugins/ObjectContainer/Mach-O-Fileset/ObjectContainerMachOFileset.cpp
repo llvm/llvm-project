@@ -229,6 +229,8 @@ size_t ObjectContainerMachOFileset::GetModuleSpecifications(
 
   DataExtractorSP data_extractor_sp = extractor_sp->GetSubsetExtractorSP(
       data_offset, extractor_sp->GetByteSize());
+  if (!data_extractor_sp)
+    return initial_count;
   if (MagicBytesMatch(*data_extractor_sp)) {
     std::vector<Entry> entries;
     if (ParseHeader(*data_extractor_sp, file, file_offset, entries)) {

@@ -210,9 +210,8 @@ size_t ObjectFile::GetModuleSpecifications(const FileSpec &file,
   if (!extractor_sp)
     extractor_sp = std::make_shared<DataExtractor>();
   if (!extractor_sp->HasData()) {
-    DataBufferSP file_data_sp = FileSystem::Instance().CreateDataBuffer(
-        file.GetPath(), g_initial_bytes_to_read, file_offset);
-    if (file_data_sp)
+    if (DataBufferSP file_data_sp = FileSystem::Instance().CreateDataBuffer(
+            file.GetPath(), g_initial_bytes_to_read, file_offset))
       extractor_sp->SetData(file_data_sp);
   }
   if (extractor_sp->HasData()) {

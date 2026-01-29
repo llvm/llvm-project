@@ -132,6 +132,9 @@ size_t ObjectFileXCOFF::GetModuleSpecifications(
     lldb::offset_t length, lldb_private::ModuleSpecList &specs) {
   const size_t initial_count = specs.GetSize();
 
+  if (!extractor_sp || !extractor_sp->HasData())
+    return 0;
+
   if (ObjectFileXCOFF::MagicBytesMatch(extractor_sp, 0,
                                        extractor_sp->GetByteSize())) {
     ArchSpec arch_spec =

@@ -91,8 +91,6 @@ public:
 
   static bool MagicBytesMatch(lldb::DataExtractorSP extractor_sp);
 
-  static bool MagicBytesMatch(lldb::DataBufferSP data_sp);
-
   static lldb::SymbolType MapSymbolType(uint16_t coff_symbol_type);
 
   // LLVM RTTI support

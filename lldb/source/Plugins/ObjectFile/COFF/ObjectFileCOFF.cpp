@@ -65,11 +65,11 @@ ObjectFileCOFF::CreateInstance(const ModuleSP &module_sp,
   assert(extractor_sp && extractor_sp->HasData() &&
          "must have mapped file at this point");
 
-  // If this is opearting on a VirtualDataExtractor, it can have
+  // If this is operating on a VirtualDataExtractor, it can have
   // gaps between valid bytes in the DataBuffer. We extract an
   // ArrayRef of the raw bytes, and can segfault.
   DataExtractorSP contiguous_extractor_sp =
-      extractor_sp->GetSubsetExtractorSP(0);
+      extractor_sp->GetContiguousDataExtractorSP();
   if (!IsCOFFObjectFile(contiguous_extractor_sp->GetData()))
     return nullptr;
 
@@ -116,11 +116,16 @@ lldb_private::ObjectFile *ObjectFileCOFF::CreateMemoryInstance(
 size_t ObjectFileCOFF::GetModuleSpecifications(
     const FileSpec &file, DataExtractorSP &extractor_sp, offset_t data_offset,
     offset_t file_offset, offset_t length, ModuleSpecList &specs) {
+  if (!extractor_sp || !extractor_sp->HasData())
+    return 0;
+
   // If this is opearting on a VirtualDataExtractor, it can have
   // gaps between valid bytes in the DataBuffer. We extract an
   // ArrayRef of the raw bytes, and can segfault.
   DataExtractorSP contiguous_extractor_sp =
-      extractor_sp->GetSubsetExtractorSP(0);
+      extractor_sp->GetContiguousDataExtractorSP();
+  if (!contiguous_extractor_sp)
+    return 0;
   if (!IsCOFFObjectFile(contiguous_extractor_sp->GetData()))
     return 0;
 

@@ -1211,7 +1211,7 @@ ObjectFile *Module::GetObjectFile() {
 
       if (file_size > m_object_offset) {
         m_did_load_objfile = true;
-        // FindPlugin will modify its data_sp argument. Do not let it
+        // FindPlugin will modify its extractor_sp argument. Do not let it
         // modify our m_extractor_sp member.
         DataExtractorSP extractor_sp;
         if (m_extractor_sp)
