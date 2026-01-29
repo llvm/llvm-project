@@ -273,11 +273,11 @@ bool RISCVAsmPrinter::EmitToStreamer(MCStreamer &S, const MCInst &Inst,
 // instructions) auto-generated.
 #include "RISCVGenMCPseudoLowering.inc"
 
-// If the target supports Zihintntl and the instruction has a nontemporal
-// MachineMemOperand, emit an NTLH hint instruction before it.
+// If the instruction has a nontemporal MachineMemOperand, emit an NTL hint
+// instruction before it. NTL hints are always safe to emit since they use
+// HINT encodings that are guaranteed not to trap
+// (riscv-non-isa/riscv-elf-psabi-doc#474).
 void RISCVAsmPrinter::emitNTLHint(const MachineInstr *MI) {
-  if (!STI->hasStdExtZihintntl())
-    return;
 
   if (MI->memoperands_empty())
     return;

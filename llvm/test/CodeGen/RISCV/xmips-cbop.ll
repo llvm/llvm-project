@@ -7,11 +7,13 @@
 define void @prefetch_data_read(ptr noundef %ptr) nounwind {
 ; RV32XMIPSPREFETCH-LABEL: prefetch_data_read:
 ; RV32XMIPSPREFETCH:       # %bb.0: # %entry
+; RV32XMIPSPREFETCH-NEXT:    ntl.all
 ; RV32XMIPSPREFETCH-NEXT:    mips.pref 8, 1(a0)
 ; RV32XMIPSPREFETCH-NEXT:    ret
 ;
 ; RV64XMIPSPREFETCH-LABEL: prefetch_data_read:
 ; RV64XMIPSPREFETCH:       # %bb.0: # %entry
+; RV64XMIPSPREFETCH-NEXT:    ntl.all
 ; RV64XMIPSPREFETCH-NEXT:    mips.pref 8, 1(a0)
 ; RV64XMIPSPREFETCH-NEXT:    ret
 entry:
@@ -24,12 +26,14 @@ define void @prefetch_data_write(ptr noundef %ptr) nounwind  {
 ; RV32XMIPSPREFETCH-LABEL: prefetch_data_write:
 ; RV32XMIPSPREFETCH:       # %bb.0:
 ; RV32XMIPSPREFETCH-NEXT:    addi a0, a0, 512
+; RV32XMIPSPREFETCH-NEXT:    ntl.all
 ; RV32XMIPSPREFETCH-NEXT:    mips.pref 9, 0(a0)
 ; RV32XMIPSPREFETCH-NEXT:    ret
 ;
 ; RV64XMIPSPREFETCH-LABEL: prefetch_data_write:
 ; RV64XMIPSPREFETCH:       # %bb.0:
 ; RV64XMIPSPREFETCH-NEXT:    addi a0, a0, 512
+; RV64XMIPSPREFETCH-NEXT:    ntl.all
 ; RV64XMIPSPREFETCH-NEXT:    mips.pref 9, 0(a0)
 ; RV64XMIPSPREFETCH-NEXT:    ret
   %arrayidx = getelementptr inbounds nuw i8, ptr %ptr, i64 512
@@ -57,6 +61,7 @@ define void @prefetch_frameindex_test_neg() nounwind {
 ; RV32XMIPSPREFETCH-NEXT:    addi a0, a0, 16
 ; RV32XMIPSPREFETCH-NEXT:    sub sp, sp, a0
 ; RV32XMIPSPREFETCH-NEXT:    addi a0, sp, 524
+; RV32XMIPSPREFETCH-NEXT:    ntl.all
 ; RV32XMIPSPREFETCH-NEXT:    mips.pref 8, 0(a0)
 ; RV32XMIPSPREFETCH-NEXT:    lui a0, 1
 ; RV32XMIPSPREFETCH-NEXT:    addi a0, a0, 16
@@ -69,6 +74,7 @@ define void @prefetch_frameindex_test_neg() nounwind {
 ; RV64XMIPSPREFETCH-NEXT:    addi a0, a0, 16
 ; RV64XMIPSPREFETCH-NEXT:    sub sp, sp, a0
 ; RV64XMIPSPREFETCH-NEXT:    addi a0, sp, 524
+; RV64XMIPSPREFETCH-NEXT:    ntl.all
 ; RV64XMIPSPREFETCH-NEXT:    mips.pref 8, 0(a0)
 ; RV64XMIPSPREFETCH-NEXT:    lui a0, 1
 ; RV64XMIPSPREFETCH-NEXT:    addi a0, a0, 16
@@ -84,6 +90,7 @@ define void @prefetch_frameindex_test() nounwind {
 ; RV32XMIPSPREFETCH-LABEL: prefetch_frameindex_test:
 ; RV32XMIPSPREFETCH:       # %bb.0:
 ; RV32XMIPSPREFETCH-NEXT:    addi sp, sp, -512
+; RV32XMIPSPREFETCH-NEXT:    ntl.all
 ; RV32XMIPSPREFETCH-NEXT:    mips.pref 8, 32(sp)
 ; RV32XMIPSPREFETCH-NEXT:    addi sp, sp, 512
 ; RV32XMIPSPREFETCH-NEXT:    ret
@@ -91,6 +98,7 @@ define void @prefetch_frameindex_test() nounwind {
 ; RV64XMIPSPREFETCH-LABEL: prefetch_frameindex_test:
 ; RV64XMIPSPREFETCH:       # %bb.0:
 ; RV64XMIPSPREFETCH-NEXT:    addi sp, sp, -512
+; RV64XMIPSPREFETCH-NEXT:    ntl.all
 ; RV64XMIPSPREFETCH-NEXT:    mips.pref 8, 32(sp)
 ; RV64XMIPSPREFETCH-NEXT:    addi sp, sp, 512
 ; RV64XMIPSPREFETCH-NEXT:    ret
