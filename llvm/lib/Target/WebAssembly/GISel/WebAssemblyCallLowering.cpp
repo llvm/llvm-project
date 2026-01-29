@@ -1162,7 +1162,8 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     if (!Arg.Flags[0].isVarArg()) {
       for (unsigned Part = 0; Part < NumParts; ++Part) {
         auto NewArgReg = MRI.createGenericVirtualRegister(LLT(NewVT));
-        MRI.setRegClass(NewArgReg, TLI.getRegClassFor(NewVT));        MIRBuilder.buildCopy(NewArgReg, Arg.Regs[Part]);
+        MRI.setRegClass(NewArgReg, TLI.getRegClassFor(NewVT));
+        MIRBuilder.buildCopy(NewArgReg, Arg.Regs[Part]);
         CallInst.addUse(Arg.Regs[Part]);
       }
       ++NumFixedArgs;
@@ -1244,7 +1245,8 @@ bool WebAssemblyCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
             MIRBuilder
                 .buildPtrAdd(
                     PtrLLT, VarArgStackPtr,
-                    MIRBuilder.buildConstant(SizeLLT, Offset).getReg(0))
+                    MIRBuilder.buildConstant(SizeLLT, Offset).getReg(0),
+                    MachineInstr::MIFlag::NoUWrap)
                 .getReg(0);
 
         MachineMemOperand *DstMMO = MF.getMachineMemOperand(
