@@ -113,7 +113,7 @@ static void emitInterfaceMethodsDef(const DialectInterface &interface,
       continue;
     }
 
-    // Otherwise it's a normal interface method
+    // if it is not a method declaration, then it's a normal interface method.
     ios << " {";
 
     if (auto body = method.getBody()) {

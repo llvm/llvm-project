@@ -22,7 +22,7 @@ def NoDefaultMethod : DialectInterface<"NoDefaultMethod"> {
 
 // DECL:   class NoDefaultMethod : public {{.*}}DialectInterface::Base<NoDefaultMethod>
 // DECL:   public:
-/// DECL:   NoDefaultMethod(::mlir::Dialect *dialect) : Base(dialect) {}
+// DECL:   NoDefaultMethod(::mlir::Dialect *dialect) : Base(dialect) {}
 // DECL:   virtual bool isExampleDialect() const {}
 // DECL:   virtual unsigned supportSecondMethod(::mlir::Type type) const {}
 
