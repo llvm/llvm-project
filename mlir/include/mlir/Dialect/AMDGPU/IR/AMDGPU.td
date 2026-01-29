@@ -986,6 +986,74 @@ def AMDGPU_LDSBarrierOp : AMDGPU_Op<"lds_barrier"> {
   let hasCanonicalizer = 1;
 }
 
+def AMDGPU_BarrierSignalLDSOp : AMDGPU_Op<"barrier_signal_lds"> {
+  let summary = "Signal phase of split LDS barrier.";
+  let description = [{
+    `amdgpu.barrier_signal_lds` is the signal phase of a split barrier that
+    waits for all operations that affect the Local Data Store (LDS) issued from
+    the workgroup to complete and signals that this workitem has reached the
+    barrier. This operation separates the barrier signal from the barrier wait,
+    allowing independent computation to be performed between the signal and wait
+    phases while all workitems converge to the barrier.
+
+    All workitems in a workgroup must reach the barrier signal before any of them
+    may proceed past the corresponding `amdgpu.barrier_wait_lds`. Between the
+    signal and wait operations, computation that does not depend on reading values
+    from LDS may proceed. All LDS writes that occurred before the signal will be
+    visible after the wait.
+
+    The split barrier provides better performance than `amdgpu.lds_barrier` when
+    there is independent work that can be done while waiting for LDS operations
+    to complete.
+
+    Example:
+    ```mlir
+    memref.store %val, %lds[%idx] : memref<128xf32, 3>
+    amdgpu.barrier_signal_lds
+    // Independent computation that doesn't read from LDS can happen here.
+    %result = arith.addi %a, %b : i32
+    amdgpu.barrier_wait_lds
+    // All workitems have reached the barrier, can now read LDS values from other workitems.
+    %val2 = memref.load %lds[%other_idx] : memref<128xf32, 3>
+    ```
+
+    Note that `barrier_signal_lds` does **not** force reads to or from global
+    memory to complete before execution continues.
+  }];
+  let assemblyFormat = "attr-dict";
+}
+
+def AMDGPU_BarrierWaitLDSOp : AMDGPU_Op<"barrier_wait_lds"> {
+  let summary = "Wait phase of split LDS barrier.";
+  let description = [{
+    `amdgpu.barrier_wait_lds` is the wait phase of a split barrier that completes
+    the wait for all operations that affect the Local Data Store (LDS) issued
+    from the workgroup.
+
+    This operation must be paired with a preceding `amdgpu.barrier_signal_lds`.
+    All workitems in a workgroup must reach both the signal and wait operations,
+    and the workgroup may only continue past the wait once all previously issued
+    LDS operations have completed.
+
+    The split barrier provides better performance than `amdgpu.lds_barrier` when
+    there is independent work that can be done while waiting for LDS operations
+    to complete.
+
+    Example:
+    ```mlir
+    amdgpu.barrier_signal_lds
+    // Independent computation can happen here.
+    %result = arith.addi %a, %b : i32
+    amdgpu.barrier_wait_lds
+    // LDS operations are guaranteed to be complete here.
+    ```
+
+    Note that `barrier_wait_lds` does **not** force reads to or from global
+    memory to complete before execution continues.
+  }];
+  let assemblyFormat = "attr-dict";
+}
+
 def AMDGPU_SchedBarrierOpOpt : I32BitEnumAttr<"sched_barrier_opt_enum",
     "The possible options for scheduling barriers",
     [

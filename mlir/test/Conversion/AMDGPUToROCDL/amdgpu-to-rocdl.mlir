@@ -454,6 +454,81 @@ func.func @lds_barrier() {
   func.return
 }
 
+// CHECK-LABEL: func @barrier_signal_lds
+func.func @barrier_signal_lds() {
+  // For gfx < 12, signal converts to full lds_barrier.
+  // GFX908: llvm.fence syncscope("workgroup") release {llvm.mmra = #[[$MMRA_TAG]]}
+  // GFX908-NEXT: llvm.inline_asm has_side_effects asm_dialect = att
+  // GFX908-SAME: ";;;WARNING: BREAKS DEBUG WATCHES\0As_barrier"
+  // GFX908-NEXT: llvm.fence syncscope("workgroup") acquire {llvm.mmra = #[[$MMRA_TAG]]}
+  // GFX90A: llvm.fence syncscope("workgroup") release {llvm.mmra = #[[$MMRA_TAG]]}
+  // GFX90A-NEXT: rocdl.s.barrier
+  // GFX90A-NEXT: llvm.fence syncscope("workgroup") acquire {llvm.mmra = #[[$MMRA_TAG]]}
+  // GFX942: llvm.fence syncscope("workgroup") release {llvm.mmra = #[[$MMRA_TAG]]}
+  // GFX942-NEXT: rocdl.s.barrier
+  // GFX942-NEXT: llvm.fence syncscope("workgroup") acquire {llvm.mmra = #[[$MMRA_TAG]]}
+  // GFX10: llvm.fence syncscope("workgroup") release {llvm.mmra = #[[$MMRA_TAG]]}
+  // GFX10-NEXT: rocdl.s.barrier
+  // GFX10-NEXT: llvm.fence syncscope("workgroup") acquire {llvm.mmra = #[[$MMRA_TAG]]}
+  // GFX11: llvm.fence syncscope("workgroup") release {llvm.mmra = #[[$MMRA_TAG]]}
+  // GFX11-NEXT: rocdl.s.barrier
+  // GFX11-NEXT: llvm.fence syncscope("workgroup") acquire {llvm.mmra = #[[$MMRA_TAG]]}
+  // For gfx >= 12, signal converts to split barrier signal.
+  // GFX12: llvm.fence syncscope("workgroup") release {llvm.mmra = #[[$MMRA_TAG]]}
+  // GFX12-NEXT: rocdl.s.barrier.signal id = -1
+  // GFX1250: llvm.fence syncscope("workgroup") release {llvm.mmra = #[[$MMRA_TAG]]}
+  // GFX1250-NEXT: rocdl.s.barrier.signal id = -1
+  amdgpu.barrier_signal_lds
+  func.return
+}
+
+// CHECK-LABEL: func @barrier_wait_lds
+func.func @barrier_wait_lds() {
+  // For gfx < 12, wait is erased (noop, since signal already did full barrier).
+  // GFX908-NOT: llvm.fence
+  // GFX908-NOT: rocdl
+  // GFX90A-NOT: llvm.fence
+  // GFX90A-NOT: rocdl
+  // GFX942-NOT: llvm.fence
+  // GFX942-NOT: rocdl
+  // GFX10-NOT: llvm.fence
+  // GFX10-NOT: rocdl
+  // GFX11-NOT: llvm.fence
+  // GFX11-NOT: rocdl
+  // For gfx >= 12, wait converts to split barrier wait.
+  // GFX12: rocdl.s.barrier.wait id = -1
+  // GFX12-NEXT: llvm.fence syncscope("workgroup") acquire {llvm.mmra = #[[$MMRA_TAG]]}
+  // GFX1250: rocdl.s.barrier.wait id = -1
+  // GFX1250-NEXT: llvm.fence syncscope("workgroup") acquire {llvm.mmra = #[[$MMRA_TAG]]}
+  amdgpu.barrier_wait_lds
+  func.return
+}
+
+// CHECK-LABEL: func @barrier_split_lds
+func.func @barrier_split_lds() {
+  // Test combined signal + wait pattern.
+  // For gfx < 12: signal becomes full barrier, wait is erased.
+  // GFX908: llvm.fence syncscope("workgroup") release {llvm.mmra = #[[$MMRA_TAG]]}
+  // GFX908-NEXT: llvm.inline_asm has_side_effects asm_dialect = att
+  // GFX908-SAME: ";;;WARNING: BREAKS DEBUG WATCHES\0As_barrier"
+  // GFX908-NEXT: llvm.fence syncscope("workgroup") acquire {llvm.mmra = #[[$MMRA_TAG]]}
+  // GFX90A: llvm.fence syncscope("workgroup") release {llvm.mmra = #[[$MMRA_TAG]]}
+  // GFX90A-NEXT: rocdl.s.barrier
+  // GFX90A-NEXT: llvm.fence syncscope("workgroup") acquire {llvm.mmra = #[[$MMRA_TAG]]}
+  // For gfx >= 12: both operations preserved as split barriers.
+  // GFX12: llvm.fence syncscope("workgroup") release {llvm.mmra = #[[$MMRA_TAG]]}
+  // GFX12-NEXT: rocdl.s.barrier.signal id = -1
+  // GFX12-NEXT: rocdl.s.barrier.wait id = -1
+  // GFX12-NEXT: llvm.fence syncscope("workgroup") acquire {llvm.mmra = #[[$MMRA_TAG]]}
+  // GFX1250: llvm.fence syncscope("workgroup") release {llvm.mmra = #[[$MMRA_TAG]]}
+  // GFX1250-NEXT: rocdl.s.barrier.signal id = -1
+  // GFX1250-NEXT: rocdl.s.barrier.wait id = -1
+  // GFX1250-NEXT: llvm.fence syncscope("workgroup") acquire {llvm.mmra = #[[$MMRA_TAG]]}
+  amdgpu.barrier_signal_lds
+  amdgpu.barrier_wait_lds
+  func.return
+}
+
 // CHECK-LABEL: func @sched_barrier
 func.func @sched_barrier() {
   // CHECK: rocdl.sched.barrier 0

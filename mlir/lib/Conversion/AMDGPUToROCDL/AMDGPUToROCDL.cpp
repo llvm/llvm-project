@@ -566,6 +566,26 @@ struct MemoryCounterWaitOpLowering
   }
 };
 
+// Helper function to create a fence operation with LDS memory synchronization.
+static Operation *createLDSFence(OpBuilder &builder, Location loc,
+                                 LLVM::AtomicOrdering ordering) {
+  Attribute mmra =
+      builder.getAttr<LLVM::MMRATagAttr>("amdgpu-synchronize-as", "local");
+  // Note: while there *is* a workgroup-one-as scope, this, when combined with
+  // the MMRA, will lead to the fence having no effect. This is because the
+  // codepaths for an atomic load or store will observe that a
+  // one-address-space atomic to LDS requires no synchronization because
+  // operations on LDS are totally ordered with respect to each other, and so
+  // will not emit the correct waitcnt operations that these fences are
+  // intended to produce. Therefore, we use a broader type of fence and rely
+  // on the MMRA to relax it to the semantics we want.
+  StringRef scope = "workgroup";
+
+  auto fence = LLVM::FenceOp::create(builder, loc, ordering, scope);
+  fence->setDiscardableAttr(LLVM::LLVMDialect::getMmraAttrName(), mmra);
+  return fence;
+}
+
 struct LDSBarrierOpLowering : public ConvertOpToLLVMPattern<LDSBarrierOp> {
   LDSBarrierOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
       : ConvertOpToLLVMPattern<LDSBarrierOp>(converter), chipset(chipset) {}
@@ -580,21 +600,7 @@ struct LDSBarrierOpLowering : public ConvertOpToLLVMPattern<LDSBarrierOp> {
     // chips that don't have the BackOffBarrier feature enabled in LLVM.
     bool requiresInlineAsm = chipset < kGfx90a;
 
-    Attribute mmra =
-        rewriter.getAttr<LLVM::MMRATagAttr>("amdgpu-synchronize-as", "local");
-    // Note: while there *is* a workgroup-one-as scope, this, when combined with
-    // the MMRA, will lead to the fence having no effect. This is because the
-    // codepaths for an atomic load or store will observe that a
-    // one-address-space atomic to LDS requires no synchronization because
-    // operations on LDS are totally ordered with respect to each other, and so
-    // will not emit the correct waitcnt operations that these fences are
-    // intended to produce. Therefore, we use a broader type of fence and rely
-    // on the MMRA to relax it to the semantics we want.
-    StringRef scope = "workgroup";
-
-    auto relFence = LLVM::FenceOp::create(rewriter, loc,
-                                          LLVM::AtomicOrdering::release, scope);
-    relFence->setDiscardableAttr(LLVM::LLVMDialect::getMmraAttrName(), mmra);
+    createLDSFence(rewriter, loc, LLVM::AtomicOrdering::release);
     if (requiresInlineAsm) {
       auto asmDialectAttr = LLVM::AsmDialectAttr::get(rewriter.getContext(),
                                                       LLVM::AsmDialect::AD_ATT);
@@ -614,9 +620,65 @@ struct LDSBarrierOpLowering : public ConvertOpToLLVMPattern<LDSBarrierOp> {
       ROCDL::BarrierWaitOp::create(rewriter, loc, -1);
     }
 
-    auto acqFence = LLVM::FenceOp::create(rewriter, loc,
-                                          LLVM::AtomicOrdering::acquire, scope);
-    acqFence->setDiscardableAttr(LLVM::LLVMDialect::getMmraAttrName(), mmra);
+    auto acqFence =
+        createLDSFence(rewriter, loc, LLVM::AtomicOrdering::acquire);
+    rewriter.replaceOp(op, acqFence);
+    return success();
+  }
+};
+
+struct BarrierSignalLDSOpLowering
+    : public ConvertOpToLLVMPattern<BarrierSignalLDSOp> {
+  BarrierSignalLDSOpLowering(const LLVMTypeConverter &converter,
+                             Chipset chipset)
+      : ConvertOpToLLVMPattern<BarrierSignalLDSOp>(converter),
+        chipset(chipset) {}
+
+  Chipset chipset;
+
+  LogicalResult
+  matchAndRewrite(BarrierSignalLDSOp op, BarrierSignalLDSOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+
+    // Split barriers are only supported on gfx12+.
+    // For older architectures, convert signal to a full lds_barrier.
+    if (chipset.majorVersion < 12) {
+      auto ldsBarrier = LDSBarrierOp::create(rewriter, loc);
+      rewriter.replaceOp(op, ldsBarrier);
+      return success();
+    }
+
+    createLDSFence(rewriter, loc, LLVM::AtomicOrdering::release);
+    auto signal = ROCDL::BarrierSignalOp::create(rewriter, loc, -1);
+    rewriter.replaceOp(op, signal);
+    return success();
+  }
+};
+
+struct BarrierWaitLDSOpLowering
+    : public ConvertOpToLLVMPattern<BarrierWaitLDSOp> {
+  BarrierWaitLDSOpLowering(const LLVMTypeConverter &converter, Chipset chipset)
+      : ConvertOpToLLVMPattern<BarrierWaitLDSOp>(converter), chipset(chipset) {}
+
+  Chipset chipset;
+
+  LogicalResult
+  matchAndRewrite(BarrierWaitLDSOp op, BarrierWaitLDSOp::Adaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+
+    // Split barriers are only supported on gfx12+.
+    // For older architectures, convert wait to a noop (signal already did the
+    // full barrier).
+    if (chipset.majorVersion < 12) {
+      rewriter.eraseOp(op);
+      return success();
+    }
+
+    ROCDL::BarrierWaitOp::create(rewriter, loc, -1);
+    auto acqFence =
+        createLDSFence(rewriter, loc, LLVM::AtomicOrdering::acquire);
     rewriter.replaceOp(op, acqFence);
     return success();
   }
@@ -3561,6 +3623,7 @@ void mlir::populateAMDGPUToROCDLConversionPatterns(LLVMTypeConverter &converter,
            RawBufferOpLowering<RawBufferAtomicCmpswapOp,
                                ROCDL::RawPtrBufferAtomicCmpSwap>,
            AMDGPUDPPLowering, MemoryCounterWaitOpLowering, LDSBarrierOpLowering,
+           BarrierSignalLDSOpLowering, BarrierWaitLDSOpLowering,
            SchedBarrierOpLowering, MFMAOpLowering, ScaledMFMAOpLowering,
            SparseMFMAOpLowering, WMMAOpLowering, ScaledWMMAOpLowering,
            ExtPackedFp8OpLowering, ScaledExtPackedMatrixOpLowering,
