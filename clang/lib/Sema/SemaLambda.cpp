@@ -1325,6 +1325,9 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
 
     VarDecl *Underlying = Var->getPotentiallyDecomposedVarDecl();
 
+    // For increasemental processing(such as clang-repl), allow lambda to
+    // capture
+    // top level varible.
     if (!Underlying->hasLocalStorage() &&
         !PP.isIncrementalProcessingEnabled()) {
       Diag(C->Loc, diag::err_capture_non_automatic_variable) << C->Id;

@@ -16,11 +16,18 @@ auto r2 = l2();
 auto r3 = l2();
 // CHECK: TWO
 
-// Verify non-local lambda capture error is correctly reported
+// in clang-repl, allow lambda to capture top level varible
 int x = 42;
 
-// expected-error {{non-local lambda expression cannot have a capture-default}}
+// expected-no-diagnostics
 auto capture = [&]() { return x * 2; };
+auto capture2 = [&x]() { return x * 2; };
+
+printf("capture = %d\n", capture());
+// CHECK: capture = 84
+
+printf("capture2 = %d\n", capture2());
+// CHECK: capture2 = 84
 
 // Ensure interpreter continues and x is still valid
 printf("x = %d\n", x);
