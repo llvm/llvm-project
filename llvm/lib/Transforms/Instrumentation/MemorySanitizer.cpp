@@ -580,6 +580,8 @@ static const PlatformMemoryMapParams NetBSD_X86_MemoryMapParams = {
     &NetBSD_X86_64_MemoryMapParams,
 };
 
+enum OddOrEvenLanes { kBothLanes, kEvenLanes, kOddLanes };
+
 namespace {
 
 /// Instrument functions of a module to detect uninitialized reads.
@@ -3962,8 +3964,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
                                        unsigned ReductionFactor,
                                        bool ZeroPurifies,
                                        unsigned EltSizeInBits = 0,
-                                       bool UseEvenLanes = true,
-                                       bool UseOddLanes = true) {
+                                       enum OddOrEvenLanes Lanes = kBothLanes) {
     IRBuilder<> IRB(&I);
 
     [[maybe_unused]] FixedVectorType *ReturnType =
@@ -3976,8 +3977,6 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     Value *Sa = nullptr;
     Value *Sb = nullptr;
 
-    assert(UseEvenLanes || UseOddLanes);
-
     assert(I.arg_size() == 2 || I.arg_size() == 3);
     if (I.arg_size() == 2) {
       Va = I.getOperand(0);
@@ -3986,7 +3985,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       Sa = getShadow(&I, 0);
       Sb = getShadow(&I, 1);
 
-      assert(UseEvenLanes && UseOddLanes);
+      assert(Lanes == kBothLanes);
     } else if (I.arg_size() == 3) {
       // Operand 0 is the accumulator. We will deal with that below.
       Va = I.getOperand(1);
@@ -3995,9 +3994,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       Sa = getShadow(&I, 1);
       Sb = getShadow(&I, 2);
 
-      if (UseEvenLanes && UseOddLanes) {
+      if (Lanes == kBothLanes) {
         // Default
-      } else if (UseEvenLanes || UseOddLanes) {
+      } else if (Lanes == kEvenLanes || Lanes == kOddLanes) {
         // Convert < S0, S1, S2, S3, S4, S5, S6, S7 >
         //      to < S0, S0, S2, S2, S4, S4, S6, S6 > (if even)
         //      to < S1, S1, S3, S3, S5, S5, S7, S7 > (if odd)
@@ -4012,9 +4011,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
         unsigned Width = InputShadowType->getNumElements();
 
         Sa = IRB.CreateShuffleVector(
-            Sa, getPclmulMask(Width, /*OddElements=*/UseOddLanes));
+            Sa, getPclmulMask(Width, /*OddElements=*/Lanes == kOddLanes));
         Sb = IRB.CreateShuffleVector(
-            Sb, getPclmulMask(Width, /*OddElements=*/UseOddLanes));
+            Sb, getPclmulMask(Width, /*OddElements=*/Lanes == kOddLanes));
       }
     }
 
@@ -5977,8 +5976,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
                                       /*ZeroPurifies=*/false,
                                       /*EltSizeInBits=*/0,
-                                      /*UseEvenLanes=*/false,
-                                      /*UseOddLanes=*/true);
+                                      /*Lanes=*/kOddLanes);
       break;
 
     // <4 x float> llvm.aarch64.neon.bfmlalb
@@ -5987,8 +5985,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
       handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
                                       /*ZeroPurifies=*/false,
                                       /*EltSizeInBits=*/0,
-                                      /*UseEvenLanes=*/true,
-                                      /*UseOddLanes=*/false);
+                                      /*Lanes=*/kEvenLanes);
       break;
 
     // AVX Vector Neural Network Instructions: bytes
