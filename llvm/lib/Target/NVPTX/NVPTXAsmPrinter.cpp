@@ -1955,11 +1955,11 @@ void NVPTXAsmPrinter::printMemOperand(const MachineInstr *MI, unsigned OpNum,
   }
 }
 
-void NVPTXAsmPrinter::emitInlineAsm(StringRef Str, const TargetMachine &TM,
+void NVPTXAsmPrinter::emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
+                                    const MCTargetOptions &MCOptions,
                                     const MDNode *LocMDNode,
+                                    InlineAsm::AsmDialect Dialect,
                                     const MachineInstr *MI) {
-  const MCSubtargetInfo &STI =
-      MI ? getSubtargetInfo() : *TM.getMCSubtargetInfo();
   assert(!Str.empty() && "Can't emit empty inline asm block");
   SmallString<256> StringData;
   raw_svector_ostream OS(StringData);
