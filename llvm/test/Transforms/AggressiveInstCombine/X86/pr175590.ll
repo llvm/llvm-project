@@ -15,7 +15,7 @@ define double @CompareDistmats(double noundef %distmat1_, double noundef %distma
 ; CHECK-NEXT:    ret double [[SQRT]]
 ; CHECK:       [[FOR_BODY]]:
 ; CHECK-NEXT:    [[SUB:%.*]] = fsub double [[DISTMAT1_]], [[DISTMAT2_]]
-; CHECK-NEXT:    [[FMACALL]] = call double @llvm.fmuladd.f64(double [[SUB]], double [[SUB]], double [[RMSD_0]])
+; CHECK-NEXT:    [[FMACALL]] = call double @llvm.fmuladd.f64(double noundef [[SUB]], double noundef [[SUB]], double [[RMSD_0]])
 ; CHECK-NEXT:    br label %[[FOR_COND]]
 ;
 entry:
@@ -32,7 +32,7 @@ for.cond.cleanup:                                 ; preds = %for.cond
 
 for.body:                                         ; preds = %for.cond
   %sub = fsub double %distmat1_, %distmat2_
-  %fmacall = call double @llvm.fmuladd.f64(double %sub, double %sub, double %RMSD.0)
+  %fmacall = call double @llvm.fmuladd.f64(double noundef %sub, double noundef %sub, double %RMSD.0)
   br label %for.cond
 }
 
