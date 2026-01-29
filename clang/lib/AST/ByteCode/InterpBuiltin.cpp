@@ -5907,7 +5907,12 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     return interp__builtin_elementwise_fp_binop(
         S, OpPC, Call,
         [](const APFloat &A, const APFloat &B,
-           std::optional<APSInt>) -> std::optional<APFloat> {
+           std::optional<APSInt> RoundingMode) -> std::optional<APFloat> {
+          // Default to _MM_FROUND_CUR_DIRECTION (4) if no rounding mode
+          // specified
+          APSInt DefaultMode(APInt(32, 4), /*isUnsigned=*/true);
+          if (RoundingMode.value_or(DefaultMode) != 4)
+            return std::nullopt;
           if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
               B.isInfinity() || B.isDenormal())
             return std::nullopt;
@@ -5922,7 +5927,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         S, OpPC, Call,
         [](const APFloat &A, const APFloat &B,
            std::optional<APSInt> RoundingMode) -> std::optional<APFloat> {
-          if (!RoundingMode || *RoundingMode != 4)
+          // Default to _MM_FROUND_CUR_DIRECTION (4) if no rounding mode
+          // specified
+          APSInt DefaultMode(APInt(32, 4), /*isUnsigned=*/true);
+          if (RoundingMode.value_or(DefaultMode) != 4)
             return std::nullopt;
           if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
               B.isInfinity() || B.isDenormal())
@@ -5959,7 +5967,12 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
     return interp__builtin_elementwise_fp_binop(
         S, OpPC, Call,
         [](const APFloat &A, const APFloat &B,
-           std::optional<APSInt>) -> std::optional<APFloat> {
+           std::optional<APSInt> RoundingMode) -> std::optional<APFloat> {
+          // Default to _MM_FROUND_CUR_DIRECTION (4) if no rounding mode
+          // specified
+          APSInt DefaultMode(APInt(32, 4), /*isUnsigned=*/true);
+          if (RoundingMode.value_or(DefaultMode) != 4)
+            return std::nullopt;
           if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
               B.isInfinity() || B.isDenormal())
             return std::nullopt;
@@ -5974,7 +5987,10 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         S, OpPC, Call,
         [](const APFloat &A, const APFloat &B,
            std::optional<APSInt> RoundingMode) -> std::optional<APFloat> {
-          if (!RoundingMode || *RoundingMode != 4)
+          // Default to _MM_FROUND_CUR_DIRECTION (4) if no rounding mode
+          // specified
+          APSInt DefaultMode(APInt(32, 4), /*isUnsigned=*/true);
+          if (RoundingMode.value_or(DefaultMode) != 4)
             return std::nullopt;
           if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
               B.isInfinity() || B.isDenormal())

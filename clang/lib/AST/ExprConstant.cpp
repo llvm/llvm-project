@@ -14342,7 +14342,12 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case clang::X86::BI__builtin_ia32_minsh:
     return EvaluateFpBinOpExpr(
         [](const APFloat &A, const APFloat &B,
-           std::optional<APSInt>) -> std::optional<APFloat> {
+           std::optional<APSInt> RoundingMode) -> std::optional<APFloat> {
+          // Default to _MM_FROUND_CUR_DIRECTION (4) if no rounding mode
+          // specified
+          APSInt DefaultMode(APInt(32, 4), /*isUnsigned=*/true);
+          if (RoundingMode.value_or(DefaultMode) != 4)
+            return std::nullopt;
           if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
               B.isInfinity() || B.isDenormal())
             return std::nullopt;
@@ -14356,7 +14361,10 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return EvaluateScalarFpRoundMaskBinOp(
         [](const APFloat &A, const APFloat &B,
            std::optional<APSInt> RoundingMode) -> std::optional<APFloat> {
-          if (!RoundingMode || *RoundingMode != 4)
+          // Default to _MM_FROUND_CUR_DIRECTION (4) if no rounding mode
+          // specified
+          APSInt DefaultMode(APInt(32, 4), /*isUnsigned=*/true);
+          if (RoundingMode.value_or(DefaultMode) != 4)
             return std::nullopt;
           if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
               B.isInfinity() || B.isDenormal())
@@ -14391,7 +14399,12 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case clang::X86::BI__builtin_ia32_maxsh:
     return EvaluateFpBinOpExpr(
         [](const APFloat &A, const APFloat &B,
-           std::optional<APSInt>) -> std::optional<APFloat> {
+           std::optional<APSInt> RoundingMode) -> std::optional<APFloat> {
+          // Default to _MM_FROUND_CUR_DIRECTION (4) if no rounding mode
+          // specified
+          APSInt DefaultMode(APInt(32, 4), /*isUnsigned=*/true);
+          if (RoundingMode.value_or(DefaultMode) != 4)
+            return std::nullopt;
           if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
               B.isInfinity() || B.isDenormal())
             return std::nullopt;
@@ -14405,7 +14418,10 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return EvaluateScalarFpRoundMaskBinOp(
         [](const APFloat &A, const APFloat &B,
            std::optional<APSInt> RoundingMode) -> std::optional<APFloat> {
-          if (!RoundingMode || *RoundingMode != 4)
+          // Default to _MM_FROUND_CUR_DIRECTION (4) if no rounding mode
+          // specified
+          APSInt DefaultMode(APInt(32, 4), /*isUnsigned=*/true);
+          if (RoundingMode.value_or(DefaultMode) != 4)
             return std::nullopt;
           if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
               B.isInfinity() || B.isDenormal())
