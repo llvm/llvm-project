@@ -36,4 +36,18 @@
 #define LLVM_C_EXTERN_C_END LLVM_C_STRICT_PROTOTYPES_END
 #endif
 
+#ifndef LLVM_HAS_ATTRIBUTE
+#if defined(__has_attribute)
+#define LLVM_HAS_ATTRIBUTE(x) __has_attribute(x)
+#else
+#define LLVM_HAS_ATTRIBUTE(x) 0
+#endif
+#endif
+
+#if LLVM_HAS_ATTRIBUTE(warn_unused_result) && defined(__clang__)
+#define LLVM_NODISCARD_TYPEDEF __attribute__((warn_unused_result))
+#else
+#define LLVM_NODISCARD_TYPEDEF
+#endif
+
 #endif

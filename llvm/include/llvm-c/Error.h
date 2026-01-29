@@ -31,7 +31,7 @@ LLVM_C_EXTERN_C_BEGIN
 /**
  * Opaque reference to an error instance. Null serves as the 'success' value.
  */
-typedef struct LLVMOpaqueError *LLVMErrorRef;
+LLVM_NODISCARD_TYPEDEF typedef struct LLVMOpaqueError *LLVMErrorRef;
 
 /**
  * Error type identifier.
