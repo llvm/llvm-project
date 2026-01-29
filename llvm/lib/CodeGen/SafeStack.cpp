@@ -669,13 +669,8 @@ void SafeStack::moveDynamicAllocasToUnsafeStack(
     IRBuilder<> IRB(AI);
 
     // Compute the new SP value (after AI).
-    Value *ArraySize = AI->getArraySize();
-    if (ArraySize->getType() != IntPtrTy)
-      ArraySize = IRB.CreateIntCast(ArraySize, IntPtrTy, false);
-
     Type *Ty = AI->getAllocatedType();
-    uint64_t TySize = DL.getTypeAllocSize(Ty);
-    Value *Size = IRB.CreateMul(ArraySize, ConstantInt::get(IntPtrTy, TySize));
+    Value *Size = IRB.CreateAllocationSize(IntPtrTy, AI);
 
     Value *SP = IRB.CreatePtrToInt(IRB.CreateLoad(StackPtrTy, UnsafeStackPtr),
                                    IntPtrTy);
