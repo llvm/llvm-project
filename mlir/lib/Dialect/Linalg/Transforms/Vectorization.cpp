@@ -38,6 +38,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/InterleavedRange.h"
@@ -710,8 +711,8 @@ static Operation *buildMultiDimReduce(OpBuilder &b, Operation *reduceOp,
 }
 
 static SmallVector<bool> getDimsToReduce(LinalgOp linalgOp) {
-  return llvm::to_vector(
-      llvm::map_range(linalgOp.getIteratorTypesArray(), isReductionIterator));
+  return llvm::map_to_vector(linalgOp.getIteratorTypesArray(),
+                             isReductionIterator);
 }
 
 /// Check if `op` is a linalg.reduce or a linalg.generic that has at least one

@@ -13,6 +13,7 @@
 #include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/Debug.h"
 
@@ -291,9 +292,9 @@ LayoutAttr::delinearizeId(OpBuilder &builder, Location loc, Value linearId) {
   // Handle order attribute
   SmallVector<int64_t> order;
   if (orderAttr && !orderAttr.empty()) {
-    order = llvm::to_vector(
-        llvm::map_range(orderAttr.asArrayRef(),
-                        [](int32_t idx) { return static_cast<int64_t>(idx); }));
+    order = llvm::map_to_vector(orderAttr.asArrayRef(), [](int32_t idx) {
+      return static_cast<int64_t>(idx);
+    });
   } else {
     // Default order: [1, 0] for 2D (row-major), [2, 1, 0] for 3D, etc.
     order = llvm::to_vector(

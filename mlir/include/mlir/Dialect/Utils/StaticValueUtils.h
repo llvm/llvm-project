@@ -91,10 +91,9 @@ getSimplifiedOfrAndStaticSizePair(OpFoldResult ofr, Builder &b);
 /// Extract integer values from the assumed ArrayAttr of IntegerAttr.
 template <typename IntTy>
 SmallVector<IntTy> extractFromIntegerArrayAttr(Attribute attr) {
-  return llvm::to_vector(
-      llvm::map_range(cast<ArrayAttr>(attr), [](Attribute a) -> IntTy {
-        return cast<IntegerAttr>(a).getInt();
-      }));
+  return llvm::map_to_vector(cast<ArrayAttr>(attr), [](Attribute a) -> IntTy {
+    return cast<IntegerAttr>(a).getInt();
+  });
 }
 
 /// Given a value, try to extract a constant Attribute. If this fails, return

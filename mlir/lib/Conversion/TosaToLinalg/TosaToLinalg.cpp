@@ -28,6 +28,7 @@
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 #include <type_traits>
 
@@ -1566,15 +1567,15 @@ public:
 
     if (isMultiplierConstant && isShiftConstant) {
       // explicit cast is required here
-      shiftValues = llvm::to_vector(llvm::map_range(
+      shiftValues = llvm::map_to_vector(
           shiftElems.getValues<IntegerAttr>(), [](IntegerAttr attr) -> int32_t {
             return static_cast<int32_t>(attr.getInt());
-          }));
-      multiplierValues = llvm::to_vector(
-          llvm::map_range(multiplierElems.getValues<IntegerAttr>(),
-                          [](IntegerAttr attr) -> int32_t {
-                            return static_cast<int32_t>(attr.getInt());
-                          }));
+          });
+      multiplierValues =
+          llvm::map_to_vector(multiplierElems.getValues<IntegerAttr>(),
+                              [](IntegerAttr attr) -> int32_t {
+                                return static_cast<int32_t>(attr.getInt());
+                              });
 
       // If we shift by more than the bitwidth, this just sets to 0.
       for (int i = 0, s = multiplierValues.size(); i < s; i++) {

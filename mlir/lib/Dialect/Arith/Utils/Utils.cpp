@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Complex/IR/Complex.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include <numeric>
 
 using namespace mlir;
@@ -261,10 +262,10 @@ Value mlir::convertScalarToDtype(OpBuilder &b, Location loc, Value operand,
 SmallVector<Value>
 mlir::getValueOrCreateConstantIndexOp(OpBuilder &b, Location loc,
                                       ArrayRef<OpFoldResult> valueOrAttrVec) {
-  return llvm::to_vector<4>(
-      llvm::map_range(valueOrAttrVec, [&](OpFoldResult value) -> Value {
+  return llvm::map_to_vector<4>(
+      valueOrAttrVec, [&](OpFoldResult value) -> Value {
         return getValueOrCreateConstantIndexOp(b, loc, value);
-      }));
+      });
 }
 
 Value mlir::createScalarOrSplatConstant(OpBuilder &builder, Location loc,

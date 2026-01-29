@@ -713,6 +713,7 @@ void MIPS<ELFT>::relocate(uint8_t *loc, const Relocation &rel,
 
   switch (type) {
   case R_MIPS_32:
+  case R_MIPS_REL32:
   case R_MIPS_GPREL32:
   case R_MIPS_TLS_DTPREL32:
   case R_MIPS_TLS_TPREL32:
@@ -721,6 +722,7 @@ void MIPS<ELFT>::relocate(uint8_t *loc, const Relocation &rel,
   case R_MIPS_64:
   case R_MIPS_TLS_DTPREL64:
   case R_MIPS_TLS_TPREL64:
+  case (R_MIPS_64 << 8) | R_MIPS_REL32:
     write64(ctx, loc, val);
     break;
   case R_MIPS_26:

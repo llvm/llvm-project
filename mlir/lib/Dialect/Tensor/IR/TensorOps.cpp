@@ -34,6 +34,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/MathExtras.h"
@@ -2413,12 +2414,12 @@ void ExtractSliceOp::build(OpBuilder &b, OperationState &result,
                            RankedTensorType resultType, Value source,
                            ValueRange offsets, ValueRange sizes,
                            ValueRange strides, ArrayRef<NamedAttribute> attrs) {
-  SmallVector<OpFoldResult> offsetValues = llvm::to_vector<4>(
-      llvm::map_range(offsets, [](Value v) -> OpFoldResult { return v; }));
-  SmallVector<OpFoldResult> sizeValues = llvm::to_vector<4>(
-      llvm::map_range(sizes, [](Value v) -> OpFoldResult { return v; }));
-  SmallVector<OpFoldResult> strideValues = llvm::to_vector<4>(
-      llvm::map_range(strides, [](Value v) -> OpFoldResult { return v; }));
+  SmallVector<OpFoldResult> offsetValues = llvm::map_to_vector<4>(
+      offsets, [](Value v) -> OpFoldResult { return v; });
+  SmallVector<OpFoldResult> sizeValues =
+      llvm::map_to_vector<4>(sizes, [](Value v) -> OpFoldResult { return v; });
+  SmallVector<OpFoldResult> strideValues = llvm::map_to_vector<4>(
+      strides, [](Value v) -> OpFoldResult { return v; });
   build(b, result, resultType, source, offsetValues, sizeValues, strideValues);
 }
 
@@ -2832,12 +2833,12 @@ void InsertSliceOp::build(OpBuilder &b, OperationState &result, Value source,
 void InsertSliceOp::build(OpBuilder &b, OperationState &result, Value source,
                           Value dest, ValueRange offsets, ValueRange sizes,
                           ValueRange strides, ArrayRef<NamedAttribute> attrs) {
-  SmallVector<OpFoldResult> offsetValues = llvm::to_vector<4>(
-      llvm::map_range(offsets, [](Value v) -> OpFoldResult { return v; }));
-  SmallVector<OpFoldResult> sizeValues = llvm::to_vector<4>(
-      llvm::map_range(sizes, [](Value v) -> OpFoldResult { return v; }));
-  SmallVector<OpFoldResult> strideValues = llvm::to_vector<4>(
-      llvm::map_range(strides, [](Value v) -> OpFoldResult { return v; }));
+  SmallVector<OpFoldResult> offsetValues = llvm::map_to_vector<4>(
+      offsets, [](Value v) -> OpFoldResult { return v; });
+  SmallVector<OpFoldResult> sizeValues =
+      llvm::map_to_vector<4>(sizes, [](Value v) -> OpFoldResult { return v; });
+  SmallVector<OpFoldResult> strideValues = llvm::map_to_vector<4>(
+      strides, [](Value v) -> OpFoldResult { return v; });
   build(b, result, source, dest, offsetValues, sizeValues, strideValues);
 }
 
@@ -3897,12 +3898,12 @@ void ParallelInsertSliceOp::build(OpBuilder &b, OperationState &result,
                                   Value source, Value dest, ValueRange offsets,
                                   ValueRange sizes, ValueRange strides,
                                   ArrayRef<NamedAttribute> attrs) {
-  SmallVector<OpFoldResult> offsetValues = llvm::to_vector<4>(
-      llvm::map_range(offsets, [](Value v) -> OpFoldResult { return v; }));
-  SmallVector<OpFoldResult> sizeValues = llvm::to_vector<4>(
-      llvm::map_range(sizes, [](Value v) -> OpFoldResult { return v; }));
-  SmallVector<OpFoldResult> strideValues = llvm::to_vector<4>(
-      llvm::map_range(strides, [](Value v) -> OpFoldResult { return v; }));
+  SmallVector<OpFoldResult> offsetValues = llvm::map_to_vector<4>(
+      offsets, [](Value v) -> OpFoldResult { return v; });
+  SmallVector<OpFoldResult> sizeValues =
+      llvm::map_to_vector<4>(sizes, [](Value v) -> OpFoldResult { return v; });
+  SmallVector<OpFoldResult> strideValues = llvm::map_to_vector<4>(
+      strides, [](Value v) -> OpFoldResult { return v; });
   build(b, result, source, dest, offsetValues, sizeValues, strideValues);
 }
 

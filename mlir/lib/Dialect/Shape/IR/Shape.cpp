@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <utility>
-
 #include "mlir/Dialect/Shape/IR/Shape.h"
 
 #include "mlir/Dialect/Arith/IR/Arith.h"
@@ -25,8 +23,10 @@
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/SetOperations.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Support/raw_ostream.h"
+#include <utility>
 
 using namespace mlir;
 using namespace mlir::shape;
@@ -813,8 +813,8 @@ struct CanonicalizeCastExtentTensorOperandsPattern
       }
       return operand;
     };
-    auto newOperands = llvm::to_vector<8>(
-        llvm::map_range(op.getOperands(), canonicalizeOperand));
+    auto newOperands =
+        llvm::map_to_vector<8>(op.getOperands(), canonicalizeOperand);
 
     // Rewrite op if any change required.
     if (!anyChange)

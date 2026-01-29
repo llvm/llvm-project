@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 // clang-format off
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "mlir/Bindings/Python/IRCore.h"
 #include "mlir/Bindings/Python/IRTypes.h"
 // clang-format on
@@ -480,8 +481,8 @@ PyVectorType::getChecked(std::vector<int64_t> shape, PyType &elementType,
     if (scalable->size() != shape.size())
       throw nb::value_error("Expected len(scalable) == len(shape).");
 
-    SmallVector<bool> scalableDimFlags = llvm::to_vector(llvm::map_range(
-        *scalable, [](const nb::handle &h) { return nb::cast<bool>(h); }));
+    SmallVector<bool> scalableDimFlags = llvm::map_to_vector(
+        *scalable, [](const nb::handle &h) { return nb::cast<bool>(h); });
     type = mlirVectorTypeGetScalableChecked(
         loc, shape.size(), shape.data(), scalableDimFlags.data(), elementType);
   } else if (scalableDims) {
@@ -517,8 +518,8 @@ PyVectorType PyVectorType::get(std::vector<int64_t> shape, PyType &elementType,
     if (scalable->size() != shape.size())
       throw nb::value_error("Expected len(scalable) == len(shape).");
 
-    SmallVector<bool> scalableDimFlags = llvm::to_vector(llvm::map_range(
-        *scalable, [](const nb::handle &h) { return nb::cast<bool>(h); }));
+    SmallVector<bool> scalableDimFlags = llvm::map_to_vector(
+        *scalable, [](const nb::handle &h) { return nb::cast<bool>(h); });
     type = mlirVectorTypeGetScalable(shape.size(), shape.data(),
                                      scalableDimFlags.data(), elementType);
   } else if (scalableDims) {

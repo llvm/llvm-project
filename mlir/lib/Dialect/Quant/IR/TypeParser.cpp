@@ -12,6 +12,7 @@
 #include "mlir/IR/DialectImplementation.h"
 #include "mlir/IR/Types.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 using namespace mlir;
 using namespace quant;
@@ -413,17 +414,17 @@ static Type parseUniformType(DialectAsmParser &parser) {
   }
   if (isSubChannel) {
     SmallVector<APFloat> apFloatScales =
-        llvm::to_vector(llvm::map_range(scales, [&](double scale) -> APFloat {
+        llvm::map_to_vector(scales, [&](double scale) -> APFloat {
           APFloat apFloatScale(scale);
           bool unused;
           apFloatScale.convert(expressedType.getFloatSemantics(),
                                APFloat::rmNearestTiesToEven, &unused);
           return apFloatScale;
-        }));
-    SmallVector<APInt> apIntZeroPoints = llvm::to_vector(
-        llvm::map_range(zeroPoints, [&](int64_t zeroPoint) -> APInt {
+        });
+    SmallVector<APInt> apIntZeroPoints =
+        llvm::map_to_vector(zeroPoints, [&](int64_t zeroPoint) -> APInt {
           return APInt(storageType.getIntOrFloatBitWidth(), zeroPoint);
-        }));
+        });
     auto scalesRef = mlir::DenseElementsAttr::get(
         RankedTensorType::get(dims, expressedType), apFloatScales);
     auto zeroPointsRef = mlir::DenseElementsAttr::get(

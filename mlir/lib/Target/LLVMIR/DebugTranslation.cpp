@@ -8,6 +8,7 @@
 
 #include "DebugTranslation.h"
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/IR/Module.h"
@@ -98,8 +99,8 @@ llvm::MDTuple *
 DebugTranslation::getMDTupleOrNull(ArrayRef<DINodeAttr> elements) {
   if (elements.empty())
     return nullptr;
-  SmallVector<llvm::Metadata *> llvmElements = llvm::to_vector(
-      llvm::map_range(elements, [&](DINodeAttr attr) -> llvm::Metadata * {
+  SmallVector<llvm::Metadata *> llvmElements =
+      llvm::map_to_vector(elements, [&](DINodeAttr attr) -> llvm::Metadata * {
         if (DIAnnotationAttr annAttr = dyn_cast<DIAnnotationAttr>(attr)) {
           llvm::Metadata *ops[2] = {
               llvm::MDString::get(llvmCtx, annAttr.getName()),
@@ -107,7 +108,7 @@ DebugTranslation::getMDTupleOrNull(ArrayRef<DINodeAttr> elements) {
           return llvm::MDNode::get(llvmCtx, ops);
         }
         return translate(attr);
-      }));
+      });
   return llvm::MDNode::get(llvmCtx, llvmElements);
 }
 

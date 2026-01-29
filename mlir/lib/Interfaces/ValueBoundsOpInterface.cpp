@@ -6,8 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <utility>
-
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 
 #include "mlir/IR/BuiltinTypes.h"
@@ -15,8 +13,11 @@
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/APSInt.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
+
+#include <utility>
 
 #define DEBUG_TYPE "value-bounds-op-interface"
 
@@ -314,10 +315,10 @@ int64_t ValueBoundsConstraintSet::insert(AffineMap map,
   auto mapper = [&](std::pair<Value, std::optional<int64_t>> v) {
     return getExpr(v.first, v.second);
   };
-  SmallVector<AffineExpr> dimReplacements = llvm::to_vector(
-      llvm::map_range(ArrayRef(operands).take_front(map.getNumDims()), mapper));
-  SmallVector<AffineExpr> symReplacements = llvm::to_vector(
-      llvm::map_range(ArrayRef(operands).drop_front(map.getNumDims()), mapper));
+  SmallVector<AffineExpr> dimReplacements = llvm::map_to_vector(
+      ArrayRef(operands).take_front(map.getNumDims()), mapper);
+  SmallVector<AffineExpr> symReplacements = llvm::map_to_vector(
+      ArrayRef(operands).drop_front(map.getNumDims()), mapper);
   addBound(
       presburger::BoundType::EQ, pos,
       map.getResult(0).replaceDimsAndSymbols(dimReplacements, symReplacements));

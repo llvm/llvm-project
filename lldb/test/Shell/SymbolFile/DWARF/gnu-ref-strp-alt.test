@@ -1,0 +1,12 @@
+# This test verifies that LLDB can read DWARF file that contains DW_FORM values
+# encoded with the DW_FORM_GNU_ref_alt and DW_FORM_GNU_strp_alt. If any file was
+# loaded into LLDB prior to adding support LLDB wouldn't be able to parse any
+# of the DWARF as it wouldn't know how to parse these entries and since DWARF is
+# a stream, nothing after that could be parsed.
+
+# RUN: yaml2obj %S/Inputs/gnu-ref-strp-alt.yaml > %t
+# RUN: %lldb %t -b -o 'b bar' | FileCheck %s
+
+# CHECK:      (lldb) b bar
+# CHECK-NOT:  unsupported DW_FORM values:
+# CHECK:      Breakpoint 1: address = 0x0000000000001000
