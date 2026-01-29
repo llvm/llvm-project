@@ -111,15 +111,23 @@ tblgen::findDialectToGenerate(ArrayRef<Dialect> dialects) {
 /// {2}: The dialect parent class.
 static const char *const dialectDeclBeginStr = R"(
 class {0} : public ::mlir::{2} {
+  typedef {0} DialectType;
   explicit {0}(::mlir::MLIRContext *context);
 
   void initialize();
   friend class ::mlir::MLIRContext;
 public:
   ~{0}() override;
-  static constexpr ::llvm::StringLiteral getDialectNamespace() {
+  static constexpr ::llvm::StringLiteral getDialectNamespace() {{
     return ::llvm::StringLiteral("{1}");
   }
+  static const DialectType *getLoaded(::mlir::MLIRContext &context) {{
+    return context.getLoadedDialect<DialectType>();
+  }
+  static const DialectType *getLoaded(::mlir::MLIRContext *context) {{
+    return getLoaded(*context);
+  }
+  static const DialectType *getLoaded(::mlir::Operation *operation);
 )";
 
 /// Registration for a single dependent dialect: to be inserted in the ctor
@@ -207,28 +215,28 @@ static const char *const discardableAttrHelperDecl = R"(
       static constexpr ::llvm::StringLiteral getNameStr() {{
         return "{4}.{1}";
       }
-      constexpr ::mlir::StringAttr getName() {{
+      constexpr ::mlir::StringAttr getName() const {{
         return name;
       }
 
       {0}AttrHelper(::mlir::MLIRContext *ctx)
         : name(::mlir::StringAttr::get(ctx, getNameStr())) {{}
 
-     {2} getAttr(::mlir::Operation *op) {{
-       return op->getAttrOfType<{2}>(name);
-     }
-     void setAttr(::mlir::Operation *op, {2} val) {{
-       op->setAttr(name, val);
-     }
-     bool isAttrPresent(::mlir::Operation *op) {{
-       return op->hasAttrOfType<{2}>(name);
-     }
-     void removeAttr(::mlir::Operation *op) {{
-       assert(op->hasAttrOfType<{2}>(name));
-       op->removeAttr(name);
-     }
+      {2} getAttr(::mlir::Operation *op) const {{
+        return op->getAttrOfType<{2}>(name);
+      }
+      void setAttr(::mlir::Operation *op, {2} val) const {{
+        op->setAttr(name, val);
+      }
+      bool isAttrPresent(::mlir::Operation *op) const {{
+        return op->hasAttrOfType<{2}>(name);
+      }
+      void removeAttr(::mlir::Operation *op) const {{
+        assert(op->hasAttrOfType<{2}>(name));
+        op->removeAttr(name);
+      }
    };
-   {0}AttrHelper get{0}AttrHelper() {
+   const {0}AttrHelper get{0}AttrHelper() const {
      return {3}AttrName;
    }
  private:
@@ -347,6 +355,16 @@ static const char *const dialectDestructorStr = R"(
 
 )";
 
+/// The code block to generate a member funcs.
+///
+/// {0}: The name of the dialect class.
+static const char *const dialectStaticMemberDefs = R"(
+const {0} *{0}::getLoaded(::mlir::Operation *operation) {{
+  return getLoaded(*operation->getContext());
+}
+
+)";
+
 static void emitDialectDef(Dialect &dialect, const RecordKeeper &records,
                            raw_ostream &os) {
   std::string cppClassName = dialect.getCppClassName();
@@ -393,6 +411,9 @@ static void emitDialectDef(Dialect &dialect, const RecordKeeper &records,
                       discardableAttributesInit);
   if (!dialect.hasNonDefaultDestructor())
     os << llvm::formatv(dialectDestructorStr, cppClassName);
+
+  // Emit member function definitions.
+  os << llvm::formatv(dialectStaticMemberDefs, cppClassName);
 }
 
 static bool emitDialectDefs(const RecordKeeper &records, raw_ostream &os) {

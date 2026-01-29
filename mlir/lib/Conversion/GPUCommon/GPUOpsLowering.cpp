@@ -201,7 +201,7 @@ GPUFuncOpLowering::matchAndRewrite(gpu::GPUFuncOp gpuFuncOp, OpAdaptor adaptor,
   DenseI32ArrayAttr knownClusterSize = gpuFuncOp.getKnownClusterSizeAttr();
   // Ensure we don't lose information if the function is lowered before its
   // surrounding context.
-  auto *gpuDialect = cast<gpu::GPUDialect>(gpuFuncOp->getDialect());
+  auto *gpuDialect = gpu::GPUDialect::getLoaded(gpuFuncOp);
   if (knownBlockSize)
     attributes.emplace_back(gpuDialect->getKnownBlockSizeAttrHelper().getName(),
                             knownBlockSize);

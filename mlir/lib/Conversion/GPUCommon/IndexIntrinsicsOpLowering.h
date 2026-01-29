@@ -75,21 +75,18 @@ public:
     // 3. Discardable attributes on a surrounding function of any kind
     // The below code handles these in reverse order so that more important
     // sources overwrite less important ones.
+    auto *gpuDialect = gpu::GPUDialect::getLoaded(op);
     DenseI32ArrayAttr funcBounds = nullptr;
     if (auto funcOp = op->template getParentOfType<FunctionOpInterface>()) {
       switch (indexKind) {
       case IndexKind::Block: {
-        auto blockHelper =
-            gpu::GPUDialect::KnownBlockSizeAttrHelper(op.getContext());
-        if (blockHelper.isAttrPresent(funcOp))
-          funcBounds = blockHelper.getAttr(funcOp);
+        auto blockHelper = gpuDialect->getKnownBlockSizeAttrHelper();
+        funcBounds = blockHelper.getAttr(funcOp);
         break;
       }
       case IndexKind::Grid: {
-        auto gridHelper =
-            gpu::GPUDialect::KnownGridSizeAttrHelper(op.getContext());
-        if (gridHelper.isAttrPresent(funcOp))
-          funcBounds = gridHelper.getAttr(funcOp);
+        auto gridHelper = gpuDialect->getKnownGridSizeAttrHelper();
+        funcBounds = gridHelper.getAttr(funcOp);
         break;
       }
       case IndexKind::Cluster: {

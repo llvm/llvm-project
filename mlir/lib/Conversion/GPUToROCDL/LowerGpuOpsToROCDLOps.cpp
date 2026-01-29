@@ -501,7 +501,7 @@ struct LowerGpuOpsToROCDLOpsPass final
     configureGpuToROCDLConversionLegality(target);
     if (failed(applyPartialConversion(m, target, std::move(llvmPatterns))))
       signalPassFailure();
-    auto *rocdlDialect = getContext().getLoadedDialect<ROCDL::ROCDLDialect>();
+    auto *rocdlDialect = ROCDL::ROCDLDialect::getLoaded(getContext());
     auto reqdWorkGroupSizeAttrHelper =
         rocdlDialect->getReqdWorkGroupSizeAttrHelper();
     auto flatWorkGroupSizeAttrHelper =
@@ -549,8 +549,7 @@ void mlir::populateGpuToROCDLConversionPatterns(
   using gpu::index_lowering::IndexKind;
   using gpu::index_lowering::IntrType;
   using mlir::gpu::amd::Runtime;
-  auto *rocdlDialect =
-      converter.getContext().getLoadedDialect<ROCDL::ROCDLDialect>();
+  auto *rocdlDialect = ROCDL::ROCDLDialect::getLoaded(converter.getContext());
   populateWithGenerated(patterns);
   patterns.add<
       gpu::index_lowering::OpLowering<gpu::ThreadIdOp, ROCDL::ThreadIdXOp,
