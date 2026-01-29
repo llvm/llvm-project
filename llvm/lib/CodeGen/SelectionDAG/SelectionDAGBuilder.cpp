@@ -5358,7 +5358,7 @@ void SelectionDAGBuilder::visitAtomicStore(const StoreInst &I) {
 std::pair<bool, bool>
 SelectionDAGBuilder::getTargetIntrinsicCallProperties(const CallBase &I) {
   const Function *F = I.getCalledFunction();
-  bool HasChain = !F->doesNotAccessMemory();
+  bool HasChain = !F->doesNotAccessMemory() || !F->willReturn();
   bool OnlyLoad =
       HasChain && F->onlyReadsMemory() && F->willReturn() && F->doesNotThrow();
 
