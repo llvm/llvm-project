@@ -1529,12 +1529,9 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
   // A member function pointer.
   if (const auto *methodDecl = dyn_cast<CXXMethodDecl>(decl)) {
     auto ty = mlir::cast<cir::MethodType>(convertType(e->getType()));
-    if (methodDecl->isVirtual()) {
-      assert(!cir::MissingFeatures::virtualMethodAttr());
-      errorNYI(e->getSourceRange(),
-               "emitMemberPointerConstant: virtual method pointer");
-      return {};
-    }
+    if (methodDecl->isVirtual())
+      return cir::ConstantOp::create(
+          builder, loc, getCXXABI().buildVirtualMethodAttr(ty, methodDecl));
 
     cir::FuncOp methodFuncOp = getAddrOfFunction(methodDecl);
     return cir::ConstantOp::create(builder, loc,
@@ -2146,8 +2143,9 @@ void CIRGenModule::setCIRFunctionAttributes(GlobalDecl globalDecl,
   constructAttributeList(func.getName(), info, globalDecl, pal, callingConv,
                          sideEffect,
                          /*attrOnCallSite=*/false, isThunk);
-  // TODO(cir): we need to set Extra Attrs here when that gets implemented.
-  assert(!cir::MissingFeatures::opFuncExtraAttrs());
+
+  for (mlir::NamedAttribute attr : pal)
+    func->setAttr(attr.getName(), attr.getValue());
 
   // TODO(cir): Check X86_VectorCall incompatibility wiht WinARM64EC
 

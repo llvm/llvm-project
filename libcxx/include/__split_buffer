@@ -156,10 +156,8 @@ public:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI const_reference back() const _NOEXCEPT { return *(__end_ - 1); }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __swap_without_allocator(
-      __split_buffer_pointer_layout<__split_buffer<value_type, allocator_type, __split_buffer_pointer_layout>,
-                                    value_type,
-                                    allocator_type>& __other) _NOEXCEPT {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
+  __swap_without_allocator(__split_buffer_pointer_layout& __other) _NOEXCEPT {
     std::swap(__front_cap_, __other.__front_cap_);
     std::swap(__begin_, __other.__begin_);
     std::swap(__back_cap_, __other.__back_cap_);
@@ -263,25 +261,19 @@ public:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __set_valid_range(pointer __new_begin, pointer __new_end) _NOEXCEPT {
-    // Size-based __split_buffers track their size directly: we need to explicitly update the size
-    // when the front is adjusted.
-    __size_ -= __new_begin - __begin_;
     __begin_ = __new_begin;
     __set_sentinel(__new_end);
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __set_valid_range(pointer __new_begin, size_type __new_size) _NOEXCEPT {
-    // Size-based __split_buffers track their size directly: we need to explicitly update the size
-    // when the front is adjusted.
-    __size_ -= __new_begin - __begin_;
     __begin_ = __new_begin;
     __set_sentinel(__new_size);
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_sentinel(pointer __new_end) _NOEXCEPT {
     _LIBCPP_ASSERT_INTERNAL(__front_cap_ <= __new_end, "__new_end cannot precede __front_cap_");
-    __size_ += __new_end - end();
+    __size_ = __new_end - __begin_;
   }
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_sentinel(size_type __new_size) _NOEXCEPT {
@@ -312,10 +304,8 @@ public:
     return __begin_[__size_ - 1];
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __swap_without_allocator(
-      __split_buffer_pointer_layout<__split_buffer<value_type, allocator_type, __split_buffer_pointer_layout>,
-                                    value_type,
-                                    allocator_type>& __other) _NOEXCEPT {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
+  __swap_without_allocator(__split_buffer_size_layout& __other) _NOEXCEPT {
     std::swap(__front_cap_, __other.__front_cap_);
     std::swap(__begin_, __other.__begin_);
     std::swap(__cap_, __other.__cap_);
@@ -585,7 +575,7 @@ public:
 
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
   __swap_without_allocator(__split_buffer<value_type, allocator_type, _Layout>& __other) _NOEXCEPT {
-    __base_type::__swap_without_allocator(__other);
+    __base_type::__swap_without_allocator(static_cast<__base_type&>(__other));
   }
 
 private:

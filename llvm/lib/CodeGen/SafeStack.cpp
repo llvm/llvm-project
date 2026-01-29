@@ -510,10 +510,8 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
   // Unsafe stack always grows down.
   StackLayout SSL(StackAlignment);
   if (StackGuardSlot) {
-    Type *Ty = StackGuardSlot->getAllocatedType();
-    Align Align = std::max(DL.getPrefTypeAlign(Ty), StackGuardSlot->getAlign());
     SSL.addObject(StackGuardSlot, getStaticAllocaAllocationSize(StackGuardSlot),
-                  Align, SSC.getFullLiveRange());
+                  StackGuardSlot->getAlign(), SSC.getFullLiveRange());
   }
 
   for (Argument *Arg : ByValArguments) {
@@ -530,15 +528,11 @@ Value *SafeStack::moveStaticAllocasToUnsafeStack(
   }
 
   for (AllocaInst *AI : StaticAllocas) {
-    Type *Ty = AI->getAllocatedType();
     uint64_t Size = getStaticAllocaAllocationSize(AI);
     if (Size == 0)
       Size = 1; // Don't create zero-sized stack objects.
 
-    // Ensure the object is properly aligned.
-    Align Align = std::max(DL.getPrefTypeAlign(Ty), AI->getAlign());
-
-    SSL.addObject(AI, Size, Align,
+    SSL.addObject(AI, Size, AI->getAlign(),
                   ClColoring ? SSC.getLiveRange(AI) : NoColoringRange);
   }
 
@@ -669,21 +663,13 @@ void SafeStack::moveDynamicAllocasToUnsafeStack(
     IRBuilder<> IRB(AI);
 
     // Compute the new SP value (after AI).
-    Value *ArraySize = AI->getArraySize();
-    if (ArraySize->getType() != IntPtrTy)
-      ArraySize = IRB.CreateIntCast(ArraySize, IntPtrTy, false);
-
-    Type *Ty = AI->getAllocatedType();
-    uint64_t TySize = DL.getTypeAllocSize(Ty);
-    Value *Size = IRB.CreateMul(ArraySize, ConstantInt::get(IntPtrTy, TySize));
-
+    Value *Size = IRB.CreateAllocationSize(IntPtrTy, AI);
     Value *SP = IRB.CreatePtrToInt(IRB.CreateLoad(StackPtrTy, UnsafeStackPtr),
                                    IntPtrTy);
     SP = IRB.CreateSub(SP, Size);
 
-    // Align the SP value to satisfy the AllocaInst, type and stack alignments.
-    auto Align = std::max(std::max(DL.getPrefTypeAlign(Ty), AI->getAlign()),
-                          StackAlignment);
+    // Align the SP value to satisfy the AllocaInst and stack alignments.
+    auto Align = std::max(AI->getAlign(), StackAlignment);
 
     Value *NewTop = IRB.CreateIntToPtr(
         IRB.CreateAnd(
@@ -876,9 +862,7 @@ class SafeStackLegacyPass : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid..
 
-  SafeStackLegacyPass() : FunctionPass(ID) {
-    initializeSafeStackLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
+  SafeStackLegacyPass() : FunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.addRequired<LibcallLoweringInfoWrapper>();
