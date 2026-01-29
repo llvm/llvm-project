@@ -17,6 +17,9 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/Basic/DiagnosticParse.h"
 #include "clang/Basic/StackExhaustionHandler.h"
+#include "clang/Basic/TokenKinds.h"
+#include "clang/Lex/ModuleLoader.h"
+#include "clang/Lex/Preprocessor.h"
 #include "clang/Parse/RAIIObjectsForParser.h"
 #include "clang/Sema/DeclSpec.h"
 #include "clang/Sema/EnterExpressionEvaluationContext.h"
@@ -515,8 +518,6 @@ void Parser::Initialize() {
   Ident_abstract = nullptr;
   Ident_override = nullptr;
   Ident_GNU_final = nullptr;
-  Ident_import = nullptr;
-  Ident_module = nullptr;
 
   Ident_super = &PP.getIdentifierTable().get("super");
 
@@ -572,11 +573,6 @@ void Parser::Initialize() {
     PP.SetPoisonReason(Ident_AbnormalTermination,diag::err_seh___finally_block);
   }
 
-  if (getLangOpts().CPlusPlusModules) {
-    Ident_import = PP.getIdentifierInfo("import");
-    Ident_module = PP.getIdentifierInfo("module");
-  }
-
   Actions.Initialize();
 
   // Prime the lexer look-ahead.
@@ -624,25 +620,8 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
     switch (NextToken().getKind()) {
     case tok::kw_module:
       goto module_decl;
-
-    // Note: no need to handle kw_import here. We only form kw_import under
-    // the Standard C++ Modules, and in that case 'export import' is parsed as
-    // an export-declaration containing an import-declaration.
-
-    // Recognize context-sensitive C++20 'export module' and 'export import'
-    // declarations.
-    case tok::identifier: {
-      IdentifierInfo *II = NextToken().getIdentifierInfo();
-      if ((II == Ident_module || II == Ident_import) &&
-          GetLookAheadToken(2).isNot(tok::coloncolon)) {
-        if (II == Ident_module)
-          goto module_decl;
-        else
-          goto import_decl;
-      }
-      break;
-    }
-
+    case tok::kw_import:
+      goto import_decl;
     default:
       break;
     }
@@ -710,22 +689,6 @@ bool Parser::ParseTopLevelDecl(DeclGroupPtrTy &Result,
     Actions.ActOnEndOfTranslationUnit();
     //else don't tell Sema that we ended parsing: more input might come.
     return true;
-
-  case tok::identifier:
-    // C++2a [basic.link]p3:
-    //   A token sequence beginning with 'export[opt] module' or
-    //   'export[opt] import' and not immediately followed by '::'
-    //   is never interpreted as the declaration of a top-level-declaration.
-    if ((Tok.getIdentifierInfo() == Ident_module ||
-         Tok.getIdentifierInfo() == Ident_import) &&
-        NextToken().isNot(tok::coloncolon)) {
-      if (Tok.getIdentifierInfo() == Ident_module)
-        goto module_decl;
-      else
-        goto import_decl;
-    }
-    break;
-
   default:
     break;
   }
@@ -840,6 +803,9 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
   case tok::annot_pragma_attribute:
     HandlePragmaAttribute();
     return nullptr;
+  case tok::annot_pragma_export:
+    HandlePragmaExport();
+    return nullptr;
   case tok::semi:
     // Either a C++11 empty-declaration or attribute-declaration.
     SingleDecl =
@@ -918,8 +884,10 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
   case tok::kw_import: {
     Sema::ModuleImportState IS = Sema::ModuleImportState::NotACXX20Module;
     if (getLangOpts().CPlusPlusModules) {
-      llvm_unreachable("not expecting a c++20 import here");
-      ProhibitAttributes(Attrs);
+      Diag(Tok, diag::err_unexpected_module_or_import_decl)
+          << /*IsImport*/ true;
+      SkipUntil(tok::semi);
+      return nullptr;
     }
     SingleDecl = ParseModuleImport(SourceLocation(), IS);
   } break;
@@ -1011,7 +979,7 @@ Parser::ParseExternalDeclaration(ParsedAttributes &Attrs,
     return nullptr;
 
   case tok::kw_module:
-    Diag(Tok, diag::err_unexpected_module_decl);
+    Diag(Tok, diag::err_unexpected_module_or_import_decl) << /*IsImport*/ false;
     SkipUntil(tok::semi);
     return nullptr;
 
@@ -2231,6 +2199,11 @@ void Parser::CodeCompleteNaturalLanguage() {
   Actions.CodeCompletion().CodeCompleteNaturalLanguage();
 }
 
+void Parser::CodeCompleteModuleImport(SourceLocation ImportLoc,
+                                      ModuleIdPath Path) {
+  Actions.CodeCompletion().CodeCompleteModuleImport(ImportLoc, Path);
+}
+
 bool Parser::ParseMicrosoftIfExistsCondition(IfExistsCondition& Result) {
   assert((Tok.is(tok::kw___if_exists) || Tok.is(tok::kw___if_not_exists)) &&
          "Expected '__if_exists' or '__if_not_exists'");
@@ -2342,10 +2315,8 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
                                  ? Sema::ModuleDeclKind::Interface
                                  : Sema::ModuleDeclKind::Implementation;
 
-  assert(
-      (Tok.is(tok::kw_module) ||
-       (Tok.is(tok::identifier) && Tok.getIdentifierInfo() == Ident_module)) &&
-      "not a module declaration");
+  assert(Tok.is(tok::kw_module) && "not a module declaration");
+
   SourceLocation ModuleLoc = ConsumeToken();
 
   // Attributes appear after the module name, not before.
@@ -2402,6 +2373,10 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
       return nullptr;
   }
 
+  // This should already diagnosed in phase 4, just skip unil semicolon.
+  if (!Tok.isOneOf(tok::semi, tok::l_square))
+    SkipUntil(tok::semi, SkipUntilFlags::StopBeforeMatch);
+
   // We don't support any module attributes yet; just parse them and diagnose.
   ParsedAttributes Attrs(AttrFactory);
   MaybeParseCXX11Attributes(Attrs);
@@ -2410,7 +2385,9 @@ Parser::ParseModuleDecl(Sema::ModuleImportState &ImportState) {
                           /*DiagnoseEmptyAttrs=*/false,
                           /*WarnOnUnknownAttrs=*/true);
 
-  ExpectAndConsumeSemi(diag::err_module_expected_semi);
+  if (ExpectAndConsumeSemi(diag::err_expected_semi_after_module_or_import,
+                           tok::getKeywordSpelling(tok::kw_module)))
+    SkipUntil(tok::semi);
 
   return Actions.ActOnModuleDecl(StartLoc, ModuleLoc, MDK, Path, Partition,
                                  ImportState,
@@ -2424,7 +2401,7 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
   SourceLocation ExportLoc;
   TryConsumeToken(tok::kw_export, ExportLoc);
 
-  assert((AtLoc.isInvalid() ? Tok.isOneOf(tok::kw_import, tok::identifier)
+  assert((AtLoc.isInvalid() ? Tok.is(tok::kw_import)
                             : Tok.isObjCAtKeyword(tok::objc_import)) &&
          "Improper start to module import");
   bool IsObjCAtImport = Tok.isObjCAtKeyword(tok::objc_import);
@@ -2449,12 +2426,12 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
       Diag(ColonLoc, diag::err_unsupported_module_partition)
           << SourceRange(ColonLoc, Path.back().getLoc());
     // Recover by leaving partition empty.
-    else if (ParseModuleName(ColonLoc, Path, /*IsImport*/ true))
+    else if (ParseModuleName(ColonLoc, Path, /*IsImport=*/true))
       return nullptr;
     else
       IsPartition = true;
   } else {
-    if (ParseModuleName(ImportLoc, Path, /*IsImport*/ true))
+    if (ParseModuleName(ImportLoc, Path, /*IsImport=*/true))
       return nullptr;
   }
 
@@ -2514,8 +2491,17 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
       SeenError = false;
     break;
   }
-  ExpectAndConsumeSemi(diag::err_module_expected_semi);
-  TryConsumeToken(tok::eod);
+
+  bool LexedSemi = false;
+  if (getLangOpts().CPlusPlusModules)
+    LexedSemi =
+        !ExpectAndConsumeSemi(diag::err_expected_semi_after_module_or_import,
+                              tok::getKeywordSpelling(tok::kw_import));
+  else
+    LexedSemi = !ExpectAndConsumeSemi(diag::err_module_expected_semi);
+
+  if (!LexedSemi)
+    SkipUntil(tok::semi);
 
   if (SeenError)
     return nullptr;
@@ -2546,29 +2532,16 @@ Decl *Parser::ParseModuleImport(SourceLocation AtLoc,
 bool Parser::ParseModuleName(SourceLocation UseLoc,
                              SmallVectorImpl<IdentifierLoc> &Path,
                              bool IsImport) {
-  // Parse the module path.
-  while (true) {
-    if (!Tok.is(tok::identifier)) {
-      if (Tok.is(tok::code_completion)) {
-        cutOffParsing();
-        Actions.CodeCompletion().CodeCompleteModuleImport(UseLoc, Path);
-        return true;
-      }
-
-      Diag(Tok, diag::err_module_expected_ident) << IsImport;
-      SkipUntil(tok::semi);
-      return true;
-    }
-
-    // Record this part of the module path.
-    Path.emplace_back(Tok.getLocation(), Tok.getIdentifierInfo());
-    ConsumeToken();
-
-    if (Tok.isNot(tok::period))
-      return false;
-
-    ConsumeToken();
+  if (Tok.isNot(tok::annot_module_name)) {
+    SkipUntil(tok::semi);
+    return true;
   }
+  ModuleNameLoc *NameLoc =
+      static_cast<ModuleNameLoc *>(Tok.getAnnotationValue());
+  Path.assign(NameLoc->getModuleIdPath().begin(),
+              NameLoc->getModuleIdPath().end());
+  ConsumeAnnotationToken();
+  return false;
 }
 
 bool Parser::parseMisplacedModuleImport() {

@@ -15,6 +15,7 @@
 #ifndef LLVM_IR_PROFDATAUTILS_H
 #define LLVM_IR_PROFDATAUTILS_H
 
+#include "llvm/ADT/STLFunctionalExtras.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Metadata.h"
 #include "llvm/Support/Compiler.h"
@@ -215,6 +216,12 @@ LLVM_ABI bool hasExplicitlyUnknownBranchWeights(const Instruction &I);
 
 /// Scaling the profile data attached to 'I' using the ratio of S/T.
 LLVM_ABI void scaleProfData(Instruction &I, uint64_t S, uint64_t T);
+
+// Helper to apply a metadata setting function to an Instruction* if profiling
+// is enabled. If profiling is disabled (ProfcheckDisableMetadataFixes is true)
+// or V is not an Instruction, the callback will not be invoked.
+LLVM_ABI void applyProfMetadataIfEnabled(
+    Value *V, llvm::function_ref<void(Instruction *)> setMetadataCallback);
 
 /// Get the branch weights of a branch conditioned on b1 || b2, where b1 and b2
 /// are 2 booleans that are the conditions of 2 branches for which we have the

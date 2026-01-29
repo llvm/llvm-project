@@ -321,6 +321,8 @@ private:
 
   bool selectReadImageIntrinsic(Register &ResVReg, const SPIRVType *ResType,
                                 MachineInstr &I) const;
+  bool selectSampleIntrinsic(Register &ResVReg, const SPIRVType *ResType,
+                             MachineInstr &I) const;
   bool selectImageWriteIntrinsic(MachineInstr &I) const;
   bool selectResourceGetPointer(Register &ResVReg, const SPIRVType *ResType,
                                 MachineInstr &I) const;
@@ -343,6 +345,7 @@ private:
                    const SPIRVType *ResType = nullptr) const;
 
   Register buildZerosVal(const SPIRVType *ResType, MachineInstr &I) const;
+  bool isScalarOrVectorIntConstantZero(Register Reg) const;
   Register buildZerosValF(const SPIRVType *ResType, MachineInstr &I) const;
   Register buildOnesVal(bool AllOnes, const SPIRVType *ResType,
                         MachineInstr &I) const;
@@ -521,7 +524,7 @@ static bool isConstReg(MachineRegisterInfo *MRI, Register OpReg) {
 // or reduce our dependence on the global registry, so we can remove this
 // function. It can easily be missed when new intrinsics are added.
 
-// Most SPIR-V instrinsics are considered to have side-effects in their tablegen
+// Most SPIR-V intrinsics are considered to have side-effects in their tablegen
 // definition because they are referenced in the global registry. This is a list
 // of intrinsics that have no side effects other than their references in the
 // global registry.
@@ -565,6 +568,7 @@ static bool intrinsicHasSideEffects(Intrinsic::ID ID) {
   case Intrinsic::spv_resource_handlefrombinding:
   case Intrinsic::spv_resource_handlefromimplicitbinding:
   case Intrinsic::spv_resource_nonuniformindex:
+  case Intrinsic::spv_resource_sample:
   case Intrinsic::spv_rsqrt:
   case Intrinsic::spv_saturate:
   case Intrinsic::spv_sdot:
@@ -3019,6 +3023,52 @@ Register SPIRVInstructionSelector::buildZerosVal(const SPIRVType *ResType,
   return GR.getOrCreateConstInt(0, I, ResType, TII, ZeroAsNull);
 }
 
+bool SPIRVInstructionSelector::isScalarOrVectorIntConstantZero(
+    Register Reg) const {
+  SPIRVType *Type = GR.getSPIRVTypeForVReg(Reg);
+  if (!Type)
+    return false;
+  SPIRVType *CompType = GR.getScalarOrVectorComponentType(Type);
+  if (!CompType || CompType->getOpcode() != SPIRV::OpTypeInt)
+    return false;
+
+  auto IsZero = [this](Register Reg) {
+    MachineInstr *Def = getDefInstrMaybeConstant(Reg, MRI);
+    if (!Def)
+      return false;
+
+    if (Def->getOpcode() == SPIRV::OpConstantNull)
+      return true;
+
+    if (Def->getOpcode() == TargetOpcode::G_CONSTANT ||
+        Def->getOpcode() == SPIRV::OpConstantI)
+      return getIConstVal(Reg, MRI) == 0;
+
+    return false;
+  };
+
+  if (IsZero(Reg))
+    return true;
+
+  MachineInstr *Def = MRI->getVRegDef(Reg);
+  if (!Def)
+    return false;
+
+  if (Def->getOpcode() == TargetOpcode::G_BUILD_VECTOR ||
+      (Def->getOpcode() == TargetOpcode::G_INTRINSIC_W_SIDE_EFFECTS &&
+       cast<GIntrinsic>(Def)->getIntrinsicID() ==
+           Intrinsic::spv_const_composite)) {
+    unsigned StartOp = Def->getOpcode() == TargetOpcode::G_BUILD_VECTOR ? 1 : 2;
+    for (unsigned i = StartOp; i < Def->getNumOperands(); ++i) {
+      if (!IsZero(Def->getOperand(i).getReg()))
+        return false;
+    }
+    return true;
+  }
+
+  return false;
+}
+
 Register SPIRVInstructionSelector::buildZerosValF(const SPIRVType *ResType,
                                                   MachineInstr &I) const {
   // OpenCL uses nulls for Zero. In HLSL we don't use null constants.
@@ -3815,7 +3865,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectWaveOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformAll);
   case Intrinsic::spv_wave_any:
     return selectWaveOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformAny);
-  case Intrinsic::spv_wave_ballot:
+  case Intrinsic::spv_subgroup_ballot:
     return selectWaveOpInst(ResVReg, ResType, I,
                             SPIRV::OpGroupNonUniformBallot);
   case Intrinsic::spv_wave_is_first_lane:
@@ -3860,6 +3910,10 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_resource_load_typedbuffer: {
     return selectReadImageIntrinsic(ResVReg, ResType, I);
   }
+  case Intrinsic::spv_resource_sample:
+  case Intrinsic::spv_resource_sample_clamp: {
+    return selectSampleIntrinsic(ResVReg, ResType, I);
+  }
   case Intrinsic::spv_resource_getpointer: {
     return selectResourceGetPointer(ResVReg, ResType, I);
   }
@@ -3874,6 +3928,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   }
   case Intrinsic::spv_unpackhalf2x16: {
     return selectExtInst(ResVReg, ResType, I, GL::UnpackHalf2x16);
+  }
+  case Intrinsic::spv_packhalf2x16: {
+    return selectExtInst(ResVReg, ResType, I, GL::PackHalf2x16);
   }
   case Intrinsic::spv_ddx:
     return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpDPdx);
@@ -4058,6 +4115,79 @@ bool SPIRVInstructionSelector::selectReadImageIntrinsic(
 
   return generateImageReadOrFetch(ResVReg, ResType, NewImageReg, IdxReg, Loc,
                                   Pos);
+}
+
+bool SPIRVInstructionSelector::selectSampleIntrinsic(Register &ResVReg,
+                                                     const SPIRVType *ResType,
+                                                     MachineInstr &I) const {
+  Register ImageReg = I.getOperand(2).getReg();
+  Register SamplerReg = I.getOperand(3).getReg();
+  Register CoordinateReg = I.getOperand(4).getReg();
+  std::optional<Register> OffsetReg;
+  std::optional<Register> ClampReg;
+
+  if (I.getNumOperands() > 5)
+    OffsetReg = I.getOperand(5).getReg();
+  if (I.getNumOperands() > 6)
+    ClampReg = I.getOperand(6).getReg();
+
+  DebugLoc Loc = I.getDebugLoc();
+
+  auto *ImageDef = cast<GIntrinsic>(getVRegDef(*MRI, ImageReg));
+  Register NewImageReg = MRI->createVirtualRegister(MRI->getRegClass(ImageReg));
+  if (!loadHandleBeforePosition(NewImageReg, GR.getSPIRVTypeForVReg(ImageReg),
+                                *ImageDef, I)) {
+    return false;
+  }
+
+  auto *SamplerDef = cast<GIntrinsic>(getVRegDef(*MRI, SamplerReg));
+  Register NewSamplerReg =
+      MRI->createVirtualRegister(MRI->getRegClass(SamplerReg));
+  if (!loadHandleBeforePosition(
+          NewSamplerReg, GR.getSPIRVTypeForVReg(SamplerReg), *SamplerDef, I)) {
+    return false;
+  }
+
+  MachineIRBuilder MIRBuilder(I);
+  SPIRVType *SampledImageType = GR.getOrCreateOpTypeSampledImage(
+      GR.getSPIRVTypeForVReg(ImageReg), MIRBuilder);
+
+  Register SampledImageReg =
+      MRI->createVirtualRegister(GR.getRegClass(SampledImageType));
+  bool Succeed = BuildMI(*I.getParent(), I, Loc, TII.get(SPIRV::OpSampledImage))
+                     .addDef(SampledImageReg)
+                     .addUse(GR.getSPIRVTypeID(SampledImageType))
+                     .addUse(NewImageReg)
+                     .addUse(NewSamplerReg)
+                     .constrainAllUses(TII, TRI, RBI);
+  if (!Succeed)
+    return false;
+
+  auto MIB =
+      BuildMI(*I.getParent(), I, Loc, TII.get(SPIRV::OpImageSampleImplicitLod))
+          .addDef(ResVReg)
+          .addUse(GR.getSPIRVTypeID(ResType))
+          .addUse(SampledImageReg)
+          .addUse(CoordinateReg);
+
+  uint32_t ImageOperands = 0;
+  if (OffsetReg && !isScalarOrVectorIntConstantZero(*OffsetReg)) {
+    ImageOperands |= 0x8; // ConstOffset
+  }
+
+  if (ClampReg) {
+    ImageOperands |= 0x80; // MinLod
+  }
+
+  if (ImageOperands != 0) {
+    MIB.addImm(ImageOperands);
+    if (ImageOperands & 0x8)
+      MIB.addUse(*OffsetReg);
+    if (ImageOperands & 0x80)
+      MIB.addUse(*ClampReg);
+  }
+
+  return MIB.constrainAllUses(TII, TRI, RBI);
 }
 
 bool SPIRVInstructionSelector::generateImageReadOrFetch(

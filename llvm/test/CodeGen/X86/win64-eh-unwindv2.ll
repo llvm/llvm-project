@@ -1,4 +1,7 @@
 ; RUN: llc -mtriple=x86_64-unknown-windows-msvc -o - %s | FileCheck %s
+; RUN: llc -mtriple=x86_64-unknown-windows-msvc -o - %s \
+; RUN:    -x86-wineh-unwindv2-unwind-codes-threshold=8 | FileCheck %s \
+; RUN:    -check-prefixes=ALLOWLESS,CHECK
 
 define dso_local void @no_epilog() local_unnamed_addr {
 entry:
@@ -204,11 +207,113 @@ entry:
 ; CHECK:        int3
 ; CHECK-NEXT:   .seh_endproc
 
+define dso_local i32 @has_funclet(i32 %x) local_unnamed_addr personality ptr @__C_specific_handler {
+entry:
+  %call = invoke i32 @c(i32 %x)
+    to label %call.block.1 unwind label %cleanup
+
+call.block.1:
+  %call1 = invoke i32 @c(i32 %x)
+    to label %call.block.2 unwind label %cleanup
+
+call.block.2:
+  %add = add nsw i32 %call1, %call
+  %call2 = invoke i32 @c(i32 %x)
+    to label %call.block.3 unwind label %cleanup
+
+call.block.3:
+  %call3 = invoke i32 @c(i32 %call2)
+    to label %call.block.4 unwind label %cleanup
+
+call.block.4:
+  %add4 = add nsw i32 %add, %call3
+  ret i32 %add4
+
+cleanup:
+  %cleanup_token = cleanuppad within none []
+  call fastcc void @is_funclet(i32 %x) #18 [ "funclet"(token %cleanup_token) ]
+  cleanupret from %cleanup_token unwind to caller
+}
+
+define internal fastcc void @is_funclet(i32 %x) local_unnamed_addr {
+entry:
+  %y = alloca i32, i32 %x
+  ret void
+}
+
+; CHECK-LABEL:  has_funclet:
+; CHECK:        .seh_pushreg %rbp
+; CHECK:        .seh_pushreg %rsi
+; CHECK:        .seh_pushreg %rdi
+; CHECK:        .seh_stackalloc 48
+; CHECK:        .seh_setframe %rbp, 48
+; CHECK:        .seh_endprologue
+; CHECK:        .seh_startepilogue
+; CHECK:        .seh_unwindv2start
+; CHECK-NEXT:   popq    %rdi
+; CHECK-NEXT:   popq    %rsi
+; CHECK-NEXT:   popq    %rbp
+; CHECK-NEXT:   .seh_endepilogue
+; CHECK-NEXT:   retq
+; ALLOWLESS-NEXT: .seh_splitchained
+; ALLOWLESS-NEXT: .seh_endprologue
+; CHECK-NEXT:   .seh_handlerdata
+; CHECK:        .text
+; CHECK-NEXT:   .seh_endproc
+; CHECK-LABEL:  "?dtor$5@?0?has_funclet@4HA":
+; CHECK:        .seh_pushreg %rbp
+; CHECK:        .seh_pushreg %rsi
+; CHECK:        .seh_pushreg %rdi
+; CHECK:        .seh_stackalloc 32
+; CHECK:        .seh_endprologue
+; CHECK:        .seh_startepilogue
+; CHECK:        .seh_unwindv2start
+; CHECK-NEXT:   popq    %rdi
+; CHECK-NEXT:   popq    %rsi
+; CHECK-NEXT:   popq    %rbp
+; CHECK-NEXT:   .seh_endepilogue
+; CHECK-NEXT:   retq
+; CHECK:        .seh_handlerdata
+; CHECK-NEXT:   .text
+; CHECK-NEXT:   .seh_endproc
+; CHECK-LABEL:  is_funclet:
+; CHECK:        .seh_unwindversion 2
+; CHECK:        .seh_pushreg %rbp
+; CHECK:        .seh_setframe %rbp, 0
+; CHECK:        .seh_endprologue
+; CHECK:        .seh_startepilogue
+; CHECK:        .seh_unwindv2start
+; CHECK:        .seh_endepilogue
+; CHECK-NEXT:   retq
+; CHECK-NEXT:   .seh_endproc
+
+define dso_local void @set_frame_and_alloc(i32 %x) local_unnamed_addr {
+  %y = alloca i32, i32 %x
+  %z = alloca ptr, align 8
+  ret void
+}
+
+; CHECK-LABEL:  set_frame_and_alloc:
+; CHECK:        .seh_unwindversion 2
+; CHECK:        .seh_pushreg %rbp
+; CHECK:        .seh_stackalloc 16
+; CHECK:        .seh_setframe %rbp, 16
+; CHECK:        .seh_endprologue
+; CHECK:        .seh_startepilogue
+; CHECK-NEXT:   movq    %rbp, %rsp
+; CHECK-NEXT:   .seh_unwindv2start
+; CHECK-NEXT:   popq    %rbp
+; CHECK-NEXT:   .seh_endepilogue
+; CHECK-NEXT:   retq
+; CHECK-NEXT:   .seh_endproc
+
 declare i64 @llvm.x86.flags.read.u64()
 declare void @a() local_unnamed_addr
 declare i32 @b() local_unnamed_addr
 declare i32 @c(i32) local_unnamed_addr
 declare void @d() local_unnamed_addr #1
+
+declare dso_local i32 @__C_specific_handler(...)
 
 !llvm.module.flags = !{!0}
 !0 = !{i32 1, !"winx64-eh-unwindv2", i32 2}

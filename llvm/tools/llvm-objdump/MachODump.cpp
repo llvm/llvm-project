@@ -388,6 +388,12 @@ static void printRelocationTargetName(const MachOObjectFile *O,
     return;
   }
 
+  if (O->getAnyRelocationType(RE) == MachO::RISCV_RELOC_ADDEND &&
+      O->getArch() == Triple::riscv32) {
+    Fmt << format("0x%0" PRIx64, Val);
+    return;
+  }
+
   if (isExtern) {
     symbol_iterator SI = O->symbol_begin();
     std::advance(SI, Val);
@@ -928,6 +934,9 @@ static void PrintRelocationEntries(const MachOObjectFile *O,
           else if ((cputype == MachO::CPU_TYPE_ARM64 ||
                     cputype == MachO::CPU_TYPE_ARM64_32) &&
                    r_type == MachO::ARM64_RELOC_ADDEND)
+            outs() << format("addend = 0x%06x\n", (unsigned int)r_symbolnum);
+          else if (cputype == MachO::CPU_TYPE_RISCV &&
+                   r_type == MachO::RISCV_RELOC_ADDEND)
             outs() << format("addend = 0x%06x\n", (unsigned int)r_symbolnum);
           else {
             outs() << format("%d ", r_symbolnum);
@@ -7240,6 +7249,19 @@ objdump::getMachODSymObject(const MachOObjectFile *MachOOF, StringRef Filename,
   return DbgObj;
 }
 
+static bool shouldInstPrinterUseColor() {
+  switch (DisassemblyColor) {
+  case ColorOutput::Enable:
+    return true;
+  case ColorOutput::Auto:
+    return outs().has_colors();
+  case ColorOutput::Disable:
+  case ColorOutput::Invalid:
+    return false;
+  }
+  return false;
+}
+
 static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
                              StringRef DisSegName, StringRef DisSectName) {
   const char *McpuDefault = nullptr;
@@ -7324,8 +7346,9 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
   std::unique_ptr<MCInstPrinter> IP(TheTarget->createMCInstPrinter(
       TheTriple, AsmPrinterVariant, *AsmInfo, *InstrInfo, *MRI));
   CHECK_TARGET_INFO_CREATION(IP);
-  // Set the display preference for hex vs. decimal immediates.
   IP->setPrintImmHex(PrintImmHex);
+  IP->setUseColor(shouldInstPrinterUseColor());
+
   // Comment stream and backing vector.
   SmallString<128> CommentsToEmit;
   raw_svector_ostream CommentStream(CommentsToEmit);
@@ -7377,8 +7400,8 @@ static void DisassembleMachO(StringRef Filename, MachOObjectFile *MachOOF,
         ThumbTriple, ThumbAsmPrinterVariant, *ThumbAsmInfo, *ThumbInstrInfo,
         *ThumbMRI));
     CHECK_THUMB_TARGET_INFO_CREATION(ThumbIP);
-    // Set the display preference for hex vs. decimal immediates.
     ThumbIP->setPrintImmHex(PrintImmHex);
+    ThumbIP->setUseColor(shouldInstPrinterUseColor());
   }
 
 #undef CHECK_TARGET_INFO_CREATION
