@@ -68,6 +68,17 @@ extern "C" void mgpuLaunchKernel(hipFunction_t function, intptr_t gridX,
                                             stream, params, extra));
 }
 
+extern "C" void mgpuLaunchKernelRT(void *function, intptr_t gridX,
+                                   intptr_t gridY, intptr_t gridZ,
+                                   intptr_t blockX, intptr_t blockY,
+                                   intptr_t blockZ, int32_t smem,
+                                   hipStream_t stream, void **params,
+                                   void **extra, size_t /*paramsCount*/) {
+  HIP_REPORT_IF_ERROR(hipLaunchKernel(function, dim3(gridX, gridY, gridZ),
+                                      dim3(blockX, blockY, blockZ), params,
+                                      smem, stream));
+}
+
 extern "C" hipStream_t mgpuStreamCreate() {
   hipStream_t stream = nullptr;
   HIP_REPORT_IF_ERROR(hipStreamCreate(&stream));
