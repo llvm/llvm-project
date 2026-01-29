@@ -197,8 +197,8 @@ LogicalResult AllocTensorOp::bufferize(RewriterBase &rewriter,
   return success();
 }
 
-bool AllocTensorOp::resultBufferizesToMemoryWrite(OpResult opResult,
-                                                  const AnalysisState &state) {
+bool AllocTensorOp::bufferizesToMemoryWrite(OpResult opResult,
+                                            const AnalysisState &state) {
   // AllocTensorOps do not write unless they have a `copy` value.
   return static_cast<bool>(getCopy());
 }

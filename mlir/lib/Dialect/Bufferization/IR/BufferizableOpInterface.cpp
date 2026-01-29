@@ -501,7 +501,7 @@ bool AnalysisState::bufferizesToMemoryWrite(Value value) const {
   auto bufferizableOp = getOptions().dynCastBufferizableOp(value);
   if (!bufferizableOp)
     return true;
-  return bufferizableOp.resultBufferizesToMemoryWrite(opResult, *this);
+  return bufferizableOp.bufferizesToMemoryWrite(opResult, *this);
 }
 
 /// Return true if the given value is read by an op that bufferizes to a memory
@@ -876,7 +876,7 @@ bufferization::getMemRefTypeWithStaticIdentityLayout(TensorType tensorType,
 // Default implementations of interface methods
 //===----------------------------------------------------------------------===//
 
-bool bufferization::detail::defaultResultBufferizesToMemoryWrite(
+bool bufferization::detail::defaultBufferizesToMemoryWrite(
     OpResult opResult, const AnalysisState &state) {
   auto bufferizableOp = cast<BufferizableOpInterface>(opResult.getDefiningOp());
   AliasingOpOperandList opOperands =

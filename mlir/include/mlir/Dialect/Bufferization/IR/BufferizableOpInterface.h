@@ -722,10 +722,10 @@ defaultGetBufferType(Value value, const BufferizationOptions &options,
                      SmallVector<Value> &invocationStack);
 
 /// This is the default implementation of
-/// BufferizableOpInterface::resultBufferizesToMemoryWrite. Should not be called
+/// BufferizableOpInterface::bufferizesToMemoryWrite. Should not be called
 /// from other places.
-bool defaultResultBufferizesToMemoryWrite(OpResult opResult,
-                                          const AnalysisState &state);
+bool defaultBufferizesToMemoryWrite(OpResult opResult,
+                                    const AnalysisState &state);
 
 /// This is the default implementation of
 /// BufferizableOpInterface::isRepetitiveRegion. Should not be called from other
