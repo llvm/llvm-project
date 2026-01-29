@@ -192,8 +192,11 @@ def action_write(name, args):
 
         key_idx = len(strtable)
         strtable += key + '\0'
-        prefix = os.path.dirname(value) + '/'
-        suffix = os.path.basename(value)
+        prefix, suffix = os.path.split(value)
+        # This guarantees that prefix + suffix == value in all cases, including when
+        # prefix is empty or contains a trailing slash or suffix is empty (hence the use
+        # of `len(value) - len(suffix)` instead of just `-len(suffix)`.
+        prefix += value[len(prefix) : len(value) - len(suffix)]
         prefix_idx = len(strtable)
         strtable += prefix + '\0'
         suffix_idx = len(strtable)
