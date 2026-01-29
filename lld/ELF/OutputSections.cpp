@@ -737,6 +737,17 @@ template <bool is64> void OutputSection::finalizeNonAllocCrel(Ctx &ctx) {
 void OutputSection::finalize(Ctx &ctx) {
   InputSection *first = getFirstInputSection(this);
 
+  // Mark as WA output sections without input sections and with
+  // type == SHT_NOBITS. Without this, every SHT_NOBITS section can be
+  // accounted as program text by size/llvm-size. This is also related to GNU
+  // ld's compatibility.
+  if (!first && type == SHT_NOBITS) {
+    // SHT_NOBITS section can inheiret SHF_EXECINSTR from the previous
+    // section, clear it in this case.
+    flags &= ~SHF_EXECINSTR;
+    flags |= SHF_WRITE;
+  }
+
   if (flags & SHF_LINK_ORDER) {
     // We must preserve the link order dependency of sections with the
     // SHF_LINK_ORDER flag. The dependency is indicated by the sh_link field. We
