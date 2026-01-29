@@ -682,19 +682,10 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     break;
   }
   case TargetOpcode::G_CTLS: {
-    KnownBits SrcOpKnown;
     auto Reg = MI.getOperand(1).getReg();
+    unsigned MinRedundantSignBits = computeNumSignBits(Reg, Depth + 1) - 1;
 
-    computeKnownBitsImpl(Reg, SrcOpKnown, DemandedElts, Depth + 1);
-    unsigned MinRedundantSignBits = SrcOpKnown.countMinSignBits() - 1;
-
-    if (SrcOpKnown.isConstant()) {
-      Known = KnownBits::makeConstant(APInt(BitWidth, MinRedundantSignBits));
-      break;
-    }
-
-    unsigned MaxUpperRedundantSignBits =
-        MRI.getType(Reg).getScalarSizeInBits() - 1;
+    unsigned MaxUpperRedundantSignBits = MRI.getType(Reg).getScalarSizeInBits();
 
     ConstantRange Range(APInt(BitWidth, MinRedundantSignBits),
                         APInt(BitWidth, MaxUpperRedundantSignBits));
