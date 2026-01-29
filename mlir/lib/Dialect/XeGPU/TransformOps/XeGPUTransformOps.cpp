@@ -12,6 +12,7 @@
 #include "mlir/Dialect/SCF/Utils/Utils.h"
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 #include <optional>
 
@@ -515,9 +516,9 @@ transform::InsertPrefetchOp::apply(transform::TransformRewriter &rewriter,
     IRMapping mapping;
     mapping.map(forOp.getInductionVar(), replacementVal);
     SmallVector<Value> dynamicOffsets =
-        llvm::to_vector(llvm::map_range(loadOp.getOffsets(), [&](Value v) {
+        llvm::map_to_vector(loadOp.getOffsets(), [&](Value v) {
           return mapping.lookupOrDefault(v);
-        }));
+        });
     auto constOffsets = loadOp.getConstOffsets().value();
     return getMixedValues(constOffsets, dynamicOffsets, ctx);
   };
