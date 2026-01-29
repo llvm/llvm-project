@@ -4665,6 +4665,18 @@ ExprResult Sema::BuildAtomicExpr(SourceRange CallRange, SourceRange ExprRange,
   if ((IsOpenCL || IsHIP || IsScoped) &&
       Op != AtomicExpr::AO__opencl_atomic_init)
     ++AdjustedNumArgs;
+
+  // Verify if the arguments are of type CompleteType
+  if (Op == AtomicExpr::AO__atomic_exchange) {
+    for (auto Arg : Args) {
+      auto ValType = Arg->getType();
+      if (ValType->isPointerType() && !ValType->isNullPtrType() &&
+          RequireCompleteType(Arg->getBeginLoc(), ValType->getPointeeType(),
+                              diag::err_incomplete_type)) {
+        return ExprError();
+      }
+    }
+  }
   // Check we have the right number of arguments.
   if (Args.size() < AdjustedNumArgs) {
     Diag(CallRange.getEnd(), diag::err_typecheck_call_too_few_args)
