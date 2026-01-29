@@ -1,11 +1,11 @@
 // RUN: %clang_analyze_cc1 -analyzer-checker=alpha.webkit.UncheckedCallArgsChecker -std=c++20 -verify %s
 // expected-no-diagnostics
 
-// Test: [[clang::suppress]] fails for implicit template specializations when
+// Previously [[clang::suppress]] failed for implicit template specializations when
 // namespace has multiple redeclarations and suppression is in a different
 // redeclaration than the lexical parent of the implicit specialization.
 //
-// The bug occured when:
+// The bug occurred when:
 // 1. A template is forward-declared in one namespace block
 // 2. A partial specialization with [[clang::suppress]] is in a different block
 // 3. An implicit instantiation's getLexicalDeclContext() points to the wrong block

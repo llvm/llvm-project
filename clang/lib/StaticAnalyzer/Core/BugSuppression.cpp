@@ -203,7 +203,8 @@ preferTemplateDefinitionForTemplateSpecializations(const Decl *D) {
         return Redecl;
       }
     }
-    assert(false && "A redecl must be a definition");
+    assert(false &&
+           "This class template must have a redecl that is a definition");
     return D;
   }
 
