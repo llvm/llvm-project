@@ -3972,13 +3972,14 @@ llvm::Function *CGObjCGNU::ModuleInitFunction() {
 
     for (auto &untypedSel : allSelectors) {
       std::string selNameStr = untypedSel.getAsString();
-      llvm::Constant *selName = ExportUniqueString(selNameStr, ".objc_sel_name");
+      llvm::Constant *selName = ExportUniqueString(selNameStr,
+        ".objc_sel_name_", true);
 
       for (TypedSelector &sel : table[untypedSel]) {
         llvm::Constant *selectorTypeEncoding = NULLPtr;
         if (!sel.first.empty())
           selectorTypeEncoding =
-            MakeConstantString(sel.first, ".objc_sel_types");
+            MakeConstantString(sel.first, ".objc_sel_types_");
 
         auto selStruct = selectors.beginStruct(selStructTy);
         selStruct.add(selName);
