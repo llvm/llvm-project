@@ -988,7 +988,9 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   assert(TermBranchOnCount &&
          match(IVInc, m_Add(m_Specific(LoopRegion->getCanonicalIV()),
                             m_Specific(&Plan.getVFxUF()))) &&
-         "Unexpected terminator");
+         std::next(IVInc->getDefiningRecipe()->getIterator()) ==
+             Latch->getTerminator()->getIterator() &&
+         "Unexpected canonical iv increment");
 
   // Split the latch at the IV update, and branch to it from the header mask.
   VPBasicBlock *LatchSplit =
