@@ -1423,7 +1423,7 @@ def : ProcessorModel<"cortex-a520", CortexA510Model, ProcessorFeatures.A520,
                      [TuneA520]>;
 def : ProcessorModel<"cortex-a520ae", CortexA510Model, ProcessorFeatures.A520AE,
                      [TuneA520AE]>;
-def : ProcessorModel<"c1-nano", CortexA510Model,
+def : ProcessorModel<"c1-nano", C1NanoModel,
                      ProcessorFeatures.C1Nano, [TuneC1Nano]>;
 def : ProcessorModel<"cortex-a57", CortexA57Model, ProcessorFeatures.A53,
                      [TuneA57]>;
