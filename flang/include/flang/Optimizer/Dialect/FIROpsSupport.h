@@ -131,6 +131,11 @@ static constexpr llvm::StringRef getHasLifetimeMarkerAttrName() {
   return "fir.has_lifetime";
 }
 
+/// Attribute to mark the access groups of an operation.
+static constexpr llvm::StringRef getAccessGroupsAttrName() {
+  return "access_groups";
+}
+
 /// Does the function, \p func, have a host-associations tuple argument?
 /// Some internal procedures may have access to host procedure variables.
 bool hasHostAssociationArgument(mlir::func::FuncOp func);

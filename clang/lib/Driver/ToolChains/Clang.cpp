@@ -1065,10 +1065,6 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
     A->render(Args, CmdArgs);
   }
 
-  Args.addAllArgs(CmdArgs,
-                  {options::OPT_D, options::OPT_U, options::OPT_I_Group,
-                   options::OPT_F, options::OPT_embed_dir_EQ});
-
   if (C.isOffloadingHostKind(Action::OFK_Cuda) ||
       JA.isDeviceOffloading(Action::OFK_Cuda)) {
     // Collect all enabled NVPTX architectures.
@@ -1090,6 +1086,10 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
       CmdArgs.push_back(Args.MakeArgString("-D__CUDA_ARCH_LIST__=" + List));
     }
   }
+
+  Args.addAllArgs(CmdArgs,
+                  {options::OPT_D, options::OPT_U, options::OPT_I_Group,
+                   options::OPT_F, options::OPT_embed_dir_EQ});
 
   // Add -Wp, and -Xpreprocessor if using the preprocessor.
 
@@ -6777,7 +6777,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     StringRef S0 = A->getValue(), S = S0;
     unsigned Size, Offset = 0;
     if (!Triple.isAArch64() && !Triple.isLoongArch() && !Triple.isRISCV() &&
-        !Triple.isX86() &&
+        !Triple.isX86() && !Triple.isSystemZ() &&
         !(!Triple.isOSAIX() && (Triple.getArch() == llvm::Triple::ppc ||
                                 Triple.getArch() == llvm::Triple::ppc64 ||
                                 Triple.getArch() == llvm::Triple::ppc64le)))
@@ -7211,6 +7211,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       LanguageStandard = llvm::StringSwitch<StringRef>(StdArg->getValue())
                              .Case("c11", "-std=c11")
                              .Case("c17", "-std=c17")
+                             // If you add cases below for spellings that are
+                             // not in LangStandards.def, update
+                             // TransferableCommand::tryParseStdArg() in
+                             // lib/Tooling/InterpolatingCompilationDatabase.cpp
+                             // to match.
                              // TODO: add c23 when MSVC supports it.
                              .Case("clatest", "-std=c23")
                              .Default("");
@@ -7228,6 +7233,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                              .Case("c++14", "-std=c++14")
                              .Case("c++17", "-std=c++17")
                              .Case("c++20", "-std=c++20")
+                             // If you add cases below for spellings that are
+                             // not in LangStandards.def, update
+                             // TransferableCommand::tryParseStdArg() in
+                             // lib/Tooling/InterpolatingCompilationDatabase.cpp
+                             // to match.
                              // TODO add c++23 and c++26 when MSVC supports it.
                              .Case("c++23preview", "-std=c++23")
                              .Case("c++latest", "-std=c++26")
@@ -7930,36 +7940,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  if (Arg *A = Args.getLastArg(options::OPT_fglobal_isel,
-                               options::OPT_fno_global_isel)) {
-    CmdArgs.push_back("-mllvm");
-    if (A->getOption().matches(options::OPT_fglobal_isel)) {
-      CmdArgs.push_back("-global-isel=1");
-
-      // GISel is on by default on AArch64 -O0, so don't bother adding
-      // the fallback remarks for it. Other combinations will add a warning of
-      // some kind.
-      bool IsArchSupported = Triple.getArch() == llvm::Triple::aarch64;
-      bool IsOptLevelSupported = false;
-
-      Arg *A = Args.getLastArg(options::OPT_O_Group);
-      if (Triple.getArch() == llvm::Triple::aarch64) {
-        if (!A || A->getOption().matches(options::OPT_O0))
-          IsOptLevelSupported = true;
-      }
-      if (!IsArchSupported || !IsOptLevelSupported) {
-        CmdArgs.push_back("-mllvm");
-        CmdArgs.push_back("-global-isel-abort=2");
-
-        if (!IsArchSupported)
-          D.Diag(diag::warn_drv_global_isel_incomplete) << Triple.getArchName();
-        else
-          D.Diag(diag::warn_drv_global_isel_incomplete_opt);
-      }
-    } else {
-      CmdArgs.push_back("-global-isel=0");
-    }
-  }
+  renderGlobalISelOptions(D, Args, CmdArgs, Triple);
 
   if (Arg *A = Args.getLastArg(options::OPT_fforce_enable_int128,
                                options::OPT_fno_force_enable_int128)) {
@@ -9304,18 +9285,23 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   Linker->ConstructJob(C, JA, Output, Inputs, Args, LinkingOutput);
   const auto &LinkCommand = C.getJobs().getJobs().back();
 
-  // Forward -Xoffload-linker<-triple> arguments to the device link job.
-  for (Arg *A : Args.filtered(options::OPT_Xoffload_linker)) {
+  // Forward -Xoffload-{compiler,linker}<-triple> arguments to the linker
+  // wrapper.
+  for (Arg *A :
+       Args.filtered(options::OPT_Xoffload_compiler, OPT_Xoffload_linker)) {
     StringRef Val = A->getValue(0);
+    bool IsLinkJob = A->getOption().getID() == OPT_Xoffload_linker;
+    auto WrapperOption =
+        IsLinkJob ? Twine("--device-linker=") : Twine("--device-compiler=");
     if (Val.empty())
-      CmdArgs.push_back(
-          Args.MakeArgString(Twine("--device-linker=") + A->getValue(1)));
+      CmdArgs.push_back(Args.MakeArgString(WrapperOption + A->getValue(1)));
     else
       CmdArgs.push_back(Args.MakeArgString(
-          "--device-linker=" +
+          WrapperOption +
           ToolChain::getOpenMPTriple(Val.drop_front()).getTriple() + "=" +
           A->getValue(1)));
   }
+  Args.ClaimAllArgs(options::OPT_Xoffload_compiler);
   Args.ClaimAllArgs(options::OPT_Xoffload_linker);
 
   // Embed bitcode instead of an object in JIT mode.

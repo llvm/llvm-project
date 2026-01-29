@@ -31,23 +31,12 @@ using namespace clang;
 using namespace clang::CIRGen;
 using namespace llvm;
 
-template <typename... Operands>
-static mlir::Value emitIntrinsicCallOp(CIRGenBuilderTy &builder,
-                                       mlir::Location loc, const StringRef str,
-                                       const mlir::Type &resTy,
-                                       Operands &&...op) {
-  return cir::LLVMIntrinsicCallOp::create(builder, loc,
-                                          builder.getStringAttr(str), resTy,
-                                          std::forward<Operands>(op)...)
-      .getResult();
-}
-
 // Generate vscale * scalingFactor
 static mlir::Value genVscaleTimesFactor(mlir::Location loc,
                                         CIRGenBuilderTy builder,
                                         mlir::Type cirTy,
                                         int32_t scalingFactor) {
-  mlir::Value vscale = emitIntrinsicCallOp(builder, loc, "vscale", cirTy);
+  mlir::Value vscale = builder.emitIntrinsicCallOp(loc, "vscale", cirTy);
   return builder.createNUWAMul(loc, vscale,
                                builder.getUInt64(scalingFactor, loc));
 }
@@ -240,8 +229,8 @@ CIRGenFunction::emitAArch64SVEBuiltinExpr(unsigned builtinID,
 
     auto retTy = convertType(expr->getType());
 
-    auto call = emitIntrinsicCallOp(builder, loc, llvmIntrName, retTy,
-                                    mlir::ValueRange{ops});
+    auto call = builder.emitIntrinsicCallOp(loc, llvmIntrName, retTy,
+                                            mlir::ValueRange{ops});
     if (call.getType() == retTy)
       return call;
 
@@ -1245,11 +1234,17 @@ CIRGenFunction::emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
 
   assert(!cir::MissingFeatures::neonSISDIntrinsics());
 
+  llvm::SmallVector<mlir::Value> ops;
+  mlir::Location loc = getLoc(expr->getExprLoc());
+
   // Handle non-overloaded intrinsics first.
   switch (builtinID) {
   default:
     break;
-  case NEON::BI__builtin_neon_vabsh_f16:
+  case NEON::BI__builtin_neon_vabsh_f16: {
+    ops.push_back(emitScalarExpr(expr->getArg(0)));
+    return cir::FAbsOp::create(builder, loc, ops);
+  }
   case NEON::BI__builtin_neon_vaddq_p128:
   case NEON::BI__builtin_neon_vldrq_p128:
   case NEON::BI__builtin_neon_vstrq_p128:

@@ -1046,6 +1046,10 @@ public:
   bool matchRedundantSextInReg(MachineInstr &Root, MachineInstr &Other,
                                BuildFnTy &MatchInfo) const;
 
+  // (ctlz (xor x, (sra x, bitwidth-1))) -> (add (ctls x), 1) or
+  // (ctlz (or (shl (xor x, (sra x, bitwidth-1)), 1), 1) -> (ctls x)
+  bool matchCtls(MachineInstr &CtlzMI, BuildFnTy &MatchInfo) const;
+
 private:
   /// Checks for legality of an indexed variant of \p LdSt.
   bool isIndexedLoadStoreLegal(GLoadStore &LdSt) const;

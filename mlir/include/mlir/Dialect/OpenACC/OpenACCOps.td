@@ -4,7 +4,7 @@
 // See https://llvm.org/LICENSE.txt for license information.
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
-// =============================================================================
+//===----------------------------------------------------------------------===//
 //
 // Defines MLIR OpenACC operations.
 //
@@ -853,21 +853,6 @@ def OpenACC_FirstprivateOp : OpenACC_DataEntryOp<"firstprivate",
   let extraClassDeclaration = extraClassDeclarationBase;
 }
 
-// The mapping of firstprivate cannot be represented through an `acc.copyin`
-// since that operation includes present counter updates (and private variables
-// do not impact counters). Instead, the below operation is used to represent
-// the mapping of that initial value which can be used to initialize the private
-// copies.
-def OpenACC_FirstprivateMapInitialOp : OpenACC_DataEntryOp<"firstprivate_map",
-    "mlir::acc::DataClause::acc_firstprivate", "", [],
-    (ins Arg<OpenACC_AnyPointerOrMappableType,"Host variable",[MemRead]>:$var)> {
-  let summary = "Used to decompose firstprivate semantics and represents the "
-                "mapping of the initial value.";
-  let results = (outs Arg<OpenACC_AnyPointerOrMappableType,
-                          "Accelerator mapped variable",[MemWrite]>:$accVar);
-  let extraClassDeclaration = extraClassDeclarationBase;
-}
-
 //===----------------------------------------------------------------------===//
 // 2.5.15 reduction clause
 //===----------------------------------------------------------------------===//
@@ -1684,7 +1669,8 @@ def OpenACC_ParallelOp
                  [AttrSizedOperandSegments, AutomaticAllocationScope,
                   RecursiveMemoryEffects,
                   DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
-                  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+                  DeclareOpInterfaceMethods<RegionBranchOpInterface,
+                                            ["getSuccessorInputs"]>,
                   OffloadRegionOpInterface,
                   MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
                                  MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
@@ -1885,7 +1871,8 @@ def OpenACC_SerialOp
                  [AttrSizedOperandSegments, AutomaticAllocationScope,
                   RecursiveMemoryEffects,
                   DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
-                  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+                  DeclareOpInterfaceMethods<RegionBranchOpInterface,
+                                            ["getSuccessorInputs"]>,
                   OffloadRegionOpInterface,
                   MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
                                  MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
@@ -2026,7 +2013,8 @@ def OpenACC_KernelsOp
                  [AttrSizedOperandSegments, AutomaticAllocationScope,
                   RecursiveMemoryEffects,
                   DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
-                  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+                  DeclareOpInterfaceMethods<RegionBranchOpInterface,
+                                            ["getSuccessorInputs"]>,
                   OffloadRegionOpInterface,
                   MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
                                  MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
@@ -2201,67 +2189,14 @@ def OpenACC_KernelsOp
 }
 
 //===----------------------------------------------------------------------===//
-// acc.kernel_environment
-//===----------------------------------------------------------------------===//
-
-def OpenACC_KernelEnvironmentOp
-    : OpenACC_Op<"kernel_environment",
-                 [AttrSizedOperandSegments, RecursiveMemoryEffects, SingleBlock,
-                  NoTerminator,
-                  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
-                  MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
-                                 MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
-  let summary = "Decomposition of compute constructs to capture data mapping "
-                "and asynchronous behavior information";
-  let description = [{
-    The `acc.kernel_environment` operation represents a decomposition of
-    any OpenACC compute construct (acc.kernels, acc.parallel, or
-    acc.serial) that captures data mapping and asynchronous behavior:
-    - data clause operands
-    - async clause operands
-    - wait clause operands
-
-    This allows kernel execution parallelism and privatization to be
-    handled separately, facilitating eventual lowering to GPU dialect where
-    kernel launching and compute offloading are handled separately.
-  }];
-
-  let arguments = (ins
-    Variadic<AnyType>:$dataClauseOperands,
-    Variadic<IntOrIndex>:$asyncOperands,
-    OptionalAttr<DeviceTypeArrayAttr>:$asyncOperandsDeviceType,
-    OptionalAttr<DeviceTypeArrayAttr>:$asyncOnly,
-    Variadic<IntOrIndex>:$waitOperands,
-    OptionalAttr<DenseI32ArrayAttr>:$waitOperandsSegments,
-    OptionalAttr<DeviceTypeArrayAttr>:$waitOperandsDeviceType,
-    OptionalAttr<BoolArrayAttr>:$hasWaitDevnum,
-    OptionalAttr<DeviceTypeArrayAttr>:$waitOnly);
-
-  let regions = (region SizedRegion<1>:$region);
-
-  let assemblyFormat = [{
-    oilist(
-        `dataOperands` `(` $dataClauseOperands `:` type($dataClauseOperands) `)`
-      | `async` `` custom<DeviceTypeOperandsWithKeywordOnly>($asyncOperands,
-            type($asyncOperands), $asyncOperandsDeviceType, $asyncOnly)
-      | `wait` `` custom<WaitClause>($waitOperands, type($waitOperands),
-          $waitOperandsDeviceType, $waitOperandsSegments, $hasWaitDevnum,
-          $waitOnly)
-    )
-    $region attr-dict
-  }];
-
-  let hasCanonicalizer = 1;
-}
-
-//===----------------------------------------------------------------------===//
 // 2.6.5 data Construct
 //===----------------------------------------------------------------------===//
 
 def OpenACC_DataOp
     : OpenACC_Op<
           "data", [AttrSizedOperandSegments, RecursiveMemoryEffects,
-                   DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+                   DeclareOpInterfaceMethods<RegionBranchOpInterface,
+                                             ["getSuccessorInputs"]>,
                    MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
                                   MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "data construct";
@@ -2537,7 +2472,8 @@ def OpenACC_ExitDataOp : OpenACC_Op<"exit_data",
 def OpenACC_HostDataOp
     : OpenACC_Op<"host_data",
                  [AttrSizedOperandSegments,
-                  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+                  DeclareOpInterfaceMethods<RegionBranchOpInterface,
+                                            ["getSuccessorInputs"]>,
                   MemoryEffects<[MemWrite<OpenACC_ConstructResource>,
                                  MemRead<OpenACC_CurrentDeviceIdResource>]>]> {
   let summary = "host_data construct";
@@ -2583,7 +2519,8 @@ def OpenACC_LoopOp
                    RecursiveMemoryEffects,
                    DeclareOpInterfaceMethods<ComputeRegionOpInterface>,
                    DeclareOpInterfaceMethods<LoopLikeOpInterface>,
-                   DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+                   DeclareOpInterfaceMethods<RegionBranchOpInterface,
+                                             ["getSuccessorInputs"]>,
                    MemoryEffects<[MemWrite<OpenACC_ConstructResource>]>]> {
   let summary = "loop construct";
 
@@ -3708,5 +3645,7 @@ def OpenACC_WaitOp : OpenACC_Op<"wait", [AttrSizedOperandSegments]> {
   }];
   let hasVerifier = 1;
 }
+
+include "mlir/Dialect/OpenACC/OpenACCCGOps.td"
 
 #endif // OPENACC_OPS
