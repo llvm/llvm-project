@@ -2069,6 +2069,9 @@ PHINode *WidenIV::createWideIV(SCEVExpander &Rewriter) {
   if (!AddRec || AddRec->getLoop() != L)
     return nullptr;
 
+  if (!Rewriter.canExpand(AddRec))
+    return nullptr;
+
   // An AddRec must have loop-invariant operands. Since this AddRec is
   // materialized by a loop header phi, the expression cannot have any post-loop
   // operands, so they must dominate the loop header.
@@ -2095,6 +2098,7 @@ PHINode *WidenIV::createWideIV(SCEVExpander &Rewriter) {
   // expect a well-formed cyclic phi-with-increments. i.e. any operand not part
   // of the phi-SCC dominates the loop entry.
   Instruction *InsertPt = &*L->getHeader()->getFirstInsertionPt();
+
   Value *ExpandInst = Rewriter.expandCodeFor(AddRec, WideType, InsertPt);
   // If the wide phi is not a phi node, for example a cast node, like bitcast,
   // inttoptr, ptrtoint, just skip for now.
