@@ -57,12 +57,9 @@ bool2x2 fn2(bool V) {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[RETVAL:%.*]] = alloca i1, align 4
 // CHECK-NEXT:    [[S:%.*]] = alloca [[STRUCT_S:%.*]], align 1
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[S]], ptr align 1 @__const._Z3fn3v.s, i32 20, i1 false)
 // CHECK-NEXT:    [[BM:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[S]], i32 0, i32 0
-// CHECK-NEXT:    store <4 x i32> <i32 1, i32 0, i32 1, i32 0>, ptr [[BM]], align 1
-// CHECK-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[S]], i32 0, i32 1
-// CHECK-NEXT:    store float 1.000000e+00, ptr [[F]], align 1
-// CHECK-NEXT:    [[BM1:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[S]], i32 0, i32 0
-// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[BM1]], align 1
+// CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i32>, ptr [[BM]], align 1
 // CHECK-NEXT:    [[MATRIXEXT:%.*]] = extractelement <4 x i32> [[TMP0]], i32 0
 // CHECK-NEXT:    store i32 [[MATRIXEXT]], ptr [[RETVAL]], align 4
 // CHECK-NEXT:    [[TMP1:%.*]] = load i1, ptr [[RETVAL]], align 4
@@ -113,15 +110,12 @@ void fn5() {
 // CHECK-NEXT:    [[V:%.*]] = alloca i32, align 4
 // CHECK-NEXT:    [[S:%.*]] = alloca [[STRUCT_S:%.*]], align 1
 // CHECK-NEXT:    store i32 0, ptr [[V]], align 4
-// CHECK-NEXT:    [[BM:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[S]], i32 0, i32 0
-// CHECK-NEXT:    store <4 x i32> <i32 1, i32 0, i32 1, i32 0>, ptr [[BM]], align 1
-// CHECK-NEXT:    [[F:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[S]], i32 0, i32 1
-// CHECK-NEXT:    store float 1.000000e+00, ptr [[F]], align 1
+// CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i32(ptr align 1 [[S]], ptr align 1 @__const._Z3fn6v.s, i32 20, i1 false)
 // CHECK-NEXT:    [[TMP0:%.*]] = load i32, ptr [[V]], align 4
 // CHECK-NEXT:    [[LOADEDV:%.*]] = trunc i32 [[TMP0]] to i1
-// CHECK-NEXT:    [[BM1:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[S]], i32 0, i32 0
+// CHECK-NEXT:    [[BM:%.*]] = getelementptr inbounds nuw [[STRUCT_S]], ptr [[S]], i32 0, i32 0
 // CHECK-NEXT:    [[TMP1:%.*]] = zext i1 [[LOADEDV]] to i32
-// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <4 x i32>, ptr [[BM1]], i32 0, i32 1
+// CHECK-NEXT:    [[TMP2:%.*]] = getelementptr <4 x i32>, ptr [[BM]], i32 0, i32 1
 // CHECK-NEXT:    store i32 [[TMP1]], ptr [[TMP2]], align 4
 // CHECK-NEXT:    ret void
 //
