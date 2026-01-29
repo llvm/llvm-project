@@ -1260,7 +1260,7 @@ unsigned AMDGPURegisterBankInfo::setBufferOffsets(
     }
   }
 
-  const bool CheckNUW = Subtarget->hasGFX1250Insts();
+  const bool CheckNUW = Subtarget.hasGFX1250Insts();
   Register Base;
   unsigned Offset;
 
