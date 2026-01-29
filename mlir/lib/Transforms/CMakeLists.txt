@@ -42,3 +42,5 @@ add_mlir_library(MLIRTransforms
   MLIRTransformUtils
   MLIRUBDialect
   )
+
+set_target_properties(obj.MLIRTransforms PROPERTIES UNITY_BUILD_BATCH_SIZE 1)

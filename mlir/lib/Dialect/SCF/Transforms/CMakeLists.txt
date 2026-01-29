@@ -43,3 +43,4 @@ add_mlir_dialect_library(MLIRSCFTransforms
   MLIRTransforms
   MLIRTransformUtils
 )
+set_target_properties(obj.MLIRSCFTransforms PROPERTIES UNITY_BUILD_BATCH_SIZE 1)

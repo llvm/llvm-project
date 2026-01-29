@@ -29,3 +29,5 @@ target_include_directories(LLVMTableGenBasic
   INTERFACE
   $<BUILD_INTERFACE:${CMAKE_CURRENT_SOURCE_DIR}/..>
   )
+
+set_target_properties(LLVMTableGenBasic PROPERTIES UNITY_BUILD_BATCH_SIZE 1)

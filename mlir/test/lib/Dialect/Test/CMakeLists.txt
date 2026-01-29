@@ -96,6 +96,7 @@ mlir_target_link_libraries(MLIRTestDialect PUBLIC
   MLIRValueBoundsOpInterface
   MLIRBufferizationDialect
 )
+set_target_properties(MLIRTestDialect PROPERTIES UNITY_BUILD_BATCH_SIZE 1)
 
 add_mlir_translation_library(MLIRTestFromLLVMIRTranslation
   TestFromLLVMIRTranslation.cpp

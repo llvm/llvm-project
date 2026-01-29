@@ -72,3 +72,4 @@ add_mlir_library(MLIRIR
   MLIRSupport
   )
 
+set_target_properties(obj.MLIRIR PROPERTIES UNITY_BUILD_BATCH_SIZE 1)

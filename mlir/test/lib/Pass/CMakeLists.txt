@@ -28,3 +28,4 @@ target_include_directories(MLIRTestPass
   ${CMAKE_CURRENT_SOURCE_DIR}/../Dialect/Test
   ${CMAKE_CURRENT_BINARY_DIR}/../Dialect/Test
   )
+set_target_properties(MLIRTestPass PROPERTIES UNITY_BUILD_BATCH_SIZE 1)

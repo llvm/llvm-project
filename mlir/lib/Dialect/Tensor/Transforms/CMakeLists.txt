@@ -40,3 +40,4 @@ add_mlir_dialect_library(MLIRTensorTransforms
   MLIRVectorUtils
   MLIRValueBoundsOpInterface
 )
+set_target_properties(obj.MLIRTensorTransforms PROPERTIES UNITY_BUILD_BATCH_SIZE 1)

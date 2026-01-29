@@ -22,3 +22,4 @@ add_mlir_library(MLIRSupport
 
   LINK_LIBS PUBLIC
   ${LLVM_PTHREAD_LIB})
+set_target_properties(obj.MLIRSupport PROPERTIES UNITY_BUILD_BATCH_SIZE 1)

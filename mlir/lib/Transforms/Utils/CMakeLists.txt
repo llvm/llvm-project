@@ -24,3 +24,5 @@ add_mlir_library(MLIRTransformUtils
   MLIRSubsetOpInterface
   MLIRRewrite
   )
+
+set_target_properties(obj.MLIRTransformUtils PROPERTIES UNITY_BUILD_BATCH_SIZE 1)

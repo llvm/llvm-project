@@ -1313,7 +1313,9 @@ add_subdirectory(lib/Demangle)
 add_subdirectory(lib/Support)
 add_subdirectory(lib/TableGen)
 
+set(CMAKE_UNITY_BUILD_BATCH_SIZE 1)
 add_subdirectory(utils/TableGen)
+set(CMAKE_UNITY_BUILD_BATCH_SIZE 0)
 
 add_subdirectory(include)
 

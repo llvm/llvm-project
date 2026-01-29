@@ -67,6 +67,7 @@ add_mlir_dialect_library(MLIRNVVMDialect
   MLIRSideEffectInterfaces
   MLIRInferIntRangeInterface
   )
+set_target_properties(obj.MLIRNVVMDialect PROPERTIES UNITY_BUILD_BATCH_SIZE 1)
 
 add_mlir_dialect_library(MLIRROCDLDialect
   IR/ROCDLDialect.cpp

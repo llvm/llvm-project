@@ -1138,6 +1138,12 @@ static bool LookupDirect(Sema &S, LookupResult &R, const DeclContext *DC) {
   // Perform lookup into this declaration context.
   DeclContext::lookup_result DR = DC->lookup(R.getLookupName());
   for (NamedDecl *D : DR) {
+    DeclContext *DCtx = D->getDeclContext();
+    if (EnumDecl *ED = dyn_cast<EnumDecl>(DCtx))
+      DCtx = ED->getDeclContext();
+    if (NamespaceDecl *NS = dyn_cast<NamespaceDecl>(DCtx))
+      if (NS->isDisabled())
+        continue;
     if ((D = R.getAcceptableDecl(D))) {
       R.addDecl(D);
       Found = true;

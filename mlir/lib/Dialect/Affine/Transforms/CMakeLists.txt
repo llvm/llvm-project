@@ -46,3 +46,4 @@ add_mlir_dialect_library(MLIRAffineTransforms
   MLIRVectorUtils
   )
 
+set_target_properties(obj.MLIRAffineTransforms PROPERTIES UNITY_BUILD_BATCH_SIZE 1)

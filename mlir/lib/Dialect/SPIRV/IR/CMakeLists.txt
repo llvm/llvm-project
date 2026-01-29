@@ -51,3 +51,4 @@ add_mlir_dialect_library(MLIRSPIRVDialect
   MLIRTransforms
   MLIRUBDialect
 )
+set_target_properties(obj.MLIRSPIRVDialect PROPERTIES UNITY_BUILD_BATCH_SIZE 1)

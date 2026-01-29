@@ -10,3 +10,5 @@ add_llvm_component_library(LLVMDemangle
   "${LLVM_MAIN_INCLUDE_DIR}/llvm/Demangle"
 
 )
+
+set_target_properties(LLVMDemangle PROPERTIES UNITY_BUILD_BATCH_SIZE 1)

@@ -1,5 +1,6 @@
 include(LLVM-Build)
 
+set(CMAKE_UNITY_BUILD_BATCH_SIZE 1)
 # `Demangle', `Support' and `TableGen' libraries are added on the top-level
 # CMakeLists.txt
 
@@ -74,3 +75,5 @@ endif()
 # Component post-processing
 LLVMBuildResolveComponentsLink()
 LLVMBuildGenerateCFragment(OUTPUT ${LLVMCONFIGLIBRARYDEPENDENCIESINC})
+
+set(CMAKE_UNITY_BUILD_BATCH_SIZE 0)

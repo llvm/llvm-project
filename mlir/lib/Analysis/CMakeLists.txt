@@ -62,3 +62,4 @@ add_mlir_library(MLIRAnalysis
   MLIRViewLikeInterface
   )
 
+set_target_properties(obj.MLIRAnalysis PROPERTIES UNITY_BUILD_BATCH_SIZE 1)

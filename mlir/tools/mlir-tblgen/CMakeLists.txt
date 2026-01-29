@@ -40,5 +40,6 @@ add_tablegen(mlir-tblgen MLIR
 target_link_libraries(mlir-tblgen
   PRIVATE
   MLIRTblgenLib)
+set_target_properties(mlir-tblgen PROPERTIES UNITY_BUILD_BATCH_SIZE 1)
 
 mlir_check_all_link_libraries(mlir-tblgen)
