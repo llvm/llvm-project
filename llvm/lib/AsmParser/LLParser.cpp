@@ -20,6 +20,7 @@
 #include "llvm/AsmParser/SlotMapping.h"
 #include "llvm/BinaryFormat/Dwarf.h"
 #include "llvm/IR/Argument.h"
+#include "llvm/IR/Attributes.h"
 #include "llvm/IR/AutoUpgrade.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CallingConv.h"
@@ -1470,7 +1471,7 @@ bool LLParser::parseGlobal(const std::string &Name, unsigned NameID,
         return true;
     } else if (Lex.getKind() == lltok::kw_align) {
       MaybeAlign Alignment;
-      if (parseOptionalAlignment(lltok::kw_align, Alignment))
+      if (parseOptionalAlignment(Alignment))
         return true;
       if (Alignment)
         GV->setAlignment(*Alignment);
@@ -1569,7 +1570,7 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
         return true;
       Alignment = Align(Value);
     } else {
-      if (parseOptionalAlignment(lltok::kw_align, Alignment, true))
+      if (parseOptionalAlignment(Alignment, true))
         return true;
     }
     B.addAlignmentAttr(Alignment);
@@ -1606,17 +1607,31 @@ bool LLParser::parseEnumAttribute(Attribute::AttrKind Attr, AttrBuilder &B,
     return false;
   }
   case Attribute::Dereferenceable: {
-    uint64_t Bytes;
-    if (parseOptionalDerefAttrBytes(lltok::kw_dereferenceable, Bytes))
+    std::optional<uint64_t> Bytes;
+    if (parseOptionalAttrBytes(lltok::kw_dereferenceable, Bytes))
       return true;
-    B.addDereferenceableAttr(Bytes);
+    assert(Bytes.has_value());
+    B.addDereferenceableAttr(Bytes.value());
+    return false;
+  }
+  case Attribute::DeadOnReturn: {
+    std::optional<uint64_t> Bytes;
+    if (parseOptionalAttrBytes(lltok::kw_dead_on_return, Bytes,
+                               /*ErrorNoBytes=*/false))
+      return true;
+    if (Bytes.has_value()) {
+      B.addDeadOnReturnAttr(DeadOnReturnInfo(Bytes.value()));
+    } else {
+      B.addDeadOnReturnAttr(DeadOnReturnInfo());
+    }
     return false;
   }
   case Attribute::DereferenceableOrNull: {
-    uint64_t Bytes;
-    if (parseOptionalDerefAttrBytes(lltok::kw_dereferenceable_or_null, Bytes))
+    std::optional<uint64_t> Bytes;
+    if (parseOptionalAttrBytes(lltok::kw_dereferenceable_or_null, Bytes))
       return true;
-    B.addDereferenceableOrNullAttr(Bytes);
+    assert(Bytes.has_value());
+    B.addDereferenceableOrNullAttr(Bytes.value());
     return false;
   }
   case Attribute::UWTable: {
@@ -2415,11 +2430,10 @@ bool LLParser::parseOptionalFunctionMetadata(Function &F) {
 
 /// parseOptionalAlignment
 ///   ::= /* empty */
-///   ::= KW 4
-bool LLParser::parseOptionalAlignment(lltok::Kind KW, MaybeAlign &Alignment,
-                                      bool AllowParens) {
+///   ::= 'align' 4
+bool LLParser::parseOptionalAlignment(MaybeAlign &Alignment, bool AllowParens) {
   Alignment = std::nullopt;
-  if (!EatIfPresent(KW))
+  if (!EatIfPresent(lltok::kw_align))
     return false;
   LocTy AlignLoc = Lex.getLoc();
   uint64_t Value = 0;
@@ -2435,6 +2449,35 @@ bool LLParser::parseOptionalAlignment(lltok::Kind KW, MaybeAlign &Alignment,
     return true;
 
   if (HaveParens && !EatIfPresent(lltok::rparen))
+    return error(ParenLoc, "expected ')'");
+
+  if (!isPowerOf2_64(Value))
+    return error(AlignLoc, "alignment is not a power of two");
+  if (Value > Value::MaximumAlignment)
+    return error(AlignLoc, "huge alignments are not supported yet");
+  Alignment = Align(Value);
+  return false;
+}
+
+/// parseOptionalPrefAlignment
+///   ::= /* empty */
+///   ::= 'prefalign' '(' 4 ')'
+bool LLParser::parseOptionalPrefAlignment(MaybeAlign &Alignment) {
+  Alignment = std::nullopt;
+  if (!EatIfPresent(lltok::kw_prefalign))
+    return false;
+  LocTy AlignLoc = Lex.getLoc();
+  uint64_t Value = 0;
+
+  LocTy ParenLoc = Lex.getLoc();
+  if (!EatIfPresent(lltok::lparen))
+    return error(ParenLoc, "expected '('");
+
+  if (parseUInt64(Value))
+    return true;
+
+  ParenLoc = Lex.getLoc();
+  if (!EatIfPresent(lltok::rparen))
     return error(ParenLoc, "expected ')'");
 
   if (!isPowerOf2_64(Value))
@@ -2469,31 +2512,38 @@ bool LLParser::parseOptionalCodeModel(CodeModel::Model &model) {
   return false;
 }
 
-/// parseOptionalDerefAttrBytes
+/// parseOptionalAttrBytes
 ///   ::= /* empty */
 ///   ::= AttrKind '(' 4 ')'
 ///
-/// where AttrKind is either 'dereferenceable' or 'dereferenceable_or_null'.
-bool LLParser::parseOptionalDerefAttrBytes(lltok::Kind AttrKind,
-                                           uint64_t &Bytes) {
+/// where AttrKind is either 'dereferenceable', 'dereferenceable_or_null', or
+/// 'dead_on_return'
+bool LLParser::parseOptionalAttrBytes(lltok::Kind AttrKind,
+                                      std::optional<uint64_t> &Bytes,
+                                      bool ErrorNoBytes) {
   assert((AttrKind == lltok::kw_dereferenceable ||
-          AttrKind == lltok::kw_dereferenceable_or_null) &&
+          AttrKind == lltok::kw_dereferenceable_or_null ||
+          AttrKind == lltok::kw_dead_on_return) &&
          "contract!");
 
   Bytes = 0;
   if (!EatIfPresent(AttrKind))
     return false;
   LocTy ParenLoc = Lex.getLoc();
-  if (!EatIfPresent(lltok::lparen))
-    return error(ParenLoc, "expected '('");
+  if (!EatIfPresent(lltok::lparen)) {
+    if (ErrorNoBytes)
+      return error(ParenLoc, "expected '('");
+    Bytes = std::nullopt;
+    return false;
+  }
   LocTy DerefLoc = Lex.getLoc();
-  if (parseUInt64(Bytes))
+  if (parseUInt64(Bytes.value()))
     return true;
   ParenLoc = Lex.getLoc();
   if (!EatIfPresent(lltok::rparen))
     return error(ParenLoc, "expected ')'");
-  if (!Bytes)
-    return error(DerefLoc, "dereferenceable bytes must be non-zero");
+  if (!Bytes.value())
+    return error(DerefLoc, "byte count specified must be non-zero");
   return false;
 }
 
@@ -2733,7 +2783,7 @@ bool LLParser::parseOptionalCommaAlign(MaybeAlign &Alignment,
     if (Lex.getKind() != lltok::kw_align)
       return error(Lex.getLoc(), "expected metadata or 'align'");
 
-    if (parseOptionalAlignment(lltok::kw_align, Alignment))
+    if (parseOptionalAlignment(Alignment))
       return true;
   }
 
@@ -6820,8 +6870,8 @@ bool LLParser::parseFunctionHeader(Function *&Fn, bool IsDefine,
       (EatIfPresent(lltok::kw_section) && parseStringConstant(Section)) ||
       (EatIfPresent(lltok::kw_partition) && parseStringConstant(Partition)) ||
       parseOptionalComdat(FunctionName, C) ||
-      parseOptionalAlignment(lltok::kw_align, Alignment) ||
-      parseOptionalAlignment(lltok::kw_prefalign, PrefAlignment) ||
+      parseOptionalAlignment(Alignment) ||
+      parseOptionalPrefAlignment(PrefAlignment) ||
       (EatIfPresent(lltok::kw_gc) && parseStringConstant(GC)) ||
       (EatIfPresent(lltok::kw_prefix) && parseGlobalTypeAndValue(Prefix)) ||
       (EatIfPresent(lltok::kw_prologue) && parseGlobalTypeAndValue(Prologue)) ||
@@ -8559,7 +8609,7 @@ int LLParser::parseAlloc(Instruction *&Inst, PerFunctionState &PFS) {
   bool AteExtraComma = false;
   if (EatIfPresent(lltok::comma)) {
     if (Lex.getKind() == lltok::kw_align) {
-      if (parseOptionalAlignment(lltok::kw_align, Alignment))
+      if (parseOptionalAlignment(Alignment))
         return true;
       if (parseOptionalCommaAddrSpace(AddrSpace, ASLoc, AteExtraComma))
         return true;
@@ -8574,7 +8624,7 @@ int LLParser::parseAlloc(Instruction *&Inst, PerFunctionState &PFS) {
         return true;
       if (EatIfPresent(lltok::comma)) {
         if (Lex.getKind() == lltok::kw_align) {
-          if (parseOptionalAlignment(lltok::kw_align, Alignment))
+          if (parseOptionalAlignment(Alignment))
             return true;
           if (parseOptionalCommaAddrSpace(AddrSpace, ASLoc, AteExtraComma))
             return true;
@@ -10168,6 +10218,7 @@ bool LLParser::parseOptionalCalls(
         if (parseToken(lltok::colon, "expected ':'") || parseHotness(Hotness))
           return true;
         break;
+      // Deprecated, keep in order to support old files.
       case lltok::kw_relbf:
         Lex.Lex();
         if (parseToken(lltok::colon, "expected ':'") || parseUInt32(RelBF))
@@ -10182,15 +10233,13 @@ bool LLParser::parseOptionalCalls(
         return error(Lex.getLoc(), "expected hotness, relbf, or tail");
       }
     }
-    if (Hotness != CalleeInfo::HotnessType::Unknown && RelBF > 0)
-      return tokError("Expected only one of hotness or relbf");
     // Keep track of the Call array index needing a forward reference.
     // We will save the location of the ValueInfo needing an update, but
     // can only do so once the std::vector is finalized.
     if (VI.getRef() == FwdVIRef)
       IdToIndexMap[GVId].push_back(std::make_pair(Calls.size(), Loc));
     Calls.push_back(
-        FunctionSummary::EdgeTy{VI, CalleeInfo(Hotness, HasTailCall, RelBF)});
+        FunctionSummary::EdgeTy{VI, CalleeInfo(Hotness, HasTailCall)});
 
     if (parseToken(lltok::rparen, "expected ')' in call"))
       return true;

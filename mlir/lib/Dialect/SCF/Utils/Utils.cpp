@@ -25,6 +25,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/DebugLog.h"
 #include <cstdint>
 
@@ -91,9 +92,9 @@ SmallVector<scf::ForOp> mlir::replaceLoopNestWithNewYields(
     newLoopNest = replaceLoopNestWithNewYields(rewriter, loopNest.drop_front(),
                                                innerNewBBArgs, newYieldValuesFn,
                                                replaceIterOperandsUsesInLoop);
-    return llvm::to_vector(llvm::map_range(
+    return llvm::map_to_vector(
         newLoopNest.front().getResults().take_back(innerNewBBArgs.size()),
-        [](OpResult r) -> Value { return r; }));
+        [](OpResult r) -> Value { return r; });
   };
   scf::ForOp outerMostLoop =
       cast<scf::ForOp>(*loopNest.front().replaceWithAdditionalYields(
@@ -396,9 +397,12 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
       return UnrolledLoopInfo{forOp, std::nullopt};
     }
 
+    // TODO(#178506): This may overflow for large trip counts. Should use
+    // uint64_t.
     int64_t tripCountEvenMultiple =
-        constTripCount->getSExtValue() -
-        (constTripCount->getSExtValue() % unrollFactor);
+        constTripCount->getZExtValue() -
+        (constTripCount->getZExtValue() % unrollFactor);
+    // TODO(#178506): This may overflow when computing upperBoundUnrolledCst.
     int64_t upperBoundUnrolledCst = lbCst + tripCountEvenMultiple * stepCst;
     int64_t stepUnrolledCst = stepCst * unrollFactor;
 
@@ -500,9 +504,9 @@ LogicalResult mlir::loopUnrollFull(scf::ForOp forOp) {
   const APInt &tripCount = *mayBeConstantTripCount;
   if (tripCount.isZero())
     return success();
-  if (tripCount.getSExtValue() == 1)
+  if (tripCount.getZExtValue() == 1)
     return forOp.promoteIfSingleIteration(rewriter);
-  return loopUnrollByFactor(forOp, tripCount.getSExtValue());
+  return loopUnrollByFactor(forOp, tripCount.getZExtValue());
 }
 
 /// Check if bounds of all inner loops are defined outside of `forOp`
@@ -553,7 +557,7 @@ LogicalResult mlir::loopUnrollJamByFactor(scf::ForOp forOp,
               "trip "
               "count";
     unrollJamFactor = tripCount->getZExtValue();
-  } else if (tripCount->getSExtValue() % unrollJamFactor != 0) {
+  } else if (tripCount->getZExtValue() % unrollJamFactor != 0) {
     LDBG() << "failed to unroll and jam: unsupported trip count that is not a "
               "multiple of unroll jam factor";
     return failure();
@@ -1566,13 +1570,16 @@ mlir::getConstLoopTripCounts(mlir::LoopLikeOpInterface loopOp) {
   std::optional<SmallVector<OpFoldResult>> steps = loopOp.getLoopSteps();
   if (!loBnds || !upBnds || !steps)
     return {};
+  // TODO(#178506): The result should be SmallVector<uint64_t> and use uint64_t
+  // for trip counts.
   llvm::SmallVector<int64_t> tripCounts;
   for (auto [lb, ub, step] : llvm::zip(*loBnds, *upBnds, *steps)) {
+    // TODO(#178506): Signedness is not handled correctly here.
     std::optional<llvm::APInt> numIter = constantTripCount(
         lb, ub, step, /*isSigned=*/true, scf::computeUbMinusLb);
     if (!numIter)
       return {};
-    tripCounts.push_back(numIter->getSExtValue());
+    tripCounts.push_back(numIter->getZExtValue());
   }
   return tripCounts;
 }
