@@ -663,7 +663,6 @@ void SafeStack::moveDynamicAllocasToUnsafeStack(
     IRBuilder<> IRB(AI);
 
     // Compute the new SP value (after AI).
-    Type *Ty = AI->getAllocatedType();
     Value *Size = IRB.CreateAllocationSize(IntPtrTy, AI);
 
     Value *SP = IRB.CreatePtrToInt(IRB.CreateLoad(StackPtrTy, UnsafeStackPtr),
