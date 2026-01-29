@@ -170,6 +170,30 @@ enum EdgeKind_loongarch : Edge::Kind {
   ///
   PageOffset12,
 
+  /// The upper 20 bits of the offset from the fixup to the target.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- (Target + Addend - Fixup + 0x800) >> 12 : int20
+  ///
+  /// Notes:
+  ///   For PCADDU12I fixups.
+  ///
+  /// Errors:
+  ///   - The result of the fixup expression must fit into an int20 otherwise an
+  ///     out-of-range error will be returned.
+  ///
+  PCAddHi20,
+
+  /// The lower 12 bits of the offset from the paired PCADDU12I (the initial
+  /// target) to the final target it points to.
+  ///
+  /// Typically used to fix up ADDI/LD_W/LD_D immediates.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- (FinalTarget - InitialTarget) & 0xfff : int12
+  ///
+  PCAddLo12,
+
   /// A GOT entry getter/constructor, transformed to Page20 pointing at the GOT
   /// entry for the original target.
   ///
@@ -205,6 +229,49 @@ enum EdgeKind_loongarch : Edge::Kind {
   ///   NONE
   ///
   RequestGOTAndTransformToPageOffset12,
+
+  /// A GOT entry getter/constructor, transformed to PCAddHi20 pointing at the
+  /// GOT entry for the original target.
+  ///
+  /// Indicates that this edge should be transformed into a PCAddHi20 targeting
+  /// the GOT entry for the edge's current target, maintaining the same addend.
+  /// A GOT entry for the target should be created if one does not already
+  /// exist.
+  ///
+  /// Edges of this kind are usually handled by a GOT/PLT builder pass inserted
+  /// by default.
+  ///
+  /// Fixup expression:
+  ///   NONE
+  ///
+  /// Errors:
+  ///   - *ASSERTION* Failure to handle edges of this kind prior to the fixup
+  ///     phase will result in an assert/unreachable during the fixup phase.
+  ///
+  RequestGOTAndTransformToPCAddHi20,
+
+  /// A 30-bit PC-relative call.
+  ///
+  /// Represents a PC-relative call to a target within [-2G, +2G)
+  /// The target must be 4-byte aligned. For adjacent pcaddu12i+jirl
+  /// instruction pairs.
+  ///
+  /// Fixup expression:
+  ///   Fixup <- (Target - Fixup + Addend) >> 2 : int30
+  ///
+  /// Notes:
+  ///   The '30' in the name refers to the number operand bits and follows the
+  /// naming convention used by the corresponding ELF relocations. Since the low
+  /// two bits must be zero (because of the 4-byte alignment of the target) the
+  /// operand is effectively a signed 32-bit number.
+  ///
+  /// Errors:
+  ///   - The result of the unshifted part of the fixup expression must be
+  ///     4-byte aligned otherwise an alignment error will be returned.
+  ///   - The result of the fixup expression must fit into an int30 otherwise an
+  ///     out-of-range error will be returned.
+  ///
+  Call30PCRel,
 
   /// A 36-bit PC-relative call.
   ///
@@ -380,9 +447,14 @@ inline Symbol &createAnonymousPointerJumpStub(LinkGraph &G,
                                               Symbol &PointerSymbol) {
   Block &StubContentBlock = G.createContentBlock(
       StubSection, getStubBlockContent(G), orc::ExecutorAddr(), 4, 0);
-  StubContentBlock.addEdge(Page20, 0, PointerSymbol, 0);
-  StubContentBlock.addEdge(PageOffset12, 4, PointerSymbol, 0);
-  return G.addAnonymousSymbol(StubContentBlock, 0, StubEntrySize, true, false);
+  Symbol &StubSymbol =
+      G.addAnonymousSymbol(StubContentBlock, 0, StubEntrySize, true, false);
+  StubContentBlock.addEdge(G.getPointerSize() == 8 ? Page20 : PCAddHi20, 0,
+                           PointerSymbol, 0);
+  StubContentBlock.addEdge(
+      G.getPointerSize() == 8 ? PageOffset12 : PCAddLo12, 4,
+      G.getPointerSize() == 8 ? PointerSymbol : StubSymbol, 0);
+  return StubSymbol;
 }
 
 /// Global Offset Table Builder.
@@ -398,6 +470,9 @@ public:
       break;
     case RequestGOTAndTransformToPageOffset12:
       KindToSet = PageOffset12;
+      break;
+    case RequestGOTAndTransformToPCAddHi20:
+      KindToSet = PCAddHi20;
       break;
     default:
       return false;
@@ -437,7 +512,8 @@ public:
   static StringRef getSectionName() { return "$__STUBS"; }
 
   bool visitEdge(LinkGraph &G, Block *B, Edge &E) {
-    if ((E.getKind() == Branch26PCRel || E.getKind() == Call36PCRel) &&
+    if ((E.getKind() == Branch26PCRel || E.getKind() == Call36PCRel ||
+         E.getKind() == Call30PCRel) &&
         !E.getTarget().isDefined()) {
       DEBUG_WITH_TYPE("jitlink", {
         dbgs() << "  Fixing " << G.getEdgeKindName(E.getKind()) << " edge at "

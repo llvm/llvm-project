@@ -339,7 +339,7 @@ AArch64LegalizerInfo::AArch64LegalizerInfo(const AArch64Subtarget &ST)
       .moreElementsToNextPow2(0)
       .scalarizeIf(scalarOrEltWiderThan(0, 64), 0);
 
-  getActionDefinitionsBuilder(G_CTLZ)
+  getActionDefinitionsBuilder({G_CTLZ, G_CTLS})
       .legalFor({{s32, s32},
                  {s64, s64},
                  {v8s8, v8s8},
@@ -1879,7 +1879,7 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     return LowerBinOp(TargetOpcode::G_SAVGCEIL);
   case Intrinsic::aarch64_neon_sqshrn: {
     if (!MRI.getType(MI.getOperand(0).getReg()).isVector())
-      return false;
+      return true;
     // Create right shift instruction. Store the output register in Shr.
     auto Shr = MIB.buildInstr(AArch64::G_VASHR,
                               {MRI.getType(MI.getOperand(2).getReg())},
@@ -1891,7 +1891,7 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   }
   case Intrinsic::aarch64_neon_sqshrun: {
     if (!MRI.getType(MI.getOperand(0).getReg()).isVector())
-      return false;
+      return true;
     // Create right shift instruction. Store the output register in Shr.
     auto Shr = MIB.buildInstr(AArch64::G_VASHR,
                               {MRI.getType(MI.getOperand(2).getReg())},
@@ -1903,7 +1903,7 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   }
   case Intrinsic::aarch64_neon_sqrshrn: {
     if (!MRI.getType(MI.getOperand(0).getReg()).isVector())
-      return false;
+      return true;
     // Create right shift instruction. Store the output register in Shr.
     auto Shr = MIB.buildInstr(AArch64::G_SRSHR_I,
                               {MRI.getType(MI.getOperand(2).getReg())},
@@ -1915,7 +1915,7 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   }
   case Intrinsic::aarch64_neon_sqrshrun: {
     if (!MRI.getType(MI.getOperand(0).getReg()).isVector())
-      return false;
+      return true;
     // Create right shift instruction. Store the output register in Shr.
     auto Shr = MIB.buildInstr(AArch64::G_SRSHR_I,
                               {MRI.getType(MI.getOperand(2).getReg())},
@@ -1927,7 +1927,7 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   }
   case Intrinsic::aarch64_neon_uqrshrn: {
     if (!MRI.getType(MI.getOperand(0).getReg()).isVector())
-      return false;
+      return true;
     // Create right shift instruction. Store the output register in Shr.
     auto Shr = MIB.buildInstr(AArch64::G_URSHR_I,
                               {MRI.getType(MI.getOperand(2).getReg())},
@@ -1939,7 +1939,7 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
   }
   case Intrinsic::aarch64_neon_uqshrn: {
     if (!MRI.getType(MI.getOperand(0).getReg()).isVector())
-      return false;
+      return true;
     // Create right shift instruction. Store the output register in Shr.
     auto Shr = MIB.buildInstr(AArch64::G_VLSHR,
                               {MRI.getType(MI.getOperand(2).getReg())},

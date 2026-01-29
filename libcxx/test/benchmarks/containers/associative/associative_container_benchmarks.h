@@ -298,11 +298,20 @@ void associative_container_benchmarks(std::string container) {
     }
   });
 
-  bench("insert(value) (new value)", [=](auto& st) {
+  auto insert_new_value_bench = [=](bool bench_end_iter, auto& st) {
     const std::size_t size = st.range(0);
     std::vector<Value> in  = make_value_types(generate_unique_keys(size + 1));
-    Value to_insert        = in.back();
-    in.pop_back();
+    auto skipped_val       = bench_end_iter ? in.size() - 1 : in.size() / 2;
+    Value to_insert        = in[skipped_val];
+    { // Remove the element
+      std::vector<Value> tmp;
+      tmp.reserve(in.size() - 1);
+      for (size_t i = 0; i != in.size(); ++i)
+        if (i != skipped_val)
+          tmp.emplace_back(in[i]);
+      in = std::move(tmp);
+    }
+
     std::vector<Container> c(BatchSize, Container(in.begin(), in.end()));
 
     while (st.KeepRunningBatch(BatchSize)) {
@@ -319,7 +328,9 @@ void associative_container_benchmarks(std::string container) {
       }
       st.ResumeTiming();
     }
-  });
+  };
+  bench("insert(value) (new value, end)", [=](auto& state) { insert_new_value_bench(true, state); });
+  bench("insert(value) (new value, middle)", [=](auto& state) { insert_new_value_bench(false, state); });
 
   if constexpr (is_map_like && !is_multi_key_container) {
     bench_non_empty("insert_or_assign(key, value) (already present)", [=](auto& st) {
@@ -340,11 +351,20 @@ void associative_container_benchmarks(std::string container) {
       }
     });
 
-    bench("insert_or_assign(key, value) (new value)", [=](auto& st) {
+    auto insert_or_assign_bench = [=](bool bench_end_iter, auto& st) {
       const std::size_t size = st.range(0);
       std::vector<Value> in  = make_value_types(generate_unique_keys(size + 1));
-      Value to_insert        = in.back();
-      in.pop_back();
+      auto skipped_val       = bench_end_iter ? in.size() - 1 : in.size() / 2;
+      Value to_insert        = in[skipped_val];
+      { // Remove the element
+        std::vector<Value> tmp;
+        tmp.reserve(in.size() - 1);
+        for (size_t i = 0; i != in.size(); ++i)
+          if (i != skipped_val)
+            tmp.emplace_back(in[i]);
+        in = std::move(tmp);
+      }
+
       std::vector<Container> c(BatchSize, Container(in.begin(), in.end()));
 
       while (st.KeepRunningBatch(BatchSize)) {
@@ -361,7 +381,10 @@ void associative_container_benchmarks(std::string container) {
         }
         st.ResumeTiming();
       }
-    });
+    };
+    bench("insert_or_assign(key, value) (new value, end)", [=](auto& state) { insert_or_assign_bench(true, state); });
+    bench("insert_or_assign(key, value) (new value, middle)",
+          [=](auto& state) { insert_or_assign_bench(false, state); });
   }
 
   // The insert(hint, ...) methods are only relevant for ordered containers, and we lack
@@ -441,16 +464,23 @@ void associative_container_benchmarks(std::string container) {
     bench("insert(hint, value) (bad hint, middle)", [=](auto& state) { insert_bad_hint_bench(false, state); });
   }
 
-  bench("insert(iterator, iterator) (all new keys)", [=](auto& st) {
+  auto insert_iter_iter_bench = [=](bool bench_end_iter, auto& st) {
     const std::size_t size = st.range(0);
     std::vector<Value> in  = make_value_types(generate_unique_keys(size + (size / 10)));
+    auto skip_start        = bench_end_iter ? size : size / 2;
 
-    // Populate a container with a small number of elements, that's what containers will start with.
     std::vector<Value> small;
-    for (std::size_t i = 0; i != (size / 10); ++i) {
-      small.push_back(in.back());
-      in.pop_back();
+    small.reserve(size / 10);
+    { // Split the range
+      std::vector<Value> tmp;
+      tmp.reserve(size);
+      std::copy_n(in.begin(), skip_start, std::back_inserter(tmp));
+      std::copy_n(in.begin() + skip_start, size / 10, std::back_inserter(small));
+      std::copy(in.begin() + skip_start + size / 10, in.end(), std::back_inserter(tmp));
+
+      in = std::move(tmp);
     }
+
     Container c(small.begin(), small.end());
 
     for ([[maybe_unused]] auto _ : st) {
@@ -462,7 +492,10 @@ void associative_container_benchmarks(std::string container) {
       c = Container(small.begin(), small.end());
       st.ResumeTiming();
     }
-  });
+  };
+  bench("insert(iterator, iterator) (all new keys, end)", [&](auto& state) { insert_iter_iter_bench(true, state); });
+  bench("insert(iterator, iterator) (all new keys, middle)",
+        [&](auto& state) { insert_iter_iter_bench(false, state); });
 
   bench("insert(iterator, iterator) (half new keys)", [=](auto& st) {
     const std::size_t size = st.range(0);
@@ -554,14 +587,22 @@ void associative_container_benchmarks(std::string container) {
     }
   });
 
-  bench("erase(key) (non-existent)", [=](auto& st) {
+  auto erase_key_non_existent_bench = [=](bool bench_end_iter, auto& st) {
     const std::size_t size = st.range(0);
     std::vector<Value> in  = make_value_types(generate_unique_keys(size + BatchSize));
     std::vector<Key> keys;
-    for (std::size_t i = 0; i != BatchSize; ++i) {
-      keys.push_back(get_key(in.back()));
-      in.pop_back();
+
+    auto skip_start = bench_end_iter ? size : size / 2;
+    { // Extract the keys
+      std::vector<Value> tmp;
+      tmp.reserve(size);
+      std::copy_n(in.begin(), skip_start, std::back_inserter(tmp));
+      std::transform(in.begin() + skip_start, in.begin() + skip_start + BatchSize, std::back_inserter(keys), get_key);
+      std::copy(in.begin() + skip_start + BatchSize, in.end(), std::back_inserter(tmp));
+
+      in = std::move(tmp);
     }
+
     Container c(in.begin(), in.end());
 
     while (st.KeepRunningBatch(BatchSize)) {
@@ -574,7 +615,9 @@ void associative_container_benchmarks(std::string container) {
 
       // no cleanup required because we erased a non-existent element
     }
-  });
+  };
+  bench("erase(key) (non-existent, end)", [=](auto& state) { erase_key_non_existent_bench(true, state); });
+  bench("erase(key) (non-existent, middle)", [=](auto& state) { erase_key_non_existent_bench(false, state); });
 
   bench_non_empty("erase(iterator)", [=](auto& st) {
     const std::size_t size = st.range(0);

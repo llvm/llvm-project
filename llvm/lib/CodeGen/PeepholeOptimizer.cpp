@@ -558,9 +558,7 @@ class PeepholeOptimizerLegacy : public MachineFunctionPass {
 public:
   static char ID; // Pass identification
 
-  PeepholeOptimizerLegacy() : MachineFunctionPass(ID) {
-    initializePeepholeOptimizerLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  PeepholeOptimizerLegacy() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 
@@ -921,7 +919,7 @@ bool PeepholeOptimizer::optimizeExtInstr(
       Register NewVR = MRI->createVirtualRegister(RC);
       BuildMI(*UseMBB, UseMI, UseMI->getDebugLoc(),
               TII->get(TargetOpcode::COPY), NewVR)
-          .addReg(DstReg, 0, SubIdx);
+          .addReg(DstReg, {}, SubIdx);
       if (UseSrcSubIdx)
         UseMO->setSubReg(0);
 
@@ -1106,7 +1104,7 @@ static MachineInstr &insertPHI(MachineRegisterInfo &MRI,
 
   unsigned MBBOpIdx = 2;
   for (const RegSubRegPair &RegPair : SrcRegs) {
-    MIB.addReg(RegPair.Reg, 0, RegPair.SubReg);
+    MIB.addReg(RegPair.Reg, {}, RegPair.SubReg);
     MIB.addMBB(OrigPHI.getOperand(MBBOpIdx).getMBB());
     // Since we're extended the lifetime of RegPair.Reg, clear the
     // kill flags to account for that and make RegPair.Reg reaches
@@ -1302,7 +1300,7 @@ MachineInstr &PeepholeOptimizer::rewriteSource(MachineInstr &CopyLike,
   MachineInstr *NewCopy =
       BuildMI(*CopyLike.getParent(), &CopyLike, CopyLike.getDebugLoc(),
               TII->get(TargetOpcode::COPY), NewVReg)
-          .addReg(NewSrc.Reg, 0, NewSrc.SubReg);
+          .addReg(NewSrc.Reg, {}, NewSrc.SubReg);
 
   if (Def.SubReg) {
     NewCopy->getOperand(0).setSubReg(Def.SubReg);

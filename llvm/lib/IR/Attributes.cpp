@@ -288,6 +288,11 @@ Attribute Attribute::getWithNoFPClass(LLVMContext &Context,
   return get(Context, NoFPClass, ClassMask);
 }
 
+Attribute Attribute::getWithDeadOnReturnInfo(LLVMContext &Context,
+                                             DeadOnReturnInfo DI) {
+  return get(Context, DeadOnReturn, DI.toIntValue());
+}
+
 Attribute Attribute::getWithCaptureInfo(LLVMContext &Context, CaptureInfo CI) {
   return get(Context, Captures, CI.toIntValue());
 }
@@ -451,6 +456,13 @@ uint64_t Attribute::getDereferenceableBytes() const {
   return pImpl->getValueAsInt();
 }
 
+DeadOnReturnInfo Attribute::getDeadOnReturnInfo() const {
+  assert(hasAttribute(Attribute::DeadOnReturn) &&
+         "Trying to get dead_on_return bytes from"
+         "a parameter without such an attribute!");
+  return DeadOnReturnInfo::createFromIntValue(pImpl->getValueAsInt());
+}
+
 uint64_t Attribute::getDereferenceableOrNullBytes() const {
   assert(hasAttribute(Attribute::DereferenceableOrNull) &&
          "Trying to get dereferenceable bytes from "
@@ -572,6 +584,13 @@ std::string Attribute::getAsString(bool InAttrGrp) const {
 
   if (hasAttribute(Attribute::DereferenceableOrNull))
     return AttrWithBytesToString("dereferenceable_or_null");
+
+  if (hasAttribute(Attribute::DeadOnReturn)) {
+    uint64_t DeadBytes = getValueAsInt();
+    if (DeadBytes == std::numeric_limits<uint64_t>::max())
+      return "dead_on_return";
+    return AttrWithBytesToString("dead_on_return");
+  }
 
   if (hasAttribute(Attribute::AllocSize)) {
     unsigned ElemSize;
@@ -1156,6 +1175,10 @@ uint64_t AttributeSet::getDereferenceableBytes() const {
   return SetNode ? SetNode->getDereferenceableBytes() : 0;
 }
 
+DeadOnReturnInfo AttributeSet::getDeadOnReturnInfo() const {
+  return SetNode ? SetNode->getDeadOnReturnInfo() : DeadOnReturnInfo(0);
+}
+
 uint64_t AttributeSet::getDereferenceableOrNullBytes() const {
   return SetNode ? SetNode->getDereferenceableOrNullBytes() : 0;
 }
@@ -1357,6 +1380,12 @@ Type *AttributeSetNode::getAttributeType(Attribute::AttrKind Kind) const {
 uint64_t AttributeSetNode::getDereferenceableBytes() const {
   if (auto A = findEnumAttribute(Attribute::Dereferenceable))
     return A->getDereferenceableBytes();
+  return 0;
+}
+
+DeadOnReturnInfo AttributeSetNode::getDeadOnReturnInfo() const {
+  if (auto A = findEnumAttribute(Attribute::DeadOnReturn))
+    return A->getDeadOnReturnInfo();
   return 0;
 }
 
@@ -1977,6 +2006,10 @@ uint64_t AttributeList::getRetDereferenceableOrNullBytes() const {
   return getRetAttrs().getDereferenceableOrNullBytes();
 }
 
+DeadOnReturnInfo AttributeList::getDeadOnReturnInfo(unsigned Index) const {
+  return getParamAttrs(Index).getDeadOnReturnInfo();
+}
+
 uint64_t
 AttributeList::getParamDereferenceableOrNullBytes(unsigned Index) const {
   return getParamAttrs(Index).getDereferenceableOrNullBytes();
@@ -2199,6 +2232,13 @@ AttrBuilder &AttrBuilder::addDereferenceableAttr(uint64_t Bytes) {
   return addRawIntAttr(Attribute::Dereferenceable, Bytes);
 }
 
+AttrBuilder &AttrBuilder::addDeadOnReturnAttr(DeadOnReturnInfo Info) {
+  if (Info.isZeroSized())
+    return *this;
+
+  return addRawIntAttr(Attribute::DeadOnReturn, Info.toIntValue());
+}
+
 AttrBuilder &AttrBuilder::addDereferenceableOrNullAttr(uint64_t Bytes) {
   if (Bytes == 0)
     return *this;
@@ -2336,6 +2376,11 @@ AttrBuilder &AttrBuilder::addFromEquivalentMetadata(const Instruction &I) {
 
   if (const MDNode *Range = I.getMetadata(LLVMContext::MD_range))
     addRangeAttr(getConstantRangeFromMetadata(*Range));
+
+  if (const MDNode *NoFPClass = I.getMetadata(LLVMContext::MD_nofpclass)) {
+    ConstantInt *CI = mdconst::extract<ConstantInt>(NoFPClass->getOperand(0));
+    addNoFPClassAttr(static_cast<FPClassTest>(CI->getZExtValue()));
+  }
 
   return *this;
 }

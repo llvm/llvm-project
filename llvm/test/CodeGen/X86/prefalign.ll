@@ -14,7 +14,7 @@ define void @f1() {
 ; CHECK: .globl f2
 ; CHECK-NOT: .prefalign
 ; CHECK-NOT: .p2align
-define void @f2() prefalign 1 {
+define void @f2() prefalign(1) {
   ret void
 }
 
@@ -22,6 +22,6 @@ define void @f2() prefalign 1 {
 ; NOFS-NEXT: .p2align 2
 ; FS-NEXT: .p2align 1
 ; FS-NEXT: .prefalign 4
-define void @f3() align 2 prefalign 4 {
+define void @f3() align 2 prefalign(4) {
   ret void
 }
