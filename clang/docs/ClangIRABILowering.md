@@ -331,7 +331,7 @@ mlir::Type getArgType(unsigned i);
 
 > **TableGen Syntax Note**: `InterfaceMethod<description, return_type, method_name, parameters>` defines a polymorphic method that types can implement. `(ins)` means no parameters. This generates C++ virtual methods that each type overrides.
 
-```tablegen
+```cpp
 def ABITypeInterface : TypeInterface<"ABITypeInterface"> {
   let methods = [
     // Basic type queries
