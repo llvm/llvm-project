@@ -26,9 +26,7 @@
 #include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "mlir/Transforms/RegionUtils.h"
-
 #include "llvm/ADT/SmallVectorExtras.h"
-
 #include <optional>
 #include <utility>
 

@@ -20,7 +20,6 @@
 #include "mlir/IR/Value.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Transforms/InliningUtils.h"
-
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/MapVector.h"
 #include "llvm/ADT/STLExtras.h"

@@ -22,12 +22,9 @@
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Transforms/InliningUtils.h"
-
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
-#include "llvm/Support/raw_ostream.h"
-
 #include "llvm/Support/raw_ostream.h"
 #include <utility>
 

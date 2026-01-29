@@ -27,7 +27,6 @@
 #include "mlir/IR/IntegerSet.h"
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 #include "llvm/ADT/SmallVectorExtras.h"
-
 #include <optional>
 
 #define DEBUG_TYPE "affine-utils"

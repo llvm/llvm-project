@@ -23,10 +23,8 @@
 #include "mlir/IR/BuiltinTypeInterfaces.h"
 #include "mlir/Interfaces/TilingInterface.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
-
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/Debug.h"
-
 #include <optional>
 
 #define DEBUG_TYPE "linalg-tiling-interface-impl"

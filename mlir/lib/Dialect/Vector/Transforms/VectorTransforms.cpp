@@ -31,7 +31,6 @@
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/FormatVariadic.h"
 
-#include "llvm/Support/FormatVariadic.h"
 #include <cassert>
 #include <cstdint>
 #include <functional>

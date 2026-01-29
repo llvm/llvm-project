@@ -12,7 +12,6 @@
 #include "mlir/IR/Matchers.h"
 #include "mlir/Interfaces/DestinationStyleOpInterface.h"
 #include "mlir/Interfaces/ViewLikeInterface.h"
-
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/Debug.h"

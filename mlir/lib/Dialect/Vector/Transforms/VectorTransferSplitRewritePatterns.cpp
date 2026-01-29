@@ -25,7 +25,12 @@
 #include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/VectorInterfaces.h"
 
+#include "mlir/Dialect/Vector/Transforms/VectorTransforms.h"
+#include "mlir/IR/PatternMatch.h"
+#include "mlir/Interfaces/VectorInterfaces.h"
+
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 #define DEBUG_TYPE "vector-transfer-split"
 

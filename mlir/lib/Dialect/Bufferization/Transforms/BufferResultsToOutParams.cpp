@@ -13,8 +13,6 @@
 #include "mlir/Dialect/MemRef/IR/MemRef.h"
 #include "mlir/IR/Operation.h"
 
-#include "llvm/ADT/SmallVectorExtras.h"
-
 namespace mlir {
 namespace bufferization {
 #define GEN_PASS_DEF_BUFFERRESULTSTOOUTPARAMSPASS
