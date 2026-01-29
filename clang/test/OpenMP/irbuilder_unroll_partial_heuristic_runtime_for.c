@@ -167,7 +167,7 @@ void unroll_partial_heuristic_runtime_for(int n, float *a, float *b, float *c, f
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@__captured_stmt
-// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[DISTANCE:%.*]], ptr noalias noundef [[__CONTEXT:%.*]]) #[[ATTR1:[0-9]+]] {
+// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[DISTANCE:%.*]], ptr noalias noundef [[__CONTEXT:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[DISTANCE_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[__CONTEXT_ADDR:%.*]] = alloca ptr, align 8
@@ -210,7 +210,7 @@ void unroll_partial_heuristic_runtime_for(int n, float *a, float *b, float *c, f
 //
 //
 // CHECK-LABEL: define {{[^@]+}}@__captured_stmt.1
-// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[LOOPVAR:%.*]], i32 noundef [[LOGICAL:%.*]], ptr noalias noundef [[__CONTEXT:%.*]]) #[[ATTR1]] {
+// CHECK-SAME: (ptr noundef nonnull align 4 dereferenceable(4) [[LOOPVAR:%.*]], i32 noundef [[LOGICAL:%.*]], ptr noalias noundef [[__CONTEXT:%.*]]) #[[ATTR0]] {
 // CHECK-NEXT:  entry:
 // CHECK-NEXT:    [[LOOPVAR_ADDR:%.*]] = alloca ptr, align 8
 // CHECK-NEXT:    [[LOGICAL_ADDR:%.*]] = alloca i32, align 4

@@ -1180,7 +1180,7 @@ void test_transparent()
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@__cxx_global_var_init
-// CHECK1-SAME: () #[[ATTR9:[0-9]+]] section "__TEXT,__StaticInit,regular,pure_instructions" {
+// CHECK1-SAME: () #[[ATTR7]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    call void @_ZN2S1C1Ev(ptr noundef nonnull align 4 dereferenceable(4) @s1)
 // CHECK1-NEXT:    ret void
@@ -1373,7 +1373,7 @@ void test_transparent()
 //
 //
 // CHECK1-LABEL: define {{[^@]+}}@_GLOBAL__sub_I_task_codegen.cpp
-// CHECK1-SAME: () #[[ATTR9]] section "__TEXT,__StaticInit,regular,pure_instructions" {
+// CHECK1-SAME: () #[[ATTR7]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK1-NEXT:  entry:
 // CHECK1-NEXT:    call void @__cxx_global_var_init()
 // CHECK1-NEXT:    ret void
@@ -2382,7 +2382,7 @@ void test_transparent()
 //
 //
 // CHECK1-51-LABEL: define {{[^@]+}}@__cxx_global_var_init
-// CHECK1-51-SAME: () #[[ATTR9:[0-9]+]] section "__TEXT,__StaticInit,regular,pure_instructions" {
+// CHECK1-51-SAME: () #[[ATTR7]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK1-51-NEXT:  entry:
 // CHECK1-51-NEXT:    call void @_ZN2S1C1Ev(ptr noundef nonnull align 4 dereferenceable(4) @s1)
 // CHECK1-51-NEXT:    ret void
@@ -2984,7 +2984,7 @@ void test_transparent()
 //
 //
 // CHECK1-51-LABEL: define {{[^@]+}}@_GLOBAL__sub_I_task_codegen.cpp
-// CHECK1-51-SAME: () #[[ATTR9]] section "__TEXT,__StaticInit,regular,pure_instructions" {
+// CHECK1-51-SAME: () #[[ATTR7]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK1-51-NEXT:  entry:
 // CHECK1-51-NEXT:    call void @__cxx_global_var_init()
 // CHECK1-51-NEXT:    ret void
@@ -3911,7 +3911,7 @@ void test_transparent()
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@__cxx_global_var_init
-// CHECK2-SAME: () #[[ATTR9:[0-9]+]] section "__TEXT,__StaticInit,regular,pure_instructions" {
+// CHECK2-SAME: () #[[ATTR7]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    call void @_ZN2S1C1Ev(ptr noundef nonnull align 4 dereferenceable(4) @s1)
 // CHECK2-NEXT:    ret void
@@ -4104,7 +4104,7 @@ void test_transparent()
 //
 //
 // CHECK2-LABEL: define {{[^@]+}}@_GLOBAL__sub_I_task_codegen.cpp
-// CHECK2-SAME: () #[[ATTR9]] section "__TEXT,__StaticInit,regular,pure_instructions" {
+// CHECK2-SAME: () #[[ATTR7]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK2-NEXT:  entry:
 // CHECK2-NEXT:    call void @__cxx_global_var_init()
 // CHECK2-NEXT:    ret void
@@ -5113,7 +5113,7 @@ void test_transparent()
 //
 //
 // CHECK2-51-LABEL: define {{[^@]+}}@__cxx_global_var_init
-// CHECK2-51-SAME: () #[[ATTR9:[0-9]+]] section "__TEXT,__StaticInit,regular,pure_instructions" {
+// CHECK2-51-SAME: () #[[ATTR7]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK2-51-NEXT:  entry:
 // CHECK2-51-NEXT:    call void @_ZN2S1C1Ev(ptr noundef nonnull align 4 dereferenceable(4) @s1)
 // CHECK2-51-NEXT:    ret void
@@ -5715,7 +5715,7 @@ void test_transparent()
 //
 //
 // CHECK2-51-LABEL: define {{[^@]+}}@_GLOBAL__sub_I_task_codegen.cpp
-// CHECK2-51-SAME: () #[[ATTR9]] section "__TEXT,__StaticInit,regular,pure_instructions" {
+// CHECK2-51-SAME: () #[[ATTR7]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK2-51-NEXT:  entry:
 // CHECK2-51-NEXT:    call void @__cxx_global_var_init()
 // CHECK2-51-NEXT:    ret void
@@ -6649,7 +6649,7 @@ void test_transparent()
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@__cxx_global_var_init
-// CHECK3-SAME: () #[[ATTR9:[0-9]+]] section "__TEXT,__StaticInit,regular,pure_instructions" {
+// CHECK3-SAME: () #[[ATTR7]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    call void @_ZN2S1C1Ev(ptr noundef nonnull align 4 dereferenceable(4) @s1)
 // CHECK3-NEXT:    ret void
@@ -6731,7 +6731,7 @@ void test_transparent()
 //
 //
 // CHECK3-LABEL: define {{[^@]+}}@_GLOBAL__sub_I_task_codegen.cpp
-// CHECK3-SAME: () #[[ATTR9]] section "__TEXT,__StaticInit,regular,pure_instructions" {
+// CHECK3-SAME: () #[[ATTR7]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK3-NEXT:  entry:
 // CHECK3-NEXT:    call void @__cxx_global_var_init()
 // CHECK3-NEXT:    ret void
@@ -7665,7 +7665,7 @@ void test_transparent()
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@__cxx_global_var_init
-// CHECK4-SAME: () #[[ATTR9:[0-9]+]] section "__TEXT,__StaticInit,regular,pure_instructions" {
+// CHECK4-SAME: () #[[ATTR7]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    call void @_ZN2S1C1Ev(ptr noundef nonnull align 4 dereferenceable(4) @s1)
 // CHECK4-NEXT:    ret void
@@ -7747,7 +7747,7 @@ void test_transparent()
 //
 //
 // CHECK4-LABEL: define {{[^@]+}}@_GLOBAL__sub_I_task_codegen.cpp
-// CHECK4-SAME: () #[[ATTR9]] section "__TEXT,__StaticInit,regular,pure_instructions" {
+// CHECK4-SAME: () #[[ATTR7]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK4-NEXT:  entry:
 // CHECK4-NEXT:    call void @__cxx_global_var_init()
 // CHECK4-NEXT:    ret void
@@ -8765,7 +8765,7 @@ void test_transparent()
 //
 //
 // CHECK3-51-LABEL: define {{[^@]+}}@__cxx_global_var_init
-// CHECK3-51-SAME: () #[[ATTR9:[0-9]+]] section "__TEXT,__StaticInit,regular,pure_instructions" {
+// CHECK3-51-SAME: () #[[ATTR7]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK3-51-NEXT:  entry:
 // CHECK3-51-NEXT:    call void @_ZN2S1C1Ev(ptr noundef nonnull align 4 dereferenceable(4) @s1)
 // CHECK3-51-NEXT:    ret void
@@ -9265,7 +9265,7 @@ void test_transparent()
 //
 //
 // CHECK3-51-LABEL: define {{[^@]+}}@_GLOBAL__sub_I_task_codegen.cpp
-// CHECK3-51-SAME: () #[[ATTR9]] section "__TEXT,__StaticInit,regular,pure_instructions" {
+// CHECK3-51-SAME: () #[[ATTR7]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK3-51-NEXT:  entry:
 // CHECK3-51-NEXT:    call void @__cxx_global_var_init()
 // CHECK3-51-NEXT:    ret void
@@ -10199,7 +10199,7 @@ void test_transparent()
 //
 //
 // CHECK4-51-LABEL: define {{[^@]+}}@__cxx_global_var_init
-// CHECK4-51-SAME: () #[[ATTR9:[0-9]+]] section "__TEXT,__StaticInit,regular,pure_instructions" {
+// CHECK4-51-SAME: () #[[ATTR7]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK4-51-NEXT:  entry:
 // CHECK4-51-NEXT:    call void @_ZN2S1C1Ev(ptr noundef nonnull align 4 dereferenceable(4) @s1)
 // CHECK4-51-NEXT:    ret void
@@ -10281,7 +10281,7 @@ void test_transparent()
 //
 //
 // CHECK4-51-LABEL: define {{[^@]+}}@_GLOBAL__sub_I_task_codegen.cpp
-// CHECK4-51-SAME: () #[[ATTR9]] section "__TEXT,__StaticInit,regular,pure_instructions" {
+// CHECK4-51-SAME: () #[[ATTR7]] section "__TEXT,__StaticInit,regular,pure_instructions" {
 // CHECK4-51-NEXT:  entry:
 // CHECK4-51-NEXT:    call void @__cxx_global_var_init()
 // CHECK4-51-NEXT:    ret void
