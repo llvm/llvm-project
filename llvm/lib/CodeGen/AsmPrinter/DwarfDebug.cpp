@@ -614,11 +614,6 @@ static void finishCallSiteParams(ValT Val, const DIExpression *Expr,
   for (auto Param : DescribedParams) {
     bool ShouldCombineExpressions = Expr && Param.Expr->getNumElements() > 0;
 
-    // TODO: Entry value operations can currently not be combined with any
-    // other expressions, so we can't emit call site entries in those cases.
-    if (ShouldCombineExpressions && Expr->isEntryValue())
-      continue;
-
     // If a parameter's call site value is produced by a chain of
     // instructions we may have already created an expression for the
     // parameter when walking through the instructions. Append that to the

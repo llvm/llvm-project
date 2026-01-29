@@ -157,6 +157,7 @@ set(files
   __algorithm/ranges_set_intersection.h
   __algorithm/ranges_set_symmetric_difference.h
   __algorithm/ranges_set_union.h
+  __algorithm/ranges_shift_left.h
   __algorithm/ranges_shuffle.h
   __algorithm/ranges_sort.h
   __algorithm/ranges_sort_heap.h
@@ -214,6 +215,7 @@ set(files
   __atomic/atomic_lock_free.h
   __atomic/atomic_ref.h
   __atomic/atomic_sync.h
+  __atomic/atomic_sync_timed.h
   __atomic/atomic_waitable_traits.h
   __atomic/check_memory_order.h
   __atomic/contention_t.h
@@ -329,6 +331,7 @@ set(files
   __condition_variable/condition_variable.h
   __config
   __configuration/abi.h
+  __configuration/attributes.h
   __configuration/availability.h
   __configuration/compiler.h
   __configuration/experimental.h
@@ -607,6 +610,7 @@ set(files
   __memory/unique_temporary_buffer.h
   __memory/uses_allocator.h
   __memory/uses_allocator_construction.h
+  __memory/valid_range.h
   __memory_resource/memory_resource.h
   __memory_resource/monotonic_buffer_resource.h
   __memory_resource/polymorphic_allocator.h
@@ -931,7 +935,6 @@ set(files
   __utility/in_place.h
   __utility/integer_sequence.h
   __utility/is_pointer_in_range.h
-  __utility/is_valid_range.h
   __utility/lazy_synth_three_way_comparator.h
   __utility/move.h
   __utility/no_destroy.h
@@ -1027,7 +1030,6 @@ set(files
   filesystem
   flat_map
   flat_set
-  float.h
   format
   forward_list
   fstream

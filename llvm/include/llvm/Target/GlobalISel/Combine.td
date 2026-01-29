@@ -689,6 +689,13 @@ def constant_fold_fsqrt : constant_fold_unary_fp_op_rule<G_FSQRT>;
 def constant_fold_flog2 : constant_fold_unary_fp_op_rule<G_FLOG2>;
 def constant_fold_fptrunc : constant_fold_unary_fp_op_rule<G_FPTRUNC>;
 def constant_fold_fpext : constant_fold_unary_fp_op_rule<G_FPEXT>;
+def constant_fold_fceil : constant_fold_unary_fp_op_rule<G_FCEIL>;
+def constant_fold_ffloor : constant_fold_unary_fp_op_rule<G_FFLOOR>;
+def constant_fold_intrinsic_trunc : constant_fold_unary_fp_op_rule<G_INTRINSIC_TRUNC>;
+def constant_fold_intrinsic_round : constant_fold_unary_fp_op_rule<G_INTRINSIC_ROUND>;
+def constant_fold_intrinsic_roundeven : constant_fold_unary_fp_op_rule<G_INTRINSIC_ROUNDEVEN>;
+def constant_fold_frint : constant_fold_unary_fp_op_rule<G_FRINT>;
+def constant_fold_fnearbyint : constant_fold_unary_fp_op_rule<G_FNEARBYINT>;
 
 // Fold constant zero int to fp conversions.
 class itof_const_zero_fold_rule<Instruction opcode> : GICombineRule <
@@ -708,6 +715,13 @@ def constant_fold_fp_ops : GICombineGroup<[
   constant_fold_flog2,
   constant_fold_fptrunc,
   constant_fold_fpext,
+  constant_fold_fceil,
+  constant_fold_ffloor,
+  constant_fold_intrinsic_trunc,
+  constant_fold_intrinsic_round,
+  constant_fold_intrinsic_roundeven,
+  constant_fold_frint,
+  constant_fold_fnearbyint,
   itof_const_zero_fold_si,
   itof_const_zero_fold_ui
 ]>;
@@ -2004,6 +2018,22 @@ class narrow_binop_opcode<Instruction binopOpcode> : GICombineRule <
          [{ return Helper.matchNarrowBinop(*${Trunc}, *${Binop}, ${matchinfo}); }]),
   (apply [{ Helper.applyBuildFn(*${Trunc}, ${matchinfo}); }])>;
 
+// Fold (ctlz (xor x, (sra x, bitwidth-1))) -> (add (ctls x), 1).
+// Fold (ctlz (or (shl (xor x, (sra x, bitwidth-1)), 1), 1) -> (ctls x)
+class ctlz_to_ctls_op<Instruction ctlzOpcode> : GICombineRule <
+  (defs root:$root, build_fn_matchinfo:$matchinfo),
+  (match (ctlzOpcode $dst, $src):$root,
+         [{ return Helper.matchCtls(*${root}, ${matchinfo}); }]),
+  (apply [{Helper.applyBuildFn(*${root}, ${matchinfo});}])>;
+
+def ctlz_to_ctls : ctlz_to_ctls_op<G_CTLZ>;
+def ctlz_zero_undef_to_ctls : ctlz_to_ctls_op<G_CTLZ_ZERO_UNDEF>;
+
+def ctls_combines : GICombineGroup<[
+  ctlz_to_ctls,
+  ctlz_zero_undef_to_ctls,
+]>;
+
 def narrow_binop_add : narrow_binop_opcode<G_ADD>;
 def narrow_binop_sub : narrow_binop_opcode<G_SUB>;
 def narrow_binop_mul : narrow_binop_opcode<G_MUL>;
@@ -2166,7 +2196,7 @@ def all_combines : GICombineGroup<[integer_reassoc_combines, trivial_combines,
     simplify_neg_minmax, combine_concat_vector,
     sext_trunc, zext_trunc, prefer_sign_combines, shuffle_combines,
     combine_use_vector_truncate, merge_combines, overflow_combines, 
-    truncsat_combines, lshr_of_trunc_of_lshr]>;
+    truncsat_combines, lshr_of_trunc_of_lshr, ctls_combines]>;
 
 // A combine group used to for prelegalizer combiners at -O0. The combines in
 // this group have been selected based on experiments to balance code size and

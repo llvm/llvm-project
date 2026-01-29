@@ -13,10 +13,10 @@ entry:
 ; CHECK: %[[#param:]] = OpFunctionParameter %[[#bool]]
 ; CHECK: %{{.+}} = OpGroupNonUniformBallot %[[#bitmask]] %[[#scope]] %[[#param]]
   %0 = call token @llvm.experimental.convergence.entry()
-  %ret = call <4 x i32> @llvm.spv.wave.ballot(i1 %p1) [ "convergencectrl"(token %0) ]
+  %ret = call <4 x i32> @llvm.spv.subgroup.ballot(i1 %p1) [ "convergencectrl"(token %0) ]
   ret <4 x i32> %ret
 }
 
-declare <4 x i32> @llvm.spv.wave.ballot(i1) #0
+declare <4 x i32> @llvm.spv.subgroup.ballot(i1) #0
 
 attributes #0 = { convergent }

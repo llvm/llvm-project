@@ -14,6 +14,7 @@ add_mlir_dialect_library(MLIRTosaTransforms
   TosaProfileCompliance.cpp
   TosaValidation.cpp
   TosaNarrowTypes.cpp
+  TosaInputShape.cpp
 
   ADDITIONAL_HEADER_DIRS
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/Tosa/Transforms

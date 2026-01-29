@@ -16,6 +16,7 @@
 #include "mlir/IR/AffineMap.h"
 #include "mlir/IR/IntegerSet.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/MathExtras.h"
 #include <numeric>
 #include <optional>
@@ -652,9 +653,9 @@ AffineExpr mlir::getAffineConstantExpr(int64_t constant, MLIRContext *context) {
 SmallVector<AffineExpr>
 mlir::getAffineConstantExprs(ArrayRef<int64_t> constants,
                              MLIRContext *context) {
-  return llvm::to_vector(llvm::map_range(constants, [&](int64_t constant) {
+  return llvm::map_to_vector(constants, [&](int64_t constant) {
     return getAffineConstantExpr(constant, context);
-  }));
+  });
 }
 
 /// Simplify add expression. Return nullptr if it can't be simplified.

@@ -23,6 +23,7 @@
 ; CHECK-NEXT:   disable-postmisched-store-clustering - Disable PostRA store clustering in the machine scheduler.
 ; CHECK-NEXT:   dlen-factor-2                    - Vector unit DLEN(data path width) is half of VLEN.
 ; CHECK-NEXT:   e                                - 'E' (Embedded Instruction Set with 16 GPRs).
+; CHECK-NEXT:   enable-select-opt                - Enable the select optimize pass for select loop heuristics.
 ; CHECK-NEXT:   enable-vsetvli-sched-heuristic   - Enable vsetvli-based scheduling heuristic.
 ; CHECK-NEXT:   exact-asm                        - Enable Exact Assembly (Disables Compression and Relaxation).
 ; CHECK-NEXT:   experimental                     - Experimental intrinsics.
@@ -34,7 +35,7 @@
 ; CHECK-NEXT:   experimental-xrivosvizip         - 'XRivosVizip' (Rivos Vector Register Zips).
 ; CHECK-NEXT:   experimental-xsfmclic            - 'XSfmclic' (SiFive CLIC Machine-mode CSRs).
 ; CHECK-NEXT:   experimental-xsfsclic            - 'XSfsclic' (SiFive CLIC Supervisor-mode CSRs).
-; CHECK-NEXT:   experimental-zalasr              - 'Zalasr' (Load-Acquire and Store-Release Instructions).
+; CHECK-NEXT:   experimental-y                   - 'Y' ('Base Y' (CHERI)).
 ; CHECK-NEXT:   experimental-zibi                - 'Zibi' (Branch with Immediate).
 ; CHECK-NEXT:   experimental-zicfilp             - 'Zicfilp' (Landing pad).
 ; CHECK-NEXT:   experimental-zicfiss             - 'Zicfiss' (Shadow stack).
@@ -165,6 +166,7 @@
 ; CHECK-NEXT:   svinval                          - 'Svinval' (Fine-Grained Address-Translation Cache Invalidation).
 ; CHECK-NEXT:   svnapot                          - 'Svnapot' (NAPOT Translation Contiguity).
 ; CHECK-NEXT:   svpbmt                           - 'Svpbmt' (Page-Based Memory Types).
+; CHECK-NEXT:   svrsw60t59b                      - 'Svrsw60t59b' (PTE Reserved-for-Software Bits 60-59).
 ; CHECK-NEXT:   svvptc                           - 'Svvptc' (Obviating Memory-Management Instructions after Marking PTEs Valid).
 ; CHECK-NEXT:   tagged-globals                   - Use an instruction sequence for taking the address of a global that allows a memory tag in the upper address bits.
 ; CHECK-NEXT:   unaligned-scalar-mem             - Has reasonably performant unaligned scalar loads and stores.
@@ -255,6 +257,7 @@
 ; CHECK-NEXT:   zaamo                            - 'Zaamo' (Atomic Memory Operations).
 ; CHECK-NEXT:   zabha                            - 'Zabha' (Byte and Halfword Atomic Memory Operations).
 ; CHECK-NEXT:   zacas                            - 'Zacas' (Atomic Compare-And-Swap Instructions).
+; CHECK-NEXT:   zalasr                           - 'Zalasr' (Load-Acquire and Store-Release Instructions).
 ; CHECK-NEXT:   zalrsc                           - 'Zalrsc' (Load-Reserved/Store-Conditional).
 ; CHECK-NEXT:   zama16b                          - 'Zama16b' (Atomic 16-byte misaligned loads, stores and AMOs).
 ; CHECK-NEXT:   zawrs                            - 'Zawrs' (Wait on Reservation Set).
