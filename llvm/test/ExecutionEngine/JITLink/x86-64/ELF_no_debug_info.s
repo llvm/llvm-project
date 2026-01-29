@@ -2,11 +2,10 @@
 
 # RUN: rm -rf %t && mkdir %t
 # RUN: llvm-mc -triple=x86_64-unknown-linux \
-# RUN:     -filetype=obj -o %t/ELF_x86-64_simple.o %s
-# RUN: llvm-jitlink %t/ELF_x86-64_simple.o
+# RUN:     -filetype=obj -o %t/ELF_x86-64_no_debug_info.o %s
+# RUN: llvm-jitlink %t/ELF_x86-64_no_debug_info.o
 
-# Test with the most basic function. Also check if everything works
-# in the absent of any debug information.
+# Check if everything works in the absent of any debug information.
 
 	.text
 	.globl	main                            # -- Begin function main

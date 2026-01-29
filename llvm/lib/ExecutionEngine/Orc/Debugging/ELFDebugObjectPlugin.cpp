@@ -349,7 +349,10 @@ void ELFDebugObjectPlugin::modifyPassConfig(MaterializationResponsibility &MR,
     // register the memory range with the GDB JIT Interface in an allocation
     // action of the LinkGraph's own allocation
     DebugObject *DebugObj = getPendingDebugObj(MR);
-    assert(DebugObj && "no debug object?");
+    assert(DebugObj && "Don't inject passes if we have no debug object");
+    // Post-allocation phases would bail out if there is no debug section,
+    // in which case we wouldn't collect target memory and therefore shouldn't
+    // wait for the transaction to finish.
     if (!DebugObj->hasPendingTargetMem())
       return Error::success();
     Expected<ExecutorAddrRange> R = DebugObj->awaitTargetMem();
