@@ -732,6 +732,7 @@ bool PPCMIPeephole::simplifyCode() {
             LLVM_DEBUG(dbgs() << "Optimizing swap/swap => copy: ");
             LLVM_DEBUG(MI.dump());
             addRegToUpdate(MI.getOperand(1).getReg());
+
             BuildMI(MBB, &MI, MI.getDebugLoc(), TII->get(PPC::COPY),
                     MI.getOperand(0).getReg())
                 .add(DefMI->getOperand(1));
@@ -744,7 +745,9 @@ bool PPCMIPeephole::simplifyCode() {
                    DefOpc == PPC::XXPERMDIs &&
                    (DefMI->getOperand(2).getImm() == 0 ||
                     DefMI->getOperand(2).getImm() == 3)) {
-          ToErase = &MI;
+
+          if (!MRI->hasOneNonDBGUser(DefMI->getOperand(0).getReg()))
+            break;
           Simplified = true;
           // Swap of a splat, convert to copy.
           if (Immed == 2) {
@@ -754,10 +757,12 @@ bool PPCMIPeephole::simplifyCode() {
                     MI.getOperand(0).getReg())
                 .add(MI.getOperand(1));
             addRegToUpdate(MI.getOperand(1).getReg());
+            ToErase = &MI;
             break;
           }
           // Splat fed by another splat - switch the output of the first
           // and remove the second.
+          ToErase = &MI;
           DefMI->getOperand(0).setReg(MI.getOperand(0).getReg());
           LLVM_DEBUG(dbgs() << "Removing redundant splat: ");
           LLVM_DEBUG(MI.dump());

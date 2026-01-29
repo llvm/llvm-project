@@ -27,6 +27,7 @@
 #include "mlir/Interfaces/InferTypeOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 #include "llvm/ADT/APFloat.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 #include <numeric>
@@ -135,9 +136,9 @@ SmallVector<Region *> tosa::WhileOp::getLoopRegions() {
 //===----------------------------------------------------------------------===//
 
 static SmallVector<int64_t> convertToMlirShape(ArrayRef<int64_t> shape) {
-  return to_vector(llvm::map_range(shape, [](int64_t dim) {
+  return map_to_vector(shape, [](int64_t dim) {
     return dim == -1 ? ShapedType::kDynamic : dim;
-  }));
+  });
 }
 
 // returns type of variable op
@@ -2147,9 +2148,8 @@ LogicalResult tosa::PadOp::verify() {
 
   auto inputRank = inputType.getRank();
   DenseIntElementsAttr paddingAttr;
-  if (!matchPattern(getPadding(), m_Constant(&paddingAttr))) {
-    return failure();
-  }
+  if (!matchPattern(getPadding(), m_Constant(&paddingAttr)))
+    return success();
 
   auto paddingValues = paddingAttr.getValues<APInt>();
   if (paddingValues.size() != static_cast<size_t>(inputRank * 2))
@@ -2410,9 +2410,9 @@ tosa::TileOp::getConstantMultiples(SmallVector<int64_t> &multiples) {
   DenseIntElementsAttr multiplesAttr;
   if (!matchPattern(getMultiples(), m_Constant(&multiplesAttr)))
     return failure();
-  multiples = llvm::to_vector(
-      llvm::map_range(multiplesAttr.getValues<APInt>(),
-                      [](const APInt &val) { return val.getSExtValue(); }));
+  multiples =
+      llvm::map_to_vector(multiplesAttr.getValues<APInt>(),
+                          [](const APInt &val) { return val.getSExtValue(); });
   return success();
 }
 
@@ -2806,8 +2806,8 @@ LogicalResult tosa::TransposeOp::verify() {
                       return s >= 0 &&
                              static_cast<size_t>(s) < constantPerms.size();
                     }) ||
-      !isPermutationVector(llvm::to_vector(llvm::map_range(
-          constantPerms, [](int32_t v) -> int64_t { return v; }))))
+      !isPermutationVector(llvm::map_to_vector(
+          constantPerms, [](int32_t v) -> int64_t { return v; })))
     return emitOpError() << "expected valid permutation indices";
 
   // ERROR_IF(tensor_size(shape1) != tensor_size(shape))
@@ -3409,7 +3409,7 @@ static LogicalResult poolingInferReturnTypes(
   outputShape.resize(4, ShapedType::kDynamic);
 
   // We only know the rank if the input type is unranked.
-  if (!inputShape) {
+  if (!inputShape.hasRank()) {
     inferredReturnShapes.push_back(ShapedTypeComponents(outputShape));
     return success();
   }
