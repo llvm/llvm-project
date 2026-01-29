@@ -6538,7 +6538,6 @@ protected:
   std::mutex m_output_mutex;
 };
 
-
 class ApplicationDelegate : public WindowDelegate, public MenuDelegate {
 public:
   enum {

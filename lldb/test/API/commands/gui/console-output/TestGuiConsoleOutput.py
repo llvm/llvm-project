@@ -54,7 +54,7 @@ class TestGuiConsoleOutputTest(PExpectTest):
         self.child.expect_exact("(no output yet)")
 
         # Continue program execution
-        self.child.send('c')
+        self.child.send("c")
 
         # Check console output for messages
         self.child.expect_exact("Hello from stdout line 1")
@@ -136,4 +136,3 @@ class TestGuiConsoleOutputTest(PExpectTest):
 
         self.expect_prompt()
         self.quit()
-
