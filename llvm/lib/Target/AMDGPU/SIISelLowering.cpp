@@ -4392,41 +4392,27 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
 
   unsigned ArgIdx = 0;
   for (auto [Reg, Val] : RegsToPass) {
-    if (ArgIdx >= NumSpecialInputs) {
-      // If this arg is from an inreg parameter of the caller
-      // This is trying to generate readfirstlane if arg is inreg, but SGPR was
-      // used up and VGPR is used instead. In such case, the data is uniform and
-      // should use readfirstlane.
-      bool IsFromInRegParam = false;
-      unsigned OrigArgIdx = Outs[ArgIdx - NumSpecialInputs].OrigArgIndex;
-      if (CLI.CB && OrigArgIdx < CLI.CB->arg_size()) {
-        Value *ArgOperand =
-            CLI.CB->getArgOperand(Outs[ArgIdx - NumSpecialInputs].OrigArgIndex);
-        if (const Argument *Arg = dyn_cast<Argument>(ArgOperand))
-          IsFromInRegParam = Arg->hasInRegAttr();
-      }
-      if ((IsChainCallConv || !Val->isDivergent() || IsFromInRegParam) &&
-          TRI->isSGPRPhysReg(Reg)) {
-        // For chain calls, the inreg arguments are required to be
-        // uniform. Speculatively Insert a readfirstlane in case we cannot prove
-        // they are uniform.
-        //
-        // For other calls, if an inreg arguments is known to be uniform,
-        // speculatively insert a readfirstlane in case it is in a VGPR.
-        //
-        // FIXME: We need to execute this in a waterfall loop if it is a
-        // divergent value, so let that continue to produce invalid code.
+    if (ArgIdx++ >= NumSpecialInputs &&
+        (IsChainCallConv || !Val->isDivergent()) && TRI->isSGPRPhysReg(Reg)) {
+      // For chain calls, the inreg arguments are required to be
+      // uniform. Speculatively Insert a readfirstlane in case we cannot prove
+      // they are uniform.
+      //
+      // For other calls, if an inreg arguments is known to be uniform,
+      // speculatively insert a readfirstlane in case it is in a VGPR.
+      //
+      // FIXME: We need to execute this in a waterfall loop if it is a divergent
+      // value, so let that continue to produce invalid code.
 
-        SmallVector<SDValue, 3> ReadfirstlaneArgs({ReadFirstLaneID, Val});
-        if (TokenGlue)
-          ReadfirstlaneArgs.push_back(TokenGlue);
-        Val = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Val.getValueType(),
-                          ReadfirstlaneArgs);
-      }
+      SmallVector<SDValue, 3> ReadfirstlaneArgs({ReadFirstLaneID, Val});
+      if (TokenGlue)
+        ReadfirstlaneArgs.push_back(TokenGlue);
+      Val = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Val.getValueType(),
+                        ReadfirstlaneArgs);
     }
+
     Chain = DAG.getCopyToReg(Chain, DL, Reg, Val, InGlue);
     InGlue = Chain.getValue(1);
-    ArgIdx++;
   }
 
   // We don't usually want to end the call-sequence here because we would tidy
