@@ -3963,8 +3963,8 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   void handleVectorDotProductIntrinsic(IntrinsicInst &I,
                                        unsigned ReductionFactor,
                                        bool ZeroPurifies,
-                                       unsigned EltSizeInBits = 0,
-                                       enum OddOrEvenLanes Lanes = kBothLanes) {
+                                       unsigned EltSizeInBits,
+                                       enum OddOrEvenLanes Lanes) {
     IRBuilder<> IRB(&I);
 
     [[maybe_unused]] FixedVectorType *ReturnType =
@@ -5950,21 +5950,25 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx2_pmadd_ub_sw:
     case Intrinsic::x86_avx512_pmaddubs_w_512:
       handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
-                                      /*ZeroPurifies=*/true);
+                                      /*ZeroPurifies=*/true,
+                                      /*EltSizeInBits=*/0,
+                                      /*Lanes=*/kBothLanes);
       break;
 
     // <1 x i64> @llvm.x86.ssse3.pmadd.ub.sw(<1 x i64>, <1 x i64>)
     case Intrinsic::x86_ssse3_pmadd_ub_sw:
       handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
                                       /*ZeroPurifies=*/true,
-                                      /*EltSizeInBits=*/8);
+                                      /*EltSizeInBits=*/8,
+                                      /*Lanes=*/kBothLanes);
       break;
 
     // <1 x i64> @llvm.x86.mmx.pmadd.wd(<1 x i64>, <1 x i64>)
     case Intrinsic::x86_mmx_pmadd_wd:
       handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
                                       /*ZeroPurifies=*/true,
-                                      /*EltSizeInBits=*/16);
+                                      /*EltSizeInBits=*/16,
+                                      /*Lanes=*/kBothLanes);
       break;
 
     // BFloat16 multiply-add to single-precision
@@ -6103,7 +6107,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx2_vpdpbuuds_256:
     case Intrinsic::x86_avx10_vpdpbuuds_512:
       handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/4,
-                                      /*ZeroPurifies=*/true);
+                                      /*ZeroPurifies=*/true,
+                                      /*EltSizeInBits=*/0,
+                                      /*Lanes=*/kBothLanes);
       break;
 
     // AVX Vector Neural Network Instructions: words
@@ -6223,7 +6229,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx2_vpdpwuuds_256:
     case Intrinsic::x86_avx10_vpdpwuuds_512:
       handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
-                                      /*ZeroPurifies=*/true);
+                                      /*ZeroPurifies=*/true,
+                                      /*EltSizeInBits=*/0,
+                                      /*Lanes=*/kBothLanes);
       break;
 
     // Dot Product of BF16 Pairs Accumulated Into Packed Single
@@ -6238,7 +6246,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx512bf16_dpbf16ps_256:
     case Intrinsic::x86_avx512bf16_dpbf16ps_512:
       handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
-                                      /*ZeroPurifies=*/false);
+                                      /*ZeroPurifies=*/false,
+                                      /*EltSizeInBits=*/0,
+                                      /*Lanes=*/kBothLanes);
       break;
 
     case Intrinsic::x86_sse_cmp_ss:
@@ -6951,7 +6961,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::aarch64_neon_sdot:
     case Intrinsic::aarch64_neon_udot:
       handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/4,
-                                      /*ZeroPurifies=*/true);
+                                      /*ZeroPurifies=*/true,
+                                      /*EltSizeInBits=*/0,
+                                      /*Lanes=*/kBothLanes);
       break;
 
     // <2 x float> @llvm.aarch64.neon.bfdot.v2f32.v4bf16
@@ -6960,7 +6972,9 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     //               (<4 x float> %acc, <8 x bfloat> %a, <8 x bfloat> %b)
     case Intrinsic::aarch64_neon_bfdot:
       handleVectorDotProductIntrinsic(I, /*ReductionFactor=*/2,
-                                      /*ZeroPurifies=*/false);
+                                      /*ZeroPurifies=*/false,
+                                      /*EltSizeInBits=*/0,
+                                      /*Lanes=*/kBothLanes);
       break;
 
     default:
