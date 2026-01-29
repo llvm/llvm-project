@@ -270,7 +270,7 @@ def fir_AllocMemOp : fir_Op<"allocmem", [AttrSizedOperandSegments]> {
   }];
 }
 
-def fir_FreeMemOp : fir_Op<"freemem", [MemoryEffects<[MemFree]>]> {
+def fir_FreeMemOp : fir_Op<"freemem", []> {
   let summary = "free a heap object";
 
   let description = [{
@@ -856,6 +856,7 @@ def fir_HasValueOp : fir_Op<"has_value", [Terminator, HasParent<"GlobalOp">]> {
 //===----------------------------------------------------------------------===//
 
 def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments,
+                                   ConditionallySpeculatable,
                                    fir_FortranObjectViewOpInterface]> {
   let summary = "boxes a given reference and (optional) dimension information";
 
@@ -923,10 +924,14 @@ def fir_EmboxOp : fir_Op<"embox", [NoMemoryEffect, AttrSizedOperandSegments,
     // FortranObjectViewOpInterface methods:
     mlir::Value getViewSource(mlir::OpResult) { return getMemref(); }
     std::optional<std::int64_t> getViewOffset(mlir::OpResult);
+
+    // Interface method for ConditionallySpeculatable.
+    mlir::Speculation::Speculatability getSpeculatability();
   }];
 }
 
 def fir_ReboxOp : fir_Op<"rebox", [NoMemoryEffect, AttrSizedOperandSegments,
+                                   ConditionallySpeculatable,
                                    fir_FortranObjectViewOpInterface]> {
   let summary =
       "create a box given another box and (optional) dimension information";
@@ -982,6 +987,9 @@ def fir_ReboxOp : fir_Op<"rebox", [NoMemoryEffect, AttrSizedOperandSegments,
     // FortranObjectViewOpInterface methods:
     mlir::Value getViewSource(mlir::OpResult) { return getBox(); }
     std::optional<std::int64_t> getViewOffset(mlir::OpResult);
+
+    // Interface method for ConditionallySpeculatable.
+    mlir::Speculation::Speculatability getSpeculatability();
   }];
 }
 
@@ -1133,6 +1141,7 @@ def fir_UnboxProcOp : fir_SimpleOp<"unboxproc", [NoMemoryEffect]> {
 
 def fir_BoxAddrOp
     : fir_SimpleOneResultOp<"box_addr", [NoMemoryEffect,
+                                         ConditionallySpeculatable,
                                          fir_FortranObjectViewOpInterface]> {
   let summary = "return a memory reference to the boxed value";
 
@@ -1161,6 +1170,9 @@ def fir_BoxAddrOp
     // FortranObjectViewOpInterface methods:
     mlir::Value getViewSource(mlir::OpResult) { return getVal(); }
     std::optional<std::int64_t> getViewOffset(mlir::OpResult);
+
+    // Interface method for ConditionallySpeculatable.
+    mlir::Speculation::Speculatability getSpeculatability();
   }];
 }
 
@@ -1183,7 +1195,8 @@ def fir_BoxCharLenOp : fir_SimpleOp<"boxchar_len", [NoMemoryEffect]> {
   let hasFolder = 1;
 }
 
-def fir_BoxDimsOp : fir_Op<"box_dims", [NoMemoryEffect]> {
+def fir_BoxDimsOp
+    : fir_Op<"box_dims", [NoMemoryEffect, ConditionallySpeculatable]> {
   let summary = "return the dynamic dimension information for the boxed value";
 
   let description = [{
@@ -1215,6 +1228,8 @@ def fir_BoxDimsOp : fir_Op<"box_dims", [NoMemoryEffect]> {
     mlir::Value getLowerBound() {return getResult(0);};
     mlir::Value getExtent() {return getResult(1);};
     mlir::Value getByteStride() {return getResult(2);};
+    // Interface method for ConditionallySpeculatable.
+    mlir::Speculation::Speculatability getSpeculatability();
   }];
 }
 
@@ -2012,7 +2027,7 @@ def fir_FieldIndexOp : fir_OneResultOp<"field_index", [NoMemoryEffect]> {
   }];
 }
 
-def fir_ShapeOp : fir_Op<"shape", [NoMemoryEffect]> {
+def fir_ShapeOp : fir_Op<"shape", [Pure]> {
 
   let summary = "generate an abstract shape vector of type `!fir.shape`";
 
@@ -2041,7 +2056,7 @@ def fir_ShapeOp : fir_Op<"shape", [NoMemoryEffect]> {
   let builders = [OpBuilder<(ins "mlir::ValueRange":$extents)>];
 }
 
-def fir_ShapeShiftOp : fir_Op<"shape_shift", [NoMemoryEffect]> {
+def fir_ShapeShiftOp : fir_Op<"shape_shift", [Pure]> {
 
   let summary = [{
     generate an abstract shape and shift vector of type `!fir.shapeshift`
@@ -2091,7 +2106,7 @@ def fir_ShapeShiftOp : fir_Op<"shape_shift", [NoMemoryEffect]> {
   }];
 }
 
-def fir_ShiftOp : fir_Op<"shift", [NoMemoryEffect]> {
+def fir_ShiftOp : fir_Op<"shift", [Pure]> {
 
   let summary = "generate an abstract shift vector of type `!fir.shift`";
 
@@ -2118,7 +2133,7 @@ def fir_ShiftOp : fir_Op<"shift", [NoMemoryEffect]> {
   let hasVerifier = 1;
 }
 
-def fir_SliceOp : fir_Op<"slice", [NoMemoryEffect, AttrSizedOperandSegments]> {
+def fir_SliceOp : fir_Op<"slice", [Pure, AttrSizedOperandSegments]> {
 
   let summary = "generate an abstract slice vector of type `!fir.slice`";
 
@@ -2910,6 +2925,7 @@ def fir_VolatileCastOp : fir_SimpleOneResultOp<"volatile_cast", [Pure]> {
 
 def fir_ConvertOp
     : fir_SimpleOneResultOp<"convert", [NoMemoryEffect, ViewLikeOpInterface,
+                                        ConditionallySpeculatable,
                                         fir_FortranObjectViewOpInterface]> {
   let summary = "encapsulates all Fortran entity type conversions";
 
@@ -2955,6 +2971,9 @@ def fir_ConvertOp
     // FortranObjectViewOpInterface methods:
     mlir::Value getViewSource(mlir::OpResult) { return getValue(); }
     std::optional<std::int64_t> getViewOffset(mlir::OpResult) { return 0; }
+
+    // Interface method for ConditionallySpeculatable.
+    mlir::Speculation::Speculatability getSpeculatability();
   }];
   let hasCanonicalizer = 1;
 }

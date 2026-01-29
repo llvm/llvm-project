@@ -2998,6 +2998,20 @@ static bool CheckAllArgTypesAreCorrect(
   return false;
 }
 
+static bool CheckFloatRepresentation(Sema *S, SourceLocation Loc,
+                                     int ArgOrdinal,
+                                     clang::QualType PassedType) {
+  clang::QualType BaseType =
+      PassedType->isVectorType()
+          ? PassedType->castAs<clang::VectorType>()->getElementType()
+          : PassedType;
+  if (!BaseType->isFloat32Type())
+    return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
+           << ArgOrdinal << /* scalar or vector of */ 5 << /* no int */ 0
+           << /* float */ 1 << PassedType;
+  return false;
+}
+
 static bool CheckFloatOrHalfRepresentation(Sema *S, SourceLocation Loc,
                                            int ArgOrdinal,
                                            clang::QualType PassedType) {
@@ -3714,6 +3728,15 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     }
 
     SetElementTypeAsReturnType(&SemaRef, TheCall, getASTContext().FloatTy);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_elementwise_f32tof16: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+    if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall, CheckFloatRepresentation))
+      return true;
+    SetElementTypeAsReturnType(&SemaRef, TheCall,
+                               getASTContext().UnsignedIntTy);
     break;
   }
   }
@@ -4737,6 +4760,40 @@ public:
 };
 } // namespace
 
+// Recursively detect any incomplete array anywhere in the type graph,
+// including arrays, struct fields, and base classes.
+static bool containsIncompleteArrayType(QualType Ty) {
+  Ty = Ty.getCanonicalType();
+
+  // Array types
+  if (const ArrayType *AT = dyn_cast<ArrayType>(Ty)) {
+    if (isa<IncompleteArrayType>(AT))
+      return true;
+    return containsIncompleteArrayType(AT->getElementType());
+  }
+
+  // Record (struct/class) types
+  if (const auto *RT = Ty->getAs<RecordType>()) {
+    const RecordDecl *RD = RT->getDecl();
+
+    // Walk base classes (for C++ / HLSL structs with inheritance)
+    if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+      for (const CXXBaseSpecifier &Base : CXXRD->bases()) {
+        if (containsIncompleteArrayType(Base.getType()))
+          return true;
+      }
+    }
+
+    // Walk fields
+    for (const FieldDecl *F : RD->fields()) {
+      if (containsIncompleteArrayType(F->getType()))
+        return true;
+    }
+  }
+
+  return false;
+}
+
 bool SemaHLSL::transformInitList(const InitializedEntity &Entity,
                                  InitListExpr *Init) {
   // If the initializer is a scalar, just return it.
@@ -4763,6 +4820,19 @@ bool SemaHLSL::transformInitList(const InitializedEntity &Entity,
   if (ExpectedSize == 0 && ActualSize == 0)
     return true;
 
+  // Reject empty initializer if *any* incomplete array exists structurally
+  if (ActualSize == 0 && containsIncompleteArrayType(Entity.getType())) {
+    QualType InitTy = Entity.getType().getNonReferenceType();
+    if (InitTy.hasAddressSpace())
+      InitTy = SemaRef.getASTContext().removeAddrSpaceQualType(InitTy);
+
+    SemaRef.Diag(Init->getBeginLoc(), diag::err_hlsl_incorrect_num_initializers)
+        << /*TooManyOrFew=*/(int)(ExpectedSize < ActualSize) << InitTy
+        << /*ExpectedSize=*/ExpectedSize << /*ActualSize=*/ActualSize;
+    return false;
+  }
+
+  // We infer size after validating legality.
   // For incomplete arrays it is completely arbitrary to choose whether we think
   // the user intended fewer or more elements. This implementation assumes that
   // the user intended more, and errors that there are too few initializers to

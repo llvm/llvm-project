@@ -495,17 +495,27 @@ bool ClauseProcessor::processSizes(StatementContext &stmtCtx,
 bool ClauseProcessor::processNumTeams(
     lower::StatementContext &stmtCtx,
     mlir::omp::NumTeamsClauseOps &result) const {
-  // TODO Get lower and upper bounds for num_teams when parser is updated to
-  // accept both.
   if (auto *clause = findUniqueClause<omp::clause::NumTeams>()) {
-    // The num_teams directive accepts a list of team lower/upper bounds.
-    // This is an extension to support grid specification for ompx_bare.
-    // Here, only expect a single element in the list.
-    assert(clause->v.size() == 1);
-    // auto lowerBound = std::get<std::optional<ExprTy>>(clause->v[0]->t);
-    auto &upperBound = std::get<ExprTy>(clause->v[0].t);
-    result.numTeamsUpper =
-        fir::getBase(converter.genExprValue(upperBound, stmtCtx));
+    // Structure: {LB?, [UB]} - single optional lower bound, list of upper
+    // bounds
+    auto &lowerBound = std::get<std::optional<ExprTy>>(clause->t);
+    auto &upperBounds =
+        std::get<omp::clause::NumTeams::UpperBoundList>(clause->t);
+    assert(!upperBounds.empty());
+
+    // Extract optional lower bound
+    if (lowerBound) {
+      result.numTeamsLower =
+          fir::getBase(converter.genExprValue(*lowerBound, stmtCtx));
+    }
+
+    // Extract all upper bounds
+    result.numTeamsUpperVars.reserve(upperBounds.size());
+    for (const auto &ub : upperBounds) {
+      result.numTeamsUpperVars.push_back(
+          fir::getBase(converter.genExprValue(ub, stmtCtx)));
+    }
+
     return true;
   }
   return false;
@@ -515,9 +525,11 @@ bool ClauseProcessor::processNumThreads(
     lower::StatementContext &stmtCtx,
     mlir::omp::NumThreadsClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::NumThreads>()) {
-    // OMPIRBuilder expects `NUM_THREADS` clause as a `Value`.
-    result.numThreads =
-        fir::getBase(converter.genExprValue(clause->v, stmtCtx));
+    // OMPIRBuilder expects `NUM_THREADS` clause as a list of Values.
+    for (const ExprTy &expr : clause->v) {
+      result.numThreadsVars.push_back(
+          fir::getBase(converter.genExprValue(expr, stmtCtx)));
+    }
     return true;
   }
   return false;
@@ -668,8 +680,10 @@ bool ClauseProcessor::processThreadLimit(
     lower::StatementContext &stmtCtx,
     mlir::omp::ThreadLimitClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::ThreadLimit>()) {
-    result.threadLimit =
-        fir::getBase(converter.genExprValue(clause->v, stmtCtx));
+    result.threadLimitVars.reserve(clause->v.size());
+    for (const ExprTy &vv : clause->v)
+      result.threadLimitVars.push_back(
+          fir::getBase(converter.genExprValue(vv, stmtCtx)));
     return true;
   }
   return false;
@@ -1714,6 +1728,34 @@ bool ClauseProcessor::processUseDevicePtr(
   insertChildMapInfoIntoParent(converter, semaCtx, stmtCtx, parentMemberIndices,
                                result.useDevicePtrVars, useDeviceSyms);
   return clauseFound;
+}
+
+bool ClauseProcessor::processUniform(
+    mlir::omp::UniformClauseOps &result) const {
+  return findRepeatableClause<omp::clause::Uniform>(
+      [&](const omp::clause::Uniform &clause, const parser::CharBlock &) {
+        const auto &objects = clause.v;
+        if (!objects.empty())
+          genObjectList(objects, converter, result.uniformVars);
+      });
+}
+
+bool ClauseProcessor::processInbranch(
+    mlir::omp::InbranchClauseOps &result) const {
+  if (findUniqueClause<omp::clause::Inbranch>()) {
+    result.inbranch = converter.getFirOpBuilder().getUnitAttr();
+    return true;
+  }
+  return false;
+}
+
+bool ClauseProcessor::processNotinbranch(
+    mlir::omp::NotinbranchClauseOps &result) const {
+  if (findUniqueClause<omp::clause::Notinbranch>()) {
+    result.notinbranch = converter.getFirOpBuilder().getUnitAttr();
+    return true;
+  }
+  return false;
 }
 
 } // namespace omp

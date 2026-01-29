@@ -37,6 +37,7 @@ public:
   void VisitDeclRefExpr(const DeclRefExpr *DRE);
   void VisitCXXConstructExpr(const CXXConstructExpr *CCE);
   void VisitCXXMemberCallExpr(const CXXMemberCallExpr *MCE);
+  void VisitMemberExpr(const MemberExpr *ME);
   void VisitCallExpr(const CallExpr *CE);
   void VisitCXXNullPtrLiteralExpr(const CXXNullPtrLiteralExpr *N);
   void VisitImplicitCastExpr(const ImplicitCastExpr *ICE);
@@ -57,9 +58,11 @@ private:
 
   void handleAssignment(const Expr *LHSExpr, const Expr *RHSExpr);
 
+  void handleCXXCtorInitializer(const CXXCtorInitializer *CII);
   void handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds);
-
   void handleTemporaryDtor(const CFGTemporaryDtor &TemporaryDtor);
+
+  void handleExitBlock();
 
   void handleGSLPointerConstruction(const CXXConstructExpr *CCE);
 
