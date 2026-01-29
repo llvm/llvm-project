@@ -173,6 +173,8 @@ private:
 
   /// Are we parsing ms-style inline assembly?
   bool ParsingMSInlineAsm = false;
+  bool NeedParseFromRdata = false;
+  int ParseRdataCnt = 0;
 
   /// Did we already inform the user about inconsistent MD5 usage?
   bool ReportedInconsistentMD5 = false;
@@ -960,11 +962,65 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
 
   getTargetParser().onBeginOfFile();
 
+  // Save begin location, check if have .rdata section, confirm where to begin
+  // parse. If have it and .rdata after .text, begin parse from .rdata, when go
+  // to Eof, jump to begin location and then continue parse.
+  SMLoc IDLoc_start = getTok().getLoc();
+  SMLoc IDLoc_rdata = getTok().getLoc();
+  StringRef IDVal;
+  bool HasParseText = false;
+  bool HasParseRdata = false;
+  while (Lexer.isNot(AsmToken::Eof)) {
+    while (Lexer.is(AsmToken::Space)) {
+      IDLoc_rdata = getTok().getLoc();
+      Lex();
+    }
+    if (Lexer.is(AsmToken::EndOfStatement) || Lexer.is(AsmToken::Integer) ||
+        Lexer.is(AsmToken::Dot) || Lexer.is(AsmToken::LCurly) ||
+        Lexer.is(AsmToken::RCurly) ||
+        (Lexer.is(AsmToken::Star) &&
+         getTargetParser().starIsStartOfStatement())) {
+      IDLoc_rdata = getTok().getLoc();
+      Lex();
+    } else if (!parseIdentifier(IDVal)) {
+      if (IDVal == ".rdata")
+        HasParseRdata = true;
+      if (IDVal == ".text")
+        HasParseText = true;
+      //.text section before .rdata section.
+      if (IDVal == ".rdata" && HasParseText == true) {
+        NeedParseFromRdata = true;
+        jumpToLoc(IDLoc_rdata);
+        Lex();
+        break;
+      }
+      if (IDVal == ".text" && HasParseRdata == true) {
+        break;
+      }
+      IDLoc_rdata = getTok().getLoc();
+      Lex();
+    } else {
+      IDLoc_rdata = getTok().getLoc();
+      Lex();
+    }
+  }
+
+  // If did not have .rdata section or .rdata before .text, jump to begin
+  // location and then parse.
+  if (NeedParseFromRdata == false) {
+    jumpToLoc(IDLoc_start);
+    Lex();
+  }
+
+BeginParse:
   // While we have input, parse each statement.
   while (Lexer.isNot(AsmToken::Eof)) {
     ParseStatementInfo Info(&AsmStrRewrites);
     bool HasError = parseStatement(Info, nullptr);
 
+    if (!Parsed && (ParseRdataCnt == 2)) {
+      break;
+    }
     // If we have a Lexer Error we are on an Error Token. Load in Lexer Error
     // for printing ErrMsg via Lex() only if no (presumably better) parser error
     // exists.
@@ -977,6 +1033,15 @@ bool AsmParser::Run(bool NoInitialTextSection, bool NoFinalize) {
     // Skipping to the next line if needed.
     if (HasError && !getLexer().justConsumedEOL())
       eatToEndOfStatement();
+  }
+
+  // Because when we parse from .rdata, what before .rdata would be skipped and
+  // not be parsed, so need to go to begin location until once again parse
+  // .rdata section.
+  if (NeedParseFromRdata == true) {
+    jumpToLoc(IDLoc_start);
+    Lex();
+    goto BeginParse;
   }
 
   getTargetParser().onEndOfFile();
@@ -1914,6 +1979,15 @@ bool AsmParser::parseStatement(ParseStatementInfo &Info,
     //    all the directives that behave in a target and platform independent
     //    manner, or at least have a default behavior that's shared between
     //    all targets and platforms.
+
+    // Prevent parsing .rdata section twice.
+    if (IDVal == ".rdata") {
+      ParseRdataCnt++;
+    }
+    if (NeedParseFromRdata == true && ParseRdataCnt == 2) {
+      NeedParseFromRdata = false;
+      return false;
+    }
 
     getTargetParser().flushPendingInstructions(getStreamer());
 
