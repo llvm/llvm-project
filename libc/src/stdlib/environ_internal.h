@@ -54,6 +54,9 @@ class EnvironmentManager {
   // Current number of variables in environ
   size_t size = 0;
 
+  // True if we have initialized from the startup environment
+  bool initialized = false;
+
   // True if we allocated storage (and are responsible for freeing it)
   bool is_ours = false;
 

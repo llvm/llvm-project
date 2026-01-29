@@ -32,16 +32,19 @@ char **EnvironmentManager::get_array() {
 }
 
 void EnvironmentManager::init() {
-  // Count entries in the startup environ
-  char **env_ptr = reinterpret_cast<char **>(LIBC_NAMESPACE::app.env_ptr);
-  if (!env_ptr)
+  if (initialized)
     return;
 
-  size_t count = 0;
-  for (char **env = env_ptr; *env != nullptr; env++)
-    count++;
+  // Count entries in the startup environ
+  char **env_ptr = reinterpret_cast<char **>(LIBC_NAMESPACE::app.env_ptr);
+  if (env_ptr) {
+    size_t count = 0;
+    for (char **env = env_ptr; *env != nullptr; env++)
+      count++;
+    size = count;
+  }
 
-  size = count;
+  initialized = true;
 }
 
 int EnvironmentManager::find_var(cpp::string_view name) {
@@ -63,11 +66,13 @@ int EnvironmentManager::find_var(cpp::string_view name) {
 }
 
 bool EnvironmentManager::ensure_capacity(size_t needed) {
-  // If we're still using the startup environ, we need to copy it
+  // If we're still using the startup environ (pointed to by app.env_ptr),
+  // we must transition to our own managed storage. This allows us to
+  // track ownership of strings and safely expand the array.
   if (!is_ours) {
     char **old_env = reinterpret_cast<char **>(LIBC_NAMESPACE::app.env_ptr);
 
-    // Allocate new array with room to grow
+    // Allocate new array with room to grow.
     size_t new_capacity = needed < MIN_ENVIRON_CAPACITY
                               ? MIN_ENVIRON_CAPACITY
                               : needed * ENVIRON_GROWTH_FACTOR;
@@ -76,7 +81,8 @@ bool EnvironmentManager::ensure_capacity(size_t needed) {
     if (!new_storage)
       return false;
 
-    // Allocate ownership tracking array
+    // Allocate ownership tracking array. We use a parallel array to keep
+    // the environ array compatible with the standard char** format.
     EnvStringOwnership *new_ownership = reinterpret_cast<EnvStringOwnership *>(
         malloc(sizeof(EnvStringOwnership) * (new_capacity + 1)));
     if (!new_ownership) {
@@ -84,12 +90,11 @@ bool EnvironmentManager::ensure_capacity(size_t needed) {
       return false;
     }
 
-    // Copy existing pointers (we don't own the strings yet, so just copy
-    // pointers)
+    // Copy existing pointers from the startup environment.
+    // We don't own these strings, so we mark them as not-ours.
     if (old_env) {
       for (size_t i = 0; i < size; i++) {
         new_storage[i] = old_env[i];
-        // Initialize ownership: startup strings are not owned by us
         new_ownership[i] = EnvStringOwnership();
       }
     }
@@ -102,22 +107,21 @@ bool EnvironmentManager::ensure_capacity(size_t needed) {
     capacity = new_capacity;
     is_ours = true;
 
-    // Update app.env_ptr to point to our storage
+    // Update the global environ pointer.
     LIBC_NAMESPACE::app.env_ptr = reinterpret_cast<uintptr_t *>(storage);
 
     return true;
   }
 
-  // We already own environ, check if we need to grow it
+  // We already own the environment array. Check if it's large enough.
   if (needed <= capacity)
     return true;
 
-  // Grow capacity by the growth factor
+  // Grow capacity.
   size_t new_capacity = needed * ENVIRON_GROWTH_FACTOR;
 
-  // Allocate new arrays and copy to avoid partial realloc failures.
-  // We manage two coupled arrays plus app.env_ptr; reallocating one at a
-  // time can leave the state inconsistent if the second allocation fails.
+  // Allocate new arrays and copy. We avoid realloc to ensure that
+  // failures don't leave the manager in an inconsistent state.
   char **new_storage = reinterpret_cast<char **>(
       malloc(sizeof(char *) * (new_capacity + 1)));
   if (!new_storage)
@@ -145,7 +149,7 @@ bool EnvironmentManager::ensure_capacity(size_t needed) {
   ownership = new_ownership;
   capacity = new_capacity;
 
-  // Update app.env_ptr to point to our new storage
+  // Update the global environ pointer.
   LIBC_NAMESPACE::app.env_ptr = reinterpret_cast<uintptr_t *>(storage);
 
   return true;
