@@ -7679,6 +7679,46 @@ When the Owner's lifetime ends, it will consider the Pointer to be dangling.
     P.getInt(); // P is dangling
   }
 
+**Transparent Member Functions**
+
+The analysis automatically tracks certain member functions of ``[[gsl::Pointer]]`` types
+that provide transparent access to the pointed-to object. These include:
+
+* Dereference operators: ``operator*``, ``operator->``
+* Data access methods: ``data()``, ``c_str()``, ``get()``
+* Iterator methods: ``begin()``, ``end()``, ``rbegin()``, ``rend()``, ``cbegin()``, ``cend()``, ``crbegin()``, ``crend()``
+
+When these methods return pointers, view types, or references, the analysis treats them as
+transparently borrowing from the same object that the pointer itself borrows from,
+enabling detection of use-after-free through these access patterns:
+
+.. code-block:: c++
+
+  // For example, .data() here returns a borrow to 's' instead of 'v'.
+  const char* f() {
+    std::string s = "hello";
+    std::string_view v = s; // warning: address of stack memory returned
+    return v.data();        // note: returned here
+  }
+
+  const MyObj& g(MyObj obj) {
+    View v = obj; // warning: address of stack memory returned
+    return *v;    // note: returned here
+  }
+
+This tracking also applies to range-based for loops, where the ``begin()`` and ``end()``
+iterators are used to access elements:
+
+.. code-block:: c++
+
+  std::string_view f(std::vector<std::string> vec) {
+    for (const std::string& s : vec) {  // warning: address of stack memory returned
+      return s; // note: returned here
+    }
+  }
+
+**Container Template Specialization**
+
 If a template class is annotated with ``[[gsl::Owner]]``, and the first
 instantiated template argument is a pointer type (raw pointer, or ``[[gsl::Pointer]]``),
 the analysis will consider the instantiated class as a container of the pointer.

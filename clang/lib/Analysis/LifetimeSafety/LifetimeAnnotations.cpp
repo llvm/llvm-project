@@ -13,6 +13,7 @@
 #include "clang/AST/DeclTemplate.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "llvm/ADT/StringSet.h"
 
 namespace clang::lifetimes {
 
@@ -107,6 +108,10 @@ bool isPointerLikeType(QualType QT) {
   return isGslPointerType(QT) || QT->isPointerType() || QT->isNullPtrType();
 }
 
+static bool isReferenceOrPointerLikeType(QualType QT) {
+  return QT->isReferenceType() || isPointerLikeType(QT);
+}
+
 bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
                                   bool RunningUnderLifetimeSafety) {
   if (!Callee)
@@ -115,35 +120,43 @@ bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
     if (isGslPointerType(Conv->getConversionType()) &&
         Callee->getParent()->hasAttr<OwnerAttr>())
       return true;
-  if (!isInStlNamespace(Callee->getParent()))
-    return false;
   if (!isGslPointerType(Callee->getFunctionObjectParameterType()) &&
       !isGslOwnerType(Callee->getFunctionObjectParameterType()))
     return false;
 
-  // Track dereference operator for GSL pointers in STL. Only do so for lifetime
-  // safety analysis and not for Sema's statement-local analysis as it starts
-  // to have false-positives.
+  // Begin and end iterators.
+  static const llvm::StringSet<> IteratorMembers = {
+      "begin", "end", "rbegin", "rend", "cbegin", "cend", "crbegin", "crend"};
+  static const llvm::StringSet<> InnerPointerGetters = {
+      // Inner pointer getters.
+      "c_str", "data", "get"};
+  static const llvm::StringSet<> ContainerFindFns = {
+      // Map and set types.
+      "find", "equal_range", "lower_bound", "upper_bound"};
+  // Track dereference operator and transparent functions like begin(), get(),
+  // etc. for all GSL pointers. Only do so for lifetime safety analysis and not
+  // for Sema's statement-local analysis as it starts to have false-positives.
   if (RunningUnderLifetimeSafety &&
       isGslPointerType(Callee->getFunctionObjectParameterType()) &&
-      (Callee->getOverloadedOperator() == OverloadedOperatorKind::OO_Star ||
-       Callee->getOverloadedOperator() == OverloadedOperatorKind::OO_Arrow))
-    return true;
+      isReferenceOrPointerLikeType(Callee->getReturnType())) {
+    if (Callee->getOverloadedOperator() == OverloadedOperatorKind::OO_Star ||
+        Callee->getOverloadedOperator() == OverloadedOperatorKind::OO_Arrow)
+      return true;
+    if (Callee->getIdentifier() &&
+        (IteratorMembers.contains(Callee->getName()) ||
+         InnerPointerGetters.contains(Callee->getName())))
+      return true;
+  }
+
+  if (!isInStlNamespace(Callee->getParent()))
+    return false;
 
   if (isPointerLikeType(Callee->getReturnType())) {
     if (!Callee->getIdentifier())
       return false;
-    return llvm::StringSwitch<bool>(Callee->getName())
-        .Cases(
-            {// Begin and end iterators.
-             "begin", "end", "rbegin", "rend", "cbegin", "cend", "crbegin",
-             "crend",
-             // Inner pointer getters.
-             "c_str", "data", "get",
-             // Map and set types.
-             "find", "equal_range", "lower_bound", "upper_bound"},
-            true)
-        .Default(false);
+    return IteratorMembers.contains(Callee->getName()) ||
+           InnerPointerGetters.contains(Callee->getName()) ||
+           ContainerFindFns.contains(Callee->getName());
   }
   if (Callee->getReturnType()->isReferenceType()) {
     if (!Callee->getIdentifier()) {
