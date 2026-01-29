@@ -189,17 +189,12 @@ def TuneFusionLogicImmReg
 //   mul(w) rd, rs1, rs2
 //   add(w) rd, rd, rs3
 def TuneFusionMulAdd
-  : Fusion<"fusion-mul-add", "HasFusionMulAdd",
+  : SimpleFusion<"fusion-mul-add", "HasFusionMulAdd",
            "Enable MUL+ADD macrofusion",
-           [
-             SecondFusionPredicateWithMCInstPredicate<
-               CheckOpcode<[ADD, ADDW]>
-             >,
-             WildcardTrue,
-             FirstFusionPredicateWithMCInstPredicate<
-               CheckOpcode<[MUL, MULW]>
-             >,
-             // Check that both instructions have the same width
+           CheckOpcode<[MUL, MULW]>,
+           CheckOpcode<[ADD, ADDW]>,
+           [],
+           [// Check that both instructions have the same width
              FusionPredicateWithCode<[{
                if ((FirstMI->getDesc().TSFlags & RISCVII::IsSignExtendingOpWMask) !=
                    (SecondMI.getDesc().TSFlags & RISCVII::IsSignExtendingOpWMask))
@@ -207,10 +202,7 @@ def TuneFusionMulAdd
              }]>,
              SecondFusionPredicateWithMCInstPredicate<
                CheckNot<CheckSameRegOperand<0, 2>>
-             >,
-             SecondInstHasSameReg<0, 1>,
-             OneUse,
-             TieReg<0, 1>
+             >
            ]>;
 
 // Fuse add with load or store with zero offset:
