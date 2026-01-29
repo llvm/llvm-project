@@ -75,7 +75,12 @@ public:
 
   void trackFinalizedAlloc(FinalizedAlloc FA) { Alloc = std::move(FA); }
 
-  Expected<ExecutorAddrRange> awaitTargetMem() { return FinalizeFuture.get(); }
+  Expected<ExecutorAddrRange> awaitTargetMem() {
+    if (!FinalizeFuture.valid()) {
+      return ExecutorAddrRange();
+    }
+    return FinalizeFuture.get();
+  }
 
   void reportTargetMem(ExecutorAddrRange TargetMem) {
     FinalizePromise.set_value(TargetMem);
