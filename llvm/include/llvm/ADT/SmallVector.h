@@ -664,7 +664,7 @@ public:
   }
 
   void reserve(size_type N) {
-    if (this->capacity() < N)
+    if (LLVM_UNLIKELY(this->capacity() < N))
       this->grow(N);
   }
 
