@@ -222,7 +222,7 @@ void ARMTargetLowering::addTypeForNEON(MVT VT, MVT PromotedLdStVT) {
 
   if (!VT.isFloatingPoint() && VT != MVT::v2i64 && VT != MVT::v1i64)
     for (auto Opcode : {ISD::ABS, ISD::ABDS, ISD::ABDU, ISD::SMIN, ISD::SMAX,
-                        ISD::UMIN, ISD::UMAX})
+                        ISD::UMIN, ISD::UMAX, ISD::CTLS})
       setOperationAction(Opcode, VT, Legal);
   if (!VT.isFloatingPoint())
     for (auto Opcode : {ISD::SADDSAT, ISD::UADDSAT, ISD::SSUBSAT, ISD::USUBSAT})
@@ -276,6 +276,7 @@ void ARMTargetLowering::addMVEVectorTypes(bool HasMVEFP) {
     setOperationAction(ISD::UMIN, VT, Legal);
     setOperationAction(ISD::UMAX, VT, Legal);
     setOperationAction(ISD::ABS, VT, Legal);
+    setOperationAction(ISD::CTLS, VT, Legal);
     setOperationAction(ISD::SETCC, VT, Custom);
     setOperationAction(ISD::MLOAD, VT, Custom);
     setOperationAction(ISD::MSTORE, VT, Legal);
@@ -1004,9 +1005,9 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::ROTR, VT, Expand);
   }
   setOperationAction(ISD::CTTZ,  MVT::i32, Custom);
-  // CTLS (Count Leading Sign bits)
-  setOperationAction(ISD::CTLS, MVT::i32, Custom);
-  setOperationAction(ISD::CTLS, MVT::i64, Custom);
+  // Note: arm_cls and arm_cls64 intrinsics are expanded directly in
+  // LowerINTRINSIC_WO_CHAIN since there's no native scalar CLS instruction.
+  // Vector CTLS is Legal when NEON/MVE is available (set elsewhere).
   // TODO: These two should be set to LibCall, but this currently breaks
   //   the Linux kernel build. See #101786.
   setOperationAction(ISD::CTPOP, MVT::i32, Expand);
@@ -3839,11 +3840,30 @@ ARMTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG,
     return DAG.getNode(ARMISD::THREAD_POINTER, dl, PtrVT);
   }
   case Intrinsic::arm_cls: {
+    // ARM32 scalar CLS: CTLS(x) = CTLZ(OR(SHL(XOR(x, SRA(x, 31)), 1), 1))
+    // We expand directly here instead of using ISD::CTLS since there's no
+    // native scalar CLS instruction on ARM.
     const SDValue &Operand = Op.getOperand(1);
     const EVT VTy = Op.getValueType();
-    return DAG.getNode(ISD::CTLS, dl, VTy, Operand);
+    SDValue SRA =
+        DAG.getNode(ISD::SRA, dl, VTy, Operand, DAG.getConstant(31, dl, VTy));
+    SDValue XOR = DAG.getNode(ISD::XOR, dl, VTy, SRA, Operand);
+    SDValue SHL =
+        DAG.getNode(ISD::SHL, dl, VTy, XOR, DAG.getConstant(1, dl, VTy));
+    SDValue OR =
+        DAG.getNode(ISD::OR, dl, VTy, SHL, DAG.getConstant(1, dl, VTy));
+    return DAG.getNode(ISD::CTLZ, dl, VTy, OR);
   }
   case Intrinsic::arm_cls64: {
+    // arm_cls64 returns i32 but takes i64 input.
+    // Use ISD::CTLS for i64 and truncate the result.
+    const SDValue &Operand = Op.getOperand(1);
+    SDValue CTLS64 = DAG.getNode(ISD::CTLS, dl, MVT::i64, Operand);
+    return DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, CTLS64);
+  }
+  case Intrinsic::arm_neon_vcls:
+  case Intrinsic::arm_mve_vcls: {
+    // Lower vector CLS intrinsics to ISD::CTLS
     const SDValue &Operand = Op.getOperand(1);
     const EVT VTy = Op.getValueType();
     return DAG.getNode(ISD::CTLS, dl, VTy, Operand);
@@ -6280,61 +6300,6 @@ static SDValue LowerCTPOP(SDNode *N, SelectionDAG &DAG,
   }
 
   return Res;
-}
-
-SDValue ARMTargetLowering::LowerCTLS(SDNode *N, SelectionDAG &DAG,
-                                       const ARMSubtarget *ST) const {
-  SDLoc dl(N);
-  EVT VT = N->getValueType(0);
-  SDValue Operand = N->getOperand(0);
-
-  if (VT == MVT::i32) {
-    // ARM32 scalar CLS: CTLS(x) = CTLZ(OR(SHL(XOR(x, SRA(x, 31)), 1), 1))
-    SDValue SRA =
-        DAG.getNode(ISD::SRA, dl, VT, Operand, DAG.getConstant(31, dl, VT));
-    SDValue XOR = DAG.getNode(ISD::XOR, dl, VT, SRA, Operand);
-    SDValue SHL =
-        DAG.getNode(ISD::SHL, dl, VT, XOR, DAG.getConstant(1, dl, VT));
-    SDValue OR = DAG.getNode(ISD::OR, dl, VT, SHL, DAG.getConstant(1, dl, VT));
-    SDValue Result = DAG.getNode(ISD::CTLZ, dl, VT, OR);
-    return Result;
-  }
-
-  if (VT == MVT::i64) {
-    // For 64-bit on 32-bit ARM, we need to split into two 32-bit operations
-    EVT VT32 = MVT::i32;
-    SDValue Lo, Hi;
-    std::tie(Lo, Hi) = DAG.SplitScalar(Operand, dl, VT32, VT32);
-
-    SDValue Constant0 = DAG.getConstant(0, dl, VT32);
-    SDValue Constant1 = DAG.getConstant(1, dl, VT32);
-    SDValue Constant31 = DAG.getConstant(31, dl, VT32);
-
-    // Compute CTLS of high part
-    SDValue SRAHi = DAG.getNode(ISD::SRA, dl, VT32, Hi, Constant31);
-    SDValue XORHi = DAG.getNode(ISD::XOR, dl, VT32, SRAHi, Hi);
-    SDValue SHLHi = DAG.getNode(ISD::SHL, dl, VT32, XORHi, Constant1);
-    SDValue ORHi = DAG.getNode(ISD::OR, dl, VT32, SHLHi, Constant1);
-    SDValue CLSHi = DAG.getNode(ISD::CTLZ, dl, VT32, ORHi);
-
-    // Check if CLSHi == 31 (all high bits are sign bits)
-    SDValue IsAllSignBits =
-        DAG.getSetCC(dl, MVT::i1, CLSHi, Constant31, ISD::SETEQ);
-
-    // If all high bits are sign bits, compute for low part
-    SDValue HiIsZero = DAG.getSetCC(dl, MVT::i1, Hi, Constant0, ISD::SETEQ);
-    SDValue AdjustedLo =
-        DAG.getSelect(dl, VT32, HiIsZero, Lo, DAG.getNOT(dl, Lo, VT32));
-    SDValue CLZAdjustedLo = DAG.getNode(ISD::CTLZ, dl, VT32, AdjustedLo);
-    SDValue Result = DAG.getSelect(
-        dl, VT32, IsAllSignBits,
-        DAG.getNode(ISD::ADD, dl, VT32, CLZAdjustedLo, Constant31), CLSHi);
-
-    return Result;
-  }
-
-  // Vector types should be handled elsewhere
-  return SDValue();
 }
 
 /// Getvshiftimm - Check if this is a valid build_vector for the immediate
@@ -10379,8 +10344,8 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SRL_PARTS:
   case ISD::SRA_PARTS:     return LowerShiftRightParts(Op, DAG);
   case ISD::CTTZ:
-  case ISD::CTTZ_ZERO_UNDEF: return LowerCTTZ(Op.getNode(), DAG, Subtarget);
-  case ISD::CTLS:           return LowerCTLS(Op.getNode(), DAG, Subtarget);
+  case ISD::CTTZ_ZERO_UNDEF:
+    return LowerCTTZ(Op.getNode(), DAG, Subtarget);
   case ISD::CTPOP:         return LowerCTPOP(Op.getNode(), DAG, Subtarget);
   case ISD::SETCC:         return LowerVSETCC(Op, DAG, Subtarget);
   case ISD::SETCCCARRY:    return LowerSETCCCARRY(Op, DAG);
