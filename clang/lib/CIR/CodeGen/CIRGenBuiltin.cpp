@@ -1335,8 +1335,44 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_eh_return:
   case Builtin::BI__builtin_unwind_init:
   case Builtin::BI__builtin_extend_pointer:
-  case Builtin::BI__builtin_setjmp:
-  case Builtin::BI__builtin_longjmp:
+    return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI__builtin_setjmp: {
+    Address buf = emitPointerWithAlignment(e->getArg(0));
+    mlir::Location loc = getLoc(e->getExprLoc());
+
+    cir::PointerType ppTy = builder.getPointerTo(builder.getVoidPtrTy());
+    mlir::Value castBuf = builder.createBitcast(buf.getPointer(), ppTy);
+
+    assert(!cir::MissingFeatures::emitCheckedInBoundsGEP());
+    if (getTarget().getTriple().isSystemZ()) {
+      llvm_unreachable("SYSTEMZ NYI");
+    }
+    
+    mlir::Value frameaddress =
+        cir::FrameAddrOp::create(builder, loc, builder.getVoidPtrTy(),
+                                 mlir::ValueRange{builder.getUInt32(0, loc)})
+            .getResult();
+
+    builder.createStore(loc, frameaddress, Address(castBuf, buf.getAlignment()));
+
+    mlir::Value stacksave =
+        cir::StackSaveOp::create(builder, loc, builder.getVoidPtrTy())
+            .getResult();
+    cir::PtrStrideOp stackSaveSlot = cir::PtrStrideOp::create(
+        builder, loc, ppTy, castBuf, builder.getSInt32(2, loc));
+    builder.createStore(loc, stacksave, Address(stackSaveSlot, buf.getAlignment()));
+    auto op =
+        cir::EhSetjmpOp::create(builder, loc, castBuf, /*is_builtin=*/true);
+    return RValue::get(op);
+  }
+  case Builtin::BI__builtin_longjmp: {
+    mlir::Value buf = emitScalarExpr(e->getArg(0));
+    mlir::Location loc = getLoc(e->getExprLoc());
+
+    cir::EhLongjmpOp::create(builder, loc, buf);
+    builder.create<cir::UnreachableOp>(loc);
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__builtin_launder:
   case Builtin::BI__sync_fetch_and_add:
   case Builtin::BI__sync_fetch_and_sub:
