@@ -7,14 +7,6 @@ CodeGen/AArch64/selectopt-cast.ll
 CodeGen/AArch64/selectopt.ll
 CodeGen/ARM/loopvectorize_pr33804.ll
 CodeGen/ARM/sjljeh-swifterror.ll
-CodeGen/Hexagon/autohvx/interleave.ll
-CodeGen/Hexagon/loop-idiom/hexagon-memmove1.ll
-CodeGen/Hexagon/loop-idiom/hexagon-memmove2.ll
-CodeGen/Hexagon/loop-idiom/memmove-rt-check.ll
-CodeGen/Hexagon/masked_gather.ll
-CodeGen/NVPTX/lower-ctor-dtor.ll
-CodeGen/RISCV/zmmul.ll
-CodeGen/WebAssembly/memory-interleave.ll
 CodeGen/X86/AMX/amx-low-intrinsics.ll
 CodeGen/X86/masked_gather_scatter.ll
 DebugInfo/AArch64/ir-outliner.ll
@@ -23,7 +15,6 @@ DebugInfo/Generic/block-asan.ll
 LTO/X86/diagnostic-handler-remarks-with-hotness.ll
 Other/optimization-remarks-auto.ll
 Transforms/AtomicExpand/ARM/atomic-expansion-v7.ll
-Transforms/AtomicExpand/SPARC/partword.ll
 Transforms/Attributor/align.ll
 Transforms/Attributor/ArgumentPromotion/2008-02-01-ReturnAttrs.ll
 Transforms/Attributor/ArgumentPromotion/2008-07-02-array-indexing.ll
@@ -87,10 +78,6 @@ Transforms/CodeExtractor/LoopExtractor_alloca.ll
 Transforms/CodeExtractor/LoopExtractor_crash.ll
 Transforms/CodeExtractor/LoopExtractor_infinite.ll
 Transforms/CodeExtractor/LoopExtractor.ll
-Transforms/CodeGenPrepare/NVPTX/bypass-slow-div-constant-numerator.ll
-Transforms/CodeGenPrepare/NVPTX/bypass-slow-div.ll
-Transforms/CodeGenPrepare/NVPTX/bypass-slow-div-not-exact.ll
-Transforms/CodeGenPrepare/NVPTX/bypass-slow-div-special-cases.ll
 Transforms/Coroutines/coro-await-suspend-lower-invoke.ll
 Transforms/Coroutines/coro-await-suspend-lower.ll
 Transforms/Coroutines/coro-byval-param.ll
@@ -390,7 +377,6 @@ Transforms/LoopBoundSplit/loop-bound-split.ll
 Transforms/LoopDeletion/invalidate-scev-after-hoisting.ll
 Transforms/LoopIdiom/AArch64/byte-compare-index.ll
 Transforms/LoopIdiom/AArch64/find-first-byte.ll
-Transforms/LoopIdiom/RISCV/byte-compare-index.ll
 Transforms/LoopInterchange/reduction2mem.ll
 Transforms/LowerAtomic/atomic-load.ll
 Transforms/LowerAtomic/atomic-swap.ll
@@ -481,8 +467,6 @@ Transforms/PhaseOrdering/X86/pr52078.ll
 Transforms/PhaseOrdering/X86/preserve-access-group.ll
 Transforms/PreISelIntrinsicLowering/AArch64/expand-exp.ll
 Transforms/PreISelIntrinsicLowering/AArch64/expand-log.ll
-Transforms/PreISelIntrinsicLowering/PowerPC/memset-pattern.ll
-Transforms/PreISelIntrinsicLowering/RISCV/memset-pattern.ll
 Transforms/ScalarizeMaskedMemIntrin/AArch64/expand-masked-load.ll
 Transforms/ScalarizeMaskedMemIntrin/AArch64/expand-masked-store.ll
 Transforms/ScalarizeMaskedMemIntrin/AArch64/streaming-compatible-expand-masked-gather-scatter.ll
