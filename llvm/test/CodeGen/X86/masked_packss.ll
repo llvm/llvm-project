@@ -16,11 +16,8 @@ define <16 x i8> @_mm_mask_packss_epi16_manual(<16 x i8> %src, i16 noundef %k, <
 ;
 ; AVX512-LABEL: _mm_mask_packss_epi16_manual:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
-; AVX512-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; AVX512-NEXT:    kmovd %edi, %k1
-; AVX512-NEXT:    vpmovswb %ymm1, %xmm0 {%k1}
-; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    vpacksswb %xmm2, %xmm1, %xmm0 {%k1}
 ; AVX512-NEXT:    retq
   %sh = shufflevector <8 x i16> %a, <8 x i16> %b, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15>
   %minv = tail call <16 x i16> @llvm.smax.v16i16(<16 x i16> %sh, <16 x i16> splat (i16 -128))
@@ -46,11 +43,8 @@ define <32 x i8> @_mm256_mask_packss_epi16_manual(<32 x i8> %src, i32 noundef %k
 ;
 ; AVX512-LABEL: _mm256_mask_packss_epi16_manual:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vperm2i128 {{.*#+}} ymm3 = ymm1[2,3],ymm2[2,3]
-; AVX512-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
-; AVX512-NEXT:    vinserti64x4 $1, %ymm3, %zmm1, %zmm1
 ; AVX512-NEXT:    kmovd %edi, %k1
-; AVX512-NEXT:    vpmovswb %zmm1, %ymm0 {%k1}
+; AVX512-NEXT:    vpacksswb %ymm2, %ymm1, %ymm0 {%k1}
 ; AVX512-NEXT:    retq
   %sh = shufflevector <16 x i16> %a, <16 x i16> %b, <32 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 16, i32 17, i32 18, i32 19, i32 20, i32 21, i32 22, i32 23, i32 8, i32 9, i32 10, i32 11, i32 12, i32 13, i32 14, i32 15, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   %minv = tail call <32 x i16> @llvm.smax.v32i16(<32 x i16> %sh, <32 x i16> splat (i16 -128))
@@ -114,11 +108,8 @@ define <8 x i16> @_mm_mask_packss_epi32_manual(<8 x i16> %src, i8 noundef %k, <4
 ;
 ; AVX512-LABEL: _mm_mask_packss_epi32_manual:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    # kill: def $xmm1 killed $xmm1 def $ymm1
-; AVX512-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
 ; AVX512-NEXT:    kmovd %edi, %k1
-; AVX512-NEXT:    vpmovsdw %ymm1, %xmm0 {%k1}
-; AVX512-NEXT:    vzeroupper
+; AVX512-NEXT:    vpackssdw %xmm2, %xmm1, %xmm0 {%k1}
 ; AVX512-NEXT:    retq
   %sh = shufflevector <4 x i32> %a, <4 x i32> %b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   %minv = tail call <8 x i32> @llvm.smax.v8i32(<8 x i32> %sh, <8 x i32> splat (i32 -32768))
@@ -143,11 +134,8 @@ define <16 x i16> @_mm256_mask_packss_epi32_manual(<16 x i16> %src, i16 noundef 
 ;
 ; AVX512-LABEL: _mm256_mask_packss_epi32_manual:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vperm2i128 {{.*#+}} ymm3 = ymm1[2,3],ymm2[2,3]
-; AVX512-NEXT:    vinserti128 $1, %xmm2, %ymm1, %ymm1
-; AVX512-NEXT:    vinserti64x4 $1, %ymm3, %zmm1, %zmm1
 ; AVX512-NEXT:    kmovd %edi, %k1
-; AVX512-NEXT:    vpmovsdw %zmm1, %ymm0 {%k1}
+; AVX512-NEXT:    vpackssdw %ymm2, %ymm1, %ymm0 {%k1}
 ; AVX512-NEXT:    retq
   %sh = shufflevector <8 x i32> %a, <8 x i32> %b, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7, i32 12, i32 13, i32 14, i32 15>
   %minv = tail call <16 x i32> @llvm.smax.v16i32(<16 x i32> %sh, <16 x i32> splat (i32 -32768))
