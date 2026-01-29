@@ -190,9 +190,10 @@ private:
                                    bool ProcessingGeneric) const;
   void printMCExpr(const MCExpr &Expr, raw_ostream &OS) const;
   /// Emit a blob of inline asm to the output streamer.
-  void emitInlineAsm(StringRef Str, const TargetMachine &TM,
-                     const MDNode *LocMDNode = nullptr,
-                     const MachineInstr *MI = nullptr) override;
+  void emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
+                     const MCTargetOptions &MCOptions, const MDNode *LocMDNode,
+                     InlineAsm::AsmDialect Dialect,
+                     const MachineInstr *MI) override;
 
 protected:
   bool doInitialization(Module &M) override;
