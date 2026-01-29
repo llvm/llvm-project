@@ -97,18 +97,24 @@ static bool isRefToTrivialType(Type type) {
   return fir::isa_trivial(fir::unwrapRefType(type));
 }
 
-static void hoistLoads(acc::FirstprivateMapInitialOp firstprivateInitOp,
+/// Attempts to hoist loads from accVar to before firstprivateInitOp.
+/// Returns true if all uses of accVar are loads and they were hoisted.
+static bool hoistLoads(acc::FirstprivateMapInitialOp firstprivateInitOp,
                        Value var, Value accVar) {
-  llvm::SmallVector<fir::LoadOp> loadsToHoist;
-  for (Operation *user : accVar.getUsers()) {
-    if (auto loadOp = dyn_cast<fir::LoadOp>(user))
-      loadsToHoist.push_back(loadOp);
-  }
+  // Check if all uses are loads - only hoist if we can optimize all uses.
+  bool allLoads = llvm::all_of(accVar.getUsers(), [](Operation *user) {
+    return isa<fir::LoadOp>(user);
+  });
+  if (!allLoads)
+    return false;
 
-  for (fir::LoadOp loadOp : loadsToHoist) {
+  // Hoist all loads before the firstprivate_map operation.
+  for (Operation *user : llvm::make_early_inc_range(accVar.getUsers())) {
+    auto loadOp = cast<fir::LoadOp>(user);
     loadOp.getMemrefMutable().assign(var);
     loadOp->moveBefore(firstprivateInitOp);
   }
+  return true;
 }
 
 class ACCOptimizeFirstprivateMap
@@ -176,8 +182,7 @@ private:
     if (mayBeOptionalVariable(var))
       return false;
 
-    hoistLoads(firstprivateInitOp, var, accVar);
-    return true;
+    return hoistLoads(firstprivateInitOp, var, accVar);
   }
 };
 
