@@ -805,7 +805,7 @@ protected:
 
   void DoExecute(Args &command, CommandReturnObject &result) override {
     Target &target = GetTarget();
-    StackFrame *frame = m_exe_ctx.GetFramePtr();
+    StackFrameSP frame_sp = m_exe_ctx.GetFrameSP();
 
     // If no argument is present, issue an error message.  There's no way to
     // set a watchpoint.
@@ -839,7 +839,7 @@ protected:
     uint32_t expr_path_options =
         StackFrame::eExpressionPathOptionCheckPtrVsMember |
         StackFrame::eExpressionPathOptionsAllowDirectIVarAccess;
-    valobj_sp = frame->GetValueForVariableExpressionPath(
+    valobj_sp = frame_sp->GetValueForVariableExpressionPath(
         command.GetArgumentAtIndex(0), eNoDynamicValues, expr_path_options,
         var_sp, error);
 
@@ -902,11 +902,15 @@ protected:
 
     error.Clear();
     WatchpointSP watch_sp =
-        target.CreateWatchpoint(addr, size, &compiler_type, watch_type, error);
+        target.CreateWatchpointByAddress(addr, size, &compiler_type, watch_type,
+                                         m_option_watchpoint.watch_mode, error);
     if (!watch_sp) {
       result.AppendErrorWithFormat(
-          "Watchpoint creation failed (addr=0x%" PRIx64 ", size=%" PRIu64
+          "%s watchpoint creation failed (addr=0x%" PRIx64 ", size=%" PRIu64
           ", variable expression='%s').\n",
+          m_option_watchpoint.watch_mode == lldb::eWatchpointModeHardware
+              ? "Hardware"
+              : "Software",
           addr, static_cast<uint64_t>(size), command.GetArgumentAtIndex(0));
       if (const char *error_message = error.AsCString(nullptr))
         result.AppendError(error_message);
@@ -923,7 +927,7 @@ protected:
         watch_sp->SetDeclInfo(std::string(ss.GetString()));
       }
       if (var_sp->GetScope() == eValueTypeVariableLocal)
-        watch_sp->SetupVariableWatchpointDisabler(m_exe_ctx.GetFrameSP());
+        watch_sp->SetupVariableWatchpointDisabler(frame_sp);
     }
     output_stream.Printf("Watchpoint created: ");
     watch_sp->GetDescription(&output_stream, lldb::eDescriptionLevelFull);
@@ -1093,22 +1097,30 @@ protected:
     }
 
     Status error;
-    WatchpointSP watch_sp =
-        target.CreateWatchpoint(addr, size, &compiler_type, watch_type, error);
-    if (watch_sp) {
-      watch_sp->SetWatchSpec(std::string(expr));
-      Stream &output_stream = result.GetOutputStream();
-      output_stream.Printf("Watchpoint created: ");
-      watch_sp->GetDescription(&output_stream, lldb::eDescriptionLevelFull);
-      output_stream.EOL();
-      result.SetStatus(eReturnStatusSuccessFinishResult);
-    } else {
-      result.AppendErrorWithFormat("Watchpoint creation failed (addr=0x%" PRIx64
-                                   ", size=%" PRIu64 ").\n",
-                                   addr, (uint64_t)size);
-      if (error.AsCString(nullptr))
-        result.AppendError(error.AsCString());
+    WatchpointSP watch_sp;
+    watch_sp =
+        target.CreateWatchpointByAddress(addr, size, &compiler_type, watch_type,
+                                         m_option_watchpoint.watch_mode, error);
+    if (!watch_sp) {
+      result.AppendErrorWithFormat(
+          "%s watchpoint creation failed (addr=0x%" PRIx64 ", size=%" PRIu64
+          ", expression='%s').\n",
+          m_option_watchpoint.watch_mode == eWatchpointModeHardware
+              ? "Hardware"
+              : "Software",
+          addr, static_cast<uint64_t>(size), expr.data());
+      if (const char *error_message = error.AsCString(nullptr))
+        result.AppendError(error_message);
+      return;
     }
+
+    watch_sp->SetWatchSpec(std::string(expr));
+
+    Stream &output_stream = result.GetOutputStream();
+    output_stream.Printf("Watchpoint created: ");
+    watch_sp->GetDescription(&output_stream, lldb::eDescriptionLevelFull);
+    output_stream.EOL();
+    result.SetStatus(eReturnStatusSuccessFinishResult);
   }
 
 private:

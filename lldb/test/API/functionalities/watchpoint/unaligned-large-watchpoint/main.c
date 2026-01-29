@@ -11,7 +11,7 @@ struct obj {
 };
 
 int main() {
-  const int count = 16776960;
+  const int count = 1000;
   uint8_t *array = (uint8_t *)malloc(count);
   memset(array, 0, count);
   struct obj variable;

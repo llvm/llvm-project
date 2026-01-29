@@ -10,6 +10,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test.lldbwatchpointutils import *
 
 
 class WatchpointSizeTestCase(TestBase):
@@ -28,23 +29,65 @@ class WatchpointSizeTestCase(TestBase):
 
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=["s390x"])
-    def test_byte_size_watchpoints_with_byte_selection(self):
+    @expectedFailureAll(archs="^riscv.*")
+    def test_byte_size_hardware_watchpoints_with_byte_selection(self):
         """Test to selectively watch different bytes in a 8-byte array."""
-        self.run_watchpoint_size_test("byteArray", 8, "1")
+        self.run_watchpoint_size_test(
+            "byteArray", 8, "1", WatchpointType.READ_WRITE, lldb.eWatchpointModeHardware
+        )
+
+    def test_byte_size_software_watchpoints_with_byte_selection(self):
+        """Test to selectively watch different bytes in a 8-byte array."""
+        # The software watchpoints can only be of the modify type, so in this test,
+        # we will try to use modify type watchpoints instead of the ones used in the
+        # original test (read-write type).
+        self.run_watchpoint_size_test(
+            "byteArray", 8, "1", WatchpointType.MODIFY, lldb.eWatchpointModeSoftware
+        )
 
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=["s390x"])
-    def test_two_byte_watchpoints_with_word_selection(self):
+    @expectedFailureAll(archs="^riscv.*")
+    def test_two_byte_hardware_watchpoints_with_word_selection(self):
         """Test to selectively watch different words in an 8-byte word array."""
-        self.run_watchpoint_size_test("wordArray", 4, "2")
+        self.run_watchpoint_size_test(
+            "wordArray", 4, "2", WatchpointType.READ_WRITE, lldb.eWatchpointModeHardware
+        )
+
+    def test_two_byte_software_watchpoints_with_word_selection(self):
+        """Test to selectively watch different words in an 8-byte word array."""
+        # The software watchpoints can only be of the modify type, so in this test,
+        # we will try to use modify type watchpoints instead of the ones used in the
+        # original test (read-write type).
+        self.run_watchpoint_size_test(
+            "wordArray", 4, "2", WatchpointType.MODIFY, lldb.eWatchpointModeSoftware
+        )
 
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=["s390x"])
-    def test_four_byte_watchpoints_with_dword_selection(self):
+    @expectedFailureAll(archs="^riscv.*")
+    def test_four_byte_hardware_watchpoints_with_dword_selection(self):
         """Test to selectively watch two double words in an 8-byte dword array."""
-        self.run_watchpoint_size_test("dwordArray", 2, "4")
+        self.run_watchpoint_size_test(
+            "dwordArray",
+            2,
+            "4",
+            WatchpointType.READ_WRITE,
+            lldb.eWatchpointModeHardware,
+        )
 
-    def run_watchpoint_size_test(self, arrayName, array_size, watchsize):
+    def test_four_byte_software_watchpoints_with_dword_selection(self):
+        """Test to selectively watch two double words in an 8-byte dword array."""
+        # The software watchpoints can only be of the modify type, so in this test,
+        # we will try to use modify type watchpoints instead of the ones used in the
+        # original test (read-write type).
+        self.run_watchpoint_size_test(
+            "dwordArray", 2, "4", WatchpointType.MODIFY, lldb.eWatchpointModeSoftware
+        )
+
+    def run_watchpoint_size_test(
+        self, arrayName, array_size, watchsize, wp_type, wp_mode
+    ):
         self.build(dictionary=self.d)
         self.setTearDownCleanup(dictionary=self.d)
 
@@ -74,9 +117,13 @@ class WatchpointSizeTestCase(TestBase):
             # Set a read_write type watchpoint arrayName
             watch_loc = arrayName + "[" + str(i) + "]"
             self.expect(
-                "watchpoint set variable -w read_write " + watch_loc,
+                f"{get_set_watchpoint_CLI_command(WatchpointCLICommandVariant.VARIABLE, wp_type, wp_mode)} {arrayName}[{str(i)}]",
                 WATCHPOINT_CREATED,
-                substrs=["Watchpoint created", "size = " + watchsize, "type = rw"],
+                substrs=[
+                    "Watchpoint created",
+                    f"size = {watchsize}",
+                    f"type = {wp_type.value[0]}",
+                ],
             )
 
             # Use the '-v' option to do verbose listing of the watchpoint.

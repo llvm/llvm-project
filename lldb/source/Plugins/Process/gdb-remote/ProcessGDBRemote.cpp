@@ -3479,6 +3479,12 @@ Status ProcessGDBRemote::EnableWatchpoint(WatchpointSP wp_sp, bool notify) {
     return error;
   }
 
+  // Handle a software watchpoint
+  if (!wp_sp->IsHardware()) {
+    wp_sp->SetEnabled(true, notify);
+    return error;
+  }
+
   bool read = wp_sp->WatchpointRead();
   bool write = wp_sp->WatchpointWrite() || wp_sp->WatchpointModify();
   size_t size = wp_sp->GetByteSize();
@@ -3585,33 +3591,38 @@ Status ProcessGDBRemote::DisableWatchpoint(WatchpointSP wp_sp, bool notify) {
     return error;
   }
 
-  if (wp_sp->IsHardware()) {
-    bool disabled_all = true;
+  // Handle a software watchpoint
+  if (!wp_sp->IsHardware()) {
+    wp_sp->SetEnabled(false, notify);
+    return error;
+  }
 
-    std::vector<WatchpointResourceSP> unused_resources;
-    for (const auto &wp_res_sp : m_watchpoint_resource_list.Sites()) {
-      if (wp_res_sp->ConstituentsContains(wp_sp)) {
-        GDBStoppointType type = GetGDBStoppointType(wp_res_sp);
-        addr_t addr = wp_res_sp->GetLoadAddress();
-        size_t size = wp_res_sp->GetByteSize();
-        if (m_gdb_comm.SendGDBStoppointTypePacket(type, false, addr, size,
-                                                  GetInterruptTimeout())) {
-          disabled_all = false;
-        } else {
-          wp_res_sp->RemoveConstituent(wp_sp);
-          if (wp_res_sp->GetNumberOfConstituents() == 0)
-            unused_resources.push_back(wp_res_sp);
-        }
+  bool disabled_all = true;
+
+  std::vector<WatchpointResourceSP> unused_resources;
+  for (const auto &wp_res_sp : m_watchpoint_resource_list.Sites()) {
+    if (wp_res_sp->ConstituentsContains(wp_sp)) {
+      GDBStoppointType type = GetGDBStoppointType(wp_res_sp);
+      addr_t addr = wp_res_sp->GetLoadAddress();
+      size_t size = wp_res_sp->GetByteSize();
+      if (m_gdb_comm.SendGDBStoppointTypePacket(type, false, addr, size,
+                                                GetInterruptTimeout())) {
+        disabled_all = false;
+      } else {
+        wp_res_sp->RemoveConstituent(wp_sp);
+        if (wp_res_sp->GetNumberOfConstituents() == 0)
+          unused_resources.push_back(wp_res_sp);
       }
     }
-    for (auto &wp_res_sp : unused_resources)
-      m_watchpoint_resource_list.Remove(wp_res_sp->GetID());
-
-    wp_sp->SetEnabled(false, notify);
-    if (!disabled_all)
-      error = Status::FromErrorString(
-          "Failure disabling one of the watchpoint locations");
   }
+  for (auto &wp_res_sp : unused_resources)
+    m_watchpoint_resource_list.Remove(wp_res_sp->GetID());
+
+  wp_sp->SetEnabled(false, notify);
+  if (!disabled_all)
+    Status::FromErrorString(
+        "Failure disabling one of the watchpoint locations");
+
   return error;
 }
 

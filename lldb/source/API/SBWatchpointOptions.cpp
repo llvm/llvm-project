@@ -20,6 +20,7 @@ public:
   bool m_read = false;
   bool m_write = false;
   bool m_modify = false;
+  lldb::WatchpointMode m_mode = lldb::eWatchpointModeHardware;
 };
 
 
@@ -70,4 +71,12 @@ WatchpointWriteType SBWatchpointOptions::GetWatchpointTypeWrite() const {
   if (m_opaque_up->m_write)
     return eWatchpointWriteTypeAlways;
   return eWatchpointWriteTypeDisabled;
+}
+
+void SBWatchpointOptions::SetWatchpointMode(lldb::WatchpointMode mode) {
+  m_opaque_up->m_mode = mode;
+}
+
+lldb::WatchpointMode SBWatchpointOptions::GetWatchpointMode() const {
+  return m_opaque_up->m_mode;
 }

@@ -438,11 +438,10 @@ bool ThreadPlanStepOut::DoWillResume(StateType resume_state,
   if (m_return_bp_id == LLDB_INVALID_BREAK_ID)
     return false;
 
-  if (current_plan) {
-    Breakpoint *return_bp = GetTarget().GetBreakpointByID(m_return_bp_id).get();
-    if (return_bp != nullptr)
-      return_bp->SetEnabled(true);
-  }
+  Breakpoint *return_bp = GetTarget().GetBreakpointByID(m_return_bp_id).get();
+  if (return_bp != nullptr)
+    return_bp->SetEnabled(true);
+
   return true;
 }
 

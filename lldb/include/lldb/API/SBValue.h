@@ -359,7 +359,7 @@ public:
   ///     return due to a value not being contained in memory, too
   ///     large, or watchpoint resources are not available or all in
   ///     use.
-  lldb::SBWatchpoint Watch(bool resolve_location, bool read, bool write,
+  lldb::SBWatchpoint Watch(bool resolve_location, SBWatchpointOptions options,
                            SBError &error);
 
   // Backward compatibility fix in the interim.
@@ -389,8 +389,8 @@ public:
   ///     return due to a value not being contained in memory, too
   ///     large, or watchpoint resources are not available or all in
   ///     use.
-  lldb::SBWatchpoint WatchPointee(bool resolve_location, bool read, bool write,
-                                  SBError &error);
+  lldb::SBWatchpoint WatchPointee(bool resolve_location,
+                                  SBWatchpointOptions options, SBError &error);
 
   /// If this value represents a C++ class that has a vtable, return an value
   /// that represents the virtual function table.

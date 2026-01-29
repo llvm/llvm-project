@@ -6,6 +6,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test.lldbwatchpointutils import *
 
 
 class WatchpointIgnoreCountTestCase(TestBase):
@@ -30,7 +31,20 @@ class WatchpointIgnoreCountTestCase(TestBase):
 
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=["s390x"])
-    def test_set_watch_ignore_count(self):
+    @expectedFailureAll(archs="^riscv.*")
+    def test_set_hw_watch_ignore_count(self):
+        self.do_set_watch_ignore_count(
+            WatchpointType.READ_WRITE, lldb.eWatchpointModeHardware
+        )
+
+    def test_set_sw_watch_ignore_count(self):
+        self.runCmd("settings append target.env-vars SW_WP_CASE=YES")
+        self.do_set_watch_ignore_count(
+            WatchpointType.MODIFY, lldb.eWatchpointModeSoftware
+        )
+        self.runCmd("settings clear target.env-vars")
+
+    def do_set_watch_ignore_count(self, wp_type, wp_mode):
         """Test SBWatchpoint.SetIgnoreCount() API."""
         self.build()
         exe = self.getBuildArtifact("a.out")
@@ -57,7 +71,7 @@ class WatchpointIgnoreCountTestCase(TestBase):
         # Watch 'global' for read and write.
         value = frame0.FindValue("global", lldb.eValueTypeVariableGlobal)
         error = lldb.SBError()
-        watchpoint = value.Watch(True, True, True, error)
+        watchpoint = set_watchpoint_at_value(value, wp_type, wp_mode, error)
         self.assertTrue(
             value and watchpoint, "Successfully found the variable and set a watchpoint"
         )

@@ -7,6 +7,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test.lldbwatchpointutils import *
 
 
 class WatchpointForMultipleThreadsTestCase(TestBase):
@@ -14,28 +15,71 @@ class WatchpointForMultipleThreadsTestCase(TestBase):
     main_spec = lldb.SBFileSpec("main.cpp", False)
 
     @skipIfWindows  # This test is flaky on Windows
-    def test_watchpoint_before_thread_start(self):
+    @expectedFailureAll(archs="^riscv.*")
+    def test_hardware_watchpoint_before_thread_start(self):
         """Test that we can hit a watchpoint we set before starting another thread"""
-        self.do_watchpoint_test("Before running the thread")
+        self.do_watchpoint_test(
+            "Before running the thread",
+            WatchpointType.WRITE,
+            lldb.eWatchpointModeHardware,
+        )
 
     @skipIfWindows  # This test is flaky on Windows
-    def test_watchpoint_after_thread_launch(self):
+    @expectedFailureAll(archs="^riscv.*")
+    def test_hardware_watchpoint_after_thread_launch(self):
         """Test that we can hit a watchpoint we set after launching another thread"""
-        self.do_watchpoint_test("After launching the thread")
+        self.do_watchpoint_test(
+            "After launching the thread",
+            WatchpointType.WRITE,
+            lldb.eWatchpointModeHardware,
+        )
 
-    def test_watchpoint_after_thread_start(self):
+    @expectedFailureAll(archs="^riscv.*")
+    def test_hardware_watchpoint_after_thread_start(self):
         """Test that we can hit a watchpoint we set after another thread starts"""
-        self.do_watchpoint_test("After running the thread")
+        self.do_watchpoint_test(
+            "After running the thread",
+            WatchpointType.WRITE,
+            lldb.eWatchpointModeHardware,
+        )
 
-    def do_watchpoint_test(self, line):
+    # The software watchpoints can only be of the modify type, so in this tests,
+    # we will try to use modify type watchpoints instead of the ones used in the
+    # original test (write type).
+
+    def test_software_watchpoint_before_thread_start(self):
+        """Test that we can hit a watchpoint we set before starting another thread"""
+        self.do_watchpoint_test(
+            "Before running the thread",
+            WatchpointType.MODIFY,
+            lldb.eWatchpointModeSoftware,
+        )
+
+    def test_software_watchpoint_after_thread_launch(self):
+        """Test that we can hit a watchpoint we set after launching another thread"""
+        self.do_watchpoint_test(
+            "After launching the thread",
+            WatchpointType.MODIFY,
+            lldb.eWatchpointModeSoftware,
+        )
+
+    def test_software_watchpoint_after_thread_start(self):
+        """Test that we can hit a watchpoint we set after another thread starts"""
+        self.do_watchpoint_test(
+            "After running the thread",
+            WatchpointType.MODIFY,
+            lldb.eWatchpointModeSoftware,
+        )
+
+    def do_watchpoint_test(self, line, wp_type, wp_mode):
         self.build()
         lldbutil.run_to_source_breakpoint(self, line, self.main_spec)
 
         # Now let's set a write-type watchpoint for variable 'g_val'.
         self.expect(
-            "watchpoint set variable -w write g_val",
+            f"{get_set_watchpoint_CLI_command(WatchpointCLICommandVariant.VARIABLE, wp_type, wp_mode)} g_val",
             WATCHPOINT_CREATED,
-            substrs=["Watchpoint created", "size = 4", "type = w"],
+            substrs=["Watchpoint created", "size = 4", f"type = {wp_type.value[0]}"],
         )
 
         # Use the '-v' option to do verbose listing of the watchpoint.
@@ -55,7 +99,18 @@ class WatchpointForMultipleThreadsTestCase(TestBase):
         # The hit count should now be 1.
         self.expect("watchpoint list -v", substrs=["hit_count = 1"])
 
-    def test_watchpoint_multiple_threads_wp_set_and_then_delete(self):
+    @expectedFailureAll(archs="^riscv.*")
+    def test_harwdare_watchpoint_multiple_threads_wp_set_and_then_delete(self):
+        self.do_watchpoint_multiple_threads_wp_set_and_then_delete(
+            WatchpointType.WRITE, lldb.eWatchpointModeHardware
+        )
+
+    def test_software_watchpoint_multiple_threads_wp_set_and_then_delete(self):
+        self.do_watchpoint_multiple_threads_wp_set_and_then_delete(
+            WatchpointType.MODIFY, lldb.eWatchpointModeSoftware
+        )
+
+    def do_watchpoint_multiple_threads_wp_set_and_then_delete(self, wp_type, wp_mode):
         """Test that lldb watchpoint works for multiple threads, and after the watchpoint is deleted, the watchpoint event should no longer fires."""
         self.build()
         self.setTearDownCleanup()
@@ -66,9 +121,9 @@ class WatchpointForMultipleThreadsTestCase(TestBase):
 
         # Now let's set a write-type watchpoint for variable 'g_val'.
         self.expect(
-            "watchpoint set variable -w write g_val",
+            f"{get_set_watchpoint_CLI_command(WatchpointCLICommandVariant.VARIABLE, wp_type, wp_mode)} g_val",
             WATCHPOINT_CREATED,
-            substrs=["Watchpoint created", "size = 4", "type = w"],
+            substrs=["Watchpoint created", "size = 4", f"type = {wp_type.value[0]}"],
         )
 
         # Use the '-v' option to do verbose listing of the watchpoint.

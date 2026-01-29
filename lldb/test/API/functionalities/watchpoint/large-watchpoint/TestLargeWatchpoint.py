@@ -8,6 +8,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test.lldbwatchpointutils import *
 
 
 class UnalignedWatchpointTestCase(TestBase):
@@ -27,7 +28,14 @@ class UnalignedWatchpointTestCase(TestBase):
 
     # debugserver only gained the ability to watch larger regions
     # with this patch.
-    def test_large_watchpoint(self):
+    @skipIfOutOfTreeDebugserver
+    def test_large_hw_watchpoint(self):
+        self.do_large_watchpoint(WatchpointType.MODIFY, lldb.eWatchpointModeHardware)
+
+    def test_large_sw_watchpoint(self):
+        self.do_large_watchpoint(WatchpointType.MODIFY, lldb.eWatchpointModeSoftware)
+
+    def do_large_watchpoint(self, wp_type, wp_mode):
         """Test watchpoint that covers a large region of memory."""
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.c")
@@ -44,9 +52,7 @@ class UnalignedWatchpointTestCase(TestBase):
         # to a 1024 byte boundary to begin with, force alignment.
         wa_256_addr = (array_addr + 1024) & ~(1024 - 1)
         err = lldb.SBError()
-        wp_opts = lldb.SBWatchpointOptions()
-        wp_opts.SetWatchpointTypeWrite(lldb.eWatchpointWriteTypeOnModify)
-        wp = target.WatchpointCreateByAddress(wa_256_addr, 1024, wp_opts, err)
+        wp = set_watchpoint_by_address(target, wa_256_addr, 1024, wp_type, wp_mode, err)
         self.assertTrue(wp.IsValid())
         self.assertSuccess(err)
 

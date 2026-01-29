@@ -931,9 +931,9 @@ bool Target::ProcessIsValid() {
   return (m_process_sp && m_process_sp->IsAlive());
 }
 
-static bool CheckIfWatchpointsSupported(Target *target, Status &error) {
+static bool CheckIfHardwareWatchpointsSupported(Target &target, Status &error) {
   std::optional<uint32_t> num_supported_hardware_watchpoints =
-      target->GetProcessSP()->GetWatchpointSlotCount();
+      target.GetProcessSP()->GetWatchpointSlotCount();
 
   // If unable to determine the # of watchpoints available,
   // assume they are supported.
@@ -949,91 +949,108 @@ static bool CheckIfWatchpointsSupported(Target *target, Status &error) {
   return true;
 }
 
-// See also Watchpoint::SetWatchpointType(uint32_t type) and the
-// OptionGroupWatchpoint::WatchType enum type.
-WatchpointSP Target::CreateWatchpoint(lldb::addr_t addr, size_t size,
-                                      const CompilerType *type, uint32_t kind,
-                                      Status &error) {
-  Log *log = GetLog(LLDBLog::Watchpoints);
-  LLDB_LOGF(log,
-            "Target::%s (addr = 0x%8.8" PRIx64 " size = %" PRIu64
-            " type = %u)\n",
-            __FUNCTION__, addr, (uint64_t)size, kind);
+static bool IsModifyWatchpointKind(uint32_t kind) {
+  return (kind & LLDB_WATCH_TYPE_READ) == 0 &&
+         (kind & LLDB_WATCH_TYPE_WRITE) == 0;
+}
 
-  WatchpointSP wp_sp;
-  if (!ProcessIsValid()) {
-    error = Status::FromErrorString("process is not alive");
-    return wp_sp;
+static bool CheckSoftwareWatchpointParameters(uint32_t kind, Status &error) {
+  if (!IsModifyWatchpointKind(kind)) {
+    error.FromErrorString("software watchpoint can be only \"modify\" type");
+    return false;
   }
+  return true;
+}
 
-  if (addr == LLDB_INVALID_ADDRESS || size == 0) {
-    if (size == 0)
-      error = Status::FromErrorString(
-          "cannot set a watchpoint with watch_size of 0");
-    else
-      error = Status::FromErrorStringWithFormat(
-          "invalid watch address: %" PRIu64, addr);
-    return wp_sp;
-  }
-
+static bool CheckGeneralWatchpointParameters(uint32_t kind, size_t size,
+                                             Status &error) {
   if (!LLDB_WATCH_TYPE_IS_VALID(kind)) {
-    error =
-        Status::FromErrorStringWithFormat("invalid watchpoint type: %d", kind);
+    error.FromErrorStringWithFormat("invalid watchpoint type: %d", kind);
+    return false;
   }
 
-  if (!CheckIfWatchpointsSupported(this, error))
-    return wp_sp;
+  if (size == 0) {
+    error.FromErrorString("cannot set a watchpoint with watch_size of 0");
+    return false;
+  }
 
-  // Currently we only support one watchpoint per address, with total number of
-  // watchpoints limited by the hardware which the inferior is running on.
+  return true;
+}
+
+// LWP_TODO this sequence is looking for an existing watchpoint
+// at the exact same user-specified address. If addr/size/type match,
+// reuse the matched watchpoint. If type/size/mode differ, return an error.
+// This isn't correct, we need both watchpoints to use a shared
+// WatchpointResource in the target, and expand the WatchpointResource
+// to handle the needs of both Watchpoints.
+// Also, even if the addresses don't match, they may need to be
+// supported by the same WatchpointResource, e.g. a watchpoint
+// watching 1 byte at 0x102 and a watchpoint watching 1 byte at 0x103.
+// They're in the same word and must be watched by a single hardware
+// watchpoint register.
+static WatchpointSP CheckMatchedWatchpoint(Target &target, lldb::addr_t addr,
+                                           uint32_t kind, size_t size,
+                                           WatchpointMode mode, Status &error) {
+  // Grab the list mutex while doing operations.
+  std::unique_lock<std::recursive_mutex> lock;
+  target.GetWatchpointList().GetListMutex(lock);
+
+  WatchpointList &wp_list = target.GetWatchpointList();
+  WatchpointSP matched_sp = wp_list.FindByAddress(addr);
+  if (!matched_sp)
+    return nullptr;
+
+  size_t old_size = matched_sp->GetByteSize();
+  uint32_t old_type =
+      (matched_sp->WatchpointRead() ? LLDB_WATCH_TYPE_READ : 0) |
+      (matched_sp->WatchpointWrite() ? LLDB_WATCH_TYPE_WRITE : 0) |
+      (matched_sp->WatchpointModify() ? LLDB_WATCH_TYPE_MODIFY : 0);
+  WatchpointMode old_mode = matched_sp->IsHardware() ? eWatchpointModeHardware
+                                                     : eWatchpointModeSoftware;
+  // Return the existing watchpoint if size, type and mode match.
+  if (size == old_size && kind == old_type && mode == old_mode) {
+    Debugger::ReportWarning(llvm::formatv(
+        "Address 0x{0:x} is already monitored by Watchpoint {1} with "
+        "matching parameters: size ({2}), type ({3}{4}{5}), and mode ({6}). "
+        "Reusing existing watchpoint.",
+        addr, matched_sp->GetID(), size,
+        matched_sp->WatchpointRead() ? "r" : "",
+        matched_sp->WatchpointWrite() ? "w" : "",
+        matched_sp->WatchpointModify() ? "m" : "",
+        matched_sp->IsHardware() ? "Hardware" : "Software"));
+    WatchpointSP wp_sp = matched_sp;
+    return wp_sp;
+  }
+
+  error.FromErrorStringWithFormat(
+      "Address 0x%lx is already monitored by Watchpoint %u with "
+      "diffrent size(%zu), type(%s%s%s) or mode(%s).\n"
+      "Multiple watchpoints on the same address are not supported. "
+      "You should manually delete Watchpoint %u before setting a "
+      "a new watchpoint on this address.",
+      addr, matched_sp->GetID(), size, matched_sp->WatchpointRead() ? "r" : "",
+      matched_sp->WatchpointWrite() ? "w" : "",
+      matched_sp->WatchpointModify() ? "m" : "",
+      matched_sp->IsHardware() ? "Hardware" : "Software", matched_sp->GetID());
+  return nullptr;
+}
+
+static bool AddWatchpointToList(Target &target, WatchpointSP wp_sp,
+                                Status &error) {
+  lldbassert(wp_sp);
+
+  Log *log = GetLog(LLDBLog::Watchpoints);
+  constexpr bool notify = true;
+
+  WatchpointList &wp_list = target.GetWatchpointList();
 
   // Grab the list mutex while doing operations.
-  const bool notify = false; // Don't notify about all the state changes we do
-                             // on creating the watchpoint.
-
-  // Mask off ignored bits from watchpoint address.
-  if (ABISP abi = m_process_sp->GetABI())
-    addr = abi->FixDataAddress(addr);
-
-  // LWP_TODO this sequence is looking for an existing watchpoint
-  // at the exact same user-specified address, disables the new one
-  // if addr/size/type match.  If type/size differ, disable old one.
-  // This isn't correct, we need both watchpoints to use a shared
-  // WatchpointResource in the target, and expand the WatchpointResource
-  // to handle the needs of both Watchpoints.
-  // Also, even if the addresses don't match, they may need to be
-  // supported by the same WatchpointResource, e.g. a watchpoint
-  // watching 1 byte at 0x102 and a watchpoint watching 1 byte at 0x103.
-  // They're in the same word and must be watched by a single hardware
-  // watchpoint register.
-
   std::unique_lock<std::recursive_mutex> lock;
-  this->GetWatchpointList().GetListMutex(lock);
-  WatchpointSP matched_sp = m_watchpoint_list.FindByAddress(addr);
-  if (matched_sp) {
-    size_t old_size = matched_sp->GetByteSize();
-    uint32_t old_type =
-        (matched_sp->WatchpointRead() ? LLDB_WATCH_TYPE_READ : 0) |
-        (matched_sp->WatchpointWrite() ? LLDB_WATCH_TYPE_WRITE : 0) |
-        (matched_sp->WatchpointModify() ? LLDB_WATCH_TYPE_MODIFY : 0);
-    // Return the existing watchpoint if both size and type match.
-    if (size == old_size && kind == old_type) {
-      wp_sp = matched_sp;
-      wp_sp->SetEnabled(false, notify);
-    } else {
-      // Nil the matched watchpoint; we will be creating a new one.
-      m_process_sp->DisableWatchpoint(matched_sp, notify);
-      m_watchpoint_list.Remove(matched_sp->GetID(), true);
-    }
-  }
+  wp_list.GetListMutex(lock);
 
-  if (!wp_sp) {
-    wp_sp = std::make_shared<Watchpoint>(*this, addr, size, type);
-    wp_sp->SetWatchpointType(kind, notify);
-    m_watchpoint_list.Add(wp_sp, true);
-  }
+  wp_list.Add(wp_sp, notify);
 
-  error = m_process_sp->EnableWatchpoint(wp_sp, notify);
+  error = target.GetProcessSP()->EnableWatchpoint(wp_sp, /*notify=*/false);
   LLDB_LOGF(log, "Target::%s (creation of watchpoint %s with id = %u)\n",
             __FUNCTION__, error.Success() ? "succeeded" : "failed",
             wp_sp->GetID());
@@ -1041,10 +1058,107 @@ WatchpointSP Target::CreateWatchpoint(lldb::addr_t addr, size_t size,
   if (error.Fail()) {
     // Enabling the watchpoint on the device side failed. Remove the said
     // watchpoint from the list maintained by the target instance.
-    m_watchpoint_list.Remove(wp_sp->GetID(), true);
-    wp_sp.reset();
-  } else
-    m_last_created_watchpoint = wp_sp;
+    wp_list.Remove(wp_sp->GetID(), notify);
+    return false;
+  }
+  return true;
+}
+
+// See also Watchpoint::SetWatchpointType(uint32_t type) and the
+// OptionGroupWatchpoint::WatchType enum type.
+WatchpointSP Target::CreateWatchpointByAddress(lldb::addr_t addr, size_t size,
+                                               const CompilerType *type,
+                                               uint32_t kind,
+                                               WatchpointMode mode,
+                                               Status &error) {
+  Log *log = GetLog(LLDBLog::Watchpoints);
+  LLDB_LOGF(log,
+            "Target::%s (addr = 0x%8.8" PRIx64 " size = %" PRIu64
+            " type = %u)\n",
+            __FUNCTION__, addr, static_cast<uint64_t>(size), kind);
+
+  if (!ProcessIsValid()) {
+    error = Status::FromErrorString("process is not alive");
+    return nullptr;
+  }
+
+  if (!CheckGeneralWatchpointParameters(kind, size, error))
+    return nullptr;
+
+  if (addr == LLDB_INVALID_ADDRESS) {
+    error = Status::FromErrorStringWithFormat("invalid watch address: %" PRIu64,
+                                              addr);
+    return nullptr;
+  }
+
+  // Mask off ignored bits from watchpoint address.
+  if (ABISP abi = m_process_sp->GetABI(); abi != nullptr)
+    addr = abi->FixDataAddress(addr);
+
+  if (mode == eWatchpointModeHardware) {
+    // Hardware wathpoint specific checks
+    if (!CheckIfHardwareWatchpointsSupported(*this, error))
+      return nullptr;
+  } else {
+    // Software watchpoint specific checks
+    if (!CheckSoftwareWatchpointParameters(kind, error))
+      return nullptr;
+  }
+
+  WatchpointSP wp_sp =
+      CheckMatchedWatchpoint(*this, addr, kind, size, mode, error);
+  if (error.Fail()) {
+    // A watchpoint already exists at this address with conflicting parameters
+    // (size, type, or mode). Since multiple watchpoints cannot share the same
+    // address, return an error here and suggest the user to remove the existing
+    // watchpoint if user still wants to create a new one.
+    return nullptr;
+  }
+
+  if (wp_sp) {
+    // A watchpoint with desired parameters already exists at this address.
+    // In this case, enable it if needed and reuse it.
+    error = m_process_sp->EnableWatchpoint(wp_sp, /*notify=*/false);
+    return wp_sp;
+  }
+
+  wp_sp = std::make_shared<Watchpoint>(*this, addr, size, type, mode);
+  wp_sp->SetWatchpointType(kind, /*notify=*/false);
+
+  if (!AddWatchpointToList(*this, wp_sp, error))
+    return nullptr;
+
+  m_last_created_watchpoint = wp_sp;
+  return wp_sp;
+}
+
+WatchpointSP Target::CreateWatchpointByExpression(llvm::StringRef expr,
+                                                  size_t size,
+                                                  ExecutionContext &exe_ctx,
+                                                  uint32_t kind,
+                                                  Status &error) {
+  Log *log = GetLog(LLDBLog::Watchpoints);
+  LLDB_LOGF(log, "Target::%s (expr = %s, size = %" PRIu64 " type = %u)\n",
+            __FUNCTION__, expr.data(), static_cast<uint64_t>(size), kind);
+
+  if (!ProcessIsValid()) {
+    error.FromErrorString("process is not alive");
+    return nullptr;
+  }
+
+  if (!CheckGeneralWatchpointParameters(kind, size, error))
+    return nullptr;
+
+  if (!CheckSoftwareWatchpointParameters(kind, error))
+    return nullptr;
+
+  WatchpointSP wp_sp = std::make_shared<Watchpoint>(*this, expr, size, exe_ctx);
+  wp_sp->SetWatchpointType(kind, /*notify=*/false);
+
+  if (!AddWatchpointToList(*this, wp_sp, error))
+    return nullptr;
+
+  m_last_created_watchpoint = wp_sp;
   return wp_sp;
 }
 

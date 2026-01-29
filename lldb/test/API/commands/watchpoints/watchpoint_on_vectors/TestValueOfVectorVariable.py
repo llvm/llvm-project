@@ -7,18 +7,32 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test.lldbwatchpointutils import *
 
 
 class TestValueOfVectorVariableTestCase(TestBase):
     NO_DEBUG_INFO_TESTCASE = True
 
-    def test_value_of_vector_variable_using_watchpoint_set(self):
+    @expectedFailureAll(archs="^riscv.*")
+    def test_value_of_vector_variable_using_hardware_watchpoint_set(self):
         """Test verify displayed value of vector variable."""
         exe = self.getBuildArtifact("a.out")
         d = {"C_SOURCES": self.source, "EXE": exe}
         self.build(dictionary=d)
         self.setTearDownCleanup(dictionary=d)
-        self.value_of_vector_variable_with_watchpoint_set()
+        self.value_of_vector_variable_with_watchpoint_set(
+            WatchpointType.MODIFY, lldb.eWatchpointModeHardware
+        )
+
+    def test_value_of_vector_variable_using_software_watchpoint_set(self):
+        """Test verify displayed value of vector variable."""
+        exe = self.getBuildArtifact("a.out")
+        d = {"C_SOURCES": self.source, "EXE": exe}
+        self.build(dictionary=d)
+        self.setTearDownCleanup(dictionary=d)
+        self.value_of_vector_variable_with_watchpoint_set(
+            WatchpointType.MODIFY, lldb.eWatchpointModeSoftware
+        )
 
     def setUp(self):
         # Call super's setUp().
@@ -26,7 +40,7 @@ class TestValueOfVectorVariableTestCase(TestBase):
         # Our simple source filename.
         self.source = "main.c"
 
-    def value_of_vector_variable_with_watchpoint_set(self):
+    def value_of_vector_variable_with_watchpoint_set(self, wp_type, wp_mode):
         """Test verify displayed value of vector variable"""
         exe = self.getBuildArtifact("a.out")
         self.runCmd("file " + exe, CURRENT_EXECUTABLE_SET)
@@ -39,7 +53,7 @@ class TestValueOfVectorVariableTestCase(TestBase):
 
         # Value of a vector variable should be displayed correctly
         self.expect(
-            "watchpoint set variable global_vector",
+            f"{get_set_watchpoint_CLI_command(WatchpointCLICommandVariant.VARIABLE, wp_type, wp_mode)} global_vector",
             WATCHPOINT_CREATED,
             substrs=["new value: (1, 2, 3, 4)"],
         )

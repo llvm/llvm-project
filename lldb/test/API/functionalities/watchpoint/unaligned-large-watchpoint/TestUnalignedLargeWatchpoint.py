@@ -9,6 +9,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test.lldbwatchpointutils import *
 
 
 class UnalignedLargeWatchpointTestCase(TestBase):
@@ -31,7 +32,17 @@ class UnalignedLargeWatchpointTestCase(TestBase):
     # Test on 64-bit targets where we probably have
     # four watchpoint registers that can watch doublewords (8-byte).
     @skipIf(archs=no_match(["arm64", "arm64e", "aarch64", "x86_64"]))
-    def test_unaligned_large_watchpoint(self):
+    def test_unaligned_large_hw_watchpoint(self):
+        self.do_unaligned_large_watchpoint(
+            WatchpointType.MODIFY, lldb.eWatchpointModeHardware
+        )
+
+    def test_unaligned_large_sw_watchpoint(self):
+        self.do_unaligned_large_watchpoint(
+            WatchpointType.MODIFY, lldb.eWatchpointModeSoftware
+        )
+
+    def do_unaligned_large_watchpoint(self, wp_type, wp_mode):
         """Test watching an unaligned region of memory that requires multiple watchpoints."""
         self.build()
         self.main_source_file = lldb.SBFileSpec("main.c")
@@ -54,9 +65,7 @@ class UnalignedLargeWatchpointTestCase(TestBase):
         wa_addr = wa_addr + 7
 
         err = lldb.SBError()
-        wp_opts = lldb.SBWatchpointOptions()
-        wp_opts.SetWatchpointTypeWrite(lldb.eWatchpointWriteTypeOnModify)
-        wp = target.WatchpointCreateByAddress(wa_addr, 22, wp_opts, err)
+        wp = set_watchpoint_by_address(target, wa_addr, 22, wp_type, wp_mode, err)
         self.assertTrue(wp.IsValid())
         self.assertSuccess(err)
         if self.TraceOn():
@@ -79,9 +88,13 @@ class UnalignedLargeWatchpointTestCase(TestBase):
 
         # Now try watching a 16 byte variable
         # (not unaligned, but a good check to do anyway)
-        frame = thread.GetFrameAtIndex(0)
+        frame0 = thread.GetFrameAtIndex(0)
+        value = frame0.FindValue("variable", lldb.eValueTypeVariableLocal)
         err = lldb.SBError()
-        wp = frame.locals["variable"][0].Watch(True, False, True, err)
+        wp = set_watchpoint_at_value(value, wp_type, wp_mode, err)
+        self.assertTrue(
+            value and wp, "Successfully found the variable and set a watchpoint"
+        )
         self.assertSuccess(err)
         if self.TraceOn():
             self.runCmd("frame select 0")

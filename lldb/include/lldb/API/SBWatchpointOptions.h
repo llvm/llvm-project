@@ -33,6 +33,9 @@ public:
   void SetWatchpointTypeWrite(lldb::WatchpointWriteType write_type);
   lldb::WatchpointWriteType GetWatchpointTypeWrite() const;
 
+  void SetWatchpointMode(lldb::WatchpointMode mode);
+  lldb::WatchpointMode GetWatchpointMode() const;
+
 private:
   // This auto_pointer is made in the constructor and is always valid.
   mutable std::unique_ptr<WatchpointOptionsImpl> m_opaque_up;

@@ -7,6 +7,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test.lldbwatchpointutils import *
 
 
 class WatchpointConditionCmdTestCase(TestBase):
@@ -26,7 +27,14 @@ class WatchpointConditionCmdTestCase(TestBase):
         self.exe_name = self.testMethodName
         self.d = {"CXX_SOURCES": self.source, "EXE": self.exe_name}
 
-    def test_watchpoint_cond(self):
+    @expectedFailureAll(archs="^riscv.*")
+    def test_hardware_watchpoint_cond(self):
+        self.do_watchpoint_cond(WatchpointType.WRITE, lldb.eWatchpointModeHardware)
+
+    def test_software_watchpoint_cond(self):
+        self.do_watchpoint_cond(WatchpointType.MODIFY, lldb.eWatchpointModeSoftware)
+
+    def do_watchpoint_cond(self, wp_type, wp_mode):
         """Test watchpoint condition."""
         self.build(dictionary=self.d)
         self.setTearDownCleanup(dictionary=self.d)
@@ -53,12 +61,12 @@ class WatchpointConditionCmdTestCase(TestBase):
         # Now let's set a write-type watchpoint for 'global'.
         # With a condition of 'global==5'.
         self.expect(
-            "watchpoint set variable -w write global",
+            f"{get_set_watchpoint_CLI_command(WatchpointCLICommandVariant.VARIABLE, wp_type, wp_mode)} global",
             WATCHPOINT_CREATED,
             substrs=[
                 "Watchpoint created",
                 "size = 4",
-                "type = w",
+                f"type = {wp_type.value[0]}",
                 "%s:%d" % (self.source, self.decl),
             ],
         )

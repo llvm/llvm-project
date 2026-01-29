@@ -1327,8 +1327,7 @@ lldb::SBWatchpoint SBTarget::WatchAddress(lldb::addr_t addr, size_t size,
 
   SBWatchpointOptions options;
   options.SetWatchpointTypeRead(read);
-  if (modify)
-    options.SetWatchpointTypeWrite(eWatchpointWriteTypeOnModify);
+  options.SetWatchpointTypeWrite(eWatchpointWriteTypeOnModify);
   return WatchpointCreateByAddress(addr, size, options, error);
 }
 
@@ -1339,7 +1338,10 @@ SBTarget::WatchpointCreateByAddress(lldb::addr_t addr, size_t size,
   LLDB_INSTRUMENT_VA(this, addr, size, options, error);
 
   SBWatchpoint sb_watchpoint;
-  lldb::WatchpointSP watchpoint_sp;
+  TargetSP target_sp(GetSP());
+  if (!target_sp)
+    return sb_watchpoint;
+
   uint32_t watch_type = 0;
   if (options.GetWatchpointTypeRead())
     watch_type |= LLDB_WATCH_TYPE_READ;
@@ -1353,19 +1355,17 @@ SBTarget::WatchpointCreateByAddress(lldb::addr_t addr, size_t size,
     return sb_watchpoint;
   }
 
-  if (TargetSP target_sp = GetSP();
-      target_sp && addr != LLDB_INVALID_ADDRESS && size > 0) {
-    std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
-    // Target::CreateWatchpoint() is thread safe.
-    Status cw_error;
-    // This API doesn't take in a type, so we can't figure out what it is.
-    CompilerType *type = nullptr;
-    watchpoint_sp =
-        target_sp->CreateWatchpoint(addr, size, type, watch_type, cw_error);
-    error.SetError(std::move(cw_error));
-    sb_watchpoint.SetSP(watchpoint_sp);
-  }
+  // Target::CreateWatchpointByAddress() is thread safe.
+  std::lock_guard<std::recursive_mutex> guard(target_sp->GetAPIMutex());
 
+  Status cw_error;
+  // This API doesn't take in a type, so we can't figure out what it is.
+  CompilerType *type = nullptr;
+  lldb::WatchpointSP watchpoint_sp = target_sp->CreateWatchpointByAddress(
+      addr, size, type, watch_type, options.GetWatchpointMode(), cw_error);
+  error.SetError(std::move(cw_error));
+
+  sb_watchpoint.SetSP(watchpoint_sp);
   return sb_watchpoint;
 }
 

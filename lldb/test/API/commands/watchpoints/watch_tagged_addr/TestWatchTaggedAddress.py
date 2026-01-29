@@ -6,6 +6,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test.lldbwatchpointutils import *
 
 
 class TestWatchTaggedAddresses(TestBase):
@@ -33,7 +34,18 @@ class TestWatchTaggedAddresses(TestBase):
 
     @skipIf(archs=no_match(["aarch64"]))
     @skipIf(oslist=no_match(["linux"]))
-    def test_watch_hit_tagged_ptr_access(self):
+    def test_hw_watch_hit_tagged_ptr_access(self):
+        self.do_watch_hit_tagged_ptr_access(
+            WatchpointType.MODIFY, lldb.eWatchpointModeHardware
+        )
+
+    @skipIf(archs=no_match(["aarch64"]))
+    def test_sw_watch_hit_tagged_ptr_access(self):
+        self.do_watch_hit_tagged_ptr_access(
+            WatchpointType.MODIFY, lldb.eWatchpointModeSoftware
+        )
+
+    def do_watch_hit_tagged_ptr_access(self, wp_type, wp_mode):
         """
         Test that LLDB hits watchpoint installed on an untagged address with
         memory access by a tagged pointer.
@@ -57,12 +69,12 @@ class TestWatchTaggedAddresses(TestBase):
 
         # Now let's set a watchpoint on 'global_var'.
         self.expect(
-            "watchpoint set variable global_var",
+            f"{get_set_watchpoint_CLI_command(WatchpointCLICommandVariant.VARIABLE, wp_type, wp_mode)} global_var",
             WATCHPOINT_CREATED,
             substrs=[
                 "Watchpoint created",
                 "size = 4",
-                "type = m",
+                f"type = {wp_type.value[0]}",
                 "%s:%d" % (self.source, self.decl),
             ],
         )
@@ -71,7 +83,18 @@ class TestWatchTaggedAddresses(TestBase):
 
     @skipIf(archs=no_match(["aarch64"]))
     @skipIf(oslist=no_match(["linux"]))
-    def test_watch_set_on_tagged_ptr(self):
+    def test_hw_watch_hit_tagged_ptr_access(self):
+        self.do_watch_set_on_tagged_ptr(
+            WatchpointType.MODIFY, lldb.eWatchpointModeHardware
+        )
+
+    @skipIf(archs=no_match(["aarch64"]))
+    def test_sw_watch_hit_tagged_ptr_access(self):
+        self.do_watch_set_on_tagged_ptr(
+            WatchpointType.MODIFY, lldb.eWatchpointModeSoftware
+        )
+
+    def do_watch_set_on_tagged_ptr(self, wp_type, wp_mode):
         """Test that LLDB can install and hit watchpoint on a tagged address"""
 
         # Find the line number to break inside main().
@@ -94,9 +117,9 @@ class TestWatchTaggedAddresses(TestBase):
 
         # Now let's set a expression watchpoint on 'tagged_ptr'.
         self.expect(
-            "watchpoint set expression -s 4 -- tagged_ptr",
+            f"{get_set_watchpoint_CLI_command(WatchpointCLICommandVariant.EXPRESSION, wp_type, wp_mode)} -s 4 -- tagged_ptr",
             WATCHPOINT_CREATED,
-            substrs=["Watchpoint created", "size = 4", "type = m"],
+            substrs=["Watchpoint created", "size = 4", f"type = {wp_type.value[0]}"],
         )
 
         self.verify_watch_hits()

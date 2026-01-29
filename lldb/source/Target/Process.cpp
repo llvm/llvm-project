@@ -17,6 +17,7 @@
 
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Breakpoint/StoppointCallbackContext.h"
+#include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/ModuleSpec.h"
@@ -2619,6 +2620,15 @@ bool Process::GetWatchpointReportedAfter() {
   return reported_after;
 }
 
+llvm::SmallVector<lldb::WatchpointSP> Process::GetEnabledSoftwareWatchpoint() {
+  llvm::SmallVector<lldb::WatchpointSP, 4> watchpoints;
+  llvm::copy_if(GetTarget().GetWatchpointList().Watchpoints(),
+                std::back_inserter(watchpoints), [](lldb::WatchpointSP wp_sp) {
+                  return !wp_sp->IsHardware() && wp_sp->IsEnabled();
+                });
+  return watchpoints;
+}
+
 ModuleSP Process::ReadModuleFromMemory(const FileSpec &file_spec,
                                        lldb::addr_t header_addr,
                                        size_t size_to_read) {
@@ -4971,6 +4981,25 @@ private:
   bool m_is_controlling = false;
   bool m_okay_to_discard = false;
 };
+
+// RestoreSoftwareWatchpoints is used to disable all enabled software
+// watchpoints and reenable them on destruction
+class RestoreSoftwareWatchpoints {
+public:
+  RestoreSoftwareWatchpoints(Process &process)
+      : m_watchpoints{process.GetEnabledSoftwareWatchpoint()} {
+    for (lldb::WatchpointSP wp_sp : m_watchpoints)
+      wp_sp->SetEnabled(false, false);
+  }
+
+  ~RestoreSoftwareWatchpoints() {
+    for (lldb::WatchpointSP wp_sp : m_watchpoints)
+      wp_sp->SetEnabled(true, false);
+  }
+
+private:
+  llvm::SmallVector<lldb::WatchpointSP> m_watchpoints;
+};
 } // anonymous namespace
 
 static microseconds
@@ -5110,6 +5139,11 @@ Process::RunThreadPlan(ExecutionContext &exe_ctx,
   // runner.  This will restore them when we are done:
 
   RestorePlanState thread_plan_restorer(thread_plan_sp);
+
+  // We need to disable all software watchpoints, if they are presented,
+  // otherwise the process is going to step during the thread plan evaluation.
+
+  RestoreSoftwareWatchpoints sw_watchpoints_restorer(*this);
 
   // We rely on the thread plan we are running returning "PlanCompleted" if
   // when it successfully completes. For that to be true the plan can't be

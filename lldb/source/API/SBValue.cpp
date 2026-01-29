@@ -1482,69 +1482,65 @@ lldb::SBDeclaration SBValue::GetDeclaration() {
   return decl_sb;
 }
 
-lldb::SBWatchpoint SBValue::Watch(bool resolve_location, bool read, bool write,
-                                  SBError &error) {
-  LLDB_INSTRUMENT_VA(this, resolve_location, read, write, error);
+lldb::SBWatchpoint SBValue::Watch(bool resolve_location,
+                                  SBWatchpointOptions options, SBError &error) {
+  LLDB_INSTRUMENT_VA(this, resolve_location, options, error);
 
   SBWatchpoint sb_watchpoint;
 
   // If the SBValue is not valid, there's no point in even trying to watch it.
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
-  TargetSP target_sp(GetTarget().GetSP());
-  if (value_sp && target_sp) {
-    // Read and Write cannot both be false.
-    if (!read && !write)
-      return sb_watchpoint;
-
-    // If the value is not in scope, don't try and watch and invalid value
-    if (!IsInScope())
-      return sb_watchpoint;
-
-    addr_t addr = GetLoadAddress();
-    if (addr == LLDB_INVALID_ADDRESS)
-      return sb_watchpoint;
-    size_t byte_size = GetByteSize();
-    if (byte_size == 0)
-      return sb_watchpoint;
-
-    uint32_t watch_type = 0;
-    if (read) {
-      watch_type |= LLDB_WATCH_TYPE_READ;
-      // read + write, the most likely intention
-      // is to catch all writes to this, not just
-      // value modifications.
-      if (write)
-        watch_type |= LLDB_WATCH_TYPE_WRITE;
-    } else {
-      if (write)
-        watch_type |= LLDB_WATCH_TYPE_MODIFY;
-    }
-
-    Status rc;
-    CompilerType type(value_sp->GetCompilerType());
-    WatchpointSP watchpoint_sp =
-        target_sp->CreateWatchpoint(addr, byte_size, &type, watch_type, rc);
-    error.SetError(std::move(rc));
-
-    if (watchpoint_sp) {
-      sb_watchpoint.SetSP(watchpoint_sp);
-      Declaration decl;
-      if (value_sp->GetDeclaration(decl)) {
-        if (decl.GetFile()) {
-          StreamString ss;
-          // True to show fullpath for declaration file.
-          decl.DumpStopContext(&ss, true);
-          watchpoint_sp->SetDeclInfo(std::string(ss.GetString()));
-        }
-      }
-    }
-  } else if (target_sp) {
+  if (!value_sp) {
     error = Status::FromErrorStringWithFormat("could not get SBValue: %s",
                                               locker.GetError().AsCString());
-  } else {
+    return sb_watchpoint;
+  }
+
+  TargetSP target_sp(GetTarget().GetSP());
+  if (!target_sp) {
     error = Status::FromErrorString(
         "could not set watchpoint, a target is required");
+    return sb_watchpoint;
+  }
+
+  // If the value is not in scope, don't try and watch and invalid value
+  if (!IsInScope())
+    return sb_watchpoint;
+
+  uint32_t watch_type = 0;
+  if (options.GetWatchpointTypeRead())
+    watch_type |= LLDB_WATCH_TYPE_READ;
+  if (options.GetWatchpointTypeWrite() == eWatchpointWriteTypeAlways)
+    watch_type |= LLDB_WATCH_TYPE_WRITE;
+  if (options.GetWatchpointTypeWrite() == eWatchpointWriteTypeOnModify)
+    watch_type |= LLDB_WATCH_TYPE_MODIFY;
+  if (!watch_type) {
+    error.SetErrorString("Can't create a watchpoint that is neither read nor "
+                         "write nor modify.");
+    return sb_watchpoint;
+  }
+
+  Status rc;
+  WatchpointSP watchpoint_sp;
+  CompilerType type(value_sp->GetCompilerType());
+  watchpoint_sp = target_sp->CreateWatchpointByAddress(
+      GetLoadAddress(), GetByteSize(), &type, watch_type,
+      options.GetWatchpointMode(), rc);
+  error.SetError(std::move(rc));
+
+  if (!watchpoint_sp)
+    return sb_watchpoint;
+
+  watchpoint_sp->SetWatchSpec(GetName());
+
+  sb_watchpoint.SetSP(watchpoint_sp);
+  Declaration decl;
+  if (value_sp->GetDeclaration(decl) && decl.GetFile()) {
+    StreamString ss;
+    // True to show fullpath for declaration file.
+    decl.DumpStopContext(&ss, true);
+    watchpoint_sp->SetDeclInfo(std::string(ss.GetString()));
   }
 
   return sb_watchpoint;
@@ -1558,16 +1554,20 @@ lldb::SBWatchpoint SBValue::Watch(bool resolve_location, bool read,
   LLDB_INSTRUMENT_VA(this, resolve_location, read, write);
 
   SBError error;
-  return Watch(resolve_location, read, write, error);
+  SBWatchpointOptions options;
+  options.SetWatchpointTypeRead(read);
+  options.SetWatchpointTypeWrite(eWatchpointWriteTypeOnModify);
+  return Watch(resolve_location, options, error);
 }
 
-lldb::SBWatchpoint SBValue::WatchPointee(bool resolve_location, bool read,
-                                         bool write, SBError &error) {
-  LLDB_INSTRUMENT_VA(this, resolve_location, read, write, error);
+lldb::SBWatchpoint SBValue::WatchPointee(bool resolve_location,
+                                         SBWatchpointOptions options,
+                                         SBError &error) {
+  LLDB_INSTRUMENT_VA(this, resolve_location, options, error);
 
   SBWatchpoint sb_watchpoint;
   if (IsInScope() && GetType().IsPointerType())
-    sb_watchpoint = Dereference().Watch(resolve_location, read, write, error);
+    sb_watchpoint = Dereference().Watch(resolve_location, options, error);
   return sb_watchpoint;
 }
 

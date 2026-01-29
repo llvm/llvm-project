@@ -6,6 +6,7 @@ import lldb
 from lldbsuite.test.decorators import *
 from lldbsuite.test.lldbtest import *
 from lldbsuite.test import lldbutil
+from lldbsuite.test.lldbwatchpointutils import *
 
 
 class SetWatchpointAPITestCase(TestBase):
@@ -22,20 +23,53 @@ class SetWatchpointAPITestCase(TestBase):
 
     # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=["s390x"])
-    def test_watch_val(self):
+    @expectedFailureAll(archs="^riscv.*")
+    def test_hardware_watch_val(self):
         """Exercise SBValue.Watch() API to set a watchpoint."""
-        self._test_watch_val(variable_watchpoint=False)
-        pass
+        self._test_watch_val(
+            WatchpointType.READ_WRITE,
+            lldb.eWatchpointModeHardware,
+            variable_watchpoint=False,
+        )
 
+    def test_software_watch_val(self):
+        """Exercise SBValue.Watch() API to set a watchpoint."""
+        self.runCmd("settings append target.env-vars SW_WP_CASE=YES")
+        self._test_watch_val(
+            WatchpointType.MODIFY,
+            lldb.eWatchpointModeSoftware,
+            variable_watchpoint=False,
+        )
+        self.runCmd("settings clear target.env-vars")
+
+    # Read-write watchpoints not supported on SystemZ
     @expectedFailureAll(archs=["s390x"])
-    def test_watch_variable(self):
+    @expectedFailureAll(archs="^riscv.*")
+    def test_hardware_watch_variable(self):
         """
         Exercise some watchpoint APIs when the watchpoint
         is created as a variable watchpoint.
         """
-        self._test_watch_val(variable_watchpoint=True)
+        self._test_watch_val(
+            WatchpointType.READ_WRITE,
+            lldb.eWatchpointModeHardware,
+            variable_watchpoint=True,
+        )
 
-    def _test_watch_val(self, variable_watchpoint):
+    def test_software_watch_variable(self):
+        """
+        Exercise some watchpoint APIs when the watchpoint
+        is created as a variable watchpoint.
+        """
+        self.runCmd("settings append target.env-vars SW_WP_CASE=YES")
+        self._test_watch_val(
+            WatchpointType.MODIFY,
+            lldb.eWatchpointModeSoftware,
+            variable_watchpoint=True,
+        )
+        self.runCmd("settings clear target.env-vars")
+
+    def _test_watch_val(self, wp_type, wp_mode, variable_watchpoint):
         exe = self.getBuildArtifact("a.out")
 
         # Create a target by the debugger.
@@ -61,7 +95,9 @@ class SetWatchpointAPITestCase(TestBase):
         if variable_watchpoint:
             # FIXME: There should probably be an API to create a
             # variable watchpoint.
-            self.runCmd("watchpoint set variable -w read_write -- global")
+            self.runCmd(
+                f"{get_set_watchpoint_CLI_command(WatchpointCLICommandVariant.VARIABLE, wp_type, wp_mode)} -- global"
+            )
             watchpoint = target.GetWatchpointAtIndex(0)
             self.assertEqual(
                 watchpoint.GetWatchValueKind(), lldb.eWatchPointValueKindVariable
@@ -75,7 +111,7 @@ class SetWatchpointAPITestCase(TestBase):
         else:
             value = frame0.FindValue("global", lldb.eValueTypeVariableGlobal)
             error = lldb.SBError()
-            watchpoint = value.Watch(True, True, True, error)
+            watchpoint = set_watchpoint_at_value(value, wp_type, wp_mode, error)
             self.assertTrue(
                 value and watchpoint,
                 "Successfully found the variable and set a watchpoint",
@@ -88,12 +124,16 @@ class SetWatchpointAPITestCase(TestBase):
             # is reported as eWatchPointValueKindExpression. If the kind is
             # actually supposed to be eWatchPointValueKindVariable then the spec
             # should probably be 'global'.
-            self.assertEqual(watchpoint.GetWatchSpec(), None)
+            self.assertEqual(watchpoint.GetWatchSpec(), "global")
 
         self.assertEqual(watchpoint.GetType().GetDisplayTypeName(), "int32_t")
         self.assertEqual(value.GetName(), "global")
         self.assertEqual(value.GetType(), watchpoint.GetType())
-        self.assertTrue(watchpoint.IsWatchingReads())
+        self.assertTrue(
+            watchpoint.IsWatchingReads()
+            if wp_mode == lldb.eWatchpointModeHardware
+            else not watchpoint.IsWatchingReads()
+        )
         self.assertTrue(watchpoint.IsWatchingWrites())
 
         # Hide stdout if not running with '-t' option.

@@ -8,6 +8,7 @@
 
 #include "lldb/Target/Thread.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
+#include "lldb/Breakpoint/Watchpoint.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/FormatEntity.h"
 #include "lldb/Core/Module.h"
@@ -626,6 +627,109 @@ void Thread::WillStop() {
   current_plan->WillStop();
 }
 
+// This plan handles two responsibilities:
+//
+// 1. Ensuring instruction stepping on resume when software watchpoints
+//		are present. Since resume state is controlled by the current
+//		thread plan, we must guarantee the top thread plan has
+//		eStateStepping resume state. Therefore, if any software
+// watchpoints 		exist, this plan is manually pushed onto the thread plan
+// stack just 		before resume. The only exception here is
+// StepOverBreakpoint plan, 		which must be placed above this plan
+// when needed - otherwise we 		won't even have an ability to make a
+// step.
+//
+// 2. After stopping, it checks all software watchpoint values and sets
+//		correspoinding stop reason when a hit occurs.
+//
+// Generally, this plan is OkeyToDiscard and not Controlling. When no
+// watchpoint hits occur after stepping, we want lower thread plans to
+// check if they are completed.
+//
+// However, when watchpoint hit is detected, this plan becomes Controlling
+// and not OkeyToDiscard. In this case, it sets the watchpoint stop reason
+// and prevents lower plans from overriding this reason.
+class ThreadPlanWatchpointStepInstruction : public ThreadPlanStepInstruction {
+public:
+  ThreadPlanWatchpointStepInstruction(Thread &thread)
+      : ThreadPlanStepInstruction(thread, /*step_over =*/false,
+                                  /*stop_other_threads =*/false, eVoteNoOpinion,
+                                  eVoteNoOpinion,
+                                  ThreadPlan::eKindWatchpointStepInstruction) {}
+
+  void GetDescription(Stream *s, lldb::DescriptionLevel level) override {
+    if (level == lldb::eDescriptionLevelBrief) {
+      s->Printf("watchpoint instruction step");
+    } else {
+      s->Printf("Watchpoint stepping one instruction past");
+      DumpAddress(s->AsRawOstream(), GetInstructionAddr(), sizeof(addr_t));
+    }
+
+    if (m_status.Fail())
+      s->Printf(" failed (%s)", m_status.AsCString());
+  }
+
+  bool DoPlanExplainsStop(Event *event_ptr) override {
+
+    auto watchID = GetHittedWatchID();
+    if (watchID == LLDB_INVALID_WATCH_ID)
+      return ThreadPlanStepInstruction::DoPlanExplainsStop(event_ptr);
+
+    SetPlanComplete();
+    SetStopInfo(
+        StopInfo::CreateStopReasonWithWatchpointID(GetThread(), watchID));
+    return true;
+  }
+
+  bool ShouldStop(Event *event_ptr) override {
+    if (IsPlanComplete())
+      return true;
+
+    if (!ThreadPlanStepInstruction::ShouldStop(event_ptr)) {
+      // Looks like we didn't even make a step so get out of here
+      return false;
+    }
+
+    auto watchID = GetHittedWatchID();
+    if (watchID == LLDB_INVALID_WATCH_ID)
+      return false;
+
+    SetPlanComplete();
+    SetStopInfo(
+        StopInfo::CreateStopReasonWithWatchpointID(GetThread(), watchID));
+    return true;
+  }
+
+private:
+  lldb::user_id_t GetHittedWatchID() {
+    Thread &thread = GetThread();
+    lldb::ProcessSP process_sp = thread.GetProcess();
+    if (!process_sp)
+      return LLDB_INVALID_WATCH_ID;
+
+    auto sw_watchpoints = process_sp->GetEnabledSoftwareWatchpoint();
+
+    ExecutionContext exe_ctx(thread.GetStackFrameAtIndex(0));
+    auto wp_iter = llvm::find_if(
+        sw_watchpoints, [&exe_ctx, process_sp](lldb::WatchpointSP wp_sp) {
+          Watchpoint::WatchpointSentry sentry(process_sp, wp_sp);
+          return wp_sp->WatchedValueReportable(exe_ctx);
+        });
+
+    if (wp_iter == sw_watchpoints.end())
+      return LLDB_INVALID_WATCH_ID;
+
+    auto wp_sp = *wp_iter;
+    return wp_sp->GetID();
+  }
+};
+
+static bool AlreadyHasWatchpointStepPlan(Thread &thread) {
+  auto current_plan_kind = thread.GetCurrentPlan()->GetKind();
+  return current_plan_kind == ThreadPlan::eKindStepOverBreakpoint ||
+         current_plan_kind == ThreadPlan::eKindWatchpointStepInstruction;
+}
+
 bool Thread::SetupToStepOverBreakpointIfNeeded(RunDirection direction) {
   if (GetResumeState() != eStateSuspended) {
     // First check whether this thread is going to "actually" resume at all.
@@ -636,13 +740,33 @@ bool Thread::SetupToStepOverBreakpointIfNeeded(RunDirection direction) {
     if (GetCurrentPlan()->IsVirtualStep())
       return false;
 
+    // If we have at least one software watchpoint, push the watchpoint-step
+    // plan onto the top of the stack before the resume.
+
+    ProcessSP process_sp(GetProcess());
+    if (!process_sp)
+      return false;
+
+    // If we have at least one software watchpoint, push the watchpoint-step
+    // plan onto the top of the stack before the resume.
+    if (StateIsStoppedState(process_sp->GetState(), true) &&
+        direction == eRunForward &&
+        process_sp->GetEnabledSoftwareWatchpoint().size() >= 1 &&
+        !AlreadyHasWatchpointStepPlan(*this)) {
+      ThreadPlanSP thread_plan_sp(
+          new ThreadPlanWatchpointStepInstruction(*this));
+      // By default this plan should be OkeyToDiscard and not Controlling.
+      thread_plan_sp->SetIsControllingPlan(true);
+      thread_plan_sp->SetOkayToDiscard(false);
+      QueueThreadPlan(thread_plan_sp, false);
+    }
+
     // If we're at a breakpoint push the step-over breakpoint plan.  Do this
     // before telling the current plan it will resume, since we might change
     // what the current plan is.
 
     lldb::RegisterContextSP reg_ctx_sp(GetRegisterContext());
-    ProcessSP process_sp(GetProcess());
-    if (reg_ctx_sp && process_sp && direction == eRunForward) {
+    if (reg_ctx_sp && direction == eRunForward) {
       const addr_t thread_pc = reg_ctx_sp->GetPC();
       BreakpointSiteSP bp_site_sp =
           process_sp->GetBreakpointSiteList().FindByAddress(thread_pc);

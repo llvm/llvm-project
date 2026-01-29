@@ -43,9 +43,26 @@ static constexpr OptionDefinition g_option_table[] = {
     {LLDB_OPT_SET_1, false, "watch", 'w', OptionParser::eRequiredArgument,
      nullptr, OptionEnumValues(g_watch_type), 0, eArgTypeWatchType,
      "Specify the type of watching to perform."},
-    {LLDB_OPT_SET_1, false, "size", 's', OptionParser::eRequiredArgument,
-     nullptr, {}, 0, eArgTypeByteSize, 
+    {LLDB_OPT_SET_1,
+     false,
+     "size",
+     's',
+     OptionParser::eRequiredArgument,
+     nullptr,
+     {},
+     0,
+     eArgTypeByteSize,
      "Number of bytes to use to watch a region."},
+    {LLDB_OPT_SET_1,
+     false,
+     "software",
+     'S',
+     OptionParser::eOptionalArgument,
+     nullptr,
+     {},
+     0,
+     eArgTypeNone,
+     "Force to create a software watchpoint"},
     {LLDB_OPT_SET_2,
      false,
      "language",
@@ -92,6 +109,9 @@ OptionGroupWatchpoint::SetOptionValue(uint32_t option_idx,
       error = Status::FromErrorStringWithFormat(
           "invalid --size option value '%s'", option_arg.str().c_str());
     break;
+  case 'S':
+    watch_mode = eWatchpointModeSoftware;
+    break;
 
   default:
     llvm_unreachable("Unimplemented option");
@@ -103,6 +123,7 @@ OptionGroupWatchpoint::SetOptionValue(uint32_t option_idx,
 void OptionGroupWatchpoint::OptionParsingStarting(
     ExecutionContext *execution_context) {
   watch_type_specified = false;
+  watch_mode = eWatchpointModeHardware;
   watch_type = eWatchInvalid;
   watch_size.Clear();
   language_type = eLanguageTypeUnknown;
