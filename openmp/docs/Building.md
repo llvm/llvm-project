@@ -194,6 +194,8 @@ cmake ../llvm -G Ninja                       \
     -DCMAKE_INSTALL_PREFIX=<PATH>
 ```
 
+Additionally, the `FlangOffload.cmake` file is provided for users that wish to
+build a complete Fortran offloading toolchain.
 
 ## Building on Windows
 

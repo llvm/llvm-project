@@ -100,8 +100,8 @@ struct TestEmulateNarrowTypePass
 
     arith::populateArithNarrowTypeEmulationPatterns(typeConverter, patterns);
     memref::populateMemRefNarrowTypeEmulationPatterns(typeConverter, patterns);
-    vector::populateVectorNarrowTypeEmulationPatterns(typeConverter, patterns,
-                                                      disableAtomicRMW);
+    vector::populateVectorNarrowTypeEmulationPatterns(
+        typeConverter, patterns, disableAtomicRMW, assumeAligned);
 
     if (failed(applyPartialConversion(op, target, std::move(patterns))))
       signalPassFailure();
@@ -125,6 +125,12 @@ struct TestEmulateNarrowTypePass
       *this, "disable-atomic-rmw",
       llvm::cl::desc("disable atomic read-modify-write and prefer generating "
                      "normal sequence"),
+      llvm::cl::init(false)};
+
+  Option<bool> assumeAligned{
+      *this, "assume-aligned",
+      llvm::cl::desc("assume store offsets are aligned to container element "
+                     "boundaries"),
       llvm::cl::init(false)};
 };
 

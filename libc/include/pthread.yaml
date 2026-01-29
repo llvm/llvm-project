@@ -176,6 +176,12 @@ functions:
     return_type: _Noreturn void
     arguments:
       - type: void *
+  - name: pthread_getattr_np
+    standards: gnu
+    return_type: int
+    arguments:
+      - type: pthread_t
+      - type: pthread_attr_t *
   - name: pthread_getname_np
     standards:
       - gnu

@@ -609,12 +609,16 @@ def binop_same_val: GICombineRule<
 >;
 
 // Fold (0 op x) - > 0
+def binop_left_to_zero_frags : GICombinePatFrag<
+  (outs root:$dst, $zero), (ins $rhs),
+  !foreach(op,
+           [G_SHL, G_LSHR, G_ASHR, G_SDIV, G_UDIV, G_SREM, G_UREM, G_MUL],
+           (pattern (G_CONSTANT $zero, 0), (op $dst, $zero, $rhs)))>;
+
 def binop_left_to_zero: GICombineRule<
-  (defs root:$root),
-  (match (wip_match_opcode G_SHL, G_LSHR, G_ASHR, G_SDIV, G_UDIV, G_SREM,
-                           G_UREM):$root,
-    [{ return Helper.matchOperandIsZero(*${root}, 1); }]),
-  (apply [{ Helper.replaceSingleDefInstWithOperand(*${root}, 1); }])
+  (defs root:$dst),
+  (match (binop_left_to_zero_frags $dst, $zero, $rhs)),
+  (apply (GIReplaceReg $dst, $zero))
 >;
 
 def urem_pow2_to_mask : GICombineRule<
