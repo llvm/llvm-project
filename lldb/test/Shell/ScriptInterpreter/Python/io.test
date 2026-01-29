@@ -5,10 +5,11 @@
 # RUN: cat %t.stdout | FileCheck %s --check-prefix STDOUT
 # RUN: cat %t.stderr | FileCheck %s --check-prefix STDERR
 script
-variable = 300
+import sys
+variable = 250 + 5
 print(variable)
-print(not_value)
+print("wrote to", "stderr", file=sys.stderr)
 quit
 
-# STDOUT: 300
-# STDERR: NameError{{.*}}is not defined
+# STDOUT: 255
+# STDERR: wrote to stderr

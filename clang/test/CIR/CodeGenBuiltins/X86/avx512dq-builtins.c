@@ -417,3 +417,75 @@ __m512i test_mm512_inserti64x2(__m512i __A, __m128i __B) {
   // OGCG: shufflevector <8 x i64> %{{.*}}, <8 x i64> %{{.*}}, <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 4, i32 5, i32 6, i32 7>
   return _mm512_inserti64x2(__A, __B, 1);
 }
+
+__mmask8 test_mm512_mask_fpclass_pd_mask(__mmask8 __U, __m512d __A) {
+  // CIR-LABEL: _mm512_mask_fpclass_pd_mask
+  // CIR: %[[A:.*]] = cir.call_llvm_intrinsic "x86.avx512.fpclass.pd.512"
+  // CIR: %[[B:.*]] = cir.cast bitcast {{.*}} : !u8i -> !cir.vector<8 x !cir.int<s, 1>>
+  // CIR: %[[C:.*]] = cir.binop(and, %[[A]], %[[B]]) : !cir.vector<8 x !cir.int<s, 1>>
+  // CIR: cir.cast bitcast %[[C]] : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
+
+  // LLVM-LABEL: test_mm512_mask_fpclass_pd_mask
+  // LLVM: %[[A:.*]] = call <8 x i1> @llvm.x86.avx512.fpclass.pd.512
+  // LLVM: %[[B:.*]] = bitcast i8 {{.*}} to <8 x i1>
+  // LLVM: %[[C:.*]] = and <8 x i1> %[[A]], %[[B]]
+  // LLVM: bitcast <8 x i1> %[[C]] to i8
+
+  // OGCG-LABEL: test_mm512_mask_fpclass_pd_mask
+  // OGCG: %[[A:.*]] = call <8 x i1> @llvm.x86.avx512.fpclass.pd.512
+  // OGCG: %[[B:.*]] = bitcast i8 {{.*}} to <8 x i1>
+  // OGCG: %[[C:.*]] = and <8 x i1> %[[A]], %[[B]]
+  // OGCG: bitcast <8 x i1> %[[C]] to i8
+  return _mm512_mask_fpclass_pd_mask(__U, __A, 4);
+}
+
+__mmask8 test_mm512_fpclass_pd_mask(__m512d __A) {
+  // CIR-LABEL: _mm512_fpclass_pd_mask
+  // CIR: %[[A:.*]] = cir.call_llvm_intrinsic "x86.avx512.fpclass.pd.512"
+  // CIR: cir.cast bitcast %[[A]] : !cir.vector<8 x !cir.int<s, 1>> -> !u8i
+
+  // LLVM-LABEL: test_mm512_fpclass_pd_mask
+  // LLVM: %[[A:.*]] = call <8 x i1> @llvm.x86.avx512.fpclass.pd.512
+  // LLVM: bitcast <8 x i1> %[[A]] to i8
+
+  // OGCG-LABEL: test_mm512_fpclass_pd_mask
+  // OGCG: %[[A:.*]] = call <8 x i1> @llvm.x86.avx512.fpclass.pd.512
+  // OGCG: bitcast <8 x i1> %[[A]] to i8
+  return _mm512_fpclass_pd_mask(__A, 4);
+}
+
+__mmask16 test_mm512_mask_fpclass_ps_mask(__mmask16 __U, __m512 __A) {
+  // CIR-LABEL: _mm512_mask_fpclass_ps_mask
+  // CIR: %[[A:.*]] = cir.call_llvm_intrinsic "x86.avx512.fpclass.ps.512"
+  // CIR: %[[B:.*]] = cir.cast bitcast {{.*}} : !u16i -> !cir.vector<16 x !cir.int<s, 1>>
+  // CIR: %[[C:.*]] = cir.binop(and, %[[A]], %[[B]]) : !cir.vector<16 x !cir.int<s, 1>>
+  // CIR: cir.cast bitcast %[[C]] : !cir.vector<16 x !cir.int<s, 1>> -> !u16i
+
+  // LLVM-LABEL: test_mm512_mask_fpclass_ps_mask
+  // LLVM: %[[A:.*]] = call <16 x i1> @llvm.x86.avx512.fpclass.ps.512
+  // LLVM: %[[B:.*]] = bitcast i16 {{.*}} to <16 x i1>
+  // LLVM: %[[C:.*]] = and <16 x i1> %[[A]], %[[B]]
+  // LLVM: bitcast <16 x i1> %[[C]] to i16
+
+  // OGCG-LABEL: test_mm512_mask_fpclass_ps_mask
+  // OGCG: %[[A:.*]] = call <16 x i1> @llvm.x86.avx512.fpclass.ps.512
+  // OGCG: %[[B:.*]] = bitcast i16 {{.*}} to <16 x i1>
+  // OGCG: %[[C:.*]] = and <16 x i1> %[[A]], %[[B]]
+  // OGCG: bitcast <16 x i1> %[[C]] to i16
+  return _mm512_mask_fpclass_ps_mask(__U, __A, 4);
+}
+
+__mmask16 test_mm512_fpclass_ps_mask(__m512 __A) {
+  // CIR-LABEL: _mm512_fpclass_ps_mask
+  // CIR: %[[A:.*]] = cir.call_llvm_intrinsic "x86.avx512.fpclass.ps.512"
+  // CIR: cir.cast bitcast %[[A]] : !cir.vector<16 x !cir.int<s, 1>> -> !u16i
+
+  // LLVM-LABEL: test_mm512_fpclass_ps_mask
+  // LLVM: %[[A:.*]] = call <16 x i1> @llvm.x86.avx512.fpclass.ps.512
+  // LLVM: bitcast <16 x i1> %[[A]] to i16
+
+  // OGCG-LABEL: test_mm512_fpclass_ps_mask
+  // OGCG: %[[A:.*]] = call <16 x i1> @llvm.x86.avx512.fpclass.ps.512
+  // OGCG: bitcast <16 x i1> %[[A]] to i16
+  return _mm512_fpclass_ps_mask(__A, 4);
+}

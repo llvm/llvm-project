@@ -245,7 +245,7 @@ public:
     Inst.setOpcode(Opcode);
     Inst.clear();
     Inst.addOperand(MCOperand::createExpr(MCSpecifierExpr::create(
-        MCSymbolRefExpr::create(Target, *Ctx), ELF::R_RISCV_CALL_PLT, *Ctx)));
+        MCSymbolRefExpr::create(Target, *Ctx), RISCV::S_CALL_PLT, *Ctx)));
   }
 
   void createCall(MCInst &Inst, const MCSymbol *Target,
@@ -433,7 +433,7 @@ public:
     case ELF::R_RISCV_TLS_GD_HI20:
       // The GOT is reused so no need to create GOT relocations
     case ELF::R_RISCV_PCREL_HI20:
-      return MCSpecifierExpr::create(Expr, ELF::R_RISCV_PCREL_HI20, Ctx);
+      return MCSpecifierExpr::create(Expr, RISCV::S_PCREL_HI, Ctx);
     case ELF::R_RISCV_PCREL_LO12_I:
     case ELF::R_RISCV_PCREL_LO12_S:
       return MCSpecifierExpr::create(Expr, RISCV::S_PCREL_LO, Ctx);
@@ -443,9 +443,9 @@ public:
     case ELF::R_RISCV_LO12_S:
       return MCSpecifierExpr::create(Expr, RISCV::S_LO, Ctx);
     case ELF::R_RISCV_CALL:
-      return MCSpecifierExpr::create(Expr, ELF::R_RISCV_CALL_PLT, Ctx);
+      return MCSpecifierExpr::create(Expr, RISCV::S_CALL_PLT, Ctx);
     case ELF::R_RISCV_CALL_PLT:
-      return MCSpecifierExpr::create(Expr, ELF::R_RISCV_CALL_PLT, Ctx);
+      return MCSpecifierExpr::create(Expr, RISCV::S_CALL_PLT, Ctx);
     }
   }
 
@@ -470,6 +470,7 @@ public:
     switch (cast<MCSpecifierExpr>(ImmExpr)->getSpecifier()) {
     default:
       return false;
+    case RISCV::S_CALL_PLT:
     case ELF::R_RISCV_CALL_PLT:
       return true;
     }
