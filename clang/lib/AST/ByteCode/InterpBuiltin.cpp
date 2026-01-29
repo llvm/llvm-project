@@ -136,6 +136,8 @@ static void assignInteger(InterpState &S, const Pointer &Dest, PrimType ValueT,
     Dest.deref<IntegralAP<false>>() =
         S.allocAP<IntegralAP<false>>(Value.getBitWidth());
     Dest.deref<IntegralAP<false>>().copy(Value);
+  } else if (ValueT == PT_Bool) {
+    Dest.deref<Boolean>() = Boolean::from(!Value.isZero());
   } else {
     INT_TYPE_SWITCH_NO_BOOL(
         ValueT, { Dest.deref<T>() = T::from(static_cast<T>(Value)); });
