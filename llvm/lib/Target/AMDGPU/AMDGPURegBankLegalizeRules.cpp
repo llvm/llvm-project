@@ -1185,10 +1185,6 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForGOpcs({G_FPTOUI, G_FPTOSI})
       .Any({{UniS16, S16}, {{UniInVgprS16}, {Vgpr16}}})
       .Any({{DivS16, S16}, {{Vgpr16}, {Vgpr16}}})
-      .Any({{UniS16, S32}, {{UniInVgprS16}, {Vgpr32}}})
-      .Any({{DivS16, S32}, {{Vgpr16}, {Vgpr32}}})
-      .Any({{UniS16, S64}, {{UniInVgprS16}, {Vgpr64}}})
-      .Any({{DivS16, S64}, {{Vgpr16}, {Vgpr64}}})
       .Any({{UniS32, S16}, {{Sgpr32}, {Sgpr16}}}, hasSALUFloat)
       .Any({{UniS32, S16}, {{UniInVgprS32}, {Vgpr16}}}, !hasSALUFloat)
       .Any({{DivS32, S16}, {{Vgpr32}, {Vgpr16}}})
@@ -1196,9 +1192,7 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniS32, S32}, {{UniInVgprS32}, {Vgpr32}}}, !hasSALUFloat)
       .Any({{DivS32, S32}, {{Vgpr32}, {Vgpr32}}})
       .Any({{UniS32, S64}, {{UniInVgprS32}, {Vgpr64}}})
-      .Any({{DivS32, S64}, {{Vgpr32}, {Vgpr64}}})
-      .Any({{UniS64, S16}, {{UniInVgprS64}, {Vgpr16}}})
-      .Any({{DivS64, S16}, {{Vgpr64}, {Vgpr16}}});
+      .Any({{DivS32, S64}, {{Vgpr32}, {Vgpr64}}});
 
   addRulesForGOpcs({G_UITOFP, G_SITOFP})
       .Any({{UniS16, S16}, {{UniInVgprS16}, {Vgpr16}}})
@@ -1209,8 +1203,6 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{UniS32, S32}, {{Sgpr32}, {Sgpr32}}}, hasSALUFloat)
       .Any({{UniS32, S32}, {{UniInVgprS32}, {Vgpr32}}}, !hasSALUFloat)
       .Any({{DivS32, S32}, {{Vgpr32}, {Vgpr32}}})
-      .Any({{UniS32, S64}, {{UniInVgprS32}, {Vgpr64}}})
-      .Any({{DivS32, S64}, {{Vgpr32}, {Vgpr64}}})
       .Any({{UniS64, S32}, {{UniInVgprS64}, {Vgpr32}}})
       .Any({{DivS64, S32}, {{Vgpr64}, {Vgpr32}}});
 
