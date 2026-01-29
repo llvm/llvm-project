@@ -101,6 +101,7 @@ const RegisterSet *
 NativeRegisterContextFreeBSD_powerpc::GetRegisterSet(uint32_t set_index) const {
   switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::ppc:
+  case llvm::Triple::ppc64:
     return &g_reg_sets_powerpc[set_index];
   default:
     llvm_unreachable("Unhandled target architecture.");
@@ -112,6 +113,7 @@ NativeRegisterContextFreeBSD_powerpc::GetSetForNativeRegNum(
     uint32_t reg_num) const {
   switch (GetRegisterInfoInterface().GetTargetArchitecture().GetMachine()) {
   case llvm::Triple::ppc:
+  case llvm::Triple::ppc64:
     if (reg_num >= k_first_gpr_powerpc && reg_num <= k_last_gpr_powerpc)
       return GPRegSet;
     if (reg_num >= k_first_fpr && reg_num <= k_last_fpr)
