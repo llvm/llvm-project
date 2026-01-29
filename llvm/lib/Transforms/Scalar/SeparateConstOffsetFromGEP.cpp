@@ -297,7 +297,7 @@ private:
 
   /// Analyze XOR instruction to extract disjoint constant bits that behave
   /// like addition operations for improved address mode folding.
-  APInt extractDisjointBitsFromXor(BinaryOperator *XorInst);
+  std::pair<APInt, APInt> extractDisjointBitsFromXor(BinaryOperator *XorInst);
 
   /// The path from the constant offset to the old GEP index. e.g., if the GEP
   /// index is "a * b + (c + 5)". After running function find, UserChain[0] will
@@ -602,8 +602,10 @@ APInt ConstantOffsetExtractor::find(Value *V, bool SignExtended,
     if (CanTraceInto(SignExtended, ZeroExtended, BO, NonNegative))
       ConstantOffset = findInEitherOperand(BO, SignExtended, ZeroExtended);
     // Handle XOR with disjoint bits that can be treated as addition.
-    else if (BO->getOpcode() == Instruction::Xor)
-      ConstantOffset = extractDisjointBitsFromXor(BO);
+    else if (BO->getOpcode() == Instruction::Xor) {
+      auto [DisjointBits, NonDisjointBits] = extractDisjointBitsFromXor(BO);
+      ConstantOffset = DisjointBits;
+    }
   } else if (isa<TruncInst>(V)) {
     ConstantOffset =
         find(U->getOperand(0), SignExtended, ZeroExtended, NonNegative)
@@ -723,71 +725,64 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
   Value *NextInChain = removeConstOffset(ChainIndex - 1);
   Value *TheOther = BO->getOperand(1 - OpNo);
 
-  if (ConstantInt *CI = dyn_cast<ConstantInt>(NextInChain)) {
-    if (CI->isZero()) {
-      // Custom XOR handling for disjoint bits.
-      // TODO: The design should be updated to support partial constant
-      // extraction.
-      if (BO->getOpcode() == Instruction::Xor) {
-        if (auto *ConstIOther = dyn_cast<ConstantInt>(TheOther)) {
-          // Purpose:
-          //   We want to compute/simplify the expression:
-          //       b + scale * (a ^ c)
-          //   Here a and c are both constants.
+  // Custom XOR handling for disjoint bits.
+  // TODO: The design should be updated to support partial constant
+  // extraction.
+  if (BO->getOpcode() == Instruction::Xor) {
+    if (dyn_cast<ConstantInt>(TheOther)) {
+      // Purpose:
+      //   We want to compute/simplify the expression:
+      //       b + scale * (a ^ c)
+      //   Here a and c are both constants.
 
-          // Transform:
-          //   We must partition c into disjoint and non-disjoint components and
-          //   only XOR the non-disjoint bits with a:
+      // Transform:
+      //   We must partition c into disjoint and non-disjoint components and
+      //   only XOR the non-disjoint bits with a:
 
-          //       non_disjoint(c) = c & ~disjoint(c)
+      //       non_disjoint(c) = c & ~disjoint(c)
 
-          //   Therefore the correct form is:
-          //       b + ((a ^ non_disjoint(c)) + disjoint(c)) * scale
+      //   Therefore the correct form is:
+      //       b + ((a ^ non_disjoint(c)) + disjoint(c)) * scale
 
-          // And not b + ((a ^ (c)) + disjoint(c)) * scale, which ignores the
-          // non_disjoint split of the constant c which is incorrect.
+      // And not b + ((a ^ (c)) + disjoint(c)) * scale, which ignores the
+      // non_disjoint split of the constant c which is incorrect.
 
-          // Rationale:
-          //   - Bits of c that are disjoint from a (i.e., where a is known
-          //   zero)
-          // pass through unchanged (added, not XORed).
-          //   - Only the overlapping (non-disjoint) bits of c should
-          //   participate
-          // in the XOR with a.
+      // Rationale:
+      //   - Bits of c that are disjoint from a (i.e., where a is known
+      //   zero)
+      // pass through unchanged (added, not XORed).
+      //   - Only the overlapping (non-disjoint) bits of c should
+      //   participate in the XOR with a.
 
-          // Example:
-          //   a = 0
-          //   c = 3
-          //   scale = 4
+      // Example:
+      //   a = 0
+      //   c = 3
+      //   scale = 4
 
-          //   Expected:
-          //     b + scale * (a ^ c)
-          //     = b + 4 * (0 ^ 3)
-          //     = b + 4 * 3
-          //     = b + 12
+      //   Expected:
+      //     b + scale * (a ^ c)
+      //     = b + 4 * (0 ^ 3)
+      //     = b + 4 * 3
+      //     = b + 12
 
-          //   Transform:
-          //     non_disjoint(3) = 3 & ~3 = 0
-          //     b + ((0 ^ non_disjoint(3)) + disjoint(3)) * 4
-          //     = b + ((0 ^ 0) + 3) * 4
-          //     = b + 3 * 4
-          //     = b + 12
+      //   Transform:
+      //     non_disjoint(3) = 3 & ~3 = 0
+      //     b + ((0 ^ non_disjoint(3)) + disjoint(3)) * 4
+      //     = b + ((0 ^ 0) + 3) * 4
+      //     = b + 3 * 4
+      //     = b + 12
 
-          const APInt &DisjointBits = extractDisjointBitsFromXor(BO);
-          const APInt &ConstantValue = ConstIOther->getValue();
-          const APInt &NonDisjointBits = ConstantValue & (~DisjointBits);
-          BO->setOperand(1 - OpNo,
-                         ConstantInt::get(BO->getType(), NonDisjointBits));
-        }
-        return BO;
-      }
-
-      // If NextInChain is 0 and not the LHS of a sub, we can simplify the
-      // sub-expression to be just TheOther.
-      if (!(BO->getOpcode() == Instruction::Sub && OpNo == 0))
-        return TheOther;
+      auto [DisjointBits, NonDisjointBits] = extractDisjointBitsFromXor(BO);
+      BO->setOperand(1 - OpNo,
+                     ConstantInt::get(BO->getType(), NonDisjointBits));
     }
+    return BO;
   }
+
+  // If NextInChain is 0 and not the LHS of a sub, we can simplify the
+  // sub-expression to be just TheOther.
+  if (!(BO->getOpcode() == Instruction::Sub && OpNo == 0))
+    return TheOther;
 
   BinaryOperator::BinaryOps NewOp = BO->getOpcode();
   if (BO->getOpcode() == Instruction::Or) {
@@ -836,8 +831,8 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
 /// \param XorInst The XOR binary operator to analyze
 /// \return APInt containing the disjoint bits that can be extracted as offset,
 ///         or zero if no disjoint bits exist
-APInt ConstantOffsetExtractor::extractDisjointBitsFromXor(
-    BinaryOperator *XorInst) {
+std::pair<APInt, APInt>
+ConstantOffsetExtractor::extractDisjointBitsFromXor(BinaryOperator *XorInst) {
   assert(XorInst && XorInst->getOpcode() == Instruction::Xor &&
          "Expected XOR instruction");
 
@@ -847,7 +842,7 @@ APInt ConstantOffsetExtractor::extractDisjointBitsFromXor(
 
   // Match pattern: xor BaseOperand, Constant.
   if (!match(XorInst, m_Xor(m_Value(BaseOperand), m_ConstantInt(XorConstant))))
-    return APInt::getZero(BitWidth);
+    return {APInt::getZero(BitWidth), APInt::getZero(BitWidth)};
 
   // Compute known bits for the base operand.
   const SimplifyQuery SQ(DL);
@@ -859,7 +854,7 @@ APInt ConstantOffsetExtractor::extractDisjointBitsFromXor(
 
   // Early exit if no disjoint bits found.
   if (DisjointBits.isZero())
-    return APInt::getZero(BitWidth);
+    return {APInt::getZero(BitWidth), APInt::getZero(BitWidth)};
 
   // Compute the remaining non-disjoint bits that stay in the XOR.
   const APInt NonDisjointBits = ConstantValue & ~DisjointBits;
@@ -875,7 +870,7 @@ APInt ConstantOffsetExtractor::extractDisjointBitsFromXor(
   // This will replace the original constant in the XOR with the new
   // constant.
   UserChain.push_back(ConstantInt::get(XorInst->getType(), NonDisjointBits));
-  return DisjointBits;
+  return {DisjointBits, NonDisjointBits};
 }
 
 /// A helper function to check if reassociating through an entry in the user
