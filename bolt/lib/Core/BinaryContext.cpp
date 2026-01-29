@@ -78,6 +78,11 @@ cl::opt<std::string> CompDirOverride(
              "to *.dwo files."),
     cl::Hidden, cl::init(""), cl::cat(BoltCategory));
 
+static cl::opt<bool> CloneConstantIsland("clone-constant-island",
+                                         cl::desc("clone constant islands"),
+                                         cl::Hidden, cl::init(true),
+                                         cl::ZeroOrMore, cl::cat(BoltCategory));
+
 static cl::opt<bool>
     FailOnInvalidPadding("fail-on-invalid-padding", cl::Hidden, cl::init(false),
                          cl::desc("treat invalid code padding as error"),
@@ -461,7 +466,8 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
       // of dynamic relocs, as we currently do not support cloning them.
       // Notice: we might fail to link because of this, if the original constant
       // island we are referring would be emitted too far away.
-      if (IslandIter->second->hasDynamicRelocationAtIsland()) {
+      if (IslandIter->second->hasDynamicRelocationAtIsland() ||
+          !opts::CloneConstantIsland) {
         MCSymbol *IslandSym =
             IslandIter->second->getOrCreateIslandAccess(Address);
         if (IslandSym)
@@ -469,6 +475,12 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
       } else if (MCSymbol *IslandSym =
                      IslandIter->second->getOrCreateProxyIslandAccess(Address,
                                                                       BF)) {
+        LLVM_DEBUG(
+            dbgs() << "BOLT-DEBUG: clone constant island at address 0x"
+                   << Twine::utohexstr(IslandIter->first) << " with size of 0x"
+                   << Twine::utohexstr(
+                          IslandIter->second->estimateConstantIslandSize())
+                   << " bytes, referenced by " << BF << "\n");
         BF.createIslandDependency(IslandSym, IslandIter->second);
         return std::make_pair(IslandSym, 0);
       }
@@ -516,6 +528,43 @@ BinaryContext::handleAddressRef(uint64_t Address, BinaryFunction &BF,
   MCSymbol *TargetSymbol = getOrCreateGlobalSymbol(Address, "DATAat");
   LLVM_DEBUG(dbgs() << "Created symbol " << TargetSymbol->getName() << '\n');
   return std::make_pair(TargetSymbol, 0);
+}
+
+MCSymbol *BinaryContext::handleExternalBranchTarget(uint64_t Address,
+                                                    BinaryFunction &Source,
+                                                    BinaryFunction &Target) {
+  const uint64_t Offset = Address - Target.getAddress();
+  assert(Offset < Target.getSize() &&
+         "Address should be inside the referenced function");
+
+  bool IsValid = true;
+  if (Source.NeedBranchValidation) {
+    if (Target.CurrentState == BinaryFunction::State::Disassembled &&
+        !Target.getInstructionAtOffset(Offset)) {
+      this->errs()
+          << "BOLT-WARNING: corrupted control flow detected in function "
+          << Source
+          << ": an external branch/call targets an invalid instruction "
+          << "in function " << Target << " at address 0x"
+          << Twine::utohexstr(Address) << "; ignoring both functions\n";
+      IsValid = false;
+    }
+    if (Target.isInConstantIsland(Address)) {
+      this->errs() << "BOLT-WARNING: ignoring entry point at address 0x"
+                   << Twine::utohexstr(Address)
+                   << " in constant island of function " << Target << '\n';
+      IsValid = false;
+    }
+  }
+
+  if (!IsValid) {
+    Source.NeedBranchValidation = false;
+    Source.setIgnored();
+    Target.setIgnored();
+    return nullptr;
+  }
+
+  return Offset ? Target.addEntryPointAtOffset(Offset) : Target.getSymbol();
 }
 
 MemoryContentsType BinaryContext::analyzeMemoryAt(uint64_t Address,
@@ -761,19 +810,23 @@ void BinaryContext::populateJumpTables() {
   }
 
   if (opts::StrictMode && DataPCRelocations.size()) {
-    LLVM_DEBUG({
-      dbgs() << DataPCRelocations.size()
-             << " unclaimed PC-relative relocations left in data:\n";
-      for (uint64_t Reloc : DataPCRelocations)
-        dbgs() << Twine::utohexstr(Reloc) << '\n';
-    });
-    assert(0 && "unclaimed PC-relative relocations left in data\n");
+    this->errs() << "BOLT-ERROR: " << DataPCRelocations.size()
+                 << " unclaimed PC-relative relocation(s) left in data";
+    if (opts::Verbosity) {
+      this->errs() << ":\n";
+      for (uint64_t RelocOffset : DataPCRelocations)
+        this->errs() << "  @0x" << Twine::utohexstr(RelocOffset) << '\n';
+    } else {
+      this->errs() << ". Re-run with -v=1 to see the list\n";
+    }
+    this->errs() << "BOLT-ERROR: unable to proceed with --strict\n";
+    exit(1);
   }
   clearList(DataPCRelocations);
 }
 
 void BinaryContext::skipMarkedFragments() {
-  std::vector<BinaryFunction *> FragmentQueue;
+  BinaryFunctionListType FragmentQueue;
   // Copy the functions to FragmentQueue.
   FragmentQueue.assign(FragmentsToSkip.begin(), FragmentsToSkip.end());
   auto addToWorklist = [&](BinaryFunction *Function) -> void {
@@ -977,14 +1030,12 @@ bool BinaryContext::hasValidCodePadding(const BinaryFunction &BF) {
     return Offset - StartOffset;
   };
 
-  // Skip a sequence of zero bytes. For AArch64 we only skip 4 bytes of zeros
-  // in case the following zeros belong to constant island or veneer.
+  // Skip a sequence of zero bytes. For AArch64 we only skip 4's exact
+  // multiple number of zeros in case the following zeros belong to veneer.
   auto skipZeros = [&]() {
     const uint64_t StartOffset = Offset;
     uint64_t CurrentOffset = Offset;
-    for (; CurrentOffset < BF.getMaxSize() &&
-           (!isAArch64() || CurrentOffset < StartOffset + 4);
-         ++CurrentOffset)
+    for (; CurrentOffset < BF.getMaxSize(); ++CurrentOffset)
       if ((*FunctionData)[CurrentOffset] != 0)
         break;
 
@@ -1399,23 +1450,14 @@ void BinaryContext::processInterproceduralReferences() {
             << Function.getPrintName() << " and "
             << TargetFunction->getPrintName() << '\n';
       }
-      if (uint64_t Offset = Address - TargetFunction->getAddress()) {
-        if (!TargetFunction->isInConstantIsland(Address)) {
-          TargetFunction->addEntryPointAtOffset(Offset);
-        } else {
-          TargetFunction->setIgnored();
-          this->outs() << "BOLT-WARNING: Ignoring entry point at address 0x"
-                       << Twine::utohexstr(Address)
-                       << " in constant island of function " << *TargetFunction
-                       << '\n';
-        }
-      }
+
+      // Create an extra entry point if needed. Can also render the target
+      // function ignored if the reference is invalid.
+      handleExternalBranchTarget(Address, Function, *TargetFunction);
 
       continue;
     }
 
-    // Check if address falls in function padding space - this could be
-    // unmarked data in code. In this case adjust the padding space size.
     ErrorOr<BinarySection &> Section = getSectionForAddress(Address);
     assert(Section && "cannot get section for referenced address");
 
@@ -1427,7 +1469,7 @@ void BinaryContext::processInterproceduralReferences() {
     if (SectionName == ".plt" || SectionName == ".plt.got")
       continue;
 
-    // Check if it is aarch64 veneer written at Address
+    // Check if it is aarch64 veneer written at Address.
     if (isAArch64() && handleAArch64Veneer(Address))
       continue;
 
@@ -1439,6 +1481,8 @@ void BinaryContext::processInterproceduralReferences() {
       exit(1);
     }
 
+    // Check if the address falls into the function padding space - this could
+    // be an unmarked data in code. In this case, adjust the padding space size.
     TargetFunction = getBinaryFunctionContainingAddress(Address,
                                                         /*CheckPastEnd=*/false,
                                                         /*UseMaxSize=*/true);
@@ -1495,6 +1539,17 @@ void BinaryContext::foldFunction(BinaryFunction &ChildBF,
     // NB: there's no need to update BinaryDataMap and GlobalSymbols.
   }
   ChildBF.getSymbols().clear();
+
+  // Reset function mapping for local symbols.
+  for (uint64_t RelOffset : ChildBF.getInternalRefDataRelocations()) {
+    const Relocation *Rel = getRelocationAt(RelOffset);
+    if (!Rel || !Rel->Symbol)
+      continue;
+
+    WriteSymbolMapLock.lock();
+    SymbolToFunctionMap[Rel->Symbol] = nullptr;
+    WriteSymbolMapLock.unlock();
+  }
 
   // Move other names the child function is known under.
   llvm::move(ChildBF.Aliases, std::back_inserter(ParentBF.Aliases));
@@ -1660,18 +1715,8 @@ unsigned BinaryContext::addDebugFilenameToUnit(const uint32_t DestCUID,
                                DestCUID, DstUnit->getVersion()));
 }
 
-std::vector<BinaryFunction *> BinaryContext::getSortedFunctions() {
-  std::vector<BinaryFunction *> SortedFunctions(BinaryFunctions.size());
-  llvm::transform(llvm::make_second_range(BinaryFunctions),
-                  SortedFunctions.begin(),
-                  [](BinaryFunction &BF) { return &BF; });
-
-  llvm::stable_sort(SortedFunctions, compareBinaryFunctionByIndex);
-  return SortedFunctions;
-}
-
-std::vector<BinaryFunction *> BinaryContext::getAllBinaryFunctions() {
-  std::vector<BinaryFunction *> AllFunctions;
+BinaryFunctionListType BinaryContext::getAllBinaryFunctions() {
+  BinaryFunctionListType AllFunctions;
   AllFunctions.reserve(BinaryFunctions.size() + InjectedBinaryFunctions.size());
   llvm::transform(llvm::make_second_range(BinaryFunctions),
                   std::back_inserter(AllFunctions),
@@ -1833,6 +1878,9 @@ void BinaryContext::preprocessDebugInfo() {
 
   preprocessDWODebugInfo();
 
+  // Check if required DWO files are missing.
+  uint64_t NumMissingDWOs = 0;
+
   // Populate MCContext with DWARF files from all units.
   StringRef GlobalPrefix = AsmInfo->getPrivateGlobalPrefix();
   for (const std::unique_ptr<DWARFUnit> &CU : DwCtx->compile_units()) {
@@ -1854,19 +1902,23 @@ void BinaryContext::preprocessDebugInfo() {
       std::optional<MD5::MD5Result> Checksum;
       if (LineTable->Prologue.ContentTypes.HasMD5)
         Checksum = LineTable->Prologue.FileNames[0].Checksum;
-      std::optional<const char *> Name =
+      const char *Name =
           dwarf::toString(CU->getUnitDIE().find(dwarf::DW_AT_name), nullptr);
       if (std::optional<uint64_t> DWOID = CU->getDWOId()) {
         auto Iter = DWOCUs.find(*DWOID);
         if (Iter == DWOCUs.end()) {
-          this->errs() << "BOLT-ERROR: DWO CU was not found for " << Name
-                       << '\n';
-          exit(1);
+          const char *DWOName =
+              dwarf::toString(CU->getUnitDIE().find(dwarf::DW_AT_dwo_name),
+                              "<missing DW_AT_dwo_name>");
+          this->errs() << "BOLT-ERROR: unable to load " << DWOName
+                       << " for DWO_id 0x" << Twine::utohexstr(*DWOID) << '\n';
+          NumMissingDWOs++;
+          continue;
         }
         Name = dwarf::toString(
             Iter->second->getUnitDIE().find(dwarf::DW_AT_name), nullptr);
       }
-      BinaryLineTable.setRootFile(CU->getCompilationDir(), *Name, Checksum,
+      BinaryLineTable.setRootFile(CU->getCompilationDir(), Name, Checksum,
                                   std::nullopt);
     }
 
@@ -1900,6 +1952,14 @@ void BinaryContext::preprocessDebugInfo() {
       cantFail(getDwarfFile(Dir, FileName, 0, Checksum, std::nullopt, CUID,
                             DwarfVersion));
     }
+  }
+
+  if (NumMissingDWOs) {
+    this->errs() << "BOLT-ERROR: " << NumMissingDWOs
+                 << " required DWO file(s) not found. Unable to update debug"
+                    " info. Use --comp-dir-override to locate the file(s) or"
+                    " --update-debug-sections=0 to remove debug info\n";
+    exit(1);
   }
 }
 
@@ -2499,6 +2559,10 @@ BinaryContext::createInjectedBinaryFunction(const std::string &Name,
   BinaryFunction *BF = InjectedBinaryFunctions.back();
   setSymbolToFunctionMap(BF->getSymbol(), BF);
   BF->CurrentState = BinaryFunction::State::CFG;
+
+  if (!getOutputBinaryFunctions().empty())
+    getOutputBinaryFunctions().push_back(BF);
+
   return BF;
 }
 
@@ -2527,6 +2591,10 @@ BinaryContext::createInstructionPatch(uint64_t Address,
   PBF->setOriginSection(&Section.get());
   PBF->addBasicBlock()->addInstructions(Instructions);
   PBF->setIsPatch(true);
+
+  // Patch functions have to be emitted each into their unique section.
+  PBF->setCodeSectionName(
+      BinaryFunction::buildCodeSectionName(PBF->getOneName(), *this));
 
   // Don't create symbol table entry if the name wasn't specified.
   if (Name.str().empty())

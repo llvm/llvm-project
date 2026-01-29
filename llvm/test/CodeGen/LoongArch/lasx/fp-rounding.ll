@@ -7,38 +7,8 @@ define void @ceil_v8f32(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: ceil_v8f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvpickve.w $xr1, $xr0, 5
-; CHECK-NEXT:    vreplvei.w $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrp.s $vr1, $vr1
-; CHECK-NEXT:    xvpickve.w $xr2, $xr0, 4
-; CHECK-NEXT:    vreplvei.w $vr2, $vr2, 0
-; CHECK-NEXT:    vfrintrp.s $vr2, $vr2
-; CHECK-NEXT:    vextrins.w $vr2, $vr1, 16
-; CHECK-NEXT:    xvpickve.w $xr1, $xr0, 6
-; CHECK-NEXT:    vreplvei.w $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrp.s $vr1, $vr1
-; CHECK-NEXT:    vextrins.w $vr2, $vr1, 32
-; CHECK-NEXT:    xvpickve.w $xr1, $xr0, 7
-; CHECK-NEXT:    vreplvei.w $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrp.s $vr1, $vr1
-; CHECK-NEXT:    vextrins.w $vr2, $vr1, 48
-; CHECK-NEXT:    xvpickve.w $xr1, $xr0, 1
-; CHECK-NEXT:    vreplvei.w $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrp.s $vr1, $vr1
-; CHECK-NEXT:    xvpickve.w $xr3, $xr0, 0
-; CHECK-NEXT:    vreplvei.w $vr3, $vr3, 0
-; CHECK-NEXT:    vfrintrp.s $vr3, $vr3
-; CHECK-NEXT:    vextrins.w $vr3, $vr1, 16
-; CHECK-NEXT:    xvpickve.w $xr1, $xr0, 2
-; CHECK-NEXT:    vreplvei.w $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrp.s $vr1, $vr1
-; CHECK-NEXT:    vextrins.w $vr3, $vr1, 32
-; CHECK-NEXT:    xvpickve.w $xr0, $xr0, 3
-; CHECK-NEXT:    vreplvei.w $vr0, $vr0, 0
-; CHECK-NEXT:    vfrintrp.s $vr0, $vr0
-; CHECK-NEXT:    vextrins.w $vr3, $vr0, 48
-; CHECK-NEXT:    xvpermi.q $xr3, $xr2, 2
-; CHECK-NEXT:    xvst $xr3, $a0, 0
+; CHECK-NEXT:    xvfrintrp.s $xr0, $xr0
+; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %v0 = load <8 x float>, ptr %a0
@@ -52,21 +22,7 @@ define void @ceil_v4f64(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: ceil_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvpickve.d $xr1, $xr0, 3
-; CHECK-NEXT:    vreplvei.d $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrp.d $vr1, $vr1
-; CHECK-NEXT:    xvpickve.d $xr2, $xr0, 2
-; CHECK-NEXT:    vreplvei.d $vr2, $vr2, 0
-; CHECK-NEXT:    vfrintrp.d $vr2, $vr2
-; CHECK-NEXT:    vextrins.d $vr2, $vr1, 16
-; CHECK-NEXT:    xvpickve.d $xr1, $xr0, 1
-; CHECK-NEXT:    vreplvei.d $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrp.d $vr1, $vr1
-; CHECK-NEXT:    xvpickve.d $xr0, $xr0, 0
-; CHECK-NEXT:    vreplvei.d $vr0, $vr0, 0
-; CHECK-NEXT:    vfrintrp.d $vr0, $vr0
-; CHECK-NEXT:    vextrins.d $vr0, $vr1, 16
-; CHECK-NEXT:    xvpermi.q $xr0, $xr2, 2
+; CHECK-NEXT:    xvfrintrp.d $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -81,38 +37,8 @@ define void @floor_v8f32(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: floor_v8f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvpickve.w $xr1, $xr0, 5
-; CHECK-NEXT:    vreplvei.w $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrm.s $vr1, $vr1
-; CHECK-NEXT:    xvpickve.w $xr2, $xr0, 4
-; CHECK-NEXT:    vreplvei.w $vr2, $vr2, 0
-; CHECK-NEXT:    vfrintrm.s $vr2, $vr2
-; CHECK-NEXT:    vextrins.w $vr2, $vr1, 16
-; CHECK-NEXT:    xvpickve.w $xr1, $xr0, 6
-; CHECK-NEXT:    vreplvei.w $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrm.s $vr1, $vr1
-; CHECK-NEXT:    vextrins.w $vr2, $vr1, 32
-; CHECK-NEXT:    xvpickve.w $xr1, $xr0, 7
-; CHECK-NEXT:    vreplvei.w $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrm.s $vr1, $vr1
-; CHECK-NEXT:    vextrins.w $vr2, $vr1, 48
-; CHECK-NEXT:    xvpickve.w $xr1, $xr0, 1
-; CHECK-NEXT:    vreplvei.w $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrm.s $vr1, $vr1
-; CHECK-NEXT:    xvpickve.w $xr3, $xr0, 0
-; CHECK-NEXT:    vreplvei.w $vr3, $vr3, 0
-; CHECK-NEXT:    vfrintrm.s $vr3, $vr3
-; CHECK-NEXT:    vextrins.w $vr3, $vr1, 16
-; CHECK-NEXT:    xvpickve.w $xr1, $xr0, 2
-; CHECK-NEXT:    vreplvei.w $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrm.s $vr1, $vr1
-; CHECK-NEXT:    vextrins.w $vr3, $vr1, 32
-; CHECK-NEXT:    xvpickve.w $xr0, $xr0, 3
-; CHECK-NEXT:    vreplvei.w $vr0, $vr0, 0
-; CHECK-NEXT:    vfrintrm.s $vr0, $vr0
-; CHECK-NEXT:    vextrins.w $vr3, $vr0, 48
-; CHECK-NEXT:    xvpermi.q $xr3, $xr2, 2
-; CHECK-NEXT:    xvst $xr3, $a0, 0
+; CHECK-NEXT:    xvfrintrm.s $xr0, $xr0
+; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %v0 = load <8 x float>, ptr %a0
@@ -126,21 +52,7 @@ define void @floor_v4f64(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: floor_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvpickve.d $xr1, $xr0, 3
-; CHECK-NEXT:    vreplvei.d $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrm.d $vr1, $vr1
-; CHECK-NEXT:    xvpickve.d $xr2, $xr0, 2
-; CHECK-NEXT:    vreplvei.d $vr2, $vr2, 0
-; CHECK-NEXT:    vfrintrm.d $vr2, $vr2
-; CHECK-NEXT:    vextrins.d $vr2, $vr1, 16
-; CHECK-NEXT:    xvpickve.d $xr1, $xr0, 1
-; CHECK-NEXT:    vreplvei.d $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrm.d $vr1, $vr1
-; CHECK-NEXT:    xvpickve.d $xr0, $xr0, 0
-; CHECK-NEXT:    vreplvei.d $vr0, $vr0, 0
-; CHECK-NEXT:    vfrintrm.d $vr0, $vr0
-; CHECK-NEXT:    vextrins.d $vr0, $vr1, 16
-; CHECK-NEXT:    xvpermi.q $xr0, $xr2, 2
+; CHECK-NEXT:    xvfrintrm.d $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -155,38 +67,8 @@ define void @trunc_v8f32(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: trunc_v8f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvpickve.w $xr1, $xr0, 5
-; CHECK-NEXT:    vreplvei.w $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrz.s $vr1, $vr1
-; CHECK-NEXT:    xvpickve.w $xr2, $xr0, 4
-; CHECK-NEXT:    vreplvei.w $vr2, $vr2, 0
-; CHECK-NEXT:    vfrintrz.s $vr2, $vr2
-; CHECK-NEXT:    vextrins.w $vr2, $vr1, 16
-; CHECK-NEXT:    xvpickve.w $xr1, $xr0, 6
-; CHECK-NEXT:    vreplvei.w $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrz.s $vr1, $vr1
-; CHECK-NEXT:    vextrins.w $vr2, $vr1, 32
-; CHECK-NEXT:    xvpickve.w $xr1, $xr0, 7
-; CHECK-NEXT:    vreplvei.w $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrz.s $vr1, $vr1
-; CHECK-NEXT:    vextrins.w $vr2, $vr1, 48
-; CHECK-NEXT:    xvpickve.w $xr1, $xr0, 1
-; CHECK-NEXT:    vreplvei.w $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrz.s $vr1, $vr1
-; CHECK-NEXT:    xvpickve.w $xr3, $xr0, 0
-; CHECK-NEXT:    vreplvei.w $vr3, $vr3, 0
-; CHECK-NEXT:    vfrintrz.s $vr3, $vr3
-; CHECK-NEXT:    vextrins.w $vr3, $vr1, 16
-; CHECK-NEXT:    xvpickve.w $xr1, $xr0, 2
-; CHECK-NEXT:    vreplvei.w $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrz.s $vr1, $vr1
-; CHECK-NEXT:    vextrins.w $vr3, $vr1, 32
-; CHECK-NEXT:    xvpickve.w $xr0, $xr0, 3
-; CHECK-NEXT:    vreplvei.w $vr0, $vr0, 0
-; CHECK-NEXT:    vfrintrz.s $vr0, $vr0
-; CHECK-NEXT:    vextrins.w $vr3, $vr0, 48
-; CHECK-NEXT:    xvpermi.q $xr3, $xr2, 2
-; CHECK-NEXT:    xvst $xr3, $a0, 0
+; CHECK-NEXT:    xvfrintrz.s $xr0, $xr0
+; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %v0 = load <8 x float>, ptr %a0
@@ -200,21 +82,7 @@ define void @trunc_v4f64(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: trunc_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvpickve.d $xr1, $xr0, 3
-; CHECK-NEXT:    vreplvei.d $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrz.d $vr1, $vr1
-; CHECK-NEXT:    xvpickve.d $xr2, $xr0, 2
-; CHECK-NEXT:    vreplvei.d $vr2, $vr2, 0
-; CHECK-NEXT:    vfrintrz.d $vr2, $vr2
-; CHECK-NEXT:    vextrins.d $vr2, $vr1, 16
-; CHECK-NEXT:    xvpickve.d $xr1, $xr0, 1
-; CHECK-NEXT:    vreplvei.d $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrz.d $vr1, $vr1
-; CHECK-NEXT:    xvpickve.d $xr0, $xr0, 0
-; CHECK-NEXT:    vreplvei.d $vr0, $vr0, 0
-; CHECK-NEXT:    vfrintrz.d $vr0, $vr0
-; CHECK-NEXT:    vextrins.d $vr0, $vr1, 16
-; CHECK-NEXT:    xvpermi.q $xr0, $xr2, 2
+; CHECK-NEXT:    xvfrintrz.d $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -229,38 +97,8 @@ define void @roundeven_v8f32(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: roundeven_v8f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvpickve.w $xr1, $xr0, 5
-; CHECK-NEXT:    vreplvei.w $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrne.s $vr1, $vr1
-; CHECK-NEXT:    xvpickve.w $xr2, $xr0, 4
-; CHECK-NEXT:    vreplvei.w $vr2, $vr2, 0
-; CHECK-NEXT:    vfrintrne.s $vr2, $vr2
-; CHECK-NEXT:    vextrins.w $vr2, $vr1, 16
-; CHECK-NEXT:    xvpickve.w $xr1, $xr0, 6
-; CHECK-NEXT:    vreplvei.w $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrne.s $vr1, $vr1
-; CHECK-NEXT:    vextrins.w $vr2, $vr1, 32
-; CHECK-NEXT:    xvpickve.w $xr1, $xr0, 7
-; CHECK-NEXT:    vreplvei.w $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrne.s $vr1, $vr1
-; CHECK-NEXT:    vextrins.w $vr2, $vr1, 48
-; CHECK-NEXT:    xvpickve.w $xr1, $xr0, 1
-; CHECK-NEXT:    vreplvei.w $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrne.s $vr1, $vr1
-; CHECK-NEXT:    xvpickve.w $xr3, $xr0, 0
-; CHECK-NEXT:    vreplvei.w $vr3, $vr3, 0
-; CHECK-NEXT:    vfrintrne.s $vr3, $vr3
-; CHECK-NEXT:    vextrins.w $vr3, $vr1, 16
-; CHECK-NEXT:    xvpickve.w $xr1, $xr0, 2
-; CHECK-NEXT:    vreplvei.w $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrne.s $vr1, $vr1
-; CHECK-NEXT:    vextrins.w $vr3, $vr1, 32
-; CHECK-NEXT:    xvpickve.w $xr0, $xr0, 3
-; CHECK-NEXT:    vreplvei.w $vr0, $vr0, 0
-; CHECK-NEXT:    vfrintrne.s $vr0, $vr0
-; CHECK-NEXT:    vextrins.w $vr3, $vr0, 48
-; CHECK-NEXT:    xvpermi.q $xr3, $xr2, 2
-; CHECK-NEXT:    xvst $xr3, $a0, 0
+; CHECK-NEXT:    xvfrintrne.s $xr0, $xr0
+; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %v0 = load <8 x float>, ptr %a0
@@ -274,21 +112,7 @@ define void @roundeven_v4f64(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: roundeven_v4f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    xvld $xr0, $a1, 0
-; CHECK-NEXT:    xvpickve.d $xr1, $xr0, 3
-; CHECK-NEXT:    vreplvei.d $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrne.d $vr1, $vr1
-; CHECK-NEXT:    xvpickve.d $xr2, $xr0, 2
-; CHECK-NEXT:    vreplvei.d $vr2, $vr2, 0
-; CHECK-NEXT:    vfrintrne.d $vr2, $vr2
-; CHECK-NEXT:    vextrins.d $vr2, $vr1, 16
-; CHECK-NEXT:    xvpickve.d $xr1, $xr0, 1
-; CHECK-NEXT:    vreplvei.d $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrne.d $vr1, $vr1
-; CHECK-NEXT:    xvpickve.d $xr0, $xr0, 0
-; CHECK-NEXT:    vreplvei.d $vr0, $vr0, 0
-; CHECK-NEXT:    vfrintrne.d $vr0, $vr0
-; CHECK-NEXT:    vextrins.d $vr0, $vr1, 16
-; CHECK-NEXT:    xvpermi.q $xr0, $xr2, 2
+; CHECK-NEXT:    xvfrintrne.d $xr0, $xr0
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:

@@ -35,7 +35,7 @@
 ; LOOP-NEXT: s_cbranch_scc1 [[LOOP]]
 
 ; MIR-LABEL: name: gws_barrier_offset0{{$}}
-; MIR: BUNDLE implicit{{( killed)?( renamable)?}} $vgpr0, implicit $m0, implicit $exec {
+; MIR: BUNDLE implicit{{( killed)?( renamable)?}} $vgpr0, implicit $m0, implicit $exec
 ; MIR-NEXT: DS_GWS_BARRIER renamable $vgpr0, 0, implicit $m0, implicit $exec :: (load (s32) from custom "GWSResource")
 ; MIR-NEXT: S_WAITCNT 0
 ; MIR-NEXT: }

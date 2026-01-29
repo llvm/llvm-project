@@ -217,9 +217,9 @@ This section explains how to extend clang with the new functionality.
 
 **Parsing functionality**
 
-If an extension modifies the standard parsing it needs to be added to
-the clang frontend source code. This also means that the associated macro
-indicating the presence of the extension should be added to clang.
+If a new extension is added it needs to be added to the clang frontend source
+code. This also means that the associated macro indicating the presence of the
+extension should be added to clang.
 
 The default flow for adding a new extension into the frontend is to
 modify `OpenCLExtensions.def
@@ -242,7 +242,7 @@ with :option:`-cl-ext` command-line flags.
 **Library functionality**
 
 If an extension adds functionality that does not modify standard language
-parsing it should not require modifying anything other than header files and
+parsing it may not require modifying anything other than header files and
 ``OpenCLBuiltins.td`` detailed in :ref:`OpenCL builtins <opencl_builtins>`.
 Most commonly such extensions add functionality via libraries (by adding
 non-native types or functions) parsed regularly. Similar to other languages this
@@ -250,13 +250,7 @@ is the most common way to add new functionality.
 
 Clang has standard headers where new types and functions are being added,
 for more details refer to
-:ref:`the section on the OpenCL Header <opencl_header>`. The macros indicating
-the presence of such extensions can be added in the standard header files
-conditioned on target specific predefined macros or/and language version
-predefined macros (see `feature/extension preprocessor macros defined in
-opencl-c-base.h
-<https://github.com/llvm/llvm-project/blob/main/clang/lib/Headers/opencl-c-base.h>`__).
-
+:ref:`the section on the OpenCL Header <opencl_header>`.
 **Pragmas**
 
 Some extensions alter standard parsing dynamically via pragmas.

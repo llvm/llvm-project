@@ -19,7 +19,7 @@ class MockJITLinkMemoryManager : public llvm::jitlink::JITLinkMemoryManager {
 public:
   class Alloc {
   public:
-    virtual ~Alloc() {}
+    virtual ~Alloc() = default;
   };
 
   class SimpleAlloc : public Alloc {

@@ -72,6 +72,7 @@
 #include "llvm/Config/llvm-config.h"
 #include "llvm/IR/Attributes.h"
 #include "llvm/IR/Function.h"
+#include "llvm/InitializePasses.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCInstrItineraries.h"
@@ -344,15 +345,9 @@ private:
                                           const LoadStoreChunk &To);
 
   /// Add a loop-carried order dependency between \p Src and \p Dst if we
-  /// cannot prove they are independent. When \p PerformCheapCheck is true, a
-  /// lightweight dependency test (referred to as "cheap check" below) is
-  /// performed at first. Note that the cheap check is retained to maintain the
-  /// existing behavior and not expected to be used anymore.
-  ///
-  /// TODO: Remove \p PerformCheapCheck and the corresponding cheap check.
+  /// cannot prove they are independent.
   void addDependenciesBetweenSUs(const SUnitWithMemInfo &Src,
-                                 const SUnitWithMemInfo &Dst,
-                                 bool PerformCheapCheck = false);
+                                 const SUnitWithMemInfo &Dst);
 
   void computeDependenciesAux();
 };
@@ -485,6 +480,61 @@ void MachinePipeliner::setPragmaPipelineOptions(MachineLoop &L) {
   }
 }
 
+/// Depth-first search to detect cycles among PHI dependencies.
+/// Returns true if a cycle is detected within the PHI-only subgraph.
+static bool hasPHICycleDFS(
+    unsigned Reg, const DenseMap<unsigned, SmallVector<unsigned, 2>> &PhiDeps,
+    SmallSet<unsigned, 8> &Visited, SmallSet<unsigned, 8> &RecStack) {
+
+  // If Reg is not a PHI-def it cannot contribute to a PHI cycle.
+  auto It = PhiDeps.find(Reg);
+  if (It == PhiDeps.end())
+    return false;
+
+  if (RecStack.count(Reg))
+    return true; // backedge.
+  if (Visited.count(Reg))
+    return false;
+
+  Visited.insert(Reg);
+  RecStack.insert(Reg);
+
+  for (unsigned Dep : It->second) {
+    if (hasPHICycleDFS(Dep, PhiDeps, Visited, RecStack))
+      return true;
+  }
+
+  RecStack.erase(Reg);
+  return false;
+}
+
+static bool hasPHICycle(const MachineBasicBlock *LoopHeader,
+                        const MachineRegisterInfo &MRI) {
+  DenseMap<unsigned, SmallVector<unsigned, 2>> PhiDeps;
+
+  // Collect PHI nodes and their dependencies.
+  for (const MachineInstr &MI : LoopHeader->phis()) {
+    unsigned DefReg = MI.getOperand(0).getReg();
+    auto Ins = PhiDeps.try_emplace(DefReg).first;
+
+    // PHI operands are (Reg, MBB) pairs starting at index 1.
+    for (unsigned I = 1; I < MI.getNumOperands(); I += 2)
+      Ins->second.push_back(MI.getOperand(I).getReg());
+  }
+
+  // DFS to detect cycles among PHI nodes.
+  SmallSet<unsigned, 8> Visited, RecStack;
+
+  // Start DFS from each PHI-def.
+  for (const auto &KV : PhiDeps) {
+    unsigned Reg = KV.first;
+    if (hasPHICycleDFS(Reg, PhiDeps, Visited, RecStack))
+      return true;
+  }
+
+  return false;
+}
+
 /// Return true if the loop can be software pipelined.  The algorithm is
 /// restricted to loops with a single basic block.  Make sure that the
 /// branch in the loop can be analyzed.
@@ -496,6 +546,11 @@ bool MachinePipeliner::canPipelineLoop(MachineLoop &L) {
              << "Not a single basic block: "
              << ore::NV("NumBlocks", L.getNumBlocks());
     });
+    return false;
+  }
+
+  if (hasPHICycle(L.getHeader(), MF->getRegInfo())) {
+    LLVM_DEBUG(dbgs() << "Cannot pipeline loop due to PHI cycle\n");
     return false;
   }
 
@@ -991,11 +1046,12 @@ bool SUnitWithMemInfo::getUnderlyingObjects() {
 
 /// Returns true if there is a loop-carried order dependency from \p Src to \p
 /// Dst.
-static bool
-hasLoopCarriedMemDep(const SUnitWithMemInfo &Src, const SUnitWithMemInfo &Dst,
-                     BatchAAResults &BAA, const TargetInstrInfo *TII,
-                     const TargetRegisterInfo *TRI,
-                     const SwingSchedulerDAG *SSD, bool PerformCheapCheck) {
+static bool hasLoopCarriedMemDep(const SUnitWithMemInfo &Src,
+                                 const SUnitWithMemInfo &Dst,
+                                 BatchAAResults &BAA,
+                                 const TargetInstrInfo *TII,
+                                 const TargetRegisterInfo *TRI,
+                                 const SwingSchedulerDAG *SSD) {
   if (Src.isTriviallyDisjoint(Dst))
     return false;
   if (isSuccOrder(Src.SU, Dst.SU))
@@ -1003,28 +1059,6 @@ hasLoopCarriedMemDep(const SUnitWithMemInfo &Src, const SUnitWithMemInfo &Dst,
 
   MachineInstr &SrcMI = *Src.SU->getInstr();
   MachineInstr &DstMI = *Dst.SU->getInstr();
-  if (PerformCheapCheck) {
-    // First, perform the cheaper check that compares the base register.
-    // If they are the same and the load offset is less than the store
-    // offset, then mark the dependence as loop carried potentially.
-    //
-    // TODO: This check will be removed.
-    const MachineOperand *BaseOp1, *BaseOp2;
-    int64_t Offset1, Offset2;
-    bool Offset1IsScalable, Offset2IsScalable;
-    if (TII->getMemOperandWithOffset(SrcMI, BaseOp1, Offset1, Offset1IsScalable,
-                                     TRI) &&
-        TII->getMemOperandWithOffset(DstMI, BaseOp2, Offset2, Offset2IsScalable,
-                                     TRI)) {
-      if (BaseOp1->isIdenticalTo(*BaseOp2) &&
-          Offset1IsScalable == Offset2IsScalable &&
-          (int)Offset1 < (int)Offset2) {
-        assert(TII->areMemAccessesTriviallyDisjoint(SrcMI, DstMI) &&
-               "What happened to the chain edge?");
-        return true;
-      }
-    }
-  }
 
   if (!SSD->mayOverlapInLaterIter(&SrcMI, &DstMI))
     return false;
@@ -1098,13 +1132,12 @@ LoopCarriedOrderDepsTracker::getInstrTag(SUnit *SU) const {
 }
 
 void LoopCarriedOrderDepsTracker::addDependenciesBetweenSUs(
-    const SUnitWithMemInfo &Src, const SUnitWithMemInfo &Dst,
-    bool PerformCheapCheck) {
+    const SUnitWithMemInfo &Src, const SUnitWithMemInfo &Dst) {
   // Avoid self-dependencies.
   if (Src.SU == Dst.SU)
     return;
 
-  if (hasLoopCarriedMemDep(Src, Dst, *BAA, TII, TRI, DAG, PerformCheapCheck))
+  if (hasLoopCarriedMemDep(Src, Dst, *BAA, TII, TRI, DAG))
     LoopCarried[Src.SU->NodeNum].set(Dst.SU->NodeNum);
 }
 
@@ -1113,8 +1146,7 @@ void LoopCarriedOrderDepsTracker::addLoopCarriedDepenenciesForChunks(
   // Add load-to-store dependencies (WAR).
   for (const SUnitWithMemInfo &Src : From.Loads)
     for (const SUnitWithMemInfo &Dst : To.Stores)
-      // Perform a cheap check first if this is a forward dependency.
-      addDependenciesBetweenSUs(Src, Dst, Src.SU->NodeNum < Dst.SU->NodeNum);
+      addDependenciesBetweenSUs(Src, Dst);
 
   // Add store-to-load dependencies (RAW).
   for (const SUnitWithMemInfo &Src : From.Stores)
@@ -1214,8 +1246,19 @@ void SwingSchedulerDAG::updatePhiDependences() {
               HasPhiDef = Reg;
               // Add a chain edge to a dependent Phi that isn't an existing
               // predecessor.
-              if (SU->NodeNum < I.NodeNum && !I.isPred(SU))
-                I.addPred(SDep(SU, SDep::Barrier));
+
+              // %3:intregs = PHI %21:intregs, %bb.6, %7:intregs, %bb.1 - SU0
+              // %7:intregs = PHI %21:intregs, %bb.6, %13:intregs, %bb.1 - SU1
+              // %27:intregs = A2_zxtb %3:intregs - SU2
+              // %13:intregs = C2_muxri %45:predregs, 0, %46:intreg
+              // If we have dependent phis, SU0 should be the successor of SU1
+              // not the other way around. (it used to be SU1 is the successor
+              // of SU0). In some cases, SU0 is scheduled earlier than SU1
+              // resulting in bad IR as we do not have a value that can be used
+              // by SU2.
+
+              if (SU->NodeNum < I.NodeNum && !SU->isPred(&I))
+                SU->addPred(SDep(&I, SDep::Barrier));
             }
           }
         }
@@ -1509,7 +1552,11 @@ private:
 
   void dumpPSet(Register Reg) const {
     dbgs() << "Reg=" << printReg(Reg, TRI, 0, &MRI) << " PSet=";
-    for (auto PSetIter = MRI.getPressureSets(Reg); PSetIter.isValid();
+    // FIXME: The static_cast is a bug compensating bugs in the callers.
+    VirtRegOrUnit VRegOrUnit =
+        Reg.isVirtual() ? VirtRegOrUnit(Reg)
+                        : VirtRegOrUnit(static_cast<MCRegUnit>(Reg.id()));
+    for (auto PSetIter = MRI.getPressureSets(VRegOrUnit); PSetIter.isValid();
          ++PSetIter) {
       dbgs() << *PSetIter << ' ';
     }
@@ -1518,7 +1565,11 @@ private:
 
   void increaseRegisterPressure(std::vector<unsigned> &Pressure,
                                 Register Reg) const {
-    auto PSetIter = MRI.getPressureSets(Reg);
+    // FIXME: The static_cast is a bug compensating bugs in the callers.
+    VirtRegOrUnit VRegOrUnit =
+        Reg.isVirtual() ? VirtRegOrUnit(Reg)
+                        : VirtRegOrUnit(static_cast<MCRegUnit>(Reg.id()));
+    auto PSetIter = MRI.getPressureSets(VRegOrUnit);
     unsigned Weight = PSetIter.getWeight();
     for (; PSetIter.isValid(); ++PSetIter)
       Pressure[*PSetIter] += Weight;
@@ -1526,7 +1577,7 @@ private:
 
   void decreaseRegisterPressure(std::vector<unsigned> &Pressure,
                                 Register Reg) const {
-    auto PSetIter = MRI.getPressureSets(Reg);
+    auto PSetIter = MRI.getPressureSets(VirtRegOrUnit(Reg));
     unsigned Weight = PSetIter.getWeight();
     for (; PSetIter.isValid(); ++PSetIter) {
       auto &P = Pressure[*PSetIter];
@@ -1559,7 +1610,11 @@ private:
       if (MI.isDebugInstr())
         continue;
       for (auto &Use : ROMap[&MI].Uses) {
-        auto Reg = Use.RegUnit;
+        // FIXME: The static_cast is a bug.
+        Register Reg =
+            Use.VRegOrUnit.isVirtualReg()
+                ? Use.VRegOrUnit.asVirtualReg()
+                : Register(static_cast<unsigned>(Use.VRegOrUnit.asMCRegUnit()));
         // Ignore the variable that appears only on one side of phi instruction
         // because it's used only at the first iteration.
         if (MI.isPHI() && Reg != getLoopPhiReg(MI, OrigMBB))
@@ -1609,8 +1664,14 @@ private:
         Register Reg = getLoopPhiReg(*MI, OrigMBB);
         UpdateTargetRegs(Reg);
       } else {
-        for (auto &Use : ROMap.find(MI)->getSecond().Uses)
-          UpdateTargetRegs(Use.RegUnit);
+        for (auto &Use : ROMap.find(MI)->getSecond().Uses) {
+          // FIXME: The static_cast is a bug.
+          Register Reg = Use.VRegOrUnit.isVirtualReg()
+                             ? Use.VRegOrUnit.asVirtualReg()
+                             : Register(static_cast<unsigned>(
+                                   Use.VRegOrUnit.asMCRegUnit()));
+          UpdateTargetRegs(Reg);
+        }
       }
     }
 
@@ -1621,7 +1682,11 @@ private:
     DenseMap<Register, MachineInstr *> LastUseMI;
     for (MachineInstr *MI : llvm::reverse(OrderedInsts)) {
       for (auto &Use : ROMap.find(MI)->getSecond().Uses) {
-        auto Reg = Use.RegUnit;
+        // FIXME: The static_cast is a bug.
+        Register Reg =
+            Use.VRegOrUnit.isVirtualReg()
+                ? Use.VRegOrUnit.asVirtualReg()
+                : Register(static_cast<unsigned>(Use.VRegOrUnit.asMCRegUnit()));
         if (!TargetRegs.contains(Reg))
           continue;
         auto [Ite, Inserted] = LastUseMI.try_emplace(Reg, MI);
@@ -1635,8 +1700,8 @@ private:
     }
 
     Instr2LastUsesTy LastUses;
-    for (auto &Entry : LastUseMI)
-      LastUses[Entry.second].insert(Entry.first);
+    for (auto [Reg, MI] : LastUseMI)
+      LastUses[MI].insert(Reg);
     return LastUses;
   }
 
@@ -1675,7 +1740,12 @@ private:
     });
 
     const auto InsertReg = [this, &CurSetPressure](RegSetTy &RegSet,
-                                                   Register Reg) {
+                                                   VirtRegOrUnit VRegOrUnit) {
+      // FIXME: The static_cast is a bug.
+      Register Reg =
+          VRegOrUnit.isVirtualReg()
+              ? VRegOrUnit.asVirtualReg()
+              : Register(static_cast<unsigned>(VRegOrUnit.asMCRegUnit()));
       if (!Reg.isValid() || isReservedRegister(Reg))
         return;
 
@@ -1712,7 +1782,7 @@ private:
         const unsigned Iter = I - Stage;
 
         for (auto &Def : ROMap.find(MI)->getSecond().Defs)
-          InsertReg(LiveRegSets[Iter], Def.RegUnit);
+          InsertReg(LiveRegSets[Iter], Def.VRegOrUnit);
 
         for (auto LastUse : LastUses[MI]) {
           if (MI->isPHI()) {
@@ -2235,7 +2305,7 @@ static void computeLiveOuts(MachineFunction &MF, RegPressureTracker &RPTracker,
   const TargetRegisterInfo *TRI = MF.getSubtarget().getRegisterInfo();
   MachineRegisterInfo &MRI = MF.getRegInfo();
   SmallVector<VRegMaskOrUnit, 8> LiveOutRegs;
-  SmallSet<Register, 4> Uses;
+  SmallSet<VirtRegOrUnit, 4> Uses;
   for (SUnit *SU : NS) {
     const MachineInstr *MI = SU->getInstr();
     if (MI->isPHI())
@@ -2243,9 +2313,10 @@ static void computeLiveOuts(MachineFunction &MF, RegPressureTracker &RPTracker,
     for (const MachineOperand &MO : MI->all_uses()) {
       Register Reg = MO.getReg();
       if (Reg.isVirtual())
-        Uses.insert(Reg);
+        Uses.insert(VirtRegOrUnit(Reg));
       else if (MRI.isAllocatable(Reg))
-        Uses.insert_range(TRI->regunits(Reg.asMCReg()));
+        for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
+          Uses.insert(VirtRegOrUnit(Unit));
     }
   }
   for (SUnit *SU : NS)
@@ -2253,12 +2324,14 @@ static void computeLiveOuts(MachineFunction &MF, RegPressureTracker &RPTracker,
       if (!MO.isDead()) {
         Register Reg = MO.getReg();
         if (Reg.isVirtual()) {
-          if (!Uses.count(Reg))
-            LiveOutRegs.emplace_back(Reg, LaneBitmask::getNone());
+          if (!Uses.count(VirtRegOrUnit(Reg)))
+            LiveOutRegs.emplace_back(VirtRegOrUnit(Reg),
+                                     LaneBitmask::getNone());
         } else if (MRI.isAllocatable(Reg)) {
           for (MCRegUnit Unit : TRI->regunits(Reg.asMCReg()))
-            if (!Uses.count(Unit))
-              LiveOutRegs.emplace_back(Unit, LaneBitmask::getNone());
+            if (!Uses.count(VirtRegOrUnit(Unit)))
+              LiveOutRegs.emplace_back(VirtRegOrUnit(Unit),
+                                       LaneBitmask::getNone());
         }
       }
   RPTracker.addLiveRegs(LiveOutRegs);

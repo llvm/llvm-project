@@ -54,6 +54,7 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
       -D CMAKE_CXX_FLAGS=-gmlt \
       -D CMAKE_C_COMPILER_LAUNCHER=sccache \
       -D CMAKE_CXX_COMPILER_LAUNCHER=sccache \
+      -D CMAKE_DISABLE_PRECOMPILE_HEADERS=ON \
       -D LIBCXX_CXX_ABI=libcxxabi \
       -D MLIR_ENABLE_BINDINGS_PYTHON=ON \
       -D LLDB_ENABLE_PYTHON=ON \
@@ -64,11 +65,13 @@ cmake -S "${MONOREPO_ROOT}"/llvm -B "${BUILD_DIR}" \
 
 start-group "ninja"
 
-# Targets are not escaped as they are passed as separate arguments.
-ninja -C "${BUILD_DIR}" -k 0 ${targets} |& tee ninja.log
-cp ${BUILD_DIR}/.ninja_log ninja.ninja_log
+if [[ -n "${targets}" ]]; then
+  # Targets are not escaped as they are passed as separate arguments.
+  ninja -C "${BUILD_DIR}" -k 0 ${targets} |& tee ninja.log
+  cp ${BUILD_DIR}/.ninja_log ninja.ninja_log
+fi
 
-if [[ "${runtime_targets}" != "" ]]; then
+if [[ -n "${runtime_targets}" ]]; then
   start-group "ninja Runtimes"
 
   ninja -C "${BUILD_DIR}" ${runtime_targets} |& tee ninja_runtimes.log
@@ -77,7 +80,7 @@ fi
 
 # Compiling runtimes with just-built Clang and running their tests
 # as an additional testing for Clang.
-if [[ "${runtime_targets_needs_reconfig}" != "" ]]; then
+if [[ -n "${runtime_targets_needs_reconfig}" ]]; then
   start-group "CMake Runtimes C++26"
 
   cmake \

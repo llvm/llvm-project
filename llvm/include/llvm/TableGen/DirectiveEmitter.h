@@ -20,7 +20,6 @@
 #include "llvm/Frontend/Directive/Spelling.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/TableGen/Record.h"
-#include <algorithm>
 #include <string>
 #include <vector>
 

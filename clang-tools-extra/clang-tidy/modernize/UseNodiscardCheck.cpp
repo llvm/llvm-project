@@ -110,11 +110,11 @@ void UseNodiscardCheck::registerMatchers(MatchFinder *Finder) {
 void UseNodiscardCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *MatchedDecl = Result.Nodes.getNodeAs<CXXMethodDecl>("no_discard");
   // Don't make replacements if the location is invalid or in a macro.
-  SourceLocation Loc = MatchedDecl->getLocation();
+  const SourceLocation Loc = MatchedDecl->getLocation();
   if (Loc.isInvalid() || Loc.isMacroID())
     return;
 
-  SourceLocation RetLoc = MatchedDecl->getInnerLocStart();
+  const SourceLocation RetLoc = MatchedDecl->getInnerLocStart();
 
   ASTContext &Context = *Result.Context;
 

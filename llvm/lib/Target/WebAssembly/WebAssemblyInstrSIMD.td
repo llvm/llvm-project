@@ -300,11 +300,17 @@ foreach vec = [I32x4, I64x2, F32x4, F64x2] in {
   defm : LoadPat<vec.vt, pat, inst>;
 }
 
-// TODO: f32x4 and f64x2 as well
 foreach vec = [I32x4, I64x2] in {
   defvar inst = "LOAD_ZERO_"#vec.lane_bits;
   defvar pat = PatFrag<(ops node:$ptr),
     (vector_insert (vec.splat (vec.lane_vt 0)), (vec.lane_vt (load $ptr)), 0)>;
+  defm : LoadPat<vec.vt, pat, inst>;
+}
+
+foreach vec = [F32x4, F64x2] in {
+  defvar inst = "LOAD_ZERO_"#vec.lane_bits;
+  defvar pat = PatFrag<(ops node:$ptr),
+    (vector_insert (vec.splat (vec.lane_vt fpimm0)), (vec.lane_vt (load $ptr)), 0)>;
   defm : LoadPat<vec.vt, pat, inst>;
 }
 
@@ -334,17 +340,19 @@ defm "" : SIMDLoadLane<16, 0x55>;
 defm "" : SIMDLoadLane<32, 0x56>;
 defm "" : SIMDLoadLane<64, 0x57>;
 
-// Select loads with no constant offset.
-multiclass LoadLanePatNoOffset<Vec vec, SDPatternOperator kind> {
+// Select loads, possibly including a constant offset.
+multiclass LoadLanePat<Vec vec, SDPatternOperator kind> {
   defvar load_lane_a32 = !cast<NI>("LOAD_LANE_"#vec.lane_bits#"_A32");
   defvar load_lane_a64 = !cast<NI>("LOAD_LANE_"#vec.lane_bits#"_A64");
-  def : Pat<(vec.vt (kind (i32 I32:$addr),
+
+  def : Pat<(vec.vt (kind (AddrOps32 offset32_op:$offset, I32:$addr),
               (vec.vt V128:$vec), (i32 vec.lane_idx:$idx))),
-            (load_lane_a32 0, 0, imm:$idx, $addr, $vec)>,
+            (load_lane_a32 0, $offset, imm:$idx, $addr, $vec)>,
         Requires<[HasAddr32]>;
-  def : Pat<(vec.vt (kind (i64 I64:$addr),
+
+  def : Pat<(vec.vt (kind (AddrOps64 offset64_op:$offset, I64:$addr),
               (vec.vt V128:$vec), (i32 vec.lane_idx:$idx))),
-            (load_lane_a64 0, 0, imm:$idx, $addr, $vec)>,
+            (load_lane_a64 0, $offset, imm:$idx, $addr, $vec)>,
         Requires<[HasAddr64]>;
 }
 
@@ -365,15 +373,12 @@ def load64_lane :
            (vector_insert $vec, (f64 (load $ptr)), $idx)
 ]>;
 
-defm : LoadLanePatNoOffset<I8x16, load8_lane>;
-defm : LoadLanePatNoOffset<I16x8, load16_lane>;
-defm : LoadLanePatNoOffset<I32x4, load32_lane>;
-defm : LoadLanePatNoOffset<I64x2, load64_lane>;
-defm : LoadLanePatNoOffset<F32x4, load32_lane>;
-defm : LoadLanePatNoOffset<F64x2, load64_lane>;
-
-// TODO: Also support the other load patterns for load_lane once the instructions
-// are merged to the proposal.
+defm : LoadLanePat<I8x16, load8_lane>;
+defm : LoadLanePat<I16x8, load16_lane>;
+defm : LoadLanePat<I32x4, load32_lane>;
+defm : LoadLanePat<I64x2, load64_lane>;
+defm : LoadLanePat<F32x4, load32_lane>;
+defm : LoadLanePat<F64x2, load64_lane>;
 
 // Store: v128.store
 let mayStore = 1, UseNamedOperandTable = 1 in {
@@ -1541,6 +1546,32 @@ def : Pat<(v4i32 (int_wasm_extadd_pairwise_signed (v8i16 V128:$in))),
 def : Pat<(v8i16 (int_wasm_extadd_pairwise_signed (v16i8 V128:$in))),
           (extadd_pairwise_s_I16x8 V128:$in)>;
 
+multiclass ExtAddPairwiseShuffle<ValueType from_ty, ValueType to_ty, string suffix,
+                              int a0, int a1, int a2, int a3, int a4, int a5, int a6, int a7,
+                              int b0, int b1, int b2, int b3, int b4, int b5, int b6, int b7> {
+  foreach sign = ["s", "u"] in {
+    def : Pat<(to_ty (add
+                    (!cast<SDNode>("extend_low_"#sign) (from_ty (wasm_shuffle (from_ty V128:$vec), (from_ty srcvalue),
+                                  (i32 a0), (i32 a1), (i32 a2), (i32 a3),
+                                  (i32 a4), (i32 a5), (i32 a6), (i32 a7),
+                                  (i32 srcvalue), (i32 srcvalue), (i32 srcvalue), (i32 srcvalue),
+                                  (i32 srcvalue), (i32 srcvalue), (i32 srcvalue), (i32 srcvalue)))),
+                    (!cast<SDNode>("extend_low_"#sign) (from_ty (wasm_shuffle (from_ty V128:$vec), (from_ty srcvalue),
+                                  (i32 b0), (i32 b1), (i32 b2), (i32 b3),
+                                  (i32 b4), (i32 b5), (i32 b6), (i32 b7),
+                                  (i32 srcvalue), (i32 srcvalue), (i32 srcvalue), (i32 srcvalue),
+                                  (i32 srcvalue), (i32 srcvalue), (i32 srcvalue), (i32 srcvalue)))))),
+              (!cast<Instruction>("extadd_pairwise_"#sign#"_"#suffix) V128:$vec)>;
+  }
+}
+
+defm : ExtAddPairwiseShuffle<v8i16, v4i32, "I32x4",
+                         0, 1, 4, 5, 8, 9, 12, 13,
+                         2, 3, 6, 7, 10, 11, 14, 15>;
+defm : ExtAddPairwiseShuffle<v16i8, v8i16, "I16x8",
+                         0, 2, 4, 6, 8, 10, 12, 14,
+                         1, 3, 5, 7, 9, 11, 13, 15>;
+
 // f64x2 <-> f32x4 conversions
 def demote_t : SDTypeProfile<1, 1, [SDTCisVec<0>, SDTCisVec<1>]>;
 def demote_zero : SDNode<"WebAssemblyISD::DEMOTE_ZERO", demote_t>;
@@ -1745,26 +1776,44 @@ defm SIMD_RELAXED_FMIN :
 defm SIMD_RELAXED_FMAX :
    RelaxedBinary<F64x2, int_wasm_relaxed_max, "relaxed_max", 0x110>;
 
+def relaxed_fmin : SDNode<"WebAssemblyISD::RELAXED_FMIN", SDTFPBinOp>;
+def relaxed_fmax : SDNode<"WebAssemblyISD::RELAXED_FMAX", SDTFPBinOp>;
+
+def relaxed_pmin :
+  PatFrag<(ops node:$lhs, node:$rhs), (pmin $lhs, $rhs), [{
+  return (N->getFlags().hasNoNaNs() ||
+          (CurDAG->isKnownNeverNaN(N->getOperand(0)) &&
+           CurDAG->isKnownNeverNaN(N->getOperand(1)))) &&
+         (N->getFlags().hasNoSignedZeros() ||
+          CurDAG->isKnownNeverZeroFloat(N->getOperand(0)) ||
+          CurDAG->isKnownNeverZeroFloat(N->getOperand(1)));
+}]>;
+
+def relaxed_pmax :
+  PatFrag<(ops node:$lhs, node:$rhs), (pmax $lhs, $rhs), [{
+  return (N->getFlags().hasNoNaNs() ||
+          (CurDAG->isKnownNeverNaN(N->getOperand(0)) &&
+           CurDAG->isKnownNeverNaN(N->getOperand(1)))) &&
+         (N->getFlags().hasNoSignedZeros() ||
+          CurDAG->isKnownNeverZeroFloat(N->getOperand(0)) ||
+          CurDAG->isKnownNeverZeroFloat(N->getOperand(1)));
+}]>;
+
 let Predicates = [HasRelaxedSIMD] in {
   foreach vec = [F32x4, F64x2] in {
     defvar relaxed_min = !cast<NI>("SIMD_RELAXED_FMIN_"#vec);
     defvar relaxed_max = !cast<NI>("SIMD_RELAXED_FMAX_"#vec);
 
-    // Transform standard fminimum/fmaximum to relaxed versions
-    def : Pat<(vec.vt (fminnum (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
+    def : Pat<(vec.vt (relaxed_fmin (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
               (relaxed_min V128:$lhs, V128:$rhs)>;
-    def : Pat<(vec.vt (fminimumnum (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
-              (relaxed_min V128:$lhs, V128:$rhs)>;
-    def : Pat<(vec.vt (fmaxnum (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
-              (relaxed_max V128:$lhs, V128:$rhs)>;
-    def : Pat<(vec.vt (fmaximumnum (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
+    def : Pat<(vec.vt (relaxed_fmax (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
               (relaxed_max V128:$lhs, V128:$rhs)>;
 
     // Transform pmin/max-supposed patterns to relaxed min max
     let AddedComplexity = 1 in {
-      def : Pat<(vec.vt (pmin (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
+      def : Pat<(vec.vt (relaxed_pmin (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
                 (relaxed_min $lhs, $rhs)>;
-      def : Pat<(vec.vt (pmax (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
+      def : Pat<(vec.vt (relaxed_pmax (vec.vt V128:$lhs), (vec.vt V128:$rhs))),
                 (relaxed_max $lhs, $rhs)>;
       defm : PMinMaxInt<vec, relaxed_min, relaxed_max>;
     }

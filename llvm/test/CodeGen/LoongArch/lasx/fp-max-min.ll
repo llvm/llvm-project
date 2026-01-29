@@ -5,40 +5,10 @@
 define void @minnum_v8f32(ptr %res, ptr %x, ptr %y) nounwind {
 ; CHECK-LABEL: minnum_v8f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvpickve.w $xr2, $xr0, 5
-; CHECK-NEXT:    xvpickve.w $xr3, $xr1, 5
-; CHECK-NEXT:    fmin.s $fa2, $fa3, $fa2
-; CHECK-NEXT:    xvpickve.w $xr3, $xr0, 4
-; CHECK-NEXT:    xvpickve.w $xr4, $xr1, 4
-; CHECK-NEXT:    fmin.s $fa3, $fa4, $fa3
-; CHECK-NEXT:    vextrins.w $vr3, $vr2, 16
-; CHECK-NEXT:    xvpickve.w $xr2, $xr0, 6
-; CHECK-NEXT:    xvpickve.w $xr4, $xr1, 6
-; CHECK-NEXT:    fmin.s $fa2, $fa4, $fa2
-; CHECK-NEXT:    vextrins.w $vr3, $vr2, 32
-; CHECK-NEXT:    xvpickve.w $xr2, $xr0, 7
-; CHECK-NEXT:    xvpickve.w $xr4, $xr1, 7
-; CHECK-NEXT:    fmin.s $fa2, $fa4, $fa2
-; CHECK-NEXT:    vextrins.w $vr3, $vr2, 48
-; CHECK-NEXT:    xvpickve.w $xr2, $xr0, 1
-; CHECK-NEXT:    xvpickve.w $xr4, $xr1, 1
-; CHECK-NEXT:    fmin.s $fa2, $fa4, $fa2
-; CHECK-NEXT:    xvpickve.w $xr4, $xr0, 0
-; CHECK-NEXT:    xvpickve.w $xr5, $xr1, 0
-; CHECK-NEXT:    fmin.s $fa4, $fa5, $fa4
-; CHECK-NEXT:    vextrins.w $vr4, $vr2, 16
-; CHECK-NEXT:    xvpickve.w $xr2, $xr0, 2
-; CHECK-NEXT:    xvpickve.w $xr5, $xr1, 2
-; CHECK-NEXT:    fmin.s $fa2, $fa5, $fa2
-; CHECK-NEXT:    vextrins.w $vr4, $vr2, 32
-; CHECK-NEXT:    xvpickve.w $xr0, $xr0, 3
-; CHECK-NEXT:    xvpickve.w $xr1, $xr1, 3
-; CHECK-NEXT:    fmin.s $fa0, $fa1, $fa0
-; CHECK-NEXT:    vextrins.w $vr4, $vr0, 48
-; CHECK-NEXT:    xvpermi.q $xr4, $xr3, 2
-; CHECK-NEXT:    xvst $xr4, $a0, 0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvfmin.s $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %v0 = load <8 x float>, ptr %x
@@ -51,23 +21,9 @@ entry:
 define void @minnum_v4f64(ptr %res, ptr %x, ptr %y) nounwind {
 ; CHECK-LABEL: minnum_v4f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvpickve.d $xr2, $xr0, 3
-; CHECK-NEXT:    xvpickve.d $xr3, $xr1, 3
-; CHECK-NEXT:    fmin.d $fa2, $fa3, $fa2
-; CHECK-NEXT:    xvpickve.d $xr3, $xr0, 2
-; CHECK-NEXT:    xvpickve.d $xr4, $xr1, 2
-; CHECK-NEXT:    fmin.d $fa3, $fa4, $fa3
-; CHECK-NEXT:    vextrins.d $vr3, $vr2, 16
-; CHECK-NEXT:    xvpickve.d $xr2, $xr0, 1
-; CHECK-NEXT:    xvpickve.d $xr4, $xr1, 1
-; CHECK-NEXT:    fmin.d $fa2, $fa4, $fa2
-; CHECK-NEXT:    xvpickve.d $xr0, $xr0, 0
-; CHECK-NEXT:    xvpickve.d $xr1, $xr1, 0
-; CHECK-NEXT:    fmin.d $fa0, $fa1, $fa0
-; CHECK-NEXT:    vextrins.d $vr0, $vr2, 16
-; CHECK-NEXT:    xvpermi.q $xr0, $xr3, 2
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvfmin.d $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -81,40 +37,10 @@ entry:
 define void @maxnum_v8f32(ptr %res, ptr %x, ptr %y) nounwind {
 ; CHECK-LABEL: maxnum_v8f32:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvpickve.w $xr2, $xr0, 5
-; CHECK-NEXT:    xvpickve.w $xr3, $xr1, 5
-; CHECK-NEXT:    fmax.s $fa2, $fa3, $fa2
-; CHECK-NEXT:    xvpickve.w $xr3, $xr0, 4
-; CHECK-NEXT:    xvpickve.w $xr4, $xr1, 4
-; CHECK-NEXT:    fmax.s $fa3, $fa4, $fa3
-; CHECK-NEXT:    vextrins.w $vr3, $vr2, 16
-; CHECK-NEXT:    xvpickve.w $xr2, $xr0, 6
-; CHECK-NEXT:    xvpickve.w $xr4, $xr1, 6
-; CHECK-NEXT:    fmax.s $fa2, $fa4, $fa2
-; CHECK-NEXT:    vextrins.w $vr3, $vr2, 32
-; CHECK-NEXT:    xvpickve.w $xr2, $xr0, 7
-; CHECK-NEXT:    xvpickve.w $xr4, $xr1, 7
-; CHECK-NEXT:    fmax.s $fa2, $fa4, $fa2
-; CHECK-NEXT:    vextrins.w $vr3, $vr2, 48
-; CHECK-NEXT:    xvpickve.w $xr2, $xr0, 1
-; CHECK-NEXT:    xvpickve.w $xr4, $xr1, 1
-; CHECK-NEXT:    fmax.s $fa2, $fa4, $fa2
-; CHECK-NEXT:    xvpickve.w $xr4, $xr0, 0
-; CHECK-NEXT:    xvpickve.w $xr5, $xr1, 0
-; CHECK-NEXT:    fmax.s $fa4, $fa5, $fa4
-; CHECK-NEXT:    vextrins.w $vr4, $vr2, 16
-; CHECK-NEXT:    xvpickve.w $xr2, $xr0, 2
-; CHECK-NEXT:    xvpickve.w $xr5, $xr1, 2
-; CHECK-NEXT:    fmax.s $fa2, $fa5, $fa2
-; CHECK-NEXT:    vextrins.w $vr4, $vr2, 32
-; CHECK-NEXT:    xvpickve.w $xr0, $xr0, 3
-; CHECK-NEXT:    xvpickve.w $xr1, $xr1, 3
-; CHECK-NEXT:    fmax.s $fa0, $fa1, $fa0
-; CHECK-NEXT:    vextrins.w $vr4, $vr0, 48
-; CHECK-NEXT:    xvpermi.q $xr4, $xr3, 2
-; CHECK-NEXT:    xvst $xr4, $a0, 0
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvfmax.s $xr0, $xr0, $xr1
+; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %v0 = load <8 x float>, ptr %x
@@ -127,23 +53,9 @@ entry:
 define void @maxnum_v4f64(ptr %res, ptr %x, ptr %y) nounwind {
 ; CHECK-LABEL: maxnum_v4f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    xvld $xr0, $a2, 0
-; CHECK-NEXT:    xvld $xr1, $a1, 0
-; CHECK-NEXT:    xvpickve.d $xr2, $xr0, 3
-; CHECK-NEXT:    xvpickve.d $xr3, $xr1, 3
-; CHECK-NEXT:    fmax.d $fa2, $fa3, $fa2
-; CHECK-NEXT:    xvpickve.d $xr3, $xr0, 2
-; CHECK-NEXT:    xvpickve.d $xr4, $xr1, 2
-; CHECK-NEXT:    fmax.d $fa3, $fa4, $fa3
-; CHECK-NEXT:    vextrins.d $vr3, $vr2, 16
-; CHECK-NEXT:    xvpickve.d $xr2, $xr0, 1
-; CHECK-NEXT:    xvpickve.d $xr4, $xr1, 1
-; CHECK-NEXT:    fmax.d $fa2, $fa4, $fa2
-; CHECK-NEXT:    xvpickve.d $xr0, $xr0, 0
-; CHECK-NEXT:    xvpickve.d $xr1, $xr1, 0
-; CHECK-NEXT:    fmax.d $fa0, $fa1, $fa0
-; CHECK-NEXT:    vextrins.d $vr0, $vr2, 16
-; CHECK-NEXT:    xvpermi.q $xr0, $xr3, 2
+; CHECK-NEXT:    xvld $xr0, $a1, 0
+; CHECK-NEXT:    xvld $xr1, $a2, 0
+; CHECK-NEXT:    xvfmax.d $xr0, $xr0, $xr1
 ; CHECK-NEXT:    xvst $xr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:

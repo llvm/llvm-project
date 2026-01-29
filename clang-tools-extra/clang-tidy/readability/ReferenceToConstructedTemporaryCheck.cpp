@@ -37,7 +37,7 @@ struct NotExtendedByDeclBoundToPredicate {
 
 AST_MATCHER_P(MaterializeTemporaryExpr, isExtendedByDeclBoundTo, StringRef,
               ID) {
-  NotExtendedByDeclBoundToPredicate Predicate{
+  const NotExtendedByDeclBoundToPredicate Predicate{
       ID, ::clang::DynTypedNode::create(Node)};
   return Builder->removeBindings(Predicate);
 }

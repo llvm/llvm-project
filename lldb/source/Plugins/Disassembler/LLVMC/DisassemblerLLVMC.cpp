@@ -70,6 +70,7 @@ public:
   bool HasDelaySlot(llvm::MCInst &mc_inst) const;
   bool IsCall(llvm::MCInst &mc_inst) const;
   bool IsLoad(llvm::MCInst &mc_inst) const;
+  bool IsBarrier(llvm::MCInst &mc_inst) const;
   bool IsAuthenticated(llvm::MCInst &mc_inst) const;
 
 private:
@@ -434,6 +435,11 @@ public:
   bool IsLoad() override {
     VisitInstruction();
     return m_is_load;
+  }
+
+  bool IsBarrier() override {
+    VisitInstruction();
+    return m_is_barrier;
   }
 
   bool IsAuthenticated() override {
@@ -1195,6 +1201,7 @@ protected:
   bool m_is_call = false;
   bool m_is_load = false;
   bool m_is_authenticated = false;
+  bool m_is_barrier = false;
 
   void VisitInstruction() {
     if (m_has_visited_instruction)
@@ -1227,6 +1234,7 @@ protected:
     m_is_call = mc_disasm_ptr->IsCall(inst);
     m_is_load = mc_disasm_ptr->IsLoad(inst);
     m_is_authenticated = mc_disasm_ptr->IsAuthenticated(inst);
+    m_is_barrier = mc_disasm_ptr->IsBarrier(inst);
   }
 
 private:
@@ -1430,6 +1438,11 @@ bool DisassemblerLLVMC::MCDisasmInstance::IsCall(llvm::MCInst &mc_inst) const {
 
 bool DisassemblerLLVMC::MCDisasmInstance::IsLoad(llvm::MCInst &mc_inst) const {
   return m_instr_info_up->get(mc_inst.getOpcode()).mayLoad();
+}
+
+bool DisassemblerLLVMC::MCDisasmInstance::IsBarrier(
+    llvm::MCInst &mc_inst) const {
+  return m_instr_info_up->get(mc_inst.getOpcode()).isBarrier();
 }
 
 bool DisassemblerLLVMC::MCDisasmInstance::IsAuthenticated(

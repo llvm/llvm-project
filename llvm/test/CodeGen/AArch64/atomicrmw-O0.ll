@@ -9,15 +9,15 @@ define i8 @test_rmw_add_8(ptr %dst)   {
 ; NOLSE:       // %bb.0: // %entry
 ; NOLSE-NEXT:    sub sp, sp, #32
 ; NOLSE-NEXT:    .cfi_def_cfa_offset 32
-; NOLSE-NEXT:    str x0, [sp, #16] // 8-byte Folded Spill
+; NOLSE-NEXT:    str x0, [sp, #16] // 8-byte Spill
 ; NOLSE-NEXT:    ldrb w8, [x0]
-; NOLSE-NEXT:    str w8, [sp, #28] // 4-byte Folded Spill
+; NOLSE-NEXT:    str w8, [sp, #28] // 4-byte Spill
 ; NOLSE-NEXT:    b .LBB0_1
 ; NOLSE-NEXT:  .LBB0_1: // %atomicrmw.start
 ; NOLSE-NEXT:    // =>This Loop Header: Depth=1
 ; NOLSE-NEXT:    // Child Loop BB0_2 Depth 2
-; NOLSE-NEXT:    ldr w9, [sp, #28] // 4-byte Folded Reload
-; NOLSE-NEXT:    ldr x11, [sp, #16] // 8-byte Folded Reload
+; NOLSE-NEXT:    ldr w9, [sp, #28] // 4-byte Reload
+; NOLSE-NEXT:    ldr x11, [sp, #16] // 8-byte Reload
 ; NOLSE-NEXT:    add w12, w9, #1
 ; NOLSE-NEXT:  .LBB0_2: // %atomicrmw.start
 ; NOLSE-NEXT:    // Parent Loop BB0_1 Depth=1
@@ -32,12 +32,12 @@ define i8 @test_rmw_add_8(ptr %dst)   {
 ; NOLSE-NEXT:  .LBB0_4: // %atomicrmw.start
 ; NOLSE-NEXT:    // in Loop: Header=BB0_1 Depth=1
 ; NOLSE-NEXT:    subs w9, w8, w9, uxtb
-; NOLSE-NEXT:    str w8, [sp, #12] // 4-byte Folded Spill
-; NOLSE-NEXT:    str w8, [sp, #28] // 4-byte Folded Spill
+; NOLSE-NEXT:    str w8, [sp, #12] // 4-byte Spill
+; NOLSE-NEXT:    str w8, [sp, #28] // 4-byte Spill
 ; NOLSE-NEXT:    b.ne .LBB0_1
 ; NOLSE-NEXT:    b .LBB0_5
 ; NOLSE-NEXT:  .LBB0_5: // %atomicrmw.end
-; NOLSE-NEXT:    ldr w0, [sp, #12] // 4-byte Folded Reload
+; NOLSE-NEXT:    ldr w0, [sp, #12] // 4-byte Reload
 ; NOLSE-NEXT:    add sp, sp, #32
 ; NOLSE-NEXT:    ret
 ;
@@ -56,15 +56,15 @@ define i16 @test_rmw_add_16(ptr %dst)   {
 ; NOLSE:       // %bb.0: // %entry
 ; NOLSE-NEXT:    sub sp, sp, #32
 ; NOLSE-NEXT:    .cfi_def_cfa_offset 32
-; NOLSE-NEXT:    str x0, [sp, #16] // 8-byte Folded Spill
+; NOLSE-NEXT:    str x0, [sp, #16] // 8-byte Spill
 ; NOLSE-NEXT:    ldrh w8, [x0]
-; NOLSE-NEXT:    str w8, [sp, #28] // 4-byte Folded Spill
+; NOLSE-NEXT:    str w8, [sp, #28] // 4-byte Spill
 ; NOLSE-NEXT:    b .LBB1_1
 ; NOLSE-NEXT:  .LBB1_1: // %atomicrmw.start
 ; NOLSE-NEXT:    // =>This Loop Header: Depth=1
 ; NOLSE-NEXT:    // Child Loop BB1_2 Depth 2
-; NOLSE-NEXT:    ldr w9, [sp, #28] // 4-byte Folded Reload
-; NOLSE-NEXT:    ldr x11, [sp, #16] // 8-byte Folded Reload
+; NOLSE-NEXT:    ldr w9, [sp, #28] // 4-byte Reload
+; NOLSE-NEXT:    ldr x11, [sp, #16] // 8-byte Reload
 ; NOLSE-NEXT:    add w12, w9, #1
 ; NOLSE-NEXT:  .LBB1_2: // %atomicrmw.start
 ; NOLSE-NEXT:    // Parent Loop BB1_1 Depth=1
@@ -79,12 +79,12 @@ define i16 @test_rmw_add_16(ptr %dst)   {
 ; NOLSE-NEXT:  .LBB1_4: // %atomicrmw.start
 ; NOLSE-NEXT:    // in Loop: Header=BB1_1 Depth=1
 ; NOLSE-NEXT:    subs w9, w8, w9, uxth
-; NOLSE-NEXT:    str w8, [sp, #12] // 4-byte Folded Spill
-; NOLSE-NEXT:    str w8, [sp, #28] // 4-byte Folded Spill
+; NOLSE-NEXT:    str w8, [sp, #12] // 4-byte Spill
+; NOLSE-NEXT:    str w8, [sp, #28] // 4-byte Spill
 ; NOLSE-NEXT:    b.ne .LBB1_1
 ; NOLSE-NEXT:    b .LBB1_5
 ; NOLSE-NEXT:  .LBB1_5: // %atomicrmw.end
-; NOLSE-NEXT:    ldr w0, [sp, #12] // 4-byte Folded Reload
+; NOLSE-NEXT:    ldr w0, [sp, #12] // 4-byte Reload
 ; NOLSE-NEXT:    add sp, sp, #32
 ; NOLSE-NEXT:    ret
 ;
@@ -103,15 +103,15 @@ define i32 @test_rmw_add_32(ptr %dst)   {
 ; NOLSE:       // %bb.0: // %entry
 ; NOLSE-NEXT:    sub sp, sp, #32
 ; NOLSE-NEXT:    .cfi_def_cfa_offset 32
-; NOLSE-NEXT:    str x0, [sp, #16] // 8-byte Folded Spill
+; NOLSE-NEXT:    str x0, [sp, #16] // 8-byte Spill
 ; NOLSE-NEXT:    ldr w8, [x0]
-; NOLSE-NEXT:    str w8, [sp, #28] // 4-byte Folded Spill
+; NOLSE-NEXT:    str w8, [sp, #28] // 4-byte Spill
 ; NOLSE-NEXT:    b .LBB2_1
 ; NOLSE-NEXT:  .LBB2_1: // %atomicrmw.start
 ; NOLSE-NEXT:    // =>This Loop Header: Depth=1
 ; NOLSE-NEXT:    // Child Loop BB2_2 Depth 2
-; NOLSE-NEXT:    ldr w9, [sp, #28] // 4-byte Folded Reload
-; NOLSE-NEXT:    ldr x11, [sp, #16] // 8-byte Folded Reload
+; NOLSE-NEXT:    ldr w9, [sp, #28] // 4-byte Reload
+; NOLSE-NEXT:    ldr x11, [sp, #16] // 8-byte Reload
 ; NOLSE-NEXT:    add w12, w9, #1
 ; NOLSE-NEXT:  .LBB2_2: // %atomicrmw.start
 ; NOLSE-NEXT:    // Parent Loop BB2_1 Depth=1
@@ -126,12 +126,12 @@ define i32 @test_rmw_add_32(ptr %dst)   {
 ; NOLSE-NEXT:  .LBB2_4: // %atomicrmw.start
 ; NOLSE-NEXT:    // in Loop: Header=BB2_1 Depth=1
 ; NOLSE-NEXT:    subs w9, w8, w9
-; NOLSE-NEXT:    str w8, [sp, #12] // 4-byte Folded Spill
-; NOLSE-NEXT:    str w8, [sp, #28] // 4-byte Folded Spill
+; NOLSE-NEXT:    str w8, [sp, #12] // 4-byte Spill
+; NOLSE-NEXT:    str w8, [sp, #28] // 4-byte Spill
 ; NOLSE-NEXT:    b.ne .LBB2_1
 ; NOLSE-NEXT:    b .LBB2_5
 ; NOLSE-NEXT:  .LBB2_5: // %atomicrmw.end
-; NOLSE-NEXT:    ldr w0, [sp, #12] // 4-byte Folded Reload
+; NOLSE-NEXT:    ldr w0, [sp, #12] // 4-byte Reload
 ; NOLSE-NEXT:    add sp, sp, #32
 ; NOLSE-NEXT:    ret
 ;
@@ -150,15 +150,15 @@ define i64 @test_rmw_add_64(ptr %dst)   {
 ; NOLSE:       // %bb.0: // %entry
 ; NOLSE-NEXT:    sub sp, sp, #32
 ; NOLSE-NEXT:    .cfi_def_cfa_offset 32
-; NOLSE-NEXT:    str x0, [sp, #16] // 8-byte Folded Spill
+; NOLSE-NEXT:    str x0, [sp, #16] // 8-byte Spill
 ; NOLSE-NEXT:    ldr x8, [x0]
-; NOLSE-NEXT:    str x8, [sp, #24] // 8-byte Folded Spill
+; NOLSE-NEXT:    str x8, [sp, #24] // 8-byte Spill
 ; NOLSE-NEXT:    b .LBB3_1
 ; NOLSE-NEXT:  .LBB3_1: // %atomicrmw.start
 ; NOLSE-NEXT:    // =>This Loop Header: Depth=1
 ; NOLSE-NEXT:    // Child Loop BB3_2 Depth 2
-; NOLSE-NEXT:    ldr x9, [sp, #24] // 8-byte Folded Reload
-; NOLSE-NEXT:    ldr x11, [sp, #16] // 8-byte Folded Reload
+; NOLSE-NEXT:    ldr x9, [sp, #24] // 8-byte Reload
+; NOLSE-NEXT:    ldr x11, [sp, #16] // 8-byte Reload
 ; NOLSE-NEXT:    add x12, x9, #1
 ; NOLSE-NEXT:  .LBB3_2: // %atomicrmw.start
 ; NOLSE-NEXT:    // Parent Loop BB3_1 Depth=1
@@ -173,12 +173,12 @@ define i64 @test_rmw_add_64(ptr %dst)   {
 ; NOLSE-NEXT:  .LBB3_4: // %atomicrmw.start
 ; NOLSE-NEXT:    // in Loop: Header=BB3_1 Depth=1
 ; NOLSE-NEXT:    subs x9, x8, x9
-; NOLSE-NEXT:    str x8, [sp, #8] // 8-byte Folded Spill
-; NOLSE-NEXT:    str x8, [sp, #24] // 8-byte Folded Spill
+; NOLSE-NEXT:    str x8, [sp, #8] // 8-byte Spill
+; NOLSE-NEXT:    str x8, [sp, #24] // 8-byte Spill
 ; NOLSE-NEXT:    b.ne .LBB3_1
 ; NOLSE-NEXT:    b .LBB3_5
 ; NOLSE-NEXT:  .LBB3_5: // %atomicrmw.end
-; NOLSE-NEXT:    ldr x0, [sp, #8] // 8-byte Folded Reload
+; NOLSE-NEXT:    ldr x0, [sp, #8] // 8-byte Reload
 ; NOLSE-NEXT:    add sp, sp, #32
 ; NOLSE-NEXT:    ret
 ;
@@ -198,18 +198,18 @@ define i128 @test_rmw_add_128(ptr %dst)   {
 ; NOLSE:       // %bb.0: // %entry
 ; NOLSE-NEXT:    sub sp, sp, #48
 ; NOLSE-NEXT:    .cfi_def_cfa_offset 48
-; NOLSE-NEXT:    str x0, [sp, #24] // 8-byte Folded Spill
+; NOLSE-NEXT:    str x0, [sp, #24] // 8-byte Spill
 ; NOLSE-NEXT:    ldr x8, [x0, #8]
 ; NOLSE-NEXT:    ldr x9, [x0]
-; NOLSE-NEXT:    str x9, [sp, #32] // 8-byte Folded Spill
-; NOLSE-NEXT:    str x8, [sp, #40] // 8-byte Folded Spill
+; NOLSE-NEXT:    str x9, [sp, #32] // 8-byte Spill
+; NOLSE-NEXT:    str x8, [sp, #40] // 8-byte Spill
 ; NOLSE-NEXT:    b .LBB4_1
 ; NOLSE-NEXT:  .LBB4_1: // %atomicrmw.start
 ; NOLSE-NEXT:    // =>This Loop Header: Depth=1
 ; NOLSE-NEXT:    // Child Loop BB4_2 Depth 2
-; NOLSE-NEXT:    ldr x13, [sp, #40] // 8-byte Folded Reload
-; NOLSE-NEXT:    ldr x11, [sp, #32] // 8-byte Folded Reload
-; NOLSE-NEXT:    ldr x9, [sp, #24] // 8-byte Folded Reload
+; NOLSE-NEXT:    ldr x13, [sp, #40] // 8-byte Reload
+; NOLSE-NEXT:    ldr x11, [sp, #32] // 8-byte Reload
+; NOLSE-NEXT:    ldr x9, [sp, #24] // 8-byte Reload
 ; NOLSE-NEXT:    adds x14, x11, #1
 ; NOLSE-NEXT:    cinc x15, x13, hs
 ; NOLSE-NEXT:  .LBB4_2: // %atomicrmw.start
@@ -233,18 +233,18 @@ define i128 @test_rmw_add_128(ptr %dst)   {
 ; NOLSE-NEXT:  .LBB4_5: // %atomicrmw.start
 ; NOLSE-NEXT:    // in Loop: Header=BB4_1 Depth=1
 ; NOLSE-NEXT:    mov x8, x12
-; NOLSE-NEXT:    str x8, [sp, #8] // 8-byte Folded Spill
+; NOLSE-NEXT:    str x8, [sp, #8] // 8-byte Spill
 ; NOLSE-NEXT:    mov x9, x10
-; NOLSE-NEXT:    str x9, [sp, #16] // 8-byte Folded Spill
+; NOLSE-NEXT:    str x9, [sp, #16] // 8-byte Spill
 ; NOLSE-NEXT:    subs x12, x12, x13
 ; NOLSE-NEXT:    ccmp x10, x11, #0, eq
-; NOLSE-NEXT:    str x9, [sp, #32] // 8-byte Folded Spill
-; NOLSE-NEXT:    str x8, [sp, #40] // 8-byte Folded Spill
+; NOLSE-NEXT:    str x9, [sp, #32] // 8-byte Spill
+; NOLSE-NEXT:    str x8, [sp, #40] // 8-byte Spill
 ; NOLSE-NEXT:    b.ne .LBB4_1
 ; NOLSE-NEXT:    b .LBB4_6
 ; NOLSE-NEXT:  .LBB4_6: // %atomicrmw.end
-; NOLSE-NEXT:    ldr x1, [sp, #8] // 8-byte Folded Reload
-; NOLSE-NEXT:    ldr x0, [sp, #16] // 8-byte Folded Reload
+; NOLSE-NEXT:    ldr x1, [sp, #8] // 8-byte Reload
+; NOLSE-NEXT:    ldr x0, [sp, #16] // 8-byte Reload
 ; NOLSE-NEXT:    add sp, sp, #48
 ; NOLSE-NEXT:    ret
 ;
@@ -252,17 +252,17 @@ define i128 @test_rmw_add_128(ptr %dst)   {
 ; LSE:       // %bb.0: // %entry
 ; LSE-NEXT:    sub sp, sp, #48
 ; LSE-NEXT:    .cfi_def_cfa_offset 48
-; LSE-NEXT:    str x0, [sp, #24] // 8-byte Folded Spill
+; LSE-NEXT:    str x0, [sp, #24] // 8-byte Spill
 ; LSE-NEXT:    ldr x8, [x0, #8]
 ; LSE-NEXT:    ldr x9, [x0]
-; LSE-NEXT:    str x9, [sp, #32] // 8-byte Folded Spill
-; LSE-NEXT:    str x8, [sp, #40] // 8-byte Folded Spill
+; LSE-NEXT:    str x9, [sp, #32] // 8-byte Spill
+; LSE-NEXT:    str x8, [sp, #40] // 8-byte Spill
 ; LSE-NEXT:    b .LBB4_1
 ; LSE-NEXT:  .LBB4_1: // %atomicrmw.start
 ; LSE-NEXT:    // =>This Inner Loop Header: Depth=1
-; LSE-NEXT:    ldr x11, [sp, #40] // 8-byte Folded Reload
-; LSE-NEXT:    ldr x10, [sp, #32] // 8-byte Folded Reload
-; LSE-NEXT:    ldr x8, [sp, #24] // 8-byte Folded Reload
+; LSE-NEXT:    ldr x11, [sp, #40] // 8-byte Reload
+; LSE-NEXT:    ldr x10, [sp, #32] // 8-byte Reload
+; LSE-NEXT:    ldr x8, [sp, #24] // 8-byte Reload
 ; LSE-NEXT:    mov x0, x10
 ; LSE-NEXT:    mov x1, x11
 ; LSE-NEXT:    adds x2, x10, #1
@@ -271,18 +271,18 @@ define i128 @test_rmw_add_128(ptr %dst)   {
 ; LSE-NEXT:    mov x3, x9
 ; LSE-NEXT:    caspal x0, x1, x2, x3, [x8]
 ; LSE-NEXT:    mov x9, x0
-; LSE-NEXT:    str x9, [sp, #8] // 8-byte Folded Spill
+; LSE-NEXT:    str x9, [sp, #8] // 8-byte Spill
 ; LSE-NEXT:    mov x8, x1
-; LSE-NEXT:    str x8, [sp, #16] // 8-byte Folded Spill
+; LSE-NEXT:    str x8, [sp, #16] // 8-byte Spill
 ; LSE-NEXT:    subs x11, x8, x11
 ; LSE-NEXT:    ccmp x9, x10, #0, eq
-; LSE-NEXT:    str x9, [sp, #32] // 8-byte Folded Spill
-; LSE-NEXT:    str x8, [sp, #40] // 8-byte Folded Spill
+; LSE-NEXT:    str x9, [sp, #32] // 8-byte Spill
+; LSE-NEXT:    str x8, [sp, #40] // 8-byte Spill
 ; LSE-NEXT:    b.ne .LBB4_1
 ; LSE-NEXT:    b .LBB4_2
 ; LSE-NEXT:  .LBB4_2: // %atomicrmw.end
-; LSE-NEXT:    ldr x1, [sp, #16] // 8-byte Folded Reload
-; LSE-NEXT:    ldr x0, [sp, #8] // 8-byte Folded Reload
+; LSE-NEXT:    ldr x1, [sp, #16] // 8-byte Reload
+; LSE-NEXT:    ldr x0, [sp, #8] // 8-byte Reload
 ; LSE-NEXT:    add sp, sp, #48
 ; LSE-NEXT:    ret
 entry:
@@ -294,15 +294,15 @@ define i8 @test_rmw_nand_8(ptr %dst)   {
 ; NOLSE:       // %bb.0: // %entry
 ; NOLSE-NEXT:    sub sp, sp, #32
 ; NOLSE-NEXT:    .cfi_def_cfa_offset 32
-; NOLSE-NEXT:    str x0, [sp, #16] // 8-byte Folded Spill
+; NOLSE-NEXT:    str x0, [sp, #16] // 8-byte Spill
 ; NOLSE-NEXT:    ldrb w8, [x0]
-; NOLSE-NEXT:    str w8, [sp, #28] // 4-byte Folded Spill
+; NOLSE-NEXT:    str w8, [sp, #28] // 4-byte Spill
 ; NOLSE-NEXT:    b .LBB5_1
 ; NOLSE-NEXT:  .LBB5_1: // %atomicrmw.start
 ; NOLSE-NEXT:    // =>This Loop Header: Depth=1
 ; NOLSE-NEXT:    // Child Loop BB5_2 Depth 2
-; NOLSE-NEXT:    ldr w9, [sp, #28] // 4-byte Folded Reload
-; NOLSE-NEXT:    ldr x11, [sp, #16] // 8-byte Folded Reload
+; NOLSE-NEXT:    ldr w9, [sp, #28] // 4-byte Reload
+; NOLSE-NEXT:    ldr x11, [sp, #16] // 8-byte Reload
 ; NOLSE-NEXT:    mvn w8, w9
 ; NOLSE-NEXT:    orr w12, w8, #0xfffffffe
 ; NOLSE-NEXT:  .LBB5_2: // %atomicrmw.start
@@ -318,12 +318,12 @@ define i8 @test_rmw_nand_8(ptr %dst)   {
 ; NOLSE-NEXT:  .LBB5_4: // %atomicrmw.start
 ; NOLSE-NEXT:    // in Loop: Header=BB5_1 Depth=1
 ; NOLSE-NEXT:    subs w9, w8, w9, uxtb
-; NOLSE-NEXT:    str w8, [sp, #12] // 4-byte Folded Spill
-; NOLSE-NEXT:    str w8, [sp, #28] // 4-byte Folded Spill
+; NOLSE-NEXT:    str w8, [sp, #12] // 4-byte Spill
+; NOLSE-NEXT:    str w8, [sp, #28] // 4-byte Spill
 ; NOLSE-NEXT:    b.ne .LBB5_1
 ; NOLSE-NEXT:    b .LBB5_5
 ; NOLSE-NEXT:  .LBB5_5: // %atomicrmw.end
-; NOLSE-NEXT:    ldr w0, [sp, #12] // 4-byte Folded Reload
+; NOLSE-NEXT:    ldr w0, [sp, #12] // 4-byte Reload
 ; NOLSE-NEXT:    add sp, sp, #32
 ; NOLSE-NEXT:    ret
 ;
@@ -331,25 +331,25 @@ define i8 @test_rmw_nand_8(ptr %dst)   {
 ; LSE:       // %bb.0: // %entry
 ; LSE-NEXT:    sub sp, sp, #32
 ; LSE-NEXT:    .cfi_def_cfa_offset 32
-; LSE-NEXT:    str x0, [sp, #16] // 8-byte Folded Spill
+; LSE-NEXT:    str x0, [sp, #16] // 8-byte Spill
 ; LSE-NEXT:    ldrb w8, [x0]
-; LSE-NEXT:    str w8, [sp, #28] // 4-byte Folded Spill
+; LSE-NEXT:    str w8, [sp, #28] // 4-byte Spill
 ; LSE-NEXT:    b .LBB5_1
 ; LSE-NEXT:  .LBB5_1: // %atomicrmw.start
 ; LSE-NEXT:    // =>This Inner Loop Header: Depth=1
-; LSE-NEXT:    ldr w9, [sp, #28] // 4-byte Folded Reload
-; LSE-NEXT:    ldr x11, [sp, #16] // 8-byte Folded Reload
+; LSE-NEXT:    ldr w9, [sp, #28] // 4-byte Reload
+; LSE-NEXT:    ldr x11, [sp, #16] // 8-byte Reload
 ; LSE-NEXT:    mvn w8, w9
 ; LSE-NEXT:    orr w10, w8, #0xfffffffe
 ; LSE-NEXT:    mov w8, w9
 ; LSE-NEXT:    casalb w8, w10, [x11]
 ; LSE-NEXT:    subs w9, w8, w9, uxtb
-; LSE-NEXT:    str w8, [sp, #12] // 4-byte Folded Spill
-; LSE-NEXT:    str w8, [sp, #28] // 4-byte Folded Spill
+; LSE-NEXT:    str w8, [sp, #12] // 4-byte Spill
+; LSE-NEXT:    str w8, [sp, #28] // 4-byte Spill
 ; LSE-NEXT:    b.ne .LBB5_1
 ; LSE-NEXT:    b .LBB5_2
 ; LSE-NEXT:  .LBB5_2: // %atomicrmw.end
-; LSE-NEXT:    ldr w0, [sp, #12] // 4-byte Folded Reload
+; LSE-NEXT:    ldr w0, [sp, #12] // 4-byte Reload
 ; LSE-NEXT:    add sp, sp, #32
 ; LSE-NEXT:    ret
 entry:
@@ -362,15 +362,15 @@ define i16 @test_rmw_nand_16(ptr %dst)   {
 ; NOLSE:       // %bb.0: // %entry
 ; NOLSE-NEXT:    sub sp, sp, #32
 ; NOLSE-NEXT:    .cfi_def_cfa_offset 32
-; NOLSE-NEXT:    str x0, [sp, #16] // 8-byte Folded Spill
+; NOLSE-NEXT:    str x0, [sp, #16] // 8-byte Spill
 ; NOLSE-NEXT:    ldrh w8, [x0]
-; NOLSE-NEXT:    str w8, [sp, #28] // 4-byte Folded Spill
+; NOLSE-NEXT:    str w8, [sp, #28] // 4-byte Spill
 ; NOLSE-NEXT:    b .LBB6_1
 ; NOLSE-NEXT:  .LBB6_1: // %atomicrmw.start
 ; NOLSE-NEXT:    // =>This Loop Header: Depth=1
 ; NOLSE-NEXT:    // Child Loop BB6_2 Depth 2
-; NOLSE-NEXT:    ldr w9, [sp, #28] // 4-byte Folded Reload
-; NOLSE-NEXT:    ldr x11, [sp, #16] // 8-byte Folded Reload
+; NOLSE-NEXT:    ldr w9, [sp, #28] // 4-byte Reload
+; NOLSE-NEXT:    ldr x11, [sp, #16] // 8-byte Reload
 ; NOLSE-NEXT:    mvn w8, w9
 ; NOLSE-NEXT:    orr w12, w8, #0xfffffffe
 ; NOLSE-NEXT:  .LBB6_2: // %atomicrmw.start
@@ -386,12 +386,12 @@ define i16 @test_rmw_nand_16(ptr %dst)   {
 ; NOLSE-NEXT:  .LBB6_4: // %atomicrmw.start
 ; NOLSE-NEXT:    // in Loop: Header=BB6_1 Depth=1
 ; NOLSE-NEXT:    subs w9, w8, w9, uxth
-; NOLSE-NEXT:    str w8, [sp, #12] // 4-byte Folded Spill
-; NOLSE-NEXT:    str w8, [sp, #28] // 4-byte Folded Spill
+; NOLSE-NEXT:    str w8, [sp, #12] // 4-byte Spill
+; NOLSE-NEXT:    str w8, [sp, #28] // 4-byte Spill
 ; NOLSE-NEXT:    b.ne .LBB6_1
 ; NOLSE-NEXT:    b .LBB6_5
 ; NOLSE-NEXT:  .LBB6_5: // %atomicrmw.end
-; NOLSE-NEXT:    ldr w0, [sp, #12] // 4-byte Folded Reload
+; NOLSE-NEXT:    ldr w0, [sp, #12] // 4-byte Reload
 ; NOLSE-NEXT:    add sp, sp, #32
 ; NOLSE-NEXT:    ret
 ;
@@ -399,25 +399,25 @@ define i16 @test_rmw_nand_16(ptr %dst)   {
 ; LSE:       // %bb.0: // %entry
 ; LSE-NEXT:    sub sp, sp, #32
 ; LSE-NEXT:    .cfi_def_cfa_offset 32
-; LSE-NEXT:    str x0, [sp, #16] // 8-byte Folded Spill
+; LSE-NEXT:    str x0, [sp, #16] // 8-byte Spill
 ; LSE-NEXT:    ldrh w8, [x0]
-; LSE-NEXT:    str w8, [sp, #28] // 4-byte Folded Spill
+; LSE-NEXT:    str w8, [sp, #28] // 4-byte Spill
 ; LSE-NEXT:    b .LBB6_1
 ; LSE-NEXT:  .LBB6_1: // %atomicrmw.start
 ; LSE-NEXT:    // =>This Inner Loop Header: Depth=1
-; LSE-NEXT:    ldr w9, [sp, #28] // 4-byte Folded Reload
-; LSE-NEXT:    ldr x11, [sp, #16] // 8-byte Folded Reload
+; LSE-NEXT:    ldr w9, [sp, #28] // 4-byte Reload
+; LSE-NEXT:    ldr x11, [sp, #16] // 8-byte Reload
 ; LSE-NEXT:    mvn w8, w9
 ; LSE-NEXT:    orr w10, w8, #0xfffffffe
 ; LSE-NEXT:    mov w8, w9
 ; LSE-NEXT:    casalh w8, w10, [x11]
 ; LSE-NEXT:    subs w9, w8, w9, uxth
-; LSE-NEXT:    str w8, [sp, #12] // 4-byte Folded Spill
-; LSE-NEXT:    str w8, [sp, #28] // 4-byte Folded Spill
+; LSE-NEXT:    str w8, [sp, #12] // 4-byte Spill
+; LSE-NEXT:    str w8, [sp, #28] // 4-byte Spill
 ; LSE-NEXT:    b.ne .LBB6_1
 ; LSE-NEXT:    b .LBB6_2
 ; LSE-NEXT:  .LBB6_2: // %atomicrmw.end
-; LSE-NEXT:    ldr w0, [sp, #12] // 4-byte Folded Reload
+; LSE-NEXT:    ldr w0, [sp, #12] // 4-byte Reload
 ; LSE-NEXT:    add sp, sp, #32
 ; LSE-NEXT:    ret
 entry:
@@ -430,15 +430,15 @@ define i32 @test_rmw_nand_32(ptr %dst)   {
 ; NOLSE:       // %bb.0: // %entry
 ; NOLSE-NEXT:    sub sp, sp, #32
 ; NOLSE-NEXT:    .cfi_def_cfa_offset 32
-; NOLSE-NEXT:    str x0, [sp, #16] // 8-byte Folded Spill
+; NOLSE-NEXT:    str x0, [sp, #16] // 8-byte Spill
 ; NOLSE-NEXT:    ldr w8, [x0]
-; NOLSE-NEXT:    str w8, [sp, #28] // 4-byte Folded Spill
+; NOLSE-NEXT:    str w8, [sp, #28] // 4-byte Spill
 ; NOLSE-NEXT:    b .LBB7_1
 ; NOLSE-NEXT:  .LBB7_1: // %atomicrmw.start
 ; NOLSE-NEXT:    // =>This Loop Header: Depth=1
 ; NOLSE-NEXT:    // Child Loop BB7_2 Depth 2
-; NOLSE-NEXT:    ldr w9, [sp, #28] // 4-byte Folded Reload
-; NOLSE-NEXT:    ldr x11, [sp, #16] // 8-byte Folded Reload
+; NOLSE-NEXT:    ldr w9, [sp, #28] // 4-byte Reload
+; NOLSE-NEXT:    ldr x11, [sp, #16] // 8-byte Reload
 ; NOLSE-NEXT:    mvn w8, w9
 ; NOLSE-NEXT:    orr w12, w8, #0xfffffffe
 ; NOLSE-NEXT:  .LBB7_2: // %atomicrmw.start
@@ -454,12 +454,12 @@ define i32 @test_rmw_nand_32(ptr %dst)   {
 ; NOLSE-NEXT:  .LBB7_4: // %atomicrmw.start
 ; NOLSE-NEXT:    // in Loop: Header=BB7_1 Depth=1
 ; NOLSE-NEXT:    subs w9, w8, w9
-; NOLSE-NEXT:    str w8, [sp, #12] // 4-byte Folded Spill
-; NOLSE-NEXT:    str w8, [sp, #28] // 4-byte Folded Spill
+; NOLSE-NEXT:    str w8, [sp, #12] // 4-byte Spill
+; NOLSE-NEXT:    str w8, [sp, #28] // 4-byte Spill
 ; NOLSE-NEXT:    b.ne .LBB7_1
 ; NOLSE-NEXT:    b .LBB7_5
 ; NOLSE-NEXT:  .LBB7_5: // %atomicrmw.end
-; NOLSE-NEXT:    ldr w0, [sp, #12] // 4-byte Folded Reload
+; NOLSE-NEXT:    ldr w0, [sp, #12] // 4-byte Reload
 ; NOLSE-NEXT:    add sp, sp, #32
 ; NOLSE-NEXT:    ret
 ;
@@ -467,25 +467,25 @@ define i32 @test_rmw_nand_32(ptr %dst)   {
 ; LSE:       // %bb.0: // %entry
 ; LSE-NEXT:    sub sp, sp, #32
 ; LSE-NEXT:    .cfi_def_cfa_offset 32
-; LSE-NEXT:    str x0, [sp, #16] // 8-byte Folded Spill
+; LSE-NEXT:    str x0, [sp, #16] // 8-byte Spill
 ; LSE-NEXT:    ldr w8, [x0]
-; LSE-NEXT:    str w8, [sp, #28] // 4-byte Folded Spill
+; LSE-NEXT:    str w8, [sp, #28] // 4-byte Spill
 ; LSE-NEXT:    b .LBB7_1
 ; LSE-NEXT:  .LBB7_1: // %atomicrmw.start
 ; LSE-NEXT:    // =>This Inner Loop Header: Depth=1
-; LSE-NEXT:    ldr w9, [sp, #28] // 4-byte Folded Reload
-; LSE-NEXT:    ldr x11, [sp, #16] // 8-byte Folded Reload
+; LSE-NEXT:    ldr w9, [sp, #28] // 4-byte Reload
+; LSE-NEXT:    ldr x11, [sp, #16] // 8-byte Reload
 ; LSE-NEXT:    mvn w8, w9
 ; LSE-NEXT:    orr w10, w8, #0xfffffffe
 ; LSE-NEXT:    mov w8, w9
 ; LSE-NEXT:    casal w8, w10, [x11]
 ; LSE-NEXT:    subs w9, w8, w9
-; LSE-NEXT:    str w8, [sp, #12] // 4-byte Folded Spill
-; LSE-NEXT:    str w8, [sp, #28] // 4-byte Folded Spill
+; LSE-NEXT:    str w8, [sp, #12] // 4-byte Spill
+; LSE-NEXT:    str w8, [sp, #28] // 4-byte Spill
 ; LSE-NEXT:    b.ne .LBB7_1
 ; LSE-NEXT:    b .LBB7_2
 ; LSE-NEXT:  .LBB7_2: // %atomicrmw.end
-; LSE-NEXT:    ldr w0, [sp, #12] // 4-byte Folded Reload
+; LSE-NEXT:    ldr w0, [sp, #12] // 4-byte Reload
 ; LSE-NEXT:    add sp, sp, #32
 ; LSE-NEXT:    ret
 entry:
@@ -498,15 +498,15 @@ define i64 @test_rmw_nand_64(ptr %dst)   {
 ; NOLSE:       // %bb.0: // %entry
 ; NOLSE-NEXT:    sub sp, sp, #32
 ; NOLSE-NEXT:    .cfi_def_cfa_offset 32
-; NOLSE-NEXT:    str x0, [sp, #16] // 8-byte Folded Spill
+; NOLSE-NEXT:    str x0, [sp, #16] // 8-byte Spill
 ; NOLSE-NEXT:    ldr x8, [x0]
-; NOLSE-NEXT:    str x8, [sp, #24] // 8-byte Folded Spill
+; NOLSE-NEXT:    str x8, [sp, #24] // 8-byte Spill
 ; NOLSE-NEXT:    b .LBB8_1
 ; NOLSE-NEXT:  .LBB8_1: // %atomicrmw.start
 ; NOLSE-NEXT:    // =>This Loop Header: Depth=1
 ; NOLSE-NEXT:    // Child Loop BB8_2 Depth 2
-; NOLSE-NEXT:    ldr x9, [sp, #24] // 8-byte Folded Reload
-; NOLSE-NEXT:    ldr x11, [sp, #16] // 8-byte Folded Reload
+; NOLSE-NEXT:    ldr x9, [sp, #24] // 8-byte Reload
+; NOLSE-NEXT:    ldr x11, [sp, #16] // 8-byte Reload
 ; NOLSE-NEXT:    mov w8, w9
 ; NOLSE-NEXT:    mvn w10, w8
 ; NOLSE-NEXT:    // implicit-def: $x8
@@ -525,12 +525,12 @@ define i64 @test_rmw_nand_64(ptr %dst)   {
 ; NOLSE-NEXT:  .LBB8_4: // %atomicrmw.start
 ; NOLSE-NEXT:    // in Loop: Header=BB8_1 Depth=1
 ; NOLSE-NEXT:    subs x9, x8, x9
-; NOLSE-NEXT:    str x8, [sp, #8] // 8-byte Folded Spill
-; NOLSE-NEXT:    str x8, [sp, #24] // 8-byte Folded Spill
+; NOLSE-NEXT:    str x8, [sp, #8] // 8-byte Spill
+; NOLSE-NEXT:    str x8, [sp, #24] // 8-byte Spill
 ; NOLSE-NEXT:    b.ne .LBB8_1
 ; NOLSE-NEXT:    b .LBB8_5
 ; NOLSE-NEXT:  .LBB8_5: // %atomicrmw.end
-; NOLSE-NEXT:    ldr x0, [sp, #8] // 8-byte Folded Reload
+; NOLSE-NEXT:    ldr x0, [sp, #8] // 8-byte Reload
 ; NOLSE-NEXT:    add sp, sp, #32
 ; NOLSE-NEXT:    ret
 ;
@@ -538,14 +538,14 @@ define i64 @test_rmw_nand_64(ptr %dst)   {
 ; LSE:       // %bb.0: // %entry
 ; LSE-NEXT:    sub sp, sp, #32
 ; LSE-NEXT:    .cfi_def_cfa_offset 32
-; LSE-NEXT:    str x0, [sp, #16] // 8-byte Folded Spill
+; LSE-NEXT:    str x0, [sp, #16] // 8-byte Spill
 ; LSE-NEXT:    ldr x8, [x0]
-; LSE-NEXT:    str x8, [sp, #24] // 8-byte Folded Spill
+; LSE-NEXT:    str x8, [sp, #24] // 8-byte Spill
 ; LSE-NEXT:    b .LBB8_1
 ; LSE-NEXT:  .LBB8_1: // %atomicrmw.start
 ; LSE-NEXT:    // =>This Inner Loop Header: Depth=1
-; LSE-NEXT:    ldr x9, [sp, #24] // 8-byte Folded Reload
-; LSE-NEXT:    ldr x11, [sp, #16] // 8-byte Folded Reload
+; LSE-NEXT:    ldr x9, [sp, #24] // 8-byte Reload
+; LSE-NEXT:    ldr x11, [sp, #16] // 8-byte Reload
 ; LSE-NEXT:    mov w8, w9
 ; LSE-NEXT:    mvn w10, w8
 ; LSE-NEXT:    // implicit-def: $x8
@@ -554,12 +554,12 @@ define i64 @test_rmw_nand_64(ptr %dst)   {
 ; LSE-NEXT:    mov x8, x9
 ; LSE-NEXT:    casal x8, x10, [x11]
 ; LSE-NEXT:    subs x9, x8, x9
-; LSE-NEXT:    str x8, [sp, #8] // 8-byte Folded Spill
-; LSE-NEXT:    str x8, [sp, #24] // 8-byte Folded Spill
+; LSE-NEXT:    str x8, [sp, #8] // 8-byte Spill
+; LSE-NEXT:    str x8, [sp, #24] // 8-byte Spill
 ; LSE-NEXT:    b.ne .LBB8_1
 ; LSE-NEXT:    b .LBB8_2
 ; LSE-NEXT:  .LBB8_2: // %atomicrmw.end
-; LSE-NEXT:    ldr x0, [sp, #8] // 8-byte Folded Reload
+; LSE-NEXT:    ldr x0, [sp, #8] // 8-byte Reload
 ; LSE-NEXT:    add sp, sp, #32
 ; LSE-NEXT:    ret
 entry:
@@ -572,18 +572,18 @@ define i128 @test_rmw_nand_128(ptr %dst)   {
 ; NOLSE:       // %bb.0: // %entry
 ; NOLSE-NEXT:    sub sp, sp, #48
 ; NOLSE-NEXT:    .cfi_def_cfa_offset 48
-; NOLSE-NEXT:    str x0, [sp, #24] // 8-byte Folded Spill
+; NOLSE-NEXT:    str x0, [sp, #24] // 8-byte Spill
 ; NOLSE-NEXT:    ldr x8, [x0, #8]
 ; NOLSE-NEXT:    ldr x9, [x0]
-; NOLSE-NEXT:    str x9, [sp, #32] // 8-byte Folded Spill
-; NOLSE-NEXT:    str x8, [sp, #40] // 8-byte Folded Spill
+; NOLSE-NEXT:    str x9, [sp, #32] // 8-byte Spill
+; NOLSE-NEXT:    str x8, [sp, #40] // 8-byte Spill
 ; NOLSE-NEXT:    b .LBB9_1
 ; NOLSE-NEXT:  .LBB9_1: // %atomicrmw.start
 ; NOLSE-NEXT:    // =>This Loop Header: Depth=1
 ; NOLSE-NEXT:    // Child Loop BB9_2 Depth 2
-; NOLSE-NEXT:    ldr x13, [sp, #40] // 8-byte Folded Reload
-; NOLSE-NEXT:    ldr x11, [sp, #32] // 8-byte Folded Reload
-; NOLSE-NEXT:    ldr x9, [sp, #24] // 8-byte Folded Reload
+; NOLSE-NEXT:    ldr x13, [sp, #40] // 8-byte Reload
+; NOLSE-NEXT:    ldr x11, [sp, #32] // 8-byte Reload
+; NOLSE-NEXT:    ldr x9, [sp, #24] // 8-byte Reload
 ; NOLSE-NEXT:    mov w8, w11
 ; NOLSE-NEXT:    mvn w10, w8
 ; NOLSE-NEXT:    // implicit-def: $x8
@@ -611,18 +611,18 @@ define i128 @test_rmw_nand_128(ptr %dst)   {
 ; NOLSE-NEXT:  .LBB9_5: // %atomicrmw.start
 ; NOLSE-NEXT:    // in Loop: Header=BB9_1 Depth=1
 ; NOLSE-NEXT:    mov x8, x12
-; NOLSE-NEXT:    str x8, [sp, #8] // 8-byte Folded Spill
+; NOLSE-NEXT:    str x8, [sp, #8] // 8-byte Spill
 ; NOLSE-NEXT:    mov x9, x10
-; NOLSE-NEXT:    str x9, [sp, #16] // 8-byte Folded Spill
+; NOLSE-NEXT:    str x9, [sp, #16] // 8-byte Spill
 ; NOLSE-NEXT:    subs x12, x12, x13
 ; NOLSE-NEXT:    ccmp x10, x11, #0, eq
-; NOLSE-NEXT:    str x9, [sp, #32] // 8-byte Folded Spill
-; NOLSE-NEXT:    str x8, [sp, #40] // 8-byte Folded Spill
+; NOLSE-NEXT:    str x9, [sp, #32] // 8-byte Spill
+; NOLSE-NEXT:    str x8, [sp, #40] // 8-byte Spill
 ; NOLSE-NEXT:    b.ne .LBB9_1
 ; NOLSE-NEXT:    b .LBB9_6
 ; NOLSE-NEXT:  .LBB9_6: // %atomicrmw.end
-; NOLSE-NEXT:    ldr x1, [sp, #8] // 8-byte Folded Reload
-; NOLSE-NEXT:    ldr x0, [sp, #16] // 8-byte Folded Reload
+; NOLSE-NEXT:    ldr x1, [sp, #8] // 8-byte Reload
+; NOLSE-NEXT:    ldr x0, [sp, #16] // 8-byte Reload
 ; NOLSE-NEXT:    add sp, sp, #48
 ; NOLSE-NEXT:    ret
 ;
@@ -630,17 +630,17 @@ define i128 @test_rmw_nand_128(ptr %dst)   {
 ; LSE:       // %bb.0: // %entry
 ; LSE-NEXT:    sub sp, sp, #48
 ; LSE-NEXT:    .cfi_def_cfa_offset 48
-; LSE-NEXT:    str x0, [sp, #24] // 8-byte Folded Spill
+; LSE-NEXT:    str x0, [sp, #24] // 8-byte Spill
 ; LSE-NEXT:    ldr x8, [x0, #8]
 ; LSE-NEXT:    ldr x9, [x0]
-; LSE-NEXT:    str x9, [sp, #32] // 8-byte Folded Spill
-; LSE-NEXT:    str x8, [sp, #40] // 8-byte Folded Spill
+; LSE-NEXT:    str x9, [sp, #32] // 8-byte Spill
+; LSE-NEXT:    str x8, [sp, #40] // 8-byte Spill
 ; LSE-NEXT:    b .LBB9_1
 ; LSE-NEXT:  .LBB9_1: // %atomicrmw.start
 ; LSE-NEXT:    // =>This Inner Loop Header: Depth=1
-; LSE-NEXT:    ldr x11, [sp, #40] // 8-byte Folded Reload
-; LSE-NEXT:    ldr x10, [sp, #32] // 8-byte Folded Reload
-; LSE-NEXT:    ldr x8, [sp, #24] // 8-byte Folded Reload
+; LSE-NEXT:    ldr x11, [sp, #40] // 8-byte Reload
+; LSE-NEXT:    ldr x10, [sp, #32] // 8-byte Reload
+; LSE-NEXT:    ldr x8, [sp, #24] // 8-byte Reload
 ; LSE-NEXT:    mov x0, x10
 ; LSE-NEXT:    mov x1, x11
 ; LSE-NEXT:    mov w9, w10
@@ -653,18 +653,18 @@ define i128 @test_rmw_nand_128(ptr %dst)   {
 ; LSE-NEXT:    mov x3, x9
 ; LSE-NEXT:    caspal x0, x1, x2, x3, [x8]
 ; LSE-NEXT:    mov x9, x0
-; LSE-NEXT:    str x9, [sp, #8] // 8-byte Folded Spill
+; LSE-NEXT:    str x9, [sp, #8] // 8-byte Spill
 ; LSE-NEXT:    mov x8, x1
-; LSE-NEXT:    str x8, [sp, #16] // 8-byte Folded Spill
+; LSE-NEXT:    str x8, [sp, #16] // 8-byte Spill
 ; LSE-NEXT:    subs x11, x8, x11
 ; LSE-NEXT:    ccmp x9, x10, #0, eq
-; LSE-NEXT:    str x9, [sp, #32] // 8-byte Folded Spill
-; LSE-NEXT:    str x8, [sp, #40] // 8-byte Folded Spill
+; LSE-NEXT:    str x9, [sp, #32] // 8-byte Spill
+; LSE-NEXT:    str x8, [sp, #40] // 8-byte Spill
 ; LSE-NEXT:    b.ne .LBB9_1
 ; LSE-NEXT:    b .LBB9_2
 ; LSE-NEXT:  .LBB9_2: // %atomicrmw.end
-; LSE-NEXT:    ldr x1, [sp, #16] // 8-byte Folded Reload
-; LSE-NEXT:    ldr x0, [sp, #8] // 8-byte Folded Reload
+; LSE-NEXT:    ldr x1, [sp, #16] // 8-byte Reload
+; LSE-NEXT:    ldr x0, [sp, #8] // 8-byte Reload
 ; LSE-NEXT:    add sp, sp, #48
 ; LSE-NEXT:    ret
 entry:

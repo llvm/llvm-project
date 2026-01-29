@@ -26,7 +26,6 @@ define <1 x half> @floor_v1f16(<1 x half> %x) strictfp {
   %a = call <1 x half> @llvm.experimental.constrained.floor.v1f16(<1 x half> %x, metadata !"fpexcept.strict")
   ret <1 x half> %a
 }
-declare <1 x half> @llvm.experimental.constrained.floor.v1f16(<1 x half>, metadata)
 
 define <2 x half> @floor_v2f16(<2 x half> %x) strictfp {
 ; CHECK-LABEL: floor_v2f16:
@@ -50,7 +49,6 @@ define <2 x half> @floor_v2f16(<2 x half> %x) strictfp {
   %a = call <2 x half> @llvm.experimental.constrained.floor.v2f16(<2 x half> %x, metadata !"fpexcept.strict")
   ret <2 x half> %a
 }
-declare <2 x half> @llvm.experimental.constrained.floor.v2f16(<2 x half>, metadata)
 
 define <4 x half> @floor_v4f16(<4 x half> %x) strictfp {
 ; CHECK-LABEL: floor_v4f16:
@@ -74,7 +72,6 @@ define <4 x half> @floor_v4f16(<4 x half> %x) strictfp {
   %a = call <4 x half> @llvm.experimental.constrained.floor.v4f16(<4 x half> %x, metadata !"fpexcept.strict")
   ret <4 x half> %a
 }
-declare <4 x half> @llvm.experimental.constrained.floor.v4f16(<4 x half>, metadata)
 
 define <8 x half> @floor_v8f16(<8 x half> %x) strictfp {
 ; CHECK-LABEL: floor_v8f16:
@@ -98,7 +95,6 @@ define <8 x half> @floor_v8f16(<8 x half> %x) strictfp {
   %a = call <8 x half> @llvm.experimental.constrained.floor.v8f16(<8 x half> %x, metadata !"fpexcept.strict")
   ret <8 x half> %a
 }
-declare <8 x half> @llvm.experimental.constrained.floor.v8f16(<8 x half>, metadata)
 
 define <16 x half> @floor_v16f16(<16 x half> %x) strictfp {
 ; CHECK-LABEL: floor_v16f16:
@@ -122,7 +118,6 @@ define <16 x half> @floor_v16f16(<16 x half> %x) strictfp {
   %a = call <16 x half> @llvm.experimental.constrained.floor.v16f16(<16 x half> %x, metadata !"fpexcept.strict")
   ret <16 x half> %a
 }
-declare <16 x half> @llvm.experimental.constrained.floor.v16f16(<16 x half>, metadata)
 
 define <32 x half> @floor_v32f16(<32 x half> %x) strictfp {
 ; CHECK-LABEL: floor_v32f16:
@@ -147,7 +142,6 @@ define <32 x half> @floor_v32f16(<32 x half> %x) strictfp {
   %a = call <32 x half> @llvm.experimental.constrained.floor.v32f16(<32 x half> %x, metadata !"fpexcept.strict")
   ret <32 x half> %a
 }
-declare <32 x half> @llvm.experimental.constrained.floor.v32f16(<32 x half>, metadata)
 
 define <1 x float> @floor_v1f32(<1 x float> %x) strictfp {
 ; CHECK-LABEL: floor_v1f32:
@@ -170,7 +164,6 @@ define <1 x float> @floor_v1f32(<1 x float> %x) strictfp {
   %a = call <1 x float> @llvm.experimental.constrained.floor.v1f32(<1 x float> %x, metadata !"fpexcept.strict")
   ret <1 x float> %a
 }
-declare <1 x float> @llvm.experimental.constrained.floor.v1f32(<1 x float>, metadata)
 
 define <2 x float> @floor_v2f32(<2 x float> %x) strictfp {
 ; CHECK-LABEL: floor_v2f32:
@@ -193,7 +186,6 @@ define <2 x float> @floor_v2f32(<2 x float> %x) strictfp {
   %a = call <2 x float> @llvm.experimental.constrained.floor.v2f32(<2 x float> %x, metadata !"fpexcept.strict")
   ret <2 x float> %a
 }
-declare <2 x float> @llvm.experimental.constrained.floor.v2f32(<2 x float>, metadata)
 
 define <4 x float> @floor_v4f32(<4 x float> %x) strictfp {
 ; CHECK-LABEL: floor_v4f32:
@@ -216,7 +208,6 @@ define <4 x float> @floor_v4f32(<4 x float> %x) strictfp {
   %a = call <4 x float> @llvm.experimental.constrained.floor.v4f32(<4 x float> %x, metadata !"fpexcept.strict")
   ret <4 x float> %a
 }
-declare <4 x float> @llvm.experimental.constrained.floor.v4f32(<4 x float>, metadata)
 
 define <8 x float> @floor_v8f32(<8 x float> %x) strictfp {
 ; CHECK-LABEL: floor_v8f32:
@@ -239,7 +230,6 @@ define <8 x float> @floor_v8f32(<8 x float> %x) strictfp {
   %a = call <8 x float> @llvm.experimental.constrained.floor.v8f32(<8 x float> %x, metadata !"fpexcept.strict")
   ret <8 x float> %a
 }
-declare <8 x float> @llvm.experimental.constrained.floor.v8f32(<8 x float>, metadata)
 
 define <16 x float> @floor_v16f32(<16 x float> %x) strictfp {
 ; CHECK-LABEL: floor_v16f32:
@@ -262,7 +252,6 @@ define <16 x float> @floor_v16f32(<16 x float> %x) strictfp {
   %a = call <16 x float> @llvm.experimental.constrained.floor.v16f32(<16 x float> %x, metadata !"fpexcept.strict")
   ret <16 x float> %a
 }
-declare <16 x float> @llvm.experimental.constrained.floor.v16f32(<16 x float>, metadata)
 
 define <1 x double> @floor_v1f64(<1 x double> %x) strictfp {
 ; RV32-LABEL: floor_v1f64:
@@ -304,7 +293,6 @@ define <1 x double> @floor_v1f64(<1 x double> %x) strictfp {
   %a = call <1 x double> @llvm.experimental.constrained.floor.v1f64(<1 x double> %x, metadata !"fpexcept.strict")
   ret <1 x double> %a
 }
-declare <1 x double> @llvm.experimental.constrained.floor.v1f64(<1 x double>, metadata)
 
 define <2 x double> @floor_v2f64(<2 x double> %x) strictfp {
 ; RV32-LABEL: floor_v2f64:
@@ -346,7 +334,6 @@ define <2 x double> @floor_v2f64(<2 x double> %x) strictfp {
   %a = call <2 x double> @llvm.experimental.constrained.floor.v2f64(<2 x double> %x, metadata !"fpexcept.strict")
   ret <2 x double> %a
 }
-declare <2 x double> @llvm.experimental.constrained.floor.v2f64(<2 x double>, metadata)
 
 define <4 x double> @floor_v4f64(<4 x double> %x) strictfp {
 ; RV32-LABEL: floor_v4f64:
@@ -388,7 +375,6 @@ define <4 x double> @floor_v4f64(<4 x double> %x) strictfp {
   %a = call <4 x double> @llvm.experimental.constrained.floor.v4f64(<4 x double> %x, metadata !"fpexcept.strict")
   ret <4 x double> %a
 }
-declare <4 x double> @llvm.experimental.constrained.floor.v4f64(<4 x double>, metadata)
 
 define <8 x double> @floor_v8f64(<8 x double> %x) strictfp {
 ; RV32-LABEL: floor_v8f64:
@@ -430,4 +416,3 @@ define <8 x double> @floor_v8f64(<8 x double> %x) strictfp {
   %a = call <8 x double> @llvm.experimental.constrained.floor.v8f64(<8 x double> %x, metadata !"fpexcept.strict")
   ret <8 x double> %a
 }
-declare <8 x double> @llvm.experimental.constrained.floor.v8f64(<8 x double>, metadata)

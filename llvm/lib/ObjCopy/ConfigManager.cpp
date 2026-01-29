@@ -28,9 +28,8 @@ Expected<const COFFConfig &> ConfigManager::getCOFFConfig() const {
       !Common.SymbolsToLocalize.empty() || !Common.SymbolsToWeaken.empty() ||
       !Common.SymbolsToKeepGlobal.empty() || !Common.SectionsToRename.empty() ||
       !Common.SetSectionAlignment.empty() || !Common.SetSectionType.empty() ||
-      Common.ExtractDWO || Common.PreserveDates || Common.StripDWO ||
-      Common.StripNonAlloc || Common.StripSections || Common.Weaken ||
-      Common.DecompressDebugSections ||
+      Common.ExtractDWO || Common.StripDWO || Common.StripNonAlloc ||
+      Common.StripSections || Common.Weaken || Common.DecompressDebugSections ||
       Common.DiscardMode == DiscardType::Locals ||
       !Common.SymbolsToAdd.empty() || Common.GapFill != 0 ||
       Common.PadTo != 0 || Common.ChangeSectionLMAValAll != 0 ||

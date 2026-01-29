@@ -28,7 +28,7 @@ using testing::IsEmpty;
 using testing::Not;
 using testing::NotNull;
 
-constexpr const char kTriple[] = "aarch64-unknown-linux";
+constexpr char kTriple[] = "aarch64-unknown-linux";
 
 class AArch64TargetTest : public ::testing::Test {
 protected:

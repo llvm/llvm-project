@@ -64,7 +64,7 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
         breakpoints = response["body"]["breakpoints"]
         for breakpoint in breakpoints:
             main_bp_id = breakpoint["id"]
-            dap_breakpoint_ids.append("%i" % (main_bp_id))
+            dap_breakpoint_ids.append(main_bp_id)
             self.assertTrue(
                 breakpoint["verified"], "expect main breakpoint to be verified"
             )
@@ -76,25 +76,29 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
         breakpoints = response["body"]["breakpoints"]
         for breakpoint in breakpoints:
             foo_bp_id = breakpoint["id"]
-            dap_breakpoint_ids.append("%i" % (foo_bp_id))
+            dap_breakpoint_ids.append(foo_bp_id)
             self.assertFalse(
                 breakpoint["verified"], "expect foo breakpoint to not be verified"
             )
 
+        # Flush the breakpoint events.
+        self.dap_server.wait_for_breakpoint_events()
+
         # Continue to the breakpoint
-        self.continue_to_breakpoint(foo_bp_id)
-        self.continue_to_next_stop()  # foo_bp2
-        self.continue_to_breakpoint(main_bp_id)
-        self.continue_to_exit()
+        self.continue_to_breakpoints(dap_breakpoint_ids)
 
-        bp_events = [e for e in self.dap_server.events if e["event"] == "breakpoint"]
+        verified_breakpoint_ids = []
+        unverified_breakpoint_ids = []
+        for breakpoint_event in self.dap_server.wait_for_breakpoint_events():
+            breakpoint = breakpoint_event["body"]["breakpoint"]
+            id = breakpoint["id"]
+            if breakpoint["verified"]:
+                verified_breakpoint_ids.append(id)
+            else:
+                unverified_breakpoint_ids.append(id)
 
-        main_bp_events = [
-            e for e in bp_events if e["body"]["breakpoint"]["id"] == main_bp_id
-        ]
-        foo_bp_events = [
-            e for e in bp_events if e["body"]["breakpoint"]["id"] == foo_bp_id
-        ]
+        self.assertIn(main_bp_id, unverified_breakpoint_ids)
+        self.assertIn(foo_bp_id, unverified_breakpoint_ids)
 
-        self.assertTrue(main_bp_events)
-        self.assertTrue(foo_bp_events)
+        self.assertIn(main_bp_id, verified_breakpoint_ids)
+        self.assertIn(foo_bp_id, verified_breakpoint_ids)

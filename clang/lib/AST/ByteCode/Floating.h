@@ -45,7 +45,8 @@ private:
     if (singleWord())
       return APFloat(getSemantics(), APInt(BitWidth, Val));
     unsigned NumWords = numWords();
-    return APFloat(getSemantics(), APInt(BitWidth, NumWords, Memory));
+    return APFloat(getSemantics(),
+                   APInt(BitWidth, llvm::ArrayRef(Memory, NumWords)));
   }
 
 public:

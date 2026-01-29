@@ -9,7 +9,7 @@
 #include "Mips.h"
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
 
@@ -49,8 +49,7 @@ void mips::getMipsCPUAndABI(const ArgList &Args, const llvm::Triple &Triple,
     DefMips64CPU = "mips3";
   }
 
-  if (Arg *A = Args.getLastArg(clang::driver::options::OPT_march_EQ,
-                               options::OPT_mcpu_EQ))
+  if (Arg *A = Args.getLastArg(options::OPT_march_EQ, options::OPT_mcpu_EQ))
     CPUName = A->getValue();
 
   if (Arg *A = Args.getLastArg(options::OPT_mabi_EQ)) {
@@ -117,7 +116,7 @@ void mips::getMipsCPUAndABI(const ArgList &Args, const llvm::Triple &Triple,
     // Deduce CPU name from ABI name.
     CPUName = llvm::StringSwitch<const char *>(ABIName)
                   .Case("o32", DefMips32CPU)
-                  .Cases("n32", "n64", DefMips64CPU)
+                  .Cases({"n32", "n64"}, DefMips64CPU)
                   .Default("");
   }
 
@@ -389,6 +388,8 @@ void mips::getMIPSTargetFeatures(const Driver &D, const llvm::Triple &Triple,
                    "virt");
   AddTargetFeature(Args, Features, options::OPT_mginv, options::OPT_mno_ginv,
                    "ginv");
+  AddTargetFeature(Args, Features, options::OPT_mfix_r5900,
+                   options::OPT_mno_fix_r5900, "fix-r5900");
 
   if (Arg *A = Args.getLastArg(options::OPT_mindirect_jump_EQ)) {
     StringRef Val = StringRef(A->getValue());
@@ -467,7 +468,7 @@ bool mips::isNaN2008(const Driver &D, const ArgList &Args,
 
   // NaN2008 is the default for MIPS32r6/MIPS64r6.
   return llvm::StringSwitch<bool>(getCPUName(D, Args, Triple))
-      .Cases("mips32r6", "mips64r6", true)
+      .Cases({"mips32r6", "mips64r6"}, true)
       .Default(false);
 }
 

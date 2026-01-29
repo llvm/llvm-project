@@ -17,6 +17,7 @@
 #define LLVM_ANALYSIS_DELINEARIZATION_H
 
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/Value.h"
 
 namespace llvm {
 class raw_ostream;
@@ -133,38 +134,33 @@ bool findFixedSizeArrayDimensions(ScalarEvolution &SE, const SCEV *Expr,
 /// terms exist in the \p Expr. In other words, it assumes that the all step
 /// values are constant.
 ///
-/// This function is intended to replace getIndexExpressionsFromGEP and
-/// tryDelinearizeFixedSizeImpl. They rely on the GEP source element type so
-/// that they will be removed in the future.
+/// This function is intended to replace getIndexExpressionsFromGEP. They rely
+/// on the GEP source element type so that will be removed in the future.
 bool delinearizeFixedSizeArray(ScalarEvolution &SE, const SCEV *Expr,
                                SmallVectorImpl<const SCEV *> &Subscripts,
                                SmallVectorImpl<const SCEV *> &Sizes,
                                const SCEV *ElementSize);
 
+/// Check that each subscript in \p Subscripts is within the corresponding size
+/// in \p Sizes. For the outermost dimension, the subscript being negative is
+/// allowed.
+bool validateDelinearizationResult(ScalarEvolution &SE,
+                                   ArrayRef<const SCEV *> Sizes,
+                                   ArrayRef<const SCEV *> Subscripts);
+
 /// Gathers the individual index expressions from a GEP instruction.
 ///
 /// This function optimistically assumes the GEP references into a fixed size
 /// array. If this is actually true, this function returns a list of array
-/// subscript expressions in \p Subscripts and a list of integers describing
-/// the size of the individual array dimensions in \p Sizes. Both lists have
-/// either equal length or the size list is one element shorter in case there
-/// is no known size available for the outermost array dimension. Returns true
-/// if successful and false otherwise.
+/// subscript expressions in \p Subscripts and a list of SCEV expressions
+/// describing the size of the individual array dimensions in \p Sizes. Both
+/// lists have either equal length or the size list is one element shorter in
+/// case there is no known size available for the outermost array dimension.
+/// Returns true if successful and false otherwise.
 bool getIndexExpressionsFromGEP(ScalarEvolution &SE,
                                 const GetElementPtrInst *GEP,
                                 SmallVectorImpl<const SCEV *> &Subscripts,
-                                SmallVectorImpl<int> &Sizes);
-
-/// Implementation of fixed size array delinearization. Try to delinearize
-/// access function for a fixed size multi-dimensional array, by deriving
-/// subscripts from GEP instructions. Returns true upon success and false
-/// otherwise. \p Inst is the load/store instruction whose pointer operand is
-/// the one we want to delinearize. \p AccessFn is its corresponding SCEV
-/// expression w.r.t. the surrounding loop.
-bool tryDelinearizeFixedSizeImpl(ScalarEvolution *SE, Instruction *Inst,
-                                 const SCEV *AccessFn,
-                                 SmallVectorImpl<const SCEV *> &Subscripts,
-                                 SmallVectorImpl<int> &Sizes);
+                                SmallVectorImpl<const SCEV *> &Sizes);
 
 struct DelinearizationPrinterPass
     : public PassInfoMixin<DelinearizationPrinterPass> {

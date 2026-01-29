@@ -701,15 +701,75 @@ define void @call_will_return() {
 ; CHECK: llvm.func @f()
 declare void @f()
 
+; CHECK-LABEL: @call_noreturn
+define void @call_noreturn() {
+; CHECK: llvm.call @f() {noreturn}
+  call void @f() noreturn
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_returnstwice
+define void @call_returnstwice() {
+; CHECK: llvm.call @f() {returns_twice}
+  call void @f() returns_twice
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_hot
+define void @call_hot() {
+; CHECK: llvm.call @f() {hot}
+  call void @f() hot
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_cold
+define void @call_cold() {
+; CHECK: llvm.call @f() {cold}
+  call void @f() cold
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_noduplicate
+define void @call_noduplicate() {
+; CHECK: llvm.call @f() {noduplicate}
+  call void @f() noduplicate
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
 ; CHECK-LABEL: @call_memory_effects
 define void @call_memory_effects() {
-; CHECK: llvm.call @f() {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>}
+; CHECK: llvm.call @f() {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>}
   call void @f() memory(none)
-; CHECK: llvm.call @f() {memory_effects = #llvm.memory_effects<other = none, argMem = write, inaccessibleMem = read>}
+; CHECK: llvm.call @f() {memory_effects = #llvm.memory_effects<other = none, argMem = write, inaccessibleMem = read, errnoMem = none, targetMem0 = none, targetMem1 = none>}
   call void @f() memory(none, argmem: write, inaccessiblemem: read)
-; CHECK: llvm.call @f() {memory_effects = #llvm.memory_effects<other = write, argMem = none, inaccessibleMem = write>}
+; CHECK: llvm.call @f() {memory_effects = #llvm.memory_effects<other = write, argMem = none, inaccessibleMem = write, errnoMem = write, targetMem0 = write, targetMem1 = write>}
   call void @f() memory(write, argmem: none)
-; CHECK: llvm.call @f() {memory_effects = #llvm.memory_effects<other = readwrite, argMem = readwrite, inaccessibleMem = read>}
+; CHECK: llvm.call @f() {memory_effects = #llvm.memory_effects<other = readwrite, argMem = readwrite, inaccessibleMem = read, errnoMem = readwrite, targetMem0 = readwrite, targetMem1 = readwrite>}
   call void @f() memory(readwrite, inaccessiblemem: read)
 ; CHECK: llvm.call @f()
 ; CHECK-NOT: #llvm.memory_effects

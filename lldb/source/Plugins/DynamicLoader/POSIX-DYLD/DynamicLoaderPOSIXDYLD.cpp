@@ -9,6 +9,7 @@
 // Main header include
 #include "DynamicLoaderPOSIXDYLD.h"
 
+#include "Plugins/ObjectFile/Placeholder/ObjectFilePlaceholder.h"
 #include "lldb/Breakpoint/BreakpointLocation.h"
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
@@ -469,7 +470,8 @@ void DynamicLoaderPOSIXDYLD::RefreshModules() {
           }
 
           ModuleSP module_sp = LoadModuleAtAddress(
-              so_entry.file_spec, so_entry.link_addr, so_entry.base_addr, true);
+              so_entry.file_spec, so_entry.link_addr, so_entry.base_addr,
+              /*base_addr_is_offset=*/true);
           if (!module_sp.get())
             return;
 
@@ -538,7 +540,7 @@ DynamicLoaderPOSIXDYLD::GetStepThroughTrampolinePlan(Thread &thread,
 
   StackFrame *frame = thread.GetStackFrameAtIndex(0).get();
   const SymbolContext &context = frame->GetSymbolContext(eSymbolContextSymbol);
-  Symbol *sym = context.symbol;
+  const Symbol *sym = context.symbol;
 
   if (sym == nullptr || !sym->IsTrampoline())
     return thread_plan_sp;
@@ -697,22 +699,35 @@ void DynamicLoaderPOSIXDYLD::LoadAllCurrentModules() {
   ModuleSP executable = GetTargetExecutable();
   SetLoadedModule(executable, m_rendezvous.GetLinkMapAddress());
 
+  Target &target = m_process->GetTarget();
   std::vector<FileSpec> module_names;
   for (I = m_rendezvous.begin(), E = m_rendezvous.end(); I != E; ++I)
     module_names.push_back(I->file_spec);
-  m_process->PrefetchModuleSpecs(
-      module_names, m_process->GetTarget().GetArchitecture().GetTriple());
+  m_process->PrefetchModuleSpecs(module_names,
+                                 target.GetArchitecture().GetTriple());
 
-  auto load_module_fn = [this, &module_list,
+  auto load_module_fn = [this, &module_list, &target,
                          &log](const DYLDRendezvous::SOEntry &so_entry) {
     ModuleSP module_sp = LoadModuleAtAddress(
         so_entry.file_spec, so_entry.link_addr, so_entry.base_addr, true);
+    if (!module_sp && !m_process->IsLiveDebugSession()) {
+      // Create placeholder modules for any modules we couldn't load from disk
+      // or from memory.
+      ModuleSpec module_spec(so_entry.file_spec, target.GetArchitecture());
+      if (UUID uuid = m_process->FindModuleUUID(so_entry.file_spec.GetPath()))
+        module_spec.GetUUID() = uuid;
+      module_sp = Module::CreateModuleFromObjectFile<ObjectFilePlaceholder>(
+          module_spec, so_entry.base_addr, 512);
+      bool load_addr_changed = false;
+      target.GetImages().Append(module_sp, false);
+      module_sp->SetLoadAddress(target, so_entry.base_addr, false,
+                                load_addr_changed);
+    }
     if (module_sp.get()) {
       LLDB_LOG(log, "LoadAllCurrentModules loading module: {0}",
                so_entry.file_spec.GetFilename());
       module_list.Append(module_sp);
     } else {
-      Log *log = GetLog(LLDBLog::DynamicLoader);
       LLDB_LOGF(
           log,
           "DynamicLoaderPOSIXDYLD::%s failed loading module %s at 0x%" PRIx64,
@@ -726,9 +741,8 @@ void DynamicLoaderPOSIXDYLD::LoadAllCurrentModules() {
       task_group.async(load_module_fn, *I);
     task_group.wait();
   } else {
-    for (I = m_rendezvous.begin(), E = m_rendezvous.end(); I != E; ++I) {
+    for (I = m_rendezvous.begin(), E = m_rendezvous.end(); I != E; ++I)
       load_module_fn(*I);
-    }
   }
 
   m_process->GetTarget().ModulesDidLoad(module_list);
@@ -901,10 +915,9 @@ void DynamicLoaderPOSIXDYLD::ResolveExecutableModule(
   if (module_sp && module_sp->MatchesModuleSpec(module_spec))
     return;
 
+  module_spec.SetTarget(target.shared_from_this());
   const auto executable_search_paths(Target::GetDefaultExecutableSearchPaths());
-  auto error = platform_sp->ResolveExecutable(
-      module_spec, module_sp,
-      !executable_search_paths.IsEmpty() ? &executable_search_paths : nullptr);
+  auto error = platform_sp->ResolveExecutable(module_spec, module_sp);
   if (error.Fail()) {
     StreamString stream;
     module_spec.Dump(stream);

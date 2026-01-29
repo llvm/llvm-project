@@ -5,12 +5,12 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fno-rtti -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefixes=OGCG-NO-RTTI,OGCG-COMMON --input-file=%t.ll  %s
 
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t.cir
-// RUN: FileCheck --check-prefixes=CIR-RTTI,CIR-COMMON --input-file=%t.cir %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir.ll
-// RUN: FileCheck --check-prefixes=LLVM-RTTI,LLVM-COMMON --input-file=%t-cir.ll  %s
-// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
-// RUN: FileCheck --check-prefixes=OGCG-RTTI,OGCG-COMMON --input-file=%t.ll  %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-cir %s -o %t-rtti.cir
+// RUN: FileCheck --check-prefixes=CIR-RTTI,CIR-COMMON --input-file=%t-rtti.cir %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -emit-llvm %s -o %t-cir-rtti.ll
+// RUN: FileCheck --check-prefixes=LLVM-RTTI,LLVM-COMMON --input-file=%t-cir-rtti.ll  %s
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t-rtti.ll
+// RUN: FileCheck --check-prefixes=OGCG-RTTI,OGCG-COMMON --input-file=%t-rtti.ll  %s
 
 // Note: This test will be expanded to verify VTT emission and VTT implicit
 // argument handling. For now, it's just test the record layout.
@@ -170,7 +170,7 @@ void D::y() {}
 
 // CIR-RTTI:  cir.global{{.*}} @_ZTI1B : !cir.ptr<!u8i>
 
-// LLVM-RTTI: @_ZTI1B = external global ptr
+// LLVM-RTTI: @_ZTI1B = external constant ptr
 
 // OGCG-RTTI: @_ZTI1B = external constant ptr
 
@@ -540,9 +540,9 @@ D::D() {}
 // OGCG-COMMON:   %[[THIS:.*]] = load ptr, ptr %[[THIS_ADDR]]
 // OGCG-COMMON:   %[[A_ADDR:.*]] = getelementptr inbounds i8, ptr %[[THIS]], i64 40
 // OGCG-COMMON:   call void @_ZN1AC2Ev(ptr {{.*}} %[[A_ADDR]])
-// OGCG-COMMON:   call void @_ZN1BC2Ev(ptr {{.*}} %[[THIS]], ptr {{.*}} getelementptr inbounds ([7 x ptr], ptr @_ZTT1D, i64 0, i64 1))
+// OGCG-COMMON:   call void @_ZN1BC2Ev(ptr {{.*}} %[[THIS]], ptr {{.*}} getelementptr inbounds (ptr, ptr @_ZTT1D, i64 1))
 // OGCG-COMMON:   %[[C_ADDR:.*]] = getelementptr inbounds i8, ptr %[[THIS]], i64 16
-// OGCG-COMMON:   call void @_ZN1CC2Ev(ptr {{.*}} %[[C_ADDR]], ptr {{.*}} getelementptr inbounds ([7 x ptr], ptr @_ZTT1D, i64 0, i64 3))
+// OGCG-COMMON:   call void @_ZN1CC2Ev(ptr {{.*}} %[[C_ADDR]], ptr {{.*}} getelementptr inbounds (ptr, ptr @_ZTT1D, i64 3))
 // OGCG-COMMON:   store ptr getelementptr inbounds inrange(-24, 16) ({ [5 x ptr], [4 x ptr], [4 x ptr] }, ptr @_ZTV1D, i32 0, i32 0, i32 3), ptr %[[THIS]]
 // OGCG-COMMON:   %[[A_ADDR:.*]] = getelementptr inbounds i8, ptr %[[THIS]], i64 40
 // OGCG-COMMON:   store ptr getelementptr inbounds inrange(-24, 8) ({ [5 x ptr], [4 x ptr], [4 x ptr] }, ptr @_ZTV1D, i32 0, i32 2, i32 3), ptr %[[A_ADDR]]

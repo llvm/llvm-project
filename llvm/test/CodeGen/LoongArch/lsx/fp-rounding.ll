@@ -7,22 +7,8 @@ define void @ceil_v4f32(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: ceil_v4f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vreplvei.w $vr1, $vr0, 1
-; CHECK-NEXT:    vreplvei.w $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrp.s $vr1, $vr1
-; CHECK-NEXT:    vreplvei.w $vr2, $vr0, 0
-; CHECK-NEXT:    vreplvei.w $vr2, $vr2, 0
-; CHECK-NEXT:    vfrintrp.s $vr2, $vr2
-; CHECK-NEXT:    vextrins.w $vr2, $vr1, 16
-; CHECK-NEXT:    vreplvei.w $vr1, $vr0, 2
-; CHECK-NEXT:    vreplvei.w $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrp.s $vr1, $vr1
-; CHECK-NEXT:    vextrins.w $vr2, $vr1, 32
-; CHECK-NEXT:    vreplvei.w $vr0, $vr0, 3
-; CHECK-NEXT:    vreplvei.w $vr0, $vr0, 0
 ; CHECK-NEXT:    vfrintrp.s $vr0, $vr0
-; CHECK-NEXT:    vextrins.w $vr2, $vr0, 48
-; CHECK-NEXT:    vst $vr2, $a0, 0
+; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %v0 = load <4 x float>, ptr %a0
@@ -36,13 +22,7 @@ define void @ceil_v2f64(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: ceil_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vreplvei.d $vr1, $vr0, 1
-; CHECK-NEXT:    vreplvei.d $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrp.d $vr1, $vr1
-; CHECK-NEXT:    vreplvei.d $vr0, $vr0, 0
-; CHECK-NEXT:    vreplvei.d $vr0, $vr0, 0
 ; CHECK-NEXT:    vfrintrp.d $vr0, $vr0
-; CHECK-NEXT:    vextrins.d $vr0, $vr1, 16
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -57,22 +37,8 @@ define void @floor_v4f32(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: floor_v4f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vreplvei.w $vr1, $vr0, 1
-; CHECK-NEXT:    vreplvei.w $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrm.s $vr1, $vr1
-; CHECK-NEXT:    vreplvei.w $vr2, $vr0, 0
-; CHECK-NEXT:    vreplvei.w $vr2, $vr2, 0
-; CHECK-NEXT:    vfrintrm.s $vr2, $vr2
-; CHECK-NEXT:    vextrins.w $vr2, $vr1, 16
-; CHECK-NEXT:    vreplvei.w $vr1, $vr0, 2
-; CHECK-NEXT:    vreplvei.w $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrm.s $vr1, $vr1
-; CHECK-NEXT:    vextrins.w $vr2, $vr1, 32
-; CHECK-NEXT:    vreplvei.w $vr0, $vr0, 3
-; CHECK-NEXT:    vreplvei.w $vr0, $vr0, 0
 ; CHECK-NEXT:    vfrintrm.s $vr0, $vr0
-; CHECK-NEXT:    vextrins.w $vr2, $vr0, 48
-; CHECK-NEXT:    vst $vr2, $a0, 0
+; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %v0 = load <4 x float>, ptr %a0
@@ -86,13 +52,7 @@ define void @floor_v2f64(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: floor_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vreplvei.d $vr1, $vr0, 1
-; CHECK-NEXT:    vreplvei.d $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrm.d $vr1, $vr1
-; CHECK-NEXT:    vreplvei.d $vr0, $vr0, 0
-; CHECK-NEXT:    vreplvei.d $vr0, $vr0, 0
 ; CHECK-NEXT:    vfrintrm.d $vr0, $vr0
-; CHECK-NEXT:    vextrins.d $vr0, $vr1, 16
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -107,22 +67,8 @@ define void @trunc_v4f32(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: trunc_v4f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vreplvei.w $vr1, $vr0, 1
-; CHECK-NEXT:    vreplvei.w $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrz.s $vr1, $vr1
-; CHECK-NEXT:    vreplvei.w $vr2, $vr0, 0
-; CHECK-NEXT:    vreplvei.w $vr2, $vr2, 0
-; CHECK-NEXT:    vfrintrz.s $vr2, $vr2
-; CHECK-NEXT:    vextrins.w $vr2, $vr1, 16
-; CHECK-NEXT:    vreplvei.w $vr1, $vr0, 2
-; CHECK-NEXT:    vreplvei.w $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrz.s $vr1, $vr1
-; CHECK-NEXT:    vextrins.w $vr2, $vr1, 32
-; CHECK-NEXT:    vreplvei.w $vr0, $vr0, 3
-; CHECK-NEXT:    vreplvei.w $vr0, $vr0, 0
 ; CHECK-NEXT:    vfrintrz.s $vr0, $vr0
-; CHECK-NEXT:    vextrins.w $vr2, $vr0, 48
-; CHECK-NEXT:    vst $vr2, $a0, 0
+; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %v0 = load <4 x float>, ptr %a0
@@ -136,13 +82,7 @@ define void @trunc_v2f64(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: trunc_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vreplvei.d $vr1, $vr0, 1
-; CHECK-NEXT:    vreplvei.d $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrz.d $vr1, $vr1
-; CHECK-NEXT:    vreplvei.d $vr0, $vr0, 0
-; CHECK-NEXT:    vreplvei.d $vr0, $vr0, 0
 ; CHECK-NEXT:    vfrintrz.d $vr0, $vr0
-; CHECK-NEXT:    vextrins.d $vr0, $vr1, 16
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
@@ -157,22 +97,8 @@ define void @roundeven_v4f32(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: roundeven_v4f32:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vreplvei.w $vr1, $vr0, 1
-; CHECK-NEXT:    vreplvei.w $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrne.s $vr1, $vr1
-; CHECK-NEXT:    vreplvei.w $vr2, $vr0, 0
-; CHECK-NEXT:    vreplvei.w $vr2, $vr2, 0
-; CHECK-NEXT:    vfrintrne.s $vr2, $vr2
-; CHECK-NEXT:    vextrins.w $vr2, $vr1, 16
-; CHECK-NEXT:    vreplvei.w $vr1, $vr0, 2
-; CHECK-NEXT:    vreplvei.w $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrne.s $vr1, $vr1
-; CHECK-NEXT:    vextrins.w $vr2, $vr1, 32
-; CHECK-NEXT:    vreplvei.w $vr0, $vr0, 3
-; CHECK-NEXT:    vreplvei.w $vr0, $vr0, 0
 ; CHECK-NEXT:    vfrintrne.s $vr0, $vr0
-; CHECK-NEXT:    vextrins.w $vr2, $vr0, 48
-; CHECK-NEXT:    vst $vr2, $a0, 0
+; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:
   %v0 = load <4 x float>, ptr %a0
@@ -186,13 +112,7 @@ define void @roundeven_v2f64(ptr %res, ptr %a0) nounwind {
 ; CHECK-LABEL: roundeven_v2f64:
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    vld $vr0, $a1, 0
-; CHECK-NEXT:    vreplvei.d $vr1, $vr0, 1
-; CHECK-NEXT:    vreplvei.d $vr1, $vr1, 0
-; CHECK-NEXT:    vfrintrne.d $vr1, $vr1
-; CHECK-NEXT:    vreplvei.d $vr0, $vr0, 0
-; CHECK-NEXT:    vreplvei.d $vr0, $vr0, 0
 ; CHECK-NEXT:    vfrintrne.d $vr0, $vr0
-; CHECK-NEXT:    vextrins.d $vr0, $vr1, 16
 ; CHECK-NEXT:    vst $vr0, $a0, 0
 ; CHECK-NEXT:    ret
 entry:

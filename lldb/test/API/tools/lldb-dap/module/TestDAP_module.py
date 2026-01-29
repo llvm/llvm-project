@@ -7,8 +7,7 @@ from lldbsuite.test.lldbtest import *
 import lldbdap_testcase
 import re
 
-# Flakey in Github CI runs, see https://github.com/llvm/llvm-project/issues/137660.
-@skipIfLinux
+
 class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
     def run_test(self, symbol_basename, expect_debug_info_size):
         program_basename = "a.out.stripped"
@@ -64,12 +63,10 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(program, program_module["path"])
         self.assertIn("addressRange", program_module)
 
-        self.continue_to_exit()
-
         # Collect all the module names we saw as events.
         module_new_names = []
         module_changed_names = []
-        for module_event in self.dap_server.module_events:
+        for module_event in self.dap_server.wait_for_module_events():
             reason = module_event["body"]["reason"]
             if reason == "new":
                 module_new_names.append(module_event["body"]["module"]["name"])
@@ -85,6 +82,7 @@ class TestDAP_module(lldbdap_testcase.DAPTestCaseBase):
         # symbols got added.
         self.assertNotEqual(len(module_changed_names), 0)
         self.assertIn(program_module["name"], module_changed_names)
+        self.continue_to_exit()
 
     @skipIfWindows
     def test_modules(self):

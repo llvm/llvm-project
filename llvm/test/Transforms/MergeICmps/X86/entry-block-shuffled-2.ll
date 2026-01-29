@@ -27,7 +27,7 @@ define i1 @test() {
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    br label [[LAND_END]]
 ; CHECK:       land.end:
-; CHECK-NEXT:    [[V9:%.*]] = phi i1 [ [[TMP5]], [[LAND_RHS1]] ], [ false, %"land.lhs.true+entry" ]
+; CHECK-NEXT:    [[V9:%.*]] = phi i1 [ false, %"land.lhs.true+entry" ], [ [[TMP5]], [[LAND_RHS1]] ]
 ; CHECK-NEXT:    ret i1 [[V9]]
 ;
 entry:

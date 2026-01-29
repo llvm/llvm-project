@@ -1,8 +1,8 @@
-// RUN: not %clang_cc1 -fnative-half-type -std=hlsl202x -triple dxilv1.0-unknown-shadermodel6.0-compute \
+// RUN: not %clang_cc1 -fnative-half-type -fnative-int16-type -std=hlsl202x -triple dxilv1.0-unknown-shadermodel6.0-compute \
 // RUN:  -finclude-default-header -S -o - %s 2>&1 | FileCheck %s -DTEST_TYPE=half
-// RUN: not %clang_cc1 -fnative-half-type -std=hlsl202x -triple dxilv1.0-unknown-shadermodel6.0-compute \
+// RUN: not %clang_cc1 -fnative-half-type -fnative-int16-type -std=hlsl202x -triple dxilv1.0-unknown-shadermodel6.0-compute \
 // RUN:  -finclude-default-header -S -o - %s 2>&1 | FileCheck %s -DTEST_TYPE=int16_t
-// RUN: not %clang_cc1 -fnative-half-type -std=hlsl202x -triple dxilv1.0-unknown-shadermodel6.0-compute \
+// RUN: not %clang_cc1 -fnative-half-type -fnative-int16-type -std=hlsl202x -triple dxilv1.0-unknown-shadermodel6.0-compute \
 // RUN:  -finclude-default-header -S -o - %s 2>&1 | FileCheck %s -DTEST_TYPE=uint16_t
 
 // check we error on 16 bit type if shader model is too old

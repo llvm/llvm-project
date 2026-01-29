@@ -13,8 +13,6 @@
 #include "llvm/ExecutionEngine/Orc/MemoryMapper.h"
 #include "llvm/Testing/Support/Error.h"
 
-#include <vector>
-
 using namespace llvm;
 using namespace llvm::jitlink;
 using namespace llvm::orc;

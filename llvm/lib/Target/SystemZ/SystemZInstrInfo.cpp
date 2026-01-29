@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/BranchProbability.h"
@@ -60,7 +61,7 @@ static uint64_t allOnes(unsigned int Count) {
 void SystemZInstrInfo::anchor() {}
 
 SystemZInstrInfo::SystemZInstrInfo(const SystemZSubtarget &sti)
-    : SystemZGenInstrInfo(sti, -1, -1),
+    : SystemZGenInstrInfo(sti, RI, -1, -1),
       RI(sti.getSpecialRegisters()->getReturnFunctionAddressRegister(),
          sti.getHwMode()),
       STI(sti) {}
@@ -82,8 +83,8 @@ void SystemZInstrInfo::splitMove(MachineBasicBlock::iterator MI,
   MachineOperand &HighRegOp = HighPartMI->getOperand(0);
   MachineOperand &LowRegOp = LowPartMI->getOperand(0);
   Register Reg128 = LowRegOp.getReg();
-  unsigned Reg128Killed = getKillRegState(LowRegOp.isKill());
-  unsigned Reg128Undef  = getUndefRegState(LowRegOp.isUndef());
+  RegState Reg128Killed = getKillRegState(LowRegOp.isKill());
+  RegState Reg128Undef = getUndefRegState(LowRegOp.isUndef());
   HighRegOp.setReg(RI.getSubReg(HighRegOp.getReg(), SystemZ::subreg_h64));
   LowRegOp.setReg(RI.getSubReg(LowRegOp.getReg(), SystemZ::subreg_l64));
 
@@ -107,7 +108,7 @@ void SystemZInstrInfo::splitMove(MachineBasicBlock::iterator MI,
     // undefined. We could track liveness and skip storing an undefined
     // subreg, but this is hopefully rare (discovered with llvm-stress).
     // If Reg128 was killed, set kill flag on MI.
-    unsigned Reg128UndefImpl = (Reg128Undef | RegState::Implicit);
+    RegState Reg128UndefImpl = (Reg128Undef | RegState::Implicit);
     MachineInstrBuilder(MF, HighPartMI).addReg(Reg128, Reg128UndefImpl);
     MachineInstrBuilder(MF, LowPartMI).addReg(Reg128, (Reg128UndefImpl | Reg128Killed));
   } else {
@@ -1023,8 +1024,8 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 void SystemZInstrInfo::storeRegToStackSlot(
     MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register SrcReg,
     bool isKill, int FrameIdx, const TargetRegisterClass *RC,
-    const TargetRegisterInfo *TRI, Register VReg,
-    MachineInstr::MIFlag Flags) const {
+
+    Register VReg, MachineInstr::MIFlag Flags) const {
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
 
   // Callers may expect a single instruction, so keep 128-bit moves
@@ -1036,10 +1037,12 @@ void SystemZInstrInfo::storeRegToStackSlot(
                     FrameIdx);
 }
 
-void SystemZInstrInfo::loadRegFromStackSlot(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register DestReg,
-    int FrameIdx, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
-    Register VReg, MachineInstr::MIFlag Flags) const {
+void SystemZInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
+                                            MachineBasicBlock::iterator MBBI,
+                                            Register DestReg, int FrameIdx,
+                                            const TargetRegisterClass *RC,
+                                            Register VReg, unsigned SubReg,
+                                            MachineInstr::MIFlag Flags) const {
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
 
   // Callers may expect a single instruction, so keep 128-bit moves
@@ -2357,4 +2360,24 @@ SystemZInstrInfo::isCopyInstrImpl(const MachineInstr &MI) const {
     return DestSourcePair(MI.getOperand(0), MI.getOperand(1));
 
   return std::nullopt;
+}
+
+std::pair<unsigned, unsigned>
+SystemZInstrInfo::decomposeMachineOperandsTargetFlags(unsigned TF) const {
+  return std::make_pair(TF, 0u);
+}
+
+ArrayRef<std::pair<unsigned, const char *>>
+SystemZInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
+  using namespace SystemZII;
+
+  static const std::pair<unsigned, const char *> TargetFlags[] = {
+      {MO_ADA_DATA_SYMBOL_ADDR, "systemz-ada-datasymboladdr"},
+      {MO_ADA_INDIRECT_FUNC_DESC, "systemz-ada-indirectfuncdesc"},
+      {MO_ADA_DIRECT_FUNC_DESC, "systemz-ada-directfuncdesc"}};
+  return ArrayRef(TargetFlags);
+}
+
+MCInst SystemZInstrInfo::getNop() const {
+  return MCInstBuilder(SystemZ::NOPR).addReg(0);
 }

@@ -21,7 +21,6 @@
 #include "clang/AST/ASTLambda.h"
 #include "clang/AST/Expr.h"
 #include "clang/Basic/TargetInfo.h"
-#include "llvm/Support/SystemZ/zOSSupport.h"
 
 using namespace clang;
 using namespace clang::interp;
@@ -295,13 +294,15 @@ bool Context::evaluateStrlen(State &Parent, const Expr *E, uint64_t &Result) {
     if (!FieldDesc->isPrimitiveArray())
       return false;
 
-    if (Ptr.isDummy() || Ptr.isUnknownSizeArray())
+    if (Ptr.isDummy() || Ptr.isUnknownSizeArray() || Ptr.isPastEnd())
       return false;
 
     unsigned N = Ptr.getNumElems();
     if (Ptr.elemSize() == 1) {
-      Result = strnlen(reinterpret_cast<const char *>(Ptr.getRawAddress()), N);
-      return Result != N;
+      unsigned Size = N - Ptr.getIndex();
+      Result =
+          strnlen(reinterpret_cast<const char *>(Ptr.getRawAddress()), Size);
+      return Result != Size;
     }
 
     PrimType ElemT = FieldDesc->getPrimType();
@@ -554,15 +555,15 @@ const Function *Context::getOrCreateFunction(const FunctionDecl *FuncDecl) {
       // the lambda captures.
       if (!MD->getParent()->isCompleteDefinition())
         return nullptr;
-      llvm::DenseMap<const ValueDecl *, FieldDecl *> LC;
-      FieldDecl *LTC;
+      if (MD->isStatic()) {
+        llvm::DenseMap<const ValueDecl *, FieldDecl *> LC;
+        FieldDecl *LTC;
 
-      MD->getParent()->getCaptureFields(LC, LTC);
-
-      if (MD->isStatic() && !LC.empty()) {
+        MD->getParent()->getCaptureFields(LC, LTC);
         // Static lambdas cannot have any captures. If this one does,
         // it has already been diagnosed and we can only ignore it.
-        return nullptr;
+        if (!LC.empty())
+          return nullptr;
       }
     }
   }

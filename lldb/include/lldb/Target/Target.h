@@ -32,6 +32,7 @@
 #include "lldb/Target/PathMappingList.h"
 #include "lldb/Target/SectionLoadHistory.h"
 #include "lldb/Target/Statistics.h"
+#include "lldb/Target/SyntheticFrameProvider.h"
 #include "lldb/Target/ThreadSpec.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Broadcaster.h"
@@ -537,6 +538,7 @@ public:
     eBroadcastBitWatchpointChanged = (1 << 3),
     eBroadcastBitSymbolsLoaded = (1 << 4),
     eBroadcastBitSymbolsChanged = (1 << 5),
+    eBroadcastBitNewTargetCreated = (1 << 6),
   };
 
   // These two functions fill out the Broadcaster interface:
@@ -556,6 +558,13 @@ public:
     TargetEventData(const lldb::TargetSP &target_sp,
                     const ModuleList &module_list);
 
+    // Constructor for eBroadcastBitNewTargetCreated events. For this event
+    // type:
+    // - target_sp is the parent target (the subject/broadcaster of the event)
+    // - created_target_sp is the newly created target
+    TargetEventData(const lldb::TargetSP &target_sp,
+                    const lldb::TargetSP &created_target_sp);
+
     ~TargetEventData() override;
 
     static llvm::StringRef GetFlavorString();
@@ -570,14 +579,23 @@ public:
 
     static lldb::TargetSP GetTargetFromEvent(const Event *event_ptr);
 
+    // For eBroadcastBitNewTargetCreated events, returns the newly created
+    // target. For other event types, returns an invalid target.
+    static lldb::TargetSP GetCreatedTargetFromEvent(const Event *event_ptr);
+
     static ModuleList GetModuleListFromEvent(const Event *event_ptr);
 
     const lldb::TargetSP &GetTarget() const { return m_target_sp; }
+
+    const lldb::TargetSP &GetCreatedTarget() const {
+      return m_created_target_sp;
+    }
 
     const ModuleList &GetModuleList() const { return m_module_list; }
 
   private:
     lldb::TargetSP m_target_sp;
+    lldb::TargetSP m_created_target_sp;
     ModuleList m_module_list;
 
     TargetEventData(const TargetEventData &) = delete;
@@ -622,6 +640,30 @@ public:
   ///     requirements.
   llvm::Error SetLabel(llvm::StringRef label);
 
+  /// Get the target session name for this target.
+  ///
+  /// Provides a meaningful name for IDEs or tools to display for dynamically
+  /// created targets. Defaults to "Session {ID}" based on the globally unique
+  /// ID.
+  ///
+  /// \return
+  ///     The target session name for this target.
+  llvm::StringRef GetTargetSessionName() { return m_target_session_name; }
+
+  /// Set the target session name for this target.
+  ///
+  /// This should typically be set along with the event
+  /// eBroadcastBitNewTargetCreated. Useful for scripts or triggers that
+  /// automatically create targets and want to provide meaningful names that
+  /// IDEs or other tools can display to help users identify the origin and
+  /// purpose of each target.
+  ///
+  /// \param[in] target_session_name
+  ///     The target session name to set for this target.
+  void SetTargetSessionName(llvm::StringRef target_session_name) {
+    m_target_session_name = target_session_name.str();
+  }
+
   /// Find a binary on the system and return its Module,
   /// or return an existing Module that is already in the Target.
   ///
@@ -629,13 +671,20 @@ public:
   /// or identify a matching Module already present in the Target,
   /// and return a shared pointer to it.
   ///
+  /// Note that this function previously also preloaded the module's symbols
+  /// depending on a setting. This function no longer does any module
+  /// preloading because that can potentially cause deadlocks when called in
+  /// parallel with this function.
+  ///
   /// \param[in] module_spec
   ///     The criteria that must be matched for the binary being loaded.
   ///     e.g. UUID, architecture, file path.
   ///
   /// \param[in] notify
   ///     If notify is true, and the Module is new to this Target,
-  ///     Target::ModulesDidLoad will be called.
+  ///     Target::ModulesDidLoad will be called. See note in
+  ///     Target::ModulesDidLoad about thread-safety with
+  ///     Target::GetOrCreateModule.
   ///     If notify is false, it is assumed that the caller is adding
   ///     multiple Modules and will call ModulesDidLoad with the
   ///     full list at the end.
@@ -696,6 +745,36 @@ public:
 
   Status Attach(ProcessAttachInfo &attach_info,
                 Stream *stream); // Optional stream to receive first stop info
+
+  /// Add or update a scripted frame provider descriptor for this target.
+  /// All new threads in this target will check if they match any descriptors
+  /// to create their frame providers.
+  ///
+  /// \param[in] descriptor
+  ///     The descriptor to add or update.
+  ///
+  /// \return
+  ///     The descriptor identifier if the registration succeeded, otherwise an
+  ///     llvm::Error.
+  llvm::Expected<uint32_t> AddScriptedFrameProviderDescriptor(
+      const ScriptedFrameProviderDescriptor &descriptor);
+
+  /// Remove a scripted frame provider descriptor by id.
+  ///
+  /// \param[in] id
+  ///     The id of the descriptor to remove.
+  ///
+  /// \return
+  ///     True if a descriptor was removed, false if no descriptor with that
+  ///     id existed.
+  bool RemoveScriptedFrameProviderDescriptor(uint32_t id);
+
+  /// Clear all scripted frame provider descriptors for this target.
+  void ClearScriptedFrameProviderDescriptors();
+
+  /// Get all scripted frame provider descriptors for this target.
+  const llvm::DenseMap<uint32_t, ScriptedFrameProviderDescriptor> &
+  GetScriptedFrameProviderDescriptors() const;
 
   // This part handles the breakpoints.
 
@@ -931,6 +1010,13 @@ public:
   // the address of its previous instruction and return that address.
   lldb::addr_t GetBreakableLoadAddress(lldb::addr_t addr);
 
+  /// This call may preload module symbols, and may do so in parallel depending
+  /// on the following target settings:
+  ///   - TargetProperties::GetPreloadSymbols()
+  ///   - TargetProperties::GetParallelModuleLoad()
+  ///
+  /// Warning: if preloading is active and this is called in parallel with
+  /// Target::GetOrCreateModule, this may result in a ABBA deadlock situation.
   void ModulesDidLoad(ModuleList &module_list);
 
   void ModulesDidUnload(ModuleList &module_list, bool delete_locations);
@@ -1346,6 +1432,13 @@ public:
                                const lldb_private::RegisterFlags &flags,
                                uint32_t byte_size);
 
+  /// Sends a breakpoint notification event.
+  void NotifyBreakpointChanged(Breakpoint &bp,
+                               lldb::BreakpointEventType event_kind);
+  /// Sends a breakpoint notification event.
+  void NotifyBreakpointChanged(Breakpoint &bp,
+                               const lldb::EventDataSP &breakpoint_data_sp);
+
   llvm::Expected<lldb::DisassemblerSP>
   ReadInstructions(const Address &start_addr, uint32_t count,
                    const char *flavor_string = nullptr);
@@ -1682,6 +1775,13 @@ protected:
   PathMappingList m_image_search_paths;
   TypeSystemMap m_scratch_type_system_map;
 
+  /// Map of scripted frame provider descriptors for this target.
+  /// Keys are the provider descriptors ids, values are the descriptors.
+  /// Used to initialize frame providers for new threads.
+  llvm::DenseMap<uint32_t, ScriptedFrameProviderDescriptor>
+      m_frame_provider_descriptors;
+  mutable std::recursive_mutex m_frame_provider_descriptors_mutex;
+
   typedef std::map<lldb::LanguageType, lldb::REPLSP> REPLMap;
   REPLMap m_repl_map;
 
@@ -1698,8 +1798,11 @@ protected:
   bool m_is_dummy_target;
   unsigned m_next_persistent_variable_index = 0;
   lldb::user_id_t m_target_unique_id =
-      LLDB_INVALID_GLOBALLY_UNIQUE_TARGET_ID; /// The globally unique ID
+      LLDB_INVALID_GLOBALLY_UNIQUE_TARGET_ID; ///< The globally unique ID
                                               /// assigned to this target
+  std::string m_target_session_name; ///< The target session name for this
+                                     /// target, used to name debugging
+                                     /// sessions in DAP.
   /// An optional \a lldb_private::Trace object containing processor trace
   /// information of this target.
   lldb::TraceSP m_trace_sp;

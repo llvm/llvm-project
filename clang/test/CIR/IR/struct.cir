@@ -68,12 +68,25 @@ module  {
   }
 
   cir.func @structs() {
-    %0 = cir.alloca !cir.ptr<!cir.record<struct "Sc" {!u8i, !u16i, !u32i}>>, !cir.ptr<!cir.ptr<!cir.record<struct "Sc" {!u8i, !u16i, !u32i}>>>, ["sc", init]
-    %1 = cir.alloca !cir.ptr<!cir.record<union "U" incomplete>>, !cir.ptr<!cir.ptr<!cir.record<union "U" incomplete>>>, ["u", init]
+    %0 = cir.alloca !cir.ptr<!cir.record<struct "Sc" {!u8i, !u16i, !u32i}>>, !cir.ptr<!cir.ptr<!cir.record<struct "Sc" {!u8i, !u16i, !u32i}>>>, ["sc", init] {alignment = 8 : i64}
+    %1 = cir.alloca !cir.ptr<!cir.record<union "U" incomplete>>, !cir.ptr<!cir.ptr<!cir.record<union "U" incomplete>>>, ["u", init] {alignment = 8 : i64}
     cir.return
   }
 
 // CHECK: cir.func @structs() {
 // CHECK:     %0 = cir.alloca !cir.ptr<!rec_Sc>, !cir.ptr<!cir.ptr<!rec_Sc>>, ["sc", init]
 // CHECK:     %1 = cir.alloca !cir.ptr<!rec_U>, !cir.ptr<!cir.ptr<!rec_U>>, ["u", init]
+
+cir.func @struct_extract_member_test() {
+    %0 = cir.const #cir.const_record<{#cir.int<1> : !u8i, #cir.int<2> : !u16i, #cir.int<3> : !u32i}> : !rec_Sc
+    %1 = cir.extract_member %0[0] : !rec_Sc -> !u8i
+    cir.return
+}
+
+// CHECK: cir.func{{.*}} @struct_extract_member_test() {
+// CHECK: %[[RECORD:.*]] = cir.const #cir.const_record<{#cir.int<1> : !u8i, #cir.int<2> : !u16i, #cir.int<3> : !u32i}> : !rec_Sc
+// CHECK: %[[ELEM_0:.*]] = cir.extract_member %[[RECORD]][0] : !rec_Sc -> !u8i
+// CHECK: cir.return
+// CHECK: }
+
 }

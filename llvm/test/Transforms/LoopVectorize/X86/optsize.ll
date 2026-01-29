@@ -173,7 +173,7 @@ define void @scev4stride1(ptr noalias nocapture %a, ptr noalias nocapture readon
 ; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[INDEX]]
 ; CHECK-NEXT:    store <64 x i32> [[WIDE_MASKED_GATHER]], ptr [[TMP3]], align 4
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 64
-; CHECK-NEXT:    [[VEC_IND_NEXT]] = add <64 x i32> [[VEC_IND]], splat (i32 64)
+; CHECK-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <64 x i32> [[VEC_IND]], splat (i32 64)
 ; CHECK-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], 256
 ; CHECK-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; CHECK:       [[MIDDLE_BLOCK]]:
@@ -198,7 +198,7 @@ define void @scev4stride1(ptr noalias nocapture %a, ptr noalias nocapture readon
 ; AUTOVF-NEXT:    [[TMP3:%.*]] = getelementptr inbounds i32, ptr [[A]], i32 [[INDEX]]
 ; AUTOVF-NEXT:    store <8 x i32> [[WIDE_MASKED_GATHER]], ptr [[TMP3]], align 4
 ; AUTOVF-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], 8
-; AUTOVF-NEXT:    [[VEC_IND_NEXT]] = add <8 x i32> [[VEC_IND]], splat (i32 8)
+; AUTOVF-NEXT:    [[VEC_IND_NEXT]] = add nuw nsw <8 x i32> [[VEC_IND]], splat (i32 8)
 ; AUTOVF-NEXT:    [[TMP5:%.*]] = icmp eq i32 [[INDEX_NEXT]], 256
 ; AUTOVF-NEXT:    br i1 [[TMP5]], label %[[MIDDLE_BLOCK:.*]], label %[[VECTOR_BODY]], !llvm.loop [[LOOP4:![0-9]+]]
 ; AUTOVF:       [[MIDDLE_BLOCK]]:

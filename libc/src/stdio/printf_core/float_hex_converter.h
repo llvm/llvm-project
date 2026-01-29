@@ -137,9 +137,9 @@ LIBC_INLINE int convert_float_hex_exp(Writer<write_mode> *writer,
   size_t first_non_zero = 1;
   for (; mant_cur > 0; --mant_cur, mantissa >>= 4) {
     char mant_mod_16 = static_cast<char>(mantissa % 16);
-    char new_digit = static_cast<char>(internal::int_to_b36_char(mant_mod_16));
+    char new_digit = internal::int_to_b36_char(mant_mod_16);
     if (internal::isupper(to_conv.conv_name))
-      new_digit = static_cast<char>(internal::toupper(new_digit));
+      new_digit = internal::toupper(new_digit);
     mant_buffer[mant_cur - 1] = new_digit;
     if (new_digit != '0' && first_non_zero < mant_cur)
       first_non_zero = mant_cur;
@@ -167,8 +167,7 @@ LIBC_INLINE int convert_float_hex_exp(Writer<write_mode> *writer,
 
   size_t exp_cur = EXP_LEN;
   for (; exponent > 0; --exp_cur, exponent /= 10) {
-    exp_buffer[exp_cur - 1] =
-        static_cast<char>(internal::int_to_b36_char(exponent % 10));
+    exp_buffer[exp_cur - 1] = internal::int_to_b36_char(exponent % 10);
   }
   if (exp_cur == EXP_LEN) { // if nothing else was written, write a 0.
     exp_buffer[EXP_LEN - 1] = '0';

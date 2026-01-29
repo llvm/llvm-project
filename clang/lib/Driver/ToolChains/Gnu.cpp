@@ -20,9 +20,9 @@
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
 #include "clang/Driver/MultilibBuilder.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/Tool.h"
 #include "clang/Driver/ToolChain.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Option/ArgList.h"
@@ -451,7 +451,7 @@ void tools::gnutools::Linker::ConstructJob(Compilation &C, const JobAction &JA,
   addLinkerCompressDebugSectionsOption(ToolChain, Args, CmdArgs);
   AddLinkerInputs(ToolChain, Inputs, Args, CmdArgs, JA);
 
-  addHIPRuntimeLibArgs(ToolChain, C, Args, CmdArgs);
+  ToolChain.addOffloadRTLibs(C.getActiveOffloadKinds(), Args, CmdArgs);
 
   // The profile runtime also needs access to system libraries.
   getToolChain().addProfileRTLibs(Args, CmdArgs);
@@ -751,7 +751,12 @@ void tools::gnutools::Assembler::ConstructJob(Compilation &C,
 
     break;
   }
-  // TODO: handle loongarch32.
+  case llvm::Triple::loongarch32: {
+    StringRef ABIName =
+        loongarch::getLoongArchABI(D, Args, getToolChain().getTriple());
+    CmdArgs.push_back(Args.MakeArgString("-mabi=" + ABIName));
+    break;
+  }
   case llvm::Triple::loongarch64: {
     StringRef ABIName =
         loongarch::getLoongArchABI(D, Args, getToolChain().getTriple());
@@ -1750,11 +1755,11 @@ static void findRISCVBareMetalMultilibs(const Driver &D,
   std::string MArch = tools::riscv::getRISCVArch(Args, TargetTriple);
   for (auto Element : RISCVMultilibSet) {
     addMultilibFlag(MArch == Element.march,
-                    Twine("-march=", Element.march).str().c_str(), Flags);
+                    Twine("-march=", Element.march).str(), Flags);
     if (!Added_ABIs.count(Element.mabi)) {
       Added_ABIs.insert(Element.mabi);
       addMultilibFlag(ABIName == Element.mabi,
-                      Twine("-mabi=", Element.mabi).str().c_str(), Flags);
+                      Twine("-mabi=", Element.mabi).str(), Flags);
     }
   }
 
@@ -2058,7 +2063,7 @@ Generic_GCC::GCCVersion Generic_GCC::GCCVersion::Parse(StringRef VersionText) {
 
 static llvm::StringRef getGCCToolchainDir(const ArgList &Args,
                                           llvm::StringRef SysRoot) {
-  const Arg *A = Args.getLastArg(clang::driver::options::OPT_gcc_toolchain);
+  const Arg *A = Args.getLastArg(options::OPT_gcc_toolchain);
   if (A)
     return A->getValue();
 
@@ -2111,8 +2116,7 @@ void Generic_GCC::GCCInstallationDetector::init(
                            CandidateBiarchTripleAliases);
 
   // If --gcc-install-dir= is specified, skip filesystem detection.
-  if (const Arg *A =
-          Args.getLastArg(clang::driver::options::OPT_gcc_install_dir_EQ);
+  if (const Arg *A = Args.getLastArg(options::OPT_gcc_install_dir_EQ);
       A && A->getValue()[0]) {
     StringRef InstallDir = A->getValue();
     if (!ScanGCCForMultilibs(TargetTriple, Args, InstallDir, false)) {
@@ -2135,8 +2139,7 @@ void Generic_GCC::GCCInstallationDetector::init(
 
   // If --gcc-triple is specified use this instead of trying to
   // auto-detect a triple.
-  if (const Arg *A =
-          Args.getLastArg(clang::driver::options::OPT_gcc_triple_EQ)) {
+  if (const Arg *A = Args.getLastArg(options::OPT_gcc_triple_EQ)) {
     StringRef GCCTriple = A->getValue();
     CandidateTripleAliases.clear();
     CandidateTripleAliases.push_back(GCCTriple);
@@ -2295,6 +2298,7 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
       D.getVFS().exists("/opt/rh")) {
     // TODO: We may want to remove this, since the functionality
     //   can be achieved using config files.
+    Prefixes.push_back("/opt/rh/gcc-toolset-13/root/usr");
     Prefixes.push_back("/opt/rh/gcc-toolset-12/root/usr");
     Prefixes.push_back("/opt/rh/gcc-toolset-11/root/usr");
     Prefixes.push_back("/opt/rh/gcc-toolset-10/root/usr");
@@ -2369,6 +2373,12 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
       "i386-redhat-linux6E", "i686-redhat-linux",     "i386-redhat-linux",
       "i586-suse-linux",     "i686-montavista-linux",
   };
+
+  static const char *const LoongArch32LibDirs[] = {"/lib32", "/lib"};
+  static const char *const LoongArch32Triples[] = {
+      "loongarch32-linux-gnu",    "loongarch32-unknown-linux-gnu",
+      "loongarch32-linux-gnuf32", "loongarch32-unknown-linux-gnuf32",
+      "loongarch32-linux-gnusf",  "loongarch32-unknown-linux-gnusf"};
 
   static const char *const LoongArch64LibDirs[] = {"/lib64", "/lib"};
   static const char *const LoongArch64Triples[] = {
@@ -2640,7 +2650,10 @@ void Generic_GCC::GCCInstallationDetector::AddDefaultGCCPrefixes(
       BiarchTripleAliases.append(begin(X32Triples), end(X32Triples));
     }
     break;
-  // TODO: Handle loongarch32.
+  case llvm::Triple::loongarch32:
+    LibDirs.append(begin(LoongArch32LibDirs), end(LoongArch32LibDirs));
+    TripleAliases.append(begin(LoongArch32Triples), end(LoongArch32Triples));
+    break;
   case llvm::Triple::loongarch64:
     LibDirs.append(begin(LoongArch64LibDirs), end(LoongArch64LibDirs));
     TripleAliases.append(begin(LoongArch64Triples), end(LoongArch64Triples));

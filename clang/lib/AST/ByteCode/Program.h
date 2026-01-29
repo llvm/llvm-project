@@ -58,7 +58,7 @@ public:
   unsigned getOrCreateNativePointer(const void *Ptr);
 
   /// Returns the value of a marshalled native pointer.
-  const void *getNativePointer(unsigned Idx);
+  const void *getNativePointer(unsigned Idx) const;
 
   /// Emits a string literal among global data.
   unsigned createGlobalString(const StringLiteral *S,
@@ -205,7 +205,6 @@ private:
     const Block *block() const { return &B; }
 
   private:
-    /// Required metadata - does not actually track pointers.
     Block B;
   };
 

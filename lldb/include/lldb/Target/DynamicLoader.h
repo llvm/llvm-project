@@ -145,7 +145,7 @@ public:
   ///     The equivalent symbol list - any equivalent symbols found are appended
   ///     to this list.
   ///
-  virtual void FindEquivalentSymbols(Symbol *original_symbol,
+  virtual void FindEquivalentSymbols(const Symbol *original_symbol,
                                      ModuleList &module_list,
                                      SymbolContextList &equivalent_symbols) {}
 
@@ -352,6 +352,7 @@ public:
 protected:
   // Utility methods for derived classes
 
+  /// Find a module in the target that matches the given file.
   lldb::ModuleSP FindModuleViaTarget(const FileSpec &file);
 
   /// Checks to see if the target module has changed, updates the target

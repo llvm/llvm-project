@@ -107,8 +107,10 @@ private:
   uint32_t VarContentEnd = 0;
   uint32_t VarFixupStart = 0;
 
+protected:
   const MCSubtargetInfo *STI = nullptr;
 
+private:
   // Optional variable-size tail used by various fragment types.
   union Tail {
     struct {
@@ -362,21 +364,18 @@ class MCNopsFragment : public MCFragment {
   /// Source location of the directive that this fragment was created for.
   SMLoc Loc;
 
-  /// When emitting Nops some subtargets have specific nop encodings.
-  const MCSubtargetInfo &STI;
-
 public:
   MCNopsFragment(int64_t NumBytes, int64_t ControlledNopLength, SMLoc L,
                  const MCSubtargetInfo &STI)
       : MCFragment(FT_Nops), Size(NumBytes),
-        ControlledNopLength(ControlledNopLength), Loc(L), STI(STI) {}
+        ControlledNopLength(ControlledNopLength), Loc(L) {
+    this->STI = &STI;
+  }
 
   int64_t getNumBytes() const { return Size; }
   int64_t getControlledNopLength() const { return ControlledNopLength; }
 
   SMLoc getLoc() const { return Loc; }
-
-  const MCSubtargetInfo *getSubtargetInfo() const { return &STI; }
 
   static bool classof(const MCFragment *F) {
     return F->getKind() == MCFragment::FT_Nops;
@@ -490,12 +489,11 @@ class MCBoundaryAlignFragment : public MCFragment {
   /// is not meaningful before that.
   uint64_t Size = 0;
 
-  /// When emitting Nops some subtargets have specific nop encodings.
-  const MCSubtargetInfo &STI;
-
 public:
   MCBoundaryAlignFragment(Align AlignBoundary, const MCSubtargetInfo &STI)
-      : MCFragment(FT_BoundaryAlign), AlignBoundary(AlignBoundary), STI(STI) {}
+      : MCFragment(FT_BoundaryAlign), AlignBoundary(AlignBoundary) {
+    this->STI = &STI;
+  }
 
   uint64_t getSize() const { return Size; }
   void setSize(uint64_t Value) { Size = Value; }
@@ -508,8 +506,6 @@ public:
     assert(!F || getParent() == F->getParent());
     LastFragment = F;
   }
-
-  const MCSubtargetInfo *getSubtargetInfo() const { return &STI; }
 
   static bool classof(const MCFragment *F) {
     return F->getKind() == MCFragment::FT_BoundaryAlign;
@@ -550,6 +546,7 @@ private:
   MCSymbol *End = nullptr;
   /// The alignment requirement of this section.
   Align Alignment;
+  MaybeAlign PreferredAlignment;
   /// The section index in the assemblers section list.
   unsigned Ordinal = 0;
   // If not -1u, the first linker-relaxable fragment's order within the
@@ -609,6 +606,19 @@ public:
     if (Alignment < MinAlignment)
       Alignment = MinAlignment;
   }
+
+  Align getPreferredAlignment() const {
+    if (!PreferredAlignment || Alignment > *PreferredAlignment)
+      return Alignment;
+    return *PreferredAlignment;
+  }
+
+  void ensurePreferredAlignment(Align PrefAlign) {
+    if (!PreferredAlignment || PrefAlign > *PreferredAlignment)
+      PreferredAlignment = PrefAlign;
+  }
+
+  Align getAlignmentForObjectFile(uint64_t Size) const;
 
   unsigned getOrdinal() const { return Ordinal; }
   void setOrdinal(unsigned Value) { Ordinal = Value; }

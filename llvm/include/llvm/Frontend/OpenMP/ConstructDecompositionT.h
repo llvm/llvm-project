@@ -68,17 +68,23 @@ find_unique(Container &&container, Predicate &&pred) {
 
 namespace tomp {
 
-// ClauseType - Either instance of ClauseT, or a type derived from ClauseT.
+enum struct ErrorCode : int {
+  NoLeafAllowing,    // No leaf that allows this clause
+  NoLeafPrivatizing, // No leaf that has a privatizing clause
+  InvalidDirNameMod, // Invalid directive name modifier
+  RedModNotApplied,  // Reduction modifier not applied
+};
+
+// ClauseType: Either an instance of ClauseT, or a type derived from ClauseT.
+//   This is the clause representation in the code using this infrastructure.
 //
-// This is the clause representation in the code using this infrastructure.
-//
-// HelperType - A class that implements two member functions:
-//
+// HelperType: A class that implements two member functions:
 //   // Return the base object of the given object, if any.
 //   std::optional<Object> getBaseObject(const Object &object) const
 //   // Return the iteration variable of the outermost loop associated
 //   // with the construct being worked on, if any.
 //   std::optional<Object> getLoopIterVar() const
+
 template <typename ClauseType, typename HelperType>
 struct ConstructDecompositionT {
   using ClauseTy = ClauseType;
@@ -94,9 +100,9 @@ struct ConstructDecompositionT {
   ConstructDecompositionT(uint32_t ver, HelperType &helper,
                           llvm::omp::Directive dir,
                           llvm::ArrayRef<ClauseTy> clauses)
-      : version(ver), construct(dir), helper(helper) {
+      : version(ver), helper(helper), inputDirective(dir) {
     for (const ClauseTy &clause : clauses)
-      nodes.push_back(&clause);
+      inputClauses.push_back(&clause);
 
     bool success = split();
     if (!success)
@@ -115,9 +121,15 @@ struct ConstructDecompositionT {
   }
 
   tomp::ListT<DirectiveWithClauses<ClauseType>> output;
+  llvm::SmallVector<std::pair<const ClauseType *, ErrorCode>> errors;
 
 private:
   bool split();
+
+  bool error(const ClauseTy *input, ErrorCode ec) {
+    errors.emplace_back(input, ec);
+    return false;
+  }
 
   struct LeafReprInternal {
     llvm::omp::Directive id = llvm::omp::Directive::OMPD_unknown;
@@ -181,57 +193,52 @@ private:
   std::enable_if_t<llvm::remove_cvref_t<U>::UnionTrait::value, void>
   addClauseSymsToMap(U &&item, const ClauseTy *);
 
-  // Apply a clause to the only directive that allows it. If there are no
+  // Apply the clause to the only directive that allows it. If there are no
   // directives that allow it, or if there is more that one, do not apply
   // anything and return false, otherwise return true.
-  bool applyToUnique(const ClauseTy *node);
+  bool applyToUnique(const ClauseTy *input);
 
-  // Apply a clause to the first directive in given range that allows it.
+  // Apply the clause to the first directive in given range that allows it.
   // If such a directive does not exist, return false, otherwise return true.
   template <typename Iterator>
-  bool applyToFirst(const ClauseTy *node, llvm::iterator_range<Iterator> range);
+  bool applyToFirst(const ClauseTy *input,
+                    llvm::iterator_range<Iterator> range);
 
-  // Apply a clause to the innermost directive that allows it. If such a
+  // Apply the clause to the innermost directive that allows it. If such a
   // directive does not exist, return false, otherwise return true.
-  bool applyToInnermost(const ClauseTy *node);
+  bool applyToInnermost(const ClauseTy *input);
 
-  // Apply a clause to the outermost directive that allows it. If such a
+  // Apply the clause to the outermost directive that allows it. If such a
   // directive does not exist, return false, otherwise return true.
-  bool applyToOutermost(const ClauseTy *node);
+  bool applyToOutermost(const ClauseTy *input);
 
+  // Apply the clause to all directives that allow it, and which satisfy
+  // the predicate: bool shouldApply(LeafReprInternal). If no such
+  // directives exist, return false, otherwise return true.
   template <typename Predicate>
-  bool applyIf(const ClauseTy *node, Predicate shouldApply);
+  bool applyIf(const ClauseTy *input, Predicate shouldApply);
 
-  bool applyToAll(const ClauseTy *node);
+  // Apply the clause to all directives that allow it. If no such directives
+  // exist, return false, otherwise return true.
+  bool applyToAll(const ClauseTy *input);
 
   template <typename Clause>
-  bool applyClause(Clause &&clause, const ClauseTy *node);
+  bool applyClause(Clause &&clause, const ClauseTy *input);
 
+  bool applyClause(const tomp::clause::AllocateT<TypeTy, IdTy, ExprTy> &clause,
+                   const ClauseTy *);
   bool applyClause(const tomp::clause::CollapseT<TypeTy, IdTy, ExprTy> &clause,
-                   const ClauseTy *);
-  bool applyClause(const tomp::clause::PrivateT<TypeTy, IdTy, ExprTy> &clause,
-                   const ClauseTy *);
-  bool
-  applyClause(const tomp::clause::FirstprivateT<TypeTy, IdTy, ExprTy> &clause,
-              const ClauseTy *);
-  bool
-  applyClause(const tomp::clause::LastprivateT<TypeTy, IdTy, ExprTy> &clause,
-              const ClauseTy *);
-  bool applyClause(const tomp::clause::SharedT<TypeTy, IdTy, ExprTy> &clause,
                    const ClauseTy *);
   bool applyClause(const tomp::clause::DefaultT<TypeTy, IdTy, ExprTy> &clause,
                    const ClauseTy *);
   bool
-  applyClause(const tomp::clause::ThreadLimitT<TypeTy, IdTy, ExprTy> &clause,
+  applyClause(const tomp::clause::FirstprivateT<TypeTy, IdTy, ExprTy> &clause,
               const ClauseTy *);
-  bool applyClause(const tomp::clause::OrderT<TypeTy, IdTy, ExprTy> &clause,
-                   const ClauseTy *);
-  bool applyClause(const tomp::clause::AllocateT<TypeTy, IdTy, ExprTy> &clause,
-                   const ClauseTy *);
-  bool applyClause(const tomp::clause::ReductionT<TypeTy, IdTy, ExprTy> &clause,
-                   const ClauseTy *);
   bool applyClause(const tomp::clause::IfT<TypeTy, IdTy, ExprTy> &clause,
                    const ClauseTy *);
+  bool
+  applyClause(const tomp::clause::LastprivateT<TypeTy, IdTy, ExprTy> &clause,
+              const ClauseTy *);
   bool applyClause(const tomp::clause::LinearT<TypeTy, IdTy, ExprTy> &clause,
                    const ClauseTy *);
   bool applyClause(const tomp::clause::NowaitT<TypeTy, IdTy, ExprTy> &clause,
@@ -241,12 +248,24 @@ private:
               const ClauseTy *);
   bool applyClause(const tomp::clause::OmpxBareT<TypeTy, IdTy, ExprTy> &clause,
                    const ClauseTy *);
+  bool applyClause(const tomp::clause::OrderT<TypeTy, IdTy, ExprTy> &clause,
+                   const ClauseTy *);
+  bool applyClause(const tomp::clause::PrivateT<TypeTy, IdTy, ExprTy> &clause,
+                   const ClauseTy *);
+  bool applyClause(const tomp::clause::ReductionT<TypeTy, IdTy, ExprTy> &clause,
+                   const ClauseTy *);
+  bool applyClause(const tomp::clause::SharedT<TypeTy, IdTy, ExprTy> &clause,
+                   const ClauseTy *);
+  bool
+  applyClause(const tomp::clause::ThreadLimitT<TypeTy, IdTy, ExprTy> &clause,
+              const ClauseTy *);
 
   uint32_t version;
-  llvm::omp::Directive construct;
   HelperType &helper;
+  llvm::omp::Directive inputDirective;
+  tomp::ListT<const ClauseTy *> inputClauses;
+
   ListT<LeafReprInternal> leafs;
-  tomp::ListT<const ClauseTy *> nodes;
   std::list<ClauseTy> implicit; // Container for materialized implicit clauses.
                                 // Inserting must preserve element addresses.
   std::unordered_map<IdTy, ClauseSet> syms;
@@ -261,35 +280,35 @@ ConstructDecompositionT(uint32_t, HelperType &, llvm::omp::Directive,
 
 template <typename C, typename H>
 void ConstructDecompositionT<C, H>::addClauseSymsToMap(const ObjectTy &object,
-                                                       const ClauseTy *node) {
-  syms[object.id()].insert(node);
+                                                       const ClauseTy *input) {
+  syms[object.id()].insert(input);
 }
 
 template <typename C, typename H>
 void ConstructDecompositionT<C, H>::addClauseSymsToMap(
-    const tomp::ObjectListT<IdTy, ExprTy> &objects, const ClauseTy *node) {
+    const tomp::ObjectListT<IdTy, ExprTy> &objects, const ClauseTy *input) {
   for (auto &object : objects)
-    syms[object.id()].insert(node);
+    syms[object.id()].insert(input);
 }
 
 template <typename C, typename H>
 void ConstructDecompositionT<C, H>::addClauseSymsToMap(const TypeTy &item,
-                                                       const ClauseTy *node) {
+                                                       const ClauseTy *input) {
   // Nothing to do for types.
 }
 
 template <typename C, typename H>
 void ConstructDecompositionT<C, H>::addClauseSymsToMap(const ExprTy &item,
-                                                       const ClauseTy *node) {
+                                                       const ClauseTy *input) {
   // Nothing to do for expressions.
 }
 
 template <typename C, typename H>
 void ConstructDecompositionT<C, H>::addClauseSymsToMap(
     const tomp::clause::MapT<TypeTy, IdTy, ExprTy> &item,
-    const ClauseTy *node) {
+    const ClauseTy *input) {
   auto &objects = std::get<tomp::ObjectListT<IdTy, ExprTy>>(item.t);
-  addClauseSymsToMap(objects, node);
+  addClauseSymsToMap(objects, input);
   for (auto &object : objects) {
     if (auto base = helper.getBaseObject(object))
       mapBases.insert(base->id());
@@ -299,33 +318,33 @@ void ConstructDecompositionT<C, H>::addClauseSymsToMap(
 template <typename C, typename H>
 template <typename U>
 void ConstructDecompositionT<C, H>::addClauseSymsToMap(
-    const std::optional<U> &item, const ClauseTy *node) {
+    const std::optional<U> &item, const ClauseTy *input) {
   if (item)
-    addClauseSymsToMap(*item, node);
+    addClauseSymsToMap(*item, input);
 }
 
 template <typename C, typename H>
 template <typename U>
 void ConstructDecompositionT<C, H>::addClauseSymsToMap(
-    const tomp::ListT<U> &item, const ClauseTy *node) {
+    const tomp::ListT<U> &item, const ClauseTy *input) {
   for (auto &s : item)
-    addClauseSymsToMap(s, node);
+    addClauseSymsToMap(s, input);
 }
 
 template <typename C, typename H>
 template <typename... U, size_t... Is>
 void ConstructDecompositionT<C, H>::addClauseSymsToMap(
-    const std::tuple<U...> &item, const ClauseTy *node,
+    const std::tuple<U...> &item, const ClauseTy *input,
     std::index_sequence<Is...>) {
-  (void)node; // Silence strange warning from GCC.
-  (addClauseSymsToMap(std::get<Is>(item), node), ...);
+  (void)input; // Silence strange warning from GCC.
+  (addClauseSymsToMap(std::get<Is>(item), input), ...);
 }
 
 template <typename C, typename H>
 template <typename U>
 std::enable_if_t<std::is_enum_v<llvm::remove_cvref_t<U>>, void>
 ConstructDecompositionT<C, H>::addClauseSymsToMap(U &&item,
-                                                  const ClauseTy *node) {
+                                                  const ClauseTy *input) {
   // Nothing to do for enums.
 }
 
@@ -333,7 +352,7 @@ template <typename C, typename H>
 template <typename U>
 std::enable_if_t<llvm::remove_cvref_t<U>::EmptyTrait::value, void>
 ConstructDecompositionT<C, H>::addClauseSymsToMap(U &&item,
-                                                  const ClauseTy *node) {
+                                                  const ClauseTy *input) {
   // Nothing to do for an empty class.
 }
 
@@ -341,7 +360,7 @@ template <typename C, typename H>
 template <typename U>
 std::enable_if_t<llvm::remove_cvref_t<U>::IncompleteTrait::value, void>
 ConstructDecompositionT<C, H>::addClauseSymsToMap(U &&item,
-                                                  const ClauseTy *node) {
+                                                  const ClauseTy *input) {
   // Nothing to do for an incomplete class (they're empty).
 }
 
@@ -349,39 +368,39 @@ template <typename C, typename H>
 template <typename U>
 std::enable_if_t<llvm::remove_cvref_t<U>::WrapperTrait::value, void>
 ConstructDecompositionT<C, H>::addClauseSymsToMap(U &&item,
-                                                  const ClauseTy *node) {
-  addClauseSymsToMap(item.v, node);
+                                                  const ClauseTy *input) {
+  addClauseSymsToMap(item.v, input);
 }
 
 template <typename C, typename H>
 template <typename U>
 std::enable_if_t<llvm::remove_cvref_t<U>::TupleTrait::value, void>
 ConstructDecompositionT<C, H>::addClauseSymsToMap(U &&item,
-                                                  const ClauseTy *node) {
+                                                  const ClauseTy *input) {
   constexpr size_t tuple_size =
       std::tuple_size_v<llvm::remove_cvref_t<decltype(item.t)>>;
-  addClauseSymsToMap(item.t, node, std::make_index_sequence<tuple_size>{});
+  addClauseSymsToMap(item.t, input, std::make_index_sequence<tuple_size>{});
 }
 
 template <typename C, typename H>
 template <typename U>
 std::enable_if_t<llvm::remove_cvref_t<U>::UnionTrait::value, void>
 ConstructDecompositionT<C, H>::addClauseSymsToMap(U &&item,
-                                                  const ClauseTy *node) {
-  std::visit([&](auto &&s) { addClauseSymsToMap(s, node); }, item.u);
+                                                  const ClauseTy *input) {
+  std::visit([&](auto &&s) { addClauseSymsToMap(s, input); }, item.u);
 }
 
 // Apply a clause to the only directive that allows it. If there are no
 // directives that allow it, or if there is more that one, do not apply
 // anything and return false, otherwise return true.
 template <typename C, typename H>
-bool ConstructDecompositionT<C, H>::applyToUnique(const ClauseTy *node) {
+bool ConstructDecompositionT<C, H>::applyToUnique(const ClauseTy *input) {
   auto unique = detail::find_unique(leafs, [=](const auto &leaf) {
-    return llvm::omp::isAllowedClauseForDirective(leaf.id, node->id, version);
+    return llvm::omp::isAllowedClauseForDirective(leaf.id, input->id, version);
   });
 
   if (unique != leafs.end()) {
-    unique->clauses.push_back(node);
+    unique->clauses.push_back(input);
     return true;
   }
   return false;
@@ -392,14 +411,14 @@ bool ConstructDecompositionT<C, H>::applyToUnique(const ClauseTy *node) {
 template <typename C, typename H>
 template <typename Iterator>
 bool ConstructDecompositionT<C, H>::applyToFirst(
-    const ClauseTy *node, llvm::iterator_range<Iterator> range) {
+    const ClauseTy *input, llvm::iterator_range<Iterator> range) {
   if (range.empty())
     return false;
 
   for (auto &leaf : range) {
-    if (!llvm::omp::isAllowedClauseForDirective(leaf.id, node->id, version))
+    if (!llvm::omp::isAllowedClauseForDirective(leaf.id, input->id, version))
       continue;
-    leaf.clauses.push_back(node);
+    leaf.clauses.push_back(input);
     return true;
   }
   return false;
@@ -408,28 +427,28 @@ bool ConstructDecompositionT<C, H>::applyToFirst(
 // Apply a clause to the innermost directive that allows it. If such a
 // directive does not exist, return false, otherwise return true.
 template <typename C, typename H>
-bool ConstructDecompositionT<C, H>::applyToInnermost(const ClauseTy *node) {
-  return applyToFirst(node, llvm::reverse(leafs));
+bool ConstructDecompositionT<C, H>::applyToInnermost(const ClauseTy *input) {
+  return applyToFirst(input, llvm::reverse(leafs));
 }
 
 // Apply a clause to the outermost directive that allows it. If such a
 // directive does not exist, return false, otherwise return true.
 template <typename C, typename H>
-bool ConstructDecompositionT<C, H>::applyToOutermost(const ClauseTy *node) {
-  return applyToFirst(node, llvm::iterator_range(leafs));
+bool ConstructDecompositionT<C, H>::applyToOutermost(const ClauseTy *input) {
+  return applyToFirst(input, llvm::iterator_range(leafs));
 }
 
 template <typename C, typename H>
 template <typename Predicate>
-bool ConstructDecompositionT<C, H>::applyIf(const ClauseTy *node,
+bool ConstructDecompositionT<C, H>::applyIf(const ClauseTy *input,
                                             Predicate shouldApply) {
   bool applied = false;
   for (auto &leaf : leafs) {
-    if (!llvm::omp::isAllowedClauseForDirective(leaf.id, node->id, version))
+    if (!llvm::omp::isAllowedClauseForDirective(leaf.id, input->id, version))
       continue;
     if (!shouldApply(leaf))
       continue;
-    leaf.clauses.push_back(node);
+    leaf.clauses.push_back(input);
     applied = true;
   }
 
@@ -437,14 +456,14 @@ bool ConstructDecompositionT<C, H>::applyIf(const ClauseTy *node,
 }
 
 template <typename C, typename H>
-bool ConstructDecompositionT<C, H>::applyToAll(const ClauseTy *node) {
-  return applyIf(node, [](auto) { return true; });
+bool ConstructDecompositionT<C, H>::applyToAll(const ClauseTy *input) {
+  return applyIf(input, [](auto) { return true; });
 }
 
 template <typename C, typename H>
 template <typename Specific>
 bool ConstructDecompositionT<C, H>::applyClause(Specific &&specific,
-                                                const ClauseTy *node) {
+                                                const ClauseTy *input) {
   // The default behavior is to find the unique directive to which the
   // given clause may be applied. If there are no such directives, or
   // if there are multiple ones, flag an error.
@@ -452,10 +471,39 @@ bool ConstructDecompositionT<C, H>::applyClause(Specific &&specific,
   // S Some clauses are permitted only on a single leaf construct of the
   // S combined or composite construct, in which case the effect is as if
   // S the clause is applied to that specific construct. (p339, 31-33)
-  if (applyToUnique(node))
-    return true;
+  if (!applyToUnique(input))
+    return error(input, ErrorCode::NoLeafAllowing);
+  return true;
+}
 
-  return false;
+// --- Specific clauses -----------------------------------------------
+
+// ALLOCATE
+// [5.2:178:7-9]
+// Directives: allocators, distribute, do, for, parallel, scope, sections,
+// single, target, task, taskgroup, taskloop, teams
+//
+// [5.2:340:33-35]
+// (33) The effect of the allocate clause is as if it is applied to all leaf
+// constructs that permit the clause and to which a data-sharing attribute
+// clause that may create a private copy of the same list item is applied.
+template <typename C, typename H>
+bool ConstructDecompositionT<C, H>::applyClause(
+    const tomp::clause::AllocateT<TypeTy, IdTy, ExprTy> &clause,
+    const ClauseTy *input) {
+  // This one needs to be applied at the end, once we know which clauses are
+  // assigned to which leaf constructs.
+
+  // [5.2:340:33]
+  bool applied = applyIf(input, [&](const auto &leaf) {
+    return llvm::any_of(leaf.clauses, [&](const ClauseTy *n) {
+      return llvm::omp::isPrivatizingClause(n->id);
+    });
+  });
+
+  if (!applied)
+    return error(input, ErrorCode::NoLeafPrivatizing);
+  return true;
 }
 
 // COLLAPSE
@@ -468,34 +516,27 @@ bool ConstructDecompositionT<C, H>::applyClause(Specific &&specific,
 template <typename C, typename H>
 bool ConstructDecompositionT<C, H>::applyClause(
     const tomp::clause::CollapseT<TypeTy, IdTy, ExprTy> &clause,
-    const ClauseTy *node) {
-  // Apply "collapse" to the innermost directive. If it's not one that
-  // allows it flag an error.
-  if (!leafs.empty()) {
-    auto &last = leafs.back();
-
-    if (llvm::omp::isAllowedClauseForDirective(last.id, node->id, version)) {
-      last.clauses.push_back(node);
-      return true;
-    }
-  }
-
-  return false;
+    const ClauseTy *input) {
+  if (!applyToInnermost(input))
+    return error(input, ErrorCode::NoLeafAllowing);
+  return true;
 }
 
-// PRIVATE
-// [5.2:111:5-7]
-// Directives: distribute, do, for, loop, parallel, scope, sections, simd,
-// single, target, task, taskloop, teams
+// DEFAULT
+// [5.2:109:5-6]
+// Directives: parallel, task, taskloop, teams
 //
-// [5.2:340:1-2]
-// (1) The effect of the 1 private clause is as if it is applied only to the
-// innermost leaf construct that permits it.
+// [5.2:340:31-32]
+// (31) The effect of the shared, default, thread_limit, or order clause is as
+// if it is applied to all leaf constructs that permit the clause.
 template <typename C, typename H>
 bool ConstructDecompositionT<C, H>::applyClause(
-    const tomp::clause::PrivateT<TypeTy, IdTy, ExprTy> &clause,
-    const ClauseTy *node) {
-  return applyToInnermost(node);
+    const tomp::clause::DefaultT<TypeTy, IdTy, ExprTy> &clause,
+    const ClauseTy *input) {
+  // [5.2:340:31]
+  if (!applyToAll(input))
+    return error(input, ErrorCode::NoLeafAllowing);
+  return true;
 }
 
 // FIRSTPRIVATE
@@ -531,14 +572,14 @@ bool ConstructDecompositionT<C, H>::applyClause(
 template <typename C, typename H>
 bool ConstructDecompositionT<C, H>::applyClause(
     const tomp::clause::FirstprivateT<TypeTy, IdTy, ExprTy> &clause,
-    const ClauseTy *node) {
+    const ClauseTy *input) {
   bool applied = false;
 
   // [5.2:340:3-6]
   auto dirDistribute = findDirective(llvm::omp::OMPD_distribute);
   auto dirTeams = findDirective(llvm::omp::OMPD_teams);
   if (dirDistribute != nullptr) {
-    dirDistribute->clauses.push_back(node);
+    dirDistribute->clauses.push_back(input);
     applied = true;
     // [5.2:340:17]
     if (dirTeams != nullptr) {
@@ -548,7 +589,7 @@ bool ConstructDecompositionT<C, H>::applyClause(
       dirTeams->clauses.push_back(shared);
     }
   } else if (dirTeams != nullptr) {
-    dirTeams->clauses.push_back(node);
+    dirTeams->clauses.push_back(input);
     applied = true;
   }
 
@@ -565,14 +606,14 @@ bool ConstructDecompositionT<C, H>::applyClause(
 
   auto dirWorksharing = findWorksharing();
   if (dirWorksharing != nullptr) {
-    dirWorksharing->clauses.push_back(node);
+    dirWorksharing->clauses.push_back(input);
     applied = true;
   }
 
   // [5.2:340:9]
   auto dirTaskloop = findDirective(llvm::omp::OMPD_taskloop);
   if (dirTaskloop != nullptr) {
-    dirTaskloop->clauses.push_back(node);
+    dirTaskloop->clauses.push_back(input);
     applied = true;
   }
 
@@ -580,7 +621,7 @@ bool ConstructDecompositionT<C, H>::applyClause(
   auto dirParallel = findDirective(llvm::omp::OMPD_parallel);
   if (dirParallel != nullptr) {
     if (dirTaskloop == nullptr && dirWorksharing == nullptr) {
-      dirParallel->clauses.push_back(node);
+      dirParallel->clauses.push_back(input);
       applied = true;
     } else {
       // [5.2:340:15]
@@ -619,11 +660,53 @@ bool ConstructDecompositionT<C, H>::applyClause(
 
   // "task" is not handled by any of the cases above.
   if (auto dirTask = findDirective(llvm::omp::OMPD_task)) {
-    dirTask->clauses.push_back(node);
+    dirTask->clauses.push_back(input);
     applied = true;
   }
 
-  return applied;
+  if (!applied)
+    return error(input, ErrorCode::NoLeafAllowing);
+  return true;
+}
+
+// IF
+// [5.2:72:7-9]
+// Directives: cancel, parallel, simd, target, target data, target enter data,
+// target exit data, target update, task, taskloop
+//
+// [5.2:72:15-18]
+// (15) For combined or composite constructs, the if clause only applies to the
+// semantics of the construct named in the directive-name-modifier.
+// (16) For a combined or composite construct, if no directive-name-modifier is
+// specified then the if clause applies to all constituent constructs to which
+// an if clause can apply.
+template <typename C, typename H>
+bool ConstructDecompositionT<C, H>::applyClause(
+    const tomp::clause::IfT<TypeTy, IdTy, ExprTy> &clause,
+    const ClauseTy *input) {
+  using DirectiveNameModifier =
+      typename clause::IfT<TypeTy, IdTy, ExprTy>::DirectiveNameModifier;
+  using IfExpression = typename clause::IfT<TypeTy, IdTy, ExprTy>::IfExpression;
+  auto &modifier = std::get<std::optional<DirectiveNameModifier>>(clause.t);
+
+  if (modifier) {
+    llvm::omp::Directive dirId = *modifier;
+    auto *unmodified =
+        makeClause(llvm::omp::Clause::OMPC_if,
+                   tomp::clause::IfT<TypeTy, IdTy, ExprTy>{
+                       {/*DirectiveNameModifier=*/std::nullopt,
+                        /*IfExpression=*/std::get<IfExpression>(clause.t)}});
+
+    if (auto *hasDir = findDirective(dirId)) {
+      hasDir->clauses.push_back(unmodified);
+      return true;
+    }
+    return error(input, ErrorCode::InvalidDirNameMod);
+  }
+
+  if (!applyToAll(input))
+    return error(input, ErrorCode::NoLeafAllowing);
+  return true;
 }
 
 // LASTPRIVATE
@@ -648,13 +731,10 @@ bool ConstructDecompositionT<C, H>::applyClause(
 template <typename C, typename H>
 bool ConstructDecompositionT<C, H>::applyClause(
     const tomp::clause::LastprivateT<TypeTy, IdTy, ExprTy> &clause,
-    const ClauseTy *node) {
-  bool applied = false;
-
+    const ClauseTy *input) {
   // [5.2:340:21]
-  applied = applyToAll(node);
-  if (!applied)
-    return false;
+  if (!applyToAll(input))
+    return error(input, ErrorCode::NoLeafAllowing);
 
   auto inFirstprivate = [&](const ObjectTy &object) {
     if (ClauseSet *set = findClausesWith(object)) {
@@ -680,7 +760,6 @@ bool ConstructDecompositionT<C, H>::applyClause(
           llvm::omp::Clause::OMPC_shared,
           tomp::clause::SharedT<TypeTy, IdTy, ExprTy>{/*List=*/sharedObjects});
       dirParallel->clauses.push_back(shared);
-      applied = true;
     }
 
     // [5.2:340:24]
@@ -689,7 +768,6 @@ bool ConstructDecompositionT<C, H>::applyClause(
           llvm::omp::Clause::OMPC_shared,
           tomp::clause::SharedT<TypeTy, IdTy, ExprTy>{/*List=*/sharedObjects});
       dirTeams->clauses.push_back(shared);
-      applied = true;
     }
   }
 
@@ -713,56 +791,112 @@ bool ConstructDecompositionT<C, H>::applyClause(
                           /*Mapper=*/std::nullopt, /*Iterator=*/std::nullopt,
                           /*LocatorList=*/std::move(tofrom)}});
       dirTarget->clauses.push_back(map);
-      applied = true;
     }
   }
 
-  return applied;
+  return true;
 }
 
-// SHARED
-// [5.2:110:5-6]
-// Directives: parallel, task, taskloop, teams
+// LINEAR
+// [5.2:118:1-2]
+// Directives: declare simd, do, for, simd
 //
-// [5.2:340:31-32]
-// (31) The effect of the shared, default, thread_limit, or order clause is as
-// if it is applied to all leaf constructs that permit the clause.
+// [5.2:341:15-22]
+// (15.1) The effect of the linear clause is as if it is applied to the
+// innermost leaf construct.
+// (15.2) Additionally, if the list item is not the iteration variable of a simd
+// or worksharing-loop SIMD construct, the effect on the outer leaf constructs
+// is as if the list item was specified in firstprivate and lastprivate clauses
+// on the combined or composite construct, with the rules specified above
+// applied.
+// (19) If a list item of the linear clause is the iteration variable of a simd
+// or worksharing-loop SIMD construct and it is not declared in the construct,
+// the effect on the outer leaf constructs is as if the list item was specified
+// in a lastprivate clause on the combined or composite construct with the rules
+// specified above applied.
 template <typename C, typename H>
 bool ConstructDecompositionT<C, H>::applyClause(
-    const tomp::clause::SharedT<TypeTy, IdTy, ExprTy> &clause,
-    const ClauseTy *node) {
-  // [5.2:340:31]
-  return applyToAll(node);
+    const tomp::clause::LinearT<TypeTy, IdTy, ExprTy> &clause,
+    const ClauseTy *input) {
+  // [5.2:341:15.1]
+  if (!applyToInnermost(input))
+    return error(input, ErrorCode::NoLeafAllowing);
+
+  // [5.2:341:15.2], [5.2:341:19]
+  auto dirSimd = findDirective(llvm::omp::Directive::OMPD_simd);
+  std::optional<ObjectTy> iterVar = helper.getLoopIterVar();
+  const auto &objects = std::get<tomp::ObjectListT<IdTy, ExprTy>>(clause.t);
+
+  // Lists of objects that will be used to construct "firstprivate" and
+  // "lastprivate" clauses.
+  tomp::ObjectListT<IdTy, ExprTy> first, last;
+
+  for (const ObjectTy &object : objects) {
+    last.push_back(object);
+    if (!dirSimd || !iterVar || object.id() != iterVar->id())
+      first.push_back(object);
+  }
+
+  if (!first.empty()) {
+    // A standalone "simd linear" may trigger the addition of "firstprivate",
+    // which will fail, since "simd" does not allow it. Add the firstprivate
+    // only if some leaf allows it.
+    bool allowed = llvm::any_of(leafs, [this](const LeafReprInternal &leaf) {
+      return llvm::omp::isAllowedClauseForDirective(
+          leaf.id, llvm::omp::Clause::OMPC_firstprivate, version);
+    });
+    if (allowed) {
+      auto *firstp = makeClause(
+          llvm::omp::Clause::OMPC_firstprivate,
+          tomp::clause::FirstprivateT<TypeTy, IdTy, ExprTy>{/*List=*/first});
+      inputClauses.push_back(firstp); // Appending to the main clause list.
+    }
+  }
+  if (!last.empty()) {
+    auto *lastp =
+        makeClause(llvm::omp::Clause::OMPC_lastprivate,
+                   tomp::clause::LastprivateT<TypeTy, IdTy, ExprTy>{
+                       {/*LastprivateModifier=*/std::nullopt, /*List=*/last}});
+    inputClauses.push_back(lastp); // Appending to the main clause list.
+  }
+  return true;
 }
 
-// DEFAULT
-// [5.2:109:5-6]
-// Directives: parallel, task, taskloop, teams
+// NOWAIT
+// [5.2:308:11-13]
+// Directives: dispatch, do, for, interop, scope, sections, single, target,
+// target enter data, target exit data, target update, taskwait, workshare
 //
-// [5.2:340:31-32]
-// (31) The effect of the shared, default, thread_limit, or order clause is as
-// if it is applied to all leaf constructs that permit the clause.
+// [5.2:341:23]
+// (23) The effect of the nowait clause is as if it is applied to the outermost
+// leaf construct that permits it.
 template <typename C, typename H>
 bool ConstructDecompositionT<C, H>::applyClause(
-    const tomp::clause::DefaultT<TypeTy, IdTy, ExprTy> &clause,
-    const ClauseTy *node) {
-  // [5.2:340:31]
-  return applyToAll(node);
+    const tomp::clause::NowaitT<TypeTy, IdTy, ExprTy> &clause,
+    const ClauseTy *input) {
+  if (!applyToOutermost(input))
+    return error(input, ErrorCode::NoLeafAllowing);
+  return true;
 }
 
-// THREAD_LIMIT
-// [5.2:277:14-15]
-// Directives: target, teams
-//
-// [5.2:340:31-32]
-// (31) The effect of the shared, default, thread_limit, or order clause is as
-// if it is applied to all leaf constructs that permit the clause.
+// OMPX_ATTRIBUTE
 template <typename C, typename H>
 bool ConstructDecompositionT<C, H>::applyClause(
-    const tomp::clause::ThreadLimitT<TypeTy, IdTy, ExprTy> &clause,
-    const ClauseTy *node) {
-  // [5.2:340:31]
-  return applyToAll(node);
+    const tomp::clause::OmpxAttributeT<TypeTy, IdTy, ExprTy> &clause,
+    const ClauseTy *input) {
+  if (!applyToAll(input))
+    return error(input, ErrorCode::NoLeafAllowing);
+  return true;
+}
+
+// OMPX_BARE
+template <typename C, typename H>
+bool ConstructDecompositionT<C, H>::applyClause(
+    const tomp::clause::OmpxBareT<TypeTy, IdTy, ExprTy> &clause,
+    const ClauseTy *input) {
+  if (!applyToOutermost(input))
+    return error(input, ErrorCode::NoLeafAllowing);
+  return true;
 }
 
 // ORDER
@@ -775,35 +909,28 @@ bool ConstructDecompositionT<C, H>::applyClause(
 template <typename C, typename H>
 bool ConstructDecompositionT<C, H>::applyClause(
     const tomp::clause::OrderT<TypeTy, IdTy, ExprTy> &clause,
-    const ClauseTy *node) {
+    const ClauseTy *input) {
   // [5.2:340:31]
-  return applyToAll(node);
+  if (!applyToAll(input))
+    return error(input, ErrorCode::NoLeafAllowing);
+  return true;
 }
 
-// ALLOCATE
-// [5.2:178:7-9]
-// Directives: allocators, distribute, do, for, parallel, scope, sections,
-// single, target, task, taskgroup, taskloop, teams
+// PRIVATE
+// [5.2:111:5-7]
+// Directives: distribute, do, for, loop, parallel, scope, sections, simd,
+// single, target, task, taskloop, teams
 //
-// [5.2:340:33-35]
-// (33) The effect of the allocate clause is as if it is applied to all leaf
-// constructs that permit the clause and to which a data-sharing attribute
-// clause that may create a private copy of the same list item is applied.
+// [5.2:340:1-2]
+// (1) The effect of the 1 private clause is as if it is applied only to the
+// innermost leaf construct that permits it.
 template <typename C, typename H>
 bool ConstructDecompositionT<C, H>::applyClause(
-    const tomp::clause::AllocateT<TypeTy, IdTy, ExprTy> &clause,
-    const ClauseTy *node) {
-  // This one needs to be applied at the end, once we know which clauses are
-  // assigned to which leaf constructs.
-
-  // [5.2:340:33]
-  bool applied = applyIf(node, [&](const auto &leaf) {
-    return llvm::any_of(leaf.clauses, [&](const ClauseTy *n) {
-      return llvm::omp::isPrivatizingClause(n->id);
-    });
-  });
-
-  return applied;
+    const tomp::clause::PrivateT<TypeTy, IdTy, ExprTy> &clause,
+    const ClauseTy *input) {
+  if (!applyToInnermost(input))
+    return error(input, ErrorCode::NoLeafAllowing);
+  return true;
 }
 
 // REDUCTION
@@ -835,7 +962,7 @@ bool ConstructDecompositionT<C, H>::applyClause(
 template <typename C, typename H>
 bool ConstructDecompositionT<C, H>::applyClause(
     const tomp::clause::ReductionT<TypeTy, IdTy, ExprTy> &clause,
-    const ClauseTy *node) {
+    const ClauseTy *input) {
   using ReductionTy = tomp::clause::ReductionT<TypeTy, IdTy, ExprTy>;
 
   // [5.2:340:36], [5.2:341:1], [5.2:341:3]
@@ -885,7 +1012,7 @@ bool ConstructDecompositionT<C, H>::applyClause(
       return dir == llvm::omp::Directive::OMPD_simd ||
              llvm::is_contained(getWorksharingLoop(), dir);
     case ReductionModifier::Task:
-      if (alreadyApplied)
+      if (alreadyApplied) // Not an error
         return false;
       // According to [5.2:135:16-18], "task" only applies to "parallel" and
       // worksharing constructs.
@@ -905,31 +1032,37 @@ bool ConstructDecompositionT<C, H>::applyClause(
            /*List=*/objects}});
 
   ReductionModifier effective = modifier.value_or(ReductionModifier::Default);
-  bool effectiveApplied = false;
+  bool modifierApplied = false;
+  bool allowingLeaf = false;
   // Walk over the leaf constructs starting from the innermost, and apply
   // the clause as required by the spec.
   for (auto &leaf : llvm::reverse(leafs)) {
-    if (!llvm::omp::isAllowedClauseForDirective(leaf.id, node->id, version))
+    if (!llvm::omp::isAllowedClauseForDirective(leaf.id, input->id, version))
       continue;
+    // Found a leaf that allows this clause. Keep track of this for better
+    // error reporting.
+    allowingLeaf = true;
     if (!applyToParallel && &leaf == dirParallel)
       continue;
     if (!applyToTeams && &leaf == dirTeams)
       continue;
     // Some form of the clause will be applied past this point.
-    if (isValidModifier(leaf.id, effective, effectiveApplied)) {
+    if (isValidModifier(leaf.id, effective, modifierApplied)) {
       // Apply clause with modifier.
-      leaf.clauses.push_back(node);
-      effectiveApplied = true;
+      leaf.clauses.push_back(input);
+      modifierApplied = true;
     } else {
       // Apply clause without modifier.
       leaf.clauses.push_back(unmodified);
     }
     // The modifier must be applied to some construct.
-    applied = effectiveApplied;
+    applied = modifierApplied;
   }
 
+  if (!allowingLeaf)
+    return error(input, ErrorCode::NoLeafAllowing);
   if (!applied)
-    return false;
+    return error(input, ErrorCode::RedModNotApplied);
 
   tomp::ObjectListT<IdTy, ExprTy> sharedObjects;
   llvm::transform(objects, std::back_inserter(sharedObjects),
@@ -976,170 +1109,77 @@ bool ConstructDecompositionT<C, H>::applyClause(
                /*LocatorList=*/std::move(tofrom)}});
 
       dirTarget->clauses.push_back(map);
-      applied = true;
     }
   }
 
-  return applied;
-}
-
-// IF
-// [5.2:72:7-9]
-// Directives: cancel, parallel, simd, target, target data, target enter data,
-// target exit data, target update, task, taskloop
-//
-// [5.2:72:15-18]
-// (15) For combined or composite constructs, the if clause only applies to the
-// semantics of the construct named in the directive-name-modifier.
-// (16) For a combined or composite construct, if no directive-name-modifier is
-// specified then the if clause applies to all constituent constructs to which
-// an if clause can apply.
-template <typename C, typename H>
-bool ConstructDecompositionT<C, H>::applyClause(
-    const tomp::clause::IfT<TypeTy, IdTy, ExprTy> &clause,
-    const ClauseTy *node) {
-  using DirectiveNameModifier =
-      typename clause::IfT<TypeTy, IdTy, ExprTy>::DirectiveNameModifier;
-  using IfExpression = typename clause::IfT<TypeTy, IdTy, ExprTy>::IfExpression;
-  auto &modifier = std::get<std::optional<DirectiveNameModifier>>(clause.t);
-
-  if (modifier) {
-    llvm::omp::Directive dirId = *modifier;
-    auto *unmodified =
-        makeClause(llvm::omp::Clause::OMPC_if,
-                   tomp::clause::IfT<TypeTy, IdTy, ExprTy>{
-                       {/*DirectiveNameModifier=*/std::nullopt,
-                        /*IfExpression=*/std::get<IfExpression>(clause.t)}});
-
-    if (auto *hasDir = findDirective(dirId)) {
-      hasDir->clauses.push_back(unmodified);
-      return true;
-    }
-    return false;
-  }
-
-  return applyToAll(node);
-}
-
-// LINEAR
-// [5.2:118:1-2]
-// Directives: declare simd, do, for, simd
-//
-// [5.2:341:15-22]
-// (15.1) The effect of the linear clause is as if it is applied to the
-// innermost leaf construct.
-// (15.2) Additionally, if the list item is not the iteration variable of a simd
-// or worksharing-loop SIMD construct, the effect on the outer leaf constructs
-// is as if the list item was specified in firstprivate and lastprivate clauses
-// on the combined or composite construct, with the rules specified above
-// applied.
-// (19) If a list item of the linear clause is the iteration variable of a simd
-// or worksharing-loop SIMD construct and it is not declared in the construct,
-// the effect on the outer leaf constructs is as if the list item was specified
-// in a lastprivate clause on the combined or composite construct with the rules
-// specified above applied.
-template <typename C, typename H>
-bool ConstructDecompositionT<C, H>::applyClause(
-    const tomp::clause::LinearT<TypeTy, IdTy, ExprTy> &clause,
-    const ClauseTy *node) {
-  // [5.2:341:15.1]
-  if (!applyToInnermost(node))
-    return false;
-
-  // [5.2:341:15.2], [5.2:341:19]
-  auto dirSimd = findDirective(llvm::omp::Directive::OMPD_simd);
-  std::optional<ObjectTy> iterVar = helper.getLoopIterVar();
-  const auto &objects = std::get<tomp::ObjectListT<IdTy, ExprTy>>(clause.t);
-
-  // Lists of objects that will be used to construct "firstprivate" and
-  // "lastprivate" clauses.
-  tomp::ObjectListT<IdTy, ExprTy> first, last;
-
-  for (const ObjectTy &object : objects) {
-    last.push_back(object);
-    if (!dirSimd || !iterVar || object.id() != iterVar->id())
-      first.push_back(object);
-  }
-
-  if (!first.empty()) {
-    auto *firstp = makeClause(
-        llvm::omp::Clause::OMPC_firstprivate,
-        tomp::clause::FirstprivateT<TypeTy, IdTy, ExprTy>{/*List=*/first});
-    nodes.push_back(firstp); // Appending to the main clause list.
-  }
-  if (!last.empty()) {
-    auto *lastp =
-        makeClause(llvm::omp::Clause::OMPC_lastprivate,
-                   tomp::clause::LastprivateT<TypeTy, IdTy, ExprTy>{
-                       {/*LastprivateModifier=*/std::nullopt, /*List=*/last}});
-    nodes.push_back(lastp); // Appending to the main clause list.
-  }
   return true;
 }
 
-// NOWAIT
-// [5.2:308:11-13]
-// Directives: dispatch, do, for, interop, scope, sections, single, target,
-// target enter data, target exit data, target update, taskwait, workshare
+// SHARED
+// [5.2:110:5-6]
+// Directives: parallel, task, taskloop, teams
 //
-// [5.2:341:23]
-// (23) The effect of the nowait clause is as if it is applied to the outermost
-// leaf construct that permits it.
+// [5.2:340:31-32]
+// (31) The effect of the shared, default, thread_limit, or order clause is as
+// if it is applied to all leaf constructs that permit the clause.
 template <typename C, typename H>
 bool ConstructDecompositionT<C, H>::applyClause(
-    const tomp::clause::NowaitT<TypeTy, IdTy, ExprTy> &clause,
-    const ClauseTy *node) {
-  return applyToOutermost(node);
+    const tomp::clause::SharedT<TypeTy, IdTy, ExprTy> &clause,
+    const ClauseTy *input) {
+  // [5.2:340:31]
+  if (!applyToAll(input))
+    return error(input, ErrorCode::NoLeafAllowing);
+  return true;
 }
 
+// THREAD_LIMIT
+// [5.2:277:14-15]
+// Directives: target, teams
+//
+// [5.2:340:31-32]
+// (31) The effect of the shared, default, thread_limit, or order clause is as
+// if it is applied to all leaf constructs that permit the clause.
 template <typename C, typename H>
 bool ConstructDecompositionT<C, H>::applyClause(
-    const tomp::clause::OmpxBareT<TypeTy, IdTy, ExprTy> &clause,
-    const ClauseTy *node) {
-  return applyToOutermost(node);
+    const tomp::clause::ThreadLimitT<TypeTy, IdTy, ExprTy> &clause,
+    const ClauseTy *input) {
+  // [5.2:340:31]
+  if (!applyToAll(input))
+    return error(input, ErrorCode::NoLeafAllowing);
+  return true;
 }
 
-template <typename C, typename H>
-bool ConstructDecompositionT<C, H>::applyClause(
-    const tomp::clause::OmpxAttributeT<TypeTy, IdTy, ExprTy> &clause,
-    const ClauseTy *node) {
-  return applyToAll(node);
-}
+// --- Splitting ------------------------------------------------------
 
 template <typename C, typename H> bool ConstructDecompositionT<C, H>::split() {
   bool success = true;
 
-  auto isImplicit = [this](const ClauseTy *node) {
-    return llvm::is_contained(llvm::make_pointer_range(implicit), node);
-  };
-
-  for (llvm::omp::Directive leaf :
-       llvm::omp::getLeafConstructsOrSelf(construct))
+  for (auto leaf : llvm::omp::getLeafConstructsOrSelf(inputDirective))
     leafs.push_back(LeafReprInternal{leaf, /*clauses=*/{}});
 
-  for (const ClauseTy *node : nodes)
-    addClauseSymsToMap(*node, node);
+  for (const ClauseTy *input : inputClauses)
+    addClauseSymsToMap(*input, input);
 
   // First we need to apply LINEAR, because it can generate additional
   // "firstprivate" and "lastprivate" clauses that apply to the combined/
   // composite construct.
   // Collect them separately, because they may modify the clause list.
   llvm::SmallVector<const ClauseTy *> linears;
-  for (const ClauseTy *node : nodes) {
-    if (node->id == llvm::omp::Clause::OMPC_linear)
-      linears.push_back(node);
+  for (const ClauseTy *input : inputClauses) {
+    if (input->id == llvm::omp::Clause::OMPC_linear)
+      linears.push_back(input);
   }
-  for (const auto *node : linears) {
+  for (const auto *input : linears) {
     success = success &&
               applyClause(std::get<tomp::clause::LinearT<TypeTy, IdTy, ExprTy>>(
-                              node->u),
-                          node);
+                              input->u),
+                          input);
   }
 
   // "allocate" clauses need to be applied last since they need to see
   // which directives have data-privatizing clauses.
-  auto skip = [](const ClauseTy *node) {
-    switch (node->id) {
+  auto skip = [](const ClauseTy *input) {
+    switch (input->id) {
     case llvm::omp::Clause::OMPC_allocate:
     case llvm::omp::Clause::OMPC_linear:
       return true;
@@ -1149,22 +1189,21 @@ template <typename C, typename H> bool ConstructDecompositionT<C, H>::split() {
   };
 
   // Apply (almost) all clauses.
-  for (const ClauseTy *node : nodes) {
-    if (skip(node))
-      continue;
-    bool result =
-        std::visit([&](auto &&s) { return applyClause(s, node); }, node->u);
-    if (!isImplicit(node))
-      success = success && result;
-  }
-
-  // Apply "allocate".
-  for (const ClauseTy *node : nodes) {
-    if (node->id != llvm::omp::Clause::OMPC_allocate)
+  for (const ClauseTy *input : inputClauses) {
+    if (skip(input))
       continue;
     success =
         success &&
-        std::visit([&](auto &&s) { return applyClause(s, node); }, node->u);
+        std::visit([&](auto &&s) { return applyClause(s, input); }, input->u);
+  }
+
+  // Apply "allocate".
+  for (const ClauseTy *input : inputClauses) {
+    if (input->id != llvm::omp::Clause::OMPC_allocate)
+      continue;
+    success =
+        success &&
+        std::visit([&](auto &&s) { return applyClause(s, input); }, input->u);
   }
 
   return success;
