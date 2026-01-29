@@ -9100,6 +9100,58 @@ def : Pat<(v8f16 (sint_to_fp (v8i16 (AArch64vashr_exact v8i16:$Vn, i32:$shift)))
           (SCVTFv8i16_shift $Vn, vecshiftR16:$shift)>;
 }
 
+// Select fmul(sitofp(x), C) where C is a constant reciprocal of a power of two.
+// For both scalar and vector inputs, if we have sitofp(X) * C (where C is
+// 1/2^N), this can be optimized to scvtf(X, 2^N).
+class fixedpoint_recip_vec_i16<ValueType FloatVT>
+    : ComplexPattern<FloatVT, 1, "SelectCVTFixedPosRecipOperandVec<16>", []>;
+class fixedpoint_recip_vec_i32<ValueType FloatVT>
+    : ComplexPattern<FloatVT, 1, "SelectCVTFixedPosRecipOperandVec<32>", []>;
+class fixedpoint_recip_vec_i64<ValueType FloatVT>
+    : ComplexPattern<FloatVT, 1, "SelectCVTFixedPosRecipOperandVec<64>", []>;
+def fixedpoint_recip_vec_xform : SDNodeXForm<timm, [{
+  // Suppress the unused variable warning by explicitly using N.
+  // The actual value needed for the pattern is already in V.
+  (void)N;
+  return V;
+}]>;
+
+def fixedpoint_recip_v2f32_v2i32 : fixedpoint_recip_vec_i32<v2f32>;
+def fixedpoint_recip_v4f32_v4i32 : fixedpoint_recip_vec_i32<v4f32>;
+def fixedpoint_recip_v2f64_v2i64 : fixedpoint_recip_vec_i64<v2f64>;
+
+def fixedpoint_recip_v4f16_v4i16 : fixedpoint_recip_vec_i16<v4f16>;
+def fixedpoint_recip_v8f16_v8i16 : fixedpoint_recip_vec_i16<v8f16>;
+
+let Predicates = [HasNEON] in {
+  def : Pat<(v2f32(fmul(sint_to_fp(v2i32 V64:$Rn)),
+                fixedpoint_recip_v2f32_v2i32:$scale)),
+            (v2f32(SCVTFv2i32_shift(v2i32 V64:$Rn),
+                (fixedpoint_recip_vec_xform fixedpoint_recip_v2f32_v2i32:$scale)))>;
+
+  def : Pat<(v4f32(fmul(sint_to_fp(v4i32 FPR128:$Rn)),
+                fixedpoint_recip_v4f32_v4i32:$scale)),
+            (v4f32(SCVTFv4i32_shift(v4i32 FPR128:$Rn),
+                (fixedpoint_recip_vec_xform fixedpoint_recip_v4f32_v4i32:$scale)))>;
+
+  def : Pat<(v2f64(fmul(sint_to_fp(v2i64 FPR128:$Rn)),
+                fixedpoint_recip_v2f64_v2i64:$scale)),
+            (v2f64(SCVTFv2i64_shift(v2i64 FPR128:$Rn),
+                (fixedpoint_recip_vec_xform fixedpoint_recip_v2f64_v2i64:$scale)))>;
+}
+
+let Predicates = [HasNEON, HasFullFP16] in {
+  def : Pat<(v4f16(fmul(sint_to_fp(v4i16 V64:$Rn)),
+                fixedpoint_recip_v4f16_v4i16:$scale)),
+            (v4f16(SCVTFv4i16_shift(v4i16 V64:$Rn),
+                (fixedpoint_recip_vec_xform fixedpoint_recip_v4f16_v4i16:$scale)))>;
+
+  def : Pat<(v8f16(fmul(sint_to_fp(v8i16 FPR128:$Rn)),
+                fixedpoint_recip_v8f16_v8i16:$scale)),
+            (v8f16(SCVTFv8i16_shift(v8i16 FPR128:$Rn),
+                (fixedpoint_recip_vec_xform fixedpoint_recip_v8f16_v8i16:$scale)))>;
+}
+
 // X << 1 ==> X + X
 class SHLToADDPat<ValueType ty, RegisterClass regtype>
   : Pat<(ty (AArch64vshl (ty regtype:$Rn), (i32 1))),
