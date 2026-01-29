@@ -1222,11 +1222,12 @@ std::string Triple::normalize(StringRef Str, CanonicalForm Form) {
 
   // Note which components are already in their final position.  These will not
   // be moved.
-  bool Found[4];
+  bool Found[5];
   Found[0] = Arch != UnknownArch;
   Found[1] = Vendor != UnknownVendor;
   Found[2] = OS != UnknownOS;
   Found[3] = Environment != UnknownEnvironment;
+  Found[4] = ObjectFormat != UnknownObjectFormat;
 
   // If they are not there already, permute the components into their canonical
   // positions by seeing if they parse as a valid architecture, and if so moving
@@ -1262,10 +1263,10 @@ std::string Triple::normalize(StringRef Str, CanonicalForm Form) {
       case 3:
         Environment = parseEnvironment(Comp);
         Valid = Environment != UnknownEnvironment;
-        if (!Valid) {
-          ObjectFormat = parseFormat(Comp);
-          Valid = ObjectFormat != UnknownObjectFormat;
-        }
+        break;
+      case 4:
+        ObjectFormat = parseFormat(Comp);
+        Valid = ObjectFormat != UnknownObjectFormat;
         break;
       }
       if (!Valid)
@@ -1323,6 +1324,14 @@ std::string Triple::normalize(StringRef Str, CanonicalForm Form) {
       Found[Pos] = true;
       break;
     }
+  }
+
+  // Environment "unknown-elf" is just "elf".
+  if (ObjectFormat != UnknownObjectFormat &&
+      (Components[3] == "unknown" || Components[3].empty())) {
+    Found[3] = true;
+    std::swap(Components[3], Components[4]);
+    Components.pop_back();
   }
 
   // If "none" is in the middle component in a three-component triple, treat it
@@ -1395,14 +1404,21 @@ std::string Triple::normalize(StringRef Str, CanonicalForm Form) {
     }
   }
 
+  // Leave out unknown object format from the string representation.
+  if (ObjectFormat == UnknownObjectFormat && Components.size() == 5)
+    Components.pop_back();
+
   // Canonicalize the components if necessary.
   switch (Form) {
   case CanonicalForm::ANY:
     break;
-  case CanonicalForm::THREE_IDENT:
-  case CanonicalForm::FOUR_IDENT:
-  case CanonicalForm::FIVE_IDENT: {
+  case CanonicalForm::THREE_IDENT: {
     Components.resize(static_cast<unsigned>(Form), "unknown");
+    break;
+  }
+  case CanonicalForm::FOUR_IDENT: {
+    if (Components.size() < 4)
+      Components.resize(static_cast<unsigned>(Form), "unknown");
     break;
   }
   }
