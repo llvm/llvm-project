@@ -1751,11 +1751,11 @@ bool SIFoldOperandsImpl::tryMapMacToMad(MachineInstr &MI) const {
   unsigned NewOpc = macToMad(MI.getOpcode());
   if (NewOpc == AMDGPU::INSTRUCTION_LIST_END)
     return false;
-  
+
   MachineOperand *TiedOp = TII->getNamedOperand(MI, AMDGPU::OpName::src2);
-  if (!TiedOp || !TiedOp->isReg() || !TiedOp->isTied()) 
+  if (!TiedOp || !TiedOp->isReg() || !TiedOp->isTied())
     return false;
-    
+
   Register TiedReg = TiedOp->getReg();
   if (!TiedReg.isVirtual())
     return false;
@@ -1764,7 +1764,7 @@ bool SIFoldOperandsImpl::tryMapMacToMad(MachineInstr &MI) const {
     int Src2Idx =
         AMDGPU::getNamedOperandIdx(MI.getOpcode(), AMDGPU::OpName::src2);
     MI.setDesc(TII->get(NewOpc));
-    MI.untieRegOperand(Src2Idx);  
+    MI.untieRegOperand(Src2Idx);
     return true;
   }
 
@@ -1774,23 +1774,24 @@ bool SIFoldOperandsImpl::tryMapMacToMad(MachineInstr &MI) const {
     if (&UseMI == &MI)
       continue;
     if (UseMI.getParent() != BB)
-      return false;  // Different BB - bail out (accumulator might be live-out)
+      return false; // Different BB - bail out (accumulator might be live-out)
   }
 
   // Check for any uses (including subregisters) after MI in same BB.
   // readsRegister checks both full register and subregister uses.
   for (auto I = std::next(MI.getIterator()); I != BB->end(); ++I) {
     if (I->readsRegister(TiedReg, TRI))
-      return false;  // Found a use after MI - register is still live
+      return false; // Found a use after MI - register is still live
   }
 
   // Check if destination register feeds a PHI.
   // PHIs benefit from the tied FMAC form as it constrains the register
-  // allocator to reuse the same physical register, minimizing copies at merge points.
+  // allocator to reuse the same physical register, minimizing copies at merge
+  // points.
   Register DstReg = MI.getOperand(0).getReg();
   if (DstReg.isVirtual()) {
     for (MachineInstr &UseMI : MRI->use_nodbg_instructions(DstReg)) {
-      if (UseMI.isPHI()) 
+      if (UseMI.isPHI())
         return false;
     }
   }
@@ -2426,7 +2427,7 @@ bool SIFoldOperandsImpl::tryFoldRegSequence(MachineInstr &MI) {
       !MRI->hasOneNonDBGUse(Reg))
     return false;
 
-  SmallVector<std::pair<MachineOperand*, unsigned>, 32> Defs;
+  SmallVector<std::pair<MachineOperand *, unsigned>, 32> Defs;
   if (!getRegSeqInit(Defs, Reg))
     return false;
 
