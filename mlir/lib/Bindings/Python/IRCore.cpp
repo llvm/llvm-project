@@ -1500,13 +1500,12 @@ static void populateResultTypes(std::string_view name, nb::list resultTypeList,
               .c_str());
     }
     resultSegmentLengths.reserve(resultTypeList.size());
-    size_t size = resultSegmentSpec.size();
-    for (size_t index = 0; index < size; ++index) {
-      int segmentSpec = resultSegmentSpec[index];
+    for (size_t i = 0, e = resultSegmentSpec.size(); i < e; ++i) {
+      int segmentSpec = resultSegmentSpec[i];
       if (segmentSpec == 1 || segmentSpec == 0) {
         // Unpack unary element.
         try {
-          auto *resultType = nb::cast<PyType *>(resultTypeList[index]);
+          auto *resultType = nb::cast<PyType *>(resultTypeList[i]);
           if (resultType) {
             resultTypes.push_back(resultType);
             resultSegmentLengths.push_back(1);
@@ -1515,24 +1514,24 @@ static void populateResultTypes(std::string_view name, nb::list resultTypeList,
             resultSegmentLengths.push_back(0);
           } else {
             throw nb::value_error(
-                join("Result ", index, " of operation \"", name,
+                join("Result ", i, " of operation \"", name,
                      "\" must be a Type (was None and result is not optional)")
                     .c_str());
           }
         } catch (nb::cast_error &err) {
-          throw nb::value_error(join("Result ", index, " of operation \"", name,
+          throw nb::value_error(join("Result ", i, " of operation \"", name,
                                      "\" must be a Type (", err.what(), ")")
                                     .c_str());
         }
       } else if (segmentSpec == -1) {
         // Unpack sequence by appending.
         try {
-          if (resultTypeList[index].is_none()) {
+          if (resultTypeList[i].is_none()) {
             // Treat it as an empty list.
             resultSegmentLengths.push_back(0);
           } else {
             // Unpack the list.
-            auto segment = nb::cast<nb::sequence>(resultTypeList[index]);
+            auto segment = nb::cast<nb::sequence>(resultTypeList[i]);
             for (nb::handle segmentItem : segment) {
               resultTypes.push_back(nb::cast<PyType *>(segmentItem));
               if (!resultTypes.back()) {
@@ -1545,7 +1544,7 @@ static void populateResultTypes(std::string_view name, nb::list resultTypeList,
           // NOTE: Sloppy to be using a catch-all here, but there are at least
           // three different unrelated exceptions that can be thrown in the
           // above "casts". Just keep the scope above small and catch them all.
-          throw nb::value_error(join("Result ", index, " of operation \"", name,
+          throw nb::value_error(join("Result ", i, " of operation \"", name,
                                      "\" must be a Sequence of Types (",
                                      err.what(), ")")
                                     .c_str());
@@ -1662,19 +1661,17 @@ nb::object PyOpView::buildGeneric(
               .c_str());
     }
     operandSegmentLengths.reserve(operandList.size());
-    size_t size = operandSegmentSpec.size();
-    for (size_t index = 0; index < size; ++index) {
-      int segmentSpec = operandSegmentSpec[index];
+    for (size_t i = 0, e = operandSegmentSpec.size(); i < e; ++i) {
+      int segmentSpec = operandSegmentSpec[i];
       if (segmentSpec == 1 || segmentSpec == 0) {
         // Unpack unary element.
-        const auto operand = operandList[index];
+        const auto operand = operandList[i];
         if (!operand.is_none()) {
           try {
             operands.push_back(getOpResultOrValue(operand));
           } catch (nb::builtin_exception &err) {
-            throw nb::value_error(join("Operand ", index, " of operation \"",
-                                       name, "\" must be a Value (", err.what(),
-                                       ")")
+            throw nb::value_error(join("Operand ", i, " of operation \"", name,
+                                       "\" must be a Value (", err.what(), ")")
                                       .c_str());
           }
 
@@ -1684,19 +1681,19 @@ nb::object PyOpView::buildGeneric(
           operandSegmentLengths.push_back(0);
         } else {
           throw nb::value_error(
-              join("Operand ", index, " of operation \"", name,
+              join("Operand ", i, " of operation \"", name,
                    "\" must be a Value (was None and operand is not optional)")
                   .c_str());
         }
       } else if (segmentSpec == -1) {
         // Unpack sequence by appending.
         try {
-          if (operandList[index].is_none()) {
+          if (operandList[i].is_none()) {
             // Treat it as an empty list.
             operandSegmentLengths.push_back(0);
           } else {
             // Unpack the list.
-            auto segment = nb::cast<nb::sequence>(operandList[index]);
+            auto segment = nb::cast<nb::sequence>(operandList[i]);
             for (nb::handle segmentItem : segment) {
               operands.push_back(getOpResultOrValue(segmentItem));
             }
@@ -1706,8 +1703,8 @@ nb::object PyOpView::buildGeneric(
           // NOTE: Sloppy to be using a catch-all here, but there are at least
           // three different unrelated exceptions that can be thrown in the
           // above "casts". Just keep the scope above small and catch them all.
-          throw nb::value_error(join("Operand ", index, " of operation \"",
-                                     name, "\" must be a Sequence of Values (",
+          throw nb::value_error(join("Operand ", i, " of operation \"", name,
+                                     "\" must be a Sequence of Values (",
                                      err.what(), ")")
                                     .c_str());
         }
