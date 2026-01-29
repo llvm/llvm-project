@@ -1190,7 +1190,9 @@ struct ConvertXeGPUToXeVMPass
         return {};
       auto input = inputs.front();
       if (auto vecTy = dyn_cast<VectorType>(input.getType())) {
-        if (type.isIntOrIndexOrFloat()) {
+        if (type == vecTy.getElementType() ||
+            ((vecTy.getElementType() == builder.getIndexType()) &&
+             type.isInteger())) {
           // If the vector rank is 0 or has a single element,
           // extract scalar of target type.
           auto rank = vecTy.getRank();
@@ -1203,7 +1205,7 @@ struct ConvertXeGPUToXeVMPass
                                              SmallVector<int64_t>(rank, 0))
                        .getResult();
           }
-          if (vecTy.getElementType() == builder.getIndexType())
+          if (type != vecTy.getElementType())
             cast = arith::IndexCastUIOp::create(builder, loc, type, cast)
                        .getResult();
           return cast;
@@ -1233,12 +1235,18 @@ struct ConvertXeGPUToXeVMPass
       if (inputs.size() != 1)
         return {};
       auto input = inputs.front();
-      if (input.getType().isIntOrIndexOrFloat()) {
-        // If the input is a scalar, and the target type is a vector of rank 0
-        // or single element, broadcast scalar to target type.
-        if (auto vecTy = dyn_cast<VectorType>(type)) {
-          if (vecTy.getRank() == 0 || vecTy.getNumElements() == 1) {
+      // If the target type is a vector of rank 0 or single element vector
+      // of element type matching input type, broadcast input to target type.
+      if (auto vecTy = dyn_cast<VectorType>(type)) {
+        if (vecTy.getRank() == 0 || vecTy.getNumElements() == 1) {
+          if (input.getType() == vecTy.getElementType()) {
             return vector::BroadcastOp::create(builder, loc, vecTy, input)
+                .getResult();
+          } else if (vecTy.getElementType() == builder.getIndexType()) {
+            Value cast = arith::IndexCastUIOp::create(
+                             builder, loc, builder.getIndexType(), input)
+                             .getResult();
+            return vector::BroadcastOp::create(builder, loc, vecTy, cast)
                 .getResult();
           }
         }
