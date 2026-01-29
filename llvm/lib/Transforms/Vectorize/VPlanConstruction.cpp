@@ -968,7 +968,7 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   VPBasicBlock *Header = LoopRegion->getEntryBasicBlock();
 
-  VPBasicBlock *HeaderSplit = Header->splitAt(Header->getFirstNonPhi());
+  Header->splitAt(Header->getFirstNonPhi());
 
   // Create the header mask, insert it in the header and branch on it.
   auto *IV =
@@ -997,26 +997,21 @@ void VPlanTransforms::foldTailByMasking(VPlan &Plan) {
       Latch->splitAt(IVInc->getDefiningRecipe()->getIterator());
   VPBlockUtils::connectBlocks(Header, LatchSplit);
 
-  // Insert phis for any values used outside of the predicated body.
-  auto NeedsPhi = [&Header, &Plan](VPUser *U) {
-    auto *UR = cast<VPRecipeBase>(U);
-    return UR->getParent() == Header ||
-           UR->getRegion() != Plan.getVectorLoopRegion();
-  };
-
+  // Insert phis for any values in the predicated body that are used outside.
   Builder.setInsertPoint(LatchSplit, LatchSplit->begin());
-  for (VPBlockBase *VPB : vp_depth_first_shallow(HeaderSplit)) {
-    auto *VPBB = cast<VPBasicBlock>(VPB);
-    if (VPBB == LatchSplit)
-      continue;
+  for (VPBasicBlock *VPBB : {Header, Plan.getMiddleBlock()}) {
     for (VPRecipeBase &R : *VPBB) {
-      for (VPValue *V : R.definedValues()) {
-        if (!any_of(V->users(), NeedsPhi))
+      for (VPValue *V : R.operands()) {
+        VPRecipeBase *VR = V->getDefiningRecipe();
+        if (!VR || !VR->getRegion() || VR->getParent() == LatchSplit ||
+            VR->getParent() == VPBB)
           continue;
+        // TODO: For reduction phis, use phi value instead of poison.
         VPValue *Poison = Plan.getOrAddLiveIn(
             PoisonValue::get(V->getUnderlyingValue()->getType()));
-        VPValue *Phi = Builder.createScalarPhi({V, Poison}, {});
-        V->replaceUsesWithIf(Phi, NeedsPhi);
+        VPInstruction *Phi = Builder.createScalarPhi({V, Poison}, {});
+        V->replaceUsesWithIf(Phi,
+                             [&Phi](VPUser &U, unsigned) { return &U != Phi; });
       }
     }
   }
