@@ -87,7 +87,6 @@
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/UnrollLoop.h"
 #include <cassert>
-#include <cctype>
 #include <cstdint>
 #include <cstring>
 #include <string>
