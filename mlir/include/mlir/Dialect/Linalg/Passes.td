@@ -274,4 +274,13 @@ def LinalgBlockPackMatmul : Pass<"linalg-block-pack-matmul"> {
   ];
 }
 
+def LinalgDecomposeConv2DToConv1D : Pass<"linalg-decompose-conv2d-to-conv1d"> {
+  let summary = "Decompose a conv2d into a series of conv1d ops";
+  let description = [{
+    TODO
+  }];
+
+  let dependentDialects = ["linalg::LinalgDialect", "tensor::TensorDialect", "scf::SCFDialect"];
+}
+
 #endif // MLIR_DIALECT_LINALG_PASSES
