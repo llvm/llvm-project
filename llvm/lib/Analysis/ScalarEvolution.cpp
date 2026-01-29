@@ -5971,6 +5971,73 @@ const SCEV *ScalarEvolution::createAddRecFromPHI(PHINode *PN) {
 
         return PHISCEV;
       }
+    } else {
+      // try to match y(k) = p*y(k-1) + q, where p and q are loop invariants
+      // if match,for start_value = a does the equation simplify to y(k) = a
+      unsigned FoundSNIdx = Add->getNumOperands();
+      for (unsigned i = 0, ei = Add->getNumOperands(); i != ei; ++i) {
+        if (const SCEVMulExpr* Mul = dyn_cast<SCEVMulExpr>(Add->getOperand(i))) {
+          for (unsigned j = 0, ej = Mul->getNumOperands(); j != ej; ++j) {
+            if (Mul->getOperand(j) == SymbolicName){
+              FoundSNIdx = i;
+              break;
+            }
+          }
+          if (FoundSNIdx != ei) break;
+        }
+      }
+      if (FoundSNIdx != Add->getNumOperands()) {
+        // check for invariance of q, q can be sum of values
+        // collect q along the way.
+        bool IsQInvariant = true;
+        SmallVector<const SCEV*, 4> QValues;
+        for (unsigned i = 0, e = Add->getNumOperands(); i != e; ++i) {
+          if (i != FoundSNIdx) {
+            auto *Op = Add->getOperand(i);
+            if (isLoopInvariant(Op, L)) {
+              QValues.push_back(Op);
+            }else{
+              IsQInvariant = false;
+              break;
+            }
+          }
+        }
+        if (IsQInvariant) {
+          // check for invariance of p, p can be product of values
+          // p = 1 is covered in the previous section.
+          // collect p along the way.
+          bool IsPInvariant = true;
+          SmallVector<const SCEV*, 4> PValues;
+          const SCEVMulExpr *SNOperand = dyn_cast<SCEVMulExpr>(Add->getOperand(FoundSNIdx));
+          for (unsigned i = 0, e = SNOperand->getNumOperands(); i != e; ++i) {
+            auto *Op = SNOperand->getOperand(i);
+            if (Op != SymbolicName) {
+              if (isLoopInvariant(Op, L)) {
+                PValues.push_back(Op);
+              }else{
+                IsPInvariant = false;
+                break;
+              }
+            }
+          }
+          if (IsPInvariant) {
+            // p and q are both loop invariant
+            // then simplify p*Start_value + q
+            auto *StartVal = getSCEV(StartValueV);
+            auto *P = getMulExpr(PValues);
+            auto *PMulSV = getMulExpr(P, StartVal);
+            QValues.push_back(PMulSV);
+            auto *Resultant = getAddExpr(QValues);
+
+            if (Resultant == StartVal) {
+              // the recurrence is always equal to StartVal
+              forgetMemoizedResults(SymbolicName);
+              insertValueToMap(PN, StartVal);
+              return StartVal;
+            }
+          }
+        }
+      }
     }
   } else {
     // Otherwise, this could be a loop like this:
