@@ -258,9 +258,8 @@ int IRTranslator::getOrCreateFrameIndex(const AllocaInst &AI) {
   if (!Inserted)
     return MapEntry->second;
 
-  uint64_t ElementSize = DL->getTypeAllocSize(AI.getAllocatedType());
   uint64_t Size =
-      ElementSize * cast<ConstantInt>(AI.getArraySize())->getZExtValue();
+      AI.getAllocationSize(*DL).value_or(TypeSize::getZero()).getFixedValue();
 
   // Always allocate at least one byte.
   Size = std::max<uint64_t>(Size, 1u);

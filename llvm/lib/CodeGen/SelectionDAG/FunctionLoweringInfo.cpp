@@ -134,7 +134,6 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
   for (const BasicBlock &BB : *Fn) {
     for (const Instruction &I : BB) {
       if (const AllocaInst *AI = dyn_cast<AllocaInst>(&I)) {
-        Type *Ty = AI->getAllocatedType();
         Align Alignment = AI->getAlign();
 
         // Static allocas can be folded into the initial stack frame
@@ -142,8 +141,9 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
         // do this if there is an extra alignment requirement.
         if (AI->isStaticAlloca() &&
             (TFI->isStackRealignable() || (Alignment <= StackAlign))) {
-          uint64_t TySize =
-              AI->getAllocationSize(MF->getDataLayout())->getKnownMinValue();
+          TypeSize AllocaSize = AI->getAllocationSize(MF->getDataLayout())
+                                    .value_or(TypeSize::getZero());
+          uint64_t TySize = AllocaSize.getKnownMinValue();
           if (TySize == 0)
             TySize = 1; // Don't create zero-sized stack objects.
           int FrameIndex = INT_MAX;
@@ -160,7 +160,7 @@ void FunctionLoweringInfo::set(const Function &fn, MachineFunction &mf,
           // Scalable vectors and structures that contain scalable vectors may
           // need a special StackID to distinguish them from other (fixed size)
           // stack objects.
-          if (Ty->isScalableTy())
+          if (AllocaSize.isScalable())
             MF->getFrameInfo().setStackID(FrameIndex,
                                           TFI->getStackIDForScalableVectors());
 
