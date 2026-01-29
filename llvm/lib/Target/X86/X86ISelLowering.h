@@ -1611,16 +1611,21 @@ namespace llvm {
 
     /// This method returns a target specific FastISel object,
     /// or null if the target does not support "fast" ISel.
-    FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
-                             const TargetLibraryInfo *libInfo) const override;
+    FastISel *
+    createFastISel(FunctionLoweringInfo &funcInfo,
+                   const TargetLibraryInfo *libInfo,
+                   const LibcallLoweringInfo *libcallLowering) const override;
 
     /// If the target has a standard location for the stack protector cookie,
     /// returns the address of that location. Otherwise, returns nullptr.
-    Value *getIRStackGuard(IRBuilderBase &IRB) const override;
+    Value *getIRStackGuard(IRBuilderBase &IRB,
+                           const LibcallLoweringInfo &Libcalls) const override;
 
     bool useLoadStackGuardNode(const Module &M) const override;
     bool useStackGuardXorFP() const override;
-    void insertSSPDeclarations(Module &M) const override;
+    void
+    insertSSPDeclarations(Module &M,
+                          const LibcallLoweringInfo &Libcalls) const override;
     SDValue emitStackGuardXorFP(SelectionDAG &DAG, SDValue Val,
                                 const SDLoc &DL) const override;
 
@@ -1628,7 +1633,8 @@ namespace llvm {
     /// Return true if the target stores SafeStack pointer at a fixed offset in
     /// some non-standard address space, and populates the address space and
     /// offset as appropriate.
-    Value *getSafeStackPointerLocation(IRBuilderBase &IRB) const override;
+    Value *getSafeStackPointerLocation(
+        IRBuilderBase &IRB, const LibcallLoweringInfo &Libcalls) const override;
 
     std::pair<SDValue, SDValue> BuildFILD(EVT DstVT, EVT SrcVT, const SDLoc &DL,
                                           SDValue Chain, SDValue Pointer,
@@ -1959,8 +1965,9 @@ namespace llvm {
   };
 
   namespace X86 {
-    FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
-                             const TargetLibraryInfo *libInfo);
+  FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
+                           const TargetLibraryInfo *libInfo,
+                           const LibcallLoweringInfo *libcallLowering);
   } // end namespace X86
 
   // X86 specific Gather/Scatter nodes.

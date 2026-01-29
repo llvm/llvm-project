@@ -53,10 +53,10 @@ ENUM_CLASS(LanguageFeature, BackslashEscapes, OldDebugLines,
     PolymorphicActualAllocatableOrPointerToMonomorphicDummy, RelaxedPureDummy,
     UndefinableAsynchronousOrVolatileActual, AutomaticInMainProgram, PrintCptr,
     SavedLocalInSpecExpr, PrintNamelist, AssumedRankPassedToNonAssumedRank,
-    IgnoreIrrelevantAttributes, Unsigned, AmbiguousStructureConstructor,
-    ContiguousOkForSeqAssociation, ForwardRefExplicitTypeDummy,
-    InaccessibleDeferredOverride, CudaWarpMatchFunction, DoConcurrentOffload,
-    TransferBOZ, Coarray, PointerPassObject)
+    IgnoreIrrelevantAttributes, Unsigned, ContiguousOkForSeqAssociation,
+    ForwardRefExplicitTypeDummy, InaccessibleDeferredOverride,
+    CudaWarpMatchFunction, DoConcurrentOffload, TransferBOZ, Coarray,
+    PointerPassObject, MultipleIdenticalDATA)
 
 // Portability and suspicious usage warnings
 ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
@@ -80,7 +80,7 @@ ENUM_CLASS(UsageWarning, Portability, PointerToUndefinable,
     NullActualForDefaultIntentAllocatable, UseAssociationIntoSameNameSubprogram,
     HostAssociatedIntentOutInSpecExpr, NonVolatilePointerToVolatile,
     RealConstantWidening, VolatileOrAsynchronousTemporary, UnusedVariable,
-    UsedUndefinedVariable, BadValueInDeadCode)
+    UsedUndefinedVariable, BadValueInDeadCode, AssumedTypeSizeDummy)
 
 using LanguageFeatures = EnumSet<LanguageFeature, LanguageFeature_enumSize>;
 using UsageWarnings = EnumSet<UsageWarning, UsageWarning_enumSize>;

@@ -154,8 +154,10 @@ public:
   void addPostRegAlloc(PassManagerWrapper &PMW) const;
   void addPreEmitPass(PassManagerWrapper &PMWM) const;
   void addPreEmitRegAlloc(PassManagerWrapper &PMW) const;
+  Error addRegAssignmentFast(PassManagerWrapper &PMW) const;
   Error addRegAssignmentOptimized(PassManagerWrapper &PMW) const;
   void addPreRegAlloc(PassManagerWrapper &PMW) const;
+  Error addFastRegAlloc(PassManagerWrapper &PMW) const;
   void addOptimizedRegAlloc(PassManagerWrapper &PMW) const;
   void addPreSched2(PassManagerWrapper &PMW) const;
   void addPostBBSections(PassManagerWrapper &PMW) const;
@@ -815,7 +817,8 @@ static bool mustPreserveGV(const GlobalValue &GV) {
 }
 
 void AMDGPUTargetMachine::registerDefaultAliasAnalyses(AAManager &AAM) {
-  AAM.registerFunctionAnalysis<AMDGPUAA>();
+  if (EnableAMDGPUAliasAnalysis)
+    AAM.registerFunctionAnalysis<AMDGPUAA>();
 }
 
 static Expected<ScanOptions>
@@ -2287,6 +2290,8 @@ void AMDGPUCodeGenPassBuilder::addPreRewrite(PassManagerWrapper &PMW) const {
   if (EnableRegReassign) {
     addMachineFunctionPass(GCNNSAReassignPass(), PMW);
   }
+
+  addMachineFunctionPass(AMDGPURewriteAGPRCopyMFMAPass(), PMW);
 }
 
 void AMDGPUCodeGenPassBuilder::addMachineSSAOptimization(
@@ -2306,6 +2311,42 @@ void AMDGPUCodeGenPassBuilder::addMachineSSAOptimization(
   }
   addMachineFunctionPass(DeadMachineInstructionElimPass(), PMW);
   addMachineFunctionPass(SIShrinkInstructionsPass(), PMW);
+}
+
+Error AMDGPUCodeGenPassBuilder::addFastRegAlloc(PassManagerWrapper &PMW) const {
+  insertPass<PHIEliminationPass>(SILowerControlFlowPass());
+
+  insertPass<TwoAddressInstructionPass>(SIWholeQuadModePass());
+
+  return Base::addFastRegAlloc(PMW);
+}
+
+Error AMDGPUCodeGenPassBuilder::addRegAssignmentFast(
+    PassManagerWrapper &PMW) const {
+  // TODO: handle default regalloc override error (with regalloc-npm)
+
+  addMachineFunctionPass(GCNPreRALongBranchRegPass(), PMW);
+
+  addMachineFunctionPass(RegAllocFastPass({onlyAllocateSGPRs, "sgpr", false}),
+                         PMW);
+
+  // Equivalent of PEI for SGPRs.
+  addMachineFunctionPass(SILowerSGPRSpillsPass(), PMW);
+
+  // To Allocate wwm registers used in whole quad mode operations (for shaders).
+  addMachineFunctionPass(SIPreAllocateWWMRegsPass(), PMW);
+
+  // For allocating other wwm register operands.
+  addMachineFunctionPass(RegAllocFastPass({onlyAllocateWWMRegs, "wwm", false}),
+                         PMW);
+
+  addMachineFunctionPass(SILowerWWMCopiesPass(), PMW);
+  addMachineFunctionPass(AMDGPUReserveWWMRegsPass(), PMW);
+
+  // For allocating per-thread VGPRs.
+  addMachineFunctionPass(RegAllocFastPass({onlyAllocateVGPRs, "vgpr"}), PMW);
+
+  return Error::success();
 }
 
 void AMDGPUCodeGenPassBuilder::addOptimizedRegAlloc(

@@ -125,7 +125,9 @@ private:
   bool lowerUnpackBitShift(MachineInstr &MI);
   bool lowerV_BFE(MachineInstr &MI);
   bool lowerS_BFE(MachineInstr &MI);
+  bool lowerUniMAD64(MachineInstr &MI);
   bool lowerSplitTo32(MachineInstr &MI);
+  bool lowerSplitTo32Mul(MachineInstr &MI);
   bool lowerSplitTo16(MachineInstr &MI);
   bool lowerSplitTo32Select(MachineInstr &MI);
   bool lowerSplitTo32SExtInReg(MachineInstr &MI);

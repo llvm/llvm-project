@@ -48,9 +48,9 @@ static void DebugOnlyFunction(AnalysisDeclContext &AC, const CFG &Cfg,
 }
 #endif
 
-LifetimeSafetyAnalysis::LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
-                                               LifetimeSafetyReporter *Reporter)
-    : AC(AC), Reporter(Reporter) {}
+LifetimeSafetyAnalysis::LifetimeSafetyAnalysis(
+    AnalysisDeclContext &AC, LifetimeSafetySemaHelper *SemaHelper)
+    : AC(AC), SemaHelper(SemaHelper) {}
 
 void LifetimeSafetyAnalysis::run() {
   llvm::TimeTraceScope TimeProfile("LifetimeSafetyAnalysis");
@@ -90,7 +90,7 @@ void LifetimeSafetyAnalysis::run() {
   DEBUG_WITH_TYPE("LiveOrigins",
                   LiveOrigins->dump(llvm::dbgs(), FactMgr->getTestPoints()));
 
-  runLifetimeChecker(*LoanPropagation, *LiveOrigins, *FactMgr, AC, Reporter);
+  runLifetimeChecker(*LoanPropagation, *LiveOrigins, *FactMgr, AC, SemaHelper);
 }
 
 void collectLifetimeStats(AnalysisDeclContext &AC, OriginManager &OM,
@@ -103,9 +103,9 @@ void collectLifetimeStats(AnalysisDeclContext &AC, OriginManager &OM,
 } // namespace internal
 
 void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
-                               LifetimeSafetyReporter *Reporter,
+                               LifetimeSafetySemaHelper *SemaHelper,
                                LifetimeSafetyStats &Stats, bool CollectStats) {
-  internal::LifetimeSafetyAnalysis Analysis(AC, Reporter);
+  internal::LifetimeSafetyAnalysis Analysis(AC, SemaHelper);
   Analysis.run();
   if (CollectStats)
     collectLifetimeStats(AC, Analysis.getFactManager().getOriginMgr(), Stats);
