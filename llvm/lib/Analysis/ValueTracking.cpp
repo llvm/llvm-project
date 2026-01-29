@@ -5944,10 +5944,10 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
                               KnownFPClass::OrderedGreaterThanZeroMask,
                               KnownStart, Q, Depth + 1);
           computeKnownFPClass(L, DemandedElts,
-                              KnownFPClass::OrderedGreaterThanZeroMask,
-                              KnownL, Q, Depth + 1);
+                              KnownFPClass::OrderedGreaterThanZeroMask, KnownL,
+                              Q, Depth + 1);
           if (L == R &&
-              isGuaranteedNotToBeUndef(L, Q.AC, Q.CxtI, Q.DT, Depth + 1)) 
+              isGuaranteedNotToBeUndef(L, Q.AC, Q.CxtI, Q.DT, Depth + 1))
             Known = KnownFPClass::fma_square(KnownL, KnownStart);
           break;
         }
