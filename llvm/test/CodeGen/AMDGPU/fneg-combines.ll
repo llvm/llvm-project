@@ -7777,15 +7777,12 @@ define half @fadd_select_fneg_fneg_f16(i32 %arg0, half %x, half %y, half %z) {
 ; SI-LABEL: fadd_select_fneg_fneg_f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SI-NEXT:    v_cvt_f32_f16_e32 v2, v2
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, v3
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
-; SI-NEXT:    v_sub_f32_e32 v0, v3, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v1, v3
+; SI-NEXT:    v_sub_f32_e32 v0, v1, v0
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: fadd_select_fneg_fneg_f16:
@@ -7808,25 +7805,20 @@ define <2 x half> @fadd_select_fneg_fneg_v2f16(i32 %arg0, <2 x half> %x, <2 x ha
 ; SI-LABEL: fadd_select_fneg_fneg_v2f16:
 ; SI:       ; %bb.0:
 ; SI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; SI-NEXT:    v_cvt_f16_f32_e32 v2, v2
-; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; SI-NEXT:    v_cvt_f16_f32_e32 v3, v3
-; SI-NEXT:    v_cvt_f16_f32_e32 v5, v5
-; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; SI-NEXT:    v_or_b32_e32 v1, v1, v2
-; SI-NEXT:    v_cvt_f16_f32_e32 v2, v4
-; SI-NEXT:    v_cvt_f16_f32_e32 v4, v6
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v0
-; SI-NEXT:    v_lshlrev_b32_e32 v2, 16, v2
-; SI-NEXT:    v_or_b32_e32 v2, v3, v2
 ; SI-NEXT:    v_cndmask_b32_e32 v0, v2, v1, vcc
+; SI-NEXT:    v_lshrrev_b32_e32 v4, 16, v3
 ; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
-; SI-NEXT:    v_cvt_f32_f16_e32 v3, v4
-; SI-NEXT:    v_cvt_f32_f16_e32 v4, v5
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v2, v4
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
-; SI-NEXT:    v_sub_f32_e32 v0, v4, v0
-; SI-NEXT:    v_sub_f32_e32 v1, v3, v1
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v3, v3
+; SI-NEXT:    v_sub_f32_e32 v1, v2, v1
+; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
+; SI-NEXT:    v_sub_f32_e32 v0, v3, v0
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    v_lshlrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_or_b32_e32 v0, v0, v1
 ; SI-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; VI-LABEL: fadd_select_fneg_fneg_v2f16:

@@ -7179,6 +7179,14 @@ static bool HandleWebAssemblyFuncrefAttr(TypeProcessingState &State,
     return true;
   }
 
+  // Check that the type is a function pointer type.
+  QualType Desugared = QT.getDesugaredType(S.Context);
+  const auto *Ptr = dyn_cast<PointerType>(Desugared);
+  if (!Ptr || !Ptr->getPointeeType()->isFunctionType()) {
+    S.Diag(PAttr.getLoc(), diag::err_attribute_webassembly_funcref);
+    return true;
+  }
+
   // Add address space to type based on its attributes.
   LangAS ASIdx = LangAS::wasm_funcref;
   QualType Pointee = QT->getPointeeType();
@@ -9880,10 +9888,6 @@ static QualType GetEnumUnderlyingType(Sema &S, QualType BaseType,
 
   QualType Underlying = ED->getIntegerType();
   if (Underlying.isNull()) {
-    // This is an enum without a fixed underlying type which we skipped parsing
-    // the body because we saw its definition previously in another module.
-    // Use the definition's integer type in that case.
-    assert(ED->isThisDeclarationADemotedDefinition());
     Underlying = ED->getDefinition()->getIntegerType();
     assert(!Underlying.isNull());
   }
