@@ -253,6 +253,7 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
             self.assertEvaluateFailure("a_function(1)")
             self.assertEvaluateFailure("var2 + struct1.foo")
             self.assertEvaluateFailure("foo_func")
+            self.assertEvaluateFailure("(float) var2")
             self.assertEvaluate("foo_var", "44")
 
         # Expressions at breakpoint 2, which is an anonymous block

@@ -170,8 +170,8 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
     Status status;
     auto valobj_sp = frame->GetValueForVariableExpressionPath(
         expr, eval_options.GetUseDynamic(),
-        StackFrame::eExpressionPathOptionsAllowDirectIVarAccess, var_sp,
-        status);
+        StackFrame::eExpressionPathOptionsAllowDirectIVarAccess, var_sp, status,
+        lldb::eDILModeSimple);
     if (valobj_sp && status.Success() && valobj_sp->GetError().Success()) {
       if (!suppress_result) {
         if (auto persisted_valobj = valobj_sp->Persist())
