@@ -13,6 +13,7 @@
 #include "IncrementalParser.h"
 #include "IncrementalAction.h"
 
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclContextInternals.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Interpreter/PartialTranslationUnit.h"
@@ -20,6 +21,7 @@
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Module.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Error.h"
 
@@ -213,9 +215,10 @@ void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
       if (II && II->getFETokenInfo()) {
         for (auto It = S.IdResolver.begin(II); It != S.IdResolver.end(); ++It) {
           NamedDecl *D = *It;
-          if (D->isImplicit() && isa<FunctionDecl>(D) &&
-              D->getTranslationUnitDecl() == MostRecentTU) {
-            NamedDeclsToRemove.push_back(D);
+          if (D->isImplicit() && D->getTranslationUnitDecl() == MostRecentTU) {
+            if (auto *FD = dyn_cast<FunctionDecl>(D);
+                FD && FD->getBuiltinID() == 0)
+              NamedDeclsToRemove.push_back(D);
           }
         }
       }
