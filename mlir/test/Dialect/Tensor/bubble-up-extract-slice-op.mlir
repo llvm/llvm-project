@@ -190,7 +190,6 @@ func.func @bubble_up_extract_slice_through_collapse_shape_dynamic_size_and_src(%
   return %extract : tensor<?xf32>
 }
 
-
 // CHECK-LABEL:   func.func @bubble_up_extract_slice_through_collapse_shape_dynamic_offset(
 // CHECK-SAME:                       %[[SRC:.*]]: tensor<1x5x1xf32>,
 // CHECK-SAME:                       %[[OFFSET:.*]]: index) -> tensor<3xf32> {
@@ -227,6 +226,163 @@ func.func @bubble_up_extract_slice_through_collapse_shape_dynamic_and_static_gro
   %collapse = tensor.collapse_shape %src [[0, 1], [2, 3, 4]] : tensor<5x10x1x1x40xf32> into tensor<50x40xf32>
   %extract = tensor.extract_slice %collapse[10, %offset][20, %size][1, 1] : tensor<50x40xf32> to tensor<20x?xf32>
   return %extract : tensor<20x?xf32>
+}
+
+// CHECK-LABEL:   func.func @bubble_up_extract_slice_through_collapse_shape_unit_size_dynamic_offset(
+// CHECK-SAME:                      %[[SRC:.*]]: tensor<2x3x10xf32>,
+// CHECK-SAME:                      %[[OFFSET:.*]]: index) -> tensor<1xf32> {
+// CHECK:           %[[DELINEARIZE:.*]]:3 = affine.delinearize_index %[[OFFSET]] into (2, 3, 10)
+// CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice %[[SRC]]{{\[}}%[[DELINEARIZE]]#0, %[[DELINEARIZE]]#1, %[[DELINEARIZE]]#2] [1, 1, 1] [1, 1, 1]
+// CHECK:           %[[COLLAPSE:.*]] = tensor.collapse_shape %[[EXTRACT]] {{\[\[}}0, 1, 2]]
+// CHECK:           return %[[COLLAPSE]]
+func.func @bubble_up_extract_slice_through_collapse_shape_unit_size_dynamic_offset(%src: tensor<2x3x10xf32>, %offset : index) -> tensor<1xf32> {
+  %collapse = tensor.collapse_shape %src [[0, 1, 2]] : tensor<2x3x10xf32> into tensor<60xf32>
+  %extract = tensor.extract_slice %collapse[%offset][1][1] : tensor<60xf32> to tensor<1xf32>
+  return %extract : tensor<1xf32>
+}
+
+// CHECK-LABEL:   func.func @bubble_up_extract_slice_through_collapse_shape_unit_size_dynamic_offset_multi_group(
+// CHECK-SAME:                      %[[SRC:.*]]: tensor<2x3x4x5xf32>,
+// CHECK-SAME:                      %[[OFFSET0:.*]]: index,
+// CHECK-SAME:                      %[[OFFSET1:.*]]: index) -> tensor<1x1xf32> {
+// CHECK-DAG:       %[[DELINEARIZE0:.*]]:2 = affine.delinearize_index %[[OFFSET0]] into (2, 3)
+// CHECK-DAG:       %[[DELINEARIZE1:.*]]:2 = affine.delinearize_index %[[OFFSET1]] into (4, 5)
+// CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice %[[SRC]]{{\[}}%[[DELINEARIZE0]]#0, %[[DELINEARIZE0]]#1, %[[DELINEARIZE1]]#0, %[[DELINEARIZE1]]#1] [1, 1, 1, 1] [1, 1, 1, 1]
+// CHECK:           %[[COLLAPSE:.*]] = tensor.collapse_shape %[[EXTRACT]] {{\[\[}}0, 1], [2, 3]]
+// CHECK:           return %[[COLLAPSE]]
+func.func @bubble_up_extract_slice_through_collapse_shape_unit_size_dynamic_offset_multi_group(%src: tensor<2x3x4x5xf32>, %offset0 : index, %offset1 : index) -> tensor<1x1xf32> {
+  %collapse = tensor.collapse_shape %src [[0, 1], [2, 3]] : tensor<2x3x4x5xf32> into tensor<6x20xf32>
+  %extract = tensor.extract_slice %collapse[%offset0, %offset1][1, 1][1, 1] : tensor<6x20xf32> to tensor<1x1xf32>
+  return %extract : tensor<1x1xf32>
+}
+
+// CHECK-LABEL:   func.func @bubble_up_extract_slice_through_collapse_shape_affine_apply_offset(
+// CHECK-SAME:                      %[[SRC:.*]]: tensor<2x3x10xf32>,
+// CHECK-SAME:                      %[[IDX:.*]]: index) -> tensor<5xf32> {
+// CHECK:           %[[OFFSET:.*]] = affine.apply
+// CHECK:           %[[DELINEARIZE:.*]]:3 = affine.delinearize_index %[[OFFSET]] into (2, 3, 10)
+// CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice %[[SRC]]{{\[}}%[[DELINEARIZE]]#0, %[[DELINEARIZE]]#1, %[[DELINEARIZE]]#2] [1, 1, 5] [1, 1, 1]
+// CHECK:           %[[COLLAPSE:.*]] = tensor.collapse_shape %[[EXTRACT]] {{\[\[}}0, 1, 2]]
+// CHECK:           return %[[COLLAPSE]]
+func.func @bubble_up_extract_slice_through_collapse_shape_affine_apply_offset(%src: tensor<2x3x10xf32>, %idx : index) -> tensor<5xf32> {
+  %collapse = tensor.collapse_shape %src [[0, 1, 2]] : tensor<2x3x10xf32> into tensor<60xf32>
+  %offset = affine.apply affine_map<()[s0] -> (s0 * 5)>()[%idx]
+  %extract = tensor.extract_slice %collapse[%offset][5][1] : tensor<60xf32> to tensor<5xf32>
+  return %extract : tensor<5xf32>
+}
+
+// CHECK-LABEL:   func.func @bubble_up_extract_slice_through_collapse_shape_affine_apply_offset_full_inner_dim(
+// CHECK-SAME:                      %[[SRC:.*]]: tensor<4x5x8xf32>,
+// CHECK-SAME:                      %[[IDX:.*]]: index) -> tensor<8xf32> {
+// CHECK:           %[[OFFSET:.*]] = affine.apply
+// CHECK:           %[[DELINEARIZE:.*]]:3 = affine.delinearize_index %[[OFFSET]] into (4, 5, 8)
+// CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice %[[SRC]]{{\[}}%[[DELINEARIZE]]#0, %[[DELINEARIZE]]#1, %[[DELINEARIZE]]#2] [1, 1, 8] [1, 1, 1]
+// CHECK:           %[[COLLAPSE:.*]] = tensor.collapse_shape %[[EXTRACT]] {{\[\[}}0, 1, 2]]
+// CHECK:           return %[[COLLAPSE]]
+func.func @bubble_up_extract_slice_through_collapse_shape_affine_apply_offset_full_inner_dim(%src: tensor<4x5x8xf32>, %idx : index) -> tensor<8xf32> {
+  %collapse = tensor.collapse_shape %src [[0, 1, 2]] : tensor<4x5x8xf32> into tensor<160xf32>
+  // offset = idx * 8, size = 8, innermost dim = 8, 8 % 8 == 0, should work
+  %offset = affine.apply affine_map<()[s0] -> (s0 * 8)>()[%idx]
+  %extract = tensor.extract_slice %collapse[%offset][8][1] : tensor<160xf32> to tensor<8xf32>
+  return %extract : tensor<8xf32>
+}
+
+// CHECK-LABEL:   func.func @bubble_up_extract_slice_through_collapse_shape_affine_apply_complex_expr(
+// CHECK-SAME:                      %[[SRC:.*]]: tensor<3x4x8xf32>,
+// CHECK-SAME:                      %[[IDX:.*]]: index) -> tensor<4xf32> {
+// CHECK:           %[[OFFSET:.*]] = affine.apply
+// CHECK:           %[[DELINEARIZE:.*]]:3 = affine.delinearize_index %[[OFFSET]] into (3, 4, 8)
+// CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice %[[SRC]]{{\[}}%[[DELINEARIZE]]#0, %[[DELINEARIZE]]#1, %[[DELINEARIZE]]#2] [1, 1, 4] [1, 1, 1]
+// CHECK:           %[[COLLAPSE:.*]] = tensor.collapse_shape %[[EXTRACT]] {{\[\[}}0, 1, 2]]
+// CHECK:           return %[[COLLAPSE]]
+func.func @bubble_up_extract_slice_through_collapse_shape_affine_apply_complex_expr(%src: tensor<3x4x8xf32>, %idx : index) -> tensor<4xf32> {
+  %collapse = tensor.collapse_shape %src [[0, 1, 2]] : tensor<3x4x8xf32> into tensor<96xf32>
+  // offset = idx * 4, size = 4, innermost dim = 8, 8 % 4 == 0, should work
+  %offset = affine.apply affine_map<()[s0] -> (s0 * 4)>()[%idx]
+  %extract = tensor.extract_slice %collapse[%offset][4][1] : tensor<96xf32> to tensor<4xf32>
+  return %extract : tensor<4xf32>
+}
+
+// CHECK-LABEL:   func.func @bubble_up_extract_slice_through_collapse_shape_affine_apply_multi_group(
+// CHECK-SAME:                      %[[SRC:.*]]: tensor<2x3x4x6xf32>,
+// CHECK-SAME:                      %[[IDX0:.*]]: index,
+// CHECK-SAME:                      %[[IDX1:.*]]: index) -> tensor<3x2xf32> {
+// CHECK-DAG:       %[[OFFSET0:.*]] = affine.apply {{.*}}{{\[}}%[[IDX0]]]
+// CHECK-DAG:       %[[OFFSET1:.*]] = affine.apply {{.*}}{{\[}}%[[IDX1]]]
+// CHECK-DAG:       %[[DELINEARIZE0:.*]]:2 = affine.delinearize_index %[[OFFSET0]] into (2, 3)
+// CHECK-DAG:       %[[DELINEARIZE1:.*]]:2 = affine.delinearize_index %[[OFFSET1]] into (4, 6)
+// CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice %[[SRC]]{{\[}}%[[DELINEARIZE0]]#0, %[[DELINEARIZE0]]#1, %[[DELINEARIZE1]]#0, %[[DELINEARIZE1]]#1] [1, 3, 1, 2] [1, 1, 1, 1]
+// CHECK:           %[[COLLAPSE:.*]] = tensor.collapse_shape %[[EXTRACT]] {{\[\[}}0, 1], [2, 3]]
+// CHECK:           return %[[COLLAPSE]]
+func.func @bubble_up_extract_slice_through_collapse_shape_affine_apply_multi_group(%src: tensor<2x3x4x6xf32>, %idx0 : index, %idx1 : index) -> tensor<3x2xf32> {
+  %collapse = tensor.collapse_shape %src [[0, 1], [2, 3]] : tensor<2x3x4x6xf32> into tensor<6x24xf32>
+  // For first group: size=3, innermost=3, 3%3==0, offset=idx0*3, works
+  // For second group: size=2, innermost=6, 6%2==0, offset=idx1*2, works
+  %offset0 = affine.apply affine_map<()[s0] -> (s0 * 3)>()[%idx0]
+  %offset1 = affine.apply affine_map<()[s0] -> (s0 * 2)>()[%idx1]
+  %extract = tensor.extract_slice %collapse[%offset0, %offset1][3, 2][1, 1] : tensor<6x24xf32> to tensor<3x2xf32>
+  return %extract : tensor<3x2xf32>
+}
+
+// CHECK-LABEL:   func.func @bubble_up_extract_slice_through_collapse_shape_affine_apply_nested(
+// CHECK-SAME:                      %[[SRC:.*]]: tensor<2x4x8xf32>,
+// CHECK-SAME:                      %[[IDX:.*]]: index) -> tensor<4xf32> {
+// CHECK:           affine.apply
+// CHECK:           %[[OFFSET:.*]] = affine.apply
+// CHECK:           %[[DELINEARIZE:.*]]:3 = affine.delinearize_index %[[OFFSET]] into (2, 4, 8)
+// CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice %[[SRC]]{{\[}}%[[DELINEARIZE]]#0, %[[DELINEARIZE]]#1, %[[DELINEARIZE]]#2] [1, 1, 4] [1, 1, 1]
+// CHECK:           %[[COLLAPSE:.*]] = tensor.collapse_shape %[[EXTRACT]] {{\[\[}}0, 1, 2]]
+// CHECK:           return %[[COLLAPSE]]
+func.func @bubble_up_extract_slice_through_collapse_shape_affine_apply_nested(%src: tensor<2x4x8xf32>, %idx : index) -> tensor<4xf32> {
+  %collapse = tensor.collapse_shape %src [[0, 1, 2]] : tensor<2x4x8xf32> into tensor<64xf32>
+  // Nested affine.apply: offset = (idx * 2) * 2 = idx * 4, multiple of 4
+  %tmp = affine.apply affine_map<()[s0] -> (s0 * 2)>()[%idx]
+  %offset = affine.apply affine_map<()[s0] -> (s0 * 2)>()[%tmp]
+  %extract = tensor.extract_slice %collapse[%offset][4][1] : tensor<64xf32> to tensor<4xf32>
+  return %extract : tensor<4xf32>
+}
+
+// CHECK-LABEL:   func.func @no_bubble_up_extract_slice_affine_apply_offset_not_multiple(
+// CHECK-SAME:                      %[[SRC:.*]]: tensor<2x3x10xf32>,
+// CHECK-SAME:                      %[[IDX:.*]]: index) -> tensor<4xf32> {
+// CHECK:           %[[COLLAPSE:.*]] = tensor.collapse_shape
+// CHECK:           %[[OFFSET:.*]] = affine.apply
+// CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice
+// CHECK:           return %[[EXTRACT]]
+func.func @no_bubble_up_extract_slice_affine_apply_offset_not_multiple(%src: tensor<2x3x10xf32>, %idx : index) -> tensor<4xf32> {
+  %collapse = tensor.collapse_shape %src [[0, 1, 2]] : tensor<2x3x10xf32> into tensor<60xf32>
+  // offset = idx * 3, but size = 4, 3 is not a multiple of 4
+  %offset = affine.apply affine_map<()[s0] -> (s0 * 3)>()[%idx]
+  %extract = tensor.extract_slice %collapse[%offset][4][1] : tensor<60xf32> to tensor<4xf32>
+  return %extract : tensor<4xf32>
+}
+
+// CHECK-LABEL:   func.func @no_bubble_up_extract_slice_affine_apply_size_not_dividing_inner(
+// CHECK-SAME:                      %[[SRC:.*]]: tensor<2x3x10xf32>,
+// CHECK-SAME:                      %[[IDX:.*]]: index) -> tensor<3xf32> {
+// CHECK:           %[[COLLAPSE:.*]] = tensor.collapse_shape
+// CHECK:           %[[OFFSET:.*]] = affine.apply
+// CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice
+// CHECK:           return %[[EXTRACT]]
+func.func @no_bubble_up_extract_slice_affine_apply_size_not_dividing_inner(%src: tensor<2x3x10xf32>, %idx : index) -> tensor<3xf32> {
+  %collapse = tensor.collapse_shape %src [[0, 1, 2]] : tensor<2x3x10xf32> into tensor<60xf32>
+  // offset = idx * 3 (multiple of 3), but size = 3, innermost = 10, 10 % 3 != 0
+  %offset = affine.apply affine_map<()[s0] -> (s0 * 3)>()[%idx]
+  %extract = tensor.extract_slice %collapse[%offset][3][1] : tensor<60xf32> to tensor<3xf32>
+  return %extract : tensor<3xf32>
+}
+
+// CHECK-LABEL:   func.func @no_bubble_up_extract_slice_dynamic_offset_not_affine_apply(
+// CHECK-SAME:                      %[[SRC:.*]]: tensor<2x3x10xf32>,
+// CHECK-SAME:                      %[[OFFSET:.*]]: index) -> tensor<5xf32> {
+// CHECK:           %[[COLLAPSE:.*]] = tensor.collapse_shape
+// CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice
+// CHECK:           return %[[EXTRACT]]
+func.func @no_bubble_up_extract_slice_dynamic_offset_not_affine_apply(%src: tensor<2x3x10xf32>, %offset : index) -> tensor<5xf32> {
+  %collapse = tensor.collapse_shape %src [[0, 1, 2]] : tensor<2x3x10xf32> into tensor<60xf32>
+  // offset is a plain Value (not from affine.apply), can't prove it's a multiple of 5
+  %extract = tensor.extract_slice %collapse[%offset][5][1] : tensor<60xf32> to tensor<5xf32>
+  return %extract : tensor<5xf32>
 }
 
 /// The 2 following tests are cases where the bubble up cannot occur because the contiguous size extracted 

@@ -579,6 +579,24 @@ LogicalResult mlir::tensor::getCollapsedExtractSliceInfo(
   return success();
 }
 
+// Checks if the `value` is a multiple of the `factor`.
+// Otherwise, returns false.
+// For now we are handling only the case where the value
+// is resulted from an affine.apply op, where affine ops
+// can be lowered to.
+static bool isValueMultipleOf(Value value, int64_t factor) {
+  auto applyOp = value.getDefiningOp<affine::AffineApplyOp>();
+  if (!applyOp)
+    return false;
+  AffineMap map = applyOp.getAffineMap();
+  SmallVector<Value> operands(applyOp.getOperands());
+  affine::fullyComposeAffineMapAndOperands(&map, &operands);
+  map = simplifyAffineMap(map);
+  if (map.getNumResults() != 1)
+    return false;
+  return map.getResult(0).isMultipleOf(factor);
+}
+
 LogicalResult mlir::tensor::getExpandedExtractSliceInfo(
     OpBuilder &b, tensor::ExtractSliceOp sliceOp,
     ArrayRef<ReassociationIndices> reassociation,
@@ -610,26 +628,103 @@ LogicalResult mlir::tensor::getExpandedExtractSliceInfo(
   for (auto [collapsedSize, collapsedOffset, reassocIndices] :
        llvm::zip_equal(collapsedSizes, collapsedOffsets, reassociation)) {
     // CASE #1 - size and/or offset are dynamic.
-    // In this case, the slice can be represented as a contiguous slice only
-    // if there is a single dimension in the reassociation group that has a
-    // size not equal to 1.
     if (isa<Value>(collapsedSize) || isa<Value>(collapsedOffset)) {
+      // When the size is dynamic, We will handle a simple case where there
+      // is a single dimension in the reassociation group that has a size
+      // not equal to 1, which guarantees it is a contiguous slice.
       int nonUnitSizeCount = 0;
+      SmallVector<OpFoldResult> tentativeSizes, tentativeOffsets;
       for (int64_t expandedShapeIdx : reassocIndices) {
         if (expandedShape[expandedShapeIdx] != 1) {
           nonUnitSizeCount++;
-          expandedSizes.push_back(collapsedSize);
-          expandedOffsets.push_back(collapsedOffset);
+          tentativeSizes.push_back(collapsedSize);
+          tentativeOffsets.push_back(collapsedOffset);
           continue;
         }
 
-        expandedSizes.push_back(b.getIndexAttr(1));
-        expandedOffsets.push_back(b.getIndexAttr(0));
+        tentativeSizes.push_back(b.getIndexAttr(1));
+        tentativeOffsets.push_back(b.getIndexAttr(0));
       }
 
-      if (nonUnitSizeCount != 1) {
-        return failure();
+      if (nonUnitSizeCount == 1) {
+        // Only one non-unit dimension, slice is contiguous.
+        expandedSizes.append(tentativeSizes);
+        expandedOffsets.append(tentativeOffsets);
+        continue;
       }
+
+      std::optional<int64_t> staticSize = getConstantIntValue(collapsedSize);
+      if (!staticSize.has_value())
+        return failure();
+
+      // If the size is statically 1, it means we're extracting a
+      // single element. In this case, we can always handle this by
+      // delinearizing the dynamic offset and get a contiguous slice.
+      if (staticSize.value() == 1) {
+        SmallVector<int64_t> basis;
+        for (int64_t expandedShapeIdx : reassocIndices) {
+          expandedSizes.push_back(b.getIndexAttr(1));
+          basis.push_back(expandedShape[expandedShapeIdx]);
+        }
+
+        Value offsetVal = getValueOrCreateConstantIndexOp(b, sliceOp.getLoc(),
+                                                          collapsedOffset);
+        auto delinearizeOp = affine::AffineDelinearizeIndexOp::create(
+            b, sliceOp.getLoc(), offsetVal, basis, /*hasOuterBound=*/true);
+        for (auto result : delinearizeOp.getResults())
+          expandedOffsets.push_back(result);
+
+        continue;
+      }
+
+      // If the size is greater than 1, we will take a more
+      // restrictive case where both the offset and the innermost
+      // expanded dimension are divisible by the size.
+      //
+      // Example:
+      //   collapse_shape tensor<6x10xf32> -> tensor<60xf32>
+      //   extract_slice at offset_a with some size_b.
+      //
+      // Contiguity is guaranteed when:
+      //   1. innermost dim (10) % size_b == 0 i.e.
+      //      the slice fits within a single row.
+      //   2. offset_a is multiple of size_b i.e.
+      //      the slice starts at row-aligned boundary.
+      //
+      // Result: delinearize offset_a -> [row, col], extract [1, size_b]
+      //         from expanded shape.
+      assert(staticSize.value() > 1 && "Expected size to be greater than 1");
+      int64_t sizeVal = staticSize.value();
+      int64_t innermostDim = expandedShape[reassocIndices.back()];
+
+      // Only try this path if offset is from affine.apply
+      Value offsetVal = cast<Value>(collapsedOffset);
+      if (!offsetVal.getDefiningOp<affine::AffineApplyOp>())
+        return failure();
+
+      if (innermostDim % sizeVal != 0)
+        return failure();
+
+      if (!isValueMultipleOf(offsetVal, sizeVal))
+        return failure();
+
+      SmallVector<int64_t> basis;
+      for (int64_t expandedShapeIdx : reassocIndices)
+        basis.push_back(expandedShape[expandedShapeIdx]);
+
+      auto delinearizeOp = affine::AffineDelinearizeIndexOp::create(
+          b, sliceOp.getLoc(), offsetVal, basis, /*hasOuterBound=*/true);
+
+      // Sizes: [1, 1, ..., 1, sizeVal] - size goes on innermost dimension.
+      for (size_t i = 0; i < reassocIndices.size() - 1; ++i)
+        expandedSizes.push_back(b.getIndexAttr(1));
+
+      expandedSizes.push_back(collapsedSize);
+
+      // Offsets from delinearization.
+      for (auto result : delinearizeOp.getResults())
+        expandedOffsets.push_back(result);
+
       continue;
     }
 
