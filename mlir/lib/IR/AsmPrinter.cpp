@@ -4159,7 +4159,7 @@ void Operation::print(raw_ostream &os, const OpPrintingFlags &printerFlags) {
 }
 void Operation::print(raw_ostream &os, AsmState &state) {
   OperationPrinter printer(os, state.getImpl());
-  if (!getParent() && !state.getPrinterFlags().shouldUseLocalScope()) {
+  if (!state.getPrinterFlags().shouldUseLocalScope()) {
     state.getImpl().initializeAliases(this);
     printer.printTopLevelOperation(this);
   } else {
