@@ -457,6 +457,14 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP AND BUILTIN_SUPPORTED_ARCH MATCHES "arm")
       arm/unorddf2.S
       arm/unordsf2.S
       arm/extendsfdf2.S
+      arm/fixdfdi.S
+      arm/fixdfsi.S
+      arm/fixsfdi.S
+      arm/fixsfsi.S
+      arm/fixunsdfdi.S
+      arm/fixunsdfsi.S
+      arm/fixunssfdi.S
+      arm/fixunssfsi.S
       arm/truncdfsf2.S
       )
     set_source_files_properties(${assembly_files}
