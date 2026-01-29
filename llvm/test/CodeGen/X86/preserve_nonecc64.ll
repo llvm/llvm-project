@@ -10,10 +10,12 @@
 define preserve_nonecc RETTYPE @preserve_nonecc1(i64, i64, double, double) nounwind {
 entry:
 ;ALL-LABEL:   preserve_nonecc1
-;ALL:         pushq %rbp
+;ALL:         pushq %rbx
+;ALL-NEXT:    pushq %rbp
 ;ALL-NEXT:    InlineAsm Start
 ;ALL-NEXT:    InlineAsm End
 ;ALL-NEXT:    popq %rbp
+;ALL-NEXT:    popq %rbx
 ;ALL-NEXT:    retq
   call void asm sideeffect "", "~{rax},~{rbx},~{rcx},~{rdx},~{rsi},~{rdi},~{r8},~{r9},~{r10},~{r11},~{r12},~{r13},~{r14},~{r15},~{rbp},~{xmm0},~{xmm1},~{xmm2},~{xmm3},~{xmm4},~{xmm5},~{xmm6},~{xmm7},~{xmm8},~{xmm9},~{xmm10},~{xmm11},~{xmm12},~{xmm13},~{xmm14},~{xmm15}"()
   ret RETTYPE RETVAL
