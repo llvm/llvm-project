@@ -277,6 +277,14 @@ define void @section_func() section ".section.name" {
 
 // -----
 
+; CHECK-LABEL: @partition_func
+; CHECK-SAME: attributes {partition = "part1"}
+define void @partition_func() partition "part1" {
+  ret void
+}
+
+// -----
+
 ; CHECK-LABEL: local_unnamed_addr @local_unnamed_addr_func
 define void @local_unnamed_addr_func() local_unnamed_addr {
   ret void

@@ -174,6 +174,14 @@
 
 ; // -----
 
+; partition attribute.
+
+; CHECK:  llvm.mlir.global internal constant @partitionvar("hello world")
+; CHECK-SAME:  {addr_space = 0 : i32, dso_local, partition = "part1"}
+@partitionvar = internal constant [11 x i8] c"hello world", partition "part1"
+
+; // -----
+
 ; Sequential constants.
 
 ; CHECK:  llvm.mlir.global internal constant @vector_constant

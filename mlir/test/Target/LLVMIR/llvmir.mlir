@@ -196,6 +196,13 @@ llvm.mlir.global thread_local @has_thr_local(42 : i64) : i64
 llvm.mlir.global internal constant @sectionvar("teststring")  {section = ".mysection"}: !llvm.array<10 x i8>
 
 //
+// Partition attribute.
+//
+
+// CHECK: @partitionvar = internal constant [10 x i8] c"teststring", partition "part1"
+llvm.mlir.global internal constant @partitionvar("teststring")  {partition = "part1"}: !llvm.array<10 x i8>
+
+//
 // Declarations of the allocation functions to be linked against. These are
 // inserted before other functions in the module.
 //
@@ -1717,6 +1724,14 @@ llvm.func @gc_decl() attributes { garbageCollector = "statepoint-example" }
 // CHECK-LABEL: @section_func
 // CHECK-SAME: section ".section.name"
 llvm.func @section_func() attributes { section = ".section.name" } {
+    llvm.return
+}
+
+// -----
+
+// CHECK-LABEL: @partition_func
+// CHECK-SAME: partition "part1"
+llvm.func @partition_func() attributes { partition = "part1" } {
     llvm.return
 }
 
