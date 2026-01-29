@@ -272,14 +272,14 @@ static cl::opt<unsigned> SkipRegionNumInstrsThreshold(
     "misched-skip-region-num-instrs-threshold", cl::Hidden,
     cl::desc("The minimum number of instructions in a region before it is "
              "considered as a candidate to skip in case of excessive register "
-             "pressures. 0 disables."),
+             "pressure. 0 disables."),
     cl::init(0));
 
 static cl::opt<unsigned> SkipRegionRegisterPressureThreshold(
     "misched-skip-region-reg-pressure-threshold", cl::Hidden,
     cl::desc("The minimum number of critical register pressure sets in a "
              "region before it is considered as a candidate to skip in case of "
-             "excessive register pressures. 0 disables."),
+             "excessive register pressure. 0 disables."),
     cl::init(0));
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
