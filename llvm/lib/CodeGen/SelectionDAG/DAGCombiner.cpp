@@ -14669,7 +14669,7 @@ static SDValue tryToFoldExtOfLoad(SelectionDAG &DAG, DAGCombiner &Combiner,
 
   SDLoc DL(Load);
   // If the load value is used only by N, replace it via CombineTo N.
-  bool NoReplaceTrunc = Frozen ? Freeze->hasOneUse() : Load->hasOneUse();
+  bool NoReplaceTrunc = N0.hasOneUse();
   SDValue ExtLoad =
       DAG.getExtLoad(ExtLoadType, DL, VT, Load->getChain(), Load->getBasePtr(),
                      Load->getValueType(0), Load->getMemOperand());
