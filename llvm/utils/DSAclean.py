@@ -7,7 +7,7 @@
 #%tmp.#, i.e. it now will remove %tmp.12.3.15 etc, additionally fixed a spelling error in
 # the comments
 # 10/12/2005: now it only removes nodes and edges for which the label is %tmp.# rather
-# than removing all lines for which the lable CONTAINS %tmp.#
+# than removing all lines for which the label CONTAINS %tmp.#
 
 from __future__ import print_function
 
