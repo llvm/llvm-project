@@ -946,7 +946,7 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       OS << ", ";
     OS << Slot << ',';
     if (!OmitComments)
-      OS << " // #" << CTTM->getResultNo();
+      OS << " // #" << CTTM->getResultNo() << " = ConvertToTarget #" << Slot;
     OS << '\n';
     return 1 + (Slot >= 8);
   }
@@ -975,19 +975,22 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
     if (Reg->EnumValue > 255) {
       assert(isUInt<16>(Reg->EnumValue) && "not handled");
       OS << "OPC_EmitCopyToRegTwoByte, " << Slot << ", "
-         << "TARGET_VAL(" << getQualifiedName(Reg->TheDef) << "),\n";
+         << "TARGET_VAL(" << getQualifiedName(Reg->TheDef) << "),";
       ++Bytes;
     } else {
       if (Slot < 8) {
         OS << "OPC_EmitCopyToReg" << Slot << ", "
-           << getQualifiedName(Reg->TheDef) << ",\n";
+           << getQualifiedName(Reg->TheDef) << ",";
         --Bytes;
       } else {
         OS << "OPC_EmitCopyToReg, " << Slot << ", "
-           << getQualifiedName(Reg->TheDef) << ",\n";
+           << getQualifiedName(Reg->TheDef) << ",";
       }
     }
+    if (!OmitComments)
+      OS << " // = #" << Slot;
 
+    OS << '\n';
     return Bytes;
   }
   case Matcher::EmitNodeXForm: {
@@ -995,8 +998,8 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
     OS << "OPC_EmitNodeXForm, " << getNodeXFormID(XF->getNodeXForm()) << ", "
        << XF->getSlot() << ',';
     if (!OmitComments)
-      OS << " // " << XF->getNodeXForm()->getName() << " #"
-         << XF->getResultNo();
+      OS << " // #" << XF->getResultNo() << " = "
+         << XF->getNodeXForm()->getName() << " #" << XF->getSlot();
     OS << '\n';
     return 3;
   }
