@@ -47,6 +47,7 @@ FunctionPass *createSIWholeQuadModeLegacyPass();
 FunctionPass *createSIFixControlFlowLiveIntervalsPass();
 FunctionPass *createSIOptimizeExecMaskingPreRAPass();
 FunctionPass *createSIOptimizeVGPRLiveRangeLegacyPass();
+FunctionPass *createAMDGPUNextUseAnalysisPass();
 FunctionPass *createSIFixSGPRCopiesLegacyPass();
 FunctionPass *createLowerWWMCopiesPass();
 FunctionPass *createSIMemoryLegalizerPass();
@@ -192,6 +193,9 @@ extern char &SIFixSGPRCopiesLegacyID;
 
 void initializeSIFixVGPRCopiesLegacyPass(PassRegistry &);
 extern char &SIFixVGPRCopiesID;
+
+void initializeAMDGPUNextUseAnalysisPassPass(PassRegistry &);
+extern char &AMDGPUNextUseAnalysisID;
 
 void initializeSILowerWWMCopiesLegacyPass(PassRegistry &);
 extern char &SILowerWWMCopiesLegacyID;
