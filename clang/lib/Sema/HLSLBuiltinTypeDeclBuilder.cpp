@@ -430,7 +430,7 @@ Expr *BuiltinTypeMethodBuilder::convertPlaceholder(LocalVar &Var) {
 Expr *BuiltinTypeMethodBuilder::convertPlaceholder(QualType Ty) {
   ASTContext &AST = DeclBuilder.SemaRef.getASTContext();
   QualType PtrTy = AST.getPointerType(Ty);
-  // Creates `Ty*()`, a value-initialized null pointer of type Ty*.
+  // Creates a value-initialized null pointer of type Ty*.
   return new (AST) CXXScalarValueInitExpr(
       PtrTy, AST.getTrivialTypeSourceInfo(PtrTy, SourceLocation()),
       SourceLocation());
