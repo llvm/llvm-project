@@ -14592,7 +14592,9 @@ static SDValue tryToFoldExtOfExtload(SelectionDAG &DAG, DAGCombiner &Combiner,
                                      const TargetLowering &TLI, EVT VT,
                                      bool LegalOperations, SDNode *N,
                                      SDValue N0, ISD::LoadExtType ExtLoadType) {
-  auto OldExtLoad = dyn_cast<LoadSDNode>(N0.getNode());
+  bool Frozen = N0.getOpcode() == ISD::FREEZE;
+  auto OldExtLoad =
+      dyn_cast<LoadSDNode>(Frozen ? N0.getOperand(0).getNode() : N0.getNode());
   if (!OldExtLoad)
     return SDValue();
 
@@ -14600,7 +14602,7 @@ static SDValue tryToFoldExtOfExtload(SelectionDAG &DAG, DAGCombiner &Combiner,
                         ? ISD::isSEXTLoad(OldExtLoad)
                         : ISD::isZEXTLoad(OldExtLoad);
   if ((!isAExtLoad && !ISD::isEXTLoad(OldExtLoad)) ||
-      !ISD::isUNINDEXEDLoad(OldExtLoad) || !N0.hasOneUse())
+      !ISD::isUNINDEXEDLoad(OldExtLoad) || !OldExtLoad->hasNUsesOfValue(1, 0))
     return SDValue();
 
   EVT MemVT = OldExtLoad->getMemoryVT();
@@ -14612,10 +14614,18 @@ static SDValue tryToFoldExtOfExtload(SelectionDAG &DAG, DAGCombiner &Combiner,
   SDValue ExtLoad = DAG.getExtLoad(ExtLoadType, DL, VT, OldExtLoad->getChain(),
                                    OldExtLoad->getBasePtr(), MemVT,
                                    OldExtLoad->getMemOperand());
-  Combiner.CombineTo(N, ExtLoad);
+  SDValue Res = ExtLoad;
+  if (Frozen) {
+    Res = DAG.getFreeze(ExtLoad);
+    Res = DAG.getNode(
+        ExtLoadType == ISD::SEXTLOAD ? ISD::AssertSext : ISD::AssertZext, DL,
+        Res.getValueType(), Res,
+        DAG.getValueType(OldExtLoad->getValueType(0).getScalarType()));
+  }
+  Combiner.CombineTo(N, Res);
   DAG.ReplaceAllUsesOfValueWith(SDValue(OldExtLoad, 1), ExtLoad.getValue(1));
-  if (OldExtLoad->use_empty())
-    Combiner.recursivelyDeleteUnusedNodes(OldExtLoad);
+  if (N0->use_empty())
+    Combiner.recursivelyDeleteUnusedNodes(N0.getNode());
   return SDValue(N, 0); // Return N so it doesn't get rechecked!
 }
 
