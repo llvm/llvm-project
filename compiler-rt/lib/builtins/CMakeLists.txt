@@ -456,6 +456,8 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP AND BUILTIN_SUPPORTED_ARCH MATCHES "arm")
       arm/gesf2.S
       arm/unorddf2.S
       arm/unordsf2.S
+      arm/extendsfdf2.S
+      arm/truncdfsf2.S
       )
     set_source_files_properties(${assembly_files}
       PROPERTIES COMPILE_OPTIONS ${implicit_it_flag})
