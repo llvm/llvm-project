@@ -7,6 +7,8 @@
 // RUN: yaml2obj %S/Inputs/branch-templates-single.yaml -o %t.o
 // RUN: llvm-profdata merge %S/Inputs/branch-templates-single.proftext -o %t.profdata
 // RUN: llvm-cov show --show-expansions --show-branches=count %t.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs | FileCheck %S/Inputs/branch-templates.cpp
+// RUN: llvm-cov report --show-branch-summary %t.o -instr-profile %t.profdata -show-functions -path-equivalence=.,%S/Inputs %S/Inputs/branch-templates.cpp | FileCheck %s -check-prefix=REPORT
+// RUN: llvm-cov report --show-branch-summary %t.o -instr-profile %t.profdata -path-equivalence=.,%S/Inputs | FileCheck %s -check-prefix=REPORTFILE
 
 // REPORT:      Name                        Regions    Miss   Cover     Lines    Miss   Cover  Branches    Miss   Cover
 // REPORT-NEXT: ---
