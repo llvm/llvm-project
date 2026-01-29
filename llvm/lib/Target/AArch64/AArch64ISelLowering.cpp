@@ -6027,6 +6027,43 @@ static SDValue optimizeIncrementingWhile(SDNode *N, SelectionDAG &DAG,
   return SDValue();
 }
 
+// Match active.lane.mask(cttz.elts(x)) -> brkb(x)
+// Match active.lane.mask(add(cttz.elts(x), 1)) -> brka(x)
+static SDValue optimizeBrk(SDNode *N, SelectionDAG &DAG) {
+  EVT VT = N->getValueType(0);
+
+  // TODO: Do we need to do anything for fixed types post legalization?
+  if (!VT.isScalableVT())
+    return SDValue();
+
+  SDValue Op = N->getOperand(1);
+
+  // Default to brkb, switch to brka if we find a +1.
+  unsigned BrkID = Intrinsic::aarch64_sve_brkb_z;
+  if (Op->getOpcode() == ISD::ADD && isOneOrOneSplat(Op.getOperand(1))) {
+    Op = Op.getOperand(0);
+    BrkID = Intrinsic::aarch64_sve_brka_z;
+  }
+
+  if (Op.getOpcode() == AArch64ISD::CTTZ_ELTS) {
+    SDValue Mask = Op->getOperand(0);
+    SDLoc DL(N);
+    SDValue PTrue = getPTrue(DAG, DL, VT, AArch64SVEPredPattern::all);
+
+    // brk{a,b} only support .b forms, so reinterpret to make sure all our
+    // p regs will match.
+    PTrue = DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, MVT::nxv16i1, PTrue);
+    SDValue MaskR =
+        DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, MVT::nxv16i1, Mask);
+    SDValue ID = DAG.getTargetConstant(BrkID, DL, MVT::i64);
+    SDValue Brk = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, MVT::nxv16i1, ID,
+                              PTrue, MaskR);
+    return DAG.getNode(AArch64ISD::REINTERPRET_CAST, DL, VT, Brk);
+  }
+
+  return SDValue();
+}
+
 // Returns a safe bitcast between two scalable vector predicates, where
 // any newly created lanes from a widening bitcast are defined as zero.
 static SDValue getSVEPredicateBitCast(EVT VT, SDValue Op, SelectionDAG &DAG) {
@@ -19470,6 +19507,9 @@ performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                              const AArch64Subtarget *ST) {
   if (DCI.isBeforeLegalize())
     return SDValue();
+
+  if (SDValue Brk = optimizeBrk(N, DCI.DAG))
+    return Brk;
 
   if (SDValue While = optimizeIncrementingWhile(N, DCI.DAG, /*IsSigned=*/false,
                                                 /*IsEqual=*/false))

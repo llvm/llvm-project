@@ -7,8 +7,6 @@ define <vscale x 16 x i1> @mask_exclude_active_nxv16(<vscale x 16 x i1> %mask.in
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
-; CHECK-NEXT:    cntp x8, p0, p0.b
-; CHECK-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-NEXT:    ret
   %tz.elts = call i64 @llvm.experimental.cttz.elts.i64.nxv16i1(<vscale x 16 x i1> %mask.in, i1 false)
   %mask.out = call <vscale x 16 x i1> @llvm.get.active.lane.mask.nxv16i1.i64(i64 0, i64 %tz.elts)
@@ -20,8 +18,6 @@ define <vscale x 8 x i1> @mask_exclude_active_nxv8(<vscale x 8 x i1> %mask.in) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.h
 ; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
-; CHECK-NEXT:    cntp x8, p0, p0.h
-; CHECK-NEXT:    whilelo p0.h, xzr, x8
 ; CHECK-NEXT:    ret
   %tz.elts = call i64 @llvm.experimental.cttz.elts.i64.nxv8i1(<vscale x 8 x i1> %mask.in, i1 false)
   %mask.out = call <vscale x 8 x i1> @llvm.get.active.lane.mask.nxv8i1.i64(i64 0, i64 %tz.elts)
@@ -33,8 +29,6 @@ define <vscale x 4 x i1> @mask_exclude_active_nxv4(<vscale x 4 x i1> %mask.in) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
-; CHECK-NEXT:    cntp x8, p0, p0.s
-; CHECK-NEXT:    whilelo p0.s, xzr, x8
 ; CHECK-NEXT:    ret
   %tz.elts = call i64 @llvm.experimental.cttz.elts.i64.nxv4i1(<vscale x 4 x i1> %mask.in, i1 false)
   %mask.out = call <vscale x 4 x i1> @llvm.get.active.lane.mask.nxv4i1.i64(i64 0, i64 %tz.elts)
@@ -46,8 +40,6 @@ define <vscale x 2 x i1> @mask_exclude_active_nxv2(<vscale x 2 x i1> %mask.in) {
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.d
 ; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
-; CHECK-NEXT:    cntp x8, p0, p0.d
-; CHECK-NEXT:    whilelo p0.d, xzr, x8
 ; CHECK-NEXT:    ret
   %tz.elts = call i64 @llvm.experimental.cttz.elts.i64.nxv2i1(<vscale x 2 x i1> %mask.in, i1 false)
   %mask.out = call <vscale x 2 x i1> @llvm.get.active.lane.mask.nxv2i1.i64(i64 0, i64 %tz.elts)
@@ -58,10 +50,7 @@ define <vscale x 16 x i1> @mask_include_active_nxv16(<vscale x 16 x i1> %mask.in
 ; CHECK-LABEL: mask_include_active_nxv16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.b
-; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
-; CHECK-NEXT:    cntp x8, p0, p0.b
-; CHECK-NEXT:    add x8, x8, #1
-; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    brka p0.b, p1/z, p0.b
 ; CHECK-NEXT:    ret
   %tz.elts = call i64 @llvm.experimental.cttz.elts.i64.nxv16i1(<vscale x 16 x i1> %mask.in, i1 false)
   %inc = add i64 %tz.elts, 1
@@ -73,10 +62,7 @@ define <vscale x 8 x i1> @mask_include_active_nxv8(<vscale x 8 x i1> %mask.in) {
 ; CHECK-LABEL: mask_include_active_nxv8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.h
-; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
-; CHECK-NEXT:    cntp x8, p0, p0.h
-; CHECK-NEXT:    add x8, x8, #1
-; CHECK-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-NEXT:    brka p0.b, p1/z, p0.b
 ; CHECK-NEXT:    ret
   %tz.elts = call i64 @llvm.experimental.cttz.elts.i64.nxv8i1(<vscale x 8 x i1> %mask.in, i1 false)
   %inc = add i64 %tz.elts, 1
@@ -88,10 +74,7 @@ define <vscale x 4 x i1> @mask_include_active_nxv4(<vscale x 4 x i1> %mask.in) {
 ; CHECK-LABEL: mask_include_active_nxv4:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.s
-; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
-; CHECK-NEXT:    cntp x8, p0, p0.s
-; CHECK-NEXT:    add x8, x8, #1
-; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    brka p0.b, p1/z, p0.b
 ; CHECK-NEXT:    ret
   %tz.elts = call i64 @llvm.experimental.cttz.elts.i64.nxv4i1(<vscale x 4 x i1> %mask.in, i1 false)
   %inc = add i64 %tz.elts, 1
@@ -103,10 +86,7 @@ define <vscale x 2 x i1> @mask_include_active_nxv2(<vscale x 2 x i1> %mask.in) {
 ; CHECK-LABEL: mask_include_active_nxv2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    ptrue p1.d
-; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
-; CHECK-NEXT:    cntp x8, p0, p0.d
-; CHECK-NEXT:    add x8, x8, #1
-; CHECK-NEXT:    whilelo p0.d, xzr, x8
+; CHECK-NEXT:    brka p0.b, p1/z, p0.b
 ; CHECK-NEXT:    ret
   %tz.elts = call i64 @llvm.experimental.cttz.elts.i64.nxv2i1(<vscale x 2 x i1> %mask.in, i1 false)
   %inc = add i64 %tz.elts, 1
@@ -123,8 +103,6 @@ define <16 x i1> @mask_exclude_active_v16(<16 x i1> %mask.in) {
 ; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, #0
 ; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
-; CHECK-NEXT:    cntp x8, p0, p0.b
-; CHECK-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -141,8 +119,6 @@ define <8 x i1> @mask_exclude_active_v8(<8 x i1> %mask.in) {
 ; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, #0
 ; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
-; CHECK-NEXT:    cntp x8, p0, p0.b
-; CHECK-NEXT:    whilelo p0.b, xzr, x8
 ; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -159,8 +135,6 @@ define <4 x i1> @mask_exclude_active_v4(<4 x i1> %mask.in) {
 ; CHECK-NEXT:    ptrue p1.h
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
 ; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
-; CHECK-NEXT:    cntp x8, p0, p0.h
-; CHECK-NEXT:    whilelo p0.h, xzr, x8
 ; CHECK-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -177,8 +151,6 @@ define <2 x i1> @mask_exclude_active_v2(<2 x i1> %mask.in) {
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
 ; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
-; CHECK-NEXT:    cntp x8, p0, p0.s
-; CHECK-NEXT:    whilelo p0.s, xzr, x8
 ; CHECK-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -194,10 +166,7 @@ define <16 x i1> @mask_include_active_v16(<16 x i1> %mask.in) {
 ; CHECK-NEXT:    ptrue p0.b, vl16
 ; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, #0
-; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
-; CHECK-NEXT:    cntp x8, p0, p0.b
-; CHECK-NEXT:    add x8, x8, #1
-; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    brka p0.b, p1/z, p0.b
 ; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
@@ -214,10 +183,7 @@ define <8 x i1> @mask_include_active_v8(<8 x i1> %mask.in) {
 ; CHECK-NEXT:    ptrue p0.b, vl8
 ; CHECK-NEXT:    ptrue p1.b
 ; CHECK-NEXT:    cmpne p0.b, p0/z, z0.b, #0
-; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
-; CHECK-NEXT:    cntp x8, p0, p0.b
-; CHECK-NEXT:    add x8, x8, #1
-; CHECK-NEXT:    whilelo p0.b, xzr, x8
+; CHECK-NEXT:    brka p0.b, p1/z, p0.b
 ; CHECK-NEXT:    mov z0.b, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -234,10 +200,7 @@ define <4 x i1> @mask_include_active_v4(<4 x i1> %mask.in) {
 ; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    ptrue p1.h
 ; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
-; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
-; CHECK-NEXT:    cntp x8, p0, p0.h
-; CHECK-NEXT:    add x8, x8, #1
-; CHECK-NEXT:    whilelo p0.h, xzr, x8
+; CHECK-NEXT:    brka p0.b, p1/z, p0.b
 ; CHECK-NEXT:    mov z0.h, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
@@ -254,10 +217,7 @@ define <2 x i1> @mask_include_active_v2(<2 x i1> %mask.in) {
 ; CHECK-NEXT:    ptrue p0.s, vl2
 ; CHECK-NEXT:    ptrue p1.s
 ; CHECK-NEXT:    cmpne p0.s, p0/z, z0.s, #0
-; CHECK-NEXT:    brkb p0.b, p1/z, p0.b
-; CHECK-NEXT:    cntp x8, p0, p0.s
-; CHECK-NEXT:    add x8, x8, #1
-; CHECK-NEXT:    whilelo p0.s, xzr, x8
+; CHECK-NEXT:    brka p0.b, p1/z, p0.b
 ; CHECK-NEXT:    mov z0.s, p0/z, #-1 // =0xffffffffffffffff
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $z0
 ; CHECK-NEXT:    ret
