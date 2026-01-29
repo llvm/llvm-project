@@ -10,6 +10,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AArch64ExpandImm.h"
 #include "AArch64InstrInfo.h"
 #include "AArch64MCSymbolizer.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
@@ -2602,14 +2603,86 @@ public:
 
   InstructionListType createLoadImmediate(const MCPhysReg Dest,
                                           uint64_t Imm) const override {
-    InstructionListType Insts(4);
-    int Shift = 48;
-    for (int I = 0; I < 4; I++, Shift -= 16) {
-      Insts[I].setOpcode(AArch64::MOVKXi);
-      Insts[I].addOperand(MCOperand::createReg(Dest));
-      Insts[I].addOperand(MCOperand::createReg(Dest));
-      Insts[I].addOperand(MCOperand::createImm((Imm >> Shift) & 0xFFFF));
-      Insts[I].addOperand(MCOperand::createImm(Shift));
+    const MCRegisterClass RC = RegInfo->getRegClass(Dest);
+    unsigned BitSize = RC.getSizeInBits();
+    InstructionListType Insts;
+    SmallVector<AArch64_IMM::ImmInsnModel, 4> IIMs;
+    AArch64_IMM::expandMOVImm(Imm, BitSize, IIMs);
+    assert(IIMs.size() != 0);
+    for (auto I = IIMs.begin(), E = IIMs.end(); I != E; ++I) {
+      switch (I->Opcode) {
+      default:
+        llvm_unreachable("unhandled!");
+        break;
+
+      // ORR <Wd>, <Wn>, #<imm>
+      // ORR <Xd>, <Xn>, #<imm>
+      case AArch64::ORRWri:
+      case AArch64::ORRXri:
+        if (I->Op1 == 0) {
+          MCInst Inst = MCInstBuilder(I->Opcode)
+                            .addReg(Dest)
+                            .addReg(BitSize == 32 ? AArch64::WZR : AArch64::XZR)
+                            .addImm(I->Op2);
+          Insts.push_back(Inst);
+        } else {
+          MCInst Inst =
+              MCInstBuilder(I->Opcode).addReg(Dest).addReg(Dest).addImm(I->Op2);
+          Insts.push_back(Inst);
+        }
+        break;
+      // ORR <Wd>, <Wn>, <Wm>, <shift> #<amount>
+      // ORR <Xd>, <Xn>, <Xm>, <shift> #<amount>
+      case AArch64::ORRWrs:
+      case AArch64::ORRXrs: {
+        MCInst Inst = MCInstBuilder(I->Opcode)
+                          .addReg(Dest)
+                          .addReg(Dest)
+                          .addReg(Dest)
+                          .addImm(I->Op1) // Shift type
+                          .addImm(I->Op2);
+        Insts.push_back(Inst);
+      } break;
+      // AND Xd, Xn, #imm
+      // EOR Xd, Xn, #imm
+      case AArch64::ANDXri:
+      case AArch64::EORXri:
+        if (I->Op1 == 0) {
+          MCInst Inst = MCInstBuilder(I->Opcode)
+                            .addReg(Dest)
+                            .addReg(BitSize == 32 ? AArch64::WZR : AArch64::XZR)
+                            .addImm(I->Op2);
+          Insts.push_back(Inst);
+        } else {
+          MCInst Inst =
+              MCInstBuilder(I->Opcode).addReg(Dest).addReg(Dest).addImm(I->Op2);
+          Insts.push_back(Inst);
+        }
+        break;
+      // MOVZ Wd, #imm16, LSL #shift
+      // MOVZ Xd, #imm16, LSL #shift
+      // MOVN Wd, #imm16, LSL #shift
+      // MOVN Xd, #imm16, LSL #shift
+      case AArch64::MOVNWi:
+      case AArch64::MOVNXi:
+      case AArch64::MOVZWi:
+      case AArch64::MOVZXi: {
+        MCInst Inst =
+            MCInstBuilder(I->Opcode).addReg(Dest).addImm(I->Op1).addImm(I->Op2);
+        Insts.push_back(Inst);
+      } break;
+      // MOVK Wd, #imm16, LSL #shift
+      // MOVK Xd, #imm16, LSL #shift
+      case AArch64::MOVKWi:
+      case AArch64::MOVKXi: {
+        MCInst Inst = MCInstBuilder(I->Opcode)
+                          .addReg(Dest)
+                          .addReg(Dest)
+                          .addImm(I->Op1)
+                          .addImm(I->Op2);
+        Insts.push_back(Inst);
+      } break;
+      }
     }
     return Insts;
   }

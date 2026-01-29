@@ -7,7 +7,9 @@
 //===----------------------------------------------------------------------===//
 
 #ifdef AARCH64_AVAILABLE
+#include "AArch64.h"
 #include "AArch64Subtarget.h"
+#include "MCTargetDesc/AArch64AddressingModes.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
 #endif // AARCH64_AVAILABLE
 
@@ -352,6 +354,109 @@ TEST_P(MCPlusBuilderTester, AArch64_CmpJNE) {
   ASSERT_EQ(II->getOperand(0).getImm(), AArch64CC::NE);
   const MCSymbol *Label = BC->MIB->getTargetSymbol(*II, 1);
   ASSERT_EQ(Label, BB->getLabel());
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_LoadZero) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+
+  InstructionListType Instrs = BC->MIB->createLoadImmediate(AArch64::X0, 0);
+  BB->addInstructions(Instrs.begin(), Instrs.end());
+
+  ASSERT_EQ(BB->size(), 1);
+  auto II = BB->begin();
+  // mov x0, #0
+  ASSERT_EQ(II->getOpcode(), AArch64::MOVZXi);
+  ASSERT_EQ(II->getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(II->getOperand(1).getImm(), 0);
+  ASSERT_EQ(II->getOperand(2).getImm(), 0);
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_LoadImm16) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+
+  InstructionListType Instrs = BC->MIB->createLoadImmediate(AArch64::X0, 2);
+  BB->addInstructions(Instrs.begin(), Instrs.end());
+
+  ASSERT_EQ(BB->size(), 1);
+  auto II = BB->begin();
+  // mov x0, #2
+  ASSERT_EQ(II->getOpcode(), AArch64::MOVZXi);
+  ASSERT_EQ(II->getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(II->getOperand(1).getImm(), 2);
+  ASSERT_EQ(II->getOperand(2).getImm(), 0);
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_LoadImm64) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+
+  int64_t Imm = ((uint64_t)4) << 48 | ((uint64_t)3) << 32 | 2 << 16 | 1;
+  InstructionListType Instrs = BC->MIB->createLoadImmediate(AArch64::X0, Imm);
+  BB->addInstructions(Instrs.begin(), Instrs.end());
+
+  ASSERT_EQ(BB->size(), 4);
+  auto II = BB->begin();
+  // mov x0, #1
+  ASSERT_EQ(II->getOpcode(), AArch64::MOVZXi);
+  ASSERT_EQ(II->getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(II->getOperand(1).getImm(), 1);
+  ASSERT_EQ(II->getOperand(2).getImm(), 0);
+  II++;
+  // movk x0, #2, lsl #16
+  ASSERT_EQ(II->getOpcode(), AArch64::MOVKXi);
+  ASSERT_EQ(II->getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(II->getOperand(1).getReg(), AArch64::X0);
+  ASSERT_EQ(II->getOperand(2).getImm(), 2);
+  ASSERT_EQ(II->getOperand(3).getImm(), 16);
+  II++;
+  // movk x0, #3, lsl #32
+  ASSERT_EQ(II->getOpcode(), AArch64::MOVKXi);
+  ASSERT_EQ(II->getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(II->getOperand(1).getReg(), AArch64::X0);
+  ASSERT_EQ(II->getOperand(2).getImm(), 3);
+  ASSERT_EQ(II->getOperand(3).getImm(), 32);
+  II++;
+  // movk x0, #4, lsl #48
+  ASSERT_EQ(II->getOpcode(), AArch64::MOVKXi);
+  ASSERT_EQ(II->getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(II->getOperand(1).getReg(), AArch64::X0);
+  ASSERT_EQ(II->getOperand(2).getImm(), 4);
+  ASSERT_EQ(II->getOperand(3).getImm(), 48);
+}
+
+TEST_P(MCPlusBuilderTester, AArch64_LoadImm64Partial) {
+  if (GetParam() != Triple::aarch64)
+    GTEST_SKIP();
+  BinaryFunction *BF = BC->createInjectedBinaryFunction("BF", true);
+  std::unique_ptr<BinaryBasicBlock> BB = BF->createBasicBlock();
+
+  int64_t Imm = ((uint64_t)4) << 48 | 2 << 16;
+  InstructionListType Instrs = BC->MIB->createLoadImmediate(AArch64::X0, Imm);
+  BB->addInstructions(Instrs.begin(), Instrs.end());
+
+  ASSERT_EQ(BB->size(), 2);
+  auto II = BB->begin();
+  // orr x0, xzr, #0x20000
+  ASSERT_EQ(II->getOpcode(), AArch64::ORRXri);
+  ASSERT_EQ(II->getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(II->getOperand(1).getReg(), AArch64::XZR);
+  ASSERT_EQ(II->getOperand(2).getImm(),
+            AArch64_AM::encodeLogicalImmediate(2 << 16, 64));
+  II++;
+  // orr x0, x0, #0x4000000000000
+  ASSERT_EQ(II->getOpcode(), AArch64::ORRXri);
+  ASSERT_EQ(II->getOperand(0).getReg(), AArch64::X0);
+  ASSERT_EQ(II->getOperand(1).getReg(), AArch64::X0);
+  ASSERT_EQ(II->getOperand(2).getImm(),
+            AArch64_AM::encodeLogicalImmediate(((uint64_t)4) << 48, 64));
 }
 
 TEST_P(MCPlusBuilderTester, testAccessedRegsImplicitDef) {
