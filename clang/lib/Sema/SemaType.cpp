@@ -8308,6 +8308,25 @@ static void HandleVectorSizeAttr(QualType &CurType, const ParsedAttr &Attr,
     return;
   }
 
+  // check -mgeneral-regs-only is specified
+  const TargetInfo &targetInfo = S.getASTContext().getTargetInfo();
+  llvm::Triple::ArchType arch = targetInfo.getTriple().getArch();
+  const auto HasFeature = [](const clang::TargetOptions &targetOpts,
+                             const std::string &feature) {
+    return std::find(targetOpts.Features.begin(), targetOpts.Features.end(),
+                     feature) != targetOpts.Features.end();
+  };
+  if (CurType->isSpecificBuiltinType(BuiltinType::LongDouble)) {
+    if (arch == llvm::Triple::x86_64 &&
+        HasFeature(targetInfo.getTargetOpts(), "-x87") &&
+        HasFeature(targetInfo.getTargetOpts(), "-mmx") &&
+        HasFeature(targetInfo.getTargetOpts(), "-sse")) {
+      S.Diag(Attr.getLoc(),
+             diag::err_attribute_x86_feature_gro_vector_size_unsupported);
+      Attr.setInvalid();
+      return;
+    }
+  }
   Expr *SizeExpr = Attr.getArgAsExpr(0);
   QualType T = S.BuildVectorType(CurType, SizeExpr, Attr.getLoc());
   if (!T.isNull())
