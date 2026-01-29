@@ -158,13 +158,13 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
   };
   return all_of(EVL.users(), [this, &VerifyEVLUse](VPUser *U) {
     return TypeSwitch<const VPUser *, bool>(U)
-        .Case<VPWidenIntrinsicRecipe>([&](const VPWidenIntrinsicRecipe *S) {
+        .Case([&](const VPWidenIntrinsicRecipe *S) {
           return VerifyEVLUse(*S, S->getNumOperands() - 1);
         })
         .Case<VPWidenStoreEVLRecipe, VPReductionEVLRecipe,
               VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe>(
             [&](const VPRecipeBase *S) { return VerifyEVLUse(*S, 2); })
-        .Case<VPScalarIVStepsRecipe>([&](auto *R) {
+        .Case([&](const VPScalarIVStepsRecipe *R) {
           if (R->getNumOperands() != 3) {
             errs() << "Unrolling with EVL tail folding not yet supported\n";
             return false;
@@ -174,9 +174,9 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
         .Case<VPWidenLoadEVLRecipe, VPVectorEndPointerRecipe,
               VPInterleaveEVLRecipe>(
             [&](const VPRecipeBase *R) { return VerifyEVLUse(*R, 1); })
-        .Case<VPInstructionWithType>(
+        .Case(
             [&](const VPInstructionWithType *S) { return VerifyEVLUse(*S, 0); })
-        .Case<VPInstruction>([&](const VPInstruction *I) {
+        .Case([&](const VPInstruction *I) {
           if (I->getOpcode() == Instruction::PHI ||
               I->getOpcode() == Instruction::ICmp ||
               I->getOpcode() == Instruction::Sub)

@@ -292,17 +292,17 @@ Type *VPTypeAnalysis::inferScalarType(const VPValue *V) {
           .Case<VPBlendRecipe, VPInstruction, VPWidenRecipe, VPReplicateRecipe,
                 VPWidenCallRecipe, VPWidenMemoryRecipe>(
               [this](const auto *R) { return inferScalarTypeForRecipe(R); })
-          .Case<VPInterleaveBase>([V](const auto *R) {
+          .Case([V](const VPInterleaveBase *R) {
             // TODO: Use info from interleave group.
             return V->getUnderlyingValue()->getType();
           })
-          .Case<VPExpandSCEVRecipe>([](const VPExpandSCEVRecipe *R) {
+          .Case([](const VPExpandSCEVRecipe *R) {
             return R->getSCEV()->getType();
           })
-          .Case<VPReductionRecipe>([this](const auto *R) {
+          .Case([this](const VPReductionRecipe *R) {
             return inferScalarType(R->getChainOp());
           })
-          .Case<VPExpressionRecipe>([this](const auto *R) {
+          .Case([this](const VPExpressionRecipe *R) {
             return inferScalarType(R->getOperandOfResultType());
           });
 
