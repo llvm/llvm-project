@@ -65,17 +65,17 @@ INTERCEPTOR(void, cfree, void *ptr) {
 INTERCEPTOR(void*, vec_malloc, uptr size) {
   if (DlsymAlloc::Use())
     return DlsymAlloc::Allocate(size);
-  AsanInitFromRtl();
   GET_STACK_TRACE_MALLOC;
-  return asan_malloc(size, &stack);
+  // Unlike malloc, vec_malloc must return memory aligned to 16 bytes.
+  return asan_vec_malloc(size, &stack);
 }
 
 INTERCEPTOR(void*, vec_calloc, uptr nmemb, uptr size) {
   if (DlsymAlloc::Use())
     return DlsymAlloc::Callocate(nmemb, size);
-  AsanInitFromRtl();
   GET_STACK_TRACE_MALLOC;
-  return asan_calloc(nmemb, size, &stack);
+  // Unlike calloc, vec_calloc must return memory aligned to 16 bytes.
+  return asan_vec_calloc(nmemb, size, &stack);
 }
 #  endif
 
