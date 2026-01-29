@@ -450,6 +450,9 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP AND BUILTIN_SUPPORTED_ARCH MATCHES "arm")
       arm/adddf3.S
       arm/muldf3.S
       arm/divdf3.S
+      arm/cmpdf2.S
+      arm/gedf2.S
+      arm/unorddf2.S
       )
     set_source_files_properties(${assembly_files}
       PROPERTIES COMPILE_OPTIONS ${implicit_it_flag})
@@ -503,11 +506,16 @@ set_property(SOURCE arm/adddf3.S DIRECTORY ${COMPILER_RT_SOURCE_DIR} PROPERTY cr
 if(COMPILER_RT_ARM_OPTIMIZED_FP)
   set(thumb1_base_SOURCES
     arm/thumb1/mulsf3.S
+    arm/thumb1/cmpdf2.S
+    arm/thumb1/gedf2.S
+    arm/thumb1/unorddf2.S
     arm/fnan2.c
     arm/fnorm2.c
     arm/funder.c
     ${thumb1_base_SOURCES}
   )
+  set_property(SOURCE arm/thumb1/cmpdf2.S PROPERTY crt_supersedes comparedf2.c)
+  set_property(SOURCE arm/thumb1/cmpdf2.S DIRECTORY ${COMPILER_RT_SOURCE_DIR} PROPERTY crt_provides comparedf2)
 endif()
 
 set(arm_EABI_RT_SOURCES
