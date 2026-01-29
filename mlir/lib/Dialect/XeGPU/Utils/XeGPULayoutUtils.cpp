@@ -887,7 +887,7 @@ xegpu::setupLoadMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
     break;
   case xegpu::LayoutKind::Lane:
     requiredLayout =
-        xegpu::LayoutAttr::get(context, defaultLaneData, defaultLaneLayout);
+        xegpu::LayoutAttr::get(context, defaultLaneLayout, defaultLaneData);
     break;
   default:
     llvm_unreachable("unsupported layout kind");
@@ -917,7 +917,7 @@ xegpu::setupStoreMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
     break;
   case xegpu::LayoutKind::Lane:
     requiredLayout =
-        xegpu::LayoutAttr::get(context, defaultLaneData, defaultLaneLayout);
+        xegpu::LayoutAttr::get(context, defaultLaneLayout, defaultLaneData);
 
     break;
   default:
