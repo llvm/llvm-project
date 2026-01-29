@@ -40,10 +40,15 @@
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
+#include "llvm/IR/Instruction.h"
+#include "llvm/IR/Instructions.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/Casting.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Target/TargetMachine.h"
@@ -55,6 +60,10 @@
 #define DEBUG_TYPE "expand-ir-insts"
 
 using namespace llvm;
+
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
 
 static cl::opt<unsigned>
     ExpandFpConvertBits("expand-fp-convert-bits", cl::Hidden,
@@ -69,6 +78,7 @@ static cl::opt<unsigned>
                               "more than <N> bits are expanded."));
 
 namespace {
+
 bool isConstantPowerOfTwo(llvm::Value *V, bool SignedOp) {
   auto *C = dyn_cast<ConstantInt>(V);
   if (!C)
@@ -566,37 +576,61 @@ static void expandFPToI(Instruction *FPToI) {
       ARep0, ConstantInt::getSigned(Builder.getIntNTy(FloatWidth), -1));
   Value *Sign = Builder.CreateSelect(PosOrNeg, ConstantInt::getSigned(IntTy, 1),
                                      ConstantInt::getSigned(IntTy, -1));
+  applyProfMetadataIfEnabled(Sign, [&](Instruction *Inst) {
+    setExplicitlyUnknownBranchWeightsIfProfiled(*Inst, DEBUG_TYPE, F);
+  });
   Value *And =
       Builder.CreateLShr(ARep, Builder.getIntN(BitWidth, FPMantissaWidth));
   Value *And2 = Builder.CreateAnd(
       And, Builder.getIntN(BitWidth, (1 << ExponentWidth) - 1));
   Value *Abs = Builder.CreateAnd(ARep, SignificandMask);
   Value *Or = Builder.CreateOr(Abs, ImplicitBit);
+  // The comparison checks the floating-point value is in the range (-1, 1). We
+  // assume unknown (50/50) as the branch weight.
   Value *Cmp =
       Builder.CreateICmpULT(And2, Builder.getIntN(BitWidth, ExponentBias));
-  Builder.CreateCondBr(Cmp, End, IfEnd);
+  Value *CondBrEntry = Builder.CreateCondBr(Cmp, End, IfEnd);
+  applyProfMetadataIfEnabled(CondBrEntry, [&](Instruction *Inst) {
+    setExplicitlyUnknownBranchWeightsIfProfiled(*Inst, DEBUG_TYPE, F);
+  });
 
   // if.end:
   Builder.SetInsertPoint(IfEnd);
   Value *Add1 = Builder.CreateAdd(
       And2, ConstantInt::getSigned(
                 IntTy, -static_cast<int64_t>(ExponentBias + BitWidth)));
+  // The comparison is doing the overflow check so we assume the 'true' path is
+  // unlikely.
   Value *Cmp3 = Builder.CreateICmpULT(
       Add1, ConstantInt::getSigned(IntTy, -static_cast<int64_t>(BitWidth)));
-  Builder.CreateCondBr(Cmp3, IfThen5, IfEnd9);
+  Value *CondBrIfEnd = Builder.CreateCondBr(Cmp3, IfThen5, IfEnd9);
+  applyProfMetadataIfEnabled(CondBrIfEnd, [&](Instruction *Inst) {
+    Inst->setMetadata(
+        LLVMContext::MD_prof,
+        MDBuilder(Inst->getContext()).createUnlikelyBranchWeights());
+  });
 
   // if.then5:
   Builder.SetInsertPoint(IfThen5);
   Value *PosInf = ConstantInt::get(IntTy, APInt::getSignedMaxValue(BitWidth));
   Value *NegInf = ConstantInt::get(IntTy, APInt::getSignedMinValue(BitWidth));
   Value *Cond8 = Builder.CreateSelect(PosOrNeg, PosInf, NegInf);
+  applyProfMetadataIfEnabled(Cond8, [&](Instruction *Inst) {
+    setExplicitlyUnknownBranchWeightsIfProfiled(*Inst, DEBUG_TYPE, F);
+  });
   Builder.CreateBr(End);
 
   // if.end9:
   Builder.SetInsertPoint(IfEnd9);
+  // The shift direction depends on the magnitude of the floating-point number.
+  // Given the lack of domain-specific profiles, we treat the left-shift and
+  // right-shift paths as 50/50.
   Value *Cmp10 = Builder.CreateICmpULT(
       And2, Builder.getIntN(BitWidth, ExponentBias + FPMantissaWidth));
-  Builder.CreateCondBr(Cmp10, IfThen12, IfElse);
+  Value *CondBrIfEnd9 = Builder.CreateCondBr(Cmp10, IfThen12, IfElse);
+  applyProfMetadataIfEnabled(CondBrIfEnd9, [&](Instruction *Inst) {
+    setExplicitlyUnknownBranchWeightsIfProfiled(*Inst, DEBUG_TYPE, F);
+  });
 
   // if.then12:
   Builder.SetInsertPoint(IfThen12);
@@ -768,8 +802,15 @@ static void expandIToFP(Instruction *IToFP) {
 
   // entry:
   Builder.SetInsertPoint(Entry);
+  // We assume that the zero is an unlikely input case, so the branch to 'End'
+  // is the unlikely path.
   Value *Cmp = Builder.CreateICmpEQ(IntVal, ConstantInt::getSigned(IntTy, 0));
-  Builder.CreateCondBr(Cmp, End, IfEnd);
+  Value *CondBrEntry = Builder.CreateCondBr(Cmp, End, IfEnd);
+  applyProfMetadataIfEnabled(CondBrEntry, [&](Instruction *Inst) {
+    Inst->setMetadata(
+        LLVMContext::MD_prof,
+        MDBuilder(Inst->getContext()).createUnlikelyBranchWeights());
+  });
 
   // if.end:
   Builder.SetInsertPoint(IfEnd);
@@ -786,13 +827,30 @@ static void expandIToFP(Instruction *IToFP) {
                                   FloatWidth == 128 ? Call : Cast);
   Value *Cmp3 = Builder.CreateICmpSGT(
       Sub1, Builder.getIntN(BitWidthNew, FPMantissaWidth + 1));
-  Builder.CreateCondBr(Cmp3, IfThen4, IfElse);
+  // This branch handles the rare case where rounding the mantissa causes a
+  // carry-out at the most significant bit, necessitating an increment of the
+  // exponent. This is rare case, so the True path is mared as likely.
+  Value *CondBrIfEnd = Builder.CreateCondBr(Cmp3, IfThen4, IfElse);
+  applyProfMetadataIfEnabled(CondBrIfEnd, [&](Instruction *Inst) {
+    Inst->setMetadata(
+        LLVMContext::MD_prof,
+        MDBuilder(Inst->getContext()).createLikelyBranchWeights());
+  });
 
   // if.then4:
   Builder.SetInsertPoint(IfThen4);
   llvm::SwitchInst *SI = Builder.CreateSwitch(Sub1, SwDefault);
   SI->addCase(Builder.getIntN(BitWidthNew, FPMantissaWidth + 2), SwBB);
   SI->addCase(Builder.getIntN(BitWidthNew, FPMantissaWidth + 3), SwEpilog);
+  // Add branch weights to the SwitchInst. The weights are provided for the
+  // default case first (SwDefault), followed by each explicit case in the
+  // order they were added (SwBB, then SwEpilog). Because the following cases
+  // are rare, the defalut case is given a likely weight.
+  if (!ProfcheckDisableMetadataFixes) {
+    SI->setMetadata(LLVMContext::MD_prof,
+                    MDBuilder(SI->getContext())
+                        .createBranchWeights({(1U << 20) - 1, 1, 1}));
+  }
 
   // sw.bb:
   Builder.SetInsertPoint(SwBB);
@@ -846,7 +904,14 @@ static void expandIToFP(Instruction *IToFP) {
     ExtractT64 = Builder.CreateTrunc(Sub2, Builder.getInt64Ty());
   else
     ExtractT64 = Builder.CreateTrunc(Extract63, Builder.getInt32Ty());
-  Builder.CreateCondBr(PosOrNeg, IfEnd26, IfThen20);
+  // Rounding usually keeps the exponent within its current magnitude and
+  // overflow is rare. The False path is unlikely to be taken.
+  Value *CondBrSwEpilog = Builder.CreateCondBr(PosOrNeg, IfEnd26, IfThen20);
+  applyProfMetadataIfEnabled(CondBrSwEpilog, [&](Instruction *Inst) {
+    Inst->setMetadata(
+        LLVMContext::MD_prof,
+        MDBuilder(Inst->getContext()).createLikelyBranchWeights());
+  });
 
   // if.then20
   Builder.SetInsertPoint(IfThen20);
