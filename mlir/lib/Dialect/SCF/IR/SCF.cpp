@@ -443,7 +443,7 @@ LogicalResult ForOp::promoteIfSingleIteration(RewriterBase &rewriter) {
   LDBG() << "promoteIfSingleIteration tripCount is " << tripCount
          << " for loop "
          << OpWithFlags(getOperation(), OpPrintingFlags().skipRegions());
-  if (!tripCount.has_value() || tripCount->getSExtValue() > 1)
+  if (!tripCount.has_value() || tripCount->getZExtValue() > 1)
     return failure();
 
   if (*tripCount == 0) {

@@ -251,6 +251,7 @@ FailureOr<scf::ParallelOp> parallelLoopUnrollByFactors(
 /// Get constant trip counts for each of the induction variables of the given
 /// loop operation. If any of the loop's trip counts is not constant, return an
 /// empty vector.
+/// TODO(#178506): Should return SmallVector<uint64_t> for correct signedness.
 llvm::SmallVector<int64_t>
 getConstLoopTripCounts(mlir::LoopLikeOpInterface loopOp);
 
