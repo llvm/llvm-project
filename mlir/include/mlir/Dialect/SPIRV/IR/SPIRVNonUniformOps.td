@@ -1657,8 +1657,8 @@ def SPIRV_GroupNonUniformQuadSwapOp : SPIRV_Op<"GroupNonUniformQuadSwap", [
     #### Example:
 
     ```mlir
-    %0 = spirv.GroupNonUniformQuadSwap <Subgroup> %value %dir : f32, i32
-    %1 = spirv.GroupNonUniformQuadSwap <Subgroup> %value %dir : vector<4xf32>, i32
+    %0 = spirv.GroupNonUniformQuadSwap <Subgroup> <Horizontal> %value : f32
+    %1 = spirv.GroupNonUniformQuadSwap <Subgroup> <Vertical> %value : vector<4xf32>
     ```
   }];
 
