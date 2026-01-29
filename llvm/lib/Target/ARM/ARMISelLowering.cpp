@@ -6282,7 +6282,8 @@ static SDValue LowerCTPOP(SDNode *N, SelectionDAG &DAG,
   return Res;
 }
 
-static SDValue LowerCTLS(SDNode *N, SelectionDAG &DAG, const ARMSubtarget *ST) {
+SDValue ARMTargetLowering::LowerCTLS(SDNode *N, SelectionDAG &DAG,
+                                       const ARMSubtarget *ST) const {
   SDLoc dl(N);
   EVT VT = N->getValueType(0);
   SDValue Operand = N->getOperand(0);
@@ -10379,8 +10380,7 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SRA_PARTS:     return LowerShiftRightParts(Op, DAG);
   case ISD::CTTZ:
   case ISD::CTTZ_ZERO_UNDEF: return LowerCTTZ(Op.getNode(), DAG, Subtarget);
-  case ISD::CTLS:
-    return LowerCTLS(Op.getNode(), DAG, Subtarget);
+  case ISD::CTLS:           return LowerCTLS(Op.getNode(), DAG, Subtarget);
   case ISD::CTPOP:         return LowerCTPOP(Op.getNode(), DAG, Subtarget);
   case ISD::SETCC:         return LowerVSETCC(Op, DAG, Subtarget);
   case ISD::SETCCCARRY:    return LowerSETCCCARRY(Op, DAG);
