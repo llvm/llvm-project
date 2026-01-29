@@ -132,19 +132,6 @@ std::optional<llvm::APSInt> mlir::scf::computeUbMinusLb(Value lb, Value ub,
 // ExecuteRegionOp
 //===----------------------------------------------------------------------===//
 
-/// Replaces the given op with the contents of the given single-block region,
-/// using the operands of the block terminator to replace operation results.
-static void replaceOpWithRegion(PatternRewriter &rewriter, Operation *op,
-                                Region &region, ValueRange blockArgs = {}) {
-  assert(region.hasOneBlock() && "expected single-block region");
-  Block *block = &region.front();
-  Operation *terminator = block->getTerminator();
-  ValueRange results = terminator->getOperands();
-  rewriter.inlineBlockBefore(block, op, blockArgs);
-  rewriter.replaceOp(op, results);
-  rewriter.eraseOp(terminator);
-}
-
 ///
 /// (ssa-id `=`)? `execute_region` `->` function-result-type `{`
 ///    block+
@@ -191,32 +178,6 @@ LogicalResult ExecuteRegionOp::verify() {
     return emitOpError("region cannot have any arguments");
   return success();
 }
-
-// Inline an ExecuteRegionOp if it only contains one block.
-//     "test.foo"() : () -> ()
-//      %v = scf.execute_region -> i64 {
-//        %x = "test.val"() : () -> i64
-//        scf.yield %x : i64
-//      }
-//      "test.bar"(%v) : (i64) -> ()
-//
-//  becomes
-//
-//     "test.foo"() : () -> ()
-//     %x = "test.val"() : () -> i64
-//     "test.bar"(%x) : (i64) -> ()
-//
-struct SingleBlockExecuteInliner : public OpRewritePattern<ExecuteRegionOp> {
-  using OpRewritePattern<ExecuteRegionOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(ExecuteRegionOp op,
-                                PatternRewriter &rewriter) const override {
-    if (!op.getRegion().hasOneBlock() || op.getNoInline())
-      return failure();
-    replaceOpWithRegion(rewriter, op, op.getRegion());
-    return success();
-  }
-};
 
 // Inline an ExecuteRegionOp if its parent can contain multiple blocks.
 // TODO generalize the conditions for operations which can be inlined into.
@@ -293,9 +254,15 @@ struct MultiBlockExecuteInliner : public OpRewritePattern<ExecuteRegionOp> {
 
 void ExecuteRegionOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                   MLIRContext *context) {
-  results.add<SingleBlockExecuteInliner, MultiBlockExecuteInliner>(context);
+  results.add<MultiBlockExecuteInliner>(context);
   populateRegionBranchOpInterfaceCanonicalizationPatterns(
       results, ExecuteRegionOp::getOperationName());
+  // Inline ops with a single block that are not marked as "no_inline".
+  populateRegionBranchOpInterfaceInliningPattern(
+      results, ExecuteRegionOp::getOperationName(),
+      mlir::detail::defaultReplBuilderFn, [](Operation *op) {
+        return failure(cast<ExecuteRegionOp>(op).getNoInline());
+      });
 }
 
 void ExecuteRegionOp::getSuccessorRegions(
@@ -704,6 +671,26 @@ OperandRange ForOp::getEntrySuccessorOperands(RegionSuccessor successor) {
 
 void ForOp::getSuccessorRegions(RegionBranchPoint point,
                                 SmallVectorImpl<RegionSuccessor> &regions) {
+  if (std::optional<APInt> tripCount = getStaticTripCount()) {
+    // The loop has a known static trip count.
+    if (point.isParent()) {
+      if (*tripCount == 0) {
+        // The loop has zero iterations. It branches directly back to the
+        // parent.
+        regions.push_back(RegionSuccessor::parent());
+      } else {
+        // The loop has at least one iteration. It branches into the body.
+        regions.push_back(RegionSuccessor(&getRegion()));
+      }
+      return;
+    } else if (*tripCount == 1) {
+      // The loop has exactly 1 iteration. Therefore, it branches from the
+      // region to the parent. (No further iteration.)
+      regions.push_back(RegionSuccessor::parent());
+      return;
+    }
+  }
+
   // Both the operation itself and the region may be branching into the body or
   // back into the operation itself. It is possible for loop not to enter the
   // body.
@@ -941,54 +928,6 @@ mlir::scf::replaceAndCastForOpIterArg(RewriterBase &rewriter, scf::ForOp forOp,
 }
 
 namespace {
-/// Rewriting pattern that erases loops that are known not to iterate, replaces
-/// single-iteration loops with their bodies, and removes empty loops that
-/// iterate at least once and only return values defined outside of the loop.
-struct SimplifyTrivialLoops : public OpRewritePattern<ForOp> {
-  using OpRewritePattern<ForOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(ForOp op,
-                                PatternRewriter &rewriter) const override {
-    std::optional<APInt> tripCount = op.getStaticTripCount();
-    if (!tripCount.has_value())
-      return rewriter.notifyMatchFailure(op,
-                                         "can't compute constant trip count");
-
-    if (tripCount->isZero()) {
-      LDBG() << "SimplifyTrivialLoops tripCount is 0 for loop "
-             << OpWithFlags(op, OpPrintingFlags().skipRegions());
-      rewriter.replaceOp(op, op.getInitArgs());
-      return success();
-    }
-
-    if (tripCount->getSExtValue() == 1) {
-      LDBG() << "SimplifyTrivialLoops tripCount is 1 for loop "
-             << OpWithFlags(op, OpPrintingFlags().skipRegions());
-      SmallVector<Value, 4> blockArgs;
-      blockArgs.reserve(op.getInitArgs().size() + 1);
-      blockArgs.push_back(op.getLowerBound());
-      llvm::append_range(blockArgs, op.getInitArgs());
-      replaceOpWithRegion(rewriter, op, op.getRegion(), blockArgs);
-      return success();
-    }
-
-    // Now we are left with loops that have more than 1 iterations.
-    Block &block = op.getRegion().front();
-    if (!llvm::hasSingleElement(block))
-      return failure();
-    // The loop is empty and iterates at least once, if it only returns values
-    // defined outside of the loop, remove it and replace it with yield values.
-    if (llvm::any_of(op.getYieldedValues(),
-                     [&](Value v) { return !op.isDefinedOutsideOfLoop(v); }))
-      return failure();
-    LDBG() << "SimplifyTrivialLoops empty body loop allows replacement with "
-              "yield operands for loop "
-           << OpWithFlags(op, OpPrintingFlags().skipRegions());
-    rewriter.replaceOp(op, op.getYieldedValues());
-    return success();
-  }
-};
-
 /// Fold scf.for iter_arg/result pairs that go through incoming/ougoing
 /// a tensor.cast op pair so as to pull the tensor.cast inside the scf.for:
 ///
@@ -1051,9 +990,20 @@ struct ForOpTensorCastFolder : public OpRewritePattern<ForOp> {
 
 void ForOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                         MLIRContext *context) {
-  results.add<SimplifyTrivialLoops, ForOpTensorCastFolder>(context);
+  results.add<ForOpTensorCastFolder>(context);
   populateRegionBranchOpInterfaceCanonicalizationPatterns(
       results, ForOp::getOperationName());
+  populateRegionBranchOpInterfaceInliningPattern(
+      results, ForOp::getOperationName(),
+      /*replBuilderFn=*/[](OpBuilder &builder, Location loc, Value value) {
+        // scf.for has only one non-successor input value: the loop induction
+        // variable. In case of a single acyclic path through the op, the IV can
+        // be safely replaced with the lower bound.
+        auto blockArg = cast<BlockArgument>(value);
+        assert(blockArg.getArgNumber() == 0 && "expected induction variable");
+        auto forOp = cast<ForOp>(blockArg.getOwner()->getParentOp());
+        return forOp.getLowerBound();
+      });
 }
 
 std::optional<APInt> ForOp::getConstantStep() {
@@ -2197,26 +2147,6 @@ void IfOp::getRegionInvocationBounds(
 }
 
 namespace {
-struct RemoveStaticCondition : public OpRewritePattern<IfOp> {
-  using OpRewritePattern<IfOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(IfOp op,
-                                PatternRewriter &rewriter) const override {
-    BoolAttr condition;
-    if (!matchPattern(op.getCondition(), m_Constant(&condition)))
-      return failure();
-
-    if (condition.getValue())
-      replaceOpWithRegion(rewriter, op, op.getThenRegion());
-    else if (!op.getElseRegion().empty())
-      replaceOpWithRegion(rewriter, op, op.getElseRegion());
-    else
-      rewriter.eraseOp(op);
-
-    return success();
-  }
-};
-
 /// Hoist any yielded results whose operands are defined outside
 /// the if, to a select instruction.
 struct ConvertTrivialIfToSelect : public OpRewritePattern<IfOp> {
@@ -2767,10 +2697,11 @@ void IfOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                        MLIRContext *context) {
   results.add<CombineIfs, CombineNestedIfs, ConditionPropagation,
               ConvertTrivialIfToSelect, RemoveEmptyElseBranch,
-              RemoveStaticCondition, ReplaceIfYieldWithConditionOrValue>(
-      context);
+              ReplaceIfYieldWithConditionOrValue>(context);
   populateRegionBranchOpInterfaceCanonicalizationPatterns(
       results, IfOp::getOperationName());
+  populateRegionBranchOpInterfaceInliningPattern(results,
+                                                 IfOp::getOperationName());
 }
 
 Block *IfOp::thenBlock() { return &getThenRegion().back(); }
@@ -3775,6 +3706,8 @@ void WhileOp::getCanonicalizationPatterns(RewritePatternSet &results,
               WhileMoveIfDown>(context);
   populateRegionBranchOpInterfaceCanonicalizationPatterns(
       results, WhileOp::getOperationName());
+  populateRegionBranchOpInterfaceInliningPattern(results,
+                                                 WhileOp::getOperationName());
 }
 
 //===----------------------------------------------------------------------===//
@@ -3921,43 +3854,11 @@ void IndexSwitchOp::getRegionInvocationBounds(
     bounds.emplace_back(/*lb=*/0, /*ub=*/i == liveIndex);
 }
 
-struct FoldConstantCase : OpRewritePattern<scf::IndexSwitchOp> {
-  using OpRewritePattern<scf::IndexSwitchOp>::OpRewritePattern;
-
-  LogicalResult matchAndRewrite(scf::IndexSwitchOp op,
-                                PatternRewriter &rewriter) const override {
-    // If `op.getArg()` is a constant, select the region that matches with
-    // the constant value. Use the default region if no matche is found.
-    std::optional<int64_t> maybeCst = getConstantIntValue(op.getArg());
-    if (!maybeCst.has_value())
-      return failure();
-    int64_t cst = *maybeCst;
-    int64_t caseIdx, e = op.getNumCases();
-    for (caseIdx = 0; caseIdx < e; ++caseIdx) {
-      if (cst == op.getCases()[caseIdx])
-        break;
-    }
-
-    Region &r = (caseIdx < op.getNumCases()) ? op.getCaseRegions()[caseIdx]
-                                             : op.getDefaultRegion();
-    Block &source = r.front();
-    Operation *terminator = source.getTerminator();
-    SmallVector<Value> results = terminator->getOperands();
-
-    rewriter.inlineBlockBefore(&source, op);
-    rewriter.eraseOp(terminator);
-    // Replace the operation with a potentially empty list of results.
-    // Fold mechanism doesn't support the case where the result list is empty.
-    rewriter.replaceOp(op, results);
-
-    return success();
-  }
-};
-
 void IndexSwitchOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                 MLIRContext *context) {
-  results.add<FoldConstantCase>(context);
   populateRegionBranchOpInterfaceCanonicalizationPatterns(
+      results, IndexSwitchOp::getOperationName());
+  populateRegionBranchOpInterfaceInliningPattern(
       results, IndexSwitchOp::getOperationName());
 }
 

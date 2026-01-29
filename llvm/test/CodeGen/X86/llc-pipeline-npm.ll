@@ -14,6 +14,7 @@
 ; O0-NEXT: require<profile-summary>
 ; O0-NEXT: require<collector-metadata>
 ; O0-NEXT: require<runtime-libcall-info>
+; O0-NEXT: require<libcall-lowering-info>
 ; O0-NEXT: pre-isel-intrinsic-lowering
 ; O0-NEXT: function(expand-ir-insts<O0>
 ; O0-NEXT: atomic-expand
@@ -70,13 +71,14 @@
 ; O2-NEXT: require<profile-summary>
 ; O2-NEXT: require<collector-metadata>
 ; O2-NEXT: require<runtime-libcall-info>
+; O2-NEXT: require<libcall-lowering-info>
 ; O2-NEXT: pre-isel-intrinsic-lowering
 ; O2-NEXT: function(expand-ir-insts<O2>
 ; O2-NEXT: atomic-expand
 ; O2-NEXT: x86-lower-amx-intrinsics
 ; O2-NEXT: x86-lower-amx-type
 ; O2-NEXT: verify
-; O2-NEXT: loop-mssa(canon-freeze
+; O2-NEXT: loop(canon-freeze
 ; O2-NEXT: loop-reduce)
 ; O2-NEXT: mergeicmps
 ; O2-NEXT: expand-memcmp
@@ -180,6 +182,7 @@
 ; O0-WINDOWS-NEXT: require<profile-summary>
 ; O0-WINDOWS-NEXT: require<collector-metadata>
 ; O0-WINDOWS-NEXT: require<runtime-libcall-info>
+; O0-WINDOWS-NEXT: require<libcall-lowering-info>
 ; O0-WINDOWS-NEXT: pre-isel-intrinsic-lowering
 ; O0-WINDOWS-NEXT: function(expand-ir-insts<O0>
 ; O0-WINDOWS-NEXT: atomic-expand
@@ -239,13 +242,14 @@
 ; O3-WINDOWS-NEXT: require<profile-summary>
 ; O3-WINDOWS-NEXT: require<collector-metadata>
 ; O3-WINDOWS-NEXT: require<runtime-libcall-info>
+; O3-WINDOWS-NEXT: require<libcall-lowering-info>
 ; O3-WINDOWS-NEXT: pre-isel-intrinsic-lowering
 ; O3-WINDOWS-NEXT: function(expand-ir-insts<O3>
 ; O3-WINDOWS-NEXT: atomic-expand
 ; O3-WINDOWS-NEXT: x86-lower-amx-intrinsics
 ; O3-WINDOWS-NEXT: x86-lower-amx-type
 ; O3-WINDOWS-NEXT: verify
-; O3-WINDOWS-NEXT: loop-mssa(canon-freeze
+; O3-WINDOWS-NEXT: loop(canon-freeze
 ; O3-WINDOWS-NEXT: loop-reduce)
 ; O3-WINDOWS-NEXT: mergeicmps
 ; O3-WINDOWS-NEXT: expand-memcmp
