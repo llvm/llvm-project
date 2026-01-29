@@ -23,9 +23,7 @@ class TestDAP_module_event(lldbdap_testcase.DAPTestCaseBase):
         self.continue_to_breakpoints(breakpoint_ids)
 
         # We're now stopped at breakpoint 1 before the dlopen. Flush all the module events.
-        event = self.dap_server.wait_for_event(["module"])
-        while event is not None:
-            event = self.dap_server.wait_for_event(["module"])
+        self.dap_server.wait_for_module_events()
 
         # Continue to the second breakpoint, before the dlclose.
         self.continue_to_breakpoints(breakpoint_ids)
