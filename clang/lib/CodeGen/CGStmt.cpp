@@ -2480,6 +2480,18 @@ void CodeGenFunction::EmitSwitchStmt(const SwitchStmt &S) {
 
   ConditionScope.ForceCleanup();
 
+  // Close the last case (or DefaultBlock).
+  EmitBranch(SwitchExit.getBlock());
+
+  // Insert a False Counter if SwitchStmt doesn't have DefaultStmt.
+  if (hasSkipCounter(S.getCond())) {
+    auto *ImplicitDefaultBlock = createBasicBlock("sw.false");
+    EmitBlock(ImplicitDefaultBlock);
+    incrementProfileCounter(UseSkipPath, S.getCond());
+    Builder.CreateBr(SwitchInsn->getDefaultDest());
+    SwitchInsn->setDefaultDest(ImplicitDefaultBlock);
+  }
+
   // Emit continuation.
   EmitBlock(SwitchExit.getBlock(), true);
   incrementProfileCounter(&S);
