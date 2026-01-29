@@ -19516,17 +19516,23 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
 
   bool NeedFreeze = false;
   SmallVector<Value *> GatheredScalars(E->Scalars.begin(), E->Scalars.end());
-  // Clear values, to be replaced by insertvector instructions.
-  for (auto [EIdx, Idx] : E->CombinedEntriesWithIndices)
-    for_each(MutableArrayRef(GatheredScalars)
-                 .slice(Idx, VectorizableTree[EIdx]->getVectorFactor()),
-             [&](Value *&V) { V = PoisonValue::get(V->getType()); });
+  // Do not process split vectorize node, marked to be gathers/buildvectors.
   SmallVector<std::pair<const TreeEntry *, unsigned>> SubVectors(
       E->CombinedEntriesWithIndices.size());
-  transform(E->CombinedEntriesWithIndices, SubVectors.begin(),
-            [&](const auto &P) {
-              return std::make_pair(VectorizableTree[P.first].get(), P.second);
-            });
+  if (E->State == TreeEntry::SplitVectorize &&
+      TransformedToGatherNodes.contains(E)) {
+    SubVectors.clear();
+  } else {
+    // Clear values, to be replaced by insertvector instructions.
+    for (auto [EIdx, Idx] : E->CombinedEntriesWithIndices)
+      for_each(MutableArrayRef(GatheredScalars)
+                   .slice(Idx, VectorizableTree[EIdx]->getVectorFactor()),
+               [&](Value *&V) { V = PoisonValue::get(V->getType()); });
+    transform(
+        E->CombinedEntriesWithIndices, SubVectors.begin(), [&](const auto &P) {
+          return std::make_pair(VectorizableTree[P.first].get(), P.second);
+        });
+  }
   // Build a mask out of the reorder indices and reorder scalars per this
   // mask.
   SmallVector<int> ReorderMask(E->ReorderIndices.begin(),
@@ -20056,8 +20062,12 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
 }
 
 Value *BoUpSLP::createBuildVector(const TreeEntry *E, Type *ScalarTy) {
-  for (auto [EIdx, _] : E->CombinedEntriesWithIndices)
-    (void)vectorizeTree(VectorizableTree[EIdx].get());
+  // Do not do this for split vectorize node, marked to be gathers/buildvectors.
+  if (E->State != TreeEntry::SplitVectorize ||
+      !TransformedToGatherNodes.contains(E)) {
+    for (auto [EIdx, _] : E->CombinedEntriesWithIndices)
+      (void)vectorizeTree(VectorizableTree[EIdx].get());
+  }
   return processBuildVector<ShuffleInstructionBuilder, Value *>(E, ScalarTy,
                                                                 Builder, *this);
 }
