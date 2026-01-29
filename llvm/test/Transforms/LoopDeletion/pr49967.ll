@@ -16,7 +16,7 @@ define void @test() {
 ; CHECK:       for.body63:
 ; CHECK-NEXT:    [[I58_010:%.*]] = phi i16 [ 32, [[VECTOR_PH]] ]
 ; CHECK-NEXT:    store i16 undef, ptr undef, align 1
-; CHECK-NEXT:    [[INC89:%.*]] = add nuw nsw i16 [[I58_010]], 1
+; CHECK-NEXT:    [[INC89:%.*]] = add nuw nsw i16 32, 1
 ; CHECK-NEXT:    [[EXITCOND12_NOT:%.*]] = icmp eq i16 [[INC89]], 33
 ; CHECK-NEXT:    br label [[FOR_COND_CLEANUP62:%.*]]
 ; CHECK:       for.cond.cleanup150.loopexit:
