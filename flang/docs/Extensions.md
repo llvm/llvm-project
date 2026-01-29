@@ -481,6 +481,7 @@ end
 * A data object can be initialized multiple times by `DATA` statements
   and default component initialization, but only when all initializations
   are to the same value.  Distinct initializations remain errors.
+* `!pgi$` as an alias to `!dir$`.
 
 ### Extensions supported when enabled by options
 

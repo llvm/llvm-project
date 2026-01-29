@@ -27,6 +27,14 @@ module m
      real(8), allocatable :: d(:)
      !dir$  align : 1024 :: d
   end type stuff
+
+  interface
+    subroutine alternative_sentinel(a)
+      integer(4) :: a
+      !pgi$ ignore_tkr a
+      !CHECK: !DIR$ IGNORE_TKR a
+    end subroutine
+  end interface
 end
 
 subroutine vector_always

@@ -78,7 +78,8 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
       .set_preprocessingOnly(options.prescanAndReformat)
       .set_expandIncludeLines(!options.prescanAndReformat ||
           options.expandIncludeLinesInPreprocessedOutput)
-      .AddCompilerDirectiveSentinel("dir$");
+      .AddCompilerDirectiveSentinel("dir$")
+      .AddCompilerDirectiveSentinel("pgi$");
   bool noneOfTheAbove{!options.features.IsEnabled(LanguageFeature::OpenACC) &&
       !options.features.IsEnabled(LanguageFeature::OpenMP) &&
       !options.features.IsEnabled(LanguageFeature::CUDA)};
