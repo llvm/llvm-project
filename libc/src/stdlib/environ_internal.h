@@ -1,4 +1,4 @@
-//===-- Internal utilities for environment management ----------*- C++ -*-===//
+//===-- Internal utilities for environment management -----------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -65,7 +65,7 @@ class EnvironmentManager {
 
 public:
   // Get the singleton instance of the environment manager
-  LIBC_INLINE static EnvironmentManager &instance() {
+  LIBC_INLINE static EnvironmentManager &get_instance() {
     static EnvironmentManager mgr;
     return mgr;
   }

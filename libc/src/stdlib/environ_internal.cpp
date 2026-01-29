@@ -77,13 +77,13 @@ bool EnvironmentManager::ensure_capacity(size_t needed) {
                               ? MIN_ENVIRON_CAPACITY
                               : needed * ENVIRON_GROWTH_FACTOR;
     char **new_storage =
-        reinterpret_cast<char **>(malloc(sizeof(char *) * (new_capacity + 1)));
+        static_cast<char **>(malloc(sizeof(char *) * (new_capacity + 1)));
     if (!new_storage)
       return false;
 
     // Allocate ownership tracking array. We use a parallel array to keep
     // the environ array compatible with the standard char** format.
-    EnvStringOwnership *new_ownership = reinterpret_cast<EnvStringOwnership *>(
+    EnvStringOwnership *new_ownership = static_cast<EnvStringOwnership *>(
         malloc(sizeof(EnvStringOwnership) * (new_capacity + 1)));
     if (!new_ownership) {
       free(new_storage);
@@ -122,12 +122,12 @@ bool EnvironmentManager::ensure_capacity(size_t needed) {
 
   // Allocate new arrays and copy. We avoid realloc to ensure that
   // failures don't leave the manager in an inconsistent state.
-  char **new_storage = reinterpret_cast<char **>(
-      malloc(sizeof(char *) * (new_capacity + 1)));
+  char **new_storage =
+      static_cast<char **>(malloc(sizeof(char *) * (new_capacity + 1)));
   if (!new_storage)
     return false;
 
-  EnvStringOwnership *new_ownership = reinterpret_cast<EnvStringOwnership *>(
+  EnvStringOwnership *new_ownership = static_cast<EnvStringOwnership *>(
       malloc(sizeof(EnvStringOwnership) * (new_capacity + 1)));
   if (!new_ownership) {
     free(new_storage);

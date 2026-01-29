@@ -40,7 +40,7 @@ LLVM_LIBC_FUNCTION(int, setenv,
   }
 
   // Get the singleton environment manager
-  auto &env_mgr = internal::EnvironmentManager::instance();
+  auto &env_mgr = internal::EnvironmentManager::get_instance();
 
   // Initialize environ if not already done
   env_mgr.init();
@@ -68,7 +68,7 @@ LLVM_LIBC_FUNCTION(int, setenv,
   size_t value_len = LIBC_NAMESPACE::internal::string_length(value);
   size_t total_len = name_len + 1 + value_len + 1; // name + '=' + value + '\0'
 
-  char *new_string = reinterpret_cast<char *>(malloc(total_len));
+  char *new_string = static_cast<char *>(malloc(total_len));
   if (!new_string) {
     libc_errno = ENOMEM;
     return -1;
