@@ -2221,7 +2221,9 @@ struct DSEState {
       return true;
 
     if (auto *LoadI = dyn_cast<LoadInst>(Store->getOperand(0))) {
-      if (LoadI->getPointerOperand() == Store->getOperand(1)) {
+      if (LoadI->getPointerOperand() == Store->getOperand(1) ||
+          AA.isMustAlias(MemoryLocation::get(LoadI),
+                         MemoryLocation::get(Store))) {
         // Get the defining access for the load.
         auto *LoadAccess = MSSA.getMemoryAccess(LoadI)->getDefiningAccess();
         // Fast path: the defining accesses are the same.

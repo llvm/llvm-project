@@ -1179,3 +1179,14 @@ if.else:
 end:
   ret void
 }
+
+define i32 @test_use_alias_analysis(ptr %Q) {
+; CHECK-LABEL: @test_use_alias_analysis(
+; CHECK-NEXT:    [[A:%.*]] = load i32, ptr [[Q:%.*]], align 4
+; CHECK-NEXT:    ret i32 [[A]]
+;
+  %a = load i32, ptr %Q
+  %Q2 = addrspacecast ptr %Q to ptr addrspace(5)
+  store i32 %a, ptr addrspace(5) %Q2
+  ret i32 %a
+}
