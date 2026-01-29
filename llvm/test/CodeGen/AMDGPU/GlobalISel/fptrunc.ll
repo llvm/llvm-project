@@ -404,8 +404,9 @@ define amdgpu_ps half @fptrunc_f64_to_f16_div(double %a) {
 ; GFX1250-NEXT:    v_or_b32_e32 v3, v5, v3
 ; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX1250-NEXT:    v_cndmask_b32_e32 v3, v4, v3, vcc_lo
-; GFX1250-NEXT:    v_dual_lshrrev_b32 v3, 2, v3 :: v_dual_bitop2_b32 v4, 7, v3 bitop3:0x40
-; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_1)
+; GFX1250-NEXT:    v_and_b32_e32 v4, 7, v3
+; GFX1250-NEXT:    v_lshrrev_b32_e32 v3, 2, v3
+; GFX1250-NEXT:    s_delay_alu instid0(VALU_DEP_2)
 ; GFX1250-NEXT:    v_cmp_eq_u32_e32 vcc_lo, 3, v4
 ; GFX1250-NEXT:    v_cmp_lt_i32_e64 s0, 5, v4
 ; GFX1250-NEXT:    s_or_b32 s0, vcc_lo, s0
