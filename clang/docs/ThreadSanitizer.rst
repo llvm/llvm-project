@@ -126,37 +126,40 @@ Interaction of Inlining with Disabling Sanitizer Instrumentation
     #define ALWAYS_INLINE_IF_UNINSTRUMENTED __attribute__((always_inline))
     #endif
 
-Conditional Sanitizer Checks with ``__builtin_allow_sanitize_check``
---------------------------------------------------------------------
+Explicit Sanitizer Checks with ``__builtin_allow_sanitize_check``
+-----------------------------------------------------------------
 
 The ``__builtin_allow_sanitize_check("thread")`` builtin can be used to
-conditionally execute code only when ThreadSanitizer is active for the current
-function (after inlining). This is particularly useful for inserting explicit,
-sanitizer-specific checks around operations like syscalls or inline assembly,
-which might otherwise be unchecked by the sanitizer.
+conditionally execute code depending on whether ThreadSanitizer checks are
+enabled and permitted by the current policy (after inlining). This is
+particularly useful for inserting explicit, sanitizer-specific checks around
+operations like syscalls or inline assembly, which might otherwise be unchecked
+by the sanitizer.
 
 Example:
 
 .. code-block:: c
 
+    void __tsan_read8(void *);
+
     inline __attribute__((always_inline))
-    void copy_to_device(void *addr, size_t size) {
-      if (__builtin_allow_sanitize_check("thread")) {
-        // Custom checks that `data` is not concurrently modified.
-      }
-      // ... actual device memory copy logic, potentially a syscall ...
+    void my_helper(void *addr) {
+      if (__builtin_allow_sanitize_check("thread"))
+        __tsan_read8(addr);
+      // ... actual logic, e.g. inline assembly ...
+      asm volatile ("..." : : "r" (addr) : "memory");
     }
 
     void instrumented_function() {
       ...
-      copy_to_device(&shared_data, size); // checks are active
+      my_helper(&shared_data); // checks are active
       ...
     }
 
     __attribute__((no_sanitize("thread")))
     void uninstrumented_function() {
       ...
-      copy_to_device(&shared_data, size); // checks are skipped
+      my_helper(&shared_data); // checks are skipped
       ...
     }
 
