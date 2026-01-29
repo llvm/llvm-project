@@ -27,6 +27,7 @@ add_llvm_target(SPIRVCodeGen
   SPIRVInstrInfo.cpp
   SPIRVInstructionSelector.cpp
   SPIRVLegalizeImplicitBinding.cpp
+  SPIRVLegalizeZeroSizeArrays.cpp
   SPIRVStripConvergentIntrinsics.cpp
   SPIRVLegalizePointerCast.cpp
   SPIRVMergeRegionExitTargets.cpp
@@ -62,6 +63,7 @@ add_llvm_target(SPIRVCodeGen
   Demangle
   GlobalISel
   FrontendHLSL
+  IPO
   MC
   SPIRVAnalysis
   SPIRVDesc

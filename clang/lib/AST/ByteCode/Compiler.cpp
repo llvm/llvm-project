@@ -779,6 +779,9 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     // a diagnostic if appropriate.
     return this->delegate(SubExpr);
 
+  case CK_LValueBitCast:
+    return this->emitInvalidCast(CastKind::ReinterpretLike, /*Fatal=*/true, CE);
+
   default:
     return this->emitInvalid(CE);
   }
@@ -1381,6 +1384,10 @@ bool Compiler<Emitter>::VisitComplexBinOp(const BinaryOperator *E) {
     } else {
       if (!this->emitPop(ResultElemT, E))
         return false;
+      // Remove the Complex temporary pointer we created ourselves at the
+      // beginning of this function.
+      if (!Initializing)
+        return this->emitPopPtr(E);
     }
   }
   return true;
@@ -3184,6 +3191,8 @@ bool Compiler<Emitter>::VisitCXXReinterpretCastExpr(
     if (PointeeToT && PointeeFromT) {
       if (isIntegralType(*PointeeFromT) && isIntegralType(*PointeeToT))
         Fatal = false;
+      else if (E->getCastKind() == CK_LValueBitCast)
+        Fatal = false;
     } else {
       Fatal = SubExpr->getType().getTypePtr() != E->getType().getTypePtr();
     }
@@ -3685,34 +3694,42 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
       QualType InitType = Init->getType();
       size_t StaticInitElems = 0;
       const Expr *DynamicInit = nullptr;
+      OptPrimType ElemT;
+
       if (const ConstantArrayType *CAT =
               Ctx.getASTContext().getAsConstantArrayType(InitType)) {
         StaticInitElems = CAT->getZExtSize();
+        // Initialize the first S element from the initializer.
         if (!this->visitInitializer(Init))
           return false;
 
-        if (const auto *ILE = dyn_cast<InitListExpr>(Init);
-            ILE && ILE->hasArrayFiller())
-          DynamicInit = ILE->getArrayFiller();
+        if (const auto *ILE = dyn_cast<InitListExpr>(Init)) {
+          if (ILE->hasArrayFiller())
+            DynamicInit = ILE->getArrayFiller();
+          else if (isa<StringLiteral>(ILE->getInit(0)))
+            ElemT = classifyPrim(CAT->getElementType());
+        }
       }
 
       // The initializer initializes a certain number of elements, S.
       // However, the complete number of elements, N, might be larger than that.
       // In this case, we need to get an initializer for the remaining elements.
-      // There are to cases:
+      // There are three cases:
       //   1) For the form 'new Struct[n];', the initializer is a
       //      CXXConstructExpr and its type is an IncompleteArrayType.
       //   2) For the form 'new Struct[n]{1,2,3}', the initializer is an
       //      InitListExpr and the initializer for the remaining elements
       //      is the array filler.
+      //   3) StringLiterals don't have an array filler, so we need to zero
+      //      the remaining elements.
 
-      if (DynamicInit || InitType->isIncompleteArrayType()) {
+      if (DynamicInit || ElemT || InitType->isIncompleteArrayType()) {
         const Function *CtorFunc = nullptr;
         if (const auto *CE = dyn_cast<CXXConstructExpr>(Init)) {
           CtorFunc = getFunction(CE->getConstructor());
           if (!CtorFunc)
             return false;
-        } else if (!DynamicInit)
+        } else if (!DynamicInit && !ElemT)
           DynamicInit = Init;
 
         LabelTy EndLabel = this->getLabel();
@@ -3778,6 +3795,13 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
             if (!this->emitPopPtr(E))
               return false;
           }
+        } else if (ElemT) {
+          if (!this->visitZeroInitializer(
+                  *ElemT, InitType->getAsArrayTypeUnsafe()->getElementType(),
+                  Init))
+            return false;
+          if (!this->emitStorePop(*ElemT, E))
+            return false;
         } else {
           assert(CtorFunc);
           if (!this->emitCall(CtorFunc, 0, E))
@@ -5134,6 +5158,10 @@ bool Compiler<Emitter>::VisitBuiltinCallExpr(const CallExpr *E,
       return false;
 
   } break;
+  case Builtin::BI__assume:
+  case Builtin::BI__builtin_assume:
+    // Argument is not evaluated.
+    break;
   default:
     if (!Context::isUnevaluatedBuiltin(BuiltinID)) {
       // Put arguments on the stack.
@@ -5570,7 +5598,8 @@ bool Compiler<Emitter>::maybeEmitDeferredVarInit(const VarDecl *VD) {
 static bool hasTrivialDefaultCtorParent(const FieldDecl *FD) {
   assert(FD);
   assert(FD->getParent()->isUnion());
-  const auto *CXXRD = dyn_cast<CXXRecordDecl>(FD->getParent());
+  const CXXRecordDecl *CXXRD =
+      FD->getType()->getBaseElementTypeUnsafe()->getAsCXXRecordDecl();
   return !CXXRD || CXXRD->hasTrivialDefaultConstructor();
 }
 
@@ -5655,6 +5684,9 @@ bool Compiler<Emitter>::visitReturnStmt(const ReturnStmt *RS) {
       if (!this->visit(RE))
         return false;
     } else {
+      if (RE->containsErrors())
+        return false;
+
       InitLinkScope<Emitter> ILS(this, InitLink::RVO());
       // RVO - construct the value in the return location.
       if (!this->emitRVOPtr(RE))
@@ -6151,6 +6183,14 @@ bool Compiler<Emitter>::visitDefaultStmt(const DefaultStmt *S) {
 
 template <class Emitter>
 bool Compiler<Emitter>::visitAttributedStmt(const AttributedStmt *S) {
+  const Stmt *SubStmt = S->getSubStmt();
+
+  bool IsMSVCConstexprAttr = isa<ReturnStmt>(SubStmt) &&
+                             hasSpecificAttr<MSConstexprAttr>(S->getAttrs());
+
+  if (IsMSVCConstexprAttr && !this->emitPushMSVCCE(S))
+    return false;
+
   if (this->Ctx.getLangOpts().CXXAssumptions &&
       !this->Ctx.getLangOpts().MSVCCompat) {
     for (const Attr *A : S->getAttrs()) {
@@ -6158,7 +6198,7 @@ bool Compiler<Emitter>::visitAttributedStmt(const AttributedStmt *S) {
       if (!AA)
         continue;
 
-      assert(isa<NullStmt>(S->getSubStmt()));
+      assert(isa<NullStmt>(SubStmt));
 
       const Expr *Assumption = AA->getAssumption();
       if (Assumption->isValueDependent())
@@ -6177,7 +6217,12 @@ bool Compiler<Emitter>::visitAttributedStmt(const AttributedStmt *S) {
   }
 
   // Ignore other attributes.
-  return this->visitStmt(S->getSubStmt());
+  if (!this->visitStmt(SubStmt))
+    return false;
+
+  if (IsMSVCConstexprAttr)
+    return this->emitPopMSVCCE(S);
+  return true;
 }
 
 template <class Emitter>
@@ -6440,9 +6485,20 @@ bool Compiler<Emitter>::compileConstructor(const CXXConstructorDecl *Ctor) {
       return false;
   }
 
-  if (const auto *Body = Ctor->getBody())
+  if (const Stmt *Body = Ctor->getBody()) {
+    // Only emit the CtorCheck op for non-empty CompoundStmt bodies.
+    // For non-CompoundStmts, always assume they are non-empty and emit it.
+    if (const auto *CS = dyn_cast<CompoundStmt>(Body)) {
+      if (!CS->body_empty() && !this->emitCtorCheck(SourceInfo{}))
+        return false;
+    } else {
+      if (!this->emitCtorCheck(SourceInfo{}))
+        return false;
+    }
+
     if (!visitStmt(Body))
       return false;
+  }
 
   return this->emitRetVoid(SourceInfo{});
 }
@@ -6792,13 +6848,17 @@ bool Compiler<Emitter>::VisitUnaryOperator(const UnaryOperator *E) {
       return false;
     return DiscardResult ? this->emitPop(*T, E) : this->emitComp(*T, E);
   case UO_Real: // __real x
-    assert(T);
+    if (!T)
+      return false;
     return this->delegate(SubExpr);
   case UO_Imag: { // __imag x
-    assert(T);
+    if (!T)
+      return false;
     if (!this->discard(SubExpr))
       return false;
-    return this->visitZeroInitializer(*T, SubExpr->getType(), SubExpr);
+    return DiscardResult
+               ? true
+               : this->visitZeroInitializer(*T, SubExpr->getType(), SubExpr);
   }
   case UO_Extension:
     return this->delegate(SubExpr);
@@ -7071,6 +7131,10 @@ bool Compiler<Emitter>::visitDeclRef(const ValueDecl *D, const Expr *E) {
 
       return this->emitGetPtrParam(It->second.Offset, E);
     }
+
+    if (!Ctx.getLangOpts().CPlusPlus23 && IsReference)
+      return this->emitInvalidDeclRef(cast<DeclRefExpr>(E),
+                                      /*InitializerFailed=*/false, E);
   }
   // Local variables.
   if (auto It = Locals.find(D); It != Locals.end()) {
@@ -7345,7 +7409,8 @@ bool Compiler<Emitter>::emitComplexComparison(const Expr *LHS, const Expr *RHS,
                                               const BinaryOperator *E) {
   assert(E->isComparisonOp());
   assert(!Initializing);
-  assert(!DiscardResult);
+  if (DiscardResult)
+    return this->discard(LHS) && this->discard(RHS);
 
   PrimType ElemT;
   bool LHSIsComplex;

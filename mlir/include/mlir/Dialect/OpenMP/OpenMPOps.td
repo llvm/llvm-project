@@ -948,6 +948,7 @@ def TaskOp
 def TaskloopOp : OpenMP_Op<"taskloop", traits = [
     AttrSizedOperandSegments, AutomaticAllocationScope,
     DeclareOpInterfaceMethods<ComposableOpInterface>,
+    DeclareOpInterfaceMethods<OutlineableOpenMPOpInterface>,
     DeclareOpInterfaceMethods<LoopWrapperInterface>, NoTerminator,
     RecursiveMemoryEffects, SingleBlock
   ], clauses = [
@@ -2238,6 +2239,38 @@ def WorkdistributeOp : OpenMP_Op<"workdistribute"> {
   let regions = (region AnyRegion:$region);
   let hasVerifier = 1;
   let assemblyFormat = "$region attr-dict";
+}
+
+//===----------------------------------------------------------------------===//
+// declare simd Construct
+//===----------------------------------------------------------------------===//
+
+def DeclareSimdOp
+    : OpenMP_Op<"declare_simd", traits = [AttrSizedOperandSegments],
+                clauses = [OpenMP_AlignedClause, OpenMP_InbranchClause,
+                           OpenMP_LinearClause, OpenMP_NotinbranchClause,
+                           OpenMP_SimdlenClause, OpenMP_UniformClause]> {
+  let summary = "declare simd directive";
+  let description = [{
+    "omp.declare_simd" models the OpenMP `declare simd` directive.
+
+    This is a declarative operation (no region) intended to appear inside
+    a function body. It attaches clauses of declare simd to the enclosing
+    function.
+
+    Example:
+    ```mlir
+    func.func @add(%a: memref<16xi32>) {
+      omp.declare_simd simdlen(8) aligned(%a : memref<16xi32> -> 64 : i64)
+      ...
+    }
+    ```
+  }] # clausesDescription;
+
+  let builders = [OpBuilder<(
+      ins CArg<"const DeclareSimdOperands &">:$clauses)>];
+
+  let hasVerifier = 1;
 }
 
 #endif // OPENMP_OPS

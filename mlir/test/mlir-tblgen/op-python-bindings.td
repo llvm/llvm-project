@@ -233,7 +233,7 @@ def DeriveResultTypesOp : TestOp<"derive_result_types_op", [FirstAttrDerivedResu
   // CHECK:     _ods_result_type_source_attr = attributes["type"]
   // CHECK:     _ods_derived_result_type = (
   // CHECK:       _ods_ir.TypeAttr(_ods_result_type_source_attr).value
-  // CHECK:       if _ods_ir.TypeAttr.isinstance(_ods_result_type_source_attr) else
+  // CHECK:       if isinstance(_ods_result_type_source_attr, _ods_ir.TypeAttr) else
   // CHECK:       _ods_result_type_source_attr.type)
   // CHECK:     results = [_ods_derived_result_type] * 2
   let arguments = (ins TypeAttr:$type);

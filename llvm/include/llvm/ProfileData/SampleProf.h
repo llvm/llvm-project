@@ -1219,6 +1219,13 @@ public:
     return getCanonicalFnName(FnName, KnownSuffixes, Attr);
   }
 
+  static StringRef getCanonicalCoroFnName(StringRef FnName,
+                                          StringRef Attr = "selected") {
+    const SmallVector<StringRef, 3> CoroSuffixes{".cleanup", ".destroy",
+                                                 ".resume"};
+    return getCanonicalFnName(FnName, CoroSuffixes, Attr);
+  }
+
   static StringRef getCanonicalFnName(StringRef FnName,
                                       ArrayRef<StringRef> Suffixes,
                                       StringRef Attr = "selected") {

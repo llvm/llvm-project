@@ -48,6 +48,7 @@
 #include "llvm/Support/Allocator.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Registry.h"
+#include "llvm/Support/TrailingObjects.h"
 #include <cassert>
 #include <cstddef>
 #include <cstdint>
@@ -134,6 +135,64 @@ struct CXXStandardLibraryVersionInfo {
   enum Library { Unknown, LibStdCXX };
   Library Lib;
   std::uint64_t Version;
+};
+
+/// Record the previous 'export' keyword info.
+///
+/// Since P1857R3, the standard introduced several rules to determine whether
+/// the 'module', 'export module', 'import', 'export import' is a valid
+/// directive introducer. This class is used to record the previous 'export'
+/// keyword token, and then handle 'export module' and 'export import'.
+class ExportContextualKeywordInfo {
+  Token ExportTok;
+  bool AtPhysicalStartOfLine = false;
+
+public:
+  ExportContextualKeywordInfo() = default;
+  ExportContextualKeywordInfo(const Token &Tok, bool AtPhysicalStartOfLine)
+      : ExportTok(Tok), AtPhysicalStartOfLine(AtPhysicalStartOfLine) {}
+
+  bool isValid() const { return ExportTok.is(tok::kw_export); }
+  bool isAtPhysicalStartOfLine() const { return AtPhysicalStartOfLine; }
+  Token getExportTok() const { return ExportTok; }
+  void reset() {
+    ExportTok.startToken();
+    AtPhysicalStartOfLine = false;
+  }
+};
+
+class ModuleNameLoc final
+    : llvm::TrailingObjects<ModuleNameLoc, IdentifierLoc> {
+  friend TrailingObjects;
+  unsigned NumIdentifierLocs;
+  unsigned numTrailingObjects(OverloadToken<IdentifierLoc>) const {
+    return getNumIdentifierLocs();
+  }
+
+  ModuleNameLoc(ModuleIdPath Path) : NumIdentifierLocs(Path.size()) {
+    (void)llvm::copy(Path, getTrailingObjectsNonStrict<IdentifierLoc>());
+  }
+
+public:
+  static ModuleNameLoc *Create(Preprocessor &PP, ModuleIdPath Path);
+  unsigned getNumIdentifierLocs() const { return NumIdentifierLocs; }
+  ModuleIdPath getModuleIdPath() const {
+    return {getTrailingObjectsNonStrict<IdentifierLoc>(),
+            getNumIdentifierLocs()};
+  }
+
+  SourceLocation getBeginLoc() const {
+    return getModuleIdPath().front().getLoc();
+  }
+  SourceLocation getEndLoc() const {
+    auto &Last = getModuleIdPath().back();
+    return Last.getLoc().getLocWithOffset(
+        Last.getIdentifierInfo()->getLength());
+  }
+  SourceRange getRange() const { return {getBeginLoc(), getEndLoc()}; }
+  std::string str() const {
+    return ModuleLoader::getFlatNameFromPath(getModuleIdPath());
+  }
 };
 
 /// Engages in a tight little dance with the lexer to efficiently
@@ -339,8 +398,9 @@ private:
   /// lexed, if any.
   SourceLocation ModuleImportLoc;
 
-  /// The import path for named module that we're currently processing.
-  SmallVector<IdentifierLoc, 2> NamedModuleImportPath;
+  /// The source location of the \c module contextual keyword we just
+  /// lexed, if any.
+  SourceLocation ModuleDeclLoc;
 
   llvm::DenseMap<FileID, SmallVector<const char *>> CheckPoints;
   unsigned CheckPointCounter = 0;
@@ -350,6 +410,12 @@ private:
 
   /// Whether the last token we lexed was an '@'.
   bool LastTokenWasAt = false;
+
+  /// Whether we're importing a standard C++20 named Modules.
+  bool ImportingCXXNamedModules = false;
+
+  /// Whether the last token we lexed was an 'export' keyword.
+  ExportContextualKeywordInfo LastTokenWasExportKeyword;
 
   /// First pp-token source location in current translation unit.
   SourceLocation FirstPPTokenLoc;
@@ -562,9 +628,9 @@ private:
         reset();
     }
 
-    void handleIdentifier(IdentifierInfo *Identifier) {
-      if (isModuleCandidate() && Identifier)
-        Name += Identifier->getName().str();
+    void handleModuleName(ModuleNameLoc *NameLoc) {
+      if (isModuleCandidate() && NameLoc)
+        Name += NameLoc->str();
       else if (!isNamedModule())
         reset();
     }
@@ -572,13 +638,6 @@ private:
     void handleColon() {
       if (isModuleCandidate())
         Name += ":";
-      else if (!isNamedModule())
-        reset();
-    }
-
-    void handlePeriod() {
-      if (isModuleCandidate())
-        Name += ".";
       else if (!isNamedModule())
         reset();
     }
@@ -638,10 +697,6 @@ private:
   };
 
   ModuleDeclSeq ModuleDeclState;
-
-  /// Whether the module import expects an identifier next. Otherwise,
-  /// it expects a '.' or ';'.
-  bool ModuleImportExpectsIdentifier = false;
 
   /// The identifier and source location of the currently-active
   /// \#pragma clang arc_cf_code_audited begin.
@@ -775,6 +830,12 @@ private:
   ///
   /// Only one of CurLexer, or CurTokenLexer will be non-null.
   std::unique_ptr<Lexer> CurLexer;
+
+  /// Lexers that are pending destruction, deferred until the current
+  /// Stack of Lexer unwinds completely (LexLevel returns to 0).
+  /// This avoids use-after-free when HandleEndOfFile is called from
+  /// within a Lexer method that still needs to access its members.
+  SmallVector<std::unique_ptr<Lexer>, 2> PendingDestroyLexers;
 
   /// The current top of the stack that we're lexing from
   /// if not expanding a macro.
@@ -1124,6 +1185,9 @@ private:
 
   /// Whether tokens are being skipped until the through header is seen.
   bool SkippingUntilPCHThroughHeader = false;
+
+  /// Whether the main file is preprocessed module file.
+  bool MainFileIsPreprocessedModuleFile = false;
 
   /// \{
   /// Cache of macro expanders to reduce malloc traffic.
@@ -1778,6 +1842,36 @@ public:
   std::optional<LexEmbedParametersResult> LexEmbedParameters(Token &Current,
                                                              bool ForHasEmbed);
 
+  /// Whether the main file is preprocessed module file.
+  bool isPreprocessedModuleFile() const {
+    return MainFileIsPreprocessedModuleFile;
+  }
+
+  /// Mark the main file as a preprocessed module file, then the 'module' and
+  /// 'import' directive recognition will be suppressed. Only
+  /// '__preprocessed_moduke' and '__preprocessed_import' are allowed.
+  void markMainFileAsPreprocessedModuleFile() {
+    MainFileIsPreprocessedModuleFile = true;
+  }
+
+  bool LexModuleNameContinue(Token &Tok, SourceLocation UseLoc,
+                             SmallVectorImpl<Token> &Suffix,
+                             SmallVectorImpl<IdentifierLoc> &Path,
+                             bool AllowMacroExpansion = true,
+                             bool IsPartition = false);
+  void EnterModuleSuffixTokenStream(ArrayRef<Token> Toks);
+  void HandleCXXImportDirective(Token Import);
+  void HandleCXXModuleDirective(Token Module);
+
+  /// Callback invoked when the lexer sees one of export, import or module token
+  /// at the start of a line.
+  ///
+  /// This consumes the import/module directive, modifies the
+  /// lexer/preprocessor state, and advances the lexer(s) so that the next token
+  /// read is the correct one.
+  bool HandleModuleContextualKeyword(Token &Result,
+                                     bool TokAtPhysicalStartOfLine);
+
   /// Get the start location of the first pp-token in main file.
   SourceLocation getMainFileFirstPPTokenLoc() const {
     assert(FirstPPTokenLoc.isValid() &&
@@ -1786,7 +1880,10 @@ public:
   }
 
   bool LexAfterModuleImport(Token &Result);
-  void CollectPpImportSuffix(SmallVectorImpl<Token> &Toks);
+  void CollectPPImportSuffix(SmallVectorImpl<Token> &Toks,
+                             bool StopUntilEOD = false);
+  bool CollectPPImportSuffixAndEnterStream(SmallVectorImpl<Token> &Toks,
+                                           bool StopUntilEOD = false);
 
   void makeModuleVisible(Module *M, SourceLocation Loc,
                          bool IncludeExports = true);
@@ -2308,45 +2405,22 @@ public:
     }
   }
 
-  /// Check whether the next pp-token is one of the specificed token kind. this
-  /// method should have no observable side-effect on the lexed tokens.
-  template <typename... Ts> bool isNextPPTokenOneOf(Ts... Ks) {
+  /// isNextPPTokenOneOf - Check whether the next pp-token is one of the
+  /// specificed token kind. this method should have no observable side-effect
+  /// on the lexed tokens.
+  template <typename... Ts> bool isNextPPTokenOneOf(Ts... Ks) const {
     static_assert(sizeof...(Ts) > 0,
                   "requires at least one tok::TokenKind specified");
-    // Do some quick tests for rejection cases.
-    std::optional<Token> Val;
-    if (CurLexer)
-      Val = CurLexer->peekNextPPToken();
-    else
-      Val = CurTokenLexer->peekNextPPToken();
-
-    if (!Val) {
-      // We have run off the end.  If it's a source file we don't
-      // examine enclosing ones (C99 5.1.1.2p4).  Otherwise walk up the
-      // macro stack.
-      if (CurPPLexer)
-        return false;
-      for (const IncludeStackInfo &Entry : llvm::reverse(IncludeMacroStack)) {
-        if (Entry.TheLexer)
-          Val = Entry.TheLexer->peekNextPPToken();
-        else
-          Val = Entry.TheTokenLexer->peekNextPPToken();
-
-        if (Val)
-          break;
-
-        // Ran off the end of a source file?
-        if (Entry.ThePPLexer)
-          return false;
-      }
-    }
-
-    // Okay, we found the token and return.  Otherwise we found the end of the
-    // translation unit.
-    return Val->isOneOf(Ks...);
+    auto NextTokOpt = peekNextPPToken();
+    return NextTokOpt.has_value() ? NextTokOpt->is(Ks...) : false;
   }
 
 private:
+  /// peekNextPPToken - Return std::nullopt if there are no more tokens in the
+  /// buffer controlled by this lexer, otherwise return the next unexpanded
+  /// token.
+  std::optional<Token> peekNextPPToken() const;
+
   /// Identifiers used for SEH handling in Borland. These are only
   /// allowed in particular circumstances
   // __except block
@@ -2402,20 +2476,27 @@ public:
   /// If \p EnableMacros is true, then we consider macros that expand to zero
   /// tokens as being ok.
   ///
+  /// If \p ExtraToks not null, the extra tokens will be saved in this
+  /// container.
+  ///
   /// \return The location of the end of the directive (the terminating
   /// newline).
-  SourceLocation CheckEndOfDirective(const char *DirType,
-                                     bool EnableMacros = false);
+  SourceLocation
+  CheckEndOfDirective(StringRef DirType, bool EnableMacros = false,
+                      SmallVectorImpl<Token> *ExtraToks = nullptr);
 
   /// Read and discard all tokens remaining on the current line until
   /// the tok::eod token is found. Returns the range of the skipped tokens.
-  SourceRange DiscardUntilEndOfDirective() {
+  SourceRange
+  DiscardUntilEndOfDirective(SmallVectorImpl<Token> *DiscardedToks = nullptr) {
     Token Tmp;
-    return DiscardUntilEndOfDirective(Tmp);
+    return DiscardUntilEndOfDirective(Tmp, DiscardedToks);
   }
 
   /// Same as above except retains the token that was found.
-  SourceRange DiscardUntilEndOfDirective(Token &Tok);
+  SourceRange
+  DiscardUntilEndOfDirective(Token &Tok,
+                             SmallVectorImpl<Token> *DiscardedToks = nullptr);
 
   /// Returns true if the preprocessor has seen a use of
   /// __DATE__ or __TIME__ in the file so far.
@@ -2486,11 +2567,10 @@ public:
   }
 
   /// If we're importing a standard C++20 Named Modules.
-  bool isInImportingCXXNamedModules() const {
-    // NamedModuleImportPath will be non-empty only if we're importing
-    // Standard C++ named modules.
-    return !NamedModuleImportPath.empty() && getLangOpts().CPlusPlusModules &&
-           !IsAtImport;
+  bool isImportingCXXNamedModules() const {
+    assert(getLangOpts().CPlusPlusModules &&
+           "Import C++ named modules are only valid for C++20 modules");
+    return ImportingCXXNamedModules;
   }
 
   /// Allocate a new MacroInfo object with the provided SourceLocation.
@@ -2558,6 +2638,8 @@ private:
   }
 
   void PopIncludeMacroStack() {
+    if (CurLexer)
+      PendingDestroyLexers.push_back(std::move(CurLexer));
     CurLexer = std::move(IncludeMacroStack.back().TheLexer);
     CurPPLexer = IncludeMacroStack.back().ThePPLexer;
     CurTokenLexer = std::move(IncludeMacroStack.back().TheTokenLexer);
