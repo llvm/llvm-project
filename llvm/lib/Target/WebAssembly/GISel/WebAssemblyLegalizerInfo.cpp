@@ -205,12 +205,14 @@ WebAssemblyLegalizerInfo::WebAssemblyLegalizerInfo(
   getActionDefinitionsBuilder(G_LOAD)
       .legalForTypesWithMemDesc(
           {{s32, p0, s32, 1}, {s64, p0, s64, 1}, {p0, p0, p0, 1}})
-      .legalForTypesWithMemDesc({{s32, p0, s8, 1},
-                                 {s32, p0, s16, 1},
+      .customIf(
+          LegalityPredicates::typePairAndMemDescInSet(0, 1, /*MMOIdx*/ 0,
+                                                      {{s32, p0, s8, 1},
+                                                       {s32, p0, s16, 1},
 
-                                 {s64, p0, s8, 1},
-                                 {s64, p0, s16, 1},
-                                 {s64, p0, s32, 1}})
+                                                       {s64, p0, s8, 1},
+                                                       {s64, p0, s16, 1},
+                                                       {s64, p0, s32, 1}}))
       .clampScalar(0, s32, s64)
       .lowerIfMemSizeNotByteSizePow2();
   //.scalarize(0);
@@ -345,6 +347,13 @@ bool WebAssemblyLegalizerInfo::legalizeCustom(
   const LLT s1 = LLT::scalar(1);
 
   switch (MI.getOpcode()) {
+  case TargetOpcode::G_LOAD: {
+    // If we are here we are looking at a valid load with a MemTy smaller than the ValueTy
+    // just turn it into a G_ZEXTLOAD to aid optimizations
+
+    MI.setDesc(MIRBuilder.getTII().get(TargetOpcode::G_ZEXTLOAD));
+    return true;
+  }
   case TargetOpcode::G_FCANONICALIZE: {
     auto One =
         MIRBuilder.buildFConstant(MRI.getType(MI.getOperand(0).getReg()), 1.0)
