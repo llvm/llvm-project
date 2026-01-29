@@ -236,6 +236,24 @@ define signext i64 @bset_i64_zero(i64 signext %a) nounwind {
   ret i64 %shl
 }
 
+define i32 @bset_i32_shl_neg(i32 %a, i32 %b) nounwind {
+; RV32I-LABEL: bset_i32_shl_neg:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a2, -1
+; RV32I-NEXT:    sll a1, a2, a1
+; RV32I-NEXT:    add a0, a1, a0
+; RV32I-NEXT:    ret
+;
+; RV32ZBS-LABEL: bset_i32_shl_neg:
+; RV32ZBS:       # %bb.0:
+; RV32ZBS-NEXT:    bset a1, zero, a1
+; RV32ZBS-NEXT:    sub a0, a0, a1
+; RV32ZBS-NEXT:    ret
+  %shl = shl nsw i32 -1, %b
+  %sub = add i32 %shl, %a
+  ret i32 %sub
+}
+
 define i32 @binv_i32(i32 %a, i32 %b) nounwind {
 ; RV32I-LABEL: binv_i32:
 ; RV32I:       # %bb.0:
@@ -327,17 +345,17 @@ define i64 @bext_i64(i64 %a, i64 %b) nounwind {
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    andi a3, a2, 63
 ; CHECK-NEXT:    addi a4, a3, -32
-; CHECK-NEXT:    bltz a4, .LBB13_2
+; CHECK-NEXT:    bltz a4, .LBB14_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    srl a0, a1, a3
-; CHECK-NEXT:    j .LBB13_3
-; CHECK-NEXT:  .LBB13_2:
+; CHECK-NEXT:    j .LBB14_3
+; CHECK-NEXT:  .LBB14_2:
 ; CHECK-NEXT:    srl a0, a0, a2
 ; CHECK-NEXT:    slli a1, a1, 1
 ; CHECK-NEXT:    not a2, a3
 ; CHECK-NEXT:    sll a1, a1, a2
 ; CHECK-NEXT:    or a0, a0, a1
-; CHECK-NEXT:  .LBB13_3:
+; CHECK-NEXT:  .LBB14_3:
 ; CHECK-NEXT:    andi a0, a0, 1
 ; CHECK-NEXT:    li a1, 0
 ; CHECK-NEXT:    ret
@@ -815,17 +833,17 @@ define i64 @bset_trailing_ones_i64_mask(i64 %a) nounwind {
 ; CHECK-NEXT:    li a3, -1
 ; CHECK-NEXT:    addi a1, a2, -32
 ; CHECK-NEXT:    sll a0, a3, a0
-; CHECK-NEXT:    bltz a1, .LBB44_2
+; CHECK-NEXT:    bltz a1, .LBB45_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    sll a2, a3, a2
-; CHECK-NEXT:    j .LBB44_3
-; CHECK-NEXT:  .LBB44_2:
+; CHECK-NEXT:    j .LBB45_3
+; CHECK-NEXT:  .LBB45_2:
 ; CHECK-NEXT:    not a2, a2
 ; CHECK-NEXT:    lui a3, 524288
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    srl a2, a3, a2
 ; CHECK-NEXT:    or a2, a0, a2
-; CHECK-NEXT:  .LBB44_3:
+; CHECK-NEXT:  .LBB45_3:
 ; CHECK-NEXT:    srai a1, a1, 31
 ; CHECK-NEXT:    and a0, a1, a0
 ; CHECK-NEXT:    not a1, a2
@@ -843,17 +861,17 @@ define i64 @bset_trailing_ones_i64_no_mask(i64 %a) nounwind {
 ; CHECK-NEXT:    li a1, -1
 ; CHECK-NEXT:    addi a2, a0, -32
 ; CHECK-NEXT:    sll a1, a1, a0
-; CHECK-NEXT:    bltz a2, .LBB45_2
+; CHECK-NEXT:    bltz a2, .LBB46_2
 ; CHECK-NEXT:  # %bb.1:
 ; CHECK-NEXT:    mv a0, a1
-; CHECK-NEXT:    j .LBB45_3
-; CHECK-NEXT:  .LBB45_2:
+; CHECK-NEXT:    j .LBB46_3
+; CHECK-NEXT:  .LBB46_2:
 ; CHECK-NEXT:    not a0, a0
 ; CHECK-NEXT:    lui a3, 524288
 ; CHECK-NEXT:    addi a3, a3, -1
 ; CHECK-NEXT:    srl a0, a3, a0
 ; CHECK-NEXT:    or a0, a1, a0
-; CHECK-NEXT:  .LBB45_3:
+; CHECK-NEXT:  .LBB46_3:
 ; CHECK-NEXT:    srai a2, a2, 31
 ; CHECK-NEXT:    and a2, a2, a1
 ; CHECK-NEXT:    not a1, a0
