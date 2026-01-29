@@ -367,8 +367,10 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
   unsigned ElemSize = StrPtr.getFieldDesc()->getElemSize();
 
   if (ID == Builtin::BI__builtin_wcslen || ID == Builtin::BIwcslen) {
-    [[maybe_unused]] const ASTContext &AC = S.getASTContext();
-    assert(ElemSize == AC.getTypeSizeInChars(AC.getWCharType()).getQuantity());
+    const ASTContext &AC = S.getASTContext();
+    unsigned WCharSize = AC.getTypeSizeInChars(AC.getWCharType()).getQuantity();
+    if (ElemSize != WCharSize)
+      return false;
   }
 
   size_t Len = 0;
@@ -728,6 +730,30 @@ static bool interp__builtin_popcount(InterpState &S, CodePtr OpPC,
     Val = popToAPSInt(S, Call->getArg(0));
   }
   pushInteger(S, Val.popcount(), Call->getType());
+  return true;
+}
+
+static bool interp__builtin_ia32_crc32(InterpState &S, CodePtr OpPC,
+                                       const InterpFrame *Frame,
+                                       const CallExpr *Call,
+                                       unsigned DataBytes) {
+  uint64_t DataVal = popToUInt64(S, Call->getArg(1));
+  uint64_t CRCVal = popToUInt64(S, Call->getArg(0));
+
+  // CRC32C polynomial (iSCSI polynomial, bit-reversed)
+  static const uint32_t CRC32C_POLY = 0x82F63B78;
+
+  // Process each byte
+  uint32_t Result = static_cast<uint32_t>(CRCVal);
+  for (unsigned I = 0; I != DataBytes; ++I) {
+    uint8_t Byte = static_cast<uint8_t>((DataVal >> (I * 8)) & 0xFF);
+    Result ^= Byte;
+    for (int J = 0; J != 8; ++J) {
+      Result = (Result >> 1) ^ ((Result & 1) ? CRC32C_POLY : 0);
+    }
+  }
+
+  pushInteger(S, Result, Call->getType());
   return true;
 }
 
@@ -2456,8 +2482,8 @@ static bool interp__builtin_elementwise_int_unaryop(
 
 static bool interp__builtin_elementwise_fp_binop(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
-    llvm::function_ref<APFloat(const APFloat &, const APFloat &,
-                               std::optional<APSInt> RoundingMode)>
+    llvm::function_ref<std::optional<APFloat>(
+        const APFloat &, const APFloat &, std::optional<APSInt> RoundingMode)>
         Fn) {
   assert((Call->getNumArgs() == 2) || (Call->getNumArgs() == 3));
   const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
@@ -2483,10 +2509,10 @@ static bool interp__builtin_elementwise_fp_binop(
     using T = PrimConv<PT_Float>::T;
     APFloat ElemA = APtr.elem<T>(ElemIdx).getAPFloat();
     APFloat ElemB = BPtr.elem<T>(ElemIdx).getAPFloat();
-    if (ElemA.isNaN() || ElemA.isInfinity() || ElemA.isDenormal() ||
-        ElemB.isNaN() || ElemB.isInfinity() || ElemB.isDenormal())
+    std::optional<APFloat> Result = Fn(ElemA, ElemB, RoundingMode);
+    if (!Result)
       return false;
-    Dst.elem<T>(ElemIdx) = static_cast<T>(Fn(ElemA, ElemB, RoundingMode));
+    Dst.elem<T>(ElemIdx) = static_cast<T>(*Result);
   }
 
   Dst.initializeAllElements();
@@ -4408,6 +4434,15 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case Builtin::BI__builtin_assume_aligned:
     return interp__builtin_assume_aligned(S, OpPC, Frame, Call);
 
+  case clang::X86::BI__builtin_ia32_crc32qi:
+    return interp__builtin_ia32_crc32(S, OpPC, Frame, Call, 1);
+  case clang::X86::BI__builtin_ia32_crc32hi:
+    return interp__builtin_ia32_crc32(S, OpPC, Frame, Call, 2);
+  case clang::X86::BI__builtin_ia32_crc32si:
+    return interp__builtin_ia32_crc32(S, OpPC, Frame, Call, 4);
+  case clang::X86::BI__builtin_ia32_crc32di:
+    return interp__builtin_ia32_crc32(S, OpPC, Frame, Call, 8);
+
   case clang::X86::BI__builtin_ia32_bextr_u32:
   case clang::X86::BI__builtin_ia32_bextr_u64:
   case clang::X86::BI__builtin_ia32_bextri_u32:
@@ -5787,7 +5822,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_minph512:
     return interp__builtin_elementwise_fp_binop(
         S, OpPC, Call,
-        [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
+        [](const APFloat &A, const APFloat &B,
+           std::optional<APSInt>) -> std::optional<APFloat> {
+          if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
+              B.isInfinity() || B.isDenormal())
+            return std::nullopt;
           if (A.isZero() && B.isZero())
             return B;
           return llvm::minimum(A, B);
@@ -5804,7 +5843,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_maxph512:
     return interp__builtin_elementwise_fp_binop(
         S, OpPC, Call,
-        [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
+        [](const APFloat &A, const APFloat &B,
+           std::optional<APSInt>) -> std::optional<APFloat> {
+          if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
+              B.isInfinity() || B.isDenormal())
+            return std::nullopt;
           if (A.isZero() && B.isZero())
             return B;
           return llvm::maximum(A, B);

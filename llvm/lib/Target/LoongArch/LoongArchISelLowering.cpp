@@ -411,7 +411,7 @@ LoongArchTargetLowering::LoongArchTargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::CONCAT_VECTORS, VT, Custom);
       setOperationAction(ISD::INSERT_SUBVECTOR, VT, Legal);
 
-      setOperationAction(ISD::SETCC, VT, Legal);
+      setOperationAction(ISD::SETCC, VT, Custom);
       setOperationAction(ISD::VSELECT, VT, Legal);
       setOperationAction(ISD::VECTOR_SHUFFLE, VT, Custom);
     }
@@ -613,6 +613,8 @@ SDValue LoongArchTargetLowering::LowerOperation(SDValue Op,
     return lowerVECREDUCE(Op, DAG);
   case ISD::ConstantFP:
     return lowerConstantFP(Op, DAG);
+  case ISD::SETCC:
+    return lowerSETCC(Op, DAG);
   }
   return SDValue();
 }
@@ -723,6 +725,35 @@ SDValue LoongArchTargetLowering::lowerConstantFP(SDValue Op,
   }
 
   return SDValue();
+}
+
+// Ensure SETCC result and operand have the same bit width; isel does not
+// support mismatched widths.
+SDValue LoongArchTargetLowering::lowerSETCC(SDValue Op,
+                                            SelectionDAG &DAG) const {
+  SDLoc DL(Op);
+  EVT ResultVT = Op.getValueType();
+  EVT OperandVT = Op.getOperand(0).getValueType();
+
+  EVT SetCCResultVT =
+      getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), OperandVT);
+
+  if (ResultVT == SetCCResultVT)
+    return Op;
+
+  assert(Op.getOperand(0).getValueType() == Op.getOperand(1).getValueType() &&
+         "SETCC operands must have the same type!");
+
+  SDValue SetCCNode =
+      DAG.getNode(ISD::SETCC, DL, SetCCResultVT, Op.getOperand(0),
+                  Op.getOperand(1), Op.getOperand(2));
+
+  if (ResultVT.bitsGT(SetCCResultVT))
+    SetCCNode = DAG.getNode(ISD::SIGN_EXTEND, DL, ResultVT, SetCCNode);
+  else if (ResultVT.bitsLT(SetCCResultVT))
+    SetCCNode = DAG.getNode(ISD::TRUNCATE, DL, ResultVT, SetCCNode);
+
+  return SetCCNode;
 }
 
 // Lower vecreduce_add using vhaddw instructions.
@@ -7217,7 +7248,7 @@ emitPseudoXVINSGR2VR(MachineInstr &MI, MachineBasicBlock *BB,
     Register ScratchSubReg2 = MRI.createVirtualRegister(SubRC);
 
     BuildMI(*BB, MI, DL, TII->get(LoongArch::COPY), ScratchSubReg1)
-        .addReg(XSrc, 0, LoongArch::sub_128);
+        .addReg(XSrc, {}, LoongArch::sub_128);
     BuildMI(*BB, MI, DL,
             TII->get(HalfSize == 8 ? LoongArch::VINSGR2VR_H
                                    : LoongArch::VINSGR2VR_B),

@@ -324,6 +324,35 @@ module {
     llvm.return
   }
 
+  llvm.func @noreturn_function() attributes {noreturn} {
+    // CHECK: @noreturn_function
+    // CHECK-SAME: attributes {noreturn}
+    llvm.return
+  }
+
+  llvm.func @returnstwice_function() attributes {returnstwice} {
+    // CHECK: @returnstwice_function
+    // CHECK-SAME: attributes {returnstwice}
+    llvm.return
+  }
+
+  llvm.func @hot_function() attributes {hot} {
+    // CHECK: @hot_function
+    // CHECK-SAME: attributes {hot}
+    llvm.return
+  }
+
+  llvm.func @cold_function() attributes {cold} {
+    // CHECK: @cold_function
+    // CHECK-SAME: attributes {cold}
+    llvm.return
+  }
+
+  llvm.func @noduplicate_function() attributes {noduplicate} {
+    // CHECK: @noduplicate_function
+    // CHECK-SAME: attributes {noduplicate}
+    llvm.return
+  }
 
 }
 

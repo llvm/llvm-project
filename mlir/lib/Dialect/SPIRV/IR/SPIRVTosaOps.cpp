@@ -9,41 +9,43 @@
 // This file defines the Tosa operations in the SPIR-V dialect.
 //
 //===----------------------------------------------------------------------===//
+
 #include "mlir/Dialect/SPIRV/IR/SPIRVOps.h"
-#include "mlir/IR/BuiltinTypes.h"
-#include "mlir/IR/Matchers.h"
-#include "mlir/IR/TypeUtilities.h"
+#include "llvm/Support/InterleavedRange.h"
 
 namespace mlir::spirv {
 
 //===----------------------------------------------------------------------===//
-// TOSA Operator Verifiers.
+// SPIRV Tosa Custom formatters
 //===----------------------------------------------------------------------===//
 
-//===----------------------------------------------------------------------===//
-// spirv.TosaArgmaxOp
-//===----------------------------------------------------------------------===//
-
-LogicalResult TosaArgMaxOp::verify() {
-  ShapedType inputTy = getInputType();
-  ShapedType resultTy = getResultType();
-
-  if (inputTy.hasRank() && resultTy.hasRank() &&
-      resultTy.getRank() !=
-          (inputTy.getRank() > 1 ? inputTy.getRank() - 1 : 1)) {
-    return emitOpError(
-               "result rank must be max of 1 and (input rank - 1), got ")
-           << resultTy.getRank();
+ParseResult parseSPIRV_I32_1DArmTensor(OpAsmParser &parser,
+                                       DenseIntElementsAttr &attr) {
+  SmallVector<int32_t, 6> elements;
+  auto f = [&]() {
+    int32_t value;
+    ParseResult r = parser.parseInteger(value);
+    elements.push_back(value);
+    return r;
+  };
+  if (parser.parseCommaSeparatedList(
+          OpAsmParser::Delimiter::Square, f,
+          "parsing values in integer list attribute")) {
+    return failure();
   }
 
-  const uint32_t axis = getAxis();
-  if (inputTy.hasRank() && axis >= inputTy.getRank()) {
-    return emitOpError(
-               "specified axis is greater than the rank of input, got axis = ")
-           << axis << " and input rank = " << inputTy.getRank();
-  }
-
+  auto i32Type = IntegerType::get(parser.getContext(), 32);
+  auto type = TensorArmType::get(
+      ArrayRef{static_cast<int64_t>(elements.size())}, i32Type);
+  attr = DenseIntElementsAttr::get(type, elements);
   return success();
+}
+
+void printSPIRV_I32_1DArmTensor(OpAsmPrinter &printer, Operation *,
+                                DenseIntElementsAttr attr) {
+  printer << llvm::interleaved_array(
+      llvm::map_range(attr.getValues<APInt>(),
+                      [](const APInt &a) { return a.getSExtValue(); }));
 }
 
 } // namespace mlir::spirv
