@@ -1,6 +1,7 @@
 // REQUIRES: aarch64-registered-target,aarch64-host,system-linux
 // RUN: %clang --target=aarch64 --print-enabled-extensions -mcpu=grace | FileCheck --strict-whitespace --implicit-check-not=FEAT_ %s
 // RUN: env LLVM_CPUINFO=%S/../Inputs/cpunative/grace %clang --target=aarch64 --print-enabled-extensions -mcpu=native | FileCheck --strict-whitespace --implicit-check-not=FEAT_ %s
+// RUN: env LLVM_CPUINFO=%S/../Inputs/cpunative/grace %clang --target=aarch64 --print-enabled-extensions -march=native | FileCheck --strict-whitespace --implicit-check-not=FEAT_ %s
 
 // CHECK: Extensions enabled for the given AArch64 target
 // CHECK-EMPTY:
@@ -61,3 +62,7 @@
 // CHECK-NEXT:     FEAT_TRF                                               Enable Armv8.4-A Trace extension
 // CHECK-NEXT:     FEAT_UAO                                               Enable Armv8.2-A UAO PState
 // CHECK-NEXT:     FEAT_VHE                                               Enable Armv8.1-A Virtual Host extension
+
+// RUN: env LLVM_CPUINFO=%S/../Inputs/cpunative/grace %clang --target=aarch64 -mcpu=native -### -c %s 2>&1 | FileCheck -check-prefix=NEOVERSE-V2 %s
+// RUN: env LLVM_CPUINFO=%S/../Inputs/cpunative/grace %clang --target=aarch64 -march=native -### -c %s 2>&1 | FileCheck -check-prefix=NEOVERSE-V2 %s
+// NEOVERSE-V2: "-cc1"{{.*}} "-triple" "aarch64{{.*}}" "-target-cpu" "neoverse-v2"

@@ -35,6 +35,11 @@ std::string aarch64::getAArch64TargetCPU(const ArgList &Args,
   if ((A = Args.getLastArg(options::OPT_mcpu_EQ))) {
     StringRef Mcpu = A->getValue();
     CPU = Mcpu.split("+").first.lower();
+  } else if (const Arg *MArch = Args.getLastArg(options::OPT_march_EQ)) {
+    // Otherwise, use -march=native if specified.
+    StringRef MArchValue = MArch->getValue();
+    if (MArchValue.split("+").first.equals_insensitive("native"))
+      CPU = "native";
   }
 
   CPU = llvm::AArch64::resolveCPUAlias(CPU);
@@ -159,10 +164,11 @@ getAArch64ArchFeaturesFromMarch(const Driver &D, StringRef March,
   std::string MarchLowerCase = March.lower();
   std::pair<StringRef, StringRef> Split = StringRef(MarchLowerCase).split("+");
 
+  if (Split.first == "native")
+    return DecodeAArch64Mcpu(D, MarchLowerCase, Extensions);
+
   const llvm::AArch64::ArchInfo *ArchInfo =
       llvm::AArch64::parseArch(Split.first);
-  if (Split.first == "native")
-    ArchInfo = llvm::AArch64::getArchForCpu(llvm::sys::getHostCPUName().str());
   if (!ArchInfo)
     return false;
 
