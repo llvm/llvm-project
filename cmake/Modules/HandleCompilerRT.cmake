@@ -61,6 +61,8 @@ function(find_compiler_rt_library name variable)
   set(target "${ARG_TARGET}")
   if(NOT target AND CMAKE_CXX_COMPILER_TARGET)
     set(target "${CMAKE_CXX_COMPILER_TARGET}")
+  elseif(LLVM_DEFAULT_TARGET_TRIPLE)
+    set(target "${LLVM_DEFAULT_TARGET_TRIPLE}")
   endif()
   if(NOT DEFINED COMPILER_RT_LIBRARY_builtins_${target})
     # If the cache variable is not defined, invoke Clang and then
