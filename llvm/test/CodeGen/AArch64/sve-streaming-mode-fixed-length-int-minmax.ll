@@ -723,8 +723,7 @@ define <1 x i64> @smax_v1i64(<1 x i64> %op1, <1 x i64> %op2) {
 ; NONEON-NOSVE-NEXT:    fmov x9, d0
 ; NONEON-NOSVE-NEXT:    cmp x9, x8
 ; NONEON-NOSVE-NEXT:    csel x8, x9, x8, gt
-; NONEON-NOSVE-NEXT:    str x8, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fmov d0, x8
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = call <1 x i64> @llvm.smax.v1i64(<1 x i64> %op1, <1 x i64> %op2)
@@ -1525,8 +1524,7 @@ define <1 x i64> @smin_v1i64(<1 x i64> %op1, <1 x i64> %op2) {
 ; NONEON-NOSVE-NEXT:    fmov x9, d0
 ; NONEON-NOSVE-NEXT:    cmp x9, x8
 ; NONEON-NOSVE-NEXT:    csel x8, x9, x8, lt
-; NONEON-NOSVE-NEXT:    str x8, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fmov d0, x8
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = call <1 x i64> @llvm.smin.v1i64(<1 x i64> %op1, <1 x i64> %op2)
@@ -2327,8 +2325,7 @@ define <1 x i64> @umax_v1i64(<1 x i64> %op1, <1 x i64> %op2) {
 ; NONEON-NOSVE-NEXT:    fmov x9, d0
 ; NONEON-NOSVE-NEXT:    cmp x9, x8
 ; NONEON-NOSVE-NEXT:    csel x8, x9, x8, hi
-; NONEON-NOSVE-NEXT:    str x8, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fmov d0, x8
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = call <1 x i64> @llvm.umax.v1i64(<1 x i64> %op1, <1 x i64> %op2)
@@ -3129,8 +3126,7 @@ define <1 x i64> @umin_v1i64(<1 x i64> %op1, <1 x i64> %op2) {
 ; NONEON-NOSVE-NEXT:    fmov x9, d0
 ; NONEON-NOSVE-NEXT:    cmp x9, x8
 ; NONEON-NOSVE-NEXT:    csel x8, x9, x8, lo
-; NONEON-NOSVE-NEXT:    str x8, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fmov d0, x8
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = call <1 x i64> @llvm.umin.v1i64(<1 x i64> %op1, <1 x i64> %op2)

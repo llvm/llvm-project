@@ -685,8 +685,7 @@ define <1 x i64> @add_v1i64(<1 x i64> %op1, <1 x i64> %op2) {
 ; NONEON-NOSVE-NEXT:    fmov x8, d1
 ; NONEON-NOSVE-NEXT:    fmov x9, d0
 ; NONEON-NOSVE-NEXT:    add x8, x9, x8
-; NONEON-NOSVE-NEXT:    str x8, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fmov d0, x8
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = add <1 x i64> %op1, %op2
@@ -1546,8 +1545,7 @@ define <1 x i64> @mul_v1i64(<1 x i64> %op1, <1 x i64> %op2) {
 ; NONEON-NOSVE-NEXT:    fmov x8, d1
 ; NONEON-NOSVE-NEXT:    fmov x9, d0
 ; NONEON-NOSVE-NEXT:    mul x8, x9, x8
-; NONEON-NOSVE-NEXT:    str x8, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fmov d0, x8
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = mul <1 x i64> %op1, %op2
@@ -2320,8 +2318,7 @@ define <1 x i64> @sub_v1i64(<1 x i64> %op1, <1 x i64> %op2) {
 ; NONEON-NOSVE-NEXT:    fmov x8, d1
 ; NONEON-NOSVE-NEXT:    fmov x9, d0
 ; NONEON-NOSVE-NEXT:    sub x8, x9, x8
-; NONEON-NOSVE-NEXT:    str x8, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fmov d0, x8
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = sub <1 x i64> %op1, %op2
@@ -3063,8 +3060,7 @@ define <1 x i64> @abs_v1i64(<1 x i64> %op1) {
 ; NONEON-NOSVE-NEXT:    fmov x8, d0
 ; NONEON-NOSVE-NEXT:    cmp x8, #0
 ; NONEON-NOSVE-NEXT:    cneg x8, x8, mi
-; NONEON-NOSVE-NEXT:    str x8, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fmov d0, x8
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = call <1 x i64> @llvm.abs.v1i64(<1 x i64> %op1, i1 false)

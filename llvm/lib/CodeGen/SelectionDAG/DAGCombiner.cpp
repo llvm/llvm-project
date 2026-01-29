@@ -20611,9 +20611,13 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
     if (!isTypeLegal(LDMemType))
       break;
     if (STMemType != LDMemType) {
-      // TODO: Support vectors? This requires extract_subvector/bitcast.
       if (LdMemSize == StMemSize) {
-        if (DAG.isConstantValueOfAnyType(Val) && isTypeLegal(STMemType))
+        if (TLI.isLoadBitCastBeneficial(LDMemType, STMemType, DAG,
+                                        *LD->getMemOperand()) &&
+            TLI.isOperationLegal(ISD::BITCAST, LDMemType) &&
+            isTypeLegal(LDMemType) &&
+            TLI.isOperationLegal(ISD::BITCAST, STMemType) &&
+            isTypeLegal(STMemType))
           Val = DAG.getBitcast(LDMemType, Val);
         else
           break;
