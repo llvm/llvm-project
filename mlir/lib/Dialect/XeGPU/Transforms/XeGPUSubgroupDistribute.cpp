@@ -35,6 +35,7 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 namespace mlir {
 namespace xegpu {
@@ -399,8 +400,8 @@ struct StoreNdDistribution final : public gpu::WarpDistributionPattern {
                                          "the store op must have offsets");
     SmallVector<Value> offsetsAsValues =
         vector::getAsValues(rewriter, storeOp.getLoc(), offsets);
-    SmallVector<Type> offsetTypes = llvm::to_vector(
-        llvm::map_range(offsetsAsValues, [](Value v) { return v.getType(); }));
+    SmallVector<Type> offsetTypes = llvm::map_to_vector(
+        offsetsAsValues, [](Value v) { return v.getType(); });
     xegpu::TensorDescType tensorDescTy = storeOp.getTensorDescType();
     xegpu::LayoutAttr layout = tensorDescTy.getLayoutAttr();
     if (!layout)
@@ -530,8 +531,8 @@ struct LoadNdDistribution final : public gpu::WarpDistributionPattern {
                                          "the load op must have offsets");
     SmallVector<Value> offsetsAsValues =
         vector::getAsValues(rewriter, loadOp.getLoc(), offsets);
-    SmallVector<Type> offsetTypes = llvm::to_vector(
-        llvm::map_range(offsetsAsValues, [](Value v) { return v.getType(); }));
+    SmallVector<Type> offsetTypes = llvm::map_to_vector(
+        offsetsAsValues, [](Value v) { return v.getType(); });
 
     xegpu::TensorDescType tensorDescTy = loadOp.getTensorDescType();
     xegpu::LayoutAttr layout = tensorDescTy.getLayoutAttr();
@@ -766,8 +767,8 @@ struct PrefetchNdDistribution final : public gpu::WarpDistributionPattern {
                                          "the prefetch op must have offsets");
     SmallVector<Value> offsetsAsValues =
         vector::getAsValues(rewriter, prefetchOp.getLoc(), offsets);
-    SmallVector<Type> offsetTypes = llvm::to_vector(
-        llvm::map_range(offsetsAsValues, [](Value v) { return v.getType(); }));
+    SmallVector<Type> offsetTypes = llvm::map_to_vector(
+        offsetsAsValues, [](Value v) { return v.getType(); });
 
     xegpu::LayoutAttr layout = prefetchOp.getTensorDescType().getLayoutAttr();
     if (!layout)
@@ -997,8 +998,8 @@ struct LoadMatrixDistribution final : public gpu::WarpDistributionPattern {
     const unsigned offsetsStartIdx = operands.size();
     operands.append(offsetsAsValues);
 
-    SmallVector<Type> operandTypes = llvm::to_vector(
-        llvm::map_range(operands, [](Value v) { return v.getType(); }));
+    SmallVector<Type> operandTypes =
+        llvm::map_to_vector(operands, [](Value v) { return v.getType(); });
 
     SmallVector<size_t> newRetIndices;
     gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
@@ -1072,8 +1073,8 @@ struct StoreMatrixDistribution final : public gpu::WarpDistributionPattern {
     const unsigned offsetsStartIdx = operands.size();
     operands.append(offsetsAsValues);
 
-    SmallVector<Type> operandTypes = llvm::to_vector(
-        llvm::map_range(operands, [](Value v) { return v.getType(); }));
+    SmallVector<Type> operandTypes =
+        llvm::map_to_vector(operands, [](Value v) { return v.getType(); });
     operandTypes[0] = *distPayloadByWarpOpOrFailure;
 
     SmallVector<size_t> newRetIndices;
