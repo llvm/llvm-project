@@ -99,7 +99,8 @@ struct TestEmulateNarrowTypePass
     RewritePatternSet patterns(ctx);
 
     arith::populateArithNarrowTypeEmulationPatterns(typeConverter, patterns);
-    memref::populateMemRefNarrowTypeEmulationPatterns(typeConverter, patterns);
+    memref::populateMemRefNarrowTypeEmulationPatterns(typeConverter, patterns,
+                                                      disableAtomicRMW);
     vector::populateVectorNarrowTypeEmulationPatterns(
         typeConverter, patterns, disableAtomicRMW, assumeAligned);
 
