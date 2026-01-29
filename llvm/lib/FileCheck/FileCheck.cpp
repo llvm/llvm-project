@@ -2524,23 +2524,35 @@ FileCheckString::CheckDag(const SourceMgr &SM, StringRef Buffer,
 
 static bool ValidatePrefixes(StringRef Kind, StringSet<> &UniquePrefixes,
                              ArrayRef<StringRef> SuppliedPrefixes) {
+  static const char *Suffixes[] = {"-NEXT",  "-SAME", "-EMPTY", "-NOT",
+                                   "-COUNT", "-DAG",  "-LABEL"};
+
   for (StringRef Prefix : SuppliedPrefixes) {
     if (Prefix.empty()) {
       errs() << "error: supplied " << Kind << " prefix must not be the empty "
              << "string\n";
       return false;
     }
-    static const Regex Validator("^[a-zA-Z0-9_-]*$");
+    // TODO: restrict prefixes to start with only letter eventually
+    static const Regex Validator("^[a-zA-Z0-9][a-zA-Z0-9_-]*$");
     if (!Validator.match(Prefix)) {
       errs() << "error: supplied " << Kind << " prefix must start with a "
-             << "letter and contain only alphanumeric characters, hyphens, and "
-             << "underscores: '" << Prefix << "'\n";
+             << "letter or digit and contain only ascii alphanumeric "
+             << "characters, hyphens, and underscores: '" << Prefix << "'\n";
       return false;
     }
     if (!UniquePrefixes.insert(Prefix).second) {
       errs() << "error: supplied " << Kind << " prefix must be unique among "
              << "check and comment prefixes: '" << Prefix << "'\n";
       return false;
+    }
+    for (StringRef Directive : Suffixes) {
+      if (Prefix.ends_with(Directive)) {
+        errs() << "error: supplied " << Kind << " prefix must not end with "
+               << "directive: '" << Directive << "', prefix: '" << Prefix
+               << "'\n";
+        return false;
+      }
     }
   }
   return true;

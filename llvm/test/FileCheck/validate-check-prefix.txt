@@ -6,7 +6,7 @@
 foobar
 ; A1a-B_c: foobar
 
-; BAD_PREFIX: supplied check prefix must start with a letter and contain only alphanumeric characters, hyphens, and underscores: 'A!'
+; BAD_PREFIX:  supplied check prefix must start with a letter or digit and contain only ascii alphanumeric characters, hyphens, and underscores: 'A!'
 
 ; DUPLICATE_PREFIX: error: supplied check prefix must be unique among check and comment prefixes: 'REPEAT'
 
