@@ -14,6 +14,8 @@
 #ifndef LLVM_CLANG_C_CXSTRING_H
 #define LLVM_CLANG_C_CXSTRING_H
 
+#include <stddef.h>
+
 #include "clang-c/ExternC.h"
 #include "clang-c/Platform.h"
 #include <stddef.h>

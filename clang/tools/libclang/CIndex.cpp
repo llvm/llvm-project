@@ -4565,6 +4565,7 @@ static StringLiteral *getCFSTR_value(CallExpr *callExpr) {
   return S;
 }
 
+namespace {
 struct ExprEvalResult {
   CXEvalResultKind EvalType;
   union {
@@ -4581,6 +4582,7 @@ struct ExprEvalResult {
     }
   }
 };
+} // end namespace
 
 void clang_EvalResult_dispose(CXEvalResult E) {
   delete static_cast<ExprEvalResult *>(E);
@@ -4640,7 +4642,8 @@ CXString clang_EvalResult_getAsCXString(CXEvalResult E) {
   if (!E) {
     return cxstring::createNull();
   }
-  auto data = clang_getCStringInfo(((ExprEvalResult *)E)->EvalData.stringVal);
+  auto data = clang_getCStringInfo(
+      static_cast<ExprEvalResult *>(E)->EvalData.stringVal);
   return cxstring::createDup(StringRef(data.string, data.length));
 }
 
