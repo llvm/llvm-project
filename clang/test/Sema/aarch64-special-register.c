@@ -5,35 +5,35 @@ void string_literal(unsigned v) {
 }
 
 void wsr_1(unsigned v) {
-  __builtin_arm_wsr("sysreg", v);
+  __builtin_arm_wsr("aidr_el1", v);
 }
 
 void wsrp_1(void *v) {
-  __builtin_arm_wsrp("sysreg", v);
+  __builtin_arm_wsrp("aidr_el1", v);
 }
 
 void wsr64_1(unsigned long v) {
-  __builtin_arm_wsr64("sysreg", v);
+  __builtin_arm_wsr64("aidr_el1", v);
 }
 
 void wsr128_1(__uint128_t v) {
-  __builtin_arm_wsr128("sysreg", v);
+  __builtin_arm_wsr128("aidr_el1", v);
 }
 
 unsigned rsr_1(void) {
-  return __builtin_arm_rsr("sysreg");
+  return __builtin_arm_rsr("aidr_el1");
 }
 
 void *rsrp_1(void) {
-  return __builtin_arm_rsrp("sysreg");
+  return __builtin_arm_rsrp("aidr_el1");
 }
 
 unsigned long rsr64_1(void) {
-  return __builtin_arm_rsr64("sysreg");
+  return __builtin_arm_rsr64("aidr_el1");
 }
 
 __uint128_t rsr128_1(void) {
-  return __builtin_arm_rsr128("sysreg");
+  return __builtin_arm_rsr128("aidr_el1");
 }
 
 void wsr_2(unsigned v) {
@@ -219,4 +219,11 @@ void wsr64_6(void) {
 
   __builtin_arm_wsr64("allint", 2); // expected-error {{outside the valid range}}
   __builtin_arm_wsr64("pm", 2); // expected-error {{outside the valid range}}
+}
+
+void sysreg_invalid_name(unsigned long *r) {
+  r[0] = __builtin_arm_rsr("sysreg"); //expected-error {{invalid special register for builtin}}
+  r[1] = __builtin_arm_rsr64("sysreg"); //expected-error {{invalid special register for builtin}}
+  __builtin_arm_wsr64("sysreg", r[3]); //expected-error {{invalid special register for builtin}}
+  __builtin_arm_wsr64("sysreg", r[4]); //expected-error {{invalid special register for builtin}}
 }

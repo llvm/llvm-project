@@ -1586,7 +1586,7 @@ __uint128_t test_rsr128() {
 // AArch64-NEXT:    ret ptr [[TMP1]]
 //
 void *test_rsrp() {
-  return __arm_rsrp("sysreg");
+  return __arm_rsrp("aidr_el1");
 }
 
 // AArch32-LABEL: @test_wsr(
@@ -1651,7 +1651,7 @@ void test_wsr128(__uint128_t v) {
 // AArch64-NEXT:    ret void
 //
 void test_wsrp(void *v) {
-  __arm_wsrp("sysreg", v);
+  __arm_wsrp("aidr_el1", v);
 }
 
 // AArch32-LABEL: @test_rsrf(

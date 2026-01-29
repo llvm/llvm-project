@@ -17,6 +17,7 @@
 #include "clang/Sema/Initialization.h"
 #include "clang/Sema/ParsedAttr.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/Support/Regex.h"
 
 namespace clang {
 
@@ -185,9 +186,9 @@ bool SemaARM::BuiltinARMMemoryTaggingCall(unsigned BuiltinID,
 
 /// BuiltinARMSpecialReg - Handle a check if argument ArgNum of CallExpr
 /// TheCall is an ARM/AArch64 special register string literal.
-bool SemaARM::BuiltinARMSpecialReg(unsigned BuiltinID, CallExpr *TheCall,
-                                   int ArgNum, unsigned ExpectedFieldNum,
-                                   bool AllowName) {
+bool SemaARM::BuiltinARMSpecialReg(const TargetInfo &TI, unsigned BuiltinID,
+                                   CallExpr *TheCall, int ArgNum,
+                                   unsigned ExpectedFieldNum, bool AllowName) {
   bool IsARMBuiltin = BuiltinID == ARM::BI__builtin_arm_rsr64 ||
                       BuiltinID == ARM::BI__builtin_arm_wsr64 ||
                       BuiltinID == ARM::BI__builtin_arm_rsr ||
@@ -206,13 +207,17 @@ bool SemaARM::BuiltinARMSpecialReg(unsigned BuiltinID, CallExpr *TheCall,
 
   // We can't check the value of a dependent argument.
   Expr *Arg = TheCall->getArg(ArgNum);
+
+  auto CreateDiagErr = [&](unsigned DiagID) {
+    return Diag(TheCall->getBeginLoc(), DiagID) << Arg->getSourceRange();
+  };
+
   if (Arg->isTypeDependent() || Arg->isValueDependent())
     return false;
 
   // Check if the argument is a string literal.
   if (!isa<StringLiteral>(Arg->IgnoreParenImpCasts()))
-    return Diag(TheCall->getBeginLoc(), diag::err_expr_not_string_literal)
-           << Arg->getSourceRange();
+    return CreateDiagErr(diag::err_expr_not_string_literal);
 
   // Check the type of special register given.
   StringRef Reg = cast<StringLiteral>(Arg->IgnoreParenImpCasts())->getString();
@@ -220,8 +225,7 @@ bool SemaARM::BuiltinARMSpecialReg(unsigned BuiltinID, CallExpr *TheCall,
   Reg.split(Fields, ":");
 
   if (Fields.size() != ExpectedFieldNum && !(AllowName && Fields.size() == 1))
-    return Diag(TheCall->getBeginLoc(), diag::err_arm_invalid_specialreg)
-           << Arg->getSourceRange();
+    return CreateDiagErr(diag::err_arm_invalid_specialreg);
 
   // If the string is the name of a register then we cannot check that it is
   // valid here but if the string is of one the forms described in ACLE then we
@@ -262,19 +266,26 @@ bool SemaARM::BuiltinARMSpecialReg(unsigned BuiltinID, CallExpr *TheCall,
     }
 
     if (!ValidString)
-      return Diag(TheCall->getBeginLoc(), diag::err_arm_invalid_specialreg)
-             << Arg->getSourceRange();
+      return CreateDiagErr(diag::err_arm_invalid_specialreg);
+
   } else if (IsAArch64Builtin && Fields.size() == 1) {
     // This code validates writes to PSTATE registers.
 
-    // Not a write.
-    if (TheCall->getNumArgs() != 2)
-      return false;
+    {
+      // Try to parse an S<op0>_<op1>_<Cn>_<Cm>_<op2> register name
+      static const llvm::Regex GenericRegPattern(
+          "^S([0-3])_([0-7])_C([0-9]|1[0-5])_C([0-9]|1[0-5])_([0-7])$");
+      if (GenericRegPattern.match(Reg.upper()))
+        return false;
+    }
 
-    // The 128-bit system register accesses do not touch PSTATE.
-    if (BuiltinID == AArch64::BI__builtin_arm_rsr128 ||
+    if (TheCall->getNumArgs() != 2 || // Not a write.
+
+        // The 128-bit system register accesses do not touch PSTATE.
+        BuiltinID == AArch64::BI__builtin_arm_rsr128 ||
         BuiltinID == AArch64::BI__builtin_arm_wsr128)
-      return false;
+      return !TI.isValidSystemRegisterName(Reg) &&
+             CreateDiagErr(diag::err_arm_invalid_specialreg);
 
     // These are the named PSTATE accesses using "MSR (immediate)" instructions,
     // along with the upper limit on the immediates allowed.
@@ -294,7 +305,8 @@ bool SemaARM::BuiltinARMSpecialReg(unsigned BuiltinID, CallExpr *TheCall,
     // If this is not a named PSTATE, just continue without validating, as this
     // will be lowered to an "MSR (register)" instruction directly
     if (!MaxLimit)
-      return false;
+      return !TI.isValidSystemRegisterName(Reg) &&
+             CreateDiagErr(diag::err_arm_invalid_specialreg);
 
     // Here we only allow constants in the range for that pstate, as required by
     // the ACLE.
@@ -1041,13 +1053,13 @@ bool SemaARM::CheckARMBuiltinFunctionCall(const TargetInfo &TI,
 
   if (BuiltinID == ARM::BI__builtin_arm_rsr64 ||
       BuiltinID == ARM::BI__builtin_arm_wsr64)
-    return BuiltinARMSpecialReg(BuiltinID, TheCall, 0, 3, false);
+    return BuiltinARMSpecialReg(TI, BuiltinID, TheCall, 0, 3, false);
 
   if (BuiltinID == ARM::BI__builtin_arm_rsr ||
       BuiltinID == ARM::BI__builtin_arm_rsrp ||
       BuiltinID == ARM::BI__builtin_arm_wsr ||
       BuiltinID == ARM::BI__builtin_arm_wsrp)
-    return BuiltinARMSpecialReg(BuiltinID, TheCall, 0, 5, true);
+    return BuiltinARMSpecialReg(TI, BuiltinID, TheCall, 0, 5, true);
 
   if (CheckNeonBuiltinFunctionCall(TI, BuiltinID, TheCall))
     return true;
@@ -1139,7 +1151,7 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
       BuiltinID == AArch64::BI__builtin_arm_wsr64 ||
       BuiltinID == AArch64::BI__builtin_arm_rsr128 ||
       BuiltinID == AArch64::BI__builtin_arm_wsr128)
-    return BuiltinARMSpecialReg(BuiltinID, TheCall, 0, 5, true);
+    return BuiltinARMSpecialReg(TI, BuiltinID, TheCall, 0, 5, true);
 
   // Memory Tagging Extensions (MTE) Intrinsics
   if (BuiltinID == AArch64::BI__builtin_arm_irg ||
@@ -1155,7 +1167,7 @@ bool SemaARM::CheckAArch64BuiltinFunctionCall(const TargetInfo &TI,
       BuiltinID == AArch64::BI__builtin_arm_rsrp ||
       BuiltinID == AArch64::BI__builtin_arm_wsr ||
       BuiltinID == AArch64::BI__builtin_arm_wsrp)
-    return BuiltinARMSpecialReg(BuiltinID, TheCall, 0, 5, true);
+    return BuiltinARMSpecialReg(TI, BuiltinID, TheCall, 0, 5, true);
 
   // Only check the valid encoding range. Any constant in this range would be
   // converted to a register of the form S1_2_C3_C4_5. Let the hardware throw

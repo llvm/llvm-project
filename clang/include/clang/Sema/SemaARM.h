@@ -67,7 +67,8 @@ public:
 
   bool CheckAArch64BuiltinFunctionCall(const TargetInfo &TI, unsigned BuiltinID,
                                        CallExpr *TheCall);
-  bool BuiltinARMSpecialReg(unsigned BuiltinID, CallExpr *TheCall, int ArgNum,
+  bool BuiltinARMSpecialReg(const TargetInfo &TI, unsigned BuiltinID,
+                            CallExpr *TheCall, int ArgNum,
                             unsigned ExpectedFieldNum, bool AllowName);
   bool BuiltinARMMemoryTaggingCall(unsigned BuiltinID, CallExpr *TheCall);
 
