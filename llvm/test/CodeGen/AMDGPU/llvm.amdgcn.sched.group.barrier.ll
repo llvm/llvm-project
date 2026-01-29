@@ -1196,7 +1196,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_interleave_EXP_MFMA
 ; GCN-NEXT:    v_rndne_f32_e32 v5, v4
 ; GCN-NEXT:    v_sub_f32_e32 v6, v4, v5
 ; GCN-NEXT:    v_fma_f32 v4, s0, v3, -v4
-; GCN-NEXT:    v_fmac_f32_e32 v4, s0, v7
+; GCN-NEXT:    v_fma_f32 v4, s0, v7, v4
 ; GCN-NEXT:    v_add_f32_e32 v4, v6, v4
 ; GCN-NEXT:    v_exp_f32_e32 v4, v4
 ; GCN-NEXT:    v_cvt_i32_f32_e32 v5, v5
@@ -1213,23 +1213,23 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_interleave_EXP_MFMA
 ; GCN-NEXT:    v_mov_b32_e32 v9, 1.0
 ; GCN-NEXT:    v_ldexp_f32 v4, v4, v5
 ; GCN-NEXT:    v_mov_b32_e32 v5, 0xc2ce8ed0
-; GCN-NEXT:    v_mul_f32_e32 v10, s1, v3
 ; GCN-NEXT:    v_cmp_nlt_f32_e32 vcc, s0, v5
 ; GCN-NEXT:    v_mov_b32_e32 v6, 0x42b17218
-; GCN-NEXT:    v_rndne_f32_e32 v11, v10
+; GCN-NEXT:    v_mul_f32_e32 v10, s1, v3
 ; GCN-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
 ; GCN-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v6
 ; GCN-NEXT:    v_mov_b32_e32 v8, 0x7f800000
+; GCN-NEXT:    v_rndne_f32_e32 v11, v10
+; GCN-NEXT:    v_cndmask_b32_e32 v4, v8, v4, vcc
 ; GCN-NEXT:    v_sub_f32_e32 v12, v10, v11
 ; GCN-NEXT:    v_fma_f32 v10, s1, v3, -v10
-; GCN-NEXT:    v_cndmask_b32_e32 v4, v8, v4, vcc
-; GCN-NEXT:    v_fmac_f32_e32 v10, s1, v7
-; GCN-NEXT:    ds_read_b128 a[28:31], v1 offset:8304
-; GCN-NEXT:    s_waitcnt lgkmcnt(1)
+; GCN-NEXT:    s_waitcnt lgkmcnt(0)
 ; GCN-NEXT:    v_mfma_f32_32x32x1f32 a[32:63], v9, v4, a[32:63]
-; GCN-NEXT:    v_add_f32_e32 v4, v12, v10
+; GCN-NEXT:    v_fma_f32 v4, s1, v7, v10
+; GCN-NEXT:    v_add_f32_e32 v4, v12, v4
 ; GCN-NEXT:    v_exp_f32_e32 v4, v4
 ; GCN-NEXT:    v_cvt_i32_f32_e32 v10, v11
+; GCN-NEXT:    ds_read_b128 a[28:31], v1 offset:8304
 ; GCN-NEXT:    ds_read_b128 a[24:27], v1 offset:8288
 ; GCN-NEXT:    ds_read_b128 a[20:23], v1 offset:8272
 ; GCN-NEXT:    ds_read_b128 a[16:19], v1 offset:8256
@@ -1248,7 +1248,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_interleave_EXP_MFMA
 ; GCN-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v9, v4, a[0:31]
 ; GCN-NEXT:    v_fma_f32 v4, s2, v3, -v10
 ; GCN-NEXT:    v_sub_f32_e32 v12, v10, v11
-; GCN-NEXT:    v_fmac_f32_e32 v4, s2, v7
+; GCN-NEXT:    v_fma_f32 v4, s2, v7, v4
 ; GCN-NEXT:    v_add_f32_e32 v4, v12, v4
 ; GCN-NEXT:    v_exp_f32_e32 v4, v4
 ; GCN-NEXT:    v_cvt_i32_f32_e32 v10, v11
@@ -1281,7 +1281,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_interleave_EXP_MFMA
 ; GCN-NEXT:    v_mfma_f32_32x32x1f32 a[64:95], v9, v1, a[64:95]
 ; GCN-NEXT:    v_sub_f32_e32 v1, v4, v10
 ; GCN-NEXT:    v_fma_f32 v4, s3, v3, -v4
-; GCN-NEXT:    v_fmac_f32_e32 v4, s3, v7
+; GCN-NEXT:    v_fma_f32 v4, s3, v7, v4
 ; GCN-NEXT:    v_add_f32_e32 v1, v1, v4
 ; GCN-NEXT:    v_exp_f32_e32 v1, v1
 ; GCN-NEXT:    v_cvt_i32_f32_e32 v4, v10
@@ -1297,7 +1297,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_interleave_EXP_MFMA
 ; GCN-NEXT:    v_mfma_f32_32x32x1f32 a[96:127], v9, v1, a[96:127]
 ; GCN-NEXT:    v_rndne_f32_e32 v1, v4
 ; GCN-NEXT:    v_sub_f32_e32 v10, v4, v1
-; GCN-NEXT:    v_fmac_f32_e32 v3, s8, v7
+; GCN-NEXT:    v_fma_f32 v3, s8, v7, v3
 ; GCN-NEXT:    v_add_f32_e32 v3, v10, v3
 ; GCN-NEXT:    v_exp_f32_e32 v3, v3
 ; GCN-NEXT:    v_cvt_i32_f32_e32 v1, v1
@@ -1381,7 +1381,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_interleave_EXP_MFMA
 ; EXACTCUTOFF-NEXT:    v_rndne_f32_e32 v5, v4
 ; EXACTCUTOFF-NEXT:    v_sub_f32_e32 v6, v4, v5
 ; EXACTCUTOFF-NEXT:    v_fma_f32 v4, s0, v3, -v4
-; EXACTCUTOFF-NEXT:    v_fmac_f32_e32 v4, s0, v7
+; EXACTCUTOFF-NEXT:    v_fma_f32 v4, s0, v7, v4
 ; EXACTCUTOFF-NEXT:    v_add_f32_e32 v4, v6, v4
 ; EXACTCUTOFF-NEXT:    v_exp_f32_e32 v4, v4
 ; EXACTCUTOFF-NEXT:    v_cvt_i32_f32_e32 v5, v5
@@ -1398,23 +1398,23 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_interleave_EXP_MFMA
 ; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v9, 1.0
 ; EXACTCUTOFF-NEXT:    v_ldexp_f32 v4, v4, v5
 ; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v5, 0xc2ce8ed0
-; EXACTCUTOFF-NEXT:    v_mul_f32_e32 v10, s1, v3
 ; EXACTCUTOFF-NEXT:    v_cmp_nlt_f32_e32 vcc, s0, v5
 ; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v6, 0x42b17218
-; EXACTCUTOFF-NEXT:    v_rndne_f32_e32 v11, v10
+; EXACTCUTOFF-NEXT:    v_mul_f32_e32 v10, s1, v3
 ; EXACTCUTOFF-NEXT:    v_cndmask_b32_e32 v4, 0, v4, vcc
 ; EXACTCUTOFF-NEXT:    v_cmp_ngt_f32_e32 vcc, s0, v6
 ; EXACTCUTOFF-NEXT:    v_mov_b32_e32 v8, 0x7f800000
+; EXACTCUTOFF-NEXT:    v_rndne_f32_e32 v11, v10
+; EXACTCUTOFF-NEXT:    v_cndmask_b32_e32 v4, v8, v4, vcc
 ; EXACTCUTOFF-NEXT:    v_sub_f32_e32 v12, v10, v11
 ; EXACTCUTOFF-NEXT:    v_fma_f32 v10, s1, v3, -v10
-; EXACTCUTOFF-NEXT:    v_cndmask_b32_e32 v4, v8, v4, vcc
-; EXACTCUTOFF-NEXT:    v_fmac_f32_e32 v10, s1, v7
-; EXACTCUTOFF-NEXT:    ds_read_b128 a[28:31], v1 offset:8304
-; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(1)
+; EXACTCUTOFF-NEXT:    s_waitcnt lgkmcnt(0)
 ; EXACTCUTOFF-NEXT:    v_mfma_f32_32x32x1f32 a[32:63], v9, v4, a[32:63]
-; EXACTCUTOFF-NEXT:    v_add_f32_e32 v4, v12, v10
+; EXACTCUTOFF-NEXT:    v_fma_f32 v4, s1, v7, v10
+; EXACTCUTOFF-NEXT:    v_add_f32_e32 v4, v12, v4
 ; EXACTCUTOFF-NEXT:    v_exp_f32_e32 v4, v4
 ; EXACTCUTOFF-NEXT:    v_cvt_i32_f32_e32 v10, v11
+; EXACTCUTOFF-NEXT:    ds_read_b128 a[28:31], v1 offset:8304
 ; EXACTCUTOFF-NEXT:    ds_read_b128 a[24:27], v1 offset:8288
 ; EXACTCUTOFF-NEXT:    ds_read_b128 a[20:23], v1 offset:8272
 ; EXACTCUTOFF-NEXT:    ds_read_b128 a[16:19], v1 offset:8256
@@ -1433,7 +1433,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_interleave_EXP_MFMA
 ; EXACTCUTOFF-NEXT:    v_mfma_f32_32x32x1f32 a[0:31], v9, v4, a[0:31]
 ; EXACTCUTOFF-NEXT:    v_fma_f32 v4, s2, v3, -v10
 ; EXACTCUTOFF-NEXT:    v_sub_f32_e32 v12, v10, v11
-; EXACTCUTOFF-NEXT:    v_fmac_f32_e32 v4, s2, v7
+; EXACTCUTOFF-NEXT:    v_fma_f32 v4, s2, v7, v4
 ; EXACTCUTOFF-NEXT:    v_add_f32_e32 v4, v12, v4
 ; EXACTCUTOFF-NEXT:    v_exp_f32_e32 v4, v4
 ; EXACTCUTOFF-NEXT:    v_cvt_i32_f32_e32 v10, v11
@@ -1466,7 +1466,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_interleave_EXP_MFMA
 ; EXACTCUTOFF-NEXT:    v_mfma_f32_32x32x1f32 a[64:95], v9, v1, a[64:95]
 ; EXACTCUTOFF-NEXT:    v_sub_f32_e32 v1, v4, v10
 ; EXACTCUTOFF-NEXT:    v_fma_f32 v4, s3, v3, -v4
-; EXACTCUTOFF-NEXT:    v_fmac_f32_e32 v4, s3, v7
+; EXACTCUTOFF-NEXT:    v_fma_f32 v4, s3, v7, v4
 ; EXACTCUTOFF-NEXT:    v_add_f32_e32 v1, v1, v4
 ; EXACTCUTOFF-NEXT:    v_exp_f32_e32 v1, v1
 ; EXACTCUTOFF-NEXT:    v_cvt_i32_f32_e32 v4, v10
@@ -1482,7 +1482,7 @@ define amdgpu_kernel void @test_sched_group_barrier_pipeline_interleave_EXP_MFMA
 ; EXACTCUTOFF-NEXT:    v_mfma_f32_32x32x1f32 a[96:127], v9, v1, a[96:127]
 ; EXACTCUTOFF-NEXT:    v_rndne_f32_e32 v1, v4
 ; EXACTCUTOFF-NEXT:    v_sub_f32_e32 v10, v4, v1
-; EXACTCUTOFF-NEXT:    v_fmac_f32_e32 v3, s8, v7
+; EXACTCUTOFF-NEXT:    v_fma_f32 v3, s8, v7, v3
 ; EXACTCUTOFF-NEXT:    v_add_f32_e32 v3, v10, v3
 ; EXACTCUTOFF-NEXT:    v_exp_f32_e32 v3, v3
 ; EXACTCUTOFF-NEXT:    v_cvt_i32_f32_e32 v1, v1
