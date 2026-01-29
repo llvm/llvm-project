@@ -3077,7 +3077,17 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
         return;
     }
 
-    CreateImplicitSymbols(symbol);
+    // We should only create any additional symbols, if the one mentioned
+    // in the source code was declared outside of the construct. This was
+    // always the case before Fortran 2008. F2008 introduced the BLOCK
+    // construct, and allowed local variable declarations.
+    // In OpenMP local (non-static) variables are always private in a given
+    // construct, if they are declared inside the construct. In those cases
+    // we don't need to do anything here (i.e. no flags are needed or
+    // anything else).
+    if (symbol->owner().Contains(currScope())) {
+      CreateImplicitSymbols(symbol);
+    }
   } // within OpenMP construct
 }
 
