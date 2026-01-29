@@ -143,8 +143,7 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
       maybe_add_hint(output);
       result.GetOutputStream() << output;
     } else {
-      llvm::Error error =
-        valobj.Dump(result.GetOutputStream(), dump_options);
+      llvm::Error error = valobj.Dump(result.GetOutputStream(), dump_options);
       if (error) {
         result.AppendError(toString(std::move(error)));
         return;
@@ -154,6 +153,28 @@ void CommandObjectDWIMPrint::DoExecute(StringRef command,
                                            m_cmd_name);
     result.SetStatus(eReturnStatusSuccessFinishResult);
   };
+
+  // If the frame is synthetic, then we handle all printing through the
+  // GetValueForVariableExpressionPath. This is so that the synthetic frame has
+  // the ability to take over anything it needs to.
+  if (frame && frame->IsSynthetic()) {
+    VariableSP var_sp;
+    Status status;
+    auto valobj_sp = frame->GetValueForVariableExpressionPath(
+        expr, eval_options.GetUseDynamic(),
+        StackFrame::eExpressionPathOptionsAllowDirectIVarAccess, var_sp,
+        status);
+
+    // Something failed, print the error and return immediately.
+    if (!status.Success()) {
+      result.AppendError(status.AsCString());
+      return;
+    }
+
+    // Otherwise, simply print the object.
+    dump_val_object(*valobj_sp);
+    return;
+  }
 
   // First, try `expr` as a _limited_ frame variable expression path: only the
   // dot operator (`.`) is permitted for this case.
