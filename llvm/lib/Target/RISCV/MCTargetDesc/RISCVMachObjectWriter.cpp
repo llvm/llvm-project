@@ -431,7 +431,7 @@ void RISCVMachObjectWriter::recordRelocation(
   if (RequireExtraAddend) {
     emitRelocation(Writer, Fragment, FixupOffset, /*RelSymbol*/ nullptr,
                    ExtraAddendValue & 0xffffff, /*IsPCRel*/ false,
-		   /*Log2Size*/ 2, /*Type*/ MachO::RISCV_RELOC_ADDEND);
+                   /*Log2Size*/ 2, /*Type*/ MachO::RISCV_RELOC_ADDEND);
   }
 }
 
