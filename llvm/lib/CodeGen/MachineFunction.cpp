@@ -1508,56 +1508,70 @@ MachineConstantPool::~MachineConstantPool() {
   }
 }
 
-/// Test whether the given two constants can be allocated the same constant pool
-/// entry referenced by \param A.
-static bool CanShareConstantPoolEntry(const Constant *A, const Constant *B,
-                                      const DataLayout &DL) {
-  // Handle the trivial case quickly.
-  if (A == B) return true;
-
-  // If they have the same type but weren't the same constant, quickly
-  // reject them.
-  if (A->getType() == B->getType()) return false;
-
+static bool IsSharableConstant(const Constant *C, const DataLayout &DL) {
   // We can't handle structs or arrays.
-  if (isa<StructType>(A->getType()) || isa<ArrayType>(A->getType()) ||
-      isa<StructType>(B->getType()) || isa<ArrayType>(B->getType()))
+  if (isa<StructType>(C->getType()) || isa<ArrayType>(C->getType()))
     return false;
 
-  // For now, only support constants with the same size.
-  uint64_t StoreSize = DL.getTypeStoreSize(A->getType());
-  if (StoreSize != DL.getTypeStoreSize(B->getType()) || StoreSize > 128)
+  uint64_t StoreSize = DL.getTypeStoreSize(C->getType());
+  if (StoreSize > 128)
     return false;
+  return true;
+}
 
-  bool ContainsUndefOrPoisonA = A->containsUndefOrPoisonElement();
+/// Find another constant that can be allocated the same constant pool
+/// entry referenced by \param B.
+std::optional<unsigned> MachineConstantPool::FindSharableConstantPoolEntry(
+    const Constant *B, const Constant *&FoldedB, const DataLayout &DL) {
+  // Handle the trivial case quickly.
+  if (auto It = SharableConstants.find(B); It != SharableConstants.end()) {
+    const Constant *A = Constants[It->second].Val.ConstVal;
+    if (A == B)
+      return It->second;
+  }
 
-  Type *IntTy = IntegerType::get(A->getContext(), StoreSize*8);
+  if (!IsSharableConstant(B, DL))
+    return std::nullopt;
+
+  uint64_t StoreSize = DL.getTypeStoreSize(B->getType());
+  Type *IntTy = IntegerType::get(B->getContext(), StoreSize * 8);
 
   // Try constant folding a bitcast of both instructions to an integer.  If we
   // get two identical ConstantInt's, then we are good to share them.  We use
   // the constant folding APIs to do this so that we get the benefit of
   // DataLayout.
-  if (isa<PointerType>(A->getType()))
-    A = ConstantFoldCastOperand(Instruction::PtrToInt,
-                                const_cast<Constant *>(A), IntTy, DL);
-  else if (A->getType() != IntTy)
-    A = ConstantFoldCastOperand(Instruction::BitCast, const_cast<Constant *>(A),
-                                IntTy, DL);
   if (isa<PointerType>(B->getType()))
-    B = ConstantFoldCastOperand(Instruction::PtrToInt,
-                                const_cast<Constant *>(B), IntTy, DL);
+    FoldedB = ConstantFoldCastOperand(Instruction::PtrToInt,
+                                      const_cast<Constant *>(B), IntTy, DL);
   else if (B->getType() != IntTy)
-    B = ConstantFoldCastOperand(Instruction::BitCast, const_cast<Constant *>(B),
-                                IntTy, DL);
+    FoldedB = ConstantFoldCastOperand(Instruction::BitCast,
+                                      const_cast<Constant *>(B), IntTy, DL);
+  else
+    FoldedB = B;
 
-  if (A != B)
-    return false;
+  if (auto It = SharableConstants.find(FoldedB);
+      It != SharableConstants.end()) {
+    const Constant *A = Constants[It->second].Val.ConstVal;
+    // If they have the same type but weren't the same constant, quickly
+    // reject them.
+    if (A->getType() == B->getType())
+      return std::nullopt;
 
-  // Constants only safely match if A doesn't contain undef/poison.
-  // As we'll be reusing A, it doesn't matter if B contain undef/poison.
-  // TODO: Handle cases where A and B have the same undef/poison elements.
-  // TODO: Merge A and B with mismatching undef/poison elements.
-  return !ContainsUndefOrPoisonA;
+    // Constants only safely match if A doesn't contain undef/poison.
+    // As we'll be reusing A, it doesn't matter if B contain undef/poison.
+    // TODO: Handle cases where A and B have the same undef/poison elements.
+    // TODO: Merge A and B with mismatching undef/poison elements.
+    if (A->containsUndefOrPoisonElement())
+      return std::nullopt;
+
+    // For now, only support constants with the same size.
+    if (StoreSize != DL.getTypeStoreSize(A->getType()))
+      return std::nullopt;
+
+    return SharableConstants[A];
+  }
+
+  return std::nullopt;
 }
 
 /// Create a new entry in the constant pool or return an existing one.
@@ -1568,16 +1582,19 @@ unsigned MachineConstantPool::getConstantPoolIndex(const Constant *C,
 
   // Check to see if we already have this constant.
   //
-  // FIXME, this could be made much more efficient for large constant pools.
-  for (unsigned i = 0, e = Constants.size(); i != e; ++i)
-    if (!Constants[i].isMachineConstantPoolEntry() &&
-        CanShareConstantPoolEntry(Constants[i].Val.ConstVal, C, DL)) {
-      if (Constants[i].getAlign() < Alignment)
-        Constants[i].Alignment = Alignment;
-      return i;
-    }
+  const Constant *FoldedC = nullptr;
+  if (auto Entry = FindSharableConstantPoolEntry(C, FoldedC, DL)) {
+    unsigned i = *Entry;
+    if (Constants[i].getAlign() < Alignment)
+      Constants[i].Alignment = Alignment;
+    return i;
+  }
 
   Constants.push_back(MachineConstantPoolEntry(C, Alignment));
+  SharableConstants[C] = Constants.size() - 1;
+  if (IsSharableConstant(C, DL)) {
+    SharableConstants[FoldedC] = Constants.size() - 1;
+  }
   return Constants.size()-1;
 }
 

@@ -117,6 +117,8 @@ public:
 class MachineConstantPool {
   Align PoolAlignment; ///< The alignment for the pool.
   std::vector<MachineConstantPoolEntry> Constants; ///< The pool of constants.
+  // Map from existing constant pool constants to their slot indices
+  DenseMap<const Constant *, unsigned> SharableConstants;
   /// MachineConstantPoolValues that use an existing MachineConstantPoolEntry.
   DenseSet<MachineConstantPoolValue*> MachineCPVsSharingEntries;
   const DataLayout &DL;
@@ -132,6 +134,10 @@ public:
   /// Return the alignment required by the whole constant pool, of which the
   /// first element must be aligned.
   Align getConstantPoolAlign() const { return PoolAlignment; }
+
+  std::optional<unsigned>
+  FindSharableConstantPoolEntry(const Constant *B, const Constant *&FoldedB,
+                                const DataLayout &DL);
 
   /// getConstantPoolIndex - Create a new entry in the constant pool or return
   /// an existing one.  User must specify the minimum required alignment for
