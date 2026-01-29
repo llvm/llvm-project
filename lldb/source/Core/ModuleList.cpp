@@ -1679,18 +1679,23 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
   return error;
 }
 
-static llvm::Expected<ModuleSpec>
-loadModuleFromCASImpl(llvm::StringRef cas_id, const lldb::ModuleSP &nearby,
-                      const UUID &uuid, const ArchSpec &arch) {
-  auto maybe_cas = ModuleList::GetOrCreateCAS(nearby);
-  if (!maybe_cas)
-    return maybe_cas.takeError();
+static llvm::Expected<ModuleSpec> loadModuleFromCASImpl(
+    llvm::StringRef cas_id, llvm::StringRef name_for_diagnostics,
+    const lldb::ModuleSP &nearby, const UUID &uuid, const ArchSpec &arch) {
+  llvm::Expected<ModuleList::CAS> maybe_cas =
+      ModuleList::GetOrCreateCAS(nearby);
+  if (!maybe_cas) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Modules), maybe_cas.takeError(),
+                   "Failed to load module '{1}' at '{2}' from CAS: {0}",
+                   name_for_diagnostics, cas_id);
+    return ModuleSpec();
+  }
 
   auto cas = std::move(maybe_cas->object_store);
   if (!cas) {
     LLDB_LOG(GetLog(LLDBLog::Modules),
-             "skip loading module '{0}' from CAS: CAS is not available",
-             cas_id);
+             "Failed to load '{0}' at '{1}' from CAS: CAS is not available",
+             name_for_diagnostics, cas_id);
     return ModuleSpec();
   }
 
@@ -1723,8 +1728,9 @@ loadModuleFromCASImpl(llvm::StringRef cas_id, const lldb::ModuleSP &nearby,
 /// Load the module referenced by \c cas_id from a CAS located
 /// near \c nearby.
 static llvm::Expected<ModuleSpec>
-loadModuleFromCAS(llvm::StringRef cas_id, const lldb::ModuleSP &nearby,
-                  const UUID &uuid, const ArchSpec &arch) {
+loadModuleFromCAS(llvm::StringRef cas_id, llvm::StringRef name_for_diagnostics,
+                  const lldb::ModuleSP &nearby, const UUID &uuid,
+                  const ArchSpec &arch) {
   static llvm::StringMap<ModuleSpec> g_cache;
   static std::recursive_mutex g_cache_lock;
   std::scoped_lock<std::recursive_mutex> lock(g_cache_lock);
@@ -1732,7 +1738,8 @@ loadModuleFromCAS(llvm::StringRef cas_id, const lldb::ModuleSP &nearby,
   if (cached != g_cache.end())
     return cached->second;
 
-  auto spec_or_err = loadModuleFromCASImpl(cas_id, nearby, uuid, arch);
+  auto spec_or_err =
+      loadModuleFromCASImpl(cas_id, name_for_diagnostics, nearby, uuid, arch);
   g_cache.try_emplace(cas_id, spec_or_err ? *spec_or_err : ModuleSpec());
 
   return spec_or_err;
@@ -1842,10 +1849,12 @@ ModuleList::GetOrCreateCAS(const ModuleSP &module_sp) {
 }
 
 llvm::Expected<bool> ModuleList::GetSharedModuleFromCAS(
-    llvm::StringRef cas_id, const lldb::ModuleSP &nearby,
-    ModuleSpec &module_spec, lldb::ModuleSP &module_sp) {
-  auto loaded = loadModuleFromCAS(cas_id, nearby, module_spec.GetUUID(),
-                                  module_spec.GetArchitecture());
+    llvm::StringRef cas_id, llvm::StringRef name_for_diagnostics,
+    const lldb::ModuleSP &nearby, ModuleSpec &module_spec,
+    lldb::ModuleSP &module_sp) {
+  auto loaded =
+      loadModuleFromCAS(cas_id, name_for_diagnostics, nearby,
+                        module_spec.GetUUID(), module_spec.GetArchitecture());
   if (!loaded)
     return loaded.takeError();
 

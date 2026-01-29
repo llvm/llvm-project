@@ -2013,7 +2013,8 @@ void SymbolFileDWARF::UpdateExternalModuleListIfNeeded() {
       LLDB_LOG(GetLog(LLDBLog::Symbols | LLDBLog::Modules),
                "Loading module '{0}' from CAS at {1}...", const_name, dwo_path);
       auto loaded = ModuleList::GetSharedModuleFromCAS(
-          dwo_path, GetObjectFile()->GetModule(), dwo_module_spec, module_sp);
+          dwo_path, const_name, GetObjectFile()->GetModule(), dwo_module_spec,
+          module_sp);
       if (!loaded)
         GetObjectFile()->GetModule()->ReportWarning(
             "Failed to load module '{0}' from CAS: {1}", const_name,

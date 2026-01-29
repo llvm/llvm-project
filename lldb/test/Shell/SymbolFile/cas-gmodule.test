@@ -8,7 +8,7 @@
 # RUN: sed "s|DIR|%/t|g" %t/cas-config.template > %t/.cas-config
 # RUN: %lldb %t/main -s %t/lldb.script 2>&1 | FileCheck %s
 
-# FAIL: Failed to load module 'Bottom' from CAS: no CAS available
+# FAIL: Failed to load module 'Bottom' at '{{.*}}' from CAS: no CAS available
 # FAIL: Unable to locate module needed for external types.
 # CHECK: Loading module 'Bottom' from CAS at
 # CHECK: Loading module 'Top' from CAS at

@@ -10,6 +10,15 @@
 // RUN:   --language=C99 -compiler-context 'ClassOrStruct:TypeFromPCH' \
 // RUN:   %t.exe | FileCheck %s
 
+// BEGIN CAS
+// RUN: rm %t.pch
+// RUN: lldb-test symbols -dump-clang-ast -find type --find-in-any-module \
+// RUN:   --language=C99 -compiler-context 'ClassOrStruct:TypeFromPCH' \
+// RUN:   %t.exe 2>&1 | FileCheck %s --check-prefix=CHECK-CAS
+// CHECK-CAS-NOT: Failed to load module {{.*}} from CAS
+// CHECK-CAS: pch{{.*}}does not exist
+// END CAS
+
 anchor_t anchor;
 
 int main(int argc, char **argv) { return 0; }
