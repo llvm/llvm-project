@@ -2034,6 +2034,11 @@ def fansi_escape_codes : Flag<["-"], "fansi-escape-codes">, Group<f_Group>,
   Visibility<[ClangOption, CLOption, DXCOption, CC1Option]>,
   HelpText<"Use ANSI escape codes for diagnostics">,
   MarshallingInfoFlag<DiagnosticOpts<"UseANSIEscapeCodes">>;
+def fcase_insensitive_paths
+    : Flag<["-"], "fcase-insensitive-paths">,
+      Group<f_Group>,
+      Visibility<[ClangOption, CLOption, DXCOption, CC1Option]>,
+      HelpText<"Treat file paths as case-insensitive">;
 def fcomment_block_commands : CommaJoined<["-"], "fcomment-block-commands=">, Group<f_clang_Group>,
   Visibility<[ClangOption, CC1Option]>,
   HelpText<"Treat each comma separated argument in <arg> as a documentation comment block command">,

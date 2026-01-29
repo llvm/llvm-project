@@ -207,6 +207,10 @@ public:
   LLVM_PREFERRED_TYPE(bool)
   unsigned Verbose : 1;
 
+  /// Whether header search should be case-insensitive.
+  LLVM_PREFERRED_TYPE(bool)
+  unsigned CaseInsensitive : 1;
+
   /// If true, skip verifying input files used by modules if the
   /// module was already verified during this build session (see
   /// \c BuildSessionTimestamp).
@@ -289,7 +293,7 @@ public:
         ModuleFileHomeIsCwd(false), EnablePrebuiltImplicitModules(false),
         UseBuiltinIncludes(true), UseStandardSystemIncludes(true),
         UseStandardCXXIncludes(true), UseLibcxx(false), Verbose(false),
-        ModulesValidateOncePerBuildSession(false),
+        CaseInsensitive(false), ModulesValidateOncePerBuildSession(false),
         ModulesValidateSystemHeaders(false),
         ModulesForceValidateUserHeaders(true),
         ValidateASTInputFilesContent(false),

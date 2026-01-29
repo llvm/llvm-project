@@ -749,8 +749,7 @@ std::unique_ptr<ASTUnit> ASTUnit::LoadFromASTFile(
     return nullptr;
   }
 
-  VFS = createVFSFromOverlayFiles(AST->HSOpts->VFSOverlayFiles,
-                                  *AST->Diagnostics, std::move(VFS));
+  VFS = createVFSFromHSOpts(*AST->HSOpts, *AST->Diagnostics, std::move(VFS));
 
   AST->FileMgr = llvm::makeIntrusiveRefCnt<FileManager>(FileSystemOpts, VFS);
 

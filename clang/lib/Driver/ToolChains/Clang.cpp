@@ -1186,6 +1186,9 @@ void Clang::AddPreprocessingOptions(Compilation &C, const JobAction &JA,
 
   Args.addOptInFlag(CmdArgs, options::OPT_fdefine_target_os_macros,
                     options::OPT_fno_define_target_os_macros);
+
+  if (Args.hasArg(options::OPT_fcase_insensitive_paths))
+    CmdArgs.push_back("-fcase-insensitive-paths");
 }
 
 // FIXME: Move to target hook.

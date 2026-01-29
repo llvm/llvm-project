@@ -404,9 +404,8 @@ IntrusiveRefCntPtr<llvm::vfs::FileSystem> createVFSFromCompilerInvocation(
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS);
 
 IntrusiveRefCntPtr<llvm::vfs::FileSystem>
-createVFSFromOverlayFiles(ArrayRef<std::string> VFSOverlayFiles,
-                          DiagnosticsEngine &Diags,
-                          IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS);
+createVFSFromHSOpts(const HeaderSearchOptions &HSOpts, DiagnosticsEngine &Diags,
+                    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS);
 
 } // namespace clang
 

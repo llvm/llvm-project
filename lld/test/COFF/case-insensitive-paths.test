@@ -1,0 +1,2 @@
+# RUN: lld-link %S/Inputs/hello64.obj /out:%t.exe /entry:main \
+# RUN:   /libpath:%p/inPutS /defaultlib:StD64 --case-insensitive-paths

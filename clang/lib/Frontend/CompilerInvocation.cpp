@@ -3382,6 +3382,9 @@ static void GenerateHeaderSearchArgs(const HeaderSearchOptions &Opts,
 
   for (const std::string &F : Opts.VFSOverlayFiles)
     GenerateArg(Consumer, OPT_ivfsoverlay, F);
+
+  if (Opts.CaseInsensitive)
+    GenerateArg(Consumer, OPT_fcase_insensitive_paths);
 }
 
 static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
@@ -3501,6 +3504,8 @@ static bool ParseHeaderSearchArgs(HeaderSearchOptions &Opts, ArgList &Args,
 
   for (const auto *A : Args.filtered(OPT_ivfsoverlay, OPT_vfsoverlay))
     Opts.AddVFSOverlayFile(A->getValue());
+
+  Opts.CaseInsensitive = Args.hasArg(OPT_fcase_insensitive_paths);
 
   return Diags.getNumErrors() == NumErrorsBefore;
 }
@@ -5440,19 +5445,17 @@ IntrusiveRefCntPtr<llvm::vfs::FileSystem>
 clang::createVFSFromCompilerInvocation(
     const CompilerInvocation &CI, DiagnosticsEngine &Diags,
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS) {
-  return createVFSFromOverlayFiles(CI.getHeaderSearchOpts().VFSOverlayFiles,
-                                   Diags, std::move(BaseFS));
+  return createVFSFromHSOpts(CI.getHeaderSearchOpts(), Diags,
+                             std::move(BaseFS));
 }
 
-IntrusiveRefCntPtr<llvm::vfs::FileSystem> clang::createVFSFromOverlayFiles(
-    ArrayRef<std::string> VFSOverlayFiles, DiagnosticsEngine &Diags,
-    IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS) {
-  if (VFSOverlayFiles.empty())
-    return BaseFS;
-
+IntrusiveRefCntPtr<llvm::vfs::FileSystem>
+clang::createVFSFromHSOpts(const HeaderSearchOptions &HSOpts,
+                           DiagnosticsEngine &Diags,
+                           IntrusiveRefCntPtr<llvm::vfs::FileSystem> BaseFS) {
   IntrusiveRefCntPtr<llvm::vfs::FileSystem> Result = BaseFS;
   // earlier vfs files are on the bottom
-  for (const auto &File : VFSOverlayFiles) {
+  for (const auto &File : HSOpts.VFSOverlayFiles) {
     llvm::ErrorOr<std::unique_ptr<llvm::MemoryBuffer>> Buffer =
         Result->getBufferForFile(File);
     if (!Buffer) {
@@ -5470,5 +5473,10 @@ IntrusiveRefCntPtr<llvm::vfs::FileSystem> clang::createVFSFromOverlayFiles(
 
     Result = FS;
   }
+
+  if (HSOpts.CaseInsensitive)
+    return llvm::makeIntrusiveRefCnt<llvm::vfs::CaseInsensitiveFileSystem>(
+        std::move(Result));
+
   return Result;
 }
