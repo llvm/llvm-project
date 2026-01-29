@@ -12,7 +12,6 @@
 #include "include/llvm-libc-macros/float128-macros.h"
 #include "include/llvm-libc-macros/float16-macros.h"
 
-
 #ifdef LIBC_TYPES_HAS_FLOAT128
 #ifdef LIBC_TYPES_HAS_FLOAT16
 
