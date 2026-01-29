@@ -666,10 +666,7 @@ void populateRewriteSubmodule(nb::module_ &m) {
           "dialects"_a, "Mark the given dialect as illegal.");
 
   nb::class_<PyTypeConverter>(m, "TypeConverter")
-      .def(
-          "__init__",
-          [](PyTypeConverter &self) { new (&self) PyTypeConverter(); },
-          "Create a new TypeConverter.")
+      .def(nb::init<>(), "Create a new TypeConverter.")
       .def("add_conversion", &PyTypeConverter::addConversion, "convert"_a,
            nb::keep_alive<0, 1>(), "Register a type conversion function.");
 
