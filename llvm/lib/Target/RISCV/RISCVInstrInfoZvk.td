@@ -696,6 +696,9 @@ foreach vtiToWti = AllWidenableIntVectors in {
   }
 }
 
+defm : VPatBinarySDNode_VV_VX<clmul, "PseudoVCLMUL", I64IntegerVectors, ExtraPreds=[HasStdExtZvbc]>;
+defm : VPatBinarySDNode_VV_VX<clmulh, "PseudoVCLMULH", I64IntegerVectors, ExtraPreds=[HasStdExtZvbc]>;
+
 //===----------------------------------------------------------------------===//
 // VL patterns
 //===----------------------------------------------------------------------===//
