@@ -113,7 +113,7 @@ public:
   };
 
   enum ImmTy {
-    ImmTyNone,
+    ImmTyPlain,
     ImmTyGDS,
     ImmTyLDS,
     ImmTyOffen,
@@ -368,11 +368,9 @@ public:
 
   template <ImmTy Ty> bool isImmTy() const { return isImmTy(Ty); }
 
-  bool isImmLiteral() const { return isImmTy(ImmTyNone); }
+  bool isPlainImm() const { return isImmTy(ImmTyPlain); }
 
-  bool isImmModifier() const {
-    return isImm() && Imm.Type != ImmTyNone;
-  }
+  bool isImmModifier() const { return isImm() && !isPlainImm(); }
 
   bool isOModSI() const { return isImmTy(ImmTyOModSI); }
   bool isDim() const { return isImmTy(ImmTyDim); }
@@ -1020,12 +1018,12 @@ public:
   int getMCOpIdx() const { return MCOpIdx; }
 
   Modifiers getModifiers() const {
-    assert(isRegKind() || isImmTy(ImmTyNone));
+    assert(isRegKind() || isPlainImm());
     return isRegKind() ? Reg.Mods : Imm.Mods;
   }
 
   void setModifiers(Modifiers Mods) {
-    assert(isRegKind() || isImmTy(ImmTyNone));
+    assert(isRegKind() || isPlainImm());
     if (isRegKind())
       Reg.Mods = Mods;
     else
@@ -1099,7 +1097,7 @@ public:
   static void printImmTy(raw_ostream& OS, ImmTy Type) {
     // clang-format off
     switch (Type) {
-    case ImmTyNone: OS << "None"; break;
+    case ImmTyPlain: OS << "Plain"; break;
     case ImmTyGDS: OS << "GDS"; break;
     case ImmTyLDS: OS << "LDS"; break;
     case ImmTyOffen: OS << "Offen"; break;
@@ -1183,7 +1181,7 @@ public:
       break;
     case Immediate:
       OS << '<' << getImm();
-      if (getImmTy() != ImmTyNone) {
+      if (!isPlainImm()) {
         OS << " type: "; printImmTy(OS, getImmTy());
       }
       OS << " mods: " << Imm.Mods << '>';
@@ -1201,7 +1199,7 @@ public:
 
   static AMDGPUOperand::Ptr CreateImm(const AMDGPUAsmParser *AsmParser,
                                       int64_t Val, SMLoc Loc,
-                                      ImmTy Type = ImmTyNone,
+                                      ImmTy Type = ImmTyPlain,
                                       bool IsFPImm = false) {
     auto Op = std::make_unique<AMDGPUOperand>(Immediate, AsmParser);
     Op->Imm.Val = Val;
@@ -1678,17 +1676,17 @@ public:
 
   ParseStatus
   parseIntWithPrefix(const char *Prefix, OperandVector &Operands,
-                     AMDGPUOperand::ImmTy ImmTy = AMDGPUOperand::ImmTyNone,
+                     AMDGPUOperand::ImmTy ImmTy = AMDGPUOperand::ImmTyPlain,
                      std::function<bool(int64_t &)> ConvertResult = nullptr);
 
   ParseStatus parseOperandArrayWithPrefix(
       const char *Prefix, OperandVector &Operands,
-      AMDGPUOperand::ImmTy ImmTy = AMDGPUOperand::ImmTyNone,
+      AMDGPUOperand::ImmTy ImmTy = AMDGPUOperand::ImmTyPlain,
       bool (*ConvertResult)(int64_t &) = nullptr);
 
   ParseStatus
   parseNamedBit(StringRef Name, OperandVector &Operands,
-                AMDGPUOperand::ImmTy ImmTy = AMDGPUOperand::ImmTyNone);
+                AMDGPUOperand::ImmTy ImmTy = AMDGPUOperand::ImmTyPlain);
   unsigned getCPolKind(StringRef Id, StringRef Mnemo, bool &Disabling) const;
   ParseStatus parseCPol(OperandVector &Operands);
   ParseStatus parseScope(OperandVector &Operands, int64_t &Scope);
@@ -2114,7 +2112,7 @@ bool AMDGPUOperand::isInlinableImm(MVT type) const {
     return true;
   }
 
-  if (!isImmTy(ImmTyNone)) {
+  if (!isPlainImm()) {
     // Only plain immediates are inlinable (e.g. "clamp" attribute is not)
     return false;
   }
@@ -2194,7 +2192,7 @@ bool AMDGPUOperand::isInlinableImm(MVT type) const {
 
 bool AMDGPUOperand::isLiteralImm(MVT type) const {
   // Check that this immediate can be added as literal
-  if (!isImmTy(ImmTyNone)) {
+  if (!isPlainImm()) {
     return false;
   }
 
@@ -2304,7 +2302,7 @@ bool AMDGPUOperand::isBoolReg() const {
 
 uint64_t AMDGPUOperand::applyInputFPModifiers(uint64_t Val, unsigned Size) const
 {
-  assert(isImmTy(ImmTyNone) && Imm.Mods.hasFPModifiers());
+  assert(isPlainImm() && Imm.Mods.hasFPModifiers());
   assert(Size == 2 || Size == 4 || Size == 8);
 
   const uint64_t FpSignMask = (1ULL << (Size * 8 - 1));
@@ -2330,10 +2328,10 @@ void AMDGPUOperand::addImmOperands(MCInst &Inst, unsigned N, bool ApplyModifiers
   if (AMDGPU::isSISrcOperand(AsmParser->getMII()->get(Inst.getOpcode()),
                              Inst.getNumOperands())) {
     addLiteralImmOperand(Inst, Imm.Val,
-                         ApplyModifiers &
-                         isImmTy(ImmTyNone) && Imm.Mods.hasFPModifiers());
+                         ApplyModifiers & isPlainImm() &&
+                             Imm.Mods.hasFPModifiers());
   } else {
-    assert(!isImmTy(ImmTyNone) || !hasModifiers());
+    assert(!isPlainImm() || !hasModifiers());
     Inst.addOperand(MCOperand::createImm(Imm.Val));
   }
 }
@@ -3298,8 +3296,8 @@ ParseStatus AMDGPUAsmParser::parseImm(OperandVector &Operands,
       RealVal.changeSign();
 
     Operands.push_back(
-      AMDGPUOperand::CreateImm(this, RealVal.bitcastToAPInt().getZExtValue(), S,
-                               AMDGPUOperand::ImmTyNone, true));
+        AMDGPUOperand::CreateImm(this, RealVal.bitcastToAPInt().getZExtValue(),
+                                 S, AMDGPUOperand::ImmTyPlain, true));
     AMDGPUOperand &Op = static_cast<AMDGPUOperand &>(*Operands.back());
     Op.setModifiers(Mods);
 
@@ -4000,7 +3998,7 @@ bool AMDGPUAsmParser::validateVOPD(const MCInst &Inst,
   if (AsVOPD3) {
     for (const std::unique_ptr<MCParsedAsmOperand> &Operand : Operands) {
       AMDGPUOperand &Op = (AMDGPUOperand &)*Operand;
-      if ((Op.isRegKind() || Op.isImmTy(AMDGPUOperand::ImmTyNone)) &&
+      if ((Op.isRegKind() || Op.isPlainImm()) &&
           (Op.getModifiers().getFPModifiersOperand() & SISrcMods::ABS))
         Error(Op.getStartLoc(), "ABS not allowed in VOPD3 instructions");
     }
@@ -9036,7 +9034,7 @@ void AMDGPUAsmParser::cvtMubufImpl(MCInst &Inst,
     }
 
     // Handle the case where soffset is an immediate
-    if (Op.isImm() && Op.getImmTy() == AMDGPUOperand::ImmTyNone) {
+    if (Op.isPlainImm()) {
       Op.addImmOperands(Inst, 1);
       continue;
     }
@@ -9064,18 +9062,18 @@ void AMDGPUAsmParser::cvtMubufImpl(MCInst &Inst,
 //===----------------------------------------------------------------------===//
 
 bool AMDGPUOperand::isSMRDOffset8() const {
-  return isImmLiteral() && isUInt<8>(getImm());
+  return isPlainImm() && isUInt<8>(getImm());
 }
 
 bool AMDGPUOperand::isSMEMOffset() const {
   // Offset range is checked later by validator.
-  return isImmLiteral();
+  return isPlainImm();
 }
 
 bool AMDGPUOperand::isSMRDLiteralOffset() const {
   // 32-bit literals are only supported on CI and we only want to use them
   // when the offset is > 8-bits.
-  return isImmLiteral() && !isUInt<8>(getImm()) && isUInt<32>(getImm());
+  return isPlainImm() && !isUInt<8>(getImm()) && isUInt<32>(getImm());
 }
 
 //===----------------------------------------------------------------------===//
@@ -9863,11 +9861,11 @@ bool AMDGPUOperand::isBLGP() const {
 }
 
 bool AMDGPUOperand::isS16Imm() const {
-  return isImmLiteral() && (isInt<16>(getImm()) || isUInt<16>(getImm()));
+  return isPlainImm() && (isInt<16>(getImm()) || isUInt<16>(getImm()));
 }
 
 bool AMDGPUOperand::isU16Imm() const {
-  return isImmLiteral() && isUInt<16>(getImm());
+  return isPlainImm() && isUInt<16>(getImm());
 }
 
 //===----------------------------------------------------------------------===//

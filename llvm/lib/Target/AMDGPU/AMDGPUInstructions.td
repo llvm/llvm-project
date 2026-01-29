@@ -128,7 +128,7 @@ class CustomOperand<ValueType type, bit optional = 0, string name = NAME>
 class ImmOperand<ValueType type, string name = NAME, bit optional = 0,
                  string printer = "print"#name>
     : CustomOperand<type, optional, name> {
-  let ImmTy = "ImmTyNone";
+  let ImmTy = "ImmTyPlain";
   let ParserMethod = "";
   let PrintMethod = printer;
 }
