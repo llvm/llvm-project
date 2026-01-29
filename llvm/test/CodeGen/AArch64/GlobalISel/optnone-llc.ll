@@ -1,18 +1,13 @@
-; RUN: llc -O1 -debug %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=LLC-Ox
-; RUN: llc -O2 -debug %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=LLC-Ox
-; RUN: llc -O3 -debug %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=LLC-Ox
-; RUN: llc -misched-postra -debug %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=LLC-MORE
-; RUN: llc -O1 -debug-only=isel %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=FAST
-; RUN: llc -O1 -debug-only=isel -fast-isel=false %s -o /dev/null 2>&1 | FileCheck %s --check-prefix=NOFAST
+; NOTE: Do not autogenerate
+; RUN: llc -O1 -debug -global-isel -mtriple=aarch64-unknown-linux-gnu -filetype=null %s 2>&1 | FileCheck %s --check-prefix=LLC-Ox
+; RUN: llc -O2 -debug -global-isel -mtriple=aarch64-unknown-linux-gnu -filetype=null %s 2>&1 | FileCheck %s --check-prefix=LLC-Ox
+; RUN: llc -O3 -debug -global-isel -mtriple=aarch64-unknown-linux-gnu -filetype=null %s 2>&1 | FileCheck %s --check-prefix=LLC-Ox
 
-; REQUIRES: asserts, default_triple
-; AArch64 uses GlobalISel for optnone functions meaning the output from 'isel' will be empty as it will not be run.
-; UNSUPPORTED: target=nvptx{{.*}}, target=aarch64{{.*}}
+; REQUIRES: asserts
 
 ; This test verifies that we don't run Machine Function optimizations
-; on optnone functions, and that we can turn off FastISel.
+; on optnone functions.
 
-; Function Attrs: noinline optnone
 define i32 @_Z3fooi(i32 %x) #0 {
 entry:
   %x.addr = alloca i32, align 4
@@ -35,9 +30,6 @@ while.end:                                        ; preds = %while.cond
 
 attributes #0 = { optnone noinline }
 
-; Nothing that runs at -O0 gets skipped.
-; LLC-O0-NOT: Skipping pass
-
 ; Machine Function passes run at -O1 and higher.
 ; LLC-Ox-DAG: Skipping pass 'Branch Probability Basic Block Placement'
 ; LLC-Ox-DAG: Skipping pass 'CodeGen Prepare'
@@ -53,10 +45,3 @@ attributes #0 = { optnone noinline }
 ; LLC-Ox-DAG: Skipping pass 'Post{{.*}}RA{{.*}}{{[Ss]}}cheduler'
 ; LLC-Ox-DAG: Skipping pass 'Remove dead machine instructions'
 ; LLC-Ox-DAG: Skipping pass 'Tail Duplication'
-
-; Alternate post-RA scheduler.
-; LLC-MORE: Skipping pass 'PostRA Machine Instruction Scheduler'
-
-; Selectively disable FastISel for optnone functions.
-; FAST:   FastISel is enabled
-; NOFAST: FastISel is disabled
