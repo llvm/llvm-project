@@ -347,6 +347,11 @@ OPTIONS
 
   Don't print demangled function names.
 
+.. option:: --no-use-symbol-table
+
+  Don't prefer function names stored in symbol table to function names in debug
+  info sections.
+
 .. option:: --obj <path>, --exe, -e
 
   Path to object file to be symbolized. If ``-`` is specified, read the object
@@ -490,6 +495,11 @@ OPTIONS
   Print the file's path relative to the compilation directory, instead
   of the absolute path. If the command-line to the compiler included
   the full path, this will be the same as the default.
+
+.. option:: --use-symbol-table
+
+  Prefer function names stored in symbol table to function names in debug info
+  sections. This is the default.
 
 .. option:: --verbose
 
