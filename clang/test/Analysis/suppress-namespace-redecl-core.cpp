@@ -21,7 +21,7 @@ namespace N { // 3rd
 template <class T> struct Wrapper {
   static void get() {
     // This [[clang::suppress]] should suppress the warning.
-    // Bug: Without the fix, it doesn't work because the implicit
+    // In earlier revisions this did not work because the implicit
     // specialization's lexical parent points to second namespace block.
     [[clang::suppress]] clang_analyzer_warnIfReached(); // no-warning
   }
