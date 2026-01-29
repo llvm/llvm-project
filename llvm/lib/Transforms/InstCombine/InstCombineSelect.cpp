@@ -503,7 +503,7 @@ Instruction *InstCombinerImpl::foldSelectIntrinsic(SelectInst &SI) {
   auto *RHSIntrinsic = dyn_cast<IntrinsicInst>(SI.getFalseValue());
   if (!RHSIntrinsic ||
       LHSIntrinsic->getIntrinsicID() != RHSIntrinsic->getIntrinsicID() ||
-      (!LHSIntrinsic->hasOneUse() || !RHSIntrinsic->hasOneUse()))
+      !LHSIntrinsic->hasOneUse() || !RHSIntrinsic->hasOneUse())
     return nullptr;
 
   const Intrinsic::ID IID = LHSIntrinsic->getIntrinsicID();
@@ -511,18 +511,15 @@ Instruction *InstCombinerImpl::foldSelectIntrinsic(SelectInst &SI) {
   case Intrinsic::abs:
   case Intrinsic::cttz:
   case Intrinsic::ctlz: {
-    auto *TZ = dyn_cast<ConstantInt>(LHSIntrinsic->getArgOperand(1));
-    auto *FZ = dyn_cast<ConstantInt>(RHSIntrinsic->getArgOperand(1));
-    if (!TZ || !FZ)
-      return nullptr;
+    auto *TZ = cast<ConstantInt>(LHSIntrinsic->getArgOperand(1));
+    auto *FZ = cast<ConstantInt>(RHSIntrinsic->getArgOperand(1));
 
     Value *TV = LHSIntrinsic->getArgOperand(0);
     Value *FV = RHSIntrinsic->getArgOperand(0);
 
     Value *NewSel = Builder.CreateSelect(SI.getCondition(), TV, FV, "", &SI);
     Value *NewPoisonFlag = Builder.CreateAnd(TZ, FZ);
-    Instruction *NewCall = Builder.CreateIntrinsic(IID, {NewSel->getType()},
-                                                   {NewSel, NewPoisonFlag});
+    Value *NewCall = Builder.CreateBinaryIntrinsic(IID, NewSel, NewPoisonFlag);
 
     return replaceInstUsesWith(SI, NewCall);
   }
@@ -531,8 +528,7 @@ Instruction *InstCombinerImpl::foldSelectIntrinsic(SelectInst &SI) {
     Value *FV = RHSIntrinsic->getArgOperand(0);
 
     Value *NewSel = Builder.CreateSelect(SI.getCondition(), TV, FV, "", &SI);
-    Instruction *NewCall =
-        Builder.CreateIntrinsic(IID, {NewSel->getType()}, {NewSel});
+    Value *NewCall = Builder.CreateUnaryIntrinsic(IID, NewSel);
 
     return replaceInstUsesWith(SI, NewCall);
   }
