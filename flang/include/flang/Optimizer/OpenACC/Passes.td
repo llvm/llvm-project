@@ -70,4 +70,16 @@ def ACCUseDeviceCanonicalizer
   let dependentDialects = ["mlir::acc::OpenACCDialect", "fir::FIROpsDialect"];
 }
 
+def ACCOptimizeFirstprivateMap
+    : Pass<"acc-optimize-firstprivate-map", "mlir::func::FuncOp"> {
+  let summary = "Optimize firstprivate mapping";
+  let description = [{
+    This pass optimizes acc firstprivate mapping operations by hoisting
+    loads from the mapped variable to before the compute region. This enables
+    pass-by-value instead of using global memory mapping through the
+    runtime.
+  }];
+  let dependentDialects = ["mlir::acc::OpenACCDialect", "fir::FIROpsDialect"];
+}
+
 #endif // FORTRAN_OPTIMIZER_OPENACC_PASSES

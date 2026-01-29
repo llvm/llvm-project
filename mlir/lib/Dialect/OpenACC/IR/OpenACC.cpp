@@ -306,7 +306,11 @@ struct MemrefGlobalVariableModel
 
 struct GPULaunchOffloadRegionModel
     : public acc::OffloadRegionOpInterface::ExternalModel<
-          GPULaunchOffloadRegionModel, gpu::LaunchOp> {};
+          GPULaunchOffloadRegionModel, gpu::LaunchOp> {
+  mlir::Region &getOffloadRegion(mlir::Operation *op) const {
+    return cast<gpu::LaunchOp>(op).getBody();
+  }
+};
 
 /// Helper function for any of the times we need to modify an ArrayAttr based on
 /// a device type list.  Returns a new ArrayAttr with all of the
