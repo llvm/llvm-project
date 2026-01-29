@@ -166,30 +166,27 @@ is properly initialized and prepared for insertion into a `RewritePatternSet`.
 
 ## Pattern Rewriter
 
-A `PatternRewriter` is a special class that allows for a pattern to communicate
-with the driver of pattern application. As noted above, *all* IR mutations,
+A `PatternRewriter` is a special class which extends from [`RewriterBase`](RewritingMLIR.md/#rewriters)
+that allows for a pattern to communicate with the driver of pattern
+application. `RewriterBase` provides a base level of functions
+As noted above, *all* IR mutations,
 including creations, are required to be performed via the `PatternRewriter`
 class. This is required because the underlying pattern driver may have state
 that would be invalidated when a mutation takes place. Examples of some of the
 more prevalent `PatternRewriter` API is shown below, please refer to the
-[class documentation](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/IR/PatternMatch.h#L235)
+[class documentation](https://mlir.llvm.org/doxygen/classmlir_1_1PatternRewriter.html)
 for a more up-to-date listing of the available API:
 
-*   Erase an Operation : `eraseOp`
 
-This method erases an operation that either has no results, or whose results are
-all known to have no uses.
+* `RewriterBase` API and `OpBuilder` API
 
-*   Notify why a `match` failed : `notifyMatchFailure`
-
-This method allows for providing a diagnostic message within a `matchAndRewrite`
-as to why a pattern failed to match. How this message is displayed back to the
-user is determined by the specific pattern driver.
-
-*   Replace an Operation : `replaceOp`/`replaceOpWithNewOp`
-
-This method replaces an operation's results with a set of provided values, and
-erases the operation.
+The `PatternRewriter` inherits from the `RewriterBase` class, which inherits
+from the `OpBuilder` class. `PatternWriter` provides all of the same
+functionality present within a `RewriterBase` and an `OpBuilder`. This
+includes operation replacement, modification, erasure, and creation, as well
+as many useful attribute and type construction methods.
+See the explanation of the functions provided by [`RewriterBase`](RewritingMLIR.md#rewriter-functions)
+for functions used for erasure, replacement, and notifying match failures.
 
 *   Update an Operation in-place : `(start|cancel|finalize)OpModification`
 
@@ -201,11 +198,6 @@ within a pattern. An in-place update transaction is started with
 wrapper, `modifyOpInPlace`, is provided that wraps a `start` and `finalize`
 around a callback.
 
-*   OpBuilder API
-
-The `PatternRewriter` inherits from the `OpBuilder` class, and thus provides all
-of the same functionality present within an `OpBuilder`. This includes operation
-creation, as well as many useful attribute and type construction methods.
 
 ## Pattern Application
 
@@ -366,7 +358,8 @@ from being added to the worklist throughout the rewrite process:
     the worklist was initialized) are added to the worklist.
 
 Note: This driver listens for IR changes via the callbacks provided by
-`RewriterBase`. It is important that patterns announce all IR changes to the
+[`RewriterBase`](RewritingMLIR.md#rewriterbase. It is important that patterns
+announce all IR changes to the
 rewriter and do not bypass the rewriter API by modifying ops directly.
 
 Note: This driver is the one used by the [canonicalization](Canonicalization.md)
