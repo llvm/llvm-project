@@ -1124,6 +1124,15 @@ def WaveActiveOp : DXILOp<119, waveActiveOp> {
   let attributes = [Attributes<DXIL1_0, []>];
 }
 
+def WavePrefixBitCount : DXILOp<136, wavePrefixOp> {
+  let Doc = "returns the count of bits of Expr set to 1 on prior lanes";
+  let intrinsics = [IntrinSelect<int_dx_wave_prefix_bit_count>];
+  let arguments = [Int1Ty];
+  let result = Int32Ty;
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, []>];
+}
+
 def LegacyF32ToF16 : DXILOp<130, legacyF32ToF16> {
   let Doc = "converts the float stored in the first element of the float2 "
             "to a half and stores it in the low-half of the output uint";

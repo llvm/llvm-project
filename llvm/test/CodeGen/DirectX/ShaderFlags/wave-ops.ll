@@ -104,3 +104,10 @@ entry:
   %0 = call %dx.types.fouri32 @llvm.dx.wave.ballot(i1 %expr)
   ret void
 }
+
+define void @wave_prefix_bit_count(i1 %expr) {
+entry:
+  ; CHECK: Function wave_prefix_bit_count : [[WAVE_FLAG]]
+  %0 = call i32 @llvm.dx.wave.prefix.bit.count(i1 %expr)
+  ret void
+}

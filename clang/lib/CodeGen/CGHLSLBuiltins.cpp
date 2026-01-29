@@ -384,6 +384,19 @@ static Intrinsic::ID getWaveActiveMinIntrinsic(llvm::Triple::ArchType Arch,
   }
 }
 
+static Intrinsic::ID getPrefixCountBitsIntrinsic(llvm::Triple::ArchType Arch) {
+  switch (Arch) {
+  case llvm::Triple::spirv:
+    return Intrinsic::spv_subgroup_prefix_bit_count;
+  case llvm::Triple::dxil: {
+    return Intrinsic::dx_wave_prefix_bit_count;
+  }
+  default:
+    llvm_unreachable(
+        "WavePrefixOp instruction not supported by target architecture");
+  }
+}
+
 // Returns the mangled name for a builtin function that the SPIR-V backend
 // will expand into a spec Constant.
 static std::string getSpecConstantFunctionName(clang::QualType SpecConstantType,
@@ -863,6 +876,18 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         /*ReturnType=*/Op0->getType(),
         CGM.getHLSLRuntime().getSaturateIntrinsic(), ArrayRef<Value *>{Op0},
         nullptr, "hlsl.saturate");
+  }
+  case Builtin::BI__builtin_hlsl_wave_prefix_count_bits: {
+    Value *Op = EmitScalarExpr(E->getArg(0));
+    assert(Op->getType()->isIntegerTy(1) &&
+           "WavePrefixBitCount operand must be a boolean type");
+
+    Intrinsic::ID IID =
+        getPrefixCountBitsIntrinsic(getTarget().getTriple().getArch());
+
+    return EmitRuntimeCall(
+        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), IID), ArrayRef{Op},
+        "hlsl.wave.prefix.bit.count");
   }
   case Builtin::BI__builtin_hlsl_select: {
     Value *OpCond = EmitScalarExpr(E->getArg(0));
