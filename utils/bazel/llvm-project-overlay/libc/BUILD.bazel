@@ -2946,6 +2946,14 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_fsqrtl",
+    hdrs = ["src/__support/math/fsqrtl.h"],
+    deps = [
+        ":__support_fputil_sqrt",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_inv_trigf_utils",
     hdrs = ["src/__support/math/inv_trigf_utils.h"],
     deps = [
@@ -4740,7 +4748,7 @@ libc_math_function(
 libc_math_function(
     name = "fsqrtl",
     additional_deps = [
-        ":__support_fputil_sqrt",
+        ":__support_math_fsqrtl",
     ],
 )
 
