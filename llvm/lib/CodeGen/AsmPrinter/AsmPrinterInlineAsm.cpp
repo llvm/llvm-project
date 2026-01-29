@@ -69,15 +69,11 @@ unsigned AsmPrinter::addInlineAsmDiagBuffer(StringRef AsmStr,
 }
 
 /// EmitInlineAsm - Emit a blob of inline asm to the output streamer.
-void AsmPrinter::emitInlineAsm(StringRef Str, const TargetMachine &TM,
+void AsmPrinter::emitInlineAsm(StringRef Str, const MCSubtargetInfo &STI,
+                               const MCTargetOptions &MCOptions,
                                const MDNode *LocMDNode,
+                               InlineAsm::AsmDialect Dialect,
                                const MachineInstr *MI) {
-  const MCSubtargetInfo &STI =
-      MI ? getSubtargetInfo() : *TM.getMCSubtargetInfo();
-  const MCTargetOptions &MCOptions = TM.Options.MCOptions;
-  InlineAsm::AsmDialect Dialect =
-      MI ? MI->getInlineAsmDialect()
-         : InlineAsm::AsmDialect(TM.getMCAsmInfo()->getAssemblerDialect());
   assert(!Str.empty() && "Can't emit empty inline asm block");
 
   // Remember if the buffer is nul terminated or not so we can avoid a copy.
@@ -420,7 +416,8 @@ void AsmPrinter::emitInlineAsm(const MachineInstr *MI) {
     }
   }
 
-  emitInlineAsm(StringData, TM, LocMD, MI);
+  emitInlineAsm(StringData, getSubtargetInfo(), TM.Options.MCOptions, LocMD,
+                MI->getInlineAsmDialect(), MI);
 
   // Emit the #NOAPP end marker.  This has to happen even if verbose-asm isn't
   // enabled, so we use emitRawComment.
