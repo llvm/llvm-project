@@ -282,6 +282,14 @@ int main(int, char**) {
         assert_non_throwing([=, &policy] {
           (void)std::stable_sort(policy, std::move(first1), std::move(last1), compare);
         });
+
+        // is_sorted(first, last)
+        assert_non_throwing([=, &policy] { (void)std::is_sorted(policy, std::move(first1), std::move(last1)); });
+
+        // is_sorted(first, last, comp)
+        assert_non_throwing([=, &policy] {
+          (void)std::is_sorted(policy, std::move(first1), std::move(last1), compare);
+        });
       }
 
       {

@@ -514,6 +514,7 @@ objc_library(
         ":HostMacOSXHeaders",
         ":HostMacOSXPrivateHeaders",
         ":UtilityHeaders",
+        "//llvm:DebugInfoDWARF",
         "//llvm:Support",
         "//llvm:TargetParser",
     ],

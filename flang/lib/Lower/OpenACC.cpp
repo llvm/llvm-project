@@ -73,11 +73,6 @@ static llvm::cl::opt<bool> enableSymbolRemapping(
     llvm::cl::desc("Whether to remap symbols that appears in data clauses."),
     llvm::cl::init(true));
 
-static llvm::cl::opt<bool> enableDevicePtrRemap(
-    "openacc-remap-device-ptr-symbols",
-    llvm::cl::desc("sub-option of openacc-remap-symbols for deviceptr clause"),
-    llvm::cl::init(false));
-
 // Special value for * passed in device_type or gang clauses.
 static constexpr std::int64_t starCst = -1;
 
@@ -2434,12 +2429,11 @@ static Op createComputeOp(
     } else if (const auto *devicePtrClause =
                    std::get_if<Fortran::parser::AccClause::Deviceptr>(
                        &clause.u)) {
-      AccDataMap *symPairs = enableDevicePtrRemap ? &dataMap : nullptr;
       genDataOperandOperations<mlir::acc::DevicePtrOp>(
           devicePtrClause->v, converter, semanticsContext, stmtCtx,
           dataClauseOperands, mlir::acc::DataClause::acc_deviceptr,
           /*structured=*/true, /*implicit=*/false, async, asyncDeviceTypes,
-          asyncOnlyDeviceTypes, /*setDeclareAttr=*/false, symPairs);
+          asyncOnlyDeviceTypes, /*setDeclareAttr=*/false, &dataMap);
     } else if (const auto *attachClause =
                    std::get_if<Fortran::parser::AccClause::Attach>(&clause.u)) {
       auto crtDataStart = dataClauseOperands.size();

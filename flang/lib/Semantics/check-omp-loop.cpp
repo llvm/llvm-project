@@ -775,54 +775,62 @@ void OmpStructureChecker::Enter(const parser::OmpClause::Linear &x) {
     auto &modifiers{OmpGetModifiers(x.v)};
     linearMod = OmpGetUniqueModifier<parser::OmpLinearModifier>(modifiers);
     if (linearMod) {
-      // 2.7 Loop Construct Restriction
-      if ((llvm::omp::allDoSet | llvm::omp::allSimdSet).test(dir)) {
-        context_.Say(clauseSource,
-            "A modifier may not be specified in a LINEAR clause on the %s directive"_err_en_US,
-            ContextDirectiveAsFortran());
-        // Don't return early - continue to check other restrictions
-      }
-
       auto &desc{OmpGetDescriptor<parser::OmpLinearModifier>()};
-      for (auto &[symbol, source] : symbols) {
-        if (linearMod->v != parser::OmpLinearModifier::Value::Ref) {
-          CheckIntegerNoRef(symbol, source);
-        } else {
-          if (!IsAllocatable(*symbol) && !IsAssumedShape(*symbol) &&
-              !IsPolymorphic(*symbol)) {
-            context_.Say(source,
-                "The list item `%s` specified with the REF '%s' must be polymorphic variable, assumed-shape array, or a variable with the `ALLOCATABLE` attribute"_err_en_US,
-                symbol->name(), desc.name.str());
-          }
+      parser::CharBlock modSource{OmpGetModifierSource(modifiers, linearMod)};
+      bool valid{true};
+
+      if (version < 52) {
+        // Modifiers on LINEAR are only allowed on DECLARE SIMD
+        if (dir != llvm::omp::Directive::OMPD_declare_simd) {
+          context_.Say(modSource,
+              "A modifier may not be specified in a LINEAR clause on the %s directive"_err_en_US,
+              parser::ToUpperCaseLetters(getDirectiveName(dir)));
+          valid = false;
         }
+      } else {
         if (linearMod->v == parser::OmpLinearModifier::Value::Ref ||
             linearMod->v == parser::OmpLinearModifier::Value::Uval) {
-          if (!IsDummy(*symbol) || IsValue(*symbol)) {
-            context_.Say(source,
-                "If the `%s` is REF or UVAL, the list item '%s' must be a dummy argument without the VALUE attribute"_err_en_US,
-                desc.name.str(), symbol->name());
+          if (dir != llvm::omp::Directive::OMPD_declare_simd) {
+            context_.Say(modSource,
+                "A REF or UVAL '%s' may not be specified in a LINEAR clause on the %s directive"_err_en_US,
+                desc.name.str(),
+                parser::ToUpperCaseLetters(getDirectiveName(dir)));
+            valid = false;
           }
         }
-      } // for (symbol, source)
+        if (!std::get</*PostModified=*/bool>(x.v.t)) {
+          context_.Say(modSource,
+              "The 'modifier(<list>)' syntax is deprecated in %s, use '<list> : modifier' instead"_warn_en_US,
+              ThisVersion(version));
+        }
+      }
 
-      if (version >= 52 && !std::get</*PostModified=*/bool>(x.v.t)) {
-        context_.Say(OmpGetModifierSource(modifiers, linearMod),
-            "The 'modifier(<list>)' syntax is deprecated in %s, use '<list> : modifier' instead"_warn_en_US,
-            ThisVersion(version));
+      if (valid) {
+        for (auto &[symbol, source] : symbols) {
+          if (linearMod->v != parser::OmpLinearModifier::Value::Ref) {
+            CheckIntegerNoRef(symbol, source);
+          } else {
+            if (!IsAllocatable(*symbol) && !IsAssumedShape(*symbol) &&
+                !IsPolymorphic(*symbol)) {
+              context_.Say(source,
+                  "The list item `%s` specified with the REF '%s' must be polymorphic variable, assumed-shape array, or a variable with the `ALLOCATABLE` attribute"_err_en_US,
+                  symbol->name(), desc.name.str());
+            }
+          }
+          if (linearMod->v == parser::OmpLinearModifier::Value::Ref ||
+              linearMod->v == parser::OmpLinearModifier::Value::Uval) {
+            if (!IsDummy(*symbol) || IsValue(*symbol)) {
+              context_.Say(source,
+                  "If the `%s` is REF or UVAL, the list item '%s' must be a dummy argument without the VALUE attribute"_err_en_US,
+                  desc.name.str(), symbol->name());
+            }
+          }
+        } // for (symbol, source)
       }
     }
   }
 
-  // OpenMP 5.2: Ordered clause restriction
-  if (const auto *clause{
-          FindClause(GetContext(), llvm::omp::Clause::OMPC_ordered)}) {
-    const auto &orderedClause{std::get<parser::OmpClause::Ordered>(clause->u)};
-    if (orderedClause.v) {
-      return;
-    }
-  }
-
-  // OpenMP 5.2: Linear clause Restrictions
+  // Linear clause restrictions.
   for (auto &[symbol, source] : symbols) {
     // Check that the list item is a scalar variable (rank 0)
     // For declare simd with REF modifier, arrays are allowed
