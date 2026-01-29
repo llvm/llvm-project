@@ -762,12 +762,10 @@ entry:
 define <4 x i16> @abs_diff_add_v4i16(<4 x i16> %a, <4 x i16> %c) {
 ; CHECK-LABEL: abs_diff_add_v4i16:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov w8, #-1170 // =0xfffffb6e
-; CHECK-NEXT:    dup v2.4s, w8
-; CHECK-NEXT:    saddw v0.4s, v2.4s, v0.4h
-; CHECK-NEXT:    abs v0.4s, v0.4s
-; CHECK-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NEXT:    add v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    mov w8, #1170 // =0x492
+; CHECK-NEXT:    dup v2.4h, w8
+; CHECK-NEXT:    saba v1.4h, v0.4h, v2.4h
+; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    ret
 entry:
   %conv = sext <4 x i16> %a to <4 x i32>
@@ -784,13 +782,11 @@ entry:
 define <4 x i16> @abs_diff_add_v4i16_rii(<4 x i16> %a) {
 ; CHECK-LABEL: abs_diff_add_v4i16_rii:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mvni v1.4s, #146
 ; CHECK-NEXT:    mov w8, #2371 // =0x943
-; CHECK-NEXT:    saddw v0.4s, v1.4s, v0.4h
+; CHECK-NEXT:    movi v2.4h, #147
 ; CHECK-NEXT:    dup v1.4h, w8
-; CHECK-NEXT:    abs v0.4s, v0.4s
-; CHECK-NEXT:    xtn v0.4h, v0.4s
-; CHECK-NEXT:    add v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    saba v1.4h, v0.4h, v2.4h
+; CHECK-NEXT:    fmov d0, d1
 ; CHECK-NEXT:    ret
 entry:
   %conv = sext <4 x i16> %a to <4 x i32>
