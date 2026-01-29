@@ -297,6 +297,8 @@ unset(SHOULD_ENABLE_PROJECT)
 # Build llvm with ccache if the package is present
 set(LLVM_CCACHE_BUILD OFF CACHE BOOL "Set to ON for a ccache enabled build")
 if(LLVM_CCACHE_BUILD)
+  message(NOTICE "LLVM_CCACHE_BUILD will be deprecated. "
+	"Use CMAKE_C_COMPILER_LAUNCHER and CMAKE_CXX_COMPILER_LAUNCHER instead.")
   find_program(CCACHE_PROGRAM ccache)
   if(CCACHE_PROGRAM)
     set(LLVM_CCACHE_MAXSIZE "" CACHE STRING "Size of ccache")
