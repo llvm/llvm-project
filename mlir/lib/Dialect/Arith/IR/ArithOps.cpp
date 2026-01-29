@@ -235,9 +235,10 @@ bool arith::ConstantOp::isBuildableWith(Attribute value, Type type) {
   if (!typedAttr || typedAttr.getType() != type)
     return false;
   // Integer values must be signless.
-  if (llvm::isa<IntegerType>(type) &&
-      !llvm::cast<IntegerType>(type).isSignless())
-    return false;
+  if (auto intType = dyn_cast<IntegerType>(getElementTypeOrSelf(type))) {
+    if (!intType.isSignless())
+      return false;
+  }
   // Integer, float, and element attributes are buildable.
   return llvm::isa<IntegerAttr, FloatAttr, ElementsAttr>(value);
 }
