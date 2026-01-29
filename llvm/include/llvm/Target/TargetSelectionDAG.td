@@ -1070,10 +1070,14 @@ class PatFrags<dag ops, list<dag> frags, code pred = [{}],
   // This should return a `bool` for whether the predicate matches or not.
   code ImmediateCode = [{}];
 
-  // After this node is matched as `NAME:$val`, `$val` is stored so it can be
-  // used later in the pattern result. This implicit transform means that `$val`
-  // will store the result of transforming the node, instead of the original
-  // node.
+  // When a node is matched as `frag:$name`, the matched node is bound to
+  // `$name` so it can be used in the pattern result. This implicit transform
+  // means that `$name` will store the result of transforming the matched node,
+  // instead of the original node.
+  //
+  // The syntax for binding in a pattern can be:
+  // - `(frag:$name <patterns...>)` when `frag` has nested patterns
+  // - `frag:$name` when `frag` is a `PatLeaf` (no nested patterns)
   //
   // PatFrags with OperandTransforms are most useful when defining a pattern
   // directly on an instruction, where the transform cannot be written on the
