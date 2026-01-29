@@ -549,6 +549,7 @@ DynamicLoaderPOSIXDYLD::GetStepThroughTrampolinePlan(Thread &thread,
     if (sym->GetType() != lldb::eSymbolTypeCode)
       return thread_plan_sp;
 
+    // Check if any trampoline symbols exists at the file address.
     SymbolContextList addr_ctx_list;
     context.module_sp->FindSymbolsContainingFileAddress(
         context.GetFunctionOrSymbolAddress(), eSymbolTypeTrampoline,
