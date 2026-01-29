@@ -134,7 +134,7 @@ ASM_FUNCTION_RISCV_RE = re.compile(
 
 ASM_FUNCTION_RISCV_MACHO_RE = re.compile(
     r'^_?(?P<func>[^:]+):[ \t]*;[ \t]*@"?(?P=func)"?\n'
-    r"(?:\s*\.?Lfunc_begin[^:\n]*:\n)?[^:]*?"
+    r"(?:[ \t]+.cfi_startproc\n)?"  # drop optional cfi noise
     r"(?P<body>^;;?[ \t]+[^:]+:.*?)\s*"
     r"([ \t]*.cfi_endproc\n[\s]*)?"
     r"^[ \t]*;[ \t]--[ \t]End[ \t]function",
