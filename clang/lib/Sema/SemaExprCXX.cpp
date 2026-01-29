@@ -4773,6 +4773,10 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
     ToType = ToAtomic->getValueType();
   }
 
+  // Save the initial `atomicity` information of the From-expression for later check
+  // before it's potentially removed in the StandardConversionSequence steps 1-3.
+  const AtomicType* StartingFromAtomic = From->getType()->getAs<AtomicType>();
+
   QualType InitialFromType = FromType;
   // Perform the first implicit conversion.
   switch (SCS.First) {
@@ -5336,7 +5340,7 @@ Sema::PerformImplicitConversion(Expr *From, QualType ToType,
 
   // If this conversion sequence involved a scalar -> atomic conversion, perform
   // that conversion now.
-  if (!ToAtomicType.isNull()) {
+  if (!StartingFromAtomic && !ToAtomicType.isNull()) {
     assert(Context.hasSameType(
         ToAtomicType->castAs<AtomicType>()->getValueType(), From->getType()));
     From = ImpCastExprToType(From, ToAtomicType, CK_NonAtomicToAtomic,
