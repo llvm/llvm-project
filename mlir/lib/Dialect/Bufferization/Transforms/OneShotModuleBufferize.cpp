@@ -60,8 +60,6 @@
 // as "not reading" and/or "not writing".
 
 #include "mlir/Dialect/Bufferization/Transforms/OneShotModuleBufferize.h"
-#include "llvm/ADT/SmallVectorExtras.h"
-
 #include "mlir/Dialect/Bufferization/IR/BufferizableOpInterface.h"
 #include "mlir/Dialect/Bufferization/IR/Bufferization.h"
 #include "mlir/Dialect/Bufferization/Transforms/Bufferize.h"
