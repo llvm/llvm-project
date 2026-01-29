@@ -4,11 +4,13 @@ template <typename Ty>
 bool ab(Ty a, Ty b) {
   return (a && b);
 }
-// CHECK: [[@LINE-2]]| 4| return
+// MERGE: [[@LINE-2]]| 4| return
+// ANY:   [[@LINE-3]]| 2| return
+// ALL:   [[@LINE-4]]| 0| return
 
-// CHECK: MC/DC Coverage for Decision{{[:]}}  50.00%
-// CHECK: MC/DC Coverage for Decision{{[:]}}  50.00%
-// CHECK: MC/DC Coverage for Decision{{[:]}}   0.00%
+// MERGE: MC/DC Coverage for Decision{{[:]}}  50.00%
+// ANY:   MC/DC Coverage for Decision{{[:]}}  50.00%
+// ALL:   MC/DC Coverage for Decision{{[:]}}   0.00%
 // CHECK-NOT: MC/DC Coverage for Decision{{[:]}}
 
 // CHECK: _Z2abIbEbT_S0_{{[:]}}
@@ -23,10 +25,13 @@ template <bool C>
 bool Cab(bool a, bool b) {
   return (a && b && C);
 }
-// CHECK: [[@LINE-2]]| 4| return
+// MERGE: [[@LINE-2]]| 4| return
+// ANY:   [[@LINE-3]]| 2| return
+// ALL:   [[@LINE-4]]| 2| return
 
-// CHECK: MC/DC Coverage for Decision{{[:]}}   0.00%
-// CHECK: MC/DC Coverage for Decision{{[:]}}  50.00%
+// MERGE:  MC/DC Coverage for Decision{{[:]}}  50.00%
+// ANY:    MC/DC Coverage for Decision{{[:]}}  50.00%
+// ALL:    MC/DC Coverage for Decision{{[:]}}   0.00%
 // CHECK-NOT: MC/DC Coverage for Decision{{[:]}}
 
 // CHECK: _Z3CabILb0EEbbb{{[:]}}

@@ -19,6 +19,6 @@
 
 // FILE:      Filename          Regions Missed Regions  Cover   Functions Missed Functions Executed      Lines  Missed Lines    Cover   Branches Missed Branches Cover
 // FILE-NEXT: ---
-// FILE-NEXT: branch-macros.cpp      28              5  82.14%          3                0  100.00%         39             0   100.00%        40              16 60.00%
+// FILE-NEXT: branch-macros.cpp      28              5  82.14%          3                0  100.00%         39             0   100.00%        16              10 37.50%
 // FILE-NEXT: ---
-// FILE-NEXT: TOTAL                  28              5  82.14%          3                0  100.00%         39             0   100.00%        40              16 60.00%
+// FILE-NEXT: TOTAL                  28              5  82.14%          3                0  100.00%         39             0   100.00%        16              10 37.50%

@@ -46,4 +46,4 @@
 // MACROS: 5,15,5,23,1,2,8,0,4
 // MACROS: 6,15,6,23,0,1,9,0,4
 // MACROS: 8,15,8,38,1,2,2,0,4
-// MACROS: {"count":40,"covered":24,"notcovered":16,"percent":60}
+// MACROS: {"count":16,"covered":6,"notcovered":10,"percent":37.5}
