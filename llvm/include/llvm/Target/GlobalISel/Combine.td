@@ -609,12 +609,16 @@ def binop_same_val: GICombineRule<
 >;
 
 // Fold (0 op x) - > 0
+def binop_left_to_zero_frags : GICombinePatFrag<
+  (outs root:$dst, $zero), (ins $rhs),
+  !foreach(op,
+           [G_SHL, G_LSHR, G_ASHR, G_SDIV, G_UDIV, G_SREM, G_UREM, G_MUL],
+           (pattern (G_CONSTANT $zero, 0), (op $dst, $zero, $rhs)))>;
+
 def binop_left_to_zero: GICombineRule<
-  (defs root:$root),
-  (match (wip_match_opcode G_SHL, G_LSHR, G_ASHR, G_SDIV, G_UDIV, G_SREM,
-                           G_UREM):$root,
-    [{ return Helper.matchOperandIsZero(*${root}, 1); }]),
-  (apply [{ Helper.replaceSingleDefInstWithOperand(*${root}, 1); }])
+  (defs root:$dst),
+  (match (binop_left_to_zero_frags $dst, $zero, $rhs)),
+  (apply (GIReplaceReg $dst, $zero))
 >;
 
 def urem_pow2_to_mask : GICombineRule<
@@ -1813,6 +1817,21 @@ shl_of_vscale,
 sub_of_vscale,
 ]>;
 
+// fold ((A+(B-C))-B) -> A-C
+def APlusBMinusCMinusB : GICombineRule<
+   (defs root:$root),
+   (match (G_SUB $sub1, $B, $C),
+          (G_ADD $add1, $A, $sub1),
+          (G_SUB $root, $add1, $B)),
+   (apply (G_SUB $root, $A, $C))>;
+
+// fold ((A-(B-C))-C) -> A-B
+def AMinusBMinusCMinusC : GICombineRule<
+    (defs root:$root),
+    (match (G_SUB $sub1, $B, $C),
+            (G_SUB $sub2, $A, $sub1),
+            (G_SUB $root, $sub2, $C)),
+    (apply (G_SUB $root, $A, $B))>;
 
 // fold ((0-A) + B) -> B-A
 def ZeroMinusAPlusB : GICombineRule<
@@ -1925,6 +1944,8 @@ def AMinusC1PlusC2: GICombineRule<
    (apply [{ Helper.applyBuildFn(*${root}, ${matchinfo}); }])>;
 
 def integer_reassoc_combines: GICombineGroup<[
+  APlusBMinusCMinusB,
+  AMinusBMinusCMinusC,
   ZeroMinusAPlusB,
   APlusZeroMinusB,
   APlusBMinusB,
