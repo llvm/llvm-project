@@ -26,8 +26,9 @@
 # Ignore the user specified CMake presets in subproject directories.
 /*/CMakeUserPresets.json
 
-# Nested build directory
+# Nested build and install directories
 /build*
+/install*
 
 #==============================================================================#
 # Explicit files to ignore (only matches one).
