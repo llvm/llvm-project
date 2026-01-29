@@ -60,6 +60,14 @@ Annotations::Annotations(llvm::StringRef Text) {
       OpenRanges.pop_back();
       continue;
     }
+    if (Text.consume_front("\\[")) {
+      Code.push_back('[');
+      continue;
+    }
+    if (Text.consume_front("\\]")) {
+      Code.push_back(']');
+      continue;
+    }
     if (Text.consume_front("$")) {
       Name =
           Text.take_while([](char C) { return llvm::isAlnum(C) || C == '_'; });
