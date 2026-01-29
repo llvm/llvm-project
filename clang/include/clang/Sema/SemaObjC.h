@@ -396,6 +396,13 @@ public:
   void AddAnyMethodToGlobalPool(Decl *D);
 
   void ActOnStartOfObjCMethodDef(Scope *S, Decl *D);
+
+  /// Set CurContext to @c D, to prevent semantic errors when late parsing
+  /// expressions in attributes. This does not setup the context needed for
+  /// parsing a method body.
+  void ActOnEnterObjCMethodContextForLateParsedAttrs(Scope *S,
+                                                     ObjCMethodDecl *D);
+
   bool isObjCMethodDecl(Decl *D) { return isa_and_nonnull<ObjCMethodDecl>(D); }
 
   /// CheckImplementationIvars - This routine checks if the instance variables
