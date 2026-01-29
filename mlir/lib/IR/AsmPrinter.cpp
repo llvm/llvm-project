@@ -32,13 +32,16 @@
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/MapVector.h"
+#include "llvm/ADT/PointerIntPair.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/ScopedHashTable.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/ADT/TypeSwitch.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/Endian.h"
@@ -47,6 +50,7 @@
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/Threading.h"
 #include "llvm/Support/raw_ostream.h"
+#include <algorithm>
 #include <type_traits>
 
 #include <optional>
@@ -201,6 +205,11 @@ struct AsmPrinterOptions {
   llvm::cl::opt<bool> useNameLocAsPrefix{
       "mlir-use-nameloc-as-prefix", llvm::cl::init(false),
       llvm::cl::desc("Print SSA IDs using NameLocs as prefixes")};
+
+  llvm::cl::opt<bool> disableDialectAliases{
+      "mlir-disable-dialect-aliases", llvm::cl::init(false),
+      llvm::cl::desc(
+          "Disable printing of dialect aliases for attributes and types")};
 };
 } // namespace
 
@@ -219,7 +228,7 @@ OpPrintingFlags::OpPrintingFlags()
       printGenericOpFormFlag(false), skipRegionsFlag(false),
       assumeVerifiedFlag(false), printLocalScope(false),
       printValueUsersFlag(false), printUniqueSSAIDsFlag(false),
-      useNameLocAsPrefix(false) {
+      useNameLocAsPrefix(false), printDialectAliasesFlag(true) {
   // Initialize based upon command line options, if they are available.
   if (!clOptions.isConstructed())
     return;
@@ -239,6 +248,7 @@ OpPrintingFlags::OpPrintingFlags()
   printValueUsersFlag = clOptions->printValueUsers;
   printUniqueSSAIDsFlag = clOptions->printUniqueSSAIDs;
   useNameLocAsPrefix = clOptions->useNameLocAsPrefix;
+  printDialectAliasesFlag = !clOptions->disableDialectAliases;
 }
 
 /// Enable the elision of large elements attributes, by printing a '...'
@@ -331,6 +341,11 @@ OpPrintingFlags &OpPrintingFlags::printNameLocAsPrefix(bool enable) {
   return *this;
 }
 
+OpPrintingFlags &OpPrintingFlags::enableDialectAliases(bool enable) {
+  printDialectAliasesFlag = enable;
+  return *this;
+}
+
 /// Return the size limit for printing large ElementsAttr.
 std::optional<int64_t> OpPrintingFlags::getLargeElementsAttrLimit() const {
   return elementsAttrElementLimit;
@@ -387,6 +402,12 @@ bool OpPrintingFlags::shouldUseNameLocAsPrefix() const {
   return useNameLocAsPrefix;
 }
 
+/// Return if the printer should use dialect aliases when printing attributes or
+/// types.
+bool OpPrintingFlags::shouldPrintDialectAliases() const {
+  return printDialectAliasesFlag;
+}
+
 //===----------------------------------------------------------------------===//
 // NewLineCounter
 //===----------------------------------------------------------------------===//
@@ -414,6 +435,7 @@ class AsmPrinter::Impl {
 public:
   Impl(raw_ostream &os, AsmStateImpl &state);
   explicit Impl(Impl &other) : Impl(other.os, other.state) {}
+  explicit Impl(raw_ostream &os, Impl &other) : Impl(os, other.state) {}
 
   /// Returns the output stream of the printer.
   raw_ostream &getStream() { return os; }
@@ -462,6 +484,10 @@ public:
   /// be printed.
   LogicalResult printAlias(Attribute attr);
 
+  /// Print the dialect alias for the given attribute, return failure if no
+  /// alias could be printed.
+  LogicalResult printDialectAlias(Attribute attr, bool printStripped);
+
   /// Print the given type or an alias.
   void printType(Type type);
   /// Print the given type.
@@ -470,6 +496,10 @@ public:
   /// Print the alias for the given type, return failure if no alias could
   /// be printed.
   LogicalResult printAlias(Type type);
+
+  /// Print the dialect alias for the given type, return failure if no alias
+  /// could be printed.
+  LogicalResult printDialectAlias(Type type, bool printStripped);
 
   /// Print the given location to the stream. If `allowAlias` is true, this
   /// allows for the internal location to use an attribute alias.
@@ -833,6 +863,12 @@ private:
     initializer.visit(type);
     return success();
   }
+  LogicalResult printDialectAlias(Attribute attr, bool printStripped) override {
+    return failure();
+  }
+  LogicalResult printDialectAlias(Type type, bool printStripped) override {
+    return failure();
+  }
 
   /// Consider the given location to be printed for an alias.
   void printOptionalLocationSpecifier(Location loc) override {
@@ -1011,6 +1047,11 @@ private:
     printType(type);
     return success();
   }
+
+  LogicalResult printDialectAlias(Attribute, bool) override {
+    return failure();
+  }
+  LogicalResult printDialectAlias(Type, bool) override { return failure(); }
 
   /// Record the alias result of a child element.
   void recordAliasResult(std::pair<size_t, size_t> aliasDepthAndIndex) {
@@ -1275,7 +1316,10 @@ namespace {
 /// This class manages the state for type and attribute aliases.
 class AliasState {
 public:
-  // Initialize the internal aliases.
+  /// Initialize the alias state for custom dialect aliases.
+  AliasState(DialectInterfaceCollection<OpAsmDialectInterface> &interfaces);
+
+  /// Initialize the internal aliases.
   void
   initialize(Operation *op, const OpPrintingFlags &printerFlags,
              DialectInterfaceCollection<OpAsmDialectInterface> &interfaces);
@@ -1299,19 +1343,98 @@ public:
     printAliases(p, newLine, /*isDeferred=*/true);
   }
 
+  /// Get an attribute alias if it exists. Returns the alias if found,
+  /// or a default constructed pair otherwise.
+  std::pair<const Dialect *, StringRef>
+  getAttrAlias(AsmPrinter::Impl &p, Attribute attr, bool printStripped) {
+    return getAlias(p, attr.getTypeID(), attr.getAsOpaquePointer(),
+                    printStripped);
+  }
+
+  /// Get a type alias if it exists. Returns the alias if found,
+  /// or a default constructed pair otherwise.
+  std::pair<const Dialect *, StringRef>
+  getTypeAlias(AsmPrinter::Impl &p, Type type, bool printStripped) {
+    return getAlias(p, type.getTypeID(), type.getAsOpaquePointer(),
+                    printStripped);
+  }
+
 private:
+  using TypeIDPrinter =
+      std::tuple<TypeID, const Dialect *,
+                 std::function<void(const void *, AsmPrinter &, bool)>>;
+  using PrinterIterator = SmallVectorImpl<TypeIDPrinter>::iterator;
+
   /// Print all of the referenced aliases that support the provided resolution
   /// behavior.
   void printAliases(AsmPrinter::Impl &p, NewLineCounter &newLine,
                     bool isDeferred);
+
+  /// Comparison function for TypeIDPrinter.
+  static bool comparePrinters(const TypeIDPrinter &lhs,
+                              const TypeIDPrinter &rhs);
+
+  /// Find custom printers for the given TypeID.
+  llvm::iterator_range<PrinterIterator> findPrinters(TypeID typeID);
+
+  /// Get an attribute or type alias if it exists. Returns the alias if found,
+  /// or a default constructed pair otherwise.
+  std::pair<const Dialect *, StringRef> getAlias(AsmPrinter::Impl &p,
+                                                 TypeID typeID,
+                                                 const void *opaqueAttrType,
+                                                 bool printStripped);
 
   /// Mapping between attribute/type and alias.
   llvm::MapVector<const void *, SymbolAlias> attrTypeToAlias;
 
   /// An allocator used for alias names.
   llvm::BumpPtrAllocator aliasAllocator;
+
+  /// Mapping between attribute/type ID and custom printers for them.
+  SmallVector<TypeIDPrinter> attrTypePrinters;
+
+  /// Cache for custom printed attributes/types.
+  DenseMap<llvm::PointerIntPair<const void *, 1, bool>,
+           std::pair<const Dialect *, std::string>>
+      printCache;
 };
 } // namespace
+
+AliasState::AliasState(
+    DialectInterfaceCollection<OpAsmDialectInterface> &interfaces) {
+  // Collect all of the custom alias printers.
+  for (const OpAsmDialectInterface &interface : interfaces) {
+    auto insertAliasAttrFn =
+        [&](TypeID typeID,
+            OpAsmDialectInterface::AttributeAliasPrinter printer) {
+          if (!printer)
+            return;
+          attrTypePrinters.emplace_back(
+              typeID, interface.getDialect(),
+              [printer](const void *attr, AsmPrinter &p, bool printStripped) {
+                printer(Attribute::getFromOpaquePointer(attr), p,
+                        printStripped);
+              });
+        };
+    auto insertAliasTypeFn =
+        [&](TypeID typeID, OpAsmDialectInterface::TypeAliasPrinter printer) {
+          if (!printer)
+            return;
+          attrTypePrinters.emplace_back(
+              typeID, interface.getDialect(),
+              [printer](const void *attr, AsmPrinter &p, bool printStripped) {
+                printer(Type::getFromOpaquePointer(attr), p, printStripped);
+              });
+        };
+    interface.registerAttrAliasPrinter(insertAliasAttrFn);
+    interface.registerTypeAliasPrinter(insertAliasTypeFn);
+  }
+
+  // Sort the printers by TypeID for efficient lookup.
+  // Stable sort guarantees that the order of registration is preserved.
+  std::stable_sort(attrTypePrinters.begin(), attrTypePrinters.end(),
+                   comparePrinters);
+}
 
 void AliasState::initialize(
     Operation *op, const OpPrintingFlags &printerFlags,
@@ -1339,6 +1462,24 @@ LogicalResult AliasState::getAlias(Type ty, raw_ostream &os) const {
   return success();
 }
 
+bool AliasState::comparePrinters(const TypeIDPrinter &lhs,
+                                 const TypeIDPrinter &rhs) {
+  return std::get<0>(lhs).getAsOpaquePointer() <
+         std::get<0>(rhs).getAsOpaquePointer();
+}
+
+llvm::iterator_range<AliasState::PrinterIterator>
+AliasState::findPrinters(TypeID typeID) {
+  TypeIDPrinter key = std::make_tuple(
+      typeID, /*unused*/ nullptr,
+      /*unused*/ std::function<void(const void *, AsmPrinter &, bool)>());
+  PrinterIterator lb = std::lower_bound(
+      attrTypePrinters.begin(), attrTypePrinters.end(), key, comparePrinters);
+  PrinterIterator ub = std::upper_bound(
+      attrTypePrinters.begin(), attrTypePrinters.end(), key, comparePrinters);
+  return llvm::make_range(lb, ub);
+}
+
 void AliasState::printAliases(AsmPrinter::Impl &p, NewLineCounter &newLine,
                               bool isDeferred) {
   auto filterFn = [=](const auto &aliasIt) {
@@ -1364,6 +1505,40 @@ void AliasState::printAliases(AsmPrinter::Impl &p, NewLineCounter &newLine,
 
     p.getStream() << newLine;
   }
+}
+
+std::pair<const Dialect *, StringRef>
+AliasState::getAlias(AsmPrinter::Impl &p, TypeID typeID,
+                     const void *opaqueAttrType, bool printStripped) {
+  llvm::PointerIntPair<const void *, 1, bool> key(opaqueAttrType,
+                                                  printStripped);
+  // Check the cache first.
+  if (auto it = printCache.find(key); it != printCache.end())
+    return it->second;
+
+  // Try to get the alias using custom printers.
+  std::string buffer;
+  llvm::raw_string_ostream os(buffer);
+  AsmPrinter::Impl printImpl(os, p);
+  DialectAsmPrinter printer(printImpl);
+  for (const auto &printInfo : findPrinters(typeID)) {
+    // Invoke the printer.
+    std::get<2>(printInfo)(opaqueAttrType, printer, printStripped);
+
+    // Trim any whitespace.
+    if (StringRef str = StringRef(buffer).trim(); str != buffer)
+      buffer = str.str();
+
+    // If we printed something, cache and return.
+    if (!buffer.empty()) {
+      StringRef alias = (printCache[key] = std::make_pair(
+                             std::get<1>(printInfo), std::move(buffer)))
+                            .second;
+      return std::make_pair(std::get<1>(printInfo), alias);
+    }
+    buffer.clear();
+  }
+  return {nullptr, StringRef()};
 }
 
 //===----------------------------------------------------------------------===//
@@ -1972,11 +2147,13 @@ class AsmStateImpl {
 public:
   explicit AsmStateImpl(Operation *op, const OpPrintingFlags &printerFlags,
                         AsmState::LocationMap *locationMap)
-      : interfaces(op->getContext()), nameState(op, printerFlags),
-        printerFlags(printerFlags), locationMap(locationMap) {}
+      : interfaces(op->getContext()), aliasState(interfaces),
+        nameState(op, printerFlags), printerFlags(printerFlags),
+        locationMap(locationMap) {}
   explicit AsmStateImpl(MLIRContext *ctx, const OpPrintingFlags &printerFlags,
                         AsmState::LocationMap *locationMap)
-      : interfaces(ctx), printerFlags(printerFlags), locationMap(locationMap) {}
+      : interfaces(ctx), aliasState(interfaces), printerFlags(printerFlags),
+        locationMap(locationMap) {}
 
   /// Initialize the alias state to enable the printing of aliases.
   void initializeAliases(Operation *op) {
@@ -2401,6 +2578,44 @@ LogicalResult AsmPrinter::Impl::printAlias(Type type) {
   return state.getAliasState().getAlias(type, os);
 }
 
+LogicalResult AsmPrinter::Impl::printDialectAlias(Attribute attr,
+                                                  bool printStripped) {
+  if (!state.getPrinterFlags().shouldPrintDialectAliases())
+    return failure();
+
+  // Check to see if there is a dialect alias for this attribute.
+  auto [aliasDialect, alias] =
+      state.getAliasState().getAttrAlias(*this, attr, printStripped);
+  if (aliasDialect && !alias.empty()) {
+    if (printStripped) {
+      os << alias;
+      return success();
+    }
+    printDialectSymbol(os, "!", aliasDialect->getNamespace(), alias);
+    return success();
+  }
+  return failure();
+}
+
+LogicalResult AsmPrinter::Impl::printDialectAlias(Type type,
+                                                  bool printStripped) {
+  if (!state.getPrinterFlags().shouldPrintDialectAliases())
+    return failure();
+
+  // Check to see if there is a dialect alias for this type.
+  auto [aliasDialect, alias] =
+      state.getAliasState().getTypeAlias(*this, type, printStripped);
+  if (aliasDialect && !alias.empty()) {
+    if (printStripped) {
+      os << alias;
+      return success();
+    }
+    printDialectSymbol(os, "!", aliasDialect->getNamespace(), alias);
+    return success();
+  }
+  return failure();
+}
+
 void AsmPrinter::Impl::printAttribute(Attribute attr,
                                       AttrTypeElision typeElision) {
   if (!attr) {
@@ -2410,6 +2625,8 @@ void AsmPrinter::Impl::printAttribute(Attribute attr,
 
   // Try to print an alias for this attribute.
   if (succeeded(printAlias(attr)))
+    return;
+  if (succeeded(printDialectAlias(attr, /*printStripped=*/false)))
     return;
   return printAttributeImpl(attr, typeElision);
 }
@@ -2739,6 +2956,8 @@ void AsmPrinter::Impl::printType(Type type) {
   // Try to print an alias for this type.
   if (succeeded(printAlias(type)))
     return;
+  if (succeeded(printDialectAlias(type, /*printStripped=*/false)))
+    return;
   return printTypeImpl(type);
 }
 
@@ -3037,6 +3256,17 @@ LogicalResult AsmPrinter::printAlias(Attribute attr) {
 
 LogicalResult AsmPrinter::printAlias(Type type) {
   assert(impl && "expected AsmPrinter::printAlias to be overriden");
+  return impl->printAlias(type);
+}
+
+LogicalResult AsmPrinter::printDialectAlias(Attribute attr,
+                                            bool printStripped) {
+  assert(impl && "expected AsmPrinter::printDialectAlias to be overriden");
+  return impl->printAlias(attr);
+}
+
+LogicalResult AsmPrinter::printDialectAlias(Type type, bool printStripped) {
+  assert(impl && "expected AsmPrinter::printDialectAlias to be overriden");
   return impl->printAlias(type);
 }
 
