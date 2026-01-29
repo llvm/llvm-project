@@ -1,7 +1,5 @@
-// RUN: %clang_cc1 -std=c++20 -Wno-all -Wformat \
-// RUN:            -verify=expected-format %s
-// RUN: %clang_cc1 -std=c++20 -Wno-all -Wunsafe-buffer-usage -Wunsafe-buffer-usage-in-format-attr-call \
-// RUN:            -verify %s
+// RUN: %clang_cc1 -Wformat -verify=expected-format %s
+// RUN: %clang_cc1 -Wunsafe-buffer-usage -Wunsafe-buffer-usage-in-format-attr-call -verify=expected,expected-format %s
 
 namespace std {
   template<typename T>
