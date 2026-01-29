@@ -77,10 +77,10 @@ protected:
   LLVM_ABI void grow_pod(void *FirstEl, size_t MinSize, size_t TSize);
 
 public:
-  size_t size() const { return Size; }
-  size_t capacity() const { return Capacity; }
+  size_t size() const noexcept { return Size; }
+  size_t capacity() const noexcept { return Capacity; }
 
-  [[nodiscard]] bool empty() const { return !Size; }
+  [[nodiscard]] bool empty() const noexcept { return !Size; }
 
 protected:
   /// Set the array size to \p N, which the current array must have enough
@@ -270,16 +270,20 @@ public:
   using Base::size;
 
   // forward iterator creation methods.
-  iterator begin() { return (iterator)this->BeginX; }
-  const_iterator begin() const { return (const_iterator)this->BeginX; }
-  iterator end() { return begin() + size(); }
-  const_iterator end() const { return begin() + size(); }
+  iterator begin() noexcept { return (iterator)this->BeginX; }
+  const_iterator begin() const noexcept { return (const_iterator)this->BeginX; }
+  iterator end() noexcept { return begin() + size(); }
+  const_iterator end() const noexcept { return begin() + size(); }
 
   // reverse iterator creation methods.
-  reverse_iterator rbegin()            { return reverse_iterator(end()); }
-  const_reverse_iterator rbegin() const{ return const_reverse_iterator(end()); }
-  reverse_iterator rend()              { return reverse_iterator(begin()); }
-  const_reverse_iterator rend() const { return const_reverse_iterator(begin());}
+  reverse_iterator rbegin() noexcept { return reverse_iterator(end()); }
+  const_reverse_iterator rbegin() const noexcept {
+    return const_reverse_iterator(end());
+  }
+  reverse_iterator rend() noexcept { return reverse_iterator(begin()); }
+  const_reverse_iterator rend() const noexcept {
+    return const_reverse_iterator(begin());
+  }
 
   size_type size_in_bytes() const { return size() * sizeof(T); }
   size_type max_size() const {
@@ -289,9 +293,9 @@ public:
   size_t capacity_in_bytes() const { return capacity() * sizeof(T); }
 
   /// Return a pointer to the vector's buffer, even if empty().
-  pointer data() { return pointer(begin()); }
+  pointer data() noexcept { return pointer(begin()); }
   /// Return a pointer to the vector's buffer, even if empty().
-  const_pointer data() const { return const_pointer(begin()); }
+  const_pointer data() const noexcept { return const_pointer(begin()); }
 
   reference operator[](size_type idx) {
     assert(idx < size());
