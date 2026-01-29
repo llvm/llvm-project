@@ -123,6 +123,21 @@ void VirtualCallChecker::checkPreCall(const CallEvent &Call,
   if (!ObState)
     return;
 
+  // If we're directly inside the constructor/destructor of a final class,
+  // virtual dispatch is safe because there can be no derived classes.
+  // We only suppress when directly in the ctor/dtor, not in helper functions
+  // (which could be called from non-final classes), and not in base class
+  // ctors/dtors (which have broken vtables even when constructing/destroying
+  // a final derived class).
+  const auto *LCtx = C.getLocationContext();
+  if (const auto *CD = dyn_cast<CXXConstructorDecl>(LCtx->getDecl())) {
+    if (CD->getParent()->isEffectivelyFinal())
+      return;
+  } else if (const auto *DD = dyn_cast<CXXDestructorDecl>(LCtx->getDecl())) {
+    if (DD->getParent()->isEffectivelyFinal())
+      return;
+  }
+
   bool IsPure = MD->isPureVirtual();
 
   // At this point we're sure that we're calling a virtual method
