@@ -28,7 +28,7 @@ constexpr size_t ENVIRON_GROWTH_FACTOR = 2;
 char **EnvironmentManager::get_array() {
   if (is_ours)
     return storage;
-  return reinterpret_cast<char **>(LIBC_NAMESPACE::app.env_ptr);
+  return reinterpret_cast<char **>(app.env_ptr);
 }
 
 void EnvironmentManager::init() {
@@ -36,7 +36,7 @@ void EnvironmentManager::init() {
     return;
 
   // Count entries in the startup environ
-  char **env_ptr = reinterpret_cast<char **>(LIBC_NAMESPACE::app.env_ptr);
+  char **env_ptr = reinterpret_cast<char **>(app.env_ptr);
   if (env_ptr) {
     size_t count = 0;
     for (char **env = env_ptr; *env != nullptr; env++)
@@ -70,7 +70,7 @@ bool EnvironmentManager::ensure_capacity(size_t needed) {
   // we must transition to our own managed storage. This allows us to
   // track ownership of strings and safely expand the array.
   if (!is_ours) {
-    char **old_env = reinterpret_cast<char **>(LIBC_NAMESPACE::app.env_ptr);
+    char **old_env = reinterpret_cast<char **>(app.env_ptr);
 
     // Allocate new array with room to grow.
     size_t new_capacity = needed < MIN_ENVIRON_CAPACITY
@@ -108,7 +108,7 @@ bool EnvironmentManager::ensure_capacity(size_t needed) {
     is_ours = true;
 
     // Update the global environ pointer.
-    LIBC_NAMESPACE::app.env_ptr = reinterpret_cast<uintptr_t *>(storage);
+    app.env_ptr = reinterpret_cast<uintptr_t *>(storage);
 
     return true;
   }
@@ -150,7 +150,7 @@ bool EnvironmentManager::ensure_capacity(size_t needed) {
   capacity = new_capacity;
 
   // Update the global environ pointer.
-  LIBC_NAMESPACE::app.env_ptr = reinterpret_cast<uintptr_t *>(storage);
+  app.env_ptr = reinterpret_cast<uintptr_t *>(storage);
 
   return true;
 }
