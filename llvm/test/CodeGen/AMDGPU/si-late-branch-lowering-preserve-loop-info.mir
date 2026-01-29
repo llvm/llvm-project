@@ -4,11 +4,12 @@
 # due to early termination handling.
 
 # CHECK: Running analysis: MachineLoopAnalysis on early_term_in_loop
-# CHECK: Running pass: SILateBranchLoweringPass on early_term_in_loop
-# CHECK: Running pass: MachineLoopPrinterPass on early_term_in_loop
-# CHECK: Machine loop info for machine function 'early_term_in_loop':
+# CHECK-NEXT: Running analysis: MachineDominatorTreeAnalysis on early_term_in_loop
+# CHECK-NEXT: Running pass: SILateBranchLoweringPass on early_term_in_loop
+# CHECK-NEXT: Running pass: MachineLoopPrinterPass on early_term_in_loop
+# CHECK-NEXT: Machine loop info for machine function 'early_term_in_loop':
 # CHECK-NOT: Running analysis: MachineLoopAnalysis on early_term_in_loop
-# CHECK: Loop at depth 1 containing: %bb.1<header><exiting>,%bb.4<latch><exiting>
+# CHECK-NEXT: Loop at depth 1 containing: %bb.1<header><exiting>,%bb.4<latch><exiting>
 
 --- |
   define amdgpu_ps void @early_term_in_loop() {
