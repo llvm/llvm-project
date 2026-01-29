@@ -30,7 +30,7 @@ body:             |
   ; CHECK-NEXT: bb.2:
   ; CHECK-NEXT:   successors: %bb.2(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gpr32 = PHI [[CSELWr]], %bb.1, %8, %bb.2
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:gpr32 = PHI [[CSELWr]], %bb.1, %9, %bb.2
   ; CHECK-NEXT:   [[FCVTHSr:%[0-9]+]]:fpr16 = nofpexcept FCVTHSr [[COPY]], implicit $fpcr
   ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:fpr32 = SUBREG_TO_REG [[FCVTHSr]], %subreg.hsub
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr32all = COPY [[SUBREG_TO_REG]]
@@ -154,12 +154,14 @@ body:             |
   ; CHECK-NEXT: bb.3:
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   %fpr:fpr16 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[DEF:%[0-9]+]]:gpr32 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:fpr32 = COPY [[DEF]]
+  ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:fpr16 = COPY [[COPY2]].hsub
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.4:
   ; CHECK-NEXT:   successors: %bb.5(0x80000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT:   %fp_phi:fpr16 = PHI %fpr, %bb.3, [[COPY1]], %bb.2
+  ; CHECK-NEXT:   %fp_phi:fpr16 = PHI [[COPY3]], %bb.3, [[COPY1]], %bb.2
   ; CHECK-NEXT:   %gp_phi1:gpr32 = PHI %gpr_1, %bb.3, %gpr_2, %bb.2
   ; CHECK-NEXT:   %gp_phi2:gpr32 = PHI %gpr_1, %bb.3, %gpr_2, %bb.2
   ; CHECK-NEXT:   %gp_phi3:gpr32 = PHI %gpr_1, %bb.3, %gpr_2, %bb.2
@@ -167,7 +169,7 @@ body:             |
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:gpr32all = COPY [[SUBREG_TO_REG]]
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.5:
-  ; CHECK-NEXT:   %use_fp_phi:gpr32 = PHI %gpr_1, %bb.0, [[COPY2]], %bb.4
+  ; CHECK-NEXT:   %use_fp_phi:gpr32 = PHI %gpr_1, %bb.0, [[COPY4]], %bb.4
   ; CHECK-NEXT:   %use_gp_phi1:gpr32 = PHI %gpr_1, %bb.0, %gp_phi1, %bb.4
   ; CHECK-NEXT:   %use_gp_phi2:gpr32 = PHI %gpr_1, %bb.0, %gp_phi2, %bb.4
   ; CHECK-NEXT:   %use_gp_phi3:gpr32 = PHI %gpr_1, %bb.0, %gp_phi3, %bb.4
