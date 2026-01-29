@@ -240,6 +240,8 @@ bool BugSuppression::isSuppressed(const PathDiagnosticLocation &Location,
       // specialization. Transform specializations to their template definitions
       // before checking for suppressions or walking up the lexical parent
       // chain.
+      // Simply taking the lexical parent of template specializations might land
+      // us in a completely different namespace.
       DeclWithIssue =
           preferTemplateDefinitionForTemplateSpecializations(DeclWithIssue);
 
