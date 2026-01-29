@@ -156,6 +156,9 @@ public:
                               cir::PointerType destCIRTy, bool isRefCast,
                               Address src) override;
 
+  cir::MethodAttr buildVirtualMethodAttr(cir::MethodType methodTy,
+                                         const CXXMethodDecl *md) override;
+
   Address initializeArrayCookie(CIRGenFunction &cgf, Address newPtr,
                                 mlir::Value numElements, const CXXNewExpr *e,
                                 QualType elementType) override;
@@ -2195,6 +2198,25 @@ mlir::Value CIRGenItaniumCXXABI::emitDynamicCast(CIRGenFunction &cgf,
                                         isRefCast, castInfo);
 }
 
+cir::MethodAttr
+CIRGenItaniumCXXABI::buildVirtualMethodAttr(cir::MethodType methodTy,
+                                            const CXXMethodDecl *md) {
+  assert(md->isVirtual() && "only deal with virtual member functions");
+
+  uint64_t index = cgm.getItaniumVTableContext().getMethodVTableIndex(md);
+  uint64_t vtableOffset;
+  if (cgm.getItaniumVTableContext().isRelativeLayout()) {
+    // Multiply by 4-byte relative offsets.
+    vtableOffset = index * 4;
+  } else {
+    const ASTContext &astContext = cgm.getASTContext();
+    CharUnits pointerWidth = astContext.toCharUnitsFromBits(
+        astContext.getTargetInfo().getPointerWidth(LangAS::Default));
+    vtableOffset = index * pointerWidth.getQuantity();
+  }
+
+  return cir::MethodAttr::get(methodTy, vtableOffset);
+}
 /// The Itanium ABI always places an offset to the complete object
 /// at entry -2 in the vtable.
 void CIRGenItaniumCXXABI::emitVirtualObjectDelete(

@@ -3,11 +3,13 @@ add_flang_library(FIRAnalysis
   TBAAForest.cpp
 
   DEPENDS
+  CUFDialect
   FIRDialect
   FIRSupport
   HLFIRDialect
 
   LINK_LIBS
+  CUFDialect
   FIRBuilder
   FIRDialect
   FIRSupport

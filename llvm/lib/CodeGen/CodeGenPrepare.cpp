@@ -485,9 +485,7 @@ class CodeGenPrepareLegacyPass : public FunctionPass {
 public:
   static char ID; // Pass identification, replacement for typeid
 
-  CodeGenPrepareLegacyPass() : FunctionPass(ID) {
-    initializeCodeGenPrepareLegacyPassPass(*PassRegistry::getPassRegistry());
-  }
+  CodeGenPrepareLegacyPass() : FunctionPass(ID) {}
 
   bool runOnFunction(Function &F) override;
 
@@ -2662,9 +2660,11 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT) {
       if (!isAligned(PrefAlign, Offset2))
         continue;
       AllocaInst *AI;
-      if ((AI = dyn_cast<AllocaInst>(Val)) && AI->getAlign() < PrefAlign &&
-          DL->getTypeAllocSize(AI->getAllocatedType()) >= MinSize + Offset2)
-        AI->setAlignment(PrefAlign);
+      if ((AI = dyn_cast<AllocaInst>(Val)) && AI->getAlign() < PrefAlign) {
+        std::optional<TypeSize> AllocaSize = AI->getAllocationSize(*DL);
+        if (AllocaSize && AllocaSize->getKnownMinValue() >= MinSize + Offset2)
+          AI->setAlignment(PrefAlign);
+      }
       // Global variables can only be aligned if they are defined in this
       // object (i.e. they are uniquely initialized in this object), and
       // over-aligning global variables that have an explicit section is
@@ -2672,7 +2672,7 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT) {
       GlobalVariable *GV;
       if ((GV = dyn_cast<GlobalVariable>(Val)) && GV->canIncreaseAlignment() &&
           GV->getPointerAlignment(*DL) < PrefAlign &&
-          DL->getTypeAllocSize(GV->getValueType()) >= MinSize + Offset2)
+          GV->getGlobalSize(*DL) >= MinSize + Offset2)
         GV->setAlignment(PrefAlign);
     }
   }
@@ -2965,7 +2965,7 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
     EVI = dyn_cast<ExtractValueInst>(V);
     if (EVI) {
       V = EVI->getOperand(0);
-      if (!llvm::all_of(EVI->indices(), [](unsigned idx) { return idx == 0; }))
+      if (!llvm::all_of(EVI->indices(), equal_to(0)))
         return false;
     }
 
@@ -3016,9 +3016,13 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
   if (&*BI != RetI)
     return false;
 
-  /// Only dup the ReturnInst if the CallInst is likely to be emitted as a tail
-  /// call.
-  const Function *F = BB->getParent();
+  // Only dup the ReturnInst if the CallInst is likely to be emitted as a tail
+  // call.
+  auto MayBePermittedAsTailCall = [&](const auto *CI) {
+    return TLI->mayBeEmittedAsTailCall(CI) &&
+           attributesPermitTailCall(BB->getParent(), CI, RetI, *TLI);
+  };
+
   SmallVector<BasicBlock *, 4> TailCallBBs;
   // Record the call instructions so we can insert any fake uses
   // that need to be preserved before them.
@@ -3031,8 +3035,7 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
       BasicBlock *PredBB = PN->getIncomingBlock(I);
       // Make sure the phi value is indeed produced by the tail call.
       if (CI && CI->hasOneUse() && CI->getParent() == PredBB &&
-          TLI->mayBeEmittedAsTailCall(CI) &&
-          attributesPermitTailCall(F, CI, RetI, *TLI)) {
+          MayBePermittedAsTailCall(CI)) {
         TailCallBBs.push_back(PredBB);
         CallInsts.push_back(CI);
       } else {
@@ -3053,8 +3056,7 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
         if (CI && CI->use_empty() &&
             isIntrinsicOrLFToBeTailCalled(TLInfo, CI) &&
             IncomingVal == CI->getArgOperand(0) &&
-            TLI->mayBeEmittedAsTailCall(CI) &&
-            attributesPermitTailCall(F, CI, RetI, *TLI)) {
+            MayBePermittedAsTailCall(CI)) {
           TailCallBBs.push_back(PredBB);
           CallInsts.push_back(CI);
         }
@@ -3067,8 +3069,7 @@ bool CodeGenPrepare::dupRetToEnableTailCallOpts(BasicBlock *BB,
         continue;
       if (Instruction *I = Pred->rbegin()->getPrevNode()) {
         CallInst *CI = dyn_cast<CallInst>(I);
-        if (CI && CI->use_empty() && TLI->mayBeEmittedAsTailCall(CI) &&
-            attributesPermitTailCall(F, CI, RetI, *TLI)) {
+        if (CI && CI->use_empty() && MayBePermittedAsTailCall(CI)) {
           // Either we return void or the return value must be the first
           // argument of a known intrinsic or library function.
           if (!V || isa<UndefValue>(V) ||
@@ -7044,7 +7045,7 @@ bool CodeGenPrepare::optimizePhiType(
     }
   }
 
-  if (!ConvertTy || !AnyAnchored ||
+  if (!ConvertTy || !AnyAnchored || PhiTy == ConvertTy ||
       !TLI->shouldConvertPhiType(PhiTy, ConvertTy))
     return false;
 
@@ -7943,7 +7944,7 @@ bool CodeGenPrepare::tryToSinkFreeOperands(Instruction *I) {
 
   for (Use *U : reverse(OpsToSink)) {
     auto *UI = cast<Instruction>(U->get());
-    if (isa<PHINode>(UI))
+    if (isa<PHINode>(UI) || UI->mayHaveSideEffects() || UI->mayReadFromMemory())
       continue;
     if (UI->getParent() == TargetBB) {
       if (InstOrdering[UI] < InstOrdering[InsertPoint])

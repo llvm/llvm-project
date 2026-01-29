@@ -17,7 +17,7 @@
 #ifndef LLVM_ADT_STLFORWARDCOMPAT_H
 #define LLVM_ADT_STLFORWARDCOMPAT_H
 
-#include <functional>
+#include "llvm/Support/Compiler.h"
 #include <optional>
 #include <tuple>
 #include <type_traits>
@@ -227,7 +227,7 @@ class BindStorage<BindFront, BoundArgsTupleT, FnStorageT,
                   std::index_sequence<Indices...>> {
   BoundArgsTupleT BoundArgs;
   // This may be empty for const functions, hence the `no_unique_address`.
-  [[no_unique_address]] FnStorageT FnStorage;
+  LLVM_NO_UNIQUE_ADDRESS FnStorageT FnStorage;
 
 public:
   // Constructor for FnHolder (runtime callable).
@@ -242,7 +242,7 @@ public:
       : BoundArgs(std::forward<BoundArgsArgT>(Args)...), FnStorage() {}
 
   template <typename... CallArgsT>
-  constexpr auto operator()(CallArgsT &&...CallArgs) {
+  constexpr decltype(auto) operator()(CallArgsT &&...CallArgs) {
     if constexpr (BindFront)
       return llvm::invoke(FnStorage.get(), std::get<Indices>(BoundArgs)...,
                           std::forward<CallArgsT>(CallArgs)...);
@@ -252,7 +252,7 @@ public:
   }
 
   template <typename... CallArgsT>
-  constexpr auto operator()(CallArgsT &&...CallArgs) const {
+  constexpr decltype(auto) operator()(CallArgsT &&...CallArgs) const {
     if constexpr (BindFront)
       return llvm::invoke(FnStorage.get(), std::get<Indices>(BoundArgs)...,
                           std::forward<CallArgsT>(CallArgs)...);

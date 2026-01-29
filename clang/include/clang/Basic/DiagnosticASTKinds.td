@@ -186,9 +186,6 @@ def access_kind_subobject : TextSubstitution<
 def access_kind_volatile : TextSubstitution<
   "%select{read of|read of|assignment to|increment of|decrement of|"
   "<ERROR>|<ERROR>|<ERROR>|<ERROR>|<ERROR>|<ERROR>}0">;
-def note_constexpr_lifetime_ended : Note<
-  "%sub{access_kind}0 %select{temporary|variable}1 whose "
-  "%plural{8:storage duration|:lifetime}0 has ended">;
 def note_constexpr_access_uninit : Note<
   "%sub{access_kind_subobject}0 "
   "%select{object outside its lifetime|uninitialized object}1 "
