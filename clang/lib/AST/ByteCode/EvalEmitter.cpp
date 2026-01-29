@@ -293,7 +293,7 @@ bool EvalEmitter::emitGetLocal(uint32_t I, SourceInfo Info) {
   if (!CheckLocalLoad(S, OpPC, B))
     return false;
 
-  S.Stk.push<T>(*reinterpret_cast<T *>(B->data()));
+  S.Stk.push<T>(B->deref<T>());
   return true;
 }
 
@@ -305,7 +305,7 @@ bool EvalEmitter::emitSetLocal(uint32_t I, SourceInfo Info) {
   using T = typename PrimConv<OpType>::T;
 
   Block *B = getLocal(I);
-  *reinterpret_cast<T *>(B->data()) = S.Stk.pop<T>();
+  B->deref<T>() = S.Stk.pop<T>();
   auto &Desc = B->getBlockDesc<InlineDescriptor>();
   Desc.IsInitialized = true;
 

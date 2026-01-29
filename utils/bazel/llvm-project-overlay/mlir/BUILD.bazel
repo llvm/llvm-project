@@ -114,6 +114,16 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "OpAsmDialectInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/IR/OpAsmDialectInterface.h.inc": ["-gen-dialect-interface-decls"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/IR/OpAsmDialectInterface.td",
+    deps = [":OpBaseTdFiles"],
+)
+
+gentbl_cc_library(
     name = "TensorEncodingIncGen",
     tbl_outs = {
         "include/mlir/IR/TensorEncInterfaces.h.inc": ["-gen-attr-interface-decls"],
@@ -397,6 +407,7 @@ cc_library(
         "lib/Bytecode/Writer/*.h",
         "include/mlir/Bytecode/*.h",
     ]) + [
+        "include/mlir/IR/OpAsmDialectInterface.h.inc",
         "include/mlir/IR/OpAsmOpInterface.h.inc",
         "include/mlir/Interfaces/DataLayoutInterfaces.h",
         "include/mlir/Interfaces/InferIntRangeInterface.h",
@@ -3975,6 +3986,7 @@ cc_library(
         ":SCFTransforms",
         ":TransformUtils",
         ":XeGPUDialect",
+        ":XeGPUuArch",
         ":XeVMDialect",
         "//llvm:Support",
     ],
@@ -7698,6 +7710,7 @@ cc_library(
         ":IR",
         ":InferTypeOpInterface",
         ":TensorDialect",
+        "//llvm:Support",
     ],
 )
 
@@ -13198,6 +13211,7 @@ cc_library(
         ":MathBaseIncGen",
         ":MathOpsIncGen",
         ":SideEffectInterfaces",
+        ":Support",
         ":UBDialect",
         ":VectorInterfaces",
     ],
@@ -13248,6 +13262,7 @@ cc_library(
         ":Pass",
         ":TransformUtils",
         ":VectorDialect",
+        "//llvm:Support",
     ],
 )
 
@@ -13258,6 +13273,24 @@ td_library(
     deps = [
         ":OpBaseTdFiles",
     ],
+)
+
+td_library(
+    name = "MemoryAccessOpInterfacesTdFiles",
+    srcs = ["include/mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.td"],
+    includes = ["include"],
+    deps = [":OpBaseTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "MemoryAccessOpInterfacesIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.h.inc": ["-gen-op-interface-decls"],
+        "include/mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.cpp.inc": ["-gen-op-interface-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.td",
+    deps = [":MemoryAccessOpInterfacesTdFiles"],
 )
 
 td_library(
@@ -13346,6 +13379,7 @@ cc_library(
     hdrs = [
         "include/mlir/Dialect/MemRef/IR/MemRef.h",
         "include/mlir/Dialect/MemRef/IR/MemRefMemorySlot.h",
+        "include/mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.h",
         "include/mlir/Dialect/MemRef/IR/ValueBoundsOpInterfaceImpl.h",
     ],
     includes = ["include"],
@@ -13370,10 +13404,12 @@ cc_library(
         ":MemOpInterfaces",
         ":MemRefBaseIncGen",
         ":MemRefOpsIncGen",
+        ":MemoryAccessOpInterfacesIncGen",
         ":MemorySlotInterfaces",
         ":RuntimeVerifiableOpInterface",
         ":ShapedOpInterfaces",
         ":SideEffectInterfaces",
+        ":Support",
         ":UBDialect",
         ":ValueBoundsOpInterface",
         ":ViewLikeInterface",

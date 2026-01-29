@@ -507,7 +507,6 @@ public:
   InstCounterType SmemAccessCounter;
   InstCounterType MaxCounter;
   bool IsExpertMode = false;
-  const unsigned *WaitEventMaskForInst;
 
 private:
   DenseMap<const Value *, MachineBasicBlock *> SLoadAddresses;
@@ -653,6 +652,7 @@ public:
                          bool ExpertMode) const;
   AtomicRMWState getAtomicRMWState(MachineInstr &MI,
                                    AtomicRMWState PrevState) const;
+  const unsigned *getWaitEventMask() const { return WCG->getWaitEventMask(); }
 };
 
 // This objects maintains the current score brackets of each wait counter, and
@@ -752,7 +752,7 @@ public:
     return PendingEvents & (1 << E);
   }
   unsigned hasPendingEvent(InstCounterType T) const {
-    unsigned HasPending = PendingEvents & Context->WaitEventMaskForInst[T];
+    unsigned HasPending = PendingEvents & Context->getWaitEventMask()[T];
     assert((HasPending != 0) == (getScoreRange(T) != 0));
     return HasPending;
   }
@@ -810,7 +810,7 @@ public:
   void setStateOnFunctionEntryOrReturn() {
     setScoreUB(STORE_CNT, getScoreUB(STORE_CNT) +
                               getWaitCountMax(Context->getLimits(), STORE_CNT));
-    PendingEvents |= Context->WaitEventMaskForInst[STORE_CNT];
+    PendingEvents |= Context->getWaitEventMask()[STORE_CNT];
   }
 
   ArrayRef<const MachineInstr *> getLDSDMAStores() const {
@@ -1005,7 +1005,7 @@ bool WaitcntBrackets::hasPointSamplePendingVmemTypes(const MachineInstr &MI,
 }
 
 void WaitcntBrackets::updateByEvent(WaitEventType E, MachineInstr &Inst) {
-  InstCounterType T = eventCounter(Context->WaitEventMaskForInst, E);
+  InstCounterType T = eventCounter(Context->getWaitEventMask(), E);
   assert(T < Context->MaxCounter);
 
   unsigned UB = getScoreUB(T);
@@ -1325,6 +1325,27 @@ void WaitcntBrackets::simplifyWaitcnt(InstCounterType T,
     Count = ~0u;
 }
 
+void WaitcntBrackets::simplifyXcnt(const AMDGPU::Waitcnt &CheckWait,
+                                   AMDGPU::Waitcnt &UpdateWait) const {
+  // Try to simplify xcnt further by checking for joint kmcnt and loadcnt
+  // optimizations. On entry to a block with multiple predescessors, there may
+  // be pending SMEM and VMEM events active at the same time.
+  // In such cases, only clear one active event at a time.
+  // TODO: Revisit xcnt optimizations for gfx1250.
+  // Wait on XCNT is redundant if we are already waiting for a load to complete.
+  // SMEM can return out of order, so only omit XCNT wait if we are waiting till
+  // zero.
+  if (CheckWait.KmCnt == 0 && hasPendingEvent(SMEM_GROUP))
+    UpdateWait.XCnt = ~0u;
+  // If we have pending store we cannot optimize XCnt because we do not wait for
+  // stores. VMEM loads retun in order, so if we only have loads XCnt is
+  // decremented to the same number as LOADCnt.
+  if (CheckWait.LoadCnt != ~0u && hasPendingEvent(VMEM_GROUP) &&
+      !hasPendingEvent(STORE_CNT) && CheckWait.XCnt >= CheckWait.LoadCnt)
+    UpdateWait.XCnt = ~0u;
+  simplifyWaitcnt(X_CNT, UpdateWait.XCnt);
+}
+
 void WaitcntBrackets::simplifyVmVsrc(const AMDGPU::Waitcnt &CheckWait,
                                      AMDGPU::Waitcnt &UpdateWait) const {
   // Waiting for some counters implies waiting for VM_VSRC, since an
@@ -1404,7 +1425,7 @@ void WaitcntBrackets::tryClearSCCWriteEvent(MachineInstr *Inst) {
       PendingSCCWrite->getOperand(0).getImm() == Inst->getOperand(0).getImm()) {
     unsigned SCC_WRITE_PendingEvent = 1 << SCC_WRITE;
     // If this SCC_WRITE is the only pending KM_CNT event, clear counter.
-    if ((PendingEvents & Context->WaitEventMaskForInst[KM_CNT]) ==
+    if ((PendingEvents & Context->getWaitEventMask()[KM_CNT]) ==
         SCC_WRITE_PendingEvent) {
       setScoreLB(KM_CNT, getScoreUB(KM_CNT));
     }
@@ -1437,7 +1458,7 @@ void WaitcntBrackets::applyWaitcnt(InstCounterType T, unsigned Count) {
     setScoreLB(T, std::max(getScoreLB(T), UB - Count));
   } else {
     setScoreLB(T, UB);
-    PendingEvents &= ~Context->WaitEventMaskForInst[T];
+    PendingEvents &= ~Context->getWaitEventMask()[T];
   }
 
   if (T == KM_CNT && Count == 0 && hasPendingEvent(SMEM_GROUP)) {
@@ -1453,27 +1474,6 @@ void WaitcntBrackets::applyWaitcnt(InstCounterType T, unsigned Count) {
     else if (Count == 0)
       PendingEvents &= ~(1 << VMEM_GROUP);
   }
-}
-
-void WaitcntBrackets::simplifyXcnt(const AMDGPU::Waitcnt &CheckWait,
-                                   AMDGPU::Waitcnt &UpdateWait) const {
-  // Try to simplify xcnt further by checking for joint kmcnt and loadcnt
-  // optimizations. On entry to a block with multiple predescessors, there may
-  // be pending SMEM and VMEM events active at the same time.
-  // In such cases, only clear one active event at a time.
-  // TODO: Revisit xcnt optimizations for gfx1250.
-  // Wait on XCNT is redundant if we are already waiting for a load to complete.
-  // SMEM can return out of order, so only omit XCNT wait if we are waiting till
-  // zero.
-  if (CheckWait.KmCnt == 0 && hasPendingEvent(SMEM_GROUP))
-    UpdateWait.XCnt = ~0u;
-  // If we have pending store we cannot optimize XCnt because we do not wait for
-  // stores. VMEM loads retun in order, so if we only have loads XCnt is
-  // decremented to the same number as LOADCnt.
-  if (CheckWait.LoadCnt != ~0u && hasPendingEvent(VMEM_GROUP) &&
-      !hasPendingEvent(STORE_CNT) && CheckWait.XCnt >= CheckWait.LoadCnt)
-    UpdateWait.XCnt = ~0u;
-  simplifyWaitcnt(X_CNT, UpdateWait.XCnt);
 }
 
 // Where there are multiple types of event in the bracket of a counter,
@@ -2784,9 +2784,9 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
 
   for (auto T : inst_counter_types(Context->MaxCounter)) {
     // Merge event flags for this counter
-    const unsigned *WaitEventMaskForInst = Context->WaitEventMaskForInst;
-    const unsigned OldEvents = PendingEvents & WaitEventMaskForInst[T];
-    const unsigned OtherEvents = Other.PendingEvents & WaitEventMaskForInst[T];
+    auto EventsForT = Context->getWaitEventMask()[T];
+    const unsigned OldEvents = PendingEvents & EventsForT;
+    const unsigned OtherEvents = Other.PendingEvents & EventsForT;
     if (OtherEvents & ~OldEvents)
       StrictDom = true;
     PendingEvents |= OtherEvents;
@@ -3325,9 +3325,7 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   for (auto T : inst_counter_types())
     ForceEmitWaitcnt[T] = false;
 
-  WaitEventMaskForInst = WCG->getWaitEventMask();
-
-  SmemAccessCounter = eventCounter(WaitEventMaskForInst, SMEM_ACCESS);
+  SmemAccessCounter = eventCounter(WCG->getWaitEventMask(), SMEM_ACCESS);
 
   BlockInfos.clear();
   bool Modified = false;
