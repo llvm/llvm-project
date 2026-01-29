@@ -1783,9 +1783,10 @@ bool hlfir::isSimplyContiguous(mlir::Value base, bool checkWhole) {
     return false;
 
   return mlir::TypeSwitch<mlir::Operation *, bool>(def)
-      .Case<fir::EmboxOp>(
-          [&](auto op) { return fir::isContiguousEmbox(op, checkWhole); })
-      .Case<fir::ReboxOp>([&](auto op) {
+      .Case([&](fir::EmboxOp op) {
+        return fir::isContiguousEmbox(op, checkWhole);
+      })
+      .Case([&](fir::ReboxOp op) {
         hlfir::Entity box{op.getBox()};
         return fir::reboxPreservesContinuity(
                    op, box.mayHaveNonDefaultLowerBounds(), checkWhole) &&
@@ -1794,7 +1795,7 @@ bool hlfir::isSimplyContiguous(mlir::Value base, bool checkWhole) {
       .Case<fir::DeclareOp, hlfir::DeclareOp>([&](auto op) {
         return isSimplyContiguous(op.getMemref(), checkWhole);
       })
-      .Case<fir::ConvertOp>(
-          [&](auto op) { return isSimplyContiguous(op.getValue()); })
+      .Case(
+          [&](fir::ConvertOp op) { return isSimplyContiguous(op.getValue()); })
       .Default([](auto &&) { return false; });
 }
