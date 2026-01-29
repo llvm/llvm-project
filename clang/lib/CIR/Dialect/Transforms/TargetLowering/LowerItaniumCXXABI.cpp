@@ -173,11 +173,11 @@ mlir::Type LowerItaniumCXXABI::lowerMethodType(
 mlir::TypedAttr LowerItaniumCXXABI::lowerDataMemberConstant(
     cir::DataMemberAttr attr, const mlir::DataLayout &layout,
     const mlir::TypeConverter &typeConverter) const {
-  uint64_t memberOffset;
+  int64_t memberOffset;
   if (attr.isNullPtr()) {
     // Itanium C++ ABI 2.3:
     //   A NULL pointer is represented as -1.
-    memberOffset = -1ull;
+    memberOffset = -1;
   } else {
     // Itanium C++ ABI 2.3:
     //   A pointer to data member is an offset from the base address of
