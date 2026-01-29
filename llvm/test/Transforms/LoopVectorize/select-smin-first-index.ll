@@ -259,4 +259,97 @@ exit:
   ret i64 %res
 }
 
+; Test with non-canonical IV (start=5, step=3) to exercise new canonical IV creation for smin
+define i64 @test_vectorize_select_smin_first_idx_non_canonical(ptr %src) {
+; CHECK-LABEL: define i64 @test_vectorize_select_smin_first_idx_non_canonical(
+; CHECK-SAME: ptr [[SRC:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[INDEX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MIN_IDX:%.*]] = phi i64 [ 5, %[[ENTRY]] ], [ [[MIN_IDX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MIN_VAL:%.*]] = phi i64 [ 0, %[[ENTRY]] ], [ [[MIN_VAL_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[INDEX]]
+; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[MIN_VAL]], [[L]]
+; CHECK-NEXT:    [[MIN_VAL_NEXT]] = tail call i64 @llvm.smin.i64(i64 [[MIN_VAL]], i64 [[L]])
+; CHECK-NEXT:    [[IV_IDX:%.*]] = mul nuw nsw i64 [[INDEX]], 3
+; CHECK-NEXT:    [[IV_IDX_OFFSET:%.*]] = add nuw nsw i64 [[IV_IDX]], 5
+; CHECK-NEXT:    [[MIN_IDX_NEXT]] = select i1 [[CMP]], i64 [[IV_IDX_OFFSET]], i64 [[MIN_IDX]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw nsw i64 [[INDEX]], 1
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[TMP10:%.*]] = phi i64 [ [[MIN_IDX_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i64 [[TMP10]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %min.idx = phi i64 [ 5, %entry ], [ %min.idx.next, %loop ]
+  %min.val = phi i64 [ 0, %entry ], [ %min.val.next, %loop ]
+  %gep = getelementptr i64, ptr %src, i64 %iv
+  %l = load i64, ptr %gep
+  %cmp = icmp sgt i64 %min.val, %l
+  %min.val.next = tail call i64 @llvm.smin.i64(i64 %min.val, i64 %l)
+  ; Non-canonical IV: start=5, step=3
+  %iv.idx = mul nuw nsw i64 %iv, 3
+  %iv.idx.offset = add nuw nsw i64 %iv.idx, 5
+  %min.idx.next = select i1 %cmp, i64 %iv.idx.offset, i64 %min.idx
+  %iv.next = add nuw nsw i64 %iv, 1
+  %exitcond.not = icmp eq i64 %iv.next, 100
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret i64 %min.idx.next
+}
+
+; Test with non-canonical wide IV (start=5, step=3) to exercise new canonical IV creation
+define i64 @test_vectorize_select_smin_first_idx_non_canonical_wide_iv(ptr %src) {
+; CHECK-LABEL: define i64 @test_vectorize_select_smin_first_idx_non_canonical_wide_iv(
+; CHECK-SAME: ptr [[SRC:%.*]]) {
+; CHECK-NEXT:  [[VECTOR_PH:.*]]:
+; CHECK-NEXT:    br label %[[VECTOR_BODY:.*]]
+; CHECK:       [[VECTOR_BODY]]:
+; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[WIDE_IV:%.*]] = phi i64 [ 5, %[[VECTOR_PH]] ], [ [[WIDE_IV_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[MIN_IDX:%.*]] = phi i64 [ 5, %[[VECTOR_PH]] ], [ [[MIN_IDX_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[MIN_VAL:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[MIN_VAL_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr i64, ptr [[SRC]], i64 [[INDEX]]
+; CHECK-NEXT:    [[L:%.*]] = load i64, ptr [[TMP0]], align 4
+; CHECK-NEXT:    [[CMP:%.*]] = icmp slt i64 [[L]], [[MIN_VAL]]
+; CHECK-NEXT:    [[MIN_VAL_NEXT]] = tail call i64 @llvm.smin.i64(i64 [[MIN_VAL]], i64 [[L]])
+; CHECK-NEXT:    [[MIN_IDX_NEXT]] = select i1 [[CMP]], i64 [[WIDE_IV]], i64 [[MIN_IDX]]
+; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw nsw i64 [[INDEX]], 1
+; CHECK-NEXT:    [[WIDE_IV_NEXT]] = add nuw nsw i64 [[WIDE_IV]], 3
+; CHECK-NEXT:    [[TMP4:%.*]] = icmp eq i64 [[INDEX_NEXT]], 100
+; CHECK-NEXT:    br i1 [[TMP4]], label %[[EXIT:.*]], label %[[VECTOR_BODY]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[TMP10:%.*]] = phi i64 [ [[MIN_IDX_NEXT]], %[[VECTOR_BODY]] ]
+; CHECK-NEXT:    ret i64 [[TMP10]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
+  %wide.iv = phi i64 [ 5, %entry ], [ %wide.iv.next, %loop ]
+  %min.idx = phi i64 [ 5, %entry ], [ %min.idx.next, %loop ]
+  %min.val = phi i64 [ 0, %entry ], [ %min.val.next, %loop ]
+  %gep = getelementptr i64, ptr %src, i64 %iv
+  %l = load i64, ptr %gep
+  %cmp = icmp slt i64 %l, %min.val  ; Use strict predicate slt instead of sgt
+  %min.val.next = tail call i64 @llvm.smin.i64(i64 %min.val, i64 %l)
+  ; Use the wide IV directly in the select (non-canonical: start=5, step=3)
+  %min.idx.next = select i1 %cmp, i64 %wide.iv, i64 %min.idx
+  %iv.next = add nuw nsw i64 %iv, 1
+  %wide.iv.next = add nuw nsw i64 %wide.iv, 3
+  %exitcond.not = icmp eq i64 %iv.next, 100
+  br i1 %exitcond.not, label %exit, label %loop
+
+exit:
+  ret i64 %min.idx.next
+}
 
