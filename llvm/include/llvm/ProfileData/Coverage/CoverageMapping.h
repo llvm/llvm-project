@@ -1072,7 +1072,9 @@ public:
   /// The given filename must be the name as recorded in the coverage
   /// information. That is, only names returned from getUniqueSourceFiles will
   /// yield a result.
-  LLVM_ABI CoverageData getCoverageForFile(StringRef Filename) const;
+  LLVM_ABI CoverageData getCoverageForFile(
+      StringRef Filename,
+      const DenseSet<const FunctionRecord *> &FilteredOutFunctions = {}) const;
 
   /// Get the coverage for a particular function.
   LLVM_ABI CoverageData

@@ -19,9 +19,9 @@ CHECK:       3  0 100.00%
 CHECK:      19  1  94.74%
 
 # Branches
-CHECK:      11  3  72.73%
+CHECK:      24  9  62.50%
 
 # MC/DC Conditions
-CHECK:       4  2  50.00%
+CHECK:      10  7  30.00%
 
 REPORT: TOTAL
