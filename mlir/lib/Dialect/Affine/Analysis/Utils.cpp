@@ -1648,6 +1648,23 @@ mlir::affine::computeSliceUnion(ArrayRef<Operation *> opsA,
       dstAccess = MemRefAccess(b);
       if (srcAccess.memref != dstAccess.memref)
         continue;
+
+      // Bailout if producer and consumer access different-sized element types.
+      // This prevents illegal fusion when vector types have different shapes.
+      Type srcElementType =
+          cast<MemRefType>(srcAccess.memref.getType()).getElementType();
+      Type dstElementType =
+          cast<MemRefType>(dstAccess.memref.getType()).getElementType();
+      if (auto srcVecType = dyn_cast<VectorType>(srcElementType)) {
+        if (auto dstVecType = dyn_cast<VectorType>(dstElementType)) {
+          if (srcVecType.getShape() != dstVecType.getShape()) {
+            LDBG() << "Cannot fuse: different vector element sizes in "
+                      "producer/consumer";
+            return SliceComputationResult::GenericFailure;
+          }
+        }
+      }
+
       // Check if 'loopDepth' exceeds nesting depth of src/dst ops.
       if ((!isBackwardSlice && loopDepth > getNestingDepth(a)) ||
           (isBackwardSlice && loopDepth > getNestingDepth(b))) {
