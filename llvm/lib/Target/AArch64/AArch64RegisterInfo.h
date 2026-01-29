@@ -154,10 +154,6 @@ public:
   bool shouldAnalyzePhysregInMachineLoopInfo(MCRegister R) const override;
 
   bool isIgnoredCVReg(MCRegister LLVMReg) const override;
-
-  const TargetRegisterClass *getRegClassForTypeOnBank(
-      LLT Ty, const RegisterBank &Bank,
-      const TargetSubtargetInfo *STI = nullptr) const override;
 };
 
 } // end namespace llvm

@@ -364,9 +364,8 @@ public:
   const TargetRegisterClass *
   getRegClassForSizeOnBank(unsigned Size, const RegisterBank &Bank) const;
 
-  const TargetRegisterClass *getRegClassForTypeOnBank(
-      LLT Ty, const RegisterBank &Bank,
-      const TargetSubtargetInfo *STI = nullptr) const override {
+  const TargetRegisterClass *
+  getRegClassForTypeOnBank(LLT Ty, const RegisterBank &Bank) const {
     return getRegClassForSizeOnBank(Ty.getSizeInBits(), Bank);
   }
 

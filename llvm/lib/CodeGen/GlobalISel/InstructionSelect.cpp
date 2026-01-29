@@ -23,7 +23,6 @@
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineOptimizationRemarkEmitter.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
-#include "llvm/CodeGen/RegisterBankInfo.h"
 #include "llvm/CodeGen/TargetLowering.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetPassConfig.h"
@@ -357,21 +356,17 @@ bool InstructionSelect::selectInstr(MachineInstr &MI) {
     return true;
   }
 
-  // Eliminate hints or G_CONSTANT_FOLD_BARRIER.
+  if (MI.getOpcode() == TargetOpcode::G_CONSTANT_FOLD_BARRIER) {
+    // Allow targets to provide custom handling before falling back to the
+    // generic elimination below.
+    if (ISel->select(MI))
+      return true;
+  }
+
+  // Eliminate hints or a remaining G_CONSTANT_FOLD_BARRIER.
   if (isPreISelGenericOptimizationHint(MI.getOpcode()) ||
       MI.getOpcode() == TargetOpcode::G_CONSTANT_FOLD_BARRIER) {
-    const RegisterBankInfo *RBI = ISel->MF->getSubtarget().getRegBankInfo();
-    const TargetRegisterInfo *TRI = ISel->MF->getSubtarget().getRegisterInfo();
-    auto ConstrainToRC = [&](Register Reg) {
-      const RegisterBank *RB = RBI->getRegBank(Reg, MRI, *TRI);
-      const TargetRegisterClass *RC = TRI->getRegClassForTypeOnBank(
-          MRI.getType(Reg), *RB, &ISel->MF->getSubtarget());
-      return !RC || (RC && RBI->constrainGenericRegister(Reg, *RC, MRI));
-    };
-
     auto [DstReg, SrcReg] = MI.getFirst2Regs();
-    if (!ConstrainToRC(DstReg) || !ConstrainToRC(SrcReg))
-      return false;
 
     // At this point, the destination register class of the op may have
     // been decided.

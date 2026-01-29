@@ -21,7 +21,6 @@
 #include "llvm/ADT/iterator_range.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/RegisterBank.h"
-#include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/IR/CallingConv.h"
 #include "llvm/MC/LaneBitmask.h"
 #include "llvm/MC/MCRegisterInfo.h"
@@ -382,14 +381,6 @@ public:
   /// allocatable or NULL.
   const TargetRegisterClass *
     getAllocatableClass(const TargetRegisterClass *RC) const;
-
-  /// Given a register bank, and a type, return the smallest register class
-  /// that can represent that combination.
-  virtual const TargetRegisterClass *
-  getRegClassForTypeOnBank(LLT Ty, const RegisterBank &Bank,
-                           const TargetSubtargetInfo *STI = nullptr) const {
-    return nullptr;
-  }
 
   /// Returns a bitset indexed by register number indicating if a register is
   /// allocatable or not. If a register class is specified, returns the subset
