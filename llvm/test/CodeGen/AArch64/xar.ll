@@ -371,50 +371,19 @@ define <4 x i16> @rev16_v4i16(<4 x i16> %r) {
 }
 
 define <2 x i32> @rev32_v2i32(<2 x i32> %r) {
-; SHA3-LABEL: rev32_v2i32:
-; SHA3:       // %bb.0:
-; SHA3-NEXT:    rev32 v0.4h, v0.4h
-; SHA3-NEXT:    ret
-;
-; NOSHA3-LABEL: rev32_v2i32:
-; NOSHA3:       // %bb.0:
-; NOSHA3-NEXT:    rev32 v0.4h, v0.4h
-; NOSHA3-NEXT:    ret
-;
-; SVE2-LABEL: rev32_v2i32:
-; SVE2:       // %bb.0:
-; SVE2-NEXT:    movi v1.2d, #0000000000000000
-; SVE2-NEXT:    // kill: def $d0 killed $d0 def $z0
-; SVE2-NEXT:    xar z0.s, z0.s, z1.s, #16
-; SVE2-NEXT:    // kill: def $d0 killed $d0 killed $z0
-; SVE2-NEXT:    ret
+; CHECK-LABEL: rev32_v2i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev32 v0.4h, v0.4h
+; CHECK-NEXT:    ret
   %or = tail call <2 x i32> @llvm.fshl(<2 x i32> %r, <2 x i32> %r, <2 x i32> splat (i32 16))
   ret <2 x i32> %or
 }
 
 define <1 x i64> @rev64_v1i64(<1 x i64> %r) {
-; SHA3-LABEL: rev64_v1i64:
-; SHA3:       // %bb.0:
-; SHA3-NEXT:    movi v1.2d, #0000000000000000
-; SHA3-NEXT:    // kill: def $d0 killed $d0 def $q0
-; SHA3-NEXT:    xar v0.2d, v0.2d, v1.2d, #32
-; SHA3-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; SHA3-NEXT:    ret
-;
-; NOSHA3-LABEL: rev64_v1i64:
-; NOSHA3:       // %bb.0:
-; NOSHA3-NEXT:    shl d1, d0, #32
-; NOSHA3-NEXT:    usra d1, d0, #32
-; NOSHA3-NEXT:    fmov d0, d1
-; NOSHA3-NEXT:    ret
-;
-; SVE2-LABEL: rev64_v1i64:
-; SVE2:       // %bb.0:
-; SVE2-NEXT:    movi v1.2d, #0000000000000000
-; SVE2-NEXT:    // kill: def $d0 killed $d0 def $z0
-; SVE2-NEXT:    xar z0.d, z0.d, z1.d, #32
-; SVE2-NEXT:    // kill: def $d0 killed $d0 killed $z0
-; SVE2-NEXT:    ret
+; CHECK-LABEL: rev64_v1i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev64 v0.2s, v0.2s
+; CHECK-NEXT:    ret
   %or = tail call <1 x i64> @llvm.fshl(<1 x i64> %r, <1 x i64> %r, <1 x i64> splat (i64 32))
   ret <1 x i64> %or
 }
@@ -429,46 +398,19 @@ define <8 x i16> @rev16_v8i16(<8 x i16> %r) {
 }
 
 define <4 x i32> @rev32_v4i32(<4 x i32> %r) {
-; SHA3-LABEL: rev32_v4i32:
-; SHA3:       // %bb.0:
-; SHA3-NEXT:    rev32 v0.8h, v0.8h
-; SHA3-NEXT:    ret
-;
-; NOSHA3-LABEL: rev32_v4i32:
-; NOSHA3:       // %bb.0:
-; NOSHA3-NEXT:    rev32 v0.8h, v0.8h
-; NOSHA3-NEXT:    ret
-;
-; SVE2-LABEL: rev32_v4i32:
-; SVE2:       // %bb.0:
-; SVE2-NEXT:    movi v1.2d, #0000000000000000
-; SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
-; SVE2-NEXT:    xar z0.s, z0.s, z1.s, #16
-; SVE2-NEXT:    // kill: def $q0 killed $q0 killed $z0
-; SVE2-NEXT:    ret
+; CHECK-LABEL: rev32_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev32 v0.8h, v0.8h
+; CHECK-NEXT:    ret
   %or = tail call <4 x i32> @llvm.fshl(<4 x i32> %r, <4 x i32> %r, <4 x i32> splat (i32 16))
   ret <4 x i32> %or
 }
 
 define <2 x i64> @rev64_v2i64(<2 x i64> %r) {
-; SHA3-LABEL: rev64_v2i64:
-; SHA3:       // %bb.0:
-; SHA3-NEXT:    movi v1.2d, #0000000000000000
-; SHA3-NEXT:    xar v0.2d, v0.2d, v1.2d, #32
-; SHA3-NEXT:    ret
-;
-; NOSHA3-LABEL: rev64_v2i64:
-; NOSHA3:       // %bb.0:
-; NOSHA3-NEXT:    rev64 v0.4s, v0.4s
-; NOSHA3-NEXT:    ret
-;
-; SVE2-LABEL: rev64_v2i64:
-; SVE2:       // %bb.0:
-; SVE2-NEXT:    movi v1.2d, #0000000000000000
-; SVE2-NEXT:    // kill: def $q0 killed $q0 def $z0
-; SVE2-NEXT:    xar z0.d, z0.d, z1.d, #32
-; SVE2-NEXT:    // kill: def $q0 killed $q0 killed $z0
-; SVE2-NEXT:    ret
+; CHECK-LABEL: rev64_v2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    rev64 v0.4s, v0.4s
+; CHECK-NEXT:    ret
   %or = tail call <2 x i64> @llvm.fshl(<2 x i64> %r, <2 x i64> %r, <2 x i64> splat (i64 32))
   ret <2 x i64> %or
 }

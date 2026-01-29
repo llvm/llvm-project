@@ -309,35 +309,21 @@ define <vscale x 8 x i16> @revb_nxv8i16(<vscale x 8 x i16> %r) {
 }
 
 define <vscale x 4 x i32> @revh_nxv4i32(<vscale x 4 x i32> %r) {
-; SVE-LABEL: revh_nxv4i32:
-; SVE:       // %bb.0:
-; SVE-NEXT:    lsr z1.s, z0.s, #16
-; SVE-NEXT:    lsl z0.s, z0.s, #16
-; SVE-NEXT:    orr z0.d, z0.d, z1.d
-; SVE-NEXT:    ret
-;
-; SVE2-LABEL: revh_nxv4i32:
-; SVE2:       // %bb.0:
-; SVE2-NEXT:    movi v1.2d, #0000000000000000
-; SVE2-NEXT:    xar z0.s, z0.s, z1.s, #16
-; SVE2-NEXT:    ret
+; CHECK-LABEL: revh_nxv4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.s
+; CHECK-NEXT:    revh z0.s, p0/m, z0.s
+; CHECK-NEXT:    ret
   %or = tail call <vscale x 4 x i32> @llvm.fshl(<vscale x 4 x i32> %r, <vscale x 4 x i32> %r, <vscale x 4 x i32> splat (i32 16))
   ret <vscale x 4 x i32> %or
 }
 
 define <vscale x 2 x i64> @revw_nx2i64(<vscale x 2 x i64> %r) {
-; SVE-LABEL: revw_nx2i64:
-; SVE:       // %bb.0:
-; SVE-NEXT:    lsr z1.d, z0.d, #32
-; SVE-NEXT:    lsl z0.d, z0.d, #32
-; SVE-NEXT:    orr z0.d, z0.d, z1.d
-; SVE-NEXT:    ret
-;
-; SVE2-LABEL: revw_nx2i64:
-; SVE2:       // %bb.0:
-; SVE2-NEXT:    movi v1.2d, #0000000000000000
-; SVE2-NEXT:    xar z0.d, z0.d, z1.d, #32
-; SVE2-NEXT:    ret
+; CHECK-LABEL: revw_nx2i64:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    ptrue p0.d
+; CHECK-NEXT:    revw z0.d, p0/m, z0.d
+; CHECK-NEXT:    ret
   %or = tail call <vscale x 2 x i64> @llvm.fshl(<vscale x 2 x i64> %r, <vscale x 2 x i64> %r, <vscale x 2 x i64> splat (i64 32))
   ret <vscale x 2 x i64> %or
 }
