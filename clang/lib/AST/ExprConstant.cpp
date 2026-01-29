@@ -1886,6 +1886,7 @@ static bool EvaluateIntegerOrLValue(const Expr *E, APValue &Result,
                                     EvalInfo &Info);
 static bool EvaluateFloat(const Expr *E, APFloat &Result, EvalInfo &Info);
 static bool EvaluateComplex(const Expr *E, ComplexValue &Res, EvalInfo &Info);
+static bool EvaluateMatrix(const Expr *E, APValue &Result, EvalInfo &Info);
 static bool EvaluateAtomic(const Expr *E, const LValue *This, APValue &Result,
                            EvalInfo &Info);
 static bool EvaluateAsRValue(EvalInfo &Info, const Expr *E, APValue &Result);
@@ -2717,6 +2718,7 @@ static bool HandleConversionToBool(const APValue &Val, bool &Result) {
     Result = Val.getMemberPointerDecl();
     return true;
   case APValue::Vector:
+  case APValue::Matrix:
   case APValue::Array:
   case APValue::Struct:
   case APValue::Union:
@@ -4043,6 +4045,12 @@ static unsigned elementwiseSize(EvalInfo &Info, QualType BaseTy) {
       Size += NumEl;
       continue;
     }
+    if (Type->isConstantMatrixType()) {
+      unsigned NumEl =
+          Type->castAs<ConstantMatrixType>()->getNumElementsFlattened();
+      Size += NumEl;
+      continue;
+    }
     if (Type->isConstantArrayType()) {
       QualType ElTy = cast<ConstantArrayType>(Info.Ctx.getAsArrayType(Type))
                           ->getElementType();
@@ -4093,6 +4101,11 @@ static bool hlslAggSplatHelper(EvalInfo &Info, const Expr *E, APValue &SrcVal,
     SrcTy = SrcTy->castAs<VectorType>()->getElementType();
     SrcVal = SrcVal.getVectorElt(0);
   }
+  if (SrcVal.isMatrix()) {
+    assert(SrcTy->isConstantMatrixType() && "Type mismatch.");
+    SrcTy = SrcTy->castAs<ConstantMatrixType>()->getElementType();
+    SrcVal = SrcVal.getMatrixElt(0, 0);
+  }
   return true;
 }
 
@@ -4119,6 +4132,22 @@ static bool flattenAPValue(EvalInfo &Info, const Expr *E, APValue Value,
         Elements.push_back(Work.getVectorElt(I));
         Types.push_back(ElTy);
         Populated++;
+      }
+      continue;
+    }
+    if (Work.isMatrix()) {
+      assert(Type->isConstantMatrixType() && "Type mismatch.");
+      const auto *MT = Type->castAs<ConstantMatrixType>();
+      QualType ElTy = MT->getElementType();
+      // Matrix elements are flattened in row-major order.
+      for (unsigned Row = 0; Row < Work.getMatrixNumRows() && Populated < Size;
+           Row++) {
+        for (unsigned Col = 0;
+             Col < Work.getMatrixNumCols() && Populated < Size; Col++) {
+          Elements.push_back(Work.getMatrixElt(Row, Col));
+          Types.push_back(ElTy);
+          Populated++;
+        }
       }
       continue;
     }
@@ -7844,6 +7873,7 @@ class APValueToBufferConverter {
     case APValue::FixedPoint:
       // FIXME: We should support these.
 
+    case APValue::Matrix:
     case APValue::Union:
     case APValue::MemberPointer:
     case APValue::AddrLabelDiff: {
@@ -11769,8 +11799,17 @@ bool VectorExprEvaluator::VisitCastExpr(const CastExpr *E) {
     return Success(Elements, E);
   }
   case CK_HLSLMatrixTruncation: {
-    // TODO: See #168935. Add matrix truncation support to expr constant.
-    return Error(E);
+    // Matrix truncation occurs in row-major order.
+    APValue Val;
+    if (!EvaluateMatrix(SE, Val, Info))
+      return Error(E);
+    SmallVector<APValue, 16> Elements;
+    for (unsigned Row = 0;
+         Row < Val.getMatrixNumRows() && Elements.size() < NElts; Row++)
+      for (unsigned Col = 0;
+           Col < Val.getMatrixNumCols() && Elements.size() < NElts; Col++)
+        Elements.push_back(Val.getMatrixElt(Row, Col));
+    return Success(Elements, E);
   }
   case CK_HLSLAggregateSplatCast: {
     APValue Val;
@@ -14602,6 +14641,126 @@ bool VectorExprEvaluator::VisitShuffleVectorExpr(const ShuffleVectorExpr *E) {
   }
 
   return Success(APValue(ResultElements.data(), ResultElements.size()), E);
+}
+
+//===----------------------------------------------------------------------===//
+// Matrix Evaluation
+//===----------------------------------------------------------------------===//
+
+namespace {
+class MatrixExprEvaluator : public ExprEvaluatorBase<MatrixExprEvaluator> {
+  APValue &Result;
+
+public:
+  MatrixExprEvaluator(EvalInfo &Info, APValue &Result)
+      : ExprEvaluatorBaseTy(Info), Result(Result) {}
+
+  bool Success(ArrayRef<APValue> M, unsigned NumRows, unsigned NumCols,
+               const Expr *E) {
+    assert(
+        M.size() ==
+        E->getType()->castAs<ConstantMatrixType>()->getNumElementsFlattened());
+    assert(M.size() == NumRows * NumCols);
+    // FIXME: remove this APValue copy.
+    Result = APValue(M.data(), NumRows, NumCols);
+    return true;
+  }
+  bool Success(const APValue &M, const Expr *E) {
+    assert(M.isMatrix() && "expected matrix");
+    Result = M;
+    return true;
+  }
+
+  bool VisitCastExpr(const CastExpr *E);
+  bool VisitInitListExpr(const InitListExpr *E);
+};
+} // end anonymous namespace
+
+static bool EvaluateMatrix(const Expr *E, APValue &Result, EvalInfo &Info) {
+  assert(E->isPRValue() && E->getType()->isConstantMatrixType() &&
+         "not a matrix prvalue");
+  return MatrixExprEvaluator(Info, Result).Visit(E);
+}
+
+bool MatrixExprEvaluator::VisitCastExpr(const CastExpr *E) {
+  const auto *MT = E->getType()->castAs<ConstantMatrixType>();
+  unsigned NumRows = MT->getNumRows();
+  unsigned NumCols = MT->getNumColumns();
+  unsigned NElts = NumRows * NumCols;
+  QualType EltTy = MT->getElementType();
+  const Expr *SE = E->getSubExpr();
+
+  switch (E->getCastKind()) {
+  case CK_HLSLAggregateSplatCast: {
+    APValue Val;
+    QualType ValTy;
+
+    if (!hlslAggSplatHelper(Info, SE, Val, ValTy))
+      return false;
+
+    APValue CastedVal;
+    const FPOptions FPO = E->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
+    if (!handleScalarCast(Info, FPO, E, ValTy, EltTy, Val, CastedVal))
+      return false;
+
+    SmallVector<APValue, 16> SplatEls(NElts, CastedVal);
+    return Success(SplatEls, NumRows, NumCols, E);
+  }
+  case CK_HLSLElementwiseCast: {
+    SmallVector<APValue> SrcVals;
+    SmallVector<QualType> SrcTypes;
+
+    if (!hlslElementwiseCastHelper(Info, SE, E->getType(), SrcVals, SrcTypes))
+      return false;
+
+    const FPOptions FPO = E->getFPFeaturesInEffect(Info.Ctx.getLangOpts());
+    SmallVector<QualType, 16> DestTypes(NElts, EltTy);
+    SmallVector<APValue, 16> ResultEls(NElts);
+    if (!handleElementwiseCast(Info, E, FPO, SrcVals, SrcTypes, DestTypes,
+                               ResultEls))
+      return false;
+    // ResultEls contains elements in row-major order, but APValue expects
+    // column-major order. Reorder the elements.
+    SmallVector<APValue, 16> ColMajorEls(NElts);
+    for (unsigned Row = 0; Row < NumRows; Row++)
+      for (unsigned Col = 0; Col < NumCols; Col++)
+        ColMajorEls[Col * NumRows + Row] =
+            std::move(ResultEls[Row * NumCols + Col]);
+    return Success(ColMajorEls, NumRows, NumCols, E);
+  }
+  default:
+    return ExprEvaluatorBaseTy::VisitCastExpr(E);
+  }
+}
+
+bool MatrixExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
+  const auto *MT = E->getType()->castAs<ConstantMatrixType>();
+  unsigned NumRows = MT->getNumRows();
+  unsigned NumCols = MT->getNumColumns();
+  QualType EltTy = MT->getElementType();
+
+  assert(E->getNumInits() == NumRows * NumCols &&
+         "Expected number of elements in initializer list to match the number "
+         "of matrix elements");
+
+  SmallVector<APValue, 16> Elements;
+  Elements.reserve(NumRows * NumCols);
+
+  for (unsigned I = 0; I < E->getNumInits(); ++I) {
+    if (EltTy->isIntegerType()) {
+      llvm::APSInt IntVal;
+      if (!EvaluateInteger(E->getInit(I), IntVal, Info))
+        return false;
+      Elements.push_back(APValue(IntVal));
+    } else {
+      llvm::APFloat FloatVal(0.0);
+      if (!EvaluateFloat(E->getInit(I), FloatVal, Info))
+        return false;
+      Elements.push_back(APValue(FloatVal));
+    }
+  }
+
+  return Success(Elements, NumRows, NumCols, E);
 }
 
 //===----------------------------------------------------------------------===//
@@ -18942,8 +19101,10 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
     return Success(Val.getVectorElt(0), E);
   }
   case CK_HLSLMatrixTruncation: {
-    // TODO: See #168935. Add matrix truncation support to expr constant.
-    return Error(E);
+    APValue Val;
+    if (!EvaluateMatrix(SubExpr, Val, Info))
+      return Error(E);
+    return Success(Val.getMatrixElt(0, 0), E);
   }
   case CK_HLSLElementwiseCast: {
     SmallVector<APValue> SrcVals;
@@ -19539,8 +19700,10 @@ bool FloatExprEvaluator::VisitCastExpr(const CastExpr *E) {
     return Success(Val.getVectorElt(0), E);
   }
   case CK_HLSLMatrixTruncation: {
-    // TODO: See #168935. Add matrix truncation support to expr constant.
-    return Error(E);
+    APValue Val;
+    if (!EvaluateMatrix(SubExpr, Val, Info))
+      return Error(E);
+    return Success(Val.getMatrixElt(0, 0), E);
   }
   case CK_HLSLElementwiseCast: {
     SmallVector<APValue> SrcVals;
@@ -20438,6 +20601,9 @@ static bool Evaluate(APValue &Result, EvalInfo &Info, const Expr *E) {
     LV.moveInto(Result);
   } else if (T->isVectorType()) {
     if (!EvaluateVector(E, Result, Info))
+      return false;
+  } else if (T->isConstantMatrixType()) {
+    if (!EvaluateMatrix(E, Result, Info))
       return false;
   } else if (T->isIntegralOrEnumerationType()) {
     if (!IntExprEvaluator(Info, Result).Visit(E))
