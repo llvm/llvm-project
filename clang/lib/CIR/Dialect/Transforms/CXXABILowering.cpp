@@ -270,6 +270,26 @@ mlir::LogicalResult CIRGlobalOpABILowering::matchAndRewrite(
         mlir::cast_if_present<cir::MethodAttr>(op.getInitialValueAttr());
     loweredInit = lowerModule->getCXXABI().lowerMethodConstant(
         init, layout, *getTypeConverter());
+  } else if (auto arrTy = mlir::dyn_cast<cir::ArrayType>(ty)) {
+    auto init = mlir::cast<cir::ConstArrayAttr>(op.getInitialValueAttr());
+    auto arrayElts = mlir::cast<ArrayAttr>(init.getElts());
+    SmallVector<mlir::Attribute> loweredElements;
+    loweredElements.reserve(arrTy.getSize());
+    for (const mlir::Attribute &attr : arrayElts) {
+      if (auto methodAttr = mlir::dyn_cast<cir::MethodAttr>(attr)) {
+        mlir::Attribute loweredElt =
+            lowerModule->getCXXABI().lowerMethodConstant(methodAttr, layout,
+                                                         *getTypeConverter());
+        loweredElements.push_back(loweredElt);
+      } else {
+        llvm_unreachable("array of data member lowering is NYI");
+      }
+    }
+    auto loweredArrTy =
+        mlir::cast<cir::ArrayType>(getTypeConverter()->convertType(arrTy));
+    loweredInit = cir::ConstArrayAttr::get(
+        loweredArrTy,
+        mlir::ArrayAttr::get(rewriter.getContext(), loweredElements));
   } else {
     llvm_unreachable(
         "inputs to cir.global in ABI lowering must be data member or method");
@@ -363,6 +383,14 @@ static void prepareCXXABITypeConverter(mlir::TypeConverter &converter,
     return cir::PointerType::get(type.getContext(), loweredPointeeType,
                                  type.getAddrSpace());
   });
+  converter.addConversion([&](cir::ArrayType type) -> mlir::Type {
+    mlir::Type loweredElementType =
+        converter.convertType(type.getElementType());
+    if (!loweredElementType)
+      return {};
+    return cir::ArrayType::get(loweredElementType, type.getSize());
+  });
+
   converter.addConversion([&](cir::DataMemberType type) -> mlir::Type {
     mlir::Type abiType =
         lowerModule.getCXXABI().lowerDataMemberType(type, converter);
