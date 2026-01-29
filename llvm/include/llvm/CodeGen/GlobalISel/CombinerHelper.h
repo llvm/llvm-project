@@ -518,9 +518,6 @@ public:
   /// Optimize (x op x) -> x
   bool matchBinOpSameVal(MachineInstr &MI) const;
 
-  /// Check if operand \p OpIdx is zero.
-  bool matchOperandIsZero(MachineInstr &MI, unsigned OpIdx) const;
-
   /// Check if operand \p OpIdx is undef.
   bool matchOperandIsUndef(MachineInstr &MI, unsigned OpIdx) const;
 
