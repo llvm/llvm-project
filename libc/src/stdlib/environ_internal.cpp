@@ -94,6 +94,8 @@ bool EnvironmentManager::ensure_capacity(size_t needed) {
         new_ownership[i] = EnvStringOwnership();
       }
     }
+    for (size_t i = size; i < new_capacity; i++)
+      new_ownership[i] = EnvStringOwnership();
     new_storage[size] = nullptr;
 
     storage = new_storage;
@@ -114,21 +116,31 @@ bool EnvironmentManager::ensure_capacity(size_t needed) {
   // Grow capacity by the growth factor
   size_t new_capacity = needed * ENVIRON_GROWTH_FACTOR;
 
-  // Use realloc to grow the arrays
+  // Allocate new arrays and copy to avoid partial realloc failures.
+  // We manage two coupled arrays plus app.env_ptr; reallocating one at a
+  // time can leave the state inconsistent if the second allocation fails.
   char **new_storage = reinterpret_cast<char **>(
-      realloc(storage, sizeof(char *) * (new_capacity + 1)));
+      malloc(sizeof(char *) * (new_capacity + 1)));
   if (!new_storage)
     return false;
 
   EnvStringOwnership *new_ownership = reinterpret_cast<EnvStringOwnership *>(
-      realloc(ownership, sizeof(EnvStringOwnership) * (new_capacity + 1)));
+      malloc(sizeof(EnvStringOwnership) * (new_capacity + 1)));
   if (!new_ownership) {
-    // If ownership realloc fails, we still have the old storage in new_storage
-    // which was successfully reallocated. We need to restore or handle this.
-    // For safety, we'll keep the successfully reallocated storage.
-    storage = new_storage;
+    free(new_storage);
     return false;
   }
+
+  for (size_t i = 0; i < size; i++) {
+    new_storage[i] = storage[i];
+    new_ownership[i] = ownership[i];
+  }
+  for (size_t i = size; i < new_capacity; i++)
+    new_ownership[i] = EnvStringOwnership();
+  new_storage[size] = nullptr;
+
+  free(storage);
+  free(ownership);
 
   storage = new_storage;
   ownership = new_ownership;
