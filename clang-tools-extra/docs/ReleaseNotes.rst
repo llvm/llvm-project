@@ -136,6 +136,12 @@ Changes in existing checks
   the invalidating function in the warning message when a custom invalidation
   function is used (via the `InvalidationFunctions` option).
 
+- Improved :doc:`cppcoreguidelines-pro-type-vararg
+  <clang-tidy/checks/cppcoreguidelines/pro-type-vararg>` check by no longer
+  warning on builtins with custom type checking (e.g., type-generic builtins
+  like ``__builtin_clzg``) that use variadic declarations as an implementation
+  detail.
+
 - Improved :doc:`llvm-use-ranges
   <clang-tidy/checks/llvm/use-ranges>` check by adding support for the following
   algorithms: ``std::accumulate``, ``std::replace_copy``, and
