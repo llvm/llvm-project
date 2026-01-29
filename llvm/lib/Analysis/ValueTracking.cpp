@@ -5941,14 +5941,17 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         case Intrinsic::fmuladd: {
           KnownFPClass KnownStart, KnownL;
           computeKnownFPClass(Init, DemandedElts,
-                              KnownFPClass::OrderedGreaterThanZeroMask,
+                              InterestedClasses,
                               KnownStart, Q, Depth + 1);
+          if (KnownStart.isUnknown())
+            break;
           computeKnownFPClass(L, DemandedElts,
-                              KnownFPClass::OrderedGreaterThanZeroMask, KnownL,
+                              InterestedClasses, KnownL,
                               Q, Depth + 1);
           if (L == R &&
               isGuaranteedNotToBeUndef(L, Q.AC, Q.CxtI, Q.DT, Depth + 1))
-            Known = KnownFPClass::fma_square(KnownL, KnownStart);
+            Known = KnownFPClass::fma_square(KnownL, KnownStart,
+                                            DenormalMode::getDynamic());
           break;
         }
         }
