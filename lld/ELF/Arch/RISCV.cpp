@@ -581,15 +581,15 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
 
   case INTERNAL_RISCV_QC_E_32: {
     checkInt(ctx, loc, val, 32, rel);
-    uint64_t insn = static_cast<uint64_t>(read32le(loc))
-                  | (static_cast<uint64_t>(read16le(loc + 4)) << 32);
+    uint64_t insn = static_cast<uint64_t>(read32le(loc)) |
+                    (static_cast<uint64_t>(read16le(loc + 4)) << 32);
     insn &= 0xFFFFull;
 
     uint64_t imm32_0 = static_cast<uint64_t>(extractBits(val, 32, 0)) << 16;
     insn |= imm32_0;
 
     write32le(loc, insn);
-    write16le(loc+4, (insn >> 32) & 0xFFFF);
+    write16le(loc + 4, (insn >> 32) & 0xFFFF);
 
     break;
   }
@@ -598,8 +598,8 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     checkInt(ctx, loc, val, 13, rel);
     checkAlignment(ctx, loc, val, 2, rel);
 
-    uint64_t insn = static_cast<uint64_t>(read32le(loc))
-                  | (static_cast<uint64_t>(read16le(loc + 4)) << 32);
+    uint64_t insn = static_cast<uint64_t>(read32le(loc)) |
+                    (static_cast<uint64_t>(read16le(loc + 4)) << 32);
     insn &= 0xFFFF01FFF07Full;
 
     uint64_t imm12 = static_cast<uint64_t>(extractBits(val, 12, 12)) << 31;
@@ -609,7 +609,7 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     insn |= imm12 | imm10_5 | imm4_1 | imm11;
 
     write32le(loc, insn);
-    write16le(loc+4, (insn >> 32) & 0xFFFF);
+    write16le(loc + 4, (insn >> 32) & 0xFFFF);
     return;
   }
 
@@ -617,8 +617,8 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     checkInt(ctx, loc, val, 32, rel);
     checkAlignment(ctx, loc, val, 2, rel);
 
-    uint64_t insn = static_cast<uint64_t>(read32le(loc))
-                  | (static_cast<uint64_t>(read16le(loc + 4)) << 32);
+    uint64_t insn = static_cast<uint64_t>(read32le(loc)) |
+                    (static_cast<uint64_t>(read16le(loc + 4)) << 32);
     insn &= 0xFFFF01FFF07Full;
 
     uint64_t imm31_16 = static_cast<uint64_t>(extractBits(val, 31, 16)) << 32;
@@ -630,7 +630,7 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     insn |= imm31_16 | imm12 | imm10_5 | imm15_13 | imm4_1 | imm11;
 
     write32le(loc, insn);
-    write16le(loc+4, (insn >> 32) & 0xFFFF);
+    write16le(loc + 4, (insn >> 32) & 0xFFFF);
     return;
   }
 
