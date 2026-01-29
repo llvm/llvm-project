@@ -4,66 +4,21 @@
 ; Check for the crash in https://github.com/llvm/llvm-project/issues/173483
 target triple = "aarch64-unknown-linux-gnu"
 
-define dso_local void @f(ptr noundef captures(none) %ptr) local_unnamed_addr {
+define void @f(<2 x i8> %1) {
 ; CHECK-LABEL: f:
-; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    sub sp, sp, #112
-; CHECK-NEXT:    stp d15, d14, [sp, #16] // 16-byte Folded Spill
-; CHECK-NEXT:    stp d13, d12, [sp, #32] // 16-byte Folded Spill
-; CHECK-NEXT:    stp d11, d10, [sp, #48] // 16-byte Folded Spill
-; CHECK-NEXT:    stp d9, d8, [sp, #64] // 16-byte Folded Spill
-; CHECK-NEXT:    str x30, [sp, #80] // 8-byte Spill
-; CHECK-NEXT:    stp x20, x19, [sp, #96] // 16-byte Folded Spill
-; CHECK-NEXT:    .cfi_def_cfa_offset 112
-; CHECK-NEXT:    .cfi_offset w19, -8
-; CHECK-NEXT:    .cfi_offset w20, -16
-; CHECK-NEXT:    .cfi_offset w30, -32
-; CHECK-NEXT:    .cfi_offset b8, -40
-; CHECK-NEXT:    .cfi_offset b9, -48
-; CHECK-NEXT:    .cfi_offset b10, -56
-; CHECK-NEXT:    .cfi_offset b11, -64
-; CHECK-NEXT:    .cfi_offset b12, -72
-; CHECK-NEXT:    .cfi_offset b13, -80
-; CHECK-NEXT:    .cfi_offset b14, -88
-; CHECK-NEXT:    .cfi_offset b15, -96
-; CHECK-NEXT:    ldr h0, [x0]
-; CHECK-NEXT:    mov x19, x0
-; CHECK-NEXT:    ushll v0.8h, v0.8b, #0
-; CHECK-NEXT:    ushll v0.4s, v0.4h, #0
-; CHECK-NEXT:    mov w20, v0.s[1]
-; CHECK-NEXT:    str b0, [sp, #92]
-; CHECK-NEXT:    str q0, [sp] // 16-byte Spill
-; CHECK-NEXT:    strb w20, [sp, #93]
-; CHECK-NEXT:    ldrh w8, [sp, #92]
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    sub sp, sp, #16
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-NEXT:    mov s1, v0.s[1]
+; CHECK-NEXT:    str b0, [sp, #12]
+; CHECK-NEXT:    stur b1, [sp, #13]
+; CHECK-NEXT:    ldrh w8, [sp, #12]
 ; CHECK-NEXT:    fmov s0, w8
-; CHECK-NEXT:    str s0, [sp, #88] // 4-byte Spill
 ; CHECK-NEXT:    //APP
 ; CHECK-NEXT:    //NO_APP
-; CHECK-NEXT:    //APP
-; CHECK-NEXT:    //NO_APP
-; CHECK-NEXT:    bl foo
-; CHECK-NEXT:    ldr s0, [sp, #88] // 4-byte Reload
-; CHECK-NEXT:    //APP
-; CHECK-NEXT:    //NO_APP
-; CHECK-NEXT:    strb w20, [x19, #1]
-; CHECK-NEXT:    ldr q0, [sp] // 16-byte Reload
-; CHECK-NEXT:    ldp d9, d8, [sp, #64] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d11, d10, [sp, #48] // 16-byte Folded Reload
-; CHECK-NEXT:    ldr x30, [sp, #80] // 8-byte Reload
-; CHECK-NEXT:    str b0, [x19]
-; CHECK-NEXT:    ldp x20, x19, [sp, #96] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d13, d12, [sp, #32] // 16-byte Folded Reload
-; CHECK-NEXT:    ldp d15, d14, [sp, #16] // 16-byte Folded Reload
-; CHECK-NEXT:    add sp, sp, #112
+; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
-entry:
-  %0 = load <2 x i8>, ptr %ptr, align 2
-  tail call void asm sideeffect "", "w"(<2 x i8> %0)
-  tail call void asm sideeffect "", "~{d8},~{d9},~{d10},~{d11},~{d12},~{d13},~{d14},~{d15}"()
-  tail call void @foo()
-  tail call void asm sideeffect "", "w"(<2 x i8> %0)
-  store <2 x i8> %0, ptr %ptr, align 2
+  call void asm sideeffect "", "w"(<2 x i8> %1)
   ret void
 }
-
-declare void @foo(...) local_unnamed_addr
