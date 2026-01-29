@@ -465,6 +465,13 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP AND BUILTIN_SUPPORTED_ARCH MATCHES "arm")
       arm/fixunsdfsi.S
       arm/fixunssfdi.S
       arm/fixunssfsi.S
+      arm/floatdidf.S
+      arm/floatdisf.S
+      arm/floatsidf.S
+      arm/floatsisf.S
+      arm/floatunsdidf.S
+      arm/floatunssidf.S
+      arm/floatunssisf.S
       arm/truncdfsf2.S
       )
     set_source_files_properties(${assembly_files}
@@ -478,6 +485,7 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP AND BUILTIN_SUPPORTED_ARCH MATCHES "arm")
       arm/dnorm2.c
       arm/dunder.c
       )
+    set_property(SOURCE arm/floatdisf.S DIRECTORY ${COMPILER_RT_SOURCE_DIR} PROPERTY crt_provides floatunsdisf)
   endif()
 endif()
 
