@@ -68,8 +68,7 @@ LIBC_INLINE static constexpr T prod_hi(T, U);
 // Get high part of integer multiplications.
 // Use template to prevent implicit conversion.
 template <>
-LIBC_INLINE constexpr uint64_t prod_hi<uint64_t>(uint64_t x,
-                                                        uint64_t y) {
+LIBC_INLINE constexpr uint64_t prod_hi<uint64_t>(uint64_t x, uint64_t y) {
   return static_cast<uint64_t>(
       (static_cast<UInt128>(x) * static_cast<UInt128>(y)) >> 64);
 }
@@ -77,7 +76,7 @@ LIBC_INLINE constexpr uint64_t prod_hi<uint64_t>(uint64_t x,
 // Get high part of unsigned 128x64 bit multiplication.
 template <>
 LIBC_INLINE constexpr UInt128 prod_hi<UInt128, uint64_t>(UInt128 x,
-                                                                uint64_t y) {
+                                                         uint64_t y) {
   uint64_t x_lo = static_cast<uint64_t>(x);
   uint64_t x_hi = static_cast<uint64_t>(x >> 64);
   UInt128 xyl = static_cast<UInt128>(x_lo) * static_cast<UInt128>(y);
@@ -111,8 +110,7 @@ LIBC_INLINE constexpr UInt128 prod_hi<UInt128>(UInt128 x, UInt128 y) {
 
 // Get high 128-bit part of mixed sign 128x128 bit multiplication.
 template <>
-LIBC_INLINE constexpr Int128 prod_hi<Int128, UInt128>(Int128 x,
-                                                             UInt128 y) {
+LIBC_INLINE constexpr Int128 prod_hi<Int128, UInt128>(Int128 x, UInt128 y) {
   UInt128 mask = static_cast<UInt128>(x >> 127);
   UInt128 negative_part = y & mask;
   UInt128 prod = prod_hi(static_cast<UInt128>(x), y);
