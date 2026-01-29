@@ -120,16 +120,6 @@ template <typename T>
 int getLargestDivisor(T dim, ArrayRef<T> candidates,
                       ArrayRef<T> candidateMultiples = {});
 
-/// [to-be-deprecated] Sets the DistributeLayoutAttr for a given OpResult
-/// user should use setAnchorLayout instead
-void setDistributeLayoutAttr(const OpResult &Result,
-                             const DistributeLayoutAttr layout);
-
-/// [to-be-deprecated] Sets the DistributeLayoutAttr for a given OpOperand
-/// user should use setAnchorLayout instead
-void setDistributeLayoutAttr(const OpOperand &opr,
-                             const DistributeLayoutAttr layout);
-
 /// Retrieves the DistributeLayoutAttr associated with a given Value. For
 /// TensorDescType values, the DistributeLayoutAttr is extracted from the
 /// TensorDescType itself. For other values, it is obtained from the attributes
@@ -141,6 +131,16 @@ DistributeLayoutAttr getDistributeLayoutAttr(const Value value);
 /// will first check the operand_layout_{id} of the owner operation. If not
 /// found, it will check the operand itself and its defining op.
 DistributeLayoutAttr getDistributeLayoutAttr(const OpOperand &opr);
+
+/// [to-be-deprecated] Sets the DistributeLayoutAttr for a given OpResult
+/// user should use setAnchorLayout instead
+void setDistributeLayoutAttr(const OpResult &Result,
+                             const DistributeLayoutAttr layout);
+
+/// [to-be-deprecated] Sets the DistributeLayoutAttr for a given OpOperand
+/// user should use setAnchorLayout instead
+void setDistributeLayoutAttr(const OpOperand &opr,
+                             const DistributeLayoutAttr layout);
 
 /// Return the attribute name for the OpOperand to attach DistributeLayoutAttr
 std::string getTemporaryLayoutName(const OpOperand &operand);
