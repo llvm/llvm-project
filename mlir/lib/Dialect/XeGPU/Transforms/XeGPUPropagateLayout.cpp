@@ -1714,24 +1714,40 @@ void XeGPUPropagateLayoutPass::runOnOperation() {
       Operation *defOp = opResult.getDefiningOp();
       LLVM_DEBUG(DBGS() << "Try op: " << *defOp << "\n");
       if (auto anchorOp = dyn_cast<xegpu::AnchorLayoutInterface>(defOp)) {
-        // inject debug print here
         LLVM_DEBUG(DBGS() << "AnchorLayoutInterface found for op: " << *defOp
                           << "\n");
-        // print the anchor layout
-        LLVM_DEBUG(DBGS() << "Anchor layout: " << anchorOp.getAnchorLayout()
+        auto anchorLayout = anchorOp.getAnchorLayout();
+        LLVM_DEBUG(DBGS() << "Anchor layout: " << anchorLayout << "\n");
+        LLVM_DEBUG(DBGS() << "Anchor layout is null: "
+                          << (anchorLayout == nullptr ? "true" : "false")
                           << "\n");
-        return anchorOp.getAnchorLayout();
+        if (anchorLayout != nullptr) {
+          LLVM_DEBUG(DBGS()
+                     << "Returning anchor layout: " << anchorLayout << "\n");
+          return anchorLayout;
+        }
+        LLVM_DEBUG(DBGS() << "Anchor layout is null, continuing...\n");
       }
 
       xegpu::DistributeLayoutAttr requiredResLayoutAttr =
           xegpu::getTemporaryLayout(opResult);
-      if (requiredResLayoutAttr != nullptr)
+      LLVM_DEBUG(DBGS() << "Temporary layout for value: " << val << " is "
+                        << requiredResLayoutAttr << "\n");
+      if (requiredResLayoutAttr != nullptr) {
+        LLVM_DEBUG(DBGS() << "Returning temporary layout: "
+                          << requiredResLayoutAttr << "\n");
         return requiredResLayoutAttr;
+      }
     }
     xegpu::DistributeLayoutAttr layoutAttr =
         cast<xegpu::DistributeLayoutAttr>(layout.get());
-    if (layout.isSliceLayout())
+    LLVM_DEBUG(DBGS() << "Layout attr for value: " << val << " is "
+                      << layoutAttr << "\n");
+    if (layout.isSliceLayout()) {
+      LLVM_DEBUG(DBGS() << "Returning slice layout: " << layoutAttr << "\n");
       return cast<xegpu::SliceAttr>(layoutAttr);
+    }
+    LLVM_DEBUG(DBGS() << "Returning layout attr: " << layoutAttr << "\n");
     return cast<xegpu::LayoutAttr>(layoutAttr);
   };
 

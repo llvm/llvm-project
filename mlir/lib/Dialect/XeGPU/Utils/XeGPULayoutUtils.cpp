@@ -389,28 +389,63 @@ xegpu::inferBitCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
   // only adjust the sg_data, inst_data, lane_data accordingly
   // based on the bitwidth ratio between source and result element type
 
+  llvm::dbgs() << "inferBitCastSourceLayout: resElemTyBitWidth="
+               << resElemTyBitWidth
+               << ", srcElemTyBitWidth=" << srcElemTyBitWidth << "\n";
+
   SmallVector<int64_t> sgData = resLayout.getEffectiveSgDataAsInt();
   SmallVector<int64_t> instData = resLayout.getEffectiveInstDataAsInt();
   SmallVector<int64_t> laneData = resLayout.getEffectiveLaneDataAsInt();
-  size_t dim = sgData.size() - 1;
-  int64_t sgDataValue, instDataValue, laneDataValue;
+  size_t sgDataSize = sgData.size();
+  size_t instDataSize = instData.size();
+  size_t laneDataSize = laneData.size();
+  int64_t sgDataValue = -1;
+  int64_t instDataValue = -1;
+  int64_t laneDataValue = -1;
+  int64_t dim = resLayout.getRank() - 1;
 
-  if (srcElemTyBitWidth >= resElemTyBitWidth) {
-    int bitWidthRatio = srcElemTyBitWidth / resElemTyBitWidth;
-    sgDataValue = (dim < sgData.size()) ? sgData[dim] * bitWidthRatio : -1;
-    instDataValue =
-        (dim < instData.size()) ? instData[dim] * bitWidthRatio : -1;
-    laneDataValue =
-        (dim < laneData.size()) ? laneData[dim] * bitWidthRatio : -1;
-  } else {
+  llvm::dbgs() << "inferBitCastSourceLayout: dim=" << dim
+               << ", sgData.size()=" << sgData.size()
+               << ", instData.size()=" << instData.size()
+               << ", laneData.size()=" << laneData.size() << "\n";
+
+  if (srcElemTyBitWidth <= resElemTyBitWidth) {
     int bitWidthRatio = resElemTyBitWidth / srcElemTyBitWidth;
-    assert((laneData[dim] % bitWidthRatio) == 0 &&
-           "laneData not divisible by bitWidthRatio");
-    sgDataValue = (dim < sgData.size()) ? sgData[dim] / bitWidthRatio : -1;
-    instDataValue =
-        (dim < instData.size()) ? instData[dim] / bitWidthRatio : -1;
-    laneDataValue =
-        (dim < laneData.size()) ? laneData[dim] / bitWidthRatio : -1;
+    llvm::dbgs() << "inferBitCastSourceLayout: srcElemTyBitWidth >= "
+                    "resElemTyBitWidth, bitWidthRatio="
+                 << bitWidthRatio << "\n";
+    if (sgDataSize)
+      sgDataValue = sgData[sgDataSize - 1] * bitWidthRatio;
+    if (instDataSize)
+      instDataValue = instData[instDataSize - 1] * bitWidthRatio;
+    if (laneDataSize)
+      laneDataValue = laneData[laneDataSize - 1] * bitWidthRatio;
+    llvm::dbgs() << "inferBitCastSourceLayout: sgDataValue=" << sgDataValue
+                 << ", instDataValue=" << instDataValue
+                 << ", laneDataValue=" << laneDataValue << "\n";
+  } else {
+    int bitWidthRatio = srcElemTyBitWidth / resElemTyBitWidth;
+    llvm::dbgs() << "inferBitCastSourceLayout: srcElemTyBitWidth < "
+                    "resElemTyBitWidth, bitWidthRatio="
+                 << bitWidthRatio << "\n";
+    if (sgDataSize) {
+      assert((sgData[sgDataSize - 1] % bitWidthRatio) == 0 &&
+             "sgData not divisible by bitWidthRatio");
+      sgDataValue = sgData[sgDataSize - 1] / bitWidthRatio;
+    }
+    if (instDataSize) {
+      assert((instData[instDataSize - 1] % bitWidthRatio) == 0 &&
+             "instData not divisible by bitWidthRatio");
+      instDataValue = instData[instDataSize - 1] / bitWidthRatio;
+    }
+    if (laneDataSize) {
+      assert((laneData[laneDataSize - 1] % bitWidthRatio) == 0 &&
+             "laneData not divisible by bitWidthRatio");
+      laneDataValue = laneData[laneDataSize - 1] / bitWidthRatio;
+    }
+    llvm::dbgs() << "inferBitCastSourceLayout: sgDataValue=" << sgDataValue
+                 << ", instDataValue=" << instDataValue
+                 << ", laneDataValue=" << laneDataValue << "\n";
   }
 
   // Now set only instData and laneData, preserving sgData
@@ -418,6 +453,7 @@ xegpu::inferBitCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
   finalSrcLayout =
       resLayout.setDimData(dim, sgDataValue, instDataValue, laneDataValue);
 
+  llvm::dbgs() << "inferBitCastSourceLayout: returning finalSrcLayout\n";
   return finalSrcLayout;
 }
 
@@ -608,16 +644,18 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
 
   const int subgroupSize = uArch->getSubgroupSize();
 
-  const int vectorSize = 16; // vector size from SPRIV vector restriction
+  const int vectorSize = 1; // vector size from SPRIV vector restriction
 
   SmallVector<int64_t> defaultInstData(srcShapeSize, 1);
-  defaultInstData[srcShapeSize - 1] = subgroupSize;
-  defaultInstData[srcShapeSize - 2] =
-      vectorSize; // This will be adjusted based on actual data distribution
 
   SmallVector<int64_t> defaultLaneLayout(srcShapeSize, 1);
-  defaultLaneLayout[srcShapeSize - 1] = subgroupSize;
+
   SmallVector<int64_t> defaultLaneData(srcShapeSize, 1);
+  defaultInstData[srcShapeSize - 2] = vectorSize;
+  defaultInstData[srcShapeSize - 1] = subgroupSize;
+  defaultLaneLayout[srcShapeSize - 1] = subgroupSize;
+  defaultLaneData[srcShapeSize - 2] = vectorSize;
+  defaultLaneData[srcShapeSize - 1] = 1;
 
   // Strategy 1: Try to preserve the consumer's slice layout structure
   // If the consumer already expects a slice layout with the same reduction
@@ -743,28 +781,34 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
       }
       break;
     case xegpu::LayoutKind::Lane:
-      consumerLaneId = consumerLaneLayout.size() - 1;
-      // For non-reduction dimensions, try to match consumer's lane_layout
-      // This ensures the result after reduction has the expected distribution
-      for (int i = 0; i < srcShapeSize; i++)
-        if (!llvm::is_contained(reductionDims, i) && consumerLaneId >= 0) {
-          laneLayout[i] = consumerLaneLayout[consumerLaneId];
-          assert((srcShape[i] % laneLayout[i] == 0) &&
-                 "source shape not divisible by consumer lane_layout");
-          laneData[i] = srcShape[i] / laneLayout[i];
-          remainingLaneCount /= laneLayout[i];
-          consumerLaneId--;
-        }
-      for (int i = 0; i < srcShapeSize; i++)
-        if (llvm::is_contained(reductionDims, i)) {
-          laneLayout[i] = std::min((srcShape[i] / defaultLaneLayout[i]),
-                                   static_cast<int64_t>(remainingLaneCount));
-          assert((srcShape[i] % laneLayout[i] == 0) &&
-                 "source shape not divisible by consumer lane_layout");
-          laneData[i] = srcShape[i] / laneLayout[i];
-          remainingLaneCount /= laneLayout[i];
-        }
-      assert(remainingLaneCount == 1 && "not all lanes have been distributed");
+      laneLayout = defaultLaneLayout;
+      laneData = defaultLaneData;
+      //  consumerLaneId = consumerLaneLayout.size() - 1;
+      // // For non-reduction dimensions, try to match consumer's lane_layout
+      // // This ensures the result after reduction has the expected
+      // distribution for (int i = 0; i < srcShapeSize; i++)
+      //   if (!llvm::is_contained(reductionDims, i) && consumerLaneId >= 0) {
+      //     laneLayout[i] = consumerLaneLayout[consumerLaneId];
+      //     assert((srcShape[i] % laneLayout[i] == 0) &&
+      //            "source shape not divisible by consumer lane_layout");
+      //     laneData[i] = srcShape[i] / laneLayout[i];
+      //     remainingLaneCount /= laneLayout[i];
+      //     consumerLaneId--;
+      //   }
+      // for (int i = 0; i < srcShapeSize; i++)
+      //   if (llvm::is_contained(reductionDims, i)) {
+      //     laneLayout[i] =
+      //         std::min(srcShape[i],
+      //         static_cast<int64_t>(remainingLaneCount));
+      //     assert((srcShape[i] % laneLayout[i] == 0) &&
+      //            "source shape not divisible by consumer lane_layout");
+      //     laneData[i] = srcShape[i] / laneLayout[i];
+      //     laneData[i] = std::min(laneData[i],
+      //     static_cast<int64_t>(vectorSize)); remainingLaneCount /=
+      //     laneLayout[i];
+      //   }
+      // assert(remainingLaneCount == 1 && "not all lanes have been
+      // distributed");
       break;
     default:
       llvm_unreachable("unsupported layout kind");
@@ -806,17 +850,39 @@ xegpu::DistributeLayoutAttr xegpu::setupBitCastResultLayout(
     xegpu::LayoutKind layoutKind, VectorType srcVecTy, VectorType resVecTy,
     DistributeLayoutAttr consumerLayout, const xegpu::uArch::uArch *uArch) {
 
+  // print out consumerLayout for debugging
+  llvm::dbgs() << "setupBitCastResultLayout: consumerLayout=";
+  consumerLayout.print(llvm::dbgs());
+  llvm::dbgs() << "\n";
+
+  llvm::dbgs() << "setupBitCastResultLayout: layoutKind="
+               << static_cast<int>(layoutKind) << "\n";
+
   int srcElemTyBitWidth = srcVecTy.getElementType().getIntOrFloatBitWidth();
   int resElemTyBitWidth = resVecTy.getElementType().getIntOrFloatBitWidth();
+
+  llvm::dbgs() << "setupBitCastResultLayout: srcElemTyBitWidth="
+               << srcElemTyBitWidth
+               << ", resElemTyBitWidth=" << resElemTyBitWidth << "\n";
 
   ArrayRef<int64_t> srcShape = srcVecTy.getShape();
   SmallVector<int64_t> sgData = consumerLayout.getEffectiveSgDataAsInt();
   SmallVector<int64_t> instData = consumerLayout.getEffectiveInstDataAsInt();
   SmallVector<int64_t> laneData = consumerLayout.getEffectiveLaneDataAsInt();
   size_t dim = srcShape.size() - 1;
-  int64_t sgDataValue, instDataValue, laneDataValue;
+  int64_t sgDataValue = -1;
+  int64_t instDataValue = -1;
+  int64_t laneDataValue = -1;
+
+  llvm::dbgs() << "setupBitCastResultLayout: srcShape.size()="
+               << srcShape.size() << ", dim=" << dim << "\n";
+  llvm::dbgs() << "setupBitCastResultLayout: sgData.size()=" << sgData.size()
+               << ", instData.size()=" << instData.size()
+               << ", laneData.size()=" << laneData.size() << "\n";
 
   const int subgroupSize = uArch->getSubgroupSize();
+  llvm::dbgs() << "setupBitCastResultLayout: subgroupSize=" << subgroupSize
+               << "\n";
 
   if (srcElemTyBitWidth > resElemTyBitWidth) {
     // When casting to a smaller bitwidth, multiply the result layout
@@ -853,17 +919,19 @@ xegpu::DistributeLayoutAttr xegpu::setupBitCastResultLayout(
     default:
       llvm_unreachable("unsupported layout kind");
     }
-  } else {
-    sgDataValue = sgData[dim];
-    instDataValue = instData[dim];
-    laneDataValue = laneData[dim];
+    // Now set only instData and laneData, preserving sgData
+    xegpu::DistributeLayoutAttr resLayout;
+    llvm::dbgs() << "setupBitCastResultLayout: Setting dimension data - dim="
+                 << dim << ", sgDataValue=" << sgDataValue
+                 << ", instDataValue=" << instDataValue
+                 << ", laneDataValue=" << laneDataValue << "\n";
+    resLayout = consumerLayout.setDimData(dim, sgDataValue, instDataValue,
+                                          laneDataValue);
+    llvm::dbgs()
+        << "setupBitCastResultLayout: resLayout created successfully\n";
+    return resLayout;
   }
-
-  // Now set only instData and laneData, preserving sgData
-  xegpu::DistributeLayoutAttr resLayout;
-  resLayout =
-      consumerLayout.setDimData(dim, sgDataValue, instDataValue, laneDataValue);
-  return resLayout;
+  return consumerLayout;
 }
 
 xegpu::DistributeLayoutAttr
@@ -1096,8 +1164,12 @@ xegpu::DistributeLayoutAttr xegpu::setupLoadGatherAnchorLayout(
       assert(resShape[1] <= static_cast<int64_t>(
                                 uArchInstruction->getMaxLaneLoadStoreSize()) &&
              "StoreScatterOp lane size exceeds max lane load/store size.");
+      llvm::dbgs() << "setupLoadGatherAnchorLayout: Creating LayoutAttr with "
+                   << "laneLayout=[" << subgroupSize << ", 1], "
+                   << "laneData=[1, " << resShape[1] << "]\n";
       requiredLayout = xegpu::LayoutAttr::get(
           context, {subgroupSize, 1}, {1, static_cast<int>(resShape[1])});
+      llvm::dbgs() << "setupLoadGatherAnchorLayout: Created requiredLayout\n";
     }
     break;
   default:
@@ -1176,8 +1248,8 @@ xegpu::setupStoreScatterAnchorLayout(LayoutKind layoutKind, VectorType srcVecTy,
       requiredLayout =
           getDefaultLaneLayoutAttr(context, srcVecTy.getRank(), uArch);
     else {
-      assert((srcVecTy.getRank() > 2) && "StoreScatterOp can access 2D tensor "
-                                         "tile at maximum at subgroup level.");
+      assert((srcVecTy.getRank() <= 2) && "StoreScatterOp can access 2D tensor "
+                                          "tile at maximum at subgroup level.");
       assert(srcShape[1] <= static_cast<int64_t>(
                                 uArchInstruction->getMaxLaneLoadStoreSize()) &&
              "StoreScatterOp lane size exceeds max lane load/store size.");
