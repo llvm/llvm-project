@@ -59,6 +59,7 @@ namespace __pstl {
 // - all_of
 // - none_of
 // - is_partitioned
+// - is_sorted
 // - is_sorted_until
 //
 // for_each family
@@ -85,7 +86,6 @@ namespace __pstl {
 // - count
 // - equal(3 legs)
 // - equal
-// - is_sorted
 // - reduce
 //
 // transform and transform_binary family
@@ -210,6 +210,19 @@ struct __is_sorted_until<__default_backend_tag, _ExecutionPolicy> {
     } else {
       return std::is_sorted_until(std::move(__first), std::move(__last), std::forward<_Comp>(__comp));
     }
+  }
+};
+
+template <class _ExecutionPolicy>
+struct __is_sorted<__default_backend_tag, _ExecutionPolicy> {
+  template <class _Policy, class _ForwardIterator, class _Comp>
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<bool>
+  operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Comp&& __comp) const noexcept {
+    using _IsSortedUntil             = __dispatch<__is_sorted_until, __current_configuration, _ExecutionPolicy>;
+    optional<_ForwardIterator> __res = _IsSortedUntil()(__policy, __first, __last, std::forward<_Comp>(__comp));
+    if (!__res)
+      return nullopt;
+    return *__res == __last;
   }
 };
 
@@ -420,35 +433,6 @@ struct __reduce<__default_backend_tag, _ExecutionPolicy> {
         std::move(__init),
         std::forward<_BinaryOperation>(__op),
         __identity{});
-  }
-};
-
-template <class _ExecutionPolicy>
-struct __is_sorted<__default_backend_tag, _ExecutionPolicy> {
-  template <class _Policy, class _ForwardIterator, class _Comp>
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI optional<bool>
-  operator()(_Policy&& __policy, _ForwardIterator __first, _ForwardIterator __last, _Comp&& __comp) const noexcept {
-    if constexpr (__has_bidirectional_iterator_category<_ForwardIterator>::value) {
-      if (__first == __last)
-        return true; // Empty, sorted by definition
-      _ForwardIterator __first2 = std::next(__first);
-      if (__first2 == __last)
-        return true; // Only one element, sorted by definition
-      --__last;      // Make two iterator ranges: [__first, __first + n - 1) and [__first + 1, __first + n)
-      using _TransformReduce = __dispatch<__transform_reduce_binary, __current_configuration, _ExecutionPolicy>;
-      using _Ref             = __iterator_reference<_ForwardIterator>;
-      return _TransformReduce()(
-          __policy,
-          std::move(__first),
-          std::move(__last),
-          std::move(__first2),
-          true,
-          std::logical_and{},
-          [&](_Ref __left, _Ref __right) -> bool { return !__comp(__right, __left); });
-    } else {
-      // Currently anything outside bidirectional iterators has to be processed serially
-      return std::is_sorted(std::move(__first), std::move(__last), std::forward<_Comp>(__comp));
-    }
   }
 };
 

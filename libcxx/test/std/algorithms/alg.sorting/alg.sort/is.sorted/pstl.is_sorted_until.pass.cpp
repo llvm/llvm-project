@@ -17,6 +17,7 @@
 #include <algorithm>
 #include <cassert>
 #include <functional>
+#include <limits>
 #include <numeric>
 
 #include "test_execution_policies.h"
@@ -174,6 +175,46 @@ struct Test {
       int a[]     = {1, 1, 1, 1};
       unsigned sa = sizeof(a) / sizeof(a[0]);
       assert(std::is_sorted_until(policy, Iter(a), Iter(a + sa)) == Iter(a + sa));
+    }
+    {
+      int a[]     = {std::numeric_limits<int>::min(),
+                     std::numeric_limits<int>::min(),
+                     std::numeric_limits<int>::max(),
+                     std::numeric_limits<int>::max()};
+      unsigned sa = sizeof(a) / sizeof(a[0]);
+      assert(std::is_sorted_until(policy, Iter(a), Iter(a + sa)) == Iter(a + sa));
+    }
+    {
+      int a[]     = {std::numeric_limits<int>::min(),
+                     std::numeric_limits<int>::max(),
+                     std::numeric_limits<int>::min(),
+                     std::numeric_limits<int>::max()};
+      unsigned sa = sizeof(a) / sizeof(a[0]);
+      assert(std::is_sorted_until(policy, Iter(a), Iter(a + sa)) == Iter(a + 2));
+    }
+    {
+      int a[] = {
+          std::numeric_limits<int>::min(),
+          std::numeric_limits<int>::min() / 2,
+          -1,
+          0,
+          1,
+          std::numeric_limits<int>::max() / 2,
+          std::numeric_limits<int>::max()};
+      unsigned sa = sizeof(a) / sizeof(a[0]);
+      assert(std::is_sorted_until(policy, Iter(a), Iter(a + sa)) == Iter(a + sa));
+    }
+    {
+      int a[] = {
+          std::numeric_limits<int>::min(),
+          std::numeric_limits<int>::min() / 2,
+          1,
+          0,
+          -1,
+          std::numeric_limits<int>::max() / 2,
+          std::numeric_limits<int>::max()};
+      unsigned sa = sizeof(a) / sizeof(a[0]);
+      assert(std::is_sorted_until(policy, Iter(a), Iter(a + sa)) == Iter(a + 3));
     }
   }
 };
