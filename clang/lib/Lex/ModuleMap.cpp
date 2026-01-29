@@ -42,6 +42,7 @@
 #include <optional>
 #include <string>
 #include <system_error>
+#include <tuple>
 #include <utility>
 
 using namespace clang;
@@ -1969,7 +1970,8 @@ void ModuleMapLoader::handleHeaderDecl(const modulemap::HeaderDecl &HD) {
 
 static bool compareModuleHeaders(const Module::Header &A,
                                  const Module::Header &B) {
-  return A.NameAsWritten < B.NameAsWritten;
+  return std::tie(A.NameAsWritten, A.PathRelativeToRootModuleDirectory) <
+         std::tie(B.NameAsWritten, B.PathRelativeToRootModuleDirectory);
 }
 
 void ModuleMapLoader::handleUmbrellaDirDecl(
