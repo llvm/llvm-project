@@ -2052,8 +2052,7 @@ bool AMDGPUDAGToDAGISel::SelectGlobalSAddr(SDNode *N, SDValue Addr,
           if (TII->isLegalFLATOffset(COffset, AMDGPUAS::GLOBAL_ADDRESS,
                                      SIInstrFlags::FlatGlobal)) {
             VOffset = ExtRHS.getOperand(0);
-            ImmOffset =
-                cast<ConstantSDNode>(ExtRHS.getOperand(1))->getSExtValue();
+            ImmOffset = COffset;
           }
         }
 
