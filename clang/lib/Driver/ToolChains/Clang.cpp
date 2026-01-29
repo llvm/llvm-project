@@ -7180,9 +7180,9 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // - Implicitly enabled via -fms-extensions or -fms-compatibility
   // - Implicitly disabled via -fno-ms-extensions or -fno-ms-compatibility
   //
-  // When multiple relevent options are present, the last option on the command line
-  // takes precedence. This allows users to selectively override implicit enablement.
-  // Examples:
+  // When multiple relevent options are present, the last option on the command
+  // line takes precedence. This allows users to selectively override implicit
+  // enablement. Examples:
   //   -fms-extensions -fno-ms-anonymous-structs -> disabled (explicit override)
   //   -fno-ms-anonymous-structs -fms-extensions -> enabled (last flag wins)
   auto ShouldEnableMSAnonymousStructs =
