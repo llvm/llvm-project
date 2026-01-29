@@ -24,22 +24,24 @@
 // Returns: a / b
 COMPILER_RT_ABI float __divsf3(float a, float b);
 
-int test__divsf3(uint32_t a_rep, uint32_t b_rep, uint32_t expected_rep) {
+int test__divsf3(int line, uint32_t a_rep, uint32_t b_rep, uint32_t expected_rep) {
   float a = fromRep32(a_rep), b = fromRep32(b_rep);
   float x = __divsf3(a, b);
 #ifdef EXPECT_EXACT_RESULTS
-  int ret = toRep32(x) == expected_rep;
+  int ret = toRep32(x) != expected_rep;
 #else
   int ret = compareResultF(x, expected_rep);
 #endif
 
   if (ret) {
-    printf("error in test__divsf3(%08" PRIx32 ", %08" PRIx32 ") = %08" PRIx32
+    printf("error at line %d: __divsf3(%08" PRIx32 ", %08" PRIx32 ") = %08" PRIx32
            ", expected %08" PRIx32 "\n",
-           a_rep, b_rep, toRep32(x), expected_rep);
+           line, a_rep, b_rep, toRep32(x), expected_rep);
   }
   return ret;
 }
+
+#define test__divsf3(a,b,x) test__divsf3(__LINE__,a,b,x)
 
 int main(void) {
   int status = 0;
