@@ -66,7 +66,7 @@ SparcTTIImpl::getPopcntSupport(unsigned TyWidth) const {
 
 unsigned SparcTTIImpl::getRegisterClassForType(bool Vector, Type *Ty) const {
   if (Vector)
-    return FPRRC;
+    return VRRC;
   if (Ty &&
       (Ty->getScalarType()->isFloatTy() || Ty->getScalarType()->isDoubleTy()))
     return FPRRC;
@@ -85,6 +85,11 @@ unsigned SparcTTIImpl::getNumberOfRegisters(unsigned ClassID) const {
     return 32;
   case FP128RRC:
     return 16;
+  case VRRC:
+    // TODO We have vector capabilities as part of the VIS extensions, but the
+    // codegen doesn't currently use it. Revisit this when vector codegen is
+    // ready.
+    return 0;
   }
 
   llvm_unreachable("Unsupported register class");

@@ -58,7 +58,7 @@ public:
 
   /// \name Vector TTI Implementations
   /// @{
-  enum SparcRegisterClass { GPRRC, FPRRC, FP128RRC };
+  enum SparcRegisterClass { GPRRC, FPRRC, FP128RRC, VRRC };
   unsigned getNumberOfRegisters(unsigned ClassID) const override;
   unsigned getRegisterClassForType(bool Vector,
                                    Type *Ty = nullptr) const override;
