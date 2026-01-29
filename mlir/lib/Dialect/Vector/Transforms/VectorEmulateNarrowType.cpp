@@ -613,8 +613,8 @@ struct ConvertVectorStore final : OpConversionPattern<vector::StoreOp> {
             op, "the source vector does not fill whole container elements "
                 "(not divisible in size)");
 
-      auto stridedMetadata = memref::ExtractStridedMetadataOp::create(
-          rewriter, loc, op.getBase());
+      auto stridedMetadata =
+          memref::ExtractStridedMetadataOp::create(rewriter, loc, op.getBase());
       OpFoldResult linearizedIndices;
       std::tie(std::ignore, linearizedIndices) =
           memref::getLinearizedMemRefOffsetAndSize(
