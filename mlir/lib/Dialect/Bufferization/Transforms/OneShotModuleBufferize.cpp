@@ -72,7 +72,6 @@
 #include "mlir/IR/Operation.h"
 #include "llvm/ADT/SmallVectorExtras.h"
 
-
 using namespace mlir;
 using namespace mlir::bufferization;
 using namespace mlir::bufferization::func_ext;
