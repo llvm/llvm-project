@@ -194,7 +194,8 @@ def TuneFusionMulAdd
            CheckOpcode<[MUL, MULW]>,
            CheckOpcode<[ADD, ADDW]>,
            [],
-           [// Check that both instructions have the same width
+           [
+             // Check that both instructions have the same width
              FusionPredicateWithCode<[{
                if ((FirstMI->getDesc().TSFlags & RISCVII::IsSignExtendingOpWMask) !=
                    (SecondMI.getDesc().TSFlags & RISCVII::IsSignExtendingOpWMask))
@@ -235,16 +236,12 @@ def TuneFusionAddMem
 //   srli(w)/srai(w) rd, rd, imm2
 //   where imm1 <= imm2
 def TuneFusionShiftBitExtract
-  : Fusion<"fusion-shift-bit-extract", "HasFusionShiftBitExtract",
+  : SimpleFusion<"fusion-shift-bit-extract", "HasFusionShiftBitExtract",
            "Enable SLLI+SRLI/SRAI macrofusion",
+           CheckOpcode<ShiftLeft>,
+           CheckOpcode<ShiftRight>,
+           [],
            [
-             SecondFusionPredicateWithMCInstPredicate<
-               CheckOpcode<ShiftRight>
-             >,
-             WildcardTrue,
-             FirstFusionPredicateWithMCInstPredicate<
-               CheckOpcode<ShiftLeft>
-             >,
              // Check that both instructions have the same width
              FusionPredicateWithCode<[{
                if ((FirstMI->getDesc().TSFlags & RISCVII::IsSignExtendingOpWMask) !=
@@ -258,7 +255,4 @@ def TuneFusionShiftBitExtract
                      FirstMI->getOperand(2).getImm() <= SecondMI.getOperand(2).getImm()))
                  return false;
              }]>,
-             SecondInstHasSameReg<0, 1>,
-             OneUse,
-             TieReg<0, 1>
            ]>;
