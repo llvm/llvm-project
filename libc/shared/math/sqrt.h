@@ -1,4 +1,4 @@
-//===-- Implementation of sqrt function -----------------------------------===//
+//===-- Shared header for sqrt ----------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/sqrt.h"
+#ifndef LLVM_LIBC_SHARED_MATH_SQRT_H
+#define LLVM_LIBC_SHARED_MATH_SQRT_H
+
+#include "shared/libc_common.h"
 #include "src/__support/math/sqrt.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(double, sqrt, (double x)) { return math::sqrt(x); }
+using math::sqrt;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_SQRT_H
