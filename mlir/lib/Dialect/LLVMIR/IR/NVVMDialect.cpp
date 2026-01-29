@@ -2969,26 +2969,26 @@ LogicalResult NVVM::ReduxOp::verify() {
       return emitOpError("nan attribute is supported only for f32 type");
   }
 
-  NVVM::ReduxKind kind = getKind();
+  NVVM::ReductionKind kind = getKind();
   switch (kind) {
-  case NVVM::ReduxKind::ADD:
-  case NVVM::ReduxKind::AND:
-  case NVVM::ReduxKind::OR:
-  case NVVM::ReduxKind::XOR:
-  case NVVM::ReduxKind::MAX:
-  case NVVM::ReduxKind::MIN:
-  case NVVM::ReduxKind::UMAX:
-  case NVVM::ReduxKind::UMIN:
+  case NVVM::ReductionKind::ADD:
+  case NVVM::ReductionKind::AND:
+  case NVVM::ReductionKind::OR:
+  case NVVM::ReductionKind::XOR:
+  case NVVM::ReductionKind::MAX:
+  case NVVM::ReductionKind::MIN:
+  case NVVM::ReductionKind::UMAX:
+  case NVVM::ReductionKind::UMIN:
     if (!reduxType.isInteger(32))
       return emitOpError("'")
-             << kind << "' redux kind unsupported with " << reduxType
+             << kind << "' reduction kind unsupported with " << reduxType
              << " type. Only supported type is 'i32'.";
     break;
-  case NVVM::ReduxKind::FMIN:
-  case NVVM::ReduxKind::FMAX:
+  case NVVM::ReductionKind::FMIN:
+  case NVVM::ReductionKind::FMAX:
     if (!reduxType.isF32())
       return emitOpError("'")
-             << kind << "' redux kind unsupported with " << reduxType
+             << kind << "' reduction kind unsupported with " << reduxType
              << " type. Only supported type is 'f32'.";
     break;
   }
@@ -5482,6 +5482,93 @@ mlir::NVVM::IDArgPair Tcgen05MMAWsSparseOp::getIntrinsicIDAndArgs(
       builder.getInt32(static_cast<unsigned>(thisOp.getCollectorOp())));
 
   return {ID, args};
+}
+
+//===----------------------------------------------------------------------===//
+// NVVM tcgen05.ld.red functions
+//===----------------------------------------------------------------------===//
+
+#define TCGEN05LDRED(SHAPE, NUM, TYPE)                                         \
+  llvm::Intrinsic::nvvm_tcgen05_ld_red_##SHAPE##_##NUM##_##TYPE
+
+mlir::NVVM::IDArgPair NVVM::Tcgen05LdRedOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::Tcgen05LdRedOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+
+  mlir::VectorType VecResTy =
+      cast<mlir::VectorType>(thisOp.getData().getType());
+  unsigned Num = VecResTy.getNumElements();
+  bool IsFloat = thisOp.getRedVal().getType().isF32();
+
+  llvm::Intrinsic::ID Shape32x32b[][2] = {
+      {notIntrinsic, notIntrinsic},
+      {TCGEN05LDRED(32x32b, x2, i32), TCGEN05LDRED(32x32b, x2, f32)},
+      {TCGEN05LDRED(32x32b, x4, i32), TCGEN05LDRED(32x32b, x4, f32)},
+      {TCGEN05LDRED(32x32b, x8, i32), TCGEN05LDRED(32x32b, x8, f32)},
+      {TCGEN05LDRED(32x32b, x16, i32), TCGEN05LDRED(32x32b, x16, f32)},
+      {TCGEN05LDRED(32x32b, x32, i32), TCGEN05LDRED(32x32b, x32, f32)},
+      {TCGEN05LDRED(32x32b, x64, i32), TCGEN05LDRED(32x32b, x64, f32)},
+      {TCGEN05LDRED(32x32b, x128, i32), TCGEN05LDRED(32x32b, x128, f32)},
+  };
+
+  llvm::Intrinsic::ID Shape16x32bx2[][2] = {
+      {notIntrinsic, notIntrinsic},
+      {TCGEN05LDRED(16x32bx2, x2, i32), TCGEN05LDRED(16x32bx2, x2, f32)},
+      {TCGEN05LDRED(16x32bx2, x4, i32), TCGEN05LDRED(16x32bx2, x4, f32)},
+      {TCGEN05LDRED(16x32bx2, x8, i32), TCGEN05LDRED(16x32bx2, x8, f32)},
+      {TCGEN05LDRED(16x32bx2, x16, i32), TCGEN05LDRED(16x32bx2, x16, f32)},
+      {TCGEN05LDRED(16x32bx2, x32, i32), TCGEN05LDRED(16x32bx2, x32, f32)},
+      {TCGEN05LDRED(16x32bx2, x64, i32), TCGEN05LDRED(16x32bx2, x64, f32)},
+      {TCGEN05LDRED(16x32bx2, x128, i32), TCGEN05LDRED(16x32bx2, x128, f32)},
+  };
+
+  NVVM::Tcgen05LdStShape shape = thisOp.getShape();
+  unsigned ID = [&]() {
+    // `num` contains the length of vector and log2 of `num` returns the index
+    // into the shape array
+    unsigned idx = std::log2(Num);
+    switch (shape) {
+    case NVVM::Tcgen05LdStShape::SHAPE_32X32B:
+      return Shape32x32b[idx][IsFloat];
+    case NVVM::Tcgen05LdStShape::SHAPE_16X32BX2:
+      return Shape16x32bx2[idx][IsFloat];
+    default:
+      llvm_unreachable("unhandled tcgen05.ld lowering");
+    }
+  }();
+
+  args.push_back(mt.lookupValue(thisOp.getAddr()));
+
+  if (shape == NVVM::Tcgen05LdStShape::SHAPE_16X32BX2)
+    args.push_back(mt.lookupValue(thisOp.getOffset()));
+
+  args.push_back(
+      builder.getInt32(thisOp.getOp() == NVVM::ReductionKind::MIN ? 0 : 1));
+
+  if (IsFloat) {
+    args.push_back(builder.getInt1(static_cast<unsigned>(thisOp.getAbs())));
+    args.push_back(builder.getInt1(static_cast<unsigned>(thisOp.getNan())));
+  }
+  return {ID, args};
+}
+
+LogicalResult Tcgen05LdRedOp::verify() {
+  VectorType data = cast<VectorType>(getData().getType());
+  Type redVal = getRedVal().getType();
+
+  if (data.getElementType() != redVal)
+    return emitError(
+        "type of reduction value and element type of vector data should match");
+
+  if (getOp() != NVVM::ReductionKind::MIN &&
+      getOp() != NVVM::ReductionKind::MAX)
+    return emitError("only min and max reduction kinds are supported");
+
+  if (redVal.isInteger() && (getAbs() || getNan())) {
+    return emitError("abs or nan is only applicable for f32 type");
+  }
+  return success();
 }
 
 //===----------------------------------------------------------------------===//

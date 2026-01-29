@@ -61,31 +61,31 @@ static NVVM::ShflKind convertShflKind(gpu::ShuffleMode mode) {
   llvm_unreachable("unknown shuffle mode");
 }
 
-static std::optional<NVVM::ReduxKind>
-convertReduxKind(gpu::AllReduceOperation mode) {
+static std::optional<NVVM::ReductionKind>
+convertToNVVMReductionKind(gpu::AllReduceOperation mode) {
   switch (mode) {
   case gpu::AllReduceOperation::ADD:
-    return NVVM::ReduxKind::ADD;
+    return NVVM::ReductionKind::ADD;
   case gpu::AllReduceOperation::MUL:
     return std::nullopt;
   case gpu::AllReduceOperation::MINSI:
-    return NVVM::ReduxKind::MIN;
+    return NVVM::ReductionKind::MIN;
   case gpu::AllReduceOperation::MINUI:
     return std::nullopt;
   case gpu::AllReduceOperation::MINNUMF:
-    return NVVM::ReduxKind::MIN;
+    return NVVM::ReductionKind::MIN;
   case gpu::AllReduceOperation::MAXSI:
-    return NVVM::ReduxKind::MAX;
+    return NVVM::ReductionKind::MAX;
   case gpu::AllReduceOperation::MAXUI:
     return std::nullopt;
   case gpu::AllReduceOperation::MAXNUMF:
-    return NVVM::ReduxKind::MAX;
+    return NVVM::ReductionKind::MAX;
   case gpu::AllReduceOperation::AND:
-    return NVVM::ReduxKind::AND;
+    return NVVM::ReductionKind::AND;
   case gpu::AllReduceOperation::OR:
-    return NVVM::ReduxKind::OR;
+    return NVVM::ReductionKind::OR;
   case gpu::AllReduceOperation::XOR:
-    return NVVM::ReduxKind::XOR;
+    return NVVM::ReductionKind::XOR;
   case gpu::AllReduceOperation::MINIMUMF:
   case gpu::AllReduceOperation::MAXIMUMF:
     return std::nullopt;
@@ -113,7 +113,8 @@ struct GPUSubgroupReduceOpLowering
     if (!op.getValue().getType().isInteger(32))
       return rewriter.notifyMatchFailure(op, "unsupported data type");
 
-    std::optional<NVVM::ReduxKind> mode = convertReduxKind(op.getOp());
+    std::optional<NVVM::ReductionKind> mode =
+        convertToNVVMReductionKind(op.getOp());
     if (!mode.has_value())
       return rewriter.notifyMatchFailure(
           op, "unsupported reduction mode for redux");

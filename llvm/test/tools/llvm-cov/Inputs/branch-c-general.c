@@ -23,10 +23,10 @@ void conditionals() {           // CHECK: @LINE|{{.*}}conditionals()
     } else {
       if (i) {}                 // CHECK: Branch ([[@LINE]]:11): [True: [[#min(C,16)]], False: 1]
     }
-                                // BRCOV: Branch ([[@LINE+1]]:9): [True: [[#min(C,100)]], Folded]
-    if (1 && i) {}              // BRCOV: Branch ([[@LINE]]:14): [True: [[#min(C,99)]], False: 1]
-    if (0 || i) {}              // BRCOV: Branch ([[@LINE]]:9): [Folded, False: [[#min(C,100)]]]
-  }                             // BRCOV: Branch ([[@LINE-1]]:14): [True: [[#min(C,99)]], False: 1]
+                                // CHECK: Branch ([[@LINE+1]]:9): [True: [[#min(C,100)]], Folded]
+    if (1 && i) {}              // CHECK: Branch ([[@LINE]]:14): [True: [[#min(C,99)]], False: 1]
+    if (0 || i) {}              // CHECK: Branch ([[@LINE]]:9): [Folded, False: [[#min(C,100)]]]
+  }                             // CHECK: Branch ([[@LINE-1]]:14): [True: [[#min(C,99)]], False: 1]
 
 }
 
@@ -180,30 +180,30 @@ void big_switch() {             // CHECK: @LINE|{{.*}}big_switch()
 void boolean_operators() {      // CHECK: @LINE|{{.*}}boolean_operators()
   int v;
   for (int i = 0; i < 100; ++i) {
-    v = i % 3 || i;             // BRCOV: Branch ([[@LINE]]:9): [True: [[#min(C,66)]], False: [[#min(C,34)]]]
-                                // BRCOV: Branch ([[@LINE-1]]:18): [True: [[#min(C,33)]], False: 1]
-    v = i % 3 && i;             // BRCOV: Branch ([[@LINE]]:9): [True: [[#min(C,66)]], False: [[#min(C,34)]]]
-                                // BRCOV: Branch ([[@LINE-1]]:18): [True: [[#min(C,66)]], False: 0]
-    v = i % 3 || i % 2 || i;    // BRCOV: Branch ([[@LINE]]:9): [True: [[#min(C,66)]], False: [[#min(C,34)]]]
-                                // BRCOV: Branch ([[@LINE-1]]:18): [True: [[#min(C,17)]], False: [[#min(C,17)]]]
-    v = i % 2 && i % 3 && i;    // BRCOV: Branch ([[@LINE-2]]:27): [True: [[#min(C,16)]], False: 1]
-  }                             // BRCOV: Branch ([[@LINE-1]]:9): [True: [[#min(C,50)]], False: [[#min(C,50)]]]
-                                // BRCOV: Branch ([[@LINE-2]]:18): [True: [[#min(C,33)]], False: [[#min(C,17)]]]
-}                               // BRCOV: Branch ([[@LINE-3]]:27): [True: [[#min(C,33)]], False: 0]
+    v = i % 3 || i;             // CHECK: Branch ([[@LINE]]:9): [True: [[#min(C,66)]], False: [[#min(C,34)]]]
+                                // CHECK: Branch ([[@LINE-1]]:18): [True: [[#min(C,33)]], False: 1]
+    v = i % 3 && i;             // CHECK: Branch ([[@LINE]]:9): [True: [[#min(C,66)]], False: [[#min(C,34)]]]
+                                // CHECK: Branch ([[@LINE-1]]:18): [True: [[#min(C,66)]], False: 0]
+    v = i % 3 || i % 2 || i;    // CHECK: Branch ([[@LINE]]:9): [True: [[#min(C,66)]], False: [[#min(C,34)]]]
+                                // CHECK: Branch ([[@LINE-1]]:18): [True: [[#min(C,17)]], False: [[#min(C,17)]]]
+    v = i % 2 && i % 3 && i;    // CHECK: Branch ([[@LINE-2]]:27): [True: [[#min(C,16)]], False: 1]
+  }                             // CHECK: Branch ([[@LINE-1]]:9): [True: [[#min(C,50)]], False: [[#min(C,50)]]]
+                                // CHECK: Branch ([[@LINE-2]]:18): [True: [[#min(C,33)]], False: [[#min(C,17)]]]
+}                               // CHECK: Branch ([[@LINE-3]]:27): [True: [[#min(C,33)]], False: 0]
 
 void boolop_loops() {           // CHECK: @LINE|{{.*}}boolop_loops()
   int i = 100;
 
-  while (i && i > 50)           // BRCOV: Branch ([[@LINE]]:10): [True: [[#min(C,51)]], False: 0]
-    i--;                        // BRCOV: Branch ([[@LINE-1]]:15): [True: [[#min(C,50)]], False: 1]
+  while (i && i > 50)           // CHECK: Branch ([[@LINE]]:10): [True: [[#min(C,51)]], False: 0]
+    i--;                        // CHECK: Branch ([[@LINE-1]]:15): [True: [[#min(C,50)]], False: 1]
 
-  while ((i % 2) || (i > 0))    // BRCOV: Branch ([[@LINE]]:10): [True: [[#min(C,25)]], False: [[#min(C,26)]]]
-    i--;                        // BRCOV: Branch ([[@LINE-1]]:21): [True: [[#min(C,25)]], False: 1]
+  while ((i % 2) || (i > 0))    // CHECK: Branch ([[@LINE]]:10): [True: [[#min(C,25)]], False: [[#min(C,26)]]]
+    i--;                        // CHECK: Branch ([[@LINE-1]]:21): [True: [[#min(C,25)]], False: 1]
 
-  for (i = 100; i && i > 50; --i);  // BRCOV: Branch ([[@LINE]]:17): [True: [[#min(C,51)]], False: 0]
-                                    // BRCOV: Branch ([[@LINE-1]]:22): [True: [[#min(C,50)]], False: 1]
-  for (; (i % 2) || (i > 0); --i);  // BRCOV: Branch ([[@LINE]]:10): [True: [[#min(C,25)]], False: [[#min(C,26)]]]
-                                    // BRCOV: Branch ([[@LINE-1]]:21): [True: [[#min(C,25)]], False: 1]
+  for (i = 100; i && i > 50; --i);  // CHECK: Branch ([[@LINE]]:17): [True: [[#min(C,51)]], False: 0]
+                                    // CHECK: Branch ([[@LINE-1]]:22): [True: [[#min(C,50)]], False: 1]
+  for (; (i % 2) || (i > 0); --i);  // CHECK: Branch ([[@LINE]]:10): [True: [[#min(C,25)]], False: [[#min(C,26)]]]
+                                    // CHECK: Branch ([[@LINE-1]]:21): [True: [[#min(C,25)]], False: 1]
 }
 
 void conditional_operator() {   // CHECK: @LINE|{{.*}}conditional_operator()
