@@ -1546,8 +1546,8 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
       setOperationAction(ISD::GET_ACTIVE_LANE_MASK, VT, Legal);
     }
 
-    if (Subtarget->hasSVE2p1() ||
-        (Subtarget->hasSME2() && Subtarget->isStreaming()))
+    if (Subtarget->isSVEorStreamingSVEAvailable() &&
+        (Subtarget->hasSVE2p1() || Subtarget->hasSME2()))
       setOperationAction(ISD::GET_ACTIVE_LANE_MASK, MVT::nxv32i1, Custom);
 
     for (auto VT : {MVT::v16i8, MVT::v8i8, MVT::v4i16, MVT::v2i32})
@@ -19384,7 +19384,8 @@ performActiveLaneMaskCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     return While;
 
   if (!N->getValueType(0).isScalableVector() ||
-      (!ST->hasSVE2p1() && !(ST->hasSME2() && ST->isStreaming())))
+      !ST->isSVEorStreamingSVEAvailable() ||
+      !(ST->hasSVE2p1() || ST->hasSME2()))
     return SDValue();
 
   // Count the number of users which are extract_vectors.
@@ -29251,8 +29252,8 @@ void AArch64TargetLowering::ReplaceExtractSubVectorResults(
 
 void AArch64TargetLowering::ReplaceGetActiveLaneMaskResults(
     SDNode *N, SmallVectorImpl<SDValue> &Results, SelectionDAG &DAG) const {
-  assert((Subtarget->hasSVE2p1() ||
-          (Subtarget->hasSME2() && Subtarget->isStreaming())) &&
+  assert((Subtarget->isSVEorStreamingSVEAvailable() &&
+          (Subtarget->hasSVE2p1() || Subtarget->hasSME2())) &&
          "Custom lower of get.active.lane.mask missing required feature.");
 
   assert(N->getValueType(0) == MVT::nxv32i1 &&
