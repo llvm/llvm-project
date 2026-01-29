@@ -71,19 +71,18 @@ jobs:
       with:
         python-version: '3.14'
 
-    - name: Install Windows dependencies
+    - name: Install Windows ARM64 dependencies
       if: runner.os == 'Windows' && runner.arch == 'ARM64'
       run: |
         # Some of the python modules we install require this package to be installed on the system.
         vcpkg install openssl:arm64-windows-static-md
-        echo "OPENSSL_DIR=$env:VCPKG_INSTALLATION_ROOT\installed\arm64-windows-static-md" >> $env:GITHUB_ENV
+        #echo "OPENSSL_DIR=$env:VCPKG_INSTALLATION_ROOT\installed\arm64-windows-static-md" >> $env:GITHUB_ENV
 
     - name: Checkout LLVM
       uses: actions/checkout@8e8c483db84b4bee98b60c0593521ed34d9990e8 # v6.0.1
 
     - name: Install Dependencies
-      #env:
-      #  PIP_ONLY_BINARY: pynacl
+      shell: bash
       run: |
         pip install --require-hashes -r ./llvm/utils/git/requirements.txt
 
