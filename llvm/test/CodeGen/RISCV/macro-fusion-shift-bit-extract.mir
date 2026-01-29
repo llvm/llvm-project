@@ -1,9 +1,9 @@
 # REQUIRES: asserts
 # RUN: llc -mtriple=riscv64-linux-gnu -x=mir < %s \
 # RUN:   -debug-only=machine-scheduler -start-before=machine-scheduler 2>&1 \
-# RUN:   -mattr=+shift-bitextra-fusion | FileCheck %s
+# RUN:   -mattr=+fusion-shift-bit-extract | FileCheck %s
 
-# Test shift-bitextra fusion: SLLI + SRLI/SRAI
+# Test shift-bit-extract fusion: SLLI + SRLI/SRAI
 # This fusion combines left shift followed by right shift with the constraint
 # that the first immediate must be less than or equal to the second immediate.
 # It also checks that both instructions have the same width (W suffix or not).

@@ -1,7 +1,7 @@
 # REQUIRES: asserts
 # RUN: llc -mtriple=riscv64-linux-gnu -x=mir < %s \
 # RUN:   -debug-only=machine-scheduler -start-before=machine-scheduler 2>&1 \
-# RUN:   -mattr=+add-mem-fusion | FileCheck %s
+# RUN:   -mattr=+fusion-add-mem | FileCheck %s
 
 # Test add-mem fusion: ADD + load/store with offset 0
 # This fusion combines an address calculation (ADD) with a memory operation

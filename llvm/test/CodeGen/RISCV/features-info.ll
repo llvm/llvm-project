@@ -7,7 +7,6 @@
 ; CHECK-NEXT:   64bit                            - Implements RV64.
 ; CHECK-NEXT:   a                                - 'A' (Atomic Instructions).
 ; CHECK-NEXT:   add-load-fusion                  - Enable ADD(.UW) + load macrofusion.
-; CHECK-NEXT:   add-mem-fusion                   - Enable ADD+LOAD/STORE macrofusion.
 ; CHECK-NEXT:   addi-load-fusion                 - Enable ADDI + load macrofusion.
 ; CHECK-NEXT:   andes45                          - Andes 45-Series processors.
 ; CHECK-NEXT:   auipc-addi-fusion                - Enable AUIPC+ADDI macrofusion.
@@ -47,18 +46,20 @@
 ; CHECK-NEXT:   experimental-zvqdotq             - 'Zvqdotq' (Vector quad widening 4D Dot Product).
 ; CHECK-NEXT:   f                                - 'F' (Single-Precision Floating-Point).
 ; CHECK-NEXT:   forced-atomics                   - Assume that lock-free native-width atomics are available.
+; CHECK-NEXT:   fusion-add-mem                   - Enable ADD+LOAD/STORE macrofusion.
+; CHECK-NEXT:   fusion-logic-imm-reg             - Enable ANDI/ORI/XORI+AND/OR/XOR macrofusion.
+; CHECK-NEXT:   fusion-logic-reg-imm             - Enable AND/OR/XOR+ANDI/ORI/XORI macrofusion.
+; CHECK-NEXT:   fusion-logic-reg-reg             - Enable AND/OR/XOR+AND/OR/XOR macrofusion.
+; CHECK-NEXT:   fusion-mul-add                   - Enable MUL+ADD macrofusion.
+; CHECK-NEXT:   fusion-shift-bit-extract         - Enable SLLI+SRLI/SRAI macrofusion.
 ; CHECK-NEXT:   h                                - 'H' (Hypervisor).
 ; CHECK-NEXT:   i                                - 'I' (Base Integer Instruction Set).
 ; CHECK-NEXT:   ld-add-fusion                    - Enable LD+ADD macrofusion.
 ; CHECK-NEXT:   log-vrgather                     - Has vrgather.vv with LMUL*log2(LMUL) latency
-; CHECK-NEXT:   logic-imm-reg-fusion             - Enable ANDI/ORI/XORI+AND/OR/XOR macrofusion.
-; CHECK-NEXT:   logic-reg-imm-fusion             - Enable AND/OR/XOR+ANDI/ORI/XORI macrofusion.
-; CHECK-NEXT:   logic-reg-reg-fusion             - Enable AND/OR/XOR+AND/OR/XOR macrofusion.
 ; CHECK-NEXT:   lui-addi-fusion                  - Enable LUI+ADDI macro fusion.
 ; CHECK-NEXT:   lui-load-fusion                  - Enable LUI + load macrofusion.
 ; CHECK-NEXT:   m                                - 'M' (Integer Multiplication and Division).
 ; CHECK-NEXT:   mips-p8700                       - MIPS p8700 processor.
-; CHECK-NEXT:   mul-add-fusion                   - Enable MUL+ADD macrofusion.
 ; CHECK-NEXT:   no-default-unroll                - Disable default unroll preference..
 ; CHECK-NEXT:   no-sink-splat-operands           - Disable sink splat operands to enable .vx, .vf,.wx, and .wf instructions.
 ; CHECK-NEXT:   no-trailing-seq-cst-fence        - Disable trailing fence for seq-cst store..
@@ -123,7 +124,6 @@
 ; CHECK-NEXT:   sha                              - 'Sha' (Augmented Hypervisor).
 ; CHECK-NEXT:   shcounterenw                     - 'Shcounterenw' (Support writeable hcounteren enable bit for any hpmcounter that is not read-only zero).
 ; CHECK-NEXT:   shgatpa                          - 'Shgatpa' (SvNNx4 mode supported for all modes supported by satp, as well as Bare).
-; CHECK-NEXT:   shift-bitextra-fusion            - Enable SLLI+SRLI/SRAI macrofusion.
 ; CHECK-NEXT:   shifted-zextw-fusion             - Enable SLLI+SRLI to be fused when computing (shifted) word zero extension.
 ; CHECK-NEXT:   shlcofideleg                     - 'Shlcofideleg' (Delegating LCOFI Interrupts to VS-mode).
 ; CHECK-NEXT:   short-forward-branch-ialu        - Enable short forward branch optimization for RVI base instructions.

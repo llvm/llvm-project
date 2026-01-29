@@ -160,8 +160,8 @@ def TuneSHXADDLoadFusion
 //   and/or/xor rd, rs1, rs2
 //   and/or/xor rd, rd, rs3
 let IsCommutable = 1 in
-def TuneLogicRegRegFusion
-  : SimpleFusion<"logic-reg-reg-fusion", "HasLogicRegRegFusion",
+def TuneFusionLogicRegReg
+  : SimpleFusion<"fusion-logic-reg-reg", "HasFusionLogicRegReg",
                  "Enable AND/OR/XOR+AND/OR/XOR macrofusion",
                  CheckOpcode<LogicOp>,
                  CheckOpcode<LogicOp>>;
@@ -169,8 +169,8 @@ def TuneLogicRegRegFusion
 // Fuse logic operation followed by logic immediate operation:
 //   and/or/xor rd, rs1, rs2
 //   andi/ori/xori rd, rd, imm
-def TuneLogicRegImmFusion
-  : SimpleFusion<"logic-reg-imm-fusion", "HasLogicRegImmFusion",
+def TuneFusionLogicRegImm
+  : SimpleFusion<"fusion-logic-reg-imm", "HasFusionLogicRegImm",
                  "Enable AND/OR/XOR+ANDI/ORI/XORI macrofusion",
                  CheckOpcode<LogicOp>,
                  CheckOpcode<LogicImmOp>>;
@@ -179,8 +179,8 @@ def TuneLogicRegImmFusion
 //   andi/ori/xori rd, rs1, imm
 //   and/or/xor rd, rd, rs2
 let IsCommutable = 1 in
-def TuneLogicImmRegFusion
-  : SimpleFusion<"logic-imm-reg-fusion", "HasLogicImmRegFusion",
+def TuneFusionLogicImmReg
+  : SimpleFusion<"fusion-logic-imm-reg", "HasFusionLogicImmReg",
                  "Enable ANDI/ORI/XORI+AND/OR/XOR macrofusion",
                  CheckOpcode<LogicImmOp>,
                  CheckOpcode<LogicOp>>;
@@ -188,8 +188,8 @@ def TuneLogicImmRegFusion
 // Fuse multiply followed by add:
 //   mul(w) rd, rs1, rs2
 //   add(w) rd, rd, rs3
-def TuneMulAddFusion
-  : Fusion<"mul-add-fusion", "HasMulAddFusion",
+def TuneFusionMulAdd
+  : Fusion<"fusion-mul-add", "HasFusionMulAdd",
            "Enable MUL+ADD macrofusion",
            [
              SecondFusionPredicateWithMCInstPredicate<
@@ -216,8 +216,8 @@ def TuneMulAddFusion
 // Fuse add with load or store with zero offset:
 //   add rd, rs1, rs2
 //   load/store rt, 0(rd)
-def TuneAddMemFusion
-  : Fusion<"add-mem-fusion", "HasAddMemFusion",
+def TuneFusionAddMem
+  : Fusion<"fusion-add-mem", "HasFusionAddMem",
            "Enable ADD+LOAD/STORE macrofusion",
            [
              SecondFusionPredicateWithMCInstPredicate<
@@ -242,8 +242,8 @@ def TuneAddMemFusion
 //   slli(w) rd, rs1, imm1
 //   srli(w)/srai(w) rd, rd, imm2
 //   where imm1 <= imm2
-def TuneShiftBitextraFusion
-  : Fusion<"shift-bitextra-fusion", "HasShiftBitextraFusion",
+def TuneFusionShiftBitExtract
+  : Fusion<"fusion-shift-bit-extract", "HasFusionShiftBitExtract",
            "Enable SLLI+SRLI/SRAI macrofusion",
            [
              SecondFusionPredicateWithMCInstPredicate<

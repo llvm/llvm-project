@@ -790,12 +790,12 @@ def SPACEMIT_X100 : RISCVProcessorModel<"spacemit-x100",
                                          TuneOptimizedNF3SegmentLoadStore,
                                          TuneOptimizedNF4SegmentLoadStore,
                                          TuneVXRMPipelineFlush,
-                                         TuneLogicRegRegFusion,
-                                         TuneLogicRegImmFusion,
-                                         TuneLogicImmRegFusion,
-                                         TuneMulAddFusion,
-                                         TuneAddMemFusion,
-                                         TuneShiftBitextraFusion]> {
+                                         TuneFusionLogicRegReg,
+                                         TuneFusionLogicRegImm,
+                                         TuneFusionLogicImmReg,
+                                         TuneFusionMulAdd,
+                                         TuneFusionAddMem,
+                                         TuneFusionShiftBitExtract]> {
   let MVendorID = 0x710;
   let MArchID = 0x8000000058000002;
   let MImpID = 0x33d8a600;

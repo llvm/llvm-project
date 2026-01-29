@@ -1,7 +1,7 @@
 # REQUIRES: asserts
 # RUN: llc -mtriple=riscv64-linux-gnu -x=mir < %s \
 # RUN:   -debug-only=machine-scheduler -start-before=machine-scheduler 2>&1 \
-# RUN:   -mattr=+logic-reg-imm-fusion | FileCheck %s
+# RUN:   -mattr=+fusion-logic-reg-imm | FileCheck %s
 
 # Test logic register-immediate fusion: AND/OR/XOR + ANDI/ORI/XORI
 # This fusion combines a logic operation on registers followed by

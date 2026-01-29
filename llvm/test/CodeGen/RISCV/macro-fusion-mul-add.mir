@@ -1,7 +1,7 @@
 # REQUIRES: asserts
 # RUN: llc -mtriple=riscv64-linux-gnu -x=mir < %s \
 # RUN:   -debug-only=machine-scheduler -start-before=machine-scheduler 2>&1 \
-# RUN:   -mattr=+m,+mul-add-fusion | FileCheck %s
+# RUN:   -mattr=+m,+fusion-mul-add | FileCheck %s
 
 # Test mul-add fusion: MUL + ADD and MULW + ADDW
 # This fusion combines a multiplication followed by an addition.
