@@ -130,6 +130,8 @@ void transform::ApplyLowerMultiReductionPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   vector::VectorTransformsOptions vectorTransformOptions;
   vectorTransformOptions.setVectorMultiReductionLowering(getLoweringStrategy());
+  vector::populateVectorMultiReductionInnerOuterDimPatterns(
+      patterns, vectorTransformOptions.vectorMultiReductionLowering);
   vector::populateVectorMultiReductionLoweringPatterns(
       patterns, vectorTransformOptions.vectorMultiReductionLowering);
 }

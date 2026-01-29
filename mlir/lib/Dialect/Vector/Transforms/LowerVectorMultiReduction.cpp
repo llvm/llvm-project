@@ -496,11 +496,18 @@ struct LowerVectorMultiReductionPass
     Operation *op = getOperation();
     MLIRContext *context = op->getContext();
 
-    RewritePatternSet loweringPatterns(context);
-    populateVectorMultiReductionLoweringPatterns(loweringPatterns,
-                                                 this->loweringStrategy);
+    RewritePatternSet innerOuterPatterns(context);
+    populateVectorMultiReductionInnerOuterDimPatterns(innerOuterPatterns,
+                                                      this->loweringStrategy);
 
-    if (failed(applyPatternsGreedily(op, std::move(loweringPatterns))))
+    if (failed(applyPatternsGreedily(op, std::move(innerOuterPatterns))))
+      signalPassFailure();
+
+    RewritePatternSet flatteningPatterns(context);
+    populateVectorMultiReductionFlatteningPatterns(flatteningPatterns,
+                                                   this->loweringStrategy);
+
+    if (failed(applyPatternsGreedily(op, std::move(flatteningPatterns))))
       signalPassFailure();
   }
 
@@ -510,6 +517,27 @@ struct LowerVectorMultiReductionPass
 };
 
 } // namespace
+
+void mlir::vector::populateVectorMultiReductionInnerOuterDimPatterns(
+    RewritePatternSet &patterns, VectorMultiReductionLowering options,
+    PatternBenefit benefit) {
+  patterns.add<OneDimMultiReductionToTwoDim>(patterns.getContext(), benefit);
+  patterns.add<InnerOuterDimReductionConversion>(patterns.getContext(), options,
+                                                 benefit);
+}
+
+void mlir::vector::populateVectorMultiReductionFlatteningPatterns(
+    RewritePatternSet &patterns, VectorMultiReductionLowering options,
+    PatternBenefit benefit) {
+  patterns.add<ReduceMultiDimReductionRank>(patterns.getContext(), options,
+                                            benefit);
+  if (options == VectorMultiReductionLowering ::InnerReduction)
+    patterns.add<TwoDimMultiReductionToReduction>(patterns.getContext(),
+                                                  benefit);
+  else
+    patterns.add<TwoDimMultiReductionToElementWise>(patterns.getContext(),
+                                                    benefit);
+}
 
 void mlir::vector::populateVectorMultiReductionLoweringPatterns(
     RewritePatternSet &patterns, VectorMultiReductionLowering options,
