@@ -5127,6 +5127,12 @@ def HLSLWaveIsFirstLane : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "bool()";
 }
 
+def HLSLWavePrefixCountBits : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_prefix_count_bits"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "unsigned int(bool)";
+}
+
 def HLSLWaveReadLaneAt : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_read_lane_at"];
   let Attributes = [NoThrow, Const];
