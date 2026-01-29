@@ -2792,7 +2792,8 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
   Operation::operand_range lowerBounds = loopOp.getLoopLowerBounds();
   Operation::operand_range upperBounds = loopOp.getLoopUpperBounds();
   Operation::operand_range steps = loopOp.getLoopSteps();
-  llvm::Type * boundType = moduleTranslation.lookupValue(lowerBounds[0])->getType();
+  llvm::Type *boundType =
+      moduleTranslation.lookupValue(lowerBounds[0])->getType();
   llvm::Value *lbVal = nullptr;
   llvm::Value *ubVal = builder.getIntN(boundType->getIntegerBitWidth(), 1);
   llvm::Value *stepVal = nullptr;
@@ -2802,8 +2803,8 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
     // The Collapsed Loop UpperBound is the product of all collapsed
     // loop's tripcount.
     // The LowerBound for collapsed loops is always 1. When the loops are
-    // collapsed, it will reset the bounds and introduce processing to ensure the
-    // index's are presented as expected. As this happens after creating
+    // collapsed, it will reset the bounds and introduce processing to ensure
+    // the index's are presented as expected. As this happens after creating
     // Taskloop, these bounds need predicting. Example:
     // !$omp taskloop collapse(2)
     //   do i = 1, 10
@@ -2812,32 +2813,43 @@ convertOmpTaskloopOp(Operation &opInst, llvm::IRBuilderBase &builder,
     //     end do
     //   end do
     // This loop above has a total of 50 iterations, so the lb will be 1, and
-    // the ub will be 50. collapseLoops in OMPIRBuilder then handles ensuring that i and j are
-    // properly presented when used in the loop.
+    // the ub will be 50. collapseLoops in OMPIRBuilder then handles ensuring
+    // that i and j are properly presented when used in the loop.
     for (uint64_t i = 0; i < loopOp.getCollapseNumLoops(); i++) {
       llvm::Value *loopLb = moduleTranslation.lookupValue(lowerBounds[i]);
       llvm::Value *loopUb = moduleTranslation.lookupValue(upperBounds[i]);
       llvm::Value *loopStep = moduleTranslation.lookupValue(steps[i]);
-      // In some cases, such as where the ub is less than the lb so the loop steps down, the calculation for the loopTripCount is swapped.
-      // To ensure the correct value is found, calculate both UB - LB and LB - UB then select which value to use depending on how the loop has been configured.
-      llvm::Value *loopLbMinusOne = builder.CreateSub(loopLb, builder.getIntN(boundType->getIntegerBitWidth(), 1));
-      llvm::Value *loopUbMinusOne = builder.CreateSub(loopUb, builder.getIntN(boundType->getIntegerBitWidth(), 1));
+      // In some cases, such as where the ub is less than the lb so the loop
+      // steps down, the calculation for the loopTripCount is swapped. To ensure
+      // the correct value is found, calculate both UB - LB and LB - UB then
+      // select which value to use depending on how the loop has been
+      // configured.
+      llvm::Value *loopLbMinusOne = builder.CreateSub(
+          loopLb, builder.getIntN(boundType->getIntegerBitWidth(), 1));
+      llvm::Value *loopUbMinusOne = builder.CreateSub(
+          loopUb, builder.getIntN(boundType->getIntegerBitWidth(), 1));
       llvm::Value *boundsCmp = builder.CreateICmpSLT(loopLb, loopUb);
       llvm::Value *ubMinusLb = builder.CreateSub(loopUb, loopLbMinusOne);
       llvm::Value *lbMinusUb = builder.CreateSub(loopLb, loopUbMinusOne);
-      llvm::Value *loopTripCount = builder.CreateSelect(boundsCmp, ubMinusLb, lbMinusUb);
-      loopTripCount = builder.CreateBinaryIntrinsic(llvm::Intrinsic::abs, loopTripCount, builder.getFalse());
+      llvm::Value *loopTripCount =
+          builder.CreateSelect(boundsCmp, ubMinusLb, lbMinusUb);
+      loopTripCount = builder.CreateBinaryIntrinsic(
+          llvm::Intrinsic::abs, loopTripCount, builder.getFalse());
       // For loops that have a step value not equal to 1, we need to adjust the
       // trip count to ensure the correct number of iterations for the loop is
       // captured.
-      llvm::Value *loopTripCountDivStep = builder.CreateSDiv( loopTripCount, loopStep); 
-      loopTripCountDivStep = builder.CreateBinaryIntrinsic(llvm::Intrinsic::abs, loopTripCountDivStep, builder.getFalse());
-      llvm::Value *loopTripCountRem = builder.CreateSRem(loopTripCount, loopStep);
-      loopTripCountRem = builder.CreateBinaryIntrinsic(llvm::Intrinsic::abs, loopTripCountRem, builder.getFalse());
+      llvm::Value *loopTripCountDivStep =
+          builder.CreateSDiv(loopTripCount, loopStep);
+      loopTripCountDivStep = builder.CreateBinaryIntrinsic(
+          llvm::Intrinsic::abs, loopTripCountDivStep, builder.getFalse());
+      llvm::Value *loopTripCountRem =
+          builder.CreateSRem(loopTripCount, loopStep);
+      loopTripCountRem = builder.CreateBinaryIntrinsic(
+          llvm::Intrinsic::abs, loopTripCountRem, builder.getFalse());
       llvm::Value *needsRoundUp = builder.CreateICmpNE(
           loopTripCountRem,
           builder.getIntN(loopTripCountRem->getType()->getIntegerBitWidth(),
-                          0)); 
+                          0));
       loopTripCount =
           builder.CreateAdd(loopTripCountDivStep,
                             builder.CreateZExtOrTrunc(

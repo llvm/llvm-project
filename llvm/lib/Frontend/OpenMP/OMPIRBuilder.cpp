@@ -2368,8 +2368,8 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
       Value *IVPlusTaskLB = Builder.CreateAdd(
           CLI->getIndVar(),
           Builder.CreateSub(CastedTaskLB, ConstantInt::get(IVTy, 1)));
-      // To ensure every Use is correctly captured, we first want to record which
-      // users to replace the value in, and then replace the value.
+      // To ensure every Use is correctly captured, we first want to record
+      // which users to replace the value in, and then replace the value.
       for (auto IVUse = CLI->getIndVar()->uses().begin();
            IVUse != CLI->getIndVar()->uses().end(); IVUse++) {
         User *IVUser = IVUse->getUser();
