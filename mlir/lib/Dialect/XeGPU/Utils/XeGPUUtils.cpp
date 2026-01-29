@@ -186,8 +186,7 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
     return layout;
   }
 
-  auto layout = getDistributeLayoutAttr(opr.get());
-  return layout;
+  return nullptr;
 }
 
 // Returns the permanent layout attribute for the given result if it's
@@ -361,9 +360,9 @@ bool xegpu::recoverTemporaryLayouts(Operation *rootOp) {
         continue;
       auto layout = xegpu::getDistributeLayoutAttr(operand.get());
       if (!layout) {
-        op->emitError("Could not find layout attribute for operand ")
+        op->emitWarning("Could not find layout attribute for operand ")
             << operand.getOperandNumber() << " of operation " << op->getName();
-        return WalkResult::interrupt();
+        continue;
       }
       xegpu::setDistributeLayoutAttr(operand, layout);
     }

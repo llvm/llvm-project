@@ -32,6 +32,7 @@
 namespace llvm {
 
 class Constant;
+class DataLayout;
 class Module;
 
 template <typename ValueSubClass, typename... Args> class SymbolTableListTraits;
@@ -169,6 +170,11 @@ public:
   /// initializer must not be null.  This may affect the global's alignment if
   /// it isn't explicitly set.
   LLVM_ABI void replaceInitializer(Constant *InitVal);
+
+  /// Get the size of this global variable in bytes.
+  /// This is only a minimum size if this is a declaration or a replaceable
+  /// definition.
+  LLVM_ABI uint64_t getGlobalSize(const DataLayout &DL) const;
 
   /// If the value is a global constant, its value is immutable throughout the
   /// runtime execution of the program.  Assigning a value into the constant

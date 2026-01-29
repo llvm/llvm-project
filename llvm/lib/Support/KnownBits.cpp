@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/Support/KnownBits.h"
+#include "llvm/ADT/Sequence.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -153,6 +154,127 @@ KnownBits KnownBits::computeForSubBorrow(const KnownBits &LHS, KnownBits RHS,
   return ::computeForAddCarry(LHS, RHS,
                               /*CarryZero=*/Borrow.One.getBoolValue(),
                               /*CarryOne=*/Borrow.Zero.getBoolValue());
+}
+
+KnownBits KnownBits::truncSSat(unsigned BitWidth) const {
+  unsigned InputBits = getBitWidth();
+  APInt MinInRange = APInt::getSignedMinValue(BitWidth).sext(InputBits);
+  APInt MaxInRange = APInt::getSignedMaxValue(BitWidth).sext(InputBits);
+  APInt InputMin = getSignedMinValue();
+  APInt InputMax = getSignedMaxValue();
+  KnownBits Known(BitWidth);
+
+  // Case 1: All values fit - just truncate
+  if (InputMin.sge(MinInRange) && InputMax.sle(MaxInRange)) {
+    Known = trunc(BitWidth);
+  }
+  // Case 2: All saturate to min
+  else if (InputMax.slt(MinInRange)) {
+    Known = KnownBits::makeConstant(APInt::getSignedMinValue(BitWidth));
+  }
+  // Case 3: All saturate to max
+  else if (InputMin.sgt(MaxInRange)) {
+    Known = KnownBits::makeConstant(APInt::getSignedMaxValue(BitWidth));
+  }
+  // Case 4: All non-negative, some fit, some saturate to max
+  else if (InputMin.isNonNegative()) {
+    // Output: truncated OR max saturation
+    // Max saturation has only sign bit as 0
+    Known.Zero = APInt(BitWidth, 0);
+    Known.Zero.setBit(BitWidth - 1); // Sign bit always 0
+    // Max saturation has all lower bits as 1, so preserve InputOneLower
+    Known.One = One.trunc(BitWidth);
+    Known.One.clearBit(BitWidth - 1); // Sign bit is 0, not 1
+  }
+  // Case 5: All negative, some fit, some saturate to min
+  else if (InputMax.isNegative()) {
+    // Output: truncated OR min saturation
+    // Min saturation has all lower bits as 0, so preserve InputZeroLower
+    Known.Zero = Zero.trunc(BitWidth);
+    Known.Zero.clearBit(BitWidth - 1); // Sign bit is 1, not 0
+    // Min saturation has only sign bit as 1
+    Known.One = APInt(BitWidth, 0);
+    Known.One.setBit(BitWidth - 1); // Sign bit always 1
+  }
+  // Case 6: Mixed positive and negative
+  else {
+    // Output: min saturation, truncated, or max saturation
+    APInt InputZeroLower = Zero.trunc(BitWidth);
+    APInt InputOneLower = One.trunc(BitWidth);
+    APInt MinSat = APInt::getSignedMinValue(BitWidth);
+    APInt MaxSat = APInt::getSignedMaxValue(BitWidth);
+    KnownBits MinSatKB = KnownBits::makeConstant(MinSat);
+    KnownBits MaxSatKB = KnownBits::makeConstant(MaxSat);
+    if (InputMax.sle(MaxInRange)) {
+      // Positive values fit, only negatives saturate to min
+      Known.Zero = InputZeroLower & MinSatKB.Zero;
+      Known.One = InputOneLower & MinSatKB.One;
+    } else if (InputMin.sge(MinInRange)) {
+      // Negative values fit, only positives saturate to max
+      Known.Zero = InputZeroLower & MaxSatKB.Zero;
+      Known.One = InputOneLower & MaxSatKB.One;
+    } else {
+      // Both positive and negative values might saturate
+      Known.Zero = InputZeroLower & MinSatKB.Zero & MaxSatKB.Zero;
+      Known.One = InputOneLower & MinSatKB.One & MaxSatKB.One;
+    }
+  }
+  return Known;
+}
+
+KnownBits KnownBits::truncSSatU(unsigned BitWidth) const {
+  unsigned InputBits = getBitWidth();
+  APInt MaxInRange = APInt::getAllOnes(BitWidth).zext(InputBits);
+  APInt InputMin = getSignedMinValue();
+  APInt InputMax = getSignedMaxValue();
+  KnownBits Known(BitWidth);
+
+  if (isNegative()) {
+    Known.setAllZero();
+  } else if (InputMin.isNonNegative() && InputMax.ule(MaxInRange)) {
+    Known = trunc(BitWidth);
+  } else if (InputMin.isNonNegative() && InputMin.ugt(MaxInRange)) {
+    Known.setAllOnes();
+  } else if (InputMin.isNonNegative()) {
+    // All non-negative but mixed: some fit, some saturate to all-ones
+    // No common zero bits (saturation is all-ones)
+    Known.Zero = APInt(BitWidth, 0);
+    // Common one bits: bits that are 1 in input stay 1
+    Known.One = One.trunc(BitWidth);
+  } else {
+    // Mixed: sign bit unknown
+    if (InputMax.ule(MaxInRange)) {
+      // Positive values all fit (no saturation to all-ones)
+      // Output: all-zeros (negatives) OR truncated (positives)
+      Known.Zero = Zero.trunc(BitWidth);
+      Known.One = APInt(BitWidth, 0);
+    } else {
+      // Positive values might saturate to all-ones
+      // Output: all-zeros OR truncated OR all-ones
+      // No common bits
+      Known.Zero = APInt(BitWidth, 0);
+      Known.One = APInt(BitWidth, 0);
+    }
+  }
+  return Known;
+}
+
+KnownBits KnownBits::truncUSat(unsigned BitWidth) const {
+  unsigned InputBits = getBitWidth();
+  APInt MaxInRange = APInt::getLowBitsSet(InputBits, BitWidth);
+  APInt InputMax = getMaxValue();
+  APInt InputMin = getMinValue();
+  KnownBits Known(BitWidth);
+
+  if (InputMax.ule(MaxInRange)) {
+    Known = trunc(BitWidth);
+  } else if (InputMin.ugt(MaxInRange)) {
+    Known.setAllOnes();
+  } else {
+    Known.resetAll();
+    Known.One = One.trunc(BitWidth);
+  }
+  return Known;
 }
 
 KnownBits KnownBits::sextInReg(unsigned SrcBitWidth) const {
@@ -479,6 +601,33 @@ KnownBits KnownBits::ashr(const KnownBits &LHS, const KnownBits &RHS,
   if (Known.hasConflict())
     Known.setAllZero();
   return Known;
+}
+
+KnownBits KnownBits::clmul(const KnownBits &LHS, const KnownBits &RHS) {
+  KnownBits Res =
+      makeConstant(APIntOps::clmul(LHS.getMinValue(), RHS.getMinValue()));
+
+  // This is the same operation as clmul except it accumulates the result with
+  // an OR instead of an XOR.
+  auto ClMulOr = [](const APInt &LHS, const APInt &RHS) {
+    unsigned BW = LHS.getBitWidth();
+    assert(BW == RHS.getBitWidth() && "Operand mismatch");
+    APInt Result(BW, 0);
+    for (unsigned I :
+         seq(std::min(RHS.getActiveBits(), BW - LHS.countr_zero())))
+      if (RHS[I])
+        Result |= LHS << I;
+    return Result;
+  };
+
+  // Bits in the result are known if, for every corresponding pair of input
+  // bits, both input bits are known or either input bit is known to be zero.
+  APInt Known = ~(ClMulOr(~LHS.Zero & ~LHS.One, ~RHS.Zero) |
+                  ClMulOr(~LHS.Zero, ~RHS.Zero & ~RHS.One));
+  Res.Zero &= Known;
+  Res.One &= Known;
+
+  return Res;
 }
 
 std::optional<bool> KnownBits::eq(const KnownBits &LHS, const KnownBits &RHS) {
@@ -900,24 +1049,22 @@ KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
   // Where C5, C6 describe the known bits of %a, %b
   // C1, C2 describe the known bottom bits of %a, %b.
   // C7 describes the mask of the known bits of the result.
-  const APInt &Bottom0 = LHS.One;
-  const APInt &Bottom1 = RHS.One;
 
   // How many times we'd be able to divide each argument by 2 (shr by 1).
   // This gives us the number of trailing zeros on the multiplication result.
-  unsigned TrailBitsKnown0 = (LHS.Zero | LHS.One).countr_one();
-  unsigned TrailBitsKnown1 = (RHS.Zero | RHS.One).countr_one();
-  unsigned TrailZero0 = LHS.countMinTrailingZeros();
-  unsigned TrailZero1 = RHS.countMinTrailingZeros();
-  unsigned TrailZ = TrailZero0 + TrailZero1;
+  unsigned TrailBitsKnownLHS = (LHS.Zero | LHS.One).countr_one();
+  unsigned TrailBitsKnownRHS = (RHS.Zero | RHS.One).countr_one();
+  unsigned TrailZeroLHS = LHS.countMinTrailingZeros();
+  unsigned TrailZeroRHS = RHS.countMinTrailingZeros();
+  unsigned TrailZ = TrailZeroLHS + TrailZeroRHS;
 
   // Figure out the fewest known-bits operand.
-  unsigned SmallestOperand =
-      std::min(TrailBitsKnown0 - TrailZero0, TrailBitsKnown1 - TrailZero1);
+  unsigned SmallestOperand = std::min(TrailBitsKnownLHS - TrailZeroLHS,
+                                      TrailBitsKnownRHS - TrailZeroRHS);
   unsigned ResultBitsKnown = std::min(SmallestOperand + TrailZ, BitWidth);
 
-  APInt BottomKnown =
-      Bottom0.getLoBits(TrailBitsKnown0) * Bottom1.getLoBits(TrailBitsKnown1);
+  // The lower ResultBitsKnown bits of this are known.
+  APInt BottomKnown = LHS.One * RHS.One;
 
   KnownBits Res(BitWidth);
   Res.Zero.setHighBits(LeadZ);
@@ -926,13 +1073,13 @@ KnownBits KnownBits::mul(const KnownBits &LHS, const KnownBits &RHS,
 
   if (NoUndefSelfMultiply) {
     // If X has at least TZ trailing zeroes, then bit (2 * TZ + 1) must be zero.
-    unsigned TwoTZP1 = 2 * TrailZero0 + 1;
+    unsigned TwoTZP1 = 2 * TrailZeroLHS + 1;
     if (TwoTZP1 < BitWidth)
       Res.Zero.setBit(TwoTZP1);
 
     // If X has exactly TZ trailing zeros, then bit (2 * TZ + 2) must also be
     // zero.
-    if (TrailZero0 < BitWidth && LHS.One[TrailZero0]) {
+    if (TrailZeroLHS < BitWidth && LHS.One[TrailZeroLHS]) {
       unsigned TwoTZP2 = TwoTZP1 + 1;
       if (TwoTZP2 < BitWidth)
         Res.Zero.setBit(TwoTZP2);
@@ -1095,7 +1242,7 @@ KnownBits KnownBits::urem(const KnownBits &LHS, const KnownBits &RHS) {
   if (RHS.isConstant() && RHS.getConstant().isPowerOf2()) {
     // NB: Low bits set in `remGetLowBits`.
     APInt HighBits = ~(RHS.getConstant() - 1);
-    Known.Zero |= HighBits;
+    Known.Zero |= std::move(HighBits);
     return Known;
   }
 

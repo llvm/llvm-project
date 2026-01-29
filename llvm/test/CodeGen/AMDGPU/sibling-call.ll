@@ -1029,13 +1029,30 @@ entry:
 declare hidden fastcc <3 x i16> @v3i16_fastcc_v3i16(<3 x i16> %arg0)
 
 define hidden fastcc <3 x i16> @sibling_call_v3i16_fastcc_v3i16(<3 x i16> %a) #1 {
-; GCN-LABEL: sibling_call_v3i16_fastcc_v3i16:
-; GCN:       ; %bb.0: ; %entry
-; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    s_getpc_b64 s[16:17]
-; GCN-NEXT:    s_add_u32 s16, s16, v3i16_fastcc_v3i16@rel32@lo+4
-; GCN-NEXT:    s_addc_u32 s17, s17, v3i16_fastcc_v3i16@rel32@hi+12
-; GCN-NEXT:    s_setpc_b64 s[16:17]
+; FIJI-LABEL: sibling_call_v3i16_fastcc_v3i16:
+; FIJI:       ; %bb.0: ; %entry
+; FIJI-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; FIJI-NEXT:    s_getpc_b64 s[16:17]
+; FIJI-NEXT:    s_add_u32 s16, s16, v3i16_fastcc_v3i16@rel32@lo+4
+; FIJI-NEXT:    s_addc_u32 s17, s17, v3i16_fastcc_v3i16@rel32@hi+12
+; FIJI-NEXT:    s_setpc_b64 s[16:17]
+;
+; HAWAII-LABEL: sibling_call_v3i16_fastcc_v3i16:
+; HAWAII:       ; %bb.0: ; %entry
+; HAWAII-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; HAWAII-NEXT:    v_and_b32_e32 v1, 0xffff, v1
+; HAWAII-NEXT:    s_getpc_b64 s[16:17]
+; HAWAII-NEXT:    s_add_u32 s16, s16, v3i16_fastcc_v3i16@rel32@lo+4
+; HAWAII-NEXT:    s_addc_u32 s17, s17, v3i16_fastcc_v3i16@rel32@hi+12
+; HAWAII-NEXT:    s_setpc_b64 s[16:17]
+;
+; GFX9-LABEL: sibling_call_v3i16_fastcc_v3i16:
+; GFX9:       ; %bb.0: ; %entry
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    s_getpc_b64 s[16:17]
+; GFX9-NEXT:    s_add_u32 s16, s16, v3i16_fastcc_v3i16@rel32@lo+4
+; GFX9-NEXT:    s_addc_u32 s17, s17, v3i16_fastcc_v3i16@rel32@hi+12
+; GFX9-NEXT:    s_setpc_b64 s[16:17]
 entry:
   %ret = tail call fastcc <3 x i16> @v3i16_fastcc_v3i16(<3 x i16> %a)
   ret <3 x i16> %ret
