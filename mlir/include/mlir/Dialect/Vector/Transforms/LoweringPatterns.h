@@ -85,6 +85,12 @@ void populateVectorMultiReductionInnerOuterDimPatterns(
 /// form, rewrites n-D vector.multi_reduction into 2-D vector.multi_reduction,
 /// by introducing vector.shape_cast ops to collapse + multi-reduce + expand
 /// back.
+void populateVectorMultiReductionFlatteningPatterns(
+    RewritePatternSet &patterns, VectorMultiReductionLowering options,
+    PatternBenefit benefit = 1);
+
+/// Collect a set of patterns to convert vector.multi_reduction op into
+/// a sequence of vector.reduction ops. The patterns comprise:
 ///
 /// [TwoDimMultiReductionToElementWise]
 /// Once in 2-D vector.multi_reduction form, with an **outermost** reduction
@@ -96,7 +102,7 @@ void populateVectorMultiReductionInnerOuterDimPatterns(
 /// dimension, unroll the outer dimension to obtain a sequence of extract +
 /// vector.reduction + insert. This can further lower to horizontal reduction
 /// ops.
-void populateVectorMultiReductionFlatteningPatterns(
+void populateVectorMultiReductionUnrollingPatterns(
     RewritePatternSet &patterns, VectorMultiReductionLowering options,
     PatternBenefit benefit = 1);
 

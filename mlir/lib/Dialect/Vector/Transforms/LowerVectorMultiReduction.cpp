@@ -509,6 +509,13 @@ struct LowerVectorMultiReductionPass
 
     if (failed(applyPatternsGreedily(op, std::move(flatteningPatterns))))
       signalPassFailure();
+
+    RewritePatternSet unrollingPatterns(context);
+    populateVectorMultiReductionUnrollingPatterns(unrollingPatterns,
+                                                  this->loweringStrategy);
+
+    if (failed(applyPatternsGreedily(op, std::move(unrollingPatterns))))
+      signalPassFailure();
   }
 
   void getDependentDialects(DialectRegistry &registry) const override {
@@ -531,6 +538,11 @@ void mlir::vector::populateVectorMultiReductionFlatteningPatterns(
     PatternBenefit benefit) {
   patterns.add<ReduceMultiDimReductionRank>(patterns.getContext(), options,
                                             benefit);
+}
+
+void mlir::vector::populateVectorMultiReductionUnrollingPatterns(
+    RewritePatternSet &patterns, VectorMultiReductionLowering options,
+    PatternBenefit benefit) {
   if (options == VectorMultiReductionLowering ::InnerReduction)
     patterns.add<TwoDimMultiReductionToReduction>(patterns.getContext(),
                                                   benefit);
