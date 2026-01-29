@@ -129,7 +129,7 @@ int main(int, char**)
             std::future<T> f = p.get_future();
             support::make_test_thread(func5, std::move(p)).detach();
             assert(f.valid());
-            f.get();
+            (void)f.get();
             assert(!f.valid());
         }
 #ifndef TEST_HAS_NO_EXCEPTIONS
@@ -140,7 +140,7 @@ int main(int, char**)
             try
             {
                 assert(f.valid());
-                f.get();
+                (void)f.get();
                 assert(false);
             }
             catch (char i)

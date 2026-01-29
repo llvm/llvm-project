@@ -40,14 +40,14 @@ using IntVec = Vector<int>;
 // HTML-GLOBAL-NEXT:     <h2>Typedefs</h2>
 // HTML-GLOBAL-NEXT:     <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 // HTML-GLOBAL-NEXT:         <pre><code class="language-cpp code-clang-doc">using u_long = unsigned long</code></pre>
-// HTML-GLOBAL-NEXT:         <div>
+// HTML-GLOBAL-NEXT:         <div class="nested-delimiter-container">
 // HTML-GLOBAL-NEXT:             <p> This is u_long</p>
 // HTML-GLOBAL-NEXT:         </div>
 // HTML-GLOBAL-NEXT:         <p>Defined at line 8 of file {{.*}}typedef-alias.cpp</p>
 // HTML-GLOBAL-NEXT:     </div>
 // HTML-GLOBAL-NEXT:     <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 // HTML-GLOBAL-NEXT:         <pre><code class="language-cpp code-clang-doc">typedef IntPtr int *</code></pre>
-// HTML-GLOBAL-NEXT:         <div>
+// HTML-GLOBAL-NEXT:         <div class="nested-delimiter-container">
 // HTML-GLOBAL-NEXT:             <p> This is IntPtr</p>
 // HTML-GLOBAL-NEXT:         </div>
 // HTML-GLOBAL-NEXT:         <p>Defined at line 11 of file {{.*}}typedef-alias.cpp</p>
@@ -74,7 +74,7 @@ using IntVec = Vector<int>;
 // HTML-VECTOR-NEXT:     <h2>Typedefs</h2>
 // HTML-VECTOR-NEXT:     <div id="{{([0-9A-F]{40})}}" class="delimiter-container">
 // HTML-VECTOR-NEXT:         <pre><code class="language-cpp code-clang-doc">using Ptr = IntPtr</code></pre>
-// HTML-VECTOR-NEXT:         <div>
+// HTML-VECTOR-NEXT:         <div class="nested-delimiter-container">
 // HTML-VECTOR-NEXT:             <p> This is a Ptr</p>
 // HTML-VECTOR-NEXT:         </div>
 // HTML-VECTOR-NEXT:         <p>Defined at line 16 of file {{.*}}typedef-alias.cpp</p>

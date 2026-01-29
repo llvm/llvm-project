@@ -12,17 +12,11 @@
 #include <__atomic/atomic_waitable_traits.h>
 #include <__atomic/contention_t.h>
 #include <__atomic/memory_order.h>
-#include <__atomic/to_gcc_order.h>
 #include <__chrono/duration.h>
 #include <__config>
 #include <__memory/addressof.h>
 #include <__thread/poll_with_backoff.h>
-#include <__type_traits/conjunction.h>
 #include <__type_traits/decay.h>
-#include <__type_traits/invoke.h>
-#include <__type_traits/is_same.h>
-#include <__type_traits/void_t.h>
-#include <__utility/declval.h>
 #include <cstring>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -90,7 +84,7 @@ struct __atomic_wait_backoff_impl {
   using __waitable_traits _LIBCPP_NODEBUG = __atomic_waitable_traits<__decay_t<_AtomicWaitable> >;
   using __value_type _LIBCPP_NODEBUG      = typename __waitable_traits::__value_type;
 
-  _LIBCPP_HIDE_FROM_ABI bool operator()(chrono::nanoseconds __elapsed) const {
+  _LIBCPP_HIDE_FROM_ABI __backoff_results operator()(chrono::nanoseconds __elapsed) const {
     if (__elapsed > chrono::microseconds(4)) {
       auto __contention_address = const_cast<const void*>(
           static_cast<const volatile void*>(__waitable_traits::__atomic_contention_address(__a_)));
@@ -98,18 +92,18 @@ struct __atomic_wait_backoff_impl {
       if constexpr (__has_native_atomic_wait<__value_type>) {
         auto __atomic_value = __waitable_traits::__atomic_load(__a_, __order_);
         if (__poll_(__atomic_value))
-          return true;
+          return __backoff_results::__poll_success;
         std::__atomic_wait_native<sizeof(__value_type)>(__contention_address, std::addressof(__atomic_value));
       } else {
         __cxx_contention_t __monitor_val = std::__atomic_monitor_global(__contention_address);
         auto __atomic_value              = __waitable_traits::__atomic_load(__a_, __order_);
         if (__poll_(__atomic_value))
-          return true;
+          return __backoff_results::__poll_success;
         std::__atomic_wait_global_table(__contention_address, __monitor_val);
       }
     } else {
     } // poll
-    return false;
+    return __backoff_results::__continue_poll;
   }
 };
 
@@ -144,16 +138,16 @@ struct __atomic_wait_backoff_impl {
     return __poll_(__current_val);
   }
 
-  _LIBCPP_HIDE_FROM_ABI bool operator()(chrono::nanoseconds __elapsed) const {
+  _LIBCPP_HIDE_FROM_ABI __backoff_results operator()(chrono::nanoseconds __elapsed) const {
     if (__elapsed > chrono::microseconds(4)) {
       auto __contention_address = __waitable_traits::__atomic_contention_address(__a_);
       __cxx_contention_t __monitor_val;
       if (__update_monitor_val_and_poll(__contention_address, __monitor_val))
-        return true;
+        return __backoff_results::__poll_success;
       std::__libcpp_atomic_wait(__contention_address, __monitor_val);
     } else {
     } // poll
-    return false;
+    return __backoff_results::__continue_poll;
   }
 };
 

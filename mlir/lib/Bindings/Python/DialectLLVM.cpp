@@ -37,13 +37,14 @@ struct StructType : PyConcreteType<StructType> {
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirLLVMStructTypeGetTypeID;
   static constexpr const char *pyClassName = "StructType";
+  static inline const MlirStringRef name = mlirLLVMStructTypeGetName();
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {
     c.def_static(
         "get_literal",
-        [](const std::vector<PyType> &elements, bool packed, MlirLocation loc,
-           DefaultingPyMlirContext context) {
+        [](const std::vector<PyType> &elements, bool packed,
+           DefaultingPyLocation loc, DefaultingPyMlirContext context) {
           python::CollectDiagnosticsToStringScope scope(
               mlirLocationGetContext(loc));
           std::vector<MlirType> elements_(elements.size());
@@ -169,6 +170,7 @@ struct PointerType : PyConcreteType<PointerType> {
   static constexpr GetTypeIDFunctionTy getTypeIdFunction =
       mlirLLVMPointerTypeGetTypeID;
   static constexpr const char *pyClassName = "PointerType";
+  static inline const MlirStringRef name = mlirLLVMPointerTypeGetName();
   using Base::Base;
 
   static void bindDerived(ClassTy &c) {

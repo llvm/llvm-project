@@ -25,6 +25,17 @@ namespace {
 
 AST_MATCHER(EnumDecl, hasEnumerators) { return !Node.enumerators().empty(); }
 
+AST_MATCHER(EnumDecl, isExternC) {
+  return Node.getDeclContext()->isExternCContext();
+}
+
+AST_MATCHER_P(EnumDecl, hasTypedefNameForAnonDecl,
+              ast_matchers::internal::Matcher<NamedDecl>, InnerMatcher) {
+  if (const TypedefNameDecl *TD = Node.getTypedefNameForAnonDecl())
+    return InnerMatcher.matches(*TD, Finder, Builder);
+  return false;
+}
+
 const std::uint64_t Min8 =
     std::imaxabs(std::numeric_limits<std::int8_t>::min());
 const std::uint64_t Max8 = std::numeric_limits<std::int8_t>::max();
@@ -90,8 +101,11 @@ bool EnumSizeCheck::isLanguageVersionSupported(
 void EnumSizeCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(
       enumDecl(unless(isExpansionInSystemHeader()), isDefinition(),
-               hasEnumerators(),
-               unless(matchers::matchesAnyListedName(EnumIgnoreList)))
+               hasEnumerators(), unless(isExternC()),
+               unless(anyOf(
+                   matchers::matchesAnyListedRegexName(EnumIgnoreList),
+                   hasTypedefNameForAnonDecl(
+                       matchers::matchesAnyListedRegexName(EnumIgnoreList)))))
           .bind("e"),
       this);
 }
