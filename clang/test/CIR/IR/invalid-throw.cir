@@ -5,7 +5,7 @@
 module {
 
 cir.func dso_local @throw_without_type_info() {
-    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a"]
+    %0 = cir.alloca !s32i, !cir.ptr<!s32i>, ["a"] {alignment = 4 : i64}
     // expected-error @below {{'cir.throw' op 'type_info' symbol attribute missing}}
     cir.throw %0 : !cir.ptr<!s32i>
     cir.unreachable
