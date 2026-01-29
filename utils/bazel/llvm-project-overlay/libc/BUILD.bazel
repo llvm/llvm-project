@@ -2915,7 +2915,7 @@ libc_support_library(
         ":__support_fputil_fma",
         ":__support_macros_config",
         ":__support_common",
-        ":llvm_libc_macros_float128_macros",
+        ":llvm_libc_types_float128",
         ":llvm_libc_macros_float16_macros",
     ],
 )
