@@ -36,7 +36,7 @@ define i32 @main(ptr %c, i32 %0, i1 %tobool4.not, i16 %1) {
 ; CHECK-NEXT:    [[TMP16:%.*]] = xor <4 x i32> [[TMP14]], [[TMP15]]
 ; CHECK-NEXT:    [[TMP18:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
 ; CHECK-NEXT:    [[TMP19:%.*]] = shufflevector <4 x i32> [[TMP16]], <4 x i32> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <4 x i32> [[TMP8]], <4 x i32> [[TMP16]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
+; CHECK-NEXT:    [[TMP20:%.*]] = shufflevector <8 x i32> [[TMP18]], <8 x i32> [[TMP19]], <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
 ; CHECK-NEXT:    [[TMP21:%.*]] = insertelement <8 x i32> <i32 poison, i32 0, i32 0, i32 0, i32 0, i32 0, i32 0, i32 poison>, i32 [[B_0_PH]], i32 0
 ; CHECK-NEXT:    [[TMP22:%.*]] = insertelement <8 x i32> [[TMP21]], i32 [[TMP0]], i32 7
 ; CHECK-NEXT:    br label %[[AH:.*]]
