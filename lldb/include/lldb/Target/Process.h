@@ -2016,9 +2016,30 @@ public:
   ///     the instruction has completed executing.
   bool GetWatchpointReportedAfter();
 
+  /// Load a module image from memory.
+  ///
+  /// \param[in] file_spec
+  ///     The path to use to represent this module. This will show up in the
+  ///     the image list.
+  ///
+  /// \param[in] header_addr
+  ///     The address of the object file header.
+  ///
+  /// \param[in] size_to_read
+  ///     The number of contiguous bytes to read that can be used to provide
+  ///     all of the data for this module in memory. If this value is set to
+  ///     zero, the memory region that contains \a header_addr will be found
+  ///     and the size will be to the end address of this memory region. If
+  ///     there is no memory region info that contains \a header_addr, then
+  ///     default to 512 bytes.
+  ///
+  /// \return
+  ///     A valid module shared pointer if this succeeds, or an empty shared
+  ///     pointer if no ObjectFile plug-ins recognize the object file header or
+  ///     memory can not be read from \a header_addr.
   lldb::ModuleSP ReadModuleFromMemory(const FileSpec &file_spec,
                                       lldb::addr_t header_addr,
-                                      size_t size_to_read = 512);
+                                      size_t size_to_read = 0);
 
   /// Attempt to get the attributes for a region of memory in the process.
   ///

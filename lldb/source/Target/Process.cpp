@@ -2639,6 +2639,26 @@ ModuleSP Process::ReadModuleFromMemory(const FileSpec &file_spec,
       progress_up = std::make_unique<Progress>(
           "Reading binary from memory", file_spec.GetFilename().GetString());
 
+    if (size_to_read == 0) {
+      // No size was provided, figure out the size of the memory region that
+      // contains "header_addr"
+      MemoryRegionInfo header_region_info;
+      Status error(GetMemoryRegionInfo(header_addr, header_region_info));
+      // Default to 512 in case we can't find a memory region.
+      size_to_read = 512;
+      if (error.Success()) {
+        // We found a memory region, set the range of bytes ro read to read to
+        // the end of the memory region. This should be enough to contain the
+        // file header and important bits.
+        const auto &range = header_region_info.GetRange();
+        const addr_t end = range.GetRangeBase() + range.GetByteSize();
+        if (end > header_addr) {
+          const addr_t new_size = end - header_addr;
+          if (new_size > size_to_read)
+            size_to_read = new_size;
+        }
+      }
+    }
     ObjectFile *objfile = module_sp->GetMemoryObjectFile(
         shared_from_this(), header_addr, error, size_to_read);
     if (objfile)

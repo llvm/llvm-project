@@ -597,16 +597,7 @@ void DynamicLoaderPOSIXDYLD::LoadVDSO() {
 
   FileSpec file("[vdso]");
 
-  MemoryRegionInfo info;
-  Status status = m_process->GetMemoryRegionInfo(m_vdso_base, info);
-  if (status.Fail()) {
-    Log *log = GetLog(LLDBLog::DynamicLoader);
-    LLDB_LOG(log, "Failed to get vdso region info: {0}", status);
-    return;
-  }
-
-  if (ModuleSP module_sp = m_process->ReadModuleFromMemory(
-          file, m_vdso_base, info.GetRange().GetByteSize())) {
+  if (ModuleSP module_sp = m_process->ReadModuleFromMemory(file, m_vdso_base)) {
     UpdateLoadedSections(module_sp, LLDB_INVALID_ADDRESS, m_vdso_base, false);
     m_process->GetTarget().GetImages().AppendIfNeeded(module_sp);
   }
