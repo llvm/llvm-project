@@ -455,6 +455,9 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP AND BUILTIN_SUPPORTED_ARCH MATCHES "arm")
       arm/fnan2.c
       arm/fnorm2.c
       arm/funder.c
+      arm/dnan2.c
+      arm/dnorm2.c
+      arm/dunder.c
       )
   endif()
 endif()
