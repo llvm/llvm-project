@@ -8162,12 +8162,11 @@ static SDValue buildFromShuffleMostly(SDValue Op, const SDLoc &DL,
 static SDValue LowerBUILD_VECTORvXbf16(SDValue Op, SelectionDAG &DAG,
                                        const X86Subtarget &Subtarget) {
   MVT VT = Op.getSimpleValueType();
-  MVT IVT =
-      VT.changeVectorElementType(Subtarget.hasFP16() ? MVT::f16 : MVT::i16);
+  MVT SVT = Subtarget.hasFP16() ? MVT::f16 : MVT::i16;
+  MVT IVT = VT.changeVectorElementType(SVT);
   SmallVector<SDValue, 16> NewOps;
   for (unsigned I = 0, E = Op.getNumOperands(); I != E; ++I)
-    NewOps.push_back(DAG.getBitcast(Subtarget.hasFP16() ? MVT::f16 : MVT::i16,
-                                    Op.getOperand(I)));
+    NewOps.push_back(DAG.getBitcast(SVT, Op.getOperand(I)));
   SDValue Res = DAG.getNode(ISD::BUILD_VECTOR, SDLoc(), IVT, NewOps);
   return DAG.getBitcast(VT, Res);
 }
@@ -20185,9 +20184,10 @@ static SDValue vectorizeExtractedCast(SDValue Cast, const SDLoc &DL,
 
   // See if we have a 128-bit vector cast op for this type of cast.
   SDValue VecOp = Extract.getOperand(0);
-  MVT FromVT = VecOp.getSimpleValueType();
+  EVT FromVT = VecOp.getValueType();
   unsigned NumEltsInXMM = 128 / FromVT.getScalarSizeInBits();
-  MVT Vec128VT = MVT::getVectorVT(FromVT.getScalarType(), NumEltsInXMM);
+  MVT Vec128VT =
+      MVT::getVectorVT(FromVT.getScalarType().getSimpleVT(), NumEltsInXMM);
   MVT ToVT = MVT::getVectorVT(DestVT, NumEltsInXMM);
   if (!useVectorCast(Cast.getOpcode(), Vec128VT, ToVT, Subtarget))
     return SDValue();
@@ -43348,6 +43348,23 @@ static SDValue combineTargetShuffle(SDValue N, const SDLoc &DL,
     if ((ZeroMask & (1u << DstIdx)) && !Op1.isUndef())
       return DAG.getNode(X86ISD::INSERTPS, DL, VT, Op0, DAG.getUNDEF(VT),
                          DAG.getTargetConstant(InsertPSMask, DL, MVT::i8));
+
+    // Chained inserts of the same src - prefer splat + blend.
+    // TODO: Splat isn't necessary if they insert into different v2f32 subs.
+    if (Op0.getOpcode() == X86ISD::INSERTPS && Op0.getOperand(1) == Op1) {
+      unsigned InnerPSMask = Op0.getConstantOperandVal(2);
+      unsigned InnerSrcIdx = (InnerPSMask >> 6) & 0x3;
+      unsigned InnerDstIdx = (InnerPSMask >> 4) & 0x3;
+      unsigned InnerZeroMask = InnerPSMask & 0xF;
+      if (SrcIdx == InnerSrcIdx && ZeroMask == 0 && InnerZeroMask == 0) {
+        SmallVector<int, 4> SplatMask(4, (int)SrcIdx);
+        Op1 = DAG.getNode(X86ISD::SHUFP, DL, VT, Op1, Op1,
+                          getV4X86ShuffleImm8ForMask(SplatMask, DL, DAG));
+        unsigned BlendMask = (1 << DstIdx) | (1 << InnerDstIdx);
+        return DAG.getNode(X86ISD::BLENDI, DL, VT, Op0, Op1,
+                           DAG.getTargetConstant(BlendMask, DL, MVT::i8));
+      }
+    }
 
     // Attempt to merge insertps Op1 with an inner target shuffle node.
     SmallVector<int, 8> TargetMask1;
