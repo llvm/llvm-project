@@ -1752,7 +1752,10 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
   Record.push_back(PPOpts.UsePredefines);
   // Detailed record is important since it is used for the module cache hash.
   Record.push_back(PPOpts.DetailedRecord);
-  AddString(PPOpts.ImplicitPCHInclude, Record);
+  if (PPOpts.ImplicitPCHInclude.empty())
+    AddString(PPOpts.ImplicitPCHInclude, Record);
+  else
+    AddPath(PPOpts.ImplicitPCHInclude, Record);
   Record.push_back(static_cast<unsigned>(PPOpts.ObjCXXARCStandardLibrary));
   Stream.EmitRecord(PREPROCESSOR_OPTIONS, Record);
 
@@ -6115,7 +6118,13 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema *SemaPtr, StringRef isysroot,
 
         endian::Writer LE(Out, llvm::endianness::little);
         LE.write<uint8_t>(static_cast<uint8_t>(M.Kind));
-        StringRef Name = M.isModule() ? M.ModuleName : M.FileName;
+        SmallString<128> Name;
+        if (M.isModule())
+          Name = M.ModuleName;
+        else {
+          Name = M.FileName;
+          PreparePathForOutput(Name);
+        }
         LE.write<uint16_t>(Name.size());
         Out.write(Name.data(), Name.size());
 
