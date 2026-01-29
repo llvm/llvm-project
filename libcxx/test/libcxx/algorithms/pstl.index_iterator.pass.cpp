@@ -12,8 +12,7 @@
 
 // Checks the logic of the index wrapper iterator.
 
-#include <algorithm>
-#include <execution>
+#include <__pstl/index_iterator.h>
 #include <iterator>
 #include <type_traits>
 #include <cassert>
