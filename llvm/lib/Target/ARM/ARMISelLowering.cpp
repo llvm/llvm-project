@@ -2439,8 +2439,6 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   auto PtrVt = getPointerTy(DAG.getDataLayout());
 
   if (Subtarget->genLongCalls()) {
-    assert((!isPositionIndependent() || Subtarget->isTargetWindows()) &&
-           "long-calls codegen is not position independent!");
     // Handle a global address or an external symbol. If it's not one of
     // those, the target's already in a register, so we don't need to do
     // anything extra.
@@ -2450,6 +2448,14 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
           ++NumMovwMovt;
         Callee = DAG.getNode(ARMISD::Wrapper, dl, PtrVt,
                              DAG.getTargetGlobalAddress(GVal, dl, PtrVt));
+      } else if (isPositionIndependent() && !Subtarget->isTargetWindows()){
+        SDValue G = DAG.getTargetGlobalAddress(
+              GVal, dl, PtrVt, 0, GVal->isDSOLocal() ? 0 : ARMII::MO_GOT);
+        Callee = DAG.getNode(ARMISD::WrapperPIC, dl, PtrVt, G);
+        if (!GVal->isDSOLocal())
+          Callee =
+              DAG.getLoad(PtrVt, dl, DAG.getEntryNode(), Callee,
+                          MachinePointerInfo::getGOT(DAG.getMachineFunction()));
       } else {
         // Create a constant pool entry for the callee address
         unsigned ARMPCLabelIndex = AFI->createPICLabelUId();
@@ -2483,6 +2489,10 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
         Callee = DAG.getLoad(
             PtrVt, dl, DAG.getEntryNode(), Addr,
             MachinePointerInfo::getConstantPool(DAG.getMachineFunction()));
+        if (isPositionIndependent() && !Subtarget->isTargetWindows()) {
+          SDValue PICLabel = DAG.getConstant(ARMPCLabelIndex, dl, MVT::i32);
+          Callee = DAG.getNode(ARMISD::PIC_ADD, dl, PtrVt, Callee, PICLabel);
+        }
       }
     }
   } else if (isa<GlobalAddressSDNode>(Callee)) {
