@@ -58,7 +58,7 @@ bool RegisterContextFreeBSDKernel_i386::ReadRegister(
   uint32_t reg = reg_info->kinds[lldb::eRegisterKindLLDB];
   switch (reg) {
 #define REG(x)                                                                 \
-  case lldb_##x##_i386:                                                      \
+  case lldb_##x##_i386:                                                        \
     value = pcb.x;                                                             \
     break;
 
