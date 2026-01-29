@@ -11,12 +11,6 @@
 # CHECK-NOT: Running analysis: MachineLoopAnalysis on early_term_in_loop
 # CHECK-NEXT: Loop at depth 1 containing: %bb.1<header><exiting>,%bb.4<latch><exiting>
 
---- |
-  define amdgpu_ps void @early_term_in_loop() {
-    ret void
-  }
-...
-
 ---
 name: early_term_in_loop
 tracksRegLiveness: true
