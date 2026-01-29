@@ -285,9 +285,15 @@ void Options::OutputFormattedUsageText(Stream &strm,
     return;
   }
 
-  // We need to break it up into multiple lines.
+  // We need to break it up into multiple lines. We can do this based on the
+  // formatted text because we know that:
+  // * We only break lines on whitespace, therefore we will not break in the
+  //   middle of a Unicode character or escape code.
+  // * Escape codes are so far not applied to multiple words, so there is no
+  //   risk of breaking up a phrase and the escape code being incorrectly
+  //   applied to the indent too.
 
-  const int allowed_text_width = output_max_columns - strm.GetIndentLevel() - 1;
+  const int max_text_width = output_max_columns - strm.GetIndentLevel() - 1;
   int start = 0;
   int end = start;
   const int final_end = visible_length;
@@ -298,10 +304,10 @@ void Options::OutputFormattedUsageText(Stream &strm,
     while ((start < final_end) && (actual_text[start] == ' '))
       start++;
 
-    end = start + allowed_text_width;
-    if (end > final_end)
+    end = start + max_text_width;
+    if (end > final_end) {
       end = final_end;
-    else {
+    } else {
       // If we're not at the end of the text, make sure we break the line on
       // white space.
       while (end > start && actual_text[end] != ' ' &&
