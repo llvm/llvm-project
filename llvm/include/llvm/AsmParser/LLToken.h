@@ -210,6 +210,10 @@ enum Kind {
   kw_target_mem1,
   kw_errnomem,
 
+  // Target Specific Memory attributes
+  kw_aarch64_fpmr,
+  kw_aarch64_za,
+
   // Legacy attributes:
   kw_argmemonly,
   kw_inaccessiblememonly,

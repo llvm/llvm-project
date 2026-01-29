@@ -2379,6 +2379,29 @@ ExceptionHandling Triple::getDefaultExceptionHandling() const {
   return ExceptionHandling::None;
 }
 
+StringRef Triple::aarch64GetTargetMemLocName(Triple::TargetMemLoc Kind) const {
+  switch (Kind) {
+  case TargetMemLoc::TargetMem0:
+    return "aarch64_fprm: ";
+  case TargetMemLoc::TargetMem1:
+    return "aarch64_za: ";
+  }
+}
+
+StringRef Triple::getTargetMemLocName(TargetMemLoc Kind) const {
+
+  if (isAArch64())
+    return aarch64GetTargetMemLocName(Kind);
+
+  switch (Kind) {
+  case TargetMemLoc::TargetMem0:
+    return "target_mem0: ";
+  case TargetMemLoc::TargetMem1:
+    return "target_mem1: ";
+  }
+  return "unkown";
+}
+
 // HLSL triple environment orders are relied on in the front end
 static_assert(Triple::Vertex - Triple::Pixel == 1,
               "incorrect HLSL stage order");
