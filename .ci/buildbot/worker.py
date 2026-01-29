@@ -291,6 +291,10 @@ class Worker:
         """Convenience wrapper for rmtree()"""
         return rmtree(*args, *kwargs)
 
+    def try_delete(self, *args, **kwargs):
+        """Convenience wrapper for try_delete()"""
+        return try_delete(*args, *kwargs)
+
     def checkout(self, giturl, sourcepath):
         """Convenience wrapper for checkout()"""
         return checkout(giturl, sourcepath)
