@@ -132,8 +132,6 @@ ASM_FUNCTION_RISCV_RE = re.compile(
     flags=(re.M | re.S),
 )
 
-# Comment character is ; instead of #.  Instead of .cfi_startproc at
-# the beginning we have .cfi_endproc at the end of the function.
 ASM_FUNCTION_RISCV_MACHO_RE = re.compile(
     r'^_?(?P<func>[^:]+):[ \t]*;[ \t]*@"?(?P=func)"?\n'
     r"(?:\s*\.?L(?P=func)\$local:\n)?"  # optional .L<func>$local: due to -fno-semantic-interposition
