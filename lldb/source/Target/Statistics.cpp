@@ -153,6 +153,11 @@ TargetStats::ToJSON(Target &target,
                                       m_load_core_time.get().count());
     }
 
+    if (m_first_bt_time_set) {
+      target_metrics_json.try_emplace("activeTimeToFirstBt",
+                                      m_active_time_to_first_bt.get().count());
+    }
+
     json::Array breakpoints_array;
     double totalBreakpointResolveTime = 0.0;
     // Report both the normal breakpoint list and the internal breakpoint list.
@@ -511,6 +516,62 @@ llvm::json::Value DebuggerStats::ReportStatistics(
   }
 
   return std::move(global_stats);
+}
+
+void TargetStats::SetFirstBtTime(lldb::ProcessSP process_sp, Thread &thread) {
+  if (m_first_bt_time_set)
+    return;
+
+  // Our goal here is to calculate the total active time to get to the first bt
+  // so this will be the target creation time, or the load core time plus all
+  // the time to load and index modules and their debug info.
+  double elapsed_time = 0.0;
+  // GetStackFrameCount can be expensive, but at this point we should
+  // have completed a BT successfully, so the frames should already
+  // exist.
+  for (size_t i = 0; i < thread.GetStackFrameCount(); ++i) {
+    lldb::StackFrameSP frame_sp = thread.GetStackFrameAtIndex(i);
+    if (!frame_sp)
+      continue;
+
+    lldb::ModuleSP module_sp =
+        frame_sp->GetSymbolContext(lldb::eSymbolContextModule).module_sp;
+    if (!module_sp)
+      continue;
+
+    // Add the time it took to load and index the module.
+    elapsed_time += module_sp->GetSymtabParseTime().get().count();
+
+    // Walk over all the symbol locators and add their time. A symbol locator
+    // could have been called and no symbol was found.
+    for (const auto &entry : module_sp->GetSymbolLocatorStatistics().map) {
+      elapsed_time += entry.second;
+    }
+
+    // Add the time it took to load and index the debug info. Can create
+    // false is very important here. We don't want this call to have any side
+    // effects.
+    SymbolFile *sym_file = module_sp->GetSymbolFile(/*can_create=*/false);
+    if (!sym_file)
+      continue;
+
+    elapsed_time += sym_file->GetDebugInfoParseTime().count();
+  }
+
+  // Process should be valid if we've already generated a backtrace.
+  assert(process_sp);
+  m_first_bt_time_set = true;
+  m_active_time_to_first_bt += std::chrono::duration<double>(elapsed_time);
+  if (process_sp->IsLiveDebugSession()) {
+
+    // If we are in a live debug session, then the target creation time is
+    // the time it took to load the executable and all the modules.
+    m_active_time_to_first_bt += m_create_time.get();
+  } else {
+    // If we are in a core file, then the target creation time is the time it
+    // took to load the core file.
+    m_active_time_to_first_bt += m_load_core_time.get();
+  }
 }
 
 llvm::json::Value SummaryStatistics::ToJSON() const {

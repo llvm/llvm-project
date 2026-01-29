@@ -28,6 +28,7 @@ class TestStatsAPI(TestBase):
         self.assertTrue(target.GetCollectingStats())
         target.SetCollectingStats(False)
         self.assertFalse(target.GetCollectingStats())
+        self.runCmd("bt")
 
         # Test the function to get the statistics in JSON'ish.
         stats = target.GetStatistics()
@@ -48,7 +49,7 @@ class TestStatsAPI(TestBase):
         self.assertIn(
             "expressionEvaluation",
             stats_json,
-            'Make sure the "expressionEvaluation" key in in target.GetStatistics()["targets"][0]',
+            'Make sure the "expressionEvaluation" key is in target.GetStatistics()["targets"][0]',
         )
         self.assertIn(
             "frameVariable",
@@ -60,6 +61,12 @@ class TestStatsAPI(TestBase):
             stats_json,
             "LoadCoreTime should not be present in a live, non-coredump target",
         )
+        self.assertIn(
+            "activeTimeToFirstBt",
+            stats_json,
+            'Make sure the "activeTimeToFirstBt" key in in target.GetStatistics()["targets"][0]',
+        )
+        self.assertTrue(float(stats_json["activeTimeToFirstBt"]) > 0.0)
         expressionEvaluation = stats_json["expressionEvaluation"]
         self.assertIn(
             "successes",
@@ -175,6 +182,7 @@ class TestStatsAPI(TestBase):
         target = self.dbg.CreateTarget(None)
         process = target.LoadCore(minidump_path)
         self.assertTrue(process.IsValid())
+        self.runCmd("bt")
 
         stats_options = lldb.SBStatisticsOptions()
         stats = target.GetStatistics(stats_options)
@@ -182,6 +190,17 @@ class TestStatsAPI(TestBase):
         stats.GetAsJSON(stream)
         debug_stats = json.loads(stream.GetData())
         self.assertTrue("targets" in debug_stats)
-        target_info = debug_stats["targets"][0]
-        self.assertTrue("loadCoreTime" in target_info)
-        self.assertTrue(float(target_info["loadCoreTime"]) > 0.0)
+
+        target_stats = debug_stats["targets"][0]
+        self.assertIn(
+            "loadCoreTime",
+            target_stats,
+            "Ensure load core time is present in target statistics",
+        )
+        self.assertTrue(float(target_stats["loadCoreTime"]) > 0.0)
+        self.assertIn(
+            "activeTimeToFirstBt",
+            target_stats,
+            'Make sure the "activeTimeToFirstBt" key is in target.GetStatistics()["targets"][0]',
+        )
+        self.assertTrue(float(target_stats["activeTimeToFirstBt"]) > 0.0)
