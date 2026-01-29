@@ -4404,7 +4404,8 @@ SDValue SITargetLowering::LowerCall(CallLoweringInfo &CLI,
         if (const Argument *Arg = dyn_cast<Argument>(ArgOperand))
           IsFromInRegParam = Arg->hasInRegAttr();
       }
-      if ((IsChainCallConv || !Val->isDivergent() || IsFromInRegParam) &&
+      if ((IsChainCallConv || (!Val->isDivergent() && TokenGlue) ||
+           (IsFromInRegParam && Val->isDivergent())) &&
           TRI->isSGPRPhysReg(Reg)) {
         // For chain calls, the inreg arguments are required to be
         // uniform. Speculatively Insert a readfirstlane in case we cannot prove
