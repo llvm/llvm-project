@@ -301,6 +301,12 @@ struct VPlanTransforms {
                                          VPlan &Plan, VPBasicBlock *HeaderVPBB,
                                          VPBasicBlock *LatchVPBB);
 
+  /// Replaces the exit condition from
+  ///   (branch-on-count CanonicalIVInc, VectorTripCount)
+  /// to
+  ///   (branch-on-cond eq AVLNext, 0)
+  static void convertEVLExitCond(VPlan &Plan);
+
   /// Replace loop regions with explicit CFG.
   static void dissolveLoopRegions(VPlan &Plan);
 
@@ -316,12 +322,6 @@ struct VPlanTransforms {
   ///  * Makes EVL-Phi concrete.
   //   * Removes CanonicalIV and increment.
   static void canonicalizeEVLLoops(VPlan &Plan);
-
-  /// Replaces the exit condition from
-  ///   (branch-on-count CanonicalIVInc, VectorTripCount)
-  /// to
-  ///   (branch-on-cond eq AVLNext, 0)
-  static void convertEVLExitCond(VPlan &Plan);
 
   /// Lower abstract recipes to concrete ones, that can be codegen'd.
   static void convertToConcreteRecipes(VPlan &Plan);

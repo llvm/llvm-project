@@ -3247,9 +3247,9 @@ void VPlanTransforms::addExplicitVectorLength(
   Plan.setUF(1);
 }
 
-/// Find EVL loop entries by locating VPEVLBasedIVPHIRecipe.
-/// There should be only one EVL PHI in the entire plan.
-static VPEVLBasedIVPHIRecipe *findEVLPhi(VPlan &Plan) {
+void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
+  // Find EVL loop entries by locating VPEVLBasedIVPHIRecipe.
+  // There should be only one EVL PHI in the entire plan.
   VPEVLBasedIVPHIRecipe *EVLPhi = nullptr;
 
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
@@ -3260,11 +3260,6 @@ static VPEVLBasedIVPHIRecipe *findEVLPhi(VPlan &Plan) {
         EVLPhi = PhiR;
       }
 
-  return EVLPhi;
-}
-
-void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
-  VPEVLBasedIVPHIRecipe *EVLPhi = findEVLPhi(Plan);
   // Early return if no EVL PHI is found.
   if (!EVLPhi)
     return;
@@ -3294,7 +3289,17 @@ void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
 }
 
 void VPlanTransforms::convertEVLExitCond(VPlan &Plan) {
-  VPEVLBasedIVPHIRecipe *EVLPhi = findEVLPhi(Plan);
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  // The canonical IV may not exist at this stage.
+  if (!LoopRegion ||
+      !isa<VPCanonicalIVPHIRecipe>(LoopRegion->getEntryBasicBlock()->front()))
+    return;
+  VPCanonicalIVPHIRecipe *CanIV = LoopRegion->getCanonicalIV();
+  if (!CanIV || std::next(CanIV->getIterator()) == CanIV->getParent()->end())
+    return;
+  // The EVL IV is always immediately after the canonical IV.
+  auto *EVLPhi =
+      dyn_cast_or_null<VPEVLBasedIVPHIRecipe>(std::next(CanIV->getIterator()));
   if (!EVLPhi)
     return;
 
@@ -3315,16 +3320,13 @@ void VPlanTransforms::convertEVLExitCond(VPlan &Plan) {
                      m_Specific(Plan.getTripCount()), m_VPValue(AVLNext)));
   assert(FoundAVLNext && "Didn't find AVL backedge?");
 
-  VPBasicBlock *HeaderVPBB = EVLPhi->getParent();
-  VPBasicBlock *LatchExiting =
-      HeaderVPBB->getPredecessors()[1]->getEntryBasicBlock();
-  auto *LatchExitingBr = cast<VPInstruction>(LatchExiting->getTerminator());
-  if (match(LatchExitingBr, m_BranchOnCond(m_True())))
+  VPBasicBlock *Latch = LoopRegion->getExitingBasicBlock();
+  auto *LatchBr = cast<VPInstruction>(Latch->getTerminator());
+  if (match(LatchBr, m_BranchOnCond(m_True())))
     return;
 
-  [[maybe_unused]] auto *CanIV = cast<VPPhi>(&*EVLPhi->getParent()->begin());
   assert(
-      match(LatchExitingBr,
+      match(LatchBr,
             m_BranchOnCond(m_SpecificCmp(
                 CmpInst::ICMP_EQ, m_Specific(CanIV->getIncomingValue(1)),
                 m_Specific(&Plan.getVectorTripCount())))) &&
@@ -3332,10 +3334,9 @@ void VPlanTransforms::convertEVLExitCond(VPlan &Plan) {
       "trip count");
 
   Type *AVLTy = VPTypeAnalysis(Plan).inferScalarType(AVLNext);
-  VPBuilder Builder(LatchExitingBr);
-  LatchExitingBr->setOperand(0,
-                             Builder.createICmp(CmpInst::ICMP_EQ, AVLNext,
-                                                Plan.getConstantInt(AVLTy, 0)));
+  VPBuilder Builder(LatchBr);
+  LatchBr->setOperand(0, Builder.createICmp(CmpInst::ICMP_EQ, AVLNext,
+                                            Plan.getConstantInt(AVLTy, 0)));
 }
 
 void VPlanTransforms::replaceSymbolicStrides(
