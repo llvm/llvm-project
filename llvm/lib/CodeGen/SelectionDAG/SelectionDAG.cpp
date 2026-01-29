@@ -3883,19 +3883,17 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::CTTZ:
   case ISD::CTTZ_ZERO_UNDEF: {
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    // If we have a known 1, its position is our upper bound.
-    unsigned PossibleTZ = Known2.countMaxTrailingZeros();
-    unsigned LowBits = llvm::bit_width(PossibleTZ);
-    Known.Zero.setBitsFrom(LowBits);
+    APInt MinCount(BitWidth, Known2.countMinTrailingZeros());
+    APInt MaxCount(BitWidth, Known2.countMaxTrailingZeros());
+    Known = ConstantRange::getNonEmpty(MinCount, MaxCount + 1).toKnownBits();
     break;
   }
   case ISD::CTLZ:
   case ISD::CTLZ_ZERO_UNDEF: {
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    // If we have a known 1, its position is our upper bound.
-    unsigned PossibleLZ = Known2.countMaxLeadingZeros();
-    unsigned LowBits = llvm::bit_width(PossibleLZ);
-    Known.Zero.setBitsFrom(LowBits);
+    APInt MinCount(BitWidth, Known2.countMinLeadingZeros());
+    APInt MaxCount(BitWidth, Known2.countMaxLeadingZeros());
+    Known = ConstantRange::getNonEmpty(MinCount, MaxCount + 1).toKnownBits();
     break;
   }
   case ISD::CTLS: {
@@ -3908,9 +3906,9 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   }
   case ISD::CTPOP: {
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    // If we know some of the bits are zero, they can't be one.
-    unsigned PossibleOnes = Known2.countMaxPopulation();
-    Known.Zero.setBitsFrom(llvm::bit_width(PossibleOnes));
+    APInt MinCount(BitWidth, Known2.countMinPopulation());
+    APInt MaxCount(BitWidth, Known2.countMaxPopulation());
+    Known = ConstantRange::getNonEmpty(MinCount, MaxCount + 1).toKnownBits();
     break;
   }
   case ISD::PARITY: {
