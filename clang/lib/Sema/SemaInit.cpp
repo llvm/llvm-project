@@ -5645,22 +5645,22 @@ static void TryReferenceInitializationCore(Sema &S,
     //   applied.
     // Postpone address space conversions to after the temporary materialization
     // conversion to allow creating temporaries in the alloca address space.
-    auto T1QualsIgnoreConvertions = T1Quals;
-    auto T2QualsIgnoreConvertions = T2Quals;
+    auto T1QualsIgnoreConversions = T1Quals;
+    auto T2QualsIgnoreConversions = T2Quals;
     if (T1Quals.getAddressSpace() != T2Quals.getAddressSpace()) {
-      T1QualsIgnoreConvertions.removeAddressSpace();
-      T2QualsIgnoreConvertions.removeAddressSpace();
+      T1QualsIgnoreConversions.removeAddressSpace();
+      T2QualsIgnoreConversions.removeAddressSpace();
     }
     // Postpone ObjC lifetime conversions to after the temporary materialization
     // conversion, similar to address space conversions. This handles cases like
     // binding a __strong rvalue to a const __autoreleasing reference.
     if (T1Quals.getObjCLifetime() != T2Quals.getObjCLifetime()) {
-      T1QualsIgnoreConvertions.removeObjCLifetime();
-      T2QualsIgnoreConvertions.removeObjCLifetime();
+      T1QualsIgnoreConversions.removeObjCLifetime();
+      T2QualsIgnoreConversions.removeObjCLifetime();
     }
     QualType cv1T4 =
-        S.Context.getQualifiedType(cv2T2, T1QualsIgnoreConvertions);
-    if (T1QualsIgnoreConvertions != T2QualsIgnoreConvertions)
+        S.Context.getQualifiedType(cv2T2, T1QualsIgnoreConversions);
+    if (T1QualsIgnoreConversions != T2QualsIgnoreConversions)
       Sequence.AddQualificationConversionStep(cv1T4, ValueKind);
     Sequence.AddReferenceBindingStep(cv1T4, ValueKind == VK_PRValue);
     ValueKind = isLValueRef ? VK_LValue : VK_XValue;
