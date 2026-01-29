@@ -2385,12 +2385,61 @@ genParallelOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
 
 static mlir::omp::ScanOp
 genScanOp(lower::AbstractConverter &converter, lower::SymMap &symTable,
-          semantics::SemanticsContext &semaCtx, mlir::Location loc,
-          const ConstructQueue &queue, ConstructQueue::const_iterator item) {
+          semantics::SemanticsContext &semaCtx, lower::pft::Evaluation &eval,
+          mlir::Location loc, const ConstructQueue &queue,
+          ConstructQueue::const_iterator item) {
   mlir::omp::ScanOperands clauseOps;
   genScanClauses(converter, semaCtx, item->clauses, loc, clauseOps);
-  return mlir::omp::ScanOp::create(converter.getFirOpBuilder(),
-                                   converter.getCurrentLocation(), clauseOps);
+  mlir::omp::ScanOp scanOp = mlir::omp::ScanOp::create(
+      converter.getFirOpBuilder(), converter.getCurrentLocation(), clauseOps);
+
+  /// Scan reduction is not implemented with nested workshare loops, linear
+  /// clause, tiling
+  mlir::omp::LoopNestOp loopNestOp =
+      scanOp->getParentOfType<mlir::omp::LoopNestOp>();
+  llvm::SmallVector<mlir::omp::LoopWrapperInterface> loopWrappers;
+  loopNestOp.gatherWrappers(loopWrappers);
+  mlir::Operation *loopWrapperOp = loopWrappers.front().getOperation();
+  if (llvm::isa<mlir::omp::SimdOp>(loopWrapperOp))
+    TODO(loc, "unsupported simd");
+  if (loopWrappers.size() > 1)
+    TODO(loc, "unsupported composite");
+  mlir::omp::WsloopOp wsLoopOp = llvm::cast<mlir::omp::WsloopOp>(loopWrapperOp);
+  // mlir::omp::WsloopOp wsLoopOp =
+  // scanOp->getParentOfType<mlir::omp::WsloopOp>();
+  bool isNested =
+      (loopNestOp.getNumLoops() > 1) ||
+      (wsLoopOp && (wsLoopOp->getParentOfType<mlir::omp::WsloopOp>()));
+  if (isNested)
+    TODO(loc, "Scan directive inside nested workshare loops");
+  if (wsLoopOp && !wsLoopOp.getLinearVars().empty())
+    TODO(loc, "Scan directive with linear clause");
+  if (loopNestOp.getTileSizes())
+    TODO(loc, "Scan directive with loop tiling");
+
+  // All loop indices should be loaded after the scan construct as otherwise,
+  // it would result in using the index variable across scan directive.
+  // (`Intra-iteration dependences from a statement in the structured
+  // block sequence that precede a scan directive to a statement in the
+  // structured block sequence that follows a scan directive must not exist,
+  // except for dependences for the list items specified in an inclusive or
+  // exclusive clause.`).
+  // TODO: Nested loops are not handled.
+  mlir::Region &region = loopNestOp->getRegion(0);
+  mlir::Value indexVal = fir::getBase(region.getArgument(0));
+  lower::pft::Evaluation *doConstructEval = eval.parentConstruct;
+  fir::FirOpBuilder &firOpBuilder = converter.getFirOpBuilder();
+  lower::pft::Evaluation *doLoop = &doConstructEval->getFirstNestedEvaluation();
+  auto *doStmt = doLoop->getIf<parser::NonLabelDoStmt>();
+  assert(doStmt && "Expected do loop to be in the nested evaluation");
+  const auto &loopControl =
+      std::get<std::optional<parser::LoopControl>>(doStmt->t);
+  const parser::LoopControl::Bounds *bounds =
+      std::get_if<parser::LoopControl::Bounds>(&loopControl->u);
+  mlir::Operation *storeOp =
+      setLoopVar(converter, loc, indexVal, bounds->name.thing.symbol);
+  firOpBuilder.setInsertionPointAfter(storeOp);
+  return scanOp;
 }
 
 static mlir::omp::SectionsOp
@@ -3609,7 +3658,7 @@ static void genOMPDispatch(lower::AbstractConverter &converter,
                                   loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_scan:
-    newOp = genScanOp(converter, symTable, semaCtx, loc, queue, item);
+    newOp = genScanOp(converter, symTable, semaCtx, eval, loc, queue, item);
     break;
   case llvm::omp::Directive::OMPD_section:
     llvm_unreachable("genOMPDispatch: OMPD_section");
