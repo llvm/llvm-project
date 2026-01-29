@@ -32,12 +32,14 @@
 #include "llvm/CodeGen/GlobalISel/GISelValueTracking.h"
 #include "llvm/CodeGen/GlobalISel/GenericMachineInstrs.h"
 #include "llvm/CodeGen/GlobalISel/MIPatternMatch.h"
+#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePassManager.h"
 #include "llvm/CodeGen/PseudoSourceValueManager.h"
 #include "llvm/CodeGen/SDPatternMatch.h"
+#include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
@@ -10088,6 +10090,17 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                : DAG.getPOISON(VT);
   case Intrinsic::amdgcn_wave_id:
     return lowerWaveID(DAG, Op);
+  case Intrinsic::amdgcn_gfx9_wave_id: {
+    MVT VT = MVT::i32;
+    auto Ratio = DAG.getAnyExtOrTrunc(Op.getOperand(0), DL, VT);
+
+    SDValue WorkGrpId = lowerWorkGroupId(DAG, *MFI, VT,
+                            AMDGPUFunctionArgInfo::WORKGROUP_ID_X,
+                            AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_MAX_ID_X,
+                            AMDGPUFunctionArgInfo::CLUSTER_WORKGROUP_ID_X);
+
+    return DAG.getNode(ISD::MUL, DL, VT, WorkGrpId, Ratio);
+  }
   case Intrinsic::amdgcn_lds_kernel_id: {
     if (MFI->isEntryFunction())
       return getLDSKernelId(DAG, DL);

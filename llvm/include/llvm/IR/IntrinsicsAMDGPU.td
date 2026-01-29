@@ -2819,6 +2819,9 @@ def int_amdgcn_global_load_lds : AMDGPUGlobalLoadLDS;
 def int_amdgcn_pops_exiting_wave_id :
   DefaultAttrsIntrinsic<[llvm_i32_ty], [], [IntrNoMem, IntrHasSideEffects]>;
 
+// i32 @llvm.amdgcn.gfx9_wave_id(i32)
+def int_amdgcn_gfx9_wave_id : DefaultAttrsIntrinsic<[llvm_i32_ty], [llvm_i32_ty], [IntrNoMem, IntrConvergent]>;
+
 //===----------------------------------------------------------------------===//
 // GFX10 Intrinsics
 //===----------------------------------------------------------------------===//
