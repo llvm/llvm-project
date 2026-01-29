@@ -62,7 +62,7 @@ void AMDGPUDialect::initialize() {
       >();
   addAttributes<
 #define GET_ATTRDEF_LIST
-#include "mlir/Dialect/AMDGPU/IR/AMDGPUAttributes.cpp.inc"
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUAttrs.cpp.inc"
       >();
   addInterfaces<AMDGPUInlinerInterface>();
 }

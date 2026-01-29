@@ -25,6 +25,7 @@
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h.inc"
 
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUEnums.h.inc"
+#include "mlir/Dialect/AMDGPU/IR/AMDGPUAttributes.h.inc"
 #include "mlir/Dialect/AMDGPU/IR/AMDGPUTypes.h.inc"
 
 namespace mlir::amdgpu {
