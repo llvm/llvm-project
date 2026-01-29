@@ -285,6 +285,9 @@ private:
                                      uint32_t &gnu_debuglink_crc,
                                      lldb_private::ArchSpec &arch_spec);
 
+  // Use Note Section to get uuid.
+  lldb_private::UUID GetUUIDByNoteSection();
+
   /// Scans the dynamic section and locates all dependent modules (shared
   /// libraries) populating m_filespec_up.  This method will compute the
   /// dependent module list only once.  Returns the number of dependent

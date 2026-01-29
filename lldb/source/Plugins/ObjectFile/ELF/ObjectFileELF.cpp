@@ -856,6 +856,32 @@ bool ObjectFileELF::ParseHeader() {
   return m_header.Parse(*m_data_nsp, &offset);
 }
 
+UUID ObjectFileELF::GetUUIDByNoteSection() {
+  if (!ParseProgramHeaders())
+    return UUID();
+  for (const ELFProgramHeader &H : m_program_headers) {
+    if (H.p_type == llvm::ELF::PT_NOTE) {
+      const elf_off ph_offset = H.p_offset;
+      const size_t ph_size = H.p_filesz;
+
+      DataExtractor segment_data;
+      if (segment_data.SetData(m_data, ph_offset, ph_size) != ph_size) {
+        // The ELF program header contained incorrect data, probably corefile
+        // is incomplete or corrupted.
+        break;
+      }
+
+      UUID uuid;
+      ArchSpec arch;
+
+      if (RefineModuleDetailsFromNote(segment_data, arch, uuid).Success())
+        return uuid;
+    }
+  }
+
+  return UUID();
+}
+
 UUID ObjectFileELF::GetUUID() {
   if (m_uuid)
     return m_uuid;
@@ -887,6 +913,9 @@ UUID ObjectFileELF::GetUUID() {
 
       if (!ParseProgramHeaders())
         return UUID();
+
+      if ((m_uuid = GetUUIDByNoteSection()).IsValid())
+        return m_uuid;
 
       core_notes_crc =
           CalculateELFNotesSegmentsCRC32(m_program_headers, *m_data_nsp);
