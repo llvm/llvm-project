@@ -24,6 +24,7 @@
 #include "mlir/Interfaces/ViewLikeInterface.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 
 using namespace mlir;
 using namespace mlir::memref;
@@ -340,10 +341,9 @@ LogicalResult ReallocOp::verify() {
            << sourceType << " and result memref type " << resultType;
 
   // The source memref and the result memref should have the same element type.
-  if (sourceType.getElementType() != resultType.getElementType())
-    return emitError("different element types specified for source memref "
-                     "type ")
-           << sourceType << " and result memref type " << resultType;
+  if (failed(verifyElementTypesMatch(*this, sourceType, resultType, "source",
+                                     "result")))
+    return failure();
 
   // Verify that we have the dynamic dimension operand when it is needed.
   if (resultType.getNumDynamicDims() && !getDynamicResultSize())
@@ -1705,7 +1705,24 @@ OpFoldResult LoadOp::fold(FoldAdaptor adaptor) {
   /// load(memrefcast) -> load
   if (succeeded(foldMemRefCast(*this)))
     return getResult();
-  return OpFoldResult();
+
+  // Fold load from a global constant memref.
+  auto getGlobalOp = getMemref().getDefiningOp<memref::GetGlobalOp>();
+  if (!getGlobalOp)
+    return {};
+
+  // Get to the memref.global defining the symbol.
+  auto global = SymbolTable::lookupNearestSymbolFrom<memref::GlobalOp>(
+      getGlobalOp, getGlobalOp.getNameAttr());
+  if (!global)
+    return {};
+  // If it's a splat constant, we can fold irrespective of indices.
+  auto splatAttr =
+      dyn_cast_or_null<SplatElementsAttr>(global.getConstantInitValue());
+  if (!splatAttr)
+    return {};
+
+  return splatAttr.getSplatValue<Attribute>();
 }
 
 FailureOr<std::optional<SmallVector<Value>>>
@@ -1916,14 +1933,12 @@ void ReinterpretCastOp::build(OpBuilder &b, OperationState &result,
                               int64_t offset, ArrayRef<int64_t> sizes,
                               ArrayRef<int64_t> strides,
                               ArrayRef<NamedAttribute> attrs) {
-  SmallVector<OpFoldResult> sizeValues =
-      llvm::to_vector<4>(llvm::map_range(sizes, [&](int64_t v) -> OpFoldResult {
+  SmallVector<OpFoldResult> sizeValues = llvm::map_to_vector<4>(
+      sizes, [&](int64_t v) -> OpFoldResult { return b.getI64IntegerAttr(v); });
+  SmallVector<OpFoldResult> strideValues =
+      llvm::map_to_vector<4>(strides, [&](int64_t v) -> OpFoldResult {
         return b.getI64IntegerAttr(v);
-      }));
-  SmallVector<OpFoldResult> strideValues = llvm::to_vector<4>(
-      llvm::map_range(strides, [&](int64_t v) -> OpFoldResult {
-        return b.getI64IntegerAttr(v);
-      }));
+      });
   build(b, result, resultType, source, b.getI64IntegerAttr(offset), sizeValues,
         strideValues, attrs);
 }
@@ -1932,10 +1947,10 @@ void ReinterpretCastOp::build(OpBuilder &b, OperationState &result,
                               MemRefType resultType, Value source, Value offset,
                               ValueRange sizes, ValueRange strides,
                               ArrayRef<NamedAttribute> attrs) {
-  SmallVector<OpFoldResult> sizeValues = llvm::to_vector<4>(
-      llvm::map_range(sizes, [](Value v) -> OpFoldResult { return v; }));
-  SmallVector<OpFoldResult> strideValues = llvm::to_vector<4>(
-      llvm::map_range(strides, [](Value v) -> OpFoldResult { return v; }));
+  SmallVector<OpFoldResult> sizeValues =
+      llvm::map_to_vector<4>(sizes, [](Value v) -> OpFoldResult { return v; });
+  SmallVector<OpFoldResult> strideValues = llvm::map_to_vector<4>(
+      strides, [](Value v) -> OpFoldResult { return v; });
   build(b, result, resultType, source, offset, sizeValues, strideValues, attrs);
 }
 
@@ -1948,9 +1963,9 @@ LogicalResult ReinterpretCastOp::verify() {
   if (srcType.getMemorySpace() != resultType.getMemorySpace())
     return emitError("different memory spaces specified for source type ")
            << srcType << " and result memref type " << resultType;
-  if (srcType.getElementType() != resultType.getElementType())
-    return emitError("different element types specified for source type ")
-           << srcType << " and result memref type " << resultType;
+  if (failed(verifyElementTypesMatch(*this, srcType, resultType, "source",
+                                     "result")))
+    return failure();
 
   // Match sizes in result memref type and in static_sizes attribute.
   for (auto [idx, resultSize, expectedSize] :
@@ -3050,18 +3065,16 @@ void SubViewOp::build(OpBuilder &b, OperationState &result, Value source,
                       ArrayRef<int64_t> offsets, ArrayRef<int64_t> sizes,
                       ArrayRef<int64_t> strides,
                       ArrayRef<NamedAttribute> attrs) {
-  SmallVector<OpFoldResult> offsetValues = llvm::to_vector<4>(
-      llvm::map_range(offsets, [&](int64_t v) -> OpFoldResult {
+  SmallVector<OpFoldResult> offsetValues =
+      llvm::map_to_vector<4>(offsets, [&](int64_t v) -> OpFoldResult {
         return b.getI64IntegerAttr(v);
-      }));
-  SmallVector<OpFoldResult> sizeValues =
-      llvm::to_vector<4>(llvm::map_range(sizes, [&](int64_t v) -> OpFoldResult {
+      });
+  SmallVector<OpFoldResult> sizeValues = llvm::map_to_vector<4>(
+      sizes, [&](int64_t v) -> OpFoldResult { return b.getI64IntegerAttr(v); });
+  SmallVector<OpFoldResult> strideValues =
+      llvm::map_to_vector<4>(strides, [&](int64_t v) -> OpFoldResult {
         return b.getI64IntegerAttr(v);
-      }));
-  SmallVector<OpFoldResult> strideValues = llvm::to_vector<4>(
-      llvm::map_range(strides, [&](int64_t v) -> OpFoldResult {
-        return b.getI64IntegerAttr(v);
-      }));
+      });
   build(b, result, source, offsetValues, sizeValues, strideValues, attrs);
 }
 
@@ -3072,18 +3085,16 @@ void SubViewOp::build(OpBuilder &b, OperationState &result,
                       ArrayRef<int64_t> offsets, ArrayRef<int64_t> sizes,
                       ArrayRef<int64_t> strides,
                       ArrayRef<NamedAttribute> attrs) {
-  SmallVector<OpFoldResult> offsetValues = llvm::to_vector<4>(
-      llvm::map_range(offsets, [&](int64_t v) -> OpFoldResult {
+  SmallVector<OpFoldResult> offsetValues =
+      llvm::map_to_vector<4>(offsets, [&](int64_t v) -> OpFoldResult {
         return b.getI64IntegerAttr(v);
-      }));
-  SmallVector<OpFoldResult> sizeValues =
-      llvm::to_vector<4>(llvm::map_range(sizes, [&](int64_t v) -> OpFoldResult {
+      });
+  SmallVector<OpFoldResult> sizeValues = llvm::map_to_vector<4>(
+      sizes, [&](int64_t v) -> OpFoldResult { return b.getI64IntegerAttr(v); });
+  SmallVector<OpFoldResult> strideValues =
+      llvm::map_to_vector<4>(strides, [&](int64_t v) -> OpFoldResult {
         return b.getI64IntegerAttr(v);
-      }));
-  SmallVector<OpFoldResult> strideValues = llvm::to_vector<4>(
-      llvm::map_range(strides, [&](int64_t v) -> OpFoldResult {
-        return b.getI64IntegerAttr(v);
-      }));
+      });
   build(b, result, resultType, source, offsetValues, sizeValues, strideValues,
         attrs);
 }
@@ -3094,12 +3105,12 @@ void SubViewOp::build(OpBuilder &b, OperationState &result,
                       MemRefType resultType, Value source, ValueRange offsets,
                       ValueRange sizes, ValueRange strides,
                       ArrayRef<NamedAttribute> attrs) {
-  SmallVector<OpFoldResult> offsetValues = llvm::to_vector<4>(
-      llvm::map_range(offsets, [](Value v) -> OpFoldResult { return v; }));
-  SmallVector<OpFoldResult> sizeValues = llvm::to_vector<4>(
-      llvm::map_range(sizes, [](Value v) -> OpFoldResult { return v; }));
-  SmallVector<OpFoldResult> strideValues = llvm::to_vector<4>(
-      llvm::map_range(strides, [](Value v) -> OpFoldResult { return v; }));
+  SmallVector<OpFoldResult> offsetValues = llvm::map_to_vector<4>(
+      offsets, [](Value v) -> OpFoldResult { return v; });
+  SmallVector<OpFoldResult> sizeValues =
+      llvm::map_to_vector<4>(sizes, [](Value v) -> OpFoldResult { return v; });
+  SmallVector<OpFoldResult> strideValues = llvm::map_to_vector<4>(
+      strides, [](Value v) -> OpFoldResult { return v; });
   build(b, result, resultType, source, offsetValues, sizeValues, strideValues);
 }
 

@@ -519,7 +519,8 @@ static bool isThumb(const MCSubtargetInfo& STI) {
 }
 
 void ARMAsmPrinter::emitInlineAsmEnd(const MCSubtargetInfo &StartInfo,
-                                     const MCSubtargetInfo *EndInfo) const {
+                                     const MCSubtargetInfo *EndInfo,
+                                     const MachineInstr *MI) {
   // If either end mode is unknown (EndInfo == NULL) or different than
   // the start mode, then restore the start mode.
   const bool WasThumb = isThumb(StartInfo);
