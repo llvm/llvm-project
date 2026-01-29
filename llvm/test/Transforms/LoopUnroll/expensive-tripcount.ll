@@ -2,9 +2,9 @@
 ; RUN: opt < %s -S -passes=loop-unroll,instcombine | FileCheck -check-prefixes=CHECK,CHECK-NOUNROLL %s
 ; RUN: opt < %s -S -passes=loop-unroll,instcombine -unroll-runtime-expensive-trip-count | FileCheck -check-prefixes=CHECK,CHECK-UNROLL %s
 
-define amdgpu_kernel void @_Z6kernelPilll(ptr addrspace(1) noundef writeonly captures(none) %a.coerce, i64 noundef %n, i64 noundef %k, i64 noundef %s) #0 {
-; CHECK-NOUNROLL-LABEL: define protected amdgpu_kernel void @_Z6kernelPilll(
-; CHECK-NOUNROLL-SAME: ptr addrspace(1) noundef writeonly captures(none) [[A_COERCE:%.*]], i64 noundef [[N:%.*]], i64 noundef [[K:%.*]], i64 noundef [[S:%.*]]) local_unnamed_addr {
+define amdgpu_kernel void @_Z6kernelPilll(ptr addrspace(1) noundef writeonly captures(none) %a.coerce, i64 noundef %n, i64 noundef %k, i64 noundef %s) {
+; CHECK-NOUNROLL-LABEL: define amdgpu_kernel void @_Z6kernelPilll(
+; CHECK-NOUNROLL-SAME: ptr addrspace(1) noundef writeonly captures(none) [[A_COERCE:%.*]], i64 noundef [[N:%.*]], i64 noundef [[K:%.*]], i64 noundef [[S:%.*]]) {
 ; CHECK-NOUNROLL-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NOUNROLL-NEXT:    [[IMPL_ARG_PTR:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; CHECK-NOUNROLL-NEXT:    [[BID:%.*]] = tail call i32 @llvm.amdgcn.workgroup.id.x()
@@ -13,7 +13,7 @@ define amdgpu_kernel void @_Z6kernelPilll(ptr addrspace(1) noundef writeonly cap
 ; CHECK-NOUNROLL-NEXT:    [[SEL_I:%.*]] = select i1 [[CMP_ULT]], i64 12, i64 18
 ; CHECK-NOUNROLL-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPL_ARG_PTR]], i64 [[SEL_I]]
 ; CHECK-NOUNROLL-NEXT:    [[LD:%.*]] = load i16, ptr addrspace(4) [[GEP]], align 2
-; CHECK-NOUNROLL-NEXT:    [[TID:%.*]] = tail call noundef range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-NOUNROLL-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-NOUNROLL-NEXT:    [[MUL:%.*]] = mul nsw i64 [[K]], [[N]]
 ; CHECK-NOUNROLL-NEXT:    [[CONV_I_I4:%.*]] = zext i16 [[LD]] to i32
 ; CHECK-NOUNROLL-NEXT:    [[CONV5:%.*]] = zext nneg i32 [[TID]] to i64
@@ -35,8 +35,8 @@ define amdgpu_kernel void @_Z6kernelPilll(ptr addrspace(1) noundef writeonly cap
 ; CHECK-NOUNROLL-NEXT:    [[CMP:%.*]] = icmp sgt i64 [[MUL]], [[CONV]]
 ; CHECK-NOUNROLL-NEXT:    br i1 [[CMP]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP_LOOPEXIT]], !llvm.loop [[LOOP0:![0-9]+]]
 ;
-; CHECK-UNROLL-LABEL: define protected amdgpu_kernel void @_Z6kernelPilll(
-; CHECK-UNROLL-SAME: ptr addrspace(1) noundef writeonly captures(none) [[A_COERCE:%.*]], i64 noundef [[N:%.*]], i64 noundef [[K:%.*]], i64 noundef [[S:%.*]]) local_unnamed_addr {
+; CHECK-UNROLL-LABEL: define amdgpu_kernel void @_Z6kernelPilll(
+; CHECK-UNROLL-SAME: ptr addrspace(1) noundef writeonly captures(none) [[A_COERCE:%.*]], i64 noundef [[N:%.*]], i64 noundef [[K:%.*]], i64 noundef [[S:%.*]]) {
 ; CHECK-UNROLL-NEXT:  [[ENTRY:.*:]]
 ; CHECK-UNROLL-NEXT:    [[IMPL_ARG_PTR:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
 ; CHECK-UNROLL-NEXT:    [[BID:%.*]] = tail call i32 @llvm.amdgcn.workgroup.id.x()
@@ -45,7 +45,7 @@ define amdgpu_kernel void @_Z6kernelPilll(ptr addrspace(1) noundef writeonly cap
 ; CHECK-UNROLL-NEXT:    [[SEL_I:%.*]] = select i1 [[CMP_ULT]], i64 12, i64 18
 ; CHECK-UNROLL-NEXT:    [[GEP:%.*]] = getelementptr inbounds nuw i8, ptr addrspace(4) [[IMPL_ARG_PTR]], i64 [[SEL_I]]
 ; CHECK-UNROLL-NEXT:    [[LD:%.*]] = load i16, ptr addrspace(4) [[GEP]], align 2
-; CHECK-UNROLL-NEXT:    [[TID:%.*]] = tail call noundef range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.x()
+; CHECK-UNROLL-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
 ; CHECK-UNROLL-NEXT:    [[MUL:%.*]] = mul nsw i64 [[K]], [[N]]
 ; CHECK-UNROLL-NEXT:    [[CONV_I_I4:%.*]] = zext i16 [[LD]] to i32
 ; CHECK-UNROLL-NEXT:    [[CONV5:%.*]] = zext nneg i32 [[TID]] to i64
@@ -133,14 +133,14 @@ define amdgpu_kernel void @_Z6kernelPilll(ptr addrspace(1) noundef writeonly cap
 ; CHECK-UNROLL-NEXT:    br i1 [[CMP_7]], label %[[FOR_BODY]], label %[[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA]], !llvm.loop [[LOOP2:![0-9]+]]
 ;
 entry:
-  %impl.arg.ptr= tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %impl.arg.ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
   %bid = tail call i32 @llvm.amdgcn.workgroup.id.x()
   %impl.arg = load i32, ptr addrspace(4) %impl.arg.ptr, align 4
   %cmp.ult = icmp ult i32 %bid, %impl.arg
   %sel.i = select i1 %cmp.ult, i64 12, i64 18
   %gep = getelementptr inbounds nuw i8, ptr addrspace(4) %impl.arg.ptr, i64 %sel.i
   %ld = load i16, ptr addrspace(4) %gep, align 2
-  %tid = tail call noundef range(i32 0, 1024) i32 @llvm.amdgcn.workitem.id.x()
+  %tid = tail call i32 @llvm.amdgcn.workitem.id.x()
   %mul = mul nsw i64 %k, %n
   %cmp.i.i = icmp eq i64 %s, 0
   %spec.select.i.i = add nsw i64 %s, %mul
@@ -158,7 +158,7 @@ for.cond.cleanup.loopexit:                        ; preds = %for.body
 for.cond.cleanup:                                 ; preds = %for.cond.cleanup.loopexit, %entry
   ret void
 
-for.body:                                         ; preds = %for.body.preheader, %for.body
+for.body:                                         ; preds = %for.body, %for.body.preheader
   %conv8 = phi i64 [ %conv, %for.body ], [ %conv5, %for.body.preheader ]
   %i3.07 = phi i32 [ %add, %for.body ], [ %tid, %for.body.preheader ]
   %arrayidx = getelementptr inbounds nuw i32, ptr addrspace(1) %a.coerce, i64 %conv8
@@ -166,13 +166,12 @@ for.body:                                         ; preds = %for.body.preheader,
   %add = add nuw nsw i32 %i3.07, %conv.i.i4
   %conv = zext nneg i32 %add to i64
   %cmp = icmp sgt i64 %mul, %conv
-  br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit, !llvm.loop !152
+  br i1 %cmp, label %for.body, label %for.cond.cleanup.loopexit, !llvm.loop !0
 }
 
-!47 = !{!"llvm.loop.mustprogress"}
-!152 = distinct !{!152, !47, !153}
-!153 = !{!"llvm.loop.unroll.enable"}
-
+!0 = distinct !{!0, !1, !2}
+!1 = !{!"llvm.loop.mustprogress"}
+!2 = !{!"llvm.loop.unroll.enable"}
 ;.
 ; CHECK-NOUNROLL: [[LOOP0]] = distinct !{[[LOOP0]], [[META1:![0-9]+]], [[META2:![0-9]+]]}
 ; CHECK-NOUNROLL: [[META1]] = !{!"llvm.loop.mustprogress"}
