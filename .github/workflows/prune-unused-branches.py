@@ -99,6 +99,7 @@ def generate_patches_for_all_branches(branches_to_remove: list[str], patches_pat
 
 
 def main(github_token):
+    print("Starting app")
     if len(sys.argv) != 2:
         print(
             "Invalid invocation. Correct usage: python3 prune-unused-branches.py <patch output diectory>"
