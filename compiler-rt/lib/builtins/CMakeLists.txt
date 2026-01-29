@@ -451,8 +451,11 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP AND BUILTIN_SUPPORTED_ARCH MATCHES "arm")
       arm/muldf3.S
       arm/divdf3.S
       arm/cmpdf2.S
+      arm/cmpsf2.S
       arm/gedf2.S
+      arm/gesf2.S
       arm/unorddf2.S
+      arm/unordsf2.S
       )
     set_source_files_properties(${assembly_files}
       PROPERTIES COMPILE_OPTIONS ${implicit_it_flag})
@@ -507,8 +510,11 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP)
   set(thumb1_base_SOURCES
     arm/thumb1/mulsf3.S
     arm/thumb1/cmpdf2.S
+    arm/thumb1/cmpsf2.S
     arm/thumb1/gedf2.S
+    arm/thumb1/gesf2.S
     arm/thumb1/unorddf2.S
+    arm/thumb1/unordsf2.S
     arm/fnan2.c
     arm/fnorm2.c
     arm/funder.c
@@ -516,6 +522,9 @@ if(COMPILER_RT_ARM_OPTIMIZED_FP)
   )
   set_property(SOURCE arm/thumb1/cmpdf2.S PROPERTY crt_supersedes comparedf2.c)
   set_property(SOURCE arm/thumb1/cmpdf2.S DIRECTORY ${COMPILER_RT_SOURCE_DIR} PROPERTY crt_provides comparedf2)
+  set_property(SOURCE arm/thumb1/cmpsf2.S PROPERTY crt_supersedes comparesf2.S)
+  # We don't need to set 'crt_provides' for cmpsf2.S, because the
+  # superseded comparesf2.S will already have enabled the comparesf2 tests.
 endif()
 
 set(arm_EABI_RT_SOURCES
