@@ -43,6 +43,10 @@ namespace llvm {
 /// This is implemented using Tarjan's DFS algorithm using an internal stack to
 /// build up a vector of nodes in a particular SCC. Note that it is a forward
 /// iterator and thus you cannot backtrack or re-visit nodes.
+///
+/// This is designed for CFG-like graphs with single entry node and does not
+/// implement the complete Tarjan's DFS algorithm. It won't produce correct
+/// result for generic graph.
 template <class GraphT, class GT = GraphTraits<GraphT>>
 class scc_iterator : public iterator_facade_base<
                          scc_iterator<GraphT, GT>, std::forward_iterator_tag,
