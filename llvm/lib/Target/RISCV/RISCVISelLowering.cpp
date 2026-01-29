@@ -6073,10 +6073,6 @@ static bool isCompressMask(ArrayRef<int> Mask) {
 static SDValue lowerDisjointIndicesShuffle(ShuffleVectorSDNode *SVN,
                                            SelectionDAG &DAG,
                                            const RISCVSubtarget &Subtarget) {
-  MVT VT = SVN->getSimpleValueType(0);
-  MVT XLenVT = Subtarget.getXLenVT();
-  SDLoc DL(SVN);
-
   const ArrayRef<int> Mask = SVN->getMask();
 
   // Work out which source each lane will come from.
@@ -6095,6 +6091,9 @@ static SDValue lowerDisjointIndicesShuffle(ShuffleVectorSDNode *SVN,
       return SDValue();
   }
 
+  MVT VT = SVN->getSimpleValueType(0);
+  MVT XLenVT = Subtarget.getXLenVT();
+  SDLoc DL(SVN);
   SmallVector<SDValue> SelectMaskVals;
   for (int Lane : Srcs) {
     if (Lane == -1)
