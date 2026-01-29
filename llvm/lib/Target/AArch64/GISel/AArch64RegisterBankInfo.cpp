@@ -416,8 +416,16 @@ void AArch64RegisterBankInfo::applyMappingImpl(
     Register Dst = MI.getOperand(0).getReg();
     if (MRI.getRegBank(Dst) == &AArch64::GPRRegBank) {
       const APFloat &Imm = MI.getOperand(1).getFPImm()->getValueAPF();
+      APInt Bits = Imm.bitcastToAPInt();
       Builder.setInsertPt(*MI.getParent(), MI.getIterator());
-      Builder.buildConstant(Dst, Imm.bitcastToAPInt());
+      if (Bits.getBitWidth() < 32) {
+        Register ExtReg = MRI.createGenericVirtualRegister(LLT::scalar(32));
+        Builder.buildConstant(ExtReg, Bits.zext(32));
+        Builder.buildTrunc(Dst, ExtReg);
+        MRI.setRegBank(ExtReg, AArch64::GPRRegBank);
+      } else {
+        Builder.buildConstant(Dst, Bits);
+      }
       MI.eraseFromParent();
       return;
     }
