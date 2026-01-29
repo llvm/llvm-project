@@ -123,7 +123,10 @@ foreach(arch ${BUILTIN_TEST_ARCH})
     # "hexagon/udivsi3.S" => "udivsi3"
     # "udivsi3.c" => "udivsi3"
     get_filename_component(FILE_NAME_FILTERED "${file_name}" NAME_WE)
-    list(APPEND BUILTINS_LIT_SOURCE_FEATURES "librt_has_${FILE_NAME_FILTERED}")
+    get_property(_also_provided SOURCE "${COMPILER_RT_SOURCE_DIR}/lib/builtins/${file_name}" DIRECTORY ${COMPILER_RT_SOURCE_DIR} PROPERTY crt_provides)
+    foreach(_function "${FILE_NAME_FILTERED}" ${_also_provided})
+      list(APPEND BUILTINS_LIT_SOURCE_FEATURES "librt_has_${_function}")
+    endforeach()
   endforeach()
 
   string(TOUPPER ${arch} ARCH_UPPER_CASE)
