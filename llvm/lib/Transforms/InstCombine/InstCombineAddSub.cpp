@@ -1568,8 +1568,11 @@ Instruction *InstCombinerImpl::visitAdd(BinaryOperator &I) {
                                               I.hasNoUnsignedWrap()))
     return R;
   Type *Ty = I.getType();
-  if (Ty->isIntOrIntVectorTy(1))
+  if (Ty->isIntOrIntVectorTy(1)) {
+    if (I.hasNoUnsignedWrap() || I.hasNoSignedWrap())
+      return BinaryOperator::CreateDisjoint(Instruction::Or, LHS, RHS);
     return BinaryOperator::CreateXor(LHS, RHS);
+  }
 
   // X + X --> X << 1
   if (LHS == RHS) {
