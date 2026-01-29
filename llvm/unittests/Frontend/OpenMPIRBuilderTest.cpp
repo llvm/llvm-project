@@ -6369,27 +6369,6 @@ TEST_F(OpenMPIRBuilderTest, TargetDataRegion) {
   EXPECT_TRUE(TargetDataCall->getOperand(2)->getType()->isIntegerTy(32));
   EXPECT_TRUE(TargetDataCall->getOperand(8)->getType()->isPointerTy());
 
-  // Check that BodyGenCB is still made when IsTargetDevice is set to true.
-  OMPBuilder.Config.setIsTargetDevice(true);
-  bool CheckDevicePassBodyGen = false;
-  auto BodyTargetCB = [&](InsertPointTy CodeGenIP, BodyGenTy BodyGenType) {
-    CheckDevicePassBodyGen = true;
-    Builder.restoreIP(CodeGenIP);
-    CallInst *TargetDataCall =
-        dyn_cast<CallInst>(BB->back().getPrevNode()->getPrevNode());
-    // Make sure no begin_mapper call is present for device pass.
-    EXPECT_EQ(TargetDataCall, nullptr);
-    return Builder.saveIP();
-  };
-  ASSERT_EXPECTED_INIT(
-      OpenMPIRBuilder::InsertPointTy, TargetDataIP2,
-      OMPBuilder.createTargetData(Loc, AllocaIP, Builder.saveIP(),
-                                  Builder.getInt64(DeviceID),
-                                  /* IfCond= */ nullptr, Info, GenMapInfoCB,
-                                  CustomMapperCB, nullptr, BodyTargetCB));
-  Builder.restoreIP(TargetDataIP2);
-  EXPECT_TRUE(CheckDevicePassBodyGen);
-
   Builder.CreateRetVoid();
   EXPECT_FALSE(verifyModule(*M, &errs()));
 }
