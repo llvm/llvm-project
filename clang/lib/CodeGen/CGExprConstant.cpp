@@ -2532,7 +2532,7 @@ ConstantEmitter::tryEmitPrivate(const APValue &Value, QualType DestType,
           Inits[Idx] =
               llvm::ConstantFP::get(CGM.getLLVMContext(), Elt.getFloat());
         else if (Elt.isIndeterminate())
-          Inits[Idx] = llvm::UndefValue::get(
+          Inits[Idx] = llvm::PoisonValue::get(
               CGM.getTypes().ConvertType(MT->getElementType()));
         else
           llvm_unreachable("unsupported matrix element type");
