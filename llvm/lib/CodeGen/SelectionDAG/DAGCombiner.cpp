@@ -7021,12 +7021,11 @@ static SDValue castIntVectorSelect(SDNode *N, SelectionDAG &DAG,
   if (NewVT == EVT())
     return SDValue();
 
-  SDValue NewTrue = DAG.getNode(ISD::BITCAST, SDLoc(TrueVal), NewVT, TrueVal);
-  SDValue NewFalse =
-      DAG.getNode(ISD::BITCAST, SDLoc(FalseVal), NewVT, FalseVal);
+  SDValue NewTrue = DAG.getBitcast(NewVT, TrueVal);
+  SDValue NewFalse = DAG.getBitcast(NewVT, FalseVal);
   SDValue NewSelect =
       DAG.getNode(ISD::SELECT, SDLoc(N), NewVT, Cond, NewTrue, NewFalse);
-  return DAG.getNode(ISD::BITCAST, SDLoc(N), ResultVT, NewSelect);
+  return DAG.getBitcast(ResultVT, NewSelect);
 }
 
 /// This contains all DAGCombine rules which reduce two values combined by
