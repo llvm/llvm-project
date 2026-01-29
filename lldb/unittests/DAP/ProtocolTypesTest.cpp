@@ -1042,10 +1042,10 @@ TEST(ProtocolTypesTest, CompletionsArguments) {
     "text": "abc"
   })");
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());
-  EXPECT_EQ(expected->frameId, 7u);
+  EXPECT_EQ(expected->frameId, 7U);
   EXPECT_EQ(expected->text, "abc");
-  EXPECT_EQ(expected->column, 8);
-  EXPECT_EQ(expected->line, 9);
+  EXPECT_EQ(expected->column, 8U);
+  EXPECT_EQ(expected->line, 9U);
 
   // Check required keys.
   EXPECT_THAT_EXPECTED(parse<CompletionsArguments>(R"({})"),
@@ -1264,7 +1264,7 @@ TEST(ProtocolTypesTest, StackFrame) {
 }
 
 TEST(ProtocolTypesTest, DAPSession) {
-  const DAPSession session{/*targetId*/ 1000, /*debuggerId*/ 300};
+  const DAPSession session{/*targetId=*/1000, /*debuggerId=*/300};
 
   auto expected = parse<DAPSession>(R"({"targetId": 1000, "debuggerId": 300})");
   ASSERT_THAT_EXPECTED(expected, llvm::Succeeded());

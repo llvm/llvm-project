@@ -639,10 +639,8 @@ LegalizerHelper::LegalizeResult LegalizerHelper::createLibcall(
   if (LibcallImpl == RTLIB::Unsupported)
     return LegalizerHelper::UnableToLegalize;
 
-  auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
-
   StringRef Name = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LibcallImpl);
-  const CallingConv::ID CC = TLI.getLibcallImplCallingConv(LibcallImpl);
+  const CallingConv::ID CC = Libcalls->getLibcallImplCallingConv(LibcallImpl);
   return createLibcall(Name.data(), Result, Args, CC, LocObserver, MI);
 }
 
@@ -807,44 +805,46 @@ LegalizerHelper::createMemLibcall(MachineRegisterInfo &MRI, MachineInstr &MI,
   }
 
   auto &CLI = *MIRBuilder.getMF().getSubtarget().getCallLowering();
-  auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
   RTLIB::Libcall RTLibcall;
   unsigned Opc = MI.getOpcode();
-  const char *Name;
   switch (Opc) {
   case TargetOpcode::G_BZERO:
     RTLibcall = RTLIB::BZERO;
-    Name = TLI.getLibcallName(RTLibcall);
     break;
   case TargetOpcode::G_MEMCPY:
     RTLibcall = RTLIB::MEMCPY;
-    Name = TLI.getLibcallImplName(TLI.getMemcpyImpl()).data();
     Args[0].Flags[0].setReturned();
     break;
   case TargetOpcode::G_MEMMOVE:
     RTLibcall = RTLIB::MEMMOVE;
-    Name = TLI.getLibcallName(RTLibcall);
     Args[0].Flags[0].setReturned();
     break;
   case TargetOpcode::G_MEMSET:
     RTLibcall = RTLIB::MEMSET;
-    Name = TLI.getLibcallName(RTLibcall);
     Args[0].Flags[0].setReturned();
     break;
   default:
     llvm_unreachable("unsupported opcode");
   }
 
+  if (!Libcalls) // FIXME: Should be mandatory
+    return LegalizerHelper::UnableToLegalize;
+
+  RTLIB::LibcallImpl RTLibcallImpl = Libcalls->getLibcallImpl(RTLibcall);
+
   // Unsupported libcall on the target.
-  if (!Name) {
+  if (RTLibcallImpl == RTLIB::Unsupported) {
     LLVM_DEBUG(dbgs() << ".. .. Could not find libcall name for "
                       << MIRBuilder.getTII().getName(Opc) << "\n");
     return LegalizerHelper::UnableToLegalize;
   }
 
   CallLowering::CallLoweringInfo Info;
-  Info.CallConv = TLI.getLibcallCallingConv(RTLibcall);
-  Info.Callee = MachineOperand::CreateES(Name);
+  Info.CallConv = Libcalls->getLibcallImplCallingConv(RTLibcallImpl);
+
+  StringRef LibcallName =
+      RTLIB::RuntimeLibcallsInfo::getLibcallImplName(RTLibcallImpl);
+  Info.Callee = MachineOperand::CreateES(LibcallName.data());
   Info.OrigRet = CallLowering::ArgInfo({0}, Type::getVoidTy(Ctx), 0);
   Info.IsTailCall =
       MI.getOperand(MI.getNumOperands() - 1).getImm() &&
@@ -926,9 +926,9 @@ static RTLIB::Libcall getOutlineAtomicLibcall(MachineInstr &MI) {
 #undef LCALL5
 }
 
-static LegalizerHelper::LegalizeResult
-createAtomicLibcall(MachineIRBuilder &MIRBuilder, MachineInstr &MI) {
-  auto &Ctx = MIRBuilder.getMF().getFunction().getContext();
+LegalizerHelper::LegalizeResult
+LegalizerHelper::createAtomicLibcall(MachineInstr &MI) const {
+  auto &Ctx = MIRBuilder.getContext();
 
   Type *RetTy;
   SmallVector<Register> RetRegs;
@@ -980,21 +980,26 @@ createAtomicLibcall(MachineIRBuilder &MIRBuilder, MachineInstr &MI) {
     llvm_unreachable("unsupported opcode");
   }
 
+  if (!Libcalls) // FIXME: Should be mandatory
+    return LegalizerHelper::UnableToLegalize;
+
   auto &CLI = *MIRBuilder.getMF().getSubtarget().getCallLowering();
-  auto &TLI = *MIRBuilder.getMF().getSubtarget().getTargetLowering();
   RTLIB::Libcall RTLibcall = getOutlineAtomicLibcall(MI);
-  const char *Name = TLI.getLibcallName(RTLibcall);
+  RTLIB::LibcallImpl RTLibcallImpl = Libcalls->getLibcallImpl(RTLibcall);
 
   // Unsupported libcall on the target.
-  if (!Name) {
+  if (RTLibcallImpl == RTLIB::Unsupported) {
     LLVM_DEBUG(dbgs() << ".. .. Could not find libcall name for "
                       << MIRBuilder.getTII().getName(Opc) << "\n");
     return LegalizerHelper::UnableToLegalize;
   }
 
   CallLowering::CallLoweringInfo Info;
-  Info.CallConv = TLI.getLibcallCallingConv(RTLibcall);
-  Info.Callee = MachineOperand::CreateES(Name);
+  Info.CallConv = Libcalls->getLibcallImplCallingConv(RTLibcallImpl);
+
+  StringRef LibcallName =
+      RTLIB::RuntimeLibcallsInfo::getLibcallImplName(RTLibcallImpl);
+  Info.Callee = MachineOperand::CreateES(LibcallName.data());
   Info.OrigRet = CallLowering::ArgInfo(RetRegs, RetTy, 0);
 
   llvm::append_range(Info.OrigArgs, Args);
@@ -1487,7 +1492,7 @@ LegalizerHelper::libcall(MachineInstr &MI, LostDebugLocObserver &LocObserver) {
   case TargetOpcode::G_ATOMICRMW_XOR:
   case TargetOpcode::G_ATOMIC_CMPXCHG:
   case TargetOpcode::G_ATOMIC_CMPXCHG_WITH_SUCCESS: {
-    auto Status = createAtomicLibcall(MIRBuilder, MI);
+    auto Status = createAtomicLibcall(MI);
     if (Status != Legalized)
       return Status;
     break;
