@@ -2294,8 +2294,13 @@ void Sema::ActOnPopScope(SourceLocation Loc, Scope *S) {
       if (const auto *RD = dyn_cast<RecordDecl>(D))
         DiagnoseUnusedNestedTypedefs(RD, addDiag);
       if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
-        DiagnoseUnusedButSetDecl(VD, addDiag);
-        RefsMinusAssignments.erase(VD);
+        // wait until end of TU to diagnose static globals
+        bool isStaticGlobal =
+            VD->isFileVarDecl() && VD->getStorageClass() == SC_Static;
+        if (!isStaticGlobal) {
+          DiagnoseUnusedButSetDecl(VD, addDiag);
+          RefsMinusAssignments.erase(VD);
+        }
       }
     }
 
