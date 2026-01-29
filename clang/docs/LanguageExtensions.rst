@@ -2427,10 +2427,9 @@ Clang provides support for Microsoft extensions to support enumerations with no 
 Microsoft Anonymous Structs and Unions
 --------------------------------------
 
-Clang provides support for a Microsoft extension that allows named struct or union types to be declared
-as anonymous member inside another struct or union, making their fields directly accessible from the
-enclosing type.
-
+Clang provides support for a Microsoft extension that allows use of named struct or union types to
+declare anonymous members inside another struct or union, making their fields directly accessible
+from the enclosing type.
 
 For example, consider the following code:
 
@@ -2446,12 +2445,13 @@ For example, consider the following code:
     };
 
     void f(struct Outer *o) {
-        o->x = 1;      /* accesses Inner::x directly */
-        o->y = 1;      /* accesses Inner::y directly */
+        o->x = 1;      /* accesses x member of anonymous member of type Inner directly */
+        o->y = 1;      /* accesses x member of anonymous member of type Inner directly */
     }
 
 Without this extension, such declarations generate a warning that the declaration does not
-declare anything and their members cannot be accessed directly.
+declare anything, the associated member names are not available for access, and the layout
+of types containing such declarations are affected accordingly.
 
 This extension can be controlled independently of other Microsoft extensions:
 
@@ -2466,7 +2466,8 @@ This extension is also **implicitly enabled** when either of the following optio
 * ``-fms-extensions``
 * ``-fms-compatibility``
 
-When multiple controlling options are specified, the last option on command line take precedence.
+When multiple controlling options are specified, the last option on the command line takes
+precedence.
 
 Interoperability with C++11 lambdas
 -----------------------------------
