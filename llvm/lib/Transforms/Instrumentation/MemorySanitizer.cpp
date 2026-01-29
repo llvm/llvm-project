@@ -3979,13 +3979,13 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
 
     assert(I.arg_size() == 2 || I.arg_size() == 3);
     if (I.arg_size() == 2) {
+      assert(Lanes == kBothLanes);
+
       Va = I.getOperand(0);
       Vb = I.getOperand(1);
 
       Sa = getShadow(&I, 0);
       Sb = getShadow(&I, 1);
-
-      assert(Lanes == kBothLanes);
     } else if (I.arg_size() == 3) {
       // Operand 0 is the accumulator. We will deal with that below.
       Va = I.getOperand(1);
