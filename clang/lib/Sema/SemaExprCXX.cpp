@@ -6305,8 +6305,8 @@ QualType Sema::FindCompositePointerType(SourceLocation Loc,
         Composite1 = Arr1->getElementType();
         Composite2 = Arr2->getElementType();
         Steps.emplace_back(Step::Array);
-        if (CAT1 || CAT2)
-          NeedConstBefore = Steps.size();
+        if ((CAT1 || CAT2) && Steps.size() > 2)
+          NeedConstBefore = Steps.size() - 2;
         continue;
       }
     }
