@@ -5181,7 +5181,8 @@ Instruction *InstCombinerImpl::foldNot(BinaryOperator &I) {
 
 // ((X + C) & M) ^ M --> ((M − C) − X) & M
 static Instruction *foldMaskedAddXorPattern(BinaryOperator &I,
-                                            InstCombiner::BuilderTy &Builder) {
+                                            InstCombiner::BuilderTy &Builder,
+                                            InstCombinerImpl &IC) {
   Value *InnerVal;
   const APInt *AndMask, *XorMask, *AddC;
 
@@ -5191,6 +5192,16 @@ static Instruction *foldMaskedAddXorPattern(BinaryOperator &I,
                       m_APInt(XorMask))) &&
       *AndMask == *XorMask) {
     APInt NewConst = *AndMask - *AddC;
+    unsigned BitWidth = I.getType()->getScalarSizeInBits();
+    ConstantRange Range =
+        computeConstantRange(InnerVal, /*signed*/ true,
+                             /*UseInstrInfo=*/true, &IC.getAssumptionCache(),
+                             &I, &IC.getDominatorTree(), 0);
+    // Since C <= (X + C) <= M always holds, 'nuw' check is unnecessary.
+    // Bail out if 'nsw' is implied to avoid creating poison for X=INT_MIN.
+    if (!Range.contains(APInt::getSignedMinValue(BitWidth)))
+      return nullptr;
+
     Value *NewSub =
         Builder.CreateSub(ConstantInt::get(I.getType(), NewConst), InnerVal);
 
@@ -5537,7 +5548,7 @@ Instruction *InstCombinerImpl::visitXor(BinaryOperator &I) {
   if (Instruction *Res = foldBitwiseLogicWithIntrinsics(I, Builder))
     return Res;
 
-  if (Instruction *Res = foldMaskedAddXorPattern(I, Builder))
+  if (Instruction *Res = foldMaskedAddXorPattern(I, Builder, *this))
     return Res;
 
   return nullptr;
