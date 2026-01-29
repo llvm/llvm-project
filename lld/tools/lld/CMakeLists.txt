@@ -32,11 +32,12 @@ lld_target_link_libraries(lld
   lldMachO
   lldMinGW
   lldWasm
+  lldSPIRV
   )
 
 if(NOT LLD_SYMLINKS_TO_CREATE)
   set(LLD_SYMLINKS_TO_CREATE
-      lld-link ld.lld ld64.lld wasm-ld)
+      lld-link ld.lld ld64.lld wasm-ld spirv-lld)
 endif()
 
 foreach(link ${LLD_SYMLINKS_TO_CREATE})

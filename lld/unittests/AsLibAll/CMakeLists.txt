@@ -14,4 +14,5 @@ target_link_libraries(LLDAsLibAllTests
   lldMachO
   lldMinGW
   lldWasm
+  lldSPIRV
 )

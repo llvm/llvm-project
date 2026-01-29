@@ -95,6 +95,7 @@ llvm_config.feature_config(
                 "MSP430": "msp430",
                 "PowerPC": "ppc",
                 "RISCV": "riscv",
+                "SPIRV": "spirv",
                 "Sparc": "sparc",
                 "SystemZ": "systemz",
                 "WebAssembly": "wasm",
