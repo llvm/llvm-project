@@ -7066,6 +7066,8 @@ static bool isTypeLegalForLookupTable(Type *Ty, const TargetTransformInfo &TTI,
   // on ABI alignment and padding in the table to allow the load to be widened.
   // Or we could widen the constants and truncate the load.
   unsigned BitWidth = IT->getBitWidth();
+  if (BitWidth == 1)
+    return true;
   return BitWidth >= 8 && isPowerOf2_32(BitWidth) &&
          DL.fitsInLegalInteger(IT->getBitWidth());
 }
