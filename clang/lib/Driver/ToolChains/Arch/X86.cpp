@@ -259,10 +259,6 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
         A->getOption().matches(options::OPT_mapx_features_EQ) ||
         A->getOption().matches(options::OPT_mno_apx_features_EQ)) {
 
-      if (Not64Bit && !IsNegative)
-        D.Diag(diag::err_drv_unsupported_opt_for_target)
-            << StringRef("-mapx-features=|-mapxf") << Triple.getTriple();
-
       if (Name == "apxf") {
         if (IsNegative) {
           Features.insert(Features.end(),
@@ -274,9 +270,17 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
                           {"+egpr", "+ndd", "+ccmp", "+nf", "+zu"});
           if (!Triple.isOSWindows())
             Features.insert(Features.end(), {"+push2pop2", "+ppx"});
+
+          if (Not64Bit)
+            D.Diag(diag::err_drv_unsupported_opt_for_target)
+                << StringRef("-mapxf") << Triple.getTriple();
         }
         continue;
       }
+
+      if (Not64Bit && !IsNegative)
+        D.Diag(diag::err_drv_unsupported_opt_for_target)
+            << StringRef("-mapx-features=") << Triple.getTriple();
 
       for (StringRef Value : A->getValues()) {
         if (Value != "egpr" && Value != "push2pop2" && Value != "ppx" &&

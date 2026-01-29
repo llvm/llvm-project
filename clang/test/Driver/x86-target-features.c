@@ -417,11 +417,12 @@
 
 // RUN: not %clang -### --target=i386 -muintr %s 2>&1 | FileCheck --check-prefix=NON-UINTR %s
 // RUN: %clang -### --target=i386 -mno-uintr %s 2>&1 > /dev/null
-// RUN: not %clang -### --target=i386 -mapx-features=ndd %s 2>&1 | FileCheck --check-prefix=NON-APX %s
-// RUN: not %clang -### --target=i386 -mapxf %s 2>&1 | FileCheck --check-prefix=NON-APX %s
+// RUN: not %clang -### --target=i386 -mapx-features=ndd %s 2>&1 | FileCheck --check-prefixes=NON-APX,NON-APXFS %s
+// RUN: not %clang -### --target=i386 -mapxf %s 2>&1 | FileCheck --check-prefixes=NON-APX,NON-APXF %s
 // RUN: %clang -### --target=i386 -mno-apxf %s 2>&1 > /dev/null
 // NON-UINTR:    error: unsupported option '-muintr' for target 'i386'
-// NON-APX:      error: unsupported option '-mapx-features=|-mapxf' for target 'i386'
+// NON-APXF:     error: unsupported option '-mapxf' for target 'i386'
+// NON-APXFS:    error: unsupported option '-mapx-features=' for target 'i386'
 // NON-APX-NOT:  error: {{.*}} -mapx-features=
 
 // RUN: %clang --target=i386 -march=i386 -mharden-sls=return %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=SLS-RET,NO-SLS %s

@@ -973,7 +973,8 @@ void X86TargetInfo::getTargetDefines(const LangOptions &Opts,
   if (HasZU)
     Builder.defineMacro("__ZU__");
   if (HasEGPR && HasNDD && HasCCMP && HasNF && HasZU)
-    Builder.defineMacro("__APX_F__");
+    if (getTriple().isOSWindows() || (HasPush2Pop2 && HasPPX))
+      Builder.defineMacro("__APX_F__");
   if (HasEGPR && HasInlineAsmUseGPR32)
     Builder.defineMacro("__APX_INLINE_ASM_USE_GPR32__");
 

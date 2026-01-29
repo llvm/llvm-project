@@ -213,10 +213,11 @@ void f(void) {
 }
 
 
-// RUN: not %clang_cl -### --target=i386-pc-windows -mapx-features=ndd -- 2>&1 %s | FileCheck --check-prefix=NON-APX %s
-// RUN: not %clang_cl -### --target=i386-pc-windows -mapxf -- 2>&1 %s | FileCheck --check-prefix=NON-APX %s
+// RUN: not %clang_cl -### --target=i386-pc-windows -mapx-features=ndd -- 2>&1 %s | FileCheck --check-prefixes=NON-APX,NON-APXFS %s
+// RUN: not %clang_cl -### --target=i386-pc-windows -mapxf -- 2>&1 %s | FileCheck --check-prefixes=NON-APX,NON-APXF %s
 // RUN: %clang_cl -### --target=i386-pc-windows -mno-apxf -- 2>&1 %s > /dev/null
-// NON-APX:      error: unsupported option '-mapx-features=|-mapxf' for target 'i386-pc-windows{{.*}}'
+// NON-APXF:     error: unsupported option '-mapxf' for target 'i386-pc-windows{{.*}}'
+// NON-APXFS:    error: unsupported option '-mapx-features=' for target 'i386-pc-windows{{.*}}'
 // NON-APX-NOT:  error: {{.*}} -mapx-features=
 
 // RUN: %clang_cl --target=x86_64-pc-windows -mapxf -### -- 2>&1 %s | FileCheck -check-prefix=APXF %s
