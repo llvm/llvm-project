@@ -798,6 +798,8 @@ RISCVRegisterInfo::getCallPreservedMask(const MachineFunction & MF,
   case RISCVABI::ABI_LP64D:
     if (CC == CallingConv::RISCV_VectorCall)
       return CSR_ILP32D_LP64D_V_RegMask;
+    if(Subtarget.hasStdExtV())
+      return CSR_ILP32D_LP64D_V_RegMask;
     return CSR_ILP32D_LP64D_RegMask;
   }
 }
