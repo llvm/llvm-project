@@ -45,16 +45,14 @@ struct VPlanTransforms {
   static decltype(auto) runPass(StringRef PassName, PassTy &&Pass, VPlan &Plan,
                                 ArgsTy &&...Args) {
     scope_exit PostTransformActions{[&]() {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       // Make sure to print before verification, so that output is more useful
       // in case of failures:
       if (PrintAfterEachVPlanPass) {
         dbgs() << "VPlan after " << PassName << '\n';
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
         dbgs() << Plan << '\n';
-#else
-        dbgs() << "LLVM DUMP is disabled!\n";
-#endif
       }
+#endif
       if (VerifyEachVPlan && EnableVerify)
         verifyVPlanIsValid(Plan);
     }};
