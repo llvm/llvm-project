@@ -4,21 +4,6 @@
 # Ensure that MFMA instructions are marked as convergent to prevent
 # machine-sink from sinking them.
 
---- |
-  define void @test_V_MFMA_F32_32X32X64_F8F6F4_f4_f4_e64() { ret void }
-  define void @test_V_MFMA_F32_16X16X128_F8F6F4_f4_f4_e64() { ret void }
-  define void @test_V_MFMA_SCALE_F32_16X16X128_F8F6F4_f4_f4_vgprcd_e64() { ret void }
-  define void @test_V_MFMA_SCALE_F32_32X32X64_F8F6F4_f4_f4_mac_vgprcd_e64() { ret void }
-  define void @test_V_MFMA_F32_4X4X1F32_e64() { ret void }
-  define void @test_V_MFMA_F32_32X32X1F32_e64() { ret void }
-  define void @test_V_MFMA_F32_32X32X8F16_mac_e64() { ret void }
-  define void @test_V_MFMA_F64_4X4X4F64_e64() { ret void }
-  define void @test_V_MFMA_F32_32X32X16_F16_e64() { ret void }
-  define void @test_V_MFMA_F32_32X32X16_BF8_BF8_e64() { ret void }
-  define void @test_V_MFMA_F32_16X16X16F16_e64() { ret void }
-  define void @test_V_MFMA_I32_32X32X8I8_e64() { ret void }
-...
-
 ---
 name: test_V_MFMA_F32_32X32X64_F8F6F4_f4_f4_e64
 body:             |
