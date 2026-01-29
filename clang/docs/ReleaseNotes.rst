@@ -363,6 +363,11 @@ Python Binding Changes
 
   Affected methods: ``isKindOptional``, ``isKindTypedText``, ``isKindPlaceHolder``,
   ``isKindInformative`` and ``isKindResultType``.
+- Add a deprecation warning to ``CodeCompletionResults.results``.
+  This property will be removed in a future release. Existing uses of
+  ``CodeCompletionResults.results`` should be changed to directly use
+  ``CodeCompletionResults``: it nows supports ``__len__`` and ``__getitem__``,
+  so it can be used the same as ``CodeCompletionResults.results``.
 
 OpenMP Support
 --------------
