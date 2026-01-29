@@ -41,7 +41,7 @@ import re
 from UpdateTestChecks import common
 
 
-def extract_vplan(raw_output, vplan_name_prefix="VPlan '"):
+def extract_vplan(raw_output):
     """
     Extract a VPlan block from loop-vectorize debug output using brace-depth
     tracking.
@@ -50,7 +50,7 @@ def extract_vplan(raw_output, vplan_name_prefix="VPlan '"):
     result = []
     brace_depth = 0
     for line in raw_output.splitlines():
-        if not brace_depth and line.startswith(vplan_name_prefix):
+        if not brace_depth and line.startswith("VPlan 'Initial VPlan"):
             brace_depth = 1
             result.append(line)
             continue
@@ -138,14 +138,12 @@ def update_test(opt_basename: str, ti: common.TestInfo):
                 continue
             for raw_tool_output in re.split(split_by, raw_tool_outputs):
                 if is_vplan_output:
-                    vplan_output = extract_vplan(
-                        raw_tool_output, "VPlan 'Initial VPlan"
-                    )
+                    vplan_output = extract_vplan(raw_tool_output)
                     if not vplan_output:
                         continue
                     # Reconstruct minimal output: function header line + VPlan
                     func_header = raw_tool_output.split("\n")[0]
-                    raw_tool_output = func_header + "\n" + vplan_output
+                    raw_tool_output = "\n".join([func_header, vplan_output])
 
                 # For VPlan mode, don't scrub whitespace - preserve exact alignment
                 scrubber = (lambda body: body) if is_vplan_output else common.scrub_body
