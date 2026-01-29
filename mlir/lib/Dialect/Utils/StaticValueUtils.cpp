@@ -337,8 +337,6 @@ std::optional<APInt> constantTripCount(
       // case applies, so the static trip count is unknown.
       return std::nullopt;
     }
-    if (stepCst.isNegative())
-      return APInt(bitwidth, 0);
   }
 
   if (isIndex) {
@@ -392,6 +390,14 @@ std::optional<APInt> constantTripCount(
     return std::nullopt;
   }
   auto &stepCst = maybeStepCst->first;
+  // For signed loops, a negative step size could indicate an infinite number of
+  // iterations.
+  if (isSigned && stepCst.isSignBitSet()) {
+    LDBG() << "constantTripCount is infinite because step is negative";
+    return std::nullopt;
+  }
+
+  // Create new APSInt instances with explicit signedness to ensure they match
   llvm::APInt tripCount = isSigned ? diff.sdiv(stepCst) : diff.udiv(stepCst);
   llvm::APInt remainder = isSigned ? diff.srem(stepCst) : diff.urem(stepCst);
   if (!remainder.isZero())
