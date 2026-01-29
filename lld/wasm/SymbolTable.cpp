@@ -736,7 +736,7 @@ Symbol *SymbolTable::addUndefinedGlobal(StringRef name,
   else if (s->isDefined())
     checkGlobalType(s, file, type);
   else
-    updateExistingUndefined(s, flags, file);
+    updateExistingUndefined(s, flags, file, importName, importModule);
   return s;
 }
 
@@ -762,7 +762,7 @@ Symbol *SymbolTable::addUndefinedTable(StringRef name,
   else if (s->isDefined())
     checkTableType(s, file, type);
   else
-    updateExistingUndefined(s, flags, file);
+    updateExistingUndefined(s, flags, file, importName, importModule);
   return s;
 }
 
@@ -788,7 +788,7 @@ Symbol *SymbolTable::addUndefinedTag(StringRef name,
   else if (s->isDefined())
     checkTagType(s, file, sig);
   else
-    updateExistingUndefined(s, flags, file);
+    updateExistingUndefined(s, flags, file, importName, importModule);
   return s;
 }
 
