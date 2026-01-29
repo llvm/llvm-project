@@ -1619,16 +1619,6 @@ struct VectorShapeCastDistribution : public gpu::WarpDistributionPattern {
     // must be a slice of higher rank layout.
     int64_t sourceRank = shapeCastOp.getSourceVectorType().getRank();
     int64_t resultRank = shapeCastOp.getResultVectorType().getRank();
-    // if (sourceRank < resultRank && !sourceLayout.isSliceOf(resultLayout)) {
-    //   return rewriter.notifyMatchFailure(
-    //       warpOp, "shape_cast is rank reducing but source layout is not a "
-    //               "slice of result layout");
-    // }
-    // if (sourceRank > resultRank && !resultLayout.isSliceOf(sourceLayout)) {
-    //   return rewriter.notifyMatchFailure(
-    //       warpOp, "shape_cast is rank increasing but result layout is not a "
-    //               "slice of source layout");
-    // }
 
     FailureOr<VectorType> sourceDistTypeOrFailure =
         getDistVecTypeBasedOnLaneLayout(sourceLayout,
