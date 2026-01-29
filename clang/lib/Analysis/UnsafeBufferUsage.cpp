@@ -1152,14 +1152,22 @@ static bool isUnsafeMemset(const CallExpr &Node, ASTContext &Ctx) {
   assert(FD && "It should have been checked that FD is non-null.");
 
   const IdentifierInfo *II = FD->getIdentifier();
-  if (!II || II->getName() != "memset")
+  if (!II)
     return false;
 
-  // If the number of parameters is unexpected, don't flag it as unsafe.
-  if (FD->getNumParams() < 3)
+  StringRef Name = LibcFunNamePrefixSuffixParser().matchName(
+      II->getName(), FD->getBuiltinID());
+  if (Name != "memset")
     return false;
 
-  // Now we have a real call to memset, it's considered unsafe unless it's in
+  // We currently only handle the basic forms of `memset` with 3 parameters.
+  // There is also `__builtin___memset_chk()` which takes a 4th `destlen`
+  // parameter for bounds checking, but we don't consider its safe forms yet.
+  // https://refspecs.linuxbase.org/LSB_4.1.0/LSB-Core-generic/LSB-Core-generic/libc---memset-chk-1.html
+  if (FD->getNumParams() != 3)
+    return true;
+
+  // Now we have a known version of `memset`, consider it unsafe unless it's in
   // the form `memset(&x, 0, sizeof(x))`.
   const auto *AddressOfVar = dyn_cast_if_present<DeclRefExpr>(
       getSubExprInAddressOfExpr(Node.getArg(0)));
