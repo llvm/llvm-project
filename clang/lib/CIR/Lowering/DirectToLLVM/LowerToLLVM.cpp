@@ -4463,6 +4463,26 @@ mlir::LogicalResult CIRToLLVMCpuIdOpLowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRToLLVMMemChrOpLowering::matchAndRewrite(
+    cir::MemChrOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
+  mlir::Type srcTy = getTypeConverter()->convertType(op.getSrc().getType());
+  mlir::Type patternTy =
+      getTypeConverter()->convertType(op.getPattern().getType());
+  mlir::Type lenTy = getTypeConverter()->convertType(op.getLen().getType());
+  auto fnTy =
+      mlir::LLVM::LLVMFunctionType::get(llvmPtrTy, {srcTy, patternTy, lenTy},
+                                        /*isVarArg=*/false);
+  llvm::StringRef fnName = "memchr";
+  createLLVMFuncOpIfNotExist(rewriter, op, fnName, fnTy);
+  rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
+      op, mlir::TypeRange{llvmPtrTy}, fnName,
+      mlir::ValueRange{adaptor.getSrc(), adaptor.getPattern(),
+                       adaptor.getLen()});
+  return mlir::success();
+}
+
 std::unique_ptr<mlir::Pass> createConvertCIRToLLVMPass() {
   return std::make_unique<ConvertCIRToLLVMPass>();
 }

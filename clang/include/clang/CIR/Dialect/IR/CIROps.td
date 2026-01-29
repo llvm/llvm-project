@@ -6242,4 +6242,35 @@ def CIR_CpuIdOp : CIR_Op<"cpuid"> {
     }];
 }
 
+//===----------------------------------------------------------------------===//
+// MemChrOp
+//===----------------------------------------------------------------------===//
+
+def CIR_MemChrOp : CIR_Op<"libc.memchr"> {
+  let summary = "libc's `memchr`";
+  let description = [{
+    Search for `pattern` in data range from `src` to `src` + `len`.
+    `len` provides a bound to the search in `src`. `result` is a pointer to
+    found `pattern` or a null pointer.
+
+    Examples:
+
+    ```mlir
+    %p = cir.libc.memchr(%src, %pattern, %len)
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_VoidPtrType, "", [MemRead]>:$src,
+    CIR_SInt32:$pattern,
+    CIR_UInt64:$len
+  );
+
+  let results = (outs CIR_VoidPtrType:$result);
+
+  let assemblyFormat = [{
+    `(` $src `,` $pattern `,` $len `)` attr-dict
+  }];
+}
+
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD
