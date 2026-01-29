@@ -11,7 +11,7 @@
 // RUN:   | FileCheck --check-prefix=CHECK-BASIC-CLANG-SYSROOT-SLASH %s
 // CHECK-BASIC-CLANG-SYSROOT-SLASH: "-cc1"
 // CHECK-BASIC-CLANG-SYSROOT-SLASH-SAME: "-isysroot" "[[SYSROOT:[^"]+/]]"
-// CHECK-BASIC-CLANG-SYSROOT-SLASH-SAME: "-internal-isystem" "[[BINROOT:[^"]+]]/usr/bin/../include/x86_64-unknown-linux-gnu"
+// CHECK-BASIC-CLANG-SYSROOT-SLASH-SAME: "-internal-isystem" "[[BINROOT:[^"]+]]/usr/bin[[SEP:/|\\\\]]..[[SEP]]include[[SEP]]x86_64-unknown-linux-gnu"
 // CHECK-BASIC-CLANG-SYSROOT-SLASH-SAME: "-internal-isystem" "[[SYSROOT]]usr/local/include"
 //
 // Test a simulated installation of libc++ on Linux, both through sysroot and
