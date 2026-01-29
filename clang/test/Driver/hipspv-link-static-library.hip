@@ -20,6 +20,7 @@
 // RUN: 2>&1 | FileCheck -check-prefixes=ALL,SDL %s
 
 // RUN: %clang --offload-new-driver -fgpu-rdc \
+// RUN:   --target=x86_64-linux-gnu \
 // RUN:   --offload=spirv64-unknown-chipstar \
 // RUN:   -nogpuinc -nogpulib %s -c -o %t/tu0.o
 // RUN: %clang --offload-new-driver -fgpu-rdc \
@@ -28,6 +29,7 @@
 // RUN: llvm-ar cr %t/libSDL2.a %t/tu1.o
 
 // RUN: %clang --offload-new-driver -fgpu-rdc \
+// RUN:   --target=x86_64-linux-gnu \
 // RUN:   -Xoffload-compiler-spirv64-unknown-chipstar \
 // RUN:   --hip-path=%S/Inputs/hipspv -no-hip-rt %t/tu0.o %t/libSDL2.a \
 // A hacky trick to print clang commands invoked by clang-linker-wrapper
