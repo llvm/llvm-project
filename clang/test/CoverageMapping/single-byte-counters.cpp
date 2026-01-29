@@ -55,17 +55,17 @@ int testSwitch(int x) { // CHECK-NEXT: File 0, [[@LINE]]:23 -> [[@LINE+20]]:2 = 
   switch (x) {
                         // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:14 -> [[@LINE+13]]:15 = 0
   case 1:               // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+3]]:10 = [[C31:#2]]
-
+                        // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:3 -> [[@LINE-1]]:9 = [[C31]], 0
     result = 1;
     break;
                         // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:11 -> [[@LINE+1]]:3 = 0
   case 2:               // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+3]]:10 = [[C32:#3]]
-
+                        // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:3 -> [[@LINE-1]]:9 = [[C32]], 0
     result = 2;
     break;
                         // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:11 -> [[@LINE+1]]:3 = 0
   default:              // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE+2]]:15 = [[C3D:#4]]
-
+                        // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:3 -> [[@LINE-1]]:10 = [[C3D]], 0
     result = 0;
   }
                         // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:4 -> [[@LINE+1]]:3 = [[C3E:#1]]
