@@ -10,7 +10,7 @@ template <class T> struct Wrapper;
 
 // This becomes the lexical parent for implicit specializations
 namespace N { // 2nd
-template <class T> struct Wrapper; // DeclWithIssue changes to this 1st.
+template <class T> struct Wrapper;
 template <class T> void trigger() {
   Wrapper<T>::get();
 }
