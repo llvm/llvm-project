@@ -94,12 +94,10 @@ define double @foo2_pgso() !prof !14 {
 ;
 ; CHECK-GI-LABEL: foo2_pgso:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:  Lloh2:
-; CHECK-GI-NEXT:    adrp x8, lCPI4_0@PAGE
-; CHECK-GI-NEXT:  Lloh3:
-; CHECK-GI-NEXT:    ldr d0, [x8, lCPI4_0@PAGEOFF]
+; CHECK-GI-NEXT:    mov x8, #137438887936 ; =0x1fffff0000
+; CHECK-GI-NEXT:    movk x8, #65489
+; CHECK-GI-NEXT:    fmov d0, x8
 ; CHECK-GI-NEXT:    ret
-; CHECK-GI-NEXT:    .loh AdrpLdr Lloh2, Lloh3
   ret double 0x1FFFFFFFd1
 }
 
@@ -115,12 +113,10 @@ define float @bar_pgso() !prof !14 {
 ;
 ; CHECK-GI-LABEL: bar_pgso:
 ; CHECK-GI:       ; %bb.0:
-; CHECK-GI-NEXT:  Lloh4:
-; CHECK-GI-NEXT:    adrp x8, lCPI5_0@PAGE
-; CHECK-GI-NEXT:  Lloh5:
-; CHECK-GI-NEXT:    ldr s0, [x8, lCPI5_0@PAGEOFF]
+; CHECK-GI-NEXT:    mov w8, #4060 ; =0xfdc
+; CHECK-GI-NEXT:    movk w8, #16457, lsl #16
+; CHECK-GI-NEXT:    fmov s0, w8
 ; CHECK-GI-NEXT:    ret
-; CHECK-GI-NEXT:    .loh AdrpLdr Lloh4, Lloh5
   ret float 0x400921FB80000000
 }
 

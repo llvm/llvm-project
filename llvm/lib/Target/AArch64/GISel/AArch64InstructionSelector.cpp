@@ -2680,58 +2680,10 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   case TargetOpcode::G_CONSTANT: {
     const bool isFP = Opcode == TargetOpcode::G_FCONSTANT;
 
-    //   const LLT s8 = LLT::scalar(8);
-    //   const LLT s16 = LLT::scalar(16);
-    //   const LLT s32 = LLT::scalar(32);
-    //   const LLT s64 = LLT::scalar(64);
-    //   const LLT s128 = LLT::scalar(128);
-    //   const LLT p0 = LLT::pointer(0, 64);
-
     const Register DefReg = I.getOperand(0).getReg();
     const LLT DefTy = MRI.getType(DefReg);
     const unsigned DefSize = DefTy.getSizeInBits();
     const RegisterBank &RB = *RBI.getRegBank(DefReg, MRI, TRI);
-
-    //   // FIXME: Redundant check, but even less readable when factored out.
-    //   if (isFP) {
-    //     if (Ty != s16 && Ty != s32 && Ty != s64 && Ty != s128) {
-    //       LLVM_DEBUG(dbgs() << "Unable to materialize FP " << Ty
-    //                         << " constant, expected: " << s16 << " or " <<
-    //                         s32
-    //                         << " or " << s64 << " or " << s128 << '\n');
-    //       return false;
-    //     }
-
-    //     if (RB.getID() != AArch64::FPRRegBankID) {
-    //       LLVM_DEBUG(dbgs() << "Unable to materialize FP " << Ty
-    //                         << " constant on bank: " << RB
-    //                         << ", expected: FPR\n");
-    //       return false;
-    //     }
-
-    // The case when we have 0.0 is covered by tablegen. Reject it here so we
-    // can be sure tablegen works correctly and isn't rescued by this code.
-    // 0.0 is not covered by tablegen for FP128. So we will handle this
-    // scenario in the code here.
-    // if (isFP && DefSize != 128 &&
-    // I.getOperand(1).getFPImm()->isExactlyValue(0.0))
-    //   return false;
-    //   } else {
-    //     // s32 and s64 are covered by tablegen.
-    //     if (Ty != p0 && Ty != s8 && Ty != s16) {
-    //       LLVM_DEBUG(dbgs() << "Unable to materialize integer " << Ty
-    //                         << " constant, expected: " << s32 << ", " << s64
-    //                         << ", or " << p0 << '\n');
-    //       return false;
-    //     }
-
-    //     if (RB.getID() != AArch64::GPRRegBankID) {
-    //       LLVM_DEBUG(dbgs() << "Unable to materialize integer " << Ty
-    //                         << " constant on bank: " << RB
-    //                         << ", expected: GPR\n");
-    //       return false;
-    //     }
-    //   }
 
     if (isFP) {
       const TargetRegisterClass &FPRRC = *getRegClassForTypeOnBank(DefTy, RB);
@@ -2763,44 +2715,33 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
         return RBI.constrainGenericRegister(DefReg, FPRRC, MRI);
       }
       }
+    }
+
+    if (DefTy.isPointer()) {
+      if (DefSize != 64)
+        return false;
+
+      uint64_t Val = 0;
+      if (I.getOperand(1).isCImm())
+        Val = I.getOperand(1).getCImm()->getZExtValue();
+      else if (I.getOperand(1).isImm())
+        Val = I.getOperand(1).getImm();
+      else
+        return false;
+
+      Register TmpReg = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
+      auto Mov = MIB.buildInstr(AArch64::MOVi64imm, {TmpReg}, {}).addImm(Val);
+      MIB.buildCopy({DefReg}, {TmpReg});
+      I.eraseFromParent();
+
+      const TargetRegisterClass &RC = *getRegClassForTypeOnBank(DefTy, RB);
+      if (!RBI.constrainGenericRegister(DefReg, RC, MRI))
+        return false;
+      return constrainSelectedInstRegOperands(*Mov, TII, TRI, RBI);
+    }
+
+    return false;
   }
-
-  return false;
-  }
-
-  //     assert((DefSize == 32 || DefSize == 64) && "Unexpected const def
-  //     size");
-  //     // Either emit a FMOV, or emit a copy to emit a normal mov.
-  //     const Register DefGPRReg = MRI.createVirtualRegister(
-  //         DefSize == 32 ? &AArch64::GPR32RegClass : &AArch64::GPR64RegClass);
-  //     MachineOperand &RegOp = I.getOperand(0);
-  //     RegOp.setReg(DefGPRReg);
-  //     MIB.setInsertPt(MIB.getMBB(), std::next(I.getIterator()));
-  //     MIB.buildCopy({DefReg}, {DefGPRReg});
-
-  //     if (!RBI.constrainGenericRegister(DefReg, FPRRC, MRI)) {
-  //       LLVM_DEBUG(dbgs() << "Failed to constrain G_FCONSTANT def
-  //       operand\n"); return false;
-  //     }
-
-  //     MachineOperand &ImmOp = I.getOperand(1);
-  //     // FIXME: Is going through int64_t always correct?
-  //     ImmOp.ChangeToImmediate(
-  //         ImmOp.getFPImm()->getValueAPF().bitcastToAPInt().getZExtValue());
-  //   } else if (I.getOperand(1).isCImm()) {
-  //     uint64_t Val = I.getOperand(1).getCImm()->getZExtValue();
-  //     I.getOperand(1).ChangeToImmediate(Val);
-  //   } else if (I.getOperand(1).isImm()) {
-  //     uint64_t Val = I.getOperand(1).getImm();
-  //     I.getOperand(1).ChangeToImmediate(Val);
-  //   }
-
-  //   const unsigned MovOpc =
-  //       DefSize == 64 ? AArch64::MOVi64imm : AArch64::MOVi32imm;
-  //   I.setDesc(TII.get(MovOpc));
-  //   constrainSelectedInstRegOperands(I, TII, TRI, RBI);
-  //   return true;
-  // }
   case TargetOpcode::G_EXTRACT: {
     Register DstReg = I.getOperand(0).getReg();
     Register SrcReg = I.getOperand(1).getReg();
