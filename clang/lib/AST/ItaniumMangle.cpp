@@ -6463,6 +6463,9 @@ static bool isZeroInitialized(QualType T, const APValue &V) {
     return true;
   }
 
+  case APValue::Matrix:
+    llvm_unreachable("Matrix APValues not yet supported");
+
   case APValue::Int:
     return !V.getInt();
 
@@ -6676,6 +6679,9 @@ void CXXNameMangler::mangleValueInTemplateArg(QualType T, const APValue &V,
     Out << 'E';
     break;
   }
+
+  case APValue::Matrix:
+    llvm_unreachable("Matrix template argument mangling not yet supported");
 
   case APValue::Int:
     mangleIntegerLiteral(T, V.getInt());
