@@ -40,7 +40,6 @@ struct EnvStringOwnership {
 // This class encapsulates all state and operations related to environment
 // management, including memory management and tracking of string ownership.
 class EnvironmentManager {
-
   // Our allocated environ array (nullptr if using startup environ)
   char **storage = nullptr;
 

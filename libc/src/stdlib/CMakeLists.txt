@@ -62,7 +62,8 @@ add_entrypoint_object(
   HDRS
     getenv.h
   DEPENDS
-  libc.config.app_h
+    libc.config.app_h
+    .environ_internal
 )
 
 add_object_library(

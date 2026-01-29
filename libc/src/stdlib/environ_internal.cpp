@@ -54,11 +54,8 @@ int EnvironmentManager::find_var(cpp::string_view name) {
 
   for (size_t i = 0; i < size; i++) {
     cpp::string_view current(env_array[i]);
-    if (!current.starts_with(name))
-      continue;
-
-    // Check that name is followed by '='
-    if (current.size() > name.size() && current[name.size()] == '=')
+    if (current.starts_with(name) && current.size() > name.size() &&
+        current[name.size()] == '=')
       return static_cast<int>(i);
   }
 
