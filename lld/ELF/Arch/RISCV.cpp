@@ -290,6 +290,8 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
   case R_RISCV_HI20:
   case R_RISCV_LO12_I:
   case R_RISCV_LO12_S:
+  case INTERNAL_RISCV_QC_ABS20_U:
+  case INTERNAL_RISCV_QC_E_32:
     return R_ABS;
   case R_RISCV_ADD8:
   case R_RISCV_ADD16:
@@ -311,10 +313,12 @@ RelExpr RISCV::getRelExpr(const RelType type, const Symbol &s,
   case R_RISCV_RVC_BRANCH:
   case R_RISCV_RVC_JUMP:
   case R_RISCV_32_PCREL:
+  case INTERNAL_RISCV_QC_E_BRANCH:
     return R_PC;
   case R_RISCV_CALL:
   case R_RISCV_CALL_PLT:
   case R_RISCV_PLT32:
+  case INTERNAL_RISCV_QC_E_CALL_PLT:
     return R_PLT_PC;
   case R_RISCV_GOT_HI20:
   case R_RISCV_GOT32_PCREL:
@@ -563,6 +567,73 @@ void RISCV::relocate(uint8_t *loc, const Relocation &rel, uint64_t val) const {
     else
       write32le(loc + 4, val);
     break;
+
+  case INTERNAL_RISCV_QC_ABS20_U: {
+    checkInt(ctx, loc, val, 20, rel);
+    uint32_t insn = read32le(loc) & 0xFFF;
+    uint32_t imm20 = extractBits(val, 19, 19) << 31;
+    uint32_t imm18_15 = extractBits(val, 18, 15) << 12;
+    uint32_t imm14_0 = extractBits(val, 14, 0) << 16;
+    insn |= imm20 | imm18_15 | imm14_0;
+    write32le(loc, insn);
+    break;
+  }
+
+  case INTERNAL_RISCV_QC_E_32: {
+    checkInt(ctx, loc, val, 32, rel);
+    uint64_t insn = static_cast<uint64_t>(read32le(loc))
+                  | (static_cast<uint64_t>(read16le(loc + 4)) << 32);
+    insn &= 0xFFFFull;
+
+    uint64_t imm32_0 = static_cast<uint64_t>(extractBits(val, 32, 0)) << 16;
+    insn |= imm32_0;
+
+    write32le(loc, insn);
+    write16le(loc+4, (insn >> 32) & 0xFFFF);
+
+    break;
+  }
+
+  case INTERNAL_RISCV_QC_E_BRANCH: {
+    checkInt(ctx, loc, val, 13, rel);
+    checkAlignment(ctx, loc, val, 2, rel);
+
+    uint64_t insn = static_cast<uint64_t>(read32le(loc))
+                  | (static_cast<uint64_t>(read16le(loc + 4)) << 32);
+    insn &= 0xFFFF01FFF07Full;
+
+    uint64_t imm12 = static_cast<uint64_t>(extractBits(val, 12, 12)) << 31;
+    uint64_t imm10_5 = static_cast<uint64_t>(extractBits(val, 10, 5)) << 25;
+    uint64_t imm4_1 = static_cast<uint64_t>(extractBits(val, 4, 1)) << 8;
+    uint64_t imm11 = static_cast<uint64_t>(extractBits(val, 11, 11)) << 7;
+    insn |= imm12 | imm10_5 | imm4_1 | imm11;
+
+    write32le(loc, insn);
+    write16le(loc+4, (insn >> 32) & 0xFFFF);
+    return;
+  }
+
+  case INTERNAL_RISCV_QC_E_CALL_PLT: {
+    checkInt(ctx, loc, val, 32, rel);
+    checkAlignment(ctx, loc, val, 2, rel);
+
+    uint64_t insn = static_cast<uint64_t>(read32le(loc))
+                  | (static_cast<uint64_t>(read16le(loc + 4)) << 32);
+    insn &= 0xFFFF01FFF07Full;
+
+    uint64_t imm31_16 = static_cast<uint64_t>(extractBits(val, 31, 16)) << 32;
+    uint64_t imm12 = static_cast<uint64_t>(extractBits(val, 12, 12)) << 31;
+    uint64_t imm10_5 = static_cast<uint64_t>(extractBits(val, 10, 5)) << 25;
+    uint64_t imm15_13 = static_cast<uint64_t>(extractBits(val, 15, 13)) << 17;
+    uint64_t imm4_1 = static_cast<uint64_t>(extractBits(val, 4, 1)) << 8;
+    uint64_t imm11 = static_cast<uint64_t>(extractBits(val, 11, 11)) << 7;
+    insn |= imm31_16 | imm12 | imm10_5 | imm15_13 | imm4_1 | imm11;
+
+    write32le(loc, insn);
+    write16le(loc+4, (insn >> 32) & 0xFFFF);
+    return;
+  }
+
   default:
     llvm_unreachable("unknown relocation");
   }
