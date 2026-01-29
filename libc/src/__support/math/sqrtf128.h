@@ -9,6 +9,10 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_SQRTF128_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_SQRTF128_H
 
+#include "include/llvm-libc-types/float128.h"
+
+#ifdef LIBC_TYPES_HAS_FLOAT128
+
 #include "src/__support/CPP/bit.h"
 #include "src/__support/FPUtil/FEnvImpl.h"
 #include "src/__support/FPUtil/FPBits.h"
@@ -16,7 +20,6 @@
 #include "src/__support/common.h"
 #include "src/__support/macros/optimization.h"
 #include "src/__support/uint128.h"
-#include "src/math/sqrtf128.h"
 
 // Compute sqrtf128 with correct rounding for all rounding modes using integer
 // arithmetic by Alexei Sibidanov (sibid@uvic.ca):
@@ -55,7 +58,6 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace math {
 
-
 namespace sqrtf128_internal {
 
 using FPBits = fputil::FPBits<float128>;
@@ -66,7 +68,7 @@ LIBC_INLINE static constexpr T prod_hi(T, U);
 // Get high part of integer multiplications.
 // Use template to prevent implicit conversion.
 template <>
-LIBC_INLINE static constexpr uint64_t prod_hi<uint64_t>(uint64_t x,
+LIBC_INLINE constexpr uint64_t prod_hi<uint64_t>(uint64_t x,
                                                         uint64_t y) {
   return static_cast<uint64_t>(
       (static_cast<UInt128>(x) * static_cast<UInt128>(y)) >> 64);
@@ -74,7 +76,7 @@ LIBC_INLINE static constexpr uint64_t prod_hi<uint64_t>(uint64_t x,
 
 // Get high part of unsigned 128x64 bit multiplication.
 template <>
-LIBC_INLINE static constexpr UInt128 prod_hi<UInt128, uint64_t>(UInt128 x,
+LIBC_INLINE constexpr UInt128 prod_hi<UInt128, uint64_t>(UInt128 x,
                                                                 uint64_t y) {
   uint64_t x_lo = static_cast<uint64_t>(x);
   uint64_t x_hi = static_cast<uint64_t>(x >> 64);
@@ -85,14 +87,14 @@ LIBC_INLINE static constexpr UInt128 prod_hi<UInt128, uint64_t>(UInt128 x,
 
 // Get high part of signed 64x64 bit multiplication.
 template <>
-LIBC_INLINE static constexpr int64_t prod_hi<int64_t>(int64_t x, int64_t y) {
+LIBC_INLINE constexpr int64_t prod_hi<int64_t>(int64_t x, int64_t y) {
   return static_cast<int64_t>(
       (static_cast<Int128>(x) * static_cast<Int128>(y)) >> 64);
 }
 
 // Get high 128-bit part of unsigned 128x128 bit multiplication.
 template <>
-LIBC_INLINE static constexpr UInt128 prod_hi<UInt128>(UInt128 x, UInt128 y) {
+LIBC_INLINE constexpr UInt128 prod_hi<UInt128>(UInt128 x, UInt128 y) {
   uint64_t x_lo = static_cast<uint64_t>(x);
   uint64_t x_hi = static_cast<uint64_t>(x >> 64);
   uint64_t y_lo = static_cast<uint64_t>(y);
@@ -109,7 +111,7 @@ LIBC_INLINE static constexpr UInt128 prod_hi<UInt128>(UInt128 x, UInt128 y) {
 
 // Get high 128-bit part of mixed sign 128x128 bit multiplication.
 template <>
-LIBC_INLINE static constexpr Int128 prod_hi<Int128, UInt128>(Int128 x,
+LIBC_INLINE constexpr Int128 prod_hi<Int128, UInt128>(Int128 x,
                                                              UInt128 y) {
   UInt128 mask = static_cast<UInt128>(x >> 127);
   UInt128 negative_part = y & mask;
@@ -284,7 +286,7 @@ LIBC_INLINE static constexpr uint64_t rsqrt_approx(uint64_t m) {
 
 } // namespace sqrtf128_internal
 
-LIBC_INLINE static constexpr float128 sqrtf128(float128 x) {
+LIBC_INLINE static float128 sqrtf128(float128 x) {
   using namespace sqrtf128_internal;
   using FPBits = fputil::FPBits<float128>;
   // Get rounding mode.
@@ -451,4 +453,6 @@ LIBC_INLINE static constexpr float128 sqrtf128(float128 x) {
 } // namespace math
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif
+#endif // LIBC_TYPES_HAS_FLOAT128
+
+#endif // LLVM_LIBC_SRC___SUPPORT_MATH_SQRTF128_H
