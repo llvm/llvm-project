@@ -2862,6 +2862,10 @@ void RISCVTTIImpl::getUnrollingPreferences(
   // taken cost of the backedge.
   if (Cost < 12)
     UP.Force = true;
+
+  // Set a lower runtime unrolling count for in-order models.
+  if (!ST->getSchedModel().isOutOfOrder())
+    UP.DefaultUnrollRuntimeCount = 4;
 }
 
 void RISCVTTIImpl::getPeelingPreferences(Loop *L, ScalarEvolution &SE,
