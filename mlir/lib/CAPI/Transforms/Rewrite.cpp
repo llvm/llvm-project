@@ -642,9 +642,8 @@ MlirConversionPattern mlirOpConversionPatternCreate(
     void *userData, size_t nGeneratedNames, MlirStringRef *generatedNames) {
   std::vector<mlir::StringRef> generatedNamesVec;
   generatedNamesVec.reserve(nGeneratedNames);
-  for (size_t i = 0; i < nGeneratedNames; ++i) {
+  for (size_t i = 0; i < nGeneratedNames; ++i)
     generatedNamesVec.push_back(unwrap(generatedNames[i]));
-  }
   return wrap(new mlir::ExternalConversionPattern(
       callbacks, userData, unwrap(rootName), PatternBenefit(benefit),
       unwrap(context), unwrap(typeConverter), generatedNamesVec));
