@@ -3920,8 +3920,8 @@ private:
   /// If the int shifts unique, also strided, but not ordered, sets \p Order.
   /// If the node can be represented as a bitcast + bswap, sets \p IsBSwap.
   /// If the root nodes are loads, sets \p ForLoads to true.
-  bool matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
-                      bool &IsBSwap, bool &ForLoads) const;
+  bool matchesShlZExt(const TreeEntry &TE, OrdersType &Order, bool &IsBSwap,
+                      bool &ForLoads) const;
 
   class TreeEntry {
   public:
