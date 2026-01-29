@@ -385,6 +385,11 @@ static LogicalResult checkImplementationStatus(Operation &op) {
       result = todo("num_threads with multi-dimensional values");
   };
 
+  auto checkThreadLimit = [&todo](auto op, LogicalResult &result) {
+    if (op.hasThreadLimitMultiDim())
+      result = todo("thread_limit with multi-dimensional values");
+  };
+
   LogicalResult result = success();
   llvm::TypeSwitch<Operation &>(op)
       .Case([&](omp::DistributeOp op) {
@@ -409,6 +414,7 @@ static LogicalResult checkImplementationStatus(Operation &op) {
         checkAllocate(op, result);
         checkPrivate(op, result);
         checkNumTeams(op, result);
+        checkThreadLimit(op, result);
       })
       .Case([&](omp::TaskOp op) {
         checkAllocate(op, result);
@@ -442,11 +448,12 @@ static LogicalResult checkImplementationStatus(Operation &op) {
             omp::AtomicCaptureOp>([&](auto op) { checkHint(op, result); })
       .Case<omp::TargetEnterDataOp, omp::TargetExitDataOp>(
           [&](auto op) { checkDepend(op, result); })
-      .Case<omp::TargetUpdateOp>([&](auto op) { checkDepend(op, result); })
+      .Case([&](omp::TargetUpdateOp op) { checkDepend(op, result); })
       .Case([&](omp::TargetOp op) {
         checkAllocate(op, result);
         checkBare(op, result);
         checkInReduction(op, result);
+        checkThreadLimit(op, result);
       })
       .Default([](Operation &) {
         // Assume all clauses for an operation can be translated unless they are
@@ -2080,8 +2087,8 @@ convertOmpTeams(omp::TeamsOp op, llvm::IRBuilderBase &builder,
     numTeamsUpper = moduleTranslation.lookupValue(op.getNumTeams(0));
 
   llvm::Value *threadLimit = nullptr;
-  if (Value threadLimitVar = op.getThreadLimit())
-    threadLimit = moduleTranslation.lookupValue(threadLimitVar);
+  if (!op.getThreadLimitVars().empty())
+    threadLimit = moduleTranslation.lookupValue(op.getThreadLimit(0));
 
   llvm::Value *ifExpr = nullptr;
   if (Value ifVar = op.getIfExpr())
@@ -4857,6 +4864,11 @@ static llvm::omp::OpenMPOffloadMappingFlags mapParentWithMembers(
   assert(!ompBuilder.Config.isTargetDevice() &&
          "function only supported for host device codegen");
 
+  auto parentClause =
+      llvm::cast<omp::MapInfoOp>(mapData.MapClause[mapDataIndex]);
+
+  auto *parentMapper = mapData.Mappers[mapDataIndex];
+
   // Map the first segment of the parent. If a user-defined mapper is attached,
   // include the parent's to/from-style bits (and common modifiers) in this
   // base entry so the mapper receives correct copy semantics via its 'type'
@@ -4867,9 +4879,7 @@ static llvm::omp::OpenMPOffloadMappingFlags mapParentWithMembers(
           ? llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_TARGET_PARAM
           : llvm::omp::OpenMPOffloadMappingFlags::OMP_MAP_NONE;
 
-  // Detect if this mapping uses a user-defined mapper.
-  bool hasUserMapper = mapData.Mappers[mapDataIndex] != nullptr;
-  if (hasUserMapper) {
+  if (parentMapper) {
     using mapFlags = llvm::omp::OpenMPOffloadMappingFlags;
     // Preserve relevant map-type bits from the parent clause. These include
     // the copy direction (TO/FROM), as well as commonly used modifiers that
@@ -4884,7 +4894,11 @@ static llvm::omp::OpenMPOffloadMappingFlags mapParentWithMembers(
   combinedInfo.Types.emplace_back(baseFlag);
   combinedInfo.DevicePointers.emplace_back(
       mapData.DevicePointers[mapDataIndex]);
-  combinedInfo.Mappers.emplace_back(mapData.Mappers[mapDataIndex]);
+  // Only attach the mapper to the base entry when we are mapping the whole
+  // parent. Combined/segment entries must not carry a mapper; otherwise the
+  // mapper can be invoked with a partial size, which is undefined behaviour.
+  combinedInfo.Mappers.emplace_back(
+      parentMapper && !parentClause.getPartialMap() ? parentMapper : nullptr);
   combinedInfo.Names.emplace_back(LLVM::createMappingInformation(
       mapData.MapClause[mapDataIndex]->getLoc(), ompBuilder));
   combinedInfo.BasePointers.emplace_back(mapData.BasePointers[mapDataIndex]);
@@ -4896,8 +4910,6 @@ static llvm::omp::OpenMPOffloadMappingFlags mapParentWithMembers(
   // Fortran pointers and allocatables, the mapping of the pointed to
   // data by the descriptor (which itself, is a structure containing
   // runtime information on the dynamically allocated data).
-  auto parentClause =
-      llvm::cast<omp::MapInfoOp>(mapData.MapClause[mapDataIndex]);
   llvm::Value *lowAddr, *highAddr;
   if (!parentClause.getPartialMap()) {
     lowAddr = builder.CreatePointerCast(mapData.Pointers[mapDataIndex],
@@ -4958,7 +4970,7 @@ static llvm::omp::OpenMPOffloadMappingFlags mapParentWithMembers(
           mapData.BasePointers[mapDataIndex]);
       combinedInfo.Pointers.emplace_back(mapData.Pointers[mapDataIndex]);
       combinedInfo.Sizes.emplace_back(mapData.Sizes[mapDataIndex]);
-      combinedInfo.Mappers.emplace_back(mapData.Mappers[mapDataIndex]);
+      combinedInfo.Mappers.emplace_back(nullptr);
     } else {
       llvm::SmallVector<size_t> overlapIdxs;
       // Find all of the members that "overlap", i.e. occlude other members that
@@ -4992,7 +5004,7 @@ static llvm::omp::OpenMPOffloadMappingFlags mapParentWithMembers(
             mapData.MapClause[mapDataIndex]->getLoc(), ompBuilder));
         combinedInfo.BasePointers.emplace_back(
             mapData.BasePointers[mapDataIndex]);
-        combinedInfo.Mappers.emplace_back(mapData.Mappers[mapDataIndex]);
+        combinedInfo.Mappers.emplace_back(nullptr);
         combinedInfo.Pointers.emplace_back(lowAddr);
         combinedInfo.Sizes.emplace_back(builder.CreateIntCast(
             builder.CreatePtrDiff(builder.getInt8Ty(),
@@ -5014,7 +5026,7 @@ static llvm::omp::OpenMPOffloadMappingFlags mapParentWithMembers(
           mapData.MapClause[mapDataIndex]->getLoc(), ompBuilder));
       combinedInfo.BasePointers.emplace_back(
           mapData.BasePointers[mapDataIndex]);
-      combinedInfo.Mappers.emplace_back(mapData.Mappers[mapDataIndex]);
+      combinedInfo.Mappers.emplace_back(nullptr);
       combinedInfo.Pointers.emplace_back(lowAddr);
       combinedInfo.Sizes.emplace_back(builder.CreateIntCast(
           builder.CreatePtrDiff(builder.getInt8Ty(), highAddr, lowAddr),
@@ -6050,7 +6062,8 @@ extractHostEvalClauses(omp::TargetOp targetOp, Value &numThreads,
             else if (llvm::is_contained(teamsOp.getNumTeamsUpperVars(),
                                         blockArg))
               numTeamsUpper = hostEvalVar;
-            else if (teamsOp.getThreadLimit() == blockArg)
+            else if (!teamsOp.getThreadLimitVars().empty() &&
+                     teamsOp.getThreadLimit(0) == blockArg)
               threadLimit = hostEvalVar;
             else
               llvm_unreachable("unsupported host_eval use");
@@ -6173,7 +6186,8 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
       // Handle num_teams upper bounds (only first value for now)
       if (!teamsOp.getNumTeamsUpperVars().empty())
         numTeamsUpper = teamsOp.getNumTeams(0);
-      threadLimit = teamsOp.getThreadLimit();
+      if (!teamsOp.getThreadLimitVars().empty())
+        threadLimit = teamsOp.getThreadLimit(0);
     }
 
     if (auto parallelOp = castOrGetParentOfType<omp::ParallelOp>(capturedOp)) {
@@ -6220,7 +6234,8 @@ initTargetDefaultAttrs(omp::TargetOp targetOp, Operation *capturedOp,
 
   // Extract 'thread_limit' clause from 'target' and 'teams' directives.
   int32_t targetThreadLimitVal = -1, teamsThreadLimitVal = -1;
-  setMaxValueFromClause(targetOp.getThreadLimit(), targetThreadLimitVal);
+  if (!targetOp.getThreadLimitVars().empty())
+    setMaxValueFromClause(targetOp.getThreadLimit(0), targetThreadLimitVal);
   setMaxValueFromClause(threadLimit, teamsThreadLimitVal);
 
   // Extract 'max_threads' clause from 'parallel' or set to 1 if it's SIMD.
@@ -6299,9 +6314,11 @@ initTargetRuntimeAttrs(llvm::IRBuilderBase &builder,
                          teamsThreadLimit, &lowerBounds, &upperBounds, &steps);
 
   // TODO: Handle constant 'if' clauses.
-  if (Value targetThreadLimit = targetOp.getThreadLimit())
+  if (!targetOp.getThreadLimitVars().empty()) {
+    Value targetThreadLimit = targetOp.getThreadLimit(0);
     attrs.TargetThreadLimit.front() =
         moduleTranslation.lookupValue(targetThreadLimit);
+  }
 
   // The __kmpc_push_num_teams_51 function expects int32 as the arguments.  So,
   // truncate or sign extend lower and upper num_teams bounds as well as
