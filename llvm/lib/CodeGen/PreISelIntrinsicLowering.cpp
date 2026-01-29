@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "llvm/CodeGen/PreISelIntrinsicLowering.h"
+#include "llvm/ADT/APSInt.h"
 #include "llvm/Analysis/ObjCARCInstKind.h"
 #include "llvm/Analysis/ObjCARCUtil.h"
 #include "llvm/Analysis/TargetLibraryInfo.h"
@@ -124,6 +125,163 @@ static bool lowerLoadRelative(Function &F) {
     Value *ResultPtr = B.CreatePtrAdd(CI->getArgOperand(0), OffsetI32);
 
     CI->replaceAllUsesWith(ResultPtr);
+    CI->eraseFromParent();
+    Changed = true;
+  }
+
+  return Changed;
+}
+
+static Value *lowerFixedPointMul(Module *M, IRBuilder<> &B, Value *Op0,
+                                 Value *Op1, unsigned Scale, bool Signed,
+                                 bool Saturating) {
+  IntegerType *OpTy = cast<IntegerType>(Op0->getType());
+  unsigned NumBits = OpTy->getBitWidth();
+
+  if (!Scale) {
+    if (!Saturating) {
+      // [us]mul.fix(a, b, 0) -> mul(a, b)
+      return B.CreateMul(Op0, Op1);
+    }
+
+    APSInt MinVal = APSInt::getMinValue(NumBits, !Signed);
+    APSInt MaxVal = APSInt::getMaxValue(NumBits, !Signed);
+    Constant *Zero = Constant::getNullValue(OpTy);
+    if (Signed) {
+      Value *Res =
+          B.CreateIntrinsic(Intrinsic::smul_with_overflow, {OpTy}, {Op0, Op1});
+      Value *Prod = B.CreateExtractValue(Res, {0});
+      Value *Overflowed = B.CreateExtractValue(Res, {1});
+      Value *Xor = B.CreateXor(
+          Op0, Op1); // The sign bit will be 1 if the product is negative.
+      Value *ProdNeg = B.CreateICmpSLT(Xor, Zero);
+      Value *OverflowRes =
+          B.CreateSelect(ProdNeg, ConstantInt::get(OpTy, MinVal),
+                         ConstantInt::get(OpTy, MaxVal));
+      return B.CreateSelect(Overflowed, OverflowRes, Prod);
+    } else {
+      Value *Res =
+          B.CreateIntrinsic(Intrinsic::umul_with_overflow, {OpTy}, {Op0, Op1});
+      Value *Prod = B.CreateExtractValue(Res, {0});
+      Value *Overflowed = B.CreateExtractValue(Res, {1});
+      return B.CreateSelect(Overflowed, ConstantInt::get(OpTy, MaxVal), Prod);
+    }
+  }
+
+  // Cast to a wider type.
+  IntegerType *WideTy = cast<IntegerType>(OpTy)->getExtendedType();
+  Value *WideOp0 =
+      Signed ? B.CreateSExt(Op0, WideTy) : B.CreateZExt(Op0, WideTy);
+  Value *WideOp1 =
+      Signed ? B.CreateSExt(Op1, WideTy) : B.CreateZExt(Op1, WideTy);
+
+  // Then do the mul.
+  Value *Prod = B.CreateMul(WideOp0, WideOp1);
+  if (Saturating) {
+    APSInt MinVal =
+        APSInt::getMinValue(NumBits, !Signed).extend(WideTy->getBitWidth());
+    APSInt MaxVal =
+        APSInt::getMaxValue(NumBits, !Signed).extend(WideTy->getBitWidth());
+    Constant *SatMin = ConstantInt::get(WideTy, MinVal);
+    Constant *SatMax = ConstantInt::get(WideTy, MaxVal);
+    if (Signed) {
+      Value *OverflowedBelow = B.CreateICmpSLT(Prod, SatMin);
+      Prod = B.CreateSelect(OverflowedBelow, SatMin, Prod);
+      Value *OverflowedAbove = B.CreateICmpSGT(Prod, SatMax);
+      Prod = B.CreateSelect(OverflowedAbove, SatMax, Prod);
+    } else {
+      Value *OverflowedAbove = B.CreateICmpUGT(Prod, SatMax);
+      Prod = B.CreateSelect(OverflowedAbove, SatMax, Prod);
+    }
+  }
+
+  // RShift by the scale then truncate.
+  Value *Res = B.CreateAShr(Prod, Scale);
+  return B.CreateTrunc(Res, OpTy);
+}
+
+static bool lowerFixedPointMul(Function &F, bool Signed, bool Saturating) {
+  if (F.use_empty())
+    return false;
+
+  bool Changed = false;
+  Module *M = F.getParent();
+
+  for (Use &U : llvm::make_early_inc_range(F.uses())) {
+    auto CI = dyn_cast<CallInst>(U.getUser());
+    if (!CI || CI->getCalledOperand() != &F)
+      continue;
+
+    IRBuilder<> B(CI);
+    unsigned Scale = cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
+    Value *Result =
+        lowerFixedPointMul(M, B, CI->getArgOperand(0), CI->getArgOperand(1),
+                           Scale, Signed, Saturating);
+
+    CI->replaceAllUsesWith(Result);
+    CI->eraseFromParent();
+    Changed = true;
+  }
+
+  return Changed;
+}
+
+static Value *lowerFixedPointDiv(Module *M, IRBuilder<> &B, Value *Op0,
+                                 Value *Op1, unsigned Scale, bool Signed,
+                                 bool Saturating) {
+  IntegerType *OpTy = cast<IntegerType>(Op0->getType());
+  unsigned NumBits = OpTy->getBitWidth();
+
+  // Widen the type by the scale then do the division.
+  IntegerType *WideTy = IntegerType::get(M->getContext(), NumBits + Scale);
+  Value *WideOp0 =
+      Signed ? B.CreateSExt(Op0, WideTy) : B.CreateZExt(Op0, WideTy);
+  Value *WideOp1 =
+      Signed ? B.CreateSExt(Op1, WideTy) : B.CreateZExt(Op1, WideTy);
+
+  WideOp0 = B.CreateShl(WideOp0, Scale);
+  Value *Quot =
+      Signed ? B.CreateSDiv(WideOp0, WideOp1) : B.CreateUDiv(WideOp0, WideOp1);
+  if (Saturating) {
+    APSInt MinVal =
+        APSInt::getMinValue(NumBits, !Signed).extend(WideTy->getBitWidth());
+    APSInt MaxVal =
+        APSInt::getMaxValue(NumBits, !Signed).extend(WideTy->getBitWidth());
+    Constant *SatMin = ConstantInt::get(WideTy, MinVal);
+    Constant *SatMax = ConstantInt::get(WideTy, MaxVal);
+    if (Signed) {
+      Value *OverflowedBelow = B.CreateICmpSLT(Quot, SatMin);
+      Quot = B.CreateSelect(OverflowedBelow, SatMin, Quot);
+      Value *OverflowedAbove = B.CreateICmpSGT(Quot, SatMax);
+      Quot = B.CreateSelect(OverflowedAbove, SatMax, Quot);
+    } else {
+      Value *OverflowedAbove = B.CreateICmpUGT(Quot, SatMax);
+      Quot = B.CreateSelect(OverflowedAbove, SatMax, Quot);
+    }
+  }
+
+  return B.CreateTrunc(Quot, OpTy);
+}
+
+static bool lowerFixedPointDiv(Function &F, bool Signed, bool Saturating) {
+  if (F.use_empty())
+    return false;
+
+  bool Changed = false;
+  Module *M = F.getParent();
+
+  for (Use &U : llvm::make_early_inc_range(F.uses())) {
+    auto CI = dyn_cast<CallInst>(U.getUser());
+    if (!CI || CI->getCalledOperand() != &F)
+      continue;
+
+    IRBuilder<> B(CI);
+    unsigned Scale = cast<ConstantInt>(CI->getArgOperand(2))->getZExtValue();
+    Value *Result =
+        lowerFixedPointDiv(M, B, CI->getArgOperand(0), CI->getArgOperand(1),
+                           Scale, Signed, Saturating);
+
+    CI->replaceAllUsesWith(Result);
     CI->eraseFromParent();
     Changed = true;
   }
@@ -629,6 +787,30 @@ bool PreISelIntrinsicLowering::lowerIntrinsics(Module &M) const {
       break;
     case Intrinsic::load_relative:
       Changed |= lowerLoadRelative(F);
+      break;
+    case Intrinsic::smul_fix:
+      Changed |= lowerFixedPointMul(F, /*Signed=*/true, /*Saturating=*/false);
+      break;
+    case Intrinsic::smul_fix_sat:
+      Changed |= lowerFixedPointMul(F, /*Signed=*/true, /*Saturating=*/true);
+      break;
+    case Intrinsic::umul_fix:
+      Changed |= lowerFixedPointMul(F, /*Signed=*/false, /*Saturating=*/false);
+      break;
+    case Intrinsic::umul_fix_sat:
+      Changed |= lowerFixedPointMul(F, /*Signed=*/false, /*Saturating=*/true);
+      break;
+    case Intrinsic::sdiv_fix:
+      Changed |= lowerFixedPointDiv(F, /*Signed=*/true, /*Saturating=*/false);
+      break;
+    case Intrinsic::sdiv_fix_sat:
+      Changed |= lowerFixedPointDiv(F, /*Signed=*/true, /*Saturating=*/true);
+      break;
+    case Intrinsic::udiv_fix:
+      Changed |= lowerFixedPointDiv(F, /*Signed=*/false, /*Saturating=*/false);
+      break;
+    case Intrinsic::udiv_fix_sat:
+      Changed |= lowerFixedPointDiv(F, /*Signed=*/false, /*Saturating=*/true);
       break;
     case Intrinsic::is_constant:
     case Intrinsic::objectsize:
