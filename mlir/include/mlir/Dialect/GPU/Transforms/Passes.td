@@ -143,7 +143,7 @@ def GpuNVVMAttachTarget: Pass<"nvvm-attach-target", ""> {
            /*default=*/ "\"nvptx64-nvidia-cuda\"",
            "Target triple.">,
     Option<"chip", "chip", "std::string",
-           /*default=*/"\"sm_50\"",
+           /*default=*/"\"sm_75\"",
            "Target chip.">,
     Option<"features", "features", "std::string",
            /*default=*/"\"+ptx60\"",
