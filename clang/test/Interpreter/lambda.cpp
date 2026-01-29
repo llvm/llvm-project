@@ -16,7 +16,7 @@ auto r2 = l2();
 auto r3 = l2();
 // CHECK: TWO
 
-// in clang-repl, allow lambda to capture top level varible
+// in clang-repl, allow lambda to capture top level variable
 int x = 42;
 
 // expected-no-diagnostics

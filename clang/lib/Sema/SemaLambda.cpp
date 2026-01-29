@@ -1325,9 +1325,9 @@ void Sema::ActOnLambdaExpressionAfterIntroducer(LambdaIntroducer &Intro,
 
     VarDecl *Underlying = Var->getPotentiallyDecomposedVarDecl();
 
-    // For increasemental processing(such as clang-repl), allow lambda to
+    // For incremental processing(such as clang-repl), allow lambda to
     // capture
-    // top level varible.
+    // top level variable.
     if (!Underlying->hasLocalStorage() &&
         !PP.isIncrementalProcessingEnabled()) {
       Diag(C->Loc, diag::err_capture_non_automatic_variable) << C->Id;
@@ -1386,8 +1386,8 @@ void Sema::ActOnLambdaClosureQualifiers(LambdaIntroducer &Intro,
   // For DR1632, we also allow a capture-default in any context where we can
   // odr-use 'this' (in particular, in a default initializer for a non-static
   // data member).
-  // For increasemental processing(such as clang-repl), allow lambda to capture
-  // top level varible.
+  // For incremental processing(such as clang-repl), allow lambda to capture
+  // top level variable.
   if (Intro.Default != LCD_None &&
       !LSI->Lambda->getParent()->isFunctionOrMethod() &&
       (getCurrentThisType().isNull() ||
