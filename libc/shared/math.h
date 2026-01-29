@@ -60,7 +60,7 @@
 #include "math/expm1f.h"
 #include "math/expm1f16.h"
 #include "math/f16fma.h"
-#include "math/f16fmaf28.h"
+#include "math/f16fmaf128.h"
 #include "math/f16fmal.h"
 #include "math/f16sqrt.h"
 #include "math/f16sqrtl.h"
