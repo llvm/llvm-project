@@ -18,6 +18,7 @@
 #include "../ScriptInterpreterPythonImpl.h"
 #include "ScriptedPythonInterface.h"
 #include "lldb/Symbol/SymbolContext.h"
+#include "lldb/ValueObject/ValueObjectList.h"
 #include <optional>
 
 using namespace lldb;
@@ -271,6 +272,43 @@ ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::StackFrameListSP>(
   }
 
   return m_interpreter.GetOpaqueTypeFromSBFrameList(*sb_frame_list);
+}
+
+template <>
+lldb::ValueObjectSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectSP>(
+    python::PythonObject &p, Status &error) {
+  lldb::SBValue *sb_value = reinterpret_cast<lldb::SBValue *>(
+      python::LLDBSWIGPython_CastPyObjectToSBValue(p.get()));
+  if (!sb_value) {
+    error = Status::FromErrorStringWithFormat(
+        "couldn't cast lldb::SBValue to lldb::ValueObjectSP");
+    return {};
+  }
+
+  return m_interpreter.GetOpaqueTypeFromSBValue(*sb_value);
+}
+
+template <>
+lldb::ValueObjectListSP
+ScriptedPythonInterface::ExtractValueFromPythonObject<lldb::ValueObjectListSP>(
+    python::PythonObject &p, Status &error) {
+  lldb::SBValueList *sb_value_list = reinterpret_cast<lldb::SBValueList *>(
+      python::LLDBSWIGPython_CastPyObjectToSBValueList(p.get()));
+
+  if (!sb_value_list) {
+    error = Status::FromErrorStringWithFormat(
+        "couldn't cast lldb::SBValueList to lldb::ValueObjectListSP");
+    return {};
+  }
+
+  lldb::ValueObjectListSP out = std::make_shared<ValueObjectList>();
+  for (uint32_t i = 0, e = sb_value_list->GetSize(); i < e; ++i) {
+    SBValue value = sb_value_list->GetValueAtIndex(i);
+    out->Append(m_interpreter.GetOpaqueTypeFromSBValue(value));
+  }
+
+  return out;
 }
 
 #endif

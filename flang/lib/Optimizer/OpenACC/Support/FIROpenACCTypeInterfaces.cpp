@@ -23,6 +23,7 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
+#include "flang/Optimizer/OpenACC/Support/FIROpenACCUtils.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
@@ -1211,41 +1212,6 @@ template mlir::Value OpenACCPointerLikeModel<fir::LLVMPointerType>::genAllocate(
     llvm::StringRef varName, mlir::Type varType, mlir::Value originalVar,
     bool &needsFree) const;
 
-static mlir::Value stripCasts(mlir::Value value, bool stripDeclare = true) {
-  mlir::Value currentValue = value;
-
-  while (currentValue) {
-    auto *definingOp = currentValue.getDefiningOp();
-    if (!definingOp)
-      break;
-
-    if (auto convertOp = mlir::dyn_cast<fir::ConvertOp>(definingOp)) {
-      currentValue = convertOp.getValue();
-      continue;
-    }
-
-    if (auto viewLike = mlir::dyn_cast<mlir::ViewLikeOpInterface>(definingOp)) {
-      currentValue = viewLike.getViewSource();
-      continue;
-    }
-
-    if (stripDeclare) {
-      if (auto declareOp = mlir::dyn_cast<hlfir::DeclareOp>(definingOp)) {
-        currentValue = declareOp.getMemref();
-        continue;
-      }
-
-      if (auto declareOp = mlir::dyn_cast<fir::DeclareOp>(definingOp)) {
-        currentValue = declareOp.getMemref();
-        continue;
-      }
-    }
-    break;
-  }
-
-  return currentValue;
-}
-
 template <typename Ty>
 bool OpenACCPointerLikeModel<Ty>::genFree(
     mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
@@ -1273,7 +1239,7 @@ bool OpenACCPointerLikeModel<Ty>::genFree(
   mlir::Value valueToInspect = allocRes ? allocRes : varToFree;
 
   // Strip casts and declare operations to find the original allocation
-  mlir::Value strippedValue = stripCasts(valueToInspect);
+  mlir::Value strippedValue = fir::acc::getOriginalDef(valueToInspect);
   mlir::Operation *originalAlloc = strippedValue.getDefiningOp();
 
   // If we found an AllocMemOp (heap allocation), free it
@@ -1511,7 +1477,8 @@ static bool hasCUDADeviceAttrOnFuncArg(mlir::BlockArgument blockArg) {
 /// Shared implementation for checking if a value represents device data.
 static bool isDeviceDataImpl(mlir::Value var) {
   // Strip casts to find the underlying value.
-  mlir::Value currentVal = stripCasts(var, /*stripDeclare=*/false);
+  mlir::Value currentVal =
+      fir::acc::getOriginalDef(var, /*stripDeclare=*/false);
 
   if (auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(currentVal))
     return hasCUDADeviceAttrOnFuncArg(blockArg);

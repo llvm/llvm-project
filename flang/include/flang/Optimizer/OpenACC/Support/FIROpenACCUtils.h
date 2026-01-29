@@ -88,6 +88,14 @@ createOrGetReductionRecipe(mlir::OpBuilder &builder, mlir::Location loc,
                            llvm::SmallVector<mlir::Value> &dataBoundOps,
                            mlir::Attribute fastMathAttr = {});
 
+/// Walks through operations that forward or view their operand and returns
+/// the original defining value. This strips operations like fir.convert,
+/// ViewLikeOpInterface, and optionally fir.declare/hlfir.declare.
+/// \param value The value to trace back to its origin
+/// \param stripDeclare If true (default), also strips declare operations
+/// \return The original value after stripping all intermediate operations
+mlir::Value getOriginalDef(mlir::Value value, bool stripDeclare = true);
+
 } // namespace acc
 } // namespace fir
 

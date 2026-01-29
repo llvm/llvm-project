@@ -269,6 +269,7 @@ void *LLDBSWIGPython_CastPyObjectToSBThread(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBFrame(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBSymbolContext(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBValue(PyObject *data);
+void *LLDBSWIGPython_CastPyObjectToSBValueList(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBMemoryRegionInfo(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBExecutionContext(PyObject *data);
 void *LLDBSWIGPython_CastPyObjectToSBFrameList(PyObject *data);

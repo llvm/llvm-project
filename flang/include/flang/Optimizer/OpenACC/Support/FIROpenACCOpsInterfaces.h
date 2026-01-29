@@ -94,7 +94,11 @@ struct OutlineRematerializationModel
 template <typename Op>
 struct OffloadRegionModel
     : public mlir::acc::OffloadRegionOpInterface::ExternalModel<
-          OffloadRegionModel<Op>, Op> {};
+          OffloadRegionModel<Op>, Op> {
+  mlir::Region &getOffloadRegion(mlir::Operation *op) const {
+    return mlir::cast<Op>(op).getRegion();
+  }
+};
 
 /// External model for fir::OperationMoveOpInterface.
 /// This interface provides methods to identify whether
