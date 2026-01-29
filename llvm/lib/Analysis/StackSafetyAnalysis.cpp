@@ -920,7 +920,11 @@ const StackSafetyGlobalInfo::InfoTy &StackSafetyGlobalInfo::getInfo() const {
         ++NumAllocaTotal;
         const AllocaInst *AI = KV.first;
         auto AIRange = getStaticAllocaSizeRange(*AI);
-        if (AIRange.contains(KV.second.Range)) {
+        // An alloca is safe if all accesses are in-bounds AND the address
+        // doesn't escape to other functions. If the address is passed to
+        // another function, ASan may instrument accesses in the callee, which
+        // requires the caller to properly initialize shadow memory.
+        if (AIRange.contains(KV.second.Range) && KV.second.Calls.empty()) {
           Info->SafeAllocas.insert(AI);
           ++NumAllocaStackSafe;
         }
