@@ -122,11 +122,12 @@ public:
     uint32_t MSMangleNum;
     bool Invalidated;
 
-    Assign(const Expr *AssignExpr, const Scope *AssignScope, const DeclBindingInfo *Info);
+    Assign(const Expr *AssignExpr, const Scope *AssignScope,
+           const DeclBindingInfo *Info);
   };
 
-  void trackAssign(const ValueDecl *VD, const Scope *AssignScope, const Expr *AssignExpr,
-                   const DeclBindingInfo *Info);
+  void trackAssign(const ValueDecl *VD, const Scope *AssignScope,
+                   const Expr *AssignExpr, const DeclBindingInfo *Info);
   std::optional<Assign> getAssign(const ValueDecl *VD);
 
 private:

@@ -4518,10 +4518,10 @@ bool SemaHLSL::CheckResourceBinOp(BinaryOperatorKind Opc, Expr *LHSExpr,
   if (DeclRefExpr *DRE = dyn_cast<DeclRefExpr>(E->IgnoreParens())) {
     if (VarDecl *VD = dyn_cast<VarDecl>(DRE->getDecl())) {
       if (VD->hasGlobalStorage() && VD->getStorageClass() != SC_Static) {
-          // Assignment to a global resource is not allowed.
-          SemaRef.Diag(Loc, diag::err_hlsl_assign_to_global_resource) << VD;
-          SemaRef.Diag(VD->getLocation(), diag::note_var_declared_here) << VD;
-          return false;
+        // Assignment to a global resource is not allowed.
+        SemaRef.Diag(Loc, diag::err_hlsl_assign_to_global_resource) << VD;
+        SemaRef.Diag(VD->getLocation(), diag::note_var_declared_here) << VD;
+        return false;
       }
 
       if (auto Binding = getGlobalBinding(RHSExpr)) {
