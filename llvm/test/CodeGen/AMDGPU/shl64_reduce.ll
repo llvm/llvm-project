@@ -261,20 +261,23 @@ define <4 x i64> @shl_v4_or16_sgpr(<4 x i64> inreg %arg0, <4 x i64> inreg %shift
 ; CHECK-LABEL: shl_v4_or16_sgpr:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    v_or_b32_e32 v0, 16, v0
+; CHECK-NEXT:    v_readfirstlane_b32 s4, v0
+; CHECK-NEXT:    s_or_b32 s10, s4, 16
 ; CHECK-NEXT:    s_or_b32 s8, s28, 16
 ; CHECK-NEXT:    s_or_b32 s6, s26, 16
 ; CHECK-NEXT:    s_or_b32 s4, s24, 16
 ; CHECK-NEXT:    s_lshl_b64 s[4:5], s[16:17], s4
 ; CHECK-NEXT:    s_lshl_b64 s[6:7], s[18:19], s6
 ; CHECK-NEXT:    s_lshl_b64 s[8:9], s[20:21], s8
-; CHECK-NEXT:    v_lshlrev_b64 v[6:7], v0, s[22:23]
+; CHECK-NEXT:    s_lshl_b64 s[10:11], s[22:23], s10
 ; CHECK-NEXT:    v_mov_b32_e32 v0, s4
 ; CHECK-NEXT:    v_mov_b32_e32 v1, s5
 ; CHECK-NEXT:    v_mov_b32_e32 v2, s6
 ; CHECK-NEXT:    v_mov_b32_e32 v3, s7
 ; CHECK-NEXT:    v_mov_b32_e32 v4, s8
 ; CHECK-NEXT:    v_mov_b32_e32 v5, s9
+; CHECK-NEXT:    v_mov_b32_e32 v6, s10
+; CHECK-NEXT:    v_mov_b32_e32 v7, s11
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %or = or <4 x i64> %shift_amt, splat (i64 16)
   %shl = shl <4 x i64> %arg0, %or
@@ -402,17 +405,19 @@ define <4 x i64> @shl_v4_or32_sgpr(<4 x i64> inreg %arg0, <4 x i64> inreg %shift
 ; CHECK-LABEL: shl_v4_or32_sgpr:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_lshl_b32 s4, s16, s24
-; CHECK-NEXT:    s_lshl_b32 s5, s18, s26
-; CHECK-NEXT:    s_lshl_b32 s6, s20, s28
-; CHECK-NEXT:    v_lshlrev_b32_e64 v7, v0, s22
+; CHECK-NEXT:    v_readfirstlane_b32 s4, v0
+; CHECK-NEXT:    s_lshl_b32 s5, s16, s24
+; CHECK-NEXT:    s_lshl_b32 s6, s18, s26
+; CHECK-NEXT:    s_lshl_b32 s7, s20, s28
+; CHECK-NEXT:    s_lshl_b32 s4, s22, s4
 ; CHECK-NEXT:    v_mov_b32_e32 v0, 0
-; CHECK-NEXT:    v_mov_b32_e32 v1, s4
+; CHECK-NEXT:    v_mov_b32_e32 v1, s5
 ; CHECK-NEXT:    v_mov_b32_e32 v2, 0
-; CHECK-NEXT:    v_mov_b32_e32 v3, s5
+; CHECK-NEXT:    v_mov_b32_e32 v3, s6
 ; CHECK-NEXT:    v_mov_b32_e32 v4, 0
-; CHECK-NEXT:    v_mov_b32_e32 v5, s6
+; CHECK-NEXT:    v_mov_b32_e32 v5, s7
 ; CHECK-NEXT:    v_mov_b32_e32 v6, 0
+; CHECK-NEXT:    v_mov_b32_e32 v7, s4
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %or = or <4 x i64> %shift_amt, splat (i64 32)
   %shl = shl <4 x i64> %arg0, %or

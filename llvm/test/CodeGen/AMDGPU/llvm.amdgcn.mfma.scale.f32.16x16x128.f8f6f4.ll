@@ -857,8 +857,8 @@ define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_0_0_sgprs(<8 x i32> inr
 ; SDAG-NEXT:    v_mov_b32_e32 v21, s17
 ; SDAG-NEXT:    v_mov_b32_e32 v22, s18
 ; SDAG-NEXT:    v_mov_b32_e32 v23, s19
-; SDAG-NEXT:    v_mov_b32_e32 v7, v1
-; SDAG-NEXT:    v_mov_b32_e32 v6, v0
+; SDAG-NEXT:    v_readfirstlane_b32 s0, v1
+; SDAG-NEXT:    v_readfirstlane_b32 s1, v0
 ; SDAG-NEXT:    v_mov_b32_e32 v8, s20
 ; SDAG-NEXT:    v_mov_b32_e32 v9, s21
 ; SDAG-NEXT:    v_mov_b32_e32 v10, s22
@@ -869,6 +869,8 @@ define <4 x float> @test_mfma_scale_f32_16x16x128_f8f6f4_0_0_sgprs(<8 x i32> inr
 ; SDAG-NEXT:    v_mov_b32_e32 v15, s27
 ; SDAG-NEXT:    v_mov_b32_e32 v4, s28
 ; SDAG-NEXT:    v_mov_b32_e32 v5, s29
+; SDAG-NEXT:    v_mov_b32_e32 v6, s1
+; SDAG-NEXT:    v_mov_b32_e32 v7, s0
 ; SDAG-NEXT:    s_nop 1
 ; SDAG-NEXT:    v_mfma_scale_f32_16x16x128_f8f6f4 v[0:3], v[16:23], v[8:15], v[4:7], v2, v3 op_sel_hi:[0,0,0]
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
