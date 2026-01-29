@@ -57,6 +57,7 @@ void ignoredBuiltinsTest(void *ptr) {
   (void)__builtin_fpclassify(0, 0, 0, 0, 0, 0.f);
   (void)__builtin_isinf_sign(0.f);
   (void)__builtin_prefetch(nullptr);
+  (void)__builtin_popcountg(42);
 }
 
 // Some implementations of __builtin_va_list and __builtin_ms_va_list desugared
