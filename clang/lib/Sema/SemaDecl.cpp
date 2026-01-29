@@ -4828,6 +4828,11 @@ void Sema::MergeVarDecl(VarDecl *New, LookupResult &Previous) {
     return New->setInvalidDecl();
   }
 
+  if (Old->getFormalLinkage() != New->getFormalLinkage()) {
+    Diag(New->getLocation(), diag::err_multiple_linkage) << New->getDeclName();
+    return New->setInvalidDecl();
+  }
+
   if (New->isInline() && !Old->getMostRecentDecl()->isInline()) {
     if (VarDecl *Def = Old->getDefinition()) {
       // C++1z [dcl.fcn.spec]p4:

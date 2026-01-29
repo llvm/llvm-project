@@ -6428,6 +6428,8 @@ def err_different_language_linkage : Error<
 def ext_retained_language_linkage : Extension<
   "friend function %0 retaining previous language linkage is an extension">,
   InGroup<DiagGroup<"retained-language-linkage">>;
+def err_multiple_linkage: Error<
+  "the same identifier %0 appears with both internal and external linkage">;
 def err_extern_c_global_conflict : Error<
   "declaration of %1 %select{with C language linkage|in global scope}0 "
   "conflicts with declaration %select{in global scope|with C language linkage}0">;
