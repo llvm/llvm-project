@@ -11,7 +11,6 @@
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/OpenACC/Support/FIROpenACCTypeInterfaces.h"
-#include "flang/Optimizer/OpenACC/Support/FIROpenACCUtils.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/DirectivesCommon.h"
 #include "flang/Optimizer/Builder/FIRBuilder.h"
@@ -24,6 +23,7 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
+#include "flang/Optimizer/OpenACC/Support/FIROpenACCUtils.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
@@ -1212,7 +1212,6 @@ template mlir::Value OpenACCPointerLikeModel<fir::LLVMPointerType>::genAllocate(
     llvm::StringRef varName, mlir::Type varType, mlir::Value originalVar,
     bool &needsFree) const;
 
-
 template <typename Ty>
 bool OpenACCPointerLikeModel<Ty>::genFree(
     mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
@@ -1478,7 +1477,8 @@ static bool hasCUDADeviceAttrOnFuncArg(mlir::BlockArgument blockArg) {
 /// Shared implementation for checking if a value represents device data.
 static bool isDeviceDataImpl(mlir::Value var) {
   // Strip casts to find the underlying value.
-  mlir::Value currentVal = fir::acc::getOriginalDef(var, /*stripDeclare=*/false);
+  mlir::Value currentVal =
+      fir::acc::getOriginalDef(var, /*stripDeclare=*/false);
 
   if (auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(currentVal))
     return hasCUDADeviceAttrOnFuncArg(blockArg);
