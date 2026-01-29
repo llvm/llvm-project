@@ -100,6 +100,40 @@ We use here the command-line, non-interactive CMake interface.
 
      $ cmake -DCMAKE_INSTALL_PREFIX=/tmp/llvm -P cmake_install.cmake
 
+Additional Resources
+====================
+
+- [YouTube: Building LLVM - Best Practices](https://www.youtube.com/watch?v=Dnubzx8-E1M)
+
+.. _llvm_cmake_build_insights:
+
+CMake and LLVM Build Insights
+===============================
+
+Overview
+--------
+
+Peter from Google, a long-time contributor to LLVM since 2015, shares key insights into the LLVM build processes, emphasizing the importance of CMake, performance optimizations, and community contributions.
+
+Key Insights
+------------
+
+1. **CMake’s Role in LLVM**:
+   CMake serves as a critical cross-platform build tool for LLVM, allowing diverse projects to compile efficiently. Its use is crucial for ensuring LLVM’s wide-ranging applicability.
+
+2. **Improving Build Documentation**:
+   There is a significant need to enhance the documentation related to LLVM builds. Comprehensive resources are essential for helping newcomers understand the complexities of the build process, lowering the barrier to entry for new contributors.
+
+3. **Performance Optimizations**:
+   Peter highlights the potential for improving build performance through multi-generator features in CMake, enabling parallel builds that reduce compilation time for runtimes and toolchains.
+
+4. **Top-Level CMake File**:
+   Introducing a top-level CMake file could simplify project management, making it easier for developers to work across LLVM’s build system and reducing overall complexity.
+
+5. **Community Contributions**:
+   Encouraging community involvement, especially from newcomers, is vital for sustaining LLVM’s growth. Contributions to the build process are welcomed to make the system more efficient and adaptable to evolving needs.
+
+
 .. _Basic CMake usage:
 .. _Usage:
 
