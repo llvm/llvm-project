@@ -377,7 +377,7 @@ getBaseRef(mlir::TypedValue<mlir::acc::PointerLikeType> varPtr) {
   // calculation op.
   mlir::Value baseRef =
       llvm::TypeSwitch<mlir::Operation *, mlir::Value>(op)
-          .Case<fir::DeclareOp>([&](auto op) {
+          .Case([&](fir::DeclareOp op) {
             // If this declare binds a view with an underlying storage operand,
             // treat that storage as the base reference. Otherwise, fall back
             // to the declared memref.
@@ -385,7 +385,7 @@ getBaseRef(mlir::TypedValue<mlir::acc::PointerLikeType> varPtr) {
               return storage;
             return mlir::Value(varPtr);
           })
-          .Case<hlfir::DesignateOp>([&](auto op) {
+          .Case([&](hlfir::DesignateOp op) {
             // Get the base object.
             return op.getMemref();
           })
@@ -393,12 +393,12 @@ getBaseRef(mlir::TypedValue<mlir::acc::PointerLikeType> varPtr) {
             // Get the base array on which the coordinate is being applied.
             return op.getMemref();
           })
-          .Case<fir::CoordinateOp>([&](auto op) {
+          .Case([&](fir::CoordinateOp op) {
             // For coordinate operation which is applied on derived type
             // object, get the base object.
             return op.getRef();
           })
-          .Case<fir::ConvertOp>([&](auto op) -> mlir::Value {
+          .Case([&](fir::ConvertOp op) -> mlir::Value {
             // Strip the conversion and recursively check the operand
             if (auto ptrLikeOperand = mlir::dyn_cast_if_present<
                     mlir::TypedValue<mlir::acc::PointerLikeType>>(
@@ -1585,5 +1585,24 @@ template bool
 template bool
     OpenACCMappableModel<fir::PointerType>::isDeviceData(mlir::Type,
                                                          mlir::Value) const;
+
+std::optional<mlir::arith::AtomicRMWKind>
+OpenACCReducibleLogicalModel::getAtomicRMWKind(
+    mlir::Type type, mlir::acc::ReductionOperator redOp) const {
+  switch (redOp) {
+  case mlir::acc::ReductionOperator::AccLand:
+    return mlir::arith::AtomicRMWKind::andi;
+  case mlir::acc::ReductionOperator::AccLor:
+    return mlir::arith::AtomicRMWKind::ori;
+  case mlir::acc::ReductionOperator::AccEqv:
+  case mlir::acc::ReductionOperator::AccNeqv:
+    // Eqv and Neqv are valid for logical types but don't have a direct
+    // AtomicRMWKind mapping yet.
+    return std::nullopt;
+  default:
+    // Other reduction operators are not valid for logical types.
+    return std::nullopt;
+  }
+}
 
 } // namespace fir::acc

@@ -3389,7 +3389,7 @@ bool InstCombinerImpl::SimplifyDemandedFPClass(Instruction *I, unsigned OpNo,
   Type *VTy = V->getType();
 
   if (DemandedMask == fcNone) {
-    if (isa<UndefValue>(V))
+    if (isa<PoisonValue>(V))
       return false;
     replaceUse(U, PoisonValue::get(VTy));
     return true;
@@ -3403,7 +3403,7 @@ bool InstCombinerImpl::SimplifyDemandedFPClass(Instruction *I, unsigned OpNo,
     Known.knownNot(~DemandedMask);
 
     if (Known.KnownFPClasses == fcNone) {
-      if (isa<UndefValue>(V))
+      if (isa<PoisonValue>(V))
         return false;
       replaceUse(U, PoisonValue::get(VTy));
       return true;
@@ -3423,12 +3423,14 @@ bool InstCombinerImpl::SimplifyDemandedFPClass(Instruction *I, unsigned OpNo,
     return true;
   }
 
-  if (Depth == MaxAnalysisRecursionDepth)
-    return false;
-
   if (const CallBase *CB = dyn_cast<CallBase>(VInst)) {
     FPClassTest NoFPClass = CB->getParamNoFPClass(U.getOperandNo());
     DemandedMask &= ~NoFPClass;
+  }
+
+  if (Depth == MaxAnalysisRecursionDepth) {
+    Known.knownNot(~DemandedMask);
+    return false;
   }
 
   Value *NewVal;
