@@ -122,7 +122,7 @@ class ExprCommandThatRestartsTestCase(TestBase):
         self.runCmd("process handle SIGCHLD -s 1 -p 1 -n 1")
 
         value = frame.EvaluateExpression("call_me (%d)" % (num_sigchld), options)
-        self.assertTrue(value.IsValid())
+        self.assertFalse(value.IsValid())
         self.assertFalse(value.GetError().Success())
 
         # Set signal handling back to no-stop, and continue and we should end

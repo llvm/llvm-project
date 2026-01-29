@@ -45,7 +45,7 @@ class ExprCommandWithThrowTestCase(TestBase):
         self.orig_frame_pc = frame.GetPC()
 
         value = frame.EvaluateExpression("[my_class callMeIThrow]", options)
-        self.assertTrue(value.IsValid())
+        self.assertFalse(value.IsValid())
         self.assertFalse(value.GetError().Success())
 
         self.check_after_call()
@@ -61,7 +61,8 @@ class ExprCommandWithThrowTestCase(TestBase):
 
         value = frame.EvaluateExpression("[my_class callMeIThrow]", options)
 
-        self.assertTrue(value.IsValid() and not value.GetError().Success())
+        self.assertFalse(value.IsValid())
+        self.assertFalse(value.GetError().Success())
         self.check_after_call()
 
         # Now set the ObjC language breakpoint and make sure that doesn't
@@ -76,7 +77,8 @@ class ExprCommandWithThrowTestCase(TestBase):
 
         value = frame.EvaluateExpression("[my_class callMeIThrow]", options)
 
-        self.assertTrue(value.IsValid() and not value.GetError().Success())
+        self.assertFalse(value.IsValid())
+        self.assertFalse(value.GetError().Success())
         self.check_after_call()
 
         # Now turn off exception trapping, and call a function that catches the exceptions,
@@ -95,5 +97,6 @@ class ExprCommandWithThrowTestCase(TestBase):
         options.SetUnwindOnError(False)
         value = frame.EvaluateExpression("[my_class callMeIThrow]", options)
 
-        self.assertTrue(value.IsValid() and not value.GetError().Success())
+        self.assertFalse(value.IsValid())
+        self.assertFalse(value.GetError().Success())
         self.check_after_call()
