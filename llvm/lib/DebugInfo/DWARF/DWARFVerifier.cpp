@@ -182,8 +182,8 @@ bool DWARFVerifier::verifyUnitHeader(const DWARFDataExtractor DebugInfoData,
     bool HeaderShown = false;
     auto ShowHeaderOnce = [&]() {
       if (!HeaderShown) {
-        error() << format("Units[%d] - start offset: 0x%08" PRIx64 " \n",
-                          UnitIndex, OffsetStart);
+        error() << formatv("Units[{0}] - start offset: {1:x+8}\n", UnitIndex,
+                           OffsetStart);
         HeaderShown = true;
       }
     };
@@ -957,10 +957,9 @@ unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
       if (CUOffset >= CUSize) {
         ++NumErrors;
         ErrorCategory.Report("Invalid CU offset", [&]() {
-          error() << FormEncodingString(Form) << " CU offset "
-                  << format("0x%08" PRIx64, CUOffset)
-                  << " is invalid (must be less than CU size of "
-                  << format("0x%08" PRIx64, CUSize) << "):\n";
+          error() << formatv("{0} CU offset {1:x+8} is invalid (must be less "
+                             "than CU size of {2:x+8}):\n",
+                             FormEncodingString(Form), CUOffset, CUSize);
           Die.dump(OS, 0, DumpOpts);
           dump(Die) << '\n';
         });
@@ -1032,8 +1031,9 @@ unsigned DWARFVerifier::verifyDebugInfoReferences(
       continue;
     ++NumErrors;
     ErrorCategory.Report("Invalid DIE reference", [&]() {
-      error() << "invalid DIE reference " << format("0x%08" PRIx64, Pair.first)
-              << ". Offset is in between DIEs:\n";
+      error() << formatv(
+          "invalid DIE reference {0:x+8}. Offset is in between DIEs:\n",
+          Pair.first);
       for (auto Offset : Pair.second)
         dump(GetDIEForOffset(Offset)) << '\n';
       OS << "\n";
@@ -1058,8 +1058,9 @@ void DWARFVerifier::verifyDebugLineStmtOffsets() {
       if (!LineTable) {
         ++NumDebugLineErrors;
         ErrorCategory.Report("Unparsable .debug_line entry", [&]() {
-          error() << ".debug_line[" << format("0x%08" PRIx64, LineTableOffset)
-                  << "] was not able to be parsed for CU:\n";
+          error() << formatv(
+              ".debug_line[{0:x+8}] was not able to be parsed for CU:\n",
+              LineTableOffset);
           dump(Die) << '\n';
         });
         continue;
@@ -1076,10 +1077,9 @@ void DWARFVerifier::verifyDebugLineStmtOffsets() {
       ++NumDebugLineErrors;
       const auto &OldDie = Iter->second;
       ErrorCategory.Report("Identical DW_AT_stmt_list section offset", [&]() {
-        error() << "two compile unit DIEs, "
-                << format("0x%08" PRIx64, OldDie.getOffset()) << " and "
-                << format("0x%08" PRIx64, Die.getOffset())
-                << ", have the same DW_AT_stmt_list section offset:\n";
+        error() << formatv("two compile unit DIEs, {0:x+8} and {1:x+8}, have "
+                           "the same DW_AT_stmt_list section offset:\n",
+                           OldDie.getOffset(), Die.getOffset());
         dump(OldDie);
         dump(Die) << '\n';
       });
@@ -1110,10 +1110,9 @@ void DWARFVerifier::verifyDebugLineRows() {
         ErrorCategory.Report(
             "Invalid index in .debug_line->prologue.file_names->dir_idx",
             [&]() {
-              error() << ".debug_line["
-                      << format("0x%08" PRIx64,
-                                *toSectionOffset(Die.find(DW_AT_stmt_list)))
-                      << "].prologue.file_names[" << FileIndex
+              error() << formatv(".debug_line[{0:x+8}].prologue.file_names[{1}",
+                                 *toSectionOffset(Die.find(DW_AT_stmt_list)),
+                                 FileIndex)
                       << "].dir_idx contains an invalid index: "
                       << FileName.DirIdx << "\n";
             });
@@ -1128,10 +1127,9 @@ void DWARFVerifier::verifyDebugLineRows() {
       (void)HasFullPath;
       auto [It, Inserted] = FullPathMap.try_emplace(FullPath, FileIndex);
       if (!Inserted && It->second != FileIndex && DumpOpts.Verbose) {
-        warn() << ".debug_line["
-               << format("0x%08" PRIx64,
-                         *toSectionOffset(Die.find(DW_AT_stmt_list)))
-               << "].prologue.file_names[" << FileIndex
+        warn() << formatv(".debug_line[{0:x+8}].prologue.file_names[{1}",
+                          *toSectionOffset(Die.find(DW_AT_stmt_list)),
+                          FileIndex)
                << "] is a duplicate of file_names[" << It->second << "]\n";
       }
 
@@ -1152,10 +1150,9 @@ void DWARFVerifier::verifyDebugLineRows() {
         ++NumDebugLineErrors;
         ErrorCategory.Report(
             "decreasing address between debug_line rows", [&]() {
-              error() << ".debug_line["
-                      << format("0x%08" PRIx64,
-                                *toSectionOffset(Die.find(DW_AT_stmt_list)))
-                      << "] row[" << RowIndex
+              error() << formatv(".debug_line[{0:x+8}] row[{1}",
+                                 *toSectionOffset(Die.find(DW_AT_stmt_list)),
+                                 RowIndex)
                       << "] decreases in address from previous row:\n";
 
               DWARFDebugLine::Row::dumpTableHeader(OS, 0);
@@ -1169,10 +1166,10 @@ void DWARFVerifier::verifyDebugLineRows() {
       if (!LineTable->hasFileAtIndex(Row.File)) {
         ++NumDebugLineErrors;
         ErrorCategory.Report("Invalid file index in debug_line", [&]() {
-          error() << ".debug_line["
-                  << format("0x%08" PRIx64,
-                            *toSectionOffset(Die.find(DW_AT_stmt_list)))
-                  << "][" << RowIndex << "] has invalid file index " << Row.File
+          error() << formatv(
+                         ".debug_line[{0:x+8}][{1}] has invalid file index {2}",
+                         *toSectionOffset(Die.find(DW_AT_stmt_list)), RowIndex,
+                         Row.File)
                   << " (valid values are [" << MinFileIndex << ','
                   << LineTable->Prologue.FileNames.size()
                   << (isDWARF5 ? ")" : "]") << "):\n";
@@ -1247,8 +1244,8 @@ void DWARFVerifier::verifyAppleAccelTable(const DWARFSection *AccelSection,
     uint32_t HashIdx = AccelSectionData.getU32(&BucketsOffset);
     if (HashIdx >= NumHashes && HashIdx != UINT32_MAX) {
       ErrorCategory.Report("Invalid hash index", [&]() {
-        error() << format("Bucket[%d] has invalid hash index: %u.\n", BucketIdx,
-                          HashIdx);
+        error() << formatv("Bucket[{0}] has invalid hash index: {1}.\n",
+                           BucketIdx, HashIdx);
       });
     }
   }
@@ -1274,9 +1271,8 @@ void DWARFVerifier::verifyAppleAccelTable(const DWARFSection *AccelSection,
     if (!AccelSectionData.isValidOffsetForDataOfSize(HashDataOffset,
                                                      sizeof(uint64_t))) {
       ErrorCategory.Report("Invalid HashData offset", [&]() {
-        error() << format("Hash[%d] has invalid HashData offset: "
-                          "0x%08" PRIx64 ".\n",
-                          HashIdx, HashDataOffset);
+        error() << formatv("Hash[{0}] has invalid HashData offset: {1:x+8}.\n",
+                           HashIdx, HashDataOffset);
       });
     }
 
@@ -1301,12 +1297,12 @@ void DWARFVerifier::verifyAppleAccelTable(const DWARFSection *AccelSection,
             Name = "<NULL>";
 
           ErrorCategory.Report("Invalid DIE offset", [&]() {
-            error() << format(
-                "%s Bucket[%d] Hash[%d] = 0x%08x "
-                "Str[%u] = 0x%08" PRIx64 " DIE[%d] = 0x%08" PRIx64 " "
-                "is not a valid DIE offset for \"%s\".\n",
-                SectionName, BucketIdx, HashIdx, Hash, StringCount, StrpOffset,
-                HashDataIdx, Offset, Name);
+            error() << formatv("{0} Bucket[{1}] Hash[{2}] = {3:x+8} "
+                               "Str[{4}] = {5:x+8} DIE[{6}] = {7:x+8} "
+                               "is not a valid DIE offset for \"{8}\".\n",
+                               SectionName, BucketIdx, HashIdx, Hash,
+                               StringCount, StrpOffset, HashDataIdx, Offset,
+                               Name);
           });
           continue;
         }
