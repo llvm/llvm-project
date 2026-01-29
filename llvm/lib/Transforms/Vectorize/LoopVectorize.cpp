@@ -4044,22 +4044,20 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
 
     unsigned Opcode =
         TypeSwitch<const VPRecipeBase *, unsigned>(R)
-            .Case<VPHeaderPHIRecipe>(
-                [](const auto *R) { return Instruction::PHI; })
-            .Case<VPWidenStoreRecipe>(
-                [](const auto *R) { return Instruction::Store; })
-            .Case<VPWidenLoadRecipe>(
-                [](const auto *R) { return Instruction::Load; })
+            .Case([](const VPHeaderPHIRecipe *R) { return Instruction::PHI; })
+            .Case(
+                [](const VPWidenStoreRecipe *R) { return Instruction::Store; })
+            .Case([](const VPWidenLoadRecipe *R) { return Instruction::Load; })
             .Case<VPWidenCallRecipe, VPWidenIntrinsicRecipe>(
                 [](const auto *R) { return Instruction::Call; })
             .Case<VPInstruction, VPWidenRecipe, VPReplicateRecipe,
                   VPWidenCastRecipe>(
                 [](const auto *R) { return R->getOpcode(); })
-            .Case<VPInterleaveRecipe>([](const VPInterleaveRecipe *R) {
+            .Case([](const VPInterleaveRecipe *R) {
               return R->getStoredValues().empty() ? Instruction::Load
                                                   : Instruction::Store;
             })
-            .Case<VPReductionRecipe>([](const auto *R) {
+            .Case([](const VPReductionRecipe *R) {
               return RecurrenceDescriptor::getOpcode(R->getRecurrenceKind());
             });
 
@@ -5650,11 +5648,17 @@ LoopVectorizationCostModel::getScalarizationOverhead(Instruction *I,
   if (!RetTy->isVoidTy() &&
       (!isa<LoadInst>(I) || !TTI.supportsEfficientVectorElementLoadStore())) {
 
+    TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None;
+    if (isa<LoadInst>(I))
+      VIC = TTI::VectorInstrContext::Load;
+    else if (isa<StoreInst>(I))
+      VIC = TTI::VectorInstrContext::Store;
+
     for (Type *VectorTy : getContainedTypes(RetTy)) {
       Cost += TTI.getScalarizationOverhead(
           cast<VectorType>(VectorTy), APInt::getAllOnes(VF.getFixedValue()),
-          /*Insert=*/true,
-          /*Extract=*/false, CostKind);
+          /*Insert=*/true, /*Extract=*/false, CostKind,
+          /*ForPoisonSrc=*/true, {}, VIC);
     }
   }
 
@@ -5675,7 +5679,11 @@ LoopVectorizationCostModel::getScalarizationOverhead(Instruction *I,
   SmallVector<Type *> Tys;
   for (auto *V : filterExtractingOperands(Ops, VF))
     Tys.push_back(maybeVectorizeType(V->getType(), VF));
-  return Cost + TTI.getOperandsScalarizationOverhead(Tys, CostKind);
+
+  TTI::VectorInstrContext OperandVIC = isa<StoreInst>(I)
+                                           ? TTI::VectorInstrContext::Store
+                                           : TTI::VectorInstrContext::None;
+  return Cost + TTI.getOperandsScalarizationOverhead(Tys, CostKind, OperandVIC);
 }
 
 void LoopVectorizationCostModel::setCostBasedWideningDecision(ElementCount VF) {
@@ -8155,7 +8163,8 @@ bool VPRecipeBuilder::getScaledReductions(
         continue;
       }
       Value *ExtOp;
-      if (!match(OpI, m_ZExtOrSExt(m_Value(ExtOp))))
+      if (!match(OpI, m_ZExtOrSExt(m_Value(ExtOp))) &&
+          !match(OpI, m_FPExt(m_Value(ExtOp))))
         return false;
       Exts[I] = cast<Instruction>(OpI);
 
@@ -8207,10 +8216,13 @@ bool VPRecipeBuilder::getScaledReductions(
 
   if (LoopVectorizationPlanner::getDecisionAndClampRange(
           [&](ElementCount VF) {
+            std::optional<FastMathFlags> FMF = std::nullopt;
+            if (Update->getOpcode() == Instruction::FAdd)
+              FMF = Update->getFastMathFlags();
             InstructionCost Cost = TTI->getPartialReductionCost(
                 Update->getOpcode(), ExtOpTypes[0], ExtOpTypes[1],
                 PHI->getType(), VF, ExtKinds[0], ExtKinds[1], BinOpc,
-                CM.CostKind);
+                CM.CostKind, FMF);
             return Cost.isValid();
           },
           Range)) {
@@ -8294,6 +8306,10 @@ VPRecipeBuilder::tryToCreatePartialReduction(VPInstruction *Reduction,
          "all accumulators in chain must have same scale factor");
 
   auto *ReductionI = Reduction->getUnderlyingInstr();
+  assert(
+      Reduction->getOpcode() != Instruction::FAdd ||
+      (ReductionI->hasAllowReassoc() && ReductionI->hasAllowContract()) &&
+          "FAdd partial reduction requires allow-reassoc and allow-contract");
   if (Reduction->getOpcode() == Instruction::Sub) {
     SmallVector<VPValue *, 2> Ops;
     Ops.push_back(Plan.getConstantInt(ReductionI->getType(), 0));
@@ -8308,7 +8324,12 @@ VPRecipeBuilder::tryToCreatePartialReduction(VPInstruction *Reduction,
     Cond = getBlockInMask(Builder.getInsertBlock());
 
   return new VPReductionRecipe(
-      RecurKind::Add, FastMathFlags(), ReductionI, Accumulator, BinOp, Cond,
+      Reduction->getOpcode() == Instruction::FAdd ? RecurKind::FAdd
+                                                  : RecurKind::Add,
+      Reduction->getOpcode() == Instruction::FAdd
+          ? Reduction->getFastMathFlags()
+          : FastMathFlags(),
+      ReductionI, Accumulator, BinOp, Cond,
       RdxUnordered{/*VFScaleFactor=*/ScaleFactor}, ReductionI->getDebugLoc());
 }
 

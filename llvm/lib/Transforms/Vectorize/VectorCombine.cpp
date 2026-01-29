@@ -1655,7 +1655,13 @@ bool VectorCombine::foldSelectsFromBitcast(Instruction &I) {
     }
 
     // Create the vector select and bitcast once for this condition.
-    Builder.SetInsertPoint(BC->getNextNode());
+    auto InsertPt = std::next(BC->getIterator());
+
+    if (auto *CondInst = dyn_cast<Instruction>(Cond))
+      if (DT.dominates(BC, CondInst))
+        InsertPt = std::next(CondInst->getIterator());
+
+    Builder.SetInsertPoint(InsertPt);
     Value *VecSel =
         Builder.CreateSelect(Cond, SrcVec, Constant::getNullValue(SrcVecTy));
     Value *NewBC = Builder.CreateBitCast(VecSel, DstVecTy);

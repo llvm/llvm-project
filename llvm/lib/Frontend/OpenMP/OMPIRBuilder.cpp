@@ -7850,17 +7850,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTargetData(
     return InsertPointTy();
 
   Builder.restoreIP(CodeGenIP);
-  // Disable TargetData CodeGen on Device pass.
-  if (Config.IsTargetDevice.value_or(false)) {
-    if (BodyGenCB) {
-      InsertPointOrErrorTy AfterIP =
-          BodyGenCB(Builder.saveIP(), BodyGenTy::NoPriv);
-      if (!AfterIP)
-        return AfterIP.takeError();
-      Builder.restoreIP(*AfterIP);
-    }
-    return Builder.saveIP();
-  }
 
   bool IsStandAlone = !BodyGenCB;
   MapInfosTy *MapInfo;
@@ -9465,14 +9454,6 @@ void OpenMPIRBuilder::emitUDMapperArrayInitOrDel(
   if (IsInit) {
     // base != begin?
     Value *BaseIsBegin = Builder.CreateICmpNE(Base, Begin);
-    // IsPtrAndObj?
-    Value *PtrAndObjBit = Builder.CreateAnd(
-        MapType,
-        Builder.getInt64(
-            static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
-                OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ)));
-    PtrAndObjBit = Builder.CreateIsNotNull(PtrAndObjBit);
-    BaseIsBegin = Builder.CreateAnd(BaseIsBegin, PtrAndObjBit);
     Cond = Builder.CreateOr(IsArray, BaseIsBegin);
     DeleteCond = Builder.CreateIsNull(
         DeleteBit,

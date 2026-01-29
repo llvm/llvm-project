@@ -678,14 +678,20 @@ basic_string<char32_t> operator""s( const char32_t *str, size_t len );          
 _LIBCPP_PUSH_MACROS
 #  include <__undef_macros>
 
-#  if __has_feature(address_sanitizer) && _LIBCPP_INSTRUMENTED_WITH_ASAN
+// Since std::string is partially instantiated in the built library, we require that the library
+// has been built with ASAN support in order to enable the container checks in std::string.
+// Within the <string> implementation, use `_LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS_FOR_STRING`
+// to determine whether ASAN container checks should be provided.
+//
+// The _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS macro disables ASAN instrumentation for a specific
+// function, allowing memory accesses that would normally trigger ASan errors to proceed without
+// crashing. This is useful for accessing parts of objects memory, which should not be accessed,
+// such as unused bytes in short strings, that should never be accessed by other parts of the program.
+#  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS && _LIBCPP_INSTRUMENTED_WITH_ASAN
+#    define _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS_FOR_STRING 1
 #    define _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS __attribute__((__no_sanitize__("address")))
-// This macro disables AddressSanitizer (ASan) instrumentation for a specific function,
-// allowing memory accesses that would normally trigger ASan errors to proceed without crashing.
-// This is useful for accessing parts of objects memory, which should not be accessed,
-// such as unused bytes in short strings, that should never be accessed
-// by other parts of the program.
 #  else
+#    define _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS_FOR_STRING 0
 #    define _LIBCPP_STRING_INTERNAL_MEMORY_ACCESS
 #  endif
 
@@ -749,7 +755,7 @@ public:
   //
   // This string implementation doesn't contain any references into itself. It only contains a bit that says whether
   // it is in small or large string mode, so the entire structure is trivially relocatable if its members are.
-#  if __has_feature(address_sanitizer) && _LIBCPP_INSTRUMENTED_WITH_ASAN
+#  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS_FOR_STRING
   // When compiling with AddressSanitizer (ASan), basic_string cannot be trivially
   // relocatable. Because the object's memory might be poisoned when its content
   // is kept inside objects memory (short string optimization), instead of in allocated
@@ -764,7 +770,7 @@ public:
       void>;
 #  endif
 
-#  if __has_feature(address_sanitizer) && _LIBCPP_INSTRUMENTED_WITH_ASAN
+#  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS_FOR_STRING
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 pointer __asan_volatile_wrapper(pointer const& __ptr) const {
     if (__libcpp_is_constant_evaluated())
       return __ptr;
@@ -2313,7 +2319,7 @@ private:
   __annotate_contiguous_container(const void* __old_mid, const void* __new_mid) const {
     (void)__old_mid;
     (void)__new_mid;
-#  if _LIBCPP_INSTRUMENTED_WITH_ASAN
+#  if _LIBCPP_ENABLE_ASAN_CONTAINER_CHECKS_FOR_STRING
 #    if defined(__APPLE__)
     // TODO: remove after addressing issue #96099 (https://llvm.org/PR96099)
     if (!__is_long())
