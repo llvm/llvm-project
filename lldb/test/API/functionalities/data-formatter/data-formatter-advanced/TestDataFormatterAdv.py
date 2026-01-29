@@ -359,13 +359,13 @@ class AdvDataFormatterTestCase(TestBase):
         self.runCmd("type format delete int")
 
         # First, check the following:
-        #   1. Verify the default max-children-depth (4) is applied
+        #   1. Verify the default max-children-depth (5) is applied
         #   2. Ensure the one-time warning is printed
         warning = "*** Some of the displayed variables have a greater depth"
         self.expect(
             "frame variable quite_nested",
             matching=True,
-            substrs=["four ={...}", warning],
+            substrs=["five ={...}", warning],
         )
         self.expect(
             "frame variable quite_nested",
