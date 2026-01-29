@@ -48,6 +48,25 @@ define <2 x i64> @pclmul128_hi_hi(<2 x i64> %v0, <2 x i64> %v1) {
   ret <2 x i64> %r
 }
 
+define <2 x i64> @pclmul128_hi_lo_vector(<2 x i64> %a0, <2 x i64> %a1) {
+; SSE-LABEL: pclmul128_hi_lo_vector:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pclmulqdq $1, %xmm1, %xmm0
+; SSE-NEXT:    retq
+;
+; AVX-LABEL: pclmul128_hi_lo_vector:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpclmulqdq $1, %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %s0 = shufflevector <2 x i64> %a0, <2 x i64> poison, <1 x i32> <i32 1>
+  %s1 = shufflevector <2 x i64> %a1, <2 x i64> poison, <1 x i32> <i32 0>
+  %x0 = zext <1 x i64> %s0 to <1 x i128>
+  %x1 = zext <1 x i64> %s1 to <1 x i128>
+  %clmul = call <1 x i128> @llvm.clmul.v1i128(<1 x i128> %x0, <1 x i128> %x1)
+  %res = bitcast <1 x i128> %clmul to <2 x i64>
+  ret <2 x i64>%res
+}
+
 define <4 x i64> @pclmul256_lo_lo(<4 x i64> %v0, <4 x i64> %v1) {
 ; SSE-LABEL: pclmul256_lo_lo:
 ; SSE:       # %bb.0:
@@ -126,6 +145,35 @@ define <4 x i64> @pclmul256_lo_hi(<4 x i64> %v0, <4 x i64> %v1) {
   %r1 = bitcast i128 %c1 to <2 x i64>
   %r = shufflevector <2 x i64> %r0, <2 x i64> %r1, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   ret <4 x i64> %r
+}
+
+define <4 x i64> @pclmul256_hi_hi_vector(<4 x i64> %a0, <4 x i64> %a1) {
+; SSE-LABEL: pclmul256_hi_hi_vector:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pclmulqdq $17, %xmm2, %xmm0
+; SSE-NEXT:    pclmulqdq $17, %xmm3, %xmm1
+; SSE-NEXT:    retq
+;
+; AVX-PCLMUL-LABEL: pclmul256_hi_hi_vector:
+; AVX-PCLMUL:       # %bb.0:
+; AVX-PCLMUL-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX-PCLMUL-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX-PCLMUL-NEXT:    vpclmulqdq $17, %xmm3, %xmm2, %xmm2
+; AVX-PCLMUL-NEXT:    vpclmulqdq $17, %xmm1, %xmm0, %xmm0
+; AVX-PCLMUL-NEXT:    vinsertf128 $1, %xmm2, %ymm0, %ymm0
+; AVX-PCLMUL-NEXT:    retq
+;
+; AVX-VPCLMULQDQ-LABEL: pclmul256_hi_hi_vector:
+; AVX-VPCLMULQDQ:       # %bb.0:
+; AVX-VPCLMULQDQ-NEXT:    vpclmulqdq $17, %ymm1, %ymm0, %ymm0
+; AVX-VPCLMULQDQ-NEXT:    retq
+  %s0 = shufflevector <4 x i64> %a0, <4 x i64> poison, <2 x i32> <i32 1, i32 3>
+  %s1 = shufflevector <4 x i64> %a1, <4 x i64> poison, <2 x i32> <i32 1, i32 3>
+  %x0 = zext <2 x i64> %s0 to <2 x i128>
+  %x1 = zext <2 x i64> %s1 to <2 x i128>
+  %clmul = call <2 x i128> @llvm.clmul.v2i128(<2 x i128> %x0, <2 x i128> %x1)
+  %res = bitcast <2 x i128> %clmul to <4 x i64>
+  ret <4 x i64>%res
 }
 
 define <8 x i64> @pclmul512_lo_hi(<8 x i64> %v0, <8 x i64> %v1) {
@@ -268,4 +316,76 @@ define <8 x i64> @pclmul512_hi_lo(<8 x i64> %v0, <8 x i64> %v1) {
   %r23 = shufflevector <2 x i64> %r2, <2 x i64> %r3, <4 x i32> <i32 0, i32 1, i32 2, i32 3>
   %r = shufflevector <4 x i64> %r01, <4 x i64> %r23, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7>
   ret <8 x i64> %r
+}
+
+define <8 x i64> @pclmul512_lo_lo(<8 x i64> %a0, <8 x i64> %a1) {
+; SSE-LABEL: pclmul512_lo_lo:
+; SSE:       # %bb.0:
+; SSE-NEXT:    pclmulqdq $0, %xmm4, %xmm0
+; SSE-NEXT:    pclmulqdq $0, %xmm5, %xmm1
+; SSE-NEXT:    pclmulqdq $0, %xmm6, %xmm2
+; SSE-NEXT:    pclmulqdq $0, %xmm7, %xmm3
+; SSE-NEXT:    retq
+;
+; AVX-PCLMUL-LABEL: pclmul512_lo_lo:
+; AVX-PCLMUL:       # %bb.0:
+; AVX-PCLMUL-NEXT:    vperm2f128 {{.*#+}} ymm4 = ymm0[2,3],ymm1[2,3]
+; AVX-PCLMUL-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX-PCLMUL-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm4[0],ymm0[2],ymm4[2]
+; AVX-PCLMUL-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm2[2,3],ymm3[2,3]
+; AVX-PCLMUL-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
+; AVX-PCLMUL-NEXT:    vunpcklpd {{.*#+}} ymm1 = ymm2[0],ymm1[0],ymm2[2],ymm1[2]
+; AVX-PCLMUL-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX-PCLMUL-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX-PCLMUL-NEXT:    vpclmulqdq $17, %xmm3, %xmm2, %xmm4
+; AVX-PCLMUL-NEXT:    vpclmulqdq $0, %xmm3, %xmm2, %xmm2
+; AVX-PCLMUL-NEXT:    vpclmulqdq $17, %xmm1, %xmm0, %xmm3
+; AVX-PCLMUL-NEXT:    vpclmulqdq $0, %xmm1, %xmm0, %xmm0
+; AVX-PCLMUL-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
+; AVX-PCLMUL-NEXT:    vinsertf128 $1, %xmm4, %ymm2, %ymm1
+; AVX-PCLMUL-NEXT:    retq
+;
+; AVX2-VPCLMULQDQ-LABEL: pclmul512_lo_lo:
+; AVX2-VPCLMULQDQ:       # %bb.0:
+; AVX2-VPCLMULQDQ-NEXT:    vperm2f128 {{.*#+}} ymm4 = ymm0[2,3],ymm1[2,3]
+; AVX2-VPCLMULQDQ-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX2-VPCLMULQDQ-NEXT:    vunpcklpd {{.*#+}} ymm0 = ymm0[0],ymm4[0],ymm0[2],ymm4[2]
+; AVX2-VPCLMULQDQ-NEXT:    vperm2f128 {{.*#+}} ymm1 = ymm2[2,3],ymm3[2,3]
+; AVX2-VPCLMULQDQ-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
+; AVX2-VPCLMULQDQ-NEXT:    vunpcklpd {{.*#+}} ymm1 = ymm2[0],ymm1[0],ymm2[2],ymm1[2]
+; AVX2-VPCLMULQDQ-NEXT:    vextractf128 $1, %ymm0, %xmm2
+; AVX2-VPCLMULQDQ-NEXT:    vextractf128 $1, %ymm1, %xmm3
+; AVX2-VPCLMULQDQ-NEXT:    vpclmulqdq $17, %xmm3, %xmm2, %xmm4
+; AVX2-VPCLMULQDQ-NEXT:    vpclmulqdq $0, %xmm3, %xmm2, %xmm2
+; AVX2-VPCLMULQDQ-NEXT:    vpclmulqdq $17, %xmm1, %xmm0, %xmm3
+; AVX2-VPCLMULQDQ-NEXT:    vpclmulqdq $0, %xmm1, %xmm0, %xmm0
+; AVX2-VPCLMULQDQ-NEXT:    vinsertf128 $1, %xmm3, %ymm0, %ymm0
+; AVX2-VPCLMULQDQ-NEXT:    vinsertf128 $1, %xmm4, %ymm2, %ymm1
+; AVX2-VPCLMULQDQ-NEXT:    retq
+;
+; AVX512-VPCLMULQDQ-LABEL: pclmul512_lo_lo:
+; AVX512-VPCLMULQDQ:       # %bb.0:
+; AVX512-VPCLMULQDQ-NEXT:    vextracti64x4 $1, %zmm0, %ymm2
+; AVX512-VPCLMULQDQ-NEXT:    vpunpcklqdq {{.*#+}} ymm0 = ymm0[0],ymm2[0],ymm0[2],ymm2[2]
+; AVX512-VPCLMULQDQ-NEXT:    vpermq {{.*#+}} ymm0 = ymm0[0,2,1,3]
+; AVX512-VPCLMULQDQ-NEXT:    vextracti64x4 $1, %zmm1, %ymm2
+; AVX512-VPCLMULQDQ-NEXT:    vpunpcklqdq {{.*#+}} ymm1 = ymm1[0],ymm2[0],ymm1[2],ymm2[2]
+; AVX512-VPCLMULQDQ-NEXT:    vpermq {{.*#+}} ymm1 = ymm1[0,2,1,3]
+; AVX512-VPCLMULQDQ-NEXT:    vextracti128 $1, %ymm0, %xmm2
+; AVX512-VPCLMULQDQ-NEXT:    vextracti128 $1, %ymm1, %xmm3
+; AVX512-VPCLMULQDQ-NEXT:    vpclmulqdq $17, %xmm1, %xmm0, %xmm4
+; AVX512-VPCLMULQDQ-NEXT:    vpclmulqdq $0, %xmm1, %xmm0, %xmm0
+; AVX512-VPCLMULQDQ-NEXT:    vpclmulqdq $17, %xmm3, %xmm2, %xmm1
+; AVX512-VPCLMULQDQ-NEXT:    vpclmulqdq $0, %xmm3, %xmm2, %xmm2
+; AVX512-VPCLMULQDQ-NEXT:    vinserti128 $1, %xmm1, %ymm2, %ymm1
+; AVX512-VPCLMULQDQ-NEXT:    vinserti128 $1, %xmm4, %ymm0, %ymm0
+; AVX512-VPCLMULQDQ-NEXT:    vinserti64x4 $1, %ymm1, %zmm0, %zmm0
+; AVX512-VPCLMULQDQ-NEXT:    retq
+  %s0 = shufflevector <8 x i64> %a0, <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %s1 = shufflevector <8 x i64> %a1, <8 x i64> poison, <4 x i32> <i32 0, i32 2, i32 4, i32 6>
+  %x0 = zext <4 x i64> %s0 to <4 x i128>
+  %x1 = zext <4 x i64> %s1 to <4 x i128>
+  %clmul = call <4 x i128> @llvm.clmul.v4i128(<4 x i128> %x0, <4 x i128> %x1)
+  %res = bitcast <4 x i128> %clmul to <8 x i64>
+  ret <8 x i64>%res
 }
