@@ -1921,7 +1921,10 @@ public:
 
   void reverseBranchCondition(MCInst &Inst, const MCSymbol *TBB,
                               MCContext *Ctx) const override {
-    assert(isReversibleBranch(Inst) && "Cannot reverse branch");
+    if (!isReversibleBranch(Inst)) {
+      errs() << "BOLT-ERROR: Cannot reverse branch " << Inst << "\n";
+      exit(1);
+    }
 
     if (isTB(Inst) || isCB(Inst) || isCompAndBranch(Inst)) {
       unsigned InvertedOpcode = getInvertedBranchOpcode(Inst.getOpcode());
