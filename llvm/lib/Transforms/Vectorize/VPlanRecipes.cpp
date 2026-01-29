@@ -2922,6 +2922,7 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
           RedTy->isFloatingPointTy() ? std::optional{RedR->getFastMathFlags()}
                                      : std::nullopt);
     else if (!RedTy->isFloatingPointTy())
+      // TTI::getExtendedReductionCost only supports integer types.
       return Ctx.TTI.getExtendedReductionCost(
           Opcode, ExtR->getOpcode() == Instruction::ZExt, RedTy, SrcVecTy,
           std::nullopt, Ctx.CostKind);
