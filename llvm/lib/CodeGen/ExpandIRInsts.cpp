@@ -528,14 +528,10 @@ static void expandFPToI(Instruction *FPToI) {
       PowerOf2Ceil(FloatVal->getType()->getScalarSizeInBits());
   unsigned ExponentWidth = FloatWidth - FPMantissaWidth - 1;
   unsigned ExponentBias = (1 << (ExponentWidth - 1)) - 1;
-  Value *ImplicitBit = Builder.CreateShl(
-      Builder.getIntN(BitWidth, 1), Builder.getIntN(BitWidth, FPMantissaWidth));
+  Value *ImplicitBit =
+      ConstantInt::get(IntTy, APInt::getOneBitSet(BitWidth, FPMantissaWidth));
   Value *SignificandMask =
-      Builder.CreateSub(ImplicitBit, Builder.getIntN(BitWidth, 1));
-  Value *NegOne = ConstantInt::getAllOnesValue(IntTy);
-  Value *NegInf =
-      Builder.CreateShl(ConstantInt::getSigned(IntTy, 1),
-                        ConstantInt::getSigned(IntTy, BitWidth - 1));
+      ConstantInt::get(IntTy, APInt::getLowBitsSet(BitWidth, FPMantissaWidth));
 
   BasicBlock *Entry = Builder.GetInsertBlock();
   Function *F = Entry->getParent();
@@ -591,7 +587,8 @@ static void expandFPToI(Instruction *FPToI) {
 
   // if.then5:
   Builder.SetInsertPoint(IfThen5);
-  Value *PosInf = Builder.CreateXor(NegOne, NegInf);
+  Value *PosInf = ConstantInt::get(IntTy, APInt::getSignedMaxValue(BitWidth));
+  Value *NegInf = ConstantInt::get(IntTy, APInt::getSignedMinValue(BitWidth));
   Value *Cond8 = Builder.CreateSelect(PosOrNeg, PosInf, NegInf);
   Builder.CreateBr(End);
 
