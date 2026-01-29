@@ -205,6 +205,9 @@ Improvements to Clang's time-trace
 Improvements to Coverage Mapping
 --------------------------------
 
+- "Single byte coverage" now supports branch coverage and can be used
+  together with ``-fcoverage-mcdc``.
+
 Bug Fixes in This Version
 -------------------------
 - Fixed a failed assertion in the preprocessor when ``__has_embed`` parameters are missing parentheses. (#GH175088)
