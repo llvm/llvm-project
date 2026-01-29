@@ -113,8 +113,9 @@ static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
   auto newMaskType = VectorType::get(maskShape, rewriter.getI1Type());
   std::optional<Operation *> newMask =
       TypeSwitch<Operation *, std::optional<Operation *>>(maskOp)
-          .Case<vector::CreateMaskOp>(
-              [&](auto createMaskOp) -> std::optional<Operation *> {
+          .Case(
+              [&](vector::CreateMaskOp createMaskOp)
+                  -> std::optional<Operation *> {
                 OperandRange maskOperands = createMaskOp.getOperands();
                 // The `vector.create_mask` op creates a mask arrangement
                 // without any zeros at the front. Also, because
@@ -134,8 +135,8 @@ static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
                 return vector::CreateMaskOp::create(rewriter, loc, newMaskType,
                                                     newMaskOperands);
               })
-          .Case<vector::ConstantMaskOp>([&](auto constantMaskOp)
-                                            -> std::optional<Operation *> {
+          .Case([&](vector::ConstantMaskOp constantMaskOp)
+                    -> std::optional<Operation *> {
             // Take the shape of mask, compress its trailing dimension:
             SmallVector<int64_t> maskDimSizes(constantMaskOp.getMaskDimSizes());
             int64_t &maskIndex = maskDimSizes.back();
@@ -144,8 +145,8 @@ static FailureOr<Operation *> getCompressedMaskOp(OpBuilder &rewriter,
             return vector::ConstantMaskOp::create(rewriter, loc, newMaskType,
                                                   maskDimSizes);
           })
-          .Case<arith::ConstantOp>([&](auto constantOp)
-                                       -> std::optional<Operation *> {
+          .Case([&](arith::ConstantOp constantOp)
+                    -> std::optional<Operation *> {
             // TODO: Support multiple dimensions.
             if (maskShape.size() != 1)
               return std::nullopt;

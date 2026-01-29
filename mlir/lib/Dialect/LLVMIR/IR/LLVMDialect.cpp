@@ -779,7 +779,7 @@ verifyStructIndices(Type baseGEPType, unsigned indexPos,
     return success();
 
   return TypeSwitch<Type, LogicalResult>(baseGEPType)
-      .Case<LLVMStructType>([&](LLVMStructType structType) -> LogicalResult {
+      .Case([&](LLVMStructType structType) -> LogicalResult {
         auto attr = dyn_cast<IntegerAttr>(indices[indexPos]);
         if (!attr)
           return emitOpError() << "expected index " << indexPos
@@ -3253,13 +3253,13 @@ LogicalResult LLVMFuncOp::verify() {
            return WalkResult::advance();
          };
          return TypeSwitch<Operation *, WalkResult>(op)
-             .Case<LandingpadOp>([&](auto landingpad) {
+             .Case([&](LandingpadOp landingpad) {
                constexpr StringLiteral errorMessage =
                    "'llvm.landingpad' should have a consistent result type "
                    "inside a function";
                return checkType(landingpad.getType(), errorMessage);
              })
-             .Case<ResumeOp>([&](auto resume) {
+             .Case([&](ResumeOp resume) {
                constexpr StringLiteral errorMessage =
                    "'llvm.resume' should have a consistent input type inside a "
                    "function";

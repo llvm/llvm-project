@@ -1741,20 +1741,20 @@ static LogicalResult convertParameterAttr(llvm::AttrBuilder &attrBuilder,
                                           ModuleTranslation &moduleTranslation,
                                           Location loc) {
   return llvm::TypeSwitch<Attribute, LogicalResult>(namedAttr.getValue())
-      .Case<TypeAttr>([&](auto typeAttr) {
+      .Case([&](TypeAttr typeAttr) {
         attrBuilder.addTypeAttr(
             llvmKind, moduleTranslation.convertType(typeAttr.getValue()));
         return success();
       })
-      .Case<IntegerAttr>([&](auto intAttr) {
+      .Case([&](IntegerAttr intAttr) {
         attrBuilder.addRawIntAttr(llvmKind, intAttr.getInt());
         return success();
       })
-      .Case<UnitAttr>([&](auto) {
+      .Case([&](UnitAttr) {
         attrBuilder.addAttribute(llvmKind);
         return success();
       })
-      .Case<LLVM::ConstantRangeAttr>([&](auto rangeAttr) {
+      .Case([&](LLVM::ConstantRangeAttr rangeAttr) {
         attrBuilder.addConstantRangeAttr(
             llvmKind,
             llvm::ConstantRange(rangeAttr.getLower(), rangeAttr.getUpper()));

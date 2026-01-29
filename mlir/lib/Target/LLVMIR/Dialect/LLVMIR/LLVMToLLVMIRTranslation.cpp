@@ -333,16 +333,16 @@ static void convertModuleFlagsOp(ArrayAttr flags, llvm::IRBuilderBase &builder,
   for (auto flagAttr : flags.getAsRange<ModuleFlagAttr>()) {
     llvm::Metadata *valueMetadata =
         llvm::TypeSwitch<Attribute, llvm::Metadata *>(flagAttr.getValue())
-            .Case<StringAttr>([&](auto strAttr) {
+            .Case([&](StringAttr strAttr) {
               return llvm::MDString::get(builder.getContext(),
                                          strAttr.getValue());
             })
-            .Case<IntegerAttr>([&](auto intAttr) {
+            .Case([&](IntegerAttr intAttr) {
               return llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
                   llvm::Type::getInt32Ty(builder.getContext()),
                   intAttr.getInt()));
             })
-            .Case<ArrayAttr>([&](auto arrayAttr) {
+            .Case([&](ArrayAttr arrayAttr) {
               return convertModuleFlagValue(flagAttr.getKey().getValue(),
                                             arrayAttr, builder,
                                             moduleTranslation);

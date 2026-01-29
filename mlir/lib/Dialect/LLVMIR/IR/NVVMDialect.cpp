@@ -4117,10 +4117,10 @@ ConvertF32x2ToF4x2Op::getIntrinsicIDAndArgs(NVVM::ConvertF32x2ToF4x2Op op,
 llvm::Intrinsic::ID ConvertF32x2ToF6x2Op::getIntrinsicID(mlir::Type dstTy,
                                                          bool hasRelu) {
   return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
-      .Case<mlir::Float6E2M3FNType>([&](mlir::Float6E2M3FNType) {
+      .Case([&](mlir::Float6E2M3FNType) {
         return GET_F32x2_TO_F6x2_ID(e2m3x2, hasRelu);
       })
-      .Case<mlir::Float6E3M2FNType>([&](mlir::Float6E3M2FNType) {
+      .Case([&](mlir::Float6E3M2FNType) {
         return GET_F32x2_TO_F6x2_ID(e3m2x2, hasRelu);
       })
       .Default([](mlir::Type) {
@@ -4145,13 +4145,13 @@ ConvertF32x2ToF8x2Op::getIntrinsicID(mlir::Type dstTy, NVVM::FPRoundingMode rnd,
   bool hasRoundingModeRP = (rnd == NVVM::FPRoundingMode::RP);
 
   return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
-      .Case<mlir::Float8E4M3FNType>([&](mlir::Float8E4M3FNType) {
+      .Case([&](mlir::Float8E4M3FNType) {
         return GET_F32x2_TO_F8X2_S_ID(e4m3x2, hasRelu);
       })
-      .Case<mlir::Float8E5M2Type>([&](mlir::Float8E5M2Type) {
+      .Case([&](mlir::Float8E5M2Type) {
         return GET_F32x2_TO_F8X2_S_ID(e5m2x2, hasRelu);
       })
-      .Case<mlir::Float8E8M0FNUType>([&](mlir::Float8E8M0FNUType) {
+      .Case([&](mlir::Float8E8M0FNUType) {
         if (hasRoundingModeRZ)
           return GET_F32x2_TO_F8X2_US_ID(rz, hasSatFinite);
         else if (hasRoundingModeRP)
@@ -4172,10 +4172,10 @@ ConvertF32x2ToF8x2Op::getIntrinsicID(mlir::Type dstTy, NVVM::FPRoundingMode rnd,
 llvm::Intrinsic::ID ConvertF16x2ToF8x2Op::getIntrinsicID(mlir::Type dstTy,
                                                          bool hasRelu) {
   return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
-      .Case<mlir::Float8E4M3FNType>([&](mlir::Float8E4M3FNType) {
+      .Case([&](mlir::Float8E4M3FNType) {
         return GET_F16x2_TO_F8X2_ID(e4m3x2, hasRelu);
       })
-      .Case<mlir::Float8E5M2Type>([&](mlir::Float8E5M2Type) {
+      .Case([&](mlir::Float8E5M2Type) {
         return GET_F16x2_TO_F8X2_ID(e5m2x2, hasRelu);
       })
       .Default([](mlir::Type) {
@@ -4210,11 +4210,11 @@ NVVM::IDArgPair ConvertF8x2ToF16x2Op::getIntrinsicIDAndArgs(
 
   llvm::Intrinsic::ID intId =
       llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(curOp.getSrcType())
-          .Case<Float8E4M3FNType>([&](Float8E4M3FNType type) {
+          .Case([&](Float8E4M3FNType type) {
             return hasRelu ? llvm::Intrinsic::nvvm_e4m3x2_to_f16x2_rn_relu
                            : llvm::Intrinsic::nvvm_e4m3x2_to_f16x2_rn;
           })
-          .Case<Float8E5M2Type>([&](Float8E5M2Type type) {
+          .Case([&](Float8E5M2Type type) {
             return hasRelu ? llvm::Intrinsic::nvvm_e5m2x2_to_f16x2_rn_relu
                            : llvm::Intrinsic::nvvm_e5m2x2_to_f16x2_rn;
           })
@@ -4250,11 +4250,11 @@ NVVM::IDArgPair ConvertF6x2ToF16x2Op::getIntrinsicIDAndArgs(
 
   llvm::Intrinsic::ID intId =
       llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(curOp.getSrcType())
-          .Case<Float6E2M3FNType>([&](Float6E2M3FNType type) {
+          .Case([&](Float6E2M3FNType type) {
             return hasRelu ? llvm::Intrinsic::nvvm_e2m3x2_to_f16x2_rn_relu
                            : llvm::Intrinsic::nvvm_e2m3x2_to_f16x2_rn;
           })
-          .Case<Float6E3M2FNType>([&](Float6E3M2FNType type) {
+          .Case([&](Float6E3M2FNType type) {
             return hasRelu ? llvm::Intrinsic::nvvm_e3m2x2_to_f16x2_rn_relu
                            : llvm::Intrinsic::nvvm_e3m2x2_to_f16x2_rn;
           })
@@ -4278,7 +4278,7 @@ NVVM::IDArgPair ConvertF4x2ToF16x2Op::getIntrinsicIDAndArgs(
 
   llvm::Intrinsic::ID intId =
       llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(curOp.getSrcType())
-          .Case<Float4E2M1FNType>([&](Float4E2M1FNType type) {
+          .Case([&](Float4E2M1FNType type) {
             return hasRelu ? llvm::Intrinsic::nvvm_e2m1x2_to_f16x2_rn_relu
                            : llvm::Intrinsic::nvvm_e2m1x2_to_f16x2_rn;
           })
@@ -4483,11 +4483,11 @@ llvm::Intrinsic::ID ConvertF32x4ToF8x4Op::getIntrinsicID() {
   bool hasRelu = getRelu();
 
   return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
-      .Case<mlir::Float8E4M3FNType>([&](mlir::Float8E4M3FNType) {
+      .Case([&](mlir::Float8E4M3FNType) {
         return hasRelu ? llvm::Intrinsic::nvvm_f32x4_to_e4m3x4_rs_relu_satfinite
                        : llvm::Intrinsic::nvvm_f32x4_to_e4m3x4_rs_satfinite;
       })
-      .Case<mlir::Float8E5M2Type>([&](mlir::Float8E5M2Type) {
+      .Case([&](mlir::Float8E5M2Type) {
         return hasRelu ? llvm::Intrinsic::nvvm_f32x4_to_e5m2x4_rs_relu_satfinite
                        : llvm::Intrinsic::nvvm_f32x4_to_e5m2x4_rs_satfinite;
       })
@@ -4502,11 +4502,11 @@ llvm::Intrinsic::ID ConvertF32x4ToF6x4Op::getIntrinsicID() {
   bool hasRelu = getRelu();
 
   return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
-      .Case<mlir::Float6E2M3FNType>([&](mlir::Float6E2M3FNType) {
+      .Case([&](mlir::Float6E2M3FNType) {
         return hasRelu ? llvm::Intrinsic::nvvm_f32x4_to_e2m3x4_rs_relu_satfinite
                        : llvm::Intrinsic::nvvm_f32x4_to_e2m3x4_rs_satfinite;
       })
-      .Case<mlir::Float6E3M2FNType>([&](mlir::Float6E3M2FNType) {
+      .Case([&](mlir::Float6E3M2FNType) {
         return hasRelu ? llvm::Intrinsic::nvvm_f32x4_to_e3m2x4_rs_relu_satfinite
                        : llvm::Intrinsic::nvvm_f32x4_to_e3m2x4_rs_satfinite;
       })
@@ -4521,7 +4521,7 @@ llvm::Intrinsic::ID ConvertF32x4ToF4x4Op::getIntrinsicID() {
   bool hasRelu = getRelu();
 
   return llvm::TypeSwitch<mlir::Type, llvm::Intrinsic::ID>(dstTy)
-      .Case<mlir::Float4E2M1FNType>([&](mlir::Float4E2M1FNType) {
+      .Case([&](mlir::Float4E2M1FNType) {
         return hasRelu ? llvm::Intrinsic::nvvm_f32x4_to_e2m1x4_rs_relu_satfinite
                        : llvm::Intrinsic::nvvm_f32x4_to_e2m1x4_rs_satfinite;
       })

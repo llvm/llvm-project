@@ -389,7 +389,7 @@ collectParentLayouts(Operation *leaf,
   for (Operation *parent = leaf->getParentOp(); parent != nullptr;
        parent = parent->getParentOp()) {
     llvm::TypeSwitch<Operation *>(parent)
-        .Case<ModuleOp>([&](ModuleOp op) {
+        .Case([&](ModuleOp op) {
           // Skip top-level module op unless it has a layout. Top-level module
           // without layout is most likely the one implicitly added by the
           // parser and it doesn't have location. Top-level null specification
@@ -401,7 +401,7 @@ collectParentLayouts(Operation *leaf,
           if (opLocations)
             opLocations->push_back(op.getLoc());
         })
-        .Case<DataLayoutOpInterface>([&](DataLayoutOpInterface op) {
+        .Case([&](DataLayoutOpInterface op) {
           specs.push_back(op.getDataLayoutSpec());
           if (opLocations)
             opLocations->push_back(op.getLoc());
