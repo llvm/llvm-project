@@ -236,25 +236,25 @@ RValue NVPTXABIInfo::EmitVAArg(CodeGenFunction &CGF, Address VAListAddr,
 
 void NVPTXTargetCodeGenInfo::setTargetAttributes(
     const Decl *D, llvm::GlobalValue *GV, CodeGen::CodeGenModule &M) const {
-
   const VarDecl *VD = dyn_cast_or_null<VarDecl>(D);
-  if (VD) {
-    if (M.getLangOpts().CUDA) {
-      if (!GV->isDeclaration() &&
-          VD->getType()->isCUDADeviceBuiltinSurfaceType())
-        addNVVMMetadata(GV, "surface", 1);
-      else if (!GV->isDeclaration() &&
-               VD->getType()->isCUDADeviceBuiltinTextureType())
-        addNVVMMetadata(GV, "texture", 1);
-      // nvlink asserts managed attribute match in decl and def
-      else if (VD->hasAttr<HIPManagedAttr>())
-        addNVVMMetadata(GV, "managed", 1);
-      return;
-    }
+  // nvlink asserts managed attribute match in decl and def
+  if (VD && VD->hasAttr<HIPManagedAttr>() && M.getLangOpts().CUDA) {
+    addNVVMMetadata(GV, "managed", 1);
+    return;
   }
 
   if (GV->isDeclaration())
     return;
+
+  if (VD) {
+    if (M.getLangOpts().CUDA) {
+      if (VD->getType()->isCUDADeviceBuiltinSurfaceType())
+        addNVVMMetadata(GV, "surface", 1);
+      else if (VD->getType()->isCUDADeviceBuiltinTextureType())
+        addNVVMMetadata(GV, "texture", 1);
+      return;
+    }
+  }
 
   const FunctionDecl *FD = dyn_cast_or_null<FunctionDecl>(D);
   if (!FD)

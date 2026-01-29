@@ -68,6 +68,7 @@ private:
     DeviceVarFlags Flags;
   };
   llvm::SmallVector<VarInfo, 16> DeviceVars;
+  bool HasManagedVars = false;
   /// Keeps track of variable containing handle of GPU binary. Populated by
   /// ModuleCtorFunction() and used to create corresponding cleanup calls in
   /// ModuleDtorFunction()
@@ -552,7 +553,6 @@ void CGNVCUDARuntime::emitDeviceStubBodyLegacy(CodeGenFunction &CGF,
 static void replaceManagedVar(llvm::GlobalVariable *Var,
                               llvm::GlobalVariable *ManagedVar) {
   SmallVector<SmallVector<llvm::User *, 8>, 8> WorkList;
-
   for (auto &&VarUse : Var->uses()) {
     WorkList.push_back({VarUse.getUser()});
   }
@@ -702,6 +702,7 @@ llvm::Function *CGNVCUDARuntime::makeRegisterGlobalsFn() {
                "HIP managed variables not transformed");
         auto *ManagedVar = CGM.getModule().getNamedGlobal(
             Var->getName().drop_back(StringRef(".managed").size()));
+        HasManagedVars = true;
         SmallVector<llvm::Value *, 8> Args;
         if (CGM.getLangOpts().HIP)
           Args = {&GpuBinaryHandlePtr,
@@ -985,16 +986,12 @@ llvm::Function *CGNVCUDARuntime::makeModuleCtorFunction() {
       CtorBuilder.CreateCall(RegisterFatbinEndFunc, RegisterFatbinCall);
     }
     // Call __cudaInitModule(GpuBinaryHandle) for managed variables
-    for (auto &&Info : DeviceVars) {
-      llvm::GlobalVariable *Var = Info.Var;
-      if (!Var->isDeclaration() && Info.Flags.isManaged()) {
-        llvm::FunctionCallee NvInitManagedRtWithModule =
-            CGM.CreateRuntimeFunction(
-                llvm::FunctionType::get(CharTy, PtrTy, false),
-                "__cudaInitModule");
-        CtorBuilder.CreateCall(NvInitManagedRtWithModule, GpuBinaryHandle);
-        break;
-      }
+    if (HasManagedVars) {
+      llvm::FunctionCallee NvInitManagedRtWithModule =
+          CGM.CreateRuntimeFunction(
+              llvm::FunctionType::get(CharTy, PtrTy, false),
+              "__cudaInitModule");
+      CtorBuilder.CreateCall(NvInitManagedRtWithModule, GpuBinaryHandle);
     }
   } else {
     // Generate a unique module ID.
