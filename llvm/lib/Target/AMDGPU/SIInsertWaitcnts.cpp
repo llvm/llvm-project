@@ -363,7 +363,9 @@ public:
     return Mask & (1 << Event);
   }
   /// \Returns true if this set contains all elements of \p Other.
-  bool contains(const WaitEventSet &Other) const { return Mask & ~Other.Mask; }
+  bool contains(const WaitEventSet &Other) const {
+    return (~Mask & Other.Mask) == 0;
+  }
   /// \Returns the intersection of this and \p Other.
   WaitEventSet operator&(const WaitEventSet &Other) const {
     auto Copy = *this;
@@ -2870,7 +2872,7 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
     const WaitEventSet &EventsForT = Context->getWaitEventMask()[T];
     const WaitEventSet OldEvents = PendingEvents & EventsForT;
     const WaitEventSet OtherEvents = Other.PendingEvents & EventsForT;
-    if (OtherEvents.contains(OldEvents))
+    if (!OldEvents.contains(OtherEvents))
       StrictDom = true;
     PendingEvents |= OtherEvents;
 
