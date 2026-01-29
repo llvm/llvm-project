@@ -477,8 +477,6 @@ static const char *timeout_error =
     "Reached timeout while interpreting expression";
 static const char *too_many_functions_error =
     "Interpreter doesn't handle modules with multiple function bodies.";
-static const char *bad_conversion_error =
-    "Interpreter couldn't convert a value";
 
 static bool CanResolveConstant(llvm::Constant *constant) {
   switch (constant->getValueID()) {
@@ -1296,8 +1294,14 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       // Casting floating point values that are out of bounds of the target type
       // is undefined behaviour.
       if (status & llvm::APFloatBase::opInvalidOp) {
-        LLDB_LOG(log, "Couldn't convert {0} to {1}", S, *inst->getType());
-        error = lldb_private::Status::FromErrorString(bad_conversion_error);
+        std::string s;
+        raw_string_ostream rso(s);
+        rso << "Conversion error: " << S << " cannot be converted to ";
+        if (inst->getOpcode() == Instruction::FPToUI)
+          rso << "unsigned ";
+        rso << *inst->getType();
+        LLDB_LOGF(log, "%s", s.c_str());
+        error = lldb_private::Status::FromErrorString(s.c_str());
         return false;
       }
       lldb_private::Scalar R(result);

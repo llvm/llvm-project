@@ -250,9 +250,15 @@ class IRInterpreterTestCase(TestBase):
         ]
 
         expressions = [
-            "(int)$f",
-            "(long)$d",
-            "(unsigned)$nf",
+            ("(int)$f", "Conversion error: (float) 3.0E+9 cannot be converted to i32"),
+            (
+                "(long)$d",
+                "Conversion error: (float) 1.0E+20 cannot be converted to i64",
+            ),
+            (
+                "(unsigned)$nf",
+                "Conversion error: (float) -1.5 cannot be converted to unsigned i32",
+            ),
         ]
 
         for expression in set_up_expressions:
@@ -260,10 +266,8 @@ class IRInterpreterTestCase(TestBase):
 
         # The IR Interpreter returns an error if a value cannot be converted.
         for expression in expressions:
-            result = target.EvaluateExpression(expression)
-            self.assertIn(
-                "Interpreter couldn't convert a value", str(result.GetError())
-            )
+            result = target.EvaluateExpression(expression[0])
+            self.assertIn(expression[1], str(result.GetError()))
 
         # The conversion should succeed if the destination type can represent the result.
         self.expect_expr(
