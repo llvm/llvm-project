@@ -20699,12 +20699,267 @@ static SDValue performANDORCSELCombine(SDNode *N, SelectionDAG &DAG) {
                      CSel0.getOperand(1), getCondCode(DAG, CC1), CCmp);
 }
 
+// Fold lsl + lsr + orr to rev for half-width shifts
+// Pattern: orr(lsl(x, shift), lsr(x, shift)) -> rev(x) when shift == half_bitwidth
+static SDValue performLSL_LSR_ORRCombine(SDNode *N, SelectionDAG &DAG,
+                                         const AArch64Subtarget *Subtarget) {
+  if (!Subtarget->hasSVE())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  if (!VT.isScalableVector())
+    return SDValue();
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  
+  // Check if one operand is LSL and the other is LSR
+  SDValue LSL, LSR;
+  if (LHS.getOpcode() == ISD::SHL && RHS.getOpcode() == ISD::SRL) {
+    LSL = LHS;
+    LSR = RHS;
+  } else if (LHS.getOpcode() == ISD::SRL && RHS.getOpcode() == ISD::SHL) {
+    LSL = RHS;
+    LSR = LHS;
+  } else {
+    return SDValue();
+  }
+
+  // Check that both shifts operate on the same source
+  SDValue Src = LSL.getOperand(0);
+  if (Src != LSR.getOperand(0))
+    return SDValue();
+
+  // Check that both shifts have the same constant amount
+  if (!isa<ConstantSDNode>(LSL.getOperand(1)) || 
+      !isa<ConstantSDNode>(LSR.getOperand(1)))
+    return SDValue();
+
+  uint64_t ShiftAmt = LSL.getConstantOperandVal(1);
+  if (ShiftAmt != LSR.getConstantOperandVal(1))
+    return SDValue();
+
+  // Check if shift amount equals half the bitwidth
+  EVT EltVT = VT.getVectorElementType();
+  if (!EltVT.isSimple())
+    return SDValue();
+
+  unsigned EltSize = EltVT.getSizeInBits();
+  if (ShiftAmt != EltSize / 2)
+    return SDValue();
+
+  // Determine the appropriate REV instruction based on element size and shift amount
+  unsigned RevOp;
+  switch (EltSize) {
+  case 16:
+    if (ShiftAmt == 8)
+      RevOp = AArch64ISD::BSWAP_MERGE_PASSTHRU;  // 16-bit elements, 8-bit shift -> revb
+    else
+      return SDValue();
+    break;
+  case 32:
+    if (ShiftAmt == 16)
+      RevOp = AArch64ISD::REVH_MERGE_PASSTHRU;  // 32-bit elements, 16-bit shift -> revh
+    else
+      return SDValue();
+    break;
+  case 64:
+    if (ShiftAmt == 32)
+      RevOp = AArch64ISD::REVW_MERGE_PASSTHRU;  // 64-bit elements, 32-bit shift -> revw
+    else
+      return SDValue();
+    break;
+  default:
+    return SDValue();
+  }
+
+  // Create the REV instruction
+  SDLoc DL(N);
+  SDValue Pg = getPredicateForVector(DAG, DL, VT);
+  SDValue Undef = DAG.getUNDEF(VT);
+  
+  return DAG.getNode(RevOp, DL, VT, Pg, Src, Undef);
+}
+
+// Fold bswap to correct rev instruction for scalable vectors
+// DAGCombiner converts lsl+lsr+orr with 8-bit shift to BSWAP, but for scalable vectors
+// we need to use the correct REV instruction based on element size
+static SDValue performBSWAPCombine(SDNode *N, SelectionDAG &DAG,
+                                   const AArch64Subtarget *Subtarget) {
+  LLVM_DEBUG(dbgs() << "BSWAP combine called\n");
+  if (!Subtarget->hasSVE())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  if (!VT.isScalableVector())
+    return SDValue();
+
+  LLVM_DEBUG(dbgs() << "BSWAP combine called for scalable vector\n");
+
+  EVT EltVT = VT.getVectorElementType();
+  if (!EltVT.isSimple())
+    return SDValue();
+
+  unsigned EltSize = EltVT.getSizeInBits();
+  
+  // For scalable vectors with 16-bit elements, BSWAP should use REVB, not REVH
+  // REVH is not available for 16-bit elements, only for 32-bit and 64-bit elements
+  // For 16-bit elements, REVB (byte reverse) is equivalent to halfword reverse
+  if (EltSize != 16)
+    return SDValue();  // Use default BSWAP lowering for other sizes
+
+  // The current BSWAP lowering is already correct for 16-bit elements
+  // BSWAP_MERGE_PASSTHRU maps to REVB which is correct for 16-bit elements
+  return SDValue();
+}
+
+// Fold rotl to rev instruction for half-width rotations on scalable vectors
+// Pattern: rotl(x, half_bitwidth) -> rev(x) for scalable vectors
+static SDValue performROTLCombine(SDNode *N, SelectionDAG &DAG,
+                                  const AArch64Subtarget *Subtarget) {
+  LLVM_DEBUG(dbgs() << "ROTL combine called\n");
+  if (!Subtarget->hasSVE())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  if (!VT.isScalableVector())
+    return SDValue();
+
+  // Check that the rotation amount is a constant
+  if (!isa<ConstantSDNode>(N->getOperand(1)))
+    return SDValue();
+
+  uint64_t RotAmt = N->getConstantOperandVal(1);
+  
+  // Check if rotation amount equals half the bitwidth
+  EVT EltVT = VT.getVectorElementType();
+  if (!EltVT.isSimple())
+    return SDValue();
+
+  unsigned EltSize = EltVT.getSizeInBits();
+  if (RotAmt != EltSize / 2)
+    return SDValue();
+
+  // Determine the appropriate REV instruction based on element size
+  unsigned RevOp;
+  switch (EltSize) {
+  case 16:
+    return SDValue(); // 16-bit case handled by BSWAP
+  case 32:
+    RevOp = AArch64ISD::REVW_MERGE_PASSTHRU;  // 32-bit elements, 16-bit rotation -> revw
+    break;
+  case 64:
+    RevOp = AArch64ISD::REVD_MERGE_PASSTHRU;  // 64-bit elements, 32-bit rotation -> revd
+    break;
+  default:
+    return SDValue();
+  }
+
+  // Create the REV instruction
+  SDLoc DL(N);
+  SDValue Src = N->getOperand(0);
+  SDValue Pg = getPredicateForVector(DAG, DL, VT);
+  SDValue Undef = DAG.getUNDEF(VT);
+  
+  return DAG.getNode(RevOp, DL, VT, Pg, Src, Undef);
+}
+
+// Fold predicated shl + srl + orr to rev for half-width shifts on scalable vectors
+// Pattern: orr(AArch64ISD::SHL_PRED(pg, x, shift), AArch64ISD::SRL_PRED(pg, x, shift)) -> rev(x) when shift == half_bitwidth
+static SDValue performSVE_SHL_SRL_ORRCombine(SDNode *N, SelectionDAG &DAG,
+                                             const AArch64Subtarget *Subtarget) {
+  if (!Subtarget->hasSVE())
+    return SDValue();
+
+  EVT VT = N->getValueType(0);
+  if (!VT.isScalableVector())
+    return SDValue();
+
+  SDValue LHS = N->getOperand(0);
+  SDValue RHS = N->getOperand(1);
+  
+  // Check if one operand is predicated SHL and the other is predicated SRL
+  SDValue SHL, SRL;
+  if (LHS.getOpcode() == AArch64ISD::SHL_PRED && RHS.getOpcode() == AArch64ISD::SRL_PRED) {
+    SHL = LHS;
+    SRL = RHS;
+  } else if (LHS.getOpcode() == AArch64ISD::SRL_PRED && RHS.getOpcode() == AArch64ISD::SHL_PRED) {
+    SHL = RHS;
+    SRL = LHS;
+  } else {
+    return SDValue();
+  }
+
+  // Check that both shifts operate on the same predicate and source
+  SDValue SHLPred = SHL.getOperand(0);
+  SDValue SHLSrc = SHL.getOperand(1);
+  SDValue SHLAmt = SHL.getOperand(2);
+  
+  SDValue SRLPred = SRL.getOperand(0);
+  SDValue SRLSrc = SRL.getOperand(1);
+  SDValue SRLAmt = SRL.getOperand(2);
+  
+  if (SHLPred != SRLPred || SHLSrc != SRLSrc || SHLAmt != SRLAmt)
+    return SDValue();
+
+  // Check that the shift amount is a constant
+  if (!isa<ConstantSDNode>(SHLAmt->getOperand(0))) // For splat_vector
+    return SDValue();
+
+  uint64_t ShiftAmt = cast<ConstantSDNode>(SHLAmt->getOperand(0))->getZExtValue();
+
+  // Check if shift amount equals half the bitwidth
+  EVT EltVT = VT.getVectorElementType();
+  if (!EltVT.isSimple())
+    return SDValue();
+
+  unsigned EltSize = EltVT.getSizeInBits();
+  if (ShiftAmt != EltSize / 2)
+    return SDValue();
+
+  // Determine the appropriate REV instruction based on element size and shift amount
+  unsigned RevOp;
+  switch (EltSize) {
+  case 16:
+    return SDValue(); // 16-bit case handled by BSWAP
+  case 32:
+    if (ShiftAmt == 16)
+      RevOp = AArch64ISD::REVH_MERGE_PASSTHRU;  // 32-bit elements, 16-bit shift -> revh
+    else
+      return SDValue();
+    break;
+  case 64:
+    if (ShiftAmt == 32)
+      RevOp = AArch64ISD::REVW_MERGE_PASSTHRU;  // 64-bit elements, 32-bit shift -> revw
+    else
+      return SDValue();
+    break;
+  default:
+    return SDValue();
+  }
+
+  // Create the REV instruction
+  SDLoc DL(N);
+  SDValue Pg = SHLPred;
+  SDValue Src = SHLSrc;
+  SDValue Undef = DAG.getUNDEF(VT);
+  
+  return DAG.getNode(RevOp, DL, VT, Pg, Src, Undef);
+}
+
 static SDValue performORCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
                                 const AArch64Subtarget *Subtarget,
                                 const AArch64TargetLowering &TLI) {
   SelectionDAG &DAG = DCI.DAG;
 
   if (SDValue R = performANDORCSELCombine(N, DAG))
+    return R;
+
+  if (SDValue R = performLSL_LSR_ORRCombine(N, DAG, Subtarget))
+    return R;
+
+  // Try the predicated shift combine for SVE 
+  if (SDValue R = performSVE_SHL_SRL_ORRCombine(N, DAG, Subtarget))
     return R;
 
   return SDValue();
@@ -28616,6 +28871,12 @@ SDValue AArch64TargetLowering::PerformDAGCombine(SDNode *N,
     return performFpToIntCombine(N, DAG, DCI, Subtarget);
   case ISD::OR:
     return performORCombine(N, DCI, Subtarget, *this);
+  case ISD::BSWAP:
+    return performBSWAPCombine(N, DAG, Subtarget);
+  case AArch64ISD::BSWAP_MERGE_PASSTHRU:
+    return performBSWAPCombine(N, DAG, Subtarget);
+  case ISD::ROTL:
+    return performROTLCombine(N, DAG, Subtarget);
   case ISD::AND:
     return performANDCombine(N, DCI);
   case ISD::FADD:
