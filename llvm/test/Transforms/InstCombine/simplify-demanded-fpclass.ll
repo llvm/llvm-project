@@ -13,6 +13,7 @@ declare float @llvm.maxnum.f32(float, float)
 declare float @llvm.minimumnum.f32(float, float)
 declare float @llvm.maximumnum.f32(float, float)
 
+declare nofpclass(inf norm sub zero) float @nan_only()
 
 define float @ninf_user_select_inf(i1 %cond, float %x, float %y) {
 ; CHECK-LABEL: define float @ninf_user_select_inf
@@ -1096,6 +1097,23 @@ define nofpclass(nan inf) float @no_nan_noinf__fneg_ninf_fabs__known_positive_or
   %fabs = call float @llvm.fabs.f32(float %known.positive.or.ninf)
   %copysign = fneg float %fabs
   ret float %copysign
+}
+
+define nofpclass(nan) float @fneg_fabs_multiple_uses_fabs(i1 %cond, float %x, ptr %ptr) {
+; CHECK-LABEL: define nofpclass(nan) float @fneg_fabs_multiple_uses_fabs
+; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]], ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[NAN:%.*]] = call float @nan_only()
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[X]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    store float [[FABS]], ptr [[PTR]], align 4
+; CHECK-NEXT:    ret float [[FNEG_FABS]]
+;
+  %nan = call float @nan_only()
+  %sel = select i1 %cond, float %x, float %nan
+  %fabs = call float @llvm.fabs.f32(float %sel)
+  %fneg.fabs = fneg float %fabs
+  store float %fabs, ptr %ptr ; external user on fabs
+  ret float %fneg.fabs
 }
 
 ; should fold to ret copysign(%x)
