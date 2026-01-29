@@ -349,8 +349,8 @@ define void @pred_cfg1(i32 %k, i32 %j) {
 ; CHECK-NEXT:   ir<%iv> = WIDEN-INDUCTION ir<0>, ir<1>, vp<[[VF]]>
 ; CHECK-NEXT:   EMIT vp<[[MASK1:%.+]]> = icmp ule ir<%iv>, vp<[[BTC]]>
 ; CHECK-NEXT:   WIDEN ir<%c.1> = icmp ult ir<%iv>, ir<%j>
-; CHECK-NEXT:   WIDEN ir<%mul> = mul ir<%iv>, ir<10>
 ; CHECK-NEXT:   EMIT vp<[[MASK2:%.+]]> = logical-and vp<[[MASK1]]>, ir<%c.1>
+; CHECK-NEXT:   WIDEN ir<%mul> = mul ir<%iv>, ir<10>
 ; CHECK-NEXT: Successor(s): pred.load
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.load: {
@@ -448,8 +448,8 @@ define void @pred_cfg2(i32 %k, i32 %j) {
 ; CHECK-NEXT:   EMIT vp<[[MASK1:%.+]]> = icmp ule ir<%iv>, vp<[[BTC]]>
 ; CHECK-NEXT:   WIDEN ir<%mul> = mul ir<%iv>, ir<10>
 ; CHECK-NEXT:   WIDEN ir<%c.0> = icmp ult ir<%iv>, ir<%j>
-; CHECK-NEXT:   WIDEN ir<%c.1> = icmp ugt ir<%iv>, ir<%j>
 ; CHECK-NEXT:   EMIT vp<[[MASK2:%.+]]> = logical-and vp<[[MASK1]]>, ir<%c.0>
+; CHECK-NEXT:   WIDEN ir<%c.1> = icmp ugt ir<%iv>, ir<%j>
 ; CHECK-NEXT: Successor(s): pred.load
 ; CHECK-EMPTY:
 ; CHECK-NEXT: <xVFxUF> pred.load: {
