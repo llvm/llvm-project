@@ -729,6 +729,16 @@ add_header_library(
 )
 
 add_header_library(
+  llogbf128
+  HDRS
+    llogbf128.h
+  DEPENDS
+    libc.src.__support.macros.config
+    libc.src.__support.FPUtil.manipulation_functions
+    libc.include.llvm-libc-types.float128
+)
+
+add_header_library(
   ldexpf16
   HDRS
     ldexpf16.h

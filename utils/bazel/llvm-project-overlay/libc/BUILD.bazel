@@ -3024,6 +3024,16 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_llogbf128",
+    hdrs = ["src/__support/math/llogbf128.h"],
+    deps = [
+        ":__support_fputil_manipulation_functions",
+        ":__support_macros_config",
+        ":llvm_libc_types_float128",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_ldexpf16",
     hdrs = ["src/__support/math/ldexpf16.h"],
     deps = [
@@ -4827,7 +4837,12 @@ libc_math_function(
 
 libc_math_function(name = "llogbl")
 
-libc_math_function(name = "llogbf128")
+libc_math_function(
+    name = "llogbf128",
+    additional_deps = [
+        ":__support_math_llogbf128",
+    ],
+)
 
 libc_math_function(
     name = "llogbf16",
