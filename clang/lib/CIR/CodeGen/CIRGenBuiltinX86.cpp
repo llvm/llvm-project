@@ -200,6 +200,39 @@ static mlir::Value emitX86Select(CIRGenBuilderTy &builder, mlir::Location loc,
   return cir::VecTernaryOp::create(builder, loc, mask, op0, op1);
 }
 
+// Helper function to extract zero-bit from a mask as a boolean
+static mlir::Value getMaskZeroBitAsBool(CIRGenBuilderTy &builder,
+                                        mlir::Location loc, mlir::Value mask) {
+  // Get the mask as a vector of i1 and extract bit 0
+  auto intTy = mlir::dyn_cast<cir::IntType>(mask.getType());
+  assert(intTy && "mask must be an integer type");
+  unsigned width = intTy.getWidth();
+
+  auto maskVecTy = cir::VectorType::get(builder.getSIntNTy(1), width);
+  mlir::Value maskVec = builder.createBitcast(mask, maskVecTy);
+
+  // Extract bit 0 from the mask vector
+  mlir::Value bit0 = builder.createExtractElement(loc, maskVec, uint64_t(0));
+
+  // Convert i1 to bool for select
+  auto boolTy = cir::BoolType::get(builder.getContext());
+  return cir::CastOp::create(builder, loc, boolTy, cir::CastKind::int_to_bool,
+                             bit0);
+}
+
+static mlir::Value emitX86ScalarSelect(CIRGenBuilderTy &builder,
+                                       mlir::Location loc, mlir::Value mask,
+                                       mlir::Value op0, mlir::Value op1) {
+
+  // If the mask is all ones just return first argument.
+  if (auto c = mlir::dyn_cast_or_null<cir::ConstantOp>(mask.getDefiningOp()))
+    if (c.isAllOnesValue())
+      return op0;
+
+  mlir::Value cond = getMaskZeroBitAsBool(builder, loc, mask);
+  return builder.createSelect(loc, cond, op0, op1);
+}
+
 static mlir::Value emitX86MaskAddLogic(CIRGenBuilderTy &builder,
                                        mlir::Location loc,
                                        const std::string &intrinsicName,
@@ -1788,10 +1821,21 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_selectpd_128:
   case X86::BI__builtin_ia32_selectpd_256:
   case X86::BI__builtin_ia32_selectpd_512:
+    return emitX86Select(builder, getLoc(expr->getExprLoc()), ops[0], ops[1],
+                         ops[2]);
   case X86::BI__builtin_ia32_selectsh_128:
   case X86::BI__builtin_ia32_selectsbf_128:
   case X86::BI__builtin_ia32_selectss_128:
-  case X86::BI__builtin_ia32_selectsd_128:
+  case X86::BI__builtin_ia32_selectsd_128: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    mlir::Value scalar1 =
+        builder.createExtractElement(loc, ops[1], uint64_t(0));
+    mlir::Value scalar2 =
+        builder.createExtractElement(loc, ops[2], uint64_t(0));
+    mlir::Value result =
+        emitX86ScalarSelect(builder, loc, ops[0], scalar1, scalar2);
+    return builder.createInsertElement(loc, ops[1], result, uint64_t(0));
+  }
   case X86::BI__builtin_ia32_cmpb128_mask:
   case X86::BI__builtin_ia32_cmpb256_mask:
   case X86::BI__builtin_ia32_cmpb512_mask:
