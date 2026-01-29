@@ -496,3 +496,18 @@ Stencil transformer::catVector(std::vector<Stencil> Parts) {
     return std::move(Parts[0]);
   return std::make_shared<SequenceStencil>(std::move(Parts));
 }
+
+Stencil transformer::joinVector(StringRef Sep, std::vector<Stencil> Parts) {
+  if (Parts.size() == 1)
+    return std::move(Parts[0]);
+
+  Stencil SepStencil = detail::makeStencil(Sep);
+  std::vector<Stencil> SeparatedParts;
+  SeparatedParts.reserve(2 * Parts.size() - 1);
+  SeparatedParts.push_back(std::move(Parts[0]));
+  for (size_t I = 1, E = Parts.size(); I < E; ++I) {
+    SeparatedParts.emplace_back(SepStencil);
+    SeparatedParts.push_back(std::move(Parts[I]));
+  }
+  return std::make_shared<SequenceStencil>(std::move(SeparatedParts));
+}
