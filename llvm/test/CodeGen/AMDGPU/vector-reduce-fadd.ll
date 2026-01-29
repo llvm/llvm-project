@@ -239,10 +239,9 @@ define half @test_vector_reduce_fadd_v3half(half %sp, <3 x half> %v) {
 ; GFX11-GISEL-TRUE16-LABEL: test_vector_reduce_fadd_v3half:
 ; GFX11-GISEL-TRUE16:       ; %bb.0: ; %entry
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
 ; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
 ; GFX11-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v3.l
+; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.h
 ; GFX11-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v2.l
 ; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
@@ -290,10 +289,9 @@ define half @test_vector_reduce_fadd_v3half(half %sp, <3 x half> %v) {
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_samplecnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-GISEL-TRUE16-NEXT:    s_wait_kmcnt 0x0
-; GFX12-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v3, 16, v1
 ; GFX12-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.l
 ; GFX12-GISEL-TRUE16-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(NEXT) | instid1(VALU_DEP_1)
-; GFX12-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v3.l
+; GFX12-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v1.h
 ; GFX12-GISEL-TRUE16-NEXT:    v_add_f16_e32 v0.l, v0.l, v2.l
 ; GFX12-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;

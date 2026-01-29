@@ -462,14 +462,8 @@ static bool isLoadStoreSizeLegal(const GCNSubtarget &ST,
     MemSize = std::max(MemSize, Align);
 #endif
 
-  // Only 8-bit and 16-bit to 32-bit extloads are valid.
-  if (!ST.useRealTrue16Insts() && MemSize != RegSize && RegSize != 32)
-    return false;
-
-  // 8-bit to 16-bit extloads are valid using True16 instructions.
-  // 8-bit and 16-bit to 32-bit extloads are valid for non-True16 D16 memory
-  // ops, which could be re-implemented as True16
-  if (ST.useRealTrue16Insts() && MemSize != RegSize && RegSize > 32)
+  // Only allow extloads to up to 32 bits.
+  if (MemSize != RegSize && RegSize > 33)
     return false;
 
   if (MemSize > maxSizeForAddrSpace(ST, AS, IsLoad,
@@ -2038,6 +2032,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
 
     auto &Builder =
         getActionDefinitionsBuilder(Op)
+            .legalIf(all(isRegisterType(ST, 0), isRegisterType(ST, 1)))
             .lowerFor({{S16, V2S16}})
             .lowerIf([=](const LegalityQuery &Query) {
               const LLT BigTy = Query.Types[BigTyIdx];
@@ -2068,10 +2063,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
                   return notValidElt(Query, BigTyIdx);
                 },
                 scalarize(1))
-            .clampScalar(BigTyIdx, S32, MaxScalar)
-            // legalIf must come after other rules because we don't have 16-bit SGPRs.
-            // We expect 16-bit values to already be lowered or widened by this point.
-            .legalIf(all(isRegisterType(ST, 0), isRegisterType(ST, 1)));
+            .clampScalar(BigTyIdx, S32, MaxScalar);
 
     if (Op == G_MERGE_VALUES) {
       Builder.widenScalarIf(

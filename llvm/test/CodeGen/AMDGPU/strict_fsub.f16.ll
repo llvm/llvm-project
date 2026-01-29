@@ -586,11 +586,9 @@ define <3 x half> @v_constained_fsub_v3f16_fpexcept_strict(<3 x half> %x, <3 x h
 ; GFX11-GISEL-TRUE16-LABEL: v_constained_fsub_v3f16_fpexcept_strict:
 ; GFX11-GISEL-TRUE16:       ; %bb.0:
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
-; GFX11-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v5, 16, v2
 ; GFX11-GISEL-TRUE16-NEXT:    v_sub_f16_e32 v0.l, v0.l, v2.l
+; GFX11-GISEL-TRUE16-NEXT:    v_sub_f16_e32 v0.h, v0.h, v2.h
 ; GFX11-GISEL-TRUE16-NEXT:    v_sub_f16_e32 v1.l, v1.l, v3.l
-; GFX11-GISEL-TRUE16-NEXT:    v_sub_f16_e32 v0.h, v4.l, v5.l
 ; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GISEL-FAKE16-LABEL: v_constained_fsub_v3f16_fpexcept_strict:
@@ -766,14 +764,10 @@ define <4 x half> @v_constained_fsub_v4f16_fpexcept_strict(<4 x half> %x, <4 x h
 ; GFX11-GISEL-TRUE16-LABEL: v_constained_fsub_v4f16_fpexcept_strict:
 ; GFX11-GISEL-TRUE16:       ; %bb.0:
 ; GFX11-GISEL-TRUE16-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX11-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v4, 16, v0
-; GFX11-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v5, 16, v1
-; GFX11-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v6, 16, v2
-; GFX11-GISEL-TRUE16-NEXT:    v_lshrrev_b32_e32 v7, 16, v3
 ; GFX11-GISEL-TRUE16-NEXT:    v_sub_f16_e32 v0.l, v0.l, v2.l
+; GFX11-GISEL-TRUE16-NEXT:    v_sub_f16_e32 v0.h, v0.h, v2.h
 ; GFX11-GISEL-TRUE16-NEXT:    v_sub_f16_e32 v1.l, v1.l, v3.l
-; GFX11-GISEL-TRUE16-NEXT:    v_sub_f16_e32 v0.h, v4.l, v6.l
-; GFX11-GISEL-TRUE16-NEXT:    v_sub_f16_e32 v1.h, v5.l, v7.l
+; GFX11-GISEL-TRUE16-NEXT:    v_sub_f16_e32 v1.h, v1.h, v3.h
 ; GFX11-GISEL-TRUE16-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-GISEL-FAKE16-LABEL: v_constained_fsub_v4f16_fpexcept_strict:
