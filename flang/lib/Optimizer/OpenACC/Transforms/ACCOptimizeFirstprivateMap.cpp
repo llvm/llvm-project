@@ -163,6 +163,10 @@ private:
     Value var = firstprivateInitOp.getVar();
     Value accVar = firstprivateInitOp.getAccVar();
 
+    // If there are no uses, we can erase the operation.
+    if (accVar.use_empty())
+      return true;
+
     // Only optimize references to trivial types.
     if (!isRefToTrivialType(var.getType()))
       return false;
