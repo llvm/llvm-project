@@ -188,6 +188,10 @@ DarwinSDKInfo::parseDarwinSDKSettingsJSON(std::string FilePath,
   std::optional<StringRef> XcodePlatform = parseXcodePlatform(*Obj);
   std::pair<llvm::Triple::OSType, llvm::Triple::EnvironmentType>
       OSAndEnvironment = parseOSAndEnvironment(XcodePlatform);
+  // DisplayName should always be present, but don't require it.
+  StringRef DisplayName =
+      Obj->getString("DisplayName")
+          .value_or(Obj->getString("CanonicalName").value_or("<unknown>"));
   PlatformInfoStorageType PlatformInfos =
       parsePlatformInfos(*Obj, XcodePlatform, OSAndEnvironment.first,
                          OSAndEnvironment.second, *Version);
@@ -234,7 +238,7 @@ DarwinSDKInfo::parseDarwinSDKSettingsJSON(std::string FilePath,
 
   return DarwinSDKInfo(std::move(FilePath), OSAndEnvironment.first,
                        OSAndEnvironment.second, std::move(*Version),
-                       std::move(*MaximumDeploymentVersion),
+                       DisplayName, std::move(*MaximumDeploymentVersion),
                        std::move(PlatformInfos), std::move(VersionMappings));
 }
 

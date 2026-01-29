@@ -2708,8 +2708,24 @@ struct SliceReturnTypeCanonicalizer {
                               ArrayRef<OpFoldResult> mixedOffsets,
                               ArrayRef<OpFoldResult> mixedSizes,
                               ArrayRef<OpFoldResult> mixedStrides) {
-    return ExtractSliceOp::inferCanonicalRankReducedResultType(
-        op.getType().getRank(), op.getSourceType(), mixedSizes);
+    // Infer a tensor type without taking into account any rank reductions.
+    RankedTensorType nonReducedType =
+        ExtractSliceOp::inferResultType(op.getSourceType(), mixedSizes);
+
+    // Directly return the non-rank reduced type if there are no dropped
+    // dims.
+    llvm::SmallBitVector droppedDims = op.getDroppedDims();
+    if (droppedDims.none())
+      return nonReducedType;
+
+    // Build the reduced shape, preserving the original rank reduction pattern.
+    SmallVector<int64_t> targetShape;
+    for (auto i : llvm::seq<int64_t>(mixedSizes.size()))
+      if (!droppedDims.test(i))
+        targetShape.push_back(nonReducedType.getDimSize(i));
+
+    return RankedTensorType::get(targetShape, nonReducedType.getElementType(),
+                                 nonReducedType.getEncoding());
   }
 };
 
