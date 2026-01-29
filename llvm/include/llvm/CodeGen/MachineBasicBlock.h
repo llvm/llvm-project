@@ -731,7 +731,7 @@ public:
 
   /// Sets the fixed BBID of this basic block.
   void setBBID(const UniqueBBID &V) {
-    assert(!BBID.has_value() && "Cannot change BBID.");
+    assert((!BBID.has_value() || BBID->BaseID == 0) && "Cannot change BBID.");
     BBID = V;
   }
 
