@@ -181,6 +181,8 @@ public:
        &CStringChecker::evalSprintf},
       {{CDM::CLibraryMaybeHardened, {"snprintf"}, std::nullopt, 3},
        &CStringChecker::evalSnprintf},
+      {{CDM::CLibraryMaybeHardened, {"getentropy"}, 2}, 
+       &CStringChecker::evalGetentropy},
   };
 
   // These require a bit of special handling.
@@ -237,6 +239,7 @@ public:
   void evalSnprintf(CheckerContext &C, const CallEvent &Call) const;
   void evalSprintfCommon(CheckerContext &C, const CallEvent &Call,
                          bool IsBounded) const;
+  void evalGetentropy(CheckerContext &C, const CallEvent &Call) const;
 
   // Utility methods
   std::pair<ProgramStateRef , ProgramStateRef >
@@ -2769,6 +2772,52 @@ void CStringChecker::evalSprintfCommon(CheckerContext &C, const CallEvent &Call,
   }
 
   C.addTransition(State);
+}
+
+void CStringChecker::evalGetentropy(CheckerContext &C, const CallEvent &Call) const {
+  DestinationArgExpr Buffer = {{Call.getArgExpr(0), 0}};
+  SizeArgExpr Size = {{Call.getArgExpr(1), 1}};
+  ProgramStateRef State = C.getState();
+  SValBuilder &SVB = C.getSValBuilder();
+
+  std::optional<NonLoc> SizeVal = C.getSVal(Size.Expression).getAs<NonLoc>();
+  if (!SizeVal)
+    return;
+
+  std::optional<NonLoc> MaxLength = SVB.makeIntVal(256, C.getASTContext().IntTy).getAs<NonLoc>();
+  QualType SizeTy = Size.Expression->getType();
+
+  SVal Buff = C.getSVal(Buffer.Expression);
+  auto [StateZeroSize, StateNonZeroSize] =
+      assumeZero(C, State, *SizeVal, SizeTy);
+
+  if (StateZeroSize && !StateNonZeroSize) {
+    State = invalidateDestinationBufferBySize(C, State, Buffer.Expression, Buff, *SizeVal, SizeTy);
+    C.addTransition(State);
+    return;
+  }
+
+  State = checkNonNull(C, StateNonZeroSize, Buffer, Buff);
+  if (!State)
+    return;
+
+  State = CheckBufferAccess(C, State, Buffer, Size, AccessKind::write);
+  if (!State)
+    return;
+
+  QualType cmpTy = C.getSValBuilder().getConditionType();
+  auto [sizeAboveLimit, sizeNotAboveLimit] = State->assume(
+	 SVB
+	.evalBinOpNN(State, BO_GT, *SizeVal, *MaxLength, cmpTy)
+	.castAs<DefinedOrUnknownSVal>());
+  if (sizeAboveLimit && !sizeNotAboveLimit) {
+    emitOutOfBoundsBug(C, sizeAboveLimit, Buffer.Expression, "must be smaller than or equal to 256");
+  } else {
+    State = invalidateDestinationBufferBySize(C, sizeNotAboveLimit, Buffer.Expression,
+                                            Buff,
+                                            *SizeVal, SizeTy);
+    C.addTransition(State);
+  }
 }
 
 //===----------------------------------------------------------------------===//
