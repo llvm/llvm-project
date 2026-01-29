@@ -862,9 +862,6 @@ struct OffloadArray {
   /// fails.
   /// This MUST be used immediately after the construction of the object.
   bool initialize(AllocaInst &Array, Instruction &Before) {
-    if (!Array.getAllocatedType()->isArrayTy())
-      return false;
-
     if (!getValues(Array, Before))
       return false;
 
@@ -882,8 +879,13 @@ private:
   /// \p Array, leaving StoredValues with the values stored before the
   /// instruction \p Before is reached.
   bool getValues(AllocaInst &Array, Instruction &Before) {
-    // Initialize container.
-    const uint64_t NumValues = Array.getAllocatedType()->getArrayNumElements();
+    // Initialize containers.
+    const DataLayout &DL = Array.getDataLayout();
+    std::optional<TypeSize> ArraySize = Array.getAllocationSize(DL);
+    if (!ArraySize || !ArraySize->isFixed())
+      return false;
+    const unsigned int PointerSize = DL.getPointerSize();
+    const uint64_t NumValues = ArraySize->getFixedValue() / PointerSize;
     StoredValues.assign(NumValues, nullptr);
     LastAccesses.assign(NumValues, nullptr);
 
@@ -892,9 +894,6 @@ private:
     BasicBlock *BB = Array.getParent();
     if (BB != Before.getParent())
       return false;
-
-    const DataLayout &DL = Array.getDataLayout();
-    const unsigned int PointerSize = DL.getPointerSize();
 
     for (Instruction &I : *BB) {
       if (&I == &Before)
