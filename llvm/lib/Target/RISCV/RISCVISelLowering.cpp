@@ -5497,7 +5497,7 @@ static SDValue lowerVECTOR_SHUFFLEAsMergeGather(const SDLoc &DL, MVT VT,
   auto [TrueMask, VL] = getDefaultVLOps(VT, ContainerVT, DL, DAG, Subtarget);
 
   // Create the mask for the initial merge
-  auto XLenVT = Subtarget.getXLenVT();
+  MVT XLenVT = Subtarget.getXLenVT();
   SmallVector<SDValue> MergeMaskVals(NumElts);
   for (unsigned Idx : seq<unsigned>(NumElts)) {
     // If lane not used from either operand, use poison
