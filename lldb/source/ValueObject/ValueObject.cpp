@@ -755,8 +755,8 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
       }
     } break;
     case eAddressTypeHost: {
-      auto max_bytes =
-          GetCompilerType().GetByteSize(exe_ctx.GetBestExecutionContextScope());
+      auto max_bytes = llvm::expectedToOptional(GetCompilerType().GetByteSize(
+          exe_ctx.GetBestExecutionContextScope()));
       if (max_bytes && *max_bytes > offset) {
         size_t bytes_read = std::min<uint64_t>(*max_bytes - offset, bytes);
         addr = m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);

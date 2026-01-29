@@ -887,11 +887,15 @@ lldb::BasicType TypeSystemClang::GetBasicTypeEnumeration(llvm::StringRef name) {
 }
 
 uint32_t TypeSystemClang::GetPointerByteSize() {
-  if (m_pointer_byte_size == 0)
-    if (auto size = GetBasicType(lldb::eBasicTypeVoid)
-                        .GetPointerType()
-                        .GetByteSize(nullptr))
-      m_pointer_byte_size = *size;
+  if (m_pointer_byte_size != 0)
+    return m_pointer_byte_size;
+  auto size_or_err =
+      GetBasicType(lldb::eBasicTypeVoid).GetPointerType().GetByteSize(nullptr);
+  if (!size_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Types), size_or_err.takeError(), "{0}");
+    return m_pointer_byte_size;
+  }
+  m_pointer_byte_size = *size_or_err;
   return m_pointer_byte_size;
 }
 
