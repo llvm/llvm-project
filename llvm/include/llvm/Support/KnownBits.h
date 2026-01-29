@@ -315,6 +315,9 @@ public:
     return KnownBits(~C, C);
   }
 
+  /// Create known bits from a known INCLUSIVE pair of unsigned constants.
+  static KnownBits makeInclusiveRange(const APInt &Lower, const APInt &Upper);
+
   /// Returns KnownBits information that is known to be true for both this and
   /// RHS.
   ///
