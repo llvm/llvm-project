@@ -929,7 +929,7 @@ static bool callInRange(const MachineInstr *From, const MachineInstr *To) {
   int Count = 0;
   auto InstrRange =
       make_range(std::next(From->getIterator()), To->getIterator());
-  return any_of(InstrRange, [&Count](const MachineInstr &MI) {
+  return any_of(InstrRange, [&](const MachineInstr &MI) {
     return ++Count > MaxInstructionsToCheck || MI.isCall();
   });
 }
