@@ -237,12 +237,18 @@ define signext i64 @bset_i64_zero(i64 signext %a) nounwind {
 }
 
 define i32 @bset_i32_shl_neg(i32 %a, i32 %b) nounwind {
-; CHECK-LABEL: bset_i32_shl_neg:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, -1
-; CHECK-NEXT:    sll a1, a2, a1
-; CHECK-NEXT:    add a0, a1, a0
-; CHECK-NEXT:    ret
+; RV32I-LABEL: bset_i32_shl_neg:
+; RV32I:       # %bb.0:
+; RV32I-NEXT:    li a2, -1
+; RV32I-NEXT:    sll a1, a2, a1
+; RV32I-NEXT:    add a0, a1, a0
+; RV32I-NEXT:    ret
+;
+; RV32ZBS-LABEL: bset_i32_shl_neg:
+; RV32ZBS:       # %bb.0:
+; RV32ZBS-NEXT:    bset a1, zero, a1
+; RV32ZBS-NEXT:    sub a0, a0, a1
+; RV32ZBS-NEXT:    ret
   %shl = shl nsw i32 -1, %b
   %sub = add i32 %shl, %a
   ret i32 %sub

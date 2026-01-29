@@ -264,12 +264,18 @@ define signext i64 @bset_i64_zero(i64 signext %a) nounwind {
 }
 
 define i64 @bset_i64_shl_neg(i64 %a, i64 %b) nounwind {
-; CHECK-LABEL: bset_i64_shl_neg:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    li a2, -1
-; CHECK-NEXT:    sll a1, a2, a1
-; CHECK-NEXT:    add a0, a1, a0
-; CHECK-NEXT:    ret
+; RV64I-LABEL: bset_i64_shl_neg:
+; RV64I:       # %bb.0:
+; RV64I-NEXT:    li a2, -1
+; RV64I-NEXT:    sll a1, a2, a1
+; RV64I-NEXT:    add a0, a1, a0
+; RV64I-NEXT:    ret
+;
+; RV64ZBS-LABEL: bset_i64_shl_neg:
+; RV64ZBS:       # %bb.0:
+; RV64ZBS-NEXT:    bset a1, zero, a1
+; RV64ZBS-NEXT:    sub a0, a0, a1
+; RV64ZBS-NEXT:    ret
   %shl = shl nsw i64 -1, %b
   %sub = add i64 %shl, %a
   ret i64 %sub
