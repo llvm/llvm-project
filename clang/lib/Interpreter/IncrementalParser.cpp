@@ -18,6 +18,7 @@
 #include "clang/Interpreter/PartialTranslationUnit.h"
 #include "clang/Parse/Parser.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Error.h"
@@ -162,7 +163,9 @@ IncrementalParser::Parse(llvm::StringRef input) {
 }
 
 void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
-  if (StoredDeclsMap *Map = MostRecentTU->getPrimaryContext()->getLookupPtr()) {
+  auto DeclsMapFilter = [MostRecentTU](StoredDeclsMap *Map) -> void {
+    if (!Map)
+      return;
     for (auto &&[Key, List] : *Map) {
       DeclContextLookupResult R = List.getLookupResult();
       std::vector<NamedDecl *> NamedDeclsToRemove;
@@ -180,6 +183,11 @@ void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
           List.remove(D);
       }
     }
+  };
+  DeclsMapFilter(MostRecentTU->getPrimaryContext()->getLookupPtr());
+  auto *ECCD = S.getASTContext().getExternCContextDecl();
+  if (ECCD) {
+    DeclsMapFilter(ECCD->getPrimaryContext()->getLookupPtr());
   }
 
   // FIXME: We should de-allocate MostRecentTU
@@ -191,6 +199,30 @@ void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
     if (ND->getDeclName().getFETokenInfo() && !D->getLangOpts().ObjC &&
         !D->getLangOpts().CPlusPlus)
       S.IdResolver.RemoveDecl(ND);
+  }
+
+  // In C, implicit function declarations are not lexically attached to the
+  // current PTU, so they cannot be found in
+  // MostRecentTU->getPrimaryContext()->getLookupPtr(). We must traverse the
+  // entire IdentifierTable to locate them.
+  // FIXME: Is there a more lightweight solution?
+  llvm::SmallVector<NamedDecl *, 2> NamedDeclsToRemove;
+  if (S.getDiagnostics().hasErrorOccurred() && !S.getLangOpts().CPlusPlus) {
+    for (auto &Entry : S.getASTContext().Idents) {
+      IdentifierInfo *II = Entry.getValue();
+      if (II && II->getFETokenInfo()) {
+        for (auto It = S.IdResolver.begin(II); It != S.IdResolver.end(); ++It) {
+          NamedDecl *D = *It;
+          if (D->isImplicit() && isa<FunctionDecl>(D) &&
+              D->getTranslationUnitDecl() == MostRecentTU) {
+            NamedDeclsToRemove.push_back(D);
+          }
+        }
+      }
+    }
+  }
+  for (auto &&D : NamedDeclsToRemove) {
+    S.IdResolver.RemoveDecl(D);
   }
 }
 
