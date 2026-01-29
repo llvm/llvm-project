@@ -458,38 +458,18 @@ define <16 x i16> @shuffle_shuffle_duplicates_not_used(<16 x i16> %op0, <16 x i1
 ; CHECK-NEXT: 	.byte	6                               # 0x6
 ; CHECK-NEXT: 	.byte	10                              # 0xa
 ; CHECK-NEXT: 	.byte	14                              # 0xe
-; CHECK-LABEL: LCPI9_1
-; CHECK-NEXT: 	.byte	3                               # 0x3
-; CHECK-NEXT: 	.byte	7                               # 0x7
-; CHECK-NEXT: 	.byte	11                              # 0xb
-; CHECK-NEXT: 	.byte	15                              # 0xf
-; CHECK-NEXT: 	.byte	2                               # 0x2
-; CHECK-NEXT: 	.byte	6                               # 0x6
-; CHECK-NEXT: 	.byte	10                              # 0xa
-; CHECK-NEXT: 	.byte	14                              # 0xe
-; CHECK-NEXT: 	.byte	0                               # 0x0
-; CHECK-NEXT: 	.byte	4                               # 0x4
-; CHECK-NEXT: 	.byte	8                               # 0x8
-; CHECK-NEXT: 	.byte	12                              # 0xc
-; CHECK-NEXT: 	.byte	1                               # 0x1
-; CHECK-NEXT: 	.byte	5                               # 0x5
-; CHECK-NEXT: 	.byte	9                               # 0x9
-; CHECK-NEXT: 	.byte	13                              # 0xd
 ; CHECK-LABEL: shuffle_shuffle_duplicates_not_used:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    lui a0, %hi(.LCPI9_0)
 ; CHECK-NEXT:    addi a0, a0, %lo(.LCPI9_0)
 ; CHECK-NEXT:    vsetivli zero, 16, e16, m2, ta, ma
-; CHECK-NEXT:    vle8.v v12, (a0)
-; CHECK-NEXT:    lui a0, %hi(.LCPI9_1)
-; CHECK-NEXT:    addi a0, a0, %lo(.LCPI9_1)
-; CHECK-NEXT:    vle8.v v16, (a0)
-; CHECK-NEXT:    vsext.vf2 v14, v12
-; CHECK-NEXT:    vrgather.vv v12, v8, v14
-; CHECK-NEXT:    vsext.vf2 v8, v16
-; CHECK-NEXT:    vrgather.vv v14, v10, v8
-; CHECK-NEXT:    vslideup.vi v12, v14, 8
-; CHECK-NEXT:    vmv.v.v v8, v12
+; CHECK-NEXT:    vle8.v v14, (a0)
+; CHECK-NEXT:    lui a0, 3
+; CHECK-NEXT:    addi a0, a0, 819
+; CHECK-NEXT:    vmv.s.x v0, a0
+; CHECK-NEXT:    vmerge.vvm v10, v10, v8, v0
+; CHECK-NEXT:    vsext.vf2 v12, v14
+; CHECK-NEXT:    vrgather.vv v8, v10, v12
 ; CHECK-NEXT:    ret
   %shuff0 = shufflevector <16 x i16> %op0, <16 x i16> poison, <16 x i32> <i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13, i32 3, i32 7, i32 11, i32 15, i32 2, i32 6, i32 10, i32 14>
   %shuff1 = shufflevector <16 x i16> %op1, <16 x i16> poison, <16 x i32> <i32 3, i32 7, i32 11, i32 15, i32 2, i32 6, i32 10, i32 14, i32 0, i32 4, i32 8, i32 12, i32 1, i32 5, i32 9, i32 13>
