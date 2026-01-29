@@ -1105,6 +1105,7 @@ InstCombinerImpl::foldBinOpOfSelectAndCastOfSelectCondition(BinaryOperator &I) {
   Value *LHS = I.getOperand(0), *RHS = I.getOperand(1);
   Value *A, *CondVal, *TrueVal, *FalseVal;
   Value *CastOp;
+  SelectInst *SI;
 
   auto MatchSelectAndCast = [&](Value *CastOp, Value *SelectOp) {
     return match(CastOp, m_ZExtOrSExt(m_Value(A))) &&
@@ -1112,14 +1113,15 @@ InstCombinerImpl::foldBinOpOfSelectAndCastOfSelectCondition(BinaryOperator &I) {
            match(SelectOp, m_Select(m_Value(CondVal), m_Value(TrueVal),
                                     m_Value(FalseVal)));
   };
-
   // Make sure one side of the binop is a select instruction, and the other is a
   // zero/sign extension operating on a i1.
-  if (MatchSelectAndCast(LHS, RHS))
+  if (MatchSelectAndCast(LHS, RHS)) {
     CastOp = LHS;
-  else if (MatchSelectAndCast(RHS, LHS))
+    SI = cast<SelectInst>(RHS);
+  } else if (MatchSelectAndCast(RHS, LHS)) {
     CastOp = RHS;
-  else
+    SI = cast<SelectInst>(LHS);
+  } else
     return nullptr;
 
   SelectInst *SI = ProfcheckDisableMetadataFixes
@@ -1143,6 +1145,10 @@ InstCombinerImpl::foldBinOpOfSelectAndCastOfSelectCondition(BinaryOperator &I) {
     return IsCastOpRHS ? Builder.CreateBinOp(Opc, V, C)
                        : Builder.CreateBinOp(Opc, C, V);
   };
+
+  if (!SI->hasOneUse() && !(isa<Constant>(SI->getTrueValue()) && isa<Constant>(SI->getFalseValue()))) {
+    return nullptr;
+  }
 
   // If the value used in the zext/sext is the select condition, or the negated
   // of the select condition, the binop can be simplified.
