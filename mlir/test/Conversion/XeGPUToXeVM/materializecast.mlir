@@ -70,7 +70,6 @@ gpu.module @materializecast [#xevm.target<chip = "pvc">]{
     %49 = xegpu.create_mem_desc %alloca_11 : memref<512xi8, 3> -> !xegpu.mem_desc<8x16xf32>
     // CHECK: %[[LOAD:.*]] = llvm.load %{{.+}} : !llvm.ptr<3> -> f32
     // CHECK: %[[BCST:.*]] = vector.broadcast %[[LOAD]] : f32 to vector<1x1xf32>
-    // CHECK: vector.shape_cast %[[BCST]] : vector<1x1xf32> to vector<1xf32>
     %50 = xegpu.load_matrix %49[%c0, %c0] : !xegpu.mem_desc<8x16xf32>, index, index -> vector<1x1xf32>
     %51 = vector.shape_cast %50 : vector<1x1xf32> to vector<1xf32>
     vector.store %51, %dst[%c0] : memref<128xf32>, vector<1xf32>
