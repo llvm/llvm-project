@@ -26,46 +26,6 @@ using namespace llvm::AArch64PAuth;
 
 namespace {
 
-class RegScavengerHelper {
-private:
-  RegScavenger RS;
-  MachineFunction *MF = nullptr;
-  bool SpillSlotCreated = false;
-
-public:
-  RegScavengerHelper() = default;
-
-  void reset(MachineFunction &Func) {
-    MF = &Func;
-    SpillSlotCreated = false;
-  }
-
-  Register findRegister(MachineBasicBlock::iterator MBBI) {
-    assert(MBBI->getParent()->getParent() == MF &&
-           "MBBI does not belong to MF");
-    RS.enterBasicBlockEnd(*MBBI->getParent());
-    RS.backward(MBBI);
-    Register XReg = RS.FindUnusedReg(&AArch64::GPR64RegClass);
-    if (XReg != 0)
-      return XReg;
-    if (!SpillSlotCreated) {
-      MachineFrameInfo &MFI = MF->getFrameInfo();
-      const TargetRegisterInfo *TRI = MF->getSubtarget().getRegisterInfo();
-      int FI = MFI.CreateSpillStackObject(
-          TRI->getSpillSize(AArch64::GPR64RegClass),
-          TRI->getSpillAlign(AArch64::GPR64RegClass));
-      RS.addScavengingFrameIndex(FI);
-      SpillSlotCreated = true;
-    }
-    XReg = RS.scavengeRegisterBackwards(AArch64::GPR64RegClass, std::prev(MBBI),
-                                        true, 0);
-    if (XReg == 0)
-      reportFatalInternalError(
-          "AArch64PointerAuth: failed to scavenge a register!");
-    return XReg;
-  }
-};
-
 class AArch64PointerAuth : public MachineFunctionPass {
 public:
   static char ID;
@@ -79,7 +39,6 @@ public:
 private:
   const AArch64Subtarget *Subtarget = nullptr;
   const AArch64InstrInfo *TII = nullptr;
-  RegScavengerHelper RSHelper;
 
   void signLR(MachineFunction &MF, MachineBasicBlock::iterator MBBI) const;
 
@@ -293,7 +252,6 @@ unsigned llvm::AArch64PAuth::getCheckerSizeInBytes(AuthCheckMethod Method) {
 bool AArch64PointerAuth::runOnMachineFunction(MachineFunction &MF) {
   Subtarget = &MF.getSubtarget<AArch64Subtarget>();
   TII = Subtarget->getInstrInfo();
-  RSHelper.reset(MF);
 
   SmallVector<MachineBasicBlock::instr_iterator> PAuthPseudoInstrs;
 
@@ -339,6 +297,7 @@ bool AArch64PointerAuth::emitSignReturnAddressHardening(MachineFunction &MF) {
     return false;
   assert(Subtarget && "Subtarget must be initialized");
 
+  RegScavenger RS;
   bool Modified = false;
   for (MachineBasicBlock &MBB : MF) {
     if (!MBB.isReturnBlock())
@@ -349,9 +308,16 @@ bool AArch64PointerAuth::emitSignReturnAddressHardening(MachineFunction &MF) {
     if (MBBI == MBB.end() || MBBI->getOpcode() != AArch64::RET)
       continue;
 
-    DebugLoc DL = MBBI->getDebugLoc();
+    RS.enterBasicBlockEnd(*MBBI->getParent());
+    Register XReg = RS.scavengeRegisterBackwards(
+        AArch64::GPR64RegClass, MBBI,
+        /*RestoreAfter=*/false, /*SPAdj=*/0, /*AllowSpill=*/false);
+    if (XReg == AArch64::NoRegister)
+      // Couldn't find a free register to use for the hardening. Skip.
+      continue;
+    RS.setRegUsed(XReg);
 
-    Register XReg = RSHelper.findRegister(MBBI);
+    DebugLoc DL = MBBI->getDebugLoc();
 
     // Register copies are done using ORRXrs directly instead of using the
     // pseudo-instruction COPY because this function can be called after

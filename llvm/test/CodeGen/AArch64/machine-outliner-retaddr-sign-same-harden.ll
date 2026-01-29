@@ -6,19 +6,19 @@ define void @a() "sign-return-address"="all" "sign-return-address-key"="a_key" "
 ; V8A:           hint #25
 ; V8A-NOT:       bl OUTLINED_FUNCTION
 ; V8A:           hint #29
-; V8A-NEXT:      mov x0, x30
+; V8A-NEXT:      mov x8, x30
 ; V8A-NEXT:      hint #7
 ; V8A-NEXT:      ldr w30, [x30]
-; V8A-NEXT:      mov x30, x0
+; V8A-NEXT:      mov x30, x8
 ; V8A-NEXT:      ret{{$}}
 
 ; V83A-LABEL:    a:
 ; V83A:          paciasp
 ; V83A-NOT:      bl OUTLINED_FUNCTION
 ; V83A:          autiasp
-; V83A-NEXT:     mov x0, x30
-; V83A-NEXT:     xpaci x0
-; V83A-NEXT:     ldr w0, [x0]
+; V83A-NEXT:     mov x8, x30
+; V83A-NEXT:     xpaci x8
+; V83A-NEXT:     ldr w8, [x8]
 ; V83A-NEXT:     ret{{$}}
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
@@ -40,19 +40,19 @@ define void @b() "sign-return-address"="all" "sign-return-address-key"="a_key" "
 ; V8A:           hint #25
 ; V8A-NOT:       bl OUTLINED_FUNCTION
 ; V8A:           hint #29
-; V8A-NEXT:      mov x0, x30
+; V8A-NEXT:      mov x8, x30
 ; V8A-NEXT:      hint #7
 ; V8A-NEXT:      ldr w30, [x30]
-; V8A-NEXT:      mov x30, x0
+; V8A-NEXT:      mov x30, x8
 ; V8A-NEXT:      ret{{$}}
 
 ; V83A-LABEL:    b:
 ; V83A:          paciasp
 ; V83A-NOT:      bl OUTLINED_FUNCTION
 ; V83A:          autiasp
-; V83A-NEXT:     mov x0, x30
-; V83A-NEXT:     xpaci x0
-; V83A-NEXT:     ldr w0, [x0]
+; V83A-NEXT:     mov x8, x30
+; V83A-NEXT:     xpaci x8
+; V83A-NEXT:     ldr w8, [x8]
 ; V83A-NEXT:     ret{{$}}
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4
@@ -74,19 +74,19 @@ define void @c() "sign-return-address"="all" "sign-return-address-key"="a_key" "
 ; V8A:           hint #25
 ; V8A-NOT:       bl OUTLINED_FUNCTION
 ; V8A:           hint #29
-; V8A-NEXT:      mov x0, x30
+; V8A-NEXT:      mov x8, x30
 ; V8A-NEXT:      hint #7
 ; V8A-NEXT:      ldr w30, [x30]
-; V8A-NEXT:      mov x30, x0
+; V8A-NEXT:      mov x30, x8
 ; V8A-NEXT:      ret{{$}}
 
 ; V83A-LABEL:    c:
 ; V83A:          paciasp
 ; V83A-NOT:      bl OUTLINED_FUNCTION
 ; V83A:          autiasp
-; V83A-NEXT:     mov x0, x30
-; V83A-NEXT:     xpaci x0
-; V83A-NEXT:     ldr w0, [x0]
+; V83A-NEXT:     mov x8, x30
+; V83A-NEXT:     xpaci x8
+; V83A-NEXT:     ldr w8, [x8]
 ; V83A-NEXT:     ret{{$}}
   %1 = alloca i32, align 4
   %2 = alloca i32, align 4

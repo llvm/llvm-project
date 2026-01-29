@@ -15,10 +15,10 @@ define i32 @f0(i32 %a) #0 {
 ; CHECK-NO-PAUTH-NEXT:    .cfi_negate_ra_state
 ; CHECK-NO-PAUTH-NEXT:    add w0, w0, #1
 ; CHECK-NO-PAUTH-NEXT:    hint #29
-; CHECK-NO-PAUTH-NEXT:    mov x1, x30
+; CHECK-NO-PAUTH-NEXT:    mov x8, x30
 ; CHECK-NO-PAUTH-NEXT:    hint #7
 ; CHECK-NO-PAUTH-NEXT:    ldr w30, [x30]
-; CHECK-NO-PAUTH-NEXT:    mov x30, x1
+; CHECK-NO-PAUTH-NEXT:    mov x30, x8
 ; CHECK-NO-PAUTH-NEXT:    ret{{$}}
 ;
 ; CHECK-PAUTH-LABEL: f0:
@@ -27,9 +27,9 @@ define i32 @f0(i32 %a) #0 {
 ; CHECK-PAUTH-NEXT:    .cfi_negate_ra_state
 ; CHECK-PAUTH-NEXT:    add w0, w0, #1
 ; CHECK-PAUTH-NEXT:    autiasp
-; CHECK-PAUTH-NEXT:    mov x1, x30
-; CHECK-PAUTH-NEXT:    xpaci x1
-; CHECK-PAUTH-NEXT:    ldr w1, [x1]
+; CHECK-PAUTH-NEXT:    mov x8, x30
+; CHECK-PAUTH-NEXT:    xpaci x8
+; CHECK-PAUTH-NEXT:    ldr w8, [x8]
 ; CHECK-PAUTH-NEXT:    ret{{$}}
 entry:
   %add = add nsw i32 %a, 1
@@ -44,10 +44,10 @@ define i32 @f1(i32 %a) #1 {
 ; CHECK-NO-PAUTH-NEXT:    .cfi_negate_ra_state
 ; CHECK-NO-PAUTH-NEXT:    add w0, w0, #1
 ; CHECK-NO-PAUTH-NEXT:    hint #31
-; CHECK-NO-PAUTH-NEXT:    mov x1, x30
+; CHECK-NO-PAUTH-NEXT:    mov x8, x30
 ; CHECK-NO-PAUTH-NEXT:    hint #7
 ; CHECK-NO-PAUTH-NEXT:    ldr w30, [x30]
-; CHECK-NO-PAUTH-NEXT:    mov x30, x1
+; CHECK-NO-PAUTH-NEXT:    mov x30, x8
 ; CHECK-NO-PAUTH-NEXT:    ret{{$}}
 ;
 ; CHECK-PAUTH-LABEL: f1:
@@ -57,9 +57,9 @@ define i32 @f1(i32 %a) #1 {
 ; CHECK-PAUTH-NEXT:    .cfi_negate_ra_state
 ; CHECK-PAUTH-NEXT:    add w0, w0, #1
 ; CHECK-PAUTH-NEXT:    autibsp
-; CHECK-PAUTH-NEXT:    mov x1, x30
-; CHECK-PAUTH-NEXT:    xpaci x1
-; CHECK-PAUTH-NEXT:    ldr w1, [x1]
+; CHECK-PAUTH-NEXT:    mov x8, x30
+; CHECK-PAUTH-NEXT:    xpaci x8
+; CHECK-PAUTH-NEXT:    ldr w8, [x8]
 ; CHECK-PAUTH-NEXT:    ret{{$}}
 entry:
   %add = add nsw i32 %a, 1
@@ -77,10 +77,10 @@ define i32 @f2(i32 %a) #2 {
 ; CHECK-NO-PAUTH-NEXT:    bl foo
 ; CHECK-NO-PAUTH-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NO-PAUTH-NEXT:    hint #29
-; CHECK-NO-PAUTH-NEXT:    mov x1, x30
+; CHECK-NO-PAUTH-NEXT:    mov x8, x30
 ; CHECK-NO-PAUTH-NEXT:    hint #7
 ; CHECK-NO-PAUTH-NEXT:    ldr w30, [x30]
-; CHECK-NO-PAUTH-NEXT:    mov x30, x1
+; CHECK-NO-PAUTH-NEXT:    mov x30, x8
 ; CHECK-NO-PAUTH-NEXT:    ret{{$}}
 ;
 ; CHECK-PAUTH-LABEL: f2:
@@ -93,9 +93,9 @@ define i32 @f2(i32 %a) #2 {
 ; CHECK-PAUTH-NEXT:    bl foo
 ; CHECK-PAUTH-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-PAUTH-NEXT:    autiasp
-; CHECK-PAUTH-NEXT:    mov x1, x30
-; CHECK-PAUTH-NEXT:    xpaci x1
-; CHECK-PAUTH-NEXT:    ldr w1, [x1]
+; CHECK-PAUTH-NEXT:    mov x8, x30
+; CHECK-PAUTH-NEXT:    xpaci x8
+; CHECK-PAUTH-NEXT:    ldr w8, [x8]
 ; CHECK-PAUTH-NEXT:    ret{{$}}
 entry:
   %call = call i32 @foo(i32 %a)
@@ -114,10 +114,10 @@ define i32 @f3(i32 %a) #3 {
 ; CHECK-NO-PAUTH-NEXT:    bl foo
 ; CHECK-NO-PAUTH-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-NO-PAUTH-NEXT:    hint #31
-; CHECK-NO-PAUTH-NEXT:    mov x1, x30
+; CHECK-NO-PAUTH-NEXT:    mov x8, x30
 ; CHECK-NO-PAUTH-NEXT:    hint #7
 ; CHECK-NO-PAUTH-NEXT:    ldr w30, [x30]
-; CHECK-NO-PAUTH-NEXT:    mov x30, x1
+; CHECK-NO-PAUTH-NEXT:    mov x30, x8
 ; CHECK-NO-PAUTH-NEXT:    ret{{$}}
 ;
 ; CHECK-PAUTH-LABEL: f3:
@@ -131,9 +131,9 @@ define i32 @f3(i32 %a) #3 {
 ; CHECK-PAUTH-NEXT:    bl foo
 ; CHECK-PAUTH-NEXT:    ldr x30, [sp], #16 // 8-byte Folded Reload
 ; CHECK-PAUTH-NEXT:    autibsp
-; CHECK-PAUTH-NEXT:    mov x1, x30
-; CHECK-PAUTH-NEXT:    xpaci x1
-; CHECK-PAUTH-NEXT:    ldr w1, [x1]
+; CHECK-PAUTH-NEXT:    mov x8, x30
+; CHECK-PAUTH-NEXT:    xpaci x8
+; CHECK-PAUTH-NEXT:    ldr w8, [x8]
 ; CHECK-PAUTH-NEXT:    ret{{$}}
 entry:
   %call = call i32 @foo(i32 %a)
@@ -258,10 +258,10 @@ define void @stackprotector() #6 {
 ; CHECK-NO-PAUTH-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-NO-PAUTH-NEXT:    add sp, sp, #32
 ; CHECK-NO-PAUTH-NEXT:    hint #29
-; CHECK-NO-PAUTH-NEXT:    mov x0, x30
+; CHECK-NO-PAUTH-NEXT:    mov x8, x30
 ; CHECK-NO-PAUTH-NEXT:    hint #7
 ; CHECK-NO-PAUTH-NEXT:    ldr w30, [x30]
-; CHECK-NO-PAUTH-NEXT:    mov x30, x0
+; CHECK-NO-PAUTH-NEXT:    mov x30, x8
 ; CHECK-NO-PAUTH-NEXT:    ret{{$}}
 ; CHECK-NO-PAUTH-NEXT:  .LBB8_2:
 ; CHECK-NO-PAUTH-NEXT:    bl __stack_chk_fail
@@ -284,9 +284,9 @@ define void @stackprotector() #6 {
 ; CHECK-PAUTH-NEXT:    ldr x30, [sp, #16] // 8-byte Reload
 ; CHECK-PAUTH-NEXT:    add sp, sp, #32
 ; CHECK-PAUTH-NEXT:    autiasp
-; CHECK-PAUTH-NEXT:    mov x0, x30
-; CHECK-PAUTH-NEXT:    xpaci x0
-; CHECK-PAUTH-NEXT:    ldr w0, [x0]
+; CHECK-PAUTH-NEXT:    mov x8, x30
+; CHECK-PAUTH-NEXT:    xpaci x8
+; CHECK-PAUTH-NEXT:    ldr w8, [x8]
 ; CHECK-PAUTH-NEXT:    ret{{$}}
 ; CHECK-PAUTH-NEXT:  .LBB8_2:
 ; CHECK-PAUTH-NEXT:    bl __stack_chk_fail
