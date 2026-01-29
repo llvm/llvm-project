@@ -2353,7 +2353,8 @@ Instruction *InstCombinerImpl::foldICmpShlConstant(ICmpInst &Cmp,
   //
   // NB: sge/sle with a constant will canonicalize to sgt/slt.
   if (Shl->hasNoSignedWrap() &&
-      (Pred == ICmpInst::ICMP_SGT || Pred == ICmpInst::ICMP_SLT))
+      ((Pred == ICmpInst::ICMP_SGT && Shl->hasOneUse()) ||
+       Pred == ICmpInst::ICMP_SLT))
     if (C.isZero() || (Pred == ICmpInst::ICMP_SGT ? C.isAllOnes() : C.isOne()))
       return new ICmpInst(Pred, Shl->getOperand(0), Cmp.getOperand(1));
 
@@ -2373,7 +2374,7 @@ Instruction *InstCombinerImpl::foldICmpShlConstant(ICmpInst &Cmp,
   // NSW guarantees that we are only shifting out sign bits from the high bits,
   // so we can ASHR the compare constant without needing a mask and eliminate
   // the shift.
-  if (Shl->hasNoSignedWrap()) {
+  if (Shl->hasNoSignedWrap() && Shl->hasOneUse()) {
     if (Pred == ICmpInst::ICMP_SGT) {
       // icmp Pred (shl nsw X, ShiftAmt), C --> icmp Pred X, (C >>s ShiftAmt)
       APInt ShiftedC = C.ashr(*ShiftAmt);
