@@ -22,6 +22,42 @@ STRING_EXTENSION_OUTSIDE(SBInstruction)
         def __load_adrr_property__ (self):
             return self.GetComment (target)
 
+        def variable_annotations(self):
+            """Get variable annotations as a Python list of dictionaries.
+
+            Returns:
+                List of dictionaries, each containing variable annotation data
+            """
+            structured_data = self.GetVariableAnnotations()
+            if not structured_data.IsValid():
+                return []
+
+            annotations = []
+            for i in range(structured_data.GetSize()):
+                item = structured_data.GetItemAtIndex(i)
+                if item.GetType() != eStructuredDataTypeDictionary:
+                    continue
+
+                annotation = {}
+
+                integer_fields = ['start_address', 'end_address', 'register_kind', 'decl_line']
+                string_fields = ['variable_name', 'location_description', 'decl_file', 'type_name']
+
+                for field in integer_fields:
+                    value = item.GetValueForKey(field)
+                    if value.IsValid():
+                        annotation[field] = value.GetUnsignedIntegerValue()
+
+                for field in string_fields:
+                    value = item.GetValueForKey(field)
+                    if value.IsValid():
+                        annotation[field] = value.GetStringValue(1024)
+
+                annotations.append(annotation)
+
+            return annotations
+
+
         mnemonic = property(__mnemonic_property__, None, doc='''A read only property that returns the mnemonic for this instruction as a string.''')
         operands = property(__operands_property__, None, doc='''A read only property that returns the operands for this instruction as a string.''')
         comment = property(__comment_property__, None, doc='''A read only property that returns the comment for this instruction as a string.''')

@@ -37,13 +37,6 @@ int main(int argc, char** argv) {
       return x == y;
     });
   };
-  auto ranges_equal_4leg_pred = [](auto first1, auto last1, auto first2, auto last2) {
-    return std::ranges::equal(first1, last1, first2, last2, [](auto x, auto y) {
-      benchmark::DoNotOptimize(x);
-      benchmark::DoNotOptimize(y);
-      return x == y;
-    });
-  };
 
   // Benchmark {std,ranges}::equal where we determine inequality at the very end (worst case).
   {
@@ -87,17 +80,11 @@ int main(int argc, char** argv) {
     bm.operator()<std::vector<int>>("std::equal(vector<int>) (it, it, it, it)", std_equal_4leg);
     bm.operator()<std::deque<int>>("std::equal(deque<int>) (it, it, it, it)", std_equal_4leg);
     bm.operator()<std::list<int>>("std::equal(list<int>) (it, it, it, it)", std_equal_4leg);
-    bm.operator()<std::vector<int>>("rng::equal(vector<int>) (it, it, it, it)", std::ranges::equal);
-    bm.operator()<std::deque<int>>("rng::equal(deque<int>) (it, it, it, it)", std::ranges::equal);
-    bm.operator()<std::list<int>>("rng::equal(list<int>) (it, it, it, it)", std::ranges::equal);
 
     // {std,ranges}::equal(it, it, it, it, pred)
     bm.operator()<std::vector<int>>("std::equal(vector<int>) (it, it, it, it, pred)", std_equal_4leg_pred);
     bm.operator()<std::deque<int>>("std::equal(deque<int>) (it, it, it, it, pred)", std_equal_4leg_pred);
     bm.operator()<std::list<int>>("std::equal(list<int>) (it, it, it, it, pred)", std_equal_4leg_pred);
-    bm.operator()<std::vector<int>>("rng::equal(vector<int>) (it, it, it, it, pred)", ranges_equal_4leg_pred);
-    bm.operator()<std::deque<int>>("rng::equal(deque<int>) (it, it, it, it, pred)", ranges_equal_4leg_pred);
-    bm.operator()<std::list<int>>("rng::equal(list<int>) (it, it, it, it, pred)", ranges_equal_4leg_pred);
   }
 
   // Benchmark {std,ranges}::equal on vector<bool>.
@@ -129,11 +116,9 @@ int main(int argc, char** argv) {
 
     // {std,ranges}::equal(vector<bool>) (aligned)
     bm("std::equal(vector<bool>) (aligned)", std_equal_4leg, true);
-    bm("rng::equal(vector<bool>) (aligned)", std::ranges::equal, true);
 
     // {std,ranges}::equal(vector<bool>) (unaligned)
     bm("std::equal(vector<bool>) (unaligned)", std_equal_4leg, false);
-    bm("rng::equal(vector<bool>) (unaligned)", std::ranges::equal, false);
   }
 
   benchmark::Initialize(&argc, argv);

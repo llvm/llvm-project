@@ -6,6 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include <cmath>
 #include <cstdint>
 #include <optional>
 #include <string>
@@ -343,8 +344,50 @@ void PyFloatAttribute::bindDerived(ClassTy &c) {
 void PyIntegerAttribute::bindDerived(ClassTy &c) {
   c.def_static(
       "get",
-      [](PyType &type, int64_t value) {
-        MlirAttribute attr = mlirIntegerAttrGet(type, value);
+      [](PyType &type, nb::object value) {
+        // Handle IndexType - it doesn't have a bit width or signedness.
+        if (mlirTypeIsAIndex(type)) {
+          int64_t intValue = nb::cast<int64_t>(value);
+          MlirAttribute attr = mlirIntegerAttrGet(type, intValue);
+          return PyIntegerAttribute(type.getContext(), attr);
+        }
+
+        // Get the bit width of the integer type.
+        unsigned bitWidth = mlirIntegerTypeGetWidth(type);
+
+        // Try to use the fast path for small integers.
+        if (bitWidth <= 64) {
+          int64_t intValue = nb::cast<int64_t>(value);
+          MlirAttribute attr = mlirIntegerAttrGet(type, intValue);
+          return PyIntegerAttribute(type.getContext(), attr);
+        }
+
+        // For larger integers, convert Python int to array of 64-bit words.
+        unsigned numWords = std::ceil(static_cast<double>(bitWidth) / 64);
+        std::vector<uint64_t> words(numWords, 0);
+
+        // Extract words from Python integer (little-endian order).
+        nb::object mask = nb::int_(0xFFFFFFFFFFFFFFFFULL);
+        nb::object shift = nb::int_(64);
+        nb::object current = value;
+
+        // Handle negative numbers for signed types by converting to two's
+        // complement representation.
+        if (mlirIntegerTypeIsSigned(type)) {
+          nb::object zero = nb::int_(0);
+          if (nb::cast<bool>(current < zero)) {
+            nb::object twoToTheBitWidth = nb::int_(1) << nb::int_(bitWidth);
+            current = current + twoToTheBitWidth;
+          }
+        }
+
+        for (unsigned i = 0; i < numWords; ++i) {
+          words[i] = nb::cast<uint64_t>(current & mask);
+          current = current >> shift;
+        }
+
+        MlirAttribute attr =
+            mlirIntegerAttrGetFromWords(type, numWords, words.data());
         return PyIntegerAttribute(type.getContext(), attr);
       },
       nb::arg("type"), nb::arg("value"),
@@ -360,13 +403,44 @@ void PyIntegerAttribute::bindDerived(ClassTy &c) {
       nb::sig("def static_typeid(/) -> TypeID"));
 }
 
-int64_t PyIntegerAttribute::toPyInt(PyIntegerAttribute &self) {
+nb::object PyIntegerAttribute::toPyInt(PyIntegerAttribute &self) {
   MlirType type = mlirAttributeGetType(self);
-  if (mlirTypeIsAIndex(type) || mlirIntegerTypeIsSignless(type))
-    return mlirIntegerAttrGetValueInt(self);
-  if (mlirIntegerTypeIsSigned(type))
-    return mlirIntegerAttrGetValueSInt(self);
-  return mlirIntegerAttrGetValueUInt(self);
+  unsigned bitWidth = mlirIntegerAttrGetValueBitWidth(self);
+
+  // For integers that fit in 64 bits, use the fast path.
+  if (bitWidth <= 64) {
+    if (mlirTypeIsAIndex(type) || mlirIntegerTypeIsSignless(type))
+      return nb::int_(mlirIntegerAttrGetValueInt(self));
+    if (mlirIntegerTypeIsSigned(type))
+      return nb::int_(mlirIntegerAttrGetValueSInt(self));
+    return nb::int_(mlirIntegerAttrGetValueUInt(self));
+  }
+
+  // For larger integers, reconstruct the value from raw words.
+  unsigned numWords = mlirIntegerAttrGetValueNumWords(self);
+  std::vector<uint64_t> words(numWords);
+  mlirIntegerAttrGetValueWords(self, words.data());
+
+  // Build the Python integer by shifting and ORing the words together.
+  // Words are in little-endian order (least significant first).
+  nb::object result = nb::int_(0);
+  nb::object shift = nb::int_(64);
+  for (unsigned i = numWords; i > 0; --i) {
+    result = result << shift;
+    result = result | nb::int_(words[i - 1]);
+  }
+
+  // Handle signed integers: if the sign bit is set, subtract 2^bitWidth.
+  if (mlirIntegerTypeIsSigned(type)) {
+    // Check if sign bit is set (most significant bit of the value).
+    bool signBitSet = (words[numWords - 1] >> ((bitWidth - 1) % 64)) & 1;
+    if (signBitSet) {
+      nb::object twoToTheBitWidth = nb::int_(1) << nb::int_(bitWidth);
+      result = result - twoToTheBitWidth;
+    }
+  }
+
+  return result;
 }
 
 void PyBoolAttribute::bindDerived(ClassTy &c) {

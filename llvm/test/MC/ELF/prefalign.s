@@ -1,5 +1,5 @@
-// RUN: llvm-mc -filetype=asm -triple x86_64-pc-linux-gnu %s -o - | FileCheck --check-prefix=ASM %s
-// RUN: llvm-mc -filetype=obj -triple x86_64-pc-linux-gnu %s -o - | llvm-readelf -SW - | FileCheck --check-prefix=OBJ %s
+// RUN: llvm-mc -triple x86_64 %s -o - | FileCheck --check-prefix=ASM %s
+// RUN: llvm-mc -filetype=obj -triple x86_64 %s -o - | llvm-readelf -SW - | FileCheck --check-prefix=OBJ %s
 
 // Minimum alignment >= preferred alignment, no effect on sh_addralign.
 // ASM: .section .text.f1lt
