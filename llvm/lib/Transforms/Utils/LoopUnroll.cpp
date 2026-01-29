@@ -374,7 +374,12 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
   // At this point, the code is well formed.  Perform constprop, instsimplify,
   // and dce.
   const DataLayout &DL = L->getHeader()->getDataLayout();
+  Function *F = L->getHeader()->getParent();
   SmallVector<WeakTrackingVH, 16> DeadInsts;
+  bool DoNotOptimizeLifetimeMarkers =
+      F->hasFnAttribute(Attribute::SanitizeAddress) ||
+      F->hasFnAttribute(Attribute::SanitizeMemory) ||
+      F->hasFnAttribute(Attribute::SanitizeHWAddress);
   for (BasicBlock *BB : L->getBlocks()) {
     // Remove repeated debug instructions after loop unrolling.
     if (BB->getParent()->getSubprogram())
@@ -386,6 +391,22 @@ void llvm::simplifyLoopAfterUnroll(Loop *L, bool SimplifyIVs, LoopInfo *LI,
           Inst.replaceAllUsesWith(V);
       if (isInstructionTriviallyDead(&Inst))
         DeadInsts.emplace_back(&Inst);
+      if (!DoNotOptimizeLifetimeMarkers) {
+        if (auto *II = dyn_cast<IntrinsicInst>(&Inst)) {
+          if (II->getIntrinsicID() == Intrinsic::lifetime_start) {
+            if (auto *PrevII =
+                    dyn_cast_or_null<IntrinsicInst>(II->getPrevNode()))
+              if (PrevII->getIntrinsicID() == Intrinsic::lifetime_end) {
+                if (PrevII->getArgOperand(0) == II->getArgOperand(0) &&
+                    PrevII->getArgOperand(1) == II->getArgOperand(1)) {
+                  PrevII->eraseFromParent();
+                  II->eraseFromParent();
+                  continue;
+                }
+              }
+          }
+        }
+      }
 
       // Fold ((add X, C1), C2) to (add X, C1+C2). This is very common in
       // unrolled loops, and handling this early allows following code to
