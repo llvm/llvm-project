@@ -261,6 +261,23 @@ static bool isMinMaxReductionPhiWithUsersOutsideReductionChain(
   return true;
 }
 
+// This matches a phi that selects between the original value (HeaderPhi) and an
+// arbitrary non-redunction value.
+static bool isFindLastLikePhi(PHINode *Phi, PHINode *HeaderPhi,
+                              SmallPtrSetImpl<Instruction *> &ReductionInstrs) {
+  unsigned NumNonReduxInputs = 0;
+  for (const Use &Use : Phi->operands()) {
+    if (!ReductionInstrs.contains(dyn_cast<Instruction>(Use))) {
+      if (++NumNonReduxInputs > 1)
+        return false;
+    } else if (Use.get() != HeaderPhi) {
+      // TODO: Remove this restriction once chained phis are supported.
+      return false;
+    }
+  }
+  return NumNonReduxInputs == 1;
+}
+
 bool RecurrenceDescriptor::AddReductionVar(
     PHINode *Phi, RecurKind Kind, Loop *TheLoop, FastMathFlags FuncFMF,
     RecurrenceDescriptor &RedDes, DemandedBits *DB, AssumptionCache *AC,
@@ -306,6 +323,13 @@ bool RecurrenceDescriptor::AddReductionVar(
   //  to make sure we only see exactly the two instructions.
   unsigned NumCmpSelectPatternInst = 0;
   InstDesc ReduxDesc(false, nullptr);
+
+  // To recognize find-lasts of conditional operations (such as loads or
+  // divides), that need masking, we track non-phi users and if we've found a
+  // "find-last-like" phi (see isFindLastLikePhi). We currently only support
+  // loops with a single "find-last-phi" and do not allow any other operations.
+  unsigned NumNonPHIUsers = 0;
+  bool FoundFindLastLikePhi = false;
 
   // Data used for determining if the recurrence has been type-promoted.
   Type *RecurrenceType = Phi->getType();
@@ -414,6 +438,8 @@ bool RecurrenceDescriptor::AddReductionVar(
       return false;
 
     bool IsAPhi = isa<PHINode>(Cur);
+    if (!IsAPhi)
+      ++NumNonPHIUsers;
 
     // A header PHI use other than the original PHI.
     if (Cur != Phi && IsAPhi && Cur->getParent() == Phi->getParent())
@@ -470,9 +496,17 @@ bool RecurrenceDescriptor::AddReductionVar(
         !isAnyOfRecurrenceKind(Kind) && hasMultipleUsesOf(Cur, VisitedInsts, 1))
       return false;
 
-    // All inputs to a PHI node must be a reduction value.
-    if (IsAPhi && Cur != Phi && !areAllUsesIn(Cur, VisitedInsts))
-      return false;
+    if (IsAPhi && Cur != Phi) {
+      if (!areAllUsesIn(Cur, VisitedInsts)) {
+        // A "FindLast-like" Phi acts like a conditional select between the
+        // previous reduction value, and an arbitrary value.
+        FoundFindLastLikePhi =
+            Kind == RecurKind::FindLast && !FoundFindLastLikePhi &&
+            isFindLastLikePhi(cast<PHINode>(Cur), Phi, VisitedInsts);
+        if (!FoundFindLastLikePhi)
+          return false; // All inputs to a PHI node must be a reduction value.
+      }
+    }
 
     if (isIntMinMaxRecurrenceKind(Kind) && (isa<ICmpInst>(Cur) || IsASelect))
       ++NumCmpSelectPatternInst;
@@ -482,7 +516,7 @@ bool RecurrenceDescriptor::AddReductionVar(
       ++NumCmpSelectPatternInst;
 
     // Check  whether we found a reduction operator.
-    FoundReduxOp |= !IsAPhi && Cur != Start;
+    FoundReduxOp |= (!IsAPhi || FoundFindLastLikePhi) && Cur != Start;
 
     // Process users of current instruction. Push non-PHI nodes after PHI nodes
     // onto the stack. This way we are going to have seen all inputs to PHI
@@ -555,6 +589,10 @@ bool RecurrenceDescriptor::AddReductionVar(
     Worklist.append(PHIs.begin(), PHIs.end());
     Worklist.append(NonPHIs.begin(), NonPHIs.end());
   }
+
+  if (FoundFindLastLikePhi &&
+      (NumNonPHIUsers != 0 || Kind != RecurKind::FindLast))
+    return false;
 
   // This means we have seen one but not the other instruction of the
   // pattern or more than just a select and cmp. Zero implies that we saw a

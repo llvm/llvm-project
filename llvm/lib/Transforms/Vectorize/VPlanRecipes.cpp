@@ -2741,7 +2741,7 @@ void VPBlendRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
     for (unsigned I = 0, E = getNumIncomingValues(); I < E; ++I) {
       O << " ";
       getIncomingValue(I)->printAsOperand(O, SlotTracker);
-      if (I == 0)
+      if (I == 0 && isNormalized())
         continue;
       O << "/";
       getMask(I)->printAsOperand(O, SlotTracker);
