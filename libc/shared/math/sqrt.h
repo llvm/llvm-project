@@ -13,7 +13,6 @@
 #include "src/__support/math/sqrt.h"
 
 namespace LIBC_NAMESPACE_DECL {
-
 namespace shared {
 
 using math::sqrt;
