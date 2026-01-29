@@ -202,14 +202,15 @@ LocalResourceAssigns::Assign::Assign(const Expr *AssignExpr,
     : AssignExpr(AssignExpr), AssignScope(AssignScope), Info(Info),
       MSMangleNum(AssignScope->getMSCurManglingNumber()), Invalidated(false) {}
 
-static bool isEquivalentScope(LocalResourceAssigns::Assign Cur,
-                              LocalResourceAssigns::Assign Prev) {
+static bool isEquivalentAssignmentScope(LocalResourceAssigns::Assign Cur,
+                                        LocalResourceAssigns::Assign Prev) {
   const Scope *CurScope = Cur.AssignScope;
   const Scope *PrevScope = Prev.AssignScope;
   if (CurScope != PrevScope)
     return false;
 
-  // If these are not equivalent
+  // If these are not equivalent, then we are at a tailing single stmt else/
+  // else if, and should be denoted as different for assignment.
   if (Cur.MSMangleNum != Prev.MSMangleNum)
     return false;
 
@@ -245,7 +246,7 @@ void LocalResourceAssigns::trackAssign(const ValueDecl *VD,
 
   Assign &Prev = AssignIt->getSecond();
 
-  if (isEquivalentScope(Cur, Prev) ||
+  if (isEquivalentAssignmentScope(Cur, Prev) ||
       isAncestorScope(Cur.AssignScope, Prev.AssignScope->getParent())) {
     // If the current scope is equivalent or an ancestor of the previous scope,
     // we should ignore the previous access and overwrite it
