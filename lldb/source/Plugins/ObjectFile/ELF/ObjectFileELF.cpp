@@ -605,122 +605,119 @@ size_t ObjectFileELF::GetModuleSpecifications(
     elf::ELFHeader header;
     lldb::offset_t header_offset = data_offset;
     if (header.Parse(data, &header_offset)) {
-      if (extractor_sp) {
-        ModuleSpec spec(file);
-        // In Android API level 23 and above, bionic dynamic linker is able to
-        // load .so file directly from zip file. In that case, .so file is
-        // page aligned and uncompressed, and this module spec should retain the
-        // .so file offset and file size to pass through the information from
-        // lldb-server to LLDB. For normal file, file_offset should be 0,
-        // length should be the size of the file.
-        spec.SetObjectOffset(file_offset);
-        spec.SetObjectSize(length);
+      ModuleSpec spec(file);
+      // In Android API level 23 and above, bionic dynamic linker is able to
+      // load .so file directly from zip file. In that case, .so file is
+      // page aligned and uncompressed, and this module spec should retain the
+      // .so file offset and file size to pass through the information from
+      // lldb-server to LLDB. For normal file, file_offset should be 0,
+      // length should be the size of the file.
+      spec.SetObjectOffset(file_offset);
+      spec.SetObjectSize(length);
 
-        const uint32_t sub_type = subTypeFromElfHeader(header);
-        spec.GetArchitecture().SetArchitecture(
-            eArchTypeELF, header.e_machine, sub_type, header.e_ident[EI_OSABI]);
+      const uint32_t sub_type = subTypeFromElfHeader(header);
+      spec.GetArchitecture().SetArchitecture(
+          eArchTypeELF, header.e_machine, sub_type, header.e_ident[EI_OSABI]);
 
-        if (spec.GetArchitecture().IsValid()) {
-          llvm::Triple::OSType ostype;
-          llvm::Triple::VendorType vendor;
-          llvm::Triple::OSType spec_ostype =
-              spec.GetArchitecture().GetTriple().getOS();
+      if (spec.GetArchitecture().IsValid()) {
+        llvm::Triple::OSType ostype;
+        llvm::Triple::VendorType vendor;
+        llvm::Triple::OSType spec_ostype =
+            spec.GetArchitecture().GetTriple().getOS();
 
-          LLDB_LOGF(log, "ObjectFileELF::%s file '%s' module OSABI: %s",
-                    __FUNCTION__, file.GetPath().c_str(),
-                    OSABIAsCString(header.e_ident[EI_OSABI]));
+        LLDB_LOGF(log, "ObjectFileELF::%s file '%s' module OSABI: %s",
+                  __FUNCTION__, file.GetPath().c_str(),
+                  OSABIAsCString(header.e_ident[EI_OSABI]));
 
-          // SetArchitecture should have set the vendor to unknown
-          vendor = spec.GetArchitecture().GetTriple().getVendor();
-          assert(vendor == llvm::Triple::UnknownVendor);
-          UNUSED_IF_ASSERT_DISABLED(vendor);
+        // SetArchitecture should have set the vendor to unknown
+        vendor = spec.GetArchitecture().GetTriple().getVendor();
+        assert(vendor == llvm::Triple::UnknownVendor);
+        UNUSED_IF_ASSERT_DISABLED(vendor);
 
-          //
-          // Validate it is ok to remove GetOsFromOSABI
-          GetOsFromOSABI(header.e_ident[EI_OSABI], ostype);
-          assert(spec_ostype == ostype);
-          if (spec_ostype != llvm::Triple::OSType::UnknownOS) {
-            LLDB_LOGF(log,
-                      "ObjectFileELF::%s file '%s' set ELF module OS type "
-                      "from ELF header OSABI.",
-                      __FUNCTION__, file.GetPath().c_str());
-          }
-
-          // When ELF file does not contain GNU build ID, the later code will
-          // calculate CRC32 with this data file_offset and
-          // length. It is important for Android zip .so file, which is a slice
-          // of a file, to not access the outside of the file slice range.
-          if (data.GetByteSize() < length)
-            if (DataBufferSP data_sp = MapFileData(file, length, file_offset)) {
-              data.SetData(data_sp);
-              data_offset = 0;
-            }
-          // In case there is header extension in the section #0, the header we
-          // parsed above could have sentinel values for e_phnum, e_shnum, and
-          // e_shstrndx.  In this case we need to reparse the header with a
-          // bigger data source to get the actual values.
-          if (header.HasHeaderExtension()) {
-            lldb::offset_t header_offset = data_offset;
-            header.Parse(data, &header_offset);
-          }
-
-          uint32_t gnu_debuglink_crc = 0;
-          std::string gnu_debuglink_file;
-          SectionHeaderColl section_headers;
-          lldb_private::UUID &uuid = spec.GetUUID();
-
-          GetSectionHeaderInfo(section_headers, data, header, uuid,
-                               gnu_debuglink_file, gnu_debuglink_crc,
-                               spec.GetArchitecture());
-
-          llvm::Triple &spec_triple = spec.GetArchitecture().GetTriple();
-
+        //
+        // Validate it is ok to remove GetOsFromOSABI
+        GetOsFromOSABI(header.e_ident[EI_OSABI], ostype);
+        assert(spec_ostype == ostype);
+        if (spec_ostype != llvm::Triple::OSType::UnknownOS) {
           LLDB_LOGF(log,
-                    "ObjectFileELF::%s file '%s' module set to triple: %s "
-                    "(architecture %s)",
-                    __FUNCTION__, file.GetPath().c_str(),
-                    spec_triple.getTriple().c_str(),
-                    spec.GetArchitecture().GetArchitectureName());
+                    "ObjectFileELF::%s file '%s' set ELF module OS type "
+                    "from ELF header OSABI.",
+                    __FUNCTION__, file.GetPath().c_str());
+        }
 
-          if (!uuid.IsValid()) {
-            uint32_t core_notes_crc = 0;
+        // When ELF file does not contain GNU build ID, the later code will
+        // calculate CRC32 with this data file_offset and
+        // length. It is important for Android zip .so file, which is a slice
+        // of a file, to not access the outside of the file slice range.
+        if (data.GetByteSize() < length)
+          if (DataBufferSP data_sp = MapFileData(file, length, file_offset)) {
+            data.SetData(data_sp);
+            data_offset = 0;
+          }
+        // In case there is header extension in the section #0, the header we
+        // parsed above could have sentinel values for e_phnum, e_shnum, and
+        // e_shstrndx.  In this case we need to reparse the header with a
+        // bigger data source to get the actual values.
+        if (header.HasHeaderExtension()) {
+          lldb::offset_t header_offset = data_offset;
+          header.Parse(data, &header_offset);
+        }
 
-            if (!gnu_debuglink_crc) {
-              LLDB_SCOPED_TIMERF(
-                  "Calculating module crc32 %s with size %" PRIu64 " KiB",
-                  file.GetFilename().AsCString(),
-                  (length - file_offset) / 1024);
+        uint32_t gnu_debuglink_crc = 0;
+        std::string gnu_debuglink_file;
+        SectionHeaderColl section_headers;
+        lldb_private::UUID &uuid = spec.GetUUID();
 
-              // For core files - which usually don't happen to have a
-              // gnu_debuglink, and are pretty bulky - calculating whole
-              // contents crc32 would be too much of luxury.  Thus we will need
-              // to fallback to something simpler.
-              if (header.e_type == llvm::ELF::ET_CORE) {
-                ProgramHeaderColl program_headers;
-                GetProgramHeaderInfo(program_headers, data, header);
+        GetSectionHeaderInfo(section_headers, data, header, uuid,
+                             gnu_debuglink_file, gnu_debuglink_crc,
+                             spec.GetArchitecture());
 
-                core_notes_crc =
-                    CalculateELFNotesSegmentsCRC32(program_headers, data);
-              } else {
-                gnu_debuglink_crc = calc_crc32(0, data);
-              }
-            }
-            using u32le = llvm::support::ulittle32_t;
-            if (gnu_debuglink_crc) {
-              // Use 4 bytes of crc from the .gnu_debuglink section.
-              u32le data(gnu_debuglink_crc);
-              uuid = UUID(&data, sizeof(data));
-            } else if (core_notes_crc) {
-              // Use 8 bytes - first 4 bytes for *magic* prefix, mainly to make
-              // it look different form .gnu_debuglink crc followed by 4 bytes
-              // of note segments crc.
-              u32le data[] = {u32le(g_core_uuid_magic), u32le(core_notes_crc)};
-              uuid = UUID(data, sizeof(data));
+        llvm::Triple &spec_triple = spec.GetArchitecture().GetTriple();
+
+        LLDB_LOGF(log,
+                  "ObjectFileELF::%s file '%s' module set to triple: %s "
+                  "(architecture %s)",
+                  __FUNCTION__, file.GetPath().c_str(),
+                  spec_triple.getTriple().c_str(),
+                  spec.GetArchitecture().GetArchitectureName());
+
+        if (!uuid.IsValid()) {
+          uint32_t core_notes_crc = 0;
+
+          if (!gnu_debuglink_crc) {
+            LLDB_SCOPED_TIMERF(
+                "Calculating module crc32 %s with size %" PRIu64 " KiB",
+                file.GetFilename().AsCString(), (length - file_offset) / 1024);
+
+            // For core files - which usually don't happen to have a
+            // gnu_debuglink, and are pretty bulky - calculating whole
+            // contents crc32 would be too much of luxury.  Thus we will need
+            // to fallback to something simpler.
+            if (header.e_type == llvm::ELF::ET_CORE) {
+              ProgramHeaderColl program_headers;
+              GetProgramHeaderInfo(program_headers, data, header);
+
+              core_notes_crc =
+                  CalculateELFNotesSegmentsCRC32(program_headers, data);
+            } else {
+              gnu_debuglink_crc = calc_crc32(0, data);
             }
           }
-
-          specs.Append(spec);
+          using u32le = llvm::support::ulittle32_t;
+          if (gnu_debuglink_crc) {
+            // Use 4 bytes of crc from the .gnu_debuglink section.
+            u32le data(gnu_debuglink_crc);
+            uuid = UUID(&data, sizeof(data));
+          } else if (core_notes_crc) {
+            // Use 8 bytes - first 4 bytes for *magic* prefix, mainly to make
+            // it look different form .gnu_debuglink crc followed by 4 bytes
+            // of note segments crc.
+            u32le data[] = {u32le(g_core_uuid_magic), u32le(core_notes_crc)};
+            uuid = UUID(data, sizeof(data));
+          }
         }
+
+        specs.Append(spec);
       }
     }
   }
