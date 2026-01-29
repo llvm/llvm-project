@@ -54,8 +54,8 @@
 // Check the clang command, invoked by the linker wrapper, selects the HIPSPV
 // toolchain for the new offload driver.
 
-// RUN: %clang --offload-new-driver -nogpuinc -nogpulib \
-// RUN:   --offload=spirv64-unknown-chipstar \
+// RUN: %clang -target x86_64-linux-gnu --offload-new-driver -nogpuinc \
+// RUN:   -nogpulib --offload=spirv64-unknown-chipstar \
 // RUN:   --hip-path=%S/Inputs/hipspv -Xoffload-compiler \
 // RUN:   '-###' -c %s -o /dev/null 2>&1 \
 // RUN: | FileCheck %s --check-prefix=CHIPSTAR
@@ -71,8 +71,8 @@
 // CHIPSTAR-SAME: "--spirv-ext=-all,+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups"
 // CHIPSTAR-SAME: [[LOWER_BC]] "-o" "[[SPIRV_OUT:.*img]]"
 
-// RUN: %clang --offload-new-driver -nogpuinc -nogpulib \
-// RUN:   --offload=spirv64v1.3-unknown-chipstar \
+// RUN: %clang -target x86_64-linux-gnu --offload-new-driver -nogpuinc \
+// RUN:   -nogpulib --offload=spirv64v1.3-unknown-chipstar \
 // RUN:   --hip-path=%S/Inputs/hipspv -Xoffload-compiler \
 // RUN:   '-###' -c %s -o /dev/null 2>&1 \
 // RUN: | FileCheck %s --check-prefix=CHIPSTAR_SUBARCH
@@ -99,7 +99,8 @@
 // RUN:   | FileCheck -DVERSION=%llvm-version-major \
 // RUN:   --check-prefix=VERSIONED %s
 
-// RUN: env "PATH=%t/versioned" %clang --offload-new-driver -nogpuinc \
+// RUN: env "PATH=%t/versioned" %clang -target x86_64-linux-gnu \
+// RUN:   --offload-new-driver -nogpuinc \
 // RUN:   -nogpulib --offload=spirv64-unknown-chipstar \
 // RUN:   --hip-path=%S/Inputs/hipspv -Xoffload-compiler '-###' -c %s \
 // RUN:   -o /dev/null 2>&1 \
