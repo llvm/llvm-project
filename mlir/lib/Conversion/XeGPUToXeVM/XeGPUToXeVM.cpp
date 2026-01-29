@@ -1056,7 +1056,7 @@ struct ConvertXeGPUToXeVMPass
       // If the element type is index, convert it to i64.
       if (llvm::isa<IndexType>(elemType))
         elemType = IntegerType::get(&getContext(), 64);
-      // If the vector is a scalar or has a single element, return the element
+      // If the vector rank is 0 or has a single element, return the element
       if (rank == 0 || type.getNumElements() == 1)
         return elemType;
       // Otherwise, convert the vector to a flat vector type.
@@ -1191,7 +1191,8 @@ struct ConvertXeGPUToXeVMPass
       auto input = inputs.front();
       if (auto vecTy = dyn_cast<VectorType>(input.getType())) {
         if (type.isIntOrIndexOrFloat()) {
-          // If the vector has a single element, return the element type.
+          // If the vector rank is 0 or has a single element,
+          // extract scalar of target type.
           auto rank = vecTy.getRank();
           Value cast;
           if (rank == 0) {
@@ -1233,10 +1234,10 @@ struct ConvertXeGPUToXeVMPass
         return {};
       auto input = inputs.front();
       if (input.getType().isIntOrIndexOrFloat()) {
-        // If the input is a scalar, and the target type is a vector of single
-        // element, create a single element vector by broadcasting.
+        // If the input is a scalar, and the target type is a vector of rank 0
+        // or single element, broadcast scalar to target type.
         if (auto vecTy = dyn_cast<VectorType>(type)) {
-          if (vecTy.getNumElements() == 1) {
+          if (vecTy.getRank() == 0 || vecTy.getNumElements() == 1) {
             return vector::BroadcastOp::create(builder, loc, vecTy, input)
                 .getResult();
           }
