@@ -368,7 +368,7 @@ void GPUDialect::printType(Type type, DialectAsmPrinter &os) const {
       .Case<SparseSpGEMMOpHandleType>([&](Type) {
         os << getSparseHandleKeyword(SparseHandleKind::SpGEMMOp);
       })
-      .Case<MMAMatrixType>([&](MMAMatrixType fragTy) {
+      .Case([&](MMAMatrixType fragTy) {
         os << "mma_matrix<";
         auto shape = fragTy.getShape();
         for (auto dim = shape.begin(), e = shape.end() - 1; dim != e; ++dim)
