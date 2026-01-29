@@ -243,10 +243,8 @@ Transforms/InstCombine/fabs.ll
 Transforms/InstCombine/fcmp-select.ll
 Transforms/InstCombine/ffs-1.ll
 Transforms/InstCombine/ffs-i16.ll
-Transforms/InstCombine/fmul-bool.ll
 Transforms/InstCombine/fmul.ll
 Transforms/InstCombine/fneg.ll
-Transforms/InstCombine/icmp-mul-and.ll
 Transforms/InstCombine/intrinsic-select.ll
 Transforms/InstCombine/ldexp-ext.ll
 Transforms/InstCombine/ldexp.ll
@@ -272,18 +270,14 @@ Transforms/InstCombine/minmax-fp.ll
 Transforms/InstCombine/minmax-intrinsics.ll
 Transforms/InstCombine/mul-inseltpoison.ll
 Transforms/InstCombine/mul.ll
-Transforms/InstCombine/mul-masked-bits.ll
 Transforms/InstCombine/mul-pow2.ll
 Transforms/InstCombine/multiple-uses-load-bitcast-select.ll
 Transforms/InstCombine/nested-select.ll
-Transforms/InstCombine/or-bitmask.ll
 Transforms/InstCombine/or-fcmp.ll
 Transforms/InstCombine/pow-1.ll
 Transforms/InstCombine/pow-3.ll
 Transforms/InstCombine/pow-sqrt.ll
 Transforms/InstCombine/pull-conditional-binop-through-shift.ll
-Transforms/InstCombine/rem.ll
-Transforms/InstCombine/sdiv-canonicalize.ll
 Transforms/InstCombine/select-and-or.ll
 Transforms/InstCombine/select-factorize.ll
 Transforms/InstCombine/select-min-max.ll
@@ -300,7 +294,6 @@ Transforms/InstCombine/strrchr-3.ll
 Transforms/InstCombine/sub-xor-cmp.ll
 Transforms/InstCombine/truncating-saturate.ll
 Transforms/InstCombine/unordered-fcmp-select.ll
-Transforms/InstCombine/urem-via-cmp-select.ll
 Transforms/InstCombine/wcslen-1.ll
 Transforms/InstCombine/wcslen-3.ll
 Transforms/InstCombine/X86/x86-avx512-inseltpoison.ll
