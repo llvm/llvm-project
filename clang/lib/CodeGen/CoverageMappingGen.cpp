@@ -1020,6 +1020,28 @@ struct CounterCoverageMappingBuilder
     return Counters;
   }
 
+  /// Returns {TrueCnt,FalseCnt} for "implicit default".
+  /// FalseCnt is considered as the False count on SwitchStmt.
+  std::pair<Counter, Counter>
+  getSwitchImplicitDefaultCounterPair(const Stmt *Cond, Counter ParentCount,
+                                      Counter CaseCountSum) {
+    if (llvm::EnableSingleByteCoverage) {
+      // Allocate the new Counter since `subtract(Parent - Sum)` is unavailable.
+      unsigned Idx = NextCounterNum++;
+      CounterMap[Cond].Skipped = Idx;
+      return {Counter::getZero(), // Folded
+              Counter::getCounter(Idx)};
+    }
+
+    // Simplify is skipped while building the counters above: it can get
+    // really slow on top of switches with thousands of cases. Instead,
+    // trigger simplification by adding zero to the last counter.
+    CaseCountSum =
+        addCounters(CaseCountSum, Counter::getZero(), /*Simplify=*/true);
+
+    return {CaseCountSum, Builder.subtract(ParentCount, CaseCountSum)};
+  }
+
   bool IsCounterEqual(Counter OutCount, Counter ParentCount) {
     if (OutCount == ParentCount)
       return true;
@@ -1911,7 +1933,7 @@ struct CounterCoverageMappingBuilder
       propagateCounts(Counter::getZero(), Body);
     BreakContinue BC = BreakContinueStack.pop_back_val();
 
-    if (!BreakContinueStack.empty() && !llvm::EnableSingleByteCoverage)
+    if (!BreakContinueStack.empty())
       BreakContinueStack.back().ContinueCount = addCounters(
           BreakContinueStack.back().ContinueCount, BC.ContinueCount);
 
@@ -1925,11 +1947,6 @@ struct CounterCoverageMappingBuilder
     // in a different file.
     MostRecentLocation = getStart(S);
     handleFileExit(ExitLoc);
-
-    // When single byte coverage mode is enabled, do not create branch region by
-    // early returning.
-    if (llvm::EnableSingleByteCoverage)
-      return;
 
     // Create a Branch Region around each Case. Subtract the case's
     // counter from the Parent counter to track the "False" branch count.
@@ -1945,15 +1962,9 @@ struct CounterCoverageMappingBuilder
     // the hidden branch, which will be added later by the CodeGen. This region
     // will be associated with the switch statement's condition.
     if (!HasDefaultCase) {
-      // Simplify is skipped while building the counters above: it can get
-      // really slow on top of switches with thousands of cases. Instead,
-      // trigger simplification by adding zero to the last counter.
-      CaseCountSum =
-          addCounters(CaseCountSum, Counter::getZero(), /*Simplify=*/true);
-
-      // This is considered as the False count on SwitchStmt.
-      Counter SwitchFalse = subtractCounters(ParentCount, CaseCountSum);
-      createBranchRegion(S->getCond(), CaseCountSum, SwitchFalse);
+      auto Counters = getSwitchImplicitDefaultCounterPair(
+          S->getCond(), ParentCount, CaseCountSum);
+      createBranchRegion(S->getCond(), Counters.first, Counters.second);
     }
   }
 
@@ -1961,9 +1972,7 @@ struct CounterCoverageMappingBuilder
     extendRegion(S);
 
     SourceMappingRegion &Parent = getRegion();
-    Counter Count = llvm::EnableSingleByteCoverage
-                        ? getRegionCounter(S)
-                        : addCounters(Parent.getCounter(), getRegionCounter(S));
+    Counter Count = addCounters(Parent.getCounter(), getRegionCounter(S));
 
     // Reuse the existing region if it starts at our label. This is typical of
     // the first case in a switch.

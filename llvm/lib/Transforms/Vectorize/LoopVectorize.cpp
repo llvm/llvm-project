@@ -4044,22 +4044,20 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
 
     unsigned Opcode =
         TypeSwitch<const VPRecipeBase *, unsigned>(R)
-            .Case<VPHeaderPHIRecipe>(
-                [](const auto *R) { return Instruction::PHI; })
-            .Case<VPWidenStoreRecipe>(
-                [](const auto *R) { return Instruction::Store; })
-            .Case<VPWidenLoadRecipe>(
-                [](const auto *R) { return Instruction::Load; })
+            .Case([](const VPHeaderPHIRecipe *R) { return Instruction::PHI; })
+            .Case(
+                [](const VPWidenStoreRecipe *R) { return Instruction::Store; })
+            .Case([](const VPWidenLoadRecipe *R) { return Instruction::Load; })
             .Case<VPWidenCallRecipe, VPWidenIntrinsicRecipe>(
                 [](const auto *R) { return Instruction::Call; })
             .Case<VPInstruction, VPWidenRecipe, VPReplicateRecipe,
                   VPWidenCastRecipe>(
                 [](const auto *R) { return R->getOpcode(); })
-            .Case<VPInterleaveRecipe>([](const VPInterleaveRecipe *R) {
+            .Case([](const VPInterleaveRecipe *R) {
               return R->getStoredValues().empty() ? Instruction::Load
                                                   : Instruction::Store;
             })
-            .Case<VPReductionRecipe>([](const auto *R) {
+            .Case([](const VPReductionRecipe *R) {
               return RecurrenceDescriptor::getOpcode(R->getRecurrenceKind());
             });
 
@@ -8165,7 +8163,8 @@ bool VPRecipeBuilder::getScaledReductions(
         continue;
       }
       Value *ExtOp;
-      if (!match(OpI, m_ZExtOrSExt(m_Value(ExtOp))))
+      if (!match(OpI, m_ZExtOrSExt(m_Value(ExtOp))) &&
+          !match(OpI, m_FPExt(m_Value(ExtOp))))
         return false;
       Exts[I] = cast<Instruction>(OpI);
 
@@ -8217,10 +8216,13 @@ bool VPRecipeBuilder::getScaledReductions(
 
   if (LoopVectorizationPlanner::getDecisionAndClampRange(
           [&](ElementCount VF) {
+            std::optional<FastMathFlags> FMF = std::nullopt;
+            if (Update->getOpcode() == Instruction::FAdd)
+              FMF = Update->getFastMathFlags();
             InstructionCost Cost = TTI->getPartialReductionCost(
                 Update->getOpcode(), ExtOpTypes[0], ExtOpTypes[1],
                 PHI->getType(), VF, ExtKinds[0], ExtKinds[1], BinOpc,
-                CM.CostKind);
+                CM.CostKind, FMF);
             return Cost.isValid();
           },
           Range)) {
@@ -8304,6 +8306,10 @@ VPRecipeBuilder::tryToCreatePartialReduction(VPInstruction *Reduction,
          "all accumulators in chain must have same scale factor");
 
   auto *ReductionI = Reduction->getUnderlyingInstr();
+  assert(
+      Reduction->getOpcode() != Instruction::FAdd ||
+      (ReductionI->hasAllowReassoc() && ReductionI->hasAllowContract()) &&
+          "FAdd partial reduction requires allow-reassoc and allow-contract");
   if (Reduction->getOpcode() == Instruction::Sub) {
     SmallVector<VPValue *, 2> Ops;
     Ops.push_back(Plan.getConstantInt(ReductionI->getType(), 0));
@@ -8318,7 +8324,12 @@ VPRecipeBuilder::tryToCreatePartialReduction(VPInstruction *Reduction,
     Cond = getBlockInMask(Builder.getInsertBlock());
 
   return new VPReductionRecipe(
-      RecurKind::Add, FastMathFlags(), ReductionI, Accumulator, BinOp, Cond,
+      Reduction->getOpcode() == Instruction::FAdd ? RecurKind::FAdd
+                                                  : RecurKind::Add,
+      Reduction->getOpcode() == Instruction::FAdd
+          ? Reduction->getFastMathFlags()
+          : FastMathFlags(),
+      ReductionI, Accumulator, BinOp, Cond,
       RdxUnordered{/*VFScaleFactor=*/ScaleFactor}, ReductionI->getDebugLoc());
 }
 
