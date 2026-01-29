@@ -39,6 +39,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         self.build_and_launch(
             program, console="integratedTerminal", args=["foobar"], env=["FOO=bar"]
         )
+        self.dap_server.wait_for_initialized()
 
         self.assertEqual(
             len(self.dap_server.reverse_requests),
@@ -83,6 +84,7 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
         """
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program, console="integratedTerminal", env={"FOO": "BAR"})
+        self.dap_server.wait_for_initialized()
 
         self.assertEqual(
             len(self.dap_server.reverse_requests),
@@ -102,12 +104,11 @@ class TestDAP_runInTerminal(lldbdap_testcase.DAPTestCaseBase):
     @skipIfWindows
     def test_runInTerminalInvalidTarget(self):
         self.build_and_create_debug_adapter()
-        response = self.launch(
+        response = self.launch_and_configurationDone(
             "INVALIDPROGRAM",
             console="integratedTerminal",
             args=["foobar"],
             env=["FOO=bar"],
-            waitForResponse=True,
         )
         self.assertFalse(response["success"])
         self.assertIn(
