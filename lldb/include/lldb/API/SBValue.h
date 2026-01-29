@@ -506,6 +506,9 @@ protected:
   void SetSP(const lldb::ValueObjectSP &sp, lldb::DynamicValueType use_dynamic,
              bool use_synthetic, const char *name);
 
+protected:
+  friend class lldb_private::ScriptInterpreter;
+
 private:
   typedef std::shared_ptr<ValueImpl> ValueImplSP;
   ValueImplSP m_opaque_sp;
