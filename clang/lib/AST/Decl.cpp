@@ -2919,9 +2919,17 @@ void VarDecl::assignAddressSpace(const ASTContext &Ctxt, LangAS AS) {
 }
 
 void VarDecl::deduceParmAddressSpace(const ASTContext &Ctxt) {
-  assert(isa<ParmVarDecl>(this) || isa<ImplicitParamDecl>(this));
   if (Ctxt.getLangOpts().OpenCL)
     assignAddressSpace(Ctxt, LangAS::opencl_private);
+  if (Ctxt.getTargetInfo().getTriple().isWasm()) {
+    // For WebAssembly, variables holding reference types must have a special
+    // address space when taking their reference.
+    QualType Type = getType();
+    if (const auto *ATy = dyn_cast<ArrayType>(Type))
+      Type = ATy->getElementType();
+    if (Type.isWebAssemblyReferenceType())
+      assignAddressSpace(Ctxt, LangAS::wasm_var);
+  }
 }
 
 //===----------------------------------------------------------------------===//

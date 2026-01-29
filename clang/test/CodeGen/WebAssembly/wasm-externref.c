@@ -7,9 +7,9 @@ void helper(externref_t);
 
 // CHECK-LABEL: @handle(
 // CHECK-NEXT:  entry:
-// CHECK-NEXT:    [[OBJ_ADDR:%.*]] = alloca ptr addrspace(10), align 1
-// CHECK-NEXT:    store ptr addrspace(10) [[OBJ:%.*]], ptr [[OBJ_ADDR]], align 1
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(10), ptr [[OBJ_ADDR]], align 1
+// CHECK-NEXT:    [[OBJ_ADDR:%.*]] = alloca ptr addrspace(10), align 1, addrspace(1)
+// CHECK-NEXT:    store ptr addrspace(10) [[OBJ:%.*]], ptr addrspace(1) [[OBJ_ADDR]], align 1
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(10), ptr addrspace(1) [[OBJ_ADDR]], align 1
 // CHECK-NEXT:    call void @helper(ptr addrspace(10) [[TMP0]])
 // CHECK-NEXT:    ret void
 //

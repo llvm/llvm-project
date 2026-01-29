@@ -1482,9 +1482,11 @@ static bool shouldExtendLifetime(const ASTContext &Context,
 CodeGenFunction::AutoVarEmission
 CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
   QualType Ty = D.getType();
-  assert(
-      Ty.getAddressSpace() == LangAS::Default ||
-      (Ty.getAddressSpace() == LangAS::opencl_private && getLangOpts().OpenCL));
+  assert(Ty.getAddressSpace() == LangAS::Default ||
+         (Ty.getAddressSpace() == LangAS::opencl_private &&
+          getLangOpts().OpenCL) ||
+         (Ty.getAddressSpace() == LangAS::wasm_var &&
+          getTarget().getTriple().isWasm()));
 
   AutoVarEmission emission(D);
 
@@ -2684,8 +2686,6 @@ void CodeGenFunction::EmitParmDecl(const VarDecl &D, ParamValue Arg,
     Arg.getAnyValue()->setName(D.getName());
 
   QualType Ty = D.getType();
-  assert((getLangOpts().OpenCL || Ty.getAddressSpace() == LangAS::Default) &&
-         "parameter has non-default address space in non-OpenCL mode");
 
   // Use better IR generation for certain implicit parameters.
   if (auto IPD = dyn_cast<ImplicitParamDecl>(&D)) {

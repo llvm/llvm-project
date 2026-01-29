@@ -67,6 +67,7 @@ enum class LangAS : unsigned {
 
   // Wasm specific address spaces.
   wasm_funcref,
+  wasm_var,
 
   // This denotes the count of language-specific address spaces and also
   // the offset added to the target-specific address spaces, which are usually

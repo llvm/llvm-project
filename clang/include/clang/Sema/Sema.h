@@ -4702,6 +4702,7 @@ public:
 
   void deduceOpenCLAddressSpace(VarDecl *decl);
   void deduceHLSLAddressSpace(VarDecl *decl);
+  void deduceWasmAddressSpace(VarDecl *Decl);
 
   /// Adjust the \c DeclContext for a function or variable that might be a
   /// function-local external declaration.
