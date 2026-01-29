@@ -342,7 +342,7 @@ struct ConvertLoad final : public OpConversionPattern<memref::LoadOp> {
     }
 
     auto arrayValue =
-        dyn_cast<TypedValue<emitc::ArrayType>>(operands.getMemref());
+        dyn_cast<TypedValue<emitc::ArrayType>>(operands.getBase());
     if (!arrayValue) {
       return rewriter.notifyMatchFailure(op.getLoc(), "expected array type");
     }
@@ -362,7 +362,7 @@ struct ConvertStore final : public OpConversionPattern<memref::StoreOp> {
   matchAndRewrite(memref::StoreOp op, OpAdaptor operands,
                   ConversionPatternRewriter &rewriter) const override {
     auto arrayValue =
-        dyn_cast<TypedValue<emitc::ArrayType>>(operands.getMemref());
+        dyn_cast<TypedValue<emitc::ArrayType>>(operands.getBase());
     if (!arrayValue) {
       return rewriter.notifyMatchFailure(op.getLoc(), "expected array type");
     }
@@ -370,7 +370,7 @@ struct ConvertStore final : public OpConversionPattern<memref::StoreOp> {
     auto subscript = emitc::SubscriptOp::create(
         rewriter, op.getLoc(), arrayValue, operands.getIndices());
     rewriter.replaceOpWithNewOp<emitc::AssignOp>(op, subscript,
-                                                 operands.getValue());
+                                                 operands.getValueToStore());
     return success();
   }
 };

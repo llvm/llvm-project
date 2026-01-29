@@ -557,7 +557,7 @@ IntLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
 
   const auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
   Value accessChain =
-      spirv::getElementPtr(typeConverter, memrefType, adaptor.getMemref(),
+      spirv::getElementPtr(typeConverter, memrefType, adaptor.getBase(),
                            adaptor.getIndices(), loc, rewriter);
 
   if (!accessChain)
@@ -684,7 +684,7 @@ LoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
         "failed to lower memref in image storage class to storage buffer");
 
   Value loadPtr = spirv::getElementPtr(
-      *getTypeConverter<SPIRVTypeConverter>(), memrefType, adaptor.getMemref(),
+      *getTypeConverter<SPIRVTypeConverter>(), memrefType, adaptor.getBase(),
       adaptor.getIndices(), loadOp.getLoc(), rewriter);
 
   if (!loadPtr)
@@ -745,7 +745,7 @@ ImageLoadOpPattern::matchAndRewrite(memref::LoadOp loadOp, OpAdaptor adaptor,
     return rewriter.notifyMatchFailure(
         loadOp, "failed to lower memref in non-image storage class to image");
 
-  Value loadPtr = adaptor.getMemref();
+  Value loadPtr = adaptor.getBase();
   auto memoryRequirements = calculateMemoryRequirements(loadPtr, loadOp);
   if (failed(memoryRequirements))
     return rewriter.notifyMatchFailure(
@@ -826,7 +826,7 @@ IntStoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
   auto loc = storeOp.getLoc();
   auto &typeConverter = *getTypeConverter<SPIRVTypeConverter>();
   Value accessChain =
-      spirv::getElementPtr(typeConverter, memrefType, adaptor.getMemref(),
+      spirv::getElementPtr(typeConverter, memrefType, adaptor.getBase(),
                            adaptor.getIndices(), loc, rewriter);
 
   if (!accessChain)
@@ -876,7 +876,7 @@ IntStoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
           storeOp, "failed to determine memory requirements");
 
     auto [memoryAccess, alignment] = *memoryRequirements;
-    Value storeVal = adaptor.getValue();
+    Value storeVal = adaptor.getValueToStore();
     if (isBool)
       storeVal = castBoolToIntN(loc, storeVal, dstType, rewriter);
     rewriter.replaceOpWithNewOp<spirv::StoreOp>(storeOp, accessChain, storeVal,
@@ -917,7 +917,8 @@ IntStoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
   clearBitsMask =
       rewriter.createOrFold<spirv::NotOp>(loc, dstType, clearBitsMask);
 
-  Value storeVal = shiftValue(loc, adaptor.getValue(), offset, mask, rewriter);
+  Value storeVal =
+      shiftValue(loc, adaptor.getValueToStore(), offset, mask, rewriter);
   Value adjustedPtr = adjustAccessChainForBitwidth(typeConverter, accessChainOp,
                                                    srcBits, dstBits, rewriter);
   std::optional<spirv::Scope> scope = getAtomicOpScope(memrefType);
@@ -1022,7 +1023,7 @@ StoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
   if (memrefType.getElementType().isSignlessInteger())
     return rewriter.notifyMatchFailure(storeOp, "signless int");
   auto storePtr = spirv::getElementPtr(
-      *getTypeConverter<SPIRVTypeConverter>(), memrefType, adaptor.getMemref(),
+      *getTypeConverter<SPIRVTypeConverter>(), memrefType, adaptor.getBase(),
       adaptor.getIndices(), storeOp.getLoc(), rewriter);
 
   if (!storePtr)
@@ -1035,7 +1036,7 @@ StoreOpPattern::matchAndRewrite(memref::StoreOp storeOp, OpAdaptor adaptor,
 
   auto [memoryAccess, alignment] = *memoryRequirements;
   rewriter.replaceOpWithNewOp<spirv::StoreOp>(
-      storeOp, storePtr, adaptor.getValue(), memoryAccess, alignment);
+      storeOp, storePtr, adaptor.getValueToStore(), memoryAccess, alignment);
   return success();
 }
 

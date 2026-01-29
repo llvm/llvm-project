@@ -941,9 +941,9 @@ struct LoadOpLowering : public LoadStoreOpLowering<memref::LoadOp> {
     // Per memref.load spec, the indices must be in-bounds:
     // 0 <= idx < dim_size, and additionally all offsets are non-negative,
     // hence inbounds and nuw are used when lowering to llvm.getelementptr.
-    Value dataPtr = getStridedElementPtr(rewriter, loadOp.getLoc(), type,
-                                         adaptor.getMemref(),
-                                         adaptor.getIndices(), kNoWrapFlags);
+    Value dataPtr =
+        getStridedElementPtr(rewriter, loadOp.getLoc(), type, adaptor.getBase(),
+                             adaptor.getIndices(), kNoWrapFlags);
     rewriter.replaceOpWithNewOp<LLVM::LoadOp>(
         loadOp, typeConverter->convertType(type.getElementType()), dataPtr,
         loadOp.getAlignment().value_or(0), false, loadOp.getNontemporal());
@@ -965,11 +965,11 @@ struct StoreOpLowering : public LoadStoreOpLowering<memref::StoreOp> {
     // 0 <= idx < dim_size, and additionally all offsets are non-negative,
     // hence inbounds and nuw are used when lowering to llvm.getelementptr.
     Value dataPtr =
-        getStridedElementPtr(rewriter, op.getLoc(), type, adaptor.getMemref(),
+        getStridedElementPtr(rewriter, op.getLoc(), type, adaptor.getBase(),
                              adaptor.getIndices(), kNoWrapFlags);
-    rewriter.replaceOpWithNewOp<LLVM::StoreOp>(op, adaptor.getValue(), dataPtr,
-                                               op.getAlignment().value_or(0),
-                                               false, op.getNontemporal());
+    rewriter.replaceOpWithNewOp<LLVM::StoreOp>(
+        op, adaptor.getValueToStore(), dataPtr, op.getAlignment().value_or(0),
+        false, op.getNontemporal());
     return success();
   }
 };
