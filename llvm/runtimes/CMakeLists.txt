@@ -97,6 +97,7 @@ function(builtin_default_target compiler_rt_path)
                                       -DLLVM_DEFAULT_TARGET_TRIPLE=${LLVM_TARGET_TRIPLE}
                                       -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR}
                                       -DLLVM_CMAKE_DIR=${CMAKE_BINARY_DIR}
+                                      -DCMAKE_INSTALL_RPATH=${CMAKE_INSTALL_RPATH}
                                       -DCMAKE_C_COMPILER_WORKS=ON
                                       -DCMAKE_CXX_COMPILER_WORKS=ON
                                       -DCMAKE_ASM_COMPILER_WORKS=ON
@@ -138,6 +139,7 @@ function(builtin_register_target compiler_rt_path name)
                                       -DLLVM_RUNTIME_OUTPUT_INTDIR=${LLVM_TOOLS_BINARY_DIR}
                                       -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=ON
                                       -DLLVM_CMAKE_DIR=${CMAKE_BINARY_DIR}
+                                      -DCMAKE_INSTALL_RPATH=${CMAKE_INSTALL_RPATH}
                                       -DCMAKE_C_COMPILER_WORKS=ON
                                       -DCMAKE_CXX_COMPILER_WORKS=ON
                                       -DCMAKE_ASM_COMPILER_WORKS=ON
@@ -278,6 +280,7 @@ function(runtime_default_target)
                                       -DLLVM_ENABLE_PROJECTS_USED=${LLVM_ENABLE_PROJECTS_USED}
                                       -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR}
                                       -DLLVM_BUILD_TOOLS=${LLVM_BUILD_TOOLS}
+                                      -DCMAKE_INSTALL_RPATH=${CMAKE_INSTALL_RPATH}
                                       -DCMAKE_C_COMPILER_WORKS=ON
                                       -DCMAKE_CXX_COMPILER_WORKS=ON
                                       -DCMAKE_Fortran_COMPILER_WORKS=ON
@@ -423,6 +426,7 @@ function(runtime_register_target name)
                                       -DLLVM_INCLUDE_TESTS=${LLVM_INCLUDE_TESTS}
                                       -DLLVM_ENABLE_PROJECTS_USED=${LLVM_ENABLE_PROJECTS_USED}
                                       -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR}
+                                      -DCMAKE_INSTALL_RPATH=${CMAKE_INSTALL_RPATH}
                                       -DCMAKE_C_COMPILER_WORKS=ON
                                       -DCMAKE_CXX_COMPILER_WORKS=ON
                                       -DCMAKE_Fortran_COMPILER_WORKS=ON
