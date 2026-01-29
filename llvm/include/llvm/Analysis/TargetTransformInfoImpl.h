@@ -704,7 +704,7 @@ public:
       unsigned Opcode, Type *InputTypeA, Type *InputTypeB, Type *AccumType,
       ElementCount VF, TTI::PartialReductionExtendKind OpAExtend,
       TTI::PartialReductionExtendKind OpBExtend, std::optional<unsigned> BinOp,
-      TTI::TargetCostKind CostKind) const {
+      TTI::TargetCostKind CostKind, std::optional<FastMathFlags> FMF) const {
     return InstructionCost::getInvalid();
   }
 
