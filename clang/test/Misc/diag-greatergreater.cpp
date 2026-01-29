@@ -23,7 +23,7 @@ template<int> int V;
 // Here, we split the >>= token into a > followed by a >=.
 // Then we split the >= token into a > followed by an =,
 // which we merge with the other = to form an ==.
-// CHECK:      error: a space is required
+// CHECK:      warning: two consecutive right angle brackets
 // CHECK-NEXT: int k = V<C<int>>==0;
 // CHECK-NEXT:                ^~{{$}}
 // CHECK-NEXT:                > >{{$}}
