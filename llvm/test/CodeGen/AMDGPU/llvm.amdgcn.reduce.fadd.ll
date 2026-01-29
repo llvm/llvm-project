@@ -1255,8 +1255,8 @@ define void @divergent_value_double(ptr addrspace(1) %out, double %id.x) {
 ; GFX8DAGISEL-NEXT:    s_ff1_i32_b64 s10, s[4:5]
 ; GFX8DAGISEL-NEXT:    v_mov_b32_e32 v4, s6
 ; GFX8DAGISEL-NEXT:    v_readlane_b32 s8, v2, s10
-; GFX8DAGISEL-NEXT:    v_mov_b32_e32 v5, s7
 ; GFX8DAGISEL-NEXT:    v_readlane_b32 s9, v3, s10
+; GFX8DAGISEL-NEXT:    v_mov_b32_e32 v5, s7
 ; GFX8DAGISEL-NEXT:    v_add_f64 v[4:5], s[8:9], v[4:5]
 ; GFX8DAGISEL-NEXT:    s_bitset0_b64 s[4:5], s10
 ; GFX8DAGISEL-NEXT:    s_cmp_lg_u64 s[4:5], 0
@@ -1280,8 +1280,8 @@ define void @divergent_value_double(ptr addrspace(1) %out, double %id.x) {
 ; GFX8GISEL-NEXT:    s_ff1_i32_b64 s10, s[4:5]
 ; GFX8GISEL-NEXT:    v_mov_b32_e32 v4, s6
 ; GFX8GISEL-NEXT:    v_readlane_b32 s8, v2, s10
-; GFX8GISEL-NEXT:    v_mov_b32_e32 v5, s7
 ; GFX8GISEL-NEXT:    v_readlane_b32 s9, v3, s10
+; GFX8GISEL-NEXT:    v_mov_b32_e32 v5, s7
 ; GFX8GISEL-NEXT:    v_add_f64 v[4:5], s[8:9], v[4:5]
 ; GFX8GISEL-NEXT:    s_bitset0_b64 s[4:5], s10
 ; GFX8GISEL-NEXT:    s_cmp_lg_u64 s[4:5], 0
@@ -1305,8 +1305,8 @@ define void @divergent_value_double(ptr addrspace(1) %out, double %id.x) {
 ; GFX9DAGISEL-NEXT:    s_ff1_i32_b64 s10, s[4:5]
 ; GFX9DAGISEL-NEXT:    v_mov_b32_e32 v4, s6
 ; GFX9DAGISEL-NEXT:    v_readlane_b32 s8, v2, s10
-; GFX9DAGISEL-NEXT:    v_mov_b32_e32 v5, s7
 ; GFX9DAGISEL-NEXT:    v_readlane_b32 s9, v3, s10
+; GFX9DAGISEL-NEXT:    v_mov_b32_e32 v5, s7
 ; GFX9DAGISEL-NEXT:    v_add_f64 v[4:5], s[8:9], v[4:5]
 ; GFX9DAGISEL-NEXT:    s_bitset0_b64 s[4:5], s10
 ; GFX9DAGISEL-NEXT:    s_cmp_lg_u64 s[4:5], 0
@@ -1330,8 +1330,8 @@ define void @divergent_value_double(ptr addrspace(1) %out, double %id.x) {
 ; GFX9GISEL-NEXT:    s_ff1_i32_b64 s10, s[4:5]
 ; GFX9GISEL-NEXT:    v_mov_b32_e32 v4, s6
 ; GFX9GISEL-NEXT:    v_readlane_b32 s8, v2, s10
-; GFX9GISEL-NEXT:    v_mov_b32_e32 v5, s7
 ; GFX9GISEL-NEXT:    v_readlane_b32 s9, v3, s10
+; GFX9GISEL-NEXT:    v_mov_b32_e32 v5, s7
 ; GFX9GISEL-NEXT:    v_add_f64 v[4:5], s[8:9], v[4:5]
 ; GFX9GISEL-NEXT:    s_bitset0_b64 s[4:5], s10
 ; GFX9GISEL-NEXT:    s_cmp_lg_u64 s[4:5], 0
