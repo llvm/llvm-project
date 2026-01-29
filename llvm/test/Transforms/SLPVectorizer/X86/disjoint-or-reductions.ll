@@ -6,8 +6,8 @@ define i64 @bswap(ptr noalias %p, ptr noalias %p1) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i8>, ptr [[P:%.*]], align 1
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i8>, ptr [[P1:%.*]], align 1
 ; CHECK-NEXT:    [[TMP3:%.*]] = add <8 x i8> [[TMP1]], [[TMP2]]
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i8> [[TMP3]], <8 x i8> poison, <8 x i32> <i32 7, i32 6, i32 5, i32 4, i32 3, i32 2, i32 1, i32 0>
-; CHECK-NEXT:    [[TMP6:%.*]] = bitcast <8 x i8> [[TMP4]] to i64
+; CHECK-NEXT:    [[TMP4:%.*]] = bitcast <8 x i8> [[TMP3]] to i64
+; CHECK-NEXT:    [[TMP6:%.*]] = call i64 @llvm.bswap.i64(i64 [[TMP4]])
 ; CHECK-NEXT:    ret i64 [[TMP6]]
 ;
   %g1 = getelementptr i8, ptr %p, i32 1
