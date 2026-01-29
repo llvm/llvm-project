@@ -983,21 +983,11 @@ struct CounterCoverageMappingBuilder
   ///
   /// \param S Key to the CounterMap
   /// \param ParentCnt The Counter representing how many times S is evaluated.
-  /// \param SkipCntForOld (To be removed later) Optional fake Counter
-  ///                      to override Skipped for adjustment of
-  ///                      expressions in the old behavior of
-  ///                      EnableSingleByteCoverage that is unaware of
-  ///                      Branch coverage.
   BranchCounterPair
   getBranchCounterPair(const Stmt *S, Counter ParentCnt,
                        std::optional<Counter> SkipCntForOld = std::nullopt) {
     auto &TheMap = CounterMap[S];
     auto ExecCnt = Counter::getCounter(TheMap.Executed);
-
-    // The old behavior of SingleByte is unaware of Branches.
-    // Will be pruned after the migration of SingleByte.
-    if (llvm::EnableSingleByteCoverage && SkipCntForOld)
-      return {ExecCnt, *SkipCntForOld};
 
     BranchCounterPair Counters = {ExecCnt,
                                   Builder.subtract(ParentCnt, ExecCnt)};
@@ -2328,9 +2318,6 @@ struct CounterCoverageMappingBuilder
     extendRegion(E->getRHS());
     propagateCounts(getRegionCounter(E), E->getRHS());
 
-    if (llvm::EnableSingleByteCoverage)
-      return;
-
     // Extract the Parent Region Counter.
     Counter ParentCnt = getRegion().getCounter();
 
@@ -2398,9 +2385,6 @@ struct CounterCoverageMappingBuilder
     // Counter tracks the right hand side of a logical or operator.
     extendRegion(E->getRHS());
     propagateCounts(getRegionCounter(E), E->getRHS());
-
-    if (llvm::EnableSingleByteCoverage)
-      return;
 
     // Extract the Parent Region Counter.
     Counter ParentCnt = getRegion().getCounter();
