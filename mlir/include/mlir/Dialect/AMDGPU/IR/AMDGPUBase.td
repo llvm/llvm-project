@@ -1,4 +1,4 @@
-//===-- AMDGPUBase.td - AMDGPU dialect base *- tablegen -*----------===//
+//===-- AMDGPUBase.td - AMDGPU dialect base *- tablegen -*-----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -113,6 +113,10 @@ def AMDGPU_Dialect : Dialect {
   ];
   let useDefaultAttributePrinterParser = 1;
   let useDefaultTypePrinterParser = 1;
+  let extraClassDeclaration = [{
+    void registerAttributes();
+    void registerTypes();
+  }];
 }
 
 #endif // MLIR_DIALECT_AMDGPU_IR_AMDGPUBASE_TD
