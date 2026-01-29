@@ -12,6 +12,7 @@
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/DebugLog.h"
 #include "llvm/Support/MathExtras.h"
 
@@ -103,8 +104,8 @@ OpFoldResult getAsOpFoldResult(Value val) {
 /// Given an array of values, try to extract a constant Attribute from each
 /// value. If this fails, return the original value.
 SmallVector<OpFoldResult> getAsOpFoldResult(ValueRange values) {
-  return llvm::to_vector(
-      llvm::map_range(values, [](Value v) { return getAsOpFoldResult(v); }));
+  return llvm::map_to_vector(values,
+                             [](Value v) { return getAsOpFoldResult(v); });
 }
 
 /// Convert `arrayAttr` to a vector of OpFoldResult.
@@ -122,8 +123,8 @@ OpFoldResult getAsIndexOpFoldResult(MLIRContext *ctx, int64_t val) {
 
 SmallVector<OpFoldResult> getAsIndexOpFoldResult(MLIRContext *ctx,
                                                  ArrayRef<int64_t> values) {
-  return llvm::to_vector(llvm::map_range(
-      values, [ctx](int64_t v) { return getAsIndexOpFoldResult(ctx, v); }));
+  return llvm::map_to_vector(
+      values, [ctx](int64_t v) { return getAsIndexOpFoldResult(ctx, v); });
 }
 
 /// If ofr is a constant integer or an IntegerAttr, return the integer.
