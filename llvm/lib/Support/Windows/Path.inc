@@ -484,21 +484,45 @@ static std::error_code rename_internal(HANDLE FromHandle, const Twine &To,
                                   (ToWide.size() * sizeof(wchar_t)));
   FILE_RENAME_INFO &RenameInfo =
       *reinterpret_cast<FILE_RENAME_INFO *>(RenameInfoBuf.data());
-  RenameInfo.ReplaceIfExists = ReplaceIfExists;
   RenameInfo.RootDirectory = 0;
   RenameInfo.FileNameLength = ToWide.size() * sizeof(wchar_t);
   std::copy(ToWide.begin(), ToWide.end(), &RenameInfo.FileName[0]);
 
-  SetLastError(ERROR_SUCCESS);
-  if (!SetFileInformationByHandle(FromHandle, FileRenameInfo, &RenameInfo,
-                                  RenameInfoBuf.size())) {
-    unsigned Error = GetLastError();
-    if (Error == ERROR_SUCCESS)
-      Error = ERROR_CALL_NOT_IMPLEMENTED; // Wine doesn't always set error code.
-    return mapWindowsError(Error);
+  static const struct {
+    DWORD dwFlags;
+    FILE_INFO_BY_HANDLE_CLASS Class;
+  } kRenameStyles[] = {
+    { static_cast<DWORD>(FILE_RENAME_FLAG_POSIX_SEMANTICS | (ReplaceIfExists ? FILE_RENAME_FLAG_REPLACE_IF_EXISTS : 0)), FileRenameInfoEx },
+    { 0, FileRenameInfo },
+  };
+
+  DWORD dwError;
+  for (const auto &style : kRenameStyles) {
+    if (style.dwFlags)
+      RenameInfo.Flags = style.dwFlags;
+    else
+      RenameInfo.ReplaceIfExists = ReplaceIfExists;
+
+    SetLastError(ERROR_SUCCESS);
+    if (SetFileInformationByHandle(FromHandle, style.Class, &RenameInfo,
+                                   RenameInfoBuf.size()))
+      return std::error_code();
+
+    dwError = GetLastError();
+
+    // Wine doesn't always set error code.
+    if (dwError == ERROR_SUCCESS)
+      dwError = ERROR_CALL_NOT_IMPLEMENTED;
+
+    // Retry with a different style if we do not support this style.
+    if (dwError == ERROR_INVALID_PARAMETER ||
+        dwError == ERROR_CALL_NOT_IMPLEMENTED)
+      continue;
+
+    return mapWindowsError(dwError);
   }
 
-  return std::error_code();
+  return mapWindowsError(dwError);
 }
 
 static std::error_code rename_handle(HANDLE FromHandle, const Twine &To) {
