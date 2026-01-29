@@ -318,31 +318,27 @@ Operation *ACCImplicitData::getOriginalDataClauseOpForAlias(
   return nullptr;
 }
 
-// Generates bounds for variables that have unknown dimensions
-static void fillInBoundsForUnknownDimensions(Operation *dataClauseOp,
-                                             OpBuilder &builder) {
+// Generates bounds for variables.
+static void fillInBounds(Operation *dataClauseOp, OpBuilder &builder) {
 
   if (!acc::getBounds(dataClauseOp).empty())
     // If bounds are already present, do not overwrite them.
     return;
 
-  // For types that have unknown dimensions, attempt to generate bounds by
-  // relying on MappableType being able to extract it from the IR.
+  // Rely on MappableType to extract the bounds from the IR.
   auto var = acc::getVar(dataClauseOp);
   auto type = var.getType();
   if (auto mappableTy = dyn_cast<acc::MappableType>(type)) {
-    if (mappableTy.hasUnknownDimensions()) {
-      TypeSwitch<Operation *>(dataClauseOp)
-          .Case<ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS>([&](auto dataClauseOp) {
-            if (std::is_same_v<decltype(dataClauseOp), acc::DevicePtrOp>)
-              return;
-            OpBuilder::InsertionGuard guard(builder);
-            builder.setInsertionPoint(dataClauseOp);
-            auto bounds = mappableTy.generateAccBounds(var, builder);
-            if (!bounds.empty())
-              dataClauseOp.getBoundsMutable().assign(bounds);
-          });
-    }
+    TypeSwitch<Operation *>(dataClauseOp)
+        .Case<ACC_DATA_ENTRY_OPS, ACC_DATA_EXIT_OPS>([&](auto dataClauseOp) {
+          if (std::is_same_v<decltype(dataClauseOp), acc::DevicePtrOp>)
+            return;
+          OpBuilder::InsertionGuard guard(builder);
+          builder.setInsertionPoint(dataClauseOp);
+          auto bounds = mappableTy.generateAccBounds(var, builder);
+          if (!bounds.empty())
+            dataClauseOp.getBoundsMutable().assign(bounds);
+        });
   }
 }
 
@@ -737,7 +733,7 @@ void ACCImplicitData::generateImplicitDataOps(
     auto newDataClauseOp = generateDataClauseOpForCandidate(
         var, module, builder, computeConstructOp, dominatingDataClauses,
         defaultClause);
-    fillInBoundsForUnknownDimensions(newDataClauseOp, builder);
+    fillInBounds(newDataClauseOp, builder);
     LLVM_DEBUG(llvm::dbgs() << "Generated data clause for " << var << ":\n"
                             << "\t" << *newDataClauseOp << "\n");
     if (isa_and_nonnull<acc::PrivateOp, acc::FirstprivateOp, acc::ReductionOp>(

@@ -174,9 +174,7 @@ static void printAllocatableOp(mlir::OpAsmPrinter &p, OP &op) {
   p.printOptionalAttrDict(op->getAttrs(), {"in_type", "operandSegmentSizes"});
 }
 
-/// Returns true if the given box value may be absent.
-/// The given value must have BaseBoxType.
-static bool mayBeAbsentBox(mlir::Value val) {
+bool fir::mayBeAbsentBox(mlir::Value val) {
   assert(mlir::isa<fir::BaseBoxType>(val.getType()) && "expected box argument");
   while (val) {
     mlir::Operation *defOp = val.getDefiningOp();
