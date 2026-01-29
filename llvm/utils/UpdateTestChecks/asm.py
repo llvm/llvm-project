@@ -134,8 +134,6 @@ ASM_FUNCTION_RISCV_RE = re.compile(
 
 ASM_FUNCTION_RISCV_MACHO_RE = re.compile(
     r'^_?(?P<func>[^:]+):[ \t]*;[ \t]*@"?(?P=func)"?\n'
-    r"(?:\s*\.?L(?P=func)\$local:\n)?"  # optional .L<func>$local: due to -fno-semantic-interposition
-    r"(?:\s*\.type\s+\.?L(?P=func)\$local,@function\n)?"  # optional .type .L<func>$local
     r"(?:\s*\.?Lfunc_begin[^:\n]*:\n)?[^:]*?"
     r"(?P<body>^;;?[ \t]+[^:]+:.*?)\s*"
     r"([ \t]*.cfi_endproc\n[\s]*)?"
