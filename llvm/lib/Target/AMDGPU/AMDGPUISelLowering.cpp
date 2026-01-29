@@ -2566,6 +2566,8 @@ SDValue AMDGPUTargetLowering::LowerFROUND(SDValue Op, SelectionDAG &DAG) const {
 
   SDValue T = DAG.getNode(ISD::FTRUNC, SL, VT, X);
 
+  // TODO: Should this propagate fast-math-flags?
+
   SDValue Diff = DAG.getNode(ISD::FSUB, SL, VT, X, T);
 
   SDValue AbsDiff = DAG.getNode(ISD::FABS, SL, VT, Diff);
