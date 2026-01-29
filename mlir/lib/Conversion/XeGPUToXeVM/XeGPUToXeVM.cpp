@@ -1085,9 +1085,12 @@ struct ConvertXeGPUToXeVMPass
     // add materialization casts to handle them.
 
     // Materialization to convert memref to i64 or i32 depending on global/SLM
-    auto memrefMaterializationCast = [](OpBuilder &builder, Type type,
-                                        ValueRange inputs,
-                                        Location loc) -> Value {
+    // Applies only to target materialization.
+    // Note: int type to memref materialization is not required as xegpu ops
+    // currently do not produce memrefs as result.
+    auto memrefToIntMaterializationCast = [](OpBuilder &builder, Type type,
+                                             ValueRange inputs,
+                                             Location loc) -> Value {
       if (inputs.size() != 1)
         return {};
       auto input = inputs.front();
@@ -1146,9 +1149,12 @@ struct ConvertXeGPUToXeVMPass
     };
 
     // Materialization to convert ui64 to i64
-    auto ui64MaterializationCast = [](OpBuilder &builder, Type type,
-                                      ValueRange inputs,
-                                      Location loc) -> Value {
+    // Applies only to target materialization.
+    // Note: i64 to ui64 materialization is not required as xegpu ops
+    // currently do not produce ui64 as result.
+    auto ui64ToI64MaterializationCast = [](OpBuilder &builder, Type type,
+                                           ValueRange inputs,
+                                           Location loc) -> Value {
       if (inputs.size() != 1)
         return {};
       auto input = inputs.front();
@@ -1163,9 +1169,12 @@ struct ConvertXeGPUToXeVMPass
     };
 
     // Materialization to convert ui32 to i32
-    auto ui32MaterializationCast = [](OpBuilder &builder, Type type,
-                                      ValueRange inputs,
-                                      Location loc) -> Value {
+    // Applies only to target materialization.
+    // Note: i32 to ui32 materialization is not required as xegpu ops
+    // currently do not produce ui32 as result.
+    auto ui32ToI32MaterializationCast = [](OpBuilder &builder, Type type,
+                                           ValueRange inputs,
+                                           Location loc) -> Value {
       if (inputs.size() != 1)
         return {};
       auto input = inputs.front();
@@ -1180,12 +1189,39 @@ struct ConvertXeGPUToXeVMPass
     };
 
     // Materialization to convert
-    //   - single element vector to scalar
     //   - bitcast vector of same rank
     //   - shape vector of different rank but same element type
-    auto vectorMaterializationCast = [](OpBuilder &builder, Type type,
-                                        ValueRange inputs,
-                                        Location loc) -> Value {
+    // Applies to both source and target materialization.
+    auto vectorToVectorMaterializationCast = [](OpBuilder &builder, Type type,
+                                                ValueRange inputs,
+                                                Location loc) -> Value {
+      if (inputs.size() != 1)
+        return {};
+      auto input = inputs.front();
+      if (auto vecTy = dyn_cast<VectorType>(input.getType())) {
+        if (auto targetVecTy = dyn_cast<VectorType>(type)) {
+          // If the target type is a vector of same rank,
+          //   bitcast to the target type.
+          if (targetVecTy.getRank() == vecTy.getRank())
+            return vector::BitCastOp::create(builder, loc, targetVecTy, input)
+                .getResult();
+          else if (targetVecTy.getElementType() == vecTy.getElementType()) {
+            // If the target type is a vector of different rank but same element
+            // type, reshape to the target type.
+            return vector::ShapeCastOp::create(builder, loc, targetVecTy, input)
+                .getResult();
+          }
+        }
+      }
+      return {};
+    };
+
+    // Materialization to convert
+    //   - single element vector to single element of vector element type
+    // Applies only to target materialization.
+    auto vectorToSingleElementMaterializationCast =
+        [](OpBuilder &builder, Type type, ValueRange inputs,
+           Location loc) -> Value {
       if (inputs.size() != 1)
         return {};
       auto input = inputs.front();
@@ -1209,27 +1245,18 @@ struct ConvertXeGPUToXeVMPass
             cast = arith::IndexCastUIOp::create(builder, loc, type, cast)
                        .getResult();
           return cast;
-        } else if (auto targetVecTy = dyn_cast<VectorType>(type)) {
-          // If the target type is a vector of same rank,
-          //   bitcast to the target type.
-          if (targetVecTy.getRank() == vecTy.getRank())
-            return vector::BitCastOp::create(builder, loc, targetVecTy, input)
-                .getResult();
-          else if (targetVecTy.getElementType() == vecTy.getElementType()) {
-            // If the target type is a vector of different rank but same element
-            // type, reshape to the target type.
-            return vector::ShapeCastOp::create(builder, loc, targetVecTy, input)
-                .getResult();
-          }
         }
       }
       return {};
     };
 
+    // Materialization to convert
+    //   - single element of vector element type to single element vector
     // If result type of original op is single element vector and lowered type
     // is scalar. This materialization cast creates a single element vector by
     // broadcasting the scalar value.
-    auto singleElementVectorMaterializationCast =
+    // Applies only to source materialization.
+    auto singleElementToVectorMaterializationCast =
         [](OpBuilder &builder, Type type, ValueRange inputs,
            Location loc) -> Value {
       if (inputs.size() != 1)
@@ -1254,12 +1281,14 @@ struct ConvertXeGPUToXeVMPass
       return {};
     };
     typeConverter.addSourceMaterialization(
-        singleElementVectorMaterializationCast);
-    typeConverter.addSourceMaterialization(vectorMaterializationCast);
-    typeConverter.addTargetMaterialization(memrefMaterializationCast);
-    typeConverter.addTargetMaterialization(ui32MaterializationCast);
-    typeConverter.addTargetMaterialization(ui64MaterializationCast);
-    typeConverter.addTargetMaterialization(vectorMaterializationCast);
+        singleElementToVectorMaterializationCast);
+    typeConverter.addSourceMaterialization(vectorToVectorMaterializationCast);
+    typeConverter.addTargetMaterialization(memrefToIntMaterializationCast);
+    typeConverter.addTargetMaterialization(ui32ToI32MaterializationCast);
+    typeConverter.addTargetMaterialization(ui64ToI64MaterializationCast);
+    typeConverter.addTargetMaterialization(
+        vectorToSingleElementMaterializationCast);
+    typeConverter.addTargetMaterialization(vectorToVectorMaterializationCast);
     ConversionTarget target(getContext());
     target.addLegalDialect<xevm::XeVMDialect, LLVM::LLVMDialect,
                            vector::VectorDialect, arith::ArithDialect,
