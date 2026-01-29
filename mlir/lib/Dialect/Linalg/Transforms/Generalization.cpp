@@ -64,6 +64,10 @@ FailureOr<GenericOp> mlir::linalg::generalizeNamedOp(RewriterBase &rewriter,
                         outputs, indexingMaps, iterators);
   rewriter.inlineRegionBefore(linalgOp->getRegion(0), genericOp.getRegion(),
                               genericOp.getRegion().begin());
+
+  // Preserve discardable (user-defined) attributes from the original op.
+  genericOp->setDiscardableAttrs(linalgOp->getDiscardableAttrDictionary());
+
   rewriter.replaceOp(linalgOp, genericOp->getResults());
   return genericOp;
 }
