@@ -14358,9 +14358,12 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         /*IsScalar=*/true);
 
   case clang::X86::BI__builtin_ia32_minsh_round_mask:
+  case clang::X86::BI__builtin_ia32_maxsh_round_mask: {
+    bool IsMin =
+        E->getBuiltinCallee() == clang::X86::BI__builtin_ia32_minsh_round_mask;
     return EvaluateScalarFpRoundMaskBinOp(
-        [](const APFloat &A, const APFloat &B,
-           std::optional<APSInt> RoundingMode) -> std::optional<APFloat> {
+        [IsMin](const APFloat &A, const APFloat &B,
+                std::optional<APSInt> RoundingMode) -> std::optional<APFloat> {
           // Default to _MM_FROUND_CUR_DIRECTION (4) if no rounding mode
           // specified
           APSInt DefaultMode(APInt(32, 4), /*isUnsigned=*/true);
@@ -14371,8 +14374,9 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
             return std::nullopt;
           if (A.isZero() && B.isZero())
             return B;
-          return llvm::minimum(A, B);
+          return IsMin ? llvm::minimum(A, B) : llvm::maximum(A, B);
         });
+  }
 
   case clang::X86::BI__builtin_ia32_maxps:
   case clang::X86::BI__builtin_ia32_maxpd:
@@ -14413,23 +14417,6 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
           return llvm::maximum(A, B);
         },
         /*IsScalar=*/true);
-
-  case clang::X86::BI__builtin_ia32_maxsh_round_mask:
-    return EvaluateScalarFpRoundMaskBinOp(
-        [](const APFloat &A, const APFloat &B,
-           std::optional<APSInt> RoundingMode) -> std::optional<APFloat> {
-          // Default to _MM_FROUND_CUR_DIRECTION (4) if no rounding mode
-          // specified
-          APSInt DefaultMode(APInt(32, 4), /*isUnsigned=*/true);
-          if (RoundingMode.value_or(DefaultMode) != 4)
-            return std::nullopt;
-          if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
-              B.isInfinity() || B.isDenormal())
-            return std::nullopt;
-          if (A.isZero() && B.isZero())
-            return B;
-          return llvm::maximum(A, B);
-        });
 
   case clang::X86::BI__builtin_ia32_vcvtps2ph:
   case clang::X86::BI__builtin_ia32_vcvtps2ph256: {
