@@ -2634,6 +2634,18 @@ def : GCNPat <
                    (V_RCP_IFLAG_F32_e32 (V_CVT_F32_U32_e32 $src0))))
 >;
 
+let SubtargetPredicate = isGFX940Plus in {
+def : GCNPat <
+  (int_amdgcn_buffer_wbinvl1),
+  (BUFFER_INV)
+>;
+
+def : GCNPat <
+  (int_amdgcn_buffer_wbinvl1_vol),
+  (BUFFER_INV)
+>;
+}
+
 //===----------------------------------------------------------------------===//
 // VOP3 Patterns
 //===----------------------------------------------------------------------===//
