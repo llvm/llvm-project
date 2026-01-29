@@ -65,7 +65,11 @@ FailureOr<GenericOp> mlir::linalg::generalizeNamedOp(RewriterBase &rewriter,
   rewriter.inlineRegionBefore(linalgOp->getRegion(0), genericOp.getRegion(),
                               genericOp.getRegion().begin());
 
-  // Preserve discardable (user-defined) attributes from the original op.
+  // Discardable attributes carry user-defined metadata (e.g., annotations for
+  // downstream passes). Generalization is a semantics-preserving
+  // transformation, so dropping this metadata would be unexpected. This is safe
+  // because discardable attributes are by definition independent of op
+  // semantics.
   genericOp->setDiscardableAttrs(linalgOp->getDiscardableAttrDictionary());
 
   rewriter.replaceOp(linalgOp, genericOp->getResults());
