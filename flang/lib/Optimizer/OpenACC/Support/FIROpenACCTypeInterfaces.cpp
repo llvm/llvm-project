@@ -23,6 +23,7 @@
 #include "flang/Optimizer/Dialect/FIRType.h"
 #include "flang/Optimizer/Dialect/Support/FIRContext.h"
 #include "flang/Optimizer/Dialect/Support/KindMapping.h"
+#include "flang/Optimizer/OpenACC/Support/FIROpenACCUtils.h"
 #include "flang/Optimizer/Support/Utils.h"
 #include "mlir/Dialect/Arith/IR/Arith.h"
 #include "mlir/Dialect/OpenACC/OpenACC.h"
@@ -377,7 +378,7 @@ getBaseRef(mlir::TypedValue<mlir::acc::PointerLikeType> varPtr) {
   // calculation op.
   mlir::Value baseRef =
       llvm::TypeSwitch<mlir::Operation *, mlir::Value>(op)
-          .Case<fir::DeclareOp>([&](auto op) {
+          .Case([&](fir::DeclareOp op) {
             // If this declare binds a view with an underlying storage operand,
             // treat that storage as the base reference. Otherwise, fall back
             // to the declared memref.
@@ -385,7 +386,7 @@ getBaseRef(mlir::TypedValue<mlir::acc::PointerLikeType> varPtr) {
               return storage;
             return mlir::Value(varPtr);
           })
-          .Case<hlfir::DesignateOp>([&](auto op) {
+          .Case([&](hlfir::DesignateOp op) {
             // Get the base object.
             return op.getMemref();
           })
@@ -393,12 +394,12 @@ getBaseRef(mlir::TypedValue<mlir::acc::PointerLikeType> varPtr) {
             // Get the base array on which the coordinate is being applied.
             return op.getMemref();
           })
-          .Case<fir::CoordinateOp>([&](auto op) {
+          .Case([&](fir::CoordinateOp op) {
             // For coordinate operation which is applied on derived type
             // object, get the base object.
             return op.getRef();
           })
-          .Case<fir::ConvertOp>([&](auto op) -> mlir::Value {
+          .Case([&](fir::ConvertOp op) -> mlir::Value {
             // Strip the conversion and recursively check the operand
             if (auto ptrLikeOperand = mlir::dyn_cast_if_present<
                     mlir::TypedValue<mlir::acc::PointerLikeType>>(
@@ -1211,41 +1212,6 @@ template mlir::Value OpenACCPointerLikeModel<fir::LLVMPointerType>::genAllocate(
     llvm::StringRef varName, mlir::Type varType, mlir::Value originalVar,
     bool &needsFree) const;
 
-static mlir::Value stripCasts(mlir::Value value, bool stripDeclare = true) {
-  mlir::Value currentValue = value;
-
-  while (currentValue) {
-    auto *definingOp = currentValue.getDefiningOp();
-    if (!definingOp)
-      break;
-
-    if (auto convertOp = mlir::dyn_cast<fir::ConvertOp>(definingOp)) {
-      currentValue = convertOp.getValue();
-      continue;
-    }
-
-    if (auto viewLike = mlir::dyn_cast<mlir::ViewLikeOpInterface>(definingOp)) {
-      currentValue = viewLike.getViewSource();
-      continue;
-    }
-
-    if (stripDeclare) {
-      if (auto declareOp = mlir::dyn_cast<hlfir::DeclareOp>(definingOp)) {
-        currentValue = declareOp.getMemref();
-        continue;
-      }
-
-      if (auto declareOp = mlir::dyn_cast<fir::DeclareOp>(definingOp)) {
-        currentValue = declareOp.getMemref();
-        continue;
-      }
-    }
-    break;
-  }
-
-  return currentValue;
-}
-
 template <typename Ty>
 bool OpenACCPointerLikeModel<Ty>::genFree(
     mlir::Type pointer, mlir::OpBuilder &builder, mlir::Location loc,
@@ -1273,7 +1239,7 @@ bool OpenACCPointerLikeModel<Ty>::genFree(
   mlir::Value valueToInspect = allocRes ? allocRes : varToFree;
 
   // Strip casts and declare operations to find the original allocation
-  mlir::Value strippedValue = stripCasts(valueToInspect);
+  mlir::Value strippedValue = fir::acc::getOriginalDef(valueToInspect);
   mlir::Operation *originalAlloc = strippedValue.getDefiningOp();
 
   // If we found an AllocMemOp (heap allocation), free it
@@ -1511,7 +1477,8 @@ static bool hasCUDADeviceAttrOnFuncArg(mlir::BlockArgument blockArg) {
 /// Shared implementation for checking if a value represents device data.
 static bool isDeviceDataImpl(mlir::Value var) {
   // Strip casts to find the underlying value.
-  mlir::Value currentVal = stripCasts(var, /*stripDeclare=*/false);
+  mlir::Value currentVal =
+      fir::acc::getOriginalDef(var, /*stripDeclare=*/false);
 
   if (auto blockArg = mlir::dyn_cast<mlir::BlockArgument>(currentVal))
     return hasCUDADeviceAttrOnFuncArg(blockArg);
@@ -1585,5 +1552,24 @@ template bool
 template bool
     OpenACCMappableModel<fir::PointerType>::isDeviceData(mlir::Type,
                                                          mlir::Value) const;
+
+std::optional<mlir::arith::AtomicRMWKind>
+OpenACCReducibleLogicalModel::getAtomicRMWKind(
+    mlir::Type type, mlir::acc::ReductionOperator redOp) const {
+  switch (redOp) {
+  case mlir::acc::ReductionOperator::AccLand:
+    return mlir::arith::AtomicRMWKind::andi;
+  case mlir::acc::ReductionOperator::AccLor:
+    return mlir::arith::AtomicRMWKind::ori;
+  case mlir::acc::ReductionOperator::AccEqv:
+  case mlir::acc::ReductionOperator::AccNeqv:
+    // Eqv and Neqv are valid for logical types but don't have a direct
+    // AtomicRMWKind mapping yet.
+    return std::nullopt;
+  default:
+    // Other reduction operators are not valid for logical types.
+    return std::nullopt;
+  }
+}
 
 } // namespace fir::acc
