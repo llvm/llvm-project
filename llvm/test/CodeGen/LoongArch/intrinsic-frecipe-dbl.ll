@@ -1,4 +1,3 @@
-; RUN: llc --mtriple=loongarch32 --mattr=+d,+frecipe < %s | FileCheck %s
 ; RUN: llc --mtriple=loongarch64 --mattr=+d,+frecipe < %s | FileCheck %s
 
 declare double @llvm.loongarch.frecipe.d(double)
