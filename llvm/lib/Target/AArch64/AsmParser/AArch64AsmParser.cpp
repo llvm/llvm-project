@@ -4267,6 +4267,8 @@ bool AArch64AsmParser::parseSyspAlias(StringRef Name, SMLoc NameLoc,
     const AArch64TLBIP::TLBIP *TLBIPorig = AArch64TLBIP::lookupTLBIPByName(Op);
     if (!TLBIPorig)
       return TokError("invalid operand for TLBIP instruction");
+    if (!getSTI().getFeatureBits()[AArch64::FeatureD128])
+      return TokError("instruction requires: d128");
     const AArch64TLBIP::TLBIP TLBIP(
         TLBIPorig->Name, TLBIPorig->Encoding | (HasnXSQualifier ? (1 << 7) : 0),
         TLBIPorig->NeedsReg, TLBIPorig->OptionalReg,

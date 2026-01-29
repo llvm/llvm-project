@@ -180,7 +180,7 @@ cpyfp [x0]!, [x1]!, x2!
 // nolse128 implied nod128, so reinstate it
 .arch_extension d128
 // This needs to come before `.arch_extension nothe` as it uses an instruction
-// that requires both the and d128
+// that requires the extension. `.arch_extension d128` is needed for rcwcasp.
 sysp #0, c2, c0, #0, x0, x1
 rcwcasp   x0, x1, x6, x7, [x4]
 // CHECK-NOT: [[@LINE-2]]:1: error: instruction requires: d128
@@ -188,9 +188,8 @@ rcwcasp   x0, x1, x6, x7, [x4]
 .arch_extension nod128
 sysp #0, c2, c0, #0, x0, x1
 rcwcasp   x0, x1, x6, x7, [x4]
+// CHECK-NOT: [[@LINE-2]]:1: error: instruction requires: d128
 // CHECK: [[@LINE-2]]:1: error: instruction requires: d128
-// CHECK-NEXT: sysp #0, c2, c0, #0, x0, x1
-// CHECK: [[@LINE-3]]:1: error: instruction requires: d128
 // CHECK-NEXT: rcwcasp   x0, x1, x6, x7, [x4]
 
 rcwswp x0, x1, [x2]
