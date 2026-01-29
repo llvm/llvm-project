@@ -32,7 +32,7 @@ define void @func(ptr noalias readonly %a, ptr noalias readonly %b, ptr noalias 
 ; CHECK-NEXT:    br label %[[OUTERLOOPHEADER_PREHEADER]]
 ; CHECK:       [[INNERLOOP_SPLIT1]]:
 ; CHECK-NEXT:    [[TMP0:%.*]] = load double, ptr [[ADDR_S]], align 8
-; CHECK-NEXT:    [[NEW_VAR:%.*]] = select i1 [[FIRSTITER]], double [[TMP0]], double 0.000000e+00
+; CHECK-NEXT:    [[NEW_VAR:%.*]] = select i1 [[FIRSTITER]], double 0.000000e+00, double [[TMP0]]
 ; CHECK-NEXT:    [[ADDR_A_J_I:%.*]] = getelementptr inbounds nuw double, ptr [[ADDR_A]], i64 [[INDEX_J]]
 ; CHECK-NEXT:    [[A_J_I:%.*]] = load double, ptr [[ADDR_A_J_I]], align 8
 ; CHECK-NEXT:    [[ADDR_B_J_I:%.*]] = getelementptr inbounds nuw double, ptr [[ADDR_B]], i64 [[INDEX_J]]
