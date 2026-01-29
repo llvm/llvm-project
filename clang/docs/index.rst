@@ -122,6 +122,7 @@ Design Documents
    HardwareAssistedAddressSanitizerDesign.rst
    ConstantInterpreter
    ClangIRCodeDuplication
+   ClangIRABILowering
 
 Indices and tables
 ==================
