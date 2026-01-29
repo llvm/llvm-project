@@ -1026,17 +1026,17 @@ void *asan_calloc(uptr nmemb, uptr size, BufferedStackTrace *stack) {
 }
 
 #if SANITIZER_AIX
-void *asan_vec_malloc(uptr size, BufferedStackTrace *stack) {
+void* asan_vec_malloc(uptr size, BufferedStackTrace* stack) {
   return SetErrnoOnNull(instance.Allocate(size, 16, stack, FROM_MALLOC, true));
 }
 
-void *asan_vec_calloc(uptr nmemb, uptr size, BufferedStackTrace *stack) {
+void* asan_vec_calloc(uptr nmemb, uptr size, BufferedStackTrace* stack) {
   if (UNLIKELY(CheckForCallocOverflow(size, nmemb))) {
     if (AllocatorMayReturnNull())
       return nullptr;
     ReportCallocOverflow(nmemb, size, stack);
   }
-  void *ptr = instance.Allocate(nmemb * size, 16, stack, FROM_MALLOC, false);
+  void* ptr = instance.Allocate(nmemb * size, 16, stack, FROM_MALLOC, false);
   // If the memory comes from the secondary allocator no need to clear it
   // as it comes directly from mmap.
   if (ptr && get_allocator().FromPrimary(ptr))
