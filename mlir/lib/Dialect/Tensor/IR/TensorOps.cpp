@@ -2719,7 +2719,7 @@ struct SliceReturnTypeCanonicalizer {
 
     // Build the reduced shape, preserving the original rank reduction pattern.
     SmallVector<int64_t> targetShape;
-    for (int64_t i = 0; i < static_cast<int64_t>(mixedSizes.size()); ++i)
+    for (auto i : llvm::seq<int64_t>(mixedSizes.size()))
       if (!droppedDims.test(i))
         targetShape.push_back(nonReducedType.getDimSize(i));
 
