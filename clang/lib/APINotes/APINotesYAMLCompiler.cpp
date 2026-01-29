@@ -743,14 +743,14 @@ class YAMLConverter {
   llvm::raw_ostream &OS;
   llvm::SourceMgr::DiagHandlerTy DiagHandler;
   void *DiagHandlerCtxt;
-  bool ErrorOccured;
+  bool ErrorOccurred;
 
   /// Emit a diagnostic
   bool emitError(llvm::Twine Message) {
     DiagHandler(
         llvm::SMDiagnostic("", llvm::SourceMgr::DK_Error, Message.str()),
         DiagHandlerCtxt);
-    ErrorOccured = true;
+    ErrorOccurred = true;
     return true;
   }
 
@@ -761,7 +761,7 @@ public:
                 void *DiagHandlerCtxt)
       : M(TheModule), Writer(TheModule.Name, SourceFile), OS(OS),
         DiagHandler(DiagHandler), DiagHandlerCtxt(DiagHandlerCtxt),
-        ErrorOccured(false) {}
+        ErrorOccurred(false) {}
 
   void convertAvailability(const AvailabilityItem &Availability,
                            CommonEntityInfo &CEI, llvm::StringRef APIName) {
@@ -1234,10 +1234,10 @@ public:
       convertTopLevelItems(/* context */ std::nullopt, Versioned.Items,
                            Versioned.Version);
 
-    if (!ErrorOccured)
+    if (!ErrorOccurred)
       Writer.writeToStream(OS);
 
-    return ErrorOccured;
+    return ErrorOccurred;
   }
 };
 } // namespace

@@ -186,8 +186,7 @@ xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
     return layout;
   }
 
-  auto layout = getDistributeLayoutAttr(opr.get());
-  return layout;
+  return nullptr;
 }
 
 // Returns the permanent layout attribute for the given result if it's
@@ -361,9 +360,9 @@ bool xegpu::recoverTemporaryLayouts(Operation *rootOp) {
         continue;
       auto layout = xegpu::getDistributeLayoutAttr(operand.get());
       if (!layout) {
-        op->emitError("Could not find layout attribute for operand ")
+        op->emitWarning("Could not find layout attribute for operand ")
             << operand.getOperandNumber() << " of operation " << op->getName();
-        return WalkResult::interrupt();
+        continue;
       }
       xegpu::setDistributeLayoutAttr(operand, layout);
     }
@@ -378,6 +377,42 @@ void xegpu::removeLayoutAttr(const T &operandOrResult) {
   std::string name = xegpu::getTemporaryLayoutName(operandOrResult);
   if (owner->hasAttrOfType<DistributeLayoutAttr>(name))
     owner->removeAttr(name);
+}
+
+SmallVector<NamedAttribute>
+xegpu::dropSgLayoutAndDataOnAttrs(ArrayRef<NamedAttribute> attrs) {
+  SmallVector<NamedAttribute> out;
+  out.reserve(attrs.size());
+
+  for (auto attr : attrs) {
+    if (auto dist = dyn_cast<xegpu::DistributeLayoutAttr>(attr.getValue())) {
+      auto newLayout = dist.dropSgLayoutAndData();
+      if (newLayout)
+        out.emplace_back(attr.getName(), newLayout);
+    } else {
+      out.push_back(attr);
+    }
+  }
+
+  return out;
+}
+
+SmallVector<NamedAttribute>
+xegpu::dropInstDataOnAttrs(ArrayRef<NamedAttribute> attrs) {
+  SmallVector<NamedAttribute> out;
+  out.reserve(attrs.size());
+
+  for (auto attr : attrs) {
+    if (auto dist = dyn_cast<xegpu::DistributeLayoutAttr>(attr.getValue())) {
+      auto newLayout = dist.dropInstData();
+      if (newLayout)
+        out.emplace_back(attr.getName(), newLayout);
+    } else {
+      out.push_back(attr);
+    }
+  }
+
+  return out;
 }
 
 // Explicit instantiation for OpResult

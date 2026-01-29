@@ -60,6 +60,7 @@ body:             |
     ; Tuple crossing the 256 boundary
     ; GCN-NEXT: s_set_vgpr_msb 0x5511
     ; ASM-SAME:                                         ;  msbs: dst=0 src0=1 src1=0 src2=1
+    ; GCN-NEXT: s_delay_alu instid0(VALU_DEP_1)
     ; GCN-NEXT: v_mqsad_u32_u8 v[254:257], v[2:3] /*v[258:259]*/, v0, v[244:247] /*v[500:503]*/
     $vgpr254_vgpr255_vgpr256_vgpr257 = V_MQSAD_U32_U8_e64 $vgpr258_vgpr259, $vgpr0, undef $vgpr500_vgpr501_vgpr502_vgpr503, 0, implicit $exec
 
@@ -526,7 +527,14 @@ body:             |
     $vgpr1 = V_ADD_U32_e32 undef $vgpr257, undef $vgpr1, implicit $exec
     $vgpr2 = V_ADD_U32_e32 undef $vgpr258, undef $vgpr258, implicit $exec
 
-    ; ASM: NumVgprs: 263
+    ; GCN-NEXT: s_set_vgpr_msb 0x50a
+    ; ASM-SAME:                                         ;  msbs: dst=0 src0=2 src1=2 src2=0
+    ; GCN-NEXT: v_mov_b32_e32 v8, v18 /*v530*/
+    ; GCN-NEXT: v_add_nc_u32_e32 v9, 0x1234, v19 /*v531*/
+    $vgpr8 = V_MOV_B32_e32 undef $vgpr530, implicit $exec
+    $vgpr9 = V_ADD_U32_e32 4660, undef $vgpr531, implicit $exec
+
+    ; ASM: NumVgprs: 532
 
 ...
 

@@ -11,7 +11,7 @@
 #if __riscv_xlen == 64
 // RV64ZBC-LABEL: @clmul_64(
 // RV64ZBC-NEXT:  entry:
-// RV64ZBC-NEXT:    [[TMP0:%.*]] = call i64 @llvm.riscv.clmul.i64(i64 [[A:%.*]], i64 [[B:%.*]])
+// RV64ZBC-NEXT:    [[TMP0:%.*]] = call i64 @llvm.clmul.i64(i64 [[A:%.*]], i64 [[B:%.*]])
 // RV64ZBC-NEXT:    ret i64 [[TMP0]]
 //
 uint64_t clmul_64(uint64_t a, uint64_t b) {
@@ -39,12 +39,12 @@ uint64_t clmulr_64(uint64_t a, uint64_t b) {
 
 // RV32ZBC-LABEL: @clmul_32(
 // RV32ZBC-NEXT:  entry:
-// RV32ZBC-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.clmul.i32(i32 [[A:%.*]], i32 [[B:%.*]])
+// RV32ZBC-NEXT:    [[TMP0:%.*]] = call i32 @llvm.clmul.i32(i32 [[A:%.*]], i32 [[B:%.*]])
 // RV32ZBC-NEXT:    ret i32 [[TMP0]]
 //
 // RV64ZBC-LABEL: @clmul_32(
 // RV64ZBC-NEXT:  entry:
-// RV64ZBC-NEXT:    [[TMP0:%.*]] = call i32 @llvm.riscv.clmul.i32(i32 [[A:%.*]], i32 [[B:%.*]])
+// RV64ZBC-NEXT:    [[TMP0:%.*]] = call i32 @llvm.clmul.i32(i32 [[A:%.*]], i32 [[B:%.*]])
 // RV64ZBC-NEXT:    ret i32 [[TMP0]]
 //
 uint32_t clmul_32(uint32_t a, uint32_t b) {

@@ -2318,7 +2318,7 @@ static codecvt_base::result utf16be_to_ucs4(
       frm_nxt += 2;
   }
   for (; frm_nxt < frm_end - 1 && to_nxt < to_end; ++to_nxt) {
-    uint16_t c1 = static_cast<uint16_t>(frm_nxt[0] << 8 | frm_nxt[1]);
+    uint16_t c1 = static_cast<uint16_t>((frm_nxt[0] << 8) | frm_nxt[1]);
     if ((c1 & 0xFC00) == 0xDC00)
       return codecvt_base::error;
     if ((c1 & 0xFC00) != 0xD800) {
@@ -2329,7 +2329,7 @@ static codecvt_base::result utf16be_to_ucs4(
     } else {
       if (frm_end - frm_nxt < 4)
         return codecvt_base::partial;
-      uint16_t c2 = static_cast<uint16_t>(frm_nxt[2] << 8 | frm_nxt[3]);
+      uint16_t c2 = static_cast<uint16_t>((frm_nxt[2] << 8) | frm_nxt[3]);
       if ((c2 & 0xFC00) != 0xDC00)
         return codecvt_base::error;
       uint32_t t = static_cast<uint32_t>(((((c1 & 0x03C0) >> 6) + 1) << 16) | ((c1 & 0x003F) << 10) | (c2 & 0x03FF));
@@ -2354,7 +2354,7 @@ static int utf16be_to_ucs4_length(
       frm_nxt += 2;
   }
   for (size_t nchar32_t = 0; frm_nxt < frm_end - 1 && nchar32_t < mx; ++nchar32_t) {
-    uint16_t c1 = static_cast<uint16_t>(frm_nxt[0] << 8 | frm_nxt[1]);
+    uint16_t c1 = static_cast<uint16_t>((frm_nxt[0] << 8) | frm_nxt[1]);
     if ((c1 & 0xFC00) == 0xDC00)
       break;
     if ((c1 & 0xFC00) != 0xD800) {
@@ -2364,7 +2364,7 @@ static int utf16be_to_ucs4_length(
     } else {
       if (frm_end - frm_nxt < 4)
         break;
-      uint16_t c2 = static_cast<uint16_t>(frm_nxt[2] << 8 | frm_nxt[3]);
+      uint16_t c2 = static_cast<uint16_t>((frm_nxt[2] << 8) | frm_nxt[3]);
       if ((c2 & 0xFC00) != 0xDC00)
         break;
       uint32_t t = static_cast<uint32_t>(((((c1 & 0x03C0) >> 6) + 1) << 16) | ((c1 & 0x003F) << 10) | (c2 & 0x03FF));
@@ -2432,7 +2432,7 @@ static codecvt_base::result utf16le_to_ucs4(
       frm_nxt += 2;
   }
   for (; frm_nxt < frm_end - 1 && to_nxt < to_end; ++to_nxt) {
-    uint16_t c1 = static_cast<uint16_t>(frm_nxt[1] << 8 | frm_nxt[0]);
+    uint16_t c1 = static_cast<uint16_t>((frm_nxt[1] << 8) | frm_nxt[0]);
     if ((c1 & 0xFC00) == 0xDC00)
       return codecvt_base::error;
     if ((c1 & 0xFC00) != 0xD800) {
@@ -2443,7 +2443,7 @@ static codecvt_base::result utf16le_to_ucs4(
     } else {
       if (frm_end - frm_nxt < 4)
         return codecvt_base::partial;
-      uint16_t c2 = static_cast<uint16_t>(frm_nxt[3] << 8 | frm_nxt[2]);
+      uint16_t c2 = static_cast<uint16_t>((frm_nxt[3] << 8) | frm_nxt[2]);
       if ((c2 & 0xFC00) != 0xDC00)
         return codecvt_base::error;
       uint32_t t = static_cast<uint32_t>(((((c1 & 0x03C0) >> 6) + 1) << 16) | ((c1 & 0x003F) << 10) | (c2 & 0x03FF));
@@ -2468,7 +2468,7 @@ static int utf16le_to_ucs4_length(
       frm_nxt += 2;
   }
   for (size_t nchar32_t = 0; frm_nxt < frm_end - 1 && nchar32_t < mx; ++nchar32_t) {
-    uint16_t c1 = static_cast<uint16_t>(frm_nxt[1] << 8 | frm_nxt[0]);
+    uint16_t c1 = static_cast<uint16_t>((frm_nxt[1] << 8) | frm_nxt[0]);
     if ((c1 & 0xFC00) == 0xDC00)
       break;
     if ((c1 & 0xFC00) != 0xD800) {
@@ -2478,7 +2478,7 @@ static int utf16le_to_ucs4_length(
     } else {
       if (frm_end - frm_nxt < 4)
         break;
-      uint16_t c2 = static_cast<uint16_t>(frm_nxt[3] << 8 | frm_nxt[2]);
+      uint16_t c2 = static_cast<uint16_t>((frm_nxt[3] << 8) | frm_nxt[2]);
       if ((c2 & 0xFC00) != 0xDC00)
         break;
       uint32_t t = static_cast<uint32_t>(((((c1 & 0x03C0) >> 6) + 1) << 16) | ((c1 & 0x003F) << 10) | (c2 & 0x03FF));
@@ -2535,7 +2535,7 @@ static codecvt_base::result utf16be_to_ucs2(
       frm_nxt += 2;
   }
   for (; frm_nxt < frm_end - 1 && to_nxt < to_end; ++to_nxt) {
-    uint16_t c1 = static_cast<uint16_t>(frm_nxt[0] << 8 | frm_nxt[1]);
+    uint16_t c1 = static_cast<uint16_t>((frm_nxt[0] << 8) | frm_nxt[1]);
     if ((c1 & 0xF800) == 0xD800 || c1 > Maxcode)
       return codecvt_base::error;
     *to_nxt = c1;
@@ -2556,7 +2556,7 @@ static int utf16be_to_ucs2_length(
       frm_nxt += 2;
   }
   for (size_t nchar16_t = 0; frm_nxt < frm_end - 1 && nchar16_t < mx; ++nchar16_t) {
-    uint16_t c1 = static_cast<uint16_t>(frm_nxt[0] << 8 | frm_nxt[1]);
+    uint16_t c1 = static_cast<uint16_t>((frm_nxt[0] << 8) | frm_nxt[1]);
     if ((c1 & 0xF800) == 0xD800 || c1 > Maxcode)
       break;
     frm_nxt += 2;
@@ -2609,7 +2609,7 @@ static codecvt_base::result utf16le_to_ucs2(
       frm_nxt += 2;
   }
   for (; frm_nxt < frm_end - 1 && to_nxt < to_end; ++to_nxt) {
-    uint16_t c1 = static_cast<uint16_t>(frm_nxt[1] << 8 | frm_nxt[0]);
+    uint16_t c1 = static_cast<uint16_t>((frm_nxt[1] << 8) | frm_nxt[0]);
     if ((c1 & 0xF800) == 0xD800 || c1 > Maxcode)
       return codecvt_base::error;
     *to_nxt = c1;
@@ -2631,7 +2631,7 @@ static int utf16le_to_ucs2_length(
       frm_nxt += 2;
   }
   for (size_t nchar16_t = 0; frm_nxt < frm_end - 1 && nchar16_t < mx; ++nchar16_t) {
-    uint16_t c1 = static_cast<uint16_t>(frm_nxt[1] << 8 | frm_nxt[0]);
+    uint16_t c1 = static_cast<uint16_t>((frm_nxt[1] << 8) | frm_nxt[0]);
     if ((c1 & 0xF800) == 0xD800 || c1 > Maxcode)
       break;
     frm_nxt += 2;

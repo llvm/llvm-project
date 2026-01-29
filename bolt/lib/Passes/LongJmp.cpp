@@ -499,6 +499,11 @@ Error LongJmpPass::relaxStub(BinaryBasicBlock &StubBB, bool &Modified) {
                 << RealTargetSym->getName() << "\n";
       exit(1);
     }
+    if (TargetFunction && TargetFunction->isPLTFunction()) {
+      BC.MIB->patchPLTEntryForBTI(*TargetFunction,
+                                  *StubBB.getLastNonPseudoInstr());
+      return;
+    }
     if (TargetFunction && TargetFunction->isIgnored()) {
       // Includes PLT functions.
       BC.errs() << "BOLT-ERROR: Cannot add BTI landing pad to ignored function "

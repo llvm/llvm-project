@@ -2157,16 +2157,16 @@ void AsmPrinter::Impl::printLocationInternal(LocationAttr loc, bool pretty,
     return;
 
   TypeSwitch<LocationAttr>(loc)
-      .Case<OpaqueLoc>([&](OpaqueLoc loc) {
+      .Case([&](OpaqueLoc loc) {
         printLocationInternal(loc.getFallbackLocation(), pretty);
       })
-      .Case<UnknownLoc>([&](UnknownLoc loc) {
+      .Case([&](UnknownLoc loc) {
         if (pretty)
           os << "[unknown]";
         else
           os << "unknown";
       })
-      .Case<FileLineColRange>([&](FileLineColRange loc) {
+      .Case([&](FileLineColRange loc) {
         if (pretty)
           os << loc.getFilename().getValue();
         else
@@ -2184,7 +2184,7 @@ void AsmPrinter::Impl::printLocationInternal(LocationAttr loc, bool pretty,
         os << ':' << loc.getStartLine() << ':' << loc.getStartColumn() << " to "
            << loc.getEndLine() << ':' << loc.getEndColumn();
       })
-      .Case<NameLoc>([&](NameLoc loc) {
+      .Case([&](NameLoc loc) {
         printEscapedString(loc.getName());
 
         // Print the child if it isn't unknown.
@@ -2195,7 +2195,7 @@ void AsmPrinter::Impl::printLocationInternal(LocationAttr loc, bool pretty,
           os << ')';
         }
       })
-      .Case<CallSiteLoc>([&](CallSiteLoc loc) {
+      .Case([&](CallSiteLoc loc) {
         Location caller = loc.getCaller();
         Location callee = loc.getCallee();
         if (!pretty)
@@ -2218,7 +2218,7 @@ void AsmPrinter::Impl::printLocationInternal(LocationAttr loc, bool pretty,
         if (!pretty)
           os << ")";
       })
-      .Case<FusedLoc>([&](FusedLoc loc) {
+      .Case([&](FusedLoc loc) {
         if (!pretty)
           os << "fused";
         if (Attribute metadata = loc.getMetadata()) {
@@ -2744,7 +2744,7 @@ void AsmPrinter::Impl::printType(Type type) {
 
 void AsmPrinter::Impl::printTypeImpl(Type type) {
   TypeSwitch<Type>(type)
-      .Case<OpaqueType>([&](OpaqueType opaqueTy) {
+      .Case([&](OpaqueType opaqueTy) {
         printDialectSymbol(os, "!", opaqueTy.getDialectNamespace(),
                            opaqueTy.getTypeData());
       })
@@ -2767,14 +2767,14 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
       .Case<Float64Type>([&](Type) { os << "f64"; })
       .Case<Float80Type>([&](Type) { os << "f80"; })
       .Case<Float128Type>([&](Type) { os << "f128"; })
-      .Case<IntegerType>([&](IntegerType integerTy) {
+      .Case([&](IntegerType integerTy) {
         if (integerTy.isSigned())
           os << 's';
         else if (integerTy.isUnsigned())
           os << 'u';
         os << 'i' << integerTy.getWidth();
       })
-      .Case<FunctionType>([&](FunctionType funcTy) {
+      .Case([&](FunctionType funcTy) {
         os << '(';
         interleaveComma(funcTy.getInputs(), [&](Type ty) { printType(ty); });
         os << ") -> ";
@@ -2787,7 +2787,7 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
           os << ')';
         }
       })
-      .Case<VectorType>([&](VectorType vectorTy) {
+      .Case([&](VectorType vectorTy) {
         auto scalableDims = vectorTy.getScalableDims();
         os << "vector<";
         auto vShape = vectorTy.getShape();
@@ -2804,7 +2804,7 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
         printType(vectorTy.getElementType());
         os << '>';
       })
-      .Case<RankedTensorType>([&](RankedTensorType tensorTy) {
+      .Case([&](RankedTensorType tensorTy) {
         os << "tensor<";
         printDimensionList(tensorTy.getShape());
         if (!tensorTy.getShape().empty())
@@ -2817,12 +2817,12 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
         }
         os << '>';
       })
-      .Case<UnrankedTensorType>([&](UnrankedTensorType tensorTy) {
+      .Case([&](UnrankedTensorType tensorTy) {
         os << "tensor<*x";
         printType(tensorTy.getElementType());
         os << '>';
       })
-      .Case<MemRefType>([&](MemRefType memrefTy) {
+      .Case([&](MemRefType memrefTy) {
         os << "memref<";
         printDimensionList(memrefTy.getShape());
         if (!memrefTy.getShape().empty())
@@ -2840,7 +2840,7 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
         }
         os << '>';
       })
-      .Case<UnrankedMemRefType>([&](UnrankedMemRefType memrefTy) {
+      .Case([&](UnrankedMemRefType memrefTy) {
         os << "memref<*x";
         printType(memrefTy.getElementType());
         // Only print the memory space if it is the non-default one.
@@ -2850,19 +2850,19 @@ void AsmPrinter::Impl::printTypeImpl(Type type) {
         }
         os << '>';
       })
-      .Case<ComplexType>([&](ComplexType complexTy) {
+      .Case([&](ComplexType complexTy) {
         os << "complex<";
         printType(complexTy.getElementType());
         os << '>';
       })
-      .Case<TupleType>([&](TupleType tupleTy) {
+      .Case([&](TupleType tupleTy) {
         os << "tuple<";
         interleaveComma(tupleTy.getTypes(),
                         [&](Type type) { printType(type); });
         os << '>';
       })
       .Case<NoneType>([&](Type) { os << "none"; })
-      .Case<GraphType>([&](GraphType graphTy) {
+      .Case([&](GraphType graphTy) {
         os << '(';
         interleaveComma(graphTy.getInputs(), [&](Type ty) { printType(ty); });
         os << ") -> ";
