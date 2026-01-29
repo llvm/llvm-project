@@ -359,6 +359,13 @@ int clang_main(int Argc, char **Argv, const llvm::ToolContext &ToolContext) {
   }
 
   std::string Path = GetExecutablePath(ToolContext.Path, CanonicalPrefixes);
+  // We might be in in-process execution mode, where `ToolContext.Path` is
+  // pointing to `clang-cache`. This is then used subsequently in the
+  // constructor for `Driver` which uses this same value in `BuildCompilation`.
+  // That path results in the wrong mode being selected. Explicitly adjust the
+  // `Path` to point to the wrapped tool invocation.
+  if (isClangCache(getDriverMode(ToolContext.Path, {})))
+    Path = Args[0];
 
   // Whether the cc1 tool should be called inside the current process, or if we
   // should spawn a new clang subprocess (old behavior).

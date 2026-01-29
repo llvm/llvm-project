@@ -28,7 +28,7 @@ static bool isSameProgram(StringRef clangCachePath, StringRef compilerPath) {
   if (path::parent_path(clangCachePath) == path::parent_path(compilerPath))
     return true;
 
-#if LLVM_ON_WIN32
+#if defined(_WIN32)
   // executables are normally copies on Windows, so we cannot do much more of a
   // check.
   return true;
@@ -214,7 +214,7 @@ clang::handleClangCacheInvocation(SmallVectorImpl<const char *> &Args,
           llvm::sys::Process::GetEnv("LLVM_CACHE_WARNINGS")) {
     SmallVector<const char *, 8> WarnOpts;
     WarnOpts.push_back(Args.front());
-#if LLVM_ON_WIN32
+#if defined(_WIN32)
     llvm::cl::TokenizeWindowsCommandLine(*WarnOptsValue, Saver, WarnOpts);
 #else
     llvm::cl::TokenizeGNUCommandLine(*WarnOptsValue, Saver, WarnOpts);
