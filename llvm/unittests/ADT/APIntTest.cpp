@@ -3516,12 +3516,60 @@ TEST(APIntTest, SolveQuadraticEquationWrap) {
     Iterate(i);
 }
 
-TEST(APIntTest, MultiplicativeInverseExaustive) {
+TEST(APIntTest, MultiplicativeInverseExaustivePowerOfTwo) {
   for (unsigned BitWidth = 1; BitWidth <= 8; ++BitWidth) {
     for (unsigned Value = 1; Value < (1u << BitWidth); Value += 2) {
       // Multiplicative inverse exists for all odd numbers.
       APInt V = APInt(BitWidth, Value);
       EXPECT_EQ(V * V.multiplicativeInverse(), 1);
+    }
+  }
+}
+
+TEST(APIntTest, ModularMultiplicativeInverseSpecific) {
+  // Test a single modulus for all known inverses and non-inverses.
+  int BitWidth = 8;
+  APInt Modulus(BitWidth, 26);
+  int Values[12] = {1, 3, 5, 7, 9, 11, 15, 17, 19, 21, 23, 25};
+  int Inverses[12] = {1, 9, 21, 15, 3, 19, 7, 23, 11, 5, 17, 25};
+  int NonInvertibleElements[14] = {0,  2,  4,  6,  8,  10, 12,
+                                   13, 14, 16, 18, 20, 22, 24};
+
+  for (auto [Val, ExpectedInv] : zip(Values, Inverses)) {
+    APInt V(BitWidth, Val);
+    EXPECT_EQ(V.multiplicativeInverse(Modulus), ExpectedInv);
+  }
+
+  for (auto Val : NonInvertibleElements) {
+    APInt V(BitWidth, Val);
+    EXPECT_EQ(V.multiplicativeInverse(Modulus), 0);
+  }
+}
+
+TEST(APIntTest, ModularMultiplicativeInverseExaustive) {
+  // Test all moduli and all values up to 8 bits using a gcd test to determine
+  // if a multiplicative inverse exists.
+  int BitWidth = 8;
+
+  APInt M(BitWidth, 1);
+  APInt Z(BitWidth, 0);
+  EXPECT_TRUE(Z.multiplicativeInverse(M).isZero());
+
+  for (unsigned Modulus = 2; Modulus < (1u << BitWidth); ++Modulus) {
+    APInt M(BitWidth, Modulus);
+    for (unsigned Value = 0; Value < Modulus; ++Value) {
+      APInt V(BitWidth, Value);
+      APInt MulInv = V.multiplicativeInverse(M);
+      if (APIntOps::GreatestCommonDivisor(V, M).isOne()) {
+        // Multiplication verification must take place in a larger bit width
+        APInt Actual = (V.zext(2 * BitWidth) * MulInv.zext(2 * BitWidth))
+                           .urem(M.zext(2 * BitWidth));
+        EXPECT_TRUE(Actual.isOne())
+            << "Expected " << V << " * " << MulInv << " = 1 mod " << M
+            << ", but it was " << Actual;
+      } else {
+        EXPECT_TRUE(MulInv.isZero());
+      }
     }
   }
 }
