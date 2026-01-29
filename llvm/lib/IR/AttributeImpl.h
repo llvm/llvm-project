@@ -343,7 +343,8 @@ public:
   MemoryEffects getMemoryEffects() const;
   CaptureInfo getCaptureInfo() const;
   FPClassTest getNoFPClass() const;
-  std::string getAsString(bool InAttrGrp) const;
+  std::string getAsString(const Triple *TT = nullptr,
+                          bool InAttrGrp = false) const;
   Type *getAttributeType(Attribute::AttrKind Kind) const;
 
   using iterator = const Attribute *;

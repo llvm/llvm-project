@@ -732,6 +732,8 @@ lltok::Kind LLLexer::LexIdentifier() {
   KEYWORD(address);
   KEYWORD(provenance);
   KEYWORD(read_provenance);
+  KEYWORD(aarch64_fpmr);
+  KEYWORD(aarch64_za);
 
   // denormal_fpenv attribute
   KEYWORD(ieee);
