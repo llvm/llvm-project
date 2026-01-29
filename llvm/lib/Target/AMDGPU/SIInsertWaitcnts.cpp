@@ -347,27 +347,23 @@ class WaitEventSet {
 public:
   WaitEventSet() = default;
   explicit constexpr WaitEventSet(WaitEventType Event) {
-    assert((size_t)Event < sizeof(Mask) * 8 && "Not enough bits in mask!");
+    static_assert(NUM_WAIT_EVENTS <= sizeof(Mask) * 8,
+                  "Not enough bits in Mask for all the events");
     Mask |= 1 << Event;
   }
   constexpr WaitEventSet(std::initializer_list<WaitEventType> Events) {
     for (auto &E : Events) {
-      assert((size_t)E < sizeof(Mask) * 8 && "Not enough bits in mask!");
       Mask |= 1 << E;
     }
   }
-  void insert(const WaitEventType &Event) {
-    assert((size_t)Event < sizeof(Mask) * 8 && "Not enough bits in mask!");
-    Mask |= 1 << Event;
-  }
-  void remove(const WaitEventType &Event) {
-    assert((size_t)Event < sizeof(Mask) * 8 && "Not enough bits in mask!");
-    Mask &= ~(1 << Event);
-  }
+  void insert(const WaitEventType &Event) { Mask |= 1 << Event; }
+  void remove(const WaitEventType &Event) { Mask &= ~(1 << Event); }
+  void remove(const WaitEventSet &Other) { Mask &= ~Other.Mask; }
   bool contains(const WaitEventType &Event) const {
-    assert((size_t)Event < sizeof(Mask) * 8 && "Not enough bits in mask!");
     return Mask & (1 << Event);
   }
+  /// \Returns true if this set contains all elements of \p Other.
+  bool contains(const WaitEventSet &Other) const { return Mask & ~Other.Mask; }
   /// \Returns the intersection of this and \p Other.
   WaitEventSet operator&(const WaitEventSet &Other) const {
     auto Copy = *this;
@@ -378,12 +374,6 @@ public:
   WaitEventSet operator|(const WaitEventSet &Other) const {
     auto Copy = *this;
     Copy.Mask |= Other.Mask;
-    return Copy;
-  }
-  /// \Returns the inverse of this set.
-  WaitEventSet operator~() const {
-    auto Copy = *this;
-    Copy.Mask = ~Copy.Mask;
     return Copy;
   }
   /// This set becomes the union of this and \p Other.
@@ -1502,7 +1492,7 @@ void WaitcntBrackets::tryClearSCCWriteEvent(MachineInstr *Inst) {
       setScoreLB(KM_CNT, getScoreUB(KM_CNT));
     }
 
-    PendingEvents &= ~SCC_WRITE_PendingEvent;
+    PendingEvents.remove(SCC_WRITE_PendingEvent);
     PendingSCCWrite = nullptr;
   }
 }
@@ -1530,7 +1520,7 @@ void WaitcntBrackets::applyWaitcnt(InstCounterType T, unsigned Count) {
     setScoreLB(T, std::max(getScoreLB(T), UB - Count));
   } else {
     setScoreLB(T, UB);
-    PendingEvents &= ~Context->getWaitEventMask()[T];
+    PendingEvents.remove(Context->getWaitEventMask()[T]);
   }
 
   if (T == KM_CNT && Count == 0 && hasPendingEvent(SMEM_GROUP)) {
@@ -2880,7 +2870,7 @@ bool WaitcntBrackets::merge(const WaitcntBrackets &Other) {
     const WaitEventSet &EventsForT = Context->getWaitEventMask()[T];
     const WaitEventSet OldEvents = PendingEvents & EventsForT;
     const WaitEventSet OtherEvents = Other.PendingEvents & EventsForT;
-    if (OtherEvents & ~OldEvents)
+    if (OtherEvents.contains(OldEvents))
       StrictDom = true;
     PendingEvents |= OtherEvents;
 
