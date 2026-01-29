@@ -1024,7 +1024,8 @@ void NativeProcessFreeBSD::MonitorClone(::pid_t child_pid, bool is_vfork,
   }
 
   struct ptrace_lwpinfo info;
-  const auto siginfo_err = PtraceWrapper(PT_LWPINFO, child_pid, &info, sizeof(info));
+  const auto siginfo_err =
+      PtraceWrapper(PT_LWPINFO, child_pid, &info, sizeof(info));
   if (siginfo_err.Fail()) {
     LLDB_LOG(log, "PT_LWPINFO failed {0}", siginfo_err);
     return;

@@ -57,8 +57,9 @@ public:
   matchAndRewrite(mlir::Operation *op, llvm::ArrayRef<mlir::Value> operands,
                   mlir::ConversionPatternRewriter &rewriter) const override {
     // Do not match on operations that have dedicated ABI lowering rewrite rules
-    if (llvm::isa<cir::AllocaOp, cir::BaseDataMemberOp, cir::CastOp, cir::CmpOp,
-                  cir::ConstantOp, cir::DerivedDataMemberOp, cir::FuncOp,
+    if (llvm::isa<cir::AllocaOp, cir::BaseDataMemberOp, cir::BaseMethodOp,
+                  cir::CastOp, cir::CmpOp, cir::ConstantOp,
+                  cir::DerivedDataMemberOp, cir::DerivedMethodOp, cir::FuncOp,
                   cir::GetMethodOp, cir::GetRuntimeMemberOp, cir::GlobalOp>(op))
       return mlir::failure();
 
@@ -264,6 +265,31 @@ mlir::LogicalResult CIRGlobalOpABILowering::matchAndRewrite(
         mlir::cast_if_present<cir::DataMemberAttr>(op.getInitialValueAttr());
     loweredInit = lowerModule->getCXXABI().lowerDataMemberConstant(
         init, layout, *getTypeConverter());
+  } else if (mlir::isa<cir::MethodType>(ty)) {
+    cir::MethodAttr init =
+        mlir::cast_if_present<cir::MethodAttr>(op.getInitialValueAttr());
+    loweredInit = lowerModule->getCXXABI().lowerMethodConstant(
+        init, layout, *getTypeConverter());
+  } else if (auto arrTy = mlir::dyn_cast<cir::ArrayType>(ty)) {
+    auto init = mlir::cast<cir::ConstArrayAttr>(op.getInitialValueAttr());
+    auto arrayElts = mlir::cast<ArrayAttr>(init.getElts());
+    SmallVector<mlir::Attribute> loweredElements;
+    loweredElements.reserve(arrTy.getSize());
+    for (const mlir::Attribute &attr : arrayElts) {
+      if (auto methodAttr = mlir::dyn_cast<cir::MethodAttr>(attr)) {
+        mlir::Attribute loweredElt =
+            lowerModule->getCXXABI().lowerMethodConstant(methodAttr, layout,
+                                                         *getTypeConverter());
+        loweredElements.push_back(loweredElt);
+      } else {
+        llvm_unreachable("array of data member lowering is NYI");
+      }
+    }
+    auto loweredArrTy =
+        mlir::cast<cir::ArrayType>(getTypeConverter()->convertType(arrTy));
+    loweredInit = cir::ConstArrayAttr::get(
+        loweredArrTy,
+        mlir::ArrayAttr::get(rewriter.getContext(), loweredElements));
   } else {
     llvm_unreachable(
         "inputs to cir.global in ABI lowering must be data member or method");
@@ -285,10 +311,28 @@ mlir::LogicalResult CIRBaseDataMemberOpABILowering::matchAndRewrite(
   return mlir::success();
 }
 
+mlir::LogicalResult CIRBaseMethodOpABILowering::matchAndRewrite(
+    cir::BaseMethodOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Value loweredResult =
+      lowerModule->getCXXABI().lowerBaseMethod(op, adaptor.getSrc(), rewriter);
+  rewriter.replaceOp(op, loweredResult);
+  return mlir::success();
+}
+
 mlir::LogicalResult CIRDerivedDataMemberOpABILowering::matchAndRewrite(
     cir::DerivedDataMemberOp op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Value loweredResult = lowerModule->getCXXABI().lowerDerivedDataMember(
+      op, adaptor.getSrc(), rewriter);
+  rewriter.replaceOp(op, loweredResult);
+  return mlir::success();
+}
+
+mlir::LogicalResult CIRDerivedMethodOpABILowering::matchAndRewrite(
+    cir::DerivedMethodOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  mlir::Value loweredResult = lowerModule->getCXXABI().lowerDerivedMethod(
       op, adaptor.getSrc(), rewriter);
   rewriter.replaceOp(op, loweredResult);
   return mlir::success();
@@ -339,6 +383,14 @@ static void prepareCXXABITypeConverter(mlir::TypeConverter &converter,
     return cir::PointerType::get(type.getContext(), loweredPointeeType,
                                  type.getAddrSpace());
   });
+  converter.addConversion([&](cir::ArrayType type) -> mlir::Type {
+    mlir::Type loweredElementType =
+        converter.convertType(type.getElementType());
+    if (!loweredElementType)
+      return {};
+    return cir::ArrayType::get(loweredElementType, type.getSize());
+  });
+
   converter.addConversion([&](cir::DataMemberType type) -> mlir::Type {
     mlir::Type abiType =
         lowerModule.getCXXABI().lowerDataMemberType(type, converter);
