@@ -828,7 +828,13 @@ Fortran::lower::genCallOpAndResult(
             mustFinalizeResult, callOp};
   }
 
-  if (allocatedResult) {
+  // Insert clean-up for the result.
+  // In HLFIR, this is skipped when the result does not need to be finalized
+  // because the result is moved to an expression that will deal with the
+  // finalization.
+  if (allocatedResult &&
+      (mustFinalizeResult ||
+       !converter.getLoweringOptions().getLowerToHighLevelFIR())) {
     // The result must be optionally destroyed (if it is of a derived type
     // that may need finalization or deallocation of the components).
     // For an allocatable result we have to free the memory allocated
@@ -856,7 +862,7 @@ Fortran::lower::genCallOpAndResult(
     bool resultIsFinalized = false;
     // Check if the derived-type is finalizable if it is a monomorphic
     // derived-type.
-    // For polymorphic and unlimited polymorphic enities call the runtime
+    // For polymorphic and unlimited polymorphic entities call the runtime
     // in any cases.
     if (mustFinalizeResult) {
       if (retTy->IsPolymorphic() || retTy->IsUnlimitedPolymorphic()) {
@@ -886,6 +892,10 @@ Fortran::lower::genCallOpAndResult(
     }
     return {LoweredResult{*allocatedResult}, resultIsFinalized, callOp};
   }
+
+  if (allocatedResult)
+    return {LoweredResult{*allocatedResult}, /*resultIsFinalized=*/false,
+            callOp};
 
   // subroutine call
   if (!resultType)
@@ -1973,17 +1983,25 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
   if (!resultIsFinalized) {
     hlfir::Entity resultEntity = extendedValueToHlfirEntity(
         loc, builder, result, tempResultName, /*insertBefore=*/callOp);
+    // Allocatable result must be freed, other results are stack allocated.
+    const auto *allocatable = result.getBoxOf<fir::MutableBoxValue>();
+    bool mustFree = allocatable != nullptr;
     resultEntity = loadTrivialScalar(loc, builder, resultEntity);
     if (resultEntity.isVariable()) {
       // If the result has no finalization, it can be moved into an expression.
-      // In such case, the expression should not be freed after its use since
-      // the result is stack allocated or deallocation (for allocatable results)
-      // was already inserted in genCallOpAndResult.
-      auto asExpr =
-          hlfir::AsExprOp::create(builder, loc, resultEntity,
-                                  /*mustFree=*/builder.createBool(loc, false));
-      return hlfir::EntityWithAttributes{asExpr.getResult()};
+      // In such case, the expression.
+      mlir::Value asExpr = hlfir::AsExprOp::create(
+          builder, loc, resultEntity, builder.createBool(loc, mustFree));
+      callContext.stmtCtx.attachCleanup([bldr = &builder, loc, asExpr]() {
+        hlfir::DestroyOp::create(*bldr, loc, asExpr, /*finalize=*/false);
+      });
+      return hlfir::EntityWithAttributes{asExpr};
     }
+    if (allocatable)
+      callContext.stmtCtx.attachCleanup(
+          [bldr = &builder, loc, box = *allocatable]() {
+            fir::factory::genFreememIfAllocated(*bldr, loc, box);
+          });
     return hlfir::EntityWithAttributes{resultEntity};
   }
   // If the result has finalization, it cannot be moved because use of its
