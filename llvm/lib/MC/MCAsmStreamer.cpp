@@ -123,7 +123,7 @@ public:
     EmitCommentsAndEOL();
   }
 
-  void emitSyntaxDirective() override;
+  void emitSyntaxDirective(StringRef Syntax, StringRef Options) override;
 
   void EmitCommentsAndEOL();
 
@@ -376,8 +376,7 @@ public:
   void emitWinCFIStartProc(const MCSymbol *Symbol, SMLoc Loc) override;
   void emitWinCFIEndProc(SMLoc Loc) override;
   void emitWinCFIFuncletOrFuncEnd(SMLoc Loc) override;
-  void emitWinCFIStartChained(SMLoc Loc) override;
-  void emitWinCFIEndChained(SMLoc Loc) override;
+  void emitWinCFISplitChained(SMLoc Loc) override;
   void emitWinCFIPushReg(MCRegister Register, SMLoc Loc) override;
   void emitWinCFISetFrame(MCRegister Register, unsigned Offset,
                           SMLoc Loc) override;
@@ -800,14 +799,11 @@ void MCAsmStreamer::emitSymbolDesc(MCSymbol *Symbol, unsigned DescValue) {
   EmitEOL();
 }
 
-void MCAsmStreamer::emitSyntaxDirective() {
-  if (MAI->getAssemblerDialect() == 1) {
-    OS << "\t.intel_syntax noprefix";
-    EmitEOL();
-  }
-  // FIXME: Currently emit unprefix'ed registers.
-  // The intel_syntax directive has one optional argument
-  // with may have a value of prefix or noprefix.
+void MCAsmStreamer::emitSyntaxDirective(StringRef Syntax, StringRef Options) {
+  OS << "\t." << Syntax << "_syntax";
+  if (!Options.empty())
+    OS << " " << Options;
+  EmitEOL();
 }
 
 void MCAsmStreamer::beginCOFFSymbolDef(const MCSymbol *Symbol) {
@@ -2184,17 +2180,10 @@ void MCAsmStreamer::emitWinCFIFuncletOrFuncEnd(SMLoc Loc) {
   EmitEOL();
 }
 
-void MCAsmStreamer::emitWinCFIStartChained(SMLoc Loc) {
-  MCStreamer::emitWinCFIStartChained(Loc);
+void MCAsmStreamer::emitWinCFISplitChained(SMLoc Loc) {
+  MCStreamer::emitWinCFISplitChained(Loc);
 
-  OS << "\t.seh_startchained";
-  EmitEOL();
-}
-
-void MCAsmStreamer::emitWinCFIEndChained(SMLoc Loc) {
-  MCStreamer::emitWinCFIEndChained(Loc);
-
-  OS << "\t.seh_endchained";
+  OS << "\t.seh_splitchained";
   EmitEOL();
 }
 

@@ -73,7 +73,9 @@ private:
   bool isAllOnesMask(const MachineInstr *MaskDef) const;
   std::optional<unsigned> getConstant(const MachineOperand &VL) const;
   bool ensureDominates(const MachineOperand &Use, MachineInstr &Src) const;
-  Register lookThruCopies(Register Reg, bool OneUseOnly = false) const;
+  Register
+  lookThruCopies(Register Reg, bool OneUseOnly = false,
+                 SmallVectorImpl<MachineInstr *> *Copies = nullptr) const;
 };
 
 } // namespace
@@ -389,8 +391,9 @@ bool RISCVVectorPeephole::convertAllOnesVMergeToVMv(MachineInstr &MI) const {
 
 // If \p Reg is defined by one or more COPYs of virtual registers, traverses
 // the chain and returns the root non-COPY source.
-Register RISCVVectorPeephole::lookThruCopies(Register Reg,
-                                             bool OneUseOnly) const {
+Register RISCVVectorPeephole::lookThruCopies(
+    Register Reg, bool OneUseOnly,
+    SmallVectorImpl<MachineInstr *> *Copies) const {
   while (MachineInstr *Def = MRI->getUniqueVRegDef(Reg)) {
     if (!Def->isFullCopy())
       break;
@@ -399,6 +402,8 @@ Register RISCVVectorPeephole::lookThruCopies(Register Reg,
       break;
     if (OneUseOnly && !MRI->hasOneNonDBGUse(Reg))
       break;
+    if (Copies)
+      Copies->push_back(Def);
     Reg = Src;
   }
   return Reg;
@@ -735,10 +740,12 @@ bool RISCVVectorPeephole::foldVMergeToMask(MachineInstr &MI) const {
   if (RISCV::getRVVMCOpcode(MI.getOpcode()) != RISCV::VMERGE_VVM)
     return false;
 
+  // Collect chain of COPYs on True's result for later cleanup.
+  SmallVector<MachineInstr *, 4> TrueCopies;
   Register PassthruReg = lookThruCopies(MI.getOperand(1).getReg());
   Register FalseReg = lookThruCopies(MI.getOperand(2).getReg());
-  Register TrueReg =
-      lookThruCopies(MI.getOperand(3).getReg(), /*OneUseOnly=*/true);
+  Register TrueReg = lookThruCopies(MI.getOperand(3).getReg(),
+                                    /*OneUseOnly=*/true, &TrueCopies);
   if (!TrueReg.isVirtual() || !MRI->hasOneUse(TrueReg))
     return false;
   MachineInstr &True = *MRI->getUniqueVRegDef(TrueReg);
@@ -821,8 +828,9 @@ bool RISCVVectorPeephole::foldVMergeToMask(MachineInstr &MI) const {
   assert(RISCVII::hasVecPolicyOp(True.getDesc().TSFlags) &&
          "Foldable unmasked pseudo should have a policy op already");
 
-  // Make sure the mask dominates True, otherwise move down True so it does.
-  // VL will always dominate since if it's a register they need to be the same.
+  // Make sure the mask dominates True and its copies, otherwise move down True
+  // so it does. VL will always dominate since if it's a register they need to
+  // be the same.
   if (!ensureDominates(MaskOp, True))
     return false;
 
@@ -860,6 +868,11 @@ bool RISCVVectorPeephole::foldVMergeToMask(MachineInstr &MI) const {
   // We should clear the IsKill flag since we have a new use now.
   MRI->clearKillFlags(FalseReg);
   MI.eraseFromParent();
+
+  // Cleanup all the COPYs on True's value. We have to manually do this because
+  // sometimes sinking True causes these COPY to be invalid (use before define).
+  for (MachineInstr *TrueCopy : TrueCopies)
+    TrueCopy->eraseFromParent();
 
   return true;
 }
