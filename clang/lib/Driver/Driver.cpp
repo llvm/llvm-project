@@ -4938,26 +4938,21 @@ Action *Driver::BuildOffloadingActions(Compilation &C,
     // Compiling HIP in device-only non-RDC mode requires linking each action
     // individually.
     for (Action *&A : DeviceActions) {
-      auto *OffloadTriple = A->getOffloadingToolChain()
-                                ? &A->getOffloadingToolChain()->getTriple()
-                                : nullptr;
-      bool IsHIPSPV =
-          OffloadTriple && OffloadTriple->isSPIRV() &&
-          (OffloadTriple->getOS() == llvm::Triple::OSType::AMDHSA ||
-           OffloadTriple->getOS() == llvm::Triple::OSType::ChipStar);
+      bool IsAMDGCNSPIRV = A->getOffloadingToolChain() &&
+                           A->getOffloadingToolChain()->getTriple().getOS() ==
+                               llvm::Triple::OSType::AMDHSA &&
+                           A->getOffloadingToolChain()->getTriple().isSPIRV();
       bool UseSPIRVBackend = Args.hasFlag(options::OPT_use_spirv_backend,
                                           options::OPT_no_use_spirv_backend,
                                           /*Default=*/false);
 
-      // Special handling for the HIP SPIR-V toolchains in device-only.
+      // Special handling for the HIP SPIR-V toolchain in device-only.
       // The translator path has a linking step, whereas the SPIR-V backend path
       // does not to avoid any external dependency such as spirv-link. The
       // linking step is skipped for the SPIR-V backend path.
-      bool IsAMDGCNSPIRVWithBackend =
-          IsHIPSPV && OffloadTriple->getOS() == llvm::Triple::OSType::AMDHSA &&
-          UseSPIRVBackend;
+      bool IsAMDGCNSPIRVWithBackend = IsAMDGCNSPIRV && UseSPIRVBackend;
 
-      if ((A->getType() != types::TY_Object && !IsHIPSPV &&
+      if ((A->getType() != types::TY_Object && !IsAMDGCNSPIRV &&
            A->getType() != types::TY_LTO_BC) ||
           HIPRelocatableObj || !HIPNoRDC || !offloadDeviceOnly() ||
           (IsAMDGCNSPIRVWithBackend && offloadDeviceOnly()))
@@ -6965,9 +6960,6 @@ const ToolChain &Driver::getToolChain(const ArgList &Args,
     case llvm::Triple::Vulkan:
     case llvm::Triple::ShaderModel:
       TC = std::make_unique<toolchains::HLSLToolChain>(*this, Target, Args);
-      break;
-    case llvm::Triple::ChipStar:
-      TC = std::make_unique<toolchains::HIPSPVToolChain>(*this, Target, Args);
       break;
     default:
       // Of these targets, Hexagon is the only one that might have
