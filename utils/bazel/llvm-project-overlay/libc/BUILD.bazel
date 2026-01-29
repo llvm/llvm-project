@@ -3748,6 +3748,14 @@ libc_support_library(
     ],
 )
 
+libc_support_library(
+    name = "__support_math_tanhf16",
+    hdrs = ["src/__support/math/tanhf16.h"],
+    deps = [
+        ":__support_math_expxf16_utils",
+    ],
+)
+
 ############################### complex targets ################################
 
 libc_function(
@@ -5453,7 +5461,7 @@ libc_math_function(
 libc_math_function(
     name = "tanhf16",
     additional_deps = [
-        ":__support_math_expxf16_utils",
+        ":__support_math_tanhf16",
     ],
 )
 
