@@ -2683,6 +2683,11 @@ return CurDAG->getTargetConstant(
   N->getValueAPF().bitcastToAPInt().getZExtValue(), SDLoc(N), MVT::i64);
 }]>;
 
+def gi_bitcast_fpimm_to_i32 : GICustomOperandRenderer<"renderBitcastFPImm">,
+  GISDNodeXFormEquiv<bitcast_fpimm_to_i32>;
+def gi_bitcast_fpimm_to_i64 : GICustomOperandRenderer<"renderBitcastFPImm">,
+  GISDNodeXFormEquiv<bitcast_fpimm_to_i64>;
+
 
 def : Pat<(f32 fpimm:$in),
   (COPY_TO_REGCLASS (MOVi32imm (bitcast_fpimm_to_i32 f32:$in)), FPR32)>;
