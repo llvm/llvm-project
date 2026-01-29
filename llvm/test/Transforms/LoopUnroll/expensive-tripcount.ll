@@ -2,7 +2,7 @@
 ; RUN: opt < %s -S -passes=loop-unroll,instcombine | FileCheck -check-prefixes=CHECK,CHECK-NOUNROLL %s
 ; RUN: opt < %s -S -passes=loop-unroll,instcombine -unroll-runtime-expensive-trip-count | FileCheck -check-prefixes=CHECK,CHECK-UNROLL %s
 
-define protected amdgpu_kernel void @_Z6kernelPilll(ptr addrspace(1) noundef writeonly captures(none) %a.coerce, i64 noundef %n, i64 noundef %k, i64 noundef %s) local_unnamed_addr #0 {
+define amdgpu_kernel void @_Z6kernelPilll(ptr addrspace(1) noundef writeonly captures(none) %a.coerce, i64 noundef %n, i64 noundef %k, i64 noundef %s) #0 {
 ; CHECK-NOUNROLL-LABEL: define protected amdgpu_kernel void @_Z6kernelPilll(
 ; CHECK-NOUNROLL-SAME: ptr addrspace(1) noundef writeonly captures(none) [[A_COERCE:%.*]], i64 noundef [[N:%.*]], i64 noundef [[K:%.*]], i64 noundef [[S:%.*]]) local_unnamed_addr {
 ; CHECK-NOUNROLL-NEXT:  [[ENTRY:.*:]]
