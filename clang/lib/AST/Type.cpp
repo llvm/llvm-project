@@ -2947,7 +2947,8 @@ bool QualType::isWebAssemblyExternrefType() const {
 
 bool QualType::isWebAssemblyFuncrefType() const {
   return getTypePtr()->isFunctionPointerType() &&
-         getAddressSpace() == LangAS::wasm_funcref;
+         (getAddressSpace() == LangAS::wasm_funcref ||
+          getTypePtr()->hasAttr(attr::WebAssemblyFuncref));
 }
 
 QualType::PrimitiveDefaultInitializeKind
