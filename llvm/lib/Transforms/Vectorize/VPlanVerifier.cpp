@@ -339,6 +339,13 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
         return false;
       }
     }
+    if (const auto *EVLIV = dyn_cast<VPEVLBasedIVPHIRecipe>(&R)) {
+      if (!isa_and_nonnull<VPCanonicalIVPHIRecipe>(
+              std::prev(EVLIV->getIterator()))) {
+        errs() << "EVL based IV is not immediately after canonical IV\n";
+        return false;
+      }
+    }
     if (const auto *VPI = dyn_cast<VPInstruction>(&R)) {
       switch (VPI->getOpcode()) {
       case VPInstruction::ExplicitVectorLength:
