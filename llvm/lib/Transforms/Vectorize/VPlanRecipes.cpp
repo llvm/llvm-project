@@ -2610,9 +2610,9 @@ void VPVectorEndPointerRecipe::execute(VPTransformState &State) {
     LastLane =
         Builder.CreateMul(ConstantInt::getSigned(IndexTy, Stride), LastLane);
   Value *Ptr = State.get(getOperand(0), VPLane(0));
-  Value *ResultPtr =
-      Builder.CreateGEP(IndexedTy, Ptr, NumElt, "", getGEPNoWrapFlags());
-  ResultPtr = Builder.CreateGEP(IndexedTy, ResultPtr, LastLane, "",
+  Value *ResultPtr = Builder.CreateGEP(getSourceElementType(), Ptr, NumElt, "",
+                                       getGEPNoWrapFlags());
+  ResultPtr = Builder.CreateGEP(getSourceElementType(), ResultPtr, LastLane, "",
                                 getGEPNoWrapFlags());
 
   State.set(this, ResultPtr, /*IsScalar*/ true);
