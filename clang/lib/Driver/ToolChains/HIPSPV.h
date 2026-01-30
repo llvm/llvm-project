@@ -47,12 +47,9 @@ class LLVM_LIBRARY_VISIBILITY HIPSPVToolChain final : public ToolChain {
 public:
   HIPSPVToolChain(const Driver &D, const llvm::Triple &Triple,
                   const ToolChain &HostTC, const llvm::opt::ArgList &Args);
-  HIPSPVToolChain(const Driver &D, const llvm::Triple &Triple,
-                  const llvm::opt::ArgList &Args);
 
   const llvm::Triple *getAuxTriple() const override {
-    assert(HostTC);
-    return &HostTC->getTriple();
+    return &HostTC.getTriple();
   }
 
   void
@@ -93,7 +90,7 @@ public:
   bool isPICDefaultForced() const override { return false; }
   bool SupportsProfiling() const override { return false; }
 
-  const ToolChain *HostTC = nullptr;
+  const ToolChain &HostTC;
 
 protected:
   Tool *buildLinker() const override;

@@ -411,3 +411,17 @@ define <16 x i8> @shuffle_v16_v16i8_r0_31(ptr %arg) {
   %shuf = shufflevector <16 x i8> %load, <16 x i8> poison, <16 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 7, i32 24, i32 25, i32 26, i32 27, i32 28, i32 29, i32 30, i32 31>
   ret <16 x i8> %shuf
 }
+
+; PR178917: Verify poison mask elements are preserved when trimming loads.
+define <8 x i16> @shuffle_with_poison_mask(ptr %p) {
+; CHECK-LABEL: define <8 x i16> @shuffle_with_poison_mask(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load <7 x i16>, ptr [[TMP1]], align 1
+; CHECK-NEXT:    [[SHUF:%.*]] = shufflevector <7 x i16> [[TMP2]], <7 x i16> poison, <8 x i32> <i32 0, i32 2, i32 poison, i32 poison, i32 poison, i32 4, i32 poison, i32 6>
+; CHECK-NEXT:    ret <8 x i16> [[SHUF]]
+;
+  %pre = load <8 x i16>, ptr %p, align 1
+  %shuf = shufflevector <8 x i16> %pre, <8 x i16> poison, <8 x i32> <i32 1, i32 3, i32 poison, i32 poison, i32 poison, i32 5, i32 poison, i32 7>
+  ret <8 x i16> %shuf
+}

@@ -227,48 +227,53 @@ generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
   fir::FirOpBuilder firBuilder(builder, var.getDefiningOp());
   mlir::Location loc = var.getLoc();
 
-  if (seqType.hasDynamicExtents() || seqType.hasUnknownShape()) {
-    if (auto boxAddr =
-            mlir::dyn_cast_if_present<fir::BoxAddrOp>(var.getDefiningOp())) {
-      mlir::Value box = boxAddr.getVal();
-      auto res =
-          hlfir::translateToExtendedValue(loc, firBuilder, hlfir::Entity(box));
-      fir::ExtendedValue exv = res.first;
-      mlir::Value boxRef = box;
-      if (auto boxPtr = mlir::cast<mlir::acc::MappableType>(box.getType())
-                            .getVarPtr(box)) {
-        boxRef = boxPtr;
+  // If [hl]fir.declare is visible, extract the bounds from the declaration's
+  // shape (if it is provided).
+  if (mlir::isa<hlfir::DeclareOp, fir::DeclareOp>(var.getDefiningOp())) {
+    mlir::Value zero =
+        firBuilder.createIntegerConstant(loc, builder.getIndexType(), 0);
+    mlir::Value one =
+        firBuilder.createIntegerConstant(loc, builder.getIndexType(), 1);
+
+    mlir::Value shape;
+    if (auto declareOp =
+            mlir::dyn_cast_if_present<fir::DeclareOp>(var.getDefiningOp()))
+      shape = declareOp.getShape();
+    else if (auto declareOp = mlir::dyn_cast_if_present<hlfir::DeclareOp>(
+                 var.getDefiningOp()))
+      shape = declareOp.getShape();
+
+    const bool strideIncludeLowerExtent = true;
+
+    llvm::SmallVector<mlir::Value> accBounds;
+    mlir::Operation *anyShapeOp = shape ? shape.getDefiningOp() : nullptr;
+    if (auto shapeOp = mlir::dyn_cast_if_present<fir::ShapeOp>(anyShapeOp)) {
+      mlir::Value cummulativeExtent = one;
+      for (auto extent : shapeOp.getExtents()) {
+        mlir::Value upperbound =
+            mlir::arith::SubIOp::create(builder, loc, extent, one);
+        mlir::Value stride = one;
+        if (strideIncludeLowerExtent) {
+          stride = cummulativeExtent;
+          cummulativeExtent = mlir::arith::MulIOp::create(
+              builder, loc, cummulativeExtent, extent);
+        }
+        auto accBound = mlir::acc::DataBoundsOp::create(
+            builder, loc, mlir::acc::DataBoundsType::get(builder.getContext()),
+            /*lowerbound=*/zero, /*upperbound=*/upperbound,
+            /*extent=*/extent, /*stride=*/stride, /*strideInBytes=*/false,
+            /*startIdx=*/one);
+        accBounds.push_back(accBound);
       }
-      // TODO: Handle Fortran optional.
-      const mlir::Value isPresent;
-      fir::factory::AddrAndBoundsInfo info(box, boxRef, isPresent,
-                                           box.getType());
-      return fir::factory::genBoundsOpsFromBox<mlir::acc::DataBoundsOp,
-                                               mlir::acc::DataBoundsType>(
-          firBuilder, loc, exv, info);
-    }
-
-    if (mlir::isa<hlfir::DeclareOp, fir::DeclareOp>(var.getDefiningOp())) {
-      mlir::Value zero =
-          firBuilder.createIntegerConstant(loc, builder.getIndexType(), 0);
-      mlir::Value one =
-          firBuilder.createIntegerConstant(loc, builder.getIndexType(), 1);
-
-      mlir::Value shape;
-      if (auto declareOp =
-              mlir::dyn_cast_if_present<fir::DeclareOp>(var.getDefiningOp()))
-        shape = declareOp.getShape();
-      else if (auto declareOp = mlir::dyn_cast_if_present<hlfir::DeclareOp>(
-                   var.getDefiningOp()))
-        shape = declareOp.getShape();
-
-      const bool strideIncludeLowerExtent = true;
-
-      llvm::SmallVector<mlir::Value> accBounds;
-      if (auto shapeOp =
-              mlir::dyn_cast_if_present<fir::ShapeOp>(shape.getDefiningOp())) {
-        mlir::Value cummulativeExtent = one;
-        for (auto extent : shapeOp.getExtents()) {
+    } else if (auto shapeShiftOp =
+                   mlir::dyn_cast_if_present<fir::ShapeShiftOp>(anyShapeOp)) {
+      mlir::Value lowerbound;
+      mlir::Value cummulativeExtent = one;
+      for (auto [idx, val] : llvm::enumerate(shapeShiftOp.getPairs())) {
+        if (idx % 2 == 0) {
+          lowerbound = val;
+        } else {
+          mlir::Value extent = val;
           mlir::Value upperbound =
               mlir::arith::SubIOp::create(builder, loc, extent, one);
           mlir::Value stride = one;
@@ -282,40 +287,48 @@ generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
               mlir::acc::DataBoundsType::get(builder.getContext()),
               /*lowerbound=*/zero, /*upperbound=*/upperbound,
               /*extent=*/extent, /*stride=*/stride, /*strideInBytes=*/false,
-              /*startIdx=*/one);
+              /*startIdx=*/lowerbound);
           accBounds.push_back(accBound);
         }
-      } else if (auto shapeShiftOp =
-                     mlir::dyn_cast_if_present<fir::ShapeShiftOp>(
-                         shape.getDefiningOp())) {
-        mlir::Value lowerbound;
-        mlir::Value cummulativeExtent = one;
-        for (auto [idx, val] : llvm::enumerate(shapeShiftOp.getPairs())) {
-          if (idx % 2 == 0) {
-            lowerbound = val;
-          } else {
-            mlir::Value extent = val;
-            mlir::Value upperbound =
-                mlir::arith::SubIOp::create(builder, loc, extent, one);
-            mlir::Value stride = one;
-            if (strideIncludeLowerExtent) {
-              stride = cummulativeExtent;
-              cummulativeExtent = mlir::arith::MulIOp::create(
-                  builder, loc, cummulativeExtent, extent);
-            }
-            auto accBound = mlir::acc::DataBoundsOp::create(
-                builder, loc,
-                mlir::acc::DataBoundsType::get(builder.getContext()),
-                /*lowerbound=*/zero, /*upperbound=*/upperbound,
-                /*extent=*/extent, /*stride=*/stride, /*strideInBytes=*/false,
-                /*startIdx=*/lowerbound);
-            accBounds.push_back(accBound);
-          }
-        }
       }
+    }
 
-      if (!accBounds.empty())
-        return accBounds;
+    if (!accBounds.empty())
+      return accBounds;
+  }
+
+  if (seqType.hasDynamicExtents() || seqType.hasUnknownShape()) {
+    mlir::Value box;
+    bool mayBeOptional = false;
+    if (auto boxAddr =
+            mlir::dyn_cast_if_present<fir::BoxAddrOp>(var.getDefiningOp())) {
+      box = boxAddr.getVal();
+      // Since fir.box_addr already accesses the box, we do not care
+      // checking if it is optional.
+    } else if (mlir::isa<fir::BaseBoxType>(var.getType())) {
+      box = var;
+      mayBeOptional = fir::mayBeAbsentBox(box);
+    }
+
+    if (box) {
+      auto res =
+          hlfir::translateToExtendedValue(loc, firBuilder, hlfir::Entity(box));
+      fir::ExtendedValue exv = res.first;
+      mlir::Value boxRef = box;
+      if (auto boxPtr =
+              mlir::cast<mlir::acc::MappableType>(box.getType()).getVarPtr(box))
+        boxRef = boxPtr;
+
+      mlir::Value isPresent =
+          !mayBeOptional ? mlir::Value{}
+                         : fir::IsPresentOp::create(builder, loc,
+                                                    builder.getI1Type(), box);
+
+      fir::factory::AddrAndBoundsInfo info(box, boxRef, isPresent,
+                                           box.getType());
+      return fir::factory::genBoundsOpsFromBox<mlir::acc::DataBoundsOp,
+                                               mlir::acc::DataBoundsType>(
+          firBuilder, loc, exv, info);
     }
 
     assert(false && "array with unknown dimension expected to have descriptor");
