@@ -4128,7 +4128,7 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
           auto *SrcVecTy = cast<VectorType>(toVectorTy(SrcTy, VF));
           TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
-          InstructionCost ExtRedCost;
+          InstructionCost ExtRedCost = InstructionCost::getInvalid();
           InstructionCost ExtCost =
               cast<VPWidenCastRecipe>(VecOp)->computeCost(VF, Ctx);
           InstructionCost RedCost = Red->computeCost(VF, Ctx);
@@ -4141,11 +4141,11 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
             ExtRedCost = Ctx.TTI.getPartialReductionCost(
                 Opcode, SrcTy, nullptr, RedTy, VF, ExtKind,
                 llvm::TargetTransformInfo::PR_None, std::nullopt, Ctx.CostKind,
-                std::nullopt);
-          } else {
-            assert(ExtOpc != Instruction::CastOps::FPExt &&
-                   "Floating-point extended reductions are not currently "
-                   "supported");
+                RedTy->isFloatingPointTy()
+                    ? std::optional{Red->getFastMathFlags()}
+                    : std::nullopt);
+          } else if (!RedTy->isFloatingPointTy()) {
+            // TTI::getExtendedReductionCost only supports integer types.
             ExtRedCost = Ctx.TTI.getExtendedReductionCost(
                 Opcode, ExtOpc == Instruction::CastOps::ZExt, RedTy, SrcVecTy,
                 Red->getFastMathFlags(), CostKind);
@@ -4157,7 +4157,9 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
 
   VPValue *A;
   // Match reduce(ext)).
-  if (match(VecOp, m_ZExtOrSExt(m_VPValue(A))) &&
+  if (isa<VPWidenCastRecipe>(VecOp) &&
+      (match(VecOp, m_ZExtOrSExt(m_VPValue(A))) ||
+       match(VecOp, m_FPExt(m_VPValue(A)))) &&
       IsExtendedRedValidAndClampRange(
           RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind()),
           cast<VPWidenCastRecipe>(VecOp)->getOpcode(),
