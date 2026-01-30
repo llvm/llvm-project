@@ -12,7 +12,7 @@ define void @clmul(i128 %a128, i128 %b128, i64 %a64, i64 %b64, i32 %a32, i32 %b3
 ; PCLMUL-NEXT:  Cost Model: Found an estimated cost of 0 for instruction: ret void
 ;
 ; NO-PCLMUL-LABEL: 'clmul'
-; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 768 for instruction: %call_i128 = call i128 @llvm.clmul.i128(i128 %a128, i128 %b128)
+; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 1024 for instruction: %call_i128 = call i128 @llvm.clmul.i128(i128 %a128, i128 %b128)
 ; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 192 for instruction: %call_i64 = call i64 @llvm.clmul.i64(i64 %a64, i64 %b64)
 ; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 96 for instruction: %call_i32 = call i32 @llvm.clmul.i32(i32 %a32, i32 %b32)
 ; NO-PCLMUL-NEXT:  Cost Model: Found an estimated cost of 24 for instruction: %call_i8 = call i8 @llvm.clmul.i8(i8 %a8, i8 %b8)
