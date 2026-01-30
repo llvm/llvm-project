@@ -539,55 +539,26 @@ struct OneDimMultiReductionToTwoDim
   }
 };
 
-/// Unrolls outermost dimension for vector.multi_reduction.
-/// This patterns matches operations which reduce the outermost dimension,
-/// it does not transform operations for which the outermost dimension is not
-/// a reduction dimension.
+/// Unrolls vector.multi_reduction when the outermost dimension is the only
+/// reduction dimension. Transforms to elementwise arithmetic operations.
 ///
-/// There are two cases to consider:
-/// 1. The base case is when the outermost dimension is the only reduction
-/// dimension.
-/// 2. The general case is when the outermost dimension is not the only
-/// reduction dimension.
-///
-/// The base case transformation:
+/// Example:
 ///
 /// ```mlir
-/// %res = vector.multi_reduction <add> %src, %acc [0] : vector<NxMx...xf32> to
-/// vector<Mx...xf32>
+/// %res = vector.multi_reduction <add> %src, %acc [0]
+///     : vector<NxMx...xf32> to vector<Mx...xf32>
 /// ```
 ///
-/// will extract N vectors from %src and then perform elementwise operations.
+/// becomes:
 ///
 /// ```mlir
 /// %0 = vector.extract %src[0] : vector<Mx...xf32> from vector<NxMx...xf32>
 /// ...
-/// %Nminus1 = vector.extract %src[ [[N-1]] ] : vector<Mx...x.f32> from
-/// vector<NxMx...xf32>
+/// %Nminus1 = vector.extract %src[N-1] : vector<Mx...xf32> from vector<NxMx...xf32>
 ///
 /// %res0 = arith.addf %0, %acc : vector<Mx...xf32>
 /// ...
 /// %res = arith.addf %Nminus1, %resNminus2 : vector<Mx...xf32>
-/// ```
-///
-/// For the general case, we still extract N vectors, but produce N
-/// vector.multi_reduction instead of elementwise operations.
-///
-/// ```mlir
-/// %res = vector.multi_reduction <add> %src, %acc [0, [[REDUCTION_DIMS]] ] :
-/// vector<NxMx...xf32> to vector<Ix...xf32>
-///
-/// ```mlir
-/// %0 = vector.extract %src[0] : vector<Mx...xf32> from vector<NxMx...xf32>
-/// ...
-/// %Nminus1 = vector.extract %src[ [[N-1]] ] : vector<Mx...x.f32> from
-/// vector<NxMx...xf32>
-///
-/// %red0 = vector.multi_reduction %0, %acc [ [[REDUCTION_DIMS]] ] :
-/// vector<Mx...xf32> to vector<Ix...xf32>
-/// ...
-/// %res = vector.multi_reduction %Nminus1, %redNminus2 [ [[REDUCTION_DIMS]] ] :
-/// vector<Mx...xf32> to vector<Ix...xf32>
 /// ```
 struct UnrollMultiReductionOuterBaseCase
     : public OpRewritePattern<vector::MultiDimReductionOp> {
@@ -658,6 +629,30 @@ struct UnrollMultiReductionOuterBaseCase
   }
 };
 
+/// Unrolls vector.multi_reduction when the outermost dimension is one of
+/// multiple reduction dimensions. Extracts slices and chains smaller
+/// multi_reduction operations.
+///
+/// Example:
+///
+/// ```mlir
+/// %res = vector.multi_reduction <add> %src, %acc [0, 2]
+///     : vector<NxMx...xf32> to vector<Ix...xf32>
+/// ```
+///
+/// becomes:
+///
+/// ```mlir
+/// %0 = vector.extract %src[0] : vector<Mx...xf32> from vector<NxMx...xf32>
+/// ...
+/// %Nminus1 = vector.extract %src[N-1] : vector<Mx...xf32> from vector<NxMx...xf32>
+///
+/// %red0 = vector.multi_reduction <add>, %0, %acc [1]
+///     : vector<Mx...xf32> to vector<Ix...xf32>
+/// ...
+/// %res = vector.multi_reduction <add>, %Nminus1, %redNminus2 [1]
+///     : vector<Mx...xf32> to vector<Ix...xf32>
+/// ```
 struct UnrollMultiReductionOuterGeneralCase
     : public OpRewritePattern<vector::MultiDimReductionOp> {
   using Base::Base;
