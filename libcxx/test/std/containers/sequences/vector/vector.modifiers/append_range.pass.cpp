@@ -33,6 +33,7 @@ constexpr bool test() {
     });
   });
   test_sequence_append_range_move_only<std::vector>();
+  test_sequence_append_range_emplace_constructible_and_move_insertable<std::vector>();
 
   {   // Vector may or may not need to reallocate because of the insertion -- make sure to test both cases.
     { // Ensure reallocation happens.

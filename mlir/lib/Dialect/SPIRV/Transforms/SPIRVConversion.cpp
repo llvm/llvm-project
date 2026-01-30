@@ -628,9 +628,9 @@ static spirv::Dim convertRank(int64_t rank) {
 
 static spirv::ImageFormat getImageFormat(Type elementType) {
   return TypeSwitch<Type, spirv::ImageFormat>(elementType)
-      .Case<Float16Type>([](Float16Type) { return spirv::ImageFormat::R16f; })
-      .Case<Float32Type>([](Float32Type) { return spirv::ImageFormat::R32f; })
-      .Case<IntegerType>([](IntegerType intType) {
+      .Case([](Float16Type) { return spirv::ImageFormat::R16f; })
+      .Case([](Float32Type) { return spirv::ImageFormat::R32f; })
+      .Case([](IntegerType intType) {
         auto const isSigned = intType.isSigned() || intType.isSignless();
 #define BIT_WIDTH_CASE(BIT_WIDTH)                                              \
   case BIT_WIDTH:                                                              \
@@ -1018,7 +1018,7 @@ struct FuncOpConversion final : OpConversionPattern<func::FuncOp> {
                                             : TypeRange()));
 
     // Copy over all attributes other than the function name and type.
-    for (const auto &namedAttr : funcOp->getAttrs()) {
+    for (NamedAttribute namedAttr : funcOp->getAttrs()) {
       if (namedAttr.getName() != funcOp.getFunctionTypeAttrName() &&
           namedAttr.getName() != SymbolTable::getSymbolAttrName())
         newFuncOp->setAttr(namedAttr.getName(), namedAttr.getValue());

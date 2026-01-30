@@ -73,7 +73,10 @@ endfunction()
 # Run sanitizer tests only if we're sure that clang would produce
 # working binaries.
 if(COMPILER_RT_CAN_EXECUTE_TESTS)
-  if(COMPILER_RT_BUILD_BUILTINS)
+  # COMPILER_RT_TEST_EXTERNAL_BUILTINS allows running tests against builtins built
+  # in an independent build. This option is only indended to be used by
+  # LLVM_ENABLE_RUNTIMES-based builds.
+  if(COMPILER_RT_BUILD_BUILTINS OR COMPILER_RT_TEST_EXTERNAL_BUILTINS)
     add_subdirectory(builtins)
   endif()
   if(COMPILER_RT_BUILD_SANITIZERS)

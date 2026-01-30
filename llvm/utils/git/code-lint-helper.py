@@ -23,7 +23,7 @@ import json
 import os
 import subprocess
 import sys
-from typing import Any, Dict, Final, List, Sequence
+from typing import Any, Dict, Final, Iterable, List, Sequence
 
 
 class LintArgs:
@@ -36,6 +36,7 @@ class LintArgs:
     issue_number: int = 0
     build_path: str = "build"
     clang_tidy_binary: str = "clang-tidy"
+    doc8_binary: str = "doc8"
 
     def __init__(self, args: argparse.Namespace) -> None:
         if args is not None:
@@ -50,6 +51,7 @@ class LintArgs:
             self.verbose = args.verbose
             self.build_path = args.build_path
             self.clang_tidy_binary = args.clang_tidy_binary
+            self.doc8_binary = args.doc8_binary
 
 
 class LintHelper:
@@ -192,7 +194,7 @@ python3 clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py \
             arg for arg in changed_files if "third-party" not in arg
         ]
 
-        filtered_files = []
+        filtered_files: List[str] = []
         for filepath in clang_tidy_changed_files:
             _, ext = os.path.splitext(filepath)
             if ext not in (".c", ".cpp", ".cxx", ".h", ".hpp", ".hxx"):
@@ -289,8 +291,76 @@ python3 clang-tools-extra/clang-tidy/tool/clang-tidy-diff.py \
         return ""
 
 
+class Doc8LintHelper(LintHelper):
+    name: Final = "doc8"
+    friendly_name: Final = "RST documentation linter"
 
-ALL_LINTERS = (ClangTidyLintHelper(),)
+    def instructions(self, files_to_lint: Iterable[str], args: LintArgs) -> str:
+        return f"doc8 -q {' '.join(files_to_lint)} --config clang-tools-extra/clang-tidy/doc8.ini"
+
+    def create_comment_text(
+        self, linter_output: str, files_to_lint: Sequence[str], args: LintArgs
+    ) -> str:
+        comment = super().create_comment_text(linter_output, files_to_lint, args)
+        if "D001" in linter_output or "Line too long" in linter_output:
+            parts = comment.rsplit("</details>", 1)
+            if len(parts) == 2:
+                return (
+                    parts[0]
+                    + "\nNote: documentation lines should be less than 80 characters wide.\n</details>"
+                    + parts[1]
+                )
+        return comment
+
+    def filter_changed_files(self, changed_files: Iterable[str]) -> Sequence[str]:
+        return list(filter(self._should_lint_file, changed_files))
+
+    def _should_lint_file(self, filepath: str) -> bool:
+        return (
+            os.path.splitext(filepath)[1] == ".rst"
+            and filepath.startswith("clang-tools-extra/docs/clang-tidy/")
+            and os.path.exists(filepath)
+        )
+
+    def run_linter_tool(self, files_to_lint: Iterable[str], args: LintArgs) -> str:
+        if not files_to_lint:
+            return ""
+
+        doc8_cmd = [
+            args.doc8_binary,
+            "-q",
+            "--config",
+            "clang-tools-extra/clang-tidy/doc8.ini",
+        ]
+        doc8_cmd.extend(files_to_lint)
+
+        if args.verbose:
+            print(f"Running doc8: {' '.join(doc8_cmd)}")
+
+        proc = subprocess.run(
+            doc8_cmd,
+            stdout=subprocess.PIPE,
+            stderr=subprocess.PIPE,
+            text=True,
+            check=False,
+        )
+
+        if proc.returncode == 0:
+            return ""
+
+        parts: List[str] = []
+        if output := proc.stdout.strip():
+            parts.append(output)
+
+        if error_output := proc.stderr.strip():
+            parts.append(f"stderr:\n{error_output}")
+
+        if parts:
+            return "\n\n".join(parts)
+        return f"doc8 exited with return code {proc.returncode} but no output."
+
+
+ALL_LINTERS = (ClangTidyLintHelper(), Doc8LintHelper())
 
 
 if __name__ == "__main__":
@@ -330,6 +400,12 @@ if __name__ == "__main__":
         type=str,
         default="clang-tidy",
         help="Path to clang-tidy binary",
+    )
+    parser.add_argument(
+        "--doc8-binary",
+        type=str,
+        default="doc8",
+        help="Path to doc8 binary",
     )
     parser.add_argument(
         "--verbose", action="store_true", default=True, help="Verbose output"

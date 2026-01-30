@@ -16,8 +16,7 @@
 
 namespace llvm::omp::target::plugin {
 
-#if OMPTARGET_DEBUG
-static const char *AllocKindToStr(int32_t Kind) {
+static const char *allocKindToStr(int32_t Kind) {
   switch (Kind) {
   case TARGET_ALLOC_DEVICE:
     return "DEVICE";
@@ -29,7 +28,6 @@ static const char *AllocKindToStr(int32_t Kind) {
     return "DEFAULT";
   }
 }
-#endif
 
 void *MemAllocatorTy::MemPoolTy::BlockTy::alloc() {
   if (isFull())
@@ -120,9 +118,9 @@ Error MemAllocatorTy::MemPoolTy::init(int32_t Kind, MemAllocatorTy *AllocatorIn,
   AllocMax = AllocMin << getBucketId(UserAllocMax * (1 << 20));
   if (AllocMin >= AllocMax) {
     AllocMax = 2 * AllocMin;
-    DP("Warning: Adjusting pool's AllocMax to %zu for %s due to device "
-       "requirements.\n",
-       AllocMax, AllocKindToStr(AllocKind));
+    ODBG(OLDT_Alloc) << "Warning: Adjusting pool's AllocMax to " << AllocMax
+                     << " for " << allocKindToStr(AllocKind)
+                     << " due to device requirements.";
   }
   assert(AllocMin < AllocMax &&
          "Invalid parameters while initializing memory pool");
@@ -151,11 +149,12 @@ Error MemAllocatorTy::MemPoolTy::init(int32_t Kind, MemAllocatorTy *AllocatorIn,
     BucketParams.emplace_back(ChunkSize, BlockSize);
   }
 
-  DP("Initialized %s pool for device " DPxMOD ": AllocUnit = %zu, "
-     "AllocMax = %zu, "
-     "Capacity = %" PRIu32 ", PoolSizeMax = %zu\n",
-     AllocKindToStr(AllocKind), DPxPTR(Device), AllocUnit, AllocMax,
-     BlockCapacity, PoolSizeMax);
+  ODBG(OLDT_Alloc) << "Initialized " << allocKindToStr(AllocKind)
+                   << " pool for device " << Device
+                   << ": AllocUnit = " << AllocUnit
+                   << ", AllocMax = " << AllocMax
+                   << ", Capacity = " << BlockCapacity
+                   << ", PoolSizeMax = " << PoolSizeMax;
   return Plugin::success();
 }
 
@@ -179,9 +178,10 @@ Error MemAllocatorTy::MemPoolTy::init(MemAllocatorTy *AllocatorIn,
     BucketParams.emplace_back(ChunkSize, ChunkSize * BlockCapacity);
   }
 
-  DP("Initialized reduction scratch pool for device " DPxMOD
-     ": AllocMin = %zu, AllocMax = %zu, PoolSizeMax = %zu\n",
-     DPxPTR(Allocator->Device), AllocMin, AllocMax, PoolSizeMax);
+  ODBG(OLDT_Alloc) << "Initialized reduction scratch pool for device "
+                   << Allocator->Device << ": AllocMin = " << AllocMin
+                   << ", AllocMax = " << AllocMax
+                   << ", PoolSizeMax = " << PoolSizeMax;
   return Plugin::success();
 }
 
@@ -197,9 +197,10 @@ Error MemAllocatorTy::MemPoolTy::init(MemAllocatorTy *AllocatorIn) {
   BucketStats.resize(1, {0, 0});
   BucketParams.emplace_back(AllocMax, AllocUnit);
   ZeroInit = true;
-  DP("Initialized zero-initialized reduction counter pool for "
-     "device " DPxMOD ": AllocMin = %zu, AllocMax = %zu, PoolSizeMax = %zu\n",
-     DPxPTR(Allocator->Device), AllocMin, AllocMax, PoolSizeMax);
+  ODBG(OLDT_Alloc) << "Initialized zero-initialized reduction counter pool for "
+                   << "device " << Allocator->Device
+                   << ": AllocMin = " << AllocMin << ", AllocMax = " << AllocMax
+                   << ", PoolSizeMax = " << PoolSizeMax;
   return Plugin::success();
 }
 
@@ -220,7 +221,7 @@ void MemAllocatorTy::MemPoolTy::printUsage() {
       }
     }
 
-    Os << "MemPool usage for " << AllocKindToStr(AllocKind) << ", device "
+    Os << "MemPool usage for " << allocKindToStr(AllocKind) << ", device "
        << Allocator->Device << "\n";
 
     if (HasPoolAlloc) {
@@ -312,9 +313,9 @@ Expected<void *> MemAllocatorTy::MemPoolTy::alloc(size_t Size,
       SmallPoolSize += BlockSize;
     else
       PoolSize += BlockSize;
-    DP("New block allocation for %s pool: base = " DPxMOD
-       ", size = %zu, pool size = %zu\n",
-       AllocKindToStr(AllocKind), DPxPTR(Base), BlockSize, PoolSize);
+    ODBG(OLDT_Alloc) << "New block allocation for " << allocKindToStr(AllocKind)
+                     << " pool: base = " << Base << ", size = " << BlockSize
+                     << ", pool size = " << PoolSize;
     BucketStats[BucketId].first++;
   } else {
     BucketStats[BucketId].second++;
@@ -422,15 +423,15 @@ void MemAllocatorTy::updateMaxAllocSize(L0DeviceTy &L0Device) {
     // MaxAllocSize should be the minimum of all devices from the driver.
     if (MaxAllocSize > maxMemAllocSize) {
       MaxAllocSize = maxMemAllocSize;
-      DP("Updated MaxAllocSize for driver " DPxMOD " to %zu\n",
-         DPxPTR(L0Context), MaxAllocSize);
+      ODBG(OLDT_Alloc) << "Updated MaxAllocSize for driver " << L0Context
+                       << " to " << MaxAllocSize;
     }
     return;
   }
 
   MaxAllocSize = maxMemAllocSize;
-  DP("Updated MaxAllocSize for device " DPxMOD " to %zu\n", DPxPTR(Device),
-     MaxAllocSize);
+  ODBG(OLDT_Alloc) << "Updated MaxAllocSize for device " << Device << " to "
+                   << MaxAllocSize;
 }
 
 /// Release resources and report statistics if requested.
@@ -468,7 +469,7 @@ Error MemAllocatorTy::deinit() {
   ODBG_OS([&](llvm::raw_ostream &Os) {
     for (size_t Kind = 0; Kind < MaxMemKind; Kind++) {
       auto &Stat = Stats[Kind];
-      Os << "Memory usage for " << AllocKindToStr(Kind) << ", device " << Device
+      Os << "Memory usage for " << allocKindToStr(Kind) << ", device " << Device
          << "\n";
       if (Stat.NumAllocs[0] == 0 && Stat.NumAllocs[1] == 0) {
         Os << "-- Not used\n";
@@ -552,8 +553,9 @@ Expected<void *> MemAllocatorTy::allocFromPool(size_t Size, size_t Align,
       if (DevMalloc)
         MemOwned.push_back(AllocBase);
       if (UseDedicatedPool) {
-        DP("Allocated %zu bytes from %s pool\n", Size,
-           UseScratchPool ? "scratch" : "zero-initialized");
+        ODBG(OLDT_Alloc) << "Allocated " << Size << " bytes from "
+                         << (UseScratchPool ? "scratch" : "zero-initialized")
+                         << " pool";
       }
       return Mem;
     }
@@ -571,8 +573,9 @@ Expected<void *> MemAllocatorTy::allocFromPool(size_t Size, size_t Align,
       MemOwned.push_back(AllocBase);
     if (UseDedicatedPool) {
       // We do not want this happen in general.
-      DP("Allocated %zu bytes from L0 for %s pool\n", Size,
-         UseScratchPool ? "scratch" : "zero-initialized");
+      ODBG(OLDT_Alloc) << "Allocated " << Size << " bytes from L0 for "
+                       << (UseScratchPool ? "scratch" : "zero-initialized")
+                       << " pool";
     }
   }
   return Mem;
@@ -607,7 +610,7 @@ Error MemAllocatorTy::deallocLocked(void *Ptr) {
     return Plugin::success();
   }
   if (!Info.Base) {
-    DP("Error: Cannot find base address of " DPxMOD "\n", DPxPTR(Ptr));
+    ODBG(OLDT_Alloc) << "Error: Cannot find base address of " << Ptr;
     return Plugin::error(ErrorCode::INVALID_ARGUMENT,
                          "Cannot find base address of " DPxMOD "\n",
                          DPxPTR(Ptr));
@@ -616,8 +619,8 @@ Error MemAllocatorTy::deallocLocked(void *Ptr) {
 
   if (auto Err = deallocFromL0(Info.Base))
     return Err;
-  DP("Deleted device memory " DPxMOD " (Base: " DPxMOD ", Size: %zu)\n",
-     DPxPTR(Ptr), DPxPTR(Info.Base), Info.AllocSize);
+  ODBG(OLDT_Alloc) << "Deleted device memory " << Ptr << " (Base: " << Info.Base
+                   << ", Size: " << Info.AllocSize << ")";
 
   return Plugin::success();
 }
@@ -655,19 +658,18 @@ Expected<void *> MemAllocatorTy::allocFromL0(size_t Size, size_t Align,
     MakeResident = true;
     CALL_ZE_RET_ERROR(zeMemAllocDevice, ZeContext, &DeviceDesc, Size, Align,
                       ZeDevice, &Mem);
-    DP("Allocated %" PRId64 " bytes of device memory " DPxMOD "\n", Size,
-       DPxPTR(Mem));
+    ODBG(OLDT_Alloc) << "Allocated " << Size << " bytes of device memory "
+                     << Mem;
     break;
   case TARGET_ALLOC_HOST:
     CALL_ZE_RET_ERROR(zeMemAllocHost, ZeContext, &HostDesc, Size, Align, &Mem);
-    DP("Allocated %" PRId64 " bytes of host memory " DPxMOD "\n", Size,
-       DPxPTR(Mem));
+    ODBG(OLDT_Alloc) << "Allocated " << Size << " bytes of host memory " << Mem;
     break;
   case TARGET_ALLOC_SHARED:
     CALL_ZE_RET_ERROR(zeMemAllocShared, ZeContext, &DeviceDesc, &HostDesc, Size,
                       Align, ZeDevice, &Mem);
-    DP("Allocated %" PRId64 " bytes of shared memory " DPxMOD "\n", Size,
-       DPxPTR(Mem));
+    ODBG(OLDT_Alloc) << "Allocated " << Size << " bytes of shared memory "
+                     << Mem;
     break;
   default:
     assert(0 && "Invalid target data allocation kind");
@@ -686,7 +688,7 @@ Expected<void *> MemAllocatorTy::allocFromL0(size_t Size, size_t Align,
 
 Error MemAllocatorTy::deallocFromL0(void *Ptr) {
   CALL_ZE_RET_ERROR(zeMemFree, L0Context->getZeContext(), Ptr);
-  DP("Freed device pointer " DPxMOD "\n", DPxPTR(Ptr));
+  ODBG(OLDT_Alloc) << "Freed device pointer " << Ptr;
   return Plugin::success();
 }
 

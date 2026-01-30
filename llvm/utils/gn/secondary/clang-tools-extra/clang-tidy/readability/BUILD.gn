@@ -33,6 +33,7 @@ static_library("readability") {
     "IdentifierNamingCheck.cpp",
     "ImplicitBoolConversionCheck.cpp",
     "InconsistentDeclarationParameterNameCheck.cpp",
+    "InconsistentIfElseBracesCheck.cpp",
     "IsolateDeclarationCheck.cpp",
     "MagicNumbersCheck.cpp",
     "MakeMemberFunctionConstCheck.cpp",
