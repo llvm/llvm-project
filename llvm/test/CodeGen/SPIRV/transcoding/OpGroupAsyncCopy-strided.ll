@@ -1,26 +1,26 @@
 ; RUN: llc -O0 -mtriple=spirv32-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv32-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
-; CHECK-SPIRV-DAG: %[[#IntTy:]] = OpTypeInt 32 0
-; CHECK-SPIRV-DAG: %[[#Int8Ty:]] = OpTypeInt 8 0
-; CHECK-SPIRV-DAG: %[[#EventTy:]] = OpTypeEvent
-; CHECK-SPIRV-DAG: %[[#WGPtrTy:]] = OpTypePointer Workgroup %[[#Int8Ty]]
-; CHECK-SPIRV-DAG: %[[#CWGPtrTy:]] = OpTypePointer CrossWorkgroup %[[#Int8Ty]]
-; CHECK-SPIRV-DAG: %[[#Scope:]] = OpConstant %[[#IntTy]] 2
-; CHECK-SPIRV-DAG: %[[#NumElem:]] = OpConstant %[[#IntTy]] 123
-; CHECK-SPIRV-DAG: %[[#Stride:]] = OpConstant %[[#IntTy]] 1
-; CHECK-SPIRV-DAG: %[[#DstNull:]] = OpConstantNull %[[#WGPtrTy]]
-; CHECK-SPIRV-DAG: %[[#SrcNull:]] = OpConstantNull %[[#CWGPtrTy]]
-; CHECK-SPIRV-DAG: %[[#EventNull:]] = OpConstantNull %[[#EventTy]]
-; CHECK-SPIRV-DAG: %[[#GenPtrEventTy:]] = OpTypePointer Generic %[[#EventTy]]
-; CHECK-SPIRV-DAG: %[[#FunPtrEventTy:]] = OpTypePointer Function %[[#EventTy]]
-; CHECK-SPIRV: OpFunction
-; CHECK-SPIRV: %[[#Var:]] = OpVariable %[[#FunPtrEventTy]] Function
-; CHECK-SPIRV: %[[#ResEvent:]] = OpGroupAsyncCopy %[[#EventTy]] %[[#Scope]] %[[#DstNull]] %[[#SrcNull]] %[[#NumElem]] %[[#Stride]] %[[#EventNull]]
-; CHECK-SPIRV: OpStore %[[#Var]] %[[#ResEvent]]
-; CHECK-SPIRV: %[[#PtrEventGen:]] = OpPtrCastToGeneric %[[#GenPtrEventTy]] %[[#Var]]
-; CHECK-SPIRV: OpGroupWaitEvents %[[#Scope]] %[[#Stride]] %[[#PtrEventGen]]
-; CHECK-SPIRV: OpFunctionEnd
+; CHECK-DAG: %[[#IntTy:]] = OpTypeInt 32 0
+; CHECK-DAG: %[[#Int8Ty:]] = OpTypeInt 8 0
+; CHECK-DAG: %[[#EventTy:]] = OpTypeEvent
+; CHECK-DAG: %[[#WGPtrTy:]] = OpTypePointer Workgroup %[[#Int8Ty]]
+; CHECK-DAG: %[[#CWGPtrTy:]] = OpTypePointer CrossWorkgroup %[[#Int8Ty]]
+; CHECK-DAG: %[[#Scope:]] = OpConstant %[[#IntTy]] 2
+; CHECK-DAG: %[[#NumElem:]] = OpConstant %[[#IntTy]] 123
+; CHECK-DAG: %[[#Stride:]] = OpConstant %[[#IntTy]] 1
+; CHECK-DAG: %[[#DstNull:]] = OpConstantNull %[[#WGPtrTy]]
+; CHECK-DAG: %[[#SrcNull:]] = OpConstantNull %[[#CWGPtrTy]]
+; CHECK-DAG: %[[#EventNull:]] = OpConstantNull %[[#EventTy]]
+; CHECK-DAG: %[[#GenPtrEventTy:]] = OpTypePointer Generic %[[#EventTy]]
+; CHECK-DAG: %[[#FunPtrEventTy:]] = OpTypePointer Function %[[#EventTy]]
+; CHECK: OpFunction
+; CHECK: %[[#Var:]] = OpVariable %[[#FunPtrEventTy]] Function
+; CHECK: %[[#ResEvent:]] = OpGroupAsyncCopy %[[#EventTy]] %[[#Scope]] %[[#DstNull]] %[[#SrcNull]] %[[#NumElem]] %[[#Stride]] %[[#EventNull]]
+; CHECK: OpStore %[[#Var]] %[[#ResEvent]]
+; CHECK: %[[#PtrEventGen:]] = OpPtrCastToGeneric %[[#GenPtrEventTy]] %[[#Var]]
+; CHECK: OpGroupWaitEvents %[[#Scope]] %[[#Stride]] %[[#PtrEventGen]]
+; CHECK: OpFunctionEnd
 
 define spir_kernel void @foo() {
   %event = alloca target("spirv.Event"), align 8
