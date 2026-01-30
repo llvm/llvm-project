@@ -48,7 +48,7 @@ private:
   bool selectImpl(MachineInstr &I, CodeGenCoverage &CoverageInfo) const;
 
   const WebAssemblyTargetMachine &TM;
-  const WebAssemblySubtarget &STI;
+  // const WebAssemblySubtarget &STI;
   const WebAssemblyInstrInfo &TII;
   const WebAssemblyRegisterInfo &TRI;
   const WebAssemblyRegisterBankInfo &RBI;
@@ -71,8 +71,8 @@ private:
 WebAssemblyInstructionSelector::WebAssemblyInstructionSelector(
     const WebAssemblyTargetMachine &TM, const WebAssemblySubtarget &STI,
     const WebAssemblyRegisterBankInfo &RBI)
-    : TM(TM), STI(STI), TII(*STI.getInstrInfo()), TRI(*STI.getRegisterInfo()),
-      RBI(RBI),
+    : TM(TM), /*STI(STI),*/ TII(*STI.getInstrInfo()),
+      TRI(*STI.getRegisterInfo()), RBI(RBI),
 
 #define GET_GLOBALISEL_PREDICATES_INIT
 #include "WebAssemblyGenGlobalISel.inc"
