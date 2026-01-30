@@ -140,7 +140,8 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
 
   EXPECT_FP_EQ(float128(0x0p+0),
                LIBC_NAMESPACE::shared::atan2f128(float128(0.0), float128(0.0)));
-  EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::ffmaf128(float128(0.0), float128(0.0), float128(0.0)));
+  EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::ffmaf128(
+                            float128(0.0), float128(0.0), float128(0.0)));
   EXPECT_FP_EQ(0x1p+0f, LIBC_NAMESPACE::shared::fsqrtf128(float128(1.0f)));
   EXPECT_FP_EQ_ALL_ROUNDING(float128(0.75), LIBC_NAMESPACE::shared::frexpf128(
                                                 float128(24), &exponent));

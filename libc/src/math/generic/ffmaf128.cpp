@@ -8,6 +8,7 @@
 
 #include "src/math/ffmaf128.h"
 #include "src/__support/math/ffmaf128.h"
+
 namespace LIBC_NAMESPACE_DECL {
 
 LLVM_LIBC_FUNCTION(float, ffmaf128, (float128 x, float128 y, float128 z)) {
