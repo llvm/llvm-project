@@ -783,7 +783,7 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
   // sub-expression to be just TheOther.
   if (ConstantInt *CI = dyn_cast<ConstantInt>(NextInChain))
     if (CI->isZero())
-      if (!(BO->getOpcode() == Instruction::Sub && OpNo == 0))
+      if (!BO->getOpcode() != Instruction::Sub || OpNo != 0)
         return TheOther;
 
   BinaryOperator::BinaryOps NewOp = BO->getOpcode();
