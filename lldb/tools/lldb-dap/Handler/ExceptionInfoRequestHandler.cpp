@@ -54,9 +54,9 @@ struct MainThreadCheckerReport {
 struct ASanReport {
   std::string description;
   lldb::addr_t address = LLDB_INVALID_ADDRESS;
-  lldb::addr_t pc = LLDB_INVALID_ADDRESS;
-  lldb::addr_t bp = LLDB_INVALID_ADDRESS;
-  lldb::addr_t sp = LLDB_INVALID_ADDRESS;
+  lldb::addr_t program_counter = LLDB_INVALID_ADDRESS;
+  lldb::addr_t base_pointer = LLDB_INVALID_ADDRESS;
+  lldb::addr_t stack_pointer = LLDB_INVALID_ADDRESS;
   std::string stop_type;
 };
 
@@ -89,8 +89,9 @@ static bool fromJSON(const json::Value &params, ASanReport &report,
   json::ObjectMapper O(params, path);
   return O.mapOptional("description", report.description) &&
          O.mapOptional("address", report.address) &&
-         O.mapOptional("pc", report.pc) && O.mapOptional("bp", report.bp) &&
-         O.mapOptional("sp", report.sp) &&
+         O.mapOptional("pc", report.program_counter) &&
+         O.mapOptional("bp", report.base_pointer) &&
+         O.mapOptional("sp", report.stack_pointer) &&
          O.mapOptional("stop_type", report.stop_type);
 }
 
@@ -170,12 +171,13 @@ static raw_ostream &operator<<(raw_ostream &OS, ASanReport &report) {
 
   if (report.address != LLDB_INVALID_ADDRESS)
     OS << "Address: 0x" << llvm::utohexstr(report.address) << "\n";
-  if (report.pc != LLDB_INVALID_ADDRESS)
-    OS << "Program counter: 0x" << llvm::utohexstr(report.pc) << "\n";
-  if (report.bp != LLDB_INVALID_ADDRESS)
-    OS << "Base pointer: 0x" << llvm::utohexstr(report.bp) << "\n";
-  if (report.sp != LLDB_INVALID_ADDRESS)
-    OS << "Stack pointer: 0x" << llvm::utohexstr(report.sp) << "\n";
+  if (report.program_counter != LLDB_INVALID_ADDRESS)
+    OS << "Program counter: 0x" << llvm::utohexstr(report.program_counter)
+       << "\n";
+  if (report.base_pointer != LLDB_INVALID_ADDRESS)
+    OS << "Base pointer: 0x" << llvm::utohexstr(report.base_pointer) << "\n";
+  if (report.stack_pointer != LLDB_INVALID_ADDRESS)
+    OS << "Stack pointer: 0x" << llvm::utohexstr(report.stack_pointer) << "\n";
 
   return OS;
 }
