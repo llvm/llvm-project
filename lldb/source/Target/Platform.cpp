@@ -2056,7 +2056,7 @@ llvm::ArrayRef<uint8_t> Platform::SoftwareTrapOpcodeBytes(const ArchSpec &arch,
     static const uint8_t g_wasm_opcode[] = {0x00};
     trap_opcode = llvm::ArrayRef<uint8_t>(g_wasm_opcode, sizeof(g_wasm_opcode));
   } break;
-  // The default case should not match against anything, so return empty Array
+  // The default case should not match against anything, so return empty Array.
   default: {
     trap_opcode = llvm::ArrayRef<uint8_t>{};
   };
@@ -2071,7 +2071,7 @@ size_t Platform::GetTrapOpcodeSizeHint(Target &target, Address addr,
   const auto &triple = arch.GetTriple();
 
   if (bytes.size() && triple.isRISCV()) {
-    // RISC-V instructions have the two LSB as 0b11 if they are four-byte
+    // RISC-V instructions have the two LSB as 0b11 if they are four-byte.
     return (bytes[0] & 0b11) == 0b11 ? 4 : 2;
   }
 
@@ -2079,6 +2079,8 @@ size_t Platform::GetTrapOpcodeSizeHint(Target &target, Address addr,
     if (auto addr_class = addr.GetAddressClass();
         addr_class == AddressClass::eCodeAlternateISA) {
       return 2;
+    } else {
+      return 4;
     }
   }
   return 0;

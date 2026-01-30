@@ -330,7 +330,10 @@ public:
   virtual std::vector<ArchSpec>
   GetSupportedArchitectures(const ArchSpec &process_host_arch) = 0;
 
-  /// Get the bytes of the platform's software interrupt instruction.
+  /// Get the bytes of the platform's software interrupt instruction. If there
+  /// are multiple possible encodings, for example where there are immediate
+  /// values encoded in the instruction, this will return the instruction with
+  /// those bits set as 0.
   ///
   /// \param[in] arch
   ///     The architecture of the inferior
@@ -342,6 +345,11 @@ public:
                                                   size_t size_hint = 0);
 
   /// Get the suggested size hint for a trap instruction on the given target.
+  /// Some platforms have a compressed instruction set which can be used
+  /// instead of the "normal" encoding. This function attempts to determine
+  /// a size hint for the size of the instruction at address \a addr, and
+  /// return 0, 2 or 4, with 2 and 4 corresponding to the estimated size
+  /// and zero meaning no applicable hint.
   ///
   /// \param[in] target
   ///     The target of the inferior

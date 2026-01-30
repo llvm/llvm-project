@@ -219,7 +219,9 @@ protected:
   virtual bool ShouldStop(Event *event_ptr) { return true; }
 
   // Shared implementation for when a trap instruction leaves the CPU PC at
-  // the trap instruction instead of just after it.
+  // the trap instruction, instead of just after it. Currently the subclasses
+  // StopInfoMachException and StopInfoUnixSignal use this to skip over the
+  // instruction at the PC if it is a matching trap instruction.
   void SkipOverTrapInstruction();
 
   // Classes that inherit from StackID can see and modify these
