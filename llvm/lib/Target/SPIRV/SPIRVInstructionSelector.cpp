@@ -226,7 +226,7 @@ private:
 
   bool selectWaveBitOpInst(Register ResVReg, const SPIRVType *ResType,
                            MachineInstr &I, unsigned Opcode) const;
-                           
+
   bool selectWavePrefixBitCount(Register ResVReg, const SPIRVType *ResType,
                                 MachineInstr &I) const;
 
