@@ -280,7 +280,13 @@ FunctionPass *createX86CompressEVEXLegacyPass();
 FunctionPass *createX86IndirectThunksPass();
 
 /// This pass replaces ret instructions with jmp's to __x86_return thunk.
-FunctionPass *createX86ReturnThunksPass();
+class X86ReturnThunksPass : public PassInfoMixin<X86ReturnThunksPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86ReturnThunksLegacyPass();
 
 /// This pass insert wait instruction after X87 instructions which could raise
 /// fp exceptions when strict-fp enabled.
@@ -348,15 +354,47 @@ InstructionSelector *createX86InstructionSelector(const X86TargetMachine &TM,
 
 FunctionPass *createX86PreLegalizerCombiner();
 FunctionPass *createX86LoadValueInjectionLoadHardeningPass();
-FunctionPass *createX86LoadValueInjectionRetHardeningPass();
-FunctionPass *createX86SpeculativeLoadHardeningPass();
-FunctionPass *createX86SpeculativeExecutionSideEffectSuppression();
-FunctionPass *createX86ArgumentStackSlotPass();
+
+class X86LoadValueInjectionRetHardeningPass
+    : public PassInfoMixin<X86LoadValueInjectionRetHardeningPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86LoadValueInjectionRetHardeningLegacyPass();
+
+class X86SpeculativeExecutionSideEffectSuppressionPass
+    : public PassInfoMixin<X86SpeculativeExecutionSideEffectSuppressionPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86SpeculativeExecutionSideEffectSuppressionLegacyPass();
+
+class X86SpeculativeLoadHardeningPass
+    : public PassInfoMixin<X86SpeculativeLoadHardeningPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86SpeculativeLoadHardeningLegacyPass();
+
+class X86ArgumentStackSlotPass
+    : public PassInfoMixin<X86ArgumentStackSlotPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86ArgumentStackSlotLegacyPass();
 
 void initializeCompressEVEXLegacyPass(PassRegistry &);
 void initializeX86FixupBWInstLegacyPass(PassRegistry &);
 void initializeFixupLEAsLegacyPass(PassRegistry &);
-void initializeX86ArgumentStackSlotPassPass(PassRegistry &);
+void initializeX86ArgumentStackSlotLegacyPass(PassRegistry &);
 void initializeX86AsmPrinterPass(PassRegistry &);
 void initializeX86FixupInstTuningLegacyPass(PassRegistry &);
 void initializeX86FixupVectorConstantsLegacyPass(PassRegistry &);
@@ -376,16 +414,17 @@ void initializeX86FastTileConfigLegacyPass(PassRegistry &);
 void initializeX86FixupSetCCLegacyPass(PassRegistry &);
 void initializeX86FlagsCopyLoweringLegacyPass(PassRegistry &);
 void initializeX86LoadValueInjectionLoadHardeningPassPass(PassRegistry &);
-void initializeX86LoadValueInjectionRetHardeningPassPass(PassRegistry &);
+void initializeX86LoadValueInjectionRetHardeningLegacyPass(PassRegistry &);
 void initializeX86LowerAMXIntrinsicsLegacyPassPass(PassRegistry &);
 void initializeX86LowerAMXTypeLegacyPassPass(PassRegistry &);
 void initializeX86LowerTileCopyLegacyPass(PassRegistry &);
 void initializeX86OptimizeLEAsLegacyPass(PassRegistry &);
 void initializeX86PartialReductionLegacyPass(PassRegistry &);
 void initializeX86PreTileConfigLegacyPass(PassRegistry &);
-void initializeX86ReturnThunksPass(PassRegistry &);
-void initializeX86SpeculativeExecutionSideEffectSuppressionPass(PassRegistry &);
-void initializeX86SpeculativeLoadHardeningPassPass(PassRegistry &);
+void initializeX86ReturnThunksLegacyPass(PassRegistry &);
+void initializeX86SpeculativeExecutionSideEffectSuppressionLegacyPass(
+    PassRegistry &);
+void initializeX86SpeculativeLoadHardeningLegacyPass(PassRegistry &);
 void initializeX86SuppressAPXForRelocationLegacyPass(PassRegistry &);
 void initializeX86TileConfigLegacyPass(PassRegistry &);
 void initializeX86WinEHUnwindV2Pass(PassRegistry &);

@@ -1236,6 +1236,11 @@ public:
     bool AddInitializers = false;
     bool AddImplicitDtors = false;
     bool AddLifetime = false;
+    // Add lifetime markers for function parameters. In principle, function
+    // parameters are constructed and destructed in the caller context but
+    // analyses could still choose to include these in the callee's CFG to
+    // represent the lifetime ends of parameters on function exit.
+    bool AddParameterLifetimes = false;
     bool AddLoopExit = false;
     bool AddTemporaryDtors = false;
     bool AddScopes = false;

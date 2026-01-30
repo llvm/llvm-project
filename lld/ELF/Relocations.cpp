@@ -148,7 +148,7 @@ static bool isRelExpr(RelExpr expr) {
   return oneof<R_PC, R_GOTREL, R_GOTPLTREL, RE_ARM_PCA, RE_MIPS_GOTREL,
                RE_PPC64_CALL, RE_PPC64_RELAX_TOC, RE_AARCH64_PAGE_PC,
                R_RELAX_GOT_PC, RE_RISCV_PC_INDIRECT, RE_PPC64_RELAX_GOT_PC,
-               RE_LOONGARCH_PAGE_PC>(expr);
+               RE_LOONGARCH_PAGE_PC, RE_LOONGARCH_PC_INDIRECT>(expr);
 }
 
 static RelExpr toPlt(RelExpr expr) {
@@ -914,7 +914,7 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
   // If non-ifunc non-preemptible, change PLT to direct call and optimize GOT
   // indirection.
   const bool isIfunc = sym.isGnuIFunc();
-  if (!sym.isPreemptible && (!isIfunc || ctx.arg.zIfuncNoplt)) {
+  if (!sym.isPreemptible && !isIfunc) {
     if (expr != R_GOT_PC) {
       // The 0x8000 bit of r_addend of R_PPC_PLTREL24 is used to choose call
       // stub type. It should be ignored if optimized to R_PC.

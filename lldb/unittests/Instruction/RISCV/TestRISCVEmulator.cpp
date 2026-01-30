@@ -16,6 +16,7 @@
 #include "lldb/Utility/RegisterValue.h"
 
 #include "Plugins/Instruction/RISCV/EmulateInstructionRISCV.h"
+#include "Plugins/Process/Utility/RegisterInfoPOSIX_riscv32.h"
 #include "Plugins/Process/Utility/RegisterInfoPOSIX_riscv64.h"
 #include "Plugins/Process/Utility/lldb-riscv-register-enums.h"
 
@@ -805,4 +806,20 @@ TEST_F(RISCVEmulatorTester, TestFMV_D_XInst) {
   ASSERT_EQ(name, "FMV_D_X");
   ASSERT_TRUE(this->Execute(*decode, false));
   ASSERT_EQ(this->fpr.fpr[DecodeRD(FMV_D_XInst)], bits);
+}
+
+TEST_F(RISCVEmulatorTester, TestGetRegisterInfoRV64) {
+  // Test that GetRegisterInfo returns valid register info for riscv64.
+  auto reg_info = this->GetRegisterInfo(eRegisterKindLLDB, gpr_x1_riscv);
+  ASSERT_TRUE(reg_info.has_value());
+  ASSERT_EQ(reg_info->byte_size, 8u);
+  ASSERT_STREQ(reg_info->name, "ra");
+}
+
+TEST_F(RISCVEmulatorTester32, TestGetRegisterInfoRV32) {
+  // Test that GetRegisterInfo returns valid register info for riscv32.
+  auto reg_info = this->GetRegisterInfo(eRegisterKindLLDB, gpr_x1_riscv);
+  ASSERT_TRUE(reg_info.has_value());
+  ASSERT_EQ(reg_info->byte_size, 4u);
+  ASSERT_STREQ(reg_info->name, "ra");
 }

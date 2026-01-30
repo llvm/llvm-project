@@ -804,6 +804,8 @@ PPCTargetLowering::PPCTargetLowering(const PPCTargetMachine &TM,
 
   if (Subtarget.hasAltivec()) {
     for (MVT VT : { MVT::v16i8, MVT::v8i16, MVT::v4i32 }) {
+      setOperationAction(ISD::AVGCEILS, VT, Legal);
+      setOperationAction(ISD::AVGCEILU, VT, Legal);
       setOperationAction(ISD::SADDSAT, VT, Legal);
       setOperationAction(ISD::SSUBSAT, VT, Legal);
       setOperationAction(ISD::UADDSAT, VT, Legal);
@@ -11024,6 +11026,19 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
   unsigned IntrinsicID = Op.getConstantOperandVal(0);
 
   SDLoc dl(Op);
+  // Note: BCD instructions expect the immediate operand in vector form (v4i32),
+  // but the builtin provides it as a scalar. To satisfy the instruction
+  // encoding, we splat the scalar across all lanes using SPLAT_VECTOR.
+  auto MapNodeWithSplatVector =
+      [&](unsigned Opcode,
+          std::initializer_list<SDValue> ExtraOps = {}) -> SDValue {
+    SDValue SplatVal =
+        DAG.getNode(ISD::SPLAT_VECTOR, dl, MVT::v4i32, Op.getOperand(2));
+
+    SmallVector<SDValue, 4> Ops{SplatVal, Op.getOperand(1)};
+    Ops.append(ExtraOps.begin(), ExtraOps.end());
+    return DAG.getNode(Opcode, dl, MVT::v16i8, Ops);
+  };
 
   switch (IntrinsicID) {
   case Intrinsic::thread_pointer:
@@ -11077,6 +11092,17 @@ SDValue PPCTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
                         DAG.getTargetConstant(ME, dl, MVT::i32)}),
                    0);
   }
+
+  case Intrinsic::ppc_bcdshift:
+    return MapNodeWithSplatVector(PPCISD::BCDSHIFT, {Op.getOperand(3)});
+  case Intrinsic::ppc_bcdshiftround:
+    return MapNodeWithSplatVector(PPCISD::BCDSHIFTROUND, {Op.getOperand(3)});
+  case Intrinsic::ppc_bcdtruncate:
+    return MapNodeWithSplatVector(PPCISD::BCDTRUNC, {Op.getOperand(3)});
+  case Intrinsic::ppc_bcdunsignedtruncate:
+    return MapNodeWithSplatVector(PPCISD::BCDUTRUNC);
+  case Intrinsic::ppc_bcdunsignedshift:
+    return MapNodeWithSplatVector(PPCISD::BCDUSHIFT);
 
   case Intrinsic::ppc_rlwnm: {
     if (Op.getConstantOperandVal(3) == 0)
@@ -11507,6 +11533,16 @@ SDValue PPCTargetLowering::LowerINTRINSIC_VOID(SDValue Op,
   case Intrinsic::ppc_mma_disassemble_dmr: {
     return DAG.getStore(DAG.getEntryNode(), DL, Op.getOperand(ArgStart + 2),
                         Op.getOperand(ArgStart + 1), MachinePointerInfo());
+  }
+  case Intrinsic::ppc_amo_stwat:
+  case Intrinsic::ppc_amo_stdat: {
+    SDLoc dl(Op);
+    SDValue Chain = Op.getOperand(0);
+    SDValue Ptr = Op.getOperand(ArgStart + 1);
+    SDValue Val = Op.getOperand(ArgStart + 2);
+    SDValue FC = Op.getOperand(ArgStart + 3);
+
+    return DAG.getNode(PPCISD::STAT, dl, MVT::Other, Chain, Val, Ptr, FC);
   }
   default:
     break;
@@ -13226,7 +13262,7 @@ MachineBasicBlock *PPCTargetLowering::EmitPartwordAtomicBinary(
   // We need use 32-bit subregister to avoid mismatch register class in 64-bit
   // mode.
   BuildMI(BB, dl, TII->get(PPC::RLWINM), Shift1Reg)
-      .addReg(Ptr1Reg, 0, is64bit ? PPC::sub_32 : 0)
+      .addReg(Ptr1Reg, {}, is64bit ? PPC::sub_32 : 0)
       .addImm(3)
       .addImm(27)
       .addImm(is8bit ? 28 : 27);
@@ -14250,7 +14286,7 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     // We need use 32-bit subregister to avoid mismatch register class in 64-bit
     // mode.
     BuildMI(BB, dl, TII->get(PPC::RLWINM), Shift1Reg)
-        .addReg(Ptr1Reg, 0, is64bit ? PPC::sub_32 : 0)
+        .addReg(Ptr1Reg, {}, is64bit ? PPC::sub_32 : 0)
         .addImm(3)
         .addImm(27)
         .addImm(is8bit ? 28 : 27);
@@ -14568,10 +14604,10 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     Register Hi = MI.getOperand(1).getReg();
     BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY))
         .addDef(Lo)
-        .addUse(Src, 0, PPC::sub_gp8_x1);
+        .addUse(Src, {}, PPC::sub_gp8_x1);
     BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY))
         .addDef(Hi)
-        .addUse(Src, 0, PPC::sub_gp8_x0);
+        .addUse(Src, {}, PPC::sub_gp8_x0);
   } else if (MI.getOpcode() == PPC::LQX_PSEUDO ||
              MI.getOpcode() == PPC::STQX_PSEUDO) {
     DebugLoc DL = MI.getDebugLoc();
@@ -14587,7 +14623,7 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     BuildMI(*BB, MI, DL,
             MI.getOpcode() == PPC::LQX_PSEUDO ? TII->get(PPC::LQ)
                                               : TII->get(PPC::STQ))
-        .addReg(Val, MI.getOpcode() == PPC::LQX_PSEUDO ? RegState::Define : 0)
+        .addReg(Val, getDefRegState(MI.getOpcode() == PPC::LQX_PSEUDO))
         .addImm(0)
         .addReg(Ptr);
   } else if (MI.getOpcode() == PPC::LWAT_PSEUDO ||
@@ -14623,10 +14659,36 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
         .addImm(FC);
     Register Result64 = MRI.createVirtualRegister(&PPC::G8RCRegClass);
     BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), Result64)
-        .addReg(PairResult, 0, PPC::sub_gp8_x0);
+        .addReg(PairResult, {}, PPC::sub_gp8_x0);
     if (IsLwat)
       BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
-          .addReg(Result64, 0, PPC::sub_32);
+          .addReg(Result64, {}, PPC::sub_32);
+    else
+      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
+          .addReg(Result64);
+  } else if (MI.getOpcode() == PPC::LWAT_COND_PSEUDO ||
+             MI.getOpcode() == PPC::LDAT_COND_PSEUDO) {
+    DebugLoc DL = MI.getDebugLoc();
+    Register DstReg = MI.getOperand(0).getReg();
+    Register PtrReg = MI.getOperand(1).getReg();
+    unsigned FC = MI.getOperand(2).getImm();
+    bool IsLwat_Cond = MI.getOpcode() == PPC::LWAT_COND_PSEUDO;
+
+    Register Pair = MRI.createVirtualRegister(&PPC::G8pRCRegClass);
+    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::IMPLICIT_DEF), Pair);
+
+    Register PairResult = MRI.createVirtualRegister(&PPC::G8pRCRegClass);
+    BuildMI(*BB, MI, DL, TII->get(IsLwat_Cond ? PPC::LWAT : PPC::LDAT),
+            PairResult)
+        .addReg(Pair)
+        .addReg(PtrReg)
+        .addImm(FC);
+    Register Result64 = MRI.createVirtualRegister(&PPC::G8RCRegClass);
+    BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), Result64)
+        .addReg(PairResult, {}, PPC::sub_gp8_x0);
+    if (IsLwat_Cond)
+      BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
+          .addReg(Result64, {}, PPC::sub_32);
     else
       BuildMI(*BB, MI, DL, TII->get(TargetOpcode::COPY), DstReg)
           .addReg(Result64);
@@ -18991,10 +19053,10 @@ Sched::Preference PPCTargetLowering::getSchedulingPreference(SDNode *N) const {
 }
 
 // Create a fast isel object.
-FastISel *
-PPCTargetLowering::createFastISel(FunctionLoweringInfo &FuncInfo,
-                                  const TargetLibraryInfo *LibInfo) const {
-  return PPC::createFastISel(FuncInfo, LibInfo);
+FastISel *PPCTargetLowering::createFastISel(
+    FunctionLoweringInfo &FuncInfo, const TargetLibraryInfo *LibInfo,
+    const LibcallLoweringInfo *LibcallLowering) const {
+  return PPC::createFastISel(FuncInfo, LibInfo, LibcallLowering);
 }
 
 // 'Inverted' means the FMA opcode after negating one multiplicand.
@@ -20256,7 +20318,7 @@ bool PPCTargetLowering::shouldInlineQuadwordAtomics() const {
 }
 
 TargetLowering::AtomicExpansionKind
-PPCTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+PPCTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   unsigned Size = AI->getType()->getPrimitiveSizeInBits();
   if (shouldInlineQuadwordAtomics() && Size == 128)
     return AtomicExpansionKind::MaskedIntrinsic;
@@ -20275,7 +20337,8 @@ PPCTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
 }
 
 TargetLowering::AtomicExpansionKind
-PPCTargetLowering::shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const {
+PPCTargetLowering::shouldExpandAtomicCmpXchgInIR(
+    const AtomicCmpXchgInst *AI) const {
   unsigned Size = AI->getNewValOperand()->getType()->getPrimitiveSizeInBits();
   if (shouldInlineQuadwordAtomics() && Size == 128)
     return AtomicExpansionKind::MaskedIntrinsic;

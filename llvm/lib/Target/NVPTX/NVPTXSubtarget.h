@@ -36,9 +36,8 @@ class NVPTXSubtarget : public NVPTXGenSubtargetInfo {
   // PTX version x.y is represented as 10*x+y, e.g. 3.1 == 31
   unsigned PTXVersion;
 
-  // FullSmVersion encoding: SM * 10 + ArchSuffixOffset
-  // ArchSuffixOffset: 0 (base), 2 ('f'), 3 ('a')
-  // e.g. sm_30 -> 300, sm_90a -> 903, sm_100f -> 1002
+  // Full SM version x.y is represented as 100*x+10*y+feature, e.g. 3.1 == 310
+  // sm_90a == 901
   unsigned int FullSmVersion;
 
   // SM version x.y is represented as 10*x+y, e.g. 3.1 == 31. Derived from
@@ -161,6 +160,11 @@ public:
   bool hasTcgen05MMASparseMxf4() const {
     return hasPTXWithAccelSMs(90, {100, 110, 103}) ||
            hasPTXWithAccelSMs(86, {100, 101, 103});
+  }
+
+  bool hasTcgen05LdRedSupport() const {
+    return hasPTXWithFamilySMs(90, {110, 103}) ||
+           hasPTXWithFamilySMs(88, {101, 103});
   }
 
   bool hasReduxSyncF32() const {
@@ -290,9 +294,9 @@ public:
     return getFullSmVersion() % 10 == 2 ? PTXVersion >= 88
                                         : hasArchAccelFeatures();
   }
-  // If the user did not provide a target we default to the `sm_30` target.
+  // If the user did not provide a target we default to the `sm_75` target.
   std::string getTargetName() const {
-    return TargetName.empty() ? "sm_30" : TargetName;
+    return TargetName.empty() ? "sm_75" : TargetName;
   }
   bool hasTargetName() const { return !TargetName.empty(); }
 

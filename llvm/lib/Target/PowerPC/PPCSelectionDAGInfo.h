@@ -87,6 +87,11 @@ public:
   std::pair<SDValue, SDValue>
   EmitTargetCodeForStrlen(SelectionDAG &DAG, const SDLoc &DL, SDValue Chain,
                           SDValue Src, const CallInst *CI) const override;
+
+  std::pair<SDValue, SDValue>
+  EmitTargetCodeForStrstr(SelectionDAG &DAG, const SDLoc &dl, SDValue Chain,
+                          SDValue Op1, SDValue Op2,
+                          const CallInst *CI) const override;
 };
 
 } // namespace llvm

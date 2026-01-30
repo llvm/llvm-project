@@ -143,11 +143,11 @@ def GpuNVVMAttachTarget: Pass<"nvvm-attach-target", ""> {
            /*default=*/ "\"nvptx64-nvidia-cuda\"",
            "Target triple.">,
     Option<"chip", "chip", "std::string",
-           /*default=*/"\"sm_50\"",
+           /*default=*/"\"sm_75\"",
            "Target chip.">,
     Option<"features", "features", "std::string",
-           /*default=*/"\"\"",
-           "Target features, default is to use the minimum PTX ISA version for the SM target.">,
+           /*default=*/"\"+ptx60\"",
+           "Target features.">,
     Option<"optLevel", "O", "unsigned",
            /*default=*/"2",
            "Optimization level.">,
@@ -162,6 +162,9 @@ def GpuNVVMAttachTarget: Pass<"nvvm-attach-target", ""> {
     Option<"cmdOptions", "ptxas-cmd-options", "std::string",
            /*default=*/ [{""}],
            "Command line options passed to downstream compiler">,
+    Option<"verifyTarget", "verify-target-arch", "bool",
+           /*default=*/"true",
+           "Enable verification of the target architecture">,
   ];
 }
 

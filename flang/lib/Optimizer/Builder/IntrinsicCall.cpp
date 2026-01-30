@@ -15,6 +15,7 @@
 
 #include "flang/Optimizer/Builder/IntrinsicCall.h"
 #include "flang/Common/static-multimap-view.h"
+#include "flang/Lower/AbstractConverter.h"
 #include "flang/Optimizer/Builder/BoxValue.h"
 #include "flang/Optimizer/Builder/CUDAIntrinsicCall.h"
 #include "flang/Optimizer/Builder/CUFCommon.h"
@@ -8087,12 +8088,14 @@ mlir::Value IntrinsicLibrary::genTanpi(mlir::Type resultType,
 
 // TEAM_NUMBER
 fir::ExtendedValue
-IntrinsicLibrary::genTeamNumber(mlir::Type,
+IntrinsicLibrary::genTeamNumber(mlir::Type resultType,
                                 llvm::ArrayRef<fir::ExtendedValue> args) {
   converter->checkCoarrayEnabled();
   assert(args.size() == 1);
-  return mif::TeamNumberOp::create(builder, loc,
-                                   /*team*/ fir::getBase(args[0]));
+
+  mlir::Value res = mif::TeamNumberOp::create(builder, loc,
+                                              /*team*/ fir::getBase(args[0]));
+  return builder.createConvert(loc, resultType, res);
 }
 
 // THIS_IMAGE

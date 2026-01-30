@@ -360,6 +360,16 @@ TEST_F(TestTypeSystemClang, TestBuiltinTypeForEmptyTriple) {
   TypeSystemClang::CompleteTagDeclarationDefinition(record_type);
 }
 
+TEST_F(TestTypeSystemClang, TestGetBuiltinTypeByName_BitInt) {
+  auto holder =
+      std::make_unique<clang_utils::TypeSystemClangHolder>("bitint_ast");
+  auto &ast = *holder->GetAST();
+
+  EXPECT_TRUE(ast.GetBuiltinTypeByName(ConstString("_BitInt(26)")).IsSigned());
+  EXPECT_FALSE(
+      ast.GetBuiltinTypeByName(ConstString("unsigned _BitInt(26)")).IsSigned());
+}
+
 TEST_F(TestTypeSystemClang, TestDisplayName) {
   TypeSystemClang ast("some name", llvm::Triple());
   EXPECT_EQ("some name", ast.getDisplayName());
