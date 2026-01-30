@@ -82,6 +82,7 @@ define i32* @unnamed_const() nounwind {
   ret i32* @anon
 }
 
+; UTC_ARGS: --disable
 ; Manually written check that are not caught by the UCT script invocation
 ; COMMON-LABEL: l_anon:
 ; COMMON-NEXT:     .word 42
