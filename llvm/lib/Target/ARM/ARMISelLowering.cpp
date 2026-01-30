@@ -3840,19 +3840,9 @@ ARMTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG,
     return DAG.getNode(ARMISD::THREAD_POINTER, dl, PtrVT);
   }
   case Intrinsic::arm_cls: {
-    // ARM32 scalar CLS: CTLS(x) = CTLZ(OR(SHL(XOR(x, SRA(x, 31)), 1), 1))
-    // We expand directly here instead of using ISD::CTLS since there's no
-    // native scalar CLS instruction on ARM.
     const SDValue &Operand = Op.getOperand(1);
     const EVT VTy = Op.getValueType();
-    SDValue SRA =
-        DAG.getNode(ISD::SRA, dl, VTy, Operand, DAG.getConstant(31, dl, VTy));
-    SDValue XOR = DAG.getNode(ISD::XOR, dl, VTy, SRA, Operand);
-    SDValue SHL =
-        DAG.getNode(ISD::SHL, dl, VTy, XOR, DAG.getConstant(1, dl, VTy));
-    SDValue OR =
-        DAG.getNode(ISD::OR, dl, VTy, SHL, DAG.getConstant(1, dl, VTy));
-    return DAG.getNode(ISD::CTLZ, dl, VTy, OR);
+    return DAG.getNode(ISD::CTLS, dl, VTy, Operand);
   }
   case Intrinsic::arm_cls64: {
     // arm_cls64 returns i32 but takes i64 input.

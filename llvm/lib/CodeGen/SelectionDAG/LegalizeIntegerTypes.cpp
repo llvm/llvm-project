@@ -4173,7 +4173,7 @@ void DAGTypeLegalizer::ExpandIntRes_CTLS(SDNode *N, SDValue &Lo, SDValue &Hi) {
   //               else ctls(Hi)
   GetExpandedInteger(N->getOperand(0), Lo, Hi);
   EVT NVT = Lo.getValueType();
-  unsigned NVTBits = NVT.getSizeInBits();
+  unsigned NVTBits = NVT.getScalarSizeInBits();
 
   SDValue Constant0 = DAG.getConstant(0, dl, NVT);
   SDValue ConstantBWM1 = DAG.getConstant(NVTBits - 1, dl, NVT);
