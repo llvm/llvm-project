@@ -1717,7 +1717,8 @@ static llvm::Expected<ModuleSpec> loadModuleFromCASImpl(
   FileSpec cas_spec;
   cas_spec.SetDirectory(ConstString(maybe_cas->configuration.CASPath));
   cas_spec.SetFilename(ConstString(cas_id));
-  ModuleSpec loaded(cas_spec, uuid, std::move(file_buffer));
+  DataExtractorSP extractor_sp = std::make_shared<DataExtractor>(file_buffer);
+  ModuleSpec loaded(cas_spec, uuid, extractor_sp);
   loaded.GetArchitecture() = arch;
 
   LLDB_LOG(GetLog(LLDBLog::Modules), "loading module using CASID '{0}'",

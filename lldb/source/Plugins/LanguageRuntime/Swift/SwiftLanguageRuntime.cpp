@@ -775,9 +775,9 @@ bool SwiftLanguageRuntime::AddModuleToReflectionContext(
   // When dealing with ELF, we need to pass in the contents of the on-disk
   // file, since the Section Header Table is not present in the child process
   if (obj_file->GetPluginName() == "elf") {
-    DataExtractor extractor;
-    auto size = obj_file->GetData(0, obj_file->GetByteSize(), extractor);
-    const uint8_t *file_data = extractor.GetDataStart();
+    DataExtractorSP extractor_sp;
+    auto size = obj_file->GetData(0, obj_file->GetByteSize(), extractor_sp);
+    const uint8_t *file_data = extractor_sp->GetDataStart();
     llvm::sys::MemoryBlock file_buffer((void *)file_data, size);
     info_id = m_reflection_ctx->ReadELF(
         swift::remote::RemoteAddress(
