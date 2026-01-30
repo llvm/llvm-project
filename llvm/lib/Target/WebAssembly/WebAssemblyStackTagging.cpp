@@ -203,7 +203,7 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
         untagAlloca(AI, Node, Size, StoreTagDecl, IntPtrType);
       };
       if (!DT || !PDT ||
-          !memtag::forAllReachableExits(*DT, *PDT, *LI, Info, Info.LifetimeEnd,
+          !memtag::forAllReachableExits(*DT, *PDT, *LI, Info, SInfo.RetVec,
                                         TagEnd)) {
         for (auto *End : Info.LifetimeEnd)
           End->eraseFromParent();
