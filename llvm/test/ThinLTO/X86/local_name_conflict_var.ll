@@ -20,15 +20,15 @@
 ;; summaries for baz as non-read only, which should cause the linkage type of
 ;; the imported copies of baz variables to be available_externally instead of
 ;; internal.
-; RUN: opt -module-summary -module-hash %p/Inputs/local_name_conflict_var3b.ll -o %t3b.bc
-; RUN: llvm-lto -thinlto-action=thinlink -o %t5.bc %t.bc %t1.bc %t2.bc %t3b.bc
+; RUN: opt -module-summary -module-hash %p/Inputs/local_name_conflict_var3b.ll -o %t3.bc
+; RUN: llvm-lto -thinlto-action=thinlink -o %t5.bc %t.bc %t1.bc %t2.bc %t3.bc
 ; RUN: llvm-lto -thinlto-action=import -exported-symbol=main %t.bc -thinlto-index=%t5.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=IMPORTNOREADONLY
 ; IMPORTNOREADONLY: @baz.llvm.{{.*}} = available_externally hidden global i32 10
 ; IMPORTNOREADONLY: @baz.llvm.{{.*}} = available_externally hidden global i32 10
 
 ;; Do this again but where the 3rd module calls local function baz.
-; RUN: opt -module-summary -module-hash %p/Inputs/local_name_conflict_var3.ll -o %t3.bc
-; RUN: llvm-lto -thinlto-action=thinlink -o %t5.bc %t.bc %t1.bc %t2.bc %t3.bc
+; RUN: opt -module-summary -module-hash %p/Inputs/local_name_conflict_var3.ll -o %t3b.bc
+; RUN: llvm-lto -thinlto-action=thinlink -o %t5.bc %t.bc %t1.bc %t2.bc %t3b.bc
 ; RUN: llvm-lto -thinlto-action=import -exported-symbol=main %t.bc -thinlto-index=%t5.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=IMPORTNOREADONLY
 
 ; ModuleID = 'local_name_conflict_var_main.o'
