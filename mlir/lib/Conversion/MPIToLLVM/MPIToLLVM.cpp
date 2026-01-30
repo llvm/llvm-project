@@ -20,6 +20,7 @@
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
 #include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/Dialect/MPI/IR/MPI.h"
+#include "mlir/Dialect/MPI/IR/Utils.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include <memory>
 
@@ -614,6 +615,17 @@ struct CommRankOpLowering : public ConvertOpToLLVMPattern<mpi::CommRankOp> {
 // CommSizeOpLowering
 //===----------------------------------------------------------------------===//
 
+static Value createOrFoldCommSize(ConversionPatternRewriter &rewriter,
+                                  Location loc, Value commOrg,
+                                  Value commAdapt) {
+  auto i32 = rewriter.getI32Type();
+  auto nRanksOp = mpi::CommSizeOp::create(rewriter, loc, i32, commOrg);
+  if (succeeded(FoldToDLTIConst(nRanksOp, "MPI:comm_world_size", rewriter)))
+    return nRanksOp.getSize();
+  rewriter.eraseOp(nRanksOp);
+  return mpi::CommSizeOp::create(rewriter, loc, i32, commAdapt).getSize();
+}
+
 struct CommSizeOpLowering : public ConvertOpToLLVMPattern<mpi::CommSizeOp> {
   using ConvertOpToLLVMPattern::ConvertOpToLLVMPattern;
 
@@ -818,8 +830,7 @@ struct AllGatherOpLowering : public ConvertOpToLLVMPattern<mpi::AllGatherOp> {
 
     // count_recv is the number of elements received from each rank, not total
     Value nRanks =
-        mpi::CommSizeOp::create(rewriter, loc, i32, adaptor.getComm())
-            .getSize();
+        createOrFoldCommSize(rewriter, loc, op.getComm(), adaptor.getComm());
     Value recvCountPerRank =
         LLVM::UDivOp::create(rewriter, loc, i32, recvSize, nRanks);
 

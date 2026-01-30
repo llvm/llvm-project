@@ -95,6 +95,7 @@ module attributes {dlti.map = #dlti.map<"MPI:Implementation" = "MPICH">} {
     // CHECK: [[v57:%.*]] = llvm.load [[v55]] : !llvm.ptr -> i32
     %split = mpi.comm_split(%comm, %color, %key) : !mpi.comm
 
+    // CHECK: llvm.call @MPI_Comm_size
     // CHECK: llvm.call @MPI_Allgather({{.*}} : (!llvm.ptr, i32, i32, !llvm.ptr, i32, i32, i32) -> i32
     %err3 = mpi.allgather(%arg0, %arg0, %comm) : memref<100xf32>, memref<100xf32> -> !mpi.retval
 
@@ -253,6 +254,21 @@ module attributes { dlti.map = #dlti.map<"MPI:Implementation" = "OpenMPI"> } {
     // CHECK: llvm.call @MPI_Finalize() : () -> i32
     %3 = mpi.finalize : !mpi.retval
 
+    return
+  }
+}
+
+// -----
+
+module attributes {mpi.dlti = #dlti.map<"MPI:Implementation" = "MPICH", "MPI:comm_world_size" = 4, "MPI:comm_world_rank" = 1> } {
+  // CHECK: llvm.func @mpi_test_fold
+  func.func @mpi_test_fold(%arg0: memref<100xf32>) {
+    // CHECK: [[comm:%.*]] = llvm.mlir.constant(1140850688 : i64) : i64
+    %comm = mpi.comm_world : !mpi.comm
+
+    // CHECK-NOT: llvm.call @MPI_Comm_size
+    // CHECK: llvm.call @MPI_Allgather({{.*}} : (!llvm.ptr, i32, i32, !llvm.ptr, i32, i32, i32) -> i32
+    %err3 = mpi.allgather(%arg0, %arg0, %comm) : memref<100xf32>, memref<100xf32> -> !mpi.retval
     return
   }
 }
