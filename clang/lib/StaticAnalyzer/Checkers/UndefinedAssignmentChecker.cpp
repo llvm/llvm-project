@@ -40,12 +40,9 @@ void UndefinedAssignmentChecker::checkBind(SVal location, SVal val,
   // Do not report assignments of uninitialized values inside swap functions.
   // This should allow to swap partially uninitialized structs
   if (const FunctionDecl *EnclosingFunctionDecl =
-          dyn_cast<FunctionDecl>(C.getStackFrame()->getDecl())) {
-    if (C.getCalleeName(EnclosingFunctionDecl) == "swap") {
-      C.generateSink(C.getState(), C.getPredecessor());
+      dyn_cast<FunctionDecl>(C.getStackFrame()->getDecl()))
+    if (C.getCalleeName(EnclosingFunctionDecl) == "swap")
       return;
-    }
-  }
 
   ExplodedNode *N = C.generateErrorNode();
 
