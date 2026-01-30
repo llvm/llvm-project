@@ -4625,8 +4625,8 @@ class InitListTransformer {
       unsigned Cols = MTy->getNumColumns();
       QualType ElemTy = MTy->getElementType();
 
-      for (unsigned C = 0; C < Cols; ++C) {
-        for (unsigned R = 0; R < Rows; ++R) {
+      for (unsigned R = 0; R < Rows; ++R) {
+        for (unsigned C = 0; C < Cols; ++C) {
           // row index literal
           Expr *RowIdx = IntegerLiteral::Create(
               Ctx, llvm::APInt(Ctx.getIntWidth(Ctx.IntTy), R), Ctx.IntTy,
