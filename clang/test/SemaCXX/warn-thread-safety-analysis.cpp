@@ -7438,9 +7438,10 @@ void testPointerAliasEscapeAndReset(Foo *f) {
 void escapeAliasMultiple(void *, void *, void *);
 void testPointerAliasEscapeMultiple(Foo *F)
 {
+    Foo *L;
     F->mu.Lock(); // expected-note{{mutex acquired here}}
     Foo *Fp = F;
-    escapeAliasMultiple(&F, &F, &Fp);
+    escapeAliasMultiple(&L, &L, &Fp);
     Fp->mu.Unlock(); // expected-warning{{releasing mutex 'Fp->mu' that was not held}}
 } // expected-warning{{mutex 'F->mu' is still held at the end of function}}
   
