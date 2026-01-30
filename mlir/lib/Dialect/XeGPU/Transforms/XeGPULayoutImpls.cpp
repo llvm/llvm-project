@@ -714,6 +714,17 @@ getDefaultLaneLayoutAttr(mlir::MLIRContext *ctx, unsigned rank,
   return xegpu::LayoutAttr::get(ctx, {1, uArch->getSubgroupSize()}, {1, 1});
 }
 
+/// Sets up the result layout for a load gather operation.
+/// For Subgroup layout, uses the consumer layout directly.
+/// non-chunked loads:
+///   InstData = {1, ..., min(consumer, maxLaneLoadStoreSize *
+///   subgroupSize)}
+///   LaneLayout = {1, ..., subgroupSize}
+///   lane_data = {1, ..., min(consumer, maxLaneLoadStoreSize)}
+/// chunked loads:
+///   InstData = {subgroupSize, min(consumer, maxLaneLoadStoreSize)}
+///   LaneLayout = {subgroupSize, 1}
+///   lane_data={1,min(consumer, maxLaneLoadStoreSize)}
 xegpu::DistributeLayoutAttr xegpu::setupLoadGatherAnchorLayout(
     LayoutKind layoutKind, VectorType resVecTy, int chunkSize,
     DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch) {
@@ -721,9 +732,7 @@ xegpu::DistributeLayoutAttr xegpu::setupLoadGatherAnchorLayout(
   xegpu::DistributeLayoutAttr requiredLayout;
   const int subgroupSize = uArch->getSubgroupSize();
 
-  auto resShape = resVecTy.getShape();
-  int resShapeSize = resShape.size();
-  SmallVector<int> instData(resShapeSize);
+  int resShapeSize = resVecTy.getShape().size();
   auto context = resVecTy.getContext();
 
   const auto *uArchInstruction =
@@ -732,48 +741,44 @@ xegpu::DistributeLayoutAttr xegpu::setupLoadGatherAnchorLayout(
 
   SmallVector<int64_t> consumerInstData =
       consumerLayout.getEffectiveInstDataAsInt();
-  SmallVector<int32_t> instData32;
+  SmallVector<int64_t> consumerLaneData =
+      consumerLayout.getEffectiveLaneDataAsInt();
 
-  switch (layoutKind) {
-  case xegpu::LayoutKind::Subgroup:
-    requiredLayout = consumerLayout;
-    break;
-  case xegpu::LayoutKind::InstData:
-    if (resVecTy.getRank() == 1) {
+  SmallVector<int> instData(resShapeSize, 1);
+  SmallVector<int> laneLayout(resShapeSize, 1);
+  SmallVector<int> laneData(resShapeSize, 1);
+
+  if (layoutKind == xegpu::LayoutKind::Subgroup) {
+    return consumerLayout;
+  }
+
+  if (chunkSize == 1) {
+    if (layoutKind == xegpu::LayoutKind::InstData) {
+      instData[resShapeSize - 1] =
+          std::min(static_cast<int>(consumerInstData[resShapeSize - 1]),
+                   uArchInstruction->getMaxLaneLoadStoreSize() * subgroupSize);
+      requiredLayout = xegpu::LayoutAttr::get(context, instData);
+    } else if (layoutKind == xegpu::LayoutKind::Lane) {
+      laneLayout[resShapeSize - 1] = subgroupSize;
+      laneData[resShapeSize - 1] =
+          std::min(static_cast<int>(consumerLaneData[resShapeSize - 1]),
+                   uArchInstruction->getMaxLaneLoadStoreSize());
+      requiredLayout = xegpu::LayoutAttr::get(context, laneLayout, laneData);
+    }
+  } else {
+    assert(resVecTy.getRank() == 2 &&
+           "Chunked Store must access 2D tensor tile.");
+    if (layoutKind == xegpu::LayoutKind::InstData) {
       instData[0] = subgroupSize;
-    } else {
-      assert((resVecTy.getRank() == 2) && "StoreScatterOp can access 2D tensor "
-                                          "tile at maximum at subgroup level.");
-      if (chunkSize == 1) {
-        instData[0] = 1;
-        instData[1] = subgroupSize;
-      } else {
-        instData[0] = subgroupSize;
-        instData[1] = std::min(static_cast<int>(resShape[1]),
-                               uArchInstruction->getMaxLaneLoadStoreSize());
-        instData[1] =
-            std::min(instData[1], static_cast<int>(consumerInstData[1]));
-      }
+      instData[1] = std::min(static_cast<int>(consumerInstData[1]),
+                             uArchInstruction->getMaxLaneLoadStoreSize());
+      requiredLayout = xegpu::LayoutAttr::get(context, instData);
+    } else if (layoutKind == xegpu::LayoutKind::Lane) {
+      laneLayout[0] = subgroupSize;
+      laneData[1] = std::min(static_cast<int>(consumerLaneData[1]),
+                             uArchInstruction->getMaxLaneLoadStoreSize());
+      requiredLayout = xegpu::LayoutAttr::get(context, laneLayout, laneData);
     }
-    requiredLayout = xegpu::LayoutAttr::get(
-        context, DenseI32ArrayAttr::get(context, instData));
-    break;
-  case xegpu::LayoutKind::Lane:
-    if (chunkSize == 1)
-      requiredLayout =
-          getDefaultLaneLayoutAttr(context, resVecTy.getRank(), uArch);
-    else {
-      assert((resVecTy.getRank() <= 2) && "StoreScatterOp can access 2D tensor "
-                                          "tile at maximum at subgroup level.");
-      assert(resShape[1] <= static_cast<int64_t>(
-                                uArchInstruction->getMaxLaneLoadStoreSize()) &&
-             "StoreScatterOp lane size exceeds max lane load/store size.");
-      requiredLayout = xegpu::LayoutAttr::get(
-          context, {subgroupSize, 1}, {1, static_cast<int>(resShape[1])});
-    }
-    break;
-  default:
-    llvm_unreachable("unsupported layout kind");
   }
   return requiredLayout;
 }
