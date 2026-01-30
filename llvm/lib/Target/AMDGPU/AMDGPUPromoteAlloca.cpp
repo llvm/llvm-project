@@ -619,7 +619,7 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
     TypeSize AccessSize = DL.getTypeStoreSize(AccessTy);
     if (Constant *CI = dyn_cast<Constant>(Index)) {
       if (CI->isZeroValue() && AccessSize == VecStoreSize) {
-        Inst->replaceAllUsesWith(Builder.CreateCastChain(DL, CurVal, AccessTy));
+        Inst->replaceAllUsesWith(Builder.CreateBitPreservingCastChain(DL, CurVal, AccessTy));
         return nullptr;
       }
     }
@@ -669,7 +669,7 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
             SubVec, Builder.CreateExtractElement(CurVal, CurIdx), K);
       }
 
-      Inst->replaceAllUsesWith(Builder.CreateCastChain(DL, SubVec, AccessTy));
+      Inst->replaceAllUsesWith(Builder.CreateBitPreservingCastChain(DL, SubVec, AccessTy));
       return nullptr;
     }
 
@@ -695,7 +695,7 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
     TypeSize AccessSize = DL.getTypeStoreSize(AccessTy);
     if (Constant *CI = dyn_cast<Constant>(Index))
       if (CI->isZeroValue() && AccessSize == VecStoreSize)
-        return Builder.CreateCastChain(DL, Val, AA.Vector.Ty);
+        return Builder.CreateBitPreservingCastChain(DL, Val, AA.Vector.Ty);
 
     // Storing a subvector.
     if (isa<FixedVectorType>(AccessTy)) {
@@ -706,7 +706,7 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
       auto *SubVecTy = FixedVectorType::get(VecEltTy, NumWrittenElts);
       assert(DL.getTypeStoreSize(SubVecTy) == DL.getTypeStoreSize(AccessTy));
 
-      Val = Builder.CreateCastChain(DL, Val, SubVecTy);
+      Val = Builder.CreateBitPreservingCastChain(DL, Val, SubVecTy);
       Value *CurVec = GetCurVal();
       for (unsigned K = 0, NumElts = std::min(NumWrittenElts, NumVecElts);
            K < NumElts; ++K) {

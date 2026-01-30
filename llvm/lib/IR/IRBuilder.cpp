@@ -103,8 +103,8 @@ Value *IRBuilderBase::CreateAggregateCast(Value *V, Type *DestTy) {
   return CreateBitOrPointerCast(V, DestTy);
 }
 
-Value *IRBuilderBase::CreateCastChain(const DataLayout &DL, Value *V,
-                                      Type *NewTy) {
+Value *IRBuilderBase::CreateBitPreservingCastChain(const DataLayout &DL,
+                                                   Value *V, Type *NewTy) {
   Type *OldTy = V->getType();
 
   if (OldTy == NewTy)

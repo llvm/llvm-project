@@ -3150,7 +3150,7 @@ private:
     assert(!LI.isVolatile());
     Value *V =
         IRB.CreateAlignedLoad(NewAllocaTy, &NewAI, NewAI.getAlign(), "load");
-    V = IRB.CreateCastChain(DL, V, IntTy);
+    V = IRB.CreateBitPreservingCastChain(DL, V, IntTy);
     assert(NewBeginOffset >= NewAllocaBeginOffset && "Out of bounds offset");
     uint64_t Offset = NewBeginOffset - NewAllocaBeginOffset;
     if (Offset > 0 || NewEndOffset < NewAllocaEndOffset) {
@@ -3243,7 +3243,7 @@ private:
       V = NewLI;
       IsPtrAdjusted = true;
     }
-    V = IRB.CreateCastChain(DL, V, TargetTy);
+    V = IRB.CreateBitPreservingCastChain(DL, V, TargetTy);
 
     if (IsSplit) {
       assert(!LI.isVolatile());
@@ -3298,7 +3298,7 @@ private:
                           ? ElementTy
                           : FixedVectorType::get(ElementTy, NumElements);
       if (V->getType() != SliceTy)
-        V = IRB.CreateCastChain(DL, V, SliceTy);
+        V = IRB.CreateBitPreservingCastChain(DL, V, SliceTy);
 
       // Mix in the existing elements.
       Value *Old =
@@ -3327,12 +3327,12 @@ private:
         IntTy->getBitWidth()) {
       Value *Old = IRB.CreateAlignedLoad(NewAllocaTy, &NewAI, NewAI.getAlign(),
                                          "oldload");
-      Old = IRB.CreateCastChain(DL, Old, IntTy);
+      Old = IRB.CreateBitPreservingCastChain(DL, Old, IntTy);
       assert(BeginOffset >= NewAllocaBeginOffset && "Out of bounds offset");
       uint64_t Offset = BeginOffset - NewAllocaBeginOffset;
       V = insertInteger(DL, IRB, Old, SI.getValueOperand(), Offset, "insert");
     }
-    V = IRB.CreateCastChain(DL, V, NewAllocaTy);
+    V = IRB.CreateBitPreservingCastChain(DL, V, NewAllocaTy);
     StoreInst *Store = IRB.CreateAlignedStore(V, &NewAI, NewAI.getAlign());
     Store->copyMetadata(SI, {LLVMContext::MD_mem_parallel_loop_access,
                              LLVMContext::MD_access_group});
@@ -3384,7 +3384,7 @@ private:
     if (NewBeginOffset == NewAllocaBeginOffset &&
         NewEndOffset == NewAllocaEndOffset &&
         canConvertValue(DL, V->getType(), NewAllocaTy)) {
-      V = IRB.CreateCastChain(DL, V, NewAllocaTy);
+      V = IRB.CreateBitPreservingCastChain(DL, V, NewAllocaTy);
       Value *NewPtr =
           getPtrToNewAI(SI.getPointerAddressSpace(), SI.isVolatile());
 
@@ -3535,7 +3535,7 @@ private:
 
       Value *Splat = getIntegerSplat(
           II.getValue(), DL.getTypeSizeInBits(ElementTy).getFixedValue() / 8);
-      Splat = IRB.CreateCastChain(DL, Splat, ElementTy);
+      Splat = IRB.CreateBitPreservingCastChain(DL, Splat, ElementTy);
       if (NumElements > 1)
         Splat = getVectorSplat(Splat, NumElements);
 
@@ -3554,14 +3554,14 @@ private:
                     EndOffset != NewAllocaBeginOffset)) {
         Value *Old = IRB.CreateAlignedLoad(NewAllocaTy, &NewAI,
                                            NewAI.getAlign(), "oldload");
-        Old = IRB.CreateCastChain(DL, Old, IntTy);
+        Old = IRB.CreateBitPreservingCastChain(DL, Old, IntTy);
         uint64_t Offset = NewBeginOffset - NewAllocaBeginOffset;
         V = insertInteger(DL, IRB, Old, V, Offset, "insert");
       } else {
         assert(V->getType() == IntTy &&
                "Wrong type for an alloca wide integer!");
       }
-      V = IRB.CreateCastChain(DL, V, NewAllocaTy);
+      V = IRB.CreateBitPreservingCastChain(DL, V, NewAllocaTy);
     } else {
       // Established these invariants above.
       assert(NewBeginOffset == NewAllocaBeginOffset);
@@ -3573,7 +3573,7 @@ private:
         V = getVectorSplat(
             V, cast<FixedVectorType>(AllocaVecTy)->getNumElements());
 
-      V = IRB.CreateCastChain(DL, V, NewAllocaTy);
+      V = IRB.CreateBitPreservingCastChain(DL, V, NewAllocaTy);
     }
 
     Value *NewPtr = getPtrToNewAI(II.getDestAddressSpace(), II.isVolatile());
@@ -3775,7 +3775,7 @@ private:
     } else if (IntTy && !IsWholeAlloca && !IsDest) {
       Src =
           IRB.CreateAlignedLoad(NewAllocaTy, &NewAI, NewAI.getAlign(), "load");
-      Src = IRB.CreateCastChain(DL, Src, IntTy);
+      Src = IRB.CreateBitPreservingCastChain(DL, Src, IntTy);
       uint64_t Offset = NewBeginOffset - NewAllocaBeginOffset;
       Src = extractInteger(DL, IRB, Src, SubIntTy, Offset, "extract");
     } else {
@@ -3796,10 +3796,10 @@ private:
     } else if (IntTy && !IsWholeAlloca && IsDest) {
       Value *Old = IRB.CreateAlignedLoad(NewAllocaTy, &NewAI, NewAI.getAlign(),
                                          "oldload");
-      Old = IRB.CreateCastChain(DL, Old, IntTy);
+      Old = IRB.CreateBitPreservingCastChain(DL, Old, IntTy);
       uint64_t Offset = NewBeginOffset - NewAllocaBeginOffset;
       Src = insertInteger(DL, IRB, Old, Src, Offset, "insert");
-      Src = IRB.CreateCastChain(DL, Src, NewAllocaTy);
+      Src = IRB.CreateBitPreservingCastChain(DL, Src, NewAllocaTy);
     }
 
     StoreInst *Store = cast<StoreInst>(
