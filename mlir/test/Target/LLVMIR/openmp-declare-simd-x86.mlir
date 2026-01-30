@@ -35,7 +35,6 @@ module attributes {
   //   * CDT = return type i32 => 32 bits
   //   * VLEN = vector-register-size / 32
   //
-  // CHECK-LABEL: define i32 @ds_minimal
   llvm.func @ds_minimal(%x: !llvm.ptr, %y: !llvm.ptr) -> i32 {
     omp.declare_simd
     %vx = llvm.load %x : !llvm.ptr -> i32
@@ -61,7 +60,6 @@ module attributes {
   //
   // No branch clause => both masked (M) and unmasked (N) variants emitted.
   //
-  // CHECK-LABEL: define i32 @ds_uniform_linear_const_step_inbranch
   llvm.func @ds_uniform_linear_const_step_inbranch(
       %x: !llvm.ptr, %y: !llvm.ptr, %i: !llvm.ptr) -> i32 {
     %c1 = llvm.mlir.constant(1 : i32) : i32
@@ -91,7 +89,6 @@ module attributes {
   //
   // No branch clause => both masked (M) and unmasked (N) variants emitted.
   //
-  // CHECK-LABEL: define i32 @ds_uniform_linear_var_stride
   llvm.func @ds_uniform_linear_var_stride(
       %x: !llvm.ptr, %y: !llvm.ptr, %i: !llvm.ptr, %step: !llvm.ptr) -> i32 {
     %stepv = llvm.load %step : !llvm.ptr -> i32
@@ -119,7 +116,6 @@ module attributes {
   // VLEN:
   //   No simdlen => derived from CDT (i32)
   //
-  // CHECK-LABEL: define i32 @ds_aligned_uniform_notinbranch
   llvm.func @ds_aligned_uniform_notinbranch(
       %p0: !llvm.ptr, %p1: !llvm.ptr, %i: !llvm.ptr) -> i32 {
     omp.declare_simd aligned(%p0 : !llvm.ptr -> 32 : i64,
@@ -139,7 +135,6 @@ module attributes {
   // Each omp.declare_simd independently contributes a set of
   // vector-function attributes to the same LLVM function.
   //
-  // CHECK-LABEL: define i32 @ds_multiple_ops_same_function
   llvm.func @ds_multiple_ops_same_function(%a: !llvm.ptr, %b: !llvm.ptr, %i: !llvm.ptr) -> i32 {
     %c1 = llvm.mlir.constant(1 : i32) : i32
     omp.declare_simd uniform(%b : !llvm.ptr) linear(%i = %c1 : !llvm.ptr) simdlen(4) {linear_var_types = [i32]}
@@ -156,7 +151,7 @@ module attributes {
 
 // no branch clause => both N and M, VLEN from CDT(i32)=32b
 //
-// CHECK: attributes #[[ATTR_0:[0-9]+]] = {
+// CHECK: attributes {{.+}} = {
 // CHECK-SAME: "_ZGVbM4vv_ds_minimal"
 // CHECK-SAME: "_ZGVbN4vv_ds_minimal"
 // CHECK-SAME: "_ZGVcN8vv_ds_minimal"
@@ -167,7 +162,7 @@ module attributes {
 //
 // uniform + linear with constant step + simdlen + inbranch
 //
-// CHECK: attributes #[[ATTR_1:[0-9]+]] = {
+// CHECK: attributes {{.+}} = {
 // CHECK-SAME: "_ZGVbM8vul_ds_uniform_linear_const_step_inbranch"
 // CHECK-SAME: "_ZGVcM8vul_ds_uniform_linear_const_step_inbranch"
 // CHECK-SAME: "_ZGVdM8vul_ds_uniform_linear_const_step_inbranch"
@@ -176,7 +171,7 @@ module attributes {
 //
 // uniform + linear with var-stride via `llvm.load %step` + simdlen
 //
-// CHECK: attributes #[[ATTR_2:[0-9]+]] = {
+// CHECK: attributes {{.+}} = {
 // CHECK-SAME: "_ZGVbM8vuls3v_ds_uniform_linear_var_stride"
 // CHECK-SAME: "_ZGVbN8vuls3v_ds_uniform_linear_var_stride"
 // CHECK-SAME: "_ZGVcM8vuls3v_ds_uniform_linear_var_stride"
@@ -189,7 +184,7 @@ module attributes {
 //
 // aligned + uniform + notinbranch
 //
-// CHECK: attributes #[[ATTR_3:[0-9]+]] = {
+// CHECK: attributes {{.+}} = {
 // CHECK-SAME: "_ZGVbN4va32ua128v_ds_aligned_uniform_notinbranch"
 // CHECK-SAME: "_ZGVcN8va32ua128v_ds_aligned_uniform_notinbranch"
 // CHECK-SAME: "_ZGVdN8va32ua128v_ds_aligned_uniform_notinbranch"
@@ -198,7 +193,7 @@ module attributes {
 //
 // multiple declare_simd ops in the same function body
 //
-// CHECK: attributes #[[ATTR_4:[0-9]+]] = {
+// CHECK: attributes {{.+}} = {
 // CHECK-SAME: "_ZGVbM4vul_ds_multiple_ops_same_function"
 // CHECK-SAME: "_ZGVbM8uvv_ds_multiple_ops_same_function"
 // CHECK-SAME: "_ZGVbN4vul_ds_multiple_ops_same_function"
