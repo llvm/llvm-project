@@ -411,5 +411,53 @@ declare void @willreturn_attribute() willreturn
 
 // -----
 
+; CHECK-LABEL: @noreturn_attribute
+; CHECK-SAME: attributes {noreturn}
+declare void @noreturn_attribute() noreturn
+
+// -----
+
+; CHECK-LABEL: @returnstwice_attribute
+; CHECK-SAME: attributes {returns_twice}
+declare void @returnstwice_attribute() returns_twice
+
+// -----
+
+; CHECK-LABEL: @hot_attribute
+; CHECK-SAME: attributes {hot}
+declare void @hot_attribute() hot
+
+// -----
+
+; CHECK-LABEL: @cold_attribute
+; CHECK-SAME: attributes {cold}
+declare void @cold_attribute() cold
+
+// -----
+
+; CHECK-LABEL: @noduplicate_attribute
+; CHECK-SAME: attributes {noduplicate}
+declare void @noduplicate_attribute() noduplicate
+
+// -----
+
+; CHECK-LABEL: @no_caller_saved_registers_attribute
+; CHECK-SAME: attributes {no_caller_saved_registers}
+declare void @no_caller_saved_registers_attribute () "no_caller_saved_registers"
+
+// -----
+
+; CHECK-LABEL: @nocallback_attribute
+; CHECK-SAME: attributes {nocallback}
+declare void @nocallback_attribute() nocallback
+
+// -----
+
+; CHECK-LABEL: @modular_format_attribute
+; CHECK-SAME: attributes {modular_format = "Ident,1,1,Foo,Bar"}
+declare void @modular_format_attribute(i32) "modular-format" = "Ident,1,1,Foo,Bar"
+
+// -----
+
 ; expected-warning @unknown {{'preallocated' attribute is invalid on current operation, skipping it}}
 declare void @test() preallocated(i32)
