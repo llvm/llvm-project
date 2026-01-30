@@ -5956,11 +5956,11 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyWorkshareLoop(
   case OMPScheduleType::BaseGreedy:
   case OMPScheduleType::BaseBalanced:
   case OMPScheduleType::BaseSteal:
-  case OMPScheduleType::BaseGuidedSimd:
   case OMPScheduleType::BaseRuntimeSimd:
     assert(!ChunkSize &&
            "schedule type does not support user-defined chunk sizes");
     [[fallthrough]];
+  case OMPScheduleType::BaseGuidedSimd:
   case OMPScheduleType::BaseDynamicChunked:
   case OMPScheduleType::BaseGuidedChunked:
   case OMPScheduleType::BaseGuidedIterativeChunked:
