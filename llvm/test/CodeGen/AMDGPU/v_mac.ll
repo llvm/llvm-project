@@ -252,8 +252,16 @@ bb:
 ; SI-DAG: v_cvt_f32_f16_e32 [[CVT_B:v[0-9]+]], [[B]]
 
 ; SI: v_add_f32_e32 [[TMP2:v[0-9]+]], [[CVT_A]], [[CVT_A]]
-; SI: v_mad_f32 v{{[0-9]+}}, [[TMP2]], -4.0, 1.0
-; SI: v_madmk_f32 v{{[0-9]+}}, v{{[0-9]+}}, 0x41000000, v{{[0-9]+}}
+; SI: v_cvt_f16_f32
+; SI: v_cvt_f32_f16
+; SI: v_mul_f32
+; SI: v_mul_f32
+; SI: v_cvt_f16_f32
+; SI: v_cvt_f16_f32
+; SI: v_add_f32
+; SI: v_add_f32
+; SI: v_cvt_f16_f32
+; SI: v_cvt_f16_f32
 
 ; VI-FLUSH: v_add_f16_e32 [[TMP2:v[0-9]+]], [[A]], [[A]]
 ; VI-FLUSH: v_mad_f16 v{{[0-9]+}}, [[TMP2]], -4.0, 1.0

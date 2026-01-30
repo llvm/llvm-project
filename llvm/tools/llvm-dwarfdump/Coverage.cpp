@@ -66,7 +66,7 @@ computeVariableCoverage(DWARFContext &DICtx, DWARFDie VariableDIE,
     for (const auto &L : Locations.get()) {
       if (L.Range) {
         if (!Lines)
-          Lines = {{}};
+          Lines = DenseSet<SourceLocation>();
         addLines(LineTable, *Lines, L.Range.value());
       }
     }
@@ -82,7 +82,7 @@ computeVariableCoverage(DWARFContext &DICtx, DWARFDie VariableDIE,
   auto ParentRanges = VariableDIE.getParent().getAddressRanges();
   std::optional<DenseSet<SourceLocation>> ParentLines;
   if (ParentRanges) {
-    ParentLines = {{}};
+    ParentLines = DenseSet<SourceLocation>();
     for (const auto &R : ParentRanges.get())
       addLines(LineTable, *ParentLines, R);
   } else {

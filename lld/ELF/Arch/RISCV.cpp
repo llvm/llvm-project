@@ -42,7 +42,6 @@ public:
                 uint64_t pltEntryAddr) const override;
   template <class ELFT, class RelTy>
   void scanSectionImpl(InputSectionBase &, Relocs<RelTy>);
-  template <class ELFT> void scanSection1(InputSectionBase &);
   void scanSection(InputSectionBase &) override;
   RelType getDynRel(RelType type) const override;
   RelExpr getRelExpr(RelType type, const Symbol &s,
@@ -1537,32 +1536,24 @@ void RISCV::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
                     });
 }
 
-template <class ELFT> void RISCV::scanSection1(InputSectionBase &sec) {
-  const RelsOrRelas<ELFT> rels = sec.template relsOrRelas<ELFT>();
-  if (rels.areRelocsCrel())
-    scanSectionImpl<ELFT>(sec, rels.crels);
-  else
-    scanSectionImpl<ELFT>(sec, rels.relas);
-}
-
 void RISCV::scanSection(InputSectionBase &sec) {
-  invokeELFT(scanSection1, sec);
+  if (ctx.arg.is64)
+    elf::scanSection1<RISCV, ELF64LE>(*this, sec);
+  else
+    elf::scanSection1<RISCV, ELF32LE>(*this, sec);
 }
 
-namespace lld::elf {
-uint32_t getRISCVVendorRelMarker(StringRef rvVendor) {
+uint32_t elf::getRISCVVendorRelMarker(StringRef rvVendor) {
   return StringSwitch<uint32_t>(rvVendor)
       .Case("QUALCOMM", INTERNAL_RISCV_VENDOR_QUALCOMM)
       .Case("ANDES", INTERNAL_RISCV_VENDOR_ANDES)
       .Default(0);
 }
 
-std::optional<StringRef> getRISCVVendorString(RelType ty) {
+std::optional<StringRef> elf::getRISCVVendorString(RelType ty) {
   if ((ty.v & INTERNAL_RISCV_VENDOR_MASK) == INTERNAL_RISCV_VENDOR_QUALCOMM)
     return "QUALCOMM";
   if ((ty.v & INTERNAL_RISCV_VENDOR_MASK) == INTERNAL_RISCV_VENDOR_ANDES)
     return "ANDES";
   return std::nullopt;
 }
-
-} // namespace lld::elf

@@ -40,6 +40,23 @@ define nofpclass(inf) float @ret_nofpclass_inf_undef() {
   ret float undef
 }
 
+define nofpclass(all) float @ret_nofpclass_all_undef() {
+; CHECK-LABEL: define nofpclass(all) float @ret_nofpclass_all_undef() {
+; CHECK-NEXT:    ret float poison
+;
+  ret float undef
+}
+
+; Use + callsite implies no values, should fold undef to poison.
+define nofpclass(nan) float @undef_folds_to_poison_arg() {
+; CHECK-LABEL: define nofpclass(nan) float @undef_folds_to_poison_arg() {
+; CHECK-NEXT:    [[FENCE:%.*]] = call float @llvm.arithmetic.fence.f32(float nofpclass(inf zero sub norm) poison)
+; CHECK-NEXT:    ret float [[FENCE]]
+;
+  %fence = call float @llvm.arithmetic.fence.f32(float nofpclass(inf sub norm zero) undef)
+  ret float %fence
+}
+
 ; Make sure there's no infinite loop
 define nofpclass(all) float @ret_nofpclass_all_var(float %arg) {
 ; CHECK-LABEL: define nofpclass(all) float @ret_nofpclass_all_var
@@ -93,128 +110,6 @@ define nofpclass(inf) float @ret_nofpclass_inf__ninf() {
   ret float 0xFFF0000000000000
 }
 
-; Basic aggregate tests to ensure this does not crash.
-define nofpclass(nan) { float } @ret_nofpclass_struct_ty() {
-; CHECK-LABEL: define nofpclass(nan) { float } @ret_nofpclass_struct_ty() {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret { float } zeroinitializer
-;
-entry:
-  ret { float } zeroinitializer
-}
-
-define nofpclass(nan) { float, float } @ret_nofpclass_multiple_elems_struct_ty() {
-; CHECK-LABEL: define nofpclass(nan) { float, float } @ret_nofpclass_multiple_elems_struct_ty() {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret { float, float } zeroinitializer
-;
-entry:
-  ret { float, float } zeroinitializer
-}
-
-define nofpclass(nan) { <4 x float>, <4 x float> } @ret_nofpclass_vector_elems_struct_ty() {
-; CHECK-LABEL: define nofpclass(nan) { <4 x float>, <4 x float> } @ret_nofpclass_vector_elems_struct_ty() {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret { <4 x float>, <4 x float> } zeroinitializer
-;
-entry:
-  ret { <4 x float>, <4 x float> } zeroinitializer
-}
-
-define nofpclass(nan) [ 5 x float ] @ret_nofpclass_array_ty() {
-; CHECK-LABEL: define nofpclass(nan) [5 x float] @ret_nofpclass_array_ty() {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret [5 x float] zeroinitializer
-;
-entry:
-  ret [ 5 x float ] zeroinitializer
-}
-
-define nofpclass(nan) [ 2 x [ 5 x float ]] @ret_nofpclass_nested_array_ty() {
-; CHECK-LABEL: define nofpclass(nan) [2 x [5 x float]] @ret_nofpclass_nested_array_ty() {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret [2 x [5 x float]] zeroinitializer
-;
-entry:
-  ret [ 2 x [ 5 x float ]] zeroinitializer
-}
-
-define nofpclass(pinf) { float } @ret_nofpclass_struct_ty_pinf__ninf() {
-; CHECK-LABEL: define nofpclass(pinf) { float } @ret_nofpclass_struct_ty_pinf__ninf() {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret { float } { float 0xFFF0000000000000 }
-;
-entry:
-  ret { float } { float 0xFFF0000000000000 }
-}
-
-define nofpclass(pinf) { float, float } @ret_nofpclass_multiple_elems_struct_ty_pinf__ninf() {
-; CHECK-LABEL: define nofpclass(pinf) { float, float } @ret_nofpclass_multiple_elems_struct_ty_pinf__ninf() {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret { float, float } { float 0xFFF0000000000000, float 0xFFF0000000000000 }
-;
-entry:
-  ret { float, float } { float 0xFFF0000000000000, float 0xFFF0000000000000 }
-}
-
-define nofpclass(pinf) { <2 x float> } @ret_nofpclass_vector_elems_struct_ty_pinf__ninf() {
-; CHECK-LABEL: define nofpclass(pinf) { <2 x float> } @ret_nofpclass_vector_elems_struct_ty_pinf__ninf() {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret { <2 x float> } { <2 x float> splat (float 0xFFF0000000000000) }
-;
-entry:
-  ret { <2 x float>} { <2 x float> <float 0xFFF0000000000000, float 0xFFF0000000000000> }
-}
-
-; UTC_ARGS: --disable
-; FileCheck does not like the nested square brackets.
-define nofpclass(pinf) [ 1 x [ 1 x float ]] @ret_nofpclass_nested_array_ty_pinf__ninf() {
-; CHECK-LABEL: @ret_nofpclass_nested_array_ty_pinf__ninf() {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret {{.*}}float 0xFFF0000000000000
-;
-entry:
-  ret [ 1 x [ 1 x float ]] [[ 1 x float ] [float 0xFFF0000000000000]]
-}
-; UTC_ARGS: --enable
-
-define nofpclass(pzero) { float, float } @ret_nofpclass_multiple_elems_struct_ty_pzero__nzero() {
-; CHECK-LABEL: define nofpclass(pzero) { float, float } @ret_nofpclass_multiple_elems_struct_ty_pzero__nzero() {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret { float, float } { float -0.000000e+00, float -0.000000e+00 }
-;
-entry:
-  ret { float, float } { float -0.0, float -0.0 }
-}
-
-define nofpclass(ninf) { float, float } @ret_nofpclass_multiple_elems_struct_ty_ninf__npinf() {
-; CHECK-LABEL: define nofpclass(ninf) { float, float } @ret_nofpclass_multiple_elems_struct_ty_ninf__npinf() {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret { float, float } { float 0x7FF0000000000000, float 0x7FF0000000000000 }
-;
-entry:
-  ret { float, float } { float 0x7FF0000000000000, float 0x7FF0000000000000 }
-}
-
-; FIXME (should be poison): Support computeKnownFPClass() for non-zero aggregates.
-define nofpclass(inf) { float, float } @ret_nofpclass_multiple_elems_struct_ty_inf__npinf() {
-; CHECK-LABEL: define nofpclass(inf) { float, float } @ret_nofpclass_multiple_elems_struct_ty_inf__npinf() {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret { float, float } { float 0x7FF0000000000000, float 0x7FF0000000000000 }
-;
-entry:
-  ret { float, float } { float 0x7FF0000000000000, float 0x7FF0000000000000 }
-}
-
-; FIXME (should be poison): Support computeKnownFPClass() for non-zero aggregates.
-define nofpclass(nzero) [ 1 x float ] @ret_nofpclass_multiple_elems_struct_ty_nzero_nzero() {
-; CHECK-LABEL: define nofpclass(nzero) [1 x float] @ret_nofpclass_multiple_elems_struct_ty_nzero_nzero() {
-; CHECK-NEXT:  entry:
-; CHECK-NEXT:    ret [1 x float] [float -0.000000e+00]
-;
-entry:
-  ret [ 1 x float ] [ float -0.0 ]
-}
 
 ; Negative test, do nothing
 define nofpclass(inf) float @ret_nofpclass_inf__select_nofpclass_inf_lhs(i1 %cond, float nofpclass(inf) %x, float %y) {
@@ -245,16 +140,6 @@ define nofpclass(inf) float @ret_nofpclass_inf__select_nofpclass_arg_only_inf_rh
 ;
   %select = select i1 %cond, float %x, float %y
   ret float %select
-}
-
-; Fold to ret %y
-define nofpclass(inf) [3 x [2 x float]] @ret_float_array(i1 %cond, [3 x [2 x float]] nofpclass(nan norm zero sub) %x, [3 x [2 x float]] %y) {
-; CHECK-LABEL: define nofpclass(inf) [3 x [2 x float]] @ret_float_array
-; CHECK-SAME: (i1 [[COND:%.*]], [3 x [2 x float]] nofpclass(nan zero sub norm) [[X:%.*]], [3 x [2 x float]] [[Y:%.*]]) {
-; CHECK-NEXT:    ret [3 x [2 x float]] [[Y]]
-;
-  %select = select i1 %cond, [3 x [2 x float]] %x, [3 x [2 x float]] %y
-  ret [3 x [2 x float ]] %select
 }
 
 ; Fold to ret %x
@@ -705,12 +590,20 @@ define nofpclass(snan) float @fabs_src_known_positive_except_negzero_multiple_us
   ret float %fabs
 }
 
+define nofpclass(snan) float @fabs_nsz_src_known_positive_except_negzero(float nofpclass(nan ninf nnorm nsub) %always.positive.or.nzero) {
+; CHECK-LABEL: define nofpclass(snan) float @fabs_nsz_src_known_positive_except_negzero
+; CHECK-SAME: (float nofpclass(nan ninf nsub nnorm) [[ALWAYS_POSITIVE_OR_NZERO:%.*]]) {
+; CHECK-NEXT:    ret float [[ALWAYS_POSITIVE_OR_NZERO]]
+;
+  %fabs = call nsz float @llvm.fabs.f32(float %always.positive.or.nzero)
+  ret float %fabs
+}
+
 define nofpclass(snan) float @fabs_nsz_src_known_positive_except_negzero_multiple_uses(float nofpclass(nan ninf nnorm nsub) %always.positive.or.nzero, ptr %ptr) {
 ; CHECK-LABEL: define nofpclass(snan) float @fabs_nsz_src_known_positive_except_negzero_multiple_uses
 ; CHECK-SAME: (float nofpclass(nan ninf nsub nnorm) [[ALWAYS_POSITIVE_OR_NZERO:%.*]], ptr [[PTR:%.*]]) {
-; CHECK-NEXT:    [[FABS:%.*]] = call nsz float @llvm.fabs.f32(float [[ALWAYS_POSITIVE_OR_NZERO]])
-; CHECK-NEXT:    store float [[FABS]], ptr [[PTR]], align 4
-; CHECK-NEXT:    ret float [[FABS]]
+; CHECK-NEXT:    store float [[ALWAYS_POSITIVE_OR_NZERO]], ptr [[PTR]], align 4
+; CHECK-NEXT:    ret float [[ALWAYS_POSITIVE_OR_NZERO]]
 ;
   %fabs = call nsz float @llvm.fabs.f32(float %always.positive.or.nzero)
   store float %fabs, ptr %ptr
@@ -775,6 +668,199 @@ define nofpclass(snan) float @fabs_src_known_negative(float nofpclass(nan pinf p
 ;
   %fabs = call float @llvm.fabs.f32(float %always.negative)
   ret float %fabs
+}
+
+define nofpclass(snan) float @fneg_fabs_src_known_negative_multiple_uses(float nofpclass(nan pinf pnorm psub pzero) %always.negative, ptr %ptr) {
+; CHECK-LABEL: define nofpclass(snan) float @fneg_fabs_src_known_negative_multiple_uses
+; CHECK-SAME: (float nofpclass(nan pinf pzero psub pnorm) [[ALWAYS_NEGATIVE:%.*]], ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ALWAYS_NEGATIVE]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    store float [[FNEG_FABS]], ptr [[PTR]], align 4
+; CHECK-NEXT:    ret float [[ALWAYS_NEGATIVE]]
+;
+  %fabs = call float @llvm.fabs.f32(float %always.negative)
+  %fneg.fabs = fneg float %fabs
+  store float %fneg.fabs, ptr %ptr
+  ret float %fneg.fabs
+}
+
+define nofpclass(snan) float @fneg_fabs_src_known_positive_multiple_uses(float nofpclass(nan ninf nnorm nsub nzero) %always.positive, ptr %ptr) {
+; CHECK-LABEL: define nofpclass(snan) float @fneg_fabs_src_known_positive_multiple_uses
+; CHECK-SAME: (float nofpclass(nan ninf nzero nsub nnorm) [[ALWAYS_POSITIVE:%.*]], ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[ALWAYS_POSITIVE]]
+; CHECK-NEXT:    store float [[FNEG_FABS]], ptr [[PTR]], align 4
+; CHECK-NEXT:    ret float [[FNEG_FABS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %always.positive)
+  %fneg.fabs = fneg float %fabs
+  store float %fneg.fabs, ptr %ptr
+  ret float %fneg.fabs
+}
+
+define nofpclass(snan) float @fneg_fabs_src_known_negative_or_nan_multiple_uses(float nofpclass(pinf pnorm psub pzero) %always.negative.or.nan, ptr %ptr) {
+; CHECK-LABEL: define nofpclass(snan) float @fneg_fabs_src_known_negative_or_nan_multiple_uses
+; CHECK-SAME: (float nofpclass(pinf pzero psub pnorm) [[ALWAYS_NEGATIVE_OR_NAN:%.*]], ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ALWAYS_NEGATIVE_OR_NAN]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    store float [[FNEG_FABS]], ptr [[PTR]], align 4
+; CHECK-NEXT:    ret float [[FNEG_FABS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %always.negative.or.nan)
+  %fneg.fabs = fneg float %fabs
+  store float %fneg.fabs, ptr %ptr
+  ret float %fneg.fabs
+}
+
+define nofpclass(nan) float @ret_nonan_fneg_fabs_src_known_positive_or_nan_multiple_uses(float nofpclass(ninf nnorm nsub nzero) %always.positive.or.nan, ptr %ptr) {
+; CHECK-LABEL: define nofpclass(nan) float @ret_nonan_fneg_fabs_src_known_positive_or_nan_multiple_uses
+; CHECK-SAME: (float nofpclass(ninf nzero nsub nnorm) [[ALWAYS_POSITIVE_OR_NAN:%.*]], ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ALWAYS_POSITIVE_OR_NAN]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    store float [[FNEG_FABS]], ptr [[PTR]], align 4
+; CHECK-NEXT:    ret float [[FNEG_FABS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %always.positive.or.nan)
+  %fneg.fabs = fneg float %fabs
+  store float %fneg.fabs, ptr %ptr
+  ret float %fneg.fabs
+}
+
+define nofpclass(snan) float @fneg_nnan_fabs_src_known_negative_or_nan_multiple_uses(float nofpclass(pinf pnorm psub pzero) %always.negative.or.nan, ptr %ptr) {
+; CHECK-LABEL: define nofpclass(snan) float @fneg_nnan_fabs_src_known_negative_or_nan_multiple_uses
+; CHECK-SAME: (float nofpclass(pinf pzero psub pnorm) [[ALWAYS_NEGATIVE_OR_NAN:%.*]], ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ALWAYS_NEGATIVE_OR_NAN]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg nnan float [[FABS]]
+; CHECK-NEXT:    store float [[FNEG_FABS]], ptr [[PTR]], align 4
+; CHECK-NEXT:    ret float [[ALWAYS_NEGATIVE_OR_NAN]]
+;
+  %fabs = call float @llvm.fabs.f32(float %always.negative.or.nan)
+  %fneg.fabs = fneg nnan float %fabs
+  store float %fneg.fabs, ptr %ptr
+  ret float %fneg.fabs
+}
+
+define nofpclass(snan) float @fneg_fabs_nnan_src_known_negative_or_nan_multiple_uses(float nofpclass(pinf pnorm psub pzero) %always.negative.or.nan, ptr %ptr) {
+; CHECK-LABEL: define nofpclass(snan) float @fneg_fabs_nnan_src_known_negative_or_nan_multiple_uses
+; CHECK-SAME: (float nofpclass(pinf pzero psub pnorm) [[ALWAYS_NEGATIVE_OR_NAN:%.*]], ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[FABS:%.*]] = call nnan float @llvm.fabs.f32(float [[ALWAYS_NEGATIVE_OR_NAN]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    store float [[FNEG_FABS]], ptr [[PTR]], align 4
+; CHECK-NEXT:    ret float [[ALWAYS_NEGATIVE_OR_NAN]]
+;
+  %fabs = call nnan float @llvm.fabs.f32(float %always.negative.or.nan)
+  %fneg.fabs = fneg float %fabs
+  store float %fneg.fabs, ptr %ptr
+  ret float %fneg.fabs
+}
+
+define nofpclass(snan) float @fneg_fabs_nofpclass_nan_src__known_negative_or_nan_multiple_uses(float nofpclass(pinf pnorm psub pzero) %always.negative.or.nan, ptr %ptr) {
+; CHECK-LABEL: define nofpclass(snan) float @fneg_fabs_nofpclass_nan_src__known_negative_or_nan_multiple_uses
+; CHECK-SAME: (float nofpclass(pinf pzero psub pnorm) [[ALWAYS_NEGATIVE_OR_NAN:%.*]], ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float nofpclass(nan) [[ALWAYS_NEGATIVE_OR_NAN]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    store float [[FNEG_FABS]], ptr [[PTR]], align 4
+; CHECK-NEXT:    ret float [[FNEG_FABS]]
+;
+  %fabs = call float @llvm.fabs.f32(float nofpclass(nan) %always.negative.or.nan)
+  %fneg.fabs = fneg float %fabs
+  store float %fneg.fabs, ptr %ptr
+  ret float %fneg.fabs
+}
+
+; Take no-posinf from ninf flag
+define nofpclass(snan) float @ret_fneg_ninf_fabs_src_known_negative_or_posinf_multiple_uses(float nofpclass(nan pnorm psub pzero) %negative.or.neginf, ptr %ptr) {
+; CHECK-LABEL: define nofpclass(snan) float @ret_fneg_ninf_fabs_src_known_negative_or_posinf_multiple_uses
+; CHECK-SAME: (float nofpclass(nan pzero psub pnorm) [[NEGATIVE_OR_NEGINF:%.*]], ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[NEGATIVE_OR_NEGINF]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg ninf float [[FABS]]
+; CHECK-NEXT:    store float [[FNEG_FABS]], ptr [[PTR]], align 4
+; CHECK-NEXT:    ret float [[NEGATIVE_OR_NEGINF]]
+;
+  %fabs = call float @llvm.fabs.f32(float %negative.or.neginf)
+  %fneg.fabs = fneg ninf float %fabs
+  store float %fneg.fabs, ptr %ptr
+  ret float %fneg.fabs
+}
+
+; Take no-posinf from ninf flag
+define nofpclass(snan) float @ret_fneg_fabs_ninf_src_known_negative_or_posinf_multiple_uses(float nofpclass(nan pnorm psub pzero) %negative.or.neginf, ptr %ptr) {
+; CHECK-LABEL: define nofpclass(snan) float @ret_fneg_fabs_ninf_src_known_negative_or_posinf_multiple_uses
+; CHECK-SAME: (float nofpclass(nan pzero psub pnorm) [[NEGATIVE_OR_NEGINF:%.*]], ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[FABS:%.*]] = call ninf float @llvm.fabs.f32(float [[NEGATIVE_OR_NEGINF]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    store float [[FNEG_FABS]], ptr [[PTR]], align 4
+; CHECK-NEXT:    ret float [[NEGATIVE_OR_NEGINF]]
+;
+  %fabs = call ninf float @llvm.fabs.f32(float %negative.or.neginf)
+  %fneg.fabs = fneg float %fabs
+  store float %fneg.fabs, ptr %ptr
+  ret float %fneg.fabs
+}
+
+define nofpclass(snan) float @fneg_fabs_src_known_negative_or_poszero_multiple_uses(float nofpclass(nan pinf pnorm psub) %always.negative.or.pzero, ptr %ptr) {
+; CHECK-LABEL: define nofpclass(snan) float @fneg_fabs_src_known_negative_or_poszero_multiple_uses
+; CHECK-SAME: (float nofpclass(nan pinf psub pnorm) [[ALWAYS_NEGATIVE_OR_PZERO:%.*]], ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ALWAYS_NEGATIVE_OR_PZERO]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    store float [[FNEG_FABS]], ptr [[PTR]], align 4
+; CHECK-NEXT:    ret float [[FNEG_FABS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %always.negative.or.pzero)
+  %fneg.fabs = fneg float %fabs
+  store float %fneg.fabs, ptr %ptr
+  ret float %fneg.fabs
+}
+
+define nofpclass(snan) float @fneg_fabs_nsz_src_known_negative_or_poszero(float nofpclass(nan pinf pnorm psub) %always.negative.or.pzero) {
+; CHECK-LABEL: define nofpclass(snan) float @fneg_fabs_nsz_src_known_negative_or_poszero
+; CHECK-SAME: (float nofpclass(nan pinf psub pnorm) [[ALWAYS_NEGATIVE_OR_PZERO:%.*]]) {
+; CHECK-NEXT:    [[FABS:%.*]] = call nsz float @llvm.fabs.f32(float [[ALWAYS_NEGATIVE_OR_PZERO]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    ret float [[FNEG_FABS]]
+;
+  %fabs = call nsz float @llvm.fabs.f32(float %always.negative.or.pzero)
+  %fneg.fabs = fneg float %fabs
+  ret float %fneg.fabs
+}
+
+define nofpclass(snan) float @fneg_fabs_nsz_src_known_negative_or_poszero_multiple_uses(float nofpclass(nan pinf pnorm psub) %always.negative.or.pzero, ptr %ptr) {
+; CHECK-LABEL: define nofpclass(snan) float @fneg_fabs_nsz_src_known_negative_or_poszero_multiple_uses
+; CHECK-SAME: (float nofpclass(nan pinf psub pnorm) [[ALWAYS_NEGATIVE_OR_PZERO:%.*]], ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[FABS:%.*]] = call nsz float @llvm.fabs.f32(float [[ALWAYS_NEGATIVE_OR_PZERO]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg float [[FABS]]
+; CHECK-NEXT:    store float [[FNEG_FABS]], ptr [[PTR]], align 4
+; CHECK-NEXT:    ret float [[ALWAYS_NEGATIVE_OR_PZERO]]
+;
+  %fabs = call nsz float @llvm.fabs.f32(float %always.negative.or.pzero)
+  %fneg.fabs = fneg float %fabs
+  store float %fneg.fabs, ptr %ptr
+  ret float %fneg.fabs
+}
+
+define nofpclass(snan) float @fneg_nsz_fabs_src_known_negative_or_poszero(float nofpclass(nan pinf pnorm psub) %always.negative.or.pzero) {
+; CHECK-LABEL: define nofpclass(snan) float @fneg_nsz_fabs_src_known_negative_or_poszero
+; CHECK-SAME: (float nofpclass(nan pinf psub pnorm) [[ALWAYS_NEGATIVE_OR_PZERO:%.*]]) {
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ALWAYS_NEGATIVE_OR_PZERO]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg nsz float [[FABS]]
+; CHECK-NEXT:    ret float [[FNEG_FABS]]
+;
+  %fabs = call float @llvm.fabs.f32(float %always.negative.or.pzero)
+  %fneg.fabs = fneg nsz float %fabs
+  ret float %fneg.fabs
+}
+
+define nofpclass(snan) float @fneg_nsz_fabs_src_known_negative_or_poszero_multiple_uses(float nofpclass(nan pinf pnorm psub) %always.negative.or.pzero, ptr %ptr) {
+; CHECK-LABEL: define nofpclass(snan) float @fneg_nsz_fabs_src_known_negative_or_poszero_multiple_uses
+; CHECK-SAME: (float nofpclass(nan pinf psub pnorm) [[ALWAYS_NEGATIVE_OR_PZERO:%.*]], ptr [[PTR:%.*]]) {
+; CHECK-NEXT:    [[FABS:%.*]] = call float @llvm.fabs.f32(float [[ALWAYS_NEGATIVE_OR_PZERO]])
+; CHECK-NEXT:    [[FNEG_FABS:%.*]] = fneg nsz float [[FABS]]
+; CHECK-NEXT:    store float [[FNEG_FABS]], ptr [[PTR]], align 4
+; CHECK-NEXT:    ret float [[ALWAYS_NEGATIVE_OR_PZERO]]
+;
+  %fabs = call float @llvm.fabs.f32(float %always.negative.or.pzero)
+  %fneg.fabs = fneg nsz float %fabs
+  store float %fneg.fabs, ptr %ptr
+  ret float %fneg.fabs
 }
 
 ; should fold to ret copysign(%x)
@@ -1161,9 +1247,9 @@ define nofpclass(nan inf nzero nsub nnorm) float @powr_issue64870(float nofpclas
 ; CHECK-SAME: (float nofpclass(nan inf) [[X:%.*]], float nofpclass(nan inf) [[Y:%.*]]) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[I:%.*]] = tail call float @llvm.fabs.f32(float [[X]])
-; CHECK-NEXT:    [[I1:%.*]] = tail call float @llvm.log2.f32(float [[I]])
+; CHECK-NEXT:    [[I1:%.*]] = tail call nnan float @llvm.log2.f32(float [[I]])
 ; CHECK-NEXT:    [[I2:%.*]] = fmul nnan float [[I1]], [[Y]]
-; CHECK-NEXT:    [[I3:%.*]] = tail call nofpclass(ninf nzero nsub nnorm) float @llvm.exp2.f32(float [[I2]])
+; CHECK-NEXT:    [[I3:%.*]] = tail call nnan nofpclass(ninf nzero nsub nnorm) float @llvm.exp2.f32(float [[I2]])
 ; CHECK-NEXT:    [[I6:%.*]] = fcmp oeq float [[X]], 0.000000e+00
 ; CHECK-NEXT:    [[I7:%.*]] = select i1 [[I6]], float 0.000000e+00, float [[I3]]
 ; CHECK-NEXT:    [[I8:%.*]] = fcmp oeq float [[Y]], 0.000000e+00
@@ -1196,9 +1282,9 @@ define nofpclass(nan inf nzero nsub nnorm) float @test_powr_issue64870_2(float n
 ; CHECK-LABEL: define nofpclass(nan inf nzero nsub nnorm) float @test_powr_issue64870_2
 ; CHECK-SAME: (float nofpclass(nan inf) [[ARG:%.*]], float nofpclass(nan inf) [[ARG1:%.*]]) {
 ; CHECK-NEXT:  bb:
-; CHECK-NEXT:    [[I3:%.*]] = tail call float @llvm.log2.f32(float noundef [[ARG]])
+; CHECK-NEXT:    [[I3:%.*]] = tail call nnan float @llvm.log2.f32(float [[ARG]])
 ; CHECK-NEXT:    [[I5:%.*]] = fmul nnan float [[ARG1]], [[I3]]
-; CHECK-NEXT:    [[I6:%.*]] = tail call noundef nofpclass(ninf nzero nsub nnorm) float @llvm.exp2.f32(float noundef [[I5]])
+; CHECK-NEXT:    [[I6:%.*]] = tail call nnan nofpclass(ninf nzero nsub nnorm) float @llvm.exp2.f32(float [[I5]])
 ; CHECK-NEXT:    [[TMP0:%.*]] = fcmp oeq float [[ARG]], 0.000000e+00
 ; CHECK-NEXT:    [[I12:%.*]] = select i1 [[TMP0]], float 0.000000e+00, float [[I6]]
 ; CHECK-NEXT:    ret float [[I12]]
@@ -1225,9 +1311,9 @@ define nofpclass(nan inf) float @pow_f32(float nofpclass(nan inf) %arg, float no
 ; CHECK-SAME: (float nofpclass(nan inf) [[ARG:%.*]], float nofpclass(nan inf) [[ARG1:%.*]]) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = tail call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float noundef [[ARG]])
-; CHECK-NEXT:    [[I2:%.*]] = tail call float @llvm.log2.f32(float noundef [[I]])
+; CHECK-NEXT:    [[I2:%.*]] = tail call nnan float @llvm.log2.f32(float [[I]])
 ; CHECK-NEXT:    [[I3:%.*]] = fmul nnan float [[I2]], [[ARG1]]
-; CHECK-NEXT:    [[I4:%.*]] = tail call noundef float @llvm.exp2.f32(float noundef [[I3]])
+; CHECK-NEXT:    [[I4:%.*]] = tail call nnan float @llvm.exp2.f32(float [[I3]])
 ; CHECK-NEXT:    [[I5:%.*]] = tail call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float noundef [[ARG1]])
 ; CHECK-NEXT:    [[I6:%.*]] = tail call float @llvm.trunc.f32(float noundef [[I5]])
 ; CHECK-NEXT:    [[I7:%.*]] = fcmp oeq float [[I6]], [[I5]]
@@ -1521,6 +1607,17 @@ define nofpclass(inf) float @ret_nofpclass_inf__arithmetic_fence_select_pinf_rhs
 ;
   %select = select i1 %cond, float %x, float 0x7FF0000000000000
   %fence = call float @llvm.arithmetic.fence.f32(float %select)
+  ret float %fence
+}
+
+define nofpclass(snan) float @arithmetic_fence__noinf_callsite_param_attr_select_pinf_rhs(i1 %cond, float %x) {
+; CHECK-LABEL: define nofpclass(snan) float @arithmetic_fence__noinf_callsite_param_attr_select_pinf_rhs
+; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]]) {
+; CHECK-NEXT:    [[FENCE:%.*]] = call float @llvm.arithmetic.fence.f32(float nofpclass(inf) [[X]])
+; CHECK-NEXT:    ret float [[FENCE]]
+;
+  %select = select i1 %cond, float %x, float 0x7FF0000000000000
+  %fence = call float @llvm.arithmetic.fence.f32(float nofpclass(inf) %select)
   ret float %fence
 }
 

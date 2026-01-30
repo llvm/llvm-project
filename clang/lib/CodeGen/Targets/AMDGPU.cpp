@@ -24,7 +24,7 @@ class AMDGPUABIInfo final : public DefaultABIInfo {
 private:
   static const unsigned MaxNumRegsForArgsRet = 16;
 
-  unsigned numRegsForType(QualType Ty) const;
+  uint64_t numRegsForType(QualType Ty) const;
 
   bool isHomogeneousAggregateBaseType(QualType Ty) const override;
   bool isHomogeneousAggregateSmallEnough(const Type *Base,
@@ -78,20 +78,20 @@ bool AMDGPUABIInfo::isHomogeneousAggregateSmallEnough(
 }
 
 /// Estimate number of registers the type will use when passed in registers.
-unsigned AMDGPUABIInfo::numRegsForType(QualType Ty) const {
-  unsigned NumRegs = 0;
+uint64_t AMDGPUABIInfo::numRegsForType(QualType Ty) const {
+  uint64_t NumRegs = 0;
 
   if (const VectorType *VT = Ty->getAs<VectorType>()) {
     // Compute from the number of elements. The reported size is based on the
     // in-memory size, which includes the padding 4th element for 3-vectors.
     QualType EltTy = VT->getElementType();
-    unsigned EltSize = getContext().getTypeSize(EltTy);
+    uint64_t EltSize = getContext().getTypeSize(EltTy);
 
     // 16-bit element vectors should be passed as packed.
     if (EltSize == 16)
       return (VT->getNumElements() + 1) / 2;
 
-    unsigned EltNumRegs = (EltSize + 31) / 32;
+    uint64_t EltNumRegs = (EltSize + 31) / 32;
     return EltNumRegs * VT->getNumElements();
   }
 
@@ -264,7 +264,7 @@ ABIArgInfo AMDGPUABIInfo::classifyArgumentType(QualType Ty, bool Variadic,
     }
 
     if (NumRegsLeft > 0) {
-      unsigned NumRegs = numRegsForType(Ty);
+      uint64_t NumRegs = numRegsForType(Ty);
       if (NumRegsLeft >= NumRegs) {
         NumRegsLeft -= NumRegs;
         return ABIArgInfo::getDirect();
@@ -281,8 +281,8 @@ ABIArgInfo AMDGPUABIInfo::classifyArgumentType(QualType Ty, bool Variadic,
   // Otherwise just do the default thing.
   ABIArgInfo ArgInfo = DefaultABIInfo::classifyArgumentType(Ty);
   if (!ArgInfo.isIndirect()) {
-    unsigned NumRegs = numRegsForType(Ty);
-    NumRegsLeft -= std::min(NumRegs, NumRegsLeft);
+    uint64_t NumRegs = numRegsForType(Ty);
+    NumRegsLeft -= std::min(NumRegs, uint64_t{NumRegsLeft});
   }
 
   return ArgInfo;

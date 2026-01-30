@@ -289,8 +289,10 @@ class VectorType;
 
     /// createFastISel - This method returns a target specific FastISel object,
     /// or null if the target does not support "fast" ISel.
-    FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
-                             const TargetLibraryInfo *libInfo) const override;
+    FastISel *
+    createFastISel(FunctionLoweringInfo &funcInfo,
+                   const TargetLibraryInfo *libInfo,
+                   const LibcallLoweringInfo *libcallLowering) const override;
 
     Sched::Preference getSchedulingPreference(SDNode *N) const override;
 
@@ -391,7 +393,9 @@ class VectorType;
 
     bool useLoadStackGuardNode(const Module &M) const override;
 
-    void insertSSPDeclarations(Module &M) const override;
+    void
+    insertSSPDeclarations(Module &M,
+                          const LibcallLoweringInfo &Libcalls) const override;
 
     bool canCombineStoreAndExtract(Type *VectorTy, Value *Idx,
                                    unsigned &Cost) const override;
@@ -727,8 +731,9 @@ class VectorType;
 
   namespace ARM {
 
-    FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
-                             const TargetLibraryInfo *libInfo);
+  FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
+                           const TargetLibraryInfo *libInfo,
+                           const LibcallLoweringInfo *libcallLowering);
 
   } // end namespace ARM
 
