@@ -39,7 +39,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
   EXPECT_FP_EQ(float16(10.0), LIBC_NAMESPACE::shared::f16fma(2.0, 3.0, 4.0));
 
   EXPECT_FP_EQ(float16(10.0), LIBC_NAMESPACE::shared::f16fmaf(2.0f, 3.0f, 4.0f));
-  
+
 #ifdef LIBC_TYPES_HAS_FLOAT128
 
   EXPECT_FP_EQ(10.0f16, LIBC_NAMESPACE::shared::f16fmaf128(
