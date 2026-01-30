@@ -1,4 +1,4 @@
-//=- RISCVSchedSpacemitX100.td - Spacemit X100 Scheduling Defs -*- tablegen -*-=//
+//- RISCVSchedSpacemitX100.td - Spacemit X100 Scheduling Defs -*- tablegen -*-//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -31,7 +31,7 @@ let SchedModel = SpacemitX100Model in {
 //===----------------------------------------------------------------------===//
 // Define processor resources for Spacemit-X100
 let BufferSize = 12 in {
-  // Each Queue can accepts 2 ops and issue 1 op per cycle
+  // Each Queue can accept 2 ops and issue 1 op per cycle
   def SMTX100_IQ0 : ProcResource<1>; //Integer Queue 0
   def SMTX100_IQ1 : ProcResource<1>; //Integer Queue 1
   def SMTX100_BQ  : ProcResource<1>; //Branch Queue
@@ -41,7 +41,7 @@ let BufferSize = 8 in {
   // LSQ is 16 entry * 1, can accept 4 ops and issue 2 ops per cycle
   // We model it as 8 entry * 2, so each queue accept 2 and issue 1, just like others
   def SMTX100_LSQ : ProcResource<2>; //Load Store Queue
-  // Each Queue can accepts 2 ops and issue 1 op per cycle
+  // Each Queue can accept 2 ops and issue 1 op per cycle
   def SMTX100_FQ0 : ProcResource<1>; //Float Queue 0
   def SMTX100_FQ1 : ProcResource<1>; //Float Queue 1
 }
@@ -136,7 +136,7 @@ let Latency = 4 in {
 }
 
 // Atomics
-// Latency is at lease 7, not sure worst case latency now
+// Latency is at least 7, not sure worst case latency now
 let Latency = 7 in {
   def : WriteRes<WriteAtomicSTW, [SMTX100_LSQ]>;
   def : WriteRes<WriteAtomicSTD, [SMTX100_LSQ]>;
