@@ -621,7 +621,7 @@ struct ConvertAllReduceOp : public CommOpPattern<AllReduceOp> {
 struct ConvertAllGatherOp : public CommOpPattern<AllGatherOp> {
   using CommOpPattern::CommOpPattern;
 
-  // shard.allgather always concatenates along a specified gather-axis.
+  // shard.allgather concatenates along a specified gather-axis.
   // mpi.allgather always concatenates along the first dimension and
   // there is no MPI operation that allows gathering along an arbitrary axis.
   // Hence, if gather-axis!=0, we need to create a temporary buffer
