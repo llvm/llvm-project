@@ -126,7 +126,8 @@ DistributeLayoutAttr setupBitCastResultLayout(
     DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
 
 DistributeLayoutAttr setupInsertStridedSliceResultLayout(
-    LayoutKind layoutKind, VectorType resVectorTy, const uArch::uArch *uArch);
+    LayoutKind layoutKind, VectorType resVectorTy,
+    DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
 
 DistributeLayoutAttr
 setupLoadMatrixAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,

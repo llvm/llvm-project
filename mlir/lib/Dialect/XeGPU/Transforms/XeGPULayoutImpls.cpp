@@ -408,16 +408,17 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
 /// Algorithm Overview:
 /// This function attempts to construct a source layout that, when sliced along
 /// reduction dimensions, produces a result layout compatible with the
-/// consumer layout. This minimizes data redistribution overhead
-/// between the reduction operation and its consumer.
+/// consumer layout.
 ///
-/// It first tries to align the source layout's subgroup layout and data with
-/// the consumer's layout on non-reduction dimensions. Then, it distributes
-/// remaining subgroups across reduction dimensions.
-/// For InstData, it requries {1, ..., min(maxReduceVectorSize,
-/// srcshape),subgroupSize} For lane layout, it requires {1, ..., 1,
-/// subgroupSize} For lane data, it requires {1, ..., min(maxReduceVectorSize,
-/// srcshape), 1}
+/// For subgroup layouts, it first tries to align the source layout's subgroup
+/// layout and data with the consumer's layout on non-reduction dimensions.
+/// Then, it distributes remaining subgroups across reduction dimensions. This
+/// avoid subgroup data redistribution overhead between the reduced result and
+/// its consumer.
+///
+/// InstData requries {1, ..., min(maxReduceVectorSize, srcShape),subgroupSize}
+/// Lane Layout requires {1, ..., 1, subgroupSize}
+/// Lane data requires {1, ..., min(maxReduceVectorSize, srcShape), 1}
 
 xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
     xegpu::LayoutKind layoutKind, VectorType srcVecTy,
@@ -520,6 +521,11 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
                                DenseI64ArrayAttr::get(context, reductionDims));
 }
 
+/// Sets up the result layout for a bitcast operation.
+/// When casting to a smaller bitwidth, adjusts the layout dimensions (sgData,
+/// instData, or laneData) by multiplying by the bitwidth ratio to ensure the
+/// result layout can be correctly divided back to the source layout during
+/// inference.
 xegpu::DistributeLayoutAttr xegpu::setupBitCastResultLayout(
     xegpu::LayoutKind layoutKind, VectorType srcVecTy, VectorType resVecTy,
     DistributeLayoutAttr consumerLayout, const xegpu::uArch::uArch *uArch) {
@@ -642,22 +648,37 @@ xegpu::setupStoreMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
   return requiredLayout;
 }
 
-xegpu::DistributeLayoutAttr
-xegpu::setupInsertStridedSliceResultLayout(xegpu::LayoutKind layoutKind,
-                                           VectorType resVectorTy,
-                                           const xegpu::uArch::uArch *uArch) {
+/// Sets up the result layout for an insert strided slice operation.
+/// Creates a default layout based on the specified layout kind (InstData or
+/// Lane).
+/// Subgroup layout is currently not supported for this operation.
+/// InstData layout requires {1, .., subgroupSize} by default.
+/// Lane layout requires {1, ..., subgroupSize} with lane data {1, ..., 1}.
+/// The instData and laneData is adjusted to contain packed data, by checking if
+/// the consumerLayout's innermost dimension.
+xegpu::DistributeLayoutAttr xegpu::setupInsertStridedSliceResultLayout(
+    xegpu::LayoutKind layoutKind, VectorType resVectorTy,
+    xegpu::DistributeLayoutAttr consumerLayout,
+    const xegpu::uArch::uArch *uArch) {
 
   xegpu::DistributeLayoutAttr requiredResLayout;
   auto subgroupSize = uArch->getSubgroupSize();
   auto context = resVectorTy.getContext();
   auto resShape = resVectorTy.getShape();
   int resShapeSize = resShape.size();
+  SmallVector<int64_t> consumerInstData =
+      consumerLayout.getEffectiveInstDataAsInt();
+  SmallVector<int64_t> consumerLaneData =
+      consumerLayout.getEffectiveLaneDataAsInt();
 
-  SmallVector<int> defaultInstData(resShapeSize, 1);
-  SmallVector<int> defaultLaneLayout(resShapeSize, 1);
-  SmallVector<int> defaultLaneData(resShapeSize, 1);
-  defaultInstData[resShapeSize - 1] = subgroupSize;
-  defaultLaneLayout[resShapeSize - 1] = subgroupSize;
+  SmallVector<int> instData(resShapeSize, 1);
+  SmallVector<int> laneLayout(resShapeSize, 1);
+  SmallVector<int> laneData(resShapeSize, 1);
+
+  const unsigned packingSize{uArch->getGeneralPackedFormatBitSize()};
+  unsigned bitwidth = resVectorTy.getElementType().getIntOrFloatBitWidth();
+  int packingFactor = bitwidth < packingSize ? packingSize / bitwidth : 1;
+  int packedDataSize = subgroupSize * packingFactor;
 
   switch (layoutKind) {
   case xegpu::LayoutKind::Subgroup:
@@ -665,11 +686,17 @@ xegpu::setupInsertStridedSliceResultLayout(xegpu::LayoutKind layoutKind,
            "subgroup layout assignment not supported for insertStridedSlice.");
     break;
   case xegpu::LayoutKind::InstData:
-    requiredResLayout = xegpu::LayoutAttr::get(context, defaultInstData);
+    instData[resShapeSize - 1] = subgroupSize;
+    if (consumerInstData[resShapeSize - 1] == packedDataSize)
+      instData[resShapeSize - 1] = packedDataSize;
+    requiredResLayout = xegpu::LayoutAttr::get(context, instData);
     break;
   case xegpu::LayoutKind::Lane:
-    requiredResLayout =
-        xegpu::LayoutAttr::get(context, defaultLaneLayout, defaultLaneData);
+    laneLayout[resShapeSize - 1] = subgroupSize;
+    laneData[resShapeSize - 1] = 1;
+    if (consumerLaneData[resShapeSize - 1] == packingFactor)
+      laneData[resShapeSize - 1] = packingFactor;
+    requiredResLayout = xegpu::LayoutAttr::get(context, laneLayout, laneData);
     break;
   default:
     llvm_unreachable("unsupported layout kind");

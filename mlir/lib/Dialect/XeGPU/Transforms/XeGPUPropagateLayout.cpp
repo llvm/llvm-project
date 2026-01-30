@@ -1132,8 +1132,8 @@ void LayoutInfoPropagation::visitInsertStridedSliceOp(
       dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
   auto uArch = getUArch(xegpu::getChipStr(insertStridedSlice).value_or(""));
 
-  auto requiredResLayoutAttr =
-      xegpu::setupInsertStridedSliceResultLayout(layoutKind, resVecType, uArch);
+  auto requiredResLayoutAttr = xegpu::setupInsertStridedSliceResultLayout(
+      layoutKind, resVecType, consumerLayoutAttr, uArch);
 
   xegpu::setTemporaryLayout(insertStridedSlice->getResult(0),
                             requiredResLayoutAttr);
