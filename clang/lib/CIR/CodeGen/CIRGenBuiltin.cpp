@@ -1772,7 +1772,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
         e->getArg(0)->getType()->isPointerType()) {
       if (getTarget().getTriple().getArch() == llvm::Triple::x86)
         llvm_unreachable("NYI setjmp on x86");
-      else if (getTarget().getTriple().getArch() == llvm::Triple::aarch64){
+      else if (getTarget().getTriple().getArch() == llvm::Triple::aarch64) {
         llvm_unreachable("NYI setjmp on aarch64");
       }
       llvm_unreachable("NYI setjmp on generic MSVCRT");
