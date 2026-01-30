@@ -26,8 +26,8 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
-#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/IVDescriptors.h"
 #include "llvm/Analysis/InstSimplifyFolder.h"
@@ -5411,14 +5411,9 @@ void VPlanTransforms::runTestTransforms(VPlan &Plan, StringRef Pipeline,
   };
 
   SmallVector<StringRef> Passes;
-  Pipeline.split(Passes, ',');
+  Pipeline.split(Passes, ';');
 
   for (StringRef PassName : Passes) {
-    PassName = PassName.trim();
-    if (PassName == "print") {
-      dbgs() << "VPlan:\n" << Plan << "\n";
-      continue;
-    }
     auto It = TestTransforms.find(PassName);
     if (It == TestTransforms.end())
       report_fatal_error("Unknown VPlan test transform: " + PassName);

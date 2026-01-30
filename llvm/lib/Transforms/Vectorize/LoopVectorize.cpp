@@ -377,12 +377,6 @@ static cl::opt<bool> VPlanBuildStressTest(
         "out right after the build (stress test the VPlan H-CFG construction "
         "in the VPlan-native vectorization path)."));
 
-static cl::opt<std::string> VPlanTestTransform(
-    "vplan-test-transform", cl::init(""), cl::Hidden,
-    cl::desc(
-        "Build VPlan and run specified transform(s) for testing. "
-        "Comma-separated list. Example: 'widen-from-metadata,simplify,print'"));
-
 cl::opt<bool> llvm::EnableLoopInterleaving(
     "interleave-loops", cl::init(true), cl::Hidden,
     cl::desc("Enable loop interleaving in Loop vectorization passes"));
@@ -9729,20 +9723,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                     << L->getHeader()->getParent()->getName() << "' from "
                     << L->getLocStr() << "\n");
 
-  PredicatedScalarEvolution PSE(*SE, *L);
-
-  // Function containing loop
-  Function *F = L->getHeader()->getParent();
-
-  // VPlan test transform mode: build minimal VPlan and run requested
-  // transforms.
-  if (!VPlanTestTransform.empty()) {
-    auto Plan = VPlanTransforms::buildVPlan0(
-        L, *LI, Type::getInt64Ty(F->getContext()), DebugLoc(), PSE);
-    VPlanTransforms::runTestTransforms(*Plan, VPlanTestTransform, TLI);
-    return false;
-  }
-
   LoopVectorizeHints Hints(L, InterleaveOnlyWhenForced, *ORE, TTI);
 
   LLVM_DEBUG(
@@ -9756,6 +9736,9 @@ bool LoopVectorizePass::processLoop(Loop *L) {
              << " width=" << Hints.getWidth()
              << " interleave=" << Hints.getInterleave() << "\n");
 
+  // Function containing loop
+  Function *F = L->getHeader()->getParent();
+
   // Looking at the diagnostic output is the only way to determine if a loop
   // was vectorized (other than looking at the IR or machine code), so it
   // is important to generate an optimization remark for each loop. Most of
@@ -9768,6 +9751,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
     LLVM_DEBUG(dbgs() << "LV: Loop hints prevent vectorization.\n");
     return false;
   }
+
+  PredicatedScalarEvolution PSE(*SE, *L);
 
   // Query this against the original loop and save it here because the profile
   // of the original loop header may change as the transformation happens.

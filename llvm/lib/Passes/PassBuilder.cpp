@@ -381,6 +381,7 @@
 #include "llvm/Transforms/Vectorize/LoopVectorize.h"
 #include "llvm/Transforms/Vectorize/SLPVectorizer.h"
 #include "llvm/Transforms/Vectorize/SandboxVectorizer/SandboxVectorizer.h"
+#include "llvm/Transforms/Vectorize/VPlanTestPass.h"
 #include "llvm/Transforms/Vectorize/VectorCombine.h"
 #include <optional>
 
@@ -500,6 +501,12 @@ static Expected<OptimizationLevel> parseOptLevelParam(StringRef S) {
   return make_error<StringError>(
       formatv("invalid optimization level '{}'", S).str(),
       inconvertibleErrorCode());
+}
+
+static Expected<std::string> parseVPlanTestPassOptions(StringRef Params) {
+  // VPlanTestPass accepts a semicolon-separated list of transform names, e.g.
+  // "widen-from-metadata;licm"
+  return Params.str();
 }
 
 PassBuilder::PassBuilder(TargetMachine *TM, PipelineTuningOptions PTO,

@@ -441,8 +441,7 @@ struct VPlanTransforms {
   /// LCSSA phi.
   static void addExitUsersForFirstOrderRecurrences(VPlan &Plan, VFRange &Range);
 
-  /// Run test transforms specified by comma-separated \p Pipeline names.
-  /// For testing VPlan transforms in isolation.
+  /// Run test transforms specified by semi-colon-separated \p Pipeline names.
   LLVM_ABI_FOR_TEST static void runTestTransforms(VPlan &Plan,
                                                   StringRef Pipeline,
                                                   const TargetLibraryInfo *TLI);

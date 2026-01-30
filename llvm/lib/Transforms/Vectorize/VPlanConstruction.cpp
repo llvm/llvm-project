@@ -180,6 +180,10 @@ VPValue *PlainCFGBuilder::getOrCreateVPOperand(Value *IRVal) {
 void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
                                                   BasicBlock *BB) {
   VPIRBuilder.setInsertPoint(VPBB);
+  unsigned VPlanWidenKind = BB->getContext().getMDKindID("vplan.widen");
+  unsigned VPlanReplicateKind = BB->getContext().getMDKindID("vplan.replicate");
+          
+
   // TODO: Model and preserve debug intrinsics in VPlan.
   for (Instruction &InstRef : BB->instructionsWithoutDebug(false)) {
     Instruction *Inst = &InstRef;
@@ -252,11 +256,8 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
 
       // Preserve vplan.widen and vplan.replicate metadata for testing VPlan
       // transforms.
-      unsigned VPlanWidenKind = Inst->getContext().getMDKindID("vplan.widen");
       if (MDNode *WidenMD = Inst->getMetadata(VPlanWidenKind))
         MD.setMetadata(VPlanWidenKind, WidenMD);
-      unsigned VPlanReplicateKind =
-          Inst->getContext().getMDKindID("vplan.replicate");
       if (MDNode *ReplicateMD = Inst->getMetadata(VPlanReplicateKind))
         MD.setMetadata(VPlanReplicateKind, ReplicateMD);
 

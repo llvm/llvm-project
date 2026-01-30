@@ -578,6 +578,10 @@ FUNCTION_PASS_WITH_PARAMS(
     [](CFGuardPass::Mechanism M) { return CFGuardPass(M); },
     parseCFGuardPassOptions, "check;dispatch")
 FUNCTION_PASS_WITH_PARAMS(
+    "vplan-test", "VPlanTestPass",
+    [](std::string Pipeline) { return VPlanTestPass(std::move(Pipeline)); },
+    parseVPlanTestPassOptions, "")
+FUNCTION_PASS_WITH_PARAMS(
     "early-cse", "EarlyCSEPass",
     [](bool UseMemorySSA) { return EarlyCSEPass(UseMemorySSA); },
     parseEarlyCSEPassOptions, "memssa")
