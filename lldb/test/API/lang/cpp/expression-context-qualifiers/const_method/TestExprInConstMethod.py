@@ -44,7 +44,7 @@ class TestCase(TestBase):
 
         # Test --cpp-ignore-context-qualifiers via SBExpressionOptions.
         options = lldb.SBExpressionOptions()
-        options.SetIgnoreContextQualifiers()
+        options.SetCppIgnoreContextQualifiers()
         self.expect_expr("m_mem = -2.0; m_mem", options=options, result_value="-2")
 
         self.expect_expr("((Foo*)this)->bar()", result_type="double", result_value="5")
