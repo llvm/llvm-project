@@ -1764,8 +1764,8 @@ gentbl_cc_library(
 cc_library(
     name = "AMDGPUDialect",
     srcs = [
-        "lib/Dialect/AMDGPU/IR/AMDGPUDialect.cpp",
         "lib/Dialect/AMDGPU/IR/AMDGPUAttrs.cpp",
+        "lib/Dialect/AMDGPU/IR/AMDGPUDialect.cpp",
         "lib/Dialect/AMDGPU/IR/AMDGPUEnums.cpp",
         "lib/Dialect/AMDGPU/IR/AMDGPUOps.cpp",
         "lib/Dialect/AMDGPU/IR/AMDGPUTypes.cpp",
