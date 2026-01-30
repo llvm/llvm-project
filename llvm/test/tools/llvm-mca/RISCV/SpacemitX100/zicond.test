@@ -2,14 +2,14 @@
 # RUN: llvm-mca -mtriple=riscv64 -mcpu=spacemit-x100 -iterations=1 -instruction-tables=full %p/../Inputs/zicond.s | FileCheck %s
 
 # CHECK:      Resources:
-# CHECK-NEXT: [0]   - SMTX100_BQ:1
-# CHECK-NEXT: [1]   - SMTX100_FQ:2 SMTX100_FQ0, SMTX100_FQ1
-# CHECK-NEXT: [2]   - SMTX100_FQ0:1
-# CHECK-NEXT: [3]   - SMTX100_FQ1:1
-# CHECK-NEXT: [4]   - SMTX100_IQ:2 SMTX100_IQ0, SMTX100_IQ1
-# CHECK-NEXT: [5]   - SMTX100_IQ0:1
-# CHECK-NEXT: [6]   - SMTX100_IQ1:1
-# CHECK-NEXT: [7]   - SMTX100_LSQ:2
+# CHECK-NEXT: [0]   - SMTX100_BQ:2
+# CHECK-NEXT: [1]   - SMTX100_FQ:4 SMTX100_FQ0, SMTX100_FQ0, SMTX100_FQ1, SMTX100_FQ1
+# CHECK-NEXT: [2]   - SMTX100_FQ0:2
+# CHECK-NEXT: [3]   - SMTX100_FQ1:2
+# CHECK-NEXT: [4]   - SMTX100_IQ:4 SMTX100_IQ0, SMTX100_IQ0, SMTX100_IQ1, SMTX100_IQ1
+# CHECK-NEXT: [5]   - SMTX100_IQ0:2
+# CHECK-NEXT: [6]   - SMTX100_IQ1:2
+# CHECK-NEXT: [7]   - SMTX100_LSQ:4
 
 # CHECK:      Instruction Info:
 # CHECK-NEXT: [1]: #uOps
@@ -23,27 +23,34 @@
 # CHECK-NEXT: [9]: LLVM Opcode Name
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]                                        [9]                        Instructions:
-# CHECK-NEXT:  1      1     0.50                         1     SMTX100_IQ                                 CZERO_EQZ                  czero.eqz	a0, a1, a2
-# CHECK-NEXT:  1      1     0.50                         1     SMTX100_IQ                                 CZERO_NEZ                  czero.nez	a0, a1, a2
-# CHECK-NEXT:  1      1     0.50                         1     SMTX100_IQ                                 CZERO_EQZ                  czero.eqz	a0, a1, a2
-# CHECK-NEXT:  1      1     0.50                         1     SMTX100_IQ                                 CZERO_NEZ                  czero.nez	a0, a1, a2
+# CHECK-NEXT:  1      1     0.25                         1     SMTX100_IQ                                 CZERO_EQZ                  czero.eqz	a0, a1, a2
+# CHECK-NEXT:  1      1     0.25                         1     SMTX100_IQ                                 CZERO_NEZ                  czero.nez	a0, a1, a2
+# CHECK-NEXT:  1      1     0.25                         1     SMTX100_IQ                                 CZERO_EQZ                  czero.eqz	a0, a1, a2
+# CHECK-NEXT:  1      1     0.25                         1     SMTX100_IQ                                 CZERO_NEZ                  czero.nez	a0, a1, a2
 
 # CHECK:      Resources:
-# CHECK-NEXT: [0]   - SMTX100_BQ
-# CHECK-NEXT: [1]   - SMTX100_FQ0
-# CHECK-NEXT: [2]   - SMTX100_FQ1
-# CHECK-NEXT: [3]   - SMTX100_IQ0
-# CHECK-NEXT: [4]   - SMTX100_IQ1
+# CHECK-NEXT: [0.0] - SMTX100_BQ
+# CHECK-NEXT: [0.1] - SMTX100_BQ
+# CHECK-NEXT: [1.0] - SMTX100_FQ0
+# CHECK-NEXT: [1.1] - SMTX100_FQ0
+# CHECK-NEXT: [2.0] - SMTX100_FQ1
+# CHECK-NEXT: [2.1] - SMTX100_FQ1
+# CHECK-NEXT: [3.0] - SMTX100_IQ0
+# CHECK-NEXT: [3.1] - SMTX100_IQ0
+# CHECK-NEXT: [4.0] - SMTX100_IQ1
+# CHECK-NEXT: [4.1] - SMTX100_IQ1
 # CHECK-NEXT: [5.0] - SMTX100_LSQ
 # CHECK-NEXT: [5.1] - SMTX100_LSQ
+# CHECK-NEXT: [5.2] - SMTX100_LSQ
+# CHECK-NEXT: [5.3] - SMTX100_LSQ
 
 # CHECK:      Resource pressure per iteration:
-# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5.0]  [5.1]
-# CHECK-NEXT:  -      -      -     2.00   2.00    -      -
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [3.0]  [3.1]  [4.0]  [4.1]  [5.0]  [5.1]  [5.2]  [5.3]
+# CHECK-NEXT:  -      -      -      -      -      -     1.00   1.00   1.00   1.00    -      -      -      -
 
 # CHECK:      Resource pressure by instruction:
-# CHECK-NEXT: [0]    [1]    [2]    [3]    [4]    [5.0]  [5.1]  Instructions:
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -     czero.eqz	a0, a1, a2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -     czero.nez	a0, a1, a2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -     czero.eqz	a0, a1, a2
-# CHECK-NEXT:  -      -      -     0.50   0.50    -      -     czero.nez	a0, a1, a2
+# CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [3.0]  [3.1]  [4.0]  [4.1]  [5.0]  [5.1]  [5.2]  [5.3]  Instructions:
+# CHECK-NEXT:  -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     czero.eqz	a0, a1, a2
+# CHECK-NEXT:  -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     czero.nez	a0, a1, a2
+# CHECK-NEXT:  -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     czero.eqz	a0, a1, a2
+# CHECK-NEXT:  -      -      -      -      -      -     0.25   0.25   0.25   0.25    -      -      -      -     czero.nez	a0, a1, a2

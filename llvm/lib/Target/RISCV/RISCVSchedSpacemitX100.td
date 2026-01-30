@@ -30,20 +30,22 @@ let SchedModel = SpacemitX100Model in {
 
 //===----------------------------------------------------------------------===//
 // Define processor resources for Spacemit-X100
-let BufferSize = 12 in {
-  // Each Queue can accept 2 ops and issue 1 op per cycle
-  def SMTX100_IQ0 : ProcResource<1>; //Integer Queue 0
-  def SMTX100_IQ1 : ProcResource<1>; //Integer Queue 1
-  def SMTX100_BQ  : ProcResource<1>; //Branch Queue
+let BufferSize = 6 in {
+  // IQ0, IQ1, BQ: 12 entry queue, can accept 2 ops and issue 1 op per cycle
+  // To model the accept bandwidth, split into 2 sub-queues of 6 entry each
+  def SMTX100_IQ0 : ProcResource<2>; //Integer Queue 0
+  def SMTX100_IQ1 : ProcResource<2>; //Integer Queue 1
+  def SMTX100_BQ  : ProcResource<2>; //Branch Queue
 }
 
-let BufferSize = 8 in {
-  // LSQ is 16 entry * 1, can accept 4 ops and issue 2 ops per cycle
-  // We model it as 8 entry * 2, so each queue accept 2 and issue 1, just like others
-  def SMTX100_LSQ : ProcResource<2>; //Load Store Queue
-  // Each Queue can accept 2 ops and issue 1 op per cycle
-  def SMTX100_FQ0 : ProcResource<1>; //Float Queue 0
-  def SMTX100_FQ1 : ProcResource<1>; //Float Queue 1
+let BufferSize = 4 in {
+  // LSQ: 16 entry queue, can accept 4 ops and issue 1 op per cycle
+  // To model the accept bandwidth, split into 4 sub-queues of 4 entry each
+  def SMTX100_LSQ : ProcResource<4>; //Load Store Queue
+  // FQ0, FQ1: 8 entry queue, can accept 2 ops and issue 1 op per cycle
+  // To model the accept bandwidth, split into 2 sub-queues of 4 entry each
+  def SMTX100_FQ0 : ProcResource<2>; //Float Queue 0
+  def SMTX100_FQ1 : ProcResource<2>; //Float Queue 1
 }
 
 def SMTX100_IQ : ProcResGroup<[SMTX100_IQ0, SMTX100_IQ1]>;
