@@ -2655,22 +2655,20 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
 
 // Format an address space for diagnostics without assuming it maps to a
 // target-specific value. Language-specific spaces (e.g. OpenCL) are rendered
-// using their spelled qualifiers, while target-specific ones are printed as the
-// numeric attribute value for compatibility with existing messages.
+// using their spelled qualifiers, and return whole qual type
 
-static std::string formatAddressSpaceForDiag(LangAS AS,
+static std::string formatAddressSpaceForDiag(QualType T,
                                              const LangOptions &LangOpts) {
+  LangAS AS = T.getAddressSpace();
   if (isTargetAddressSpace(AS))
     return llvm::utostr(toTargetAddressSpace(AS));
-
   PrintingPolicy PP(LangOpts);
-  Qualifiers Q;
-  Q.setAddressSpace(AS);
   std::string S;
   llvm::raw_string_ostream OS(S);
-  Q.print(OS, PP, false);
+  T.print(OS, PP);
   return OS.str();
 }
+
 
 bool Sema::CheckAllocatedType(QualType AllocType, SourceLocation Loc,
                               SourceRange R) {
@@ -2696,7 +2694,7 @@ bool Sema::CheckAllocatedType(QualType AllocType, SourceLocation Loc,
            !getLangOpts().OpenCLCPlusPlus)
     return Diag(Loc, diag::err_address_space_qualified_new)
            << AllocType.getUnqualifiedType()
-           << formatAddressSpaceForDiag(AllocType.getAddressSpace(),
+           << formatAddressSpaceForDiag(AllocType,
                                         getLangOpts());
 
   else if (getLangOpts().ObjCAutoRefCount) {
@@ -4090,7 +4088,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
       return Diag(Ex.get()->getBeginLoc(),
                   diag::err_address_space_qualified_delete)
              << Pointee.getUnqualifiedType()
-             << formatAddressSpaceForDiag(Pointee.getAddressSpace(),
+             << formatAddressSpaceForDiag(Pointee,
                                           getLangOpts());
 
     CXXRecordDecl *PointeeRD = nullptr;
