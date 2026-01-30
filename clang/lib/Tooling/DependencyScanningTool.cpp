@@ -463,6 +463,9 @@ DependencyScanningTool::computeDependenciesByNameWithContextOrError(
     LookupModuleOutputCallback LookupModuleOutput) {
   FullDependencyConsumer Consumer(AlreadySeen);
   auto Controller = createActionController(LookupModuleOutput);
+  // We need to clear the DiagnosticOutput so that each by-name lookup
+  // has a clean diagnostics buffer.
+  DiagPrinterWithOS->DiagnosticOutput.clear();
   if (Worker.computeDependenciesByNameWithContext(ModuleName, Consumer,
                                                   *Controller))
     return Consumer.takeTranslationUnitDeps();
