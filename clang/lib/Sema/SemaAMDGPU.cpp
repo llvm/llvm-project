@@ -21,9 +21,14 @@
 #include "clang/Sema/Ownership.h"
 #include "clang/Sema/Scope.h"
 #include "clang/Sema/Sema.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringExtras.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/AtomicOrdering.h"
+#include "llvm/TargetParser/TargetParser.h"
 #include <cstdint>
+#include <utility>
 
 namespace clang {
 
@@ -723,21 +728,14 @@ namespace {
 /// form: \c if(__builtin_amdgcn_is_invocable), we consider the then statement
 /// guarded.
 class DiagnoseUnguardedBuiltins : public DynamicRecursiveASTVisitor {
-  // TODO: this is conservative, and should be extended to:
-  //       - warn on unguarded ASM usage (__builtin_amdgcn_processor_is as the
-  //         guard);
-  //       - build sets of builtins which are invocable from nested
-  //         if (__builtin_amdgcn_is_invocable) calls, rather than assume
-  //         sanity / that the existence of a guard implies its correctness;
-  //       - derive the set of available builtins / valid ASM constraints from
-  //         the target architecture passed to __builtin_amdgcn_processor_is;
-  //       - consider attributes such as target.
+  // TODO: this could eventually be extended to consider attributes such as
+  //       target.
   Sema &SemaRef;
 
-  unsigned Guards;
-
+  SmallVector<std::pair<CallExpr *, StringRef>> CurrentGFXIP;
+  SmallVector<std::pair<unsigned, StringRef>> GuardedBuiltins;
 public:
-  DiagnoseUnguardedBuiltins(Sema &SemaRef) : SemaRef(SemaRef), Guards(0u) {}
+  DiagnoseUnguardedBuiltins(Sema &SemaRef) : SemaRef(SemaRef) {}
 
   bool TraverseLambdaExpr(LambdaExpr *LE) override {
     if (SemaRef.AMDGPU().HasPotentiallyUnguardedBuiltinUsage(
@@ -760,12 +758,14 @@ public:
     return TraverseStmt(CS->getSubStmt());
   }
 
+  bool VisitAsmStmt(AsmStmt *ASM) override;
   bool VisitCallExpr(CallExpr *CE) override;
 };
 
 inline Expr *FindPredicate(Expr *Cond) {
   if (auto *CE = dyn_cast<CallExpr>(Cond)) {
-    if (CE->getBuiltinCallee() == AMDGPU::BI__builtin_amdgcn_is_invocable)
+    if (CE->getBuiltinCallee() == AMDGPU::BI__builtin_amdgcn_is_invocable ||
+        CE->getBuiltinCallee() == AMDGPU::BI__builtin_amdgcn_processor_is)
       return Cond;
   } else if (auto *UO = dyn_cast<UnaryOperator>(Cond)) {
     return FindPredicate(UO->getSubExpr());
@@ -779,9 +779,34 @@ inline Expr *FindPredicate(Expr *Cond) {
 
 bool DiagnoseUnguardedBuiltins::TraverseIfStmt(IfStmt *If) {
   if (FindPredicate(If->getCond())) {
-    ++Guards;
+    auto *CE = cast<CallExpr>(If->getCond());
+    bool IsProcessorCheck =
+        CE->getBuiltinCallee() == AMDGPU::BI__builtin_amdgcn_processor_is;
+
+    if (IsProcessorCheck) {
+      StringRef G = cast<clang::StringLiteral>(CE->getArg(0))->getString();
+      // TODO: handle generic ISAs.
+      if (!CurrentGFXIP.empty() && G != CurrentGFXIP.back().second) {
+        SemaRef.Diag(CE->getExprLoc(),
+                     diag::err_amdgcn_conflicting_is_processor_options) << CE;
+        SemaRef.Diag(CurrentGFXIP.back().first->getExprLoc(),
+                     diag::note_amdgcn_previous_is_processor_guard);
+      }
+      CurrentGFXIP.emplace_back(CE, G);
+    } else {
+      auto *FD = cast<FunctionDecl>(
+          cast<DeclRefExpr>(CE->getArg(0))->getReferencedDeclOfCallee());
+      unsigned ID = FD->getBuiltinID();
+      StringRef F = SemaRef.getASTContext().BuiltinInfo.getRequiredFeatures(ID);
+      GuardedBuiltins.emplace_back(ID, F);
+    }
+
     bool Continue = TraverseStmt(If->getThen());
-    --Guards;
+
+    if (IsProcessorCheck)
+      CurrentGFXIP.pop_back();
+    else
+      GuardedBuiltins.pop_back();
 
     return Continue && TraverseStmt(If->getElse());
   }
@@ -789,10 +814,19 @@ bool DiagnoseUnguardedBuiltins::TraverseIfStmt(IfStmt *If) {
   return DynamicRecursiveASTVisitor::TraverseIfStmt(If);
 }
 
-bool DiagnoseUnguardedBuiltins::VisitCallExpr(CallExpr *CE) {
-  if (Guards)
+bool DiagnoseUnguardedBuiltins::VisitAsmStmt(AsmStmt *ASM) {
+  // TODO: should we check if the ASM is valid for the target? Can we?
+  if (!CurrentGFXIP.empty())
     return true;
 
+  std::string S = ASM->generateAsmString(SemaRef.getASTContext());
+  SemaRef.Diag(ASM->getAsmLoc(), diag::warn_amdgcn_unguarded_asm_stmt) << S;
+  SemaRef.Diag(ASM->getAsmLoc(), diag::note_amdgcn_unguarded_asm_silence) << S;
+
+  return true;
+}
+
+bool DiagnoseUnguardedBuiltins::VisitCallExpr(CallExpr *CE) {
   unsigned ID = CE->getBuiltinCallee();
 
   if (!ID)
@@ -802,11 +836,34 @@ bool DiagnoseUnguardedBuiltins::VisitCallExpr(CallExpr *CE) {
   if (ID == AMDGPU::BI__builtin_amdgcn_processor_is ||
       ID == AMDGPU::BI__builtin_amdgcn_is_invocable)
     return true;
+  if (llvm::any_of(GuardedBuiltins, [ID](auto &&B) { return B.first == ID; }))
+    return true;
 
-  SemaRef.Diag(CE->getExprLoc(), diag::warn_amdgcn_unguarded_builtin)
-      << CE->getDirectCallee();
-  SemaRef.Diag(CE->getExprLoc(), diag::note_amdgcn_unguarded_builtin_silence)
-      << CE->getDirectCallee();
+  StringRef FL(SemaRef.getASTContext().BuiltinInfo.getRequiredFeatures(ID));
+  llvm::StringMap<bool> FeatureMap;
+  if (CurrentGFXIP.empty()) {
+    for (auto &&[ID, RequiredFeatures] : GuardedBuiltins)
+      for (auto &&F : llvm::split(RequiredFeatures, ','))
+        FeatureMap[F] = true;
+  } else {
+    llvm::AMDGPU::fillAMDGPUFeatureMap(CurrentGFXIP.back().second,
+                                       llvm::Triple("amdgcn-amd-amdhsa"),
+                                       FeatureMap);
+  }
+
+  if (Builtin::evaluateRequiredTargetFeatures(FL, FeatureMap)) {
+    SemaRef.Diag(CE->getExprLoc(), diag::warn_amdgcn_unguarded_builtin)
+        << CE->getDirectCallee();
+    SemaRef.Diag(CE->getExprLoc(), diag::note_amdgcn_unguarded_builtin_silence)
+        << CE->getDirectCallee();
+  } else {
+    StringRef GFXIP = CurrentGFXIP.empty() ? "" : CurrentGFXIP.back().second;
+    SemaRef.Diag(CE->getExprLoc(), diag::err_amdgcn_incompatible_builtin)
+        << CE->getDirectCallee() << FL << !CurrentGFXIP.empty() << GFXIP;
+    if (!CurrentGFXIP.empty())
+      SemaRef.Diag(CurrentGFXIP.back().first->getExprLoc(),
+                   diag::note_amdgcn_previous_is_processor_guard);
+  }
 
   return true;
 }
