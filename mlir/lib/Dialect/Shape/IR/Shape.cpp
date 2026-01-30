@@ -1203,11 +1203,13 @@ void IndexToSizeOp::getCanonicalizationPatterns(RewritePatternSet &patterns,
 //===----------------------------------------------------------------------===//
 
 OpFoldResult FromExtentsOp::fold(FoldAdaptor adaptor) {
-  if (llvm::any_of(adaptor.getExtents(), [](Attribute a) { return !a; }))
-    return nullptr;
   SmallVector<int64_t, 6> extents;
-  for (auto attr : adaptor.getExtents())
-    extents.push_back(llvm::cast<IntegerAttr>(attr).getInt());
+  for (Attribute attr : adaptor.getExtents()) {
+    auto intAttr = llvm::dyn_cast_if_present<IntegerAttr>(attr);
+    if (!intAttr)
+      return nullptr;
+    extents.push_back(intAttr.getInt());
+  }
   Builder builder(getContext());
   return builder.getIndexTensorAttr(extents);
 }
