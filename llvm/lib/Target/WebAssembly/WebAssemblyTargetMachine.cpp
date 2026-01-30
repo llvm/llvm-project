@@ -20,6 +20,10 @@
 #include "WebAssemblyTargetObjectFile.h"
 #include "WebAssemblyTargetTransformInfo.h"
 #include "WebAssemblyUtilities.h"
+#include "llvm/CodeGen/GlobalISel/IRTranslator.h"
+#include "llvm/CodeGen/GlobalISel/InstructionSelect.h"
+#include "llvm/CodeGen/GlobalISel/Legalizer.h"
+#include "llvm/CodeGen/GlobalISel/RegBankSelect.h"
 #include "llvm/CodeGen/MIRParser/MIParser.h"
 #include "llvm/CodeGen/Passes.h"
 #include "llvm/CodeGen/RegAllocRegistry.h"
@@ -92,6 +96,10 @@ LLVMInitializeWebAssemblyTarget() {
 
   // Register backend passes
   auto &PR = *PassRegistry::getPassRegistry();
+  initializeGlobalISel(PR);
+  initializeWebAssemblyO0PreLegalizerCombinerPass(PR);
+  initializeWebAssemblyPreLegalizerCombinerPass(PR);
+  initializeWebAssemblyPostLegalizerCombinerPass(PR);
   initializeWebAssemblyAddMissingPrototypesPass(PR);
   initializeWebAssemblyLowerEmscriptenEHSjLjPass(PR);
   initializeLowerGlobalDtorsLegacyPassPass(PR);
@@ -442,6 +450,13 @@ public:
 
   // No reg alloc
   bool addRegAssignAndRewriteOptimized() override { return false; }
+
+  bool addIRTranslator() override;
+  void addPreLegalizeMachineIR() override;
+  bool addLegalizeMachineIR() override;
+  void addPreRegBankSelect() override;
+  bool addRegBankSelect() override;
+  bool addGlobalInstructionSelect() override;
 };
 } // end anonymous namespace
 
@@ -659,6 +674,47 @@ void WebAssemblyPassConfig::addPreEmitPass() {
 bool WebAssemblyPassConfig::addPreISel() {
   TargetPassConfig::addPreISel();
   addPass(createWebAssemblyLowerRefTypesIntPtrConv());
+  return false;
+}
+
+bool WebAssemblyPassConfig::addIRTranslator() {
+  addPass(new IRTranslator());
+  return false;
+}
+
+void WebAssemblyPassConfig::addPreLegalizeMachineIR() {
+  if (getOptLevel() == CodeGenOptLevel::None) {
+    addPass(createWebAssemblyO0PreLegalizerCombiner());
+  } else {
+    addPass(createWebAssemblyPreLegalizerCombiner());
+  }
+}
+bool WebAssemblyPassConfig::addLegalizeMachineIR() {
+  addPass(new Legalizer());
+  return false;
+}
+
+void WebAssemblyPassConfig::addPreRegBankSelect() {
+  addPass(createWebAssemblyPostLegalizerCombiner(getOptLevel() ==
+                                                 CodeGenOptLevel::None));
+}
+
+bool WebAssemblyPassConfig::addRegBankSelect() {
+  addPass(new RegBankSelect());
+  return false;
+}
+
+bool WebAssemblyPassConfig::addGlobalInstructionSelect() {
+  addPass(new InstructionSelect(getOptLevel()));
+
+  // We insert only if ISelDAG won't insert these at a later point.
+  if (isGlobalISelAbortEnabled()) {
+    addPass(createWebAssemblyArgumentMove());
+    addPass(createWebAssemblySetP2AlignOperands());
+    addPass(createWebAssemblyFixBrTableDefaults());
+    addPass(createWebAssemblyCleanCodeAfterTrap());
+  }
+
   return false;
 }
 
