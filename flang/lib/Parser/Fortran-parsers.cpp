@@ -1340,7 +1340,7 @@ constexpr auto noinlineDir{
     "NOINLINE" >> construct<CompilerDirective::NoInline>()};
 constexpr auto inlineDir{"INLINE" >> construct<CompilerDirective::Inline>()};
 constexpr auto ivdep{"IVDEP" >> construct<CompilerDirective::IVDep>()};
-TYPE_PARSER(beginDirective >> "DIR$ "_tok >>
+TYPE_PARSER(beginDirective >> some(letter) >> "$ "_tok >>
     sourced((construct<CompilerDirective>(ignore_tkr) ||
                 construct<CompilerDirective>(loopCount) ||
                 construct<CompilerDirective>(assumeAligned) ||
