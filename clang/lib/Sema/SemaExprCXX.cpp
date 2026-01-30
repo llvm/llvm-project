@@ -2670,10 +2670,8 @@ static std::string formatAddressSpaceForDiag(QualType T,
   llvm::raw_string_ostream OS(Sugared);
   llvm::raw_string_ostream KO(Desugared);
 
-  
   T.print(OS, PP);
 
-  
   T.getDesugaredType(Ctx).print(KO, PP);
 
   return OS.str() + " (" + KO.str() + ")";
