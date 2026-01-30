@@ -245,8 +245,8 @@ generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
     const bool strideIncludeLowerExtent = true;
 
     llvm::SmallVector<mlir::Value> accBounds;
-    if (auto shapeOp =
-            mlir::dyn_cast_if_present<fir::ShapeOp>(shape.getDefiningOp())) {
+    mlir::Operation *anyShapeOp = shape ? shape.getDefiningOp() : nullptr;
+    if (auto shapeOp = mlir::dyn_cast_if_present<fir::ShapeOp>(anyShapeOp)) {
       mlir::Value cummulativeExtent = one;
       for (auto extent : shapeOp.getExtents()) {
         mlir::Value upperbound =
@@ -264,8 +264,8 @@ generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
             /*startIdx=*/one);
         accBounds.push_back(accBound);
       }
-    } else if (auto shapeShiftOp = mlir::dyn_cast_if_present<fir::ShapeShiftOp>(
-                   shape.getDefiningOp())) {
+    } else if (auto shapeShiftOp =
+                   mlir::dyn_cast_if_present<fir::ShapeShiftOp>(anyShapeOp)) {
       mlir::Value lowerbound;
       mlir::Value cummulativeExtent = one;
       for (auto [idx, val] : llvm::enumerate(shapeShiftOp.getPairs())) {
@@ -314,18 +314,15 @@ generateSeqTyAccBounds(fir::SequenceType seqType, mlir::Value var,
           hlfir::translateToExtendedValue(loc, firBuilder, hlfir::Entity(box));
       fir::ExtendedValue exv = res.first;
       mlir::Value boxRef = box;
-      if (auto boxPtr = mlir::cast<mlir::acc::MappableType>(box.getType())
-                            .getVarPtr(box)) {
+      if (auto boxPtr =
+              mlir::cast<mlir::acc::MappableType>(box.getType()).getVarPtr(box))
         boxRef = boxPtr;
-      }
-      // TODO: Handle Fortran optional, e.g. reuse mayBeAbsentBox()
-      // from FIROps.cpp.
-      const mlir::Value isPresent;
-      if (mayBeOptional) {
-        // TODO: generate the dynamic check for OPTIONAL.
-        // For now, return no bounds.
-        return {};
-      }
+
+      mlir::Value isPresent =
+          !mayBeOptional ? mlir::Value{}
+                         : fir::IsPresentOp::create(builder, loc,
+                                                    builder.getI1Type(), box);
+
       fir::factory::AddrAndBoundsInfo info(box, boxRef, isPresent,
                                            box.getType());
       return fir::factory::genBoundsOpsFromBox<mlir::acc::DataBoundsOp,
