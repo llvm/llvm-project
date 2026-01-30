@@ -1270,4 +1270,18 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Any({{DivB64}, {{VgprB64}, {IntrId, SgprP1}}})
       .Any({{DivB128}, {{VgprB128}, {IntrId, SgprP1}}});
 
+  addRulesForIOpcs({amdgcn_wwm, amdgcn_strict_wwm}, StandardB)
+      .Div(B32, {{VgprB32}, {IntrId, VgprB32}})
+      .Uni(B32, {{SgprB32}, {IntrId, SgprB32}})
+      .Div(B64, {{VgprB64}, {IntrId, VgprB64}})
+      .Uni(B64, {{SgprB64}, {IntrId, SgprB64}})
+      .Div(B96, {{VgprB96}, {IntrId, VgprB96}})
+      .Uni(B96, {{SgprB96}, {IntrId, SgprB96}})
+      .Div(B128, {{VgprB128}, {IntrId, VgprB128}})
+      .Uni(B128, {{SgprB128}, {IntrId, SgprB128}})
+      .Any({{UniB256}, {{SgprB256}, {IntrId, SgprB256}}})
+      .Any({{DivB256}, {{VgprB256}, {IntrId, VgprB256}}})
+      .Any({{UniB512}, {{SgprB512}, {IntrId, SgprB512}}})
+      .Any({{DivB512}, {{VgprB512}, {IntrId, VgprB512}}});
+
 } // end initialize rules
