@@ -42,11 +42,12 @@ typedef unsigned char __mmask8;
 typedef unsigned short __mmask16;
 
 /* Rounding mode macros.  */
-#define _MM_FROUND_TO_NEAREST_INT   0x00
-#define _MM_FROUND_TO_NEG_INF       0x01
-#define _MM_FROUND_TO_POS_INF       0x02
-#define _MM_FROUND_TO_ZERO          0x03
-#define _MM_FROUND_CUR_DIRECTION    0x04
+#define _MM_FROUND_TO_NEAREST_INT       0x00
+#define _MM_FROUND_TO_NEAREST_TIES_EVEN 0x00
+#define _MM_FROUND_TO_NEG_INF           0x01
+#define _MM_FROUND_TO_POS_INF           0x02
+#define _MM_FROUND_TO_ZERO              0x03
+#define _MM_FROUND_CUR_DIRECTION        0x04
 
 /* Constants for integer comparison predicates */
 typedef enum {
