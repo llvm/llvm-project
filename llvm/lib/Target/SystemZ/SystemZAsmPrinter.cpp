@@ -541,6 +541,7 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
       .addReg(SystemZMC::getRegAsGR64(MI->getOperand(2).getReg()));
     break;
 
+  case SystemZ::VLR16:
   case SystemZ::VLR32:
   case SystemZ::VLR64:
     LoweredMI = MCInstBuilder(SystemZ::VLR)

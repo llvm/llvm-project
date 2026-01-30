@@ -139,3 +139,17 @@ define i32 @cls_i32_knownbits_no_overestimate(i32 signext %x) {
   %e = or i32 %d, 16
   ret i32 %e
  }
+
+; Test that computeKnownBits works with NEON CLS intrinsics now that they use ISD::CTLS.
+; The CLS result for v4i32 is in range [0, 31], so the `and 31` should be optimized away.
+define <4 x i32> @neon_cls_v4i32_knownbits(<4 x i32> %a) nounwind {
+; CHECK-LABEL: neon_cls_v4i32_knownbits:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cls v0.4s, v0.4s
+; CHECK-NEXT:    ret
+  %result = call <4 x i32> @llvm.aarch64.neon.cls.v4i32(<4 x i32> %a)
+  %and = and <4 x i32> %result, <i32 31, i32 31, i32 31, i32 31>
+  ret <4 x i32> %and
+}
+
+declare <4 x i32> @llvm.aarch64.neon.cls.v4i32(<4 x i32>) nounwind readnone
