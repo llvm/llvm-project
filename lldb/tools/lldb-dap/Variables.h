@@ -19,7 +19,11 @@
 
 namespace lldb_dap {
 
-enum eScopeKind { Locals, Globals, Registers };
+enum ScopeKind : unsigned {
+  eScopeKindLocals,
+  eScopeKindGlobals,
+  eScopeKindRegisters
+};
 /// Creates a `protocol::Scope` struct.
 ///
 /// \param[in] kind
@@ -36,11 +40,11 @@ enum eScopeKind { Locals, Globals, Registers };
 ///
 /// \return
 ///     A `protocol::Scope`
-protocol::Scope CreateScope(const eScopeKind kind, int64_t variablesReference,
+protocol::Scope CreateScope(const ScopeKind kind, int64_t variablesReference,
                             int64_t namedVariables, bool expensive);
 
 struct ScopeData {
-  eScopeKind kind;
+  ScopeKind kind;
   lldb::SBValueList scope;
 };
 
@@ -51,13 +55,13 @@ struct FrameScopes {
   lldb::SBValueList registers;
 
   /// Returns a pointer to the scope corresponding to the given kind.
-  lldb::SBValueList *GetScope(eScopeKind kind) {
+  lldb::SBValueList *GetScope(ScopeKind kind) {
     switch (kind) {
-    case eScopeKind::Locals:
+    case eScopeKindLocals:
       return &locals;
-    case eScopeKind::Globals:
+    case eScopeKindGlobals:
       return &globals;
-    case eScopeKind::Registers:
+    case eScopeKindRegisters:
       return &registers;
     }
 
@@ -81,7 +85,7 @@ struct Variables {
   lldb::SBValue GetVariable(int64_t var_ref) const;
 
   lldb::SBValueList *GetScope(const uint64_t dap_frame_id,
-                              const eScopeKind kind);
+                              const ScopeKind kind);
 
   /// Insert a new \p variable.
   /// \return variableReference assigned to this expandable variable.
@@ -110,7 +114,7 @@ private:
   int64_t m_next_temporary_var_ref{TemporaryVariableStartIndex};
 
   // Variable Reference,                 dap_frame_id
-  std::map<int64_t, std::pair<eScopeKind, uint64_t>> m_scope_kinds;
+  std::map<int64_t, std::pair<ScopeKind, uint64_t>> m_scope_kinds;
 
   /// Variables that are alive in this stop state.
   /// Will be cleared when debuggee resumes.

@@ -38,7 +38,7 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
     int64_t num_children = 0;
 
     std::optional<ScopeData> scope_data = dap.variables.GetScopeKind(var_ref);
-    if (scope_data.has_value() && scope_data->kind == eScopeKind::Registers) {
+    if (scope_data.has_value() && scope_data->kind == eScopeKindRegisters) {
 
       // Change the default format of any pointer sized registers in the first
       // register set to be the lldb::eFormatAddressInfo so we show the pointer
@@ -60,7 +60,7 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
 
     num_children = top_scope->GetSize();
     if (num_children == 0 && scope_data &&
-        scope_data->kind == eScopeKind::Locals) {
+        scope_data->kind == eScopeKindLocals) {
       // Check for an error in the SBValueList that might explain why we don't
       // have locals. If we have an error display it as the sole value in the
       // the locals.
@@ -96,7 +96,7 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
     }
 
     // Show return value if there is any ( in the local top frame )
-    if (scope_data && scope_data->kind == eScopeKind::Locals) {
+    if (scope_data && scope_data->kind == eScopeKindLocals) {
       auto process = dap.target.GetProcess();
       auto selected_thread = process.GetSelectedThread();
       lldb::SBValue stop_return_value = selected_thread.GetStopReturnValue();

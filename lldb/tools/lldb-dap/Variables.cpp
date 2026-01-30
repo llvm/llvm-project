@@ -20,7 +20,7 @@ using namespace lldb_dap;
 
 namespace lldb_dap {
 
-protocol::Scope CreateScope(const eScopeKind kind, int64_t variablesReference,
+protocol::Scope CreateScope(const ScopeKind kind, int64_t variablesReference,
                             int64_t namedVariables, bool expensive) {
   protocol::Scope scope;
   scope.variablesReference = variablesReference;
@@ -35,14 +35,14 @@ protocol::Scope CreateScope(const eScopeKind kind, int64_t variablesReference,
   // be expanded if we enter a function with arguments. It becomes more
   // annoying when the scope has arguments, return_value and locals.
   switch (kind) {
-  case eScopeKind::Locals:
+  case eScopeKindLocals:
     scope.presentationHint = protocol::Scope::eScopePresentationHintLocals;
     scope.name = "Locals";
     break;
-  case eScopeKind::Globals:
+  case eScopeKindGlobals:
     scope.name = "Globals";
     break;
-  case eScopeKind::Registers:
+  case eScopeKindRegisters:
     scope.presentationHint = protocol::Scope::eScopePresentationHintRegisters;
     scope.name = "Registers";
     break;
@@ -56,7 +56,7 @@ lldb::SBValueList *Variables::GetTopLevelScope(int64_t variablesReference) {
   if (iter == m_scope_kinds.end())
     return nullptr;
 
-  eScopeKind scope_kind = iter->second.first;
+  ScopeKind scope_kind = iter->second.first;
   uint64_t dap_frame_id = iter->second.second;
 
   auto frame_iter = m_frames.find(dap_frame_id);
@@ -171,7 +171,7 @@ Variables::GetScopeKind(const int64_t variablesReference) {
 }
 
 lldb::SBValueList *Variables::GetScope(const uint64_t dap_frame_id,
-                                       const eScopeKind kind) {
+                                       const ScopeKind kind) {
 
   auto frame = m_frames.find(dap_frame_id);
   if (frame == m_frames.end()) {
@@ -206,26 +206,25 @@ std::vector<protocol::Scope> Variables::ReadyFrame(const uint64_t dap_frame_id,
 
   int64_t locals_ref = GetNewVariableReference(false);
 
-  scopes.push_back(CreateScope(
-      eScopeKind::Locals, locals_ref,
-      GetScope(dap_frame_id, eScopeKind::Locals)->GetSize(), false));
+  scopes.push_back(
+      CreateScope(eScopeKindLocals, locals_ref,
+                  GetScope(dap_frame_id, eScopeKindLocals)->GetSize(), false));
 
-  m_scope_kinds[locals_ref] = std::make_pair(eScopeKind::Locals, dap_frame_id);
+  m_scope_kinds[locals_ref] = std::make_pair(eScopeKindLocals, dap_frame_id);
 
   int64_t globals_ref = GetNewVariableReference(false);
-  scopes.push_back(CreateScope(
-      eScopeKind::Globals, globals_ref,
-      GetScope(dap_frame_id, eScopeKind::Globals)->GetSize(), false));
-  m_scope_kinds[globals_ref] =
-      std::make_pair(eScopeKind::Globals, dap_frame_id);
+  scopes.push_back(
+      CreateScope(eScopeKindGlobals, globals_ref,
+                  GetScope(dap_frame_id, eScopeKindGlobals)->GetSize(), false));
+  m_scope_kinds[globals_ref] = std::make_pair(eScopeKindGlobals, dap_frame_id);
 
   int64_t registers_ref = GetNewVariableReference(false);
   scopes.push_back(CreateScope(
-      eScopeKind::Registers, registers_ref,
-      GetScope(dap_frame_id, eScopeKind::Registers)->GetSize(), false));
+      eScopeKindRegisters, registers_ref,
+      GetScope(dap_frame_id, eScopeKindRegisters)->GetSize(), false));
 
   m_scope_kinds[registers_ref] =
-      std::make_pair(eScopeKind::Registers, dap_frame_id);
+      std::make_pair(eScopeKindRegisters, dap_frame_id);
 
   return scopes;
 }

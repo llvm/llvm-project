@@ -91,11 +91,11 @@ TEST_F(VariablesTest, GetTopLevelScope_ReturnsCorrectScope) {
   ASSERT_NE(registers_scope, nullptr);
 
   EXPECT_EQ(vars.GetTopLevelScope(locals_scope->variablesReference),
-            vars.GetScope(frame_id, eScopeKind::Locals));
+            vars.GetScope(frame_id, eScopeKindLocals));
   EXPECT_EQ(vars.GetTopLevelScope(globals_scope->variablesReference),
-            vars.GetScope(frame_id, eScopeKind::Globals));
+            vars.GetScope(frame_id, eScopeKindGlobals));
   EXPECT_EQ(vars.GetTopLevelScope(registers_scope->variablesReference),
-            vars.GetScope(frame_id, eScopeKind::Registers));
+            vars.GetScope(frame_id, eScopeKindRegisters));
   EXPECT_EQ(vars.GetTopLevelScope(9999), nullptr);
 }
 
