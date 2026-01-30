@@ -740,6 +740,22 @@ void mlir::vector::populateVectorMultiReductionUnrollingPatterns(
   }
 }
 
+void mlir::vector::populateVectorUnrollMultiReduction(
+    RewritePatternSet &patterns, VectorMultiReductionLowering options,
+    PatternBenefit benefit) {
+  if (options == VectorMultiReductionLowering::InnerReduction) {
+    // TODO: Add UnrollMultiReductionInnerBaseCase and
+    // UnrollMultiReductionInnerGeneralCase patterns here once implemented.
+    // For now, fall back to the existing 2-D based lowering.
+    patterns.add<TwoDimMultiReductionToReduction>(patterns.getContext(),
+                                                  benefit);
+  } else {
+    patterns.add<UnrollMultiReductionOuterBaseCase,
+                 UnrollMultiReductionOuterGeneralCase>(patterns.getContext(),
+                                                       benefit);
+  }
+}
+
 void mlir::vector::populateVectorMultiReductionLoweringPatterns(
     RewritePatternSet &patterns, VectorMultiReductionLowering options,
     PatternBenefit benefit) {
