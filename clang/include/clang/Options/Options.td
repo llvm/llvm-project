@@ -3329,6 +3329,14 @@ def fms_extensions : Flag<["-"], "fms-extensions">, Group<f_Group>,
   Visibility<[ClangOption, CC1Option, CLOption]>,
   HelpText<"Accept some non-standard constructs supported by the Microsoft compiler">,
   MarshallingInfoFlag<LangOpts<"MicrosoftExt">>, ImpliedByAnyOf<[fms_compatibility.KeyPath]>;
+defm ms_anonymous_structs
+    : BoolFOption<
+          "ms-anonymous-structs", LangOpts<"MSAnonymousStructs">, DefaultFalse,
+          PosFlag<SetTrue, [], [ClangOption, CC1Option],
+                  "Enable Microsoft anonymous struct/union extension.",
+                  [fms_extensions.KeyPath]>,
+          NegFlag<SetFalse, [], [ClangOption, CC1Option],
+                  "Disable Microsoft anonymous struct/union extension.">>;
 defm asm_blocks : BoolFOption<"asm-blocks",
   LangOpts<"AsmBlocks">, Default<fms_extensions.KeyPath>,
   PosFlag<SetTrue, [], [ClangOption, CC1Option]>,
@@ -4797,7 +4805,7 @@ def ffile_prefix_map_EQ
              "macros and __builtin_FILE(). Implies -ffile-reproducible.">;
 def fmacro_prefix_map_EQ
   : Joined<["-"], "fmacro-prefix-map=">, Group<f_Group>,
-  Visibility<[ClangOption, CC1Option]>,
+  Visibility<[ClangOption, CLOption, CC1Option]>,
     HelpText<"remap file source paths in predefined preprocessor macros and "
              "__builtin_FILE(). Implies -ffile-reproducible.">;
 defm force_dwarf_frame : BoolFOption<"force-dwarf-frame",
@@ -5936,6 +5944,12 @@ def mcheck_zero_division : Flag<["-"], "mcheck-zero-division">,
 def mno_check_zero_division : Flag<["-"], "mno-check-zero-division">,
                               Group<m_mips_Features_Group>;
 def mfix4300 : Flag<["-"], "mfix4300">, Group<m_mips_Features_Group>;
+def mfix_r5900 : Flag<["-"], "mfix-r5900">,
+                 Group<m_mips_Features_Group>,
+                 HelpText<"Enable R5900 short loop erratum fix">;
+def mno_fix_r5900 : Flag<["-"], "mno-fix-r5900">,
+                    Group<m_mips_Features_Group>,
+                    HelpText<"Disable R5900 short loop erratum fix">;
 def mcompact_branches_EQ : Joined<["-"], "mcompact-branches=">,
                            Group<m_mips_Features_Group>;
 } // let Flags = [TargetSpecific]
