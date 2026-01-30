@@ -234,7 +234,8 @@ void f(P x, Q y) {
         for kind_key in kind_keys:
             with warnings.catch_warnings(record=True):
                 self.assertEqual(
-                    SPELLING_CACHE[kind_key.value], CompletionChunk.SPELLING_CACHE[kind_key]
+                    SPELLING_CACHE[kind_key.value],
+                    CompletionChunk.SPELLING_CACHE[kind_key]
                 )
 
     def test_spelling_cache_missing_attribute(self):
