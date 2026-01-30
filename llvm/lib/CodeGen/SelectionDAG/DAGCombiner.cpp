@@ -20747,9 +20747,32 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
     if (!isTypeLegal(LDMemType))
       break;
     if (STMemType != LDMemType) {
-      // TODO: Support vectors? This requires extract_subvector/bitcast.
-      if (!STMemType.isVector() && !LDMemType.isVector() &&
-          STMemType.isInteger() && LDMemType.isInteger())
+      if (LdMemSize == StMemSize) {
+        if (TLI.isOperationLegal(ISD::BITCAST, LDMemType) &&
+            isTypeLegal(LDMemType) &&
+            TLI.isOperationLegal(ISD::BITCAST, STMemType) &&
+            isTypeLegal(STMemType) &&
+            TLI.isLoadBitCastBeneficial(LDMemType, STMemType, DAG,
+                                        *LD->getMemOperand()))
+          Val = DAG.getBitcast(LDMemType, Val);
+        else
+          break;
+      } else if (LDMemType.isVector()) {
+        EVT EltVT = LDMemType.getVectorElementType();
+        uint64_t EltSize = EltVT.getSizeInBits();
+
+        if (!StMemSize.isKnownMultipleOf(EltSize))
+          break;
+
+        EVT InterVT = EVT::getVectorVT(*DAG.getContext(), EltVT,
+                                       StMemSize.divideCoefficientBy(EltSize));
+        if (!TLI.isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, InterVT))
+          break;
+
+        Val = DAG.getExtractSubvector(SDLoc(LD), LDMemType,
+                                      DAG.getBitcast(InterVT, Val), 0);
+      } else if (!STMemType.isVector() && !LDMemType.isVector() &&
+                 STMemType.isInteger() && LDMemType.isInteger())
         Val = DAG.getNode(ISD::TRUNCATE, SDLoc(LD), LDMemType, Val);
       else
         break;
