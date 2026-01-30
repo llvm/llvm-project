@@ -11195,3 +11195,4 @@ static const unsigned NonFoldableWithSameMaskTable[] = {
   X86::VUNPCKLPSZrrk,
   X86::VUNPCKLPSZrrkz,
 };
+
