@@ -300,6 +300,7 @@ ENTRY(VMOVSDrr, VMOVLPDrm, TB_NO_REVERSE)
 // element reads only from source elements that are also active under the same mask.
 // These instructions perform element rearrangement/broadcasting that may cause
 // active destination elements to read from masked-off source elements.
+// Matches the following patterns: OPCODE[,Z,Z128,Z256][,rr,ri,rri][k,kz].
 #ifndef NOFOLD_SAME_MASK_PREFIX
 #define NOFOLD_SAME_MASK_PREFIX(PREFIX)
 #endif
