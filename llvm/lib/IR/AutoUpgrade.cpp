@@ -4948,9 +4948,8 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
       llvm_unreachable("Unknown function for CallBase upgrade.");
     }
 
-    if (Rep) {
+    if (Rep)
       CI->replaceAllUsesWith(Rep);
-    }
     CI->eraseFromParent();
     return;
   }
