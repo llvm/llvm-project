@@ -2779,27 +2779,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     constrainSelectedInstRegOperands(I, TII, TRI, RBI);
     return true;
   }
-  case TargetOpcode::G_CONSTANT_FOLD_BARRIER: {
-    auto ConstrainToRC = [&](Register Reg) {
-      const RegisterBank &RB = *RBI.getRegBank(Reg, MRI, TRI);
-      const TargetRegisterClass *RC =
-          getRegClassForTypeOnBank(MRI.getType(Reg), RB);
-      return RC && RBI.constrainGenericRegister(Reg, *RC, MRI);
-    };
-
-    auto [DstReg, SrcReg] = I.getFirst2Regs();
-    if (!ConstrainToRC(DstReg) || !ConstrainToRC(SrcReg))
-      return false;
-
-    if (const auto *DstRC = MRI.getRegClassOrNull(DstReg))
-      MRI.setRegClass(SrcReg, DstRC);
-
-    assert(canReplaceReg(DstReg, SrcReg, MRI) &&
-           "Must be able to replace dst with src!");
-    I.eraseFromParent();
-    MRI.replaceRegWith(DstReg, SrcReg);
-    return true;
-  }
   case TargetOpcode::G_EXTRACT: {
     Register DstReg = I.getOperand(0).getReg();
     Register SrcReg = I.getOperand(1).getReg();

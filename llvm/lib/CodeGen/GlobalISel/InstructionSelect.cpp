@@ -356,14 +356,7 @@ bool InstructionSelect::selectInstr(MachineInstr &MI) {
     return true;
   }
 
-  if (MI.getOpcode() == TargetOpcode::G_CONSTANT_FOLD_BARRIER) {
-    // Allow targets to provide custom handling before falling back to the
-    // generic elimination below.
-    if (ISel->select(MI))
-      return true;
-  }
-
-  // Eliminate hints or a remaining G_CONSTANT_FOLD_BARRIER.
+  // Eliminate hints or G_CONSTANT_FOLD_BARRIER.
   if (isPreISelGenericOptimizationHint(MI.getOpcode()) ||
       MI.getOpcode() == TargetOpcode::G_CONSTANT_FOLD_BARRIER) {
     auto [DstReg, SrcReg] = MI.getFirst2Regs();
@@ -373,10 +366,11 @@ bool InstructionSelect::selectInstr(MachineInstr &MI) {
     //
     // Propagate that through to the source register.
     const TargetRegisterClass *DstRC = MRI.getRegClassOrNull(DstReg);
-    if (DstRC)
+    const TargetRegisterClass *SrcRC = MRI.getRegClassOrNull(SrcReg);
+    if (DstRC && SrcRC)
+      MRI.constrainRegClass(SrcReg, DstRC);
+    else if (DstRC)
       MRI.setRegClass(SrcReg, DstRC);
-    assert(canReplaceReg(DstReg, SrcReg, MRI) &&
-           "Must be able to replace dst with src!");
     MI.eraseFromParent();
     MRI.replaceRegWith(DstReg, SrcReg);
     return true;
