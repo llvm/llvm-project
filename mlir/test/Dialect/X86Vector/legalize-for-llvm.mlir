@@ -95,27 +95,11 @@ func.func @avx512bf16_cvt_packed_f32_to_bf16_512(
   return %0 : vector<16xbf16>
 }
 
-// CHECK-LABEL: func @avx512_dot_i8_128
-func.func @avx512_dot_i8_128(%w: vector<4xi32>, %a: vector<16xi8>,
-    %b: vector<16xi8>) -> vector<4xi32> {
-  // CHECK: llvm.call_intrinsic "llvm.x86.avx512.vpdpwssd.128"
-  %0 = x86vector.avx512.dot.i8 %w, %a, %b : vector<16xi8> -> vector<4xi32>
-  return %0 : vector<4xi32>
-}
-
-// CHECK-LABEL: func @avx512_dot_i8_256
-func.func @avx512_dot_i8_256(%w: vector<8xi32>, %a: vector<32xi8>,
-    %b: vector<32xi8>) -> vector<8xi32> {
-  // CHECK: llvm.call_intrinsic "llvm.x86.avx512.vpdpwssd.256"
-  %0 = x86vector.avx512.dot.i8 %w, %a, %b : vector<32xi8> -> vector<8xi32>
-  return %0 : vector<8xi32>
-}
-
-// CHECK-LABEL: func @avx512_dot_i8_512
-func.func @avx512_dot_i8_512(%w: vector<16xi32>, %a: vector<64xi8>,
+// CHECK-LABEL: func @avx10_dot_i8_512
+func.func @avx10_dot_i8_512(%w: vector<16xi32>, %a: vector<64xi8>,
     %b: vector<64xi8>) -> vector<16xi32> {
-  // CHECK: llvm.call_intrinsic "llvm.x86.avx512.vpdpwssd.512"
-  %0 = x86vector.avx512.dot.i8 %w, %a, %b : vector<64xi8> -> vector<16xi32>
+  // CHECK: llvm.call_intrinsic "llvm.x86.avx10.vpdpbssd.512"
+  %0 = x86vector.avx10.dot.i8 %w, %a, %b : vector<64xi8> -> vector<16xi32>
   return %0 : vector<16xi32>
 }
 

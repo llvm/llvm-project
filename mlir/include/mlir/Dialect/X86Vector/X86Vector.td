@@ -343,11 +343,19 @@ def CvtPackedF32ToBF16Op : AVX512_Op<"cvt.packed.f32_to_bf16", [Pure,
   }];
 }
 
+//===----------------------------------------------------------------------===//
+// AVX10 op definitions
+//===----------------------------------------------------------------------===//
+
+// Operation that is part of the input dialect.
+class AVX10_Op<string mnemonic, list<Trait> traits = []> :
+  Op<X86Vector_Dialect, "avx10." # mnemonic, traits> {}
+
 //----------------------------------------------------------------------------//
-// AVX512 Int8 Dot
+// AVX10 Int8 Dot
 //----------------------------------------------------------------------------//
 
-def AVX512DotInt8Op : AVX512_Op<"dot.i8", [Pure,
+def AVX10DotInt8Op : AVX10_Op<"dot.i8", [Pure,
     X86IntrinsicOpInterface,
     AllTypesMatch<["a", "b"]>,
     AllTypesMatch<["w", "dst"]>,
@@ -356,10 +364,10 @@ def AVX512DotInt8Op : AVX512_Op<"dot.i8", [Pure,
                    "VectorType::get({::llvm::cast<VectorType>($_self).getShape()[0] * 4}, "
                    "IntegerType::get($_self.getContext(), 8))">
   ]> {
-  let summary = "AVX512 Dot Int8 op";
+  let summary = "AVX10 Dot Int8 op";
   let description = [{
     The `dot` op is an AVX512-Int8 specific op that can lower to the proper
-    LLVMAVX2-INT8 operation `llvm.vpdpwssd` depending on the width of MLIR
+    LLVMAVX10-INT8 operation `llvm.vpdpwssd` depending on the width of MLIR
     vectors it is applied to.
 
     #### From the Intel Intrinsics Guide:
@@ -371,24 +379,20 @@ def AVX512DotInt8Op : AVX512_Op<"dot.i8", [Pure,
 
     Example:
     ```mlir
-    %dst = x86vector.avx512.dot.i8 %w, %a, %b : vector<64xi8> -> vector<16xi32>
+    %dst = x86vector.avx10.dot.i8 %w, %a, %b : vector<64xi8> -> vector<16xi32>
     ```
   }];
-  let arguments = (ins VectorOfLengthAndType<[4, 8, 16], [I32]>:$w,
-                   VectorOfLengthAndType<[16, 32, 64], [I8]>:$a,
-                   VectorOfLengthAndType<[16, 32, 64], [I8]>:$b
+  let arguments = (ins VectorOfLengthAndType<[16], [I32]>:$w,
+                   VectorOfLengthAndType<[64], [I8]>:$a,
+                   VectorOfLengthAndType<[64], [I8]>:$b
                    );
-  let results = (outs VectorOfLengthAndType<[4, 8, 16], [I32]>:$dst);
+  let results = (outs VectorOfLengthAndType<[16], [I32]>:$dst);
   let assemblyFormat =
     "$w `,` $a `,` $b attr-dict `:` type($a) `->` type($w)";
 
   let extraClassDeclaration = [{
     std::string getIntrinsicName() {
-      std::string intr = "llvm.x86.avx512.vpdpwssd";
-      VectorType vecType = getW().getType();
-      unsigned elemBitWidth = vecType.getElementTypeBitWidth();
-      unsigned opBitWidth = vecType.getShape()[0] * elemBitWidth;
-      intr += "." + std::to_string(opBitWidth);
+      std::string intr = "llvm.x86.avx10.vpdpbssd.512";
       return intr;
     }
   }];
