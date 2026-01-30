@@ -104,3 +104,63 @@ func.func @unroll_vector_multi_reduction_inner_masked(%source: vector<2x3x5xf32>
 
   return %0 : vector<2x3xf32>
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Test UnrollVectorMultiReduction for Inner Reduction (General Case)
+//===----------------------------------------------------------------------===//
+
+// The general case handles multiple reduction dimensions.
+// For vector<2x3x5xf32> with reduction on dims [1, 2]:
+// - Unrolls along dim 0 (size 2), creating vector<3x5xf32> multi_reductions
+// - Each new multi_reduction has reduction dims [0, 1] (shifted from [1, 2])
+
+// CHECK-LABEL: func @unroll_vector_multi_reduction_inner_general(
+// CHECK-SAME: %[[SOURCE:.+]]: vector<2x3x5xf32>,
+// CHECK-SAME: %[[ACC:.+]]: vector<2xf32>
+func.func @unroll_vector_multi_reduction_inner_general(%source: vector<2x3x5xf32>, %acc: vector<2xf32>) -> (vector<2xf32>) {
+  // CHECK-DAG: %[[VEC_0:.+]] = vector.extract %[[SOURCE]][0] : vector<3x5xf32> from vector<2x3x5xf32>
+  // CHECK-DAG: %[[VEC_1:.+]] = vector.extract %[[SOURCE]][1] : vector<3x5xf32> from vector<2x3x5xf32>
+
+  // CHECK-DAG: %[[ACC_0:.+]] = vector.extract %[[ACC]][0] : f32 from vector<2xf32>
+  // CHECK-DAG: %[[ACC_1:.+]] = vector.extract %[[ACC]][1] : f32 from vector<2xf32>
+
+  // CHECK: %[[RED_0:.+]] = vector.multi_reduction <add>, %[[VEC_0]], %[[ACC_0]] [0, 1] : vector<3x5xf32> to f32
+  // CHECK: %[[RED_1:.+]] = vector.multi_reduction <add>, %[[VEC_1]], %[[ACC_1]] [0, 1] : vector<3x5xf32> to f32
+  // CHECK: %[[INSERT_0:.+]] = vector.insert %[[RED_0]], %{{.*}} [0] : f32 into vector<2xf32>
+  // CHECK: %[[INSERT_1:.+]] = vector.insert %[[RED_1]], %[[INSERT_0]] [1] : f32 into vector<2xf32>
+  %1 = vector.multi_reduction <add>, %source, %acc [1, 2] : vector<2x3x5xf32> to vector<2xf32>
+
+  // CHECK: return %[[INSERT_1]]
+  return %1 : vector<2xf32>
+}
+
+// -----
+
+// CHECK-LABEL: func @unroll_vector_multi_reduction_inner_general_masked(
+// CHECK-SAME: %[[SOURCE:.+]]: vector<2x3x5xf32>,
+// CHECK-SAME: %[[MASK:.+]]: vector<2x3x5xi1>,
+// CHECK-SAME: %[[ACC:.+]]: vector<2xf32>
+func.func @unroll_vector_multi_reduction_inner_general_masked(%source: vector<2x3x5xf32>, %mask: vector<2x3x5xi1>, %acc: vector<2xf32>) -> (vector<2xf32>) {
+  // CHECK-DAG: %[[VEC_0:.+]] = vector.extract %[[SOURCE]][0] : vector<3x5xf32> from vector<2x3x5xf32>
+  // CHECK-DAG: %[[VEC_1:.+]] = vector.extract %[[SOURCE]][1] : vector<3x5xf32> from vector<2x3x5xf32>
+
+  // CHECK-DAG: %[[ACC_0:.+]] = vector.extract %[[ACC]][0] : f32 from vector<2xf32>
+  // CHECK-DAG: %[[ACC_1:.+]] = vector.extract %[[ACC]][1] : f32 from vector<2xf32>
+
+  // CHECK-DAG: %[[MASK_0:.+]] = vector.extract %[[MASK]][0] : vector<3x5xi1> from vector<2x3x5xi1>
+  // CHECK-DAG: %[[MASK_1:.+]] = vector.extract %[[MASK]][1] : vector<3x5xi1> from vector<2x3x5xi1>
+
+  // CHECK: %[[RED_0:.+]] = vector.mask %[[MASK_0]] { vector.multi_reduction <add>, %[[VEC_0]], %[[ACC_0]] [0, 1] : vector<3x5xf32> to f32 } : vector<3x5xi1> -> f32
+  // CHECK: %[[RED_1:.+]] = vector.mask %[[MASK_1]] { vector.multi_reduction <add>, %[[VEC_1]], %[[ACC_1]] [0, 1] : vector<3x5xf32> to f32 } : vector<3x5xi1> -> f32
+  // CHECK: %[[INSERT_0:.+]] = vector.insert %[[RED_0]], %{{.*}} [0] : f32 into vector<2xf32>
+  // CHECK: %[[INSERT_1:.+]] = vector.insert %[[RED_1]], %[[INSERT_0]] [1] : f32 into vector<2xf32>
+
+  %0 = vector.mask %mask {
+    %1 = vector.multi_reduction <add>, %source, %acc [1, 2] : vector<2x3x5xf32> to vector<2xf32>
+  } : vector<2x3x5xi1> -> vector<2xf32>
+
+  // CHECK: return %[[INSERT_1]]
+  return %0 : vector<2xf32>
+}

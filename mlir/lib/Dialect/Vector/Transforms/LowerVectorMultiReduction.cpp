@@ -674,34 +674,34 @@ struct UnrollMultiReductionOuterGeneralCase
   }
 };
 
-/// Unrolls innermost dimension for vector.multi_reduction when the innermost
-/// dimension is the only reduction dimension.
+/// Unrolls vector.multi_reduction along the outermost parallel dimension
+/// when the innermost dimension is a reduction dimension.
 ///
 /// This pattern matches operations where:
 /// - The innermost dimension is a reduction dimension
 /// - The outermost dimension is a parallel dimension
-/// - There is exactly one reduction dimension
 ///
-/// The transformation unrolls along the outermost parallel dimension:
+/// The transformation extracts slices along the outermost parallel dimension,
+/// creates smaller multi_reductions, and assembles the results:
 ///
 /// ```mlir
-/// %res = vector.multi_reduction <add> %src, %acc [N-1]
-///     : vector<AxBx...xMxf32> to vector<AxBx...xf32>
+/// %res = vector.multi_reduction <add> %src, %acc [1, 3]
+///     : vector<AxBxCxDxf32> to vector<AxCxf32>
 /// ```
 ///
 /// becomes:
 ///
 /// ```mlir
-/// %result = arith.constant dense<0.0> : vector<AxBx...xf32>
-/// %0 = vector.extract %src[0] : vector<Bx...xMxf32> from vector<AxBx...xMxf32>
-/// %acc0 = vector.extract %acc[0] : vector<Bx...xf32> from vector<AxBx...xf32>
-/// %red0 = vector.multi_reduction <add>, %0, %acc0 [N-2]
-///     : vector<Bx...xMxf32> to vector<Bx...xf32>
+/// %result = arith.constant dense<0.0> : vector<AxCxf32>
+/// %0 = vector.extract %src[0] : vector<BxCxDxf32> from vector<AxBxCxDxf32>
+/// %acc0 = vector.extract %acc[0] : vector<Cxf32> from vector<AxCxf32>
+/// %red0 = vector.multi_reduction <add>, %0, %acc0 [0, 2]
+///     : vector<BxCxDxf32> to vector<Cxf32>
 /// %res0 = vector.insert %red0, %result[0]
-///     : vector<Bx...xf32> into vector<AxBx...xf32>
+///     : vector<Cxf32> into vector<AxCxf32>
 /// // ... repeat for indices 1 to A-1
 /// ```
-struct UnrollMultiReductionInnerBaseCase
+struct UnrollMultiReductionInner
     : public OpRewritePattern<vector::MultiDimReductionOp> {
   using Base::Base;
 
@@ -722,11 +722,6 @@ struct UnrollMultiReductionInnerBaseCase
       return rewriter.notifyMatchFailure(
           multiReductionOp,
           "expected outermost dimension to be a parallel dimension.");
-
-    ArrayRef<int64_t> reductionDims = multiReductionOp.getReductionDims();
-    if (reductionDims.size() != 1)
-      return rewriter.notifyMatchFailure(
-          multiReductionOp, "expected exactly one reduction dimension.");
 
     Type elementType = getElementTypeOrSelf(multiReductionOp.getDestType());
     if (!elementType.isIntOrIndexOrFloat())
@@ -770,11 +765,11 @@ struct UnrollMultiReductionInnerBaseCase
       else
         maskSlices.push_back(nullptr);
 
-    // Compute new reduction mask: for the extracted slice (rank srcRank-1),
-    // the innermost dimension is still the reduction dimension.
-    // New mask has srcRank-1 elements, with the last one being true.
-    SmallVector<bool> newReductionMask(srcRank - 1, false);
-    newReductionMask.back() = true;
+    // Compute new reduction mask by dropping the first element (dimension 0).
+    // Since dimension 0 is parallel (not reduced), all reduction indices shift
+    // down by 1.
+    ArrayRef<bool> newReductionMask =
+        ArrayRef<bool>(multiReductionOp.getReductionMask()).drop_front();
 
     SmallVector<Value> reductionResults;
     for (auto [srcSlice, accSlice, maskSlice] :
@@ -875,10 +870,7 @@ void mlir::vector::populateVectorUnrollMultiReduction(
     RewritePatternSet &patterns, VectorMultiReductionLowering options,
     PatternBenefit benefit) {
   if (options == VectorMultiReductionLowering::InnerReduction) {
-    // TODO: Add UnrollMultiReductionInnerGeneralCase pattern here once
-    // implemented.
-    patterns.add<UnrollMultiReductionInnerBaseCase>(patterns.getContext(),
-                                                    benefit);
+    patterns.add<UnrollMultiReductionInner>(patterns.getContext(), benefit);
   } else {
     patterns.add<UnrollMultiReductionOuterBaseCase,
                  UnrollMultiReductionOuterGeneralCase>(patterns.getContext(),
