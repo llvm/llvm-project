@@ -42,7 +42,7 @@ struct goroutine
 
   struct promise_type
   {
-    std::suspend_never initial_suspend() {
+    std::suspend_never initial_suspend() noexcept {
       return {};
     }
     std::suspend_never final_suspend() noexcept { return {}; }
