@@ -248,10 +248,6 @@ llvm::Error SendThreadStoppedEvent(DAP &dap, bool on_entry) {
   return Error::success();
 }
 
-// Send a "terminated" event to indicate the process is done being
-// debugged.
-void SendTerminatedEvent(DAP &dap) { dap.SendTerminatedEvent(); }
-
 // Grab any STDOUT and STDERR from the process and send it up to VS Code
 // via an "output" event to the "stdout" and "stderr" categories.
 void SendStdOutStdErr(DAP &dap, lldb::SBProcess &process) {
@@ -324,8 +320,8 @@ void SendMemoryEvent(DAP &dap, lldb::SBValue variable) {
 // the original DAP::Handle*Event pattern while supporting multi-session
 // debugging.
 
-void HandleProcessEvent(const lldb::SBEvent &event, bool &process_exited,
-                        Log *log) {
+static void HandleProcessEvent(const lldb::SBEvent &event, bool &process_exited,
+                               Log &log) {
   lldb::SBProcess process = lldb::SBProcess::GetProcessFromEvent(event);
 
   // Find the DAP instance that owns this process's target.
@@ -393,7 +389,7 @@ void HandleProcessEvent(const lldb::SBEvent &event, bool &process_exited,
   }
 }
 
-void HandleTargetEvent(const lldb::SBEvent &event, Log *log) {
+static void HandleTargetEvent(const lldb::SBEvent &event, Log &log) {
   lldb::SBTarget target = lldb::SBTarget::GetTargetFromEvent(event);
 
   // Find the DAP instance that owns this target.
@@ -466,10 +462,11 @@ void HandleTargetEvent(const lldb::SBEvent &event, Log *log) {
     // FindTargetByGloballyUniqueID.
     llvm::json::Object configuration;
     configuration.try_emplace("type", "lldb");
-    configuration.try_emplace("debuggerId",
-                              created_target.GetDebugger().GetID());
-    configuration.try_emplace("targetId", created_target.GetGloballyUniqueID());
     configuration.try_emplace("name", created_target.GetTargetSessionName());
+
+    json::Object session{{"targetId", created_target.GetGloballyUniqueID()},
+                         {"debuggerId", created_target.GetDebugger().GetID()}};
+    configuration.try_emplace("session", std::move(session));
 
     llvm::json::Object request;
     request.try_emplace("request", "attach");
@@ -480,7 +477,7 @@ void HandleTargetEvent(const lldb::SBEvent &event, Log *log) {
   }
 }
 
-void HandleBreakpointEvent(const lldb::SBEvent &event, Log *log) {
+static void HandleBreakpointEvent(const lldb::SBEvent &event, Log &log) {
   const uint32_t event_mask = event.GetType();
   if (!(event_mask & lldb::SBTarget::eBroadcastBitBreakpointChanged))
     return;
@@ -529,7 +526,7 @@ void HandleBreakpointEvent(const lldb::SBEvent &event, Log *log) {
   }
 }
 
-void HandleThreadEvent(const lldb::SBEvent &event, Log *log) {
+static void HandleThreadEvent(const lldb::SBEvent &event, Log &log) {
   uint32_t event_type = event.GetType();
 
   if (!(event_type & lldb::SBThread::eBroadcastBitStackChanged))
@@ -550,7 +547,7 @@ void HandleThreadEvent(const lldb::SBEvent &event, Log *log) {
                        thread.GetThreadID());
 }
 
-void HandleDiagnosticEvent(const lldb::SBEvent &event, Log *log) {
+static void HandleDiagnosticEvent(const lldb::SBEvent &event, Log &log) {
   // Global debugger events - send to all DAP instances.
   std::vector<DAP *> active_instances =
       DAPSessionManager::GetInstance().GetActiveSessions();
@@ -588,8 +585,13 @@ void HandleDiagnosticEvent(const lldb::SBEvent &event, Log *log) {
 // them prevent multiple threads from writing simultaneously so no locking
 // is required.
 void EventThread(lldb::SBDebugger debugger, lldb::SBBroadcaster broadcaster,
-                 llvm::StringRef client_name, Log *log) {
-  llvm::set_thread_name("lldb.DAP.client." + client_name + ".event_handler");
+                 llvm::StringRef client_name, Log &log) {
+  std::string thread_name =
+      llvm::formatv("lldb.DAP.client.{}.event_handler", client_name);
+  if (thread_name.length() > llvm::get_max_thread_name_length())
+    thread_name = llvm::formatv("DAP.{}.evt", client_name);
+  llvm::set_thread_name(thread_name);
+
   lldb::SBListener listener = debugger.GetListener();
   broadcaster.AddListener(listener, eBroadcastBitStopEventThread);
   debugger.GetBroadcaster().AddListener(

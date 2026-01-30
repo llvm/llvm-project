@@ -105,10 +105,10 @@ public:
   /// more than one architecture or object.
   ObjectFile(const lldb::ModuleSP &module_sp, const FileSpec *file_spec_ptr,
              lldb::offset_t file_offset, lldb::offset_t length,
-             lldb::DataBufferSP data_sp, lldb::offset_t data_offset);
+             lldb::DataExtractorSP extractor_sp, lldb::offset_t data_offset);
 
   ObjectFile(const lldb::ModuleSP &module_sp, const lldb::ProcessSP &process_sp,
-             lldb::addr_t header_addr, lldb::DataBufferSP data_sp);
+             lldb::addr_t header_addr, lldb::DataExtractorSP extractor_sp);
 
   /// Destructor.
   ///
@@ -152,7 +152,7 @@ public:
   static lldb::ObjectFileSP
   FindPlugin(const lldb::ModuleSP &module_sp, const FileSpec *file_spec,
              lldb::offset_t file_offset, lldb::offset_t file_size,
-             lldb::DataBufferSP &data_sp, lldb::offset_t &data_offset);
+             lldb::DataExtractorSP extractor_sp, lldb::offset_t &data_offset);
 
   /// Find a ObjectFile plug-in that can parse a file in memory.
   ///
@@ -177,10 +177,10 @@ public:
   static size_t
   GetModuleSpecifications(const FileSpec &file, lldb::offset_t file_offset,
                           lldb::offset_t file_size, ModuleSpecList &specs,
-                          lldb::DataBufferSP data_sp = lldb::DataBufferSP());
+                          lldb::DataExtractorSP = lldb::DataExtractorSP());
 
   static size_t GetModuleSpecifications(const lldb_private::FileSpec &file,
-                                        lldb::DataBufferSP &data_sp,
+                                        lldb::DataExtractorSP &extractor_sp,
                                         lldb::offset_t data_offset,
                                         lldb::offset_t file_offset,
                                         lldb::offset_t file_size,
@@ -338,29 +338,6 @@ public:
   /// Perform relocations on the section if necessary.
   ///
   virtual void RelocateSection(lldb_private::Section *section);
-
-  /// Appends a Symbol for the specified so_addr to the symbol table.
-  ///
-  /// If verify_unique is false, the symbol table is not searched to determine
-  /// if a Symbol found at this address has already been added to the symbol
-  /// table.  When verify_unique is true, this method resolves the Symbol as
-  /// the first match in the SymbolTable and appends a Symbol only if
-  /// required/found.
-  ///
-  /// \return
-  ///     The resolved symbol or nullptr.  Returns nullptr if a
-  ///     a Symbol could not be found for the specified so_addr.
-  virtual Symbol *ResolveSymbolForAddress(const Address &so_addr,
-                                          bool verify_unique) {
-    // Typically overridden to lazily add stripped symbols recoverable from the
-    // exception handling unwind information (i.e. without parsing the entire
-    // eh_frame section.
-    //
-    // The availability of LC_FUNCTION_STARTS allows ObjectFileMachO to
-    // efficiently add stripped symbols when the symbol table is first
-    // constructed.  Poorer cousins are PECoff and ELF.
-    return nullptr;
-  }
 
   /// Detect if this object file has been stripped of local symbols.
   /// Detect if this object file has been stripped of local symbols.
@@ -682,7 +659,7 @@ public:
   // This function returns raw file contents. Do not use it if you want
   // transparent decompression of section contents.
   size_t GetData(lldb::offset_t offset, size_t length,
-                 DataExtractor &data) const;
+                 lldb::DataExtractorSP &data_sp) const;
 
   // This function returns raw file contents. Do not use it if you want
   // transparent decompression of section contents.

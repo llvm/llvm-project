@@ -10,8 +10,14 @@
 #ifndef __CRC32INTRIN_H
 #define __CRC32INTRIN_H
 
+/// We only declare crc32 as a constexpr if we are compiling C++ code
+#if defined(__cplusplus) && (__cplusplus >= 201103L)
+#define __DEFAULT_FN_ATTRS                                                     \
+  __attribute__((__always_inline__, __nodebug__, __target__("crc32"))) constexpr
+#else
 #define __DEFAULT_FN_ATTRS                                                     \
   __attribute__((__always_inline__, __nodebug__, __target__("crc32")))
+#endif
 
 /// Adds the unsigned integer operand to the CRC-32C checksum of the
 ///    unsigned char operand.
@@ -28,8 +34,7 @@
 /// \returns The result of adding operand \a __C to the CRC-32C checksum of
 ///    operand \a __D.
 static __inline__ unsigned int __DEFAULT_FN_ATTRS
-_mm_crc32_u8(unsigned int __C, unsigned char __D)
-{
+_mm_crc32_u8(unsigned int __C, unsigned char __D) {
   return __builtin_ia32_crc32qi(__C, __D);
 }
 
@@ -48,8 +53,7 @@ _mm_crc32_u8(unsigned int __C, unsigned char __D)
 /// \returns The result of adding operand \a __C to the CRC-32C checksum of
 ///    operand \a __D.
 static __inline__ unsigned int __DEFAULT_FN_ATTRS
-_mm_crc32_u16(unsigned int __C, unsigned short __D)
-{
+_mm_crc32_u16(unsigned int __C, unsigned short __D) {
   return __builtin_ia32_crc32hi(__C, __D);
 }
 
@@ -68,8 +72,7 @@ _mm_crc32_u16(unsigned int __C, unsigned short __D)
 /// \returns The result of adding operand \a __C to the CRC-32C checksum of
 ///    operand \a __D.
 static __inline__ unsigned int __DEFAULT_FN_ATTRS
-_mm_crc32_u32(unsigned int __C, unsigned int __D)
-{
+_mm_crc32_u32(unsigned int __C, unsigned int __D) {
   return __builtin_ia32_crc32si(__C, __D);
 }
 
@@ -89,8 +92,7 @@ _mm_crc32_u32(unsigned int __C, unsigned int __D)
 /// \returns The result of adding operand \a __C to the CRC-32C checksum of
 ///    operand \a __D.
 static __inline__ unsigned long long __DEFAULT_FN_ATTRS
-_mm_crc32_u64(unsigned long long __C, unsigned long long __D)
-{
+_mm_crc32_u64(unsigned long long __C, unsigned long long __D) {
   return __builtin_ia32_crc32di(__C, __D);
 }
 #endif /* __x86_64__ */

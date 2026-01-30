@@ -16,6 +16,7 @@
 // REQUIRES: target={{x86_64-.+}}
 // REQUIRES: objcopy-available
 // UNSUPPORTED: target={{.*-windows.*}}
+// UNSUPPORTED: target={{.*-apple.*}}
 
 // TODO: Figure out why this fails with Memory Sanitizer.
 // XFAIL: msan

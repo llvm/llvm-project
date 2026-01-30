@@ -20,4 +20,4 @@
 // HIPSTDPAR-COMPILE: "-idirafter" "{{.*/Inputs/hipstdpar}}"
 // HIPSTDPAR-COMPILE: "-include" "hipstdpar_lib.hpp"
 // HIPSTDPAR-LINK: "-rpath"
-// HIPSTDPAR-LINK: "-l{{.*hip.*}}"
+// HIPSTDPAR-LINK: "{{.*hip.*}}"

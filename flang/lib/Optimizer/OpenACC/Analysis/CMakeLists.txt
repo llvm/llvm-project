@@ -15,8 +15,10 @@ add_flang_library(FIROpenACCAnalysis
 
   MLIR_DEPS
   MLIROpenACCDialect
+  MLIROpenACCUtils
 
   MLIR_LIBS
   MLIROpenACCDialect
+  MLIROpenACCUtils
 )
 

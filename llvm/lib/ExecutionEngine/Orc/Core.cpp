@@ -26,6 +26,7 @@ namespace llvm {
 namespace orc {
 
 char ResourceTrackerDefunct::ID = 0;
+char JITDylibDefunct::ID = 0;
 char FailedToMaterialize::ID = 0;
 char SymbolsNotFound::ID = 0;
 char SymbolsCouldNotBeRemoved::ID = 0;
@@ -77,6 +78,15 @@ std::error_code ResourceTrackerDefunct::convertToErrorCode() const {
 
 void ResourceTrackerDefunct::log(raw_ostream &OS) const {
   OS << "Resource tracker " << (void *)RT.get() << " became defunct";
+}
+
+std::error_code JITDylibDefunct::convertToErrorCode() const {
+  return orcError(OrcErrorCode::UnknownORCError);
+}
+
+void JITDylibDefunct::log(raw_ostream &OS) const {
+  OS << "JITDylib " << JD->getName() << " (" << (void *)JD.get()
+     << ") is defunct";
 }
 
 FailedToMaterialize::FailedToMaterialize(
@@ -377,18 +387,18 @@ void ReExportsMaterializationUnit::materialize(
     SymbolAliasMap QueryAliases;
 
     // Collect as many aliases as we can without including a chain.
-    for (auto &KV : RequestedAliases) {
+    for (auto &[Alias, AliasInfo] : RequestedAliases) {
       // Chain detected. Skip this symbol for this round.
-      if (&SrcJD == &TgtJD && (QueryAliases.count(KV.second.Aliasee) ||
-                               RequestedAliases.count(KV.second.Aliasee)))
+      if (&SrcJD == &TgtJD && (QueryAliases.count(AliasInfo.Aliasee) ||
+                               RequestedAliases.count(AliasInfo.Aliasee)))
         continue;
 
-      ResponsibilitySymbols.insert(KV.first);
-      QuerySymbols.add(KV.second.Aliasee,
-                       KV.second.AliasFlags.hasMaterializationSideEffectsOnly()
+      ResponsibilitySymbols.insert(Alias);
+      QuerySymbols.add(AliasInfo.Aliasee,
+                       AliasInfo.AliasFlags.hasMaterializationSideEffectsOnly()
                            ? SymbolLookupFlags::WeaklyReferencedSymbol
                            : SymbolLookupFlags::RequiredSymbol);
-      QueryAliases[KV.first] = std::move(KV.second);
+      QueryAliases[Alias] = std::move(AliasInfo);
     }
 
     // Remove the aliases collected this round from the RequestedAliases map.
@@ -1897,9 +1907,9 @@ Error ExecutionSession::registerJITDispatchHandlers(
   return Error::success();
 }
 
-void ExecutionSession::runJITDispatchHandler(SendResultFunction SendResult,
-                                             ExecutorAddr HandlerFnTagAddr,
-                                             ArrayRef<char> ArgBuffer) {
+void ExecutionSession::runJITDispatchHandler(
+    SendResultFunction SendResult, ExecutorAddr HandlerFnTagAddr,
+    shared::WrapperFunctionBuffer ArgBytes) {
 
   std::shared_ptr<JITDispatchHandlerFunction> F;
   {
@@ -1910,9 +1920,9 @@ void ExecutionSession::runJITDispatchHandler(SendResultFunction SendResult,
   }
 
   if (F)
-    (*F)(std::move(SendResult), ArgBuffer.data(), ArgBuffer.size());
+    (*F)(std::move(SendResult), ArgBytes.data(), ArgBytes.size());
   else
-    SendResult(shared::WrapperFunctionResult::createOutOfBandError(
+    SendResult(shared::WrapperFunctionBuffer::createOutOfBandError(
         ("No function registered for tag " +
          formatv("{0:x16}", HandlerFnTagAddr))
             .str()));

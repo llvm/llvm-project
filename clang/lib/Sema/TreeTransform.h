@@ -139,6 +139,10 @@ class TreeTransform {
     ~ForgetPartiallySubstitutedPackRAII() {
       Self.RememberPartiallySubstitutedPack(Old);
     }
+    ForgetPartiallySubstitutedPackRAII(
+        const ForgetPartiallySubstitutedPackRAII &) = delete;
+    ForgetPartiallySubstitutedPackRAII &
+    operator=(const ForgetPartiallySubstitutedPackRAII &) = delete;
   };
 
 protected:
@@ -233,6 +237,8 @@ public:
     ~TemporaryBase() {
       Self.getDerived().setBase(OldLocation, OldEntity);
     }
+    TemporaryBase(const TemporaryBase &) = delete;
+    TemporaryBase &operator=(const TemporaryBase &) = delete;
   };
 
   /// Determine whether the given type \p T has already been
@@ -1845,6 +1851,13 @@ public:
     return getSema().OpenMP().ActOnOpenMPProcBindClause(
         Kind, KindKwLoc, StartLoc, LParenLoc, EndLoc);
   }
+  OMPClause *RebuildOMPTransparentClause(Expr *ImpexTypeArg,
+                                         SourceLocation StartLoc,
+                                         SourceLocation LParenLoc,
+                                         SourceLocation EndLoc) {
+    return getSema().OpenMP().ActOnOpenMPTransparentClause(
+        ImpexTypeArg, StartLoc, LParenLoc, EndLoc);
+  }
 
   /// Build a new OpenMP 'schedule' clause.
   ///
@@ -2252,9 +2265,12 @@ public:
   ///
   /// By default, performs semantic analysis to build the new OpenMP clause.
   /// Subclasses may override this routine to provide different behavior.
-  OMPClause *RebuildOMPUseDevicePtrClause(ArrayRef<Expr *> VarList,
-                                          const OMPVarListLocTy &Locs) {
-    return getSema().OpenMP().ActOnOpenMPUseDevicePtrClause(VarList, Locs);
+  OMPClause *RebuildOMPUseDevicePtrClause(
+      ArrayRef<Expr *> VarList, const OMPVarListLocTy &Locs,
+      OpenMPUseDevicePtrFallbackModifier FallbackModifier,
+      SourceLocation FallbackModifierLoc) {
+    return getSema().OpenMP().ActOnOpenMPUseDevicePtrClause(
+        VarList, Locs, FallbackModifier, FallbackModifierLoc);
   }
 
   /// Build a new OpenMP 'use_device_addr' clause.
@@ -2847,6 +2863,16 @@ public:
     return getSema().ActOnArraySubscriptExpr(/*Scope=*/nullptr, LHS,
                                              LBracketLoc, RHS,
                                              RBracketLoc);
+  }
+
+  /// Build a new matrix single subscript expression.
+  ///
+  /// By default, performs semantic analysis to build the new expression.
+  /// Subclasses may override this routine to provide different behavior.
+  ExprResult RebuildMatrixSingleSubscriptExpr(Expr *Base, Expr *RowIdx,
+                                              SourceLocation RBracketLoc) {
+    return getSema().CreateBuiltinMatrixSingleSubscriptExpr(Base, RowIdx,
+                                                            RBracketLoc);
   }
 
   /// Build a new matrix subscript expression.
@@ -4297,6 +4323,23 @@ public:
     return getSema().OpenACC().ActOnOpenACCAsteriskSizeExpr(AsteriskLoc);
   }
 
+  ExprResult
+  RebuildSubstNonTypeTemplateParmExpr(Decl *AssociatedDecl,
+                                      const NonTypeTemplateParmDecl *NTTP,
+                                      SourceLocation Loc, TemplateArgument Arg,
+                                      UnsignedOrNone PackIndex, bool Final) {
+    return getSema().BuildSubstNonTypeTemplateParmExpr(
+        AssociatedDecl, NTTP, Loc, Arg, PackIndex, Final);
+  }
+
+  OMPClause *RebuildOpenMPTransparentClause(Expr *ImpexType,
+                                            SourceLocation StartLoc,
+                                            SourceLocation LParenLoc,
+                                            SourceLocation EndLoc) {
+    return getSema().OpenMP().ActOnOpenMPTransparentClause(ImpexType, StartLoc,
+                                                           LParenLoc, EndLoc);
+  }
+
 private:
   QualType TransformTypeInObjectScope(TypeLocBuilder &TLB, TypeLoc TL,
                                       QualType ObjectType,
@@ -5154,7 +5197,7 @@ bool TreeTransform<Derived>::TransformTemplateArguments(
     if (In.getArgument().isPackExpansion()) {
       UnexpandedInfo Info;
       TemplateArgumentLoc Prepared;
-      if (PreparePackForExpansion(In, Uneval, Prepared, Info))
+      if (getDerived().PreparePackForExpansion(In, Uneval, Prepared, Info))
         return true;
       if (!Info.Expand) {
         Outputs.addArgument(Prepared);
@@ -5340,7 +5383,7 @@ bool TreeTransform<Derived>::PreparePackForExpansion(TemplateArgumentLoc In,
   //   };
   //   TupleWithInt<int>::type y;
   // At this point we will see the `__builtin_dedup_pack<int, int>` with a known
-  // lenght and run `ComputeInfo()` to provide the necessary information to our
+  // length and run `ComputeInfo()` to provide the necessary information to our
   // caller.
   //
   // Note that we may still have situations where builtin is not going to be
@@ -7724,12 +7767,13 @@ QualType TreeTransform<Derived>::TransformHLSLAttributedResourceType(
 
   QualType ContainedTy = QualType();
   QualType OldContainedTy = oldType->getContainedType();
+  TypeSourceInfo *ContainedTSI = nullptr;
   if (!OldContainedTy.isNull()) {
     TypeSourceInfo *oldContainedTSI = TL.getContainedTypeSourceInfo();
     if (!oldContainedTSI)
       oldContainedTSI = getSema().getASTContext().getTrivialTypeSourceInfo(
           OldContainedTy, SourceLocation());
-    TypeSourceInfo *ContainedTSI = getDerived().TransformType(oldContainedTSI);
+    ContainedTSI = getDerived().TransformType(oldContainedTSI);
     if (!ContainedTSI)
       return QualType();
     ContainedTy = ContainedTSI->getType();
@@ -7742,7 +7786,10 @@ QualType TreeTransform<Derived>::TransformHLSLAttributedResourceType(
         WrappedTy, ContainedTy, oldType->getAttrs());
   }
 
-  TLB.push<HLSLAttributedResourceTypeLoc>(Result);
+  HLSLAttributedResourceTypeLoc NewTL =
+      TLB.push<HLSLAttributedResourceTypeLoc>(Result);
+  NewTL.setSourceRange(TL.getLocalSourceRange());
+  NewTL.setContainedTypeSourceInfo(ContainedTSI);
   return Result;
 }
 
@@ -8550,6 +8597,14 @@ TreeTransform<Derived>::TransformBreakStmt(BreakStmt *S) {
 
   return new (SemaRef.Context)
       BreakStmt(S->getKwLoc(), S->getLabelLoc(), cast<LabelDecl>(LD));
+}
+
+template <typename Derived>
+StmtResult TreeTransform<Derived>::TransformDeferStmt(DeferStmt *S) {
+  StmtResult Result = getDerived().TransformStmt(S->getBody());
+  if (!Result.isUsable())
+    return StmtError();
+  return DeferStmt::Create(getSema().Context, S->getDeferLoc(), Result.get());
 }
 
 template<typename Derived>
@@ -10641,6 +10696,20 @@ TreeTransform<Derived>::TransformOMPThreadsetClause(OMPThreadsetClause *C) {
 
 template <typename Derived>
 OMPClause *
+TreeTransform<Derived>::TransformOMPTransparentClause(OMPTransparentClause *C) {
+  Expr *Impex = C->getImpexType();
+  ExprResult TransformedImpex = getDerived().TransformExpr(Impex);
+
+  if (TransformedImpex.isInvalid())
+    return nullptr;
+
+  return getDerived().RebuildOMPTransparentClause(
+      TransformedImpex.get(), C->getBeginLoc(), C->getLParenLoc(),
+      C->getEndLoc());
+}
+
+template <typename Derived>
+OMPClause *
 TreeTransform<Derived>::TransformOMPProcBindClause(OMPProcBindClause *C) {
   return getDerived().RebuildOMPProcBindClause(
       C->getProcBindKind(), C->getProcBindKindKwLoc(), C->getBeginLoc(),
@@ -11591,7 +11660,8 @@ OMPClause *TreeTransform<Derived>::TransformOMPUseDevicePtrClause(
     Vars.push_back(EVar.get());
   }
   OMPVarListLocTy Locs(C->getBeginLoc(), C->getLParenLoc(), C->getEndLoc());
-  return getDerived().RebuildOMPUseDevicePtrClause(Vars, Locs);
+  return getDerived().RebuildOMPUseDevicePtrClause(
+      Vars, Locs, C->getFallbackModifier(), C->getFallbackModifierLoc());
 }
 
 template <typename Derived>
@@ -13376,6 +13446,25 @@ TreeTransform<Derived>::TransformArraySubscriptExpr(ArraySubscriptExpr *E) {
   return getDerived().RebuildArraySubscriptExpr(
       LHS.get(),
       /*FIXME:*/ E->getLHS()->getBeginLoc(), RHS.get(), E->getRBracketLoc());
+}
+
+template <typename Derived>
+ExprResult TreeTransform<Derived>::TransformMatrixSingleSubscriptExpr(
+    MatrixSingleSubscriptExpr *E) {
+  ExprResult Base = getDerived().TransformExpr(E->getBase());
+  if (Base.isInvalid())
+    return ExprError();
+
+  ExprResult RowIdx = getDerived().TransformExpr(E->getRowIdx());
+  if (RowIdx.isInvalid())
+    return ExprError();
+
+  if (!getDerived().AlwaysRebuild() && Base.get() == E->getBase() &&
+      RowIdx.get() == E->getRowIdx())
+    return E;
+
+  return getDerived().RebuildMatrixSingleSubscriptExpr(Base.get(), RowIdx.get(),
+                                                       E->getRBracketLoc());
 }
 
 template <typename Derived>
@@ -16459,7 +16548,7 @@ ExprResult TreeTransform<Derived>::TransformSubstNonTypeTemplateParmPackExpr(
 
   TemplateArgument Pack = E->getArgumentPack();
   TemplateArgument Arg = SemaRef.getPackSubstitutedTemplateArgument(Pack);
-  return SemaRef.BuildSubstNonTypeTemplateParmExpr(
+  return getDerived().RebuildSubstNonTypeTemplateParmExpr(
       E->getAssociatedDecl(), E->getParameterPack(),
       E->getParameterPackLocation(), Arg, SemaRef.getPackIndex(Pack),
       E->getFinal());
@@ -16517,10 +16606,10 @@ ExprResult TreeTransform<Derived>::TransformSubstNonTypeTemplateParmExpr(
     Replacement = E->getReplacement();
   }
 
-  return new (SemaRef.Context) SubstNonTypeTemplateParmExpr(
-      Replacement.get()->getType(), Replacement.get()->getValueKind(),
-      E->getNameLoc(), Replacement.get(), AssociatedDecl, E->getIndex(),
-      E->getPackIndex(), E->isReferenceParameter(), E->getFinal());
+  return getDerived().RebuildSubstNonTypeTemplateParmExpr(
+      AssociatedDecl, E->getParameter(), E->getNameLoc(),
+      TemplateArgument(Replacement.get(), /*IsCanonical=*/false),
+      E->getPackIndex(), E->getFinal());
 }
 
 template<typename Derived>

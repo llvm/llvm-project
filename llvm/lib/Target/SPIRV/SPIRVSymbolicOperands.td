@@ -391,6 +391,11 @@ defm SPV_INTEL_bfloat16_arithmetic
     : ExtensionOperand<129, [EnvVulkan, EnvOpenCL]>;
 defm SPV_INTEL_16bit_atomics : ExtensionOperand<130, [EnvVulkan, EnvOpenCL]>;
 defm SPV_ALTERA_arbitrary_precision_fixed_point : ExtensionOperand<131, [EnvOpenCL, EnvVulkan]>;
+defm SPV_NV_shader_atomic_fp16_vector
+    : ExtensionOperand<132, [EnvVulkan, EnvOpenCL]>;
+defm SPV_EXT_image_raw10_raw12 :ExtensionOperand<133, [EnvOpenCL, EnvVulkan]>;
+defm SPV_ALTERA_arbitrary_precision_floating_point: ExtensionOperand<134, [EnvOpenCL]>;
+defm SPV_KHR_fma : ExtensionOperand<135, [EnvVulkan, EnvOpenCL]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define Capabilities enum values and at the same time
@@ -567,12 +572,14 @@ defm FloatControls2
     : CapabilityOperand<6029, 0x10200, 0, [SPV_KHR_float_controls2], []>;
 defm AtomicFloat32AddEXT : CapabilityOperand<6033, 0, 0, [SPV_EXT_shader_atomic_float_add], []>;
 defm AtomicFloat64AddEXT : CapabilityOperand<6034, 0, 0, [SPV_EXT_shader_atomic_float_add], []>;
+defm FmaKHR : CapabilityOperand<6035, 0, 0, [SPV_KHR_fma], []>;
 defm AtomicFloat16AddEXT : CapabilityOperand<6095, 0, 0, [SPV_EXT_shader_atomic_float16_add], []>;
 defm AtomicBFloat16AddINTEL : CapabilityOperand<6255, 0, 0, [SPV_INTEL_16bit_atomics], []>;
 defm AtomicFloat16MinMaxEXT : CapabilityOperand<5616, 0, 0, [SPV_EXT_shader_atomic_float_min_max], []>;
 defm AtomicFloat32MinMaxEXT : CapabilityOperand<5612, 0, 0, [SPV_EXT_shader_atomic_float_min_max], []>;
 defm AtomicFloat64MinMaxEXT : CapabilityOperand<5613, 0, 0, [SPV_EXT_shader_atomic_float_min_max], []>;
 defm AtomicBFloat16MinMaxINTEL : CapabilityOperand<6256, 0, 0, [SPV_INTEL_16bit_atomics], []>;
+defm AtomicFloat16VectorNV : CapabilityOperand<5404, 0, 0, [SPV_NV_shader_atomic_fp16_vector], []>;
 defm VariableLengthArrayINTEL : CapabilityOperand<5817, 0, 0, [SPV_INTEL_variable_length_array], []>;
 defm GroupUniformArithmeticKHR : CapabilityOperand<6400, 0, 0, [SPV_KHR_uniform_group_instructions], []>;
 defm USMStorageClassesINTEL : CapabilityOperand<5935, 0, 0, [SPV_INTEL_usm_storage_classes], [Kernel]>;
@@ -617,6 +624,7 @@ defm BFloat16DotProductKHR : CapabilityOperand<5117, 0, 0, [SPV_KHR_bfloat16], [
 defm BFloat16CooperativeMatrixKHR : CapabilityOperand<5118, 0, 0, [SPV_KHR_bfloat16], [BFloat16TypeKHR, CooperativeMatrixKHR]>;
 defm BlockingPipesALTERA : CapabilityOperand<5945, 0, 0, [SPV_ALTERA_blocking_pipes], []>;
 defm ArbitraryPrecisionFixedPointALTERA : CapabilityOperand<5922, 0, 0, [SPV_ALTERA_arbitrary_precision_fixed_point], []>;
+defm ArbitraryPrecisionFloatingPointALTERA : CapabilityOperand<5845, 0, 0,[SPV_ALTERA_arbitrary_precision_floating_point], []>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SourceLanguage enum values and at the same time
@@ -1112,6 +1120,8 @@ defm HalfFloat : ImageChannelDataTypeOperand<13, [Kernel]>;
 defm Float : ImageChannelDataTypeOperand<14, [Kernel]>;
 defm UnormInt24 : ImageChannelDataTypeOperand<15, [Kernel]>;
 defm UnormInt101010_2 : ImageChannelDataTypeOperand<16, [Kernel]>;
+defm UnsignedIntRaw10EXT : ImageChannelDataTypeOperand<17, [Kernel]>;
+defm UnsignedIntRaw12EXT : ImageChannelDataTypeOperand<18, [Kernel]>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define ImageOperand enum values and at the same time

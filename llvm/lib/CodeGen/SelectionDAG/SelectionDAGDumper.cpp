@@ -55,6 +55,10 @@ VerboseDAGDumping("dag-dump-verbose", cl::Hidden,
                   cl::desc("Display more information when dumping selection "
                            "DAG nodes."));
 
+static cl::opt<bool>
+    PrintSDNodeAddrs("print-sdnode-addrs", cl::Hidden,
+                     cl::desc("Print addresses of SDNodes when dumping"));
+
 std::string SDNode::getOperationName(const SelectionDAG *G) const {
   switch (getOpcode()) {
   default:
@@ -148,6 +152,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::ADDROFRETURNADDR:           return "ADDROFRETURNADDR";
   case ISD::FRAMEADDR:                  return "FRAMEADDR";
   case ISD::SPONENTRY:                  return "SPONENTRY";
+  case ISD::STACKADDRESS:               return "STACKADDRESS";
   case ISD::LOCAL_RECOVER:              return "LOCAL_RECOVER";
   case ISD::READ_REGISTER:              return "READ_REGISTER";
   case ISD::WRITE_REGISTER:             return "WRITE_REGISTER";
@@ -299,6 +304,9 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::ROTR:                       return "rotr";
   case ISD::FSHL:                       return "fshl";
   case ISD::FSHR:                       return "fshr";
+  case ISD::CLMUL:                      return "clmul";
+  case ISD::CLMULR:                     return "clmulr";
+  case ISD::CLMULH:                     return "clmulh";
   case ISD::FADD:                       return "fadd";
   case ISD::STRICT_FADD:                return "strict_fadd";
   case ISD::FSUB:                       return "fsub";
@@ -348,7 +356,8 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::VECTOR_INTERLEAVE:          return "vector_interleave";
   case ISD::SCALAR_TO_VECTOR:           return "scalar_to_vector";
   case ISD::VECTOR_SHUFFLE:             return "vector_shuffle";
-  case ISD::VECTOR_SPLICE:              return "vector_splice";
+  case ISD::VECTOR_SPLICE_LEFT:         return "vector_splice_left";
+  case ISD::VECTOR_SPLICE_RIGHT:        return "vector_splice_right";
   case ISD::SPLAT_VECTOR:               return "splat_vector";
   case ISD::SPLAT_VECTOR_PARTS:         return "splat_vector_parts";
   case ISD::VECTOR_REVERSE:             return "vector_reverse";
@@ -512,6 +521,7 @@ std::string SDNode::getOperationName(const SelectionDAG *G) const {
   case ISD::CTTZ_ZERO_UNDEF:            return "cttz_zero_undef";
   case ISD::CTLZ:                       return "ctlz";
   case ISD::CTLZ_ZERO_UNDEF:            return "ctlz_zero_undef";
+  case ISD::CTLS:                       return "ctls";
   case ISD::PARITY:                     return "parity";
 
   // Trampolines
@@ -1231,4 +1241,6 @@ void SDNode::print(raw_ostream &OS, const SelectionDAG *G) const {
     OS << ", ";
     DL.print(OS);
   }
+  if (PrintSDNodeAddrs)
+    OS << " ; " << this;
 }

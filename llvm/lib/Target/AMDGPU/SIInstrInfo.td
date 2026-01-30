@@ -27,6 +27,7 @@ def SIEncodingFamily {
   int GFX11 = 10;
   int GFX12 = 11;
   int GFX1250 = 12;
+  int GFX13 = 13;
 }
 
 //===----------------------------------------------------------------------===//
@@ -40,6 +41,7 @@ class GFXGen<Predicate pred, string dn, string suffix, int sub> {
   int Subtarget = sub;
 }
 
+def GFX13Gen         : GFXGen<isGFX13Only, "GFX13", "_gfx13", SIEncodingFamily.GFX13>;
 def GFX1250Gen       : GFXGen<isGFX125xOnly, "GFX1250", "_gfx1250", SIEncodingFamily.GFX1250>;
 def GFX12Not12_50Gen : GFXGen<isGFX12Not12_50, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
 def GFX12Gen : GFXGen<isGFX12Only, "GFX12", "_gfx12", SIEncodingFamily.GFX12>;
@@ -809,6 +811,8 @@ defm atomic_load_add : SIAtomicM0Glue2 <"LOAD_ADD">;
 defm atomic_load_sub : SIAtomicM0Glue2 <"LOAD_SUB">;
 defm atomic_load_uinc_wrap : SIAtomicM0Glue2 <"LOAD_UINC_WRAP">;
 defm atomic_load_udec_wrap : SIAtomicM0Glue2 <"LOAD_UDEC_WRAP">;
+defm atomic_load_usub_cond : SIAtomicM0Glue2 <"LOAD_USUB_COND">;
+defm atomic_load_usub_sat : SIAtomicM0Glue2 <"LOAD_USUB_SAT">;
 defm atomic_load_and : SIAtomicM0Glue2 <"LOAD_AND">;
 defm atomic_load_min : SIAtomicM0Glue2 <"LOAD_MIN">;
 defm atomic_load_max : SIAtomicM0Glue2 <"LOAD_MAX">;
@@ -954,6 +958,9 @@ def InlineImmFP64 : FPImmLeaf<f64, [{
   return isInlineImmediate(Imm);
 }]>;
 
+def fpimm_pos_zero : FPImmLeaf<fAny, [{
+  return Imm.isZero() && !Imm.isNegative();
+}]>;
 
 class VGPRImm <dag frag> : PatLeaf<frag, [{
   return isVGPRImm(N);
@@ -981,6 +988,11 @@ def ShiftAmt32Imm : ImmLeaf <i32, [{
 def fp16_zeros_high_16bits : PatLeaf<(f16 VGPR_32:$src), [{
   return fp16SrcZerosHighBits(N->getOpcode());
 }]>;
+
+
+class build_vector_fpimm_pos_zero_v2<VTVec vec> : PatLeaf<
+  (vec (build_vector (vec.ElementType fpimm_pos_zero),
+                     (vec.ElementType fpimm_pos_zero)))>;
 
 def MFMALdScaleXForm : SDNodeXForm<timm, [{
   unsigned Val = N->getZExtValue();
@@ -3355,7 +3367,8 @@ def getMCOpcodeGen : InstrMapping {
                    [!cast<string>(SIEncodingFamily.GFX940)],
                    [!cast<string>(SIEncodingFamily.GFX11)],
                    [!cast<string>(SIEncodingFamily.GFX12)],
-                   [!cast<string>(SIEncodingFamily.GFX1250)]];
+                   [!cast<string>(SIEncodingFamily.GFX1250)],
+                   [!cast<string>(SIEncodingFamily.GFX13)]];
 }
 
 // Get equivalent SOPK instruction.

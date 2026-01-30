@@ -219,9 +219,8 @@ static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR _mm256_div_ps(__m256 __a,
 ///    A 256-bit vector of [4 x double] containing one of the operands.
 /// \returns A 256-bit vector of [4 x double] containing the maximum values
 ///    between both operands.
-static __inline __m256d __DEFAULT_FN_ATTRS
-_mm256_max_pd(__m256d __a, __m256d __b)
-{
+static __inline __m256d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_max_pd(__m256d __a, __m256d __b) {
   return (__m256d)__builtin_ia32_maxpd256((__v4df)__a, (__v4df)__b);
 }
 
@@ -240,9 +239,8 @@ _mm256_max_pd(__m256d __a, __m256d __b)
 ///    A 256-bit vector of [8 x float] containing one of the operands.
 /// \returns A 256-bit vector of [8 x float] containing the maximum values
 ///    between both operands.
-static __inline __m256 __DEFAULT_FN_ATTRS
-_mm256_max_ps(__m256 __a, __m256 __b)
-{
+static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR _mm256_max_ps(__m256 __a,
+                                                                  __m256 __b) {
   return (__m256)__builtin_ia32_maxps256((__v8sf)__a, (__v8sf)__b);
 }
 
@@ -261,9 +259,8 @@ _mm256_max_ps(__m256 __a, __m256 __b)
 ///    A 256-bit vector of [4 x double] containing one of the operands.
 /// \returns A 256-bit vector of [4 x double] containing the minimum values
 ///    between both operands.
-static __inline __m256d __DEFAULT_FN_ATTRS
-_mm256_min_pd(__m256d __a, __m256d __b)
-{
+static __inline __m256d __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_min_pd(__m256d __a, __m256d __b) {
   return (__m256d)__builtin_ia32_minpd256((__v4df)__a, (__v4df)__b);
 }
 
@@ -282,9 +279,8 @@ _mm256_min_pd(__m256d __a, __m256d __b)
 ///    A 256-bit vector of [8 x float] containing one of the operands.
 /// \returns A 256-bit vector of [8 x float] containing the minimum values
 ///    between both operands.
-static __inline __m256 __DEFAULT_FN_ATTRS
-_mm256_min_ps(__m256 __a, __m256 __b)
-{
+static __inline __m256 __DEFAULT_FN_ATTRS_CONSTEXPR _mm256_min_ps(__m256 __a,
+                                                                  __m256 __b) {
   return (__m256)__builtin_ia32_minps256((__v8sf)__a, (__v8sf)__b);
 }
 
@@ -2186,9 +2182,8 @@ _mm256_cvtepi32_ps(__m256i __a) {
 /// \param __a
 ///    A 256-bit vector of [4 x double].
 /// \returns A 128-bit vector of [4 x float] containing the converted values.
-static __inline __m128 __DEFAULT_FN_ATTRS
-_mm256_cvtpd_ps(__m256d __a)
-{
+static __inline __m128 __DEFAULT_FN_ATTRS_CONSTEXPR
+_mm256_cvtpd_ps(__m256d __a) {
   return (__m128)__builtin_ia32_cvtpd2ps256((__v4df) __a);
 }
 
@@ -3606,9 +3601,7 @@ _mm256_undefined_pd(void)
 /// This intrinsic has no corresponding instruction.
 ///
 /// \returns A 256-bit vector of [8 x float] containing undefined values.
-static __inline__ __m256 __DEFAULT_FN_ATTRS
-_mm256_undefined_ps(void)
-{
+static __inline__ __m256 __DEFAULT_FN_ATTRS _mm256_undefined_ps(void) {
   return (__m256)__builtin_ia32_undef256();
 }
 

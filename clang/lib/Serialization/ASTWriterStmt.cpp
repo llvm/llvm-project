@@ -330,6 +330,13 @@ void ASTStmtWriter::VisitBreakStmt(BreakStmt *S) {
   Code = serialization::STMT_BREAK;
 }
 
+void ASTStmtWriter::VisitDeferStmt(DeferStmt *S) {
+  VisitStmt(S);
+  Record.AddSourceLocation(S->getDeferLoc());
+  Record.AddStmt(S->getBody());
+  Code = serialization::STMT_DEFER;
+}
+
 void ASTStmtWriter::VisitReturnStmt(ReturnStmt *S) {
   VisitStmt(S);
 
@@ -896,6 +903,15 @@ void ASTStmtWriter::VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
   VisitExpr(E);
   Record.AddStmt(E->getLHS());
   Record.AddStmt(E->getRHS());
+  Record.AddSourceLocation(E->getRBracketLoc());
+  Code = serialization::EXPR_ARRAY_SUBSCRIPT;
+}
+
+void ASTStmtWriter::VisitMatrixSingleSubscriptExpr(
+    MatrixSingleSubscriptExpr *E) {
+  VisitExpr(E);
+  Record.AddStmt(E->getBase());
+  Record.AddStmt(E->getRowIdx());
   Record.AddSourceLocation(E->getRBracketLoc());
   Code = serialization::EXPR_ARRAY_SUBSCRIPT;
 }

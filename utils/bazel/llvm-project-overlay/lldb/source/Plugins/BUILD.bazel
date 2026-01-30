@@ -1159,6 +1159,7 @@ cc_library(
     includes = [".."],
     deps = [
         ":PluginDynamicLoaderPosixDYLDHeaders",
+        ":PluginObjectFilePlaceholder",
         ":PluginProcessElfCore",
         ":PluginProcessUtility",
         "//lldb:Breakpoint",
@@ -1765,6 +1766,7 @@ cc_library(
     deps = [
         ":PluginObjectFileWasm",
         "//lldb:Core",
+        "//lldb:Headers",
         "//lldb:Host",
         "//lldb:HostMacOSXPrivateHeaders",
         "//lldb:Symbol",
@@ -2143,11 +2145,15 @@ cc_library(
         ":PluginObjectFilePlaceholder",
         ":PluginProcessUtility",
         "//lldb:Core",
+        "//lldb:CoreHeaders",
+        "//lldb:Headers",
         "//lldb:Host",
         "//lldb:InterpreterHeaders",
+        "//lldb:SymbolHeaders",
         "//lldb:Target",
         "//lldb:TargetHeaders",
         "//lldb:Utility",
+        "//llvm:Support",
     ],
 )
 

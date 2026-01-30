@@ -140,8 +140,7 @@ public:
         DebugStrictDwarf(false), Hotpatch(false),
         PPCGenScalarMASSEntries(false), JMCInstrument(false),
         EnableCFIFixup(false), MisExpect(false), XCOFFReadOnlyPointers(false),
-        VerifyArgABICompliance(true),
-        FPDenormalMode(DenormalMode::IEEE, DenormalMode::IEEE) {}
+        VerifyArgABICompliance(true) {}
 
   /// DisableFramePointerElim - This returns true if frame pointer elimination
   /// optimization should be disabled for the given machine function.
@@ -413,25 +412,7 @@ public:
   /// Vector math library to use.
   VectorLibrary VecLib = VectorLibrary::NoLibrary;
 
-private:
-  /// Flushing mode to assume in default FP environment.
-  DenormalMode FPDenormalMode;
-
-  /// Flushing mode to assume in default FP environment, for float/vector of
-  /// float.
-  DenormalMode FP32DenormalMode;
-
 public:
-  void setFPDenormalMode(DenormalMode Mode) { FPDenormalMode = Mode; }
-
-  void setFP32DenormalMode(DenormalMode Mode) { FP32DenormalMode = Mode; }
-
-  DenormalMode getRawFPDenormalMode() const { return FPDenormalMode; }
-
-  DenormalMode getRawFP32DenormalMode() const { return FP32DenormalMode; }
-
-  LLVM_ABI DenormalMode getDenormalMode(const fltSemantics &FPType) const;
-
   /// What exception model to use
   ExceptionHandling ExceptionModel = ExceptionHandling::None;
 
