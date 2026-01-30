@@ -755,8 +755,17 @@ int64_t RISCVRegisterInfo::getFrameIndexInstrOffset(const MachineInstr *MI,
 }
 
 Register RISCVRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
-  const TargetFrameLowering *TFI = getFrameLowering(MF);
-  return TFI->hasFP(MF) ? RISCV::X8 : RISCV::X2;
+  // This approximates most of the checks in `RISCVFrameLowering::hasFPImpl`,
+  // except that if you have forced frame pointers with a flag, but otherwise
+  // could have eliminated them, then we will use the stack pointer as we are
+  // better at compressing sp-relative accesses.
+  //
+  // We have to use a frame pointer for:
+  // - Stack Realignment
+  // - Variable Sized Objects
+  const MachineFrameInfo &MFI = MF.getFrameInfo();
+  return (hasStackRealignment(MF) || MFI.hasVarSizedObjects()) ? RISCV::X8
+                                                               : RISCV::X2;
 }
 
 StringRef RISCVRegisterInfo::getRegAsmName(MCRegister Reg) const {

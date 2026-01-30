@@ -19,10 +19,10 @@ define signext i32 @add(i32 %0, i32 %1) #0 {
 ; RV32I-DEFAULT-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-DEFAULT-NEXT:    sw s0, 8(sp) # 4-byte Folded Spill
 ; RV32I-DEFAULT-NEXT:    addi s0, sp, 16
-; RV32I-DEFAULT-NEXT:    sw a0, -12(s0)
-; RV32I-DEFAULT-NEXT:    sw a1, -16(s0)
-; RV32I-DEFAULT-NEXT:    lw a0, -12(s0)
-; RV32I-DEFAULT-NEXT:    lw a1, -16(s0)
+; RV32I-DEFAULT-NEXT:    sw a0, 4(sp)
+; RV32I-DEFAULT-NEXT:    sw a1, 0(sp)
+; RV32I-DEFAULT-NEXT:    lw a0, 4(sp)
+; RV32I-DEFAULT-NEXT:    lw a1, 0(sp)
 ; RV32I-DEFAULT-NEXT:    add a0, a0, a1
 ; RV32I-DEFAULT-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-DEFAULT-NEXT:    lw s0, 8(sp) # 4-byte Folded Reload
@@ -35,10 +35,10 @@ define signext i32 @add(i32 %0, i32 %1) #0 {
 ; RV64I-DEFAULT-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64I-DEFAULT-NEXT:    sd s0, 16(sp) # 8-byte Folded Spill
 ; RV64I-DEFAULT-NEXT:    addi s0, sp, 32
-; RV64I-DEFAULT-NEXT:    sw a0, -20(s0)
-; RV64I-DEFAULT-NEXT:    sw a1, -24(s0)
-; RV64I-DEFAULT-NEXT:    lw a0, -20(s0)
-; RV64I-DEFAULT-NEXT:    lw a1, -24(s0)
+; RV64I-DEFAULT-NEXT:    sw a0, 12(sp)
+; RV64I-DEFAULT-NEXT:    sw a1, 8(sp)
+; RV64I-DEFAULT-NEXT:    lw a0, 12(sp)
+; RV64I-DEFAULT-NEXT:    lw a1, 8(sp)
 ; RV64I-DEFAULT-NEXT:    addw a0, a0, a1
 ; RV64I-DEFAULT-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-DEFAULT-NEXT:    ld s0, 16(sp) # 8-byte Folded Reload
@@ -51,10 +51,10 @@ define signext i32 @add(i32 %0, i32 %1) #0 {
 ; RV32I-EMIT-FP-NEXT:    sw ra, 12(sp) # 4-byte Folded Spill
 ; RV32I-EMIT-FP-NEXT:    sw fp, 8(sp) # 4-byte Folded Spill
 ; RV32I-EMIT-FP-NEXT:    addi fp, sp, 16
-; RV32I-EMIT-FP-NEXT:    sw a0, -12(fp)
-; RV32I-EMIT-FP-NEXT:    sw a1, -16(fp)
-; RV32I-EMIT-FP-NEXT:    lw a0, -12(fp)
-; RV32I-EMIT-FP-NEXT:    lw a1, -16(fp)
+; RV32I-EMIT-FP-NEXT:    sw a0, 4(sp)
+; RV32I-EMIT-FP-NEXT:    sw a1, 0(sp)
+; RV32I-EMIT-FP-NEXT:    lw a0, 4(sp)
+; RV32I-EMIT-FP-NEXT:    lw a1, 0(sp)
 ; RV32I-EMIT-FP-NEXT:    add a0, a0, a1
 ; RV32I-EMIT-FP-NEXT:    lw ra, 12(sp) # 4-byte Folded Reload
 ; RV32I-EMIT-FP-NEXT:    lw fp, 8(sp) # 4-byte Folded Reload
@@ -67,10 +67,10 @@ define signext i32 @add(i32 %0, i32 %1) #0 {
 ; RV64I-EMIT-FP-NEXT:    sd ra, 24(sp) # 8-byte Folded Spill
 ; RV64I-EMIT-FP-NEXT:    sd fp, 16(sp) # 8-byte Folded Spill
 ; RV64I-EMIT-FP-NEXT:    addi fp, sp, 32
-; RV64I-EMIT-FP-NEXT:    sw a0, -20(fp)
-; RV64I-EMIT-FP-NEXT:    sw a1, -24(fp)
-; RV64I-EMIT-FP-NEXT:    lw a0, -20(fp)
-; RV64I-EMIT-FP-NEXT:    lw a1, -24(fp)
+; RV64I-EMIT-FP-NEXT:    sw a0, 12(sp)
+; RV64I-EMIT-FP-NEXT:    sw a1, 8(sp)
+; RV64I-EMIT-FP-NEXT:    lw a0, 12(sp)
+; RV64I-EMIT-FP-NEXT:    lw a1, 8(sp)
 ; RV64I-EMIT-FP-NEXT:    addw a0, a0, a1
 ; RV64I-EMIT-FP-NEXT:    ld ra, 24(sp) # 8-byte Folded Reload
 ; RV64I-EMIT-FP-NEXT:    ld fp, 16(sp) # 8-byte Folded Reload
@@ -83,10 +83,10 @@ define signext i32 @add(i32 %0, i32 %1) #0 {
 ; RV32I-NUMERIC-NEXT:    sw x1, 12(x2) # 4-byte Folded Spill
 ; RV32I-NUMERIC-NEXT:    sw x8, 8(x2) # 4-byte Folded Spill
 ; RV32I-NUMERIC-NEXT:    addi x8, x2, 16
-; RV32I-NUMERIC-NEXT:    sw x10, -12(x8)
-; RV32I-NUMERIC-NEXT:    sw x11, -16(x8)
-; RV32I-NUMERIC-NEXT:    lw x10, -12(x8)
-; RV32I-NUMERIC-NEXT:    lw x11, -16(x8)
+; RV32I-NUMERIC-NEXT:    sw x10, 4(x2)
+; RV32I-NUMERIC-NEXT:    sw x11, 0(x2)
+; RV32I-NUMERIC-NEXT:    lw x10, 4(x2)
+; RV32I-NUMERIC-NEXT:    lw x11, 0(x2)
 ; RV32I-NUMERIC-NEXT:    add x10, x10, x11
 ; RV32I-NUMERIC-NEXT:    lw x1, 12(x2) # 4-byte Folded Reload
 ; RV32I-NUMERIC-NEXT:    lw x8, 8(x2) # 4-byte Folded Reload
@@ -99,10 +99,10 @@ define signext i32 @add(i32 %0, i32 %1) #0 {
 ; RV64I-NUMERIC-NEXT:    sd x1, 24(x2) # 8-byte Folded Spill
 ; RV64I-NUMERIC-NEXT:    sd x8, 16(x2) # 8-byte Folded Spill
 ; RV64I-NUMERIC-NEXT:    addi x8, x2, 32
-; RV64I-NUMERIC-NEXT:    sw x10, -20(x8)
-; RV64I-NUMERIC-NEXT:    sw x11, -24(x8)
-; RV64I-NUMERIC-NEXT:    lw x10, -20(x8)
-; RV64I-NUMERIC-NEXT:    lw x11, -24(x8)
+; RV64I-NUMERIC-NEXT:    sw x10, 12(x2)
+; RV64I-NUMERIC-NEXT:    sw x11, 8(x2)
+; RV64I-NUMERIC-NEXT:    lw x10, 12(x2)
+; RV64I-NUMERIC-NEXT:    lw x11, 8(x2)
 ; RV64I-NUMERIC-NEXT:    addw x10, x10, x11
 ; RV64I-NUMERIC-NEXT:    ld x1, 24(x2) # 8-byte Folded Reload
 ; RV64I-NUMERIC-NEXT:    ld x8, 16(x2) # 8-byte Folded Reload

@@ -9,7 +9,7 @@ declare void @consume(ptr addrspace(1) %obj)
 define i1 @test(ptr addrspace(1) %a) "frame-pointer"="all" gc "statepoint-example" {
 entry:
   %safepoint_token = tail call token (i64, i32, ptr, i32, i32, ...) @llvm.experimental.gc.statepoint.p0(i64 0, i32 0, ptr elementtype(i1 ()) @return_i1, i32 0, i32 0, i32 0, i32 0) ["gc-live" (ptr addrspace(1) %a)]
-; CHECK: STATEPOINT 0, 0, 0, target-flags(riscv-call) @return_i1, 2, 0, 2, 0, 2, 0, 2, 1, 1, 8, $x8, -32, 2, 0, 2, 1, 0, 0
+; CHECK: STATEPOINT 0, 0, 0, target-flags(riscv-call) @return_i1, 2, 0, 2, 0, 2, 0, 2, 1, 1, 8, $x2, 0, 2, 0, 2, 1, 0, 0
   %call1 = call ptr addrspace(1) @llvm.experimental.gc.relocate.p1(token %safepoint_token,  i32 0, i32 0)
   %call2 = call zeroext i1 @llvm.experimental.gc.result.i1(token %safepoint_token)
   call void @consume(ptr addrspace(1) %call1)

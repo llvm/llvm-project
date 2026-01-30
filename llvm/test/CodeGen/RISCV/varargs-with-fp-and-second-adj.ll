@@ -15,16 +15,36 @@ define dso_local void @_Z3fooPKcz(ptr noundef %0, ...) "frame-pointer"="all" {
 ; RV64V-NEXT:    lui t0, 2
 ; RV64V-NEXT:    addi t0, t0, -576
 ; RV64V-NEXT:    sub sp, sp, t0
-; RV64V-NEXT:    sd a5, 40(s0)
-; RV64V-NEXT:    sd a6, 48(s0)
-; RV64V-NEXT:    sd a7, 56(s0)
-; RV64V-NEXT:    sd a1, 8(s0)
-; RV64V-NEXT:    sd a2, 16(s0)
-; RV64V-NEXT:    sd a3, 24(s0)
-; RV64V-NEXT:    sd a4, 32(s0)
-; RV64V-NEXT:    sd a0, -32(s0)
-; RV64V-NEXT:    addi a0, s0, 8
-; RV64V-NEXT:    sd a0, -40(s0)
+; RV64V-NEXT:    lui t0, 2
+; RV64V-NEXT:    add t0, t0, sp
+; RV64V-NEXT:    sd a5, -104(t0)
+; RV64V-NEXT:    lui a5, 2
+; RV64V-NEXT:    add a5, a5, sp
+; RV64V-NEXT:    sd a6, -96(a5)
+; RV64V-NEXT:    lui a5, 2
+; RV64V-NEXT:    add a5, a5, sp
+; RV64V-NEXT:    sd a7, -88(a5)
+; RV64V-NEXT:    lui a5, 2
+; RV64V-NEXT:    add a5, a5, sp
+; RV64V-NEXT:    sd a1, -136(a5)
+; RV64V-NEXT:    lui a1, 2
+; RV64V-NEXT:    add a1, a1, sp
+; RV64V-NEXT:    sd a2, -128(a1)
+; RV64V-NEXT:    lui a1, 2
+; RV64V-NEXT:    add a1, a1, sp
+; RV64V-NEXT:    sd a3, -120(a1)
+; RV64V-NEXT:    lui a1, 2
+; RV64V-NEXT:    add a1, a1, sp
+; RV64V-NEXT:    sd a4, -112(a1)
+; RV64V-NEXT:    lui a1, 2
+; RV64V-NEXT:    add a1, a1, sp
+; RV64V-NEXT:    sd a0, -176(a1)
+; RV64V-NEXT:    lui a0, 2
+; RV64V-NEXT:    addi a0, a0, -136
+; RV64V-NEXT:    add a0, a0, sp
+; RV64V-NEXT:    lui a1, 2
+; RV64V-NEXT:    add a1, a1, sp
+; RV64V-NEXT:    sd a0, -184(a1)
 ; RV64V-NEXT:    addi sp, s0, -432
 ; RV64V-NEXT:    .cfi_def_cfa sp, 496
 ; RV64V-NEXT:    ld ra, 424(sp) # 8-byte Folded Reload
