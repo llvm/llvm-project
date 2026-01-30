@@ -436,7 +436,7 @@ void NVPTXInstPrinter::printCachePolicy(const MCInst *MI, int OpNum,
                                         raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNum);
   // If the operand is a register and valid, print ", $reg"
-  if (MO.isReg() && MO.getReg() != 0) {
+  if (MO.isReg() && MO.getReg().isValid()) {
     O << ", ";
     printRegName(O, MO.getReg());
   }
