@@ -80,7 +80,7 @@ TEST_F(VariablesTest, GetTopLevelScope_ReturnsCorrectScope) {
   lldb::SBFrame frame;
   uint32_t frame_id = 0;
 
-  std::vector<protocol::Scope> scopes = vars.ReadyFrame(frame_id, frame);
+  std::vector<protocol::Scope> scopes = vars.CreateScopes(frame_id, frame);
 
   const protocol::Scope *locals_scope = FindScope(scopes, "Locals");
   const protocol::Scope *globals_scope = FindScope(scopes, "Globals");
@@ -90,20 +90,27 @@ TEST_F(VariablesTest, GetTopLevelScope_ReturnsCorrectScope) {
   ASSERT_NE(globals_scope, nullptr);
   ASSERT_NE(registers_scope, nullptr);
 
-  EXPECT_EQ(vars.GetTopLevelScope(locals_scope->variablesReference),
-            vars.GetScope(frame_id, eScopeKindLocals));
-  EXPECT_EQ(vars.GetTopLevelScope(globals_scope->variablesReference),
-            vars.GetScope(frame_id, eScopeKindGlobals));
-  EXPECT_EQ(vars.GetTopLevelScope(registers_scope->variablesReference),
-            vars.GetScope(frame_id, eScopeKindRegisters));
-  EXPECT_EQ(vars.GetTopLevelScope(9999), nullptr);
+  auto locals_data = vars.GetTopLevelScope(locals_scope->variablesReference);
+  auto globals_data = vars.GetTopLevelScope(globals_scope->variablesReference);
+  auto registers_data =
+      vars.GetTopLevelScope(registers_scope->variablesReference);
+
+  ASSERT_TRUE(locals_data.has_value());
+  ASSERT_TRUE(globals_data.has_value());
+  ASSERT_TRUE(registers_data.has_value());
+
+  EXPECT_EQ(locals_data->kind, eScopeKindLocals);
+  EXPECT_EQ(globals_data->kind, eScopeKindGlobals);
+  EXPECT_EQ(registers_data->kind, eScopeKindRegisters);
+
+  EXPECT_FALSE(vars.GetTopLevelScope(9999).has_value());
 }
 
 TEST_F(VariablesTest, FindVariable_LocalsByName) {
   lldb::SBFrame frame;
   uint32_t frame_id = 0;
 
-  std::vector<protocol::Scope> scopes = vars.ReadyFrame(frame_id, frame);
+  std::vector<protocol::Scope> scopes = vars.CreateScopes(frame_id, frame);
 
   const protocol::Scope *locals_scope = FindScope(scopes, "Locals");
   ASSERT_NE(locals_scope, nullptr);
