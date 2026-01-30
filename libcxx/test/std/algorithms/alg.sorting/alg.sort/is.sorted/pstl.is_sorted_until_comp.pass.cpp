@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-// UNSUPPORTED: c++03, c++11, c++14
+// REQUIRES: std-at-least-c++17
 
 // UNSUPPORTED: libcpp-has-no-incomplete-pstl
 
