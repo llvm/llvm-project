@@ -1638,18 +1638,18 @@ def : MnemonicAlias<"vmandnot.mm", "vmandn.mm">;
 def : MnemonicAlias<"vmornot.mm", "vmorn.mm">;
 
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0,
-    RVVConstraint = NoConstraint, ElementsDependOn = EltDepsVLMask in {
+    ElementsDependOn = EltDepsVLMask in {
 
 // Vector mask population count vcpop
-def VCPOP_M : RVInstVUnary<0b010000, 0b10000, OPMVV, (outs GPR:$vd),
-                           (ins VR:$vs2, VMaskOp:$vm),
-                           "vcpop.m", "$vd, $vs2$vm">,
+def VCPOP_M : RVInstVUnaryRd<0b010000, 0b10000, OPMVV, (outs GPR:$rd),
+                             (ins VR:$vs2, VMaskOp:$vm),
+                             "vcpop.m", "$rd, $vs2$vm">,
               SchedUnaryMC<"WriteVMPopV", "ReadVMPopV">;
 
 // vfirst find-first-set mask bit
-def VFIRST_M : RVInstVUnary<0b010000, 0b10001, OPMVV, (outs GPR:$vd),
-                            (ins VR:$vs2, VMaskOp:$vm),
-                            "vfirst.m", "$vd, $vs2$vm">,
+def VFIRST_M : RVInstVUnaryRd<0b010000, 0b10001, OPMVV, (outs GPR:$rd),
+                              (ins VR:$vs2, VMaskOp:$vm),
+                              "vfirst.m", "$rd, $vs2$vm">,
               SchedUnaryMC<"WriteVMFFSV", "ReadVMFFSV">;
 
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0, RVVConstraint = NoConstraint, ElementsDependOn = EltDepsVLMask
@@ -1680,15 +1680,21 @@ def VID_V : RVInstVUnary<0b010100, 0b10001, OPMVV, (outs VR:$vd),
             SchedNullaryMC<"WriteVIdxV">;
 
 // Integer Scalar Move Instructions
-let vm = 1, RVVConstraint = NoConstraint in {
-def VMV_X_S : RVInstVUnary<0b010000, 0b00000, OPMVV, (outs GPR:$vd),
-                           (ins VR:$vs2), "vmv.x.s", "$vd, $vs2">,
-              Sched<[WriteVMovXS, ReadVMovXS]>;
-let Constraints = "$vd = $vd_wb" in
-def VMV_S_X : RVInstV2<0b010000, 0b00000, OPMVX, (outs VR:$vd_wb),
-                      (ins VR:$vd, GPR:$rs1), "vmv.s.x", "$vd, $rs1">,
-              Sched<[WriteVMovSX, ReadVMovSX_V, ReadVMovSX_X]>;
+let vm = 1 in {
+def VMV_X_S : RVInstVUnaryRd<0b010000, 0b00000, OPMVV, (outs GPR:$rd),
+                             (ins VR:$vs2), "vmv.x.s", "$rd, $vs2">,
+              Sched<[WriteVMovXS, ReadVMovXS]> {
+  let Uses = [VTYPE];
 }
+def VMV_S_X : RVInstVX<0b010000, OPMVX, (outs VR:$vd_wb),
+                      (ins VR:$vd, GPR:$rs1), "vmv.s.x", "$vd, $rs1">,
+              Sched<[WriteVMovSX, ReadVMovSX_V, ReadVMovSX_X]> {
+  let vs2 = 0;
+
+  let Constraints = "$vd = $vd_wb";
+  let RVVConstraint = NoConstraint;
+}
+} // vm = 1
 
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
@@ -1696,16 +1702,21 @@ def VMV_S_X : RVInstV2<0b010000, 0b00000, OPMVX, (outs VR:$vd_wb),
 
 let Predicates = [HasVInstructionsAnyF] in {
 
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, vm = 1,
-    RVVConstraint = NoConstraint  in {
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0, vm = 1 in {
 // Floating-Point Scalar Move Instructions
-def VFMV_F_S : RVInstVUnary<0b010000, 0b00000, OPFVV, (outs FPR32:$vd),
-                            (ins VR:$vs2), "vfmv.f.s", "$vd, $vs2">,
-               Sched<[WriteVMovFS, ReadVMovFS]>;
-let Constraints = "$vd = $vd_wb" in
-def VFMV_S_F : RVInstV2<0b010000, 0b00000, OPFVF, (outs VR:$vd_wb),
+def VFMV_F_S : RVInstVUnaryRd<0b010000, 0b00000, OPFVV, (outs FPR32:$rd),
+                              (ins VR:$vs2), "vfmv.f.s", "$rd, $vs2">,
+               Sched<[WriteVMovFS, ReadVMovFS]> {
+  let Uses = [VTYPE];
+}
+def VFMV_S_F : RVInstVX<0b010000, OPFVF, (outs VR:$vd_wb),
                        (ins VR:$vd, FPR32:$rs1), "vfmv.s.f", "$vd, $rs1">,
-               Sched<[WriteVMovSF, ReadVMovSF_V, ReadVMovSF_F]>;
+               Sched<[WriteVMovSF, ReadVMovSF_V, ReadVMovSF_F]> {
+  let vs2 = 0;
+
+  let Constraints = "$vd = $vd_wb";
+  let RVVConstraint = NoConstraint;
+}
 
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0, vm = 1
 

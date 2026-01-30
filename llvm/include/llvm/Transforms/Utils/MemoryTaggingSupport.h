@@ -93,10 +93,11 @@ Value *readRegister(IRBuilder<> &IRB, StringRef Name);
 Value *getFP(IRBuilder<> &IRB);
 Value *getPC(const Triple &TargetTriple, IRBuilder<> &IRB);
 Value *getAndroidSlotPtr(IRBuilder<> &IRB, int Slot);
+Value *getDarwinSlotPtr(IRBuilder<> &IRB, int Slot);
 
 void annotateDebugRecords(AllocaInfo &Info, unsigned int Tag);
 Value *incrementThreadLong(IRBuilder<> &IRB, Value *ThreadLong,
-                           unsigned int Inc);
+                           unsigned int Inc, bool IsMemtagDarwin = false);
 
 } // namespace memtag
 } // namespace llvm
