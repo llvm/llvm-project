@@ -1393,8 +1393,7 @@ void SelectionDAGISel::DoInstructionSelection() {
       // Default lowering of llvm.fcanonicalize is to replace it with
       // multiplication by 1.0. The replacement was postponed to avoid removing
       // it due to optimizations.
-      if (Node->getOpcode() == ISD::FCANONICALIZE &&
-          Node->getNumOperands() == 2) {
+      if (Node->getOpcode() == ISD::FCANONICALIZE_MUL) {
         SDValue Operand = Node->getOperand(0);
         SDValue One = Node->getOperand(1);
         EVT VT = Operand.getValueType();

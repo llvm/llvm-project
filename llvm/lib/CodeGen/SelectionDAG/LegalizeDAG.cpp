@@ -3495,21 +3495,20 @@ bool SelectionDAGLegalize::ExpandNode(SDNode *Node) {
     Results.push_back(Op);
     break;
   }
-  case ISD::FCANONICALIZE:
+  case ISD::FCANONICALIZE: {
     // This implements llvm.canonicalize.f* by multiplication with 1.0, as
     // suggested in
     // https://llvm.org/docs/LangRef.html#llvm-canonicalize-intrinsic.
-    // To avoid optimization 'x*1.0 -> x', do not replace the node with FMUL.
-    // Instead shape it to look as FMUL and replace its opcode immediately
-    // before the instruction selection.
-    if (Node->getNumOperands() == 1) {
-      SDValue Operand = Node->getOperand(0);
-      EVT VT = Operand.getValueType();
-      SDValue One = DAG.getConstantFP(1.0, dl, VT);
-      SDValue NewNode = DAG.getNode(ISD::FCANONICALIZE, dl, VT, Operand, One);
-      Results.push_back(NewNode);
-    }
+    // To avoid optimization 'x*1.0 -> x', use a special node instead of FMUL.
+    // The node will be replaced by FMUL immediately before the instruction
+    // selection.
+    SDValue Operand = Node->getOperand(0);
+    EVT VT = Operand.getValueType();
+    SDValue One = DAG.getConstantFP(1.0, dl, VT);
+    SDValue NewNode = DAG.getNode(ISD::FCANONICALIZE_MUL, dl, VT, Operand, One);
+    Results.push_back(NewNode);
     break;
+  }
   case ISD::SIGN_EXTEND_INREG: {
     EVT ExtraVT = cast<VTSDNode>(Node->getOperand(1))->getVT();
     EVT VT = Node->getValueType(0);

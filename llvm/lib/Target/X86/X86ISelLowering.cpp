@@ -33874,14 +33874,12 @@ static SDValue LowerPREFETCH(SDValue Op, const X86Subtarget &Subtarget,
 
 static SDValue LowerFCanonicalize(SDValue Op, SelectionDAG &DAG) {
   SDNode *N = Op.getNode();
-  if (N->getNumOperands() == 1) {
-    SDLoc dl(N);
-    SDValue Operand = N->getOperand(0);
-    EVT VT = Operand.getValueType();
-    SDValue One = DAG.getConstantFP(1.0, dl, VT);
-    return DAG.getNode(ISD::FCANONICALIZE, dl, VT, Operand, One);
-  }
-  return Op;
+  SDValue Operand = N->getOperand(0);
+  EVT VT = Operand.getValueType();
+  SDLoc dl(N);
+  SDValue One = DAG.getConstantFP(1.0, dl, VT);
+  SDValue NewNode = DAG.getNode(ISD::FCANONICALIZE_MUL, dl, VT, Operand, One);
+  return NewNode;
 }
 
 static StringRef getInstrStrFromOpNo(const SmallVectorImpl<StringRef> &AsmStrs,

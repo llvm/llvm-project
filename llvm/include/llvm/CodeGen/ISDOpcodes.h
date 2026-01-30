@@ -538,10 +538,12 @@ enum NodeType {
   FGETSIGN,
 
   /// Returns platform specific canonical encoding of a floating point number.
-  /// The node may have two operands, in this case the second one must be a
-  /// constant 1.0. This form is used when canonicalization is implemented as
-  /// multiplication by one.
   FCANONICALIZE,
+
+  /// Returns platform specific canonical encoding of a floating point number
+  /// using multiplying it by 1.0. The fist operand is the floating-point
+  /// number, the second is constant 1.0.
+  FCANONICALIZE_MUL,
 
   /// Performs a check of floating point class property, defined by IEEE-754.
   /// The first operand is the floating point value to check. The second operand

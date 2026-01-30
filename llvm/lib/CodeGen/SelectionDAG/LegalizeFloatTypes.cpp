@@ -72,6 +72,8 @@ void DAGTypeLegalizer::SoftenFloatResult(SDNode *N, unsigned ResNo) {
     case ISD::FABS:        R = SoftenFloatRes_FABS(N); break;
     case ISD::FCANONICALIZE:
       R = SoftenFloatRes_FCANONICALIZE(N); break;
+    case ISD::FCANONICALIZE_MUL:
+      R = SoftenFloatRes_FMUL(N); break;
     case ISD::STRICT_FMINNUM:
     case ISD::FMINNUM:     R = SoftenFloatRes_FMINNUM(N); break;
     case ISD::STRICT_FMAXNUM:
@@ -314,18 +316,20 @@ SDValue DAGTypeLegalizer::SoftenFloatRes_FABS(SDNode *N) {
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FCANONICALIZE(SDNode *N) {
+  SDLoc dl(N);
+
   // This implements llvm.canonicalize.f* by multiplication with 1.0, as
   // suggested in
   // https://llvm.org/docs/LangRef.html#llvm-canonicalize-intrinsic.
-  if (N->getNumOperands() == 1) {
-    SDLoc dl(N);
-    SDValue Operand = N->getOperand(0);
-    EVT VT = Operand.getValueType();
-    SDValue One = DAG.getConstantFP(1.0, dl, VT);
-    SDValue Mul = DAG.getNode(ISD::FCANONICALIZE, dl, VT, Operand, One);
-    return BitConvertToInteger(Mul);
-  }
-  return SoftenFloatRes_FMUL(N);
+  // To avoid optimization 'x*1.0 -> x', use a special node instead of FMUL.
+  // The node will be replaced by FMUL immediately before the instruction
+  // selection.
+
+  SDValue Operand = N->getOperand(0);
+  EVT VT = Operand.getValueType();
+  SDValue One = DAG.getConstantFP(1.0, dl, VT);
+  SDValue Mul = DAG.getNode(ISD::FCANONICALIZE_MUL, dl, VT, Operand, One);
+  return BitConvertToInteger(Mul);
 }
 
 SDValue DAGTypeLegalizer::SoftenFloatRes_FMINNUM(SDNode *N) {
