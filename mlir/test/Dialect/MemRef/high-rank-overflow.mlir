@@ -1,4 +1,4 @@
-// UNSUPPORTED: ubsan
+// XFAIL: ubsan
 
 // RUN: mlir-opt %s --convert-to-llvm --split-input-file --verify-diagnostics | FileCheck %s
 
