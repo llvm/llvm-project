@@ -16,7 +16,8 @@
 #ifdef LIBC_COPT_PRINTF_MODULAR
 #include "src/__support/arg_list.h"
 
-#define LIBC_PRINTF_DEFINE_MODULAR
+
+#define LIBC_PRINTF_DEFINE_MODULES
 #include "src/stdio/printf_core/float_dec_converter.h"
 #include "src/stdio/printf_core/float_hex_converter.h"
 #include "src/stdio/printf_core/parser.h"
