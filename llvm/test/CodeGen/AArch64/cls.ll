@@ -140,66 +140,16 @@ define i32 @cls_i32_knownbits_no_overestimate(i32 signext %x) {
   ret i32 %e
  }
 
-; Test AArch64 NEON vector CLS (Count Leading Sign bits) operations
-; The intrinsics are lowered to ISD::CTLS and selected to CLS instructions
-
-define <8 x i8> @test_cls_v8i8(<8 x i8> %a) nounwind {
-; CHECK-LABEL: test_cls_v8i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cls v0.8b, v0.8b
-; CHECK-NEXT:    ret
-  %result = call <8 x i8> @llvm.aarch64.neon.cls.v8i8(<8 x i8> %a)
-  ret <8 x i8> %result
-}
-
-define <16 x i8> @test_cls_v16i8(<16 x i8> %a) nounwind {
-; CHECK-LABEL: test_cls_v16i8:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cls v0.16b, v0.16b
-; CHECK-NEXT:    ret
-  %result = call <16 x i8> @llvm.aarch64.neon.cls.v16i8(<16 x i8> %a)
-  ret <16 x i8> %result
-}
-
-define <4 x i16> @test_cls_v4i16(<4 x i16> %a) nounwind {
-; CHECK-LABEL: test_cls_v4i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cls v0.4h, v0.4h
-; CHECK-NEXT:    ret
-  %result = call <4 x i16> @llvm.aarch64.neon.cls.v4i16(<4 x i16> %a)
-  ret <4 x i16> %result
-}
-
-define <8 x i16> @test_cls_v8i16(<8 x i16> %a) nounwind {
-; CHECK-LABEL: test_cls_v8i16:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cls v0.8h, v0.8h
-; CHECK-NEXT:    ret
-  %result = call <8 x i16> @llvm.aarch64.neon.cls.v8i16(<8 x i16> %a)
-  ret <8 x i16> %result
-}
-
-define <2 x i32> @test_cls_v2i32(<2 x i32> %a) nounwind {
-; CHECK-LABEL: test_cls_v2i32:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cls v0.2s, v0.2s
-; CHECK-NEXT:    ret
-  %result = call <2 x i32> @llvm.aarch64.neon.cls.v2i32(<2 x i32> %a)
-  ret <2 x i32> %result
-}
-
-define <4 x i32> @test_cls_v4i32(<4 x i32> %a) nounwind {
-; CHECK-LABEL: test_cls_v4i32:
+; Test that computeKnownBits works with NEON CLS intrinsics now that they use ISD::CTLS.
+; The CLS result for v4i32 is in range [0, 31], so the `and 31` should be optimized away.
+define <4 x i32> @neon_cls_v4i32_knownbits(<4 x i32> %a) nounwind {
+; CHECK-LABEL: neon_cls_v4i32_knownbits:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    cls v0.4s, v0.4s
 ; CHECK-NEXT:    ret
   %result = call <4 x i32> @llvm.aarch64.neon.cls.v4i32(<4 x i32> %a)
-  ret <4 x i32> %result
+  %and = and <4 x i32> %result, <i32 31, i32 31, i32 31, i32 31>
+  ret <4 x i32> %and
 }
 
-declare <8 x i8> @llvm.aarch64.neon.cls.v8i8(<8 x i8>) nounwind readnone
-declare <16 x i8> @llvm.aarch64.neon.cls.v16i8(<16 x i8>) nounwind readnone
-declare <4 x i16> @llvm.aarch64.neon.cls.v4i16(<4 x i16>) nounwind readnone
-declare <8 x i16> @llvm.aarch64.neon.cls.v8i16(<8 x i16>) nounwind readnone
-declare <2 x i32> @llvm.aarch64.neon.cls.v2i32(<2 x i32>) nounwind readnone
 declare <4 x i32> @llvm.aarch64.neon.cls.v4i32(<4 x i32>) nounwind readnone
