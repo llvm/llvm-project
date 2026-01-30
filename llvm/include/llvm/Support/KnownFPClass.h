@@ -327,6 +327,13 @@ struct KnownFPClass {
       KnownFPClasses &= (fcPositive | fcNan);
   }
 
+  static KnownFPClass copysign(const KnownFPClass &KnownMag,
+                               const KnownFPClass &KnownSign) {
+    KnownFPClass Known = KnownMag;
+    Known.copysign(KnownSign);
+    return Known;
+  }
+
   // Propagate knowledge that a non-NaN source implies the result can also not
   // be a NaN. For unconstrained operations, signaling nans are not guaranteed
   // to be quieted but cannot be introduced.
