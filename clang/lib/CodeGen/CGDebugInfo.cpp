@@ -6737,14 +6737,27 @@ void CGDebugInfo::EmitGlobalVariableForHeterogeneousDwarf(
     }
 
   llvm::DIExprBuilder ExprBuilder(CGM.getLLVMContext());
-  // FIXME: There isn't general support for getting a Constant from an APValue,
-  // but we should be able to support all possibilities here.
-  if (Init.isInt())
-    ExprBuilder.append<llvm::DIOp::Constant>(
-        llvm::ConstantInt::get(CGM.getLLVMContext(), Init.getInt()));
-  else if (Init.isFloat())
-    ExprBuilder.append<llvm::DIOp::Constant>(
-        llvm::ConstantFP::get(CGM.getLLVMContext(), Init.getFloat()));
+  QualType VDQualTy = VD->getType();
+  llvm::Type *VDTy = CGM.getTypes().ConvertType(VDQualTy);
+
+  llvm::Constant *C = nullptr;
+  // As a special case, handle null pointers directly, even in cases where
+  // ConstantEmitter does not fold them to ConstantData.
+  if (Init.isLValue() && Init.isNullPointer() && isa<llvm::PointerType>(VDTy)) {
+    assert(!Init.getLValueBase() && "null pointer should be absolute");
+    auto *PtrTy = cast<llvm::PointerType>(VDTy);
+    unsigned NumBits = CGM.getDataLayout().getPointerTypeSizeInBits(PtrTy);
+    auto *IntPtrTy = CGM.getDataLayout().getIntPtrType(PtrTy);
+    uint64_t NullValue = CGM.getContext().getTargetNullPointerValue(VDQualTy);
+    uint64_t MaskedNullValue =
+        NullValue & llvm::maskTrailingOnes<uint64_t>(NumBits);
+    C = llvm::ConstantInt::get(IntPtrTy, MaskedNullValue);
+  } else {
+    C = ConstantEmitter(CGM).emitAbstract(SourceLocation(), Init, VDQualTy);
+  }
+  if (!isa_and_present<llvm::ConstantData>(C))
+    return;
+  ExprBuilder.append<llvm::DIOp::Constant>(cast<llvm::ConstantData>(C));
 
   GV.reset(DBuilder.createGlobalVariableExpression(
       DContext, Name, StringRef(), Unit, getLineNumber(VD->getLocation()), Ty,

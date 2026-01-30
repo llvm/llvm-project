@@ -1,0 +1,38 @@
+// REQUIRES: amdgpu-registered-target
+// RUN: %clang -cl-std=clc++2021 -emit-llvm -g -O0 -S -nogpulib -target amdgcn-amd-amdhsa -mcpu=fiji -o - %s | FileCheck %s
+// RUN: %clang -cl-std=clc++2021 -emit-llvm -g -O0 -S -nogpulib -target amdgcn-amd-amdhsa-opencl -mcpu=fiji -o - %s | FileCheck %s
+
+// Test that the special case in EmitGlobalVariableForHeterogeneousDwarf
+// handles nullptr constants when the are actually folded. This is reduced from
+// a case which previously crashed the compiler, and the typedef is seemingly
+// required to get Clang to actually fold the constant in this case.
+
+// CHECK: !DIGlobalVariableExpression(var: [[VAR_GLOBAL:![0-9]+]], expr: !DIExpression(DIOpConstant(i64 0)))
+// CHECK: [[VAR_GLOBAL]] = distinct !DIGlobalVariable(name: "null_global_ptr"
+typedef global int *global_ptr;
+const global_ptr null_global_ptr = nullptr;
+bool isnull(global_ptr p) { return p == null_global_ptr; }
+
+// CHECK: !DIGlobalVariableExpression(var: [[VAR_PRIVATE:![0-9]+]], expr: !DIExpression(DIOpConstant(i32 -1)))
+// CHECK: [[VAR_PRIVATE]] = distinct !DIGlobalVariable(name: "null_private_ptr"
+typedef private int *private_ptr;
+const private_ptr null_private_ptr = nullptr;
+bool isnull(private_ptr p) { return p == null_private_ptr; }
+
+// CHECK: !DIGlobalVariableExpression(var: [[VAR_CONSTANT:![0-9]+]], expr: !DIExpression(DIOpConstant(i64 0)))
+// CHECK: [[VAR_CONSTANT]] = distinct !DIGlobalVariable(name: "null_constant_ptr"
+typedef constant int *constant_ptr;
+const constant_ptr null_constant_ptr = nullptr;
+bool isnull(constant_ptr p) { return p == null_constant_ptr; }
+
+// CHECK: !DIGlobalVariableExpression(var: [[VAR_LOCAL:![0-9]+]], expr: !DIExpression(DIOpConstant(i32 -1)))
+// CHECK: [[VAR_LOCAL]] = distinct !DIGlobalVariable(name: "null_local_ptr"
+typedef local int *local_ptr;
+const local_ptr null_local_ptr = nullptr;
+bool isnull(local_ptr p) { return p == null_local_ptr; }
+
+// CHECK: !DIGlobalVariableExpression(var: [[VAR_GENERIC:![0-9]+]], expr: !DIExpression(DIOpConstant(i64 0)))
+// CHECK: [[VAR_GENERIC]] = distinct !DIGlobalVariable(name: "null_generic_ptr"
+typedef int *generic_ptr;
+const generic_ptr null_generic_ptr = nullptr;
+bool isnull(generic_ptr p) { return p == null_generic_ptr; }

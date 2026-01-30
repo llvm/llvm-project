@@ -3156,6 +3156,8 @@ DIExprBuilder::Iterator DIExprBuilder::erase(Iterator From, Iterator To) {
 }
 
 DIExpression *DIExprBuilder::intoExpression() {
+  assert(!Elements.empty() &&
+         "Attempting to create an empty DIOp-based DIExpression");
 #ifndef NDEBUG
   assert(!StateIsUnspecified);
   StateIsUnspecified = true;
