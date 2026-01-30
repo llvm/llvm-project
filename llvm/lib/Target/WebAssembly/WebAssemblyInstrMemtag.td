@@ -91,8 +91,8 @@ defm MEMTAG_UNTAGSTORE_A#B: I<(outs rc:$untaggedptr), (ins i32imm:$tableidx, rc:
                     (outs), (ins i32imm:$tableidx),
                     [(set rc:$untaggedptr,
                         (int_wasm_memtag_untagstore (i32 imm:$tableidx), rc:$src, rc:$b16))],
-                    "memtag.untagstorez\t$tableidx, $src, $b16",
-                    "memtag.untagstorez\t$tableidx",
+                    "memtag.untagstore\t$tableidx, $src, $b16",
+                    "memtag.untagstore\t$tableidx",
                     0xfc29>;
 
 let mayStore = 1 in
