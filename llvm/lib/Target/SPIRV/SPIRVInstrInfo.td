@@ -527,6 +527,9 @@ def OpUDotAccSat: Op<4454, (outs ID:$res), (ins TYPE:$type, ID:$vec1, ID:$vec2, 
 def OpSUDotAccSat: Op<4455, (outs ID:$res), (ins TYPE:$type, ID:$vec1, ID:$vec2, ID:$acc, variable_ops),
                   "$res = OpSUDotAccSat $type $vec1 $vec2 $acc">;
 
+def OpFmaKHR: Op<6034, (outs ID:$res), (ins TYPE:$type, ID:$a, ID:$b, ID:$c),
+                  "$res = OpFmaKHR $type $a $b $c">;
+
 // 3.42.14 Bit Instructions
 
 defm OpShiftRightLogical: BinOpTypedGen<"OpShiftRightLogical", 194, srl, 0, 1>;
