@@ -1136,7 +1136,7 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
     OS << ' ' << EN->getNumOperands();
     if (!OmitComments)
       OS << "/*#Ops*/";
-    OS << ',';
+    OS << ", ";
 
     std::vector<uint8_t> OpBytes;
     for (unsigned i = 0, e = EN->getNumOperands(); i != e; ++i) {
@@ -1146,13 +1146,24 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
         OpBytes.push_back(Buffer[i]);
     }
     unsigned Index = OperandTable.get(OpBytes);
+    if (!OmitComments)
+      OS << "/*OperandList*/";
     unsigned NumOperandBytes = EmitVBRValue(Index, OS);
 
     if (!OmitComments) {
+      // Print the operand #'s.
+      ArrayRef<unsigned> Ops = EN->getOperandList();
+      OS << " // Ops =";
+      if (Ops.empty())
+        OS << " None";
+      else
+        for (unsigned OpNo : Ops)
+          OS << " #" << OpNo;
+
       // Print the result #'s for EmitNode.
       if (const EmitNodeMatcher *E = dyn_cast<EmitNodeMatcher>(EN)) {
         if (unsigned NumResults = EN->getNumVTs()) {
-          OS << " // Results =";
+          OS << " Results =";
           unsigned First = E->getFirstResultSlot();
           for (unsigned i = 0; i != NumResults; ++i)
             OS << " #" << First + i;
