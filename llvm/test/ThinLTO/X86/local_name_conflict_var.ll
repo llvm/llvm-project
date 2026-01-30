@@ -31,6 +31,16 @@
 ; RUN: llvm-lto -thinlto-action=thinlink -o %t5.bc %t.bc %t1.bc %t2.bc %t3b.bc
 ; RUN: llvm-lto -thinlto-action=import -exported-symbol=main %t.bc -thinlto-index=%t5.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=IMPORTNOREADONLY
 
+;; Now link in the new module before the other 2 modules. We currently will stop
+;; looking for a variable to import once we see the non-variable summary. This
+;; is a compile time optimization. It is safe because we have marked all
+;; summaries for baz as non-read-only, as shown above.
+; RUN: opt -module-summary -module-hash %p/Inputs/local_name_conflict_var3.ll -o %t3.bc
+; RUN: llvm-lto -thinlto-action=thinlink -o %t5.bc %t.bc %t3.bc %t1.bc %t2.bc
+; RUN: llvm-lto -thinlto-action=import -exported-symbol=main %t.bc -thinlto-index=%t5.bc -o - | llvm-dis -o - | FileCheck %s --check-prefix=NOIMPORT
+; NOIMPORT: @baz.llvm.{{.*}} = external hidden global i32, align 4
+; NOIMPORT: @baz.llvm.{{.*}} = external hidden global i32, align 4
+
 ; ModuleID = 'local_name_conflict_var_main.o'
 source_filename = "local_name_conflict_var_main.c"
 target datalayout = "e-m:e-p270:32:32-p271:32:32-p272:64:64-i64:64-f80:128-n8:16:32:64-S128"

@@ -156,7 +156,7 @@ ifeq "$(HOST_OS)" "Darwin"
 		LDFLAGS += -fuse-ld=lld
 	endif
 endif
-
+LDFLAGS += -fuse-ld=lld
 
 #----------------------------------------------------------------------
 # ARCHFLAG is the flag used to tell the compiler which architecture
