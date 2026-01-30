@@ -20583,6 +20583,13 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       } else if (VecOpcode == Instruction::SIToFP && SrcIt != MinBWs.end() &&
                  !SrcIt->second.second) {
         VecOpcode = Instruction::UIToFP;
+      } else if (VecOpcode == Instruction::BitCast && SrcIt != MinBWs.end() &&
+                 ScalarTy->isFPOrFPVectorTy()) {
+        Type *OrigSrcScalarTy = CI->getSrcTy();
+        auto *OrigSrcVectorTy =
+            getWidenedType(OrigSrcScalarTy, E->Scalars.size());
+        InVec =
+            Builder.CreateIntCast(InVec, OrigSrcVectorTy, SrcIt->second.second);
       }
       Value *V = (VecOpcode != ShuffleOrOp && VecOpcode == Instruction::BitCast)
                      ? InVec
