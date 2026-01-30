@@ -20757,9 +20757,9 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
           Val = DAG.getBitcast(LDMemType, Val);
         else
           break;
-      } else if (LDMemType.isVector()) {
+      } else if (LDMemType.isVector() && isTypeLegal(STMemType)) {
         EVT EltVT = LDMemType.getVectorElementType();
-        uint64_t EltSize = EltVT.getSizeInBits();
+        TypeSize EltSize = EltVT.getSizeInBits();
 
         if (!StMemSize.isKnownMultipleOf(EltSize))
           break;
