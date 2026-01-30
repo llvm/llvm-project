@@ -2295,7 +2295,8 @@ public:
   /// of V. This may involve multiple casts (e.g., ptr -> i64 -> <2 x i32>).
   /// The created cast instructions are inserted into the current basic block.
   /// If no casts are needed, V is returned.
-  LLVM_ABI Value *CreateBitPreservingCastChain(const DataLayout &DL, Value *V, Type *NewTy);
+  LLVM_ABI Value *CreateBitPreservingCastChain(const DataLayout &DL, Value *V,
+                                               Type *NewTy);
 
   //===--------------------------------------------------------------------===//
   // Instruction creation methods: Compare Instructions

@@ -619,7 +619,8 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
     TypeSize AccessSize = DL.getTypeStoreSize(AccessTy);
     if (Constant *CI = dyn_cast<Constant>(Index)) {
       if (CI->isZeroValue() && AccessSize == VecStoreSize) {
-        Inst->replaceAllUsesWith(Builder.CreateBitPreservingCastChain(DL, CurVal, AccessTy));
+        Inst->replaceAllUsesWith(
+            Builder.CreateBitPreservingCastChain(DL, CurVal, AccessTy));
         return nullptr;
       }
     }
@@ -669,7 +670,8 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
             SubVec, Builder.CreateExtractElement(CurVal, CurIdx), K);
       }
 
-      Inst->replaceAllUsesWith(Builder.CreateBitPreservingCastChain(DL, SubVec, AccessTy));
+      Inst->replaceAllUsesWith(
+          Builder.CreateBitPreservingCastChain(DL, SubVec, AccessTy));
       return nullptr;
     }
 
