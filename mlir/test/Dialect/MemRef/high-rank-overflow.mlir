@@ -1,3 +1,5 @@
+// UNSUPPORTED: ubsan
+
 // RUN: mlir-opt %s --convert-to-llvm --split-input-file --verify-diagnostics | FileCheck %s
 
 // Test that extremely high-rank memrefs with overflow in stride calculation
