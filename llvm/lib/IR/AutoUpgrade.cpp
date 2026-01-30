@@ -3622,7 +3622,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     Value *Op0 = CI->getArgOperand(0);
     unsigned Imm = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
     unsigned NumElts = cast<FixedVectorType>(CI->getType())->getNumElements();
-    
+
     if (Name == "sse2.pshufl.w" && NumElts % 8 != 0)
       reportFatalUsageError("Invalid Intrinsic Signature");
 
@@ -4492,8 +4492,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
   } else if (Name.starts_with("avx512.mask.") &&
              upgradeAVX512MaskToSelect(Name, Builder, *CI, Rep)) {
     // Rep will be updated by the call in the condition.
-  }
-  else
+  } else
     reportFatalUsageError("Invalid Intrinsic Used");
 
   return Rep;
@@ -4951,8 +4950,8 @@ void llvm::UpgradeIntrinsicCall(CallBase *CI, Function *NewFn) {
 
     if (Rep) {
       CI->replaceAllUsesWith(Rep);
-      CI->eraseFromParent();
     }
+    CI->eraseFromParent();
     return;
   }
 
@@ -5674,7 +5673,7 @@ void llvm::UpgradeCallsToIntrinsic(Function *F) {
         UpgradeIntrinsicCall(CB, NewFn);
 
     // Remove old function, no longer used, from the module.
-    if (NewFn != nullptr && F != NewFn)
+    if (F != NewFn)
       F->eraseFromParent();
   }
 }
