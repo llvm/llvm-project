@@ -449,11 +449,14 @@ void AArch64StackTagging::untagAlloca(AllocaInst *AI, Instruction *InsertBefore,
 
 static Value *getSlotPtr(IRBuilder<> &IRB, const Triple &TargetTriple,
                          bool HasInstrumentedAllocas) {
+  if (!HasInstrumentedAllocas)
+    return nullptr;
+
   if (ClRecordStackHistory == instr ||
       (!ClRecordStackHistory.getNumOccurrences() &&
        TargetTriple.isOSDarwin())) {
     if (TargetTriple.isAndroid() && TargetTriple.isAArch64() &&
-        !TargetTriple.isAndroidVersionLT(35) && HasInstrumentedAllocas)
+        !TargetTriple.isAndroidVersionLT(35))
       return memtag::getAndroidSlotPtr(IRB, -3);
     if (TargetTriple.isOSDarwin() && TargetTriple.isAArch64() &&
         !TargetTriple.isSimulatorEnvironment())
