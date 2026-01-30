@@ -642,18 +642,14 @@ ABISysV_riscv::GetReturnValueObjectSimple(Thread &thread,
                                           value, ConstString(""));
   }
   // Floating point return type.
-  else if (type_flags & eTypeIsFloat) {
-    bool is_complex = false;
-
-    if (compiler_type.IsFloatingPointType(is_complex) &&
-        !(type_flags & eTypeIsVector) && !is_complex) {
-      const uint32_t arch_fp_flags =
-          arch.GetFlags() & ArchSpec::eRISCV_float_abi_mask;
-      return_valobj_sp = GetValObjFromFPRegs(
-          thread, reg_ctx, machine, arch_fp_flags, type_flags, byte_size);
-      return return_valobj_sp;
-    }
+  else if (compiler_type.IsRealFloatingPointType()) {
+    const uint32_t arch_fp_flags =
+        arch.GetFlags() & ArchSpec::eRISCV_float_abi_mask;
+    return_valobj_sp = GetValObjFromFPRegs(
+        thread, reg_ctx, machine, arch_fp_flags, type_flags, byte_size);
+    return return_valobj_sp;
   }
+
   // Unsupported return type.
   return return_valobj_sp;
 }
