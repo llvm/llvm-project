@@ -5,7 +5,7 @@
 
 define void @clmul(i128 %a128, i128 %b128, i64 %a64, i64 %b64, i32 %a32, i32 %b32, i8 %a8, i8 %b8) {
 ; PCLMUL-LABEL: 'clmul'
-; PCLMUL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %call_i128 = call i128 @llvm.clmul.i128(i128 %a128, i128 %b128)
+; PCLMUL-NEXT:  Cost Model: Found an estimated cost of 4 for instruction: %call_i128 = call i128 @llvm.clmul.i128(i128 %a128, i128 %b128)
 ; PCLMUL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %call_i64 = call i64 @llvm.clmul.i64(i64 %a64, i64 %b64)
 ; PCLMUL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %call_i32 = call i32 @llvm.clmul.i32(i32 %a32, i32 %b32)
 ; PCLMUL-NEXT:  Cost Model: Found an estimated cost of 2 for instruction: %call_i8 = call i8 @llvm.clmul.i8(i8 %a8, i8 %b8)
@@ -24,4 +24,3 @@ define void @clmul(i128 %a128, i128 %b128, i64 %a64, i64 %b64, i32 %a32, i32 %b3
   %call_i8 = call i8 @llvm.clmul.i8(i8 %a8, i8 %b8)
   ret void
 }
-
