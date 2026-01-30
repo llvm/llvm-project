@@ -24,7 +24,6 @@
 
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
-#include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Regex.h"
 
 namespace mlir {
@@ -223,7 +222,7 @@ private:
       valueCasterMap;
   /// Set of dialect namespaces that we have attempted to import implementation
   /// modules for.
-  llvm::StringSet<> loadedDialectModules;
+  std::unordered_set<std::string> loadedDialectModules;
 
   TracebackLoc tracebackLoc;
   TypeIDAllocator typeIDAllocator;

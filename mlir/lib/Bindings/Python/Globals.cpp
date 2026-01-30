@@ -49,7 +49,9 @@ PyGlobals &PyGlobals::get() {
 bool PyGlobals::loadDialectModule(std::string_view dialectNamespace) {
   {
     nb::ft_lock_guard lock(mutex);
-    if (loadedDialectModules.contains(dialectNamespace))
+    std::string dialectNamespaceStr(dialectNamespace);
+    if (loadedDialectModules.find(dialectNamespaceStr) !=
+        loadedDialectModules.end())
       return true;
   }
   // Since re-entrancy is possible, make a copy of the search prefixes.
@@ -75,7 +77,7 @@ bool PyGlobals::loadDialectModule(std::string_view dialectNamespace) {
   // Note: Iterator cannot be shared from prior to loading, since re-entrancy
   // may have occurred, which may do anything.
   nb::ft_lock_guard lock(mutex);
-  loadedDialectModules.insert(dialectNamespace);
+  loadedDialectModules.insert(std::string(dialectNamespace));
   return true;
 }
 
