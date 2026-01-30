@@ -18,7 +18,7 @@ define dso_local void @foo1(double %a.coerce0, double %a.coerce1, double %b.coer
 ; CHECK-NEXT:    movq %rsp, %rdi
 ; CHECK-NEXT:    callq foo3@PLT
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = mem[0],zero
-; CHECK-NEXT:    movapd {{.*#+}} xmm1 = [1.0E+0,u]
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [1.0E+0,0.0E+0]
 ; CHECK-NEXT:    movhpd {{.*#+}} xmm1 = xmm1[0],mem[0]
 ; CHECK-NEXT:    addpd %xmm0, %xmm1
 ; CHECK-NEXT:    movapd %xmm1, g(%rip)

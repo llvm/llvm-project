@@ -2223,7 +2223,8 @@ define <4 x float> @regression2(ptr addrspace(1) %0, <4 x i32> %1, <4 x i32> %2,
 ; X64VL-NEXT:    vmovw (%rsi), %xmm0
 ; X64VL-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; X64VL-NEXT:    vcvtdq2ps %xmm0, %xmm0
-; X64VL-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],mem[2,3]
+; X64VL-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
+; X64VL-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; X64VL-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to4}, %xmm0, %xmm0
 ; X64VL-NEXT:    retq
 ;
@@ -2233,7 +2234,8 @@ define <4 x float> @regression2(ptr addrspace(1) %0, <4 x i32> %1, <4 x i32> %2,
 ; X86-NEXT:    vmovw (%eax), %xmm0
 ; X86-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; X86-NEXT:    vcvtdq2ps %xmm0, %xmm0
-; X86-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],mem[2,3]
+; X86-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
+; X86-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; X86-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}{1to4}, %xmm0, %xmm0
 ; X86-NEXT:    retl
 ;
@@ -2242,7 +2244,8 @@ define <4 x float> @regression2(ptr addrspace(1) %0, <4 x i32> %1, <4 x i32> %2,
 ; X64-NOVL-NEXT:    vmovw (%rsi), %xmm0
 ; X64-NOVL-NEXT:    vpmovzxbd {{.*#+}} xmm0 = xmm0[0],zero,zero,zero,xmm0[1],zero,zero,zero,xmm0[2],zero,zero,zero,xmm0[3],zero,zero,zero
 ; X64-NOVL-NEXT:    vcvtdq2ps %xmm0, %xmm0
-; X64-NOVL-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0,1],mem[2,3]
+; X64-NOVL-NEXT:    vmovddup {{.*#+}} xmm1 = mem[0,0]
+; X64-NOVL-NEXT:    vmovsd {{.*#+}} xmm0 = xmm0[0],xmm1[1]
 ; X64-NOVL-NEXT:    vbroadcastss {{.*#+}} xmm1 = [3.92156886E-3,3.92156886E-3,3.92156886E-3,3.92156886E-3]
 ; X64-NOVL-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; X64-NOVL-NEXT:    retq
@@ -2437,7 +2440,7 @@ define <16 x i32> @pr52561(<16 x i32> %a, <16 x i32> %b) "min-legal-vector-width
 ; X86-NEXT:    andl $-32, %esp
 ; X86-NEXT:    subl $32, %esp
 ; X86-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
-; X86-NEXT:    vpaddd 8(%ebp), %ymm1, %ymm1
+; X86-NEXT:    vpaddd 36(%ebp){1to8}, %ymm1, %ymm1
 ; X86-NEXT:    vpbroadcastd {{.*#+}} ymm2 = [112,112,112,112,112,112,112,112]
 ; X86-NEXT:    vpaddd %ymm2, %ymm0, %ymm0
 ; X86-NEXT:    vpaddd %ymm2, %ymm1, %ymm1
@@ -2482,7 +2485,8 @@ define <8 x i16> @pr59628_xmm(i16 %arg) {
 ; X64-NOVL-LABEL: pr59628_xmm:
 ; X64-NOVL:       # %bb.0:
 ; X64-NOVL-NEXT:    vmovw %edi, %xmm0
-; X64-NOVL-NEXT:    vpcmpeqw {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; X64-NOVL-NEXT:    vpinsrw $0, {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; X64-NOVL-NEXT:    vpcmpeqw %xmm1, %xmm0, %xmm1
 ; X64-NOVL-NEXT:    vpandn %xmm0, %xmm1, %xmm0
 ; X64-NOVL-NEXT:    retq
   %I1 = insertelement <8 x i16> zeroinitializer, i16 %arg, i16 0

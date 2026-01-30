@@ -388,13 +388,13 @@ define <8 x i64> @pr23259() #1 {
 ; AVX-LABEL: pr23259:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [1,1,1,1]
-; AVX-NEXT:    vblendps {{.*#+}} xmm0 = mem[0,1],xmm1[2,3]
+; AVX-NEXT:    vpinsrq $0, A+16(%rip), %xmm1, %xmm0
 ; AVX-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1,2,3],mem[4,5,6,7]
 ; AVX-NEXT:    retq
 ;
 ; AVX2-LABEL: pr23259:
 ; AVX2:       # %bb.0: # %entry
-; AVX2-NEXT:    vmovaps A+16(%rip), %xmm0
+; AVX2-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX2-NEXT:    vblendps {{.*#+}} ymm0 = ymm0[0,1],mem[2,3,4,5,6,7]
 ; AVX2-NEXT:    vbroadcastsd {{.*#+}} ymm1 = [1,1,1,1]
 ; AVX2-NEXT:    retq

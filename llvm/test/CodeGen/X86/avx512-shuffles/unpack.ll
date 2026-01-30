@@ -826,7 +826,7 @@ define <2 x double> @test_2xdouble_zero_masked_unpack_low_mask1(<2 x double> %ve
 define <2 x double> @test_2xdouble_unpack_low_mem_mask0(<2 x double> %vec1, ptr %vec2p) {
 ; CHECK-LABEL: test_2xdouble_unpack_low_mem_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm0 = xmm0[0],mem[0]
+; CHECK-NEXT:    vmovhps {{.*#+}} xmm0 = xmm0[0,1],mem[0,1]
 ; CHECK-NEXT:    retq
   %vec2 = load <2 x double>, ptr %vec2p
   %res = shufflevector <2 x double> %vec1, <2 x double> %vec2, <2 x i32> <i32 0, i32 2>
@@ -835,9 +835,10 @@ define <2 x double> @test_2xdouble_unpack_low_mem_mask0(<2 x double> %vec1, ptr 
 define <2 x double> @test_2xdouble_masked_unpack_low_mem_mask0(<2 x double> %vec1, ptr %vec2p, <2 x double> %vec3, <2 x double> %mask) {
 ; CHECK-LABEL: test_2xdouble_masked_unpack_low_mem_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
-; CHECK-NEXT:    vcmpeqpd %xmm3, %xmm2, %k1
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm1 {%k1} = xmm0[0],mem[0]
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
+; CHECK-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vcmpeqpd %xmm4, %xmm2, %k1
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm1 {%k1} = xmm0[0],xmm3[0]
 ; CHECK-NEXT:    vmovapd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %vec2 = load <2 x double>, ptr %vec2p
@@ -850,9 +851,10 @@ define <2 x double> @test_2xdouble_masked_unpack_low_mem_mask0(<2 x double> %vec
 define <2 x double> @test_2xdouble_zero_masked_unpack_low_mem_mask0(<2 x double> %vec1, ptr %vec2p, <2 x double> %mask) {
 ; CHECK-LABEL: test_2xdouble_zero_masked_unpack_low_mem_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vcmpeqpd %xmm2, %xmm1, %k1
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm0 {%k1} {z} = xmm0[0],mem[0]
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
+; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vcmpeqpd %xmm3, %xmm1, %k1
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm0 {%k1} {z} = xmm0[0],xmm2[0]
 ; CHECK-NEXT:    retq
   %vec2 = load <2 x double>, ptr %vec2p
   %shuf = shufflevector <2 x double> %vec1, <2 x double> %vec2, <2 x i32> <i32 0, i32 2>
@@ -864,9 +866,10 @@ define <2 x double> @test_2xdouble_zero_masked_unpack_low_mem_mask0(<2 x double>
 define <2 x double> @test_2xdouble_masked_unpack_low_mem_mask1(<2 x double> %vec1, ptr %vec2p, <2 x double> %vec3, <2 x double> %mask) {
 ; CHECK-LABEL: test_2xdouble_masked_unpack_low_mem_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
-; CHECK-NEXT:    vcmpeqpd %xmm3, %xmm2, %k1
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm1 {%k1} = xmm0[0],mem[0]
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm3 = mem[0],zero
+; CHECK-NEXT:    vxorpd %xmm4, %xmm4, %xmm4
+; CHECK-NEXT:    vcmpeqpd %xmm4, %xmm2, %k1
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm1 {%k1} = xmm0[0],xmm3[0]
 ; CHECK-NEXT:    vmovapd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %vec2 = load <2 x double>, ptr %vec2p
@@ -879,9 +882,10 @@ define <2 x double> @test_2xdouble_masked_unpack_low_mem_mask1(<2 x double> %vec
 define <2 x double> @test_2xdouble_zero_masked_unpack_low_mem_mask1(<2 x double> %vec1, ptr %vec2p, <2 x double> %mask) {
 ; CHECK-LABEL: test_2xdouble_zero_masked_unpack_low_mem_mask1:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
-; CHECK-NEXT:    vcmpeqpd %xmm2, %xmm1, %k1
-; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm0 {%k1} {z} = xmm0[0],mem[0]
+; CHECK-NEXT:    vmovsd {{.*#+}} xmm2 = mem[0],zero
+; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
+; CHECK-NEXT:    vcmpeqpd %xmm3, %xmm1, %k1
+; CHECK-NEXT:    vunpcklpd {{.*#+}} xmm0 {%k1} {z} = xmm0[0],xmm2[0]
 ; CHECK-NEXT:    retq
   %vec2 = load <2 x double>, ptr %vec2p
   %shuf = shufflevector <2 x double> %vec1, <2 x double> %vec2, <2 x i32> <i32 0, i32 2>
@@ -2223,7 +2227,7 @@ define <2 x double> @test_2xdouble_zero_masked_unpack_high_mask1(<2 x double> %v
 define <2 x double> @test_2xdouble_unpack_high_mem_mask0(<2 x double> %vec1, ptr %vec2p) {
 ; CHECK-LABEL: test_2xdouble_unpack_high_mem_mask0:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vunpckhpd {{.*#+}} xmm0 = xmm0[1],mem[1]
+; CHECK-NEXT:    vunpckhpd 8(%rdi){1to2}, %xmm0, %xmm0
 ; CHECK-NEXT:    retq
   %vec2 = load <2 x double>, ptr %vec2p
   %res = shufflevector <2 x double> %vec1, <2 x double> %vec2, <2 x i32> <i32 1, i32 3>
@@ -2234,7 +2238,7 @@ define <2 x double> @test_2xdouble_masked_unpack_high_mem_mask0(<2 x double> %ve
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqpd %xmm3, %xmm2, %k1
-; CHECK-NEXT:    vunpckhpd {{.*#+}} xmm1 {%k1} = xmm0[1],mem[1]
+; CHECK-NEXT:    vunpckhpd 8(%rdi){1to2}, %xmm0, %xmm1 {%k1}
 ; CHECK-NEXT:    vmovapd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %vec2 = load <2 x double>, ptr %vec2p
@@ -2249,7 +2253,7 @@ define <2 x double> @test_2xdouble_zero_masked_unpack_high_mem_mask0(<2 x double
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqpd %xmm2, %xmm1, %k1
-; CHECK-NEXT:    vunpckhpd {{.*#+}} xmm0 {%k1} {z} = xmm0[1],mem[1]
+; CHECK-NEXT:    vunpckhpd 8(%rdi){1to2}, %xmm0, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec2 = load <2 x double>, ptr %vec2p
   %shuf = shufflevector <2 x double> %vec1, <2 x double> %vec2, <2 x i32> <i32 1, i32 3>
@@ -2263,7 +2267,7 @@ define <2 x double> @test_2xdouble_masked_unpack_high_mem_mask1(<2 x double> %ve
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorpd %xmm3, %xmm3, %xmm3
 ; CHECK-NEXT:    vcmpeqpd %xmm3, %xmm2, %k1
-; CHECK-NEXT:    vunpckhpd {{.*#+}} xmm1 {%k1} = xmm0[1],mem[1]
+; CHECK-NEXT:    vunpckhpd 8(%rdi){1to2}, %xmm0, %xmm1 {%k1}
 ; CHECK-NEXT:    vmovapd %xmm1, %xmm0
 ; CHECK-NEXT:    retq
   %vec2 = load <2 x double>, ptr %vec2p
@@ -2278,7 +2282,7 @@ define <2 x double> @test_2xdouble_zero_masked_unpack_high_mem_mask1(<2 x double
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vxorpd %xmm2, %xmm2, %xmm2
 ; CHECK-NEXT:    vcmpeqpd %xmm2, %xmm1, %k1
-; CHECK-NEXT:    vunpckhpd {{.*#+}} xmm0 {%k1} {z} = xmm0[1],mem[1]
+; CHECK-NEXT:    vunpckhpd 8(%rdi){1to2}, %xmm0, %xmm0 {%k1} {z}
 ; CHECK-NEXT:    retq
   %vec2 = load <2 x double>, ptr %vec2p
   %shuf = shufflevector <2 x double> %vec1, <2 x double> %vec2, <2 x i32> <i32 1, i32 3>

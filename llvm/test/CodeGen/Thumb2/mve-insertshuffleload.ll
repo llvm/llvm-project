@@ -128,9 +128,11 @@ define <8 x i16> @inserti8_last_zext(ptr %p) {
 define <8 x i32> @inserti32_first(ptr %p) {
 ; CHECKLE-LABEL: inserti32_first:
 ; CHECKLE:       @ %bb.0:
+; CHECKLE-NEXT:    ldr r1, [r0, #16]
 ; CHECKLE-NEXT:    vldrw.u32 q2, [r0, #20]
-; CHECKLE-NEXT:    vldr s4, [r0, #16]
 ; CHECKLE-NEXT:    vldrw.u32 q0, [r0]
+; CHECKLE-NEXT:    vmov.32 q1[3], r1
+; CHECKLE-NEXT:    vmov.f32 s4, s7
 ; CHECKLE-NEXT:    vmov.f32 s5, s8
 ; CHECKLE-NEXT:    vmov.f32 s6, s9
 ; CHECKLE-NEXT:    vmov.f32 s7, s10
@@ -138,14 +140,16 @@ define <8 x i32> @inserti32_first(ptr %p) {
 ;
 ; CHECKBE-LABEL: inserti32_first:
 ; CHECKBE:       @ %bb.0:
-; CHECKBE-NEXT:    vldrw.u32 q3, [r0, #20]
 ; CHECKBE-NEXT:    vldrb.u8 q1, [r0]
-; CHECKBE-NEXT:    vldr s8, [r0, #16]
-; CHECKBE-NEXT:    vmov.f32 s9, s12
+; CHECKBE-NEXT:    ldr r1, [r0, #16]
+; CHECKBE-NEXT:    vldrw.u32 q2, [r0, #20]
 ; CHECKBE-NEXT:    vrev64.8 q0, q1
-; CHECKBE-NEXT:    vmov.f32 s10, s13
-; CHECKBE-NEXT:    vmov.f32 s11, s14
-; CHECKBE-NEXT:    vrev64.32 q1, q2
+; CHECKBE-NEXT:    vmov.32 q1[3], r1
+; CHECKBE-NEXT:    vmov.f32 s12, s7
+; CHECKBE-NEXT:    vmov.f32 s13, s8
+; CHECKBE-NEXT:    vmov.f32 s14, s9
+; CHECKBE-NEXT:    vmov.f32 s15, s10
+; CHECKBE-NEXT:    vrev64.32 q1, q3
 ; CHECKBE-NEXT:    bx lr
   %q = getelementptr inbounds i8, ptr %p, i32 4
   %l1 = load <8 x i32>, ptr %q
@@ -158,24 +162,28 @@ define <8 x i32> @inserti32_first(ptr %p) {
 define <8 x i32> @inserti32_last(ptr %p) {
 ; CHECKLE-LABEL: inserti32_last:
 ; CHECKLE:       @ %bb.0:
-; CHECKLE-NEXT:    vldrw.u32 q2, [r0]
-; CHECKLE-NEXT:    vldr s3, [r0, #16]
+; CHECKLE-NEXT:    ldr r1, [r0, #16]
+; CHECKLE-NEXT:    vldrw.u32 q0, [r0]
 ; CHECKLE-NEXT:    vldrw.u32 q1, [r0, #20]
-; CHECKLE-NEXT:    vmov.f32 s0, s9
-; CHECKLE-NEXT:    vmov.f32 s1, s10
-; CHECKLE-NEXT:    vmov.f32 s2, s11
+; CHECKLE-NEXT:    vmov.32 q2[0], r1
+; CHECKLE-NEXT:    vmov.f32 s0, s1
+; CHECKLE-NEXT:    vmov.f32 s1, s2
+; CHECKLE-NEXT:    vmov.f32 s2, s3
+; CHECKLE-NEXT:    vmov.f32 s3, s8
 ; CHECKLE-NEXT:    bx lr
 ;
 ; CHECKBE-LABEL: inserti32_last:
 ; CHECKBE:       @ %bb.0:
-; CHECKBE-NEXT:    vldrw.u32 q3, [r0]
-; CHECKBE-NEXT:    vldrb.u8 q0, [r0, #20]
-; CHECKBE-NEXT:    vldr s11, [r0, #16]
-; CHECKBE-NEXT:    vmov.f32 s8, s13
-; CHECKBE-NEXT:    vrev64.8 q1, q0
-; CHECKBE-NEXT:    vmov.f32 s9, s14
-; CHECKBE-NEXT:    vmov.f32 s10, s15
-; CHECKBE-NEXT:    vrev64.32 q0, q2
+; CHECKBE-NEXT:    ldr r1, [r0, #16]
+; CHECKBE-NEXT:    vldrw.u32 q0, [r0]
+; CHECKBE-NEXT:    vldrb.u8 q2, [r0, #20]
+; CHECKBE-NEXT:    vmov.32 q1[0], r1
+; CHECKBE-NEXT:    vmov.f32 s12, s1
+; CHECKBE-NEXT:    vmov.f32 s15, s4
+; CHECKBE-NEXT:    vrev64.8 q1, q2
+; CHECKBE-NEXT:    vmov.f32 s13, s2
+; CHECKBE-NEXT:    vmov.f32 s14, s3
+; CHECKBE-NEXT:    vrev64.32 q0, q3
 ; CHECKBE-NEXT:    bx lr
   %q = getelementptr inbounds i8, ptr %p, i32 32
   %l1 = load <8 x i32>, ptr %p

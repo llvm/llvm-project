@@ -39,20 +39,22 @@ define <8 x i16> @t1(ptr %A, ptr %B) nounwind {
 ; X86:       # %bb.0:
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %eax
 ; X86-NEXT:    movl {{[0-9]+}}(%esp), %ecx
+; X86-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X86-NEXT:    movaps {{.*#+}} xmm0 = [0,65535,65535,65535,65535,65535,65535,65535]
-; X86-NEXT:    movaps %xmm0, %xmm1
-; X86-NEXT:    andnps (%ecx), %xmm1
-; X86-NEXT:    andps (%eax), %xmm0
-; X86-NEXT:    orps %xmm1, %xmm0
+; X86-NEXT:    movaps (%eax), %xmm2
+; X86-NEXT:    andps %xmm0, %xmm2
+; X86-NEXT:    andnps %xmm1, %xmm0
+; X86-NEXT:    orps %xmm2, %xmm0
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t1:
 ; X64:       # %bb.0:
+; X64-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; X64-NEXT:    movaps {{.*#+}} xmm0 = [0,65535,65535,65535,65535,65535,65535,65535]
-; X64-NEXT:    movaps %xmm0, %xmm1
-; X64-NEXT:    andnps (%rsi), %xmm1
-; X64-NEXT:    andps (%rdi), %xmm0
-; X64-NEXT:    orps %xmm1, %xmm0
+; X64-NEXT:    movaps (%rdi), %xmm2
+; X64-NEXT:    andps %xmm0, %xmm2
+; X64-NEXT:    andnps %xmm1, %xmm0
+; X64-NEXT:    orps %xmm2, %xmm0
 ; X64-NEXT:    retq
 	%tmp1 = load <8 x i16>, ptr %A
 	%tmp2 = load <8 x i16>, ptr %B
@@ -395,14 +397,14 @@ entry:
 define <4 x i32> @t17() nounwind {
 ; X86-LABEL: t17:
 ; X86:       # %bb.0: # %entry
-; X86-NEXT:    pshufd {{.*#+}} xmm0 = mem[0,1,0,1]
-; X86-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0
+; X86-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X86-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,0,1]
 ; X86-NEXT:    retl
 ;
 ; X64-LABEL: t17:
 ; X64:       # %bb.0: # %entry
-; X64-NEXT:    pshufd {{.*#+}} xmm0 = mem[0,1,0,1]
-; X64-NEXT:    pand {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; X64-NEXT:    movd {{.*#+}} xmm0 = mem[0],zero,zero,zero
+; X64-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[1,1,0,1]
 ; X64-NEXT:    retq
 entry:
   %tmp1 = load <4 x float>, ptr undef, align 16

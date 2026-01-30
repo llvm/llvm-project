@@ -99,15 +99,14 @@ entry:
 define <2 x i64> @test_none_v16i8(i8 %arg1, ptr nocapture noundef readonly %b) {
 ; CHECK-LE-P8-LABEL: test_none_v16i8:
 ; CHECK-LE-P8:       # %bb.0: # %entry
-; CHECK-LE-P8-NEXT:    lxvd2x vs0, 0, r4
-; CHECK-LE-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-LE-P8-NEXT:    mtfprd f0, r3
+; CHECK-LE-P8-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-LE-P8-NEXT:    xxpermdi v2, vs0, v2, 1
 ; CHECK-LE-P8-NEXT:    blr
 ;
 ; CHECK-LE-P9-LABEL: test_none_v16i8:
 ; CHECK-LE-P9:       # %bb.0: # %entry
-; CHECK-LE-P9-NEXT:    lxv v2, 0(r4)
+; CHECK-LE-P9-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-LE-P9-NEXT:    mtfprd f0, r3
 ; CHECK-LE-P9-NEXT:    xxpermdi v2, vs0, v2, 1
 ; CHECK-LE-P9-NEXT:    blr
@@ -115,13 +114,13 @@ define <2 x i64> @test_none_v16i8(i8 %arg1, ptr nocapture noundef readonly %b) {
 ; CHECK-BE-P8-LABEL: test_none_v16i8:
 ; CHECK-BE-P8:       # %bb.0: # %entry
 ; CHECK-BE-P8-NEXT:    mtfprwz f0, r3
-; CHECK-BE-P8-NEXT:    lxvd2x v2, 0, r4
+; CHECK-BE-P8-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-BE-P8-NEXT:    xxpermdi v2, v2, vs0, 1
 ; CHECK-BE-P8-NEXT:    blr
 ;
 ; CHECK-BE-P9-LABEL: test_none_v16i8:
 ; CHECK-BE-P9:       # %bb.0: # %entry
-; CHECK-BE-P9-NEXT:    lxv v2, 0(r4)
+; CHECK-BE-P9-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-BE-P9-NEXT:    mtfprwz f0, r3
 ; CHECK-BE-P9-NEXT:    xxpermdi v2, v2, vs0, 1
 ; CHECK-BE-P9-NEXT:    blr
@@ -129,13 +128,13 @@ define <2 x i64> @test_none_v16i8(i8 %arg1, ptr nocapture noundef readonly %b) {
 ; CHECK-AIX-64-P8-LABEL: test_none_v16i8:
 ; CHECK-AIX-64-P8:       # %bb.0: # %entry
 ; CHECK-AIX-64-P8-NEXT:    mtfprwz f0, r3
-; CHECK-AIX-64-P8-NEXT:    lxvd2x v2, 0, r4
+; CHECK-AIX-64-P8-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-AIX-64-P8-NEXT:    xxpermdi v2, v2, vs0, 1
 ; CHECK-AIX-64-P8-NEXT:    blr
 ;
 ; CHECK-AIX-64-P9-LABEL: test_none_v16i8:
 ; CHECK-AIX-64-P9:       # %bb.0: # %entry
-; CHECK-AIX-64-P9-NEXT:    lxv v2, 0(r4)
+; CHECK-AIX-64-P9-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-AIX-64-P9-NEXT:    mtfprwz f0, r3
 ; CHECK-AIX-64-P9-NEXT:    xxpermdi v2, v2, vs0, 1
 ; CHECK-AIX-64-P9-NEXT:    blr
@@ -144,7 +143,8 @@ define <2 x i64> @test_none_v16i8(i8 %arg1, ptr nocapture noundef readonly %b) {
 ; CHECK-AIX-32-P8:       # %bb.0: # %entry
 ; CHECK-AIX-32-P8-NEXT:    stb r3, -16(r1)
 ; CHECK-AIX-32-P8-NEXT:    addi r3, r1, -16
-; CHECK-AIX-32-P8-NEXT:    lxvd2x v2, 0, r4
+; CHECK-AIX-32-P8-NEXT:    lfd f0, 0(r4)
+; CHECK-AIX-32-P8-NEXT:    xxpermdi v2, vs0, vs0, 1
 ; CHECK-AIX-32-P8-NEXT:    lxvw4x vs0, 0, r3
 ; CHECK-AIX-32-P8-NEXT:    xxmrghd v2, v2, vs0
 ; CHECK-AIX-32-P8-NEXT:    blr
@@ -153,7 +153,8 @@ define <2 x i64> @test_none_v16i8(i8 %arg1, ptr nocapture noundef readonly %b) {
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
 ; CHECK-AIX-32-P9-NEXT:    stb r3, -16(r1)
 ; CHECK-AIX-32-P9-NEXT:    lxv vs0, -16(r1)
-; CHECK-AIX-32-P9-NEXT:    lxv v2, 0(r4)
+; CHECK-AIX-32-P9-NEXT:    lfd f1, 0(r4)
+; CHECK-AIX-32-P9-NEXT:    xxpermdi v2, vs1, vs0, 1
 ; CHECK-AIX-32-P9-NEXT:    xxmrghd v2, v2, vs0
 ; CHECK-AIX-32-P9-NEXT:    blr
 entry:
@@ -167,15 +168,14 @@ entry:
 define <2 x i64> @test_v16i8_none(i8 %arg1, ptr nocapture noundef readonly %b) {
 ; CHECK-LE-P8-LABEL: test_v16i8_none:
 ; CHECK-LE-P8:       # %bb.0: # %entry
-; CHECK-LE-P8-NEXT:    lxvd2x vs0, 0, r4
-; CHECK-LE-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-LE-P8-NEXT:    mtfprd f0, r3
+; CHECK-LE-P8-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-LE-P8-NEXT:    xxpermdi v2, v2, vs0, 2
 ; CHECK-LE-P8-NEXT:    blr
 ;
 ; CHECK-LE-P9-LABEL: test_v16i8_none:
 ; CHECK-LE-P9:       # %bb.0: # %entry
-; CHECK-LE-P9-NEXT:    lxv v2, 0(r4)
+; CHECK-LE-P9-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-LE-P9-NEXT:    mtfprd f0, r3
 ; CHECK-LE-P9-NEXT:    xxpermdi v2, v2, vs0, 2
 ; CHECK-LE-P9-NEXT:    blr
@@ -183,13 +183,13 @@ define <2 x i64> @test_v16i8_none(i8 %arg1, ptr nocapture noundef readonly %b) {
 ; CHECK-BE-P8-LABEL: test_v16i8_none:
 ; CHECK-BE-P8:       # %bb.0: # %entry
 ; CHECK-BE-P8-NEXT:    mtfprwz f0, r3
-; CHECK-BE-P8-NEXT:    lxvd2x v2, 0, r4
+; CHECK-BE-P8-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-BE-P8-NEXT:    xxpermdi v2, vs0, v2, 2
 ; CHECK-BE-P8-NEXT:    blr
 ;
 ; CHECK-BE-P9-LABEL: test_v16i8_none:
 ; CHECK-BE-P9:       # %bb.0: # %entry
-; CHECK-BE-P9-NEXT:    lxv v2, 0(r4)
+; CHECK-BE-P9-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-BE-P9-NEXT:    mtfprwz f0, r3
 ; CHECK-BE-P9-NEXT:    xxpermdi v2, vs0, v2, 2
 ; CHECK-BE-P9-NEXT:    blr
@@ -197,13 +197,13 @@ define <2 x i64> @test_v16i8_none(i8 %arg1, ptr nocapture noundef readonly %b) {
 ; CHECK-AIX-64-P8-LABEL: test_v16i8_none:
 ; CHECK-AIX-64-P8:       # %bb.0: # %entry
 ; CHECK-AIX-64-P8-NEXT:    mtfprwz f0, r3
-; CHECK-AIX-64-P8-NEXT:    lxvd2x v2, 0, r4
+; CHECK-AIX-64-P8-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-AIX-64-P8-NEXT:    xxpermdi v2, vs0, v2, 2
 ; CHECK-AIX-64-P8-NEXT:    blr
 ;
 ; CHECK-AIX-64-P9-LABEL: test_v16i8_none:
 ; CHECK-AIX-64-P9:       # %bb.0: # %entry
-; CHECK-AIX-64-P9-NEXT:    lxv v2, 0(r4)
+; CHECK-AIX-64-P9-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-AIX-64-P9-NEXT:    mtfprwz f0, r3
 ; CHECK-AIX-64-P9-NEXT:    xxpermdi v2, vs0, v2, 2
 ; CHECK-AIX-64-P9-NEXT:    blr
@@ -212,7 +212,8 @@ define <2 x i64> @test_v16i8_none(i8 %arg1, ptr nocapture noundef readonly %b) {
 ; CHECK-AIX-32-P8:       # %bb.0: # %entry
 ; CHECK-AIX-32-P8-NEXT:    stb r3, -16(r1)
 ; CHECK-AIX-32-P8-NEXT:    addi r3, r1, -16
-; CHECK-AIX-32-P8-NEXT:    lxvd2x v2, 0, r4
+; CHECK-AIX-32-P8-NEXT:    lfd f0, 0(r4)
+; CHECK-AIX-32-P8-NEXT:    xxpermdi v2, vs0, vs0, 1
 ; CHECK-AIX-32-P8-NEXT:    lxvw4x vs0, 0, r3
 ; CHECK-AIX-32-P8-NEXT:    xxmrghd v2, vs0, v2
 ; CHECK-AIX-32-P8-NEXT:    blr
@@ -221,7 +222,8 @@ define <2 x i64> @test_v16i8_none(i8 %arg1, ptr nocapture noundef readonly %b) {
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
 ; CHECK-AIX-32-P9-NEXT:    stb r3, -16(r1)
 ; CHECK-AIX-32-P9-NEXT:    lxv vs0, -16(r1)
-; CHECK-AIX-32-P9-NEXT:    lxv v2, 0(r4)
+; CHECK-AIX-32-P9-NEXT:    lfd f1, 0(r4)
+; CHECK-AIX-32-P9-NEXT:    xxpermdi v2, vs1, vs0, 1
 ; CHECK-AIX-32-P9-NEXT:    xxmrghd v2, vs0, v2
 ; CHECK-AIX-32-P9-NEXT:    blr
 entry:
@@ -377,15 +379,14 @@ entry:
 define <2 x i64> @test_v8i16_none(i16 %arg1, ptr nocapture noundef readonly %b) {
 ; CHECK-LE-P8-LABEL: test_v8i16_none:
 ; CHECK-LE-P8:       # %bb.0: # %entry
-; CHECK-LE-P8-NEXT:    lxvd2x vs0, 0, r4
-; CHECK-LE-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-LE-P8-NEXT:    mtfprd f0, r3
+; CHECK-LE-P8-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-LE-P8-NEXT:    xxpermdi v2, v2, vs0, 2
 ; CHECK-LE-P8-NEXT:    blr
 ;
 ; CHECK-LE-P9-LABEL: test_v8i16_none:
 ; CHECK-LE-P9:       # %bb.0: # %entry
-; CHECK-LE-P9-NEXT:    lxv v2, 0(r4)
+; CHECK-LE-P9-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-LE-P9-NEXT:    mtfprd f0, r3
 ; CHECK-LE-P9-NEXT:    xxpermdi v2, v2, vs0, 2
 ; CHECK-LE-P9-NEXT:    blr
@@ -393,13 +394,13 @@ define <2 x i64> @test_v8i16_none(i16 %arg1, ptr nocapture noundef readonly %b) 
 ; CHECK-BE-P8-LABEL: test_v8i16_none:
 ; CHECK-BE-P8:       # %bb.0: # %entry
 ; CHECK-BE-P8-NEXT:    mtfprwz f0, r3
-; CHECK-BE-P8-NEXT:    lxvd2x v2, 0, r4
+; CHECK-BE-P8-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-BE-P8-NEXT:    xxpermdi v2, vs0, v2, 2
 ; CHECK-BE-P8-NEXT:    blr
 ;
 ; CHECK-BE-P9-LABEL: test_v8i16_none:
 ; CHECK-BE-P9:       # %bb.0: # %entry
-; CHECK-BE-P9-NEXT:    lxv v2, 0(r4)
+; CHECK-BE-P9-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-BE-P9-NEXT:    mtfprwz f0, r3
 ; CHECK-BE-P9-NEXT:    xxpermdi v2, vs0, v2, 2
 ; CHECK-BE-P9-NEXT:    blr
@@ -407,13 +408,13 @@ define <2 x i64> @test_v8i16_none(i16 %arg1, ptr nocapture noundef readonly %b) 
 ; CHECK-AIX-64-P8-LABEL: test_v8i16_none:
 ; CHECK-AIX-64-P8:       # %bb.0: # %entry
 ; CHECK-AIX-64-P8-NEXT:    mtfprwz f0, r3
-; CHECK-AIX-64-P8-NEXT:    lxvd2x v2, 0, r4
+; CHECK-AIX-64-P8-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-AIX-64-P8-NEXT:    xxpermdi v2, vs0, v2, 2
 ; CHECK-AIX-64-P8-NEXT:    blr
 ;
 ; CHECK-AIX-64-P9-LABEL: test_v8i16_none:
 ; CHECK-AIX-64-P9:       # %bb.0: # %entry
-; CHECK-AIX-64-P9-NEXT:    lxv v2, 0(r4)
+; CHECK-AIX-64-P9-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-AIX-64-P9-NEXT:    mtfprwz f0, r3
 ; CHECK-AIX-64-P9-NEXT:    xxpermdi v2, vs0, v2, 2
 ; CHECK-AIX-64-P9-NEXT:    blr
@@ -422,7 +423,8 @@ define <2 x i64> @test_v8i16_none(i16 %arg1, ptr nocapture noundef readonly %b) 
 ; CHECK-AIX-32-P8:       # %bb.0: # %entry
 ; CHECK-AIX-32-P8-NEXT:    sth r3, -16(r1)
 ; CHECK-AIX-32-P8-NEXT:    addi r3, r1, -16
-; CHECK-AIX-32-P8-NEXT:    lxvd2x v2, 0, r4
+; CHECK-AIX-32-P8-NEXT:    lfd f0, 0(r4)
+; CHECK-AIX-32-P8-NEXT:    xxpermdi v2, vs0, vs0, 1
 ; CHECK-AIX-32-P8-NEXT:    lxvw4x vs0, 0, r3
 ; CHECK-AIX-32-P8-NEXT:    xxmrghd v2, vs0, v2
 ; CHECK-AIX-32-P8-NEXT:    blr
@@ -431,7 +433,8 @@ define <2 x i64> @test_v8i16_none(i16 %arg1, ptr nocapture noundef readonly %b) 
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
 ; CHECK-AIX-32-P9-NEXT:    sth r3, -16(r1)
 ; CHECK-AIX-32-P9-NEXT:    lxv vs0, -16(r1)
-; CHECK-AIX-32-P9-NEXT:    lxv v2, 0(r4)
+; CHECK-AIX-32-P9-NEXT:    lfd f1, 0(r4)
+; CHECK-AIX-32-P9-NEXT:    xxpermdi v2, vs1, vs0, 1
 ; CHECK-AIX-32-P9-NEXT:    xxmrghd v2, vs0, v2
 ; CHECK-AIX-32-P9-NEXT:    blr
 entry:
@@ -445,15 +448,14 @@ entry:
 define <2 x i64> @test_none_v8i16(i16 %arg1, ptr nocapture noundef readonly %b) {
 ; CHECK-LE-P8-LABEL: test_none_v8i16:
 ; CHECK-LE-P8:       # %bb.0: # %entry
-; CHECK-LE-P8-NEXT:    lxvd2x vs0, 0, r4
-; CHECK-LE-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-LE-P8-NEXT:    mtfprd f0, r3
+; CHECK-LE-P8-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-LE-P8-NEXT:    xxpermdi v2, vs0, v2, 1
 ; CHECK-LE-P8-NEXT:    blr
 ;
 ; CHECK-LE-P9-LABEL: test_none_v8i16:
 ; CHECK-LE-P9:       # %bb.0: # %entry
-; CHECK-LE-P9-NEXT:    lxv v2, 0(r4)
+; CHECK-LE-P9-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-LE-P9-NEXT:    mtfprd f0, r3
 ; CHECK-LE-P9-NEXT:    xxpermdi v2, vs0, v2, 1
 ; CHECK-LE-P9-NEXT:    blr
@@ -461,13 +463,13 @@ define <2 x i64> @test_none_v8i16(i16 %arg1, ptr nocapture noundef readonly %b) 
 ; CHECK-BE-P8-LABEL: test_none_v8i16:
 ; CHECK-BE-P8:       # %bb.0: # %entry
 ; CHECK-BE-P8-NEXT:    mtfprwz f0, r3
-; CHECK-BE-P8-NEXT:    lxvd2x v2, 0, r4
+; CHECK-BE-P8-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-BE-P8-NEXT:    xxpermdi v2, v2, vs0, 1
 ; CHECK-BE-P8-NEXT:    blr
 ;
 ; CHECK-BE-P9-LABEL: test_none_v8i16:
 ; CHECK-BE-P9:       # %bb.0: # %entry
-; CHECK-BE-P9-NEXT:    lxv v2, 0(r4)
+; CHECK-BE-P9-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-BE-P9-NEXT:    mtfprwz f0, r3
 ; CHECK-BE-P9-NEXT:    xxpermdi v2, v2, vs0, 1
 ; CHECK-BE-P9-NEXT:    blr
@@ -475,13 +477,13 @@ define <2 x i64> @test_none_v8i16(i16 %arg1, ptr nocapture noundef readonly %b) 
 ; CHECK-AIX-64-P8-LABEL: test_none_v8i16:
 ; CHECK-AIX-64-P8:       # %bb.0: # %entry
 ; CHECK-AIX-64-P8-NEXT:    mtfprwz f0, r3
-; CHECK-AIX-64-P8-NEXT:    lxvd2x v2, 0, r4
+; CHECK-AIX-64-P8-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-AIX-64-P8-NEXT:    xxpermdi v2, v2, vs0, 1
 ; CHECK-AIX-64-P8-NEXT:    blr
 ;
 ; CHECK-AIX-64-P9-LABEL: test_none_v8i16:
 ; CHECK-AIX-64-P9:       # %bb.0: # %entry
-; CHECK-AIX-64-P9-NEXT:    lxv v2, 0(r4)
+; CHECK-AIX-64-P9-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-AIX-64-P9-NEXT:    mtfprwz f0, r3
 ; CHECK-AIX-64-P9-NEXT:    xxpermdi v2, v2, vs0, 1
 ; CHECK-AIX-64-P9-NEXT:    blr
@@ -490,7 +492,8 @@ define <2 x i64> @test_none_v8i16(i16 %arg1, ptr nocapture noundef readonly %b) 
 ; CHECK-AIX-32-P8:       # %bb.0: # %entry
 ; CHECK-AIX-32-P8-NEXT:    sth r3, -16(r1)
 ; CHECK-AIX-32-P8-NEXT:    addi r3, r1, -16
-; CHECK-AIX-32-P8-NEXT:    lxvd2x v2, 0, r4
+; CHECK-AIX-32-P8-NEXT:    lfd f0, 0(r4)
+; CHECK-AIX-32-P8-NEXT:    xxpermdi v2, vs0, vs0, 1
 ; CHECK-AIX-32-P8-NEXT:    lxvw4x vs0, 0, r3
 ; CHECK-AIX-32-P8-NEXT:    xxmrghd v2, v2, vs0
 ; CHECK-AIX-32-P8-NEXT:    blr
@@ -499,7 +502,8 @@ define <2 x i64> @test_none_v8i16(i16 %arg1, ptr nocapture noundef readonly %b) 
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
 ; CHECK-AIX-32-P9-NEXT:    sth r3, -16(r1)
 ; CHECK-AIX-32-P9-NEXT:    lxv vs0, -16(r1)
-; CHECK-AIX-32-P9-NEXT:    lxv v2, 0(r4)
+; CHECK-AIX-32-P9-NEXT:    lfd f1, 0(r4)
+; CHECK-AIX-32-P9-NEXT:    xxpermdi v2, vs1, vs0, 1
 ; CHECK-AIX-32-P9-NEXT:    xxmrghd v2, v2, vs0
 ; CHECK-AIX-32-P9-NEXT:    blr
 entry:
@@ -655,15 +659,14 @@ entry:
 define <2 x i64> @test_none_v4i32(i32 %arg1, ptr nocapture noundef readonly %b) {
 ; CHECK-LE-P8-LABEL: test_none_v4i32:
 ; CHECK-LE-P8:       # %bb.0: # %entry
-; CHECK-LE-P8-NEXT:    lxvd2x vs0, 0, r4
-; CHECK-LE-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-LE-P8-NEXT:    mtfprwz f0, r3
+; CHECK-LE-P8-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-LE-P8-NEXT:    xxpermdi v2, vs0, v2, 1
 ; CHECK-LE-P8-NEXT:    blr
 ;
 ; CHECK-LE-P9-LABEL: test_none_v4i32:
 ; CHECK-LE-P9:       # %bb.0: # %entry
-; CHECK-LE-P9-NEXT:    lxv v2, 0(r4)
+; CHECK-LE-P9-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-LE-P9-NEXT:    mtfprwz f0, r3
 ; CHECK-LE-P9-NEXT:    xxpermdi v2, vs0, v2, 1
 ; CHECK-LE-P9-NEXT:    blr
@@ -671,13 +674,13 @@ define <2 x i64> @test_none_v4i32(i32 %arg1, ptr nocapture noundef readonly %b) 
 ; CHECK-BE-P8-LABEL: test_none_v4i32:
 ; CHECK-BE-P8:       # %bb.0: # %entry
 ; CHECK-BE-P8-NEXT:    mtfprwz f0, r3
-; CHECK-BE-P8-NEXT:    lxvd2x v2, 0, r4
+; CHECK-BE-P8-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-BE-P8-NEXT:    xxpermdi v2, v2, vs0, 1
 ; CHECK-BE-P8-NEXT:    blr
 ;
 ; CHECK-BE-P9-LABEL: test_none_v4i32:
 ; CHECK-BE-P9:       # %bb.0: # %entry
-; CHECK-BE-P9-NEXT:    lxv v2, 0(r4)
+; CHECK-BE-P9-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-BE-P9-NEXT:    mtfprwz f0, r3
 ; CHECK-BE-P9-NEXT:    xxpermdi v2, v2, vs0, 1
 ; CHECK-BE-P9-NEXT:    blr
@@ -685,13 +688,13 @@ define <2 x i64> @test_none_v4i32(i32 %arg1, ptr nocapture noundef readonly %b) 
 ; CHECK-AIX-64-P8-LABEL: test_none_v4i32:
 ; CHECK-AIX-64-P8:       # %bb.0: # %entry
 ; CHECK-AIX-64-P8-NEXT:    mtfprwz f0, r3
-; CHECK-AIX-64-P8-NEXT:    lxvd2x v2, 0, r4
+; CHECK-AIX-64-P8-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-AIX-64-P8-NEXT:    xxpermdi v2, v2, vs0, 1
 ; CHECK-AIX-64-P8-NEXT:    blr
 ;
 ; CHECK-AIX-64-P9-LABEL: test_none_v4i32:
 ; CHECK-AIX-64-P9:       # %bb.0: # %entry
-; CHECK-AIX-64-P9-NEXT:    lxv v2, 0(r4)
+; CHECK-AIX-64-P9-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-AIX-64-P9-NEXT:    mtfprwz f0, r3
 ; CHECK-AIX-64-P9-NEXT:    xxpermdi v2, v2, vs0, 1
 ; CHECK-AIX-64-P9-NEXT:    blr
@@ -700,7 +703,8 @@ define <2 x i64> @test_none_v4i32(i32 %arg1, ptr nocapture noundef readonly %b) 
 ; CHECK-AIX-32-P8:       # %bb.0: # %entry
 ; CHECK-AIX-32-P8-NEXT:    stw r3, -16(r1)
 ; CHECK-AIX-32-P8-NEXT:    addi r3, r1, -16
-; CHECK-AIX-32-P8-NEXT:    lxvd2x v2, 0, r4
+; CHECK-AIX-32-P8-NEXT:    lfd f0, 0(r4)
+; CHECK-AIX-32-P8-NEXT:    xxpermdi v2, vs0, vs0, 1
 ; CHECK-AIX-32-P8-NEXT:    lxvw4x vs0, 0, r3
 ; CHECK-AIX-32-P8-NEXT:    xxmrghd v2, v2, vs0
 ; CHECK-AIX-32-P8-NEXT:    blr
@@ -709,7 +713,8 @@ define <2 x i64> @test_none_v4i32(i32 %arg1, ptr nocapture noundef readonly %b) 
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
 ; CHECK-AIX-32-P9-NEXT:    stw r3, -16(r1)
 ; CHECK-AIX-32-P9-NEXT:    lxv vs0, -16(r1)
-; CHECK-AIX-32-P9-NEXT:    lxv v2, 0(r4)
+; CHECK-AIX-32-P9-NEXT:    lfd f1, 0(r4)
+; CHECK-AIX-32-P9-NEXT:    xxpermdi v2, vs1, vs0, 1
 ; CHECK-AIX-32-P9-NEXT:    xxmrghd v2, v2, vs0
 ; CHECK-AIX-32-P9-NEXT:    blr
 entry:
@@ -723,15 +728,14 @@ entry:
 define <2 x i64> @test_v4i32_none(i32 %arg1, ptr nocapture noundef readonly %b) {
 ; CHECK-LE-P8-LABEL: test_v4i32_none:
 ; CHECK-LE-P8:       # %bb.0: # %entry
-; CHECK-LE-P8-NEXT:    lxvd2x vs0, 0, r4
-; CHECK-LE-P8-NEXT:    xxswapd v2, vs0
 ; CHECK-LE-P8-NEXT:    mtfprwz f0, r3
+; CHECK-LE-P8-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-LE-P8-NEXT:    xxpermdi v2, v2, vs0, 2
 ; CHECK-LE-P8-NEXT:    blr
 ;
 ; CHECK-LE-P9-LABEL: test_v4i32_none:
 ; CHECK-LE-P9:       # %bb.0: # %entry
-; CHECK-LE-P9-NEXT:    lxv v2, 0(r4)
+; CHECK-LE-P9-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-LE-P9-NEXT:    mtfprwz f0, r3
 ; CHECK-LE-P9-NEXT:    xxpermdi v2, v2, vs0, 2
 ; CHECK-LE-P9-NEXT:    blr
@@ -739,13 +743,13 @@ define <2 x i64> @test_v4i32_none(i32 %arg1, ptr nocapture noundef readonly %b) 
 ; CHECK-BE-P8-LABEL: test_v4i32_none:
 ; CHECK-BE-P8:       # %bb.0: # %entry
 ; CHECK-BE-P8-NEXT:    mtfprwz f0, r3
-; CHECK-BE-P8-NEXT:    lxvd2x v2, 0, r4
+; CHECK-BE-P8-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-BE-P8-NEXT:    xxpermdi v2, vs0, v2, 2
 ; CHECK-BE-P8-NEXT:    blr
 ;
 ; CHECK-BE-P9-LABEL: test_v4i32_none:
 ; CHECK-BE-P9:       # %bb.0: # %entry
-; CHECK-BE-P9-NEXT:    lxv v2, 0(r4)
+; CHECK-BE-P9-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-BE-P9-NEXT:    mtfprwz f0, r3
 ; CHECK-BE-P9-NEXT:    xxpermdi v2, vs0, v2, 2
 ; CHECK-BE-P9-NEXT:    blr
@@ -753,13 +757,13 @@ define <2 x i64> @test_v4i32_none(i32 %arg1, ptr nocapture noundef readonly %b) 
 ; CHECK-AIX-64-P8-LABEL: test_v4i32_none:
 ; CHECK-AIX-64-P8:       # %bb.0: # %entry
 ; CHECK-AIX-64-P8-NEXT:    mtfprwz f0, r3
-; CHECK-AIX-64-P8-NEXT:    lxvd2x v2, 0, r4
+; CHECK-AIX-64-P8-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-AIX-64-P8-NEXT:    xxpermdi v2, vs0, v2, 2
 ; CHECK-AIX-64-P8-NEXT:    blr
 ;
 ; CHECK-AIX-64-P9-LABEL: test_v4i32_none:
 ; CHECK-AIX-64-P9:       # %bb.0: # %entry
-; CHECK-AIX-64-P9-NEXT:    lxv v2, 0(r4)
+; CHECK-AIX-64-P9-NEXT:    lxvdsx v2, 0, r4
 ; CHECK-AIX-64-P9-NEXT:    mtfprwz f0, r3
 ; CHECK-AIX-64-P9-NEXT:    xxpermdi v2, vs0, v2, 2
 ; CHECK-AIX-64-P9-NEXT:    blr
@@ -768,7 +772,8 @@ define <2 x i64> @test_v4i32_none(i32 %arg1, ptr nocapture noundef readonly %b) 
 ; CHECK-AIX-32-P8:       # %bb.0: # %entry
 ; CHECK-AIX-32-P8-NEXT:    stw r3, -16(r1)
 ; CHECK-AIX-32-P8-NEXT:    addi r3, r1, -16
-; CHECK-AIX-32-P8-NEXT:    lxvd2x v2, 0, r4
+; CHECK-AIX-32-P8-NEXT:    lfd f0, 0(r4)
+; CHECK-AIX-32-P8-NEXT:    xxpermdi v2, vs0, vs0, 1
 ; CHECK-AIX-32-P8-NEXT:    lxvw4x vs0, 0, r3
 ; CHECK-AIX-32-P8-NEXT:    xxmrghd v2, vs0, v2
 ; CHECK-AIX-32-P8-NEXT:    blr
@@ -777,7 +782,8 @@ define <2 x i64> @test_v4i32_none(i32 %arg1, ptr nocapture noundef readonly %b) 
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
 ; CHECK-AIX-32-P9-NEXT:    stw r3, -16(r1)
 ; CHECK-AIX-32-P9-NEXT:    lxv vs0, -16(r1)
-; CHECK-AIX-32-P9-NEXT:    lxv v2, 0(r4)
+; CHECK-AIX-32-P9-NEXT:    lfd f1, 0(r4)
+; CHECK-AIX-32-P9-NEXT:    xxpermdi v2, vs1, vs0, 1
 ; CHECK-AIX-32-P9-NEXT:    xxmrghd v2, vs0, v2
 ; CHECK-AIX-32-P9-NEXT:    blr
 entry:
@@ -934,12 +940,12 @@ define <2 x i64> @test_v2i64_v16i8(i8 %arg1, i64 %arg) {
 ;
 ; CHECK-AIX-32-P9-LABEL: test_v2i64_v16i8:
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
-; CHECK-AIX-32-P9-NEXT:    stw r5, -32(r1)
-; CHECK-AIX-32-P9-NEXT:    stw r4, -48(r1)
-; CHECK-AIX-32-P9-NEXT:    lxv vs1, -32(r1)
-; CHECK-AIX-32-P9-NEXT:    lxv vs2, -48(r1)
+; CHECK-AIX-32-P9-NEXT:    mtfprwz f1, r5
+; CHECK-AIX-32-P9-NEXT:    mtfprwz f2, r4
 ; CHECK-AIX-32-P9-NEXT:    stb r3, -16(r1)
 ; CHECK-AIX-32-P9-NEXT:    lxv vs0, -16(r1)
+; CHECK-AIX-32-P9-NEXT:    xxinsertw vs1, vs1, 0
+; CHECK-AIX-32-P9-NEXT:    xxinsertw vs2, vs2, 0
 ; CHECK-AIX-32-P9-NEXT:    xxmrghw vs1, vs2, vs1
 ; CHECK-AIX-32-P9-NEXT:    xxmrghd v2, vs1, vs0
 ; CHECK-AIX-32-P9-NEXT:    blr
@@ -955,43 +961,48 @@ entry:
 define <2 x i64> @test_none_v2i64(ptr nocapture noundef readonly %b, i64 %arg) {
 ; CHECK-LE-P8-LABEL: test_none_v2i64:
 ; CHECK-LE-P8:       # %bb.0: # %entry
-; CHECK-LE-P8-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-LE-P8-NEXT:    xxswapd v2, vs0
+; CHECK-LE-P8-NEXT:    lfd f0, 0(r3)
+; CHECK-LE-P8-NEXT:    xxspltd v2, vs0, 0
 ; CHECK-LE-P8-NEXT:    mtfprd f0, r4
 ; CHECK-LE-P8-NEXT:    xxpermdi v2, vs0, v2, 1
 ; CHECK-LE-P8-NEXT:    blr
 ;
 ; CHECK-LE-P9-LABEL: test_none_v2i64:
 ; CHECK-LE-P9:       # %bb.0: # %entry
-; CHECK-LE-P9-NEXT:    lxv v2, 0(r3)
+; CHECK-LE-P9-NEXT:    lfd f0, 0(r3)
+; CHECK-LE-P9-NEXT:    xxspltd v2, vs0, 0
 ; CHECK-LE-P9-NEXT:    mtfprd f0, r4
 ; CHECK-LE-P9-NEXT:    xxpermdi v2, vs0, v2, 1
 ; CHECK-LE-P9-NEXT:    blr
 ;
 ; CHECK-BE-P8-LABEL: test_none_v2i64:
 ; CHECK-BE-P8:       # %bb.0: # %entry
-; CHECK-BE-P8-NEXT:    lxvd2x v2, 0, r3
+; CHECK-BE-P8-NEXT:    lfd f0, 0(r3)
+; CHECK-BE-P8-NEXT:    xxpermdi v2, vs0, vs0, 1
 ; CHECK-BE-P8-NEXT:    mtfprd f0, r4
 ; CHECK-BE-P8-NEXT:    xxmrghd v2, v2, vs0
 ; CHECK-BE-P8-NEXT:    blr
 ;
 ; CHECK-BE-P9-LABEL: test_none_v2i64:
 ; CHECK-BE-P9:       # %bb.0: # %entry
-; CHECK-BE-P9-NEXT:    lxv v2, 0(r3)
+; CHECK-BE-P9-NEXT:    lfd f0, 0(r3)
+; CHECK-BE-P9-NEXT:    xxpermdi v2, vs0, vs0, 1
 ; CHECK-BE-P9-NEXT:    mtfprd f0, r4
 ; CHECK-BE-P9-NEXT:    xxmrghd v2, v2, vs0
 ; CHECK-BE-P9-NEXT:    blr
 ;
 ; CHECK-AIX-64-P8-LABEL: test_none_v2i64:
 ; CHECK-AIX-64-P8:       # %bb.0: # %entry
-; CHECK-AIX-64-P8-NEXT:    lxvd2x v2, 0, r3
+; CHECK-AIX-64-P8-NEXT:    lfd f0, 0(r3)
+; CHECK-AIX-64-P8-NEXT:    xxpermdi v2, vs0, vs0, 1
 ; CHECK-AIX-64-P8-NEXT:    mtfprd f0, r4
 ; CHECK-AIX-64-P8-NEXT:    xxmrghd v2, v2, vs0
 ; CHECK-AIX-64-P8-NEXT:    blr
 ;
 ; CHECK-AIX-64-P9-LABEL: test_none_v2i64:
 ; CHECK-AIX-64-P9:       # %bb.0: # %entry
-; CHECK-AIX-64-P9-NEXT:    lxv v2, 0(r3)
+; CHECK-AIX-64-P9-NEXT:    lfd f0, 0(r3)
+; CHECK-AIX-64-P9-NEXT:    xxpermdi v2, vs0, vs0, 1
 ; CHECK-AIX-64-P9-NEXT:    mtfprd f0, r4
 ; CHECK-AIX-64-P9-NEXT:    xxmrghd v2, v2, vs0
 ; CHECK-AIX-64-P9-NEXT:    blr
@@ -1031,55 +1042,53 @@ entry:
 define <2 x i64> @test_v2i64_none(ptr nocapture noundef readonly %b, i64 %arg) {
 ; CHECK-LE-P8-LABEL: test_v2i64_none:
 ; CHECK-LE-P8:       # %bb.0: # %entry
-; CHECK-LE-P8-NEXT:    lxvd2x vs0, 0, r3
-; CHECK-LE-P8-NEXT:    xxswapd v2, vs0
+; CHECK-LE-P8-NEXT:    ld r3, 0(r3)
 ; CHECK-LE-P8-NEXT:    mtfprd f0, r4
-; CHECK-LE-P8-NEXT:    xxpermdi v2, v2, vs0, 2
+; CHECK-LE-P8-NEXT:    mtfprd f1, r3
+; CHECK-LE-P8-NEXT:    xxmrghd v2, vs1, vs0
 ; CHECK-LE-P8-NEXT:    blr
 ;
 ; CHECK-LE-P9-LABEL: test_v2i64_none:
 ; CHECK-LE-P9:       # %bb.0: # %entry
-; CHECK-LE-P9-NEXT:    lxv v2, 0(r3)
-; CHECK-LE-P9-NEXT:    mtfprd f0, r4
-; CHECK-LE-P9-NEXT:    xxpermdi v2, v2, vs0, 2
+; CHECK-LE-P9-NEXT:    ld r3, 0(r3)
+; CHECK-LE-P9-NEXT:    mtvsrdd v2, r3, r4
 ; CHECK-LE-P9-NEXT:    blr
 ;
 ; CHECK-BE-P8-LABEL: test_v2i64_none:
 ; CHECK-BE-P8:       # %bb.0: # %entry
+; CHECK-BE-P8-NEXT:    ld r3, 0(r3)
 ; CHECK-BE-P8-NEXT:    mtfprd f0, r4
-; CHECK-BE-P8-NEXT:    lxvd2x v3, 0, r3
-; CHECK-BE-P8-NEXT:    xxspltd v2, vs0, 0
-; CHECK-BE-P8-NEXT:    xxmrghd v2, v2, v3
+; CHECK-BE-P8-NEXT:    mtfprd f1, r3
+; CHECK-BE-P8-NEXT:    xxmrghd v2, vs0, vs1
 ; CHECK-BE-P8-NEXT:    blr
 ;
 ; CHECK-BE-P9-LABEL: test_v2i64_none:
 ; CHECK-BE-P9:       # %bb.0: # %entry
-; CHECK-BE-P9-NEXT:    lxv v2, 0(r3)
-; CHECK-BE-P9-NEXT:    mtvsrdd v3, r4, r4
-; CHECK-BE-P9-NEXT:    xxmrghd v2, v3, v2
+; CHECK-BE-P9-NEXT:    ld r3, 0(r3)
+; CHECK-BE-P9-NEXT:    mtvsrdd v2, r4, r3
 ; CHECK-BE-P9-NEXT:    blr
 ;
 ; CHECK-AIX-64-P8-LABEL: test_v2i64_none:
 ; CHECK-AIX-64-P8:       # %bb.0: # %entry
+; CHECK-AIX-64-P8-NEXT:    ld r3, 0(r3)
 ; CHECK-AIX-64-P8-NEXT:    mtfprd f0, r4
-; CHECK-AIX-64-P8-NEXT:    lxvd2x v3, 0, r3
-; CHECK-AIX-64-P8-NEXT:    xxmrghd v2, vs0, vs0
-; CHECK-AIX-64-P8-NEXT:    xxmrghd v2, v2, v3
+; CHECK-AIX-64-P8-NEXT:    mtfprd f1, r3
+; CHECK-AIX-64-P8-NEXT:    xxmrghd v2, vs0, vs1
 ; CHECK-AIX-64-P8-NEXT:    blr
 ;
 ; CHECK-AIX-64-P9-LABEL: test_v2i64_none:
 ; CHECK-AIX-64-P9:       # %bb.0: # %entry
-; CHECK-AIX-64-P9-NEXT:    lxv v2, 0(r3)
-; CHECK-AIX-64-P9-NEXT:    mtvsrdd v3, r4, r4
-; CHECK-AIX-64-P9-NEXT:    xxmrghd v2, v3, v2
+; CHECK-AIX-64-P9-NEXT:    ld r3, 0(r3)
+; CHECK-AIX-64-P9-NEXT:    mtvsrdd v2, r4, r3
 ; CHECK-AIX-64-P9-NEXT:    blr
 ;
 ; CHECK-AIX-32-P8-LABEL: test_v2i64_none:
 ; CHECK-AIX-32-P8:       # %bb.0: # %entry
-; CHECK-AIX-32-P8-NEXT:    lxvd2x v2, 0, r3
+; CHECK-AIX-32-P8-NEXT:    lfd f0, 0(r3)
 ; CHECK-AIX-32-P8-NEXT:    addi r3, r1, -16
 ; CHECK-AIX-32-P8-NEXT:    stw r5, -16(r1)
 ; CHECK-AIX-32-P8-NEXT:    stw r4, -32(r1)
+; CHECK-AIX-32-P8-NEXT:    xxpermdi v2, vs0, vs0, 1
 ; CHECK-AIX-32-P8-NEXT:    lxvw4x vs0, 0, r3
 ; CHECK-AIX-32-P8-NEXT:    addi r3, r1, -32
 ; CHECK-AIX-32-P8-NEXT:    lxvw4x vs1, 0, r3
@@ -1089,11 +1098,12 @@ define <2 x i64> @test_v2i64_none(ptr nocapture noundef readonly %b, i64 %arg) {
 ;
 ; CHECK-AIX-32-P9-LABEL: test_v2i64_none:
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
-; CHECK-AIX-32-P9-NEXT:    lxv v2, 0(r3)
-; CHECK-AIX-32-P9-NEXT:    stw r5, -16(r1)
-; CHECK-AIX-32-P9-NEXT:    stw r4, -32(r1)
-; CHECK-AIX-32-P9-NEXT:    lxv vs0, -16(r1)
-; CHECK-AIX-32-P9-NEXT:    lxv vs1, -32(r1)
+; CHECK-AIX-32-P9-NEXT:    lfd f0, 0(r3)
+; CHECK-AIX-32-P9-NEXT:    mtfprwz f1, r4
+; CHECK-AIX-32-P9-NEXT:    xxinsertw vs1, vs1, 0
+; CHECK-AIX-32-P9-NEXT:    xxpermdi v2, vs0, vs0, 1
+; CHECK-AIX-32-P9-NEXT:    mtfprwz f0, r5
+; CHECK-AIX-32-P9-NEXT:    xxinsertw vs0, vs0, 0
 ; CHECK-AIX-32-P9-NEXT:    xxmrghw vs0, vs1, vs0
 ; CHECK-AIX-32-P9-NEXT:    xxmrghd v2, vs0, v2
 ; CHECK-AIX-32-P9-NEXT:    blr
@@ -1536,13 +1546,13 @@ define <2 x i64> @test_v4i32_v2i64(i32 %arg1, i64 %arg) {
 ;
 ; CHECK-AIX-32-P9-LABEL: test_v4i32_v2i64:
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
-; CHECK-AIX-32-P9-NEXT:    stw r4, -32(r1)
-; CHECK-AIX-32-P9-NEXT:    stw r3, -48(r1)
+; CHECK-AIX-32-P9-NEXT:    mtfprwz f0, r4
+; CHECK-AIX-32-P9-NEXT:    mtfprwz f1, r3
 ; CHECK-AIX-32-P9-NEXT:    lwz r3, L..C0(r2) # %const.0
-; CHECK-AIX-32-P9-NEXT:    lxv vs0, -32(r1)
-; CHECK-AIX-32-P9-NEXT:    lxv vs1, -48(r1)
 ; CHECK-AIX-32-P9-NEXT:    stw r5, -16(r1)
 ; CHECK-AIX-32-P9-NEXT:    lxv v2, -16(r1)
+; CHECK-AIX-32-P9-NEXT:    xxinsertw vs0, vs0, 0
+; CHECK-AIX-32-P9-NEXT:    xxinsertw vs1, vs1, 0
 ; CHECK-AIX-32-P9-NEXT:    xxmrghw v3, vs1, vs0
 ; CHECK-AIX-32-P9-NEXT:    lxv vs0, 0(r3)
 ; CHECK-AIX-32-P9-NEXT:    xxperm v2, v3, vs0
@@ -1713,12 +1723,12 @@ define <2 x i64> @test_v2i64_v4i32(i64 %arg1, i32 %arg) {
 ;
 ; CHECK-AIX-32-P9-LABEL: test_v2i64_v4i32:
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
-; CHECK-AIX-32-P9-NEXT:    stw r4, -16(r1)
-; CHECK-AIX-32-P9-NEXT:    stw r3, -32(r1)
-; CHECK-AIX-32-P9-NEXT:    lxv vs1, -16(r1)
-; CHECK-AIX-32-P9-NEXT:    lxv vs2, -32(r1)
+; CHECK-AIX-32-P9-NEXT:    mtfprwz f1, r4
+; CHECK-AIX-32-P9-NEXT:    mtfprwz f2, r3
 ; CHECK-AIX-32-P9-NEXT:    stw r5, -48(r1)
 ; CHECK-AIX-32-P9-NEXT:    lxv vs0, -48(r1)
+; CHECK-AIX-32-P9-NEXT:    xxinsertw vs1, vs1, 0
+; CHECK-AIX-32-P9-NEXT:    xxinsertw vs2, vs2, 0
 ; CHECK-AIX-32-P9-NEXT:    xxmrghw vs1, vs2, vs1
 ; CHECK-AIX-32-P9-NEXT:    xxmrghd v2, vs1, vs0
 ; CHECK-AIX-32-P9-NEXT:    blr
@@ -1793,12 +1803,12 @@ define <2 x i64> @test_v2i64_v8i16(i64 %arg1, i16 %arg) {
 ;
 ; CHECK-AIX-32-P9-LABEL: test_v2i64_v8i16:
 ; CHECK-AIX-32-P9:       # %bb.0: # %entry
-; CHECK-AIX-32-P9-NEXT:    stw r4, -16(r1)
-; CHECK-AIX-32-P9-NEXT:    stw r3, -32(r1)
-; CHECK-AIX-32-P9-NEXT:    lxv vs1, -16(r1)
-; CHECK-AIX-32-P9-NEXT:    lxv vs2, -32(r1)
+; CHECK-AIX-32-P9-NEXT:    mtfprwz f1, r4
+; CHECK-AIX-32-P9-NEXT:    mtfprwz f2, r3
 ; CHECK-AIX-32-P9-NEXT:    sth r5, -48(r1)
 ; CHECK-AIX-32-P9-NEXT:    lxv vs0, -48(r1)
+; CHECK-AIX-32-P9-NEXT:    xxinsertw vs1, vs1, 0
+; CHECK-AIX-32-P9-NEXT:    xxinsertw vs2, vs2, 0
 ; CHECK-AIX-32-P9-NEXT:    xxmrghw vs1, vs2, vs1
 ; CHECK-AIX-32-P9-NEXT:    xxmrghd v2, vs1, vs0
 ; CHECK-AIX-32-P9-NEXT:    blr

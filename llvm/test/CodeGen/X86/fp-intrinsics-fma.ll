@@ -9,7 +9,8 @@ define float @f1(float %0, float %1, float %2) #0 {
 ; NOFMA:       # %bb.0: # %entry
 ; NOFMA-NEXT:    pushq %rax
 ; NOFMA-NEXT:    .cfi_def_cfa_offset 16
-; NOFMA-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; NOFMA-NEXT:    movss {{.*#+}} xmm3 = [-0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; NOFMA-NEXT:    xorps %xmm3, %xmm0
 ; NOFMA-NEXT:    callq fmaf@PLT
 ; NOFMA-NEXT:    popq %rax
 ; NOFMA-NEXT:    .cfi_def_cfa_offset 8
@@ -37,7 +38,8 @@ define double @f2(double %0, double %1, double %2) #0 {
 ; NOFMA:       # %bb.0: # %entry
 ; NOFMA-NEXT:    pushq %rax
 ; NOFMA-NEXT:    .cfi_def_cfa_offset 16
-; NOFMA-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; NOFMA-NEXT:    movsd {{.*#+}} xmm3 = [-0.0E+0,0.0E+0]
+; NOFMA-NEXT:    xorps %xmm3, %xmm0
 ; NOFMA-NEXT:    callq fma@PLT
 ; NOFMA-NEXT:    popq %rax
 ; NOFMA-NEXT:    .cfi_def_cfa_offset 8
@@ -65,7 +67,8 @@ define float @f3(float %0, float %1, float %2) #0 {
 ; NOFMA:       # %bb.0: # %entry
 ; NOFMA-NEXT:    pushq %rax
 ; NOFMA-NEXT:    .cfi_def_cfa_offset 16
-; NOFMA-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; NOFMA-NEXT:    movss {{.*#+}} xmm3 = [-0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; NOFMA-NEXT:    xorps %xmm3, %xmm2
 ; NOFMA-NEXT:    callq fmaf@PLT
 ; NOFMA-NEXT:    popq %rax
 ; NOFMA-NEXT:    .cfi_def_cfa_offset 8
@@ -93,7 +96,8 @@ define double @f4(double %0, double %1, double %2) #0 {
 ; NOFMA:       # %bb.0: # %entry
 ; NOFMA-NEXT:    pushq %rax
 ; NOFMA-NEXT:    .cfi_def_cfa_offset 16
-; NOFMA-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; NOFMA-NEXT:    movsd {{.*#+}} xmm3 = [-0.0E+0,0.0E+0]
+; NOFMA-NEXT:    xorps %xmm3, %xmm2
 ; NOFMA-NEXT:    callq fma@PLT
 ; NOFMA-NEXT:    popq %rax
 ; NOFMA-NEXT:    .cfi_def_cfa_offset 8
@@ -184,7 +188,8 @@ define float @f7(float %0, float %1, float %2) #0 {
 ; NOFMA-NEXT:    pushq %rax
 ; NOFMA-NEXT:    .cfi_def_cfa_offset 16
 ; NOFMA-NEXT:    callq fmaf@PLT
-; NOFMA-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; NOFMA-NEXT:    movss {{.*#+}} xmm1 = [-0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; NOFMA-NEXT:    xorps %xmm1, %xmm0
 ; NOFMA-NEXT:    popq %rax
 ; NOFMA-NEXT:    .cfi_def_cfa_offset 8
 ; NOFMA-NEXT:    retq
@@ -192,13 +197,15 @@ define float @f7(float %0, float %1, float %2) #0 {
 ; FMA-AVX1-LABEL: f7:
 ; FMA-AVX1:       # %bb.0: # %entry
 ; FMA-AVX1-NEXT:    vfmadd213ss {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2
-; FMA-AVX1-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; FMA-AVX1-NEXT:    vmovss {{.*#+}} xmm1 = [-0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; FMA-AVX1-NEXT:    vxorps %xmm1, %xmm0, %xmm0
 ; FMA-AVX1-NEXT:    retq
 ;
 ; FMA4-LABEL: f7:
 ; FMA4:       # %bb.0: # %entry
 ; FMA4-NEXT:    vfmaddss {{.*#+}} xmm0 = (xmm0 * xmm1) + xmm2
-; FMA4-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; FMA4-NEXT:    vmovss {{.*#+}} xmm1 = [-0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; FMA4-NEXT:    vxorps %xmm1, %xmm0, %xmm0
 ; FMA4-NEXT:    retq
 ;
 ; FMA-AVX512-LABEL: f7:
@@ -221,7 +228,8 @@ define double @f8(double %0, double %1, double %2) #0 {
 ; NOFMA-NEXT:    pushq %rax
 ; NOFMA-NEXT:    .cfi_def_cfa_offset 16
 ; NOFMA-NEXT:    callq fma@PLT
-; NOFMA-NEXT:    xorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0
+; NOFMA-NEXT:    movsd {{.*#+}} xmm1 = [-0.0E+0,0.0E+0]
+; NOFMA-NEXT:    xorps %xmm1, %xmm0
 ; NOFMA-NEXT:    popq %rax
 ; NOFMA-NEXT:    .cfi_def_cfa_offset 8
 ; NOFMA-NEXT:    retq
@@ -229,13 +237,15 @@ define double @f8(double %0, double %1, double %2) #0 {
 ; FMA-LABEL: f8:
 ; FMA:       # %bb.0: # %entry
 ; FMA-NEXT:    vfmadd213sd {{.*#+}} xmm0 = (xmm1 * xmm0) + xmm2
-; FMA-NEXT:    vxorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; FMA-NEXT:    vmovsd {{.*#+}} xmm1 = [-0.0E+0,0.0E+0]
+; FMA-NEXT:    vxorpd %xmm1, %xmm0, %xmm0
 ; FMA-NEXT:    retq
 ;
 ; FMA4-LABEL: f8:
 ; FMA4:       # %bb.0: # %entry
 ; FMA4-NEXT:    vfmaddsd {{.*#+}} xmm0 = (xmm0 * xmm1) + xmm2
-; FMA4-NEXT:    vxorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; FMA4-NEXT:    vmovsd {{.*#+}} xmm1 = [-0.0E+0,0.0E+0]
+; FMA4-NEXT:    vxorpd %xmm1, %xmm0, %xmm0
 ; FMA4-NEXT:    retq
 entry:
   %3 = call double @llvm.experimental.constrained.fma.f64(double %0, double %1, double %2,
@@ -262,13 +272,15 @@ define float @f9(float %0, float %1, float %2) #0 {
 ; FMA-AVX1-LABEL: f9:
 ; FMA-AVX1:       # %bb.0: # %entry
 ; FMA-AVX1-NEXT:    vfnmsub213ss {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2
-; FMA-AVX1-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; FMA-AVX1-NEXT:    vmovss {{.*#+}} xmm1 = [-0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; FMA-AVX1-NEXT:    vxorps %xmm1, %xmm0, %xmm0
 ; FMA-AVX1-NEXT:    retq
 ;
 ; FMA4-LABEL: f9:
 ; FMA4:       # %bb.0: # %entry
 ; FMA4-NEXT:    vfnmsubss {{.*#+}} xmm0 = -(xmm0 * xmm1) - xmm2
-; FMA4-NEXT:    vxorps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; FMA4-NEXT:    vmovss {{.*#+}} xmm1 = [-0.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; FMA4-NEXT:    vxorps %xmm1, %xmm0, %xmm0
 ; FMA4-NEXT:    retq
 ;
 ; FMA-AVX512-LABEL: f9:
@@ -304,13 +316,15 @@ define double @f10(double %0, double %1, double %2) #0 {
 ; FMA-LABEL: f10:
 ; FMA:       # %bb.0: # %entry
 ; FMA-NEXT:    vfnmsub213sd {{.*#+}} xmm0 = -(xmm1 * xmm0) - xmm2
-; FMA-NEXT:    vxorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; FMA-NEXT:    vmovsd {{.*#+}} xmm1 = [-0.0E+0,0.0E+0]
+; FMA-NEXT:    vxorpd %xmm1, %xmm0, %xmm0
 ; FMA-NEXT:    retq
 ;
 ; FMA4-LABEL: f10:
 ; FMA4:       # %bb.0: # %entry
 ; FMA4-NEXT:    vfnmsubsd {{.*#+}} xmm0 = -(xmm0 * xmm1) - xmm2
-; FMA4-NEXT:    vxorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm0
+; FMA4-NEXT:    vmovsd {{.*#+}} xmm1 = [-0.0E+0,0.0E+0]
+; FMA4-NEXT:    vxorpd %xmm1, %xmm0, %xmm0
 ; FMA4-NEXT:    retq
 entry:
   %3 = fneg double %0

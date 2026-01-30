@@ -186,17 +186,27 @@ define i64 @bfe_ashr_unsigned_64(i64 %x) {
 }
 
 define i32 @bfe3(i128 %a) {
-; CHECK-LABEL: bfe3(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b32 %r<3>;
-; CHECK-NEXT:    .reg .b64 %rd<3>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [bfe3_param_0];
-; CHECK-NEXT:    cvt.u32.u64 %r1, %rd1;
-; CHECK-NEXT:    bfe.s32 %r2, %r1, 15, 17;
-; CHECK-NEXT:    st.param.b32 [func_retval0], %r2;
-; CHECK-NEXT:    ret;
+; CHECK-O3-LABEL: bfe3(
+; CHECK-O3:       {
+; CHECK-O3-NEXT:    .reg .b32 %r<3>;
+; CHECK-O3-EMPTY:
+; CHECK-O3-NEXT:  // %bb.0:
+; CHECK-O3-NEXT:    ld.param.b32 %r1, [bfe3_param_0];
+; CHECK-O3-NEXT:    bfe.s32 %r2, %r1, 15, 17;
+; CHECK-O3-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-O3-NEXT:    ret;
+;
+; CHECK-O0-LABEL: bfe3(
+; CHECK-O0:       {
+; CHECK-O0-NEXT:    .reg .b32 %r<3>;
+; CHECK-O0-NEXT:    .reg .b64 %rd<3>;
+; CHECK-O0-EMPTY:
+; CHECK-O0-NEXT:  // %bb.0:
+; CHECK-O0-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [bfe3_param_0];
+; CHECK-O0-NEXT:    cvt.u32.u64 %r1, %rd1;
+; CHECK-O0-NEXT:    bfe.s32 %r2, %r1, 15, 17;
+; CHECK-O0-NEXT:    st.param.b32 [func_retval0], %r2;
+; CHECK-O0-NEXT:    ret;
   %trunc = trunc i128 %a to i32
   %and = and i32 %trunc, -32768
   %shr = ashr exact i32 %and, 15
@@ -204,15 +214,25 @@ define i32 @bfe3(i128 %a) {
 }
 
 define i64 @bfe4(i128 %a) {
-; CHECK-LABEL: bfe4(
-; CHECK:       {
-; CHECK-NEXT:    .reg .b64 %rd<4>;
-; CHECK-EMPTY:
-; CHECK-NEXT:  // %bb.0:
-; CHECK-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [bfe4_param_0];
-; CHECK-NEXT:    bfe.s64 %rd3, %rd1, 17, 47;
-; CHECK-NEXT:    st.param.b64 [func_retval0], %rd3;
-; CHECK-NEXT:    ret;
+; CHECK-O3-LABEL: bfe4(
+; CHECK-O3:       {
+; CHECK-O3-NEXT:    .reg .b64 %rd<3>;
+; CHECK-O3-EMPTY:
+; CHECK-O3-NEXT:  // %bb.0:
+; CHECK-O3-NEXT:    ld.param.b64 %rd1, [bfe4_param_0];
+; CHECK-O3-NEXT:    bfe.s64 %rd2, %rd1, 17, 47;
+; CHECK-O3-NEXT:    st.param.b64 [func_retval0], %rd2;
+; CHECK-O3-NEXT:    ret;
+;
+; CHECK-O0-LABEL: bfe4(
+; CHECK-O0:       {
+; CHECK-O0-NEXT:    .reg .b64 %rd<4>;
+; CHECK-O0-EMPTY:
+; CHECK-O0-NEXT:  // %bb.0:
+; CHECK-O0-NEXT:    ld.param.v2.b64 {%rd1, %rd2}, [bfe4_param_0];
+; CHECK-O0-NEXT:    bfe.s64 %rd3, %rd1, 17, 47;
+; CHECK-O0-NEXT:    st.param.b64 [func_retval0], %rd3;
+; CHECK-O0-NEXT:    ret;
   %trunc = trunc i128 %a to i64
   %and = and i64 %trunc, -131072
   %shr = ashr exact i64 %and, 17

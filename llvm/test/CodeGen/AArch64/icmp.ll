@@ -1123,30 +1123,29 @@ entry:
 define <3 x i64> @v3i64_i64(<3 x i64> %a, <3 x i64> %b, <3 x i64> %d, <3 x i64> %e) {
 ; CHECK-SD-LABEL: v3i64_i64:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    // kill: def $d4 killed $d4 def $q4
 ; CHECK-SD-NEXT:    // kill: def $d3 killed $d3 def $q3
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    // kill: def $d4 killed $d4 def $q4
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 def $q1
 ; CHECK-SD-NEXT:    // kill: def $d6 killed $d6 def $q6
 ; CHECK-SD-NEXT:    // kill: def $d7 killed $d7 def $q7
+; CHECK-SD-NEXT:    add x8, sp, #16
 ; CHECK-SD-NEXT:    // kill: def $d5 killed $d5 def $q5
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 def $q2
-; CHECK-SD-NEXT:    ldr d16, [sp, #24]
-; CHECK-SD-NEXT:    ldr d17, [sp]
 ; CHECK-SD-NEXT:    mov v3.d[1], v4.d[0]
 ; CHECK-SD-NEXT:    mov v0.d[1], v1.d[0]
 ; CHECK-SD-NEXT:    mov v6.d[1], v7.d[0]
-; CHECK-SD-NEXT:    ldp d1, d4, [sp, #8]
-; CHECK-SD-NEXT:    mov v1.d[1], v4.d[0]
+; CHECK-SD-NEXT:    ldp d4, d1, [sp]
+; CHECK-SD-NEXT:    ld1 { v1.d }[1], [x8]
 ; CHECK-SD-NEXT:    cmgt v0.2d, v3.2d, v0.2d
 ; CHECK-SD-NEXT:    bsl v0.16b, v6.16b, v1.16b
 ; CHECK-SD-NEXT:    cmgt v1.2d, v5.2d, v2.2d
-; CHECK-SD-NEXT:    mov v2.16b, v1.16b
+; CHECK-SD-NEXT:    ldr d2, [sp, #24]
+; CHECK-SD-NEXT:    bit v2.16b, v4.16b, v1.16b
 ; CHECK-SD-NEXT:    ext v1.16b, v0.16b, v0.16b, #8
 ; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 killed $q0
-; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
-; CHECK-SD-NEXT:    bsl v2.16b, v17.16b, v16.16b
 ; CHECK-SD-NEXT:    // kill: def $d2 killed $d2 killed $q2
+; CHECK-SD-NEXT:    // kill: def $d1 killed $d1 killed $q1
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v3i64_i64:

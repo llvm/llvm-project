@@ -44,7 +44,7 @@ define void @unsupportedInstructionForPromotion(ptr %addr1, i32 %in2, ptr %dest)
 
 
 ; IR-BOTH-LABEL: @unsupportedChainInDifferentBBs
-; IR-BOTH: [[LOAD:%[a-zA-Z_0-9-]+]] = load <2 x i32>, ptr %addr1
+; IR-BOTH: [[LOAD:%[a-zA-Z_0-9-]+]] = load volatile <2 x i32>, ptr %addr1
 ; IR-BOTH-NEXT: [[EXTRACT:%[a-zA-Z_0-9-]+]] = extractelement <2 x i32> [[LOAD]], i32 0
 ; IR-BOTH-NEXT: br i1 %bool, label %bb2, label %end
 ; BB2
@@ -58,10 +58,10 @@ define void @unsupportedInstructionForPromotion(ptr %addr1, i32 %in2, ptr %dest)
 ; ASM: bx
 define void @unsupportedChainInDifferentBBs(ptr %addr1, ptr %dest, i1 %bool) {
 bb1:
-  %in1 = load <2 x i32>, ptr %addr1, align 8
+  %in1 = load volatile <2 x i32>, ptr %addr1, align 8
   %extract = extractelement <2 x i32> %in1, i32 0
   br i1 %bool, label %bb2, label %end
-bb2: 
+bb2:
   %out = or i32 %extract, 1
   store i32 %out, ptr %dest, align 4
   br label %end
@@ -150,7 +150,7 @@ define void @udivCase(ptr %addr1, ptr %dest) {
 ; IR-STRESS-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = extractelement <2 x i32> [[DIV]], i32 1
 ;
 ; IR-BOTH-NEXT: store i32 [[RES]], ptr %dest
-; IR-BOTH-NEXT: ret 
+; IR-BOTH-NEXT: ret
 define void @uremCase(ptr %addr1, ptr %dest) {
   %in1 = load <2 x i32>, ptr %addr1, align 8
   %extract = extractelement <2 x i32> %in1, i32 1
@@ -169,7 +169,7 @@ define void @uremCase(ptr %addr1, ptr %dest) {
 ; IR-STRESS-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = extractelement <2 x i32> [[DIV]], i32 1
 ;
 ; IR-BOTH-NEXT: store i32 [[RES]], ptr %dest
-; IR-BOTH-NEXT: ret 
+; IR-BOTH-NEXT: ret
 define void @sdivCase(ptr %addr1, ptr %dest) {
   %in1 = load <2 x i32>, ptr %addr1, align 8
   %extract = extractelement <2 x i32> %in1, i32 1
@@ -188,7 +188,7 @@ define void @sdivCase(ptr %addr1, ptr %dest) {
 ; IR-STRESS-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = extractelement <2 x i32> [[DIV]], i32 1
 ;
 ; IR-BOTH-NEXT: store i32 [[RES]], ptr %dest
-; IR-BOTH-NEXT: ret 
+; IR-BOTH-NEXT: ret
 define void @sremCase(ptr %addr1, ptr %dest) {
   %in1 = load <2 x i32>, ptr %addr1, align 8
   %extract = extractelement <2 x i32> %in1, i32 1
@@ -199,7 +199,7 @@ define void @sremCase(ptr %addr1, ptr %dest) {
 
 ; IR-BOTH-LABEL: @fdivCase
 ; IR-BOTH: [[LOAD:%[a-zA-Z_0-9-]+]] = load <2 x float>, ptr %addr1
-; Scalar version:  
+; Scalar version:
 ; IR-NORMAL-NEXT: [[EXTRACT:%[a-zA-Z_0-9-]+]] = extractelement <2 x float> [[LOAD]], i32 1
 ; IR-NORMAL-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = fdiv float [[EXTRACT]], 7.0
 ; Vector version:
@@ -209,7 +209,7 @@ define void @sremCase(ptr %addr1, ptr %dest) {
 ; IR-BOTH-NEXT: store float [[RES]], ptr %dest
 ; IR-BOTH-NEXT: ret
 define void @fdivCase(ptr %addr1, ptr %dest) {
-  %in1 = load <2 x float>, ptr %addr1, align 8   
+  %in1 = load <2 x float>, ptr %addr1, align 8
   %extract = extractelement <2 x float> %in1, i32 1
   %out = fdiv float %extract, 7.0
   store float %out, ptr %dest, align 4
@@ -218,7 +218,7 @@ define void @fdivCase(ptr %addr1, ptr %dest) {
 
 ; IR-BOTH-LABEL: @fremCase
 ; IR-BOTH: [[LOAD:%[a-zA-Z_0-9-]+]] = load <2 x float>, ptr %addr1
-; Scalar version:  
+; Scalar version:
 ; IR-NORMAL-NEXT: [[EXTRACT:%[a-zA-Z_0-9-]+]] = extractelement <2 x float> [[LOAD]], i32 1
 ; IR-NORMAL-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = frem float [[EXTRACT]], 7.0
 ; Vector version:
@@ -228,7 +228,7 @@ define void @fdivCase(ptr %addr1, ptr %dest) {
 ; IR-BOTH-NEXT: store float [[RES]], ptr %dest
 ; IR-BOTH-NEXT: ret
 define void @fremCase(ptr %addr1, ptr %dest) {
-  %in1 = load <2 x float>, ptr %addr1, align 8   
+  %in1 = load <2 x float>, ptr %addr1, align 8
   %extract = extractelement <2 x float> %in1, i32 1
   %out = frem float %extract, 7.0
   store float %out, ptr %dest, align 4
@@ -272,7 +272,7 @@ define void @undefRemCase(ptr %addr1, ptr %dest) {
 ; flag is set.
 ; IR-BOTH-LABEL: @undefConstantFRemCaseWithFastMath
 ; IR-BOTH: [[LOAD:%[a-zA-Z_0-9-]+]] = load <2 x float>, ptr %addr1
-; Scalar version:  
+; Scalar version:
 ; IR-NORMAL-NEXT: [[EXTRACT:%[a-zA-Z_0-9-]+]] = extractelement <2 x float> [[LOAD]], i32 1
 ; IR-NORMAL-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = frem nnan float [[EXTRACT]], 7.0
 ; Vector version:
@@ -282,7 +282,7 @@ define void @undefRemCase(ptr %addr1, ptr %dest) {
 ; IR-BOTH-NEXT: store float [[RES]], ptr %dest
 ; IR-BOTH-NEXT: ret
 define void @undefConstantFRemCaseWithFastMath(ptr %addr1, ptr %dest) {
-  %in1 = load <2 x float>, ptr %addr1, align 8   
+  %in1 = load <2 x float>, ptr %addr1, align 8
   %extract = extractelement <2 x float> %in1, i32 1
   %out = frem nnan float %extract, 7.0
   store float %out, ptr %dest, align 4
@@ -293,7 +293,7 @@ define void @undefConstantFRemCaseWithFastMath(ptr %addr1, ptr %dest) {
 ; flag is set.
 ; IR-BOTH-LABEL: @undefVectorFRemCaseWithFastMath
 ; IR-BOTH: [[LOAD:%[a-zA-Z_0-9-]+]] = load <2 x float>, ptr %addr1
-; Scalar version:  
+; Scalar version:
 ; IR-NORMAL-NEXT: [[EXTRACT:%[a-zA-Z_0-9-]+]] = extractelement <2 x float> [[LOAD]], i32 1
 ; IR-NORMAL-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = frem nnan float 7.000000e+00, [[EXTRACT]]
 ; Vector version:
@@ -303,7 +303,7 @@ define void @undefConstantFRemCaseWithFastMath(ptr %addr1, ptr %dest) {
 ; IR-BOTH-NEXT: store float [[RES]], ptr %dest
 ; IR-BOTH-NEXT: ret
 define void @undefVectorFRemCaseWithFastMath(ptr %addr1, ptr %dest) {
-  %in1 = load <2 x float>, ptr %addr1, align 8   
+  %in1 = load <2 x float>, ptr %addr1, align 8
   %extract = extractelement <2 x float> %in1, i32 1
   %out = frem nnan float 7.0, %extract
   store float %out, ptr %dest, align 4
@@ -315,7 +315,7 @@ define void @undefVectorFRemCaseWithFastMath(ptr %addr1, ptr %dest) {
 ; not promote on armv7.
 ; IR-BOTH-LABEL: @simpleOneInstructionPromotionFloat
 ; IR-BOTH: [[LOAD:%[a-zA-Z_0-9-]+]] = load <2 x float>, ptr %addr1
-; Scalar version: 
+; Scalar version:
 ; IR-NORMAL-NEXT: [[EXTRACT:%[a-zA-Z_0-9-]+]] = extractelement <2 x float> [[LOAD]], i32 1
 ; IR-NORMAL-NEXT: [[RES:%[a-zA-Z_0-9-]+]] = fadd float [[EXTRACT]], 1.0
 ; Vector version:

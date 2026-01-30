@@ -660,29 +660,19 @@ define <16 x i8> @var_rotate_v16i8(<16 x i8> %a, <16 x i8> %b) nounwind {
 ;
 
 define <2 x i64> @splatvar_rotate_v2i64(<2 x i64> %a, <2 x i64> %b) nounwind {
-; SSE2-LABEL: splatvar_rotate_v2i64:
-; SSE2:       # %bb.0:
-; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [64,64]
-; SSE2-NEXT:    psubq %xmm1, %xmm2
-; SSE2-NEXT:    movdqa %xmm0, %xmm3
-; SSE2-NEXT:    psllq %xmm1, %xmm3
-; SSE2-NEXT:    psrlq %xmm2, %xmm0
-; SSE2-NEXT:    por %xmm3, %xmm0
-; SSE2-NEXT:    retq
-;
-; SSE41-LABEL: splatvar_rotate_v2i64:
-; SSE41:       # %bb.0:
-; SSE41-NEXT:    pmovsxbq {{.*#+}} xmm2 = [64,64]
-; SSE41-NEXT:    psubq %xmm1, %xmm2
-; SSE41-NEXT:    movdqa %xmm0, %xmm3
-; SSE41-NEXT:    psllq %xmm1, %xmm3
-; SSE41-NEXT:    psrlq %xmm2, %xmm0
-; SSE41-NEXT:    por %xmm3, %xmm0
-; SSE41-NEXT:    retq
+; SSE-LABEL: splatvar_rotate_v2i64:
+; SSE:       # %bb.0:
+; SSE-NEXT:    movq {{.*#+}} xmm2 = [64,0]
+; SSE-NEXT:    psubq %xmm1, %xmm2
+; SSE-NEXT:    movdqa %xmm0, %xmm3
+; SSE-NEXT:    psllq %xmm1, %xmm3
+; SSE-NEXT:    psrlq %xmm2, %xmm0
+; SSE-NEXT:    por %xmm3, %xmm0
+; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: splatvar_rotate_v2i64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    vpmovsxbq {{.*#+}} xmm2 = [64,64]
+; AVX-NEXT:    vmovq {{.*#+}} xmm2 = [64,0]
 ; AVX-NEXT:    vpsubq %xmm1, %xmm2, %xmm2
 ; AVX-NEXT:    vpsllq %xmm1, %xmm0, %xmm1
 ; AVX-NEXT:    vpsrlq %xmm2, %xmm0, %xmm0

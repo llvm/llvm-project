@@ -4,10 +4,11 @@
 define <8 x i32> @_Z6test70v(ptr %id14793) {
 ; CHECK-LABEL: _Z6test70v:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    vmovaps (%rdi), %xmm0
-; CHECK-NEXT:    vblendps {{.*#+}} xmm1 = xmm0[0],mem[1],xmm0[2,3]
-; CHECK-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,3,1,0]
-; CHECK-NEXT:    vshufps {{.*#+}} xmm1 = xmm1[0,2,1,0]
+; CHECK-NEXT:    vmovdqa (%rdi), %xmm0
+; CHECK-NEXT:    vpinsrd $1, {{\.?LCPI[0-9]+_[0-9]+}}+4(%rip), %xmm0, %xmm1
+; CHECK-NEXT:    vpblendw {{.*#+}} xmm1 = xmm0[0,1],xmm1[2,3],xmm0[4,5,6,7]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm0 = xmm0[1,3,1,0]
+; CHECK-NEXT:    vpshufd {{.*#+}} xmm1 = xmm1[0,2,1,0]
 ; CHECK-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
 ; CHECK-NEXT:    retq
 entry:

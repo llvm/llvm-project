@@ -5,10 +5,9 @@ define half @extret1_f16_sf(<8 x half> %a, <8 x half> %b, ptr nocapture %p) {
 ; CHECK-LABEL: extret1_f16_sf:
 ; CHECK:       @ %bb.0:
 ; CHECK-NEXT:    vmov d0, r0, r1
-; CHECK-NEXT:    mov r0, sp
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    ldrh.w r0, [sp, #2]
+; CHECK-NEXT:    vadd.f16 q0, q0, r0
 ; CHECK-NEXT:    ldr r0, [sp, #16]
-; CHECK-NEXT:    vadd.f16 q0, q0, q1
 ; CHECK-NEXT:    vmovx.f16 s0, s0
 ; CHECK-NEXT:    vstr.16 s0, [r0]
 ; CHECK-NEXT:    vmov r0, s0
@@ -22,11 +21,10 @@ define half @extret1_f16_sf(<8 x half> %a, <8 x half> %b, ptr nocapture %p) {
 define half @extret4_f16_sf(<8 x half> %a, <8 x half> %b, ptr nocapture %p) {
 ; CHECK-LABEL: extret4_f16_sf:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    mov r0, sp
+; CHECK-NEXT:    ldrh.w r0, [sp, #8]
 ; CHECK-NEXT:    vmov d1, r2, r3
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vadd.f16 q0, q0, r0
 ; CHECK-NEXT:    ldr r0, [sp, #16]
-; CHECK-NEXT:    vadd.f16 q0, q0, q1
 ; CHECK-NEXT:    vstr.16 s2, [r0]
 ; CHECK-NEXT:    vmov r0, s2
 ; CHECK-NEXT:    bx lr
@@ -98,11 +96,10 @@ define arm_aapcs_vfpcc <8 x half> @extret4_v8f16_hf(<8 x half> %a, <8 x half> %b
 define float @extret1_f32_sf(<4 x float> %a, <4 x float> %b, ptr nocapture %p) {
 ; CHECK-LABEL: extret1_f32_sf:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    vmov d0, r0, r1
-; CHECK-NEXT:    mov r0, sp
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vldr s1, [sp, #4]
+; CHECK-NEXT:    vmov d2, r0, r1
 ; CHECK-NEXT:    ldr r1, [sp, #16]
-; CHECK-NEXT:    vadd.f32 q0, q0, q1
+; CHECK-NEXT:    vadd.f32 q0, q1, q0
 ; CHECK-NEXT:    vmov r0, s1
 ; CHECK-NEXT:    vstr s1, [r1]
 ; CHECK-NEXT:    bx lr
@@ -115,11 +112,10 @@ define float @extret1_f32_sf(<4 x float> %a, <4 x float> %b, ptr nocapture %p) {
 define float @extret2_f32_sf(<4 x float> %a, <4 x float> %b, ptr nocapture %p) {
 ; CHECK-LABEL: extret2_f32_sf:
 ; CHECK:       @ %bb.0:
-; CHECK-NEXT:    mov r0, sp
-; CHECK-NEXT:    vmov d1, r2, r3
-; CHECK-NEXT:    vldrw.u32 q1, [r0]
+; CHECK-NEXT:    vldr s2, [sp, #8]
+; CHECK-NEXT:    vmov d3, r2, r3
 ; CHECK-NEXT:    ldr r1, [sp, #16]
-; CHECK-NEXT:    vadd.f32 q0, q0, q1
+; CHECK-NEXT:    vadd.f32 q0, q1, q0
 ; CHECK-NEXT:    vmov r0, s2
 ; CHECK-NEXT:    vstr s2, [r1]
 ; CHECK-NEXT:    bx lr
