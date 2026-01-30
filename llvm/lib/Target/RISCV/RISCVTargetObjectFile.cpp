@@ -187,5 +187,5 @@ void RISCVMachOTargetObjectFile::getNameWithPrefix(
     const TargetMachine &TM) const {
   // RISC-V does not use section-relative relocations so any global symbol must
   // be accessed via at least a linker-private symbol.
-  getMangler().getNameWithPrefix(OutName, GV, /* CannotUsePrivateLabel */ true);
+  getMangler().getNameWithPrefix(OutName, GV, /*CannotUsePrivateLabel=*/ true);
 }
