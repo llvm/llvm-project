@@ -103,9 +103,9 @@ func.func @_QPtest_dummy_scalar(%arg0: !fir.ref<!fir.array<?xi32>> {fir.bindc_na
 // CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[LOAD_0]] : (i32) -> index
 // CHECK:           %[[CONVERT_1:.*]] = fir.convert %[[CONSTANT_0]] : (index) -> i32
 // CHECK:           %[[LOAD_1:.*]] = fir.load %[[DECLARE_3]] : !fir.ref<!fir.box<!fir.heap<i32>>>
+// CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
 // CHECK:           %[[DO_LOOP_0:.*]] = fir.do_loop %[[VAL_0:.*]] = %[[CONSTANT_0]] to %[[CONVERT_0]] step %[[CONSTANT_0]] iter_args(%[[VAL_1:.*]] = %[[CONVERT_1]]) -> (i32) {
 // CHECK:             fir.store %[[VAL_1]] to %[[DECLARE_0]] : !fir.ref<i32>
-// CHECK:             %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
 // CHECK:             %[[LOAD_2:.*]] = fir.load %[[BOX_ADDR_0]] : !fir.heap<i32>
 // CHECK:             %[[LOAD_3:.*]] = fir.load %[[DECLARE_0]] : !fir.ref<i32>
 // CHECK:             %[[CONVERT_2:.*]] = fir.convert %[[LOAD_3]] : (i32) -> i64
@@ -318,9 +318,9 @@ func.func @_QPtest_global_scalar(%arg0: !fir.ref<!fir.array<?xi32>> {fir.bindc_n
 // CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[LOAD_0]] : (i32) -> index
 // CHECK:           %[[CONVERT_1:.*]] = fir.convert %[[CONSTANT_0]] : (index) -> i32
 // CHECK:           %[[LOAD_1:.*]] = fir.load %[[DECLARE_0]] : !fir.ref<!fir.box<!fir.heap<f32>>>
+// CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
 // CHECK:           %[[DO_LOOP_0:.*]] = fir.do_loop %[[VAL_0:.*]] = %[[CONSTANT_0]] to %[[CONVERT_0]] step %[[CONSTANT_0]] iter_args(%[[VAL_1:.*]] = %[[CONVERT_1]]) -> (i32) {
 // CHECK:             fir.store %[[VAL_1]] to %[[DECLARE_1]] : !fir.ref<i32>
-// CHECK:             %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.heap<f32>>) -> !fir.heap<f32>
 // CHECK:             %[[LOAD_2:.*]] = fir.load %[[BOX_ADDR_0]] : !fir.heap<f32>
 // CHECK:             %[[CONVERT_2:.*]] = fir.convert %[[LOAD_2]] : (f32) -> i32
 // CHECK:             %[[LOAD_3:.*]] = fir.load %[[DECLARE_1]] : !fir.ref<i32>
@@ -391,9 +391,9 @@ func.func @_QPtest_global_scalar_allocatable(%arg0: !fir.ref<!fir.array<?xi32>> 
 // CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[LOAD_0]] : (i32) -> index
 // CHECK:           %[[CONVERT_1:.*]] = fir.convert %[[CONSTANT_0]] : (index) -> i32
 // CHECK:           %[[LOAD_1:.*]] = fir.load %[[DECLARE_0]] : !fir.ref<!fir.box<!fir.ptr<f32>>>
+// CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
 // CHECK:           %[[DO_LOOP_0:.*]] = fir.do_loop %[[VAL_0:.*]] = %[[CONSTANT_0]] to %[[CONVERT_0]] step %[[CONSTANT_0]] iter_args(%[[VAL_1:.*]] = %[[CONVERT_1]]) -> (i32) {
 // CHECK:             fir.store %[[VAL_1]] to %[[DECLARE_1]] : !fir.ref<i32>
-// CHECK:             %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.ptr<f32>>) -> !fir.ptr<f32>
 // CHECK:             %[[LOAD_2:.*]] = fir.load %[[BOX_ADDR_0]] : !fir.ptr<f32>
 // CHECK:             %[[CONVERT_2:.*]] = fir.convert %[[LOAD_2]] : (f32) -> i32
 // CHECK:             %[[LOAD_3:.*]] = fir.load %[[DECLARE_1]] : !fir.ref<i32>
@@ -756,11 +756,11 @@ func.func @_QPtest_dummy_array(%arg0: !fir.ref<!fir.array<?xi32>> {fir.bindc_nam
 // CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[LOAD_0]] : (i32) -> index
 // CHECK:           %[[CONVERT_1:.*]] = fir.convert %[[CONSTANT_1]] : (index) -> i32
 // CHECK:           %[[LOAD_1:.*]] = fir.load %[[DECLARE_3]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xi32>>>>
+// CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
+// CHECK:           %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[LOAD_1]], %[[CONSTANT_0]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
+// CHECK:           %[[SHAPE_SHIFT_0:.*]] = fir.shape_shift %[[BOX_DIMS_0]]#0, %[[BOX_DIMS_0]]#1 : (index, index) -> !fir.shapeshift<1>
 // CHECK:           %[[DO_LOOP_0:.*]] = fir.do_loop %[[VAL_0:.*]] = %[[CONSTANT_1]] to %[[CONVERT_0]] step %[[CONSTANT_1]] iter_args(%[[VAL_1:.*]] = %[[CONVERT_1]]) -> (i32) {
 // CHECK:             fir.store %[[VAL_1]] to %[[DECLARE_0]] : !fir.ref<i32>
-// CHECK:             %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>) -> !fir.heap<!fir.array<?xi32>>
-// CHECK:             %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[LOAD_1]], %[[CONSTANT_0]] : (!fir.box<!fir.heap<!fir.array<?xi32>>>, index) -> (index, index, index)
-// CHECK:             %[[SHAPE_SHIFT_0:.*]] = fir.shape_shift %[[BOX_DIMS_0]]#0, %[[BOX_DIMS_0]]#1 : (index, index) -> !fir.shapeshift<1>
 // CHECK:             %[[ARRAY_COOR_0:.*]] = fir.array_coor %[[BOX_ADDR_0]](%[[SHAPE_SHIFT_0]]) %[[CONSTANT_1]] : (!fir.heap<!fir.array<?xi32>>, !fir.shapeshift<1>, index) -> !fir.ref<i32>
 // CHECK:             %[[LOAD_2:.*]] = fir.load %[[ARRAY_COOR_0]] : !fir.ref<i32>
 // CHECK:             %[[LOAD_3:.*]] = fir.load %[[DECLARE_0]] : !fir.ref<i32>
@@ -834,10 +834,10 @@ func.func @_QPtest_dummy_array_allocatable(%arg0: !fir.ref<!fir.array<?xi32>> {f
 // CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[LOAD_0]] : (i32) -> index
 // CHECK:           %[[CONVERT_1:.*]] = fir.convert %[[CONSTANT_1]] : (index) -> i32
 // CHECK:           %[[LOAD_1:.*]] = fir.load %[[DECLARE_3]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xi32>>>>
+// CHECK:           %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[LOAD_1]], %[[CONSTANT_0]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> (index, index, index)
+// CHECK:           %[[SHIFT_0:.*]] = fir.shift %[[BOX_DIMS_0]]#0 : (index) -> !fir.shift<1>
 // CHECK:           %[[DO_LOOP_0:.*]] = fir.do_loop %[[VAL_0:.*]] = %[[CONSTANT_1]] to %[[CONVERT_0]] step %[[CONSTANT_1]] iter_args(%[[VAL_1:.*]] = %[[CONVERT_1]]) -> (i32) {
 // CHECK:             fir.store %[[VAL_1]] to %[[DECLARE_0]] : !fir.ref<i32>
-// CHECK:             %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[LOAD_1]], %[[CONSTANT_0]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, index) -> (index, index, index)
-// CHECK:             %[[SHIFT_0:.*]] = fir.shift %[[BOX_DIMS_0]]#0 : (index) -> !fir.shift<1>
 // CHECK:             %[[ARRAY_COOR_0:.*]] = fir.array_coor %[[LOAD_1]](%[[SHIFT_0]]) %[[CONSTANT_1]] : (!fir.box<!fir.ptr<!fir.array<?xi32>>>, !fir.shift<1>, index) -> !fir.ref<i32>
 // CHECK:             %[[LOAD_2:.*]] = fir.load %[[ARRAY_COOR_0]] : !fir.ref<i32>
 // CHECK:             %[[LOAD_3:.*]] = fir.load %[[DECLARE_0]] : !fir.ref<i32>
@@ -985,11 +985,11 @@ func.func @_QPtest_global_array(%arg0: !fir.ref<!fir.array<?xi32>> {fir.bindc_na
 // CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[LOAD_0]] : (i32) -> index
 // CHECK:           %[[CONVERT_1:.*]] = fir.convert %[[CONSTANT_1]] : (index) -> i32
 // CHECK:           %[[LOAD_1:.*]] = fir.load %[[DECLARE_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+// CHECK:           %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
+// CHECK:           %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[LOAD_1]], %[[CONSTANT_0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
+// CHECK:           %[[SHAPE_SHIFT_0:.*]] = fir.shape_shift %[[BOX_DIMS_0]]#0, %[[BOX_DIMS_0]]#1 : (index, index) -> !fir.shapeshift<1>
 // CHECK:           %[[DO_LOOP_0:.*]] = fir.do_loop %[[VAL_0:.*]] = %[[CONSTANT_1]] to %[[CONVERT_0]] step %[[CONSTANT_1]] iter_args(%[[VAL_1:.*]] = %[[CONVERT_1]]) -> (i32) {
 // CHECK:             fir.store %[[VAL_1]] to %[[DECLARE_1]] : !fir.ref<i32>
-// CHECK:             %[[BOX_ADDR_0:.*]] = fir.box_addr %[[LOAD_1]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
-// CHECK:             %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[LOAD_1]], %[[CONSTANT_0]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>, index) -> (index, index, index)
-// CHECK:             %[[SHAPE_SHIFT_0:.*]] = fir.shape_shift %[[BOX_DIMS_0]]#0, %[[BOX_DIMS_0]]#1 : (index, index) -> !fir.shapeshift<1>
 // CHECK:             %[[ARRAY_COOR_0:.*]] = fir.array_coor %[[BOX_ADDR_0]](%[[SHAPE_SHIFT_0]]) %[[CONSTANT_1]] : (!fir.heap<!fir.array<?xf32>>, !fir.shapeshift<1>, index) -> !fir.ref<f32>
 // CHECK:             %[[LOAD_2:.*]] = fir.load %[[ARRAY_COOR_0]] : !fir.ref<f32>
 // CHECK:             %[[CONVERT_2:.*]] = fir.convert %[[LOAD_2]] : (f32) -> i32
@@ -1066,10 +1066,10 @@ func.func @_QPtest_global_array_allocatable(%arg0: !fir.ref<!fir.array<?xi32>> {
 // CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[LOAD_0]] : (i32) -> index
 // CHECK:           %[[CONVERT_1:.*]] = fir.convert %[[CONSTANT_1]] : (index) -> i32
 // CHECK:           %[[LOAD_1:.*]] = fir.load %[[DECLARE_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+// CHECK:           %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[LOAD_1]], %[[CONSTANT_0]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, index) -> (index, index, index)
+// CHECK:           %[[SHIFT_0:.*]] = fir.shift %[[BOX_DIMS_0]]#0 : (index) -> !fir.shift<1>
 // CHECK:           %[[DO_LOOP_0:.*]] = fir.do_loop %[[VAL_0:.*]] = %[[CONSTANT_1]] to %[[CONVERT_0]] step %[[CONSTANT_1]] iter_args(%[[VAL_1:.*]] = %[[CONVERT_1]]) -> (i32) {
 // CHECK:             fir.store %[[VAL_1]] to %[[DECLARE_1]] : !fir.ref<i32>
-// CHECK:             %[[BOX_DIMS_0:.*]]:3 = fir.box_dims %[[LOAD_1]], %[[CONSTANT_0]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, index) -> (index, index, index)
-// CHECK:             %[[SHIFT_0:.*]] = fir.shift %[[BOX_DIMS_0]]#0 : (index) -> !fir.shift<1>
 // CHECK:             %[[ARRAY_COOR_0:.*]] = fir.array_coor %[[LOAD_1]](%[[SHIFT_0]]) %[[CONSTANT_1]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>, !fir.shift<1>, index) -> !fir.ref<f32>
 // CHECK:             %[[LOAD_2:.*]] = fir.load %[[ARRAY_COOR_0]] : !fir.ref<f32>
 // CHECK:             %[[CONVERT_2:.*]] = fir.convert %[[LOAD_2]] : (f32) -> i32
@@ -1530,8 +1530,8 @@ func.func @_QPtest_common_scalar(%arg0: !fir.ref<!fir.array<?xi32>> {fir.bindc_n
 // CHECK:           %[[DECLARE_2:.*]] = fir.declare %[[CONVERT_1]](%{{.*}}) storage(%[[ADDRESS_OF_0]][4]) {uniq_name = "_QFtest_common_arrayEc"} : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, !fir.ref<!fir.array<44xi8>>) -> !fir.ref<!fir.array<10xf32>>
 // CHECK:           %[[DECLARE_4:.*]] = fir.declare %[[ARG2]] dummy_scope %{{.*}} arg 3 {uniq_name = "_QFtest_common_arrayEm"} : (!fir.ref<i32>, !fir.dscope) -> !fir.ref<i32>
 // CHECK:           %[[LOAD_1:.*]] = fir.load %[[DECLARE_4]] : !fir.ref<i32>
+// CHECK:           %[[CONVERT_4:.*]] = fir.convert %[[LOAD_1]] : (i32) -> i64
 // CHECK:           %[[DO_LOOP_0:.*]] = fir.do_loop
-// CHECK:             %[[CONVERT_4:.*]] = fir.convert %[[LOAD_1]] : (i32) -> i64
 // CHECK:             %[[ARRAY_COOR_0:.*]] = fir.array_coor %[[DECLARE_2]](%{{.*}}) %[[CONVERT_4]] : (!fir.ref<!fir.array<10xf32>>, !fir.shape<1>, i64) -> !fir.ref<f32>
 // CHECK:             %[[LOAD_2:.*]] = fir.load %[[ARRAY_COOR_0]] : !fir.ref<f32>
 // CHECK:             %[[CONVERT_5:.*]] = fir.convert %[[LOAD_2]] : (f32) -> i32
@@ -1726,4 +1726,256 @@ func.func @_QPtest_acc_loop_with_private(%arg0: !fir.ref<f32> {fir.bindc_name = 
     acc.yield
   }
   return
+}
+
+// -----
+// Test fir.slice and fir.rebox hoisting:
+// CHECK-LABEL:   func.func @_QPtest_slice_rebox_licm(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
+// CHECK:           %[[CONSTANT_0:.*]] = arith.constant 20 : index
+// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 10 : index
+// CHECK:           %[[CONSTANT_2:.*]] = arith.constant 1 : index
+// CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
+// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_slice_rebox_licmEi"}
+// CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ALLOCA_0]] {uniq_name = "_QFtest_slice_rebox_licmEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ARG0]] dummy_scope %[[DUMMY_SCOPE_0]] arg 1 {uniq_name = "_QFtest_slice_rebox_licmEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
+// CHECK:           %[[REBOX_0:.*]] = fir.rebox %[[DECLARE_1]] : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
+// CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[CONSTANT_2]] : (index) -> i32
+// CHECK:           %[[SLICE_0:.*]] = fir.slice %[[CONSTANT_1]], %[[CONSTANT_0]], %[[CONSTANT_2]] : (index, index, index) -> !fir.slice<1>
+// CHECK:           %[[REBOX_1:.*]] = fir.rebox %[[REBOX_0]] {{\[}}%[[SLICE_0]]] : (!fir.box<!fir.array<?xf32>>, !fir.slice<1>) -> !fir.box<!fir.array<11xf32>>
+// CHECK:           %[[CONVERT_1:.*]] = fir.convert %[[REBOX_1]] : (!fir.box<!fir.array<11xf32>>) -> !fir.box<!fir.array<?xf32>>
+// CHECK:           %[[DO_LOOP_0:.*]] = fir.do_loop %[[VAL_0:.*]] = %[[CONSTANT_2]] to %[[CONSTANT_1]] step %[[CONSTANT_2]] iter_args(%[[VAL_1:.*]] = %[[CONVERT_0]]) -> (i32) {
+// CHECK:             fir.store %[[VAL_1]] to %[[DECLARE_0]] : !fir.ref<i32>
+// CHECK:             fir.call @takes_assumed_shape(%[[CONVERT_1]]) : (!fir.box<!fir.array<?xf32>>) -> ()
+// CHECK:             %[[LOAD_0:.*]] = fir.load %[[DECLARE_0]] : !fir.ref<i32>
+// CHECK:             %[[ADDI_0:.*]] = arith.addi %[[LOAD_0]], %[[CONVERT_0]] overflow<nsw> : i32
+// CHECK:             fir.result %[[ADDI_0]] : i32
+// CHECK:           }
+func.func @_QPtest_slice_rebox_licm(%arg0: !fir.box<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
+  %c20 = arith.constant 20 : index
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %3 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_slice_rebox_licmEi"}
+  %4 = fir.declare %3 {uniq_name = "_QFtest_slice_rebox_licmEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %5 = fir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFtest_slice_rebox_licmEx"} : (!fir.box<!fir.array<?xf32>>, !fir.dscope) -> !fir.box<!fir.array<?xf32>>
+  %6 = fir.rebox %5 : (!fir.box<!fir.array<?xf32>>) -> !fir.box<!fir.array<?xf32>>
+  %7 = fir.convert %c1 : (index) -> i32
+  %8 = fir.do_loop %arg2 = %c1 to %c10 step %c1 iter_args(%arg3 = %7) -> (i32) {
+    fir.store %arg3 to %4 : !fir.ref<i32>
+    %9 = fir.slice %c10, %c20, %c1 : (index, index, index) -> !fir.slice<1>
+    %10 = fir.rebox %6 [%9] : (!fir.box<!fir.array<?xf32>>, !fir.slice<1>) -> !fir.box<!fir.array<11xf32>>
+    %11 = fir.convert %10 : (!fir.box<!fir.array<11xf32>>) -> !fir.box<!fir.array<?xf32>>
+    fir.call @takes_assumed_shape(%11) : (!fir.box<!fir.array<?xf32>>) -> ()
+    %12 = fir.load %4 : !fir.ref<i32>
+    %13 = arith.addi %12, %7 overflow<nsw> : i32
+    fir.result %13 : i32
+  }
+  fir.store %8 to %4 : !fir.ref<i32>
+  return
+}
+func.func private @takes_assumed_shape(!fir.box<!fir.array<?xf32>>)
+
+// -----
+// Test fir.shape and fir.embox hoisting:
+// CHECK-LABEL:   func.func @_QPtest_shape_embox_licm(
+// CHECK-SAME:      %[[ARG0:.*]]: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
+// CHECK:           %[[CONSTANT_0:.*]] = arith.constant 11 : index
+// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 10 : index
+// CHECK:           %[[CONSTANT_2:.*]] = arith.constant 1 : index
+// CHECK:           %[[DUMMY_SCOPE_0:.*]] = fir.dummy_scope : !fir.dscope
+// CHECK:           %[[ALLOCA_0:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_shape_embox_licmEi"}
+// CHECK:           %[[DECLARE_0:.*]] = fir.declare %[[ALLOCA_0]] {uniq_name = "_QFtest_shape_embox_licmEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+// CHECK:           %[[ASSUMED_SIZE_EXTENT_0:.*]] = fir.assumed_size_extent : index
+// CHECK:           %[[SHAPE_0:.*]] = fir.shape %[[ASSUMED_SIZE_EXTENT_0]] : (index) -> !fir.shape<1>
+// CHECK:           %[[DECLARE_1:.*]] = fir.declare %[[ARG0]](%[[SHAPE_0]]) dummy_scope %[[DUMMY_SCOPE_0]] arg 1 {uniq_name = "_QFtest_shape_embox_licmEx"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<?xf32>>
+// CHECK:           %[[CONVERT_0:.*]] = fir.convert %[[CONSTANT_2]] : (index) -> i32
+// CHECK:           %[[ARRAY_COOR_0:.*]] = fir.array_coor %[[DECLARE_1]](%[[SHAPE_0]]) %[[CONSTANT_1]] : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
+// CHECK:           %[[SHAPE_1:.*]] = fir.shape %[[CONSTANT_0]] : (index) -> !fir.shape<1>
+// CHECK:           %[[CONVERT_1:.*]] = fir.convert %[[ARRAY_COOR_0]] : (!fir.ref<f32>) -> !fir.ref<!fir.array<11xf32>>
+// CHECK:           %[[EMBOX_0:.*]] = fir.embox %[[CONVERT_1]](%[[SHAPE_1]]) : (!fir.ref<!fir.array<11xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<11xf32>>
+// CHECK:           %[[CONVERT_2:.*]] = fir.convert %[[EMBOX_0]] : (!fir.box<!fir.array<11xf32>>) -> !fir.box<!fir.array<?xf32>>
+// CHECK:           %[[DO_LOOP_0:.*]] = fir.do_loop %[[VAL_0:.*]] = %[[CONSTANT_2]] to %[[CONSTANT_1]] step %[[CONSTANT_2]] iter_args(%[[VAL_1:.*]] = %[[CONVERT_0]]) -> (i32) {
+// CHECK:             fir.store %[[VAL_1]] to %[[DECLARE_0]] : !fir.ref<i32>
+// CHECK:             fir.call @takes_assumed_shape(%[[CONVERT_2]]) : (!fir.box<!fir.array<?xf32>>) -> ()
+// CHECK:             %[[LOAD_0:.*]] = fir.load %[[DECLARE_0]] : !fir.ref<i32>
+// CHECK:             %[[ADDI_0:.*]] = arith.addi %[[LOAD_0]], %[[CONVERT_0]] overflow<nsw> : i32
+// CHECK:             fir.result %[[ADDI_0]] : i32
+// CHECK:           }
+func.func @_QPtest_shape_embox_licm(%arg0: !fir.ref<!fir.array<?xf32>> {fir.bindc_name = "x"}) {
+  %c11 = arith.constant 11 : index
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_shape_embox_licmEi"}
+  %2 = fir.declare %1 {uniq_name = "_QFtest_shape_embox_licmEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %3 = fir.assumed_size_extent : index
+  %4 = fir.shape %3 : (index) -> !fir.shape<1>
+  %5 = fir.declare %arg0(%4) dummy_scope %0 arg 1 {uniq_name = "_QFtest_shape_embox_licmEx"} : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, !fir.dscope) -> !fir.ref<!fir.array<?xf32>>
+  %6 = fir.convert %c1 : (index) -> i32
+  %9 = fir.array_coor %5(%4) %c10 : (!fir.ref<!fir.array<?xf32>>, !fir.shape<1>, index) -> !fir.ref<f32>
+  %7 = fir.do_loop %arg1 = %c1 to %c10 step %c1 iter_args(%arg2 = %6) -> (i32) {
+    fir.store %arg2 to %2 : !fir.ref<i32>
+    %8 = fir.shape %c11 : (index) -> !fir.shape<1>
+    %10 = fir.convert %9 : (!fir.ref<f32>) -> !fir.ref<!fir.array<11xf32>>
+    %11 = fir.embox %10(%8) : (!fir.ref<!fir.array<11xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<11xf32>>
+    %12 = fir.convert %11 : (!fir.box<!fir.array<11xf32>>) -> !fir.box<!fir.array<?xf32>>
+    fir.call @takes_assumed_shape(%12) : (!fir.box<!fir.array<?xf32>>) -> ()
+    %13 = fir.load %2 : !fir.ref<i32>
+    %14 = arith.addi %13, %6 overflow<nsw> : i32
+    fir.result %14 : i32
+  }
+  fir.store %7 to %2 : !fir.ref<i32>
+  return
+}
+
+// -----
+// CHECK-LABEL:   func.func @test_shapeshift_licm(
+// CHECK-SAME:      %[[ARG0:.*]]: index) {
+// CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
+// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 10 : index
+// CHECK:           %[[SHAPE_SHIFT_0:.*]] = fir.shape_shift %[[ARG0]], %[[ARG0]] : (index, index) -> !fir.shapeshift<1>
+// CHECK:           fir.do_loop %[[VAL_0:.*]] = %[[CONSTANT_0]] to %[[CONSTANT_1]] step %[[CONSTANT_0]] {
+// CHECK:             fir.call @takes_shape_shift(%[[SHAPE_SHIFT_0]]) : (!fir.shapeshift<1>) -> ()
+// CHECK:           }
+func.func @test_shapeshift_licm(%arg0 : index) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg1 = %c1 to %c10 step %c1 {
+    %op = fir.shape_shift %arg0, %arg0 : (index, index) -> !fir.shapeshift<1>
+    fir.call @takes_shape_shift(%op) : (!fir.shapeshift<1>) -> ()
+  }
+  return
+}
+func.func private @takes_shape_shift(!fir.shapeshift<1>)
+
+// -----
+// CHECK-LABEL:   func.func @test_shift_licm(
+// CHECK-SAME:      %[[ARG0:.*]]: index) {
+// CHECK:           %[[CONSTANT_0:.*]] = arith.constant 1 : index
+// CHECK:           %[[CONSTANT_1:.*]] = arith.constant 10 : index
+// CHECK:           %[[SHIFT_0:.*]] = fir.shift %[[ARG0]] : (index) -> !fir.shift<1>
+// CHECK:           fir.do_loop %[[VAL_0:.*]] = %[[CONSTANT_0]] to %[[CONSTANT_1]] step %[[CONSTANT_0]] {
+// CHECK:             fir.call @takes_shift(%[[SHIFT_0]]) : (!fir.shift<1>) -> ()
+// CHECK:           }
+func.func @test_shift_licm(%arg0 : index) {
+  %c1 = arith.constant 1 : index
+  %c10 = arith.constant 10 : index
+  fir.do_loop %arg1 = %c1 to %c10 step %c1 {
+    %op = fir.shift %arg0 : (index) -> !fir.shift<1>
+    fir.call @takes_shift(%op) : (!fir.shift<1>) -> ()
+  }
+  return
+}
+func.func private @takes_shift(!fir.shift<1>)
+
+// -----
+// Check that fir.box_addr of !fir.boxproc is not speculated.
+// For some reason, we do not produce proper [hl]fir.declare
+// for optional dummy procedure pointers.
+// CHECK-LABEL: func.func @_QPtest_box_addr_proc(
+// CHECK-NOT: fir.box_addr
+// CHECK: fir.do_loop
+// CHECK: fir.box_addr
+func.func @_QPtest_box_addr_proc(%arg0: !fir.ref<f32> {fir.bindc_name = "x"}, %arg1: !fir.boxproc<() -> ()>) {
+  %c10 = arith.constant 10 : index
+  %c1 = arith.constant 1 : index
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFtest_box_addr_procEi"}
+  %2 = fir.declare %1 {uniq_name = "_QFtest_box_addr_procEi"} : (!fir.ref<i32>) -> !fir.ref<i32>
+  %3 = fir.declare %arg0 dummy_scope %0 arg 1 {uniq_name = "_QFtest_box_addr_procEx"} : (!fir.ref<f32>, !fir.dscope) -> !fir.ref<f32>
+  %4 = fir.convert %c1 : (index) -> i32
+  %5 = fir.do_loop %arg2 = %c1 to %c10 step %c1 iter_args(%arg3 = %4) -> (i32) {
+    fir.store %arg3 to %2 : !fir.ref<i32>
+    %6 = fir.box_addr %arg1 : (!fir.boxproc<() -> ()>) -> (() -> f32)
+    %7 = fir.call %6() : () -> f32
+    fir.store %7 to %3 : !fir.ref<f32>
+    %8 = fir.load %2 : !fir.ref<i32>
+    %9 = arith.addi %8, %4 overflow<nsw> : i32
+    fir.result %9 : i32
+  }
+  fir.store %5 to %2 : !fir.ref<i32>
+  return
+}
+
+// -----
+// CHECK-LABEL: func.func @test_acc_loop_private_hoisting(
+// CHECK: %[[CLAUSE_VAL:.*]] = acc.private
+// CHECK-NOT: %[[CLAUSE_VAL]]
+// CHECK: acc.loop{{.*}}private(%[[CLAUSE_VAL]] : !fir.ref<f32>)
+func.func @test_acc_loop_private_hoisting() {
+  %cst = arith.constant 1.000000e+00 : f32
+  %c10_i32 = arith.constant 10 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.alloca f32 {bindc_name = "b", uniq_name = "_QFtestEb"}
+  %2 = fir.declare %1 {uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  acc.parallel combined(loop) {
+    %5 = acc.private varPtr(%2 : !fir.ref<f32>) recipe(@privatization_ref_f32) -> !fir.ref<f32> {name = "b"}
+    acc.loop combined(parallel) private(%5 : !fir.ref<f32>) control(%arg0 : i32) = (%c1_i32 : i32) to (%c10_i32 : i32)  step (%c1_i32 : i32) {
+      %cvt = fir.convert %5 : (!fir.ref<f32>) -> !fir.ref<f32>
+      %7 = fir.declare %cvt {uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
+      fir.store %cst to %7 : !fir.ref<f32>
+      acc.yield
+    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+    acc.yield
+  }
+  return
+}
+
+// -----
+// CHECK-LABEL: func.func @test_acc_loop_firstprivate_hoisting(
+// CHECK: %[[CLAUSE_VAL:.*]] = acc.firstprivate
+// CHECK-NOT: %[[CLAUSE_VAL]]
+// CHECK: acc.loop{{.*}}firstprivate(%[[CLAUSE_VAL]] : !fir.ref<f32>)
+func.func @test_acc_loop_firstprivate_hoisting() {
+  %cst = arith.constant 1.000000e+00 : f32
+  %c10_i32 = arith.constant 10 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.alloca f32 {bindc_name = "b", uniq_name = "_QFtestEb"}
+  %2 = fir.declare %1 {uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  acc.parallel combined(loop) {
+    %5 = acc.firstprivate varPtr(%2 : !fir.ref<f32>) recipe(@privatization_ref_f32) -> !fir.ref<f32> {name = "b"}
+    acc.loop combined(parallel) firstprivate(%5 : !fir.ref<f32>) control(%arg0 : i32) = (%c1_i32 : i32) to (%c10_i32 : i32)  step (%c1_i32 : i32) {
+      %cvt = fir.convert %5 : (!fir.ref<f32>) -> !fir.ref<f32>
+      %7 = fir.declare %cvt {uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
+      fir.store %cst to %7 : !fir.ref<f32>
+      acc.yield
+    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+    acc.yield
+  }
+  return
+}
+
+// -----
+// CHECK-LABEL: func.func @test_acc_loop_reduction_hoisting(
+// CHECK: %[[CLAUSE_VAL:.*]] = acc.reduction
+// CHECK-NOT: %[[CLAUSE_VAL]]
+// CHECK: acc.loop{{.*}}reduction(%[[CLAUSE_VAL]] : !fir.ref<f32>)
+func.func @test_acc_loop_reduction_hoisting() {
+  %cst = arith.constant 1.000000e+00 : f32
+  %c10_i32 = arith.constant 10 : i32
+  %c1_i32 = arith.constant 1 : i32
+  %0 = fir.dummy_scope : !fir.dscope
+  %1 = fir.alloca f32 {bindc_name = "b", uniq_name = "_QFtestEb"}
+  %2 = fir.declare %1 {uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
+  acc.parallel combined(loop) {
+  %5 = acc.reduction varPtr(%2 : !fir.ref<f32>) recipe(@reduction_add_ref_f32) -> !fir.ref<f32> {name = "b"}
+    acc.loop combined(parallel) reduction(%5 : !fir.ref<f32>) control(%arg0 : i32) = (%c1_i32 : i32) to (%c10_i32 : i32)  step (%c1_i32 : i32) {
+      %cvt = fir.convert %5 : (!fir.ref<f32>) -> !fir.ref<f32>
+      %7 = fir.declare %cvt {uniq_name = "_QFtestEb"} : (!fir.ref<f32>) -> !fir.ref<f32>
+      fir.store %cst to %7 : !fir.ref<f32>
+      acc.yield
+    } attributes {inclusiveUpperbound = array<i1: true>, independent = [#acc.device_type<none>]}
+    acc.yield
+  }
+  return
+}
+acc.reduction.recipe @reduction_add_ref_f32 : !fir.ref<f32> reduction_operator <add> init {
+^bb0(%arg0: !fir.ref<f32>):
+  acc.yield %arg0 : !fir.ref<f32>
+} combiner {
+^bb0(%arg0: !fir.ref<f32>, %arg1: !fir.ref<f32>):
+  acc.yield %arg0 : !fir.ref<f32>
 }

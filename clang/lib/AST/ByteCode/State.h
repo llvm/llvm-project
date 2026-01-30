@@ -15,6 +15,7 @@
 
 #include "clang/AST/ASTDiagnostic.h"
 #include "clang/AST/Expr.h"
+#include "clang/AST/OptionalDiagnostic.h"
 
 namespace clang {
 class OptionalDiagnostic;

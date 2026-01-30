@@ -839,6 +839,8 @@ public:
   virtual void emitCodeAlignment(Align Alignment, const MCSubtargetInfo *STI,
                                  unsigned MaxBytesToEmit = 0);
 
+  virtual void emitPrefAlign(Align A);
+
   /// Emit some number of copies of \p Value until the byte offset \p
   /// Offset is reached.
   ///
@@ -1054,7 +1056,7 @@ public:
   /// Get the .xdata section used for the given section.
   MCSection *getAssociatedXDataSection(const MCSection *TextSec);
 
-  virtual void emitSyntaxDirective();
+  virtual void emitSyntaxDirective(StringRef Syntax, StringRef Options);
 
   /// Record a relocation described by the .reloc directive.
   virtual void emitRelocDirective(const MCExpr &Offset, StringRef Name,
