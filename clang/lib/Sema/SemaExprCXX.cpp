@@ -2658,15 +2658,25 @@ ExprResult Sema::BuildCXXNew(SourceRange Range, bool UseGlobal,
 // using their spelled qualifiers, and return whole qual type
 
 static std::string formatAddressSpaceForDiag(QualType T,
-                                             const LangOptions &LangOpts) {
+                                             const LangOptions &LangOpts,
+                                             const ASTContext &Ctx) {
   LangAS AS = T.getAddressSpace();
   if (isTargetAddressSpace(AS))
     return llvm::utostr(toTargetAddressSpace(AS));
+
   PrintingPolicy PP(LangOpts);
-  std::string S;
-  llvm::raw_string_ostream OS(S);
+
+  std::string Sugared, Desugared;
+  llvm::raw_string_ostream OS(Sugared);
+  llvm::raw_string_ostream KO(Desugared);
+
+  // Sugared type (e.g. LocalInt / FOO)
   T.print(OS, PP);
-  return OS.str();
+
+  // Desugared type (e.g. __local int)
+  T.getDesugaredType(Ctx).print(KO, PP);
+
+  return OS.str() + " (" + KO.str() + ")";
 }
 
 bool Sema::CheckAllocatedType(QualType AllocType, SourceLocation Loc,
@@ -2693,7 +2703,7 @@ bool Sema::CheckAllocatedType(QualType AllocType, SourceLocation Loc,
            !getLangOpts().OpenCLCPlusPlus)
     return Diag(Loc, diag::err_address_space_qualified_new)
            << AllocType.getUnqualifiedType()
-           << formatAddressSpaceForDiag(AllocType, getLangOpts());
+           << formatAddressSpaceForDiag(AllocType, getLangOpts(), Context);
 
   else if (getLangOpts().ObjCAutoRefCount) {
     if (const ArrayType *AT = Context.getAsArrayType(AllocType)) {
@@ -4086,7 +4096,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
       return Diag(Ex.get()->getBeginLoc(),
                   diag::err_address_space_qualified_delete)
              << Pointee.getUnqualifiedType()
-             << formatAddressSpaceForDiag(Pointee, getLangOpts());
+             << formatAddressSpaceForDiag(Pointee, getLangOpts(), Context);
 
     CXXRecordDecl *PointeeRD = nullptr;
     if (Pointee->isVoidType() && !isSFINAEContext()) {
