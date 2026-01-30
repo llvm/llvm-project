@@ -8333,15 +8333,14 @@ SDValue SITargetLowering::LowerINLINEASM(SDValue Op, SelectionDAG &DAG) const {
                        TRI->isSGPRClass(TRI->getRegClass(RCID));
 
     for (unsigned J = 0; J < NumVals; ++J, ++I) {
-      if (!IsSGPRInput)
-        continue;
-
       SDValue Val = Op.getOperand(I);
       if (Val.getOpcode() != ISD::Register)
         continue;
 
       Register Reg = cast<RegisterSDNode>(Val.getNode())->getReg();
-      if (Reg.isVirtual())
+
+      IsSGPRInput = Reg.isPhysical() ? TRI->isSGPRPhysReg(Reg) : IsSGPRInput;
+      if (IsSGPRInput)
         SGPRInputRegs.insert(Reg);
     }
   }
