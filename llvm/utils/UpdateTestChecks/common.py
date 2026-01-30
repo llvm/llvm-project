@@ -1413,7 +1413,7 @@ def make_analyze_generalizer(version):
         NamelessValue(
             r"GRP",
             "#",
-            r"",
+            r"group",
             r"0x[0-9a-f]+",
             None,
             replace_number_with_counter=True,
@@ -1429,10 +1429,7 @@ def make_analyze_generalizer(version):
     ]
 
     prefix = r"(\s*)"
-    # Suffix matches either:
-    # - GRP pattern: ")" or ":" or "):"
-    # - VP pattern: space, comma, ),  =, or end of line (but only after >)
-    suffix = r"(\)?:|(?<=>)(?=[,\s\)=]|\Z))"
+    suffix = r"([,\s\(\)\}\]:]|\Z)"
 
     return GeneralizerInfo(
         version, GeneralizerInfo.MODE_ANALYZE, values, prefix, suffix

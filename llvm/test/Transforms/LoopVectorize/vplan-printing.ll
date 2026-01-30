@@ -562,6 +562,36 @@ define i32 @print_exit_value(ptr %ptr, i32 %off) {
 ; CHECK-NEXT:  vector.ph:
 ; CHECK-NEXT:  Successor(s): vector loop
 ; CHECK-EMPTY:
+; CHECK-NEXT:  <x1> vector loop: {
+; CHECK-NEXT:    vector.body:
+; CHECK-NEXT:      EMIT vp<[[VP3:%[0-9]+]]> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
+; CHECK-NEXT:      ir<%iv> = WIDEN-INDUCTION nsw ir<0>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      vp<[[VP4:%[0-9]+]]> = SCALAR-STEPS vp<[[VP3]]>, ir<1>, vp<[[VP0]]>
+; CHECK-NEXT:      CLONE ir<%gep> = getelementptr inbounds ir<%ptr>, vp<[[VP4]]>
+; CHECK-NEXT:      vp<[[VP5:%[0-9]+]]> = vector-pointer inbounds ir<%gep>
+; CHECK-NEXT:      WIDEN store vp<[[VP5]]>, ir<0>
+; CHECK-NEXT:      EMIT vp<%index.next> = add nuw vp<[[VP3]]>, vp<[[VP1]]>
+; CHECK-NEXT:      EMIT branch-on-count vp<%index.next>, vp<[[VP2]]>
+; CHECK-NEXT:    No successors
+; CHECK-NEXT:  }
+; CHECK-NEXT:  Successor(s): middle.block
+; CHECK-EMPTY:
+; CHECK-NEXT:  middle.block:
+; CHECK-NEXT:    WIDEN ir<%add> = add ir<%iv>, ir<%off>
+; CHECK-NEXT:    EMIT vp<[[VP7:%[0-9]+]]> = extract-last-part ir<%add>
+; CHECK-NEXT:    EMIT vp<[[VP8:%[0-9]+]]> = extract-last-lane vp<[[VP7]]>
+; CHECK-NEXT:    EMIT vp<%cmp.n> = icmp eq ir<1000>, vp<[[VP2]]>
+; CHECK-NEXT:    EMIT branch-on-cond vp<%cmp.n>
+; CHECK-NEXT:  Successor(s): ir-bb<exit>, scalar.ph
+; CHECK-EMPTY:
+; CHECK-NEXT:  ir-bb<exit>:
+; CHECK-NEXT:    IR   %lcssa = phi i32 [ %add, %loop ] (extra operand: vp<[[VP8]]> from middle.block)
+; CHECK-NEXT:  No successors
+; CHECK-EMPTY:
+; CHECK-NEXT:  scalar.ph:
+; CHECK-NEXT:    EMIT-SCALAR vp<%bc.resume.val> = phi [ vp<[[VP2]]>, middle.block ], [ ir<0>, ir-bb<entry> ]
+; CHECK-NEXT:  Successor(s): ir-bb<loop>
+; CHECK-EMPTY:
 ; CHECK-NEXT:  ir-bb<loop>:
 ; CHECK-NEXT:    IR   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ] (extra operand: vp<%bc.resume.val> from scalar.ph)
 ; CHECK-NEXT:    IR   %gep = getelementptr inbounds i8, ptr %ptr, i32 %iv
