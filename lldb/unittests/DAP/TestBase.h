@@ -109,7 +109,6 @@ protected:
 
   static void SetUpTestSuite();
   static void TeatUpTestSuite();
-  void SetUp() override;
   void TearDown() override;
 
   bool GetDebuggerSupportsTarget(llvm::StringRef platform);

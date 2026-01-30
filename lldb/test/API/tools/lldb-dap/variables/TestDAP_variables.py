@@ -146,8 +146,7 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
                 },
             },
         }
-        varref_dict = {}
-        self.verify_variables(verify_locals, locals, varref_dict)
+        self.verify_variables(verify_locals, locals)
 
     def do_test_scopes_variables_setVariable_evaluate(
         self, enableAutoVariableSummaries: bool
@@ -622,8 +621,9 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
 
         var_ref = permanent_expandable_ref
         response = self.dap_server.request_variables(var_ref)
-        self.verify_variables(
-            expandable_expression["children"], response["body"]["variables"]
+        self.assertFalse(
+            response["success"],
+            f"variable reference should be out of scope in {response}",
         )
 
         # Test that frame scopes have corresponding presentation hints.

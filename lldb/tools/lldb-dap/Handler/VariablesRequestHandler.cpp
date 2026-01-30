@@ -13,7 +13,6 @@
 #include "Protocol/DAPTypes.h"
 #include "Protocol/ProtocolRequests.h"
 #include "Variables.h"
-#include "llvm/Support/ErrorExtras.h"
 
 using namespace llvm;
 using namespace lldb_dap::protocol;

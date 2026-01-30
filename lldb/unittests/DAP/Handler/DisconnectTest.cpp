@@ -44,17 +44,18 @@ TEST_F(DisconnectRequestHandlerTest, DisconnectTriggersTerminateCommands) {
 
   LoadCore();
 
-  DisconnectRequestHandler handler(*dap);
-
   dap->configuration.terminateCommands = {"?script print(1)",
                                           "script print(2)"};
   EXPECT_EQ(dap->target.GetProcess().GetState(), lldb::eStateStopped);
+
+  DisconnectRequestHandler handler(*dap);
   ASSERT_THAT_ERROR(handler.Run(std::nullopt), Succeeded());
-  EXPECT_CALL(client, Received(Output("1\n")));
-  EXPECT_CALL(client, Received(Output("2\n"))).Times(2);
-  EXPECT_CALL(client, Received(Output("(lldb) script print(2)\n")));
+
   EXPECT_CALL(client, Received(Output("Running terminateCommands:\n")));
+  EXPECT_CALL(client, Received(Output("(lldb) script print(2)\n")));
+  EXPECT_CALL(client, Received(Output("2\n")));
   EXPECT_CALL(client, Received(IsEvent("terminated", _)));
+
   Run();
 }
 #endif
