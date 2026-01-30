@@ -732,7 +732,6 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
     // Purpose:
     //   We want to compute/simplify the expression:
     //       b + scale * (a ^ c)
-    //   Here a and c are both constants.
 
     // Transform:
     //   We must partition c into disjoint and non-disjoint components and
@@ -780,7 +779,7 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
   // sub-expression to be just TheOther.
   if (ConstantInt *CI = dyn_cast<ConstantInt>(NextInChain))
     if (CI->isZero())
-      if (!BO->getOpcode() != Instruction::Sub || OpNo != 0)
+      if (!(BO->getOpcode() == Instruction::Sub && OpNo == 0))
         return TheOther;
 
   BinaryOperator::BinaryOps NewOp = BO->getOpcode();
