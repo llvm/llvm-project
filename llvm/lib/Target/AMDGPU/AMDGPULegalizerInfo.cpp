@@ -7777,7 +7777,6 @@ bool AMDGPULegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
       B.buildFrameIndex(MI.getOperand(0), FI);
       MI.eraseFromParent();
     }
-    B.getMF().getInfo<SIMachineFunctionInfo>()->setUsesSPOnEntry(true);
     return true;
   case Intrinsic::amdgcn_if:
   case Intrinsic::amdgcn_else: {

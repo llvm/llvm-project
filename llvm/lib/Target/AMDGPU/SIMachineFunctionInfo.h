@@ -492,9 +492,6 @@ private:
   // to spill some of the dynamic VGPRs.
   unsigned ScratchReservedForDynamicVGPRs = 0;
 
-  // Track if llvm.sponentry intrinsic is used.
-  bool UsesSPOnEntry = false;
-
   // Tracks information about user SGPRs that will be setup by hardware which
   // will apply to all wavefronts of the grid.
   GCNUserSGPRUsageInfo UserSGPRInfo;
@@ -695,9 +692,6 @@ public:
   }
 
   bool isWholeWaveFunction() const { return IsWholeWaveFunction; }
-
-  bool usesSPOnEntry() const { return UsesSPOnEntry; }
-  void setUsesSPOnEntry(bool Val) { UsesSPOnEntry = Val; }
 
   ArrayRef<PrologEpilogSGPRSpill> getPrologEpilogSGPRSpills() const {
     assert(is_sorted(PrologEpilogSGPRSpills, llvm::less_first()));

@@ -7913,14 +7913,13 @@ SDValue SITargetLowering::LowerSPONENTRY(SDValue Op, SelectionDAG &DAG) const {
   MachineFunction &MF = DAG.getMachineFunction();
   SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
 
-  MFI->setUsesSPOnEntry(true);
-
-  // For functions that set up their own stack, use the AMDGPUsponentry
-  // node which will be selected to GET_STACK_BASE pseudo.
+  // For functions that set up their own stack, select the GET_STACK_BASE
+  // pseudo.
   if (MFI->isBottomOfStack()) {
     return Op;
   }
 
+  // For everything else, create a dummy stack object.
   EVT VT = getPointerTy(DAG.getDataLayout(), AMDGPUAS::PRIVATE_ADDRESS);
   int FI = MF.getFrameInfo().CreateFixedObject(1, 0, /*IsImmutable=*/false);
   return DAG.getFrameIndex(FI, VT);

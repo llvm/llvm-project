@@ -2588,7 +2588,8 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     } else {
       MI.setDesc(get(AMDGPU::S_MOV_B32));
       MI.addOperand(MachineOperand::CreateImm(0));
-      MI.removeOperand(MI.getNumExplicitOperands()); // Drop implicit def of SCC.
+      MI.removeOperand(
+          MI.getNumExplicitOperands()); // Drop implicit def of SCC.
     }
     break;
   }
