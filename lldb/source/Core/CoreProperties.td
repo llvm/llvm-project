@@ -131,7 +131,7 @@ let Definition = "debugger" in {
   def StopShowColumnAnsiPrefix: Property<"stop-show-column-ansi-prefix", "String">,
     Global,
     DefaultStringValue<"${ansi.underline}">,
-    Desc<"When displaying the column marker in a color-enabled terminal, use the ANSI terminal code specified in this format at the immediately before the column to be marked.">;
+    Desc<"When displaying the column marker in a color-enabled terminal, use the ANSI terminal code specified in this format immediately before the column to be marked.">;
   def StopShowColumnAnsiSuffix: Property<"stop-show-column-ansi-suffix", "String">,
     Global,
     DefaultStringValue<"${ansi.normal}">,
@@ -139,7 +139,7 @@ let Definition = "debugger" in {
   def StopShowLineMarkerAnsiPrefix: Property<"stop-show-line-ansi-prefix", "String">,
     Global,
     DefaultStringValue<"${ansi.fg.yellow}">,
-    Desc<"When displaying the line marker in a color-enabled terminal, use the ANSI terminal code specified in this format at the immediately before the line to be marked.">;
+    Desc<"When displaying the line marker in a color-enabled terminal, use the ANSI terminal code specified in this format immediately before the line to be marked.">;
   def StopShowLineMarkerAnsiSuffix: Property<"stop-show-line-ansi-suffix", "String">,
     Global,
     DefaultStringValue<"${ansi.normal}">,
@@ -215,7 +215,7 @@ let Definition = "debugger" in {
       : Property<"disable-ansi-suffix", "String">,
         Global,
         DefaultStringValue<"${ansi.normal}">,
-        Desc<"When somehing has been disabled in a color-enabled terminal, use "
+        Desc<"When something has been disabled in a color-enabled terminal, use "
              "the ANSI terminal code specified immediately after whatever has "
              "been disabled.">;
 
