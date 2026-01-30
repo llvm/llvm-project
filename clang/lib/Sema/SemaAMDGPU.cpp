@@ -788,7 +788,8 @@ bool DiagnoseUnguardedBuiltins::TraverseIfStmt(IfStmt *If) {
       // TODO: handle generic ISAs.
       if (!CurrentGFXIP.empty() && G != CurrentGFXIP.back().second) {
         SemaRef.Diag(CE->getExprLoc(),
-                     diag::err_amdgcn_conflicting_is_processor_options) << CE;
+                     diag::err_amdgcn_conflicting_is_processor_options)
+            << CE;
         SemaRef.Diag(CurrentGFXIP.back().first->getExprLoc(),
                      diag::note_amdgcn_previous_is_processor_guard);
       }
