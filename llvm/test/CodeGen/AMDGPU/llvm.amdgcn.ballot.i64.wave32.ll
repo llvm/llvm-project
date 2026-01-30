@@ -126,9 +126,8 @@ define amdgpu_cs i64 @ctpop_of_ballot(float %x, float %y) {
 define amdgpu_cs i32 @branch_divergent_ballot64_ne_zero_compare(i32 %v) {
 ; CHECK-LABEL: branch_divergent_ballot64_ne_zero_compare:
 ; CHECK:       ; %bb.0:
-; CHECK-NEXT:    v_cmp_gt_u32_e64 s0, 12, v0
-; CHECK-NEXT:    s_mov_b32 s1, 0
-; CHECK-NEXT:    s_cmp_eq_u64 s[0:1], 0
+; CHECK-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 12, v0
+; CHECK-NEXT:    s_cmp_eq_u32 vcc_lo, 0
 ; CHECK-NEXT:    s_cbranch_scc1 .LBB7_2
 ; CHECK-NEXT:  ; %bb.1: ; %true
 ; CHECK-NEXT:    s_mov_b32 s0, 42
@@ -152,11 +151,10 @@ define amdgpu_cs i32 @branch_divergent_ballot64_ne_zero_and(i32 %v1, i32 %v2) {
 ; DAGISEL:       ; %bb.0:
 ; DAGISEL-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 12, v0
 ; DAGISEL-NEXT:    v_cmp_lt_u32_e64 s0, 34, v1
-; DAGISEL-NEXT:    s_mov_b32 s1, 0
 ; DAGISEL-NEXT:    s_and_b32 s0, vcc_lo, s0
 ; DAGISEL-NEXT:    v_cndmask_b32_e64 v0, 0, 1, s0
-; DAGISEL-NEXT:    v_cmp_ne_u32_e64 s0, 0, v0
-; DAGISEL-NEXT:    s_cmp_eq_u64 s[0:1], 0
+; DAGISEL-NEXT:    v_cmp_ne_u32_e32 vcc_lo, 0, v0
+; DAGISEL-NEXT:    s_cmp_eq_u32 vcc_lo, 0
 ; DAGISEL-NEXT:    s_cbranch_scc1 .LBB8_2
 ; DAGISEL-NEXT:  ; %bb.1: ; %true
 ; DAGISEL-NEXT:    s_mov_b32 s0, 42
@@ -170,9 +168,8 @@ define amdgpu_cs i32 @branch_divergent_ballot64_ne_zero_and(i32 %v1, i32 %v2) {
 ; GISEL:       ; %bb.0:
 ; GISEL-NEXT:    v_cmp_gt_u32_e32 vcc_lo, 12, v0
 ; GISEL-NEXT:    v_cmp_lt_u32_e64 s0, 34, v1
-; GISEL-NEXT:    s_mov_b32 s1, 0
 ; GISEL-NEXT:    s_and_b32 s0, vcc_lo, s0
-; GISEL-NEXT:    s_cmp_eq_u64 s[0:1], 0
+; GISEL-NEXT:    s_cmp_eq_u32 s0, 0
 ; GISEL-NEXT:    s_cbranch_scc1 .LBB8_2
 ; GISEL-NEXT:  ; %bb.1: ; %true
 ; GISEL-NEXT:    s_mov_b32 s0, 42

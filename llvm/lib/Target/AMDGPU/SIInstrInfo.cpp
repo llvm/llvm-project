@@ -11026,7 +11026,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   }
 
   const auto replaceSourceReg = [](MachineInstr &MI, Register Old, Register New) {
-    for (int I = 0; I < MI.getNumOperands(); I++)
+    for (unsigned I = 0; I < MI.getNumOperands(); I++)
       if (MI.getOperand(I).isReg() && MI.getOperand(I).getReg() == Old)
       {
         MI.getOperand(I).setReg(New);
@@ -11036,8 +11036,8 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   };
 
   const auto replaceSourceImm = [](MachineInstr &MI, uint64_t Old, uint64_t New) {
-    for (int I = 0; I < MI.getNumOperands(); I++)
-      if (MI.getOperand(I).isImm() && MI.getOperand(I).getImm() == Old)
+    for (unsigned I = 0; I < MI.getNumOperands(); I++)
+      if (MI.getOperand(I).isImm() && (uint64_t)MI.getOperand(I).getImm() == Old)
       {
         MI.getOperand(I).setImm(New);
         return true;
@@ -11046,7 +11046,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   };
 
   const auto replaceSourceRegWithImm = [](MachineInstr &MI, Register Old, uint64_t New) {
-    for (int I = 0; I < MI.getNumOperands(); I++)
+    for (unsigned I = 0; I < MI.getNumOperands(); I++)
       if (MI.getOperand(I).isReg() && MI.getOperand(I).getReg() == Old)
       {
         MI.getOperand(I).ChangeToImmediate(New);
@@ -11072,7 +11072,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
       return false;
 
     if(!RegSequence.second) //Lower 32 bits nonzero
-      if (CmpValue > UINT32_MAX + 1UL) {
+      if ((uint64_t)CmpValue > UINT32_MAX + 1UL) {
         // Hard-code EQ ? 0 : 1
         CmpInstr.setDesc(get(AMDGPU::S_CMP_EQ_U32));
         CmpInstr.getOperand(0).ChangeToImmediate(0);
@@ -11084,7 +11084,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
         SrcReg = RegSequence.first->getOperand(0).getReg();
       }
     else // Upper 32 bits nonzero
-      if (CmpValue % (UINT32_MAX + 1UL)) {
+      if ((uint64_t)CmpValue % (UINT32_MAX + 1UL)) {
         // Hard-code EQ ? 0 : 1
         CmpInstr.setDesc(get(AMDGPU::S_CMP_EQ_U32));
         CmpInstr.getOperand(0).ChangeToImmediate(0);

@@ -21,7 +21,7 @@ define amdgpu_kernel void @copy_to_vreg_1(i32 %0) {
 ; GCN-NEXT:    v_readfirstlane_b32 s1, v1
 ; GCN-NEXT:    s_cselect_b32 s4, s0, s1
 ; GCN-NEXT:    v_mov_b32_e32 v1, s5
-; GCN-NEXT:    s_cmp_lg_u64 0, 0
+; GCN-NEXT:    s_cmp_lg_u32 0, 0
 ; GCN-NEXT:    s_mov_b64 s[0:1], 0
 ; GCN-NEXT:    v_cmp_ne_u64_e32 vcc, 0, v[0:1]
 ; GCN-NEXT:    s_cselect_b64 s[2:3], -1, 0
