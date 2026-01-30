@@ -779,6 +779,11 @@ public:
 
   size_t GetNumTemplateArguments(lldb::opaque_compiler_type_t type,
                                  bool expand_pack) override;
+  lldb::TemplateArgumentKind
+  GetTemplateArgumentKind(lldb::opaque_compiler_type_t type, size_t idx,
+                          bool expand_pack) override;
+  CompilerType GetTypeTemplateArgument(lldb::opaque_compiler_type_t type,
+                                       size_t idx, bool expand_pack) override;
 
   lldb::GenericKind GetGenericArgumentKind(lldb::opaque_compiler_type_t type,
                                            size_t idx);
