@@ -297,14 +297,26 @@ multiclass C_COND_M<string TypeStr, RegisterOperand RC, bits<5> fmt,
     let BaseOpcode = "c.f."#NAME;
     let isCommutable = 1;
   }
-  def C_UN_#NAME : MMRel, C_COND_FT<"un", TypeStr, RC, itin>,
-                   C_COND_FM<fmt, 1> {
-    let BaseOpcode = "c.un."#NAME;
-    let isCommutable = 1;
-  }
   def C_EQ_#NAME : MMRel, C_COND_FT<"eq", TypeStr, RC, itin>,
                    C_COND_FM<fmt, 2> {
     let BaseOpcode = "c.eq."#NAME;
+    let isCommutable = 1;
+  }
+  def C_OLT_#NAME : MMRel, C_COND_FT<"olt", TypeStr, RC, itin>,
+                    C_COND_FM<fmt, 4> {
+    let BaseOpcode = "c.olt."#NAME;
+  }
+  def C_OLE_#NAME : MMRel, C_COND_FT<"ole", TypeStr, RC, itin>,
+                    C_COND_FM<fmt, 6> {
+    let BaseOpcode = "c.ole."#NAME;
+  }
+}
+
+multiclass C_COND_NOTR5900_M<string TypeStr, RegisterOperand RC, bits<5> fmt,
+                             InstrItinClass itin> {
+  def C_UN_#NAME : MMRel, C_COND_FT<"un", TypeStr, RC, itin>,
+                   C_COND_FM<fmt, 1> {
+    let BaseOpcode = "c.un."#NAME;
     let isCommutable = 1;
   }
   def C_UEQ_#NAME : MMRel, C_COND_FT<"ueq", TypeStr, RC, itin>,
@@ -312,17 +324,9 @@ multiclass C_COND_M<string TypeStr, RegisterOperand RC, bits<5> fmt,
     let BaseOpcode = "c.ueq."#NAME;
     let isCommutable = 1;
   }
-  def C_OLT_#NAME : MMRel, C_COND_FT<"olt", TypeStr, RC, itin>,
-                    C_COND_FM<fmt, 4> {
-    let BaseOpcode = "c.olt."#NAME;
-  }
   def C_ULT_#NAME : MMRel, C_COND_FT<"ult", TypeStr, RC, itin>,
                     C_COND_FM<fmt, 5> {
     let BaseOpcode = "c.ult."#NAME;
-  }
-  def C_OLE_#NAME : MMRel, C_COND_FT<"ole", TypeStr, RC, itin>,
-                    C_COND_FM<fmt, 6> {
-    let BaseOpcode = "c.ole."#NAME;
   }
   def C_ULE_#NAME : MMRel, C_COND_FT<"ule", TypeStr, RC, itin>,
                      C_COND_FM<fmt, 7> {
@@ -376,29 +380,44 @@ multiclass C_COND_M<string TypeStr, RegisterOperand RC, bits<5> fmt,
 
 let AdditionalPredicates = [NotInMicroMips] in {
 defm S : C_COND_M<"s", FGR32Opnd, 16, II_C_CC_S>, ISA_MIPS1_NOT_32R6_64R6;
+defm S : C_COND_NOTR5900_M<"s", FGR32Opnd, 16, II_C_CC_S>,
+         ISA_MIPS1_NOT_32R6_64R6_R5900;
 defm D32 : C_COND_M<"d", AFGR64Opnd, 17, II_C_CC_D>, ISA_MIPS1_NOT_32R6_64R6,
            FGR_32;
-let DecoderNamespace = "MipsFP64" in
+defm D32 : C_COND_NOTR5900_M<"d", AFGR64Opnd, 17, II_C_CC_D>,
+           ISA_MIPS1_NOT_32R6_64R6, FGR_32;
+let DecoderNamespace = "MipsFP64" in {
 defm D64 : C_COND_M<"d", FGR64Opnd, 17, II_C_CC_D>, ISA_MIPS1_NOT_32R6_64R6,
            FGR_64;
+defm D64 : C_COND_NOTR5900_M<"d", FGR64Opnd, 17, II_C_CC_D>,
+           ISA_MIPS1_NOT_32R6_64R6, FGR_64;
+}
 }
 //===----------------------------------------------------------------------===//
 // Floating Point Instructions
 //===----------------------------------------------------------------------===//
 let AdditionalPredicates = [NotInMicroMips], mayRaiseFPException = 1 in {
-  def ROUND_W_S : MMRel, StdMMR6Rel,
+  def ROUND_W_S : MMRel,
+                  StdMMR6Rel,
                   ABSS_FT<"round.w.s", FGR32Opnd, FGR32Opnd, II_ROUND>,
-                  ABSS_FM<0xc, 16>, ISA_MIPS2;
+                  ABSS_FM<0xc, 16>,
+                  ISA_MIPS2_NOT_R5900;
   defm ROUND_W  : ROUND_M<"round.w.d", II_ROUND>, ABSS_FM<0xc, 17>, ISA_MIPS2;
-  def TRUNC_W_S : MMRel, StdMMR6Rel,
+  def TRUNC_W_S : MMRel,
+                  StdMMR6Rel,
                   ABSS_FT<"trunc.w.s", FGR32Opnd, FGR32Opnd, II_TRUNC>,
-                  ABSS_FM<0xd, 16>, ISA_MIPS2;
-  def CEIL_W_S  : MMRel, StdMMR6Rel,
-                  ABSS_FT<"ceil.w.s", FGR32Opnd, FGR32Opnd, II_CEIL>,
-                  ABSS_FM<0xe, 16>, ISA_MIPS2;
-  def FLOOR_W_S : MMRel, StdMMR6Rel,
+                  ABSS_FM<0xd, 16>,
+                  ISA_MIPS2_NOT_R5900;
+  def CEIL_W_S : MMRel,
+                 StdMMR6Rel,
+                 ABSS_FT<"ceil.w.s", FGR32Opnd, FGR32Opnd, II_CEIL>,
+                 ABSS_FM<0xe, 16>,
+                 ISA_MIPS2_NOT_R5900;
+  def FLOOR_W_S : MMRel,
+                  StdMMR6Rel,
                   ABSS_FT<"floor.w.s", FGR32Opnd, FGR32Opnd, II_FLOOR>,
-                  ABSS_FM<0xf, 16>, ISA_MIPS2;
+                  ABSS_FM<0xf, 16>,
+                  ISA_MIPS2_NOT_R5900;
 
   defm TRUNC_W : ROUND_M<"trunc.w.d", II_TRUNC>, ABSS_FM<0xd, 17>, ISA_MIPS2;
   defm CEIL_W  : ROUND_M<"ceil.w.d", II_CEIL>, ABSS_FM<0xe, 17>, ISA_MIPS2;
@@ -888,23 +907,26 @@ multiclass C_COND_ALIASES<string TypeStr, RegisterOperand RC> {
   def : MipsInstAlias<!strconcat("c.f.", TypeStr, " $fs, $ft"),
                       (!cast<Instruction>("C_F_"#NAME) FCC0,
                                                        RC:$fs, RC:$ft), 1>;
-  def : MipsInstAlias<!strconcat("c.un.", TypeStr, " $fs, $ft"),
-                      (!cast<Instruction>("C_UN_"#NAME) FCC0,
-                                                        RC:$fs, RC:$ft), 1>;
   def : MipsInstAlias<!strconcat("c.eq.", TypeStr, " $fs, $ft"),
                       (!cast<Instruction>("C_EQ_"#NAME) FCC0,
+                                                        RC:$fs, RC:$ft), 1>;
+  def : MipsInstAlias<!strconcat("c.olt.", TypeStr, " $fs, $ft"),
+                      (!cast<Instruction>("C_OLT_"#NAME) FCC0,
+                                                         RC:$fs, RC:$ft), 1>;
+  def : MipsInstAlias<!strconcat("c.ole.", TypeStr, " $fs, $ft"),
+                      (!cast<Instruction>("C_OLE_"#NAME) FCC0,
+                                                         RC:$fs, RC:$ft), 1>;
+}
+
+multiclass C_COND_NOTR5900_ALIASES<string TypeStr, RegisterOperand RC> {
+  def : MipsInstAlias<!strconcat("c.un.", TypeStr, " $fs, $ft"),
+                      (!cast<Instruction>("C_UN_"#NAME) FCC0,
                                                         RC:$fs, RC:$ft), 1>;
   def : MipsInstAlias<!strconcat("c.ueq.", TypeStr, " $fs, $ft"),
                       (!cast<Instruction>("C_UEQ_"#NAME) FCC0,
                                                          RC:$fs, RC:$ft), 1>;
-  def : MipsInstAlias<!strconcat("c.olt.", TypeStr, " $fs, $ft"),
-                      (!cast<Instruction>("C_OLT_"#NAME) FCC0,
-                                                         RC:$fs, RC:$ft), 1>;
   def : MipsInstAlias<!strconcat("c.ult.", TypeStr, " $fs, $ft"),
                       (!cast<Instruction>("C_ULT_"#NAME) FCC0,
-                                                         RC:$fs, RC:$ft), 1>;
-  def : MipsInstAlias<!strconcat("c.ole.", TypeStr, " $fs, $ft"),
-                      (!cast<Instruction>("C_OLE_"#NAME) FCC0,
                                                          RC:$fs, RC:$ft), 1>;
   def : MipsInstAlias<!strconcat("c.ule.", TypeStr, " $fs, $ft"),
                       (!cast<Instruction>("C_ULE_"#NAME) FCC0,
@@ -947,9 +969,15 @@ multiclass BC1_ALIASES<Instruction BCTrue, string BCTrueString,
 let AdditionalPredicates = [NotInMicroMips] in {
   defm S   : C_COND_ALIASES<"s", FGR32Opnd>, HARDFLOAT,
              ISA_MIPS1_NOT_32R6_64R6;
+  defm S   : C_COND_NOTR5900_ALIASES<"s", FGR32Opnd>, HARDFLOAT,
+             ISA_MIPS1_NOT_32R6_64R6_R5900;
   defm D32 : C_COND_ALIASES<"d", AFGR64Opnd>, HARDFLOAT,
              ISA_MIPS1_NOT_32R6_64R6, FGR_32;
+  defm D32 : C_COND_NOTR5900_ALIASES<"d", AFGR64Opnd>, HARDFLOAT,
+             ISA_MIPS1_NOT_32R6_64R6, FGR_32;
   defm D64 : C_COND_ALIASES<"d", FGR64Opnd>, HARDFLOAT,
+             ISA_MIPS1_NOT_32R6_64R6, FGR_64;
+  defm D64 : C_COND_NOTR5900_ALIASES<"d", FGR64Opnd>, HARDFLOAT,
              ISA_MIPS1_NOT_32R6_64R6, FGR_64;
 
   defm : BC1_ALIASES<BC1T, "bc1t", BC1F, "bc1f">, ISA_MIPS1_NOT_32R6_64R6,
