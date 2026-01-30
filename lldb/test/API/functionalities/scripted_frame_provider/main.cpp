@@ -29,6 +29,10 @@ void thread_func(int thread_num) {
 int main(int argc, char **argv) {
   std::thread threads[NUM_THREADS];
 
+  // Used as an existing C++ variable we can anchor on.
+  int variable_in_main = 123;
+  (void)variable_in_main;
+
   for (int i = 0; i < NUM_THREADS; i++) {
     threads[i] = std::thread(thread_func, i);
   }

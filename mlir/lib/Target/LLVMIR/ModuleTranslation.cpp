@@ -1686,6 +1686,12 @@ static void convertFunctionAttributes(LLVMFuncOp func,
     llvmFunc->addFnAttr(llvm::Attribute::WillReturn);
   if (func.getNoreturnAttr())
     llvmFunc->addFnAttr(llvm::Attribute::NoReturn);
+  if (func.getNoCallerSavedRegistersAttr())
+    llvmFunc->addFnAttr("no_caller_saved_registers");
+  if (func.getNocallbackAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::NoCallback);
+  if (StringAttr modFormat = func.getModularFormatAttr())
+    llvmFunc->addFnAttr("modular-format", modFormat.getValue());
   if (TargetFeaturesAttr targetFeatAttr = func.getTargetFeaturesAttr())
     llvmFunc->addFnAttr("target-features", targetFeatAttr.getFeaturesString());
   if (FramePointerKindAttr fpAttr = func.getFramePointerAttr())
@@ -1741,20 +1747,20 @@ static LogicalResult convertParameterAttr(llvm::AttrBuilder &attrBuilder,
                                           ModuleTranslation &moduleTranslation,
                                           Location loc) {
   return llvm::TypeSwitch<Attribute, LogicalResult>(namedAttr.getValue())
-      .Case<TypeAttr>([&](auto typeAttr) {
+      .Case([&](TypeAttr typeAttr) {
         attrBuilder.addTypeAttr(
             llvmKind, moduleTranslation.convertType(typeAttr.getValue()));
         return success();
       })
-      .Case<IntegerAttr>([&](auto intAttr) {
+      .Case([&](IntegerAttr intAttr) {
         attrBuilder.addRawIntAttr(llvmKind, intAttr.getInt());
         return success();
       })
-      .Case<UnitAttr>([&](auto) {
+      .Case([&](UnitAttr) {
         attrBuilder.addAttribute(llvmKind);
         return success();
       })
-      .Case<LLVM::ConstantRangeAttr>([&](auto rangeAttr) {
+      .Case([&](LLVM::ConstantRangeAttr rangeAttr) {
         attrBuilder.addConstantRangeAttr(
             llvmKind,
             llvm::ConstantRange(rangeAttr.getLower(), rangeAttr.getUpper()));

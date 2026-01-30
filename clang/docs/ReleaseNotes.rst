@@ -121,6 +121,9 @@ Non-comprehensive list of changes in this release
 
 New Compiler Flags
 ------------------
+- New option ``-fms-anonymous-structs`` / ``-fno-ms-anonymous-structs`` added
+  to enable or disable Microsoft's anonymous struct/union extension without
+  enabling other ``-fms-extensions`` features (#GH177607).
 
 Deprecated Compiler Flags
 -------------------------
@@ -199,11 +202,16 @@ Improvements to Clang's diagnostics
       DanglingView(std::string s) : view(s) {}  // warning: address of stack memory escapes to a field
     };
 
+- Improved ``-Wassign-enum`` performance by caching enum enumerator values. (#GH176454)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
 Improvements to Coverage Mapping
 --------------------------------
+
+- "Single byte coverage" now supports branch coverage and can be used
+  together with ``-fcoverage-mcdc``.
 
 Bug Fixes in This Version
 -------------------------
@@ -211,6 +219,7 @@ Bug Fixes in This Version
 
 - Fix lifetime extension of temporaries in for-range-initializers in templates. (#GH165182)
 - Fixed a preprocessor crash in ``__has_cpp_attribute`` on incomplete scoped attributes. (#GH178098)
+- Fixes an assertion failure when evaluating ``__underlying_type`` on enum redeclarations. (#GH177943)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -222,6 +231,7 @@ Bug Fixes to Attribute Support
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a crash when instantiating ``requires`` expressions involving substitution failures in C++ concepts. (#GH176402)
+- Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^
