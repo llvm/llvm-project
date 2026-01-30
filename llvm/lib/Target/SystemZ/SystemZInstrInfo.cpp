@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/BranchProbability.h"
@@ -2375,4 +2376,8 @@ SystemZInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_ADA_INDIRECT_FUNC_DESC, "systemz-ada-indirectfuncdesc"},
       {MO_ADA_DIRECT_FUNC_DESC, "systemz-ada-directfuncdesc"}};
   return ArrayRef(TargetFlags);
+}
+
+MCInst SystemZInstrInfo::getNop() const {
+  return MCInstBuilder(SystemZ::NOPR).addReg(0);
 }

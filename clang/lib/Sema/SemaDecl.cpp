@@ -13825,7 +13825,7 @@ void Sema::DiagnoseUniqueObjectDuplication(const VarDecl *VD) {
 
 void Sema::AddInitializerToDecl(Decl *RealDecl, Expr *Init, bool DirectInit) {
   llvm::scope_exit ResetDeclForInitializer([this]() {
-    if (this->ExprEvalContexts.empty())
+    if (!this->ExprEvalContexts.empty())
       this->ExprEvalContexts.back().DeclForInitializer = nullptr;
   });
 
@@ -14770,6 +14770,22 @@ StmtResult Sema::ActOnCXXForRangeIdentifier(Scope *S, SourceLocation IdentLoc,
   return ActOnDeclStmt(FinalizeDeclaratorGroup(S, DS, Var), IdentLoc,
                        Attrs.Range.getEnd().isValid() ? Attrs.Range.getEnd()
                                                       : IdentLoc);
+}
+
+void Sema::addLifetimeBoundToImplicitThis(CXXMethodDecl *MD) {
+  if (!MD || lifetimes::implicitObjectParamIsLifetimeBound(MD))
+    return;
+  auto *Attr = LifetimeBoundAttr::CreateImplicit(Context, MD->getLocation());
+  QualType MethodType = MD->getType();
+  QualType AttributedType =
+      Context.getAttributedType(Attr, MethodType, MethodType);
+  TypeLocBuilder TLB;
+  if (TypeSourceInfo *TSI = MD->getTypeSourceInfo())
+    TLB.pushFullCopy(TSI->getTypeLoc());
+  AttributedTypeLoc TyLoc = TLB.push<AttributedTypeLoc>(AttributedType);
+  TyLoc.setAttr(Attr);
+  MD->setType(AttributedType);
+  MD->setTypeSourceInfo(TLB.getTypeSourceInfo(Context, AttributedType));
 }
 
 void Sema::CheckCompleteVariableDeclaration(VarDecl *var) {

@@ -2548,7 +2548,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     }
     break;
 
-  case AMDGPU::V_MAX_BF16_PSEUDO_e64:
+  case AMDGPU::V_MAX_BF16_PSEUDO_e64: {
     assert(ST.hasBF16PackedInsts());
     MI.setDesc(get(AMDGPU::V_PK_MAX_NUM_BF16));
     MI.addOperand(MachineOperand::CreateImm(0)); // op_sel
@@ -2559,6 +2559,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     auto Op1 = getNamedOperand(MI, AMDGPU::OpName::src1_modifiers);
     Op1->setImm(Op1->getImm() | SISrcMods::OP_SEL_1);
     break;
+  }
   }
 
   return true;
@@ -4481,13 +4482,14 @@ bool SIInstrInfo::mayAccessScratch(const MachineInstr &MI) const {
   if ((!isFLAT(MI) || isFLATGlobal(MI)) && !isBUF(MI))
     return false;
 
-  // If scratch is not initialized, we can never access it.
-  if (MI.getMF()->getFunction().hasFnAttribute("amdgpu-no-flat-scratch-init"))
-    return false;
-
   // SCRATCH instructions always access scratch.
   if (isFLATScratch(MI))
     return true;
+
+  // If FLAT_SCRATCH registers are not initialized, we can never access scratch
+  // via the aperture.
+  if (MI.getMF()->getFunction().hasFnAttribute("amdgpu-no-flat-scratch-init"))
+    return false;
 
   // If there are no memory operands then conservatively assume the flat
   // operation may access scratch.
@@ -7333,44 +7335,12 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
     return CreatedBB;
   }
 
-  // Legalize REG_SEQUENCE and PHI
-  // The register class of the operands much be the same type as the register
+  // Legalize PHI
+  // The register class of the operands must be the same type as the register
   // class of the output.
   if (MI.getOpcode() == AMDGPU::PHI) {
-    const TargetRegisterClass *RC = nullptr, *SRC = nullptr, *VRC = nullptr;
-    for (unsigned i = 1, e = MI.getNumOperands(); i != e; i += 2) {
-      if (!MI.getOperand(i).isReg() || !MI.getOperand(i).getReg().isVirtual())
-        continue;
-      const TargetRegisterClass *OpRC =
-          MRI.getRegClass(MI.getOperand(i).getReg());
-      if (RI.hasVectorRegisters(OpRC)) {
-        VRC = OpRC;
-      } else {
-        SRC = OpRC;
-      }
-    }
-
-    // If any of the operands are VGPR registers, then they all most be
-    // otherwise we will create illegal VGPR->SGPR copies when legalizing
-    // them.
-    if (VRC || !RI.isSGPRClass(getOpRegClass(MI, 0))) {
-      if (!VRC) {
-        assert(SRC);
-        if (getOpRegClass(MI, 0) == &AMDGPU::VReg_1RegClass) {
-          VRC = &AMDGPU::VReg_1RegClass;
-        } else
-          VRC = RI.isAGPRClass(getOpRegClass(MI, 0))
-                    ? RI.getEquivalentAGPRClass(SRC)
-                    : RI.getEquivalentVGPRClass(SRC);
-      } else {
-        VRC = RI.isAGPRClass(getOpRegClass(MI, 0))
-                  ? RI.getEquivalentAGPRClass(VRC)
-                  : RI.getEquivalentVGPRClass(VRC);
-      }
-      RC = VRC;
-    } else {
-      RC = SRC;
-    }
+    const TargetRegisterClass *VRC = getOpRegClass(MI, 0);
+    assert(!RI.isSGPRClass(VRC));
 
     // Update all the operands so they have the same type.
     for (unsigned I = 1, E = MI.getNumOperands(); I != E; I += 2) {
@@ -7384,7 +7354,7 @@ SIInstrInfo::legalizeOperands(MachineInstr &MI,
 
       // Avoid creating no-op copies with the same src and dst reg class.  These
       // confuse some of the machine passes.
-      legalizeGenericOperand(*InsertBB, Insert, RC, Op, MRI, MI.getDebugLoc());
+      legalizeGenericOperand(*InsertBB, Insert, VRC, Op, MRI, MI.getDebugLoc());
     }
   }
 
@@ -10057,6 +10027,9 @@ void SIInstrInfo::fixImplicitOperands(MachineInstr &MI) const {
   if (MI.isInlineAsm())
     return;
 
+  if (MI.getNumOperands() < MI.getNumExplicitOperands())
+    return;
+
   for (auto &Op : MI.implicit_operands()) {
     if (Op.isReg() && Op.getReg() == AMDGPU::VCC)
       Op.setReg(AMDGPU::VCC_LO);
@@ -10239,6 +10212,8 @@ static unsigned subtargetEncodingFamily(const GCNSubtarget &ST) {
   case AMDGPUSubtarget::GFX12:
     return ST.hasGFX1250Insts() ? SIEncodingFamily::GFX1250
                                 : SIEncodingFamily::GFX12;
+  case AMDGPUSubtarget::GFX13:
+    return SIEncodingFamily::GFX13;
   }
   llvm_unreachable("Unknown subtarget generation!");
 }
@@ -11260,7 +11235,7 @@ bool SIInstrInfo::isXDLWMMA(const MachineInstr &MI) const {
   if (!isWMMA(MI) && !isSWMMAC(MI))
     return false;
 
-  if (AMDGPU::isGFX1250(ST))
+  if (ST.hasGFX1250Insts())
     return AMDGPU::getWMMAIsXDL(MI.getOpcode());
 
   return true;
