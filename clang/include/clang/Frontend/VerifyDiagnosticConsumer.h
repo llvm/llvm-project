@@ -32,8 +32,8 @@ class TextDiagnosticBuffer;
 
 enum class DiagnosticMatchResult {
   NoMatch,
-  Match,
-  PartialMatch,
+  Partial,
+  Full,
 };
 
 /// VerifyDiagnosticConsumer - Create a diagnostic client which will use

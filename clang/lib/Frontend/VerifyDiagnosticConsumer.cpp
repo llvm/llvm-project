@@ -104,10 +104,10 @@ public:
       return DiagnosticMatchResult::NoMatch;
     }
     if (!FullMatchRequired) {
-      return DiagnosticMatchResult::Match;
+      return DiagnosticMatchResult::Full;
     }
-    return S.trim() == Text ? DiagnosticMatchResult::Match
-                            : DiagnosticMatchResult::PartialMatch;
+    return S.trim() == Text ? DiagnosticMatchResult::Full
+                            : DiagnosticMatchResult::Partial;
   }
 };
 
@@ -128,7 +128,7 @@ public:
 
   DiagnosticMatchResult match(StringRef S) const override {
     if (!FullMatchRequired) {
-      return Regex.match(S) ? DiagnosticMatchResult::Match
+      return Regex.match(S) ? DiagnosticMatchResult::Full
                             : DiagnosticMatchResult::NoMatch;
     }
 
@@ -139,8 +139,8 @@ public:
       return DiagnosticMatchResult::NoMatch;
     }
     return Matches[0].size() == TrimmedText.size()
-               ? DiagnosticMatchResult::Match
-               : DiagnosticMatchResult::PartialMatch;
+               ? DiagnosticMatchResult::Full
+               : DiagnosticMatchResult::Partial;
   }
 
 private:
@@ -1086,7 +1086,7 @@ static unsigned CheckLists(DiagnosticsEngine &Diags, SourceManager &SourceMgr,
         DiagnosticMatchResult MatchResult = D.match(RightText);
         if (MatchResult != DiagnosticMatchResult::NoMatch) {
           if (D.FullMatchRequired &&
-              MatchResult == DiagnosticMatchResult::PartialMatch) {
+              MatchResult == DiagnosticMatchResult::Partial) {
             IncompleteMatches.push_back({&D, II->second});
           }
           break;
@@ -1243,7 +1243,7 @@ static unsigned CheckResultsAreInOrder(DiagnosticsEngine &Diags,
         SourceMgr.getPresumedLineNumber(DiagLoc) ==
             SourceMgr.getPresumedLineNumber(Directive->DiagnosticLoc) &&
         IsFromSameFile(SourceMgr, Directive->DiagnosticLoc, DiagLoc);
-    bool TextMatch = Directive->match(DiagText) == DiagnosticMatchResult::Match;
+    bool TextMatch = Directive->match(DiagText) == DiagnosticMatchResult::Full;
     if (LocsMatch && TextMatch) {
       continue;
     }
