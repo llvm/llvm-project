@@ -474,12 +474,21 @@ FunctionCognitiveComplexityCheck::FunctionCognitiveComplexityCheck(
     StringRef Name, ClangTidyContext *Context)
     : ClangTidyCheck(Name, Context),
       Threshold(Options.get("Threshold", CognitiveComplexity::DefaultLimit)),
+      IgnoreAboveThreshold(
+          Options.get("IgnoreAboveThreshold", std::optional<unsigned>())),
       DescribeBasicIncrements(Options.get("DescribeBasicIncrements", true)),
-      IgnoreMacros(Options.get("IgnoreMacros", false)) {}
+      IgnoreMacros(Options.get("IgnoreMacros", false)) {
+  if (IgnoreAboveThreshold && *IgnoreAboveThreshold < Threshold)
+    configurationDiag("'IgnoreAboveThreshold' option value '%0' is less than "
+                      "'Threshold' option value '%1'; the option will be "
+                      "ignored")
+        << *IgnoreAboveThreshold << Threshold;
+}
 
 void FunctionCognitiveComplexityCheck::storeOptions(
     ClangTidyOptions::OptionMap &Opts) {
   Options.store(Opts, "Threshold", Threshold);
+  Options.store(Opts, "IgnoreAboveThreshold", IgnoreAboveThreshold);
   Options.store(Opts, "DescribeBasicIncrements", DescribeBasicIncrements);
   Options.store(Opts, "IgnoreMacros", IgnoreMacros);
 }
@@ -512,6 +521,13 @@ void FunctionCognitiveComplexityCheck::check(
   }
 
   if (Visitor.CC.Total <= Threshold)
+    return;
+
+  // Skip functions that are "hopelessly" complex.
+  // Only apply IgnoreAboveThreshold if it's >= Threshold (otherwise it was
+  // invalid and a config warning was already emitted).
+  if (IgnoreAboveThreshold && *IgnoreAboveThreshold >= Threshold &&
+      Visitor.CC.Total >= *IgnoreAboveThreshold)
     return;
 
   if (TheDecl)
