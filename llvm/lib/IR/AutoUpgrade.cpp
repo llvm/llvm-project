@@ -3030,6 +3030,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     switch (VecWidth) {
     default:
       reportFatalUsageErrorWithCI("Above intrinsic is unexpected", CI);
+      break;
     case 128:
       IID = Intrinsic::x86_avx512_vpshufbitqmb_128;
       break;
