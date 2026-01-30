@@ -382,15 +382,7 @@ template <typename AttrT> static bool hasImplicitAttr(const ValueDecl *decl) {
   return decl->isImplicit();
 }
 
-// This function returns true if M is a specialization, a template,
-// or a non-generic lambda call operator.
-inline bool isLambdaCallOperator(const CXXMethodDecl *MD) {
-  const CXXRecordDecl *LambdaClass = MD->getParent();
-  if (!LambdaClass || !LambdaClass->isLambda())
-    return false;
-  return MD->getOverloadedOperator() == OO_Call;
-}
-
+// TODO(cir): This should be shared with OG Codegen.
 bool CIRGenModule::shouldEmitCUDAGlobalVar(const VarDecl *global) const {
   assert(langOpts.CUDA && "Should not be called by non-CUDA languages");
   // We need to emit host-side 'shadows' for all global
@@ -427,6 +419,7 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
     if (const auto *varDecl = dyn_cast<VarDecl>(global)) {
       if (!shouldEmitCUDAGlobalVar(varDecl))
         return;
+    // TODO(cir): This should be shared with OG Codegen.
     } else if (langOpts.CUDAIsDevice) {
       const auto *functionDecl = dyn_cast<FunctionDecl>(global);
       if ((!global->hasAttr<CUDADeviceAttr>() ||
