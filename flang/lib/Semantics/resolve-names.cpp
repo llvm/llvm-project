@@ -1569,14 +1569,12 @@ void AccVisitor::Post(const parser::OpenACCCombinedConstruct &x) { PopScope(); }
 class OmpVisitor : public virtual DeclarationVisitor {
 public:
   void AddOmpSourceRange(const parser::CharBlock &);
+  void PushScopeWithSource(
+      Scope::Kind kind, parser::CharBlock source, Symbol *symbol = nullptr);
 
   static bool NeedsScope(const parser::OmpBlockConstruct &);
   static bool NeedsScope(const parser::OmpClause &);
 
-  bool Pre(const parser::OpenMPRequiresConstruct &x) {
-    AddOmpSourceRange(x.source);
-    return true;
-  }
   bool Pre(const parser::OmpBlockConstruct &);
   void Post(const parser::OmpBlockConstruct &);
   bool Pre(const parser::OmpBeginDirective &x) {
@@ -1592,8 +1590,8 @@ public:
     Post(static_cast<const parser::OmpDirectiveSpecification &>(x));
   }
 
-  bool Pre(const parser::OpenMPLoopConstruct &) {
-    PushScope(Scope::Kind::OtherConstruct, nullptr);
+  bool Pre(const parser::OpenMPLoopConstruct &x) {
+    PushScopeWithSource(Scope::Kind::OtherConstruct, x.source);
     return true;
   }
   void Post(const parser::OpenMPLoopConstruct &) { PopScope(); }
@@ -1637,8 +1635,8 @@ public:
   }
   bool Pre(const parser::OmpMapClause &);
 
-  bool Pre(const parser::OpenMPSectionsConstruct &) {
-    PushScope(Scope::Kind::OtherConstruct, nullptr);
+  bool Pre(const parser::OpenMPSectionsConstruct &x) {
+    PushScopeWithSource(Scope::Kind::OtherConstruct, x.source);
     return true;
   }
   void Post(const parser::OpenMPSectionsConstruct &) { PopScope(); }
@@ -1744,7 +1742,7 @@ public:
   }
   bool Pre(const parser::OmpClause &x) {
     if (NeedsScope(x)) {
-      PushScope(Scope::Kind::OtherClause, nullptr);
+      PushScopeWithSource(Scope::Kind::OtherClause, x.source);
     }
     return true;
   }
@@ -1813,9 +1811,15 @@ void OmpVisitor::AddOmpSourceRange(const parser::CharBlock &source) {
   currScope().AddSourceRange(source);
 }
 
+void OmpVisitor::PushScopeWithSource(
+      Scope::Kind kind, parser::CharBlock source, Symbol *symbol) {
+  PushScope(kind, symbol);
+  currScope().AddSourceRange(source);
+}
+
 bool OmpVisitor::Pre(const parser::OmpBlockConstruct &x) {
   if (NeedsScope(x)) {
-    PushScope(Scope::Kind::OtherConstruct, nullptr);
+    PushScopeWithSource(Scope::Kind::OtherConstruct, x.source);
   }
   return true;
 }
