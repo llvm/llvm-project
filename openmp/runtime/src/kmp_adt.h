@@ -98,9 +98,7 @@ public:
 
   // Drop the first n characters from the string.
   // (Limit n to the length of the string.)
-  void drop_front(size_t n) {
-    sv.remove_prefix(std::min(n, length()));
-  }
+  void drop_front(size_t n) { sv.remove_prefix(std::min(n, length())); }
 
   // Drop characters from the string while the predicate returns true.
   void drop_while(bool (*predicate)(char)) {
