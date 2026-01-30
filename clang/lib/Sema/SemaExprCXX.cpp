@@ -2669,7 +2669,6 @@ static std::string formatAddressSpaceForDiag(QualType T,
   return OS.str();
 }
 
-
 bool Sema::CheckAllocatedType(QualType AllocType, SourceLocation Loc,
                               SourceRange R) {
   // C++ 5.3.4p1: "[The] type shall be a complete object type, but not an
@@ -2694,8 +2693,7 @@ bool Sema::CheckAllocatedType(QualType AllocType, SourceLocation Loc,
            !getLangOpts().OpenCLCPlusPlus)
     return Diag(Loc, diag::err_address_space_qualified_new)
            << AllocType.getUnqualifiedType()
-           << formatAddressSpaceForDiag(AllocType,
-                                        getLangOpts());
+           << formatAddressSpaceForDiag(AllocType, getLangOpts());
 
   else if (getLangOpts().ObjCAutoRefCount) {
     if (const ArrayType *AT = Context.getAsArrayType(AllocType)) {
@@ -4088,8 +4086,7 @@ Sema::ActOnCXXDelete(SourceLocation StartLoc, bool UseGlobal,
       return Diag(Ex.get()->getBeginLoc(),
                   diag::err_address_space_qualified_delete)
              << Pointee.getUnqualifiedType()
-             << formatAddressSpaceForDiag(Pointee,
-                                          getLangOpts());
+             << formatAddressSpaceForDiag(Pointee, getLangOpts());
 
     CXXRecordDecl *PointeeRD = nullptr;
     if (Pointee->isVoidType() && !isSFINAEContext()) {
