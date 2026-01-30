@@ -5551,7 +5551,7 @@ struct VPPartialReductionChain {
 // clamps VF range.
 static bool transformToPartialReduction(const VPPartialReductionChain &Chain,
                                         VFRange &Range, VPCostContext &CostCtx,
-                                        VPlan &Plan) {
+                                        VPlan &Plan, RecurKind RK) {
   VPWidenRecipe *WidenRecipe = Chain.ReductionBinOp;
   unsigned ScaleFactor = Chain.ScaleFactor;
   assert(WidenRecipe->getNumOperands() == 2 && "Expected binary operation");
@@ -5639,8 +5639,13 @@ static bool transformToPartialReduction(const VPPartialReductionChain &Chain,
 
   }
 
-  // Handle SUB by negating the operand and using ADD for the partial reduction.
-  if (WidenRecipe->getOpcode() == Instruction::Sub) {
+  // For partial reductions the 'sub' is performed outside the loop,
+  // so that the reduction itself is all positive, because otherwise
+  // the neg/sub can't be folded into the operands. For non-partial
+  // sub-reductions and reduction chains that have both adds and subs,
+  // the sub is performed on the operand inside the vector loop.
+  // Note that both cases use an add to implement the actual reduction step.
+  if (WidenRecipe->getOpcode() == Instruction::Sub && RK != RecurKind::Sub) {
     VPBuilder Builder(WidenRecipe);
     Type *ElemTy = CostCtx.Types.inferScalarType(BinOp);
     auto *Zero = Plan.getConstantInt(ElemTy, 0);
@@ -5889,7 +5894,46 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
     }
   }
 
-  for (const auto &[_, Chains] : ChainsByPhi)
+  for (auto &[Phi, Chains] : ChainsByPhi) {
+    RecurKind RK = cast<VPReductionPHIRecipe>(Phi)->getRecurrenceKind();
+    bool IsTransformed = false;
     for (const VPPartialReductionChain &Chain : Chains)
-      transformToPartialReduction(Chain, Range, CostCtx, Plan);
+      IsTransformed |=
+          transformToPartialReduction(Chain, Range, CostCtx, Plan, RK);
+
+    // Sub-reductions can be implemented in two ways:
+    // (1) negate the operand in the vector loop (the default way).
+    // (2) subtract the reduced value from the init value in the middle block.
+    // Both ways keep the reduction itself as an 'add' reduction.
+    //
+    // The ISD nodes for partial reductions don't support folding the
+    // sub/negation into its operands because the following is not a valid
+    // transformation:
+    //      sub(0, mul(ext(a), ext(b)))
+    //   -> mul(ext(a), ext(sub(0, b)))
+    //
+    // It's therefore better to choose option (2) such that the partial
+    // reduction is always positive (starting at '0') and to do a final
+    // subtract in the middle block.
+    if (IsTransformed && !Range.isEmpty() && RK == RecurKind::Sub) {
+      // Update start value of PHI node.
+      auto *StartInst = cast<VPInstruction>(Phi->getStartValue());
+      assert(StartInst->getOpcode() == VPInstruction::ReductionStartVector);
+      VPValue *OldStartValue = StartInst->getOperand(0);
+      StartInst->setOperand(0, StartInst->getOperand(1));
+
+      // Replace reduction_result by 'sub (startval, reductionresult)'.
+      VPInstruction *RdxResult = vputils::findComputeReductionResult(Phi);
+      assert(RdxResult && "Could not find reduction result");
+
+      VPBuilder Builder = VPBuilder::getToInsertAfter(RdxResult);
+      constexpr unsigned SubOpc = Instruction::BinaryOps::Sub;
+      VPInstruction *NewResult = Builder.createNaryOp(
+          SubOpc, {OldStartValue, RdxResult},
+          VPIRFlags::getDefaultFlags(SubOpc), Phi->getDebugLoc());
+      RdxResult->replaceUsesWithIf(
+          NewResult,
+          [&NewResult](VPUser &U, unsigned Idx) { return &U != NewResult; });
+    }
+  }
 }
