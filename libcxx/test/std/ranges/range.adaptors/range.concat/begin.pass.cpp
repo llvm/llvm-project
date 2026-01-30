@@ -40,7 +40,7 @@ concept HasOnlyNonConstBegin = HasBegin<T> && !HasConstBegin<T>;
 template <class T>
 concept HasOnlyConstBegin = HasConstBegin<T> && !HasConstAndNonConstBegin<T>;
 
-constexpr void tests() {
+constexpr bool test() {
   // check the case of simple view
   {
     int buffer[4] = {1, 2, 3, 4};
@@ -91,10 +91,15 @@ constexpr void tests() {
     assert(*it == 1);
     assert(it + 4 == view.end());
   }
-}
 
-constexpr bool test() {
-  tests();
+  // all views are empty
+  {
+    std::array<int, 0> arr;
+    std::vector<int> v;
+    std::ranges::concat_view(arr, v);
+    assert(v.begin() == v.end());
+  }
+
   return true;
 }
 

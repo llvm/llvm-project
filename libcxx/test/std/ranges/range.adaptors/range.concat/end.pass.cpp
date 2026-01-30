@@ -65,6 +65,16 @@ constexpr bool test() {
     std::array<int, 3> arr{1, 2, 3};
     auto v = std::views::concat(InputView{Iter{buffer1}, Sentinel{Iter{buffer1 + 5}}}, arr);
     static_assert(std::same_as<decltype(v.end()), std::default_sentinel_t>);
+    auto it = v.begin();
+    it++;
+    it++;
+    it++;
+    it++;
+    it++;
+    it++;
+    it++;
+    it++;
+    assert(it == v.end());
   }
 
   {
