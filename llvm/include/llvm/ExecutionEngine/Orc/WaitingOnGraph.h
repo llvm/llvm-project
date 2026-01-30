@@ -177,7 +177,7 @@ private:
       SortedContainers.reserve(M.size());
       for (auto &[Container, Elems] : M)
         SortedContainers.push_back(Container);
-      llvm::sort(SortedContainers);
+      llvm::sort</*AllowPointers=*/true>(SortedContainers);
       hash_code Hash(0);
       for (auto &Container : SortedContainers) {
         auto &ContainerElems = M.at(Container);

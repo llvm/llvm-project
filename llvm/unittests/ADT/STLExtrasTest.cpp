@@ -649,6 +649,11 @@ TEST(STLExtrasTest, PartitionAdaptor) {
   EXPECT_EQ(7, V[7]);
 }
 
+TEST(STLExtrasTest, SortPointer) {
+  std::vector<int *> V = {nullptr, nullptr};
+  llvm::sort</*AllowPointers=*/true>(V);
+}
+
 TEST(STLExtrasTest, EraseIf) {
   std::vector<int> V = {1, 2, 3, 4, 5, 6, 7, 8};
 

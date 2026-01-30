@@ -3389,7 +3389,7 @@ void Verifier::visitBasicBlock(BasicBlock &BB) {
   if (isa<PHINode>(BB.front())) {
     SmallVector<BasicBlock *, 8> Preds(predecessors(&BB));
     SmallVector<std::pair<BasicBlock*, Value*>, 8> Values;
-    llvm::sort(Preds);
+    llvm::sort</*AllowPointers=*/true>(Preds);
     for (const PHINode &PN : BB.phis()) {
       Check(PN.getNumIncomingValues() == Preds.size(),
             "PHINode should have one entry for each predecessor of its "

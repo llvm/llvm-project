@@ -1630,8 +1630,11 @@ using sort_trivially_copyable = std::conjunction<
 
 // Provide wrappers to std::sort which shuffle the elements before sorting
 // to help uncover non-deterministic behavior (PR35135).
-template <typename IteratorTy>
+template <bool AllowPointers = false, typename IteratorTy>
 inline void sort(IteratorTy Start, IteratorTy End) {
+  using VT = typename std::iterator_traits<IteratorTy>::value_type;
+  static_assert(AllowPointers || !std::is_pointer_v<VT>,
+                "Cannot sort pointers");
   if constexpr (detail::sort_trivially_copyable<IteratorTy>::value) {
     // Forward trivially copyable types to array_pod_sort. This avoids a large
     // amount of code bloat for a minor performance hit.
@@ -1644,8 +1647,9 @@ inline void sort(IteratorTy Start, IteratorTy End) {
   }
 }
 
-template <typename Container> inline void sort(Container &&C) {
-  llvm::sort(adl_begin(C), adl_end(C));
+template <bool AllowPointers = false, typename Container>
+inline void sort(Container &&C) {
+  llvm::sort<AllowPointers>(adl_begin(C), adl_end(C));
 }
 
 template <typename IteratorTy, typename Compare>
@@ -2129,6 +2133,11 @@ auto unique(Range &&R, Predicate P) {
 /// container without having to specify the begin/end iterators.
 template <typename Range> auto unique(Range &&R) {
   return std::unique(adl_begin(R), adl_end(R));
+}
+
+template <typename Container> inline void sort_and_unique(Container &&C) {
+  llvm::sort(C, std::less<detail::ValueOfRange<Container>>());
+  C.erase(llvm::unique(C), adl_end(C));
 }
 
 /// Wrapper function around std::equal to detect if pair-wise elements between

@@ -38,7 +38,7 @@ public:
   BlockToIndexMapping(Function &F) {
     for (BasicBlock &BB : F)
       V.push_back(&BB);
-    llvm::sort(V);
+    llvm::sort</*AllowPointers=*/true>(V);
   }
 
   size_t blockToIndex(BasicBlock const *BB) const {
