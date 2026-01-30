@@ -30,7 +30,7 @@ protocol::Scope CreateScope(const ScopeKind kind, int64_t variablesReference,
   // TODO: Support "arguments" and "return value" scope.
   // At the moment lldb-dap includes the arguments and return_value  into the
   // "locals" scope.
-  // vscode only expands the first non-expensive scope, this causes friction
+  // VS Code only expands the first non-expensive scope. This causes friction
   // if we add the arguments above the local scope, as the locals scope will not
   // be expanded if we enter a function with arguments. It becomes more
   // annoying when the scope has arguments, return_value and locals.
@@ -153,14 +153,14 @@ Variables::GetScopeKind(const int64_t variablesReference) {
     return std::nullopt;
   }
 
-  auto scope_iter = m_frames.find(scope_kind_iter->second.second);
-  if (scope_iter == m_frames.end()) {
+  auto frames_iter = m_frames.find(scope_kind_iter->second.second);
+  if (frames_iter == m_frames.end()) {
     return std::nullopt;
   }
 
   ScopeData scope_data = ScopeData();
   scope_data.kind = scope_kind_iter->second.first;
-  lldb::SBValueList *scope = scope_iter->second.GetScope(scope_data.kind);
+  lldb::SBValueList *scope = frames_iter->second.GetScope(scope_data.kind);
 
   if (scope == nullptr) {
     return std::nullopt;
