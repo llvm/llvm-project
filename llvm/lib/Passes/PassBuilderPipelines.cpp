@@ -138,6 +138,7 @@
 #include "llvm/Transforms/Utils/AssumeBundleBuilder.h"
 #include "llvm/Transforms/Utils/CanonicalizeAliases.h"
 #include "llvm/Transforms/Utils/CountVisits.h"
+#include "llvm/Transforms/Utils/EmitChangedFuncDebugInfo.h"
 #include "llvm/Transforms/Utils/EntryExitInstrumenter.h"
 #include "llvm/Transforms/Utils/ExtraPassManager.h"
 #include "llvm/Transforms/Utils/InjectTLIMappings.h"
@@ -1667,9 +1668,12 @@ PassBuilder::buildModuleOptimizationPipeline(OptimizationLevel Level,
   if (PTO.CallGraphProfile && !LTOPreLink)
     MPM.addPass(CGProfilePass(isLTOPostLink(LTOPhase)));
 
-  // RelLookupTableConverterPass runs later in LTO post-link pipeline.
-  if (!LTOPreLink)
+  // RelLookupTableConverterPass and EmitChangedFuncDebugInfoPass run later in
+  // LTO post-link pipeline.
+  if (!LTOPreLink) {
     MPM.addPass(RelLookupTableConverterPass());
+    MPM.addPass(EmitChangedFuncDebugInfoPass());
+  }
 
   // Add devirtualization pass only when LTO is not enabled, as otherwise
   // the pass is already enabled in the LTO pipeline.

@@ -51,9 +51,11 @@ attributes #0 = { "use-sample-profile" }
 !4 = !{i32 2, !"Debug Info Version", i32 3}
 !5 = !{i32 1, !"wchar_size", i32 4}
 !6 = !{!"clang version 8.0.0 (trunk 345241)"}
-!7 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !8, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: true, unit: !0, retainedNodes: !2)
+!7 = distinct !DISubprogram(name: "foo", scope: !1, file: !1, line: 1, type: !12, isLocal: false, isDefinition: true, scopeLine: 1, isOptimized: true, unit: !0, retainedNodes: !2)
 !8 = !DISubroutineType(types: !2)
 !9 = !DILocation(line: 2, column: 3, scope: !7)
-!10 = distinct !DISubprogram(name: "goo", scope: !1, file: !1, line: 8, type: !8, isLocal: false, isDefinition: true, scopeLine: 8, isOptimized: true, unit: !0, retainedNodes: !2)
+!10 = distinct !DISubprogram(name: "goo", scope: !1, file: !1, line: 8, type: !12, isLocal: false, isDefinition: true, scopeLine: 8, isOptimized: true, unit: !0, retainedNodes: !2)
 !11 = !DILocation(line: 10, column: 3, scope: !10)
-
+!12 = !DISubroutineType(types: !13)
+!13 = !{!14}
+!14 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
