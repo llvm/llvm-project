@@ -2543,7 +2543,6 @@ bool Type::isSizelessBuiltinType() const {
 #include "clang/Basic/HLSLIntangibleTypes.def"
       // AMDGPU feature predicate type
     case BuiltinType::AMDGPUFeaturePredicate:
-// #include "clang/Basic/AMDGPUTypes.def"
       return true;
     default:
       return false;
