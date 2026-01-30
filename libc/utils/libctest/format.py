@@ -23,6 +23,7 @@ These are created by the add_libc_test() infrastructure.
 """
 
 import os
+import shlex
 
 import lit.formats
 import lit.Test
@@ -52,7 +53,8 @@ class LibcTest(lit.formats.ExecutableTest):
         if not os.path.isdir(source_path):
             return
 
-        for filename in os.listdir(source_path):
+        # Sort for deterministic test discovery/output ordering.
+        for filename in sorted(os.listdir(source_path)):
             filepath = os.path.join(source_path, filename)
 
             # Match our test executable pattern
@@ -85,12 +87,20 @@ class LibcTest(lit.formats.ExecutableTest):
         testdata/test.txt) work correctly.
         """
 
-        testPath = test.getSourcePath()
-        execDir = os.path.dirname(testPath)
+        test_path = test.getSourcePath()
+        exec_dir = os.path.dirname(test_path)
 
-        out, err, exitCode = lit.util.executeCommand(testPath, cwd=execDir)
+        test_cmd_template = getattr(test.config, "libc_test_cmd", "")
+        if test_cmd_template:
+            test_cmd = test_cmd_template.replace("@BINARY@", test_path)
+            cmd_args = shlex.split(test_cmd)
+            if not cmd_args:
+                cmd_args = [test_path]
+            out, err, exit_code = lit.util.executeCommand(cmd_args, cwd=exec_dir)
+        else:
+            out, err, exit_code = lit.util.executeCommand([test_path], cwd=exec_dir)
 
-        if not exitCode:
+        if not exit_code:
             return lit.Test.PASS, ""
 
         return lit.Test.FAIL, out + err

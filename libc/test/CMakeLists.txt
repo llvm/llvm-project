@@ -10,9 +10,21 @@ add_custom_target(libc-long-running-tests)
 add_custom_target(libc-unit-tests-build)
 add_custom_target(libc-hermetic-tests-build)
 
-# Configure lit test infrastructure
-# Lit depends on build-only targets so tests aren't run during build
-configure_libc_lit_site_cfg()
+# Configure the site config file for lit
+configure_lit_site_cfg(
+  ${LIBC_SOURCE_DIR}/test/lit.site.cfg.py.in
+  ${LIBC_BUILD_DIR}/test/lit.site.cfg.py
+  MAIN_CONFIG
+  ${LIBC_SOURCE_DIR}/test/lit.cfg.py
+  PATHS
+  "LLVM_SOURCE_DIR"
+  "LLVM_BINARY_DIR"
+  "LLVM_TOOLS_DIR"
+  "LLVM_LIBS_DIR"
+  "LIBC_SOURCE_DIR"
+  "LIBC_BUILD_DIR"
+)
+
 add_lit_testsuite(check-libc-lit
   "Running libc tests via lit"
   ${LIBC_BUILD_DIR}/test
