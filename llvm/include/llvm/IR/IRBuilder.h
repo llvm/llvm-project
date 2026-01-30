@@ -531,7 +531,7 @@ public:
   /// Get a constant N-bit value, zero extended or truncated from
   /// a 64-bit value.
   ConstantInt *getIntN(unsigned N, uint64_t C) {
-    return ConstantInt::get(getIntNTy(N), C);
+    return ConstantInt::get(getIntNTy(N), C, false, true);
   }
 
   /// Get a constant integer value.
