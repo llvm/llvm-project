@@ -331,6 +331,14 @@ void GCNSubtarget::overrideSchedPolicy(MachineSchedPolicy &Policy,
   Policy.OnlyTopDown = false;
   Policy.OnlyBottomUp = false;
 
+  const Function &F = Region.RegionBegin->getMF()->getFunction();
+  Attribute WorkloadAttr = F.getFnAttribute("amdgpu-workload-type");
+  bool IsMLWorkload =
+      WorkloadAttr.isValid() && WorkloadAttr.getValueAsString() == "ml";
+  // Always schedule top-down for better blancing of HW resource usage.
+  if (IsMLWorkload)
+    Policy.OnlyTopDown = true;
+
   // Enabling ShouldTrackLaneMasks crashes the SI Machine Scheduler.
   if (!enableSIScheduler())
     Policy.ShouldTrackLaneMasks = true;
