@@ -2518,6 +2518,80 @@ AvailabilityAttr *Sema::mergeAvailabilityAttr(
   return nullptr;
 }
 
+/// Returns true if the given availability attribute should be inferred, and
+/// adjusts the value of the attribute as necessary to facilitate that.
+static bool shouldInferAvailabilityAttribute(const ParsedAttr &AL,
+                                             IdentifierInfo *&II,
+                                             bool &IsUnavailable,
+                                             VersionTuple &Introduced,
+                                             VersionTuple &Deprecated,
+                                             VersionTuple &Obsolete, Sema &S) {
+  const llvm::Triple &TT = S.Context.getTargetInfo().getTriple();
+  const ASTContext &Context = S.Context;
+  if (TT.getOS() != llvm::Triple::XROS)
+    return false;
+  IdentifierInfo *NewII = nullptr;
+  if (II->getName() == "ios")
+    NewII = &Context.Idents.get("xros");
+  else if (II->getName() == "ios_app_extension")
+    NewII = &Context.Idents.get("xros_app_extension");
+  if (!NewII)
+    return false;
+  II = NewII;
+
+  auto MakeUnavailable = [&]() {
+    IsUnavailable = true;
+    // Reset introduced, deprecated, obsoleted.
+    Introduced = VersionTuple();
+    Deprecated = VersionTuple();
+    Obsolete = VersionTuple();
+  };
+
+  const DarwinSDKInfo *SDKInfo = S.getDarwinSDKInfoForAvailabilityChecking(
+      AL.getRange().getBegin(), "ios");
+
+  if (!SDKInfo) {
+    MakeUnavailable();
+    return true;
+  }
+  // Map from the fallback platform availability to the current platform
+  // availability.
+  const auto *Mapping = SDKInfo->getVersionMapping(DarwinSDKInfo::OSEnvPair(
+      llvm::Triple::IOS, llvm::Triple::UnknownEnvironment, llvm::Triple::XROS,
+      llvm::Triple::UnknownEnvironment));
+  if (!Mapping) {
+    MakeUnavailable();
+    return true;
+  }
+
+  if (!Introduced.empty()) {
+    auto NewIntroduced = Mapping->mapIntroducedAvailabilityVersion(Introduced);
+    if (!NewIntroduced) {
+      MakeUnavailable();
+      return true;
+    }
+    Introduced = *NewIntroduced;
+  }
+
+  if (!Obsolete.empty()) {
+    auto NewObsolete =
+        Mapping->mapDeprecatedObsoletedAvailabilityVersion(Obsolete);
+    if (!NewObsolete) {
+      MakeUnavailable();
+      return true;
+    }
+    Obsolete = *NewObsolete;
+  }
+
+  if (!Deprecated.empty()) {
+    auto NewDeprecated =
+        Mapping->mapDeprecatedObsoletedAvailabilityVersion(Deprecated);
+    Deprecated = NewDeprecated ? *NewDeprecated : VersionTuple();
+  }
+
+  return true;
+}
+
 static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   if (isa<UsingDecl, UnresolvedUsingTypenameDecl, UnresolvedUsingValueDecl>(
           D)) {
@@ -2629,6 +2703,25 @@ static void handleAvailabilityAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       AvailabilityMergeKind::None, PriorityModifier, IIEnvironment);
   if (NewAttr)
     D->addAttr(NewAttr);
+
+  if (S.Context.getTargetInfo().getTriple().getOS() == llvm::Triple::XROS) {
+    IdentifierInfo *NewII = II;
+    bool NewIsUnavailable = IsUnavailable;
+    VersionTuple NewIntroduced = Introduced.Version;
+    VersionTuple NewDeprecated = Deprecated.Version;
+    VersionTuple NewObsoleted = Obsoleted.Version;
+    if (shouldInferAvailabilityAttribute(AL, NewII, NewIsUnavailable,
+                                         NewIntroduced, NewDeprecated,
+                                         NewObsoleted, S)) {
+      AvailabilityAttr *NewAttr = S.mergeAvailabilityAttr(
+          ND, AL, NewII, true /*Implicit*/, NewIntroduced, NewDeprecated,
+          NewObsoleted, NewIsUnavailable, Str, IsStrict, Replacement,
+          AvailabilityMergeKind::None,
+          PriorityModifier + Sema::AP_InferredFromOtherPlatform, IIEnvironment);
+      if (NewAttr)
+        D->addAttr(NewAttr);
+    }
+  }
 
   // Transcribe "ios" to "watchos" (and add a new attribute) if the versioning
   // matches before the start of the watchOS platform.
@@ -2835,6 +2928,15 @@ static void handleExternalSourceSymbolAttr(Sema &S, Decl *D,
       S.Context, AL, Language, DefinedIn, IsGeneratedDeclaration, USR));
 }
 
+void Sema::mergeVisibilityType(Decl *D, SourceLocation Loc,
+                               VisibilityAttr::VisibilityType Value) {
+  if (VisibilityAttr *Attr = D->getAttr<VisibilityAttr>()) {
+    if (Attr->getVisibility() != Value)
+      Diag(Loc, diag::err_mismatched_visibility);
+  } else
+    D->addAttr(VisibilityAttr::CreateImplicit(Context, Value));
+}
+
 template <class T>
 static T *mergeVisibilityAttr(Sema &S, Decl *D, const AttributeCommonInfo &CI,
                               typename T::VisibilityType value) {
@@ -2979,6 +3081,10 @@ static void handleSentinelAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
                                    : Ty->castAs<BlockPointerType>()
                                          ->getPointeeType()
                                          ->castAs<FunctionType>();
+      if (isa<FunctionNoProtoType>(FT)) {
+        S.Diag(AL.getLoc(), diag::warn_attribute_sentinel_named_arguments);
+        return;
+      }
       if (!cast<FunctionProtoType>(FT)->isVariadic()) {
         int m = Ty->isFunctionPointerType() ? 0 : 1;
         S.Diag(AL.getLoc(), diag::warn_attribute_sentinel_not_variadic) << m;
@@ -3510,10 +3616,12 @@ static void handleTargetClonesAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     if (S.ARM().checkTargetClonesAttr(Params, Locations, NewParams))
       return;
   } else if (S.Context.getTargetInfo().getTriple().isRISCV()) {
-    if (S.RISCV().checkTargetClonesAttr(Params, Locations, NewParams))
+    if (S.RISCV().checkTargetClonesAttr(Params, Locations, NewParams,
+                                        AL.getLoc()))
       return;
   } else if (S.Context.getTargetInfo().getTriple().isX86()) {
-    if (S.X86().checkTargetClonesAttr(Params, Locations, NewParams))
+    if (S.X86().checkTargetClonesAttr(Params, Locations, NewParams,
+                                      AL.getLoc()))
       return;
   }
   Params.clear();
@@ -7029,6 +7137,11 @@ ModularFormatAttr *Sema::mergeModularFormatAttr(
 
 static void handleModularFormat(Sema &S, Decl *D, const ParsedAttr &AL) {
   bool Valid = true;
+  if (!AL.isArgIdent(0)) {
+    S.Diag(AL.getLoc(), diag::err_attribute_argument_n_type)
+        << AL << 1 << AANT_ArgumentIdentifier;
+    Valid = false;
+  }
   StringRef ImplName;
   if (!S.checkStringLiteralArgumentAttr(AL, 1, ImplName))
     Valid = false;

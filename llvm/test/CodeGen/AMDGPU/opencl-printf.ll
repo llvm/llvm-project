@@ -2182,4 +2182,95 @@ define void @printf_printf(i32 %n) {
   ret void
 }
 
+define amdgpu_kernel void @test_kernel_return_value_use(i32 %n) {
+; R600-LABEL: @test_kernel_return_value_use(
+; R600-NEXT:  entry:
+; R600-NEXT:    [[MEM:%.*]] = alloca i32, align 4, addrspace(5)
+; R600-NEXT:    [[STR:%.*]] = alloca [9 x i8], align 1, addrspace(5)
+; R600-NEXT:    [[CALL1:%.*]] = call i32 (ptr addrspace(4), ...) @printf(ptr addrspace(4) @.str, ptr addrspace(5) [[STR]], i32 [[N:%.*]])
+; R600-NEXT:    store i32 [[CALL1]], ptr addrspace(5) [[MEM]], align 4
+; R600-NEXT:    ret void
+;
+; GCN-LABEL: @test_kernel_return_value_use(
+; GCN-NEXT:  entry:
+; GCN-NEXT:    [[MEM:%.*]] = alloca i32, align 4, addrspace(5)
+; GCN-NEXT:    [[STR:%.*]] = alloca [9 x i8], align 1, addrspace(5)
+; GCN-NEXT:    [[PRINTF_ALLOC_FN:%.*]] = call ptr addrspace(1) @__printf_alloc(i32 12)
+; GCN-NEXT:    br label [[ENTRY_SPLIT:%.*]]
+; GCN:       entry.split:
+; GCN-NEXT:    [[TMP0:%.*]] = icmp ne ptr addrspace(1) [[PRINTF_ALLOC_FN]], null
+; GCN-NEXT:    br i1 [[TMP0]], label [[TMP1:%.*]], label [[TMP2:%.*]]
+; GCN:       1:
+; GCN-NEXT:    [[PRINTBUFFID:%.*]] = getelementptr i8, ptr addrspace(1) [[PRINTF_ALLOC_FN]], i32 0
+; GCN-NEXT:    [[PRINTBUFFIDCAST:%.*]] = bitcast ptr addrspace(1) [[PRINTBUFFID]] to ptr addrspace(1)
+; GCN-NEXT:    store i32 62, ptr addrspace(1) [[PRINTBUFFIDCAST]], align 4
+; GCN-NEXT:    [[PRINTBUFFGEP:%.*]] = getelementptr i8, ptr addrspace(1) [[PRINTF_ALLOC_FN]], i32 4
+; GCN-NEXT:    store i32 4144959, ptr addrspace(1) [[PRINTBUFFGEP]], align 4
+; GCN-NEXT:    [[PRINTBUFFNEXTPTR:%.*]] = getelementptr i8, ptr addrspace(1) [[PRINTBUFFGEP]], i32 4
+; GCN-NEXT:    store i32 [[N:%.*]], ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 4
+; GCN-NEXT:    br label [[TMP2]]
+; GCN:       2:
+; GCN-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP0]], true
+; GCN-NEXT:    [[PRINTF_RES:%.*]] = sext i1 [[TMP3]] to i32
+; GCN-NEXT:    store i32 [[PRINTF_RES]], ptr addrspace(5) [[MEM]], align 4
+; GCN-NEXT:    ret void
+;
+entry:
+  %mem = alloca i32, align 4, addrspace(5)
+  %str = alloca [9 x i8], align 1, addrspace(5)
+  %call1 = call i32 (ptr addrspace(4), ...) @printf(ptr addrspace(4) @.str, ptr addrspace(5) %str, i32 %n)
+  store i32 %call1, ptr addrspace(5) %mem, align 4
+  ret void
+}
+
+define i32 @test_func_return_value_use(i32 %n) {
+; R600-LABEL: @test_func_return_value_use(
+; R600-NEXT:  entry:
+; R600-NEXT:    [[STR:%.*]] = alloca [9 x i8], align 1, addrspace(5)
+; R600-NEXT:    [[CALL1:%.*]] = call i32 (ptr addrspace(4), ...) @printf(ptr addrspace(4) @.str, ptr addrspace(5) [[STR]], i32 [[N:%.*]])
+; R600-NEXT:    ret i32 [[CALL1]]
+;
+; GCN-LABEL: @test_func_return_value_use(
+; GCN-NEXT:  entry:
+; GCN-NEXT:    [[STR:%.*]] = alloca [9 x i8], align 1, addrspace(5)
+; GCN-NEXT:    [[PRINTF_ALLOC_FN:%.*]] = call ptr addrspace(1) @__printf_alloc(i32 12)
+; GCN-NEXT:    br label [[ENTRY_SPLIT:%.*]]
+; GCN:       entry.split:
+; GCN-NEXT:    [[TMP0:%.*]] = icmp ne ptr addrspace(1) [[PRINTF_ALLOC_FN]], null
+; GCN-NEXT:    br i1 [[TMP0]], label [[TMP1:%.*]], label [[TMP2:%.*]]
+; GCN:       1:
+; GCN-NEXT:    [[PRINTBUFFID:%.*]] = getelementptr i8, ptr addrspace(1) [[PRINTF_ALLOC_FN]], i32 0
+; GCN-NEXT:    [[PRINTBUFFIDCAST:%.*]] = bitcast ptr addrspace(1) [[PRINTBUFFID]] to ptr addrspace(1)
+; GCN-NEXT:    store i32 63, ptr addrspace(1) [[PRINTBUFFIDCAST]], align 4
+; GCN-NEXT:    [[PRINTBUFFGEP:%.*]] = getelementptr i8, ptr addrspace(1) [[PRINTF_ALLOC_FN]], i32 4
+; GCN-NEXT:    store i32 4144959, ptr addrspace(1) [[PRINTBUFFGEP]], align 4
+; GCN-NEXT:    [[PRINTBUFFNEXTPTR:%.*]] = getelementptr i8, ptr addrspace(1) [[PRINTBUFFGEP]], i32 4
+; GCN-NEXT:    store i32 [[N:%.*]], ptr addrspace(1) [[PRINTBUFFNEXTPTR]], align 4
+; GCN-NEXT:    br label [[TMP2]]
+; GCN:       2:
+; GCN-NEXT:    [[TMP3:%.*]] = xor i1 [[TMP0]], true
+; GCN-NEXT:    [[PRINTF_RES:%.*]] = sext i1 [[TMP3]] to i32
+; GCN-NEXT:    ret i32 [[PRINTF_RES]]
+;
+entry:
+  %str = alloca [9 x i8], align 1, addrspace(5)
+  %call1 = call i32 (ptr addrspace(4), ...) @printf(ptr addrspace(4) @.str, ptr addrspace(5) %str, i32 %n)
+  ret i32 %call1
+}
+
+define i32 @test_null_argument_return_value_use(i32 %n) {
+; R600-LABEL: @test_null_argument_return_value_use(
+; R600-NEXT:    [[STR:%.*]] = alloca [9 x i8], align 1, addrspace(5)
+; R600-NEXT:    [[CALL1:%.*]] = call i32 (ptr addrspace(4), ...) @printf(ptr addrspace(4) null, ptr addrspace(5) [[STR]], i32 [[N:%.*]])
+; R600-NEXT:    ret i32 [[CALL1]]
+;
+; GCN-LABEL: @test_null_argument_return_value_use(
+; GCN-NEXT:    [[STR:%.*]] = alloca [9 x i8], align 1, addrspace(5)
+; GCN-NEXT:    ret i32 0
+;
+  %str = alloca [9 x i8], align 1, addrspace(5)
+  %call1 = call i32 (ptr addrspace(4), ...) @printf(ptr addrspace(4) null, ptr addrspace(5) %str, i32 %n)
+  ret i32 %call1
+}
+
 declare i32 @printf(ptr addrspace(4), ...)

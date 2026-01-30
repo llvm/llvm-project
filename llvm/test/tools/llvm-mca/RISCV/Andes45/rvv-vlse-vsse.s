@@ -128,93 +128,93 @@ vsse64.v   v8, (a0), t0
 
 # CHECK:      [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]                                        [9]                        Instructions:
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e8, mf8, ta, ma
-# CHECK-NEXT:  1      1     1.00    *                    1     Andes45VLSU                                VLSE8_V                    vlse8.v	v8, (a0), t0
+# CHECK-NEXT:  1      81    8.00    *                    81    Andes45VLSU[8]                             VLSE8_V                    vlse8.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e8, mf4, ta, ma
-# CHECK-NEXT:  1      1     1.00    *                    1     Andes45VLSU                                VLSE8_V                    vlse8.v	v8, (a0), t0
+# CHECK-NEXT:  1      81    16.00   *                    81    Andes45VLSU[16]                            VLSE8_V                    vlse8.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e8, mf2, ta, ma
-# CHECK-NEXT:  1      1     1.00    *                    1     Andes45VLSU                                VLSE8_V                    vlse8.v	v8, (a0), t0
+# CHECK-NEXT:  1      81    32.00   *                    81    Andes45VLSU[32]                            VLSE8_V                    vlse8.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e8, m1, ta, ma
-# CHECK-NEXT:  1      1     1.00    *                    1     Andes45VLSU                                VLSE8_V                    vlse8.v	v8, (a0), t0
+# CHECK-NEXT:  1      81    64.00   *                    81    Andes45VLSU[64]                            VLSE8_V                    vlse8.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e8, m2, ta, ma
-# CHECK-NEXT:  1      1     1.00    *                    1     Andes45VLSU                                VLSE8_V                    vlse8.v	v8, (a0), t0
+# CHECK-NEXT:  1      81    128.00  *                    81    Andes45VLSU[128]                           VLSE8_V                    vlse8.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e8, m4, ta, ma
-# CHECK-NEXT:  1      1     1.00    *                    1     Andes45VLSU                                VLSE8_V                    vlse8.v	v8, (a0), t0
+# CHECK-NEXT:  1      81    256.00  *                    81    Andes45VLSU[256]                           VLSE8_V                    vlse8.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e8, m8, ta, ma
-# CHECK-NEXT:  1      1     1.00    *                    1     Andes45VLSU                                VLSE8_V                    vlse8.v	v8, (a0), t0
+# CHECK-NEXT:  1      81    512.00  *                    81    Andes45VLSU[512]                           VLSE8_V                    vlse8.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e16, mf4, ta, ma
-# CHECK-NEXT:  1      1     1.00    *                    1     Andes45VLSU                                VLSE16_V                   vlse16.v	v8, (a0), t0
+# CHECK-NEXT:  1      49    8.00    *                    49    Andes45VLSU[8]                             VLSE16_V                   vlse16.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e16, mf2, ta, ma
-# CHECK-NEXT:  1      1     1.00    *                    1     Andes45VLSU                                VLSE16_V                   vlse16.v	v8, (a0), t0
+# CHECK-NEXT:  1      49    16.00   *                    49    Andes45VLSU[16]                            VLSE16_V                   vlse16.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e16, m1, ta, ma
-# CHECK-NEXT:  1      1     1.00    *                    1     Andes45VLSU                                VLSE16_V                   vlse16.v	v8, (a0), t0
+# CHECK-NEXT:  1      49    32.00   *                    49    Andes45VLSU[32]                            VLSE16_V                   vlse16.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e16, m2, ta, ma
-# CHECK-NEXT:  1      1     1.00    *                    1     Andes45VLSU                                VLSE16_V                   vlse16.v	v8, (a0), t0
+# CHECK-NEXT:  1      49    64.00   *                    49    Andes45VLSU[64]                            VLSE16_V                   vlse16.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e16, m4, ta, ma
-# CHECK-NEXT:  1      1     1.00    *                    1     Andes45VLSU                                VLSE16_V                   vlse16.v	v8, (a0), t0
+# CHECK-NEXT:  1      49    128.00  *                    49    Andes45VLSU[128]                           VLSE16_V                   vlse16.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e16, m8, ta, ma
-# CHECK-NEXT:  1      1     1.00    *                    1     Andes45VLSU                                VLSE16_V                   vlse16.v	v8, (a0), t0
+# CHECK-NEXT:  1      49    256.00  *                    49    Andes45VLSU[256]                           VLSE16_V                   vlse16.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e32, mf2, ta, ma
-# CHECK-NEXT:  1      1     1.00    *                    1     Andes45VLSU                                VLSE32_V                   vlse32.v	v8, (a0), t0
+# CHECK-NEXT:  1      33    8.00    *                    33    Andes45VLSU[8]                             VLSE32_V                   vlse32.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e32, m1, ta, ma
-# CHECK-NEXT:  1      1     1.00    *                    1     Andes45VLSU                                VLSE32_V                   vlse32.v	v8, (a0), t0
+# CHECK-NEXT:  1      33    16.00   *                    33    Andes45VLSU[16]                            VLSE32_V                   vlse32.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e32, m2, ta, ma
-# CHECK-NEXT:  1      1     1.00    *                    1     Andes45VLSU                                VLSE32_V                   vlse32.v	v8, (a0), t0
+# CHECK-NEXT:  1      33    32.00   *                    33    Andes45VLSU[32]                            VLSE32_V                   vlse32.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e32, m4, ta, ma
-# CHECK-NEXT:  1      1     1.00    *                    1     Andes45VLSU                                VLSE32_V                   vlse32.v	v8, (a0), t0
+# CHECK-NEXT:  1      33    64.00   *                    33    Andes45VLSU[64]                            VLSE32_V                   vlse32.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e32, m8, ta, ma
-# CHECK-NEXT:  1      1     1.00    *                    1     Andes45VLSU                                VLSE32_V                   vlse32.v	v8, (a0), t0
+# CHECK-NEXT:  1      33    128.00  *                    33    Andes45VLSU[128]                           VLSE32_V                   vlse32.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e64, m1, ta, ma
-# CHECK-NEXT:  1      1     1.00    *                    1     Andes45VLSU                                VLSE64_V                   vlse64.v	v8, (a0), t0
+# CHECK-NEXT:  1      25    8.00    *                    25    Andes45VLSU[8]                             VLSE64_V                   vlse64.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e64, m2, ta, ma
-# CHECK-NEXT:  1      1     1.00    *                    1     Andes45VLSU                                VLSE64_V                   vlse64.v	v8, (a0), t0
+# CHECK-NEXT:  1      25    16.00   *                    25    Andes45VLSU[16]                            VLSE64_V                   vlse64.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e64, m4, ta, ma
-# CHECK-NEXT:  1      1     1.00    *                    1     Andes45VLSU                                VLSE64_V                   vlse64.v	v8, (a0), t0
+# CHECK-NEXT:  1      25    32.00   *                    25    Andes45VLSU[32]                            VLSE64_V                   vlse64.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e64, m8, ta, ma
-# CHECK-NEXT:  1      1     1.00    *                    1     Andes45VLSU                                VLSE64_V                   vlse64.v	v8, (a0), t0
+# CHECK-NEXT:  1      25    64.00   *                    25    Andes45VLSU[64]                            VLSE64_V                   vlse64.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e8, mf8, ta, ma
-# CHECK-NEXT:  1      1     1.00           *             1     Andes45VLSU                                VSSE8_V                    vsse8.v	v8, (a0), t0
+# CHECK-NEXT:  1      1     8.00           *             1     Andes45VLSU[8]                             VSSE8_V                    vsse8.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e8, mf4, ta, ma
-# CHECK-NEXT:  1      1     1.00           *             1     Andes45VLSU                                VSSE8_V                    vsse8.v	v8, (a0), t0
+# CHECK-NEXT:  1      1     16.00          *             1     Andes45VLSU[16]                            VSSE8_V                    vsse8.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e8, mf2, ta, ma
-# CHECK-NEXT:  1      1     1.00           *             1     Andes45VLSU                                VSSE8_V                    vsse8.v	v8, (a0), t0
+# CHECK-NEXT:  1      1     32.00          *             1     Andes45VLSU[32]                            VSSE8_V                    vsse8.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e8, m1, ta, ma
-# CHECK-NEXT:  1      1     1.00           *             1     Andes45VLSU                                VSSE8_V                    vsse8.v	v8, (a0), t0
+# CHECK-NEXT:  1      1     64.00          *             1     Andes45VLSU[64]                            VSSE8_V                    vsse8.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e8, m2, ta, ma
-# CHECK-NEXT:  1      1     1.00           *             1     Andes45VLSU                                VSSE8_V                    vsse8.v	v8, (a0), t0
+# CHECK-NEXT:  1      1     128.00         *             1     Andes45VLSU[128]                           VSSE8_V                    vsse8.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e8, m4, ta, ma
-# CHECK-NEXT:  1      1     1.00           *             1     Andes45VLSU                                VSSE8_V                    vsse8.v	v8, (a0), t0
+# CHECK-NEXT:  1      1     256.00         *             1     Andes45VLSU[256]                           VSSE8_V                    vsse8.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e8, m8, ta, ma
-# CHECK-NEXT:  1      1     1.00           *             1     Andes45VLSU                                VSSE8_V                    vsse8.v	v8, (a0), t0
+# CHECK-NEXT:  1      1     512.00         *             1     Andes45VLSU[512]                           VSSE8_V                    vsse8.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e16, mf4, ta, ma
-# CHECK-NEXT:  1      1     1.00           *             1     Andes45VLSU                                VSSE16_V                   vsse16.v	v8, (a0), t0
+# CHECK-NEXT:  1      1     8.00           *             1     Andes45VLSU[8]                             VSSE16_V                   vsse16.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e16, mf2, ta, ma
-# CHECK-NEXT:  1      1     1.00           *             1     Andes45VLSU                                VSSE16_V                   vsse16.v	v8, (a0), t0
+# CHECK-NEXT:  1      1     16.00          *             1     Andes45VLSU[16]                            VSSE16_V                   vsse16.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e16, m1, ta, ma
-# CHECK-NEXT:  1      1     1.00           *             1     Andes45VLSU                                VSSE16_V                   vsse16.v	v8, (a0), t0
+# CHECK-NEXT:  1      1     32.00          *             1     Andes45VLSU[32]                            VSSE16_V                   vsse16.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e16, m2, ta, ma
-# CHECK-NEXT:  1      1     1.00           *             1     Andes45VLSU                                VSSE16_V                   vsse16.v	v8, (a0), t0
+# CHECK-NEXT:  1      1     64.00          *             1     Andes45VLSU[64]                            VSSE16_V                   vsse16.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e16, m4, ta, ma
-# CHECK-NEXT:  1      1     1.00           *             1     Andes45VLSU                                VSSE16_V                   vsse16.v	v8, (a0), t0
+# CHECK-NEXT:  1      1     128.00         *             1     Andes45VLSU[128]                           VSSE16_V                   vsse16.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e16, m8, ta, ma
-# CHECK-NEXT:  1      1     1.00           *             1     Andes45VLSU                                VSSE16_V                   vsse16.v	v8, (a0), t0
+# CHECK-NEXT:  1      1     256.00         *             1     Andes45VLSU[256]                           VSSE16_V                   vsse16.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e32, mf2, ta, ma
-# CHECK-NEXT:  1      1     1.00           *             1     Andes45VLSU                                VSSE32_V                   vsse32.v	v8, (a0), t0
+# CHECK-NEXT:  1      1     8.00           *             1     Andes45VLSU[8]                             VSSE32_V                   vsse32.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e32, m1, ta, ma
-# CHECK-NEXT:  1      1     1.00           *             1     Andes45VLSU                                VSSE32_V                   vsse32.v	v8, (a0), t0
+# CHECK-NEXT:  1      1     16.00          *             1     Andes45VLSU[16]                            VSSE32_V                   vsse32.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e32, m2, ta, ma
-# CHECK-NEXT:  1      1     1.00           *             1     Andes45VLSU                                VSSE32_V                   vsse32.v	v8, (a0), t0
+# CHECK-NEXT:  1      1     32.00          *             1     Andes45VLSU[32]                            VSSE32_V                   vsse32.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e32, m4, ta, ma
-# CHECK-NEXT:  1      1     1.00           *             1     Andes45VLSU                                VSSE32_V                   vsse32.v	v8, (a0), t0
+# CHECK-NEXT:  1      1     64.00          *             1     Andes45VLSU[64]                            VSSE32_V                   vsse32.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e32, m8, ta, ma
-# CHECK-NEXT:  1      1     1.00           *             1     Andes45VLSU                                VSSE32_V                   vsse32.v	v8, (a0), t0
+# CHECK-NEXT:  1      1     128.00         *             1     Andes45VLSU[128]                           VSSE32_V                   vsse32.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e64, m1, ta, ma
-# CHECK-NEXT:  1      1     1.00           *             1     Andes45VLSU                                VSSE64_V                   vsse64.v	v8, (a0), t0
+# CHECK-NEXT:  1      1     8.00           *             1     Andes45VLSU[8]                             VSSE64_V                   vsse64.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e64, m2, ta, ma
-# CHECK-NEXT:  1      1     1.00           *             1     Andes45VLSU                                VSSE64_V                   vsse64.v	v8, (a0), t0
+# CHECK-NEXT:  1      1     16.00          *             1     Andes45VLSU[16]                            VSSE64_V                   vsse64.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e64, m4, ta, ma
-# CHECK-NEXT:  1      1     1.00           *             1     Andes45VLSU                                VSSE64_V                   vsse64.v	v8, (a0), t0
+# CHECK-NEXT:  1      1     32.00          *             1     Andes45VLSU[32]                            VSSE64_V                   vsse64.v	v8, (a0), t0
 # CHECK-NEXT:  1      1     1.00                  U      1     Andes45CSR                                 VSETVLI                    vsetvli	zero, zero, e64, m8, ta, ma
-# CHECK-NEXT:  1      1     1.00           *             1     Andes45VLSU                                VSSE64_V                   vsse64.v	v8, (a0), t0
+# CHECK-NEXT:  1      1     64.00          *             1     Andes45VLSU[64]                            VSSE64_V                   vsse64.v	v8, (a0), t0
 
 # CHECK:      Resources:
 # CHECK-NEXT: [0.0] - Andes45ALU
@@ -237,95 +237,95 @@ vsse64.v   v8, (a0), t0
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]
-# CHECK-NEXT:  -      -     44.00   -      -      -      -      -      -      -      -      -      -     44.00   -      -      -
+# CHECK-NEXT:  -      -     44.00   -      -      -      -      -      -      -      -      -      -     3776.00  -     -      -
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1]    [2]    [3]    [4]    [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   [15]   Instructions:
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, mf8, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vlse8.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -     vlse8.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, mf4, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vlse8.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     16.00   -      -      -     vlse8.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, mf2, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vlse8.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     32.00   -      -      -     vlse8.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m1, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vlse8.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     64.00   -      -      -     vlse8.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m2, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vlse8.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     128.00  -      -      -     vlse8.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m4, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vlse8.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     256.00  -      -      -     vlse8.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m8, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vlse8.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     512.00  -      -      -     vlse8.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf4, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vlse16.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -     vlse16.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf2, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vlse16.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     16.00   -      -      -     vlse16.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m1, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vlse16.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     32.00   -      -      -     vlse16.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m2, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vlse16.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     64.00   -      -      -     vlse16.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m4, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vlse16.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     128.00  -      -      -     vlse16.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m8, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vlse16.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     256.00  -      -      -     vlse16.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf2, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vlse32.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -     vlse32.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m1, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vlse32.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     16.00   -      -      -     vlse32.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m2, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vlse32.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     32.00   -      -      -     vlse32.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m4, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vlse32.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     64.00   -      -      -     vlse32.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m8, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vlse32.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     128.00  -      -      -     vlse32.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m1, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vlse64.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -     vlse64.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m2, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vlse64.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     16.00   -      -      -     vlse64.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m4, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vlse64.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     32.00   -      -      -     vlse64.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m8, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vlse64.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     64.00   -      -      -     vlse64.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, mf8, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vsse8.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -     vsse8.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, mf4, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vsse8.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     16.00   -      -      -     vsse8.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, mf2, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vsse8.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     32.00   -      -      -     vsse8.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m1, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vsse8.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     64.00   -      -      -     vsse8.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m2, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vsse8.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     128.00  -      -      -     vsse8.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m4, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vsse8.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     256.00  -      -      -     vsse8.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e8, m8, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vsse8.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     512.00  -      -      -     vsse8.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf4, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vsse16.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -     vsse16.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, mf2, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vsse16.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     16.00   -      -      -     vsse16.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m1, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vsse16.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     32.00   -      -      -     vsse16.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m2, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vsse16.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     64.00   -      -      -     vsse16.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m4, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vsse16.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     128.00  -      -      -     vsse16.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e16, m8, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vsse16.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     256.00  -      -      -     vsse16.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, mf2, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vsse32.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -     vsse32.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m1, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vsse32.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     16.00   -      -      -     vsse32.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m2, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vsse32.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     32.00   -      -      -     vsse32.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m4, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vsse32.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     64.00   -      -      -     vsse32.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e32, m8, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vsse32.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     128.00  -      -      -     vsse32.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m1, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vsse64.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     8.00    -      -      -     vsse64.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m2, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vsse64.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     16.00   -      -      -     vsse64.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m4, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vsse64.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     32.00   -      -      -     vsse64.v	v8, (a0), t0
 # CHECK-NEXT:  -      -     1.00    -      -      -      -      -      -      -      -      -      -      -      -      -      -     vsetvli	zero, zero, e64, m8, ta, ma
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     1.00    -      -      -     vsse64.v	v8, (a0), t0
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -     64.00   -      -      -     vsse64.v	v8, (a0), t0

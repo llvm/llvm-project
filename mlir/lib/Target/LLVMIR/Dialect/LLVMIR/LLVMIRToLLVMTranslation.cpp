@@ -277,7 +277,7 @@ static LogicalResult setLoopAttr(const llvm::MDNode *node, Operation *op,
         branchOp.setLoopAnnotationAttr(attr);
         return success();
       })
-      .Default([](auto) { return failure(); });
+      .Default(failure());
 }
 
 /// Looks up all the alias scope attributes that map to the alias scope nodes
