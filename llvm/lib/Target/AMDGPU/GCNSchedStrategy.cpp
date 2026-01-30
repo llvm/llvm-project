@@ -1891,9 +1891,9 @@ bool GCNSchedStage::mayCauseSpilling(unsigned WavesAfter) {
 void GCNSchedStage::modifyRegionSchedule(unsigned RegionIdx,
                                          MachineBasicBlock *MBB,
                                          ArrayRef<MachineInstr *> MIOrder) {
-  assert(std::distance(DAG.Regions[RegionIdx].first,
-                       DAG.Regions[RegionIdx].second) ==
-             static_cast<long>(MIOrder.size()) &&
+  assert(static_cast<size_t>(std::distance(DAG.Regions[RegionIdx].first,
+                                           DAG.Regions[RegionIdx].second)) ==
+             MIOrder.size() &&
          "instruction number mismatch");
   if (MIOrder.empty())
     return;
