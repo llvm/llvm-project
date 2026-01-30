@@ -47,7 +47,6 @@
 #include "llvm/Support/AMDGPUAddrSpace.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
-#include "llvm/Support/ScopedPrinter.h"
 #include "llvm/Support/NVPTXAddrSpace.h"
 #include "llvm/Support/Regex.h"
 #include "llvm/Support/TimeProfiler.h"
@@ -65,8 +64,8 @@ static cl::opt<bool>
 static void rename(GlobalValue *GV) { GV->setName(GV->getName() + ".old"); }
 
 // Report a fatal error along with the
-// Call Instruction which caused the error 
-static void reportFatalUsageErrorWithCI(StringRef reason, CallBase* CI) {
+// Call Instruction which caused the error
+static void reportFatalUsageErrorWithCI(StringRef reason, CallBase *CI) {
   CI->dump();
   reportFatalUsageError(reason);
 }
@@ -4404,7 +4403,8 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
       else if (VecWidth == 512)
         NewArgType = VectorType::get(Builder.getInt8Ty(), 64, false);
       else
-        reportFatalUsageErrorWithCI("Above intrinsic has unexpected vector bit width", CI);
+        reportFatalUsageErrorWithCI(
+            "Above intrinsic has unexpected vector bit width", CI);
 
       Args[1] = Builder.CreateBitCast(Args[1], NewArgType);
       Args[2] = Builder.CreateBitCast(Args[2], NewArgType);
@@ -4459,7 +4459,8 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
       else if (VecWidth == 512)
         NewArgType = VectorType::get(Builder.getInt16Ty(), 32, false);
       else
-        reportFatalUsageErrorWithCI("Above intrinsic has unexpected vector bit width", CI);
+        reportFatalUsageErrorWithCI(
+            "Above intrinsic has unexpected vector bit width", CI);
 
       Args[1] = Builder.CreateBitCast(Args[1], NewArgType);
       Args[2] = Builder.CreateBitCast(Args[2], NewArgType);
