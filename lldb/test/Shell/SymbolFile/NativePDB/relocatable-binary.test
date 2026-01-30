@@ -1,0 +1,11 @@
+# REQUIRES: lld, target-windows
+# RUN: %build --compiler=clang-cl --nodefaultlib -fuse-ld=lld -Wl,/dll -Wl,/noentry -o %t.dll %S/Inputs/relocatable.cpp
+# RUN: lldb-test symbols %t.dll | FileCheck %s
+
+# Test that relocatable PE/COFF binaries (like DLLs and UEFI drivers) with PDB
+# symbols can be loaded. These binaries return LLDB_INVALID_ADDRESS for
+# GetFileAddress() and should use 0x0 as the base to allow RVA-based symbol
+# loading.
+
+# CHECK: Module: {{.*}}.dll
+# CHECK: Function{{{.*}}}, extern "C" name = "relocatable_function"
