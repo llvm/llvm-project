@@ -48,9 +48,9 @@ static void DebugOnlyFunction(AnalysisDeclContext &AC, const CFG &Cfg,
 }
 #endif
 
-
 LifetimeSafetyAnalysis::LifetimeSafetyAnalysis(
-    AnalysisDeclContext &AC, LifetimeSafetySemaHelper *SemaHelper, const LifetimeSafetyOpts &LSOpts)
+    AnalysisDeclContext &AC, LifetimeSafetySemaHelper *SemaHelper,
+    const LifetimeSafetyOpts &LSOpts)
     : AC(AC), SemaHelper(SemaHelper), LSOpts(LSOpts) {}
 
 void LifetimeSafetyAnalysis::run() {

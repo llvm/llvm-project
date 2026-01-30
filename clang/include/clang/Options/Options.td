@@ -1968,8 +1968,8 @@ defm lifetime_safety : BoolFOption<
   BothFlags<[], [CC1Option],
           " experimental lifetime safety for C++">>;
 
-def fexperimental_lifetime_safety_max_cfg_blocks
-    : Joined<["-"], "fexperimental-lifetime-safety-max-cfg-blocks=">,
+def lifetime_safety_max_cfg_blocks
+    : Joined<["-"], "lifetime-safety-max-cfg-blocks=">,
       Group<m_Group>,
       Visibility<[ClangOption, CC1Option]>,
       HelpText<"Skip LifetimeSafety analysis for functions with CFG block "

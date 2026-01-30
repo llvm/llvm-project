@@ -123,7 +123,7 @@ class LifetimeSafetyAnalysis {
 public:
   LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
                          LifetimeSafetySemaHelper *SemaHelper,
-                        const LifetimeSafetyOpts &LSOpts);
+                         const LifetimeSafetyOpts &LSOpts);
 
   void run();
 

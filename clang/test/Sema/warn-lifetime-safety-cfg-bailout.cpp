@@ -1,10 +1,11 @@
-// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -Wexperimental-lifetime-safety -fexperimental-lifetime-safety-max-cfg-blocks=3 -Wno-dangling %s 2>&1 | FileCheck %s --check-prefix=CHECK-BAILOUT
-// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -Wexperimental-lifetime-safety -Wno-dangling %s 2>&1 | FileCheck %s --check-prefix=CHECK-NOBAILOUT
+// RUN: %clang_cc1 -fsyntax-only -flifetime-safety -Wlifetime-safety -lifetime-safety-max-cfg-blocks=3 -Wno-dangling -verify=CHECK-BAILOUT %s
+// RUN: %clang_cc1 -fsyntax-only -flifetime-safety -Wlifetime-safety -Wno-dangling -verify=CHECK-BAILOUT -verify=CHECK-NOBAILOUT %s
 
 struct MyObj {
   int id;
   ~MyObj() {}  // Non-trivial destructor
   MyObj operator+(MyObj);
+  void use() const;
 };
 
 struct [[gsl::Pointer()]] View {
@@ -26,22 +27,22 @@ void single_block_cfg() {
   MyObj* p;
   {
     MyObj s;
-    p = &s;     // CHECK-BAILOUT: warning: object whose reference is captured does not live long enough
-  }             // CHECK-BAILOUT: note: destroyed here
-  (void)*p;     // CHECK-BAILOUT: note: later used here
+    p = &s;     // CHECK-BAILOUT-warning {{object whose reference is captured does not live long enough}}
+  }             // CHECK-BAILOUT-note {{destroyed here}}
+  (void)*p;     // CHECK-BAILOUT-note {{later used here}}
 }
 
 void multiple_block_cfg() {
-  View v;
+  MyObj* p;
   int a = 10;
   MyObj safe;
   {
     if (a > 5) {
       MyObj s;
-      v = s;    // CHECK-NOBAILOUT: warning: object whose reference is captured does not live long enough
-    } else {
-      v = safe;
+      p = &s;    // CHECK-NOBAILOUT-warning {{object whose reference is captured does not live long enough}}
+    } else {     // CHECK-NOBAILOUT-note {{destroyed here}}
+      p = &safe;
     }     
-  }             // CHECK-NOBAILOUT: note: destroyed here
-  v.use();      // CHECK-NOBAILOUT: note: later used here
+  }             
+  p->use();      // CHECK-NOBAILOUT-note {{later used here}}
 }
