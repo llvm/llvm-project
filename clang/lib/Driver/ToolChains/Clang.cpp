@@ -7185,43 +7185,45 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
   // enablement. Examples:
   //   -fms-extensions -fno-ms-anonymous-structs -> disabled (explicit override)
   //   -fno-ms-anonymous-structs -fms-extensions -> enabled (last flag wins)
-  auto ShouldEnableMSAnonymousStructs =
-      [&](const ArgList &Args) -> std::optional<bool> {
-    std::optional<bool> EnableAnonymousStructs;
+  auto MSAnonymousStructsOptionToUseOrNull =
+      [](const ArgList &Args) -> const char * {
+    const char *Option = nullptr;
+    constexpr const char *Enable = "-fms-anonymous-structs";
+    constexpr const char *Disable = "-fno-ms-anonymous-structs";
 
     // Iterate through all arguments in order to implement "last flag wins".
     for (const Arg *A : Args) {
       switch (A->getOption().getID()) {
       case options::OPT_fms_anonymous_structs:
         A->claim();
-        EnableAnonymousStructs = true;
+        Option = Enable;
         break;
       case options::OPT_fno_ms_anonymous_structs:
         A->claim();
-        EnableAnonymousStructs = false;
+        Option = Disable;
         break;
-      // -fms-extensions and -fms-compatibility implicitly enables feature.
+      // Each of -fms-extensions and -fms-compatibility implicitly enables the
+      // feature.
       case options::OPT_fms_extensions:
       case options::OPT_fms_compatibility:
-        EnableAnonymousStructs = true;
+        Option = Enable;
         break;
-      // -fno-ms-extensions and -fno-ms-compatibility implicitly disable
-      // this feature.
+      // Each of -fno-ms-extensions and -fno-ms-compatibility implicitly
+      // disables the feature.
       case options::OPT_fno_ms_extensions:
       case options::OPT_fno_ms_compatibility:
-        EnableAnonymousStructs = false;
+        Option = Disable;
         break;
       default:
         break;
       }
     }
-    return EnableAnonymousStructs;
+    return Option;
   };
 
   // Only pass a flag to CC1 if a relevant option was seen
-  if (auto MSAnon = ShouldEnableMSAnonymousStructs(Args))
-    CmdArgs.push_back(*MSAnon ? "-fms-anonymous-structs"
-                              : "-fno-ms-anonymous-structs");
+  if (auto MSAnonOpt = MSAnonymousStructsOptionToUseOrNull(Args))
+    CmdArgs.push_back(MSAnonOpt);
 
   if (Triple.isWindowsMSVCEnvironment() && !D.IsCLMode() &&
       Args.hasArg(options::OPT_fms_runtime_lib_EQ))
