@@ -554,7 +554,8 @@ struct OneDimMultiReductionToTwoDim
 /// ```mlir
 /// %0 = vector.extract %src[0] : vector<Mx...xf32> from vector<NxMx...xf32>
 /// ...
-/// %Nminus1 = vector.extract %src[N-1] : vector<Mx...xf32> from vector<NxMx...xf32>
+/// %Nminus1 = vector.extract %src[N-1] : vector<Mx...xf32> from
+/// vector<NxMx...xf32>
 ///
 /// %res0 = arith.addf %0, %acc : vector<Mx...xf32>
 /// ...
@@ -645,7 +646,8 @@ struct UnrollMultiReductionOuterBaseCase
 /// ```mlir
 /// %0 = vector.extract %src[0] : vector<Mx...xf32> from vector<NxMx...xf32>
 /// ...
-/// %Nminus1 = vector.extract %src[N-1] : vector<Mx...xf32> from vector<NxMx...xf32>
+/// %Nminus1 = vector.extract %src[N-1] : vector<Mx...xf32> from
+/// vector<NxMx...xf32>
 ///
 /// %red0 = vector.multi_reduction <add>, %0, %acc [1]
 ///     : vector<Mx...xf32> to vector<Ix...xf32>
