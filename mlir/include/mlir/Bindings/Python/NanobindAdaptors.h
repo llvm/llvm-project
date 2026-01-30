@@ -10,10 +10,6 @@
 // depend on implementation details of the MLIR Python API and do not introduce
 // C++-level dependencies with it (requiring only Python and CAPI-level
 // dependencies).
-//
-// It is encouraged to be used both in-tree and out-of-tree. For in-tree use
-// cases, it should be used for dialect implementations (versus relying on
-// Pybind-based internals of the core libraries).
 //===----------------------------------------------------------------------===//
 
 #ifndef MLIR_BINDINGS_PYTHON_NANOBINDADAPTORS_H
@@ -28,7 +24,7 @@
 #include "mlir-c/IR.h"
 // clang-format off
 #include "mlir/Bindings/Python/Nanobind.h"
-#include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
+#include "mlir-c/Bindings/Python/Interop.h" // Expected after nanobind headers.
 // clang-format on
 #include "llvm/ADT/Twine.h"
 
@@ -663,7 +659,7 @@ public:
       // 'get_static_typeid' method.
       // This is modeled as a static method instead of a static property because
       // `def_property_readonly_static` is not available in `pure_subclass` and
-      // we do not want to introduce the complexity that pybind uses to
+      // we do not want to introduce the complexity that nanobind uses to
       // implement it.
       def_staticmethod(
           "get_static_typeid",

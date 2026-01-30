@@ -139,7 +139,7 @@ There are a lot of co-related issues of shared library linkage, distribution
 concerns, etc that affect such things. Organizing the code into composable
 modules (versus a monolithic `cpp` file) allows the flexibility to address many
 of these as needed over time. Also, compilation time for all of the template
-meta-programming in pybind scales with the number of things you define in a
+meta-programming in nanobind scales with the number of things you define in a
 translation unit. Breaking into multiple translation units can significantly aid
 compile times for APIs with a large surface area.
 
@@ -190,8 +190,8 @@ The Python APIs should seek to layer on top of the C-API to the degree possible.
 Especially for the core, dialect-independent parts, such a binding enables
 packaging decisions that would be difficult or impossible if spanning a C++ ABI
 boundary. In addition, factoring in this way side-steps some very difficult
-issues that arise when combining RTTI-based modules (which pybind derived things
-are) with non-RTTI polymorphic C++ code (the default compilation mode of LLVM).
+issues that arise when combining RTTI-based extension modules with non-RTTI
+polymorphic C++ code (the default compilation mode of LLVM).
 
 ### Ownership in the Core IR
 
@@ -1260,11 +1260,11 @@ are available when the dialect is loaded from Python.
 Dialect-specific passes can be made available to the pass manager in Python by
 registering them with the context and relying on the API for pass pipeline
 parsing from string descriptions. This can be achieved by creating a new
-nanobind module, defined in `lib/Bindings/Python/<Dialect>Passes.cpp`, that
+Python extension module, defined in `lib/Bindings/Python/<Dialect>Passes.cpp`, that
 calls the registration C API, which must be provided first. For passes defined
 declaratively using Tablegen, `mlir-tblgen -gen-pass-capi-header` and
 `-mlir-tblgen -gen-pass-capi-impl` automate the generation of C API. The
-nanobind module must be compiled into a separate “Python extension” library,
+extension module must be compiled into a separate “Python extension” library,
 which can be `import`ed  from the main dialect file, i.e.
 `python/mlir/dialects/<dialect-namespace>.py` or
 `python/mlir/dialects/<dialect-namespace>/__init__.py`, or from a separate
@@ -1276,9 +1276,7 @@ make the passes available along with the dialect.
 
 Dialect functionality other than IR objects or passes, such as helper functions,
 can be exposed to Python similarly to attributes and types. C API is expected to
-exist for this functionality, which can then be wrapped using pybind11 and
-[`include/mlir/Bindings/Python/PybindAdaptors.h`](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/PybindAdaptors.h),
-or nanobind and
+exist for this functionality, which can then be wrapped using nanobind and
 [`include/mlir/Bindings/Python/NanobindAdaptors.h`](https://github.com/llvm/llvm-project/blob/main/mlir/include/mlir/Bindings/Python/NanobindAdaptors.h)
 utilities to connect to the rest of Python API. The bindings can be located in a
 separate module or in the same module as attributes and types, and

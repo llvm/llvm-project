@@ -7,8 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_BINDINGS_PYTHON_PYBINDUTILS_H
-#define MLIR_BINDINGS_PYTHON_PYBINDUTILS_H
+#ifndef MLIR_BINDINGS_PYTHON_NANOBINDUTILS_H
+#define MLIR_BINDINGS_PYTHON_NANOBINDUTILS_H
 
 #include "mlir-c/Support.h"
 #include "mlir/Bindings/Python/Nanobind.h"
@@ -433,4 +433,4 @@ struct DenseMapInfo<MlirTypeID> {
 };
 } // namespace llvm
 
-#endif // MLIR_BINDINGS_PYTHON_PYBINDUTILS_H
+#endif // MLIR_BINDINGS_PYTHON_NANOBINDUTILS_H

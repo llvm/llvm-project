@@ -35,8 +35,8 @@ def get_include_dirs() -> Sequence[str]:
 #
 # Aside from just being far more convenient to do this at the Python level,
 # it is actually quite hard/impossible to have such __init__ hooks, given
-# the pybind memory model (i.e. there is not a Python reference to the object
-# in the scope of the base class __init__).
+# the nanobind native extension memory model (i.e. there is not a Python
+# reference to the object in the scope of the base class __init__).
 #
 # For #1, we:
 #   a. Probe for modules named '_mlirRegisterEverything' and

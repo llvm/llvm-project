@@ -1,4 +1,4 @@
-//===- IRModules.cpp - IR Submodules of pybind module ---------------------===//
+//===- IRCore.cpp - IR submodules of MLIR Python bindings -----------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -11,7 +11,7 @@
 #include "mlir/Bindings/Python/IRCore.h"
 #include "mlir/Bindings/Python/NanobindUtils.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
-#include "mlir-c/Bindings/Python/Interop.h" // This is expected after nanobind.
+#include "mlir-c/Bindings/Python/Interop.h" // Expected after nanobind headers.
 // clang-format on
 #include "mlir-c/BuiltinAttributes.h"
 #include "mlir-c/Debug.h"
@@ -545,7 +545,7 @@ nb::object PyMlirContext::attachDiagnosticHandler(nb::object callback) {
   (void)pyHandlerObject.inc_ref();
 
   // In these C callbacks, the userData is a PyDiagnosticHandler* that is
-  // guaranteed to be known to pybind.
+  // guaranteed to be known to the nanobind-based bindings.
   auto handlerCallback =
       +[](MlirDiagnostic diagnostic, void *userData) -> MlirLogicalResult {
     PyDiagnostic *pyDiagnostic = new PyDiagnostic(diagnostic);

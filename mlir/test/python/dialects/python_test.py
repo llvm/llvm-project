@@ -601,8 +601,8 @@ def testCustomAttribute():
         else:
             raise
 
-        # The following must trigger a TypeError from pybind (therefore, not
-        # checking its message) and must not crash.
+        # The following must trigger a TypeError from the nanobind binding library
+        # (therefore, not checking its message) and must not crash.
         try:
             TestAttr(42, 56)
         except TypeError:
@@ -651,8 +651,8 @@ def testCustomType():
         else:
             raise
 
-        # The following must trigger a TypeError from pybind (therefore, not
-        # checking its message) and must not crash.
+        # The following must trigger a TypeError from the nanobind binding library
+        # (therefore, not checking its message) and must not crash.
         try:
             TestType(42, 56)
         except TypeError:
@@ -785,7 +785,7 @@ def testCustomTypeTypeCaster():
         except RuntimeError as e:
             print(e)
 
-        # python_test dialect registers a caster for RankedTensorType in its extension (pybind) module.
+        # python_test dialect registers a caster for RankedTensorType in its extension module.
         # So this one replaces that one (successfully). And then just to be sure we restore the original caster below.
         @register_type_caster(c.typeid, replace=True)
         def type_caster(pytype):

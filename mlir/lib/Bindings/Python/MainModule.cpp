@@ -1,4 +1,4 @@
-//===- MainModule.cpp - Main pybind module --------------------------------===//
+//===- MainModule.cpp - Main Python extension module ----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -56,7 +56,7 @@ NB_MODULE(_mlir, m) {
   populatePassManagerSubmodule(passManagerModule);
   nanobind::register_exception_translator(
       [](const std::exception_ptr &p, void *payload) {
-        // We can't define exceptions with custom fields through pybind, so
+        // We can't define exceptions with custom fields through nanobind, so
         // instead the exception class is defined in python and imported here.
         try {
           if (p)

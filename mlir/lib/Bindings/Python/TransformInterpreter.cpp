@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// Pybind classes for the transform dialect interpreter.
+// Python bindings classes for the transform dialect interpreter.
 //
 //===----------------------------------------------------------------------===//
 

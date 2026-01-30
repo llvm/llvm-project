@@ -17,7 +17,7 @@ macro(mlir_configure_python_dev_packages)
     # Development.Module. Searching for Development will fail in situations where
     # the Python libraries are not available. When possible, limit to just
     # Development.Module.
-    # See https://pybind11.readthedocs.io/en/stable/compiling.html#findpython-mode
+    # See CMake FindPython/FindPython3 documentation for details.
     set(_python_development_component Development.Module)
 
     find_package(Python3 ${MLIR_MINIMUM_PYTHON_VERSION}

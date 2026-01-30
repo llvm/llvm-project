@@ -1,4 +1,4 @@
-//===- LinalgPasses.cpp - Pybind module for the Linalg passes -------------===//
+//===- LinalgPasses.cpp - Python extension module for the Linalg passes ---===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

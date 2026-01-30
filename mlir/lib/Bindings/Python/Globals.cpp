@@ -1,4 +1,4 @@
-//===- IRModule.cpp - IR pybind module ------------------------------------===//
+//===- Globals.cpp - Globals for MLIR Python bindings ---------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

@@ -185,9 +185,9 @@ configure_file(
 #-------------------------------------------------------------------------------
 # Python Bindings Configuration
 # Requires:
-#   The pybind11 library can be found (set with -DPYBIND_DIR=...)
+#   The nanobind library can be found (set with -Dnanobind_DIR=...)
 #   The python executable is correct (set with -DPython3_EXECUTABLE=...)
-# By default, find_package and probing for installed pybind11 is performed.
+# By default, find_package and probing for installed nanobind is performed.
 # Super projects can set MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES=ON to
 # disable all package setup and control it themselves.
 #-------------------------------------------------------------------------------
@@ -210,7 +210,7 @@ set(MLIR_DISABLE_CONFIGURE_PYTHON_DEV_PACKAGES 0 CACHE BOOL
        "Performs python dev package configuration sufficient to use all MLIR \
        python features. Super-projects that wish to control their own setup \
        must perform an appropriate find_package of Python3 with \
-       'Development.Module' and ensure that find_package(pybind11) is \
+       'Development.Module' and ensure that find_package(nanobind) is \
        satisfied (and keep up to date as requirements evolve).")
 
 set(_mlir_python_stubgen_enabled ON)

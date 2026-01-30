@@ -2,7 +2,7 @@
 #  See https://llvm.org/LICENSE.txt for license information.
 #  SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
-# Re-export the objects provided by pybind.
+# Re-export the objects provided by the nanobind native extension.
 from ..._mlir_libs._mlirDialectsLinalg import *
 
 # These are the backing OpView classes generated from the linalg tablegen

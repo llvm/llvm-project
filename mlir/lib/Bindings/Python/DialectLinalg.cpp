@@ -1,4 +1,4 @@
-//===- DialectLinalg.cpp - Nanobind module for Linalg dialect API support -===//
+//===- DialectLinalg.cpp - Python extension module for Linalg API support -===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.

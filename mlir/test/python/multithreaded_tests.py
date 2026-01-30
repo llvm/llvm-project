@@ -214,7 +214,7 @@ TEST_MODULES = [
     ("dialects/ods_helpers", run),
     ("dialects/openmp_ops", run_with_insertion_point_v2),
     ("dialects/pdl_ops", run_with_insertion_point_v2),
-    # ("dialects/python_test", run),  # TODO: Need to pass pybind11 or nanobind argv
+    ("dialects/python_test", run),
     ("dialects/quant", run),
     ("dialects/rocdl", run_with_insertion_point_v2),
     ("dialects/scf", run_with_insertion_point_v2),
