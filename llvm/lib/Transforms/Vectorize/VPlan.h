@@ -1650,8 +1650,10 @@ public:
   ~VPWidenRecipe() override = default;
 
   VPWidenRecipe *clone() override {
-    return new VPWidenRecipe(*getUnderlyingInstr(), operands(), *this, *this,
-                             getDebugLoc());
+    if (auto *UV = getUnderlyingValue())
+      return new VPWidenRecipe(*cast<Instruction>(UV), operands(), *this, *this,
+                               getDebugLoc());
+    return new VPWidenRecipe(Opcode, operands(), *this, *this, getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenSC)

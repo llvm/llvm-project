@@ -908,8 +908,7 @@ getOptimizableIVOf(VPValue *VPV, PredicatedScalarEvolution &PSE) {
     case Instruction::Add:
       return match(VPV, m_c_Add(m_Specific(WideIV), m_Specific(IVStep)));
     case Instruction::FAdd:
-      return match(VPV, m_c_Binary<Instruction::FAdd>(m_Specific(WideIV),
-                                                      m_Specific(IVStep)));
+      return match(VPV, m_c_FAdd(m_Specific(WideIV), m_Specific(IVStep)));
     case Instruction::FSub:
       return match(VPV, m_Binary<Instruction::FSub>(m_Specific(WideIV),
                                                     m_Specific(IVStep)));
@@ -4054,7 +4053,7 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
           auto *SrcVecTy = cast<VectorType>(toVectorTy(SrcTy, VF));
           TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
-          InstructionCost ExtRedCost;
+          InstructionCost ExtRedCost = InstructionCost::getInvalid();
           InstructionCost ExtCost =
               cast<VPWidenCastRecipe>(VecOp)->computeCost(VF, Ctx);
           InstructionCost RedCost = Red->computeCost(VF, Ctx);
@@ -4067,11 +4066,11 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
             ExtRedCost = Ctx.TTI.getPartialReductionCost(
                 Opcode, SrcTy, nullptr, RedTy, VF, ExtKind,
                 llvm::TargetTransformInfo::PR_None, std::nullopt, Ctx.CostKind,
-                std::nullopt);
-          } else {
-            assert(ExtOpc != Instruction::CastOps::FPExt &&
-                   "Floating-point extended reductions are not currently "
-                   "supported");
+                RedTy->isFloatingPointTy()
+                    ? std::optional{Red->getFastMathFlags()}
+                    : std::nullopt);
+          } else if (!RedTy->isFloatingPointTy()) {
+            // TTI::getExtendedReductionCost only supports integer types.
             ExtRedCost = Ctx.TTI.getExtendedReductionCost(
                 Opcode, ExtOpc == Instruction::CastOps::ZExt, RedTy, SrcVecTy,
                 Red->getFastMathFlags(), CostKind);
@@ -4083,7 +4082,9 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
 
   VPValue *A;
   // Match reduce(ext)).
-  if (match(VecOp, m_ZExtOrSExt(m_VPValue(A))) &&
+  if (isa<VPWidenCastRecipe>(VecOp) &&
+      (match(VecOp, m_ZExtOrSExt(m_VPValue(A))) ||
+       match(VecOp, m_FPExt(m_VPValue(A)))) &&
       IsExtendedRedValidAndClampRange(
           RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind()),
           cast<VPWidenCastRecipe>(VecOp)->getOpcode(),
@@ -5628,7 +5629,7 @@ getScaledReductions(VPSingleDefRecipe *RedPhiR, VPValue *PrevValue,
         !MatchExtends(BinOp->operands()))
       return false;
   } else if (match(UpdateR, m_Add(m_VPValue(), m_VPValue())) ||
-             UpdateR->getOpcode() == Instruction::FAdd) {
+             match(UpdateR, m_FAdd(m_VPValue(), m_VPValue()))) {
     // We already know the operands for Update are Op and PhiOp.
     if (!MatchExtends({Op}))
       return false;
@@ -5724,6 +5725,18 @@ void VPlanTransforms::createPartialReductions(VPlan &Plan,
       if (!all_of(Chain.ReductionBinOp->users(), UseIsValid)) {
         Chains.clear();
         break;
+      }
+
+      // Check if the compute-reduction-result is used by a sunk store.
+      // TODO: Also form partial reductions in those cases.
+      if (auto *RdxResult = vputils::findComputeReductionResult(RedPhiR)) {
+        if (any_of(RdxResult->users(), [](VPUser *U) {
+              auto *RepR = dyn_cast<VPReplicateRecipe>(U);
+              return RepR && isa<StoreInst>(RepR->getUnderlyingInstr());
+            })) {
+          Chains.clear();
+          break;
+        }
       }
     }
   }
