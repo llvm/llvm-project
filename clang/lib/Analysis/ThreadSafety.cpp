@@ -730,7 +730,7 @@ void VarMapBuilder::VisitCallExpr(const CallExpr *CE) {
       Ctx = VMap->clearDefinition(VDec, Ctx);
   }
   // Save the context after the call where escaped variables' definitions (if
-  // they exist) are cleared:
+  // they exist) are cleared.
   VMap->saveContext(CE, Ctx);
 }
 
