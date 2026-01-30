@@ -20,6 +20,7 @@
 #include "TypeSystemSwift.h"
 #include "TypeSystemSwiftTypeRef.h"
 
+#include "lldb/Symbol/CompilerType.h"
 #include "lldb/Utility/Log.h"
 #include "lldb/lldb-enumerations.h"
 #include "swift/AST/ASTContext.h"
@@ -8405,6 +8406,26 @@ size_t SwiftASTContext::GetNumTemplateArguments(opaque_compiler_type_t type,
   }
 
   return 0;
+}
+
+lldb::TemplateArgumentKind
+SwiftASTContext::GetTemplateArgumentKind(lldb::opaque_compiler_type_t type,
+                                         size_t idx, bool expand_pack) {
+  switch (GetGenericArgumentKind(type, idx)) {
+  case eBoundGenericKindType:
+    return eTemplateArgumentKindType;
+  case eUnboundGenericKindType:
+    return eTemplateArgumentKindDeclaration;
+  default:
+    break;
+  }
+  return eTemplateArgumentKindNull;
+}
+
+CompilerType
+SwiftASTContext::GetTypeTemplateArgument(lldb::opaque_compiler_type_t type,
+                                         size_t idx, bool expand_pack) {
+  return GetGenericArgumentType(type, idx);
 }
 
 bool SwiftASTContext::GetSelectedEnumCase(const CompilerType &type,

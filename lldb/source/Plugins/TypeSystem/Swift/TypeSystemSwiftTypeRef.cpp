@@ -29,6 +29,7 @@
 #include "lldb/Host/StreamFile.h"
 #include "lldb/Interpreter/CommandReturnObject.h"
 #include "lldb/Symbol/CompileUnit.h"
+#include "lldb/Symbol/CompilerType.h"
 #include "lldb/Symbol/SymbolContext.h"
 #include "lldb/Symbol/TypeList.h"
 #include "lldb/Symbol/TypeMap.h"
@@ -4623,29 +4624,38 @@ TypeSystemSwiftTypeRef::GetNumTemplateArguments(opaque_compiler_type_t type,
 
 lldb::TemplateArgumentKind TypeSystemSwiftTypeRef::GetTemplateArgumentKind(
     lldb::opaque_compiler_type_t type, size_t idx, bool expand_pack) {
-  Demangler dem;
-  NodePointer node = DemangleCanonicalOutermostType(dem, type);
-  if (auto *type_list = GetTemplateTypeListNode(node))
-    if (idx < type_list->getNumChildren())
-      return lldb::eTemplateArgumentKindType;
+  auto impl = [&]() {
+    using namespace swift::Demangle;
+    Demangler dem;
+    NodePointer node = DemangleCanonicalOutermostType(dem, type);
+    if (auto *type_list = GetTemplateTypeListNode(node))
+      if (idx < type_list->getNumChildren())
+        return lldb::eTemplateArgumentKindType;
 
-  return lldb::eTemplateArgumentKindNull;
+    return lldb::eTemplateArgumentKindNull;
+  };
+  VALIDATE_AND_RETURN(impl, GetTemplateArgumentKind, type, g_no_exe_ctx,
+                      (ReconstructType(type), idx, expand_pack));
 }
 
 CompilerType TypeSystemSwiftTypeRef::GetTypeTemplateArgument(
     lldb::opaque_compiler_type_t type, size_t idx, bool expand_pack) {
-  using namespace swift::Demangle;
-  Demangler dem;
-  NodePointer node = DemangleCanonicalOutermostType(dem, type);
-  if (auto *type_list = GetTemplateTypeListNode(node))
-    if (idx < type_list->getNumChildren()) {
-      const auto *mangled_name = AsMangledName(type);
-      auto flavor = SwiftLanguageRuntime::GetManglingFlavor(mangled_name);
-      auto *template_type = type_list->getChild(idx);
-      return RemangleAsType(dem, template_type, flavor);
-    }
+  auto impl = [&]() {
+    using namespace swift::Demangle;
+    Demangler dem;
+    NodePointer node = DemangleCanonicalOutermostType(dem, type);
+    if (auto *type_list = GetTemplateTypeListNode(node))
+      if (idx < type_list->getNumChildren()) {
+        const auto *mangled_name = AsMangledName(type);
+        auto flavor = SwiftLanguageRuntime::GetManglingFlavor(mangled_name);
+        auto *template_type = type_list->getChild(idx);
+        return RemangleAsType(dem, template_type, flavor);
+      }
 
-  return {};
+    return CompilerType();
+  };
+  VALIDATE_AND_RETURN(impl, GetTypeTemplateArgument, type, g_no_exe_ctx,
+                      (ReconstructType(type), idx, expand_pack));
 }
 
 CompilerType
