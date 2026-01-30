@@ -723,8 +723,7 @@ define <1 x i64> @icmp_eq_v1i64(<1 x i64> %op1, <1 x i64> %op2) {
 ; NONEON-NOSVE-NEXT:    fmov x9, d0
 ; NONEON-NOSVE-NEXT:    cmp x9, x8
 ; NONEON-NOSVE-NEXT:    csetm x8, eq
-; NONEON-NOSVE-NEXT:    str x8, [sp, #8]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp, #8]
+; NONEON-NOSVE-NEXT:    fmov d0, x8
 ; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %cmp = icmp eq <1 x i64> %op1, %op2

@@ -404,8 +404,7 @@ define <1 x double> @ucvtf_v1i16_v1f64(<1 x i16> %op1) {
 ; NONEON-NOSVE-NEXT:    str d0, [sp, #8]
 ; NONEON-NOSVE-NEXT:    ldrh w8, [sp, #8]
 ; NONEON-NOSVE-NEXT:    ucvtf d0, w8
-; NONEON-NOSVE-NEXT:    str d0, [sp]
-; NONEON-NOSVE-NEXT:    ldr d0, [sp], #16
+; NONEON-NOSVE-NEXT:    add sp, sp, #16
 ; NONEON-NOSVE-NEXT:    ret
   %res = uitofp <1 x i16> %op1 to <1 x double>
   ret <1 x double> %res
