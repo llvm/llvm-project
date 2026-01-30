@@ -51,17 +51,21 @@ def PseudoSD_RV32 : PseudoStore<"sd", GPRPairRV32>;
 def PseudoLD_RV32_OPT :
     Pseudo<(outs GPR:$rd1, GPR:$rd2),
            (ins GPR:$rs1, simm12_lo:$imm12), [], "", ""> {
-  let hasSideEffects = 0;
-  let mayLoad = 1;
-  let mayStore = 0;
+  let hasSideEffects = false;
+  let mayLoad = true;
+  let mayStore = false;
+  let Size = 8; // Might become two LWs
+  let hasPostISelHook = true;
 }
 
 def PseudoSD_RV32_OPT :
     Pseudo<(outs),
            (ins GPR:$rs1, GPR:$rs2, GPR:$rs3, simm12_lo:$imm12), [], "", ""> {
-  let hasSideEffects = 0;
-  let mayLoad = 0;
-  let mayStore = 1;
+  let hasSideEffects = false;
+  let mayLoad = false;
+  let mayStore = true;
+  let Size = 8; // Might become two SWs
+  let hasPostISelHook = true;
 }
 
 def : InstAlias<"ld $rd, (${rs1})", (LD_RV32 GPRPairRV32:$rd, GPR:$rs1, 0), 0>;

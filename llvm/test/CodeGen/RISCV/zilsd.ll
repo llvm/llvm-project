@@ -9,9 +9,10 @@
 define i64 @load(ptr %a) nounwind {
 ; CHECK-LABEL: load:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mv a2, a0
-; CHECK-NEXT:    ld a0, 80(a0)
-; CHECK-NEXT:    ld zero, 0(a2)
+; CHECK-NEXT:    lw a2, 80(a0)
+; CHECK-NEXT:    lw a1, 84(a0)
+; CHECK-NEXT:    ld zero, 0(a0)
+; CHECK-NEXT:    mv a0, a2
 ; CHECK-NEXT:    ret
   %1 = getelementptr i64, ptr %a, i32 10
   %2 = load i64, ptr %1
@@ -44,10 +45,10 @@ define i64 @load_align4(ptr %a) nounwind {
 define void @store(ptr %a, i64 %b) nounwind {
 ; CHECK-LABEL: store:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    mv a3, a2
-; CHECK-NEXT:    mv a2, a1
-; CHECK-NEXT:    sd a2, 0(a0)
-; CHECK-NEXT:    sd a2, 88(a0)
+; CHECK-NEXT:    sw a1, 0(a0)
+; CHECK-NEXT:    sw a2, 4(a0)
+; CHECK-NEXT:    sw a1, 88(a0)
+; CHECK-NEXT:    sw a2, 92(a0)
 ; CHECK-NEXT:    ret
   store i64 %b, ptr %a
   %1 = getelementptr i64, ptr %a, i32 11
@@ -56,25 +57,11 @@ define void @store(ptr %a, i64 %b) nounwind {
 }
 
 define void @store_align4(ptr %a, i64 %b) nounwind {
-; SLOW-LABEL: store_align4:
-; SLOW:       # %bb.0:
-; SLOW-NEXT:    sw a1, 88(a0)
-; SLOW-NEXT:    sw a2, 92(a0)
-; SLOW-NEXT:    ret
-;
-; FAST-LABEL: store_align4:
-; FAST:       # %bb.0:
-; FAST-NEXT:    mv a3, a2
-; FAST-NEXT:    mv a2, a1
-; FAST-NEXT:    sd a2, 88(a0)
-; FAST-NEXT:    ret
-;
-; 4BYTEALIGN-LABEL: store_align4:
-; 4BYTEALIGN:       # %bb.0:
-; 4BYTEALIGN-NEXT:    mv a3, a2
-; 4BYTEALIGN-NEXT:    mv a2, a1
-; 4BYTEALIGN-NEXT:    sd a2, 88(a0)
-; 4BYTEALIGN-NEXT:    ret
+; CHECK-LABEL: store_align4:
+; CHECK:       # %bb.0:
+; CHECK-NEXT:    sw a1, 88(a0)
+; CHECK-NEXT:    sw a2, 92(a0)
+; CHECK-NEXT:    ret
   %1 = getelementptr i64, ptr %a, i32 11
   store i64 %b, ptr %1, align 4
   ret void
@@ -158,9 +145,8 @@ define void @store_unaligned(ptr %p, i64 %v) {
 ;
 ; FAST-LABEL: store_unaligned:
 ; FAST:       # %bb.0:
-; FAST-NEXT:    mv a3, a2
-; FAST-NEXT:    mv a2, a1
-; FAST-NEXT:    sd a2, 0(a0)
+; FAST-NEXT:    sw a1, 0(a0)
+; FAST-NEXT:    sw a2, 4(a0)
 ; FAST-NEXT:    ret
 ;
 ; 4BYTEALIGN-LABEL: store_unaligned:

@@ -23562,8 +23562,29 @@ RISCVTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
   }
 }
 
+static void addPairRegisterHints(MachineInstr &MI) {
+  assert((MI.getOpcode() == RISCV::PseudoLD_RV32_OPT ||
+          MI.getOpcode() == RISCV::PseudoSD_RV32_OPT) &&
+         "Needs LD/SD Pseudo");
+
+  Register FirstReg = MI.getOperand(0).getReg();
+  Register SecondReg = MI.getOperand(1).getReg();
+
+  MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
+
+  if (FirstReg.isVirtual() && SecondReg.isVirtual()) {
+    MRI.setRegAllocationHint(FirstReg, RISCVRI::RegPairEven, SecondReg);
+    MRI.setRegAllocationHint(SecondReg, RISCVRI::RegPairOdd, FirstReg);
+  }
+}
+
 void RISCVTargetLowering::AdjustInstrPostInstrSelection(MachineInstr &MI,
                                                         SDNode *Node) const {
+
+  if (MI.getOpcode() == RISCV::PseudoLD_RV32_OPT ||
+      MI.getOpcode() == RISCV::PseudoSD_RV32_OPT)
+    return addPairRegisterHints(MI);
+
   // If instruction defines FRM operand, conservatively set it as non-dead to
   // express data dependency with FRM users and prevent incorrect instruction
   // reordering.

@@ -1826,52 +1826,77 @@ void RISCVDAGToDAGISel::Select(SDNode *Node) {
   case RISCVISD::LD_RV32: {
     assert(Subtarget->hasStdExtZilsd() && "LD_RV32 is only used with Zilsd");
 
+    auto *MemNode = cast<MemSDNode>(Node);
+
     SDValue Base, Offset;
-    SDValue Chain = Node->getOperand(0);
-    SDValue Addr = Node->getOperand(1);
+    SDValue Chain = MemNode->getChain();
+    SDValue Addr = MemNode->getBasePtr();
     SelectAddrRegImm(Addr, Base, Offset);
 
     SDValue Ops[] = {Base, Offset, Chain};
-    MachineSDNode *New = CurDAG->getMachineNode(
-        RISCV::LD_RV32, DL, {MVT::Untyped, MVT::Other}, Ops);
-    SDValue Lo = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_even, DL,
-                                                MVT::i32, SDValue(New, 0));
-    SDValue Hi = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_odd, DL,
-                                                MVT::i32, SDValue(New, 0));
-    CurDAG->setNodeMemRefs(New, {cast<MemSDNode>(Node)->getMemOperand()});
+    MachineSDNode *New;
+    SDValue Lo, Hi, OutChain;
+    if (MemNode->isVolatile()) {
+      New = CurDAG->getMachineNode(RISCV::LD_RV32, DL,
+                                   {MVT::Untyped, MVT::Other}, Ops);
+
+      Lo = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_even, DL, MVT::i32,
+                                          SDValue(New, 0));
+      Hi = CurDAG->getTargetExtractSubreg(RISCV::sub_gpr_odd, DL, MVT::i32,
+                                          SDValue(New, 0));
+      OutChain = SDValue(New, 1);
+    } else {
+      New = CurDAG->getMachineNode(RISCV::PseudoLD_RV32_OPT, DL,
+                                   {MVT::i32, MVT::i32, MVT::Other}, Ops);
+      Lo = SDValue(New, 0);
+      Hi = SDValue(New, 1);
+      OutChain = SDValue(New, 2);
+    }
+
+    CurDAG->setNodeMemRefs(New, {MemNode->getMemOperand()});
     ReplaceUses(SDValue(Node, 0), Lo);
     ReplaceUses(SDValue(Node, 1), Hi);
-    ReplaceUses(SDValue(Node, 2), SDValue(New, 1));
+    ReplaceUses(SDValue(Node, 2), OutChain);
     CurDAG->RemoveDeadNode(Node);
     return;
   }
   case RISCVISD::SD_RV32: {
+    auto *MemNode = cast<MemSDNode>(Node);
+
     SDValue Base, Offset;
-    SDValue Chain = Node->getOperand(0);
+    SDValue Chain = MemNode->getChain();
     SDValue Addr = Node->getOperand(3);
     SelectAddrRegImm(Addr, Base, Offset);
 
     SDValue Lo = Node->getOperand(1);
     SDValue Hi = Node->getOperand(2);
 
-    SDValue RegPair;
-    // Peephole to use X0_Pair for storing zero.
-    if (isNullConstant(Lo) && isNullConstant(Hi)) {
-      RegPair = CurDAG->getRegister(RISCV::X0_Pair, MVT::Untyped);
-    } else {
-      SDValue Ops[] = {
-          CurDAG->getTargetConstant(RISCV::GPRPairRegClassID, DL, MVT::i32), Lo,
-          CurDAG->getTargetConstant(RISCV::sub_gpr_even, DL, MVT::i32), Hi,
-          CurDAG->getTargetConstant(RISCV::sub_gpr_odd, DL, MVT::i32)};
+    MachineSDNode *New;
+    if (MemNode->isVolatile()) {
+      SDValue RegPair;
+      // Peephole to use X0_Pair for storing zero.
+      if (isNullConstant(Lo) && isNullConstant(Hi)) {
+        RegPair = CurDAG->getRegister(RISCV::X0_Pair, MVT::Untyped);
+      } else {
+        SDValue Ops[] = {
+            CurDAG->getTargetConstant(RISCV::GPRPairRegClassID, DL, MVT::i32),
+            Lo, CurDAG->getTargetConstant(RISCV::sub_gpr_even, DL, MVT::i32),
+            Hi, CurDAG->getTargetConstant(RISCV::sub_gpr_odd, DL, MVT::i32)};
 
-      RegPair = SDValue(CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL,
-                                               MVT::Untyped, Ops),
-                        0);
+        RegPair = SDValue(CurDAG->getMachineNode(TargetOpcode::REG_SEQUENCE, DL,
+                                                 MVT::Untyped, Ops),
+                          0);
+      }
+
+      New = CurDAG->getMachineNode(RISCV::SD_RV32, DL, MVT::Other,
+                                   {RegPair, Base, Offset, Chain});
+    } else {
+      New = CurDAG->getMachineNode(RISCV::PseudoSD_RV32_OPT, DL, MVT::Other,
+                                   {Lo, Hi, Base, Offset, Chain});
     }
 
-    MachineSDNode *New = CurDAG->getMachineNode(RISCV::SD_RV32, DL, MVT::Other,
-                                                {RegPair, Base, Offset, Chain});
-    CurDAG->setNodeMemRefs(New, {cast<MemSDNode>(Node)->getMemOperand()});
+    CurDAG->setNodeMemRefs(New, {MemNode->getMemOperand()});
+
     ReplaceUses(SDValue(Node, 0), SDValue(New, 0));
     CurDAG->RemoveDeadNode(Node);
     return;
