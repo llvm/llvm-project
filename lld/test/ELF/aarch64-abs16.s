@@ -25,6 +25,21 @@ _start:
 // LE-NEXT: 220158 ffff0080
 // BE-NEXT: 220158 ffff8000
 
+// 1
+// 2
+// 3
+// 4
+// 5 after rebase main
+// 6
+// 7
+// 8
+// 9
+// 10
+// 11
+// 12 after rebase main
+// 13
+// 14
+
 // RUN: not ld.lld %t.o %t255.o -o /dev/null 2>&1 | FileCheck %s --check-prefix=OVERFLOW1
 // OVERFLOW1: relocation R_AARCH64_ABS16 out of range: -32769 is not in [-32768, 65535]; references 'foo'
 
