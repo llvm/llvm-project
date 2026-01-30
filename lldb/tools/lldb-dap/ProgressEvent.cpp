@@ -114,7 +114,7 @@ json::Value ProgressEvent::ToJSON() const {
 
   if (m_event_type == progressStart) {
     EmplaceSafeString(body, "title", m_message);
-    body.try_emplace("cancellable", false);
+    body.try_emplace("cancellable", true);
   }
 
   if (m_event_type == progressUpdate)

@@ -14,34 +14,17 @@
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
 #include "RequestHandler.h"
+#include "lldb/API/SBValue.h"
 #include "lldb/lldb-enumerations.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Error.h"
+#include <cstddef>
 
 using namespace llvm;
 using namespace lldb_dap;
 using namespace lldb_dap::protocol;
 
 namespace lldb_dap {
-
-static bool RunExpressionAsLLDBCommand(DAP &dap, lldb::SBFrame &frame,
-                                       std::string &expression,
-                                       EvaluateContext context) {
-  if (context != eEvaluateContextRepl && context != eEvaluateContextUnknown)
-    return false;
-
-  // Since we don't know this context do not try to repeat the last command;
-  if (context == eEvaluateContextUnknown && expression.empty())
-    return false;
-
-  const bool repeat_last_command =
-      expression.empty() && dap.last_valid_variable_expression.empty();
-  if (repeat_last_command)
-    return true;
-
-  const ReplMode repl_mode = dap.DetectReplMode(frame, expression, false);
-  return repl_mode == ReplMode::Command;
-}
 
 static lldb::SBValue EvaluateVariableExpression(lldb::SBTarget &target,
                                                 lldb::SBFrame &frame,
@@ -73,64 +56,59 @@ static lldb::SBValue EvaluateVariableExpression(lldb::SBTarget &target,
 /// The expression has access to any variables and arguments that are in scope.
 Expected<EvaluateResponseBody>
 EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
-
   EvaluateResponseBody body;
   lldb::SBFrame frame = dap.GetLLDBFrame(arguments.frameId);
-  std::string expression = llvm::StringRef(arguments.expression).trim().str();
-  const EvaluateContext evaluate_context = arguments.context;
-  const bool is_repl_context = evaluate_context == eEvaluateContextRepl;
+  std::string expression = arguments.expression;
+  const bool is_repl_context = arguments.context == eEvaluateContextRepl;
+  const bool run_as_expression = arguments.context != eEvaluateContextHover;
+  lldb::SBValue value;
 
-  if (RunExpressionAsLLDBCommand(dap, frame, expression, evaluate_context)) {
-    // Since the current expression is not for a variable, clear the
-    // last_valid_variable_expression field.
-    dap.last_valid_variable_expression.clear();
+  if (arguments.context == protocol::eEvaluateContextRepl &&
+      dap.DetectReplMode(frame, expression, false) == ReplMode::Command) {
+    const lldb::StateType process_state = dap.target.GetProcess().GetState();
+    if (!lldb::SBDebugger::StateIsStoppedState(process_state))
+      return llvm::make_error<DAPError>(
+          "Cannot evaluate expressions while the process is running. Pause "
+          "the process and try again.",
+          /**error_code=*/llvm::inconvertibleErrorCode(),
+          /**show_user=*/false);
+
     // If we're evaluating a command relative to the current frame, set the
     // focus_tid to the current frame for any thread related events.
-    if (frame.IsValid()) {
+    if (frame.IsValid())
       dap.focus_tid = frame.GetThread().GetThreadID();
+
+    Expected<std::pair<std::string, lldb::SBValueList>> result =
+        EvaluateContext::Run(dap, expression + "\n");
+    if (!result)
+      return result.takeError();
+
+    lldb::SBValueList values;
+    std::tie(body.result, values) = *result;
+
+    if (values.GetSize() == 1) {
+      value = values.GetValueAtIndex(0);
+      body.type = value.GetDisplayTypeName();
+    } else if (values.GetSize()) {
+      body.variablesReference = dap.variables.Insert(result->second);
     }
+  } else {
+    value = EvaluateVariableExpression(dap.target, frame, expression,
+                                       run_as_expression);
 
-    bool required_command_failed = false;
-    body.result = RunLLDBCommands(
-        dap.debugger, llvm::StringRef(), {expression}, required_command_failed,
-        /*parse_command_directives=*/false, /*echo_commands=*/false);
-    return body;
+    if (value.GetError().Fail())
+      return ToError(value.GetError(), /*show_user=*/false);
+
+    if (is_repl_context)
+      value = value.Persist();
+
+    const bool hex = arguments.format ? arguments.format->hex : false;
+    VariableDescription desc(
+        value, dap.configuration.enableAutoVariableSummaries, hex);
+
+    body.result = desc.GetResult(arguments.context);
+    body.type = desc.display_type_name;
   }
-
-  const lldb::StateType process_state = dap.target.GetProcess().GetState();
-  if (!lldb::SBDebugger::StateIsStoppedState(process_state))
-    return llvm::make_error<DAPError>(
-        "Cannot evaluate expressions while the process is running. Pause "
-        "the process and try again.",
-        /**error_code=*/llvm::inconvertibleErrorCode(),
-        /**show_user=*/false);
-
-  // If the user expression is empty, evaluate the last valid variable
-  // expression.
-  if (expression.empty() && is_repl_context)
-    expression = dap.last_valid_variable_expression;
-
-  const bool run_as_expression = evaluate_context != eEvaluateContextHover;
-  lldb::SBValue value = EvaluateVariableExpression(
-      dap.target, frame, expression, run_as_expression);
-
-  if (value.GetError().Fail())
-    return ToError(value.GetError(), /*show_user=*/false);
-
-  if (is_repl_context) {
-    // save the new variable expression
-    dap.last_valid_variable_expression = std::move(expression);
-
-    // Freeze dry the value in case users expand it later in the debug console
-    value = value.Persist();
-  }
-
-  const bool hex = arguments.format ? arguments.format->hex : false;
-  VariableDescription desc(value, dap.configuration.enableAutoVariableSummaries,
-                           hex);
-
-  body.result = desc.GetResult(evaluate_context);
-  body.type = desc.display_type_name;
 
   if (value.MightHaveChildren() || ValuePointsToCode(value))
     body.variablesReference =

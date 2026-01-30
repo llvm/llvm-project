@@ -90,6 +90,7 @@ struct Variables {
   /// Insert a new \p variable.
   /// \return variableReference assigned to this expandable variable.
   int64_t InsertVariable(lldb::SBValue variable, bool is_permanent);
+  int64_t Insert(lldb::SBValueList values);
 
   std::optional<ScopeData> GetTopLevelScope(int64_t variablesReference);
 
@@ -122,6 +123,9 @@ private:
   /// Variables that persist across entire debug session.
   /// These are the variables evaluated from debug console REPL.
   llvm::DenseMap<int64_t, lldb::SBValue> m_referencedpermanent_variables;
+
+  /// ValueLists for evaluated commands.
+  llvm::DenseMap<int64_t, lldb::SBValueList> m_referenced_value_lists;
 
   /// Key = dap_frame_id (encodes both thread index ID and frame ID)
   /// Value = scopes for the frame (locals, globals, registers)

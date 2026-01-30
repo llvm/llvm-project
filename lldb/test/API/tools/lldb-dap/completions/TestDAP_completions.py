@@ -377,13 +377,12 @@ class TestDAP_completions(lldbdap_testcase.DAPTestCaseBase):
         Tests completion requests in "repl-mode=auto"
         """
         self.setup_debuggee()
+        self.continue_to_next_stop()
 
         res = self.dap_server.request_evaluate(
             "`lldb-dap repl-mode auto", context="repl"
         )
         self.assertTrue(res["success"])
-
-        self.continue_to_next_stop()
 
         # Stopped at breakpoint 1
         # 'var' variable is in scope, completions should not show any warning.

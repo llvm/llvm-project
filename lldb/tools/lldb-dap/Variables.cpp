@@ -113,6 +113,27 @@ int64_t Variables::InsertVariable(lldb::SBValue variable, bool is_permanent) {
   return var_ref;
 }
 
+int64_t Variables::Insert(lldb::SBValueList values) {
+  if (!values.IsValid() || values.GetSize() == 0)
+    return LLDB_DAP_INVALID_VAR_REF;
+
+  if (values.GetSize() == 1) {
+    lldb::SBValue value = values.GetValueAtIndex(0);
+    if (value.MightHaveChildren())
+      return InsertVariable(value, /*is_permanent=*/true);
+    return 0;
+  }
+
+  int64_t var_ref = GetNewVariableReference(true);
+  // Copy the values as persisted results.
+  lldb::SBValueList persisted_values;
+  for (uint32_t i = 0; i < values.GetSize(); i++) {
+    persisted_values.Append(values.GetValueAtIndex(i).Persist());
+  }
+  m_referenced_value_lists.insert({var_ref, persisted_values});
+  return var_ref;
+}
+
 lldb::SBValue Variables::FindVariable(uint64_t variablesReference,
                                       llvm::StringRef name) {
   lldb::SBValue variable;

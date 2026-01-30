@@ -2,10 +2,8 @@
 Test lldb-dap cancel request
 """
 
+import os
 import time
-
-from lldbsuite.test.decorators import *
-from lldbsuite.test.lldbtest import *
 import lldbdap_testcase
 
 
@@ -13,25 +11,21 @@ class TestDAP_cancel(lldbdap_testcase.DAPTestCaseBase):
     def send_async_req(self, command: str, arguments: dict = {}) -> int:
         return self.dap_server.send_packet(
             {
+                "seq": 0,
                 "type": "request",
                 "command": command,
                 "arguments": arguments,
             }
         )
 
-    def async_blocking_request(self, duration: float) -> int:
+    def async_blocking_request(self, count: int) -> int:
         """
-        Sends an evaluate request that will sleep for the specified duration to
+        Sends an evaluate request that will sleep for the specified count to
         block the request handling thread.
         """
         return self.send_async_req(
             command="evaluate",
-            arguments={
-                "expression": '`script import time; print("starting sleep", file=lldb.debugger.GetOutputFileHandle()); time.sleep({})'.format(
-                    duration
-                ),
-                "context": "repl",
-            },
+            arguments={"expression": f"`busy-loop {count}", "context": "repl"},
         )
 
     def async_cancel(self, requestId: int) -> int:
@@ -42,14 +36,20 @@ class TestDAP_cancel(lldbdap_testcase.DAPTestCaseBase):
         Tests cancelling a pending request.
         """
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
+        busy_loop = os.path.join(os.path.dirname(__file__), "busy_loop.py")
+        self.build_and_launch(
+            program,
+            initCommands=[f"command script import {busy_loop}"],
+            stopOnEntry=True,
+        )
+        self.verify_stop_on_entry()
 
         # Use a relatively short timeout since this is only to ensure the
         # following request is queued.
-        blocking_seq = self.async_blocking_request(duration=self.DEFAULT_TIMEOUT / 10)
+        blocking_seq = self.async_blocking_request(count=1)
         # Use a longer timeout to ensure we catch if the request was interrupted
         # properly.
-        pending_seq = self.async_blocking_request(duration=self.DEFAULT_TIMEOUT / 2)
+        pending_seq = self.async_blocking_request(count=10)
         cancel_seq = self.async_cancel(requestId=pending_seq)
 
         blocking_resp = self.dap_server.receive_response(blocking_seq)
@@ -74,11 +74,18 @@ class TestDAP_cancel(lldbdap_testcase.DAPTestCaseBase):
         Tests cancelling an inflight request.
         """
         program = self.getBuildArtifact("a.out")
-        self.build_and_launch(program)
+        busy_loop = os.path.join(os.path.dirname(__file__), "busy_loop.py")
+        self.build_and_launch(
+            program,
+            initCommands=[f"command script import {busy_loop}"],
+            stopOnEntry=True,
+        )
+        self.verify_configuration_done()
+        self.verify_stop_on_entry()
 
-        blocking_seq = self.async_blocking_request(duration=self.DEFAULT_TIMEOUT / 2)
+        blocking_seq = self.async_blocking_request(count=10)
         # Wait for the sleep to start to cancel the inflight request.
-        self.collect_console(pattern="starting sleep")
+        time.sleep(0.5)
         cancel_seq = self.async_cancel(requestId=blocking_seq)
 
         blocking_resp = self.dap_server.receive_response(blocking_seq)

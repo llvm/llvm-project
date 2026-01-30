@@ -61,7 +61,8 @@ class TestDAP_sendEvent(lldbdap_testcase.DAPTestCaseBase):
         resp = self.dap_server.request_evaluate(
             "`lldb-dap send-event stopped", context="repl"
         )
+        self.assertFalse(resp["success"], f"Expected error response in {resp}")
         self.assertRegex(
-            resp["body"]["result"],
+            resp["body"]["error"]["format"],
             r"Invalid use of lldb-dap send-event, event \"stopped\" should be handled by lldb-dap internally.",
         )

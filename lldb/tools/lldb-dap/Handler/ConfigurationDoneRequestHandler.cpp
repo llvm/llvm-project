@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "DAP.h"
+#include "DAPLog.h"
 #include "EventHelper.h"
 #include "LLDBUtils.h"
 #include "Protocol/ProtocolRequests.h"
@@ -74,6 +75,8 @@ void ConfigurationDoneRequestHandler::PostRun() const {
   dap.on_configuration_done();
   // Clear the callback to ensure any captured resources are released.
   dap.on_configuration_done = nullptr;
+
+  dap.ActivateRepl();
 }
 
 } // namespace lldb_dap

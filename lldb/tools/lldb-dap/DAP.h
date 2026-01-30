@@ -11,6 +11,7 @@
 
 #include "DAPForward.h"
 #include "DAPSessionManager.h"
+#include "EvaluateContext.h"
 #include "ExceptionBreakpoint.h"
 #include "FunctionBreakpoint.h"
 #include "InstructionBreakpoint.h"
@@ -23,16 +24,15 @@
 #include "Transport.h"
 #include "Variables.h"
 #include "lldb/API/SBBroadcaster.h"
-#include "lldb/API/SBCommandInterpreter.h"
 #include "lldb/API/SBDebugger.h"
 #include "lldb/API/SBError.h"
-#include "lldb/API/SBFile.h"
 #include "lldb/API/SBFormat.h"
 #include "lldb/API/SBFrame.h"
 #include "lldb/API/SBMutex.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
 #include "lldb/Host/MainLoop.h"
+#include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/DenseSet.h"
@@ -81,6 +81,20 @@ enum class ReplMode { Variable = 0, Command, Auto };
 
 using DAPTransport = lldb_private::transport::JSONTransport<ProtocolDescriptor>;
 
+/// Wraps a set of file handles for reading and writing to a pair of handlers.
+/// Typically a pty on supported platforms or a pair of pipes as a fallback.
+struct IOWrapper {
+  IOWrapper() = default;
+  IOWrapper(lldb::FileSP read, lldb::FileSP write)
+      : read(read), write(write) {};
+
+  static llvm::Expected<std::pair<IOWrapper, IOWrapper>> CreatePseudoTerminal();
+  static llvm::Expected<std::pair<IOWrapper, IOWrapper>> CreatePipePair();
+
+  lldb::FileSP read;
+  lldb::FileSP write;
+};
+
 struct DAP final : public DAPTransport::MessageHandler {
   friend class DAPSessionManager;
 
@@ -89,9 +103,16 @@ struct DAP final : public DAPTransport::MessageHandler {
 
   Log &log;
   DAPTransport &transport;
-  lldb::SBFile in;
-  OutputRedirector out;
-  OutputRedirector err;
+
+  /// pty handles used for communicating with the debugger input / output
+  /// IOHandler.
+  /// @{
+  IOWrapper primary;
+  IOWrapper replica;
+  /// @}
+
+  OutputRedirector stdout_redirect;
+  OutputRedirector stderr_redirect;
 
   /// Configuration specified by the launch or attach commands.
   protocol::Configuration configuration;
@@ -148,11 +169,7 @@ struct DAP final : public DAPTransport::MessageHandler {
   lldb::SBFormat thread_format;
   llvm::unique_function<void()> on_configuration_done;
 
-  /// This is used to allow request_evaluate to handle empty expressions
-  /// (ie the user pressed 'return' and expects the previous expression to
-  /// repeat). If the previous expression was a command, it will be empty.
-  /// Else it will contain the last valid variable expression.
-  std::string last_valid_variable_expression;
+  void ActivateRepl();
 
   /// The set of features supported by the connected client.
   llvm::DenseSet<ClientFeature> clientFeatures;
@@ -422,6 +439,11 @@ struct DAP final : public DAPTransport::MessageHandler {
   void StartEventThread();
   void StartProgressEventThread();
 
+  void SetEvaluateContext(EvaluateContext *context) {
+    std::lock_guard<std::mutex> guard(m_eval_mutex);
+    m_evaluate_context = context;
+  }
+
   /// DAP debugger initialization functions.
   /// @{
 
@@ -491,6 +513,11 @@ private:
   /// @}
 
   const llvm::StringRef m_client_name;
+
+  std::mutex m_eval_mutex;
+  /// An optional context that is used while evaluating an expressions.
+  EvaluateContext *m_evaluate_context = nullptr;
+  lldb_private::MainLoop::ReadHandleUP m_out_handle;
 
   /// List of addresses mapped by sourceReference.
   std::vector<lldb::addr_t> m_source_references;

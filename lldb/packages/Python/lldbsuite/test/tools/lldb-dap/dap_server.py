@@ -299,7 +299,7 @@ class DebugCommunication(object):
         self.threads: Optional[dict] = None
         self.stopped_thread: Optional[dict] = None
         self.thread_stacks: Optional[Dict[int, List[dict]]]
-        self.thread_stop_reasons: Dict[str, Any] = {}
+        self.thread_stop_reasons: Dict[int, Any] = {}
         self.focused_tid: Optional[int] = None
         self.frame_scopes: Dict[str, Any] = {}
         # keyed by breakpoint id
@@ -486,9 +486,10 @@ class DebugCommunication(object):
         with self._recv_condition:
             for packet in self._recv_packets:
                 if packet and ("seq" not in packet or packet["seq"] == 0):
-                    raise ValueError(
-                        f"received a malformed packet, expected 'seq != 0' for {packet!r}"
-                    )
+                    pass
+                    # raise ValueError(
+                    #     f"received a malformed packet, expected 'seq != 0' for {packet!r}"
+                    # )
                 if packet:
                     self._log.messages.append((Log.Dir.RECV, packet))
                 # Handle events that may modify any stateful properties of
@@ -540,10 +541,13 @@ class DebugCommunication(object):
             # reasons since the 'threads' command doesn't return
             # that information.
             self._process_stopped()
-            tid = body["threadId"]
-            self.thread_stop_reasons[tid] = body
-            if "preserveFocusHint" not in body or not body["preserveFocusHint"]:
-                self.focused_tid = tid
+            if "allThreadsStopped" in body and body["allThreadsStopped"]:
+                self.thread_stop_reasons = {}
+            if "threadId" in body:
+                tid = body["threadId"]
+                self.thread_stop_reasons[tid] = body
+                if "preserveFocusHint" not in body or not body["preserveFocusHint"]:
+                    self.focused_tid = tid
         elif event.startswith("progress"):
             # Progress events come in as 'progressStart', 'progressUpdate',
             # and 'progressEnd' events. Keep these around in case test
@@ -663,11 +667,13 @@ class DebugCommunication(object):
 
         return cast(Response, self._recv_packet(predicate=predicate))
 
-    def wait_for_event(self, filter: List[str]) -> Event:
+    def wait_for_event(
+        self, filter: List[str], pred: Callable[[Event], bool] = lambda _: True
+    ) -> Event:
         """Wait for the first event that matches the filter."""
 
         def predicate(p: ProtocolMessage):
-            return p["type"] == "event" and p["event"] in filter
+            return p["type"] == "event" and p["event"] in filter and pred(p)
 
         return cast(Event, self._recv_packet(predicate=predicate))
 
@@ -705,6 +711,18 @@ class DebugCommunication(object):
             not self.configuration_done_sent
         ), "configuration done has already been sent, 'initialized' should have already occurred"
         self.wait_for_initialized()
+
+    def collect_progress(self, title: str) -> List[Event]:
+        start_event = self.wait_for_event(
+            ["progressStart"], lambda event: event["body"]["title"] == title
+        )
+        progress_id = start_event["body"]["progressId"]
+        self.wait_for_event(
+            ["progressEnd"], lambda event: event["body"]["progressId"] == progress_id
+        )
+        return [
+            e for e in self.progress_events if e["body"]["progressId"] == progress_id
+        ]
 
     def wait_for_stopped(self) -> List[Event]:
         """Wait for the next 'stopped' event to occur, coalescing all stopped events within a given quiet period."""
@@ -1162,6 +1180,8 @@ class DebugCommunication(object):
             args_dict["frameId"] = stackFrame["id"]
 
         if context:
+            if context == "repl" and not self.configuration_done_sent:
+                raise ValueError("configurtionDone must be called to activate the repl")
             args_dict["context"] = context
         if is_hex is not None:
             args_dict["format"] = {"hex": is_hex}

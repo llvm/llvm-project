@@ -17,22 +17,21 @@
 #include "LLDBUtils.h"
 #include "OutputRedirector.h"
 #include "Protocol/ProtocolBase.h"
-#include "Protocol/ProtocolEvents.h"
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
 #include "ProtocolUtils.h"
-#include "Transport.h"
-#include "lldb/API/SBBreakpoint.h"
 #include "lldb/API/SBCommandInterpreter.h"
+#include "lldb/API/SBCommandInterpreterRunOptions.h"
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBLanguageRuntime.h"
 #include "lldb/API/SBListener.h"
 #include "lldb/API/SBMutex.h"
 #include "lldb/API/SBProcess.h"
-#include "lldb/API/SBStream.h"
-#include "lldb/Host/JSONTransport.h"
+#include "lldb/Host/File.h"
 #include "lldb/Host/MainLoop.h"
 #include "lldb/Host/MainLoopBase.h"
+#include "lldb/Host/Pipe.h"
+#include "lldb/Host/PseudoTerminal.h"
 #include "lldb/Utility/Status.h"
 #include "lldb/lldb-defines.h"
 #include "lldb/lldb-enumerations.h"
@@ -56,12 +55,13 @@
 #include <cstdint>
 #include <cstdio>
 #include <functional>
-#include <future>
 #include <memory>
 #include <mutex>
 #include <optional>
 #include <string>
+#include <sys/fcntl.h>
 #include <thread>
+#include <tuple>
 #include <utility>
 #include <variant>
 
@@ -77,14 +77,6 @@
 using namespace lldb_dap;
 using namespace lldb_dap::protocol;
 using namespace lldb_private;
-
-namespace {
-#ifdef _WIN32
-const char DEV_NULL[] = "nul";
-#else
-const char DEV_NULL[] = "/dev/null";
-#endif
-} // namespace
 
 namespace lldb_dap {
 
@@ -224,17 +216,92 @@ ExceptionBreakpoint *DAP::GetExceptionBreakpoint(const lldb::break_id_t bp_id) {
   return nullptr;
 }
 
-llvm::Error DAP::ConfigureIO(std::FILE *overrideOut, std::FILE *overrideErr) {
-  in = lldb::SBFile(std::fopen(DEV_NULL, "r"), /*transfer_ownership=*/true);
+llvm::Expected<std::pair<IOWrapper, IOWrapper>>
+IOWrapper::CreatePseudoTerminal() {
+  // For testing purposes return an error to cause us to fallback to a pair of
+  // pipes.
+  if (getenv("LLDB_DAP_FORCE_REPL_PIPE"))
+    return llvm::createStringError("forced repl pipe");
 
-  if (auto Error = out.RedirectTo(overrideOut, [this](llvm::StringRef output) {
-        SendOutput(OutputType::Console, output);
-      }))
+  lldb_private::PseudoTerminal pty;
+  if (auto err = pty.OpenFirstAvailablePrimary(O_RDWR | O_NOCTTY | O_CLOEXEC))
+    return err;
+  if (auto err = pty.OpenSecondary(O_RDWR | O_NOCTTY | O_CLOEXEC))
+    return err;
+
+  lldb_private::Terminal term(pty.GetPrimaryFileDescriptor());
+  if (llvm::Error err = term.SetCanonical(false))
+    return err;
+  if (llvm::Error err = term.SetRaw())
+    return err;
+
+  int primary_fd = pty.ReleasePrimaryFileDescriptor();
+  int replica_fd = pty.ReleaseSecondaryFileDescriptor();
+
+  return std::make_pair(
+      IOWrapper(
+          /*read=*/std::make_shared<lldb_private::NativeFile>(
+              primary_fd, lldb_private::File::eOpenOptionReadOnly, false),
+          /*write=*/std::make_shared<lldb_private::NativeFile>(
+              primary_fd, lldb_private::File::eOpenOptionWriteOnly, true)),
+      IOWrapper(
+          /*read=*/std::make_shared<lldb_private::NativeFile>(
+              replica_fd, lldb_private::File::eOpenOptionReadOnly, false),
+          /*write=*/std::make_shared<lldb_private::NativeFile>(
+              replica_fd, lldb_private::File::eOpenOptionWriteOnly, true)));
+}
+
+// Hookup a pair of pipes such that reading from one writes to the other.
+llvm::Expected<std::pair<IOWrapper, IOWrapper>> IOWrapper::CreatePipePair() {
+  lldb_private::Pipe primary_pipe, replica_pipe;
+  if (auto err = primary_pipe.CreateNew().takeError())
+    return err;
+  if (auto err = replica_pipe.CreateNew().takeError())
+    return err;
+
+  return std::make_pair(
+      IOWrapper(/*read=*/
+                std::make_shared<lldb_private::NativeFile>(
+                    primary_pipe.ReleaseReadFileDescriptor(),
+                    lldb_private::File::eOpenOptionReadOnly, false),
+                /*write=*/std::make_shared<lldb_private::NativeFile>(
+                    replica_pipe.ReleaseWriteFileDescriptor(),
+                    lldb_private::File::eOpenOptionWriteOnly, true)),
+      IOWrapper(/*read=*/
+                std::make_shared<lldb_private::NativeFile>(
+                    replica_pipe.ReleaseReadFileDescriptor(),
+                    lldb_private::File::eOpenOptionReadOnly, false),
+                /*write=*/std::make_shared<lldb_private::NativeFile>(
+                    primary_pipe.ReleaseWriteFileDescriptor(),
+                    lldb_private::File::eOpenOptionWriteOnly, true)));
+}
+
+llvm::Error DAP::ConfigureIO(std::FILE *overrideOut, std::FILE *overrideErr) {
+  DAP_LOG(log, "Initializing IO");
+
+  llvm::Expected<std::pair<IOWrapper, IOWrapper>> io =
+      IOWrapper::CreatePseudoTerminal();
+  if (!io) {
+    DAP_LOG_ERROR(
+        log, io.takeError(),
+        "Falling back to a pipe for debugger IO, creating a pty failed: {0}");
+    io = IOWrapper::CreatePipePair();
+    if (!io)
+      return io.takeError();
+  }
+
+  std::tie(primary, replica) = *io;
+
+  if (auto Error = stdout_redirect.RedirectTo(
+          overrideOut, [this](llvm::StringRef output) {
+            SendOutput(OutputType::Console, output);
+          }))
     return Error;
 
-  if (auto Error = err.RedirectTo(overrideErr, [this](llvm::StringRef output) {
-        SendOutput(OutputType::Console, output);
-      }))
+  if (auto Error = stderr_redirect.RedirectTo(
+          overrideErr, [this](llvm::StringRef output) {
+            SendOutput(OutputType::Console, output);
+          }))
     return Error;
 
   return llvm::Error::success();
@@ -596,6 +663,9 @@ lldb::SBFrame DAP::GetLLDBFrame(const llvm::json::Object &arguments) {
 
 ReplMode DAP::DetectReplMode(lldb::SBFrame &frame, std::string &expression,
                              bool partial_expression) {
+  if (!debugger.GetCommandInterpreter().IsActive() || expression.empty())
+    return ReplMode::Command;
+
   // Check for the escape hatch prefix.
   if (llvm::StringRef expr_ref = expression;
       expr_ref.consume_front(configuration.commandEscapePrefix)) {
@@ -605,6 +675,9 @@ ReplMode DAP::DetectReplMode(lldb::SBFrame &frame, std::string &expression,
 
   if (repl_mode != ReplMode::Auto)
     return repl_mode;
+
+  if (expression.empty() && (repl_mode != ReplMode::Variable))
+    return ReplMode::Command;
 
   // We cannot check if expression is a variable without a frame.
   if (!frame)
@@ -947,6 +1020,7 @@ llvm::Error DAP::Disconnect(bool terminateDebuggee) {
   }
 
   SendTerminatedEvent();
+  debugger.Clear();
   TerminateLoop();
   return ToError(error);
 }
@@ -959,7 +1033,7 @@ bool DAP::IsCancelled(const protocol::Request &req) {
 void DAP::ClearCancelRequest(const CancelArguments &args) {
   std::lock_guard<std::mutex> guard(m_cancelled_requests_mutex);
   if (args.requestId)
-    m_cancelled_requests.erase(*args.requestId);
+    m_cancelled_requests.erase(args.requestId);
 }
 
 template <typename T>
@@ -990,7 +1064,7 @@ void DAP::Received(const protocol::Request &request) {
     {
       std::lock_guard<std::mutex> guard(m_cancelled_requests_mutex);
       if (cancel_args->requestId)
-        m_cancelled_requests.insert(*cancel_args->requestId);
+        m_cancelled_requests.insert(cancel_args->requestId);
     }
 
     // If a cancel is requested for the active request, make a best
@@ -1000,6 +1074,22 @@ void DAP::Received(const protocol::Request &request) {
       DAP_LOG(log, "interrupting inflight request (command={0} seq={1})",
               m_active_request->command, m_active_request->seq);
       debugger.RequestInterrupt();
+      debugger.DispatchInputInterrupt();
+      debugger.GetCommandInterpreter().InterruptCommand();
+    }
+
+    // Making a best effort attempt at interrupting in-progress events.
+    if (!cancel_args->progressId.empty()) {
+      DAP_LOG(log, "cancel in progress event, interrupt debugger");
+      // FIXME: Which of these are actually required, they all have different
+      // behavior.
+      debugger.RequestInterrupt();
+      debugger.DispatchInputInterrupt();
+      debugger.GetCommandInterpreter().InterruptCommand();
+
+      std::lock_guard<std::mutex> guard(m_eval_mutex);
+      if (m_evaluate_context)
+        m_evaluate_context->Interrupt();
     }
   }
 
@@ -1055,12 +1145,57 @@ void DAP::TransportHandler() {
     return;
   }
 
+  Status status;
+  m_out_handle = m_loop.RegisterReadObject(
+      primary.read,
+      [this](auto &loop) {
+        std::array<char, OutputBufferSize> buf = {0};
+        size_t num_bytes = buf.size();
+        if (auto err = primary.read->Read(buf.data(), num_bytes).takeError()) {
+          DAP_LOG_ERROR(log, std::move(err), "read failed {0}");
+          return;
+        }
+
+        // EOF detected
+        if (num_bytes == 0) {
+          m_out_handle.reset();
+          return;
+        }
+
+        std::lock_guard<std::mutex> guard(m_eval_mutex);
+
+        if (m_evaluate_context &&
+            m_evaluate_context->HandleOutput({buf.data(), num_bytes}))
+          return;
+
+        SendOutput(OutputType::Console, {buf.data(), num_bytes});
+      },
+      status);
+
+  if (llvm::Error err = status.takeError()) {
+    DAP_LOG_ERROR(log, std::move(err), "registering pty failed: {0}");
+    std::lock_guard<std::mutex> guard(m_queue_mutex);
+    m_error_occurred = true;
+    return;
+  }
+
   if (Status status = m_loop.Run(); status.Fail()) {
     DAP_LOG_ERROR(log, status.takeError(), "MainLoop run failed: {0}");
     std::lock_guard<std::mutex> guard(m_queue_mutex);
     m_error_occurred = true;
     return;
   }
+}
+
+void DAP::ActivateRepl() {
+  lldb::SBCommandInterpreterRunOptions options;
+  options.SetSpawnThread(true);
+  options.SetAutoHandleEvents(false);
+  options.SetEchoCommands(false);
+  options.SetEchoCommentCommands(false);
+  options.SetAllowRepeats(true);
+  options.SetAddToHistory(true);
+  debugger.RunCommandInterpreter(options);
 }
 
 llvm::Error DAP::Loop() {
@@ -1074,8 +1209,8 @@ llvm::Error DAP::Loop() {
 
   llvm::scope_exit cleanup([this]() {
     // FIXME: Merge these into the MainLoop handler.
-    out.Stop();
-    err.Stop();
+    stdout_redirect.Stop();
+    stderr_redirect.Stop();
     StopEventHandlers();
 
     // Destroy the debugger when the session ends. This will trigger the
@@ -1246,6 +1381,7 @@ protocol::Capabilities DAP::GetCapabilities() {
       protocol::eAdapterFeatureLogPoints,
       protocol::eAdapterFeatureSteppingGranularity,
       protocol::eAdapterFeatureValueFormattingOptions,
+      protocol::eAdapterFeatureSingleThreadExecutionRequests,
   };
 
   // Capabilities associated with specific requests.
@@ -1343,18 +1479,44 @@ llvm::Error DAP::InitializeDebugger() {
   debugger = lldb::SBDebugger::Create(/*argument_name=*/false);
 
   // Configure input/output/error file descriptors.
-  debugger.SetInputFile(in);
+  debugger.SetInputFile(replica.read);
+  debugger.SetOutputFile(replica.write);
+  debugger.SetErrorFile(replica.write);
+
   target = debugger.GetDummyTarget();
 
-  llvm::Expected<int> out_fd = out.GetWriteFileDescriptor();
-  if (!out_fd)
-    return out_fd.takeError();
-  debugger.SetOutputFile(lldb::SBFile(*out_fd, "w", false));
+  auto cmd = debugger.GetCommandInterpreter().AddMultiwordCommand(
+      "lldb-dap", "Commands for managing lldb-dap.");
 
-  llvm::Expected<int> err_fd = err.GetWriteFileDescriptor();
-  if (!err_fd)
-    return err_fd.takeError();
-  debugger.SetErrorFile(lldb::SBFile(*err_fd, "w", false));
+  if (clientFeatures.contains(eClientFeatureStartDebuggingRequest)) {
+    cmd.AddCommand(
+        "start-debugging", new StartDebuggingCommand(*this),
+        "Sends a startDebugging request from the debug adapter to the client "
+        "to start a child debug session of the same type as the caller.");
+  }
+
+  cmd.AddCommand(
+      "repl-mode", new ReplModeCommand(*this),
+      "Get or set the repl behavior of lldb-dap evaluation requests.");
+  cmd.AddCommand("send-event", new SendEventCommand(*this),
+                 "Sends an DAP event to the client.");
+
+  StartEventThreads();
+
+  // Set the print callback to allow us to intercept command return objects from
+  // the repl to provide a more detailed view of the output.
+  debugger.GetCommandInterpreter().SetPrintCallback(
+      [](lldb::SBCommandReturnObject &result, void *baton) {
+        DAP *dap = static_cast<DAP *>(baton);
+        std::lock_guard<std::mutex> guard(dap->m_eval_mutex);
+
+        if (dap->m_evaluate_context &&
+            dap->m_evaluate_context->HandleReturnObject(result))
+          return lldb::eCommandReturnObjectPrintCallbackHandled;
+
+        return lldb::eCommandReturnObjectPrintCallbackSkipped;
+      },
+      this);
 
   // The sourceInitFile option is not part of the DAP specification. It is an
   // extension used by the test suite to prevent sourcing `.lldbinit` and
@@ -1374,23 +1536,6 @@ llvm::Error DAP::InitializeDebugger() {
   if (llvm::Error err = RunPreInitCommands())
     return err;
 
-  auto cmd = debugger.GetCommandInterpreter().AddMultiwordCommand(
-      "lldb-dap", "Commands for managing lldb-dap.");
-
-  if (clientFeatures.contains(eClientFeatureStartDebuggingRequest)) {
-    cmd.AddCommand(
-        "start-debugging", new StartDebuggingCommand(*this),
-        "Sends a startDebugging request from the debug adapter to the client "
-        "to start a child debug session of the same type as the caller.");
-  }
-
-  cmd.AddCommand(
-      "repl-mode", new ReplModeCommand(*this),
-      "Get or set the repl behavior of lldb-dap evaluation requests.");
-  cmd.AddCommand("send-event", new SendEventCommand(*this),
-                 "Sends an DAP event to the client.");
-
-  StartEventThreads();
   return llvm::Error::success();
 }
 

@@ -20,6 +20,7 @@
 #include "llvm/Support/Error.h"
 #include "llvm/Testing/Support/Error.h"
 #include "gtest/gtest.h"
+#include <chrono>
 #include <cstdio>
 #include <memory>
 
@@ -37,7 +38,7 @@ using lldb_private::Pipe;
 void TransportBase::SetUp() {
   std::tie(to_client, to_server) = TestDAPTransport::createPair();
 
-  log = std::make_unique<Log>(llvm::outs(), log_mutex);
+  log = std::make_unique<Log>(llvm::errs(), log_mutex);
   dap = std::make_unique<DAP>(
       /*log=*/*log,
       /*default_repl_mode=*/ReplMode::Auto,
@@ -56,13 +57,17 @@ void TransportBase::SetUp() {
 }
 
 void TransportBase::Run() {
-  bool addition_succeeded = loop.AddPendingCallback(
-      [](lldb_private::MainLoopBase &loop) { loop.RequestTermination(); });
+  bool addition_succeeded = loop.AddCallback(
+      [](lldb_private::MainLoopBase &loop) {
+        llvm::errs() << "Terminating\n";
+        loop.RequestTermination();
+      },
+      std::chrono::seconds(1));
   EXPECT_TRUE(addition_succeeded);
   EXPECT_THAT_ERROR(loop.Run().takeError(), llvm::Succeeded());
 }
 
-void DAPTestBase::SetUp() { TransportBase::SetUp(); }
+// void DAPTestBase::SetUp() { TransportBase::SetUp(); }
 
 void DAPTestBase::TearDown() {
   if (core)
@@ -107,13 +112,9 @@ void DAPTestBase::CreateDebugger() {
   ASSERT_THAT_ERROR(dap->ConfigureIO(dev_null_stream, dev_null_stream),
                     Succeeded());
 
-  dap->debugger.SetInputFile(dap->in);
-  auto out_fd = dap->out.GetWriteFileDescriptor();
-  ASSERT_THAT_EXPECTED(out_fd, Succeeded());
-  dap->debugger.SetOutputFile(lldb::SBFile(*out_fd, "w", false));
-  auto err_fd = dap->out.GetWriteFileDescriptor();
-  ASSERT_THAT_EXPECTED(err_fd, Succeeded());
-  dap->debugger.SetErrorFile(lldb::SBFile(*err_fd, "w", false));
+  dap->no_lldbinit = true;
+  ASSERT_THAT_ERROR(dap->InitializeDebugger(), Succeeded());
+  ASSERT_THAT_ERROR(dap->ActivateRepl(), Succeeded());
 }
 
 void DAPTestBase::LoadCore() {

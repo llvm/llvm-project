@@ -49,6 +49,8 @@ def readfunc(prompt):
 
 
 def readfunc_stdio(prompt):
+    # Flush stdout and stderr to ensure consistency.
+    sys.stderr.flush()
     sys.stdout.write(prompt)
     sys.stdout.flush()
     line = sys.stdin.readline()
@@ -76,6 +78,7 @@ def run_python_interpreter(local_dict):
     except SystemExit as e:
         if e.code:
             print("Script exited with code %s" % e.code)
+
 
 def run_one_line(local_dict, input_string):
     global g_run_one_line_str
