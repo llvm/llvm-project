@@ -714,7 +714,7 @@ bool SharedCacheInfo::CreateSharedCacheInfoWithInstrospectionSPIs() {
         (uint8_t *)minVmAddr, maxVmAddr - minVmAddr);
     lldb::DataExtractorSP extractor_sp = std::make_shared<DataExtractor>(data_sp);
     m_images[dyld_image_get_installname(image)] = SharedCacheImageInfo{
-        UUID(uuid, 16), extractor_sp)};
+        UUID(uuid, 16), extractor_sp};
   });
   return true;
 #endif
