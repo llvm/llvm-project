@@ -1,6 +1,5 @@
-! RUN: bbc -emit-fir -hlfir=false -o - %s | FileCheck %s
-! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -o - %s | FileCheck %s
-! RUN: %flang_fc1 -emit-fir -flang-deprecated-no-hlfir -fwrapv -o - %s | FileCheck %s --check-prefix=NO-NSW
+! RUN: %flang_fc1 -emit-hlfir -o - %s | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -fwrapv -o - %s | FileCheck %s --check-prefix=NO-NSW
 
 ! Tests for unstructured loops.
 
@@ -20,6 +19,7 @@ end subroutine
 ! CHECK-LABEL: simple_unstructured
 ! CHECK:   %[[TRIP_VAR_REF:.*]] = fir.alloca i32
 ! CHECK:   %[[LOOP_VAR_REF:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsimple_unstructuredEi"}
+! CHECK:   %[[LOOP_VAR_DECL:.*]]:2 = hlfir.declare %[[LOOP_VAR_REF]]
 ! CHECK:   %[[ONE:.*]] = arith.constant 1 : i32
 ! CHECK:   %[[HUNDRED:.*]] = arith.constant 100 : i32
 ! CHECK:   %[[STEP_ONE:.*]] = arith.constant 1 : i32
@@ -27,7 +27,7 @@ end subroutine
 ! CHECK:   %[[TMP2:.*]] = arith.addi %[[TMP1]], %[[STEP_ONE]] : i32
 ! CHECK:   %[[TRIP_COUNT:.*]] = arith.divsi %[[TMP2]], %[[STEP_ONE]] : i32
 ! CHECK:   fir.store %[[TRIP_COUNT]] to %[[TRIP_VAR_REF]] : !fir.ref<i32>
-! CHECK:   fir.store %[[ONE]] to %[[LOOP_VAR_REF]] : !fir.ref<i32>
+! CHECK:   fir.store %[[ONE]] to %[[LOOP_VAR_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   cf.br ^[[HEADER:.*]]
 ! CHECK: ^[[HEADER]]:
 ! CHECK:   %[[TRIP_VAR:.*]] = fir.load %[[TRIP_VAR_REF]] : !fir.ref<i32>
@@ -39,10 +39,10 @@ end subroutine
 ! CHECK:   %[[ONE_1:.*]] = arith.constant 1 : i32
 ! CHECK:   %[[TRIP_VAR_NEXT:.*]] = arith.subi %[[TRIP_VAR]], %[[ONE_1]] : i32
 ! CHECK:   fir.store %[[TRIP_VAR_NEXT]] to %[[TRIP_VAR_REF]] : !fir.ref<i32>
-! CHECK:   %[[LOOP_VAR:.*]] = fir.load %[[LOOP_VAR_REF]] : !fir.ref<i32>
+! CHECK:   %[[LOOP_VAR:.*]] = fir.load %[[LOOP_VAR_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   %[[STEP_ONE_2:.*]] = arith.constant 1 : i32
 ! CHECK:   %[[LOOP_VAR_NEXT:.*]] = arith.addi %[[LOOP_VAR]], %[[STEP_ONE_2]] overflow<nsw> : i32
-! CHECK:   fir.store %[[LOOP_VAR_NEXT]] to %[[LOOP_VAR_REF]] : !fir.ref<i32>
+! CHECK:   fir.store %[[LOOP_VAR_NEXT]] to %[[LOOP_VAR_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   cf.br ^[[HEADER]]
 ! CHECK: ^[[EXIT]]:
 ! CHECK:   return
@@ -59,6 +59,7 @@ end subroutine
 ! CHECK-LABEL: simple_unstructured_with_step
 ! CHECK:   %[[TRIP_VAR_REF:.*]] = fir.alloca i32
 ! CHECK:   %[[LOOP_VAR_REF:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFsimple_unstructured_with_stepEi"}
+! CHECK:   %[[LOOP_VAR_DECL:.*]]:2 = hlfir.declare %[[LOOP_VAR_REF]]
 ! CHECK:   %[[ONE:.*]] = arith.constant 1 : i32
 ! CHECK:   %[[HUNDRED:.*]] = arith.constant 100 : i32
 ! CHECK:   %[[STEP:.*]] = arith.constant 2 : i32
@@ -66,7 +67,7 @@ end subroutine
 ! CHECK:   %[[TMP2:.*]] = arith.addi %[[TMP1]], %[[STEP]] : i32
 ! CHECK:   %[[TRIP_COUNT:.*]] = arith.divsi %[[TMP2]], %[[STEP]] : i32
 ! CHECK:   fir.store %[[TRIP_COUNT]] to %[[TRIP_VAR_REF]] : !fir.ref<i32>
-! CHECK:   fir.store %[[ONE]] to %[[LOOP_VAR_REF]] : !fir.ref<i32>
+! CHECK:   fir.store %[[ONE]] to %[[LOOP_VAR_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   cf.br ^[[HEADER:.*]]
 ! CHECK: ^[[HEADER]]:
 ! CHECK:   %[[TRIP_VAR:.*]] = fir.load %[[TRIP_VAR_REF]] : !fir.ref<i32>
@@ -78,10 +79,10 @@ end subroutine
 ! CHECK:   %[[ONE_1:.*]] = arith.constant 1 : i32
 ! CHECK:   %[[TRIP_VAR_NEXT:.*]] = arith.subi %[[TRIP_VAR]], %[[ONE_1]] : i32
 ! CHECK:   fir.store %[[TRIP_VAR_NEXT]] to %[[TRIP_VAR_REF]] : !fir.ref<i32>
-! CHECK:   %[[LOOP_VAR:.*]] = fir.load %[[LOOP_VAR_REF]] : !fir.ref<i32>
+! CHECK:   %[[LOOP_VAR:.*]] = fir.load %[[LOOP_VAR_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   %[[STEP_2:.*]] = arith.constant 2 : i32
 ! CHECK:   %[[LOOP_VAR_NEXT:.*]] = arith.addi %[[LOOP_VAR]], %[[STEP_2]] overflow<nsw> : i32
-! CHECK:   fir.store %[[LOOP_VAR_NEXT]] to %[[LOOP_VAR_REF]] : !fir.ref<i32>
+! CHECK:   fir.store %[[LOOP_VAR_NEXT]] to %[[LOOP_VAR_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   cf.br ^[[HEADER]]
 ! CHECK: ^[[EXIT]]:
 ! CHECK:   return
@@ -104,8 +105,11 @@ end subroutine
 ! CHECK:   %[[TRIP_VAR_J_REF:.*]] = fir.alloca i32
 ! CHECK:   %[[TRIP_VAR_I_REF:.*]] = fir.alloca i32
 ! CHECK:   %[[LOOP_VAR_I_REF:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFnested_unstructuredEi"}
+! CHECK:   %[[LOOP_VAR_I_DECL:.*]]:2 = hlfir.declare %[[LOOP_VAR_I_REF]]
 ! CHECK:   %[[LOOP_VAR_J_REF:.*]] = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFnested_unstructuredEj"}
+! CHECK:   %[[LOOP_VAR_J_DECL:.*]]:2 = hlfir.declare %[[LOOP_VAR_J_REF]]
 ! CHECK:   %[[LOOP_VAR_K_REF:.*]] = fir.alloca i32 {bindc_name = "k", uniq_name = "_QFnested_unstructuredEk"}
+! CHECK:   %[[LOOP_VAR_K_DECL:.*]]:2 = hlfir.declare %[[LOOP_VAR_K_REF]]
 ! CHECK:   %[[I_START:.*]] = arith.constant 1 : i32
 ! CHECK:   %[[I_END:.*]] = arith.constant 100 : i32
 ! CHECK:   %[[I_STEP:.*]] = arith.constant 1 : i32
@@ -113,7 +117,7 @@ end subroutine
 ! CHECK:   %[[TMP2:.*]] = arith.addi %[[TMP1]], %[[I_STEP]] : i32
 ! CHECK:   %[[TRIP_COUNT_I:.*]] = arith.divsi %[[TMP2]], %[[I_STEP]] : i32
 ! CHECK:   fir.store %[[TRIP_COUNT_I]] to %[[TRIP_VAR_I_REF]] : !fir.ref<i32>
-! CHECK:   fir.store %[[I_START]] to %[[LOOP_VAR_I_REF]] : !fir.ref<i32>
+! CHECK:   fir.store %[[I_START]] to %[[LOOP_VAR_I_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   cf.br ^[[HEADER_I:.*]]
 ! CHECK: ^[[HEADER_I]]:
 ! CHECK:   %[[TRIP_VAR_I:.*]] = fir.load %[[TRIP_VAR_I_REF]] : !fir.ref<i32>
@@ -128,7 +132,7 @@ end subroutine
 ! CHECK:   %[[TMP4:.*]] = arith.addi %[[TMP3]], %[[J_STEP]] : i32
 ! CHECK:   %[[TRIP_COUNT_J:.*]] = arith.divsi %[[TMP4]], %[[J_STEP]] : i32
 ! CHECK:   fir.store %[[TRIP_COUNT_J]] to %[[TRIP_VAR_J_REF]] : !fir.ref<i32>
-! CHECK:   fir.store %[[J_START]] to %[[LOOP_VAR_J_REF]] : !fir.ref<i32>
+! CHECK:   fir.store %[[J_START]] to %[[LOOP_VAR_J_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   cf.br ^[[HEADER_J:.*]]
 ! CHECK: ^[[HEADER_J]]:
 ! CHECK:   %[[TRIP_VAR_J:.*]] = fir.load %[[TRIP_VAR_J_REF]] : !fir.ref<i32>
@@ -143,7 +147,7 @@ end subroutine
 ! CHECK:   %[[TMP4:.*]] = arith.addi %[[TMP3]], %[[K_STEP]] : i32
 ! CHECK:   %[[TRIP_COUNT_K:.*]] = arith.divsi %[[TMP4]], %[[K_STEP]] : i32
 ! CHECK:   fir.store %[[TRIP_COUNT_K]] to %[[TRIP_VAR_K_REF]] : !fir.ref<i32>
-! CHECK:   fir.store %[[K_START]] to %[[LOOP_VAR_K_REF]] : !fir.ref<i32>
+! CHECK:   fir.store %[[K_START]] to %[[LOOP_VAR_K_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   cf.br ^[[HEADER_K:.*]]
 ! CHECK: ^[[HEADER_K]]:
 ! CHECK:   %[[TRIP_VAR_K:.*]] = fir.load %[[TRIP_VAR_K_REF]] : !fir.ref<i32>
@@ -155,30 +159,30 @@ end subroutine
 ! CHECK:   %[[ONE_1:.*]] = arith.constant 1 : i32
 ! CHECK:   %[[TRIP_VAR_K_NEXT:.*]] = arith.subi %[[TRIP_VAR_K]], %[[ONE_1]] : i32
 ! CHECK:   fir.store %[[TRIP_VAR_K_NEXT]] to %[[TRIP_VAR_K_REF]] : !fir.ref<i32>
-! CHECK:   %[[LOOP_VAR_K:.*]] = fir.load %[[LOOP_VAR_K_REF]] : !fir.ref<i32>
+! CHECK:   %[[LOOP_VAR_K:.*]] = fir.load %[[LOOP_VAR_K_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   %[[K_STEP_2:.*]] = arith.constant 1 : i32
 ! CHECK:   %[[LOOP_VAR_K_NEXT:.*]] = arith.addi %[[LOOP_VAR_K]], %[[K_STEP_2]] overflow<nsw> : i32
-! CHECK:   fir.store %[[LOOP_VAR_K_NEXT]] to %[[LOOP_VAR_K_REF]] : !fir.ref<i32>
+! CHECK:   fir.store %[[LOOP_VAR_K_NEXT]] to %[[LOOP_VAR_K_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   cf.br ^[[HEADER_K]]
 ! CHECK: ^[[EXIT_K]]:
 ! CHECK:   %[[TRIP_VAR_J:.*]] = fir.load %[[TRIP_VAR_J_REF]] : !fir.ref<i32>
 ! CHECK:   %[[ONE_1:.*]] = arith.constant 1 : i32
 ! CHECK:   %[[TRIP_VAR_J_NEXT:.*]] = arith.subi %[[TRIP_VAR_J]], %[[ONE_1]] : i32
 ! CHECK:   fir.store %[[TRIP_VAR_J_NEXT]] to %[[TRIP_VAR_J_REF]] : !fir.ref<i32>
-! CHECK:   %[[LOOP_VAR_J:.*]] = fir.load %[[LOOP_VAR_J_REF]] : !fir.ref<i32>
+! CHECK:   %[[LOOP_VAR_J:.*]] = fir.load %[[LOOP_VAR_J_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   %[[J_STEP_2:.*]] = arith.constant 1 : i32
 ! CHECK:   %[[LOOP_VAR_J_NEXT:.*]] = arith.addi %[[LOOP_VAR_J]], %[[J_STEP_2]] overflow<nsw> : i32
-! CHECK:   fir.store %[[LOOP_VAR_J_NEXT]] to %[[LOOP_VAR_J_REF]] : !fir.ref<i32>
+! CHECK:   fir.store %[[LOOP_VAR_J_NEXT]] to %[[LOOP_VAR_J_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   cf.br ^[[HEADER_J]]
 ! CHECK: ^[[EXIT_J]]:
 ! CHECK:   %[[TRIP_VAR_I:.*]] = fir.load %[[TRIP_VAR_I_REF]] : !fir.ref<i32>
 ! CHECK:   %[[ONE_1:.*]] = arith.constant 1 : i32
 ! CHECK:   %[[TRIP_VAR_I_NEXT:.*]] = arith.subi %[[TRIP_VAR_I]], %[[ONE_1]] : i32
 ! CHECK:   fir.store %[[TRIP_VAR_I_NEXT]] to %[[TRIP_VAR_I_REF]] : !fir.ref<i32>
-! CHECK:   %[[LOOP_VAR_I:.*]] = fir.load %[[LOOP_VAR_I_REF]] : !fir.ref<i32>
+! CHECK:   %[[LOOP_VAR_I:.*]] = fir.load %[[LOOP_VAR_I_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   %[[I_STEP_2:.*]] = arith.constant 1 : i32
 ! CHECK:   %[[LOOP_VAR_I_NEXT:.*]] = arith.addi %[[LOOP_VAR_I]], %[[I_STEP_2]] overflow<nsw> : i32
-! CHECK:   fir.store %[[LOOP_VAR_I_NEXT]] to %[[LOOP_VAR_I_REF]] : !fir.ref<i32>
+! CHECK:   fir.store %[[LOOP_VAR_I_NEXT]] to %[[LOOP_VAR_I_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   cf.br ^[[HEADER_I]]
 ! CHECK: ^[[EXIT_I]]:
 ! CHECK:   return
@@ -197,7 +201,9 @@ end subroutine
 ! CHECK-LABEL: nested_structured_in_unstructured
 ! CHECK:   %[[TRIP_VAR_I_REF:.*]] = fir.alloca i32
 ! CHECK:   %[[LOOP_VAR_I_REF:.*]] = fir.alloca i32 {bindc_name = "i", uniq_name = "_QFnested_structured_in_unstructuredEi"}
+! CHECK:   %[[LOOP_VAR_I_DECL:.*]]:2 = hlfir.declare %[[LOOP_VAR_I_REF]]
 ! CHECK:   %[[LOOP_VAR_J_REF:.*]] = fir.alloca i32 {bindc_name = "j", uniq_name = "_QFnested_structured_in_unstructuredEj"}
+! CHECK:   %[[LOOP_VAR_J_DECL:.*]]:2 = hlfir.declare %[[LOOP_VAR_J_REF]]
 ! CHECK:   %[[I_START:.*]] = arith.constant 1 : i32
 ! CHECK:   %[[I_END:.*]] = arith.constant 100 : i32
 ! CHECK:   %[[I_STEP:.*]] = arith.constant 1 : i32
@@ -205,7 +211,7 @@ end subroutine
 ! CHECK:   %[[TMP2:.*]] = arith.addi %[[TMP1]], %[[I_STEP]] : i32
 ! CHECK:   %[[TRIP_COUNT:.*]] = arith.divsi %[[TMP2]], %[[I_STEP]] : i32
 ! CHECK:   fir.store %[[TRIP_COUNT]] to %[[TRIP_VAR_I_REF]] : !fir.ref<i32>
-! CHECK:   fir.store %[[I_START]] to %[[LOOP_VAR_I_REF]] : !fir.ref<i32>
+! CHECK:   fir.store %[[I_START]] to %[[LOOP_VAR_I_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   cf.br ^[[HEADER:.*]]
 ! CHECK: ^[[HEADER]]:
 ! CHECK:   %[[TRIP_VAR:.*]] = fir.load %[[TRIP_VAR_I_REF]] : !fir.ref<i32>
@@ -216,18 +222,18 @@ end subroutine
 ! CHECK:   %{{.*}} = fir.do_loop %[[J_INDEX:[^ ]*]] =
 ! CHECK-SAME: %{{.*}} to %{{.*}} step %[[ST:[^ ]*]]
 ! CHECK-SAME: iter_args(%[[J_IV:.*]] = %{{.*}}) -> (i32) {
-! CHECK:     fir.store %[[J_IV]] to %[[LOOP_VAR_J_REF]] : !fir.ref<i32>
-! CHECK:     %[[LOOP_VAR_J:.*]] = fir.load %[[LOOP_VAR_J_REF]] : !fir.ref<i32>
+! CHECK:     fir.store %[[J_IV]] to %[[LOOP_VAR_J_DECL]]#0 : !fir.ref<i32>
+! CHECK:     %[[LOOP_VAR_J:.*]] = fir.load %[[LOOP_VAR_J_DECL]]#0 : !fir.ref<i32>
 ! CHECK:     %[[LOOP_VAR_J_NEXT:.*]] = arith.addi %[[LOOP_VAR_J]], %{{[^ ]*}} overflow<nsw> : i32
 ! CHECK:   }
 ! CHECK:   %[[TRIP_VAR_I:.*]] = fir.load %[[TRIP_VAR_I_REF]] : !fir.ref<i32>
 ! CHECK:   %[[C1_3:.*]] = arith.constant 1 : i32
 ! CHECK:   %[[TRIP_VAR_I_NEXT:.*]] = arith.subi %[[TRIP_VAR_I]], %[[C1_3]] : i32
 ! CHECK:   fir.store %[[TRIP_VAR_I_NEXT]] to %[[TRIP_VAR_I_REF]] : !fir.ref<i32>
-! CHECK:   %[[LOOP_VAR_I:.*]] = fir.load %[[LOOP_VAR_I_REF]] : !fir.ref<i32>
+! CHECK:   %[[LOOP_VAR_I:.*]] = fir.load %[[LOOP_VAR_I_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   %[[I_STEP_2:.*]] = arith.constant 1 : i32
 ! CHECK:   %[[LOOP_VAR_I_NEXT:.*]] = arith.addi %[[LOOP_VAR_I]], %[[I_STEP_2]] overflow<nsw> : i32
-! CHECK:   fir.store %[[LOOP_VAR_I_NEXT]] to %[[LOOP_VAR_I_REF]] : !fir.ref<i32>
+! CHECK:   fir.store %[[LOOP_VAR_I_NEXT]] to %[[LOOP_VAR_I_DECL]]#0 : !fir.ref<i32>
 ! CHECK:   cf.br ^[[HEADER]]
 ! CHECK: ^[[EXIT]]:
 ! CHECK:   return
