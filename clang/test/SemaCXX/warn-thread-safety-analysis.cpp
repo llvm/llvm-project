@@ -7681,7 +7681,7 @@ void unlock_Foo(Foo **Fp) __attribute__((release_capability((*Fp)->mu)));
 // A function that may do anything to the objects referred to by the inputs:
 void f(void *, void *, void *);
 
-static void saveContexBug(Foo *F)
+void saveContexBug(Foo *F)
 {
     Foo *L;
     L = F;
@@ -7689,9 +7689,9 @@ static void saveContexBug(Foo *F)
     Foo ** Fp = &L;
     // Previously, a local-variable-definition-context was created and
     // pushed for each of the argument below, resulting context
-    // mismatch. The analyzer missed the fact that 'mapp' may no
+    // mismatch. The analyzer missed the fact that 'Fp' may no
     // longer point to the lock. So it does not report an issue at the
-    // 'unlock_map_indirect' call.
+    // 'unlock_Foo' call.
     f(&L, &L, &Fp);
     unlock_Foo(Fp); // expected-warning{{releasing mutex 'Fp->mu' that was not held}}
 } // expected-warning{{mutex 'F->mu' is still held at the end of function}}
