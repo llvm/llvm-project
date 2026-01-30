@@ -574,7 +574,6 @@ void CIRGenFunction::emitNewArrayInitializer(
   unsigned initListElements = 0;
 
   const Expr *init = e->getInitializer();
-  Address endOfInit = Address::invalid();
   QualType::DestructionKind dtorKind = elementType.isDestructedType();
   assert(!cir::MissingFeatures::cleanupDeactivationScope());
 
@@ -640,6 +639,7 @@ void CIRGenFunction::emitNewArrayInitializer(
     QualType allocType = e->getAllocatedType();
     if (const ConstantArrayType *cat = dyn_cast_or_null<ConstantArrayType>(
             allocType->getAsArrayTypeUnsafe())) {
+      (void)cat;
       cgm.errorNYI(ile->getSourceRange(),
                    "emitNewArrayInitializer: constant array init");
       return;
