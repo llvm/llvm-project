@@ -948,8 +948,8 @@ LLVM_C_ABI LLVMMetadataRef
 LLVMModuleFlagEntriesGetMetadata(LLVMModuleFlagEntry *Entries, unsigned Index);
 
 /**
- * Add a module-level flag to the module-level flags metadata if it doesn't
- * already exist.
+ * Return the corresponding value if Key appears in module flags, otherwise
+ * return null.
  *
  * @see Module::getModuleFlag()
  */
