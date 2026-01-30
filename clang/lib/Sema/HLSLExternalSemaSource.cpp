@@ -521,6 +521,6 @@ void HLSLExternalSemaSource::CompleteType(TagDecl *Tag) {
   auto It = Completions.find(Record);
   if (It == Completions.end())
     return;
-  Completions.erase(It);
   It->second(Record);
+  Completions.erase(It);
 }
