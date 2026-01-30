@@ -258,6 +258,16 @@ LIBC_INLINE int convert_float_hex_exp(Writer<write_mode> *writer,
   }
   return WRITE_OK;
 }
+
+#ifdef LIBC_PRINTF_DEFINE_MODULES
+
+#define HANDLE_WRITE_MODE(MODE)                                                \
+  template int convert_float_hex_exp<WriteMode::MODE>(                         \
+      Writer<WriteMode::MODE> * writer, const FormatSection &to_conv);
+#include "src/stdio/printf_core/write_modes.def"
+#undef HANDLE_WRITE_MODE
+
+#endif
 #endif
 
 } // namespace printf_core
