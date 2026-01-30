@@ -2108,7 +2108,9 @@ public:
   /// Returns the opcode of the root node, or 0, if the root node is gather.
   bool isReducedBitcastRoot() const {
     return VectorizableTree.front()->hasState() &&
-           VectorizableTree.front()->CombinedOp == TreeEntry::ReducedBitcast &&
+           (VectorizableTree.front()->CombinedOp == TreeEntry::ReducedBitcast ||
+            VectorizableTree.front()->CombinedOp ==
+                TreeEntry::ReducedBitcastBSwap) &&
            VectorizableTree.front()->State == TreeEntry::Vectorize;
   }
 
@@ -3944,7 +3946,9 @@ private:
   /// Checks if the tree represents disjoint or reduction of shl(zext, (0, 8,
   /// .., 56))-like pattern.
   /// If the int shifts unique, also strided, but not ordered, sets \p Order.
-  bool matchesShlZExt(const TreeEntry &TE, OrdersType &Order) const;
+  /// If the node can be represented as a bitcast + bswap, sets \p IsBSwap.
+  bool matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
+                      bool &IsBSwap) const;
 
   class TreeEntry {
   public:
@@ -4076,6 +4080,7 @@ private:
       MinMax = Instruction::OtherOpsEnd + 1,
       FMulAdd,
       ReducedBitcast,
+      ReducedBitcastBSwap,
     };
     CombinedOpcode CombinedOp = NotCombinedOp;
 
@@ -13430,9 +13435,11 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
   return FMACost < FMulPlusFAddCost ? FMACost : InstructionCost::getInvalid();
 }
 
-bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order) const {
+bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
+                             bool &IsBSwap) const {
   assert(TE.hasState() && TE.getOpcode() == Instruction::Shl &&
          "Expected Shl node.");
+  IsBSwap = false;
   if (TE.State != TreeEntry::Vectorize || !TE.ReorderIndices.empty() ||
       !TE.ReuseShuffleIndices.empty() || MinBWs.contains(&TE) ||
       any_of(TE.Scalars, [](Value *V) { return !V->hasOneUse(); }))
@@ -13526,6 +13533,20 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order) const {
     inversePermutation(Order, Mask);
     BitcastCost += ::getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, SrcVecTy,
                                     Mask, CostKind);
+  }
+  // Check if the combination can be modeled as a bitcast+byteswap operation.
+  constexpr unsigned ByteSize = 8;
+  if (!Order.empty() && isReverseOrder(Order) &&
+      DL->getTypeSizeInBits(SrcScalarTy) == ByteSize) {
+    IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, ScalarTy, {ScalarTy});
+    InstructionCost BSwapCost =
+        TTI->getCastInstrCost(Instruction::BitCast, ScalarTy, SrcVecTy, CastCtx,
+                              CostKind) +
+        TTI->getIntrinsicInstrCost(CostAttrs, CostKind);
+    if (BSwapCost <= BitcastCost) {
+      BitcastCost = BSwapCost;
+      IsBSwap = true;
+    }
   }
   return BitcastCost < VecCost;
 }
@@ -13945,11 +13966,15 @@ void BoUpSLP::transformNodes() {
           }))
         break;
       OrdersType Order;
-      if (!matchesShlZExt(E, Order))
+      bool IsBSwap;
+      if (!matchesShlZExt(E, Order, IsBSwap))
         break;
       // This node is a (reduced disjoint or) bitcast node.
-      E.CombinedOp = TreeEntry::ReducedBitcast;
-      E.ReorderIndices = std::move(Order);
+      TreeEntry::CombinedOpcode Code =
+          IsBSwap ? TreeEntry::ReducedBitcastBSwap : TreeEntry::ReducedBitcast;
+      E.CombinedOp = Code;
+      if (!IsBSwap)
+        E.ReorderIndices = std::move(Order);
       TreeEntry *ZExtEntry = getOperandEntry(&E, 0);
       assert(ZExtEntry->UserTreeIndex &&
              ZExtEntry->State == TreeEntry::Vectorize &&
@@ -13957,13 +13982,13 @@ void BoUpSLP::transformNodes() {
              "Expected ZExt node.");
       // The ZExt node is part of the combined node.
       ZExtEntry->State = TreeEntry::CombinedVectorize;
-      ZExtEntry->CombinedOp = TreeEntry::ReducedBitcast;
+      ZExtEntry->CombinedOp = Code;
       TreeEntry *ConstEntry = getOperandEntry(&E, 1);
       assert(ConstEntry->UserTreeIndex && ConstEntry->isGather() &&
              "Expected ZExt node.");
       // The ConstNode node is part of the combined node.
       ConstEntry->State = TreeEntry::CombinedVectorize;
-      ConstEntry->CombinedOp = TreeEntry::ReducedBitcast;
+      ConstEntry->CombinedOp = Code;
       break;
     }
     default:
@@ -15062,7 +15087,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     ScalarTy = IntegerType::get(F->getContext(), It->second.first);
     if (VecTy)
       ScalarTy = getWidenedType(ScalarTy, VecTy->getNumElements());
-  } else if (E->Idx == 0 && E->CombinedOp == TreeEntry::ReducedBitcast) {
+  } else if (E->Idx == 0 && isReducedBitcastRoot()) {
     const TreeEntry *ZExt = getOperandEntry(E, /*Idx=*/0);
     ScalarTy = cast<CastInst>(ZExt->getMainOp())->getSrcTy();
   }
@@ -15636,7 +15661,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
   }
-  case TreeEntry::ReducedBitcast: {
+  case TreeEntry::ReducedBitcast:
+  case TreeEntry::ReducedBitcastBSwap: {
     auto GetScalarCost = [&, &TTI = *TTI](unsigned Idx) {
       if (isa<PoisonValue>(UniqueValues[Idx]))
         return InstructionCost(TTI::TCC_Free);
@@ -15658,6 +15684,14 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       auto *SrcVecTy = getWidenedType(SrcScalarTy, LhsTE->getVectorFactor());
       InstructionCost BitcastCost = TTI.getCastInstrCost(
           Instruction::BitCast, ScalarTy, SrcVecTy, CastCtx, CostKind);
+      if (ShuffleOrOp == TreeEntry::ReducedBitcastBSwap) {
+        auto *OrigScalarTy = E->getMainOp()->getType();
+        IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, OrigScalarTy,
+                                          {OrigScalarTy});
+        InstructionCost IntrinsicCost =
+            TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
+        BitcastCost += IntrinsicCost;
+      }
       return BitcastCost + CommonCost;
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
@@ -16436,7 +16470,8 @@ InstructionCost BoUpSLP::getSpillCost() {
   SmallPtrSet<const Instruction *, 8> LastInstructions;
   SmallPtrSet<const TreeEntry *, 8> ScalarOrPseudoEntries;
   for (const auto &TEPtr : VectorizableTree) {
-    if (TEPtr->CombinedOp == TreeEntry::ReducedBitcast) {
+    if (TEPtr->CombinedOp == TreeEntry::ReducedBitcast ||
+        TEPtr->CombinedOp == TreeEntry::ReducedBitcastBSwap) {
       ScalarOrPseudoEntries.insert(TEPtr.get());
       continue;
     }
@@ -17185,7 +17220,7 @@ InstructionCost BoUpSLP::getTreeCost(InstructionCost TreeCost,
     const auto It = find_if(*UserIgnoreList, IsaPred<Instruction>);
     assert(It != UserIgnoreList->end() && "Expected reduction instruction.");
     ReductionRoot = cast<Instruction>(*It);
-    // Scale reuction cost to the factor of the loop nest trip count.
+    // Scale reduction cost to the factor of the loop nest trip count.
     ReductionCost *=
         getScaleToLoopIterations(*VectorizableTree.front().get(),
                                  /*Scalar=*/nullptr, ReductionRoot);
@@ -19685,17 +19720,23 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
 
   bool NeedFreeze = false;
   SmallVector<Value *> GatheredScalars(E->Scalars.begin(), E->Scalars.end());
-  // Clear values, to be replaced by insertvector instructions.
-  for (auto [EIdx, Idx] : E->CombinedEntriesWithIndices)
-    for_each(MutableArrayRef(GatheredScalars)
-                 .slice(Idx, VectorizableTree[EIdx]->getVectorFactor()),
-             [&](Value *&V) { V = PoisonValue::get(V->getType()); });
+  // Do not process split vectorize node, marked to be gathers/buildvectors.
   SmallVector<std::pair<const TreeEntry *, unsigned>> SubVectors(
       E->CombinedEntriesWithIndices.size());
-  transform(E->CombinedEntriesWithIndices, SubVectors.begin(),
-            [&](const auto &P) {
-              return std::make_pair(VectorizableTree[P.first].get(), P.second);
-            });
+  if (E->State == TreeEntry::SplitVectorize &&
+      TransformedToGatherNodes.contains(E)) {
+    SubVectors.clear();
+  } else {
+    // Clear values, to be replaced by insertvector instructions.
+    for (auto [EIdx, Idx] : E->CombinedEntriesWithIndices)
+      for_each(MutableArrayRef(GatheredScalars)
+                   .slice(Idx, VectorizableTree[EIdx]->getVectorFactor()),
+               [&](Value *&V) { V = PoisonValue::get(V->getType()); });
+    transform(
+        E->CombinedEntriesWithIndices, SubVectors.begin(), [&](const auto &P) {
+          return std::make_pair(VectorizableTree[P.first].get(), P.second);
+        });
+  }
   // Build a mask out of the reorder indices and reorder scalars per this
   // mask.
   SmallVector<int> ReorderMask(E->ReorderIndices.begin(),
@@ -20225,8 +20266,12 @@ ResTy BoUpSLP::processBuildVector(const TreeEntry *E, Type *ScalarTy,
 }
 
 Value *BoUpSLP::createBuildVector(const TreeEntry *E, Type *ScalarTy) {
-  for (auto [EIdx, _] : E->CombinedEntriesWithIndices)
-    (void)vectorizeTree(VectorizableTree[EIdx].get());
+  // Do not do this for split vectorize node, marked to be gathers/buildvectors.
+  if (E->State != TreeEntry::SplitVectorize ||
+      !TransformedToGatherNodes.contains(E)) {
+    for (auto [EIdx, _] : E->CombinedEntriesWithIndices)
+      (void)vectorizeTree(VectorizableTree[EIdx].get());
+  }
   return processBuildVector<ShuffleInstructionBuilder, Value *>(E, ScalarTy,
                                                                 Builder, *this);
 }
@@ -20392,7 +20437,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
   if (!E->isAltShuffle()) {
     switch (E->CombinedOp) {
     case TreeEntry::ReducedBitcast:
-      ShuffleOrOp = TreeEntry::ReducedBitcast;
+    case TreeEntry::ReducedBitcastBSwap:
+      ShuffleOrOp = E->CombinedOp;
       break;
     default:
       break;
@@ -21328,7 +21374,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
 
       return V;
     }
-    case TreeEntry::ReducedBitcast: {
+    case TreeEntry::ReducedBitcast:
+    case TreeEntry::ReducedBitcastBSwap: {
       assert(UserIgnoreList && "Expected reduction operations only.");
       setInsertPointAfterBundle(E);
       TreeEntry *ZExt = getOperandEntry(E, /*Idx=*/0);
@@ -21345,6 +21392,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           Op, IntegerType::get(
                   Op->getContext(),
                   DL->getTypeSizeInBits(ZExt->getMainOp()->getType())));
+      if (ShuffleOrOp == TreeEntry::ReducedBitcastBSwap)
+        V = Builder.CreateUnaryIntrinsic(Intrinsic::bswap, V);
       E->VectorizedValue = V;
       ++NumVectorInstructions;
       return V;
@@ -21375,7 +21424,8 @@ Value *BoUpSLP::vectorizeTree(
   for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
     if (TE->isGather() || DeletedNodes.contains(TE.get()) ||
         (TE->State == TreeEntry::CombinedVectorize &&
-         TE->CombinedOp == TreeEntry::ReducedBitcast))
+         (TE->CombinedOp == TreeEntry::ReducedBitcast ||
+          TE->CombinedOp == TreeEntry::ReducedBitcastBSwap)))
       continue;
     (void)getLastInstructionInBundle(TE.get());
   }
@@ -21933,7 +21983,8 @@ Value *BoUpSLP::vectorizeTree(
         TransformedToGatherNodes.contains(Entry))
       continue;
 
-    if (Entry->CombinedOp == TreeEntry::ReducedBitcast) {
+    if (Entry->CombinedOp == TreeEntry::ReducedBitcast ||
+        Entry->CombinedOp == TreeEntry::ReducedBitcastBSwap) {
       // Skip constant node
       if (!Entry->hasState()) {
         assert(allConstant(Entry->Scalars) && "Expected constants only.");

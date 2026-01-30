@@ -618,3 +618,38 @@ mlir::SymbolRefAttr fir::acc::createOrGetReductionRecipe(
   mlir::acc::YieldOp::create(builder, loc, dest);
   return mlir::SymbolRefAttr::get(builder.getContext(), recipe.getSymName());
 }
+
+mlir::Value fir::acc::getOriginalDef(mlir::Value value, bool stripDeclare) {
+  mlir::Value currentValue = value;
+
+  while (currentValue) {
+    auto *definingOp = currentValue.getDefiningOp();
+    if (!definingOp)
+      break;
+
+    if (auto convertOp = mlir::dyn_cast<fir::ConvertOp>(definingOp)) {
+      currentValue = convertOp.getValue();
+      continue;
+    }
+
+    if (auto viewLike = mlir::dyn_cast<mlir::ViewLikeOpInterface>(definingOp)) {
+      currentValue = viewLike.getViewSource();
+      continue;
+    }
+
+    if (stripDeclare) {
+      if (auto declareOp = mlir::dyn_cast<hlfir::DeclareOp>(definingOp)) {
+        currentValue = declareOp.getMemref();
+        continue;
+      }
+
+      if (auto declareOp = mlir::dyn_cast<fir::DeclareOp>(definingOp)) {
+        currentValue = declareOp.getMemref();
+        continue;
+      }
+    }
+    break;
+  }
+
+  return currentValue;
+}
