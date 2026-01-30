@@ -801,7 +801,8 @@ public:
   GetScriptedFrameProviderDescriptors() const;
 
 protected:
-  /// Notify all threads that the stack traces might have changed.
+  /// Invalidate all potentially cached frame providers for all threads
+  /// and trigger a stack changed event for all threads.
   void InvalidateThreadFrameProviders();
 
 public:
