@@ -109,8 +109,6 @@ InstructionInformation::InstructionInformation(const ARMBaseInstrInfo *TII) {
     Info[op].HasBRegAddrShift = true;
   }
 
-  Info[t2SDIV].IsDivide = Info[t2UDIV].IsDivide = true;
-
   std::initializer_list<unsigned> isInlineShiftALUList = {
       t2ADCrs,  t2ADDSrs, t2ADDrs,  t2BICrs, t2EORrs,
       t2ORNrs,  t2RSBSrs, t2RSBrs,  t2SBCrs, t2SUBrs,
@@ -119,6 +117,8 @@ InstructionInformation::InstructionInformation(const ARMBaseInstrInfo *TII) {
   for (auto op : isInlineShiftALUList) {
     Info[op].IsInlineShiftALU = true;
   }
+
+  Info[t2SDIV].IsDivide = Info[t2UDIV].IsDivide = true;
 
   std::initializer_list<unsigned> isMultiplyList = {
       t2MUL,    t2MLA,     t2MLS,     t2SMLABB, t2SMLABT,  t2SMLAD,   t2SMLADX,
