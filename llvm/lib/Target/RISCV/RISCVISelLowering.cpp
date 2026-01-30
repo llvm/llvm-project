@@ -9388,7 +9388,6 @@ SDValue RISCVTargetLowering::lowerGlobalAddress(SDValue Op,
   GlobalAddressSDNode *N = cast<GlobalAddressSDNode>(Op);
   assert(N->getOffset() == 0 && "unexpected offset in global node");
   const GlobalValue *GV = N->getGlobal();
-
   bool IsLocal = getTargetMachine().shouldAssumeDSOLocal(GV);
   return getAddr(N, DAG, IsLocal, GV->hasExternalWeakLinkage());
 }
