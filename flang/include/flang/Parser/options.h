@@ -36,6 +36,7 @@ struct Options {
   bool prescanAndReformat{false}; // -E
   bool expandIncludeLinesInPreprocessedOutput{true};
   bool showColors{false};
+  std::vector<std::string> compilerDirectivesSentinels;
 };
 
 } // namespace Fortran::parser
