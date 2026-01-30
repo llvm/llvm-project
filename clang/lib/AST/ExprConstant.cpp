@@ -14729,7 +14729,7 @@ bool MatrixExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
   unsigned NumCols = MT->getNumColumns();
   QualType EltTy = MT->getElementType();
 
-  assert(E->getNumInits() == NumRows * NumCols &&
+  assert(E->getNumInits() == MT->getNumElementsFlattened() &&
          "Expected number of elements in initializer list to match the number "
          "of matrix elements");
 
