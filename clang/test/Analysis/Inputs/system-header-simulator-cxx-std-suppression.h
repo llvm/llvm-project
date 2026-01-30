@@ -142,5 +142,33 @@ shared_ptr<_Tp>::shared_ptr(nullptr_t) {
 }
 
 #endif // __has_feature(cxx_decltype)
+
+// __uninitialized_construct_buf_dispatch::__ucr is used by stable_sort
+// and inplace_merge.
+template<typename _Tp>
+struct __uninitialized_construct_buf_dispatch {
+  template<typename _ForwardIterator, typename _Allocator>
+  static void __ucr(_ForwardIterator __first, _ForwardIterator __last,
+                    _Allocator& __a) {
+    // Fake error trigger
+    int z = 0;
+    z = 5/z;
+  }
+};
+
+template<typename _RandomAccessIterator>
+void stable_sort(_RandomAccessIterator __first, _RandomAccessIterator __last) {
+  allocator<int> alloc;
+  __uninitialized_construct_buf_dispatch<int>::__ucr(__first, __last, alloc);
+}
+
+template<typename _BidirectionalIterator>
+void inplace_merge(_BidirectionalIterator __first,
+                   _BidirectionalIterator,
+                   _BidirectionalIterator __last) {
+  allocator<int> alloc;
+  __uninitialized_construct_buf_dispatch<int>::__ucr(__first, __last, alloc);
+}
+
 }
 

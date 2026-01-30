@@ -674,6 +674,12 @@ def PureVirtualCallChecker
       HelpText<
           "Check pure virtual function calls during construction/destruction">,
       Documentation<HasDocumentation>;
+
+def OpaqueSTLFunctionsModeling : Checker<"OpaqueSTLFunctionsModeling">,
+  HelpText<"Force opaque, conservative evaluation for STL internal implementation functions">,
+  Documentation<NotDocumented>,
+  Hidden;
+
 } // end: "cplusplus"
 
 let ParentPackage = CplusplusOptIn in {

@@ -37,3 +37,13 @@ void testSuppression_std_shared_pointer() {
 
   p = nullptr; // no-warning
 }
+
+void testSuppression_stable_sort() {
+  int arr[5];
+  std::stable_sort(arr, arr + 5); // no-warning
+}
+
+void testSuppression_inplace_merge() {
+  int arr[5];
+  std::inplace_merge(arr, arr + 2, arr + 5); // no-warning
+}
