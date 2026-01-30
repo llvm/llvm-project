@@ -18,8 +18,7 @@ define zeroext i8 @oeq_f64_i32(double %x) nounwind readnone {
 ; AVX-LABEL: oeq_f64_i32:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vcvttpd2dq %xmm0, %xmm1
-; AVX-NEXT:    vcvtdq2pd %xmm1, %xmm1
+; AVX-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm1
 ; AVX-NEXT:    vcmpeqsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    andl $1, %eax
@@ -29,8 +28,7 @@ define zeroext i8 @oeq_f64_i32(double %x) nounwind readnone {
 ; AVX512-LABEL: oeq_f64_i32:
 ; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX512-NEXT:    vcvttpd2dq %xmm0, %xmm1
-; AVX512-NEXT:    vcvtdq2pd %xmm1, %xmm1
+; AVX512-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm1
 ; AVX512-NEXT:    vcmpeqsd %xmm0, %xmm1, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
@@ -67,16 +65,7 @@ define zeroext i8 @oeq_f64_u32(double %x) nounwind readnone {
 ; AVX-LABEL: oeq_f64_u32:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vcvttsd2si %xmm0, %eax
-; AVX-NEXT:    movl %eax, %ecx
-; AVX-NEXT:    sarl $31, %ecx
-; AVX-NEXT:    vsubsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm1
-; AVX-NEXT:    vcvttsd2si %xmm1, %edx
-; AVX-NEXT:    andl %ecx, %edx
-; AVX-NEXT:    orl %eax, %edx
-; AVX-NEXT:    vmovd %edx, %xmm1
-; AVX-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1
-; AVX-NEXT:    vsubsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1
+; AVX-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm1
 ; AVX-NEXT:    vcmpeqsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    andl $1, %eax
@@ -86,8 +75,7 @@ define zeroext i8 @oeq_f64_u32(double %x) nounwind readnone {
 ; AVX512-LABEL: oeq_f64_u32:
 ; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX512-NEXT:    vcvttsd2usi %xmm0, %eax
-; AVX512-NEXT:    vcvtusi2sd %eax, %xmm7, %xmm1
+; AVX512-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm1
 ; AVX512-NEXT:    vcmpeqsd %xmm0, %xmm1, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
@@ -131,35 +119,21 @@ define zeroext i8 @oeq_f64_i64(double %x) nounwind readnone {
 ;
 ; AVX-LABEL: oeq_f64_i64:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    pushl %ebp
-; AVX-NEXT:    movl %esp, %ebp
-; AVX-NEXT:    andl $-8, %esp
-; AVX-NEXT:    subl $24, %esp
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vmovsd %xmm0, (%esp)
-; AVX-NEXT:    fldl (%esp)
-; AVX-NEXT:    fisttpll (%esp)
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX-NEXT:    vmovlps %xmm1, {{[0-9]+}}(%esp)
-; AVX-NEXT:    fildll {{[0-9]+}}(%esp)
-; AVX-NEXT:    fstpl {{[0-9]+}}(%esp)
-; AVX-NEXT:    vcmpeqsd {{[0-9]+}}(%esp), %xmm0, %xmm0
+; AVX-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm1
+; AVX-NEXT:    vcmpeqsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    andl $1, %eax
 ; AVX-NEXT:    # kill: def $al killed $al killed $eax
-; AVX-NEXT:    movl %ebp, %esp
-; AVX-NEXT:    popl %ebp
 ; AVX-NEXT:    retl
 ;
 ; AVX512-LABEL: oeq_f64_i64:
 ; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX512-NEXT:    vcvttpd2qq %xmm0, %xmm1
-; AVX512-NEXT:    vcvtqq2pd %ymm1, %ymm1
+; AVX512-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm1
 ; AVX512-NEXT:    vcmpeqsd %xmm0, %xmm1, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
-; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retl
 entry:
 	%0 = fptosi double %x to i64
@@ -216,48 +190,21 @@ define zeroext i8 @oeq_f64_u64(double %x) nounwind readnone {
 ;
 ; AVX-LABEL: oeq_f64_u64:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    pushl %ebp
-; AVX-NEXT:    movl %esp, %ebp
-; AVX-NEXT:    andl $-8, %esp
-; AVX-NEXT:    subl $8, %esp
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [9.2233720368547758E+18,0.0E+0]
-; AVX-NEXT:    vucomisd %xmm0, %xmm1
-; AVX-NEXT:    jbe .LBB3_2
-; AVX-NEXT:  # %bb.1: # %entry
-; AVX-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; AVX-NEXT:  .LBB3_2: # %entry
-; AVX-NEXT:    vsubsd %xmm1, %xmm0, %xmm1
-; AVX-NEXT:    vmovsd %xmm1, (%esp)
-; AVX-NEXT:    fldl (%esp)
-; AVX-NEXT:    fisttpll (%esp)
-; AVX-NEXT:    setbe %al
-; AVX-NEXT:    movzbl %al, %eax
-; AVX-NEXT:    shll $31, %eax
-; AVX-NEXT:    xorl {{[0-9]+}}(%esp), %eax
-; AVX-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
-; AVX-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[1],mem[1]
-; AVX-NEXT:    vsubpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1
-; AVX-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
-; AVX-NEXT:    vaddsd %xmm1, %xmm2, %xmm1
+; AVX-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm1
 ; AVX-NEXT:    vcmpeqsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    andl $1, %eax
 ; AVX-NEXT:    # kill: def $al killed $al killed $eax
-; AVX-NEXT:    movl %ebp, %esp
-; AVX-NEXT:    popl %ebp
 ; AVX-NEXT:    retl
 ;
 ; AVX512-LABEL: oeq_f64_u64:
 ; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX512-NEXT:    vcvttpd2uqq %xmm0, %xmm1
-; AVX512-NEXT:    vcvtuqq2pd %ymm1, %ymm1
+; AVX512-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm1
 ; AVX512-NEXT:    vcmpeqsd %xmm0, %xmm1, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
-; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retl
 entry:
 	%0 = fptoui double %x to i64
@@ -282,8 +229,7 @@ define zeroext i8 @une_f64_i32(double %x) nounwind readnone {
 ; AVX-LABEL: une_f64_i32:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vcvttpd2dq %xmm0, %xmm1
-; AVX-NEXT:    vcvtdq2pd %xmm1, %xmm1
+; AVX-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm1
 ; AVX-NEXT:    vcmpneqsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    andl $1, %eax
@@ -293,8 +239,7 @@ define zeroext i8 @une_f64_i32(double %x) nounwind readnone {
 ; AVX512-LABEL: une_f64_i32:
 ; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX512-NEXT:    vcvttpd2dq %xmm0, %xmm1
-; AVX512-NEXT:    vcvtdq2pd %xmm1, %xmm1
+; AVX512-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm1
 ; AVX512-NEXT:    vcmpneqsd %xmm0, %xmm1, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
@@ -331,16 +276,7 @@ define zeroext i8 @une_f64_u32(double %x) nounwind readnone {
 ; AVX-LABEL: une_f64_u32:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vcvttsd2si %xmm0, %eax
-; AVX-NEXT:    movl %eax, %ecx
-; AVX-NEXT:    sarl $31, %ecx
-; AVX-NEXT:    vsubsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm0, %xmm1
-; AVX-NEXT:    vcvttsd2si %xmm1, %edx
-; AVX-NEXT:    andl %ecx, %edx
-; AVX-NEXT:    orl %eax, %edx
-; AVX-NEXT:    vmovd %edx, %xmm1
-; AVX-NEXT:    vpor {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1
-; AVX-NEXT:    vsubsd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1
+; AVX-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm1
 ; AVX-NEXT:    vcmpneqsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    andl $1, %eax
@@ -350,8 +286,7 @@ define zeroext i8 @une_f64_u32(double %x) nounwind readnone {
 ; AVX512-LABEL: une_f64_u32:
 ; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX512-NEXT:    vcvttsd2usi %xmm0, %eax
-; AVX512-NEXT:    vcvtusi2sd %eax, %xmm7, %xmm1
+; AVX512-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm1
 ; AVX512-NEXT:    vcmpneqsd %xmm0, %xmm1, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
@@ -395,35 +330,21 @@ define zeroext i8 @une_f64_i64(double %x) nounwind readnone {
 ;
 ; AVX-LABEL: une_f64_i64:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    pushl %ebp
-; AVX-NEXT:    movl %esp, %ebp
-; AVX-NEXT:    andl $-8, %esp
-; AVX-NEXT:    subl $24, %esp
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vmovsd %xmm0, (%esp)
-; AVX-NEXT:    fldl (%esp)
-; AVX-NEXT:    fisttpll (%esp)
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = mem[0],zero
-; AVX-NEXT:    vmovlps %xmm1, {{[0-9]+}}(%esp)
-; AVX-NEXT:    fildll {{[0-9]+}}(%esp)
-; AVX-NEXT:    fstpl {{[0-9]+}}(%esp)
-; AVX-NEXT:    vcmpneqsd {{[0-9]+}}(%esp), %xmm0, %xmm0
+; AVX-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm1
+; AVX-NEXT:    vcmpneqsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    andl $1, %eax
 ; AVX-NEXT:    # kill: def $al killed $al killed $eax
-; AVX-NEXT:    movl %ebp, %esp
-; AVX-NEXT:    popl %ebp
 ; AVX-NEXT:    retl
 ;
 ; AVX512-LABEL: une_f64_i64:
 ; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX512-NEXT:    vcvttpd2qq %xmm0, %xmm1
-; AVX512-NEXT:    vcvtqq2pd %ymm1, %ymm1
+; AVX512-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm1
 ; AVX512-NEXT:    vcmpneqsd %xmm0, %xmm1, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
-; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retl
 entry:
 	%0 = fptosi double %x to i64
@@ -480,48 +401,21 @@ define zeroext i8 @une_f64_u64(double %x) nounwind readnone {
 ;
 ; AVX-LABEL: une_f64_u64:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    pushl %ebp
-; AVX-NEXT:    movl %esp, %ebp
-; AVX-NEXT:    andl $-8, %esp
-; AVX-NEXT:    subl $8, %esp
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [9.2233720368547758E+18,0.0E+0]
-; AVX-NEXT:    vucomisd %xmm0, %xmm1
-; AVX-NEXT:    jbe .LBB7_2
-; AVX-NEXT:  # %bb.1: # %entry
-; AVX-NEXT:    vxorpd %xmm1, %xmm1, %xmm1
-; AVX-NEXT:  .LBB7_2: # %entry
-; AVX-NEXT:    vsubsd %xmm1, %xmm0, %xmm1
-; AVX-NEXT:    vmovsd %xmm1, (%esp)
-; AVX-NEXT:    fldl (%esp)
-; AVX-NEXT:    fisttpll (%esp)
-; AVX-NEXT:    setbe %al
-; AVX-NEXT:    movzbl %al, %eax
-; AVX-NEXT:    shll $31, %eax
-; AVX-NEXT:    xorl {{[0-9]+}}(%esp), %eax
-; AVX-NEXT:    vmovd {{.*#+}} xmm1 = mem[0],zero,zero,zero
-; AVX-NEXT:    vpinsrd $1, %eax, %xmm1, %xmm1
-; AVX-NEXT:    vpunpckldq {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[1],mem[1]
-; AVX-NEXT:    vsubpd {{\.?LCPI[0-9]+_[0-9]+}}, %xmm1, %xmm1
-; AVX-NEXT:    vshufpd {{.*#+}} xmm2 = xmm1[1,0]
-; AVX-NEXT:    vaddsd %xmm1, %xmm2, %xmm1
+; AVX-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm1
 ; AVX-NEXT:    vcmpneqsd %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vmovd %xmm0, %eax
 ; AVX-NEXT:    andl $1, %eax
 ; AVX-NEXT:    # kill: def $al killed $al killed $eax
-; AVX-NEXT:    movl %ebp, %esp
-; AVX-NEXT:    popl %ebp
 ; AVX-NEXT:    retl
 ;
 ; AVX512-LABEL: une_f64_u64:
 ; AVX512:       # %bb.0: # %entry
 ; AVX512-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX512-NEXT:    vcvttpd2uqq %xmm0, %xmm1
-; AVX512-NEXT:    vcvtuqq2pd %ymm1, %ymm1
+; AVX512-NEXT:    vroundsd $11, %xmm0, %xmm0, %xmm1
 ; AVX512-NEXT:    vcmpneqsd %xmm0, %xmm1, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
-; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retl
 entry:
 	%0 = fptoui double %x to i64

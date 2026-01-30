@@ -972,6 +972,7 @@ void ASTWriter::WriteBlockInfoBlock() {
   RECORD(PP_ASSUME_NONNULL_LOC);
   RECORD(PP_UNSAFE_BUFFER_USAGE);
   RECORD(VTABLES_TO_EMIT);
+  RECORD(RISCV_VECTOR_INTRINSICS_PRAGMA);
 
   // SourceManager Block.
   BLOCK(SOURCE_MANAGER_BLOCK);
@@ -1714,7 +1715,9 @@ void ASTWriter::WriteControlBlock(Preprocessor &PP, StringRef isysroot) {
   Record.push_back(HSOpts.UseStandardCXXIncludes);
   Record.push_back(HSOpts.UseLibcxx);
   // Write out the specific module cache path that contains the module files.
-  AddString(PP.getHeaderSearchInfo().getModuleCachePath(), Record);
+  // FIXME: We already wrote out the normalized cache path. Just write the
+  // context hash (unless suppressed).
+  AddString(PP.getHeaderSearchInfo().getSpecificModuleCachePath(), Record);
   Stream.EmitRecord(HEADER_SEARCH_OPTIONS, Record);
 
   // Preprocessor options.
@@ -3515,7 +3518,7 @@ void ASTWriter::WriteFileDeclIDsMap() {
 
 void ASTWriter::WriteComments(ASTContext &Context) {
   Stream.EnterSubblock(COMMENTS_BLOCK_ID, 3);
-  auto _ = llvm::make_scope_exit([this] { Stream.ExitBlock(); });
+  llvm::scope_exit _([this] { Stream.ExitBlock(); });
   if (!PP->getPreprocessorOpts().WriteCommentListToPCH)
     return;
 
@@ -4446,15 +4449,15 @@ public:
       if (Chain && isa<NamespaceDecl>(D) && D->isFromASTFile() &&
           D == Chain->getKeyDeclaration(D)) {
         // In ASTReader, we stored only the key declaration of a namespace decl
-        // for this TU rather than storing all of the key declarations from each
-        // imported module. If we have an external namespace decl, this is that
-        // key declaration and we need to re-expand it to write out all of the
-        // key declarations from each imported module again.
+        // for this TU. If we have an external namespace decl, this is that
+        // key declaration and we need to re-expand it to write out the first
+        // decl from each module.
         //
         // See comment 'ASTReader::FindExternalVisibleDeclsByName' for details.
-        Chain->forEachImportedKeyDecl(D, [&AddDecl](const Decl *D) {
-          AddDecl(cast<NamedDecl>(const_cast<Decl *>(D)));
-        });
+        auto Firsts =
+            Writer.CollectFirstDeclFromEachModule(D, /*IncludeLocal=*/false);
+        for (const auto &[_, First] : Firsts)
+          AddDecl(cast<NamedDecl>(const_cast<Decl *>(First)));
       } else {
         AddDecl(D);
       }
@@ -5248,6 +5251,16 @@ void ASTWriter::WriteModuleFileExtension(Sema &SemaRef,
 
   // Exit the extension block.
   Stream.ExitBlock();
+}
+
+void ASTWriter::WriteRISCVIntrinsicPragmas(Sema &SemaRef) {
+  RecordData Record;
+  // Need to update this when new intrinsic class is added.
+  Record.push_back(/*size*/ 3);
+  Record.push_back(SemaRef.RISCV().DeclareRVVBuiltins);
+  Record.push_back(SemaRef.RISCV().DeclareSiFiveVectorBuiltins);
+  Record.push_back(SemaRef.RISCV().DeclareAndesVectorBuiltins);
+  Stream.EmitRecord(RISCV_VECTOR_INTRINSICS_PRAGMA, Record);
 }
 
 //===----------------------------------------------------------------------===//
@@ -6148,6 +6161,7 @@ ASTFileSignature ASTWriter::WriteASTCore(Sema *SemaPtr, StringRef isysroot,
     WriteFPPragmaOptions(SemaPtr->CurFPFeatureOverrides());
     WriteOpenCLExtensions(*SemaPtr);
     WriteCUDAPragmas(*SemaPtr);
+    WriteRISCVIntrinsicPragmas(*SemaPtr);
   }
 
   // If we're emitting a module, write out the submodule information.
@@ -6918,6 +6932,19 @@ TypeID ASTWriter::GetOrCreateTypeID(ASTContext &Context, QualType T) {
     }
     return Idx;
   });
+}
+
+llvm::MapVector<ModuleFile *, const Decl *>
+ASTWriter::CollectFirstDeclFromEachModule(const Decl *D, bool IncludeLocal) {
+  llvm::MapVector<ModuleFile *, const Decl *> Firsts;
+  // FIXME: We can skip entries that we know are implied by others.
+  for (const Decl *R = D->getMostRecentDecl(); R; R = R->getPreviousDecl()) {
+    if (R->isFromASTFile())
+      Firsts[Chain->getOwningModuleFile(R)] = R;
+    else if (IncludeLocal)
+      Firsts[nullptr] = R;
+  }
+  return Firsts;
 }
 
 void ASTWriter::AddLookupOffsets(const LookupBlockOffsets &Offsets,
@@ -7984,6 +8011,11 @@ void OMPClauseWriter::VisitOMPThreadsetClause(OMPThreadsetClause *C) {
   Record.writeEnum(C->getThreadsetKind());
 }
 
+void OMPClauseWriter::VisitOMPTransparentClause(OMPTransparentClause *C) {
+  Record.AddSourceLocation(C->getLParenLoc());
+  Record.AddStmt(C->getImpexType());
+}
+
 void OMPClauseWriter::VisitOMPProcBindClause(OMPProcBindClause *C) {
   Record.push_back(unsigned(C->getProcBindKind()));
   Record.AddSourceLocation(C->getLParenLoc());
@@ -8541,6 +8573,8 @@ void OMPClauseWriter::VisitOMPUseDevicePtrClause(OMPUseDevicePtrClause *C) {
   Record.push_back(C->getTotalComponentListNum());
   Record.push_back(C->getTotalComponentsNum());
   Record.AddSourceLocation(C->getLParenLoc());
+  Record.writeEnum(C->getFallbackModifier());
+  Record.AddSourceLocation(C->getFallbackModifierLoc());
   for (auto *E : C->varlist())
     Record.AddStmt(E);
   for (auto *VE : C->private_copies())

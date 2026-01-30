@@ -243,7 +243,8 @@ class SyntheticStackFrameList : public StackFrameList {
 public:
   SyntheticStackFrameList(Thread &thread, lldb::StackFrameListSP input_frames,
                           const lldb::StackFrameListSP &prev_frames_sp,
-                          bool show_inline_frames);
+                          bool show_inline_frames,
+                          lldb::SyntheticFrameProviderSP provider_sp);
 
 protected:
   /// Override FetchFramesUpTo to lazily return frames from the provider
@@ -255,6 +256,9 @@ private:
   /// The input stack frame list that the provider transforms.
   /// This could be a real StackFrameList or another SyntheticStackFrameList.
   lldb::StackFrameListSP m_input_frames;
+
+  /// The provider that transforms the input frames.
+  lldb::SyntheticFrameProviderSP m_provider;
 };
 
 } // namespace lldb_private

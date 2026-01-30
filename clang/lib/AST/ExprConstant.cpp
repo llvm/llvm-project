@@ -1973,10 +1973,12 @@ APValue *EvalInfo::createHeapAlloc(const Expr *E, QualType T, LValue &LV) {
 
 /// Produce a string describing the given constexpr call.
 void CallStackFrame::describe(raw_ostream &Out) const {
-  unsigned ArgIndex = 0;
-  bool IsMemberCall =
-      isa<CXXMethodDecl>(Callee) && !isa<CXXConstructorDecl>(Callee) &&
-      cast<CXXMethodDecl>(Callee)->isImplicitObjectMemberFunction();
+  bool IsMemberCall = false;
+  bool ExplicitInstanceParam = false;
+  if (const auto *MD = dyn_cast<CXXMethodDecl>(Callee)) {
+    IsMemberCall = !isa<CXXConstructorDecl>(MD) && !MD->isStatic();
+    ExplicitInstanceParam = MD->isExplicitObjectMemberFunction();
+  }
 
   if (!IsMemberCall)
     Callee->getNameForDiagnostic(Out, Info.Ctx.getPrintingPolicy(),
@@ -2007,25 +2009,19 @@ void CallStackFrame::describe(raw_ostream &Out) const {
     }
     Callee->getNameForDiagnostic(Out, Info.Ctx.getPrintingPolicy(),
                                  /*Qualified=*/false);
-    IsMemberCall = false;
   }
 
   Out << '(';
 
-  for (FunctionDecl::param_const_iterator I = Callee->param_begin(),
-       E = Callee->param_end(); I != E; ++I, ++ArgIndex) {
-    if (ArgIndex > (unsigned)IsMemberCall)
-      Out << ", ";
-
-    const ParmVarDecl *Param = *I;
-    APValue *V = Info.getParamSlot(Arguments, Param);
+  llvm::ListSeparator Comma;
+  for (const ParmVarDecl *Param :
+       Callee->parameters().slice(ExplicitInstanceParam)) {
+    Out << Comma;
+    const APValue *V = Info.getParamSlot(Arguments, Param);
     if (V)
       V->printPretty(Out, Info.Ctx, Param->getType());
     else
       Out << "<...>";
-
-    if (ArgIndex == 0 && IsMemberCall)
-      Out << "->" << *Callee << '(';
   }
 
   Out << ')';
@@ -2407,9 +2403,11 @@ static bool CheckLValueConstantExpression(EvalInfo &Info, SourceLocation Loc,
         return false;
 
       // A dllimport variable never acts like a constant, unless we're
-      // evaluating a value for use only in name mangling.
-      if (!isForManglingOnly(Kind) && Var->hasAttr<DLLImportAttr>())
-        // FIXME: Diagnostic!
+      // evaluating a value for use only in name mangling, and unless it's a
+      // static local. For the latter case, we'd still need to evaluate the
+      // constant expression in case we're inside a (inlined) function.
+      if (!isForManglingOnly(Kind) && Var->hasAttr<DLLImportAttr>() &&
+          !Var->isStaticLocal())
         return false;
 
       // In CUDA/HIP device compilation, only device side variables have
@@ -4633,8 +4631,8 @@ static CompleteObject findCompleteObject(EvalInfo &Info, const Expr *E,
     std::tie(Frame, Depth) =
         Info.getCallFrameAndDepth(LVal.getLValueCallIndex());
     if (!Frame) {
-      Info.FFDiag(E, diag::note_constexpr_lifetime_ended, 1)
-        << AK << LVal.Base.is<const ValueDecl*>();
+      Info.FFDiag(E, diag::note_constexpr_access_uninit, 1)
+          << AK << /*Indeterminate=*/false << E->getSourceRange();
       NoteLValueLocation(Info, LVal.Base);
       return CompleteObject();
     }
@@ -12278,6 +12276,42 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         return Success(APValue(ResultElements.data(), SourceLen), E);
       };
 
+  auto EvaluateFpBinOpExpr =
+      [&](llvm::function_ref<std::optional<APFloat>(
+              const APFloat &, const APFloat &, std::optional<APSInt>)>
+              Fn) {
+        assert(E->getNumArgs() == 2 || E->getNumArgs() == 3);
+        APValue A, B;
+        if (!EvaluateAsRValue(Info, E->getArg(0), A) ||
+            !EvaluateAsRValue(Info, E->getArg(1), B))
+          return false;
+
+        assert(A.isVector() && B.isVector());
+        assert(A.getVectorLength() == B.getVectorLength());
+
+        std::optional<APSInt> RoundingMode;
+        if (E->getNumArgs() == 3) {
+          APSInt Imm;
+          if (!EvaluateInteger(E->getArg(2), Imm, Info))
+            return false;
+          RoundingMode = Imm;
+        }
+
+        unsigned NumElems = A.getVectorLength();
+        SmallVector<APValue, 4> ResultElements;
+        ResultElements.reserve(NumElems);
+
+        for (unsigned EltNum = 0; EltNum < NumElems; ++EltNum) {
+          const APFloat &EltA = A.getVectorElt(EltNum).getFloat();
+          const APFloat &EltB = B.getVectorElt(EltNum).getFloat();
+          std::optional<APFloat> Result = Fn(EltA, EltB, RoundingMode);
+          if (!Result)
+            return false;
+          ResultElements.push_back(APValue(*Result));
+        }
+        return Success(APValue(ResultElements.data(), NumElems), E);
+      };
+
   auto EvalSelectScalar = [&](unsigned Len) -> bool {
     APSInt Mask;
     APValue AVal, WVal;
@@ -12384,6 +12418,41 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
       ResultElements.push_back(SourceVec.getVectorElt(Idx * RetLen + I));
 
     return Success(APValue(ResultElements.data(), RetLen), E);
+  }
+
+  case clang::X86::BI__builtin_ia32_cvtmask2b128:
+  case clang::X86::BI__builtin_ia32_cvtmask2b256:
+  case clang::X86::BI__builtin_ia32_cvtmask2b512:
+  case clang::X86::BI__builtin_ia32_cvtmask2w128:
+  case clang::X86::BI__builtin_ia32_cvtmask2w256:
+  case clang::X86::BI__builtin_ia32_cvtmask2w512:
+  case clang::X86::BI__builtin_ia32_cvtmask2d128:
+  case clang::X86::BI__builtin_ia32_cvtmask2d256:
+  case clang::X86::BI__builtin_ia32_cvtmask2d512:
+  case clang::X86::BI__builtin_ia32_cvtmask2q128:
+  case clang::X86::BI__builtin_ia32_cvtmask2q256:
+  case clang::X86::BI__builtin_ia32_cvtmask2q512: {
+    assert(E->getNumArgs() == 1);
+    APSInt Mask;
+    if (!EvaluateInteger(E->getArg(0), Mask, Info))
+      return false;
+
+    QualType VecTy = E->getType();
+    const VectorType *VT = VecTy->castAs<VectorType>();
+    unsigned VectorLen = VT->getNumElements();
+    QualType ElemTy = VT->getElementType();
+    unsigned ElemWidth = Info.Ctx.getTypeSize(ElemTy);
+
+    SmallVector<APValue, 16> Elems;
+    for (unsigned I = 0; I != VectorLen; ++I) {
+      bool BitSet = Mask[I];
+      APSInt ElemVal(ElemWidth, /*isUnsigned=*/false);
+      if (BitSet) {
+        ElemVal.setAllBits();
+      }
+      Elems.push_back(APValue(ElemVal));
+    }
+    return Success(APValue(Elems.data(), VectorLen), E);
   }
 
   case X86::BI__builtin_ia32_extracti32x4_256_mask:
@@ -12592,12 +12661,7 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
   case X86::BI__builtin_ia32_packuswb256:
   case X86::BI__builtin_ia32_packuswb512:
     return evalPackBuiltin(E, Info, Result, [](const APSInt &Src) {
-      unsigned DstBits = Src.getBitWidth() / 2;
-      if (Src.isNegative())
-        return APInt::getZero(DstBits);
-      if (Src.isIntN(DstBits))
-        return APInt((Src).trunc(DstBits));
-      return APInt::getAllOnes(DstBits);
+      return APSInt(Src).truncSSatU(Src.getBitWidth() / 2);
     });
   case clang::X86::BI__builtin_ia32_selectss_128:
     return EvalSelectScalar(4);
@@ -14311,6 +14375,46 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     return Success(R, E);
   }
 
+  case clang::X86::BI__builtin_ia32_minps:
+  case clang::X86::BI__builtin_ia32_minpd:
+  case clang::X86::BI__builtin_ia32_minps256:
+  case clang::X86::BI__builtin_ia32_minpd256:
+  case clang::X86::BI__builtin_ia32_minps512:
+  case clang::X86::BI__builtin_ia32_minpd512:
+  case clang::X86::BI__builtin_ia32_minph128:
+  case clang::X86::BI__builtin_ia32_minph256:
+  case clang::X86::BI__builtin_ia32_minph512:
+    return EvaluateFpBinOpExpr(
+        [](const APFloat &A, const APFloat &B,
+           std::optional<APSInt>) -> std::optional<APFloat> {
+          if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
+              B.isInfinity() || B.isDenormal())
+            return std::nullopt;
+          if (A.isZero() && B.isZero())
+            return B;
+          return llvm::minimum(A, B);
+        });
+
+  case clang::X86::BI__builtin_ia32_maxps:
+  case clang::X86::BI__builtin_ia32_maxpd:
+  case clang::X86::BI__builtin_ia32_maxps256:
+  case clang::X86::BI__builtin_ia32_maxpd256:
+  case clang::X86::BI__builtin_ia32_maxps512:
+  case clang::X86::BI__builtin_ia32_maxpd512:
+  case clang::X86::BI__builtin_ia32_maxph128:
+  case clang::X86::BI__builtin_ia32_maxph256:
+  case clang::X86::BI__builtin_ia32_maxph512:
+    return EvaluateFpBinOpExpr(
+        [](const APFloat &A, const APFloat &B,
+           std::optional<APSInt>) -> std::optional<APFloat> {
+          if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
+              B.isInfinity() || B.isDenormal())
+            return std::nullopt;
+          if (A.isZero() && B.isZero())
+            return B;
+          return llvm::maximum(A, B);
+        });
+
   case clang::X86::BI__builtin_ia32_vcvtps2ph:
   case clang::X86::BI__builtin_ia32_vcvtps2ph256: {
     APValue SrcVec;
@@ -14384,6 +14488,32 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
     }
 
     return Success(ResultElements, E);
+  }
+  case X86::BI__builtin_ia32_vperm2f128_pd256:
+  case X86::BI__builtin_ia32_vperm2f128_ps256:
+  case X86::BI__builtin_ia32_vperm2f128_si256:
+  case X86::BI__builtin_ia32_permti256: {
+    unsigned NumElements =
+        E->getArg(0)->getType()->getAs<VectorType>()->getNumElements();
+    unsigned PreservedBitsCnt = NumElements >> 2;
+    APValue R;
+    if (!evalShuffleGeneric(
+            Info, E, R,
+            [PreservedBitsCnt](unsigned DstIdx, unsigned ShuffleMask) {
+              unsigned ControlBitsCnt = DstIdx >> PreservedBitsCnt << 2;
+              unsigned ControlBits = ShuffleMask >> ControlBitsCnt;
+
+              if (ControlBits & 0b1000)
+                return std::make_pair(0u, -1);
+
+              unsigned SrcVecIdx = (ControlBits & 0b10) >> 1;
+              unsigned PreservedBitsMask = (1 << PreservedBitsCnt) - 1;
+              int SrcIdx = ((ControlBits & 0b1) << PreservedBitsCnt) |
+                           (DstIdx & PreservedBitsMask);
+              return std::make_pair(SrcVecIdx, SrcIdx);
+            }))
+      return false;
+    return Success(R, E);
   }
   }
 }
@@ -15892,9 +16022,43 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     return Success(APValue(ResultInt), E);
   };
 
+  auto HandleCRC32 = [&](unsigned DataBytes) -> bool {
+    APSInt CRC, Data;
+    if (!EvaluateInteger(E->getArg(0), CRC, Info) ||
+        !EvaluateInteger(E->getArg(1), Data, Info))
+      return false;
+
+    uint64_t CRCVal = CRC.getZExtValue();
+    uint64_t DataVal = Data.getZExtValue();
+
+    // CRC32C polynomial (iSCSI polynomial, bit-reversed)
+    static const uint32_t CRC32C_POLY = 0x82F63B78;
+
+    // Process each byte
+    uint32_t Result = static_cast<uint32_t>(CRCVal);
+    for (unsigned I = 0; I != DataBytes; ++I) {
+      uint8_t Byte = static_cast<uint8_t>((DataVal >> (I * 8)) & 0xFF);
+      Result ^= Byte;
+      for (int J = 0; J != 8; ++J) {
+        Result = (Result >> 1) ^ ((Result & 1) ? CRC32C_POLY : 0);
+      }
+    }
+
+    return Success(Result, E);
+  };
+
   switch (BuiltinOp) {
   default:
     return false;
+
+  case X86::BI__builtin_ia32_crc32qi:
+    return HandleCRC32(1);
+  case X86::BI__builtin_ia32_crc32hi:
+    return HandleCRC32(2);
+  case X86::BI__builtin_ia32_crc32si:
+    return HandleCRC32(4);
+  case X86::BI__builtin_ia32_crc32di:
+    return HandleCRC32(8);
 
   case Builtin::BI__builtin_dynamic_object_size:
   case Builtin::BI__builtin_object_size: {
@@ -16391,34 +16555,46 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
   case Builtin::BI__builtin_rotateleft16:
   case Builtin::BI__builtin_rotateleft32:
   case Builtin::BI__builtin_rotateleft64:
-  case Builtin::BI_rotl8: // Microsoft variants of rotate right
-  case Builtin::BI_rotl16:
-  case Builtin::BI_rotl:
-  case Builtin::BI_lrotl:
-  case Builtin::BI_rotl64: {
-    APSInt Val, Amt;
-    if (!EvaluateInteger(E->getArg(0), Val, Info) ||
-        !EvaluateInteger(E->getArg(1), Amt, Info))
-      return false;
-
-    return Success(Val.rotl(Amt), E);
-  }
-
   case Builtin::BI__builtin_rotateright8:
   case Builtin::BI__builtin_rotateright16:
   case Builtin::BI__builtin_rotateright32:
   case Builtin::BI__builtin_rotateright64:
+  case Builtin::BI__builtin_stdc_rotate_left:
+  case Builtin::BI__builtin_stdc_rotate_right:
+  case Builtin::BI_rotl8: // Microsoft variants of rotate left
+  case Builtin::BI_rotl16:
+  case Builtin::BI_rotl:
+  case Builtin::BI_lrotl:
+  case Builtin::BI_rotl64:
   case Builtin::BI_rotr8: // Microsoft variants of rotate right
   case Builtin::BI_rotr16:
   case Builtin::BI_rotr:
   case Builtin::BI_lrotr:
   case Builtin::BI_rotr64: {
-    APSInt Val, Amt;
-    if (!EvaluateInteger(E->getArg(0), Val, Info) ||
-        !EvaluateInteger(E->getArg(1), Amt, Info))
+    APSInt Value, Amount;
+    if (!EvaluateInteger(E->getArg(0), Value, Info) ||
+        !EvaluateInteger(E->getArg(1), Amount, Info))
       return false;
 
-    return Success(Val.rotr(Amt), E);
+    Amount = NormalizeRotateAmount(Value, Amount);
+
+    switch (BuiltinOp) {
+    case Builtin::BI__builtin_rotateright8:
+    case Builtin::BI__builtin_rotateright16:
+    case Builtin::BI__builtin_rotateright32:
+    case Builtin::BI__builtin_rotateright64:
+    case Builtin::BI__builtin_stdc_rotate_right:
+    case Builtin::BI_rotr8:
+    case Builtin::BI_rotr16:
+    case Builtin::BI_rotr:
+    case Builtin::BI_lrotr:
+    case Builtin::BI_rotr64:
+      return Success(
+          APSInt(Value.rotr(Amount.getZExtValue()), Value.isUnsigned()), E);
+    default:
+      return Success(
+          APSInt(Value.rotl(Amount.getZExtValue()), Value.isUnsigned()), E);
+    }
   }
 
   case Builtin::BI__builtin_elementwise_add_sat: {
@@ -18661,12 +18837,15 @@ bool IntExprEvaluator::VisitCastExpr(const CastExpr *E) {
 
     if (!Result.isInt()) {
       // Allow casts of address-of-label differences if they are no-ops
-      // or narrowing.  (The narrowing case isn't actually guaranteed to
+      // or narrowing, if the result is at least 32 bits wide.
+      // (The narrowing case isn't actually guaranteed to
       // be constant-evaluatable except in some narrow cases which are hard
       // to detect here.  We let it through on the assumption the user knows
       // what they are doing.)
-      if (Result.isAddrLabelDiff())
-        return Info.Ctx.getTypeSize(DestType) <= Info.Ctx.getTypeSize(SrcType);
+      if (Result.isAddrLabelDiff()) {
+        unsigned DestBits = Info.Ctx.getTypeSize(DestType);
+        return DestBits >= 32 && DestBits <= Info.Ctx.getTypeSize(SrcType);
+      }
       // Only allow casts of lvalues if they are lossless.
       return Info.Ctx.getTypeSize(DestType) == Info.Ctx.getTypeSize(SrcType);
     }
@@ -19796,6 +19975,46 @@ void HandleComplexComplexDiv(APFloat A, APFloat B, APFloat C, APFloat D,
   }
 }
 
+APSInt NormalizeRotateAmount(const APSInt &Value, const APSInt &Amount) {
+  // Normalize shift amount to [0, BitWidth) range to match runtime behavior
+  APSInt NormAmt = Amount;
+  unsigned BitWidth = Value.getBitWidth();
+  unsigned AmtBitWidth = NormAmt.getBitWidth();
+  if (BitWidth == 1) {
+    // Rotating a 1-bit value is always a no-op
+    NormAmt = APSInt(APInt(AmtBitWidth, 0), NormAmt.isUnsigned());
+  } else if (BitWidth == 2) {
+    // For 2-bit values: rotation amount is 0 or 1 based on
+    // whether the amount is even or odd. We can't use srem here because
+    // the divisor (2) would be misinterpreted as -2 in 2-bit signed arithmetic.
+    NormAmt =
+        APSInt(APInt(AmtBitWidth, NormAmt[0] ? 1 : 0), NormAmt.isUnsigned());
+  } else {
+    APInt Divisor;
+    if (AmtBitWidth > BitWidth) {
+      Divisor = llvm::APInt(AmtBitWidth, BitWidth);
+    } else {
+      Divisor = llvm::APInt(BitWidth, BitWidth);
+      if (AmtBitWidth < BitWidth) {
+        NormAmt = NormAmt.extend(BitWidth);
+      }
+    }
+
+    // Normalize to [0, BitWidth)
+    if (NormAmt.isSigned()) {
+      NormAmt = APSInt(NormAmt.srem(Divisor), /*isUnsigned=*/false);
+      if (NormAmt.isNegative()) {
+        APSInt SignedDivisor(Divisor, /*isUnsigned=*/false);
+        NormAmt += SignedDivisor;
+      }
+    } else {
+      NormAmt = APSInt(NormAmt.urem(Divisor), /*isUnsigned=*/true);
+    }
+  }
+
+  return NormAmt;
+}
+
 bool ComplexExprEvaluator::VisitBinaryOperator(const BinaryOperator *E) {
   if (E->isPtrMemOp() || E->isAssignmentOp() || E->getOpcode() == BO_Comma)
     return ExprEvaluatorBaseTy::VisitBinaryOperator(E);
@@ -20887,6 +21106,7 @@ static ICEDiag CheckICE(const Expr* E, const ASTContext &Ctx) {
   case Expr::ImaginaryLiteralClass:
   case Expr::StringLiteralClass:
   case Expr::ArraySubscriptExprClass:
+  case Expr::MatrixSingleSubscriptExprClass:
   case Expr::MatrixSubscriptExprClass:
   case Expr::ArraySectionExprClass:
   case Expr::OMPArrayShapingExprClass:

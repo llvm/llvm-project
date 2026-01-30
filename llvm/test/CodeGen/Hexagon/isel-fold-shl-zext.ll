@@ -10,7 +10,7 @@ target datalayout = "e-m:e-p:32:32:32-a:0-n16:32-i64:64:64-i32:32:32-i16:16:16-i
 target triple = "hexagon"
 
 ; Function Attrs: nofree nosync nounwind memory(readwrite, inaccessiblemem: none)
-define dso_local void @foo(i64* nocapture noundef %buf, i32 %a, i32 %b) local_unnamed_addr {
+define dso_local void @foo(ptr nocapture noundef %buf, i32 %a, i32 %b) local_unnamed_addr {
 ; CHECK-LABEL: foo:
 ; CHECK:         .cfi_startproc
 ; CHECK-NEXT:  // %bb.0: // %entry
@@ -26,7 +26,7 @@ define dso_local void @foo(i64* nocapture noundef %buf, i32 %a, i32 %b) local_un
 ; CHECK-NEXT:     memd(r0+#8) = r3:2
 ; CHECK-NEXT:    }
 entry:
-  %arrayidx = getelementptr inbounds i64, i64* %buf, i32 1
+  %arrayidx = getelementptr inbounds i64, ptr %buf, i32 1
   %add0 = shl nsw i32 %a, 1
   %add1 = add nsw i32 %add0, %b
   %add2 = add nsw i32 %add1, %add0
@@ -34,6 +34,6 @@ entry:
   %shift0 = shl nuw i64 %ext0, 32
   %ext1 = zext i32 %add2 to i64
   %or0 = or i64 %shift0, %ext1
-  store i64 %or0, i64* %arrayidx, align 8
+  store i64 %or0, ptr %arrayidx, align 8
   ret void
 }

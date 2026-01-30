@@ -328,7 +328,7 @@ def : GCNPat<(i32 (int_amdgcn_set_inactive_chain_arg i32:$src, i32:$inactive)),
 
 multiclass
     AMDGPUWaveReducePseudoGenerator<string Op, string DataType, ValueType ty, RegisterClass RetReg, SrcRegOrImm9 Reg> {
-  let usesCustomInserter = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC] in {
+  let usesCustomInserter = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0, UseNamedOperandTable = 1, Uses = [EXEC] in {
     def !toupper(Op) #"_PSEUDO_" #DataType
         : VPseudoInstSI<(outs RetReg : $sdst),
                         (ins Reg : $src, VSrc_b32 : $strategy),
@@ -373,9 +373,13 @@ defvar Operations = [
   WaveReduceOp<"xor", "B64", i64, SGPR_64, VSrc_b64>,
 
   WaveReduceOp<"fmin", "F32", f32, SGPR_32, VSrc_b32>,
+  WaveReduceOp<"fmin", "F64", f64, SGPR_64, VSrc_b64>,
   WaveReduceOp<"fmax", "F32", f32, SGPR_32, VSrc_b32>,
+  WaveReduceOp<"fmax", "F64", f64, SGPR_64, VSrc_b64>,
   WaveReduceOp<"fadd", "F32", f32, SGPR_32, VSrc_b32>,
+  WaveReduceOp<"fadd", "F64", f64, SGPR_64, VSrc_b64>,
   WaveReduceOp<"fsub", "F32", f32, SGPR_32, VSrc_b32>,
+  WaveReduceOp<"fsub", "F64", f64, SGPR_64, VSrc_b64>,
 ];
 
 foreach Op = Operations in {
@@ -1357,22 +1361,22 @@ multiclass f16_to_fp_Pats<Instruction cvt_f16_f32_inst_e64, Instruction cvt_f32_
   >;
 
   def : GCNPat <
-    (f32 (f16_to_fp (and_oneuse i32:$src0, 0x7fff))),
+    (f32 (any_f16_to_fp (and_oneuse i32:$src0, 0x7fff))),
     (cvt_f32_f16_inst_e64 SRCMODS.ABS, $src0)
   >;
 
   def : GCNPat <
-    (f32 (f16_to_fp (i32 (srl_oneuse (and_oneuse i32:$src0, 0x7fff0000), (i32 16))))),
+    (f32 (any_f16_to_fp (i32 (srl_oneuse (and_oneuse i32:$src0, 0x7fff0000), (i32 16))))),
     (cvt_f32_f16_inst_e64 SRCMODS.ABS, (i32 (V_LSHRREV_B32_e64 (i32 16), i32:$src0)))
   >;
 
   def : GCNPat <
-    (f32 (f16_to_fp (or_oneuse i32:$src0, 0x8000))),
+    (f32 (any_f16_to_fp (or_oneuse i32:$src0, 0x8000))),
     (cvt_f32_f16_inst_e64 SRCMODS.NEG_ABS, $src0)
   >;
 
   def : GCNPat <
-    (f32 (f16_to_fp (xor_oneuse i32:$src0, 0x8000))),
+    (f32 (any_f16_to_fp (xor_oneuse i32:$src0, 0x8000))),
     (cvt_f32_f16_inst_e64 SRCMODS.NEG, $src0)
   >;
 
@@ -2276,9 +2280,31 @@ def : GCNPat <
 >;
 
 def : GCNPat <
+  (UniformBinFrag<fcopysign> (fp16vt fpimm_pos_zero), fp16vt:$src1),
+  (S_AND_B32 (S_MOV_B32 (i32 0x00008000)), SReg_32:$src1)
+>;
+
+def : GCNPat <
+  (fcopysign (fp16vt fpimm_pos_zero), fp16vt:$src1),
+  (V_AND_B32_e32 (S_MOV_B32 (i32 0x00008000)), VGPR_32:$src1)
+>;
+
+def : GCNPat <
   (fcopysign f32:$src0, fp16vt:$src1),
   (V_BFI_B32_e64 (S_MOV_B32 (i32 0x7fffffff)), $src0,
              (V_LSHLREV_B32_e64 (i32 16), $src1))
+>;
+
+def : GCNPat <
+  (UniformBinFrag<fcopysign> (f32 fpimm_pos_zero), fp16vt:$src1),
+  (S_AND_B32 (S_MOV_B32 (i32 0x80000000)),
+             (S_LSHL_B32 SReg_32:$src1, (i32 16)))
+>;
+
+def : GCNPat <
+  (fcopysign (f32 fpimm_pos_zero), fp16vt:$src1),
+  (V_AND_B32_e32 (S_MOV_B32 (i32 0x80000000)),
+                 (V_LSHLREV_B32_e64 (i32 16), VGPR_32:$src1))
 >;
 
 def : GCNPat <
@@ -2296,6 +2322,18 @@ def : GCNPat <
 >;
 
 def : GCNPat <
+  (UniformBinFrag<fcopysign> (fp16vt fpimm_pos_zero), f32:$src1),
+  (S_AND_B32 (S_MOV_B32 (i32 0x00008000)),
+             (S_LSHR_B32 SReg_32:$src1, (i32 16)))
+>;
+
+def : GCNPat <
+  (fcopysign (fp16vt fpimm_pos_zero), f32:$src1),
+  (V_AND_B32_e32 (S_MOV_B32 (i32 0x00008000)),
+                 (V_LSHRREV_B32_e64 (i32 16), VGPR_32:$src1))
+>;
+
+def : GCNPat <
   (fcopysign fp16vt:$src0, f64:$src1),
   (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)), $src0,
              (V_LSHRREV_B32_e64 (i32 16), (EXTRACT_SUBREG $src1, sub1)))
@@ -2309,10 +2347,25 @@ def : GCNPat <
     (REG_SEQUENCE VGPR_32, $src1, lo16, (i16 (IMPLICIT_DEF)), hi16)), lo16)
 >;
 
+// TODO: Scalar case for 0 magnitude special case
+def : GCNPat <
+  (fcopysign (fp16vt fpimm_pos_zero), fp16vt:$src1),
+  (V_AND_B16_t16_e64 0, (S_MOV_B32 (i32 0x00008000)), 0, VGPR_16:$src1)
+>;
+
+// TODO: Handle 0 magnitude special case
 def : GCNPat <
   (fcopysign f32:$src0, fp16vt:$src1),
   (V_BFI_B32_e64 (S_MOV_B32 (i32 0x7fffffff)), $src0,
              (REG_SEQUENCE VGPR_32, (i16 (IMPLICIT_DEF)), lo16, $src1, hi16))
+>;
+
+// TODO: Scalar case for 0 magnitude special case
+def : GCNPat <
+  (fcopysign (f32 fpimm_pos_zero), fp16vt:$src1),
+  (REG_SEQUENCE VGPR_32,
+    (V_MOV_B16_t16_e64 0, (i16 0), 0), lo16,
+    (V_AND_B16_t16_e64 0, (S_MOV_B32 (i32 0x00008000)), 0, VGPR_16:$src1), hi16)
 >;
 
 def : GCNPat <
@@ -2330,6 +2383,13 @@ def : GCNPat <
              (V_LSHRREV_B32_e64 (i32 16), $src1)), lo16)
 >;
 
+// TODO: Scalar case for 0 magnitude special case
+def : GCNPat <
+  (fcopysign (fp16vt fpimm_pos_zero), f32:$src1),
+  (V_AND_B16_t16_e64 0, (S_MOV_B32 (i32 0x00008000)),
+                     0, (EXTRACT_SUBREG VGPR_32:$src1, hi16))
+>;
+
 def : GCNPat <
   (fcopysign fp16vt:$src0, f64:$src1),
   (V_BFI_B32_e64 (S_MOV_B32 (i32 0x00007fff)),
@@ -2345,6 +2405,16 @@ foreach fp16vt = [v2f16, v2bf16] in {
 def : GCNPat <
   (fcopysign fp16vt:$src0, fp16vt:$src1),
   (V_BFI_B32_e64 (S_MOV_B32 (i32 0x7fff7fff)), $src0, $src1)
+>;
+
+def : GCNPat <
+  (UniformBinFrag<fcopysign> build_vector_fpimm_pos_zero_v2<fp16vt>, fp16vt:$src1),
+  (S_AND_B32 (S_MOV_B32 (i32 0x80008000)), SReg_32:$src1)
+>;
+
+def : GCNPat <
+  (fcopysign build_vector_fpimm_pos_zero_v2<fp16vt>, fp16vt:$src1),
+  (V_AND_B32_e32 (S_MOV_B32 (i32 0x80008000)), VGPR_32:$src1)
 >;
 
 }
@@ -2676,9 +2746,31 @@ def : AMDGPUPat <
 >;
 
 def : AMDGPUPat <
+  (UniformBinFrag<fcopysign> (f32 fpimm_pos_zero), (f32 SReg_32:$src1)),
+  (S_AND_B32 (S_MOV_B32 (i32 0x80000000)), $src1)
+>;
+
+def : AMDGPUPat <
+  (fcopysign (f32 fpimm_pos_zero), (f32 VGPR_32:$src1)),
+  (V_AND_B32_e32 (S_MOV_B32 (i32 0x80000000)), $src1)
+>;
+
+def : AMDGPUPat <
   (fcopysign f32:$src0, f64:$src1),
   (V_BFI_B32_e64 (S_MOV_B32 (i32 0x7fffffff)), $src0,
              (i32 (EXTRACT_SUBREG SReg_64:$src1, sub1)))
+>;
+
+def : AMDGPUPat <
+  (UniformBinFrag<fcopysign> (f32 fpimm_pos_zero), SReg_64:$src1),
+  (S_AND_B32 (i32 (S_MOV_B32 (i32 0x80000000))),
+             (i32 (EXTRACT_SUBREG SReg_64:$src1, sub1)))
+>;
+
+def : AMDGPUPat <
+  (fcopysign (f32 fpimm_pos_zero), VReg_64:$src1),
+  (V_AND_B32_e32 (i32 (S_MOV_B32 (i32 0x80000000))),
+                 (i32 (EXTRACT_SUBREG SReg_64:$src1, sub1)))
 >;
 
 def : AMDGPUPat <
@@ -3668,8 +3760,6 @@ def : GCNPat <
                   SRCMODS.NONE, $src2)
 >;
 
-// COPY is workaround tablegen bug from multiple outputs
-// from S_LSHL_B32's multiple outputs from implicit scc def.
 let AddedComplexity = 1 in {
 def : GCNPat <
   (v2i16 (UniformBinFrag<build_vector> (i16 0), (i16 SReg_32:$src1))),
@@ -3688,7 +3778,7 @@ def : GCNPat <
 >;
 
 def : GCNPat <
-  (v2f16 (DivergentBinFrag<build_vector> (f16 VGPR_32:$src1), (f16 FP_ZERO))),
+  (v2f16 (DivergentBinFrag<build_vector> (f16 VGPR_32:$src1), (f16 fpimm_pos_zero))),
   (v2f16 (V_AND_B32_e64 (i32 (V_MOV_B32_e32 (i32 0xffff))), VGPR_32:$src1))
 >;
 }
@@ -3699,7 +3789,7 @@ def : GCNPat <
 >;
 
 def : GCNPat <
-  (v2f16 (UniformBinFrag<build_vector> (f16 SReg_32:$src1), (f16 FP_ZERO))),
+  (v2f16 (UniformBinFrag<build_vector> (f16 SReg_32:$src1), (f16 fpimm_pos_zero))),
   (S_AND_B32 (S_MOV_B32 (i32 0xffff)), SReg_32:$src1)
 >;
 

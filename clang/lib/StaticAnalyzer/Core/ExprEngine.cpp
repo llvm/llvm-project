@@ -72,6 +72,7 @@
 #include "llvm/Support/DOTGraphTraits.h"
 #include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/GraphWriter.h"
+#include "llvm/Support/IOSandbox.h"
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
@@ -2081,6 +2082,11 @@ void ExprEngine::Visit(const Stmt *S, ExplodedNode *Pred,
       Bldr.takeNodes(Pred);
       VisitArraySubscriptExpr(cast<ArraySubscriptExpr>(S), Pred, Dst);
       Bldr.addNodes(Dst);
+      break;
+
+    case Stmt::MatrixSingleSubscriptExprClass:
+      llvm_unreachable(
+          "Support for MatrixSingleSubscriptExprClass is not implemented.");
       break;
 
     case Stmt::MatrixSubscriptExprClass:
@@ -4104,6 +4110,8 @@ std::string ExprEngine::DumpGraph(bool trim, StringRef Filename) {
     return DumpGraph(Src, Filename);
   }
 
+  // FIXME(sandboxing): Remove this by adopting `llvm::vfs::OutputBackend`.
+  auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
   return llvm::WriteGraph(&G, "ExprEngine", /*ShortNames=*/false,
                           /*Title=*/"Exploded Graph",
                           /*Filename=*/std::string(Filename));
@@ -4118,6 +4126,8 @@ std::string ExprEngine::DumpGraph(ArrayRef<const ExplodedNode *> Nodes,
     return "";
   }
 
+  // FIXME(sandboxing): Remove this by adopting `llvm::vfs::OutputBackend`.
+  auto BypassSandbox = llvm::sys::sandbox::scopedDisable();
   return llvm::WriteGraph(TrimmedG.get(), "TrimmedExprEngine",
                           /*ShortNames=*/false,
                           /*Title=*/"Trimmed Exploded Graph",

@@ -212,11 +212,10 @@ void AvoidCStyleCastCheck::check(const MatchFinder::MatchResult &Result) {
     ReplaceWithNamedCast("static_cast");
     return;
   case CK_ConstructorConversion:
-    if (ConstructorCast) {
+    if (ConstructorCast)
       ReplaceWithConstructorCall();
-    } else {
+    else
       ReplaceWithNamedCast("static_cast");
-    }
     return;
   case CK_NoOp:
     if (FnToFnCast) {

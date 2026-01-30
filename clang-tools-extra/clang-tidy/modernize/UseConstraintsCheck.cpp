@@ -21,12 +21,12 @@ using namespace clang::ast_matchers;
 
 namespace clang::tidy::modernize {
 
+namespace {
 struct EnableIfData {
   TemplateSpecializationTypeLoc Loc;
   TypeLoc Outer;
 };
 
-namespace {
 AST_MATCHER(FunctionDecl, hasOtherDeclarations) {
   auto It = Node.redecls_begin();
   auto EndIt = Node.redecls_end();
@@ -270,11 +270,10 @@ findInsertionForConstraint(const FunctionDecl *Function, ASTContext &Context) {
   const LangOptions &LangOpts = Context.getLangOpts();
 
   if (const auto *Constructor = dyn_cast<CXXConstructorDecl>(Function)) {
-    for (const CXXCtorInitializer *Init : Constructor->inits()) {
+    for (const CXXCtorInitializer *Init : Constructor->inits())
       if (Init->getSourceOrder() == 0)
         return utils::lexer::findPreviousTokenKind(Init->getSourceLocation(),
                                                    SM, LangOpts, tok::colon);
-    }
     if (!Constructor->inits().empty())
       return std::nullopt;
   }

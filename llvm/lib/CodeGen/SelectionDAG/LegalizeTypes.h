@@ -326,6 +326,7 @@ private:
   SDValue PromoteIntRes_BUILD_PAIR(SDNode *N);
   SDValue PromoteIntRes_Constant(SDNode *N);
   SDValue PromoteIntRes_CTLZ(SDNode *N);
+  SDValue PromoteIntRes_CTLS(SDNode *N);
   SDValue PromoteIntRes_CTPOP_PARITY(SDNode *N);
   SDValue PromoteIntRes_CTTZ(SDNode *N);
   SDValue PromoteIntRes_VP_CttzElements(SDNode *N);
@@ -376,6 +377,7 @@ private:
   SDValue PromoteIntRes_Rotate(SDNode *N);
   SDValue PromoteIntRes_FunnelShift(SDNode *N);
   SDValue PromoteIntRes_VPFunnelShift(SDNode *N);
+  SDValue PromoteIntRes_CLMUL(SDNode *N);
   SDValue PromoteIntRes_IS_FPCLASS(SDNode *N);
   SDValue PromoteIntRes_PATCHPOINT(SDNode *N);
   SDValue PromoteIntRes_READ_REGISTER(SDNode *N);
@@ -387,6 +389,7 @@ private:
   // Integer Operand Promotion.
   bool PromoteIntegerOperand(SDNode *N, unsigned OpNo);
   SDValue PromoteIntOp_ANY_EXTEND(SDNode *N);
+  SDValue PromoteIntOp_ANY_EXTEND_VECTOR_INREG(SDNode *N);
   SDValue PromoteIntOp_ATOMIC_STORE(AtomicSDNode *N);
   SDValue PromoteIntOp_BITCAST(SDNode *N);
   SDValue PromoteIntOp_BUILD_PAIR(SDNode *N);
@@ -513,6 +516,7 @@ private:
 
   void ExpandIntRes_Rotate            (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_FunnelShift       (SDNode *N, SDValue &Lo, SDValue &Hi);
+  void ExpandIntRes_CLMUL(SDNode *N, SDValue &Lo, SDValue &Hi);
 
   void ExpandIntRes_VSCALE            (SDNode *N, SDValue &Lo, SDValue &Hi);
   void ExpandIntRes_READ_REGISTER(SDNode *N, SDValue &Lo, SDValue &Hi);
@@ -585,6 +589,7 @@ private:
   SDValue SoftenFloatRes_FASIN(SDNode *N);
   SDValue SoftenFloatRes_FATAN(SDNode *N);
   SDValue SoftenFloatRes_FATAN2(SDNode *N);
+  SDValue SoftenFloatRes_FCANONICALIZE(SDNode *N);
   SDValue SoftenFloatRes_FMINNUM(SDNode *N);
   SDValue SoftenFloatRes_FMAXNUM(SDNode *N);
   SDValue SoftenFloatRes_FMINIMUMNUM(SDNode *N);
@@ -766,44 +771,7 @@ private:
   }
   void SetPromotedFloat(SDValue Op, SDValue Result);
 
-  void PromoteFloatResult(SDNode *N, unsigned ResNo);
-  SDValue PromoteFloatRes_BITCAST(SDNode *N);
-  SDValue PromoteFloatRes_FREEZE(SDNode *N);
-  SDValue PromoteFloatRes_BinOp(SDNode *N);
-  SDValue PromoteFloatRes_UnaryWithTwoFPResults(SDNode *N);
-  SDValue PromoteFloatRes_ConstantFP(SDNode *N);
-  SDValue PromoteFloatRes_EXTRACT_VECTOR_ELT(SDNode *N);
-  SDValue PromoteFloatRes_FCOPYSIGN(SDNode *N);
-  SDValue PromoteFloatRes_FMAD(SDNode *N);
-  SDValue PromoteFloatRes_ExpOp(SDNode *N);
-  SDValue PromoteFloatRes_FFREXP(SDNode *N);
-  SDValue PromoteFloatRes_FP_ROUND(SDNode *N);
-  SDValue PromoteFloatRes_STRICT_FP_ROUND(SDNode *N);
-  SDValue PromoteFloatRes_LOAD(SDNode *N);
-  SDValue PromoteFloatRes_ATOMIC_LOAD(SDNode *N);
-  SDValue PromoteFloatRes_SELECT(SDNode *N);
-  SDValue PromoteFloatRes_SELECT_CC(SDNode *N);
-  SDValue PromoteFloatRes_UnaryOp(SDNode *N);
-  SDValue PromoteFloatRes_AssertNoFPClass(SDNode *N);
-  SDValue PromoteFloatRes_UNDEF(SDNode *N);
   SDValue BitcastToInt_ATOMIC_SWAP(SDNode *N);
-  SDValue PromoteFloatRes_XINT_TO_FP(SDNode *N);
-  SDValue PromoteFloatRes_VECREDUCE(SDNode *N);
-  SDValue PromoteFloatRes_VECREDUCE_SEQ(SDNode *N);
-
-  bool PromoteFloatOperand(SDNode *N, unsigned OpNo);
-  SDValue PromoteFloatOp_BITCAST(SDNode *N, unsigned OpNo);
-  SDValue PromoteFloatOp_FAKE_USE(SDNode *N, unsigned OpNo);
-  SDValue PromoteFloatOp_FCOPYSIGN(SDNode *N, unsigned OpNo);
-  SDValue PromoteFloatOp_FP_EXTEND(SDNode *N, unsigned OpNo);
-  SDValue PromoteFloatOp_STRICT_FP_EXTEND(SDNode *N, unsigned OpNo);
-  SDValue PromoteFloatOp_UnaryOp(SDNode *N, unsigned OpNo);
-  SDValue PromoteFloatOp_AssertNoFPClass(SDNode *N, unsigned OpNo);
-  SDValue PromoteFloatOp_FP_TO_XINT_SAT(SDNode *N, unsigned OpNo);
-  SDValue PromoteFloatOp_STORE(SDNode *N, unsigned OpNo);
-  SDValue PromoteFloatOp_ATOMIC_STORE(SDNode *N, unsigned OpNo);
-  SDValue PromoteFloatOp_SELECT_CC(SDNode *N, unsigned OpNo);
-  SDValue PromoteFloatOp_SETCC(SDNode *N, unsigned OpNo);
 
   //===--------------------------------------------------------------------===//
   // Half soft promotion support: LegalizeFloatTypes.cpp
@@ -1085,6 +1053,7 @@ private:
   SDValue WidenVecRes_EXTRACT_SUBVECTOR(SDNode* N);
   SDValue WidenVecRes_INSERT_SUBVECTOR(SDNode *N);
   SDValue WidenVecRes_INSERT_VECTOR_ELT(SDNode* N);
+  SDValue WidenVecRes_ATOMIC_LOAD(AtomicSDNode *N);
   SDValue WidenVecRes_LOAD(SDNode* N);
   SDValue WidenVecRes_VP_LOAD(VPLoadSDNode *N);
   SDValue WidenVecRes_VP_LOAD_FF(VPLoadFFSDNode *N);
@@ -1155,6 +1124,7 @@ private:
   SDValue WidenVecOp_VP_REDUCE(SDNode *N);
   SDValue WidenVecOp_ExpOp(SDNode *N);
   SDValue WidenVecOp_VP_CttzElements(SDNode *N);
+  SDValue WidenVecOp_VECTOR_FIND_LAST_ACTIVE(SDNode *N);
 
   /// Helper function to generate a set of operations to perform
   /// a vector operation for a wider type.
@@ -1220,7 +1190,8 @@ private:
   // Generic Result Splitting.
   void SplitRes_MERGE_VALUES(SDNode *N, unsigned ResNo,
                              SDValue &Lo, SDValue &Hi);
-  void SplitVecRes_AssertZext  (SDNode *N, SDValue &Lo, SDValue &Hi);
+  void SplitVecRes_AssertZext(SDNode *N, SDValue &Lo, SDValue &Hi);
+  void SplitVecRes_AssertSext(SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitRes_ARITH_FENCE (SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitRes_Select      (SDNode *N, SDValue &Lo, SDValue &Hi);
   void SplitRes_SELECT_CC   (SDNode *N, SDValue &Lo, SDValue &Hi);

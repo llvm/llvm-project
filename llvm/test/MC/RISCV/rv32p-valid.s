@@ -1,7 +1,7 @@
-# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-p -M no-aliases -show-encoding \
+# RUN: llvm-mc %s -triple=riscv32 -mattr=+experimental-p -show-encoding \
 # RUN:     | FileCheck -check-prefixes=CHECK-ASM,CHECK-ASM-AND-OBJ %s
 # RUN: llvm-mc -filetype=obj -triple=riscv32 -mattr=+experimental-p < %s \
-# RUN:     | llvm-objdump --mattr=+experimental-p -M no-aliases -d -r --no-print-imm-hex - \
+# RUN:     | llvm-objdump --mattr=+experimental-p -d -r --no-print-imm-hex - \
 # RUN:     | FileCheck --check-prefixes=CHECK-ASM-AND-OBJ %s
 
 # CHECK-ASM-AND-OBJ: cls a1, a2
@@ -16,6 +16,12 @@ rev s2, s3
 # CHECK-ASM-AND-OBJ: pack s0, s1, s2
 # CHECK-ASM: encoding: [0x33,0xc4,0x24,0x09]
 pack s0, s1, s2
+# CHECK-ASM-AND-OBJ: zext.h t0, t1
+# CHECK-ASM: encoding: [0xb3,0x42,0x03,0x08]
+pack t0, t1, x0
+# CHECK-ASM-AND-OBJ: zext.h t0, t1
+# CHECK-ASM: encoding: [0xb3,0x42,0x03,0x08]
+zext.h t0, t1
 # CHECK-ASM-AND-OBJ: pslli.b a6, a7, 0
 # CHECK-ASM: encoding: [0x1b,0xa8,0x88,0x80]
 pslli.b a6, a7, 0
@@ -843,15 +849,15 @@ pm2waddasu.h t3, t5, a0
 # CHECK-ASM-AND-OBJ: pmqwacc.h t5, t5, a2
 # CHECK-ASM: encoding: [0x9b,0x2f,0xcf,0x78]
 pmqwacc.h t5, t5, a2
-# CHECK-ASM-AND-OBJ: pmqwacc s2, a4, a2
+# CHECK-ASM-AND-OBJ: mqwacc s2, a4, a2
 # CHECK-ASM: encoding: [0x9b,0x29,0xc7,0x7a]
-pmqwacc s2, a4, a2
+mqwacc s2, a4, a2
 # CHECK-ASM-AND-OBJ: pmqrwacc.h a4, t3, a4
 # CHECK-ASM: encoding: [0x9b,0x27,0xee,0x7c]
 pmqrwacc.h a4, t3, a4
-# CHECK-ASM-AND-OBJ: pmqrwacc s0, s2, t5
+# CHECK-ASM-AND-OBJ: mqrwacc s0, s2, t5
 # CHECK-ASM: encoding: [0x9b,0x24,0xe9,0x7f]
-pmqrwacc s0, s2, t5
+mqrwacc s0, s2, t5
 # CHECK-ASM-AND-OBJ: predsum.dhs s0, t3, a0
 # CHECK-ASM: encoding: [0x1b,0x44,0xae,0x18]
 predsum.dhs s0, t3, a0

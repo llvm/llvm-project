@@ -85,13 +85,12 @@ static QualType getReplacementCastType(const Expr *CondLhs, const Expr *CondRhs,
       RhsType.getCanonicalType().getNonReferenceType().getUnqualifiedType();
   QualType GlobalImplicitCastType;
   if (LhsCanonicalType != RhsCanonicalType) {
-    if (llvm::isa<IntegerLiteral>(CondRhs)) {
+    if (llvm::isa<IntegerLiteral>(CondRhs))
       GlobalImplicitCastType = getNonTemplateAlias(LhsType);
-    } else if (llvm::isa<IntegerLiteral>(CondLhs)) {
+    else if (llvm::isa<IntegerLiteral>(CondLhs))
       GlobalImplicitCastType = getNonTemplateAlias(RhsType);
-    } else {
+    else
       GlobalImplicitCastType = getNonTemplateAlias(ComparedType);
-    }
   }
   return GlobalImplicitCastType;
 }

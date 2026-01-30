@@ -594,63 +594,63 @@ lldb::SBFrame DAP::GetLLDBFrame(const llvm::json::Object &arguments) {
   return GetLLDBFrame(frame_id);
 }
 
-ReplMode DAP::DetectReplMode(lldb::SBFrame frame, std::string &expression,
+ReplMode DAP::DetectReplMode(lldb::SBFrame &frame, std::string &expression,
                              bool partial_expression) {
   // Check for the escape hatch prefix.
-  if (!expression.empty() &&
-      llvm::StringRef(expression)
-          .starts_with(configuration.commandEscapePrefix)) {
-    expression = expression.substr(configuration.commandEscapePrefix.size());
+  if (llvm::StringRef expr_ref = expression;
+      expr_ref.consume_front(configuration.commandEscapePrefix)) {
+    expression = expr_ref;
     return ReplMode::Command;
   }
 
-  switch (repl_mode) {
-  case ReplMode::Variable:
+  if (repl_mode != ReplMode::Auto)
+    return repl_mode;
+
+  // We cannot check if expression is a variable without a frame.
+  if (!frame)
+    return ReplMode::Command;
+
+  // To determine if the expression is a command or not, check if the first
+  // term is a variable or command. If it's a variable in scope we will prefer
+  // that behavior and give a warning to the user if they meant to invoke the
+  // operation as a command.
+  //
+  // Example use case:
+  //   int p and expression "p + 1" > variable
+  //   int i and expression "i" > variable
+  //   int var and expression "va" > command
+  const auto [first_tok, remaining] = llvm::getToken(expression);
+
+  // If the first token is not fully finished yet, we can't
+  // determine whether this will be a variable or a lldb command.
+  if (partial_expression && remaining.empty())
+    return ReplMode::Auto;
+
+  std::string first = first_tok.str();
+  const char *first_cstr = first.c_str();
+  lldb::SBCommandInterpreter interpreter = debugger.GetCommandInterpreter();
+  const bool is_command = interpreter.CommandExists(first_cstr) ||
+                          interpreter.UserCommandExists(first_cstr) ||
+                          interpreter.AliasExists(first_cstr);
+  const bool is_variable = frame.FindVariable(first_cstr).IsValid();
+
+  // If we have both a variable and command, warn the user about the conflict.
+  if (!partial_expression && is_command && is_variable) {
+    const std::string warning_msg =
+        llvm::formatv("warning: Expression '{}' is both an LLDB command and "
+                      "variable. It will be evaluated as "
+                      "a variable. To evaluate the expression as an LLDB "
+                      "command, use '{}' as a prefix.\n",
+                      first, configuration.commandEscapePrefix);
+    SendOutput(OutputType::Console, warning_msg);
+  }
+
+  // Variables take preference to commands in auto, since commands can always
+  // be called using the command_escape_prefix
+  if (is_variable)
     return ReplMode::Variable;
-  case ReplMode::Command:
-    return ReplMode::Command;
-  case ReplMode::Auto:
-    // To determine if the expression is a command or not, check if the first
-    // term is a variable or command. If it's a variable in scope we will prefer
-    // that behavior and give a warning to the user if they meant to invoke the
-    // operation as a command.
-    //
-    // Example use case:
-    //   int p and expression "p + 1" > variable
-    //   int i and expression "i" > variable
-    //   int var and expression "va" > command
-    std::pair<llvm::StringRef, llvm::StringRef> token =
-        llvm::getToken(expression);
 
-    // If the first token is not fully finished yet, we can't
-    // determine whether this will be a variable or a lldb command.
-    if (partial_expression && token.second.empty())
-      return ReplMode::Auto;
-
-    std::string term = token.first.str();
-    lldb::SBCommandInterpreter interpreter = debugger.GetCommandInterpreter();
-    bool term_is_command = interpreter.CommandExists(term.c_str()) ||
-                           interpreter.UserCommandExists(term.c_str()) ||
-                           interpreter.AliasExists(term.c_str());
-    bool term_is_variable = frame.FindVariable(term.c_str()).IsValid();
-
-    // If we have both a variable and command, warn the user about the conflict.
-    if (term_is_command && term_is_variable) {
-      llvm::errs()
-          << "Warning: Expression '" << term
-          << "' is both an LLDB command and variable. It will be evaluated as "
-             "a variable. To evaluate the expression as an LLDB command, use '"
-          << configuration.commandEscapePrefix << "' as a prefix.\n";
-    }
-
-    // Variables take preference to commands in auto, since commands can always
-    // be called using the command_escape_prefix
-    return term_is_variable  ? ReplMode::Variable
-           : term_is_command ? ReplMode::Command
-                             : ReplMode::Variable;
-  }
-
-  llvm_unreachable("enum cases exhausted.");
+  return is_command ? ReplMode::Command : ReplMode::Variable;
 }
 
 std::optional<protocol::Source> DAP::ResolveSource(const lldb::SBFrame &frame) {
@@ -836,7 +836,7 @@ bool DAP::HandleObject(const Message &M) {
         debugger.CancelInterruptRequest();
     }
 
-    auto cleanup = llvm::make_scope_exit([&]() {
+    llvm::scope_exit cleanup([&]() {
       std::scoped_lock<std::mutex> active_request_lock(m_active_request_mutex);
       m_active_request = nullptr;
     });
@@ -1039,7 +1039,7 @@ void DAP::TerminateLoop(bool failed) {
 }
 
 void DAP::TransportHandler() {
-  auto scope_guard = llvm::make_scope_exit([this] {
+  llvm::scope_exit scope_guard([this] {
     std::lock_guard<std::mutex> guard(m_queue_mutex);
     // Ensure we're marked as disconnecting when the reader exits.
     m_disconnecting = true;
@@ -1070,9 +1070,9 @@ llvm::Error DAP::Loop() {
     m_disconnecting = false;
   }
 
-  auto thread = std::thread(std::bind(&DAP::TransportHandler, this));
+  auto thread = std::thread([this] { TransportHandler(); });
 
-  auto cleanup = llvm::make_scope_exit([this]() {
+  llvm::scope_exit cleanup([this]() {
     // FIXME: Merge these into the MainLoop handler.
     out.Stop();
     err.Stop();
@@ -1315,23 +1315,25 @@ void DAP::StartEventThreads() {
   StartEventThread();
 }
 
-llvm::Error DAP::InitializeDebugger(int debugger_id,
-                                    lldb::user_id_t target_id) {
+llvm::Error DAP::InitializeDebugger(const DAPSession &session) {
   // Find the existing debugger by ID
-  debugger = lldb::SBDebugger::FindDebuggerWithID(debugger_id);
-  if (!debugger.IsValid()) {
+  lldb::SBDebugger found_debugger =
+      lldb::SBDebugger::FindDebuggerWithID(session.debuggerId);
+  if (!found_debugger.IsValid()) {
     return llvm::createStringError(
         "Unable to find existing debugger for debugger ID");
   }
 
   // Find the target within the debugger by its globally unique ID
-  lldb::SBTarget target = debugger.FindTargetByGloballyUniqueID(target_id);
+  lldb::SBTarget target =
+      found_debugger.FindTargetByGloballyUniqueID(session.targetId);
   if (!target.IsValid()) {
     return llvm::createStringError(
         "Unable to find existing target for target ID");
   }
 
-  // Set the target for this DAP session.
+  // Set the target and debugger for this DAP session.
+  debugger = found_debugger;
   SetTarget(target);
   StartEventThreads();
   return llvm::Error::success();

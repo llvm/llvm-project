@@ -436,7 +436,10 @@ Register SPIRVGlobalRegistry::buildConstantInt(uint64_t Val,
   assert(SpvType);
   auto &MF = MIRBuilder.getMF();
   const IntegerType *Ty = cast<IntegerType>(getTypeForSPIRVType(SpvType));
-  auto *const CI = ConstantInt::get(const_cast<IntegerType *>(Ty), Val);
+  // TODO: Avoid implicit trunc?
+  // See https://github.com/llvm/llvm-project/issues/112510.
+  auto *const CI = ConstantInt::get(const_cast<IntegerType *>(Ty), Val,
+                                    /*IsSigned=*/false, /*ImplicitTrunc=*/true);
   Register Res = find(CI, &MF);
   if (Res.isValid())
     return Res;
@@ -882,6 +885,18 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeArray(uint32_t NumElems,
           .addUse(getSPIRVTypeID(ElemType))
           .addUse(NumElementsVReg);
     });
+  } else if (ST.getTargetTriple().getVendor() == Triple::VendorType::AMD) {
+    // We set the array size to the token UINT64_MAX value, which is generally
+    // illegal (the maximum legal size is 61-bits) for the foreseeable future.
+    SPIRVType *SpvTypeInt64 = getOrCreateSPIRVIntegerType(64, MIRBuilder);
+    Register NumElementsVReg =
+        buildConstantInt(UINT64_MAX, MIRBuilder, SpvTypeInt64, EmitIR);
+    ArrayType = createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
+      return MIRBuilder.buildInstr(SPIRV::OpTypeArray)
+          .addDef(createTypeVReg(MIRBuilder))
+          .addUse(getSPIRVTypeID(ElemType))
+          .addUse(NumElementsVReg);
+    });
   } else {
     if (!ST.isShader()) {
       llvm::reportFatalUsageError(
@@ -1017,10 +1032,12 @@ SPIRVType *SPIRVGlobalRegistry::getOpTypeFunction(
     const FunctionType *Ty, SPIRVType *RetType,
     const SmallVectorImpl<SPIRVType *> &ArgTypes,
     MachineIRBuilder &MIRBuilder) {
-  if (Ty->isVarArg()) {
+  const SPIRVSubtarget *ST =
+      static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
+  if (Ty->isVarArg() && ST->isShader()) {
     Function &Fn = MIRBuilder.getMF().getFunction();
     Ty->getContext().diagnose(DiagnosticInfoUnsupported(
-        Fn, "SPIR-V does not support variadic functions",
+        Fn, "SPIR-V shaders do not support variadic functions",
         MIRBuilder.getDebugLoc()));
   }
   return createOpType(MIRBuilder, [&](MachineIRBuilder &MIRBuilder) {
@@ -1465,6 +1482,27 @@ SPIRVGlobalRegistry::getOrCreatePaddingType(MachineIRBuilder &MIRBuilder) {
   auto *T = Type::getInt8Ty(MIRBuilder.getContext());
   SPIRVType *R = getOrCreateSPIRVIntegerType(8, MIRBuilder);
   finishCreatingSPIRVType(T, R);
+  add(Key, R);
+  return R;
+}
+
+SPIRVType *SPIRVGlobalRegistry::getOrCreateVulkanPushConstantType(
+    MachineIRBuilder &MIRBuilder, Type *T) {
+  const auto SC = SPIRV::StorageClass::PushConstant;
+
+  auto Key = SPIRV::irhandle_vkbuffer(T, SC, /* IsWritable= */ false);
+  if (const MachineInstr *MI = findMI(Key, &MIRBuilder.getMF()))
+    return MI;
+
+  // We need to get the SPIR-V type for the element here, so we can add the
+  // decoration to it.
+  auto *BlockType = getOrCreateSPIRVType(
+      T, MIRBuilder, SPIRV::AccessQualifier::None,
+      /* ExplicitLayoutRequired= */ true, /* EmitIr= */ false);
+
+  buildOpDecorate(BlockType->defs().begin()->getReg(), MIRBuilder,
+                  SPIRV::Decoration::Block, {});
+  SPIRVType *R = BlockType;
   add(Key, R);
   return R;
 }

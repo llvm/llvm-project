@@ -576,7 +576,7 @@ public:
   /// Fortran 2018 9.5.3.3.2 section for more details.
   mlir::Value genExtentFromTriplet(mlir::Location loc, mlir::Value lb,
                                    mlir::Value ub, mlir::Value step,
-                                   mlir::Type type);
+                                   mlir::Type type, bool fold = false);
 
   /// Create an AbsentOp of \p argTy type and handle special cases, such as
   /// Character Procedure Tuple arguments.

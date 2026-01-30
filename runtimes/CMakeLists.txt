@@ -241,6 +241,8 @@ option(LLVM_INCLUDE_DOCS "Generate build targets for the runtimes documentation.
 option(LLVM_ENABLE_SPHINX "Use Sphinx to generate the runtimes documentation." OFF)
 option(RUNTIMES_EXECUTE_ONLY_CODE "Compile runtime libraries as execute-only." OFF)
 
+include(HandleDoxygen)
+
 if (RUNTIMES_EXECUTE_ONLY_CODE)
   # If a target doesn't support or recognise -mexecute-only, Clang will simply ignore the flag.
   # We can check for this case using -Werror=unused-command-line-argument.

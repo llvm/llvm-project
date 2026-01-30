@@ -142,37 +142,37 @@ getCommentsBeforeLoc(ASTContext *Ctx, SourceLocation Loc) {
   return Comments;
 }
 
-static bool isLikelyTypo(llvm::ArrayRef<ParmVarDecl *> Params,
-                         StringRef ArgName, unsigned ArgIndex) {
+template <typename NamedDeclRange>
+static bool isLikelyTypo(const NamedDeclRange &Candidates, StringRef ArgName,
+                         StringRef TargetName) {
   const std::string ArgNameLowerStr = ArgName.lower();
   const StringRef ArgNameLower = ArgNameLowerStr;
   // The threshold is arbitrary.
   const unsigned UpperBound = ((ArgName.size() + 2) / 3) + 1;
-  const unsigned ThisED = ArgNameLower.edit_distance(
-      Params[ArgIndex]->getIdentifier()->getName().lower(),
-      /*AllowReplacements=*/true, UpperBound);
+  const unsigned ThisED =
+      ArgNameLower.edit_distance(TargetName.lower(),
+                                 /*AllowReplacements=*/true, UpperBound);
   if (ThisED >= UpperBound)
     return false;
 
-  for (unsigned I = 0, E = Params.size(); I != E; ++I) {
-    if (I == ArgIndex)
-      continue;
-    const IdentifierInfo *II = Params[I]->getIdentifier();
+  return llvm::all_of(Candidates, [&](const auto &Candidate) {
+    const IdentifierInfo *II = Candidate->getIdentifier();
     if (!II)
-      continue;
+      return true;
+
+    // Skip the target itself.
+    if (II->getName() == TargetName)
+      return true;
 
     const unsigned Threshold = 2;
-    // Other parameters must be an edit distance at least Threshold more away
-    // from this parameter. This gives us greater confidence that this is a
-    // typo of this parameter and not one with a similar name.
+    // Other candidates must be an edit distance at least Threshold more away
+    // from this candidate. This gives us greater confidence that this is a
+    // typo of this candidate and not one with a similar name.
     const unsigned OtherED = ArgNameLower.edit_distance(
         II->getName().lower(),
         /*AllowReplacements=*/true, ThisED + Threshold);
-    if (OtherED < ThisED + Threshold)
-      return false;
-  }
-
-  return true;
+    return OtherED >= ThisED + Threshold;
+  });
 }
 
 static bool sameName(StringRef InComment, StringRef InDecl, bool StrictMode) {
@@ -234,9 +234,8 @@ static const FunctionDecl *resolveMocks(const FunctionDecl *Func) {
     if (const auto *MockedMethod = findMockedMethod(Method)) {
       // If mocked method overrides the real one, we can use its parameter
       // names, otherwise we're out of luck.
-      if (MockedMethod->size_overridden_methods() > 0) {
+      if (MockedMethod->size_overridden_methods() > 0)
         return *MockedMethod->begin_overridden_methods();
-      }
       return nullptr;
     }
   }
@@ -319,7 +318,7 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
               diag(Comment.first, "argument name '%0' in comment does not "
                                   "match parameter name %1")
               << Matches[2] << II;
-          if (isLikelyTypo(Callee->parameters(), Matches[2], I)) {
+          if (isLikelyTypo(Callee->parameters(), Matches[2], II->getName())) {
             Diag << FixItHint::CreateReplacement(
                 Comment.first, (Matches[1] + II->getName() + Matches[3]).str());
           }
@@ -335,8 +334,8 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
 
     // If the argument comments are missing for literals add them.
     if (Comments.empty() && shouldAddComment(Args[I])) {
-      const std::string ArgComment =
-          (llvm::Twine("/*") + II->getName() + "=*/").str();
+      llvm::SmallString<32> ArgComment;
+      (llvm::Twine("/*") + II->getName() + "=*/").toStringRef(ArgComment);
       const DiagnosticBuilder Diag =
           diag(Args[I]->getBeginLoc(),
                "argument comment missing for literal argument %0")

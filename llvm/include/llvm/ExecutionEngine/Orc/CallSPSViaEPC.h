@@ -26,8 +26,8 @@ struct SPSCallSerializationImpl {
   using ArgSerialization = shared::SPSArgList<SPSArgTs...>;
 
   template <typename... ArgTs>
-  Expected<shared::WrapperFunctionResult> serialize(ArgTs &&...Args) {
-    auto Buffer = shared::WrapperFunctionResult::allocate(
+  Expected<shared::WrapperFunctionBuffer> serialize(ArgTs &&...Args) {
+    auto Buffer = shared::WrapperFunctionBuffer::allocate(
         ArgSerialization::size(Args...));
     shared::SPSOutputBuffer OB(Buffer.data(), Buffer.size());
     if (!ArgSerialization::serialize(OB, Args...))
@@ -48,7 +48,7 @@ template <typename SPSSig>
 struct SPSCallSerializer : public detail::SPSCallSerialization<SPSSig> {
 
   template <typename RetT>
-  Expected<RetT> deserialize(shared::WrapperFunctionResult ResultBytes) {
+  Expected<RetT> deserialize(shared::WrapperFunctionBuffer ResultBytes) {
     using RetDeserialization =
         typename detail::SPSCallSerialization<SPSSig>::RetSerialization;
     shared::SPSInputBuffer IB(ResultBytes.data(), ResultBytes.size());
@@ -66,7 +66,7 @@ struct SPSCallSerializer<void(SPSArgTs...)>
     : public detail::SPSCallSerialization<void(SPSArgTs...)> {
   template <typename RetT>
   std::enable_if_t<std::is_void_v<RetT>, Error>
-  deserialize(shared::WrapperFunctionResult ResultBytes) {
+  deserialize(shared::WrapperFunctionBuffer ResultBytes) {
     if (!ResultBytes.empty())
       return make_error<StringError>("Could not deserialize return value",
                                      inconvertibleErrorCode());
