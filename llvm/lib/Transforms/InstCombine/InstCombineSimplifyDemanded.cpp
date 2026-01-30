@@ -2799,9 +2799,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
       KnownFPClass KnownSign = computeKnownFPClass(CI->getArgOperand(1),
                                                    fcAllFlags, CxtI, Depth + 1);
-
-      if (Known.SignBit && KnownSign.SignBit &&
-          *Known.SignBit == *KnownSign.SignBit)
+      if (KnownMag.SignBit && KnownSign.SignBit &&
+          *KnownMag.SignBit == *KnownSign.SignBit)
         return CI->getOperand(0);
 
       // TODO: Call argument attribute not considered
