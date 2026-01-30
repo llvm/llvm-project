@@ -2905,10 +2905,10 @@ void SPIRVEmitIntrinsics::emitUnstructuredLoopControls(Function &F,
     // Emit intrinsic: loop control mask + optional parameters.
     B.SetInsertPoint(Term);
     SmallVector<Value *, 4> IntrArgs;
-    IntrArgs.push_back(ConstantInt::get(B.getInt32Ty(), LC));
+    IntrArgs.push_back(B.getInt32(LC));
     for (unsigned I = 1; I < Ops.size(); ++I)
-      IntrArgs.push_back(ConstantInt::get(B.getInt32Ty(), Ops[I]));
-    B.CreateIntrinsic(Intrinsic::spv_loop_control_intel, {}, IntrArgs);
+      IntrArgs.push_back(B.getInt32(Ops[I]));
+    B.CreateIntrinsic(Intrinsic::spv_loop_control_intel, IntrArgs);
   }
 }
 
