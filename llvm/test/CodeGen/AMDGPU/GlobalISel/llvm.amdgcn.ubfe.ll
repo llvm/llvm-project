@@ -14,7 +14,6 @@ define i32 @v_bfe_i32_arg_arg_arg(i32 %src0, i32 %src1, i32 %src2) #0 {
 define amdgpu_ps i32 @s_bfe_i32_arg_arg_arg(i32 inreg %src0, i32 inreg %src1, i32 inreg %src2) #0 {
 ; GFX6-LABEL: s_bfe_i32_arg_arg_arg:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_and_b32 s1, s1, 63
 ; GFX6-NEXT:    s_lshl_b32 s2, s2, 16
 ; GFX6-NEXT:    s_or_b32 s1, s1, s2
 ; GFX6-NEXT:    s_bfe_u32 s0, s0, s1
@@ -62,7 +61,6 @@ define i64 @v_bfe_i64_arg_arg_imm_width_33(i64 %src0, i32 %src1) #0 {
 define amdgpu_ps i64 @s_bfe_i64_arg_arg_arg(i64 inreg %src0, i32 inreg %src1, i32 inreg %src2) #0 {
 ; GFX6-LABEL: s_bfe_i64_arg_arg_arg:
 ; GFX6:       ; %bb.0:
-; GFX6-NEXT:    s_and_b32 s2, s2, 63
 ; GFX6-NEXT:    s_lshl_b32 s3, s3, 16
 ; GFX6-NEXT:    s_or_b32 s2, s2, s3
 ; GFX6-NEXT:    s_bfe_u64 s[0:1], s[0:1], s2
@@ -76,9 +74,8 @@ define amdgpu_kernel void @bfe_u32_arg_arg_arg(ptr addrspace(1) %out, i32 %src0,
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    s_and_b32 s4, s3, 63
-; GFX6-NEXT:    s_lshl_b32 s3, s3, 16
-; GFX6-NEXT:    s_or_b32 s3, s4, s3
+; GFX6-NEXT:    s_lshl_b32 s4, s3, 16
+; GFX6-NEXT:    s_or_b32 s3, s3, s4
 ; GFX6-NEXT:    s_bfe_u32 s3, s2, s3
 ; GFX6-NEXT:    s_mov_b32 s2, -1
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s3
@@ -95,7 +92,6 @@ define amdgpu_kernel void @bfe_u32_arg_arg_imm(ptr addrspace(1) %out, i32 %src0,
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    s_and_b32 s3, s3, 63
 ; GFX6-NEXT:    s_or_b32 s3, s3, 0x7b0000
 ; GFX6-NEXT:    s_bfe_u32 s3, s2, s3
 ; GFX6-NEXT:    s_mov_b32 s2, -1
@@ -114,7 +110,7 @@ define amdgpu_kernel void @bfe_u32_arg_imm_arg(ptr addrspace(1) %out, i32 %src0,
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX6-NEXT:    s_lshl_b32 s3, s3, 16
-; GFX6-NEXT:    s_or_b32 s3, 59, s3
+; GFX6-NEXT:    s_or_b32 s3, 0x7b, s3
 ; GFX6-NEXT:    s_bfe_u32 s3, s2, s3
 ; GFX6-NEXT:    s_mov_b32 s2, -1
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s3
@@ -131,9 +127,8 @@ define amdgpu_kernel void @bfe_u32_imm_arg_arg(ptr addrspace(1) %out, i32 %src1,
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    s_and_b32 s4, s2, 63
 ; GFX6-NEXT:    s_lshl_b32 s3, s3, 16
-; GFX6-NEXT:    s_or_b32 s3, s4, s3
+; GFX6-NEXT:    s_or_b32 s3, s2, s3
 ; GFX6-NEXT:    s_bfe_u32 s3, 0x7b, s3
 ; GFX6-NEXT:    s_mov_b32 s2, -1
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s3
@@ -150,7 +145,6 @@ define amdgpu_kernel void @bfe_u32_arg_0_width_reg_offset(ptr addrspace(1) %out,
 ; GFX6:       ; %bb.0:
 ; GFX6-NEXT:    s_load_dwordx4 s[0:3], s[4:5], 0x0
 ; GFX6-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX6-NEXT:    s_and_b32 s3, s3, 63
 ; GFX6-NEXT:    s_bfe_u32 s3, s2, s3
 ; GFX6-NEXT:    s_mov_b32 s2, -1
 ; GFX6-NEXT:    v_mov_b32_e32 v0, s3
