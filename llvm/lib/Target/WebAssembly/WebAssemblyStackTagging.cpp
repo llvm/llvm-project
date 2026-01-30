@@ -158,7 +158,7 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
   for (auto &I : AllocasToInstrument) {
     memtag::AllocaInfo &Info = I.second;
     memtag::alignAndPadAlloca(Info, kTagGranuleSize);
- 
+
     uint64_t Tag = NextTag;
     if (iswasm32) {
       Tag = static_cast<uint32_t>(Tag);
@@ -191,20 +191,20 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
         return !isa<LifetimeIntrinsic>(U.getUser());
       });
       TagPCall->setOperand(1, Info.AI);
-      IntrinsicInst *Start = Info.LifetimeStart[0];
       uint64_t Size = *Info.AI->getAllocationSize(*DL);
       Size = alignTo(Size, kTagGranuleSize);
 
-      IRBuilder<> IRB2(Start->getNextNode());
-      IRB2.CreateCall(StoreTagDecl, {ConstantInt::get(Int32Type, 0), TagPCall,
-                                     ConstantInt::get(IntPtrType, Size)});
-
+      for (IntrinsicInst *Start : Info.LifetimeStart) {
+        IRBuilder<> IRB2(Start->getNextNode());
+        IRB2.CreateCall(StoreTagDecl, {ConstantInt::get(Int32Type, 0), TagPCall,
+                                       ConstantInt::get(IntPtrType, Size)});
+      }
       auto TagEnd = [&](Instruction *Node) {
         untagAlloca(AI, Node, Size, StoreTagDecl, IntPtrType);
       };
       if (!DT || !PDT ||
-          !memtag::forAllReachableExits(*DT, *PDT, *LI, Start, Info.LifetimeEnd,
-                                        SInfo.RetVec, TagEnd)) {
+          !memtag::forAllReachableExits(*DT, *PDT, *LI, Info, Info.LifetimeEnd,
+                                        TagEnd)) {
         for (auto *End : Info.LifetimeEnd)
           End->eraseFromParent();
       }
