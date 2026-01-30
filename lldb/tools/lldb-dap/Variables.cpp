@@ -181,8 +181,8 @@ lldb::SBValueList *Variables::GetScope(const uint64_t dap_frame_id,
   return frame->second.GetScope(kind);
 }
 
-std::vector<protocol::Scope> Variables::ReadyFrame(const uint64_t dap_frame_id,
-                                                   lldb::SBFrame &frame) {
+std::vector<protocol::Scope>
+Variables::CreateScopes(const uint64_t dap_frame_id, lldb::SBFrame &frame) {
 
   if (m_frames.find(dap_frame_id) == m_frames.end()) {
 

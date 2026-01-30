@@ -96,8 +96,8 @@ struct Variables {
   lldb::SBValue FindVariable(uint64_t variablesReference, llvm::StringRef name);
 
   /// Initialize a frame if it hasn't been already, otherwise do nothing
-  std::vector<protocol::Scope> ReadyFrame(const uint64_t dap_frame_id,
-                                          lldb::SBFrame &frame);
+  std::vector<protocol::Scope> CreateScopes(const uint64_t dap_frame_id,
+                                            lldb::SBFrame &frame);
   std::optional<ScopeData> GetScopeKind(const int64_t variablesReference);
 
   /// Clear all scope variables and non-permanent expandable variables.
