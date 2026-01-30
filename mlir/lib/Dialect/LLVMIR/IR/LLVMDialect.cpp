@@ -779,7 +779,7 @@ verifyStructIndices(Type baseGEPType, unsigned indexPos,
     return success();
 
   return TypeSwitch<Type, LogicalResult>(baseGEPType)
-      .Case<LLVMStructType>([&](LLVMStructType structType) -> LogicalResult {
+      .Case([&](LLVMStructType structType) -> LogicalResult {
         auto attr = dyn_cast<IntegerAttr>(indices[indexPos]);
         if (!attr)
           return emitOpError() << "expected index " << indexPos
@@ -997,6 +997,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state, TypeRange results,
         /*convergent=*/nullptr, /*no_unwind=*/nullptr, /*will_return=*/nullptr,
         /*noreturn=*/nullptr, /*returns_twice=*/nullptr, /*hot=*/nullptr,
         /*cold=*/nullptr, /*noduplicate=*/nullptr,
+        /*no_caller_saved_registers=*/nullptr, /*nocallback=*/nullptr,
+        /*modular_format=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
@@ -1030,6 +1032,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*noreturn=*/nullptr,
         /*returns_twice=*/nullptr, /*hot=*/nullptr,
         /*cold=*/nullptr, /*noduplicate=*/nullptr,
+        /*no_caller_saved_registers=*/nullptr, /*nocallback=*/nullptr,
+        /*modular_format=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr,
@@ -1049,6 +1053,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state,
         /*noreturn=*/nullptr,
         /*returns_twice=*/nullptr, /*hot=*/nullptr,
         /*cold=*/nullptr, /*noduplicate=*/nullptr,
+        /*no_caller_saved_registers=*/nullptr, /*nocallback=*/nullptr,
+        /*modular_format=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
@@ -1068,6 +1074,8 @@ void CallOp::build(OpBuilder &builder, OperationState &state, LLVMFuncOp func,
         /*noreturn=*/nullptr,
         /*returns_twice=*/nullptr, /*hot=*/nullptr,
         /*cold=*/nullptr, /*noduplicate=*/nullptr,
+        /*no_caller_saved_registers=*/nullptr, /*nocallback=*/nullptr,
+        /*modular_format=*/nullptr,
         /*op_bundle_operands=*/{}, /*op_bundle_tags=*/{},
         /*access_groups=*/nullptr, /*alias_scopes=*/nullptr,
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr,
@@ -3253,13 +3261,13 @@ LogicalResult LLVMFuncOp::verify() {
            return WalkResult::advance();
          };
          return TypeSwitch<Operation *, WalkResult>(op)
-             .Case<LandingpadOp>([&](auto landingpad) {
+             .Case([&](LandingpadOp landingpad) {
                constexpr StringLiteral errorMessage =
                    "'llvm.landingpad' should have a consistent result type "
                    "inside a function";
                return checkType(landingpad.getType(), errorMessage);
              })
-             .Case<ResumeOp>([&](auto resume) {
+             .Case([&](ResumeOp resume) {
                constexpr StringLiteral errorMessage =
                    "'llvm.resume' should have a consistent input type inside a "
                    "function";
