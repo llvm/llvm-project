@@ -675,11 +675,11 @@ LogicalResult SparseMFMAOp::verify() {
 //===----------------------------------------------------------------------===//
 LogicalResult DPPOp::verify() {
   Type srcType = getSrc().getType();
-  if (srcType.getIntOrFloatBitWidth() > 64) {
+  Type elemType = getElementTypeOrSelf(srcType); 
+  if (elemType.getIntOrFloatBitWidth() > 64) {
     return emitOpError("integer and floating point types larger than 64 bits "
                        "are not supported");
   }
-
   DPPPerm kind = getKind();
   Attribute permArgument = getPermArgument().value_or(Attribute{});
 
