@@ -7836,6 +7836,30 @@ SDValue TargetLowering::getNegatedExpression(SDValue Op, SelectionDAG &DAG,
     Cost = std::min(CostLHS, CostRHS);
     return DAG.getSelect(DL, VT, Op.getOperand(0), NegLHS, NegRHS);
   }
+  case ISD::FP16_TO_FP: {
+    SDValue Src = Op.getOperand(0);
+    EVT VT = Op.getValueType();
+    EVT SrcVT = Src.getValueType();
+    SDLoc SL(Op);
+
+    SDValue Negated = DAG.getNode(ISD::XOR, DL, SrcVT, Src,
+                                  DAG.getConstant(0x8000, DL, SrcVT));
+
+    Cost = NegatibleCost::Expensive;
+
+    return DAG.getNode(ISD::FP16_TO_FP, DL, VT, Negated);
+  }
+  case ISD::FP_TO_FP16: {
+    SDValue Src = Op.getOperand(0);
+    NegatibleCost SrcCost = NegatibleCost::Expensive;
+    SDValue NegSrc =
+        getNegatedExpression(Src, DAG, LegalOps, OptForSize, SrcCost, Depth);
+    if (!NegSrc)
+      break;
+
+    Cost = SrcCost;
+    return DAG.getNode(ISD::FP_TO_FP16, DL, VT, NegSrc, Op.getOperand(1));
+  }
   }
 
   return SDValue();
