@@ -570,7 +570,7 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
           if (DisableWildcardInDiagLoc) {
             Diags.Report(Pos.getLocWithOffset(PH.C - PH.Begin),
                          diag::err_verify_wildcard_loc);
-            continue;
+            State.WildcardsAreErroneouslyPresent = true;
           }
           MatchAnyFileAndLine = true;
           if (!PH.Next("*")) {
@@ -603,7 +603,7 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
             if (DisableWildcardInDiagLoc) {
               Diags.Report(Pos.getLocWithOffset(PH.C - PH.Begin),
                            diag::err_verify_wildcard_loc);
-              continue;
+              State.WildcardsAreErroneouslyPresent = true;
             }
             MatchAnyLine = true;
             ExpectedLoc = SM.translateLineCol(FID, 1, 1);
@@ -613,7 +613,7 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
         if (DisableWildcardInDiagLoc) {
           Diags.Report(Pos.getLocWithOffset(PH.C - PH.Begin),
                        diag::err_verify_wildcard_loc);
-          continue;
+          State.WildcardsAreErroneouslyPresent = true;
         }
         MatchAnyLine = true;
         ExpectedLoc = SourceLocation();
@@ -632,10 +632,10 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
 
     // Next optional token: positive integer or a '+'.
     if (PH.Next(D.Min)) {
-      if (OneDiagPerDirective && D.Min != 1) {
+      if (D.Min != 1 && OneDiagPerDirective) {
         Diags.Report(Pos.getLocWithOffset(PH.C - PH.Begin),
                      diag::err_verify_non_singular_match);
-        continue;
+        State.AllDirectivesMatchExactlyOneDiag = false;
       }
       PH.Advance();
       // A positive integer can be followed by a '+' meaning min
@@ -646,7 +646,7 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
         if (OneDiagPerDirective) {
           Diags.Report(Pos.getLocWithOffset(PH.C - PH.Begin),
                        diag::err_verify_non_singular_match);
-          continue;
+          State.AllDirectivesMatchExactlyOneDiag = false;
         }
       } else if (PH.Next("-")) {
         PH.Advance();
@@ -658,7 +658,7 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
         if (OneDiagPerDirective && D.Max != 1) {
           Diags.Report(Pos.getLocWithOffset(PH.C - PH.Begin),
                        diag::err_verify_non_singular_match);
-          continue;
+          State.AllDirectivesMatchExactlyOneDiag = false;
         }
         PH.Advance();
       } else {
@@ -669,7 +669,7 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
       if (OneDiagPerDirective) {
         Diags.Report(Pos.getLocWithOffset(PH.C - PH.Begin),
                      diag::err_verify_non_singular_match);
-        continue;
+        State.AllDirectivesMatchExactlyOneDiag = false;
       }
       D.Max = Directive::MaxCount;
       PH.Advance();
@@ -1150,9 +1150,11 @@ static unsigned CheckResults(DiagnosticsEngine &Diags, SourceManager &SourceMgr,
 }
 
 // Checks that directives are lexically in the same order as the emitted
-// diagnostics. Assumes that CheckResults returned 0 problems, i.e. that
-// every diagnostic was matched by every directive without considering the
-// order.
+// diagnostics. Assumes that:
+//   - every directive matches exactly one diagnostic,
+//   - there are no wildcards, and
+//   - CheckResults returned 0 problems, i.e. every diagnostic
+//     was matched by every directive without considering the order.
 static unsigned CheckResultsAreInOrder(DiagnosticsEngine &Diags,
                                        SourceManager &SourceMgr,
                                        const TextDiagnosticBuffer &Buffer,
@@ -1228,13 +1230,13 @@ static unsigned CheckResultsAreInOrder(DiagnosticsEngine &Diags,
   int NumProblems = 0;
   SmallString<256> Fmt;
   llvm::raw_svector_ostream OS(Fmt);
-  // CheckResults already ensured that there are as many directives as emitted
-  // diagnostics, and that all of them match.
+  // zip_equal asserts that there're as many directives as emitted diagnostics.
+  // CheckResults has already ensured that all diagnostics were matched.
   for (const auto [Directive, LevelDiagPair] : llvm::zip_equal(
            OrderedDirectives,
            llvm::iterator_range{Buffer.all_begin(), Buffer.all_end()})) {
     assert(!Directive->MatchAnyFileAndLine && !Directive->MatchAnyLine &&
-           "Wildcards should not be allowed in strict verify mode!");
+           "Cannot compare source locations when wildcards are present");
     const auto [DiagLevel, DiagIndex] = LevelDiagPair;
     const auto &[DiagLoc, DiagText] = getLocDiagPair(DiagLevel, DiagIndex);
     const SourceLocation DirLoc = Directive->DirectiveLoc;
@@ -1367,9 +1369,14 @@ void VerifyDiagnosticConsumer::CheckDiagnostics() {
 
     // Check that the expected diagnostics occurred.
     NumErrors += CheckResults(Diags, *SrcManager, *Buffer, ED);
-    if (CheckOrderOfDirectives && NumErrors == 0) {
-      assert(OneDiagPerDirective && "Can't check order of directives unless "
-                                    "they match only one diagnostic!");
+
+    // If either wildcards are present or there are directives that
+    // do not match exactly one diagnostic, we already issued
+    // errors about that. In such case we cannot check that directives
+    // are in order.
+    if (CheckOrderOfDirectives && NumErrors == 0 &&
+        State.AllDirectivesMatchExactlyOneDiag &&
+        !State.WildcardsAreErroneouslyPresent) {
       NumErrors += CheckResultsAreInOrder(Diags, *SrcManager, *Buffer, ED);
     }
   } else {

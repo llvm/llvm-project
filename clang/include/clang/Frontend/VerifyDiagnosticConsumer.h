@@ -121,6 +121,8 @@ public:
   struct ParsingState {
     DirectiveStatus Status;
     std::string FirstNoDiagnosticsDirective;
+    bool AllDirectivesMatchExactlyOneDiag = true;
+    bool WildcardsAreErroneouslyPresent = false;
   };
 
   class MarkerTracker;
