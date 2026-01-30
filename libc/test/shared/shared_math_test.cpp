@@ -64,6 +64,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat16) {
 
 TEST(LlvmLibcSharedMathTest, AllFloat) {
   int exponent;
+  float sin, cos;
 
   EXPECT_FP_EQ(0x1.921fb6p+0, LIBC_NAMESPACE::shared::acosf(0.0f));
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::acoshf(1.0f));
@@ -99,6 +100,10 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
   EXPECT_EQ(long(0), LIBC_NAMESPACE::shared::llogbf(1.0f));
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::logbf(1.0f));
   EXPECT_FP_EQ(0x1p+0f, LIBC_NAMESPACE::shared::rsqrtf(1.0f));
+
+  LIBC_NAMESPACE::shared::sincosf(0.0f, &sin, &cos);
+  ASSERT_FP_EQ(1.0f, cos);
+  ASSERT_FP_EQ(0.0f, sin);
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::sinpif(0.0f));
   EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::shared::sinf(0.0f));
   EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::shared::tanf(0.0f));
