@@ -202,6 +202,8 @@ Improvements to Clang's diagnostics
       DanglingView(std::string s) : view(s) {}  // warning: address of stack memory escapes to a field
     };
 
+- Improved ``-Wassign-enum`` performance by caching enum enumerator values. (#GH176454)
+
 Improvements to Clang's time-trace
 ----------------------------------
 

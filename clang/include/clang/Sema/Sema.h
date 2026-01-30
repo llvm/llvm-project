@@ -3969,6 +3969,10 @@ public:
   /// attribute.
   mutable llvm::DenseMap<const EnumDecl *, llvm::APInt> FlagBitsCache;
 
+  /// A cache of enumerator values for enums checked by -Wassign-enum.
+  llvm::DenseMap<const EnumDecl *, llvm::SmallVector<llvm::APSInt>>
+      AssignEnumCache;
+
   /// WeakUndeclaredIdentifiers - Identifiers contained in \#pragma weak before
   /// declared. Rare. May alias another identifier, declared or undeclared.
   ///
