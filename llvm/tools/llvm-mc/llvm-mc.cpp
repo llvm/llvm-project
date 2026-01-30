@@ -696,7 +696,7 @@ int main(int argc, char **argv) {
     // BEGIN MCCAS
     std::unique_ptr<MCObjectWriter> CASBackendWriter;
     bool UseCASBackend = UseMCCASBackend ||
-                         ((TheTriple.getObjectFormat() == Triple::MachO) &&
+                         (mccasformats::v1::isSupportedTarget(TheTriple) &&
                           llvm::sys::Process::GetEnv("LLVM_TEST_CAS_BACKEND"));
 
     if (UseCASBackend) {

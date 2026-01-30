@@ -1,3 +1,6 @@
+/// Not supported in MCCAS: rdar://169313031
+// REQUIRES: !mccas
+
 // RUN: llvm-mc -g -triple i386-apple-darwin10 %s -filetype=obj -o %t
 // RUN: llvm-dwarfdump -debug-line %t | FileCheck %s
 

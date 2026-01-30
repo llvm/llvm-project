@@ -98,8 +98,11 @@ uint64_t MachOCASWriter::writeObject() {
     break;
   }
   case CASBackendMode::Verify: {
-    if (auto E = VerifyObject())
-      report_fatal_error(std::move(E));
+    if (!getContext().hadError()) {
+      // Verify only when there is no error.
+      if (auto E = VerifyObject())
+        report_fatal_error(std::move(E));
+    }
   }
   }
 

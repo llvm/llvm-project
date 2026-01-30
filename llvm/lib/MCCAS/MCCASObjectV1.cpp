@@ -1766,8 +1766,17 @@ MCOrgFragmentRef::create(MCCASBuilder &MB, const MCFragment &F,
 
 Expected<uint64_t> MCOrgFragmentRef::materialize(MCCASReader &Reader,
                                                  raw_ostream *Stream) const {
-  *Stream << getData();
-  return getData().size();
+  auto Remaining = getData();
+  unsigned FragmentSize;
+  if (auto E = consumeVBR8(Remaining, FragmentSize))
+    return std::move(E);
+  char Value;
+  if (auto E = consumeVBR8(Remaining, Value))
+    return std::move(E);
+
+  for (unsigned I = 0; I < FragmentSize; ++I)
+    *Stream << Value;
+  return FragmentSize;
 }
 
 Expected<MCSymbolIdFragmentRef>
@@ -1785,8 +1794,14 @@ MCSymbolIdFragmentRef::create(MCCASBuilder &MB, const MCFragment &F,
 Expected<uint64_t>
 MCSymbolIdFragmentRef::materialize(MCCASReader &Reader,
                                    raw_ostream *Stream) const {
-  *Stream << getData();
-  return getData().size();
+  auto Remaining = getData();
+  uint32_t Index;
+  if (auto E = consumeVBR8(Remaining, Index))
+    return std::move(E);
+
+  auto Endian = Reader.getEndian();
+  support::endian::write<uint32_t>(*Stream, Index, Endian);
+  return sizeof(uint32_t);
 }
 
 #define MCFRAGMENT_NODE_REF(MCFragmentName, MCEnumName, MCEnumIdentifier)      \
@@ -1798,10 +1813,10 @@ MCSymbolIdFragmentRef::materialize(MCCASReader &Reader,
       return B.takeError();                                                    \
     B->Data.append(MB.FragmentData);                                           \
     B->Data.append(FragmentContents.begin(), FragmentContents.end());          \
-    assert(                                                                    \
-        ((MB.FragmentData.empty() && F.getContents().empty()) ||               \
-         (MB.FragmentData.size() + F.getContents().size() == FragmentSize)) && \
-        "Size should match");                                                  \
+    assert((MB.FragmentData.size() + F.getContents().size() +                  \
+                F.getVarContents().size() ==                                   \
+            FragmentSize) &&                                                   \
+           "Size should match");                                               \
     return get(B->build());                                                    \
   }                                                                            \
   Expected<uint64_t> MCFragmentName##Ref::materialize(                         \
@@ -4235,4 +4250,8 @@ Error mccasformats::v1::visitDebugInfo(
                      EndTagCallback,
                      NewBlockCallback};
   return Visitor.visitDIERef(LoadedTopRef->RootDIE);
+}
+
+bool mccasformats::v1::isSupportedTarget(Triple Triple) {
+  return Triple.getObjectFormat() == Triple::MachO;
 }

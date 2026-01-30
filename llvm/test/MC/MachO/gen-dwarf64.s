@@ -1,3 +1,6 @@
+/// Not supported in MCCAS: dar://169313338
+// REQUIRES: !mccas
+
 // This checks that llvm-mc is able to produce 64-bit debug info.
 
 // RUN: llvm-mc -g -dwarf64 -triple x86_64-apple-darwin10 %s -filetype=obj -o %t

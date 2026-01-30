@@ -806,6 +806,9 @@ Error visitDebugInfo(
     uint8_t AddressSize,
     std::function<void(StringRef)> NewBlockCallback = [](StringRef) {});
 
+/// If MCCAS supports the target.
+bool isSupportedTarget(Triple Triple);
+
 } // namespace v1
 } // namespace mccasformats
 } // namespace llvm
