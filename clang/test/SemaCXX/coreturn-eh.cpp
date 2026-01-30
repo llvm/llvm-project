@@ -16,7 +16,7 @@ struct object { ~object() {} };
 
 struct promise_void_return_value {
   void get_return_object();
-  suspend_always initial_suspend();
+  suspend_always initial_suspend() noexcept;
   suspend_always final_suspend() noexcept;
   void unhandled_exception();
   void return_value(object);
@@ -25,7 +25,7 @@ struct promise_void_return_value {
 struct VoidTagReturnValue {
   struct promise_type {
     VoidTagReturnValue get_return_object();
-    suspend_always initial_suspend();
+    suspend_always initial_suspend() noexcept;
     suspend_always final_suspend() noexcept;
     void unhandled_exception();
     void return_value(object);

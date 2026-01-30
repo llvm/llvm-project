@@ -42,7 +42,7 @@ struct suspend_never {
 
 struct task {
   struct promise_type {
-    auto initial_suspend() { return suspend_never{}; }
+    auto initial_suspend() noexcept { return suspend_never{}; }
     auto final_suspend() noexcept { return suspend_never{}; }
     auto get_return_object() { return task{}; }
     static void unhandled_exception() {}

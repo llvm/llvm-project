@@ -667,9 +667,7 @@ struct GetReturnObjectManager {
   CodeGenFunction::AutoVarEmission GroEmission;
 
   GetReturnObjectManager(CodeGenFunction &CGF, const CoroutineBodyStmt &S)
-      : CGF(CGF), Builder(CGF.Builder), S(S),
-
-        GroActiveFlag(Address::invalid()),
+      : CGF(CGF), Builder(CGF.Builder), S(S), GroActiveFlag(Address::invalid()),
         InitialSuspendCanThrow(StmtCanThrow(S.getInitSuspendStmt())),
         DirectGroActiveFlag(Address::invalid()),
         GroEmission(CodeGenFunction::AutoVarEmission::invalid()) {

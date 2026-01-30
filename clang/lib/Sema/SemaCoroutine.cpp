@@ -594,8 +594,12 @@ static FunctionScopeInfo *checkCoroutineContext(Sema &S, SourceLocation Loc,
 /// Recursively check \p E and all its children to see if any call target
 /// (including constructor call) is declared noexcept. Also any value returned
 /// from the call has a noexcept destructor.
+///
+/// \param DiagID The error diagnostic ID to emit if a throwing function is
+/// found.
 static void checkNoThrow(Sema &S, const Stmt *E,
-                         llvm::SmallPtrSetImpl<const Decl *> &ThrowingDecls) {
+                         llvm::SmallPtrSetImpl<const Decl *> &ThrowingDecls,
+                         unsigned DiagID) {
   auto checkDeclNoexcept = [&](const Decl *D, bool IsDtor = false) {
     // In the case of dtor, the call to dtor is implicit and hence we should
     // pass nullptr to canCalleeThrow.
@@ -612,13 +616,12 @@ static void checkNoThrow(Sema &S, const Stmt *E,
           return;
       }
       if (ThrowingDecls.empty()) {
-        // [dcl.fct.def.coroutine]p15
-        //   The expression co_await promise.final_suspend() shall not be
-        //   potentially-throwing ([except.spec]).
+        // [dcl.fct.def.coroutine]p11 (initial_suspend) & p15 (final_suspend)
+        //   The expression co_await promise.initial/final_suspend() shall not
+        //   be potentially-throwing ([except.spec]).
         //
         // First time seeing an error, emit the error message.
-        S.Diag(cast<FunctionDecl>(S.CurContext)->getLocation(),
-               diag::err_coroutine_promise_final_suspend_requires_nothrow);
+        S.Diag(cast<FunctionDecl>(S.CurContext)->getLocation(), DiagID);
       }
       ThrowingDecls.insert(D);
     }
@@ -648,26 +651,39 @@ static void checkNoThrow(Sema &S, const Stmt *E,
     for (const auto *Child : E->children()) {
       if (!Child)
         continue;
-      checkNoThrow(S, Child, ThrowingDecls);
+      checkNoThrow(S, Child, ThrowingDecls, DiagID);
     }
 }
 
-bool Sema::checkFinalSuspendNoThrow(const Stmt *FinalSuspend) {
+static bool checkSuspendNoThrow(Sema &S, const Stmt *SuspendExpr,
+                                unsigned DiagID) {
   llvm::SmallPtrSet<const Decl *, 4> ThrowingDecls;
   // We first collect all declarations that should not throw but not declared
   // with noexcept. We then sort them based on the location before printing.
   // This is to avoid emitting the same note multiple times on the same
   // declaration, and also provide a deterministic order for the messages.
-  checkNoThrow(*this, FinalSuspend, ThrowingDecls);
+  checkNoThrow(S, SuspendExpr, ThrowingDecls, DiagID);
+
   auto SortedDecls = llvm::SmallVector<const Decl *, 4>{ThrowingDecls.begin(),
                                                         ThrowingDecls.end()};
   sort(SortedDecls, [](const Decl *A, const Decl *B) {
     return A->getEndLoc() < B->getEndLoc();
   });
   for (const auto *D : SortedDecls) {
-    Diag(D->getEndLoc(), diag::note_coroutine_function_declare_noexcept);
+    S.Diag(D->getEndLoc(), diag::note_coroutine_function_declare_noexcept);
   }
   return ThrowingDecls.empty();
+}
+
+bool Sema::checkFinalSuspendNoThrow(const Stmt *FinalSuspend) {
+  return checkSuspendNoThrow(
+      *this, FinalSuspend,
+      diag::err_coroutine_promise_final_suspend_requires_nothrow);
+}
+
+void Sema::warnInitialSuspendNoThrow(const Stmt *InitialSuspend) {
+  checkSuspendNoThrow(*this, InitialSuspend,
+                      diag::warn_coroutine_promise_initial_suspend_throw);
 }
 
 // [stmt.return.coroutine]p1:
@@ -731,8 +747,10 @@ bool Sema::ActOnCoroutineBodyStart(Scope *SC, SourceLocation KWLoc,
   };
 
   StmtResult InitSuspend = buildSuspends("initial_suspend");
-  if (InitSuspend.isInvalid())
+  if (InitSuspend.isInvalid()) {
     return true;
+  }
+  warnInitialSuspendNoThrow(InitSuspend.get());
 
   StmtResult FinalSuspend = buildSuspends("final_suspend");
   if (FinalSuspend.isInvalid() || !checkFinalSuspendNoThrow(FinalSuspend.get()))

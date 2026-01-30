@@ -12,7 +12,7 @@ struct resumable {
     void *operator new(std::size_t sz, Allocator &);
 
     resumable get_return_object() { return {}; }
-    auto initial_suspend() { return std::suspend_always(); }
+    auto initial_suspend() noexcept { return std::suspend_always(); }
     auto final_suspend() noexcept { return std::suspend_always(); }
     void unhandled_exception() {}
     void return_void(){};
@@ -71,7 +71,7 @@ struct promise_base2 {
 struct resumable2 {
   struct promise_type : public promise_base1, public promise_base2 {
     resumable2 get_return_object() { return {}; }
-    auto initial_suspend() { return std::suspend_always(); }
+    auto initial_suspend() noexcept { return std::suspend_always(); }
     auto final_suspend() noexcept { return std::suspend_always(); }
     void unhandled_exception() {}
     void return_void(){};

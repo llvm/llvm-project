@@ -10,7 +10,7 @@ template <typename T> struct [[clang::coro_lifetimebound, clang::coro_return_typ
     Co<T> get_return_object() {
       return {};
     }
-    suspend_always initial_suspend();
+    suspend_always initial_suspend() noexcept;
     suspend_always final_suspend() noexcept;
     void unhandled_exception();
     void return_value(const T &t);
@@ -151,7 +151,7 @@ template <typename T> struct [[clang::coro_lifetimebound]] CoNoCRT {
     CoNoCRT<T> get_return_object() {
       return {};
     }
-    suspend_always initial_suspend();
+    suspend_always initial_suspend() noexcept;
     suspend_always final_suspend() noexcept;
     void unhandled_exception();
     void return_value(const T &t);

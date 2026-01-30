@@ -12755,6 +12755,12 @@ def warn_coroutine_handle_address_invalid_return_type : Warning <
 def err_coroutine_promise_final_suspend_requires_nothrow : Error<
   "the expression 'co_await __promise.final_suspend()' is required to be non-throwing"
 >;
+def warn_coroutine_promise_initial_suspend_throw
+    : Warning<"a potentially throwing 'co_await __promise.initial_suspend()' "
+              "may disable heap allocation elision; "
+              "if it throws, the coroutine return value and state are "
+              "destroyed in the reverse order of their construction">,
+      InGroup<InitialSuspendThrowing>;
 def note_coroutine_function_declare_noexcept : Note<
   "must be declared with 'noexcept'"
 >;
