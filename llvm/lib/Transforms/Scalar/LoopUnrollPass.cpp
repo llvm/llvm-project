@@ -895,6 +895,8 @@ shouldPartialUnroll(const unsigned LoopSize, const unsigned TripCount,
       // largest power-of-two factor that satisfies the threshold limit.
       // As we'll create fixup loop, do the type of unrolling only if
       // remainder loop is allowed.
+      // Note: DefaultUnrollRuntimeCount is used as a reasonable starting point
+      // even though this is partial unrolling (not runtime unrolling).
       count = UP.DefaultUnrollRuntimeCount;
       while (count != 0 &&
              UCE.getUnrolledLoopSize(UP, count) > UP.PartialThreshold)
