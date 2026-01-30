@@ -354,6 +354,24 @@ module {
     llvm.return
   }
 
+  llvm.func @no_caller_saved_registers_function() attributes {no_caller_saved_registers} {
+    // CHECK: @no_caller_saved_registers_function
+    // CHECK-SAME: attributes {no_caller_saved_registers}
+    llvm.return
+  }
+
+  llvm.func @nocallback_function() attributes {nocallback} {
+    // CHECK: @nocallback_function
+    // CHECK-SAME: attributes {nocallback}
+    llvm.return
+  }
+
+  llvm.func @modular_format_function(%arg: i32) attributes {modular_format = "ident,1,1,foo,bar"} {
+    // CHECK: @modular_format_function
+    // CHECK-SAME: attributes {modular_format = "ident,1,1,foo,bar"}
+    llvm.return
+  }
+
 }
 
 // -----

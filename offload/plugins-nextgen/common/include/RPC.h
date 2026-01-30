@@ -38,6 +38,8 @@ class DeviceImageTy;
 /// these routines will perform no action.
 struct RPCServerTy {
 public:
+  using RPCServerCallbackTy = uint32_t (*)(void *, uint32_t);
+
   /// Initializes the handles to the number of devices we may need to service.
   RPCServerTy(plugin::GenericPluginTy &Plugin);
 
@@ -64,6 +66,9 @@ public:
   /// Deinitialize the RPC server for the given device. This will free the
   /// memory associated with the k
   llvm::Error deinitDevice(plugin::GenericDeviceTy &Device);
+
+  /// Register a custom callback for the RPC server to manage.
+  void registerCallback(RPCServerCallbackTy FnPtr);
 
 private:
   /// Array from this device's identifier to its attached devices.

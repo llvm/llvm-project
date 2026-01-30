@@ -32,6 +32,7 @@
 // DEBIAN_X86_64-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../include/x86_64-linux-gnu/c++/10"
 // DEBIAN_X86_64-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../include/c++/10/backward"
 // DEBIAN_X86_64-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]/include"
+// DEBIAN_X86_64-SAME: {{^}} "-internal-isystem" "[[BINROOT:[^"]+]]/usr/bin/../include/x86_64-unknown-linux-gnu"
 // DEBIAN_X86_64-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // DEBIAN_X86_64-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../x86_64-linux-gnu/include"
 /// We set explicit -ccc-install-dir ensure that Clang does not pick up extra
@@ -61,6 +62,7 @@
 // DEBIAN_X86_64_M32-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../include/x86_64-linux-gnu/c++/10/32"
 // DEBIAN_X86_64_M32-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../include/c++/10/backward"
 // DEBIAN_X86_64_M32-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]/include"
+// DEBIAN_X86_64-M32-SAME: {{^}} "-internal-isystem" "[[BINROOT:[^"]+]]/usr/bin/../include/x86_64-unknown-linux-gnu"
 // DEBIAN_X86_64_M32-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // DEBIAN_X86_64_M32-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/x86_64-linux-gnu/10/../../../../x86_64-linux-gnu/include"
 // DEBIAN_X86_64_M32:      "-internal-externc-isystem"
@@ -112,6 +114,7 @@
 // DEBIAN_I686_M64-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/i686-linux-gnu/10/../../../../include/i386-linux-gnu/c++/10/64"
 // DEBIAN_I686_M64-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/i686-linux-gnu/10/../../../../include/c++/10/backward"
 // DEBIAN_I686_M64-SAME: {{^}} "-internal-isystem" "[[RESOURCE]]/include"
+// DEBIAN_I686_M64-SAME: {{^}} "-internal-isystem" "[[BINROOT:[^"]+]]/usr/bin/../include/x86_64-unknown-linux-gnu"
 // DEBIAN_I686_M64-SAME: {{^}} "-internal-isystem" "[[SYSROOT]]/usr/local/include"
 // DEBIAN_I686_M64-SAME: {{^}} "-internal-isystem" "[[SYSROOT:[^"]+]]/usr/lib/gcc/i686-linux-gnu/10/../../../../i686-linux-gnu/include"
 // DEBIAN_I686_M64:      "-internal-externc-isystem"
