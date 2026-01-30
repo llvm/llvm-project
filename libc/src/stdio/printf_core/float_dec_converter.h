@@ -1201,6 +1201,28 @@ LIBC_INLINE int convert_float_dec_auto(Writer<write_mode> *writer,
 
   return convert_inf_nan(writer, to_conv);
 }
+
+#ifdef LIBC_PRINTF_DEFINE_MODULES
+
+#define HANDLE_WRITE_MODE(MODE)                                                \
+  template int convert_float_decimal<WriteMode::MODE>(                         \
+      Writer<WriteMode::MODE> * writer, const FormatSection &to_conv);
+#include "src/stdio/printf_core/write_modes.def"
+#undef HANDLE_WRITE_MODE
+
+#define HANDLE_WRITE_MODE(MODE)                                                \
+  template int convert_float_dec_exp<WriteMode::MODE>(                         \
+      Writer<WriteMode::MODE> * writer, const FormatSection &to_conv);
+#include "src/stdio/printf_core/write_modes.def"
+#undef HANDLE_WRITE_MODE
+
+#define HANDLE_WRITE_MODE(MODE)                                                \
+  template int convert_float_dec_auto<WriteMode::MODE>(                        \
+      Writer<WriteMode::MODE> * writer, const FormatSection &to_conv);
+#include "src/stdio/printf_core/write_modes.def"
+#undef HANDLE_WRITE_MODE
+
+#endif
 #endif
 
 } // namespace printf_core

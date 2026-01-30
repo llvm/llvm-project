@@ -740,6 +740,28 @@ Parser<ArgParser>::advance_arg_if_float(TypeDesc cur_type_desc) {
     return false;
   return true;
 }
+
+#ifdef LIBC_PRINTF_DEFINE_MODULES
+
+#define HANDLE_ARG_LIST_TYPE(TYPE)                                             \
+  template void Parser<internal::TYPE>::write_float_arg_val(                   \
+      FormatSection &section, LengthModifier lm, size_t conv_index);
+#include "src/__support/arg_list_types.def"
+#undef HANDLE_ARG_LIST_TYPE
+
+#define HANDLE_ARG_LIST_TYPE(TYPE)                                             \
+  template TypeDesc Parser<internal::TYPE>::float_type_desc(LengthModifier lm);
+#include "src/__support/arg_list_types.def"
+#undef HANDLE_ARG_LIST_TYPE
+
+#define HANDLE_ARG_LIST_TYPE(TYPE)                                             \
+  template bool Parser<internal::TYPE>::advance_arg_if_float(                  \
+      TypeDesc cur_type_desc);
+#include "src/__support/arg_list_types.def"
+#undef HANDLE_ARG_LIST_TYPE
+
+#endif
+
 #endif
 
 } // namespace printf_core
