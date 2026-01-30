@@ -213,13 +213,41 @@ CalculateTemplateDepthForConstraints(Sema &S, const NamedDecl *ND,
 }
 
 namespace {
-class AdjustConstraintDepth : public TreeTransform<AdjustConstraintDepth> {
+class AdjustConstraints : public TreeTransform<AdjustConstraints> {
   unsigned TemplateDepth = 0;
 
+  bool RemoveNonPackExpansionPacks = false;
+
 public:
-  using inherited = TreeTransform<AdjustConstraintDepth>;
-  AdjustConstraintDepth(Sema &SemaRef, unsigned TemplateDepth)
-      : inherited(SemaRef), TemplateDepth(TemplateDepth) {}
+  using inherited = TreeTransform<AdjustConstraints>;
+  AdjustConstraints(Sema &SemaRef, unsigned TemplateDepth,
+                    bool RemoveNonPackExpansionPacks = false)
+      : inherited(SemaRef), TemplateDepth(TemplateDepth),
+        RemoveNonPackExpansionPacks(RemoveNonPackExpansionPacks) {}
+
+  ExprResult RebuildPackExpansion(Expr *Pattern, SourceLocation EllipsisLoc,
+                                  UnsignedOrNone NumExpansions) {
+    return inherited::RebuildPackExpansion(Pattern, EllipsisLoc, NumExpansions);
+  }
+
+  TemplateArgumentLoc RebuildPackExpansion(TemplateArgumentLoc Pattern,
+                                           SourceLocation EllipsisLoc,
+                                           UnsignedOrNone NumExpansions) {
+    if (!RemoveNonPackExpansionPacks)
+      return inherited::RebuildPackExpansion(Pattern, EllipsisLoc,
+                                             NumExpansions);
+    return Pattern;
+  }
+
+  bool PreparePackForExpansion(TemplateArgumentLoc In, bool Uneval,
+                               TemplateArgumentLoc &Out, UnexpandedInfo &Info) {
+    if (!RemoveNonPackExpansionPacks)
+      return inherited::PreparePackForExpansion(In, Uneval, Out, Info);
+    assert(In.getArgument().isPackExpansion());
+    Out = In;
+    Info.Expand = false;
+    return false;
+  }
 
   using inherited::TransformTemplateTypeParmType;
   QualType TransformTemplateTypeParmType(TypeLocBuilder &TLB,
@@ -232,8 +260,8 @@ public:
           TransformDecl(TL.getNameLoc(), OldTTPDecl));
 
     QualType Result = getSema().Context.getTemplateTypeParmType(
-        T->getDepth() + TemplateDepth, T->getIndex(), T->isParameterPack(),
-        NewTTPDecl);
+        T->getDepth() + TemplateDepth, T->getIndex(),
+        RemoveNonPackExpansionPacks ? false : T->isParameterPack(), NewTTPDecl);
     TemplateTypeParmTypeLoc NewTL = TLB.push<TemplateTypeParmTypeLoc>(Result);
     NewTL.setNameLoc(TL.getNameLoc());
     return Result;
@@ -288,7 +316,13 @@ public:
 
     TemplateArgument Arg = TemplateArgs(T->getDepth(), T->getIndex());
 
-    if (T->isParameterPack() && SemaRef.ArgPackSubstIndex) {
+    // In concept parameter mapping for fold expressions, packs that aren't
+    // expanded in place are treated as having non-pack dependency, so that
+    // a PackExpansionType won't prevent expanding the packs outside the
+    // TreeTransform. However we still need to check the pack at this point.
+    if ((T->isParameterPack() ||
+         (T->getDecl() && T->getDecl()->isTemplateParameterPack())) &&
+        SemaRef.ArgPackSubstIndex) {
       assert(Arg.getKind() == TemplateArgument::Pack &&
              "Missing argument pack");
 
@@ -506,10 +540,6 @@ StringRef allocateStringFromConceptDiagnostic(const Sema &S,
 
 ExprResult ConstraintSatisfactionChecker::EvaluateAtomicConstraint(
     const Expr *AtomicExpr, const MultiLevelTemplateArgumentList &MLTAL) {
-  EnterExpressionEvaluationContext ConstantEvaluated(
-      S, Sema::ExpressionEvaluationContext::ConstantEvaluated,
-      Sema::ReuseLambdaContextDecl);
-
   llvm::FoldingSetNodeID ID;
   if (Template &&
       DiagRecursiveConstraintEval(S, ID, Template, AtomicExpr, &MLTAL)) {
@@ -617,7 +647,7 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
 
   if (S.SubstTemplateArgumentsInParameterMapping(
           Constraint.getParameterMapping(), Constraint.getBeginLoc(), MLTAL,
-          SubstArgs, /*BuildPackExpansionTypes=*/true)) {
+          SubstArgs)) {
     Satisfaction.IsSatisfied = false;
     return std::nullopt;
   }
@@ -663,6 +693,9 @@ ConstraintSatisfactionChecker::SubstitutionInTemplateArguments(
 ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     const AtomicConstraint &Constraint,
     const MultiLevelTemplateArgumentList &MLTAL) {
+  EnterExpressionEvaluationContext ConstantEvaluated(
+      S, Sema::ExpressionEvaluationContext::ConstantEvaluated,
+      Sema::ReuseLambdaContextDecl);
 
   llvm::SmallVector<TemplateArgument> SubstitutedOutermost;
   std::optional<MultiLevelTemplateArgumentList> SubstitutedArgs =
@@ -706,8 +739,6 @@ ExprResult ConstraintSatisfactionChecker::EvaluateSlow(
     return SubstitutedAtomicExpr;
   }
 
-  EnterExpressionEvaluationContext ConstantEvaluated(
-      S, Sema::ExpressionEvaluationContext::ConstantEvaluated);
   SmallVector<PartialDiagnosticAt, 2> EvaluationDiags;
   Expr::EvalResult EvalResult;
   EvalResult.Diag = &EvaluationDiags;
@@ -1288,28 +1319,6 @@ SubstituteConceptsInConstraintExpression(Sema &S, const NamedDecl *D,
       /*ForConstraintInstantiation=*/true);
   return S.SubstConceptTemplateArguments(CSE, Concept->getConstraintExpr(),
                                          MLTAL);
-}
-
-bool Sema::CheckConstraintSatisfaction(
-    const ConceptSpecializationExpr *ConstraintExpr,
-    ConstraintSatisfaction &Satisfaction) {
-
-  ExprResult Res = SubstituteConceptsInConstraintExpression(
-      *this, nullptr, ConstraintExpr, ArgPackSubstIndex);
-  if (!Res.isUsable())
-    return true;
-
-  llvm::SmallVector<AssociatedConstraint, 1> Constraints;
-  Constraints.emplace_back(Res.get());
-
-  MultiLevelTemplateArgumentList MLTAL(ConstraintExpr->getNamedConcept(),
-                                       ConstraintExpr->getTemplateArguments(),
-                                       true);
-
-  return CheckConstraintSatisfaction(
-      ConstraintExpr->getNamedConcept(), Constraints, MLTAL,
-      ConstraintExpr->getSourceRange(), Satisfaction,
-      ConstraintExpr->getConceptReference());
 }
 
 bool Sema::SetupConstraintScope(
@@ -2000,14 +2009,20 @@ class SubstituteParameterMappings {
   const MultiLevelTemplateArgumentList *MLTAL;
   const ASTTemplateArgumentListInfo *ArgsAsWritten;
 
-  bool InFoldExpr;
+  // When normalizing a fold constraint, e.g.
+  //   C<Pack1, Pack2...> && ...
+  // we want the TreeTransform to expand only Pack2 but not Pack1,
+  // since Pack1 will be expanded during the evaluation of the fold expression.
+  // This flag helps rewrite any non-PackExpansion packs into "expanded"
+  // parameters.
+  bool RemovePacksForFoldExpr;
 
   SubstituteParameterMappings(Sema &SemaRef,
                               const MultiLevelTemplateArgumentList *MLTAL,
                               const ASTTemplateArgumentListInfo *ArgsAsWritten,
-                              bool InFoldExpr)
+                              bool RemovePacksForFoldExpr)
       : SemaRef(SemaRef), MLTAL(MLTAL), ArgsAsWritten(ArgsAsWritten),
-        InFoldExpr(InFoldExpr) {}
+        RemovePacksForFoldExpr(RemovePacksForFoldExpr) {}
 
   void buildParameterMapping(NormalizedConstraintWithParamMapping &N);
 
@@ -2016,9 +2031,10 @@ class SubstituteParameterMappings {
   bool substitute(ConceptIdConstraint &CC);
 
 public:
-  SubstituteParameterMappings(Sema &SemaRef, bool InFoldExpr = false)
+  SubstituteParameterMappings(Sema &SemaRef,
+                              bool RemovePacksForFoldExpr = false)
       : SemaRef(SemaRef), MLTAL(nullptr), ArgsAsWritten(nullptr),
-        InFoldExpr(InFoldExpr) {}
+        RemovePacksForFoldExpr(RemovePacksForFoldExpr) {}
 
   bool substitute(NormalizedConstraint &N);
 };
@@ -2121,8 +2137,7 @@ bool SubstituteParameterMappings::substitute(
   // which is wrong.
   TemplateArgumentListInfo SubstArgs;
   if (SemaRef.SubstTemplateArgumentsInParameterMapping(
-          N.getParameterMapping(), N.getBeginLoc(), *MLTAL, SubstArgs,
-          /*BuildPackExpansionTypes=*/!InFoldExpr))
+          N.getParameterMapping(), N.getBeginLoc(), *MLTAL, SubstArgs))
     return true;
   Sema::CheckTemplateArgumentInfo CTAI;
   auto *TD =
@@ -2192,8 +2207,7 @@ bool SubstituteParameterMappings::substitute(ConceptIdConstraint &CC) {
   const ASTTemplateArgumentListInfo *ArgsAsWritten =
       CSE->getTemplateArgsAsWritten();
   if (SemaRef.SubstTemplateArgumentsInParameterMapping(
-          ArgsAsWritten->arguments(), CC.getBeginLoc(), *MLTAL, Out,
-          /*BuildPackExpansionTypes=*/!InFoldExpr))
+          ArgsAsWritten->arguments(), CC.getBeginLoc(), *MLTAL, Out))
     return true;
   Sema::CheckTemplateArgumentInfo CTAI;
   if (SemaRef.CheckTemplateArgumentList(CSE->getNamedConcept(),
@@ -2206,7 +2220,7 @@ bool SubstituteParameterMappings::substitute(ConceptIdConstraint &CC) {
   TemplateArgs.replaceOutermostTemplateArguments(CSE->getNamedConcept(),
                                                  CTAI.SugaredConverted);
   return SubstituteParameterMappings(SemaRef, &TemplateArgs, ArgsAsWritten,
-                                     InFoldExpr)
+                                     RemovePacksForFoldExpr)
       .substitute(CC.getNormalizedConstraint());
 }
 
@@ -2222,13 +2236,13 @@ bool SubstituteParameterMappings::substitute(NormalizedConstraint &N) {
   case NormalizedConstraint::ConstraintKind::FoldExpanded: {
     auto &FE = static_cast<FoldExpandedConstraint &>(N);
     if (!MLTAL) {
-      llvm::SaveAndRestore _1(InFoldExpr, true);
+      llvm::SaveAndRestore _1(RemovePacksForFoldExpr, true);
       assert(!ArgsAsWritten);
       return substitute(FE.getNormalizedPattern());
     }
     Sema::ArgPackSubstIndexRAII _(SemaRef, std::nullopt);
     substitute(static_cast<NormalizedConstraintWithParamMapping &>(FE));
-    return SubstituteParameterMappings(SemaRef, /*InFoldExpr=*/true)
+    return SubstituteParameterMappings(SemaRef, /*RemovePacksForFoldExpr=*/true)
         .substitute(FE.getNormalizedPattern());
   }
   case NormalizedConstraint::ConstraintKind::ConceptId: {
@@ -2239,16 +2253,38 @@ bool SubstituteParameterMappings::substitute(NormalizedConstraint &N) {
     }
     assert(!ArgsAsWritten);
     const ConceptSpecializationExpr *CSE = CC.getConceptSpecializationExpr();
+    SmallVector<TemplateArgument> InnerArgs(CSE->getTemplateArguments());
     ConceptDecl *Concept = CSE->getNamedConcept();
+    if (RemovePacksForFoldExpr) {
+      TemplateArgumentListInfo OutArgs;
+      ArrayRef<TemplateArgumentLoc> InputArgLoc =
+          CSE->getConceptReference()->getTemplateArgsAsWritten()->arguments();
+      if (AdjustConstraints(SemaRef, /*TemplateDepth=*/0,
+                            /*RemoveNonPackExpansionPacks=*/true)
+              .TransformTemplateArguments(InputArgLoc.begin(),
+                                          InputArgLoc.end(), OutArgs))
+        return true;
+      Sema::CheckTemplateArgumentInfo CTAI;
+      // Repack the packs.
+      if (SemaRef.CheckTemplateArgumentList(
+              Concept, Concept->getTemplateParameters(), Concept->getBeginLoc(),
+              OutArgs,
+              /*DefaultArguments=*/{},
+              /*PartialTemplateArgs=*/false, CTAI))
+        return true;
+      InnerArgs = std::move(CTAI.SugaredConverted);
+    }
+
     MultiLevelTemplateArgumentList MLTAL = SemaRef.getTemplateInstantiationArgs(
         Concept, Concept->getLexicalDeclContext(),
-        /*Final=*/true, CSE->getTemplateArguments(),
+        /*Final=*/true, InnerArgs,
         /*RelativeToPrimary=*/true,
         /*Pattern=*/nullptr,
         /*ForConstraintInstantiation=*/true);
 
-    return SubstituteParameterMappings(
-               SemaRef, &MLTAL, CSE->getTemplateArgsAsWritten(), InFoldExpr)
+    return SubstituteParameterMappings(SemaRef, &MLTAL,
+                                       CSE->getTemplateArgsAsWritten(),
+                                       RemovePacksForFoldExpr)
         .substitute(CC.getNormalizedConstraint());
   }
   case NormalizedConstraint::ConstraintKind::Compound: {
@@ -2496,12 +2532,12 @@ bool Sema::IsAtLeastAsConstrained(const NamedDecl *D1,
   for (size_t I = 0; I != AC1.size() && I != AC2.size(); ++I) {
     if (Depth2 > Depth1) {
       AC1[I].ConstraintExpr =
-          AdjustConstraintDepth(*this, Depth2 - Depth1)
+          AdjustConstraints(*this, Depth2 - Depth1)
               .TransformExpr(const_cast<Expr *>(AC1[I].ConstraintExpr))
               .get();
     } else if (Depth1 > Depth2) {
       AC2[I].ConstraintExpr =
-          AdjustConstraintDepth(*this, Depth1 - Depth2)
+          AdjustConstraints(*this, Depth1 - Depth2)
               .TransformExpr(const_cast<Expr *>(AC2[I].ConstraintExpr))
               .get();
     }

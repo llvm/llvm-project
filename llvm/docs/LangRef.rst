@@ -470,7 +470,7 @@ added in the future:
     registers to pass arguments. This attribute doesn't impact non-general
     purpose registers (e.g., floating point registers, on X86 XMMs/YMMs).
     Non-general purpose registers still follow the standard C calling
-    convention. Currently it is for x86_64 and AArch64 only.
+    convention. Currently it is for x86_64, AArch64 and LoongArch only.
 "``cxx_fast_tlscc``" - The `CXX_FAST_TLS` calling convention for access functions
     Clang generates an access function to access C++-style Thread Local Storage
     (TLS). The access function generally has an entry block, an exit block and an
@@ -4040,8 +4040,8 @@ are not "floating-point math operations": ``fneg``, ``llvm.fabs``, and
 representation and never change anything except possibly for the sign bit.
 
 Floating-point math operations that return a NaN are an exception from the
-general principle that LLVM implements IEEE-754 semantics. Unless specified
-otherwise, the following rules apply whenever the IEEE-754 semantics say that a
+general principle that LLVM implements IEEE 754 semantics. Unless specified
+otherwise, the following rules apply whenever the IEEE 754 semantics say that a
 NaN value is returned: the result has a non-deterministic sign; the quiet bit
 and payload are non-deterministically chosen from the following set of options:
 
@@ -4095,13 +4095,13 @@ Floating-Point Semantics
 ------------------------
 
 This section defines the semantics for core floating-point operations on types
-that use a format specified by IEEE-754. These types are: ``half``, ``float``,
+that use a format specified by IEEE 754. These types are: ``half``, ``float``,
 ``double``, and ``fp128``, which correspond to the binary16, binary32, binary64,
 and binary128 formats, respectively. The "core" operations are those defined in
-section 5 of IEEE-754, which all have corresponding LLVM operations.
+section 5 of IEEE 754, which all have corresponding LLVM operations.
 
 The value returned by those operations matches that of the corresponding
-IEEE-754 operation executed in the :ref:`default LLVM floating-point environment
+IEEE 754 operation executed in the :ref:`default LLVM floating-point environment
 <floatenv>`, except that the behavior of NaN results is instead :ref:`as
 specified here <floatnan>`. In particular, such a floating-point instruction
 returning a non-NaN value is guaranteed to always return the same bit-identical
@@ -4444,7 +4444,7 @@ Floating-Point Types
      - Description
 
    * - ``half``
-     - 16-bit floating-point value (IEEE-754 binary16)
+     - 16-bit floating-point value (IEEE 754 binary16)
 
    * - ``bfloat``
      - 16-bit "brain" floating-point value (7-bit significand).  Provides the
@@ -4453,13 +4453,13 @@ Floating-Point Types
        extensions and Arm's ARMv8.6-A extensions, among others.
 
    * - ``float``
-     - 32-bit floating-point value (IEEE-754 binary32)
+     - 32-bit floating-point value (IEEE 754 binary32)
 
    * - ``double``
-     - 64-bit floating-point value (IEEE-754 binary64)
+     - 64-bit floating-point value (IEEE 754 binary64)
 
    * - ``fp128``
-     - 128-bit floating-point value (IEEE-754 binary128)
+     - 128-bit floating-point value (IEEE 754 binary128)
 
    * - ``x86_fp80``
      -  80-bit floating-point value (X87)
@@ -4893,7 +4893,7 @@ and disassembly do not cause any bits to change in the constants.
 
 When using the hexadecimal form, constants of types bfloat, half, float, and
 double are represented using the 16-digit form shown above (which matches the
-IEEE754 representation for double); bfloat, half and float values must, however,
+IEEE 754 representation for double); bfloat, half and float values must, however,
 be exactly representable as bfloat, IEEE 754 half, and IEEE 754 single
 precision respectively. Hexadecimal format is always used for long double, and
 there are three forms of long double. The 80-bit format used by x86 is
@@ -7453,6 +7453,38 @@ Examples:
     !1 = !{ i8 255, i8 2 }
     !2 = !{ i8 0, i8 2, i8 3, i8 6 }
     !3 = !{ i8 -2, i8 0, i8 3, i8 6 }
+
+
+.. _nofpclass-metadata:
+
+'``nofpclass``' Metadata
+^^^^^^^^^^^^^^^^^^^^^^^^
+
+``nofpclass`` metadata may be attached only to ``load``
+instructions. It asserts floating-point value classes which will not
+be loaded. The representation is an i32 constant integer encoding a
+10-bit bitmask, with the same meaning and format as the
+:ref:`nofpclass <nofpclass>` attribute. If the loaded value is one of
+the specified floating-point classes, a poison value is returned. The
+interpretation does not depend on the floating-point environment. A
+zero value would be meaningless and is invalid.
+
+Examples:
+
+.. code-block:: llvm
+
+  %not.nan = load float, ptr %p, align 4, !nofpclass !0
+  %not.inf = load <2 x float>, ptr %p, align 4, !nofpclass !1
+  %only.normal = load double, ptr %p, align 8, !nofpclass !2
+  %always.poison = load double, ptr %p, align 8, !nofpclass !3
+  %not.nan.array = load [2 x <2 x float>], ptr %p, !nofpclass !1
+  %not.nan.struct = load { 2 x float }, ptr %p, align 8, !nofpclass !1
+  ...
+  !0 = !{ i32 3 }
+  !1 = !{ i32 516 }
+  !2 = !{ i32 759 }
+  !3 = !{ i32 1023 }
+
 
 '``absolute_symbol``' Metadata
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -11354,10 +11386,11 @@ shuffle mask selects an element from one of the input vectors to copy
 to the result. Non-negative elements in the mask represent an index
 into the concatenated pair of input vectors.
 
-A ``poison`` element in the mask vector specifies that the resulting element
-is ``poison``.
-For backwards-compatibility reasons, LLVM temporarily also accepts ``undef``
-mask elements, which will be interpreted the same way as ``poison`` elements.
+A ``poison`` element in the mask vector specifies that the resulting element is
+``poison``. For backwards-compatibility reasons, LLVM temporarily also accepts
+``undef`` mask elements. These will be interpreted the same way as ``poison``
+mask elements, also producing a ``poison`` element in the result.
+
 If the shuffle mask selects an ``undef`` element from one of the input
 vectors, the resulting element is ``undef``.
 
@@ -16479,7 +16512,7 @@ Semantics:
 """"""""""
 
 Return the same value as a corresponding libm '``sqrt``' function but without
-trapping or setting ``errno``. For types specified by IEEE-754, the result
+trapping or setting ``errno``. For types specified by IEEE 754, the result
 matches a conforming libm implementation.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
@@ -17474,7 +17507,7 @@ The arguments and return value are floating-point numbers of the same type.
 Semantics:
 """"""""""
 
-Return the same value as the IEEE-754 fusedMultiplyAdd operation. This
+Return the same value as the IEEE 754 fusedMultiplyAdd operation. This
 is assumed to not trap or set ``errno``.
 
 When specified with the fast-math-flag 'afn', the result may be approximated
@@ -17523,93 +17556,45 @@ are perfectly preserved.
 
 .. _i_fminmax_family:
 
-'``llvm.min.*``' Intrinsics Comparation
-^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+Floating-point min/max intrinsics comparison
+^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
-Standard:
-"""""""""
+LLVM supports three pairs of floating-point min/max intrinsics, which differ
+in their handling of :ref:`NaN values <floatnan>`:
 
-IEEE754 and ISO C define some min/max operations, and they have some differences
-on working with qNaN/sNaN and +0.0/-0.0. Here is the list:
+ * ``llvm.minimum`` and ``llvm.maximum``: Return NaN if one the arguments is
+   NaN.
+ * ``llvm.minimumnum`` and ``llvm.maximumnum``: Return the other argument if
+   one of the arguments is NaN.
+ * ``llvm.minnum`` and ``llvm.maxnum``: For quiet NaNs behaves like
+   minimumnum/maximumnum. For signaling NaNs, non-deterministically returns
+   NaN or the other operand.
 
-.. list-table::
-   :header-rows: 2
+Additionally, each of these intrinsics supports two behaviors for signed zeros.
+By default, -0.0 is considered smaller than +0.0. If the ``nsz`` flag is
+specified, the order is non-deterministic: If the two inputs are zeros with
+opposite sign, either input may be returned.
 
-   * - ``ISO C``
-     - fmin/fmax
-     - fmininum/fmaximum
-     - fminimum_num/fmaximum_num
-
-   * - ``IEEE754``
-     - minNum/maxNum (2008)
-     - minimum/maximum (2019)
-     - minimumNumber/maximumNumber (2019)
-
-   * - ``+0.0 vs -0.0``
-     - either one
-     - +0.0 > -0.0
-     - +0.0 > -0.0
-
-   * - ``NUM vs sNaN``
-     - qNaN, invalid exception
-     - qNaN, invalid exception
-     - NUM, invalid exception
-
-   * - ``qNaN vs sNaN``
-     - qNaN, invalid exception
-     - qNaN, invalid exception
-     - qNaN, invalid exception
-
-   * - ``NUM vs qNaN``
-     - NUM, no exception
-     - qNaN, no exception
-     - NUM, no exception
-
-LLVM Implementation:
-""""""""""""""""""""
-
-LLVM implements all ISO C flavors as listed in this table, except in the
-default floating-point environment exceptions are ignored. The constrained
-versions of the intrinsics respect the exception behavior.
+The mapping between the LLVM intrinsics, C functions and IEEE 754 functions is
+as follows (up to divergences permitted by the usual `NaN rules <floatnan>`):
 
 .. list-table::
    :header-rows: 1
-   :widths: 16 28 28 28
 
-   * - Operation
-     - minnum/maxnum
-     - minimum/maximum
-     - minimumnum/maximumnum
+   * - LLVM intrinsic
+     - llvm.minnum with nsz flag
+     - llvm.minimum
+     - llvm.minimumnum
 
-   * - ``NUM vs qNaN``
-     - NUM, no exception
-     - qNaN, no exception
-     - NUM, no exception
+   * - C function
+     - fmin
+     - fminimum
+     - fminimum_num
 
-   * - ``NUM vs sNaN``
-     - qNaN, invalid exception
-     - qNaN, invalid exception
-     - NUM, invalid exception
-
-   * - ``qNaN vs sNaN``
-     - qNaN, invalid exception
-     - qNaN, invalid exception
-     - qNaN, invalid exception
-
-   * - ``sNaN vs sNaN``
-     - qNaN, invalid exception
-     - qNaN, invalid exception
-     - qNaN, invalid exception
-
-   * - ``+0.0 vs -0.0``
-     - +0.0(max)/-0.0(min)
-     - +0.0(max)/-0.0(min)
-     - +0.0(max)/-0.0(min)
-
-   * - ``NUM vs NUM``
-     - larger(max)/smaller(min)
-     - larger(max)/smaller(min)
-     - larger(max)/smaller(min)
+   * - IEEE 754 function
+     - minNum (2008)
+     - minimum (2019)
+     - minimumNumber (2019)
 
 .. _i_minnum:
 
@@ -17646,30 +17631,36 @@ type.
 
 Semantics:
 """"""""""
-Follows the semantics of minNum in IEEE-754-2008, except that -0.0 < +0.0 for the purposes
-of this intrinsic. As for signaling NaNs, per the minNum semantics, if either operand is sNaN,
-the result is qNaN. This matches the recommended behavior for the libm
-function ``fmin``, although not all implementations have implemented these recommended behaviors.
 
-If either operand is a qNaN, returns the other non-NaN operand. Returns NaN only if both operands are
-NaN or if either operand is sNaN. Note that arithmetic on an sNaN doesn't consistently produce a qNaN,
-so arithmetic feeding into a minnum can produce inconsistent results. For example,
-``minnum(fadd(sNaN, -0.0), 1.0)`` can produce qNaN or 1.0 depending on whether ``fadd`` is folded.
+If both operands are qNaNs, returns a :ref:`NaN <floatnan>`. If one operand is
+qNaN and another operand is a number, returns the number. If both operands are
+numbers, returns the lesser of the two arguments. -0.0 is considered to be less
+than +0.0 for this intrinsic.
 
-IEEE-754-2008 defines minNum, and it was removed in IEEE-754-2019. As the replacement, IEEE-754-2019
-defines :ref:`minimumNumber <i_minimumnum>`.
+If an operand is a signaling NaN, then the intrinsic will non-deterministically
+either:
 
-If the intrinsic is marked with the nsz attribute, then the effect is as in the definition in C
-and IEEE-754-2008: the result of ``minnum(-0.0, +0.0)`` may be either -0.0 or +0.0.
+ * Return a :ref:`NaN <floatnan>`.
+ * Or treat the signaling NaN as a quiet NaN.
 
-Some architectures, such as ARMv8 (FMINNM), LoongArch (fmin), MIPSr6 (min.fmt), PowerPC/VSX (xsmindp),
-have instructions that match these semantics exactly; thus it is quite simple for these architectures.
-Some architectures have similar ones while they are not exact equivalent. Such as x86 implements ``MINPS``,
-which implements the semantics of C code ``a<b?a:b``: NUM vs qNaN always return qNaN. ``MINPS`` can be used
-if ``nsz`` and ``nnan`` are given.
+If the ``nsz`` flag is specified, ``llvm.minnum`` with one +0.0 and one
+-0.0 operand may non-deterministically return either operand. Contrary to normal
+``nsz`` semantics, if both operands have the same sign, the result must also
+have the same sign.
 
-For existing libc implementations, the behaviors of fmin may be quite different on sNaN and signed zero behaviors,
-even in the same release of a single libm implementation.
+When used with the ``nsz`` flag, this intrinsic follows the semantics of
+``fmin`` in C and ``minNum`` in IEEE 754-2008, except for signaling NaN inputs,
+which follow :ref:`LLVM's usual signaling NaN behavior <floatnan>` instead.
+
+The ``llvm.minnum`` intrinsic can be refined into ``llvm.minimumnum``, as the
+latter exhibits a subset of behaviors of the former.
+
+.. warning::
+
+  If the intrinsic is used without nsz, not all backends currently respect the
+  specified signed zero ordering. Do not rely on it until this warning has
+  been removed. See `issue #174730
+  <https://github.com/llvm/llvm-project/issues/174730>`_.
 
 .. _i_maxnum:
 
@@ -17706,30 +17697,36 @@ type.
 
 Semantics:
 """"""""""
-Follows the semantics of maxNum in IEEE-754-2008, except that -0.0 < +0.0 for the purposes
-of this intrinsic. As for signaling NaNs, per the maxNum semantics, if either operand is sNaN,
-the result is qNaN. This matches the recommended behavior for the libm
-function ``fmax``, although not all implementations have implemented these recommended behaviors.
 
-If either operand is a qNaN, returns the other non-NaN operand. Returns NaN only if both operands are
-NaN or if either operand is sNaN. Note that arithmetic on an sNaN doesn't consistently produce a qNaN,
-so arithmetic feeding into a maxnum can produce inconsistent results. For example,
-``maxnum(fadd(sNaN, -0.0), 1.0)`` can produce qNaN or 1.0 depending on whether ``fadd`` is folded.
+If both operands are qNaNs, returns a :ref:`NaN <floatnan>`. If one operand is
+qNaN and another operand is a number, returns the number. If both operands are
+numbers, returns the greater of the two arguments. -0.0 is considered to be
+less than +0.0 for this intrinsic.
 
-IEEE-754-2008 defines maxNum, and it was removed in IEEE-754-2019. As the replacement, IEEE-754-2019
-defines :ref:`maximumNumber <i_maximumnum>`.
+If an operand is a signaling NaN, then the intrinsic will non-deterministically
+either:
 
-If the intrinsic is marked with the nsz attribute, then the effect is as in the definition in C
-and IEEE-754-2008: the result of maxnum(-0.0, +0.0) may be either -0.0 or +0.0.
+ * Return a :ref:`NaN <floatnan>`.
+ * Or treat the signaling NaN as a quiet NaN.
 
-Some architectures, such as ARMv8 (FMAXNM), LoongArch (fmax), MIPSr6 (max.fmt), PowerPC/VSX (xsmaxdp),
-have instructions that match these semantics exactly; thus it is quite simple for these architectures.
-Some architectures have similar ones while they are not exact equivalent. Such as x86 implements ``MAXPS``,
-which implements the semantics of C code ``a>b?a:b``: NUM vs qNaN always return qNaN. ``MAXPS`` can be used
-if ``nsz`` and ``nnan`` are given.
+If the ``nsz`` flag is specified, ``llvm.maxnum`` with one +0.0 and one
+-0.0 operand may non-deterministically return either operand. Contrary to normal
+``nsz`` semantics, if both operands have the same sign, the result must also
+have the same sign.
 
-For existing libc implementations, the behaviors of fmin may be quite different on sNaN and signed zero behaviors,
-even in the same release of a single libm implementation.
+When used with the ``nsz`` flag, this intrinsic follows the semantics of
+``fmax`` in C and ``maxNum`` in IEEE 754-2008, except for signaling NaN inputs,
+which follow :ref:`LLVM's usual signaling NaN behavior <floatnan>` instead.
+
+The ``llvm.maxnum`` intrinsic can be refined into ``llvm.maximumnum``, as the
+latter exhibits a subset of behaviors of the former.
+
+.. warning::
+
+  If the intrinsic is used without nsz, not all backends currently respect the
+  specified signed zero ordering. Do not rely on it until this warning has
+  been removed. See `issue #174730
+  <https://github.com/llvm/llvm-project/issues/174730>`_.
 
 .. _i_minimum:
 
@@ -17766,10 +17763,18 @@ type.
 
 Semantics:
 """"""""""
-If either operand is a NaN, returns NaN. Otherwise returns the lesser
-of the two arguments. -0.0 is considered to be less than +0.0 for this
-intrinsic. Note that these are the semantics specified in the draft of
-IEEE 754-2019.
+If either operand is a NaN, returns a :ref:`NaN <floatnan>`. Otherwise returns
+the lesser of the two arguments. -0.0 is considered to be less than +0.0 for
+this intrinsic.
+
+This intrinsic follows the semantics of ``fminimum`` in C23 and ``minimum`` in
+IEEE 754-2019, except for signaling NaN inputs, which follow
+:ref:`LLVM's usual signaling NaN behavior <floatnan>` instead.
+
+If the ``nsz`` flag is specified, ``llvm.maximum`` with one +0.0 and one
+-0.0 operand may non-deterministically return either operand. Contrary to normal
+``nsz`` semantics, if both operands have the same sign, the result must also
+have the same sign.
 
 .. _i_maximum:
 
@@ -17806,10 +17811,18 @@ type.
 
 Semantics:
 """"""""""
-If either operand is a NaN, returns NaN. Otherwise returns the greater
-of the two arguments. -0.0 is considered to be less than +0.0 for this
-intrinsic. Note that these are the semantics specified in the draft of
-IEEE 754-2019.
+If either operand is a NaN, returns a :ref:`NaN <floatnan>`. Otherwise returns
+the greater of the two arguments. -0.0 is considered to be less than +0.0 for
+this intrinsic.
+
+This intrinsic follows the semantics of ``fmaximum`` in C23 and ``maximum`` in
+IEEE 754-2019, except for signaling NaN inputs, which follow
+:ref:`LLVM's usual signaling NaN behavior <floatnan>` instead.
+
+If the ``nsz`` flag is specified, ``llvm.maximum`` with one +0.0 and one
+-0.0 operand may non-deterministically return either operand. Contrary to normal
+``nsz`` semantics, if both operands have the same sign, the result must also
+have the same sign.
 
 .. _i_minimumnum:
 
@@ -17852,12 +17865,17 @@ one operand is NaN (including sNaN) and another operand is a number,
 return the number.  Otherwise returns the lesser of the two
 arguments. -0.0 is considered to be less than +0.0 for this intrinsic.
 
-Note that these are the semantics of minimumNumber specified in
-IEEE-754-2019 with the usual :ref:`signaling NaN <floatnan>` exception.
+If the ``nsz`` flag is specified, ``llvm.minimumnum`` with one +0.0 and one
+-0.0 operand may non-deterministically return either operand. Contrary to normal
+``nsz`` semantics, if both operands have the same sign, the result must also
+have the same sign.
 
-It has some differences with '``llvm.minnum.*``':
-1)'``llvm.minnum.*``' will return qNaN if either operand is sNaN.
-2)'``llvm.minnum*``' may return either one if we compare +0.0 vs -0.0.
+This intrinsic follows the semantics of ``fminimum_num`` in C23 and
+``minimumNumber`` in IEEE 754-2019, except for signaling NaN inputs, which
+follow :ref:`LLVM's usual signaling NaN behavior <floatnan>` instead.
+
+This intrinsic behaves the same as ``llvm.minnum`` other than its treatment of
+sNaN inputs.
 
 .. _i_maximumnum:
 
@@ -17901,12 +17919,17 @@ another operand is a number, return the number.  Otherwise returns the
 greater of the two arguments. -0.0 is considered to be less than +0.0
 for this intrinsic.
 
-Note that these are the semantics of maximumNumber specified in
-IEEE-754-2019  with the usual :ref:`signaling NaN <floatnan>` exception.
+If the ``nsz`` flag is specified, ``llvm.maximumnum`` with one +0.0 and one
+-0.0 operand may non-deterministically return either operand. Contrary to normal
+``nsz`` semantics, if both operands have the same sign, the result must also
+have the same sign.
 
-It has some differences with '``llvm.maxnum.*``':
-1)'``llvm.maxnum.*``' will return qNaN if either operand is sNaN.
-2)'``llvm.maxnum*``' may return either one if we compare +0.0 vs -0.0.
+This intrinsic follows the semantics of ``fmaximum_num`` in C23 and
+``maximumNumber`` in IEEE 754-2019, except for signaling NaN inputs, which
+follow :ref:`LLVM's usual signaling NaN behavior <floatnan>` instead.
+
+This intrinsic behaves the same as ``llvm.maxnum`` other than its treatment of
+sNaN inputs.
 
 .. _int_copysign:
 
@@ -18220,7 +18243,7 @@ The argument and return value are floating-point numbers of the same type.
 Semantics:
 """"""""""
 
-This function implements IEEE-754 operation ``roundToIntegralTiesToEven``. It
+This function implements IEEE 754 operation ``roundToIntegralTiesToEven``. It
 also behaves in the same way as C standard function ``roundeven``, including
 that it disregards rounding mode and does not raise floating point exceptions.
 
@@ -19970,7 +19993,7 @@ Overview:
 The '``llvm.canonicalize.*``' intrinsic returns the platform-specific canonical
 encoding of a floating-point number. This canonicalization is useful for
 implementing certain numeric primitives such as frexp. The canonical encoding is
-defined by IEEE-754-2008 to be:
+defined by IEEE 754-2008 to be:
 
 ::
 
@@ -19978,7 +20001,7 @@ defined by IEEE-754-2008 to be:
       representation in a format. Applied to declets, significands of finite
       numbers, infinities, and NaNs, especially in decimal formats.
 
-This operation can also be considered equivalent to the IEEE-754-2008
+This operation can also be considered equivalent to the IEEE 754-2008
 conversion of a floating-point value to the same format. NaNs are handled
 according to section 6.2.
 
@@ -19992,7 +20015,7 @@ Examples of non-canonical encodings:
   These are treated as non-canonical encodings of zero and will be flushed to
   a zero of the same sign by this operation.
 
-Note that per IEEE-754-2008 6.2, systems that support signaling NaNs with
+Note that per IEEE 754-2008 6.2, systems that support signaling NaNs with
 default exception handling must signal an invalid exception, and produce a
 quiet NaN result.
 
@@ -20661,9 +20684,14 @@ The '``llvm.vector.reduce.fmax.*``' intrinsics do a floating-point
 ``MAX`` reduction of a vector, returning the result as a scalar. The return type
 matches the element-type of the vector input.
 
-This instruction has the same comparison semantics as the '``llvm.maxnum.*``'
-intrinsic.  If the intrinsic call has the ``nnan`` fast-math flag, then the
-operation can assume that NaNs are not present in the input vector.
+This instruction has the same comparison and ``nsz`` semantics as the
+'``llvm.maxnum.*``' intrinsic.
+
+If any of the vector elements is a signaling NaN, the intrinsic will
+non-deterministically either:
+
+ * Return a :ref:`NaN <floatnan>`.
+ * Treat the signaling NaN as a quiet NaN.
 
 Arguments:
 """"""""""
@@ -20690,9 +20718,14 @@ The '``llvm.vector.reduce.fmin.*``' intrinsics do a floating-point
 ``MIN`` reduction of a vector, returning the result as a scalar. The return type
 matches the element-type of the vector input.
 
-This instruction has the same comparison semantics as the '``llvm.minnum.*``'
-intrinsic. If the intrinsic call has the ``nnan`` fast-math flag, then the
-operation can assume that NaNs are not present in the input vector.
+This instruction has the same comparison and ``nsz`` semantics as the
+'``llvm.minnum.*``' intrinsic.
+
+If any of the vector elements is a signaling NaN, the intrinsic will
+non-deterministically either:
+
+ * Return a :ref:`NaN <floatnan>`.
+ * Treat the signaling NaN as a quiet NaN.
 
 Arguments:
 """"""""""
@@ -23180,7 +23213,7 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-Predicated floating-point IEEE-754-2008 minNum of two vectors of floating-point values.
+Predicated floating-point IEEE 754-2008 minNum of two vectors of floating-point values.
 
 
 Arguments:
@@ -23229,7 +23262,7 @@ This is an overloaded intrinsic.
 Overview:
 """""""""
 
-Predicated floating-point IEEE-754-2008 maxNum of two vectors of floating-point values.
+Predicated floating-point IEEE 754-2008 maxNum of two vectors of floating-point values.
 
 
 Arguments:
@@ -29474,7 +29507,7 @@ The third argument specifies the exception behavior as described above.
 Semantics:
 """"""""""
 
-This function follows the IEEE-754-2008 semantics for maxNum.
+This function follows the IEEE 754-2008 semantics for maxNum.
 
 
 '``llvm.experimental.constrained.minnum``' Intrinsic
@@ -29506,7 +29539,7 @@ The third argument specifies the exception behavior as described above.
 Semantics:
 """"""""""
 
-This function follows the IEEE-754-2008 semantics for minNum.
+This function follows the IEEE 754-2008 semantics for minNum.
 
 
 '``llvm.experimental.constrained.maximum``' Intrinsic
@@ -29703,7 +29736,7 @@ The second argument specifies the exception behavior as described above.
 Semantics:
 """"""""""
 
-This function implements IEEE-754 operation ``roundToIntegralTiesToEven``. It
+This function implements IEEE 754 operation ``roundToIntegralTiesToEven``. It
 also behaves in the same way as C standard function ``roundeven`` and can signal
 the invalid operation exception for a SNAN argument.
 

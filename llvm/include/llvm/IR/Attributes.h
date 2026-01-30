@@ -212,6 +212,8 @@ public:
                                                  MemoryEffects ME);
   LLVM_ABI static Attribute getWithNoFPClass(LLVMContext &Context,
                                              FPClassTest Mask);
+  LLVM_ABI static Attribute getWithDeadOnReturnInfo(LLVMContext &Context,
+                                                    DeadOnReturnInfo DI);
   LLVM_ABI static Attribute getWithCaptureInfo(LLVMContext &Context,
                                                CaptureInfo CI);
 

@@ -288,6 +288,11 @@ Attribute Attribute::getWithNoFPClass(LLVMContext &Context,
   return get(Context, NoFPClass, ClassMask);
 }
 
+Attribute Attribute::getWithDeadOnReturnInfo(LLVMContext &Context,
+                                             DeadOnReturnInfo DI) {
+  return get(Context, DeadOnReturn, DI.toIntValue());
+}
+
 Attribute Attribute::getWithCaptureInfo(LLVMContext &Context, CaptureInfo CI) {
   return get(Context, Captures, CI.toIntValue());
 }
@@ -2371,6 +2376,11 @@ AttrBuilder &AttrBuilder::addFromEquivalentMetadata(const Instruction &I) {
 
   if (const MDNode *Range = I.getMetadata(LLVMContext::MD_range))
     addRangeAttr(getConstantRangeFromMetadata(*Range));
+
+  if (const MDNode *NoFPClass = I.getMetadata(LLVMContext::MD_nofpclass)) {
+    ConstantInt *CI = mdconst::extract<ConstantInt>(NoFPClass->getOperand(0));
+    addNoFPClassAttr(static_cast<FPClassTest>(CI->getZExtValue()));
+  }
 
   return *this;
 }
