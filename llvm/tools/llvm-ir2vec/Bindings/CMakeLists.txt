@@ -4,7 +4,7 @@ if(NOT LLVM_ENABLE_PIC)
 endif()
 
 set(BINDINGS_MINIMUM_PYTHON_VERSION 3.10)
-find_package(Python ${BINDINGS_MINIMUM_PYTHON_VERSION} EXACT COMPONENTS Interpreter Development.Module REQUIRED)
+find_package(Python ${BINDINGS_MINIMUM_PYTHON_VERSION} COMPONENTS Interpreter Development.Module REQUIRED)
 
 if(nanobind_DIR)
   message(STATUS "Using explicit nanobind cmake directory: ${nanobind_DIR}")
