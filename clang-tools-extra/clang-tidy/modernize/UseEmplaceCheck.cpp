@@ -100,18 +100,18 @@ cxxMemberCallExprOnContainer(StringRef MethodName,
       on(hasTypeOrPointeeType(hasWantedType(ContainerNames))));
 }
 
-static const auto DefaultContainersWithPushBack =
+static constexpr char DefaultContainersWithPushBack[] =
     "::std::vector; ::std::list; ::std::deque";
-static const auto DefaultContainersWithPush =
+static constexpr char DefaultContainersWithPush[] =
     "::std::stack; ::std::queue; ::std::priority_queue";
-static const auto DefaultContainersWithPushFront =
+static constexpr char DefaultContainersWithPushFront[] =
     "::std::forward_list; ::std::list; ::std::deque";
-static const auto DefaultSmartPointers =
+static constexpr char DefaultSmartPointers[] =
     "::std::shared_ptr; ::std::unique_ptr; ::std::auto_ptr; ::std::weak_ptr";
-static const auto DefaultTupleTypes = "::std::pair; ::std::tuple";
-static const auto DefaultTupleMakeFunctions =
+static constexpr char DefaultTupleTypes[] = "::std::pair; ::std::tuple";
+static constexpr char DefaultTupleMakeFunctions[] =
     "::std::make_pair; ::std::make_tuple";
-static const auto DefaultEmplacyFunctions =
+static constexpr char DefaultEmplacyFunctions[] =
     "vector::emplace_back; vector::emplace;"
     "deque::emplace; deque::emplace_front; deque::emplace_back;"
     "forward_list::emplace_after; forward_list::emplace_front;"

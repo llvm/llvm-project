@@ -41,8 +41,8 @@ AST_MATCHER(CXXMethodDecl, isSpecialFunction) {
 }
 } // namespace
 
-static const char SpecialFunction[] = "SpecialFunction";
-static const char DeletedNotPublic[] = "DeletedNotPublic";
+static constexpr char SpecialFunction[] = "SpecialFunction";
+static constexpr char DeletedNotPublic[] = "DeletedNotPublic";
 
 UseEqualsDeleteCheck::UseEqualsDeleteCheck(StringRef Name,
                                            ClangTidyContext *Context)

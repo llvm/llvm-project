@@ -256,7 +256,6 @@ formatted_bytes_str(ArrayRef<uint8_t> Bytes,
   std::string S;
   raw_string_ostream Str(S);
   Str << format_bytes(Bytes, Offset, NumPerLine, ByteGroupSize);
-  Str.flush();
   return S;
 }
 
@@ -266,7 +265,6 @@ static std::string format_bytes_with_ascii_str(
   std::string S;
   raw_string_ostream Str(S);
   Str << format_bytes_with_ascii(Bytes, Offset, NumPerLine, ByteGroupSize);
-  Str.flush();
   return S;
 }
 
@@ -553,7 +551,6 @@ TEST(raw_ostreamTest, reserve_stream) {
   OS << "hello";
   OS << 1;
   OS << 'w' << 'o' << 'r' << 'l' << 'd';
-  OS.flush();
   EXPECT_EQ("11111111111111111111hello1world", Str);
 }
 

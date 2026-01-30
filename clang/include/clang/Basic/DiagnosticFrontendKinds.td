@@ -217,11 +217,8 @@ def note_incompatible_analyzer_plugin_api : Note<
 
 def err_module_build_requires_fmodules : Error<
   "module compilation requires '-fmodules'">;
-def err_module_interface_requires_cpp_modules : Error<
-  "module interface compilation requires '-std=c++20'">;
-def warn_module_config_mismatch : Warning<
-  "module file %0 cannot be loaded due to a configuration mismatch with the current "
-  "compilation">, InGroup<DiagGroup<"module-file-config-mismatch">>, DefaultError;
+def err_module_interface_requires_cpp_modules
+    : Error<"module interface compilation requires '-std=c++20'">;
 def err_module_map_not_found : Error<"module map file '%0' not found">,
   DefaultFatal;
 def err_missing_module_name : Error<
@@ -397,6 +394,10 @@ def err_invalid_llvm_ir : Error<"invalid LLVM IR input: %0">;
 
 def err_os_unsupport_riscv_fmv : Error<
   "function multiversioning is currently only supported on Linux">;
+
+def warn_unreachable_version
+    : Warning<"function version '%0' is unreachable; ignoring version">,
+      InGroup<FunctionMultiVersioning>;
 
 def warn_hlsl_langstd_minimal :
   Warning<"support for HLSL language version %0 is incomplete, "

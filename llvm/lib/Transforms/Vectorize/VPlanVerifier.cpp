@@ -158,13 +158,13 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
   };
   return all_of(EVL.users(), [this, &VerifyEVLUse](VPUser *U) {
     return TypeSwitch<const VPUser *, bool>(U)
-        .Case<VPWidenIntrinsicRecipe>([&](const VPWidenIntrinsicRecipe *S) {
+        .Case([&](const VPWidenIntrinsicRecipe *S) {
           return VerifyEVLUse(*S, S->getNumOperands() - 1);
         })
         .Case<VPWidenStoreEVLRecipe, VPReductionEVLRecipe,
               VPWidenIntOrFpInductionRecipe, VPWidenPointerInductionRecipe>(
             [&](const VPRecipeBase *S) { return VerifyEVLUse(*S, 2); })
-        .Case<VPScalarIVStepsRecipe>([&](auto *R) {
+        .Case([&](const VPScalarIVStepsRecipe *R) {
           if (R->getNumOperands() != 3) {
             errs() << "Unrolling with EVL tail folding not yet supported\n";
             return false;
@@ -174,9 +174,9 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
         .Case<VPWidenLoadEVLRecipe, VPVectorEndPointerRecipe,
               VPInterleaveEVLRecipe>(
             [&](const VPRecipeBase *R) { return VerifyEVLUse(*R, 1); })
-        .Case<VPInstructionWithType>(
+        .Case(
             [&](const VPInstructionWithType *S) { return VerifyEVLUse(*S, 0); })
-        .Case<VPInstruction>([&](const VPInstruction *I) {
+        .Case([&](const VPInstruction *I) {
           if (I->getOpcode() == Instruction::PHI ||
               I->getOpcode() == Instruction::ICmp ||
               I->getOpcode() == Instruction::Sub)
@@ -188,8 +188,10 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
           case Instruction::Trunc:
           case Instruction::ZExt:
           case Instruction::Mul:
+          case Instruction::Shl:
           case Instruction::FMul:
           case VPInstruction::Broadcast:
+          case VPInstruction::PtrAdd:
             // Opcodes above can only use EVL after wide inductions have been
             // expanded.
             if (!VerifyLate) {
@@ -199,16 +201,6 @@ bool VPlanVerifier::verifyEVLRecipe(const VPInstruction &EVL) const {
             break;
           default:
             errs() << "EVL used by unexpected VPInstruction\n";
-            return false;
-          }
-          // EVLIVIncrement is only used by EVLIV & BranchOnCount.
-          // Having more than two users is unexpected.
-          if (I->getOpcode() != VPInstruction::Broadcast &&
-              I->getNumUsers() != 1 &&
-              (I->getNumUsers() != 2 ||
-               none_of(I->users(), match_fn(m_BranchOnCount(m_Specific(I),
-                                                            m_VPValue()))))) {
-            errs() << "EVL is used in VPInstruction with multiple users\n";
             return false;
           }
           if (!VerifyLate && !isa<VPEVLBasedIVPHIRecipe>(*I->users().begin())) {
@@ -391,20 +383,18 @@ static bool hasDuplicates(const SmallVectorImpl<VPBlockBase *> &VPBlockVec) {
 bool VPlanVerifier::verifyBlock(const VPBlockBase *VPB) {
   auto *VPBB = dyn_cast<VPBasicBlock>(VPB);
   // Check block's condition bit.
-  if (!isa<VPIRBasicBlock>(VPB)) {
+  if (VPBB && !isa<VPIRBasicBlock>(VPB)) {
     if (VPB->getNumSuccessors() > 1 ||
-        (VPBB && VPBB->getParent() && VPBB->isExiting() &&
+        (VPBB->getParent() && VPBB->isExiting() &&
          !VPBB->getParent()->isReplicator())) {
-      if (!VPBB || !VPBB->getTerminator()) {
+      if (!VPBB->getTerminator()) {
         errs() << "Block has multiple successors but doesn't "
                   "have a proper branch recipe!\n";
         return false;
       }
-    } else {
-      if (VPBB && VPBB->getTerminator()) {
-        errs() << "Unexpected branch recipe!\n";
-        return false;
-      }
+    } else if (VPBB->getTerminator()) {
+      errs() << "Unexpected branch recipe!\n";
+      return false;
     }
   }
 
@@ -531,15 +521,17 @@ bool VPlanVerifier::verify(const VPlan &Plan) {
   }
 
   if (Exiting->empty()) {
-    errs() << "VPlan vector loop exiting block must end with BranchOnCount or "
-              "BranchOnCond VPInstruction but is empty\n";
+    errs() << "VPlan vector loop exiting block must end with BranchOnCount, "
+              "BranchOnCond, or BranchOnTwoConds VPInstruction but is empty\n";
     return false;
   }
 
   auto *LastInst = dyn_cast<VPInstruction>(std::prev(Exiting->end()));
-  if (!match(LastInst, m_CombineOr(m_BranchOnCond(), m_BranchOnCount()))) {
-    errs() << "VPlan vector loop exit must end with BranchOnCount or "
-              "BranchOnCond VPInstruction\n";
+  if (!match(LastInst, m_CombineOr(m_BranchOnCond(),
+                                   m_CombineOr(m_BranchOnCount(),
+                                               m_BranchOnTwoConds())))) {
+    errs() << "VPlan vector loop exit must end with BranchOnCount, "
+              "BranchOnCond, or BranchOnTwoConds VPInstruction\n";
     return false;
   }
 

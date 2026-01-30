@@ -50,7 +50,7 @@
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/TargetParser/Triple.h"
 
-using namespace llvm::omp::target::debug;
+using namespace llvm::offload::debug;
 
 namespace llvm {
 namespace omp {
@@ -714,8 +714,8 @@ public:
       IgnoreLockMappedFailures = false;
     } else {
       // Disable by default.
-      ODBG(ODT_Alloc) << "Invalid value LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS="
-                      << OMPX_LockMappedBuffers.get();
+      ODBG(OLDT_Alloc) << "Invalid value LIBOMPTARGET_LOCK_MAPPED_HOST_BUFFERS="
+                       << OMPX_LockMappedBuffers.get();
       LockMappedBuffers = false;
     }
   }
@@ -854,8 +854,10 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
 
   /// Query for the completion of the pending operations on the __tgt_async_info
   /// structure in a non-blocking manner.
-  Error queryAsync(__tgt_async_info *AsyncInfo);
-  virtual Error queryAsyncImpl(__tgt_async_info &AsyncInfo) = 0;
+  Error queryAsync(__tgt_async_info *AsyncInfo, bool ReleaseQueue = true,
+                   bool *IsQueueWorkCompleted = nullptr);
+  virtual Error queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
+                               bool *IsQueueWorkCompleted) = 0;
 
   /// Check whether the architecture supports VA management
   virtual bool supportVAManagement() const { return false; }
@@ -1656,8 +1658,8 @@ public:
   /// must be called before the destructor.
   virtual Error deinit() {
     if (NextAvailable)
-      ODBG(ODT_Deinit) << "Missing " << NextAvailable
-                       << " resources to be returned";
+      ODBG(OLDT_Deinit) << "Missing " << NextAvailable
+                        << " resources to be returned";
 
     // TODO: This prevents a bug on libomptarget to make the plugins fail. There
     // may be some resources not returned. Do not destroy these ones.

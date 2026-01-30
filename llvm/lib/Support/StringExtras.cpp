@@ -17,19 +17,6 @@
 
 using namespace llvm;
 
-/// StrInStrNoCase - Portable version of strcasestr.  Locates the first
-/// occurrence of string 's1' in string 's2', ignoring case.  Returns
-/// the offset of s2 in s1 or npos if s2 cannot be found.
-StringRef::size_type llvm::StrInStrNoCase(StringRef s1, StringRef s2) {
-  size_t N = s2.size(), M = s1.size();
-  if (N > M)
-    return StringRef::npos;
-  for (size_t i = 0, e = M - N + 1; i != e; ++i)
-    if (s1.substr(i, N).equals_insensitive(s2))
-      return i;
-  return StringRef::npos;
-}
-
 /// getToken - This function extracts one token from source, ignoring any
 /// leading characters that appear in the Delimiters string, and ending the
 /// token at any of the characters that appear in the Delimiters string.  If
