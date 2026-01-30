@@ -2076,7 +2076,8 @@ private:
                                   std::to_string(TargetEnvironment) +
                                   "' is unsupported when inferring SDK Info.");
     }
-    Components.push_back(Version.getAsString());
+    std::string VersionString = Version.getAsString();
+    Components.push_back(VersionString);
     return join(Components, " ");
   }
 

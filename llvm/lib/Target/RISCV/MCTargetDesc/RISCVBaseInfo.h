@@ -62,13 +62,13 @@ enum {
   InstFormatMask = 31,
   InstFormatShift = 0,
 
-  ConstraintShift = InstFormatShift + 5,
-  VS2Constraint = 0b001 << ConstraintShift,
-  VS1Constraint = 0b010 << ConstraintShift,
-  VMConstraint = 0b100 << ConstraintShift,
-  ConstraintMask = 0b111 << ConstraintShift,
+  RVVConstraintShift = InstFormatShift + 5,
+  VS2Constraint = 0b001 << RVVConstraintShift,
+  VS1Constraint = 0b010 << RVVConstraintShift,
+  VMConstraint = 0b100 << RVVConstraintShift,
+  RVVConstraintMask = 0b111 << RVVConstraintShift,
 
-  VLMulShift = ConstraintShift + 3,
+  VLMulShift = RVVConstraintShift + 3,
   VLMulMask = 0b111 << VLMulShift,
 
   // Is this a _TIED vector pseudo instruction. For these instructions we
