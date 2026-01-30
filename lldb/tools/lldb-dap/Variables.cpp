@@ -168,9 +168,8 @@ lldb::SBValueList *Variables::GetScope(const uint64_t dap_frame_id,
 
 std::vector<protocol::Scope>
 Variables::CreateScopes(const uint64_t dap_frame_id, lldb::SBFrame &frame) {
-
-  if (m_frames.find(dap_frame_id) == m_frames.end()) {
-
+  auto iter = m_frames.find(dap_frame_id);
+  if (iter == m_frames.end()) {
     auto locals = frame.GetVariables(/*arguments=*/true,
                                      /*locals=*/true,
                                      /*statics=*/false,
@@ -183,35 +182,24 @@ Variables::CreateScopes(const uint64_t dap_frame_id, lldb::SBFrame &frame) {
 
     auto registers = frame.GetRegisters();
 
-    m_frames.insert(
-        std::make_pair(dap_frame_id, FrameScopes{locals, globals, registers}));
+    iter =
+        m_frames.emplace(dap_frame_id, FrameScopes{locals, globals, registers})
+            .first;
   }
 
-  std::vector<protocol::Scope> scopes = {};
+  const FrameScopes &frame_scopes = iter->second;
 
-  int64_t locals_ref = GetNewVariableReference(false);
+  auto create_scope = [&](ScopeKind kind, uint32_t size) {
+    int64_t ref = GetNewVariableReference(false);
+    m_scope_kinds.try_emplace(ref, kind, dap_frame_id);
+    return CreateScope(kind, ref, size, false);
+  };
 
-  scopes.push_back(
-      CreateScope(eScopeKindLocals, locals_ref,
-                  GetScope(dap_frame_id, eScopeKindLocals)->GetSize(), false));
-
-  m_scope_kinds[locals_ref] = std::make_pair(eScopeKindLocals, dap_frame_id);
-
-  int64_t globals_ref = GetNewVariableReference(false);
-  scopes.push_back(
-      CreateScope(eScopeKindGlobals, globals_ref,
-                  GetScope(dap_frame_id, eScopeKindGlobals)->GetSize(), false));
-  m_scope_kinds[globals_ref] = std::make_pair(eScopeKindGlobals, dap_frame_id);
-
-  int64_t registers_ref = GetNewVariableReference(false);
-  scopes.push_back(CreateScope(
-      eScopeKindRegisters, registers_ref,
-      GetScope(dap_frame_id, eScopeKindRegisters)->GetSize(), false));
-
-  m_scope_kinds[registers_ref] =
-      std::make_pair(eScopeKindRegisters, dap_frame_id);
-
-  return scopes;
+  return {
+      create_scope(eScopeKindLocals, frame_scopes.locals.GetSize()),
+      create_scope(eScopeKindGlobals, frame_scopes.globals.GetSize()),
+      create_scope(eScopeKindRegisters, frame_scopes.registers.GetSize()),
+  };
 }
 
 } // namespace lldb_dap
