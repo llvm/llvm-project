@@ -2127,6 +2127,18 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
   MachineRegisterInfo &MRI = MF.getRegInfo();
 
   switch (I.getOpcode()) {
+  case TargetOpcode::G_CONSTANT: {
+    Register DefReg = I.getOperand(0).getReg();
+    const LLT DefTy = MRI.getType(DefReg);
+    if (!DefTy.isPointer())
+      return false;
+    const unsigned PtrSize = DefTy.getSizeInBits();
+    if (PtrSize != 32 && PtrSize != 64)
+      return false;
+    // Convert pointer typed constants to integers so TableGen can select.
+    MRI.setType(DefReg, LLT::scalar(PtrSize));
+    return true;
+  }
   case TargetOpcode::G_STORE: {
     bool Changed = contractCrossBankCopyIntoStore(I, MRI);
     MachineOperand &SrcOp = I.getOperand(0);
@@ -2715,29 +2727,6 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
         return RBI.constrainGenericRegister(DefReg, FPRRC, MRI);
       }
       }
-    }
-
-    if (DefTy.isPointer()) {
-      if (DefSize != 64)
-        return false;
-
-      uint64_t Val = 0;
-      if (I.getOperand(1).isCImm())
-        Val = I.getOperand(1).getCImm()->getZExtValue();
-      else if (I.getOperand(1).isImm())
-        Val = I.getOperand(1).getImm();
-      else
-        return false;
-
-      Register TmpReg = MRI.createVirtualRegister(&AArch64::GPR64RegClass);
-      auto Mov = MIB.buildInstr(AArch64::MOVi64imm, {TmpReg}, {}).addImm(Val);
-      MIB.buildCopy({DefReg}, {TmpReg});
-      I.eraseFromParent();
-
-      const TargetRegisterClass &RC = *getRegClassForTypeOnBank(DefTy, RB);
-      if (!RBI.constrainGenericRegister(DefReg, RC, MRI))
-        return false;
-      return constrainSelectedInstRegOperands(*Mov, TII, TRI, RBI);
     }
 
     return false;
