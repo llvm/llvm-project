@@ -4,6 +4,8 @@
 ; RUN: llc -global-isel=1 -mtriple=amdgcn--amdpal -mcpu=gfx1200 -mattr=+real-true16 < %s | FileCheck %s --check-prefixes=CHECK,GISEL
 ; RUN: llc -global-isel=1 -mtriple=amdgcn--amdpal -mcpu=gfx1200 -mattr=-real-true16 < %s | FileCheck %s --check-prefixes=CHECK,GISEL
 
+; Test that in dynamic VGPR mode, the return of sponentry points after the area reserved for CWSR.
+
 define amdgpu_cs ptr addrspace(5) @sponentry_cs_dvgpr_16(i32 %val) #0 {
 ; CHECK-LABEL: sponentry_cs_dvgpr_16:
 ; CHECK:       ; %bb.0:
@@ -43,6 +45,8 @@ define amdgpu_cs ptr addrspace(5) @sponentry_cs_dvgpr_32(i32 %val) #1 {
 }
 
 ; CHECK: ScratchSize: 8
+
+; If we're not in dynamic VGPR mode, then sponentry can just return 0.
 
 define amdgpu_cs ptr addrspace(5) @sponentry_cs_no_dvgpr(i32 %val) #2 {
 ; CHECK-LABEL: sponentry_cs_no_dvgpr:

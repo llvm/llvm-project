@@ -2560,7 +2560,6 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     Op1->setImm(Op1->getImm() | SISrcMods::OP_SEL_1);
     break;
   }
-  }
 
   case AMDGPU::GET_STACK_BASE:
     // The stack starts at offset 0 unless we need to reserve some space at the
