@@ -2129,8 +2129,7 @@ void TypePrinter::printHLSLAttributedResourceAfter(
     OS << ")]]";
   }
 
-  if (Attrs.ResourceDimension !=
-      llvm::dxil::ResourceDimension::DimensionUnknown)
+  if (Attrs.ResourceDimension != llvm::dxil::ResourceDimension::Unknown)
     OS << " [[hlsl::resource_dimension("
        << HLSLResourceDimensionAttr::ConvertResourceDimensionToStr(
               Attrs.ResourceDimension)

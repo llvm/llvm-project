@@ -32,11 +32,11 @@ enum class ResourceClass : uint8_t {
 };
 
 enum class ResourceDimension : uint8_t {
-  DimensionUnknown = 0,
-  Dimension1D,
-  Dimension2D,
-  Dimension3D,
-  DimensionCube,
+  Unknown = 0,
+  Dim1D,
+  Dim2D,
+  Dim3D,
+  Cube,
 };
 
 /// The kind of resource for an SRV or UAV resource. Sometimes referred to as

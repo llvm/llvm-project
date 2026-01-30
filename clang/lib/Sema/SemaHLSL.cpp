@@ -3370,12 +3370,11 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (SemaRef.checkArgCountRange(TheCall, 3, 5))
       return true;
 
-    if (CheckResourceHandle(
-            &SemaRef, TheCall, 0,
-            [](const HLSLAttributedResourceType *ResType) {
-              return ResType->getAttrs().ResourceDimension ==
-                     llvm::dxil::ResourceDimension::DimensionUnknown;
-            }))
+    if (CheckResourceHandle(&SemaRef, TheCall, 0,
+                            [](const HLSLAttributedResourceType *ResType) {
+                              return ResType->getAttrs().ResourceDimension ==
+                                     llvm::dxil::ResourceDimension::Unknown;
+                            }))
       return true;
 
     if (CheckResourceHandle(&SemaRef, TheCall, 1,
@@ -3413,7 +3412,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     }
 
     assert(ResourceTy->hasContainedType() &&
-           "Expecting a contained type for resource with a the dimension "
+           "Expecting a contained type for resource with a dimension "
            "attribute.");
     QualType ReturnType = ResourceTy->getContainedType();
     TheCall->setType(ReturnType);

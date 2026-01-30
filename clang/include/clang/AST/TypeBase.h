@@ -6717,13 +6717,12 @@ public:
           IsROV(IsROV), RawBuffer(RawBuffer), IsCounter(IsCounter) {}
 
     Attributes(llvm::dxil::ResourceClass ResourceClass)
-        : Attributes(ResourceClass,
-                     llvm::dxil::ResourceDimension::DimensionUnknown) {}
+        : Attributes(ResourceClass, llvm::dxil::ResourceDimension::Unknown) {}
 
     Attributes()
         : Attributes(llvm::dxil::ResourceClass::UAV,
-                     llvm::dxil::ResourceDimension::DimensionUnknown, false,
-                     false, false) {}
+                     llvm::dxil::ResourceDimension::Unknown, false, false,
+                     false) {}
 
     friend bool operator==(const Attributes &LHS, const Attributes &RHS) {
       return std::tie(LHS.ResourceClass, LHS.ResourceDimension, LHS.IsROV,

@@ -67,8 +67,8 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
     llvm::Type *ElemType = CGM.getTypes().ConvertTypeForMem(ContainedTy);
 
     bool IsRawBuffer = ResAttrs.RawBuffer;
-    bool IsTexture = ResAttrs.ResourceDimension !=
-                     llvm::dxil::ResourceDimension::DimensionUnknown;
+    bool IsTexture =
+        ResAttrs.ResourceDimension != llvm::dxil::ResourceDimension::Unknown;
     assert((!IsRawBuffer || !IsTexture) && "A resource cannot be both a raw "
                                            "buffer and a texture.");
     llvm::StringRef TypeName = "dx.TypedBuffer";
@@ -93,16 +93,16 @@ llvm::Type *DirectXTargetCodeGenInfo::getHLSLType(
       // Map ResourceDimension to dxil::ResourceKind
       llvm::dxil::ResourceKind RK = llvm::dxil::ResourceKind::Invalid;
       switch (ResAttrs.ResourceDimension) {
-      case llvm::dxil::ResourceDimension::Dimension1D:
+      case llvm::dxil::ResourceDimension::Dim1D:
         RK = llvm::dxil::ResourceKind::Texture1D;
         break;
-      case llvm::dxil::ResourceDimension::Dimension2D:
+      case llvm::dxil::ResourceDimension::Dim2D:
         RK = llvm::dxil::ResourceKind::Texture2D;
         break;
-      case llvm::dxil::ResourceDimension::Dimension3D:
+      case llvm::dxil::ResourceDimension::Dim3D:
         RK = llvm::dxil::ResourceKind::Texture3D;
         break;
-      case llvm::dxil::ResourceDimension::DimensionCube:
+      case llvm::dxil::ResourceDimension::Cube:
         RK = llvm::dxil::ResourceKind::TextureCube;
         break;
       default:

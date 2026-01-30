@@ -862,19 +862,19 @@ llvm::Type *CommonSPIRTargetCodeGenInfo::getSPIRVImageTypeFromHLSLResource(
 
   // Dim
   switch (attributes.ResourceDimension) {
-  case llvm::dxil::ResourceDimension::Dimension1D:
+  case llvm::dxil::ResourceDimension::Dim1D:
     IntParams[0] = 0;
     break;
-  case llvm::dxil::ResourceDimension::Dimension2D:
+  case llvm::dxil::ResourceDimension::Dim2D:
     IntParams[0] = 1;
     break;
-  case llvm::dxil::ResourceDimension::Dimension3D:
+  case llvm::dxil::ResourceDimension::Dim3D:
     IntParams[0] = 2;
     break;
-  case llvm::dxil::ResourceDimension::DimensionCube:
+  case llvm::dxil::ResourceDimension::Cube:
     IntParams[0] = 3;
     break;
-  case llvm::dxil::ResourceDimension::DimensionUnknown:
+  case llvm::dxil::ResourceDimension::Unknown:
     IntParams[0] = 5;
     break;
   }

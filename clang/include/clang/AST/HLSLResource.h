@@ -92,17 +92,17 @@ struct ResourceBindingAttrs {
 
 inline uint32_t getResourceDimensions(llvm::dxil::ResourceDimension Dim) {
   switch (Dim) {
-  case llvm::dxil::ResourceDimension::Dimension1D:
+  case llvm::dxil::ResourceDimension::Dim1D:
     return 1;
     break;
-  case llvm::dxil::ResourceDimension::Dimension2D:
+  case llvm::dxil::ResourceDimension::Dim2D:
     return 2;
     break;
-  case llvm::dxil::ResourceDimension::Dimension3D:
-  case llvm::dxil::ResourceDimension::DimensionCube:
+  case llvm::dxil::ResourceDimension::Dim3D:
+  case llvm::dxil::ResourceDimension::Cube:
     return 3;
     break;
-  case llvm::dxil::ResourceDimension::DimensionUnknown:
+  case llvm::dxil::ResourceDimension::Unknown:
     llvm_unreachable(
         "We cannot get the dimension of a resource with unknown dimension.");
   }

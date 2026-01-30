@@ -876,8 +876,7 @@ BuiltinTypeDeclBuilder &
 BuiltinTypeDeclBuilder::addBufferHandles(ResourceClass RC, bool IsROV,
                                          bool RawBuffer, bool HasCounter,
                                          AccessSpecifier Access) {
-  addHandleMember(RC, ResourceDimension::DimensionUnknown, IsROV, RawBuffer,
-                  Access);
+  addHandleMember(RC, ResourceDimension::Unknown, IsROV, RawBuffer, Access);
   if (HasCounter)
     addCounterHandleMember(RC, IsROV, RawBuffer, Access);
   return *this;
@@ -892,7 +891,7 @@ BuiltinTypeDeclBuilder::addTextureHandle(ResourceClass RC, bool IsROV,
 }
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addSamplerHandle() {
-  addHandleMember(ResourceClass::Sampler, ResourceDimension::DimensionUnknown,
+  addHandleMember(ResourceClass::Sampler, ResourceDimension::Unknown,
                   /*IsROV=*/false, /*RawBuffer=*/false);
   return *this;
 }
@@ -907,9 +906,8 @@ BuiltinTypeDeclBuilder::addHandleMember(ResourceClass RC, ResourceDimension RD,
 
 BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addCounterHandleMember(
     ResourceClass RC, bool IsROV, bool RawBuffer, AccessSpecifier Access) {
-  return addResourceMember("__counter_handle", RC,
-                           ResourceDimension::DimensionUnknown, IsROV,
-                           RawBuffer,
+  return addResourceMember("__counter_handle", RC, ResourceDimension::Unknown,
+                           IsROV, RawBuffer,
                            /*IsCounter=*/true, Access);
 }
 
@@ -928,7 +926,7 @@ BuiltinTypeDeclBuilder &BuiltinTypeDeclBuilder::addResourceMember(
       HLSLResourceClassAttr::CreateImplicit(Ctx, RC),
       IsROV ? HLSLROVAttr::CreateImplicit(Ctx) : nullptr,
       RawBuffer ? HLSLRawBufferAttr::CreateImplicit(Ctx) : nullptr,
-      RD != ResourceDimension::DimensionUnknown
+      RD != ResourceDimension::Unknown
           ? HLSLResourceDimensionAttr::CreateImplicit(Ctx, RD)
           : nullptr,
       ElementTypeInfo && RC != ResourceClass::Sampler

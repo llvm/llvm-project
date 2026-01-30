@@ -542,7 +542,7 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
              .finalizeForwardDeclaration();
   onCompletion(Decl, [this](CXXRecordDecl *Decl) {
     setupTextureType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
-                     ResourceDimension::Dimension2D)
+                     ResourceDimension::Dim2D)
         .completeDefinition();
   });
 }

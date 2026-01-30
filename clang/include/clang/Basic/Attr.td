@@ -5108,8 +5108,7 @@ def HLSLResourceDimension : TypeAttr {
   let Args = [EnumArgument<
       "Dimension", "llvm::hlsl::ResourceDimension",
       /*is_string=*/true, ["Unknown", "1D", "2D", "3D", "Cube"],
-      ["DimensionUnknown", "Dimension1D", "Dimension2D", "Dimension3D",
-       "DimensionCube"],
+      ["Unknown", "Dim1D", "Dim2D", "Dim3D", "Cube"],
       /*opt=*/0, /*fake=*/0, /*isExternalType=*/1>];
   let Documentation = [InternalOnly];
 }
