@@ -4794,10 +4794,8 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
 
       // Create new load of smaller vector.
       Type *IndexTy = DL->getIndexType(PtrOp->getType());
-      Constant *PtrOffset = ConstantInt::get(IndexTy, LowOffset);
-      Value *NewPtr = LowOffset > 0u
-                          ? Builder.CreateInBoundsPtrAdd(PtrOp, PtrOffset)
-                          : PtrOp;
+      Value *NewPtr = Builder.CreateInBoundsPtrAdd(
+          PtrOp, ConstantInt::get(IndexTy, LowOffset));
 
       auto *NewLoad = cast<LoadInst>(
           Builder.CreateAlignedLoad(NewLoadTy, NewPtr, OldLoad->getAlign()));
