@@ -1,6 +1,6 @@
 ; Test the simplify-recipes VPlan transform that simplifies recipe patterns.
 
-; RUN: opt -passes=loop-vectorize -vplan-test-transform='create-loop-regions,widen-from-metadata,simplify-recipes,print' -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -passes='vplan-test<create-loop-regions;widen-from-metadata;simplify-recipes>' -disable-output %s | FileCheck %s
 
 ; Check that 'or %val, 0' is simplified, so store uses %val directly.
 ; CHECK-LABEL: VPlan ' for UF>=1' {
@@ -20,7 +20,7 @@ loop:
   %gep = getelementptr i32, ptr %A, i64 %iv
   %val = load i32, ptr %gep
   ; Identity: or X, 0 -> X (should be simplified away)
-  %result = or i32 %val, 0, !vplan.widen !0
+  %result = or i32 %val, 0, !vplan.widen !{}
   store i32 %result, ptr %gep
   %iv.next = add i64 %iv, 1
   %cmp = icmp slt i64 %iv.next, %N
@@ -29,5 +29,3 @@ loop:
 exit:
   ret void
 }
-
-!0 = !{!"widen"}

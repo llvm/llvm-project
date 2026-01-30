@@ -250,10 +250,15 @@ void PlainCFGBuilder::createVPInstructionsForVPBB(VPBasicBlock *VPBB,
           MD.setMetadata(LLVMContext::MD_noalias, NoAliasMD);
       }
 
-      // Preserve vplan.widen metadata for testing VPlan transforms.
+      // Preserve vplan.widen and vplan.replicate metadata for testing VPlan
+      // transforms.
       unsigned VPlanWidenKind = Inst->getContext().getMDKindID("vplan.widen");
       if (MDNode *WidenMD = Inst->getMetadata(VPlanWidenKind))
         MD.setMetadata(VPlanWidenKind, WidenMD);
+      unsigned VPlanReplicateKind =
+          Inst->getContext().getMDKindID("vplan.replicate");
+      if (MDNode *ReplicateMD = Inst->getMetadata(VPlanReplicateKind))
+        MD.setMetadata(VPlanReplicateKind, ReplicateMD);
 
       // Translate LLVM-IR operands into VPValue operands and set them in the
       // new VPInstruction.
@@ -1570,6 +1575,8 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
 void VPlanTransforms::widenFromMetadata(VPlan &Plan,
                                         const TargetLibraryInfo *TLI) {
   unsigned VPlanWidenKind = Plan.getContext().getMDKindID("vplan.widen");
+  unsigned VPlanReplicateKind =
+      Plan.getContext().getMDKindID("vplan.replicate");
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
 
   ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
@@ -1580,20 +1587,11 @@ void VPlanTransforms::widenFromMetadata(VPlan &Plan,
       if (!VPI)
         continue;
 
-      MDNode *MD = VPI->getMetadata(VPlanWidenKind);
-      if (!MD || MD->getNumOperands() == 0)
-        continue;
-
-      auto *KindMD = dyn_cast<MDString>(MD->getOperand(0));
-      if (!KindMD)
-        continue;
-
-      StringRef Kind = KindMD->getString();
       VPRecipeBase *NewR = nullptr;
-      if (Kind == "widen") {
+      if (VPI->getMetadata(VPlanWidenKind)) {
         NewR = new VPWidenRecipe(*VPI->getUnderlyingInstr(), VPI->operands(),
                                  *VPI, *VPI, VPI->getDebugLoc());
-      } else if (Kind == "replicate") {
+      } else if (VPI->getMetadata(VPlanReplicateKind)) {
         NewR = new VPReplicateRecipe(VPI->getUnderlyingInstr(), VPI->operands(),
                                      /*IsSingleScalar=*/false,
                                      /*Mask=*/nullptr, *VPI, *VPI,

@@ -1,10 +1,10 @@
 ; Test the widen-from-metadata VPlan transform that converts VPInstructions to
-; recipes based on !vplan.widen metadata.
+; recipes based on !vplan.widen and !vplan.replicate metadata.
 
-; RUN: opt -passes=loop-vectorize -vplan-test-transform='create-loop-regions,widen-from-metadata,print' -disable-output %s 2>&1 | FileCheck %s --check-prefix=WIDEN
-; RUN: opt -passes=loop-vectorize -vplan-test-transform='create-loop-regions,widen-from-metadata,print' -disable-output %s 2>&1 | FileCheck %s --check-prefix=REPLICATE
+; RUN: opt -passes='vplan-test<create-loop-regions;widen-from-metadata>' -disable-output %s | FileCheck %s --check-prefix=WIDEN
+; RUN: opt -passes='vplan-test<create-loop-regions;widen-from-metadata>' -disable-output %s | FileCheck %s --check-prefix=REPLICATE
 
-; Test widen conversion: VPInstruction with !vplan.widen !{!"widen"}
+; Test widen conversion: VPInstruction with !vplan.widen
 ; should be converted to VPWidenRecipe (WIDEN instead of EMIT).
 ; WIDEN-LABEL: VPlan ' for UF>=1' {
 ; WIDEN: <x1> vector loop: {
@@ -18,7 +18,7 @@
 ; WIDEN:   No successors
 ; WIDEN: }
 
-; Test replicate conversion: VPInstruction with !vplan.widen !{!"replicate"}
+; Test replicate conversion: VPInstruction with !vplan.replicate
 ; should be converted to VPReplicateRecipe (REPLICATE instead of EMIT).
 ; REPLICATE-LABEL: VPlan ' for UF>=1' {
 ; REPLICATE: <x1> vector loop: {
@@ -40,7 +40,7 @@ loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %gep = getelementptr i32, ptr %A, i64 %iv
   %val = load i32, ptr %gep
-  %add = add i32 %val, 1, !vplan.widen !0
+  %add = add i32 %val, 1, !vplan.widen !{}
   store i32 %add, ptr %gep
   %iv.next = add i64 %iv, 1
   %cmp = icmp slt i64 %iv.next, %N
@@ -58,7 +58,7 @@ loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %gep = getelementptr i32, ptr %A, i64 %iv
   %val = load i32, ptr %gep
-  %add = add i32 %val, 1, !vplan.widen !1
+  %add = add i32 %val, 1, !vplan.replicate !{}
   store i32 %add, ptr %gep
   %iv.next = add i64 %iv, 1
   %cmp = icmp slt i64 %iv.next, %N
@@ -67,6 +67,3 @@ loop:
 exit:
   ret void
 }
-
-!0 = !{!"widen"}
-!1 = !{!"replicate"}

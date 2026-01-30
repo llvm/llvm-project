@@ -1,7 +1,7 @@
 ; Test the merge-blocks VPlan transform that merges blocks into predecessors.
 ; This test uses a loop with early exit to create multiple blocks in VPlan.
 
-; RUN: opt -passes=loop-vectorize -vplan-test-transform='create-loop-regions,widen-from-metadata,merge-blocks,print' -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -passes='vplan-test<create-loop-regions;widen-from-metadata;merge-blocks>' -disable-output %s | FileCheck %s
 
 ; Check that continue block is merged into vector.body.
 ; CHECK-LABEL: VPlan ' for UF>=1' {
@@ -27,7 +27,7 @@ loop:
   br i1 %cond, label %exit, label %continue
 
 continue:
-  %add = add i32 %val, 1, !vplan.widen !0
+  %add = add i32 %val, 1, !vplan.widen !{}
   store i32 %add, ptr %gep
   %iv.next = add i64 %iv, 1
   %cmp = icmp slt i64 %iv.next, %N
@@ -36,5 +36,3 @@ continue:
 exit:
   ret void
 }
-
-!0 = !{!"widen"}

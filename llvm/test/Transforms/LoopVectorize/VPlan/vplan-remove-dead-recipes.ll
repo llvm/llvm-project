@@ -1,6 +1,6 @@
 ; Test the remove-dead-recipes VPlan transform that removes unused recipes.
 
-; RUN: opt -passes=loop-vectorize -vplan-test-transform='create-loop-regions,widen-from-metadata,remove-dead-recipes,print' -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -passes='vplan-test<create-loop-regions;widen-from-metadata;remove-dead-recipes>' -disable-output %s | FileCheck %s
 
 ; Check that dead recipes (%cmp and %4) are removed.
 ; CHECK-LABEL: VPlan ' for UF>=1' {
@@ -25,7 +25,7 @@ loop:
   %iv = phi i64 [ 0, %entry ], [ %iv.next, %loop ]
   %gep = getelementptr i32, ptr %A, i64 %iv
   %val = load i32, ptr %gep
-  %add = add i32 %val, 1, !vplan.widen !0
+  %add = add i32 %val, 1, !vplan.widen !{}
   store i32 %add, ptr %gep
   %iv.next = add i64 %iv, 1
   %cmp = icmp slt i64 %iv.next, %N
@@ -34,5 +34,3 @@ loop:
 exit:
   ret void
 }
-
-!0 = !{!"widen"}
