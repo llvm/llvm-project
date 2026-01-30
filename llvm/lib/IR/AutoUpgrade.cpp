@@ -3026,7 +3026,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
   } else if (Name.starts_with("avx512.mask.vpshufbitqmb.")) {
     Type *OpTy = CI->getArgOperand(0)->getType();
     unsigned VecWidth = OpTy->getPrimitiveSizeInBits();
-    Intrinsic::ID IID;
+    Intrinsic::ID IID = 0;
     switch (VecWidth) {
     default:
       reportFatalUsageErrorWithCI("Above intrinsic is unexpected", CI);
@@ -3049,7 +3049,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     Type *OpTy = CI->getArgOperand(0)->getType();
     unsigned VecWidth = OpTy->getPrimitiveSizeInBits();
     unsigned EltWidth = OpTy->getScalarSizeInBits();
-    Intrinsic::ID IID;
+    Intrinsic::ID IID = 0;
     if (VecWidth == 128 && EltWidth == 32)
       IID = Intrinsic::x86_avx512_fpclass_ps_128;
     else if (VecWidth == 256 && EltWidth == 32)
@@ -3073,7 +3073,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     Type *OpTy = Args[0]->getType();
     unsigned VecWidth = OpTy->getPrimitiveSizeInBits();
     unsigned EltWidth = OpTy->getScalarSizeInBits();
-    Intrinsic::ID IID;
+    Intrinsic::ID IID = 0;
     if (VecWidth == 128 && EltWidth == 32)
       IID = Intrinsic::x86_avx512_mask_cmp_ps_128;
     else if (VecWidth == 256 && EltWidth == 32)
@@ -3887,7 +3887,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
                 : Name[18] == '.' ? Name[19]
                                   : Name[20];
 
-    Intrinsic::ID IID;
+    Intrinsic::ID IID = 0;
     if (IsVariable && Name[17] != '.') {
       if (Size == 'd' && Name[17] == '2') // avx512.mask.psllv2.di
         IID = Intrinsic::x86_avx2_psllv_q;
@@ -3954,7 +3954,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
                 : Name[18] == '.' ? Name[19]
                                   : Name[20];
 
-    Intrinsic::ID IID;
+    Intrinsic::ID IID = 0;
     if (IsVariable && Name[17] != '.') {
       if (Size == 'd' && Name[17] == '2') // avx512.mask.psrlv2.di
         IID = Intrinsic::x86_avx2_psrlv_q;
