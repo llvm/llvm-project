@@ -2361,8 +2361,7 @@ BlockFrequency RAGreedy::calcSpillCost(const LiveInterval &LI) {
     if (!Visited.insert(MI).second)
       continue;
 
-    bool Reads, Writes;
-    std::tie(Reads, Writes) = MI->readsWritesVirtualRegister(LI.reg());
+    auto [Reads, Writes] = MI->readsWritesVirtualRegister(LI.reg());
     auto MBBFreq = SpillPlacer->getBlockFrequency(MI->getParent()->getNumber());
     SpillCost += (Reads + Writes) * MBBFreq.getFrequency();
   }
@@ -2437,13 +2436,14 @@ void RAGreedy::initializeCSRCost() {
     uint64_t FixedEntry = 1 << 14;
     if (ActualEntry < FixedEntry)
       CSRCost *= BranchProbability(ActualEntry, FixedEntry);
-    else if (ActualEntry <= UINT32_MAX)
+    else if (ActualEntry <= UINT32_MAX) {
       // Invert the fraction and divide.
       CSRCost /= BranchProbability(FixedEntry, ActualEntry);
-    else
+    } else {
       // Can't use BranchProbability in general, since it takes 32-bit numbers.
       CSRCost =
           BlockFrequency(CSRCost.getFrequency() * (ActualEntry / FixedEntry));
+    }
   } else {
     uint64_t EntryFreq = MBFI->getEntryFreq().getFrequency();
     CSRCost = BlockFrequency(TRI->getCSRFirstUseCost() * EntryFreq);

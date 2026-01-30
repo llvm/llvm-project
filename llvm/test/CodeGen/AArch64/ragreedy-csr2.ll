@@ -69,50 +69,50 @@ define void @foo(ptr %param) #0 {
 ; CHECK-NEXT:    ldr x0, [x0]
 ; CHECK-NEXT:    b bob
 entry:
-  %0 = load ptr, ptr %param, align 8
-  %cmp = icmp eq ptr %0, null
+  %load0 = load ptr, ptr %param, align 8
+  %cmp = icmp eq ptr %load0, null
   br i1 %cmp, label %return, label %if.end
 
 if.end:                                           ; preds = %entry
   %b = getelementptr inbounds nuw i8, ptr %param, i64 8
-  %1 = load i32, ptr %b, align 8
-  %cmp1.not = icmp eq i32 %1, 0
+  %load1 = load i32, ptr %b, align 8
+  %cmp1.not = icmp eq i32 %load1, 0
   br i1 %cmp1.not, label %if.end6, label %cold1, !prof !12
 
 cold1:                                         ; preds = %if.end
-  %call = tail call i64 @fuzz(ptr %0, i32 %1)
+  %call = tail call i64 @fuzz(ptr %load0, i32 %load1)
   br label %if.end6
 
 if.end6:                                          ; preds = %cold1, %if.end
   %c = getelementptr inbounds nuw i8, ptr %param, i64 12
-  %2 = load i32, ptr %c, align 4
-  %cmp7.not = icmp eq i32 %2, 0
+  %load2 = load i32, ptr %c, align 4
+  %cmp7.not = icmp eq i32 %load2, 0
   br i1 %cmp7.not, label %if.end24, label %cold2, !prof !12
 
 cold2:                                        ; preds = %if.end6
-  %3 = load ptr, ptr @Func, align 8
-  %call17 = tail call i1 %3()
+  %func = load ptr, ptr @Func, align 8
+  %call17 = tail call i1 %func()
   br i1 %call17, label %cold3, label %if.end24
 
 cold3:                                        ; preds = %cold2
-  %4 = load ptr, ptr %param, align 8
+  %load4 = load ptr, ptr %param, align 8
   %sunkaddr = getelementptr inbounds i8, ptr %param, i64 12
-  %5 = load i32, ptr %sunkaddr, align 4
-  %conv21 = trunc i32 %5 to i16
-  %call22 = tail call i64 @bar(ptr %4, i16 %conv21)
+  %load5 = load i32, ptr %sunkaddr, align 4
+  %conv21 = trunc i32 %load5 to i16
+  %call22 = tail call i64 @bar(ptr %load4, i16 %conv21)
   br label %if.end24
 
 if.end24:                                         ; preds = %cold2, %cold3, %if.end6
   %d = getelementptr inbounds nuw i8, ptr %param, i64 16
   %bf.load = load i8, ptr %d, align 8
-  %6 = zext i8 %bf.load to i32
-  %bf.clear = and i32 %6, 1
+  %zext = zext i8 %bf.load to i32
+  %bf.clear = and i32 %zext, 1
   %cmp26.not = icmp eq i32 %bf.clear, 0
   br i1 %cmp26.not, label %return, label %if.then35, !prof !12
 
 if.then35:                                        ; preds = %if.end24
-  %7 = load ptr, ptr %param, align 8
-  tail call void @bob(ptr %7)
+  %load6 = load ptr, ptr %param, align 8
+  tail call void @bob(ptr %load6)
   ret void
 
 return:                                           ; preds = %if.end24, %entry
