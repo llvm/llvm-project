@@ -419,7 +419,7 @@ void CIRGenModule::emitGlobal(clang::GlobalDecl gd) {
     if (const auto *varDecl = dyn_cast<VarDecl>(global)) {
       if (!shouldEmitCUDAGlobalVar(varDecl))
         return;
-    // TODO(cir): This should be shared with OG Codegen.
+      // TODO(cir): This should be shared with OG Codegen.
     } else if (langOpts.CUDAIsDevice) {
       const auto *functionDecl = dyn_cast<FunctionDecl>(global);
       if ((!global->hasAttr<CUDADeviceAttr>() ||
