@@ -61,6 +61,10 @@ to learn about the defaults for your platform and target.
     - ``LIBC_CONF_SCANF_DISABLE_INDEX_MODE``: Disable index mode in the scanf format string.
 * **"setjmp" options**
     - ``LIBC_CONF_SETJMP_AARCH64_RESTORE_PLATFORM_REGISTER``: Make setjmp save the value of x18, and longjmp restore it. The AArch64 ABI delegates this register to platform ABIs, which can choose whether to make it caller-saved.
+* **"str_to_float" options**
+    - ``LIBC_CONF_STRTOFLOAT_DISABLE_CLINGER_FAST_PATH``: Disable Clinger's fast path for string to float conversion.
+    - ``LIBC_CONF_STRTOFLOAT_DISABLE_EISEL_LEMIRE``: Disable Eisel-Lemire algorithm for string to float conversion.
+    - ``LIBC_CONF_STRTOFLOAT_DISABLE_SIMPLE_DECIMAL_CONVERSION``: Disable simple decimal conversion for string to float conversion.
 * **"string" options**
     - ``LIBC_CONF_FIND_FIRST_CHARACTER_IMPL``: Selects the implementation for find-first-character-related functions: 'element', 'word', 'clang_vector', or 'arch_vector'.
     - ``LIBC_CONF_MEMSET_X86_USE_SOFTWARE_PREFETCHING``: Inserts prefetch for write instructions (PREFETCHW) for memset on x86 to recover performance when hardware prefetcher is disabled.
