@@ -224,3 +224,18 @@ namespace nan {
                                                            // expected-error {{must be initialized by a constant expression}} \
                                                            // expected-note {{produces a NaN}}
 }
+
+#ifdef __SIZEOF_INT128__
+namespace ConvertToIntOverflow {
+  // should not crash
+  enum { E = (__uint128_t)-1. }; // ref-error {{expression is not an integral constant expression}} \
+                                 // ref-note {{outside the range of representable values of type}} \
+                                 // expected-error {{expression is not an integral constant expression}} \
+                                 // expected-note {{outside the range of representable values of type}}
+
+  enum { F = (__int128)(3.0e38) }; // ref-error {{expression is not an integral constant expression}} \
+                                   // ref-note {{outside the range of representable values of type}} \
+                                   // expected-error {{expression is not an integral constant expression}} \
+                                   // expected-note {{outside the range of representable values of type}}
+}
+#endif

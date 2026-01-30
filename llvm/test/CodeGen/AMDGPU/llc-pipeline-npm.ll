@@ -59,8 +59,17 @@
 ; GCN-O0-NEXT: require<reg-usage>
 ; GCN-O0-NEXT: cgscc(function(machine-function(reg-usage-propagation
 ; GCN-O0-NEXT: phi-node-elimination
+; GCN-O0-NEXT: si-lower-control-flow
 ; GCN-O0-NEXT: two-address-instruction
-; GCN-O0-NEXT: regallocfast
+; GCN-O0-NEXT: si-wqm
+; GCN-O0-NEXT: amdgpu-pre-ra-long-branch-reg
+; GCN-O0-NEXT: regallocfast<filter=sgpr;no-clear-vregs>
+; GCN-O0-NEXT: si-lower-sgpr-spills
+; GCN-O0-NEXT: si-pre-allocate-wwm-regs
+; GCN-O0-NEXT: regallocfast<filter=wwm;no-clear-vregs>
+; GCN-O0-NEXT: si-lower-wwm-copies
+; GCN-O0-NEXT: amdgpu-reserve-wwm-regs
+; GCN-O0-NEXT: regallocfast<filter=vgpr>
 ; GCN-O0-NEXT: si-fix-vgpr-copies
 ; GCN-O0-NEXT: remove-redundant-debug-values
 ; GCN-O0-NEXT: fixup-statepoint-caller-saved
@@ -116,7 +125,7 @@
 ; GCN-O2-NEXT: amdgpu-codegenprepare
 ; GCN-O2-NEXT: loop-mssa(licm<allowspeculation>)
 ; GCN-O2-NEXT: verify
-; GCN-O2-NEXT: loop-mssa(canon-freeze
+; GCN-O2-NEXT: loop(canon-freeze
 ; GCN-O2-NEXT: loop-reduce)
 ; GCN-O2-NEXT: mergeicmps
 ; GCN-O2-NEXT: expand-memcmp
@@ -288,7 +297,7 @@
 ; GCN-O3-NEXT: amdgpu-codegenprepare
 ; GCN-O3-NEXT: loop-mssa(licm<allowspeculation>)
 ; GCN-O3-NEXT: verify
-; GCN-O3-NEXT: loop-mssa(canon-freeze
+; GCN-O3-NEXT: loop(canon-freeze
 ; GCN-O3-NEXT: loop-reduce)
 ; GCN-O3-NEXT: mergeicmps
 ; GCN-O3-NEXT: expand-memcmp

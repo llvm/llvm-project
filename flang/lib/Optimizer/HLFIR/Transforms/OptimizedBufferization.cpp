@@ -727,9 +727,13 @@ llvm::LogicalResult ElementalAssignBufferization::matchAndRewrite(
   // Assign the element value to the array element for this iteration.
   auto arrayElement =
       hlfir::getElementAt(loc, builder, lhs, loopNest.oneBasedIndices);
-  hlfir::AssignOp::create(
+  auto newAssign = hlfir::AssignOp::create(
       builder, loc, elementValue, arrayElement, /*realloc=*/false,
       /*keep_lhs_length_if_realloc=*/false, match->assign.getTemporaryLhs());
+  if (auto accessGroups =
+          match->assign.getOperation()->getAttrOfType<mlir::ArrayAttr>(
+              fir::getAccessGroupsAttrName()))
+    newAssign->setAttr(fir::getAccessGroupsAttrName(), accessGroups);
 
   rewriter.eraseOp(match->assign);
   rewriter.eraseOp(match->destroy);
@@ -788,6 +792,11 @@ llvm::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
   llvm::SmallVector<mlir::Value> extents =
       hlfir::getIndexExtents(loc, builder, shape);
 
+  mlir::ArrayAttr accessGroups;
+  if (auto attrs = assign.getOperation()->getAttrOfType<mlir::ArrayAttr>(
+          fir::getAccessGroupsAttrName()))
+    accessGroups = attrs;
+
   if (lhs.isSimplyContiguous() && extents.size() > 1) {
     // Flatten the array to use a single assign loop, that can be better
     // optimized.
@@ -824,7 +833,9 @@ llvm::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
     mlir::Value arrayElement =
         hlfir::DesignateOp::create(builder, loc, fir::ReferenceType::get(eleTy),
                                    flatArray, loopNest.oneBasedIndices);
-    hlfir::AssignOp::create(builder, loc, rhs, arrayElement);
+    auto newAssign = hlfir::AssignOp::create(builder, loc, rhs, arrayElement);
+    if (accessGroups)
+      newAssign->setAttr(fir::getAccessGroupsAttrName(), accessGroups);
   } else {
     hlfir::LoopNest loopNest =
         hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true,
@@ -832,7 +843,9 @@ llvm::LogicalResult BroadcastAssignBufferization::matchAndRewrite(
     builder.setInsertionPointToStart(loopNest.body);
     auto arrayElement =
         hlfir::getElementAt(loc, builder, lhs, loopNest.oneBasedIndices);
-    hlfir::AssignOp::create(builder, loc, rhs, arrayElement);
+    auto newAssign = hlfir::AssignOp::create(builder, loc, rhs, arrayElement);
+    if (accessGroups)
+      newAssign->setAttr(fir::getAccessGroupsAttrName(), accessGroups);
   }
 
   rewriter.eraseOp(assign);

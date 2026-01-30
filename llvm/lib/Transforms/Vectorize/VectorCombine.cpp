@@ -33,6 +33,7 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/Support/CommandLine.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Utils/Local.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
 #include <numeric>
@@ -148,6 +149,8 @@ private:
   bool foldShuffleChainsToReduce(Instruction &I);
   bool foldCastFromReductions(Instruction &I);
   bool foldSignBitReductionCmp(Instruction &I);
+  bool foldICmpEqZeroVectorReduce(Instruction &I);
+  bool foldEquivalentReductionCmp(Instruction &I);
   bool foldSelectShuffle(Instruction &I, bool FromReduction = false);
   bool foldInterleaveIntrinsics(Instruction &I);
   bool shrinkType(Instruction &I);
@@ -1652,7 +1655,13 @@ bool VectorCombine::foldSelectsFromBitcast(Instruction &I) {
     }
 
     // Create the vector select and bitcast once for this condition.
-    Builder.SetInsertPoint(BC->getNextNode());
+    auto InsertPt = std::next(BC->getIterator());
+
+    if (auto *CondInst = dyn_cast<Instruction>(Cond))
+      if (DT.dominates(BC, CondInst))
+        InsertPt = std::next(CondInst->getIterator());
+
+    Builder.SetInsertPoint(InsertPt);
     Value *VecSel =
         Builder.CreateSelect(Cond, SrcVec, Constant::getNullValue(SrcVecTy));
     Value *NewBC = Builder.CreateBitCast(VecSel, DstVecTy);
@@ -2487,7 +2496,7 @@ bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
   }
   if (Match1) {
     InstructionCost Shuf1Cost = TTI.getShuffleCost(
-        TargetTransformInfo::SK_PermuteTwoSrc, BinOpTy, Op0Ty, Mask0, CostKind,
+        TargetTransformInfo::SK_PermuteTwoSrc, BinOpTy, Op1Ty, Mask1, CostKind,
         0, nullptr, {Op10, Op11}, cast<Instruction>(BinOp->getOperand(1)));
     OldCost += Shuf1Cost;
     if (!BinOp->hasOneUse() || !BinOp->getOperand(1)->hasOneUse())
@@ -2579,6 +2588,7 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
 
   SmallVector<int> NewMask0(OldMask);
   TargetTransformInfo::ShuffleKind SK0 = TargetTransformInfo::SK_PermuteTwoSrc;
+  TTI::OperandValueInfo Op0Info = TTI.commonOperandInfo(X, Z);
   if (X == Z) {
     llvm::for_each(NewMask0, ConvertToUnary);
     SK0 = TargetTransformInfo::SK_PermuteSingleSrc;
@@ -2587,6 +2597,7 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
 
   SmallVector<int> NewMask1(OldMask);
   TargetTransformInfo::ShuffleKind SK1 = TargetTransformInfo::SK_PermuteTwoSrc;
+  TTI::OperandValueInfo Op1Info = TTI.commonOperandInfo(Y, W);
   if (Y == W) {
     llvm::for_each(NewMask1, ConvertToUnary);
     SK1 = TargetTransformInfo::SK_PermuteSingleSrc;
@@ -2642,11 +2653,12 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
                                   CostKind, 0, nullptr, {Y, W});
 
   if (PredLHS == CmpInst::BAD_ICMP_PREDICATE) {
-    NewCost +=
-        TTI.getArithmeticInstrCost(LHS->getOpcode(), ShuffleDstTy, CostKind);
+    NewCost += TTI.getArithmeticInstrCost(LHS->getOpcode(), ShuffleDstTy,
+                                          CostKind, Op0Info, Op1Info);
   } else {
-    NewCost += TTI.getCmpSelInstrCost(LHS->getOpcode(), ShuffleCmpTy,
-                                      ShuffleDstTy, PredLHS, CostKind);
+    NewCost +=
+        TTI.getCmpSelInstrCost(LHS->getOpcode(), ShuffleCmpTy, ShuffleDstTy,
+                               PredLHS, CostKind, Op0Info, Op1Info);
   }
 
   LLVM_DEBUG(dbgs() << "Found a shuffle feeding two binops: " << I
@@ -4342,7 +4354,8 @@ bool VectorCombine::foldSignBitReductionCmp(Instruction &I) {
         TTI.getArithmeticReductionCost(getArithmeticReductionInstruction(Arith),
                                        VecTy, std::nullopt, CostKind);
     InstructionCost MinMaxCost =
-        TTI.getMinMaxReductionCost(MinMax, VecTy, FastMathFlags(), CostKind);
+        TTI.getMinMaxReductionCost(getMinMaxReductionIntrinsicOp(MinMax), VecTy,
+                                   FastMathFlags(), CostKind);
     return ArithCost <= MinMaxCost ? std::make_pair(Arith, ArithCost)
                                    : std::make_pair(MinMax, MinMaxCost);
   };
@@ -4367,6 +4380,320 @@ bool VectorCombine::foldSignBitReductionCmp(Instruction &I) {
   Value *NewReduce = Builder.CreateIntrinsic(ScalarTy, NewIID, {X});
   Value *NewCmp = IsNegativeCheck(Check) ? Builder.CreateIsNeg(NewReduce)
                                          : Builder.CreateIsNotNeg(NewReduce);
+  replaceValue(I, *NewCmp);
+  return true;
+}
+
+/// vector.reduce.OP f(X_i) == 0 -> vector.reduce.OP X_i == 0
+///
+/// We can prove it for cases when:
+///
+///   1.  OP X_i == 0 <=> \forall i \in [1, N] X_i == 0
+///   1'. OP X_i == 0 <=> \exists j \in [1, N] X_j == 0
+///   2.  f(x) == 0 <=> x == 0
+///
+/// From 1 and 2 (or 1' and 2), we can infer that
+///
+///   OP f(X_i) == 0 <=> OP X_i == 0.
+///
+///                  (1)
+///   OP f(X_i) == 0 <=> \forall i \in [1, N] f(X_i) == 0
+///                  (2)
+///                  <=> \forall i \in [1, N] X_i == 0
+///                  (1)
+///                  <=> OP(X_i) == 0
+///
+/// For some of the OP's and f's, we need to have domain constraints on X
+/// to ensure properties 1 (or 1') and 2.
+bool VectorCombine::foldICmpEqZeroVectorReduce(Instruction &I) {
+  CmpPredicate Pred;
+  Value *Op;
+  if (!match(&I, m_ICmp(Pred, m_Value(Op), m_Zero())) ||
+      !ICmpInst::isEquality(Pred))
+    return false;
+
+  auto *II = dyn_cast<IntrinsicInst>(Op);
+  if (!II)
+    return false;
+
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::vector_reduce_add:
+  case Intrinsic::vector_reduce_or:
+  case Intrinsic::vector_reduce_umin:
+  case Intrinsic::vector_reduce_umax:
+  case Intrinsic::vector_reduce_smin:
+  case Intrinsic::vector_reduce_smax:
+    break;
+  default:
+    return false;
+  }
+
+  Value *InnerOp = II->getArgOperand(0);
+
+  // TODO: fixed vector type might be too restrictive
+  if (!II->hasOneUse() || !isa<FixedVectorType>(InnerOp->getType()))
+    return false;
+
+  Value *X = nullptr;
+
+  // Check for zero-preserving operations where f(x) = 0 <=> x = 0
+  //
+  //   1. f(x) = shl nuw x, y for arbitrary y
+  //   2. f(x) = mul nuw x, c for defined c != 0
+  //   3. f(x) = zext x
+  //   4. f(x) = sext x
+  //   5. f(x) = neg x
+  //
+  if (!(match(InnerOp, m_NUWShl(m_Value(X), m_Value())) ||      // Case 1
+        match(InnerOp, m_NUWMul(m_Value(X), m_NonZeroInt())) || // Case 2
+        match(InnerOp, m_ZExt(m_Value(X))) ||                   // Case 3
+        match(InnerOp, m_SExt(m_Value(X))) ||                   // Case 4
+        match(InnerOp, m_Neg(m_Value(X)))                       // Case 5
+        ))
+    return false;
+
+  SimplifyQuery S = SQ.getWithInstruction(&I);
+  auto *XTy = cast<FixedVectorType>(X->getType());
+
+  // Check for domain constraints for all supported reductions.
+  //
+  //  a. OR X_i   - has property 1  for every X
+  //  b. UMAX X_i - has property 1  for every X
+  //  c. UMIN X_i - has property 1' for every X
+  //  d. SMAX X_i - has property 1  for X >= 0
+  //  e. SMIN X_i - has property 1' for X >= 0
+  //  f. ADD X_i  - has property 1  for X >= 0 && ADD X_i doesn't sign wrap
+  //
+  // In order for the proof to work, we need 1 (or 1') to be true for both
+  // OP f(X_i) and OP X_i and that's why below we check constraints twice.
+  //
+  // NOTE: ADD X_i holds property 1 for a mirror case as well, i.e. when
+  //       X <= 0 && ADD X_i doesn't sign wrap. However, due to the nature
+  //       of known bits, we can't reasonably hold knowledge of "either 0
+  //       or negative".
+  switch (II->getIntrinsicID()) {
+  case Intrinsic::vector_reduce_add: {
+    // We need to check that both X_i and f(X_i) have enough leading
+    // zeros to not overflow.
+    KnownBits KnownX = computeKnownBits(X, S);
+    KnownBits KnownFX = computeKnownBits(InnerOp, S);
+    unsigned NumElems = XTy->getNumElements();
+    // Adding N elements loses at most ceil(log2(N)) leading bits.
+    unsigned LostBits = Log2_32_Ceil(NumElems);
+    unsigned LeadingZerosX = KnownX.countMinLeadingZeros();
+    unsigned LeadingZerosFX = KnownFX.countMinLeadingZeros();
+    // Need at least one leading zero left after summation to ensure no overflow
+    if (LeadingZerosX <= LostBits || LeadingZerosFX <= LostBits)
+      return false;
+
+    // We are not checking whether X or f(X) are positive explicitly because
+    // we implicitly checked for it when we checked if both cases have enough
+    // leading zeros to not wrap addition.
+    break;
+  }
+  case Intrinsic::vector_reduce_smin:
+  case Intrinsic::vector_reduce_smax:
+    // Check whether X >= 0 and f(X) >= 0
+    if (!isKnownNonNegative(InnerOp, S) || !isKnownNonNegative(X, S))
+      return false;
+
+    break;
+  default:
+    break;
+  };
+
+  LLVM_DEBUG(dbgs() << "Found a reduction to 0 comparison with removable op: "
+                    << *II << "\n");
+
+  // For zext/sext, check if the transform is profitable using cost model.
+  // For other operations (shl, mul, neg), we're removing an instruction
+  // while keeping the same reduction type, so it's always profitable.
+  if (isa<ZExtInst>(InnerOp) || isa<SExtInst>(InnerOp)) {
+    auto *FXTy = cast<FixedVectorType>(InnerOp->getType());
+    Intrinsic::ID IID = II->getIntrinsicID();
+
+    InstructionCost ExtCost = TTI.getCastInstrCost(
+        cast<CastInst>(InnerOp)->getOpcode(), FXTy, XTy,
+        TTI::CastContextHint::None, CostKind, cast<CastInst>(InnerOp));
+
+    InstructionCost OldReduceCost, NewReduceCost;
+    switch (IID) {
+    case Intrinsic::vector_reduce_add:
+    case Intrinsic::vector_reduce_or:
+      OldReduceCost = TTI.getArithmeticReductionCost(
+          getArithmeticReductionInstruction(IID), FXTy, std::nullopt, CostKind);
+      NewReduceCost = TTI.getArithmeticReductionCost(
+          getArithmeticReductionInstruction(IID), XTy, std::nullopt, CostKind);
+      break;
+    case Intrinsic::vector_reduce_umin:
+    case Intrinsic::vector_reduce_umax:
+    case Intrinsic::vector_reduce_smin:
+    case Intrinsic::vector_reduce_smax:
+      OldReduceCost = TTI.getMinMaxReductionCost(
+          getMinMaxReductionIntrinsicOp(IID), FXTy, FastMathFlags(), CostKind);
+      NewReduceCost = TTI.getMinMaxReductionCost(
+          getMinMaxReductionIntrinsicOp(IID), XTy, FastMathFlags(), CostKind);
+      break;
+    default:
+      llvm_unreachable("Unexpected reduction");
+    }
+
+    InstructionCost OldCost = OldReduceCost + ExtCost;
+    InstructionCost NewCost =
+        NewReduceCost + (InnerOp->hasOneUse() ? 0 : ExtCost);
+
+    LLVM_DEBUG(dbgs() << "Found a removable extension before reduction: "
+                      << *InnerOp << "\n  OldCost: " << OldCost
+                      << " vs NewCost: " << NewCost << "\n");
+
+    // We consider transformation to still be potentially beneficial even
+    // when the costs are the same because we might remove a use from f(X)
+    // and unlock other optimizations. Equal costs would just mean that we
+    // didn't make it worse in the worst case.
+    if (NewCost > OldCost)
+      return false;
+  }
+
+  // Since we support zext and sext as f, we might change the scalar type
+  // of the intrinsic.
+  Type *Ty = XTy->getScalarType();
+  Value *NewReduce = Builder.CreateIntrinsic(Ty, II->getIntrinsicID(), {X});
+  Value *NewCmp =
+      Builder.CreateICmp(Pred, NewReduce, ConstantInt::getNullValue(Ty));
+  replaceValue(I, *NewCmp);
+  return true;
+}
+
+/// Fold comparisons of reduce.or/reduce.and with reduce.umax/reduce.umin
+/// based on cost, preserving the comparison semantics.
+///
+/// We use two fundamental properties for each pair:
+///
+///   1. or(X) == 0 <=> umax(X) == 0
+///   2. or(X) == 1 <=> umax(X) == 1
+///   3. sign(or(X)) == sign(umax(X))
+///
+///   1. and(X) == -1 <=> umin(X) == -1
+///   2. and(X) == -2 <=> umin(X) == -2
+///   3. sign(and(X)) == sign(umin(X))
+///
+/// From these we can infer the following transformations:
+///   a. or(X) ==/!= 0   <-> umax(X) ==/!= 0
+///   b. or(X) s< 0      <-> umax(X) s< 0
+///   c. or(X) s> -1     <-> umax(X) s> -1
+///   d. or(X) s< 1      <-> umax(X) s< 1
+///   e. or(X) ==/!= 1   <-> umax(X) ==/!= 1
+///   f. or(X) s< 2      <-> umax(X) s< 2
+///   g. and(X) ==/!= -1 <-> umin(X) ==/!= -1
+///   h. and(X) s< 0     <-> umin(X) s< 0
+///   i. and(X) s> -1    <-> umin(X) s> -1
+///   j. and(X) s> -2    <-> umin(X) s> -2
+///   k. and(X) ==/!= -2 <-> umin(X) ==/!= -2
+///   l. and(X) s> -3    <-> umin(X) s> -3
+///
+bool VectorCombine::foldEquivalentReductionCmp(Instruction &I) {
+  CmpPredicate Pred;
+  Value *ReduceOp;
+  const APInt *CmpVal;
+  if (!match(&I, m_ICmp(Pred, m_Value(ReduceOp), m_APInt(CmpVal))))
+    return false;
+
+  auto *II = dyn_cast<IntrinsicInst>(ReduceOp);
+  if (!II || !II->hasOneUse())
+    return false;
+
+  const auto IsValidOrUmaxCmp = [&]() {
+    // Cases a and e
+    bool IsEquality =
+        (CmpVal->isZero() || CmpVal->isOne()) && ICmpInst::isEquality(Pred);
+    // Case c
+    bool IsPositive = CmpVal->isAllOnes() && Pred == ICmpInst::ICMP_SGT;
+    // Cases b, d, and f
+    bool IsNegative = (CmpVal->isZero() || CmpVal->isOne() || *CmpVal == 2) &&
+                      Pred == ICmpInst::ICMP_SLT;
+    return IsEquality || IsPositive || IsNegative;
+  };
+
+  const auto IsValidAndUminCmp = [&]() {
+    const auto LeadingOnes = CmpVal->countl_one();
+
+    // Cases g and k
+    bool IsEquality =
+        (CmpVal->isAllOnes() || LeadingOnes + 1 == CmpVal->getBitWidth()) &&
+        ICmpInst::isEquality(Pred);
+    // Case h
+    bool IsNegative = CmpVal->isZero() && Pred == ICmpInst::ICMP_SLT;
+    // Cases i, j, and l
+    bool IsPositive =
+        // if the number has at least N - 2 leading ones
+        // and the two LSBs are:
+        //   - 1 x 1 -> -1
+        //   - 1 x 0 -> -2
+        //   - 0 x 1 -> -3
+        LeadingOnes + 2 >= CmpVal->getBitWidth() &&
+        ((*CmpVal)[0] || (*CmpVal)[1]) && Pred == ICmpInst::ICMP_SGT;
+    return IsEquality || IsNegative || IsPositive;
+  };
+
+  Intrinsic::ID OriginalIID = II->getIntrinsicID();
+  Intrinsic::ID AlternativeIID;
+
+  // Check if this is a valid comparison pattern and determine the alternate
+  // reduction intrinsic.
+  switch (OriginalIID) {
+  case Intrinsic::vector_reduce_or:
+    if (!IsValidOrUmaxCmp())
+      return false;
+    AlternativeIID = Intrinsic::vector_reduce_umax;
+    break;
+  case Intrinsic::vector_reduce_umax:
+    if (!IsValidOrUmaxCmp())
+      return false;
+    AlternativeIID = Intrinsic::vector_reduce_or;
+    break;
+  case Intrinsic::vector_reduce_and:
+    if (!IsValidAndUminCmp())
+      return false;
+    AlternativeIID = Intrinsic::vector_reduce_umin;
+    break;
+  case Intrinsic::vector_reduce_umin:
+    if (!IsValidAndUminCmp())
+      return false;
+    AlternativeIID = Intrinsic::vector_reduce_and;
+    break;
+  default:
+    return false;
+  }
+
+  Value *X = II->getArgOperand(0);
+  auto *VecTy = dyn_cast<FixedVectorType>(X->getType());
+  if (!VecTy)
+    return false;
+
+  const auto GetReductionCost = [&](Intrinsic::ID IID) -> InstructionCost {
+    unsigned ReductionOpc = getArithmeticReductionInstruction(IID);
+    if (ReductionOpc != Instruction::ICmp)
+      return TTI.getArithmeticReductionCost(ReductionOpc, VecTy, std::nullopt,
+                                            CostKind);
+    return TTI.getMinMaxReductionCost(getMinMaxReductionIntrinsicOp(IID), VecTy,
+                                      FastMathFlags(), CostKind);
+  };
+
+  InstructionCost OrigCost = GetReductionCost(OriginalIID);
+  InstructionCost AltCost = GetReductionCost(AlternativeIID);
+
+  LLVM_DEBUG(dbgs() << "Found equivalent reduction cmp: " << I
+                    << "\n  OrigCost: " << OrigCost
+                    << " vs AltCost: " << AltCost << "\n");
+
+  if (AltCost >= OrigCost)
+    return false;
+
+  Builder.SetInsertPoint(&I);
+  Type *ScalarTy = VecTy->getScalarType();
+  Value *NewReduce = Builder.CreateIntrinsic(ScalarTy, AlternativeIID, {X});
+  Value *NewCmp =
+      Builder.CreateICmp(Pred, NewReduce, ConstantInt::get(ScalarTy, *CmpVal));
 
   replaceValue(I, *NewCmp);
   return true;
@@ -5093,7 +5420,7 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
 
   // Get the range of vector elements used by shufflevector instructions.
   if (std::optional<IndexRange> Indices = GetIndexRangeInShuffles()) {
-    unsigned const NewNumElements = Indices->second + 1u;
+    unsigned const NewNumElements = (Indices->second + 1) - Indices->first;
 
     // If the range of vector elements is smaller than the full load, attempt
     // to create a smaller load.
@@ -5115,19 +5442,23 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
 
       using UseEntry = std::pair<ShuffleVectorInst *, std::vector<int>>;
       SmallVector<UseEntry, 4u> NewUses;
-      unsigned const MaxIndex = NewNumElements * 2u;
+      unsigned const LowOffset = Indices->first;
+      unsigned const HighOffset = OldNumElements - (Indices->second + 1);
 
       for (llvm::Use &Use : I.uses()) {
         auto *Shuffle = cast<ShuffleVectorInst>(Use.getUser());
         ArrayRef<int> OldMask = Shuffle->getShuffleMask();
 
         // Create entry for new use.
-        NewUses.push_back({Shuffle, OldMask});
-
-        // Validate mask indices.
+        NewUses.push_back({Shuffle, {}});
+        std::vector<int> &NewMask = NewUses.back().second;
         for (int Index : OldMask) {
-          if (Index >= static_cast<int>(MaxIndex))
+          int NewIndex = Index >= static_cast<int>(OldNumElements)
+                             ? Index - LowOffset - HighOffset
+                             : Index - LowOffset;
+          if (NewIndex >= static_cast<int>(NewNumElements * 2u))
             return false;
+          NewMask.push_back(NewIndex);
         }
 
         // Update costs.
@@ -5136,7 +5467,7 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
                                OldLoadTy, OldMask, CostKind);
         NewCost +=
             TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, Shuffle->getType(),
-                               NewLoadTy, OldMask, CostKind);
+                               NewLoadTy, NewMask, CostKind);
       }
 
       LLVM_DEBUG(
@@ -5148,8 +5479,14 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
         return false;
 
       // Create new load of smaller vector.
+      Type *IndexTy = DL->getIndexType(PtrOp->getType());
+      Value *NewPtr = LowOffset > 0u
+                          ? Builder.CreateInBoundsPtrAdd(
+                                PtrOp, ConstantInt::get(IndexTy, LowOffset))
+                          : PtrOp;
+
       auto *NewLoad = cast<LoadInst>(
-          Builder.CreateAlignedLoad(NewLoadTy, PtrOp, OldLoad->getAlign()));
+          Builder.CreateAlignedLoad(NewLoadTy, NewPtr, OldLoad->getAlign()));
       NewLoad->copyMetadata(I);
 
       // Replace all uses.
@@ -5405,6 +5742,10 @@ bool VectorCombine::run() {
         break;
       case Instruction::ICmp:
         if (foldSignBitReductionCmp(I))
+          return true;
+        if (foldICmpEqZeroVectorReduce(I))
+          return true;
+        if (foldEquivalentReductionCmp(I))
           return true;
         [[fallthrough]];
       case Instruction::FCmp:

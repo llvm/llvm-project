@@ -96,7 +96,6 @@ static isl_stat generate_non_single_valued(__isl_take isl_map *executed,
 
 	identity = isl_set_identity(isl_map_range(isl_map_copy(executed)));
 	executed = isl_map_domain_product(executed, identity);
-	build = isl_ast_build_set_single_valued(build, 1);
 
 	list = generate_code(isl_union_map_from_map(executed), build, 1);
 
@@ -133,11 +132,8 @@ static __isl_give isl_ast_graft *at_each_domain(__isl_take isl_ast_graft *graft,
 }
 
 /* Generate a call expression for the single executed
- * domain element "map" and put a guard around it based its (simplified)
- * domain.  "executed" is the original inverse schedule from which "map"
- * has been derived.  In particular, "map" is either identical to "executed"
- * or it is the result of gisting "executed" with respect to the build domain.
- * "executed" is only used if there is an at_each_domain callback.
+ * domain element "executed" and put a guard around it based on its (simplified)
+ * domain.
  *
  * At this stage, any pending constraints in the build can no longer
  * be simplified with respect to any enforced constraints since
@@ -151,7 +147,7 @@ static __isl_give isl_ast_graft *at_each_domain(__isl_take isl_ast_graft *graft,
  * on the constructed call expression node.
  */
 static isl_stat add_domain(__isl_take isl_map *executed,
-	__isl_take isl_map *map, struct isl_generate_domain_data *data)
+	struct isl_generate_domain_data *data)
 {
 	isl_ast_build *build;
 	isl_ast_graft *graft;
@@ -162,13 +158,13 @@ static isl_stat add_domain(__isl_take isl_map *executed,
 	pending = isl_ast_build_get_pending(build);
 	build = isl_ast_build_replace_pending_by_guard(build, pending);
 
-	guard = isl_map_domain(isl_map_copy(map));
+	guard = isl_map_domain(isl_map_copy(executed));
 	guard = isl_set_compute_divs(guard);
 	guard = isl_set_coalesce_preserve(guard);
 	guard = isl_set_gist(guard, isl_ast_build_get_generated(build));
 	guard = isl_ast_build_specialize(build, guard);
 
-	graft = isl_ast_graft_alloc_domain(map, build);
+	graft = isl_ast_graft_alloc_domain(isl_map_copy(executed), build);
 	graft = at_each_domain(graft, executed, build);
 	isl_ast_build_free(build);
 	isl_map_free(executed);
@@ -195,31 +191,16 @@ static isl_stat add_domain(__isl_take isl_map *executed,
  * the executed relation, possibly introducing a disjunctive guard
  * on the statement.
  *
- * On the other hand, we only perform the test after having taken the gist
- * of the domain as the resulting map is the one from which the call
- * expression is constructed.  Using this map to construct the call
- * expression usually yields simpler results in cases where the original
- * map is not obviously single-valued.
- * If the original map is obviously single-valued, then the gist
- * operation is skipped.
- *
- * Because we perform the single-valuedness test on the gisted map,
- * we may in rare cases fail to recognize that the inverse schedule
- * is single-valued.  This becomes problematic if this happens
- * from the recursive call through generate_non_single_valued
- * as we would then end up in an infinite recursion.
- * We therefore check if we are inside a call to generate_non_single_valued
- * and revert to the ungisted map if the gisted map turns out not to be
- * single-valued.
- *
  * Otherwise, call add_domain to generate a call expression (with guard) and
  * to call the at_each_domain callback, if any.
+ *
+ * Coalesce the inverse schedule before checking for single-valuedness.
+ * Skip this if the inverse schedule is obviously single-valued.
  */
 static isl_stat generate_domain(__isl_take isl_map *executed, void *user)
 {
 	struct isl_generate_domain_data *data = user;
 	isl_set *domain;
-	isl_map *map = NULL;
 	int empty, sv;
 
 	domain = isl_ast_build_get_domain(data->build);
@@ -237,25 +218,17 @@ static isl_stat generate_domain(__isl_take isl_map *executed, void *user)
 	if (sv < 0)
 		goto error;
 	if (sv)
-		return add_domain(executed, isl_map_copy(executed), data);
+		return add_domain(executed, data);
 
 	executed = isl_map_coalesce(executed);
-	map = isl_map_copy(executed);
-	map = isl_ast_build_compute_gist_map_domain(data->build, map);
-	sv = isl_map_is_single_valued(map);
+	sv = isl_map_is_single_valued(executed);
 	if (sv < 0)
 		goto error;
-	if (!sv) {
-		isl_map_free(map);
-		if (data->build->single_valued)
-			map = isl_map_copy(executed);
-		else
-			return generate_non_single_valued(executed, data);
-	}
+	if (!sv)
+		return generate_non_single_valued(executed, data);
 
-	return add_domain(executed, map, data);
+	return add_domain(executed, data);
 error:
-	isl_map_free(map);
 	isl_map_free(executed);
 	return isl_stat_error;
 }
@@ -5153,14 +5126,11 @@ __isl_give isl_ast_node *isl_ast_build_node_from_schedule_map(
 	isl_ast_node *node;
 	isl_union_map *executed;
 
-	build = isl_ast_build_copy(build);
-	build = isl_ast_build_set_single_valued(build, 0);
 	schedule = isl_union_map_coalesce(schedule);
 	schedule = isl_union_map_remove_redundancies(schedule);
 	executed = isl_union_map_reverse(schedule);
 	list = generate_code(executed, isl_ast_build_copy(build), 0);
 	node = isl_ast_node_from_graft_list(list, build);
-	isl_ast_build_free(build);
 
 	return node;
 }
@@ -5929,7 +5899,6 @@ __isl_give isl_ast_node *isl_ast_build_node_from_schedule(
 	isl_schedule_free(schedule);
 
 	build = isl_ast_build_copy(build);
-	build = isl_ast_build_set_single_valued(build, 0);
 	if (isl_schedule_node_get_type(node) != isl_schedule_node_domain)
 		isl_die(ctx, isl_error_unsupported,
 			"expecting root domain node",

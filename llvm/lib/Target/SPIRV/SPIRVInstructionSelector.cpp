@@ -224,6 +224,9 @@ private:
   bool selectDot4AddPackedExpansion(Register ResVReg, const SPIRVType *ResType,
                                     MachineInstr &I) const;
 
+  bool selectWavePrefixBitCount(Register ResVReg, const SPIRVType *ResType,
+                                MachineInstr &I) const;
+
   bool selectWaveReduceMax(Register ResVReg, const SPIRVType *ResType,
                            MachineInstr &I, bool IsUnsigned) const;
 
@@ -524,7 +527,7 @@ static bool isConstReg(MachineRegisterInfo *MRI, Register OpReg) {
 // or reduce our dependence on the global registry, so we can remove this
 // function. It can easily be missed when new intrinsics are added.
 
-// Most SPIR-V instrinsics are considered to have side-effects in their tablegen
+// Most SPIR-V intrinsics are considered to have side-effects in their tablegen
 // definition because they are referenced in the global registry. This is a list
 // of intrinsics that have no side effects other than their references in the
 // global registry.
@@ -950,8 +953,20 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
     return MIB.constrainAllUses(TII, TRI, RBI);
   }
   case TargetOpcode::G_STRICT_FMA:
-  case TargetOpcode::G_FMA:
+  case TargetOpcode::G_FMA: {
+    if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_fma)) {
+      MachineBasicBlock &BB = *I.getParent();
+      auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpFmaKHR))
+                     .addDef(ResVReg)
+                     .addUse(GR.getSPIRVTypeID(ResType))
+                     .addUse(I.getOperand(1).getReg())
+                     .addUse(I.getOperand(2).getReg())
+                     .addUse(I.getOperand(3).getReg())
+                     .setMIFlags(I.getFlags());
+      return MIB.constrainAllUses(TII, TRI, RBI);
+    }
     return selectExtInst(ResVReg, ResType, I, CL::fma, GL::Fma);
+  }
 
   case TargetOpcode::G_STRICT_FLDEXP:
     return selectExtInst(ResVReg, ResType, I, CL::ldexp);
@@ -2715,6 +2730,56 @@ bool SPIRVInstructionSelector::selectWaveActiveCountBits(
   return Result;
 }
 
+bool SPIRVInstructionSelector::selectWavePrefixBitCount(
+    Register ResVReg, const SPIRVType *ResType, MachineInstr &I) const {
+
+  assert(I.getNumOperands() == 3);
+
+  auto Op = I.getOperand(2);
+  assert(Op.isReg());
+
+  MachineBasicBlock &BB = *I.getParent();
+  DebugLoc DL = I.getDebugLoc();
+
+  Register InputRegister = Op.getReg();
+  SPIRVType *InputType = GR.getSPIRVTypeForVReg(InputRegister);
+
+  if (!InputType)
+    report_fatal_error("Input Type could not be determined.");
+
+  if (InputType->getOpcode() != SPIRV::OpTypeBool)
+    report_fatal_error("WavePrefixBitCount requires boolean input");
+
+  // Types
+  SPIRVType *Int32Ty = GR.getOrCreateSPIRVIntegerType(32, I, TII);
+
+  // Ballot result type: vector<uint32>
+  // Match DXC: %v4uint for Subgroup size
+  SPIRVType *BallotTy = GR.getOrCreateSPIRVVectorType(Int32Ty, 4, I, TII);
+
+  // Create a vreg for the ballot result
+  Register BallotVReg = MRI->createVirtualRegister(&SPIRV::IDRegClass);
+
+  // 1. OpGroupNonUniformBallot
+  BuildMI(BB, I, DL, TII.get(SPIRV::OpGroupNonUniformBallot))
+      .addDef(BallotVReg)
+      .addUse(GR.getSPIRVTypeID(BallotTy))
+      .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, Int32Ty, TII))
+      .addUse(InputRegister)
+      .constrainAllUses(TII, TRI, RBI);
+
+  // 2. OpGroupNonUniformBallotBitCount
+  BuildMI(BB, I, DL, TII.get(SPIRV::OpGroupNonUniformBallotBitCount))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, Int32Ty, TII))
+      .addImm(SPIRV::GroupOperation::ExclusiveScan)
+      .addUse(BallotVReg)
+      .constrainAllUses(TII, TRI, RBI);
+
+  return true;
+}
+
 bool SPIRVInstructionSelector::selectWaveReduceMax(Register ResVReg,
                                                    const SPIRVType *ResType,
                                                    MachineInstr &I,
@@ -3859,6 +3924,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::u_clamp, GL::UClamp);
   case Intrinsic::spv_sclamp:
     return selectExtInst(ResVReg, ResType, I, CL::s_clamp, GL::SClamp);
+  case Intrinsic::spv_subgroup_prefix_bit_count:
+    return selectWavePrefixBitCount(ResVReg, ResType, I);
   case Intrinsic::spv_wave_active_countbits:
     return selectWaveActiveCountBits(ResVReg, ResType, I);
   case Intrinsic::spv_wave_all:
@@ -3928,6 +3995,9 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   }
   case Intrinsic::spv_unpackhalf2x16: {
     return selectExtInst(ResVReg, ResType, I, GL::UnpackHalf2x16);
+  }
+  case Intrinsic::spv_packhalf2x16: {
+    return selectExtInst(ResVReg, ResType, I, GL::PackHalf2x16);
   }
   case Intrinsic::spv_ddx:
     return selectDerivativeInst(ResVReg, ResType, I, SPIRV::OpDPdx);

@@ -1,0 +1,39 @@
+"""
+Test lldb-dap launch request.
+"""
+
+from lldbsuite.test.decorators import (
+    skipIfAsan,
+    expectedFailureWindows,
+    skipIf,
+    skipIfBuildType,
+    no_match,
+)
+import lldbdap_testcase
+import tempfile
+
+
+class TestDAP_launch_stdio_redirection_and_console(lldbdap_testcase.DAPTestCaseBase):
+    """
+    Test stdio redirection and console.
+    """
+
+    @skipIfAsan
+    @expectedFailureWindows(
+        bugnumber="https://github.com/llvm/llvm-project/issues/137599"
+    )
+    @skipIf(oslist=["linux"], archs=no_match(["x86_64"]))
+    @skipIfBuildType(["debug"])
+    def test(self):
+        self.build_and_create_debug_adapter()
+        program = self.getBuildArtifact("a.out")
+
+        with tempfile.NamedTemporaryFile("rt") as f:
+            self.launch(
+                program, console="integratedTerminal", stdio=[None, f.name, None]
+            )
+            self.continue_to_exit()
+            lines = f.readlines()
+            self.assertIn(
+                program, lines[0], "make sure program path is in first argument"
+            )
