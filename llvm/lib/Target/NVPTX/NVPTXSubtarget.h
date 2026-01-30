@@ -162,6 +162,11 @@ public:
            hasPTXWithAccelSMs(86, {100, 101, 103});
   }
 
+  bool hasTcgen05LdRedSupport() const {
+    return hasPTXWithFamilySMs(90, {110, 103}) ||
+           hasPTXWithFamilySMs(88, {101, 103});
+  }
+
   bool hasReduxSyncF32() const {
     return hasPTXWithFamilySMs(88, {100}) || hasPTXWithAccelSMs(86, {100});
   }
@@ -289,9 +294,9 @@ public:
     return getFullSmVersion() % 10 == 2 ? PTXVersion >= 88
                                         : hasArchAccelFeatures();
   }
-  // If the user did not provide a target we default to the `sm_30` target.
+  // If the user did not provide a target we default to the `sm_75` target.
   std::string getTargetName() const {
-    return TargetName.empty() ? "sm_30" : TargetName;
+    return TargetName.empty() ? "sm_75" : TargetName;
   }
   bool hasTargetName() const { return !TargetName.empty(); }
 

@@ -206,9 +206,8 @@ void AMDGPUTTIImpl::getUnrollingPreferences(
             dyn_cast<AllocaInst>(getUnderlyingObject(Ptr));
         if (!Alloca || !Alloca->isStaticAlloca())
           continue;
-        Type *Ty = Alloca->getAllocatedType();
-        unsigned AllocaSize = Ty->isSized() ? DL.getTypeAllocSize(Ty) : 0;
-        if (AllocaSize > MaxAlloca)
+        auto AllocaSize = Alloca->getAllocationSize(DL);
+        if (!AllocaSize || AllocaSize->getFixedValue() > MaxAlloca)
           continue;
       } else if (AS == AMDGPUAS::LOCAL_ADDRESS ||
                  AS == AMDGPUAS::REGION_ADDRESS) {
@@ -285,7 +284,7 @@ uint64_t AMDGPUTTIImpl::getMaxMemIntrinsicInlineSizeThreshold() const {
 const FeatureBitset GCNTTIImpl::InlineFeatureIgnoreList = {
     // Codegen control options which don't matter.
     AMDGPU::FeatureEnableLoadStoreOpt, AMDGPU::FeatureEnableSIScheduler,
-    AMDGPU::FeatureEnableUnsafeDSOffsetFolding, AMDGPU::FeatureFlatForGlobal,
+    AMDGPU::FeatureEnableUnsafeDSOffsetFolding, AMDGPU::FeatureUseFlatForGlobal,
     AMDGPU::FeaturePromoteAlloca, AMDGPU::FeatureUnalignedScratchAccess,
     AMDGPU::FeatureUnalignedAccessMode,
 
@@ -300,7 +299,7 @@ const FeatureBitset GCNTTIImpl::InlineFeatureIgnoreList = {
     AMDGPU::FeatureSRAMECC,
 
     // Perf-tuning features
-    AMDGPU::FeatureFastFMAF32, AMDGPU::HalfRate64Ops};
+    AMDGPU::FeatureFastFMAF32, AMDGPU::FeatureHalfRate64Ops};
 
 GCNTTIImpl::GCNTTIImpl(const AMDGPUTargetMachine *TM, const Function &F)
     : BaseT(TM, F.getDataLayout()),
@@ -883,10 +882,9 @@ GCNTTIImpl::getMinMaxReductionCost(Intrinsic::ID IID, VectorType *Ty,
   return LT.first * getHalfRateInstrCost(CostKind);
 }
 
-InstructionCost GCNTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
-                                               TTI::TargetCostKind CostKind,
-                                               unsigned Index, const Value *Op0,
-                                               const Value *Op1) const {
+InstructionCost GCNTTIImpl::getVectorInstrCost(
+    unsigned Opcode, Type *ValTy, TTI::TargetCostKind CostKind, unsigned Index,
+    const Value *Op0, const Value *Op1, TTI::VectorInstrContext VIC) const {
   switch (Opcode) {
   case Instruction::ExtractElement:
   case Instruction::InsertElement: {
@@ -895,8 +893,8 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
     if (EltSize < 32) {
       if (EltSize == 16 && Index == 0 && ST->has16BitInsts())
         return 0;
-      return BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0,
-                                       Op1);
+      return BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0, Op1,
+                                       VIC);
     }
 
     // Extracts are just reads of a subregister, so are free. Inserts are
@@ -907,7 +905,8 @@ InstructionCost GCNTTIImpl::getVectorInstrCost(unsigned Opcode, Type *ValTy,
     return Index == ~0u ? 2 : 0;
   }
   default:
-    return BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0, Op1);
+    return BaseT::getVectorInstrCost(Opcode, ValTy, CostKind, Index, Op0, Op1,
+                                     VIC);
   }
 }
 
@@ -1455,7 +1454,8 @@ static unsigned getCallArgsTotalAllocaSize(const CallBase *CB,
     if (!AI || !AI->isStaticAlloca() || !AIVisited.insert(AI).second)
       continue;
 
-    AllocaSize += DL.getTypeAllocSize(AI->getAllocatedType());
+    if (auto Size = AI->getAllocationSize(DL))
+      AllocaSize += Size->getFixedValue();
   }
   return AllocaSize;
 }
@@ -1509,10 +1509,13 @@ unsigned GCNTTIImpl::getCallerAllocaCost(const CallBase *CB,
     Threshold += Threshold / 2;
   }
 
-  auto ArgAllocaSize = DL.getTypeAllocSize(AI->getAllocatedType());
+  auto ArgAllocaSize = AI->getAllocationSize(DL);
+  if (!ArgAllocaSize)
+    return 0;
 
   // Attribute the bonus proportionally to the alloca size
-  unsigned AllocaThresholdBonus = (Threshold * ArgAllocaSize) / AllocaSize;
+  unsigned AllocaThresholdBonus =
+      (Threshold * ArgAllocaSize->getFixedValue()) / AllocaSize;
 
   return AllocaThresholdBonus;
 }

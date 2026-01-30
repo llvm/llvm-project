@@ -511,10 +511,13 @@ def CIR_MethodAttr : CIR_Attr<"Method", "method", [TypedAttrInterface]> {
     If the member function is a non-virtual function, the `symbol` parameter
     gives the global symbol for the non-virtual member function.
 
-    Virtual function handling is not yet implemented.
+    If the member function is a virtual function, the `vtable_offset` parameter
+    gives the offset of the vtable entry corresponding to the virtual member
+    function.
 
-    If `symbol` is not present, the attribute represents a null pointer
-    constant.
+    `symbol` and `vtable_offset` cannot be present at the same time. If both of
+    `symbol` and `vtable_offset` are not present, the attribute represents a
+    null pointer constant.
 
     Examples:
     ```
@@ -522,7 +525,7 @@ def CIR_MethodAttr : CIR_Attr<"Method", "method", [TypedAttrInterface]> {
     %0 = cir.const #cir.method<@_ZN1S2m1Ei> :
              !cir.method<!cir.func<(!s32i)> in !rec_S>
 
-    // Virtual method (not yet implemented)
+    // Virtual method
     %1 = cir.const #cir.method<vtable_offset = 8> :
              !cir.method<!cir.func<(!s32i)> in !rec_S>
 
@@ -534,23 +537,35 @@ def CIR_MethodAttr : CIR_Attr<"Method", "method", [TypedAttrInterface]> {
   let parameters = (ins AttributeSelfTypeParameter<
                             "", "cir::MethodType">:$type,
                         OptionalParameter<
-                            "std::optional<mlir::FlatSymbolRefAttr>">:$symbol);
+                            "std::optional<mlir::FlatSymbolRefAttr>">:$symbol,
+                        OptionalParameter<
+                            "std::optional<uint64_t>">:$vtable_offset);
 
   let builders = [
     AttrBuilderWithInferredContext<(ins "cir::MethodType":$type), [{
-      return $_get(type.getContext(), type, std::nullopt);
+      return $_get(type.getContext(), type, std::nullopt, std::nullopt);
     }]>,
     AttrBuilderWithInferredContext<(ins "cir::MethodType":$type,
                                         "mlir::FlatSymbolRefAttr":$symbol), [{
-      return $_get(type.getContext(), type, symbol);
+      return $_get(type.getContext(), type, symbol, std::nullopt);
+    }]>,
+    AttrBuilderWithInferredContext<(ins "cir::MethodType":$type,
+                                        "uint64_t":$vtable_offset), [{
+      return $_get(type.getContext(), type, std::nullopt, vtable_offset);
     }]>,
   ];
 
   let hasCustomAssemblyFormat = 1;
 
+  let genVerifyDecl = 1;
+
   let extraClassDeclaration = [{
     bool isNull() const {
-      return !getSymbol().has_value();
+      return !getSymbol().has_value() && !getVtableOffset().has_value();
+    }
+
+    bool isVirtual() const {
+      return getVtableOffset().has_value();
     }
   }];
 }
@@ -1237,5 +1252,39 @@ def CIR_BlockAddrInfoAttr : CIR_Attr<"BlockAddrInfo", "block_addr_info"> {
     }]>
   ];
 }
+
+//===----------------------------------------------------------------------===//
+// Side Effect
+//===----------------------------------------------------------------------===//
+
+def CIR_SideEffect : CIR_I32EnumAttr<
+    "SideEffect", "allowed side effects of a function", [
+      I32EnumAttrCase<"All", 0, "all">,
+      I32EnumAttrCase<"Pure", 1, "pure">,
+      I32EnumAttrCase<"Const", 2, "const">
+]> {
+  let description = [{
+    The side effect attribute specifies the possible side effects of a function
+    or the target of a call operation.  This is an enumeration attribute with
+    the following possible values:
+
+    - all: The function or callee can have any side effects. This is the default
+      if no side effects are explicitly listed.
+    - pure: The function or callee may read data from memory, but it cannot
+      write data to memory. This has the same effect as the GNU C/C++ attribute
+      `__attribute__((pure))`.
+    - const: The function or callee may not read or write data from memory. This
+      has the same effect as the GNU C/C++ attribute `__attribute__((const))`.
+
+    Examples:
+
+    ```mlir
+    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i
+    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(pure)
+    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(const)
+    ```
+  }];
+}
+
 
 #endif // CLANG_CIR_DIALECT_IR_CIRATTRS_TD
