@@ -311,8 +311,8 @@ public:
   }
 
   LIBC_PRINTF_MODULE_DECL void write_float_arg_val(FormatSection &section,
-                                                    LengthModifier lm,
-                                                    size_t conv_index);
+                                                   LengthModifier lm,
+                                                   size_t conv_index);
   LIBC_PRINTF_MODULE_DECL TypeDesc float_type_desc(LengthModifier lm);
   LIBC_PRINTF_MODULE_DECL bool advance_arg_if_float(TypeDesc cur_type_desc);
 

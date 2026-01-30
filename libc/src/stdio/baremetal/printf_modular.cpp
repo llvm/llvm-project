@@ -18,7 +18,8 @@
 
 namespace LIBC_NAMESPACE_DECL {
 
-LLVM_LIBC_FUNCTION(int, __printf_modular, (const char *__restrict format, ...)) {
+LLVM_LIBC_FUNCTION(int, __printf_modular,
+                   (const char *__restrict format, ...)) {
   va_list vlist;
   va_start(vlist, format);
   internal::ArgList args(vlist); // This holder class allows for easier copying

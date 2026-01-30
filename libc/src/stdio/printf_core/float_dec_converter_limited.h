@@ -677,11 +677,11 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer<write_mode> *writer,
 }
 
 template <WriteMode write_mode>
-LIBC_PRINTF_MODULE_DECL int
-convert_float_decimal(Writer<write_mode> *writer, const FormatSection &to_conv);
+LIBC_PRINTF_MODULE_DECL int convert_float_decimal(Writer<write_mode> *writer,
+                                                  const FormatSection &to_conv);
 template <WriteMode write_mode>
-LIBC_PRINTF_MODULE_DECL int
-convert_float_dec_exp(Writer<write_mode> *writer, const FormatSection &to_conv);
+LIBC_PRINTF_MODULE_DECL int convert_float_dec_exp(Writer<write_mode> *writer,
+                                                  const FormatSection &to_conv);
 template <WriteMode write_mode>
 LIBC_PRINTF_MODULE_DECL int
 convert_float_dec_auto(Writer<write_mode> *writer,
