@@ -120,8 +120,6 @@ InstructionInformation::InstructionInformation(const ARMBaseInstrInfo *TII) {
     Info[op].IsInlineShiftALU = true;
   }
 
-  Info[t2SDIV].IsDivide = Info[t2UDIV].IsDivide = true;
-
   std::initializer_list<unsigned> isMultiplyList = {
       t2MUL,    t2MLA,     t2MLS,     t2SMLABB, t2SMLABT,  t2SMLAD,   t2SMLADX,
       t2SMLAL,  t2SMLALBB, t2SMLALBT, t2SMLALD, t2SMLALDX, t2SMLALTB, t2SMLALTT,
