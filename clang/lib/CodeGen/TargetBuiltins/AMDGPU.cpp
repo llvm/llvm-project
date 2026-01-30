@@ -366,39 +366,31 @@ void CodeGenFunction::AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
   Inst->setMetadata(LLVMContext::MD_mmra, MMRAMetadata::getMD(Ctx, MMRAs));
 }
 
-static llvm::MetadataAsValue *getSyncscopeIDAsMDString(llvm::LLVMContext &Ctx,
-                                                       clang::SyncScope Scope) {
-  StringRef Name;
+static StringRef getSyncscopeIDAsString(llvm::LLVMContext &Ctx,
+                                        clang::SyncScope Scope) {
   switch (Scope) {
   case clang::SyncScope::HIPSingleThread:
   case clang::SyncScope::SingleScope:
-    Name = "singlethread";
-    break;
+    return "singlethread";
   case clang::SyncScope::HIPWavefront:
   case clang::SyncScope::OpenCLSubGroup:
   case clang::SyncScope::WavefrontScope:
-    Name = "wavefront";
-    break;
+    return "wavefront";
   case clang::SyncScope::HIPCluster:
   case clang::SyncScope::ClusterScope:
   case clang::SyncScope::HIPWorkgroup:
   case clang::SyncScope::OpenCLWorkGroup:
   case clang::SyncScope::WorkgroupScope:
-    Name = "workgroup";
-    break;
+    return "workgroup";
   case clang::SyncScope::HIPAgent:
   case clang::SyncScope::OpenCLDevice:
   case clang::SyncScope::DeviceScope:
-    Name = "agent";
-    break;
+    return "agent";
   case clang::SyncScope::SystemScope:
   case clang::SyncScope::HIPSystem:
   case clang::SyncScope::OpenCLAllSVMDevices:
-    Name = "";
-    break;
+    return "";
   }
-  llvm::MDNode *MD = llvm::MDNode::get(Ctx, {llvm::MDString::get(Ctx, Name)});
-  return llvm::MetadataAsValue::get(Ctx, MD);
 }
 
 static Intrinsic::ID getIntrinsicIDforWaveReduction(unsigned BuiltinID) {
@@ -858,9 +850,12 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     llvm::Value *Addr = EmitScalarExpr(E->getArg(0));
     llvm::Value *AO = EmitScalarExpr(E->getArg(1));
 
-    auto Scope = dyn_cast<llvm::ConstantInt>(EmitScalarExpr(E->getArg(2)));
-    llvm::Value *ScopeMD = getSyncscopeIDAsMDString(
+    auto *Scope = dyn_cast<llvm::ConstantInt>(EmitScalarExpr(E->getArg(2)));
+    StringRef ScopeStr = getSyncscopeIDAsString(
         Ctx, static_cast<clang::SyncScope>(Scope->getZExtValue()));
+    llvm::MDNode *MD =
+        llvm::MDNode::get(Ctx, {llvm::MDString::get(Ctx, ScopeStr)});
+    llvm::Value *ScopeMD = llvm::MetadataAsValue::get(Ctx, MD);
     llvm::Function *F = CGM.getIntrinsic(IID, {LoadTy});
     return Builder.CreateCall(F, {Addr, AO, ScopeMD});
   }

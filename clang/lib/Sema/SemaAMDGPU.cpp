@@ -372,11 +372,10 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
   return false;
 }
 
-bool SemaAMDGPU::checkAtomicOrderingCABIArg(CallExpr *TheCall, unsigned ArgIdx,
-                                            bool MayLoad, bool MayStore) {
-  Expr *AtomicOrdArg = TheCall->getArg(ArgIdx);
+bool SemaAMDGPU::checkAtomicOrderingCABIArg(Expr *E, bool MayLoad,
+                                            bool MayStore) {
   Expr::EvalResult AtomicOrdArgRes;
-  if (!AtomicOrdArg->EvaluateAsInt(AtomicOrdArgRes, getASTContext()))
+  if (!E->EvaluateAsInt(AtomicOrdArgRes, getASTContext()))
     llvm_unreachable("Intrinsic requires imm for atomic ordering argument!");
   auto Ord =
       llvm::AtomicOrderingCABI(AtomicOrdArgRes.Val.getInt().getZExtValue());
@@ -387,9 +386,8 @@ bool SemaAMDGPU::checkAtomicOrderingCABIArg(CallExpr *TheCall, unsigned ArgIdx,
       (!(MayLoad && MayStore) && (Ord == llvm::AtomicOrderingCABI::acq_rel)) ||
       (!MayLoad && Ord == llvm::AtomicOrderingCABI::acquire) ||
       (!MayStore && Ord == llvm::AtomicOrderingCABI::release)) {
-    return Diag(AtomicOrdArg->getBeginLoc(),
-                diag::warn_atomic_op_has_invalid_memory_order)
-           << 0 << AtomicOrdArg->getSourceRange();
+    return Diag(E->getBeginLoc(), diag::warn_atomic_op_has_invalid_memory_order)
+           << 0 << E->getSourceRange();
   }
 
   return false;
@@ -409,15 +407,21 @@ bool SemaAMDGPU::checkCoopAtomicFunctionCall(CallExpr *TheCall, bool IsStore) {
         << PtrArg->getSourceRange();
   }
 
+  Expr *AO = TheCall->getArg(IsStore ? 2 : 1);
+  Expr *Scope = TheCall->getArg(TheCall->getNumArgs() - 1);
+
+  if (AO->isValueDependent() || Scope->isValueDependent())
+    return false;
+
   // Check atomic ordering
-  Fail |= checkAtomicOrderingCABIArg(
-      TheCall, IsStore ? 2 : 1, /*MayLoad=*/!IsStore, /*MayStore=*/IsStore);
+  Fail |=
+      checkAtomicOrderingCABIArg(TheCall->getArg(IsStore ? 2 : 1),
+                                 /*MayLoad=*/!IsStore, /*MayStore=*/IsStore);
 
   // Last argument is the syncscope as a string literal.
-  Expr *Arg = TheCall->getArg(TheCall->getNumArgs() - 1);
-  if (!isa<StringLiteral>(Arg->IgnoreParenImpCasts())) {
+  if (!isa<StringLiteral>(Scope->IgnoreParenImpCasts())) {
     Diag(TheCall->getBeginLoc(), diag::err_expr_not_string_literal)
-        << Arg->getSourceRange();
+        << Scope->getSourceRange();
     Fail = true;
   }
 
@@ -426,11 +430,17 @@ bool SemaAMDGPU::checkCoopAtomicFunctionCall(CallExpr *TheCall, bool IsStore) {
 
 bool SemaAMDGPU::checkAtomicMonitorLoad(CallExpr *TheCall) {
   bool Fail = false;
-  Fail |= checkAtomicOrderingCABIArg(TheCall, 1, /*MayLoad=*/true,
+
+  Expr *AO = TheCall->getArg(1);
+  auto *Scope = TheCall->getArg(TheCall->getNumArgs() - 1);
+
+  if (AO->isValueDependent() || Scope->isValueDependent())
+    return false;
+
+  Fail |= checkAtomicOrderingCABIArg(TheCall->getArg(1), /*MayLoad=*/true,
                                      /*MayStore=*/false);
 
   auto ScopeModel = AtomicScopeModel::create(AtomicScopeModelKind::Generic);
-  auto *Scope = TheCall->getArg(TheCall->getNumArgs() - 1);
   if (std::optional<llvm::APSInt> Result =
           Scope->getIntegerConstantExpr(SemaRef.Context)) {
     if (!ScopeModel->isValid(Result->getZExtValue())) {
