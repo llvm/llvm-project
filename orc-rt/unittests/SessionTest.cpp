@@ -11,8 +11,8 @@
 //===----------------------------------------------------------------------===//
 
 #include "orc-rt/Session.h"
+#include "orc-rt/ExecutionScopeGuard.h"
 #include "orc-rt/SPSWrapperFunction.h"
-#include "orc-rt/ThreadPoolTaskDispatcher.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -55,53 +55,13 @@ private:
   move_only_function<Error(Op)> GenResult;
 };
 
-class NoDispatcher : public TaskDispatcher {
-public:
-  void dispatch(std::unique_ptr<Task> T) override {
-    assert(false && "strictly no dispatching!");
-  }
-  void shutdown() override {}
-};
-
-class EnqueueingDispatcher : public TaskDispatcher {
-public:
-  using OnShutdownRunFn = move_only_function<void()>;
-  EnqueueingDispatcher(std::deque<std::unique_ptr<Task>> &Tasks,
-                       OnShutdownRunFn OnShutdownRun = {})
-      : Tasks(Tasks), OnShutdownRun(std::move(OnShutdownRun)) {}
-  void dispatch(std::unique_ptr<Task> T) override {
-    Tasks.push_back(std::move(T));
-  }
-  void shutdown() override {
-    if (OnShutdownRun)
-      OnShutdownRun();
-  }
-
-  /// Run up to NumTasks (arbitrarily many if NumTasks == std::nullopt) tasks
-  /// from the front of the queue, returning the number actually run.
-  static size_t
-  runTasksFromFront(std::deque<std::unique_ptr<Task>> &Tasks,
-                    std::optional<size_t> NumTasks = std::nullopt) {
-    size_t NumRun = 0;
-
-    while (!Tasks.empty() && (!NumTasks || NumRun != *NumTasks)) {
-      auto T = std::move(Tasks.front());
-      Tasks.pop_front();
-      T->run();
-      ++NumRun;
-    }
-
-    return NumRun;
-  }
-
-private:
-  std::deque<std::unique_ptr<Task>> &Tasks;
-  OnShutdownRunFn OnShutdownRun;
-};
-
 class MockControllerAccess : public Session::ControllerAccess {
 public:
-  MockControllerAccess(Session &SS) : Session::ControllerAccess(SS), SS(SS) {}
+  using Task = move_only_function<void()>;
+  using EnqueueTaskFn = move_only_function<void(Task)>;
+
+  MockControllerAccess(Session &S, EnqueueTaskFn EnqueueTask)
+      : Session::ControllerAccess(S), EnqueueTask(std::move(EnqueueTask)) {}
 
   void disconnect() override {
     std::unique_lock<std::mutex> Lock(M);
@@ -123,12 +83,12 @@ public:
       ++Outstanding;
     }
 
-    SS.dispatch(makeGenericTask([this, CId, OnComplete = std::move(OnComplete),
-                                 T, ArgBytes = std::move(ArgBytes)]() mutable {
+    EnqueueTask([this, CId, OnComplete = std::move(OnComplete), T,
+                 ArgBytes = std::move(ArgBytes)]() mutable {
       auto Fn = reinterpret_cast<orc_rt_WrapperFunction>(T);
       Fn(reinterpret_cast<orc_rt_SessionRef>(this), CId, wfReturn,
          ArgBytes.release());
-    }));
+    });
 
     bool Notify = false;
     {
@@ -157,11 +117,10 @@ public:
       ++Outstanding;
     }
 
-    SS.dispatch(
-        makeGenericTask([OnComplete = std::move(OnComplete),
-                         ResultBytes = std::move(ResultBytes)]() mutable {
-          OnComplete(std::move(ResultBytes));
-        }));
+    EnqueueTask([OnComplete = std::move(OnComplete),
+                 ResultBytes = std::move(ResultBytes)]() mutable {
+      OnComplete(std::move(ResultBytes));
+    });
 
     bool Notify = false;
     {
@@ -191,7 +150,9 @@ public:
       return OnComplete(WrapperFunctionBuffer::createOutOfBandError(
           "Controller disconnected"));
 
-    handleWrapperCall(CId, Fn, std::move(ArgBytes));
+    EnqueueTask([this, CId, Fn, ArgBytes = std::move(ArgBytes)]() mutable {
+      handleWrapperCall(CId, Fn, std::move(ArgBytes));
+    });
 
     bool Notify = false;
     {
@@ -231,7 +192,7 @@ private:
         CallId, WrapperFunctionBuffer(ResultBytes));
   }
 
-  Session &SS;
+  EnqueueTaskFn EnqueueTask;
 
   std::mutex M;
   bool Shutdown = false;
@@ -239,6 +200,47 @@ private:
   size_t CallId = 0;
   std::unordered_map<size_t, OnCallHandlerCompleteFn> Pending;
   std::condition_variable ShutdownCV;
+};
+
+class TaskQueue {
+public:
+  TaskQueue(ExecutionScopeGuard ER) : ER(std::move(ER)) {
+    assert(this->ER && "Invalid ExecutionScopeGuard");
+  }
+
+  MockControllerAccess::EnqueueTaskFn getEnqueuer() {
+    assert(ER && "getEnqueuer can only be called once");
+    return [this, ER = std::move(ER)](MockControllerAccess::Task T) {
+      append(std::move(T));
+    };
+  }
+
+  void runFromFront() {
+    while (true) {
+      MockControllerAccess::Task T;
+      {
+        std::scoped_lock<std::mutex> Lock(M);
+        if (!Q.empty()) {
+          T = std::move(Q.front());
+          Q.pop_front();
+        }
+      }
+      if (T)
+        T();
+      else
+        break;
+    }
+  }
+
+private:
+  void append(MockControllerAccess::Task T) {
+    std::scoped_lock<std::mutex> Lock(M);
+    Q.push_back(std::move(T));
+  }
+
+  ExecutionScopeGuard ER;
+  std::mutex M;
+  std::deque<MockControllerAccess::Task> Q;
 };
 
 class CallViaMockControllerAccess {
@@ -260,16 +262,13 @@ private:
 // move_only_functions<void(Error)>s.
 static void noErrors(Error Err) { cantFail(std::move(Err)); }
 
-TEST(SessionTest, TrivialConstructionAndDestruction) {
-  Session S(std::make_unique<NoDispatcher>(), noErrors);
-}
+TEST(SessionTest, TrivialConstructionAndDestruction) { Session S(noErrors); }
 
 TEST(SessionTest, ReportError) {
   Error E = Error::success();
   cantFail(std::move(E)); // Force error into checked state.
 
-  Session S(std::make_unique<NoDispatcher>(),
-            [&](Error Err) { E = std::move(Err); });
+  Session S([&](Error Err) { E = std::move(Err); });
   S.reportError(make_error<StringError>("foo"));
 
   if (E)
@@ -278,27 +277,13 @@ TEST(SessionTest, ReportError) {
     ADD_FAILURE() << "Missing error value";
 }
 
-TEST(SessionTest, DispatchTask) {
-  int X = 0;
-  std::deque<std::unique_ptr<Task>> Tasks;
-  Session S(std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
-
-  EXPECT_EQ(Tasks.size(), 0U);
-  S.dispatch(makeGenericTask([&]() { ++X; }));
-  EXPECT_EQ(Tasks.size(), 1U);
-  auto T = std::move(Tasks.front());
-  Tasks.pop_front();
-  T->run();
-  EXPECT_EQ(X, 1);
-}
-
 TEST(SessionTest, SingleResourceManager) {
   size_t OpIdx = 0;
   std::optional<size_t> DetachOpIdx;
   std::optional<size_t> ShutdownOpIdx;
 
   {
-    Session S(std::make_unique<NoDispatcher>(), noErrors);
+    Session S(noErrors);
     S.addResourceManager(std::make_unique<MockResourceManager>(
         DetachOpIdx, ShutdownOpIdx, OpIdx));
   }
@@ -314,7 +299,7 @@ TEST(SessionTest, MultipleResourceManagers) {
   std::optional<size_t> ShutdownOpIdx[3];
 
   {
-    Session S(std::make_unique<NoDispatcher>(), noErrors);
+    Session S(noErrors);
     for (size_t I = 0; I != 3; ++I)
       S.addResourceManager(std::make_unique<MockResourceManager>(
           DetachOpIdx[I], ShutdownOpIdx[I], OpIdx));
@@ -331,30 +316,20 @@ TEST(SessionTest, MultipleResourceManagers) {
 TEST(SessionTest, ExpectedShutdownSequence) {
   // Check that Session shutdown results in...
   // 1. ResourceManagers being shut down.
-  // 2. The TaskDispatcher being shut down.
-  // 3. A call to OnShutdownComplete.
+  // 2. A call to OnShutdownComplete.
 
   size_t OpIdx = 0;
   std::optional<size_t> DetachOpIdx;
   std::optional<size_t> ShutdownOpIdx;
 
-  bool DispatcherShutDown = false;
   bool SessionShutdownComplete = false;
-  std::deque<std::unique_ptr<Task>> Tasks;
-  Session S(std::make_unique<EnqueueingDispatcher>(
-                Tasks,
-                [&]() {
-                  EXPECT_TRUE(ShutdownOpIdx);
-                  EXPECT_EQ(*ShutdownOpIdx, 0);
-                  EXPECT_FALSE(SessionShutdownComplete);
-                  DispatcherShutDown = true;
-                }),
-            noErrors);
+  Session S(noErrors);
   S.addResourceManager(
       std::make_unique<MockResourceManager>(DetachOpIdx, ShutdownOpIdx, OpIdx));
 
   S.shutdown([&]() {
-    EXPECT_TRUE(DispatcherShutDown);
+    EXPECT_EQ(DetachOpIdx, std::nullopt);
+    EXPECT_EQ(ShutdownOpIdx, 0U);
     SessionShutdownComplete = true;
   });
   S.waitForShutdown();
@@ -365,12 +340,12 @@ TEST(SessionTest, ExpectedShutdownSequence) {
 TEST(ControllerAccessTest, Basics) {
   // Test that we can set the ControllerAccess implementation and still shut
   // down as expected.
-  std::deque<std::unique_ptr<Task>> Tasks;
-  Session S(std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
-  auto CA = std::make_shared<MockControllerAccess>(S);
-  S.setController(CA);
+  Session S(noErrors);
+  TaskQueue Tasks{ExecutionScopeGuard(S)};
+  S.setController(
+      std::make_shared<MockControllerAccess>(S, Tasks.getEnqueuer()));
 
-  EnqueueingDispatcher::runTasksFromFront(Tasks);
+  Tasks.runFromFront();
 
   S.waitForShutdown();
 }
@@ -387,17 +362,17 @@ static void add_sps_wrapper(orc_rt_SessionRef S, uint64_t CallId,
 
 TEST(ControllerAccessTest, ValidCallToController) {
   // Simulate a call to a controller handler.
-  std::deque<std::unique_ptr<Task>> Tasks;
-  Session S(std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
-  auto CA = std::make_shared<MockControllerAccess>(S);
-  S.setController(CA);
+  Session S(noErrors);
+  TaskQueue Tasks{ExecutionScopeGuard(S)};
+  S.setController(
+      std::make_shared<MockControllerAccess>(S, Tasks.getEnqueuer()));
 
   int32_t Result = 0;
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
       CallViaSession(S, reinterpret_cast<Session::HandlerTag>(add_sps_wrapper)),
       [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
 
-  EnqueueingDispatcher::runTasksFromFront(Tasks);
+  Tasks.runFromFront();
 
   EXPECT_EQ(Result, 42);
 
@@ -406,8 +381,7 @@ TEST(ControllerAccessTest, ValidCallToController) {
 
 TEST(ControllerAccessTest, CallToControllerBeforeAttach) {
   // Expect calls to the controller prior to attaching to fail.
-  std::deque<std::unique_ptr<Task>> Tasks;
-  Session S(std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
+  Session S(noErrors);
 
   Error Err = Error::success();
   SPSWrapperFunction<int32_t(int32_t, int32_t)>::call(
@@ -425,10 +399,10 @@ TEST(ControllerAccessTest, CallToControllerBeforeAttach) {
 
 TEST(ControllerAccessTest, CallToControllerAfterDetach) {
   // Expect calls to the controller prior to attaching to fail.
-  std::deque<std::unique_ptr<Task>> Tasks;
-  Session S(std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
-  auto CA = std::make_shared<MockControllerAccess>(S);
-  S.setController(CA);
+  Session S(noErrors);
+  TaskQueue Tasks{ExecutionScopeGuard(S)};
+  S.setController(
+      std::make_shared<MockControllerAccess>(S, Tasks.getEnqueuer()));
 
   S.detachFromController();
 
@@ -448,9 +422,9 @@ TEST(ControllerAccessTest, CallToControllerAfterDetach) {
 
 TEST(ControllerAccessTest, CallFromController) {
   // Simulate a call from the controller.
-  std::deque<std::unique_ptr<Task>> Tasks;
-  Session S(std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
-  auto CA = std::make_shared<MockControllerAccess>(S);
+  Session S(noErrors);
+  TaskQueue Tasks{ExecutionScopeGuard(S)};
+  auto CA = std::make_shared<MockControllerAccess>(S, Tasks.getEnqueuer());
   S.setController(CA);
 
   int32_t Result = 0;
@@ -458,17 +432,20 @@ TEST(ControllerAccessTest, CallFromController) {
       CallViaMockControllerAccess(*CA, add_sps_wrapper),
       [&](Expected<int32_t> R) { Result = cantFail(std::move(R)); }, 41, 1);
 
-  EnqueueingDispatcher::runTasksFromFront(Tasks);
+  Tasks.runFromFront();
 
   EXPECT_EQ(Result, 42);
+
+  // We need to explicitly reset CA here, since it holds an ExecutionScopeGuard
+  // that would prevent shutdown from proceeding.
+  CA.reset();
 
   S.waitForShutdown();
 }
 
 TEST(ControllerAccessTest, RedundantAsyncShutdown) {
   // Check that redundant calls to shutdown have their callbacks run.
-  std::deque<std::unique_ptr<Task>> Tasks;
-  Session S(std::make_unique<EnqueueingDispatcher>(Tasks), noErrors);
+  Session S(noErrors);
   S.waitForShutdown();
 
   bool RedundantCallbackRan = false;

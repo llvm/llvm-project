@@ -50,6 +50,12 @@ void Session::shutdown(OnShutdownCompleteFn OnShutdownComplete) {
   if (OnShutdownComplete)
     return OnShutdownComplete();
 
+  // Wait for execution scope to be fully released.
+  {
+    std::unique_lock<std::mutex> Lock(M);
+    SI->CompleteCV.wait(Lock, [&]() { return ExecutionScopeRetainCount == 0; });
+  }
+
   // OnShutdownComplete is _not_ set (i.e. was moved into the list of pending
   // handlers), and we didn't return under the lock above, so we must be
   // responsible for the shutdown. Call shutdownNext.
@@ -97,14 +103,6 @@ void Session::shutdownNext(Error Err) {
 }
 
 void Session::shutdownComplete() {
-
-  std::unique_ptr<TaskDispatcher> TmpDispatcher;
-  {
-    std::lock_guard<std::mutex> Lock(M);
-    TmpDispatcher = std::move(Dispatcher);
-  }
-
-  TmpDispatcher->shutdown();
 
   std::vector<OnShutdownCompleteFn> OnCompletes;
   {

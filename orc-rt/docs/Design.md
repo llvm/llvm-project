@@ -61,13 +61,48 @@ allocation or release will occur prior to the end of the Session
 ResourceManagers may implement this operation to abandon any fine-grained
 tracking or pre-reserved resources (e.g. address space).
 
-### TaskDispatcher
+### ExecutionScope and ExecutionScopeGuard
 
-Runs Tasks within the ORC runtime. In particular, calls originating from the
-controller (via ControllerAccess) will be dispatched as Tasks.
+A Session has an *execution scope* that must be retained while JIT'd code is
+executing. Retaining the execution scope prevents the Session from completing
+shutdown, ensuring that JIT'd code and its supporting resources remain valid.
+The Session's shutdown process will block until the execution scope is fully
+released.
 
-TaskDispatchers are responsible for ensuring that all dispatched Tasks have
-completed or been destroyed during Session shutdown.
+`ExecutionScopeGuard` is an RAII class that retains the Session's execution
+scope. Clients should create an ExecutionScopeGuard before executing any JIT'd
+code and hold it until execution completes.
+
+Example usage:
+
+```cpp
+void runJittedCode(Session &S) {
+  ExecutionScopeGuard ESG(S);  // Retain execution scope
+  callSomeJittedFunction();
+  // ESG automatically releases when it goes out of scope
+}
+```
+
+For dispatch mechanisms that handle calls from the controller, the dispatch
+mechanism should hold an ExecutionScopeGuard that covers all dispatched work:
+
+```cpp
+class MyDispatcher {
+  ExecutionScopeGuard ESG;
+  // ... thread pool or other dispatch mechanism ...
+public:
+  MyDispatcher(Session &S) : ESG(S) {}
+  void dispatch(std::function<void()> Task) {
+    // Tasks run under the dispatcher's retained execution scope
+    threadPool.enqueue(std::move(Task));
+  }
+};
+```
+
+ExecutionScopeGuards are copyable (each copy independently retains the
+execution scope) and movable (transfers the retain). The Session waits for the
+execution scope retain count to reach zero before proceeding with resource
+manager shutdown.
 
 ### WrapperFunction
 

@@ -8,12 +8,12 @@ set(ORC_RT_HEADERS
     orc-rt/BitmaskEnum.h
     orc-rt/Compiler.h
     orc-rt/Error.h
+    orc-rt/ExecutionScopeGuard.h
     orc-rt/ExecutorAddress.h
     orc-rt/IntervalMap.h
     orc-rt/IntervalSet.h
     orc-rt/Math.h
     orc-rt/MemoryFlags.h
-    orc-rt/QueueingTaskDispatcher.h
     orc-rt/ResourceManager.h
     orc-rt/RTTI.h
     orc-rt/ScopeExit.h
@@ -24,8 +24,6 @@ set(ORC_RT_HEADERS
     orc-rt/SPSMemoryFlags.h
     orc-rt/SPSWrapperFunction.h
     orc-rt/SPSWrapperFunctionBuffer.h
-    orc-rt/TaskDispatcher.h
-    orc-rt/ThreadPoolTaskDispatcher.h
     orc-rt/WrapperFunction.h
     orc-rt/bind.h
     orc-rt/bit.h

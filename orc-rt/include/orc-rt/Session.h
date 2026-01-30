@@ -15,7 +15,6 @@
 
 #include "orc-rt/Error.h"
 #include "orc-rt/ResourceManager.h"
-#include "orc-rt/TaskDispatcher.h"
 #include "orc-rt/WrapperFunction.h"
 #include "orc-rt/move_only_function.h"
 
@@ -75,6 +74,8 @@ public:
     /// disconnect is called).
     virtual void disconnect() = 0;
 
+    Session *getSession() const { return S; }
+
     /// Report an error to the session.
     void reportError(Error Err) {
       assert(S && "Already disconnected");
@@ -90,14 +91,13 @@ public:
     virtual void sendWrapperResult(uint64_t CallId,
                                    WrapperFunctionBuffer ResultBytes) = 0;
 
-    /// Ask the Session to run the given wrapper function.
-    ///
-    /// Subclasses must not call this method after disconnect returns.
     void handleWrapperCall(uint64_t CallId, orc_rt_WrapperFunction Fn,
                            WrapperFunctionBuffer ArgBytes) {
       assert(S && "Already disconnected");
-      S->handleWrapperCall(CallId, Fn, std::move(ArgBytes));
+      Fn(wrap(S), CallId, Session::wrapperReturn, ArgBytes.release());
     }
+
+    Session *getSession() { return S; }
 
   private:
     void doDisconnect() {
@@ -115,10 +115,7 @@ public:
   ///
   /// Note that entry into the reporter is not synchronized: it may be
   /// called from multiple threads concurrently.
-  Session(std::unique_ptr<TaskDispatcher> Dispatcher,
-          ErrorReporterFn ReportError)
-      : Dispatcher(std::move(Dispatcher)), ReportError(std::move(ReportError)) {
-  }
+  Session(ErrorReporterFn ReportError) : ReportError(std::move(ReportError)) {}
 
   // Sessions are not copyable or moveable.
   Session(const Session &) = delete;
@@ -127,9 +124,6 @@ public:
   Session &operator=(Session &&) = delete;
 
   ~Session();
-
-  /// Dispatch a task using the Session's TaskDispatcher.
-  void dispatch(std::unique_ptr<Task> T) { Dispatcher->dispatch(std::move(T)); }
 
   /// Report an error via the ErrorReporter function.
   void reportError(Error Err) { ReportError(std::move(Err)); }
@@ -160,6 +154,30 @@ public:
           "no controller attached"));
   }
 
+  /// The execution scope represents the right to run code in a Session.
+  ///
+  /// Each Session has a single conceptual execution scope. While the execution
+  /// scope is retained (i.e. the retain count is non-zero), Session shutdown
+  /// will not proceed.
+  ///
+  /// Calls to retainExecutionScope must be balanced by calls to
+  /// releaseExecutionScope.
+  void retainExecutionScope() {
+    std::scoped_lock<std::mutex> Lock(M);
+    assert((!SI || ExecutionScopeRetainCount > 0) &&
+           "retainExecutionScope called after shutdown");
+    ++ExecutionScopeRetainCount;
+  }
+
+  void releaseExecutionScope() {
+    std::scoped_lock<std::mutex> Lock(M);
+    assert(ExecutionScopeRetainCount > 0 &&
+           "Unbalanced call to releaseExecutionScope");
+    if (--ExecutionScopeRetainCount == 0)
+      if (SI)
+        SI->CompleteCV.notify_all();
+  }
+
 private:
   struct ShutdownInfo {
     bool Complete = false;
@@ -171,13 +189,6 @@ private:
   void shutdownNext(Error Err);
   void shutdownComplete();
 
-  void handleWrapperCall(uint64_t CallId, orc_rt_WrapperFunction Fn,
-                         WrapperFunctionBuffer ArgBytes) {
-    dispatch(makeGenericTask([=, ArgBytes = std::move(ArgBytes)]() mutable {
-      Fn(wrap(this), CallId, wrapperReturn, ArgBytes.release());
-    }));
-  }
-
   void sendWrapperResult(uint64_t CallId, WrapperFunctionBuffer ResultBytes) {
     if (auto TmpCA = CA)
       TmpCA->sendWrapperResult(CallId, std::move(ResultBytes));
@@ -186,11 +197,11 @@ private:
   static void wrapperReturn(orc_rt_SessionRef S, uint64_t CallId,
                             orc_rt_WrapperFunctionBuffer ResultBytes);
 
-  std::unique_ptr<TaskDispatcher> Dispatcher;
   std::shared_ptr<ControllerAccess> CA;
   ErrorReporterFn ReportError;
 
   std::mutex M;
+  size_t ExecutionScopeRetainCount = 0;
   std::vector<std::unique_ptr<ResourceManager>> ResourceMgrs;
   std::unique_ptr<ShutdownInfo> SI;
 };

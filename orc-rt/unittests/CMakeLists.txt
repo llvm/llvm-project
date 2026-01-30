@@ -19,12 +19,12 @@ add_orc_rt_unittest(CoreTests
   ErrorCAPITest.cpp
   ErrorTest.cpp
   ErrorExceptionInteropTest.cpp
+  ExecutionScopeGuardTest.cpp
   ExecutorAddressTest.cpp
   IntervalMapTest.cpp
   IntervalSetTest.cpp
   MathTest.cpp
   MemoryFlagsTest.cpp
-  QueueingTaskDispatcherTest.cpp
   RTTITest.cpp
   ScopeExitTest.cpp
   SessionTest.cpp
@@ -34,7 +34,6 @@ add_orc_rt_unittest(CoreTests
   SPSMemoryFlagsTest.cpp
   SPSWrapperFunctionTest.cpp
   SPSWrapperFunctionBufferTest.cpp
-  ThreadPoolTaskDispatcherTest.cpp
   WrapperFunctionBufferTest.cpp
   bind-test.cpp
   bit-test.cpp
