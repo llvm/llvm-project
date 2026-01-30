@@ -1347,7 +1347,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     if (getTarget().getTriple().isSystemZ()) {
       llvm_unreachable("SYSTEMZ NYI");
     }
-    
+
     mlir::Value frameaddress =
         cir::FrameAddrOp::create(builder, loc, builder.getVoidPtrTy(),
                                  mlir::ValueRange{builder.getUInt32(0, loc)})
