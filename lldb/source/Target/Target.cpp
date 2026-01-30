@@ -3745,7 +3745,7 @@ llvm::Expected<uint32_t> Target::AddScriptedFrameProviderDescriptor(
 }
 
 bool Target::RemoveScriptedFrameProviderDescriptor(uint32_t id) {
-  bool removed;
+  bool removed = false;
   {
     std::lock_guard<std::recursive_mutex> guard(
         m_frame_provider_descriptors_mutex);
