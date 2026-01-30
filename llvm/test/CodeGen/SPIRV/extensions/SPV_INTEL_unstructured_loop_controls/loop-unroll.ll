@@ -1,14 +1,14 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_unstructured_loop_controls %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-NO-EXT
 
-; Check that extension and capability are emitted when extension is enabled
+; Check that extension and capability are emitted when extension is enabled.
 ; CHECK-SPIRV-DAG: OpCapability UnstructuredLoopControlsINTEL
 ; CHECK-SPIRV-DAG: OpExtension "SPV_INTEL_unstructured_loop_controls"
 
-; Check that OpLoopControlINTEL is NOT emitted when extension is not enabled
+; Check that OpLoopControlINTEL is NOT emitted when extension is not enabled.
 ; CHECK-NO-EXT-NOT: OpLoopControlINTEL
 
-; Test 1: llvm.loop.unroll.enable -> OpLoopControlINTEL Unroll
+; Test 1: llvm.loop.unroll.enable -> OpLoopControlINTEL Unroll.
 ; CHECK-SPIRV: test_unroll_enable
 ; CHECK-SPIRV: OpLoopControlINTEL Unroll
 ; CHECK-SPIRV-NEXT: OpBranchConditional
@@ -29,7 +29,7 @@ for.end:
   ret void
 }
 
-; Test 2: llvm.loop.unroll.disable -> OpLoopControlINTEL DontUnroll
+; Test 2: llvm.loop.unroll.disable -> OpLoopControlINTEL DontUnroll.
 ; CHECK-SPIRV: test_unroll_disable
 ; CHECK-SPIRV: OpLoopControlINTEL DontUnroll
 ; CHECK-SPIRV-NEXT: OpBranchConditional
@@ -50,7 +50,7 @@ for.end:
   ret void
 }
 
-; Test 3: llvm.loop.unroll.count N -> OpLoopControlINTEL PartialCount N
+; Test 3: llvm.loop.unroll.count N -> OpLoopControlINTEL PartialCount N.
 ; CHECK-SPIRV: test_unroll_count
 ; CHECK-SPIRV: OpLoopControlINTEL PartialCount 4
 ; CHECK-SPIRV-NEXT: OpBranchConditional
@@ -71,7 +71,7 @@ for.end:
   ret void
 }
 
-; Test 4: llvm.loop.unroll.full -> OpLoopControlINTEL Unroll
+; Test 4: llvm.loop.unroll.full -> OpLoopControlINTEL Unroll.
 ; CHECK-SPIRV: test_unroll_full
 ; CHECK-SPIRV: OpLoopControlINTEL Unroll
 ; CHECK-SPIRV-NEXT: OpBranchConditional
