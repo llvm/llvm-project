@@ -6686,8 +6686,8 @@ define amdgpu_kernel void @v_fneg_round_f32_nsz(ptr addrspace(1) %out, ptr addrs
   %a.gep = getelementptr inbounds float, ptr addrspace(1) %a.ptr, i64 %tid.ext
   %out.gep = getelementptr inbounds float, ptr addrspace(1) %out, i64 %tid.ext
   %a = load volatile float, ptr addrspace(1) %a.gep
-  %round = call nsz float @llvm.round.f32(float %a)
-  %fneg = fneg float %round
+  %round = call float @llvm.round.f32(float %a)
+  %fneg = fneg nsz float %round
   store float %fneg, ptr addrspace(1) %out.gep
   ret void
 }

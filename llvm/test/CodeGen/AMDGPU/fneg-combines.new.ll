@@ -3455,8 +3455,8 @@ define float @v_fneg_round_f32_nsz(float %a) #0 {
 ; GCN-NEXT:    v_bfi_b32 v0, s4, v2, v0
 ; GCN-NEXT:    v_sub_f32_e64 v0, -v1, v0
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
-  %round = call nsz float @llvm.round.f32(float %a)
-  %fneg = fneg float %round
+  %round = call float @llvm.round.f32(float %a)
+  %fneg = fneg nsz float %round
   ret float %fneg
 }
 

@@ -2562,7 +2562,6 @@ SDValue AMDGPUTargetLowering::LowerFROUND(SDValue Op, SelectionDAG &DAG) const {
   SDLoc SL(Op);
   SDValue X = Op.getOperand(0);
   EVT VT = Op.getValueType();
-  SelectionDAG::FlagInserter Inserter(DAG, Op->getFlags());
 
   SDValue T = DAG.getNode(ISD::FTRUNC, SL, VT, X);
 
