@@ -2659,11 +2659,8 @@ RegionStoreManager::bindArray(LimitedRegionBindingsConstRef B,
     return bindAggregate(B, R, Init);
   }
 
-  if (isa<nonloc::SymbolVal>(Init))
+  if (isa<nonloc::SymbolVal, UnknownVal, UndefinedVal>(Init))
     return bindAggregate(B, R, Init);
-
-  if (Init.isUnknown())
-    return bindAggregate(B, R, UnknownVal());
 
   // Remaining case: explicit compound values.
   const nonloc::CompoundVal& CV = Init.castAs<nonloc::CompoundVal>();
