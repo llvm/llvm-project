@@ -4021,7 +4021,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
                 : Name[18] == '.' ? Name[19]
                                   : Name[20];
 
-    Intrinsic::ID IID;
+    Intrinsic::ID IID = 0;
     if (IsVariable && Name[17] != '.') {
       if (Size == 's' && Name[17] == '4') // avx512.mask.psrav4.si
         IID = Intrinsic::x86_avx2_psrav_d;
@@ -4233,7 +4233,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
   } else if (Name.starts_with("fma.vfmsubadd.p")) {
     unsigned VecWidth = CI->getType()->getPrimitiveSizeInBits();
     unsigned EltWidth = CI->getType()->getScalarSizeInBits();
-    Intrinsic::ID IID;
+    Intrinsic::ID IID = 0;
     if (VecWidth == 128 && EltWidth == 32)
       IID = Intrinsic::x86_fma_vfmaddsub_ps;
     else if (VecWidth == 256 && EltWidth == 32)
@@ -4304,7 +4304,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     bool ZeroMask = Name[11] == 'z';
     unsigned VecWidth = CI->getType()->getPrimitiveSizeInBits();
     unsigned EltWidth = CI->getType()->getScalarSizeInBits();
-    Intrinsic::ID IID;
+    Intrinsic::ID IID = 0;
     if (VecWidth == 128 && EltWidth == 32)
       IID = Intrinsic::x86_avx512_pternlog_d_128;
     else if (VecWidth == 256 && EltWidth == 32)
@@ -4331,7 +4331,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     bool ZeroMask = Name[11] == 'z';
     bool High = Name[20] == 'h' || Name[21] == 'h';
     unsigned VecWidth = CI->getType()->getPrimitiveSizeInBits();
-    Intrinsic::ID IID;
+    Intrinsic::ID IID = 0;
     if (VecWidth == 128 && !High)
       IID = Intrinsic::x86_avx512_vpmadd52l_uq_128;
     else if (VecWidth == 256 && !High)
@@ -4366,7 +4366,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     bool ZeroMask = Name[11] == 'z';
     bool IsSaturating = Name[ZeroMask ? 21 : 20] == 's';
     unsigned VecWidth = CI->getType()->getPrimitiveSizeInBits();
-    Intrinsic::ID IID;
+    Intrinsic::ID IID = 0;
     if (VecWidth == 128 && !IsSaturating)
       IID = Intrinsic::x86_avx512_vpdpbusd_128;
     else if (VecWidth == 256 && !IsSaturating)
@@ -4422,7 +4422,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     bool ZeroMask = Name[11] == 'z';
     bool IsSaturating = Name[ZeroMask ? 21 : 20] == 's';
     unsigned VecWidth = CI->getType()->getPrimitiveSizeInBits();
-    Intrinsic::ID IID;
+    Intrinsic::ID IID = 0;
     if (VecWidth == 128 && !IsSaturating)
       IID = Intrinsic::x86_avx512_vpdpwssd_128;
     else if (VecWidth == 256 && !IsSaturating)
@@ -4474,7 +4474,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
   } else if (Name == "addcarryx.u32" || Name == "addcarryx.u64" ||
              Name == "addcarry.u32" || Name == "addcarry.u64" ||
              Name == "subborrow.u32" || Name == "subborrow.u64") {
-    Intrinsic::ID IID;
+    Intrinsic::ID IID = 0;
     if (Name[0] == 'a' && Name.back() == '2')
       IID = Intrinsic::x86_addcarry_32;
     else if (Name[0] == 'a' && Name.back() == '4')
