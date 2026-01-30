@@ -7447,15 +7447,15 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     // Instruction prototype (including return type and parameter types)
     // For intrinsics, we use the base/non-overloaded name
     //
-    // e.g., "call <16 x i8> llvm.aarch64.neon.uqsub(<16 x i8>, <16 x i8>)"
+    // e.g., "call <16 x i8> @llvm.aarch64.neon.uqsub(<16 x i8>, <16 x i8>)"
     unsigned NumOperands = I.getNumOperands();
     if (CallInst *CI = dyn_cast<CallInst>(&I)) {
-      errs() << "YYY call " << *I.getType() << " ";
+      errs() << "YYY call " << *I.getType() << " @";
 
       if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(CI))
         errs() << Intrinsic::getBaseName(II->getIntrinsicID());
       else
-        errs() << " " << CI->getCalledFunction()->getName();
+        errs() << CI->getCalledFunction()->getName();
 
       errs() << "(";
 
