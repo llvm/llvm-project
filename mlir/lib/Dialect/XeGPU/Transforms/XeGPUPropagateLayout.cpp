@@ -671,60 +671,28 @@ void LayoutInfoPropagation::visitVectorMultiReductionOp(
   if (!resLayoutInfo.isAssigned())
     return;
 
-  // debug print resLayoutInfo
-  LLVM_DEBUG(DBGS() << "visitVectorMultiReductionOp: resLayoutInfo = ";
-             resLayoutInfo.print(llvm::dbgs()); llvm::dbgs() << "\n");
-
   VectorType sourceTy =
       llvm::dyn_cast<VectorType>(reduction.getSourceVectorType());
   SmallVector<int64_t> reductionDims(reduction.getReductionDims().begin(),
                                      reduction.getReductionDims().end());
 
-  LLVM_DEBUG(DBGS() << "visitVectorMultiReductionOp: srcShape = [";
-             for (auto dim
-                  : sourceTy.getShape()) llvm::dbgs()
-             << dim << " ";
-             llvm::dbgs() << "]\n");
-  LLVM_DEBUG(DBGS() << "visitVectorMultiReductionOp: reductionDims = [";
-             for (auto dim
-                  : reductionDims) llvm::dbgs()
-             << dim << " ";
-             llvm::dbgs() << "]\n");
-
+  auto uArch = getUArch(xegpu::getChipStr(reduction).value_or(""));
   auto consumerLayoutAttr =
       dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
 
-  LLVM_DEBUG(DBGS() << "visitVectorMultiReductionOp: consumerLayoutAttr = "
-                    << consumerLayoutAttr << "\n");
-  // The required result layout represents the layout requirements
-  // for the operation it is recorded to anchor layout or temporary layout.
+  // The result layout represents the layout requirements of the operation.
+  // it is recorded to anchor layout or temporary layout.
   // it must be honored for current op and may conflict with the layout
   // propagated from consumer op, the conflict is resolved in later phase by
   // converting the required result layout to the consumer layout
-  auto uArch = getUArch(xegpu::getChipStr(reduction).value_or(""));
   auto requiredResLayoutAttr = xegpu::setupMultiReductionResultLayout(
       layoutKind, sourceTy, consumerLayoutAttr, reductionDims, uArch);
-  LLVM_DEBUG(DBGS() << "visitVectorMultiReductionOp: requiredResLayoutAttr = "
-                    << requiredResLayoutAttr << "\n");
-
   // resLayoutInfo.set(requiredResLayoutAttr);
   xegpu::setTemporaryLayout(reduction->getResult(0), requiredResLayoutAttr);
-
-  // debug print resLayoutInfo
-  LLVM_DEBUG(
-      DBGS() << "visitVectorMultiReductionOp: after change resLayoutInfo = ";
-      resLayoutInfo.print(llvm::dbgs()); llvm::dbgs() << "\n");
-
-  LLVM_DEBUG(DBGS() << "visitVectorMultiReductionOp: after change "
-                       "results[0]->getValue() = ";
-             results[0]->getValue().print(llvm::dbgs()); llvm::dbgs() << "\n");
 
   // derive the source layout from the dominant layout and reduction dims
   auto srcLayoutAttr = xegpu::inferMultiReductionSourceLayout(
       requiredResLayoutAttr, reductionDims);
-
-  LLVM_DEBUG(DBGS() << "visitVectorMultiReductionOp: srcLayoutAttr = "
-                    << srcLayoutAttr << "\n");
 
   propagateIfChanged(operands[0], operands[0]->meet(LayoutInfo(srcLayoutAttr)));
   // Accumulator should have the same layout as the result.
@@ -1291,7 +1259,6 @@ void LayoutInfoPropagation::visitCreateDescOp(
 void LayoutInfoPropagation::visitStoreScatterOp(
     xegpu::StoreScatterOp storeScatter, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
-  LLVM_DEBUG(DBGS() << "visitStoreScatterOp: Processing store scatter op\n");
 
   xegpu::DistributeLayoutAttr requiredAnchorLayoutAttr;
   xegpu::DistributeLayoutAttr anchorLayoutAttr = storeScatter.getLayoutAttr();
@@ -1302,19 +1269,9 @@ void LayoutInfoPropagation::visitStoreScatterOp(
       llvm::dyn_cast<VectorType>(storeScatter.getMask().getType());
   int chunkSize = storeScatter.getChunkSize().value_or(1);
 
-  LLVM_DEBUG(DBGS() << "visitStoreScatterOp: anchorLayoutAttr = "
-                    << anchorLayoutAttr << "\n");
-  LLVM_DEBUG(DBGS() << "visitStoreScatterOp: subgroupSize = " << subgroupSize
-                    << "\n");
-  LLVM_DEBUG(DBGS() << "visitStoreScatterOp: chunkSize = " << chunkSize
-                    << "\n");
-  LLVM_DEBUG(DBGS() << "visitStoreScatterOp: srcVecTy = " << srcVecTy << "\n");
-
   if (hasParamsOfLayoutKind(anchorLayoutAttr)) {
-    LLVM_DEBUG(DBGS() << "visitStoreScatterOp: Using existing anchor layout\n");
     requiredAnchorLayoutAttr = anchorLayoutAttr;
   } else {
-    LLVM_DEBUG(DBGS() << "visitStoreScatterOp: Setting up new anchor layout\n");
     if (!srcVecTy) {
       storeScatter.emitWarning("Not propagating, non-vector payload supplied.");
       return;
@@ -1324,16 +1281,11 @@ void LayoutInfoPropagation::visitStoreScatterOp(
     storeScatter.setLayoutAttr(requiredAnchorLayoutAttr);
   }
 
-  LLVM_DEBUG(DBGS() << "visitStoreScatterOp: requiredAnchorLayoutAttr = "
-                    << requiredAnchorLayoutAttr << "\n");
-
   LayoutInfo srcLayoutInfo = LayoutInfo(requiredAnchorLayoutAttr);
   auto maskLayoutAttr = requiredAnchorLayoutAttr;
   // Special handling mask layout for chunked ops: Enforce the default xegpu 1D
   // layout for mask.
   if (chunkSize > 1) {
-    LLVM_DEBUG(DBGS() << "visitStoreScatterOp: Setting mask layout for chunked "
-                         "operation\n");
     if (layoutKind == xegpu::LayoutKind::InstData)
       maskLayoutAttr =
           xegpu::LayoutAttr::get(storeScatter->getContext(), {subgroupSize});
@@ -1346,71 +1298,39 @@ void LayoutInfoPropagation::visitStoreScatterOp(
   }
 
   LayoutInfo maskLayoutInfo = LayoutInfo(maskLayoutAttr);
-  LLVM_DEBUG(DBGS() << "visitStoreScatterOp: maskLayoutAttr = "
-                    << maskLayoutAttr << "\n");
 
   // Propagate the payload operand layout
-  LLVM_DEBUG(DBGS() << "visitStoreScatterOp: Propagating payload layout\n");
   propagateIfChanged(operands[0], operands[0]->meet(srcLayoutInfo));
   // Propagate the destination (if tdesc) operand layout
-  if (isa<xegpu::TensorDescType>(storeScatter.getDestType())) {
-    LLVM_DEBUG(
-        DBGS() << "visitStoreScatterOp: Propagating destination layout\n");
+  if (isa<xegpu::TensorDescType>(storeScatter.getDestType()))
     propagateIfChanged(operands[1], operands[1]->meet(srcLayoutInfo));
-  }
   // Propagate the new layout to the mask and optional offset operand.
-  LLVM_DEBUG(DBGS() << "visitStoreScatterOp: Propagating mask layout\n");
   propagateIfChanged(operands[2], operands[2]->meet(maskLayoutInfo));
-  if (storeScatter.getOffsets()) {
-    LLVM_DEBUG(DBGS() << "visitStoreScatterOp: Propagating offset layout\n");
+  if (storeScatter.getOffsets())
     propagateIfChanged(operands[3], operands[3]->meet(maskLayoutInfo));
-  }
-  LLVM_DEBUG(DBGS() << "visitStoreScatterOp: Done\n");
 }
 
 void LayoutInfoPropagation::visitLoadMatrixOp(
     xegpu::LoadMatrixOp loadMatrixOp, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
-  LLVM_DEBUG(DBGS() << "visitLoadMatrixOp: Processing load matrix op\n");
 
   LayoutInfo resLayoutInfo = results[0]->getValue();
-  if (!resLayoutInfo.isAssigned()) {
-    LLVM_DEBUG(DBGS() << "visitLoadMatrixOp: Result layout not assigned\n");
-    return;
-  }
-
-  LLVM_DEBUG(DBGS() << "visitLoadMatrixOp: resLayoutInfo = ";
-             resLayoutInfo.print(llvm::dbgs()); llvm::dbgs() << "\n");
-
   auto consumerLayoutAttr =
       dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
 
-  LLVM_DEBUG(DBGS() << "visitLoadMatrixOp: consumerLayoutAttr = "
-                    << consumerLayoutAttr << "\n");
-
   xegpu::DistributeLayoutAttr anchorLayout = loadMatrixOp.getLayoutAttr();
-
-  LLVM_DEBUG(DBGS() << "visitLoadMatrixOp: anchorLayout = " << anchorLayout
-                    << "\n");
 
   // only need to set anchor layout, no need to porpagate to memdesc and
   // offset
   if (!hasParamsOfLayoutKind(anchorLayout)) {
-    LLVM_DEBUG(DBGS() << "visitLoadMatrixOp: Setting up new anchor layout\n");
     VectorType resVecTy =
         llvm::cast<VectorType>(loadMatrixOp.getRes().getType());
     assert(resVecTy.getRank() == 2 && "Expecting 2D vector for store matrix.");
-    LLVM_DEBUG(DBGS() << "visitLoadMatrixOp: resVecTy = " << resVecTy << "\n");
     auto uArch = getUArch(getChipStr(loadMatrixOp).value_or(""));
     auto requiredAnchorLayoutAttr = xegpu::setupLoadMatrixAnchorLayout(
         layoutKind, resVecTy, consumerLayoutAttr, uArch);
-    LLVM_DEBUG(DBGS() << "visitLoadMatrixOp: requiredAnchorLayoutAttr = "
-                      << requiredAnchorLayoutAttr << "\n");
     loadMatrixOp.setLayoutAttr(requiredAnchorLayoutAttr);
-  } else {
-    LLVM_DEBUG(DBGS() << "visitLoadMatrixOp: Using existing anchor layout\n");
   }
-  LLVM_DEBUG(DBGS() << "visitLoadMatrixOp: Done\n");
 }
 
 // Store matrix is a flavor of scattered store for 2D shapes.
@@ -1712,42 +1632,21 @@ void XeGPUPropagateLayoutPass::runOnOperation() {
     if (auto opResult = dyn_cast<OpResult>(val)) {
 
       Operation *defOp = opResult.getDefiningOp();
-      LLVM_DEBUG(DBGS() << "Try op: " << *defOp << "\n");
       if (auto anchorOp = dyn_cast<xegpu::AnchorLayoutInterface>(defOp)) {
-        LLVM_DEBUG(DBGS() << "AnchorLayoutInterface found for op: " << *defOp
-                          << "\n");
         auto anchorLayout = anchorOp.getAnchorLayout();
-        LLVM_DEBUG(DBGS() << "Anchor layout: " << anchorLayout << "\n");
-        LLVM_DEBUG(DBGS() << "Anchor layout is null: "
-                          << (anchorLayout == nullptr ? "true" : "false")
-                          << "\n");
-        if (anchorLayout != nullptr) {
-          LLVM_DEBUG(DBGS()
-                     << "Returning anchor layout: " << anchorLayout << "\n");
+        if (anchorLayout != nullptr)
           return anchorLayout;
-        }
-        LLVM_DEBUG(DBGS() << "Anchor layout is null, continuing...\n");
       }
-
       xegpu::DistributeLayoutAttr requiredResLayoutAttr =
           xegpu::getTemporaryLayout(opResult);
-      LLVM_DEBUG(DBGS() << "Temporary layout for value: " << val << " is "
-                        << requiredResLayoutAttr << "\n");
-      if (requiredResLayoutAttr != nullptr) {
-        LLVM_DEBUG(DBGS() << "Returning temporary layout: "
-                          << requiredResLayoutAttr << "\n");
+      if (requiredResLayoutAttr != nullptr)
         return requiredResLayoutAttr;
-      }
     }
     xegpu::DistributeLayoutAttr layoutAttr =
         cast<xegpu::DistributeLayoutAttr>(layout.get());
-    LLVM_DEBUG(DBGS() << "Layout attr for value: " << val << " is "
-                      << layoutAttr << "\n");
-    if (layout.isSliceLayout()) {
-      LLVM_DEBUG(DBGS() << "Returning slice layout: " << layoutAttr << "\n");
+    if (layout.isSliceLayout())
       return cast<xegpu::SliceAttr>(layoutAttr);
-    }
-    LLVM_DEBUG(DBGS() << "Returning layout attr: " << layoutAttr << "\n");
+
     return cast<xegpu::LayoutAttr>(layoutAttr);
   };
 

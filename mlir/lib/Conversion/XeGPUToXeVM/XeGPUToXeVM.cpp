@@ -1190,7 +1190,7 @@ struct ConvertXeGPUToXeVMPass
         return {};
       auto input = inputs.front();
       if (auto vecTy = dyn_cast<VectorType>(input.getType())) {
-        if (vecTy.getRank() == 1 && vecTy.getNumElements() == 1) {
+        if (vecTy.getNumElements() == 1) {
           // If the vector has a single element, return the element type.
           Value cast =
               vector::ExtractOp::create(builder, loc, input, 0).getResult();
