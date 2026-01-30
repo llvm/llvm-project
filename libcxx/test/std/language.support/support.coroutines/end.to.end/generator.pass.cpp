@@ -83,7 +83,7 @@ struct minig {
       this->current_value = value;
       return {};
     }
-    std::suspend_always initial_suspend() { return {}; }
+    std::suspend_always initial_suspend() noexcept { return {}; }
     std::suspend_always final_suspend() noexcept { return {}; }
     minig get_return_object() { return minig{this}; };
     void return_void() {}
