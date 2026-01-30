@@ -709,9 +709,11 @@ bool SharedCacheInfo::CreateSharedCacheInfoWithInstrospectionSPIs() {
         });
     assert(minVmAddr != UINT_MAX);
     assert(maxVmAddr != 0);
+    DataBufferSP data_sp = std::make_shared<DataBufferUnowned>(
+        (uint8_t *)minVmAddr, maxVmAddr - minVmAddr);
+    DataExtractorSP extractor_sp = std::make_shared<DataExtractor>(data_sp);
     m_images[dyld_image_get_installname(image)] = SharedCacheImageInfo{
-        UUID(uuid, 16), std::make_shared<DataBufferUnowned>(
-                            (uint8_t *)minVmAddr, maxVmAddr - minVmAddr)};
+        UUID(uuid, 16), extractor_sp)};
   });
   return true;
 #endif
