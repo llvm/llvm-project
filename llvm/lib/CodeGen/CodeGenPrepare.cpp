@@ -423,10 +423,10 @@ private:
   void removeAllAssertingVHReferences(Value *V);
   bool eliminateAssumptions(Function &F);
   bool eliminateFallThrough(Function &F);
-  bool eliminateMostlyEmptyBlocks(Function &F, ModifyDT &ModifiedDT);
+  bool eliminateMostlyEmptyBlocks(Function &F);
   BasicBlock *findDestBlockOfMergeableEmptyBlock(BasicBlock *BB);
   bool canMergeBlocks(const BasicBlock *BB, const BasicBlock *DestBB) const;
-  void eliminateMostlyEmptyBlock(BasicBlock *BB, ModifyDT &ModifiedDT);
+  void eliminateMostlyEmptyBlock(BasicBlock *BB);
   bool isMergingEmptyBlockProfitable(BasicBlock *BB, BasicBlock *DestBB,
                                      bool isPreheader);
   bool makeBitReverse(Instruction &I);
@@ -611,11 +611,6 @@ bool CodeGenPrepare::_run(Function &F) {
 
   DomTreeUpdater DTUpdater(DT, DomTreeUpdater::UpdateStrategy::Lazy);
   DTU = &DTUpdater;
-  auto resetDTAndLI = [&]() {
-    DTU->recalculate(F);
-    LI->releaseMemory();
-    LI->analyze(DTU->getDomTree());
-  };
 
   /// This optimization identifies DIV instructions that can be
   /// profitably bypassed and carried out with a shorter, faster divide.
@@ -628,7 +623,7 @@ bool CodeGenPrepare::_run(Function &F) {
       // optimization to those blocks.
       BasicBlock *Next = BB->getNextNode();
       if (!llvm::shouldOptimizeForSize(BB, PSI, BFI.get()))
-        EverMadeChange |= bypassSlowDivision(BB, BypassWidths, DTU, LI);
+        EverMadeChange |= bypassSlowDivision(BB, BypassWidths);
       BB = Next;
     }
   }
@@ -640,32 +635,22 @@ bool CodeGenPrepare::_run(Function &F) {
 
   // Eliminate blocks that contain only PHI nodes and an
   // unconditional branch.
-  ModifyDT ModifiedDT = ModifyDT::NotModifyDT;
-  EverMadeChange |= eliminateMostlyEmptyBlocks(F, ModifiedDT);
-  if (ModifiedDT != ModifyDT::NotModifyDT) {
-    // Rebuild the dom tree if the transformation above did change the CFG, but
-    // did not update the DT.
-    resetDTAndLI();
-  }
+  EverMadeChange |= eliminateMostlyEmptyBlocks(F);
 
   if (!DisableBranchOpts)
     EverMadeChange |= splitBranchCondition(F);
 
   // Split some critical edges where one of the sources is an indirect branch,
   // to help generate sane code for PHIs involving such edges.
-  if (SplitIndirectBrCriticalEdges(F, /*IgnoreBlocksWithoutPHI=*/true)) {
-    EverMadeChange = true;
-    resetDTAndLI();
+  EverMadeChange |=
+      SplitIndirectBrCriticalEdges(F, /*IgnoreBlocksWithoutPHI=*/true);
+
+  // Transformations above may invalidate dominator tree and/or loop info.
+  if (EverMadeChange) {
+    DTU->recalculate(F);
+    LI->releaseMemory();
+    LI->analyze(DTU->getDomTree());
   }
-
-#ifndef NDEBUG
-  if (VerifyDT)
-    assert(getDT().verify(DominatorTree::VerificationLevel::Fast) &&
-           "Incorrect DominatorTree updates in CGP");
-
-  if (VerifyLoopInfo)
-    LI->verify(getDT());
-#endif
 
   // If we are optimzing huge function, we need to consider the build time.
   // Because the basic algorithm's complex is near O(N!).
@@ -944,8 +929,7 @@ BasicBlock *CodeGenPrepare::findDestBlockOfMergeableEmptyBlock(BasicBlock *BB) {
 /// unconditional branch. Passes before isel (e.g. LSR/loopsimplify) often split
 /// edges in ways that are non-optimal for isel. Start by eliminating these
 /// blocks so we can split them the way we want them.
-bool CodeGenPrepare::eliminateMostlyEmptyBlocks(Function &F,
-                                                ModifyDT &ModifiedDT) {
+bool CodeGenPrepare::eliminateMostlyEmptyBlocks(Function &F) {
   SmallPtrSet<BasicBlock *, 16> Preheaders;
   SmallVector<Loop *, 16> LoopList(LI->begin(), LI->end());
   while (!LoopList.empty()) {
@@ -976,7 +960,7 @@ bool CodeGenPrepare::eliminateMostlyEmptyBlocks(Function &F,
         !isMergingEmptyBlockProfitable(BB, DestBB, Preheaders.count(BB)))
       continue;
 
-    eliminateMostlyEmptyBlock(BB, ModifiedDT);
+    eliminateMostlyEmptyBlock(BB);
     MadeChange = true;
   }
   return MadeChange;
@@ -1153,8 +1137,7 @@ static void replaceAllUsesWith(Value *Old, Value *New,
 /// Eliminate a basic block that has only phi's and an unconditional branch in
 /// it.
 /// Indicate that the DT was modified only if the DT wasn't updated.
-void CodeGenPrepare::eliminateMostlyEmptyBlock(BasicBlock *BB,
-                                               ModifyDT &ModifiedDT) {
+void CodeGenPrepare::eliminateMostlyEmptyBlock(BasicBlock *BB) {
   BranchInst *BI = cast<BranchInst>(BB->getTerminator());
   BasicBlock *DestBB = BI->getSuccessor(0);
 
@@ -1168,7 +1151,7 @@ void CodeGenPrepare::eliminateMostlyEmptyBlock(BasicBlock *BB,
       assert(SinglePred == BB &&
              "Single predecessor not the same as predecessor");
       // Merge DestBB into SinglePred/BB and delete it.
-      MergeBlockIntoPredecessor(DestBB, DTU, LI);
+      MergeBlockIntoPredecessor(DestBB);
       // Note: BB(=SinglePred) will not be deleted on this path.
       // DestBB(=its single successor) is the one that was deleted.
       LLVM_DEBUG(dbgs() << "AFTER:\n" << *SinglePred << "\n\n\n");
@@ -1221,7 +1204,6 @@ void CodeGenPrepare::eliminateMostlyEmptyBlock(BasicBlock *BB,
   BB->eraseFromParent();
   ++NumBlocksElim;
 
-  ModifiedDT = ModifyDT::ModifyBBDT;
   LLVM_DEBUG(dbgs() << "AFTER:\n" << *DestBB << "\n\n\n");
 }
 
@@ -6492,9 +6474,10 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
   unsigned VTHalfBitWidth = Ty->getScalarSizeInBits() / 2;
   Type *LegalTy = Ty->getWithNewBitWidth(VTHalfBitWidth);
 
+  SmallVector<DominatorTree::UpdateType, 8> DTUpdates;
+
   // New BBs:
-  BasicBlock *OverflowEntryBB =
-      I->getParent()->splitBasicBlock(I, "", /*Before*/ true);
+  BasicBlock *OverflowEntryBB = SplitBlock(I->getParent(), I, DTU, LI, nullptr, "", /*Before*/ true);
   OverflowEntryBB->takeName(I->getParent());
   // Keep the 'br' instruction that is generated as a result of the split to be
   // erased/replaced later.
@@ -6537,6 +6520,8 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
     IsAnyBitTrue = Builder.CreateOr(CmpLHS, CmpRHS, "or.lhs.rhs");
   }
   Builder.CreateCondBr(IsAnyBitTrue, OverflowBB, NoOverflowBB);
+  DTUpdates.push_back({DominatorTree::Insert, OverflowEntryBB, OverflowBB});
+  DTUpdates.push_back({DominatorTree::Insert, OverflowEntryBB, NoOverflowBB});
 
   // BB overflow.no:
   Builder.SetInsertPoint(NoOverflowBB);
@@ -6560,6 +6545,9 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
   Builder.CreateBr(OverflowResBB);
   // No we don't need the old terminator in overflow.entry BB, erase it:
   OldTerminator->eraseFromParent();
+
+  DTUpdates.push_back({DominatorTree::Insert, NoOverflowBB, OverflowResBB});
+  DTUpdates.push_back({DominatorTree::Delete, OverflowEntryBB, OverflowResBB});
 
   // BB overflow.res:
   Builder.SetInsertPoint(OverflowResBB, OverflowResBB->getFirstInsertionPt());
@@ -6593,10 +6581,13 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
   Value *MulOverflow = Builder.CreateExtractValue(I, {0}, "mul.overflow");
   Value *OverflowFlag = Builder.CreateExtractValue(I, {1}, "overflow.flag");
   Builder.CreateBr(OverflowResBB);
+  DTUpdates.push_back({DominatorTree::Insert, OverflowBB, OverflowResBB});
 
   // Add The Extracted values to the PHINodes in the overflow.res BB.
   OverflowResPHI->addIncoming(MulOverflow, OverflowBB);
   OverflowFlagPHI->addIncoming(OverflowFlag, OverflowBB);
+
+  DTU->applyUpdates(DTUpdates);
 
   ModifiedDT = ModifyDT::ModifyBBDT;
   return true;
