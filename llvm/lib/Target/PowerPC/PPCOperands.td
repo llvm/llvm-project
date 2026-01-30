@@ -95,6 +95,31 @@ multiclass SignedImmOpWithPCRel<ValueType vt, string asmop, int width,
 }
 
 //===----------------------------------------------------------------------===//
+// Multiclasses for complete immediate definitions (AsmOperand + Operand + PatLeaf)
+// Similar to SystemZ's Immediate multiclass
+//===----------------------------------------------------------------------===//
+
+// Creates both Operand and PatLeaf for unsigned immediates
+// Similar to SystemZ's Immediate multiclass
+// Note: PowerPC needs width parameter for decoder, so we add it after asmop
+multiclass UnsignedImmediate<ValueType vt, code pred, SDNodeXForm xform, string asmop, int width> {
+  // Main operand definition with PatLeaf for imm nodes
+  def "" : UnsignedImmOpWithPattern<vt, asmop, width, pred, xform>;
+  
+  // PatLeaf for timm (target immediate) nodes
+  def _timm : UnsignedImmOpWithPattern<vt, asmop, width, pred, xform, timm>;
+}
+
+// Creates both Operand and PatLeaf for signed immediates
+multiclass SignedImmediate<ValueType vt, code pred, SDNodeXForm xform, string asmop, int width> {
+  // Main operand definition with PatLeaf for imm nodes
+  def "" : SignedImmOpWithPattern<vt, asmop, width, pred, xform>;
+  
+  // PatLeaf for timm (target immediate) nodes
+  def _timm : SignedImmOpWithPattern<vt, asmop, width, pred, xform, timm>;
+}
+
+//===----------------------------------------------------------------------===//
 // Immediate AsmOperand definitions
 //===----------------------------------------------------------------------===//
 
@@ -139,6 +164,12 @@ def ImmZero : ImmediateAsmOperandWithPredicate<"isImmZero">;
 //===----------------------------------------------------------------------===//
 // i32 immediate operands
 //===----------------------------------------------------------------------===//
+
+// u1imm: 1-bit unsigned immediate (generates u1imm and u1imm_timm)
+/*
+defm u1imm : UnsignedImmediate<i32,
+  [{ return isUInt<1>(N->getZExtValue()); }], NOOP_SDNodeXForm, "U1Imm", 1>;
+  */
 
 def u1imm   : UnsignedImmOp<i32, "U1Imm", 1>;
 def u2imm   : UnsignedImmOp<i32, "U2Imm", 2>;
