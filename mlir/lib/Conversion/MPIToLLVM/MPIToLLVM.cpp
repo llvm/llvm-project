@@ -402,7 +402,7 @@ public:
 };
 
 std::unique_ptr<MPIImplTraits> MPIImplTraits::get(ModuleOp &moduleOp) {
-  auto attr = dlti::query(*&moduleOp, {"MPI:Implementation"}, false);
+  auto attr = dlti::query(moduleOp, {"MPI:Implementation"}, false);
   if (failed(attr))
     return std::make_unique<MPICHImplTraits>(moduleOp);
   auto strAttr = dyn_cast<StringAttr>(attr.value());
