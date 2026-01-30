@@ -480,7 +480,7 @@ protected:
 
     // Function DI
     auto *File = DBuilder.createFile("filename.c", "/file/dir/");
-    DITypeRefArray ParamTypes = DBuilder.getOrCreateTypeArray({});
+    DITypeArray ParamTypes = DBuilder.getOrCreateTypeArray({});
     DISubroutineType *FuncType =
         DBuilder.createSubroutineType(ParamTypes);
     auto *CU = DBuilder.createCompileUnit(
@@ -769,7 +769,7 @@ TEST(CloneFunction, CloneFunctionWithSubprograms) {
     declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
     define void @test() !dbg !5 {
-      call void @llvm.dbg.declare(metadata i8* undef, metadata !4, metadata !DIExpression()), !dbg !6
+      call void @llvm.dbg.declare(metadata ptr undef, metadata !4, metadata !DIExpression()), !dbg !6
       ret void
     }
 
@@ -813,7 +813,7 @@ TEST(CloneFunction, CloneFunctionWithInlinedSubprograms) {
     declare void @llvm.dbg.declare(metadata, metadata, metadata)
 
     define void @test() !dbg !3 {
-      call void @llvm.dbg.declare(metadata i8* undef, metadata !5, metadata !DIExpression()), !dbg !7
+      call void @llvm.dbg.declare(metadata ptr undef, metadata !5, metadata !DIExpression()), !dbg !7
       ret void
     }
 
@@ -973,7 +973,7 @@ protected:
 
     // Create debug info
     auto *File = DBuilder.createFile("filename.c", "/file/dir/");
-    DITypeRefArray ParamTypes = DBuilder.getOrCreateTypeArray({});
+    DITypeArray ParamTypes = DBuilder.getOrCreateTypeArray({});
     DISubroutineType *DFuncType = DBuilder.createSubroutineType(ParamTypes);
     auto *CU = DBuilder.createCompileUnit(
         DISourceLanguageName(dwarf::DW_LANG_C99),

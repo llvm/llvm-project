@@ -47,8 +47,9 @@ define <4 x half> @shuffle_v4_v4f16_r1_2(ptr addrspace(1) nocapture readonly %ar
 ; CHECK-LABEL: define <4 x half> @shuffle_v4_v4f16_r1_2(
 ; CHECK-SAME: ptr addrspace(1) readonly captures(none) [[ARG0:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <3 x half>, ptr addrspace(1) [[ARG0]], align 32
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x half> [[TMP0]], <3 x half> poison, <4 x i32> <i32 1, i32 1, i32 2, i32 2>
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[ARG0]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr addrspace(1) [[TMP0]], align 32
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x half> [[TMP2]], <2 x half> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
 ; CHECK-NEXT:    ret <4 x half> [[TMP1]]
 ;
 entry:
@@ -61,8 +62,9 @@ define <8 x half> @shuffle_v4_v8f16_r1_2(ptr addrspace(1) nocapture readonly %ar
 ; CHECK-LABEL: define <8 x half> @shuffle_v4_v8f16_r1_2(
 ; CHECK-SAME: ptr addrspace(1) readonly captures(none) [[ARG0:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <3 x half>, ptr addrspace(1) [[ARG0]], align 32
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x half> [[TMP0]], <3 x half> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[ARG0]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x half>, ptr addrspace(1) [[TMP0]], align 32
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x half> [[TMP2]], <2 x half> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    ret <8 x half> [[TMP1]]
 ;
 entry:
@@ -108,13 +110,14 @@ define <4 x half> @shuffle_v4_v4f16_cond_r1_2(ptr addrspace(1) nocapture readonl
 ; CHECK-LABEL: define <4 x half> @shuffle_v4_v4f16_cond_r1_2(
 ; CHECK-SAME: ptr addrspace(1) readonly captures(none) [[ARG0:%.*]], i1 [[COND:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <3 x half>, ptr addrspace(1) [[ARG0]], align 32
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[ARG0]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[TMP0]], align 32
 ; CHECK-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[VAL1:%.*]] = shufflevector <3 x half> [[TMP0]], <3 x half> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[VAL1:%.*]] = shufflevector <2 x half> [[TMP1]], <2 x half> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK:       [[ELSE]]:
-; CHECK-NEXT:    [[VAL2:%.*]] = shufflevector <3 x half> [[TMP0]], <3 x half> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[VAL2:%.*]] = shufflevector <2 x half> [[TMP1]], <2 x half> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    br label %[[FINALLY]]
 ; CHECK:       [[FINALLY]]:
 ; CHECK-NEXT:    [[VAL3:%.*]] = phi <4 x half> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
@@ -141,13 +144,14 @@ define <8 x half> @shuffle_v4_v8f16_cond_r1_2(ptr addrspace(1) nocapture readonl
 ; CHECK-LABEL: define <8 x half> @shuffle_v4_v8f16_cond_r1_2(
 ; CHECK-SAME: ptr addrspace(1) readonly captures(none) [[ARG0:%.*]], i1 [[COND:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <3 x half>, ptr addrspace(1) [[ARG0]], align 32
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[ARG0]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x half>, ptr addrspace(1) [[TMP0]], align 32
 ; CHECK-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[VAL1:%.*]] = shufflevector <3 x half> [[TMP0]], <3 x half> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[VAL1:%.*]] = shufflevector <2 x half> [[TMP1]], <2 x half> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK:       [[ELSE]]:
-; CHECK-NEXT:    [[VAL2:%.*]] = shufflevector <3 x half> [[TMP0]], <3 x half> poison, <8 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[VAL2:%.*]] = shufflevector <2 x half> [[TMP1]], <2 x half> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    br label %[[FINALLY]]
 ; CHECK:       [[FINALLY]]:
 ; CHECK-NEXT:    [[VAL3:%.*]] = phi <8 x half> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
@@ -202,8 +206,9 @@ define <4 x i32> @shuffle_v4_v4i32_r1_2(ptr addrspace(1) nocapture readonly %arg
 ; CHECK-LABEL: define <4 x i32> @shuffle_v4_v4i32_r1_2(
 ; CHECK-SAME: ptr addrspace(1) readonly captures(none) [[ARG0:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr addrspace(1) [[ARG0]], align 32
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x i32> [[TMP0]], <3 x i32> poison, <4 x i32> <i32 1, i32 1, i32 2, i32 2>
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[ARG0]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr addrspace(1) [[TMP0]], align 32
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <4 x i32> <i32 0, i32 0, i32 1, i32 1>
 ; CHECK-NEXT:    ret <4 x i32> [[TMP1]]
 ;
 entry:
@@ -216,8 +221,9 @@ define <8 x i32> @shuffle_v4_v8i32_r1_2(ptr addrspace(1) nocapture readonly %arg
 ; CHECK-LABEL: define <8 x i32> @shuffle_v4_v8i32_r1_2(
 ; CHECK-SAME: ptr addrspace(1) readonly captures(none) [[ARG0:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr addrspace(1) [[ARG0]], align 32
-; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <3 x i32> [[TMP0]], <3 x i32> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[ARG0]], i64 1
+; CHECK-NEXT:    [[TMP2:%.*]] = load <2 x i32>, ptr addrspace(1) [[TMP0]], align 32
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <2 x i32> [[TMP2]], <2 x i32> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    ret <8 x i32> [[TMP1]]
 ;
 entry:
@@ -296,13 +302,14 @@ define <4 x i32> @shuffle_v4_v4i32_cond_r1_2(ptr addrspace(1) nocapture readonly
 ; CHECK-LABEL: define <4 x i32> @shuffle_v4_v4i32_cond_r1_2(
 ; CHECK-SAME: ptr addrspace(1) readonly captures(none) [[ARG0:%.*]], i1 [[COND:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr addrspace(1) [[ARG0]], align 32
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[ARG0]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr addrspace(1) [[TMP0]], align 32
 ; CHECK-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[VAL1:%.*]] = shufflevector <3 x i32> [[TMP0]], <3 x i32> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[VAL1:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK:       [[ELSE]]:
-; CHECK-NEXT:    [[VAL2:%.*]] = shufflevector <3 x i32> [[TMP0]], <3 x i32> poison, <4 x i32> <i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[VAL2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <4 x i32> <i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    br label %[[FINALLY]]
 ; CHECK:       [[FINALLY]]:
 ; CHECK-NEXT:    [[VAL3:%.*]] = phi <4 x i32> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
@@ -329,13 +336,14 @@ define <8 x i32> @shuffle_v4_v8i32_cond_r1_2(ptr addrspace(1) nocapture readonly
 ; CHECK-LABEL: define <8 x i32> @shuffle_v4_v8i32_cond_r1_2(
 ; CHECK-SAME: ptr addrspace(1) readonly captures(none) [[ARG0:%.*]], i1 [[COND:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[TMP0:%.*]] = load <3 x i32>, ptr addrspace(1) [[ARG0]], align 32
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[ARG0]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i32>, ptr addrspace(1) [[TMP0]], align 32
 ; CHECK-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[VAL1:%.*]] = shufflevector <3 x i32> [[TMP0]], <3 x i32> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
+; CHECK-NEXT:    [[VAL1:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <8 x i32> zeroinitializer
 ; CHECK-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK:       [[ELSE]]:
-; CHECK-NEXT:    [[VAL2:%.*]] = shufflevector <3 x i32> [[TMP0]], <3 x i32> poison, <8 x i32> <i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[VAL2:%.*]] = shufflevector <2 x i32> [[TMP1]], <2 x i32> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    br label %[[FINALLY]]
 ; CHECK:       [[FINALLY]]:
 ; CHECK-NEXT:    [[VAL3:%.*]] = phi <8 x i32> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]
@@ -362,13 +370,14 @@ define <8 x i32> @shuffle_v4_v8i32_cond_r1_4(ptr addrspace(1) nocapture readonly
 ; CHECK-LABEL: define <8 x i32> @shuffle_v4_v8i32_cond_r1_4(
 ; CHECK-SAME: ptr addrspace(1) readonly captures(none) [[ARG0:%.*]], i1 [[COND:%.*]]) local_unnamed_addr {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[VAL0:%.*]] = load <4 x i32>, ptr addrspace(1) [[ARG0]], align 32
+; CHECK-NEXT:    [[TMP0:%.*]] = getelementptr inbounds i8, ptr addrspace(1) [[ARG0]], i64 1
+; CHECK-NEXT:    [[TMP1:%.*]] = load <3 x i32>, ptr addrspace(1) [[TMP0]], align 32
 ; CHECK-NEXT:    br i1 [[COND]], label %[[THEN:.*]], label %[[ELSE:.*]]
 ; CHECK:       [[THEN]]:
-; CHECK-NEXT:    [[VAL1:%.*]] = shufflevector <4 x i32> [[VAL0]], <4 x i32> poison, <8 x i32> <i32 1, i32 1, i32 1, i32 1, i32 2, i32 2, i32 2, i32 2>
+; CHECK-NEXT:    [[VAL1:%.*]] = shufflevector <3 x i32> [[TMP1]], <3 x i32> poison, <8 x i32> <i32 0, i32 0, i32 0, i32 0, i32 1, i32 1, i32 1, i32 1>
 ; CHECK-NEXT:    br label %[[FINALLY:.*]]
 ; CHECK:       [[ELSE]]:
-; CHECK-NEXT:    [[VAL2:%.*]] = shufflevector <4 x i32> [[VAL0]], <4 x i32> poison, <8 x i32> <i32 3, i32 3, i32 3, i32 3, i32 4, i32 4, i32 4, i32 4>
+; CHECK-NEXT:    [[VAL2:%.*]] = shufflevector <3 x i32> [[TMP1]], <3 x i32> poison, <8 x i32> <i32 2, i32 2, i32 2, i32 2, i32 3, i32 3, i32 3, i32 3>
 ; CHECK-NEXT:    br label %[[FINALLY]]
 ; CHECK:       [[FINALLY]]:
 ; CHECK-NEXT:    [[VAL3:%.*]] = phi <8 x i32> [ [[VAL1]], %[[THEN]] ], [ [[VAL2]], %[[ELSE]] ]

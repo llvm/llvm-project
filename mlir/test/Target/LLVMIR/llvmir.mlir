@@ -78,6 +78,9 @@ llvm.mlir.global internal @f8E8M0FNU_global_as_i8(1.0 : f8E8M0FNU) : i8
 // CHECK: @bf16_global_as_i16 = internal global i16 16320
 llvm.mlir.global internal @bf16_global_as_i16(1.5 : bf16) : i16
 
+// CHECK: @bool_global_as_i8 = internal global i8 1
+llvm.mlir.global internal @bool_global_as_i8(true) : i8
+
 // CHECK: @explicit_undef = global i32 undef
 llvm.mlir.global external @explicit_undef() : i32 {
   %0 = llvm.mlir.undef : i32
@@ -2628,6 +2631,94 @@ llvm.func @willreturn() attributes { will_return } {
 
 // -----
 
+// CHECK-LABEL: @noreturn
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @noreturn() attributes { noreturn } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: noreturn
+
+// -----
+
+// CHECK-LABEL: @returnstwice
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @returnstwice() attributes { returns_twice } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: returns_twice
+
+// -----
+
+// CHECK-LABEL: @hot
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @hot() attributes { hot } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: hot
+
+// -----
+
+// CHECK-LABEL: @cold
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @cold() attributes { cold } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME:cold
+
+// -----
+
+// CHECK-LABEL: @noduplicate
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @noduplicate() attributes { noduplicate } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: noduplicate
+
+// -----
+
+// CHECK-LABEL: @no_caller_saved_registers
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @no_caller_saved_registers() attributes { no_caller_saved_registers } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: no_caller_saved_registers
+
+// -----
+
+// CHECK-LABEL: @nocallback
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @nocallback() attributes { nocallback } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: nocallback 
+
+// -----
+
+// CHECK-LABEL: @modular_format
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @modular_format(%arg : i32) attributes { modular_format = "ident,1,1,foo,bar" } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "modular-format"="ident,1,1,foo,bar"
+
+// -----
+
 llvm.func @f()
 
 // CHECK-LABEL: @convergent_call
@@ -2667,6 +2758,20 @@ llvm.func @willreturn_call() {
 
 // CHECK: #[[ATTRS]]
 // CHECK-SAME: willreturn
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @noreturn_call
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @noreturn_call() {
+  llvm.call @f() {noreturn} : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: noreturn
 
 // -----
 

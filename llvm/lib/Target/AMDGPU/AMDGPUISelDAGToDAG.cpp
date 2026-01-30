@@ -134,7 +134,7 @@ static SDValue stripExtractLoElt(SDValue In) {
 INITIALIZE_PASS_BEGIN(AMDGPUDAGToDAGISelLegacy, "amdgpu-isel",
                       "AMDGPU DAG->DAG Pattern Instruction Selection", false,
                       false)
-INITIALIZE_PASS_DEPENDENCY(AMDGPUArgumentUsageInfo)
+INITIALIZE_PASS_DEPENDENCY(AMDGPUArgumentUsageInfoWrapperLegacy)
 INITIALIZE_PASS_DEPENDENCY(AMDGPUPerfHintAnalysisLegacy)
 INITIALIZE_PASS_DEPENDENCY(UniformityInfoWrapperPass)
 #ifdef EXPENSIVE_CHECKS
@@ -238,7 +238,7 @@ bool AMDGPUDAGToDAGISelLegacy::runOnMachineFunction(MachineFunction &MF) {
 }
 
 void AMDGPUDAGToDAGISelLegacy::getAnalysisUsage(AnalysisUsage &AU) const {
-  AU.addRequired<AMDGPUArgumentUsageInfo>();
+  AU.addRequired<AMDGPUArgumentUsageInfoWrapperLegacy>();
   AU.addRequired<UniformityInfoWrapperPass>();
 #ifdef EXPENSIVE_CHECKS
   AU.addRequired<DominatorTreeWrapperPass>();
@@ -1306,7 +1306,7 @@ bool AMDGPUDAGToDAGISel::SelectDS1Addr1Offset(SDValue Addr, SDValue &Base,
 
           // FIXME: Select to VOP3 version for with-carry.
           unsigned SubOp = AMDGPU::V_SUB_CO_U32_e32;
-          if (Subtarget->hasAddNoCarry()) {
+          if (Subtarget->hasAddNoCarryInsts()) {
             SubOp = AMDGPU::V_SUB_U32_e64;
             Opnds.push_back(
                 CurDAG->getTargetConstant(0, {}, MVT::i1)); // clamp bit
@@ -1491,7 +1491,7 @@ bool AMDGPUDAGToDAGISel::SelectDSReadWrite2(SDValue Addr, SDValue &Base,
           Opnds.push_back(Zero);
           Opnds.push_back(Addr.getOperand(1));
           unsigned SubOp = AMDGPU::V_SUB_CO_U32_e32;
-          if (Subtarget->hasAddNoCarry()) {
+          if (Subtarget->hasAddNoCarryInsts()) {
             SubOp = AMDGPU::V_SUB_U32_e64;
             Opnds.push_back(
                 CurDAG->getTargetConstant(0, {}, MVT::i1)); // clamp bit
@@ -1886,7 +1886,7 @@ bool AMDGPUDAGToDAGISel::SelectFlatOffsetImpl(SDNode *N, SDValue Addr,
             Opnds.push_back(N0);
             Opnds.push_back(AddOffsetLo);
             unsigned AddOp = AMDGPU::V_ADD_CO_U32_e32;
-            if (Subtarget->hasAddNoCarry()) {
+            if (Subtarget->hasAddNoCarryInsts()) {
               AddOp = AMDGPU::V_ADD_U32_e64;
               Opnds.push_back(Clamp);
             }
@@ -4451,16 +4451,14 @@ bool AMDGPUDAGToDAGISel::isUniformLoad(const SDNode *N) const {
   const auto *Ld = cast<LoadSDNode>(N);
   const MachineMemOperand *MMO = Ld->getMemOperand();
 
-  if (Ld->isDivergent()) {
-    // FIXME: We ought to able able to take the direct isDivergent result. We
-    // cannot rely on the MMO for a uniformity check, and should stop using
-    // it. This is a hack for 2 ways that the IR divergence analysis is superior
-    // to the DAG divergence: Recognizing shift-of-workitem-id as always
-    // uniform, and isSingleLaneExecution. These should be handled in the DAG
-    // version, and then this can be dropped.
-    if (!MMO->getValue() || !AMDGPU::isUniformMMO(MMO))
-      return false;
-  }
+  // FIXME: We ought to able able to take the direct isDivergent result. We
+  // cannot rely on the MMO for a uniformity check, and should stop using
+  // it. This is a hack for 2 ways that the IR divergence analysis is superior
+  // to the DAG divergence: Recognizing shift-of-workitem-id as always
+  // uniform, and isSingleLaneExecution. These should be handled in the DAG
+  // version, and then this can be dropped.
+  if (Ld->isDivergent() && !AMDGPU::isUniformMMO(MMO))
+    return false;
 
   return MMO->getSize().hasValue() &&
          Ld->getAlign() >=

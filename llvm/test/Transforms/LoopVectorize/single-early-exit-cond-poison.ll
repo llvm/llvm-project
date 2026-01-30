@@ -24,11 +24,9 @@ define noundef i32 @f(i32 noundef %g) {
 ; VF4IC2-NEXT:    [[TMP18:%.*]] = freeze <4 x i1> [[TMP5]]
 ; VF4IC2-NEXT:    [[TMP6:%.*]] = or <4 x i1> [[TMP17]], [[TMP18]]
 ; VF4IC2-NEXT:    [[TMP7:%.*]] = call i1 @llvm.vector.reduce.or.v4i1(<4 x i1> [[TMP6]])
-; VF4IC2-NEXT:    br label %[[MIDDLE_SPLIT:.*]]
-; VF4IC2:       [[MIDDLE_SPLIT]]:
-; VF4IC2-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP3]], i32 3
 ; VF4IC2-NEXT:    br i1 [[TMP7]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[MIDDLE_BLOCK:.*]]
 ; VF4IC2:       [[MIDDLE_BLOCK]]:
+; VF4IC2-NEXT:    [[TMP8:%.*]] = extractelement <4 x i32> [[TMP3]], i32 3
 ; VF4IC2-NEXT:    br label %[[RETURN:.*]]
 ; VF4IC2:       [[VECTOR_EARLY_EXIT]]:
 ; VF4IC2-NEXT:    [[TMP9:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> [[TMP5]], i1 false)
@@ -56,11 +54,9 @@ define noundef i32 @f(i32 noundef %g) {
 ; VF8IC1-NEXT:    [[TMP2:%.*]] = icmp ne <8 x i32> [[TMP1]], zeroinitializer
 ; VF8IC1-NEXT:    [[TMP8:%.*]] = freeze <8 x i1> [[TMP2]]
 ; VF8IC1-NEXT:    [[TMP3:%.*]] = call i1 @llvm.vector.reduce.or.v8i1(<8 x i1> [[TMP8]])
-; VF8IC1-NEXT:    br label %[[MIDDLE_SPLIT:.*]]
-; VF8IC1:       [[MIDDLE_SPLIT]]:
-; VF8IC1-NEXT:    [[TMP4:%.*]] = extractelement <8 x i32> [[TMP1]], i32 7
 ; VF8IC1-NEXT:    br i1 [[TMP3]], label %[[VECTOR_EARLY_EXIT:.*]], label %[[MIDDLE_BLOCK:.*]]
 ; VF8IC1:       [[MIDDLE_BLOCK]]:
+; VF8IC1-NEXT:    [[TMP4:%.*]] = extractelement <8 x i32> [[TMP1]], i32 7
 ; VF8IC1-NEXT:    br label %[[RETURN:.*]]
 ; VF8IC1:       [[VECTOR_EARLY_EXIT]]:
 ; VF8IC1-NEXT:    [[TMP5:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v8i1(<8 x i1> [[TMP2]], i1 false)

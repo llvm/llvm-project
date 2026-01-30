@@ -1234,7 +1234,7 @@ let SubtargetPredicate = isGFX12Plus in {
   def GLOBAL_WBINV  : FLAT_Global_Invalidate_Writeback<"global_wbinv">;
 } // End SubtargetPredicate = isGFX12Plus
 
-let SubtargetPredicate = isGFX1250Plus in {
+let SubtargetPredicate = HasMcastLoadInsts in {
 
 let Uses = [M0, EXEC, ASYNCcnt], WaveSizePredicate = isWave32 in {
 defm CLUSTER_LOAD_ASYNC_TO_LDS_B8      :  FLAT_Global_Load_LDS_Pseudo<"cluster_load_async_to_lds_b8",   1>;
@@ -1253,7 +1253,7 @@ defm GLOBAL_STORE_ASYNC_FROM_LDS_B128  :  FLAT_Global_STORE_LDS_Pseudo<"global_s
 
 def TENSOR_SAVE : FLAT_Global_Tensor_Pseudo<"tensor_save", 1>;
 def TENSOR_STOP : FLAT_Global_Tensor_Pseudo<"tensor_stop">;
-} // End SubtargetPredicate = isGFX1250Plus
+} // End SubtargetPredicate = HasMcastLoadInsts
 
 defm SCRATCH_LOAD_UBYTE    : FLAT_Scratch_Load_Pseudo <"scratch_load_ubyte">;
 defm SCRATCH_LOAD_SBYTE    : FLAT_Scratch_Load_Pseudo <"scratch_load_sbyte">;
@@ -1562,10 +1562,6 @@ multiclass FlatAtomicNoRtnPatBase <string base_inst_name, string node, ValueType
   }
 }
 
-multiclass FlatAtomicNoRtnPatWithAddrSpace<string inst, string node, string addrSpaceSuffix,
-                                           ValueType vt> :
-  FlatAtomicNoRtnPatBase<inst, node # "_noret_" # addrSpaceSuffix, vt, vt>;
-
 multiclass FlatAtomicNoRtnPat <string inst, string node, ValueType vt,
                           ValueType data_vt = vt, bit isIntr = 0> :
   FlatAtomicNoRtnPatBase<inst, node # "_noret" # !if(isIntr, "", "_"#vt), vt, data_vt>;
@@ -1589,10 +1585,6 @@ multiclass FlatAtomicRtnPatBase <string inst_name, string node, ValueType vt,
     let OtherPredicates = inst_saddr.OtherPredicates;
   }
 }
-
-multiclass FlatAtomicRtnPatWithAddrSpace<string inst, string intr, string addrSpaceSuffix,
-                                         ValueType vt> :
-  FlatAtomicRtnPatBase<inst, intr # "_" # addrSpaceSuffix, vt, vt>;
 
 multiclass FlatAtomicRtnPat <string inst, string node, ValueType vt,
                              ValueType data_vt = vt, bit isIntr = 0> :
@@ -2179,13 +2171,15 @@ defm : FlatAtomicPat <"FLAT_ATOMIC_MIN_F64", "atomic_load_fmin_"#as, f64>;
 defm : FlatAtomicPat <"FLAT_ATOMIC_MAX_F64", "atomic_load_fmax_"#as, f64>;
 }
 
+let SubtargetPredicate = HasAtomicCondSubClampFlatInsts in {
+  defm : FlatAtomicRtnPat<"FLAT_ATOMIC_COND_SUB_U32", "atomic_load_usub_cond_"  #as, i32 >;
+
+  defm : FlatAtomicNoRtnPat<"FLAT_ATOMIC_COND_SUB_U32", "atomic_load_usub_cond_"#as, i32>;
+}
 } // end foreach as
 
 defm : FlatStorePats <FLAT_STORE_BYTE, truncstorei8_flat, i16>;
 defm : FlatStorePats <FLAT_STORE_SHORT, store_flat, i16>;
-
-defm : FlatAtomicRtnPatWithAddrSpace<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_atomic_cond_sub_u32", "flat_addrspace", i32>;
-defm : FlatAtomicNoRtnPatWithAddrSpace<"FLAT_ATOMIC_COND_SUB_U32", "int_amdgcn_atomic_cond_sub_u32", "flat_addrspace", i32>;
 
 let OtherPredicates = [HasD16LoadStore] in {
 defm : FlatStorePats <FLAT_STORE_SHORT_D16_HI, truncstorei16_hi16_flat, i32>;
@@ -2350,10 +2344,10 @@ defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_OR", "atomic_load_or_global", i32>;
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_SWAP", "atomic_swap_global", i32>;
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_CMPSWAP", "AMDGPUatomic_cmp_swap_global", i32, v2i32>;
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_XOR", "atomic_load_xor_global", i32>;
-defm : GlobalFLATAtomicPatsRtn <"GLOBAL_ATOMIC_CSUB", "int_amdgcn_global_atomic_csub", i32, i32, /* isIntr */ 1>;
+defm : GlobalFLATAtomicPatsRtn <"GLOBAL_ATOMIC_CSUB", "atomic_load_usub_sat_global", i32>;
 
 let SubtargetPredicate = HasAtomicCSubNoRtnInsts in
-defm : GlobalFLATAtomicPatsNoRtn <"GLOBAL_ATOMIC_CSUB", "int_amdgcn_global_atomic_csub", i32, i32, /* isIntr */ 1>;
+defm : GlobalFLATAtomicPatsNoRtn <"GLOBAL_ATOMIC_CSUB", "atomic_load_usub_sat_global", i32>;
 
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_ADD_X2", "atomic_load_add_global", i64>;
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_SUB_X2", "atomic_load_sub_global", i64>;
@@ -2370,10 +2364,8 @@ defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_CMPSWAP_X2", "AMDGPUatomic_cmp_swap_
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_XOR_X2", "atomic_load_xor_global", i64>;
 
 let SubtargetPredicate = isGFX12Plus in {
-  defm : GlobalFLATAtomicPatsRtnWithAddrSpace <"GLOBAL_ATOMIC_COND_SUB_U32", "int_amdgcn_atomic_cond_sub_u32", "global_addrspace", i32>;
-
-  let SubtargetPredicate = HasAtomicCSubNoRtnInsts in
-    defm : GlobalFLATAtomicPatsNoRtnWithAddrSpace  <"GLOBAL_ATOMIC_COND_SUB_U32", "int_amdgcn_atomic_cond_sub_u32", "global_addrspace",  i32>;
+  defm : GlobalFLATAtomicPatsRtn <"GLOBAL_ATOMIC_COND_SUB_U32", "atomic_load_usub_cond_global", i32>;
+  defm : GlobalFLATAtomicPatsNoRtn <"GLOBAL_ATOMIC_COND_SUB_U32", "atomic_load_usub_cond_global", i32>;
 }
 
 let OtherPredicates = [isGFX12PlusNot12_50] in
@@ -2460,7 +2452,7 @@ defm : FlatAtomicPat <"FLAT_ATOMIC_PK_ADD_BF16", "atomic_load_fadd_flat", v2bf16
 
 defm : GlobalFLATAtomicPats <"GLOBAL_ATOMIC_PK_ADD_BF16", "atomic_load_fadd_global", v2bf16>;
 
-let OtherPredicates = [HasFlatScratchInsts, EnableFlatScratch] in {
+let OtherPredicates = [HasFlatScratchInsts, HasFlatScratchEnabled] in {
 
 defm : ScratchFLATLoadPats <SCRATCH_LOAD_UBYTE, extloadi8_private, i32>;
 defm : ScratchFLATLoadPats <SCRATCH_LOAD_UBYTE, zextloadi8_private, i32>;
@@ -2518,12 +2510,12 @@ defm : ScratchFLATStorePats <SCRATCH_STORE_BYTE, truncstorei8_private, i32>;
 defm : ScratchFLATStorePats <SCRATCH_STORE_SHORT, truncstorei16_private, i32>;
 defm : ScratchFLATStorePats <SCRATCH_STORE_DWORDX3, store_private, v3i32>;
 
-let OtherPredicates = [HasD16LoadStore, HasFlatScratchInsts, EnableFlatScratch] in {
+let OtherPredicates = [HasD16LoadStore, HasFlatScratchInsts, HasFlatScratchEnabled] in {
 defm : ScratchFLATStorePats <SCRATCH_STORE_SHORT_D16_HI, truncstorei16_hi16_private, i32>;
 defm : ScratchFLATStorePats <SCRATCH_STORE_BYTE_D16_HI, truncstorei8_hi16_private, i32>;
 }
 
-let OtherPredicates = [D16PreservesUnusedBits, HasFlatScratchInsts, EnableFlatScratch] in {
+let OtherPredicates = [D16PreservesUnusedBits, HasFlatScratchInsts, HasFlatScratchEnabled] in {
 defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_UBYTE_D16_HI, az_extloadi8_d16_hi_private, v2i16>;
 defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_UBYTE_D16_HI, az_extloadi8_d16_hi_private, v2f16>;
 defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_SBYTE_D16_HI, sextloadi8_d16_hi_private, v2i16>;
@@ -2539,7 +2531,7 @@ defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_SHORT_D16, load_d16_lo_private, v2i
 defm : ScratchFLATLoadPats_D16 <SCRATCH_LOAD_SHORT_D16, load_d16_lo_private, v2f16>;
 }
 
-} // End OtherPredicates = [HasFlatScratchInsts,EnableFlatScratch]
+} // End OtherPredicates = [HasFlatScratchInsts,HasFlatScratchEnabled]
 
 def PrefetchLoc: SDNodeXForm<timm, [{
   uint32_t V = N->getZExtValue();
@@ -3652,17 +3644,6 @@ multiclass VFLAT_Real_gfx1250<bits<8> op,
   }
 }
 
-multiclass VFLAT_Aliases_gfx1250<string name> {
-  defvar ps = get_FLAT_ps<NAME>;
-  if !ne(ps.Mnemonic, name) then
-    def : MnemonicAlias<ps.Mnemonic, name>, Requires<[isGFX125xOnly]>;
-}
-
-multiclass VFLAT_Real_Base_gfx1250<bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic> :
-  VFLAT_Aliases_gfx1250<name> {
-  defm "" : VFLAT_Real_gfx1250<op, name>;
-}
-
 multiclass VFLAT_Real_RTN_gfx1250<bits<8> op, string name> {
   defm _RTN : VFLAT_Real_gfx1250<op, name>;
 }
@@ -3675,9 +3656,14 @@ multiclass VFLAT_Real_SADDR_RTN_gfx1250<bits<8> op, string name> {
   defm _SADDR_RTN : VFLAT_Real_gfx1250<op, name>;
 }
 
-multiclass VFLAT_Real_AllAddr_gfx1250<bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic> :
-  VFLAT_Real_Base_gfx1250<op, name>,
-  VFLAT_Real_SADDR_gfx1250<op, name>;
+multiclass VFLAT_Real_AllAddr_gfx1250<bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic,
+                                      list<Predicate> aliasPreds = [isGFX125xOnly]> :
+  VFLAT_Real_gfx1250<op, name>,
+  VFLAT_Real_SADDR_gfx1250<op, name> {
+  defvar ps = get_FLAT_ps<NAME>;
+  if !ne(ps.Mnemonic, name) then
+    def : MnemonicAlias<ps.Mnemonic, name>, Requires<aliasPreds>;
+}
 
 multiclass VFLAT_Real_Atomics_gfx1250<bits<8> op, string name = get_FLAT_ps<NAME>.Mnemonic> :
   VFLAT_Real_AllAddr_gfx1250<op, name>,

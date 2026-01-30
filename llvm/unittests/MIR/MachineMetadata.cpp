@@ -250,7 +250,8 @@ body:             |
   auto *NewMMO = MF->getMachineMemOperand(OldMMO, AAInfo);
   MI.setMemRefs(*MF, NewMMO);
 
-  MachineModuleSlotTracker MST(MMI, MF);
+  MachineModuleSlotTracker MST(
+      [&](const Function &F) { return MMI.getMachineFunction(F); }, MF);
   // Print that MI with new machine metadata, which slot numbers should be
   // assigned.
   EXPECT_EQ("%1:gpr32 = LDRWui %0, 0 :: (load (s32) from %ir.p, "
@@ -400,7 +401,8 @@ body:             |
   auto *NewMMO = MF->getMachineMemOperand(OldMMO, AAInfo);
   MI.setMemRefs(*MF, NewMMO);
 
-  MachineModuleSlotTracker MST(MMI, MF);
+  MachineModuleSlotTracker MST(
+      [&](const Function &F) { return MMI.getMachineFunction(F); }, MF);
   // Print that MI with new machine metadata, which slot numbers should be
   // assigned.
   EXPECT_EQ("%1:gr32 = MOV32rm %0, 1, $noreg, 0, $noreg :: (load (s32) from %ir.p, "
@@ -498,7 +500,8 @@ body:             |
   auto *NewMMO = MF->getMachineMemOperand(OldMMO, AAInfo);
   MI.setMemRefs(*MF, NewMMO);
 
-  MachineModuleSlotTracker MST(MMI, MF);
+  MachineModuleSlotTracker MST(
+      [&](const Function &F) { return MMI.getMachineFunction(F); }, MF);
   // Print that MI with new machine metadata, which slot numbers should be
   // assigned.
   EXPECT_EQ(

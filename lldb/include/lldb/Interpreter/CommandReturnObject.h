@@ -129,8 +129,6 @@ public:
 
   void AppendError(llvm::StringRef in_string);
 
-  void AppendRawError(llvm::StringRef in_string);
-
   void AppendErrorWithFormat(const char *format, ...)
       __attribute__((format(printf, 2, 3)));
 

@@ -426,13 +426,27 @@ class MCDCRecordProcessor : NextIDsBuilder, mcdc::TVIdxBuilder {
   /// Mapping of calculated MC/DC Independence Pairs for each condition.
   MCDCRecord::TVPairMap IndependencePairs;
 
-  /// Storage for ExecVectors
-  /// ExecVectors is the alias of its 0th element.
-  std::array<MCDCRecord::TestVectors, 2> ExecVectorsByCond;
+  /// Helper for sorting ExecVectors.
+  struct TVIdxTuple {
+    MCDCRecord::CondState MCDCCond; /// True/False
+    unsigned BIdx;                  /// Bitmap Index
+    unsigned Ord;                   /// Last position on ExecVectors
+
+    TVIdxTuple(MCDCRecord::CondState MCDCCond, unsigned BIdx, unsigned Ord)
+        : MCDCCond(MCDCCond), BIdx(BIdx), Ord(Ord) {}
+
+    bool operator<(const TVIdxTuple &RHS) const {
+      return (std::tie(this->MCDCCond, this->BIdx, this->Ord) <
+              std::tie(RHS.MCDCCond, RHS.BIdx, RHS.Ord));
+    }
+  };
+
+  // Indices for sorted TestVectors;
+  std::vector<TVIdxTuple> ExecVectorIdxs;
 
   /// Actual executed Test Vectors for the boolean expression, based on
   /// ExecutedTestVectorBitmap.
-  MCDCRecord::TestVectors &ExecVectors;
+  MCDCRecord::TestVectors ExecVectors;
 
 #ifndef NDEBUG
   DenseSet<unsigned> TVIdxs;
@@ -449,8 +463,7 @@ public:
         Region(Region), DecisionParams(Region.getDecisionParams()),
         Branches(Branches), NumConditions(DecisionParams.NumConditions),
         Folded{{BitVector(NumConditions), BitVector(NumConditions)}},
-        IndependencePairs(NumConditions), ExecVectors(ExecVectorsByCond[false]),
-        IsVersion11(IsVersion11) {}
+        IndependencePairs(NumConditions), IsVersion11(IsVersion11) {}
 
 private:
   // Walk the binary decision diagram and try assigning both false and true to
@@ -478,10 +491,12 @@ private:
                       : DecisionParams.BitmapIdx - NumTestVectors + NextTVIdx])
         continue;
 
+      ExecVectorIdxs.emplace_back(MCDCCond, NextTVIdx, ExecVectors.size());
+
       // Copy the completed test vector to the vector of testvectors.
       // The final value (T,F) is equal to the last non-dontcare state on the
       // path (in a short-circuiting system).
-      ExecVectorsByCond[MCDCCond].push_back({TV, MCDCCond});
+      ExecVectors.push_back({TV, MCDCCond});
     }
 
     // Reset back to DontCare.
@@ -500,12 +515,11 @@ private:
     assert(TVIdxs.size() == unsigned(NumTestVectors) &&
            "TVIdxs wasn't fulfilled");
 
-    // Fill ExecVectors order by False items and True items.
-    // ExecVectors is the alias of ExecVectorsByCond[false], so
-    // Append ExecVectorsByCond[true] on it.
-    auto &ExecVectorsT = ExecVectorsByCond[true];
-    ExecVectors.append(std::make_move_iterator(ExecVectorsT.begin()),
-                       std::make_move_iterator(ExecVectorsT.end()));
+    llvm::sort(ExecVectorIdxs);
+    MCDCRecord::TestVectors NewTestVectors;
+    for (const auto &IdxTuple : ExecVectorIdxs)
+      NewTestVectors.push_back(std::move(ExecVectors[IdxTuple.Ord]));
+    ExecVectors = std::move(NewTestVectors);
   }
 
 public:
@@ -637,6 +651,9 @@ static unsigned getMaxCounterID(const CounterMappingContext &Ctx,
   unsigned MaxCounterID = 0;
   for (const auto &Region : Record.MappingRegions) {
     MaxCounterID = std::max(MaxCounterID, Ctx.getMaxCounterID(Region.Count));
+    if (Region.isBranch())
+      MaxCounterID =
+          std::max(MaxCounterID, Ctx.getMaxCounterID(Region.FalseCount));
   }
   return MaxCounterID;
 }
@@ -1394,6 +1411,37 @@ public:
   }
 };
 
+struct MergeableCoverageData : public CoverageData {
+  std::vector<CountedRegion> CodeRegions;
+
+  MergeableCoverageData(bool Single, StringRef Filename)
+      : CoverageData(Single, Filename) {}
+
+  void addFunctionRegions(
+      const FunctionRecord &Function,
+      std::function<bool(const CounterMappingRegion &CR)> shouldProcess,
+      std::function<bool(const CountedRegion &CR)> shouldExpand) {
+    for (const auto &CR : Function.CountedRegions)
+      if (shouldProcess(CR)) {
+        CodeRegions.push_back(CR);
+        if (shouldExpand(CR))
+          Expansions.emplace_back(CR, Function);
+      }
+    // Capture branch regions specific to the function (excluding expansions).
+    for (const auto &CR : Function.CountedBranchRegions)
+      if (shouldProcess(CR))
+        BranchRegions.push_back(CR);
+    // Capture MCDC records specific to the function.
+    for (const auto &MR : Function.MCDCRecords)
+      if (shouldProcess(MR.getDecisionRegion()))
+        MCDCRecords.push_back(MR);
+  }
+
+  CoverageData buildSegments() {
+    Segments = SegmentBuilder::buildSegments(CodeRegions);
+    return CoverageData(std::move(*this));
+  }
+};
 } // end anonymous namespace
 
 std::vector<StringRef> CoverageMapping::getUniqueSourceFiles() const {
@@ -1445,8 +1493,7 @@ static bool isExpansion(const CountedRegion &R, unsigned FileID) {
 
 CoverageData CoverageMapping::getCoverageForFile(StringRef Filename) const {
   assert(SingleByteCoverage);
-  CoverageData FileCoverage(*SingleByteCoverage, Filename);
-  std::vector<CountedRegion> Regions;
+  MergeableCoverageData FileCoverage(*SingleByteCoverage, Filename);
 
   // Look up the function records in the given file. Due to hash collisions on
   // the filename, we may get back some records that are not in the file.
@@ -1456,26 +1503,14 @@ CoverageData CoverageMapping::getCoverageForFile(StringRef Filename) const {
     const FunctionRecord &Function = Functions[RecordIndex];
     auto MainFileID = findMainViewFileID(Filename, Function);
     auto FileIDs = gatherFileIDs(Filename, Function);
-    for (const auto &CR : Function.CountedRegions)
-      if (FileIDs.test(CR.FileID)) {
-        Regions.push_back(CR);
-        if (MainFileID && isExpansion(CR, *MainFileID))
-          FileCoverage.Expansions.emplace_back(CR, Function);
-      }
-    // Capture branch regions specific to the function (excluding expansions).
-    for (const auto &CR : Function.CountedBranchRegions)
-      if (FileIDs.test(CR.FileID))
-        FileCoverage.BranchRegions.push_back(CR);
-    // Capture MCDC records specific to the function.
-    for (const auto &MR : Function.MCDCRecords)
-      if (FileIDs.test(MR.getDecisionRegion().FileID))
-        FileCoverage.MCDCRecords.push_back(MR);
+    FileCoverage.addFunctionRegions(
+        Function, [&](auto &CR) { return FileIDs.test(CR.FileID); },
+        [&](auto &CR) { return (MainFileID && isExpansion(CR, *MainFileID)); });
   }
 
   LLVM_DEBUG(dbgs() << "Emitting segments for file: " << Filename << "\n");
-  FileCoverage.Segments = SegmentBuilder::buildSegments(Regions);
 
-  return FileCoverage;
+  return FileCoverage.buildSegments();
 }
 
 std::vector<InstantiationGroup>
@@ -1510,30 +1545,16 @@ CoverageMapping::getCoverageForFunction(const FunctionRecord &Function) const {
     return CoverageData();
 
   assert(SingleByteCoverage);
-  CoverageData FunctionCoverage(*SingleByteCoverage,
-                                Function.Filenames[*MainFileID]);
-  std::vector<CountedRegion> Regions;
-  for (const auto &CR : Function.CountedRegions)
-    if (CR.FileID == *MainFileID) {
-      Regions.push_back(CR);
-      if (isExpansion(CR, *MainFileID))
-        FunctionCoverage.Expansions.emplace_back(CR, Function);
-    }
-  // Capture branch regions specific to the function (excluding expansions).
-  for (const auto &CR : Function.CountedBranchRegions)
-    if (CR.FileID == *MainFileID)
-      FunctionCoverage.BranchRegions.push_back(CR);
-
-  // Capture MCDC records specific to the function.
-  for (const auto &MR : Function.MCDCRecords)
-    if (MR.getDecisionRegion().FileID == *MainFileID)
-      FunctionCoverage.MCDCRecords.push_back(MR);
+  MergeableCoverageData FunctionCoverage(*SingleByteCoverage,
+                                         Function.Filenames[*MainFileID]);
+  FunctionCoverage.addFunctionRegions(
+      Function, [&](auto &CR) { return (CR.FileID == *MainFileID); },
+      [&](auto &CR) { return isExpansion(CR, *MainFileID); });
 
   LLVM_DEBUG(dbgs() << "Emitting segments for function: " << Function.Name
                     << "\n");
-  FunctionCoverage.Segments = SegmentBuilder::buildSegments(Regions);
 
-  return FunctionCoverage;
+  return FunctionCoverage.buildSegments();
 }
 
 CoverageData CoverageMapping::getCoverageForExpansion(

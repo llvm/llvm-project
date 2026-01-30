@@ -71,8 +71,10 @@ class TestStatusline(PExpectTest):
         )
         self.expect('set set separator "| "')
 
-        # Hide the statusline and check or the control character.
-        self.expect("set set show-statusline false", ["\x1b[1;0r"])
+        # Hide the statusline and check for the control character.
+        self.expect(
+            "set set show-statusline false", ["\x1b[1;{}r".format(self.TERMINAL_HEIGHT)]
+        )
 
     def test_no_color(self):
         """Basic test for the statusline with colors disabled."""

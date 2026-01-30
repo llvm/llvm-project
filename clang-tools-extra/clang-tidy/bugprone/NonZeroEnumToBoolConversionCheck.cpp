@@ -11,7 +11,6 @@
 #include "../utils/OptionsUtils.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
-#include <algorithm>
 
 using namespace clang::ast_matchers;
 
@@ -59,7 +58,7 @@ void NonZeroEnumToBoolConversionCheck::registerMatchers(MatchFinder *Finder) {
                hasSourceExpression(
                    expr(hasType(qualType(hasCanonicalType(hasDeclaration(
                             enumDecl(isCompleteAndHasNoZeroValue(),
-                                     unless(matchers::matchesAnyListedName(
+                                     unless(matchers::matchesAnyListedRegexName(
                                          EnumIgnoreList)))
                                 .bind("enum"))))),
                         unless(declRefExpr(to(enumConstantDecl()))),

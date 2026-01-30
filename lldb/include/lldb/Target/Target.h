@@ -32,6 +32,7 @@
 #include "lldb/Target/PathMappingList.h"
 #include "lldb/Target/SectionLoadHistory.h"
 #include "lldb/Target/Statistics.h"
+#include "lldb/Target/SyntheticFrameProvider.h"
 #include "lldb/Target/ThreadSpec.h"
 #include "lldb/Utility/ArchSpec.h"
 #include "lldb/Utility/Broadcaster.h"
@@ -744,6 +745,36 @@ public:
 
   Status Attach(ProcessAttachInfo &attach_info,
                 Stream *stream); // Optional stream to receive first stop info
+
+  /// Add or update a scripted frame provider descriptor for this target.
+  /// All new threads in this target will check if they match any descriptors
+  /// to create their frame providers.
+  ///
+  /// \param[in] descriptor
+  ///     The descriptor to add or update.
+  ///
+  /// \return
+  ///     The descriptor identifier if the registration succeeded, otherwise an
+  ///     llvm::Error.
+  llvm::Expected<uint32_t> AddScriptedFrameProviderDescriptor(
+      const ScriptedFrameProviderDescriptor &descriptor);
+
+  /// Remove a scripted frame provider descriptor by id.
+  ///
+  /// \param[in] id
+  ///     The id of the descriptor to remove.
+  ///
+  /// \return
+  ///     True if a descriptor was removed, false if no descriptor with that
+  ///     id existed.
+  bool RemoveScriptedFrameProviderDescriptor(uint32_t id);
+
+  /// Clear all scripted frame provider descriptors for this target.
+  void ClearScriptedFrameProviderDescriptors();
+
+  /// Get all scripted frame provider descriptors for this target.
+  const llvm::DenseMap<uint32_t, ScriptedFrameProviderDescriptor> &
+  GetScriptedFrameProviderDescriptors() const;
 
   // This part handles the breakpoints.
 
@@ -1743,6 +1774,13 @@ protected:
   lldb::SearchFilterSP m_search_filter_sp;
   PathMappingList m_image_search_paths;
   TypeSystemMap m_scratch_type_system_map;
+
+  /// Map of scripted frame provider descriptors for this target.
+  /// Keys are the provider descriptors ids, values are the descriptors.
+  /// Used to initialize frame providers for new threads.
+  llvm::DenseMap<uint32_t, ScriptedFrameProviderDescriptor>
+      m_frame_provider_descriptors;
+  mutable std::recursive_mutex m_frame_provider_descriptors_mutex;
 
   typedef std::map<lldb::LanguageType, lldb::REPLSP> REPLMap;
   REPLMap m_repl_map;

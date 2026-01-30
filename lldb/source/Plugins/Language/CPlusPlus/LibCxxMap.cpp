@@ -274,8 +274,8 @@ llvm::Expected<uint32_t> lldb_private::formatters::
   if (m_tree == nullptr)
     return 0;
 
-  auto [size_sp, is_compressed_pair] = GetValueOrOldCompressedPair(
-      *m_tree, /*anon_struct_idx=*/2, "__size_", "__pair3_");
+  auto [size_sp, is_compressed_pair] =
+      GetValueOrOldCompressedPair(*m_tree, "__size_", "__pair3_");
   if (!size_sp)
     return llvm::createStringError("Unexpected std::map layout");
 

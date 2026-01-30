@@ -116,6 +116,9 @@ static cl::opt<bool> DisableMergeICmps("disable-mergeicmps",
 static cl::opt<bool>
     PrintISelInput("print-isel-input", cl::Hidden,
                    cl::desc("Print LLVM IR input to isel pass"));
+cl::opt<bool>
+    PrintRegUsage("print-regusage", cl::Hidden,
+                  cl::desc("Print register usage details collected for IPRA"));
 static cl::opt<cl::boolOrDefault>
     VerifyMachineCode("verify-machineinstrs", cl::Hidden,
                       cl::desc("Verify generated machine code"));
@@ -263,14 +266,21 @@ static cl::opt<bool> DisableSelectOptimize(
     cl::desc("Disable the select-optimization pass from running"));
 
 /// Enable garbage-collecting empty basic blocks.
-static cl::opt<bool>
-    GCEmptyBlocks("gc-empty-basic-blocks", cl::init(false), cl::Hidden,
-                  cl::desc("Enable garbage-collecting empty basic blocks"));
+static cl::opt<bool> EnableGCEmptyBlocks(
+    "enable-gc-empty-basic-blocks", cl::init(false), cl::Hidden,
+    cl::desc("Enable garbage-collecting empty basic blocks"));
 
 static cl::opt<bool>
     SplitStaticData("split-static-data", cl::Hidden, cl::init(false),
                     cl::desc("Split static data sections into hot and cold "
                              "sections using profile information"));
+
+/// Enable matching and inference when using propeller.
+static cl::opt<bool> BasicBlockSectionMatchInfer(
+    "basic-block-section-match-infer",
+    cl::desc(
+        "Enable matching and inference when generating basic block sections"),
+    cl::init(false), cl::Optional);
 
 cl::opt<bool> EmitBBHash(
     "emit-bb-hash",
@@ -500,7 +510,7 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
   SET_OPTION(DisableExpandReductions)
   SET_OPTION(PrintAfterISel)
   SET_OPTION(FSProfileFile)
-  SET_OPTION(GCEmptyBlocks)
+  SET_OPTION(EnableGCEmptyBlocks)
 
 #define SET_BOOLEAN_OPTION(Option) Opt.Option = Option;
 
@@ -517,6 +527,7 @@ CGPassBuilderOption llvm::getCGPassBuilderOption() {
   SET_BOOLEAN_OPTION(DisablePartialLibcallInlining)
   SET_BOOLEAN_OPTION(DisableSelectOptimize)
   SET_BOOLEAN_OPTION(PrintISelInput)
+  SET_BOOLEAN_OPTION(PrintRegUsage)
   SET_BOOLEAN_OPTION(DebugifyAndStripAll)
   SET_BOOLEAN_OPTION(DebugifyCheckAndStripAll)
   SET_BOOLEAN_OPTION(DisableRAFSProfileLoader)
@@ -598,6 +609,8 @@ TargetPassConfig::TargetPassConfig(TargetMachine &TM, PassManagerBase &PM)
   // Register all target independent codegen passes to activate their PassIDs,
   // including this pass itself.
   initializeCodeGen(PR);
+
+  initializeLibcallLoweringInfoWrapperPass(PR);
 
   // Also register alias analysis passes required by codegen passes.
   initializeBasicAAWrapperPassPass(PR);
@@ -1083,8 +1096,7 @@ bool TargetPassConfig::addISelPasses() {
 
   PM->add(createTargetTransformInfoWrapperPass(TM->getTargetIRAnalysis()));
   addPass(createPreISelIntrinsicLoweringPass());
-  addPass(createExpandLargeDivRemPass());
-  addPass(createExpandFpPass(getOptLevel()));
+  addPass(createExpandIRInstsPass(getOptLevel()));
   addIRPasses();
   addCodeGenPrepare();
   addPassesToHandleExceptions();
@@ -1239,8 +1251,8 @@ void TargetPassConfig::addMachinePasses() {
       addPass(createMachineOutlinerPass(EnableMachineOutliner));
   }
 
-  if (GCEmptyBlocks)
-    addPass(llvm::createGCEmptyBasicBlocksPass());
+  if (EnableGCEmptyBlocks)
+    addPass(llvm::createGCEmptyBasicBlocksLegacyPass());
 
   if (EnableFSDiscriminator)
     addPass(createMIRAddFSDiscriminatorsPass(
@@ -1285,12 +1297,17 @@ void TargetPassConfig::addMachinePasses() {
   // address map (or both).
   if (TM->getBBSectionsType() != llvm::BasicBlockSection::None ||
       TM->Options.BBAddrMap) {
-    if (EmitBBHash)
+    if (EmitBBHash || BasicBlockSectionMatchInfer)
       addPass(llvm::createMachineBlockHashInfoPass());
     if (TM->getBBSectionsType() == llvm::BasicBlockSection::List) {
       addPass(llvm::createBasicBlockSectionsProfileReaderWrapperPass(
           TM->getBBSectionsFuncListBuf()));
-      addPass(llvm::createBasicBlockPathCloningPass());
+      if (BasicBlockSectionMatchInfer)
+        addPass(llvm::createBasicBlockMatchingAndInferencePass());
+      else {
+        addPass(llvm::createBasicBlockPathCloningPass());
+        addPass(llvm::createInsertCodePrefetchPass());
+      }
     }
     addPass(llvm::createBasicBlockSectionsPass());
   }
