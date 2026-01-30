@@ -9,8 +9,8 @@
 #ifndef LLVM_LIBC_SRC___SUPPORT_MATH_F16FMAF128_H
 #define LLVM_LIBC_SRC___SUPPORT_MATH_F16FMAF128_H
 
-#include "include/llvm-libc-types/float128.h"
 #include "include/llvm-libc-macros/float16-macros.h"
+#include "include/llvm-libc-types/float128.h"
 
 #ifdef LIBC_TYPES_HAS_FLOAT128
 #ifdef LIBC_TYPES_HAS_FLOAT16
