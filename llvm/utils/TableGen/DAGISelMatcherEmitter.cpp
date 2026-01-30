@@ -1570,8 +1570,7 @@ void llvm::EmitMatcherTable(Matcher *TheMatcher, const CodeGenDAGPatterns &CGP,
   OS << "(unsigned(X) >> 16) & 255, (unsigned(X) >> 24) & 255\n";
   OS << "  static const uint8_t MatcherTable[] = {\n";
   TotalSize = MatcherEmitter.EmitMatcherList(TheMatcher, 1, 0, OS);
-  OS << "    0\n  }; // Total Array size is " << (TotalSize + 1)
-     << " bytes\n\n";
+  OS << "  }; // Total Array size is " << TotalSize << " bytes\n\n";
 
   MatcherEmitter.EmitHistogram(OS);
 
