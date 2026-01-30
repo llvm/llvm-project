@@ -734,6 +734,7 @@ class DiagnoseUnguardedBuiltins : public DynamicRecursiveASTVisitor {
 
   SmallVector<std::pair<CallExpr *, StringRef>> CurrentGFXIP;
   SmallVector<std::pair<unsigned, StringRef>> GuardedBuiltins;
+
 public:
   DiagnoseUnguardedBuiltins(Sema &SemaRef) : SemaRef(SemaRef) {}
 
