@@ -915,7 +915,7 @@ shouldPartialUnroll(const unsigned LoopSize, const unsigned TripCount,
 // Returns true if unroll count was set explicitly.
 // Calculates unroll count and writes it to UP.Count.
 // Unless IgnoreUser is true, will also use metadata and command-line options
-// that are specific to to the LoopUnroll pass (which, for instance, are
+// that are specific to the LoopUnroll pass (which, for instance, are
 // irrelevant for the LoopUnrollAndJam pass).
 // FIXME: This function is used by LoopUnroll and LoopUnrollAndJam, but consumes
 // many LoopUnroll-specific options. The shared functionality should be
