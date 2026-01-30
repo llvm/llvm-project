@@ -175,9 +175,9 @@ Limitations
 The following features are not implemented at this time:
 
 - Support for platforms other than ELF and COFF.
-- Support for more LTO configurations; only a very limited set of LTO
-  configurations is supported currently, e.g. support for basic block sections
-  is not currently available.
+- Support for more CodeGen configurations in the LTO backend; only a very
+  limited set is supported currently, e.g. support for basic block sections is
+  not currently available.
 - Support for sharing ThinLTO cache entries with in-process ThinLTO entries.
   This is not currently supported because identical code generation is not yet
   guaranteed.
