@@ -134,7 +134,7 @@ public:
     LLVM_DEBUG(dbgs() << "CreateVOPD Pass:\n");
 
     const SIInstrInfo *SII = ST->getInstrInfo();
-    const SIRegisterInfo *TRI = dyn_cast<SIRegisterInfo>(ST->getRegisterInfo());
+    const SIRegisterInfo *TRI = ST->getRegisterInfo();
     bool Changed = false;
     unsigned EncodingFamily = AMDGPU::getVOPDEncodingFamily(*ST);
     bool HasVOPD3 = ST->hasVOPD3();
