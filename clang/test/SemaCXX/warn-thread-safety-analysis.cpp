@@ -7686,5 +7686,4 @@ void testLoopConditionalReassignment(Foo *f1, Foo *f2, bool cond) {
   f1->data = 42;
   ptr->mu.Unlock(); // expected-warning{{releasing mutex 'ptr->mu' that was not held}}
 } // expected-warning{{mutex 'f1->mu' is still held at the end of function}}
-
 }  // namespace CapabilityAliases
