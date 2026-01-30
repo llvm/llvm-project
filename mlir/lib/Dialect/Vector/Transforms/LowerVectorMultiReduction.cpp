@@ -760,7 +760,7 @@ struct UnrollMultiReductionOuterGeneralCase
 ///     : vector<Cxf32> into vector<AxCxf32>
 /// // ... repeat for indices 1 to A-1
 /// ```
-struct UnrollMultiReductionInner
+struct UnrollInnerReductionAlongOuterParallel
     : public OpRewritePattern<vector::MultiDimReductionOp> {
   using Base::Base;
 
@@ -918,7 +918,8 @@ void mlir::vector::populateVectorUnrollMultiReduction(
   patterns.add<OneDimMultiReductionToReduction>(patterns.getContext(), benefit);
 
   if (options == VectorMultiReductionLowering::InnerReduction) {
-    patterns.add<UnrollMultiReductionInner>(patterns.getContext(), benefit);
+    patterns.add<UnrollInnerReductionAlongOuterParallel>(patterns.getContext(),
+                                                         benefit);
   } else {
     patterns.add<UnrollMultiReductionOuterBaseCase,
                  UnrollMultiReductionOuterGeneralCase>(patterns.getContext(),
