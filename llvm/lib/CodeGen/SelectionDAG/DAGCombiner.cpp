@@ -20744,12 +20744,12 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
       break;
     if (STMemType != LDMemType) {
       if (LdMemSize == StMemSize) {
-        if (TLI.isLoadBitCastBeneficial(LDMemType, STMemType, DAG,
-                                        *LD->getMemOperand()) &&
-            TLI.isOperationLegal(ISD::BITCAST, LDMemType) &&
+        if (TLI.isOperationLegal(ISD::BITCAST, LDMemType) &&
             isTypeLegal(LDMemType) &&
             TLI.isOperationLegal(ISD::BITCAST, STMemType) &&
-            isTypeLegal(STMemType))
+            isTypeLegal(STMemType) &&
+            TLI.isLoadBitCastBeneficial(LDMemType, STMemType, DAG,
+                                        *LD->getMemOperand()))
           Val = DAG.getBitcast(LDMemType, Val);
         else
           break;
