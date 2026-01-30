@@ -814,10 +814,11 @@ def warn_unreachable_association : Warning<
   "due to lvalue conversion of the controlling expression, association of type "
   "%0 will never be selected because it is %select{of array type|qualified}1">,
   InGroup<UnreachableCodeGenericAssoc>;
-def warn_trivial_auto_var_init_unreachable : Warning<
-  "variable %0 is uninitialized and cannot be initialized with "
-  "'-ftrivial-auto-var-init' because it is unreachable">,
-  InGroup<TrivialAutoVarInit>, DefaultIgnore;
+def warn_trivial_auto_var_init_unreachable
+    : Warning<"variable %0 is uninitialized and cannot be initialized with "
+              "'-ftrivial-auto-var-init' because it is unreachable">,
+      InGroup<TrivialAutoVarInit>,
+      DefaultIgnore;
 
 /// Built-in functions.
 def ext_implicit_lib_function_decl : ExtWarn<
