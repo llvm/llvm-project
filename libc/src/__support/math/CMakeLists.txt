@@ -798,6 +798,10 @@ add_header_library(
 
 add_header_library(
 <<<<<<< HEAD
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   llogbf
   HDRS
     llogbf.h
