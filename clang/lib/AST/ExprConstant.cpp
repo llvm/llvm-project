@@ -4143,7 +4143,7 @@ static bool flattenAPValue(EvalInfo &Info, const Expr *E, APValue Value,
       for (unsigned Row = 0; Row < Work.getMatrixNumRows() && Populated < Size;
            Row++) {
         for (unsigned Col = 0;
-             Col < Work.getMatrixNumCols() && Populated < Size; Col++) {
+             Col < Work.getMatrixNumColumns() && Populated < Size; Col++) {
           Elements.push_back(Work.getMatrixElt(Row, Col));
           Types.push_back(ElTy);
           Populated++;
@@ -11807,7 +11807,7 @@ bool VectorExprEvaluator::VisitCastExpr(const CastExpr *E) {
     for (unsigned Row = 0;
          Row < Val.getMatrixNumRows() && Elements.size() < NElts; Row++)
       for (unsigned Col = 0;
-           Col < Val.getMatrixNumCols() && Elements.size() < NElts; Col++)
+           Col < Val.getMatrixNumColumns() && Elements.size() < NElts; Col++)
         Elements.push_back(Val.getMatrixElt(Row, Col));
     return Success(Elements, E);
   }

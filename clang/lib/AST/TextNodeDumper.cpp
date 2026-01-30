@@ -815,7 +815,7 @@ void TextNodeDumper::Visit(const APValue &Value, QualType Ty) {
   }
   case APValue::Matrix: {
     unsigned NumRows = Value.getMatrixNumRows();
-    unsigned NumCols = Value.getMatrixNumCols();
+    unsigned NumCols = Value.getMatrixNumColumns();
     OS << "Matrix " << NumRows << "x" << NumCols;
 
     dumpAPValueChildren(

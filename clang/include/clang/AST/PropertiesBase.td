@@ -362,7 +362,7 @@ let Class = PropertyTypeCase<APValue, "Matrix"> in {
     let Read = [{ node.getMatrixNumRows() }];
   }
   def : Property<"numCols", UInt32> {
-    let Read = [{ node.getMatrixNumCols() }];
+    let Read = [{ node.getMatrixNumColumns() }];
   }
   def : Property<"elements", Array<APValue>> { let Read = [{ buffer }]; }
   def : Creator<[{

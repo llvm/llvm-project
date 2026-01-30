@@ -2513,7 +2513,7 @@ ConstantEmitter::tryEmitPrivate(const APValue &Value, QualType DestType,
   case APValue::Matrix: {
     const auto *MT = DestType->castAs<ConstantMatrixType>();
     unsigned NumRows = Value.getMatrixNumRows();
-    unsigned NumCols = Value.getMatrixNumCols();
+    unsigned NumCols = Value.getMatrixNumColumns();
     unsigned NumElts = NumRows * NumCols;
     SmallVector<llvm::Constant *, 16> Inits(NumElts);
 

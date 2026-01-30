@@ -596,12 +596,12 @@ public:
     assert(isMatrix() && "Invalid accessor");
     return ((const Mat *)(const void *)&Data)->NumRows;
   }
-  unsigned getMatrixNumCols() const {
+  unsigned getMatrixNumColumns() const {
     assert(isMatrix() && "Invalid accessor");
     return ((const Mat *)(const void *)&Data)->NumCols;
   }
   unsigned getMatrixNumElements() const {
-    return getMatrixNumRows() * getMatrixNumCols();
+    return getMatrixNumRows() * getMatrixNumColumns();
   }
   APValue &getMatrixElt(unsigned Idx) {
     assert(isMatrix() && "Invalid accessor");
@@ -614,9 +614,9 @@ public:
   APValue &getMatrixElt(unsigned Row, unsigned Col) {
     assert(isMatrix() && "Invalid accessor");
     assert(Row < getMatrixNumRows() && "Row index out of range");
-    assert(Col < getMatrixNumCols() && "Column index out of range");
+    assert(Col < getMatrixNumColumns() && "Column index out of range");
     // Matrix elements are stored in row-major order.
-    unsigned I = Row * getMatrixNumCols() + Col;
+    unsigned I = Row * getMatrixNumColumns() + Col;
     return ((Mat *)(char *)&Data)->Elts[I];
   }
   const APValue &getMatrixElt(unsigned Row, unsigned Col) const {

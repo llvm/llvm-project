@@ -336,7 +336,7 @@ APValue::APValue(const APValue &RHS)
   case Matrix:
     MakeMatrix();
     setMatrix(((const Mat *)(const char *)&RHS.Data)->Elts,
-              RHS.getMatrixNumRows(), RHS.getMatrixNumCols());
+              RHS.getMatrixNumRows(), RHS.getMatrixNumColumns());
     break;
   case ComplexInt:
     MakeComplexInt();
@@ -590,7 +590,7 @@ void APValue::Profile(llvm::FoldingSetNodeID &ID) const {
 
   case Matrix:
     for (unsigned R = 0, N = getMatrixNumRows(); R != N; ++R)
-      for (unsigned C = 0, M = getMatrixNumCols(); C != M; ++C)
+      for (unsigned C = 0, M = getMatrixNumColumns(); C != M; ++C)
         getMatrixElt(R, C).Profile(ID);
     return;
 
@@ -769,7 +769,7 @@ void APValue::printPretty(raw_ostream &Out, const PrintingPolicy &Policy,
       if (R != 0)
         Out << ", ";
       Out << '{';
-      for (unsigned C = 0; C < getMatrixNumCols(); ++C) {
+      for (unsigned C = 0; C < getMatrixNumColumns(); ++C) {
         if (C != 0)
           Out << ", ";
         getMatrixElt(R, C).printPretty(Out, Policy, ElemTy, Ctx);
