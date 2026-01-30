@@ -849,22 +849,18 @@ void RTDEF(FCString)(Descriptor &result, const Descriptor &string,
     const Descriptor *asis, const char *sourceFile, int sourceLine) {
   Terminator terminator{sourceFile, sourceLine};
   RUNTIME_CHECK(terminator, string.raw().type == CFI_type_char);
-
   std::size_t chars{string.ElementBytes()};
   if (!asis || !IsLogicalElementTrue(*asis, nullptr)) {
     chars = LenTrim(string.OffsetElement<const char>(), chars);
   }
   std::size_t resultBytes{chars + 1};
-
   result.Establish(string.type(), resultBytes, nullptr, 0, nullptr,
       CFI_attribute_allocatable);
   RUNTIME_CHECK(terminator, result.Allocate(kNoAsyncObject) == CFI_SUCCESS);
-
   if (chars > 0) {
     std::memcpy(result.OffsetElement(), string.OffsetElement(), chars);
   }
-
-  result.OffsetElement<char>()[chars] = '\0';
+  *result.OffsetElement<char>(chars) = '\0';
 }
 
 void RTDEF(Trim)(Descriptor &result, const Descriptor &string,
