@@ -779,13 +779,12 @@ let Command = "expression" in {
              "Expression results will be labeled with $-prefixed variables, "
              "e.g. $0, $1, etc.">;
   def ignore_context_qualifiers
-      : Option<"ignore-context-qualifiers", "Q">,
+      : Option<"cpp-ignore-context-qualifiers", "Q">,
         Groups<[1, 2]>,
         Desc<"When specified, evaluates the expression without taking into "
-             "account the type ${Q}ualifiers of the scope. E.g., this would "
-             "permit "
-             "calling a non-const C++ method when stopped in a const-method "
-             "(which would be disallowed by C++ language rules).">;
+             "account the type ${Q}ualifiers of the scope. In C++, this would "
+             "permit calling a non-const method when stopped in a const-method "
+             "(which would be disallowed by language rules).">;
 }
 
 let Command = "frame diag" in {

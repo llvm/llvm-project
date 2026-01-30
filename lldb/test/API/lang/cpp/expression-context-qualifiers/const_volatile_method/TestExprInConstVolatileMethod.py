@@ -21,11 +21,11 @@ class TestCase(TestBase):
         )
 
         options = lldb.SBExpressionOptions()
-        options.SetIgnoreContextQualifiers()
+        options.SetCppIgnoreContextQualifiers()
         options.SetIgnoreBreakpoints(True)
         self.expect_expr("volatile_method()", options=options)
         self.expect(
-            "expression --ignore-context-qualifiers -- bar()",
+            "expression --cpp-ignore-context-qualifiers -- bar()",
             error=True,
             substrs=["call to member function 'bar' is ambiguous"],
         )
@@ -47,7 +47,7 @@ class TestCase(TestBase):
 
         self.expect_expr("const_method()", options=options)
         self.expect(
-            "expression --ignore-context-qualifiers -- bar()",
+            "expression --cpp-ignore-context-qualifiers -- bar()",
             error=True,
             substrs=["call to member function 'bar' is ambiguous"],
         )
@@ -79,7 +79,7 @@ class TestCase(TestBase):
         self.expect_expr("const_method()", options=options)
         self.expect_expr("volatile_method()", options=options)
         self.expect(
-            "expression --ignore-context-qualifiers -- bar()",
+            "expression --cpp-ignore-context-qualifiers -- bar()",
             error=True,
             substrs=["call to member function 'bar' is ambiguous"],
         )

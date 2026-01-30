@@ -544,7 +544,9 @@ private:
   /// CV-qualifiers of the scope. E.g., this would permit calling a
   /// non-const C++ method when stopped in a const-method (which would be
   /// disallowed by C++ language rules).
-  bool m_ignore_context_qualifierss = false;
+  ///
+  /// FIXME: move this to a language-specific dictionary of options.
+  bool m_cpp_ignore_context_qualifierss = false;
 };
 
 // Target

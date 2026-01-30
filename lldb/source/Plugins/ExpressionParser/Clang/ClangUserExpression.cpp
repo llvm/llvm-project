@@ -417,7 +417,7 @@ void ClangUserExpression::CreateSourceCode(
 
     if (!m_source_code->GetText(m_transformed_text, exe_ctx, !m_ctx_obj,
                                 for_completion, modules_to_import,
-                                m_options.GetIgnoreContextQualifiers())) {
+                                m_options.GetCppIgnoreContextQualifiers())) {
       diagnostic_manager.PutString(lldb::eSeverityError,
                                    "couldn't construct expression body");
       return;

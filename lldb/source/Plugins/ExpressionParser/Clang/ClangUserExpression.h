@@ -166,9 +166,9 @@ public:
   void ResetDeclMap(ExecutionContext &exe_ctx,
                     Materializer::PersistentVariableDelegate &result_delegate,
                     bool keep_result_in_memory) {
-    m_type_system_helper.ResetDeclMap(exe_ctx, result_delegate,
-                                      keep_result_in_memory, m_ctx_obj,
-                                      m_options.GetIgnoreContextQualifiers());
+    m_type_system_helper.ResetDeclMap(
+        exe_ctx, result_delegate, keep_result_in_memory, m_ctx_obj,
+        m_options.GetCppIgnoreContextQualifiers());
   }
 
   lldb::ExpressionVariableSP

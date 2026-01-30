@@ -57,7 +57,7 @@ public:
     LanguageRuntimeDescriptionDisplayVerbosity m_verbosity;
     LazyBool auto_apply_fixits;
     LazyBool suppress_persistent_result;
-    bool ignore_context_qualifiers;
+    bool cpp_ignore_context_qualifiers;
   };
 
   CommandObjectExpression(CommandInterpreter &interpreter);

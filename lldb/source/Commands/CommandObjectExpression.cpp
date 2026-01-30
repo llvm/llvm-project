@@ -45,7 +45,7 @@ Status CommandObjectExpression::CommandOptions::SetOptionValue(
 
   switch (short_option) {
   case 'Q':
-    ignore_context_qualifiers = true;
+    cpp_ignore_context_qualifiers = true;
     break;
   case 'l':
     language = Language::GetLanguageTypeFromString(option_arg);
@@ -194,7 +194,7 @@ void CommandObjectExpression::CommandOptions::OptionParsingStarting(
   top_level = false;
   allow_jit = true;
   suppress_persistent_result = eLazyBoolCalculate;
-  ignore_context_qualifiers = false;
+  cpp_ignore_context_qualifiers = false;
 }
 
 llvm::ArrayRef<OptionDefinition>
@@ -217,7 +217,7 @@ CommandObjectExpression::CommandOptions::GetEvaluateExpressionOptions(
   options.SetExecutionPolicy(
       allow_jit ? EvaluateExpressionOptions::default_execution_policy
                 : lldb_private::eExecutionPolicyNever);
-  options.SetIgnoreContextQualifiers(ignore_context_qualifiers);
+  options.SetCppIgnoreContextQualifiers(cpp_ignore_context_qualifiers);
 
   bool auto_apply_fixits;
   if (this->auto_apply_fixits == eLazyBoolCalculate)
