@@ -209,7 +209,8 @@ PyGlobals::lookupOperationClass(std::string_view operationName) {
   (void)loadDialectModule(dialectNamespace);
 
   nb::ft_lock_guard lock(mutex);
-  auto foundIt = operationClassMap.find(operationName);
+  std::string operationNameStr(operationName);
+  auto foundIt = operationClassMap.find(operationNameStr);
   if (foundIt != operationClassMap.end()) {
     assert(foundIt->second && "OpView is defined");
     return foundIt->second;
@@ -226,7 +227,8 @@ PyGlobals::lookupOpAdaptorClass(llvm::StringRef operationName) {
   (void)loadDialectModule(dialectNamespace);
 
   nb::ft_lock_guard lock(mutex);
-  auto foundIt = opAdaptorClassMap.find(operationName);
+  std::string operationNameStr(operationName);
+  auto foundIt = opAdaptorClassMap.find(operationNameStr);
   if (foundIt != opAdaptorClassMap.end()) {
     assert(foundIt->second && "OpAdaptor is defined");
     return foundIt->second;
@@ -294,13 +296,14 @@ bool PyGlobals::TracebackLoc::isUserTracebackFilename(
     rebuildUserTracebackExcludeRegex = false;
     isUserTracebackFilenameCache.clear();
   }
-  if (!isUserTracebackFilenameCache.contains(file)) {
-    std::string fileStr(file);
+  std::string fileStr(file);
+  const auto foundIt = isUserTracebackFilenameCache.find(fileStr);
+  if (foundIt == isUserTracebackFilenameCache.end()) {
     bool include = std::regex_search(fileStr, userTracebackIncludeRegex);
     bool exclude = std::regex_search(fileStr, userTracebackExcludeRegex);
-    isUserTracebackFilenameCache[file] = include || !exclude;
+    isUserTracebackFilenameCache[fileStr] = include || !exclude;
   }
-  return isUserTracebackFilenameCache[file];
+  return isUserTracebackFilenameCache[fileStr];
 }
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python

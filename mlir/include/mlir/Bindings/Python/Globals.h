@@ -170,7 +170,7 @@ public:
     bool rebuildUserTracebackIncludeRegex = false;
     std::regex userTracebackExcludeRegex;
     bool rebuildUserTracebackExcludeRegex = false;
-    llvm::StringMap<bool> isUserTracebackFilenameCache;
+    std::unordered_map<std::string, bool> isUserTracebackFilenameCache;
   };
 
   TracebackLoc &getTracebackLoc() { return tracebackLoc; }
@@ -206,13 +206,13 @@ private:
   /// Module name prefixes to search under for dialect implementation modules.
   std::vector<std::string> dialectSearchPrefixes;
   /// Map of dialect namespace to external dialect class object.
-  llvm::StringMap<nanobind::object> dialectClassMap;
+  std::unordered_map<std::string, nanobind::object> dialectClassMap;
   /// Map of full operation name to external operation class object.
-  llvm::StringMap<nanobind::object> operationClassMap;
+  std::unordered_map<std::string, nanobind::object> operationClassMap;
   /// Map of full operation name to external operation adaptor class object.
-  llvm::StringMap<nanobind::object> opAdaptorClassMap;
+  std::unordered_map<std::string, nanobind::object> opAdaptorClassMap;
   /// Map of attribute ODS name to custom builder.
-  llvm::StringMap<nanobind::callable> attributeBuilderMap;
+  std::unordered_map<std::string, nanobind::callable> attributeBuilderMap;
   /// Map of MlirTypeID to custom type caster.
   std::unordered_map<MlirTypeID, nanobind::callable, MlirTypeIDHash,
                      MlirTypeIDEqual>
