@@ -169,10 +169,10 @@ following backend compilation commands with maximum parallelism:
     /usr/bin/clang -O2 -c -fprofile-sample-use=my.prof t2.o  -fthinlto-index=t2.o.thinlto.bc -o t2.native.o \
       -fproc-stat-report=t2.stats.txt
 
-TODOs
------
+Limitations
+-----------
 
-The following features are planned for DTLTO but not yet implemented:
+The following features are not implemented at this time:
 
 - Support for platforms other than ELF and COFF.
 - Support for more LTO configurations; only a very limited set of LTO
