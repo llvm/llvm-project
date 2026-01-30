@@ -83,7 +83,6 @@ define i32* @unnamed_const() nounwind {
 }
 
 ; UTC_ARGS: --disable
-; Manually written check that are not caught by the UTC script invocation
 ; COMMON-LABEL: l_anon:
 ; COMMON-NEXT:     .word 42
 
