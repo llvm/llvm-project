@@ -116,6 +116,7 @@ char *stpcpy(char *restrict s1, const char *restrict s2);
 char *strncpy( char * destination, const char * source, size_t num );
 char *strndup(const char *s, size_t n);
 char *strncat(char *restrict s1, const char *restrict s2, size_t n);
+char *strcat( char *dest, const char *src );
 
 void *malloc(size_t);
 void *calloc(size_t nmemb, size_t size);
@@ -1396,3 +1397,15 @@ void testAcceptPropagates() {
   int acceptSocket = accept(listenSocket, 0, 0);
   clang_analyzer_isTainted_int(acceptSocket); // expected-warning {{YES}}
 }
+
+int main(int argc, char * argv[]) {
+   if (argc < 1)
+     return 1;
+   char cmd[2048] = "/bin/cat ";
+   char filename[1024];
+   clang_analyzer_isTainted_char(*argv[1]); // expected-warning{{YES}}
+   strncat(cmd, argv[1], sizeof(cmd) - strlen(cmd)-1);
+   system(cmd);// expected-warning {{Untrusted data is passed to a system call}}
+   return 0;
+ }
+ 
