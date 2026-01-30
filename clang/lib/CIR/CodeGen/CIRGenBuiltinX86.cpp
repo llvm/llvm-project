@@ -31,17 +31,6 @@
 using namespace clang;
 using namespace clang::CIRGen;
 
-template <typename... Operands>
-static mlir::Value emitIntrinsicCallOp(CIRGenBuilderTy &builder,
-                                       mlir::Location loc, const StringRef str,
-                                       const mlir::Type &resTy,
-                                       Operands &&...op) {
-  return cir::LLVMIntrinsicCallOp::create(builder, loc,
-                                          builder.getStringAttr(str), resTy,
-                                          std::forward<Operands>(op)...)
-      .getResult();
-}
-
 // OG has unordered comparison as a form of optimization in addition to
 // ordered comparison, while CIR doesn't.
 //
@@ -158,6 +147,33 @@ computeFullLaneShuffleMask(CIRGenFunction &cgf, const mlir::Value vec,
 
   outIndices.resize(numElts);
 }
+
+static mlir::Value emitPrefetch(CIRGenFunction &cgf, unsigned builtinID,
+                                const CallExpr *e,
+                                const SmallVector<mlir::Value> &ops) {
+  CIRGenBuilderTy &builder = cgf.getBuilder();
+  mlir::Location location = cgf.getLoc(e->getExprLoc());
+  mlir::Type voidTy = builder.getVoidTy();
+  mlir::Value address = builder.createPtrBitcast(ops[0], voidTy);
+  bool isWrite{};
+  int locality{};
+
+  assert(builtinID == X86::BI_mm_prefetch || builtinID == X86::BI_m_prefetchw ||
+         builtinID == X86::BI_m_prefetch && "Expected prefetch builtin");
+
+  if (builtinID == X86::BI_mm_prefetch) {
+    int hint = cgf.getSExtIntValueFromConstOp(ops[1]);
+    isWrite = (hint >> 2) & 0x1;
+    locality = hint & 0x3;
+  } else {
+    isWrite = (builtinID == X86::BI_m_prefetchw);
+    locality = 0x3;
+  }
+
+  cir::PrefetchOp::create(builder, location, address, locality, isWrite);
+  return {};
+}
+
 static mlir::Value emitX86CompressExpand(CIRGenBuilderTy &builder,
                                          mlir::Location loc, mlir::Value source,
                                          mlir::Value mask,
@@ -166,8 +182,8 @@ static mlir::Value emitX86CompressExpand(CIRGenBuilderTy &builder,
   auto resultTy = cast<cir::VectorType>(mask.getType());
   mlir::Value maskValue = getMaskVecValue(
       builder, loc, inputVector, cast<cir::VectorType>(resultTy).getSize());
-  return emitIntrinsicCallOp(builder, loc, id, resultTy,
-                             mlir::ValueRange{source, mask, maskValue});
+  return builder.emitIntrinsicCallOp(loc, id, resultTy,
+                                     mlir::ValueRange{source, mask, maskValue});
 }
 
 static mlir::Value emitX86Select(CIRGenBuilderTy &builder, mlir::Location loc,
@@ -184,6 +200,39 @@ static mlir::Value emitX86Select(CIRGenBuilderTy &builder, mlir::Location loc,
   return cir::VecTernaryOp::create(builder, loc, mask, op0, op1);
 }
 
+// Helper function to extract zero-bit from a mask as a boolean
+static mlir::Value getMaskZeroBitAsBool(CIRGenBuilderTy &builder,
+                                        mlir::Location loc, mlir::Value mask) {
+  // Get the mask as a vector of i1 and extract bit 0
+  auto intTy = mlir::dyn_cast<cir::IntType>(mask.getType());
+  assert(intTy && "mask must be an integer type");
+  unsigned width = intTy.getWidth();
+
+  auto maskVecTy = cir::VectorType::get(builder.getSIntNTy(1), width);
+  mlir::Value maskVec = builder.createBitcast(mask, maskVecTy);
+
+  // Extract bit 0 from the mask vector
+  mlir::Value bit0 = builder.createExtractElement(loc, maskVec, uint64_t(0));
+
+  // Convert i1 to bool for select
+  auto boolTy = cir::BoolType::get(builder.getContext());
+  return cir::CastOp::create(builder, loc, boolTy, cir::CastKind::int_to_bool,
+                             bit0);
+}
+
+static mlir::Value emitX86ScalarSelect(CIRGenBuilderTy &builder,
+                                       mlir::Location loc, mlir::Value mask,
+                                       mlir::Value op0, mlir::Value op1) {
+
+  // If the mask is all ones just return first argument.
+  if (auto c = mlir::dyn_cast_or_null<cir::ConstantOp>(mask.getDefiningOp()))
+    if (c.isAllOnesValue())
+      return op0;
+
+  mlir::Value cond = getMaskZeroBitAsBool(builder, loc, mask);
+  return builder.createSelect(loc, cond, op0, op1);
+}
+
 static mlir::Value emitX86MaskAddLogic(CIRGenBuilderTy &builder,
                                        mlir::Location loc,
                                        const std::string &intrinsicName,
@@ -194,8 +243,8 @@ static mlir::Value emitX86MaskAddLogic(CIRGenBuilderTy &builder,
   mlir::Value lhsVec = getMaskVecValue(builder, loc, ops[0], numElts);
   mlir::Value rhsVec = getMaskVecValue(builder, loc, ops[1], numElts);
   mlir::Type vecTy = lhsVec.getType();
-  mlir::Value resVec = emitIntrinsicCallOp(builder, loc, intrinsicName, vecTy,
-                                           mlir::ValueRange{lhsVec, rhsVec});
+  mlir::Value resVec = builder.emitIntrinsicCallOp(
+      loc, intrinsicName, vecTy, mlir::ValueRange{lhsVec, rhsVec});
   return builder.createBitcast(resVec, ops[0].getType());
 }
 
@@ -260,8 +309,8 @@ static mlir::Value emitX86MaskTest(CIRGenBuilderTy &builder, mlir::Location loc,
   mlir::Value lhsVec = getMaskVecValue(builder, loc, ops[0], numElts);
   mlir::Value rhsVec = getMaskVecValue(builder, loc, ops[1], numElts);
   mlir::Type resTy = builder.getSInt32Ty();
-  return emitIntrinsicCallOp(builder, loc, intrinsicName, resTy,
-                             mlir::ValueRange{lhsVec, rhsVec});
+  return builder.emitIntrinsicCallOp(loc, intrinsicName, resTy,
+                                     mlir::ValueRange{lhsVec, rhsVec});
 }
 
 static mlir::Value emitX86MaskedCompareResult(CIRGenBuilderTy &builder,
@@ -408,8 +457,8 @@ static mlir::Value emitX86FunnelShift(CIRGenBuilderTy &builder,
   }
 
   const StringRef intrinsicName = isRight ? "fshr" : "fshl";
-  return emitIntrinsicCallOp(builder, location, intrinsicName, op0Ty,
-                             mlir::ValueRange{op0, op1, amt});
+  return builder.emitIntrinsicCallOp(location, intrinsicName, op0Ty,
+                                     mlir::ValueRange{op0, op1, amt});
 }
 
 static mlir::Value emitX86Muldq(CIRGenBuilderTy &builder, mlir::Location loc,
@@ -459,8 +508,8 @@ static mlir::Value emitX86CvtF16ToFloatExpr(CIRGenBuilderTy &builder,
     auto constOp = ops[3].getDefiningOp<cir::ConstantOp>();
     assert(constOp && "Expected constant operand");
     if (constOp.getIntValue().getZExtValue() != 4) {
-      return emitIntrinsicCallOp(builder, loc, "x86.avx512.mask.vcvtph2ps.512",
-                                 dstTy, ops);
+      return builder.emitIntrinsicCallOp(loc, "x86.avx512.mask.vcvtph2ps.512",
+                                         dstTy, ops);
     }
   }
 
@@ -593,7 +642,7 @@ static mlir::Value emitX86Fpclass(CIRGenBuilderTy &builder, mlir::Location loc,
 
   auto cmpResultTy = cir::VectorType::get(builder.getSIntNTy(1), numElts);
   mlir::Value fpclass =
-      emitIntrinsicCallOp(builder, loc, intrinsicName, cmpResultTy, ops);
+      builder.emitIntrinsicCallOp(loc, intrinsicName, cmpResultTy, ops);
   return emitX86MaskedCompareResult(builder, fpclass, numElts, maskIn, loc);
 }
 
@@ -604,8 +653,8 @@ static mlir::Value emitX86Aes(CIRGenBuilderTy &builder, mlir::Location loc,
   mlir::Type vecType =
       mlir::cast<cir::PointerType>(ops[0].getType()).getPointee();
   cir::RecordType rstRecTy = builder.getAnonRecordTy({retType, vecType});
-  mlir::Value rstValueRec = emitIntrinsicCallOp(
-      builder, loc, intrinsicName, rstRecTy, mlir::ValueRange{ops[1], ops[2]});
+  mlir::Value rstValueRec = builder.emitIntrinsicCallOp(
+      loc, intrinsicName, rstRecTy, mlir::ValueRange{ops[1], ops[2]});
 
   // Extract the first return value and truncate it to 1 bit, then cast result
   // to bool value.
@@ -662,7 +711,7 @@ static mlir::Value emitX86Aeswide(CIRGenBuilderTy &builder, mlir::Location loc,
   }
   cir::RecordType rstRecTy = builder.getAnonRecordTy(recTypes);
   mlir::Value rstValueRec =
-      emitIntrinsicCallOp(builder, loc, intrinsicName, rstRecTy, arguments);
+      builder.emitIntrinsicCallOp(loc, intrinsicName, rstRecTy, arguments);
 
   // Extract the first return value and truncate it to 1 bit, then cast result
   // to bool value.
@@ -752,21 +801,24 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   default:
     return std::nullopt;
   case X86::BI_mm_clflush:
-    return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
-                               "x86.sse2.clflush", voidTy, ops[0]);
+    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()),
+                                       "x86.sse2.clflush", voidTy, ops[0]);
   case X86::BI_mm_lfence:
-    return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
-                               "x86.sse2.lfence", voidTy);
+    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()),
+                                       "x86.sse2.lfence", voidTy);
   case X86::BI_mm_pause:
-    return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
-                               "x86.sse2.pause", voidTy);
+    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()),
+                                       "x86.sse2.pause", voidTy);
   case X86::BI_mm_mfence:
-    return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
-                               "x86.sse2.mfence", voidTy);
+    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()),
+                                       "x86.sse2.mfence", voidTy);
   case X86::BI_mm_sfence:
-    return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
-                               "x86.sse.sfence", voidTy);
+    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()),
+                                       "x86.sse.sfence", voidTy);
   case X86::BI_mm_prefetch:
+  case X86::BI_m_prefetch:
+  case X86::BI_m_prefetchw:
+    return emitPrefetch(*this, builtinID, expr, ops);
   case X86::BI__rdtsc:
   case X86::BI__builtin_ia32_rdtscp: {
     cgm.errorNYI(expr->getSourceRange(),
@@ -779,16 +831,16 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_lzcnt_u64: {
     mlir::Location loc = getLoc(expr->getExprLoc());
     mlir::Value isZeroPoison = builder.getFalse(loc);
-    return emitIntrinsicCallOp(builder, loc, "ctlz", ops[0].getType(),
-                               mlir::ValueRange{ops[0], isZeroPoison});
+    return builder.emitIntrinsicCallOp(loc, "ctlz", ops[0].getType(),
+                                       mlir::ValueRange{ops[0], isZeroPoison});
   }
   case X86::BI__builtin_ia32_tzcnt_u16:
   case X86::BI__builtin_ia32_tzcnt_u32:
   case X86::BI__builtin_ia32_tzcnt_u64: {
     mlir::Location loc = getLoc(expr->getExprLoc());
     mlir::Value isZeroPoison = builder.getFalse(loc);
-    return emitIntrinsicCallOp(builder, loc, "cttz", ops[0].getType(),
-                               mlir::ValueRange{ops[0], isZeroPoison});
+    return builder.emitIntrinsicCallOp(loc, "cttz", ops[0].getType(),
+                                       mlir::ValueRange{ops[0], isZeroPoison});
   }
   case X86::BI__builtin_ia32_undef128:
   case X86::BI__builtin_ia32_undef256:
@@ -849,15 +901,15 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     mlir::Location loc = getLoc(expr->getExprLoc());
     Address tmp = createMemTemp(expr->getArg(0)->getType(), loc);
     builder.createStore(loc, ops[0], tmp);
-    return emitIntrinsicCallOp(builder, loc, "x86.sse.ldmxcsr",
-                               builder.getVoidTy(), tmp.getPointer());
+    return builder.emitIntrinsicCallOp(loc, "x86.sse.ldmxcsr",
+                                       builder.getVoidTy(), tmp.getPointer());
   }
   case X86::BI_mm_getcsr:
   case X86::BI__builtin_ia32_stmxcsr: {
     mlir::Location loc = getLoc(expr->getExprLoc());
     Address tmp = createMemTemp(expr->getType(), loc);
-    emitIntrinsicCallOp(builder, loc, "x86.sse.stmxcsr", builder.getVoidTy(),
-                        tmp.getPointer());
+    builder.emitIntrinsicCallOp(loc, "x86.sse.stmxcsr", builder.getVoidTy(),
+                                tmp.getPointer());
     return builder.createLoad(loc, tmp);
   }
   case X86::BI__builtin_ia32_xsave:
@@ -936,15 +988,15 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     // Mlo = (uint32_t)ops[1] - extract low 32 bits by truncation
     mlir::Value mlo = builder.createIntCast(ops[1], i32Ty);
 
-    return emitIntrinsicCallOp(builder, loc, intrinsicName, voidTy,
-                               mlir::ValueRange{ops[0], mhi, mlo});
+    return builder.emitIntrinsicCallOp(loc, intrinsicName, voidTy,
+                                       mlir::ValueRange{ops[0], mhi, mlo});
   }
   case X86::BI__builtin_ia32_xgetbv:
   case X86::BI_xgetbv:
     // xgetbv reads the extended control register specified by ops[0] (ECX)
     // and returns the 64-bit value
-    return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
-                               "x86.xgetbv", builder.getUInt64Ty(), ops[0]);
+    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()), "x86.xgetbv",
+                                       builder.getUInt64Ty(), ops[0]);
   case X86::BI__builtin_ia32_storedqudi128_mask:
   case X86::BI__builtin_ia32_storedqusi128_mask:
   case X86::BI__builtin_ia32_storedquhi128_mask:
@@ -1285,8 +1337,8 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
         std::min(cast<cir::VectorType>(ops[0].getType()).getSize(),
                  cast<cir::VectorType>(ops[2].getType()).getSize());
     ops[3] = getMaskVecValue(builder, loc, ops[3], minElts);
-    return emitIntrinsicCallOp(builder, loc, intrinsicName,
-                               convertType(expr->getType()), ops);
+    return builder.emitIntrinsicCallOp(loc, intrinsicName,
+                                       convertType(expr->getType()), ops);
   }
   case X86::BI__builtin_ia32_scattersiv8df:
   case X86::BI__builtin_ia32_scattersiv16sf:
@@ -1396,8 +1448,8 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
                  cast<cir::VectorType>(ops[3].getType()).getSize());
     ops[1] = getMaskVecValue(builder, loc, ops[1], minElts);
 
-    return emitIntrinsicCallOp(builder, loc, intrinsicName,
-                               convertType(expr->getType()), ops);
+    return builder.emitIntrinsicCallOp(loc, intrinsicName,
+                                       convertType(expr->getType()), ops);
   }
   case X86::BI__builtin_ia32_vextractf128_pd256:
   case X86::BI__builtin_ia32_vextractf128_ps256:
@@ -1635,7 +1687,34 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_shuf_f32x4:
   case X86::BI__builtin_ia32_shuf_f64x2:
   case X86::BI__builtin_ia32_shuf_i32x4:
-  case X86::BI__builtin_ia32_shuf_i64x2:
+  case X86::BI__builtin_ia32_shuf_i64x2: {
+    mlir::Value src1 = ops[0];
+    mlir::Value src2 = ops[1];
+
+    unsigned imm =
+        ops[2].getDefiningOp<cir::ConstantOp>().getIntValue().getZExtValue();
+
+    unsigned numElems = cast<cir::VectorType>(src1.getType()).getSize();
+    unsigned totalBits = getContext().getTypeSize(expr->getArg(0)->getType());
+    unsigned numLanes = totalBits == 512 ? 4 : 2;
+    unsigned numElemsPerLane = numElems / numLanes;
+
+    SmallVector<mlir::Attribute, 16> indices;
+    mlir::Type i32Ty = builder.getSInt32Ty();
+
+    for (unsigned l = 0; l != numElems; l += numElemsPerLane) {
+      unsigned index = (imm % numLanes) * numElemsPerLane;
+      imm /= numLanes;
+      if (l >= (numElems / 2))
+        index += numElems;
+      for (unsigned i = 0; i != numElemsPerLane; ++i) {
+        indices.push_back(cir::IntAttr::get(i32Ty, index + i));
+      }
+    }
+
+    return builder.createVecShuffle(getLoc(expr->getExprLoc()), src1, src2,
+                                    indices);
+  }
   case X86::BI__builtin_ia32_vperm2f128_pd256:
   case X86::BI__builtin_ia32_vperm2f128_ps256:
   case X86::BI__builtin_ia32_vperm2f128_si256:
@@ -1742,10 +1821,21 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_selectpd_128:
   case X86::BI__builtin_ia32_selectpd_256:
   case X86::BI__builtin_ia32_selectpd_512:
+    return emitX86Select(builder, getLoc(expr->getExprLoc()), ops[0], ops[1],
+                         ops[2]);
   case X86::BI__builtin_ia32_selectsh_128:
   case X86::BI__builtin_ia32_selectsbf_128:
   case X86::BI__builtin_ia32_selectss_128:
-  case X86::BI__builtin_ia32_selectsd_128:
+  case X86::BI__builtin_ia32_selectsd_128: {
+    mlir::Location loc = getLoc(expr->getExprLoc());
+    mlir::Value scalar1 =
+        builder.createExtractElement(loc, ops[1], uint64_t(0));
+    mlir::Value scalar2 =
+        builder.createExtractElement(loc, ops[2], uint64_t(0));
+    mlir::Value result =
+        emitX86ScalarSelect(builder, loc, ops[0], scalar1, scalar2);
+    return builder.createInsertElement(loc, ops[1], result, uint64_t(0));
+  }
   case X86::BI__builtin_ia32_cmpb128_mask:
   case X86::BI__builtin_ia32_cmpb256_mask:
   case X86::BI__builtin_ia32_cmpb512_mask:
@@ -1970,9 +2060,9 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_reduce_fadd_ph256:
   case X86::BI__builtin_ia32_reduce_fadd_ph128: {
     assert(!cir::MissingFeatures::fastMathFlags());
-    return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
-                               "vector.reduce.fadd", ops[0].getType(),
-                               mlir::ValueRange{ops[0], ops[1]});
+    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()),
+                                       "vector.reduce.fadd", ops[0].getType(),
+                                       mlir::ValueRange{ops[0], ops[1]});
   }
   case X86::BI__builtin_ia32_reduce_fmul_pd512:
   case X86::BI__builtin_ia32_reduce_fmul_ps512:
@@ -1980,9 +2070,9 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_reduce_fmul_ph256:
   case X86::BI__builtin_ia32_reduce_fmul_ph128: {
     assert(!cir::MissingFeatures::fastMathFlags());
-    return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
-                               "vector.reduce.fmul", ops[0].getType(),
-                               mlir::ValueRange{ops[0], ops[1]});
+    return builder.emitIntrinsicCallOp(getLoc(expr->getExprLoc()),
+                                       "vector.reduce.fmul", ops[0].getType(),
+                                       mlir::ValueRange{ops[0], ops[1]});
   }
   case X86::BI__builtin_ia32_reduce_fmax_pd512:
   case X86::BI__builtin_ia32_reduce_fmax_ps512:
@@ -1991,9 +2081,9 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_reduce_fmax_ph128: {
     assert(!cir::MissingFeatures::fastMathFlags());
     cir::VectorType vecTy = cast<cir::VectorType>(ops[0].getType());
-    return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
-                               "vector.reduce.fmax", vecTy.getElementType(),
-                               mlir::ValueRange{ops[0]});
+    return builder.emitIntrinsicCallOp(
+        getLoc(expr->getExprLoc()), "vector.reduce.fmax",
+        vecTy.getElementType(), mlir::ValueRange{ops[0]});
   }
   case X86::BI__builtin_ia32_reduce_fmin_pd512:
   case X86::BI__builtin_ia32_reduce_fmin_ps512:
@@ -2002,9 +2092,9 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__builtin_ia32_reduce_fmin_ph128: {
     assert(!cir::MissingFeatures::fastMathFlags());
     cir::VectorType vecTy = cast<cir::VectorType>(ops[0].getType());
-    return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
-                               "vector.reduce.fmin", vecTy.getElementType(),
-                               mlir::ValueRange{ops[0]});
+    return builder.emitIntrinsicCallOp(
+        getLoc(expr->getExprLoc()), "vector.reduce.fmin",
+        vecTy.getElementType(), mlir::ValueRange{ops[0]});
   }
   case X86::BI__builtin_ia32_rdrand16_step:
   case X86::BI__builtin_ia32_rdrand32_step:
@@ -2045,7 +2135,7 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
                              cir::RecordType::RecordKind::Struct);
 
     mlir::Value call =
-        emitIntrinsicCallOp(builder, loc, intrinsicName, resRecord);
+        builder.emitIntrinsicCallOp(loc, intrinsicName, resRecord);
     mlir::Value rand =
         cir::ExtractMemberOp::create(builder, loc, randTy, call, 0);
     builder.CIRBaseBuilderTy::createStore(loc, rand, ops[0]);
@@ -2113,9 +2203,9 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
         cir::RecordType::get(&getMLIRContext(), {resVector, resVector}, false,
                              false, cir::RecordType::RecordKind::Struct);
 
-    mlir::Value call =
-        emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()), intrinsicName,
-                            resRecord, mlir::ValueRange{ops[0], ops[1]});
+    mlir::Value call = builder.emitIntrinsicCallOp(
+        getLoc(expr->getExprLoc()), intrinsicName, resRecord,
+        mlir::ValueRange{ops[0], ops[1]});
     mlir::Value result =
         cir::ExtractMemberOp::create(builder, loc, resVector, call, 0);
     result = emitX86MaskedCompareResult(builder, result, numElts, nullptr, loc);
@@ -2217,8 +2307,8 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
     args.push_back(ops[1]);
     args.push_back(mask);
 
-    return emitIntrinsicCallOp(
-        builder, loc, "x86.avx512bf16.mask.cvtneps2bf16.128", resTy, args);
+    return builder.emitIntrinsicCallOp(
+        loc, "x86.avx512bf16.mask.cvtneps2bf16.128", resTy, args);
   }
   case X86::BI__builtin_ia32_cvtneps2bf16_256_mask:
   case X86::BI__builtin_ia32_cvtneps2bf16_512_mask: {
@@ -2232,8 +2322,8 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
       intrinsicName = "x86.avx512bf16.cvtneps2bf16.512";
     }
 
-    mlir::Value res = emitIntrinsicCallOp(builder, loc, intrinsicName, resTy,
-                                          mlir::ValueRange{ops[0]});
+    mlir::Value res = builder.emitIntrinsicCallOp(loc, intrinsicName, resTy,
+                                                  mlir::ValueRange{ops[0]});
 
     return emitX86Select(builder, loc, ops[2], res, ops[1]);
   }
@@ -2282,9 +2372,9 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
 
     const StringRef intrinsicName =
         (builtinID == X86::BI__shiftleft128) ? "fshl" : "fshr";
-    return emitIntrinsicCallOp(builder, getLoc(expr->getExprLoc()),
-                               intrinsicName, i64Ty,
-                               mlir::ValueRange{ops[0], ops[1], ops[2]});
+    return builder.emitIntrinsicCallOp(
+        getLoc(expr->getExprLoc()), intrinsicName, i64Ty,
+        mlir::ValueRange{ops[0], ops[1], ops[2]});
   }
   case X86::BI_ReadWriteBarrier:
   case X86::BI_ReadBarrier:

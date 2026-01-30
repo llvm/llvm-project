@@ -4,6 +4,7 @@ module std_config [system] {
   @LIBCXX_CONFIG_SITE_MODULE_ENTRY@ // generated via CMake
   textual header "__config"
   textual header "__configuration/abi.h"
+  textual header "__configuration/attributes.h"
   textual header "__configuration/availability.h"
   textual header "__configuration/compiler.h"
   textual header "__configuration/experimental.h"
@@ -759,6 +760,9 @@ module std [system] {
       header "__algorithm/ranges_set_union.h"
       export std.functional.ranges_operations
       export std.algorithm.in_in_out_result
+    }
+    module ranges_shift_left {
+      header "__algorithm/ranges_shift_left.h"
     }
     module ranges_shuffle {
       header "__algorithm/ranges_shuffle.h"

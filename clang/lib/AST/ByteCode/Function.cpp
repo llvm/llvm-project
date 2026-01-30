@@ -28,7 +28,7 @@ Function::Function(Program &P, FunctionDeclTy Source, unsigned ArgSize,
   if (const auto *F = dyn_cast<const FunctionDecl *>(Source)) {
     Variadic = F->isVariadic();
     Immediate = F->isImmediateFunction();
-    Constexpr = F->isConstexpr() || F->hasAttr<MSConstexprAttr>();
+    Constexpr = F->isConstexpr();
     if (const auto *CD = dyn_cast<CXXConstructorDecl>(F)) {
       Virtual = CD->isVirtual();
       Kind = FunctionKind::Ctor;

@@ -412,7 +412,7 @@ static unsigned maxSizeForAddrSpace(const GCNSubtarget &ST, unsigned AS,
   switch (AS) {
   case AMDGPUAS::PRIVATE_ADDRESS:
     // FIXME: Private element size.
-    return ST.enableFlatScratch() ? 128 : 32;
+    return ST.hasFlatScratchEnabled() ? 128 : 32;
   case AMDGPUAS::LOCAL_ADDRESS:
     return ST.useDS128() ? 128 : 64;
   case AMDGPUAS::GLOBAL_ADDRESS:
@@ -751,7 +751,7 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .moreElementsIf(isSmallOddVector(0), oneMoreElement(0))
       .scalarize(0);
 
-  if (ST.hasVOP3PInsts() && ST.hasAddNoCarry() && ST.hasIntClamp()) {
+  if (ST.hasVOP3PInsts() && ST.hasAddNoCarryInsts() && ST.hasIntClamp()) {
     // Full set of gfx9 features.
     if (ST.hasScalarAddSub64()) {
       getActionDefinitionsBuilder({G_ADD, G_SUB})
@@ -1358,6 +1358,12 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
       .scalarize(0)
       .widenScalarToNextPow2(0, 32)
       .widenScalarToNextPow2(1, 32);
+
+  getActionDefinitionsBuilder(G_CTLS)
+      .legalFor({{S32, S32}})
+      .clampScalar(0, S32, S32)
+      .clampScalar(1, S32, S32)
+      .scalarize(0);
 
   // S64 is only legal on SALU, and needs to be broken into 32-bit elements in
   // RegBankSelect.
@@ -2762,8 +2768,7 @@ bool AMDGPULegalizerInfo::legalizeITOFP(
     auto X = B.buildXor(S32, Unmerge.getReg(0), Unmerge.getReg(1));
     auto OppositeSign = B.buildAShr(S32, X, ThirtyOne);
     auto MaxShAmt = B.buildAdd(S32, ThirtyTwo, OppositeSign);
-    auto LS = B.buildIntrinsic(Intrinsic::amdgcn_sffbh, {S32})
-                  .addUse(Unmerge.getReg(1));
+    auto LS = B.buildCTLS(S32, Unmerge.getReg(1));
     auto LS2 = B.buildSub(S32, LS, One);
     ShAmt = B.buildUMin(S32, LS2, MaxShAmt);
   } else
@@ -3169,16 +3174,16 @@ bool AMDGPULegalizerInfo::legalizeGlobalValue(
       return true; // Leave in place;
     }
 
+    const GlobalVariable &GVar = *cast<GlobalVariable>(GV);
     if (AS == AMDGPUAS::LOCAL_ADDRESS && GV->hasExternalLinkage()) {
-      Type *Ty = GV->getValueType();
       // HIP uses an unsized array `extern __shared__ T s[]` or similar
       // zero-sized type in other languages to declare the dynamic shared
       // memory which size is not known at the compile time. They will be
       // allocated by the runtime and placed directly after the static
       // allocated ones. They all share the same offset.
-      if (B.getDataLayout().getTypeAllocSize(Ty).isZero()) {
+      if (GVar.getGlobalSize(GVar.getDataLayout()) == 0) {
         // Adjust alignment for that dynamic shared memory array.
-        MFI->setDynLDSAlign(MF.getFunction(), *cast<GlobalVariable>(GV));
+        MFI->setDynLDSAlign(MF.getFunction(), GVar);
         LLT S32 = LLT::scalar(32);
         auto Sz = B.buildIntrinsic(Intrinsic::amdgcn_groupstaticsize, {S32});
         B.buildIntToPtr(DstReg, Sz);
@@ -3187,8 +3192,7 @@ bool AMDGPULegalizerInfo::legalizeGlobalValue(
       }
     }
 
-    B.buildConstant(DstReg, MFI->allocateLDSGlobal(B.getDataLayout(),
-                                                   *cast<GlobalVariable>(GV)));
+    B.buildConstant(DstReg, MFI->allocateLDSGlobal(B.getDataLayout(), GVar));
     MI.eraseFromParent();
     return true;
   }
@@ -6154,7 +6158,7 @@ AMDGPULegalizerInfo::splitBufferOffsets(MachineIRBuilder &B,
   // On GFX1250+, voffset and immoffset are zero-extended from 32 bits before
   // being added, so we can only safely match a 32-bit addition with no unsigned
   // overflow.
-  bool CheckNUW = AMDGPU::isGFX1250(ST);
+  bool CheckNUW = ST.hasGFX1250Insts();
   std::tie(BaseReg, ImmOffset) = AMDGPU::getBaseWithConstantOffset(
       MRI, OrigOffset, /*KnownBits=*/nullptr, CheckNUW);
 
@@ -7313,7 +7317,7 @@ bool AMDGPULegalizerInfo::legalizeSBufferPrefetch(LegalizerHelper &Helper,
 bool AMDGPULegalizerInfo::legalizeTrap(MachineInstr &MI,
                                        MachineRegisterInfo &MRI,
                                        MachineIRBuilder &B) const {
-  if (!ST.isTrapHandlerEnabled() ||
+  if (!ST.hasTrapHandler() ||
       ST.getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA)
     return legalizeTrapEndpgm(MI, MRI, B);
 
@@ -7433,7 +7437,7 @@ bool AMDGPULegalizerInfo::legalizeDebugTrap(MachineInstr &MI,
                                             MachineIRBuilder &B) const {
   // Is non-HSA path or trap-handler disabled? Then, report a warning
   // accordingly
-  if (!ST.isTrapHandlerEnabled() ||
+  if (!ST.hasTrapHandler() ||
       ST.getTrapHandlerAbi() != GCNSubtarget::TrapHandlerAbi::AMDHSA) {
     Function &Fn = B.getMF().getFunction();
     Fn.getContext().diagnose(DiagnosticInfoUnsupported(
