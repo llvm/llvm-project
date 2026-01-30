@@ -92,23 +92,6 @@ void populateVectorMultiReductionFlatteningPatterns(
 /// Collect a set of patterns to convert vector.multi_reduction op into
 /// a sequence of vector.reduction ops. The patterns comprise:
 ///
-/// [TwoDimMultiReductionToElementWise]
-/// Once in 2-D vector.multi_reduction form, with an **outermost** reduction
-/// dimension, unroll the outer dimension to obtain a sequence of 1-D vector
-/// ops. This also has an opportunity for tree-reduction (in the future).
-///
-/// [TwoDimMultiReductionToReduction]
-/// Once in 2-D vector.multi_reduction form, with an **innermost** reduction
-/// dimension, unroll the outer dimension to obtain a sequence of extract +
-/// vector.reduction + insert. This can further lower to horizontal reduction
-/// ops.
-void populateVectorMultiReductionUnrollingPatterns(
-    RewritePatternSet &patterns, VectorMultiReductionLowering options,
-    PatternBenefit benefit = 1);
-
-/// Collect a set of patterns to convert vector.multi_reduction op into
-/// a sequence of vector.reduction ops. The patterns comprise:
-///
 /// [InnerOuterDimReductionConversion]
 /// Rewrites vector.multi_reduction such that all reduction dimensions are
 /// either innermost or outermost, by adding the proper vector.transpose
