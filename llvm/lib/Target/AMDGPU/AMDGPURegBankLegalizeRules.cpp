@@ -1237,6 +1237,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       // readfirstlaning just in case register is not in sgpr.
       .Any({{UniS32, _, UniS32}, {{}, {Sgpr32, None, Vgpr32}}});
 
+  addRulesForIOpcs({amdgcn_s_sleep}).Any({{_, _}, {{}, {IntrId, Imm}}});
+
   addRulesForIOpcs({amdgcn_mul_u24, amdgcn_mul_i24}, Standard)
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32}})
