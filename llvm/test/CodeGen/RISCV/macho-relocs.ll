@@ -47,6 +47,7 @@ define i32* @direct_global() nounwind {
   ret i32* @var
 }
 
+;; No GOTs in static CodeGen.
 @var2 = external global i32
 define i32* @got_global() nounwind {
 ; DEFAULT-LABEL: got_global:
