@@ -3555,9 +3555,8 @@ SDValue SITargetLowering::LowerFormalArguments(
     Reg = MF.addLiveIn(Reg, RC);
     SDValue Val = DAG.getCopyFromReg(Chain, DL, Reg, VT);
     if (Arg.Flags.isInReg() && RC == &AMDGPU::VGPR_32RegClass) {
-      SmallVector<SDValue, 3> ReadfirstlaneArgs({ReadFirstLaneID, Val});
       Val = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Val.getValueType(),
-                        ReadfirstlaneArgs);
+                        ReadFirstLaneID, Val);
     }
 
     if (Arg.Flags.isSRet()) {
