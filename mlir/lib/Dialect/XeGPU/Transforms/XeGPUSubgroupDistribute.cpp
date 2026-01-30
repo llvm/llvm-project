@@ -1615,11 +1615,6 @@ struct VectorShapeCastDistribution : public gpu::WarpDistributionPattern {
           warpOp,
           "the source or result of shape_cast op lacks distribution layout");
 
-    // For rank reducing or increasing shape_cast ops, the lower rank layout
-    // must be a slice of higher rank layout.
-    int64_t sourceRank = shapeCastOp.getSourceVectorType().getRank();
-    int64_t resultRank = shapeCastOp.getResultVectorType().getRank();
-
     FailureOr<VectorType> sourceDistTypeOrFailure =
         getDistVecTypeBasedOnLaneLayout(sourceLayout,
                                         shapeCastOp.getSourceVectorType());

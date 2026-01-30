@@ -1147,40 +1147,6 @@ void LayoutInfoPropagation::visitInsertStridedSliceOp(
   return;
 }
 
-// /// For vector::BitCastOp, the lane_data of the source layout is changed
-// based
-// /// on the bit width of the source and result types.
-// void LayoutInfoPropagation::visitVectorInsertStridedSliceOp(
-//     vector::BitCastOp bitcast, ArrayRef<LayoutInfoLattice *> operands,
-//     ArrayRef<const LayoutInfoLattice *> results) {
-//   // Need the layout of bitcast result to propagate to the operands.
-//   LayoutInfo resLayoutInfo = results[0]->getValue();
-//   if (!resLayoutInfo.isAssigned())
-//     return;
-
-//   auto srcVecType = bitcast.getSourceVectorType();
-//   auto resVecType = bitcast.getResultVectorType();
-
-//   auto consumerLayoutAttr =
-//       dyn_cast<xegpu::DistributeLayoutAttr>(resLayoutInfo.get());
-//   auto uArch = getUArch(xegpu::getChipStr(bitcast).value_or(""));
-//   auto requiredResLayoutAttr = setupInsertStridedSliceResultLayout(
-//       layoutKind, srcVecType, resVecType, consumerLayoutAttr, uArch);
-
-//   xegpu::setTemporaryLayout(bitcast->getResult(0), requiredResLayoutAttr);
-
-//   int inElemTyBitWidth = srcVecType.getElementType().getIntOrFloatBitWidth();
-//   int outElemTyBitWidth =
-//   resVecType.getElementType().getIntOrFloatBitWidth();
-
-//   // derive the source layout from the dominant layout and reduction dims
-//   auto srcLayoutAttr = xegpu::inferBitCastSourceLayout(
-//       requiredResLayoutAttr, outElemTyBitWidth, inElemTyBitWidth);
-
-//   propagateIfChanged(operands[0],
-//   operands[0]->meet(LayoutInfo(srcLayoutAttr)));
-// }
-
 /// Propagate the layout of the result to the tensor descriptor, mask and offset
 /// operands in LoadGatherOp.
 void LayoutInfoPropagation::visitLoadGatherOp(
@@ -1265,8 +1231,6 @@ void LayoutInfoPropagation::visitStoreScatterOp(
   auto uArch = getUArch(getChipStr(storeScatter).value_or(""));
   auto subgroupSize = uArch->getSubgroupSize();
   VectorType srcVecTy = storeScatter.getValueType();
-  VectorType maskTy =
-      llvm::dyn_cast<VectorType>(storeScatter.getMask().getType());
   int chunkSize = storeScatter.getChunkSize().value_or(1);
 
   if (hasParamsOfLayoutKind(anchorLayoutAttr)) {
