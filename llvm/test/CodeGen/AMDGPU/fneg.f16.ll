@@ -633,10 +633,10 @@ define amdgpu_kernel void @v_extract_fneg_fold_v2f16(ptr addrspace(1) %in) #0 {
 ; CI-NEXT:    s_waitcnt vmcnt(0)
 ; CI-NEXT:    v_cvt_f32_f16_e32 v1, v0
 ; CI-NEXT:    v_lshrrev_b32_e32 v0, 16, v0
-; CI-NEXT:    v_cvt_f32_f16_e64 v0, -v0
+; CI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; CI-NEXT:    v_mul_f32_e32 v1, -4.0, v1
 ; CI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; CI-NEXT:    v_add_f32_e32 v0, 2.0, v0
+; CI-NEXT:    v_sub_f32_e32 v0, 2.0, v0
 ; CI-NEXT:    v_cvt_f16_f32_e32 v0, v0
 ; CI-NEXT:    flat_store_short v[0:1], v1
 ; CI-NEXT:    s_waitcnt vmcnt(0)
