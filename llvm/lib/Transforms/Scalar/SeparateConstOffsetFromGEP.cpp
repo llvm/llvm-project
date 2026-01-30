@@ -729,7 +729,7 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
   // TODO: The design should be updated to support partial constant
   // extraction.
   if (BO->getOpcode() == Instruction::Xor) {
-    if (dyn_cast<ConstantInt>(TheOther)) {
+    if (isa<ConstantInt>(TheOther)) {
       // Purpose:
       //   We want to compute/simplify the expression:
       //       b + scale * (a ^ c)
