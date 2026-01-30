@@ -97,7 +97,7 @@ const SourceFile *Parsing::Prescan(const std::string &path, Options options) {
     prescanner.AddCompilerDirectiveSentinel("$cuf");
     prescanner.AddCompilerDirectiveSentinel("@cuf");
   }
-  for (const auto &sentinel : options.compilerDirectivesSentinels) {
+  for (const auto &sentinel : options.compilerDirectiveSentinels) {
     prescanner.AddCompilerDirectiveSentinel(sentinel);
   }
   ProvenanceRange range{allSources.AddIncludedFile(

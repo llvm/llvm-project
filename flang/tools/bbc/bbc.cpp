@@ -375,7 +375,7 @@ static llvm::LogicalResult convertFortranSourceToMLIR(
   // prep for prescan and parse
   Fortran::parser::Parsing parsing{semanticsContext.allCookedSources()};
   if (!compilerDirectiveSentinel.empty()) {
-    options.compilerDirectivesSentinels.push_back(compilerDirectiveSentinel);
+    options.compilerDirectiveSentinels.push_back(compilerDirectiveSentinel);
   }
   parsing.Prescan(path, options);
   if (!parsing.messages().empty() && (parsing.messages().AnyFatalError())) {
