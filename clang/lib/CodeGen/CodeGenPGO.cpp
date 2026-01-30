@@ -355,18 +355,6 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     if (Hash.getHashVersion() == PGO_HASH_V1)
       return Base::TraverseIfStmt(If);
 
-    // When single byte coverage mode is enabled, add a counter to then and
-    // else.
-    bool NoSingleByteCoverage = !llvm::EnableSingleByteCoverage;
-    for (Stmt *CS : If->children()) {
-      if (!CS || NoSingleByteCoverage)
-        continue;
-      if (CS == If->getThen())
-        CounterMap[If->getThen()] = NextCounter++;
-      else if (CS == If->getElse())
-        CounterMap[If->getElse()] = NextCounter++;
-    }
-
     // Otherwise, keep track of which branch we're in while traversing.
     VisitStmt(If);
 
@@ -383,81 +371,6 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     return true;
   }
 
-  bool TraverseWhileStmt(WhileStmt *While) {
-    // When single byte coverage mode is enabled, add a counter to condition and
-    // body.
-    bool NoSingleByteCoverage = !llvm::EnableSingleByteCoverage;
-    for (Stmt *CS : While->children()) {
-      if (!CS || NoSingleByteCoverage)
-        continue;
-      if (CS == While->getCond())
-        CounterMap[While->getCond()] = NextCounter++;
-      else if (CS == While->getBody())
-        CounterMap[While->getBody()] = NextCounter++;
-    }
-
-    Base::TraverseWhileStmt(While);
-    if (Hash.getHashVersion() != PGO_HASH_V1)
-      Hash.combine(PGOHash::EndOfScope);
-    return true;
-  }
-
-  bool TraverseDoStmt(DoStmt *Do) {
-    // When single byte coverage mode is enabled, add a counter to condition and
-    // body.
-    bool NoSingleByteCoverage = !llvm::EnableSingleByteCoverage;
-    for (Stmt *CS : Do->children()) {
-      if (!CS || NoSingleByteCoverage)
-        continue;
-      if (CS == Do->getCond())
-        CounterMap[Do->getCond()] = NextCounter++;
-      else if (CS == Do->getBody())
-        CounterMap[Do->getBody()] = NextCounter++;
-    }
-
-    Base::TraverseDoStmt(Do);
-    if (Hash.getHashVersion() != PGO_HASH_V1)
-      Hash.combine(PGOHash::EndOfScope);
-    return true;
-  }
-
-  bool TraverseForStmt(ForStmt *For) {
-    // When single byte coverage mode is enabled, add a counter to condition,
-    // increment and body.
-    bool NoSingleByteCoverage = !llvm::EnableSingleByteCoverage;
-    for (Stmt *CS : For->children()) {
-      if (!CS || NoSingleByteCoverage)
-        continue;
-      if (CS == For->getCond())
-        CounterMap[For->getCond()] = NextCounter++;
-      else if (CS == For->getInc())
-        CounterMap[For->getInc()] = NextCounter++;
-      else if (CS == For->getBody())
-        CounterMap[For->getBody()] = NextCounter++;
-    }
-
-    Base::TraverseForStmt(For);
-    if (Hash.getHashVersion() != PGO_HASH_V1)
-      Hash.combine(PGOHash::EndOfScope);
-    return true;
-  }
-
-  bool TraverseCXXForRangeStmt(CXXForRangeStmt *ForRange) {
-    // When single byte coverage mode is enabled, add a counter to body.
-    bool NoSingleByteCoverage = !llvm::EnableSingleByteCoverage;
-    for (Stmt *CS : ForRange->children()) {
-      if (!CS || NoSingleByteCoverage)
-        continue;
-      if (CS == ForRange->getBody())
-        CounterMap[ForRange->getBody()] = NextCounter++;
-    }
-
-    Base::TraverseCXXForRangeStmt(ForRange);
-    if (Hash.getHashVersion() != PGO_HASH_V1)
-      Hash.combine(PGOHash::EndOfScope);
-    return true;
-  }
-
 // If the statement type \p N is nestable, and its nesting impacts profile
 // stability, define a custom traversal which tracks the end of the statement
 // in the hash (provided we're not using the V1 hash).
@@ -469,6 +382,10 @@ struct MapRegionCounters : public RecursiveASTVisitor<MapRegionCounters> {
     return true;                                                               \
   }
 
+  DEFINE_NESTABLE_TRAVERSAL(WhileStmt)
+  DEFINE_NESTABLE_TRAVERSAL(DoStmt)
+  DEFINE_NESTABLE_TRAVERSAL(ForStmt)
+  DEFINE_NESTABLE_TRAVERSAL(CXXForRangeStmt)
   DEFINE_NESTABLE_TRAVERSAL(ObjCForCollectionStmt)
   DEFINE_NESTABLE_TRAVERSAL(CXXTryStmt)
   DEFINE_NESTABLE_TRAVERSAL(CXXCatchStmt)
@@ -1187,15 +1104,15 @@ CodeGenPGO::applyFunctionAttributes(llvm::IndexedInstrProfReader *PGOReader,
   Fn->setEntryCount(FunctionCount);
 }
 
-std::pair<bool, bool> CodeGenPGO::getIsCounterPair(const Stmt *S) const {
+bool CodeGenPGO::hasSkipCounter(const Stmt *S) const {
   if (!RegionCounterMap)
-    return {false, false};
+    return false;
 
   auto I = RegionCounterMap->find(S);
   if (I == RegionCounterMap->end())
-    return {false, false};
+    return false;
 
-  return {I->second.Executed.hasValue(), I->second.Skipped.hasValue()};
+  return I->second.Skipped.hasValue();
 }
 
 void CodeGenPGO::emitCounterSetOrIncrement(CGBuilderTy &Builder, const Stmt *S,
@@ -1567,8 +1484,8 @@ void CodeGenFunction::incrementProfileCounter(CounterForIncrement ExecSkip,
   PGO->setCurrentStmt(S);
 }
 
-std::pair<bool, bool> CodeGenFunction::getIsCounterPair(const Stmt *S) const {
-  return PGO->getIsCounterPair(S);
+bool CodeGenFunction::hasSkipCounter(const Stmt *S) const {
+  return PGO->hasSkipCounter(S);
 }
 void CodeGenFunction::markStmtAsUsed(bool Skipped, const Stmt *S) {
   PGO->markStmtAsUsed(Skipped, S);
