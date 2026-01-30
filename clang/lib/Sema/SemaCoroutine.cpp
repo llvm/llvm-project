@@ -599,7 +599,7 @@ static FunctionScopeInfo *checkCoroutineContext(Sema &S, SourceLocation Loc,
 /// found.
 static void checkNoThrow(Sema &S, const Stmt *E,
                          llvm::SmallPtrSetImpl<const Decl *> &ThrowingDecls,
-                         unsigned DiagID) {
+                         unsigned DiagID, bool InitialSuspend = false) {
   auto checkDeclNoexcept = [&](const Decl *D, bool IsDtor = false) {
     // In the case of dtor, the call to dtor is implicit and hence we should
     // pass nullptr to canCalleeThrow.
@@ -612,14 +612,17 @@ static void checkNoThrow(Sema &S, const Stmt *E,
         // coroutine that just suspended, but rather throws back out from
         // whoever called coroutine_handle::resume(), hence we claim that
         // logically it does not throw.
-        if (FD->getBuiltinID() == Builtin::BI__builtin_coro_resume)
+        if (!InitialSuspend &&
+            (FD->getBuiltinID() == Builtin::BI__builtin_coro_resume))
+          return;
+        // the call to initial-suspend-resume is not part of the coroutine
+        // startup phase, so any exception thrown by it will be handled by
+        // unhandled_exception. Therefore, it need to be excluded.
+        if (InitialSuspend && FD->getIdentifier() &&
+            (FD->getIdentifier()->getName() == "await_resume"))
           return;
       }
       if (ThrowingDecls.empty()) {
-        // [dcl.fct.def.coroutine]p11 (initial_suspend) & p15 (final_suspend)
-        //   The expression co_await promise.initial/final_suspend() shall not
-        //   be potentially-throwing ([except.spec]).
-        //
         // First time seeing an error, emit the error message.
         S.Diag(cast<FunctionDecl>(S.CurContext)->getLocation(), DiagID);
       }
@@ -651,18 +654,18 @@ static void checkNoThrow(Sema &S, const Stmt *E,
     for (const auto *Child : E->children()) {
       if (!Child)
         continue;
-      checkNoThrow(S, Child, ThrowingDecls, DiagID);
+      checkNoThrow(S, Child, ThrowingDecls, DiagID, InitialSuspend);
     }
 }
 
 static bool checkSuspendNoThrow(Sema &S, const Stmt *SuspendExpr,
-                                unsigned DiagID) {
+                                unsigned DiagID, bool InitialSuspend = false) {
   llvm::SmallPtrSet<const Decl *, 4> ThrowingDecls;
   // We first collect all declarations that should not throw but not declared
   // with noexcept. We then sort them based on the location before printing.
   // This is to avoid emitting the same note multiple times on the same
   // declaration, and also provide a deterministic order for the messages.
-  checkNoThrow(S, SuspendExpr, ThrowingDecls, DiagID);
+  checkNoThrow(S, SuspendExpr, ThrowingDecls, DiagID, InitialSuspend);
 
   auto SortedDecls = llvm::SmallVector<const Decl *, 4>{ThrowingDecls.begin(),
                                                         ThrowingDecls.end()};
@@ -676,14 +679,22 @@ static bool checkSuspendNoThrow(Sema &S, const Stmt *SuspendExpr,
 }
 
 bool Sema::checkFinalSuspendNoThrow(const Stmt *FinalSuspend) {
+  // [dcl.fct.def.coroutine]p15
+  //   The expression co_await promise.final_suspend() shall not be
+  //   potentially-throwing ([except.spec]).
   return checkSuspendNoThrow(
       *this, FinalSuspend,
       diag::err_coroutine_promise_final_suspend_requires_nothrow);
 }
 
-void Sema::warnInitialSuspendNoThrow(const Stmt *InitialSuspend) {
+void Sema::warnInitialSuspendThrow(const Stmt *InitialSuspend) {
+  // CWG2935/PR177628
+  // If a potentially thrown exception occurs before the call to
+  // initial-await-resume and the return value of the coroutine is constructed
+  // in-place, it prevents HALO and causes both the return value and the
+  // coroutine state to be destroyed in the reverse order of their construction.
   checkSuspendNoThrow(*this, InitialSuspend,
-                      diag::warn_coroutine_promise_initial_suspend_throw);
+                      diag::warn_coroutine_promise_initial_suspend_throw, true);
 }
 
 // [stmt.return.coroutine]p1:
@@ -750,7 +761,7 @@ bool Sema::ActOnCoroutineBodyStart(Scope *SC, SourceLocation KWLoc,
   if (InitSuspend.isInvalid()) {
     return true;
   }
-  warnInitialSuspendNoThrow(InitSuspend.get());
+  warnInitialSuspendThrow(InitSuspend.get());
 
   StmtResult FinalSuspend = buildSuspends("final_suspend");
   if (FinalSuspend.isInvalid() || !checkFinalSuspendNoThrow(FinalSuspend.get()))

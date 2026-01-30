@@ -26,7 +26,7 @@ struct suspend_always {
 struct suspend_always_throws {
   bool await_ready() { return false; } // expected-note 1 {{must be declared with 'noexcept'}}
   void await_suspend(coroutine_handle<>) {} // expected-note 1 {{must be declared with 'noexcept'}}
-  void await_resume() {} // expected-note 1 {{must be declared with 'noexcept'}}
+  void await_resume() {} // no-warning
 };
 
 } // namespace std
