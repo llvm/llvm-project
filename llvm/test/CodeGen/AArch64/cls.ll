@@ -25,6 +25,32 @@ define i32 @cls64(i64 %t) {
 declare i32 @llvm.aarch64.cls(i32) nounwind
 declare i32 @llvm.aarch64.cls64(i64) nounwind
 
+; Test CTLS i128 type expansion (ExpandIntRes_CTLS).
+; This tests the type legalization path where i128 CTLS is split into
+; operations on two i64 halves.
+define i64 @cls_i128(i128 %x) {
+; CHECK-LABEL: cls_i128:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cls x8, x1
+; CHECK-NEXT:    cmp x8, #63
+; CHECK-NEXT:    cmp x1, #0
+; CHECK-NEXT:    mvn x9, x0
+; CHECK-NEXT:    csel x9, x9, x0, lt
+; CHECK-NEXT:    clz x9, x9
+; CHECK-NEXT:    add x9, x9, #63
+; CHECK-NEXT:    csel x0, x9, x8, eq
+; CHECK-NEXT:    ret
+  %sra = ashr i128 %x, 127
+  %xor = xor i128 %x, %sra
+  %shl = shl i128 %xor, 1
+  %or = or i128 %shl, 1
+  %lz = call i128 @llvm.ctlz.i128(i128 %or, i1 true)
+  %res = trunc i128 %lz to i64
+  ret i64 %res
+}
+
+declare i128 @llvm.ctlz.i128(i128, i1) nounwind readnone
+
 define i8 @cls_i8(i8 %x) {
 ; CHECK-LABEL: cls_i8:
 ; CHECK:       // %bb.0:
