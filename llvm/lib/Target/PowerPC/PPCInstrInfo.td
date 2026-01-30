@@ -780,9 +780,6 @@ def getFPAs64BitIntLo : SDNodeXForm<fpimm, [{
   return CurDAG->getTargetConstant(Lo, SDLoc(N), MVT::i32);
 }]>;
 
-def imm34 : PatLeaf<(imm), [{
-  return isInt<34>(N->getSExtValue());
-}]>;
 
 def getImmAs64BitInt : SDNodeXForm<imm, [{
   return getI64Imm(N->getSExtValue(), SDLoc(N));
@@ -1465,12 +1462,16 @@ multiclass Z22Form_FRTA5_SH6r<bits<6> opcode, bits<9> xo, dag OOL, dag IOL,
 
 let hasCtrlDep = 1 in {
 let Defs = [R1], Uses = [R1] in {
-def ADJCALLSTACKDOWN : PPCEmitTimePseudo<(outs), (ins u16imm:$amt1, u16imm:$amt2),
+def ADJCALLSTACKDOWN : PPCEmitTimePseudo<(outs),
+                              (ins u16imm:$amt1, u16imm:$amt2),
                               "#ADJCALLSTACKDOWN $amt1 $amt2",
-                              [(callseq_start timm:$amt1, timm:$amt2)]>;
-def ADJCALLSTACKUP   : PPCEmitTimePseudo<(outs), (ins u16imm:$amt1, u16imm:$amt2),
+                              [(callseq_start u16imm_timm:$amt1,
+                                              u16imm_timm:$amt2)]>;
+def ADJCALLSTACKUP   : PPCEmitTimePseudo<(outs),
+                              (ins u16imm:$amt1, u16imm:$amt2),
                               "#ADJCALLSTACKUP $amt1 $amt2",
-                              [(callseq_end timm:$amt1, timm:$amt2)]>;
+                              [(callseq_end u16imm_timm:$amt1,
+                                            u16imm_timm:$amt2)]>;
 }
 } // hasCtrlDep
 
@@ -2167,13 +2168,13 @@ def LWAT_PSEUDO : PPCCustomInserterPseudo<
     (outs gprc:$dst),
     (ins ptr_rc_nor0:$ptr, gprc:$val, u5imm:$fc),
     "#LWAT_PSEUDO",
-    [(set i32:$dst, (int_ppc_amo_lwat ptr_rc_nor0:$ptr, gprc:$val, timm:$fc))]>;
+    [(set i32:$dst, (int_ppc_amo_lwat ptr_rc_nor0:$ptr, gprc:$val, u5imm_timm:$fc))]>;
 
 def LWAT_COND_PSEUDO : PPCCustomInserterPseudo <
     (outs gprc:$dst),
     (ins ptr_rc_nor0:$ptr, u5imm:$fc),
     "#LWAT_COND_PSEUDO",
-    [(set i32:$dst, (int_ppc_amo_lwat_cond ptr_rc_nor0:$ptr, timm:$fc))]>;
+    [(set i32:$dst, (int_ppc_amo_lwat_cond ptr_rc_nor0:$ptr, u5imm_timm:$fc))]>;
 
 let Defs = [CR0], mayStore = 1, mayLoad = 0, hasSideEffects = 0 in {
 def STBCX : XForm_1_memOp<31, 694, (outs), (ins gprc:$RST, (memrr $RA, $RB):$addr),
@@ -2191,7 +2192,7 @@ def STWCX : XForm_1_memOp<31, 150, (outs), (ins gprc:$RST, (memrr $RA, $RB):$add
 let mayStore = 1, mayLoad = 0, hasSideEffects = 0 in
 def STWAT : XForm_base_r3xo_memOp<31, 710, (outs), (ins gprc:$RST, ptr_rc_nor0:$RA, u5imm:$RB),
                                   "stwat $RST, $RA, $RB", IIC_LdStStore,
-                                  [(PPCstat i32:$RST, ptr_rc_nor0:$RA, timm:$RB)]>,
+                                  [(PPCstat i32:$RST, ptr_rc_nor0:$RA, u5imm_timm:$RB)]>,
             Requires<[IsISA3_0]>;
 
 let isTrap = 1, hasCtrlDep = 1 in
@@ -3093,11 +3094,11 @@ let Uses = [RM], mayRaiseFPException = 1 in {
 let hasSideEffects = 1, Defs = [RM] in {
 def MTFSB0 : XForm_43<63, 70, (outs), (ins u5imm:$FM),
                       "mtfsb0 $FM", IIC_IntMTFSB0,
-                      [(int_ppc_mtfsb0 timm:$FM)]>,
+                      [(int_ppc_mtfsb0 u5imm_timm:$FM)]>,
              PPC970_DGroup_Single, PPC970_Unit_FPU;
 def MTFSB1 : XForm_43<63, 38, (outs), (ins u5imm:$FM),
                       "mtfsb1 $FM", IIC_IntMTFSB0,
-                      [(int_ppc_mtfsb1 timm:$FM)]>,
+                      [(int_ppc_mtfsb1 u5imm_timm:$FM)]>,
              PPC970_DGroup_Single, PPC970_Unit_FPU;
 }
 
@@ -4584,7 +4585,7 @@ def MCRFS : XLForm_3<63, 64, (outs crrc:$BF), (ins crrc:$BFA),
 let Predicates = [HasFPU] in {
 let Defs = [RM], hasSideEffects = 1 in {
 let isCodeGenOnly = 1,
-    Pattern = [(int_ppc_mtfsfi timm:$BF, timm:$U)], W = 0 in
+    Pattern = [(int_ppc_mtfsfi u3imm_timm:$BF, u4imm_timm:$U)], W = 0 in
 def MTFSFIb : XLForm_4<63, 134, (outs), (ins u3imm:$BF, u4imm:$U),
                        "mtfsfi $BF, $U", IIC_IntMFFS>;
 def MTFSFI : XLForm_4<63, 134, (outs), (ins u3imm:$BF, u4imm:$U, i32imm:$W),
