@@ -70,8 +70,7 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
       langOpts(astContext.getLangOpts()), codeGenOpts(cgo),
       theModule{mlir::ModuleOp::create(mlir::UnknownLoc::get(&mlirContext))},
       diags(diags), target(astContext.getTargetInfo()),
-      abi(createCXXABI(*this)), genTypes(*this), vtables(*this),
-      cudaRuntime(clang::CIRGen::createNVCUDARuntime((*this))) {
+      abi(createCXXABI(*this)), genTypes(*this), vtables(*this) {
 
   // Initialize cached types
   voidTy = cir::VoidType::get(&getMLIRContext());
@@ -129,6 +128,10 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
                        cir::OptInfoAttr::get(&mlirContext,
                                              cgo.OptimizationLevel,
                                              cgo.OptimizeSize));
+
+  if (langOpts.CUDA)
+    createCUDARuntime();
+
   // Set the module name to be the name of the main file. TranslationUnitDecl
   // often contains invalid source locations and isn't a reliable source for the
   // module location.
@@ -145,6 +148,10 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
 }
 
 CIRGenModule::~CIRGenModule() = default;
+
+void CIRGenModule::createCUDARuntime() {
+  cudaRuntime.reset(createNVCUDARuntime(*this));
+}
 
 /// FIXME: this could likely be a common helper and not necessarily related
 /// with codegen.

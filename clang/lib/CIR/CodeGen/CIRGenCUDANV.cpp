@@ -1,4 +1,4 @@
-//===- CIRGenCUDANV.cpp - Interface to NVIDIA CUDA Runtime -----===//
+//========- CIRGenCUDANV.cpp - Interface to NVIDIA CUDA Runtime -----=========//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -31,12 +31,12 @@ namespace {
 
 class CIRGenNVCUDARuntime : public CIRGenCUDARuntime {
 protected:
-  StringRef Prefix;
+  StringRef prefix;
 
   // Map a device stub function to a symbol for identifying kernel in host
   // code. For CUDA, the symbol for identifying the kernel is the same as the
   // device stub function. For HIP, they are different.
-  llvm::DenseMap<StringRef, mlir::Operation *> kernelHandles;
+  llvm::StringMap<mlir::Operation *> kernelHandles;
 
   // Map a kernel handle to the kernel stub.
   llvm::DenseMap<mlir::Operation *, mlir::Operation *> kernelStubs;
@@ -63,44 +63,29 @@ public:
 } // namespace
 
 std::string CIRGenNVCUDARuntime::addPrefixToName(StringRef funcName) const {
-  return (Prefix + funcName).str();
+  return (prefix + funcName).str();
 }
 
 std::string
 CIRGenNVCUDARuntime::addUnderscoredPrefixToName(StringRef funcName) const {
-  return ("__" + Prefix + funcName).str();
-}
-
-static std::unique_ptr<MangleContext> initDeviceMC(CIRGenModule &cgm) {
-  // If the host and device have different C++ ABIs, mark it as the device
-  // mangle context so that the mangling needs to retrieve the additional
-  // device lambda mangling number instead of the regular host one.
-  if (cgm.getASTContext().getAuxTargetInfo() &&
-      cgm.getASTContext().getTargetInfo().getCXXABI().isMicrosoft() &&
-      cgm.getASTContext().getAuxTargetInfo()->getCXXABI().isItaniumFamily()) {
-    return std::unique_ptr<MangleContext>(
-        cgm.getASTContext().createDeviceMangleContext(
-            *cgm.getASTContext().getAuxTargetInfo()));
-  }
-
-  return std::unique_ptr<MangleContext>(cgm.getASTContext().createMangleContext(
-      cgm.getASTContext().getAuxTargetInfo()));
+  return ("__" + prefix + funcName).str();
 }
 
 CIRGenNVCUDARuntime::CIRGenNVCUDARuntime(CIRGenModule &cgm)
-    : CIRGenCUDARuntime(cgm), deviceMC(initDeviceMC(cgm)) {
+    : CIRGenCUDARuntime(cgm),
+      deviceMC(cgm.getASTContext().cudaNVInitDeviceMC()) {
   if (cgm.getLangOpts().OffloadViaLLVM)
     llvm_unreachable("NYI");
   else if (cgm.getLangOpts().HIP)
-    Prefix = "hip";
+    prefix = "hip";
   else
-    Prefix = "cuda";
+    prefix = "cuda";
 }
 
 mlir::Value CIRGenNVCUDARuntime::prepareKernelArgs(CIRGenFunction &cgf,
                                                    mlir::Location loc,
                                                    FunctionArgList &args) {
-  auto &builder = cgm.getBuilder();
+  CIRGenBuilderTy &builder = cgm.getBuilder();
 
   // Build void *args[] and populate with the addresses of kernel arguments.
   auto voidPtrArrayTy = cir::ArrayType::get(cgm.voidPtrTy, args.size());
@@ -112,20 +97,15 @@ mlir::Value CIRGenNVCUDARuntime::prepareKernelArgs(CIRGenFunction &cgf,
       builder.createCast(cir::CastKind::array_to_ptrdecay, kernelArgs,
                          cir::PointerType::get(cgm.voidPtrTy));
 
-  for (auto [i, arg] : llvm::enumerate(args)) {
+  for (const auto &[i, arg] : llvm::enumerate(args)) {
     mlir::Value index =
         builder.getConstInt(loc, llvm::APInt(/*numBits=*/32, i));
     mlir::Value storePos =
         builder.createPtrStride(loc, kernelArgsDecayed, index);
-
-    // Get the address of the argument and cast the store destination to match
-    // its pointer-to-pointer type. This is needed because upstream's
-    // createStore doesn't auto-bitcast like the incubator version.
     mlir::Value argAddr = cgf.getAddrOfLocalVar(arg).getPointer();
-    mlir::Value storePosTyped = builder.createBitcast(
-        storePos, cir::PointerType::get(argAddr.getType()));
+    mlir::Value argAsVoid = builder.createBitcast(argAddr, cgm.voidPtrTy);
 
-    builder.CIRBaseBuilderTy::createStore(loc, argAddr, storePosTyped);
+    builder.CIRBaseBuilderTy::createStore(loc, argAsVoid, storePos);
   }
 
   return kernelArgsDecayed;
@@ -139,10 +119,13 @@ void CIRGenNVCUDARuntime::emitDeviceStubBodyNew(CIRGenFunction &cgf,
 
   // This requires arguments to be sent to kernels in a different way.
   if (cgm.getLangOpts().OffloadViaLLVM)
-    cgm.errorNYI("Offload via LLVM");
+    cgm.errorNYI("CIRGenNVCUDARuntime: Offload via LLVM");
 
-  auto &builder = cgm.getBuilder();
-  auto loc = fn.getLoc();
+  if (cgm.getLangOpts().HIP)
+    cgm.errorNYI("CIRGenNVCUDARuntime: HIP Support");
+
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  mlir::Location loc = fn.getLoc();
 
   // For [cuda|hip]LaunchKernel, we must add another layer of indirection
   // to arguments. For example, for function `add(int a, float b)`,
@@ -164,7 +147,7 @@ void CIRGenNVCUDARuntime::emitDeviceStubBodyNew(CIRGenFunction &cgf,
 
   // The default stream is usually stream 0 (the legacy default stream).
   // For per-thread default stream, we need a different LaunchKernel function.
-  std::string kernelLaunchAPI = "LaunchKernel";
+  StringRef kernelLaunchAPI = "LaunchKernel";
   if (cgm.getLangOpts().GPUDefaultStream ==
       LangOptions::GPUDefaultStreamKind::PerThread)
     cgm.errorNYI("CUDA/HIP Stream per thread");
@@ -173,7 +156,7 @@ void CIRGenNVCUDARuntime::emitDeviceStubBodyNew(CIRGenFunction &cgf,
   const IdentifierInfo &launchII =
       cgm.getASTContext().Idents.get(launchKernelName);
   FunctionDecl *cudaLaunchKernelFD = nullptr;
-  for (auto *result : dc->lookup(&launchII)) {
+  for (NamedDecl *result : dc->lookup(&launchII)) {
     if (FunctionDecl *fd = dyn_cast<FunctionDecl>(result))
       cudaLaunchKernelFD = fd;
   }
@@ -223,24 +206,25 @@ void CIRGenNVCUDARuntime::emitDeviceStubBodyNew(CIRGenFunction &cgf,
   //                              [cuda|hip]Stream_t stream);
 
   // We now either pick the function or the stub global for cuda, hip
-  // resepectively.
-  auto kernel = [&]() {
-    if (auto globalOp = llvm::dyn_cast_or_null<cir::GlobalOp>(
+  // respectively.
+  mlir::Value kernel = [&]() -> mlir::Value {
+    if (cir::GlobalOp globalOp = llvm::dyn_cast_or_null<cir::GlobalOp>(
             kernelHandles[fn.getSymName()])) {
-      auto kernelTy = cir::PointerType::get(globalOp.getSymType());
-      mlir::Value kernel = cir::GetGlobalOp::create(builder, loc, kernelTy,
-                                                    globalOp.getSymName());
-      return kernel;
+      cir::PointerType kernelTy = cir::PointerType::get(globalOp.getSymType());
+      mlir::Value kernelVal = cir::GetGlobalOp::create(builder, loc, kernelTy,
+                                                       globalOp.getSymName());
+      return kernelVal;
     }
-    if (auto funcOp = llvm::dyn_cast_or_null<cir::FuncOp>(
+    if (cir::FuncOp funcOp = llvm::dyn_cast_or_null<cir::FuncOp>(
             kernelHandles[fn.getSymName()])) {
-      auto kernelTy = cir::PointerType::get(funcOp.getFunctionType());
-      mlir::Value kernel =
+      cir::PointerType kernelTy =
+          cir::PointerType::get(funcOp.getFunctionType());
+      mlir::Value kernelVal =
           cir::GetGlobalOp::create(builder, loc, kernelTy, funcOp.getSymName());
-      mlir::Value func = builder.createBitcast(kernel, cgm.voidPtrTy);
+      mlir::Value func = builder.createBitcast(kernelVal, cgm.voidPtrTy);
       return func;
     }
-    assert(false && "Expected stub handle to be cir::GlobalOp or funcOp");
+    llvm_unreachable("Expected stub handle to be cir::GlobalOp or FuncOp");
   }();
 
   CallArgList launchArgs;
@@ -264,7 +248,7 @@ void CIRGenNVCUDARuntime::emitDeviceStubBodyNew(CIRGenFunction &cgf,
       cgm.getTypes().convertType(cudaLaunchKernelFD->getType());
   mlir::Operation *cudaKernelLauncherFn = cgm.createRuntimeFunction(
       cast<cir::FuncType>(launchTy), launchKernelName);
-  const auto &callInfo =
+  const CIRGenFunctionInfo &callInfo =
       cgm.getTypes().arrangeFunctionDeclaration(cudaLaunchKernelFD);
   cgf.emitCall(callInfo, CIRGenCallee::forDirect(cudaKernelLauncherFn),
                ReturnValueSlot(), launchArgs);
@@ -279,8 +263,8 @@ void CIRGenNVCUDARuntime::emitDeviceStub(CIRGenFunction &cgf, cir::FuncOp fn,
 
   if (auto globalOp =
           llvm::dyn_cast<cir::GlobalOp>(kernelHandles[fn.getSymName()])) {
-    auto &builder = cgm.getBuilder();
-    auto fnPtrTy = globalOp.getSymType();
+    CIRGenBuilderTy &builder = cgm.getBuilder();
+    mlir::Type fnPtrTy = globalOp.getSymType();
     auto sym = mlir::FlatSymbolRefAttr::get(fn.getSymNameAttr());
     auto gv = cir::GlobalViewAttr::get(fnPtrTy, sym);
 
@@ -307,27 +291,27 @@ CIRGenCUDARuntime *clang::CIRGen::createNVCUDARuntime(CIRGenModule &cgm) {
 CIRGenNVCUDARuntime::~CIRGenNVCUDARuntime() {}
 
 mlir::Operation *CIRGenNVCUDARuntime::getKernelHandle(cir::FuncOp fn,
-                                                      GlobalDecl GD) {
+                                                      GlobalDecl gd) {
 
   // Check if we already have a kernel handle for this function
-  auto Loc = kernelHandles.find(fn.getSymName());
-  if (Loc != kernelHandles.end()) {
-    auto OldHandle = Loc->second;
+  auto it = kernelHandles.find(fn.getSymName());
+  if (it != kernelHandles.end()) {
+    mlir::Operation *oldHandle = it->second;
     // Here we know that the fn did not change. Return it
-    if (kernelStubs[OldHandle] == fn)
-      return OldHandle;
+    if (kernelStubs[oldHandle] == fn)
+      return oldHandle;
 
     // We've found the function name, but F itself has changed, so we need to
     // update the references.
     if (cgm.getLangOpts().HIP) {
       // For HIP compilation the handle itself does not change, so we only need
       // to update the Stub value.
-      kernelStubs[OldHandle] = fn;
-      return OldHandle;
+      kernelStubs[oldHandle] = fn;
+      return oldHandle;
     }
     // For non-HIP compilation, erase the old Stub and fall-through to creating
     // new entries.
-    kernelStubs.erase(OldHandle);
+    kernelStubs.erase(oldHandle);
   }
 
   // If not targeting HIP, store the function itself
@@ -338,10 +322,10 @@ mlir::Operation *CIRGenNVCUDARuntime::getKernelHandle(cir::FuncOp fn,
   }
 
   // Create a new CIR global variable to represent the kernel handle
-  auto &builder = cgm.getBuilder();
-  auto globalName = cgm.getMangledName(
-      GD.getWithKernelReferenceKind(KernelReferenceKind::Kernel));
-  const VarDecl *varDecl = llvm::dyn_cast_or_null<VarDecl>(GD.getDecl());
+  CIRGenBuilderTy &builder = cgm.getBuilder();
+  StringRef globalName = cgm.getMangledName(
+      gd.getWithKernelReferenceKind(KernelReferenceKind::Kernel));
+  const VarDecl *varDecl = llvm::dyn_cast_or_null<VarDecl>(gd.getDecl());
   cir::GlobalOp globalOp =
       cgm.getOrCreateCIRGlobal(globalName, fn.getFunctionType().getReturnType(),
                                LangAS::Default, varDecl, NotForDefinition);

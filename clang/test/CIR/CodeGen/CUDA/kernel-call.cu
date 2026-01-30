@@ -12,7 +12,39 @@
 // TODO: Test CUDA legacy (< 9.0) when legacy stub body is implemented
 // TODO: Test HIP when HIP stub body support is complete
 
-// CUDA-NEW-LABEL: cir.func {{.*}} @_Z21__device_stub__kernelv
-// CUDA-NEW: cir.call @__cudaPopCallConfiguration
-// CUDA-NEW: cir.call @cudaLaunchKernel
-__global__ void kernel() {}
+// Check that the stub function is generated with the correct name
+// CUDA-NEW-LABEL: cir.func {{.*}} @_Z21__device_stub__kernelif
+//
+// Check kernel arguments are allocated as local variables
+// CUDA-NEW-DAG: cir.alloca !s32i, {{.*}} ["x", init]
+// CUDA-NEW-DAG: cir.alloca !cir.float, {{.*}} ["y", init]
+//
+// Check void *args[] array is created with correct size (2 args)
+// CUDA-NEW: cir.alloca !cir.array<!cir.ptr<!void> x 2>, {{.*}} ["kernel_args"]
+// CUDA-NEW: cir.cast array_to_ptrdecay
+//
+// Check arguments are stored in the args array via ptr_stride indexing
+// CUDA-NEW: cir.const #cir.int<0>
+// CUDA-NEW: cir.ptr_stride
+// CUDA-NEW: cir.cast bitcast {{.*}} -> !cir.ptr<!void>
+// CUDA-NEW: cir.store {{.*}} !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
+// CUDA-NEW: cir.const #cir.int<1>
+// CUDA-NEW: cir.ptr_stride
+// CUDA-NEW: cir.cast bitcast {{.*}} -> !cir.ptr<!void>
+// CUDA-NEW: cir.store {{.*}} !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
+//
+// Check dim3 grid_dim and block_dim allocas for launch configuration
+// CUDA-NEW-DAG: cir.alloca !rec_dim3, {{.*}} ["grid_dim"]
+// CUDA-NEW-DAG: cir.alloca !rec_dim3, {{.*}} ["block_dim"]
+//
+// Check shared_mem (size_t) and stream allocas
+// CUDA-NEW-DAG: cir.alloca !u64i, {{.*}} ["shared_mem"]
+// CUDA-NEW-DAG: cir.alloca !cir.ptr<!rec_cudaStream>, {{.*}} ["stream"]
+//
+// Check __cudaPopCallConfiguration is called with correct argument types
+// CUDA-NEW: cir.call @__cudaPopCallConfiguration({{.*}}) : (!cir.ptr<!rec_dim3>, !cir.ptr<!rec_dim3>, !cir.ptr<!u64i>, !cir.ptr<!cir.ptr<!rec_cudaStream>>) -> !s32i
+//
+// Check cudaLaunchKernel is called with all 6 arguments:
+// func ptr, gridDim, blockDim, args, sharedMem, stream
+// CUDA-NEW: cir.call @cudaLaunchKernel({{.*}}) : (!cir.ptr<!void>, !rec_dim3, !rec_dim3, !cir.ptr<!cir.ptr<!void>>, !u64i, !cir.ptr<!rec_cudaStream>) -> !u32i
+__global__ void kernel(int x, float y) {}

@@ -100,6 +100,8 @@ private:
 
   llvm::SmallVector<mlir::Attribute> globalScopeAsm;
 
+  void createCUDARuntime();
+
 public:
   mlir::ModuleOp getModule() const { return theModule; }
   CIRGenBuilderTy &getBuilder() { return builder; }
