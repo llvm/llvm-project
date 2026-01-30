@@ -2680,23 +2680,23 @@ void VPlanTransforms::removeBranchOnConst(VPlan &Plan) {
 }
 
 void VPlanTransforms::optimize(VPlan &Plan) {
-  runPass(removeRedundantCanonicalIVs, Plan);
-  runPass(removeRedundantInductionCasts, Plan);
+  RUN_VPLAN_PASS(removeRedundantCanonicalIVs, Plan);
+  RUN_VPLAN_PASS(removeRedundantInductionCasts, Plan);
 
-  runPass(simplifyRecipes, Plan);
-  runPass(removeDeadRecipes, Plan);
-  runPass(simplifyBlends, Plan);
-  runPass(legalizeAndOptimizeInductions, Plan);
-  runPass(narrowToSingleScalarRecipes, Plan);
-  runPass(removeRedundantExpandSCEVRecipes, Plan);
-  runPass(simplifyRecipes, Plan);
-  runPass(removeBranchOnConst, Plan);
-  runPass(removeDeadRecipes, Plan);
+  RUN_VPLAN_PASS(simplifyRecipes, Plan);
+  RUN_VPLAN_PASS(removeDeadRecipes, Plan);
+  RUN_VPLAN_PASS(simplifyBlends, Plan);
+  RUN_VPLAN_PASS(legalizeAndOptimizeInductions, Plan);
+  RUN_VPLAN_PASS(narrowToSingleScalarRecipes, Plan);
+  RUN_VPLAN_PASS(removeRedundantExpandSCEVRecipes, Plan);
+  RUN_VPLAN_PASS(simplifyRecipes, Plan);
+  RUN_VPLAN_PASS(removeBranchOnConst, Plan);
+  RUN_VPLAN_PASS(removeDeadRecipes, Plan);
 
-  runPass(createAndOptimizeReplicateRegions, Plan);
-  runPass(hoistInvariantLoads, Plan);
-  runPass(mergeBlocksIntoPredecessors, Plan);
-  runPass(licm, Plan);
+  RUN_VPLAN_PASS(createAndOptimizeReplicateRegions, Plan);
+  RUN_VPLAN_PASS(hoistInvariantLoads, Plan);
+  RUN_VPLAN_PASS(mergeBlocksIntoPredecessors, Plan);
+  RUN_VPLAN_PASS(licm, Plan);
 }
 
 // Add a VPActiveLaneMaskPHIRecipe and related recipes to \p Plan and replace
