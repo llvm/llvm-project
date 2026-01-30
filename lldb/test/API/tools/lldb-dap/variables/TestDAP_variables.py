@@ -834,3 +834,39 @@ class TestDAP_variables(lldbdap_testcase.DAPTestCaseBase):
         self.assertEqual(var_pt_x["value"], "11")
         var_pt_y = self.dap_server.get_local_variable_child("pt", "y", is_hex=is_hex)
         self.assertEqual(var_pt_y["value"], "22")
+
+    @skipIfWindows
+    def test_variable_id_uniqueness_simple(self):
+        """
+        Simple regression test for variable ID uniqueness across frames.
+        Ensures variable IDs are not reused between different scopes/frames.
+        """
+        program = self.getBuildArtifact("a.out")
+        self.build_and_launch(program)
+        source = "main.cpp"
+
+        bp_line = line_number(source, "// breakpoint 3")
+        self.set_source_breakpoints(source, [bp_line])
+        self.continue_to_next_stop()
+
+        frames = self.get_stackFrames()
+        self.assertGreaterEqual(len(frames), 2, "Need at least 2 frames")
+
+        all_refs = set()
+
+        for i in range(min(3, len(frames))):
+            frame_id = frames[i]["id"]
+            scopes = self.dap_server.request_scopes(frame_id)["body"]["scopes"]
+
+            for scope in scopes:
+                ref = scope["variablesReference"]
+                if ref != 0:
+                    self.assertNotIn(
+                        ref, all_refs, f"Variable reference {ref} was reused!"
+                    )
+                    all_refs.add(ref)
+
+        self.assertGreater(len(all_refs), 0, "Should have found variable references")
+        for ref in all_refs:
+            response = self.dap_server.request_variables(ref)
+            self.assertTrue(response["success"], f"Failed to access reference {ref}")
