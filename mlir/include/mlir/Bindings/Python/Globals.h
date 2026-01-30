@@ -12,6 +12,7 @@
 #include <optional>
 #include <regex>
 #include <string>
+#include <string_view>
 #include <unordered_set>
 #include <vector>
 
@@ -60,7 +61,7 @@ public:
   /// Note that this returns void because it is expected that the module
   /// contains calls to decorators and helpers that register the salient
   /// entities. Returns true if dialect is successfully loaded.
-  bool loadDialectModule(llvm::StringRef dialectNamespace);
+  bool loadDialectModule(std::string_view dialectNamespace);
 
   /// Adds a user-friendly Attribute builder.
   /// Raises an exception if the mapping already exists and replace == false.
@@ -121,7 +122,7 @@ public:
   /// name. Note that this may trigger a load of the dialect, which can
   /// arbitrarily re-enter.
   std::optional<nanobind::object>
-  lookupOperationClass(llvm::StringRef operationName);
+  lookupOperationClass(std::string_view operationName);
 
   /// Looks up a registered operation adaptor class by operation
   /// name. Note that this may trigger a load of the dialect, which can
@@ -143,7 +144,7 @@ public:
 
     void registerTracebackFileExclusion(const std::string &file);
 
-    bool isUserTracebackFilename(llvm::StringRef file);
+    bool isUserTracebackFilename(std::string_view file);
 
     static constexpr size_t kMaxFrames = 512;
 

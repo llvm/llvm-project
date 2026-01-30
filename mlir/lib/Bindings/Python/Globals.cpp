@@ -46,7 +46,7 @@ PyGlobals &PyGlobals::get() {
   return *instance;
 }
 
-bool PyGlobals::loadDialectModule(llvm::StringRef dialectNamespace) {
+bool PyGlobals::loadDialectModule(std::string_view dialectNamespace) {
   {
     nb::ft_lock_guard lock(mutex);
     if (loadedDialectModules.contains(dialectNamespace))
@@ -202,10 +202,10 @@ PyGlobals::lookupDialectClass(const std::string &dialectNamespace) {
 }
 
 std::optional<nb::object>
-PyGlobals::lookupOperationClass(llvm::StringRef operationName) {
+PyGlobals::lookupOperationClass(std::string_view operationName) {
   // Make sure dialect module is loaded.
-  auto split = operationName.split('.');
-  llvm::StringRef dialectNamespace = split.first;
+  size_t splitPos = operationName.find('.');
+  std::string_view dialectNamespace = operationName.substr(0, splitPos);
   (void)loadDialectModule(dialectNamespace);
 
   nb::ft_lock_guard lock(mutex);
@@ -280,7 +280,7 @@ void PyGlobals::TracebackLoc::registerTracebackFileExclusion(
 }
 
 bool PyGlobals::TracebackLoc::isUserTracebackFilename(
-    const llvm::StringRef file) {
+    const std::string_view file) {
   nanobind::ft_lock_guard lock(mutex);
   if (rebuildUserTracebackIncludeRegex) {
     userTracebackIncludeRegex.assign(
@@ -295,7 +295,7 @@ bool PyGlobals::TracebackLoc::isUserTracebackFilename(
     isUserTracebackFilenameCache.clear();
   }
   if (!isUserTracebackFilenameCache.contains(file)) {
-    std::string fileStr = file.str();
+    std::string fileStr(file);
     bool include = std::regex_search(fileStr, userTracebackIncludeRegex);
     bool exclude = std::regex_search(fileStr, userTracebackExcludeRegex);
     isUserTracebackFilenameCache[file] = include || !exclude;
