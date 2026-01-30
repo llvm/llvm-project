@@ -21,7 +21,6 @@
 
 #include <functional>
 #include <optional>
-#include <sstream>
 #include <string>
 
 namespace nb = nanobind;
@@ -48,14 +47,6 @@ operations.
 //------------------------------------------------------------------------------
 // Utilities.
 //------------------------------------------------------------------------------
-
-/// Local helper to concatenate arguments into a `std::string`.
-template <typename... Ts>
-static std::string join(const Ts &...args) {
-  std::ostringstream oss;
-  (oss << ... << args);
-  return oss.str();
-}
 
 /// Local helper to compute std::hash for a value.
 template <typename T>

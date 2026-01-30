@@ -18,6 +18,8 @@
 #include "llvm/Support/DataTypes.h"
 #include "llvm/Support/raw_ostream.h"
 
+#include <fstream>
+#include <sstream>
 #include <string>
 #include <typeinfo>
 #include <variant>
@@ -33,6 +35,26 @@ struct std::iterator_traits<nanobind::detail::fast_iterator> {
 
 namespace mlir {
 namespace python {
+
+/// Helper function to concatenate arguments into a `std::string`.
+template <typename... Ts>
+inline std::string join(const Ts &...args) {
+  std::ostringstream oss;
+  (oss << ... << args);
+  return oss.str();
+}
+
+struct MlirTypeIDHash {
+  size_t operator()(MlirTypeID typeID) const {
+    return mlirTypeIDHashValue(typeID);
+  }
+};
+
+struct MlirTypeIDEqual {
+  bool operator()(MlirTypeID lhs, MlirTypeID rhs) const {
+    return mlirTypeIDEqual(lhs, rhs);
+  }
+};
 
 /// CRTP template for special wrapper types that are allowed to be passed in as
 /// 'None' function arguments and can be resolved by some global mechanic if
@@ -411,26 +433,5 @@ public:
 };
 
 } // namespace mlir
-
-namespace llvm {
-
-template <>
-struct DenseMapInfo<MlirTypeID> {
-  static inline MlirTypeID getEmptyKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getEmptyKey();
-    return mlirTypeIDCreate(pointer);
-  }
-  static inline MlirTypeID getTombstoneKey() {
-    auto *pointer = llvm::DenseMapInfo<void *>::getTombstoneKey();
-    return mlirTypeIDCreate(pointer);
-  }
-  static inline unsigned getHashValue(const MlirTypeID &val) {
-    return mlirTypeIDHashValue(val);
-  }
-  static inline bool isEqual(const MlirTypeID &lhs, const MlirTypeID &rhs) {
-    return mlirTypeIDEqual(lhs, rhs);
-  }
-};
-} // namespace llvm
 
 #endif // MLIR_BINDINGS_PYTHON_PYBINDUTILS_H

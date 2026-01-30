@@ -29,18 +29,6 @@
 namespace mlir {
 namespace python {
 namespace MLIR_BINDINGS_PYTHON_DOMAIN {
-struct MlirTypeIDHash {
-  size_t operator()(MlirTypeID typeID) const {
-    return mlirTypeIDHashValue(typeID);
-  }
-};
-
-struct MlirTypeIDEqual {
-  bool operator()(MlirTypeID lhs, MlirTypeID rhs) const {
-    return mlirTypeIDEqual(lhs, rhs);
-  }
-};
-
 /// Globals that are always accessible once the extension has been initialized.
 /// Methods of this class are thread-safe.
 class MLIR_PYTHON_API_EXPORTED PyGlobals {
