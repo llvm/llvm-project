@@ -705,6 +705,7 @@ public:
 private:
   struct ExactFlagsTy {
     char IsExact : 1;
+    ExactFlagsTy(bool Exact) : IsExact(Exact) {}
   };
   struct FastMathFlagsTy {
     char AllowReassoc : 1;
@@ -1015,9 +1016,17 @@ private:
   }
 
 public:
+  /// Returns default flags for \p Opcode for opcodes that support it, asserts
+  /// otherwise. Opcodes not supporting default flags include compares and
+  /// ComputeReductionResult.
+  static VPIRFlags getDefaultFlags(unsigned Opcode);
+
 #if !defined(NDEBUG)
   /// Returns true if the set flags are valid for \p Opcode.
   LLVM_ABI_FOR_TEST bool flagsValidForOpcode(unsigned Opcode) const;
+
+  /// Returns true if \p Opcode has its required flags set.
+  LLVM_ABI_FOR_TEST bool hasRequiredFlagsForOpcode(unsigned Opcode) const;
 #endif
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -1701,6 +1710,8 @@ public:
         VPIRMetadata(Metadata), Opcode(Opcode), ResultTy(ResultTy) {
     assert(flagsValidForOpcode(Opcode) &&
            "Set flags not supported for the provided opcode");
+    assert(hasRequiredFlagsForOpcode(Opcode) &&
+           "Opcode requires specific flags to be set");
     setUnderlyingValue(CI);
   }
 
