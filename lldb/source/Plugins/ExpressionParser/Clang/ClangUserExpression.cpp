@@ -972,17 +972,17 @@ void ClangUserExpression::FixupParseErrorDiagnostics(
 
   // If the user already tried ignoring function qualifiers but
   // the expression still failed, we don't want to suggest the hint again.
-  if (m_options.GetIgnoreContextQualifiers()) {
+  if (m_options.GetCppIgnoreContextQualifiers()) {
     // Hard to prove that we don't get here so don't emit a diagnostic n
     // non-asserts builds. But we do want a signal in asserts builds.
     assert(false &&
-           "IgnoreContextQualifiers didn't resolve compiler diagnostic.");
+           "CppIgnoreContextQualifiers didn't resolve compiler diagnostic.");
     return;
   }
 
   diagnostic_manager.AddDiagnostic(
       "Possibly trying to mutate object in a const context. Try "
-      "running the expression with: expression --ignore-context-qualifiers "
+      "running the expression with: expression --cpp-ignore-context-qualifiers "
       "-- <your expression>",
       lldb::eSeverityInfo, eDiagnosticOriginLLDB);
 }
