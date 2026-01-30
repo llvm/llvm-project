@@ -81,7 +81,8 @@ static LogicalResult customTypeRangeResultConstraint(PatternRewriter &rewriter,
   return failure();
 }
 
-// Custom constraint that returns a value range if the op is named test.success_op
+// Custom constraint that returns a value range if the op is named
+// test.success_op
 static LogicalResult customValueRangeResultConstraint(PatternRewriter &rewriter,
                                                       PDLResultList &results,
                                                       ArrayRef<PDLValue> args) {
@@ -92,7 +93,6 @@ static LogicalResult customValueRangeResultConstraint(PatternRewriter &rewriter,
   }
   return failure();
 }
-
 
 // Custom creator invoked from PDL.
 static Operation *customCreate(PatternRewriter &rewriter, Operation *op) {
@@ -175,7 +175,7 @@ struct TestPDLByteCodePass
     pdlPattern.registerConstraintFunction("op_constr_return_type_range",
                                           customTypeRangeResultConstraint);
     pdlPattern.registerConstraintFunction("op_constr_return_value_range",
-                                      customValueRangeResultConstraint);
+                                          customValueRangeResultConstraint);
     pdlPattern.registerRewriteFunction("creator", customCreate);
     pdlPattern.registerRewriteFunction("var_creator",
                                        customVariadicResultCreate);
