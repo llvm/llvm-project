@@ -625,6 +625,7 @@ def LeadingOnesWMask : ImmLeaf<XLenVT, [{
 include "RISCVInstrFormats.td"
 include "RISCVInstrFormatsC.td"
 include "RISCVInstrFormatsV.td"
+include "RISCVInstrFormatsXAIF.td"
 
 //===----------------------------------------------------------------------===//
 // Instruction Class Templates
@@ -1641,44 +1642,46 @@ def : Pat<(XLenVT (seteq (XLenVT (and GPR:$rs, immop_oneuse<TrailingOnesMask>:$m
 def : Pat<(XLenVT (setne (XLenVT (and GPR:$rs, immop_oneuse<TrailingOnesMask>:$mask)), 0)),
           (SLTU (XLenVT X0), (XLenVT (SLLI GPR:$rs, (XLenSubTrailingOnes imm:$mask))))>;
 
-def IntCCtoRISCVCC : SDNodeXForm<riscv_selectcc, [{
-  ISD::CondCode CC = cast<CondCodeSDNode>(N->getOperand(2))->get();
+// Transforms cond -> cond_code
+def CCtoRISCVCC : SDNodeXForm<cond, [{
+  ISD::CondCode CC = N->get();
   RISCVCC::CondCode BrCC = getRISCVCCForIntCC(CC);
   return CurDAG->getTargetConstant(BrCC, SDLoc(N), Subtarget->getXLenVT());
 }]>;
 
-def riscv_selectcc_frag : PatFrag<(ops node:$lhs, node:$rhs, node:$cc,
-                                       node:$truev, node:$falsev),
-                                  (riscv_selectcc node:$lhs, node:$rhs,
-                                                  node:$cc, node:$truev,
-                                                  node:$falsev), [{}],
-                                  IntCCtoRISCVCC>;
+// Matches a `cond` and emits it as a (RISC-V specific) `cond_code`
+def riscv_cond : PatLeaf<(cond), [{}], CCtoRISCVCC>;
 
 multiclass SelectCC_GPR_rrirr<DAGOperand valty, ValueType vt,
                               ValueType cmpvt = XLenVT> {
   let usesCustomInserter = 1 in
   def _Using_CC_GPR : Pseudo<(outs valty:$dst),
                              (ins GPR:$lhs, GPR:$rhs, cond_code:$cc,
-                              valty:$truev, valty:$falsev),
+                                  valty:$truev, valty:$falsev),
                              [(set valty:$dst,
-                               (riscv_selectcc_frag:$cc (cmpvt GPR:$lhs), GPR:$rhs, cond,
-                                                        (vt valty:$truev), valty:$falsev))]>;
+                               (riscv_selectcc (cmpvt GPR:$lhs), GPR:$rhs,
+                                               riscv_cond:$cc,
+                                               (vt valty:$truev),
+                                               valty:$falsev))]>;
+
   // Explicitly select 0 in the condition to X0. The register coalescer doesn't
   // always do it.
-  def : Pat<(riscv_selectcc_frag:$cc (cmpvt GPR:$lhs), 0, cond, (vt valty:$truev),
-                                     valty:$falsev),
+  def : Pat<(riscv_selectcc (cmpvt GPR:$lhs), 0, cond:$cc,
+                            (vt valty:$truev), valty:$falsev),
             (!cast<Instruction>(NAME#"_Using_CC_GPR") GPR:$lhs, (XLenVT X0),
-             (IntCCtoRISCVCC $cc), valty:$truev, valty:$falsev)>;
+             (CCtoRISCVCC $cc), valty:$truev, valty:$falsev)>;
 }
 
 let Predicates = [NoConditionalMoveFusion] in
 defm Select_GPR : SelectCC_GPR_rrirr<GPR, XLenVT>;
 
 class SelectCompressOpt<CondCode Cond>
-    : Pat<(riscv_selectcc_frag:$select (XLenVT GPR:$lhs), simm12_no6:$Constant, Cond,
-                                       (XLenVT GPR:$truev), GPR:$falsev),
-    (Select_GPR_Using_CC_GPR (XLenVT (ADDI GPR:$lhs, (NegImm simm12_lo:$Constant))), (XLenVT X0),
-                          (IntCCtoRISCVCC $select), GPR:$truev, GPR:$falsev)>;
+    : Pat<(riscv_selectcc (XLenVT GPR:$lhs), simm12_no6:$Constant, Cond:$cc,
+                          (XLenVT GPR:$truev), GPR:$falsev),
+          (Select_GPR_Using_CC_GPR (XLenVT (ADDI GPR:$lhs,
+                                                 (NegImm simm12_lo:$Constant))),
+                                   (XLenVT X0),
+                                   (CCtoRISCVCC $cc), GPR:$truev, GPR:$falsev)>;
 
 def OptForMinSize : Predicate<"MF ? MF->getFunction().hasMinSize() : false">;
 
@@ -2382,6 +2385,7 @@ include "RISCVInstrInfoXMips.td"
 include "RISCVInstrInfoXRivos.td"
 include "RISCVInstrInfoXAndes.td"
 include "RISCVInstrInfoXSpacemiT.td"
+include "RISCVInstrInfoXAIF.td"
 
 //===----------------------------------------------------------------------===//
 // Global ISel

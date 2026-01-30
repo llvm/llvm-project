@@ -847,7 +847,7 @@ public:
       KindToSet = systemz::Delta64FromGOT;
       break;
     case systemz::RequestGOTAndTransformToDelta32dbl:
-      KindToSet = systemz::DeltaPLT32dbl;
+      KindToSet = systemz::Delta32dbl;
       break;
     default:
       return false;
@@ -929,6 +929,11 @@ public:
   GOTTableManager &GOT;
   Section *StubsSection = nullptr;
 };
+
+/// Optimize the GOT and Stub relocations edge kind DeltaPLT32dbl if the edge
+/// target address is in range. For this edge kind, if the target is in range,
+/// replace a indirect jump by plt stub with a direct jump to the target.
+LLVM_ABI Error optimizeGOTAndStubAccesses(LinkGraph &G);
 
 } // namespace systemz
 } // namespace jitlink

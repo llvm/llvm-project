@@ -133,6 +133,7 @@ enum RelExpr {
   // also reused for TLS, making the semantics differ from other architectures.
   RE_LOONGARCH_GOT,
   RE_LOONGARCH_GOT_PAGE_PC,
+  RE_LOONGARCH_PC_INDIRECT,
   RE_LOONGARCH_TLSGD_PAGE_PC,
   RE_LOONGARCH_TLSDESC_PAGE_PC,
   RE_LOONGARCH_RELAX_TLS_GD_TO_IE_PAGE_PC,
@@ -204,7 +205,7 @@ private:
   std::pair<Thunk *, bool> getSyntheticLandingPad(Defined &d, int64_t a);
 
   ThunkSection *addThunkSection(OutputSection *os, InputSectionDescription *,
-                                uint64_t off);
+                                uint64_t off, bool isPrefix = false);
 
   bool normalizeExistingThunk(Relocation &rel, uint64_t src);
 

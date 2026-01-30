@@ -773,10 +773,22 @@ def RotateLeft : BitInt8_16_32_64BuiltinsTemplate, Builtin {
   let Prototype = "T(T, T)";
 }
 
+def StdcRotateLeft : Builtin {
+  let Spellings = ["__builtin_stdc_rotate_left"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 def RotateRight : BitInt8_16_32_64BuiltinsTemplate, Builtin {
   let Spellings = ["__builtin_rotateright"];
   let Attributes = [NoThrow, Const, Constexpr];
   let Prototype = "T(T, T)";
+}
+
+def StdcRotateRight : Builtin {
+  let Spellings = ["__builtin_stdc_rotate_right"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "void(...)";
 }
 
 // Random GCC builtins
@@ -921,6 +933,12 @@ def FrameAddress : Builtin {
   let Spellings = ["__builtin_frame_address"];
   let Attributes = [NoThrow];
   let Prototype = "void*(_Constant unsigned int)";
+}
+
+def StackAddress : Builtin {
+  let Spellings = ["__builtin_stack_address"];
+  let Attributes = [NoThrow];
+  let Prototype = "void*()";
 }
 
 def ClearCache : Builtin {
@@ -2296,14 +2314,14 @@ def ScopedAtomicMaxFetch : AtomicBuiltin {
   let Prototype = "void(...)";
 }
 
-def ScopedAtomicUIncWrap : AtomicBuiltin {
-  let Spellings = ["__scoped_atomic_uinc_wrap"];
+def ScopedAtomicUInc : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_fetch_uinc"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def ScopedAtomicUDecWrap : AtomicBuiltin {
-  let Spellings = ["__scoped_atomic_udec_wrap"];
+def ScopedAtomicUDec : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_fetch_udec"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";
 }
@@ -2396,6 +2414,18 @@ def AtomicFetchMax : AtomicBuiltin {
 
 def AtomicFetchMin : AtomicBuiltin {
   let Spellings = ["__atomic_fetch_min"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def AtomicFetchUInc : AtomicBuiltin {
+  let Spellings = ["__atomic_fetch_uinc"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def AtomicFetchUDec : AtomicBuiltin {
+  let Spellings = ["__atomic_fetch_udec"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";
 }
@@ -5055,6 +5085,12 @@ def HLSLWaveActiveAnyTrue : LangBuiltin<"HLSL_LANG"> {
   let Prototype = "bool(bool)";
 }
 
+def HLSLWaveActiveBallot : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_active_ballot"];
+  let Attributes = [NoThrow, Const];
+  let Prototype = "_ExtVector<4, unsigned int>(bool)";
+}
+
 def HLSLWaveActiveCountBits : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_active_count_bits"];
   let Attributes = [NoThrow, Const];
@@ -5089,6 +5125,12 @@ def HLSLWaveIsFirstLane : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_is_first_lane"];
   let Attributes = [NoThrow, Const];
   let Prototype = "bool()";
+}
+
+def HLSLWavePrefixCountBits : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_prefix_count_bits"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "unsigned int(bool)";
 }
 
 def HLSLWaveReadLaneAt : LangBuiltin<"HLSL_LANG"> {
@@ -5274,6 +5316,12 @@ def HLSLGetSpirvSpecConstant : LangBuiltin<"HLSL_LANG">, HLSLScalarTemplate {
 
 def HLSLF16ToF32 : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_f16tof32"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def HLSLF32ToF16 : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_f32tof16"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }

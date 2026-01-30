@@ -556,7 +556,7 @@ using namespace literals::chrono_literals;
 template <class _Rep, class _Period>
   requires __has_enabled_hash<_Rep>::value
 struct hash<chrono::duration<_Rep, _Period>> {
-  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::duration<_Rep, _Period>& __d) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::duration<_Rep, _Period>& __d) {
     return hash<_Rep>{}(__d.count());
   }
 };

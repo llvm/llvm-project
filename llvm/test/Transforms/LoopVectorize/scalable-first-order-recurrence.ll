@@ -624,14 +624,12 @@ define i32 @extract_second_last_iteration(ptr %cval, i32 %x)  {
 ; CHECK-VF4UF1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[X]], i64 0
 ; CHECK-VF4UF1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-VF4UF1-NEXT:    [[TMP6:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
-; CHECK-VF4UF1-NEXT:    [[TMP7:%.*]] = mul <vscale x 4 x i32> [[TMP6]], splat (i32 1)
-; CHECK-VF4UF1-NEXT:    [[INDUCTION:%.*]] = add <vscale x 4 x i32> zeroinitializer, [[TMP7]]
 ; CHECK-VF4UF1-NEXT:    [[DOTSPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[TMP3]], i64 0
 ; CHECK-VF4UF1-NEXT:    [[DOTSPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[DOTSPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-VF4UF1-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4UF1:       [[VECTOR_BODY]]:
 ; CHECK-VF4UF1-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-VF4UF1-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x i32> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-VF4UF1-NEXT:    [[VEC_IND:%.*]] = phi <vscale x 4 x i32> [ [[TMP6]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF4UF1-NEXT:    [[TMP9:%.*]] = add <vscale x 4 x i32> [[VEC_IND]], [[BROADCAST_SPLAT]]
 ; CHECK-VF4UF1-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP3]]
 ; CHECK-VF4UF1-NEXT:    [[VEC_IND_NEXT]] = add <vscale x 4 x i32> [[VEC_IND]], [[DOTSPLAT]]
@@ -672,12 +670,10 @@ define i32 @extract_second_last_iteration(ptr %cval, i32 %x)  {
 ; CHECK-VF4UF2-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[X]], i64 0
 ; CHECK-VF4UF2-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-VF4UF2-NEXT:    [[TMP7:%.*]] = call <vscale x 4 x i32> @llvm.stepvector.nxv4i32()
-; CHECK-VF4UF2-NEXT:    [[TMP8:%.*]] = mul <vscale x 4 x i32> [[TMP7]], splat (i32 1)
-; CHECK-VF4UF2-NEXT:    [[INDUCTION:%.*]] = add <vscale x 4 x i32> zeroinitializer, [[TMP8]]
 ; CHECK-VF4UF2-NEXT:    br label %[[VECTOR_BODY:.*]]
 ; CHECK-VF4UF2:       [[VECTOR_BODY]]:
 ; CHECK-VF4UF2-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
-; CHECK-VF4UF2-NEXT:    [[STEP_ADD:%.*]] = phi <vscale x 4 x i32> [ [[INDUCTION]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT1:%.*]], %[[VECTOR_BODY]] ]
+; CHECK-VF4UF2-NEXT:    [[STEP_ADD:%.*]] = phi <vscale x 4 x i32> [ [[TMP7]], %[[VECTOR_PH]] ], [ [[VEC_IND_NEXT1:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-VF4UF2-NEXT:    [[VEC_IND_NEXT:%.*]] = add <vscale x 4 x i32> [[STEP_ADD]], [[BROADCAST_SPLAT2]]
 ; CHECK-VF4UF2-NEXT:    [[TMP9:%.*]] = add <vscale x 4 x i32> [[VEC_IND_NEXT]], [[BROADCAST_SPLAT]]
 ; CHECK-VF4UF2-NEXT:    [[INDEX_NEXT]] = add nuw i32 [[INDEX]], [[TMP6]]

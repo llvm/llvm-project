@@ -2121,9 +2121,10 @@ void SCCPInstVisitor::handleCallResult(CallBase &CB) {
             MaxLanes.multiply(getVScaleRange(II->getFunction(), BitWidth));
 
       // The result is always less than both Count and MaxLanes.
-      ConstantRange Result(
+      ConstantRange Result = ConstantRange::getNonEmpty(
           APInt::getZero(BitWidth),
-          APIntOps::umin(Count.getUpper(), MaxLanes.getUpper()));
+          APIntOps::umin(Count.getUnsignedMax(), MaxLanes.getUnsignedMax()) +
+              1);
 
       // If Count <= MaxLanes, getvectorlength(Count, MaxLanes) = Count
       if (Count.icmp(CmpInst::ICMP_ULE, MaxLanes))
