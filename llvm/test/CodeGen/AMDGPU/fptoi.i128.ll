@@ -1328,7 +1328,7 @@ define i128 @fptosi_f16_to_i128(half %x) {
 ; SDAG-NEXT:    v_cvt_i32_f32_e32 v0, v0
 ; SDAG-NEXT:    v_ashrrev_i32_e32 v1, 31, v0
 ; SDAG-NEXT:    v_ashrrev_i32_e32 v2, 31, v1
-; SDAG-NEXT:    v_mov_b32_e32 v3, v2
+; SDAG-NEXT:    v_mov_b32_e32 v3, v1
 ; SDAG-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GISEL-LABEL: fptosi_f16_to_i128:

@@ -14,10 +14,10 @@ define <4 x i16> @fold_srem_vec_1(<4 x i16> %x) {
 ; CHECK-NEXT:    mla v1.4h, v0.4h, v2.4h
 ; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI0_2]
 ; CHECK-NEXT:    adrp x8, .LCPI0_3
-; CHECK-NEXT:    sshl v1.4h, v1.4h, v2.4h
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI0_3]
-; CHECK-NEXT:    usra v1.4h, v1.4h, #15
-; CHECK-NEXT:    mls v0.4h, v1.4h, v2.4h
+; CHECK-NEXT:    sshl v2.4h, v1.4h, v2.4h
+; CHECK-NEXT:    usra v2.4h, v1.4h, #15
+; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI0_3]
+; CHECK-NEXT:    mls v0.4h, v2.4h, v1.4h
 ; CHECK-NEXT:    ret
   %1 = srem <4 x i16> %x, <i16 95, i16 -124, i16 98, i16 -1003>
   ret <4 x i16> %1
@@ -27,14 +27,14 @@ define <4 x i16> @fold_srem_vec_2(<4 x i16> %x) {
 ; CHECK-LABEL: fold_srem_vec_2:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #44151 // =0xac77
-; CHECK-NEXT:    movi v2.4h, #95
+; CHECK-NEXT:    movi v3.4h, #95
 ; CHECK-NEXT:    dup v1.4h, w8
 ; CHECK-NEXT:    smull v1.4s, v0.4h, v1.4h
 ; CHECK-NEXT:    shrn v1.4h, v1.4s, #16
 ; CHECK-NEXT:    add v1.4h, v1.4h, v0.4h
-; CHECK-NEXT:    sshr v1.4h, v1.4h, #6
-; CHECK-NEXT:    usra v1.4h, v1.4h, #15
-; CHECK-NEXT:    mls v0.4h, v1.4h, v2.4h
+; CHECK-NEXT:    sshr v2.4h, v1.4h, #6
+; CHECK-NEXT:    usra v2.4h, v1.4h, #15
+; CHECK-NEXT:    mls v0.4h, v2.4h, v3.4h
 ; CHECK-NEXT:    ret
   %1 = srem <4 x i16> %x, <i16 95, i16 95, i16 95, i16 95>
   ret <4 x i16> %1
@@ -46,15 +46,15 @@ define <4 x i16> @combine_srem_sdiv(<4 x i16> %x) {
 ; CHECK-LABEL: combine_srem_sdiv:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #44151 // =0xac77
-; CHECK-NEXT:    movi v2.4h, #95
+; CHECK-NEXT:    movi v3.4h, #95
 ; CHECK-NEXT:    dup v1.4h, w8
 ; CHECK-NEXT:    smull v1.4s, v0.4h, v1.4h
 ; CHECK-NEXT:    shrn v1.4h, v1.4s, #16
 ; CHECK-NEXT:    add v1.4h, v1.4h, v0.4h
-; CHECK-NEXT:    sshr v1.4h, v1.4h, #6
-; CHECK-NEXT:    usra v1.4h, v1.4h, #15
-; CHECK-NEXT:    mls v0.4h, v1.4h, v2.4h
-; CHECK-NEXT:    add v0.4h, v0.4h, v1.4h
+; CHECK-NEXT:    sshr v2.4h, v1.4h, #6
+; CHECK-NEXT:    usra v2.4h, v1.4h, #15
+; CHECK-NEXT:    mls v0.4h, v2.4h, v3.4h
+; CHECK-NEXT:    add v0.4h, v0.4h, v2.4h
 ; CHECK-NEXT:    ret
   %1 = srem <4 x i16> %x, <i16 95, i16 95, i16 95, i16 95>
   %2 = sdiv <4 x i16> %x, <i16 95, i16 95, i16 95, i16 95>
@@ -74,10 +74,10 @@ define <4 x i16> @dont_fold_srem_power_of_two(<4 x i16> %x) {
 ; CHECK-NEXT:    smull v1.4s, v0.4h, v1.4h
 ; CHECK-NEXT:    shrn v1.4h, v1.4s, #16
 ; CHECK-NEXT:    add v1.4h, v1.4h, v0.4h
-; CHECK-NEXT:    sshl v1.4h, v1.4h, v2.4h
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI3_2]
-; CHECK-NEXT:    usra v1.4h, v1.4h, #15
-; CHECK-NEXT:    mls v0.4h, v1.4h, v2.4h
+; CHECK-NEXT:    sshl v2.4h, v1.4h, v2.4h
+; CHECK-NEXT:    usra v2.4h, v1.4h, #15
+; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI3_2]
+; CHECK-NEXT:    mls v0.4h, v2.4h, v1.4h
 ; CHECK-NEXT:    ret
   %1 = srem <4 x i16> %x, <i16 64, i16 32, i16 8, i16 95>
   ret <4 x i16> %1
@@ -91,14 +91,14 @@ define <4 x i16> @dont_fold_srem_one(<4 x i16> %x) {
 ; CHECK-NEXT:    movi d2, #0x00ffff0000ffff
 ; CHECK-NEXT:    ldr d1, [x8, :lo12:.LCPI4_0]
 ; CHECK-NEXT:    adrp x8, .LCPI4_1
+; CHECK-NEXT:    ldr d3, [x8, :lo12:.LCPI4_1]
+; CHECK-NEXT:    adrp x8, .LCPI4_2
 ; CHECK-NEXT:    smull v1.4s, v0.4h, v1.4h
 ; CHECK-NEXT:    and v2.8b, v0.8b, v2.8b
 ; CHECK-NEXT:    shrn v1.4h, v1.4s, #16
 ; CHECK-NEXT:    add v1.4h, v1.4h, v2.4h
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI4_1]
-; CHECK-NEXT:    adrp x8, .LCPI4_2
-; CHECK-NEXT:    sshl v1.4h, v1.4h, v2.4h
 ; CHECK-NEXT:    ushr v2.4h, v1.4h, #15
+; CHECK-NEXT:    sshl v1.4h, v1.4h, v3.4h
 ; CHECK-NEXT:    mov v2.h[0], wzr
 ; CHECK-NEXT:    add v1.4h, v1.4h, v2.4h
 ; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI4_2]
@@ -118,12 +118,12 @@ define <4 x i16> @dont_fold_srem_i16_smax(<4 x i16> %x) {
 ; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI5_0]
 ; CHECK-NEXT:    adrp x8, .LCPI5_2
 ; CHECK-NEXT:    smull v1.4s, v0.4h, v1.4h
+; CHECK-NEXT:    ldr d3, [x8, :lo12:.LCPI5_2]
+; CHECK-NEXT:    adrp x8, .LCPI5_3
 ; CHECK-NEXT:    shrn v1.4h, v1.4s, #16
 ; CHECK-NEXT:    mla v1.4h, v0.4h, v2.4h
-; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI5_2]
-; CHECK-NEXT:    adrp x8, .LCPI5_3
-; CHECK-NEXT:    sshl v1.4h, v1.4h, v2.4h
 ; CHECK-NEXT:    ushr v2.4h, v1.4h, #15
+; CHECK-NEXT:    sshl v1.4h, v1.4h, v3.4h
 ; CHECK-NEXT:    mov v2.h[0], wzr
 ; CHECK-NEXT:    add v1.4h, v1.4h, v2.4h
 ; CHECK-NEXT:    ldr d2, [x8, :lo12:.LCPI5_3]
@@ -181,13 +181,13 @@ define <16 x i8> @fold_srem_v16i8(<16 x i8> %x) {
 ; CHECK-LABEL: fold_srem_v16i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.16b, #103
+; CHECK-NEXT:    movi v3.16b, #10
 ; CHECK-NEXT:    smull2 v2.8h, v0.16b, v1.16b
 ; CHECK-NEXT:    smull v1.8h, v0.8b, v1.8b
 ; CHECK-NEXT:    uzp2 v1.16b, v1.16b, v2.16b
-; CHECK-NEXT:    movi v2.16b, #10
-; CHECK-NEXT:    sshr v1.16b, v1.16b, #2
-; CHECK-NEXT:    usra v1.16b, v1.16b, #7
-; CHECK-NEXT:    mls v0.16b, v1.16b, v2.16b
+; CHECK-NEXT:    sshr v2.16b, v1.16b, #2
+; CHECK-NEXT:    usra v2.16b, v1.16b, #7
+; CHECK-NEXT:    mls v0.16b, v2.16b, v3.16b
 ; CHECK-NEXT:    ret
   %1 = srem <16 x i8> %x, <i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10>
   ret <16 x i8> %1
@@ -197,12 +197,12 @@ define <8 x i8> @fold_srem_v8i8(<8 x i8> %x) {
 ; CHECK-LABEL: fold_srem_v8i8:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    movi v1.8b, #103
-; CHECK-NEXT:    movi v2.8b, #10
+; CHECK-NEXT:    movi v3.8b, #10
 ; CHECK-NEXT:    smull v1.8h, v0.8b, v1.8b
 ; CHECK-NEXT:    shrn v1.8b, v1.8h, #8
-; CHECK-NEXT:    sshr v1.8b, v1.8b, #2
-; CHECK-NEXT:    usra v1.8b, v1.8b, #7
-; CHECK-NEXT:    mls v0.8b, v1.8b, v2.8b
+; CHECK-NEXT:    sshr v2.8b, v1.8b, #2
+; CHECK-NEXT:    usra v2.8b, v1.8b, #7
+; CHECK-NEXT:    mls v0.8b, v2.8b, v3.8b
 ; CHECK-NEXT:    ret
   %1 = srem <8 x i8> %x, <i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10, i8 10>
   ret <8 x i8> %1
@@ -212,14 +212,14 @@ define <8 x i16> @fold_srem_v8i16(<8 x i16> %x) {
 ; CHECK-LABEL: fold_srem_v8i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #26215 // =0x6667
+; CHECK-NEXT:    movi v3.8h, #10
 ; CHECK-NEXT:    dup v1.8h, w8
 ; CHECK-NEXT:    smull2 v2.4s, v0.8h, v1.8h
 ; CHECK-NEXT:    smull v1.4s, v0.4h, v1.4h
 ; CHECK-NEXT:    uzp2 v1.8h, v1.8h, v2.8h
-; CHECK-NEXT:    movi v2.8h, #10
-; CHECK-NEXT:    sshr v1.8h, v1.8h, #2
-; CHECK-NEXT:    usra v1.8h, v1.8h, #15
-; CHECK-NEXT:    mls v0.8h, v1.8h, v2.8h
+; CHECK-NEXT:    sshr v2.8h, v1.8h, #2
+; CHECK-NEXT:    usra v2.8h, v1.8h, #15
+; CHECK-NEXT:    mls v0.8h, v2.8h, v3.8h
 ; CHECK-NEXT:    ret
   %1 = srem <8 x i16> %x, <i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10, i16 10>
   ret <8 x i16> %1
@@ -229,13 +229,14 @@ define <4 x i16> @fold_srem_v4i16(<4 x i16> %x) {
 ; CHECK-LABEL: fold_srem_v4i16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #26215 // =0x6667
-; CHECK-NEXT:    movi v2.4h, #10
+; CHECK-NEXT:    movi v3.4h, #10
 ; CHECK-NEXT:    dup v1.4h, w8
 ; CHECK-NEXT:    smull v1.4s, v0.4h, v1.4h
-; CHECK-NEXT:    sshr v1.4s, v1.4s, #18
-; CHECK-NEXT:    xtn v1.4h, v1.4s
-; CHECK-NEXT:    usra v1.4h, v1.4h, #15
-; CHECK-NEXT:    mls v0.4h, v1.4h, v2.4h
+; CHECK-NEXT:    sshr v2.4s, v1.4s, #18
+; CHECK-NEXT:    shrn v1.4h, v1.4s, #16
+; CHECK-NEXT:    xtn v2.4h, v2.4s
+; CHECK-NEXT:    usra v2.4h, v1.4h, #15
+; CHECK-NEXT:    mls v0.4h, v2.4h, v3.4h
 ; CHECK-NEXT:    ret
   %1 = srem <4 x i16> %x, <i16 10, i16 10, i16 10, i16 10>
   ret <4 x i16> %1

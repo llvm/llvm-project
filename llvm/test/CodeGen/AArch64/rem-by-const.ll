@@ -894,14 +894,15 @@ define <4 x i8> @sv4i8_7(<4 x i8> %d, <4 x i8> %e) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    shl v0.4h, v0.4h, #8
 ; CHECK-SD-NEXT:    mov w8, #18725 // =0x4925
-; CHECK-SD-NEXT:    movi v2.4h, #7
+; CHECK-SD-NEXT:    movi v3.4h, #7
 ; CHECK-SD-NEXT:    dup v1.4h, w8
 ; CHECK-SD-NEXT:    sshr v0.4h, v0.4h, #8
 ; CHECK-SD-NEXT:    smull v1.4s, v0.4h, v1.4h
-; CHECK-SD-NEXT:    sshr v1.4s, v1.4s, #17
-; CHECK-SD-NEXT:    xtn v1.4h, v1.4s
-; CHECK-SD-NEXT:    usra v1.4h, v1.4h, #15
-; CHECK-SD-NEXT:    mls v0.4h, v1.4h, v2.4h
+; CHECK-SD-NEXT:    sshr v2.4s, v1.4s, #17
+; CHECK-SD-NEXT:    shrn v1.4h, v1.4s, #16
+; CHECK-SD-NEXT:    xtn v2.4h, v2.4s
+; CHECK-SD-NEXT:    usra v2.4h, v1.4h, #15
+; CHECK-SD-NEXT:    mls v0.4h, v2.4h, v3.4h
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sv4i8_7:
@@ -948,14 +949,15 @@ define <4 x i8> @sv4i8_100(<4 x i8> %d, <4 x i8> %e) {
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    shl v0.4h, v0.4h, #8
 ; CHECK-SD-NEXT:    mov w8, #5243 // =0x147b
-; CHECK-SD-NEXT:    movi v2.4h, #100
+; CHECK-SD-NEXT:    movi v3.4h, #100
 ; CHECK-SD-NEXT:    dup v1.4h, w8
 ; CHECK-SD-NEXT:    sshr v0.4h, v0.4h, #8
 ; CHECK-SD-NEXT:    smull v1.4s, v0.4h, v1.4h
-; CHECK-SD-NEXT:    sshr v1.4s, v1.4s, #19
-; CHECK-SD-NEXT:    xtn v1.4h, v1.4s
-; CHECK-SD-NEXT:    usra v1.4h, v1.4h, #15
-; CHECK-SD-NEXT:    mls v0.4h, v1.4h, v2.4h
+; CHECK-SD-NEXT:    sshr v2.4s, v1.4s, #19
+; CHECK-SD-NEXT:    shrn v1.4h, v1.4s, #16
+; CHECK-SD-NEXT:    xtn v2.4h, v2.4s
+; CHECK-SD-NEXT:    usra v2.4h, v1.4h, #15
+; CHECK-SD-NEXT:    mls v0.4h, v2.4h, v3.4h
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sv4i8_100:
@@ -1001,13 +1003,13 @@ define <8 x i8> @sv8i8_7(<8 x i8> %d, <8 x i8> %e) {
 ; CHECK-SD-LABEL: sv8i8_7:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    movi v1.8b, #147
-; CHECK-SD-NEXT:    movi v2.8b, #7
+; CHECK-SD-NEXT:    movi v3.8b, #7
 ; CHECK-SD-NEXT:    smull v1.8h, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    shrn v1.8b, v1.8h, #8
 ; CHECK-SD-NEXT:    add v1.8b, v1.8b, v0.8b
-; CHECK-SD-NEXT:    sshr v1.8b, v1.8b, #2
-; CHECK-SD-NEXT:    usra v1.8b, v1.8b, #7
-; CHECK-SD-NEXT:    mls v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    sshr v2.8b, v1.8b, #2
+; CHECK-SD-NEXT:    usra v2.8b, v1.8b, #7
+; CHECK-SD-NEXT:    mls v0.8b, v2.8b, v3.8b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sv8i8_7:
@@ -1031,12 +1033,12 @@ define <8 x i8> @sv8i8_100(<8 x i8> %d, <8 x i8> %e) {
 ; CHECK-SD-LABEL: sv8i8_100:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    movi v1.8b, #41
-; CHECK-SD-NEXT:    movi v2.8b, #100
+; CHECK-SD-NEXT:    movi v3.8b, #100
 ; CHECK-SD-NEXT:    smull v1.8h, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    shrn v1.8b, v1.8h, #8
-; CHECK-SD-NEXT:    sshr v1.8b, v1.8b, #4
-; CHECK-SD-NEXT:    usra v1.8b, v1.8b, #7
-; CHECK-SD-NEXT:    mls v0.8b, v1.8b, v2.8b
+; CHECK-SD-NEXT:    sshr v2.8b, v1.8b, #4
+; CHECK-SD-NEXT:    usra v2.8b, v1.8b, #7
+; CHECK-SD-NEXT:    mls v0.8b, v2.8b, v3.8b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sv8i8_100:
@@ -1059,14 +1061,14 @@ define <16 x i8> @sv16i8_7(<16 x i8> %d, <16 x i8> %e) {
 ; CHECK-SD-LABEL: sv16i8_7:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    movi v1.16b, #147
+; CHECK-SD-NEXT:    movi v3.16b, #7
 ; CHECK-SD-NEXT:    smull2 v2.8h, v0.16b, v1.16b
 ; CHECK-SD-NEXT:    smull v1.8h, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    uzp2 v1.16b, v1.16b, v2.16b
-; CHECK-SD-NEXT:    movi v2.16b, #7
 ; CHECK-SD-NEXT:    add v1.16b, v1.16b, v0.16b
-; CHECK-SD-NEXT:    sshr v1.16b, v1.16b, #2
-; CHECK-SD-NEXT:    usra v1.16b, v1.16b, #7
-; CHECK-SD-NEXT:    mls v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    sshr v2.16b, v1.16b, #2
+; CHECK-SD-NEXT:    usra v2.16b, v1.16b, #7
+; CHECK-SD-NEXT:    mls v0.16b, v2.16b, v3.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sv16i8_7:
@@ -1091,13 +1093,13 @@ define <16 x i8> @sv16i8_100(<16 x i8> %d, <16 x i8> %e) {
 ; CHECK-SD-LABEL: sv16i8_100:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    movi v1.16b, #41
+; CHECK-SD-NEXT:    movi v3.16b, #100
 ; CHECK-SD-NEXT:    smull2 v2.8h, v0.16b, v1.16b
 ; CHECK-SD-NEXT:    smull v1.8h, v0.8b, v1.8b
 ; CHECK-SD-NEXT:    uzp2 v1.16b, v1.16b, v2.16b
-; CHECK-SD-NEXT:    movi v2.16b, #100
-; CHECK-SD-NEXT:    sshr v1.16b, v1.16b, #4
-; CHECK-SD-NEXT:    usra v1.16b, v1.16b, #7
-; CHECK-SD-NEXT:    mls v0.16b, v1.16b, v2.16b
+; CHECK-SD-NEXT:    sshr v2.16b, v1.16b, #4
+; CHECK-SD-NEXT:    usra v2.16b, v1.16b, #7
+; CHECK-SD-NEXT:    mls v0.16b, v2.16b, v3.16b
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sv16i8_100:
@@ -1782,13 +1784,14 @@ define <4 x i16> @sv4i16_7(<4 x i16> %d, <4 x i16> %e) {
 ; CHECK-SD-LABEL: sv4i16_7:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    mov w8, #18725 // =0x4925
-; CHECK-SD-NEXT:    movi v2.4h, #7
+; CHECK-SD-NEXT:    movi v3.4h, #7
 ; CHECK-SD-NEXT:    dup v1.4h, w8
 ; CHECK-SD-NEXT:    smull v1.4s, v0.4h, v1.4h
-; CHECK-SD-NEXT:    sshr v1.4s, v1.4s, #17
-; CHECK-SD-NEXT:    xtn v1.4h, v1.4s
-; CHECK-SD-NEXT:    usra v1.4h, v1.4h, #15
-; CHECK-SD-NEXT:    mls v0.4h, v1.4h, v2.4h
+; CHECK-SD-NEXT:    sshr v2.4s, v1.4s, #17
+; CHECK-SD-NEXT:    shrn v1.4h, v1.4s, #16
+; CHECK-SD-NEXT:    xtn v2.4h, v2.4s
+; CHECK-SD-NEXT:    usra v2.4h, v1.4h, #15
+; CHECK-SD-NEXT:    mls v0.4h, v2.4h, v3.4h
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sv4i16_7:
@@ -1812,13 +1815,14 @@ define <4 x i16> @sv4i16_100(<4 x i16> %d, <4 x i16> %e) {
 ; CHECK-SD-LABEL: sv4i16_100:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    mov w8, #5243 // =0x147b
-; CHECK-SD-NEXT:    movi v2.4h, #100
+; CHECK-SD-NEXT:    movi v3.4h, #100
 ; CHECK-SD-NEXT:    dup v1.4h, w8
 ; CHECK-SD-NEXT:    smull v1.4s, v0.4h, v1.4h
-; CHECK-SD-NEXT:    sshr v1.4s, v1.4s, #19
-; CHECK-SD-NEXT:    xtn v1.4h, v1.4s
-; CHECK-SD-NEXT:    usra v1.4h, v1.4h, #15
-; CHECK-SD-NEXT:    mls v0.4h, v1.4h, v2.4h
+; CHECK-SD-NEXT:    sshr v2.4s, v1.4s, #19
+; CHECK-SD-NEXT:    shrn v1.4h, v1.4s, #16
+; CHECK-SD-NEXT:    xtn v2.4h, v2.4s
+; CHECK-SD-NEXT:    usra v2.4h, v1.4h, #15
+; CHECK-SD-NEXT:    mls v0.4h, v2.4h, v3.4h
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sv4i16_100:
@@ -1842,14 +1846,14 @@ define <8 x i16> @sv8i16_7(<8 x i16> %d, <8 x i16> %e) {
 ; CHECK-SD-LABEL: sv8i16_7:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    mov w8, #18725 // =0x4925
+; CHECK-SD-NEXT:    movi v3.8h, #7
 ; CHECK-SD-NEXT:    dup v1.8h, w8
 ; CHECK-SD-NEXT:    smull2 v2.4s, v0.8h, v1.8h
 ; CHECK-SD-NEXT:    smull v1.4s, v0.4h, v1.4h
 ; CHECK-SD-NEXT:    uzp2 v1.8h, v1.8h, v2.8h
-; CHECK-SD-NEXT:    movi v2.8h, #7
-; CHECK-SD-NEXT:    sshr v1.8h, v1.8h, #1
-; CHECK-SD-NEXT:    usra v1.8h, v1.8h, #15
-; CHECK-SD-NEXT:    mls v0.8h, v1.8h, v2.8h
+; CHECK-SD-NEXT:    sshr v2.8h, v1.8h, #1
+; CHECK-SD-NEXT:    usra v2.8h, v1.8h, #15
+; CHECK-SD-NEXT:    mls v0.8h, v2.8h, v3.8h
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sv8i16_7:
@@ -1874,14 +1878,14 @@ define <8 x i16> @sv8i16_100(<8 x i16> %d, <8 x i16> %e) {
 ; CHECK-SD-LABEL: sv8i16_100:
 ; CHECK-SD:       // %bb.0: // %entry
 ; CHECK-SD-NEXT:    mov w8, #5243 // =0x147b
+; CHECK-SD-NEXT:    movi v3.8h, #100
 ; CHECK-SD-NEXT:    dup v1.8h, w8
 ; CHECK-SD-NEXT:    smull2 v2.4s, v0.8h, v1.8h
 ; CHECK-SD-NEXT:    smull v1.4s, v0.4h, v1.4h
 ; CHECK-SD-NEXT:    uzp2 v1.8h, v1.8h, v2.8h
-; CHECK-SD-NEXT:    movi v2.8h, #100
-; CHECK-SD-NEXT:    sshr v1.8h, v1.8h, #3
-; CHECK-SD-NEXT:    usra v1.8h, v1.8h, #15
-; CHECK-SD-NEXT:    mls v0.8h, v1.8h, v2.8h
+; CHECK-SD-NEXT:    sshr v2.8h, v1.8h, #3
+; CHECK-SD-NEXT:    usra v2.8h, v1.8h, #15
+; CHECK-SD-NEXT:    mls v0.8h, v2.8h, v3.8h
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: sv8i16_100:

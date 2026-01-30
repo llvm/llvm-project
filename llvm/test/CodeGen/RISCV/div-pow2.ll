@@ -404,11 +404,13 @@ define i64 @sdiv64_pow2_8589934592(i64 %a) {
 ; RV32I-LABEL: sdiv64_pow2_8589934592:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    srli a2, a1, 31
-; RV32I-NEXT:    add a2, a1, a2
-; RV32I-NEXT:    srai a1, a1, 31
-; RV32I-NEXT:    add a1, a0, a1
-; RV32I-NEXT:    sltu a0, a1, a0
-; RV32I-NEXT:    add a1, a2, a0
+; RV32I-NEXT:    srai a3, a1, 31
+; RV32I-NEXT:    add a1, a1, a2
+; RV32I-NEXT:    slli a3, a3, 1
+; RV32I-NEXT:    or a2, a2, a3
+; RV32I-NEXT:    add a2, a0, a2
+; RV32I-NEXT:    sltu a0, a2, a0
+; RV32I-NEXT:    add a1, a1, a0
 ; RV32I-NEXT:    srai a0, a1, 1
 ; RV32I-NEXT:    srai a1, a1, 31
 ; RV32I-NEXT:    ret
@@ -429,11 +431,13 @@ define i64 @sdiv64_pow2_negative_8589934592(i64 %a) {
 ; RV32I-LABEL: sdiv64_pow2_negative_8589934592:
 ; RV32I:       # %bb.0: # %entry
 ; RV32I-NEXT:    srli a2, a1, 31
-; RV32I-NEXT:    add a2, a1, a2
-; RV32I-NEXT:    srai a1, a1, 31
-; RV32I-NEXT:    add a1, a0, a1
-; RV32I-NEXT:    sltu a0, a1, a0
-; RV32I-NEXT:    add a0, a2, a0
+; RV32I-NEXT:    srai a3, a1, 31
+; RV32I-NEXT:    add a1, a1, a2
+; RV32I-NEXT:    slli a3, a3, 1
+; RV32I-NEXT:    or a2, a2, a3
+; RV32I-NEXT:    add a2, a0, a2
+; RV32I-NEXT:    sltu a0, a2, a0
+; RV32I-NEXT:    add a0, a1, a0
 ; RV32I-NEXT:    srai a1, a0, 31
 ; RV32I-NEXT:    srai a0, a0, 1
 ; RV32I-NEXT:    snez a2, a0
