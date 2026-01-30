@@ -11,6 +11,7 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Utility/Args.h"
+#include "lldb/Utility/DataBuffer.h"
 #include "lldb/Utility/DataExtractor.h"
 #include "lldb/Utility/LLDBLog.h"
 #include "lldb/Utility/Log.h"
@@ -709,9 +710,9 @@ bool SharedCacheInfo::CreateSharedCacheInfoWithInstrospectionSPIs() {
         });
     assert(minVmAddr != UINT_MAX);
     assert(maxVmAddr != 0);
-    DataBufferSP data_sp = std::make_shared<DataBufferUnowned>(
+    lldb::DataBufferSP data_sp = std::make_shared<DataBufferUnowned>(
         (uint8_t *)minVmAddr, maxVmAddr - minVmAddr);
-    DataExtractorSP extractor_sp = std::make_shared<DataExtractor>(data_sp);
+    lldb::DataExtractorSP extractor_sp = std::make_shared<DataExtractor>(data_sp);
     m_images[dyld_image_get_installname(image)] = SharedCacheImageInfo{
         UUID(uuid, 16), extractor_sp)};
   });
