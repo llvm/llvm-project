@@ -1065,7 +1065,8 @@ class PatFrags<dag ops, list<dag> frags, code pred = [{}],
   // SDISel and GlobalISel. See `ImmLeaf` below.
   //
   // The following variables are in scope:
-  // - `int64_t Imm` representing the value of the immediate.
+  // - `Imm` representing the value of the immediate. The type of `Imm` depends
+  //   on what kind of `ImmLeaf` is being instantiated.
   //
   // This should return a `bool` for whether the predicate matches or not.
   code ImmediateCode = [{}];
@@ -2388,20 +2389,42 @@ class Pat<dag pattern, dag result> : Pattern<pattern, [result]>;
 //
 
 // Complex patterns, e.g. X86 addressing mode, requires pattern matching code
-// in C++. Ty is the type of return value; NumOperands is the number of operands
-// returned by the select function; SelectFunc is the name of the function used
-// to pattern match the max. pattern; RootNodes are the list of possible root nodes
-// of the sub-dags to match.
-// e.g. X86 addressing mode - def addr : ComplexPattern<iPTR, 4, "SelectAddr", [add]>;
-//
+// in C++: def addr : ComplexPattern<iPTR, 4, "SelectAddr", [add]>;
 class ComplexPattern<ValueType ty, int numops, string fn,
                      list<SDNode> roots = [], list<SDNodeProperty> props = [],
                      int complexity = -1> {
+
+  // Type of the return value of the Pattern
   ValueType Ty = ty;
+
+  // Number of operands returned by select function
   int NumOperands = numops;
+
+  // Name of the select function in C++ used to pattern match. This should be
+  // defined on your `GET_DAGISEL_BODY` class (usually the DAGToDAGISel class
+  // for your target).
+  //
+  // The arguments to this function are:
+  // - `SDValue Root` for the root of the match if `WantsRoot` is true
+  // - `SDValue *Parent` for the parent of the operand, if `WantsParent` is
+  //   true. This may be null if `N` is the root node.
+  // - `SDValue N` for the value being matched
+  // - one `SDValue &Out` for each operand returned
+  // - `SDValue &OutChain` for the output chain if `SDNPHasChain` is in `Properties`.
+  //
+  // This function should return a `bool` representing whether the pattern
+  // matched or not.
   string SelectFunc = fn;
+
+  // The list of possible root nodes of the sub-dags to match
   list<SDNode> RootNodes = roots;
+
+  // These properties are used to verify that the result instruction has similar
+  // properties to the pattern.
   list<SDNodeProperty> Properties = props;
+
+  // Complexity of this pattern relative to others. Patterns with higher
+  // complexity are matched before those with lower complexity.
   int Complexity = complexity;
 
   // Set this to true if SelectFunc wants an additional argument
@@ -2411,4 +2434,7 @@ class ComplexPattern<ValueType ty, int numops, string fn,
   // Set this to true if SelectFunc wants an additional argument
   // that is the parent of the matched node.
   bit WantsParent = false;
+
+  // The GlobalISel equivalent is defined using a `GIComplexOperandMatcher` and
+  // a `GIComplexPatternEquiv`.
 }
