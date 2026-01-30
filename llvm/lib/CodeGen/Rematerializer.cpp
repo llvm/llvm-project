@@ -105,7 +105,7 @@ Rematerializer::rematerializeToPos(unsigned RootIdx,
   }
 
   LLVM_DEBUG(--CallDepth);
-  return createReg(RootIdx, InsertPos, std::move(NewDeps));
+  return rematerializeReg(RootIdx, InsertPos, std::move(NewDeps));
 }
 
 void Rematerializer::rollbackRematsOf(unsigned RootIdx) {
@@ -139,16 +139,17 @@ void Rematerializer::rollbackRematsOf(unsigned RootIdx) {
 void Rematerializer::rollback(unsigned RematIdx) {
   assert(getReg(RematIdx).DefMI && !Rollbackable.contains(RematIdx) &&
          "cannot rollback dead register");
-  const unsigned ParentRegIdx = getParentOf(RematIdx);
-  reviveRegIfDead(ParentRegIdx);
+  const unsigned OriginRegIdx = getOriginOf(RematIdx);
+  reviveRegIfDead(OriginRegIdx);
   for (const auto &[UseRegion, RegionUsers] : Regs[RematIdx].Uses) {
-    transferRegionUsers(RematIdx, ParentRegIdx, UseRegion,
+    transferRegionUsers(RematIdx, OriginRegIdx, UseRegion,
                         /*SupportRollback=*/false);
   }
 }
 
 void Rematerializer::reviveRegIfDead(unsigned RootIdx) {
-  assert(!isRematerialization(RootIdx) && "cannot revive rematerialization");
+  assert(!isRematerializedRegister(RootIdx) &&
+         "cannot revive rematerialization");
 
   Reg &Root = Regs[RootIdx];
   if (!Root.Uses.empty()) {
@@ -223,7 +224,7 @@ void Rematerializer::transferUserInternal(unsigned FromRegIdx,
   assert(getReg(FromRegIdx).Uses.at(MIRegion.at(&UserMI)).contains(&UserMI) &&
          "not a user");
   assert(FromRegIdx != ToRegIdx && "identical registers");
-  assert(getParentOrSelf(FromRegIdx) == getParentOrSelf(ToRegIdx) &&
+  assert(getOriginOrSelf(FromRegIdx) == getOriginOrSelf(ToRegIdx) &&
          "unrelated registers");
 
   LLVM_DEBUG(rdbgs() << "User transfer from " << printID(FromRegIdx) << " to "
@@ -290,7 +291,7 @@ void Rematerializer::commitRematerializations() {
   Rollbackable.clear();
 }
 
-bool Rematerializer::isMOAvailableAtUses(const MachineOperand &MO,
+bool Rematerializer::isMOIdenticalAtUses(MachineOperand &MO,
                                          ArrayRef<SlotIndex> Uses) const {
   if (Uses.empty())
     return true;
@@ -310,7 +311,7 @@ bool Rematerializer::isMOAvailableAtUses(const MachineOperand &MO,
 
 unsigned Rematerializer::findRematInRegion(unsigned RegIdx, unsigned Region,
                                            SlotIndex Before) const {
-  auto It = Rematerializations.find(getParentOrSelf(RegIdx));
+  auto It = Rematerializations.find(getOriginOrSelf(RegIdx));
   if (It == Rematerializations.end())
     return NoReg;
   const SmallDenseSet<unsigned, 4> &Remats = It->getSecond();
@@ -366,10 +367,10 @@ bool Rematerializer::deleteRegIfUnused(unsigned RootIdx, bool SupportRollback) {
   } else {
     deleteReg(RootIdx);
   }
-  if (isRematerialization(RootIdx)) {
+  if (isRematerializedRegister(RootIdx)) {
     SmallDenseSet<unsigned, 4> &Remats =
-        Rematerializations.at(getParentOf(RootIdx));
-    assert(Remats.contains(RootIdx) && "broken link between remat and parent");
+        Rematerializations.at(getOriginOf(RootIdx));
+    assert(Remats.contains(RootIdx) && "broken link between remat and origin");
     Remats.erase(RootIdx);
     if (Remats.empty())
       Rematerializations.erase(RootIdx);
@@ -430,7 +431,7 @@ bool Rematerializer::analyze() {
 
   LLVM_DEBUG({
     for (unsigned I = 0, E = getNumRegs(); I < E; ++I)
-      dbgs() << printTree(I) << '\n';
+      dbgs() << printDepDAG(I) << '\n';
   });
   return !Regs.empty();
 }
@@ -526,10 +527,9 @@ unsigned Rematerializer::getDefRegIdx(const MachineInstr &MI) const {
   return UserRegIt->second;
 }
 
-unsigned
-Rematerializer::createReg(unsigned RegIdx,
-                          MachineBasicBlock::iterator InsertPos,
-                          SmallVectorImpl<Reg::Dependency> &&Dependencies) {
+unsigned Rematerializer::rematerializeReg(
+    unsigned RegIdx, MachineBasicBlock::iterator InsertPos,
+    SmallVectorImpl<Reg::Dependency> &&Dependencies) {
   unsigned UseRegion = MIRegion.at(&*InsertPos);
   unsigned NewRegIdx = Regs.size();
 
@@ -539,13 +539,13 @@ Rematerializer::createReg(unsigned RegIdx,
   NewReg.DefRegion = UseRegion;
   NewReg.Dependencies = std::move(Dependencies);
 
-  // Track rematerialization link between registers. Parents are always
+  // Track rematerialization link between registers. Origins are always
   // registers that existed originally, and rematerializations are always
   // attached to them.
-  unsigned ParentIdx =
-      isRematerialization(RegIdx) ? getParentOf(RegIdx) : RegIdx;
-  Parents.push_back(ParentIdx);
-  Rematerializations[ParentIdx].insert(NewRegIdx);
+  unsigned OriginIdx =
+      isRematerializedRegister(RegIdx) ? getOriginOf(RegIdx) : RegIdx;
+  Origins.push_back(OriginIdx);
+  Rematerializations[OriginIdx].insert(NewRegIdx);
 
   // Use the TII to rematerialize the defining instruction with a new defined
   // register.
@@ -637,7 +637,7 @@ void Rematerializer::Reg::eraseUser(MachineInstr *MI, unsigned Region) {
     RUsers.erase(MI);
 }
 
-Printable Rematerializer::printTree(unsigned RootIdx) const {
+Printable Rematerializer::printDepDAG(unsigned RootIdx) const {
   return Printable([&, RootIdx](raw_ostream &OS) {
     DenseMap<unsigned, unsigned> RegDepths;
     std::function<void(unsigned, unsigned)> WalkTree =
