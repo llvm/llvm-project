@@ -209,7 +209,7 @@ void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
   // entire IdentifierTable to locate them.
   // FIXME: Is there a more lightweight solution?
   llvm::SmallVector<NamedDecl *, 2> NamedDeclsToRemove;
-  if (S.getDiagnostics().hasErrorOccurred() && !S.getLangOpts().CPlusPlus) {
+  if (!S.getLangOpts().CPlusPlus) {
     for (auto &Entry : S.getASTContext().Idents) {
       IdentifierInfo *II = Entry.getValue();
       if (II && II->getFETokenInfo()) {
