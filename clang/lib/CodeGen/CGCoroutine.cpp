@@ -660,11 +660,17 @@ struct GetReturnObjectManager {
   // Active flag used for DirectEmit return value cleanup. When the coroutine
   // return value is directly emitted into the return slot, we need to run its
   // destructor if an exception is thrown before initial-await-resume.
+  // DirectGroActiveFlag is unused when InitialSuspendCanThrow is false.
+  bool InitialSuspendCanThrow = false;
   Address DirectGroActiveFlag;
+
   CodeGenFunction::AutoVarEmission GroEmission;
 
   GetReturnObjectManager(CodeGenFunction &CGF, const CoroutineBodyStmt &S)
-      : CGF(CGF), Builder(CGF.Builder), S(S), GroActiveFlag(Address::invalid()),
+      : CGF(CGF), Builder(CGF.Builder), S(S),
+
+        GroActiveFlag(Address::invalid()),
+        InitialSuspendCanThrow(StmtCanThrow(S.getInitSuspendStmt())),
         DirectGroActiveFlag(Address::invalid()),
         GroEmission(CodeGenFunction::AutoVarEmission::invalid()) {
     // The call to get_­return_­object is sequenced before the call to
@@ -777,18 +783,21 @@ struct GetReturnObjectManager {
         // conditional cleanup that will destroy it if an exception is thrown
         // before initial-await-resume. The cleanup is activated now and will
         // be deactivated once initial_suspend completes normally.
-        if (QualType::DestructionKind DtorKind =
-                S.getReturnValue()->getType().isDestructedType()) {
-          // Create an active flag (initialize to true) for conditional
-          // cleanup. We are not necessarily in a conditional branch here so
-          // use a simple temp alloca instead of createCleanupActiveFlag().
-          auto ActiveFlag = CGF.CreateTempAlloca(
-              Builder.getInt1Ty(), CharUnits::One(), "direct.gro.active");
-          Builder.CreateStore(Builder.getTrue(), ActiveFlag);
-          CGF.pushDestroyAndDeferDeactivation(DtorKind, CGF.ReturnValue,
-                                              S.getReturnValue()->getType());
-          CGF.initFullExprCleanupWithFlag(ActiveFlag);
-          DirectGroActiveFlag = ActiveFlag;
+        if (InitialSuspendCanThrow) {
+          if (QualType::DestructionKind DtorKind =
+                  S.getReturnValue()->getType().isDestructedType();
+              DtorKind) {
+            // Create an active flag (initialize to true) for conditional
+            // cleanup. We are not necessarily in a conditional branch here so
+            // use a simple temp alloca instead of createCleanupActiveFlag().
+            auto ActiveFlag = CGF.CreateTempAlloca(
+                Builder.getInt1Ty(), CharUnits::One(), "direct.gro.active");
+            Builder.CreateStore(Builder.getTrue(), ActiveFlag);
+            CGF.pushDestroyAndDeferDeactivation(DtorKind, CGF.ReturnValue,
+                                                S.getReturnValue()->getType());
+            CGF.initFullExprCleanupWithFlag(ActiveFlag);
+            DirectGroActiveFlag = ActiveFlag;
+          }
         }
       }
       return;
@@ -804,6 +813,7 @@ struct GetReturnObjectManager {
     CGF.EmitAutoVarInit(GroEmission);
     Builder.CreateStore(Builder.getTrue(), GroActiveFlag);
   }
+
   // The GRO returns either when it is first suspended or when it completes
   // without ever being suspended. The EmitGroConv function evaluates these
   // conditions and perform the conversion if needed.
