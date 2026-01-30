@@ -1660,7 +1660,7 @@ static void convertFunctionMemoryAttributes(LLVMFuncOp func,
 }
 
 /// Converts function attributes from `func` and attaches them to `llvmFunc`.
-static void convertFunctionAttributes(LLVMFuncOp func,
+static void convertFunctionAttributes(ModuleTranslation &mod, LLVMFuncOp func,
                                       llvm::Function *llvmFunc) {
   if (func.getNoInlineAttr())
     llvmFunc->addFnAttr(llvm::Attribute::NoInline);
@@ -1705,12 +1705,8 @@ static void convertFunctionAttributes(LLVMFuncOp func,
     if (noBuiltins.empty())
       llvmFunc->addFnAttr("no-builtins");
 
-    for (Attribute a : noBuiltins) {
-      if (auto str = dyn_cast<StringAttr>(a)) {
-        std::string attrName = ("no-builtin-" + str.getValue()).str();
-        llvmFunc->addFnAttr(attrName);
-      }
-    }
+    mod.convertFunctionArrayAttr(noBuiltins, llvmFunc,
+                                 ModuleTranslation::noBuiltinConverter);
   }
 
   convertFunctionMemoryAttributes(func, llvmFunc);
@@ -1882,7 +1878,7 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
     addRuntimePreemptionSpecifier(function.getDsoLocal(), llvmFunc);
 
     // Convert function attributes.
-    convertFunctionAttributes(function, llvmFunc);
+    convertFunctionAttributes(*this, function, llvmFunc);
 
     // Convert function kernel attributes to metadata.
     convertFunctionKernelAttributes(function, llvmFunc, *this);

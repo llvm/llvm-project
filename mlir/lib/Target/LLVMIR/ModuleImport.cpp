@@ -2703,11 +2703,11 @@ static void convertNoBuiltinAttrs(MLIRContext *ctx,
                                   OpTy target) {
   // 'no-builtins' is the complete collection, and overrides all the rest.
   if (attrs.hasAttribute("no-builtins")) {
-    target.setNobuiltinsAttr(mlir::ArrayAttr::get(ctx, {}));
+    target.setNobuiltinsAttr(ArrayAttr::get(ctx, {}));
     return;
   }
 
-  llvm::SmallVector<mlir::Attribute> nbAttrs;
+  llvm::SetVector<Attribute> nbAttrs;
   for (llvm::Attribute attr : attrs) {
     // Attributes that are part of llvm directly (that is, have an AttributeKind
     // in the enum) shouldn't be checked.
@@ -2716,19 +2716,13 @@ static void convertNoBuiltinAttrs(MLIRContext *ctx,
 
     StringRef val = attr.getKindAsString();
 
-    if (val.starts_with("no-builtin-")) {
-      StringRef str = val.drop_front(sizeof("no-builtin-") - 1);
-
-      if (nbAttrs.end() == llvm::find_if(nbAttrs, [str](Attribute a) {
-            return mlir::cast<StringAttr>(a).getValue() == str;
-          }))
-        nbAttrs.push_back(mlir::StringAttr::get(
-            ctx, val.drop_front(sizeof("no-builtin-") - 1)));
-    }
+    if (val.starts_with("no-builtin-"))
+      nbAttrs.insert(
+          StringAttr::get(ctx, val.drop_front(sizeof("no-builtin-") - 1)));
   }
 
   if (!nbAttrs.empty())
-    target.setNobuiltinsAttr(mlir::ArrayAttr::get(ctx, nbAttrs));
+    target.setNobuiltinsAttr(ArrayAttr::get(ctx, nbAttrs.getArrayRef()));
 }
 
 /// Converts LLVM attributes from `func` into MLIR attributes and adds them

@@ -127,13 +127,9 @@ static void addNoBuiltinAttributes(mlir::MLIRContext &ctx,
     return;
   }
 
-  llvm::SmallVector<mlir::Attribute> nbFuncs;
+  llvm::SetVector<mlir::Attribute> nbFuncs;
   auto addNoBuiltinAttr = [&ctx, &nbFuncs](StringRef builtinName) {
-    auto attrMatches = [=](mlir::Attribute a) {
-      return mlir::cast<mlir::StringAttr>(a).getValue() == builtinName;
-    };
-    if (nbFuncs.end() == llvm::find_if(nbFuncs, attrMatches))
-      nbFuncs.push_back(mlir::StringAttr::get(&ctx, builtinName));
+    nbFuncs.insert(mlir::StringAttr::get(&ctx, builtinName));
   };
 
   // Then, add attributes for builtins specified through -fno-builtin-<name>.
@@ -147,7 +143,7 @@ static void addNoBuiltinAttributes(mlir::MLIRContext &ctx,
 
   if (!nbFuncs.empty())
     attrs.set(cir::CIRDialect::getNoBuiltinsAttrName(),
-              mlir::ArrayAttr::get(&ctx, nbFuncs));
+              mlir::ArrayAttr::get(&ctx, nbFuncs.getArrayRef()));
 }
 
 /// Construct the CIR attribute list of a function or call.
