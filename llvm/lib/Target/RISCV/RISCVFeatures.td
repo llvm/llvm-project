@@ -2011,8 +2011,9 @@ def HasConditionalMoveFusion : Predicate<"Subtarget->hasConditionalMoveFusion()"
 def NoConditionalMoveFusion  : Predicate<"!Subtarget->hasConditionalMoveFusion()">;
 
 def TuneHasSingleElementVecFP64
-    : RISCVSimpleTuneFeature<
-          "single-element-vec-fp64", "HasSingleElementVectorFP64", "true",
+    : RISCVTuneFeature<"single-element-vec-fp64",
+          "single-element-vec-fp64", "full-vec-fp64",
+          "HasSingleElementVectorFP64", "true",
           "Certain vector FP64 operations produce a single result "
           "element per cycle">;
 

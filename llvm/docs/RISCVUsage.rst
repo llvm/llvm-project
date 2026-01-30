@@ -647,6 +647,11 @@ takes ``sifive-x280`` as the "base" tune CPU and configured it with ``single-ele
 More formally speaking, each tuning feature string has the following format:
 
 ::
+    <tune-cpu>[":"<tune-features>]?
+
+where
+
+::
     tune-cpu      ::= 'tuning CPU name in lower case'
     directive     ::= "[a-zA-Z0-9\_-]+"
     tune-features ::= directive ["," directive]*
@@ -654,9 +659,9 @@ More formally speaking, each tuning feature string has the following format:
 A *directive* can and can only _enable_ or _disable_ a certain tuning feature from the tuning CPU. A **positive directive**, like the ``single-element-vec-fp64`` we just saw, enables an additional tuning feature in the associated tuning model. A **negative directive**, on the other hand, removes a certain tuning feature. For example, ``sifive-x390`` already has the ``single-element-vec-fp64`` feature, and we can use
 
 ::
-    "sifive-x390:no-single-element-vec-fp64"
+    "sifive-x390:full-vec-fp64"
 
-to create a new performance model that looks nearly the same as ``sifive-x390`` except ``single-element-vec-fp64`` being cut out. In this case, ``no-single-element-vec-fp64`` is a negative directive.
+to create a new performance model that looks nearly the same as ``sifive-x390`` except ``single-element-vec-fp64`` being cut out. In this case, ``full-vec-fp64`` is a negative directive.
 
 There are some rules for the list of directives, though:
 

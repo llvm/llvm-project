@@ -154,13 +154,13 @@ TEST(RISCVTuneFeature, AllProcConfigurableFeatures) {
   SmallVector<StringRef> Result;
   RISCV::getCPUConfigurableTuneFeatures("sifive-x280", Result);
   EXPECT_TRUE(is_contained(Result, "single-element-vec-fp64"));
-  EXPECT_TRUE(is_contained(Result, "no-single-element-vec-fp64"));
+  EXPECT_TRUE(is_contained(Result, "full-vec-fp64"));
   EXPECT_EQ(Result.size(), 2U);
 
   Result.clear();
   RISCV::getCPUConfigurableTuneFeatures("sifive-x390", Result);
   EXPECT_TRUE(is_contained(Result, "single-element-vec-fp64"));
-  EXPECT_TRUE(is_contained(Result, "no-single-element-vec-fp64"));
+  EXPECT_TRUE(is_contained(Result, "full-vec-fp64"));
   EXPECT_EQ(Result.size(), 2U);
 
   Result.clear();
