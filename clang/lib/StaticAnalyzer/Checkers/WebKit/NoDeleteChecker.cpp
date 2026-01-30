@@ -70,6 +70,12 @@ public:
       return;
 
     bool HasNoDeleteAnnotation = isNoDeleteFunction(FD);
+    for (auto* D = FD->getPreviousDecl(); D; D = D->getPreviousDecl()) {
+      if (isNoDeleteFunction(D)) {
+        HasNoDeleteAnnotation = true;
+        break;
+      }
+    }
     if (auto *MD = dyn_cast<CXXMethodDecl>(FD)) {
       if (auto *Cls = MD->getParent(); Cls && MD->isVirtual()) {
         CXXBasePaths Paths;
@@ -84,17 +90,20 @@ public:
               const CXXRecordDecl *R = T->getAsCXXRecordDecl();
               for (const CXXMethodDecl *BaseMD : R->methods()) {
                 if (BaseMD->getCorrespondingMethodInClass(Cls) == MD) {
-                  if (isNoDeleteFunction(FD)) {
+                  if (isNoDeleteFunction(BaseMD)) {
                     HasNoDeleteAnnotation = true;
-                    return false;
+                    return true;
                   }
                 }
               }
-              return true;
+              return false;
             },
             Paths, /*LookupInDependent =*/true);
       }
     }
+
+    if (!HasNoDeleteAnnotation)
+      return;
 
     auto Body = FD->getBody();
     if (!Body || TFA.isTrivial(Body))
