@@ -2181,7 +2181,7 @@ define nofpclass(nan ninf nnorm nsub nzero) float @ret_only_positive__copysign_s
 ; CHECK-SAME: (float nofpclass(nan ninf nzero nsub nnorm) [[ALWAYS_POSITIVE:%.*]], float [[UNKNOWN:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[COPYSIGN:%.*]] = call float @llvm.copysign.f32(float [[ALWAYS_POSITIVE]], float [[UNKNOWN]])
 ; CHECK-NEXT:    store float [[COPYSIGN]], ptr [[PTR]], align 4
-; CHECK-NEXT:    ret float [[COPYSIGN]]
+; CHECK-NEXT:    ret float [[ALWAYS_POSITIVE]]
 ;
   %copysign = call float @llvm.copysign.f32(float %always.positive, float %unknown)
   store float %copysign, ptr %ptr
@@ -2204,7 +2204,7 @@ define nofpclass(nan pinf pnorm psub pzero) float @ret_only_negative__copysign_s
 ; CHECK-SAME: (float nofpclass(nan pinf pzero psub pnorm) [[ALWAYS_NEGATIVE:%.*]], float [[UNKNOWN:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[COPYSIGN:%.*]] = call float @llvm.copysign.f32(float [[ALWAYS_NEGATIVE]], float [[UNKNOWN]])
 ; CHECK-NEXT:    store float [[COPYSIGN]], ptr [[PTR]], align 4
-; CHECK-NEXT:    ret float [[COPYSIGN]]
+; CHECK-NEXT:    ret float [[ALWAYS_NEGATIVE]]
 ;
   %copysign = call float @llvm.copysign.f32(float %always.negative, float %unknown)
   store float %copysign, ptr %ptr
@@ -2273,7 +2273,7 @@ define nofpclass(nan nnorm nsub nzero) float @ret_only_positive_or_ninf__copysig
 ; CHECK-SAME: (float nofpclass(nan ninf nzero nsub nnorm) [[ALWAYS_POSITIVE:%.*]], float [[UNKNOWN:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[COPYSIGN:%.*]] = call ninf float @llvm.copysign.f32(float [[ALWAYS_POSITIVE]], float [[UNKNOWN]])
 ; CHECK-NEXT:    store float [[COPYSIGN]], ptr [[PTR]], align 4
-; CHECK-NEXT:    ret float [[COPYSIGN]]
+; CHECK-NEXT:    ret float [[ALWAYS_POSITIVE]]
 ;
   %copysign = call ninf float @llvm.copysign.f32(float %always.positive, float %unknown)
   store float %copysign, ptr %ptr
@@ -2431,7 +2431,7 @@ define nofpclass(pinf pnorm psub pzero) float @ret_only_negative_or_nan__copysig
 ; CHECK-SAME: (float nofpclass(pinf pzero psub pnorm) [[ALWAYS_NEGATIVE_OR_NAN:%.*]], float [[UNKNOWN:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[COPYSIGN:%.*]] = call nnan float @llvm.copysign.f32(float [[ALWAYS_NEGATIVE_OR_NAN]], float [[UNKNOWN]])
 ; CHECK-NEXT:    store float [[COPYSIGN]], ptr [[PTR]], align 4
-; CHECK-NEXT:    ret float [[COPYSIGN]]
+; CHECK-NEXT:    ret float [[ALWAYS_NEGATIVE_OR_NAN]]
 ;
   %copysign = call nnan float @llvm.copysign.f32(float %always.negative.or.nan, float %unknown)
   store float %copysign, ptr %ptr
@@ -2500,7 +2500,7 @@ define nofpclass(pinf pnorm psub pzero) float @ret_only_positive_or_nan__copysig
 ; CHECK-SAME: (float nofpclass(pinf pzero psub pnorm) [[ALWAYS_NEGATIVE_OR_NAN:%.*]], float [[UNKNOWN:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[COPYSIGN:%.*]] = call nnan float @llvm.copysign.f32(float [[ALWAYS_NEGATIVE_OR_NAN]], float [[UNKNOWN]])
 ; CHECK-NEXT:    store float [[COPYSIGN]], ptr [[PTR]], align 4
-; CHECK-NEXT:    ret float [[COPYSIGN]]
+; CHECK-NEXT:    ret float [[ALWAYS_NEGATIVE_OR_NAN]]
 ;
   %copysign = call nnan float @llvm.copysign.f32(float %always.negative.or.nan, float %unknown)
   store float %copysign, ptr %ptr
@@ -2524,7 +2524,7 @@ define nofpclass(nan) float @ret_no_nan__copysign_ninf__src_known_negative_or_na
 ; CHECK-SAME: (float nofpclass(pinf pzero psub pnorm) [[ALWAYS_NEGATIVE_OR_NAN:%.*]], float nofpclass(nan pzero psub pnorm) [[ALWAYS_NEGATIVE_OR_PINF:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[COPYSIGN:%.*]] = call ninf float @llvm.copysign.f32(float [[ALWAYS_NEGATIVE_OR_NAN]], float [[ALWAYS_NEGATIVE_OR_PINF]])
 ; CHECK-NEXT:    store float [[COPYSIGN]], ptr [[PTR]], align 4
-; CHECK-NEXT:    ret float [[COPYSIGN]]
+; CHECK-NEXT:    ret float [[ALWAYS_NEGATIVE_OR_NAN]]
 ;
   %copysign = call ninf float @llvm.copysign.f32(float %always.negative.or.nan, float %always.negative.or.pinf)
   store float %copysign, ptr %ptr
@@ -2548,7 +2548,7 @@ define nofpclass(nan) float @ret_no_nan__copysign_ninf__src_known_negative_or_na
 ; CHECK-SAME: (float nofpclass(ninf nzero nsub nnorm) [[ALWAYS_POSITIVE_OR_NAN:%.*]], float nofpclass(nan nzero nsub nnorm) [[ALWAYS_NEGATIVE_OR_PINF:%.*]], ptr [[PTR:%.*]]) {
 ; CHECK-NEXT:    [[COPYSIGN:%.*]] = call ninf float @llvm.copysign.f32(float [[ALWAYS_POSITIVE_OR_NAN]], float [[ALWAYS_NEGATIVE_OR_PINF]])
 ; CHECK-NEXT:    store float [[COPYSIGN]], ptr [[PTR]], align 4
-; CHECK-NEXT:    ret float [[COPYSIGN]]
+; CHECK-NEXT:    ret float [[ALWAYS_POSITIVE_OR_NAN]]
 ;
   %copysign = call ninf float @llvm.copysign.f32(float %always.positive.or.nan, float %always.negative.or.pinf)
   store float %copysign, ptr %ptr
