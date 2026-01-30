@@ -367,7 +367,7 @@ def AVX10DotInt8Op : AVX10_Op<"dot.i8", [Pure,
   let summary = "AVX10 Dot Int8 op";
   let description = [{
     The `dot` op is an AVX512-Int8 specific op that can lower to the proper
-    LLVMAVX10-INT8 operation `llvm.vpdpwssd` depending on the width of MLIR
+    LLVMAVX10-INT8 operation `llvm.vpdpbssd` depending on the width of MLIR
     vectors it is applied to.
 
     #### From the Intel Intrinsics Guide:
