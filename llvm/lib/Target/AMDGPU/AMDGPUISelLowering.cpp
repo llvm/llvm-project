@@ -631,9 +631,6 @@ AMDGPUTargetLowering::AMDGPUTargetLowering(const TargetMachine &TM,
 }
 
 bool AMDGPUTargetLowering::mayIgnoreSignedZero(SDValue Op) const {
-  if (getTargetMachine().Options.NoSignedZerosFPMath)
-    return true;
-
   const auto Flags = Op.getNode()->getFlags();
   if (Flags.hasNoSignedZeros())
     return true;
@@ -3349,7 +3346,7 @@ SDValue AMDGPUTargetLowering::LowerINT_TO_FP32(SDValue Op, SelectionDAG &DAG,
         DAG.getNode(ISD::ADD, SL, MVT::i32, DAG.getConstant(32, SL, MVT::i32),
                     OppositeSign);
     // Count the leading sign bits.
-    ShAmt = DAG.getNode(AMDGPUISD::FFBH_I32, SL, MVT::i32, Hi);
+    ShAmt = DAG.getNode(ISD::CTLS, SL, MVT::i32, Hi);
     // Different from unsigned conversion, the shift should be one bit less to
     // preserve the sign bit.
     ShAmt = DAG.getNode(ISD::SUB, SL, MVT::i32, ShAmt,
@@ -5007,7 +5004,7 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
   SDLoc SL(N);
   switch (Opc) {
   case ISD::FADD: {
-    if (!mayIgnoreSignedZero(N0))
+    if (!mayIgnoreSignedZero(N0) && !N->getFlags().hasNoSignedZeros())
       return SDValue();
 
     // (fneg (fadd x, y)) -> (fadd (fneg x), (fneg y))
@@ -5055,7 +5052,7 @@ SDValue AMDGPUTargetLowering::performFNegCombine(SDNode *N,
   case ISD::FMA:
   case ISD::FMAD: {
     // TODO: handle llvm.amdgcn.fma.legacy
-    if (!mayIgnoreSignedZero(N0))
+    if (!mayIgnoreSignedZero(N0) && !N->getFlags().hasNoSignedZeros())
       return SDValue();
 
     // (fneg (fma x, y, z)) -> (fma x, (fneg y), (fneg z))

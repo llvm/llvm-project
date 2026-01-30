@@ -40,6 +40,23 @@ define nofpclass(inf) float @ret_nofpclass_inf_undef() {
   ret float undef
 }
 
+define nofpclass(all) float @ret_nofpclass_all_undef() {
+; CHECK-LABEL: define nofpclass(all) float @ret_nofpclass_all_undef() {
+; CHECK-NEXT:    ret float poison
+;
+  ret float undef
+}
+
+; Use + callsite implies no values, should fold undef to poison.
+define nofpclass(nan) float @undef_folds_to_poison_arg() {
+; CHECK-LABEL: define nofpclass(nan) float @undef_folds_to_poison_arg() {
+; CHECK-NEXT:    [[FENCE:%.*]] = call float @llvm.arithmetic.fence.f32(float nofpclass(inf zero sub norm) poison)
+; CHECK-NEXT:    ret float [[FENCE]]
+;
+  %fence = call float @llvm.arithmetic.fence.f32(float nofpclass(inf sub norm zero) undef)
+  ret float %fence
+}
+
 ; Make sure there's no infinite loop
 define nofpclass(all) float @ret_nofpclass_all_var(float %arg) {
 ; CHECK-LABEL: define nofpclass(all) float @ret_nofpclass_all_var
@@ -1294,7 +1311,7 @@ define nofpclass(nan inf) float @pow_f32(float nofpclass(nan inf) %arg, float no
 ; CHECK-SAME: (float nofpclass(nan inf) [[ARG:%.*]], float nofpclass(nan inf) [[ARG1:%.*]]) {
 ; CHECK-NEXT:  bb:
 ; CHECK-NEXT:    [[I:%.*]] = tail call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float noundef [[ARG]])
-; CHECK-NEXT:    [[I2:%.*]] = tail call float @llvm.log2.f32(float noundef [[I]])
+; CHECK-NEXT:    [[I2:%.*]] = tail call nnan float @llvm.log2.f32(float [[I]])
 ; CHECK-NEXT:    [[I3:%.*]] = fmul nnan float [[I2]], [[ARG1]]
 ; CHECK-NEXT:    [[I4:%.*]] = tail call nnan float @llvm.exp2.f32(float [[I3]])
 ; CHECK-NEXT:    [[I5:%.*]] = tail call nofpclass(ninf nzero nsub nnorm) float @llvm.fabs.f32(float noundef [[ARG1]])
