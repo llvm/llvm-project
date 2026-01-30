@@ -20766,7 +20766,8 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
 
         EVT InterVT = EVT::getVectorVT(*DAG.getContext(), EltVT,
                                        StMemSize.divideCoefficientBy(EltSize));
-        if (!TLI.isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, InterVT))
+        if (!TLI.isTypeLegal(Val.getValueType()) ||
+            !TLI.isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, InterVT))
           break;
 
         Val = DAG.getExtractSubvector(SDLoc(LD), LDMemType,
