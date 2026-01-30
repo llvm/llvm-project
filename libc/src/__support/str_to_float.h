@@ -684,9 +684,7 @@ LIBC_INLINE FloatConvertReturn<T> decimal_exp_to_float(
     const CharType *__restrict numStart,
     const size_t num_len = cpp::numeric_limits<size_t>::max()) {
   using FPBits = typename fputil::FPBits<T>;
-  using StorageType = typename FPBits::StorageType;
 
-  StorageType mantissa = init_num.mantissa;
   int32_t exp10 = init_num.exponent;
 
   FloatConvertReturn<T> output;
@@ -725,6 +723,8 @@ LIBC_INLINE FloatConvertReturn<T> decimal_exp_to_float(
 
 #ifndef LIBC_COPT_STRTOFLOAT_DISABLE_EISEL_LEMIRE
   // Try Eisel-Lemire
+  using StorageType = typename FPBits::StorageType;
+  StorageType mantissa = init_num.mantissa;
   opt_output = eisel_lemire<T>(init_num, round);
   if (opt_output.has_value()) {
     if (!truncated) {
