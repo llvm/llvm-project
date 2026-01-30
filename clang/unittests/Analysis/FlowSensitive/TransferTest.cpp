@@ -971,7 +971,7 @@ TEST(TransferTest, BinaryOperatorAssignUnknown) {
          ASTContext &ASTCtx) {
         ASSERT_THAT(Results.keys(), UnorderedElementsAre("p", "q", "r"));
 
-        // Check that the second unknown value is different.
+        // Check that the second/third unknown value is different.
         const Environment &EnvP = getEnvironmentAtAnnotation(Results, "p");
 
         const ValueDecl *FooAtADecl = findValueDecl(ASTCtx, "FooAtA");
