@@ -320,6 +320,7 @@ def AMDGPUbfm : SDNode<"AMDGPUISD::BFM", SDTIntBinOp>;
 
 // ctlz with -1 if input is zero.
 def AMDGPUffbh_u32_impl : SDNode<"AMDGPUISD::FFBH_U32", SDTIntBitCountUnaryOp>;
+def AMDGPUffbh_i32_impl : SDNode<"AMDGPUISD::FFBH_I32", SDTIntBitCountUnaryOp>;
 
 // cttz with -1 if input is zero.
 def AMDGPUffbl_b32_impl : SDNode<"AMDGPUISD::FFBL_B32", SDTIntBitCountUnaryOp>;
@@ -486,7 +487,7 @@ def AMDGPUdiv_fixup : PatFrags<(ops node:$src0, node:$src1, node:$src2),
 
 def AMDGPUffbh_i32 : PatFrags<(ops node:$src),
   [(int_amdgcn_sffbh node:$src),
-   (ctls node:$src)]>;
+   (AMDGPUffbh_i32_impl node:$src)]>;
 
 def AMDGPUffbh_u32 : PatFrags<(ops node:$src),
   [(ctlz_zero_undef node:$src),
