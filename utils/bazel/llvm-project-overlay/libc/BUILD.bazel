@@ -3562,6 +3562,25 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_sincosf",
+    hdrs = ["src/__support/math/sincosf.h"],
+    deps = [
+        ":__support_common",
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fma",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_fputil_polyeval",
+        ":__support_fputil_rounding_mode",
+        ":__support_macros_config",
+        ":__support_macros_optimization",
+        ":__support_macros_properties_cpu_features",
+        ":__support_range_reduction",
+        ":__support_sincosf_utils",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_sincosf16_utils",
     hdrs = ["src/__support/math/sincosf16_utils.h"],
     deps = [
@@ -5316,12 +5335,7 @@ libc_math_function(
 libc_math_function(
     name = "sincosf",
     additional_deps = [
-        ":__support_fputil_fma",
-        ":__support_fputil_multiply_add",
-        ":__support_fputil_rounding_mode",
-        ":__support_macros_optimization",
-        ":__support_macros_properties_cpu_features",
-        ":__support_sincosf_utils",
+        ":__support_math_sincosf",
     ],
 )
 
