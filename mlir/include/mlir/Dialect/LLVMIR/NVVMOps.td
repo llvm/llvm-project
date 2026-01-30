@@ -1862,12 +1862,12 @@ def FPRoundingModeAttr : EnumAttr<NVVM_Dialect, FPRoundingMode, "fp_rnd_mode"> {
   let assemblyFormat = "`<` $value `>`";
 }
 
-def SaturationModeNone   : I32EnumAttrCase<"NONE", 0, "none">;
-def SaturationModeFinite : I32EnumAttrCase<"SATFINITE", 1, "satfinite">;
+def SaturationModeNone   : I32EnumCase<"NONE", 0, "none">;
+def SaturationModeFinite : I32EnumCase<"SATFINITE", 1, "satfinite">;
+def SaturationModeSat    : I32EnumCase<"SAT", 2, "sat">;
 
-def SaturationMode : I32EnumAttr<"SaturationMode", "NVVM SaturationMode kind",
-  [SaturationModeNone, SaturationModeFinite]> {
-  let genSpecializedAttr = 0;
+def SaturationMode : I32Enum<"SaturationMode", "NVVM SaturationMode kind",
+  [SaturationModeNone, SaturationModeFinite, SaturationModeSat]> {
   let cppNamespace = "::mlir::NVVM";
 }
 def SaturationModeAttr : EnumAttr<NVVM_Dialect, SaturationMode, "sat_mode"> {
@@ -6245,6 +6245,77 @@ def NVVM_Tcgen05MMAWsSparseOp : NVVM_Op<"tcgen05.mma.ws.sp",
           *op, moduleTranslation, builder);
       createIntrinsicCall(builder, ID, args);
   }];
+}
+
+def NVVM_FloatAdditionOp : 
+  NVVM_SingleResultIntrinsicOp<"fadd", [Pure, Commutative]> {
+  let summary = [{
+    Performs floating point addition operation with support for mixed precision 
+    operands
+  }];
+  let description = [{
+    The `nvvm.fadd` operation performs floating point addition of two operands.
+
+    The rounding mode to be used is specified by the `rnd` attribute, 
+    saturation mode by the `sat` attribute, and FTZ by the `ftz` unit attribute.
+    
+    The result type must be at least as wide as the operands. The operands are 
+    converted to the result type before addition if it is wider.
+    
+    For more information, see PTX ISA - [floating point addition](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-add), 
+    [half-precision floating point addition](https://docs.nvidia.com/cuda/parallel-thread-execution/#half-precision-floating-point-instructions-add), 
+    [mixed precision floating point addition](https://docs.nvidia.com/cuda/parallel-thread-execution/#mixed-precision-floating-point-instructions-add).
+  }];
+  let arguments = (ins
+    AnyTypeOf<[F16, BF16, F32, F64, VectorOfLengthAndType<[2], [F16, BF16]>]>:$lhs,
+    AnyTypeOf<[F16, BF16, F32, F64, VectorOfLengthAndType<[2], [F16, BF16]>]>:$rhs,
+    DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::NONE">:$rnd,
+    DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
+    UnitAttr:$ftz
+  );
+  let results = (outs AnyTypeOf<[F16, BF16, F32, F64, VectorOfLengthAndType<[2], [F16, BF16]>]>:$res);
+  let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type(operands) `->` type($res)";
+  let hasVerifier = 1;
+  
+  let llvmBuilder = [{
+    auto [ID, args] = NVVM::FloatAdditionOp::getIntrinsicIDAndArgs(*op, moduleTranslation, builder);
+    if(ID != llvm::Intrinsic::not_intrinsic) {
+      llvm::Value *addResult = createIntrinsicCall(builder, ID, args);
+      $res = ($_resultType->getScalarSizeInBits() > 
+              addResult->getType()->getScalarSizeInBits()) 
+             ? builder.CreateFPExt(addResult, $_resultType) : addResult;
+    }
+  }];
+}
+
+def NVVM_FloatSubtractionOp : 
+  NVVM_Op<"fsub", [Pure]> {
+  let summary = [{
+    Performs floating point subtraction operation with support for mixed 
+    precision operands
+  }];
+  let description = [{
+    The `nvvm.fsub` operation performs floating point subtraction of two 
+    operands.
+
+    It supports the same type combinations and modifiers as `nvvm.fadd`.
+    This is equivalent to `nvvm.fadd(lhs, -rhs)`.
+    
+    For more information, see PTX ISA - [floating point subtraction](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-sub), 
+    [half-precision floating point subtraction](https://docs.nvidia.com/cuda/parallel-thread-execution/#half-precision-floating-point-instructions-sub), 
+    [mixed precision floating point subtraction](https://docs.nvidia.com/cuda/parallel-thread-execution/#mixed-precision-floating-point-instructions-sub).
+ 
+  }];
+  let arguments = (ins
+    AnyTypeOf<[F16, BF16, F32, F64, VectorOfLengthAndType<[2], [F16, BF16]>]>:$lhs,
+    AnyTypeOf<[F16, BF16, F32, F64, VectorOfLengthAndType<[2], [F16, BF16]>]>:$rhs,
+    DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::NONE">:$rnd,
+    DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
+    UnitAttr:$ftz
+  );
+  let results = (outs AnyTypeOf<[F16, BF16, F32, F64, VectorOfLengthAndType<[2], [F16, BF16]>]>:$res);
+  let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type(operands) `->` type($res)";
+  let hasCanonicalizer = 1;
 }
 
 //===----------------------------------------------------------------------===//

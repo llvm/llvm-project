@@ -3072,6 +3072,85 @@ LogicalResult NVVM::TensormapReplaceOp::verify() {
   return success();
 }
 
+LogicalResult NVVM::FloatAdditionOp::verify() {
+  auto resFType = getRes().getType();
+  auto lhsFType = getLhs().getType();
+  auto rhsFType = getRhs().getType();
+  auto rndMode = getRnd();
+  auto satMode = getSat();
+  auto isFTZ = getFtz();
+
+  if (satMode == NVVM::SaturationMode::SATFINITE)
+    return emitOpError("SATFINITE saturation mode is not supported for "
+                       "floating point addition operation");
+
+  if (isa<VectorType>(resFType) != isa<VectorType>(lhsFType) ||
+      isa<VectorType>(resFType) != isa<VectorType>(rhsFType))
+    return emitOpError("cannot mix vector and scalar types for floating point "
+                       "addition operation");
+
+  if (isa<VectorType>(lhsFType) &&
+      ((cast<VectorType>(lhsFType).getElementType() !=
+        cast<VectorType>(rhsFType).getElementType()) ||
+       (cast<VectorType>(lhsFType).getElementType() !=
+        cast<VectorType>(resFType).getElementType())))
+    return emitOpError(
+        "cannot mix different element types for vector floating point "
+        "addition operation");
+
+  if (resFType.isF64() && (satMode != NVVM::SaturationMode::NONE || isFTZ))
+    return emitOpError("FTZ and saturation are not supported for additions "
+                       "involving f64 type");
+
+  auto getBaseFType = [](Type type) -> Type {
+    if (isa<VectorType>(type))
+      return cast<VectorType>(type).getElementType();
+    return type;
+  };
+
+  auto resBaseFType = getBaseFType(resFType);
+  auto lhsBaseFType = getBaseFType(lhsFType);
+  auto rhsBaseFType = getBaseFType(rhsFType);
+
+  if (resBaseFType.getIntOrFloatBitWidth() <
+      std::max(lhsBaseFType.getIntOrFloatBitWidth(),
+               rhsBaseFType.getIntOrFloatBitWidth()))
+    return emitOpError("result type must be at least as wide as the operands");
+
+  if (resBaseFType.isF16() && rndMode != NVVM::FPRoundingMode::RN &&
+      rndMode != NVVM::FPRoundingMode::NONE)
+    return emitOpError("only RN rounding mode is supported for f16 and "
+                       "vector<2xf16> additions");
+
+  if (resBaseFType.isBF16()) {
+    if (rndMode != NVVM::FPRoundingMode::RN &&
+        rndMode != NVVM::FPRoundingMode::NONE)
+      return emitOpError("only RN rounding mode is supported for bf16 and "
+                         "vector<2xbf16> additions");
+    if (satMode != NVVM::SaturationMode::NONE || isFTZ)
+      return emitOpError("FTZ and saturation are not supported for bf16 and "
+                         "vector<2xbf16> additions");
+  }
+
+  if (resBaseFType.isF16() && !(lhsBaseFType.isF16() && rhsBaseFType.isF16()))
+    return emitOpError("only f16 + f16 is supported for f16 result type");
+
+  if (resBaseFType.isBF16() &&
+      !(lhsBaseFType.isBF16() && rhsBaseFType.isBF16()))
+    return emitOpError("only bf16 + bf16 is supported for bf16 result type");
+
+  // FIXME: This is a temporary check disallowing lowering to add.rn.ftz.f16(x2)
+  // PTX instructions since the corresponding LLVM intrinsic is missing. This
+  // should be removed once the intrinsics for f16 addition (with FTZ only) are
+  // available.
+  if ((isa<VectorType>(resFType) || resBaseFType.isF16()) && isFTZ &&
+      satMode == NVVM::SaturationMode::NONE)
+    return emitOpError(
+        "FTZ with no saturation is not supported for f16 additions");
+
+  return success();
+}
+
 /// Packs the given `field` into the `result`.
 /// The `result` is 64-bits and each `field` can be 32-bits or narrower.
 static llvm::Value *
@@ -3146,6 +3225,33 @@ std::string NVVM::MBarrierTryWaitParityOp::getPtx() {
                        "DONE: \n\t"
                        "}",
                        space);
+}
+
+//===----------------------------------------------------------------------===//
+// Canonicalization patterns
+//===----------------------------------------------------------------------===//
+
+struct ConvertFsubToFnegFadd : public OpRewritePattern<FloatSubtractionOp> {
+  using OpRewritePattern<FloatSubtractionOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(FloatSubtractionOp op,
+                                PatternRewriter &rewriter) const override {
+    Location loc = op.getLoc();
+
+    Value negRhs =
+        LLVM::FNegOp::create(rewriter, loc, op.getRhs().getType(), op.getRhs());
+
+    rewriter.replaceOpWithNewOp<FloatAdditionOp>(op, op.getType(), op.getLhs(),
+                                                 negRhs, op.getRnd(),
+                                                 op.getSat(), op.getFtz());
+
+    return success();
+  }
+};
+
+void FloatSubtractionOp::getCanonicalizationPatterns(
+    RewritePatternSet &patterns, MLIRContext *context) {
+  patterns.add<ConvertFsubToFnegFadd>(context);
 }
 
 //===----------------------------------------------------------------------===//
@@ -4885,6 +4991,112 @@ mlir::NVVM::IDArgPair TensormapReplaceOp::getIntrinsicIDAndArgs(
   unsigned fieldIndex = static_cast<unsigned>(thisOp.getField());
 
   return {IDs[fieldIndex], args};
+}
+
+mlir::NVVM::IDArgPair FloatAdditionOp::getIntrinsicIDAndArgs(
+    Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder) {
+  auto thisOp = cast<NVVM::FloatAdditionOp>(op);
+  llvm::SmallVector<llvm::Value *> args;
+  auto rndMode = thisOp.getRnd();
+  bool isRndRN = rndMode == NVVM::FPRoundingMode::RN;
+  auto isSat = thisOp.getSat() == NVVM::SaturationMode::SAT;
+  auto isFTZ = thisOp.getFtz();
+
+  llvm::Value *argLHS = mt.lookupValue(thisOp.getLhs());
+  llvm::Value *argRHS = mt.lookupValue(thisOp.getRhs());
+
+  mlir::Type lhsType = thisOp.getLhs().getType();
+  mlir::Type rhsType = thisOp.getRhs().getType();
+  mlir::Type resType = thisOp.getRes().getType();
+
+  // FIXME: Add intrinsics for add.rn.ftz.f16x2 and add.rn.ftz.f16 here when
+  // they are available.
+  static constexpr llvm::Intrinsic::ID f16IDs[] = {
+      llvm::Intrinsic::nvvm_add_rn_sat_f16,
+      llvm::Intrinsic::nvvm_add_rn_ftz_sat_f16,
+      llvm::Intrinsic::nvvm_add_rn_sat_v2f16,
+      llvm::Intrinsic::nvvm_add_rn_ftz_sat_v2f16,
+  };
+
+  static constexpr llvm::Intrinsic::ID f32IDs[] = {
+      llvm::Intrinsic::nvvm_add_rn_f, // default rounding mode RN
+      llvm::Intrinsic::nvvm_add_rn_f,
+      llvm::Intrinsic::nvvm_add_rm_f,
+      llvm::Intrinsic::nvvm_add_rp_f,
+      llvm::Intrinsic::nvvm_add_rz_f,
+      llvm::Intrinsic::nvvm_add_rn_sat_f, // default rounding mode RN
+      llvm::Intrinsic::nvvm_add_rn_sat_f,
+      llvm::Intrinsic::nvvm_add_rm_sat_f,
+      llvm::Intrinsic::nvvm_add_rp_sat_f,
+      llvm::Intrinsic::nvvm_add_rz_sat_f,
+      llvm::Intrinsic::nvvm_add_rn_ftz_f, // default rounding mode RN
+      llvm::Intrinsic::nvvm_add_rn_ftz_f,
+      llvm::Intrinsic::nvvm_add_rm_ftz_f,
+      llvm::Intrinsic::nvvm_add_rp_ftz_f,
+      llvm::Intrinsic::nvvm_add_rz_ftz_f,
+      llvm::Intrinsic::nvvm_add_rn_ftz_sat_f, // default rounding mode RN
+      llvm::Intrinsic::nvvm_add_rn_ftz_sat_f,
+      llvm::Intrinsic::nvvm_add_rm_ftz_sat_f,
+      llvm::Intrinsic::nvvm_add_rp_ftz_sat_f,
+      llvm::Intrinsic::nvvm_add_rz_ftz_sat_f,
+  };
+
+  static constexpr llvm::Intrinsic::ID f64IDs[] = {
+      llvm::Intrinsic::nvvm_add_rn_d, // default rounding mode RN
+      llvm::Intrinsic::nvvm_add_rn_d, llvm::Intrinsic::nvvm_add_rm_d,
+      llvm::Intrinsic::nvvm_add_rp_d, llvm::Intrinsic::nvvm_add_rz_d};
+
+  auto addIntrinsic = [&](llvm::Intrinsic::ID IID, llvm::Value *LHS = nullptr,
+                          llvm::Value *RHS = nullptr) -> NVVM::IDArgPair {
+    args.push_back(LHS ? LHS : argLHS);
+    args.push_back(RHS ? RHS : argRHS);
+    return {IID, args};
+  };
+
+  // f16 + f16 -> f16 / vector<2xf16> + vector<2xf16> -> vector<2xf16>
+  // FIXME: Allow lowering to add.rn.ftz.f16x2 and add.rn.ftz.f16 here when the
+  // intrinsics are available.
+  bool isVectorF16Add = isa<VectorType>(resType) &&
+                        cast<VectorType>(resType).getElementType().isF16();
+  if (resType.isF16() || isVectorF16Add) {
+    if (isSat) {
+      unsigned index = (isVectorF16Add << 1) | isFTZ;
+      return addIntrinsic(f16IDs[index]);
+    } else {
+      mt.mapValue(thisOp.getRes(), builder.CreateFAdd(argLHS, argRHS));
+      return {llvm::Intrinsic::not_intrinsic, args};
+    }
+  }
+
+  // bf16 + bf16 -> bf16 / vector<2xbf16> + vector<2xbf16> -> vector<2xbf16>
+  bool isVectorBF16Add = isa<VectorType>(resType) &&
+                         cast<VectorType>(resType).getElementType().isBF16();
+  if (resType.isBF16() || isVectorBF16Add) {
+    mt.mapValue(thisOp.getRes(), builder.CreateFAdd(argLHS, argRHS));
+    return {llvm::Intrinsic::not_intrinsic, args};
+  }
+
+  // f64 + f64/f32/f16/bf16
+  if (resType.isF64()) {
+    llvm::Value *lhsF64 =
+        lhsType.isF64() ? argLHS
+                        : builder.CreateFPExt(argLHS, builder.getDoubleTy());
+    llvm::Value *rhsF64 =
+        rhsType.isF64() ? argRHS
+                        : builder.CreateFPExt(argRHS, builder.getDoubleTy());
+    unsigned index = static_cast<unsigned>(rndMode);
+    return addIntrinsic(f64IDs[index], lhsF64, rhsF64);
+  }
+
+  // f16 + f16 -> !f16 / bf16 + bf16 -> !bf16 / f16 + bf16 / f32 + f32/f16/bf16
+  llvm::Value *lhsF32 = lhsType.isF32()
+                            ? argLHS
+                            : builder.CreateFPExt(argLHS, builder.getFloatTy());
+  llvm::Value *rhsF32 = rhsType.isF32()
+                            ? argRHS
+                            : builder.CreateFPExt(argRHS, builder.getFloatTy());
+  unsigned index = ((isFTZ << 1) | isSat) * 5 + static_cast<unsigned>(rndMode);
+  return addIntrinsic(f32IDs[index], lhsF32, rhsF32);
 }
 
 //===----------------------------------------------------------------------===//
