@@ -1187,9 +1187,8 @@ BasicBlock *llvm::splitBlockBefore(BasicBlock *Old,
   while (isa<PHINode>(SplitIt) || SplitIt->isEHPad())
     ++SplitIt;
   SmallVector<BasicBlock *, 4> Preds(predecessors(Old));
-  std::string Name = BBName.str();
   BasicBlock *New = Old->splitBasicBlock(
-      SplitIt, Name.empty() ? Old->getName() + ".split" : Name,
+      SplitIt, BBName.isTriviallyEmpty() ? Old->getName() + ".split" : BBName,
       /* Before=*/true);
 
   bool HasLoopExit = false;
