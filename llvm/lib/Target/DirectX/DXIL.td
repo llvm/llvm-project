@@ -1144,6 +1144,8 @@ def WaveBitOp : DXILOp<120, waveBitOp> {
   let overloads = [
     Overloads<DXIL1_0, [Int16Ty, Int32Ty, Int64Ty]>
   ];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, []>];
 }
 
 def WavePrefixBitCount : DXILOp<136, wavePrefixOp> {
