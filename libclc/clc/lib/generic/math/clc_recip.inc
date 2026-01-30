@@ -7,6 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_recip(__CLC_GENTYPE x) {
-  _Pragma("clang fp reciprocal(on)");
+#pragma clang fp reciprocal(on)
   return __CLC_FP_LIT(1.0) / x;
 }
