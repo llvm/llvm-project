@@ -7,9 +7,13 @@
 #include <stdint.h>
 #include <stdio.h>
 
+// CHECK: PASS
+
 // This should be present in-tree relative to the test directory. If someone is
 // using a partial tree just pass the test.
-#if __has_include(<../../libc/shared/rpc.h>)
+#if !__has_include(<../../libc/shared/rpc.h>)
+int main() { printf("PASS\n"); }
+#else
 #include <../../libc/shared/rpc.h>
 
 extern "C" void __tgt_register_rpc_callback(unsigned (*Callback)(void *,
@@ -57,9 +61,6 @@ int main() {
     Port.recv([](rpc::Buffer *, uint32_t) {});
     Port.close();
   }
-  // CHECK: PASS
   printf("PASS\n");
 }
-#else
-int main() { printf("PASS\n"); }
 #endif

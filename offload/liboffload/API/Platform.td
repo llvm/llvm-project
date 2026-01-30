@@ -80,7 +80,7 @@ def ol_platform_rpc_cb_t : FptrTypedef {
   let params = [Param<"void*", "Port", "opaque pointer to the RPC server port",
                       PARAM_IN>,
                 Param<"unsigned", "NumLanes",
-                      "number of active lanes in the warp", PARAM_IN>];
+                      "number of lanes handled in a single call", PARAM_IN>];
   let return = "unsigned";
 }
 
