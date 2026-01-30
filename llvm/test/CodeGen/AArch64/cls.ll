@@ -25,32 +25,6 @@ define i32 @cls64(i64 %t) {
 declare i32 @llvm.aarch64.cls(i32) nounwind
 declare i32 @llvm.aarch64.cls64(i64) nounwind
 
-; Test CTLS i128 type expansion (ExpandIntRes_CTLS).
-; This tests the type legalization path where i128 CTLS is split into
-; operations on two i64 halves.
-define i64 @cls_i128(i128 %x) {
-; CHECK-LABEL: cls_i128:
-; CHECK:       // %bb.0:
-; CHECK-NEXT:    cls x8, x1
-; CHECK-NEXT:    cmp x8, #63
-; CHECK-NEXT:    cmp x1, #0
-; CHECK-NEXT:    mvn x9, x0
-; CHECK-NEXT:    csel x9, x9, x0, lt
-; CHECK-NEXT:    clz x9, x9
-; CHECK-NEXT:    add x9, x9, #63
-; CHECK-NEXT:    csel x0, x9, x8, eq
-; CHECK-NEXT:    ret
-  %sra = ashr i128 %x, 127
-  %xor = xor i128 %x, %sra
-  %shl = shl i128 %xor, 1
-  %or = or i128 %shl, 1
-  %lz = call i128 @llvm.ctlz.i128(i128 %or, i1 true)
-  %res = trunc i128 %lz to i64
-  ret i64 %res
-}
-
-declare i128 @llvm.ctlz.i128(i128, i1) nounwind readnone
-
 define i8 @cls_i8(i8 %x) {
 ; CHECK-LABEL: cls_i8:
 ; CHECK:       // %bb.0:
@@ -165,3 +139,67 @@ define i32 @cls_i32_knownbits_no_overestimate(i32 signext %x) {
   %e = or i32 %d, 16
   ret i32 %e
  }
+
+; Test AArch64 NEON vector CLS (Count Leading Sign bits) operations
+; The intrinsics are lowered to ISD::CTLS and selected to CLS instructions
+
+define <8 x i8> @test_cls_v8i8(<8 x i8> %a) nounwind {
+; CHECK-LABEL: test_cls_v8i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cls v0.8b, v0.8b
+; CHECK-NEXT:    ret
+  %result = call <8 x i8> @llvm.aarch64.neon.cls.v8i8(<8 x i8> %a)
+  ret <8 x i8> %result
+}
+
+define <16 x i8> @test_cls_v16i8(<16 x i8> %a) nounwind {
+; CHECK-LABEL: test_cls_v16i8:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cls v0.16b, v0.16b
+; CHECK-NEXT:    ret
+  %result = call <16 x i8> @llvm.aarch64.neon.cls.v16i8(<16 x i8> %a)
+  ret <16 x i8> %result
+}
+
+define <4 x i16> @test_cls_v4i16(<4 x i16> %a) nounwind {
+; CHECK-LABEL: test_cls_v4i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cls v0.4h, v0.4h
+; CHECK-NEXT:    ret
+  %result = call <4 x i16> @llvm.aarch64.neon.cls.v4i16(<4 x i16> %a)
+  ret <4 x i16> %result
+}
+
+define <8 x i16> @test_cls_v8i16(<8 x i16> %a) nounwind {
+; CHECK-LABEL: test_cls_v8i16:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cls v0.8h, v0.8h
+; CHECK-NEXT:    ret
+  %result = call <8 x i16> @llvm.aarch64.neon.cls.v8i16(<8 x i16> %a)
+  ret <8 x i16> %result
+}
+
+define <2 x i32> @test_cls_v2i32(<2 x i32> %a) nounwind {
+; CHECK-LABEL: test_cls_v2i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cls v0.2s, v0.2s
+; CHECK-NEXT:    ret
+  %result = call <2 x i32> @llvm.aarch64.neon.cls.v2i32(<2 x i32> %a)
+  ret <2 x i32> %result
+}
+
+define <4 x i32> @test_cls_v4i32(<4 x i32> %a) nounwind {
+; CHECK-LABEL: test_cls_v4i32:
+; CHECK:       // %bb.0:
+; CHECK-NEXT:    cls v0.4s, v0.4s
+; CHECK-NEXT:    ret
+  %result = call <4 x i32> @llvm.aarch64.neon.cls.v4i32(<4 x i32> %a)
+  ret <4 x i32> %result
+}
+
+declare <8 x i8> @llvm.aarch64.neon.cls.v8i8(<8 x i8>) nounwind readnone
+declare <16 x i8> @llvm.aarch64.neon.cls.v16i8(<16 x i8>) nounwind readnone
+declare <4 x i16> @llvm.aarch64.neon.cls.v4i16(<4 x i16>) nounwind readnone
+declare <8 x i16> @llvm.aarch64.neon.cls.v8i16(<8 x i16>) nounwind readnone
+declare <2 x i32> @llvm.aarch64.neon.cls.v2i32(<2 x i32>) nounwind readnone
+declare <4 x i32> @llvm.aarch64.neon.cls.v4i32(<4 x i32>) nounwind readnone

@@ -5583,12 +5583,6 @@ public:
   /// \returns The expansion result or SDValue() if it fails.
   SDValue expandCTLZ(SDNode *N, SelectionDAG &DAG) const;
 
-  /// Expand CTLS (count leading sign bits) nodes.
-  /// CTLS(x) = CTLZ(OR(SHL(XOR(x, SRA(x, BW-1)), 1), 1))
-  /// \param N Node to expand
-  /// \returns The expansion result or SDValue() if it fails.
-  SDValue expandCTLS(SDNode *N, SelectionDAG &DAG) const;
-
   /// Expand VP_CTLZ/VP_CTLZ_ZERO_UNDEF nodes.
   /// \param N Node to expand
   /// \returns The expansion result or SDValue() if it fails.
