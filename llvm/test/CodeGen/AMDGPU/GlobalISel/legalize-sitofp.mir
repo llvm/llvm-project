@@ -123,7 +123,7 @@ body: |
     ; GFX6-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[UV]], [[UV1]]
     ; GFX6-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[XOR]], [[C2]](s32)
     ; GFX6-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[C]], [[ASHR]]
-    ; GFX6-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.sffbh), [[UV1]](s32)
+    ; GFX6-NEXT: [[INT:%[0-9]+]]:_(s32) = G_CTLS [[UV1]](s32)
     ; GFX6-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[INT]], [[C1]]
     ; GFX6-NEXT: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[SUB]], [[ADD]]
     ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[UMIN]](s32)
@@ -145,7 +145,7 @@ body: |
     ; GFX8-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[UV]], [[UV1]]
     ; GFX8-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[XOR]], [[C2]](s32)
     ; GFX8-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[C]], [[ASHR]]
-    ; GFX8-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.sffbh), [[UV1]](s32)
+    ; GFX8-NEXT: [[INT:%[0-9]+]]:_(s32) = G_CTLS [[UV1]](s32)
     ; GFX8-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[INT]], [[C1]]
     ; GFX8-NEXT: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[SUB]], [[ADD]]
     ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[UMIN]](s32)
@@ -467,7 +467,7 @@ body: |
     ; GFX6-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[UV]], [[UV1]]
     ; GFX6-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[XOR]], [[C2]](s32)
     ; GFX6-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[C]], [[ASHR]]
-    ; GFX6-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.sffbh), [[UV1]](s32)
+    ; GFX6-NEXT: [[INT:%[0-9]+]]:_(s32) = G_CTLS [[UV1]](s32)
     ; GFX6-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[INT]], [[C1]]
     ; GFX6-NEXT: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[SUB]], [[ADD]]
     ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[SEXT_INREG]], [[UMIN]](s32)
@@ -490,7 +490,7 @@ body: |
     ; GFX8-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[UV]], [[UV1]]
     ; GFX8-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[XOR]], [[C2]](s32)
     ; GFX8-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[C]], [[ASHR]]
-    ; GFX8-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.sffbh), [[UV1]](s32)
+    ; GFX8-NEXT: [[INT:%[0-9]+]]:_(s32) = G_CTLS [[UV1]](s32)
     ; GFX8-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[INT]], [[C1]]
     ; GFX8-NEXT: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[SUB]], [[ADD]]
     ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[SEXT_INREG]], [[UMIN]](s32)
@@ -524,7 +524,7 @@ body: |
     ; GFX6-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[UV]], [[UV1]]
     ; GFX6-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[XOR]], [[C2]](s32)
     ; GFX6-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[C]], [[ASHR]]
-    ; GFX6-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.sffbh), [[UV1]](s32)
+    ; GFX6-NEXT: [[INT:%[0-9]+]]:_(s32) = G_CTLS [[UV1]](s32)
     ; GFX6-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[INT]], [[C1]]
     ; GFX6-NEXT: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[SUB]], [[ADD]]
     ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[UMIN]](s32)
@@ -548,7 +548,7 @@ body: |
     ; GFX8-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[UV]], [[UV1]]
     ; GFX8-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[XOR]], [[C2]](s32)
     ; GFX8-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[C]], [[ASHR]]
-    ; GFX8-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.sffbh), [[UV1]](s32)
+    ; GFX8-NEXT: [[INT:%[0-9]+]]:_(s32) = G_CTLS [[UV1]](s32)
     ; GFX8-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[INT]], [[C1]]
     ; GFX8-NEXT: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[SUB]], [[ADD]]
     ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[COPY]], [[UMIN]](s32)
@@ -585,7 +585,7 @@ body: |
     ; GFX6-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[UV2]], [[UV3]]
     ; GFX6-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[XOR]], [[C2]](s32)
     ; GFX6-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[C]], [[ASHR]]
-    ; GFX6-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.sffbh), [[UV3]](s32)
+    ; GFX6-NEXT: [[INT:%[0-9]+]]:_(s32) = G_CTLS [[UV3]](s32)
     ; GFX6-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[INT]], [[C1]]
     ; GFX6-NEXT: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[SUB]], [[ADD]]
     ; GFX6-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[UV]], [[UMIN]](s32)
@@ -600,7 +600,7 @@ body: |
     ; GFX6-NEXT: [[XOR1:%[0-9]+]]:_(s32) = G_XOR [[UV6]], [[UV7]]
     ; GFX6-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[XOR1]], [[C2]](s32)
     ; GFX6-NEXT: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[C]], [[ASHR1]]
-    ; GFX6-NEXT: [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.sffbh), [[UV7]](s32)
+    ; GFX6-NEXT: [[INT1:%[0-9]+]]:_(s32) = G_CTLS [[UV7]](s32)
     ; GFX6-NEXT: [[SUB2:%[0-9]+]]:_(s32) = G_SUB [[INT1]], [[C1]]
     ; GFX6-NEXT: [[UMIN2:%[0-9]+]]:_(s32) = G_UMIN [[SUB2]], [[ADD1]]
     ; GFX6-NEXT: [[SHL1:%[0-9]+]]:_(s64) = G_SHL [[UV1]], [[UMIN2]](s32)
@@ -630,7 +630,7 @@ body: |
     ; GFX8-NEXT: [[XOR:%[0-9]+]]:_(s32) = G_XOR [[UV2]], [[UV3]]
     ; GFX8-NEXT: [[ASHR:%[0-9]+]]:_(s32) = G_ASHR [[XOR]], [[C2]](s32)
     ; GFX8-NEXT: [[ADD:%[0-9]+]]:_(s32) = G_ADD [[C]], [[ASHR]]
-    ; GFX8-NEXT: [[INT:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.sffbh), [[UV3]](s32)
+    ; GFX8-NEXT: [[INT:%[0-9]+]]:_(s32) = G_CTLS [[UV3]](s32)
     ; GFX8-NEXT: [[SUB:%[0-9]+]]:_(s32) = G_SUB [[INT]], [[C1]]
     ; GFX8-NEXT: [[UMIN:%[0-9]+]]:_(s32) = G_UMIN [[SUB]], [[ADD]]
     ; GFX8-NEXT: [[SHL:%[0-9]+]]:_(s64) = G_SHL [[UV]], [[UMIN]](s32)
@@ -645,7 +645,7 @@ body: |
     ; GFX8-NEXT: [[XOR1:%[0-9]+]]:_(s32) = G_XOR [[UV6]], [[UV7]]
     ; GFX8-NEXT: [[ASHR1:%[0-9]+]]:_(s32) = G_ASHR [[XOR1]], [[C2]](s32)
     ; GFX8-NEXT: [[ADD1:%[0-9]+]]:_(s32) = G_ADD [[C]], [[ASHR1]]
-    ; GFX8-NEXT: [[INT1:%[0-9]+]]:_(s32) = G_INTRINSIC intrinsic(@llvm.amdgcn.sffbh), [[UV7]](s32)
+    ; GFX8-NEXT: [[INT1:%[0-9]+]]:_(s32) = G_CTLS [[UV7]](s32)
     ; GFX8-NEXT: [[SUB2:%[0-9]+]]:_(s32) = G_SUB [[INT1]], [[C1]]
     ; GFX8-NEXT: [[UMIN2:%[0-9]+]]:_(s32) = G_UMIN [[SUB2]], [[ADD1]]
     ; GFX8-NEXT: [[SHL1:%[0-9]+]]:_(s64) = G_SHL [[UV1]], [[UMIN2]](s32)
