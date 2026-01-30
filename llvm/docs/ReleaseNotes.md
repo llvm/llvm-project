@@ -234,6 +234,10 @@ Changes to LLDB
 ### Linux
 
 * On Arm Linux, the tpidruro register can now be read. Writing to this register is not supported.
+* LLDB now supports debugging Linux [Memory Protection Keys](https://docs.kernel.org/core-api/protection-keys.html)
+  on AArch64 systems that have the Permission Overlay Extension (POE / FEAT_S1POE).
+  See the [LLDB on AArch64 Linux](https://lldb.llvm.org/use/aarch64-linux.html#permission-overlay-extension-poe)
+  guide for more information.
 
 Changes to BOLT
 ---------------
