@@ -19,9 +19,9 @@ lldb::SBValueList *Variables::GetTopLevelScope(int64_t variablesReference) {
     // Lazy fetch globals if needed.
     if (!globals.has_value())
       globals = frame.GetVariables(/*arguments=*/false,
-                                  /*locals=*/false,
-                                  /*statics=*/true,
-                                  /*in_scope_only=*/true);
+                                   /*locals=*/false,
+                                   /*statics=*/true,
+                                   /*in_scope_only=*/true);
     return &globals.value();
   case VARREF_REGS:
     return &registers;
