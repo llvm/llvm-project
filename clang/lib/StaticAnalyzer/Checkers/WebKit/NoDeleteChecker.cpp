@@ -66,23 +66,23 @@ public:
   }
 
   static bool hasNoDeleteAnnotation(const FunctionDecl *FD) {
-      if (llvm::any_of(FD->redecls(), isNoDeleteFunction))
-        return true;
+    if (llvm::any_of(FD->redecls(), isNoDeleteFunction))
+      return true;
 
-      const auto *MD = dyn_cast<CXXMethodDecl>(FD);
-      if (!MD || !MD->isVirtual())
-        return false;
-
-      auto Overriders = llvm::to_vector(MD->overridden_methods());
-      while (!Overriders.empty()) {
-        const auto *Fn = Overriders.pop_back_val();
-        llvm::append_range(Overriders, Fn->overridden_methods());
-        if (isNoDeleteFunction(Fn))
-          return true;
-      }
-
+    const auto *MD = dyn_cast<CXXMethodDecl>(FD);
+    if (!MD || !MD->isVirtual())
       return false;
+
+    auto Overriders = llvm::to_vector(MD->overridden_methods());
+    while (!Overriders.empty()) {
+      const auto *Fn = Overriders.pop_back_val();
+      llvm::append_range(Overriders, Fn->overridden_methods());
+      if (isNoDeleteFunction(Fn))
+        return true;
     }
+
+    return false;
+  }
 
   void visitFunctionDecl(const FunctionDecl *FD) const {
     if (!FD->doesThisDeclarationHaveABody())
