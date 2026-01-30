@@ -1164,9 +1164,9 @@ add_header_library(
   HDRS
     sincos.h
   DEPENDS
-    libc.hdr.errno_macros
     .range_reduction_double
     .sincos_eval
+    libc.hdr.errno_macros
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.double_double
