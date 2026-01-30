@@ -174,8 +174,7 @@ bool AMDGPUMIRFormatter::parseSWaitAluImmMnemonic(
     // Save the position of the name for accurate error reporting.
     StringRef::iterator NamePos = Src.begin();
     [[maybe_unused]] bool ConsumeName = Src.consume_front(Name);
-    // assert(ConsumeName && "Expected name");
-    assert(ConsumeName);
+    assert(ConsumeName && "Expected name");
     [[maybe_unused]] bool ConsumeDelim = Src.consume_front(SWaitAluDelim);
     assert(ConsumeDelim && "Expected delimiter");
     // Src:       Num1_Name2_Num2

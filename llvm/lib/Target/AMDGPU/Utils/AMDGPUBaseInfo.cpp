@@ -180,8 +180,7 @@ inline unsigned getVaSsrcBitShift() { return 8; }
 inline unsigned getHoldCntWidth(unsigned VersionMajor, unsigned VersionMinor) {
   static constexpr const unsigned MinMajor = 10;
   static constexpr const unsigned MinMinor = 3;
-  return (VersionMajor == MinMajor && VersionMinor >= MinMinor) ||
-                 VersionMajor > MinMajor
+  return std::tie(VersionMajor, VersionMinor) >= std::tie(MinMajor, MinMinor)
              ? 1
              : 0;
 }
