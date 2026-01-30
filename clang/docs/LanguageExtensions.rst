@@ -3997,6 +3997,51 @@ be used within constant expressions.
   unsigned _BitInt(20) value = 0xABCDE;
   unsigned _BitInt(20) rotated = __builtin_stdc_rotate_left(value, 5);
 
+``__builtin_stdc_*`` bit utilities
+----------------------------------
+
+**Syntax**:
+
+.. code-block:: c
+
+  unsigned int __builtin_stdc_leading_zeros(T value);
+  unsigned int __builtin_stdc_leading_ones(T value);
+  unsigned int __builtin_stdc_trailing_zeros(T value);
+  unsigned int __builtin_stdc_trailing_ones(T value);
+  unsigned int __builtin_stdc_first_leading_zero(T value);
+  unsigned int __builtin_stdc_first_leading_one(T value);
+  unsigned int __builtin_stdc_first_trailing_zero(T value);
+  unsigned int __builtin_stdc_first_trailing_one(T value);
+  unsigned int __builtin_stdc_count_zeros(T value);
+  unsigned int __builtin_stdc_count_ones(T value);
+  bool         __builtin_stdc_has_single_bit(T value);
+  unsigned int __builtin_stdc_bit_width(T value);
+  T            __builtin_stdc_bit_floor(T value);
+  T            __builtin_stdc_bit_ceil(T value);
+
+where ``T`` is any unsigned integer type, including ``_BitInt`` types.
+
+**Description**:
+
+These builtins implement the C23 ``<stdbit.h>`` operations. Counts and position
+queries return ``unsigned int``; ``has_single_bit`` returns ``bool``; and
+``bit_floor``/``bit_ceil`` return the same type as the operand. Zero and
+all-ones cases follow the C23 definitions. All are usable in constant
+expressions.
+
+**Examples**:
+
+.. code-block:: c
+
+  unsigned _BitInt(9) x = 0x11;
+  unsigned int lz  = __builtin_stdc_leading_zeros(x);
+  unsigned int tz  = __builtin_stdc_trailing_zeros(x);
+  unsigned int fto = __builtin_stdc_first_trailing_one(x);
+  unsigned int cz  = __builtin_stdc_count_zeros(x);
+  bool has_one    = __builtin_stdc_has_single_bit(x);
+  unsigned _BitInt(9) ceilv  = __builtin_stdc_bit_ceil((unsigned _BitInt(9))5);
+  unsigned _BitInt(9) floorv = __builtin_stdc_bit_floor((unsigned _BitInt(9))5);
+
 ``__builtin_unreachable``
 -------------------------
 

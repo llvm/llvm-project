@@ -3733,6 +3733,195 @@ RValue CodeGenFunction::EmitBuiltinExpr(const GlobalDecl GD, unsigned BuiltinID,
   case Builtin::BI_rotr64:
     return emitRotate(E, true);
 
+  case Builtin::BI__builtin_stdc_leading_zeros:
+  case Builtin::BI__builtin_stdc_leading_ones:
+  case Builtin::BI__builtin_stdc_trailing_zeros:
+  case Builtin::BI__builtin_stdc_trailing_ones:
+  case Builtin::BI__builtin_stdc_first_leading_zero:
+  case Builtin::BI__builtin_stdc_first_leading_one:
+  case Builtin::BI__builtin_stdc_first_trailing_zero:
+  case Builtin::BI__builtin_stdc_first_trailing_one:
+  case Builtin::BI__builtin_stdc_count_zeros:
+  case Builtin::BI__builtin_stdc_count_ones:
+  case Builtin::BI__builtin_stdc_has_single_bit:
+  case Builtin::BI__builtin_stdc_bit_width:
+  case Builtin::BI__builtin_stdc_bit_floor:
+  case Builtin::BI__builtin_stdc_bit_ceil: {
+    Value *ArgValue = EmitScalarExpr(E->getArg(0));
+    llvm::Type *ArgType = ArgValue->getType();
+    llvm::Type *ResultType = ConvertType(E->getType());
+    unsigned BitWidth = ArgType->getIntegerBitWidth();
+    Value *Zero = ConstantInt::get(ArgType, 0);
+    Value *One = ConstantInt::get(ArgType, 1);
+    Value *Result;
+
+    switch (BuiltinIDIfNoAsmLabel) {
+    case Builtin::BI__builtin_stdc_leading_zeros: {
+      Function *F = CGM.getIntrinsic(Intrinsic::ctlz, ArgType);
+      Result = Builder.CreateCall(F, {ArgValue, Builder.getFalse()});
+      break;
+    }
+    case Builtin::BI__builtin_stdc_leading_ones: {
+      Function *F = CGM.getIntrinsic(Intrinsic::ctlz, ArgType);
+      Result = Builder.CreateCall(
+          F, {Builder.CreateNot(ArgValue), Builder.getFalse()});
+      break;
+    }
+    case Builtin::BI__builtin_stdc_trailing_zeros: {
+      Function *F = CGM.getIntrinsic(Intrinsic::cttz, ArgType);
+      Result = Builder.CreateCall(F, {ArgValue, Builder.getFalse()});
+      break;
+    }
+    case Builtin::BI__builtin_stdc_trailing_ones: {
+      Function *F = CGM.getIntrinsic(Intrinsic::cttz, ArgType);
+      Result = Builder.CreateCall(
+          F, {Builder.CreateNot(ArgValue), Builder.getFalse()});
+      break;
+    }
+    case Builtin::BI__builtin_stdc_first_leading_zero: {
+      Function *F = CGM.getIntrinsic(Intrinsic::ctlz, ArgType);
+      Value *Cnt = Builder.CreateCall(
+          F, {Builder.CreateNot(ArgValue), Builder.getFalse()});
+      Value *Tmp = Builder.CreateAdd(Cnt, One);
+      Value *IsAllOnes =
+          Builder.CreateICmpEQ(ArgValue, Constant::getAllOnesValue(ArgType));
+      Result = Builder.CreateSelect(IsAllOnes, Zero, Tmp);
+      break;
+    }
+    case Builtin::BI__builtin_stdc_first_leading_one: {
+      Function *F = CGM.getIntrinsic(Intrinsic::ctlz, ArgType);
+      Value *Cnt = Builder.CreateCall(F, {ArgValue, Builder.getFalse()});
+      Value *Tmp = Builder.CreateAdd(Cnt, One);
+      Value *IsZero = Builder.CreateICmpEQ(ArgValue, Zero);
+      Result = Builder.CreateSelect(IsZero, Zero, Tmp);
+      break;
+    }
+    case Builtin::BI__builtin_stdc_first_trailing_zero: {
+      Function *F = CGM.getIntrinsic(Intrinsic::cttz, ArgType);
+      Value *Cnt = Builder.CreateCall(
+          F, {Builder.CreateNot(ArgValue), Builder.getFalse()});
+      Value *Tmp = Builder.CreateAdd(Cnt, One);
+      Value *IsAllOnes =
+          Builder.CreateICmpEQ(ArgValue, Constant::getAllOnesValue(ArgType));
+      Result = Builder.CreateSelect(IsAllOnes, Zero, Tmp);
+      break;
+    }
+    case Builtin::BI__builtin_stdc_first_trailing_one: {
+      Function *F = CGM.getIntrinsic(Intrinsic::cttz, ArgType);
+      Value *Cnt = Builder.CreateCall(F, {ArgValue, Builder.getFalse()});
+      Value *Tmp = Builder.CreateAdd(Cnt, One);
+      Value *IsZero = Builder.CreateICmpEQ(ArgValue, Zero);
+      Result = Builder.CreateSelect(IsZero, Zero, Tmp);
+      break;
+    }
+    case Builtin::BI__builtin_stdc_count_zeros: {
+      Function *F = CGM.getIntrinsic(Intrinsic::ctpop, ArgType);
+      Value *PopCnt = Builder.CreateCall(F, ArgValue);
+      Result = Builder.CreateSub(ConstantInt::get(ArgType, BitWidth), PopCnt);
+      break;
+    }
+    case Builtin::BI__builtin_stdc_count_ones: {
+      Function *F = CGM.getIntrinsic(Intrinsic::ctpop, ArgType);
+      Result = Builder.CreateCall(F, ArgValue);
+      break;
+    }
+    case Builtin::BI__builtin_stdc_has_single_bit: {
+      Function *F = CGM.getIntrinsic(Intrinsic::ctpop, ArgType);
+      Value *PopCnt = Builder.CreateCall(F, ArgValue);
+      return RValue::get(Builder.CreateICmpEQ(PopCnt, One));
+    }
+    case Builtin::BI__builtin_stdc_bit_width: {
+      Function *F = CGM.getIntrinsic(Intrinsic::ctlz, ArgType);
+      Value *LZ = Builder.CreateCall(F, {ArgValue, Builder.getFalse()});
+      Result = Builder.CreateSub(ConstantInt::get(ArgType, BitWidth), LZ);
+      break;
+    }
+    case Builtin::BI__builtin_stdc_bit_floor: {
+      // Spec: arg == 0 ? 0 : 1 << (prec - 1 - clz(arg))
+      Value *IsZero = Builder.CreateICmpEQ(ArgValue, Zero);
+      BasicBlock *ZeroBB = createBasicBlock("bitfloor.zero", CurFn);
+      BasicBlock *CalcBB = createBasicBlock("bitfloor.calc", CurFn);
+      BasicBlock *MergeBB = createBasicBlock("bitfloor.merge", CurFn);
+
+      Builder.CreateCondBr(IsZero, ZeroBB, CalcBB);
+
+      // Zero path.
+      Builder.SetInsertPoint(ZeroBB);
+      Builder.CreateBr(MergeBB);
+
+      // General path.
+      Builder.SetInsertPoint(CalcBB);
+      Function *F = CGM.getIntrinsic(Intrinsic::ctlz, ArgType);
+      Value *LZ = Builder.CreateCall(F, {ArgValue, Builder.getFalse()});
+      Value *ShiftAmt =
+          Builder.CreateSub(ConstantInt::get(ArgType, BitWidth - 1), LZ);
+      Value *Tmp = Builder.CreateShl(One, ShiftAmt);
+      Builder.CreateBr(MergeBB);
+
+      // Merge.
+      Builder.SetInsertPoint(MergeBB);
+      PHINode *Phi = Builder.CreatePHI(ArgType, 2);
+      Phi->addIncoming(Zero, ZeroBB);
+      Phi->addIncoming(Tmp, CalcBB);
+      Result = Phi;
+      break;
+    }
+    case Builtin::BI__builtin_stdc_bit_ceil: {
+      // Spec: arg <= 1 ? 1 : 2 << (prec - 1 - clz(arg - 1))
+      if (auto *CI = dyn_cast<ConstantInt>(ArgValue)) {
+        if (CI->isMinusOne())
+          return RValue::get(CI);
+        if (CI->isZero() || CI->isOne())
+          return RValue::get(ConstantInt::get(ArgType, 1));
+      }
+
+      Value *AllOnes = Constant::getAllOnesValue(ArgType);
+      Value *IsAllOnes = Builder.CreateICmpEQ(ArgValue, AllOnes, "isallones");
+      Value *IsLEOne = Builder.CreateICmpULE(ArgValue, One, "isleone");
+
+      BasicBlock *AllOnesBB = createBasicBlock("bitceil.allones", CurFn);
+      BasicBlock *LEOneBB = createBasicBlock("bitceil.leone", CurFn);
+      BasicBlock *CalcBB = createBasicBlock("bitceil.calc", CurFn);
+      BasicBlock *MergeBB = createBasicBlock("bitceil.merge", CurFn);
+
+      // If all ones -> return operand
+      Builder.CreateCondBr(IsAllOnes, AllOnesBB, LEOneBB);
+
+      Builder.SetInsertPoint(AllOnesBB);
+      Builder.CreateBr(MergeBB);
+
+      // If <= 1 -> return 1, else compute.
+      Builder.SetInsertPoint(LEOneBB);
+      Builder.CreateCondBr(IsLEOne, MergeBB, CalcBB);
+
+      Builder.SetInsertPoint(CalcBB);
+      Function *F = CGM.getIntrinsic(Intrinsic::ctlz, ArgType);
+      Value *ArgMinusOne = Builder.CreateSub(ArgValue, One);
+      Value *LZ = Builder.CreateCall(F, {ArgMinusOne, Builder.getFalse()});
+      Value *LZIsZero = Builder.CreateICmpEQ(LZ, Zero, "lzzero");
+      Value *ShiftAmt =
+          Builder.CreateSub(ConstantInt::get(ArgType, BitWidth), LZ);
+      Value *Tmp = Builder.CreateShl(One, ShiftAmt);
+      Tmp = Builder.CreateSelect(LZIsZero, ArgValue, Tmp);
+      Builder.CreateBr(MergeBB);
+
+      Builder.SetInsertPoint(MergeBB);
+      PHINode *Phi = Builder.CreatePHI(ArgType, 3);
+      Phi->addIncoming(ArgValue, AllOnesBB);
+      Phi->addIncoming(One, LEOneBB);
+      Phi->addIncoming(Tmp, CalcBB);
+      Result = Phi;
+      break;
+    }
+    default:
+      llvm_unreachable("Unknown stdc builtin");
+    }
+
+    if (Result->getType() != ResultType)
+      Result = Builder.CreateIntCast(Result, ResultType, /*isSigned*/ false);
+    return RValue::get(Result);
+  }
+
   case Builtin::BI__builtin_constant_p: {
     llvm::Type *ResultType = ConvertType(E->getType());
 

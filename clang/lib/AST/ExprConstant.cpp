@@ -16829,6 +16829,90 @@ bool IntExprEvaluator::VisitBuiltinCallExpr(const CallExpr *E,
     }
   }
 
+  case Builtin::BI__builtin_stdc_leading_zeros:
+  case Builtin::BI__builtin_stdc_leading_ones:
+  case Builtin::BI__builtin_stdc_trailing_zeros:
+  case Builtin::BI__builtin_stdc_trailing_ones:
+  case Builtin::BI__builtin_stdc_first_leading_zero:
+  case Builtin::BI__builtin_stdc_first_leading_one:
+  case Builtin::BI__builtin_stdc_first_trailing_zero:
+  case Builtin::BI__builtin_stdc_first_trailing_one:
+  case Builtin::BI__builtin_stdc_count_zeros:
+  case Builtin::BI__builtin_stdc_count_ones:
+  case Builtin::BI__builtin_stdc_has_single_bit:
+  case Builtin::BI__builtin_stdc_bit_width:
+  case Builtin::BI__builtin_stdc_bit_floor:
+  case Builtin::BI__builtin_stdc_bit_ceil: {
+    APSInt Val;
+    if (!EvaluateInteger(E->getArg(0), Val, Info))
+      return false;
+
+    unsigned BitWidth = Val.getBitWidth();
+    const unsigned ResBitWidth = Info.Ctx.getIntWidth(E->getType());
+
+    switch (BuiltinOp) {
+    case Builtin::BI__builtin_stdc_leading_zeros:
+      return Success(APInt(ResBitWidth, Val.countLeadingZeros()), E);
+    case Builtin::BI__builtin_stdc_leading_ones:
+      return Success(APInt(ResBitWidth, Val.countLeadingOnes()), E);
+    case Builtin::BI__builtin_stdc_trailing_zeros:
+      return Success(APInt(ResBitWidth, Val.countTrailingZeros()), E);
+    case Builtin::BI__builtin_stdc_trailing_ones:
+      return Success(APInt(ResBitWidth, Val.countTrailingOnes()), E);
+    case Builtin::BI__builtin_stdc_first_leading_zero:
+      return Success(
+          APInt(ResBitWidth, Val.isAllOnes() ? 0 : Val.countLeadingOnes() + 1),
+          E);
+    case Builtin::BI__builtin_stdc_first_leading_one:
+      return Success(
+          APInt(ResBitWidth, Val.isZero() ? 0 : Val.countLeadingZeros() + 1),
+          E);
+    case Builtin::BI__builtin_stdc_first_trailing_zero:
+      return Success(
+          APInt(ResBitWidth, Val.isAllOnes() ? 0 : Val.countTrailingOnes() + 1),
+          E);
+    case Builtin::BI__builtin_stdc_first_trailing_one:
+      return Success(
+          APInt(ResBitWidth, Val.isZero() ? 0 : Val.countTrailingZeros() + 1),
+          E);
+    case Builtin::BI__builtin_stdc_count_zeros: {
+      APInt Cnt(ResBitWidth, BitWidth - Val.popcount());
+      return Success(APSInt(Cnt, /*IsUnsigned*/ true), E);
+    }
+    case Builtin::BI__builtin_stdc_count_ones: {
+      APInt Cnt(ResBitWidth, Val.popcount());
+      return Success(APSInt(Cnt, /*IsUnsigned*/ true), E);
+    }
+    case Builtin::BI__builtin_stdc_has_single_bit: {
+      APInt Res(ResBitWidth, Val.popcount() == 1 ? 1 : 0);
+      return Success(APSInt(Res, /*IsUnsigned*/ true), E);
+    }
+    case Builtin::BI__builtin_stdc_bit_width:
+      return Success(APInt(ResBitWidth, BitWidth - Val.countLeadingZeros()), E);
+    case Builtin::BI__builtin_stdc_bit_floor: {
+      if (Val.isZero())
+        return Success(APInt(ResBitWidth, 0), E);
+      unsigned Exp = BitWidth - Val.countLeadingZeros() - 1;
+      return Success(
+          APSInt(APInt::getOneBitSet(BitWidth, Exp), /*IsUnsigned*/ true), E);
+    }
+    case Builtin::BI__builtin_stdc_bit_ceil: {
+      if (Val.ule(1))
+        return Success(APSInt(APInt(BitWidth, 1), /*IsUnsigned*/ true), E);
+      if (Val.isAllOnes())
+        return Success(APSInt(Val), E);
+      APInt ValMinusOne = Val - 1;
+      unsigned LZ = ValMinusOne.countLeadingZeros();
+      if (LZ == 0)
+        return Success(APSInt(Val), E); // would overflow; clamp
+      APInt Result = APInt::getOneBitSet(BitWidth, BitWidth - LZ);
+      return Success(APSInt(Result, /*IsUnsigned*/ true), E);
+    }
+    default:
+      llvm_unreachable("Unknown stdc builtin");
+    }
+  }
+
   case Builtin::BI__builtin_elementwise_add_sat: {
     APSInt LHS, RHS;
     if (!EvaluateInteger(E->getArg(0), LHS, Info) ||

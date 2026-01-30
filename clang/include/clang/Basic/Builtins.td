@@ -797,6 +797,90 @@ def StdcRotateRight : Builtin {
   let Prototype = "void(...)";
 }
 
+def StdcLeadingZeros: Builtin {
+  let Spellings = ["__builtin_stdc_leading_zeros"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcLeadingOnes: Builtin {
+  let Spellings = ["__builtin_stdc_leading_ones"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcTrailingZeros: Builtin {
+  let Spellings = ["__builtin_stdc_trailing_zeros"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcTrailingOnes: Builtin {
+  let Spellings = ["__builtin_stdc_trailing_ones"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcFirstLeadingZero: Builtin {
+  let Spellings = ["__builtin_stdc_first_leading_zero"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcFirstLeadingOne: Builtin {
+  let Spellings = ["__builtin_stdc_first_leading_one"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcFirstTrailingZero: Builtin {
+  let Spellings = ["__builtin_stdc_first_trailing_zero"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcFirstTrailingOne: Builtin {
+  let Spellings = ["__builtin_stdc_first_trailing_one"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcCountZeros: Builtin {
+  let Spellings = ["__builtin_stdc_count_zeros"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcCountOnes: Builtin {
+  let Spellings = ["__builtin_stdc_count_ones"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcHasSingleBit: Builtin {
+  let Spellings = ["__builtin_stdc_has_single_bit"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "bool(...)";
+}
+
+def StdcBitWidth: Builtin {
+  let Spellings = ["__builtin_stdc_bit_width"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcBitFloor: Builtin {
+  let Spellings = ["__builtin_stdc_bit_floor"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def StdcBitCeil: Builtin {
+  let Spellings = ["__builtin_stdc_bit_ceil"];
+  let Attributes = [NoThrow, Const, Constexpr, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
 // Random GCC builtins
 // FIXME: The builtins marked FunctionWithBuiltinPrefix below should be
 //        merged with the library definitions. They are currently not because

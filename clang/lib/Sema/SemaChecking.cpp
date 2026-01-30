@@ -2356,6 +2356,47 @@ static bool BuiltinPopcountg(Sema &S, CallExpr *TheCall) {
   return false;
 }
 
+/// Checks stdc bit-utility builtins (__builtin_stdc_*):
+/// bit_ceil, bit_floor, bit_width, count_ones, count_zeros,
+/// first_leading_one, first_leading_zero, first_trailing_one,
+/// first_trailing_zero, has_single_bit, leading_ones, leading_zeros,
+/// trailing_ones, trailing_zeros. They all take a single unsigned integer
+/// argument and return either int, bool, or the argument type depending on the
+/// specific builtin.
+static bool BuiltinStdCBuiltin(Sema &S, CallExpr *TheCall) {
+  if (S.checkArgCount(TheCall, 1))
+    return true;
+
+  ExprResult ArgRes = S.DefaultLvalueConversion(TheCall->getArg(0));
+  if (ArgRes.isInvalid())
+    return true;
+
+  Expr *Arg = ArgRes.get();
+  TheCall->setArg(0, Arg);
+
+  QualType ArgTy = Arg->getType();
+  if (!ArgTy->isUnsignedIntegerType() && !ArgTy->isExtVectorBoolType()) {
+    S.Diag(Arg->getBeginLoc(), diag::err_builtin_invalid_arg_type)
+        << 1 << /* scalar */ 1 << /* unsigned integer ty */ 3 << /* no fp */ 0
+        << ArgTy;
+    return true;
+  }
+
+  switch (TheCall->getBuiltinCallee()) {
+  case Builtin::BI__builtin_stdc_bit_floor:
+  case Builtin::BI__builtin_stdc_bit_ceil:
+    TheCall->setType(ArgTy);
+    break;
+  case Builtin::BI__builtin_stdc_has_single_bit:
+    TheCall->setType(S.Context.BoolTy);
+    break;
+  default:
+    TheCall->setType(S.Context.UnsignedIntTy);
+    break;
+  }
+  return false;
+}
+
 /// Checks that __builtin_{clzg,ctzg} was called with a first argument, which is
 /// an unsigned integer, and an optional second argument, which is promoted to
 /// an 'int'.
@@ -3808,6 +3849,24 @@ Sema::CheckBuiltinFunctionCall(FunctionDecl *FDecl, unsigned BuiltinID,
   case Builtin::BI__builtin_stdc_rotate_left:
   case Builtin::BI__builtin_stdc_rotate_right:
     if (BuiltinRotateGeneric(*this, TheCall))
+      return ExprError();
+    break;
+
+  case Builtin::BI__builtin_stdc_leading_zeros:
+  case Builtin::BI__builtin_stdc_leading_ones:
+  case Builtin::BI__builtin_stdc_trailing_zeros:
+  case Builtin::BI__builtin_stdc_trailing_ones:
+  case Builtin::BI__builtin_stdc_first_leading_zero:
+  case Builtin::BI__builtin_stdc_first_leading_one:
+  case Builtin::BI__builtin_stdc_first_trailing_zero:
+  case Builtin::BI__builtin_stdc_first_trailing_one:
+  case Builtin::BI__builtin_stdc_count_zeros:
+  case Builtin::BI__builtin_stdc_count_ones:
+  case Builtin::BI__builtin_stdc_has_single_bit:
+  case Builtin::BI__builtin_stdc_bit_width:
+  case Builtin::BI__builtin_stdc_bit_floor:
+  case Builtin::BI__builtin_stdc_bit_ceil:
+    if (BuiltinStdCBuiltin(*this, TheCall))
       return ExprError();
     break;
 

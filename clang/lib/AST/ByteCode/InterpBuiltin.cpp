@@ -4413,6 +4413,129 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         });
   }
 
+  case Builtin::BI__builtin_stdc_leading_zeros: {
+    unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
+    return interp__builtin_elementwise_int_unaryop(
+        S, OpPC, Call, [ResWidth](const APSInt &Val) {
+          return APInt(ResWidth, Val.countl_zero());
+        });
+  }
+
+  case Builtin::BI__builtin_stdc_leading_ones: {
+    unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
+    return interp__builtin_elementwise_int_unaryop(
+        S, OpPC, Call, [ResWidth](const APSInt &Val) {
+          return APInt(ResWidth, Val.countl_one());
+        });
+  }
+
+  case Builtin::BI__builtin_stdc_trailing_zeros: {
+    unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
+    return interp__builtin_elementwise_int_unaryop(
+        S, OpPC, Call, [ResWidth](const APSInt &Val) {
+          return APInt(ResWidth, Val.countr_zero());
+        });
+  }
+
+  case Builtin::BI__builtin_stdc_trailing_ones: {
+    unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
+    return interp__builtin_elementwise_int_unaryop(
+        S, OpPC, Call, [ResWidth](const APSInt &Val) {
+          return APInt(ResWidth, Val.countr_one());
+        });
+  }
+
+  case Builtin::BI__builtin_stdc_first_leading_zero: {
+    unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
+    return interp__builtin_elementwise_int_unaryop(
+        S, OpPC, Call, [ResWidth](const APSInt &Val) {
+          return APInt(ResWidth, Val.isAllOnes() ? 0 : Val.countl_one() + 1);
+        });
+  }
+
+  case Builtin::BI__builtin_stdc_first_leading_one: {
+    unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
+    return interp__builtin_elementwise_int_unaryop(
+        S, OpPC, Call, [ResWidth](const APSInt &Val) {
+          return APInt(ResWidth, Val.isZero() ? 0 : Val.countl_zero() + 1);
+        });
+  }
+
+  case Builtin::BI__builtin_stdc_first_trailing_zero: {
+    unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
+    return interp__builtin_elementwise_int_unaryop(
+        S, OpPC, Call, [ResWidth](const APSInt &Val) {
+          return APInt(ResWidth, Val.isAllOnes() ? 0 : Val.countr_one() + 1);
+        });
+  }
+
+  case Builtin::BI__builtin_stdc_first_trailing_one: {
+    unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
+    return interp__builtin_elementwise_int_unaryop(
+        S, OpPC, Call, [ResWidth](const APSInt &Val) {
+          return APInt(ResWidth, Val.isZero() ? 0 : Val.countr_zero() + 1);
+        });
+  }
+
+  case Builtin::BI__builtin_stdc_count_zeros: {
+    unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
+    return interp__builtin_elementwise_int_unaryop(
+        S, OpPC, Call, [ResWidth](const APSInt &Val) {
+          unsigned BitWidth = Val.getBitWidth();
+          return APInt(ResWidth, BitWidth - Val.popcount());
+        });
+  }
+
+  case Builtin::BI__builtin_stdc_count_ones: {
+    unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
+    return interp__builtin_elementwise_int_unaryop(
+        S, OpPC, Call, [ResWidth](const APSInt &Val) {
+          return APInt(ResWidth, Val.popcount());
+        });
+  }
+
+  case Builtin::BI__builtin_stdc_has_single_bit: {
+    unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
+    return interp__builtin_elementwise_int_unaryop(
+        S, OpPC, Call, [ResWidth](const APSInt &Val) {
+          return APInt(ResWidth, Val.popcount() == 1 ? 1 : 0);
+        });
+  }
+
+  case Builtin::BI__builtin_stdc_bit_width: {
+    unsigned ResWidth = S.getASTContext().getIntWidth(Call->getType());
+    return interp__builtin_elementwise_int_unaryop(
+        S, OpPC, Call, [ResWidth](const APSInt &Val) {
+          unsigned BitWidth = Val.getBitWidth();
+          return APInt(ResWidth, BitWidth - Val.countl_zero());
+        });
+  }
+
+  case Builtin::BI__builtin_stdc_bit_floor:
+    return interp__builtin_elementwise_int_unaryop(
+        S, OpPC, Call, [](const APSInt &Val) {
+          unsigned BitWidth = Val.getBitWidth();
+          if (Val.isZero())
+            return APInt::getZero(BitWidth);
+          return APInt::getOneBitSet(BitWidth,
+                                     BitWidth - Val.countl_zero() - 1);
+        });
+
+  case Builtin::BI__builtin_stdc_bit_ceil:
+    return interp__builtin_elementwise_int_unaryop(
+        S, OpPC, Call, [](const APSInt &Val) {
+          unsigned BitWidth = Val.getBitWidth();
+          if (Val.ule(1))
+            return llvm::APInt(BitWidth, 1);
+          if (Val.isAllOnes())
+            return static_cast<const llvm::APInt &>(Val);
+          llvm::APInt ValMinusOne = static_cast<const llvm::APInt &>(Val) - 1;
+          unsigned LeadingZeros = ValMinusOne.countl_zero();
+          if (LeadingZeros == 0)
+            return static_cast<const llvm::APInt &>(Val); // would overflow
+          return llvm::APInt::getOneBitSet(BitWidth, BitWidth - LeadingZeros);
+        });
+
   case Builtin::BI__builtin_ffs:
   case Builtin::BI__builtin_ffsl:
   case Builtin::BI__builtin_ffsll:
