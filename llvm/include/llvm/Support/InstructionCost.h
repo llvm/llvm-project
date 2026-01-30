@@ -59,6 +59,10 @@ private:
       State = Invalid;
   }
 
+  // 120 chosen since least common factor of 2, 3, 4, 5, 6, 8
+  // which are realistic issue widths
+  static constexpr CostType ScalingFactor = 120;
+
   static constexpr CostType MaxValue = std::numeric_limits<CostType>::max();
   static constexpr CostType MinValue = std::numeric_limits<CostType>::min();
 
@@ -67,7 +71,16 @@ public:
   InstructionCost() = default;
 
   InstructionCost(CostState) = delete;
-  InstructionCost(CostType Val) : Value(Val), State(Valid) {}
+  InstructionCost(CostType Val) : Value(), State(Valid) {
+    InstructionCost::CostType Result;
+    if (MulOverflow(Val, ScalingFactor, Result)) {
+      if (Val > 0)
+        Result = MaxValue;
+      else
+        Result = MinValue;
+    }
+    Value = Result;
+  }
 
   static InstructionCost getMax() { return MaxValue; }
   static InstructionCost getMin() { return MinValue; }
@@ -87,7 +100,7 @@ public:
   /// and comparisons.
   CostType getValue() const {
     assert(isValid());
-    return Value;
+    return Value / ScalingFactor;
   }
 
   /// For all of the arithmetic operators provided here any invalid state is
@@ -141,6 +154,8 @@ public:
         Result = MaxValue;
       else
         Result = MinValue;
+    } else {
+      Result /= ScalingFactor;
     }
 
     Value = Result;
@@ -155,7 +170,16 @@ public:
 
   InstructionCost &operator/=(const InstructionCost &RHS) {
     propagateState(RHS);
-    Value /= RHS.Value;
+    // Saturating multiply.
+    InstructionCost::CostType Result;
+    if (MulOverflow(Value, ScalingFactor, Result)) {
+      if (Value > 0)
+        Result = MaxValue;
+      else
+        Result = MinValue;
+    }
+    Result /= RHS.Value;
+    Value = Result;
     return *this;
   }
 
