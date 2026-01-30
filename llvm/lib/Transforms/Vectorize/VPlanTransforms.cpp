@@ -3252,23 +3252,116 @@ void VPlanTransforms::addExplicitVectorLength(
   Plan.setUF(1);
 }
 
-void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
-  // Find EVL loop entries by locating VPEVLBasedIVPHIRecipe.
-  // There should be only one EVL PHI in the entire plan.
-  VPEVLBasedIVPHIRecipe *EVLPhi = nullptr;
-
+void VPlanTransforms::adjustFFLoadEarlyExitForPoisonSafety(VPlan &Plan) {
+  using namespace SCEVPatternMatch;
+  VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  VPWidenIntrinsicRecipe *LastFFLoad = nullptr;
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
-           vp_depth_first_shallow(Plan.getEntry())))
-    for (VPRecipeBase &R : VPBB->phis())
-      if (auto *PhiR = dyn_cast<VPEVLBasedIVPHIRecipe>(&R)) {
-        assert(!EVLPhi && "Found multiple EVL PHIs. Only one expected");
-        EVLPhi = PhiR;
+           vp_depth_first_deep(Plan.getVectorLoopRegion())))
+    for (VPRecipeBase &R : *VPBB)
+      if (match(&R, m_Intrinsic<Intrinsic::vp_load_ff>(m_VPValue(), m_VPValue(),
+                                                       m_VPValue()))) {
+        assert(!LastFFLoad && "Only one FFLoad is supported");
+        LastFFLoad = cast<VPWidenIntrinsicRecipe>(&R);
       }
 
-  // Early return if no EVL PHI is found.
-  if (!EVLPhi)
+  // Skip if no FFLoad.
+  if (!LastFFLoad)
     return;
 
+  // Ensure FFLoad does not read past the remainder in the last iteration.
+  // Set AVL to min(VF, remainder).
+  VPBuilder Builder(Header, Header->getFirstNonPhi());
+  DebugLoc DL = LastFFLoad->getDebugLoc();
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  auto *CanonicalIVPHI = LoopRegion->getCanonicalIV();
+  VPValue *Remainder = Builder.createNaryOp(
+      Instruction::Sub, {&Plan.getVectorTripCount(), CanonicalIVPHI}, DL);
+  VPValue *Cmp =
+      Builder.createICmp(CmpInst::ICMP_ULE, &Plan.getVF(), Remainder, DL);
+  VPValue *AVL = Builder.createSelect(Cmp, &Plan.getVF(), Remainder, DL);
+  Type *CanIVTy = CanonicalIVPHI->getScalarType();
+  Type *I32Ty = IntegerType::getInt32Ty(Plan.getContext());
+  AVL = Builder.createScalarZExtOrTrunc(AVL, I32Ty, CanIVTy, DL);
+  LastFFLoad->setOperand(2, AVL);
+
+  // To ensure poison-safety (e.g., avoiding branch-on-poison), collect
+  // FFLoad users that need faulting-lane-mask.
+  // The mask is generated as:
+  //   EMIT vp<%faulting.lane> = extractvalue vp<%ffload>, 1
+  //   EMIT vp<%alm> = active lane mask 0, vp<%faulting.lane>
+  Builder.setInsertPoint(cast<VPRecipeBase>(*LastFFLoad->user_begin()));
+  VPValue *One = Plan.getConstantInt(32, 1);
+  VPValue *FaultingLane = Builder.createNaryOp(
+      VPInstruction::ExtractScalarValue, {LastFFLoad, One}, DL);
+  FaultingLane =
+      Builder.createScalarZExtOrTrunc(FaultingLane, CanIVTy, I32Ty, DL);
+  VPValue *ALMMultiplier = Plan.getOrAddLiveIn(ConstantInt::get(CanIVTy, 1));
+  auto *Zero = Plan.getOrAddLiveIn(ConstantInt::get(CanIVTy, 0));
+  auto *ALM = Builder.createNaryOp(VPInstruction::ActiveLaneMask,
+                                   {Zero, FaultingLane, ALMMultiplier}, DL);
+  for (VPUser *U : collectUsersRecursively(LastFFLoad)) {
+    auto *CurRecipe = cast<VPRecipeBase>(U);
+    VPValue *Mask;
+    // (any-of %cond) -> (any-of (logical-and %alm, %cond))
+    if (match(CurRecipe,
+              m_VPInstruction<VPInstruction::AnyOf>(m_VPValue(Mask)))) {
+      Builder.setInsertPoint(CurRecipe);
+      auto *R = Builder.createNaryOp(VPInstruction::LogicalAnd, {ALM, Mask},
+                                     CurRecipe->getDebugLoc());
+      CurRecipe->setOperand(0, R);
+    }
+  }
+}
+
+/// After region dissolution, convert early-exit loops to variable-length
+/// stepping.
+static void
+convertFFLoadEarlyExitToVLStepping(VPlan &Plan,
+                                   VPWidenIntrinsicRecipe *LastFFLoad) {
+  using namespace SCEVPatternMatch;
+  VPBasicBlock *HeaderVPBB = LastFFLoad->getParent();
+  // Replace IVStep (VFxUF) with returned faultnig lane from FFLoad.
+  auto *CanonicalIV = cast<VPPhi>(&*HeaderVPBB->begin());
+  VPValue *Backedge = CanonicalIV->getIncomingValue(1);
+  assert(match(Backedge, m_c_Add(m_Specific(CanonicalIV),
+                                 m_Specific(&Plan.getVFxUF()))) &&
+         "Unexpected canonical iv");
+  VPRecipeBase *CanonicalIVIncrement = Backedge->getDefiningRecipe();
+  // Expected pattern
+  //   EMIT vp<%alm> = active lane mask 0, vp<%faulting.lane>
+  //   EMIT vp<%and> = logical-and vp<%alm>, vp<%cond>
+  //   EMIT vp<%latch.exit> = any-of vp<%and>
+  //   EMIT branch-on-two-conds %earlyExit, %latchexit
+  // use the index to step the iv
+  VPBasicBlock *LatchExiting =
+      HeaderVPBB->getPredecessors()[1]->getEntryBasicBlock();
+  auto *LatchExitingBr = cast<VPInstruction>(LatchExiting->getTerminator());
+  VPValue *VPAnyOf = nullptr;
+  VPValue *FaultingLane = nullptr;
+  [[maybe_unused]] bool IsExitingOnAnyOfOr =
+      match(LatchExitingBr,
+            m_BranchOnTwoConds(m_VPValue(VPAnyOf), m_VPValue())) &&
+      match(VPAnyOf,
+            m_VPInstruction<VPInstruction::AnyOf>(
+                m_VPInstruction<VPInstruction::LogicalAnd>(
+                    m_VPInstruction<VPInstruction::ActiveLaneMask>(
+                        m_ZeroInt(), m_VPValue(FaultingLane), m_VPValue()),
+                    m_VPValue())));
+  assert(IsExitingOnAnyOfOr && "Unexpected terminator for FFLoad");
+
+  CanonicalIVIncrement->setOperand(1, FaultingLane);
+}
+
+/// Once loop regions are replaced with explicit CFG, EVL loops can step with
+/// variable vector lengths instead of fixed lengths. This transformation:
+///  * Makes EVL-Phi concrete.
+///  * Removes CanonicalIV and increment.
+///  * Replaces the exit condition from
+///      (branch-on-count CanonicalIVInc, VectorTripCount)
+///    to
+///      (branch-on-cond eq AVLNext, 0)
+static void canonicalizeEVLLoops(VPlan &Plan, VPEVLBasedIVPHIRecipe *EVLPhi) {
   VPBasicBlock *HeaderVPBB = EVLPhi->getParent();
   VPValue *EVLIncrement = EVLPhi->getBackedgeValue();
   VPValue *AVL;
@@ -3328,6 +3421,34 @@ void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
   LatchExitingBr->setOperand(0,
                              Builder.createICmp(CmpInst::ICMP_EQ, AVLNext,
                                                 Plan.getConstantInt(AVLTy, 0)));
+}
+
+void VPlanTransforms::convertLoopIntoVariableLengthStepping(VPlan &Plan) {
+  // Find EVL loop entries by locating VPEVLBasedIVPHIRecipe.
+  // There should be only one EVL PHI in the entire plan.
+  VPEVLBasedIVPHIRecipe *EVLPhi = nullptr;
+  VPWidenIntrinsicRecipe *LastFFLoad = nullptr;
+
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
+           vp_depth_first_shallow(Plan.getEntry())))
+    for (VPRecipeBase &R : *VPBB) {
+      if (auto *PhiR = dyn_cast<VPEVLBasedIVPHIRecipe>(&R)) {
+        assert(!EVLPhi && "Found multiple EVL PHIs. Only one expected");
+        EVLPhi = PhiR;
+      }
+      if (match(&R, m_Intrinsic<Intrinsic::vp_load_ff>(m_VPValue(), m_VPValue(),
+                                                       m_VPValue()))) {
+        assert(!LastFFLoad && "Only one FFLoad is supported");
+        LastFFLoad = cast<VPWidenIntrinsicRecipe>(&R);
+      }
+    }
+
+  assert(!EVLPhi || !LastFFLoad && "EVL loop does not support FFLoad yet");
+
+  if (EVLPhi)
+    canonicalizeEVLLoops(Plan, EVLPhi);
+  else if (LastFFLoad)
+    convertFFLoadEarlyExitToVLStepping(Plan, LastFFLoad);
 }
 
 void VPlanTransforms::replaceSymbolicStrides(

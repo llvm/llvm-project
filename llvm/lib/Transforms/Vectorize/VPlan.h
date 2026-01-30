@@ -1240,6 +1240,10 @@ public:
     /// The lane specifies an index into a vector formed by combining all vector
     /// operands (all operands after the first one).
     ExtractLane,
+    //  Extracts a scalar value from an aggregate value.
+    ExtractScalarValue,
+    //  Extracts a vector value from an aggregate value.
+    ExtractVectorValue,
     /// Explicit user for the resume phi of the canonical induction in the main
     /// VPlan, used by the epilogue vector loop.
     ResumeForEpilogue,

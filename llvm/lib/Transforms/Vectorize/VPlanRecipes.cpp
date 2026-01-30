@@ -466,6 +466,8 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case Instruction::Store:
   case VPInstruction::BranchOnCount:
   case VPInstruction::BranchOnTwoConds:
+  case VPInstruction::ExtractScalarValue:
+  case VPInstruction::ExtractVectorValue:
   case VPInstruction::FirstOrderRecurrenceSplice:
   case VPInstruction::LogicalAnd:
   case VPInstruction::PtrAdd:
@@ -795,6 +797,13 @@ Value *VPInstruction::generate(VPTransformState &State) {
     if (isa<ExtractElementInst>(Res))
       Res->setName(Name);
     return Res;
+  }
+  case VPInstruction::ExtractVectorValue:
+  case VPInstruction::ExtractScalarValue: {
+    assert(getNumOperands() == 2 && "expected single level extractvalue");
+    Value *Op = State.get(getOperand(0));
+    auto *CI = cast<ConstantInt>(getOperand(1)->getLiveInIRValue());
+    return Builder.CreateExtractValue(Op, CI->getZExtValue());
   }
   case VPInstruction::LogicalAnd: {
     Value *A = State.get(getOperand(0));
@@ -1259,6 +1268,7 @@ bool VPInstruction::isVectorToScalar() const {
 bool VPInstruction::isSingleScalar() const {
   switch (getOpcode()) {
   case Instruction::PHI:
+  case VPInstruction::ExtractScalarValue:
   case VPInstruction::ExplicitVectorLength:
   case VPInstruction::ResumeForEpilogue:
   case VPInstruction::VScale:
@@ -1475,6 +1485,12 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ExtractPenultimateElement:
     O << "extract-penultimate-element";
+    break;
+  case VPInstruction::ExtractScalarValue:
+    O << "extract-scalar-value";
+    break;
+  case VPInstruction::ExtractVectorValue:
+    O << "extract-vector-value";
     break;
   case VPInstruction::ComputeAnyOfResult:
     O << "compute-anyof-result";
@@ -1825,8 +1841,16 @@ void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
 
   SmallVector<Type *, 2> TysForDecl;
   // Add return type if intrinsic is overloaded on it.
-  if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1,
-                                             State.TTI)) {
+  if (ResultTy->isStructTy()) {
+    auto *StructTy = cast<StructType>(ResultTy);
+    for (unsigned I = 0, E = StructTy->getNumElements(); I != E; ++I) {
+      if (isVectorIntrinsicWithStructReturnOverloadAtField(VectorIntrinsicID, I,
+                                                           State.TTI))
+        TysForDecl.push_back(
+            toVectorizedTy(StructTy->getStructElementType(I), State.VF));
+    }
+  } else if (isVectorIntrinsicWithOverloadTypeAtArg(VectorIntrinsicID, -1,
+                                                    State.TTI)) {
     Type *RetTy = toVectorizedTy(getResultType(), State.VF);
     ArrayRef<Type *> ContainedTys = getContainedTypes(RetTy);
     for (auto [Idx, Ty] : enumerate(ContainedTys)) {
@@ -1898,7 +1922,8 @@ static InstructionCost getCostForIntrinsics(Intrinsic::ID ID,
   }
 
   Type *ScalarRetTy = Ctx.Types.inferScalarType(&R);
-  Type *RetTy = VF.isVector() ? toVectorizedTy(ScalarRetTy, VF) : ScalarRetTy;
+  Type *RetTy =
+      VF.isVector() ? toVectorizedTy(ScalarRetTy, VF, ID) : ScalarRetTy;
   SmallVector<Type *> ParamTys;
   for (const VPValue *Op : Operands) {
     ParamTys.push_back(VF.isVector()

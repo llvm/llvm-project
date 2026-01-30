@@ -246,7 +246,8 @@ struct VPTransformState {
       set(Def, V, VPLane(0));
       return;
     }
-    assert((VF.isScalar() || isVectorizedTy(V->getType())) &&
+    assert((VF.isScalar() || isVectorizedTy(V->getType()) ||
+            V->getType()->isStructTy()) &&
            "scalar values must be stored as (0, 0)");
     Data.VPV2Vector[Def] = V;
   }
