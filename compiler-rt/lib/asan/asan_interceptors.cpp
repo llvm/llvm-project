@@ -96,7 +96,7 @@ static inline bool RangeOverlaps(uptr beg, uptr end_excl, uptr seg_beg,
   return beg < seg_end_excl && end_excl > seg_beg;
 }
 
-static inline bool IntersectsShadowOrGap(uptr beg, uptr end_excl) {
+static inline bool IntersectsShadow(uptr beg, uptr end_excl) {
   // Check shadow regions
   if (RangeOverlaps(beg, end_excl, kLowShadowBeg, kLowShadowEnd))
     return true;
@@ -105,17 +105,6 @@ static inline bool IntersectsShadowOrGap(uptr beg, uptr end_excl) {
     return true;
   if (RangeOverlaps(beg, end_excl, kHighShadowBeg, kHighShadowEnd))
     return true;
-
-  // Check shadow gaps
-  if (RangeOverlaps(beg, end_excl, kShadowGapBeg, kShadowGapEnd))
-    return true;
-  if (kShadowGap2Beg &&
-      RangeOverlaps(beg, end_excl, kShadowGap2Beg, kShadowGap2End))
-    return true;
-  if (kShadowGap3Beg &&
-      RangeOverlaps(beg, end_excl, kShadowGap3Beg, kShadowGap3End))
-    return true;
-
   return false;
 }
 #  endif  // SANITIZER_POSIX
@@ -202,12 +191,8 @@ static void* mmap_interceptor(Mmap real_mmap, void* addr, SIZE_T length,
     return (void*)-1;
   }
   if (flags & map_fixed) {
-    if (__asan::IntersectsShadowOrGap(start, end_excl)) {
+    if (__asan::IntersectsShadow(start, end_excl)) {
       errno = errno_EINVAL;
-      return (void*)-1;
-    }
-    if (!AddrIsInMem(start) || !AddrIsInMem(end_excl - 1)) {
-      errno = errno_ENOMEM;
       return (void*)-1;
     }
   }
@@ -238,9 +223,7 @@ static int munmap_interceptor(Munmap real_munmap, void* addr, SIZE_T length) {
     errno = errno_EINVAL;
     return -1;
   }
-  bool beg_in_mem = AddrIsInMem(beg);
-  bool end_in_mem = AddrIsInMem(end_excl - 1);
-  if ((beg_in_mem || end_in_mem) && (beg_in_mem != end_in_mem)) {
+  if (__asan::IntersectsShadow(beg, end_excl)) {
     errno = errno_EINVAL;
     return -1;
   }
