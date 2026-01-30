@@ -726,11 +726,10 @@ void VarMapBuilder::VisitCallExpr(const CallExpr *CE) {
       }
     }
 
-    if (VDec && Ctx.lookup(VDec)) {
+    if (VDec)
       Ctx = VMap->clearDefinition(VDec, Ctx);
-      VMap->saveContext(CE, Ctx);
-    }
   }
+  VMap->saveContext(CE, Ctx);
 }
 
 // Computes the intersection of two contexts.  The intersection is the
