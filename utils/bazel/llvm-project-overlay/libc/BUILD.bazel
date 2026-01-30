@@ -2912,11 +2912,11 @@ libc_support_library(
     name = "__support_math_f16fmaf128",
     hdrs = ["src/__support/math/f16fmaf128.h"],
     deps = [
+        ":__support_common",
         ":__support_fputil_fma",
         ":__support_macros_config",
-        ":__support_common",
-        ":llvm_libc_types_float128",
         ":llvm_libc_macros_float16_macros",
+        ":llvm_libc_types_float128",
     ],
 )
 
