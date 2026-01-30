@@ -44,9 +44,20 @@ class ImmediateOp<ValueType vt, string asmop, string decoder> : Operand<vt> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
+// Immediate operand with pattern matching (combines Operand + PatLeaf)
+// Similar to SystemZ's ImmOpWithPattern
+class ImmOpWithPattern<ValueType vt, string asmop, string decoder,
+                       code pred, SDNodeXForm xform, SDNode ImmNode = imm>
+  : ImmediateOp<vt, asmop, decoder>, PatLeaf<(vt ImmNode), pred, xform>;
+
 // Unsigned immediate operand
 class UnsignedImmOp<ValueType vt, string asmop, int width>
   : ImmediateOp<vt, asmop, "decodeUImmOperand<"#width#">">;
+
+// Unsigned immediate operand with pattern
+class UnsignedImmOpWithPattern<ValueType vt, string asmop, int width,
+                                code pred, SDNodeXForm xform, SDNode ImmNode = imm>
+  : ImmOpWithPattern<vt, asmop, "decodeUImmOperand<"#width#">", pred, xform, ImmNode>;
 
 // Unsigned immediate operand with encoder
 class UnsignedImmOpWithEncoder<ValueType vt, string asmop, int width, string fixup>
@@ -57,6 +68,11 @@ class UnsignedImmOpWithEncoder<ValueType vt, string asmop, int width, string fix
 // Signed immediate operand
 class SignedImmOp<ValueType vt, string asmop, int width>
   : ImmediateOp<vt, asmop, "decodeSImmOperand<"#width#">">;
+
+// Signed immediate operand with pattern
+class SignedImmOpWithPattern<ValueType vt, string asmop, int width,
+                              code pred, SDNodeXForm xform, SDNode ImmNode = imm>
+  : ImmOpWithPattern<vt, asmop, "decodeSImmOperand<"#width#">", pred, xform, ImmNode>;
 
 // Signed immediate operand with encoder
 class SignedImmOpWithEncoder<ValueType vt, string asmop, int width, string fixup>
