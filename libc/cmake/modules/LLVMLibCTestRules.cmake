@@ -290,6 +290,7 @@ function(create_libc_unittest fq_target_name)
   )
   target_include_directories(${fq_build_target_name} SYSTEM PRIVATE ${LIBC_INCLUDE_DIR})
   target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_SOURCE_DIR})
+  target_include_directories(${fq_build_target_name} PRIVATE ${LIBC_BUILD_DIR})
   target_compile_options(${fq_build_target_name} PRIVATE ${compile_options})
   target_link_options(${fq_build_target_name} PRIVATE ${link_options})
 

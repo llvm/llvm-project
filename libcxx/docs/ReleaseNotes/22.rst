@@ -39,8 +39,7 @@ Implemented Papers
 ------------------
 
 - P2592R3: Hashing support for ``std::chrono`` value classes (`Github <https://llvm.org/PR105358>`__)
-- P2321R2: ``zip`` (`Github <https://llvm.org/PR105169>`__) (The paper is partially implemented. ``zip_transform_view``,
-  ``adjacent_view``, and ``adjacent_transform_view`` are implemented in this release)
+- P2321R2: ``zip`` (`Github <https://llvm.org/PR105169>`__)
 - P2988R12: ``std::optional<T&>`` (`Github <https://llvm.org/PR148131>`__)
 - P3044R2: sub-``string_view`` from ``string`` (`Github <https://llvm.org/PR148140>`__)
 - P3223R2: Making ``std::istream::ignore`` less surprising (`Github <https://llvm.org/PR148178>`__)
@@ -51,7 +50,8 @@ Implemented Papers
   (`Github <https://llvm.org/PR105381>`__)
 - P2835R7: Expose ``std::atomic_ref``'s object address (`Github <https://llvm.org/PR118377>`__)
 - P2944R3: Comparisons for ``reference_wrapper`` (`Github <https://llvm.org/PR105424>`__)
-- P3168R2: Give ``std::optional`` Range Support (`Github <https://llvm.org/PR105430>`__)
+- P3168R2: Give ``std::optional`` Range Support
+  (guarded by ``-fexperimental-library``, `Github <https://llvm.org/PR105430>`__)
 - P3567R2: ``flat_meow`` Fixes (`Github <https://llvm.org/PR162022>`__)
 - P3836R2: Make ``optional<T&>`` trivially copyable (`Github <https://llvm.org/PR171275>`__)
 - P1789R3: Library Support for Expansion Statements (`Github <https://llvm.org/PR167184>`__)
@@ -91,6 +91,7 @@ Improvements and New Features
 - There have also been performance improvements in other library facilities:
 
   - ``vector<bool>::reserve()``: 2x
+  - ``deque::append_range``: 3.4x
   - ``num_get::do_get`` integral overloads: 2.8x
   - Some reallocations are now avoided in ``std::filesystem::path::lexically_relative``: 1.7x
   - ``ofstream::write`` passes large strings to system calls directly instead of copying them in chunks into a buffer

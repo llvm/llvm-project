@@ -280,3 +280,15 @@ func.func @fuse_memory_counter_wait_not_adjacent() {
   amdgpu.memory_counter_wait load(4) store(3) ds(2) exp(1)
   return
 }
+
+// -----
+
+// Erase duplicate barriers.
+// CHECK-LABEL: func @erase_barriers
+//       CHECK-NEXT: amdgpu.lds_barrier
+//       CHECK-NEXT: return
+func.func @erase_barriers() {
+  amdgpu.lds_barrier
+  amdgpu.lds_barrier
+  return
+}

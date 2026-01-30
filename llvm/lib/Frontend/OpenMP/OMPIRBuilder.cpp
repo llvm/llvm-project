@@ -2096,8 +2096,9 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     const LocationDescription &Loc, InsertPointTy AllocaIP,
     BodyGenCallbackTy BodyGenCB,
     llvm::function_ref<llvm::Expected<llvm::CanonicalLoopInfo *>()> LoopInfo,
-    Value *LBVal, Value *UBVal, Value *StepVal, bool Tied,
-    TaskDupCallbackTy DupCB, Value *TaskContextStructPtrVal) {
+    Value *LBVal, Value *UBVal, Value *StepVal, bool Untied, Value *IfCond,
+    Value *GrainSize, bool NoGroup, int Sched, Value *Final, bool Mergeable,
+    Value *Priority, TaskDupCallbackTy DupCB, Value *TaskContextStructPtrVal) {
 
   if (!updateToLocation(Loc))
     return InsertPointTy();
@@ -2150,11 +2151,10 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
   OI.Inputs.insert(FakeStep);
   if (TaskContextStructPtrVal)
     OI.Inputs.insert(TaskContextStructPtrVal);
-  assert(
-      (TaskContextStructPtrVal && DupCB) ||
-      (!TaskContextStructPtrVal && !DupCB) &&
-          "Task context struct ptr and duplication callback must be both set "
-          "or both null");
+  assert(((TaskContextStructPtrVal && DupCB) ||
+          (!TaskContextStructPtrVal && !DupCB)) &&
+         "Task context struct ptr and duplication callback must be both set "
+         "or both null");
 
   // It isn't safe to run the duplication bodygen callback inside the post
   // outlining callback so this has to be run now before we know the real task
@@ -2172,9 +2172,11 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
   }
   Value *TaskDupFn = *TaskDupFnOrErr;
 
-  OI.PostOutlineCB = [this, Ident, LBVal, UBVal, StepVal, Tied,
+  OI.PostOutlineCB = [this, Ident, LBVal, UBVal, StepVal, Untied,
                       TaskloopAllocaBB, CLI, Loc, TaskDupFn, ToBeDeleted,
-                      FakeLB, FakeUB, FakeStep](Function &OutlinedFn) mutable {
+                      IfCond, GrainSize, NoGroup, Sched, FakeLB, FakeUB,
+                      FakeStep, Final, Mergeable,
+                      Priority](Function &OutlinedFn) mutable {
     // Replace the Stale CI by appropriate RTL function call.
     assert(OutlinedFn.hasOneUse() &&
            "there must be a single user for the outlined function");
@@ -2202,13 +2204,29 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
 
     Value *ThreadID = getOrCreateThreadID(Ident);
 
-    // Emit runtime call for @__kmpc_taskgroup
-    Function *TaskgroupFn =
-        getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_taskgroup);
-    Builder.CreateCall(TaskgroupFn, {Ident, ThreadID});
+    if (!NoGroup) {
+      // Emit runtime call for @__kmpc_taskgroup
+      Function *TaskgroupFn =
+          getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_taskgroup);
+      Builder.CreateCall(TaskgroupFn, {Ident, ThreadID});
+    }
 
-    // The flags are set to 1 if the task is tied, 0 otherwise.
-    Value *Flags = Builder.getInt32(Tied);
+    // `flags` Argument Configuration
+    // Task is tied if (Flags & 1) == 1.
+    // Task is untied if (Flags & 1) == 0.
+    // Task is final if (Flags & 2) == 2.
+    // Task is not final if (Flags & 2) == 0.
+    // Task is mergeable if (Flags & 4) == 4.
+    // Task is not mergeable if (Flags & 4) == 0.
+    // Task is priority if (Flags & 32) == 32.
+    // Task is not priority if (Flags & 32) == 0.
+    Value *Flags = Builder.getInt32(Untied ? 0 : 1);
+    if (Final)
+      Flags = Builder.CreateOr(Builder.getInt32(2), Flags);
+    if (Mergeable)
+      Flags = Builder.CreateOr(Builder.getInt32(4), Flags);
+    if (Priority)
+      Flags = Builder.CreateOr(Builder.getInt32(32), Flags);
 
     Value *TaskSize = Builder.getInt64(
         divideCeil(M.getDataLayout().getTypeSizeInBits(Task), 8));
@@ -2251,25 +2269,34 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
     llvm::Value *Loadstep = Builder.CreateLoad(Builder.getInt64Ty(), Step);
 
     // set up the arguments for emitting kmpc_taskloop runtime call
-    // setting default values for ifval, nogroup, sched, grainsize, task_dup
-    Value *IfVal = Builder.getInt32(1);
-    Value *NoGroup = Builder.getInt32(1);
-    Value *Sched = Builder.getInt32(0);
-    Value *GrainSize = Builder.getInt64(0);
+    // setting values for ifval, nogroup, sched, grainsize, task_dup
+    Value *IfCondVal =
+        IfCond ? Builder.CreateIntCast(IfCond, Builder.getInt32Ty(), true)
+               : Builder.getInt32(1);
+    // As __kmpc_taskgroup is called manually in OMPIRBuilder, NoGroupVal should
+    // always be 1 when calling __kmpc_taskloop to ensure it is not called again
+    Value *NoGroupVal = Builder.getInt32(1);
+    Value *SchedVal = Builder.getInt32(Sched);
+    Value *GrainSizeVal =
+        GrainSize ? Builder.CreateIntCast(GrainSize, Builder.getInt64Ty(), true)
+                  : Builder.getInt64(0);
     Value *TaskDup = TaskDupFn;
 
-    Value *Args[] = {Ident,    ThreadID, TaskData, IfVal,     Lb,     Ub,
-                     Loadstep, NoGroup,  Sched,    GrainSize, TaskDup};
+    Value *Args[] = {Ident,    ThreadID,   TaskData, IfCondVal,    Lb,     Ub,
+                     Loadstep, NoGroupVal, SchedVal, GrainSizeVal, TaskDup};
 
     // taskloop runtime call
     Function *TaskloopFn =
         getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_taskloop);
     Builder.CreateCall(TaskloopFn, Args);
 
-    // Emit the @__kmpc_end_taskgroup runtime call to end the taskgroup
-    Function *EndTaskgroupFn =
-        getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_end_taskgroup);
-    Builder.CreateCall(EndTaskgroupFn, {Ident, ThreadID});
+    // Emit the @__kmpc_end_taskgroup runtime call to end the taskgroup if
+    // nogroup is not defined
+    if (!NoGroup) {
+      Function *EndTaskgroupFn =
+          getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_end_taskgroup);
+      Builder.CreateCall(EndTaskgroupFn, {Ident, ThreadID});
+    }
 
     StaleCI->eraseFromParent();
 
@@ -7823,17 +7850,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTargetData(
     return InsertPointTy();
 
   Builder.restoreIP(CodeGenIP);
-  // Disable TargetData CodeGen on Device pass.
-  if (Config.IsTargetDevice.value_or(false)) {
-    if (BodyGenCB) {
-      InsertPointOrErrorTy AfterIP =
-          BodyGenCB(Builder.saveIP(), BodyGenTy::NoPriv);
-      if (!AfterIP)
-        return AfterIP.takeError();
-      Builder.restoreIP(*AfterIP);
-    }
-    return Builder.saveIP();
-  }
 
   bool IsStandAlone = !BodyGenCB;
   MapInfosTy *MapInfo;
@@ -8292,7 +8308,7 @@ static Expected<Function *> createOutlinedFunction(
     // multiple mappings (technically not legal in OpenMP, but there is a case
     // in Fortran for Common Blocks where this is neccesary), we will end up
     // with GEP's into this array inside the kernel, that refer to the Global
-    // but are technically seperate arguments to the kernel for all intents and
+    // but are technically separate arguments to the kernel for all intents and
     // purposes. If we have mapped a segment that requires a GEP into the 0-th
     // index, it will fold into an referal to the Global, if we then encounter
     // this folded GEP during replacement all of the references to the
@@ -8300,7 +8316,7 @@ static Expected<Function *> createOutlinedFunction(
     // that corresponds to it, including any other GEP's that refer to the
     // Global that may be other arguments. This will invalidate all of the other
     // preceding mapped arguments that refer to the same global that may be
-    // seperate segments. To prevent this, we defer global processing until all
+    // separate segments. To prevent this, we defer global processing until all
     // other processing has been performed.
     if (llvm::isa<llvm::GlobalValue, llvm::GlobalObject, llvm::GlobalVariable>(
             removeASCastIfPresent(Input))) {
@@ -9438,14 +9454,6 @@ void OpenMPIRBuilder::emitUDMapperArrayInitOrDel(
   if (IsInit) {
     // base != begin?
     Value *BaseIsBegin = Builder.CreateICmpNE(Base, Begin);
-    // IsPtrAndObj?
-    Value *PtrAndObjBit = Builder.CreateAnd(
-        MapType,
-        Builder.getInt64(
-            static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
-                OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ)));
-    PtrAndObjBit = Builder.CreateIsNotNull(PtrAndObjBit);
-    BaseIsBegin = Builder.CreateAnd(BaseIsBegin, PtrAndObjBit);
     Cond = Builder.CreateOr(IsArray, BaseIsBegin);
     DeleteCond = Builder.CreateIsNull(
         DeleteBit,
@@ -10666,10 +10674,21 @@ OpenMPIRBuilder::createTeams(const LocationDescription &Loc,
     if (ThreadLimit == nullptr)
       ThreadLimit = Builder.getInt32(0);
 
+    // The __kmpc_push_num_teams_51 function expects int32 as the arguments. So,
+    // truncate or sign extend the passed values to match the int32 parameters.
+    Value *NumTeamsLowerInt32 =
+        Builder.CreateSExtOrTrunc(NumTeamsLower, Builder.getInt32Ty());
+    Value *NumTeamsUpperInt32 =
+        Builder.CreateSExtOrTrunc(NumTeamsUpper, Builder.getInt32Ty());
+    Value *ThreadLimitInt32 =
+        Builder.CreateSExtOrTrunc(ThreadLimit, Builder.getInt32Ty());
+
     Value *ThreadNum = getOrCreateThreadID(Ident);
+
     createRuntimeFunctionCall(
         getOrCreateRuntimeFunctionPtr(OMPRTL___kmpc_push_num_teams_51),
-        {Ident, ThreadNum, NumTeamsLower, NumTeamsUpper, ThreadLimit});
+        {Ident, ThreadNum, NumTeamsLowerInt32, NumTeamsUpperInt32,
+         ThreadLimitInt32});
   }
   // Generate the body of teams.
   InsertPointTy AllocaIP(AllocaBB, AllocaBB->begin());
