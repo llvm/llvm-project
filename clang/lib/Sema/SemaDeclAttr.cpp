@@ -5134,12 +5134,34 @@ static void handleOptimizeNoneAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     D->addAttr(Optnone);
 }
 
+static bool checkCommonVarDeclAddressSpaceAttr(Sema &S, const VarDecl *VD,
+                                               LangAS AS,
+                                               const ParsedAttr &AL) {
+  const ASTContext &Context = S.getASTContext();
+  QualType T = VD->getType();
+
+  // Check that the variable's type can fit in the specified address space. This
+  // is determined by how far a pointer in that address space can reach.
+  llvm::APInt MaxSizeForAddrSpace =
+      llvm::APInt::getMaxValue(Context.getTargetInfo().getPointerWidth(AS));
+  std::optional<uint64_t> TSizeInChars = Context.getTypeSizeIfKnown(T);
+  if (TSizeInChars && *TSizeInChars > MaxSizeForAddrSpace.getZExtValue()) {
+    S.Diag(AL.getLoc(), diag::err_type_too_large_for_address_space)
+        << T << MaxSizeForAddrSpace;
+    return false;
+  }
+
+  return true;
+}
+
 static void handleConstantAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
   const auto *VD = cast<VarDecl>(D);
   if (VD->hasLocalStorage()) {
     S.Diag(AL.getLoc(), diag::err_cuda_nonstatic_constdev);
     return;
   }
+  if (!checkCommonVarDeclAddressSpaceAttr(S, VD, LangAS::cuda_constant, AL))
+    return;
   // constexpr variable may already get an implicit constant attr, which should
   // be replaced by the explicit constant attr.
   if (auto *A = D->getAttr<CUDAConstantAttr>()) {
@@ -5159,6 +5181,8 @@ static void handleSharedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
     S.Diag(AL.getLoc(), diag::err_cuda_extern_shared) << VD;
     return;
   }
+  if (!checkCommonVarDeclAddressSpaceAttr(S, VD, LangAS::cuda_shared, AL))
+    return;
   if (S.getLangOpts().CUDA && VD->hasLocalStorage() &&
       S.CUDA().DiagIfHostCode(AL.getLoc(), diag::err_cuda_host_shared)
           << S.CUDA().CurrentTarget())
@@ -5208,6 +5232,8 @@ static void handleDeviceAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       S.Diag(AL.getLoc(), diag::err_cuda_nonstatic_constdev);
       return;
     }
+    if (!checkCommonVarDeclAddressSpaceAttr(S, VD, LangAS::cuda_device, AL))
+      return;
   }
 
   if (auto *A = D->getAttr<CUDADeviceAttr>()) {
@@ -5224,6 +5250,8 @@ static void handleManagedAttr(Sema &S, Decl *D, const ParsedAttr &AL) {
       S.Diag(AL.getLoc(), diag::err_cuda_nonstatic_constdev);
       return;
     }
+    if (!checkCommonVarDeclAddressSpaceAttr(S, VD, LangAS::cuda_device, AL))
+      return;
   }
   if (!D->hasAttr<HIPManagedAttr>())
     D->addAttr(::new (S.Context) HIPManagedAttr(S.Context, AL));
@@ -8135,6 +8163,22 @@ ProcessDeclAttribute(Sema &S, Scope *scope, Decl *D, const ParsedAttr &AL,
   case ParsedAttr::AT_GCCStruct:
     handleGCCStructAttr(S, D, AL);
     break;
+
+  case ParsedAttr::AT_OpenCLConstantAddressSpace:
+  case ParsedAttr::AT_OpenCLGlobalAddressSpace:
+  case ParsedAttr::AT_OpenCLGlobalDeviceAddressSpace:
+  case ParsedAttr::AT_OpenCLGlobalHostAddressSpace:
+  case ParsedAttr::AT_OpenCLLocalAddressSpace:
+  case ParsedAttr::AT_OpenCLPrivateAddressSpace:
+  case ParsedAttr::AT_OpenCLGenericAddressSpace: {
+    // OpenCL address space attributes are mainly checked during type
+    // checking. However, we need to do some common address space checking.
+    if (auto *VD = dyn_cast<VarDecl>(D)) {
+      LangAS AS = S.getLangOpts().SYCLIsDevice ? AL.asSYCLLangAS()
+                                               : AL.asOpenCLLangAS();
+      checkCommonVarDeclAddressSpaceAttr(S, VD, AS, AL);
+    }
+  }
   }
 }
 
