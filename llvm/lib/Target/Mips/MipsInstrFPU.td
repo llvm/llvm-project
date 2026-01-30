@@ -965,6 +965,10 @@ def : MipsPat<(f32 fpimm0neg), (FNEG_S (MTC1 ZERO))>, ISA_MIPS1;
 
 def : MipsPat<(f32 (any_sint_to_fp GPR32Opnd:$src)),
               (PseudoCVT_S_W GPR32Opnd:$src)>;
+let Predicates = [IsR5900] in {
+  def : MipsPat<(MipsTruncIntFP FGR32Opnd:$src),
+                (CVT_W_S FGR32Opnd:$src)>, ISA_MIPS1;
+}
 def : MipsPat<(MipsTruncIntFP FGR32Opnd:$src),
               (TRUNC_W_S FGR32Opnd:$src)>, ISA_MIPS1;
 

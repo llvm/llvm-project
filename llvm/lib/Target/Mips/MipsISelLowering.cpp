@@ -539,6 +539,65 @@ static Mips::CondCode condCodeToFCC(ISD::CondCode CC) {
   }
 }
 
+// R5900 FPU only supports 4 compare conditions: C.F, C.EQ, C.LT, C.LE
+// (opcodes 0x30, 0x32, 0x34, 0x36). Map unsupported conditions to equivalents.
+// The R5900 FPU doesn't produce NaN, so unordered comparisons can be mapped
+// to their ordered equivalents.
+// Returns the R5900-compatible condition code and whether operands should be
+// swapped.
+static std::pair<Mips::CondCode, bool> condCodeToFCCR5900(ISD::CondCode CC) {
+  // R5900 supports: FCOND_F (0), FCOND_OEQ (2), FCOND_OLT (4), FCOND_OLE (6)
+  // All other conditions must be transformed.
+  switch (CC) {
+  default:
+    llvm_unreachable("Unknown fp condition code!");
+  // Directly supported conditions
+  case ISD::SETEQ:
+  case ISD::SETOEQ:
+    return {Mips::FCOND_OEQ, false};
+  case ISD::SETLT:
+  case ISD::SETOLT:
+    return {Mips::FCOND_OLT, false};
+  case ISD::SETLE:
+  case ISD::SETOLE:
+    return {Mips::FCOND_OLE, false};
+
+  // Unordered variants - map to ordered (R5900 has no NaN)
+  case ISD::SETUEQ:
+    return {Mips::FCOND_OEQ, false};
+  case ISD::SETULT:
+    return {Mips::FCOND_OLT, false};
+  case ISD::SETULE:
+    return {Mips::FCOND_OLE, false};
+
+  // Greater-than: use less-than with swapped operands
+  case ISD::SETGT:
+  case ISD::SETOGT:
+    return {Mips::FCOND_OLT, true}; // a > b  ->  b < a
+  case ISD::SETGE:
+  case ISD::SETOGE:
+    return {Mips::FCOND_OLE, true}; // a >= b  ->  b <= a
+  case ISD::SETUGT:
+    return {Mips::FCOND_OLT, true}; // a > b unordered  ->  b < a (no NaN)
+  case ISD::SETUGE:
+    return {Mips::FCOND_OLE, true}; // a >= b unordered  ->  b <= a (no NaN)
+
+  // Not-equal: use EQ and invert result
+  case ISD::SETNE:
+  case ISD::SETONE:
+    return {Mips::FCOND_UNE, false};
+  case ISD::SETUNE:
+    return {Mips::FCOND_UNE, false};
+
+  // Unordered: always false on R5900 (no NaN)
+  case ISD::SETUO:
+    return {Mips::FCOND_F, false};
+  // Ordered: always true (use FCOND_T which is inverted F)
+  case ISD::SETO:
+    return {Mips::FCOND_OR, false};
+  }
+}
+
 /// This function returns true if the floating point conditional branches and
 /// conditional moves which use condition code CC should be inverted.
 static bool invertFPCondCodeUser(Mips::CondCode CC) {
@@ -570,6 +629,17 @@ static SDValue createFPCmp(SelectionDAG &DAG, const SDValue &Op) {
   // Assume the 3rd operand is a CondCodeSDNode. Add code to check the type of
   // node if necessary.
   ISD::CondCode CC = cast<CondCodeSDNode>(Op.getOperand(2))->get();
+
+  // R5900 FPU only supports C.F, C.EQ, C.LT, C.LE (conditions 0, 2, 4, 6).
+  // Use R5900-specific condition code mapping which may swap operands.
+  const MipsSubtarget &Subtarget = DAG.getSubtarget<MipsSubtarget>();
+  if (Subtarget.isR5900()) {
+    auto [FCC, Swap] = condCodeToFCCR5900(CC);
+    if (Swap)
+      std::swap(LHS, RHS);
+    return DAG.getNode(MipsISD::FPCmp, DL, MVT::Glue, LHS, RHS,
+                       DAG.getConstant(FCC, DL, MVT::i32));
+  }
 
   return DAG.getNode(MipsISD::FPCmp, DL, MVT::Glue, LHS, RHS,
                      DAG.getConstant(condCodeToFCC(CC), DL, MVT::i32));
