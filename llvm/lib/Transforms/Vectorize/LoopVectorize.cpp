@@ -8200,7 +8200,8 @@ bool VPRecipeBuilder::getScaledReductions(
       return false;
 
     BinOpc = std::make_optional(ExtendUser->getOpcode());
-  } else if (match(Update, m_Add(m_Value(), m_Value()))) {
+  } else if (match(Update, m_Add(m_Value(), m_Value())) ||
+             match(Update, m_FAdd(m_Value(), m_Value()))) {
     // We already know the operands for Update are Op and PhiOp.
     SmallVector<Value *> Ops({Op});
     if (!CollectExtInfo(Ops))
