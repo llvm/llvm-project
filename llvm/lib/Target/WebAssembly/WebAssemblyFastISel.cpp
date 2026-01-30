@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "Utils/WasmAddressSpaces.h"
 #include "Utils/WebAssemblyTypeUtilities.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
@@ -771,6 +772,11 @@ bool WebAssemblyFastISel::fastLowerArguments() {
 
 bool WebAssemblyFastISel::selectCall(const Instruction *I) {
   const auto *Call = cast<CallInst>(I);
+
+  // FastISel does not support calls through funcref
+  if (Call->getCalledOperand()->getType()->getPointerAddressSpace() !=
+      WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_DEFAULT)
+    return false;
 
   // TODO: Support tail calls in FastISel
   if (Call->isMustTailCall() || Call->isInlineAsm() ||
