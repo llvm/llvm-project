@@ -20,5 +20,7 @@ class TestDAP_asan(lldbdap_testcase.DAPTestCaseBase):
         self.verify_stop_exception_info("Use of deallocated memory")
         exceptionInfo = self.get_exceptionInfo()
         self.assertEqual(exceptionInfo["breakMode"], "always")
-        self.assertRegex(exceptionInfo["description"], r"fatal_error: heap-use-after-free")
+        self.assertRegex(
+            exceptionInfo["description"], r"fatal_error: heap-use-after-free"
+        )
         self.assertEqual(exceptionInfo["exceptionId"], "runtime-instrumentation")

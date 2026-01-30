@@ -60,7 +60,7 @@ struct ASanReport {
   std::string stop_type;
 };
 
-// FIXME: Support TSan, ASan, BoundsSafety formatting.
+// FIXME: Support TSan, BoundsSafety formatting.
 
 using RuntimeInstrumentReport =
     std::variant<UBSanReport, MainThreadCheckerReport, ASanReport>;
