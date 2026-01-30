@@ -1796,7 +1796,10 @@ SDValue SelectionDAG::getConstant(const ConstantInt &Val, const SDLoc &DL,
       return SDValue(N, 0);
 
   if (!N) {
-    N = newSDNode<ConstantSDNode>(isT, isO, Elt, VTs);
+    DebugLoc DbgLoc;
+    if (TLI->shouldPropagateConstantDebugLoc())
+      DbgLoc = DL.getDebugLoc();
+    N = newSDNode<ConstantSDNode>(isT, isO, Elt, VTs, DbgLoc);
     CSEMap.InsertNode(N, IP);
     InsertNode(N);
     NewSDValueDbgMsg(SDValue(N, 0), "Creating constant: ", this);

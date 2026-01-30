@@ -3542,6 +3542,10 @@ public:
   /// passed to the fp16 to fp conversion library function.
   virtual bool shouldKeepZExtForFP16Conv() const { return false; }
 
+  /// Targets that materialize constants to registers (e.g., AMDGPU) may benefit
+  /// from having debug locations on constant nodes for improved debug stepping.
+  virtual bool shouldPropagateConstantDebugLoc() const { return false; }
+
   /// Should we generate fp_to_si_sat and fp_to_ui_sat from type FPVT to type VT
   /// from min(max(fptoi)) saturation patterns.
   virtual bool shouldConvertFpToSat(unsigned Op, EVT FPVT, EVT VT) const {

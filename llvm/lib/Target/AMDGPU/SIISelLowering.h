@@ -281,6 +281,8 @@ public:
 
   bool shouldPreservePtrArith(const Function &F, EVT PtrVT) const override;
 
+  bool shouldPropagateConstantDebugLoc() const override { return true; }
+
   bool canTransformPtrArithOutOfBounds(const Function &F,
                                        EVT PtrVT) const override;
 

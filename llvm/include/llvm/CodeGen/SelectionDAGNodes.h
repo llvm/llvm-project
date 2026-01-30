@@ -1754,9 +1754,8 @@ class ConstantSDNode : public SDNode {
   const ConstantInt *Value;
 
   ConstantSDNode(bool isTarget, bool isOpaque, const ConstantInt *val,
-                 SDVTList VTs)
-      : SDNode(isTarget ? ISD::TargetConstant : ISD::Constant, 0, DebugLoc(),
-               VTs),
+                 SDVTList VTs, const DebugLoc &dl)
+      : SDNode(isTarget ? ISD::TargetConstant : ISD::Constant, 0, dl, VTs),
         Value(val) {
     assert(!isa<VectorType>(val->getType()) && "Unexpected vector type!");
     ConstantSDNodeBits.IsOpaque = isOpaque;
