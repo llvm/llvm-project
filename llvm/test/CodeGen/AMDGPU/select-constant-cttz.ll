@@ -18,7 +18,7 @@ define amdgpu_kernel void @select_constant_cttz(ptr addrspace(1) noalias %out, p
 ; GCN-NEXT:    s_and_b64 s[6:7], s[4:5], exec
 ; GCN-NEXT:    s_cselect_b32 s2, -1, s2
 ; GCN-NEXT:    s_flbit_i32 s6, s2
-; GCN-NEXT:    s_xor_b32 s8, s6, 31
+; GCN-NEXT:    s_sub_i32 s8, 31, s6
 ; GCN-NEXT:    s_cmp_eq_u32 s2, 0
 ; GCN-NEXT:    s_cselect_b64 s[6:7], -1, 0
 ; GCN-NEXT:    s_or_b64 s[4:5], s[4:5], s[6:7]

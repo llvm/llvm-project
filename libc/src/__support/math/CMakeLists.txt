@@ -1462,6 +1462,14 @@ add_header_library(
 )
 
 add_header_library(
+  sqrtf
+  HDRS
+    sqrtf.h
+  DEPENDS
+    libc.src.__support.FPUtil.sqrt
+)
+
+add_header_library(
   dfmal
   HDRS
     dfmal.h

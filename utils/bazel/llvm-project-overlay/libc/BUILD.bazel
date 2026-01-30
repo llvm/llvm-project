@@ -3670,6 +3670,14 @@ libc_support_library(
 )
 
 libc_support_library(
+    name = "__support_math_sqrtf",
+    hdrs = ["src/__support/math/sqrtf.h"],
+    deps = [
+        ":__support_fputil_sqrt",
+    ],
+)
+
+libc_support_library(
     name = "__support_math_hypotf",
     hdrs = ["src/__support/math/hypotf.h"],
     deps = [
@@ -5379,7 +5387,7 @@ libc_math_function(
 libc_math_function(
     name = "sqrtf",
     additional_deps = [
-        ":__support_fputil_sqrt",
+        ":__support_math_sqrtf",
     ],
 )
 
