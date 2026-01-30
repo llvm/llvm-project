@@ -1989,7 +1989,6 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
     resultEntity = loadTrivialScalar(loc, builder, resultEntity);
     if (resultEntity.isVariable()) {
       // If the result has no finalization, it can be moved into an expression.
-      // In such case, the expression.
       mlir::Value asExpr = hlfir::AsExprOp::create(
           builder, loc, resultEntity, builder.createBool(loc, mustFree));
       callContext.stmtCtx.attachCleanup([bldr = &builder, loc, asExpr]() {
