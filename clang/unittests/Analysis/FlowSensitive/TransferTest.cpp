@@ -1000,8 +1000,8 @@ TEST(TransferTest, BinaryOperatorAssignUnknown) {
         const StorageLocation *BOLoc = EnvP.getStorageLocation(*BO);
         EXPECT_NE(BOLoc, nullptr);
 
-        // Check that the branches are reachable
-        // with a non-false flow condition.
+        // Check that the branches are reachable with a non-false
+        // flow condition.
         const Environment &EnvQ = getEnvironmentAtAnnotation(Results, "q");
         const Environment &EnvR = getEnvironmentAtAnnotation(Results, "r");
 
