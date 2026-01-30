@@ -133,11 +133,12 @@ void attributes(void) {
 
 /** GH163090 */
 constexpr auto int a1 = 0; // c23-error {{illegal storage class on file-scoped variable}} \
-                              c23-error {{cannot combine with previous 'auto' declaration specifier}} \
+                              c23-error {{cannot combine with previous 'constexpr' declaration specifier}} \
                               c17-error {{illegal storage class on file-scoped variable}} \
                               c17-error {{unknown type name 'constexpr'}}
 
-constexpr int auto a2 = 0; // c23-error {{cannot combine with previous 'int' declaration specifier}} \
+constexpr int auto a2 = 0; // c23-error {{illegal storage class on file-scoped variable}} \
+                              c23-error {{cannot combine with previous 'constexpr' declaration specifier}} \
                               c17-error {{illegal storage class on file-scoped variable}} \
                               c17-error {{unknown type name 'constexpr'}}
 
@@ -157,10 +158,10 @@ signed int _Atomic auto b5 = 0; // c23-error {{illegal storage class on file-sco
                                    c17-error {{illegal storage class on file-scoped variable}}
 
 void t1() {
-  constexpr auto int c1 = 0; // c23-error {{cannot combine with previous 'auto' declaration specifier}} \
+  constexpr auto int c1 = 0; // c23-error {{cannot combine with previous 'constexpr' declaration specifier}} \
                                 c17-error {{use of undeclared identifier 'constexpr'}}
 
-  constexpr int auto c2 = 0; // c23-error {{cannot combine with previous 'int' declaration specifier}} \
+  constexpr int auto c2 = 0; // c23-error {{cannot combine with previous 'constexpr' declaration specifier}} \
                                 c17-error {{use of undeclared identifier 'constexpr'}}
 
   auto int d1 = 0;

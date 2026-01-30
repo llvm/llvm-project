@@ -4095,8 +4095,7 @@ void Parser::ParseDeclarationSpecifiers(
       if (getLangOpts().CPlusPlus11 || getLangOpts().C23) {
         auto MayBeTypeSpecifier = [&]() {
           if (getLangOpts().C23 && DS.hasTypeSpecifier() &&
-              DS.getTypeSpecType() != DeclSpec::TST_auto &&
-              DS.getConstexprSpecifier() == ConstexprSpecKind::Unspecified)
+              DS.getTypeSpecType() != DeclSpec::TST_auto)
             return true;
 
           unsigned I = 1;
@@ -4105,7 +4104,7 @@ void Parser::ParseDeclarationSpecifiers(
             if (isKnownToBeTypeSpecifier(T))
               return true;
 
-            if (isTypeSpecifierQualifier(T))
+            if (getLangOpts().C23 && isTypeSpecifierQualifier(T))
               ++I;
             else
               return false;
