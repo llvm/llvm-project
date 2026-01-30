@@ -1133,22 +1133,27 @@ unsigned MatcherTableEmitter::EmitMatcher(const Matcher *N,
       }
     }
 
-    OS << ' ' << EN->getNumOperands();
+    unsigned NumOps = EN->getNumOperands();
+    OS << ' ' << NumOps;
     if (!OmitComments)
       OS << "/*#Ops*/";
-    OS << ", ";
+    OS << ',';
 
-    std::vector<uint8_t> OpBytes;
-    for (unsigned i = 0, e = EN->getNumOperands(); i != e; ++i) {
-      uint8_t Buffer[5];
-      unsigned Len = encodeULEB128(EN->getOperand(i), Buffer);
-      for (unsigned i = 0; i < Len; ++i)
-        OpBytes.push_back(Buffer[i]);
+    unsigned NumOperandBytes = 0;
+    if (NumOps != 0) {
+      std::vector<uint8_t> OpBytes;
+      for (unsigned i = 0, e = EN->getNumOperands(); i != e; ++i) {
+        uint8_t Buffer[5];
+        unsigned Len = encodeULEB128(EN->getOperand(i), Buffer);
+        for (unsigned i = 0; i < Len; ++i)
+          OpBytes.push_back(Buffer[i]);
+      }
+      unsigned Index = OperandTable.get(OpBytes);
+      OS << ' ';
+      if (!OmitComments)
+        OS << "/*OperandList*/";
+      NumOperandBytes = EmitVBRValue(Index, OS);
     }
-    unsigned Index = OperandTable.get(OpBytes);
-    if (!OmitComments)
-      OS << "/*OperandList*/";
-    unsigned NumOperandBytes = EmitVBRValue(Index, OS);
 
     if (!OmitComments) {
       // Print the operand #'s.
