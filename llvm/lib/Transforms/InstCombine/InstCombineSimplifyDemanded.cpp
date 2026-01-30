@@ -2143,6 +2143,32 @@ static Value *simplifyDemandedFPClassFnegFabs(KnownFPClass &Known, Value *Src,
   return nullptr;
 }
 
+static Value *simplifyDemandedFPClassCopysignMag(Value *MagSrc,
+                                                 FPClassTest DemandedMask,
+                                                 KnownFPClass KnownSrc,
+                                                 bool NSZ) {
+  if (NSZ) {
+    constexpr FPClassTest NegOrZero = fcNegative | fcPosZero;
+    constexpr FPClassTest PosOrZero = fcPositive | fcNegZero;
+
+    if ((DemandedMask & ~NegOrZero) == fcNone &&
+        KnownSrc.isKnownAlways(NegOrZero))
+      return MagSrc;
+
+    if ((DemandedMask & ~PosOrZero) == fcNone &&
+        KnownSrc.isKnownAlways(PosOrZero))
+      return MagSrc;
+  } else {
+    if ((DemandedMask & ~fcNegative) == fcNone && KnownSrc.SignBit == true)
+      return MagSrc;
+
+    if ((DemandedMask & ~fcPositive) == fcNone && KnownSrc.SignBit == false)
+      return MagSrc;
+  }
+
+  return nullptr;
+}
+
 static Value *
 simplifyDemandedFPClassMinMax(KnownFPClass &Known, Intrinsic::ID IID,
                               const CallInst *CI, FPClassTest DemandedMask,
@@ -2763,6 +2789,10 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
         CI->setOperand(1, ConstantFP::getZero(VTy));
         return I;
       }
+
+      if (Value *Simplified = simplifyDemandedFPClassCopysignMag(
+              CI->getArgOperand(0), DemandedMask, Known, FMF.noSignedZeros()))
+        return Simplified;
 
       KnownFPClass KnownSign = computeKnownFPClass(CI->getArgOperand(1),
                                                    fcAllFlags, CxtI, Depth + 1);
