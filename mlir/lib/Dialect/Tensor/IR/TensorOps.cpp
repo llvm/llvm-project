@@ -1456,9 +1456,24 @@ void FromElementsOp::build(OpBuilder &builder, OperationState &result,
 }
 
 OpFoldResult FromElementsOp::fold(FoldAdaptor adaptor) {
-  if (!llvm::is_contained(adaptor.getElements(), nullptr))
-    return DenseElementsAttr::get(getType(), adaptor.getElements());
-  return {};
+  auto elements = adaptor.getElements();
+  // If any of the elements is null, we cannot fold.
+  if (llvm::is_contained(elements, nullptr))
+    return {};
+
+  Type elemTy = getType().getElementType();
+
+  // DenseElementsAttr expects element attributes consistent
+  // with the element type. In particular, index/integer tensors
+  // must use IntegerAttr.
+  if (isa<IndexType>(elemTy) || isa<IntegerType>(elemTy)) {
+    for (Attribute a : elements) {
+      auto intAttr = llvm::dyn_cast<IntegerAttr>(a);
+      if (!intAttr || intAttr.getType() != elemTy)
+        return {};
+    }
+  }
+  return DenseElementsAttr::get(getType(), elements);
 }
 
 namespace {
