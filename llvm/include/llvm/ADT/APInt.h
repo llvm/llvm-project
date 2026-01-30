@@ -561,6 +561,18 @@ public:
     return I1.zext(I2.getBitWidth()) == I2;
   }
 
+  /// Determine if two APInts have the same value, after sign-extending
+  /// one of them (if needed!) to ensure that the bit-widths match.
+  static bool isSameSignedValue(const APInt &I1, const APInt &I2) {
+    if (I1.getBitWidth() == I2.getBitWidth())
+      return I1 == I2;
+
+    if (I1.getBitWidth() > I2.getBitWidth())
+      return I1 == I2.sext(I1.getBitWidth());
+
+    return I1.sext(I2.getBitWidth()) == I2;
+  }
+
   /// Overload to compute a hash_code for an APInt value.
   LLVM_ABI friend hash_code hash_value(const APInt &Arg);
 
