@@ -730,7 +730,6 @@ static void genRuntimeMinMaxlocBody(fir::FirOpBuilder &builder,
       mlir::Value ifCompatElem =
           fir::ConvertOp::create(builder, loc, ifCompatType, maskElem);
 
-      llvm::SmallVector<mlir::Type> resultsTy = {elementType, elementType};
       fir::IfOp ifOp =
           fir::IfOp::create(builder, loc, elementType, ifCompatElem,
                             /*withElseRegion=*/true);

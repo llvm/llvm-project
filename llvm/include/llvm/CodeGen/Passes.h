@@ -61,13 +61,22 @@ LLVM_ABI FunctionPass *createUnreachableBlockEliminationPass();
 /// instructions. These blocks confuscate profile analysis (e.g., basic block
 /// sections) since they will share the address of their fallthrough blocks.
 /// This pass garbage-collects such basic blocks.
-LLVM_ABI MachineFunctionPass *createGCEmptyBasicBlocksPass();
+LLVM_ABI MachineFunctionPass *createGCEmptyBasicBlocksLegacyPass();
 
 /// createBasicBlockSections Pass - This pass assigns sections to machine
 /// basic blocks and is enabled with -fbasic-block-sections.
 LLVM_ABI MachineFunctionPass *createBasicBlockSectionsPass();
 
 LLVM_ABI MachineFunctionPass *createBasicBlockPathCloningPass();
+
+/// createBasicBlockMatchingAndInferencePass - This pass enables matching
+/// and inference when using propeller.
+LLVM_ABI MachineFunctionPass *createBasicBlockMatchingAndInferencePass();
+
+LLVM_ABI MachineFunctionPass *createInsertCodePrefetchPass();
+
+/// createMachineBlockHashInfoPass - This pass computes basic block hashes.
+LLVM_ABI MachineFunctionPass *createMachineBlockHashInfoPass();
 
 /// createMachineFunctionSplitterPass - This pass splits machine functions
 /// using profile information.
@@ -484,6 +493,8 @@ LLVM_ABI FunctionPass *createInterleavedLoadCombinePass();
 ///
 LLVM_ABI ModulePass *createLowerEmuTLSPass();
 
+LLVM_ABI ModulePass *createLibcallLoweringInfoWrapper();
+
 /// This pass lowers the \@llvm.load.relative and \@llvm.objc.* intrinsics to
 /// instructions.  This is unsafe to do earlier because a pass may combine the
 /// constant initializer into the load, which may result in an overflowing
@@ -539,11 +550,8 @@ LLVM_ABI FunctionPass *createExpandReductionsPass();
 // the corresponding function in a vector library (e.g., SVML, libmvec).
 LLVM_ABI FunctionPass *createReplaceWithVeclibLegacyPass();
 
-// Expands large div/rem instructions.
-LLVM_ABI FunctionPass *createExpandLargeDivRemPass();
-
-// Expands large div/rem instructions.
-LLVM_ABI FunctionPass *createExpandFpPass();
+// Expands large div/rem and floating-point instructions.
+LLVM_ABI FunctionPass *createExpandIRInstsPass(CodeGenOptLevel);
 
 // This pass expands memcmp() to load/stores.
 LLVM_ABI FunctionPass *createExpandMemCmpLegacyPass();
@@ -559,9 +567,6 @@ LLVM_ABI FunctionPass *createCFIFixup();
 
 /// Creates CFI Instruction Inserter pass. \see CFIInstrInserter.cpp
 LLVM_ABI FunctionPass *createCFIInstrInserter();
-
-// Expands floating point instructions.
-FunctionPass *createExpandFpPass(CodeGenOptLevel);
 
 /// Creates CFGuard longjmp target identification pass.
 /// \see CFGuardLongjmp.cpp
@@ -606,14 +611,6 @@ LLVM_ABI ModulePass *createCheckDebugMachineModulePass();
 /// The pass fixups statepoint machine instruction to replace usage of
 /// caller saved registers with stack slots.
 LLVM_ABI extern char &FixupStatepointCallerSavedID;
-
-/// The pass transforms load/store <256 x i32> to AMX load/store intrinsics
-/// or split the data to two <128 x i32>.
-LLVM_ABI FunctionPass *createX86LowerAMXTypePass();
-
-/// The pass transforms amx intrinsics to scalar operation if the function has
-/// optnone attribute or it is O0.
-LLVM_ABI FunctionPass *createX86LowerAMXIntrinsicsPass();
 
 /// When learning an eviction policy, extract score(reward) information,
 /// otherwise this does nothing

@@ -30,7 +30,7 @@ bool TargetOptions::DisableFramePointerElim(const MachineFunction &MF) const {
   StringRef FP = FPAttr.getValueAsString();
   if (FP == "all")
     return true;
-  if (FP == "non-leaf")
+  if (FP == "non-leaf" || FP == "non-leaf-no-reserve")
     return MF.getFrameInfo().hasCalls();
   if (FP == "none" || FP == "reserved")
     return false;
@@ -44,7 +44,8 @@ bool TargetOptions::FramePointerIsReserved(const MachineFunction &MF) const {
     return false;
 
   return StringSwitch<bool>(FPAttr.getValueAsString())
-      .Cases("all", "non-leaf", "reserved", true)
+      .Cases({"all", "non-leaf", "reserved"}, true)
+      .Case(("non-leaf-no-reserve"), MF.getFrameInfo().hasCalls())
       .Case("none", false);
 }
 

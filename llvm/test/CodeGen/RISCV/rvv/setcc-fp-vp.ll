@@ -12,8 +12,6 @@
 ; RUN:     -target-abi=lp64d -verify-machineinstrs < %s | FileCheck %s \
 ; RUN:     --check-prefixes=CHECK,CHECK64,ZVFHMIN
 
-declare <vscale x 1 x i1> @llvm.vp.fcmp.nxv1bf16(<vscale x 1 x bfloat>, <vscale x 1 x bfloat>, metadata, <vscale x 1 x i1>, i32)
-
 define <vscale x 1 x i1> @fcmp_oeq_vv_nxv1bf16(<vscale x 1 x bfloat> %va, <vscale x 1 x bfloat> %vb, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: fcmp_oeq_vv_nxv1bf16:
 ; CHECK:       # %bb.0:
@@ -656,8 +654,6 @@ define <vscale x 1 x i1> @fcmp_uno_vf_swap_nxv1bf16(<vscale x 1 x bfloat> %va, b
   ret <vscale x 1 x i1> %v
 }
 
-declare <vscale x 3 x i1> @llvm.vp.fcmp.nxv3bf16(<vscale x 3 x bfloat>, <vscale x 3 x bfloat>, metadata, <vscale x 3 x i1>, i32)
-
 define <vscale x 3 x i1> @fcmp_oeq_vv_nxv3bf16(<vscale x 3 x bfloat> %va, <vscale x 3 x bfloat> %vb, <vscale x 3 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: fcmp_oeq_vv_nxv3bf16:
 ; CHECK:       # %bb.0:
@@ -671,8 +667,6 @@ define <vscale x 3 x i1> @fcmp_oeq_vv_nxv3bf16(<vscale x 3 x bfloat> %va, <vscal
   %v = call <vscale x 3 x i1> @llvm.vp.fcmp.nxv3bf16(<vscale x 3 x bfloat> %va, <vscale x 3 x bfloat> %vb, metadata !"oeq", <vscale x 3 x i1> %m, i32 %evl)
   ret <vscale x 3 x i1> %v
 }
-
-declare <vscale x 8 x i1> @llvm.vp.fcmp.nxv8bf16(<vscale x 8 x bfloat>, <vscale x 8 x bfloat>, metadata, <vscale x 8 x i1>, i32)
 
 define <vscale x 8 x i1> @fcmp_oeq_vv_nxv8bf16(<vscale x 8 x bfloat> %va, <vscale x 8 x bfloat> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: fcmp_oeq_vv_nxv8bf16:
@@ -1342,8 +1336,6 @@ define <vscale x 8 x i1> @fcmp_uno_vf_swap_nxv8bf16(<vscale x 8 x bfloat> %va, b
   ret <vscale x 8 x i1> %v
 }
 
-declare <vscale x 64 x i1> @llvm.vp.fcmp.nxv64bf16(<vscale x 64 x bfloat>, <vscale x 64 x bfloat>, metadata, <vscale x 64 x i1>, i32)
-
 define <vscale x 64 x i1> @fcmp_oeq_vv_nxv64bf16(<vscale x 64 x bfloat> %va, <vscale x 64 x bfloat> %vb, <vscale x 64 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: fcmp_oeq_vv_nxv64bf16:
 ; CHECK:       # %bb.0:
@@ -1493,10 +1485,10 @@ define <vscale x 64 x i1> @fcmp_oeq_vv_nxv64bf16(<vscale x 64 x bfloat> %va, <vs
 ; CHECK-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
 ; CHECK-NEXT:    vfwcvtbf16.f.f.v v24, v12
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vmfeq.vv v10, v16, v24, v0.t
-; CHECK-NEXT:    vmv1r.v v9, v7
+; CHECK-NEXT:    vmfeq.vv v9, v16, v24, v0.t
+; CHECK-NEXT:    vmv1r.v v8, v7
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vslideup.vx v9, v5, a3
+; CHECK-NEXT:    vslideup.vx v8, v5, a3
 ; CHECK-NEXT:    bltu a2, a4, .LBB85_6
 ; CHECK-NEXT:  # %bb.5:
 ; CHECK-NEXT:    mv a2, a4
@@ -1531,12 +1523,12 @@ define <vscale x 64 x i1> @fcmp_oeq_vv_nxv64bf16(<vscale x 64 x bfloat> %va, <vs
 ; CHECK-NEXT:    addi a0, a0, 16
 ; CHECK-NEXT:    vl1r.v v0, (a0) # vscale x 8-byte Folded Reload
 ; CHECK-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; CHECK-NEXT:    vmfeq.vv v8, v16, v24, v0.t
+; CHECK-NEXT:    vmfeq.vv v10, v16, v24, v0.t
 ; CHECK-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
-; CHECK-NEXT:    vslideup.vx v8, v10, a3
+; CHECK-NEXT:    vslideup.vx v10, v9, a3
 ; CHECK-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; CHECK-NEXT:    vslideup.vx v8, v9, a1
-; CHECK-NEXT:    vmv.v.v v0, v8
+; CHECK-NEXT:    vslideup.vx v10, v8, a1
+; CHECK-NEXT:    vmv.v.v v0, v10
 ; CHECK-NEXT:    csrr a0, vlenb
 ; CHECK-NEXT:    mv a1, a0
 ; CHECK-NEXT:    slli a0, a0, 1
@@ -1553,8 +1545,6 @@ define <vscale x 64 x i1> @fcmp_oeq_vv_nxv64bf16(<vscale x 64 x bfloat> %va, <vs
   %v = call <vscale x 64 x i1> @llvm.vp.fcmp.nxv64bf16(<vscale x 64 x bfloat> %va, <vscale x 64 x bfloat> %vb, metadata !"oeq", <vscale x 64 x i1> %m, i32 %evl)
   ret <vscale x 64 x i1> %v
 }
-
-declare <vscale x 1 x i1> @llvm.vp.fcmp.nxv1f16(<vscale x 1 x half>, <vscale x 1 x half>, metadata, <vscale x 1 x i1>, i32)
 
 define <vscale x 1 x i1> @fcmp_oeq_vv_nxv1f16(<vscale x 1 x half> %va, <vscale x 1 x half> %vb, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: fcmp_oeq_vv_nxv1f16:
@@ -2490,8 +2480,6 @@ define <vscale x 1 x i1> @fcmp_uno_vf_swap_nxv1f16(<vscale x 1 x half> %va, half
   ret <vscale x 1 x i1> %v
 }
 
-declare <vscale x 3 x i1> @llvm.vp.fcmp.nxv3f16(<vscale x 3 x half>, <vscale x 3 x half>, metadata, <vscale x 3 x i1>, i32)
-
 define <vscale x 3 x i1> @fcmp_oeq_vv_nxv3f16(<vscale x 3 x half> %va, <vscale x 3 x half> %vb, <vscale x 3 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: fcmp_oeq_vv_nxv3f16:
 ; ZVFH:       # %bb.0:
@@ -2511,8 +2499,6 @@ define <vscale x 3 x i1> @fcmp_oeq_vv_nxv3f16(<vscale x 3 x half> %va, <vscale x
   %v = call <vscale x 3 x i1> @llvm.vp.fcmp.nxv3f16(<vscale x 3 x half> %va, <vscale x 3 x half> %vb, metadata !"oeq", <vscale x 3 x i1> %m, i32 %evl)
   ret <vscale x 3 x i1> %v
 }
-
-declare <vscale x 8 x i1> @llvm.vp.fcmp.nxv8f16(<vscale x 8 x half>, <vscale x 8 x half>, metadata, <vscale x 8 x i1>, i32)
 
 define <vscale x 8 x i1> @fcmp_oeq_vv_nxv8f16(<vscale x 8 x half> %va, <vscale x 8 x half> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: fcmp_oeq_vv_nxv8f16:
@@ -3492,8 +3478,6 @@ define <vscale x 8 x i1> @fcmp_uno_vf_swap_nxv8f16(<vscale x 8 x half> %va, half
   ret <vscale x 8 x i1> %v
 }
 
-declare <vscale x 64 x i1> @llvm.vp.fcmp.nxv64f16(<vscale x 64 x half>, <vscale x 64 x half>, metadata, <vscale x 64 x i1>, i32)
-
 define <vscale x 64 x i1> @fcmp_oeq_vv_nxv64f16(<vscale x 64 x half> %va, <vscale x 64 x half> %vb, <vscale x 64 x i1> %m, i32 zeroext %evl) {
 ; ZVFH-LABEL: fcmp_oeq_vv_nxv64f16:
 ; ZVFH:       # %bb.0:
@@ -3689,10 +3673,10 @@ define <vscale x 64 x i1> @fcmp_oeq_vv_nxv64f16(<vscale x 64 x half> %va, <vscal
 ; ZVFHMIN-NEXT:    vl8r.v v8, (a0) # vscale x 64-byte Folded Reload
 ; ZVFHMIN-NEXT:    vfwcvt.f.f.v v24, v12
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; ZVFHMIN-NEXT:    vmfeq.vv v10, v16, v24, v0.t
-; ZVFHMIN-NEXT:    vmv1r.v v9, v7
+; ZVFHMIN-NEXT:    vmfeq.vv v9, v16, v24, v0.t
+; ZVFHMIN-NEXT:    vmv1r.v v8, v7
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
-; ZVFHMIN-NEXT:    vslideup.vx v9, v5, a3
+; ZVFHMIN-NEXT:    vslideup.vx v8, v5, a3
 ; ZVFHMIN-NEXT:    bltu a2, a4, .LBB171_6
 ; ZVFHMIN-NEXT:  # %bb.5:
 ; ZVFHMIN-NEXT:    mv a2, a4
@@ -3727,12 +3711,12 @@ define <vscale x 64 x i1> @fcmp_oeq_vv_nxv64f16(<vscale x 64 x half> %va, <vscal
 ; ZVFHMIN-NEXT:    addi a0, a0, 16
 ; ZVFHMIN-NEXT:    vl1r.v v0, (a0) # vscale x 8-byte Folded Reload
 ; ZVFHMIN-NEXT:    vsetvli zero, zero, e32, m8, ta, ma
-; ZVFHMIN-NEXT:    vmfeq.vv v8, v16, v24, v0.t
+; ZVFHMIN-NEXT:    vmfeq.vv v10, v16, v24, v0.t
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e8, mf2, ta, ma
-; ZVFHMIN-NEXT:    vslideup.vx v8, v10, a3
+; ZVFHMIN-NEXT:    vslideup.vx v10, v9, a3
 ; ZVFHMIN-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
-; ZVFHMIN-NEXT:    vslideup.vx v8, v9, a1
-; ZVFHMIN-NEXT:    vmv.v.v v0, v8
+; ZVFHMIN-NEXT:    vslideup.vx v10, v8, a1
+; ZVFHMIN-NEXT:    vmv.v.v v0, v10
 ; ZVFHMIN-NEXT:    csrr a0, vlenb
 ; ZVFHMIN-NEXT:    mv a1, a0
 ; ZVFHMIN-NEXT:    slli a0, a0, 1
@@ -3749,8 +3733,6 @@ define <vscale x 64 x i1> @fcmp_oeq_vv_nxv64f16(<vscale x 64 x half> %va, <vscal
   %v = call <vscale x 64 x i1> @llvm.vp.fcmp.nxv64f16(<vscale x 64 x half> %va, <vscale x 64 x half> %vb, metadata !"oeq", <vscale x 64 x i1> %m, i32 %evl)
   ret <vscale x 64 x i1> %v
 }
-
-declare <vscale x 1 x i1> @llvm.vp.fcmp.nxv1f64(<vscale x 1 x double>, <vscale x 1 x double>, metadata, <vscale x 1 x i1>, i32)
 
 define <vscale x 1 x i1> @fcmp_oeq_vv_nxv1f64(<vscale x 1 x double> %va, <vscale x 1 x double> %vb, <vscale x 1 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: fcmp_oeq_vv_nxv1f64:
@@ -4268,8 +4250,6 @@ define <vscale x 1 x i1> @fcmp_uno_vf_swap_nxv1f64(<vscale x 1 x double> %va, do
   ret <vscale x 1 x i1> %v
 }
 
-declare <vscale x 3 x i1> @llvm.vp.fcmp.nxv3f64(<vscale x 3 x double>, <vscale x 3 x double>, metadata, <vscale x 3 x i1>, i32)
-
 define <vscale x 3 x i1> @fcmp_oeq_vv_nxv3f64(<vscale x 3 x double> %va, <vscale x 3 x double> %vb, <vscale x 3 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: fcmp_oeq_vv_nxv3f64:
 ; CHECK:       # %bb.0:
@@ -4280,8 +4260,6 @@ define <vscale x 3 x i1> @fcmp_oeq_vv_nxv3f64(<vscale x 3 x double> %va, <vscale
   %v = call <vscale x 3 x i1> @llvm.vp.fcmp.nxv3f64(<vscale x 3 x double> %va, <vscale x 3 x double> %vb, metadata !"oeq", <vscale x 3 x i1> %m, i32 %evl)
   ret <vscale x 3 x i1> %v
 }
-
-declare <vscale x 8 x i1> @llvm.vp.fcmp.nxv8f64(<vscale x 8 x double>, <vscale x 8 x double>, metadata, <vscale x 8 x i1>, i32)
 
 define <vscale x 8 x i1> @fcmp_oeq_vv_nxv8f64(<vscale x 8 x double> %va, <vscale x 8 x double> %vb, <vscale x 8 x i1> %m, i32 zeroext %evl) {
 ; CHECK-LABEL: fcmp_oeq_vv_nxv8f64:
@@ -4816,8 +4794,6 @@ define <vscale x 8 x i1> @fcmp_uno_vf_swap_nxv8f64(<vscale x 8 x double> %va, do
   %v = call <vscale x 8 x i1> @llvm.vp.fcmp.nxv8f64(<vscale x 8 x double> %vb, <vscale x 8 x double> %va, metadata !"uno", <vscale x 8 x i1> %m, i32 %evl)
   ret <vscale x 8 x i1> %v
 }
-
-declare <vscale x 32 x i1> @llvm.vp.fcmp.nxv32f64(<vscale x 32 x double>, <vscale x 32 x double>, metadata, <vscale x 32 x i1>, i32)
 
 define <vscale x 32 x i1> @fcmp_oeq_vv_nxv32f64(<vscale x 32 x double> %va, <vscale x 32 x double> %vb, <vscale x 32 x i1> %m, i32 zeroext %evl) {
 ; CHECK32-LABEL: fcmp_oeq_vv_nxv32f64:

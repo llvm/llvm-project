@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -finclude-default-header -fnative-half-type -triple dxil-pc-shadermodel6.3-library -x hlsl -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
+// RUN: %clang_cc1 -finclude-default-header -fnative-half-type -fnative-int16-type -triple dxil-pc-shadermodel6.3-library -x hlsl -emit-llvm -disable-llvm-passes -o - %s | FileCheck %s
 
 struct S {
   int X;

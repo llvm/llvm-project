@@ -225,7 +225,7 @@ inline constexpr int64_t minIntN(int64_t N) {
 
   if (N == 0)
     return 0;
-  return UINT64_C(1) + ~(UINT64_C(1) << (N - 1));
+  return UINT64_MAX << (N - 1);
 }
 
 /// Gets the maximum value for a N-bit signed integer.
@@ -241,7 +241,7 @@ inline constexpr int64_t maxIntN(int64_t N) {
 
 /// Checks if an unsigned integer fits into the given (dynamic) bit width.
 inline constexpr bool isUIntN(unsigned N, uint64_t x) {
-  return N >= 64 || x <= maxUIntN(N);
+  return N >= 64 || (x >> N) == 0;
 }
 
 /// Checks if an signed integer fits into the given (dynamic) bit width.

@@ -1,4 +1,4 @@
-; RUN: opt %loadPolly -polly-print-ast -polly-parallel -polly-parallel-force -disable-output < %s | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<ast>' -polly-print-ast -polly-parallel -polly-parallel-force -disable-output < %s | FileCheck %s
 ;
 ;       void jd(int *A) {
 ; CHECK:  #pragma omp parallel for

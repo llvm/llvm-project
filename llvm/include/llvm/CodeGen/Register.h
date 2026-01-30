@@ -10,6 +10,7 @@
 #define LLVM_CODEGEN_REGISTER_H
 
 #include "llvm/MC/MCRegister.h"
+#include "llvm/Support/MathExtras.h"
 #include <cassert>
 
 namespace llvm {
@@ -35,19 +36,23 @@ public:
   // DenseMapInfo<unsigned> uses -1u and -2u.
   static_assert(std::numeric_limits<decltype(Reg)>::max() >= 0xFFFFFFFF,
                 "Reg isn't large enough to hold full range.");
-  static constexpr unsigned FirstStackSlot = 1u << 30;
-  static_assert(FirstStackSlot >= MCRegister::LastPhysicalReg);
+  static constexpr unsigned MaxFrameIndexBitwidth = 30;
+  static constexpr unsigned StackSlotZero = 1u << MaxFrameIndexBitwidth;
+  static constexpr const unsigned StackSlotMask = StackSlotZero - 1;
+  static_assert(StackSlotZero >= MCRegister::LastPhysicalReg);
   static constexpr unsigned VirtualRegFlag = 1u << 31;
 
   /// Return true if this is a stack slot.
   constexpr bool isStack() const {
-    return Register::FirstStackSlot <= Reg && Reg < Register::VirtualRegFlag;
+    return Register::StackSlotZero <= Reg && Reg < Register::VirtualRegFlag;
   }
 
   /// Convert a non-negative frame index to a stack slot register value.
   static Register index2StackSlot(int FI) {
-    assert(FI >= 0 && "Cannot hold a negative frame index.");
-    return Register(FI + Register::FirstStackSlot);
+    assert(isInt<MaxFrameIndexBitwidth>(FI) &&
+           "Frame index must be at most 30 bits.");
+    unsigned FIMasked = FI & Register::StackSlotMask;
+    return Register(FIMasked | Register::StackSlotZero);
   }
 
   /// Return true if the specified register number is in
@@ -87,7 +92,7 @@ public:
   /// Compute the frame index from a register value representing a stack slot.
   int stackSlotIndex() const {
     assert(isStack() && "Not a stack slot");
-    return static_cast<int>(Reg - Register::FirstStackSlot);
+    return SignExtend32<MaxFrameIndexBitwidth>(Reg & Register::StackSlotMask);
   }
 
   constexpr operator unsigned() const { return Reg; }
@@ -177,12 +182,17 @@ class VirtRegOrUnit {
   unsigned VRegOrUnit;
 
 public:
-  constexpr explicit VirtRegOrUnit(MCRegUnit Unit) : VRegOrUnit(Unit) {
+  constexpr explicit VirtRegOrUnit(MCRegUnit Unit)
+      : VRegOrUnit(static_cast<unsigned>(Unit)) {
     assert(!Register::isVirtualRegister(VRegOrUnit));
   }
+
   constexpr explicit VirtRegOrUnit(Register Reg) : VRegOrUnit(Reg.id()) {
     assert(Reg.isVirtual());
   }
+
+  // Catches implicit conversions to Register.
+  template <typename T> explicit VirtRegOrUnit(T) = delete;
 
   constexpr bool isVirtualReg() const {
     return Register::isVirtualRegister(VRegOrUnit);
@@ -190,7 +200,7 @@ public:
 
   constexpr MCRegUnit asMCRegUnit() const {
     assert(!isVirtualReg() && "Not a register unit");
-    return VRegOrUnit;
+    return static_cast<MCRegUnit>(VRegOrUnit);
   }
 
   constexpr Register asVirtualReg() const {
@@ -200,6 +210,10 @@ public:
 
   constexpr bool operator==(const VirtRegOrUnit &Other) const {
     return VRegOrUnit == Other.VRegOrUnit;
+  }
+
+  constexpr bool operator<(const VirtRegOrUnit &Other) const {
+    return VRegOrUnit < Other.VRegOrUnit;
   }
 };
 

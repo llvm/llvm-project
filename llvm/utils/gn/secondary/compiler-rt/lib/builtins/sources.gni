@@ -272,7 +272,10 @@ if (current_cpu == "x86") {
     ]
   }
   if (current_os == "win") {
-    builtins_sources += [ "i386/chkstk.S" ]
+    builtins_sources += [
+      "i386/chkstk.S",
+      "i386/chkstk2.S",
+    ]
   }
 } else if (current_cpu == "x64") {
   builtins_sources -= [

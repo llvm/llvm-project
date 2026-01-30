@@ -440,6 +440,19 @@ private:
   ResourceTrackerSP RT;
 };
 
+/// Returned by operations that fail because a JITDylib has been closed.
+class LLVM_ABI JITDylibDefunct : public ErrorInfo<JITDylibDefunct> {
+public:
+  static char ID;
+
+  JITDylibDefunct(JITDylibSP JD) : JD(std::move(JD)) {}
+  std::error_code convertToErrorCode() const override;
+  void log(raw_ostream &OS) const override;
+
+private:
+  JITDylibSP JD;
+};
+
 /// Used to notify a JITDylib that the given set of symbols failed to
 /// materialize.
 class LLVM_ABI FailedToMaterialize : public ErrorInfo<FailedToMaterialize> {
@@ -448,7 +461,7 @@ public:
 
   FailedToMaterialize(std::shared_ptr<SymbolStringPool> SSP,
                       std::shared_ptr<SymbolDependenceMap> Symbols);
-  ~FailedToMaterialize();
+  ~FailedToMaterialize() override;
   std::error_code convertToErrorCode() const override;
   void log(raw_ostream &OS) const override;
   const SymbolDependenceMap &getSymbols() const { return *Symbols; }
@@ -1352,7 +1365,7 @@ public:
   using ErrorReporter = unique_function<void(Error)>;
 
   /// Send a result to the remote.
-  using SendResultFunction = unique_function<void(shared::WrapperFunctionResult)>;
+  using SendResultFunction = unique_function<void(shared::WrapperFunctionBuffer)>;
 
   /// An asynchronous wrapper-function callable from the executor via
   /// jit-dispatch.
@@ -1584,7 +1597,7 @@ public:
   /// The wrapper function should be callable as:
   ///
   /// \code{.cpp}
-  ///   CWrapperFunctionResult fn(uint8_t *Data, uint64_t Size);
+  ///   CWrapperFunctionBuffer fn(uint8_t *Data, uint64_t Size);
   /// \endcode{.cpp}
   void callWrapperAsync(ExecutorAddr WrapperFnAddr,
                         ExecutorProcessControl::IncomingWFRHandler OnComplete,
@@ -1614,9 +1627,9 @@ public:
   /// callable as:
   ///
   /// \code{.cpp}
-  ///   CWrapperFunctionResult fn(uint8_t *Data, uint64_t Size);
+  ///   CWrapperFunctionBuffer fn(uint8_t *Data, uint64_t Size);
   /// \endcode{.cpp}
-  shared::WrapperFunctionResult callWrapper(ExecutorAddr WrapperFnAddr,
+  shared::WrapperFunctionBuffer callWrapper(ExecutorAddr WrapperFnAddr,
                                             ArrayRef<char> ArgBuffer) {
     return EPC->callWrapper(WrapperFnAddr, ArgBuffer);
   }
@@ -1692,7 +1705,7 @@ public:
   /// to incoming jit-dispatch requests from the executor.
   LLVM_ABI void runJITDispatchHandler(SendResultFunction SendResult,
                                       ExecutorAddr HandlerFnTagAddr,
-                                      ArrayRef<char> ArgBuffer);
+                                      shared::WrapperFunctionBuffer ArgBytes);
 
   /// Dump the state of all the JITDylibs in this session.
   LLVM_ABI void dump(raw_ostream &OS);
@@ -1768,7 +1781,7 @@ private:
   // FIXME: We should be able to derive FailedSymsForQuery from each query once
   //        we fix how the detach operation works.
   struct EmitQueries {
-    JITDylib::AsynchronousSymbolQuerySet Updated;
+    JITDylib::AsynchronousSymbolQuerySet Completed;
     JITDylib::AsynchronousSymbolQuerySet Failed;
     DenseMap<AsynchronousSymbolQuery *, std::shared_ptr<SymbolDependenceMap>>
         FailedSymsForQuery;
@@ -1887,7 +1900,8 @@ Error JITDylib::define(std::unique_ptr<MaterializationUnitType> &&MU,
     });
 
   return ES.runSessionLocked([&, this]() -> Error {
-    assert(State == Open && "JD is defunct");
+    if (State != Open)
+      return make_error<JITDylibDefunct>(this);
 
     if (auto Err = defineImpl(*MU))
       return Err;

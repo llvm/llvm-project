@@ -45,6 +45,7 @@ protocol::Breakpoint Watchpoint::ToProtocolBreakpoint() {
       breakpoint.message = m_error.GetCString();
   } else {
     breakpoint.verified = true;
+    breakpoint.id = m_wp.GetID();
   }
 
   return breakpoint;

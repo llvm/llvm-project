@@ -450,7 +450,7 @@ void CodeGenFunction::EmitCXXThrowExpr(const CXXThrowExpr *E,
   // Therefore, we emit a trap which will abort the program, and
   // prompt a warning indicating that a trap will be emitted.
   const llvm::Triple &T = Target.getTriple();
-  if (CGM.getLangOpts().OpenMPIsTargetDevice && (T.isNVPTX() || T.isAMDGCN())) {
+  if (CGM.getLangOpts().OpenMPIsTargetDevice && T.isGPU()) {
     EmitTrapCall(llvm::Intrinsic::trap);
     return;
   }
@@ -627,7 +627,7 @@ void CodeGenFunction::EmitCXXTryStmt(const CXXTryStmt &S) {
   // If we encounter a try statement on in an OpenMP target region offloaded to
   // a GPU, we treat it as a basic block.
   const bool IsTargetDevice =
-      (CGM.getLangOpts().OpenMPIsTargetDevice && (T.isNVPTX() || T.isAMDGCN()));
+      (CGM.getLangOpts().OpenMPIsTargetDevice && T.isGPU());
   if (!IsTargetDevice)
     EnterCXXTryStmt(S);
   EmitStmt(S.getTryBlock());

@@ -25,6 +25,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/DebugLog.h"
 #include <cstdint>
 
@@ -91,9 +92,9 @@ SmallVector<scf::ForOp> mlir::replaceLoopNestWithNewYields(
     newLoopNest = replaceLoopNestWithNewYields(rewriter, loopNest.drop_front(),
                                                innerNewBBArgs, newYieldValuesFn,
                                                replaceIterOperandsUsesInLoop);
-    return llvm::to_vector(llvm::map_range(
+    return llvm::map_to_vector(
         newLoopNest.front().getResults().take_back(innerNewBBArgs.size()),
-        [](OpResult r) -> Value { return r; }));
+        [](OpResult r) -> Value { return r; });
   };
   scf::ForOp outerMostLoop =
       cast<scf::ForOp>(*loopNest.front().replaceWithAdditionalYields(
@@ -291,47 +292,61 @@ static Value ceilDivPositive(OpBuilder &builder, Location loc, Value dividend,
   return arith::DivUIOp::create(builder, loc, sum, divisor);
 }
 
-/// Generates unrolled copies of scf::ForOp 'loopBodyBlock', with
-/// associated 'forOpIV' by 'unrollFactor', calling 'ivRemapFn' to remap
-/// 'forOpIV' for each unrolled body. If specified, annotates the Ops in each
-/// unrolled iteration using annotateFn.
-static void generateUnrolledLoop(
-    Block *loopBodyBlock, Value forOpIV, uint64_t unrollFactor,
+void mlir::generateUnrolledLoop(
+    Block *loopBodyBlock, Value iv, uint64_t unrollFactor,
     function_ref<Value(unsigned, Value, OpBuilder)> ivRemapFn,
     function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn,
-    ValueRange iterArgs, ValueRange yieldedValues) {
+    ValueRange iterArgs, ValueRange yieldedValues,
+    IRMapping *clonedToSrcOpsMap) {
+
+  // Check if the op was cloned from another source op, and return it if found
+  // (or the same op if not found)
+  auto findOriginalSrcOp =
+      [](Operation *op, const IRMapping &clonedToSrcOpsMap) -> Operation * {
+    Operation *srcOp = op;
+    // If the source op derives from another op: traverse the chain to find the
+    // original source op
+    while (srcOp && clonedToSrcOpsMap.contains(srcOp))
+      srcOp = clonedToSrcOpsMap.lookup(srcOp);
+    return srcOp;
+  };
+
   // Builder to insert unrolled bodies just before the terminator of the body of
-  // 'forOp'.
+  // the loop.
   auto builder = OpBuilder::atBlockTerminator(loopBodyBlock);
 
-  constexpr auto defaultAnnotateFn = [](unsigned, Operation *, OpBuilder) {};
+  static const auto noopAnnotateFn = [](unsigned, Operation *, OpBuilder) {};
   if (!annotateFn)
-    annotateFn = defaultAnnotateFn;
+    annotateFn = noopAnnotateFn;
 
   // Keep a pointer to the last non-terminator operation in the original block
   // so that we know what to clone (since we are doing this in-place).
   Block::iterator srcBlockEnd = std::prev(loopBodyBlock->end(), 2);
 
-  // Unroll the contents of 'forOp' (append unrollFactor - 1 additional copies).
+  // Unroll the contents of the loop body (append unrollFactor - 1 additional
+  // copies).
   SmallVector<Value, 4> lastYielded(yieldedValues);
 
   for (unsigned i = 1; i < unrollFactor; i++) {
-    IRMapping operandMap;
-
     // Prepare operand map.
+    IRMapping operandMap;
     operandMap.map(iterArgs, lastYielded);
 
     // If the induction variable is used, create a remapping to the value for
     // this unrolled instance.
-    if (!forOpIV.use_empty()) {
-      Value ivUnroll = ivRemapFn(i, forOpIV, builder);
-      operandMap.map(forOpIV, ivUnroll);
+    if (!iv.use_empty()) {
+      Value ivUnroll = ivRemapFn(i, iv, builder);
+      operandMap.map(iv, ivUnroll);
     }
 
     // Clone the original body of 'forOp'.
     for (auto it = loopBodyBlock->begin(); it != std::next(srcBlockEnd); it++) {
-      Operation *clonedOp = builder.clone(*it, operandMap);
+      Operation *srcOp = &(*it);
+      Operation *clonedOp = builder.clone(*srcOp, operandMap);
       annotateFn(i, clonedOp, builder);
+      if (clonedToSrcOpsMap)
+        clonedToSrcOpsMap->map(clonedOp,
+                               findOriginalSrcOp(srcOp, *clonedToSrcOpsMap));
     }
 
     // Update yielded values.
@@ -382,9 +397,12 @@ FailureOr<UnrolledLoopInfo> mlir::loopUnrollByFactor(
       return UnrolledLoopInfo{forOp, std::nullopt};
     }
 
+    // TODO(#178506): This may overflow for large trip counts. Should use
+    // uint64_t.
     int64_t tripCountEvenMultiple =
-        constTripCount->getSExtValue() -
-        (constTripCount->getSExtValue() % unrollFactor);
+        constTripCount->getZExtValue() -
+        (constTripCount->getZExtValue() % unrollFactor);
+    // TODO(#178506): This may overflow when computing upperBoundUnrolledCst.
     int64_t upperBoundUnrolledCst = lbCst + tripCountEvenMultiple * stepCst;
     int64_t stepUnrolledCst = stepCst * unrollFactor;
 
@@ -486,9 +504,9 @@ LogicalResult mlir::loopUnrollFull(scf::ForOp forOp) {
   const APInt &tripCount = *mayBeConstantTripCount;
   if (tripCount.isZero())
     return success();
-  if (tripCount.getSExtValue() == 1)
+  if (tripCount.getZExtValue() == 1)
     return forOp.promoteIfSingleIteration(rewriter);
-  return loopUnrollByFactor(forOp, tripCount.getSExtValue());
+  return loopUnrollByFactor(forOp, tripCount.getZExtValue());
 }
 
 /// Check if bounds of all inner loops are defined outside of `forOp`
@@ -539,7 +557,7 @@ LogicalResult mlir::loopUnrollJamByFactor(scf::ForOp forOp,
               "trip "
               "count";
     unrollJamFactor = tripCount->getZExtValue();
-  } else if (tripCount->getSExtValue() % unrollJamFactor != 0) {
+  } else if (tripCount->getZExtValue() % unrollJamFactor != 0) {
     LDBG() << "failed to unroll and jam: unsupported trip count that is not a "
               "multiple of unroll jam factor";
     return failure();
@@ -1543,4 +1561,104 @@ bool mlir::isPerfectlyNestedForLoops(
     }
   }
   return true;
+}
+
+llvm::SmallVector<int64_t>
+mlir::getConstLoopTripCounts(mlir::LoopLikeOpInterface loopOp) {
+  std::optional<SmallVector<OpFoldResult>> loBnds = loopOp.getLoopLowerBounds();
+  std::optional<SmallVector<OpFoldResult>> upBnds = loopOp.getLoopUpperBounds();
+  std::optional<SmallVector<OpFoldResult>> steps = loopOp.getLoopSteps();
+  if (!loBnds || !upBnds || !steps)
+    return {};
+  // TODO(#178506): The result should be SmallVector<uint64_t> and use uint64_t
+  // for trip counts.
+  llvm::SmallVector<int64_t> tripCounts;
+  for (auto [lb, ub, step] : llvm::zip(*loBnds, *upBnds, *steps)) {
+    // TODO(#178506): Signedness is not handled correctly here.
+    std::optional<llvm::APInt> numIter = constantTripCount(
+        lb, ub, step, /*isSigned=*/true, scf::computeUbMinusLb);
+    if (!numIter)
+      return {};
+    tripCounts.push_back(numIter->getZExtValue());
+  }
+  return tripCounts;
+}
+
+FailureOr<scf::ParallelOp> mlir::parallelLoopUnrollByFactors(
+    scf::ParallelOp op, ArrayRef<uint64_t> unrollFactors,
+    RewriterBase &rewriter,
+    function_ref<void(unsigned, Operation *, OpBuilder)> annotateFn,
+    IRMapping *clonedToSrcOpsMap) {
+  const unsigned numLoops = op.getNumLoops();
+  assert(llvm::none_of(unrollFactors, [](uint64_t f) { return f == 0; }) &&
+         "Expected positive unroll factors");
+  assert((!unrollFactors.empty() && (unrollFactors.size() <= numLoops)) &&
+         "Expected non-empty unroll factors of size <= to the number of loops");
+
+  // Bail out if no valid unroll factors were provided
+  if (llvm::all_of(unrollFactors, [](uint64_t f) { return f == 1; }))
+    return rewriter.notifyMatchFailure(
+        op, "Unrolling not applied if all factors are 1");
+
+  // Return if the loop body is empty.
+  if (llvm::hasSingleElement(op.getBody()->getOperations()))
+    return rewriter.notifyMatchFailure(op, "Cannot unroll an empty loop body");
+
+  // If the provided unroll factors do not cover all the loop dims, they are
+  // applied to the inner loop dimensions.
+  const unsigned firstLoopDimIdx = numLoops - unrollFactors.size();
+
+  // Make sure that the unroll factors divide the iteration space evenly
+  // TODO: Support unrolling loops with dynamic iteration spaces.
+  const llvm::SmallVector<int64_t> tripCounts = getConstLoopTripCounts(op);
+  if (tripCounts.empty())
+    return rewriter.notifyMatchFailure(
+        op, "Failed to compute constant trip counts for the loop. Note that "
+            "dynamic loop sizes are not supported.");
+
+  for (unsigned dimIdx = firstLoopDimIdx; dimIdx < numLoops; dimIdx++) {
+    const uint64_t unrollFactor = unrollFactors[dimIdx - firstLoopDimIdx];
+    if (tripCounts[dimIdx] % unrollFactor)
+      return rewriter.notifyMatchFailure(
+          op, "Unroll factors don't divide the iteration space evenly");
+  }
+
+  std::optional<SmallVector<OpFoldResult>> maybeFoldSteps = op.getLoopSteps();
+  if (!maybeFoldSteps)
+    return rewriter.notifyMatchFailure(op, "Failed to retrieve loop steps");
+  llvm::SmallVector<size_t> steps{};
+  for (auto step : *maybeFoldSteps)
+    steps.push_back(static_cast<size_t>(*getConstantIntValue(step)));
+
+  for (unsigned dimIdx = firstLoopDimIdx; dimIdx < numLoops; dimIdx++) {
+    const uint64_t unrollFactor = unrollFactors[dimIdx - firstLoopDimIdx];
+    if (unrollFactor == 1)
+      continue;
+    const size_t origStep = steps[dimIdx];
+    const int64_t newStep = origStep * unrollFactor;
+    IRMapping clonedToSrcOpsMap;
+
+    ValueRange iterArgs = ValueRange(op.getRegionIterArgs());
+    auto yieldedValues = op.getBody()->getTerminator()->getOperands();
+
+    generateUnrolledLoop(
+        op.getBody(), op.getInductionVars()[dimIdx], unrollFactor,
+        [&](unsigned i, Value iv, OpBuilder b) {
+          // iv' = iv + step * i;
+          const AffineExpr expr = b.getAffineDimExpr(0) + (origStep * i);
+          const auto map =
+              b.getDimIdentityMap().dropResult(0).insertResult(expr, 0);
+          return affine::AffineApplyOp::create(b, iv.getLoc(), map,
+                                               ValueRange{iv});
+        },
+        /*annotateFn*/ annotateFn, iterArgs, yieldedValues, &clonedToSrcOpsMap);
+
+    // Update loop step
+    auto prevInsertPoint = rewriter.saveInsertionPoint();
+    rewriter.setInsertionPoint(op);
+    op.getStepMutable()[dimIdx].assign(
+        arith::ConstantIndexOp::create(rewriter, op.getLoc(), newStep));
+    rewriter.restoreInsertionPoint(prevInsertPoint);
+  }
+  return op;
 }

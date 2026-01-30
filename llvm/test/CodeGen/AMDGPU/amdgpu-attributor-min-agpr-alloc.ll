@@ -1031,7 +1031,7 @@ attributes #1 = { "amdgpu-waves-per-eu"="1,1" }
 ; CHECK: attributes #[[ATTR1]] = { "amdgpu-agpr-alloc"="1" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
 ; CHECK: attributes #[[ATTR2]] = { "amdgpu-agpr-alloc"="2" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
 ; CHECK: attributes #[[ATTR3]] = { "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
-; CHECK: attributes #[[ATTR4:[0-9]+]] = { convergent nocallback nofree nosync nounwind willreturn memory(none) "target-cpu"="gfx90a" }
+; CHECK: attributes #[[ATTR4:[0-9]+]] = { convergent nocallback nocreateundeforpoison nofree nosync nounwind willreturn memory(none) "target-cpu"="gfx90a" }
 ; CHECK: attributes #[[ATTR5]] = { "amdgpu-agpr-alloc"="4" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
 ; CHECK: attributes #[[ATTR6]] = { "amdgpu-agpr-alloc"="6" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }
 ; CHECK: attributes #[[ATTR7]] = { "amdgpu-agpr-alloc"="5" "target-cpu"="gfx90a" "uniform-work-group-size"="false" }

@@ -45,6 +45,8 @@
 // The number of devices in this plugin.
 #define NUM_DEVICES 4
 
+using namespace llvm::offload::debug;
+
 namespace llvm {
 namespace omp {
 namespace target {
@@ -334,7 +336,10 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
 
   /// All functions are already synchronous. No need to do anything on this
   /// query function.
-  Error queryAsyncImpl(__tgt_async_info &AsyncInfo) override {
+  Error queryAsyncImpl(__tgt_async_info &AsyncInfo, bool ReleaseQueue,
+                       bool *IsQueueWorkCompleted) override {
+    if (IsQueueWorkCompleted)
+      *IsQueueWorkCompleted = true;
     return Plugin::success();
   }
 
@@ -380,9 +385,6 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
     return Info;
   }
 
-  /// This plugin should not setup the device environment or memory pool.
-  virtual bool shouldSetupDeviceMemoryPool() const override { return false; };
-
   /// Getters and setters for stack size and heap size not relevant.
   Error getDeviceStackSize(uint64_t &Value) override {
     Value = 0;
@@ -391,11 +393,6 @@ struct GenELF64DeviceTy : public GenericDeviceTy {
   Error setDeviceStackSize(uint64_t Value) override {
     return Plugin::success();
   }
-  Error getDeviceHeapSize(uint64_t &Value) override {
-    Value = 0;
-    return Plugin::success();
-  }
-  Error setDeviceHeapSize(uint64_t Value) override { return Plugin::success(); }
 
 private:
   /// Grid values for Generic ELF64 plugins.
@@ -451,6 +448,8 @@ struct GenELF64PluginTy final : public GenericPluginTy {
     if (auto Err = Plugin::check(ffi_init(), "failed to initialize libffi"))
       return std::move(Err);
 #endif
+    ODBG(OLDT_Init) << "GenELF64 plugin detected " << ODBG_IF_LEVEL(2)
+                    << NUM_DEVICES << " " << ODBG_RESET_LEVEL() << "devices";
 
     return NUM_DEVICES;
   }

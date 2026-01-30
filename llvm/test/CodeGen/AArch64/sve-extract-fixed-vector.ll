@@ -292,9 +292,9 @@ define <8 x i1> @extract_v8i1_nxv8i1(<vscale x 8 x i1> %inmask) {
 define <16 x i1> @extract_v16i1_nxv16i1(<vscale x 16 x i1> %inmask) {
 ; CHECK-LABEL: extract_v16i1_nxv16i1:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    mov z1.b, p0/z, #1 // =0x1
-; CHECK-NEXT:    mov v0.16b, v1.16b
-; CHECK-NEXT:    mov v0.b[1], v1.b[1]
+; CHECK-NEXT:    mov z0.b, p0/z, #1 // =0x1
+; CHECK-NEXT:    mov v1.16b, v0.16b
+; CHECK-NEXT:    mov v0.b[1], v0.b[1]
 ; CHECK-NEXT:    mov v0.b[2], v1.b[2]
 ; CHECK-NEXT:    mov v0.b[3], v1.b[3]
 ; CHECK-NEXT:    mov v0.b[4], v1.b[4]
@@ -309,6 +309,7 @@ define <16 x i1> @extract_v16i1_nxv16i1(<vscale x 16 x i1> %inmask) {
 ; CHECK-NEXT:    mov v0.b[13], v1.b[13]
 ; CHECK-NEXT:    mov v0.b[14], v1.b[14]
 ; CHECK-NEXT:    mov v0.b[15], v1.b[15]
+; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ret
   %mask = call <16 x i1> @llvm.vector.extract.v16i1.nxv16i1(<vscale x 16 x i1> %inmask, i64 0)
   ret <16 x i1> %mask

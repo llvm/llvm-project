@@ -61,7 +61,7 @@ Context &getContext() {
 class SystemZMCSymbolizerTest : public MCSymbolizer {
 public:
   SystemZMCSymbolizerTest(MCContext &MC) : MCSymbolizer(MC, nullptr) {}
-  ~SystemZMCSymbolizerTest() {}
+  ~SystemZMCSymbolizerTest() override = default;
 
   bool tryAddingSymbolicOperand([[maybe_unused]] MCInst &Inst,
                                 [[maybe_unused]] raw_ostream &CStream,

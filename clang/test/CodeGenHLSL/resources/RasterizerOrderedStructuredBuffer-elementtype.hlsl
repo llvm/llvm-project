@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type -emit-llvm -o - %s | FileCheck %s -check-prefixes=DXIL
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.2-compute -finclude-default-header -fnative-half-type -fnative-int16-type -emit-llvm -o - %s | FileCheck %s -check-prefixes=DXIL
 
 struct MyStruct {
   float4 a;

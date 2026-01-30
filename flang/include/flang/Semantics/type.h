@@ -301,6 +301,7 @@ public:
   void CookParameters(evaluate::FoldingContext &);
   // Evaluates type parameter expressions.
   void EvaluateParameters(SemanticsContext &);
+  void ReevaluateParameters(SemanticsContext &);
   void AddParamValue(SourceName, ParamValue &&);
   // Creates a Scope for the type and populates it with component
   // instantiations that have been specialized with actual type parameter

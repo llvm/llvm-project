@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NOT_NULL_TERMINATED_RESULT_H
-#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NOT_NULL_TERMINATED_RESULT_H
+#ifndef LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NOTNULLTERMINATEDRESULTCHECK_H
+#define LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NOTNULLTERMINATEDRESULTCHECK_H
 
 #include "../ClangTidyCheck.h"
 
@@ -43,15 +43,15 @@ private:
   void memcpyFix(StringRef Name,
                  const ast_matchers::MatchFinder::MatchResult &Result,
                  DiagnosticBuilder &Diag);
-  void memcpy_sFix(StringRef Name,
-                   const ast_matchers::MatchFinder::MatchResult &Result,
-                   DiagnosticBuilder &Diag);
+  void memcpySFix(StringRef Name,
+                  const ast_matchers::MatchFinder::MatchResult &Result,
+                  DiagnosticBuilder &Diag);
   void memchrFix(StringRef Name,
                  const ast_matchers::MatchFinder::MatchResult &Result);
   void memmoveFix(StringRef Name,
                   const ast_matchers::MatchFinder::MatchResult &Result,
                   DiagnosticBuilder &Diag) const;
-  void strerror_sFix(const ast_matchers::MatchFinder::MatchResult &Result);
+  void strerrorSFix(const ast_matchers::MatchFinder::MatchResult &Result);
   void ncmpFix(StringRef Name,
                const ast_matchers::MatchFinder::MatchResult &Result);
   void xfrmFix(StringRef Name,
@@ -60,4 +60,4 @@ private:
 
 } // namespace clang::tidy::bugprone
 
-#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NOT_NULL_TERMINATED_RESULT_H
+#endif // LLVM_CLANG_TOOLS_EXTRA_CLANG_TIDY_BUGPRONE_NOTNULLTERMINATEDRESULTCHECK_H

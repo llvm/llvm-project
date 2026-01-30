@@ -14,8 +14,8 @@
 #include "clang/Driver/CommonArgs.h"
 #include "clang/Driver/Compilation.h"
 #include "clang/Driver/Driver.h"
-#include "clang/Driver/Options.h"
 #include "clang/Driver/SanitizerArgs.h"
+#include "clang/Options/Options.h"
 #include "llvm/ADT/StringSwitch.h"
 #include "llvm/Option/ArgList.h"
 #include "llvm/ProfileData/InstrProf.h"
@@ -566,8 +566,6 @@ static void renderRemarksOptions(const ArgList &Args, ArgStringList &CmdArgs,
   }
 }
 
-static void AppendPlatformPrefix(SmallString<128> &Path, const llvm::Triple &T);
-
 void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                   const InputInfo &Output,
                                   const InputInfoList &Inputs,
@@ -795,13 +793,15 @@ void darwin::Linker::ConstructJob(Compilation &C, const JobAction &JA,
       NonStandardSearchPath =
           Version.getMajor() < 605 ||
           (Version.getMajor() == 605 && Version.getMinor().value_or(0) < 1);
+    } else {
+      NonStandardSearchPath = getMachOToolChain().HasPlatformPrefix(Triple);
     }
 
     if (NonStandardSearchPath) {
       if (auto *Sysroot = Args.getLastArg(options::OPT_isysroot)) {
         auto AddSearchPath = [&](StringRef Flag, StringRef SearchPath) {
           SmallString<128> P(Sysroot->getValue());
-          AppendPlatformPrefix(P, Triple);
+          getMachOToolChain().AppendPlatformPrefix(P, Triple);
           llvm::sys::path::append(P, SearchPath);
           if (getToolChain().getVFS().exists(P)) {
             CmdArgs.push_back(Args.MakeArgString(Flag + P));
@@ -1035,12 +1035,12 @@ static const char *ArmMachOArchName(StringRef Arch) {
       .Case("xscale", "xscale")
       .Case("armv4t", "armv4t")
       .Case("armv7", "armv7")
-      .Cases("armv7a", "armv7-a", "armv7")
-      .Cases("armv7r", "armv7-r", "armv7")
-      .Cases("armv7em", "armv7e-m", "armv7em")
-      .Cases("armv7k", "armv7-k", "armv7k")
-      .Cases("armv7m", "armv7-m", "armv7m")
-      .Cases("armv7s", "armv7-s", "armv7s")
+      .Cases({"armv7a", "armv7-a"}, "armv7")
+      .Cases({"armv7r", "armv7-r"}, "armv7")
+      .Cases({"armv7em", "armv7e-m"}, "armv7em")
+      .Cases({"armv7k", "armv7-k"}, "armv7k")
+      .Cases({"armv7m", "armv7-m"}, "armv7m")
+      .Cases({"armv7s", "armv7-s"}, "armv7s")
       .Default(nullptr);
 }
 
@@ -1079,7 +1079,7 @@ StringRef MachO::getMachOArchName(const ArgList &Args) const {
 
   case llvm::Triple::thumb:
   case llvm::Triple::arm:
-    if (const Arg *A = Args.getLastArg(clang::driver::options::OPT_march_EQ))
+    if (const Arg *A = Args.getLastArg(options::OPT_march_EQ))
       if (const char *Arch = ArmMachOArchName(A->getValue()))
         return Arch;
 
@@ -1118,6 +1118,40 @@ AppleMachO::~AppleMachO() {}
 
 MachO::~MachO() {}
 
+void Darwin::VerifyTripleForSDK(const llvm::opt::ArgList &Args,
+                                const llvm::Triple Triple) const {
+  if (SDKInfo) {
+    if (!SDKInfo->supportsTriple(Triple))
+      getDriver().Diag(diag::warn_incompatible_sysroot)
+          << SDKInfo->getDisplayName() << Triple.getTriple();
+  } else if (const Arg *A = Args.getLastArg(options::OPT_isysroot)) {
+    const char *isysroot = A->getValue();
+    StringRef SDK = getSDKName(isysroot);
+    if (!SDK.empty()) {
+      size_t StartVer = SDK.find_first_of("0123456789");
+      StringRef SDKName = SDK.slice(0, StartVer);
+      bool supported = true;
+      if (Triple.isWatchOS())
+        supported = SDKName.starts_with("Watch");
+      else if (Triple.isTvOS())
+        supported = SDKName.starts_with("AppleTV");
+      else if (Triple.isDriverKit())
+        supported = SDKName.starts_with("DriverKit");
+      else if (Triple.isiOS())
+        supported = SDKName.starts_with("iPhone");
+      else if (Triple.isMacOSX())
+        supported = SDKName.starts_with("MacOSX");
+      else
+        llvm::reportFatalUsageError(Twine("SDK at '") + isysroot +
+                                    "' missing SDKSettings.json.");
+
+      if (!supported)
+        getDriver().Diag(diag::warn_incompatible_sysroot)
+            << SDKName << Triple.getTriple();
+    }
+  }
+}
+
 std::string Darwin::ComputeEffectiveClangTriple(const ArgList &Args,
                                                 types::ID InputType) const {
   llvm::Triple Triple(ComputeLLVMTriple(Args, InputType));
@@ -1142,6 +1176,8 @@ std::string Darwin::ComputeEffectiveClangTriple(const ArgList &Args,
     Str += "macosx";
   Str += getTripleTargetVersion().getAsString();
   Triple.setOSName(Str);
+
+  VerifyTripleForSDK(Args, Triple);
 
   return Triple.getTriple();
 }
@@ -1344,7 +1380,7 @@ void MachO::AddLinkRuntimeLib(const ArgList &Args, ArgStringList &CmdArgs,
   }
 }
 
-std::string MachO::getCompilerRT(const ArgList &, StringRef Component,
+std::string MachO::getCompilerRT(const ArgList &Args, StringRef Component,
                                  FileType Type, bool IsFortran) const {
   assert(Type != ToolChain::FT_Object &&
          "it doesn't make sense to ask for the compiler-rt library name as an "
@@ -1363,7 +1399,7 @@ std::string MachO::getCompilerRT(const ArgList &, StringRef Component,
   return std::string(FullPath);
 }
 
-std::string Darwin::getCompilerRT(const ArgList &, StringRef Component,
+std::string Darwin::getCompilerRT(const ArgList &Args, StringRef Component,
                                   FileType Type, bool IsFortran) const {
   assert(Type != ToolChain::FT_Object &&
          "it doesn't make sense to ask for the compiler-rt library name as an "
@@ -1380,26 +1416,6 @@ std::string Darwin::getCompilerRT(const ArgList &, StringRef Component,
   SmallString<128> FullPath(getDriver().ResourceDir);
   llvm::sys::path::append(FullPath, "lib", "darwin", DarwinLibName);
   return std::string(FullPath);
-}
-
-StringRef Darwin::getPlatformFamily() const {
-  switch (TargetPlatform) {
-    case DarwinPlatformKind::MacOS:
-      return "MacOSX";
-    case DarwinPlatformKind::IPhoneOS:
-      if (TargetEnvironment == MacCatalyst)
-        return "MacOSX";
-      return "iPhone";
-    case DarwinPlatformKind::TvOS:
-      return "AppleTV";
-    case DarwinPlatformKind::WatchOS:
-      return "Watch";
-    case DarwinPlatformKind::DriverKit:
-      return "DriverKit";
-    case DarwinPlatformKind::XROS:
-      return "XR";
-  }
-  llvm_unreachable("Unsupported platform");
 }
 
 StringRef Darwin::getSDKName(StringRef isysroot) {
@@ -1888,6 +1904,18 @@ struct DarwinPlatform {
     Result.EnvVarName = EnvVarName;
     return Result;
   }
+  static DarwinPlatform createFromSDKInfo(StringRef SDKRoot,
+                                          const DarwinSDKInfo &SDKInfo) {
+    const DarwinSDKInfo::SDKPlatformInfo PlatformInfo =
+        SDKInfo.getCanonicalPlatformInfo();
+    DarwinPlatform Result(InferredFromSDK,
+                          getPlatformFromOS(PlatformInfo.getOS()),
+                          SDKInfo.getVersion());
+    Result.Environment = getEnvKindFromEnvType(PlatformInfo.getEnvironment());
+    Result.InferSimulatorFromArch = false;
+    Result.InferredSource = SDKRoot;
+    return Result;
+  }
   static DarwinPlatform createFromSDK(StringRef SDKRoot,
                                       DarwinPlatformKind Platform,
                                       StringRef Value,
@@ -1913,10 +1941,18 @@ struct DarwinPlatform {
   /// the platform from the SDKPath.
   DarwinSDKInfo inferSDKInfo() {
     assert(Kind == InferredFromSDK && "can infer SDK info only");
-    return DarwinSDKInfo(getOSVersion(),
+    llvm::Triple::OSType OS = getOSFromPlatform(Platform);
+    llvm::Triple::EnvironmentType EnvironmentType =
+        getEnvTypeFromEnvKind(Environment);
+    StringRef PlatformPrefix =
+        (Platform == DarwinPlatformKind::DriverKit) ? "/System/DriverKit" : "";
+    return DarwinSDKInfo("", OS, EnvironmentType, getOSVersion(),
+                         getDisplayName(Platform, Environment, getOSVersion()),
                          /*MaximumDeploymentTarget=*/
                          VersionTuple(getOSVersion().getMajor(), 0, 99),
-                         getOSFromPlatform(Platform));
+                         {DarwinSDKInfo::SDKPlatformInfo(
+                             llvm::Triple::Apple, OS, EnvironmentType,
+                             llvm::Triple::MachO, PlatformPrefix)});
   }
 
 private:
@@ -1975,6 +2011,73 @@ private:
       return llvm::Triple::XROS;
     }
     llvm_unreachable("Unknown DarwinPlatformKind enum");
+  }
+
+  static DarwinEnvironmentKind
+  getEnvKindFromEnvType(llvm::Triple::EnvironmentType EnvironmentType) {
+    switch (EnvironmentType) {
+    case llvm::Triple::UnknownEnvironment:
+      return DarwinEnvironmentKind::NativeEnvironment;
+    case llvm::Triple::Simulator:
+      return DarwinEnvironmentKind::Simulator;
+    case llvm::Triple::MacABI:
+      return DarwinEnvironmentKind::MacCatalyst;
+    default:
+      llvm_unreachable("Unable to infer Darwin environment");
+    }
+  }
+
+  static llvm::Triple::EnvironmentType
+  getEnvTypeFromEnvKind(DarwinEnvironmentKind EnvironmentKind) {
+    switch (EnvironmentKind) {
+    case DarwinEnvironmentKind::NativeEnvironment:
+      return llvm::Triple::UnknownEnvironment;
+    case DarwinEnvironmentKind::Simulator:
+      return llvm::Triple::Simulator;
+    case DarwinEnvironmentKind::MacCatalyst:
+      return llvm::Triple::MacABI;
+    }
+    llvm_unreachable("Unknown DarwinEnvironmentKind enum");
+  }
+
+  static std::string getDisplayName(DarwinPlatformKind TargetPlatform,
+                                    DarwinEnvironmentKind TargetEnvironment,
+                                    VersionTuple Version) {
+    SmallVector<StringRef, 3> Components;
+    switch (TargetPlatform) {
+    case DarwinPlatformKind::MacOS:
+      Components.push_back("macOS");
+      break;
+    case DarwinPlatformKind::IPhoneOS:
+      Components.push_back("iOS");
+      break;
+    case DarwinPlatformKind::TvOS:
+      Components.push_back("tvOS");
+      break;
+    case DarwinPlatformKind::WatchOS:
+      Components.push_back("watchOS");
+      break;
+    case DarwinPlatformKind::DriverKit:
+      Components.push_back("DriverKit");
+      break;
+    default:
+      llvm::reportFatalUsageError(Twine("Platform: '") +
+                                  std::to_string(TargetPlatform) +
+                                  "' is unsupported when inferring SDK Info.");
+    }
+    switch (TargetEnvironment) {
+    case DarwinEnvironmentKind::NativeEnvironment:
+      break;
+    case DarwinEnvironmentKind::Simulator:
+      Components.push_back("Simulator");
+      break;
+    default:
+      llvm::reportFatalUsageError(Twine("Environment: '") +
+                                  std::to_string(TargetEnvironment) +
+                                  "' is unsupported when inferring SDK Info.");
+    }
+    Components.push_back(Version.getAsString());
+    return join(Components, " ");
   }
 
   SourceKind Kind;
@@ -2121,15 +2224,6 @@ getDeploymentTargetFromEnvironmentVariables(const Driver &TheDriver,
   return std::nullopt;
 }
 
-/// Returns the SDK name without the optional prefix that ends with a '.' or an
-/// empty string otherwise.
-static StringRef dropSDKNamePrefix(StringRef SDKName) {
-  size_t PrefixPos = SDKName.find('.');
-  if (PrefixPos == StringRef::npos)
-    return "";
-  return SDKName.substr(PrefixPos + 1);
-}
-
 /// Tries to infer the deployment target from the SDK specified by -isysroot
 /// (or SDKROOT). Uses the version specified in the SDKSettings.json file if
 /// it's available.
@@ -2140,57 +2234,43 @@ inferDeploymentTargetFromSDK(DerivedArgList &Args,
   if (!A)
     return std::nullopt;
   StringRef isysroot = A->getValue();
+  if (SDKInfo)
+    return DarwinPlatform::createFromSDKInfo(isysroot, *SDKInfo);
+
   StringRef SDK = Darwin::getSDKName(isysroot);
   if (!SDK.size())
     return std::nullopt;
 
   std::string Version;
-  if (SDKInfo) {
-    // Get the version from the SDKSettings.json if it's available.
-    Version = SDKInfo->getVersion().getAsString();
-  } else {
-    // Slice the version number out.
-    // Version number is between the first and the last number.
-    size_t StartVer = SDK.find_first_of("0123456789");
-    size_t EndVer = SDK.find_last_of("0123456789");
-    if (StartVer != StringRef::npos && EndVer > StartVer)
-      Version = std::string(SDK.slice(StartVer, EndVer + 1));
-  }
+  // Slice the version number out.
+  // Version number is between the first and the last number.
+  size_t StartVer = SDK.find_first_of("0123456789");
+  size_t EndVer = SDK.find_last_of("0123456789");
+  if (StartVer != StringRef::npos && EndVer > StartVer)
+    Version = std::string(SDK.slice(StartVer, EndVer + 1));
   if (Version.empty())
     return std::nullopt;
 
-  auto CreatePlatformFromSDKName =
-      [&](StringRef SDK) -> std::optional<DarwinPlatform> {
-    if (SDK.starts_with("iPhoneOS") || SDK.starts_with("iPhoneSimulator"))
-      return DarwinPlatform::createFromSDK(
-          isysroot, Darwin::IPhoneOS, Version,
-          /*IsSimulator=*/SDK.starts_with("iPhoneSimulator"));
-    else if (SDK.starts_with("MacOSX"))
-      return DarwinPlatform::createFromSDK(isysroot, Darwin::MacOS,
-                                           getSystemOrSDKMacOSVersion(Version));
-    else if (SDK.starts_with("WatchOS") || SDK.starts_with("WatchSimulator"))
-      return DarwinPlatform::createFromSDK(
-          isysroot, Darwin::WatchOS, Version,
-          /*IsSimulator=*/SDK.starts_with("WatchSimulator"));
-    else if (SDK.starts_with("AppleTVOS") ||
-             SDK.starts_with("AppleTVSimulator"))
-      return DarwinPlatform::createFromSDK(
-          isysroot, Darwin::TvOS, Version,
-          /*IsSimulator=*/SDK.starts_with("AppleTVSimulator"));
-    else if (SDK.starts_with("XR"))
-      return DarwinPlatform::createFromSDK(
-          isysroot, Darwin::XROS, Version,
-          /*IsSimulator=*/SDK.contains("Simulator"));
-    else if (SDK.starts_with("DriverKit"))
-      return DarwinPlatform::createFromSDK(isysroot, Darwin::DriverKit,
-                                           Version);
-    return std::nullopt;
-  };
-  if (auto Result = CreatePlatformFromSDKName(SDK))
-    return Result;
-  // The SDK can be an SDK variant with a name like `<prefix>.<platform>`.
-  return CreatePlatformFromSDKName(dropSDKNamePrefix(SDK));
+  if (SDK.starts_with("iPhoneOS") || SDK.starts_with("iPhoneSimulator"))
+    return DarwinPlatform::createFromSDK(
+        isysroot, Darwin::IPhoneOS, Version,
+        /*IsSimulator=*/SDK.starts_with("iPhoneSimulator"));
+  else if (SDK.starts_with("MacOSX"))
+    return DarwinPlatform::createFromSDK(isysroot, Darwin::MacOS,
+                                         getSystemOrSDKMacOSVersion(Version));
+  else if (SDK.starts_with("WatchOS") || SDK.starts_with("WatchSimulator"))
+    return DarwinPlatform::createFromSDK(
+        isysroot, Darwin::WatchOS, Version,
+        /*IsSimulator=*/SDK.starts_with("WatchSimulator"));
+  else if (SDK.starts_with("AppleTVOS") || SDK.starts_with("AppleTVSimulator"))
+    return DarwinPlatform::createFromSDK(
+        isysroot, Darwin::TvOS, Version,
+        /*IsSimulator=*/SDK.starts_with("AppleTVSimulator"));
+  else if (SDK.starts_with("DriverKit"))
+    return DarwinPlatform::createFromSDK(isysroot, Darwin::DriverKit, Version);
+  return std::nullopt;
 }
+
 // Compute & get the OS Version when the target triple omitted one.
 VersionTuple getInferredOSVersion(llvm::Triple::OSType OS,
                                   const llvm::Triple &Triple,
@@ -2592,26 +2672,27 @@ void Darwin::AddDeploymentTarget(DerivedArgList &Args) const {
     getDriver().Diag(diag::err_drv_invalid_version_number)
         << TargetVariantTriple->str();
   }
+}
 
-  if (const Arg *A = Args.getLastArg(options::OPT_isysroot)) {
-    StringRef SDK = getSDKName(A->getValue());
-    if (SDK.size() > 0) {
-      size_t StartVer = SDK.find_first_of("0123456789");
-      StringRef SDKName = SDK.slice(0, StartVer);
-      if (!SDKName.starts_with(getPlatformFamily()) &&
-          !dropSDKNamePrefix(SDKName).starts_with(getPlatformFamily()))
-        getDriver().Diag(diag::warn_incompatible_sysroot)
-            << SDKName << getPlatformFamily();
-    }
-  }
+bool DarwinClang::HasPlatformPrefix(const llvm::Triple &T) const {
+  if (SDKInfo)
+    return !SDKInfo->getPlatformPrefix(T).empty();
+  else
+    return Darwin::HasPlatformPrefix(T);
 }
 
 // For certain platforms/environments almost all resources (e.g., headers) are
 // located in sub-directories, e.g., for DriverKit they live in
 // <SYSROOT>/System/DriverKit/usr/include (instead of <SYSROOT>/usr/include).
-static void AppendPlatformPrefix(SmallString<128> &Path,
-                                 const llvm::Triple &T) {
-  if (T.isDriverKit()) {
+void DarwinClang::AppendPlatformPrefix(SmallString<128> &Path,
+                                       const llvm::Triple &T) const {
+  if (SDKInfo) {
+    const StringRef PlatformPrefix = SDKInfo->getPlatformPrefix(T);
+    if (!PlatformPrefix.empty())
+      llvm::sys::path::append(Path, PlatformPrefix);
+  } else if (T.isDriverKit()) {
+    // The first version of DriverKit didn't have SDKSettings.json, manually add
+    // its prefix.
     llvm::sys::path::append(Path, "System", "DriverKit");
   }
 }
@@ -2993,7 +3074,7 @@ DerivedArgList *MachO::TranslateArgs(const DerivedArgList &Args,
   if (!BoundArch.empty()) {
     StringRef Name = BoundArch;
     const Option MCpu = Opts.getOption(options::OPT_mcpu_EQ);
-    const Option MArch = Opts.getOption(clang::driver::options::OPT_march_EQ);
+    const Option MArch = Opts.getOption(options::OPT_march_EQ);
 
     // This code must be kept in sync with LLVM's getArchTypeForDarwinArch,
     // which defines the list of which architectures we accept.
@@ -3112,13 +3193,21 @@ bool Darwin::isAlignedAllocationUnavailable() const {
 static bool
 sdkSupportsBuiltinModules(const std::optional<DarwinSDKInfo> &SDKInfo) {
   if (!SDKInfo)
-    // If there is no SDK info, assume this is building against a
-    // pre-SDK version of macOS (i.e. before Mac OS X 10.4). Those
-    // don't support modules anyway, but the headers definitely
-    // don't support builtin modules either. It might also be some
-    // kind of degenerate build environment, err on the side of
-    // the old behavior which is to not use builtin modules.
+    // If there is no SDK info, assume this is building against an SDK that
+    // predates SDKSettings.json. None of those support builtin modules.
     return false;
+
+  switch (SDKInfo->getEnvironment()) {
+  case llvm::Triple::UnknownEnvironment:
+  case llvm::Triple::Simulator:
+  case llvm::Triple::MacABI:
+    // Standard xnu/Mach/Darwin based environments depend on the SDK version.
+    break;
+
+  default:
+    // All other environments support builtin modules from the start.
+    return true;
+  }
 
   VersionTuple SDKVersion = SDKInfo->getVersion();
   switch (SDKInfo->getOS()) {
@@ -3256,6 +3345,16 @@ void Darwin::addClangTargetOptions(
     CC1Args.push_back("-fno-sized-deallocation");
 
   addClangCC1ASTargetOptions(DriverArgs, CC1Args);
+
+  if (SDKInfo) {
+    // Make the SDKSettings.json an explicit dependency for the compiler
+    // invocation, in case the compiler needs to read it to remap versions.
+    if (!SDKInfo->getFilePath().empty()) {
+      SmallString<64> ExtraDepOpt("-fdepfile-entry=");
+      ExtraDepOpt += SDKInfo->getFilePath();
+      CC1Args.push_back(DriverArgs.MakeArgString(ExtraDepOpt));
+    }
+  }
 
   // Enable compatibility mode for NSItemProviderCompletionHandler in
   // Foundation/NSItemProvider.h.

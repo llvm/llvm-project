@@ -40,13 +40,15 @@ class OpenMP_EnumAttr<EnumAttrInfo enumInfo, string name>
 // capture_clause enum.
 //===----------------------------------------------------------------------===//
 
-def CaptureClauseTo : I32EnumAttrCase<"to", 0>;
-def CaptureClauseLink : I32EnumAttrCase<"link", 1>;
-def CaptureClauseEnter : I32EnumAttrCase<"enter", 2>;
+def CaptureClauseNone : I32EnumAttrCase<"none", 0>;
+def CaptureClauseTo : I32EnumAttrCase<"to", 1>;
+def CaptureClauseLink : I32EnumAttrCase<"link", 2>;
+def CaptureClauseEnter : I32EnumAttrCase<"enter", 3>;
 
 def DeclareTargetCaptureClause : OpenMP_I32EnumAttr<
     "DeclareTargetCaptureClause",
     "capture clause", [
+      CaptureClauseNone,
       CaptureClauseTo,
       CaptureClauseLink,
       CaptureClauseEnter
@@ -121,11 +123,12 @@ def ClauseMapFlagsPresent : I32BitEnumAttrCaseBit<"present", 10>;
 def ClauseMapFlagsOMPXHold : I32BitEnumAttrCaseBit<"ompx_hold", 11>;
 def ClauseMapFlagsAttach : I32BitEnumAttrCaseBit<"attach", 12>;
 def ClauseMapFlagsAttachAlways : I32BitEnumAttrCaseBit<"attach_always", 13>;
-def ClauseMapFlagsAttachNone : I32BitEnumAttrCaseBit<"attach_none", 14>;
+def ClauseMapFlagsAttachNever : I32BitEnumAttrCaseBit<"attach_never", 14>;
 def ClauseMapFlagsAttachAuto : I32BitEnumAttrCaseBit<"attach_auto", 15>;
 def ClauseMapFlagsRefPtr : I32BitEnumAttrCaseBit<"ref_ptr", 16>;
 def ClauseMapFlagsRefPtee : I32BitEnumAttrCaseBit<"ref_ptee", 17>;
 def ClauseMapFlagsRefPtrPtee : I32BitEnumAttrCaseBit<"ref_ptr_ptee", 18>;
+def ClauseMapFlagsIsDevicePtr : I32BitEnumAttrCaseBit<"is_device_ptr", 19>;
 
 def ClauseMapFlags : OpenMP_BitEnumAttr<
     "ClauseMapFlags",
@@ -145,11 +148,12 @@ def ClauseMapFlags : OpenMP_BitEnumAttr<
       ClauseMapFlagsOMPXHold,
       ClauseMapFlagsAttach,
       ClauseMapFlagsAttachAlways,
-      ClauseMapFlagsAttachNone,
+      ClauseMapFlagsAttachNever,
       ClauseMapFlagsAttachAuto,
       ClauseMapFlagsRefPtr,
       ClauseMapFlagsRefPtee,
-      ClauseMapFlagsRefPtrPtee
+      ClauseMapFlagsRefPtrPtee,
+      ClauseMapFlagsIsDevicePtr
     ]>;
 
 def ClauseMapFlagsAttr : OpenMP_EnumAttr<ClauseMapFlags,

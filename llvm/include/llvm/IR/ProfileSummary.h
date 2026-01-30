@@ -14,7 +14,6 @@
 #define LLVM_IR_PROFILESUMMARY_H
 
 #include "llvm/Support/Compiler.h"
-#include <algorithm>
 #include <cassert>
 #include <cstdint>
 #include <vector>
