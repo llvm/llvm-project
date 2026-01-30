@@ -1939,6 +1939,12 @@ public:
   /// maximum register pressure exceeds getNumberOfRegisters.
   LLVM_ABI bool shouldConsiderVectorizationRegPressure() const;
 
+  /// Return true if the loop vectorizer can generate control flow (conditional
+  /// blocks) inside the vector region. Otherwise, the loop vectorizer will
+  /// generate a single block for the vector region and handle control flow via
+  /// a mask.
+  LLVM_ABI bool preferControlFlowVectorization() const;
+
   /// \returns True if the target wants to expand the given reduction intrinsic
   /// into a shuffle sequence.
   LLVM_ABI bool shouldExpandReduction(const IntrinsicInst *II) const;

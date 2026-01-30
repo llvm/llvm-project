@@ -351,6 +351,10 @@ static cl::opt<bool> PreferPredicatedReductionSelect(
     cl::desc(
         "Prefer predicating a reduction operation over an after loop select."));
 
+static cl::opt<bool> PreferControlFlow(
+    "prefer-control-flow", cl::init(false), cl::Hidden,
+    cl::desc("Generate control flow inside the vector region."));
+
 cl::opt<bool> llvm::EnableVPlanNativePath(
     "enable-vplan-native-path", cl::Hidden,
     cl::desc("Enable VPlan-native vectorization path with "
@@ -4296,6 +4300,10 @@ VectorizationFactor LoopVectorizationPlanner::selectVectorizationFactor() {
           case VPInstruction::ExplicitVectorLength:
             C += VPI->cost(VF, CostCtx);
             break;
+          case VPInstruction::AnyOf:
+            if (!VPI->getUnderlyingValue())
+              C += VPI->cost(VF, CostCtx);
+            break;
           default:
             break;
           }
@@ -7100,6 +7108,12 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
         }
         continue;
       }
+      // WidenIntrinsic with vp_reduce_or is generated from control flow
+      // vectorization. The plan will generate more recipes than legacy.
+      if (auto *WidenIntrinsic = dyn_cast<VPWidenIntrinsicRecipe>(&R)) {
+        if (WidenIntrinsic->getVectorIntrinsicID() == Intrinsic::vp_reduce_or)
+          return true;
+      }
       // Unused FOR splices are removed by VPlan transforms, so the VPlan-based
       // cost model won't cost it whilst the legacy will.
       if (auto *FOR = dyn_cast<VPFirstOrderRecurrencePHIRecipe>(&R)) {
@@ -8648,6 +8662,9 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
                                        WithoutRuntimeCheck);
   }
   VPlanTransforms::optimizeInductionExitUsers(*Plan, IVEndValues, PSE);
+
+  if (PreferControlFlow || TTI.preferControlFlowVectorization())
+    VPlanTransforms::optimizeConditionalVPBB(*Plan);
 
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;

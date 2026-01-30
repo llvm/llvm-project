@@ -3008,6 +3008,13 @@ static VPRecipeBase *optimizeMaskToEVL(VPValue *HeaderMask,
                              {ZExt, Plan->getConstantInt(Ty, 1)}, {}, {}, DL);
   }
 
+  // This enables header mask removal for control-flow vectorization.
+  if (match(&CurRecipe, m_AnyOf(m_RemoveMask(HeaderMask, Mask))))
+    return new VPWidenIntrinsicRecipe(
+        Intrinsic::vp_reduce_or,
+        {Plan->getFalse(), Mask, Plan->getTrue(), &EVL},
+        TypeInfo.inferScalarType(Mask), {}, {}, DL);
+
   return nullptr;
 }
 
@@ -5387,5 +5394,161 @@ void VPlanTransforms::addExitUsersForFirstOrderRecurrences(VPlan &Plan,
           "vector.recur.extract.for.phi");
       cast<VPInstruction>(&R)->replaceAllUsesWith(PenultimateElement);
     }
+  }
+}
+
+void VPlanTransforms::optimizeConditionalVPBB(VPlan &Plan) {
+  VPDominatorTree VPDT(Plan);
+
+  VPValue *HeaderMask = findHeaderMask(Plan);
+
+  // Get the mask from the store recipes.
+  auto GetMask = [&HeaderMask](VPRecipeBase &R) -> VPValue * {
+    using namespace llvm::VPlanPatternMatch;
+    if (!isa<VPWidenStoreRecipe>(R))
+      return nullptr;
+    VPValue *OrigMask = cast<VPWidenMemoryRecipe>(R).getMask();
+    if (!OrigMask || OrigMask == HeaderMask)
+      return nullptr;
+
+    return OrigMask;
+  };
+
+  // First, collect all masked stores.
+  SmallVector<std::pair<VPRecipeBase *, VPValue *>> MaskedStores;
+  ReversePostOrderTraversal<VPBlockDeepTraversalWrapper<VPBlockBase *>> RPOT(
+      Plan.getEntry());
+  for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
+    for (VPRecipeBase &R : *VPBB) {
+      if (VPValue *Mask = GetMask(R))
+        MaskedStores.emplace_back(&R, Mask);
+    }
+  }
+
+  if (MaskedStores.empty())
+    return;
+
+  DenseSet<VPRecipeBase *> Candidates;
+  auto AddOperandsToCandidates = [&Candidates](VPRecipeBase *R) {
+    for (VPValue *Op : R->operands())
+      if (VPRecipeBase *OpR = Op->getDefiningRecipe())
+        Candidates.insert(OpR);
+  };
+
+  SmallVector<SetVector<VPRecipeBase *>> Tries;
+  while (!MaskedStores.empty()) {
+    auto [SR, M] = MaskedStores.pop_back_val();
+    Candidates.clear();
+    AddOperandsToCandidates(SR);
+
+    SetVector<VPRecipeBase *> CurrentTree;
+    CurrentTree.insert(SR);
+
+    VPBasicBlock *MaskBlock =
+        M->hasDefiningRecipe() ? M->getDefiningRecipe()->getParent() : nullptr;
+
+    // Don't move recipes before the mask and PHI recipes.
+    auto End =
+        MaskBlock == SR->getParent()
+            ? M->getDefiningRecipe()->getReverseIterator()
+            : std::next(
+                  SR->getParent()->getFirstNonPhi()->getReverseIterator());
+    // Also don't move the recipes through any recipe that may have side effects
+    // or write to memory.
+    for (auto It = std::next(SR->getReverseIterator()); It != End; ++It) {
+      if (It->mayHaveSideEffects() || It->mayWriteToMemory()) {
+        End = It;
+        break;
+      }
+    }
+
+    // Greedily add all recipes that are used to compute the stored value to the
+    // tree. All users of the added recipe must dominate the store
+    // recipe.
+    for (VPRecipeBase &R : make_range(SR->getReverseIterator(), End)) {
+      // Recipe is not part of the tree
+      if (!Candidates.contains(&R))
+        continue;
+
+      if (any_of(R.definedValues(), [&SR = SR, &VPDT](VPValue *Def) {
+            for (VPUser *U : Def->users()) {
+              if (auto *UR = dyn_cast<VPRecipeBase>(U)) {
+                if (UR == SR || VPDT.properlyDominates(UR, SR))
+                  continue;
+              }
+              return true;
+            }
+            return false;
+          }))
+        continue;
+
+      CurrentTree.insert(&R);
+      AddOperandsToCandidates(&R);
+    }
+    // The previous traversal could have added recipes that are used by
+    // non-added recipes, which need to be removed from the list.
+    SmallDenseSet<VPRecipeBase *, 8> ToRemove;
+    bool Changed;
+    do {
+      Changed = false;
+      for (VPRecipeBase *R : CurrentTree) {
+        if (ToRemove.contains(R))
+          continue;
+        if (any_of(R->definedValues(), [&](VPValue *Def) {
+              for (VPUser *U : Def->users()) {
+                if (auto *UR = dyn_cast<VPRecipeBase>(U))
+                  if (!CurrentTree.contains(UR) || ToRemove.contains(UR))
+                    return true;
+              }
+              return false;
+            })) {
+          Changed = true;
+          ToRemove.insert(R);
+        }
+      }
+    } while (Changed);
+
+    for (VPRecipeBase *R : ToRemove)
+      CurrentTree.remove(R);
+
+    if (CurrentTree.size() > 1)
+      Tries.push_back(CurrentTree);
+  }
+
+  for (const auto &List : Tries) {
+    VPRecipeBase *SR = List.front();
+    VPValue *M = cast<VPWidenMemoryRecipe>(SR)->getMask();
+    assert(M && "Mask VPValue must exist at this point");
+    auto Recipes = reverse(List.getArrayRef());
+
+    // Split the current basic block at the store recipe point so that
+    // a predicated block can be added in between.
+    VPBasicBlock *ParentBB = SR->getParent();
+    VPBasicBlock *ContBB = ParentBB->splitAt(SR->getIterator());
+
+    // Create VPBB and insert it between ParentBB and ContBB.
+    VPBasicBlock *IfBB = Plan.createVPBasicBlock("vector.if.bb");
+    VPBlockUtils::insertBlockAfter(IfBB, ParentBB);
+    if (ContBB->getNumSuccessors() == 0)
+      ParentBB->getEnclosingLoopRegion()->setExiting(ContBB);
+
+    // Move recipes into the conditional block.
+    for (VPRecipeBase *R : Recipes)
+      R->moveBefore(*IfBB, IfBB->end());
+
+    // Add the condition and branch in the parent block.
+    auto *ActiveLane = new VPInstruction(VPInstruction::AnyOf, {M}, {}, {},
+                                         DebugLoc::getUnknown(), "any.of.mask");
+
+    auto *BranchOnCond =
+        new VPInstruction(VPInstruction::BranchOnCond, ActiveLane);
+    ParentBB->appendRecipe(ActiveLane);
+    ParentBB->appendRecipe(BranchOnCond);
+
+    // Set proper predecessors and successors for the conditional block.
+    ParentBB->clearSuccessors();
+    ParentBB->setSuccessors({IfBB, ContBB});
+    ContBB->clearPredecessors();
+    ContBB->setPredecessors({ParentBB, IfBB});
   }
 }
