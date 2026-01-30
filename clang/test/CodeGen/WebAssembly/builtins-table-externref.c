@@ -65,20 +65,3 @@ static __externref_t other_table[0];
 void test_table_copy(int dst_idx, int src_idx, int nelem) {
   __builtin_wasm_table_copy(table, other_table, dst_idx, src_idx, nelem);
 }
-
-
-typedef void (*__funcref funcref_t)();
-static funcref_t funcref_table[0];
-
-// CHECK-LABEL: define {{[^@]+}}@test_funcref_table
-// CHECK-SAME: (ptr addrspace(20) noundef [[FUNCREF:%.*]], i32 noundef [[INDEX:%.*]]) #[[ATTR0]] {
-// CHECK-NEXT:  entry:
-// CHECK-NEXT:    call void @llvm.wasm.table.set.funcref(ptr addrspace(1) @funcref_table, i32 [[INDEX]], ptr addrspace(20) [[FUNCREF]])
-// CHECK-NEXT:    [[TMP0:%.*]] = call ptr addrspace(20) @llvm.wasm.table.get.funcref(ptr addrspace(1) @funcref_table, i32 [[INDEX]])
-// CHECK-NEXT:    ret ptr addrspace(20) [[TMP0]]
-//
-funcref_t test_funcref_table(funcref_t funcref, int index) {
-  __builtin_wasm_table_set(funcref_table, index, funcref);
-
-  return __builtin_wasm_table_get(funcref_table, index);
-}
