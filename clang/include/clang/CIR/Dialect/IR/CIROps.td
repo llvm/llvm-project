@@ -3541,6 +3541,41 @@ def CIR_MemCpyOp : CIR_MemOp<"libc.memcpy"> {
 // TODO: MemMoveOp
 
 //===----------------------------------------------------------------------===//
+// MemSetOp
+//===----------------------------------------------------------------------===//
+
+def CIR_MemSetOp : CIR_Op<"libc.memset"> {
+  let summary = "Equivalent to libc's `memset`";
+  let description = [{
+    Given the CIR pointer, `dst`, `cir.libc.memset` will set the first `len`
+    bytes of the memory pointed by `dst` to the specified `val`.
+
+    Examples:
+
+    ```mlir
+      // Set 2 bytes from a record to 0:
+      %2 = cir.const #cir.int<2> : !u32i
+      %3 = cir.const #cir.int<0> : !u32i
+      %zero = cir.cast integral %3 : !s32i -> !u8i
+      cir.libc.memset %2 bytes from %record set to %zero : !cir.ptr<!void>,
+                                                           !s32i, !u64i
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_VoidPtrType, "", [MemWrite]>:$dst,
+    CIR_SInt32:$val,
+    CIR_AnyFundamentalUIntType:$len
+  );
+
+  let assemblyFormat = [{
+    $len `bytes` `from` $dst `set` `to` $val attr-dict
+    `:` qualified(type($dst)) `,` type($val) `,` type($len)
+  }];
+}
+
+
+//===----------------------------------------------------------------------===//
 // ReturnAddrOp and FrameAddrOp
 //===----------------------------------------------------------------------===//
 

@@ -197,6 +197,12 @@ public:
                              mlir::Value src, mlir::Value len) {
     return cir::MemCpyOp::create(*this, loc, dst, src, len);
   }
+
+  cir::MemSetOp createMemSet(mlir::Location loc, mlir::Value dst,
+                             mlir::Value val, mlir::Value len) {
+    val = createIntCast(val, cir::IntType::get(getContext(), 32, true));
+    return cir::MemSetOp::create(*this, loc, dst, val, len);
+  }
   // ---------------------------
 
   cir::DataMemberAttr getDataMemberAttr(cir::DataMemberType ty,
