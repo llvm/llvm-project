@@ -1478,6 +1478,81 @@ def GPU_BarrierOp : GPU_Op<"barrier">,
                   OpBuilder<(ins "Value":$memrefToFence)>];
 }
 
+def GPU_BarrierArriveOp : GPU_Op<"barrier_arrive">,
+    Arguments<(ins OptionalAttr<GPU_AddressSpaceAttrArray> :$address_spaces)> {
+  let summary = "Signals arrival at a workgroup barrier.";
+  let description = [{
+    The `barrier_arrive` op signals that the current work item has arrived at
+    a synchronization point. This is the first half of a split barrier - it
+    signals arrival without waiting for other work items.
+
+    ```mlir
+    gpu.barrier_arrive
+    ```
+
+    This operation only signals arrival and does not wait. It must be paired
+    with a corresponding `gpu.barrier_wait` operation to complete the
+    synchronization.
+
+    The `memfence` attribute controls memory visibility. Memory accesses to
+    the specified address spaces that occur before `barrier_arrive` in program
+    order will be visible to other work items after they execute the
+    corresponding `barrier_wait`. If `memfence` is not specified, all memory
+    accesses are included. Specifying `memfence []` creates a pure
+    synchronization barrier with no memory ordering guarantees.
+
+    ```mlir
+    // All memory accesses before arrive visible after wait.
+    gpu.barrier_arrive
+    // Only workgroup address space accesses visible.
+    gpu.barrier_arrive memfence [#gpu.address_space<workgroup>]
+    // No memory visibility guarantees (pure synchronization).
+    gpu.barrier_arrive memfence []
+    ```
+
+    Either none or all work items of a workgroup need to execute this op
+    in convergence.
+  }];
+  let assemblyFormat = "(`memfence` $address_spaces^)? attr-dict";
+}
+
+def GPU_BarrierWaitOp : GPU_Op<"barrier_wait">,
+    Arguments<(ins OptionalAttr<GPU_AddressSpaceAttrArray> :$address_spaces)> {
+  let summary = "Waits for all work items to arrive at a workgroup barrier.";
+  let description = [{
+    The `barrier_wait` op waits until all work items in the workgroup have
+    signaled arrival at the barrier. This is the second half of a split
+    barrier.
+
+    ```mlir
+    gpu.barrier_wait
+    ```
+
+    This operation waits for all work items to arrive. It must be paired
+    with a corresponding `gpu.barrier_arrive` operation that signals arrival.
+
+    The `memfence` attribute controls memory visibility. After `barrier_wait`
+    completes, memory accesses to the specified address spaces that occurred
+    before `barrier_arrive` in other work items will be visible to the
+    current work item. If `memfence` is not specified, all memory accesses
+    are included. Specifying `memfence []` creates a pure synchronization
+    barrier with no memory ordering guarantees.
+
+    ```mlir
+    // All memory accesses before arrive visible after wait.
+    gpu.barrier_wait
+    // Only workgroup address space accesses visible.
+    gpu.barrier_wait memfence [#gpu.address_space<workgroup>]
+    // No memory visibility guarantees (pure synchronization).
+    gpu.barrier_wait memfence []
+    ```
+
+    Either none or all work items of a workgroup need to execute this op
+    in convergence.
+  }];
+  let assemblyFormat = "(`memfence` $address_spaces^)? attr-dict";
+}
+
 def GPU_GPUModuleOp : GPU_Op<"module", [
       IsolatedFromAbove, DataLayoutOpInterface, HasDefaultDLTIDataLayout,
       NoRegionArguments, SymbolTable, Symbol] # GraphRegionNoTerminator.traits> {
