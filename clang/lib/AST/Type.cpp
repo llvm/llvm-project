@@ -2541,6 +2541,9 @@ bool Type::isSizelessBuiltinType() const {
       // HLSL intangible types
 #define HLSL_INTANGIBLE_TYPE(Name, Id, SingletonId) case BuiltinType::Id:
 #include "clang/Basic/HLSLIntangibleTypes.def"
+      // AMDGPU feature predicate type
+    case BuiltinType::AMDGPUFeaturePredicate:
+// #include "clang/Basic/AMDGPUTypes.def"
       return true;
     default:
       return false;
