@@ -53,6 +53,7 @@
 
 #include "llvm/Transforms/IPO/ExpandVariadics.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/Demangle/Demangle.h"
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/Module.h"
@@ -130,6 +131,12 @@ public:
   // Targets implemented so far all have the same trivial lowering for these
   bool vaEndIsNop() { return true; }
   bool vaCopyIsMemcpy() { return true; }
+
+  // Any additional address spaces used in va intrinsics that should be
+  // expanded.
+  virtual SmallVector<unsigned> getTargetSpecificVaIntrinAddrSpaces() const {
+    return {};
+  }
 
   virtual ~VariadicABIInfo() = default;
 };
@@ -364,13 +371,21 @@ bool ExpandVariadics::runOnModule(Module &M) {
   // variadic functions have also been replaced.
 
   {
-    // 0 and AllocaAddrSpace are sufficient for the targets implemented so far
     unsigned Addrspace = 0;
     Changed |= expandVAIntrinsicUsersWithAddrspace(M, Builder, Addrspace);
 
     Addrspace = DL.getAllocaAddrSpace();
     if (Addrspace != 0)
       Changed |= expandVAIntrinsicUsersWithAddrspace(M, Builder, Addrspace);
+
+    // Process any addrspaces targets declare to be important.
+    const SmallVector<unsigned> &TargetASVec =
+        ABI->getTargetSpecificVaIntrinAddrSpaces();
+    for (unsigned TargetAS : TargetASVec) {
+      if (TargetAS == 0 || TargetAS == DL.getAllocaAddrSpace())
+        continue;
+      Changed |= expandVAIntrinsicUsersWithAddrspace(M, Builder, TargetAS);
+    }
   }
 
   if (Mode != ExpandVariadicsMode::Lowering)
@@ -981,7 +996,15 @@ struct SPIRV final : public VariadicABIInfo {
   // The SPIR-V backend has special handling for SPIR-V mangled printf
   // functions.
   bool ignoreFunction(Function *F) override {
-    return F->getName().starts_with('_') && F->getName().contains("printf");
+    StringRef DemangledName =
+        llvm::itaniumDemangle(F->getName(), /*ParseArgs=*/false);
+    return DemangledName == "printf" ||
+           (DemangledName.starts_with('_') && DemangledName.contains("printf"));
+  }
+
+  // We will likely see va intrinsics in the generic addrspace (4).
+  SmallVector<unsigned> getTargetSpecificVaIntrinAddrSpaces() const override {
+    return {4};
   }
 };
 
