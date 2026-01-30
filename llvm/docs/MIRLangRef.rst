@@ -550,33 +550,25 @@ corresponding internal ``llvm::RegState`` representation:
      - Internal Value
      - Meaning
 
-   * - ``implicit``
-     - ``RegState::Implicit``
-     - Not emitted register (e.g., carry, or temporary result).
-
-   * - ``implicit-def``
-     - ``RegState::ImplicitDefine``
-     - ``implicit`` and ``def``
-
    * - ``def``
      - ``RegState::Define``
      - Register definition.
 
-   * - ``dead``
-     - ``RegState::Dead``
-     - Unused definition.
+   * - ``implicit``
+     - ``RegState::Implicit``
+     - Not emitted register (e.g., carry, or temporary result).
 
    * - ``killed``
      - ``RegState::Kill``
      - The last use of a register.
 
+   * - ``dead``
+     - ``RegState::Dead``
+     - Unused definition.
+
    * - ``undef``
      - ``RegState::Undef``
      - Value of the register doesn't matter.
-
-   * - ``internal``
-     - ``RegState::InternalRead``
-     - Register reads a value that is defined inside the same instruction or bundle.
 
    * - ``early-clobber``
      - ``RegState::EarlyClobber``
@@ -586,9 +578,17 @@ corresponding internal ``llvm::RegState`` representation:
      - ``RegState::Debug``
      - Register 'use' is for debugging purpose.
 
+   * - ``internal``
+     - ``RegState::InternalRead``
+     - Register reads a value that is defined inside the same instruction or bundle.
+
    * - ``renamable``
      - ``RegState::Renamable``
      - Register that may be renamed.
+
+   * - ``implicit-def``
+     - ``RegState::ImplicitDefine``
+     - ``implicit`` and ``def``
 
 .. _subregister-indices:
 

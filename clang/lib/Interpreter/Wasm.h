@@ -18,12 +18,13 @@
 #endif // __EMSCRIPTEN__
 
 #include "clang/Interpreter/IncrementalExecutor.h"
+#include "llvm/ADT/SmallString.h"
 
 namespace clang {
 
 class WasmIncrementalExecutor : public IncrementalExecutor {
 public:
-  WasmIncrementalExecutor();
+  WasmIncrementalExecutor(llvm::Error &Err);
   ~WasmIncrementalExecutor() override;
 
   llvm::Error addModule(PartialTranslationUnit &PTU) override;
@@ -34,6 +35,9 @@ public:
   getSymbolAddress(llvm::StringRef Name,
                    SymbolNameKind NameKind) const override;
   llvm::Error LoadDynamicLibrary(const char *name) override;
+
+private:
+  llvm::SmallString<256> TempDir;
 };
 
 } // namespace clang

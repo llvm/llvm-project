@@ -20,6 +20,7 @@
 #include "clang/Basic/TargetOptions.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/FileSystem.h"
 
 namespace cir {
 
@@ -43,6 +44,12 @@ static std::unique_ptr<CIRCXXABI> createCXXABI(LowerModule &lm) {
   llvm_unreachable("invalid C++ ABI kind");
 }
 
+static std::unique_ptr<TargetLoweringInfo>
+createTargetLoweringInfo(LowerModule &lm) {
+  assert(!cir::MissingFeatures::targetLoweringInfo());
+  return std::make_unique<TargetLoweringInfo>();
+}
+
 LowerModule::LowerModule(clang::LangOptions langOpts,
                          clang::CodeGenOptions codeGenOpts,
                          mlir::ModuleOp &module,
@@ -50,6 +57,12 @@ LowerModule::LowerModule(clang::LangOptions langOpts,
                          mlir::PatternRewriter &rewriter)
     : module(module), target(std::move(target)), abi(createCXXABI(*this)),
       rewriter(rewriter) {}
+
+const TargetLoweringInfo &LowerModule::getTargetLoweringInfo() {
+  if (!targetLoweringInfo)
+    targetLoweringInfo = createTargetLoweringInfo(*this);
+  return *targetLoweringInfo;
+}
 
 // TODO: not to create it every time
 std::unique_ptr<LowerModule>

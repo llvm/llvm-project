@@ -2097,7 +2097,8 @@ void AddRegisterRenderer::emitRenderOpcodes(MatchTable &Table,
   // register and flags in a single field.
   if (IsDef) {
     Table << MatchTable::NamedValue(
-        2, IsDead ? "RegState::Define | RegState::Dead" : "RegState::Define");
+        2, IsDead ? "static_cast<uint16_t>(RegState::Define|RegState::Dead)"
+                  : "static_cast<uint16_t>(RegState::Define)");
   } else {
     assert(!IsDead && "A use cannot be dead");
     Table << MatchTable::IntValue(2, 0);
@@ -2130,9 +2131,10 @@ void TempRegRenderer::emitRenderOpcodes(MatchTable &Table,
   Table << MatchTable::Comment("TempRegFlags");
   if (IsDef) {
     SmallString<32> RegFlags;
-    RegFlags += "RegState::Define";
+    RegFlags += "static_cast<uint16_t>(RegState::Define";
     if (IsDead)
       RegFlags += "|RegState::Dead";
+    RegFlags += ")";
     Table << MatchTable::NamedValue(2, RegFlags);
   } else {
     Table << MatchTable::IntValue(2, 0);
@@ -2325,7 +2327,8 @@ void BuildMIAction::emitActionOpcodes(MatchTable &Table,
               << MatchTable::Comment("InsnID")
               << MatchTable::ULEB128Value(InsnID)
               << MatchTable::NamedValue(2, Namespace, Def->getName())
-              << (IsDead ? MatchTable::NamedValue(2, "RegState", "Dead")
+              << (IsDead ? MatchTable::NamedValue(
+                               2, "static_cast<unsigned>(RegState::Dead)")
                          : MatchTable::IntValue(2, 0))
               << MatchTable::LineBreak;
       }

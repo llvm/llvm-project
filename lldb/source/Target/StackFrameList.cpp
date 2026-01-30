@@ -58,23 +58,24 @@ StackFrameList::~StackFrameList() {
 
 SyntheticStackFrameList::SyntheticStackFrameList(
     Thread &thread, lldb::StackFrameListSP input_frames,
-    const lldb::StackFrameListSP &prev_frames_sp, bool show_inline_frames)
+    const lldb::StackFrameListSP &prev_frames_sp, bool show_inline_frames,
+    lldb::SyntheticFrameProviderSP provider_sp)
     : StackFrameList(thread, prev_frames_sp, show_inline_frames),
-      m_input_frames(std::move(input_frames)) {}
+      m_input_frames(std::move(input_frames)),
+      m_provider(std::move(provider_sp)) {}
 
 bool SyntheticStackFrameList::FetchFramesUpTo(
     uint32_t end_idx, InterruptionControl allow_interrupt) {
 
   size_t num_synthetic_frames = 0;
-  // Check if the thread has a synthetic frame provider.
-  if (auto provider_sp = m_thread.GetFrameProvider()) {
-    // Use the synthetic frame provider to generate frames lazily.
+  // Use the provider to generate frames lazily.
+  if (m_provider) {
     // Keep fetching until we reach end_idx or the provider returns an error.
     for (uint32_t idx = m_frames.size(); idx <= end_idx; idx++) {
       if (allow_interrupt &&
           m_thread.GetProcess()->GetTarget().GetDebugger().InterruptRequested())
         return true;
-      auto frame_or_err = provider_sp->GetFrameAtIndex(idx);
+      auto frame_or_err = m_provider->GetFrameAtIndex(idx);
       if (!frame_or_err) {
         // Provider returned error - we've reached the end.
         LLDB_LOG_ERROR(GetLog(LLDBLog::Thread), frame_or_err.takeError(),
@@ -981,7 +982,6 @@ size_t StackFrameList::GetStatus(Stream &strm, uint32_t first_frame,
             dbg, "Interrupted dumping stack for thread {0:x} with {1} shown.",
             m_thread.GetID(), num_frames_displayed))
       break;
-
 
     if (!frame_sp->GetStatus(strm, show_frame_info,
                              num_frames_with_source > (first_frame - frame_idx),

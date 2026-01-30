@@ -2240,7 +2240,7 @@ void test_sscanf() {
   strcpy(input_buf, "-559038737");
   test_sscanf_chunk(-559038737, "%d", input_ptr, 1);
   strcpy(input_buf, "3735928559");
-  test_sscanf_chunk(3735928559, "%u", input_ptr, 1);
+  test_sscanf_chunk(3735928559, "%lu", input_ptr, 1);
   strcpy(input_buf, "12345");
   test_sscanf_chunk(12345, "%i", input_ptr, 1);
   strcpy(input_buf, "0751");
