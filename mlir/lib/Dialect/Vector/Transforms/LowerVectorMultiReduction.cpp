@@ -413,6 +413,60 @@ struct TwoDimMultiReductionToReduction
   }
 };
 
+/// Converts 1-D vector.multi_reduction directly to vector.reduction.
+/// This is the terminal case for unrolling - once we reach rank 1,
+/// we convert to vector.reduction which backends can optimize.
+///
+/// Example:
+/// ```mlir
+/// // Before
+/// %r = vector.multi_reduction <add>, %v, %acc [0] : vector<Nxf32> to f32
+///
+/// // After
+/// %r = vector.reduction <add>, %v, %acc : vector<Nxf32> into f32
+/// ```
+struct OneDimMultiReductionToReduction
+    : public OpRewritePattern<vector::MultiDimReductionOp> {
+  using Base::Base;
+
+  LogicalResult matchAndRewrite(vector::MultiDimReductionOp multiReductionOp,
+                                PatternRewriter &rewriter) const override {
+    auto srcRank = multiReductionOp.getSourceVectorType().getRank();
+    if (srcRank != 1)
+      return rewriter.notifyMatchFailure(multiReductionOp,
+                                         "expected source rank == 1.");
+
+    if (!multiReductionOp.isReducedDim(0))
+      return rewriter.notifyMatchFailure(
+          multiReductionOp,
+          "expected dimension 0 to be a reduction dimension.");
+
+    OpBuilder::InsertionGuard guard(rewriter);
+    auto maskableOp =
+        cast<vector::MaskableOpInterface>(multiReductionOp.getOperation());
+    Operation *rootOp;
+    Value mask;
+    if (maskableOp.isMasked()) {
+      rewriter.setInsertionPoint(maskableOp.getMaskingOp());
+      rootOp = maskableOp.getMaskingOp();
+      mask = maskableOp.getMaskingOp().getMask();
+    } else {
+      rootOp = multiReductionOp;
+    }
+
+    auto loc = multiReductionOp.getLoc();
+    Operation *reductionOp = vector::ReductionOp::create(
+        rewriter, loc, multiReductionOp.getKind(), multiReductionOp.getSource(),
+        multiReductionOp.getAcc());
+
+    if (maskableOp.isMasked())
+      reductionOp = mlir::vector::maskOperation(rewriter, reductionOp, mask);
+
+    rewriter.replaceOp(rootOp, reductionOp->getResult(0));
+    return success();
+  }
+};
+
 /// Converts 1d vector.multi_reduction with a single reduction dimension to a 2d
 /// form with both a single parallel and reduction dimension.
 /// This is achieved with a simple vector.shape_cast that inserts a leading 1.
@@ -861,6 +915,8 @@ void mlir::vector::populateVectorMultiReductionFlatteningPatterns(
 void mlir::vector::populateVectorMultiReductionUnrollingPatterns(
     RewritePatternSet &patterns, VectorMultiReductionLowering options,
     PatternBenefit benefit) {
+  patterns.add<OneDimMultiReductionToReduction>(patterns.getContext(), benefit);
+
   if (options == VectorMultiReductionLowering ::InnerReduction) {
     patterns.add<TwoDimMultiReductionToReduction>(patterns.getContext(),
                                                   benefit);
@@ -874,6 +930,8 @@ void mlir::vector::populateVectorMultiReductionUnrollingPatterns(
 void mlir::vector::populateVectorUnrollMultiReduction(
     RewritePatternSet &patterns, VectorMultiReductionLowering options,
     PatternBenefit benefit) {
+  patterns.add<OneDimMultiReductionToReduction>(patterns.getContext(), benefit);
+
   if (options == VectorMultiReductionLowering::InnerReduction) {
     patterns.add<UnrollMultiReductionInner>(patterns.getContext(), benefit);
   } else {

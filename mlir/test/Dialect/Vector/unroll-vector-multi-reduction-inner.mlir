@@ -5,13 +5,15 @@
 // Test UnrollVectorMultiReduction for Inner Reduction (Base Case)
 //===----------------------------------------------------------------------===//
 
-// The pattern recursively reduces rank until we reach 1D multi_reductions.
+// The pattern recursively reduces rank until we reach 1D, then converts to
+// vector.reduction via OneDimMultiReductionToReduction.
 // For vector<2x3x5xf32> with reduction on dim 2:
 // - First pass: unrolls along dim 0 (size 2), creating vector<3x5xf32> multi_reductions
 // - Second pass: unrolls along dim 0 (size 3), creating vector<5xf32> multi_reductions
+// - Final: 1-D multi_reductions are converted to vector.reduction
 //
 // The generated IR groups operations by phase:
-// extracts (source) → extracts (acc) → multi_reductions → inserts
+// extracts (source) → extracts (acc) → reductions → inserts
 
 // CHECK-LABEL: func @unroll_vector_multi_reduction_inner(
 // CHECK-SAME: %[[SOURCE:.+]]: vector<2x3x5xf32>,
@@ -24,9 +26,9 @@ func.func @unroll_vector_multi_reduction_inner(%source: vector<2x3x5xf32>, %acc:
   // CHECK: vector.extract %[[ACC]][0, 0]
   // CHECK: vector.extract %[[ACC]][0, 1]
   // CHECK: vector.extract %[[ACC]][0, 2]
-  // CHECK: vector.multi_reduction <add>, {{.*}} [0] : vector<5xf32> to f32
-  // CHECK: vector.multi_reduction <add>, {{.*}} [0] : vector<5xf32> to f32
-  // CHECK: vector.multi_reduction <add>, {{.*}} [0] : vector<5xf32> to f32
+  // CHECK: vector.reduction <add>, {{.*}} : vector<5xf32> into f32
+  // CHECK: vector.reduction <add>, {{.*}} : vector<5xf32> into f32
+  // CHECK: vector.reduction <add>, {{.*}} : vector<5xf32> into f32
   // CHECK: vector.insert {{.*}} [0] : f32 into vector<3xf32>
   // CHECK: vector.insert {{.*}} [1] : f32 into vector<3xf32>
   // CHECK: vector.insert {{.*}} [2] : f32 into vector<3xf32>
@@ -37,17 +39,17 @@ func.func @unroll_vector_multi_reduction_inner(%source: vector<2x3x5xf32>, %acc:
   // CHECK: vector.extract %[[ACC]][1, 0]
   // CHECK: vector.extract %[[ACC]][1, 1]
   // CHECK: vector.extract %[[ACC]][1, 2]
-  // CHECK: vector.multi_reduction <add>, {{.*}} [0] : vector<5xf32> to f32
-  // CHECK: vector.multi_reduction <add>, {{.*}} [0] : vector<5xf32> to f32
-  // CHECK: vector.multi_reduction <add>, {{.*}} [0] : vector<5xf32> to f32
+  // CHECK: vector.reduction <add>, {{.*}} : vector<5xf32> into f32
+  // CHECK: vector.reduction <add>, {{.*}} : vector<5xf32> into f32
+  // CHECK: vector.reduction <add>, {{.*}} : vector<5xf32> into f32
   // CHECK: vector.insert {{.*}} [0] : f32 into vector<3xf32>
   // CHECK: vector.insert {{.*}} [1] : f32 into vector<3xf32>
   // CHECK: vector.insert {{.*}} [2] : f32 into vector<3xf32>
   // Final inserts to assemble result
   // CHECK: vector.insert {{.*}} [0] : vector<3xf32> into vector<2x3xf32>
   // CHECK: vector.insert {{.*}} [1] : vector<3xf32> into vector<2x3xf32>
-  // No original multi_reduction with [2] remains
-  // CHECK-NOT: vector.multi_reduction <add>, {{.*}} [2]
+  // No original multi_reduction remains
+  // CHECK-NOT: vector.multi_reduction
   %1 = vector.multi_reduction <add>, %source, %acc [2] : vector<2x3x5xf32> to vector<2x3xf32>
 
   return %1 : vector<2x3xf32>
@@ -70,9 +72,9 @@ func.func @unroll_vector_multi_reduction_inner_masked(%source: vector<2x3x5xf32>
   // CHECK: vector.extract %[[MASK]][0, 0]
   // CHECK: vector.extract %[[MASK]][0, 1]
   // CHECK: vector.extract %[[MASK]][0, 2]
-  // CHECK: vector.mask {{.*}} { vector.multi_reduction <add>, {{.*}} [0] : vector<5xf32> to f32 }
-  // CHECK: vector.mask {{.*}} { vector.multi_reduction <add>, {{.*}} [0] : vector<5xf32> to f32 }
-  // CHECK: vector.mask {{.*}} { vector.multi_reduction <add>, {{.*}} [0] : vector<5xf32> to f32 }
+  // CHECK: vector.mask {{.*}} { vector.reduction <add>, {{.*}} : vector<5xf32> into f32 }
+  // CHECK: vector.mask {{.*}} { vector.reduction <add>, {{.*}} : vector<5xf32> into f32 }
+  // CHECK: vector.mask {{.*}} { vector.reduction <add>, {{.*}} : vector<5xf32> into f32 }
   // CHECK: vector.insert {{.*}} [0] : f32 into vector<3xf32>
   // CHECK: vector.insert {{.*}} [1] : f32 into vector<3xf32>
   // CHECK: vector.insert {{.*}} [2] : f32 into vector<3xf32>
@@ -86,17 +88,17 @@ func.func @unroll_vector_multi_reduction_inner_masked(%source: vector<2x3x5xf32>
   // CHECK: vector.extract %[[MASK]][1, 0]
   // CHECK: vector.extract %[[MASK]][1, 1]
   // CHECK: vector.extract %[[MASK]][1, 2]
-  // CHECK: vector.mask {{.*}} { vector.multi_reduction <add>, {{.*}} [0] : vector<5xf32> to f32 }
-  // CHECK: vector.mask {{.*}} { vector.multi_reduction <add>, {{.*}} [0] : vector<5xf32> to f32 }
-  // CHECK: vector.mask {{.*}} { vector.multi_reduction <add>, {{.*}} [0] : vector<5xf32> to f32 }
+  // CHECK: vector.mask {{.*}} { vector.reduction <add>, {{.*}} : vector<5xf32> into f32 }
+  // CHECK: vector.mask {{.*}} { vector.reduction <add>, {{.*}} : vector<5xf32> into f32 }
+  // CHECK: vector.mask {{.*}} { vector.reduction <add>, {{.*}} : vector<5xf32> into f32 }
   // CHECK: vector.insert {{.*}} [0] : f32 into vector<3xf32>
   // CHECK: vector.insert {{.*}} [1] : f32 into vector<3xf32>
   // CHECK: vector.insert {{.*}} [2] : f32 into vector<3xf32>
   // Final inserts to assemble result
   // CHECK: vector.insert {{.*}} [0] : vector<3xf32> into vector<2x3xf32>
   // CHECK: vector.insert {{.*}} [1] : vector<3xf32> into vector<2x3xf32>
-  // No original multi_reduction with [2] remains
-  // CHECK-NOT: vector.multi_reduction <add>, {{.*}} [2]
+  // No original multi_reduction remains
+  // CHECK-NOT: vector.multi_reduction
 
   %0 = vector.mask %mask {
     %1 = vector.multi_reduction <add>, %source, %acc [2] : vector<2x3x5xf32> to vector<2x3xf32>
@@ -168,18 +170,33 @@ func.func @unroll_vector_multi_reduction_inner_general_masked(%source: vector<2x
 // -----
 
 //===----------------------------------------------------------------------===//
-// Negative Test: Rank-1 multi_reduction should NOT be matched by UnrollMultiReductionInner
+// Test 1-D multi_reduction to vector.reduction conversion
 //===----------------------------------------------------------------------===//
 
-// UnrollMultiReductionInner requires srcRank >= 2, so rank-1 should not match.
-// The op should remain unchanged.
+// OneDimMultiReductionToReduction converts rank-1 multi_reduction directly
+// to vector.reduction, which preserves the reduction semantic for backends.
 
-// CHECK-LABEL: func @unroll_vector_multi_reduction_inner_rank1_negative(
+// CHECK-LABEL: func @unroll_vector_multi_reduction_inner_1d(
 // CHECK-SAME: %[[SOURCE:.+]]: vector<8xf32>,
 // CHECK-SAME: %[[ACC:.+]]: f32
-func.func @unroll_vector_multi_reduction_inner_rank1_negative(%source: vector<8xf32>, %acc: f32) -> f32 {
-  // CHECK: %[[RESULT:.+]] = vector.multi_reduction <add>, %[[SOURCE]], %[[ACC]] [0] : vector<8xf32> to f32
+func.func @unroll_vector_multi_reduction_inner_1d(%source: vector<8xf32>, %acc: f32) -> f32 {
+  // CHECK: %[[RESULT:.+]] = vector.reduction <add>, %[[SOURCE]], %[[ACC]] : vector<8xf32> into f32
   %0 = vector.multi_reduction <add>, %source, %acc [0] : vector<8xf32> to f32
+  // CHECK: return %[[RESULT]]
+  return %0 : f32
+}
+
+// -----
+
+// CHECK-LABEL: func @unroll_vector_multi_reduction_inner_1d_masked(
+// CHECK-SAME: %[[SOURCE:.+]]: vector<8xf32>,
+// CHECK-SAME: %[[MASK:.+]]: vector<8xi1>,
+// CHECK-SAME: %[[ACC:.+]]: f32
+func.func @unroll_vector_multi_reduction_inner_1d_masked(%source: vector<8xf32>, %mask: vector<8xi1>, %acc: f32) -> f32 {
+  // CHECK: %[[RESULT:.+]] = vector.mask %[[MASK]] { vector.reduction <add>, %[[SOURCE]], %[[ACC]] : vector<8xf32> into f32 } : vector<8xi1> -> f32
+  %0 = vector.mask %mask {
+    vector.multi_reduction <add>, %source, %acc [0] : vector<8xf32> to f32
+  } : vector<8xi1> -> f32
   // CHECK: return %[[RESULT]]
   return %0 : f32
 }

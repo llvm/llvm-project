@@ -94,18 +94,33 @@ func.func @unroll_vector_multi_reduction_general_masked(%source: vector<2x3x5xf3
 // -----
 
 //===----------------------------------------------------------------------===//
-// Negative Test: Rank-1 multi_reduction should NOT be matched by unroll patterns
+// Test 1-D multi_reduction to vector.reduction conversion
 //===----------------------------------------------------------------------===//
 
-// UnrollMultiReductionOuterBaseCase and UnrollMultiReductionOuterGeneralCase
-// should not match rank-1 multi_reduction ops. The op should remain unchanged.
+// OneDimMultiReductionToReduction converts rank-1 multi_reduction directly
+// to vector.reduction, which preserves the reduction semantic for backends.
 
-// CHECK-LABEL: func @unroll_vector_multi_reduction_rank1_negative(
+// CHECK-LABEL: func @unroll_vector_multi_reduction_1d(
 // CHECK-SAME: %[[SOURCE:.+]]: vector<8xf32>,
 // CHECK-SAME: %[[ACC:.+]]: f32
-func.func @unroll_vector_multi_reduction_rank1_negative(%source: vector<8xf32>, %acc: f32) -> f32 {
-  // CHECK: %[[RESULT:.+]] = vector.multi_reduction <add>, %[[SOURCE]], %[[ACC]] [0] : vector<8xf32> to f32
+func.func @unroll_vector_multi_reduction_1d(%source: vector<8xf32>, %acc: f32) -> f32 {
+  // CHECK: %[[RESULT:.+]] = vector.reduction <add>, %[[SOURCE]], %[[ACC]] : vector<8xf32> into f32
   %0 = vector.multi_reduction <add>, %source, %acc [0] : vector<8xf32> to f32
+  // CHECK: return %[[RESULT]]
+  return %0 : f32
+}
+
+// -----
+
+// CHECK-LABEL: func @unroll_vector_multi_reduction_1d_masked(
+// CHECK-SAME: %[[SOURCE:.+]]: vector<8xf32>,
+// CHECK-SAME: %[[MASK:.+]]: vector<8xi1>,
+// CHECK-SAME: %[[ACC:.+]]: f32
+func.func @unroll_vector_multi_reduction_1d_masked(%source: vector<8xf32>, %mask: vector<8xi1>, %acc: f32) -> f32 {
+  // CHECK: %[[RESULT:.+]] = vector.mask %[[MASK]] { vector.reduction <add>, %[[SOURCE]], %[[ACC]] : vector<8xf32> into f32 } : vector<8xi1> -> f32
+  %0 = vector.mask %mask {
+    vector.multi_reduction <add>, %source, %acc [0] : vector<8xf32> to f32
+  } : vector<8xi1> -> f32
   // CHECK: return %[[RESULT]]
   return %0 : f32
 }
