@@ -3345,15 +3345,14 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
   };
 
   SmallVector<const MachineInstr *> WaitInstrs;
-  bool HasSGPRRead = false;
   StateType InitialState;
 
   // Look for SGPR write.
   MachineOperand *HazardDef = nullptr;
-  for (MachineOperand &Op : MI->operands()) {
+  for (MachineOperand &Op : MI->all_defs()) {
     if (!Op.isReg())
       continue;
-    if (Op.isDef() && HazardDef)
+    if (HazardDef)
       continue;
 
     Register Reg = Op.getReg();
@@ -3364,11 +3363,6 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
         continue;
       if (!TRI->isSGPRReg(MRI, Reg))
         continue;
-    }
-    // Also check for SGPR reads.
-    if (Op.isUse()) {
-      HasSGPRRead = true;
-      continue;
     }
 
     assert(!HazardDef);
@@ -3433,49 +3427,31 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
     }
   };
 
-  const unsigned ConstantMaskBits = AMDGPU::DepCtr::encodeFieldSaSdst(
-      AMDGPU::DepCtr::encodeFieldVaSdst(AMDGPU::DepCtr::encodeFieldVaVcc(0, ST),
-                                        0),
-      0);
   auto UpdateStateFn = [&](StateType &State, const MachineInstr &I) {
-    switch (I.getOpcode()) {
-    case AMDGPU::S_WAITCNT_DEPCTR:
-      // Record mergable waits within region of instructions free of SGPR reads.
-      if (!HasSGPRRead && I.getParent() == MI->getParent() && !I.isBundled() &&
-          (I.getOperand(0).getImm() & ConstantMaskBits) == ConstantMaskBits)
-        WaitInstrs.push_back(&I);
-      break;
-    default:
-      // Update tracking of SGPR reads and writes.
-      for (auto &Op : I.operands()) {
-        if (!Op.isReg())
-          continue;
+    // Update tracking of SGPR writes.
+    for (auto &Op : I.all_defs()) {
+      if (!Op.isReg())
+        continue;
 
-        Register Reg = Op.getReg();
-        if (IgnoreableSGPR(Reg))
+      Register Reg = Op.getReg();
+      if (IgnoreableSGPR(Reg))
+        continue;
+      if (!IsVCC(Reg)) {
+        if (Op.isImplicit())
           continue;
-        if (!IsVCC(Reg)) {
-          if (Op.isImplicit())
-            continue;
-          if (!TRI->isSGPRReg(MRI, Reg))
-            continue;
-        }
-        if (Op.isUse()) {
-          HasSGPRRead = true;
+        if (!TRI->isSGPRReg(MRI, Reg))
           continue;
-        }
-
-        // Stop tracking any SGPRs with writes on the basis that they will
-        // already have an appropriate wait inserted afterwards.
-        SmallVector<Register, 2> Found;
-        for (Register SGPR : State.HazardSGPRs) {
-          if (Reg == SGPR || TRI->regsOverlap(Reg, SGPR))
-            Found.push_back(SGPR);
-        }
-        for (Register SGPR : Found)
-          State.HazardSGPRs.erase(SGPR);
       }
-      break;
+
+      // Stop tracking any SGPRs with writes on the basis that they will
+      // already have an appropriate wait inserted afterwards.
+      SmallVector<Register, 2> Found;
+      for (Register SGPR : State.HazardSGPRs) {
+        if (Reg == SGPR || TRI->regsOverlap(Reg, SGPR))
+          Found.push_back(SGPR);
+      }
+      for (Register SGPR : Found)
+        State.HazardSGPRs.erase(SGPR);
     }
   };
 
@@ -3490,39 +3466,6 @@ bool GCNHazardRecognizer::fixVALUMaskWriteHazard(MachineInstr *MI) {
       IsVALU ? (IsVCC(HazardReg) ? AMDGPU::DepCtr::encodeFieldVaVcc(0, ST)
                                  : AMDGPU::DepCtr::encodeFieldVaSdst(0, ST))
              : AMDGPU::DepCtr::encodeFieldSaSdst(0, ST);
-
-  // Try to merge previous waits into this one for regions with no SGPR reads.
-  if (!WaitInstrs.empty()) {
-    // Note: WaitInstrs contains const pointers, so walk backward from MI to
-    // obtain a mutable pointer to each instruction to be merged.
-    // This is expected to be a very short walk within the same block.
-    SmallVector<MachineInstr *> ToErase;
-    unsigned Found = 0;
-    for (MachineBasicBlock::reverse_iterator It = MI->getReverseIterator(),
-                                             End = MI->getParent()->rend();
-         Found < WaitInstrs.size() && It != End; ++It) {
-      MachineInstr *WaitMI = &*It;
-      // Find next wait instruction.
-      if (std::as_const(WaitMI) != WaitInstrs[Found])
-        continue;
-      Found++;
-      unsigned WaitMask = WaitMI->getOperand(0).getImm();
-      assert((WaitMask & ConstantMaskBits) == ConstantMaskBits);
-      DepCtr = AMDGPU::DepCtr::encodeFieldSaSdst(
-          DepCtr, std::min(AMDGPU::DepCtr::decodeFieldSaSdst(WaitMask),
-                           AMDGPU::DepCtr::decodeFieldSaSdst(DepCtr)));
-      DepCtr = AMDGPU::DepCtr::encodeFieldVaSdst(
-          DepCtr, std::min(AMDGPU::DepCtr::decodeFieldVaSdst(WaitMask),
-                           AMDGPU::DepCtr::decodeFieldVaSdst(DepCtr)));
-      DepCtr = AMDGPU::DepCtr::encodeFieldVaVcc(
-          DepCtr, std::min(AMDGPU::DepCtr::decodeFieldVaVcc(WaitMask),
-                           AMDGPU::DepCtr::decodeFieldVaVcc(DepCtr)));
-      ToErase.push_back(WaitMI);
-    }
-    assert(Found == WaitInstrs.size());
-    for (MachineInstr *WaitMI : ToErase)
-      WaitMI->eraseFromParent();
-  }
 
   // Add s_waitcnt_depctr after SGPR write.
   auto NextMI = std::next(MI->getIterator());
