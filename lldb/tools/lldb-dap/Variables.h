@@ -9,6 +9,7 @@
 #ifndef LLDB_TOOLS_LLDB_DAP_VARIABLES_H
 #define LLDB_TOOLS_LLDB_DAP_VARIABLES_H
 
+#include "lldb/API/SBFrame.h"
 #include "lldb/API/SBValue.h"
 #include "lldb/API/SBValueList.h"
 #include "llvm/ADT/DenseMap.h"
@@ -21,10 +22,19 @@
 namespace lldb_dap {
 
 struct Variables {
+  lldb::SBFrame frame; ///< Used for lazy fetching of globals.
   lldb::SBValueList locals;
-  lldb::SBValueList globals;
+  std::optional<lldb::SBValueList> globals;
   lldb::SBValueList registers;
 
+  /// Set the frame to be used for lazy fetching of globals if needed. Lazy
+  /// getching globals can improve performance and avoid having LLDB fetching
+  /// all file globals even if the user never requests them by expanding the
+  /// "Globals" scope.
+  void SetFrameForLazyFetchingGlobals(lldb::SBFrame f) {
+    globals = std::nullopt;
+    frame = f;
+  }
   /// Check if \p var_ref points to a variable that should persist for the
   /// entire duration of the debug session, e.g. repl expandable variables
   static bool IsPermanentVariableReference(int64_t var_ref);

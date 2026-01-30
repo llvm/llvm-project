@@ -16,7 +16,13 @@ lldb::SBValueList *Variables::GetTopLevelScope(int64_t variablesReference) {
   case VARREF_LOCALS:
     return &locals;
   case VARREF_GLOBALS:
-    return &globals;
+    // Lazy fetch globals if needed.
+    if (!globals.has_value())
+      globals = frame.GetVariables(/*arguments=*/false,
+                                   /*locals=*/false,
+                                   /*statics=*/true,
+                                   /*in_scope_only=*/true);
+    return &globals.value();
   case VARREF_REGS:
     return &registers;
   default:
@@ -26,7 +32,7 @@ lldb::SBValueList *Variables::GetTopLevelScope(int64_t variablesReference) {
 
 void Variables::Clear() {
   locals.Clear();
-  globals.Clear();
+  globals = std::nullopt;
   registers.Clear();
   m_referencedvariables.clear();
 }

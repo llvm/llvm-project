@@ -79,16 +79,12 @@ ScopesRequestHandler::Run(const ScopesArguments &args) const {
                                             /*locals=*/true,
                                             /*statics=*/false,
                                             /*in_scope_only=*/true);
-  dap.variables.globals = frame.GetVariables(/*arguments=*/false,
-                                             /*locals=*/false,
-                                             /*statics=*/true,
-                                             /*in_scope_only=*/true);
+  dap.variables.SetFrameForLazyFetchingGlobals(frame);
   dap.variables.registers = frame.GetRegisters();
 
   std::vector scopes = {CreateScope("Locals", VARREF_LOCALS,
                                     dap.variables.locals.GetSize(), false),
-                        CreateScope("Globals", VARREF_GLOBALS,
-                                    dap.variables.globals.GetSize(), false),
+                        CreateScope("Globals", VARREF_GLOBALS, 0, false),
                         CreateScope("Registers", VARREF_REGS,
                                     dap.variables.registers.GetSize(), false)};
 

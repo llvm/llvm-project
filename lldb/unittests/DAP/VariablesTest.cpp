@@ -67,11 +67,13 @@ TEST_F(VariablesTest, Clear_RemovesTemporaryKeepsPermanent) {
 
 TEST_F(VariablesTest, GetTopLevelScope_ReturnsCorrectScope) {
   vars.locals.Append(lldb::SBValue());
-  vars.globals.Append(lldb::SBValue());
+  // Globals are lazy initialized into a std::optional, so initialize it.
+  vars.globals = lldb::SBValueList();
+  vars.globals->Append(lldb::SBValue());
   vars.registers.Append(lldb::SBValue());
 
   EXPECT_EQ(vars.GetTopLevelScope(VARREF_LOCALS), &vars.locals);
-  EXPECT_EQ(vars.GetTopLevelScope(VARREF_GLOBALS), &vars.globals);
+  EXPECT_EQ(vars.GetTopLevelScope(VARREF_GLOBALS), &vars.globals.value());
   EXPECT_EQ(vars.GetTopLevelScope(VARREF_REGS), &vars.registers);
   EXPECT_EQ(vars.GetTopLevelScope(9999), nullptr);
 }
