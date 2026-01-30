@@ -23,6 +23,7 @@
 #include <__type_traits/is_convertible.h>
 #include <__type_traits/is_same.h>
 #include <__type_traits/make_const_lvalue_ref.h>
+#include <__type_traits/remove_reference.h>
 #include <__utility/move.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
@@ -277,8 +278,8 @@ struct __libcpp_is_contiguous_iterator<__bounded_iter<_Iterator> > : true_type {
 template <class _Iterator>
 struct pointer_traits<__bounded_iter<_Iterator> > {
   using pointer         = __bounded_iter<_Iterator>;
-  using element_type    = typename pointer_traits<_Iterator>::element_type;
-  using difference_type = typename pointer_traits<_Iterator>::difference_type;
+  using element_type    = __libcpp_remove_reference_t<typename iterator_traits<_Iterator>::reference>;
+  using difference_type = typename iterator_traits<_Iterator>::difference_type;
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR static element_type* to_address(pointer __it) _NOEXCEPT {
     return std::__to_address(__it.__current_);
