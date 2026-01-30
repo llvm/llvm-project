@@ -208038,10 +208038,10 @@ define inreg <64 x half> @bitcast_v64bf16_to_v64f16_scalar(<64 x bfloat> inreg %
 ; GFX11-FAKE16-NEXT:    v_cmp_u_f32_e32 vcc_lo, v3, v3
 ; GFX11-FAKE16-NEXT:    v_and_b32_e32 v3, 0xffff0000, v24
 ; GFX11-FAKE16-NEXT:    v_lshrrev_b32_e32 v37, 16, v0
-; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_4) | instskip(SKIP_2) | instid1(VALU_DEP_3)
-; GFX11-FAKE16-NEXT:    v_dual_cndmask_b32 v1, v2, v4 :: v_dual_add_nc_u32 v0, v1, v5
-; GFX11-FAKE16-NEXT:    v_add_f32_e32 v2, 0x40c00000, v6
+; GFX11-FAKE16-NEXT:    v_add_nc_u32_e32 v0, v1, v5
+; GFX11-FAKE16-NEXT:    v_dual_cndmask_b32 v1, v2, v4 :: v_dual_add_f32 v2, 0x40c00000, v6
 ; GFX11-FAKE16-NEXT:    v_lshlrev_b32_e32 v4, 16, v24
+; GFX11-FAKE16-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-FAKE16-NEXT:    v_add_nc_u32_e32 v0, 0x7fff, v0
 ; GFX11-FAKE16-NEXT:    v_or_b32_e32 v6, 0x400000, v5
 ; GFX11-FAKE16-NEXT:    v_add_f32_e32 v3, 0x40c00000, v3
