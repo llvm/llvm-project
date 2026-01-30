@@ -308,27 +308,6 @@ static LayoutInfo getSIMTLayoutInfoBlockIO(Ty ty,
       ty.getContext(), {1, uArch->getSubgroupSize()}, {1, packingFactor}));
 }
 
-/// Helper to get the default layout for a vector type.
-static LayoutInfo getSIMTLayoutInfoScatterIO(VectorType vectorTy,
-                                             const xegpu::uArch::uArch *uArch) {
-  // Expecting a 1D or 2D vector.
-  assert((vectorTy.getRank() == 1 || vectorTy.getRank() == 2) &&
-         "Expected 1D or 2D vector.");
-  // Expecting int or float element type.
-  assert(vectorTy.getElementType().isIntOrFloat() &&
-         "Expected int or float element type.");
-  // If the rank is 1, then return default layout for 1D vector.
-  const unsigned packingSize{uArch->getGeneralPackedFormatBitSize()};
-  if (vectorTy.getRank() == 1)
-    return getDefaultSIMTLayoutInfo(vectorTy.getContext(), 1, uArch);
-  // Packing factor is determined by the element type bitwidth.
-  unsigned bitwidth = vectorTy.getElementType().getIntOrFloatBitWidth();
-  int packingFactor = bitwidth < packingSize ? packingSize / bitwidth : 1;
-  return LayoutInfo(xegpu::LayoutAttr::get(vectorTy.getContext(),
-                                           {uArch->getSubgroupSize(), 1},
-                                           {1, packingFactor}));
-}
-
 /// Helper Function to get the expected layouts for DPAS operands. `lane_data`
 /// is set according to the following criteria:
 /// * For A operand, the data must be packed in minimum

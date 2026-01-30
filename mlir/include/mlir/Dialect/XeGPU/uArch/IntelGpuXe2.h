@@ -237,6 +237,28 @@ struct LoadGatherInstruction : public Instruction {
   int32_t getMaxLaneLoadStoreSize() const { return 16; }
 };
 
+struct StoreMatrixInstruction : public Instruction {
+  StoreMatrixInstruction()
+      : Instruction(InstructionKind::StoreMatrix, InstructionScope::Lane) {}
+  static bool classof(const Instruction *B) {
+    return B->getInstructionKind() == InstructionKind::StoreMatrix;
+  }
+
+  // SPIRV restricts vector size
+  int32_t getMaxLaneLoadStoreSize() const { return 16; }
+};
+
+struct LoadMatrixInstruction : public Instruction {
+  LoadMatrixInstruction()
+      : Instruction(InstructionKind::LoadMatrix, InstructionScope::Lane) {}
+  static bool classof(const Instruction *B) {
+    return B->getInstructionKind() == InstructionKind::LoadMatrix;
+  }
+
+  // SPIRV restricts vector size
+  int32_t getMaxLaneLoadStoreSize() const { return 16; }
+};
+
 //===----------------------------------------------------------------------===//
 // uArch instances
 //===----------------------------------------------------------------------===//
@@ -249,9 +271,11 @@ struct PVCuArch final : public Xe2Plus {
     static const Subgroup2DBlockPrefetchInstruction prefetchNdInst;
     static const StoreScatterInstruction storeScatterInst;
     static const LoadGatherInstruction loadGatherInst;
-    static const Instruction *arr[] = {&dpasInst,         &loadNdInst,
-                                       &storeNdInst,      &prefetchNdInst,
-                                       &storeScatterInst, &loadGatherInst};
+    static const StoreMatrixInstruction storeMatrixInst;
+    static const LoadMatrixInstruction loadMatrixInst;
+    static const Instruction *arr[] = {
+        &dpasInst,         &loadNdInst,     &storeNdInst,     &prefetchNdInst,
+        &storeScatterInst, &loadGatherInst, &storeMatrixInst, &loadMatrixInst};
     return arr;
   }
 
