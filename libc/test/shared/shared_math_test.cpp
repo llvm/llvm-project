@@ -106,6 +106,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
   ASSERT_FP_EQ(0.0f, sin);
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::sinpif(0.0f));
   EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::shared::sinf(0.0f));
+  EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::shared::sqrtf(0.0f));
   EXPECT_FP_EQ(0.0f, LIBC_NAMESPACE::shared::tanf(0.0f));
 }
 
