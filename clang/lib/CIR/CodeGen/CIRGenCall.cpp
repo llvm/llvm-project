@@ -129,7 +129,8 @@ void CIRGenModule::constructAttributeList(llvm::StringRef name,
   if (info.isNoReturn())
     addUnitAttr(cir::CIRDialect::getNoReturnAttrName());
 
-  // TODO(cir): Check/add cmse_nonsecure_call attribute here.
+  // TODO(cir): Implement/check the CSME Nonsecure call attribute here. This
+  // requires being in CSME mode.
 
   addAttributesFromFunctionProtoType(getBuilder(), attrs,
                                      calleeInfo.getCalleeFunctionProtoType());
@@ -159,6 +160,9 @@ void CIRGenModule::constructAttributeList(llvm::StringRef name,
     if (const FunctionDecl *func = dyn_cast<FunctionDecl>(targetDecl)) {
       addAttributesFromFunctionProtoType(
           getBuilder(), attrs, func->getType()->getAs<FunctionProtoType>());
+
+      // TODO(cir): When doing 'return attrs' we need to cover the 'NoAlias' for
+      // global allocation functions here.
       assert(!cir::MissingFeatures::opCallAttrs());
 
       const CXXMethodDecl *md = dyn_cast<CXXMethodDecl>(func);
@@ -168,8 +172,7 @@ void CIRGenModule::constructAttributeList(llvm::StringRef name,
       // virtual function. These attributes are not inherited by overloads.
       if (!(attrOnCallSite && isVirtualCall)) {
         if (func->isNoReturn())
-          attrs.set(cir::CIRDialect::getNoReturnAttrName(),
-                    mlir::UnitAttr::get(&getMLIRContext()));
+          addUnitAttr(cir::CIRDialect::getNoReturnAttrName());
         // TODO(cir): Set NoBuiltinAttr here.
       }
     }
@@ -186,13 +189,54 @@ void CIRGenModule::constructAttributeList(llvm::StringRef name,
       sideEffect = cir::SideEffect::Pure;
     }
 
-    assert(!cir::MissingFeatures::opCallAttrs());
+    attrs.set(cir::CIRDialect::getSideEffectAttrName(),
+              cir::SideEffectAttr::get(&getMLIRContext(), sideEffect));
+
+    // TODO(cir): When doing 'return attrs' we need to cover the Restrict and
+    // ReturnsNonNull attributes here.
+    if (targetDecl->hasAttr<AnyX86NoCallerSavedRegistersAttr>())
+      addUnitAttr(cir::CIRDialect::getNoCallerSavedRegsAttrName());
+    // TODO(cir): Implement 'NoCFCheck' attribute here.  This requires
+    // fcf-protection mode.
+    if (targetDecl->hasAttr<LeafAttr>())
+      addUnitAttr(cir::CIRDialect::getNoCallbackAttrName());
+    // TODO(cir): Implement 'BPFFastCall' attribute here.  This requires C, and
+    // the BPF target.
+
+    // TODO(cir): Detecting 'OptimizeNone' is done here in classic codegen, when
+    // we figure out when to do that, we should do it here.
+    // TODO(cir): AllocSize attr should be done here, but it has some additional
+    // work with forming the correct value for it.  Typically this calls into
+    // LLVM to set it correctly, which flattens the elem size and num-elems into
+    // a single value.  CIR should probably represent these as two values and
+    // handle the combination during lowering by calling into LLVM.
+
+    // TODO(cir): Quite a few CUDA and OpenCL attributes are added here, like
+    // uniform-work-group-size.
+
+    // TODO(cir): we should also do 'aarch64_pstate_sm_body' here.
+
+    if (auto *modularFormat = targetDecl->getAttr<ModularFormatAttr>()) {
+      FormatAttr *format = targetDecl->getAttr<FormatAttr>();
+      StringRef type = format->getType()->getName();
+      std::string formatIdx = std::to_string(format->getFormatIdx());
+      std::string firstArg = std::to_string(format->getFirstArg());
+      SmallVector<StringRef> args = {
+          type, formatIdx, firstArg,
+          modularFormat->getModularImplFn()->getName(),
+          modularFormat->getImplName()};
+      llvm::append_range(args, modularFormat->aspects());
+      attrs.set(cir::CIRDialect::getModularFormatAttrName(),
+                builder.getStringAttr(llvm::join(args, ",")));
+    }
+
+    // TODO(cir): We should set nobuiltin and default function attrs here.
+
+    // TODO(cir): There is another region of `if (targetDecl)` that handles
+    // removing some attributes that are necessary modifications of the
+    // default-function attrs.  We should do that here.
   }
-
   assert(!cir::MissingFeatures::opCallAttrs());
-
-  attrs.set(cir::CIRDialect::getSideEffectAttrName(),
-            cir::SideEffectAttr::get(&getMLIRContext(), sideEffect));
 }
 
 /// Returns the canonical formal type of the given C++ method.
