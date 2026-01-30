@@ -2663,10 +2663,13 @@ static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("inlinehint"),
     StringLiteral("instrument-function-entry"),
     StringLiteral("instrument-function-exit"),
+    StringLiteral("modular-format"),
     StringLiteral("memory"),
+    StringLiteral("no_caller_saved_registers"),
     StringLiteral("no-infs-fp-math"),
     StringLiteral("no-nans-fp-math"),
     StringLiteral("no-signed-zeros-fp-math"),
+    StringLiteral("nocallback"),
     StringLiteral("noduplicate"),
     StringLiteral("noinline"),
     StringLiteral("noreturn"),
@@ -2722,6 +2725,13 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
     funcOp.setHot(true);
   if (func->hasFnAttribute(llvm::Attribute::NoDuplicate))
     funcOp.setNoduplicate(true);
+  if (func->hasFnAttribute("no_caller_saved_registers"))
+    funcOp.setNoCallerSavedRegisters(true);
+  if (func->hasFnAttribute(llvm::Attribute::NoCallback))
+    funcOp.setNocallback(true);
+  if (llvm::Attribute attr = func->getFnAttribute("modular-format");
+      attr.isStringAttribute())
+    funcOp.setModularFormat(StringAttr::get(context, attr.getValueAsString()));
 
   if (func->hasFnAttribute("aarch64_pstate_sm_enabled"))
     funcOp.setArmStreaming(true);
@@ -2949,6 +2959,13 @@ LogicalResult ModuleImport::convertCallAttributes(llvm::CallInst *inst,
   op.setCold(callAttrs.getFnAttr(llvm::Attribute::Cold).isValid());
   op.setNoduplicate(
       callAttrs.getFnAttr(llvm::Attribute::NoDuplicate).isValid());
+  op.setNoCallerSavedRegisters(
+      callAttrs.getFnAttr("no_caller_saved_registers").isValid());
+  op.setNocallback(callAttrs.getFnAttr(llvm::Attribute::NoCallback).isValid());
+
+  if (llvm::Attribute attr = callAttrs.getFnAttr("modular-format");
+      attr.isStringAttribute())
+    op.setModularFormat(StringAttr::get(context, attr.getValueAsString()));
   op.setNoInline(callAttrs.getFnAttr(llvm::Attribute::NoInline).isValid());
   op.setAlwaysInline(
       callAttrs.getFnAttr(llvm::Attribute::AlwaysInline).isValid());
