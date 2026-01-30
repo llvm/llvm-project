@@ -7434,7 +7434,7 @@ void testPointerAliasEscapeAndReset(Foo *f) {
   ptr->mu.Unlock();
 }
 
-// A function that may do anything to the objects referred to by the inputs:
+// A function that may do anything to the objects referred to by the inputs.
 void escapeAliasMultiple(void *, void *, void *);
 void testPointerAliasEscapeMultiple(Foo *F)
 {
