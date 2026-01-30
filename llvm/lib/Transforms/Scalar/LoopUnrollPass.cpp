@@ -1032,8 +1032,7 @@ bool llvm::computeUnrollCount(
   if (auto UnrollFactor = shouldPartialUnroll(LoopSize, TripCount, UCE, UP)) {
     UP.Count = *UnrollFactor;
 
-    if ((PragmaFullUnroll || PragmaEnableUnroll) && TripCount &&
-        UP.Count != TripCount)
+    if (PragmaFullUnroll && TripCount && UP.Count && TripCount != UP.Count)
       ORE->emit([&]() {
         return OptimizationRemarkMissed(DEBUG_TYPE,
                                         "FullUnrollAsDirectedTooLarge",
