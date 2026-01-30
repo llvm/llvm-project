@@ -1232,7 +1232,6 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
 
   UnrollCostEstimator UCE(L, TTI, EphValues, UP.BEInsns);
   if (!UCE.canUnroll()) {
-    LLVM_DEBUG(dbgs() << "  Loop not considered unrollable.\n");
     return LoopUnrollResult::Unmodified;
   }
 
