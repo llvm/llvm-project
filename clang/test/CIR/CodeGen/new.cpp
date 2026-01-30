@@ -361,3 +361,92 @@ void t_constant_size_memset_init() {
 // OGCG: define {{.*}} void @_Z27t_constant_size_memset_initv()
 // OGCG:   %[[P:.*]] = call{{.*}} ptr @_Znam(i64{{.*}} 64)
 // OGCG:   call void @llvm.memset.p0.i64(ptr{{.*}} %[[P]], i8 0, i64 64, i1 false)
+
+void t_constant_size_full_init() {
+  auto p = new int[4] { 1, 2, 3, 4 };
+}
+
+// CHECK:  cir.func {{.*}} @_Z25t_constant_size_full_initv()
+// CHECK:    %[[ALLOCATION_SIZE:.*]] = cir.const #cir.int<16> : !u64i
+// CHECK:    %[[ALLOC_PTR:.*]] = cir.call @_Znam(%[[ALLOCATION_SIZE]]) : (!u64i) -> !cir.ptr<!void>
+// CHECK:    %[[ELEM_0_PTR:.*]] = cir.cast bitcast %[[ALLOC_PTR]] : !cir.ptr<!void> -> !cir.ptr<!s32i>
+// CHECK:    %[[CONST_ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:    cir.store{{.*}} %[[CONST_ONE]], %[[ELEM_0_PTR]] : !s32i, !cir.ptr<!s32i>
+// CHECK:    %[[OFFSET:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:    %[[ELEM_1_PTR:.*]] = cir.ptr_stride %[[ELEM_0_PTR]], %[[OFFSET]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
+// CHECK:    %[[CONST_TWO:.*]] = cir.const #cir.int<2> : !s32i
+// CHECK:    cir.store{{.*}} %[[CONST_TWO]], %[[ELEM_1_PTR]] : !s32i, !cir.ptr<!s32i>
+// CHECK:    %[[OFFSET1:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:    %[[ELEM_2_PTR:.*]] = cir.ptr_stride %[[ELEM_1_PTR]], %[[OFFSET1]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
+// CHECK:    %[[CONST_THREE:.*]] = cir.const #cir.int<3> : !s32i
+// CHECK:    cir.store{{.*}} %[[CONST_THREE]], %[[ELEM_2_PTR]] : !s32i, !cir.ptr<!s32i>
+// CHECK:    %[[OFFSET2:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:    %[[ELEM_3_PTR:.*]] = cir.ptr_stride %[[ELEM_2_PTR]], %[[OFFSET2]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
+// CHECK:    %[[CONST_FOUR:.*]] = cir.const #cir.int<4> : !s32i
+// CHECK:    cir.store{{.*}} %[[CONST_FOUR]], %[[ELEM_3_PTR]] : !s32i, !cir.ptr<!s32i>
+
+// LLVM: define {{.*}} void @_Z25t_constant_size_full_initv()
+// LLVM:   %[[P:.*]] = call ptr @_Znam(i64 16)
+// LLVM:   store i32 1, ptr %[[CALL]]
+// LLVM:   %[[ELEM_1:.*]] = getelementptr i32, ptr %[[P]], i64 1
+// LLVM:   store i32 2, ptr %[[ELEM_1]]
+// LLVM:   %[[ELEM_2:.*]] = getelementptr i32, ptr %[[ELEM_1]], i64 1
+// LLVM:   store i32 3, ptr %[[ELEM_2]]
+// LLVM:   %[[ELEM_3:.*]] = getelementptr i32, ptr %[[ELEM_2]], i64 1
+// LLVM:   store i32 4, ptr %[[ELEM_3]]
+
+// OGCG: define {{.*}} void @_Z25t_constant_size_full_initv()
+// OGCG:   %[[P:.*]] = call{{.*}} ptr @_Znam(i64{{.*}} 16)
+// OGCG:   store i32 1, ptr %[[P]]
+// OGCG:   %[[ELEM_1:.*]] = getelementptr inbounds i32, ptr %[[P]], i64 1
+// OGCG:   store i32 2, ptr %[[ELEM_1]]
+// OGCG:   %[[ELEM_2:.*]] = getelementptr inbounds i32, ptr %[[ELEM_1]], i64 1
+// OGCG:   store i32 3, ptr %[[ELEM_2]]
+// OGCG:   %[[ELEM_3:.*]] = getelementptr inbounds i32, ptr %[[ELEM_2]], i64 1
+// OGCG:   store i32 4, ptr %[[ELEM_3]]
+
+void t_constant_size_partial_init() {
+  auto p = new int[16] { 1, 2, 3 };
+}
+
+// CHECK:  cir.func {{.*}} @_Z28t_constant_size_partial_initv()
+// CHECK:    %[[ALLOCATION_SIZE:.*]] = cir.const #cir.int<64> : !u64i
+// CHECK:    %[[ALLOC_PTR:.*]] = cir.call @_Znam(%[[ALLOCATION_SIZE]]) : (!u64i) -> !cir.ptr<!void>
+// CHECK:    %[[ELEM_0_PTR:.*]] = cir.cast bitcast %[[ALLOC_PTR]] : !cir.ptr<!void> -> !cir.ptr<!s32i>
+// CHECK:    %[[CONST_ONE:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:    cir.store{{.*}} %[[CONST_ONE]], %[[ELEM_0_PTR]] : !s32i, !cir.ptr<!s32i>
+// CHECK:    %[[OFFSET:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:    %[[ELEM_1_PTR:.*]] = cir.ptr_stride %[[ELEM_0_PTR]], %[[OFFSET]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
+// CHECK:    %[[CONST_TWO:.*]] = cir.const #cir.int<2> : !s32i
+// CHECK:    cir.store{{.*}} %[[CONST_TWO]], %[[ELEM_1_PTR]] : !s32i, !cir.ptr<!s32i>
+// CHECK:    %[[OFFSET1:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:    %[[ELEM_2_PTR:.*]] = cir.ptr_stride %[[ELEM_1_PTR]], %[[OFFSET1]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
+// CHECK:    %[[CONST_THREE:.*]] = cir.const #cir.int<3> : !s32i
+// CHECK:    cir.store{{.*}} %[[CONST_THREE]], %[[ELEM_2_PTR]] : !s32i, !cir.ptr<!s32i>
+// CHECK:    %[[OFFSET2:.*]] = cir.const #cir.int<1> : !s32i
+// CHECK:    %[[ELEM_3_PTR:.*]] = cir.ptr_stride %[[ELEM_2_PTR]], %[[OFFSET2]] : (!cir.ptr<!s32i>, !s32i) -> !cir.ptr<!s32i>
+// CHECK:    %[[INIT_SIZE:.*]] = cir.const #cir.int<12> : !u64i
+// CHECK:    %[[REMAINING_SIZE:.*]] = cir.binop(sub, %[[ALLOCATION_SIZE]], %[[INIT_SIZE]]) : !u64i
+// CHECK:    %[[VOID_PTR:.*]] = cir.cast bitcast %[[ELEM_3_PTR]] : !cir.ptr<!s32i> -> !cir.ptr<!void>
+// CHECK:    %[[ZERO:.*]] = cir.const #cir.int<0> : !u8i
+// CHECK:    cir.libc.memset %[[REMAINING_SIZE]] bytes at %[[VOID_PTR]] to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i
+
+// LLVM: define {{.*}} void @_Z28t_constant_size_partial_initv()
+// LLVM:   %[[P:.*]] = call ptr @_Znam(i64 64)
+// LLVM:   store i32 1, ptr %[[P]]
+// LLVM:   %[[ELEM_1:.*]] = getelementptr i32, ptr %[[P]], i64 1
+// LLVM:   store i32 2, ptr %[[ELEM_1]]
+// LLVM:   %[[ELEM_2:.*]] = getelementptr i32, ptr %[[ELEM_1]], i64 1
+// LLVM:   store i32 3, ptr %[[ELEM_2]]
+// LLVM:   %[[ELEM_3:.*]] = getelementptr i32, ptr %[[ELEM_2]], i64 1
+// LLVM:   call void @llvm.memset.p0.i64(ptr %[[ELEM_3]], i8 0, i64 52, i1 false)
+
+// OGCG: define {{.*}} void @_Z28t_constant_size_partial_initv()
+// OGCG:   %[[P:.*]] = call{{.*}} ptr @_Znam(i64{{.*}} 64)
+// OGCG:   store i32 1, ptr %[[P]]
+// OGCG:   %[[ELEM_1:.*]] = getelementptr inbounds i32, ptr %[[P]], i64 1
+// OGCG:   store i32 2, ptr %[[ELEM_1]]
+// OGCG:   %[[ELEM_2:.*]] = getelementptr inbounds i32, ptr %[[ELEM_1]], i64 1
+// OGCG:   store i32 3, ptr %[[ELEM_2]]
+// OGCG:   %[[ELEM_3:.*]] = getelementptr inbounds i32, ptr %[[ELEM_2]], i64 1
+// OGCG:   call void @llvm.memset.p0.i64(ptr{{.*}} %[[ELEM_3]], i8 0, i64 52, i1 false)
