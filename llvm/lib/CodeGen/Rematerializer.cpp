@@ -431,7 +431,7 @@ bool Rematerializer::analyze() {
 
   LLVM_DEBUG({
     for (unsigned I = 0, E = getNumRegs(); I < E; ++I)
-      dbgs() << printDepDAG(I) << '\n';
+      dbgs() << printDependencyDAG(I) << '\n';
   });
   return !Regs.empty();
 }
@@ -637,7 +637,7 @@ void Rematerializer::Reg::eraseUser(MachineInstr *MI, unsigned Region) {
     RUsers.erase(MI);
 }
 
-Printable Rematerializer::printDepDAG(unsigned RootIdx) const {
+Printable Rematerializer::printDependencyDAG(unsigned RootIdx) const {
   return Printable([&, RootIdx](raw_ostream &OS) {
     DenseMap<unsigned, unsigned> RegDepths;
     std::function<void(unsigned, unsigned)> WalkTree =
