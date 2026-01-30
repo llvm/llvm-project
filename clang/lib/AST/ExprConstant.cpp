@@ -14655,14 +14655,11 @@ public:
   MatrixExprEvaluator(EvalInfo &Info, APValue &Result)
       : ExprEvaluatorBaseTy(Info), Result(Result) {}
 
-  bool Success(ArrayRef<APValue> M, unsigned NumRows, unsigned NumCols,
-               const Expr *E) {
-    assert(
-        M.size() ==
-        E->getType()->castAs<ConstantMatrixType>()->getNumElementsFlattened());
-    assert(M.size() == NumRows * NumCols);
+  bool Success(ArrayRef<APValue> M, const Expr *E) {
+    auto *CMTy = E->getType()->castAs<ConstantMatrixType>();
+    assert(M.size() == CMTy->getNumElementsFlattened());
     // FIXME: remove this APValue copy.
-    Result = APValue(M.data(), NumRows, NumCols);
+    Result = APValue(M.data(), CMTy->getNumRows(), CMTy->getNumColumns());
     return true;
   }
   bool Success(const APValue &M, const Expr *E) {
@@ -14704,7 +14701,7 @@ bool MatrixExprEvaluator::VisitCastExpr(const CastExpr *E) {
       return false;
 
     SmallVector<APValue, 16> SplatEls(NElts, CastedVal);
-    return Success(SplatEls, NumRows, NumCols, E);
+    return Success(SplatEls, E);
   }
   case CK_HLSLElementwiseCast: {
     SmallVector<APValue> SrcVals;
@@ -14719,7 +14716,7 @@ bool MatrixExprEvaluator::VisitCastExpr(const CastExpr *E) {
     if (!handleElementwiseCast(Info, E, FPO, SrcVals, SrcTypes, DestTypes,
                                ResultEls))
       return false;
-    return Success(ResultEls, NumRows, NumCols, E);
+    return Success(ResultEls, E);
   }
   default:
     return ExprEvaluatorBaseTy::VisitCastExpr(E);
@@ -14759,7 +14756,7 @@ bool MatrixExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
     }
   }
 
-  return Success(Elements, NumRows, NumCols, E);
+  return Success(Elements, E);
 }
 
 //===----------------------------------------------------------------------===//
