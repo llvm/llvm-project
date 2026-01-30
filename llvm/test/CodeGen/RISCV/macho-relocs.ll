@@ -90,8 +90,8 @@ define i32* @unnamed_const() nounwind {
 ; COMMON-LABEL: .section	__DATA,__data
 ; COMMON-LABEL: _addend:
 ; COMMON-NEXT:     .word _simple+42
-@addend = global i32 add(i32 ptrtoint(void()* @simple to i32), i32 42)
+@addend = global i32 add(i32 ptrtoint(ptr @simple to i32), i32 42)
 
 ; COMMON-LABEL: _sub:
 ; COMMON-NEXT:     .word _simple-_call
-@sub = global i32 sub(i32 ptrtoint(void()* @simple to i32), i32 ptrtoint(void()* @call to i32))
+@sub = global i32 sub(i32 ptrtoint(ptr @simple to i32), i32 ptrtoint(ptr @call to i32))
