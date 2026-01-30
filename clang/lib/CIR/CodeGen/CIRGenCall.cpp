@@ -275,15 +275,15 @@ void CIRGenModule::constructAttributeList(llvm::StringRef name,
       attrs.set(cir::CIRDialect::getModularFormatAttrName(),
                 builder.getStringAttr(llvm::join(args, ",")));
     }
-
-    addNoBuiltinAttributes(getMLIRContext(), attrs, getLangOpts(), nba);
-
-    // TODO(cir): We should set default function attrs here.
-
-    // TODO(cir): There is another region of `if (targetDecl)` that handles
-    // removing some attributes that are necessary modifications of the
-    // default-function attrs.  We should do that here.
   }
+
+  addNoBuiltinAttributes(getMLIRContext(), attrs, getLangOpts(), nba);
+
+  // TODO(cir): We should set default function attrs here.
+
+  // TODO(cir): There is another region of `if (targetDecl)` that handles
+  // removing some attributes that are necessary modifications of the
+  // default-function attrs.  We should do that here.
   assert(!cir::MissingFeatures::opCallAttrs());
 }
 
