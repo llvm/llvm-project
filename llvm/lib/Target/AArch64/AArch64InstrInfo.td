@@ -11795,6 +11795,19 @@ let Predicates = [HasTEV] in {
   defm TEXIT : TEXIT<"texit">;
 }
 
+// Patterns for v2i64/v1i64 clmul->pmull
+def : Pat<(clmul v1i64:$Rn, v1i64:$Rd),
+          (v1i64 (EXTRACT_SUBREG (v16i8 (PMULLv1i64 $Rn, $Rd)),
+                                        (i32 3)))>;
+
+def : Pat<(clmul v2i64:$Rn, v2i64:$Rd),
+          (v2i64 (INSvi64lane (v16i8 (PMULLv1i64 (v1i64 (EXTRACT_SUBREG $Rn, (i32 3))),
+                                                 (v1i64 (EXTRACT_SUBREG $Rd, (i32 3))))),
+                              (i64 1),
+                              (v16i8 (PMULLv2i64 $Rn, $Rd)),
+                              (i64 0)))>;
+
+
 include "AArch64InstrAtomics.td"
 include "AArch64SVEInstrInfo.td"
 include "AArch64SMEInstrInfo.td"
