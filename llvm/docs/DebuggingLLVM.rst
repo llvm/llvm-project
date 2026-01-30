@@ -87,6 +87,10 @@ created multiple times at the same address, so you may need to continue
 until reaching the desired location, but in the author's experience this
 is unlikely to occur.
 
+Similar flags exist for the backend: ``-print-sdnode-addrs`` for
+printing ``SDNode`` addresses, and ``-print-mi-addrs`` for printing
+``MachineInstr`` addresses.
+
 Identifying the source locations of instructions
 ================================================
 
