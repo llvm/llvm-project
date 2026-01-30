@@ -21,7 +21,6 @@
 #include "clang/Sema/Sema.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/IR/Module.h"
-#include "llvm/Support/Casting.h"
 #include "llvm/Support/CrashRecoveryContext.h"
 #include "llvm/Support/Error.h"
 
@@ -226,6 +225,7 @@ void IncrementalParser::CleanUpPTU(TranslationUnitDecl *MostRecentTU) {
   }
   for (auto &&D : NamedDeclsToRemove) {
     S.IdResolver.RemoveDecl(D);
+    D->setInvalidDecl();
   }
 }
 

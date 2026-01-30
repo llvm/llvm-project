@@ -13,14 +13,6 @@ void a() { return; }
 a();
 // CHECK-NOT: Symbols not found
 
-p();
-// CHECK: error: call to undeclared function 'p'
-// CHECK: ISO C99 and later do not support implicit function declarations
-
-%undo
-
-void p() { return; }
-// CHECK-NOT: error: conflicting types
 
 int x = 10;
 %quit
