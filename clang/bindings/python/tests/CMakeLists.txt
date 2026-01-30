@@ -6,7 +6,7 @@ add_custom_target(check-clang-python
     COMMAND ${CMAKE_COMMAND} -E env
             CLANG_NO_DEFAULT_CONFIG=1
             LIBCLANG_LIBRARY_PATH=$<TARGET_FILE_DIR:libclang>
-            "${Python3_EXECUTABLE}" -W ignore:DeprecationWarning::clang -m unittest discover
+            "${Python3_EXECUTABLE}" -m unittest discover
     DEPENDS libclang
     WORKING_DIRECTORY ${CMAKE_CURRENT_SOURCE_DIR}/..)
 

@@ -9,6 +9,7 @@ from clang.cindex import (
 
 import unittest
 from pathlib import Path
+import warnings
 
 
 class TestCodeCompletion(unittest.TestCase):
@@ -16,7 +17,8 @@ class TestCodeCompletion(unittest.TestCase):
         self.assertIsNotNone(cr)
         self.assertEqual(len(cr.diagnostics), 0)
 
-        completions = [str(c) for c in cr.results]
+        with warnings.catch_warnings(record=True):
+            completions = [str(c) for c in cr.results]
 
         for c in expected:
             self.assertIn(c, completions)
@@ -180,7 +182,8 @@ void f(P x, Q y) {
         }
         for id, string in kindStringMap.items():
             kind = CompletionString.AvailabilityKindCompat.from_id(id)
-            self.assertEqual(str(kind), string)
+            with warnings.catch_warnings(record=True):
+                self.assertEqual(str(kind), string)
 
     def test_completion_chunk_kind_compatibility(self):
         value_to_old_str = {
@@ -210,12 +213,14 @@ void f(P x, Q y) {
         # Check that all new kinds correspond to an old kind
         for new_kind in CompletionChunkKind:
             old_str = value_to_old_str[new_kind.value]
-            self.assertEqual(old_str, str(new_kind))
+            with warnings.catch_warnings(record=True):
+                self.assertEqual(old_str, str(new_kind))
 
         # Check that all old kinds correspond to a new kind
         for value, old_str in value_to_old_str.items():
             new_kind = CompletionChunkKind.from_id(value)
-            self.assertEqual(old_str, str(new_kind))
+            with warnings.catch_warnings(record=True):
+                self.assertEqual(old_str, str(new_kind))
 
     def test_spelling_cache_missing_attribute(self):
         # Test that accessing missing attributes on SpellingCacheAlias raises
@@ -227,9 +232,10 @@ void f(P x, Q y) {
         kind_keys = list(CompletionChunk.SPELLING_CACHE)
         self.assertEqual(len(kind_keys), 13)
         for kind_key in kind_keys:
-            self.assertEqual(
-                SPELLING_CACHE[kind_key.value], CompletionChunk.SPELLING_CACHE[kind_key]
-            )
+            with warnings.catch_warnings(record=True):
+                self.assertEqual(
+                    SPELLING_CACHE[kind_key.value], CompletionChunk.SPELLING_CACHE[kind_key]
+                )
 
     def test_spelling_cache_missing_attribute(self):
         # Test that accessing missing attributes on SpellingCacheAlias raises
