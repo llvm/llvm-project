@@ -328,7 +328,7 @@ def : GCNPat<(i32 (int_amdgcn_set_inactive_chain_arg i32:$src, i32:$inactive)),
 
 multiclass
     AMDGPUWaveReducePseudoGenerator<string Op, string DataType, ValueType ty, RegisterClass RetReg, SrcRegOrImm9 Reg> {
-  let usesCustomInserter = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0, Uses = [EXEC] in {
+  let usesCustomInserter = 1, hasSideEffects = 0, mayLoad = 0, mayStore = 0, UseNamedOperandTable = 1, Uses = [EXEC] in {
     def !toupper(Op) #"_PSEUDO_" #DataType
         : VPseudoInstSI<(outs RetReg : $sdst),
                         (ins Reg : $src, VSrc_b32 : $strategy),
@@ -373,9 +373,13 @@ defvar Operations = [
   WaveReduceOp<"xor", "B64", i64, SGPR_64, VSrc_b64>,
 
   WaveReduceOp<"fmin", "F32", f32, SGPR_32, VSrc_b32>,
+  WaveReduceOp<"fmin", "F64", f64, SGPR_64, VSrc_b64>,
   WaveReduceOp<"fmax", "F32", f32, SGPR_32, VSrc_b32>,
+  WaveReduceOp<"fmax", "F64", f64, SGPR_64, VSrc_b64>,
   WaveReduceOp<"fadd", "F32", f32, SGPR_32, VSrc_b32>,
+  WaveReduceOp<"fadd", "F64", f64, SGPR_64, VSrc_b64>,
   WaveReduceOp<"fsub", "F32", f32, SGPR_32, VSrc_b32>,
+  WaveReduceOp<"fsub", "F64", f64, SGPR_64, VSrc_b64>,
 ];
 
 foreach Op = Operations in {
