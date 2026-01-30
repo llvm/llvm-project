@@ -268,7 +268,9 @@ DefinedGlobal *SymbolTable::addSyntheticGlobal(StringRef name, uint32_t flags,
 DefinedGlobal *SymbolTable::addOptionalGlobalSymbol(StringRef name,
                                                     InputGlobal *global) {
   Symbol *s = find(name);
-  if (!s || s->isDefined())
+  if (!s && (ctx.arg.exportAll || ctx.arg.exportedSymbols.contains(name)))
+    s = insertName(name).first;
+  else if (!s || s->isDefined())
     return nullptr;
   LLVM_DEBUG(dbgs() << "addOptionalGlobalSymbol: " << name << " -> " << global
                     << "\n");
