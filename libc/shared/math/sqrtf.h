@@ -1,4 +1,4 @@
-//===-- Implementation of sqrtf function ----------------------------------===//
+//===-- Shared header for sqrtf ---------------------------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,11 +6,18 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/math/sqrtf.h"
+#ifndef LLVM_LIBC_SHARED_MATH_SQRTF_H
+#define LLVM_LIBC_SHARED_MATH_SQRTF_H
+
+#include "shared/libc_common.h"
 #include "src/__support/math/sqrtf.h"
 
 namespace LIBC_NAMESPACE_DECL {
+namespace shared {
 
-LLVM_LIBC_FUNCTION(float, sqrtf, (float x)) { return math::sqrtf(x); }
+using math::sqrtf;
 
+} // namespace shared
 } // namespace LIBC_NAMESPACE_DECL
+
+#endif // LLVM_LIBC_SHARED_MATH_SQRTF_H
