@@ -268,7 +268,9 @@ DefinedGlobal *SymbolTable::addSyntheticGlobal(StringRef name, uint32_t flags,
 DefinedGlobal *SymbolTable::addOptionalGlobalSymbol(StringRef name,
                                                     InputGlobal *global) {
   Symbol *s = find(name);
-  if (!s || s->isDefined())
+  if (!s && (ctx.arg.exportAll || ctx.arg.exportedSymbols.contains(name)))
+    s = insertName(name).first;
+  else if (!s || s->isDefined())
     return nullptr;
   LLVM_DEBUG(dbgs() << "addOptionalGlobalSymbol: " << name << " -> " << global
                     << "\n");
@@ -582,11 +584,10 @@ Symbol *SymbolTable::addDefinedTable(StringRef name, uint32_t flags,
 // With LTO these attributes are not available when the bitcode is read and only
 // become available when the LTO object is read.  In this case we silently
 // replace the empty attributes with the valid ones.
-template <typename T>
-static void setImportAttributes(T *existing,
-                                std::optional<StringRef> importName,
-                                std::optional<StringRef> importModule,
-                                uint32_t flags, InputFile *file) {
+static void
+updateExistingUndefined(Symbol *existing, uint32_t flags, InputFile *file,
+                        std::optional<StringRef> importName = {},
+                        std::optional<StringRef> importModule = {}) {
   if (importName) {
     if (!existing->importName)
       existing->importName = importName;
@@ -612,6 +613,10 @@ static void setImportAttributes(T *existing,
   if (existing->isWeak() && binding != WASM_SYMBOL_BINDING_WEAK) {
     existing->flags = (existing->flags & ~WASM_SYMBOL_BINDING_MASK) | binding;
   }
+
+  // Certain flags such as NO_STRIP should be maintianed if either old or
+  // new symbol is marked as such.
+  existing->flags |= flags & WASM_SYMBOL_NO_STRIP;
 }
 
 Symbol *SymbolTable::addUndefinedFunction(StringRef name,
@@ -675,12 +680,10 @@ Symbol *SymbolTable::addUndefinedFunction(StringRef name,
         replaceSym();
     }
     if (existingUndefined) {
-      setImportAttributes(existingUndefined, importName, importModule, flags,
-                          file);
+      updateExistingUndefined(existingUndefined, flags, file, importName,
+                              importModule);
       if (isCalledDirectly)
         existingUndefined->isCalledDirectly = true;
-      if (s->isWeak())
-        s->flags = flags;
     }
   }
 
@@ -707,8 +710,8 @@ Symbol *SymbolTable::addUndefinedData(StringRef name, uint32_t flags,
       lazy->extract();
   } else if (s->isDefined()) {
     checkDataType(s, file);
-  } else if (s->isWeak()) {
-    s->flags = flags;
+  } else {
+    updateExistingUndefined(s, flags, file);
   }
   return s;
 }
@@ -734,8 +737,8 @@ Symbol *SymbolTable::addUndefinedGlobal(StringRef name,
     lazy->extract();
   else if (s->isDefined())
     checkGlobalType(s, file, type);
-  else if (s->isWeak())
-    s->flags = flags;
+  else
+    updateExistingUndefined(s, flags, file);
   return s;
 }
 
@@ -760,8 +763,8 @@ Symbol *SymbolTable::addUndefinedTable(StringRef name,
     lazy->extract();
   else if (s->isDefined())
     checkTableType(s, file, type);
-  else if (s->isWeak())
-    s->flags = flags;
+  else
+    updateExistingUndefined(s, flags, file);
   return s;
 }
 
@@ -786,12 +789,13 @@ Symbol *SymbolTable::addUndefinedTag(StringRef name,
     lazy->extract();
   else if (s->isDefined())
     checkTagType(s, file, sig);
-  else if (s->isWeak())
-    s->flags = flags;
+  else
+    updateExistingUndefined(s, flags, file);
   return s;
 }
 
 TableSymbol *SymbolTable::createUndefinedIndirectFunctionTable(StringRef name) {
+  LLVM_DEBUG(llvm::dbgs() << "createUndefinedIndirectFunctionTable\n");
   WasmLimits limits{0, 0, 0, 0}; // Set by the writer.
   WasmTableType *type = make<WasmTableType>();
   type->ElemType = ValType::FUNCREF;
@@ -806,6 +810,7 @@ TableSymbol *SymbolTable::createUndefinedIndirectFunctionTable(StringRef name) {
 }
 
 TableSymbol *SymbolTable::createDefinedIndirectFunctionTable(StringRef name) {
+  LLVM_DEBUG(llvm::dbgs() << "createDefinedIndirectFunctionTable\n");
   const uint32_t invalidIndex = -1;
   WasmLimits limits{0, 0, 0, 0}; // Set by the writer.
   WasmTableType type{ValType::FUNCREF, limits};

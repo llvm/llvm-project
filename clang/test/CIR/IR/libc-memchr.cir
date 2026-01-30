@@ -1,0 +1,12 @@
+// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+
+!voidptr = !cir.ptr<!cir.void>
+!s32i = !cir.int<s, 32>
+!u64i = !cir.int<u, 64>
+module {
+  cir.func @f(%src : !voidptr, %pattern : !s32i, %len : !u64i) -> !voidptr {
+    // CHECK: cir.libc.memchr
+    %ptr = cir.libc.memchr(%src, %pattern, %len)
+    cir.return %ptr : !voidptr
+  }
+}

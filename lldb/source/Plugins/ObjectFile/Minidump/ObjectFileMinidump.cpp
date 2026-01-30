@@ -48,7 +48,7 @@ ObjectFile *ObjectFileMinidump::CreateMemoryInstance(
 }
 
 size_t ObjectFileMinidump::GetModuleSpecifications(
-    const lldb_private::FileSpec &file, lldb::DataBufferSP &data_sp,
+    const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
     lldb::offset_t data_offset, lldb::offset_t file_offset,
     lldb::offset_t length, lldb_private::ModuleSpecList &specs) {
   specs.Clear();

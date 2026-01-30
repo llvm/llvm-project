@@ -3607,6 +3607,28 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
+  case Builtin::BI__builtin_hlsl_wave_prefix_count_bits: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+
+    QualType ArgType = TheCall->getArg(0)->getType();
+
+    if (!(ArgType->isScalarType())) {
+      SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
+                   diag::err_typecheck_expect_any_scalar_or_vector)
+          << ArgType << 0;
+      return true;
+    }
+
+    if (!(ArgType->isBooleanType())) {
+      SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
+                   diag::err_typecheck_expect_any_scalar_or_vector)
+          << ArgType << 0;
+      return true;
+    }
+
+    break;
+  }
   case Builtin::BI__builtin_hlsl_wave_read_lane_at: {
     if (SemaRef.checkArgCount(TheCall, 2))
       return true;

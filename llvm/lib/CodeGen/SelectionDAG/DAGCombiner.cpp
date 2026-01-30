@@ -11553,11 +11553,15 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
     if (sd_match(N0, m_Clmul(m_ZExt(m_Value(X)), m_ZExt(m_Value(Y)))) &&
         X.getScalarValueSizeInBits() == HalfBW &&
         Y.getScalarValueSizeInBits() == HalfBW) {
-      if (N1C->getZExtValue() == HalfBW - 1)
+      if (N1C->getZExtValue() == HalfBW - 1 &&
+          (!LegalOperations ||
+           TLI.isOperationLegalOrCustom(ISD::CLMULR, X.getValueType())))
         return DAG.getNode(
             ISD::ZERO_EXTEND, DL, VT,
             DAG.getNode(ISD::CLMULR, DL, X.getValueType(), X, Y));
-      if (N1C->getZExtValue() == HalfBW)
+      if (N1C->getZExtValue() == HalfBW &&
+          (!LegalOperations ||
+           TLI.isOperationLegalOrCustom(ISD::CLMULH, X.getValueType())))
         return DAG.getNode(
             ISD::ZERO_EXTEND, DL, VT,
             DAG.getNode(ISD::CLMULH, DL, X.getValueType(), X, Y));
