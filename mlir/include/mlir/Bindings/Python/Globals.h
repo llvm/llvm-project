@@ -13,6 +13,7 @@
 #include <regex>
 #include <string>
 #include <string_view>
+#include <unordered_map>
 #include <unordered_set>
 #include <vector>
 
@@ -21,7 +22,6 @@
 #include "mlir/Bindings/Python/NanobindUtils.h"
 #include "mlir/CAPI/Support.h"
 
-#include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/StringSet.h"
@@ -30,6 +30,18 @@
 namespace mlir {
 namespace python {
 namespace MLIR_BINDINGS_PYTHON_DOMAIN {
+struct MlirTypeIDHash {
+  size_t operator()(MlirTypeID typeID) const {
+    return mlirTypeIDHashValue(typeID);
+  }
+};
+
+struct MlirTypeIDEqual {
+  bool operator()(MlirTypeID lhs, MlirTypeID rhs) const {
+    return mlirTypeIDEqual(lhs, rhs);
+  }
+};
+
 /// Globals that are always accessible once the extension has been initialized.
 /// Methods of this class are thread-safe.
 class MLIR_PYTHON_API_EXPORTED PyGlobals {
@@ -202,9 +214,13 @@ private:
   /// Map of attribute ODS name to custom builder.
   llvm::StringMap<nanobind::callable> attributeBuilderMap;
   /// Map of MlirTypeID to custom type caster.
-  llvm::DenseMap<MlirTypeID, nanobind::callable> typeCasterMap;
+  std::unordered_map<MlirTypeID, nanobind::callable, MlirTypeIDHash,
+                     MlirTypeIDEqual>
+      typeCasterMap;
   /// Map of MlirTypeID to custom value caster.
-  llvm::DenseMap<MlirTypeID, nanobind::callable> valueCasterMap;
+  std::unordered_map<MlirTypeID, nanobind::callable, MlirTypeIDHash,
+                     MlirTypeIDEqual>
+      valueCasterMap;
   /// Set of dialect namespaces that we have attempted to import implementation
   /// modules for.
   llvm::StringSet<> loadedDialectModules;
