@@ -3346,7 +3346,7 @@ SDValue AMDGPUTargetLowering::LowerINT_TO_FP32(SDValue Op, SelectionDAG &DAG,
         DAG.getNode(ISD::ADD, SL, MVT::i32, DAG.getConstant(32, SL, MVT::i32),
                     OppositeSign);
     // Count the leading sign bits.
-    ShAmt = DAG.getNode(ISD::CTLS, SL, MVT::i32, Hi);
+    ShAmt = DAG.getNode(AMDGPUISD::FFBH_I32, SL, MVT::i32, Hi);
     // Different from unsigned conversion, the shift should be one bit less to
     // preserve the sign bit.
     ShAmt = DAG.getNode(ISD::SUB, SL, MVT::i32, ShAmt,
