@@ -121,6 +121,9 @@ Non-comprehensive list of changes in this release
 
 New Compiler Flags
 ------------------
+- New option ``-fms-anonymous-structs`` / ``-fno-ms-anonymous-structs`` added
+  to enable or disable Microsoft's anonymous struct/union extension without
+  enabling other ``-fms-extensions`` features (#GH177607).
 
 Deprecated Compiler Flags
 -------------------------
@@ -145,7 +148,7 @@ Improvements to Clang's diagnostics
   a CFG-based intra-procedural analysis that detects use-after-free and related
   temporal safety bugs. See the
   `RFC <https://discourse.llvm.org/t/rfc-intra-procedural-lifetime-analysis-in-clang/86291>`_
-  for more details. By design, this warning is enabled in ``-Wall``. To disable
+  for more details. By design, this warning is enabled in ``-Weverything``. To disable
   the analysis, use ``-Wno-lifetime-safety`` or ``-fno-lifetime-safety``.
 
 - Added ``-Wlifetime-safety-suggestions`` to enable lifetime annotation suggestions.
@@ -187,17 +190,36 @@ Improvements to Clang's diagnostics
     int* p(int *in [[clang::noescape]]) { return in; }
                                                  ^~
 
+- Added ``-Wlifetime-safety-dangling-field`` to detect dangling field references
+  when stack memory escapes to class fields. This is part of ``-Wlifetime-safety``
+  and detects cases where local variables or parameters are stored in fields but
+  outlive their scope. For example:
+
+  .. code-block:: c++
+
+    struct DanglingView {
+      std::string_view view;
+      DanglingView(std::string s) : view(s) {}  // warning: address of stack memory escapes to a field
+    };
+
+- Improved ``-Wassign-enum`` performance by caching enum enumerator values. (#GH176454)
+
 Improvements to Clang's time-trace
 ----------------------------------
 
 Improvements to Coverage Mapping
 --------------------------------
 
+- "Single byte coverage" now supports branch coverage and can be used
+  together with ``-fcoverage-mcdc``.
+
 Bug Fixes in This Version
 -------------------------
 - Fixed a failed assertion in the preprocessor when ``__has_embed`` parameters are missing parentheses. (#GH175088)
 
 - Fix lifetime extension of temporaries in for-range-initializers in templates. (#GH165182)
+- Fixed a preprocessor crash in ``__has_cpp_attribute`` on incomplete scoped attributes. (#GH178098)
+- Fixes an assertion failure when evaluating ``__underlying_type`` on enum redeclarations. (#GH177943)
 
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
@@ -209,6 +231,7 @@ Bug Fixes to Attribute Support
 Bug Fixes to C++ Support
 ^^^^^^^^^^^^^^^^^^^^^^^^
 - Fixed a crash when instantiating ``requires`` expressions involving substitution failures in C++ concepts. (#GH176402)
+- Fixed a crash when diagnosing an invalid static member function with an explicit object parameter (#GH177741)
 
 Bug Fixes to AST Handling
 ^^^^^^^^^^^^^^^^^^^^^^^^^

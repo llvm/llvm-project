@@ -366,6 +366,12 @@ cl::opt<bool>
                           cl::Hidden,
                           cl::desc("Verfiy VPlans after VPlan transforms."));
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+cl::opt<bool> llvm::PrintAfterEachVPlanPass(
+    "vplan-print-after-all", cl::init(false), cl::Hidden,
+    cl::desc("Print after each VPlanTransforms::runPass."));
+#endif
+
 // This flag enables the stress testing of the VPlan H-CFG construction in the
 // VPlan-native vectorization path. It must be used in conjuction with
 // -enable-vplan-native-path. -vplan-verify-hcfg can also be used to enable the
@@ -4044,22 +4050,20 @@ void LoopVectorizationPlanner::emitInvalidCostRemarks(
 
     unsigned Opcode =
         TypeSwitch<const VPRecipeBase *, unsigned>(R)
-            .Case<VPHeaderPHIRecipe>(
-                [](const auto *R) { return Instruction::PHI; })
-            .Case<VPWidenStoreRecipe>(
-                [](const auto *R) { return Instruction::Store; })
-            .Case<VPWidenLoadRecipe>(
-                [](const auto *R) { return Instruction::Load; })
+            .Case([](const VPHeaderPHIRecipe *R) { return Instruction::PHI; })
+            .Case(
+                [](const VPWidenStoreRecipe *R) { return Instruction::Store; })
+            .Case([](const VPWidenLoadRecipe *R) { return Instruction::Load; })
             .Case<VPWidenCallRecipe, VPWidenIntrinsicRecipe>(
                 [](const auto *R) { return Instruction::Call; })
             .Case<VPInstruction, VPWidenRecipe, VPReplicateRecipe,
                   VPWidenCastRecipe>(
                 [](const auto *R) { return R->getOpcode(); })
-            .Case<VPInterleaveRecipe>([](const VPInterleaveRecipe *R) {
+            .Case([](const VPInterleaveRecipe *R) {
               return R->getStoredValues().empty() ? Instruction::Load
                                                   : Instruction::Store;
             })
-            .Case<VPReductionRecipe>([](const auto *R) {
+            .Case([](const VPReductionRecipe *R) {
               return RecurrenceDescriptor::getOpcode(R->getRecurrenceKind());
             });
 
@@ -7390,17 +7394,16 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     ++LoopsEarlyExitVectorized;
   // TODO: Move to VPlan transform stage once the transition to the VPlan-based
   // cost model is complete for better cost estimates.
-  VPlanTransforms::runPass(VPlanTransforms::unrollByUF, BestVPlan, BestUF);
-  VPlanTransforms::runPass(VPlanTransforms::materializePacksAndUnpacks,
-                           BestVPlan);
-  VPlanTransforms::runPass(VPlanTransforms::materializeBroadcasts, BestVPlan);
-  VPlanTransforms::runPass(VPlanTransforms::replicateByVF, BestVPlan, BestVF);
+  RUN_VPLAN_PASS(VPlanTransforms::unrollByUF, BestVPlan, BestUF);
+  RUN_VPLAN_PASS(VPlanTransforms::materializePacksAndUnpacks, BestVPlan);
+  RUN_VPLAN_PASS(VPlanTransforms::materializeBroadcasts, BestVPlan);
+  RUN_VPLAN_PASS(VPlanTransforms::replicateByVF, BestVPlan, BestVF);
   bool HasBranchWeights =
       hasBranchWeightMD(*OrigLoop->getLoopLatch()->getTerminator());
   if (HasBranchWeights) {
     std::optional<unsigned> VScale = CM.getVScaleForTuning();
-    VPlanTransforms::runPass(VPlanTransforms::addBranchWeightToMiddleTerminator,
-                             BestVPlan, BestVF, VScale);
+    RUN_VPLAN_PASS(VPlanTransforms::addBranchWeightToMiddleTerminator,
+                   BestVPlan, BestVF, VScale);
   }
 
   // Checks are the same for all VPlans, added to BestVPlan only for
@@ -8165,7 +8168,8 @@ bool VPRecipeBuilder::getScaledReductions(
         continue;
       }
       Value *ExtOp;
-      if (!match(OpI, m_ZExtOrSExt(m_Value(ExtOp))))
+      if (!match(OpI, m_ZExtOrSExt(m_Value(ExtOp))) &&
+          !match(OpI, m_FPExt(m_Value(ExtOp))))
         return false;
       Exts[I] = cast<Instruction>(OpI);
 
@@ -8196,7 +8200,8 @@ bool VPRecipeBuilder::getScaledReductions(
       return false;
 
     BinOpc = std::make_optional(ExtendUser->getOpcode());
-  } else if (match(Update, m_Add(m_Value(), m_Value()))) {
+  } else if (match(Update, m_Add(m_Value(), m_Value())) ||
+             match(Update, m_FAdd(m_Value(), m_Value()))) {
     // We already know the operands for Update are Op and PhiOp.
     SmallVector<Value *> Ops({Op});
     if (!CollectExtInfo(Ops))
@@ -8217,10 +8222,13 @@ bool VPRecipeBuilder::getScaledReductions(
 
   if (LoopVectorizationPlanner::getDecisionAndClampRange(
           [&](ElementCount VF) {
+            std::optional<FastMathFlags> FMF = std::nullopt;
+            if (Update->getOpcode() == Instruction::FAdd)
+              FMF = Update->getFastMathFlags();
             InstructionCost Cost = TTI->getPartialReductionCost(
                 Update->getOpcode(), ExtOpTypes[0], ExtOpTypes[1],
                 PHI->getType(), VF, ExtKinds[0], ExtKinds[1], BinOpc,
-                CM.CostKind);
+                CM.CostKind, FMF);
             return Cost.isValid();
           },
           Range)) {
@@ -8304,6 +8312,10 @@ VPRecipeBuilder::tryToCreatePartialReduction(VPInstruction *Reduction,
          "all accumulators in chain must have same scale factor");
 
   auto *ReductionI = Reduction->getUnderlyingInstr();
+  assert(
+      Reduction->getOpcode() != Instruction::FAdd ||
+      (ReductionI->hasAllowReassoc() && ReductionI->hasAllowContract()) &&
+          "FAdd partial reduction requires allow-reassoc and allow-contract");
   if (Reduction->getOpcode() == Instruction::Sub) {
     SmallVector<VPValue *, 2> Ops;
     Ops.push_back(Plan.getConstantInt(ReductionI->getType(), 0));
@@ -8318,7 +8330,12 @@ VPRecipeBuilder::tryToCreatePartialReduction(VPInstruction *Reduction,
     Cond = getBlockInMask(Builder.getInsertBlock());
 
   return new VPReductionRecipe(
-      RecurKind::Add, FastMathFlags(), ReductionI, Accumulator, BinOp, Cond,
+      Reduction->getOpcode() == Instruction::FAdd ? RecurKind::FAdd
+                                                  : RecurKind::Add,
+      Reduction->getOpcode() == Instruction::FAdd
+          ? Reduction->getFastMathFlags()
+          : FastMathFlags(),
+      ReductionI, Accumulator, BinOp, Cond,
       RdxUnordered{/*VFScaleFactor=*/ScaleFactor}, ReductionI->getDebugLoc());
 }
 
@@ -8359,14 +8376,14 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       // Now optimize the initial VPlan.
       VPlanTransforms::hoistPredicatedLoads(*Plan, PSE, OrigLoop);
       VPlanTransforms::sinkPredicatedStores(*Plan, PSE, OrigLoop);
-      VPlanTransforms::runPass(VPlanTransforms::truncateToMinimalBitwidths,
-                               *Plan, CM.getMinimalBitwidths());
-      VPlanTransforms::runPass(VPlanTransforms::optimize, *Plan);
+      RUN_VPLAN_PASS(VPlanTransforms::truncateToMinimalBitwidths, *Plan,
+                     CM.getMinimalBitwidths());
+      RUN_VPLAN_PASS(VPlanTransforms::optimize, *Plan);
       // TODO: try to put addExplicitVectorLength close to addActiveLaneMask
       if (CM.foldTailWithEVL()) {
-        VPlanTransforms::runPass(VPlanTransforms::addExplicitVectorLength,
-                                 *Plan, CM.getMaxSafeElements());
-        VPlanTransforms::runPass(VPlanTransforms::optimizeEVLMasks, *Plan);
+        RUN_VPLAN_PASS(VPlanTransforms::addExplicitVectorLength, *Plan,
+                       CM.getMaxSafeElements());
+        RUN_VPLAN_PASS(VPlanTransforms::optimizeEVLMasks, *Plan);
       }
       assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
       VPlans.push_back(std::move(Plan));
@@ -8573,18 +8590,15 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
 
   // Apply mandatory transformation to handle reductions with multiple in-loop
   // uses if possible, bail out otherwise.
-  if (!VPlanTransforms::runPass(VPlanTransforms::handleMultiUseReductions,
-                                *Plan))
+  if (!RUN_VPLAN_PASS(VPlanTransforms::handleMultiUseReductions, *Plan))
     return nullptr;
   // Apply mandatory transformation to handle FP maxnum/minnum reduction with
   // NaNs if possible, bail out otherwise.
-  if (!VPlanTransforms::runPass(VPlanTransforms::handleMaxMinNumReductions,
-                                *Plan))
+  if (!RUN_VPLAN_PASS(VPlanTransforms::handleMaxMinNumReductions, *Plan))
     return nullptr;
 
   // Create whole-vector selects for find-last recurrences.
-  if (!VPlanTransforms::runPass(VPlanTransforms::handleFindLastReductions,
-                                *Plan))
+  if (!RUN_VPLAN_PASS(VPlanTransforms::handleFindLastReductions, *Plan))
     return nullptr;
 
   // Transform recipes to abstract recipes if it is legal and beneficial and
@@ -8594,8 +8608,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   if (!CM.foldTailWithEVL()) {
     VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, CM.CostKind, CM.PSE,
                           OrigLoop);
-    VPlanTransforms::runPass(VPlanTransforms::convertToAbstractRecipes, *Plan,
-                             CostCtx, Range);
+    RUN_VPLAN_PASS(VPlanTransforms::convertToAbstractRecipes, *Plan, CostCtx,
+                   Range);
   }
 
   for (ElementCount VF : Range)
@@ -8605,24 +8619,23 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // Interleave memory: for each Interleave Group we marked earlier as relevant
   // for this VPlan, replace the Recipes widening its memory instructions with a
   // single VPInterleaveRecipe at its insertion point.
-  VPlanTransforms::runPass(VPlanTransforms::createInterleaveGroups, *Plan,
-                           InterleaveGroups, RecipeBuilder,
-                           CM.isScalarEpilogueAllowed());
+  RUN_VPLAN_PASS(VPlanTransforms::createInterleaveGroups, *Plan,
+                 InterleaveGroups, RecipeBuilder, CM.isScalarEpilogueAllowed());
 
   // Replace VPValues for known constant strides.
-  VPlanTransforms::runPass(VPlanTransforms::replaceSymbolicStrides, *Plan, PSE,
-                           Legal->getLAI()->getSymbolicStrides());
+  RUN_VPLAN_PASS(VPlanTransforms::replaceSymbolicStrides, *Plan, PSE,
+                 Legal->getLAI()->getSymbolicStrides());
 
   auto BlockNeedsPredication = [this](BasicBlock *BB) {
     return Legal->blockNeedsPredication(BB);
   };
-  VPlanTransforms::runPass(VPlanTransforms::dropPoisonGeneratingRecipes, *Plan,
-                           BlockNeedsPredication);
+  RUN_VPLAN_PASS(VPlanTransforms::dropPoisonGeneratingRecipes, *Plan,
+                 BlockNeedsPredication);
 
   // Sink users of fixed-order recurrence past the recipe defining the previous
   // value and introduce FirstOrderRecurrenceSplice VPInstructions.
-  if (!VPlanTransforms::runPass(VPlanTransforms::adjustFixedOrderRecurrences,
-                                *Plan, Builder))
+  if (!RUN_VPLAN_PASS(VPlanTransforms::adjustFixedOrderRecurrences, *Plan,
+                      Builder))
     return nullptr;
 
   if (useActiveLaneMask(Style)) {
@@ -8905,7 +8918,7 @@ void LoopVectorizationPlanner::addReductionResultComputation(
   for (VPRecipeBase *R : ToDelete)
     R->eraseFromParent();
 
-  VPlanTransforms::runPass(VPlanTransforms::clearReductionWrapFlags, *Plan);
+  RUN_VPLAN_PASS(VPlanTransforms::clearReductionWrapFlags, *Plan);
 }
 
 void LoopVectorizationPlanner::attachRuntimeChecks(
@@ -9293,7 +9306,7 @@ static void preparePlanForMainVectorLoop(VPlan &MainPlan, VPlan &EpiPlan) {
     VPIRInst->eraseFromParent();
     ResumePhi->eraseFromParent();
   }
-  VPlanTransforms::runPass(VPlanTransforms::removeDeadRecipes, MainPlan);
+  RUN_VPLAN_PASS(VPlanTransforms::removeDeadRecipes, MainPlan);
 
   using namespace VPlanPatternMatch;
   // When vectorizing the epilogue, FindFirstIV & FindLastIV reductions can
@@ -10130,9 +10143,8 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                            BestPlan);
     // TODO: Move to general VPlan pipeline once epilogue loops are also
     // supported.
-    VPlanTransforms::runPass(
-        VPlanTransforms::materializeConstantVectorTripCount, BestPlan, VF.Width,
-        IC, PSE);
+    RUN_VPLAN_PASS(VPlanTransforms::materializeConstantVectorTripCount,
+                   BestPlan, VF.Width, IC, PSE);
     LVP.addMinimumIterationCheck(BestPlan, VF.Width, IC,
                                  VF.MinProfitableTripCount);
 

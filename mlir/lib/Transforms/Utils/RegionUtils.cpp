@@ -19,10 +19,10 @@
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/SideEffectInterfaces.h"
 #include "mlir/Support/LogicalResult.h"
-
 #include "llvm/ADT/DepthFirstIterator.h"
 #include "llvm/ADT/PostOrderIterator.h"
 #include "llvm/ADT/STLExtras.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/Support/DebugLog.h"
 
 #include <deque>
@@ -140,8 +140,8 @@ SmallVector<Value> mlir::makeRegionIsolatedFromAbove(
   Block *entryBlock = &region.front();
   SmallVector<Type> newArgTypes =
       llvm::to_vector(entryBlock->getArgumentTypes());
-  SmallVector<Location> newArgLocs = llvm::to_vector(llvm::map_range(
-      entryBlock->getArguments(), [](BlockArgument b) { return b.getLoc(); }));
+  SmallVector<Location> newArgLocs = llvm::map_to_vector(
+      entryBlock->getArguments(), [](BlockArgument b) { return b.getLoc(); });
 
   // Append the types of the captured values.
   for (auto value : finalCapturedValues) {
