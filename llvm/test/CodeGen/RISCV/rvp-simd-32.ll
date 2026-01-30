@@ -1943,8 +1943,8 @@ define <2 x i16> @test_psdiv_mulhsu_h(<2 x i16> %a) {
 ; CHECK-NEXT:    addi a1, a1, -1911
 ; CHECK-NEXT:    pmv.hs a1, a1
 ; CHECK-NEXT:    pmulhsu.h a0, a0, a1
-; CHECK-NEXT:    psrai.h a0, a0, 3
 ; CHECK-NEXT:    psrli.h a1, a0, 15
+; CHECK-NEXT:    psrai.h a0, a0, 3
 ; CHECK-NEXT:    padd.h a0, a0, a1
 ; CHECK-NEXT:    ret
   %res = sdiv <2 x i16> %a, splat (i16 15)
@@ -2033,8 +2033,9 @@ define <4 x i8> @test_psdiv_mulhsu_b(<4 x i8> %a) {
 ; RV32:       # %bb.0:
 ; RV32-NEXT:    pli.b a1, -119
 ; RV32-NEXT:    pwmulsu.b a0, a0, a1
-; RV32-NEXT:    pnsrai.b a0, a0, 11
+; RV32-NEXT:    pncvth.b a0, a0
 ; RV32-NEXT:    psrli.b a1, a0, 7
+; RV32-NEXT:    psrai.b a0, a0, 3
 ; RV32-NEXT:    padd.b a0, a0, a1
 ; RV32-NEXT:    ret
 ;
@@ -2044,8 +2045,8 @@ define <4 x i8> @test_psdiv_mulhsu_b(<4 x i8> %a) {
 ; RV64-NEXT:    pmulsu.h.b11 a2, a0, a1
 ; RV64-NEXT:    pmulsu.h.b00 a0, a0, a1
 ; RV64-NEXT:    ppairo.b a0, a0, a2
-; RV64-NEXT:    psrai.b a0, a0, 3
 ; RV64-NEXT:    psrli.b a1, a0, 7
+; RV64-NEXT:    psrai.b a0, a0, 3
 ; RV64-NEXT:    padd.b a0, a0, a1
 ; RV64-NEXT:    ret
   %res = sdiv <4 x i8> %a, splat (i8 15)
