@@ -1123,17 +1123,17 @@ LIBC_INLINE int convert_float_dec_auto_typed(Writer<write_mode> *writer,
 }
 
 template <WriteMode write_mode>
-LIBC_PRINTF_MODULAR_DECL int
+LIBC_PRINTF_MODULE_DECL int
 convert_float_decimal(Writer<write_mode> *writer, const FormatSection &to_conv);
 template <WriteMode write_mode>
-LIBC_PRINTF_MODULAR_DECL int
+LIBC_PRINTF_MODULE_DECL int
 convert_float_dec_exp(Writer<write_mode> *writer, const FormatSection &to_conv);
 template <WriteMode write_mode>
-LIBC_PRINTF_MODULAR_DECL int
+LIBC_PRINTF_MODULE_DECL int
 convert_float_dec_auto(Writer<write_mode> *writer,
                        const FormatSection &to_conv);
 
-#ifdef LIBC_PRINTF_DEFINE_MODULAR
+#if !defined(LIBC_COPT_PRINTF_MODULAR) || defined(LIBC_PRINTF_DEFINE_MODULES)
 // TODO: unify the float converters to remove the duplicated checks for inf/nan.
 
 template <WriteMode write_mode>

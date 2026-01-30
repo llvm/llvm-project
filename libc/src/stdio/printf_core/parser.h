@@ -310,11 +310,11 @@ public:
     return section;
   }
 
-  LIBC_PRINTF_MODULAR_DECL void write_float_arg_val(FormatSection &section,
+  LIBC_PRINTF_MODULE_DECL void write_float_arg_val(FormatSection &section,
                                                     LengthModifier lm,
                                                     size_t conv_index);
-  LIBC_PRINTF_MODULAR_DECL TypeDesc float_type_desc(LengthModifier lm);
-  LIBC_PRINTF_MODULAR_DECL bool advance_arg_if_float(TypeDesc cur_type_desc);
+  LIBC_PRINTF_MODULE_DECL TypeDesc float_type_desc(LengthModifier lm);
+  LIBC_PRINTF_MODULE_DECL bool advance_arg_if_float(TypeDesc cur_type_desc);
 
 private:
   // parse_flags parses the flags inside a format string. It assumes that
@@ -708,7 +708,7 @@ private:
 #endif // LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
 };
 
-#ifdef LIBC_PRINTF_DEFINE_MODULAR
+#if !defined(LIBC_COPT_PRINTF_MODULAR) || defined(LIBC_PRINTF_DEFINE_MODULES)
 template <typename ArgParser>
 LIBC_INLINE void
 Parser<ArgParser>::write_float_arg_val(FormatSection &section,

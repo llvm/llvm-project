@@ -26,10 +26,10 @@ namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
 
 template <WriteMode write_mode>
-LIBC_PRINTF_MODULAR_DECL int
+LIBC_PRINTF_MODULE_DECL int
 convert_float_hex_exp(Writer<write_mode> *writer, const FormatSection &to_conv);
 
-#ifdef LIBC_PRINTF_DEFINE_MODULAR
+#if !defined(LIBC_COPT_PRINTF_MODULAR) || defined(LIBC_PRINTF_DEFINE_MODULES)
 template <WriteMode write_mode>
 LIBC_INLINE int convert_float_hex_exp(Writer<write_mode> *writer,
                                       const FormatSection &to_conv) {
