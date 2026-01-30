@@ -91,14 +91,13 @@ struct Variables {
   /// \return variableReference assigned to this expandable variable.
   int64_t InsertVariable(lldb::SBValue variable, bool is_permanent);
 
-  lldb::SBValueList *GetTopLevelScope(int64_t variablesReference);
+  std::optional<ScopeData> GetTopLevelScope(int64_t variablesReference);
 
   lldb::SBValue FindVariable(uint64_t variablesReference, llvm::StringRef name);
 
   /// Initialize a frame if it hasn't been already, otherwise do nothing
   std::vector<protocol::Scope> CreateScopes(const uint64_t dap_frame_id,
                                             lldb::SBFrame &frame);
-  std::optional<ScopeData> GetScopeKind(const int64_t variablesReference);
 
   /// Clear all scope variables and non-permanent expandable variables.
   void Clear();

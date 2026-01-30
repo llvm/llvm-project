@@ -51,19 +51,27 @@ protocol::Scope CreateScope(const ScopeKind kind, int64_t variablesReference,
   return scope;
 }
 
-lldb::SBValueList *Variables::GetTopLevelScope(int64_t variablesReference) {
-  auto iter = m_scope_kinds.find(variablesReference);
-  if (iter == m_scope_kinds.end())
-    return nullptr;
+std::optional<ScopeData>
+Variables::GetTopLevelScope(int64_t variablesReference) {
+  auto scope_kind_iter = m_scope_kinds.find(variablesReference);
+  if (scope_kind_iter == m_scope_kinds.end())
+    return std::nullopt;
 
-  ScopeKind scope_kind = iter->second.first;
-  uint64_t dap_frame_id = iter->second.second;
+  ScopeKind scope_kind = scope_kind_iter->second.first;
+  uint64_t dap_frame_id = scope_kind_iter->second.second;
 
   auto frame_iter = m_frames.find(dap_frame_id);
   if (frame_iter == m_frames.end())
-    return nullptr;
+    return std::nullopt;
 
-  return frame_iter->second.GetScope(scope_kind);
+  lldb::SBValueList *scope = frame_iter->second.GetScope(scope_kind);
+  if (scope == nullptr)
+    return std::nullopt;
+
+  ScopeData scope_data;
+  scope_data.kind = scope_kind;
+  scope_data.scope = *scope;
+  return scope_data;
 }
 
 void Variables::Clear() {
@@ -108,15 +116,16 @@ int64_t Variables::InsertVariable(lldb::SBValue variable, bool is_permanent) {
 lldb::SBValue Variables::FindVariable(uint64_t variablesReference,
                                       llvm::StringRef name) {
   lldb::SBValue variable;
-  if (lldb::SBValueList *top_scope = GetTopLevelScope(variablesReference)) {
+  if (std::optional<ScopeData> scope_data =
+          GetTopLevelScope(variablesReference)) {
     bool is_duplicated_variable_name = name.contains(" @");
     // variablesReference is one of our scopes, not an actual variable it is
     // asking for a variable in locals or globals or registers
-    int64_t end_idx = top_scope->GetSize();
+    int64_t end_idx = scope_data->scope.GetSize();
     // Searching backward so that we choose the variable in closest scope
     // among variables of the same name.
     for (int64_t i = end_idx - 1; i >= 0; --i) {
-      lldb::SBValue curr_variable = top_scope->GetValueAtIndex(i);
+      lldb::SBValue curr_variable = scope_data->scope.GetValueAtIndex(i);
       std::string variable_name = CreateUniqueVariableNameForDisplay(
           curr_variable, is_duplicated_variable_name);
       if (variable_name == name) {
@@ -144,30 +153,6 @@ lldb::SBValue Variables::FindVariable(uint64_t variablesReference,
     }
   }
   return variable;
-}
-
-std::optional<ScopeData>
-Variables::GetScopeKind(const int64_t variablesReference) {
-  auto scope_kind_iter = m_scope_kinds.find(variablesReference);
-  if (scope_kind_iter == m_scope_kinds.end()) {
-    return std::nullopt;
-  }
-
-  auto frames_iter = m_frames.find(scope_kind_iter->second.second);
-  if (frames_iter == m_frames.end()) {
-    return std::nullopt;
-  }
-
-  ScopeData scope_data = ScopeData();
-  scope_data.kind = scope_kind_iter->second.first;
-  lldb::SBValueList *scope = frames_iter->second.GetScope(scope_data.kind);
-
-  if (scope == nullptr) {
-    return std::nullopt;
-  }
-
-  scope_data.scope = *scope;
-  return scope_data;
 }
 
 lldb::SBValueList *Variables::GetScope(const uint64_t dap_frame_id,

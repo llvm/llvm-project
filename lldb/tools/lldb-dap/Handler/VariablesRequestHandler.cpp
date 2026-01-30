@@ -31,14 +31,14 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
 
   std::vector<Variable> variables;
 
-  if (lldb::SBValueList *top_scope = dap.variables.GetTopLevelScope(var_ref)) {
+  std::optional<ScopeData> scope_data = dap.variables.GetTopLevelScope(var_ref);
+  if (scope_data) {
     // variablesReference is one of our scopes, not an actual variable it is
     // asking for the list of args, locals or globals.
     int64_t start_idx = 0;
     int64_t num_children = 0;
 
-    std::optional<ScopeData> scope_data = dap.variables.GetScopeKind(var_ref);
-    if (scope_data.has_value() && scope_data->kind == eScopeKindRegisters) {
+    if (scope_data->kind == eScopeKindRegisters) {
 
       // Change the default format of any pointer sized registers in the first
       // register set to be the lldb::eFormatAddressInfo so we show the pointer
@@ -58,16 +58,15 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
       }
     }
 
-    num_children = top_scope->GetSize();
-    if (num_children == 0 && scope_data &&
-        scope_data->kind == eScopeKindLocals) {
+    num_children = scope_data->scope.GetSize();
+    if (num_children == 0 && scope_data->kind == eScopeKindLocals) {
       // Check for an error in the SBValueList that might explain why we don't
       // have locals. If we have an error display it as the sole value in the
       // the locals.
 
       // "error" owns the error string so we must keep it alive as long as we
       // want to use the returns "const char *"
-      lldb::SBError error = top_scope->GetError();
+      lldb::SBError error = scope_data->scope.GetError();
       const char *var_err = error.GetCString();
       if (var_err) {
         // Create a fake variable named "error" to explain why variables were
@@ -89,7 +88,7 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
     // We first find out which variable names are duplicated
     std::map<llvm::StringRef, int> variable_name_counts;
     for (auto i = start_idx; i < end_idx; ++i) {
-      lldb::SBValue variable = top_scope->GetValueAtIndex(i);
+      lldb::SBValue variable = scope_data->scope.GetValueAtIndex(i);
       if (!variable.IsValid())
         break;
       variable_name_counts[GetNonNullVariableName(variable)]++;
@@ -120,7 +119,7 @@ VariablesRequestHandler::Run(const VariablesArguments &arguments) const {
 
     // Now we construct the result with unique display variable names
     for (auto i = start_idx; i < end_idx; ++i) {
-      lldb::SBValue variable = top_scope->GetValueAtIndex(i);
+      lldb::SBValue variable = scope_data->scope.GetValueAtIndex(i);
 
       if (!variable.IsValid())
         break;
