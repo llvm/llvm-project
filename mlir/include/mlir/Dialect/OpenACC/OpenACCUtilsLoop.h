@@ -14,7 +14,7 @@
 #define MLIR_DIALECT_OPENACC_OPENACCUTILSLOOP_H_
 
 namespace mlir {
-class OpBuilder;
+class RewriterBase;
 namespace scf {
 class ForOp;
 class ParallelOp;
@@ -27,26 +27,30 @@ class LoopOp;
 /// The loop arguments are converted to index type. If enableCollapse is true,
 /// nested loops are collapsed into a single loop.
 /// @param loopOp The acc.loop operation to convert (must not be unstructured)
+/// @param rewriter RewriterBase for creating operations
 /// @param enableCollapse Whether to collapse nested loops into one
 /// @return The created scf.for operation or nullptr on creation error.
 ///         An InFlightDiagnostic is emitted on creation error.
-scf::ForOp convertACCLoopToSCFFor(LoopOp loopOp, bool enableCollapse);
+scf::ForOp convertACCLoopToSCFFor(LoopOp loopOp, RewriterBase &rewriter,
+                                  bool enableCollapse);
 
 /// Convert acc.loop to scf.parallel.
 /// The loop induction variables are converted to index types.
 /// @param loopOp The acc.loop operation to convert
-/// @param builder OpBuilder for creating operations
+/// @param rewriter RewriterBase for creating and erasing operations
 /// @return The created scf.parallel operation or nullptr on creation error.
 ///         An InFlightDiagnostic is emitted on creation error.
-scf::ParallelOp convertACCLoopToSCFParallel(LoopOp loopOp, OpBuilder &builder);
+scf::ParallelOp convertACCLoopToSCFParallel(LoopOp loopOp,
+                                            RewriterBase &rewriter);
 
 /// Convert an unstructured acc.loop to scf.execute_region.
 /// @param loopOp The acc.loop operation to convert (must be unstructured)
-/// @param builder OpBuilder for creating operations
+/// @param rewriter RewriterBase for creating and erasing operations
 /// @return The created scf.execute_region operation or nullptr on creation
 ///         error. An InFlightDiagnostic is emitted on creation error.
 scf::ExecuteRegionOp
-convertUnstructuredACCLoopToSCFExecuteRegion(LoopOp loopOp, OpBuilder &builder);
+convertUnstructuredACCLoopToSCFExecuteRegion(LoopOp loopOp,
+                                             RewriterBase &rewriter);
 
 } // namespace acc
 } // namespace mlir

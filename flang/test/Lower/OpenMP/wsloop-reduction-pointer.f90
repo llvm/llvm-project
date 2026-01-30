@@ -81,7 +81,7 @@ end program
 ! CHECK:           fir.store %[[VAL_11]] to %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK:           %[[VAL_12:.*]] = fir.convert %[[VAL_5]]#0 : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> !fir.ref<!fir.box<none>>
 ! CHECK:           %[[VAL_13:.*]] = fir.convert %[[VAL_8]] : (!fir.ref<!fir.char<{{.*}}>>) -> !fir.ref<i8>
-! CHECK:           %[[VAL_14:.*]] = fir.call @_FortranAPointerAllocate(%[[VAL_12]], %[[VAL_6]], %[[VAL_7]], %[[VAL_13]], %[[VAL_9]]) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32) -> i32
+! CHECK:           %[[VAL_14:.*]] = fir.call @_FortranAPointerAllocate(%[[VAL_12]], %[[VAL_6]], %[[VAL_7]], %[[VAL_13]], %[[VAL_9]], {{.*}}) fastmath<contract> : (!fir.ref<!fir.box<none>>, i1, !fir.box<none>, !fir.ref<i8>, i32, {{.*}}) -> i32
 ! CHECK:           %[[VAL_15:.*]] = arith.constant 0 : i32
 ! CHECK:           %[[VAL_16:.*]] = fir.load %[[VAL_5]]#0 : !fir.ref<!fir.box<!fir.ptr<i32>>>
 ! CHECK:           %[[VAL_17:.*]] = fir.box_addr %[[VAL_16]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>

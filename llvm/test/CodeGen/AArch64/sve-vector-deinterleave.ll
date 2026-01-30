@@ -514,10 +514,6 @@ define {<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16
 ;
 ; SME2-LABEL: vector_deinterleave_nxv16i8_nxv64i8:
 ; SME2:       // %bb.0:
-; SME2-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; SME2-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; SME2-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; SME2-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; SME2-NEXT:    uzp { z0.b - z3.b }, { z0.b - z3.b }
 ; SME2-NEXT:    ret
   %retval = call {<vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>, <vscale x 16 x i8>} @llvm.vector.deinterleave4.nxv64i8(<vscale x 64 x i8> %vec)
@@ -539,10 +535,6 @@ define {<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 
 ;
 ; SME2-LABEL: vector_deinterleave_nxv8i16_nxv32i16:
 ; SME2:       // %bb.0:
-; SME2-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; SME2-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; SME2-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; SME2-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; SME2-NEXT:    uzp { z0.h - z3.h }, { z0.h - z3.h }
 ; SME2-NEXT:    ret
   %retval = call {<vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>, <vscale x 8 x i16>} @llvm.vector.deinterleave4.nxv32i16(<vscale x 32 x i16> %vec)
@@ -564,10 +556,6 @@ define {<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 
 ;
 ; SME2-LABEL: vector_deinterleave_nxv4i32_nxv16i32:
 ; SME2:       // %bb.0:
-; SME2-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; SME2-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; SME2-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; SME2-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; SME2-NEXT:    uzp { z0.s - z3.s }, { z0.s - z3.s }
 ; SME2-NEXT:    ret
   %retval = call {<vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>, <vscale x 4 x i32>} @llvm.vector.deinterleave4.nxv16i32(<vscale x 16 x i32> %vec)
@@ -589,22 +577,17 @@ define {<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 
 ;
 ; SME2-ALL-LABEL: vector_deinterleave_nxv2i64_nxv8i64:
 ; SME2-ALL:       // %bb.0:
-; SME2-ALL-NEXT:    uzp { z4.d, z5.d }, z2.d, z3.d
+; SME2-ALL-NEXT:    uzp { z2.d, z3.d }, z2.d, z3.d
 ; SME2-ALL-NEXT:    uzp { z0.d, z1.d }, z0.d, z1.d
-; SME2-ALL-NEXT:    uzp { z2.d, z3.d }, z0.d, z4.d
-; SME2-ALL-NEXT:    uzp { z4.d, z5.d }, z1.d, z5.d
-; SME2-ALL-NEXT:    mov z0.d, z2.d
-; SME2-ALL-NEXT:    mov z1.d, z4.d
-; SME2-ALL-NEXT:    mov z2.d, z3.d
-; SME2-ALL-NEXT:    mov z3.d, z5.d
+; SME2-ALL-NEXT:    uzp { z4.d, z5.d }, z0.d, z2.d
+; SME2-ALL-NEXT:    uzp { z2.d, z3.d }, z1.d, z3.d
+; SME2-ALL-NEXT:    mov z0.d, z4.d
+; SME2-ALL-NEXT:    mov z1.d, z2.d
+; SME2-ALL-NEXT:    mov z2.d, z5.d
 ; SME2-ALL-NEXT:    ret
 ;
 ; SME2-256-LABEL: vector_deinterleave_nxv2i64_nxv8i64:
 ; SME2-256:       // %bb.0:
-; SME2-256-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; SME2-256-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; SME2-256-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; SME2-256-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
 ; SME2-256-NEXT:    uzp { z0.d - z3.d }, { z0.d - z3.d }
 ; SME2-256-NEXT:    ret
   %retval = call {<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>} @llvm.vector.deinterleave4.nxv8i64(<vscale x 8 x i64> %vec)
@@ -643,51 +626,39 @@ define {<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 
 ; SME2-ALL-LABEL: vector_deinterleave_nxv2i64_nxv16i64:
 ; SME2-ALL:       // %bb.0:
 ; SME2-ALL-NEXT:    uzp { z6.d, z7.d }, z6.d, z7.d
-; SME2-ALL-NEXT:    uzp { z24.d, z25.d }, z4.d, z5.d
-; SME2-ALL-NEXT:    uzp { z26.d, z27.d }, z24.d, z6.d
+; SME2-ALL-NEXT:    uzp { z4.d, z5.d }, z4.d, z5.d
+; SME2-ALL-NEXT:    uzp { z24.d, z25.d }, z4.d, z6.d
 ; SME2-ALL-NEXT:    uzp { z2.d, z3.d }, z2.d, z3.d
 ; SME2-ALL-NEXT:    uzp { z0.d, z1.d }, z0.d, z1.d
 ; SME2-ALL-NEXT:    uzp { z28.d, z29.d }, z0.d, z2.d
-; SME2-ALL-NEXT:    uzp { z4.d, z5.d }, z28.d, z26.d
-; SME2-ALL-NEXT:    uzp { z30.d, z31.d }, z25.d, z7.d
+; SME2-ALL-NEXT:    uzp { z26.d, z27.d }, z28.d, z24.d
+; SME2-ALL-NEXT:    uzp { z6.d, z7.d }, z5.d, z7.d
 ; SME2-ALL-NEXT:    uzp { z0.d, z1.d }, z1.d, z3.d
-; SME2-ALL-NEXT:    uzp { z6.d, z7.d }, z0.d, z30.d
-; SME2-ALL-NEXT:    uzp { z24.d, z25.d }, z29.d, z27.d
-; SME2-ALL-NEXT:    uzp { z26.d, z27.d }, z1.d, z31.d
-; SME2-ALL-NEXT:    mov z0.d, z4.d
-; SME2-ALL-NEXT:    mov z1.d, z6.d
+; SME2-ALL-NEXT:    uzp { z4.d, z5.d }, z0.d, z6.d
+; SME2-ALL-NEXT:    uzp { z24.d, z25.d }, z29.d, z25.d
+; SME2-ALL-NEXT:    uzp { z6.d, z7.d }, z1.d, z7.d
+; SME2-ALL-NEXT:    mov z0.d, z26.d
+; SME2-ALL-NEXT:    mov z1.d, z4.d
 ; SME2-ALL-NEXT:    mov z2.d, z24.d
-; SME2-ALL-NEXT:    mov z3.d, z26.d
-; SME2-ALL-NEXT:    mov z4.d, z5.d
-; SME2-ALL-NEXT:    mov z5.d, z7.d
+; SME2-ALL-NEXT:    mov z3.d, z6.d
+; SME2-ALL-NEXT:    mov z4.d, z27.d
 ; SME2-ALL-NEXT:    mov z6.d, z25.d
-; SME2-ALL-NEXT:    mov z7.d, z27.d
 ; SME2-ALL-NEXT:    ret
 ;
 ; SME2-256-LABEL: vector_deinterleave_nxv2i64_nxv16i64:
 ; SME2-256:       // %bb.0:
-; SME2-256-NEXT:    // kill: def $z3 killed $z3 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; SME2-256-NEXT:    // kill: def $z7 killed $z7 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; SME2-256-NEXT:    // kill: def $z2 killed $z2 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; SME2-256-NEXT:    // kill: def $z6 killed $z6 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; SME2-256-NEXT:    // kill: def $z1 killed $z1 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; SME2-256-NEXT:    // kill: def $z5 killed $z5 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; SME2-256-NEXT:    // kill: def $z0 killed $z0 killed $z0_z1_z2_z3 def $z0_z1_z2_z3
-; SME2-256-NEXT:    // kill: def $z4 killed $z4 killed $z4_z5_z6_z7 def $z4_z5_z6_z7
-; SME2-256-NEXT:    uzp { z28.d - z31.d }, { z4.d - z7.d }
+; SME2-256-NEXT:    uzp { z4.d - z7.d }, { z4.d - z7.d }
 ; SME2-256-NEXT:    uzp { z0.d - z3.d }, { z0.d - z3.d }
-; SME2-256-NEXT:    uzp { z4.d, z5.d }, z0.d, z28.d
-; SME2-256-NEXT:    uzp { z6.d, z7.d }, z1.d, z29.d
-; SME2-256-NEXT:    uzp { z24.d, z25.d }, z2.d, z30.d
-; SME2-256-NEXT:    uzp { z26.d, z27.d }, z3.d, z31.d
-; SME2-256-NEXT:    mov z0.d, z4.d
-; SME2-256-NEXT:    mov z1.d, z6.d
+; SME2-256-NEXT:    uzp { z26.d, z27.d }, z0.d, z4.d
+; SME2-256-NEXT:    uzp { z4.d, z5.d }, z1.d, z5.d
+; SME2-256-NEXT:    uzp { z24.d, z25.d }, z2.d, z6.d
+; SME2-256-NEXT:    uzp { z6.d, z7.d }, z3.d, z7.d
+; SME2-256-NEXT:    mov z0.d, z26.d
+; SME2-256-NEXT:    mov z1.d, z4.d
 ; SME2-256-NEXT:    mov z2.d, z24.d
-; SME2-256-NEXT:    mov z3.d, z26.d
-; SME2-256-NEXT:    mov z4.d, z5.d
-; SME2-256-NEXT:    mov z5.d, z7.d
+; SME2-256-NEXT:    mov z3.d, z6.d
+; SME2-256-NEXT:    mov z4.d, z27.d
 ; SME2-256-NEXT:    mov z6.d, z25.d
-; SME2-256-NEXT:    mov z7.d, z27.d
 ; SME2-256-NEXT:    ret
   %retval = call {<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>} @llvm.vector.deinterleave8.nxv16i64(<vscale x 16 x i64> %vec)
   ret {<vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>, <vscale x 2 x i64>} %retval
@@ -759,11 +730,10 @@ define {<vscale x 4 x i64>, <vscale x 4 x i64>} @vector_deinterleave_nxv4i64_nxv
 ; SME2-LABEL: vector_deinterleave_nxv4i64_nxv8i64:
 ; SME2:       // %bb.0:
 ; SME2-NEXT:    uzp { z4.d, z5.d }, z0.d, z1.d
-; SME2-NEXT:    uzp { z6.d, z7.d }, z2.d, z3.d
+; SME2-NEXT:    uzp { z2.d, z3.d }, z2.d, z3.d
 ; SME2-NEXT:    mov z0.d, z4.d
-; SME2-NEXT:    mov z1.d, z6.d
+; SME2-NEXT:    mov z1.d, z2.d
 ; SME2-NEXT:    mov z2.d, z5.d
-; SME2-NEXT:    mov z3.d, z7.d
 ; SME2-NEXT:    ret
   %retval = call {<vscale x 4 x i64>, <vscale x 4 x i64>} @llvm.vector.deinterleave2.nxv8i64(<vscale x 8 x i64> %vec)
   ret {<vscale x 4 x i64>, <vscale x 4 x i64>} %retval
@@ -794,15 +764,14 @@ define {<vscale x 8 x i64>, <vscale x 8 x i64>} @vector_deinterleave_nxv8i64_nxv
 ; SME2-NEXT:    uzp { z24.d, z25.d }, z0.d, z1.d
 ; SME2-NEXT:    uzp { z26.d, z27.d }, z2.d, z3.d
 ; SME2-NEXT:    uzp { z28.d, z29.d }, z4.d, z5.d
-; SME2-NEXT:    uzp { z30.d, z31.d }, z6.d, z7.d
+; SME2-NEXT:    uzp { z6.d, z7.d }, z6.d, z7.d
 ; SME2-NEXT:    mov z0.d, z24.d
 ; SME2-NEXT:    mov z1.d, z26.d
 ; SME2-NEXT:    mov z2.d, z28.d
-; SME2-NEXT:    mov z3.d, z30.d
+; SME2-NEXT:    mov z3.d, z6.d
 ; SME2-NEXT:    mov z4.d, z25.d
 ; SME2-NEXT:    mov z5.d, z27.d
 ; SME2-NEXT:    mov z6.d, z29.d
-; SME2-NEXT:    mov z7.d, z31.d
 ; SME2-NEXT:    ret
   %retval = call {<vscale x 8 x i64>, <vscale x 8 x i64>} @llvm.vector.deinterleave2.nxv16i64(<vscale x 16 x i64> %vec)
   ret {<vscale x 8 x i64>, <vscale x 8 x i64>} %retval

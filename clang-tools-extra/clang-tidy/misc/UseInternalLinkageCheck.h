@@ -36,6 +36,9 @@ public:
 private:
   FileExtensionsSet HeaderFileExtensions;
   FixModeKind FixMode;
+  const bool AnalyzeFunctions;
+  const bool AnalyzeVariables;
+  const bool AnalyzeTypes;
 };
 
 } // namespace clang::tidy::misc

@@ -104,7 +104,7 @@ private:
   // Returns true if `E` is an character constant.
   bool isCharConstant(const Expr *E) const {
     return isCharTyped(E) && isCharValuedConstant(E);
-  };
+  }
 
   // Returns true if `E` is an integer constant which fits in `CharType`.
   bool isCharValuedConstant(const Expr *E) const {
@@ -114,13 +114,13 @@ private:
     if (!E->EvaluateAsInt(EvalResult, Ctx, Expr::SE_AllowSideEffects))
       return false;
     return EvalResult.Val.getInt().getActiveBits() <= Ctx.getTypeSize(CharType);
-  };
+  }
 
   // Returns true if `E` has the right character type.
   bool isCharTyped(const Expr *E) const {
     return E->getType().getCanonicalType().getTypePtr() ==
            CharType.getTypePtr();
-  };
+  }
 
   const QualType CharType;
   const ASTContext &Ctx;

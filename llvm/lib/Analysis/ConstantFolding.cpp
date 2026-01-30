@@ -1730,8 +1730,6 @@ bool llvm::canConstantFoldCallTo(const CallBase *Call, const Function *F) {
   case Intrinsic::frexp:
   case Intrinsic::fptoui_sat:
   case Intrinsic::fptosi_sat:
-  case Intrinsic::convert_from_fp16:
-  case Intrinsic::convert_to_fp16:
   case Intrinsic::amdgcn_cos:
   case Intrinsic::amdgcn_cubeid:
   case Intrinsic::amdgcn_cubema:
@@ -2458,15 +2456,6 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
   }
 
   if (auto *Op = dyn_cast<ConstantFP>(Operands[0])) {
-    if (IntrinsicID == Intrinsic::convert_to_fp16) {
-      APFloat Val(Op->getValueAPF());
-
-      bool lost = false;
-      Val.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven, &lost);
-
-      return ConstantInt::get(Ty->getContext(), Val.bitcastToAPInt());
-    }
-
     APFloat U = Op->getValueAPF();
 
     if (IntrinsicID == Intrinsic::wasm_trunc_signed ||
@@ -2719,11 +2708,29 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
     switch (IntrinsicID) {
       default: break;
       case Intrinsic::log:
+        if (U.isZero())
+          return ConstantFP::getInfinity(Ty, true);
+        if (U.isNegative())
+          return ConstantFP::getNaN(Ty);
+        if (U.isExactlyValue(1.0))
+          return ConstantFP::getZero(Ty);
         return ConstantFoldFP(log, APF, Ty);
       case Intrinsic::log2:
+        if (U.isZero())
+          return ConstantFP::getInfinity(Ty, true);
+        if (U.isNegative())
+          return ConstantFP::getNaN(Ty);
+        if (U.isExactlyValue(1.0))
+          return ConstantFP::getZero(Ty);
         // TODO: What about hosts that lack a C99 library?
         return ConstantFoldFP(log2, APF, Ty);
       case Intrinsic::log10:
+        if (U.isZero())
+          return ConstantFP::getInfinity(Ty, true);
+        if (U.isNegative())
+          return ConstantFP::getNaN(Ty);
+        if (U.isExactlyValue(1.0))
+          return ConstantFP::getZero(Ty);
         // TODO: What about hosts that lack a C99 library?
         return ConstantFoldFP(log10, APF, Ty);
       case Intrinsic::exp:
@@ -3054,21 +3061,6 @@ static Constant *ConstantFoldScalarCall1(StringRef Name,
       return ConstantInt::get(Ty, Op->getValue().popcount());
     case Intrinsic::bitreverse:
       return ConstantInt::get(Ty->getContext(), Op->getValue().reverseBits());
-    case Intrinsic::convert_from_fp16: {
-      APFloat Val(APFloat::IEEEhalf(), Op->getValue());
-
-      bool lost = false;
-      APFloat::opStatus status = Val.convert(
-          Ty->getFltSemantics(), APFloat::rmNearestTiesToEven, &lost);
-
-      // Conversion is always precise.
-      (void)status;
-      assert(status != APFloat::opInexact && !lost &&
-             "Precision lost during fp16 constfolding");
-
-      return ConstantFP::get(Ty, Val);
-    }
-
     case Intrinsic::amdgcn_s_wqm: {
       uint64_t Val = Op->getZExtValue();
       Val |= (Val & 0x5555555555555555ULL) << 1 |
@@ -4270,7 +4262,7 @@ static Constant *ConstantFoldFixedVectorCall(
     }
     for (unsigned I = 0; I < Result.size(); I++) {
       int64_t IAdd = (int64_t)MulVector[I * 2] + (int64_t)MulVector[I * 2 + 1];
-      Result[I] = ConstantInt::get(Ty, IAdd);
+      Result[I] = ConstantInt::getSigned(Ty, IAdd, /*ImplicitTrunc=*/true);
     }
 
     return ConstantVector::get(Result);

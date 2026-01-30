@@ -572,8 +572,9 @@ public:
   LLVM_ABI const SCEV *getConstant(ConstantInt *V);
   LLVM_ABI const SCEV *getConstant(const APInt &Val);
   LLVM_ABI const SCEV *getConstant(Type *Ty, uint64_t V, bool isSigned = false);
-  LLVM_ABI const SCEV *getLosslessPtrToIntExpr(const SCEV *Op,
-                                               unsigned Depth = 0);
+  LLVM_ABI const SCEV *getLosslessPtrToIntExpr(const SCEV *Op);
+
+  LLVM_ABI const SCEV *getPtrToAddrExpr(const SCEV *Op);
   LLVM_ABI const SCEV *getPtrToIntExpr(const SCEV *Op, Type *Ty);
   LLVM_ABI const SCEV *getTruncateExpr(const SCEV *Op, Type *Ty,
                                        unsigned Depth = 0);

@@ -46,8 +46,6 @@ int main(int argc, char** argv) {
     };
     bm.operator()<std::vector<int>>("std::shuffle(vector<int>)", std_shuffle);
     bm.operator()<std::deque<int>>("std::shuffle(deque<int>)", std_shuffle);
-    bm.operator()<std::vector<int>>("rng::shuffle(vector<int>)", std::ranges::shuffle);
-    bm.operator()<std::deque<int>>("rng::shuffle(deque<int>)", std::ranges::shuffle);
   }
 
   benchmark::Initialize(&argc, argv);

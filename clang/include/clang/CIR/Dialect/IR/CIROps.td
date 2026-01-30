@@ -77,8 +77,14 @@ class LLVMLoweringInfo {
   string llvmOp = "";
 }
 
+class LoweringBuilders<dag p> {
+  dag dagParams = p;
+}
+
 class CIR_Op<string mnemonic, list<Trait> traits = []> :
     Op<CIR_Dialect, mnemonic, traits>, LLVMLoweringInfo {
+  // Should we generate an ABI lowering pattern for this op?
+  bit hasCXXABILowering = false;
   // Should we generate an LLVM lowering pattern for this op?
   bit hasLLVMLowering = true;
   // Is the LLVM lowering pattern for this operation recursive?
@@ -86,6 +92,21 @@ class CIR_Op<string mnemonic, list<Trait> traits = []> :
   // Extra class declarations to be included in the generated LLVM lowering
   // pattern.
   code extraLLVMLoweringPatternDecl = "";
+  // Optional custom constructor for the generated LLVM lowering pattern.
+  //
+  // By default, CIR generates a standard lowering pattern constructor that
+  // receives the TypeConverter, MLIRContext, LowerModule, and DataLayout.
+  // Some operations require additional state or external context to be passed
+  // to the lowering pattern.
+  //
+  // This field allows an operation to define a single custom constructor for
+  // its LLVM lowering pattern. When specified, the default constructor is not
+  // generated, and only this custom constructor is emitted.
+  // NOTE: When providing a custom constructor, the corresponding lowering
+  // pattern is not automatically added to the RewritePatternSet. Users are
+  // responsible for manually registering the lowering pattern in the lowering
+  // pass.
+  LoweringBuilders customLLVMLoweringConstructorDecl = ?;
 }
 
 //===----------------------------------------------------------------------===//
@@ -239,6 +260,7 @@ def CIR_CastOp : CIR_Op<"cast", [
   // The input and output types should match the cast kind.
   let hasVerifier = 1;
   let hasFolder = 1;
+  let hasCXXABILowering = 1;
 
   let extraLLVMLoweringPatternDecl = [{
     mlir::Type convertTy(mlir::Type ty) const;
@@ -338,6 +360,7 @@ def CIR_DynamicCastOp : CIR_Op<"dyn_cast"> {
   }];
 
   let hasLLVMLowering = false;
+  let hasCXXABILowering = true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -420,6 +443,12 @@ def CIR_ConstantOp : CIR_Op<"const", [
       llvm_unreachable("Expected an IntAttr in ConstantOp");
     }
 
+    llvm::APFloat getFloatValue() {
+      if (const auto fpAttr = getValueAttr<cir::FPAttr>())
+        return fpAttr.getValue();
+      llvm_unreachable("Expected an FPAttr in ConstantOp");
+    }
+
     bool getBoolValue() {
       if (const auto boolAttr = getValueAttr<cir::BoolAttr>())
         return boolAttr.getValue();
@@ -451,6 +480,7 @@ def CIR_ConstantOp : CIR_Op<"const", [
 
   let hasFolder = 1;
 
+  let hasCXXABILowering = true;
   let isLLVMLoweringRecursive = true;
 }
 
@@ -530,7 +560,7 @@ def CIR_AllocaOp : CIR_Op<"alloca", [
     StrAttr:$name,
     UnitAttr:$init,
     UnitAttr:$constant,
-    ConfinedAttr<OptionalAttr<I64Attr>, [IntMinValue<0>]>:$alignment,
+    ConfinedAttr<I64Attr, [IntMinValue<1>]>:$alignment,
     OptionalAttr<ArrayAttr>:$annotations
   );
 
@@ -571,6 +601,8 @@ def CIR_AllocaOp : CIR_Op<"alloca", [
     `]`
     ($annotations^)? attr-dict
   }];
+
+  let hasCXXABILowering = true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -737,7 +769,7 @@ def CIR_ReturnOp : CIR_Op<"return", [
 //===----------------------------------------------------------------------===//
 
 def CIR_IfOp : CIR_Op<"if", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
 ]> {
   let summary = "the if-then-else operation";
@@ -998,7 +1030,7 @@ def CIR_ResumeFlatOp : CIR_Op<"resume.flat", [
 //===----------------------------------------------------------------------===//
 
 def CIR_ScopeOp : CIR_Op<"scope", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments,
   RecursiveMemoryEffects
 ]> {
@@ -1067,7 +1099,7 @@ def CIR_CaseOpKind : CIR_I32EnumAttr<"CaseOpKind", "case kind", [
 ]>;
 
 def CIR_CaseOp : CIR_Op<"case", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
   RecursivelySpeculatable, AutomaticAllocationScope
 ]> {
   let summary = "Case operation";
@@ -1105,7 +1137,7 @@ def CIR_CaseOp : CIR_Op<"case", [
 
 def CIR_SwitchOp : CIR_Op<"switch", [
   SameVariadicOperandSize,
-  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments,
   RecursiveMemoryEffects
 ]> {
@@ -1396,6 +1428,8 @@ def CIR_BrOp : CIR_Op<"br",[
   let assemblyFormat = [{
     $dest (`(` $destOperands^ `:` type($destOperands) `)`)? attr-dict
   }];
+
+  let hasCanonicalizeMethod = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1470,7 +1504,8 @@ def CIR_LabelOp : CIR_Op<"label", [AlwaysSpeculatable]> {
   let assemblyFormat = [{ $label attr-dict }];
   let hasVerifier = 1;
 
-  let hasLLVMLowering = false;
+  let customLLVMLoweringConstructorDecl =
+    LoweringBuilders<(ins "LLVMBlockAddressInfo &":$blockInfoAddr)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -1630,6 +1665,10 @@ class CIR_LoopOpBase<string mnemonic> : CIR_Op<mnemonic, [
         mlir::RegionBranchPoint point,
         llvm::SmallVectorImpl<mlir::RegionSuccessor> &regions) {
       LoopOpInterface::getLoopOpSuccessorRegions(*this, point, regions);
+    }
+    ValueRange $cppClass::getSuccessorInputs(
+        mlir::RegionSuccessor successor) {
+      return LoopOpInterface::getLoopOpSuccessorInputs(*this, successor);
     }
     llvm::SmallVector<Region *> $cppClass::getLoopRegions() {
       return {&getBody()};
@@ -1823,6 +1862,7 @@ def CIR_CmpOp : CIR_Op<"cmp", [Pure, SameTypeOperands]> {
   }];
 
   let isLLVMLoweringRecursive = true;
+  let hasCXXABILowering = true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -2073,7 +2113,7 @@ def CIR_SelectOp : CIR_Op<"select", [
 //===----------------------------------------------------------------------===//
 
 def CIR_TernaryOp : CIR_Op<"ternary", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
 ]> {
   let summary = "The `cond ? a : b` C/C++ ternary operation";
@@ -2174,7 +2214,7 @@ def CIR_TLSModel : CIR_I32EnumAttr<"TLS_Model", "TLS model", [
 ]>;
 
 def CIR_GlobalOp : CIR_Op<"global", [
-  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
   DeclareOpInterfaceMethods<CIRGlobalValueInterface>,
   NoRegionArguments
 ]> {
@@ -2250,6 +2290,8 @@ def CIR_GlobalOp : CIR_Op<"global", [
   ];
 
   let hasVerifier = 1;
+
+  let hasCXXABILowering = true;
 
   let isLLVMLoweringRecursive = true;
   let extraLLVMLoweringPatternDecl = [{
@@ -2728,6 +2770,105 @@ def CIR_GetMemberOp : CIR_Op<"get_member"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ExtractMemberOp
+//===----------------------------------------------------------------------===//
+
+def CIR_ExtractMemberOp : CIR_Op<"extract_member", [Pure]> {
+  let summary = "Extract the value of a member of a record value";
+  let description = [{
+    The `cir.extract_member` operation extracts the value of a particular member
+    from the input record. Unlike `cir.get_member` which derives pointers, this
+    operation operates on values. It takes a value of record type and extracts
+    the value of the specified record member from the input record value.
+
+    Currently `cir.extract_member` does not work on unions.
+
+    Example:
+
+    ```mlir
+    // Suppose we have a record with multiple members.
+    !s32i = !cir.int<s, 32>
+    !s8i = !cir.int<s, 32>
+    !record_ty = !cir.record<"struct.Bar" {!s32i, !s8i}>
+
+    // And suppose we have a value of the record type.
+    %0 = cir.const #cir.const_record<{#cir.int<1> : !s32i,
+	                                 #cir.int<2> : !s8i}> : !record_ty
+
+    // Extract the value of the second member of the record.
+    %1 = cir.extract_member %0[1] : !record_ty -> !s8i
+    ```
+  }];
+
+  let arguments = (ins CIRRecordType:$record, I64Attr:$index);
+  let results = (outs CIR_AnyType:$result);
+
+  let assemblyFormat = [{
+    $record `[` $index `]` attr-dict
+    `:` qualified(type($record)) `->` qualified(type($result))
+  }];
+
+  let builders = [
+    OpBuilder<(ins "mlir::Value":$record, "uint64_t":$index), [{
+      auto recordTy = mlir::cast<cir::RecordType>(record.getType());
+      mlir::Type memberTy = recordTy.getMembers()[index];
+      build($_builder, $_state, memberTy, record, index);
+    }]>
+  ];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
+// InsertMemberOp
+//===----------------------------------------------------------------------===//
+
+def CIR_InsertMemberOp : CIR_Op<"insert_member", [
+  Pure, AllTypesMatch<["record", "result"]>
+]> {
+  let summary = "Overwrite the value of a member of a record value";
+  let description = [{
+    The `cir.insert_member` operation overwrites the value of a particular
+    member in the input record, and returns the modified record. The result of
+    this operation is equal to the input record, except for the member specified
+    by `index_attr` whose value is equal to the given value.
+
+    This operation is named after the LLVM instruction `insertvalue`.
+
+    Currently `cir.insert_member` does not work on unions.
+
+    Example:
+
+    ```mlir
+    // Suppose we have a record with multiple members.
+    !s32i = !cir.int<s, 32>
+    !s8i = !cir.int<s, 32>
+    !record_ty = !cir.record<"struct.Bar" {!s32i, !s8i}>
+
+    // And suppose we have a value of the record type.
+    %0 = cir.const #cir.const_record<{#cir.int<1> : !s32i, #cir.int<2> : !s8i}> : !record_ty
+    // %0 is {1, 2}
+
+    // Overwrite the second member of the record value.
+    %1 = cir.const #cir.int<3> : !s8i
+    %2 = cir.insert_member %0[1], %1 : !record_ty, !s8i
+    // %2 is {1, 3}
+    ```
+  }];
+
+  let arguments = (ins CIRRecordType:$record, I64Attr:$index,
+                       CIR_AnyType:$value);
+  let results = (outs CIRRecordType:$result);
+
+  let assemblyFormat = [{
+    $record `[` $index `]` `,` $value attr-dict
+    `:` qualified(type($record)) `,` qualified(type($value))
+  }];
+
+  let hasVerifier = 1;
+}
+
+//===----------------------------------------------------------------------===//
 // GetElementOp
 //===----------------------------------------------------------------------===//
 
@@ -2798,6 +2939,10 @@ def CIR_OptionalPriorityAttr : OptionalAttr<
   >
 >;
 
+// TODO(CIR): CallingConv is a placeholder here so we can use it in
+// infrastructure calls, but it currently has no values.
+def CIR_CallingConv : CIR_I32EnumAttr<"CallingConv", "calling convention", []>;
+
 def CIR_FuncOp : CIR_Op<"func", [
   AutomaticAllocationScope, CallableOpInterface, FunctionOpInterface,
   DeclareOpInterfaceMethods<CIRGlobalValueInterface>,
@@ -2867,7 +3012,7 @@ def CIR_FuncOp : CIR_Op<"func", [
     ```
   }];
 
-  let arguments = (ins 
+  let arguments = (ins
     SymbolNameAttr:$sym_name,
     CIR_VisibilityAttr:$global_visibility,
     TypeAttrOf<CIR_FuncType>:$function_type,
@@ -2886,6 +3031,7 @@ def CIR_FuncOp : CIR_Op<"func", [
     OptionalAttr<DictArrayAttr>:$arg_attrs,
     OptionalAttr<DictArrayAttr>:$res_attrs,
     OptionalAttr<FlatSymbolRefAttr>:$aliasee,
+    OptionalAttr<CIR_SideEffect>:$side_effect,
     OptionalAttr<FlatSymbolRefAttr>:$personality,
     CIR_OptionalPriorityAttr:$global_ctor_priority,
     CIR_OptionalPriorityAttr:$global_dtor_priority,
@@ -2959,6 +3105,8 @@ def CIR_FuncOp : CIR_Op<"func", [
   let hasCustomAssemblyFormat = 1;
   let hasVerifier = 1;
 
+  let hasCXXABILowering = true;
+
   let extraLLVMLoweringPatternDecl = [{
     static mlir::StringRef getLinkageAttrNameString() { return "linkage"; }
 
@@ -3009,35 +3157,6 @@ def CIR_LLVMIntrinsicCallOp : CIR_Op<"call_llvm_intrinsic"> {
 //===----------------------------------------------------------------------===//
 // CallOp and TryCallOp
 //===----------------------------------------------------------------------===//
-
-def CIR_SideEffect : CIR_I32EnumAttr<
-    "SideEffect", "allowed side effects of a function", [
-      I32EnumAttrCase<"All", 0, "all">,
-      I32EnumAttrCase<"Pure", 1, "pure">,
-      I32EnumAttrCase<"Const", 2, "const">
-]> {
-  let description = [{
-    The side effect attribute specifies the possible side effects of the callee
-    of a call operation. This is an enumeration attribute and all possible
-    enumerators are:
-
-    - all: The callee can have any side effects. This is the default if no side
-      effects are explicitly listed.
-    - pure: The callee may read data from memory, but it cannot write data to
-      memory. This has the same effect as the GNU C/C++ attribute
-      `__attribute__((pure))`.
-    - const: The callee may not read or write data from memory. This has the
-      same effect as the GNU C/C++ attribute `__attribute__((const))`.
-
-    Examples:
-
-    ```mlir
-    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i
-    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(pure)
-    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(const)
-    ```
-  }];
-}
 
 class CIR_CallOpBase<string mnemonic, list<Trait> extra_traits = []>
     : CIR_Op<mnemonic, !listconcat(extra_traits, [
@@ -3238,7 +3357,7 @@ def CIR_AwaitKind : CIR_I32EnumAttr<"AwaitKind", "await kind", [
 ]>;
 
 def CIR_AwaitOp : CIR_Op<"await",[
-  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
   RecursivelySpeculatable, NoRegionArguments
 ]> {
   let summary = "Wraps C++ co_await implicit logic";
@@ -3368,6 +3487,58 @@ def CIR_CopyOp : CIR_Op<"copy",[
     }    
   }];
 }
+
+//===----------------------------------------------------------------------===//
+// MemCpyOp && MemMoveOp
+//===----------------------------------------------------------------------===//
+
+class CIR_MemOp<string mnemonic> : CIR_Op<mnemonic, [
+  AllTypesMatch<["dst", "src"]>
+]> {
+  dag commonArgs = (ins
+    Arg<CIR_VoidPtrType, "", [MemWrite]>:$dst,
+    Arg<CIR_VoidPtrType, "", [MemRead]>:$src
+  );
+}
+
+def CIR_MemCpyOp : CIR_MemOp<"libc.memcpy"> {
+  let summary = "Equivalent to libc's `memcpy`";
+  let description = [{
+    Given two CIR pointers, `src` and `dst`, `cir.libc.memcpy` will copy `len`
+    bytes from the memory pointed by `src` to the memory pointed by `dst`.
+
+    While `cir.copy` is meant to be used for implicit copies in the code where
+    the length of the copy is known, `cir.memcpy` copies only from and to void
+    pointers, requiring the copy length to be passed as an argument.
+
+    As is the case for memcpy in the C standard library, this operation
+    exhibits undefined behavior (UB) if any of the following conditions hold:
+      * `src` and/or `dst` are null pointers; or
+      * the memory regions referenced by `src` and `dst` overlap.
+
+    Examples:
+
+    ```mlir
+      // Copying 2 bytes from one array to a record:
+      %2 = cir.const #cir.int<2> : !u32i
+      cir.libc.memcpy %2 bytes from %arr to %record : !cir.ptr<!arr> -> !cir.ptr<!record>
+    ```
+  }];
+
+  let arguments = !con(commonArgs, (ins CIR_AnyFundamentalUIntType:$len));
+
+  let assemblyFormat = [{
+    $len `bytes` `from` $src `to` $dst attr-dict
+    `:` type($len) `,` qualified(type($src)) `->` qualified(type($dst))
+  }];
+
+  let extraClassDeclaration = [{
+    /// Returns the byte length type.
+    cir::IntType getLenTy() { return getLen().getType(); }
+  }];
+}
+
+// TODO: MemMoveOp
 
 //===----------------------------------------------------------------------===//
 // ReturnAddrOp and FrameAddrOp
@@ -3735,7 +3906,62 @@ def CIR_GetRuntimeMemberOp : CIR_Op<"get_runtime_member"> {
 
   let hasVerifier = 1;
 
+  let hasCXXABILowering = true;
   let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// GetMethodOp
+//===----------------------------------------------------------------------===//
+
+def CIR_GetMethodOp : CIR_Op<"get_method"> {
+  let summary = "Resolve a method to a function pointer as callee";
+  let description = [{
+    The `cir.get_method` operation takes a pointer to method (!cir.method) and
+    a pointer to a class object (!cir.ptr<!cir.record>>) as input, and
+    yields a function pointer that points to the actual function corresponding
+    to the input method. The operation also applies any necessary adjustments to
+    the input object pointer for calling the method and yields the adjusted
+    pointer.
+
+    This operation is generated when calling a method through a pointer-to-
+    member-function in C++:
+
+    ```cpp
+    // Foo *object;
+    // int arg;
+    // void (Foo::*method)(int);
+
+    (object->*method)(arg);
+    ```
+
+    The code above will generate CIR similar to:
+
+    ```mlir
+    %callee, %this = cir.get_method %method, %object
+    cir.call %callee(%this, %arg)
+    ```
+
+    The method type must match the callee type. That is:
+    - The return type of the method must match the return type of the callee.
+    - The first parameter of the callee must have type `!cir.ptr<!cir.void>`.
+    - Types of other parameters of the callee must match the parameters of the
+      method.
+  }];
+
+  let arguments = (ins CIR_MethodType:$method, CIR_PtrToRecordType:$object);
+  let results = (outs CIR_PtrToFunc:$callee, CIR_VoidPtrType:$adjusted_this);
+
+  let assemblyFormat = [{
+    $method `,` $object
+    `:` `(` qualified(type($method)) `,` qualified(type($object)) `)`
+    `->` `(` qualified(type($callee)) `,` qualified(type($adjusted_this)) `)`
+    attr-dict
+  }];
+
+  let hasVerifier = 1;
+  let hasLLVMLowering = false;
+  let hasCXXABILowering = true;
 }
 
 //===----------------------------------------------------------------------===//
@@ -4114,6 +4340,132 @@ def CIR_DerivedClassAddrOp : CIR_Op<"derived_class_addr"> {
       (`nonnull` $assume_not_null^)?
       ` ` `[` $offset `]` `->` qualified(type($derived_addr)) attr-dict
   }];
+}
+
+//===----------------------------------------------------------------------===//
+// BaseDataMemberOp & DerivedDataMemberOp
+//===----------------------------------------------------------------------===//
+
+def CIR_BaseDataMemberOp : CIR_Op<"base_data_member", [Pure]> {
+  let summary =
+    "Cast a derived class data member pointer to a base class data member "
+    "pointer";
+  let description = [{
+    The `cir.base_data_member` operation casts a data member pointer of type
+    `T Derived::*` to a data member pointer of type `T Base::*`, where `Base`
+    is an accessible non-ambiguous non-virtual base class of `Derived`.
+
+    The `offset` parameter gives the offset in bytes of the `Base` base class
+    subobject within a `Derived` object.
+  }];
+
+  let arguments = (ins CIR_DataMemberType:$src, IndexAttr:$offset);
+  let results = (outs CIR_DataMemberType:$result);
+
+  let assemblyFormat = [{
+    $src `[` $offset `]` `:` qualified(type($src)) `->` qualified(type($result)) attr-dict
+  }];
+
+  let hasVerifier = 1;
+  let hasLLVMLowering = false;
+  let hasCXXABILowering = true;  
+}
+
+def CIR_DerivedDataMemberOp : CIR_Op<"derived_data_member", [Pure]> {
+  let summary =
+    "Cast a base class data member pointer to a derived class data member "
+    "pointer";
+  let description = [{
+    The `cir.derived_data_member` operation casts a data member pointer of type
+    `T Base::*` to a data member pointer of type `T Derived::*`, where `Base`
+    is an accessible non-ambiguous non-virtual base class of `Derived`.
+
+    The `offset` parameter gives the offset in bytes of the `Base` base class
+    subobject within a `Derived` object.
+  }];
+
+  let arguments = (ins CIR_DataMemberType:$src, IndexAttr:$offset);
+  let results = (outs CIR_DataMemberType:$result);
+
+  let assemblyFormat = [{
+    $src `[` $offset `]` `:` qualified(type($src)) `->` qualified(type($result)) attr-dict
+  }];
+
+  let hasVerifier = 1;
+  let hasLLVMLowering = false;
+  let hasCXXABILowering = true;  
+}
+
+//===----------------------------------------------------------------------===//
+// BaseMethodOp & DerivedMethodOp
+//===----------------------------------------------------------------------===//
+
+def CIR_BaseMethodOp : CIR_Op<"base_method", [Pure]> {
+  let summary = [{
+    Cast a derived class pointer-to-member-function to a base class
+    pointer-to-member-function
+  }];
+  let description = [{
+    The `cir.base_method` operation casts a pointer-to-member-function of type
+    `Ret (Derived::*)(Args)` to a pointer-to-member-function of type
+    `Ret (Base::*)(Args)`, where `Base` is a non-virtual base class of
+    `Derived`.
+
+    The `offset` parameter gives the offset in bytes of the `Base` base class
+    subobject within a `Derived` object.
+
+    Example:
+
+    ```mlir
+    %1 = cir.base_method %0 [16] : !cir.method<!cir.func<(!s32i)> in !rec_Derived> -> !cir.method<!cir.func<(!s32i)> in !rec_Base>
+    ```
+  }];
+
+  let arguments = (ins CIR_MethodType:$src, IndexAttr:$offset);
+  let results = (outs CIR_MethodType:$result);
+
+  let assemblyFormat = [{
+    $src `[` $offset `]` `:` qualified(type($src))
+         `->` qualified(type($result)) attr-dict
+  }];
+
+  let hasVerifier = 1;
+  let hasLLVMLowering = false;
+  let hasCXXABILowering = true;  
+}
+
+def CIR_DerivedMethodOp : CIR_Op<"derived_method", [Pure]> {
+  let summary = [{
+    Cast a base class pointer-to-member-function to a derived class
+    pointer-to-member-function
+  }];
+  let description = [{
+    The `cir.derived_method` operation casts a pointer-to-member-function of
+    type `Ret (Base::*)(Args)` to a pointer-to-member-function of type
+    `Ret (Derived::*)(Args)`, where `Base` is a non-virtual base class of
+    `Derived`.
+
+    The `offset` parameter gives the offset in bytes of the `Base` base class
+    subobject within a `Derived` object.
+
+    Example:
+
+    ```mlir
+    %1 = cir.derived_method %0 [16] : !cir.method<!cir.func<(!s32i)> in !rec_Base> -> !cir.method<!cir.func<(!s32i)> in !rec_Derived>
+    ```
+  }];
+
+  let arguments = (ins CIR_MethodType:$src, IndexAttr:$offset);
+  let results = (outs CIR_MethodType:$result);
+
+  let assemblyFormat = [{
+    $src `[` $offset `]` `:` qualified(type($src))
+         `->` qualified(type($result)) attr-dict
+  }];
+
+  let hasVerifier = 1;
+  let hasLLVMLowering = false;
+  let hasCXXABILowering = true;  
 }
 
 //===----------------------------------------------------------------------===//
@@ -4903,6 +5255,44 @@ def CIR_PrefetchOp : CIR_Op<"prefetch"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ClearCacheOp
+//===----------------------------------------------------------------------===//
+
+def CIR_ClearCacheOp : CIR_Op<"clear_cache", [
+  AllTypesMatch<["begin", "end"]>
+]> {
+  let summary = "Clear the processor's instruction cache if required.";
+  let description = [{
+    The `cir.clear_cache` operation provides a representation for the
+    `__builtin__clear_cache` builtin and corresponds to the
+    `llvm.clear_cache` intrinsic in LLVM IR.
+
+    This operation ensures visibility of modifications in the specified
+    range to the execution unit of the processor. On targets with
+    non-unified instruction and data cache, the implementation flushes
+    the instruction cache.
+
+    On platforms with coherent instruction and data caches (e.g., x86),
+    this intrinsic is a nop. On platforms with non-coherent instruction
+    and data cache (e.g., ARM, MIPS), the operation will be lowered
+    either to appropriate instructions or a system call, if cache
+    flushing requires special privileges.
+
+    The default behavior is to emit a call to `__clear_cache` from the
+    runtime library.
+
+    This operation does not empty the instruction pipeline. Modifications
+    of the current function are outside the scope of the operation.
+  }];
+
+  let arguments = (ins CIR_VoidPtrType:$begin, CIR_VoidPtrType:$end);
+  let assemblyFormat = [{
+    $begin `,` $end `:` qualified(type($begin))
+    attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // ObjSizeOp
 //===----------------------------------------------------------------------===//
 
@@ -5375,7 +5765,7 @@ def CIR_AllocExceptionOp : CIR_Op<"alloc.exception"> {
 //===----------------------------------------------------------------------===//
 
 def CIR_TryOp : CIR_Op<"try",[
-  DeclareOpInterfaceMethods<RegionBranchOpInterface>,
+  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
   RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments
 ]> {
   let summary = "C++ try block";
@@ -5516,6 +5906,30 @@ def CIR_EhInflightOp : CIR_Op<"eh.inflight_exception"> {
     (`cleanup` $cleanup^)?
     ($catch_type_list^)?
     attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
+// Exception related: EhTypeIdOp
+//===----------------------------------------------------------------------===//
+
+def CIR_EhTypeIdOp : CIR_Op<"eh.typeid",
+  [Pure, DeclareOpInterfaceMethods<SymbolUserOpInterface>]> {
+  let summary = "Compute exception type id from its global type symbol";
+  let description = [{
+    Returns the exception type id for a given global symbol representing
+    a type.
+
+    Example:
+    ```mlir
+    %type_id = cir.eh.typeid @_ZTIi
+    ```
+  }];
+
+  let arguments = (ins FlatSymbolRefAttr:$type_sym);
+  let results = (outs CIR_UInt32:$type_id);
+  let assemblyFormat = [{
+    $type_sym attr-dict
   }];
 }
 
@@ -5819,6 +6233,81 @@ def CIR_BlockAddressOp : CIR_Op<"block_address", [Pure]> {
   let results = (outs CIR_VoidPtrType:$addr);
   let assemblyFormat = [{
     $block_addr_info `:` qualified(type($addr)) attr-dict
+  }];
+
+  let customLLVMLoweringConstructorDecl =
+    LoweringBuilders<(ins "LLVMBlockAddressInfo &":$blockInfoAddr)>;
+}
+
+//===----------------------------------------------------------------------===//
+// CpuIdOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CpuIdOp : CIR_Op<"cpuid"> {
+  let summary = "Get information about the CPU";
+  let description = [{
+    The `cir.cpuid` operation retrieves different types of CPU information and
+    stores it in an array of 4 integers.
+
+    This operation takes 3 arguments: `cpu_info`, a pointer to an array of 4
+    integers; `function_id`, an integer determining what type of information to
+    be retrieved (for instance, basic information, processor information and
+    features, or cache/TLB information); and `sub_function_id`, an integer that
+    adds more detail about what information is requested.
+
+    As a result, the array of 4 integers is filled with the requested
+    information.
+
+    Example:
+
+    ```mlir
+    cir.cpuid %cpui_info, %function_id, %sub_function_id : (!cir.ptr<!s32i>,
+        !s32i, !s32i)
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_PtrToType<CIR_SInt32>, "array address", [MemWrite]>:$cpu_info,
+    CIR_SInt32:$function_id,
+    CIR_SInt32:$sub_function_id
+  );
+
+  let assemblyFormat = [{
+    $cpu_info`,` $function_id`,` $sub_function_id `:`
+        qualified(type($cpu_info)) `,`
+        type($function_id) `,`
+        type($sub_function_id) attr-dict
+    }];
+}
+
+//===----------------------------------------------------------------------===//
+// MemChrOp
+//===----------------------------------------------------------------------===//
+
+def CIR_MemChrOp : CIR_Op<"libc.memchr"> {
+  let summary = "libc's `memchr`";
+  let description = [{
+    Search for `pattern` in data range from `src` to `src` + `len`.
+    `len` provides a bound to the search in `src`. `result` is a pointer to
+    found `pattern` or a null pointer.
+
+    Examples:
+
+    ```mlir
+    %p = cir.libc.memchr(%src, %pattern, %len)
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_VoidPtrType, "", [MemRead]>:$src,
+    CIR_SInt32:$pattern,
+    CIR_UInt64:$len
+  );
+
+  let results = (outs CIR_VoidPtrType:$result);
+
+  let assemblyFormat = [{
+    `(` $src `,` $pattern `,` $len `)` attr-dict
   }];
 }
 

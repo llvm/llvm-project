@@ -1254,8 +1254,7 @@ int main(int argc, const char *argv[]) {
     return 1;
   }
 
-  auto TerminateDebugger =
-      llvm::make_scope_exit([&] { DebuggerLifetime.Terminate(); });
+  llvm::scope_exit TerminateDebugger([&] { DebuggerLifetime.Terminate(); });
 
   auto Dbg = lldb_private::Debugger::CreateInstance();
   ModuleList::GetGlobalModuleListProperties().SetEnableExternalLookup(false);
