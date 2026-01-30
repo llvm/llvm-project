@@ -75,7 +75,7 @@ CIRGenNVCUDARuntime::CIRGenNVCUDARuntime(CIRGenModule &cgm)
     : CIRGenCUDARuntime(cgm),
       deviceMC(cgm.getASTContext().cudaNVInitDeviceMC()) {
   if (cgm.getLangOpts().OffloadViaLLVM)
-    llvm_unreachable("NYI");
+    cgm.errorNYI("CIRGenNVCUDARuntime: Offload via LLVM");
   else if (cgm.getLangOpts().HIP)
     prefix = "hip";
   else
