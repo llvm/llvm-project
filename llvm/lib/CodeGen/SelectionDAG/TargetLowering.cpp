@@ -3705,7 +3705,7 @@ bool TargetLowering::SimplifyDemandedVectorElts(
         // promoted type for creating constants to avoid creating nodes with
         // illegal types.
         if (AfterLegalizeTypes)
-          SrcSVT = getTypeToTransformTo(*TLO.DAG.getContext(), SrcSVT);
+          SrcSVT = getLegalTypeToTransformTo(*TLO.DAG.getContext(), SrcSVT);
 
         SmallVector<SDValue> MaskElts;
         MaskElts.push_back(TLO.DAG.getAllOnesConstant(DL, SrcSVT));
