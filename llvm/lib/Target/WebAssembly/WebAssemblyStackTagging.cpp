@@ -166,7 +166,7 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
   Type *IntPtrType = iswasm32 ? Int32Type : Int64Type;
 
   Function *UntagStoreDecl = Intrinsic::getOrInsertDeclaration(
-      F->getParent(), Intrinsic::wasm_memtag_untagstore, {IntPtrType});
+      F->getParent(), Intrinsic::wasm_memtag_untagstore);
 
   for (auto &I : AllocasToInstrument) {
     memtag::AllocaInfo &Info = I.second;
@@ -189,18 +189,12 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
         !SInfo.CallsReturnTwice;
     if (StandardLifetime) {
       Function *StoreTagDecl = Intrinsic::getOrInsertDeclaration(
-          F->getParent(), Intrinsic::wasm_memtag_store, {IntPtrType});
+          F->getParent(), Intrinsic::wasm_memtag_store);
       Intrinsic::ID SelectedIntrinsicID =
           usehint ? Intrinsic::wasm_memtag_hint : Intrinsic::wasm_memtag_random;
 
-      SmallVector<Type *, 3> SelectedSignatureTypes{IntPtrType};
-      if (usehint) {
-        SelectedSignatureTypes.push_back(IntPtrType);
-        SelectedSignatureTypes.push_back(IntPtrType);
-      }
-
-      auto *RandomOrHintTagDecl = Intrinsic::getOrInsertDeclaration(
-          F->getParent(), SelectedIntrinsicID, SelectedSignatureTypes);
+      Function *RandomOrHintTagDecl = Intrinsic::getOrInsertDeclaration(
+          F->getParent(), SelectedIntrinsicID);
 
       SmallVector<Value *, 4> TagCallArguments{ConstantInt::get(Int32Type, 0),
                                                Info.AI};
@@ -241,19 +235,16 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
           usehint ? Intrinsic::wasm_memtag_hintstore
                   : Intrinsic::wasm_memtag_randomstore;
 
-      SmallVector<Type *, 2> SelectedStoreSignatureTypes{IntPtrType};
-      if (usehint)
-        SelectedStoreSignatureTypes.push_back(IntPtrType);
-
       auto *RandomOrHintStoreTagDecl = Intrinsic::getOrInsertDeclaration(
-          F->getParent(), SelectedStoreIntrinsicID,
-          SelectedStoreSignatureTypes);
+          F->getParent(), SelectedStoreIntrinsicID);
 
       SmallVector<Value *, 5> StoreTagCallArguments{
           ConstantInt::get(Int32Type, 0), Info.AI,
-          ConstantInt::get(IntPtrType, Size), Base};
-      if (usehint)
+          ConstantInt::get(IntPtrType, Size)};
+      if (usehint) {
+        StoreTagCallArguments.push_back(Base);
         StoreTagCallArguments.push_back(ConstantInt::get(IntPtrType, Tag));
+      }
 
       auto *TagPCall =
           IRB.CreateCall(RandomOrHintStoreTagDecl, StoreTagCallArguments);
