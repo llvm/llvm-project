@@ -164,3 +164,22 @@ func.func @unroll_vector_multi_reduction_inner_general_masked(%source: vector<2x
   // CHECK: return %[[INSERT_1]]
   return %0 : vector<2xf32>
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Negative Test: Rank-1 multi_reduction should NOT be matched by UnrollMultiReductionInner
+//===----------------------------------------------------------------------===//
+
+// UnrollMultiReductionInner requires srcRank >= 2, so rank-1 should not match.
+// The op should remain unchanged.
+
+// CHECK-LABEL: func @unroll_vector_multi_reduction_inner_rank1_negative(
+// CHECK-SAME: %[[SOURCE:.+]]: vector<8xf32>,
+// CHECK-SAME: %[[ACC:.+]]: f32
+func.func @unroll_vector_multi_reduction_inner_rank1_negative(%source: vector<8xf32>, %acc: f32) -> f32 {
+  // CHECK: %[[RESULT:.+]] = vector.multi_reduction <add>, %[[SOURCE]], %[[ACC]] [0] : vector<8xf32> to f32
+  %0 = vector.multi_reduction <add>, %source, %acc [0] : vector<8xf32> to f32
+  // CHECK: return %[[RESULT]]
+  return %0 : f32
+}

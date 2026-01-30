@@ -90,3 +90,22 @@ func.func @unroll_vector_multi_reduction_general_masked(%source: vector<2x3x5xf3
   // CHECK: return %[[RES_1]]
   return %0 : vector<3xf32>
 }
+
+// -----
+
+//===----------------------------------------------------------------------===//
+// Negative Test: Rank-1 multi_reduction should NOT be matched by unroll patterns
+//===----------------------------------------------------------------------===//
+
+// UnrollMultiReductionOuterBaseCase and UnrollMultiReductionOuterGeneralCase
+// should not match rank-1 multi_reduction ops. The op should remain unchanged.
+
+// CHECK-LABEL: func @unroll_vector_multi_reduction_rank1_negative(
+// CHECK-SAME: %[[SOURCE:.+]]: vector<8xf32>,
+// CHECK-SAME: %[[ACC:.+]]: f32
+func.func @unroll_vector_multi_reduction_rank1_negative(%source: vector<8xf32>, %acc: f32) -> f32 {
+  // CHECK: %[[RESULT:.+]] = vector.multi_reduction <add>, %[[SOURCE]], %[[ACC]] [0] : vector<8xf32> to f32
+  %0 = vector.multi_reduction <add>, %source, %acc [0] : vector<8xf32> to f32
+  // CHECK: return %[[RESULT]]
+  return %0 : f32
+}
