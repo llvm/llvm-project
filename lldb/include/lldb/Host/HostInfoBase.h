@@ -29,7 +29,7 @@ class FileSpec;
 
 struct SharedCacheImageInfo {
   UUID uuid;
-  lldb::DataBufferSP data_sp;
+  lldb::DataExtractorSP extractor_sp;
 };
 
 namespace {
