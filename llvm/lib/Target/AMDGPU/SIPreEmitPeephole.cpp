@@ -24,6 +24,7 @@
 #include "llvm/ADT/SetVector.h"
 #include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/Support/BranchProbability.h"
@@ -37,8 +38,9 @@ class SIPreEmitPeephole {
 private:
   const SIInstrInfo *TII = nullptr;
   const SIRegisterInfo *TRI = nullptr;
+  bool CFGModified = false;
 
-  bool optimizeVccBranch(MachineInstr &MI) const;
+  bool optimizeVccBranch(MachineInstr &MI);
   bool optimizeSetGPR(MachineInstr &First, MachineInstr &MI) const;
   bool getBlockDestinations(MachineBasicBlock &SrcMBB,
                             MachineBasicBlock *&TrueMBB,
@@ -79,6 +81,7 @@ private:
 
 public:
   bool run(MachineFunction &MF);
+  bool isCFGModified() const { return CFGModified; }
 };
 
 class SIPreEmitPeepholeLegacy : public MachineFunctionPass {
@@ -101,7 +104,7 @@ char SIPreEmitPeepholeLegacy::ID = 0;
 
 char &llvm::SIPreEmitPeepholeID = SIPreEmitPeepholeLegacy::ID;
 
-bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
+bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) {
   // Match:
   // sreg = -1 or 0
   // vcc = S_AND_B64 exec, sreg or S_ANDN2_B64 exec, sreg
@@ -226,6 +229,7 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
 
   bool IsVCCZ = MI.getOpcode() == AMDGPU::S_CBRANCH_VCCZ;
   if (SReg == ExecReg) {
+    CFGModified = true;
     // EXEC is updated directly
     if (IsVCCZ) {
       MI.eraseFromParent();
@@ -233,6 +237,7 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
     }
     MI.setDesc(TII->get(AMDGPU::S_BRANCH));
   } else if (IsVCCZ && MaskValue == 0) {
+    CFGModified = true;
     // Will always branch
     // Remove all successors shadowed by new unconditional branch
     MachineBasicBlock *Parent = MI.getParent();
@@ -262,6 +267,7 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
     MI.setDesc(TII->get(AMDGPU::S_BRANCH));
   } else if (!IsVCCZ && MaskValue == 0) {
     // Will never branch
+    CFGModified = true;
     MachineOperand &Dst = MI.getOperand(0);
     assert(Dst.isMBB() && "destination is not basic block");
     MI.getParent()->removeSuccessor(Dst.getMBB());
@@ -447,6 +453,7 @@ bool SIPreEmitPeephole::removeExeczBranch(MachineInstr &MI,
   LLVM_DEBUG(dbgs() << "Removing the execz branch: " << MI);
   MI.eraseFromParent();
   SrcMBB.removeSuccessor(TrueMBB);
+  CFGModified = true;
 
   return true;
 }
@@ -707,9 +714,14 @@ llvm::SIPreEmitPeepholePass::run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM) {
   auto *MDT = MFAM.getCachedResult<MachineDominatorTreeAnalysis>(MF);
   auto *MPDT = MFAM.getCachedResult<MachinePostDominatorTreeAnalysis>(MF);
+  SIPreEmitPeephole Impl;
 
-  if (SIPreEmitPeephole().run(MF))
-    return getMachineFunctionPassPreservedAnalyses();
+  if (Impl.run(MF)) {
+    auto PA = getMachineFunctionPassPreservedAnalyses();
+    if (!Impl.isCFGModified())
+      PA.preserve<MachineLoopAnalysis>();
+    return PA;
+  }
 
   if (MDT)
     MDT->updateBlockNumbers();
@@ -722,6 +734,7 @@ bool SIPreEmitPeephole::run(MachineFunction &MF) {
   const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
   TII = ST.getInstrInfo();
   TRI = &TII->getRegisterInfo();
+  CFGModified = false;
   bool Changed = false;
 
   MF.RenumberBlocks();
