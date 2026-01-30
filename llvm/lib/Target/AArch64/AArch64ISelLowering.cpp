@@ -5595,14 +5595,13 @@ SDValue AArch64TargetLowering::LowerBITCAST(SDValue Op,
     return Op;
 
   SDValue Src = Op.getOperand(0);
+  SDLoc DL(Op);
   if (ArgVT.isVector() && ArgVT.getSizeInBits() == 16) {
-    SDLoc DL(Op);
     Src = DAG.getNode(ISD::BITCAST, DL, MVT::i16, Src);
     ArgVT = MVT::i16;
   }
 
   assert(ArgVT == MVT::i16);
-  SDLoc DL(Op);
 
   Op = DAG.getNode(ISD::ANY_EXTEND, DL, MVT::i32, Src);
   Op = DAG.getNode(ISD::BITCAST, DL, MVT::f32, Op);
