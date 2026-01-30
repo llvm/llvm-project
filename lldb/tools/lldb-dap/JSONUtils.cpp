@@ -747,6 +747,12 @@ llvm::json::Object CreateTerminatedEventObject(lldb::SBTarget &target) {
   return event;
 }
 
+llvm::json::Object CreateInitializedEventObject(lldb::SBTarget &target) {
+  llvm::json::Object event(CreateEventObject("initialized"));
+  addStatistic(target, event);
+  return event;
+}
+
 std::string JSONToString(const llvm::json::Value &json) {
   std::string data;
   llvm::raw_string_ostream os(data);

@@ -309,6 +309,7 @@ class DebugCommunication(object):
 
         # trigger enqueue thread
         self._recv_thread.start()
+        self.initialized_event = None
 
     @classmethod
     def encode_content(cls, s: str) -> bytes:
@@ -515,6 +516,7 @@ class DebugCommunication(object):
                 self.output[category] = output
         elif event == "initialized":
             self.initialized = True
+            self.initialized_event = packet
         elif event == "process":
             # When a new process is attached or launched, remember the
             # details that are available in the body of the event
