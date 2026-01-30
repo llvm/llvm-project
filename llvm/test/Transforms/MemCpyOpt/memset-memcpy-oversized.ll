@@ -153,7 +153,8 @@ define void @test_negative_offset_memset(ptr %result) {
 ; CHECK-NEXT:    [[A1:%.*]] = alloca [16 x i8], align 8
 ; CHECK-NEXT:    [[A:%.*]] = getelementptr i8, ptr [[A1]], i32 4
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[A]], i8 0, i64 12, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[RESULT:%.*]], ptr align 8 [[A1]], i64 12, i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[RESULT:%.*]], i64 4
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[TMP1]], i8 0, i64 8, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %a = alloca [ 16 x i8 ], align 8
@@ -201,7 +202,8 @@ define void @test_negative_offset_memset_2(ptr %out) {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca <{ [2 x i8], i64, i64, i64 }>, align 8
 ; CHECK-NEXT:    [[OFFSET:%.*]] = getelementptr i8, ptr [[ALLOCA]], i64 2
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[OFFSET]], i8 0, i64 24, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[OUT:%.*]], ptr [[ALLOCA]], i64 26, i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[OUT:%.*]], i64 2
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[TMP1]], i8 0, i64 24, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %alloca = alloca <{ [2 x i8], i64, i64, i64 }>
@@ -218,7 +220,8 @@ define void @test_negative_offset_memset_3(ptr %out) {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [20 x i8], align 1
 ; CHECK-NEXT:    [[OFFSET:%.*]] = getelementptr i8, ptr [[ALLOCA]], i64 10
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[OFFSET]], i8 0, i64 10, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[OUT:%.*]], ptr [[ALLOCA]], i64 15, i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[OUT:%.*]], i64 10
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[TMP1]], i8 0, i64 5, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %alloca = alloca [20 x i8]
@@ -234,7 +237,8 @@ define void @test_negative_offset_memset_different_alignment(ptr %out) {
 ; CHECK-NEXT:    [[ALLOCA:%.*]] = alloca [20 x i8], align 1
 ; CHECK-NEXT:    [[OFFSET:%.*]] = getelementptr i8, ptr [[ALLOCA]], i64 4
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 1 [[OFFSET]], i8 0, i64 16, i1 false)
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 8 [[OUT:%.*]], ptr align 1 [[ALLOCA]], i64 20, i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[OUT:%.*]], i64 4
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr align 4 [[TMP1]], i8 0, i64 16, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %alloca = alloca [20 x i8], align 1
@@ -252,7 +256,8 @@ define void @test_negative_offset_memset_and_negative_offset_memcpy_dest(ptr %ou
 ; CHECK-NEXT:    [[OFFSET:%.*]] = getelementptr i8, ptr [[ALLOCA]], i64 10
 ; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[OFFSET]], i8 0, i64 10, i1 false)
 ; CHECK-NEXT:    [[OFFSET_OUT:%.*]] = getelementptr i8, ptr [[OUT:%.*]], i64 -10
-; CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr [[OFFSET_OUT]], ptr [[ALLOCA]], i64 15, i1 false)
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[OFFSET_OUT]], i64 10
+; CHECK-NEXT:    call void @llvm.memset.p0.i64(ptr [[TMP1]], i8 0, i64 5, i1 false)
 ; CHECK-NEXT:    ret void
 ;
   %alloca = alloca [20 x i8]
