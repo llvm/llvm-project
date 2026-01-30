@@ -1,12 +1,9 @@
 // RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -triple \
-// RUN:   dxil-pc-shadermodel6.3-compute %s -emit-llvm -fnative-int16-type -fnative-half-type \
-// RUN:   -fmath-errno -ffp-contract=on -fno-rounding-math  -finclude-default-header \
-// RUN:   -disable-llvm-passes -o - |  FileCheck %s --check-prefixes=CHECK,CHECK-DXIL
-
+// RUN:   dxil-pc-shadermodel6.3-compute %s -emit-llvm -disable-llvm-passes -o - | \
+// RUN:   FileCheck %s --check-prefixes=CHECK,CHECK-DXIL
 // RUN: %clang_cc1 -std=hlsl2021 -finclude-default-header -triple \
-// RUN:   spirv-pc-vulkan-compute %s -emit-llvm -fnative-int16-type -fnative-half-type \
-// RUN:   -fmath-errno -ffp-contract=on -fno-rounding-math  -finclude-default-header \ 
-// RUN:   -disable-llvm-passes -o - | FileCheck %s --check-prefixes=CHECK,CHECK-SPIRV
+// RUN:   spirv-pc-vulkan-compute %s -emit-llvm -disable-llvm-passes -o - | \
+// RUN:   FileCheck %s --check-prefixes=CHECK,CHECK-SPIRV
 
 // Test basic lowering to runtime function call.
 

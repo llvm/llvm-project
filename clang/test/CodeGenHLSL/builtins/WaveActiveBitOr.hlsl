@@ -21,6 +21,39 @@ int test_int(int expr) {
 // CHECK-DXIL: declare [[TY]] @llvm.dx.wave.bit.or.i32([[TY]]) #[[#attr:]]
 // CHECK-SPIRV: declare [[TY]] @llvm.spv.wave.bit.or.i32([[TY]]) #[[#attr:]]
 
+// CHECK-LABEL: test_int2
+int2 test_int2(int2 expr) {
+  // CHECK-SPIRV:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.spv.wave.bit.or.v2i32([[TY]] %[[#]])
+  // CHECK-DXIL:  %[[RET:.*]] = call [[TY:.*]] @llvm.dx.wave.bit.or.v2i32([[TY]] %[[#]])
+  // CHECK: ret [[TY]] %[[RET]]
+  return WaveActiveBitOr(expr);
+}
+
+// CHECK-DXIL: declare [[TY]] @llvm.dx.wave.bit.or.v2i32([[TY]]) #[[#attr:]]
+// CHECK-SPIRV: declare [[TY]] @llvm.spv.wave.bit.or.v2i32([[TY]]) #[[#attr:]]
+
+// CHECK-LABEL: test_int3
+int3 test_int3(int3 expr) {
+  // CHECK-SPIRV:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.spv.wave.bit.or.v3i32([[TY]] %[[#]])
+  // CHECK-DXIL:  %[[RET:.*]] = call [[TY:.*]] @llvm.dx.wave.bit.or.v3i32([[TY]] %[[#]])
+  // CHECK: ret [[TY]] %[[RET]]
+  return WaveActiveBitOr(expr);
+}
+
+// CHECK-DXIL: declare [[TY]] @llvm.dx.wave.bit.or.v3i32([[TY]]) #[[#attr:]]
+// CHECK-SPIRV: declare [[TY]] @llvm.spv.wave.bit.or.v3i32([[TY]]) #[[#attr:]]
+
+// CHECK-LABEL: test_int4
+int4 test_int4(int4 expr) {
+  // CHECK-SPIRV:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.spv.wave.bit.or.v4i32([[TY]] %[[#]])
+  // CHECK-DXIL:  %[[RET:.*]] = call [[TY:.*]] @llvm.dx.wave.bit.or.v4i32([[TY]] %[[#]])
+  // CHECK: ret [[TY]] %[[RET]]
+  return WaveActiveBitOr(expr);
+}
+
+// CHECK-DXIL: declare [[TY]] @llvm.dx.wave.bit.or.v4i32([[TY]]) #[[#attr:]]
+// CHECK-SPIRV: declare [[TY]] @llvm.spv.wave.bit.or.v4i32([[TY]]) #[[#attr:]]
+
 // CHECK-LABEL: test_int16
 int16_t test_int16_t(int16_t expr) {
   // CHECK-SPIRV:  %[[RET:.*]] = call spir_func [[TY:.*]] @llvm.spv.wave.bit.or.i16([[TY]] %[[#]])

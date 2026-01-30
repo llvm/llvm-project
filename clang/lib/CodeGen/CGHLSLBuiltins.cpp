@@ -329,45 +329,15 @@ static Intrinsic::ID getFirstBitHighIntrinsic(CGHLSLRuntime &RT, QualType QT) {
   return RT.getFirstBitUHighIntrinsic();
 }
 
-// select and return a specific wave bit op intrinsic,
-// based on the provided op kind.
-// OpKinds:
-// And = 0, bitwise and of values
-// Or = 1,  bitwise or of values
-// Xor = 2, bitwise xor of values
-static Intrinsic::ID getWaveBitOpIntrinsic(int OpKind,
-                                           llvm::Triple::ArchType Arch,
-                                           CGHLSLRuntime &RT, QualType QT) {
+static Intrinsic::ID getWaveBitOpOrIntrinsic(llvm::Triple::ArchType Arch,
+                                             CGHLSLRuntime &RT, QualType QT) {
   switch (Arch) {
   case llvm::Triple::spirv:
-    switch (OpKind) {
+    return Intrinsic::spv_wave_bit_or;
 
-    case 0:
-    case 2: {
-      llvm_unreachable("Not implemented yet!");
-    }
-    case 1: {
-      return Intrinsic::spv_wave_bit_or;
-    }
-    default: {
-      llvm_unreachable("Unexpected SubOp ID");
-    }
-    }
-  case llvm::Triple::dxil: {
-    switch (OpKind) {
+  case llvm::Triple::dxil:
+    return Intrinsic::dx_wave_bit_or;
 
-    case 0:
-    case 2: {
-      llvm_unreachable("Not implemented yet!");
-    }
-    case 1: {
-      return Intrinsic::dx_wave_bit_or;
-    }
-    default: {
-      llvm_unreachable("Unexpected SubOp ID");
-    }
-    }
-  }
   default:
     llvm_unreachable("Intrinsic WaveActiveBitOr"
                      " not supported by target architecture");
@@ -975,12 +945,15 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   }
   case Builtin::BI__builtin_hlsl_wave_active_bit_or: {
     Value *Op = EmitScalarExpr(E->getArg(0));
-    assert(Op->getType()->isIntegerTy() &&
-           "Intrinsic WaveActiveBitOr operand must be an integer type");
+    llvm::Type *Ty = Op->getType();
+    assert(Ty->isIntegerTy() ||
+           (Ty->isVectorTy() && Ty->getScalarType()->isIntegerTy()) &&
+               "Intrinsic WaveActiveBitOr operand must be integer or "
+               "vector of integers");
 
-    Intrinsic::ID IID = getWaveBitOpIntrinsic(
-        /* OpKind */ 1, getTarget().getTriple().getArch(), CGM.getHLSLRuntime(),
-        E->getArg(0)->getType());
+    Intrinsic::ID IID =
+        getWaveBitOpOrIntrinsic(getTarget().getTriple().getArch(),
+                                CGM.getHLSLRuntime(), E->getArg(0)->getType());
 
     return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
                                &CGM.getModule(), IID, {Op->getType()}),

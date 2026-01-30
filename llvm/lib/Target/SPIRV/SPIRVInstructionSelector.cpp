@@ -224,8 +224,8 @@ private:
   bool selectDot4AddPackedExpansion(Register ResVReg, const SPIRVType *ResType,
                                     MachineInstr &I) const;
 
-  bool selectWaveBitOr(Register ResVReg, const SPIRVType *ResType,
-                       MachineInstr &I) const;
+  bool selectWaveBitOpInst(Register ResVReg, const SPIRVType *ResType,
+                           MachineInstr &I, unsigned Opcode) const;
 
   bool selectWaveReduceMax(Register ResVReg, const SPIRVType *ResType,
                            MachineInstr &I, bool IsUnsigned) const;
@@ -2718,31 +2718,25 @@ bool SPIRVInstructionSelector::selectWaveActiveCountBits(
   return Result;
 }
 
-bool SPIRVInstructionSelector::selectWaveBitOr(Register ResVReg,
-                                               const SPIRVType *ResType,
-                                               MachineInstr &I) const {
-
-  assert(I.getNumOperands() == 3);
-  assert(I.getOperand(2).isReg());
+bool SPIRVInstructionSelector::selectWaveBitOpInst(Register ResVReg,
+                                                   const SPIRVType *ResType,
+                                                   MachineInstr &I,
+                                                   unsigned Opcode) const {
   MachineBasicBlock &BB = *I.getParent();
-  Register InputRegister = I.getOperand(2).getReg();
-  SPIRVType *InputType = GR.getSPIRVTypeForVReg(InputRegister);
-
-  if (!InputType)
-    report_fatal_error("Input Type could not be determined.");
-  if (!GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeInt))
-    report_fatal_error("WaveActiveBitOr requires integer input");
-
   SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
 
-  return BuildMI(BB, I, I.getDebugLoc(),
-                 TII.get(SPIRV::OpGroupNonUniformBitwiseOr))
-      .addDef(ResVReg)
-      .addUse(GR.getSPIRVTypeID(ResType))
-      .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII))
-      .addImm(SPIRV::GroupOperation::Reduce)
-      .addUse(InputRegister)
-      .constrainAllUses(TII, TRI, RBI);
+  auto BMI = BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
+                 .addDef(ResVReg)
+                 .addUse(GR.getSPIRVTypeID(ResType))
+                 .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I,
+                                                IntTy, TII, !STI.isShader()));
+  BMI.addImm(SPIRV::GroupOperation::Reduce);
+
+  for (unsigned J = 2; J < I.getNumOperands(); J++) {
+    BMI.addUse(I.getOperand(J).getReg());
+  }
+
+  return BMI.constrainAllUses(TII, TRI, RBI);
 }
 
 bool SPIRVInstructionSelector::selectWaveReduceMax(Register ResVReg,
@@ -3896,7 +3890,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_wave_any:
     return selectWaveOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformAny);
   case Intrinsic::spv_wave_bit_or:
-    return selectWaveBitOr(ResVReg, ResType, I);
+    return selectWaveBitOpInst(ResVReg, ResType, I,
+                               SPIRV::OpGroupNonUniformBitwiseOr);
   case Intrinsic::spv_subgroup_ballot:
     return selectWaveOpInst(ResVReg, ResType, I,
                             SPIRV::OpGroupNonUniformBallot);

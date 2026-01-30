@@ -14,17 +14,17 @@ int test_too_many_arg(int p0) {
 
 float test_expr_bool_type_check(float p0) {
   return __builtin_hlsl_wave_active_bit_or(p0);
-  // expected-error@-1 {{invalid operand of type 'float'}}
+  // expected-error@-1 {{1st argument must be a scalar or vector of integer types (was 'float')}}
 }
 
 float2 test_expr_bool_vec_type_check(float2 p0) {
   return __builtin_hlsl_wave_active_bit_or(p0);
-  // expected-error@-1 {{invalid operand of type 'float2' (aka 'vector<float, 2>')}}
+  // expected-error@-1 {{1st argument must be a scalar or vector of integer types (was 'float2' (aka 'vector<float, 2>'))}}
 }
 
 struct S { float f; };
 
 S test_expr_struct_type_check(S p0) {
   return __builtin_hlsl_wave_active_bit_or(p0);
-  // expected-error@-1 {{invalid operand of type 'S'}}
+  // expected-error@-1 {{1st argument must be a scalar or vector of integer types (was 'S')}}
 }
