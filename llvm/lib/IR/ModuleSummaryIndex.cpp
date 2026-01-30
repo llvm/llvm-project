@@ -274,7 +274,9 @@ propagateAttributesToRefs(GlobalValueSummary *S,
 //      reference is not readonly
 //   d. clear WO attribute from variable referenced by a function when
 //      reference is not writeonly
-//   e. clear IsDSOLocal flag in every summary if any of them is false.
+//   e. clear RO and WO attributes from variables with the same GUID as
+//      a non-variable.
+//   f. clear IsDSOLocal flag in every summary if any of them is false.
 //
 //   Because of (c, d) we don't internalize variables read by function A
 //   and modified by function B.

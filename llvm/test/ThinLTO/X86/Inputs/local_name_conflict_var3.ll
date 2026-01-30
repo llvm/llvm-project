@@ -7,7 +7,7 @@ define internal i32 @baz() {
   ret i32 0
 }
 
-define i32 @b() {
+define i32 @c() {
 entry:
   %is_null = icmp eq i32 ()* @baz, null
   ret i32 0

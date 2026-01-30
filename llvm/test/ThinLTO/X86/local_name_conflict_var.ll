@@ -1,4 +1,4 @@
-; Test handling when two files with the same source file name contain
+; Test handling when multiple files with the same source file name contain
 ; static read only variables with the same name (which will have the same GUID
 ; in the combined index).
 
@@ -16,7 +16,7 @@
 ; IMPORT: @baz.llvm.{{.*}} = internal global i32 10
 
 ;; Now do the same but linking in a 3rd module, in which baz is a local function,
-;; which has a non-call reference to it in b(). We should correctly mark all
+;; which has a non-call reference to it in c(). We should correctly mark all
 ;; summaries for baz as non-read only, which should cause the linkage type of
 ;; the imported copies of baz variables to be available_externally instead of
 ;; internal.
@@ -41,8 +41,10 @@ define i32 @main() {
 entry:
   %call1 = call i32 (...) @a()
   %call2 = call i32 (...) @b()
+  %call3 = call i32 (...) @c()
   ret i32 0
 }
 
 declare i32 @a(...)
 declare i32 @b(...)
+declare i32 @c(...)

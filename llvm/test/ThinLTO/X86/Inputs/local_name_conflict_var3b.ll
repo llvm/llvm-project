@@ -7,7 +7,7 @@ define internal i32 @baz() {
   ret i32 0
 }
 
-define i32 @b() {
+define i32 @c() {
 entry:
   %call1 = call i32 (...) @baz()
   ret i32 0
