@@ -107,9 +107,6 @@ void StopInfo::SkipOverTrapInstruction() {
   auto platform_opcode =
       platform_sp->SoftwareTrapOpcodeBytes(target.GetArchitecture(), size_hint);
 
-  auto is_valid_trap = arch_plugin->IsValidTrapInstruction(platform_opcode,
-      llvm::ArrayRef<uint8_t>(bytes_at_pc.data(), bytes_at_pc.size()
-
   if (auto *arch_plugin = target.GetArchitecturePlugin();
       arch_plugin &&
       arch_plugin->IsValidTrapInstruction(
