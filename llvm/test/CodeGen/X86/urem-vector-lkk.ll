@@ -409,7 +409,7 @@ define <4 x i64> @fold_urem_i64(<4 x i64> %x) {
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vpsrlvq {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %ymm0, %ymm1
 ; AVX512-NEXT:    vpsrlq $32, %ymm1, %ymm2
-; AVX512-NEXT:    vmovdqa {{.*#+}} ymm3 = [0,105075653,2987803337,3419025229]
+; AVX512-NEXT:    vmovdqa {{.*#+}} ymm3 = [u,105075653,2987803337,3419025229]
 ; AVX512-NEXT:    vpmuludq %ymm3, %ymm2, %ymm4
 ; AVX512-NEXT:    vpmuludq %ymm3, %ymm1, %ymm3
 ; AVX512-NEXT:    vpsrlq $32, %ymm3, %ymm3
