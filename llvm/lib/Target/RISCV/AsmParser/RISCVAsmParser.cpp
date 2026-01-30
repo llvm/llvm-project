@@ -3821,7 +3821,7 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
   }
 
   const MCInstrDesc &MCID = MII.get(Opcode);
-  if (!(MCID.TSFlags & RISCVII::ConstraintMask))
+  if (!(MCID.TSFlags & RISCVII::RVVConstraintMask))
     return false;
 
   if (Opcode == RISCV::SF_VC_V_XVW || Opcode == RISCV::SF_VC_V_IVW ||
