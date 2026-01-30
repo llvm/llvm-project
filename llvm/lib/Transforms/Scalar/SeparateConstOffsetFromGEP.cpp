@@ -729,53 +729,50 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
   // TODO: The design should be updated to support partial constant
   // extraction.
   if (BO->getOpcode() == Instruction::Xor) {
-    if (isa<ConstantInt>(TheOther)) {
-      // Purpose:
-      //   We want to compute/simplify the expression:
-      //       b + scale * (a ^ c)
-      //   Here a and c are both constants.
+    // Purpose:
+    //   We want to compute/simplify the expression:
+    //       b + scale * (a ^ c)
+    //   Here a and c are both constants.
 
-      // Transform:
-      //   We must partition c into disjoint and non-disjoint components and
-      //   only XOR the non-disjoint bits with a:
+    // Transform:
+    //   We must partition c into disjoint and non-disjoint components and
+    //   only XOR the non-disjoint bits with a:
 
-      //       non_disjoint(c) = c & ~disjoint(c)
+    //       non_disjoint(c) = c & ~disjoint(c)
 
-      //   Therefore the correct form is:
-      //       b + ((a ^ non_disjoint(c)) + disjoint(c)) * scale
+    //   Therefore the correct form is:
+    //       b + ((a ^ non_disjoint(c)) + disjoint(c)) * scale
 
-      // And not b + ((a ^ (c)) + disjoint(c)) * scale, which ignores the
-      // non_disjoint split of the constant c which is incorrect.
+    // And not b + ((a ^ (c)) + disjoint(c)) * scale, which ignores the
+    // non_disjoint split of the constant c which is incorrect.
 
-      // Rationale:
-      //   - Bits of c that are disjoint from a (i.e., where a is known
-      //   zero)
-      // pass through unchanged (added, not XORed).
-      //   - Only the overlapping (non-disjoint) bits of c should
-      //   participate in the XOR with a.
+    // Rationale:
+    //   - Bits of c that are disjoint from a (i.e., where a is known
+    //   zero)
+    // pass through unchanged (added, not XORed).
+    //   - Only the overlapping (non-disjoint) bits of c should
+    //   participate in the XOR with a.
 
-      // Example:
-      //   a = 0
-      //   c = 3
-      //   scale = 4
+    // Example:
+    //   a = 0
+    //   c = 3
+    //   scale = 4
 
-      //   Expected:
-      //     b + scale * (a ^ c)
-      //     = b + 4 * (0 ^ 3)
-      //     = b + 4 * 3
-      //     = b + 12
+    //   Expected:
+    //     b + scale * (a ^ c)
+    //     = b + 4 * (0 ^ 3)
+    //     = b + 4 * 3
+    //     = b + 12
 
-      //   Transform:
-      //     non_disjoint(3) = 3 & ~3 = 0
-      //     b + ((0 ^ non_disjoint(3)) + disjoint(3)) * 4
-      //     = b + ((0 ^ 0) + 3) * 4
-      //     = b + 3 * 4
-      //     = b + 12
+    //   Transform:
+    //     non_disjoint(3) = 3 & ~3 = 0
+    //     b + ((0 ^ non_disjoint(3)) + disjoint(3)) * 4
+    //     = b + ((0 ^ 0) + 3) * 4
+    //     = b + 3 * 4
+    //     = b + 12
 
-      auto [DisjointBits, NonDisjointBits] = extractDisjointBitsFromXor(BO);
-      BO->setOperand(1 - OpNo,
-                     ConstantInt::get(BO->getType(), NonDisjointBits));
-    }
+    auto [DisjointBits, NonDisjointBits] = extractDisjointBitsFromXor(BO);
+    BO->setOperand(1 - OpNo, ConstantInt::get(BO->getType(), NonDisjointBits));
     return BO;
   }
 
