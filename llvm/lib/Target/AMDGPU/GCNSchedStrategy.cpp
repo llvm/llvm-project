@@ -1911,7 +1911,7 @@ void GCNSchedStage::modifyRegionSchedule(unsigned RegionIdx,
       // Will subsequent splice move MI up past a non-debug instruction?
       bool NonDebugReordered =
           !MI->isDebugInstr() &&
-          skipDebugInstructionsForward(DAG.RegionEnd, MII) != MII;
+          skipDebugInstructionsForward(RegionEnd, MII) != MII;
       MBB->splice(RegionEnd, MBB, MI);
       // Only update LiveIntervals information if non-debug instructions are
       // reordered. Otherwise debug instructions could cause code generation to
