@@ -9210,9 +9210,21 @@ bool Sema::CheckVariableDeclaration(VarDecl *NewVD, LookupResult &Previous) {
     Previous.setShadowed();
 
   if (!Previous.empty()) {
-    MergeVarDecl(NewVD, Previous);
-    return true;
+  if (auto *OldDecl =
+          dyn_cast<VarDecl>(Previous.getFoundDecl())) {
+    if (OldDecl->getFormalLinkage() != NewVD->getFormalLinkage()) {
+      Diag(NewVD->getLocation(),
+           diag::err_redefinition_different_linkage)
+          << NewVD->getName();
+      NewVD->setInvalidDecl();
+      return true;
+    }
   }
+
+  MergeVarDecl(NewVD, Previous);
+  return true;
+}
+
   return false;
 }
 

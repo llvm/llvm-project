@@ -6291,6 +6291,8 @@ def note_static_for_internal_linkage : Note<
 def err_static_data_member_reinitialization :
   Error<"static data member %0 already has an initializer">;
 def err_redefinition : Error<"redefinition of %0">;
+def err_redefinition_different_linkage :
+  Error<"redeclaration of %0 with different linkage">;
 def err_alias_after_tentative :
   Error<"alias definition of %0 after tentative definition">;
 def err_alias_is_definition :
