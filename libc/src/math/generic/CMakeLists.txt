@@ -5079,8 +5079,7 @@ add_entrypoint_object(
   HDRS
     ../f16sqrt.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.math.f16sqrt
 )
 
 add_entrypoint_object(
