@@ -278,28 +278,27 @@ define void @build_vector_mod_inverse_i32(ptr %a) #0 {
   ret void
 }
 
-; Multiple stride candidates (simple): IdxDiff=2 gives 2 candidates {64, 192}.
-; Val[2]=128, Val[3]=64. Stride 64 fails at index 3, stride 192 works.
-; Verify: 0*192=0, 2*192=128 mod 256, 3*192=64 mod 256.
+; TODO: Multiple stride candidates (simple): IdxDiff=2 gives 2 candidates {64, 192}.
+; Val[2]=128, Val[3]=64. Stride 64 fails at index 3, stride 192 would work.
+; Currently falls back since we only try one stride candidate.
 define void @build_vector_multi_stride_2cand(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: build_vector_multi_stride_2cand:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov w8, #192 // =0xc0
-; VBITS_GE_256-NEXT:    index z0.b, #0, w8
+; VBITS_GE_256-NEXT:    fmov v0.4s, #4.00000000
 ; VBITS_GE_256-NEXT:    str q0, [x0]
 ; VBITS_GE_256-NEXT:    ret
   store <16 x i8> <i8 0, i8 poison, i8 128, i8 64, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>, ptr %a
   ret void
 }
 
-; Multiple stride candidates (complex): IdxDiff=4 gives 4 candidates {2, 66, 130, 194}.
-; Val[6]=140 filters to {66, 194}. Val[7]=78 filters to {194}. Stride 194 works.
-; Exercises successive filtering: first mismatch at I=6, second mismatch at I=7.
+; TODO: Multiple stride candidates (complex): IdxDiff=4 gives 4 candidates {2, 66, 130, 194}.
+; Val[6]=140 filters to {66, 194}. Val[7]=78 filters to {194}. Stride 194 would work.
+; Currently falls back since we only try one stride candidate.
 define void @build_vector_multi_stride_4cand(ptr %a) #0 {
 ; VBITS_GE_256-LABEL: build_vector_multi_stride_4cand:
 ; VBITS_GE_256:       // %bb.0:
-; VBITS_GE_256-NEXT:    mov w8, #194 // =0xc2
-; VBITS_GE_256-NEXT:    index z0.b, #0, w8
+; VBITS_GE_256-NEXT:    adrp x8, .LCPI22_0
+; VBITS_GE_256-NEXT:    ldr q0, [x8, :lo12:.LCPI22_0]
 ; VBITS_GE_256-NEXT:    str q0, [x0]
 ; VBITS_GE_256-NEXT:    ret
   store <16 x i8> <i8 0, i8 poison, i8 poison, i8 poison, i8 8, i8 poison, i8 140, i8 78, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison, i8 poison>, ptr %a
