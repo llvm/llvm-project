@@ -11,5 +11,21 @@ define void @test_pm_event() {
   ; CHECK: pmevent.mask 4096;
   call void @llvm.nvvm.pm.event.mask(i16 u0x1000)
 
+  ; CHECK: pmevent.mask 32768;
+  call void @llvm.nvvm.pm.event.mask(i16 u0x8000)
+
+  ; CHECK: pmevent.mask 65535;
+  call void @llvm.nvvm.pm.event.mask(i16 u0xFFFF)
+
+  ;; LLVM doesn't distinguish signed and unsigned integers. So, NVVM calls with
+  ;; negative integers are functionally correct here and processed correctly
+  ;; in NVPTX backend
+
+  ; CHECK: pmevent.mask 32768;
+  call void @llvm.nvvm.pm.event.mask(i16 -32768)
+
+  ; CHECK: pmevent.mask 65535;
+  call void @llvm.nvvm.pm.event.mask(i16 -1)
+
   ret void
 }
