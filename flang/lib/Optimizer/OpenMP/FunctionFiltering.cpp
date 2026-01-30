@@ -120,10 +120,15 @@ public:
       // Do not filter functions with target regions inside, because they have
       // to be available for both host and device so that regular and reverse
       // offloading can be supported.
+      // However, skip target regions marked as unreachable.
       bool hasTargetRegion =
           funcOp
-              ->walk<WalkOrder::PreOrder>(
-                  [&](omp::TargetOp) { return WalkResult::interrupt(); })
+              ->walk<WalkOrder::PreOrder>([&](omp::TargetOp targetOp) {
+                // Skip targets marked as unreachable
+                if (targetOp->hasAttr("omp.target_unreachable"))
+                  return WalkResult::advance();
+                return WalkResult::interrupt();
+              })
               .wasInterrupted();
 
       omp::DeclareTargetDeviceType declareType =
