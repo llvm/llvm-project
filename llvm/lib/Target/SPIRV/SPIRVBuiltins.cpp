@@ -1252,13 +1252,22 @@ static bool generateExtInst(const SPIRV::IncomingCall *Call,
   SmallVector<Register> Arguments =
       getBuiltinCallArguments(Call, Number, MIRBuilder, GR);
 
-  // Build extended instruction.
-  auto MIB =
-      MIRBuilder.buildInstr(SPIRV::OpExtInst)
-          .addDef(Call->ReturnRegister)
-          .addUse(ReturnTypeId)
-          .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::OpenCL_std))
-          .addImm(Number);
+  MachineInstrBuilder MIB;
+  if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_fma) &&
+      Number == SPIRV::OpenCLExtInst::fma) {
+    // Use the SPIR-V fma instruction instead of the OpenCL extended
+    // instruction if the extension is available.
+    MIB = MIRBuilder.buildInstr(SPIRV::OpFmaKHR)
+              .addDef(Call->ReturnRegister)
+              .addUse(ReturnTypeId);
+  } else {
+    // Build extended instruction.
+    MIB = MIRBuilder.buildInstr(SPIRV::OpExtInst)
+              .addDef(Call->ReturnRegister)
+              .addUse(ReturnTypeId)
+              .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::OpenCL_std))
+              .addImm(Number);
+  }
 
   for (Register Argument : Arguments)
     MIB.addUse(Argument);
