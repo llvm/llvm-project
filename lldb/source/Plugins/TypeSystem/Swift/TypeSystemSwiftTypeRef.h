@@ -249,6 +249,11 @@ public:
                                 std::vector<uint32_t> &child_indexes) override;
   size_t GetNumTemplateArguments(lldb::opaque_compiler_type_t type,
                                  bool expand_pack) override;
+  lldb::TemplateArgumentKind
+  GetTemplateArgumentKind(lldb::opaque_compiler_type_t type, size_t idx,
+                          bool expand_pack) override;
+  CompilerType GetTypeTemplateArgument(lldb::opaque_compiler_type_t type,
+                                       size_t idx, bool expand_pack) override;
   CompilerType GetTypeForFormatters(lldb::opaque_compiler_type_t type) override;
   LazyBool ShouldPrintAsOneLiner(lldb::opaque_compiler_type_t type,
                                  ValueObject *valobj) override;

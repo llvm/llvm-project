@@ -4574,6 +4574,31 @@ size_t TypeSystemSwiftTypeRef::GetIndexOfChildMemberWithName(
   return {};
 }
 
+static NodePointer GetTemplateTypeListNode(NodePointer type) {
+  if (!type)
+    return nullptr;
+
+  switch (type->getKind()) {
+  case Node::Kind::BoundGenericClass:
+  case Node::Kind::BoundGenericEnum:
+  case Node::Kind::BoundGenericStructure:
+  case Node::Kind::BoundGenericProtocol:
+  case Node::Kind::BoundGenericOtherNominalType:
+  case Node::Kind::BoundGenericTypeAlias:
+  case Node::Kind::BoundGenericFunction: {
+    if (type->getNumChildren() > 1)
+      if (auto *child = type->getChild(1))
+        if (child->getKind() == Node::Kind::TypeList)
+          return child;
+    break;
+  }
+  default:
+    break;
+  }
+
+  return nullptr;
+}
+
 size_t
 TypeSystemSwiftTypeRef::GetNumTemplateArguments(opaque_compiler_type_t type,
                                                 bool expand_pack) {
@@ -4581,31 +4606,40 @@ TypeSystemSwiftTypeRef::GetNumTemplateArguments(opaque_compiler_type_t type,
     using namespace swift::Demangle;
     Demangler dem;
     NodePointer node = DemangleCanonicalOutermostType(dem, type);
+    if (auto *type_list = GetTemplateTypeListNode(node))
+      return type_list->getNumChildren();
 
-    if (!node)
-      return 0;
-
-    switch (node->getKind()) {
-    case Node::Kind::BoundGenericClass:
-    case Node::Kind::BoundGenericEnum:
-    case Node::Kind::BoundGenericStructure:
-    case Node::Kind::BoundGenericProtocol:
-    case Node::Kind::BoundGenericOtherNominalType:
-    case Node::Kind::BoundGenericTypeAlias:
-    case Node::Kind::BoundGenericFunction: {
-      if (node->getNumChildren() > 1) {
-        NodePointer child = node->getChild(1);
-        if (child && child->getKind() == Node::Kind::TypeList)
-          return child->getNumChildren();
-      }
-    } break;
-    default:
-      break;
-    }
     return 0;
   };
   VALIDATE_AND_RETURN(impl, GetNumTemplateArguments, type, g_no_exe_ctx,
                       (ReconstructType(type), expand_pack));
+}
+
+lldb::TemplateArgumentKind TypeSystemSwiftTypeRef::GetTemplateArgumentKind(
+    lldb::opaque_compiler_type_t type, size_t idx, bool expand_pack) {
+  Demangler dem;
+  NodePointer node = DemangleCanonicalOutermostType(dem, type);
+  if (auto *type_list = GetTemplateTypeListNode(node))
+    if (idx < type_list->getNumChildren())
+      return lldb::eTemplateArgumentKindType;
+
+  return lldb::eTemplateArgumentKindNull;
+}
+
+CompilerType TypeSystemSwiftTypeRef::GetTypeTemplateArgument(
+    lldb::opaque_compiler_type_t type, size_t idx, bool expand_pack) {
+  using namespace swift::Demangle;
+  Demangler dem;
+  NodePointer node = DemangleCanonicalOutermostType(dem, type);
+  if (auto *type_list = GetTemplateTypeListNode(node))
+    if (idx < type_list->getNumChildren()) {
+      const auto *mangled_name = AsMangledName(type);
+      auto flavor = SwiftLanguageRuntime::GetManglingFlavor(mangled_name);
+      auto *template_type = type_list->getChild(idx);
+      return RemangleAsType(dem, template_type, flavor);
+    }
+
+  return {};
 }
 
 CompilerType
