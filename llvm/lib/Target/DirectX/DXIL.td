@@ -1144,6 +1144,13 @@ def WaveBitOp : DXILOp<120, waveBitOp> {
   let overloads = [
     Overloads<DXIL1_0, [Int16Ty, Int32Ty, Int64Ty]>
   ];
+}
+
+def WavePrefixBitCount : DXILOp<136, wavePrefixOp> {
+  let Doc = "returns the count of bits of Expr set to 1 on prior lanes";
+  let intrinsics = [IntrinSelect<int_dx_wave_prefix_bit_count>];
+  let arguments = [Int1Ty];
+  let result = Int32Ty;
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, []>];
 }

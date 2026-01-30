@@ -226,6 +226,9 @@ private:
 
   bool selectWaveBitOpInst(Register ResVReg, const SPIRVType *ResType,
                            MachineInstr &I, unsigned Opcode) const;
+                           
+  bool selectWavePrefixBitCount(Register ResVReg, const SPIRVType *ResType,
+                                MachineInstr &I) const;
 
   bool selectWaveReduceMax(Register ResVReg, const SPIRVType *ResType,
                            MachineInstr &I, bool IsUnsigned) const;
@@ -2739,6 +2742,56 @@ bool SPIRVInstructionSelector::selectWaveBitOpInst(Register ResVReg,
   return BMI.constrainAllUses(TII, TRI, RBI);
 }
 
+bool SPIRVInstructionSelector::selectWavePrefixBitCount(
+    Register ResVReg, const SPIRVType *ResType, MachineInstr &I) const {
+
+  assert(I.getNumOperands() == 3);
+
+  auto Op = I.getOperand(2);
+  assert(Op.isReg());
+
+  MachineBasicBlock &BB = *I.getParent();
+  DebugLoc DL = I.getDebugLoc();
+
+  Register InputRegister = Op.getReg();
+  SPIRVType *InputType = GR.getSPIRVTypeForVReg(InputRegister);
+
+  if (!InputType)
+    report_fatal_error("Input Type could not be determined.");
+
+  if (InputType->getOpcode() != SPIRV::OpTypeBool)
+    report_fatal_error("WavePrefixBitCount requires boolean input");
+
+  // Types
+  SPIRVType *Int32Ty = GR.getOrCreateSPIRVIntegerType(32, I, TII);
+
+  // Ballot result type: vector<uint32>
+  // Match DXC: %v4uint for Subgroup size
+  SPIRVType *BallotTy = GR.getOrCreateSPIRVVectorType(Int32Ty, 4, I, TII);
+
+  // Create a vreg for the ballot result
+  Register BallotVReg = MRI->createVirtualRegister(&SPIRV::IDRegClass);
+
+  // 1. OpGroupNonUniformBallot
+  BuildMI(BB, I, DL, TII.get(SPIRV::OpGroupNonUniformBallot))
+      .addDef(BallotVReg)
+      .addUse(GR.getSPIRVTypeID(BallotTy))
+      .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, Int32Ty, TII))
+      .addUse(InputRegister)
+      .constrainAllUses(TII, TRI, RBI);
+
+  // 2. OpGroupNonUniformBallotBitCount
+  BuildMI(BB, I, DL, TII.get(SPIRV::OpGroupNonUniformBallotBitCount))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, Int32Ty, TII))
+      .addImm(SPIRV::GroupOperation::ExclusiveScan)
+      .addUse(BallotVReg)
+      .constrainAllUses(TII, TRI, RBI);
+
+  return true;
+}
+
 bool SPIRVInstructionSelector::selectWaveReduceMax(Register ResVReg,
                                                    const SPIRVType *ResType,
                                                    MachineInstr &I,
@@ -3883,6 +3936,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::u_clamp, GL::UClamp);
   case Intrinsic::spv_sclamp:
     return selectExtInst(ResVReg, ResType, I, CL::s_clamp, GL::SClamp);
+  case Intrinsic::spv_subgroup_prefix_bit_count:
+    return selectWavePrefixBitCount(ResVReg, ResType, I);
   case Intrinsic::spv_wave_active_countbits:
     return selectWaveActiveCountBits(ResVReg, ResType, I);
   case Intrinsic::spv_wave_all:
