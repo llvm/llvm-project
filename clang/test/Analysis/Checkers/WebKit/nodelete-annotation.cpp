@@ -69,3 +69,15 @@ class DerivedClass : public IntermediateClass {
     someFunction();
   }
 };
+
+template <class Type>
+class Base {
+public:
+  virtual unsigned foo() const = 0;
+};
+
+template <class Type>
+class Derived : public Base<Type> {
+public:
+  virtual unsigned foo() const { return 0; }
+};
