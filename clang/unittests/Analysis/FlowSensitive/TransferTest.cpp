@@ -935,6 +935,82 @@ TEST(TransferTest, BinaryOperatorAssignIntegerLiteral) {
       });
 }
 
+TEST(TransferTest, BinaryOperatorAssignUnknown) {
+  std::string Code = R"(
+    int unknown();
+
+    void target() {
+      int Foo = unknown();
+      int FooAtA = Foo;
+
+      Foo = unknown();
+      int FooAtB = Foo;
+
+      Foo += unknown();
+      int FooAtC = Foo;
+
+      // [[p]]
+
+      if (FooAtA != FooAtB) {
+        (void)0;
+        // [[q]]
+      }
+
+      if (FooAtB != FooAtC) {
+        (void)0;
+        // [[r]]
+      }
+    }
+  )";
+  using ast_matchers::binaryOperator;
+  using ast_matchers::match;
+  using ast_matchers::selectFirst;
+  runDataflow(
+      Code,
+      [](const llvm::StringMap<DataflowAnalysisState<NoopLattice>> &Results,
+         ASTContext &ASTCtx) {
+        ASSERT_THAT(Results.keys(), UnorderedElementsAre("p", "q", "r"));
+
+        // Check that the second unknown value is different.
+        const Environment &EnvP = getEnvironmentAtAnnotation(Results, "p");
+
+        const ValueDecl *FooAtADecl = findValueDecl(ASTCtx, "FooAtA");
+        ASSERT_THAT(FooAtADecl, NotNull());
+        const Value *FooAtAVal = EnvP.getValue(*FooAtADecl);
+        ASSERT_TRUE(isa_and_nonnull<IntegerValue>(FooAtAVal));
+
+        const ValueDecl *FooAtBDecl = findValueDecl(ASTCtx, "FooAtB");
+        ASSERT_THAT(FooAtBDecl, NotNull());
+        const Value *FooAtBVal = EnvP.getValue(*FooAtBDecl);
+        ASSERT_TRUE(isa_and_nonnull<IntegerValue>(FooAtBVal));
+
+        const ValueDecl *FooAtCDecl = findValueDecl(ASTCtx, "FooAtC");
+        ASSERT_THAT(FooAtCDecl, NotNull());
+        const Value *FooAtCVal = EnvP.getValue(*FooAtCDecl);
+        ASSERT_TRUE(isa_and_nonnull<IntegerValue>(FooAtCVal));
+
+        EXPECT_NE(FooAtAVal, FooAtBVal);
+        // FIXME: Should be NE too.
+        EXPECT_EQ(FooAtBVal, FooAtCVal);
+
+        // Check that the storage location is correctly propagated.
+        auto MatchResult = match(binaryOperator().bind("bo"), ASTCtx);
+        const auto *BO = selectFirst<BinaryOperator>("bo", MatchResult);
+        EXPECT_NE(BO, nullptr);
+        const StorageLocation *BOLoc = EnvP.getStorageLocation(*BO);
+        EXPECT_NE(BOLoc, nullptr);
+
+        // Check that the branches are reachable
+        // with a non-false flow condition.
+        const Environment &EnvQ = getEnvironmentAtAnnotation(Results, "q");
+        const Environment &EnvR = getEnvironmentAtAnnotation(Results, "r");
+
+        EXPECT_FALSE(EnvQ.proves(EnvQ.arena().makeLiteral(false)));
+        // FIXME: Should be FALSE too.
+        EXPECT_TRUE(EnvR.proves(EnvR.arena().makeLiteral(false)));
+      });
+}
+
 TEST(TransferTest, VarDeclInitAssign) {
   std::string Code = R"(
     void target() {
