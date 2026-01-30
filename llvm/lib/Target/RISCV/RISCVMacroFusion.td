@@ -193,8 +193,7 @@ def TuneFusionMulAdd
            "Enable MUL+ADD macrofusion",
            CheckOpcode<[MUL, MULW]>,
            CheckOpcode<[ADD, ADDW]>,
-           [],
-           [
+           epilog = [
              // Check that both instructions have the same width
              FusionPredicateWithCode<[{
                if ((FirstMI->getDesc().TSFlags & RISCVII::IsSignExtendingOpWMask) !=
@@ -240,8 +239,7 @@ def TuneFusionShiftBitExtract
            "Enable SLLI+SRLI/SRAI macrofusion",
            CheckOpcode<ShiftLeft>,
            CheckOpcode<ShiftRight>,
-           [],
-           [
+           epilog = [
              // Check that both instructions have the same width
              FusionPredicateWithCode<[{
                if ((FirstMI->getDesc().TSFlags & RISCVII::IsSignExtendingOpWMask) !=
