@@ -1923,7 +1923,7 @@ static CharUnits computeOffsetHint(ASTContext &astContext,
   // If Dst is not derived from Src we can skip the whole computation below and
   // return that Src is not a public base of Dst.  Record all inheritance paths.
   if (!dst->isDerivedFrom(src, paths))
-    return CharUnits::fromQuantity(-2ULL);
+    return CharUnits::fromQuantity(-2);
 
   unsigned numPublicPaths = 0;
   CharUnits offset;
@@ -1939,7 +1939,7 @@ static CharUnits computeOffsetHint(ASTContext &astContext,
       // If the path contains a virtual base class we can't give any hint.
       // -1: no hint.
       if (pathElement.Base->isVirtual())
-        return CharUnits::fromQuantity(-1ULL);
+        return CharUnits::fromQuantity(-1);
 
       if (numPublicPaths > 1) // Won't use offsets, skip computation.
         continue;
@@ -1954,11 +1954,11 @@ static CharUnits computeOffsetHint(ASTContext &astContext,
 
   // -2: Src is not a public base of Dst.
   if (numPublicPaths == 0)
-    return CharUnits::fromQuantity(-2ULL);
+    return CharUnits::fromQuantity(-2);
 
   // -3: Src is a multiple public base type but never a virtual base type.
   if (numPublicPaths > 1)
-    return CharUnits::fromQuantity(-3ULL);
+    return CharUnits::fromQuantity(-3);
 
   // Otherwise, the Src type is a unique public nonvirtual base type of Dst.
   // Return the offset of Src from the origin of Dst.

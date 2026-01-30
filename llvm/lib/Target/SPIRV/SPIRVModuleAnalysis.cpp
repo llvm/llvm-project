@@ -1768,6 +1768,12 @@ void addInstrRequirements(const MachineInstr &MI,
       Reqs.addCapability(SPIRV::Capability::ExpectAssumeKHR);
     }
     break;
+  case SPIRV::OpFmaKHR:
+    if (ST.canUseExtension(SPIRV::Extension::SPV_KHR_fma)) {
+      Reqs.addExtension(SPIRV::Extension::SPV_KHR_fma);
+      Reqs.addCapability(SPIRV::Capability::FmaKHR);
+    }
+    break;
   case SPIRV::OpPtrCastToCrossWorkgroupINTEL:
   case SPIRV::OpCrossWorkgroupCastToPtrINTEL:
     if (ST.canUseExtension(SPIRV::Extension::SPV_INTEL_usm_storage_classes)) {
