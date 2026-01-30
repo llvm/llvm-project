@@ -713,8 +713,8 @@ struct UnrollMultiReductionOuterGeneralCase
       else
         masks.push_back(nullptr);
 
-    ArrayRef<bool> reductionMask =
-        ArrayRef<bool>(multiReductionOp.getReductionMask()).drop_front();
+    SmallVector<bool> fullReductionMask = multiReductionOp.getReductionMask();
+    ArrayRef<bool> reductionMask = ArrayRef<bool>(fullReductionMask).drop_front();
     Value result = multiReductionOp.getAcc();
     for (auto [innerVector, innerMask] : llvm::zip(vectors, masks)) {
 
@@ -829,8 +829,9 @@ struct UnrollInnerReductionAlongOuterParallel
     // Compute new reduction mask by dropping the first element (dimension 0).
     // Since dimension 0 is parallel (not reduced), all reduction indices shift
     // down by 1.
+    SmallVector<bool> fullReductionMask = multiReductionOp.getReductionMask();
     ArrayRef<bool> newReductionMask =
-        ArrayRef<bool>(multiReductionOp.getReductionMask()).drop_front();
+        ArrayRef<bool>(fullReductionMask).drop_front();
 
     SmallVector<Value> reductionResults;
     for (auto [srcSlice, accSlice, maskSlice] :
