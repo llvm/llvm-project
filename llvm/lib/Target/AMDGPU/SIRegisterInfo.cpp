@@ -529,15 +529,9 @@ Register SIRegisterInfo::getFrameRegister(const MachineFunction &MF) const {
 }
 
 bool SIRegisterInfo::hasBasePointer(const MachineFunction &MF) const {
-  const SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-
   // When we need stack realignment, we can't reference off of the
   // stack pointer, so we reserve a base pointer.
-  if (shouldRealignStack(MF))
-    return true;
-
-  // If llvm.sponentry is used in non-entry functions, we force a base pointer.
-  return !MFI->isBottomOfStack() && MFI->usesSPOnEntry();
+  return shouldRealignStack(MF);
 }
 
 Register SIRegisterInfo::getBaseRegister() const { return AMDGPU::SGPR34; }

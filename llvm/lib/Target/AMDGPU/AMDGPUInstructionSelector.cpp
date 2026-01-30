@@ -1184,8 +1184,6 @@ bool AMDGPUInstructionSelector::selectG_INTRINSIC(MachineInstr &I) const {
     return selectGroupStaticSize(I);
   case Intrinsic::returnaddress:
     return selectReturnAddress(I);
-  case Intrinsic::sponentry:
-    return selectSPOnEntry(I);
   case Intrinsic::amdgcn_smfmac_f32_16x16x32_f16:
   case Intrinsic::amdgcn_smfmac_f32_32x32x16_f16:
   case Intrinsic::amdgcn_smfmac_f32_16x16x32_bf16:
@@ -1769,28 +1767,6 @@ bool AMDGPUInstructionSelector::selectReturnAddress(MachineInstr &I) const {
     .addReg(LiveIn);
   I.eraseFromParent();
   return true;
-}
-
-bool AMDGPUInstructionSelector::selectSPOnEntry(MachineInstr &I) const {
-  MachineBasicBlock *MBB = I.getParent();
-  MachineFunction &MF = *MBB->getParent();
-  SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
-
-  MFI->setUsesSPOnEntry(true);
-
-  // For entry functions and chain functions, use GET_STACK_BASE.
-  if (MFI->isBottomOfStack())
-    return selectImpl(I, *CoverageInfo);
-
-  MachineOperand &Dst = I.getOperand(0);
-  Register DstReg = Dst.getReg();
-
-  // For other functions, force a base pointer and copy from it.
-  Register BasePtrReg = TRI.getBaseRegister();
-  BuildMI(*MBB, &I, I.getDebugLoc(), TII.get(AMDGPU::COPY), DstReg)
-    .addReg(BasePtrReg);
-  I.eraseFromParent();
-  return RBI.constrainGenericRegister(DstReg, AMDGPU::SReg_32RegClass, *MRI);
 }
 
 bool AMDGPUInstructionSelector::selectEndCfIntrinsic(MachineInstr &MI) const {
@@ -4435,8 +4411,6 @@ bool AMDGPUInstructionSelector::select(MachineInstr &I) {
     return selectCOPY_VCC_SCC(I);
   case AMDGPU::G_AMDGPU_READANYLANE:
     return selectReadAnyLane(I);
-  case AMDGPU::G_AMDGPU_SPONENTRY:
-    return selectSPOnEntry(I);
   case TargetOpcode::G_CONSTANT:
   case TargetOpcode::G_FCONSTANT:
   default:

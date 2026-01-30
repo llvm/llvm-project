@@ -6796,7 +6796,6 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::RETURNADDR:
     return LowerRETURNADDR(Op, DAG);
   case ISD::SPONENTRY:
-    // return Op; // Legal enough, we'll replace with a pseudo later on.
     return LowerSPONENTRY(Op, DAG);
   case ISD::LOAD: {
     SDValue Result = LowerLOAD(Op, DAG);
@@ -7823,11 +7822,9 @@ SDValue SITargetLowering::LowerSPONENTRY(SDValue Op, SelectionDAG &DAG) const {
     return Op;
   }
 
-  // For other functions, force a base pointer and return a copy from it.
-  const SIRegisterInfo *TRI = getSubtarget()->getRegisterInfo();
-  Register BasePtr = TRI->getBaseRegister();
-
-  return DAG.getCopyFromReg(DAG.getEntryNode(), SDLoc(Op), BasePtr, Op.getValueType());
+  EVT VT = getPointerTy(DAG.getDataLayout(), AMDGPUAS::PRIVATE_ADDRESS);
+  int FI = MF.getFrameInfo().CreateFixedObject(1, 0, /*IsImmutable=*/false);
+  return DAG.getFrameIndex(FI, VT);
 }
 
 SDValue SITargetLowering::getFPExtOrFPRound(SelectionDAG &DAG, SDValue Op,
