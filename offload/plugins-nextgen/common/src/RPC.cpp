@@ -21,6 +21,12 @@ using namespace llvm;
 using namespace omp;
 using namespace target;
 
+// List of user generated callbacks for the RPC server.
+static llvm::SmallVector<RPCServerTy::RPCServerCallbackTy> &getRPCCallbacks() {
+  static llvm::SmallVector<RPCServerTy::RPCServerCallbackTy> Callbacks;
+  return Callbacks;
+}
+
 template <uint32_t NumLanes>
 rpc::Status handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
                                  rpc::Server::Port &Port) {
@@ -85,24 +91,31 @@ static rpc::Status handleOffloadOpcodes(plugin::GenericDeviceTy &Device,
 
 static rpc::Status runServer(plugin::GenericDeviceTy &Device, void *Buffer,
                              bool &ClientInUse) {
-  uint64_t NumPorts =
+  const uint64_t NumPorts =
       std::min(Device.requestedRPCPortCount(), rpc::MAX_PORT_COUNT);
   rpc::Server Server(NumPorts, Buffer);
 
   auto Port = Server.try_open(Device.getWarpSize());
   if (!Port)
     return rpc::RPC_SUCCESS;
-
   ClientInUse = true;
-  rpc::Status Status =
-      handleOffloadOpcodes(Device, *Port, Device.getWarpSize());
 
-  // Let the `libc` library handle any other unhandled opcodes.
+  rpc::Status Status = rpc::RPC_UNHANDLED_OPCODE;
+  const uint32_t NumLanes = Device.getWarpSize();
+
+  for (RPCServerTy::RPCServerCallbackTy Callback : getRPCCallbacks()) {
+    Status = static_cast<rpc::Status>(Callback(&*Port, NumLanes));
+    if (Status != rpc::RPC_UNHANDLED_OPCODE)
+      break;
+  }
+
   if (Status == rpc::RPC_UNHANDLED_OPCODE)
-    Status = LIBC_NAMESPACE::shared::handle_libc_opcodes(*Port,
-                                                         Device.getWarpSize());
-  Port->close();
+    Status = handleOffloadOpcodes(Device, *Port, NumLanes);
 
+  if (Status == rpc::RPC_UNHANDLED_OPCODE)
+    Status = LIBC_NAMESPACE::shared::handle_libc_opcodes(*Port, NumLanes);
+
+  Port->close();
   return Status;
 }
 
@@ -229,4 +242,9 @@ Error RPCServerTy::deinitDevice(plugin::GenericDeviceTy &Device) {
   Buffers[Device.getDeviceId()] = nullptr;
   Devices[Device.getDeviceId()] = nullptr;
   return Error::success();
+}
+
+void RPCServerTy::registerCallback(RPCServerCallbackTy FnPtr) {
+  std::lock_guard<decltype(BufferMutex)> Lock(BufferMutex);
+  getRPCCallbacks().push_back(FnPtr);
 }
