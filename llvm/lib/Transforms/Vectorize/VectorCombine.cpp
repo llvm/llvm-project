@@ -5420,7 +5420,7 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
 
   // Get the range of vector elements used by shufflevector instructions.
   if (std::optional<IndexRange> Indices = GetIndexRangeInShuffles()) {
-    unsigned const NewNumElements = (Indices->second + 1) - Indices->first;
+    unsigned const NewNumElements = Indices->second + 1u;
 
     // If the range of vector elements is smaller than the full load, attempt
     // to create a smaller load.
@@ -5442,23 +5442,19 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
 
       using UseEntry = std::pair<ShuffleVectorInst *, std::vector<int>>;
       SmallVector<UseEntry, 4u> NewUses;
-      unsigned const LowOffset = Indices->first;
-      unsigned const HighOffset = OldNumElements - (Indices->second + 1);
+      unsigned const MaxIndex = NewNumElements * 2u;
 
       for (llvm::Use &Use : I.uses()) {
         auto *Shuffle = cast<ShuffleVectorInst>(Use.getUser());
         ArrayRef<int> OldMask = Shuffle->getShuffleMask();
 
         // Create entry for new use.
-        NewUses.push_back({Shuffle, {}});
-        std::vector<int> &NewMask = NewUses.back().second;
+        NewUses.push_back({Shuffle, OldMask});
+
+        // Validate mask indices.
         for (int Index : OldMask) {
-          int NewIndex = Index >= static_cast<int>(OldNumElements)
-                             ? Index - LowOffset - HighOffset
-                             : Index - LowOffset;
-          if (NewIndex >= static_cast<int>(NewNumElements * 2u))
+          if (Index >= static_cast<int>(MaxIndex))
             return false;
-          NewMask.push_back(NewIndex);
         }
 
         // Update costs.
@@ -5467,7 +5463,7 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
                                OldLoadTy, OldMask, CostKind);
         NewCost +=
             TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, Shuffle->getType(),
-                               NewLoadTy, NewMask, CostKind);
+                               NewLoadTy, OldMask, CostKind);
       }
 
       LLVM_DEBUG(
@@ -5479,14 +5475,8 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
         return false;
 
       // Create new load of smaller vector.
-      Type *IndexTy = DL->getIndexType(PtrOp->getType());
-      Value *NewPtr = LowOffset > 0u
-                          ? Builder.CreateInBoundsPtrAdd(
-                                PtrOp, ConstantInt::get(IndexTy, LowOffset))
-                          : PtrOp;
-
       auto *NewLoad = cast<LoadInst>(
-          Builder.CreateAlignedLoad(NewLoadTy, NewPtr, OldLoad->getAlign()));
+          Builder.CreateAlignedLoad(NewLoadTy, PtrOp, OldLoad->getAlign()));
       NewLoad->copyMetadata(I);
 
       // Replace all uses.
