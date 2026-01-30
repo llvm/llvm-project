@@ -546,7 +546,7 @@ private:
   /// disallowed by C++ language rules).
   ///
   /// FIXME: move this to a language-specific dictionary of options.
-  bool m_cpp_ignore_context_qualifierss = false;
+  bool m_cpp_ignore_context_qualifiers = false;
 };
 
 // Target
