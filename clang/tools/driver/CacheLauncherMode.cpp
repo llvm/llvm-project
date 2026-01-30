@@ -22,17 +22,25 @@
 using namespace clang;
 
 static bool isSameProgram(StringRef clangCachePath, StringRef compilerPath) {
+  using namespace llvm::sys;
+
   // Fast path check, see if they have the same parent path.
-  if (llvm::sys::path::parent_path(clangCachePath) ==
-      llvm::sys::path::parent_path(compilerPath))
+  if (path::parent_path(clangCachePath) == path::parent_path(compilerPath))
     return true;
+
+#if defined(_WIN32)
+  // executables are normally copies on Windows, so we cannot do much more of a
+  // check.
+  return true;
+#else
   // Check the file status IDs;
-  llvm::sys::fs::file_status CacheStat, CompilerStat;
-  if (llvm::sys::fs::status(clangCachePath, CacheStat))
+  fs::file_status CacheStat, CompilerStat;
+  if (fs::status(clangCachePath, CacheStat))
     return false;
-  if (llvm::sys::fs::status(compilerPath, CompilerStat))
+  if (fs::status(compilerPath, CompilerStat))
     return false;
   return CacheStat.getUniqueID() == CompilerStat.getUniqueID();
+#endif
 }
 
 static bool shouldCacheInvocation(ArrayRef<const char *> Args,
@@ -206,7 +214,11 @@ clang::handleClangCacheInvocation(SmallVectorImpl<const char *> &Args,
           llvm::sys::Process::GetEnv("LLVM_CACHE_WARNINGS")) {
     SmallVector<const char *, 8> WarnOpts;
     WarnOpts.push_back(Args.front());
+#if defined(_WIN32)
+    llvm::cl::TokenizeWindowsCommandLine(*WarnOptsValue, Saver, WarnOpts);
+#else
     llvm::cl::TokenizeGNUCommandLine(*WarnOptsValue, Saver, WarnOpts);
+#endif
     DiagOpts = CreateAndPopulateDiagOpts(WarnOpts);
   } else {
     DiagOpts = std::make_unique<DiagnosticOptions>();
