@@ -317,7 +317,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
   setOperationAction({ISD::SHL_PARTS, ISD::SRA_PARTS, ISD::SRL_PARTS}, MVT::i64,
                      Expand);
 
-  setOperationAction({ISD::INLINEASM, ISD::INLINEASM_BR}, MVT::Other, Custom);
+  setOperationAction(ISD::INLINEASM, MVT::Other, Custom);
 
 #if 0
   setOperationAction({ISD::UADDO_CARRY, ISD::USUBO_CARRY}, MVT::i64, Legal);
@@ -6935,7 +6935,6 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::ROTR:
     return lowerROTR(Op, DAG);
   case ISD::INLINEASM:
-  case ISD::INLINEASM_BR:
     return LowerINLINEASM(Op, DAG);
   }
   return SDValue();

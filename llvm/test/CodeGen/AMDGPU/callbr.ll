@@ -6,9 +6,8 @@ define void @callbr_inline_asm(ptr %src, ptr %dst1, ptr %dst2, i32 %c) {
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    flat_load_dword v0, v[0:1]
-; CHECK-NEXT:    v_readfirstlane_b32 s4, v6
 ; CHECK-NEXT:    ;;#ASMSTART
-; CHECK-NEXT:    v_cmp_gt_i32 vcc s4, 42; s_cbranch_vccnz .LBB0_2
+; CHECK-NEXT:    v_cmp_gt_i32 vcc v6, 42; s_cbranch_vccnz .LBB0_2
 ; CHECK-NEXT:    ;;#ASMEND
 ; CHECK-NEXT:  ; %bb.1: ; %fallthrough
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
