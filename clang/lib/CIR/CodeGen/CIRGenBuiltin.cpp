@@ -1353,26 +1353,19 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
                                  mlir::ValueRange{builder.getUInt32(0, loc)})
             .getResult();
 
-    builder.createStore(loc, frameaddress, Address(castBuf, buf.getAlignment()));
+    builder.createStore(loc, frameaddress, castBuf);
 
     mlir::Value stacksave =
         cir::StackSaveOp::create(builder, loc, builder.getVoidPtrTy())
             .getResult();
     cir::PtrStrideOp stackSaveSlot = cir::PtrStrideOp::create(
         builder, loc, ppTy, castBuf, builder.getSInt32(2, loc));
-    builder.createStore(loc, stacksave, Address(stackSaveSlot, buf.getAlignment()));
+    builder.createStore(loc, stacksave, stackSaveSlot);
     auto op =
         cir::EhSetjmpOp::create(builder, loc, castBuf, /*is_builtin=*/true);
     return RValue::get(op);
   }
-  case Builtin::BI__builtin_longjmp: {
-    mlir::Value buf = emitScalarExpr(e->getArg(0));
-    mlir::Location loc = getLoc(e->getExprLoc());
-
-    cir::EhLongjmpOp::create(builder, loc, buf);
-    builder.create<cir::UnreachableOp>(loc);
-    return RValue::get(nullptr);
-  }
+  case Builtin::BI__builtin_longjmp:
   case Builtin::BI__builtin_launder:
   case Builtin::BI__sync_fetch_and_add:
   case Builtin::BI__sync_fetch_and_sub:
@@ -1773,7 +1766,25 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__abnormal_termination:
   case Builtin::BI_abnormal_termination:
   case Builtin::BI_setjmpex:
-  case Builtin::BI_setjmp:
+    return errorBuiltinNYI(*this, e, builtinID);
+  case Builtin::BI_setjmp: {
+    if (getTarget().getTriple().isOSMSVCRT() && e->getNumArgs() == 1 &&
+        e->getArg(0)->getType()->isPointerType()) {
+      if (getTarget().getTriple().getArch() == llvm::Triple::x86)
+        llvm_unreachable("NYI setjmp on x86");
+      else if (getTarget().getTriple().getArch() == llvm::Triple::aarch64){
+        llvm_unreachable("NYI setjmp on aarch64");
+      }
+      llvm_unreachable("NYI setjmp on generic MSVCRT");
+    }
+    Address buf = emitPointerWithAlignment(e->getArg(0));
+    mlir::Location loc = getLoc(e->getExprLoc());
+    cir::PointerType ppTy = builder.getPointerTo(builder.getVoidPtrTy());
+    mlir::Value castBuf = builder.createBitcast(buf.getPointer(), ppTy);
+    auto op =
+        cir::EhSetjmpOp::create(builder, loc, castBuf, /*is_builtin = */ false);
+    return RValue::get(op);
+  }
   case Builtin::BImove:
   case Builtin::BImove_if_noexcept:
   case Builtin::BIforward:

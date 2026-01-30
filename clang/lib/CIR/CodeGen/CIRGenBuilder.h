@@ -519,6 +519,7 @@ public:
     return createAlignedLoad(loc, ty, ptr, align.getAsAlign());
   }
 
+  using CIRBaseBuilderTy::createStore;
   cir::StoreOp createStore(mlir::Location loc, mlir::Value val, Address dst,
                            bool isVolatile = false,
                            mlir::IntegerAttr align = {},

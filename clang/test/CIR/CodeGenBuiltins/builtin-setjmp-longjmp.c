@@ -61,24 +61,3 @@ void test_setjmp2(void *env) {
   // OGCG: call i32 @_setjmp(ptr noundef [[ENV]])
   _setjmp (env);
 }
-
-void test_longjmp(void *env) {
-  // CIR-LABEL: test_longjmp
-  // CIR-SAME: [[ENV:%.*]]: 
-  // CIR-NEXT: [[ENV_ALLOCA:%[0-9]+]] = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>,
-  // CIR-NEXT: cir.store [[ENV]], [[ENV_ALLOCA]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
-  // CIR-NEXT: [[ENV_LOAD:%[0-9]+]] = cir.load align(8) [[ENV_ALLOCA]]
-  // CIR-NEXT: [[CAST:%[0-9]+]] = cir.cast bitcast [[ENV_LOAD]] : !cir.ptr<!void> -> !cir.ptr<!cir.ptr<!void>>
-  // CIR-NEXT: cir.eh.longjmp [[CAST]] : !cir.ptr<!cir.ptr<!void>>
-  // CIR-NEXT: cir.unreachable
-
-
-  // LLVM-LABEL: test_longjmp
-  // LLVM: @llvm.eh.sjlj.longjmp
-  // LLVM-NEXT: unreachable
-  
-  // OGCG-LABEL: test_longjmp
-  // OGCG: @llvm.eh.sjlj.longjmp
-  // OGCG-NEXT: unreachable
-  __builtin_longjmp(env, 1);
-}

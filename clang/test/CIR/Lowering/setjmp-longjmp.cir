@@ -23,14 +23,5 @@ module {
     %0 = cir.eh.setjmp %arg0 : (!p32) -> !s32i
     cir.return %0 : !s32i
   }
-  cir.func @test_longjmp(%arg0 : !p32) {
-
-    // MLIR: llvm.func @test_longjmp([[ARG0:%.*]]: !llvm.ptr)
-    // MLIR-NEXT:    llvm.call_intrinsic "llvm.eh.sjlj.longjmp"([[ARG0]]) : (!llvm.ptr) -> ()
-    // MLIR-NEXT:    llvm.unreachable
-    // MLIR-NEXT:  }
-    cir.eh.longjmp %arg0 : !p32
-    cir.unreachable
-  }
   // MLIR: }
 }
