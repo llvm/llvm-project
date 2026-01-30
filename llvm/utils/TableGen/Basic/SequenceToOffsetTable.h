@@ -112,10 +112,10 @@ public:
     IsLaidOut = true;
 
     // Lay out the table in Seqs iteration order.
-    for (auto &Entry : Seqs) {
-      Entry.second = Size;
+    for (auto &[Seq, Offset] : Seqs) {
+      Offset = Size;
       // Include space for a terminator.
-      Size += Entry.first.size() + Terminator.has_value();
+      Size += Seq.size() + Terminator.has_value();
     }
   }
 
