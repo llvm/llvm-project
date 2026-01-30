@@ -5785,8 +5785,7 @@ static MachineBasicBlock *lowerWaveReduce(MachineInstr &MI,
       case AMDGPU::V_ADD_F64_pseudo_e64:
       case AMDGPU::V_SUB_F32_e64: {
         bool is32BitOpc = is32bitWaveReduceOperation(Opc);
-        const TargetRegisterClass *VregRC =
-            is32BitOpc ? &AMDGPU::VGPR_32RegClass : TRI->getVGPR64Class();
+        const TargetRegisterClass *VregRC = TII->getRegClass(TII->get(Opc), 0);
         Register ActiveLanesVreg = MRI.createVirtualRegister(VregRC);
         Register DstVreg = MRI.createVirtualRegister(VregRC);
         // Get number of active lanes as a float val.
