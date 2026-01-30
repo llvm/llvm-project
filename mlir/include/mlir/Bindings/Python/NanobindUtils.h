@@ -21,6 +21,7 @@
 #include <fstream>
 #include <sstream>
 #include <string>
+#include <type_traits>
 #include <typeinfo>
 #include <variant>
 
@@ -293,8 +294,12 @@ protected:
 
   /// Trait to check if T provides a `maybeDownCast` method.
   /// Note, you need the & to detect inherited members.
-  template <typename T, typename... Args>
-  using has_maybe_downcast = decltype(&T::maybeDownCast);
+  template <typename T, typename = void>
+  struct has_maybe_downcast : std::false_type {};
+
+  template <typename T>
+  struct has_maybe_downcast<T, std::void_t<decltype(&T::maybeDownCast)>>
+      : std::true_type {};
 
   /// Returns the element at the given slice index. Supports negative indices
   /// by taking elements in inverse order. Returns a nullptr object if out
@@ -307,7 +312,7 @@ protected:
       return {};
     }
 
-    if constexpr (llvm::is_detected<has_maybe_downcast, ElementTy>::value)
+    if constexpr (has_maybe_downcast<ElementTy>::value)
       return static_cast<Derived *>(this)
           ->getRawElement(linearizeIndex(index))
           .maybeDownCast();
