@@ -831,7 +831,6 @@ shouldPragmaUnroll(Loop *L, const PragmaInfo &PInfo,
       MaxTripCount <= UP.MaxUpperBound)
     return MaxTripCount;
 
-  // if didn't return until here, should continue to other priorties
   return std::nullopt;
 }
 
