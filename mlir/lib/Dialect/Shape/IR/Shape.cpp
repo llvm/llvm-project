@@ -1700,21 +1700,24 @@ struct ShapeOfOpToConstShapeOp : public OpRewritePattern<shape::ShapeOfOp> {
   using OpRewritePattern<shape::ShapeOfOp>::OpRewritePattern;
 
   LogicalResult matchAndRewrite(shape::ShapeOfOp op,
-                                PatternRewriter &rewriter) const override {
-    auto type = llvm::dyn_cast<ShapedType>(op.getArg().getType());
-    if (!type || !type.hasStaticShape())
-      return failure();
-    Location loc = op.getLoc();
-    Value constShape =
-        ConstShapeOp::create(rewriter, loc,
-                             rewriter.getIndexTensorAttr(type.getShape()))
-            .getResult();
-    if (constShape.getType() != op.getResult().getType())
-      constShape = tensor::CastOp::create(rewriter, loc,
-                                          op.getResult().getType(), constShape);
-    rewriter.replaceOp(op, constShape);
-    return success();
-  }
+                              PatternRewriter &rewriter) const override {
+  auto shapedTy = dyn_cast<ShapedType>(op.getArg().getType());
+  if (!shapedTy || !shapedTy.hasStaticShape())
+    return failure();
+
+  Location loc = op.getLoc();
+  auto attr = rewriter.getIndexTensorAttr(shapedTy.getShape());
+
+  // IMPORTANT: Build const_shape with the SAME result type as shape_of.
+  // This avoids creating a tensor.cast to a non-tensor type (!shape.shape).
+  Value constShape = rewriter
+      .create<shape::ConstShapeOp>(loc, op.getType(), attr)
+      .getResult();
+
+  rewriter.replaceOp(op, constShape);
+  return success();
+}
+
 };
 
 // Canonicalize

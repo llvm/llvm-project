@@ -1614,3 +1614,21 @@ func.func @shape_of_0d(%arg0: tensor<f32>) -> tensor<?xindex> {
   %0 = shape.shape_of %arg0 : tensor<f32> -> tensor<?xindex>
   return %0 : tensor<?xindex>
 }
+
+
+// --------------------------------------------
+// ---- shape.shape_of canonicalize regression ----
+
+// RUN: mlir-opt %s -canonicalize | FileCheck %s
+
+module {
+  func.func @main(%arg0: tensor<2x3xi32>) -> !shape.shape {
+    %0 = shape.shape_of %arg0 : tensor<2x3xi32> -> !shape.shape
+    return %0 : !shape.shape
+  }
+}
+
+// CHECK-LABEL: func.func @main
+// CHECK:       shape.const_shape [2, 3] : !shape.shape
+// CHECK-NOT:   shape.shape_of
+
