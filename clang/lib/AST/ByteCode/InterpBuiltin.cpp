@@ -5922,9 +5922,15 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
         },
         /*IsScalar=*/true);
 
+  case clang::X86::BI__builtin_ia32_minsd_round_mask:
+  case clang::X86::BI__builtin_ia32_minss_round_mask:
   case clang::X86::BI__builtin_ia32_minsh_round_mask:
+  case clang::X86::BI__builtin_ia32_maxsd_round_mask:
+  case clang::X86::BI__builtin_ia32_maxss_round_mask:
   case clang::X86::BI__builtin_ia32_maxsh_round_mask: {
-    bool IsMin = BuiltinID == clang::X86::BI__builtin_ia32_minsh_round_mask;
+    bool IsMin = BuiltinID == clang::X86::BI__builtin_ia32_minsd_round_mask ||
+                 BuiltinID == clang::X86::BI__builtin_ia32_minss_round_mask ||
+                 BuiltinID == clang::X86::BI__builtin_ia32_minsh_round_mask;
     return interp__builtin_scalar_fp_round_mask_binop(
         S, OpPC, Call,
         [IsMin](const APFloat &A, const APFloat &B,

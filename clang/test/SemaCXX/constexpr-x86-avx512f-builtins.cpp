@@ -228,3 +228,102 @@ constexpr __m512 r = _mm512_mask_cvtpd_pslo(src, 0x4, a_nan);
 // expected-note@-4 {{in call to '_mm512_mask_cvtpd_pslo({9.000000e+00, 9.000000e+00, 9.000000e+00, 9.000000e+00, 9.000000e+00, 9.000000e+00, 9.000000e+00, 9.000000e+00, 9.000000e+00, 9.000000e+00, 9.000000e+00, 9.000000e+00, 9.000000e+00, 9.000000e+00, 9.000000e+00, 9.000000e+00}, 4, {-1.000000e+00, 2.000000e+00, nan, 8.000000e+00, 1.600000e+01, 3.200000e+01, 6.400000e+01, 1.280000e+02})'}}
 }
 }
+
+constexpr int ROUND_CUR_DIRECTION = 4;
+constexpr int ROUND_NO_EXC = 8;
+
+namespace Test_mm_mask_min_ss_valid {
+constexpr __m128 result = _mm_mask_min_ss((__m128)(__v4sf){1.0f, 2.0f, 3.0f, 4.0f}, 1, (__m128)(__v4sf){10.0f, 20.0f, 30.0f, 40.0f}, (__m128)(__v4sf){100.0f, 200.0f, 300.0f, 400.0f});
+TEST_CONSTEXPR(match_m128(result, 10.0f, 20.0f, 30.0f, 40.0f));
+}
+
+namespace Test_mm_mask_max_ss_valid {
+constexpr __m128 result = _mm_mask_max_ss((__m128)(__v4sf){1.0f, 2.0f, 3.0f, 4.0f}, 1, (__m128)(__v4sf){10.0f, 20.0f, 30.0f, 40.0f}, (__m128)(__v4sf){100.0f, 200.0f, 300.0f, 400.0f});
+TEST_CONSTEXPR(match_m128(result, 100.0f, 20.0f, 30.0f, 40.0f));
+}
+
+namespace Test_mm_mask_min_sd_valid {
+constexpr __m128d result = _mm_mask_min_sd((__m128d)(__v2df){1.0, 2.0}, 1, (__m128d)(__v2df){10.0, 20.0}, (__m128d)(__v2df){100.0, 200.0});
+TEST_CONSTEXPR(match_m128d(result, 10.0, 20.0));
+}
+
+namespace Test_mm_mask_max_sd_valid {
+constexpr __m128d result = _mm_mask_max_sd((__m128d)(__v2df){1.0, 2.0}, 1, (__m128d)(__v2df){10.0, 20.0}, (__m128d)(__v2df){100.0, 200.0});
+TEST_CONSTEXPR(match_m128d(result, 100.0, 20.0));
+}
+
+namespace Test_mm_mask_min_ss_nan {
+constexpr __m128 a = (__m128)(__v4sf){__builtin_nanf(""), 20.0f, 30.0f, 40.0f};
+constexpr __m128 b = (__m128)(__v4sf){100.0f, 200.0f, 300.0f, 400.0f};
+constexpr __m128 src = (__m128)(__v4sf){1.0f, 2.0f, 3.0f, 4.0f};
+constexpr __m128 result = _mm_mask_min_ss(src, 1, a, b); // expected-error {{must be initialized by a constant expression}}
+}
+
+namespace Test_mm_mask_min_ss_pos_inf {
+constexpr __m128 a = (__m128)(__v4sf){__builtin_inff(), 20.0f, 30.0f, 40.0f};
+constexpr __m128 b = (__m128)(__v4sf){100.0f, 200.0f, 300.0f, 400.0f};
+constexpr __m128 src = (__m128)(__v4sf){1.0f, 2.0f, 3.0f, 4.0f};
+constexpr __m128 result = _mm_mask_min_ss(src, 1, a, b); // expected-error {{must be initialized by a constant expression}}
+}
+
+namespace Test_mm_mask_min_ss_neg_inf {
+constexpr __m128 a = (__m128)(__v4sf){-__builtin_inff(), 20.0f, 30.0f, 40.0f};
+constexpr __m128 b = (__m128)(__v4sf){100.0f, 200.0f, 300.0f, 400.0f};
+constexpr __m128 src = (__m128)(__v4sf){1.0f, 2.0f, 3.0f, 4.0f};
+constexpr __m128 result = _mm_mask_min_ss(src, 1, a, b); // expected-error {{must be initialized by a constant expression}}
+}
+namespace Test_mm_maskz_min_ss_valid {
+constexpr __m128 result = _mm_maskz_min_ss(1, (__m128)(__v4sf){10.0f, 20.0f, 30.0f, 40.0f}, (__m128)(__v4sf){100.0f, 200.0f, 300.0f, 400.0f});
+TEST_CONSTEXPR(match_m128(result, 10.0f, 20.0f, 30.0f, 40.0f));
+}
+
+namespace Test_mm_maskz_max_ss_valid {
+constexpr __m128 result = _mm_maskz_max_ss(1, (__m128)(__v4sf){10.0f, 20.0f, 30.0f, 40.0f}, (__m128)(__v4sf){100.0f, 200.0f, 300.0f, 400.0f});
+TEST_CONSTEXPR(match_m128(result, 100.0f, 20.0f, 30.0f, 40.0f));
+}
+
+namespace Test_mm_maskz_min_sd_valid {
+constexpr __m128d result = _mm_maskz_min_sd(1, (__m128d)(__v2df){10.0, 20.0}, (__m128d)(__v2df){100.0, 200.0});
+TEST_CONSTEXPR(match_m128d(result, 10.0, 20.0));
+}
+
+namespace Test_mm_maskz_max_sd_valid {
+constexpr __m128d result = _mm_maskz_max_sd(1, (__m128d)(__v2df){10.0, 20.0}, (__m128d)(__v2df){100.0, 200.0});
+TEST_CONSTEXPR(match_m128d(result, 100.0, 20.0));
+}
+
+namespace Test_mm_maskz_min_ss_mask_zero {
+constexpr __m128 result = _mm_maskz_min_ss(0, (__m128)(__v4sf){10.0f, 20.0f, 30.0f, 40.0f}, (__m128)(__v4sf){100.0f, 200.0f, 300.0f, 400.0f});
+TEST_CONSTEXPR(match_m128(result, 0.0f, 20.0f, 30.0f, 40.0f));
+}
+
+namespace Test_mm_mask_min_ss_mask_zero {
+constexpr __m128 result = _mm_mask_min_ss((__m128)(__v4sf){1.0f, 2.0f, 3.0f, 4.0f}, 0, (__m128)(__v4sf){10.0f, 20.0f, 30.0f, 40.0f}, (__m128)(__v4sf){100.0f, 200.0f, 300.0f, 400.0f});
+TEST_CONSTEXPR(match_m128(result, 1.0f, 20.0f, 30.0f, 40.0f));
+}
+
+namespace Test_mm_maskz_min_ss_nan {
+constexpr __m128 a = (__m128)(__v4sf){__builtin_nanf(""), 20.0f, 30.0f, 40.0f};
+constexpr __m128 b = (__m128)(__v4sf){100.0f, 200.0f, 300.0f, 400.0f};
+constexpr __m128 result = _mm_maskz_min_ss(1, a, b); // expected-error {{must be initialized by a constant expression}}
+}
+
+namespace Test_mm_maskz_max_sd_nan {
+constexpr __m128d a = (__m128d)(__v2df){__builtin_nan(""), 20.0};
+constexpr __m128d b = (__m128d)(__v2df){100.0, 200.0};
+constexpr __m128d result = _mm_maskz_max_sd(1, a, b); // expected-error {{must be initialized by a constant expression}}
+}
+
+namespace Test_mm_mask_max_ss_pos_inf {
+constexpr __m128 a = (__m128)(__v4sf){__builtin_inff(), 20.0f, 30.0f, 40.0f};
+constexpr __m128 b = (__m128)(__v4sf){100.0f, 200.0f, 300.0f, 400.0f};
+constexpr __m128 src = (__m128)(__v4sf){1.0f, 2.0f, 3.0f, 4.0f};
+constexpr __m128 result = _mm_mask_max_ss(src, 1, a, b); // expected-error {{must be initialized by a constant expression}}
+}
+
+namespace Test_mm_mask_max_sd_neg_inf {
+constexpr __m128d a = (__m128d)(__v2df){-__builtin_inf(), 20.0};
+constexpr __m128d b = (__m128d)(__v2df){100.0, 200.0};
+constexpr __m128d src = (__m128d)(__v2df){1.0, 2.0};
+constexpr __m128d result = _mm_mask_max_sd(src, 1, a, b); // expected-error {{must be initialized by a constant expression}}
+}

@@ -1347,19 +1347,22 @@ let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<512>
   def subps512 : X86Builtin<"_Vector<16, float>(_Vector<16, float>, _Vector<16, float>, _Constant int)">;
 }
 
+let Features = "avx512f", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
+  def maxss_round_mask : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>, _Vector<4, float>, unsigned char, _Constant int)">;
+  def minss_round_mask : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>, _Vector<4, float>, unsigned char, _Constant int)">;
+  def maxsd_round_mask : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>, _Vector<2, double>, unsigned char, _Constant int)">;
+  def minsd_round_mask : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>, _Vector<2, double>, unsigned char, _Constant int)">;
+}
+
 let Features = "avx512f", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {
   def addss_round_mask : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>, _Vector<4, float>, unsigned char, _Constant int)">;
   def divss_round_mask : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>, _Vector<4, float>, unsigned char, _Constant int)">;
   def mulss_round_mask : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>, _Vector<4, float>, unsigned char, _Constant int)">;
   def subss_round_mask : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>, _Vector<4, float>, unsigned char, _Constant int)">;
-  def maxss_round_mask : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>, _Vector<4, float>, unsigned char, _Constant int)">;
-  def minss_round_mask : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<4, float>, _Vector<4, float>, unsigned char, _Constant int)">;
   def addsd_round_mask : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>, _Vector<2, double>, unsigned char, _Constant int)">;
   def divsd_round_mask : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>, _Vector<2, double>, unsigned char, _Constant int)">;
   def mulsd_round_mask : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>, _Vector<2, double>, unsigned char, _Constant int)">;
   def subsd_round_mask : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>, _Vector<2, double>, unsigned char, _Constant int)">;
-  def maxsd_round_mask : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>, _Vector<2, double>, unsigned char, _Constant int)">;
-  def minsd_round_mask : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>, _Vector<2, double>, unsigned char, _Constant int)">;
 }
 
 let Features = "avx512vl", Attributes = [NoThrow, Const, RequiredVectorWidth<128>] in {

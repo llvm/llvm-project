@@ -14357,9 +14357,17 @@ bool VectorExprEvaluator::VisitCallExpr(const CallExpr *E) {
         },
         /*IsScalar=*/true);
 
+  case clang::X86::BI__builtin_ia32_minsd_round_mask:
+  case clang::X86::BI__builtin_ia32_minss_round_mask:
   case clang::X86::BI__builtin_ia32_minsh_round_mask:
+  case clang::X86::BI__builtin_ia32_maxsd_round_mask:
+  case clang::X86::BI__builtin_ia32_maxss_round_mask:
   case clang::X86::BI__builtin_ia32_maxsh_round_mask: {
     bool IsMin =
+        E->getBuiltinCallee() ==
+            clang::X86::BI__builtin_ia32_minsd_round_mask ||
+        E->getBuiltinCallee() ==
+            clang::X86::BI__builtin_ia32_minss_round_mask ||
         E->getBuiltinCallee() == clang::X86::BI__builtin_ia32_minsh_round_mask;
     return EvaluateScalarFpRoundMaskBinOp(
         [IsMin](const APFloat &A, const APFloat &B,
