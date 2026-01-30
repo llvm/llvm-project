@@ -30,17 +30,31 @@ define <8 x bfloat> @add_h(<8 x bfloat> %a, <8 x bfloat> %b) {
 ; CHECK-CVT-NEXT:    uzp2 v0.8h, v0.8h, v2.8h
 ; CHECK-CVT-NEXT:    ret
 ;
-; CHECK-BF16-LABEL: add_h:
-; CHECK-BF16:       // %bb.0: // %entry
-; CHECK-BF16-NEXT:    shll v2.4s, v1.4h, #16
-; CHECK-BF16-NEXT:    shll v3.4s, v0.4h, #16
-; CHECK-BF16-NEXT:    shll2 v1.4s, v1.8h, #16
-; CHECK-BF16-NEXT:    shll2 v0.4s, v0.8h, #16
-; CHECK-BF16-NEXT:    fadd v2.4s, v3.4s, v2.4s
-; CHECK-BF16-NEXT:    fadd v1.4s, v0.4s, v1.4s
-; CHECK-BF16-NEXT:    bfcvtn v0.4h, v2.4s
-; CHECK-BF16-NEXT:    bfcvtn2 v0.8h, v1.4s
-; CHECK-BF16-NEXT:    ret
+; CHECK-NOSVE-BF16-LABEL: add_h:
+; CHECK-NOSVE-BF16:       // %bb.0: // %entry
+; CHECK-NOSVE-BF16-NEXT:    shll v2.4s, v1.4h, #16
+; CHECK-NOSVE-BF16-NEXT:    shll v3.4s, v0.4h, #16
+; CHECK-NOSVE-BF16-NEXT:    shll2 v1.4s, v1.8h, #16
+; CHECK-NOSVE-BF16-NEXT:    shll2 v0.4s, v0.8h, #16
+; CHECK-NOSVE-BF16-NEXT:    fadd v2.4s, v3.4s, v2.4s
+; CHECK-NOSVE-BF16-NEXT:    fadd v1.4s, v0.4s, v1.4s
+; CHECK-NOSVE-BF16-NEXT:    bfcvtn v0.4h, v2.4s
+; CHECK-NOSVE-BF16-NEXT:    bfcvtn2 v0.8h, v1.4s
+; CHECK-NOSVE-BF16-NEXT:    ret
+;
+; CHECK-SVE-BF16-LABEL: add_h:
+; CHECK-SVE-BF16:       // %bb.0: // %entry
+; CHECK-SVE-BF16-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-SVE-BF16-NEXT:    mov z4.h, #16256 // =0x3f80
+; CHECK-SVE-BF16-NEXT:    ptrue p0.s, vl4
+; CHECK-SVE-BF16-NEXT:    trn1 v3.8h, v2.8h, v0.8h
+; CHECK-SVE-BF16-NEXT:    trn2 v2.8h, v2.8h, v0.8h
+; CHECK-SVE-BF16-NEXT:    bfmlalb v3.4s, v1.8h, v4.8h
+; CHECK-SVE-BF16-NEXT:    bfmlalt v2.4s, v1.8h, v4.8h
+; CHECK-SVE-BF16-NEXT:    bfcvt z0.h, p0/m, z3.s
+; CHECK-SVE-BF16-NEXT:    bfcvtnt z0.h, p0/m, z2.s
+; CHECK-SVE-BF16-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-SVE-BF16-NEXT:    ret
 entry:
   %0 = fadd <8 x bfloat> %a, %b
   ret <8 x bfloat> %0
@@ -74,17 +88,32 @@ define <8 x bfloat> @sub_h(<8 x bfloat> %a, <8 x bfloat> %b) {
 ; CHECK-CVT-NEXT:    uzp2 v0.8h, v0.8h, v2.8h
 ; CHECK-CVT-NEXT:    ret
 ;
-; CHECK-BF16-LABEL: sub_h:
-; CHECK-BF16:       // %bb.0: // %entry
-; CHECK-BF16-NEXT:    shll v2.4s, v1.4h, #16
-; CHECK-BF16-NEXT:    shll v3.4s, v0.4h, #16
-; CHECK-BF16-NEXT:    shll2 v1.4s, v1.8h, #16
-; CHECK-BF16-NEXT:    shll2 v0.4s, v0.8h, #16
-; CHECK-BF16-NEXT:    fsub v2.4s, v3.4s, v2.4s
-; CHECK-BF16-NEXT:    fsub v1.4s, v0.4s, v1.4s
-; CHECK-BF16-NEXT:    bfcvtn v0.4h, v2.4s
-; CHECK-BF16-NEXT:    bfcvtn2 v0.8h, v1.4s
-; CHECK-BF16-NEXT:    ret
+; CHECK-NOSVE-BF16-LABEL: sub_h:
+; CHECK-NOSVE-BF16:       // %bb.0: // %entry
+; CHECK-NOSVE-BF16-NEXT:    shll v2.4s, v1.4h, #16
+; CHECK-NOSVE-BF16-NEXT:    shll v3.4s, v0.4h, #16
+; CHECK-NOSVE-BF16-NEXT:    shll2 v1.4s, v1.8h, #16
+; CHECK-NOSVE-BF16-NEXT:    shll2 v0.4s, v0.8h, #16
+; CHECK-NOSVE-BF16-NEXT:    fsub v2.4s, v3.4s, v2.4s
+; CHECK-NOSVE-BF16-NEXT:    fsub v1.4s, v0.4s, v1.4s
+; CHECK-NOSVE-BF16-NEXT:    bfcvtn v0.4h, v2.4s
+; CHECK-NOSVE-BF16-NEXT:    bfcvtn2 v0.8h, v1.4s
+; CHECK-NOSVE-BF16-NEXT:    ret
+;
+; CHECK-SVE-BF16-LABEL: sub_h:
+; CHECK-SVE-BF16:       // %bb.0: // %entry
+; CHECK-SVE-BF16-NEXT:    movi v2.2d, #0000000000000000
+; CHECK-SVE-BF16-NEXT:    mov w8, #49024 // =0xbf80
+; CHECK-SVE-BF16-NEXT:    ptrue p0.s, vl4
+; CHECK-SVE-BF16-NEXT:    dup v4.8h, w8
+; CHECK-SVE-BF16-NEXT:    trn1 v3.8h, v2.8h, v0.8h
+; CHECK-SVE-BF16-NEXT:    trn2 v2.8h, v2.8h, v0.8h
+; CHECK-SVE-BF16-NEXT:    bfmlalb v3.4s, v1.8h, v4.8h
+; CHECK-SVE-BF16-NEXT:    bfmlalt v2.4s, v1.8h, v4.8h
+; CHECK-SVE-BF16-NEXT:    bfcvt z0.h, p0/m, z3.s
+; CHECK-SVE-BF16-NEXT:    bfcvtnt z0.h, p0/m, z2.s
+; CHECK-SVE-BF16-NEXT:    // kill: def $q0 killed $q0 killed $z0
+; CHECK-SVE-BF16-NEXT:    ret
 entry:
   %0 = fsub <8 x bfloat> %a, %b
   ret <8 x bfloat> %0
