@@ -1706,7 +1706,7 @@ static void convertFunctionAttributes(ModuleTranslation &mod, LLVMFuncOp func,
       llvmFunc->addFnAttr("no-builtins");
 
     mod.convertFunctionArrayAttr(noBuiltins, llvmFunc,
-                                 ModuleTranslation::noBuiltinConverter);
+                                 ModuleTranslation::convertNoBuiltin);
   }
 
   convertFunctionMemoryAttributes(func, llvmFunc);

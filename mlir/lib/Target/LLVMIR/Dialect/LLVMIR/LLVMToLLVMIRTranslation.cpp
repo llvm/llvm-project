@@ -453,7 +453,7 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
                                              "no-builtins"));
 
       moduleTranslation.convertFunctionArrayAttr(
-          noBuiltins, call, ModuleTranslation::noBuiltinConverter);
+          noBuiltins, call, ModuleTranslation::convertNoBuiltin);
     }
 
     if (failed(moduleTranslation.convertArgAndResultAttrs(callOp, call)))

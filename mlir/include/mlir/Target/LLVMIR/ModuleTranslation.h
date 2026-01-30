@@ -351,7 +351,7 @@ public:
 
   // A helper callback that takes an attribute, and if it is a StringAttr,
   // properly converts it to the 'no-builtin-VALUE' form.
-  static std::optional<std::string> noBuiltinConverter(mlir::Attribute a) {
+  static std::optional<std::string> convertNoBuiltin(mlir::Attribute a) {
     if (auto str = dyn_cast<StringAttr>(a))
       return ("no-builtin-" + str.getValue()).str();
     return std::nullopt;
