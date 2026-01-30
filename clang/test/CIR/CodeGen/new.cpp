@@ -351,8 +351,8 @@ void t_constant_size_memset_init() {
 // CHECK:    %[[ALLOC_PTR:.*]] = cir.call @_Znam(%[[ALLOCATION_SIZE]]) : (!u64i) -> !cir.ptr<!void>
 // CHECK:    %[[ELEM_PTR:.*]] = cir.cast bitcast %[[ALLOC_PTR]] : !cir.ptr<!void> -> !cir.ptr<!s32i>
 // CHECK:    %[[VOID_PTR:.*]] = cir.cast bitcast %[[ELEM_PTR]] : !cir.ptr<!s32i> -> !cir.ptr<!void>
-// CHECK:    %[[ZERO:.*]] = cir.const #cir.int<0> : !s32i
-// CHECK:    cir.libc.memset %[[ALLOCATION_SIZE]] bytes from %[[VOID_PTR]] set to %[[ZERO]] : !cir.ptr<!void>, !s32i, !u64i
+// CHECK:    %[[ZERO:.*]] = cir.const #cir.int<0> : !u8i
+// CHECK:    cir.libc.memset %[[ALLOCATION_SIZE]] bytes at %[[VOID_PTR]] to %[[ZERO]] : !cir.ptr<!void>, !u8i, !u64i
 
 // LLVM: define {{.*}} void @_Z27t_constant_size_memset_initv()
 // LLVM:   %[[P:.*]] = call ptr @_Znam(i64 64)

@@ -200,7 +200,7 @@ public:
 
   cir::MemSetOp createMemSet(mlir::Location loc, mlir::Value dst,
                              mlir::Value val, mlir::Value len) {
-    val = createIntCast(val, cir::IntType::get(getContext(), 32, true));
+    val = createIntCast(val, getUInt8Ty());
     return cir::MemSetOp::create(*this, loc, dst, val, len);
   }
   // ---------------------------

@@ -604,7 +604,7 @@ void CIRGenFunction::emitNewArrayInitializer(
     // Create the memset.
     mlir::Value castOp =
         builder.createPtrBitcast(curPtr.getPointer(), cgm.voidTy);
-    builder.createMemSet(loc, castOp, builder.getConstInt(loc, cgm.sInt32Ty, 0),
+    builder.createMemSet(loc, castOp, builder.getConstInt(loc, cgm.uInt8Ty, 0),
                          remainingSize);
     return true;
   };
