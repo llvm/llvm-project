@@ -1,4 +1,4 @@
-; RUN: llc < %s -mtriple x86_64-unknown-linux-gnu -stack-usage-file=%t.su
+; RUN: llc < %s -mtriple=x86_64 -stack-usage-file=%t.su
 ; RUN: FileCheck --input-file=%t.su %s
 
 declare void @g(ptr)
@@ -9,5 +9,4 @@ define void @f() {
   ret void
 }
 
-; CHECK: f {{[0-9]+}} static
-
+; CHECK: f [[#]] static
