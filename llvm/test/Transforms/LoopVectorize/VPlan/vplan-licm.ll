@@ -1,8 +1,6 @@
-; REQUIRES: asserts
-
 ; Test the licm VPlan transform that performs loop-invariant code motion.
 
-; RUN: opt -passes=loop-vectorize -vplan-test-transform='widen-from-metadata,licm,print' -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-vectorize -vplan-test-transform='create-loop-regions,widen-from-metadata,licm,print' -disable-output %s 2>&1 | FileCheck %s
 
 ; Check that loop-invariant add is hoisted to vector.ph.
 ; CHECK-LABEL: VPlan ' for UF>=1' {

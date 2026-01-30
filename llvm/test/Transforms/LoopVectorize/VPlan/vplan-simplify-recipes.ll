@@ -1,8 +1,6 @@
-; REQUIRES: asserts
-
 ; Test the simplify-recipes VPlan transform that simplifies recipe patterns.
 
-; RUN: opt -passes=loop-vectorize -vplan-test-transform='widen-from-metadata,simplify-recipes,print' -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-vectorize -vplan-test-transform='create-loop-regions,widen-from-metadata,simplify-recipes,print' -disable-output %s 2>&1 | FileCheck %s
 
 ; Check that 'or %val, 0' is simplified, so store uses %val directly.
 ; CHECK-LABEL: VPlan ' for UF>=1' {

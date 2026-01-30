@@ -9729,6 +9729,20 @@ bool LoopVectorizePass::processLoop(Loop *L) {
                     << L->getHeader()->getParent()->getName() << "' from "
                     << L->getLocStr() << "\n");
 
+  PredicatedScalarEvolution PSE(*SE, *L);
+
+  // Function containing loop
+  Function *F = L->getHeader()->getParent();
+
+  // VPlan test transform mode: build minimal VPlan and run requested
+  // transforms.
+  if (!VPlanTestTransform.empty()) {
+    auto Plan = VPlanTransforms::buildVPlan0(
+        L, *LI, Type::getInt64Ty(F->getContext()), DebugLoc(), PSE);
+    VPlanTransforms::runTestTransforms(*Plan, VPlanTestTransform, TLI);
+    return false;
+  }
+
   LoopVectorizeHints Hints(L, InterleaveOnlyWhenForced, *ORE, TTI);
 
   LLVM_DEBUG(
@@ -9742,9 +9756,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
              << " width=" << Hints.getWidth()
              << " interleave=" << Hints.getInterleave() << "\n");
 
-  // Function containing loop
-  Function *F = L->getHeader()->getParent();
-
   // Looking at the diagnostic output is the only way to determine if a loop
   // was vectorized (other than looking at the IR or machine code), so it
   // is important to generate an optimization remark for each loop. Most of
@@ -9755,21 +9766,6 @@ bool LoopVectorizePass::processLoop(Loop *L) {
 
   if (!Hints.allowVectorization(F, L, VectorizeOnlyWhenForced)) {
     LLVM_DEBUG(dbgs() << "LV: Loop hints prevent vectorization.\n");
-    return false;
-  }
-
-  PredicatedScalarEvolution PSE(*SE, *L);
-
-  // VPlan test transform mode: build minimal VPlan and run requested
-  // transforms.
-  if (!VPlanTestTransform.empty()) {
-    auto Plan = VPlanTransforms::buildVPlan0(
-        L, *LI, Type::getInt64Ty(F->getContext()), DebugLoc(), PSE);
-    VPlanTransforms::handleEarlyExits(*Plan, /*HasUncountableExit=*/false);
-    VPlanTransforms::addMiddleCheck(*Plan, /*RequiresScalarEpilogueCheck=*/true,
-                                    /*TailFolded=*/false);
-    VPlanTransforms::createLoopRegions(*Plan);
-    VPlanTransforms::runTestTransforms(*Plan, VPlanTestTransform, TLI);
     return false;
   }
 

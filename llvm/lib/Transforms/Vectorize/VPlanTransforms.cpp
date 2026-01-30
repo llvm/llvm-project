@@ -26,6 +26,7 @@
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SetOperations.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/TypeSwitch.h"
 #include "llvm/Analysis/IVDescriptors.h"
@@ -41,6 +42,7 @@
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/TypeSize.h"
 #include "llvm/Transforms/Utils/ScalarEvolutionExpander.h"
+#include <functional>
 
 using namespace llvm;
 using namespace VPlanPatternMatch;
@@ -5390,49 +5392,24 @@ void VPlanTransforms::addExitUsersForFirstOrderRecurrences(VPlan &Plan,
   }
 }
 
-namespace {
-/// Uniform signature for test transforms.
-using TestTransformFn = void (*)(VPlan &, const TargetLibraryInfo *);
-
-/// Entry for a VPlan test transform.
-struct TestTransformEntry {
-  StringLiteral Name;
-  TestTransformFn Fn;
-};
-
-} // namespace
-
-// Wrappers to adapt different function signatures to uniform TestTransformFn.
-template <void (*Fn)(VPlan &)>
-static void wrapTransform(VPlan &P, const TargetLibraryInfo *) {
-  Fn(P);
-}
-
-template <bool (*Fn)(VPlan &)>
-static void wrapTransform(VPlan &P, const TargetLibraryInfo *) {
-  Fn(P);
-}
-
-static const TestTransformEntry TestTransforms[] = {
-    {"simplify-recipes", wrapTransform<VPlanTransforms::simplifyRecipes>},
-    {"remove-dead-recipes", wrapTransform<VPlanTransforms::removeDeadRecipes>},
-    {"simplify-blends", wrapTransform<simplifyBlends>},
-    {"merge-blocks", wrapTransform<mergeBlocksIntoPredecessors>},
-    {"licm", wrapTransform<licm>},
-    {"cse", wrapTransform<VPlanTransforms::cse>},
-    {"optimize", wrapTransform<VPlanTransforms::optimize>},
-    {"widen-from-metadata", VPlanTransforms::widenFromMetadata},
-};
-
-static const TestTransformEntry *getTestTransform(StringRef Name) {
-  for (const auto &E : TestTransforms)
-    if (E.Name == Name)
-      return &E;
-  return nullptr;
-}
-
 void VPlanTransforms::runTestTransforms(VPlan &Plan, StringRef Pipeline,
                                         const TargetLibraryInfo *TLI) {
+  StringMap<std::function<void()>> TestTransforms = {
+      {"cse", std::bind(VPlanTransforms::cse, std::ref(Plan))},
+      {"create-loop-regions",
+       std::bind(VPlanTransforms::createLoopRegions, std::ref(Plan))},
+      {"simplify-recipes",
+       std::bind(VPlanTransforms::simplifyRecipes, std::ref(Plan))},
+      {"remove-dead-recipes",
+       std::bind(VPlanTransforms::removeDeadRecipes, std::ref(Plan))},
+      {"simplify-blends", std::bind(simplifyBlends, std::ref(Plan))},
+      {"merge-blocks", std::bind(mergeBlocksIntoPredecessors, std::ref(Plan))},
+      {"licm", std::bind(licm, std::ref(Plan))},
+      {"optimize", std::bind(VPlanTransforms::optimize, std::ref(Plan))},
+      {"widen-from-metadata",
+       std::bind(VPlanTransforms::widenFromMetadata, std::ref(Plan), TLI)},
+  };
+
   SmallVector<StringRef> Passes;
   Pipeline.split(Passes, ',');
 
@@ -5442,9 +5419,9 @@ void VPlanTransforms::runTestTransforms(VPlan &Plan, StringRef Pipeline,
       dbgs() << "VPlan:\n" << Plan << "\n";
       continue;
     }
-    const TestTransformEntry *E = getTestTransform(PassName);
-    if (!E)
+    auto It = TestTransforms.find(PassName);
+    if (It == TestTransforms.end())
       report_fatal_error("Unknown VPlan test transform: " + PassName);
-    E->Fn(Plan, TLI);
+    It->second();
   }
 }

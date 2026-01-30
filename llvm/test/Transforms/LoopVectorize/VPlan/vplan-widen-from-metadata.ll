@@ -1,10 +1,8 @@
-; REQUIRES: asserts
-
 ; Test the widen-from-metadata VPlan transform that converts VPInstructions to
 ; recipes based on !vplan.widen metadata.
 
-; RUN: opt -passes=loop-vectorize -vplan-test-transform='widen-from-metadata,print' -disable-output %s 2>&1 | FileCheck %s --check-prefix=WIDEN
-; RUN: opt -passes=loop-vectorize -vplan-test-transform='widen-from-metadata,print' -disable-output %s 2>&1 | FileCheck %s --check-prefix=REPLICATE
+; RUN: opt -passes=loop-vectorize -vplan-test-transform='create-loop-regions,widen-from-metadata,print' -disable-output %s 2>&1 | FileCheck %s --check-prefix=WIDEN
+; RUN: opt -passes=loop-vectorize -vplan-test-transform='create-loop-regions,widen-from-metadata,print' -disable-output %s 2>&1 | FileCheck %s --check-prefix=REPLICATE
 
 ; Test widen conversion: VPInstruction with !vplan.widen !{!"widen"}
 ; should be converted to VPWidenRecipe (WIDEN instead of EMIT).

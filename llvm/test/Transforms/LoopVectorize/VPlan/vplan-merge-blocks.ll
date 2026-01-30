@@ -1,9 +1,7 @@
-; REQUIRES: asserts
-
 ; Test the merge-blocks VPlan transform that merges blocks into predecessors.
 ; This test uses a loop with early exit to create multiple blocks in VPlan.
 
-; RUN: opt -passes=loop-vectorize -vplan-test-transform='widen-from-metadata,merge-blocks,print' -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-vectorize -vplan-test-transform='create-loop-regions,widen-from-metadata,merge-blocks,print' -disable-output %s 2>&1 | FileCheck %s
 
 ; Check that continue block is merged into vector.body.
 ; CHECK-LABEL: VPlan ' for UF>=1' {

@@ -1,8 +1,6 @@
-; REQUIRES: asserts
-
 ; Test the remove-dead-recipes VPlan transform that removes unused recipes.
 
-; RUN: opt -passes=loop-vectorize -vplan-test-transform='widen-from-metadata,remove-dead-recipes,print' -disable-output %s 2>&1 | FileCheck %s
+; RUN: opt -passes=loop-vectorize -vplan-test-transform='create-loop-regions,widen-from-metadata,remove-dead-recipes,print' -disable-output %s 2>&1 | FileCheck %s
 
 ; Check that dead recipes (%cmp and %4) are removed.
 ; CHECK-LABEL: VPlan ' for UF>=1' {
