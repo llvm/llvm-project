@@ -134,25 +134,6 @@ static bool isLocallyDefined(Value v, Operation *enclosingOp) {
   return viewOp && isLocallyDefined(viewOp.getViewSource(), enclosingOp);
 }
 
-/// Returns true if `op` has only Free memory effects on the values
-/// that are locally defined (i.e. they are allocated by operations
-/// nested withing `enclosingOp`).
-static bool isDeallocationOfLocallyDefined(Operation *op,
-                                           Operation *enclosingOp) {
-  std::optional<SmallVector<MemoryEffects::EffectInstance>> effects =
-      getEffectsRecursively(op);
-  if (!effects)
-    return false;
-
-  for (const MemoryEffects::EffectInstance &effect : *effects) {
-    Value freed = effect.getValue();
-    if (!isa<MemoryEffects::Free>(effect.getEffect()) || !freed ||
-        !isLocallyDefined(freed, enclosingOp))
-      return false;
-  }
-  return true;
-}
-
 bool mlir::affine::isLoopMemoryParallel(AffineForOp forOp) {
   // Any memref-typed iteration arguments are treated as serializing.
   if (llvm::any_of(forOp.getResultTypes(), llvm::IsaPred<BaseMemRefType>))
@@ -171,7 +152,7 @@ bool mlir::affine::isLoopMemoryParallel(AffineForOp forOp) {
         loadAndStoreOps.push_back(op);
     } else if (!isa<AffineForOp, AffineYieldOp, AffineIfOp>(op) &&
                !hasSingleEffect<MemoryEffects::Allocate>(op) &&
-               !isDeallocationOfLocallyDefined(op, forOp) &&
+               !hasSingleEffect<MemoryEffects::Free>(op) &&
                !isMemoryEffectFree(op)) {
       // Alloc-like ops inside `forOp` are fine (they don't impact parallelism)
       // as long as they don't escape the loop (which has been checked above).

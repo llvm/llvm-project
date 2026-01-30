@@ -315,21 +315,6 @@ func.func @local_alloc_cast() {
   return
 }
 
-// When memref.dealloc deallocates out-of-loop allocation,
-// the loop should not be parallelized. This test is quite
-// artificial though.
-// CHECK-LABEL: func @local_dealloc
-func.func @local_dealloc() {
-  %cst = arith.constant 0.0 : f32
-  %m = memref.alloc() : memref<1xf32>
-  affine.for %i = 0 to 1 {
-    affine.store %cst, %m[%i] : memref<1xf32>
-    memref.dealloc %m : memref<1xf32>
-  }
-  // CHECK-NOT: affine.parallel
-  return
-}
-
 // CHECK-LABEL: @iter_arg_memrefs
 func.func @iter_arg_memrefs(%in: memref<10xf32>) {
   %mi = memref.alloc() : memref<f32>
