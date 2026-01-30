@@ -155,14 +155,28 @@ module attributes { mpi.dlti = #dlti.map<"MPI:comm_world_rank" = 7> } {
       %arg0 : tensor<3x4xf32>) -> tensor<3x20xf32> {
     // CHECK-DAG: [[vc2_i32:%.*]] = arith.constant 2 : i32
     // CHECK-DAG: [[vc1_i32:%.*]] = arith.constant 1 : i32
+    // CHECK-DAG: [[vc20:%.*]] = arith.constant 20 : index
     // CHECK: [[v0:%.*]] = bufferization.to_buffer [[varg0]] : tensor<3x4xf32> to memref<3x4xf32>
     // CHECK: [[v1:%.*]] = mpi.comm_world : !mpi.comm
     // CHECK: [[vnewcomm:%.*]] = mpi.comm_split([[v1]], [[vc1_i32]], [[vc2_i32]]) : !mpi.comm
-    // CHECK: [[valloc:%.*]] = memref.alloc() : memref<3x20xf32>
-    // CHECK: mpi.allgather([[v0]], [[valloc]], [[vnewcomm]]) : memref<3x4xf32>, memref<3x20xf32>
-    // CHECK: [[v2:%.*]] = bufferization.to_tensor [[valloc]] restrict : memref<3x20xf32> to tensor<3x20xf32>
+    // CHECK: [[vsize:%.*]] = mpi.comm_size([[vnewcomm]]) : i32
+    // CHECK: [[v2:%.*]] = arith.index_cast [[vsize]] : i32 to index
+    // CHECK: [[v3:%.*]] = arith.divsi [[vc20]], [[v2]] : index
+    // CHECK: [[valloc:%.*]] = memref.alloc([[v2]], [[v3]]) : memref<?x3x?xf32>
+    // CHECK: mpi.allgather([[v0]], [[valloc]], [[vnewcomm]]) : memref<3x4xf32>, memref<?x3x?xf32>
+    // CHECK: [[valloc_0:%.*]] = memref.alloc() : memref<3x20xf32>
+    // CHECK: affine.for [[varg1:%.*]] = 0 to [[v2]] {
+      // CHECK: affine.for [[varg2:%.*]] = 0 to 3 {
+        // CHECK: affine.for [[varg3:%.*]] = 0 to [[v3]] {
+          // CHECK: [[v5:%.*]] = memref.load [[valloc]][[[varg1]], [[varg2]], [[varg3]]] : memref<?x3x?xf32>
+          // CHECK: affine.store [[v5]], [[valloc_0]][[[varg2]], [[varg1]] * symbol([[v3]]) + [[varg3]]] : memref<3x20xf32>
+        // CHECK: }
+      // CHECK: }
+    // CHECK: }
+    // CHECK: memref.dealloc [[valloc]] : memref<?x3x?xf32>
+    // CHECK: [[v4:%.*]] = bufferization.to_tensor [[valloc_0]] restrict : memref<3x20xf32> to tensor<3x20xf32>
     %0 = shard.all_gather %arg0 on @grid0 grid_axes = [2] gather_axis = 1 : tensor<3x4xf32> -> tensor<3x20xf32>
-    // CHECK: return [[v2]] : tensor<3x20xf32>
+    // CHECK: return [[v4]] : tensor<3x20xf32>
     return %0 : tensor<3x20xf32>
   }
 
@@ -173,12 +187,26 @@ module attributes { mpi.dlti = #dlti.map<"MPI:comm_world_rank" = 7> } {
       %arg0 : memref<3x4xf32>) -> memref<3x20xf32> {
     // CHECK-DAG: [[vc1_i32:%.*]] = arith.constant 1 : i32
     // CHECK-DAG: [[vc2_i32:%.*]] = arith.constant 2 : i32
+    // CHECK-DAG: [[vc20:%.*]] = arith.constant 20 : index
     // CHECK: [[v0:%.*]] = mpi.comm_world : !mpi.comm
     // CHECK: [[vnewcomm:%.*]] = mpi.comm_split([[v0]], [[vc1_i32]], [[vc2_i32]]) : !mpi.comm
-    // CHECK: [[valloc:%.*]] = memref.alloc() : memref<3x20xf32>
-    // CHECK: mpi.allgather([[varg0]], [[valloc]], [[vnewcomm]]) : memref<3x4xf32>, memref<3x20xf32>
+    // CHECK: [[vsize:%.*]] = mpi.comm_size([[vnewcomm]]) : i32
+    // CHECK: [[v1:%.*]] = arith.index_cast [[vsize]] : i32 to index
+    // CHECK: [[v2:%.*]] = arith.divsi [[vc20]], [[v1]] : index
+    // CHECK: [[valloc:%.*]] = memref.alloc([[v1]], [[v2]]) : memref<?x3x?xf32>
+    // CHECK: mpi.allgather([[varg0]], [[valloc]], [[vnewcomm]]) : memref<3x4xf32>, memref<?x3x?xf32>
+    // CHECK: [[valloc_0:%.*]] = memref.alloc() : memref<3x20xf32>
+    // CHECK: affine.for [[varg1:%.*]] = 0 to [[v1]] {
+      // CHECK: affine.for [[varg2:%.*]] = 0 to 3 {
+        // CHECK: affine.for [[varg3:%.*]] = 0 to [[v2]] {
+          // CHECK: [[v3:%.*]] = memref.load [[valloc]][[[varg1]], [[varg2]], [[varg3]]] : memref<?x3x?xf32>
+          // CHECK: affine.store [[v3]], [[valloc_0]][[[varg2]], [[varg1]] * symbol([[v2]]) + [[varg3]]] : memref<3x20xf32>
+        // CHECK: }
+      // CHECK: }
+    // CHECK: }
+    // CHECK: memref.dealloc [[valloc]] : memref<?x3x?xf32>
     %0 = shard.all_gather %arg0 on @grid0 grid_axes = [2] gather_axis = 1 : memref<3x4xf32> -> memref<3x20xf32>
-    // CHECK: return [[valloc]] : memref<3x20xf32>
+    // CHECK: return [[valloc_0]] : memref<3x20xf32>
     return %0 : memref<3x20xf32>
   }
 }

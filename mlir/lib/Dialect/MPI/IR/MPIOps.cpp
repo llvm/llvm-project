@@ -43,33 +43,46 @@ struct FoldCast final : public mlir::OpRewritePattern<OpT> {
   }
 };
 
+template <typename OpT>
+static LogicalResult FoldToDLTIConst(OpT op, const char *key,
+                                     mlir::PatternRewriter &b) {
+  auto comm = op.getComm();
+  if (!comm.template getDefiningOp<mlir::mpi::CommWorldOp>())
+    return mlir::failure();
+
+  // Try to get DLTI attribute for MPI:comm_world_rank
+  // If found, set worldRank to the value of the attribute.
+  auto dltiAttr = dlti::query(op, {key}, false);
+  if (failed(dltiAttr))
+    return mlir::failure();
+  if (!isa<IntegerAttr>(dltiAttr.value()))
+    return op->emitError() << "Expected an integer attribute for " << key;
+  Value res = arith::ConstantOp::create(
+      b, op.getLoc(), b.getI32Type(),
+      b.getI32IntegerAttr(cast<IntegerAttr>(dltiAttr.value()).getInt()));
+  if (Value retVal = op.getRetval())
+    b.replaceOp(op, {retVal, res});
+  else
+    b.replaceOp(op, res);
+  return mlir::success();
+}
+
 struct FoldRank final : public mlir::OpRewritePattern<mlir::mpi::CommRankOp> {
   using mlir::OpRewritePattern<mlir::mpi::CommRankOp>::OpRewritePattern;
-
   LogicalResult matchAndRewrite(mlir::mpi::CommRankOp op,
                                 mlir::PatternRewriter &b) const override {
-    auto comm = op.getComm();
-    if (!comm.getDefiningOp<mlir::mpi::CommWorldOp>())
-      return mlir::failure();
-
-    // Try to get DLTI attribute for MPI:comm_world_rank
-    // If found, set worldRank to the value of the attribute.
-    auto dltiAttr = dlti::query(op, {"MPI:comm_world_rank"}, false);
-    if (failed(dltiAttr))
-      return mlir::failure();
-    if (!isa<IntegerAttr>(dltiAttr.value()))
-      return op->emitError()
-             << "Expected an integer attribute for MPI:comm_world_rank";
-    Value res = arith::ConstantIndexOp::create(
-        b, op.getLoc(), cast<IntegerAttr>(dltiAttr.value()).getInt());
-    if (Value retVal = op.getRetval())
-      b.replaceOp(op, {retVal, res});
-    else
-      b.replaceOp(op, res);
-    return mlir::success();
+    return FoldToDLTIConst(op, "MPI:comm_world_rank", b);
   }
 };
 
+struct FoldSize final : public mlir::OpRewritePattern<mlir::mpi::CommSizeOp> {
+  using mlir::OpRewritePattern<mlir::mpi::CommSizeOp>::OpRewritePattern;
+
+  LogicalResult matchAndRewrite(mlir::mpi::CommSizeOp op,
+                                mlir::PatternRewriter &b) const override {
+    return FoldToDLTIConst(op, "MPI:comm_world_size", b);
+  }
+};
 } // namespace
 
 void mlir::mpi::SendOp::getCanonicalizationPatterns(
@@ -95,6 +108,11 @@ void mlir::mpi::IRecvOp::getCanonicalizationPatterns(
 void mlir::mpi::CommRankOp::getCanonicalizationPatterns(
     mlir::RewritePatternSet &results, mlir::MLIRContext *context) {
   results.add<FoldRank>(context);
+}
+
+void mlir::mpi::CommSizeOp::getCanonicalizationPatterns(
+    mlir::RewritePatternSet &results, mlir::MLIRContext *context) {
+  results.add<FoldSize>(context);
 }
 
 //===----------------------------------------------------------------------===//
