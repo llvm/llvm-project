@@ -17,6 +17,7 @@
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__type_traits/is_object.h>
 #include <__type_traits/is_same.h>
+#include <__type_traits/is_specialization.h>
 #include <__type_traits/is_swappable.h>
 #include <__type_traits/is_volatile.h>
 #include <__type_traits/negation.h>
@@ -42,16 +43,16 @@ template <class _Err>
 class unexpected;
 
 template <class _Tp>
-struct __is_std_unexpected : false_type {};
+inline constexpr bool __is_std_unexpected_v = false;
 
-template <class _Err>
-struct __is_std_unexpected<unexpected<_Err>> : true_type {};
+template <class _Tp>
+inline constexpr bool __is_std_unexpected_v<unexpected<_Tp>> = true;
 
 template <class _Tp>
 using __valid_std_unexpected _LIBCPP_NODEBUG = _BoolConstant< //
     is_object_v<_Tp> &&                                       //
     !is_array_v<_Tp> &&                                       //
-    !__is_std_unexpected<_Tp>::value &&                       //
+    !__is_std_unexpected_v<_Tp> &&                            //
     !is_const_v<_Tp> &&                                       //
     !is_volatile_v<_Tp>                                       //
     >;

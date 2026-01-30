@@ -94,12 +94,12 @@ public:
   _LIBCPP_HIDE_FROM_ABI explicit independent_bits_engine(result_type __sd) : __e_(__sd) {}
   template <
       class _Sseq,
-      __enable_if_t<__is_seed_sequence<_Sseq, independent_bits_engine>::value && !is_convertible<_Sseq, _Engine>::value,
+      __enable_if_t<__is_seed_sequence_v<_Sseq, independent_bits_engine> && !is_convertible<_Sseq, _Engine>::value,
                     int> = 0>
   _LIBCPP_HIDE_FROM_ABI explicit independent_bits_engine(_Sseq& __q) : __e_(__q) {}
   _LIBCPP_HIDE_FROM_ABI void seed() { __e_.seed(); }
   _LIBCPP_HIDE_FROM_ABI void seed(result_type __sd) { __e_.seed(__sd); }
-  template <class _Sseq, __enable_if_t<__is_seed_sequence<_Sseq, independent_bits_engine>::value, int> = 0>
+  template <class _Sseq, __enable_if_t<__is_seed_sequence_v<_Sseq, independent_bits_engine>, int> = 0>
   _LIBCPP_HIDE_FROM_ABI void seed(_Sseq& __q) {
     __e_.seed(__q);
   }

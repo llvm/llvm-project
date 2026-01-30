@@ -150,6 +150,12 @@ template <class _Tp>
 class propagate_const;
 
 template <class _Up>
+inline constexpr bool __is_propagate_const_v = false;
+
+template <class _Up>
+inline constexpr bool __is_propagate_const_v<propagate_const<_Up>> = true;
+
+template <class _Up>
 inline _LIBCPP_HIDE_FROM_ABI constexpr const _Up& get_underlying(const propagate_const<_Up>& __pu) _NOEXCEPT;
 
 template <class _Up>
@@ -188,12 +194,6 @@ private:
     return __get_pointer(__u.get());
   }
 
-  template <class _Up>
-  struct __is_propagate_const : false_type {};
-
-  template <class _Up>
-  struct __is_propagate_const<propagate_const<_Up>> : true_type {};
-
   _Tp __t_;
 
 public:
@@ -220,13 +220,13 @@ public:
 
   template <class _Up,
             enable_if_t<!is_convertible<_Up&&, _Tp>::value && is_constructible<_Tp, _Up&&>::value &&
-                            !__is_propagate_const<decay_t<_Up>>::value,
+                            !__is_propagate_const_v<decay_t<_Up>>,
                         bool> = true>
   explicit _LIBCPP_HIDE_FROM_ABI constexpr propagate_const(_Up&& __u) : __t_(std::forward<_Up>(__u)) {}
 
   template <class _Up,
             enable_if_t<is_convertible<_Up&&, _Tp>::value && is_constructible<_Tp, _Up&&>::value &&
-                            !__is_propagate_const<decay_t<_Up>>::value,
+                            !__is_propagate_const_v<decay_t<_Up>>,
                         bool> = false>
   _LIBCPP_HIDE_FROM_ABI constexpr propagate_const(_Up&& __u) : __t_(std::forward<_Up>(__u)) {}
 
@@ -240,7 +240,7 @@ public:
     return *this;
   }
 
-  template <class _Up, class _Vp = enable_if_t<!__is_propagate_const<decay_t<_Up>>::value>>
+  template <class _Up, class _Vp = enable_if_t<!__is_propagate_const_v<decay_t<_Up>>>>
   _LIBCPP_HIDE_FROM_ABI constexpr propagate_const& operator=(_Up&& __u) {
     __t_ = std::forward<_Up>(__u);
     return *this;

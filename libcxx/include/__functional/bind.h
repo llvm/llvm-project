@@ -105,11 +105,11 @@ __mu(_Ti&, _Uj& __uj) {
   return std::forward<typename tuple_element<__indx, _Uj>::type>(std::get<__indx>(__uj));
 }
 
-template <class _Ti,
-          class _Uj,
-          __enable_if_t<!is_bind_expression<_Ti>::value && is_placeholder<_Ti>::value == 0 &&
-                            !__is_reference_wrapper<_Ti>::value,
-                        int> = 0>
+template <
+    class _Ti,
+    class _Uj,
+    __enable_if_t<!is_bind_expression<_Ti>::value && is_placeholder<_Ti>::value == 0 && !__is_reference_wrapper_v<_Ti>,
+                  int> = 0>
 inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 _Ti& __mu(_Ti& __ti, _Uj&) {
   return __ti;
 }
@@ -151,27 +151,23 @@ template <class _Ti, class _TupleUj>
 struct __mu_return
     : public __mu_return_impl<
           _Ti,
-          __is_reference_wrapper<_Ti>::value,
+          __is_reference_wrapper_v<_Ti>,
           is_bind_expression<_Ti>::value,
           0 < is_placeholder<_Ti>::value && is_placeholder<_Ti>::value <= tuple_size<_TupleUj>::value,
           _TupleUj> {};
 
 template <class _Fp, class _BoundArgs, class _TupleUj>
-struct __is_valid_bind_return {
-  static const bool value = false;
-};
+inline const bool __is_valid_bind_return_v = false;
 
 template <class _Fp, class... _BoundArgs, class _TupleUj>
-struct __is_valid_bind_return<_Fp, tuple<_BoundArgs...>, _TupleUj> {
-  static const bool value = __is_invocable_v<_Fp, typename __mu_return<_BoundArgs, _TupleUj>::type...>;
-};
+inline const bool __is_valid_bind_return_v<_Fp, tuple<_BoundArgs...>, _TupleUj> =
+    __is_invocable_v<_Fp, typename __mu_return<_BoundArgs, _TupleUj>::type...>;
 
 template <class _Fp, class... _BoundArgs, class _TupleUj>
-struct __is_valid_bind_return<_Fp, const tuple<_BoundArgs...>, _TupleUj> {
-  static const bool value = __is_invocable_v<_Fp, typename __mu_return<const _BoundArgs, _TupleUj>::type...>;
-};
+inline const bool __is_valid_bind_return_v<_Fp, const tuple<_BoundArgs...>, _TupleUj> =
+    __is_invocable_v<_Fp, typename __mu_return<const _BoundArgs, _TupleUj>::type...>;
 
-template <class _Fp, class _BoundArgs, class _TupleUj, bool = __is_valid_bind_return<_Fp, _BoundArgs, _TupleUj>::value>
+template <class _Fp, class _BoundArgs, class _TupleUj, bool = __is_valid_bind_return_v<_Fp, _BoundArgs, _TupleUj> >
 struct __bind_return;
 
 template <class _Fp, class... _BoundArgs, class _TupleUj>

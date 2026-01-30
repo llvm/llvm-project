@@ -10,7 +10,6 @@
 #define _LIBCPP___TYPE_TRAITS_IS_CORE_CONVERTIBLE_H
 
 #include <__config>
-#include <__type_traits/integral_constant.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -29,9 +28,6 @@ inline const bool __is_core_convertible_v = false;
 template <class _Tp, class _Up>
 inline const bool
     __is_core_convertible_v<_Tp, _Up, decltype(static_cast<void (*)(_Up)>(0)(static_cast<_Tp (*)()>(0)()))> = true;
-
-template <class _Tp, class _Up>
-using __is_core_convertible _LIBCPP_NODEBUG = integral_constant<bool, __is_core_convertible_v<_Tp, _Up> >;
 
 #if _LIBCPP_STD_VER >= 20
 

@@ -18,20 +18,20 @@ struct S {};
 
 int main(int, char**) {
   using I = std::in_place_index_t<0>;
-  static_assert( std::__is_inplace_index<I>::value, "");
-  static_assert( std::__is_inplace_index<const I>::value, "");
-  static_assert( std::__is_inplace_index<const volatile I>::value, "");
-  static_assert( std::__is_inplace_index<I&>::value, "");
-  static_assert( std::__is_inplace_index<const I&>::value, "");
-  static_assert( std::__is_inplace_index<const volatile I&>::value, "");
-  static_assert( std::__is_inplace_index<I&&>::value, "");
-  static_assert( std::__is_inplace_index<const I&&>::value, "");
-  static_assert( std::__is_inplace_index<const volatile I&&>::value, "");
-  static_assert(!std::__is_inplace_index<std::in_place_type_t<int>>::value, "");
-  static_assert(!std::__is_inplace_index<std::in_place_t>::value, "");
-  static_assert(!std::__is_inplace_index<void>::value, "");
-  static_assert(!std::__is_inplace_index<int>::value, "");
-  static_assert(!std::__is_inplace_index<S>::value, "");
+  static_assert(std::__is_in_place_index_v<I>, "");
+  static_assert(std::__is_in_place_index_v<const I>, "");
+  static_assert(std::__is_in_place_index_v<const volatile I>, "");
+  static_assert(std::__is_in_place_index_v<I&>, "");
+  static_assert(std::__is_in_place_index_v<const I&>, "");
+  static_assert(std::__is_in_place_index_v<const volatile I&>, "");
+  static_assert(std::__is_in_place_index_v<I&&>, "");
+  static_assert(std::__is_in_place_index_v<const I&&>, "");
+  static_assert(std::__is_in_place_index_v<const volatile I&&>, "");
+  static_assert(!std::__is_in_place_index_v<std::in_place_type_t<int>>, "");
+  static_assert(!std::__is_in_place_index_v<std::in_place_t>, "");
+  static_assert(!std::__is_in_place_index_v<void>, "");
+  static_assert(!std::__is_in_place_index_v<int>, "");
+  static_assert(!std::__is_in_place_index_v<S>, "");
 
   return 0;
 }
