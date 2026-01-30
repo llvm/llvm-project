@@ -24423,7 +24423,7 @@ bool SLPVectorizerPass::vectorizeStores(
           unsigned FirstUnvecStore =
               std::distance(RangeSizes.begin(),
                             find_if(RangeSizes, std::bind(IsNotVectorized,
-                                                          VF >= MaxRegVF, _1)));
+                                                          VF > MaxRegVF, _1)));
 
           // Form slices of size VF starting from FirstUnvecStore and try to
           // vectorize them.
@@ -24431,12 +24431,12 @@ bool SLPVectorizerPass::vectorizeStores(
             unsigned FirstVecStore = std::distance(
                 RangeSizes.begin(),
                 find_if(RangeSizes.drop_front(FirstUnvecStore),
-                        std::bind(IsVectorized, VF >= MaxRegVF, _1)));
+                        std::bind(IsVectorized, VF > MaxRegVF, _1)));
             unsigned MaxSliceEnd = FirstVecStore >= End ? End : FirstVecStore;
             for (unsigned SliceStartIdx = FirstUnvecStore;
                  SliceStartIdx + VF <= MaxSliceEnd;) {
               if (!checkTreeSizes(RangeSizes.slice(SliceStartIdx, VF),
-                                  VF >= MaxRegVF)) {
+                                  VF > MaxRegVF)) {
                 ++SliceStartIdx;
                 continue;
               }
@@ -24504,7 +24504,7 @@ bool SLPVectorizerPass::vectorizeStores(
               }
               if (VF > 2 && Res &&
                   !all_of(RangeSizes.slice(SliceStartIdx, VF),
-                          std::bind(VFIsProfitable, VF >= MaxRegVF, TreeSize,
+                          std::bind(VFIsProfitable, VF > MaxRegVF, TreeSize,
                                     _1))) {
                 SliceStartIdx += VF;
                 continue;
@@ -24523,7 +24523,7 @@ bool SLPVectorizerPass::vectorizeStores(
               if (TreeSize > 1) {
                 for (std::pair<unsigned, unsigned> &P :
                      RangeSizes.slice(SliceStartIdx, VF)) {
-                  if (VF >= MaxRegVF)
+                  if (VF > MaxRegVF)
                     P.second = std::max(P.second, TreeSize);
                   else
                     P.first = std::max(P.first, TreeSize);
@@ -24540,9 +24540,9 @@ bool SLPVectorizerPass::vectorizeStores(
             FirstUnvecStore = std::distance(
                 RangeSizes.begin(),
                 find_if(RangeSizes.drop_front(MaxSliceEnd),
-                        std::bind(IsNotVectorized, VF >= MaxRegVF, _1)));
+                        std::bind(IsNotVectorized, VF > MaxRegVF, _1)));
           }
-          if (!AnyProfitableGraph && VF >= MaxRegVF && has_single_bit(VF))
+          if (!AnyProfitableGraph && VF > MaxRegVF && has_single_bit(VF))
             break;
         }
         // All values vectorized - exit.
