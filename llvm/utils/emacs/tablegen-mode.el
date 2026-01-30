@@ -90,7 +90,7 @@
 (defvar tablegen-mode-hook nil)
 (defvar tablegen-mode-map nil)   ; Create a mode-specific keymap.
 
-(if (not tablegen-mode-map)
+(if tablegen-mode-map
     ()  ; Do not change the keymap if it is already set up.
   (setq tablegen-mode-map (make-sparse-keymap))
   (define-key tablegen-mode-map "\t"  'tab-to-tab-stop)
