@@ -77,10 +77,6 @@ endfunction(_get_compile_options_from_flags)
 function(_get_compile_options_from_config output_var)
   set(config_options "")
 
-  if(LIBC_CONF_PRINTF_FLOAT_TO_STR_USE_FLOAT320)
-    list(APPEND config_options "-DLIBC_COPT_PRINTF_FLOAT_TO_STR_USE_FLOAT320")
-  endif()
-
   if(LIBC_CONF_STRTOFLOAT_DISABLE_EISEL_LEMIRE)
     list(APPEND config_options "-DLIBC_COPT_STRTOFLOAT_DISABLE_EISEL_LEMIRE")
   endif()
