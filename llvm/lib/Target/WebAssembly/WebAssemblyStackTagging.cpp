@@ -166,7 +166,7 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
   Type *IntPtrType = iswasm32 ? Int32Type : Int64Type;
 
   Function *UntagStoreDecl = Intrinsic::getOrInsertDeclaration(
-      F->getParent(), Intrinsic::wasm_memtag_untagstore);
+      F->getParent(), Intrinsic::wasm_memtag_untagstore, {IntPtrType});
 
   for (auto &I : AllocasToInstrument) {
     memtag::AllocaInfo &Info = I.second;
@@ -189,12 +189,13 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
         !SInfo.CallsReturnTwice;
     if (StandardLifetime) {
       Function *StoreTagDecl = Intrinsic::getOrInsertDeclaration(
-          F->getParent(), Intrinsic::wasm_memtag_store);
+          F->getParent(), Intrinsic::wasm_memtag_store, {IntPtrType});
       Intrinsic::ID SelectedIntrinsicID =
           usehint ? Intrinsic::wasm_memtag_hint : Intrinsic::wasm_memtag_random;
 
-      Function *RandomOrHintTagDecl = Intrinsic::getOrInsertDeclaration(
-          F->getParent(), SelectedIntrinsicID);
+      auto *RandomOrHintTagDecl = Intrinsic::getOrInsertDeclaration(
+          F->getParent(), SelectedIntrinsicID,
+          usehint ? ArrayRef<Type *>{IntPtrType} : ArrayRef<Type *>{});
 
       SmallVector<Value *, 4> TagCallArguments{ConstantInt::get(Int32Type, 0),
                                                Info.AI};
@@ -207,11 +208,11 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
       if (Info.AI->hasName())
         TagPCall->setName(Info.AI->getName() + ".tag");
 
-      TagPCall->setOperand(1, Info.AI);
-
       Info.AI->replaceUsesWithIf(TagPCall, [&](const Use &U) {
         return !isa<LifetimeIntrinsic>(U.getUser());
       });
+
+      TagPCall->setOperand(1, Info.AI);
       uint64_t Size = *Info.AI->getAllocationSize(*DL);
       Size = alignTo(Size, kTagGranuleSize);
 
@@ -236,7 +237,7 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
                   : Intrinsic::wasm_memtag_randomstore;
 
       auto *RandomOrHintStoreTagDecl = Intrinsic::getOrInsertDeclaration(
-          F->getParent(), SelectedStoreIntrinsicID);
+          F->getParent(), SelectedStoreIntrinsicID, {IntPtrType, IntPtrType});
 
       SmallVector<Value *, 5> StoreTagCallArguments{
           ConstantInt::get(Int32Type, 0), Info.AI,
