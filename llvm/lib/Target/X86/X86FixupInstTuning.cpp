@@ -261,7 +261,7 @@ bool X86FixupInstTuningImpl::processInstruction(
     // Convert to VPBLENDD if scaling the VPBLENDW mask down/up loses no bits.
     APInt MaskW =
         APInt(8, MI.getOperand(NumOperands - 1).getImm(), /*IsSigned=*/false,
-             /*implicitTrunc=*/true);
+              /*implicitTrunc=*/true);
     APInt MaskD = APIntOps::ScaleBitMask(MaskW, 4, /*MatchAllBits=*/true);
     if (MaskW != APIntOps::ScaleBitMask(MaskD, 8, /*MatchAllBits=*/true))
       return false;
