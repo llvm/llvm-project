@@ -353,7 +353,7 @@ public:
     MakeVector(); setVector(E, N);
   }
   /// Creates a matrix APValue with given dimensions. The elements
-  /// are read from \p E and assumed to be in column-major order.
+  /// are read from \p E and assumed to be in row-major order.
   explicit APValue(const APValue *E, unsigned NumRows, unsigned NumCols)
       : Kind(None), AllowConstexprUnknown(false) {
     MakeMatrix();
@@ -615,8 +615,8 @@ public:
     assert(isMatrix() && "Invalid accessor");
     assert(Row < getMatrixNumRows() && "Row index out of range");
     assert(Col < getMatrixNumCols() && "Column index out of range");
-    // Matrix elements are stored in column-major order.
-    unsigned I = Col * getMatrixNumRows() + Row;
+    // Matrix elements are stored in row-major order.
+    unsigned I = Row * getMatrixNumCols() + Col;
     return ((Mat *)(char *)&Data)->Elts[I];
   }
   const APValue &getMatrixElt(unsigned Row, unsigned Col) const {

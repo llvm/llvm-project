@@ -14719,14 +14719,7 @@ bool MatrixExprEvaluator::VisitCastExpr(const CastExpr *E) {
     if (!handleElementwiseCast(Info, E, FPO, SrcVals, SrcTypes, DestTypes,
                                ResultEls))
       return false;
-    // ResultEls contains elements in row-major order, but APValue expects
-    // column-major order. Reorder the elements.
-    SmallVector<APValue, 16> ColMajorEls(NElts);
-    for (unsigned Row = 0; Row < NumRows; Row++)
-      for (unsigned Col = 0; Col < NumCols; Col++)
-        ColMajorEls[Col * NumRows + Row] =
-            std::move(ResultEls[Row * NumCols + Col]);
-    return Success(ColMajorEls, NumRows, NumCols, E);
+    return Success(ResultEls, NumRows, NumCols, E);
   }
   default:
     return ExprEvaluatorBaseTy::VisitCastExpr(E);
@@ -14746,17 +14739,23 @@ bool MatrixExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
   SmallVector<APValue, 16> Elements;
   Elements.reserve(NumRows * NumCols);
 
-  for (unsigned I = 0; I < E->getNumInits(); ++I) {
-    if (EltTy->isIntegerType()) {
-      llvm::APSInt IntVal;
-      if (!EvaluateInteger(E->getInit(I), IntVal, Info))
-        return false;
-      Elements.push_back(APValue(IntVal));
-    } else {
-      llvm::APFloat FloatVal(0.0);
-      if (!EvaluateFloat(E->getInit(I), FloatVal, Info))
-        return false;
-      Elements.push_back(APValue(FloatVal));
+  // The initializer list elements are stored in column-major order, but APValue
+  // stores matrix elements in row-major order. Convert by iterating in
+  // row-major order and computing the corresponding column-major index.
+  for (unsigned Row = 0; Row < NumRows; ++Row) {
+    for (unsigned Col = 0; Col < NumCols; ++Col) {
+      unsigned ColMajorIdx = Col * NumRows + Row;
+      if (EltTy->isIntegerType()) {
+        llvm::APSInt IntVal;
+        if (!EvaluateInteger(E->getInit(ColMajorIdx), IntVal, Info))
+          return false;
+        Elements.push_back(APValue(IntVal));
+      } else {
+        llvm::APFloat FloatVal(0.0);
+        if (!EvaluateFloat(E->getInit(ColMajorIdx), FloatVal, Info))
+          return false;
+        Elements.push_back(APValue(FloatVal));
+      }
     }
   }
 

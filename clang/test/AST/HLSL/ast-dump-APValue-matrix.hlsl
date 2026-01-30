@@ -15,12 +15,12 @@ export void Test() {
   constexpr int2x2 mat2x2 = {1, 2, 3, 4};
   // CHECK: VarDecl {{.*}} mat2x2 {{.*}} constexpr cinit
   // CHECK-NEXT: |-value: Matrix 2x2
-  // CHECK-NEXT: | `-elements: Int 1, Int 3, Int 2, Int 4
+  // CHECK-NEXT: | `-elements: Int 1, Int 2, Int 3, Int 4
 
   // Matrix with 6 elements (3x2), stored in column-major order
   constexpr float3x2 mat3x2 = {1.0f, 2.0f, 3.0f, 4.0f, 5.0f, 6.0f};
   // CHECK: VarDecl {{.*}} mat3x2 {{.*}} constexpr cinit
   // CHECK-NEXT: |-value: Matrix 3x2
-  // CHECK-NEXT: | |-elements: Float 1.000000e+00, Float 3.000000e+00, Float 5.000000e+00, Float 2.000000e+00
-  // CHECK-NEXT: | `-elements: Float 4.000000e+00, Float 6.000000e+00
+  // CHECK-NEXT: | |-elements: Float 1.000000e+00, Float 2.000000e+00, Float 3.000000e+00, Float 4.000000e+00
+  // CHECK-NEXT: | `-elements: Float 5.000000e+00, Float 6.000000e+00
 }
