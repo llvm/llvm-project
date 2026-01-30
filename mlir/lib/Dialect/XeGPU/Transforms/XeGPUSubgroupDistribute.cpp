@@ -1908,7 +1908,12 @@ struct MemrefAllocaDistribution final : public gpu::WarpDistributionPattern {
   using gpu::WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    OpOperand *operand = getWarpResult(warpOp, llvm::IsaPred<memref::AllocaOp>);
+    OpOperand *operand = getWarpResult(warpOp, [&](Operation *op) {
+      // Check if the yield operand that was produced by the *last* scattered
+      // load op to avoid creating multiple copies due to multiple users.
+      return llvm::IsaPred<memref::AllocaOp>(op) &&
+             warpOp.getTerminator()->getPrevNode() == op;
+    });
     if (!operand)
       return rewriter.notifyMatchFailure(
           warpOp, "warp result is not a memref::Alloca op");
@@ -1930,8 +1935,12 @@ struct CreateMemDescDistribution final : public gpu::WarpDistributionPattern {
   using gpu::WarpDistributionPattern::WarpDistributionPattern;
   LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
                                 PatternRewriter &rewriter) const override {
-    OpOperand *operand =
-        getWarpResult(warpOp, llvm::IsaPred<xegpu::CreateMemDescOp>);
+    OpOperand *operand = getWarpResult(warpOp, [&](Operation *op) {
+      // Check if the yield operand that was produced by the *last* scattered
+      // load op to avoid creating multiple copies due to multiple users.
+      return llvm::IsaPred<xegpu::CreateMemDescOp>(op) &&
+             warpOp.getTerminator()->getPrevNode() == op;
+    });
     if (!operand)
       return rewriter.notifyMatchFailure(
           warpOp, "warp result is not a xegpu::CreateMemDesc op");
