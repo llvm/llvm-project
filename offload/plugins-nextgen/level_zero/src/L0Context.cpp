@@ -17,7 +17,8 @@ namespace llvm::omp::target::plugin {
 
 Error L0ContextTy::init() {
   CALL_ZE_RET_ERROR(zeDriverGetApiVersion, zeDriver, &APIVersion);
-  DP("Driver API version is %" PRIx32 "\n", APIVersion);
+  ODBG(OLDT_Init) << "Driver API version is "
+                  << llvm::format(PRIx32, APIVersion);
 
   ze_context_desc_t Desc{ZE_STRUCTURE_TYPE_CONTEXT_DESC, nullptr, 0};
   CALL_ZE_RET_ERROR(zeContextCreate, zeDriver, &Desc, &zeContext);

@@ -67,39 +67,39 @@ public:
   /// Get the function at the requested location range.
   /// If no single function occupies the queried range, or the record is
   /// missing, a nullptr is returned.
-  Function *getFunctionAtLocation(const FileLocRange &) const;
+  LLVM_ABI Function *getFunctionAtLocation(const FileLocRange &) const;
   /// Get the function at the requested location.
   /// If no function occupies the queried location, or the record is missing, a
   /// nullptr is returned.
-  Function *getFunctionAtLocation(const FileLoc &) const;
+  LLVM_ABI Function *getFunctionAtLocation(const FileLoc &) const;
   /// Get the block at the requested location range.
   /// If no single block occupies the queried range, or the record is missing, a
   /// nullptr is returned.
-  BasicBlock *getBlockAtLocation(const FileLocRange &) const;
+  LLVM_ABI BasicBlock *getBlockAtLocation(const FileLocRange &) const;
   /// Get the block at the requested location.
   /// If no block occupies the queried location, or the record is missing, a
   /// nullptr is returned.
-  BasicBlock *getBlockAtLocation(const FileLoc &) const;
+  LLVM_ABI BasicBlock *getBlockAtLocation(const FileLoc &) const;
   /// Get the instruction or function argument at the requested location range.
   /// If no single instruction occupies the queried range, or the record is
   /// missing, a nullptr is returned.
-  Value *getInstructionOrArgumentAtLocation(const FileLocRange &) const;
+  LLVM_ABI Value *getInstructionOrArgumentAtLocation(const FileLocRange &) const;
   /// Get the instruction or function argument at the requested location.
   /// If no instruction occupies the queried location, or the record is missing,
   /// a nullptr is returned.
-  Value *getInstructionOrArgumentAtLocation(const FileLoc &) const;
+  LLVM_ABI Value *getInstructionOrArgumentAtLocation(const FileLoc &) const;
   /// Get value referenced at the requested location.
   /// If no value occupies the queried location, or the record is missing,
   /// a nullptr is returned.
-  Value *getValueReferencedAtLocation(const FileLoc &) const;
+  LLVM_ABI Value *getValueReferencedAtLocation(const FileLoc &) const;
   /// Get value referenced at the requested location range.
   /// If no value occupies the queried location, or the record is missing,
   /// a nullptr is returned.
-  Value *getValueReferencedAtLocation(const FileLocRange &) const;
-  bool addFunctionLocation(Function *, const FileLocRange &);
-  bool addBlockLocation(BasicBlock *, const FileLocRange &);
-  bool addInstructionOrArgumentLocation(Value *, const FileLocRange &);
-  bool addValueReferenceAtLocation(Value *, const FileLocRange &);
+  LLVM_ABI Value *getValueReferencedAtLocation(const FileLocRange &) const;
+  LLVM_ABI bool addFunctionLocation(Function *, const FileLocRange &);
+  LLVM_ABI bool addBlockLocation(BasicBlock *, const FileLocRange &);
+  LLVM_ABI bool addInstructionOrArgumentLocation(Value *, const FileLocRange &);
+  LLVM_ABI bool addValueReferenceAtLocation(Value *, const FileLocRange &);
 };
 } // namespace llvm
 

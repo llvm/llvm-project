@@ -1106,6 +1106,27 @@ _HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_f16tof32)
 float4 f16tof32(uint4);
 
 //===----------------------------------------------------------------------===//
+// f32tof16 builtins
+//===----------------------------------------------------------------------===//
+
+/// \fn uint f32tof16(float x)
+/// \brief Returns the float arg value converted to half in the low 16 bits of
+/// the uint return value
+/// \param x The float to be converted to half.
+///
+/// The return value is a uint containing the converted half value in the low
+/// 16 bits.
+
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_f32tof16)
+uint f32tof16(float);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_f32tof16)
+uint2 f32tof16(float2);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_f32tof16)
+uint3 f32tof16(float3);
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_elementwise_f32tof16)
+uint4 f32tof16(float4);
+
+//===----------------------------------------------------------------------===//
 // firstbitlow builtins
 //===----------------------------------------------------------------------===//
 
@@ -2410,6 +2431,18 @@ _HLSL_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_any_true)
 __attribute__((convergent)) bool WaveActiveAnyTrue(bool Val);
 
+/// \brief Returns a uint4 containing a bitmask of the evaluation of the
+/// boolean expression for all active lanes in the current wave.
+/// The least-significant bit corresponds to the lane with index zero.
+/// The bits corresponding to inactive lanes will be zero. The bits that
+/// are greater than or equal to WaveGetLaneCount will be zero.
+///
+/// \param Val The boolean expression to evaluate.
+/// \return uint4 bitmask
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_active_ballot)
+__attribute__((convergent)) uint4 WaveActiveBallot(bool Val);
+
 /// \brief Counts the number of boolean variables which evaluate to true across
 /// all active lanes in the current wave.
 ///
@@ -2432,6 +2465,16 @@ __attribute__((convergent)) bool WaveIsFirstLane();
 _HLSL_AVAILABILITY(shadermodel, 6.0)
 _HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_get_lane_count)
 __attribute__((convergent)) uint WaveGetLaneCount();
+
+//===----------------------------------------------------------------------===//
+// WavePrefixOp builtins
+//===----------------------------------------------------------------------===//
+/// \brief Returns the count of bits of Expr set to 1 on prior lanes.
+/// \param Expr The boolean expression to evaluate.
+/// \return the count of bits set to 1 on prior lanes.
+_HLSL_AVAILABILITY(shadermodel, 6.0)
+_HLSL_BUILTIN_ALIAS(__builtin_hlsl_wave_prefix_count_bits)
+__attribute__((convergent)) uint WavePrefixCountBits(bool Expr);
 
 //===----------------------------------------------------------------------===//
 // WaveReadLaneAt builtins

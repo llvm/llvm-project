@@ -294,12 +294,13 @@ define amdgpu_kernel void @local_stack_offset_uses_sp_flat(ptr addrspace(1) %out
 ; FLATSCR-NEXT:    s_add_u32 flat_scratch_lo, s8, s13
 ; FLATSCR-NEXT:    s_addc_u32 flat_scratch_hi, s9, 0
 ; FLATSCR-NEXT:    v_mov_b32_e32 v0, 0
-; FLATSCR-NEXT:    s_mov_b32 s0, 0
-; FLATSCR-NEXT:    scratch_store_dword off, v0, s0 offset:1024
+; FLATSCR-NEXT:    s_movk_i32 s0, 0x2000
+; FLATSCR-NEXT:    scratch_store_dword off, v0, s0
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
+; FLATSCR-NEXT:    s_mov_b32 s0, 0
 ; FLATSCR-NEXT:  .LBB2_1: ; %loadstoreloop
 ; FLATSCR-NEXT:    ; =>This Inner Loop Header: Depth=1
-; FLATSCR-NEXT:    s_add_i32 s1, s0, 0x2000
+; FLATSCR-NEXT:    s_add_i32 s1, s0, 0x4000
 ; FLATSCR-NEXT:    s_add_i32 s0, s0, 1
 ; FLATSCR-NEXT:    s_cmpk_lt_u32 s0, 0x2120
 ; FLATSCR-NEXT:    scratch_store_byte off, v0, s1
@@ -307,12 +308,12 @@ define amdgpu_kernel void @local_stack_offset_uses_sp_flat(ptr addrspace(1) %out
 ; FLATSCR-NEXT:    s_cbranch_scc1 .LBB2_1
 ; FLATSCR-NEXT:  ; %bb.2: ; %split
 ; FLATSCR-NEXT:    s_movk_i32 s0, 0x1000
-; FLATSCR-NEXT:    s_addk_i32 s0, 0x2000
+; FLATSCR-NEXT:    s_addk_i32 s0, 0x4000
 ; FLATSCR-NEXT:    scratch_load_dwordx2 v[8:9], off, s0 offset:720 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    scratch_load_dwordx4 v[0:3], off, s0 offset:704 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
-; FLATSCR-NEXT:    s_movk_i32 s0, 0x2000
+; FLATSCR-NEXT:    s_movk_i32 s0, 0x4000
 ; FLATSCR-NEXT:    scratch_load_dwordx2 v[10:11], off, s0 offset:16 glc
 ; FLATSCR-NEXT:    s_waitcnt vmcnt(0)
 ; FLATSCR-NEXT:    scratch_load_dwordx4 v[4:7], off, s0 glc

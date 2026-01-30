@@ -177,14 +177,15 @@ define i8 @concat_roundps_cmp_v8f32_v4f32(<4 x float> %x0, <4 x float> %x1, <4 x
 ;
 ; AVX512-LABEL: concat_roundps_cmp_v8f32_v4f32:
 ; AVX512:       # %bb.0:
-; AVX512-NEXT:    vroundps $4, %xmm0, %xmm0
-; AVX512-NEXT:    vroundps $4, %xmm1, %xmm1
-; AVX512-NEXT:    vcmpltps %xmm2, %xmm0, %k0
-; AVX512-NEXT:    vcmpltps %xmm3, %xmm1, %k1
-; AVX512-NEXT:    kshiftlb $4, %k1, %k1
-; AVX512-NEXT:    korb %k1, %k0, %k0
+; AVX512-NEXT:    # kill: def $xmm2 killed $xmm2 def $ymm2
+; AVX512-NEXT:    # kill: def $xmm0 killed $xmm0 def $ymm0
+; AVX512-NEXT:    vinsertf128 $1, %xmm3, %ymm2, %ymm2
+; AVX512-NEXT:    vinsertf128 $1, %xmm1, %ymm0, %ymm0
+; AVX512-NEXT:    vroundps $4, %ymm0, %ymm0
+; AVX512-NEXT:    vcmpltps %ymm2, %ymm0, %k0
 ; AVX512-NEXT:    kmovd %k0, %eax
 ; AVX512-NEXT:    # kill: def $al killed $al killed $eax
+; AVX512-NEXT:    vzeroupper
 ; AVX512-NEXT:    retq
   %rnd0 = call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %x0, i32 4)
   %rnd1 = call <4 x float> @llvm.x86.sse41.round.ps(<4 x float> %x1, i32 4)

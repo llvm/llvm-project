@@ -1269,10 +1269,20 @@ TEST(APIntTest, SaturatingMath) {
   EXPECT_EQ(APInt(6, 31), AP_42.truncSSat(6));
   EXPECT_EQ(APInt(5, 15), AP_42.truncSSat(5));
 
+  EXPECT_EQ(APInt(8, 42, false), AP_42.truncSSatU(8));
+  EXPECT_EQ(APInt(7, 42, false), AP_42.truncSSatU(7));
+  EXPECT_EQ(APInt(6, 42, false), AP_42.truncSSatU(6));
+  EXPECT_EQ(APInt(5, 31, false), AP_42.truncSSatU(5));
+
   EXPECT_EQ(APInt(8, -56, true), AP_200.truncSSat(8));
   EXPECT_EQ(APInt(7, -56, true), AP_200.truncSSat(7));
   EXPECT_EQ(APInt(6, -32, true), AP_200.truncSSat(6));
   EXPECT_EQ(APInt(5, -16, true), AP_200.truncSSat(5));
+
+  EXPECT_EQ(APInt(8, 200, false), AP_200.truncSSatU(8));
+  EXPECT_EQ(APInt(7, 0, false), AP_200.truncSSatU(7));
+  EXPECT_EQ(APInt(6, 0, false), AP_200.truncSSatU(6));
+  EXPECT_EQ(APInt(5, 0, false), AP_200.truncSSatU(5));
 
   EXPECT_EQ(APInt(8, 200), AP_100.uadd_sat(AP_100));
   EXPECT_EQ(APInt(8, 255), AP_100.uadd_sat(AP_200));

@@ -223,7 +223,8 @@ operator==(const zoned_time<_Duration1, _TimeZonePtr>& __lhs, const zoned_time<_
 template <class _Duration, class _TimeZonePtr>
   requires __has_enabled_hash<_Duration>::value && __has_enabled_hash<_TimeZonePtr>::value
 struct hash<chrono::zoned_time<_Duration, _TimeZonePtr>> {
-  _LIBCPP_HIDE_FROM_ABI static size_t operator()(const chrono::zoned_time<_Duration, _TimeZonePtr>& __zt) {
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static size_t
+  operator()(const chrono::zoned_time<_Duration, _TimeZonePtr>& __zt) {
     return std::__hash_combine(
         hash<chrono::sys_time<_Duration>>{}(__zt.get_sys_time()), hash<_TimeZonePtr>{}(__zt.get_time_zone()));
   }

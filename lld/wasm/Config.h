@@ -35,6 +35,7 @@ class Symbol;
 class DefinedData;
 class GlobalSymbol;
 class DefinedFunction;
+class DefinedGlobal;
 class UndefinedGlobal;
 class TableSymbol;
 
@@ -236,13 +237,11 @@ struct Ctx {
 
     // __table_base
     // Used in PIC code for offset of indirect function table
-    UndefinedGlobal *tableBase;
-    DefinedData *definedTableBase;
+    GlobalSymbol *tableBase;
 
     // __memory_base
     // Used in PIC code for offset of global data
-    UndefinedGlobal *memoryBase;
-    DefinedData *definedMemoryBase;
+    GlobalSymbol *memoryBase;
 
     // __indirect_function_table
     // Used as an address space for function pointers, with each function that
