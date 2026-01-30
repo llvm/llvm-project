@@ -68,9 +68,9 @@ static cl::opt<unsigned> TileSize(
     "fuse-matrix-tile-size", cl::init(4), cl::Hidden,
     cl::desc(
         "Tile size for matrix instruction fusion using square-shaped tiles."));
-static cl::opt<bool> TileUseLoops("fuse-matrix-use-loops", cl::init(false),
-                                  cl::Hidden,
-                                  cl::desc("Generate loop nest for tiling."));
+static cl::opt<bool>
+    TileUseLoops("fuse-matrix-use-loops", cl::init(false), cl::Hidden,
+                 cl::desc("Always generate loop nest for tiling."));
 static cl::opt<bool> ForceFusion(
     "force-fuse-matrix", cl::init(false), cl::Hidden,
     cl::desc("Force matrix instruction fusion even if not profitable."));
@@ -610,6 +610,24 @@ public:
                      double(TTI.getRegisterBitWidth(
                                    TargetTransformInfo::RGK_FixedWidthVector)
                                 .getFixedValue()));
+  }
+
+  /// Estimate the number of native vector operations for a multiply of matrices
+  /// with dimensions \p R x \p M and \p M x \p C. Native ops are computed as
+  /// ceil(ElementCount * ElementBits / RegisterBits).
+  ///
+  /// Native vector ops per operation type (VF = native vector elements):
+  ///   FMAs:    C * ceil(R/VF) * M (one FMA per VF output elements)
+  ///   A loads: ceil(R/VF) * M (A has M columns, ceil(R/VF) native loads each)
+  ///   B loads: ceil(M/VF) * C (B has C columns, ceil(M/VF) native loads each)
+  ///   Stores:  C * ceil(R/VF) (one store per VF output elements)
+  unsigned getNumNativeVectorOps(Type *EltType, unsigned R, unsigned M,
+                                 unsigned C) {
+    unsigned NumFMAs = C * getNumOps(EltType, R) * M;
+    unsigned NumALoads = getNumOps(EltType, R) * M;
+    unsigned NumBLoads = getNumOps(EltType, M) * C;
+    unsigned NumStores = getNumOps(EltType, R) * C;
+    return NumFMAs + NumALoads + NumBLoads + NumStores;
   }
 
   /// Return the set of vectors that a matrix value is lowered to.
@@ -2057,7 +2075,12 @@ public:
     Value *BPtr = getNonAliasingPointer(LoadOp1, Store, MatMul);
     Value *CPtr = Store->getPointerOperand();
 
-    if (TileUseLoops && (R % TileSize == 0 && C % TileSize == 0))
+    // Use loop-based tiling when forced or for larger multiplies. The threshold
+    // of 200 is approximately a 6x6x6 double matrix multiply (162 native ops).
+    unsigned NumOps = getNumNativeVectorOps(EltType, R, M, C);
+    bool UseLoops = (TileUseLoops || NumOps > 200) &&
+                    R % TileSize == 0 && C % TileSize == 0;
+    if (UseLoops)
       createTiledLoops(MatMul, APtr, LShape, BPtr, RShape, Store);
     else {
       IRBuilder<> Builder(Store);
