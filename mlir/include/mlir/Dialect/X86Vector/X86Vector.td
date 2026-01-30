@@ -343,6 +343,58 @@ def CvtPackedF32ToBF16Op : AVX512_Op<"cvt.packed.f32_to_bf16", [Pure,
   }];
 }
 
+//----------------------------------------------------------------------------//
+// AVX512 Int8 Dot
+//----------------------------------------------------------------------------//
+
+def AVX512DotInt8Op : AVX512_Op<"dot.i8", [Pure,
+    X86IntrinsicOpInterface,
+    AllTypesMatch<["a", "b"]>,
+    AllTypesMatch<["w", "dst"]>,
+    TypesMatchWith<"`a` has four times elements as `w`",
+                   "w", "a",
+                   "VectorType::get({::llvm::cast<VectorType>($_self).getShape()[0] * 4}, "
+                   "IntegerType::get($_self.getContext(), 8))">
+  ]> {
+  let summary = "AVX512 Dot Int8 op";
+  let description = [{
+    The `dot` op is an AVX512-Int8 specific op that can lower to the proper
+    LLVMAVX2-INT8 operation `llvm.vpdpwssd` depending on the width of MLIR
+    vectors it is applied to.
+
+    #### From the Intel Intrinsics Guide:
+
+    Multiply groups of 4 adjacent pairs of signed 8-bit integers in `a` with
+    corresponding signed 8-bit integers in `b`, producing 4 intermediate signed 16-bit
+    results. Sum these 4 results with the corresponding 32-bit integer in `w`, and
+    store the packed 32-bit results in `dst`.
+
+    Example:
+    ```mlir
+    %dst = x86vector.avx512.dot.i8 %w, %a, %b : vector<64xi8> -> vector<16xi32>
+    ```
+  }];
+  let arguments = (ins VectorOfLengthAndType<[4, 8, 16], [I32]>:$w,
+                   VectorOfLengthAndType<[16, 32, 64], [I8]>:$a,
+                   VectorOfLengthAndType<[16, 32, 64], [I8]>:$b
+                   );
+  let results = (outs VectorOfLengthAndType<[4, 8, 16], [I32]>:$dst);
+  let assemblyFormat =
+    "$w `,` $a `,` $b attr-dict `:` type($a) `->` type($w)";
+
+  let extraClassDeclaration = [{
+    std::string getIntrinsicName() {
+      std::string intr = "llvm.x86.avx512.vpdpwssd";
+      VectorType vecType = getW().getType();
+      unsigned elemBitWidth = vecType.getElementTypeBitWidth();
+      unsigned opBitWidth = vecType.getShape()[0] * elemBitWidth;
+      intr += "." + std::to_string(opBitWidth);
+      return intr;
+    }
+  }];
+}
+
+
 //===----------------------------------------------------------------------===//
 // AVX op definitions
 //===----------------------------------------------------------------------===//
