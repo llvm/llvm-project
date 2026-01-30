@@ -5453,6 +5453,11 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
         NewUses.push_back({Shuffle, {}});
         std::vector<int> &NewMask = NewUses.back().second;
         for (int Index : OldMask) {
+          // Preserve poison indices without modification.
+          if (Index == PoisonMaskElem) {
+            NewMask.push_back(Index);
+            continue;
+          }
           int NewIndex = Index >= static_cast<int>(OldNumElements)
                              ? Index - LowOffset - HighOffset
                              : Index - LowOffset;
