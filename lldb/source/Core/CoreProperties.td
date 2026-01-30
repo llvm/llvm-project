@@ -1,6 +1,6 @@
 include "../../include/lldb/Core/PropertiesBase.td"
 
-let Definition = "modulelist" in {
+let Definition = "modulelist", Path = "symbols" in {
   def EnableExternalLookup: Property<"enable-external-lookup", "Boolean">,
     Global,
     DefaultTrue,
@@ -49,7 +49,7 @@ let Definition = "modulelist" in {
 }
 
 #ifndef NDEBUG
-let Definition = "testing" in {
+let Definition = "testing", Path = "testing" in {
   def InjectVarLocListError
       : Property<"inject-variable-location-error", "Boolean">,
         Global,
@@ -58,7 +58,7 @@ let Definition = "testing" in {
 }
 #endif
 
-let Definition = "debugger" in {
+let Definition = "debugger", Path = "" in {
   def AutoConfirm: Property<"auto-confirm", "Boolean">,
     Global,
     DefaultFalse,
