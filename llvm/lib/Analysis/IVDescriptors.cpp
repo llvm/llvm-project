@@ -262,7 +262,7 @@ static bool isMinMaxReductionPhiWithUsersOutsideReductionChain(
 }
 
 // This matches a phi that selects between the original value (HeaderPhi) and an
-// arbitrary non-redunction value.
+// arbitrary non-reduction value.
 static bool isFindLastLikePhi(PHINode *Phi, PHINode *HeaderPhi,
                               SmallPtrSetImpl<Instruction *> &ReductionInstrs) {
   unsigned NumNonReduxInputs = 0;
