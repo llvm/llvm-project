@@ -5,12 +5,9 @@
 
 ---
 name:            pr166563
-alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
-liveins:
-  - { reg: '$w0', virtual-reg: '' }
 body:             |
   ; CHECK-LABEL: name: pr166563
   ; CHECK: bb.0:
@@ -67,48 +64,48 @@ body:             |
     successors: %bb.3(0x30000000), %bb.2(0x50000000)
     liveins: $w0
 
-    %2:gpr(s32) = COPY $w0
-    %6:gpr(s64) = G_CONSTANT i64 457873110
-    %36:gpr(s32) = G_CONSTANT i32 1
-    G_BRCOND %36(s32), %bb.3
+    %0:gpr(s32) = COPY $w0
+    %1:gpr(s64) = G_CONSTANT i64 457873110
+    %2:gpr(s32) = G_CONSTANT i32 1
+    G_BRCOND %2(s32), %bb.3
     G_BR %bb.2
 
   bb.2:
     successors: %bb.7(0x80000000)
 
-    %7:gpr(s64) = G_CONSTANT_FOLD_BARRIER %6
+    %3:gpr(s64) = G_CONSTANT_FOLD_BARRIER %1
     G_BR %bb.7
 
   bb.3:
     successors: %bb.4(0x40000000), %bb.5(0x40000000)
 
-    %28:gpr(s32) = G_CONSTANT i32 1
-    %29:gpr(s32) = G_XOR %2, %28
-    %26:gpr(s32) = G_AND %29, %28
-    G_BRCOND %26(s32), %bb.5
+    %4:gpr(s32) = G_CONSTANT i32 1
+    %5:gpr(s32) = G_XOR %0, %4
+    %6:gpr(s32) = G_AND %5, %4
+    G_BRCOND %6(s32), %bb.5
     G_BR %bb.4
 
   bb.4:
     successors: %bb.6(0x80000000)
 
-    %14:gpr(s64) = G_CONSTANT_FOLD_BARRIER %6
-    %23:gpr(s64) = G_CONSTANT i64 -2
-    %16:gpr(s64) = G_ADD %14, %23
+    %7:gpr(s64) = G_CONSTANT_FOLD_BARRIER %1
+    %8:gpr(s64) = G_CONSTANT i64 -2
+    %9:gpr(s64) = G_ADD %7, %8
     G_BR %bb.6
 
   bb.5:
-    %12:gpr(s64) = G_CONSTANT_FOLD_BARRIER %6
-    %24:gpr(s64) = G_CONSTANT i64 0
-    %13:gpr(s64) = G_AND %24, %12
-    $x0 = COPY %13(s64)
+    %10:gpr(s64) = G_CONSTANT_FOLD_BARRIER %1
+    %11:gpr(s64) = G_CONSTANT i64 0
+    %12:gpr(s64) = G_AND %11, %10
+    $x0 = COPY %12(s64)
     RET_ReallyLR implicit $x0
 
   bb.6:
     successors: %bb.6(0x80000000)
 
-    %17:gpr(s64) = G_PHI %16(s64), %bb.4, %19(s64), %bb.6
-    %22:gpr(s64) = G_CONSTANT i64 -1
-    %19:gpr(s64) = G_ADD %17, %22
+    %13:gpr(s64) = G_PHI %9(s64), %bb.4, %15(s64), %bb.6
+    %14:gpr(s64) = G_CONSTANT i64 -1
+    %15:gpr(s64) = G_ADD %13, %14
     G_BR %bb.6
 
   bb.7:
@@ -117,19 +114,16 @@ body:             |
   bb.8:
     successors: %bb.8(0x7c000000), %bb.7(0x04000000)
 
-    %25:gpr(s64) = G_CONSTANT i64 0
-    %32:gpr(s32) = G_ICMP intpred(ugt), %7(s64), %25
-    G_BRCOND %32(s32), %bb.8
+    %16:gpr(s64) = G_CONSTANT i64 0
+    %17:gpr(s32) = G_ICMP intpred(ugt), %3(s64), %16
+    G_BRCOND %17(s32), %bb.8
     G_BR %bb.7
 ...
 ---
 name:            pr166563_commuted_and
-alignment:       4
 legalized:       true
 regBankSelected: true
 tracksRegLiveness: true
-liveins:
-  - { reg: '$w0', virtual-reg: '' }
 body:             |
   ; CHECK-LABEL: name: pr166563_commuted_and
   ; CHECK: bb.0:
@@ -186,48 +180,48 @@ body:             |
     successors: %bb.3(0x30000000), %bb.2(0x50000000)
     liveins: $w0
 
-    %2:gpr(s32) = COPY $w0
-    %6:gpr(s64) = G_CONSTANT i64 457873110
-    %36:gpr(s32) = G_CONSTANT i32 1
-    G_BRCOND %36(s32), %bb.3
+    %0:gpr(s32) = COPY $w0
+    %1:gpr(s64) = G_CONSTANT i64 457873110
+    %2:gpr(s32) = G_CONSTANT i32 1
+    G_BRCOND %2(s32), %bb.3
     G_BR %bb.2
 
   bb.2:
     successors: %bb.7(0x80000000)
 
-    %7:gpr(s64) = G_CONSTANT_FOLD_BARRIER %6
+    %3:gpr(s64) = G_CONSTANT_FOLD_BARRIER %1
     G_BR %bb.7
 
   bb.3:
     successors: %bb.4(0x40000000), %bb.5(0x40000000)
 
-    %28:gpr(s32) = G_CONSTANT i32 1
-    %29:gpr(s32) = G_XOR %2, %28
-    %26:gpr(s32) = G_AND %29, %28
-    G_BRCOND %26(s32), %bb.5
+    %4:gpr(s32) = G_CONSTANT i32 1
+    %5:gpr(s32) = G_XOR %0, %4
+    %6:gpr(s32) = G_AND %5, %4
+    G_BRCOND %6(s32), %bb.5
     G_BR %bb.4
 
   bb.4:
     successors: %bb.6(0x80000000)
 
-    %14:gpr(s64) = G_CONSTANT_FOLD_BARRIER %6
-    %23:gpr(s64) = G_CONSTANT i64 -2
-    %16:gpr(s64) = G_ADD %14, %23
+    %7:gpr(s64) = G_CONSTANT_FOLD_BARRIER %1
+    %8:gpr(s64) = G_CONSTANT i64 -2
+    %9:gpr(s64) = G_ADD %7, %8
     G_BR %bb.6
 
   bb.5:
-    %12:gpr(s64) = G_CONSTANT_FOLD_BARRIER %6
-    %24:gpr(s64) = G_CONSTANT i64 0
-    %13:gpr(s64) = G_AND %12, %24
-    $x0 = COPY %13(s64)
+    %10:gpr(s64) = G_CONSTANT_FOLD_BARRIER %1
+    %11:gpr(s64) = G_CONSTANT i64 0
+    %12:gpr(s64) = G_AND %10, %11
+    $x0 = COPY %12(s64)
     RET_ReallyLR implicit $x0
 
   bb.6:
     successors: %bb.6(0x80000000)
 
-    %17:gpr(s64) = G_PHI %16(s64), %bb.4, %19(s64), %bb.6
-    %22:gpr(s64) = G_CONSTANT i64 -1
-    %19:gpr(s64) = G_ADD %17, %22
+    %13:gpr(s64) = G_PHI %9(s64), %bb.4, %15(s64), %bb.6
+    %14:gpr(s64) = G_CONSTANT i64 -1
+    %15:gpr(s64) = G_ADD %13, %14
     G_BR %bb.6
 
   bb.7:
@@ -236,8 +230,8 @@ body:             |
   bb.8:
     successors: %bb.8(0x7c000000), %bb.7(0x04000000)
 
-    %25:gpr(s64) = G_CONSTANT i64 0
-    %32:gpr(s32) = G_ICMP intpred(ugt), %7(s64), %25
-    G_BRCOND %32(s32), %bb.8
+    %16:gpr(s64) = G_CONSTANT i64 0
+    %17:gpr(s32) = G_ICMP intpred(ugt), %3(s64), %16
+    G_BRCOND %17(s32), %bb.8
     G_BR %bb.7
 ...
