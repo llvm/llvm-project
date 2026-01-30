@@ -7493,7 +7493,21 @@ void testPointerAliasEscapeMultiple(Foo *F) {
     escapeAliasMultiple(&L, &L, &Fp);
     Fp->mu.Unlock(); // expected-warning{{releasing mutex 'Fp->mu' that was not held}}
 } // expected-warning{{mutex 'F->mu' is still held at the end of function}}
-  
+
+void unlockFooWithEscapablePointer(Foo **Fp) EXCLUSIVE_UNLOCK_FUNCTION((*Fp)->mu);
+void testEscapeInvalidationHappensRightAfterTheCall(Foo* F) {
+    Foo* L;
+    L = F;
+    L->mu.Lock();
+    // Release the lock hold by 'L' before clear its definition.
+    unlockFooWithEscapablePointer(&L);
+}
+
+void testCleanUpFunctionWithLocalVarUpdated(Foo* F) {
+  F->mu.Lock();
+  Foo * __attribute__((unused, cleanup(unlockFooWithEscapablePointer))) L = F;
+}
+
 void testPointerAliasTryLock1() {
   Foo *ptr = returnsFoo();
   if (ptr->mu.TryLock()) {

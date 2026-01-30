@@ -1727,20 +1727,25 @@ class BuildLockset : public ConstStmtVisitor<BuildLockset> {
   FactSet FSet;
   // The fact set for the function on exit.
   const FactSet &FunctionExitFSet;
+  // Use `LVarCtx` to keep track of the context at each program point, which
+  // will be used to translate DREs (by `SExprBuilder::translateDeclRefExpr`)
+  // to their canonical definitions:
   LocalVariableMap::Context LVarCtx;
   unsigned CtxIndex;
 
   // To update and adjust the context.
   void updateLocalVarMapCtx(const Stmt *S) {
+    if (Analyzer->Handler.issueBetaWarnings()) {
+      // The lookup closure needs to be reconstructed with the LVarCtx at the
+      // point right before 'S'.  This is the context used for visiting 'S'.
+      Analyzer->SxBuilder.setLookupLocalVarExpr(
+          [this, Ctx = LVarCtx](const NamedDecl *D) mutable -> const Expr * {
+            return Analyzer->LocalVarMap.lookupExpr(D, Ctx);
+          });
+    }
     if (S)
+      // Update the context to the point right after 'S'.
       LVarCtx = Analyzer->LocalVarMap.getNextContext(CtxIndex, S, LVarCtx);
-    if (!Analyzer->Handler.issueBetaWarnings())
-      return;
-    // The lookup closure needs to be reconstructed with the refreshed LVarCtx.
-    Analyzer->SxBuilder.setLookupLocalVarExpr(
-        [this, Ctx = LVarCtx](const NamedDecl *D) mutable -> const Expr * {
-          return Analyzer->LocalVarMap.lookupExpr(D, Ctx);
-        });
   }
 
   // helper functions
@@ -2842,6 +2847,7 @@ void ThreadSafetyAnalyzer::runAnalysis(AnalysisDeclContext &AC) {
 
         case CFGElement::CleanupFunction: {
           const CFGCleanupFunction &CF = BI.castAs<CFGCleanupFunction>();
+          LocksetBuilder.updateLocalVarMapCtx(nullptr);
           LocksetBuilder.handleCall(
               /*Exp=*/nullptr, CF.getFunctionDecl(),
               SxBuilder.translateVariable(CF.getVarDecl(), nullptr),
