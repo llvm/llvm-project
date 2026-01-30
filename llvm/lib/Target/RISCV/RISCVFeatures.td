@@ -1866,6 +1866,12 @@ def TunePredictableSelectIsExpensive
     : SubtargetFeature<"predictable-select-expensive", "PredictableSelectIsExpensive", "true",
                        "Prefer likely predicted branches over selects">;
 
+def FeatureUseFixedOverScalableIfEqualCost
+    : SubtargetFeature<"use-fixed-over-scalable-if-equal-cost",
+                       "UseFixedOverScalableIfEqualCost", "true",
+                       "Prefer fixed width loop vectorization over scalable"
+                       "if the cost-model assigns equal costs">;
+
 def TuneOptimizedZeroStrideLoad
    : SubtargetFeature<"optimized-zero-stride-load", "HasOptimizedZeroStrideLoad",
                       "true", "Optimized (perform fewer memory operations)"
