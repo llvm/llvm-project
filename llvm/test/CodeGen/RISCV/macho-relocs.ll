@@ -31,7 +31,7 @@ define void @tail_call() nounwind {
 }
 
 @var = global i32 0
-define i32* @direct_global() nounwind {
+define ptr @direct_global() nounwind {
 ; DEFAULT-LABEL: direct_global:
 ; DEFAULT:       ; %bb.0:
 ; DEFAULT-NEXT:  Lpcrel_hi0:
@@ -44,12 +44,12 @@ define i32* @direct_global() nounwind {
 ; STATIC-NEXT:    lui a0, %hi(_var)
 ; STATIC-NEXT:    addi a0, a0, %lo(_var)
 ; STATIC-NEXT:    ret
-  ret i32* @var
+  ret ptr @var
 }
 
 ;; No GOTs in static CodeGen.
 @var2 = external global i32
-define i32* @got_global() nounwind {
+define ptr @got_global() nounwind {
 ; DEFAULT-LABEL: got_global:
 ; DEFAULT:       ; %bb.0:
 ; DEFAULT-NEXT:  Lpcrel_hi1:
@@ -62,11 +62,11 @@ define i32* @got_global() nounwind {
 ; STATIC-NEXT:    lui a0, %hi(_var2)
 ; STATIC-NEXT:    addi a0, a0, %lo(_var2)
 ; STATIC-NEXT:    ret
-  ret i32* @var2
+  ret ptr @var2
 }
 
 @anon = private unnamed_addr constant i32 42
-define i32* @unnamed_const() nounwind {
+define ptr @unnamed_const() nounwind {
 ; DEFAULT-LABEL: unnamed_const:
 ; DEFAULT:       ; %bb.0:
 ; DEFAULT-NEXT:  Lpcrel_hi2:
@@ -79,7 +79,7 @@ define i32* @unnamed_const() nounwind {
 ; STATIC-NEXT:    lui a0, %hi(l_anon)
 ; STATIC-NEXT:    addi a0, a0, %lo(l_anon)
 ; STATIC-NEXT:    ret
-  ret i32* @anon
+  ret ptr @anon
 }
 
 ; UTC_ARGS: --disable
