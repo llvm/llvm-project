@@ -516,6 +516,7 @@ SITargetLowering::SITargetLowering(const TargetMachine &TM,
 
   setOperationAction({ISD::CTLZ, ISD::CTLZ_ZERO_UNDEF}, MVT::i32, Custom);
   setOperationAction({ISD::CTTZ, ISD::CTTZ_ZERO_UNDEF}, MVT::i32, Custom);
+  setOperationAction(ISD::CTLS, MVT::i32, Legal);
 
   // We only really have 32-bit BFE instructions (and 16-bit on VI).
   //
@@ -10198,7 +10199,7 @@ SDValue SITargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     return DAG.getNode(AMDGPUISD::FMUL_LEGACY, DL, VT, Op.getOperand(1),
                        Op.getOperand(2));
   case Intrinsic::amdgcn_sffbh:
-    return DAG.getNode(AMDGPUISD::FFBH_I32, DL, VT, Op.getOperand(1));
+    return DAG.getNode(ISD::CTLS, DL, VT, Op.getOperand(1));
   case Intrinsic::amdgcn_sbfe:
     return DAG.getNode(AMDGPUISD::BFE_I32, DL, VT, Op.getOperand(1),
                        Op.getOperand(2), Op.getOperand(3));
@@ -11812,11 +11813,15 @@ void SITargetLowering::setBufferOffsets(SDValue CombinedOffset,
     }
   }
   if (DAG.isBaseWithConstantOffset(CombinedOffset)) {
+    // On GFX1250+, voffset and immoffset are zero-extended from 32 bits before
+    // being added, so we can only safely match a 32-bit addition with no
+    // unsigned overflow.
+    bool CheckNUW = Subtarget->hasGFX1250Insts();
     SDValue N0 = CombinedOffset.getOperand(0);
     SDValue N1 = CombinedOffset.getOperand(1);
     uint32_t SOffset, ImmOffset;
     int Offset = cast<ConstantSDNode>(N1)->getSExtValue();
-    if (Offset >= 0 &&
+    if (Offset >= 0 && (!CheckNUW || isNoUnsignedWrap(CombinedOffset)) &&
         TII->splitMUBUFOffset(Offset, SOffset, ImmOffset, Alignment)) {
       Offsets[0] = N0;
       Offsets[1] = DAG.getConstant(SOffset, DL, MVT::i32);

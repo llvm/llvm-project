@@ -5099,7 +5099,7 @@ void SelectionDAGBuilder::visitMaskedLoad(const CallInst &I, bool IsExpanding) {
 
   MachineMemOperand *MMO = DAG.getMachineFunction().getMachineMemOperand(
       MachinePointerInfo(PtrOperand), MMOFlags,
-      LocationSize::beforeOrAfterPointer(), Alignment, AAInfo, Ranges);
+      VT.getStoreSize(), Alignment, AAInfo, Ranges);
 
   const auto &TLI = DAG.getTargetLoweringInfo();
 
