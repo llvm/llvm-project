@@ -15,11 +15,11 @@ void f0(int len) {
 // CIR:   cir.store{{.*}} %[[LEN_ARG]], %[[LEN_ADDR]]
 // CIR:   %[[LEN:.*]] = cir.load{{.*}} %[[LEN_ADDR]]
 // CIR:   %[[LEN_SIZE_T:.*]] = cir.cast integral %[[LEN]] : !s32i -> !u64i
-// CIR:   %[[STACK_PTR:.*]] = cir.stacksave
+// CIR:   %[[STACK_PTR:.*]] = cir.stack_save
 // CIR:   cir.store{{.*}} %[[STACK_PTR]], %[[SAVED_STACK]]
 // CIR:   %[[ARR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, %[[LEN_SIZE_T]] : !u64i, ["arr"]
 // CIR:   %[[STACK_RESTORE_PTR:.*]] = cir.load{{.*}} %[[SAVED_STACK]]
-// CIR:   cir.stackrestore %[[STACK_RESTORE_PTR]]
+// CIR:   cir.stack_restore %[[STACK_RESTORE_PTR]]
 
 // LLVM: define{{.*}} void @f0(i32 %[[LEN_ARG:.*]])
 // LLVM:   %[[LEN_ADDR:.*]] = alloca i32
@@ -60,12 +60,12 @@ void f1(int len) {
 // CIR:   %[[SIXTEEN:.*]] = cir.const #cir.int<16> : !u64i
 // CIR:   %[[LEN:.*]] = cir.load{{.*}} %[[LEN_ADDR]]
 // CIR:   %[[LEN_SIZE_T:.*]] = cir.cast integral %[[LEN]] : !s32i -> !u64i
-// CIR:   %[[STACK_PTR:.*]] = cir.stacksave
+// CIR:   %[[STACK_PTR:.*]] = cir.stack_save
 // CIR:   cir.store{{.*}} %[[STACK_PTR]], %[[SAVED_STACK]]
 // CIR:   %[[TOTAL_LEN:.*]] = cir.binop(mul, %[[SIXTEEN]], %[[LEN_SIZE_T]]) nuw
 // CIR:   %[[ARR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, %[[TOTAL_LEN]] : !u64i, ["arr"]
 // CIR:   %[[STACK_RESTORE_PTR:.*]] = cir.load{{.*}} %[[SAVED_STACK]]
-// CIR:   cir.stackrestore %[[STACK_RESTORE_PTR]]
+// CIR:   cir.stack_restore %[[STACK_RESTORE_PTR]]
 
 // LLVM: define{{.*}} void @f1(i32 %[[LEN_ARG:.*]])
 // LLVM:   %[[LEN_ADDR:.*]] = alloca i32
@@ -109,11 +109,11 @@ void f2(int len) {
 // CIR:   %[[FOUR:.*]] = cir.const #cir.int<4> : !s32i
 // CIR:   %[[TOTAL_LEN:.*]] = cir.binop(add, %[[LEN]], %[[FOUR]]) nsw : !s32i
 // CIR:   %[[TOTAL_LEN_SIZE_T:.*]] = cir.cast integral %[[TOTAL_LEN]] : !s32i -> !u64i
-// CIR:   %[[STACK_PTR:.*]] = cir.stacksave
+// CIR:   %[[STACK_PTR:.*]] = cir.stack_save
 // CIR:   cir.store{{.*}} %[[STACK_PTR]], %[[SAVED_STACK]]
 // CIR:   %[[ARR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, %[[TOTAL_LEN_SIZE_T]] : !u64i, ["arr"]
 // CIR:   %[[STACK_RESTORE_PTR:.*]] = cir.load{{.*}} %[[SAVED_STACK]]
-// CIR:   cir.stackrestore %[[STACK_RESTORE_PTR]]
+// CIR:   cir.stack_restore %[[STACK_RESTORE_PTR]]
   
 // LLVM: define{{.*}} void @f2(i32 %[[LEN_ARG:.*]])
 // LLVM:   %[[LEN_ADDR:.*]] = alloca i32
@@ -159,7 +159,7 @@ void f3(unsigned len) {
 // CIR:   cir.store{{.*}} %[[LEN_ARG]], %[[LEN_ADDR]]
 // CIR:   %[[LEN:.*]] = cir.load{{.*}} %[[LEN_ADDR]]
 // CIR:   %[[LEN_SIZE_T:.*]] = cir.cast integral %[[LEN]] : !u32i -> !u64i
-// CIR:   %[[STACK_PTR:.*]] = cir.stacksave
+// CIR:   %[[STACK_PTR:.*]] = cir.stack_save
 // CIR:   cir.store{{.*}} %[[STACK_PTR]], %[[SAVED_STACK]]
 // CIR:   %[[S1:.*]] = cir.alloca !s8i, !cir.ptr<!s8i>, %[[LEN_SIZE_T]] : !u64i, ["s1"]
 // CIR:   %[[I:.*]] = cir.alloca !u32i, !cir.ptr<!u32i>, ["i", init]
@@ -178,17 +178,17 @@ void f3(unsigned len) {
 // CIR:         %[[SAVED_STACK2:.*]] = cir.alloca !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>, ["saved_stack"]
 // CIR:         %[[I_LEN:.*]] = cir.load{{.*}} %[[I]]
 // CIR:         %[[I_LEN_SIZE_T2:.*]] = cir.cast integral %[[I_LEN]] : !u32i -> !u64i
-// CIR:         %[[STACK_PTR2:.*]] = cir.stacksave
+// CIR:         %[[STACK_PTR2:.*]] = cir.stack_save
 // CIR:         cir.store{{.*}} %[[STACK_PTR2]], %[[SAVED_STACK2]]
 // CIR:         %[[S2:.*]] = cir.alloca !s8i, !cir.ptr<!s8i>, %[[I_LEN_SIZE_T2]] : !u64i, ["s2"]
 // CIR:         %[[SAVED_RESTORE_PTR2:.*]] = cir.load{{.*}} %[[SAVED_STACK2]]
-// CIR:         cir.stackrestore %[[SAVED_RESTORE_PTR2]]
+// CIR:         cir.stack_restore %[[SAVED_RESTORE_PTR2]]
 // CIR:       }
 // CIR:       cir.yield
 // CIR:     }
 // CIR:   }
 // CIR:   %[[STACK_RESTORE_PTR:.*]] = cir.load{{.*}} %[[SAVED_STACK]]
-// CIR:   cir.stackrestore %[[STACK_RESTORE_PTR]]
+// CIR:   cir.stack_restore %[[STACK_RESTORE_PTR]]
 
 // LLVM: define{{.*}} void @f3(i32 %[[LEN_ARG:.*]])
 // LLVM:   %[[SAVED_STACK2:.*]] = alloca ptr
@@ -293,7 +293,7 @@ int f5(unsigned long len) {
 // CIR:   %[[SAVED_STACK:.*]] = cir.alloca !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>, ["saved_stack"]
 // CIR:   cir.store{{.*}} %[[LEN_ARG]], %[[LEN_ADDR]]
 // CIR:   %[[LEN:.*]] = cir.load{{.*}} %[[LEN_ADDR]]
-// CIR:   %[[STACK_PTR:.*]] = cir.stacksave
+// CIR:   %[[STACK_PTR:.*]] = cir.stack_save
 // CIR:   cir.store{{.*}} %[[STACK_PTR]], %[[SAVED_STACK]]
 // CIR:   %[[ARR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, %[[LEN]] : !u64i, ["arr"]
 // CIR:   %[[TWO:.*]] = cir.const #cir.int<2> : !s32i
@@ -301,7 +301,7 @@ int f5(unsigned long len) {
 // CIR:   %[[ARR_VAL:.*]] = cir.load{{.*}} %[[ARR_2]] : !cir.ptr<!s32i>, !s32i
 // CIR:   cir.store{{.*}} %[[ARR_VAL]], %[[RET_ADDR]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[STACK_RESTORE_PTR:.*]] = cir.load{{.*}} %[[SAVED_STACK]]
-// CIR:   cir.stackrestore %[[STACK_RESTORE_PTR]]
+// CIR:   cir.stack_restore %[[STACK_RESTORE_PTR]]
 // CIR:   %[[RET_VAL:.*]] = cir.load{{.*}} %[[RET_ADDR]]
 // CIR:   cir.return %[[RET_VAL]] : !s32i
 

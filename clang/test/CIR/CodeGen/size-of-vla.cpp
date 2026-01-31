@@ -68,13 +68,13 @@ void vla_expr_element_type_of_size_1() {
 // CIR: %[[CONST_10:.*]] = cir.const #cir.int<10> : !u64i
 // CIR: cir.store {{.*}} %[[CONST_10]], %[[N_ADDR]] : !u64i, !cir.ptr<!u64i>
 // CIR: %[[TMP_N:.*]] = cir.load {{.*}} %[[N_ADDR]] : !cir.ptr<!u64i>, !u64i
-// CIR: %[[STACK_SAVE:.*]] = cir.stacksave : !cir.ptr<!u8i>
+// CIR: %[[STACK_SAVE:.*]] = cir.stack_save : !cir.ptr<!u8i>
 // CIR: cir.store {{.*}} %[[STACK_SAVE]], %[[SAVED_STACK_ADDR]] : !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>
 // CIR: %[[ARR_ADDR:.*]] = cir.alloca !cir.bool, !cir.ptr<!cir.bool>, %[[TMP_N]] : !u64i, ["arr"]
 // CIR: %[[SIZE_ADDR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["size", init]
 // CIR: cir.store {{.*}} %[[TMP_N]], %[[SIZE_ADDR]] : !u64i, !cir.ptr<!u64i>
 // CIR: %[[TMP_SAVED_STACK:.*]] = cir.load {{.*}} %[[SAVED_STACK_ADDR]] : !cir.ptr<!cir.ptr<!u8i>>, !cir.ptr<!u8i>
-// CIR: cir.stackrestore %[[TMP_SAVED_STACK]] : !cir.ptr<!u8i>
+// CIR: cir.stack_restore %[[TMP_SAVED_STACK]] : !cir.ptr<!u8i>
 
 // LLVM: %[[N_ADDR:.*]] = alloca i64, i64 1, align 8
 // LLVM: %[[SAVED_STACK_ADDR:.*]] = alloca ptr, i64 1, align 8
@@ -115,7 +115,7 @@ void vla_expr_element_type_int() {
 // CIR: %[[CONST_10:.*]] = cir.const #cir.int<10> : !u64i
 // CIR: cir.store {{.*}} %[[CONST_10]], %[[N_ADDR]] : !u64i, !cir.ptr<!u64i>
 // CIR: %[[TMP_N:.*]] = cir.load {{.*}} %[[N_ADDR]] : !cir.ptr<!u64i>, !u64i
-// CIR: %[[STACK_SAVE:.*]] = cir.stacksave : !cir.ptr<!u8i>
+// CIR: %[[STACK_SAVE:.*]] = cir.stack_save : !cir.ptr<!u8i>
 // CIR: cir.store {{.*}} %[[STACK_SAVE]], %[[SAVED_STACK_ADDR]] : !cir.ptr<!u8i>, !cir.ptr<!cir.ptr<!u8i>>
 // CIR: %[[ARR_ADDR:.*]] = cir.alloca !s32i, !cir.ptr<!s32i>, %[[TMP_N]] : !u64i, ["arr"]
 // CIR: %[[SIZE_ADDR:.*]] = cir.alloca !u64i, !cir.ptr<!u64i>, ["size", init]
@@ -123,7 +123,7 @@ void vla_expr_element_type_int() {
 // CIR: %[[SIZE:.*]] = cir.binop(mul, %[[CONST_4]], %[[TMP_N]]) nuw : !u64i
 // CIR: cir.store {{.*}} %[[SIZE]], %[[SIZE_ADDR]] : !u64i, !cir.ptr<!u64i>
 // CIR: %[[TMP_SAVED_STACK:.*]] = cir.load {{.*}} %[[SAVED_STACK_ADDR]] : !cir.ptr<!cir.ptr<!u8i>>, !cir.ptr<!u8i>
-// CIR: cir.stackrestore %[[TMP_SAVED_STACK]] : !cir.ptr<!u8i>
+// CIR: cir.stack_restore %[[TMP_SAVED_STACK]] : !cir.ptr<!u8i>
 
 // LLVM: %[[N_ADDR:.*]] = alloca i64, i64 1, align 8
 // LLVM: %[[SAVED_STACK_ADDR:.*]] = alloca ptr, i64 1, align 8

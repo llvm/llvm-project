@@ -5,8 +5,8 @@
 
 module  {
   cir.func @stack_save() {
-    %0 = cir.stacksave : !cir.ptr<!u8i>
-    cir.stackrestore %0 : !cir.ptr<!u8i>
+    %0 = cir.stack_save : !cir.ptr<!u8i>
+    cir.stack_restore %0 : !cir.ptr<!u8i>
     cir.return
   }
 }

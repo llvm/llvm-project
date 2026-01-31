@@ -193,8 +193,8 @@ public:
   using SymTableTy = llvm::ScopedHashTable<const clang::Decl *, mlir::Value>;
   SymTableTy symbolTable;
 
-  /// Whether a cir.stacksave operation has been added. Used to avoid
-  /// inserting cir.stacksave for multiple VLAs in the same scope.
+  /// Whether a cir.stack_save operation has been added. Used to avoid
+  /// inserting cir.stack_save for multiple VLAs in the same scope.
   bool didCallStackSave = false;
 
   /// Whether or not a Microsoft-style asm block has been processed within
