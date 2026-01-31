@@ -9,6 +9,10 @@ set(UBSAN_SOURCES
   ubsan_value.cpp
   )
 
+set(UBSAN_LOOP_DETECT_SOURCES
+  ubsan_loop_detect.cpp
+  )
+
 set(UBSAN_STANDALONE_SOURCES
   ubsan_diag_standalone.cpp
   ubsan_init_standalone.cpp
@@ -155,6 +159,12 @@ else()
     ADDITIONAL_HEADERS ${UBSAN_HEADERS}
     CFLAGS ${UBSAN_CXXFLAGS})
 
+  add_compiler_rt_object_libraries(RTUbsan_loop_detect
+    ARCHS ${UBSAN_COMMON_SUPPORTED_ARCH}
+    SOURCES ${UBSAN_LOOP_DETECT_SOURCES}
+    ADDITIONAL_HEADERS ${UBSAN_HEADERS}
+    CFLAGS ${UBSAN_CXXFLAGS})
+
   if (WIN32)
     set(RUNTIME_THUNK_CFLAGS -DSANITIZER_DYNAMIC_RUNTIME_THUNK -DSANITIZER_STATIC_RUNTIME_THUNK)
     add_compiler_rt_object_libraries(UbsanRuntimeThunk
@@ -195,6 +205,13 @@ else()
       STATIC
       ARCHS ${UBSAN_SUPPORTED_ARCH}
       OBJECT_LIBS RTUbsan_cxx
+      CFLAGS ${UBSAN_CXXFLAGS}
+      PARENT_TARGET ubsan)
+
+    add_compiler_rt_runtime(clang_rt.ubsan_loop_detect
+      STATIC
+      ARCHS ${UBSAN_SUPPORTED_ARCH}
+      OBJECT_LIBS RTUbsan_loop_detect
       CFLAGS ${UBSAN_CXXFLAGS}
       PARENT_TARGET ubsan)
 

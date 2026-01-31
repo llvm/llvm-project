@@ -7873,6 +7873,16 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     return;
   }
 
+  case Intrinsic::cond_loop: {
+    SDValue InputChain = DAG.getRoot();
+    SDValue P = getValue(I.getArgOperand(0));
+    Res = DAG.getNode(ISD::COND_LOOP, sdl, DAG.getVTList(MVT::Other),
+                      {InputChain, P});
+    setValue(&I, Res);
+    DAG.setRoot(Res);
+    return;
+  }
+
   case Intrinsic::eh_exceptionpointer:
   case Intrinsic::eh_exceptioncode: {
     // Get the exception pointer vreg, copy from it, and resize it to fit.
