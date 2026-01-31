@@ -79,7 +79,8 @@ private:
   ///
   /// If a subclass installs an external buffer using SetBuffer then it can wait
   /// for a \see write_impl() call to handle the data which has been put into
-  /// this buffer.
+  /// this buffer. If a subclass uses an external buffer, it is not possible
+  /// to switch to an internal buffer or an unbuffered mode.
   char *OutBufStart, *OutBufEnd, *OutBufCur;
   bool ColorEnabled = false;
 
@@ -166,11 +167,13 @@ public:
 
   /// Set the stream to be buffered, using the specified buffer size.
   void SetBufferSize(size_t Size) {
+    assert(BufferMode != BufferKind::ExternalBuffer);
     flush();
     SetBufferAndMode(new char[Size], Size, BufferKind::InternalBuffer);
   }
 
   size_t GetBufferSize() const {
+    assert(BufferMode != BufferKind::ExternalBuffer);
     // If we're supposed to be buffered but haven't actually gotten around
     // to allocating the buffer yet, return the value that would be used.
     if (BufferMode != BufferKind::Unbuffered && OutBufStart == nullptr)
@@ -184,6 +187,7 @@ public:
   /// after every write. This routine will also flush the buffer immediately
   /// when the stream is being set to unbuffered.
   void SetUnbuffered() {
+    assert(BufferMode != BufferKind::ExternalBuffer);
     flush();
     SetBufferAndMode(nullptr, 0, BufferKind::Unbuffered);
   }
@@ -223,18 +227,7 @@ public:
   }
 
   raw_ostream &operator<<(StringRef Str) {
-    // Inline fast path, particularly for strings with a known length.
-    size_t Size = Str.size();
-
-    // Make sure we can use the fast path.
-    if (Size > (size_t)(OutBufEnd - OutBufCur))
-      return write(Str.data(), Size);
-
-    if (Size) {
-      memcpy(OutBufCur, Str.data(), Size);
-      OutBufCur += Size;
-    }
-    return *this;
+    return write(Str.data(), Str.size());
   }
 
 #if defined(__cpp_char8_t)
@@ -259,7 +252,6 @@ public:
   }
 
   raw_ostream &operator<<(const std::string &Str) {
-    // Avoid the fast path, it would only increase code size for a marginal win.
     return write(Str.data(), Str.length());
   }
 
@@ -301,8 +293,25 @@ public:
   /// satisfy llvm::isPrint into an escape sequence.
   raw_ostream &write_escaped(StringRef Str, bool UseHexEscapes = false);
 
-  raw_ostream &write(unsigned char C);
-  raw_ostream &write(const char *Ptr, size_t Size);
+  raw_ostream &write(unsigned char C) {
+    if (OutBufCur >= OutBufEnd)
+      writeSlow(C);
+    else
+      *OutBufCur++ = C;
+    return *this;
+  }
+
+  raw_ostream &write(const char *Ptr, size_t Size) {
+    // Inline fast path
+    if (LLVM_UNLIKELY(size_t(OutBufEnd - OutBufCur) < Size)) {
+      writeSlow(Ptr, Size);
+      return *this;
+    }
+    if (Size)
+      memcpy(OutBufCur, Ptr, Size);
+    OutBufCur += Size;
+    return *this;
+  }
 
   // Formatted output, see the format() function in Support/Format.h.
   raw_ostream &operator<<(const format_object_base &Fmt);
@@ -386,6 +395,8 @@ protected:
   /// use only by subclasses which can arrange for the output to go directly
   /// into the desired output buffer, instead of being copied on each flush.
   void SetBuffer(char *BufferStart, size_t Size) {
+    assert((!OutBufStart && BufferMode == BufferKind::InternalBuffer) ||
+           BufferMode == BufferKind::ExternalBuffer);
     SetBufferAndMode(BufferStart, Size, BufferKind::ExternalBuffer);
   }
 
@@ -401,11 +412,36 @@ protected:
   //===--------------------------------------------------------------------===//
 private:
   /// Install the given buffer and mode.
-  void SetBufferAndMode(char *BufferStart, size_t Size, BufferKind Mode);
+  void SetBufferAndMode(char *BufferStart, size_t Size, BufferKind Mode) {
+    assert(((Mode == BufferKind::Unbuffered && !BufferStart && Size == 0) ||
+            (Mode != BufferKind::Unbuffered && BufferStart && Size != 0)) &&
+           "stream must be unbuffered or have at least one byte");
+    // Make sure the current buffer is free of content (we can't flush here; the
+    // child buffer management logic will be in write_impl).
+    assert(GetNumBytesInBuffer() == 0 && "Current buffer is non-empty!");
+
+    if (BufferMode == BufferKind::InternalBuffer)
+      delete[] OutBufStart;
+    OutBufStart = BufferStart;
+    OutBufEnd = OutBufStart + Size;
+    OutBufCur = OutBufStart;
+    BufferMode = Mode;
+
+    assert(OutBufStart <= OutBufEnd && "Invalid size!");
+  }
 
   /// Flush the current buffer, which is known to be non-empty. This outputs the
   /// currently buffered data and resets the buffer to empty.
-  void flush_nonempty();
+  void flush_nonempty() {
+    assert(OutBufCur > OutBufStart && "Invalid call to flush_nonempty.");
+    size_t Length = OutBufCur - OutBufStart;
+    OutBufCur = OutBufStart;
+    write_impl(OutBufStart, Length);
+  }
+
+  /// Slow path for writing when buffer is too small.
+  void writeSlow(unsigned char C);
+  void writeSlow(const char *Ptr, size_t Size);
 
   /// Copy data into the buffer. Size must not be greater than the number of
   /// unused bytes in the buffer.
