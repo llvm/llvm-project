@@ -48,6 +48,17 @@ static void PrintErrorAndDie(uptr ptr, uptr base, uptr bound) {
 
 }  // namespace __lowfat
 
+namespace __sanitizer {
+void BufferedStackTrace::UnwindImpl(uptr pc, uptr bp, void *context,
+                                    bool request_fast, u32 max_depth) {
+  uptr top = 0;
+  uptr bottom = 0;
+  GetThreadStackTopAndBottom(false, &top, &bottom);
+  bool fast = StackTrace::WillUseFastUnwind(request_fast);
+  Unwind(max_depth, pc, bp, context, top, bottom, fast);
+}
+}  // namespace __sanitizer
+
 // ---------------------- Interface Functions ----------------------
 
 extern "C" {
@@ -102,8 +113,13 @@ uptr __lf_get_size(uptr ptr) {
 
 }  // extern "C"
 
-// Ensure initialization runs early via .preinit_array on ELF platforms
 #if SANITIZER_CAN_USE_PREINIT_ARRAY
+// ELF platforms: use .preinit_array for earliest possible initialization
 __attribute__((section(".preinit_array"), used)) static auto preinit =
     __lf_init;
+#else
+// macOS/other platforms: use constructor attribute
+__attribute__((constructor)) static void lowfat_constructor() {
+  __lf_init();
+}
 #endif
