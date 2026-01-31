@@ -65,7 +65,7 @@ static void rename(GlobalValue *GV) { GV->setName(GV->getName() + ".old"); }
 
 // Report a fatal error along with the
 // Call Instruction which caused the error
-static void reportFatalUsageErrorWithCI(StringRef reason, CallBase *CI) {
+[[noreturn]] static void reportFatalUsageErrorWithCI(StringRef reason, CallBase *CI) {
   CI->dump();
   reportFatalUsageError(reason);
 }
@@ -3026,10 +3026,10 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
   } else if (Name.starts_with("avx512.mask.vpshufbitqmb.")) {
     Type *OpTy = CI->getArgOperand(0)->getType();
     unsigned VecWidth = OpTy->getPrimitiveSizeInBits();
-    Intrinsic::ID IID = 0;
+    Intrinsic::ID IID;
     switch (VecWidth) {
     default:
-      reportFatalUsageErrorWithCI("Above intrinsic is unexpected", CI);
+      reportFatalUsageErrorWithCI("Intrinsic is unexpected", CI);
       break;
     case 128:
       IID = Intrinsic::x86_avx512_vpshufbitqmb_128;
@@ -3049,7 +3049,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     Type *OpTy = CI->getArgOperand(0)->getType();
     unsigned VecWidth = OpTy->getPrimitiveSizeInBits();
     unsigned EltWidth = OpTy->getScalarSizeInBits();
-    Intrinsic::ID IID = 0;
+    Intrinsic::ID IID;
     if (VecWidth == 128 && EltWidth == 32)
       IID = Intrinsic::x86_avx512_fpclass_ps_128;
     else if (VecWidth == 256 && EltWidth == 32)
@@ -3063,7 +3063,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     else if (VecWidth == 512 && EltWidth == 64)
       IID = Intrinsic::x86_avx512_fpclass_pd_512;
     else
-      reportFatalUsageErrorWithCI("Above intrinsic is unexpected", CI);
+      reportFatalUsageErrorWithCI("Intrinsic is unexpected", CI);
 
     Rep =
         Builder.CreateIntrinsic(IID, {CI->getOperand(0), CI->getArgOperand(1)});
@@ -3073,7 +3073,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     Type *OpTy = Args[0]->getType();
     unsigned VecWidth = OpTy->getPrimitiveSizeInBits();
     unsigned EltWidth = OpTy->getScalarSizeInBits();
-    Intrinsic::ID IID = 0;
+    Intrinsic::ID IID;
     if (VecWidth == 128 && EltWidth == 32)
       IID = Intrinsic::x86_avx512_mask_cmp_ps_128;
     else if (VecWidth == 256 && EltWidth == 32)
@@ -3087,7 +3087,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     else if (VecWidth == 512 && EltWidth == 64)
       IID = Intrinsic::x86_avx512_mask_cmp_pd_512;
     else
-      reportFatalUsageErrorWithCI("Above intrinsic is unexpected", CI);
+      reportFatalUsageErrorWithCI("Intrinsic is unexpected", CI);
 
     Value *Mask = Constant::getAllOnesValue(CI->getType());
     if (VecWidth == 512)
@@ -3257,7 +3257,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
              Name.ends_with("d") || Name.ends_with("q"))
       IsSigned = true;
     else
-      reportFatalUsageErrorWithCI("Above intrinsic has unknown suffix", CI);
+      reportFatalUsageErrorWithCI("Intrinsic has unknown suffix", CI);
 
     unsigned Imm;
     if (CI->arg_size() == 3) {
@@ -3632,7 +3632,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     unsigned NumElts = cast<FixedVectorType>(CI->getType())->getNumElements();
 
     if (Name == "sse2.pshufl.w" && NumElts % 8 != 0)
-      reportFatalUsageErrorWithCI("Above intrinsic has invalid signature", CI);
+      reportFatalUsageErrorWithCI("Intrinsic has invalid signature", CI);
 
     SmallVector<int, 16> Idxs(NumElts);
     for (unsigned l = 0; l != NumElts; l += 8) {
@@ -3887,7 +3887,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
                 : Name[18] == '.' ? Name[19]
                                   : Name[20];
 
-    Intrinsic::ID IID = 0;
+    Intrinsic::ID IID;
     if (IsVariable && Name[17] != '.') {
       if (Size == 'd' && Name[17] == '2') // avx512.mask.psllv2.di
         IID = Intrinsic::x86_avx2_psllv_q;
@@ -3904,7 +3904,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
       else if (Name[17] == '3' && Name[18] == '2') // avx512.mask.psllv32hi
         IID = Intrinsic::x86_avx512_psllv_w_512;
       else
-        reportFatalUsageErrorWithCI("Above intrinsic has unexpected size", CI);
+        reportFatalUsageErrorWithCI("Intrinsic has unexpected size", CI);
     } else if (Name.ends_with(".128")) {
       if (Size == 'd') // avx512.mask.psll.d.128, avx512.mask.psll.di.128
         IID = IsImmediate ? Intrinsic::x86_sse2_pslli_d
@@ -3916,7 +3916,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
         IID = IsImmediate ? Intrinsic::x86_sse2_pslli_w
                           : Intrinsic::x86_sse2_psll_w;
       else
-        reportFatalUsageErrorWithCI("Above intrinsic has unexpected size", CI);
+        reportFatalUsageErrorWithCI("Intrinsic has unexpected size", CI);
     } else if (Name.ends_with(".256")) {
       if (Size == 'd') // avx512.mask.psll.d.256, avx512.mask.psll.di.256
         IID = IsImmediate ? Intrinsic::x86_avx2_pslli_d
@@ -3928,7 +3928,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
         IID = IsImmediate ? Intrinsic::x86_avx2_pslli_w
                           : Intrinsic::x86_avx2_psll_w;
       else
-        reportFatalUsageErrorWithCI("Above intrinsic has unexpected size", CI);
+        reportFatalUsageErrorWithCI("Intrinsic has unexpected size", CI);
     } else {
       if (Size == 'd') // psll.di.512, pslli.d, psll.d, psllv.d.512
         IID = IsImmediate  ? Intrinsic::x86_avx512_pslli_d_512
@@ -3942,7 +3942,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
         IID = IsImmediate ? Intrinsic::x86_avx512_pslli_w_512
                           : Intrinsic::x86_avx512_psll_w_512;
       else
-        reportFatalUsageErrorWithCI("Above intrinsic has unexpected size", CI);
+        reportFatalUsageErrorWithCI("Intrinsic has unexpected size", CI);
     }
 
     Rep = upgradeX86MaskedShift(Builder, *CI, IID);
@@ -3954,7 +3954,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
                 : Name[18] == '.' ? Name[19]
                                   : Name[20];
 
-    Intrinsic::ID IID = 0;
+    Intrinsic::ID IID;
     if (IsVariable && Name[17] != '.') {
       if (Size == 'd' && Name[17] == '2') // avx512.mask.psrlv2.di
         IID = Intrinsic::x86_avx2_psrlv_q;
@@ -3971,7 +3971,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
       else if (Name[17] == '3' && Name[18] == '2') // avx512.mask.psrlv32hi
         IID = Intrinsic::x86_avx512_psrlv_w_512;
       else
-        reportFatalUsageErrorWithCI("Above intrinsic has unexpected size", CI);
+        reportFatalUsageErrorWithCI("Intrinsic has unexpected size", CI);
     } else if (Name.ends_with(".128")) {
       if (Size == 'd') // avx512.mask.psrl.d.128, avx512.mask.psrl.di.128
         IID = IsImmediate ? Intrinsic::x86_sse2_psrli_d
@@ -3983,7 +3983,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
         IID = IsImmediate ? Intrinsic::x86_sse2_psrli_w
                           : Intrinsic::x86_sse2_psrl_w;
       else
-        reportFatalUsageErrorWithCI("Above intrinsic has unexpected size", CI);
+        reportFatalUsageErrorWithCI("Intrinsic has unexpected size", CI);
     } else if (Name.ends_with(".256")) {
       if (Size == 'd') // avx512.mask.psrl.d.256, avx512.mask.psrl.di.256
         IID = IsImmediate ? Intrinsic::x86_avx2_psrli_d
@@ -3995,7 +3995,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
         IID = IsImmediate ? Intrinsic::x86_avx2_psrli_w
                           : Intrinsic::x86_avx2_psrl_w;
       else
-        reportFatalUsageErrorWithCI("Above intrinsic has unexpected size", CI);
+        reportFatalUsageErrorWithCI("Intrinsic has unexpected size", CI);
     } else {
       if (Size == 'd') // psrl.di.512, psrli.d, psrl.d, psrl.d.512
         IID = IsImmediate  ? Intrinsic::x86_avx512_psrli_d_512
@@ -4009,7 +4009,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
         IID = IsImmediate ? Intrinsic::x86_avx512_psrli_w_512
                           : Intrinsic::x86_avx512_psrl_w_512;
       else
-        reportFatalUsageErrorWithCI("Above intrinsic has unexpected size", CI);
+        reportFatalUsageErrorWithCI("Intrinsic has unexpected size", CI);
     }
 
     Rep = upgradeX86MaskedShift(Builder, *CI, IID);
@@ -4021,7 +4021,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
                 : Name[18] == '.' ? Name[19]
                                   : Name[20];
 
-    Intrinsic::ID IID = 0;
+    Intrinsic::ID IID;
     if (IsVariable && Name[17] != '.') {
       if (Size == 's' && Name[17] == '4') // avx512.mask.psrav4.si
         IID = Intrinsic::x86_avx2_psrav_d;
@@ -4034,7 +4034,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
       else if (Name[17] == '3' && Name[18] == '2') // avx512.mask.psrav32hi
         IID = Intrinsic::x86_avx512_psrav_w_512;
       else
-        reportFatalUsageErrorWithCI("Above intrinsic has unexpected size", CI);
+        reportFatalUsageErrorWithCI("Intrinsic has unexpected size", CI);
     } else if (Name.ends_with(".128")) {
       if (Size == 'd') // avx512.mask.psra.d.128, avx512.mask.psra.di.128
         IID = IsImmediate ? Intrinsic::x86_sse2_psrai_d
@@ -4047,7 +4047,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
         IID = IsImmediate ? Intrinsic::x86_sse2_psrai_w
                           : Intrinsic::x86_sse2_psra_w;
       else
-        reportFatalUsageErrorWithCI("Above intrinsic has unexpected size", CI);
+        reportFatalUsageErrorWithCI("Intrinsic has unexpected size", CI);
     } else if (Name.ends_with(".256")) {
       if (Size == 'd') // avx512.mask.psra.d.256, avx512.mask.psra.di.256
         IID = IsImmediate ? Intrinsic::x86_avx2_psrai_d
@@ -4060,7 +4060,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
         IID = IsImmediate ? Intrinsic::x86_avx2_psrai_w
                           : Intrinsic::x86_avx2_psra_w;
       else
-        reportFatalUsageErrorWithCI("Above intrinsic has unexpected size", CI);
+        reportFatalUsageErrorWithCI("Intrinsic has unexpected size", CI);
     } else {
       if (Size == 'd') // psra.di.512, psrai.d, psra.d, psrav.d.512
         IID = IsImmediate  ? Intrinsic::x86_avx512_psrai_d_512
@@ -4074,7 +4074,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
         IID = IsImmediate ? Intrinsic::x86_avx512_psrai_w_512
                           : Intrinsic::x86_avx512_psra_w_512;
       else
-        reportFatalUsageErrorWithCI("Above intrinsic has unexpected size", CI);
+        reportFatalUsageErrorWithCI("Intrinsic has unexpected size", CI);
     }
 
     Rep = upgradeX86MaskedShift(Builder, *CI, IID);
@@ -4233,7 +4233,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
   } else if (Name.starts_with("fma.vfmsubadd.p")) {
     unsigned VecWidth = CI->getType()->getPrimitiveSizeInBits();
     unsigned EltWidth = CI->getType()->getScalarSizeInBits();
-    Intrinsic::ID IID = 0;
+    Intrinsic::ID IID;
     if (VecWidth == 128 && EltWidth == 32)
       IID = Intrinsic::x86_fma_vfmaddsub_ps;
     else if (VecWidth == 256 && EltWidth == 32)
@@ -4243,7 +4243,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     else if (VecWidth == 256 && EltWidth == 64)
       IID = Intrinsic::x86_fma_vfmaddsub_pd_256;
     else
-      reportFatalUsageErrorWithCI("Above intrinsic is unexpected", CI);
+      reportFatalUsageErrorWithCI("Intrinsic is unexpected", CI);
 
     Value *Ops[] = {CI->getArgOperand(0), CI->getArgOperand(1),
                     CI->getArgOperand(2)};
@@ -4304,7 +4304,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     bool ZeroMask = Name[11] == 'z';
     unsigned VecWidth = CI->getType()->getPrimitiveSizeInBits();
     unsigned EltWidth = CI->getType()->getScalarSizeInBits();
-    Intrinsic::ID IID = 0;
+    Intrinsic::ID IID;
     if (VecWidth == 128 && EltWidth == 32)
       IID = Intrinsic::x86_avx512_pternlog_d_128;
     else if (VecWidth == 256 && EltWidth == 32)
@@ -4318,7 +4318,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     else if (VecWidth == 512 && EltWidth == 64)
       IID = Intrinsic::x86_avx512_pternlog_q_512;
     else
-      reportFatalUsageErrorWithCI("Above intrinsic is unexpected", CI);
+      reportFatalUsageErrorWithCI("Intrinsic is unexpected", CI);
 
     Value *Args[] = {CI->getArgOperand(0), CI->getArgOperand(1),
                      CI->getArgOperand(2), CI->getArgOperand(3)};
@@ -4331,7 +4331,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     bool ZeroMask = Name[11] == 'z';
     bool High = Name[20] == 'h' || Name[21] == 'h';
     unsigned VecWidth = CI->getType()->getPrimitiveSizeInBits();
-    Intrinsic::ID IID = 0;
+    Intrinsic::ID IID;
     if (VecWidth == 128 && !High)
       IID = Intrinsic::x86_avx512_vpmadd52l_uq_128;
     else if (VecWidth == 256 && !High)
@@ -4345,7 +4345,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     else if (VecWidth == 512 && High)
       IID = Intrinsic::x86_avx512_vpmadd52h_uq_512;
     else
-      reportFatalUsageErrorWithCI("Above intrinsic is unexpected", CI);
+      reportFatalUsageErrorWithCI("Intrinsic is unexpected", CI);
 
     Value *Args[] = {CI->getArgOperand(0), CI->getArgOperand(1),
                      CI->getArgOperand(2)};
@@ -4366,7 +4366,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     bool ZeroMask = Name[11] == 'z';
     bool IsSaturating = Name[ZeroMask ? 21 : 20] == 's';
     unsigned VecWidth = CI->getType()->getPrimitiveSizeInBits();
-    Intrinsic::ID IID = 0;
+    Intrinsic::ID IID;
     if (VecWidth == 128 && !IsSaturating)
       IID = Intrinsic::x86_avx512_vpdpbusd_128;
     else if (VecWidth == 256 && !IsSaturating)
@@ -4380,7 +4380,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     else if (VecWidth == 512 && IsSaturating)
       IID = Intrinsic::x86_avx512_vpdpbusds_512;
     else
-      reportFatalUsageErrorWithCI("Above intrinsic is unexpected", CI);
+      reportFatalUsageErrorWithCI("Intrinsic is unexpected", CI);
 
     Value *Args[] = {CI->getArgOperand(0), CI->getArgOperand(1),
                      CI->getArgOperand(2)};
@@ -4405,7 +4405,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
         NewArgType = VectorType::get(Builder.getInt8Ty(), 64, false);
       else
         reportFatalUsageErrorWithCI(
-            "Above intrinsic has unexpected vector bit width", CI);
+            "Intrinsic has unexpected vector bit width", CI);
 
       Args[1] = Builder.CreateBitCast(Args[1], NewArgType);
       Args[2] = Builder.CreateBitCast(Args[2], NewArgType);
@@ -4422,7 +4422,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     bool ZeroMask = Name[11] == 'z';
     bool IsSaturating = Name[ZeroMask ? 21 : 20] == 's';
     unsigned VecWidth = CI->getType()->getPrimitiveSizeInBits();
-    Intrinsic::ID IID = 0;
+    Intrinsic::ID IID;
     if (VecWidth == 128 && !IsSaturating)
       IID = Intrinsic::x86_avx512_vpdpwssd_128;
     else if (VecWidth == 256 && !IsSaturating)
@@ -4436,7 +4436,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     else if (VecWidth == 512 && IsSaturating)
       IID = Intrinsic::x86_avx512_vpdpwssds_512;
     else
-      reportFatalUsageErrorWithCI("Above intrinsic is unexpected", CI);
+      reportFatalUsageErrorWithCI("Intrinsic is unexpected", CI);
 
     Value *Args[] = {CI->getArgOperand(0), CI->getArgOperand(1),
                      CI->getArgOperand(2)};
@@ -4461,7 +4461,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
         NewArgType = VectorType::get(Builder.getInt16Ty(), 32, false);
       else
         reportFatalUsageErrorWithCI(
-            "Above intrinsic has unexpected vector bit width", CI);
+            "Intrinsic has unexpected vector bit width", CI);
 
       Args[1] = Builder.CreateBitCast(Args[1], NewArgType);
       Args[2] = Builder.CreateBitCast(Args[2], NewArgType);
@@ -4474,7 +4474,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
   } else if (Name == "addcarryx.u32" || Name == "addcarryx.u64" ||
              Name == "addcarry.u32" || Name == "addcarry.u64" ||
              Name == "subborrow.u32" || Name == "subborrow.u64") {
-    Intrinsic::ID IID = 0;
+    Intrinsic::ID IID;
     if (Name[0] == 'a' && Name.back() == '2')
       IID = Intrinsic::x86_addcarry_32;
     else if (Name[0] == 'a' && Name.back() == '4')
@@ -4484,7 +4484,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     else if (Name[0] == 's' && Name.back() == '4')
       IID = Intrinsic::x86_subborrow_64;
     else
-      reportFatalUsageErrorWithCI("Above intrinsic is unexpected", CI);
+      reportFatalUsageErrorWithCI("Intrinsic is unexpected", CI);
 
     // Make a call with 3 operands.
     Value *Args[] = {CI->getArgOperand(0), CI->getArgOperand(1),
@@ -4503,7 +4503,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
              upgradeAVX512MaskToSelect(Name, Builder, *CI, Rep)) {
     // Rep will be updated by the call in the condition.
   } else
-    reportFatalUsageErrorWithCI("Above intrinsic is invalid", CI);
+    reportFatalUsageErrorWithCI("Intrinsic is invalid", CI);
 
   return Rep;
 }
