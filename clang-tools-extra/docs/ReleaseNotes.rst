@@ -128,6 +128,12 @@ New checks
   Finds and removes redundant conversions from ``std::[w|u8|u16|u32]string_view`` to
   ``std::[...]string`` in call expressions expecting ``std::[...]string_view``.
 
+- New :doc:`readability-trailing-comma
+  <clang-tidy/checks/readability/trailing-comma>` check.
+
+  Checks for presence or absence of trailing commas in enum definitions and
+  initializer lists.
+
 New check aliases
 ^^^^^^^^^^^^^^^^^
 

@@ -429,6 +429,7 @@ Clang-Tidy Checks
    :doc:`readability-static-definition-in-anonymous-namespace <readability/static-definition-in-anonymous-namespace>`, "Yes"
    :doc:`readability-string-compare <readability/string-compare>`, "Yes"
    :doc:`readability-suspicious-call-argument <readability/suspicious-call-argument>`,
+   :doc:`readability-trailing-comma <readability/trailing-comma>`, "Yes"
    :doc:`readability-uniqueptr-delete-release <readability/uniqueptr-delete-release>`, "Yes"
    :doc:`readability-uppercase-literal-suffix <readability/uppercase-literal-suffix>`, "Yes"
    :doc:`readability-use-anyofallof <readability/use-anyofallof>`,
