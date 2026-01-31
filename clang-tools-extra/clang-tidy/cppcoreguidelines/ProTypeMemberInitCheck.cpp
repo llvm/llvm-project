@@ -149,18 +149,20 @@ struct InitializerInsertion {
            "insertion represents a new initializer list.");
     SourceLocation Location;
     switch (Placement) {
-    case InitializerPlacement::New:
-      Location = utils::lexer::getPreviousToken(
-                     Constructor.getBody()->getBeginLoc(),
-                     Context.getSourceManager(), Context.getLangOpts())
-                     .getLocation();
+    case InitializerPlacement::New: {
+      const std::optional<Token> Tok = utils::lexer::getPreviousToken(
+          Constructor.getBody()->getBeginLoc(), Context.getSourceManager(),
+          Context.getLangOpts());
+      Location = Tok ? Tok->getLocation() : SourceLocation{};
       break;
-    case InitializerPlacement::Before:
-      Location = utils::lexer::getPreviousToken(
-                     Where->getSourceRange().getBegin(),
-                     Context.getSourceManager(), Context.getLangOpts())
-                     .getLocation();
+    }
+    case InitializerPlacement::Before: {
+      const std::optional<Token> Tok = utils::lexer::getPreviousToken(
+          Where->getSourceRange().getBegin(), Context.getSourceManager(),
+          Context.getLangOpts());
+      Location = Tok ? Tok->getLocation() : SourceLocation{};
       break;
+    }
     case InitializerPlacement::After:
       Location = Where->getRParenLoc();
       break;

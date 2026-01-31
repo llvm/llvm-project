@@ -598,6 +598,18 @@ m_FMul(const Op0_t &Op0, const Op1_t &Op1) {
 }
 
 template <typename Op0_t, typename Op1_t>
+inline AllRecipe_match<Instruction::FAdd, Op0_t, Op1_t>
+m_FAdd(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_Binary<Instruction::FAdd, Op0_t, Op1_t>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
+inline AllRecipe_commutative_match<Instruction::FAdd, Op0_t, Op1_t>
+m_c_FAdd(const Op0_t &Op0, const Op1_t &Op1) {
+  return m_c_Binary<Instruction::FAdd, Op0_t, Op1_t>(Op0, Op1);
+}
+
+template <typename Op0_t, typename Op1_t>
 inline AllRecipe_match<Instruction::UDiv, Op0_t, Op1_t>
 m_UDiv(const Op0_t &Op0, const Op1_t &Op1) {
   return m_Binary<Instruction::UDiv, Op0_t, Op1_t>(Op0, Op1);
