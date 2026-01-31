@@ -1188,6 +1188,17 @@ AMDGPULegalizerInfo::AMDGPULegalizerInfo(const GCNSubtarget &ST_,
        .scalarize(0)
        .lower();
 
+  // clang-format off
+  auto &FPToISat = getActionDefinitionsBuilder({G_FPTOSI_SAT, G_FPTOUI_SAT})
+    .legalFor({{S32, S32}, {S32, S64}})
+    .narrowScalarFor({{S64, S16}}, changeTo(0, S32));
+  FPToISat.minScalar(1, S32);
+  FPToISat.minScalar(0, S32)
+       .widenScalarToNextPow2(0, 32)
+       .scalarize(0)
+       .lower();
+  // clang-format on
+
   getActionDefinitionsBuilder({G_LROUND, G_LLROUND})
       .clampScalar(0, S16, S64)
       .scalarize(0)
@@ -6153,7 +6164,7 @@ AMDGPULegalizerInfo::splitBufferOffsets(MachineIRBuilder &B,
   // On GFX1250+, voffset and immoffset are zero-extended from 32 bits before
   // being added, so we can only safely match a 32-bit addition with no unsigned
   // overflow.
-  bool CheckNUW = AMDGPU::isGFX1250(ST);
+  bool CheckNUW = ST.hasGFX1250Insts();
   std::tie(BaseReg, ImmOffset) = AMDGPU::getBaseWithConstantOffset(
       MRI, OrigOffset, /*KnownBits=*/nullptr, CheckNUW);
 

@@ -1112,7 +1112,7 @@ getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R) {
       .Case<VPInstruction, VPWidenRecipe, VPWidenCastRecipe, VPWidenGEPRecipe,
             VPReplicateRecipe>(
           [](auto *I) { return std::make_pair(false, I->getOpcode()); })
-      .Case<VPWidenIntrinsicRecipe>([](auto *I) {
+      .Case([](const VPWidenIntrinsicRecipe *I) {
         return std::make_pair(true, I->getVectorIntrinsicID());
       })
       .Case<VPVectorPointerRecipe, VPPredInstPHIRecipe>([](auto *I) {
@@ -1128,17 +1128,17 @@ getOpcodeOrIntrinsicID(const VPSingleDefRecipe *R) {
 /// Try to fold \p R using InstSimplifyFolder. Will succeed and return a
 /// non-nullptr VPValue for a handled opcode or intrinsic ID if corresponding \p
 /// Operands are foldable live-ins.
-static VPValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
-                                 ArrayRef<VPValue *> Operands,
-                                 const DataLayout &DL,
-                                 VPTypeAnalysis &TypeInfo) {
+static VPIRValue *tryToFoldLiveIns(VPSingleDefRecipe &R,
+                                   ArrayRef<VPValue *> Operands,
+                                   const DataLayout &DL,
+                                   VPTypeAnalysis &TypeInfo) {
   auto OpcodeOrIID = getOpcodeOrIntrinsicID(&R);
   if (!OpcodeOrIID)
     return nullptr;
 
   SmallVector<Value *, 4> Ops;
   for (VPValue *Op : Operands) {
-    if (!isa<VPIRValue, VPSymbolicValue>(Op))
+    if (!match(Op, m_LiveIn()))
       return nullptr;
     Value *V = Op->getUnderlyingValue();
     if (!V)
@@ -1509,6 +1509,11 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
       Phi->replaceAllUsesWith(Phi->getOperand(0));
     return;
   }
+
+  VPIRValue *IRV;
+  if (Def->getNumOperands() == 1 &&
+      match(Def, m_ComputeReductionResult(m_VPIRValue(IRV))))
+    return Def->replaceAllUsesWith(IRV);
 
   // Some simplifications can only be applied after unrolling. Perform them
   // below.
@@ -2417,7 +2422,7 @@ struct VPCSEDenseMapInfo : public DenseMapInfo<VPSingleDefRecipe *> {
     // All VPInstructions that lower to GEPs must have the i8 source element
     // type (as they are PtrAdds), so we omit it.
     return TypeSwitch<const VPSingleDefRecipe *, Type *>(R)
-        .Case<VPReplicateRecipe>([](auto *I) -> Type * {
+        .Case([](const VPReplicateRecipe *I) -> Type * {
           if (auto *GEP = dyn_cast<GetElementPtrInst>(I->getUnderlyingValue()))
             return GEP->getSourceElementType();
           return nullptr;
@@ -2675,23 +2680,23 @@ void VPlanTransforms::removeBranchOnConst(VPlan &Plan) {
 }
 
 void VPlanTransforms::optimize(VPlan &Plan) {
-  runPass(removeRedundantCanonicalIVs, Plan);
-  runPass(removeRedundantInductionCasts, Plan);
+  RUN_VPLAN_PASS(removeRedundantCanonicalIVs, Plan);
+  RUN_VPLAN_PASS(removeRedundantInductionCasts, Plan);
 
-  runPass(simplifyRecipes, Plan);
-  runPass(removeDeadRecipes, Plan);
-  runPass(simplifyBlends, Plan);
-  runPass(legalizeAndOptimizeInductions, Plan);
-  runPass(narrowToSingleScalarRecipes, Plan);
-  runPass(removeRedundantExpandSCEVRecipes, Plan);
-  runPass(simplifyRecipes, Plan);
-  runPass(removeBranchOnConst, Plan);
-  runPass(removeDeadRecipes, Plan);
+  RUN_VPLAN_PASS(simplifyRecipes, Plan);
+  RUN_VPLAN_PASS(removeDeadRecipes, Plan);
+  RUN_VPLAN_PASS(simplifyBlends, Plan);
+  RUN_VPLAN_PASS(legalizeAndOptimizeInductions, Plan);
+  RUN_VPLAN_PASS(narrowToSingleScalarRecipes, Plan);
+  RUN_VPLAN_PASS(removeRedundantExpandSCEVRecipes, Plan);
+  RUN_VPLAN_PASS(simplifyRecipes, Plan);
+  RUN_VPLAN_PASS(removeBranchOnConst, Plan);
+  RUN_VPLAN_PASS(removeDeadRecipes, Plan);
 
-  runPass(createAndOptimizeReplicateRegions, Plan);
-  runPass(hoistInvariantLoads, Plan);
-  runPass(mergeBlocksIntoPredecessors, Plan);
-  runPass(licm, Plan);
+  RUN_VPLAN_PASS(createAndOptimizeReplicateRegions, Plan);
+  RUN_VPLAN_PASS(hoistInvariantLoads, Plan);
+  RUN_VPLAN_PASS(mergeBlocksIntoPredecessors, Plan);
+  RUN_VPLAN_PASS(licm, Plan);
 }
 
 // Add a VPActiveLaneMaskPHIRecipe and related recipes to \p Plan and replace
@@ -4049,7 +4054,7 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
           auto *SrcVecTy = cast<VectorType>(toVectorTy(SrcTy, VF));
           TTI::TargetCostKind CostKind = TTI::TCK_RecipThroughput;
 
-          InstructionCost ExtRedCost;
+          InstructionCost ExtRedCost = InstructionCost::getInvalid();
           InstructionCost ExtCost =
               cast<VPWidenCastRecipe>(VecOp)->computeCost(VF, Ctx);
           InstructionCost RedCost = Red->computeCost(VF, Ctx);
@@ -4061,8 +4066,12 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
             // here from LoopVectorize.cpp.
             ExtRedCost = Ctx.TTI.getPartialReductionCost(
                 Opcode, SrcTy, nullptr, RedTy, VF, ExtKind,
-                llvm::TargetTransformInfo::PR_None, std::nullopt, Ctx.CostKind);
-          } else {
+                llvm::TargetTransformInfo::PR_None, std::nullopt, Ctx.CostKind,
+                RedTy->isFloatingPointTy()
+                    ? std::optional{Red->getFastMathFlags()}
+                    : std::nullopt);
+          } else if (!RedTy->isFloatingPointTy()) {
+            // TTI::getExtendedReductionCost only supports integer types.
             ExtRedCost = Ctx.TTI.getExtendedReductionCost(
                 Opcode, ExtOpc == Instruction::CastOps::ZExt, RedTy, SrcVecTy,
                 Red->getFastMathFlags(), CostKind);
@@ -4074,7 +4083,9 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
 
   VPValue *A;
   // Match reduce(ext)).
-  if (match(VecOp, m_ZExtOrSExt(m_VPValue(A))) &&
+  if (isa<VPWidenCastRecipe>(VecOp) &&
+      (match(VecOp, m_ZExtOrSExt(m_VPValue(A))) ||
+       match(VecOp, m_FPExt(m_VPValue(A)))) &&
       IsExtendedRedValidAndClampRange(
           RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind()),
           cast<VPWidenCastRecipe>(VecOp)->getOpcode(),
@@ -4092,11 +4103,13 @@ tryToMatchAndCreateExtendedReduction(VPReductionRecipe *Red, VPCostContext &Ctx,
 ///   reduce.add(mul(...)),
 ///   reduce.add(mul(ext(A), ext(B))),
 ///   reduce.add(ext(mul(ext(A), ext(B)))).
+///   reduce.fadd(fmul(ext(A), ext(B)))
 static VPExpressionRecipe *
 tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
                                           VPCostContext &Ctx, VFRange &Range) {
   unsigned Opcode = RecurrenceDescriptor::getOpcode(Red->getRecurrenceKind());
-  if (Opcode != Instruction::Add && Opcode != Instruction::Sub)
+  if (Opcode != Instruction::Add && Opcode != Instruction::Sub &&
+      Opcode != Instruction::FAdd)
     return nullptr;
 
   Type *RedTy = Ctx.Types.inferScalarType(Red);
@@ -4125,10 +4138,16 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
                 Ext1 ? TargetTransformInfo::getPartialReductionExtendKind(
                            Ext1->getOpcode())
                      : TargetTransformInfo::PR_None,
-                Mul->getOpcode(), CostKind);
+                Mul->getOpcode(), CostKind,
+                RedTy->isFloatingPointTy()
+                    ? std::optional{Red->getFastMathFlags()}
+                    : std::nullopt);
           } else {
-            // Only partial reductions support mixed extends at the moment.
-            if (Ext0 && Ext1 && Ext0->getOpcode() != Ext1->getOpcode())
+            // Only partial reductions support mixed or floating-point extends
+            // at the moment.
+            if (Ext0 && Ext1 &&
+                (Ext0->getOpcode() != Ext1->getOpcode() ||
+                 Ext0->getOpcode() == Instruction::CastOps::FPExt))
               return false;
 
             bool IsZExt =
@@ -4158,6 +4177,27 @@ tryToMatchAndCreateMulAccumulateReduction(VPReductionRecipe *Red,
   VPRecipeBase *Sub = nullptr;
   VPValue *A, *B;
   VPValue *Tmp = nullptr;
+
+  // Try to match reduce.fadd(fmul(fpext(...), fpext(...))).
+  if (match(VecOp, m_FMul(m_FPExt(m_VPValue()), m_FPExt(m_VPValue())))) {
+    assert(Opcode == Instruction::FAdd &&
+           "MulAccumulateReduction from an FMul must accumulate into an FAdd "
+           "instruction");
+    auto *FMul = dyn_cast<VPWidenRecipe>(VecOp);
+    if (!FMul)
+      return nullptr;
+
+    auto *RecipeA = dyn_cast<VPWidenCastRecipe>(FMul->getOperand(0));
+    auto *RecipeB = dyn_cast<VPWidenCastRecipe>(FMul->getOperand(1));
+
+    if (RecipeA && RecipeB &&
+        IsMulAccValidAndClampRange(FMul, RecipeA, RecipeB, nullptr)) {
+      return new VPExpressionRecipe(RecipeA, RecipeB, FMul, Red);
+    }
+  }
+  if (RedTy->isFloatingPointTy())
+    return nullptr;
+
   // Sub reductions could have a sub between the add reduction and vec op.
   if (match(VecOp, m_Sub(m_ZeroInt(), m_VPValue(Tmp)))) {
     Sub = VecOp->getDefiningRecipe();
@@ -4861,7 +4901,7 @@ VPlanTransforms::expandSCEVs(VPlan &Plan, ScalarEvolution &SE) {
   }
   assert(none_of(*Entry, IsaPred<VPExpandSCEVRecipe>) &&
          "VPExpandSCEVRecipes must be at the beginning of the entry block, "
-         "after any VPIRInstructions");
+         "before any VPIRInstructions");
   // Add IR instructions in the entry basic block but not in the VPIRBasicBlock
   // to the VPIRBasicBlock.
   auto EI = Entry->begin();

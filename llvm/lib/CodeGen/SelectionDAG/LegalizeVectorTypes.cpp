@@ -1217,6 +1217,7 @@ void DAGTypeLegalizer::SplitVectorResult(SDNode *N, unsigned ResNo) {
     break;
   case ISD::MERGE_VALUES: SplitRes_MERGE_VALUES(N, ResNo, Lo, Hi); break;
   case ISD::AssertZext:   SplitVecRes_AssertZext(N, Lo, Hi); break;
+  case ISD::AssertSext:   SplitVecRes_AssertSext(N, Lo, Hi); break;
   case ISD::VSELECT:
   case ISD::SELECT:
   case ISD::VP_MERGE:
@@ -1660,7 +1661,6 @@ void DAGTypeLegalizer::SplitVecRes_BITCAST(SDNode *N, SDValue &Lo,
   switch (getTypeAction(InVT)) {
   case TargetLowering::TypeLegal:
   case TargetLowering::TypePromoteInteger:
-  case TargetLowering::TypePromoteFloat:
   case TargetLowering::TypeSoftPromoteHalf:
   case TargetLowering::TypeSoftenFloat:
   case TargetLowering::TypeScalarizeVector:
@@ -6023,7 +6023,6 @@ SDValue DAGTypeLegalizer::WidenVecRes_BITCAST(SDNode *N) {
     break;
   }
   case TargetLowering::TypeSoftenFloat:
-  case TargetLowering::TypePromoteFloat:
   case TargetLowering::TypeSoftPromoteHalf:
   case TargetLowering::TypeExpandInteger:
   case TargetLowering::TypeExpandFloat:

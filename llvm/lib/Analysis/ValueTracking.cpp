@@ -2097,6 +2097,11 @@ static void computeKnownBitsFromOperator(const Operator *I,
         Known = Known2.unionWith(Known3);
         break;
       }
+      case Intrinsic::clmul:
+        computeKnownBits(I->getOperand(0), DemandedElts, Known, Q, Depth + 1);
+        computeKnownBits(I->getOperand(1), DemandedElts, Known2, Q, Depth + 1);
+        Known = KnownBits::clmul(Known, Known2);
+        break;
       case Intrinsic::uadd_sat:
         computeKnownBits(I->getOperand(0), DemandedElts, Known, Q, Depth + 1);
         computeKnownBits(I->getOperand(1), DemandedElts, Known2, Q, Depth + 1);
@@ -5131,9 +5136,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       if ((InterestedClasses & fcNegative) == fcNone)
         break;
 
-      if (II->getArgOperand(0) == II->getArgOperand(1) &&
-          isGuaranteedNotToBeUndef(II->getArgOperand(0), Q.AC, Q.CxtI, Q.DT,
-                                   Depth + 1)) {
+      // FIXME: This should check isGuaranteedNotToBeUndef
+      if (II->getArgOperand(0) == II->getArgOperand(1)) {
         KnownFPClass KnownSrc, KnownAddend;
         computeKnownFPClass(II->getArgOperand(2), DemandedElts,
                             InterestedClasses, KnownAddend, Q, Depth + 1);
@@ -5213,9 +5217,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       KnownFPClass KnownSrc;
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
                           KnownSrc, Q, Depth + 1);
-      Known.knownNot(fcInf);
-      if (KnownSrc.isKnownNeverNaN() && KnownSrc.isKnownNeverInfinity())
-        Known.knownNot(fcNan);
+      Known = IID == Intrinsic::sin ? KnownFPClass::sin(KnownSrc)
+                                    : KnownFPClass::cos(KnownSrc);
       break;
     }
     case Intrinsic::maxnum:
@@ -5345,8 +5348,6 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         Known = KnownFPClass::log(KnownSrc, Mode);
       }
 
-      if (IID == Intrinsic::amdgcn_log && EltTy->isFloatTy())
-        Known.knownNot(fcSubnormal);
       break;
     }
     case Intrinsic::powi: {
@@ -5604,8 +5605,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           : DenormalMode::getDynamic();
 
     // X * X is always non-negative or a NaN.
-    if (Op->getOperand(0) == Op->getOperand(1) &&
-        isGuaranteedNotToBeUndef(Op->getOperand(0), Q.AC, Q.CxtI, Q.DT)) {
+    // FIXME: Should check isGuaranteedNotToBeUndef
+    if (Op->getOperand(0) == Op->getOperand(1)) {
       KnownFPClass KnownSrc;
       computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownSrc,
                           Q, Depth + 1);
@@ -6227,6 +6228,54 @@ bool llvm::canIgnoreSignBitOfNaN(const Use &U) {
   default:
     return false;
   }
+}
+
+bool llvm::isKnownIntegral(const Value *V, const SimplifyQuery &SQ,
+                           FastMathFlags FMF) {
+  if (isa<PoisonValue>(V))
+    return true;
+  if (isa<UndefValue>(V))
+    return false;
+
+  if (match(V, m_CheckedFp([](const APFloat &Val) { return Val.isInteger(); })))
+    return true;
+
+  const Instruction *I = dyn_cast<Instruction>(V);
+  if (!I)
+    return false;
+
+  switch (I->getOpcode()) {
+  case Instruction::SIToFP:
+  case Instruction::UIToFP:
+    // TODO: Could check nofpclass(inf) on incoming argument
+    if (FMF.noInfs())
+      return true;
+
+    // Need to check int size cannot produce infinity, which computeKnownFPClass
+    // knows how to do already.
+    return isKnownNeverInfinity(I, SQ);
+  case Instruction::Call: {
+    const CallInst *CI = cast<CallInst>(I);
+    switch (CI->getIntrinsicID()) {
+    case Intrinsic::trunc:
+    case Intrinsic::floor:
+    case Intrinsic::ceil:
+    case Intrinsic::rint:
+    case Intrinsic::nearbyint:
+    case Intrinsic::round:
+    case Intrinsic::roundeven:
+      return (FMF.noInfs() && FMF.noNaNs()) || isKnownNeverInfOrNaN(I, SQ);
+    default:
+      break;
+    }
+
+    break;
+  }
+  default:
+    break;
+  }
+
+  return false;
 }
 
 Value *llvm::isBytewiseValue(Value *V, const DataLayout &DL) {

@@ -299,91 +299,6 @@ void FillResponse(const llvm::json::Object &request,
   response.try_emplace("success", true);
 }
 
-// "Scope": {
-//   "type": "object",
-//   "description": "A Scope is a named container for variables. Optionally
-//                   a scope can map to a source or a range within a source.",
-//   "properties": {
-//     "name": {
-//       "type": "string",
-//       "description": "Name of the scope such as 'Arguments', 'Locals'."
-//     },
-//     "presentationHint": {
-//       "type": "string",
-//       "description": "An optional hint for how to present this scope in the
-//                       UI. If this attribute is missing, the scope is shown
-//                       with a generic UI.",
-//       "_enum": [ "arguments", "locals", "registers" ],
-//     },
-//     "variablesReference": {
-//       "type": "integer",
-//       "description": "The variables of this scope can be retrieved by
-//                       passing the value of variablesReference to the
-//                       VariablesRequest."
-//     },
-//     "namedVariables": {
-//       "type": "integer",
-//       "description": "The number of named variables in this scope. The
-//                       client can use this optional information to present
-//                       the variables in a paged UI and fetch them in chunks."
-//     },
-//     "indexedVariables": {
-//       "type": "integer",
-//       "description": "The number of indexed variables in this scope. The
-//                       client can use this optional information to present
-//                       the variables in a paged UI and fetch them in chunks."
-//     },
-//     "expensive": {
-//       "type": "boolean",
-//       "description": "If true, the number of variables in this scope is
-//                       large or expensive to retrieve."
-//     },
-//     "source": {
-//       "$ref": "#/definitions/Source",
-//       "description": "Optional source for this scope."
-//     },
-//     "line": {
-//       "type": "integer",
-//       "description": "Optional start line of the range covered by this
-//                       scope."
-//     },
-//     "column": {
-//       "type": "integer",
-//       "description": "Optional start column of the range covered by this
-//                       scope."
-//     },
-//     "endLine": {
-//       "type": "integer",
-//       "description": "Optional end line of the range covered by this scope."
-//     },
-//     "endColumn": {
-//       "type": "integer",
-//       "description": "Optional end column of the range covered by this
-//                       scope."
-//     }
-//   },
-//   "required": [ "name", "variablesReference", "expensive" ]
-// }
-llvm::json::Value CreateScope(const llvm::StringRef name,
-                              int64_t variablesReference,
-                              int64_t namedVariables, bool expensive) {
-  llvm::json::Object object;
-  EmplaceSafeString(object, "name", name.str());
-
-  // TODO: Support "arguments" scope. At the moment lldb-dap includes the
-  // arguments into the "locals" scope.
-  if (variablesReference == VARREF_LOCALS) {
-    object.try_emplace("presentationHint", "locals");
-  } else if (variablesReference == VARREF_REGS) {
-    object.try_emplace("presentationHint", "registers");
-  }
-
-  object.try_emplace("variablesReference", variablesReference);
-  object.try_emplace("expensive", expensive);
-  object.try_emplace("namedVariables", namedVariables);
-  return llvm::json::Value(std::move(object));
-}
-
 // "Event": {
 //   "allOf": [ { "$ref": "#/definitions/ProtocolMessage" }, {
 //     "type": "object",
@@ -532,7 +447,7 @@ llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
                       llvm::formatv("data breakpoint {0}", bp_id).str());
   } break;
   case lldb::eStopReasonInstrumentation:
-    body.try_emplace("reason", "breakpoint");
+    body.try_emplace("reason", "exception");
     break;
   case lldb::eStopReasonProcessorTrace:
     body.try_emplace("reason", "processor trace");

@@ -1,6 +1,19 @@
 // General tests that the header search paths detected by the driver and passed
 // to CC1 are sane.
 //
+// Test to see that the compiler include directory is present.
+// RUN: %clang -### %s -fsyntax-only 2>&1 \
+// RUN:     --target=x86_64-unknown-linux-gnu \
+// RUN:     -stdlib=libc++ \
+// RUN:     -ccc-install-dir %S/Inputs/basic_linux_tree/usr/bin \
+// RUN:     -resource-dir=%S/Inputs/resource_dir \
+// RUN:     --sysroot=%S/Inputs/basic_linux_tree/ \
+// RUN:   | FileCheck --check-prefix=CHECK-BASIC-CLANG-SYSROOT-SLASH %s
+// CHECK-BASIC-CLANG-SYSROOT-SLASH: "-cc1"
+// CHECK-BASIC-CLANG-SYSROOT-SLASH-SAME: "-isysroot" "[[SYSROOT:[^"]+/]]"
+// CHECK-BASIC-CLANG-SYSROOT-SLASH-SAME: "-internal-isystem" "[[BINROOT:[^"]+]]/usr/bin[[SEP:/|\\\\]]..[[SEP]]include[[SEP]]x86_64-unknown-linux-gnu"
+// CHECK-BASIC-CLANG-SYSROOT-SLASH-SAME: "-internal-isystem" "[[SYSROOT]]usr/local/include"
+//
 // Test a simulated installation of libc++ on Linux, both through sysroot and
 // the installation path of Clang.
 // RUN: %clang -### %s -fsyntax-only 2>&1 \
