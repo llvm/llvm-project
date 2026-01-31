@@ -12,7 +12,6 @@
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
 #include "mlir/Dialect/Vector/IR/VectorOps.h"
-#include "mlir/Dialect/Vector/Transforms/VectorRewritePatterns.h"
 #include "mlir/Dialect/X86Vector/Transforms.h"
 #include "mlir/Dialect/X86Vector/X86VectorDialect.h"
 
@@ -47,12 +46,6 @@ void mlir::transform::ApplySinkVectorProducerOpsPatternsOp::populatePatterns(
 void mlir::transform::ApplyShuffleVectorFMAOpsPatternsOp::populatePatterns(
     RewritePatternSet &patterns) {
   x86vector::populateShuffleVectorFMAOpsPatterns(patterns);
-}
-
-void mlir::transform::ApplyFlattenVectorTransferOpsPatternsOp::populatePatterns(
-    RewritePatternSet &patterns) {
-  vector::populateFlattenVectorTransferPatterns(patterns,
-                                                getTargetVectorBitwidth());
 }
 
 //===----------------------------------------------------------------------===//

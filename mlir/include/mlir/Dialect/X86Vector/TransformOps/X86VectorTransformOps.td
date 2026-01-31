@@ -71,23 +71,5 @@ def ApplyShuffleVectorFMAOpsPatternsOp : Op<Transform_Dialect,
   let assemblyFormat = "attr-dict";
 }
 
-def ApplyFlattenVectorTransferOpsPatternsOp : Op<Transform_Dialect,
-    "apply_patterns.x86vector.flatten_vector_transfer_ops",
-    [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
-  let description = [{
-    Collect patterns to rewrite contiguous row-major vector.transfer_read or 
-    vector.transfer_write operations to a 1D operation.
-  }];
-
-  let arguments = (ins
-  DefaultValuedAttr<UI32Attr,
-    "std::numeric_limits<unsigned>::max()">:$target_vector_bitwidth
-  );
-
-  let assemblyFormat = [{
-    (`target_vector_bitwidth` `=` $target_vector_bitwidth^)? attr-dict
-  }];
-}
-
 #endif // X86VECTOR_TRANSFORM_OPS
 

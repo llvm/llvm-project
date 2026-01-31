@@ -54,6 +54,8 @@ def non_configurable_patterns():
     vector.ApplyLowerScanPatternsOp()
     # CHECK: transform.apply_patterns.vector.lower_shape_cast
     vector.ApplyLowerShapeCastPatternsOp()
+    # CHECK: transform.apply_patterns.vector.flatten_vector_transfer_ops
+    vector.ApplyFlattenVectorTransferOpsPatternsOp()
 
 
 @run_apply_patterns

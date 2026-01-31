@@ -227,6 +227,12 @@ void transform::ApplySinkVectorMemPatternsOp::populatePatterns(
   vector::populateSinkVectorMemOpsPatterns(patterns);
 }
 
+void mlir::transform::ApplyFlattenVectorTransferOpsPatternsOp::populatePatterns(
+    RewritePatternSet &patterns) {
+  vector::populateFlattenVectorTransferPatterns(patterns,
+                                                getTargetVectorBitwidth());
+}
+
 //===----------------------------------------------------------------------===//
 // Transform op registration
 //===----------------------------------------------------------------------===//
