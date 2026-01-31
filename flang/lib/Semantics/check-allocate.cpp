@@ -592,7 +592,7 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
     return false;
   }
   if (rank_ > 0) {
-    if(!isArray) {
+    if(!isArray && !hasAllocateShapeSpecList()) {
       if (!hasAllocateShapeSpecList()) {
         // C939
         if (!(allocateInfo_.gotSource || allocateInfo_.gotMold)) {
