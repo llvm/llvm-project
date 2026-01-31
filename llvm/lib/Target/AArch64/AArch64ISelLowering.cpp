@@ -4871,7 +4871,13 @@ SDValue AArch64TargetLowering::LowerFP_ROUND(SDValue Op,
     } else if (SrcVT.getScalarType() == MVT::f64) {
       Narrow = DAG.getNode(AArch64ISD::FCVTXN, DL, F32, Narrow);
       Narrow = DAG.getNode(ISD::BITCAST, DL, I32, Narrow);
-    } else {
+    } else if (SrcVT.getScalarType() == MVT::f128) {
+    // Handle fp128 → bf16 via fp128 → f32 → bf16
+    // First convert fp128 to f32 (this will be handled by existing code)
+    SDValue ToF32 = DAG.getNode(ISD::FP_ROUND, DL, MVT::f32, Narrow,
+                                 DAG.getTargetConstant(0, DL, MVT::i64));
+    Narrow = DAG.getNode(ISD::BITCAST, DL, I32, ToF32);
+    }else {
       return SDValue();
     }
     if (!Trunc) {
