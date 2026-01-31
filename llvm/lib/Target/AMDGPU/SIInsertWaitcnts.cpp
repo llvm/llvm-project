@@ -2550,35 +2550,16 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   if (ForceEmitZeroFlag && !MI.isTerminator())
     Wait = WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false);
 
-  if (ForceEmitWaitcnt[LOAD_CNT])
-    Wait.LoadCnt = 0;
-  if (ForceEmitWaitcnt[EXP_CNT])
-    Wait.ExpCnt = 0;
-  if (ForceEmitWaitcnt[DS_CNT])
-    Wait.DsCnt = 0;
-  if (ForceEmitWaitcnt[SAMPLE_CNT])
-    Wait.SampleCnt = 0;
-  if (ForceEmitWaitcnt[BVH_CNT])
-    Wait.BvhCnt = 0;
-  if (ForceEmitWaitcnt[KM_CNT])
-    Wait.KmCnt = 0;
-  if (ForceEmitWaitcnt[X_CNT])
-    Wait.XCnt = 0;
-  // Only force emit VA_VDST and VM_VSRC if expert mode is enabled.
-  if (IsExpertMode) {
-    if (ForceEmitWaitcnt[VA_VDST])
-      Wait.VaVdst = 0;
-    if (ForceEmitWaitcnt[VM_VSRC])
-      Wait.VmVsrc = 0;
+  // If we force waitcnt then update Wait accordingly.
+  for (InstCounterType T : inst_counter_types()) {
+    if (!ForceEmitWaitcnt[T])
+      continue;
+    getCounterRef(Wait, T) = 0;
   }
 
   if (FlushFlags.FlushVmCnt) {
-    if (ScoreBrackets.hasPendingEvent(LOAD_CNT))
-      Wait.LoadCnt = 0;
-    if (ScoreBrackets.hasPendingEvent(SAMPLE_CNT))
-      Wait.SampleCnt = 0;
-    if (ScoreBrackets.hasPendingEvent(BVH_CNT))
-      Wait.BvhCnt = 0;
+    for (InstCounterType T : {LOAD_CNT, SAMPLE_CNT, BVH_CNT})
+      getCounterRef(Wait, T) = 0;
   }
 
   if (FlushFlags.FlushDsCnt && ScoreBrackets.hasPendingEvent(DS_CNT))

@@ -227,6 +227,11 @@ private:
   bool selectWavePrefixBitCount(Register ResVReg, const SPIRVType *ResType,
                                 MachineInstr &I) const;
 
+  template <typename PickOpcodeFn>
+  bool selectWaveReduce(Register ResVReg, const SPIRVType *ResType,
+                        MachineInstr &I, bool IsUnsigned,
+                        PickOpcodeFn &&PickOpcode) const;
+
   bool selectWaveReduceMax(Register ResVReg, const SPIRVType *ResType,
                            MachineInstr &I, bool IsUnsigned) const;
 
@@ -2853,35 +2858,48 @@ bool SPIRVInstructionSelector::selectWaveReduceMax(Register ResVReg,
                                                    const SPIRVType *ResType,
                                                    MachineInstr &I,
                                                    bool IsUnsigned) const {
-  assert(I.getNumOperands() == 3);
-  assert(I.getOperand(2).isReg());
-  MachineBasicBlock &BB = *I.getParent();
-  Register InputRegister = I.getOperand(2).getReg();
-  SPIRVType *InputType = GR.getSPIRVTypeForVReg(InputRegister);
-
-  if (!InputType)
-    report_fatal_error("Input Type could not be determined.");
-
-  SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
-  // Retreive the operation to use based on input type
-  bool IsFloatTy = GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeFloat);
-  auto IntegerOpcodeType =
-      IsUnsigned ? SPIRV::OpGroupNonUniformUMax : SPIRV::OpGroupNonUniformSMax;
-  auto Opcode = IsFloatTy ? SPIRV::OpGroupNonUniformFMax : IntegerOpcodeType;
-  return BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
-      .addDef(ResVReg)
-      .addUse(GR.getSPIRVTypeID(ResType))
-      .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII,
-                                     !STI.isShader()))
-      .addImm(SPIRV::GroupOperation::Reduce)
-      .addUse(I.getOperand(2).getReg())
-      .constrainAllUses(TII, TRI, RBI);
+  return selectWaveReduce(
+      ResVReg, ResType, I, IsUnsigned,
+      [&](Register InputRegister, bool IsUnsigned) {
+        const bool IsFloatTy =
+            GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeFloat);
+        const unsigned IntOp = IsUnsigned ? SPIRV::OpGroupNonUniformUMax
+                                          : SPIRV::OpGroupNonUniformSMax;
+        return IsFloatTy ? SPIRV::OpGroupNonUniformFMax : IntOp;
+      });
 }
 
 bool SPIRVInstructionSelector::selectWaveReduceMin(Register ResVReg,
                                                    const SPIRVType *ResType,
                                                    MachineInstr &I,
                                                    bool IsUnsigned) const {
+  return selectWaveReduce(
+      ResVReg, ResType, I, IsUnsigned,
+      [&](Register InputRegister, bool IsUnsigned) {
+        const bool IsFloatTy =
+            GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeFloat);
+        const unsigned IntOp = IsUnsigned ? SPIRV::OpGroupNonUniformUMin
+                                          : SPIRV::OpGroupNonUniformSMin;
+        return IsFloatTy ? SPIRV::OpGroupNonUniformFMin : IntOp;
+      });
+}
+
+bool SPIRVInstructionSelector::selectWaveReduceSum(Register ResVReg,
+                                                   const SPIRVType *ResType,
+                                                   MachineInstr &I) const {
+  return selectWaveReduce(ResVReg, ResType, I, /*IsUnsigned*/ false,
+                          [&](Register InputRegister, bool IsUnsigned) {
+                            bool IsFloatTy = GR.isScalarOrVectorOfType(
+                                InputRegister, SPIRV::OpTypeFloat);
+                            return IsFloatTy ? SPIRV::OpGroupNonUniformFAdd
+                                             : SPIRV::OpGroupNonUniformIAdd;
+                          });
+}
+
+template <typename PickOpcodeFn>
+bool SPIRVInstructionSelector::selectWaveReduce(
+    Register ResVReg, const SPIRVType *ResType, MachineInstr &I,
+    bool IsUnsigned, PickOpcodeFn &&PickOpcode) const {
   assert(I.getNumOperands() == 3);
   assert(I.getOperand(2).isReg());
   MachineBasicBlock &BB = *I.getParent();
@@ -2892,11 +2910,7 @@ bool SPIRVInstructionSelector::selectWaveReduceMin(Register ResVReg,
     report_fatal_error("Input Type could not be determined.");
 
   SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
-  // Retreive the operation to use based on input type
-  bool IsFloatTy = GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeFloat);
-  auto IntegerOpcodeType =
-      IsUnsigned ? SPIRV::OpGroupNonUniformUMin : SPIRV::OpGroupNonUniformSMin;
-  auto Opcode = IsFloatTy ? SPIRV::OpGroupNonUniformFMin : IntegerOpcodeType;
+  const unsigned Opcode = PickOpcode(InputRegister, IsUnsigned);
   return BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
@@ -2905,32 +2919,6 @@ bool SPIRVInstructionSelector::selectWaveReduceMin(Register ResVReg,
       .addImm(SPIRV::GroupOperation::Reduce)
       .addUse(I.getOperand(2).getReg())
       .constrainAllUses(TII, TRI, RBI);
-}
-
-bool SPIRVInstructionSelector::selectWaveReduceSum(Register ResVReg,
-                                                   const SPIRVType *ResType,
-                                                   MachineInstr &I) const {
-  assert(I.getNumOperands() == 3);
-  assert(I.getOperand(2).isReg());
-  MachineBasicBlock &BB = *I.getParent();
-  Register InputRegister = I.getOperand(2).getReg();
-  SPIRVType *InputType = GR.getSPIRVTypeForVReg(InputRegister);
-
-  if (!InputType)
-    report_fatal_error("Input Type could not be determined.");
-
-  SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
-  // Retreive the operation to use based on input type
-  bool IsFloatTy = GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeFloat);
-  auto Opcode =
-      IsFloatTy ? SPIRV::OpGroupNonUniformFAdd : SPIRV::OpGroupNonUniformIAdd;
-  return BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
-      .addDef(ResVReg)
-      .addUse(GR.getSPIRVTypeID(ResType))
-      .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII,
-                                     !STI.isShader()))
-      .addImm(SPIRV::GroupOperation::Reduce)
-      .addUse(I.getOperand(2).getReg());
 }
 
 bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,
