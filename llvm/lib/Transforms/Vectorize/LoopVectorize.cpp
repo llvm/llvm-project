@@ -8350,10 +8350,10 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   if (!CM.foldTailWithEVL()) {
     VPCostContext CostCtx(CM.TTI, *CM.TLI, *Plan, CM, CM.CostKind, CM.PSE,
                           OrigLoop);
-    RUN_VPLAN_PASS(VPlanTransforms::createPartialReductions, *Plan,
-                             CostCtx, Range);
-    RUN_VPLAN_PASS(VPlanTransforms::convertToAbstractRecipes, *Plan,
-                             CostCtx, Range);
+    RUN_VPLAN_PASS(VPlanTransforms::createPartialReductions, *Plan, CostCtx,
+                   Range);
+    RUN_VPLAN_PASS(VPlanTransforms::convertToAbstractRecipes, *Plan, CostCtx,
+                   Range);
   }
 
   for (ElementCount VF : Range)
