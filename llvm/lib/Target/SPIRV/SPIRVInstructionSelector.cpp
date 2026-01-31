@@ -1459,14 +1459,15 @@ bool SPIRVInstructionSelector::selectSincos(Register ResVReg,
             .add(I.getOperand(SrcIdx))
             .constrainAllUses(TII, TRI, RBI);
 
-    MIB = MIB &
-          BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
-              .addDef(CosResVReg)
-              .addUse(ResTypeReg)
-              .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
-              .addImm(GL::Cos)
-              .add(I.getOperand(SrcIdx))
-              .constrainAllUses(TII, TRI, RBI);
+    MIB =
+        MIB &
+        BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
+            .addDef(CosResVReg)
+            .addUse(ResTypeReg)
+            .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
+            .addImm(GL::Cos)
+            .add(I.getOperand(SrcIdx))
+            .constrainAllUses(TII, TRI, RBI);
     return MIB;
   }
   return false;
