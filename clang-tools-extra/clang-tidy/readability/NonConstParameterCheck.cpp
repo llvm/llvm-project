@@ -41,12 +41,6 @@ void NonConstParameterCheck::check(const MatchFinder::MatchResult &Result) {
       if (const auto *M = dyn_cast<CXXMethodDecl>(D)) {
         if (M->isVirtual() || M->size_overridden_methods() != 0)
           return;
-        // Skip parameters in generic lambdas to avoid false positives.
-        // Generic lambdas may have template-dependent usage that cannot
-        // be analyzed at parse time. Fixes issue #177354.
-        if (M->getParent()->isLambda() &&
-            M->getDescribedFunctionTemplate() != nullptr)
-          return;
       }
     }
     addParm(Parm);
@@ -230,6 +224,12 @@ void NonConstParameterCheck::markCanNotBeConst(const Expr *E,
   } else if (const auto *ILE = dyn_cast<InitListExpr>(E)) {
     for (unsigned I = 0U; I < ILE->getNumInits(); ++I)
       markCanNotBeConst(ILE->getInit(I), true);
+  } else if (const auto *UCE = dyn_cast<CXXUnresolvedConstructExpr>(E)) {
+    // Template-dependent constructor (e.g., in generic lambdas).
+    // Cannot analyze parameter usage at parse time, so conservatively
+    // mark arguments.
+    for (const auto *Arg : UCE->arguments())
+      markCanNotBeConst(Arg, CanNotBeConst);
   } else if (CanNotBeConst) {
     // Referencing parameter.
     if (const auto *D = dyn_cast<DeclRefExpr>(E)) {

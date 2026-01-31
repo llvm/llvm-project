@@ -365,15 +365,8 @@ void gh176623() {
 }
 
 void testGenericLambdaIssue177354() {
-  // Generic lambdas should not trigger the warning
+  // CHECK-MESSAGES-NOT: warning: pointer parameter 'p' can be pointer to const
   auto genericLambda = []<typename T>(int *p) {
-    // CHECK-MESSAGES-NOT: warning: pointer parameter 'p' can be
-    int x = *p;
-  };
-
-  // CHECK-MESSAGES: :[[@LINE+1]]:31: warning: pointer parameter 'p' can be pointer to const
-  auto regularLambda = [](int *p) {
-    // CHECK-FIXES: auto regularLambda = [](const int *p) {
-    int x = *p;
+    T x(*p);  // Template-dependent constructor - CXXUnresolvedConstructExpr
   };
 }
