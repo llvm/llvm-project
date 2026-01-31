@@ -2053,6 +2053,9 @@ bool DAGTypeLegalizer::PromoteIntegerOperand(SDNode *N, unsigned OpNo) {
   case ISD::BUILD_PAIR:   Res = PromoteIntOp_BUILD_PAIR(N); break;
   case ISD::BUILD_VECTOR: Res = PromoteIntOp_BUILD_VECTOR(N); break;
   case ISD::CONCAT_VECTORS: Res = PromoteIntOp_CONCAT_VECTORS(N); break;
+  case ISD::COND_LOOP:
+    Res = PromoteIntOp_COND_LOOP(N, OpNo);
+    break;
   case ISD::EXTRACT_VECTOR_ELT: Res = PromoteIntOp_EXTRACT_VECTOR_ELT(N); break;
   case ISD::FAKE_USE:
     Res = PromoteIntOp_FAKE_USE(N);
@@ -2354,6 +2357,16 @@ SDValue DAGTypeLegalizer::PromoteIntOp_BRCOND(SDNode *N, unsigned OpNo) {
   // The chain (Op#0) and basic block destination (Op#2) are always legal types.
   return SDValue(DAG.UpdateNodeOperands(N, N->getOperand(0), Cond,
                                         N->getOperand(2)), 0);
+}
+
+SDValue DAGTypeLegalizer::PromoteIntOp_COND_LOOP(SDNode *N, unsigned OpNo) {
+  assert(OpNo == 1 && "only know how to promote condition");
+
+  // Promote all the way up to the canonical SetCC type.
+  SDValue Cond = PromoteTargetBoolean(N->getOperand(1), MVT::Other);
+
+  // The chain (Op#0) is always a legal type.
+  return SDValue(DAG.UpdateNodeOperands(N, N->getOperand(0), Cond), 0);
 }
 
 SDValue DAGTypeLegalizer::PromoteIntOp_BUILD_PAIR(SDNode *N) {
