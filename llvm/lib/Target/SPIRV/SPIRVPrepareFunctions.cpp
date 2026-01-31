@@ -659,7 +659,8 @@ bool SPIRVPrepareFunctions::runOnModule(Module &M) {
   // Resolve the SPIR-V environment from module content before any
   // function-level processing. This must happen before legalization so that
   // isShader()/isKernel() return correct values.
-  const_cast<SPIRVTargetMachine &>(TM).getMutableSubtargetImpl()
+  const_cast<SPIRVTargetMachine &>(TM)
+      .getMutableSubtargetImpl()
       ->resolveEnvFromModule(M);
 
   bool Changed = false;
