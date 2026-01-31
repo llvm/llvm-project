@@ -36,10 +36,16 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _AlgPolicy, class _Iter, class _Sent>
 _LIBCPP_HIDE_FROM_ABI constexpr pair<_Iter, _Iter>
 __shift_right(_Iter __first, _Sent __last, typename _IterOps<_AlgPolicy>::template __difference_type<_Iter> __n) {
-  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n >= 0, "n must be greater than or equal to 0");
+  _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(__n >= 0, "Providing a negative shift amount to shift_right is UB");
   _Iter __end = _IterOps<_AlgPolicy>::next(__first, __last);
   if (__n == 0) {
     return pair<_Iter, _Iter>(std::move(__first), std::move(__end));
+  }
+
+  if constexpr (sized_sentinel_for<_Sent, _Iter>) {
+    if (__n >= ranges::distance(__first, __last)) {
+      return pair<_Iter, _Iter>(__end, std::move(__end));
+    }
   }
 
   using _IterCategory = typename _IterOps<_AlgPolicy>::template __iterator_category<_Iter>;

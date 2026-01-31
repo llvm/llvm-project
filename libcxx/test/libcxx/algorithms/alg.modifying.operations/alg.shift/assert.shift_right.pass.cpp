@@ -20,9 +20,10 @@
 
 int main(int, char**) {
   std::array<int, 5> arr = {1, 2, 3, 4, 5};
-  TEST_LIBCPP_ASSERT_FAILURE(std::ranges::shift_right(arr, -2), "n must be greater than or equal to 0");
   TEST_LIBCPP_ASSERT_FAILURE(
-      std::ranges::shift_right(arr.begin(), arr.end(), -2), "n must be greater than or equal to 0");
+      std::ranges::shift_right(arr, -2), "Providing a negative shift amount to shift_right is UB");
+  TEST_LIBCPP_ASSERT_FAILURE(
+      std::ranges::shift_right(arr.begin(), arr.end(), -2), "Providing a negative shift amount to shift_right is UB");
 
   return 0;
 }
