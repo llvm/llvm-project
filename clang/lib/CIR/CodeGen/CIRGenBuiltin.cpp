@@ -1365,7 +1365,14 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
         cir::EhSetjmpOp::create(builder, loc, castBuf, /*is_builtin=*/true);
     return RValue::get(op);
   }
-  case Builtin::BI__builtin_longjmp:
+  case Builtin::BI__builtin_longjmp: {
+    mlir::Value buf = emitScalarExpr(e->getArg(0));
+    mlir::Location loc = getLoc(e->getExprLoc());
+
+    cir::EhLongjmpOp::create(builder, loc, buf);
+    builder.create<cir::UnreachableOp>(loc);
+    return RValue::get(nullptr);
+  }
   case Builtin::BI__builtin_launder:
   case Builtin::BI__sync_fetch_and_add:
   case Builtin::BI__sync_fetch_and_sub:
