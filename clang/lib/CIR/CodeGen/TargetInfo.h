@@ -16,6 +16,7 @@
 
 #include "ABIInfo.h"
 #include "CIRGenTypes.h"
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 
@@ -48,7 +49,7 @@ public:
   const ABIInfo &getABIInfo() const { return *info; }
 
   /// Get the address space for alloca.
-  virtual cir::TargetAddressSpaceAttr getCIRAllocaAddressSpace() const {
+  virtual mlir::ptr::MemorySpaceAttrInterface getCIRAllocaAddressSpace() const {
     return {};
   }
 

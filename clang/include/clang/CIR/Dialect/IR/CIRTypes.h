@@ -13,6 +13,7 @@
 #ifndef CLANG_CIR_DIALECT_IR_CIRTYPES_H
 #define CLANG_CIR_DIALECT_IR_CIRTYPES_H
 
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/MLIRContext.h"
@@ -43,11 +44,21 @@ bool isSized(mlir::Type ty);
 //===----------------------------------------------------------------------===//
 // AddressSpace helpers
 //===----------------------------------------------------------------------===//
-cir::TargetAddressSpaceAttr toCIRTargetAddressSpace(mlir::MLIRContext &context,
-                                                    clang::LangAS langAS);
 
-bool isMatchingAddressSpace(cir::TargetAddressSpaceAttr cirAS,
+cir::LangAddressSpace toCIRLangAddressSpace(clang::LangAS langAS);
+
+// Compare a CIR memory space attribute with a Clang LangAS.
+bool isMatchingAddressSpace(mlir::MLIRContext &ctx,
+                            mlir::ptr::MemorySpaceAttrInterface cirAS,
                             clang::LangAS as);
+
+/// Convert an AST LangAS to the appropriate CIR address space attribute
+/// interface.
+mlir::ptr::MemorySpaceAttrInterface
+toCIRAddressSpaceAttr(mlir::MLIRContext *ctx, clang::LangAS langAS);
+
+bool isSupportedCIRMemorySpaceAttr(
+    mlir::ptr::MemorySpaceAttrInterface memorySpace);
 
 } // namespace cir
 
