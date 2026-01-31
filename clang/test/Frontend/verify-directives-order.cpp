@@ -1,4 +1,4 @@
-// RUN: not %clang_cc1 -verify -verify-strict %s 2>&1 | FileCheck %s
+// RUN: not %clang_cc1 -verify -verify-directives %s 2>&1 | FileCheck %s
 
 void f1(A); // #f1
 void f2(B); // #f2

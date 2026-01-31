@@ -325,7 +325,7 @@ void attachDirective(DiagnosticsEngine &Diags, const UnattachedDirective &UD,
   std::unique_ptr<Directive> D = Directive::create(
       UD.RegexKind, UD.DirectivePos, ExpectedLoc, UD.Spelling,
       MatchAnyFileAndLine, MatchAnyLine, UD.Text, UD.Min, UD.Max,
-      Diags.getDiagnosticOptions().VerifyDiagnosticsStrict);
+      Diags.getDiagnosticOptions().VerifyDirectives);
 
   std::string Error;
   if (!D->isValid(Error)) {
@@ -741,10 +741,10 @@ VerifyDiagnosticConsumer::VerifyDiagnosticConsumer(DiagnosticsEngine &Diags_)
       State{HasNoDirectives, {}} {
   if (Diags.hasSourceManager())
     setSourceManager(Diags.getSourceManager());
-  CheckOrderOfDirectives = Diags.getDiagnosticOptions().VerifyDiagnosticsStrict;
-  OneDiagPerDirective = Diags.getDiagnosticOptions().VerifyDiagnosticsStrict;
+  CheckOrderOfDirectives = Diags.getDiagnosticOptions().VerifyDirectives;
+  OneDiagPerDirective = Diags.getDiagnosticOptions().VerifyDirectives;
   DisableWildcardInDiagLoc =
-      Diags.getDiagnosticOptions().VerifyDiagnosticsStrict;
+      Diags.getDiagnosticOptions().VerifyDirectives;
 }
 
 VerifyDiagnosticConsumer::~VerifyDiagnosticConsumer() {
@@ -1023,8 +1023,7 @@ static bool IsFromSameFile(SourceManager &SM, SourceLocation DirectiveLoc,
   return (DiagFile == SM.getFileEntryForID(SM.getFileID(DirectiveLoc)));
 }
 
-/// Takes a list of diagnostics that were partially matched,
-/// despite '-verify-strict' option being set.
+/// Takes a list of diagnostics that were partially matched and prints them.
 static unsigned
 PrintPartial(DiagnosticsEngine &Diags, SourceManager &SourceMgr,
              llvm::SmallVector<std::pair<Directive *, std::string>> &DL,
@@ -1035,8 +1034,6 @@ PrintPartial(DiagnosticsEngine &Diags, SourceManager &SourceMgr,
   SmallString<256> Fmt;
   llvm::raw_svector_ostream OS(Fmt);
   for (const auto &[D, DiagText] : DL) {
-    assert(!D->MatchAnyLine && !D->MatchAnyFileAndLine &&
-           "Wildcards should not be allowed in strict verify mode");
     OS << "\n  '" << D->Spelling << "' at line "
        << SourceMgr.getPresumedLineNumber(D->DirectiveLoc) << " in "
        << SourceMgr.getFilename(D->DiagnosticLoc) << ": " << D->Text
