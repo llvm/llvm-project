@@ -3944,7 +3944,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectWaveOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformAll);
   case Intrinsic::spv_wave_any:
     return selectWaveOpInst(ResVReg, ResType, I, SPIRV::OpGroupNonUniformAny);
-  case Intrinsic::spv_wave_bit_or:
+  case Intrinsic::spv_subgroup_bit_or:
     return selectWaveBitOpInst(ResVReg, ResType, I,
                                SPIRV::OpGroupNonUniformBitwiseOr);
   case Intrinsic::spv_subgroup_ballot:

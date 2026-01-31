@@ -329,21 +329,6 @@ static Intrinsic::ID getFirstBitHighIntrinsic(CGHLSLRuntime &RT, QualType QT) {
   return RT.getFirstBitUHighIntrinsic();
 }
 
-static Intrinsic::ID getWaveBitOpOrIntrinsic(llvm::Triple::ArchType Arch,
-                                             CGHLSLRuntime &RT, QualType QT) {
-  switch (Arch) {
-  case llvm::Triple::spirv:
-    return Intrinsic::spv_wave_bit_or;
-
-  case llvm::Triple::dxil:
-    return Intrinsic::dx_wave_bit_or;
-
-  default:
-    llvm_unreachable("Intrinsic WaveActiveBitOr"
-                     " not supported by target architecture");
-  }
-}
-
 // Return wave active sum that corresponds to the QT scalar type
 static Intrinsic::ID getWaveActiveSumIntrinsic(llvm::Triple::ArchType Arch,
                                                CGHLSLRuntime &RT, QualType QT) {
@@ -976,10 +961,7 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
                "Intrinsic WaveActiveBitOr operand must be integer or "
                "vector of integers");
 
-    Intrinsic::ID IID =
-        getWaveBitOpOrIntrinsic(getTarget().getTriple().getArch(),
-                                CGM.getHLSLRuntime(), E->getArg(0)->getType());
-
+    Intrinsic::ID IID = CGM.getHLSLRuntime().getWaveActiveBitOpOrIntrinsic();
     return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
                                &CGM.getModule(), IID, {Op->getType()}),
                            ArrayRef{Op}, "hlsl.wave.active.bit.or");

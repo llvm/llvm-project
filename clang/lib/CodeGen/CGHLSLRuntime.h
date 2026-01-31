@@ -34,7 +34,15 @@
 
 // A function generator macro for picking the right intrinsic
 // for the target backend
-#define GENERATE_HLSL_INTRINSIC_FUNCTION(FunctionName, IntrinsicPostfix)       \
+
+#define _GEN_INTRIN_CHOOSER(_1, _2, _3, NAME, ...) NAME
+
+#define GENERATE_HLSL_INTRINSIC_FUNCTION(...)                                  \
+  _GEN_INTRIN_CHOOSER(__VA_ARGS__, GENERATE_HLSL_INTRINSIC_FUNCTION3,          \
+                      GENERATE_HLSL_INTRINSIC_FUNCTION2)(__VA_ARGS__)
+
+// 2-arg form: same postfix for both backends (uses the identity)
+#define GENERATE_HLSL_INTRINSIC_FUNCTION2(FunctionName, IntrinsicPostfix)      \
   llvm::Intrinsic::ID get##FunctionName##Intrinsic() {                         \
     llvm::Triple::ArchType Arch = getArch();                                   \
     switch (Arch) {                                                            \
@@ -44,6 +52,22 @@
       return llvm::Intrinsic::spv_##IntrinsicPostfix;                          \
     default:                                                                   \
       llvm_unreachable("Intrinsic " #IntrinsicPostfix                          \
+                       " not supported by target architecture");               \
+    }                                                                          \
+  }
+
+// 3-arg form: explicit SPIR-V postfix override (perfect for wave->subgroup)
+#define GENERATE_HLSL_INTRINSIC_FUNCTION3(FunctionName, DxilPostfix,           \
+                                          SpirvPostfix)                        \
+  llvm::Intrinsic::ID get##FunctionName##Intrinsic() {                         \
+    llvm::Triple::ArchType Arch = getArch();                                   \
+    switch (Arch) {                                                            \
+    case llvm::Triple::dxil:                                                   \
+      return llvm::Intrinsic::dx_##DxilPostfix;                                \
+    case llvm::Triple::spirv:                                                  \
+      return llvm::Intrinsic::spv_##SpirvPostfix;                              \
+    default:                                                                   \
+      llvm_unreachable("Intrinsic " #DxilPostfix                               \
                        " not supported by target architecture");               \
     }                                                                          \
   }
@@ -146,6 +170,8 @@ public:
   GENERATE_HLSL_INTRINSIC_FUNCTION(Dot4AddU8Packed, dot4add_u8packed)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveAllTrue, wave_all)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveAnyTrue, wave_any)
+  GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveBitOpOr, wave_bit_or,
+                                   subgroup_bit_or)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveActiveCountBits, wave_active_countbits)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveIsFirstLane, wave_is_first_lane)
   GENERATE_HLSL_INTRINSIC_FUNCTION(WaveGetLaneCount, wave_get_lane_count)

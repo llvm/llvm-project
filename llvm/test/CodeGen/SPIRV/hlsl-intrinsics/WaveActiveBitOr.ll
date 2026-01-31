@@ -12,19 +12,19 @@
 define i32 @test_uint(i32 %iexpr) {
 entry:
 ; CHECK:   %[[#iret:]] = OpGroupNonUniformBitwiseOr %[[#uint]] %[[#scope]] Reduce %[[#iexpr]]
-  %0 = call i32 @llvm.spv.wave.bit.or.i32(i32 %iexpr)
+  %0 = call i32 @llvm.spv.subgroup.bit.or.i32(i32 %iexpr)
   ret i32 %0
 }
 
-declare i32 @llvm.spv.wave.bit.or.i32(i32)
+declare i32 @llvm.spv.subgroup.bit.or.i32(i32)
 
 ; CHECK-LABEL: Begin function test_uint64
 ; CHECK:   %[[#iexpr64:]] = OpFunctionParameter %[[#uint64]]
 define i64 @test_uint64(i64 %iexpr64) {
 entry:
 ; CHECK:   %[[#iret:]] = OpGroupNonUniformBitwiseOr %[[#uint64]] %[[#scope]] Reduce %[[#iexpr64]]
-  %0 = call i64 @llvm.spv.wave.bit.or.i64(i64 %iexpr64)
+  %0 = call i64 @llvm.spv.subgroup.bit.or.i64(i64 %iexpr64)
   ret i64 %0
 }
 
-declare i64 @llvm.spv.wave.bit.or.i64(i64)
+declare i64 @llvm.spv.subgroup.bit.or.i64(i64)
