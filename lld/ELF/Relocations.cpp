@@ -1005,9 +1005,11 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
       // For a preemptible symbol, we can't use a relative relocation. For an
       // undefined symbol, we can't compute offset at link-time and use a
       // relative relocation. Use a symbolic relocation instead.
+      // Handle the composition with Memtag like addRelativeReloc.
       if (ctx.arg.emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64 &&
           !sym.isPreemptible) {
-        if (part.relrAuthDyn && sec->addralign >= 2 && offset % 2 == 0) {
+        if (!sym.isTagged() && part.relrAuthDyn && sec->addralign >= 2 &&
+            offset % 2 == 0) {
           // When symbol values are determined in
           // finalizeAddressDependentContent, some .relr.auth.dyn relocations
           // may be moved to .rela.dyn.
@@ -1016,6 +1018,9 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
         } else {
           part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, sec, offset, false,
                                   sym, addend, R_ABS});
+          if (sym.isTagged() &&
+              (addend < 0 || static_cast<uint64_t>(addend) >= sym.getSize()))
+            sec->addReloc({R_ADDEND_NEG, type, offset, addend, &sym});
         }
         return;
       }
