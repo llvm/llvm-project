@@ -2524,6 +2524,22 @@ void PyOpAttributeMap::bind(nb::module_ &m) {
           "Returns a list of `(name, attribute)` tuples.");
 }
 
+void PyOpAdaptor::bind(nb::module_ &m) {
+  nb::class_<PyOpAdaptor>(m, "OpAdaptor")
+      .def(nb::init<nb::list, PyOpAttributeMap>(),
+           "Creates an OpAdaptor with the given operands and attributes.",
+           "operands"_a, "attributes"_a)
+      .def(nb::init<nb::list, PyOpView &>(),
+           "Creates an OpAdaptor with the given operands and operation view.",
+           "operands"_a, "opview"_a)
+      .def_prop_ro(
+          "operands", [](PyOpAdaptor &self) { return self.operands; },
+          "Returns the operands of the adaptor.")
+      .def_prop_ro(
+          "attributes", [](PyOpAdaptor &self) { return self.attributes; },
+          "Returns the attributes of the adaptor.");
+}
+
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python
 } // namespace mlir
@@ -3973,6 +3989,8 @@ void populateIRCore(nb::module_ &m) {
       "cls"_a, "source"_a, nb::kw_only(), "source_name"_a = "",
       "context"_a = nb::none(),
       "Parses a specific, generated OpView based on class level attributes.");
+
+  PyOpAdaptor::bind(m);
 
   //----------------------------------------------------------------------------
   // Mapping of PyRegion.

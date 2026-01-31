@@ -324,12 +324,13 @@ public:
       nb::object opView = PyOperation::forOperation(ctx, op)->createOpView();
 
       std::vector<MlirValue> operandsVec(operands, operands + nOperands);
-      std::optional<nb::object> adaptorCls =
-          PyGlobals::get().lookupOpAdaptorClass(
-              unwrap(mlirIdentifierStr(mlirOperationGetName(op))));
-      assert(adaptorCls && "cannot found adaptor for this operation");
+      nb::object adaptorCls =
+          PyGlobals::get()
+              .lookupOpAdaptorClass(
+                  unwrap(mlirIdentifierStr(mlirOperationGetName(op))))
+              .value_or(nb::borrow(nb::type<PyOpAdaptor>()));
 
-      nb::object res = f(opView, adaptorCls.value()(operandsVec, opView),
+      nb::object res = f(opView, adaptorCls(operandsVec, opView),
                          PyConversionPattern(pattern).getTypeConverter(),
                          PyConversionPatternRewriter(rewriter));
       return logicalResultFromObject(res);

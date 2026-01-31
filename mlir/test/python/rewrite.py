@@ -240,16 +240,22 @@ def testConversionPattern():
     converter.add_conversion(convert_int)
 
     def convert_constant(op, adaptor, type_converter, rewriter):
+        assert isinstance(op, arith.ConstantOp)
+        assert isinstance(adaptor, arith.ConstantOpAdaptor)
         with rewriter.ip:
             new_op = smt.IntConstantOp(op.value, loc=op.location)
         rewriter.replace_op(op, new_op)
 
     def convert_addi(op, adaptor, type_converter, rewriter):
+        assert isinstance(op, arith.AddIOp)
+        assert isinstance(adaptor, arith.AddIOpAdaptor)
         with rewriter.ip:
             new_op = smt.IntAddOp([adaptor.lhs, adaptor.rhs], loc=op.location)
         rewriter.replace_op(op, new_op)
 
     def convert_muli(op, adaptor, type_converter, rewriter):
+        assert isinstance(op, arith.MulIOp)
+        assert isinstance(adaptor, arith.MulIOpAdaptor)
         with rewriter.ip:
             new_op = smt.IntMulOp([adaptor.lhs, adaptor.rhs], loc=op.location)
         rewriter.replace_op(op, new_op)

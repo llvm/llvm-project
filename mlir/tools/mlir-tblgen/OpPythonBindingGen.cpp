@@ -40,7 +40,6 @@ from ._ods_common import (
     get_default_loc_context as _ods_get_default_loc_context,
     get_op_results_or_values as _get_op_results_or_values,
     segmented_accessor as _ods_segmented_accessor,
-    OpAdaptor as _ods_OpAdaptor,
 )
 _ods_ir = _ods_cext.ir
 _ods_cext.globals.register_traceback_file_exclusion(__file__)
@@ -77,7 +76,7 @@ class {0}(_ods_ir.OpView):{2}
 ///   {1} is the operation name。
 constexpr const char *opAdaptorClassTemplate = R"Py(
 @_ods_cext.register_op_adaptor({0})
-class {0}Adaptor(_ods_OpAdaptor):
+class {0}Adaptor(_ods_ir.OpAdaptor):
   OPERATION_NAME = "{1}"
 )Py";
 

@@ -159,7 +159,7 @@ def AttributedOp : TestOp<"attributed_op"> {
                    UnitAttr:$unitAttr, I32Attr:$in);
 }
 // CHECK: @_ods_cext.register_op_adaptor(AttributedOp)
-// CHECK-LABEL: class AttributedOpAdaptor(_ods_OpAdaptor):
+// CHECK-LABEL: class AttributedOpAdaptor(_ods_ir.OpAdaptor):
 // CHECK:   OPERATION_NAME = "test.attributed_op"
 // CHECK:   @builtins.property
 // CHECK:   def i32attr(self) -> _ods_ir.IntegerAttr:
@@ -412,7 +412,7 @@ def OneOptionalOperandOp : TestOp<"one_optional_operand"> {
   // CHECK:   return None if len(self.operation.operands) < 2 else self.operation.operands[1]
 }
 // CHECK: @_ods_cext.register_op_adaptor(OneOptionalOperandOp)
-// CHECK-LABEL: class OneOptionalOperandOpAdaptor(_ods_OpAdaptor):
+// CHECK-LABEL: class OneOptionalOperandOpAdaptor(_ods_ir.OpAdaptor):
 // CHECK:   OPERATION_NAME = "test.one_optional_operand"
 // CHECK:   @builtins.property
 // CHECK:   def non_optional(self) -> _ods_ir.Value:
@@ -454,7 +454,7 @@ def OneVariadicOperandOp : TestOp<"one_variadic_operand"> {
   let arguments = (ins AnyType:$non_variadic, Variadic<AnyType>:$variadic);
 }
 // CHECK: @_ods_cext.register_op_adaptor(OneVariadicOperandOp)
-// CHECK-LABEL: class OneVariadicOperandOpAdaptor(_ods_OpAdaptor):
+// CHECK-LABEL: class OneVariadicOperandOpAdaptor(_ods_ir.OpAdaptor):
 // CHECK:   OPERATION_NAME = "test.one_variadic_operand"
 // CHECK:   @builtins.property
 // CHECK:   def non_variadic(self) -> _ods_ir.Value:

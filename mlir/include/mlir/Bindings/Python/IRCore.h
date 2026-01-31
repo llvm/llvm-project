@@ -1834,6 +1834,22 @@ private:
   PyOperationRef operation;
 };
 
+/// Base class of operation adaptors.
+class MLIR_PYTHON_API_EXPORTED PyOpAdaptor {
+public:
+  PyOpAdaptor(nanobind::list operands, PyOpAttributeMap attributes)
+      : operands(std::move(operands)), attributes(std::move(attributes)) {}
+  PyOpAdaptor(nanobind::list operands, PyOpView &opView)
+      : operands(std::move(operands)),
+        attributes(opView.getOperation().getRef()) {}
+
+  static void bind(nanobind::module_ &m);
+
+private:
+  nanobind::list operands;
+  PyOpAttributeMap attributes;
+};
+
 MLIR_PYTHON_API_EXPORTED MlirValue getUniqueResult(MlirOperation operation);
 MLIR_PYTHON_API_EXPORTED void populateIRCore(nanobind::module_ &m);
 MLIR_PYTHON_API_EXPORTED void populateRoot(nanobind::module_ &m);

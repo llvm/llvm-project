@@ -23,8 +23,6 @@ from ..ir import (
     Operation,
     ShapedType,
     Value,
-    OpView,
-    OpAttributeMap,
 )
 
 __all__ = [
@@ -92,7 +90,7 @@ def get_default_loc_context(location=None):
 def get_op_result_or_value(
     arg: _Union[
         _cext.ir.OpView, _cext.ir.Operation, _cext.ir.Value, _cext.ir.OpResultList
-    ],
+    ]
 ) -> _cext.ir.Value:
     """Returns the given value or the single result of the given op.
 
@@ -116,7 +114,7 @@ def get_op_results_or_values(
         _cext.ir.OpView,
         _cext.ir.Operation,
         _Sequence[_Union[_cext.ir.OpView, _cext.ir.Operation, _cext.ir.Value]],
-    ],
+    ]
 ) -> _Union[
     _Sequence[_Union[_cext.ir.OpView, _cext.ir.Operation, _cext.ir.Value]],
     _cext.ir.OpResultList,
@@ -251,7 +249,7 @@ def _dispatch_mixed_values(
 
 
 def _get_value_or_attribute_value(
-    value_or_attr: _Union[any, Attribute, ArrayAttr],
+    value_or_attr: _Union[any, Attribute, ArrayAttr]
 ) -> any:
     if isinstance(value_or_attr, Attribute) and hasattr(value_or_attr, "value"):
         return value_or_attr.value
@@ -261,13 +259,13 @@ def _get_value_or_attribute_value(
 
 
 def _get_value_list(
-    sequence_or_array_attr: _Union[_Sequence[any], ArrayAttr],
+    sequence_or_array_attr: _Union[_Sequence[any], ArrayAttr]
 ) -> _Sequence[any]:
     return [_get_value_or_attribute_value(v) for v in sequence_or_array_attr]
 
 
 def _get_int_array_attr(
-    values: _Optional[_Union[ArrayAttr, IntOrAttrList]],
+    values: _Optional[_Union[ArrayAttr, IntOrAttrList]]
 ) -> ArrayAttr:
     if values is None:
         return None
@@ -282,7 +280,7 @@ def _get_int_array_attr(
 
 
 def _get_int_array_array_attr(
-    values: _Optional[_Union[ArrayAttr, _Sequence[_Union[ArrayAttr, IntOrAttrList]]]],
+    values: _Optional[_Union[ArrayAttr, _Sequence[_Union[ArrayAttr, IntOrAttrList]]]]
 ) -> ArrayAttr:
     """Creates an ArrayAttr of ArrayAttrs of IntegerAttrs.
 
@@ -307,14 +305,3 @@ def _get_int_array_array_attr(
 
     # Turn the outer list into an ArrayAttr.
     return ArrayAttr.get(values)
-
-
-class OpAdaptor:
-    def __init__(
-        self, operands: _Sequence[Value], opview_or_attributes: OpView | OpAttributeMap
-    ) -> None:
-        self.operands = operands
-        if isinstance(opview_or_attributes, OpView):
-            self.attributes = opview_or_attributes.operation.attributes
-        else:
-            self.attributes = opview_or_attributes
