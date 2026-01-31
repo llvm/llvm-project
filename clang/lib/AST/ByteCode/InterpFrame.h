@@ -55,6 +55,10 @@ public:
   void destroy(unsigned Idx);
   void initScope(unsigned Idx);
   void destroyScopes();
+  void enableLocal(unsigned Idx);
+  bool isLocalEnabled(unsigned Idx) const {
+    return localInlineDesc(Idx)->IsActive;
+  }
 
   /// Describes the frame with arguments for diagnostic purposes.
   void describe(llvm::raw_ostream &OS) const override;
@@ -188,6 +192,9 @@ private:
   const size_t FrameOffset;
   /// Mapping from arg offsets to their argument blocks.
   llvm::DenseMap<unsigned, std::unique_ptr<char[]>> Params;
+
+public:
+  unsigned MSVCConstexprAllowed = 0;
 };
 
 } // namespace interp

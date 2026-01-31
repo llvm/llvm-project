@@ -29,9 +29,8 @@ AST_MATCHER(QualType, isEnableIf) {
   };
   const Type *BaseType = Node.getTypePtr();
   // Case: pointer or reference to enable_if.
-  while (BaseType->isPointerType() || BaseType->isReferenceType()) {
+  while (BaseType->isPointerType() || BaseType->isReferenceType())
     BaseType = BaseType->getPointeeType().getTypePtr();
-  }
   // Case: type parameter dependent (enable_if<is_integral<T>>).
   if (const auto *Dependent = BaseType->getAs<DependentNameType>())
     BaseType = Dependent->getQualifier().getAsType();
@@ -114,10 +113,9 @@ void ForwardingReferenceOverloadCheck::check(
 
   // Every parameter after the first must have a default value.
   const auto *Ctor = Result.Nodes.getNodeAs<CXXConstructorDecl>("ctor");
-  for (const auto *Param : llvm::drop_begin(Ctor->parameters())) {
+  for (const auto *Param : llvm::drop_begin(Ctor->parameters()))
     if (!Param->hasDefaultArg())
       return;
-  }
   bool EnabledCopy = false, DisabledCopy = false, EnabledMove = false,
        DisabledMove = false;
   for (const auto *OtherCtor : Ctor->getParent()->ctors()) {

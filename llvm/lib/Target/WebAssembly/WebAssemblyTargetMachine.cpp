@@ -212,8 +212,8 @@ WebAssemblyTargetMachine::WebAssemblyTargetMachine(
   this->Options.DataSections = true;
   this->Options.UniqueSectionNames = true;
 
-  initAsmInfo();
   basicCheckForEHAndSjLj(this);
+  initAsmInfo();
   // Note that we don't use setRequiresStructuredCFG(true). It disables
   // optimizations than we're ok with, and want, such as critical edge
   // splitting and tail merging.
@@ -334,6 +334,8 @@ private:
       else
         Ret += (StringRef("-") + KV.Key + ",").str();
     }
+    // remove trailing ','
+    Ret.pop_back();
     return Ret;
   }
 

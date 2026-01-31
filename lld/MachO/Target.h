@@ -58,7 +58,7 @@ public:
   virtual int64_t
   getEmbeddedAddend(llvm::MemoryBufferRef, uint64_t offset,
                     const llvm::MachO::relocation_info) const = 0;
-  virtual void relocateOne(uint8_t *loc, const Reloc &, uint64_t va,
+  virtual void relocateOne(uint8_t *loc, const Relocation &, uint64_t va,
                            uint64_t relocVA) const = 0;
 
   // Write code for lazy binding. See the comments on StubsSection for more
@@ -119,7 +119,7 @@ public:
   // For now, handleDtraceReloc only implements -no_dtrace_dof, and ensures
   // that the linking would not fail even when there are user-provided dtrace
   // symbols. However, unlike ld64, lld currently does not emit __dof sections.
-  virtual void handleDtraceReloc(const Symbol *sym, const Reloc &r,
+  virtual void handleDtraceReloc(const Symbol *sym, const Relocation &r,
                                  uint8_t *loc) const {
     llvm_unreachable("Unsupported architecture for dtrace symbols");
   }

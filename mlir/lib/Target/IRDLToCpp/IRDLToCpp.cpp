@@ -371,7 +371,7 @@ static void generateRegionConstraintVerifiers(
     std::string textualConditionName = "any region";
 
     if (auto regionDefOp =
-            dyn_cast<irdl::RegionOp>(regionsOp->getArgs()[i].getDefiningOp())) {
+            regionsOp->getArgs()[i].getDefiningOp<irdl::RegionOp>()) {
       // Generate constraint condition based on RegionOp attributes
       SmallVector<std::string> conditionParts;
       SmallVector<std::string> descriptionParts;
@@ -647,11 +647,10 @@ static LogicalResult verifySupported(irdl::DialectOp dialect) {
   dialect.walk([&](mlir::Operation *op) {
     res =
         llvm::TypeSwitch<Operation *, LogicalResult>(op)
-            .Case<irdl::DialectOp>(([](irdl::DialectOp) { return success(); }))
-            .Case<irdl::OperationOp>(
-                ([](irdl::OperationOp) { return success(); }))
-            .Case<irdl::TypeOp>(([](irdl::TypeOp) { return success(); }))
-            .Case<irdl::OperandsOp>(([](irdl::OperandsOp op) -> LogicalResult {
+            .Case(([](irdl::DialectOp) { return success(); }))
+            .Case(([](irdl::OperationOp) { return success(); }))
+            .Case(([](irdl::TypeOp) { return success(); }))
+            .Case(([](irdl::OperandsOp op) -> LogicalResult {
               if (llvm::all_of(
                       op.getVariadicity(), [](irdl::VariadicityAttr attr) {
                         return attr.getValue() == irdl::Variadicity::single;
@@ -660,7 +659,7 @@ static LogicalResult verifySupported(irdl::DialectOp dialect) {
               return op.emitError("IRDL C++ translation does not yet support "
                                   "variadic operations");
             }))
-            .Case<irdl::ResultsOp>(([](irdl::ResultsOp op) -> LogicalResult {
+            .Case(([](irdl::ResultsOp op) -> LogicalResult {
               if (llvm::all_of(
                       op.getVariadicity(), [](irdl::VariadicityAttr attr) {
                         return attr.getValue() == irdl::Variadicity::single;
@@ -669,9 +668,9 @@ static LogicalResult verifySupported(irdl::DialectOp dialect) {
               return op.emitError(
                   "IRDL C++ translation does not yet support variadic results");
             }))
-            .Case<irdl::AnyOp>(([](irdl::AnyOp) { return success(); }))
-            .Case<irdl::RegionOp>(([](irdl::RegionOp) { return success(); }))
-            .Case<irdl::RegionsOp>(([](irdl::RegionsOp) { return success(); }))
+            .Case(([](irdl::AnyOp) { return success(); }))
+            .Case(([](irdl::RegionOp) { return success(); }))
+            .Case(([](irdl::RegionsOp) { return success(); }))
             .Default([](mlir::Operation *op) -> LogicalResult {
               return op->emitError("IRDL C++ translation does not yet support "
                                    "translation of ")
@@ -711,9 +710,11 @@ irdl::translateIRDLDialectToCpp(llvm::ArrayRef<irdl::DialectOp> dialects,
     llvm::raw_string_ostream namespacePathStream(namespacePath);
     for (auto &pathElement : namespaceAbsolutePath) {
       namespaceOpenStream << "namespace " << pathElement << " {\n";
-      namespaceCloseStream << "} // namespace " << pathElement << "\n";
       namespacePathStream << "::" << pathElement;
     }
+
+    for (auto &pathElement : llvm::reverse(namespaceAbsolutePath))
+      namespaceCloseStream << "} // namespace " << pathElement << "\n";
 
     std::string cppShortName =
         llvm::convertToCamelFromSnakeCase(dialectName, true);

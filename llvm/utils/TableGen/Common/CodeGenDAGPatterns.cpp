@@ -94,15 +94,17 @@ bool TypeSetByHwMode::isValueTypeByHwMode(bool AllowEmpty) const {
   return true;
 }
 
-ValueTypeByHwMode TypeSetByHwMode::getValueTypeByHwMode() const {
+ValueTypeByHwMode TypeSetByHwMode::getValueTypeByHwMode(bool SkipEmpty) const {
   assert(isValueTypeByHwMode(true) &&
          "The type set has multiple types for at least one HW mode");
   ValueTypeByHwMode VVT;
   VVT.PtrAddrSpace = AddrSpace;
 
   for (const auto &I : *this) {
+    if (SkipEmpty && I.second.empty())
+      continue;
     MVT T = I.second.empty() ? MVT::Other : *I.second.begin();
-    VVT.getOrCreateTypeForMode(I.first, T);
+    VVT.insertTypeForMode(I.first, T);
   }
   return VVT;
 }
@@ -1480,10 +1482,9 @@ static unsigned getPatternSize(const TreePatternNode &P,
   // Count children in the count if they are also nodes.
   for (const TreePatternNode &Child : P.children()) {
     if (!Child.isLeaf() && Child.getNumTypes()) {
-      const TypeSetByHwMode &T0 = Child.getExtType(0);
-      // At this point, all variable type sets should be simple, i.e. only
-      // have a default mode.
-      if (T0.getMachineValueType() != MVT::Other) {
+      // FIXME: Can we assume non-simple VTs should be counted?
+      auto VVT = Child.getType(0);
+      if (llvm::any_of(VVT, [](auto &P) { return P.second != MVT::Other; })) {
         Size += getPatternSize(Child, CGP);
         continue;
       }
@@ -1798,15 +1799,27 @@ bool llvm::operator<(const SDTypeConstraint &LHS, const SDTypeConstraint &RHS) {
 /// RegClassByHwMode acts like ValueTypeByHwMode, taking the type of the
 /// register class from the active mode.
 static TypeSetByHwMode getTypeForRegClassByHwMode(const CodeGenTarget &T,
-                                                  const Record *R) {
+                                                  const Record *R,
+                                                  ArrayRef<SMLoc> Loc) {
   TypeSetByHwMode TypeSet;
   RegClassByHwMode Helper(R, T.getHwModes(), T.getRegBank());
 
   for (auto [ModeID, RegClass] : Helper) {
     ArrayRef<ValueTypeByHwMode> RegClassVTs = RegClass->getValueTypes();
     MachineValueTypeSet &ModeTypeSet = TypeSet.getOrCreate(ModeID);
-    for (const ValueTypeByHwMode &VT : RegClassVTs)
+    for (const ValueTypeByHwMode &VT : RegClassVTs) {
+      if (!VT.hasMode(ModeID) && !VT.hasDefault()) {
+        PrintError(R->getLoc(), "Could not resolve VT for Mode " +
+                                    T.getHwModes().getModeName(ModeID, true));
+        if (VT.getRecord())
+          PrintNote(VT.getRecord()->getLoc(), "ValueTypeByHwMode " +
+                                                  VT.getRecord()->getName() +
+                                                  " defined here");
+        PrintFatalNote(Loc, "pattern instantiated here");
+        continue;
+      }
       ModeTypeSet.insert(VT.getType(ModeID));
+    }
   }
 
   return TypeSet;
@@ -1830,10 +1843,6 @@ bool TreePatternNode::UpdateNodeTypeFromInst(unsigned ResNo,
     return UpdateNodeType(ResNo, getValueTypeByHwMode(R, T.getHwModes()), TP);
   }
 
-  // PointerLikeRegClass has a type that is determined at runtime.
-  if (Operand->isSubClassOf("PointerLikeRegClass"))
-    return UpdateNodeType(ResNo, MVT::iPTR, TP);
-
   // Both RegisterClass and RegisterOperand operands derive their types from a
   // register class def.
   const Record *RC = nullptr;
@@ -1842,17 +1851,23 @@ bool TreePatternNode::UpdateNodeTypeFromInst(unsigned ResNo,
   else if (Operand->isSubClassOf("RegisterOperand"))
     RC = Operand->getValueAsDef("RegClass");
 
-  assert(RC && "Unknown operand type");
+  if (!RC) {
+    TP.error("cannot update node type from unknown operand!");
+    return false;
+  }
+
   CodeGenTarget &Tgt = TP.getDAGPatterns().getTargetInfo();
   if (RC->isSubClassOf("RegClassByHwMode"))
-    return UpdateNodeType(ResNo, getTypeForRegClassByHwMode(Tgt, RC), TP);
+    return UpdateNodeType(
+        ResNo, getTypeForRegClassByHwMode(Tgt, RC, TP.getRecord()->getLoc()),
+        TP);
 
   return UpdateNodeType(ResNo, Tgt.getRegisterClass(RC).getValueTypes(), TP);
 }
 
 bool TreePatternNode::ContainsUnresolvedType(TreePattern &TP) const {
   for (const TypeSetByHwMode &Type : Types)
-    if (!TP.getInfer().isConcrete(Type, true))
+    if (!Type.isValueTypeByHwMode(/*AllowEmpty=*/true))
       return true;
   for (const TreePatternNode &Child : children())
     if (Child.ContainsUnresolvedType(TP))
@@ -2335,7 +2350,7 @@ static TypeSetByHwMode getImplicitType(const Record *R, unsigned ResNo,
     const CodeGenTarget &T = TP.getDAGPatterns().getTargetInfo();
 
     if (RegClass->isSubClassOf("RegClassByHwMode"))
-      return getTypeForRegClassByHwMode(T, RegClass);
+      return getTypeForRegClassByHwMode(T, RegClass, TP.getRecord()->getLoc());
 
     return TypeSetByHwMode(T.getRegisterClass(RegClass).getValueTypes());
   }
@@ -2357,8 +2372,10 @@ static TypeSetByHwMode getImplicitType(const Record *R, unsigned ResNo,
   }
 
   if (R->isSubClassOf("RegClassByHwMode")) {
+    if (NotRegisters)
+      return TypeSetByHwMode(); // Unknown.
     const CodeGenTarget &T = CDP.getTargetInfo();
-    return getTypeForRegClassByHwMode(T, R);
+    return getTypeForRegClassByHwMode(T, R, TP.getRecord()->getLoc());
   }
 
   if (R->isSubClassOf("PatFrags")) {
@@ -2412,12 +2429,6 @@ static TypeSetByHwMode getImplicitType(const Record *R, unsigned ResNo,
     const Record *T = CDP.getComplexPattern(R).getValueType();
     const CodeGenHwModes &CGH = CDP.getTargetInfo().getHwModes();
     return TypeSetByHwMode(getValueTypeByHwMode(T, CGH));
-  }
-  if (R->isSubClassOf("PointerLikeRegClass")) {
-    assert(ResNo == 0 && "Regclass can only have one result!");
-    TypeSetByHwMode VTS(MVT::iPTR);
-    TP.getInfer().expandOverloads(VTS);
-    return VTS;
   }
 
   if (R->getName() == "node" || R->getName() == "srcvalue" ||
@@ -2581,10 +2592,10 @@ bool TreePatternNode::ApplyTypeConstraints(TreePattern &TP, bool NotRegisters) {
       // Int inits are always integers. :)
       bool MadeChange = TP.getInfer().EnforceInteger(Types[0]);
 
-      if (!TP.getInfer().isConcrete(Types[0], false))
+      if (!Types[0].isValueTypeByHwMode(/*AllowEmpty=*/false))
         return MadeChange;
 
-      ValueTypeByHwMode VVT = TP.getInfer().getConcrete(Types[0], false);
+      ValueTypeByHwMode VVT = Types[0].getValueTypeByHwMode();
       for (auto &P : VVT) {
         MVT VT = P.second;
         // Can only check for types of a known size
@@ -2911,15 +2922,30 @@ TreePattern::TreePattern(const Record *TheRec, const ListInit *RawPat,
                          bool isInput, CodeGenDAGPatterns &cdp)
     : TheRecord(TheRec), CDP(cdp), isInputPattern(isInput), HasError(false),
       Infer(*this) {
-  for (const Init *I : RawPat->getElements())
-    Trees.push_back(ParseTreePattern(I, ""));
+  for (const Init *I : RawPat->getElements()) {
+    TreePatternNodePtr Node = ParseTreePattern(I, "");
+    if (!Node)
+      return;
+    Trees.push_back(Node);
+  }
 }
 
 TreePattern::TreePattern(const Record *TheRec, const DagInit *Pat, bool isInput,
                          CodeGenDAGPatterns &cdp)
     : TheRecord(TheRec), CDP(cdp), isInputPattern(isInput), HasError(false),
       Infer(*this) {
-  Trees.push_back(ParseTreePattern(Pat, ""));
+  TreePatternNodePtr Node = ParseTreePattern(Pat, "");
+  if (!Node)
+    return;
+  Trees.push_back(Node);
+}
+
+TreePattern::TreePattern(const Record *TheRec, ArrayRef<const Init *> Args,
+                         ArrayRef<const StringInit *> ArgNames, bool isInput,
+                         CodeGenDAGPatterns &cdp)
+    : TheRecord(TheRec), CDP(cdp), isInputPattern(isInput), HasError(false),
+      Infer(*this) {
+  Trees.push_back(ParseRootlessTreePattern(Args, ArgNames));
 }
 
 TreePattern::TreePattern(const Record *TheRec, TreePatternNodePtr Pat,
@@ -2948,6 +2974,19 @@ void TreePattern::ComputeNamedNodes(TreePatternNode &N) {
 
   for (TreePatternNode &Child : N.children())
     ComputeNamedNodes(Child);
+}
+
+TreePatternNodePtr
+TreePattern::ParseRootlessTreePattern(ArrayRef<const Init *> Args,
+                                      ArrayRef<const StringInit *> ArgNames) {
+  std::vector<TreePatternNodePtr> Children;
+
+  for (auto [Arg, ArgName] : llvm::zip_equal(Args, ArgNames)) {
+    StringRef NameStr = ArgName ? ArgName->getValue() : "";
+    Children.push_back(ParseTreePattern(Arg, NameStr));
+  }
+
+  return makeIntrusiveRefCnt<TreePatternNode>(nullptr, std::move(Children), 1);
 }
 
 TreePatternNodePtr TreePattern::ParseTreePattern(const Init *TheInit,
@@ -3009,12 +3048,17 @@ TreePatternNodePtr TreePattern::ParseTreePattern(const Init *TheInit,
     return nullptr;
   }
 
-  auto ParseCastOperand = [this](const DagInit *Dag, StringRef OpName) {
-    if (Dag->getNumArgs() != 1)
+  auto ParseCastOperand = [this](const DagInit *Dag,
+                                 StringRef OpName) -> TreePatternNodePtr {
+    if (Dag->getNumArgs() != 1) {
       error("Type cast only takes one operand!");
+      return nullptr;
+    }
 
-    if (!OpName.empty())
+    if (!OpName.empty()) {
       error("Type cast should not have a name!");
+      return nullptr;
+    }
 
     return ParseTreePattern(Dag->getArg(0), Dag->getArgNameStr(0));
   };
@@ -3023,6 +3067,8 @@ TreePatternNodePtr TreePattern::ParseTreePattern(const Init *TheInit,
     // If the operator is a list (of value types), then this must be "type cast"
     // of a leaf node with multiple results.
     TreePatternNodePtr New = ParseCastOperand(Dag, OpName);
+    if (!New)
+      return nullptr;
 
     size_t NumTypes = New->getNumTypes();
     if (LI->empty() || LI->size() != NumTypes)
@@ -3048,6 +3094,8 @@ TreePatternNodePtr TreePattern::ParseTreePattern(const Init *TheInit,
     // If the operator is a ValueType, then this must be "type cast" of a leaf
     // node.
     TreePatternNodePtr New = ParseCastOperand(Dag, OpName);
+    if (!New)
+      return nullptr;
 
     if (New->getNumTypes() != 1)
       error("ValueType cast can only have one type!");
@@ -3093,8 +3141,13 @@ TreePatternNodePtr TreePattern::ParseTreePattern(const Init *TheInit,
   std::vector<TreePatternNodePtr> Children;
 
   // Parse all the operands.
-  for (unsigned i = 0, e = Dag->getNumArgs(); i != e; ++i)
-    Children.push_back(ParseTreePattern(Dag->getArg(i), Dag->getArgNameStr(i)));
+  for (unsigned i = 0, e = Dag->getNumArgs(); i != e; ++i) {
+    TreePatternNodePtr Child =
+        ParseTreePattern(Dag->getArg(i), Dag->getArgNameStr(i));
+    if (!Child)
+      return nullptr;
+    Children.push_back(Child);
+  }
 
   // Get the actual number of results before Operator is converted to an
   // intrinsic node (which is hard-coded to have either zero or one result).
@@ -3294,12 +3347,10 @@ void TreePattern::dump() const { print(errs()); }
 // CodeGenDAGPatterns implementation
 //
 
-CodeGenDAGPatterns::CodeGenDAGPatterns(const RecordKeeper &R,
-                                       PatternRewriterFn PatternRewriter)
+CodeGenDAGPatterns::CodeGenDAGPatterns(const RecordKeeper &R, bool ExpandHwMode)
     : Records(R), Target(R), Intrinsics(R),
       LegalVTS(Target.getLegalValueTypes()),
-      LegalPtrVTS(ComputeLegalPtrTypes()),
-      PatternRewriter(std::move(PatternRewriter)) {
+      LegalPtrVTS(ComputeLegalPtrTypes()) {
   ParseNodeInfo();
   ParseNodeTransforms();
   ParseComplexPatterns();
@@ -3316,7 +3367,8 @@ CodeGenDAGPatterns::CodeGenDAGPatterns(const RecordKeeper &R,
   // Break patterns with parameterized types into a series of patterns,
   // where each one has a fixed type and is predicated on the conditions
   // of the associated HW mode.
-  ExpandHwModeBasedTypes();
+  if (ExpandHwMode)
+    ExpandHwModeBasedTypes();
 
   // Infer instruction flags.  For example, we can detect loads,
   // stores, and side effects in many cases by examining an
@@ -3487,20 +3539,12 @@ void CodeGenDAGPatterns::ParseDefaultOperands() {
   ArrayRef<const Record *> DefaultOps =
       Records.getAllDerivedDefinitions("OperandWithDefaultOps");
 
-  // Find some SDNode.
-  assert(!SDNodes.empty() && "No SDNodes parsed?");
-  const Init *SomeSDNode = SDNodes.begin()->first->getDefInit();
-
   for (unsigned i = 0, e = DefaultOps.size(); i != e; ++i) {
     const DagInit *DefaultInfo = DefaultOps[i]->getValueAsDag("DefaultOps");
 
-    // Clone the DefaultInfo dag node, changing the operator from 'ops' to
-    // SomeSDnode so that we can parse this.
-    const DagInit *DI = DagInit::get(SomeSDNode, DefaultInfo->getArgs(),
-                                     DefaultInfo->getArgNames());
-
     // Create a TreePattern to parse this.
-    TreePattern P(DefaultOps[i], DI, false, *this);
+    TreePattern P(DefaultOps[i], DefaultInfo->getArgs(),
+                  DefaultInfo->getArgNames(), false, *this);
     assert(P.getNumTrees() == 1 && "This ctor can only produce one tree!");
 
     // Copy the operands over into a DAGDefaultOperand.
@@ -3543,8 +3587,10 @@ static bool HandleUse(TreePattern &I, TreePatternNodePtr Pat,
   const Record *Rec;
   if (Pat->isLeaf()) {
     const DefInit *DI = dyn_cast<DefInit>(Pat->getLeafValue());
-    if (!DI)
+    if (!DI) {
       I.error("Input $" + Pat->getName() + " must be an identifier!");
+      return false;
+    }
     Rec = DI->getDef();
   } else {
     Rec = Pat->getOperator();
@@ -3648,8 +3694,7 @@ void CodeGenDAGPatterns::FindPatternInputsAndOutputs(
 
     if (Val->getDef()->isSubClassOf("RegisterClassLike") ||
         Val->getDef()->isSubClassOf("ValueType") ||
-        Val->getDef()->isSubClassOf("RegisterOperand") ||
-        Val->getDef()->isSubClassOf("PointerLikeRegClass")) {
+        Val->getDef()->isSubClassOf("RegisterOperand")) {
       if (Dest->getName().empty())
         I.error("set destination must have a name!");
       if (!InstResults.insert_or_assign(Dest->getName(), Dest).second)
@@ -4335,7 +4380,8 @@ static bool ForceArbitraryInstResultType(TreePatternNode &N, TreePattern &TP) {
   // anything.
   TypeInfer &TI = TP.getInfer();
   for (unsigned i = 0, e = N.getNumTypes(); i != e; ++i) {
-    if (N.getExtType(i).empty() || TI.isConcrete(N.getExtType(i), false))
+    if (N.getExtType(i).empty() ||
+        N.getExtType(i).isValueTypeByHwMode(/*AllowEmpty=*/false))
       continue;
 
     // Otherwise, force its type to an arbitrary choice.
@@ -4436,9 +4482,6 @@ void CodeGenDAGPatterns::ParseOnePattern(
 
   const ListInit *Preds = TheDef->getValueAsListInit("Predicates");
   int Complexity = TheDef->getValueAsInt("AddedComplexity");
-
-  if (PatternRewriter)
-    PatternRewriter(&Pattern);
 
   // A pattern may end up with an "impossible" type, i.e. a situation
   // where all types have been eliminated for some node in this pattern.

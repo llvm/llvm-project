@@ -260,7 +260,7 @@ static std::optional<evaluate::Assignment> GetEvaluateAssignment(
   using AssignmentStmt = common::Indirection<parser::AssignmentStmt>;
   using PointerAssignmentStmt =
       common::Indirection<parser::PointerAssignmentStmt>;
-  using TypedAssignment = parser::AssignmentStmt::TypedAssignment;
+  using TypedAssignment = parser::TypedAssignment;
 
   return common::visit(
       [](auto &&s) -> std::optional<evaluate::Assignment> {
@@ -426,7 +426,7 @@ static void SetExpr(parser::TypedExpr &expr, MaybeExpr value) {
   }
 }
 
-static void SetAssignment(parser::AssignmentStmt::TypedAssignment &assign,
+static void SetAssignment(parser::TypedAssignment &assign,
     std::optional<evaluate::Assignment> value) {
   if (value) {
     assign.Reset(new evaluate::GenericAssignmentWrapper(std::move(value)),
@@ -587,8 +587,18 @@ void OmpStructureChecker::CheckAtomicVariable(
   }
 
   std::vector<SomeExpr> dsgs{GetAllDesignators(atom)};
-  assert(dsgs.size() == 1 && "Should have a single top-level designator");
+
+  // Procedure references are valid if they return a pointer to a scalar.
+  // Just return if we don't have exactly one designator - other checks will
+  // diagnose any actual errors.
+  if (dsgs.size() != 1) {
+    return;
+  }
+
   evaluate::SymbolVector syms{evaluate::GetSymbolVector(dsgs.front())};
+  if (syms.empty()) {
+    return;
+  }
 
   CheckAtomicType(syms.back(), source, atom.AsFortran(), checkTypeOnPointer);
 

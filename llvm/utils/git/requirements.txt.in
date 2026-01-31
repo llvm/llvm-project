@@ -9,3 +9,4 @@ PyGithub==2.4.0 # >=1.59.1 For WorkflowRun.name
                 # >= Fix for https://github.com/PyGithub/PyGithub/issues/3001
                 # (variables in graphql query).
 GitPython>=3.1.32  # https://security.snyk.io/vuln/SNYK-PYTHON-GITPYTHON-5840584
+lit>=18.1.8  # No entry on snyk as of 2026-12-01

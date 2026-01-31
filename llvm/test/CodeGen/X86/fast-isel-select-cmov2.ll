@@ -3,6 +3,8 @@
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin10 -fast-isel -fast-isel-abort=1 | FileCheck %s --check-prefix=CHECK --check-prefix=NOAVX --check-prefix=FAST
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin10 -fast-isel -fast-isel-abort=1 -mattr=avx | FileCheck %s --check-prefix=CHECK --check-prefix=FAST_AVX
 ; RUN: llc < %s -mtriple=x86_64-apple-darwin10 -fast-isel -fast-isel-abort=1 -mattr=avx512f | FileCheck %s --check-prefix=CHECK --check-prefix=FAST_AVX
+; RUN: llc < %s -mtriple=x86_64-apple-darwin10 -fast-isel -fast-isel-abort=1 -mattr=+zu | FileCheck %s --check-prefix=FAST_SETZUCC
+; RUN: llc < %s -mtriple=x86_64-apple-darwin10 -fast-isel -fast-isel-abort=1 -mattr=+zu,+prefer-legacy-setcc | FileCheck %s --check-prefix=FAST_NO-SETZUCC
 
 ; Test all the cmp predicates that can feed an integer conditional move.
 
@@ -11,6 +13,16 @@ define i64 @select_fcmp_false_cmov(double %a, double %b, i64 %c, i64 %d) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movq %rsi, %rax
 ; CHECK-NEXT:    retq
+;
+; FAST_SETZUCC-LABEL: select_fcmp_false_cmov:
+; FAST_SETZUCC:       ## %bb.0:
+; FAST_SETZUCC-NEXT:    movq %rsi, %rax
+; FAST_SETZUCC-NEXT:    retq
+;
+; FAST_NO-SETZUCC-LABEL: select_fcmp_false_cmov:
+; FAST_NO-SETZUCC:       ## %bb.0:
+; FAST_NO-SETZUCC-NEXT:    movq %rsi, %rax
+; FAST_NO-SETZUCC-NEXT:    retq
   %1 = fcmp false double %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2
@@ -44,6 +56,26 @@ define i64 @select_fcmp_oeq_cmov(double %a, double %b, i64 %c, i64 %d) {
 ; FAST_AVX-NEXT:    testb %cl, %dl
 ; FAST_AVX-NEXT:    cmoveq %rsi, %rax
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_SETZUCC-LABEL: select_fcmp_oeq_cmov:
+; FAST_SETZUCC:       ## %bb.0:
+; FAST_SETZUCC-NEXT:    movq %rdi, %rax
+; FAST_SETZUCC-NEXT:    ucomisd %xmm1, %xmm0
+; FAST_SETZUCC-NEXT:    setzunp %cl
+; FAST_SETZUCC-NEXT:    setzue %dl
+; FAST_SETZUCC-NEXT:    testb %cl, %dl
+; FAST_SETZUCC-NEXT:    cmoveq %rsi, %rax
+; FAST_SETZUCC-NEXT:    retq
+;
+; FAST_NO-SETZUCC-LABEL: select_fcmp_oeq_cmov:
+; FAST_NO-SETZUCC:       ## %bb.0:
+; FAST_NO-SETZUCC-NEXT:    movq %rdi, %rax
+; FAST_NO-SETZUCC-NEXT:    ucomisd %xmm1, %xmm0
+; FAST_NO-SETZUCC-NEXT:    setnp %cl
+; FAST_NO-SETZUCC-NEXT:    sete %dl
+; FAST_NO-SETZUCC-NEXT:    testb %cl, %dl
+; FAST_NO-SETZUCC-NEXT:    cmoveq %rsi, %rax
+; FAST_NO-SETZUCC-NEXT:    retq
   %1 = fcmp oeq double %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2
@@ -63,6 +95,20 @@ define i64 @select_fcmp_ogt_cmov(double %a, double %b, i64 %c, i64 %d) {
 ; FAST_AVX-NEXT:    vucomisd %xmm1, %xmm0
 ; FAST_AVX-NEXT:    cmovbeq %rsi, %rax
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_SETZUCC-LABEL: select_fcmp_ogt_cmov:
+; FAST_SETZUCC:       ## %bb.0:
+; FAST_SETZUCC-NEXT:    movq %rdi, %rax
+; FAST_SETZUCC-NEXT:    ucomisd %xmm1, %xmm0
+; FAST_SETZUCC-NEXT:    cmovbeq %rsi, %rax
+; FAST_SETZUCC-NEXT:    retq
+;
+; FAST_NO-SETZUCC-LABEL: select_fcmp_ogt_cmov:
+; FAST_NO-SETZUCC:       ## %bb.0:
+; FAST_NO-SETZUCC-NEXT:    movq %rdi, %rax
+; FAST_NO-SETZUCC-NEXT:    ucomisd %xmm1, %xmm0
+; FAST_NO-SETZUCC-NEXT:    cmovbeq %rsi, %rax
+; FAST_NO-SETZUCC-NEXT:    retq
   %1 = fcmp ogt double %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2
@@ -82,6 +128,20 @@ define i64 @select_fcmp_oge_cmov(double %a, double %b, i64 %c, i64 %d) {
 ; FAST_AVX-NEXT:    vucomisd %xmm1, %xmm0
 ; FAST_AVX-NEXT:    cmovbq %rsi, %rax
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_SETZUCC-LABEL: select_fcmp_oge_cmov:
+; FAST_SETZUCC:       ## %bb.0:
+; FAST_SETZUCC-NEXT:    movq %rdi, %rax
+; FAST_SETZUCC-NEXT:    ucomisd %xmm1, %xmm0
+; FAST_SETZUCC-NEXT:    cmovbq %rsi, %rax
+; FAST_SETZUCC-NEXT:    retq
+;
+; FAST_NO-SETZUCC-LABEL: select_fcmp_oge_cmov:
+; FAST_NO-SETZUCC:       ## %bb.0:
+; FAST_NO-SETZUCC-NEXT:    movq %rdi, %rax
+; FAST_NO-SETZUCC-NEXT:    ucomisd %xmm1, %xmm0
+; FAST_NO-SETZUCC-NEXT:    cmovbq %rsi, %rax
+; FAST_NO-SETZUCC-NEXT:    retq
   %1 = fcmp oge double %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2
@@ -101,6 +161,20 @@ define i64 @select_fcmp_olt_cmov(double %a, double %b, i64 %c, i64 %d) {
 ; FAST_AVX-NEXT:    vucomisd %xmm0, %xmm1
 ; FAST_AVX-NEXT:    cmovbeq %rsi, %rax
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_SETZUCC-LABEL: select_fcmp_olt_cmov:
+; FAST_SETZUCC:       ## %bb.0:
+; FAST_SETZUCC-NEXT:    movq %rdi, %rax
+; FAST_SETZUCC-NEXT:    ucomisd %xmm0, %xmm1
+; FAST_SETZUCC-NEXT:    cmovbeq %rsi, %rax
+; FAST_SETZUCC-NEXT:    retq
+;
+; FAST_NO-SETZUCC-LABEL: select_fcmp_olt_cmov:
+; FAST_NO-SETZUCC:       ## %bb.0:
+; FAST_NO-SETZUCC-NEXT:    movq %rdi, %rax
+; FAST_NO-SETZUCC-NEXT:    ucomisd %xmm0, %xmm1
+; FAST_NO-SETZUCC-NEXT:    cmovbeq %rsi, %rax
+; FAST_NO-SETZUCC-NEXT:    retq
   %1 = fcmp olt double %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2
@@ -120,6 +194,20 @@ define i64 @select_fcmp_ole_cmov(double %a, double %b, i64 %c, i64 %d) {
 ; FAST_AVX-NEXT:    vucomisd %xmm0, %xmm1
 ; FAST_AVX-NEXT:    cmovbq %rsi, %rax
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_SETZUCC-LABEL: select_fcmp_ole_cmov:
+; FAST_SETZUCC:       ## %bb.0:
+; FAST_SETZUCC-NEXT:    movq %rdi, %rax
+; FAST_SETZUCC-NEXT:    ucomisd %xmm0, %xmm1
+; FAST_SETZUCC-NEXT:    cmovbq %rsi, %rax
+; FAST_SETZUCC-NEXT:    retq
+;
+; FAST_NO-SETZUCC-LABEL: select_fcmp_ole_cmov:
+; FAST_NO-SETZUCC:       ## %bb.0:
+; FAST_NO-SETZUCC-NEXT:    movq %rdi, %rax
+; FAST_NO-SETZUCC-NEXT:    ucomisd %xmm0, %xmm1
+; FAST_NO-SETZUCC-NEXT:    cmovbq %rsi, %rax
+; FAST_NO-SETZUCC-NEXT:    retq
   %1 = fcmp ole double %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2
@@ -139,6 +227,20 @@ define i64 @select_fcmp_one_cmov(double %a, double %b, i64 %c, i64 %d) {
 ; FAST_AVX-NEXT:    vucomisd %xmm1, %xmm0
 ; FAST_AVX-NEXT:    cmoveq %rsi, %rax
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_SETZUCC-LABEL: select_fcmp_one_cmov:
+; FAST_SETZUCC:       ## %bb.0:
+; FAST_SETZUCC-NEXT:    movq %rdi, %rax
+; FAST_SETZUCC-NEXT:    ucomisd %xmm1, %xmm0
+; FAST_SETZUCC-NEXT:    cmoveq %rsi, %rax
+; FAST_SETZUCC-NEXT:    retq
+;
+; FAST_NO-SETZUCC-LABEL: select_fcmp_one_cmov:
+; FAST_NO-SETZUCC:       ## %bb.0:
+; FAST_NO-SETZUCC-NEXT:    movq %rdi, %rax
+; FAST_NO-SETZUCC-NEXT:    ucomisd %xmm1, %xmm0
+; FAST_NO-SETZUCC-NEXT:    cmoveq %rsi, %rax
+; FAST_NO-SETZUCC-NEXT:    retq
   %1 = fcmp one double %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2
@@ -158,6 +260,20 @@ define i64 @select_fcmp_ord_cmov(double %a, double %b, i64 %c, i64 %d) {
 ; FAST_AVX-NEXT:    vucomisd %xmm1, %xmm0
 ; FAST_AVX-NEXT:    cmovpq %rsi, %rax
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_SETZUCC-LABEL: select_fcmp_ord_cmov:
+; FAST_SETZUCC:       ## %bb.0:
+; FAST_SETZUCC-NEXT:    movq %rdi, %rax
+; FAST_SETZUCC-NEXT:    ucomisd %xmm1, %xmm0
+; FAST_SETZUCC-NEXT:    cmovpq %rsi, %rax
+; FAST_SETZUCC-NEXT:    retq
+;
+; FAST_NO-SETZUCC-LABEL: select_fcmp_ord_cmov:
+; FAST_NO-SETZUCC:       ## %bb.0:
+; FAST_NO-SETZUCC-NEXT:    movq %rdi, %rax
+; FAST_NO-SETZUCC-NEXT:    ucomisd %xmm1, %xmm0
+; FAST_NO-SETZUCC-NEXT:    cmovpq %rsi, %rax
+; FAST_NO-SETZUCC-NEXT:    retq
   %1 = fcmp ord double %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2
@@ -177,6 +293,20 @@ define i64 @select_fcmp_uno_cmov(double %a, double %b, i64 %c, i64 %d) {
 ; FAST_AVX-NEXT:    vucomisd %xmm1, %xmm0
 ; FAST_AVX-NEXT:    cmovnpq %rsi, %rax
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_SETZUCC-LABEL: select_fcmp_uno_cmov:
+; FAST_SETZUCC:       ## %bb.0:
+; FAST_SETZUCC-NEXT:    movq %rdi, %rax
+; FAST_SETZUCC-NEXT:    ucomisd %xmm1, %xmm0
+; FAST_SETZUCC-NEXT:    cmovnpq %rsi, %rax
+; FAST_SETZUCC-NEXT:    retq
+;
+; FAST_NO-SETZUCC-LABEL: select_fcmp_uno_cmov:
+; FAST_NO-SETZUCC:       ## %bb.0:
+; FAST_NO-SETZUCC-NEXT:    movq %rdi, %rax
+; FAST_NO-SETZUCC-NEXT:    ucomisd %xmm1, %xmm0
+; FAST_NO-SETZUCC-NEXT:    cmovnpq %rsi, %rax
+; FAST_NO-SETZUCC-NEXT:    retq
   %1 = fcmp uno double %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2
@@ -196,6 +326,20 @@ define i64 @select_fcmp_ueq_cmov(double %a, double %b, i64 %c, i64 %d) {
 ; FAST_AVX-NEXT:    vucomisd %xmm1, %xmm0
 ; FAST_AVX-NEXT:    cmovneq %rsi, %rax
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_SETZUCC-LABEL: select_fcmp_ueq_cmov:
+; FAST_SETZUCC:       ## %bb.0:
+; FAST_SETZUCC-NEXT:    movq %rdi, %rax
+; FAST_SETZUCC-NEXT:    ucomisd %xmm1, %xmm0
+; FAST_SETZUCC-NEXT:    cmovneq %rsi, %rax
+; FAST_SETZUCC-NEXT:    retq
+;
+; FAST_NO-SETZUCC-LABEL: select_fcmp_ueq_cmov:
+; FAST_NO-SETZUCC:       ## %bb.0:
+; FAST_NO-SETZUCC-NEXT:    movq %rdi, %rax
+; FAST_NO-SETZUCC-NEXT:    ucomisd %xmm1, %xmm0
+; FAST_NO-SETZUCC-NEXT:    cmovneq %rsi, %rax
+; FAST_NO-SETZUCC-NEXT:    retq
   %1 = fcmp ueq double %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2
@@ -215,6 +359,20 @@ define i64 @select_fcmp_ugt_cmov(double %a, double %b, i64 %c, i64 %d) {
 ; FAST_AVX-NEXT:    vucomisd %xmm0, %xmm1
 ; FAST_AVX-NEXT:    cmovaeq %rsi, %rax
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_SETZUCC-LABEL: select_fcmp_ugt_cmov:
+; FAST_SETZUCC:       ## %bb.0:
+; FAST_SETZUCC-NEXT:    movq %rdi, %rax
+; FAST_SETZUCC-NEXT:    ucomisd %xmm0, %xmm1
+; FAST_SETZUCC-NEXT:    cmovaeq %rsi, %rax
+; FAST_SETZUCC-NEXT:    retq
+;
+; FAST_NO-SETZUCC-LABEL: select_fcmp_ugt_cmov:
+; FAST_NO-SETZUCC:       ## %bb.0:
+; FAST_NO-SETZUCC-NEXT:    movq %rdi, %rax
+; FAST_NO-SETZUCC-NEXT:    ucomisd %xmm0, %xmm1
+; FAST_NO-SETZUCC-NEXT:    cmovaeq %rsi, %rax
+; FAST_NO-SETZUCC-NEXT:    retq
   %1 = fcmp ugt double %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2
@@ -234,6 +392,20 @@ define i64 @select_fcmp_uge_cmov(double %a, double %b, i64 %c, i64 %d) {
 ; FAST_AVX-NEXT:    vucomisd %xmm0, %xmm1
 ; FAST_AVX-NEXT:    cmovaq %rsi, %rax
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_SETZUCC-LABEL: select_fcmp_uge_cmov:
+; FAST_SETZUCC:       ## %bb.0:
+; FAST_SETZUCC-NEXT:    movq %rdi, %rax
+; FAST_SETZUCC-NEXT:    ucomisd %xmm0, %xmm1
+; FAST_SETZUCC-NEXT:    cmovaq %rsi, %rax
+; FAST_SETZUCC-NEXT:    retq
+;
+; FAST_NO-SETZUCC-LABEL: select_fcmp_uge_cmov:
+; FAST_NO-SETZUCC:       ## %bb.0:
+; FAST_NO-SETZUCC-NEXT:    movq %rdi, %rax
+; FAST_NO-SETZUCC-NEXT:    ucomisd %xmm0, %xmm1
+; FAST_NO-SETZUCC-NEXT:    cmovaq %rsi, %rax
+; FAST_NO-SETZUCC-NEXT:    retq
   %1 = fcmp uge double %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2
@@ -253,6 +425,20 @@ define i64 @select_fcmp_ult_cmov(double %a, double %b, i64 %c, i64 %d) {
 ; FAST_AVX-NEXT:    vucomisd %xmm1, %xmm0
 ; FAST_AVX-NEXT:    cmovaeq %rsi, %rax
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_SETZUCC-LABEL: select_fcmp_ult_cmov:
+; FAST_SETZUCC:       ## %bb.0:
+; FAST_SETZUCC-NEXT:    movq %rdi, %rax
+; FAST_SETZUCC-NEXT:    ucomisd %xmm1, %xmm0
+; FAST_SETZUCC-NEXT:    cmovaeq %rsi, %rax
+; FAST_SETZUCC-NEXT:    retq
+;
+; FAST_NO-SETZUCC-LABEL: select_fcmp_ult_cmov:
+; FAST_NO-SETZUCC:       ## %bb.0:
+; FAST_NO-SETZUCC-NEXT:    movq %rdi, %rax
+; FAST_NO-SETZUCC-NEXT:    ucomisd %xmm1, %xmm0
+; FAST_NO-SETZUCC-NEXT:    cmovaeq %rsi, %rax
+; FAST_NO-SETZUCC-NEXT:    retq
   %1 = fcmp ult double %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2
@@ -272,6 +458,20 @@ define i64 @select_fcmp_ule_cmov(double %a, double %b, i64 %c, i64 %d) {
 ; FAST_AVX-NEXT:    vucomisd %xmm1, %xmm0
 ; FAST_AVX-NEXT:    cmovaq %rsi, %rax
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_SETZUCC-LABEL: select_fcmp_ule_cmov:
+; FAST_SETZUCC:       ## %bb.0:
+; FAST_SETZUCC-NEXT:    movq %rdi, %rax
+; FAST_SETZUCC-NEXT:    ucomisd %xmm1, %xmm0
+; FAST_SETZUCC-NEXT:    cmovaq %rsi, %rax
+; FAST_SETZUCC-NEXT:    retq
+;
+; FAST_NO-SETZUCC-LABEL: select_fcmp_ule_cmov:
+; FAST_NO-SETZUCC:       ## %bb.0:
+; FAST_NO-SETZUCC-NEXT:    movq %rdi, %rax
+; FAST_NO-SETZUCC-NEXT:    ucomisd %xmm1, %xmm0
+; FAST_NO-SETZUCC-NEXT:    cmovaq %rsi, %rax
+; FAST_NO-SETZUCC-NEXT:    retq
   %1 = fcmp ule double %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2
@@ -305,6 +505,26 @@ define i64 @select_fcmp_une_cmov(double %a, double %b, i64 %c, i64 %d) {
 ; FAST_AVX-NEXT:    orb %cl, %dl
 ; FAST_AVX-NEXT:    cmoveq %rsi, %rax
 ; FAST_AVX-NEXT:    retq
+;
+; FAST_SETZUCC-LABEL: select_fcmp_une_cmov:
+; FAST_SETZUCC:       ## %bb.0:
+; FAST_SETZUCC-NEXT:    movq %rdi, %rax
+; FAST_SETZUCC-NEXT:    ucomisd %xmm1, %xmm0
+; FAST_SETZUCC-NEXT:    setzup %cl
+; FAST_SETZUCC-NEXT:    setzune %dl
+; FAST_SETZUCC-NEXT:    orb %cl, %dl
+; FAST_SETZUCC-NEXT:    cmoveq %rsi, %rax
+; FAST_SETZUCC-NEXT:    retq
+;
+; FAST_NO-SETZUCC-LABEL: select_fcmp_une_cmov:
+; FAST_NO-SETZUCC:       ## %bb.0:
+; FAST_NO-SETZUCC-NEXT:    movq %rdi, %rax
+; FAST_NO-SETZUCC-NEXT:    ucomisd %xmm1, %xmm0
+; FAST_NO-SETZUCC-NEXT:    setp %cl
+; FAST_NO-SETZUCC-NEXT:    setne %dl
+; FAST_NO-SETZUCC-NEXT:    orb %cl, %dl
+; FAST_NO-SETZUCC-NEXT:    cmoveq %rsi, %rax
+; FAST_NO-SETZUCC-NEXT:    retq
   %1 = fcmp une double %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2
@@ -315,6 +535,16 @@ define i64 @select_fcmp_true_cmov(double %a, double %b, i64 %c, i64 %d) {
 ; CHECK:       ## %bb.0:
 ; CHECK-NEXT:    movq %rdi, %rax
 ; CHECK-NEXT:    retq
+;
+; FAST_SETZUCC-LABEL: select_fcmp_true_cmov:
+; FAST_SETZUCC:       ## %bb.0:
+; FAST_SETZUCC-NEXT:    movq %rdi, %rax
+; FAST_SETZUCC-NEXT:    retq
+;
+; FAST_NO-SETZUCC-LABEL: select_fcmp_true_cmov:
+; FAST_NO-SETZUCC:       ## %bb.0:
+; FAST_NO-SETZUCC-NEXT:    movq %rdi, %rax
+; FAST_NO-SETZUCC-NEXT:    retq
   %1 = fcmp true double %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2
@@ -327,6 +557,20 @@ define i64 @select_icmp_eq_cmov(i64 %a, i64 %b, i64 %c, i64 %d) {
 ; CHECK-NEXT:    cmpq %rsi, %rdi
 ; CHECK-NEXT:    cmovneq %rcx, %rax
 ; CHECK-NEXT:    retq
+;
+; FAST_SETZUCC-LABEL: select_icmp_eq_cmov:
+; FAST_SETZUCC:       ## %bb.0:
+; FAST_SETZUCC-NEXT:    movq %rdx, %rax
+; FAST_SETZUCC-NEXT:    cmpq %rsi, %rdi
+; FAST_SETZUCC-NEXT:    cmovneq %rcx, %rax
+; FAST_SETZUCC-NEXT:    retq
+;
+; FAST_NO-SETZUCC-LABEL: select_icmp_eq_cmov:
+; FAST_NO-SETZUCC:       ## %bb.0:
+; FAST_NO-SETZUCC-NEXT:    movq %rdx, %rax
+; FAST_NO-SETZUCC-NEXT:    cmpq %rsi, %rdi
+; FAST_NO-SETZUCC-NEXT:    cmovneq %rcx, %rax
+; FAST_NO-SETZUCC-NEXT:    retq
   %1 = icmp eq i64 %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2
@@ -339,6 +583,20 @@ define i64 @select_icmp_ne_cmov(i64 %a, i64 %b, i64 %c, i64 %d) {
 ; CHECK-NEXT:    cmpq %rsi, %rdi
 ; CHECK-NEXT:    cmoveq %rcx, %rax
 ; CHECK-NEXT:    retq
+;
+; FAST_SETZUCC-LABEL: select_icmp_ne_cmov:
+; FAST_SETZUCC:       ## %bb.0:
+; FAST_SETZUCC-NEXT:    movq %rdx, %rax
+; FAST_SETZUCC-NEXT:    cmpq %rsi, %rdi
+; FAST_SETZUCC-NEXT:    cmoveq %rcx, %rax
+; FAST_SETZUCC-NEXT:    retq
+;
+; FAST_NO-SETZUCC-LABEL: select_icmp_ne_cmov:
+; FAST_NO-SETZUCC:       ## %bb.0:
+; FAST_NO-SETZUCC-NEXT:    movq %rdx, %rax
+; FAST_NO-SETZUCC-NEXT:    cmpq %rsi, %rdi
+; FAST_NO-SETZUCC-NEXT:    cmoveq %rcx, %rax
+; FAST_NO-SETZUCC-NEXT:    retq
   %1 = icmp ne i64 %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2
@@ -351,6 +609,20 @@ define i64 @select_icmp_ugt_cmov(i64 %a, i64 %b, i64 %c, i64 %d) {
 ; CHECK-NEXT:    cmpq %rsi, %rdi
 ; CHECK-NEXT:    cmovbeq %rcx, %rax
 ; CHECK-NEXT:    retq
+;
+; FAST_SETZUCC-LABEL: select_icmp_ugt_cmov:
+; FAST_SETZUCC:       ## %bb.0:
+; FAST_SETZUCC-NEXT:    movq %rdx, %rax
+; FAST_SETZUCC-NEXT:    cmpq %rsi, %rdi
+; FAST_SETZUCC-NEXT:    cmovbeq %rcx, %rax
+; FAST_SETZUCC-NEXT:    retq
+;
+; FAST_NO-SETZUCC-LABEL: select_icmp_ugt_cmov:
+; FAST_NO-SETZUCC:       ## %bb.0:
+; FAST_NO-SETZUCC-NEXT:    movq %rdx, %rax
+; FAST_NO-SETZUCC-NEXT:    cmpq %rsi, %rdi
+; FAST_NO-SETZUCC-NEXT:    cmovbeq %rcx, %rax
+; FAST_NO-SETZUCC-NEXT:    retq
   %1 = icmp ugt i64 %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2
@@ -364,6 +636,20 @@ define i64 @select_icmp_uge_cmov(i64 %a, i64 %b, i64 %c, i64 %d) {
 ; CHECK-NEXT:    cmpq %rsi, %rdi
 ; CHECK-NEXT:    cmovbq %rcx, %rax
 ; CHECK-NEXT:    retq
+;
+; FAST_SETZUCC-LABEL: select_icmp_uge_cmov:
+; FAST_SETZUCC:       ## %bb.0:
+; FAST_SETZUCC-NEXT:    movq %rdx, %rax
+; FAST_SETZUCC-NEXT:    cmpq %rsi, %rdi
+; FAST_SETZUCC-NEXT:    cmovbq %rcx, %rax
+; FAST_SETZUCC-NEXT:    retq
+;
+; FAST_NO-SETZUCC-LABEL: select_icmp_uge_cmov:
+; FAST_NO-SETZUCC:       ## %bb.0:
+; FAST_NO-SETZUCC-NEXT:    movq %rdx, %rax
+; FAST_NO-SETZUCC-NEXT:    cmpq %rsi, %rdi
+; FAST_NO-SETZUCC-NEXT:    cmovbq %rcx, %rax
+; FAST_NO-SETZUCC-NEXT:    retq
   %1 = icmp uge i64 %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2
@@ -376,6 +662,20 @@ define i64 @select_icmp_ult_cmov(i64 %a, i64 %b, i64 %c, i64 %d) {
 ; CHECK-NEXT:    cmpq %rsi, %rdi
 ; CHECK-NEXT:    cmovaeq %rcx, %rax
 ; CHECK-NEXT:    retq
+;
+; FAST_SETZUCC-LABEL: select_icmp_ult_cmov:
+; FAST_SETZUCC:       ## %bb.0:
+; FAST_SETZUCC-NEXT:    movq %rdx, %rax
+; FAST_SETZUCC-NEXT:    cmpq %rsi, %rdi
+; FAST_SETZUCC-NEXT:    cmovaeq %rcx, %rax
+; FAST_SETZUCC-NEXT:    retq
+;
+; FAST_NO-SETZUCC-LABEL: select_icmp_ult_cmov:
+; FAST_NO-SETZUCC:       ## %bb.0:
+; FAST_NO-SETZUCC-NEXT:    movq %rdx, %rax
+; FAST_NO-SETZUCC-NEXT:    cmpq %rsi, %rdi
+; FAST_NO-SETZUCC-NEXT:    cmovaeq %rcx, %rax
+; FAST_NO-SETZUCC-NEXT:    retq
   %1 = icmp ult i64 %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2
@@ -388,6 +688,20 @@ define i64 @select_icmp_ule_cmov(i64 %a, i64 %b, i64 %c, i64 %d) {
 ; CHECK-NEXT:    cmpq %rsi, %rdi
 ; CHECK-NEXT:    cmovaq %rcx, %rax
 ; CHECK-NEXT:    retq
+;
+; FAST_SETZUCC-LABEL: select_icmp_ule_cmov:
+; FAST_SETZUCC:       ## %bb.0:
+; FAST_SETZUCC-NEXT:    movq %rdx, %rax
+; FAST_SETZUCC-NEXT:    cmpq %rsi, %rdi
+; FAST_SETZUCC-NEXT:    cmovaq %rcx, %rax
+; FAST_SETZUCC-NEXT:    retq
+;
+; FAST_NO-SETZUCC-LABEL: select_icmp_ule_cmov:
+; FAST_NO-SETZUCC:       ## %bb.0:
+; FAST_NO-SETZUCC-NEXT:    movq %rdx, %rax
+; FAST_NO-SETZUCC-NEXT:    cmpq %rsi, %rdi
+; FAST_NO-SETZUCC-NEXT:    cmovaq %rcx, %rax
+; FAST_NO-SETZUCC-NEXT:    retq
   %1 = icmp ule i64 %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2
@@ -400,6 +714,20 @@ define i64 @select_icmp_sgt_cmov(i64 %a, i64 %b, i64 %c, i64 %d) {
 ; CHECK-NEXT:    cmpq %rsi, %rdi
 ; CHECK-NEXT:    cmovleq %rcx, %rax
 ; CHECK-NEXT:    retq
+;
+; FAST_SETZUCC-LABEL: select_icmp_sgt_cmov:
+; FAST_SETZUCC:       ## %bb.0:
+; FAST_SETZUCC-NEXT:    movq %rdx, %rax
+; FAST_SETZUCC-NEXT:    cmpq %rsi, %rdi
+; FAST_SETZUCC-NEXT:    cmovleq %rcx, %rax
+; FAST_SETZUCC-NEXT:    retq
+;
+; FAST_NO-SETZUCC-LABEL: select_icmp_sgt_cmov:
+; FAST_NO-SETZUCC:       ## %bb.0:
+; FAST_NO-SETZUCC-NEXT:    movq %rdx, %rax
+; FAST_NO-SETZUCC-NEXT:    cmpq %rsi, %rdi
+; FAST_NO-SETZUCC-NEXT:    cmovleq %rcx, %rax
+; FAST_NO-SETZUCC-NEXT:    retq
   %1 = icmp sgt i64 %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2
@@ -412,6 +740,20 @@ define i64 @select_icmp_sge_cmov(i64 %a, i64 %b, i64 %c, i64 %d) {
 ; CHECK-NEXT:    cmpq %rsi, %rdi
 ; CHECK-NEXT:    cmovlq %rcx, %rax
 ; CHECK-NEXT:    retq
+;
+; FAST_SETZUCC-LABEL: select_icmp_sge_cmov:
+; FAST_SETZUCC:       ## %bb.0:
+; FAST_SETZUCC-NEXT:    movq %rdx, %rax
+; FAST_SETZUCC-NEXT:    cmpq %rsi, %rdi
+; FAST_SETZUCC-NEXT:    cmovlq %rcx, %rax
+; FAST_SETZUCC-NEXT:    retq
+;
+; FAST_NO-SETZUCC-LABEL: select_icmp_sge_cmov:
+; FAST_NO-SETZUCC:       ## %bb.0:
+; FAST_NO-SETZUCC-NEXT:    movq %rdx, %rax
+; FAST_NO-SETZUCC-NEXT:    cmpq %rsi, %rdi
+; FAST_NO-SETZUCC-NEXT:    cmovlq %rcx, %rax
+; FAST_NO-SETZUCC-NEXT:    retq
   %1 = icmp sge i64 %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2
@@ -424,6 +766,20 @@ define i64 @select_icmp_slt_cmov(i64 %a, i64 %b, i64 %c, i64 %d) {
 ; CHECK-NEXT:    cmpq %rsi, %rdi
 ; CHECK-NEXT:    cmovgeq %rcx, %rax
 ; CHECK-NEXT:    retq
+;
+; FAST_SETZUCC-LABEL: select_icmp_slt_cmov:
+; FAST_SETZUCC:       ## %bb.0:
+; FAST_SETZUCC-NEXT:    movq %rdx, %rax
+; FAST_SETZUCC-NEXT:    cmpq %rsi, %rdi
+; FAST_SETZUCC-NEXT:    cmovgeq %rcx, %rax
+; FAST_SETZUCC-NEXT:    retq
+;
+; FAST_NO-SETZUCC-LABEL: select_icmp_slt_cmov:
+; FAST_NO-SETZUCC:       ## %bb.0:
+; FAST_NO-SETZUCC-NEXT:    movq %rdx, %rax
+; FAST_NO-SETZUCC-NEXT:    cmpq %rsi, %rdi
+; FAST_NO-SETZUCC-NEXT:    cmovgeq %rcx, %rax
+; FAST_NO-SETZUCC-NEXT:    retq
   %1 = icmp slt i64 %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2
@@ -436,6 +792,20 @@ define i64 @select_icmp_sle_cmov(i64 %a, i64 %b, i64 %c, i64 %d) {
 ; CHECK-NEXT:    cmpq %rsi, %rdi
 ; CHECK-NEXT:    cmovgq %rcx, %rax
 ; CHECK-NEXT:    retq
+;
+; FAST_SETZUCC-LABEL: select_icmp_sle_cmov:
+; FAST_SETZUCC:       ## %bb.0:
+; FAST_SETZUCC-NEXT:    movq %rdx, %rax
+; FAST_SETZUCC-NEXT:    cmpq %rsi, %rdi
+; FAST_SETZUCC-NEXT:    cmovgq %rcx, %rax
+; FAST_SETZUCC-NEXT:    retq
+;
+; FAST_NO-SETZUCC-LABEL: select_icmp_sle_cmov:
+; FAST_NO-SETZUCC:       ## %bb.0:
+; FAST_NO-SETZUCC-NEXT:    movq %rdx, %rax
+; FAST_NO-SETZUCC-NEXT:    cmpq %rsi, %rdi
+; FAST_NO-SETZUCC-NEXT:    cmovgq %rcx, %rax
+; FAST_NO-SETZUCC-NEXT:    retq
   %1 = icmp sle i64 %a, %b
   %2 = select i1 %1, i64 %c, i64 %d
   ret i64 %2

@@ -4140,7 +4140,7 @@ of 2.
    .. code-block:: c
 
      typedef double * aligned_double_ptr __attribute__((align_value(64)));
-     void foo(double & x  __attribute__((align_value(128)),
+     void foo(double & x  __attribute__((align_value(128))),
               aligned_double_ptr y) { ... }
 
 If the pointer value does not have the specified alignment at runtime, the
@@ -5736,6 +5736,20 @@ option.
     }];
 }
 
+def StackProtectorIgnoreDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``stack_protector_ignore`` attribute skips analysis of the given local
+variable when determining if a function should use a stack protector.
+
+The ``-fstack-protector`` option uses a heuristic to only add stack protectors
+to functions which contain variables or buffers over some size threshold.  This
+attribute overrides that heuristic for the attached variable, opting
+them out.  If this results in no variables or buffers remaining over the stack
+protector threshold, then the function will no longer use a stack protector.
+  }];
+}
+
 def StrictGuardStackCheckDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -6749,7 +6763,7 @@ if omitted.``Section`` defaults  to the ``-fpatchable-function-entry`` section n
 set, or to ``__patchable_function_entries`` otherwise.
 
 This attribute is only supported on
-aarch64/aarch64-be/loongarch32/loongarch64/riscv32/riscv64/i386/x86-64/ppc/ppc64/ppc64le targets.
+aarch64/aarch64-be/loongarch32/loongarch64/riscv32/riscv64/i386/x86-64/ppc/ppc64/ppc64le/s390x targets.
 For ppc/ppc64 targets, AIX is still not supported.
 }];
 }
@@ -7065,7 +7079,9 @@ def CFIUncheckedCalleeDocs : Documentation {
   let Content = [{
 ``cfi_unchecked_callee`` is a function type attribute which prevents the compiler from instrumenting
 `Control Flow Integrity <https://clang.llvm.org/docs/ControlFlowIntegrity.html>`_ checks on indirect
-function calls. Specifically, the attribute has the following semantics:
+function calls. This also includes control flow checks added by
+`-fsanitize=function <https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html#available-checks>`.
+Specifically, the attribute has the following semantics:
 
 1. Indirect calls to a function type with this attribute will not be instrumented with CFI. That is,
    the indirect call will not be checked. Note that this only changes the behavior for indirect calls
@@ -7662,6 +7678,46 @@ When the Owner's lifetime ends, it will consider the Pointer to be dangling.
     IntPointer P(IntOwner{}); // P "points into" a temporary IntOwner object
     P.getInt(); // P is dangling
   }
+
+**Transparent Member Functions**
+
+The analysis automatically tracks certain member functions of ``[[gsl::Pointer]]`` types
+that provide transparent access to the pointed-to object. These include:
+
+* Dereference operators: ``operator*``, ``operator->``
+* Data access methods: ``data()``, ``c_str()``, ``get()``
+* Iterator methods: ``begin()``, ``end()``, ``rbegin()``, ``rend()``, ``cbegin()``, ``cend()``, ``crbegin()``, ``crend()``
+
+When these methods return pointers, view types, or references, the analysis treats them as
+transparently borrowing from the same object that the pointer itself borrows from,
+enabling detection of use-after-free through these access patterns:
+
+.. code-block:: c++
+
+  // For example, .data() here returns a borrow to 's' instead of 'v'.
+  const char* f() {
+    std::string s = "hello";
+    std::string_view v = s; // warning: address of stack memory returned
+    return v.data();        // note: returned here
+  }
+
+  const MyObj& g(MyObj obj) {
+    View v = obj; // warning: address of stack memory returned
+    return *v;    // note: returned here
+  }
+
+This tracking also applies to range-based for loops, where the ``begin()`` and ``end()``
+iterators are used to access elements:
+
+.. code-block:: c++
+
+  std::string_view f(std::vector<std::string> vec) {
+    for (const std::string& s : vec) {  // warning: address of stack memory returned
+      return s; // note: returned here
+    }
+  }
+
+**Container Template Specialization**
 
 If a template class is annotated with ``[[gsl::Owner]]``, and the first
 instantiated template argument is a pointer type (raw pointer, or ``[[gsl::Pointer]]``),
@@ -8794,6 +8850,22 @@ https://github.com/microsoft/hlsl-specs/blob/main/proposals/0011-inline-spirv.md
   }];
 }
 
+def HLSLVkPushConstantDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+Vulkan shaders have `PushConstants`
+
+The ``[[vk::push_constant]]`` attribute allows you to declare this
+global variable as a push constant when targeting Vulkan.
+This attribute is ignored otherwise.
+
+This attribute must be applied to the variable, not underlying type.
+The variable type must be a struct, per the requirements of Vulkan, "there
+must be no more than one push constant block statically used per shader entry
+point."
+}];
+}
+
 def AnnotateTypeDocs : Documentation {
   let Category = DocCatType;
   let Heading = "annotate_type";
@@ -8978,6 +9050,18 @@ The descriptor set is optional and defaults to 0 if not provided.
   [[vk::binding(1, 2)]] cbuffer MyCBuffer {
     float4x4 worldViewProj;
   };
+  }];
+}
+
+def HLSLVkLocationDocs : Documentation {
+  let Category = DocCatVariable;
+  let Content = [{
+Attribute used for specifying the location number for the stage input/output
+variables. Allowed on function parameters, function returns, and struct
+fields. This parameter has no effect when used outside of an entrypoint
+parameter/parameter field/return value.
+
+This attribute maps to the 'Location' SPIR-V decoration.
   }];
 }
 
@@ -9628,5 +9712,66 @@ silence diagnostics with code like:
 
   char BadStr[3] = "foo"; // No space for the null terminator, diagnosed
   __attribute__((nonstring)) char NotAStr[3] = "foo"; // Not diagnosed
+  }];
+}
+
+def ModularFormatDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``modular_format`` attribute can be applied to a function that bears the
+``format`` attribute (or standard library functions) to indicate that the
+implementation is "modular", that is, that the implementation is logically
+divided into a number of named aspects. When the compiler can determine that
+not all aspects of the implementation are needed for a given call, the compiler
+may redirect the call to the identifier given as the first argument to the
+attribute (the modular implementation function).
+
+The second argument is a implementation name, and the remaining arguments are
+aspects of the format string for the compiler to report. The implementation
+name is an unevaluated identifier be in the C namespace.
+
+The compiler reports that a call requires an aspect by issuing a relocation for
+the symbol ``<impl_name>_<aspect>`` at the point of the call. This arranges for
+code and data needed to support the aspect of the implementation to be brought
+into the link to satisfy weak references in the modular implemenation function.
+If the compiler does not understand an aspect, it must summarily consider any
+call to require that aspect. 
+
+For example, say ``printf`` is annotated with
+``modular_format(__modular_printf, "__printf", "float")``. Then, a call to
+``printf(var, 42)`` would be untouched. A call to ``printf("%d", 42)`` would
+become a call to ``__modular_printf`` with the same arguments, as would
+``printf("%f", 42.0)``. The latter would be accompanied with a strong
+relocation against the symbol ``__printf_float``, which would bring floating
+point support for ``printf`` into the link.
+
+If the attribute appears more than once on a declaration, or across a chain of
+redeclarations, it is an error for the attributes to have different arguments,
+excepting that the aspects may be in any order.
+
+The following aspects are currently supported:
+
+- ``float``: The call has a floating point argument
+  }];
+}
+
+def MSStructDocs : Documentation {
+  let Category = DocCatDecl;
+  let Content = [{
+The ``ms_struct`` and ``gcc_struct`` attributes request the compiler to enter a
+special record layout compatibility mode which mimics the layout of Microsoft or
+Itanium C++ ABI respectively. Obviously, if the current C++ ABI matches the
+requested ABI, the attribute does nothing. However, if it does not, annotated
+structure or class is laid out in a special compatibility mode, which slightly
+changes offsets for fields and bit-fields. The intention is to match the layout
+of the requested ABI for structures which only use C features.
+
+Note that the default behavior can be controlled by ``-mms-bitfields`` and
+``-mno-ms-bitfields`` switches and via ``#pragma ms_struct``.
+
+The primary difference is for bitfields, where the MS variant only packs
+adjacent fields into the same allocation unit if they have integral types
+of the same size, while the GCC/Itanium variant packs all fields in a bitfield
+tightly.
   }];
 }

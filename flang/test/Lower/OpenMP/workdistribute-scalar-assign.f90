@@ -11,7 +11,7 @@ subroutine target_teams_workdistribute_scalar_assign()
   ! CHECK: omp.distribute
   ! CHECK: omp.wsloop
   ! CHECK: omp.loop_nest
-  
+
   !$omp target teams workdistribute
   aa = 20
   !$omp end target teams workdistribute

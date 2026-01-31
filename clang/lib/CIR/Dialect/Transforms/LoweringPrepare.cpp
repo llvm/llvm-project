@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "LoweringPrepareCXXABI.h"
 #include "PassDetail.h"
 #include "mlir/IR/Attributes.h"
 #include "clang/AST/ASTContext.h"
@@ -71,9 +70,9 @@ struct LoweringPreparePass
   void lowerComplexMulOp(cir::ComplexMulOp op);
   void lowerUnaryOp(cir::UnaryOp op);
   void lowerGlobalOp(cir::GlobalOp op);
-  void lowerDynamicCastOp(cir::DynamicCastOp op);
   void lowerArrayDtor(cir::ArrayDtor op);
   void lowerArrayCtor(cir::ArrayCtor op);
+  void lowerTrivialCopyCall(cir::CallOp op);
 
   /// Build the function that initializes the specified global
   cir::FuncOp buildCXXGlobalVarDeclInitFunc(cir::GlobalOp op);
@@ -106,9 +105,6 @@ struct LoweringPreparePass
 
   clang::ASTContext *astCtx;
 
-  // Helper for lowering C++ ABI specific operations.
-  std::shared_ptr<cir::LoweringPrepareCXXABI> cxxABI;
-
   /// Tracks current module.
   mlir::ModuleOp mlirModule;
 
@@ -121,24 +117,7 @@ struct LoweringPreparePass
   /// List of dtors and their priorities to be called when unloading module.
   llvm::SmallVector<std::pair<std::string, uint32_t>, 4> globalDtorList;
 
-  void setASTContext(clang::ASTContext *c) {
-    astCtx = c;
-    switch (c->getCXXABIKind()) {
-    case clang::TargetCXXABI::GenericItanium:
-      // We'll need X86-specific support for handling vaargs lowering, but for
-      // now the Itanium ABI will work.
-      assert(!cir::MissingFeatures::loweringPrepareX86CXXABI());
-      cxxABI.reset(cir::LoweringPrepareCXXABI::createItaniumABI());
-      break;
-    case clang::TargetCXXABI::GenericAArch64:
-    case clang::TargetCXXABI::AppleARM64:
-      assert(!cir::MissingFeatures::loweringPrepareAArch64XXABI());
-      cxxABI.reset(cir::LoweringPrepareCXXABI::createItaniumABI());
-      break;
-    default:
-      llvm_unreachable("NYI");
-    }
-  }
+  void setASTContext(clang::ASTContext *c) { astCtx = c; }
 };
 
 } // namespace
@@ -702,6 +681,7 @@ cir::FuncOp LoweringPreparePass::getOrCreateDtorFunc(CIRBaseBuilderTy &builder,
                                                      cir::GlobalOp op,
                                                      mlir::Region &dtorRegion,
                                                      cir::CallOp &dtorCall) {
+  mlir::OpBuilder::InsertionGuard guard(builder);
   assert(!cir::MissingFeatures::astVarDeclInterface());
   assert(!cir::MissingFeatures::opGlobalThreadLocal());
 
@@ -983,17 +963,6 @@ void LoweringPreparePass::buildCXXGlobalInitFunc() {
   cir::ReturnOp::create(builder, f.getLoc());
 }
 
-void LoweringPreparePass::lowerDynamicCastOp(DynamicCastOp op) {
-  CIRBaseBuilderTy builder(getContext());
-  builder.setInsertionPointAfter(op);
-
-  assert(astCtx && "AST context is not available during lowering prepare");
-  auto loweredValue = cxxABI->lowerDynamicCast(builder, *astCtx, op);
-
-  op.replaceAllUsesWith(loweredValue);
-  op.erase();
-}
-
 static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
                                        clang::ASTContext *astCtx,
                                        mlir::Operation *op, mlir::Type eltTy,
@@ -1027,8 +996,7 @@ static void lowerArrayDtorCtorIntoLoop(cir::CIRBaseBuilderTy &builder,
       /*condBuilder=*/
       [&](mlir::OpBuilder &b, mlir::Location loc) {
         auto currentElement = cir::LoadOp::create(b, loc, eltTy, tmpAddr);
-        mlir::Type boolTy = cir::BoolType::get(b.getContext());
-        auto cmp = cir::CmpOp::create(builder, loc, boolTy, cir::CmpOpKind::ne,
+        auto cmp = cir::CmpOp::create(builder, loc, cir::CmpOpKind::ne,
                                       currentElement, stop);
         builder.createCondition(cmp);
       },
@@ -1085,6 +1053,25 @@ void LoweringPreparePass::lowerArrayCtor(cir::ArrayCtor op) {
                              true);
 }
 
+void LoweringPreparePass::lowerTrivialCopyCall(cir::CallOp op) {
+  cir::FuncOp funcOp = getCalledFunction(op);
+  if (!funcOp)
+    return;
+
+  std::optional<cir::CtorKind> ctorKind = funcOp.getCxxConstructorKind();
+  if (ctorKind && *ctorKind == cir::CtorKind::Copy &&
+      funcOp.isCxxTrivialMemberFunction()) {
+    // Replace the trivial copy constructor call with a `CopyOp`
+    CIRBaseBuilderTy builder(getContext());
+    mlir::ValueRange operands = op.getOperands();
+    mlir::Value dest = operands[0];
+    mlir::Value src = operands[1];
+    builder.setInsertionPoint(op);
+    builder.createCopy(dest, src);
+    op.erase();
+  }
+}
+
 void LoweringPreparePass::runOnOp(mlir::Operation *op) {
   if (auto arrayCtor = dyn_cast<cir::ArrayCtor>(op)) {
     lowerArrayCtor(arrayCtor);
@@ -1098,10 +1085,10 @@ void LoweringPreparePass::runOnOp(mlir::Operation *op) {
     lowerComplexMulOp(complexMul);
   } else if (auto glob = mlir::dyn_cast<cir::GlobalOp>(op)) {
     lowerGlobalOp(glob);
-  } else if (auto dynamicCast = mlir::dyn_cast<cir::DynamicCastOp>(op)) {
-    lowerDynamicCastOp(dynamicCast);
   } else if (auto unary = mlir::dyn_cast<cir::UnaryOp>(op)) {
     lowerUnaryOp(unary);
+  } else if (auto callOp = dyn_cast<cir::CallOp>(op)) {
+    lowerTrivialCopyCall(callOp);
   } else if (auto fnOp = dyn_cast<cir::FuncOp>(op)) {
     if (auto globalCtor = fnOp.getGlobalCtorPriority())
       globalCtorList.emplace_back(fnOp.getName(), globalCtor.value());
@@ -1120,7 +1107,7 @@ void LoweringPreparePass::runOnOperation() {
   op->walk([&](mlir::Operation *op) {
     if (mlir::isa<cir::ArrayCtor, cir::ArrayDtor, cir::CastOp,
                   cir::ComplexMulOp, cir::ComplexDivOp, cir::DynamicCastOp,
-                  cir::FuncOp, cir::GlobalOp, cir::UnaryOp>(op))
+                  cir::FuncOp, cir::CallOp, cir::GlobalOp, cir::UnaryOp>(op))
       opsToTransform.push_back(op);
   });
 

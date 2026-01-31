@@ -11,8 +11,6 @@ define noundef signext i32 @foo() {
   ret i32 0
 }
 
-declare void @llvm.write_register.i64(metadata, i64)
-
 define noundef signext i32 @bar() nounwind {
 ; CHECK-LABEL: bar:
 ; CHECK:       # %bb.0:
