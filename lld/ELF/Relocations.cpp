@@ -122,7 +122,7 @@ bool elf::isAbsolute(const Symbol &sym) {
   return false;
 }
 
-static bool isAbsoluteValue(const Symbol &sym) {
+static bool isAbsoluteOrTls(const Symbol &sym) {
   return isAbsolute(sym) || sym.isTls();
 }
 
@@ -148,7 +148,7 @@ static bool isRelExpr(RelExpr expr) {
   return oneof<R_PC, R_GOTREL, R_GOTPLTREL, RE_ARM_PCA, RE_MIPS_GOTREL,
                RE_PPC64_CALL, RE_PPC64_RELAX_TOC, RE_AARCH64_PAGE_PC,
                R_RELAX_GOT_PC, RE_RISCV_PC_INDIRECT, RE_PPC64_RELAX_GOT_PC,
-               RE_LOONGARCH_PAGE_PC>(expr);
+               RE_LOONGARCH_PAGE_PC, RE_LOONGARCH_PC_INDIRECT>(expr);
 }
 
 static RelExpr toPlt(RelExpr expr) {
@@ -866,7 +866,7 @@ bool RelocScan::isStaticLinkTimeConstant(RelExpr e, RelType type,
 
   // For the target and the relocation, we want to know if they are
   // absolute or relative.
-  bool absVal = isAbsoluteValue(sym) && e != RE_PPC64_TOCBASE;
+  bool absVal = isAbsoluteOrTls(sym) && e != RE_PPC64_TOCBASE;
   bool relE = isRelExpr(e);
   if (absVal && !relE)
     return true;
@@ -914,7 +914,7 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
   // If non-ifunc non-preemptible, change PLT to direct call and optimize GOT
   // indirection.
   const bool isIfunc = sym.isGnuIFunc();
-  if (!sym.isPreemptible && (!isIfunc || ctx.arg.zIfuncNoplt)) {
+  if (!sym.isPreemptible && !isIfunc) {
     if (expr != R_GOT_PC) {
       // The 0x8000 bit of r_addend of R_PPC_PLTREL24 is used to choose call
       // stub type. It should be ignored if optimized to R_PC.
@@ -927,7 +927,7 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
              type == R_HEX_GD_PLT_B22_PCREL_X ||
              type == R_HEX_GD_PLT_B32_PCREL_X)))
         expr = fromPlt(expr);
-    } else if (!isAbsoluteValue(sym) ||
+    } else if (!isAbsoluteOrTls(sym) ||
                (type == R_PPC64_PCREL_OPT && ctx.arg.emachine == EM_PPC64)) {
       expr = ctx.target->adjustGotPcExpr(type, addend,
                                          sec->content().data() + offset);
@@ -1930,7 +1930,7 @@ ThunkSection *ThunkCreator::getISThunkSec(InputSection *isec) {
     if (isec->outSecOff < first->outSecOff || last->outSecOff < isec->outSecOff)
       continue;
 
-    ts = addThunkSection(tos, isd, isec->outSecOff);
+    ts = addThunkSection(tos, isd, isec->outSecOff, /*isPrefix=*/true);
     thunkedSections[isec] = ts;
     return ts;
   }
@@ -1989,11 +1989,11 @@ void ThunkCreator::createInitialThunkSections(
 
 ThunkSection *ThunkCreator::addThunkSection(OutputSection *os,
                                             InputSectionDescription *isd,
-                                            uint64_t off) {
+                                            uint64_t off, bool isPrefix) {
   auto *ts = make<ThunkSection>(ctx, os, off);
   ts->partition = os->partition;
   if ((ctx.arg.fixCortexA53Errata843419 || ctx.arg.fixCortexA8) &&
-      !isd->sections.empty()) {
+      !isd->sections.empty() && !isPrefix) {
     // The errata fixes are sensitive to addresses modulo 4 KiB. When we add
     // thunks we disturb the base addresses of sections placed after the thunks
     // this makes patches we have generated redundant, and may cause us to
@@ -2017,6 +2017,12 @@ ThunkSection *ThunkCreator::addThunkSection(OutputSection *os,
     // 2.) The InputSectionDescription is larger than 4 KiB. This will prevent
     //     any assertion failures that an InputSectionDescription is < 4 KiB
     //     in size.
+    //
+    // isPrefix is a ThunkSection explicitly inserted before its target
+    // section. We suppress the rounding up of the size of these ThunkSections
+    // as unlike normal ThunkSections, they are small in size, but when BTI is
+    // enabled very frequent. This can bloat code-size and push the errata
+    // patches out of branch range.
     uint64_t isdSize = isd->sections.back()->outSecOff +
                        isd->sections.back()->getSize() -
                        isd->sections.front()->outSecOff;

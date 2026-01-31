@@ -586,9 +586,18 @@ def testCustomAttribute():
         try:
             TestAttr(42)
         except TypeError as e:
-            assert "Expected an MLIR object (got 42)" in str(e)
-        except ValueError as e:
-            assert "Cannot cast attribute to TestAttr (from 42)" in str(e)
+            assert (
+                "__init__(): incompatible function arguments. The following argument types are supported"
+                in str(e)
+            )
+            assert (
+                "__init__(self, cast_from_attr: mlir._mlir_libs._mlir.ir.Attribute) -> None"
+                in str(e)
+            )
+            assert (
+                "Invoked with types: mlir._mlir_libs._mlirPythonTestNanobind.TestAttr, int"
+                in str(e)
+            )
         else:
             raise
 
@@ -613,12 +622,6 @@ def testCustomType():
         b = TestType(a)
         # Instance custom types should have typeids
         assert isinstance(b.typeid, TypeID)
-        # Subclasses of ir.Type should not have a static_typeid
-        # CHECK: 'TestType' object has no attribute 'static_typeid'
-        try:
-            b.static_typeid
-        except AttributeError as e:
-            print(e)
 
         i8 = IntegerType.get_signless(8)
         try:
@@ -633,9 +636,18 @@ def testCustomType():
         try:
             TestType(42)
         except TypeError as e:
-            assert "Expected an MLIR object (got 42)" in str(e)
-        except ValueError as e:
-            assert "Cannot cast type to TestType (from 42)" in str(e)
+            assert (
+                "__init__(): incompatible function arguments. The following argument types are supported"
+                in str(e)
+            )
+            assert (
+                "__init__(self, cast_from_type: mlir._mlir_libs._mlir.ir.Type) -> None"
+                in str(e)
+            )
+            assert (
+                "Invoked with types: mlir._mlir_libs._mlirPythonTestNanobind.TestType, int"
+                in str(e)
+            )
         else:
             raise
 
@@ -842,7 +854,7 @@ def testVariadicOperandAccess():
             variadic_operands = test.SameVariadicOperandSizeOp(
                 [zero, one], two, [three, four]
             )
-            # CHECK: Value(%{{.*}} = arith.constant 2 : i32)
+            # CHECK: OpResult(%{{.*}} = arith.constant 2 : i32)
             print(variadic_operands.non_variadic)
             assert (
                 typing.get_type_hints(test.SameVariadicOperandSizeOp.non_variadic.fget)[
@@ -850,9 +862,9 @@ def testVariadicOperandAccess():
                 ]
                 is Value
             )
-            assert type(variadic_operands.non_variadic) is Value
+            assert type(variadic_operands.non_variadic) is OpResult
 
-            # CHECK: ['Value(%{{.*}} = arith.constant 0 : i32)', 'Value(%{{.*}} = arith.constant 1 : i32)']
+            # CHECK: ['OpResult(%{{.*}} = arith.constant 0 : i32)', 'OpResult(%{{.*}} = arith.constant 1 : i32)']
             print(values(variadic_operands.variadic1))
             assert (
                 typing.get_type_hints(test.SameVariadicOperandSizeOp.variadic1.fget)[
@@ -862,7 +874,7 @@ def testVariadicOperandAccess():
             )
             assert type(variadic_operands.variadic1) is OpOperandList
 
-            # CHECK: ['Value(%{{.*}} = arith.constant 3 : i32)', 'Value(%{{.*}} = arith.constant 4 : i32)']
+            # CHECK: ['OpResult(%{{.*}} = arith.constant 3 : i32)', 'OpResult(%{{.*}} = arith.constant 4 : i32)']
             print(values(variadic_operands.variadic2))
             assert type(variadic_operands.variadic2) is OpOperandList
 

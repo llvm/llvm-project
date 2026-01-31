@@ -1149,3 +1149,45 @@ gpu.module @test_module_56 {
     func.return %sin16, %cos16, %sin32, %cos32, %sin64, %cos64 : f16, f16, f32, f32, f64, f64
   }
 }
+
+// -----
+
+gpu.module @test_module_cluster_size {
+  // CHECK-LABEL: llvm.func @kernel_with_cluster_size()
+  // CHECK-SAME: nvvm.cluster_dim = array<i32: 8, 2, 4>
+  gpu.func @kernel_with_cluster_size() kernel attributes {known_cluster_size = array<i32: 8, 2, 4>} {
+    gpu.return
+  }
+}
+
+// -----
+
+gpu.module @test_module_cluster_block_ops {
+// CHECK-LABEL: llvm.func @kernel_with_cluster_size(
+// CHECK-SAME: %[[ARG0:.*]]: !llvm.ptr)
+// CHECK-SAME: gpu.known_cluster_size = array<i32: 8, 4, 2>
+  gpu.func @kernel_with_cluster_size(%arg0: !llvm.ptr) kernel attributes {known_cluster_size = array<i32: 8, 4, 2>} {
+    // CHECK: nvvm.read.ptx.sreg.cluster.ctaid.x range <i32, 0, 8> : i32
+    %0 = gpu.cluster_block_id x
+    // CHECK: nvvm.read.ptx.sreg.cluster.ctaid.y range <i32, 0, 4> : i32
+    %1 = gpu.cluster_block_id y
+    // CHECK: nvvm.read.ptx.sreg.cluster.ctaid.z range <i32, 0, 2> : i32
+    %2 = gpu.cluster_block_id z
+    // CHECK: nvvm.read.ptx.sreg.cluster.nctaid.x range <i32, 1, 9> : i32
+    %3 = gpu.cluster_dim_blocks x
+    // CHECK: nvvm.read.ptx.sreg.cluster.nctaid.y range <i32, 1, 5> : i32
+    %4 = gpu.cluster_dim_blocks y
+    // CHECK: nvvm.read.ptx.sreg.cluster.nctaid.z range <i32, 1, 3> : i32
+    %5 = gpu.cluster_dim_blocks z
+
+    %6 = arith.addi %0, %1 : index
+    %7 = arith.addi %6, %2 : index
+    %8 = arith.addi %7, %3 : index
+    %9 = arith.addi %8, %4 : index
+    %10 = arith.addi %9, %5 : index
+    %11 = arith.index_cast %10 : index to i64
+    llvm.store %11, %arg0 : i64, !llvm.ptr
+    gpu.return
+  }
+}
+

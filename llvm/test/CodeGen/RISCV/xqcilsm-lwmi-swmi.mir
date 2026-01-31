@@ -15,8 +15,13 @@
   define void @no_pair_if_offset_out_of_range_lw() nounwind { ret void }
   define void @no_pair_if_offset_out_of_range_sw() nounwind { ret void }
   define void @no_pair_if_non_consecutive_regs() nounwind { ret void }
-  define void @no_pair_if_rd_is_x0() nounwind { ret void }
+  define void @no_pair_if_rd_is_x0_lwmi() nounwind { ret void }
+  define void @no_pair_if_rd_is_x0_swmi() nounwind { ret void }
+  define void @pair_if_rd_is_x0_setwmi() nounwind { ret void }
   define void @no_pair_if_lw_rd_equals_base() nounwind { ret void }
+  define void @second_pair_if_no_first_pair_lwmi() nounwind { ret void }
+  define void @second_pair_if_no_first_pair_swmi() nounwind { ret void }
+  define void @second_pair_if_no_first_pair_setwmi() nounwind { ret void }
   define void @pair_if_not_adjacent() nounwind { ret void }
   define void @pair_if_not_adjacent_use() nounwind { ret void }
   define void @no_pair_if_not_adjacent_use() nounwind { ret void }
@@ -225,12 +230,12 @@ body: |
 
 ...
 ---
-name: no_pair_if_rd_is_x0
+name: no_pair_if_rd_is_x0_lwmi
 tracksRegLiveness: false
 body: |
   bb.0:
     liveins: $x10
-    ; CHECK-LABEL: name: no_pair_if_rd_is_x0
+    ; CHECK-LABEL: name: no_pair_if_rd_is_x0_lwmi
     ; CHECK: liveins: $x10
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: $x0 = LW $x10, 0 :: (load (s32))
@@ -238,6 +243,39 @@ body: |
     ; CHECK-NEXT: PseudoRET
     $x0 = LW $x10, 0 :: (load (s32), align 4)
     $x1 = LW $x10, 4 :: (load (s32), align 4)
+    PseudoRET
+
+...
+---
+name: no_pair_if_rd_is_x0_swmi
+tracksRegLiveness: false
+body: |
+  bb.0:
+    liveins: $x10
+    ; CHECK-LABEL: name: no_pair_if_rd_is_x0_swmi
+    ; CHECK: liveins: $x10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: SW $x0, $x10, 0 :: (store (s32))
+    ; CHECK-NEXT: SW $x1, $x10, 4 :: (store (s32))
+    ; CHECK-NEXT: PseudoRET
+    SW $x0, $x10, 0 :: (store (s32), align 4)
+    SW $x1, $x10, 4 :: (store (s32), align 4)
+    PseudoRET
+
+...
+---
+name: pair_if_rd_is_x0_setwmi
+tracksRegLiveness: false
+body: |
+  bb.0:
+    liveins: $x10
+    ; CHECK-LABEL: name: pair_if_rd_is_x0_setwmi
+    ; CHECK: liveins: $x10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: QC_SETWMI $x0, $x10, 2, 0 :: (store (s32))
+    ; CHECK-NEXT: PseudoRET
+    SW $x0, $x10, 0 :: (store (s32), align 4)
+    SW $x0, $x10, 4 :: (store (s32), align 4)
     PseudoRET
 
 ...
@@ -255,6 +293,60 @@ body: |
     ; CHECK-NEXT: PseudoRET
     $x10 = LW $x10, 20 :: (load (s32), align 4)
     $x11 = LW $x10, 24 :: (load (s32), align 4)
+    PseudoRET
+
+...
+---
+name: second_pair_if_no_first_pair_lwmi
+tracksRegLiveness: false
+body: |
+  bb.0:
+    liveins: $x10
+    ; CHECK-LABEL: name: second_pair_if_no_first_pair_lwmi
+    ; CHECK: liveins: $x10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: $x0 = LW $x10, 0 :: (load (s32))
+    ; CHECK-NEXT: $x1 = QC_LWMI $x10, 2, 4, implicit-def $x2 :: (load (s32))
+    ; CHECK-NEXT: PseudoRET
+    $x0 = LW $x10, 0 :: (load (s32), align 4)
+    $x1 = LW $x10, 4 :: (load (s32), align 4)
+    $x2 = LW $x10, 8 :: (load (s32), align 4)
+    PseudoRET
+
+...
+---
+name: second_pair_if_no_first_pair_swmi
+tracksRegLiveness: false
+body: |
+  bb.0:
+    liveins: $x10
+    ; CHECK-LABEL: name: second_pair_if_no_first_pair_swmi
+    ; CHECK: liveins: $x10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: SW $x0, $x10, 0 :: (store (s32))
+    ; CHECK-NEXT: QC_SWMI $x1, $x10, 2, 4, implicit $x2 :: (store (s32))
+    ; CHECK-NEXT: PseudoRET
+    SW $x0, $x10, 0 :: (store (s32), align 4)
+    SW $x1, $x10, 4 :: (store (s32), align 4)
+    SW $x2, $x10, 8 :: (store (s32), align 4)
+    PseudoRET
+
+...
+---
+name: second_pair_if_no_first_pair_setwmi
+tracksRegLiveness: false
+body: |
+  bb.0:
+    liveins: $x10
+    ; CHECK-LABEL: name: second_pair_if_no_first_pair_setwmi
+    ; CHECK: liveins: $x10
+    ; CHECK-NEXT: {{  $}}
+    ; CHECK-NEXT: SW $x0, $x10, 0 :: (store (s32))
+    ; CHECK-NEXT: QC_SETWMI $x2, $x10, 2, 4 :: (store (s32))
+    ; CHECK-NEXT: PseudoRET
+    SW $x0, $x10, 0 :: (store (s32), align 4)
+    SW $x2, $x10, 4 :: (store (s32), align 4)
+    SW $x2, $x10, 8 :: (store (s32), align 4)
     PseudoRET
 
 ...

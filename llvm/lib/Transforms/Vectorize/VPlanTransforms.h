@@ -16,6 +16,7 @@
 #include "VPlan.h"
 #include "VPlanVerifier.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 
@@ -35,26 +36,36 @@ struct VFRange;
 LLVM_ABI_FOR_TEST extern cl::opt<bool> VerifyEachVPlan;
 LLVM_ABI_FOR_TEST extern cl::opt<bool> EnableWideActiveLaneMask;
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_ABI_FOR_TEST extern cl::opt<bool> PrintAfterEachVPlanPass;
+#endif
+
 struct VPlanTransforms {
-  /// Helper to run a VPlan transform \p Transform on \p VPlan, forwarding extra
-  /// arguments to the transform. Returns the boolean returned by the transform.
-  template <typename... ArgsTy>
-  static bool runPass(bool (*Transform)(VPlan &, ArgsTy...), VPlan &Plan,
-                      typename std::remove_reference<ArgsTy>::type &...Args) {
-    bool Res = Transform(Plan, Args...);
-    if (VerifyEachVPlan)
-      verifyVPlanIsValid(Plan);
-    return Res;
+  /// Helper to run a VPlan pass \p Pass on \p VPlan, forwarding extra arguments
+  /// to the pass. Performs verification/printing after each VPlan pass if
+  /// requested via command line options.
+  template <bool EnableVerify = true, typename PassTy, typename... ArgsTy>
+  static decltype(auto) runPass(StringRef PassName, PassTy &&Pass, VPlan &Plan,
+                                ArgsTy &&...Args) {
+    scope_exit PostTransformActions{[&]() {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+      // Make sure to print before verification, so that output is more useful
+      // in case of failures:
+      if (PrintAfterEachVPlanPass) {
+        dbgs() << "VPlan after " << PassName << '\n';
+        dbgs() << Plan << '\n';
+      }
+#endif
+      if (VerifyEachVPlan && EnableVerify)
+        verifyVPlanIsValid(Plan);
+    }};
+
+    return std::forward<PassTy>(Pass)(Plan, std::forward<ArgsTy>(Args)...);
   }
-  /// Helper to run a VPlan transform \p Transform on \p VPlan, forwarding extra
-  /// arguments to the transform.
-  template <typename... ArgsTy>
-  static void runPass(void (*Fn)(VPlan &, ArgsTy...), VPlan &Plan,
-                      typename std::remove_reference<ArgsTy>::type &...Args) {
-    Fn(Plan, Args...);
-    if (VerifyEachVPlan)
-      verifyVPlanIsValid(Plan);
-  }
+#define RUN_VPLAN_PASS(PASS, ...)                                              \
+  llvm::VPlanTransforms::runPass(#PASS, PASS, __VA_ARGS__)
+#define RUN_VPLAN_PASS_NO_VERIFY(PASS, ...)                                    \
+  llvm::VPlanTransforms::runPass<false>(#PASS, PASS, __VA_ARGS__)
 
   /// Create a base VPlan0, serving as the common starting point for all later
   /// candidates. It consists of an initial plain CFG loop with loop blocks from
@@ -161,11 +172,9 @@ struct VPlanTransforms {
   /// Replaces the VPInstructions in \p Plan with corresponding
   /// widen recipes. Returns false if any VPInstructions could not be converted
   /// to a wide recipe if needed.
-  LLVM_ABI_FOR_TEST static bool tryToConvertVPInstructionsToVPRecipes(
-      VPlan &Plan,
-      function_ref<const InductionDescriptor *(PHINode *)>
-          GetIntOrFpInductionDescriptor,
-      const TargetLibraryInfo &TLI);
+  LLVM_ABI_FOR_TEST static bool
+  tryToConvertVPInstructionsToVPRecipes(VPlan &Plan,
+                                        const TargetLibraryInfo &TLI);
 
   /// Try to legalize reductions with multiple in-loop uses. Currently only
   /// min/max reductions used by FindLastIV reductions are supported. Otherwise
@@ -187,6 +196,13 @@ struct VPlanTransforms {
   /// executing in the scalar loop to handle the NaNs there. Return false if
   /// this attempt was unsuccessful.
   static bool handleMaxMinNumReductions(VPlan &Plan);
+
+  /// Check if \p Plan contains any FindLast reductions. If it does, try to
+  /// update the vector loop to save the appropriate state using selects
+  /// for entire vectors for both the latest mask containing at least one active
+  /// element and the corresponding data vector. Return false if this attempt
+  /// was unsuccessful.
+  static bool handleFindLastReductions(VPlan &Plan);
 
   /// Clear NSW/NUW flags from reduction instructions if necessary.
   static void clearReductionWrapFlags(VPlan &Plan);
@@ -265,6 +281,15 @@ struct VPlanTransforms {
   static void
   addExplicitVectorLength(VPlan &Plan,
                           const std::optional<unsigned> &MaxEVLSafeElements);
+
+  /// Optimize recipes which use an EVL-based header mask to VP intrinsics, for
+  /// example:
+  ///
+  /// %mask = icmp ult step-vector, EVL
+  /// %load = load %ptr, %mask
+  /// -->
+  /// %load = vp.load %ptr, EVL
+  static void optimizeEVLMasks(VPlan &Plan);
 
   // For each Interleave Group in \p InterleaveGroups replace the Recipes
   // widening its memory instructions with a single VPInterleaveRecipe at its

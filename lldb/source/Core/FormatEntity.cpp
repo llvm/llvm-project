@@ -754,14 +754,14 @@ static bool DumpValueWithLLVMFormat(Stream &s, llvm::StringRef options,
   return true;
 }
 
-static bool DumpValue(Stream &s, const SymbolContext *sc,
-                      const ExecutionContext *exe_ctx,
-                      const FormatEntity::Entry &entry, ValueObject *valobj) {
+bool FormatEntity::Formatter::DumpValue(Stream &s,
+                                        const FormatEntity::Entry &entry,
+                                        ValueObject *valobj) {
   if (valobj == nullptr)
     return false;
 
   Log *log = GetLog(LLDBLog::DataFormatters);
-  Format custom_format = eFormatInvalid;
+  enum Format custom_format = eFormatInvalid;
   ValueObject::ValueObjectRepresentationStyle val_obj_display =
       entry.string.empty()
           ? ValueObject::eValueObjectRepresentationStyleValue
@@ -821,7 +821,8 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
       ValueObject::eExpressionPathEndResultTypePlain;
 
   if (is_script) {
-    return RunScriptFormatKeyword(s, sc, exe_ctx, valobj, entry.string.c_str());
+    return RunScriptFormatKeyword(s, m_sc, m_exe_ctx, valobj,
+                                  entry.string.c_str());
   }
 
   auto split = llvm::StringRef(entry.string).split(':');
@@ -1057,8 +1058,7 @@ static bool DumpValue(Stream &s, const SymbolContext *sc,
         success &= item->DumpPrintableRepresentation(s, val_obj_display,
                                                      custom_format);
       } else {
-        success &= FormatEntity::FormatStringRef(
-            special_directions, s, sc, exe_ctx, nullptr, item, false, false);
+        success &= FormatStringRef(special_directions, s, item);
       }
 
       if (--max_num_children == 0) {
@@ -1272,16 +1272,14 @@ static bool HandleFunctionNameWithArgs(Stream &s,
   return true;
 }
 
-static bool FormatFunctionNameForLanguage(Stream &s,
-                                          const ExecutionContext *exe_ctx,
-                                          const SymbolContext *sc) {
-  assert(sc);
+bool FormatEntity::Formatter::FormatFunctionNameForLanguage(Stream &s) {
+  assert(m_sc);
 
   Language *language_plugin = nullptr;
-  if (sc->function)
-    language_plugin = Language::FindPlugin(sc->function->GetLanguage());
-  else if (sc->symbol)
-    language_plugin = Language::FindPlugin(sc->symbol->GetLanguage());
+  if (m_sc->function)
+    language_plugin = Language::FindPlugin(m_sc->function->GetLanguage());
+  else if (m_sc->symbol)
+    language_plugin = Language::FindPlugin(m_sc->symbol->GetLanguage());
 
   if (!language_plugin)
     return false;
@@ -1293,38 +1291,36 @@ static bool FormatFunctionNameForLanguage(Stream &s,
     return false;
 
   StreamString name_stream;
-  const bool success =
-      FormatEntity::Format(format, name_stream, sc, exe_ctx, /*addr=*/nullptr,
-                           /*valobj=*/nullptr, /*function_changed=*/false,
-                           /*initial_function=*/false);
+  const bool success = Format(format, name_stream, /*valobj=*/nullptr);
   if (success)
     s << name_stream.GetString();
 
   return success;
 }
 
-bool FormatEntity::FormatStringRef(const llvm::StringRef &format_str, Stream &s,
-                                   const SymbolContext *sc,
-                                   const ExecutionContext *exe_ctx,
-                                   const Address *addr, ValueObject *valobj,
-                                   bool function_changed,
-                                   bool initial_function) {
+bool FormatEntity::Formatter::FormatStringRef(const llvm::StringRef &format_str,
+                                              Stream &s, ValueObject *valobj) {
   if (!format_str.empty()) {
     FormatEntity::Entry root;
     Status error = FormatEntity::Parse(format_str, root);
     if (error.Success()) {
-      return FormatEntity::Format(root, s, sc, exe_ctx, addr, valobj,
-                                  function_changed, initial_function);
+      return Format(root, s, valobj);
     }
   }
   return false;
 }
 
-bool FormatEntity::Format(const Entry &entry, Stream &s,
-                          const SymbolContext *sc,
-                          const ExecutionContext *exe_ctx, const Address *addr,
-                          ValueObject *valobj, bool function_changed,
-                          bool initial_function) {
+bool FormatEntity::Formatter::Format(const Entry &entry, Stream &s,
+                                     ValueObject *valobj) {
+  if (IsInvalidRecursiveFormat(entry.type)) {
+    LLDB_LOG(GetLog(LLDBLog::DataFormatters),
+             "Error: detected recursive format entity: {0}",
+             FormatEntity::Entry::TypeToCString(entry.type));
+    return false;
+  }
+
+  auto entry_stack_guard = PushEntryType(entry.type);
+
   switch (entry.type) {
   case Entry::Type::Invalid:
   case Entry::Type::ParentNumber: // Only used for
@@ -1333,7 +1329,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
                                   // FormatEntity::Entry::Definition encoding
     return false;
   case Entry::Type::EscapeCode:
-    if (Target *target = Target::GetTargetFromContexts(exe_ctx, sc)) {
+    if (Target *target = Target::GetTargetFromContexts(m_exe_ctx, m_sc)) {
       Debugger &debugger = target->GetDebugger();
       if (debugger.GetUseColor()) {
         s.PutCString(entry.string);
@@ -1344,8 +1340,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
 
   case Entry::Type::Root:
     for (const auto &child : entry.children_stack[0]) {
-      if (!Format(child, s, sc, exe_ctx, addr, valobj, function_changed,
-                  initial_function)) {
+      if (!Format(child, s, valobj)) {
         return false; // If any item of root fails, then the formatting fails
       }
     }
@@ -1360,8 +1355,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     auto format_children = [&](const std::vector<Entry> &children) {
       scope_stream.Clear();
       for (const auto &child : children) {
-        if (!Format(child, scope_stream, sc, exe_ctx, addr, valobj,
-                    function_changed, initial_function))
+        if (!Format(child, scope_stream, valobj))
           return false;
       }
       return true;
@@ -1382,19 +1376,19 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
   case Entry::Type::VariableSynthetic:
   case Entry::Type::ScriptVariable:
   case Entry::Type::ScriptVariableSynthetic:
-    return DumpValue(s, sc, exe_ctx, entry, valobj);
+    return DumpValue(s, entry, valobj);
 
   case Entry::Type::AddressFile:
   case Entry::Type::AddressLoad:
   case Entry::Type::AddressLoadOrFile:
     return (
-        addr != nullptr && addr->IsValid() &&
-        DumpAddressAndContent(s, sc, exe_ctx, *addr,
+        m_addr != nullptr && m_addr->IsValid() &&
+        DumpAddressAndContent(s, m_sc, m_exe_ctx, *m_addr,
                               entry.type == Entry::Type::AddressLoadOrFile));
 
   case Entry::Type::ProcessID:
-    if (exe_ctx) {
-      Process *process = exe_ctx->GetProcessPtr();
+    if (m_exe_ctx) {
+      Process *process = m_exe_ctx->GetProcessPtr();
       if (process) {
         const char *format = "%" PRIu64;
         if (!entry.printf_format.empty())
@@ -1406,8 +1400,8 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
 
   case Entry::Type::ProcessFile:
-    if (exe_ctx) {
-      Process *process = exe_ctx->GetProcessPtr();
+    if (m_exe_ctx) {
+      Process *process = m_exe_ctx->GetProcessPtr();
       if (process) {
         Module *exe_module = process->GetTarget().GetExecutableModulePointer();
         if (exe_module) {
@@ -1419,17 +1413,17 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
 
   case Entry::Type::ScriptProcess:
-    if (exe_ctx) {
-      Process *process = exe_ctx->GetProcessPtr();
+    if (m_exe_ctx) {
+      Process *process = m_exe_ctx->GetProcessPtr();
       if (process)
-        return RunScriptFormatKeyword(s, sc, exe_ctx, process,
+        return RunScriptFormatKeyword(s, m_sc, m_exe_ctx, process,
                                       entry.string.c_str());
     }
     return false;
 
   case Entry::Type::ThreadID:
-    if (exe_ctx) {
-      Thread *thread = exe_ctx->GetThreadPtr();
+    if (m_exe_ctx) {
+      Thread *thread = m_exe_ctx->GetThreadPtr();
       if (thread) {
         const char *format = "0x%4.4" PRIx64;
         if (!entry.printf_format.empty()) {
@@ -1460,8 +1454,8 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
 
   case Entry::Type::ThreadProtocolID:
-    if (exe_ctx) {
-      Thread *thread = exe_ctx->GetThreadPtr();
+    if (m_exe_ctx) {
+      Thread *thread = m_exe_ctx->GetThreadPtr();
       if (thread) {
         const char *format = "0x%4.4" PRIx64;
         if (!entry.printf_format.empty())
@@ -1473,8 +1467,8 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
 
   case Entry::Type::ThreadIndexID:
-    if (exe_ctx) {
-      Thread *thread = exe_ctx->GetThreadPtr();
+    if (m_exe_ctx) {
+      Thread *thread = m_exe_ctx->GetThreadPtr();
       if (thread) {
         const char *format = "%" PRIu32;
         if (!entry.printf_format.empty())
@@ -1486,8 +1480,8 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
 
   case Entry::Type::ThreadName:
-    if (exe_ctx) {
-      Thread *thread = exe_ctx->GetThreadPtr();
+    if (m_exe_ctx) {
+      Thread *thread = m_exe_ctx->GetThreadPtr();
       if (thread) {
         const char *cstr = thread->GetName();
         if (cstr && cstr[0]) {
@@ -1499,8 +1493,8 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
 
   case Entry::Type::ThreadQueue:
-    if (exe_ctx) {
-      Thread *thread = exe_ctx->GetThreadPtr();
+    if (m_exe_ctx) {
+      Thread *thread = m_exe_ctx->GetThreadPtr();
       if (thread) {
         const char *cstr = thread->GetQueueName();
         if (cstr && cstr[0]) {
@@ -1512,8 +1506,8 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
 
   case Entry::Type::ThreadStopReason:
-    if (exe_ctx) {
-      if (Thread *thread = exe_ctx->GetThreadPtr()) {
+    if (m_exe_ctx) {
+      if (Thread *thread = m_exe_ctx->GetThreadPtr()) {
         std::string stop_description = thread->GetStopDescription();
         if (!stop_description.empty()) {
           s.PutCString(stop_description);
@@ -1524,8 +1518,8 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
 
   case Entry::Type::ThreadStopReasonRaw:
-    if (exe_ctx) {
-      if (Thread *thread = exe_ctx->GetThreadPtr()) {
+    if (m_exe_ctx) {
+      if (Thread *thread = m_exe_ctx->GetThreadPtr()) {
         std::string stop_description = thread->GetStopDescriptionRaw();
         if (!stop_description.empty()) {
           s.PutCString(stop_description);
@@ -1536,8 +1530,8 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
 
   case Entry::Type::ThreadReturnValue:
-    if (exe_ctx) {
-      Thread *thread = exe_ctx->GetThreadPtr();
+    if (m_exe_ctx) {
+      Thread *thread = m_exe_ctx->GetThreadPtr();
       if (thread) {
         StopInfoSP stop_info_sp = thread->GetStopInfo();
         if (stop_info_sp && stop_info_sp->IsValid()) {
@@ -1556,8 +1550,8 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
 
   case Entry::Type::ThreadCompletedExpression:
-    if (exe_ctx) {
-      Thread *thread = exe_ctx->GetThreadPtr();
+    if (m_exe_ctx) {
+      Thread *thread = m_exe_ctx->GetThreadPtr();
       if (thread) {
         StopInfoSP stop_info_sp = thread->GetStopInfo();
         if (stop_info_sp && stop_info_sp->IsValid()) {
@@ -1577,22 +1571,23 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
 
   case Entry::Type::ScriptThread:
-    if (exe_ctx) {
-      Thread *thread = exe_ctx->GetThreadPtr();
+    if (m_exe_ctx) {
+      Thread *thread = m_exe_ctx->GetThreadPtr();
       if (thread)
-        return RunScriptFormatKeyword(s, sc, exe_ctx, thread,
+        return RunScriptFormatKeyword(s, m_sc, m_exe_ctx, thread,
                                       entry.string.c_str());
     }
     return false;
 
   case Entry::Type::ThreadInfo:
-    if (exe_ctx) {
-      Thread *thread = exe_ctx->GetThreadPtr();
+    if (m_exe_ctx) {
+      Thread *thread = m_exe_ctx->GetThreadPtr();
       if (thread) {
         StructuredData::ObjectSP object_sp = thread->GetExtendedInfo();
         if (object_sp &&
             object_sp->GetType() == eStructuredDataTypeDictionary) {
-          if (FormatThreadExtendedInfoRecurse(entry, object_sp, sc, exe_ctx, s))
+          if (FormatThreadExtendedInfoRecurse(entry, object_sp, m_sc, m_exe_ctx,
+                                              s))
             return true;
         }
       }
@@ -1600,8 +1595,8 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
 
   case Entry::Type::TargetArch:
-    if (exe_ctx) {
-      Target *target = exe_ctx->GetTargetPtr();
+    if (m_exe_ctx) {
+      Target *target = m_exe_ctx->GetTargetPtr();
       if (target) {
         const ArchSpec &arch = target->GetArchitecture();
         if (arch.IsValid()) {
@@ -1613,8 +1608,8 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
 
   case Entry::Type::TargetFile:
-    if (exe_ctx) {
-      if (Target *target = exe_ctx->GetTargetPtr()) {
+    if (m_exe_ctx) {
+      if (Target *target = m_exe_ctx->GetTargetPtr()) {
         if (Module *exe_module = target->GetExecutableModulePointer()) {
           if (DumpFile(s, exe_module->GetFileSpec(), (FileKind)entry.number))
             return true;
@@ -1624,17 +1619,17 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
 
   case Entry::Type::ScriptTarget:
-    if (exe_ctx) {
-      Target *target = exe_ctx->GetTargetPtr();
+    if (m_exe_ctx) {
+      Target *target = m_exe_ctx->GetTargetPtr();
       if (target)
-        return RunScriptFormatKeyword(s, sc, exe_ctx, target,
+        return RunScriptFormatKeyword(s, m_sc, m_exe_ctx, target,
                                       entry.string.c_str());
     }
     return false;
 
   case Entry::Type::ModuleFile:
-    if (sc) {
-      Module *module = sc->module_sp.get();
+    if (m_sc) {
+      Module *module = m_sc->module_sp.get();
       if (module) {
         if (DumpFile(s, module->GetFileSpec(), (FileKind)entry.number))
           return true;
@@ -1643,8 +1638,8 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
 
   case Entry::Type::File:
-    if (sc) {
-      CompileUnit *cu = sc->comp_unit;
+    if (m_sc) {
+      CompileUnit *cu = m_sc->comp_unit;
       if (cu) {
         if (DumpFile(s, cu->GetPrimaryFile(), (FileKind)entry.number))
           return true;
@@ -1653,8 +1648,8 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
 
   case Entry::Type::Lang:
-    if (sc) {
-      CompileUnit *cu = sc->comp_unit;
+    if (m_sc) {
+      CompileUnit *cu = m_sc->comp_unit;
       if (cu) {
         const char *lang_name =
             Language::GetNameForLanguageType(cu->GetLanguage());
@@ -1667,8 +1662,8 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
 
   case Entry::Type::FrameIndex:
-    if (exe_ctx) {
-      StackFrame *frame = exe_ctx->GetFramePtr();
+    if (m_exe_ctx) {
+      StackFrame *frame = m_exe_ctx->GetFramePtr();
       if (frame) {
         const char *format = "%" PRIu32;
         if (!entry.printf_format.empty())
@@ -1680,20 +1675,20 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
 
   case Entry::Type::FrameRegisterPC:
-    if (exe_ctx) {
-      StackFrame *frame = exe_ctx->GetFramePtr();
+    if (m_exe_ctx) {
+      StackFrame *frame = m_exe_ctx->GetFramePtr();
       if (frame) {
         const Address &pc_addr = frame->GetFrameCodeAddress();
         if (pc_addr.IsValid())
-          if (DumpAddressAndContent(s, sc, exe_ctx, pc_addr, false))
+          if (DumpAddressAndContent(s, m_sc, m_exe_ctx, pc_addr, false))
             return true;
       }
     }
     return false;
 
   case Entry::Type::FrameRegisterSP:
-    if (exe_ctx) {
-      StackFrame *frame = exe_ctx->GetFramePtr();
+    if (m_exe_ctx) {
+      StackFrame *frame = m_exe_ctx->GetFramePtr();
       if (frame) {
         if (DumpRegister(s, frame, eRegisterKindGeneric, LLDB_REGNUM_GENERIC_SP,
                          (lldb::Format)entry.number))
@@ -1703,8 +1698,8 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
 
   case Entry::Type::FrameRegisterFP:
-    if (exe_ctx) {
-      StackFrame *frame = exe_ctx->GetFramePtr();
+    if (m_exe_ctx) {
+      StackFrame *frame = m_exe_ctx->GetFramePtr();
       if (frame) {
         if (DumpRegister(s, frame, eRegisterKindGeneric, LLDB_REGNUM_GENERIC_FP,
                          (lldb::Format)entry.number))
@@ -1714,8 +1709,8 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
 
   case Entry::Type::FrameRegisterFlags:
-    if (exe_ctx) {
-      StackFrame *frame = exe_ctx->GetFramePtr();
+    if (m_exe_ctx) {
+      StackFrame *frame = m_exe_ctx->GetFramePtr();
       if (frame) {
         if (DumpRegister(s, frame, eRegisterKindGeneric,
                          LLDB_REGNUM_GENERIC_FLAGS, (lldb::Format)entry.number))
@@ -1725,8 +1720,8 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
 
   case Entry::Type::FrameNoDebug:
-    if (exe_ctx) {
-      StackFrame *frame = exe_ctx->GetFramePtr();
+    if (m_exe_ctx) {
+      StackFrame *frame = m_exe_ctx->GetFramePtr();
       if (frame) {
         return !frame->HasDebugInformation();
       }
@@ -1734,8 +1729,8 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return true;
 
   case Entry::Type::FrameRegisterByName:
-    if (exe_ctx) {
-      StackFrame *frame = exe_ctx->GetFramePtr();
+    if (m_exe_ctx) {
+      StackFrame *frame = m_exe_ctx->GetFramePtr();
       if (frame) {
         if (DumpRegister(s, frame, entry.string.c_str(),
                          (lldb::Format)entry.number))
@@ -1745,15 +1740,15 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
 
   case Entry::Type::FrameIsArtificial: {
-    if (exe_ctx)
-      if (StackFrame *frame = exe_ctx->GetFramePtr())
+    if (m_exe_ctx)
+      if (StackFrame *frame = m_exe_ctx->GetFramePtr())
         return frame->IsArtificial();
     return false;
   }
 
   case Entry::Type::FrameKind: {
-    if (exe_ctx)
-      if (StackFrame *frame = exe_ctx->GetFramePtr()) {
+    if (m_exe_ctx)
+      if (StackFrame *frame = m_exe_ctx->GetFramePtr()) {
         if (frame->IsSynthetic())
           s.PutCString(" [synthetic]");
         else if (frame->IsHistorical())
@@ -1764,8 +1759,8 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
   }
 
   case Entry::Type::FrameBorrowedInfo: {
-    if (exe_ctx)
-      if (StackFrame *frame = exe_ctx->GetFramePtr()) {
+    if (m_exe_ctx)
+      if (StackFrame *frame = m_exe_ctx->GetFramePtr()) {
         if (BorrowedStackFrame *borrowed_frame =
                 llvm::dyn_cast<BorrowedStackFrame>(frame)) {
           if (lldb::StackFrameSP borrowed_from_sp =
@@ -1780,53 +1775,53 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
   }
 
   case Entry::Type::ScriptFrame:
-    if (exe_ctx) {
-      StackFrame *frame = exe_ctx->GetFramePtr();
+    if (m_exe_ctx) {
+      StackFrame *frame = m_exe_ctx->GetFramePtr();
       if (frame)
-        return RunScriptFormatKeyword(s, sc, exe_ctx, frame,
+        return RunScriptFormatKeyword(s, m_sc, m_exe_ctx, frame,
                                       entry.string.c_str());
     }
     return false;
 
   case Entry::Type::FunctionID:
-    if (sc) {
-      if (sc->function) {
-        s.Printf("function{0x%8.8" PRIx64 "}", sc->function->GetID());
+    if (m_sc) {
+      if (m_sc->function) {
+        s.Printf("function{0x%8.8" PRIx64 "}", m_sc->function->GetID());
         return true;
-      } else if (sc->symbol) {
-        s.Printf("symbol[%u]", sc->symbol->GetID());
+      } else if (m_sc->symbol) {
+        s.Printf("symbol[%u]", m_sc->symbol->GetID());
         return true;
       }
     }
     return false;
 
   case Entry::Type::FunctionDidChange:
-    return function_changed;
+    return m_function_changed;
 
   case Entry::Type::FunctionInitialFunction:
-    return initial_function;
+    return m_initial_function;
 
   case Entry::Type::FunctionName: {
-    if (sc) {
+    if (m_sc) {
       Language *language_plugin = nullptr;
       bool language_plugin_handled = false;
       StreamString ss;
 
-      if (sc->function)
-        language_plugin = Language::FindPlugin(sc->function->GetLanguage());
-      else if (sc->symbol)
-        language_plugin = Language::FindPlugin(sc->symbol->GetLanguage());
+      if (m_sc->function)
+        language_plugin = Language::FindPlugin(m_sc->function->GetLanguage());
+      else if (m_sc->symbol)
+        language_plugin = Language::FindPlugin(m_sc->symbol->GetLanguage());
 
       if (language_plugin)
         language_plugin_handled = language_plugin->GetFunctionDisplayName(
-            *sc, exe_ctx, Language::FunctionNameRepresentation::eName, ss);
+            *m_sc, m_exe_ctx, Language::FunctionNameRepresentation::eName, ss);
 
       if (language_plugin_handled) {
         s << ss.GetString();
         return true;
       }
 
-      const char *name = sc->GetPossiblyInlinedFunctionName()
+      const char *name = m_sc->GetPossiblyInlinedFunctionName()
                              .GetName(Mangled::NamePreference::ePreferDemangled)
                              .AsCString();
       if (name) {
@@ -1836,8 +1831,8 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     }
 
     // Fallback to frame methods if available.
-    if (exe_ctx) {
-      StackFrame *frame = exe_ctx->GetFramePtr();
+    if (m_exe_ctx) {
+      StackFrame *frame = m_exe_ctx->GetFramePtr();
       if (frame) {
         const char *name = frame->GetFunctionName();
         if (name) {
@@ -1850,19 +1845,19 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
   }
 
   case Entry::Type::FunctionNameNoArgs: {
-    if (sc) {
+    if (m_sc) {
       Language *language_plugin = nullptr;
       bool language_plugin_handled = false;
       StreamString ss;
-      if (sc->function)
-        language_plugin = Language::FindPlugin(sc->function->GetLanguage());
-      else if (sc->symbol)
-        language_plugin = Language::FindPlugin(sc->symbol->GetLanguage());
+      if (m_sc->function)
+        language_plugin = Language::FindPlugin(m_sc->function->GetLanguage());
+      else if (m_sc->symbol)
+        language_plugin = Language::FindPlugin(m_sc->symbol->GetLanguage());
 
       if (language_plugin)
         language_plugin_handled = language_plugin->GetFunctionDisplayName(
-            *sc, exe_ctx, Language::FunctionNameRepresentation::eNameWithNoArgs,
-            ss);
+            *m_sc, m_exe_ctx,
+            Language::FunctionNameRepresentation::eNameWithNoArgs, ss);
 
       if (language_plugin_handled) {
         s << ss.GetString();
@@ -1870,7 +1865,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
       }
 
       const char *name =
-          sc->GetPossiblyInlinedFunctionName()
+          m_sc->GetPossiblyInlinedFunctionName()
               .GetName(
                   Mangled::NamePreference::ePreferDemangledWithoutArguments)
               .AsCString();
@@ -1881,8 +1876,8 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     }
 
     // Fallback to frame methods if available.
-    if (exe_ctx) {
-      StackFrame *frame = exe_ctx->GetFramePtr();
+    if (m_exe_ctx) {
+      StackFrame *frame = m_exe_ctx->GetFramePtr();
       if (frame) {
         const char *name = frame->GetFunctionName();
         if (name) {
@@ -1905,30 +1900,30 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
   case Entry::Type::FunctionSuffix:
   case Entry::Type::FunctionQualifiers: {
     Language *language_plugin = nullptr;
-    if (sc->function)
-      language_plugin = Language::FindPlugin(sc->function->GetLanguage());
-    else if (sc->symbol)
-      language_plugin = Language::FindPlugin(sc->symbol->GetLanguage());
+    if (m_sc->function)
+      language_plugin = Language::FindPlugin(m_sc->function->GetLanguage());
+    else if (m_sc->symbol)
+      language_plugin = Language::FindPlugin(m_sc->symbol->GetLanguage());
 
     if (!language_plugin)
       return false;
 
-    return language_plugin->HandleFrameFormatVariable(*sc, exe_ctx, entry.type,
-                                                      s);
+    return language_plugin->HandleFrameFormatVariable(*m_sc, m_exe_ctx,
+                                                      entry.type, s);
   }
 
   case Entry::Type::FunctionNameWithArgs: {
-    if (sc) {
-      if (FormatFunctionNameForLanguage(s, exe_ctx, sc))
+    if (m_sc) {
+      if (FormatFunctionNameForLanguage(s))
         return true;
 
-      if (HandleFunctionNameWithArgs(s, exe_ctx, *sc))
+      if (HandleFunctionNameWithArgs(s, m_exe_ctx, *m_sc))
         return true;
     }
 
     // Fallback to frame methods if available.
-    if (exe_ctx) {
-      StackFrame *frame = exe_ctx->GetFramePtr();
+    if (m_exe_ctx) {
+      StackFrame *frame = m_exe_ctx->GetFramePtr();
       if (frame) {
         const char *name = frame->GetDisplayFunctionName();
         if (name) {
@@ -1940,10 +1935,10 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
   }
   case Entry::Type::FunctionMangledName: {
-    if (!sc)
+    if (!m_sc)
       return false;
 
-    const char *name = sc->GetPossiblyInlinedFunctionName()
+    const char *name = m_sc->GetPossiblyInlinedFunctionName()
                            .GetName(Mangled::NamePreference::ePreferMangled)
                            .AsCString();
     if (!name)
@@ -1954,33 +1949,33 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return true;
   }
   case Entry::Type::FunctionAddrOffset:
-    if (addr) {
-      if (DumpAddressOffsetFromFunction(s, sc, exe_ctx, *addr, false, false,
-                                        false))
+    if (m_addr) {
+      if (DumpAddressOffsetFromFunction(s, m_sc, m_exe_ctx, *m_addr, false,
+                                        false, false))
         return true;
     }
     return false;
 
   case Entry::Type::FunctionAddrOffsetConcrete:
-    if (addr) {
-      if (DumpAddressOffsetFromFunction(s, sc, exe_ctx, *addr, true, true,
+    if (m_addr) {
+      if (DumpAddressOffsetFromFunction(s, m_sc, m_exe_ctx, *m_addr, true, true,
                                         true))
         return true;
     }
     return false;
 
   case Entry::Type::FunctionLineOffset:
-    if (sc)
+    if (m_sc)
       return (DumpAddressOffsetFromFunction(
-          s, sc, exe_ctx, sc->line_entry.range.GetBaseAddress(), false, false,
-          false));
+          s, m_sc, m_exe_ctx, m_sc->line_entry.range.GetBaseAddress(), false,
+          false, false));
     return false;
 
   case Entry::Type::FunctionPCOffset:
-    if (exe_ctx) {
-      StackFrame *frame = exe_ctx->GetFramePtr();
+    if (m_exe_ctx) {
+      StackFrame *frame = m_exe_ctx->GetFramePtr();
       if (frame)
-        if (DumpAddressOffsetFromFunction(s, sc, exe_ctx,
+        if (DumpAddressOffsetFromFunction(s, m_sc, m_exe_ctx,
                                           frame->GetFrameCodeAddress(), false,
                                           false, false))
           return true;
@@ -1988,72 +1983,72 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
 
   case Entry::Type::FunctionChanged:
-    return function_changed;
+    return m_function_changed;
 
   case Entry::Type::FunctionIsOptimized: {
     bool is_optimized = false;
-    if (sc && sc->function && sc->function->GetIsOptimized()) {
+    if (m_sc && m_sc->function && m_sc->function->GetIsOptimized()) {
       is_optimized = true;
     }
     return is_optimized;
   }
 
   case Entry::Type::FunctionIsInlined: {
-    return sc && sc->block && sc->block->GetInlinedFunctionInfo();
+    return m_sc && m_sc->block && m_sc->block->GetInlinedFunctionInfo();
   }
 
   case Entry::Type::FunctionInitial:
-    return initial_function;
+    return m_initial_function;
 
   case Entry::Type::LineEntryFile:
-    if (sc && sc->line_entry.IsValid()) {
-      if (DumpFile(s, sc->line_entry.GetFile(), (FileKind)entry.number))
+    if (m_sc && m_sc->line_entry.IsValid()) {
+      if (DumpFile(s, m_sc->line_entry.GetFile(), (FileKind)entry.number))
         return true;
     }
     return false;
 
   case Entry::Type::LineEntryLineNumber:
-    if (sc && sc->line_entry.IsValid()) {
+    if (m_sc && m_sc->line_entry.IsValid()) {
       const char *format = "%" PRIu32;
       if (!entry.printf_format.empty())
         format = entry.printf_format.c_str();
-      s.Printf(format, sc->line_entry.line);
+      s.Printf(format, m_sc->line_entry.line);
       return true;
     }
     return false;
 
   case Entry::Type::LineEntryColumn:
-    if (sc && sc->line_entry.IsValid() && sc->line_entry.column) {
+    if (m_sc && m_sc->line_entry.IsValid() && m_sc->line_entry.column) {
       const char *format = "%" PRIu32;
       if (!entry.printf_format.empty())
         format = entry.printf_format.c_str();
-      s.Printf(format, sc->line_entry.column);
+      s.Printf(format, m_sc->line_entry.column);
       return true;
     }
     return false;
 
   case Entry::Type::LineEntryStartAddress:
   case Entry::Type::LineEntryEndAddress:
-    if (sc && sc->line_entry.range.GetBaseAddress().IsValid()) {
-      Address addr = sc->line_entry.range.GetBaseAddress();
+    if (m_sc && m_sc->line_entry.range.GetBaseAddress().IsValid()) {
+      Address addr = m_sc->line_entry.range.GetBaseAddress();
 
       if (entry.type == Entry::Type::LineEntryEndAddress)
-        addr.Slide(sc->line_entry.range.GetByteSize());
-      if (DumpAddressAndContent(s, sc, exe_ctx, addr, false))
+        addr.Slide(m_sc->line_entry.range.GetByteSize());
+      if (DumpAddressAndContent(s, m_sc, m_exe_ctx, addr, false))
         return true;
     }
     return false;
 
   case Entry::Type::CurrentPCArrow:
-    if (addr && exe_ctx && exe_ctx->GetFramePtr()) {
+    if (m_addr && m_exe_ctx && m_exe_ctx->GetFramePtr()) {
       RegisterContextSP reg_ctx =
-          exe_ctx->GetFramePtr()->GetRegisterContextSP();
+          m_exe_ctx->GetFramePtr()->GetRegisterContextSP();
       if (reg_ctx) {
         addr_t pc_loadaddr = reg_ctx->GetPC();
         if (pc_loadaddr != LLDB_INVALID_ADDRESS) {
           Address pc;
-          pc.SetLoadAddress(pc_loadaddr, exe_ctx->GetTargetPtr());
-          if (pc == *addr) {
+          pc.SetLoadAddress(pc_loadaddr, m_exe_ctx->GetTargetPtr());
+          if (pc == *m_addr) {
             s.Printf("-> ");
             return true;
           }
@@ -2065,7 +2060,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
 
   case Entry::Type::ProgressCount:
-    if (Target *target = Target::GetTargetFromContexts(exe_ctx, sc)) {
+    if (Target *target = Target::GetTargetFromContexts(m_exe_ctx, m_sc)) {
       if (auto progress = target->GetDebugger().GetCurrentProgressReport()) {
         if (progress->total != UINT64_MAX) {
           s.Format("[{0:N}/{1:N}]", progress->completed, progress->total);
@@ -2076,7 +2071,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
 
   case Entry::Type::ProgressMessage:
-    if (Target *target = Target::GetTargetFromContexts(exe_ctx, sc)) {
+    if (Target *target = Target::GetTargetFromContexts(m_exe_ctx, m_sc)) {
       if (auto progress = target->GetDebugger().GetCurrentProgressReport()) {
         s.PutCString(progress->message);
         return true;
@@ -2085,7 +2080,7 @@ bool FormatEntity::Format(const Entry &entry, Stream &s,
     return false;
 
   case Entry::Type::Separator:
-    if (Target *target = Target::GetTargetFromContexts(exe_ctx, sc)) {
+    if (Target *target = Target::GetTargetFromContexts(m_exe_ctx, m_sc)) {
       s << target->GetDebugger().GetSeparator();
       return true;
     }
@@ -2717,4 +2712,20 @@ Status FormatEntity::Parse(const llvm::StringRef &format_str, Entry &entry) {
   entry.type = Entry::Type::Root;
   llvm::StringRef modifiable_format(format_str);
   return ParseInternal(modifiable_format, entry, 0);
+}
+
+bool FormatEntity::Formatter::IsInvalidRecursiveFormat(Entry::Type type) {
+  // It is expected that Scope and Root format entities recursively call Format.
+  //
+  // Variable may also be formatted recursively in some special cases. The main
+  // use-case being array summary strings, in which case Format will call itself
+  // with the subrange ValueObject and apply a freshly created Variable entry.
+  // E.g., ${var[1-3]} will format the [1-3] range with ${var%S}.
+  static constexpr std::array s_permitted_recursive_entities = {
+      Entry::Type::Scope, Entry::Type::Root, Entry::Type::Variable};
+
+  if (llvm::is_contained(s_permitted_recursive_entities, type))
+    return false;
+
+  return llvm::is_contained(m_entry_type_stack, type);
 }

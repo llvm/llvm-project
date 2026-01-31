@@ -23,7 +23,7 @@
 
 #if __has_feature(ptrauth_calls)
 
-// CXXABI depends on defintions in libunwind as pointer auth couples the
+// CXXABI depends on definitions in libunwind as pointer auth couples the
 // definitions
 #  include "libunwind.h"
 
@@ -65,15 +65,6 @@
 // The functions defined in this file are magic functions called only by the compiler.
 #ifdef __clang__
 #  pragma clang diagnostic ignored "-Wmissing-prototypes"
-#endif
-
-// TODO: This is a temporary workaround for libc++abi to recognize that it's being
-// built against LLVM's libunwind. LLVM's libunwind started reporting _LIBUNWIND_VERSION
-// in LLVM 15 -- we can remove this workaround after shipping LLVM 17. Once we remove
-// this workaround, it won't be possible to build libc++abi against libunwind headers
-// from LLVM 14 and before anymore.
-#if defined(____LIBUNWIND_CONFIG_H__) && !defined(_LIBUNWIND_VERSION)
-#   define _LIBUNWIND_VERSION
 #endif
 
 #if defined(__SEH__) && !defined(__USING_SJLJ_EXCEPTIONS__)

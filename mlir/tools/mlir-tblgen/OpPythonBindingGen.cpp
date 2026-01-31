@@ -16,6 +16,7 @@
 #include "mlir/Support/IndentedOstream.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Operator.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/FormatVariadic.h"
@@ -886,7 +887,7 @@ constexpr const char *firstAttrDerivedResultTypeTemplate =
   _ods_result_type_source_attr = attributes["{0}"]
   _ods_derived_result_type = (
     _ods_ir.TypeAttr(_ods_result_type_source_attr).value
-    if _ods_ir.TypeAttr.isinstance(_ods_result_type_source_attr) else
+    if isinstance(_ods_result_type_source_attr, _ods_ir.TypeAttr) else
     _ods_result_type_source_attr.type)
   results = [_ods_derived_result_type] * {1})Py";
 
@@ -1076,8 +1077,8 @@ static SmallVector<std::string> emitDefaultOpBuilder(const Operator &op,
 
   os << formatv(initTemplate, llvm::join(functionArgs, ", "),
                 llvm::join(builderLines, "\n    "), llvm::join(initArgs, ", "));
-  return llvm::to_vector<8>(
-      llvm::map_range(functionArgs, [](StringRef s) { return s.str(); }));
+  return llvm::map_to_vector<8>(functionArgs,
+                                [](StringRef s) { return s.str(); });
 }
 
 static void emitSegmentSpec(
