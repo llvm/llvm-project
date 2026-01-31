@@ -1604,7 +1604,7 @@ static const IntrinsicInterface intrinsicSubroutine[]{
             {"cmdmsg", DefaultChar, Rank::scalar, Optionality::optional,
                 common::Intent::InOut}},
         {}, Rank::elemental, IntrinsicClass::impureSubroutine},
-    {"exit", {{"status", DefaultInt, Rank::scalar, Optionality::optional}}, {},
+    {"exit", {{"status", AnyInt, Rank::scalar, Optionality::optional}}, {},
         Rank::elemental, IntrinsicClass::impureSubroutine},
     {"free", {{"ptr", Addressable}}, {}},
     {"flush",
