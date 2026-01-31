@@ -2718,6 +2718,19 @@ func.func @select_tensor(%arg0: tensor<4x8x16xi1>, %arg1: tensor<4x8x16xf32>, %a
   return %1 : tensor<4x8x16xf32>
 }
 
+// -----
+
+// GH#179046: Test linalg.select with index type values (condition must be i1).
+// CHECK-LABEL: func @select_index
+func.func @select_index(%arg0: tensor<4x8x16xi1>, %arg1: tensor<4x8x16xindex>, %arg2: tensor<4x8x16xindex>) -> tensor<4x8x16xindex> {
+  %0 = tensor.empty() : tensor<4x8x16xindex>
+  // CHECK: linalg.select
+  // CHECK-SAME: ins(%{{.+}}, %{{.+}}, %{{.+}} : tensor<4x8x16xi1>, tensor<4x8x16xindex>, tensor<4x8x16xindex>)
+  // CHECK-SAME: outs(%{{.+}} : tensor<4x8x16xindex>)
+  %1 = linalg.select ins(%arg0, %arg1, %arg2 : tensor<4x8x16xi1>, tensor<4x8x16xindex>, tensor<4x8x16xindex>) outs(%0: tensor<4x8x16xindex>) -> tensor<4x8x16xindex>
+  return %1 : tensor<4x8x16xindex>
+}
+
 //===----------------------------------------------------------------------===//
 // linalg.pack + linalg.unpack
 //===----------------------------------------------------------------------===//
