@@ -3011,7 +3011,6 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
           }
           crtMatchingDistance = ComputeCudaMatchingDistance(
               context_.languageFeatures(), *procedure, localActuals);
-        } else {
         }
       }
     }
@@ -3113,14 +3112,12 @@ void ExpressionAnalyzer::EmitGenericResolutionError(const Symbol &symbol,
               ? "No specific subroutine of generic '%s' matches the actual arguments"_err_en_US
               : "No specific function of generic '%s' matches the actual arguments"_err_en_US,
           symbol.name())}) {
-    parser::ContextualMessages &messages{GetContextualMessages()};
-    semantics::Scope &scope{context_.FindScope(messages.at())};
     for (const Symbol &specific : tried) {
       if (auto procChars{characteristics::Procedure::Characterize(
               specific, GetFoldingContext())}) {
         if (procChars->HasExplicitInterface()) {
           auto reasons{semantics::CheckExplicitInterface(*procChars, arguments,
-              context_, &scope, /*intrinsic=*/nullptr,
+              context_, /*scope=*/nullptr, /*intrinsic=*/nullptr,
               /*allocActualArgumentConversions=*/false,
               /*extentErrors=*/false,
               /*ignoreImplicitVsExplicit=*/false)};
