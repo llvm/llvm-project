@@ -49,6 +49,8 @@ namespace __sanitizer {
 
 [[maybe_unused]] static atomic_uint8_t signal_handler_is_from_sanitizer[64];
 
+static THREADLOCAL void* allocated_alt_stack_base = nullptr;
+
 u32 GetUid() {
   return getuid();
 }
@@ -201,6 +203,7 @@ void SetAlternateSignalStack() {
   altstack.ss_sp = (char *)MmapOrDie(altstack.ss_size, __func__);
   altstack.ss_flags = 0;
   CHECK_EQ(0, sigaltstack(&altstack, nullptr));
+  allocated_alt_stack_base = altstack.ss_sp;
 }
 
 void UnsetAlternateSignalStack() {
@@ -209,7 +212,11 @@ void UnsetAlternateSignalStack() {
   altstack.ss_flags = SS_DISABLE;
   altstack.ss_size = GetAltStackSize();  // Some sane value required on Darwin.
   CHECK_EQ(0, sigaltstack(&altstack, &oldstack));
-  UnmapOrDie(oldstack.ss_sp, oldstack.ss_size);
+  if (allocated_alt_stack_base != 0 &&
+      allocated_alt_stack_base == oldstack.ss_sp) {
+    UnmapOrDie(oldstack.ss_sp, oldstack.ss_size);
+    allocated_alt_stack_base = nullptr;
+  }
 }
 
 bool IsSignalHandlerFromSanitizer(int signum) {
