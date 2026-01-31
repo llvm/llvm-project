@@ -208,18 +208,7 @@ private:
                           unsigned ExtraNotes, bool IsCCEDiag);
 
   /// Should we continue evaluation after encountering undefined behavior?
-  bool keepEvaluatingAfterUndefinedBehavior() const {
-    switch (EvalMode) {
-    case EvaluationMode::IgnoreSideEffects:
-    case EvaluationMode::ConstantFold:
-      return true;
-
-    case EvaluationMode::ConstantExpression:
-    case EvaluationMode::ConstantExpressionUnevaluated:
-      return checkingForUndefinedBehavior();
-    }
-    llvm_unreachable("Missed EvalMode case");
-  }
+  bool keepEvaluatingAfterUndefinedBehavior() const;
 
   // If we have a prior diagnostic, it will be noting that the expression
   // isn't a constant expression. This diagnostic is more important,

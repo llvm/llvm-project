@@ -206,3 +206,16 @@ bool State::keepEvaluatingAfterSideEffect() const {
   }
   llvm_unreachable("Missed EvalMode case");
 }
+
+bool State::keepEvaluatingAfterUndefinedBehavior() const {
+  switch (EvalMode) {
+  case EvaluationMode::IgnoreSideEffects:
+  case EvaluationMode::ConstantFold:
+    return true;
+
+  case EvaluationMode::ConstantExpression:
+  case EvaluationMode::ConstantExpressionUnevaluated:
+    return checkingForUndefinedBehavior();
+  }
+  llvm_unreachable("Missed EvalMode case");
+}
