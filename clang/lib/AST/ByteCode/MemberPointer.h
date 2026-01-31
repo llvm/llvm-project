@@ -10,10 +10,12 @@
 #define LLVM_CLANG_AST_INTERP_MEMBER_POINTER_H
 
 #include "Pointer.h"
+#include "llvm/ADT/PointerIntPair.h"
 #include <optional>
 
 namespace clang {
 class ASTContext;
+class CXXRecordDecl;
 namespace interp {
 
 class Context;
@@ -22,21 +24,33 @@ class FunctionPointer;
 class MemberPointer final {
 private:
   Pointer Base;
-  const ValueDecl *Dcl = nullptr;
+  /// The member declaration, and a flag indicating
+  /// whether the member is a member of some class derived from the class type
+  /// of the member pointer.
+  llvm::PointerIntPair<const ValueDecl *, 1, bool> DeclAndIsDerivedMember;
+  /// The path of base/derived classes from the member declaration's
+  /// class (exclusive) to the class type of the member pointer (inclusive).
+  /// This a allocated by the InterpState or the Program.
+  const CXXRecordDecl **Path = nullptr;
   int32_t PtrOffset = 0;
+  uint8_t PathLength = 0;
 
-  MemberPointer(Pointer Base, const ValueDecl *Dcl, int32_t PtrOffset)
-      : Base(Base), Dcl(Dcl), PtrOffset(PtrOffset) {}
+  MemberPointer(Pointer Base, const ValueDecl *Dcl, int32_t PtrOffset,
+                uint8_t PathLength = 0, const CXXRecordDecl **Path = nullptr,
+                bool IsDerived = false)
+      : Base(Base), DeclAndIsDerivedMember(Dcl, IsDerived), Path(Path),
+        PtrOffset(PtrOffset), PathLength(PathLength) {}
 
 public:
   MemberPointer() = default;
-  MemberPointer(Pointer Base, const ValueDecl *Dcl) : Base(Base), Dcl(Dcl) {}
+  MemberPointer(Pointer Base, const ValueDecl *Dcl)
+      : Base(Base), DeclAndIsDerivedMember(Dcl) {}
   MemberPointer(uint32_t Address, const Descriptor *D) {
     // We only reach this for Address == 0, when creating a null member pointer.
     assert(Address == 0);
   }
 
-  MemberPointer(const ValueDecl *D) : Dcl(D) {
+  MemberPointer(const ValueDecl *D) : DeclAndIsDerivedMember(D) {
     assert((isa<FieldDecl, IndirectFieldDecl, CXXMethodDecl>(D)));
   }
 
@@ -46,6 +60,25 @@ public:
         "getIntegerRepresentation() shouldn't be reachable for MemberPointers");
     return 17;
   }
+
+  bool hasDecl() const { return DeclAndIsDerivedMember.getPointer(); }
+  bool isDerivedMember() const { return DeclAndIsDerivedMember.getInt(); }
+  const ValueDecl *getDecl() const {
+    return DeclAndIsDerivedMember.getPointer();
+  }
+  bool hasPath() const { return PathLength != 0; }
+  unsigned getPathLength() const { return PathLength; }
+  const CXXRecordDecl *getPathEntry(unsigned Index) const {
+    return Path[Index];
+  }
+  const CXXRecordDecl **path() const { return Path; }
+  void takePath(const CXXRecordDecl **NewPath) {
+    assert(Path != NewPath);
+    Path = NewPath;
+  }
+
+  // Pretend we always have a path.
+  bool singleWord() const { return false; }
 
   std::optional<Pointer> toPointer(const Context &Ctx) const;
 
@@ -63,32 +96,44 @@ public:
     return Base.atFieldSub(PtrOffset);
   }
   bool isMemberFunctionPointer() const {
-    return isa_and_nonnull<CXXMethodDecl>(Dcl);
+    return isa_and_nonnull<CXXMethodDecl>(DeclAndIsDerivedMember.getPointer());
   }
   const CXXMethodDecl *getMemberFunction() const {
-    return dyn_cast_if_present<CXXMethodDecl>(Dcl);
+    return dyn_cast_if_present<CXXMethodDecl>(
+        DeclAndIsDerivedMember.getPointer());
   }
   const FieldDecl *getField() const {
-    return dyn_cast_if_present<FieldDecl>(Dcl);
+    return dyn_cast_if_present<FieldDecl>(DeclAndIsDerivedMember.getPointer());
   }
 
-  bool hasDecl() const { return Dcl; }
-  const ValueDecl *getDecl() const { return Dcl; }
+  const CXXRecordDecl *getRecordDecl() const {
+    if (const FieldDecl *FD = getField())
+      return cast<CXXRecordDecl>(FD->getParent());
 
-  MemberPointer atInstanceBase(unsigned Offset) const {
+    if (const CXXMethodDecl *MD = getMemberFunction())
+      return MD->getParent();
+    return nullptr;
+  }
+
+  MemberPointer atInstanceBase(unsigned Offset, uint8_t PathLength = 0,
+                               const CXXRecordDecl **Path = nullptr,
+                               bool NewIsDerived = false) const {
     if (Base.isZero())
-      return MemberPointer(Base, Dcl, Offset);
-    return MemberPointer(this->Base, Dcl, Offset + PtrOffset);
+      return MemberPointer(Base, DeclAndIsDerivedMember.getPointer(), Offset,
+                           PathLength, Path, NewIsDerived);
+    return MemberPointer(this->Base, DeclAndIsDerivedMember.getPointer(),
+                         Offset + PtrOffset, PathLength, Path, NewIsDerived);
   }
 
   MemberPointer takeInstance(Pointer Instance) const {
     assert(this->Base.isZero());
-    return MemberPointer(Instance, this->Dcl, this->PtrOffset);
+    return MemberPointer(Instance, DeclAndIsDerivedMember.getPointer(),
+                         this->PtrOffset);
   }
 
   APValue toAPValue(const ASTContext &) const;
 
-  bool isZero() const { return Base.isZero() && !Dcl; }
+  bool isZero() const { return Base.isZero() && !hasDecl(); }
   bool hasBase() const { return !Base.isZero(); }
   bool isWeak() const {
     if (const auto *MF = getMemberFunction())
@@ -97,22 +142,34 @@ public:
   }
 
   void print(llvm::raw_ostream &OS) const {
-    OS << "MemberPtr(" << Base << " " << (const void *)Dcl << " + " << PtrOffset
-       << ")";
+    OS << "MemberPtr(" << Base << " " << (const void *)getDecl() << " + "
+       << PtrOffset << ". PathLength: " << getPathLength()
+       << ". IsDerived: " << isDerivedMember() << ")";
   }
 
   std::string toDiagnosticString(const ASTContext &Ctx) const {
-    return toAPValue(Ctx).getAsString(Ctx, Dcl->getType());
+    return toAPValue(Ctx).getAsString(Ctx, getDecl()->getType());
   }
 
   ComparisonCategoryResult compare(const MemberPointer &RHS) const {
-    if (this->Dcl == RHS.Dcl)
+    if (this->getDecl() == RHS.getDecl()) {
+
+      if (this->PathLength != RHS.PathLength)
+        return ComparisonCategoryResult::Unordered;
+
+      if (PathLength != 0 &&
+          std::memcmp(Path, RHS.Path, PathLength * sizeof(CXXRecordDecl *)) !=
+              0)
+        return ComparisonCategoryResult::Unordered;
+
       return ComparisonCategoryResult::Equal;
+    }
     return ComparisonCategoryResult::Unordered;
   }
 };
 
-inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, MemberPointer FP) {
+inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS,
+                                     const MemberPointer &FP) {
   FP.print(OS);
   return OS;
 }
