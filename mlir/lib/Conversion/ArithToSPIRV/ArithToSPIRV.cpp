@@ -122,6 +122,13 @@ static bool isBoolScalarOrVector(Type type) {
   return false;
 }
 
+/// Returns true if the given `type` is an integer scalar or vector type.
+static bool isIntScalarOrVectorType(Type type) {
+  auto eltTy = getElementTypeOrSelf(type);
+  return eltTy && isa<IntegerType>(eltTy) &&
+         (isa<IntegerType>(type) || isa<VectorType>(type));
+}
+
 /// Creates a scalar/vector integer constant.
 static Value getScalarOrVectorConstInt(Type type, uint64_t value,
                                        OpBuilder &builder, Location loc) {
@@ -853,15 +860,32 @@ struct TruncIPattern final : public OpConversionPattern<arith::TruncIOp> {
   LogicalResult
   matchAndRewrite(arith::TruncIOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-    Type srcType = adaptor.getIn().getType();
     Type dstType = getTypeConverter()->convertType(op.getType());
     if (!dstType)
       return getTypeConversionFailure(rewriter, op);
 
+    // Trunc-to-i1 case is handled in a separate pattern.
     if (isBoolScalarOrVector(dstType))
       return failure();
 
-    if (dstType == srcType) {
+    Type srcType = op.getIn().getType();
+    Type convertedSrcType = getTypeConverter()->convertType(srcType);
+    if (!convertedSrcType)
+      return getTypeConversionFailure(rewriter, op);
+
+    // Ensure we are only lowering scalar/vector integer truncs.
+    // This prevents trying to build SPIR-V ops on tensors.
+    if (!isIntScalarOrVectorType(convertedSrcType) ||
+        !isIntScalarOrVectorType(dstType))
+      return rewriter.notifyMatchFailure(
+          op, "only int scalar or vector type for SPIR-V");
+
+    // Ensure the adaptor operand type matches the converted source type.
+    if (adaptor.getIn().getType() != convertedSrcType)
+      return rewriter.notifyMatchFailure(
+          op, "adaptor operand type does not match converted source type");
+
+    if (dstType == convertedSrcType) {
       // We can have the same source and destination type due to type emulation.
       // Perform bit masking to make sure we don't pollute downstream consumers
       // with unwanted bits. Here we need to use the original result type's
