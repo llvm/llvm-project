@@ -4405,7 +4405,7 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::PointerObject &x) {
 MaybeExpr ExpressionAnalyzer::Analyze(const parser::AllocateShapeSpecArrayList &x) {
   auto &shapeSpecList{
     std::get<std::list<parser::AllocateShapeSpec>>(x.u)};
-  if(shapeSpecList.size() != 1) {
+  if(shapeSpecList.size() == 0) {
     return std::nullopt;
   }
 
@@ -4478,6 +4478,19 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::AllocateShapeSpecArrayList &
         std::make_tuple(std::move(lowerIntExpr), std::move(upperIntExpr))};
     auto &mutableArrayList{const_cast<parser::AllocateShapeSpecArrayList&>(x)};
     mutableArrayList.u = std::move(boundsExpr);
+  } else {
+    // start from second entry and analyze each AllocateShapeSpec, since at this point
+    // we know we're not an AllocateShapeSpecArray
+    for(auto it = std::next(shapeSpecList.begin()); it != shapeSpecList.end(); ++it) {
+      // Analyze upper bound (required)
+      const auto &upperBound{std::get<1>(it->t)};
+      Analyze(upperBound.thing);
+      // Analyze lower bound if present
+      const auto &lowerBoundOpt{std::get<0>(it->t)};
+      if(lowerBoundOpt) {
+        Analyze(lowerBoundOpt->thing);
+      }
+    }
   }
 
   return std::nullopt;
