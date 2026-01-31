@@ -215,10 +215,11 @@ bool OperationMoveModel<mlir::acc::LoopOp>::canMoveOutOf(
   unsigned numDataOperands = loopOp.getNumDataOperands();
   for (unsigned i = 0; i < numDataOperands; ++i) {
     mlir::Value dataOperand = loopOp.getDataOperand(i);
-    return !llvm::any_of(candidate->getOperands(),
-                         [&](mlir::Value candidateOperand) {
-                           return dataOperand == candidateOperand;
-                         });
+    if (llvm::any_of(candidate->getOperands(),
+                     [&](mlir::Value candidateOperand) {
+                       return dataOperand == candidateOperand;
+                     }))
+      return false;
   }
   return true;
 }
