@@ -36,13 +36,12 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 // __capacity_aware_iterator is an iterator that wraps a contiguous iterator and encodes the maximum number of
 // elements that can appear in a range of such iterators. That maximum number of elements must be known at compile-time.
+// As of writing, the only standard library containers which fulfill these requirements are inplace_vector and optional.
 //
 // It also embeds a tag type to prevent mixing iterators from e.g. different containers. This also allows for some
 // algorithms to detect this iterator and perform optimizations based on the added semantic information.
-//
-// As of writing, the only standard library containers which fulfill the requirements are inplace_vector and optional.
 
-template <class _Iter, class _Tag, std::size_t _RangeMaxElements>
+template <class _Iter, class _Tag, size_t _RangeMaxElements>
 class __capacity_aware_iterator {
 private:
   _Iter __iter_;
@@ -63,8 +62,6 @@ public:
   _LIBCPP_HIDE_FROM_ABI constexpr __capacity_aware_iterator()
     requires is_default_constructible_v<_Iter>
   = default;
-
-  friend struct pointer_traits<__capacity_aware_iterator<_Iter, _Tag, _RangeMaxElements>>;
 
   template <typename _Iter2>
     requires is_convertible_v<_Iter2, _Iter>
@@ -106,7 +103,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr __capacity_aware_iterator& operator+=(difference_type __n) noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        static_cast<size_t>((__n >= 0 ? __n : -__n)) <= _RangeMaxElements,
+        static_cast<size_t>(__n >= 0 ? __n : -__n) <= _RangeMaxElements,
         "__capacity_aware_iterator::operator+=: Attempting to move iterator past its container's possible range");
 
     __iter_ += __n;
@@ -115,7 +112,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI constexpr __capacity_aware_iterator& operator-=(difference_type __n) noexcept {
     _LIBCPP_ASSERT_VALID_ELEMENT_ACCESS(
-        static_cast<size_t>((__n >= 0 ? __n : -__n)) <= _RangeMaxElements,
+        static_cast<size_t>(__n >= 0 ? __n : -__n) <= _RangeMaxElements,
         "__capacity_aware_iterator::operator-=: Attempting to move iterator past its container's possible range");
 
     __iter_ -= __n;
@@ -179,17 +176,6 @@ template <class _It, class _Tag2, size_t _RangeMaxElems2>
 _LIBCPP_HIDE_FROM_ABI constexpr auto __make_capacity_aware_iterator(_It __iter) noexcept {
   return __capacity_aware_iterator<_It, _Tag2, _RangeMaxElems2>(__iter);
 }
-
-template <class _Iter, class _Tag, std::size_t _RangeMaxElements>
-struct pointer_traits<__capacity_aware_iterator<_Iter, _Tag, _RangeMaxElements>> {
-  using pointer         = __capacity_aware_iterator<_Iter, _Tag, _RangeMaxElements>;
-  using element_type    = typename pointer_traits<_Iter>::element_type;
-  using difference_type = typename pointer_traits<_Iter>::difference_type;
-
-  _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR static element_type* to_address(pointer __it) _NOEXCEPT {
-    return std::__to_address(__it.__iter_);
-  }
-};
 
 _LIBCPP_END_NAMESPACE_STD
 
