@@ -166,7 +166,7 @@ public:
       // Compound assignments involve arithmetic we don't model yet.
       Value *RHSVal =
           S->isCompoundAssignmentOp() ? nullptr : Env.getValue(*RHS);
-      if (!RHSVal)
+      if (RHSVal == nullptr)
         RHSVal = Env.createValue(LHS->getType());
 
       // Assign a value to the storage location of the left-hand side.
