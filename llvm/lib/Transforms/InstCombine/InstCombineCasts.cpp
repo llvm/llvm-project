@@ -2859,6 +2859,14 @@ static Instruction *foldBitCastSelect(BitCastInst &BitCast,
             cast<VectorType>(DestTy)->getElementCount())
       return nullptr;
 
+  auto *Sel = cast<Instruction>(BitCast.getOperand(0));
+
+  if (isa<Constant>(TVal) || isa<Constant>(FVal)) {
+    Value *CastedTVal = Builder.CreateBitCast(TVal, DestTy);
+    Value *CastedFVal = Builder.CreateBitCast(FVal, DestTy);
+    return SelectInst::Create(Cond, CastedTVal, CastedFVal, "", nullptr, Sel);
+  }
+
   // FIXME: This transform is restricted from changing the select between
   // scalars and vectors to avoid backend problems caused by creating
   // potentially illegal operations. If a fix-up is added to handle that
@@ -2866,7 +2874,6 @@ static Instruction *foldBitCastSelect(BitCastInst &BitCast,
   if (DestTy->isVectorTy() != TVal->getType()->isVectorTy())
     return nullptr;
 
-  auto *Sel = cast<Instruction>(BitCast.getOperand(0));
   Value *X;
   if (match(TVal, m_OneUse(m_BitCast(m_Value(X)))) && X->getType() == DestTy &&
       !isa<Constant>(X)) {
