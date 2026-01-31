@@ -2103,7 +2103,9 @@ public:
   /// Returns the opcode of the root node, or 0, if the root node is gather.
   bool isReducedBitcastRoot() const {
     return VectorizableTree.front()->hasState() &&
-           VectorizableTree.front()->CombinedOp == TreeEntry::ReducedBitcast &&
+           (VectorizableTree.front()->CombinedOp == TreeEntry::ReducedBitcast ||
+            VectorizableTree.front()->CombinedOp ==
+                TreeEntry::ReducedBitcastBSwap) &&
            VectorizableTree.front()->State == TreeEntry::Vectorize;
   }
 
@@ -3929,7 +3931,9 @@ private:
   /// Checks if the tree represents disjoint or reduction of shl(zext, (0, 8,
   /// .., 56))-like pattern.
   /// If the int shifts unique, also strided, but not ordered, sets \p Order.
-  bool matchesShlZExt(const TreeEntry &TE, OrdersType &Order) const;
+  /// If the node can be represented as a bitcast + bswap, sets \p IsBSwap.
+  bool matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
+                      bool &IsBSwap) const;
 
   class TreeEntry {
   public:
@@ -4061,6 +4065,7 @@ private:
       MinMax = Instruction::OtherOpsEnd + 1,
       FMulAdd,
       ReducedBitcast,
+      ReducedBitcastBSwap,
     };
     CombinedOpcode CombinedOp = NotCombinedOp;
 
@@ -13347,9 +13352,11 @@ static InstructionCost canConvertToFMA(ArrayRef<Value *> VL,
   return FMACost < FMulPlusFAddCost ? FMACost : InstructionCost::getInvalid();
 }
 
-bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order) const {
+bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order,
+                             bool &IsBSwap) const {
   assert(TE.hasState() && TE.getOpcode() == Instruction::Shl &&
          "Expected Shl node.");
+  IsBSwap = false;
   if (TE.State != TreeEntry::Vectorize || !TE.ReorderIndices.empty() ||
       !TE.ReuseShuffleIndices.empty() || MinBWs.contains(&TE) ||
       any_of(TE.Scalars, [](Value *V) { return !V->hasOneUse(); }))
@@ -13443,6 +13450,20 @@ bool BoUpSLP::matchesShlZExt(const TreeEntry &TE, OrdersType &Order) const {
     inversePermutation(Order, Mask);
     BitcastCost += ::getShuffleCost(*TTI, TTI::SK_PermuteSingleSrc, SrcVecTy,
                                     Mask, CostKind);
+  }
+  // Check if the combination can be modeled as a bitcast+byteswap operation.
+  constexpr unsigned ByteSize = 8;
+  if (!Order.empty() && isReverseOrder(Order) &&
+      DL->getTypeSizeInBits(SrcScalarTy) == ByteSize) {
+    IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, ScalarTy, {ScalarTy});
+    InstructionCost BSwapCost =
+        TTI->getCastInstrCost(Instruction::BitCast, ScalarTy, SrcVecTy, CastCtx,
+                              CostKind) +
+        TTI->getIntrinsicInstrCost(CostAttrs, CostKind);
+    if (BSwapCost <= BitcastCost) {
+      BitcastCost = BSwapCost;
+      IsBSwap = true;
+    }
   }
   return BitcastCost < VecCost;
 }
@@ -13862,11 +13883,15 @@ void BoUpSLP::transformNodes() {
           }))
         break;
       OrdersType Order;
-      if (!matchesShlZExt(E, Order))
+      bool IsBSwap;
+      if (!matchesShlZExt(E, Order, IsBSwap))
         break;
       // This node is a (reduced disjoint or) bitcast node.
-      E.CombinedOp = TreeEntry::ReducedBitcast;
-      E.ReorderIndices = std::move(Order);
+      TreeEntry::CombinedOpcode Code =
+          IsBSwap ? TreeEntry::ReducedBitcastBSwap : TreeEntry::ReducedBitcast;
+      E.CombinedOp = Code;
+      if (!IsBSwap)
+        E.ReorderIndices = std::move(Order);
       TreeEntry *ZExtEntry = getOperandEntry(&E, 0);
       assert(ZExtEntry->UserTreeIndex &&
              ZExtEntry->State == TreeEntry::Vectorize &&
@@ -13874,13 +13899,13 @@ void BoUpSLP::transformNodes() {
              "Expected ZExt node.");
       // The ZExt node is part of the combined node.
       ZExtEntry->State = TreeEntry::CombinedVectorize;
-      ZExtEntry->CombinedOp = TreeEntry::ReducedBitcast;
+      ZExtEntry->CombinedOp = Code;
       TreeEntry *ConstEntry = getOperandEntry(&E, 1);
       assert(ConstEntry->UserTreeIndex && ConstEntry->isGather() &&
              "Expected ZExt node.");
       // The ConstNode node is part of the combined node.
       ConstEntry->State = TreeEntry::CombinedVectorize;
-      ConstEntry->CombinedOp = TreeEntry::ReducedBitcast;
+      ConstEntry->CombinedOp = Code;
       break;
     }
     default:
@@ -14925,7 +14950,7 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     ScalarTy = IntegerType::get(F->getContext(), It->second.first);
     if (VecTy)
       ScalarTy = getWidenedType(ScalarTy, VecTy->getNumElements());
-  } else if (E->Idx == 0 && E->CombinedOp == TreeEntry::ReducedBitcast) {
+  } else if (E->Idx == 0 && isReducedBitcastRoot()) {
     const TreeEntry *ZExt = getOperandEntry(E, /*Idx=*/0);
     ScalarTy = cast<CastInst>(ZExt->getMainOp())->getSrcTy();
   }
@@ -15499,7 +15524,8 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
   }
-  case TreeEntry::ReducedBitcast: {
+  case TreeEntry::ReducedBitcast:
+  case TreeEntry::ReducedBitcastBSwap: {
     auto GetScalarCost = [&, &TTI = *TTI](unsigned Idx) {
       if (isa<PoisonValue>(UniqueValues[Idx]))
         return InstructionCost(TTI::TCC_Free);
@@ -15521,6 +15547,14 @@ BoUpSLP::getEntryCost(const TreeEntry *E, ArrayRef<Value *> VectorizedVals,
       auto *SrcVecTy = getWidenedType(SrcScalarTy, LhsTE->getVectorFactor());
       InstructionCost BitcastCost = TTI.getCastInstrCost(
           Instruction::BitCast, ScalarTy, SrcVecTy, CastCtx, CostKind);
+      if (ShuffleOrOp == TreeEntry::ReducedBitcastBSwap) {
+        auto *OrigScalarTy = E->getMainOp()->getType();
+        IntrinsicCostAttributes CostAttrs(Intrinsic::bswap, OrigScalarTy,
+                                          {OrigScalarTy});
+        InstructionCost IntrinsicCost =
+            TTI.getIntrinsicInstrCost(CostAttrs, CostKind);
+        BitcastCost += IntrinsicCost;
+      }
       return BitcastCost + CommonCost;
     };
     return GetCostDiff(GetScalarCost, GetVectorCost);
@@ -16299,7 +16333,8 @@ InstructionCost BoUpSLP::getSpillCost() {
   SmallPtrSet<const Instruction *, 8> LastInstructions;
   SmallPtrSet<const TreeEntry *, 8> ScalarOrPseudoEntries;
   for (const auto &TEPtr : VectorizableTree) {
-    if (TEPtr->CombinedOp == TreeEntry::ReducedBitcast) {
+    if (TEPtr->CombinedOp == TreeEntry::ReducedBitcast ||
+        TEPtr->CombinedOp == TreeEntry::ReducedBitcastBSwap) {
       ScalarOrPseudoEntries.insert(TEPtr.get());
       continue;
     }
@@ -20233,7 +20268,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
   if (!E->isAltShuffle()) {
     switch (E->CombinedOp) {
     case TreeEntry::ReducedBitcast:
-      ShuffleOrOp = TreeEntry::ReducedBitcast;
+    case TreeEntry::ReducedBitcastBSwap:
+      ShuffleOrOp = E->CombinedOp;
       break;
     default:
       break;
@@ -20547,6 +20583,13 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
       } else if (VecOpcode == Instruction::SIToFP && SrcIt != MinBWs.end() &&
                  !SrcIt->second.second) {
         VecOpcode = Instruction::UIToFP;
+      } else if (VecOpcode == Instruction::BitCast && SrcIt != MinBWs.end() &&
+                 ScalarTy->isFPOrFPVectorTy()) {
+        Type *OrigSrcScalarTy = CI->getSrcTy();
+        auto *OrigSrcVectorTy =
+            getWidenedType(OrigSrcScalarTy, E->Scalars.size());
+        InVec =
+            Builder.CreateIntCast(InVec, OrigSrcVectorTy, SrcIt->second.second);
       }
       Value *V = (VecOpcode != ShuffleOrOp && VecOpcode == Instruction::BitCast)
                      ? InVec
@@ -21169,7 +21212,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
 
       return V;
     }
-    case TreeEntry::ReducedBitcast: {
+    case TreeEntry::ReducedBitcast:
+    case TreeEntry::ReducedBitcastBSwap: {
       assert(UserIgnoreList && "Expected reduction operations only.");
       setInsertPointAfterBundle(E);
       TreeEntry *ZExt = getOperandEntry(E, /*Idx=*/0);
@@ -21186,6 +21230,8 @@ Value *BoUpSLP::vectorizeTree(TreeEntry *E) {
           Op, IntegerType::get(
                   Op->getContext(),
                   DL->getTypeSizeInBits(ZExt->getMainOp()->getType())));
+      if (ShuffleOrOp == TreeEntry::ReducedBitcastBSwap)
+        V = Builder.CreateUnaryIntrinsic(Intrinsic::bswap, V);
       E->VectorizedValue = V;
       ++NumVectorInstructions;
       return V;
@@ -21216,7 +21262,8 @@ Value *BoUpSLP::vectorizeTree(
   for (const std::unique_ptr<TreeEntry> &TE : VectorizableTree) {
     if (TE->isGather() || DeletedNodes.contains(TE.get()) ||
         (TE->State == TreeEntry::CombinedVectorize &&
-         TE->CombinedOp == TreeEntry::ReducedBitcast))
+         (TE->CombinedOp == TreeEntry::ReducedBitcast ||
+          TE->CombinedOp == TreeEntry::ReducedBitcastBSwap)))
       continue;
     (void)getLastInstructionInBundle(TE.get());
   }
@@ -21774,7 +21821,8 @@ Value *BoUpSLP::vectorizeTree(
         TransformedToGatherNodes.contains(Entry))
       continue;
 
-    if (Entry->CombinedOp == TreeEntry::ReducedBitcast) {
+    if (Entry->CombinedOp == TreeEntry::ReducedBitcast ||
+        Entry->CombinedOp == TreeEntry::ReducedBitcastBSwap) {
       // Skip constant node
       if (!Entry->hasState()) {
         assert(allConstant(Entry->Scalars) && "Expected constants only.");
@@ -24136,13 +24184,12 @@ SLPVectorizerPass::vectorizeStoreChain(ArrayRef<Value *> Chain, BoUpSLP &R,
 }
 
 /// Checks if the quadratic mean deviation is less than 90% of the mean size.
-static bool checkTreeSizes(ArrayRef<std::pair<unsigned, unsigned>> Sizes,
-                           bool First) {
+static bool checkTreeSizes(ArrayRef<std::pair<unsigned, unsigned>> Sizes) {
   unsigned Num = 0;
   uint64_t Sum = std::accumulate(
       Sizes.begin(), Sizes.end(), static_cast<uint64_t>(0),
       [&](uint64_t V, const std::pair<unsigned, unsigned> &Val) {
-        unsigned Size = First ? Val.first : Val.second;
+        unsigned Size = Val.first;
         if (Size == 1)
           return V;
         ++Num;
@@ -24156,7 +24203,7 @@ static bool checkTreeSizes(ArrayRef<std::pair<unsigned, unsigned>> Sizes,
   uint64_t Dev = std::accumulate(
                      Sizes.begin(), Sizes.end(), static_cast<uint64_t>(0),
                      [&](uint64_t V, const std::pair<unsigned, unsigned> &Val) {
-                       unsigned P = First ? Val.first : Val.second;
+                       unsigned P = Val.first;
                        if (P == 1)
                          return V;
                        return V + (P - Mean) * (P - Mean);
@@ -24352,22 +24399,24 @@ bool SLPVectorizerPass::vectorizeStores(
       unsigned End = Operands.size();
       unsigned Repeat = 0;
       constexpr unsigned MaxAttempts = 4;
+      // first: the best TreeSize from all prior loops over CandidateVFs, gets
+      // updated after looping through CandidateVFs
+      // second: the best TreeSize from all prior loops including the current
+      // one
       llvm::SmallVector<std::pair<unsigned, unsigned>> RangeSizesStorage(
           Operands.size(), {1, 1});
       // The `slice` and `drop_front` interfaces are convenient
       const auto RangeSizes = MutableArrayRef(RangeSizesStorage);
       DenseMap<Value *, std::pair<unsigned, unsigned>> NonSchedulable;
-      auto IsNotVectorized = [](bool First,
-                                const std::pair<unsigned, unsigned> &P) {
-        return First ? P.first > 0 : P.second > 0;
+      auto IsNotVectorized = [](const std::pair<unsigned, unsigned> &P) {
+        return P.first > 0;
       };
-      auto IsVectorized = [](bool First,
-                             const std::pair<unsigned, unsigned> &P) {
-        return First ? P.first == 0 : P.second == 0;
+      auto IsVectorized = [](const std::pair<unsigned, unsigned> &P) {
+        return P.first == 0;
       };
-      auto VFIsProfitable = [](bool First, unsigned Size,
+      auto VFIsProfitable = [](unsigned Size,
                                const std::pair<unsigned, unsigned> &P) {
-        return First ? Size >= P.first : Size >= P.second;
+        return Size >= P.first;
       };
       auto FirstSizeSame = [](unsigned Size,
                               const std::pair<unsigned, unsigned> &P) {
@@ -24379,23 +24428,19 @@ bool SLPVectorizerPass::vectorizeStores(
         bool AnyProfitableGraph = false;
         for (unsigned VF : CandidateVFs) {
           AnyProfitableGraph = false;
-          unsigned FirstUnvecStore =
-              std::distance(RangeSizes.begin(),
-                            find_if(RangeSizes, std::bind(IsNotVectorized,
-                                                          VF >= MaxRegVF, _1)));
+          unsigned FirstUnvecStore = std::distance(
+              RangeSizes.begin(), find_if(RangeSizes, IsNotVectorized));
 
           // Form slices of size VF starting from FirstUnvecStore and try to
           // vectorize them.
           while (FirstUnvecStore < End) {
             unsigned FirstVecStore = std::distance(
                 RangeSizes.begin(),
-                find_if(RangeSizes.drop_front(FirstUnvecStore),
-                        std::bind(IsVectorized, VF >= MaxRegVF, _1)));
+                find_if(RangeSizes.drop_front(FirstUnvecStore), IsVectorized));
             unsigned MaxSliceEnd = FirstVecStore >= End ? End : FirstVecStore;
             for (unsigned SliceStartIdx = FirstUnvecStore;
                  SliceStartIdx + VF <= MaxSliceEnd;) {
-              if (!checkTreeSizes(RangeSizes.slice(SliceStartIdx, VF),
-                                  VF >= MaxRegVF)) {
+              if (!checkTreeSizes(RangeSizes.slice(SliceStartIdx, VF))) {
                 ++SliceStartIdx;
                 continue;
               }
@@ -24463,8 +24508,7 @@ bool SLPVectorizerPass::vectorizeStores(
               }
               if (VF > 2 && Res &&
                   !all_of(RangeSizes.slice(SliceStartIdx, VF),
-                          std::bind(VFIsProfitable, VF >= MaxRegVF, TreeSize,
-                                    _1))) {
+                          std::bind(VFIsProfitable, TreeSize, _1))) {
                 SliceStartIdx += VF;
                 continue;
               }
@@ -24479,15 +24523,10 @@ bool SLPVectorizerPass::vectorizeStores(
                   ++SliceStartIdx;
                 continue;
               }
-              if (TreeSize > 1) {
+              if (TreeSize > 1)
                 for (std::pair<unsigned, unsigned> &P :
-                     RangeSizes.slice(SliceStartIdx, VF)) {
-                  if (VF >= MaxRegVF)
-                    P.second = std::max(P.second, TreeSize);
-                  else
-                    P.first = std::max(P.first, TreeSize);
-                }
-              }
+                     RangeSizes.slice(SliceStartIdx, VF))
+                  P.second = std::max(P.second, TreeSize);
               ++SliceStartIdx;
               AnyProfitableGraph = true;
             }
@@ -24498,16 +24537,18 @@ bool SLPVectorizerPass::vectorizeStores(
               AnyProfitableGraph = true;
             FirstUnvecStore = std::distance(
                 RangeSizes.begin(),
-                find_if(RangeSizes.drop_front(MaxSliceEnd),
-                        std::bind(IsNotVectorized, VF >= MaxRegVF, _1)));
+                find_if(RangeSizes.drop_front(MaxSliceEnd), IsNotVectorized));
           }
           if (!AnyProfitableGraph && VF >= MaxRegVF && has_single_bit(VF))
             break;
+          // For the MaxRegVF case, save RangeSizes to limit compile time
+          if (VF == MaxRegVF)
+            for (std::pair<unsigned, unsigned> &P : RangeSizes)
+              if (P.first != 0)
+                P.first = std::max(P.second, P.first);
         }
         // All values vectorized - exit.
-        if (all_of(RangeSizes, [](const std::pair<unsigned, unsigned> &P) {
-              return P.first == 0 && P.second == 0;
-            }))
+        if (all_of(RangeSizes, IsVectorized))
           break;
         // Check if tried all attempts or no need for the last attempts at all.
         if (Repeat >= MaxAttempts ||
@@ -24518,9 +24559,8 @@ bool SLPVectorizerPass::vectorizeStores(
             Operands.size(),
             static_cast<unsigned>(
                 End -
-                std::distance(
-                    RangeSizes.begin(),
-                    find_if(RangeSizes, std::bind(IsNotVectorized, true, _1))) +
+                std::distance(RangeSizes.begin(),
+                              find_if(RangeSizes, IsNotVectorized)) +
                 1));
         unsigned VF = bit_ceil(CandidateVFs.front()) * 2;
         unsigned Limit =
