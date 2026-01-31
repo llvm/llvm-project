@@ -73,6 +73,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
                 ->onlyReadsMemory();
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayWriteToMemory();
+  case VPActiveLaneMaskPHISC:
   case VPCanonicalIVPHISC:
   case VPBranchOnMaskSC:
   case VPDerivedIVSC:
@@ -161,6 +162,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   switch (getVPRecipeID()) {
   case VPExpressionSC:
     return cast<VPExpressionRecipe>(this)->mayHaveSideEffects();
+  case VPActiveLaneMaskPHISC:
   case VPDerivedIVSC:
   case VPFirstOrderRecurrencePHISC:
   case VPReductionPHISC:

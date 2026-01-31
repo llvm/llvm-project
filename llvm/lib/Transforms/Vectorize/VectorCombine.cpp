@@ -2496,7 +2496,7 @@ bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
   }
   if (Match1) {
     InstructionCost Shuf1Cost = TTI.getShuffleCost(
-        TargetTransformInfo::SK_PermuteTwoSrc, BinOpTy, Op0Ty, Mask0, CostKind,
+        TargetTransformInfo::SK_PermuteTwoSrc, BinOpTy, Op1Ty, Mask1, CostKind,
         0, nullptr, {Op10, Op11}, cast<Instruction>(BinOp->getOperand(1)));
     OldCost += Shuf1Cost;
     if (!BinOp->hasOneUse() || !BinOp->getOperand(1)->hasOneUse())
@@ -5420,7 +5420,7 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
 
   // Get the range of vector elements used by shufflevector instructions.
   if (std::optional<IndexRange> Indices = GetIndexRangeInShuffles()) {
-    unsigned const NewNumElements = Indices->second + 1u;
+    unsigned const NewNumElements = (Indices->second + 1) - Indices->first;
 
     // If the range of vector elements is smaller than the full load, attempt
     // to create a smaller load.
@@ -5442,19 +5442,28 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
 
       using UseEntry = std::pair<ShuffleVectorInst *, std::vector<int>>;
       SmallVector<UseEntry, 4u> NewUses;
-      unsigned const MaxIndex = NewNumElements * 2u;
+      unsigned const LowOffset = Indices->first;
+      unsigned const HighOffset = OldNumElements - (Indices->second + 1);
 
       for (llvm::Use &Use : I.uses()) {
         auto *Shuffle = cast<ShuffleVectorInst>(Use.getUser());
         ArrayRef<int> OldMask = Shuffle->getShuffleMask();
 
         // Create entry for new use.
-        NewUses.push_back({Shuffle, OldMask});
-
-        // Validate mask indices.
+        NewUses.push_back({Shuffle, {}});
+        std::vector<int> &NewMask = NewUses.back().second;
         for (int Index : OldMask) {
-          if (Index >= static_cast<int>(MaxIndex))
+          // Preserve poison indices without modification.
+          if (Index == PoisonMaskElem) {
+            NewMask.push_back(Index);
+            continue;
+          }
+          int NewIndex = Index >= static_cast<int>(OldNumElements)
+                             ? Index - LowOffset - HighOffset
+                             : Index - LowOffset;
+          if (NewIndex >= static_cast<int>(NewNumElements * 2u))
             return false;
+          NewMask.push_back(NewIndex);
         }
 
         // Update costs.
@@ -5463,7 +5472,7 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
                                OldLoadTy, OldMask, CostKind);
         NewCost +=
             TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, Shuffle->getType(),
-                               NewLoadTy, OldMask, CostKind);
+                               NewLoadTy, NewMask, CostKind);
       }
 
       LLVM_DEBUG(
@@ -5475,8 +5484,16 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
         return false;
 
       // Create new load of smaller vector.
+      Type *IndexTy = DL->getIndexType(PtrOp->getType());
+      TypeSize ElemSize = DL->getTypeAllocSize(ElemTy);
+      Value *NewPtr =
+          LowOffset > 0u
+              ? Builder.CreateInBoundsPtrAdd(
+                    PtrOp, ConstantInt::get(IndexTy, LowOffset * ElemSize))
+              : PtrOp;
+
       auto *NewLoad = cast<LoadInst>(
-          Builder.CreateAlignedLoad(NewLoadTy, PtrOp, OldLoad->getAlign()));
+          Builder.CreateAlignedLoad(NewLoadTy, NewPtr, OldLoad->getAlign()));
       NewLoad->copyMetadata(I);
 
       // Replace all uses.

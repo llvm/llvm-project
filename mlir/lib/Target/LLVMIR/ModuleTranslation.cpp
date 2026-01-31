@@ -1686,6 +1686,12 @@ static void convertFunctionAttributes(LLVMFuncOp func,
     llvmFunc->addFnAttr(llvm::Attribute::WillReturn);
   if (func.getNoreturnAttr())
     llvmFunc->addFnAttr(llvm::Attribute::NoReturn);
+  if (func.getNoCallerSavedRegistersAttr())
+    llvmFunc->addFnAttr("no_caller_saved_registers");
+  if (func.getNocallbackAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::NoCallback);
+  if (StringAttr modFormat = func.getModularFormatAttr())
+    llvmFunc->addFnAttr("modular-format", modFormat.getValue());
   if (TargetFeaturesAttr targetFeatAttr = func.getTargetFeaturesAttr())
     llvmFunc->addFnAttr("target-features", targetFeatAttr.getFeaturesString());
   if (FramePointerKindAttr fpAttr = func.getFramePointerAttr())
