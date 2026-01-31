@@ -483,7 +483,36 @@ gpu.func @memref_extract_aligned_pointer_as_index(%arg0 : memref<256x256xf16>, %
   gpu.return
 }
 
+// CHECK-LABEL: gpu.func @memref_alloca(
+// CHECK-NEXT:    %[[ALLOCA:.*]] = memref.alloca() : memref<2048xi8, 3>
+// CHECK-NEXT:    %[[INTPTR:.*]] = memref.extract_aligned_pointer_as_index %[[ALLOCA]] : memref<2048xi8, 3> -> index
+// CHECK-NEXT:    %[[CAST:.*]] = arith.index_cast %[[INTPTR]] : index to i64
+gpu.func @memref_alloca(%laneid: index) {
+  %r = gpu.warp_execute_on_lane_0(%laneid)[16] -> (memref<2048xi8, 3>) {
+    %alloca = memref.alloca() : memref<2048xi8, 3>
+    gpu.yield %alloca :  memref<2048xi8, 3>
+  }
+  %ptr = memref.extract_aligned_pointer_as_index %r : memref<2048xi8, 3> -> index
+  %ptr_i64 = arith.index_cast %ptr : index to i64
+  "some_user_op"(%ptr_i64) : (i64) -> ()
+  gpu.return
+}
 
+// CHECK-LABEL: gpu.func @create_memdesc(
+// CHECK:       %[[W:.*]]:2 = gpu.warp_execute_on_lane_0(%{{.*}})[16] -> (!xegpu.mem_desc<4x128xf32>, memref<2048xi8, 3>) {
+// CHECK:         gpu.yield %{{.*}}, %{{.*}} : !xegpu.mem_desc<4x128xf32>, memref<2048xi8, 3>
+// CHECK-NEXT:  }
+// CHECK-NEXT:  %[[MDesc:.*]] = xegpu.create_mem_desc %[[W]]#1 : memref<2048xi8, 3> -> !xegpu.mem_desc<4x128xf32>
+gpu.func @create_memdesc(%laneid: index, %arg0 : memref<2048xi8, 3>) {
+  %c0 = arith.constant 0 : index
+  %r = gpu.warp_execute_on_lane_0(%laneid)[16] -> (!xegpu.mem_desc<4x128xf32>) {
+    %mdesc = xegpu.create_mem_desc %arg0 : memref<2048xi8, 3> -> !xegpu.mem_desc<4x128xf32>
+    gpu.yield %mdesc :  !xegpu.mem_desc<4x128xf32>
+  }
+  %25 = xegpu.load_matrix  %r[%c0, %c0]: !xegpu.mem_desc<4x128xf32>, index, index -> vector<1x16xf32>
+  "some_user_op"(%25) : (vector<1x16xf32>) -> ()
+  gpu.return
+}
 
 // CHECK-LABEL: gpu.func @vector_transpose(
 // CHECK:       %[[W:.*]]:2 = gpu.warp_execute_on_lane_0(%{{.*}})[16] -> (vector<2x1xf32>, vector<1x2xf32>) {
