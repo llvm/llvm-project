@@ -2,7 +2,7 @@
 
 ! RUN: not %flang -c %s 2>&1 | FileCheck %s
 
-! CHECK: error: flang does not accept assembly code
+! CHECK: error: flang does not support assembly files as input
 
 .globl foo
 foo:
