@@ -719,9 +719,8 @@ void elf::initSymbolAnchors(Ctx &ctx) {
   //
   // For a defined symbol foo, we may have `d->file != file` with --wrap=foo.
   // We should process foo, as the defining object file's symbol table may not
-  // contain foo after redirectSymbols changed the foo entry to __wrap_foo. To
-  // avoid adding a Defined that is undefined in one object file, use
-  // `!d->scriptDefined` to exclude symbols that are definitely not wrapped.
+  // contain foo after redirectSymbols changed the foo entry to __wrap_foo. Use
+  // `d->scriptDefined` to include such symbols.
   //
   // `relaxAux->anchors` may contain duplicate symbols, but that is fine.
   auto addAnchor = [](Defined *d) {

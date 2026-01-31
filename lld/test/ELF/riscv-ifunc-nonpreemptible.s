@@ -17,7 +17,7 @@
 # RUN: llvm-objdump -d --no-show-raw-insn %t.64 | FileCheck --check-prefix=DIS64 %s
 
 ## ifunc0 has a direct relocation, so it gets canonicalized to the IPLT entry.
-## ifunc1 has only a GOT relocation, so its symbol remains at the original section.
+## ifunc1 has only a GOT relocation, so its symbol remains in the original section.
 ## ifunc2 has both direct and GOT relocations, so it gets canonicalized to the IPLT entry.
 ## All IRELATIVE addends must be correctly adjusted after relaxation.
 
