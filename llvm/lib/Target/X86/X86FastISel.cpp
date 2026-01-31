@@ -51,8 +51,9 @@ class X86FastISel final : public FastISel {
 
 public:
   explicit X86FastISel(FunctionLoweringInfo &funcInfo,
-                       const TargetLibraryInfo *libInfo)
-      : FastISel(funcInfo, libInfo) {
+                       const TargetLibraryInfo *libInfo,
+                       const LibcallLoweringInfo *libcallLowering)
+      : FastISel(funcInfo, libInfo, libcallLowering) {
     Subtarget = &funcInfo.MF->getSubtarget<X86Subtarget>();
   }
 
@@ -1978,9 +1979,9 @@ bool X86FastISel::X86SelectDivRem(const Instruction *I) {
       // register. Unfortunately the operations needed are not uniform enough
       // to fit neatly into the table above.
       if (VT == MVT::i16) {
-        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-                TII.get(Copy), TypeEntry.HighInReg)
-          .addReg(Zero32, 0, X86::sub_16bit);
+        BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(Copy),
+                TypeEntry.HighInReg)
+            .addReg(Zero32, {}, X86::sub_16bit);
       } else if (VT == MVT::i32) {
         BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
                 TII.get(Copy), TypeEntry.HighInReg)
@@ -2629,75 +2630,8 @@ bool X86FastISel::TryEmitSmallMemcpy(X86AddressMode DestAM,
 bool X86FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
   // FIXME: Handle more intrinsics.
   switch (II->getIntrinsicID()) {
-  default: return false;
-  case Intrinsic::convert_from_fp16:
-  case Intrinsic::convert_to_fp16: {
-    if (Subtarget->useSoftFloat() || !Subtarget->hasF16C())
-      return false;
-
-    const Value *Op = II->getArgOperand(0);
-    Register InputReg = getRegForValue(Op);
-    if (!InputReg)
-      return false;
-
-    // F16C only allows converting from float to half and from half to float.
-    bool IsFloatToHalf = II->getIntrinsicID() == Intrinsic::convert_to_fp16;
-    if (IsFloatToHalf) {
-      if (!Op->getType()->isFloatTy())
-        return false;
-    } else {
-      if (!II->getType()->isFloatTy())
-        return false;
-    }
-
-    Register ResultReg;
-    const TargetRegisterClass *RC = TLI.getRegClassFor(MVT::v8i16);
-    if (IsFloatToHalf) {
-      // 'InputReg' is implicitly promoted from register class FR32 to
-      // register class VR128 by method 'constrainOperandRegClass' which is
-      // directly called by 'fastEmitInst_ri'.
-      // Instruction VCVTPS2PHrr takes an extra immediate operand which is
-      // used to provide rounding control: use MXCSR.RC, encoded as 0b100.
-      // It's consistent with the other FP instructions, which are usually
-      // controlled by MXCSR.
-      unsigned Opc = Subtarget->hasVLX() ? X86::VCVTPS2PHZ128rr
-                                         : X86::VCVTPS2PHrr;
-      InputReg = fastEmitInst_ri(Opc, RC, InputReg, 4);
-
-      // Move the lower 32-bits of ResultReg to another register of class GR32.
-      Opc = Subtarget->hasAVX512() ? X86::VMOVPDI2DIZrr
-                                   : X86::VMOVPDI2DIrr;
-      ResultReg = createResultReg(&X86::GR32RegClass);
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD, TII.get(Opc), ResultReg)
-          .addReg(InputReg, RegState::Kill);
-
-      // The result value is in the lower 16-bits of ResultReg.
-      unsigned RegIdx = X86::sub_16bit;
-      ResultReg = fastEmitInst_extractsubreg(MVT::i16, ResultReg, RegIdx);
-    } else {
-      assert(Op->getType()->isIntegerTy(16) && "Expected a 16-bit integer!");
-      // Explicitly zero-extend the input to 32-bit.
-      InputReg = fastEmit_r(MVT::i16, MVT::i32, ISD::ZERO_EXTEND, InputReg);
-
-      // The following SCALAR_TO_VECTOR will be expanded into a VMOVDI2PDIrr.
-      InputReg = fastEmit_r(MVT::i32, MVT::v4i32, ISD::SCALAR_TO_VECTOR,
-                            InputReg);
-
-      unsigned Opc = Subtarget->hasVLX() ? X86::VCVTPH2PSZ128rr
-                                         : X86::VCVTPH2PSrr;
-      InputReg = fastEmitInst_r(Opc, RC, InputReg);
-
-      // The result value is in the lower 32-bits of ResultReg.
-      // Emit an explicit copy from register class VR128 to register class FR32.
-      ResultReg = createResultReg(TLI.getRegClassFor(MVT::f32));
-      BuildMI(*FuncInfo.MBB, FuncInfo.InsertPt, MIMD,
-              TII.get(TargetOpcode::COPY), ResultReg)
-          .addReg(InputReg, RegState::Kill);
-    }
-
-    updateValueMap(II, ResultReg);
-    return true;
-  }
+  default:
+    return false;
   case Intrinsic::frameaddress: {
     MachineFunction *MF = FuncInfo.MF;
     if (MF->getTarget().getMCAsmInfo()->usesWindowsCFI())
@@ -4100,8 +4034,9 @@ Register X86FastISel::fastEmitInst_rrrr(unsigned MachineInstOpcode,
 }
 
 namespace llvm {
-  FastISel *X86::createFastISel(FunctionLoweringInfo &funcInfo,
-                                const TargetLibraryInfo *libInfo) {
-    return new X86FastISel(funcInfo, libInfo);
-  }
+FastISel *X86::createFastISel(FunctionLoweringInfo &funcInfo,
+                              const TargetLibraryInfo *libInfo,
+                              const LibcallLoweringInfo *libcallLowering) {
+  return new X86FastISel(funcInfo, libInfo, libcallLowering);
+}
 }

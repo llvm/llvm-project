@@ -383,7 +383,7 @@ define ptr @test_strstr(ptr noundef %s1, ptr noundef %s2) nounwind {
 ; CHECK-AIX-64-P9-NEXT:    mflr r0
 ; CHECK-AIX-64-P9-NEXT:    stdu r1, -112(r1)
 ; CHECK-AIX-64-P9-NEXT:    std r0, 128(r1)
-; CHECK-AIX-64-P9-NEXT:    bl .strstr[PR]
+; CHECK-AIX-64-P9-NEXT:    bl .___strstr64[PR]
 ; CHECK-AIX-64-P9-NEXT:    nop
 ; CHECK-AIX-64-P9-NEXT:    addi r1, r1, 112
 ; CHECK-AIX-64-P9-NEXT:    ld r0, 16(r1)

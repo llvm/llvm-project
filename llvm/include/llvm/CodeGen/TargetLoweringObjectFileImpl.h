@@ -331,6 +331,7 @@ public:
                                       const TargetMachine &TM) const override;
   MCSection *getSectionForLSDA(const Function &F, const MCSymbol &FnSym,
                                const TargetMachine &TM) const override;
+  MCSection *getStaticXtorSection(unsigned Priority) const;
 };
 
 } // end namespace llvm
