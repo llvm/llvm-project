@@ -806,9 +806,7 @@ func.func @wmma_scale(%fp8_src: vector<64xf8E4M3FN>, %fp6_alt_src: vector<64xf6E
 // CHECK: arm_sme.get_tile
 // CHECK: math.ctpop
 // CHECK: amdgpu.dpp
-func.func @dpp_vector_src_does_not_assert() {
-  %tile = arm_sme.get_tile : vector<[16]x[16]xi8>
-  %pop = math.ctpop %tile : vector<[16]x[16]xi8>
+func.func @dpp_vector_src_does_not_assert(%tile: vector<[16]x[16]xi8>,%pop:  vector<[16]x[16]xi8>) {
   %r = amdgpu.dpp %pop %tile row_shl(1 : i32) : vector<[16]x[16]xi8>
   func.return
 }
