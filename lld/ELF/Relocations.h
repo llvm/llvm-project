@@ -175,7 +175,6 @@ void hexagonTLSSymbolUpdate(Ctx &ctx);
 bool hexagonNeedsTLSSymbol(ArrayRef<OutputSection *> outputSections);
 
 bool isAbsolute(const Symbol &sym);
-bool isAbsoluteOrTls(const Symbol &sym);
 
 class ThunkSection;
 class Thunk;

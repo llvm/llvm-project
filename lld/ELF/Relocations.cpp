@@ -122,7 +122,7 @@ bool elf::isAbsolute(const Symbol &sym) {
   return false;
 }
 
-bool elf::isAbsoluteOrTls(const Symbol &sym) {
+static bool isAbsoluteOrTls(const Symbol &sym) {
   return isAbsolute(sym) || sym.isTls();
 }
 

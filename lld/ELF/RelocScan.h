@@ -77,7 +77,7 @@ public:
   void scanPCRel(RelType type, uint64_t offset, int64_t addend, Symbol &sym) {
     if (LLVM_UNLIKELY(sym.isGnuIFunc()))
       sym.setFlags(HAS_DIRECT_RELOC);
-    if (!sym.isPreemptible && (!ctx.arg.isPic || !isAbsoluteOrTls(sym))) {
+    if (!sym.isPreemptible && (!ctx.arg.isPic || !isAbsolute(sym))) {
       sec->addReloc({R_PC, type, offset, addend, &sym});
       return;
     }
@@ -95,7 +95,7 @@ public:
     if (sym.isPreemptible) {
       sym.setFlags(NEEDS_PLT);
       sec->addReloc({R_PLT_PC, type, offset, addend, &sym});
-    } else if (!ctx.arg.isPic || !isAbsoluteOrTls(sym)) {
+    } else if (!ctx.arg.isPic || !isAbsolute(sym)) {
       sec->addReloc({R_PC, type, offset, addend, &sym});
     } else {
       processAux(R_PC, type, offset, sym, addend);
@@ -110,7 +110,13 @@ public:
       sec->addReloc({R_TPREL, type, offset, addend, &sym});
     } else {
       sym.setFlags(NEEDS_TLSIE);
-      sec->addReloc({ieExpr, type, offset, addend, &sym});
+      // R_GOT (absolute GOT address) needs a RELATIVE dynamic relocation in
+      // PIC. This is used by R_386_TLS_IE.
+      if (ieExpr == R_GOT && ctx.arg.isPic)
+        sec->getPartition(ctx).relaDyn->addRelativeReloc(
+            ctx.target->relativeRel, *sec, offset, sym, addend, type, ieExpr);
+      else
+        sec->addReloc({ieExpr, type, offset, addend, &sym});
     }
   }
 

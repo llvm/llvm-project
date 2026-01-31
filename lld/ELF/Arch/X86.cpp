@@ -529,18 +529,7 @@ void X86::scanSectionImpl(InputSectionBase &sec, Relocs<RelTy> rels) {
       expr = R_TPREL_NEG;
       break;
     case R_386_TLS_IE:
-      ctx.hasTlsIe.store(true, std::memory_order_relaxed);
-      if (!ctx.arg.shared && !sym.isPreemptible) {
-        sec.addReloc({R_TPREL, type, offset, addend, &sym});
-      } else {
-        sym.setFlags(NEEDS_TLSIE);
-        // In PIC, the absolute GOT address needs a RELATIVE dynamic relocation.
-        if (ctx.arg.isPic)
-          sec.getPartition(ctx).relaDyn->addRelativeReloc(
-              ctx.target->relativeRel, sec, offset, sym, addend, type, R_GOT);
-        else
-          sec.addReloc({R_GOT, type, offset, addend, &sym});
-      }
+      rs.handleTlsIe(R_GOT, type, offset, addend, sym);
       continue;
     case R_386_TLS_GOTIE:
       ctx.in.gotPlt->hasGotPltOffRel.store(true, std::memory_order_relaxed);
