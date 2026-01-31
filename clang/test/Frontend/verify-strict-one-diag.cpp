@@ -26,22 +26,20 @@ void f5(A);
 // expected-error@-1 0-2 {{unknown type name 'A'}}
 
 // CHECK-NEXT:   Line 26: exactly one diagnostic can be matched
-// CHECK-NEXT:   Line 26: exactly one diagnostic can be matched
 
 void f6(A, A);
 // expected-error@-1 + {{unknown type name 'A'}}
 
-// CHECK-NEXT:   Line 32: exactly one diagnostic can be matched
+// CHECK-NEXT:   Line 31: exactly one diagnostic can be matched
 
 void f7(A, A);
 // expected-error@-1 0+ {{unknown type name 'A'}}
 
-// CHECK-NEXT:   Line 37: exactly one diagnostic can be matched
-// CHECK-NEXT:   Line 37: exactly one diagnostic can be matched
+// CHECK-NEXT:   Line 36: exactly one diagnostic can be matched
 
 void f8(A, A);
 // expected-error@-1 1+ {{unknown type name 'A'}}
 
-// CHECK-NEXT:   Line 43: exactly one diagnostic can be matched
+// CHECK-NEXT:   Line 41: exactly one diagnostic can be matched
 
-// CHECK-NEXT: 10 errors generated.
+// CHECK-NEXT: 8 errors generated.

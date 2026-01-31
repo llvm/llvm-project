@@ -630,12 +630,12 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
     // Skip optional whitespace.
     PH.SkipWhitespace();
 
+    std::optional<std::ptrdiff_t> NonSingularMatchDiagOffset;
+
     // Next optional token: positive integer or a '+'.
     if (PH.Next(D.Min)) {
-      if (D.Min != 1 && OneDiagPerDirective) {
-        Diags.Report(Pos.getLocWithOffset(PH.C - PH.Begin),
-                     diag::err_verify_non_singular_match);
-        State.AllDirectivesMatchExactlyOneDiag = false;
+      if (OneDiagPerDirective && D.Min != 1) {
+        NonSingularMatchDiagOffset = PH.C - PH.Begin;
       }
       PH.Advance();
       // A positive integer can be followed by a '+' meaning min
@@ -644,9 +644,7 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
         D.Max = Directive::MaxCount;
         PH.Advance();
         if (OneDiagPerDirective) {
-          Diags.Report(Pos.getLocWithOffset(PH.C - PH.Begin),
-                       diag::err_verify_non_singular_match);
-          State.AllDirectivesMatchExactlyOneDiag = false;
+          NonSingularMatchDiagOffset = PH.C - PH.Begin;
         }
       } else if (PH.Next("-")) {
         PH.Advance();
@@ -656,9 +654,7 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
           continue;
         }
         if (OneDiagPerDirective && D.Max != 1) {
-          Diags.Report(Pos.getLocWithOffset(PH.C - PH.Begin),
-                       diag::err_verify_non_singular_match);
-          State.AllDirectivesMatchExactlyOneDiag = false;
+          NonSingularMatchDiagOffset = PH.C - PH.Begin;
         }
         PH.Advance();
       } else {
@@ -667,12 +663,16 @@ static bool ParseDirective(StringRef S, ExpectedData *ED, SourceManager &SM,
     } else if (PH.Next("+")) {
       // '+' on its own means "1 or more".
       if (OneDiagPerDirective) {
-        Diags.Report(Pos.getLocWithOffset(PH.C - PH.Begin),
-                     diag::err_verify_non_singular_match);
-        State.AllDirectivesMatchExactlyOneDiag = false;
+        NonSingularMatchDiagOffset = PH.C - PH.Begin;
       }
       D.Max = Directive::MaxCount;
       PH.Advance();
+    }
+
+    if (NonSingularMatchDiagOffset) {
+      Diags.Report(Pos.getLocWithOffset(*NonSingularMatchDiagOffset),
+                   diag::err_verify_non_singular_match);
+      State.AllDirectivesMatchExactlyOneDiag = false;
     }
 
     // Skip optional whitespace.
