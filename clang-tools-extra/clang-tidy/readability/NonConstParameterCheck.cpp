@@ -44,7 +44,7 @@ void NonConstParameterCheck::check(const MatchFinder::MatchResult &Result) {
         // Skip parameters in generic lambdas to avoid false positives.
         // Generic lambdas may have template-dependent usage that cannot
         // be analyzed at parse time. Fixes issue #177354.
-        if (M->getParent()->isLambda() && 
+        if (M->getParent()->isLambda() &&
             M->getDescribedFunctionTemplate() != nullptr)
           return;
       }
