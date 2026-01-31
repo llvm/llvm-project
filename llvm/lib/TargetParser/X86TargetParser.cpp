@@ -762,6 +762,7 @@ llvm::X86::getCpuSupportsMask(ArrayRef<StringRef> FeatureStrs) {
   std::array<uint32_t, 4> FeatureMask{};
   for (StringRef FeatureStr : FeatureStrs) {
     unsigned Feature = StringSwitch<unsigned>(FeatureStr)
+    // ABI_VALUE is used to match values in compiler-rt/libgcc
 #define X86_FEATURE_COMPAT(ENUM, STR, PRIORITY, ABI_VALUE) .Case(STR, ABI_VALUE)
 #define X86_MICROARCH_LEVEL(ENUM, STR, PRIORITY, ABI_VALUE)                    \
   .Case(STR, ABI_VALUE)

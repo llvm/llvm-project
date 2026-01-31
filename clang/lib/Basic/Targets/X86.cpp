@@ -1363,11 +1363,9 @@ void X86TargetInfo::getCPUSpecificCPUDispatchFeatures(
 // rather than the full range of cpus.
 bool X86TargetInfo::validateCpuIs(StringRef FeatureStr) const {
   return llvm::StringSwitch<bool>(FeatureStr)
-#define X86_VENDOR(ENUM, STRING) .Case(STRING, true)
-#define X86_CPU_TYPE_ALIAS(ENUM, ALIAS) .Case(ALIAS, true)
-#define X86_CPU_TYPE(ENUM, STR) .Case(STR, true)
-#define X86_CPU_SUBTYPE_ALIAS(ENUM, ALIAS) .Case(ALIAS, true)
-#define X86_CPU_SUBTYPE(ENUM, STR) .Case(STR, true)
+#define X86_VENDOR(ENUM, STRING, ABI_VALUE) .Case(STRING, true)
+#define X86_CPU_TYPE(ENUM, STR, ABI_VALUE) .Case(STR, true)
+#define X86_CPU_SUBTYPE(ENUM, STR, ABI_VALUE) .Case(STR, true)
 #include "llvm/TargetParser/X86TargetParser.def"
       .Default(false);
 }
