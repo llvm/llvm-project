@@ -724,18 +724,24 @@ void elf::initSymbolAnchors(Ctx &ctx) {
   // `!d->scriptDefined` to exclude symbols that are definitely not wrapped.
   //
   // `relaxAux->anchors` may contain duplicate symbols, but that is fine.
+  auto addAnchor = [](Defined *d) {
+    if (auto *sec = dyn_cast_or_null<InputSection>(d->section))
+      if (sec->flags & SHF_EXECINSTR && sec->relaxAux) {
+        // If sec is discarded, relaxAux will be nullptr.
+        sec->relaxAux->anchors.push_back({d->value, d, false});
+        sec->relaxAux->anchors.push_back({d->value + d->size, d, true});
+      }
+  };
   for (InputFile *file : ctx.objectFiles)
     for (Symbol *sym : file->getSymbols()) {
       auto *d = dyn_cast<Defined>(sym);
-      if (!d || (d->file != file && !d->scriptDefined))
-        continue;
-      if (auto *sec = dyn_cast_or_null<InputSection>(d->section))
-        if (sec->flags & SHF_EXECINSTR && sec->relaxAux) {
-          // If sec is discarded, relaxAux will be nullptr.
-          sec->relaxAux->anchors.push_back({d->value, d, false});
-          sec->relaxAux->anchors.push_back({d->value + d->size, d, true});
-        }
+      if (d && (d->file == file || d->scriptDefined))
+        addAnchor(d);
     }
+  // Also add anchors for IRELATIVE symbols, which are clones of ifunc resolver
+  // symbols created during postScanRelocations.
+  for (Defined *d : ctx.irelativeSyms)
+    addAnchor(d);
   // Sort anchors by offset so that we can find the closest relocation
   // efficiently. For a zero size symbol, ensure that its start anchor precedes
   // its end anchor. For two symbols with anchors at the same offset, their
