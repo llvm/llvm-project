@@ -153,29 +153,27 @@ public:
     return cir::PointerType::get(ty);
   }
 
-  cir::PointerType getPointerTo(mlir::Type ty, cir::TargetAddressSpaceAttr as) {
+  cir::PointerType getPointerTo(mlir::Type ty,
+                                mlir::ptr::MemorySpaceAttrInterface as) {
+    if (!as)
+      return cir::PointerType::get(ty);
     return cir::PointerType::get(ty, as);
   }
 
   cir::PointerType getPointerTo(mlir::Type ty, clang::LangAS langAS) {
-    if (langAS == clang::LangAS::Default) // Default address space.
+    if (langAS == clang::LangAS::Default)
       return getPointerTo(ty);
 
-    if (clang::isTargetAddressSpace(langAS)) {
-      unsigned addrSpace = clang::toTargetAddressSpace(langAS);
-      auto asAttr = cir::TargetAddressSpaceAttr::get(
-          getContext(), getUI32IntegerAttr(addrSpace));
-      return getPointerTo(ty, asAttr);
-    }
-
-    llvm_unreachable("language-specific address spaces NYI");
+    mlir::ptr::MemorySpaceAttrInterface addrSpaceAttr =
+        cir::toCIRAddressSpaceAttr(getContext(), langAS);
+    return getPointerTo(ty, addrSpaceAttr);
   }
 
   cir::PointerType getVoidPtrTy(clang::LangAS langAS = clang::LangAS::Default) {
     return getPointerTo(cir::VoidType::get(getContext()), langAS);
   }
 
-  cir::PointerType getVoidPtrTy(cir::TargetAddressSpaceAttr as) {
+  cir::PointerType getVoidPtrTy(mlir::ptr::MemorySpaceAttrInterface as) {
     return getPointerTo(cir::VoidType::get(getContext()), as);
   }
 

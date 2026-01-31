@@ -338,7 +338,7 @@ static RValue emitBuiltinAlloca(CIRGenFunction &cgf, const CallExpr *e,
   // builtin / dynamic alloca we have to handle it here.
 
   if (!cir::isMatchingAddressSpace(
-          cgf.getCIRAllocaAddressSpace(),
+          cgf.getMLIRContext(), cgf.getCIRAllocaAddressSpace(),
           e->getType()->getPointeeType().getAddressSpace())) {
     cgf.cgm.errorNYI(e->getSourceRange(),
                      "Non-default address space for alloca");

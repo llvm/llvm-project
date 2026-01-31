@@ -16,6 +16,7 @@
 
 #include "ABIInfo.h"
 #include "CIRGenTypes.h"
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "clang/Basic/AddressSpaces.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 
@@ -48,7 +49,7 @@ public:
   const ABIInfo &getABIInfo() const { return *info; }
 
   /// Get the address space for alloca.
-  virtual cir::TargetAddressSpaceAttr getCIRAllocaAddressSpace() const {
+  virtual mlir::ptr::MemorySpaceAttrInterface getCIRAllocaAddressSpace() const {
     return {};
   }
   /// Perform address space cast of an expression of pointer type.
@@ -56,10 +57,10 @@ public:
   /// \param DestTy is the destination pointer type.
   /// \param srcAS is theaddress space of \p V.
   /// \param IsNonNull is the flag indicating \p V is known to be non null.
-  virtual mlir::Value performAddrSpaceCast(CIRGenFunction &cgf, mlir::Value v,
-                                           cir::TargetAddressSpaceAttr srcAddr,
-                                           mlir::Type destTy,
-                                           bool isNonNull = false) const;
+  virtual mlir::Value
+  performAddrSpaceCast(CIRGenFunction &cgf, mlir::Value v,
+                       mlir::ptr::MemorySpaceAttrInterface srcAS,
+                       mlir::Type destTy, bool isNonNull = false) const;
 
   /// Determine whether a call to an unprototyped functions under
   /// the given calling convention should use the variadic
