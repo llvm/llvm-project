@@ -75,6 +75,3 @@ define <vscale x 2 x float> @test_different_evl(<vscale x 2 x float>* %ptr, <vsc
   ret <vscale x 2 x float> %rev
 }
 
-declare <vscale x 2 x float> @llvm.vp.load.nxv2f32.p0nxv2f32(<vscale x 2 x float>* nocapture, <vscale x 2 x i1>, i32)
-declare <vscale x 2 x float> @llvm.experimental.vp.reverse.nxv2f32(<vscale x 2 x float>, <vscale x 2 x i1>, i32)
-declare <vscale x 2 x i1> @llvm.experimental.vp.reverse.nxv2i1(<vscale x 2 x i1>, <vscale x 2 x i1>, i32)

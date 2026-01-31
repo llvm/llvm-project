@@ -5,6 +5,21 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o %t.ll
 // RUN: FileCheck --check-prefix=OGCG --input-file=%t.ll %s
 
+struct BitfieldStruct {
+  unsigned int a:4;
+  unsigned int b:14;
+  unsigned int c:14;
+};
+
+BitfieldStruct overlapping_init = { 3, 2, 1 };
+
+// This is unintuitive. The bitfields are initialized using a struct of constants
+// that maps to the bitfields but splits the value into bytes.
+
+// CIR: cir.global external @overlapping_init = #cir.const_record<{#cir.int<35> : !u8i, #cir.int<0> : !u8i, #cir.int<4> : !u8i, #cir.int<0> : !u8i}> : !rec_anon_struct
+// LLVM: @overlapping_init = global { i8, i8, i8, i8 } { i8 35, i8 0, i8 4, i8 0 }
+// OGCG: @overlapping_init = global { i8, i8, i8, i8 } { i8 35, i8 0, i8 4, i8 0 }
+
 struct S {
   int a, b, c;
 };
@@ -25,6 +40,23 @@ StructWithDefaultInit swdi = {};
 // LLVM: @swdi = global %struct.StructWithDefaultInit { i32 2 }, align 4
 // OGCG: @swdi = global %struct.StructWithDefaultInit { i32 2 }, align 4
 
+struct StructWithFieldInitFromConst {
+  int a : 10;
+  int b = a;
+};
+
+StructWithFieldInitFromConst swfifc = {};
+
+// CIR: cir.global external @swfifc = #cir.zero : !rec_anon_struct
+// LLVM: @swfifc = global { i8, i8, i32 } zeroinitializer, align 4
+// OGCG: @swfifc = global { i8, i8, i32 } zeroinitializer, align 4
+
+StructWithFieldInitFromConst swfifc2 = { 2 };
+
+// CIR: cir.global external @swfifc2 = #cir.const_record<{#cir.int<2> : !u8i, #cir.int<0> : !u8i, #cir.int<2> : !s32i}> : !rec_anon_struct
+// LLVM: @swfifc2 = global { i8, i8, i32 } { i8 2, i8 0, i32 2 }, align 4
+// OGCG: @swfifc2 = global { i8, i8, i32 } { i8 2, i8 0, i32 2 }, align 4
+
 void init() {
   S s1 = {1, 2, 3};
   S s2 = {4, 5};
@@ -33,41 +65,16 @@ void init() {
 // CIR: cir.func{{.*}} @_Z4initv()
 // CIR:   %[[S1:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["s1", init]
 // CIR:   %[[S2:.*]] = cir.alloca !rec_S, !cir.ptr<!rec_S>, ["s2", init]
-// CIR:   %[[S1_A:.*]] = cir.get_member %[[S1]][0] {name = "a"}
-// CIR:   %[[ONE:.*]] = cir.const #cir.int<1>
-// CIR:   cir.store{{.*}} %[[ONE]], %[[S1_A]]
-// CIR:   %[[S1_B:.*]] = cir.get_member %[[S1]][1] {name = "b"}
-// CIR:   %[[TWO:.*]] = cir.const #cir.int<2>
-// CIR:   cir.store{{.*}} %[[TWO]], %[[S1_B]]
-// CIR:   %[[S1_C:.*]] = cir.get_member %[[S1]][2] {name = "c"}
-// CIR:   %[[THREE:.*]] = cir.const #cir.int<3>
-// CIR:   cir.store{{.*}} %[[THREE]], %[[S1_C]]
-// CIR:   %[[S2_A:.*]] = cir.get_member %[[S2]][0] {name = "a"}
-// CIR:   %[[FOUR:.*]] = cir.const #cir.int<4>
-// CIR:   cir.store{{.*}} %[[FOUR]], %[[S2_A]]
-// CIR:   %[[S2_B:.*]] = cir.get_member %[[S2]][1] {name = "b"}
-// CIR:   %[[FIVE:.*]] = cir.const #cir.int<5>
-// CIR:   cir.store{{.*}} %[[FIVE]], %[[S2_B]]
-// CIR:   %[[S2_C:.*]] = cir.get_member %[[S2]][2] {name = "c"}
-// CIR:   %[[ZERO:.*]] = cir.const #cir.int<0>
-// CIR:   cir.store{{.*}} %[[ZERO]], %[[S2_C]]
-// CIR:   cir.return
+// CIR:   %[[CONST_1:.*]] = cir.const #cir.const_record<{#cir.int<1> : !s32i, #cir.int<2> : !s32i, #cir.int<3> : !s32i}> : !rec_S
+// CIR:   cir.store{{.*}} %[[CONST_1]], %[[S1]]
+// CIR:   %[[CONST_2:.*]] = cir.const #cir.const_record<{#cir.int<4> : !s32i, #cir.int<5> : !s32i, #cir.int<0> : !s32i}> : !rec_S
+// CIR:   cir.store{{.*}} %[[CONST_2]], %[[S2]]
 
 // LLVM: define{{.*}} void @_Z4initv()
 // LLVM:   %[[S1:.*]] = alloca %struct.S
 // LLVM:   %[[S2:.*]] = alloca %struct.S
-// LLVM:   %[[S1_A:.*]] = getelementptr %struct.S, ptr %[[S1]], i32 0, i32 0
-// LLVM:   store i32 1, ptr %[[S1_A]]
-// LLVM:   %[[S1_B:.*]] = getelementptr %struct.S, ptr %[[S1]], i32 0, i32 1
-// LLVM:   store i32 2, ptr %[[S1_B]]
-// LLVM:   %[[S1_C:.*]] = getelementptr %struct.S, ptr %[[S1]], i32 0, i32 2
-// LLVM:   store i32 3, ptr %[[S1_C]]
-// LLVM:   %[[S2_A:.*]] = getelementptr %struct.S, ptr %[[S2]], i32 0, i32 0
-// LLVM:   store i32 4, ptr %[[S2_A]]
-// LLVM:   %[[S2_B:.*]] = getelementptr %struct.S, ptr %[[S2]], i32 0, i32 1
-// LLVM:   store i32 5, ptr %[[S2_B]]
-// LLVM:   %[[S2_C:.*]] = getelementptr %struct.S, ptr %[[S2]], i32 0, i32 2
-// LLVM:   store i32 0, ptr %[[S2_C]]
+// LLVM:   store %struct.S { i32 1, i32 2, i32 3 }, ptr %[[S1]], align 4
+// LLVM:   store %struct.S { i32 4, i32 5, i32 0 }, ptr %[[S2]], align 4
 
 // OGCG: @__const._Z4initv.s1 = private unnamed_addr constant %struct.S { i32 1, i32 2, i32 3 }
 // OGCG: @__const._Z4initv.s2 = private unnamed_addr constant %struct.S { i32 4, i32 5, i32 0 }
@@ -198,3 +205,26 @@ void init_expr(int a, int b, int c) {
 // OGCG:   %[[C_PLUS_THREE:.*]] = add nsw i32 %[[C]], 3
 // OGCG:   store i32 %[[C_PLUS_THREE]], ptr %[[S_C]]
 // OGCG:   ret void
+
+void cxx_default_init_with_struct_field() {
+  struct Parent {
+    int getA();
+    int a = getA();
+  };
+  Parent p = Parent{};
+}
+
+// CIR: %[[P_ADDR:.*]] = cir.alloca !rec_Parent, !cir.ptr<!rec_Parent>, ["p", init]
+// CIR: %[[P_ELEM_0_PTR:.*]] = cir.get_member %[[P_ADDR]][0] {name = "a"} : !cir.ptr<!rec_Parent> -> !cir.ptr<!s32i>
+// CIR: %[[METHOD_CALL:.*]] = cir.call @_ZZ34cxx_default_init_with_struct_fieldvEN6Parent4getAEv(%[[P_ADDR]]) : (!cir.ptr<!rec_Parent>) -> !s32i
+// CIR: cir.store{{.*}} %[[METHOD_CALL]], %[[P_ELEM_0_PTR]] : !s32i, !cir.ptr<!s32i>
+
+// LLVM: %[[P_ADDR:.*]] = alloca %struct.Parent, i64 1, align 4
+// LLVM: %[[P_ELEM_0_PTR:.*]] = getelementptr %struct.Parent, ptr %[[P_ADDR]], i32 0, i32 0
+// LLVM: %[[METHOD_CALL:.*]] = call i32 @_ZZ34cxx_default_init_with_struct_fieldvEN6Parent4getAEv(ptr %[[P_ADDR]])
+// LLVM: store i32 %[[METHOD_CALL]], ptr %[[P_ELEM_0_PTR]], align 4
+
+// OGCG: %[[P_ADDR:.*]] = alloca %struct.Parent, align 4
+// OGCG: %[[P_ELEM_0_PTR:.*]] = getelementptr inbounds nuw %struct.Parent, ptr %[[P_ADDR]], i32 0, i32 0
+// OGCG: %[[METHOD_CALL:.*]] = call noundef i32 @_ZZ34cxx_default_init_with_struct_fieldvEN6Parent4getAEv(ptr {{.*}} %[[P_ADDR]])
+// OGCG: store i32 %[[METHOD_CALL]], ptr %[[P_ELEM_0_PTR]], align 4

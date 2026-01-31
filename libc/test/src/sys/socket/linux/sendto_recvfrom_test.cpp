@@ -54,7 +54,7 @@ TEST_F(LlvmLibcSendToRecvFromTest, SendToFails) {
 
   ASSERT_THAT(
       LIBC_NAMESPACE::sendto(-1, TEST_MESSAGE, MESSAGE_LEN, 0, nullptr, 0),
-      Fails(static_cast<ssize_t>(EBADF), static_cast<ssize_t>(-1)));
+      Fails(EBADF));
 }
 
 TEST_F(LlvmLibcSendToRecvFromTest, RecvFromFails) {
@@ -62,5 +62,5 @@ TEST_F(LlvmLibcSendToRecvFromTest, RecvFromFails) {
 
   ASSERT_THAT(
       LIBC_NAMESPACE::recvfrom(-1, buffer, sizeof(buffer), 0, nullptr, 0),
-      Fails(static_cast<ssize_t>(EBADF), static_cast<ssize_t>(-1)));
+      Fails(EBADF));
 }

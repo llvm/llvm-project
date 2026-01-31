@@ -36,18 +36,18 @@ entry:
   ret void
 }
 
-attributes #0 = { nounwind "uniform-work-group-size"="false" "unsafe-fp-math"="true"}
-attributes #1 = { nounwind "less-precise-fpmad"="true" "no-infs-fp-math"="true" "no-nans-fp-math"="true" "unsafe-fp-math"="true" }
+attributes #0 = { nounwind "uniform-work-group-size"="false"}
+attributes #1 = { nounwind "less-precise-fpmad"="true" "no-infs-fp-math"="true" "no-nans-fp-math"="true" }
 
 ;.
-; UNSAFE: attributes #[[ATTR0]] = { nounwind "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
-; UNSAFE: attributes #[[ATTR1]] = { nounwind "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
+; UNSAFE: attributes #[[ATTR0]] = { nounwind "uniform-work-group-size"="false" }
+; UNSAFE: attributes #[[ATTR1]] = { nounwind "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="false" "uniform-work-group-size"="false" }
 ;.
-; NONANS: attributes #[[ATTR0]] = { nounwind "no-nans-fp-math"="true" "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
-; NONANS: attributes #[[ATTR1]] = { nounwind "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="true" "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
+; NONANS: attributes #[[ATTR0]] = { nounwind "no-nans-fp-math"="true" "uniform-work-group-size"="false" }
+; NONANS: attributes #[[ATTR1]] = { nounwind "less-precise-fpmad"="false" "no-infs-fp-math"="false" "no-nans-fp-math"="true" "uniform-work-group-size"="false" }
 ;.
-; NOINFS: attributes #[[ATTR0]] = { nounwind "no-infs-fp-math"="true" "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
-; NOINFS: attributes #[[ATTR1]] = { nounwind "less-precise-fpmad"="false" "no-infs-fp-math"="true" "no-nans-fp-math"="false" "uniform-work-group-size"="false" "unsafe-fp-math"="true" }
+; NOINFS: attributes #[[ATTR0]] = { nounwind "no-infs-fp-math"="true" "uniform-work-group-size"="false" }
+; NOINFS: attributes #[[ATTR1]] = { nounwind "less-precise-fpmad"="false" "no-infs-fp-math"="true" "no-nans-fp-math"="false" "uniform-work-group-size"="false" }
 ;.
 ; UNSAFE: [[META0]] = !{}
 ;.

@@ -48,10 +48,11 @@ private:
       // "... [with T = xyz; std::string_view = ...]"
 #ifdef __clang__
       std::string_view front("[T = ");
+      std::string_view back("]");
 #else
       std::string_view front("[with T = ");
-#endif
       std::string_view back("; std::string_view =");
+#endif
 
 #elif defined(_MSC_VER)
 #define DUMP_EXPR_SHOW_TYPE
@@ -202,7 +203,7 @@ private:
   }
   void Show(const evaluate::Relational<evaluate::SomeType> &x);
   template <typename T> void Show(const evaluate::Expr<T> &x) {
-    Indent("expr <" + std::string(TypeOf<T>::name) + ">");
+    Indent("expr <"s + std::string(TypeOf<T>::name) + ">"s);
     Show(x.u);
     Outdent();
   }

@@ -744,8 +744,8 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
       }
     } break;
     case eAddressTypeHost: {
-      auto max_bytes =
-          GetCompilerType().GetByteSize(exe_ctx.GetBestExecutionContextScope());
+      auto max_bytes = llvm::expectedToOptional(GetCompilerType().GetByteSize(
+          exe_ctx.GetBestExecutionContextScope()));
       if (max_bytes && *max_bytes > offset) {
         size_t bytes_read = std::min<uint64_t>(*max_bytes - offset, bytes);
         addr = m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
@@ -790,8 +790,7 @@ bool ValueObject::SetData(DataExtractor &data, Status &error) {
     return false;
   }
 
-  uint64_t count = 0;
-  const Encoding encoding = GetCompilerType().GetEncoding(count);
+  const Encoding encoding = GetCompilerType().GetEncoding();
 
   const size_t byte_size = llvm::expectedToOptional(GetByteSize()).value_or(0);
 
@@ -1669,8 +1668,7 @@ bool ValueObject::SetValueFromCString(const char *value_str, Status &error) {
     return false;
   }
 
-  uint64_t count = 0;
-  const Encoding encoding = GetCompilerType().GetEncoding(count);
+  const Encoding encoding = GetCompilerType().GetEncoding();
 
   const size_t byte_size = llvm::expectedToOptional(GetByteSize()).value_or(0);
 
@@ -2140,8 +2138,22 @@ void ValueObject::GetExpressionPath(Stream &s,
 
   ValueObject *parent = GetParent();
 
-  if (parent)
+  if (parent) {
     parent->GetExpressionPath(s, epformat);
+    const CompilerType parentType = parent->GetCompilerType();
+    if (parentType.IsPointerType() &&
+        parentType.GetPointeeType().IsArrayType(nullptr, nullptr, nullptr)) {
+      // When the parent is a pointer to an array, then we have to:
+      // - follow the expression path of the parent with "[0]"
+      //   (that will indicate dereferencing the pointer to the array)
+      // - and then follow that with this ValueObject's name
+      //   (which will be something like "[i]" to indicate
+      //    the i-th element of the array)
+      s.PutCString("[0]");
+      s.PutCString(GetName().GetCString());
+      return;
+    }
+  }
 
   // if we are a deref_of_parent just because we are synthetic array members
   // made up to allow ptr[%d] syntax to work in variable printing, then add our
@@ -3755,4 +3767,95 @@ ValueObjectSP ValueObject::Persist() {
 
 lldb::ValueObjectSP ValueObject::GetVTable() {
   return ValueObjectVTable::Create(*this);
+}
+
+ValueImpl::ValueImpl(lldb::ValueObjectSP in_valobj_sp,
+                     lldb::DynamicValueType use_dynamic, bool use_synthetic,
+                     const char *name)
+    : m_use_dynamic(use_dynamic), m_use_synthetic(use_synthetic), m_name(name) {
+  if (in_valobj_sp) {
+    if ((m_valobj_sp = in_valobj_sp->GetQualifiedRepresentationIfAvailable(
+             lldb::eNoDynamicValues, false))) {
+      if (!m_name.IsEmpty())
+        m_valobj_sp->SetName(m_name);
+    }
+  }
+}
+
+ValueImpl &ValueImpl::operator=(const ValueImpl &rhs) {
+  if (this != &rhs) {
+    m_valobj_sp = rhs.m_valobj_sp;
+    m_use_dynamic = rhs.m_use_dynamic;
+    m_use_synthetic = rhs.m_use_synthetic;
+    m_name = rhs.m_name;
+  }
+  return *this;
+}
+
+bool ValueImpl::IsValid() {
+  if (m_valobj_sp.get() == nullptr)
+    return false;
+
+  // FIXME: This check is necessary but not sufficient.  We for sure don't
+  // want to touch SBValues whose owning
+  // targets have gone away.  This check is a little weak in that it
+  // enforces that restriction when you call IsValid, but since IsValid
+  // doesn't lock the target, you have no guarantee that the SBValue won't
+  // go invalid after you call this... Also, an SBValue could depend on
+  // data from one of the modules in the target, and those could go away
+  // independently of the target, for instance if a module is unloaded.
+  // But right now, neither SBValues nor ValueObjects know which modules
+  // they depend on.  So I have no good way to make that check without
+  // tracking that in all the ValueObject subclasses.
+  TargetSP target_sp = m_valobj_sp->GetTargetSP();
+  return target_sp && target_sp->IsValid();
+}
+
+lldb::ValueObjectSP
+ValueImpl::GetSP(Process::StopLocker &stop_locker,
+                 std::unique_lock<std::recursive_mutex> &lock, Status &error) {
+  if (!m_valobj_sp) {
+    error = Status::FromErrorString("invalid value object");
+    return m_valobj_sp;
+  }
+
+  lldb::ValueObjectSP value_sp = m_valobj_sp;
+
+  Target *target = value_sp->GetTargetSP().get();
+  // If this ValueObject holds an error, then it is valuable for that.
+  if (value_sp->GetError().Fail())
+    return value_sp;
+
+  if (!target)
+    return ValueObjectSP();
+
+  lock = std::unique_lock<std::recursive_mutex>(target->GetAPIMutex());
+
+  ProcessSP process_sp(value_sp->GetProcessSP());
+  if (process_sp && !stop_locker.TryLock(&process_sp->GetRunLock())) {
+    // We don't allow people to play around with ValueObject if the process
+    // is running. If you want to look at values, pause the process, then
+    // look.
+    error = Status::FromErrorString("process must be stopped.");
+    return ValueObjectSP();
+  }
+
+  if (m_use_dynamic != eNoDynamicValues) {
+    ValueObjectSP dynamic_sp = value_sp->GetDynamicValue(m_use_dynamic);
+    if (dynamic_sp)
+      value_sp = dynamic_sp;
+  }
+
+  if (m_use_synthetic) {
+    ValueObjectSP synthetic_sp = value_sp->GetSyntheticValue();
+    if (synthetic_sp)
+      value_sp = synthetic_sp;
+  }
+
+  if (!value_sp)
+    error = Status::FromErrorString("invalid value object");
+  if (!m_name.IsEmpty())
+    value_sp->SetName(m_name);
+
+  return value_sp;
 }

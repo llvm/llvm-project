@@ -157,7 +157,7 @@ TEST(StringSwitchTest, Cases) {
 
   auto Translate = [](StringRef S) {
     return llvm::StringSwitch<OSType>(S)
-        .Cases(StringLiteral::withInnerNUL("wind\0ws"), "win32", "winnt",
+        .Cases({StringLiteral::withInnerNUL("wind\0ws"), "win32", "winnt"},
                OSType::Windows)
         .Cases({"linux", "unix", "*nix", "posix"}, OSType::Linux)
         .Cases({"macos", "osx"}, OSType::MacOS)
@@ -189,7 +189,7 @@ TEST(StringSwitchTest, CasesLower) {
 
   auto Translate = [](StringRef S) {
     return llvm::StringSwitch<OSType>(S)
-        .CasesLower(StringLiteral::withInnerNUL("wind\0ws"), "win32", "winnt",
+        .CasesLower({StringLiteral::withInnerNUL("wind\0ws"), "win32", "winnt"},
                     OSType::Windows)
         .CasesLower({"linux", "unix", "*nix", "posix"}, OSType::Linux)
         .CasesLower({"macos", "osx"}, OSType::MacOS)
@@ -238,6 +238,23 @@ TEST(StringSwitchTest, CasesCopies) {
   llvm::StringSwitch<Copyable, void>("baz").CasesLower(
       {"Foo", "Bar", "Baz", "Qux"}, Copyable{NumCopies});
   EXPECT_EQ(NumCopies, 1u);
+}
+
+TEST(StringSwitchTest, StringSwitchMultipleMatches) {
+  auto Translate = [](StringRef S) {
+    return llvm::StringSwitch<int>(S)
+        .CaseLower("A", 0)
+        .Case("b", 1)
+        .Case("a", 2)
+        .CasesLower({"a", "b"}, 3)
+        .DefaultUnreachable();
+  };
+
+  // Check that the value of the first match is returned.
+  EXPECT_EQ(0, Translate("A"));
+  EXPECT_EQ(0, Translate("a"));
+  EXPECT_EQ(3, Translate("B"));
+  EXPECT_EQ(1, Translate("b"));
 }
 
 TEST(StringSwitchTest, DefaultUnreachable) {

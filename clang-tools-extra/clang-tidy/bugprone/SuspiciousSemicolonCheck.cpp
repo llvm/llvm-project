@@ -31,7 +31,7 @@ void SuspiciousSemicolonCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   const auto *Semicolon = Result.Nodes.getNodeAs<NullStmt>("semi");
-  SourceLocation LocStart = Semicolon->getBeginLoc();
+  const SourceLocation LocStart = Semicolon->getBeginLoc();
 
   if (LocStart.isMacroID())
     return;
@@ -40,7 +40,7 @@ void SuspiciousSemicolonCheck::check(const MatchFinder::MatchResult &Result) {
   auto Token = utils::lexer::getPreviousToken(LocStart, Ctxt.getSourceManager(),
                                               Ctxt.getLangOpts());
   auto &SM = *Result.SourceManager;
-  unsigned SemicolonLine = SM.getSpellingLineNumber(LocStart);
+  const unsigned SemicolonLine = SM.getSpellingLineNumber(LocStart);
 
   const auto *Statement = Result.Nodes.getNodeAs<Stmt>("stmt");
   const bool IsIfStmt = isa<IfStmt>(Statement);
@@ -49,18 +49,20 @@ void SuspiciousSemicolonCheck::check(const MatchFinder::MatchResult &Result) {
       SM.getSpellingLineNumber(Token.getLocation()) != SemicolonLine)
     return;
 
-  SourceLocation LocEnd = Semicolon->getEndLoc();
-  FileID FID = SM.getFileID(LocEnd);
-  llvm::MemoryBufferRef Buffer = SM.getBufferOrFake(FID, LocEnd);
+  const SourceLocation LocEnd = Semicolon->getEndLoc();
+  const FileID FID = SM.getFileID(LocEnd);
+  const llvm::MemoryBufferRef Buffer = SM.getBufferOrFake(FID, LocEnd);
   Lexer Lexer(SM.getLocForStartOfFile(FID), Ctxt.getLangOpts(),
               Buffer.getBufferStart(), SM.getCharacterData(LocEnd) + 1,
               Buffer.getBufferEnd());
   if (Lexer.LexFromRawLexer(Token))
     return;
 
-  unsigned BaseIndent = SM.getSpellingColumnNumber(Statement->getBeginLoc());
-  unsigned NewTokenIndent = SM.getSpellingColumnNumber(Token.getLocation());
-  unsigned NewTokenLine = SM.getSpellingLineNumber(Token.getLocation());
+  const unsigned BaseIndent =
+      SM.getSpellingColumnNumber(Statement->getBeginLoc());
+  const unsigned NewTokenIndent =
+      SM.getSpellingColumnNumber(Token.getLocation());
+  const unsigned NewTokenLine = SM.getSpellingLineNumber(Token.getLocation());
 
   if (!IsIfStmt && NewTokenIndent <= BaseIndent &&
       Token.getKind() != tok::l_brace && NewTokenLine != SemicolonLine)

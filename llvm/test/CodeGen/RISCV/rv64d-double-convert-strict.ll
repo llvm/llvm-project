@@ -22,7 +22,6 @@ define i32 @aext_fptosi(double %a) nounwind strictfp {
   %1 = call i32 @llvm.experimental.constrained.fptosi.i32.f64(double %a, metadata !"fpexcept.strict") strictfp
   ret i32 %1
 }
-declare i32 @llvm.experimental.constrained.fptosi.i32.f64(double, metadata)
 
 define signext i32 @sext_fptosi(double %a) nounwind strictfp {
 ; RV64ID-LABEL: sext_fptosi:
@@ -69,7 +68,6 @@ define i32 @aext_fptoui(double %a) nounwind strictfp {
   %1 = call i32 @llvm.experimental.constrained.fptoui.i32.f64(double %a, metadata !"fpexcept.strict") strictfp
   ret i32 %1
 }
-declare i32 @llvm.experimental.constrained.fptoui.i32.f64(double, metadata)
 
 define signext i32 @sext_fptoui(double %a) nounwind strictfp {
 ; RV64ID-LABEL: sext_fptoui:
@@ -112,7 +110,6 @@ define double @uitofp_aext_i32_to_f64(i32 %a) nounwind strictfp {
   %1 = call double @llvm.experimental.constrained.uitofp.f64.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret double %1
 }
-declare double @llvm.experimental.constrained.uitofp.f64.i32(i32 %a, metadata, metadata)
 
 define double @uitofp_sext_i32_to_f64(i32 signext %a) nounwind strictfp {
 ; RV64ID-LABEL: uitofp_sext_i32_to_f64:
@@ -155,7 +152,6 @@ define double @sitofp_aext_i32_to_f64(i32 %a) nounwind strictfp {
   %1 = call double @llvm.experimental.constrained.sitofp.f64.i32(i32 %a, metadata !"round.dynamic", metadata !"fpexcept.strict") strictfp
   ret double %1
 }
-declare double @llvm.experimental.constrained.sitofp.f64.i32(i32 %a, metadata, metadata)
 
 define double @sitofp_sext_i32_to_f64(i32 signext %a) nounwind strictfp {
 ; RV64ID-LABEL: sitofp_sext_i32_to_f64:

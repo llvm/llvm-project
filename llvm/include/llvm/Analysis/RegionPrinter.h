@@ -18,64 +18,64 @@
 #include "llvm/Support/DOTGraphTraits.h"
 
 namespace llvm {
-  class FunctionPass;
-  class Function;
-  class RegionInfo;
-  class RegionNode;
+class FunctionPass;
+class Function;
+class RegionInfo;
+class RegionNode;
 
-  LLVM_ABI FunctionPass *createRegionViewerPass();
-  LLVM_ABI FunctionPass *createRegionOnlyViewerPass();
-  LLVM_ABI FunctionPass *createRegionPrinterPass();
-  LLVM_ABI FunctionPass *createRegionOnlyPrinterPass();
+LLVM_ABI FunctionPass *createRegionViewerPass();
+LLVM_ABI FunctionPass *createRegionOnlyViewerPass();
+LLVM_ABI FunctionPass *createRegionPrinterPass();
+LLVM_ABI FunctionPass *createRegionOnlyPrinterPass();
 
-  template <>
-  struct DOTGraphTraits<RegionNode *> : public DefaultDOTGraphTraits {
-    DOTGraphTraits(bool isSimple = false) : DefaultDOTGraphTraits(isSimple) {}
+template <> struct DOTGraphTraits<RegionNode *> : public DefaultDOTGraphTraits {
+  DOTGraphTraits(bool isSimple = false) : DefaultDOTGraphTraits(isSimple) {}
 
-    LLVM_ABI std::string getNodeLabel(RegionNode *Node, RegionNode *Graph);
-  };
+  LLVM_ABI std::string getNodeLabel(RegionNode *Node, RegionNode *Graph);
+};
 
 #ifndef NDEBUG
-  /// Open a viewer to display the GraphViz vizualization of the analysis
-  /// result.
-  ///
-  /// Practical to call in the debugger.
-  /// Includes the instructions in each BasicBlock.
-  ///
-  /// @param RI The analysis to display.
-  void viewRegion(llvm::RegionInfo *RI);
+/// Open a viewer to display the GraphViz vizualization of the analysis
+/// result.
+///
+/// Practical to call in the debugger.
+/// Includes the instructions in each BasicBlock.
+///
+/// @param RI The analysis to display.
+void viewRegion(llvm::RegionInfo *RI);
 
-  /// Analyze the regions of a function and open its GraphViz
-  /// visualization in a viewer.
-  ///
-  /// Useful to call in the debugger.
-  /// Includes the instructions in each BasicBlock.
-  /// The result of a new analysis may differ from the RegionInfo the pass
-  /// manager currently holds.
-  ///
-  /// @param F Function to analyze.
-  void viewRegion(const llvm::Function *F);
+/// Analyze the regions of a function and open its GraphViz
+/// visualization in a viewer.
+///
+/// Useful to call in the debugger.
+/// Includes the instructions in each BasicBlock.
+/// The result of a new analysis may differ from the RegionInfo the pass
+/// manager currently holds.
+///
+/// @param F Function to analyze.
+void viewRegion(const llvm::Function *F);
 
-  /// Open a viewer to display the GraphViz vizualization of the analysis
-  /// result.
-  ///
-  /// Useful to call in the debugger.
-  /// Shows only the BasicBlock names without their instructions.
-  ///
-  /// @param RI The analysis to display.
-  void viewRegionOnly(llvm::RegionInfo *RI);
+/// Open a viewer to display the GraphViz vizualization of the analysis
+/// result.
+///
+/// Useful to call in the debugger.
+/// Shows only the BasicBlock names without their instructions.
+///
+/// @param RI The analysis to display.
+void viewRegionOnly(llvm::RegionInfo *RI);
 
-  /// Analyze the regions of a function and open its GraphViz
-  /// visualization in a viewer.
-  ///
-  /// Useful to call in the debugger.
-  /// Shows only the BasicBlock names without their instructions.
-  /// The result of a new analysis may differ from the RegionInfo the pass
-  /// manager currently holds.
-  ///
-  /// @param F Function to analyze.
-  void viewRegionOnly(const llvm::Function *F);
-#endif
-} // End llvm namespace
+/// Analyze the regions of a function and open its GraphViz
+/// visualization in a viewer.
+///
+/// Useful to call in the debugger.
+/// Shows only the BasicBlock names without their instructions.
+/// The result of a new analysis may differ from the RegionInfo the pass
+/// manager currently holds.
+///
+/// @param F Function to analyze.
+void viewRegionOnly(const llvm::Function *F);
+#endif // NDEBUG
 
-#endif
+} // namespace llvm
+
+#endif // LLVM_ANALYSIS_REGIONPRINTER_H

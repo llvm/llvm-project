@@ -18,9 +18,9 @@ In this example, the ``static_cast<int>(value)`` is redundant, as it performs
 a cast from an ``int`` to another ``int``.
 
 Casting operations involving constructor conversions, user-defined conversions,
-functional casts, type-dependent casts, casts between distinct type aliases that
-refer to the same underlying type, as well as bitfield-related casts and casts
-directly from lvalue to rvalue, are all disregarded by the check.
+functional casts, type-dependent casts, casts between distinct type aliases
+that refer to the same underlying type, as well as bitfield-related casts and
+casts directly from lvalue to rvalue, are all disregarded by the check.
 
 Options
 -------

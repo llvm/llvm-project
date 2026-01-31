@@ -222,7 +222,6 @@ class RISCVAsmParser : public MCTargetAsmParser {
 
   ParseStatus parseRegReg(OperandVector &Operands);
   ParseStatus parseXSfmmVType(OperandVector &Operands);
-  ParseStatus parseRetval(OperandVector &Operands);
   ParseStatus parseZcmpStackAdj(OperandVector &Operands,
                                 bool ExpectNegative = false);
   ParseStatus parseZcmpNegStackAdj(OperandVector &Operands) {
@@ -352,7 +351,7 @@ struct RISCVOperand final : public MCParsedAsmOperand {
   } Kind;
 
   struct RegOp {
-    MCRegister RegNum;
+    MCRegister Reg;
     bool IsGPRAsFPR;
   };
 
@@ -461,20 +460,18 @@ public:
   bool isReg() const override { return Kind == KindTy::Register; }
   bool isExpr() const { return Kind == KindTy::Expression; }
   bool isV0Reg() const {
-    return Kind == KindTy::Register && Reg.RegNum == RISCV::V0;
+    return Kind == KindTy::Register && Reg.Reg == RISCV::V0;
   }
   bool isAnyReg() const {
     return Kind == KindTy::Register &&
-           (RISCVMCRegisterClasses[RISCV::GPRRegClassID].contains(Reg.RegNum) ||
-            RISCVMCRegisterClasses[RISCV::FPR64RegClassID].contains(Reg.RegNum) ||
-            RISCVMCRegisterClasses[RISCV::VRRegClassID].contains(Reg.RegNum));
+           (RISCVMCRegisterClasses[RISCV::GPRRegClassID].contains(Reg.Reg) ||
+            RISCVMCRegisterClasses[RISCV::FPR64RegClassID].contains(Reg.Reg) ||
+            RISCVMCRegisterClasses[RISCV::VRRegClassID].contains(Reg.Reg));
   }
   bool isAnyRegC() const {
     return Kind == KindTy::Register &&
-           (RISCVMCRegisterClasses[RISCV::GPRCRegClassID].contains(
-                Reg.RegNum) ||
-            RISCVMCRegisterClasses[RISCV::FPR64CRegClassID].contains(
-                Reg.RegNum));
+           (RISCVMCRegisterClasses[RISCV::GPRCRegClassID].contains(Reg.Reg) ||
+            RISCVMCRegisterClasses[RISCV::FPR64CRegClassID].contains(Reg.Reg));
   }
   bool isImm() const override { return isExpr(); }
   bool isMem() const override { return false; }
@@ -488,35 +485,33 @@ public:
 
   bool isGPR() const {
     return Kind == KindTy::Register &&
-           RISCVMCRegisterClasses[RISCV::GPRRegClassID].contains(Reg.RegNum);
+           RISCVMCRegisterClasses[RISCV::GPRRegClassID].contains(Reg.Reg);
   }
 
   bool isGPRPair() const {
     return Kind == KindTy::Register &&
-           RISCVMCRegisterClasses[RISCV::GPRPairRegClassID].contains(
-               Reg.RegNum);
+           RISCVMCRegisterClasses[RISCV::GPRPairRegClassID].contains(Reg.Reg);
   }
 
   bool isGPRPairC() const {
     return Kind == KindTy::Register &&
-           RISCVMCRegisterClasses[RISCV::GPRPairCRegClassID].contains(
-               Reg.RegNum);
+           RISCVMCRegisterClasses[RISCV::GPRPairCRegClassID].contains(Reg.Reg);
   }
 
   bool isGPRPairNoX0() const {
     return Kind == KindTy::Register &&
            RISCVMCRegisterClasses[RISCV::GPRPairNoX0RegClassID].contains(
-               Reg.RegNum);
+               Reg.Reg);
   }
 
   bool isGPRF16() const {
     return Kind == KindTy::Register &&
-           RISCVMCRegisterClasses[RISCV::GPRF16RegClassID].contains(Reg.RegNum);
+           RISCVMCRegisterClasses[RISCV::GPRF16RegClassID].contains(Reg.Reg);
   }
 
   bool isGPRF32() const {
     return Kind == KindTy::Register &&
-           RISCVMCRegisterClasses[RISCV::GPRF32RegClassID].contains(Reg.RegNum);
+           RISCVMCRegisterClasses[RISCV::GPRF32RegClassID].contains(Reg.Reg);
   }
 
   bool isGPRAsFPR() const { return isGPR() && Reg.IsGPRAsFPR; }
@@ -584,7 +579,7 @@ public:
 
     RISCV::Specifier VK = RISCV::S_None;
     return RISCVAsmParser::classifySymbolRef(getExpr(), VK) &&
-           VK == ELF::R_RISCV_CALL_PLT;
+           VK == RISCV::S_CALL_PLT;
   }
 
   bool isPseudoJumpSymbol() const {
@@ -595,7 +590,7 @@ public:
 
     RISCV::Specifier VK = RISCV::S_None;
     return RISCVAsmParser::classifySymbolRef(getExpr(), VK) &&
-           VK == ELF::R_RISCV_CALL_PLT;
+           VK == RISCV::S_CALL_PLT;
   }
 
   bool isTPRelAddSymbol() const {
@@ -931,7 +926,7 @@ public:
 
     RISCV::Specifier VK = RISCV::S_None;
     return RISCVAsmParser::classifySymbolRef(getExpr(), VK) &&
-           (VK == ELF::R_RISCV_PCREL_HI20 || VK == ELF::R_RISCV_GOT_HI20 ||
+           (VK == RISCV::S_PCREL_HI || VK == RISCV::S_GOT_HI ||
             VK == ELF::R_RISCV_TLS_GOT_HI20 || VK == ELF::R_RISCV_TLS_GD_HI20 ||
             VK == ELF::R_RISCV_TLSDESC_HI20);
   }
@@ -991,7 +986,7 @@ public:
 
   MCRegister getReg() const override {
     assert(Kind == KindTy::Register && "Invalid type access!");
-    return Reg.RegNum;
+    return Reg.Reg;
   }
 
   StringRef getSysReg() const {
@@ -1047,7 +1042,7 @@ public:
       OS << "<fpimm: " << FPImm.Val << ">";
       break;
     case KindTy::Register:
-      OS << "<reg: " << RegName(Reg.RegNum) << " (" << Reg.RegNum
+      OS << "<reg: " << RegName(Reg.Reg) << " (" << Reg.Reg.id()
          << (Reg.IsGPRAsFPR ? ") GPRasFPR>" : ")>");
       break;
     case KindTy::Token:
@@ -1099,7 +1094,7 @@ public:
   static std::unique_ptr<RISCVOperand>
   createReg(MCRegister Reg, SMLoc S, SMLoc E, bool IsGPRAsFPR = false) {
     auto Op = std::make_unique<RISCVOperand>(KindTy::Register);
-    Op->Reg.RegNum = Reg;
+    Op->Reg.Reg = Reg;
     Op->Reg.IsGPRAsFPR = IsGPRAsFPR;
     Op->StartLoc = S;
     Op->EndLoc = E;
@@ -1321,6 +1316,11 @@ static MCRegister convertVRToVRMx(const MCRegisterInfo &RI, MCRegister Reg,
                                 &RISCVMCRegisterClasses[RegClassID]);
 }
 
+static MCRegister convertFPR64ToFPR256(MCRegister Reg) {
+  assert(Reg >= RISCV::F0_D && Reg <= RISCV::F31_D && "Invalid register");
+  return Reg - RISCV::F0_D + RISCV::F0_Q2;
+}
+
 unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
                                                     unsigned Kind) {
   RISCVOperand &Op = static_cast<RISCVOperand &>(AsmOp);
@@ -1334,29 +1334,33 @@ unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
       RISCVMCRegisterClasses[RISCV::FPR64CRegClassID].contains(Reg);
   bool IsRegVR = RISCVMCRegisterClasses[RISCV::VRRegClassID].contains(Reg);
 
+  if (IsRegFPR64 && Kind == MCK_FPR256) {
+    Op.Reg.Reg = convertFPR64ToFPR256(Reg);
+    return Match_Success;
+  }
   if (IsRegFPR64 && Kind == MCK_FPR128) {
-    Op.Reg.RegNum = convertFPR64ToFPR128(Reg);
+    Op.Reg.Reg = convertFPR64ToFPR128(Reg);
     return Match_Success;
   }
   // As the parser couldn't differentiate an FPR32 from an FPR64, coerce the
   // register from FPR64 to FPR32 or FPR64C to FPR32C if necessary.
   if ((IsRegFPR64 && Kind == MCK_FPR32) ||
       (IsRegFPR64C && Kind == MCK_FPR32C)) {
-    Op.Reg.RegNum = convertFPR64ToFPR32(Reg);
+    Op.Reg.Reg = convertFPR64ToFPR32(Reg);
     return Match_Success;
   }
   // As the parser couldn't differentiate an FPR16 from an FPR64, coerce the
   // register from FPR64 to FPR16 if necessary.
   if (IsRegFPR64 && Kind == MCK_FPR16) {
-    Op.Reg.RegNum = convertFPR64ToFPR16(Reg);
+    Op.Reg.Reg = convertFPR64ToFPR16(Reg);
     return Match_Success;
   }
   if (Kind == MCK_GPRAsFPR16 && Op.isGPRAsFPR()) {
-    Op.Reg.RegNum = Reg - RISCV::X0 + RISCV::X0_H;
+    Op.Reg.Reg = Reg - RISCV::X0 + RISCV::X0_H;
     return Match_Success;
   }
   if (Kind == MCK_GPRAsFPR32 && Op.isGPRAsFPR()) {
-    Op.Reg.RegNum = Reg - RISCV::X0 + RISCV::X0_W;
+    Op.Reg.Reg = Reg - RISCV::X0 + RISCV::X0_W;
     return Match_Success;
   }
 
@@ -1372,8 +1376,8 @@ unsigned RISCVAsmParser::validateTargetOperandClass(MCParsedAsmOperand &AsmOp,
   // As the parser couldn't differentiate an VRM2/VRM4/VRM8 from an VR, coerce
   // the register from VR to VRM2/VRM4/VRM8 if necessary.
   if (IsRegVR && (Kind == MCK_VRM2 || Kind == MCK_VRM4 || Kind == MCK_VRM8)) {
-    Op.Reg.RegNum = convertVRToVRMx(*getContext().getRegisterInfo(), Reg, Kind);
-    if (!Op.Reg.RegNum)
+    Op.Reg.Reg = convertVRToVRMx(*getContext().getRegisterInfo(), Reg, Kind);
+    if (!Op.Reg.Reg)
       return Match_InvalidOperand;
     return Match_Success;
   }
@@ -1659,10 +1663,6 @@ bool RISCVAsmParser::matchAndEmitInstruction(SMLoc IDLoc, unsigned &Opcode,
     return generateImmOutOfRangeError(
         Operands, ErrorInfo, -1, (1 << 5) - 1,
         "immediate must be non-zero in the range");
-  case Match_InvalidXSfmmVType: {
-    SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
-    return generateXSfmmVTypeError(ErrorLoc);
-  }
   case Match_InvalidVTypeI: {
     SMLoc ErrorLoc = ((RISCVOperand &)*Operands[ErrorInfo]).getStartLoc();
     return generateVTypeError(ErrorLoc);
@@ -2236,7 +2236,7 @@ ParseStatus RISCVAsmParser::parseCallSymbol(OperandVector &Operands) {
   }
 
   SMLoc E = SMLoc::getFromPointer(S.getPointer() + Identifier.size());
-  RISCV::Specifier Kind = ELF::R_RISCV_CALL_PLT;
+  RISCV::Specifier Kind = RISCV::S_CALL_PLT;
 
   MCSymbol *Sym = getContext().getOrCreateSymbol(Identifier);
   Res = MCSymbolRefExpr::create(Sym, getContext());
@@ -2256,7 +2256,7 @@ ParseStatus RISCVAsmParser::parsePseudoJumpSymbol(OperandVector &Operands) {
   if (Res->getKind() != MCExpr::ExprKind::SymbolRef)
     return Error(S, "operand must be a valid jump target");
 
-  Res = MCSpecifierExpr::create(Res, ELF::R_RISCV_CALL_PLT, getContext());
+  Res = MCSpecifierExpr::create(Res, RISCV::S_CALL_PLT, getContext());
   Operands.push_back(RISCVOperand::createExpr(Res, S, E, isRV64()));
   return ParseStatus::Success;
 }
@@ -3537,8 +3537,8 @@ void RISCVAsmParser::emitLoadLocalAddress(MCInst &Inst, SMLoc IDLoc,
   //             ADDI rdest, rdest, %pcrel_lo(TmpLabel)
   MCRegister DestReg = Inst.getOperand(0).getReg();
   const MCExpr *Symbol = Inst.getOperand(1).getExpr();
-  emitAuipcInstPair(DestReg, DestReg, Symbol, ELF::R_RISCV_PCREL_HI20,
-                    RISCV::ADDI, IDLoc, Out);
+  emitAuipcInstPair(DestReg, DestReg, Symbol, RISCV::S_PCREL_HI, RISCV::ADDI,
+                    IDLoc, Out);
 }
 
 void RISCVAsmParser::emitLoadGlobalAddress(MCInst &Inst, SMLoc IDLoc,
@@ -3552,8 +3552,8 @@ void RISCVAsmParser::emitLoadGlobalAddress(MCInst &Inst, SMLoc IDLoc,
   MCRegister DestReg = Inst.getOperand(0).getReg();
   const MCExpr *Symbol = Inst.getOperand(1).getExpr();
   unsigned SecondOpcode = isRV64() ? RISCV::LD : RISCV::LW;
-  emitAuipcInstPair(DestReg, DestReg, Symbol, ELF::R_RISCV_GOT_HI20,
-                    SecondOpcode, IDLoc, Out);
+  emitAuipcInstPair(DestReg, DestReg, Symbol, RISCV::S_GOT_HI, SecondOpcode,
+                    IDLoc, Out);
 }
 
 void RISCVAsmParser::emitLoadAddress(MCInst &Inst, SMLoc IDLoc,
@@ -3622,8 +3622,8 @@ void RISCVAsmParser::emitLoadStoreSymbol(MCInst &Inst, unsigned Opcode,
   }
 
   const MCExpr *Symbol = Inst.getOperand(SymbolOpIdx).getExpr();
-  emitAuipcInstPair(DestReg, TmpReg, Symbol, ELF::R_RISCV_PCREL_HI20, Opcode,
-                    IDLoc, Out);
+  emitAuipcInstPair(DestReg, TmpReg, Symbol, RISCV::S_PCREL_HI, Opcode, IDLoc,
+                    Out);
 }
 
 void RISCVAsmParser::emitPseudoExtend(MCInst &Inst, bool SignExtend,
@@ -3821,7 +3821,7 @@ bool RISCVAsmParser::validateInstruction(MCInst &Inst,
   }
 
   const MCInstrDesc &MCID = MII.get(Opcode);
-  if (!(MCID.TSFlags & RISCVII::ConstraintMask))
+  if (!(MCID.TSFlags & RISCVII::RVVConstraintMask))
     return false;
 
   if (Opcode == RISCV::SF_VC_V_XVW || Opcode == RISCV::SF_VC_V_IVW ||
@@ -4091,6 +4091,9 @@ bool RISCVAsmParser::processInstruction(MCInst &Inst, SMLoc IDLoc,
 
     return false;
   }
+  case RISCV::PseudoCV_ELW:
+    emitLoadStoreSymbol(Inst, RISCV::CV_ELW, IDLoc, Out, /*HasTmpReg=*/false);
+    return false;
   }
 
   emitToStreamer(Out, Inst);

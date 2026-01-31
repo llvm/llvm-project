@@ -1,5 +1,5 @@
-; RUN: opt %loadNPMPolly '-passes=print<polly-detect>' -disable-output < %s 2>&1 | FileCheck %s
-; RUN: opt %loadNPMPolly '-passes=print<polly-function-scops>' -disable-output < %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<detect>' -polly-print-detect -disable-output < %s 2>&1 | FileCheck %s
+; RUN: opt %loadNPMPolly '-passes=polly-custom<scops>' -polly-print-scops -disable-output < %s
 
 ; CHECK: Valid Region for Scop: bb10 => bb16
 

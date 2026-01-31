@@ -12,7 +12,6 @@
 ; CHECK-NEXT: dynLDSAlign: 1
 ; CHECK-NEXT: isEntryFunction: true
 ; CHECK-NEXT: isChainFunction: false
-; CHECK-NEXT: noSignedZerosFPMath: false
 ; CHECK-NEXT: memoryBound: false
 ; CHECK-NEXT: waveLimiter: false
 ; CHECK-NEXT: hasSpilledSGPRs: false
@@ -48,6 +47,7 @@
 ; CHECK-NEXT: hasInitWholeWave: false
 ; CHECK-NEXT: dynamicVGPRBlockSize: 0
 ; CHECK-NEXT: scratchReservedForDynamicVGPRs: 0
+; CHECK-NEXT: numKernargPreloadSGPRs: 0
 ; CHECK-NEXT: isWholeWaveFunction: false
 ; CHECK-NEXT: body:
   define amdgpu_kernel void @uniform_long_forward_branch_debug(ptr addrspace(1) %arg, i32 %arg1) #0 !dbg !5 {

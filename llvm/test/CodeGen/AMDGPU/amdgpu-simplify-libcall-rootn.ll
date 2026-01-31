@@ -1489,7 +1489,7 @@ attributes #2 = { noinline }
 !0 = !{float 3.0}
 ;.
 ; CHECK: attributes #[[ATTR0]] = { strictfp }
-; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nofree nosync nounwind speculatable willreturn memory(none) }
+; CHECK: attributes #[[ATTR1:[0-9]+]] = { nocallback nocreateundeforpoison nofree nosync nounwind speculatable willreturn memory(none) }
 ; CHECK: attributes #[[ATTR2:[0-9]+]] = { nounwind memory(read) }
 ; CHECK: attributes #[[ATTR3]] = { noinline }
 ; CHECK: attributes #[[ATTR4]] = { nobuiltin }

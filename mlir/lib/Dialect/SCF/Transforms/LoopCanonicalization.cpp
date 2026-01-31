@@ -48,14 +48,13 @@ static bool isShapePreserving(ForOp forOp, int64_t arg) {
 
     using tensor::InsertSliceOp;
     value = llvm::TypeSwitch<Operation *, Value>(opResult.getOwner())
-                .template Case<InsertSliceOp>(
-                    [&](InsertSliceOp op) { return op.getDest(); })
-                .template Case<ForOp>([&](ForOp forOp) {
+                .Case([&](InsertSliceOp op) { return op.getDest(); })
+                .Case([&](ForOp forOp) {
                   return isShapePreserving(forOp, opResult.getResultNumber())
                              ? forOp.getInitArgs()[opResult.getResultNumber()]
                              : Value();
                 })
-                .Default([&](auto op) { return Value(); });
+                .Default(nullptr);
   }
   return false;
 }

@@ -28,7 +28,7 @@ struct GPUToNVVMPipelineOptions
       llvm::cl::init("nvptx64-nvidia-cuda")};
   PassOptions::Option<std::string> cubinChip{
       *this, "cubin-chip", llvm::cl::desc("Chip to use to serialize to cubin."),
-      llvm::cl::init("sm_50")};
+      llvm::cl::init("sm_75")};
   PassOptions::Option<std::string> cubinFeatures{
       *this, "cubin-features",
       llvm::cl::desc("Features to use to serialize to cubin."),
@@ -58,6 +58,10 @@ struct GPUToNVVMPipelineOptions
           "Whether to use the bareptr calling convention on the host (warning "
           "this should be false until the GPU layering is fixed)"),
       llvm::cl::init(false)};
+  PassOptions::Option<bool> allowPatternRollback{
+      *this, "allow-pattern-rollback",
+      llvm::cl::desc("Allow pattern rollback during dialect conversion"),
+      llvm::cl::init(true)};
 };
 
 // Options for the gpu to xevm pipeline.

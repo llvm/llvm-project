@@ -213,10 +213,8 @@ public:
 
         case CFGElement::AutomaticObjectDtor: {
           CFGAutomaticObjDtor AD = BI.castAs<CFGAutomaticObjDtor>();
-          auto *DD = const_cast<CXXDestructorDecl *>(
-              AD.getDestructorDecl(ACtx->getASTContext()));
-          auto *VD = const_cast<VarDecl *>(AD.getVarDecl());
-          V.handleDestructorCall(VD, DD);
+          V.handleDestructorCall(AD.getVarDecl(),
+                                 AD.getDestructorDecl(ACtx->getASTContext()));
           break;
         }
         default:

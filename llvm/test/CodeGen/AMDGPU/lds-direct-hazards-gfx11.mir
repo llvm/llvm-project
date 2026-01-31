@@ -183,7 +183,7 @@ body:            |
     ; GCN-LABEL: name: lds_param_load_valu_war_trans
     ; GCN: $vgpr0 = V_MUL_F32_e32 $vgpr1, $vgpr1, implicit $mode, implicit $exec
     ; GCN-NEXT: $vgpr2 = V_SQRT_F32_e32 $vgpr2, implicit $mode, implicit $exec
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 4095
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 3999
     ; GCN-NEXT: $vgpr3 = V_MUL_F32_e32 $vgpr2, $vgpr2, implicit $mode, implicit $exec
     ; GCN-NEXT: $vgpr4 = V_MUL_F32_e32 $vgpr2, $vgpr2, implicit $mode, implicit $exec
     ; GCN-NEXT: $vgpr5 = V_MUL_F32_e32 $vgpr2, $vgpr2, implicit $mode, implicit $exec
@@ -298,7 +298,7 @@ body:            |
   bb.0:
     ; GCN-LABEL: name: lds_param_load_vmem_war
     ; GCN: $vgpr0 = IMAGE_LOAD_V1_V4 $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 2, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s32))
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 65507
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 65411
     ; GCN-NEXT: $vgpr1 = LDS_PARAM_LOAD 0, 0, 15, implicit $m0, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
     $vgpr0 = IMAGE_LOAD_V1_V4 $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 2, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (load 4)
@@ -373,7 +373,7 @@ body:            |
     ; GCN-LABEL: name: lds_param_load_vmem_war_waitcnt_depctr2
     ; GCN: $vgpr0 = IMAGE_LOAD_V1_V4 $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 2, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (load (s32))
     ; GCN-NEXT: S_WAITCNT_DEPCTR 65535
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 65507
+    ; GCN-NEXT: S_WAITCNT_DEPCTR 65411
     ; GCN-NEXT: $vgpr1 = LDS_PARAM_LOAD 0, 0, 15, implicit $m0, implicit $exec
     ; GCN-NEXT: S_ENDPGM 0
     $vgpr0 = IMAGE_LOAD_V1_V4 $vgpr0_vgpr1_vgpr2_vgpr3, $sgpr0_sgpr1_sgpr2_sgpr3_sgpr4_sgpr5_sgpr6_sgpr7, 2, -1, 0, 0, 0, 0, 0, 0, implicit $exec :: (load 4)

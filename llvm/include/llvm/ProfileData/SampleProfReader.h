@@ -244,7 +244,6 @@
 #include <optional>
 #include <string>
 #include <system_error>
-#include <unordered_set>
 #include <vector>
 
 namespace llvm {

@@ -794,6 +794,8 @@ void foo_simd(int low, int up) {
 // CHECK1-IRBUILDER-NEXT:    store float [[MUL8]], ptr [[ARRAYIDX10]], align 4
 // CHECK1-IRBUILDER-NEXT:    br label [[OMP_INNER_FOR_BODY_ORDERED_AFTER:%.*]]
 // CHECK1-IRBUILDER:       omp.inner.for.body.ordered.after:
+// CHECK1-IRBUILDER-NEXT:    br label [[OMP_REGION_FINALIZE:%.*]]
+// CHECK1-IRBUILDER:       omp_region.finalize:
 // CHECK1-IRBUILDER-NEXT:    call void @__kmpc_end_ordered(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM2]])
 // CHECK1-IRBUILDER-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK1-IRBUILDER:       omp.body.continue:
@@ -884,6 +886,8 @@ void foo_simd(int low, int up) {
 // CHECK1-IRBUILDER-NEXT:    store float [[MUL7]], ptr [[ARRAYIDX8]], align 4
 // CHECK1-IRBUILDER-NEXT:    br label [[OMP_INNER_FOR_BODY_ORDERED_AFTER:%.*]]
 // CHECK1-IRBUILDER:       omp.inner.for.body.ordered.after:
+// CHECK1-IRBUILDER-NEXT:    br label [[OMP_REGION_FINALIZE:%.*]]
+// CHECK1-IRBUILDER:       omp_region.finalize:
 // CHECK1-IRBUILDER-NEXT:    call void @__kmpc_end_ordered(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM3]])
 // CHECK1-IRBUILDER-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK1-IRBUILDER:       omp.body.continue:
@@ -1022,6 +1026,8 @@ void foo_simd(int low, int up) {
 // CHECK1-IRBUILDER-NEXT:    store float [[MUL29]], ptr [[ARRAYIDX31]], align 4
 // CHECK1-IRBUILDER-NEXT:    br label [[OMP_INNER_FOR_BODY_ORDERED_AFTER:%.*]]
 // CHECK1-IRBUILDER:       omp.inner.for.body.ordered.after:
+// CHECK1-IRBUILDER-NEXT:    br label [[OMP_REGION_FINALIZE:%.*]]
+// CHECK1-IRBUILDER:       omp_region.finalize:
 // CHECK1-IRBUILDER-NEXT:    call void @__kmpc_end_ordered(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM23]])
 // CHECK1-IRBUILDER-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK1-IRBUILDER:       omp.body.continue:
@@ -1131,6 +1137,8 @@ void foo_simd(int low, int up) {
 // CHECK1-IRBUILDER-NEXT:    store float [[MUL14]], ptr [[ARRAYIDX16]], align 4
 // CHECK1-IRBUILDER-NEXT:    br label [[OMP_INNER_FOR_BODY_ORDERED_AFTER:%.*]]
 // CHECK1-IRBUILDER:       omp.inner.for.body.ordered.after:
+// CHECK1-IRBUILDER-NEXT:    br label [[OMP_REGION_FINALIZE:%.*]]
+// CHECK1-IRBUILDER:       omp_region.finalize:
 // CHECK1-IRBUILDER-NEXT:    call void @__kmpc_end_ordered(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM8]])
 // CHECK1-IRBUILDER-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK1-IRBUILDER:       omp.body.continue:
@@ -1296,17 +1304,19 @@ void foo_simd(int low, int up) {
 // CHECK1-IRBUILDER-NEXT:    call void @__captured_stmt.1(ptr [[I28]])
 // CHECK1-IRBUILDER-NEXT:    br label [[OMP_INNER_FOR_BODY33_ORDERED_AFTER:%.*]]
 // CHECK1-IRBUILDER:       omp.inner.for.body33.ordered.after:
-// CHECK1-IRBUILDER-NEXT:    br label [[OMP_BODY_CONTINUE38:%.*]]
-// CHECK1-IRBUILDER:       omp.body.continue38:
-// CHECK1-IRBUILDER-NEXT:    br label [[OMP_INNER_FOR_INC39:%.*]]
-// CHECK1-IRBUILDER:       omp.inner.for.inc39:
+// CHECK1-IRBUILDER-NEXT:    br label [[OMP_REGION_FINALIZE38:%.*]]
+// CHECK1-IRBUILDER:       omp_region.finalize38:
+// CHECK1-IRBUILDER-NEXT:    br label [[OMP_BODY_CONTINUE39:%.*]]
+// CHECK1-IRBUILDER:       omp.body.continue39:
+// CHECK1-IRBUILDER-NEXT:    br label [[OMP_INNER_FOR_INC40:%.*]]
+// CHECK1-IRBUILDER:       omp.inner.for.inc40:
 // CHECK1-IRBUILDER-NEXT:    [[TMP32:%.*]] = load i32, ptr [[DOTOMP_IV16]], align 4
 // CHECK1-IRBUILDER-NEXT:    [[ADD40:%.*]] = add i32 [[TMP32]], 1
 // CHECK1-IRBUILDER-NEXT:    store i32 [[ADD40]], ptr [[DOTOMP_IV16]], align 4
 // CHECK1-IRBUILDER-NEXT:    [[OMP_GLOBAL_THREAD_NUM41:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB12]])
 // CHECK1-IRBUILDER-NEXT:    call void @__kmpc_dispatch_fini_4u(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM41]])
 // CHECK1-IRBUILDER-NEXT:    br label [[OMP_INNER_FOR_COND30]], !llvm.loop [[LOOP5:![0-9]+]]
-// CHECK1-IRBUILDER:       omp.inner.for.end42:
+// CHECK1-IRBUILDER:       omp.inner.for.end43:
 // CHECK1-IRBUILDER-NEXT:    br label [[OMP_DISPATCH_INC:%.*]]
 // CHECK1-IRBUILDER:       omp.dispatch.inc:
 // CHECK1-IRBUILDER-NEXT:    br label [[OMP_DISPATCH_COND]]
@@ -2034,6 +2044,8 @@ void foo_simd(int low, int up) {
 // CHECK3-IRBUILDER-NEXT:    store float [[MUL8]], ptr [[ARRAYIDX10]], align 4
 // CHECK3-IRBUILDER-NEXT:    br label [[OMP_INNER_FOR_BODY_ORDERED_AFTER:%.*]]
 // CHECK3-IRBUILDER:       omp.inner.for.body.ordered.after:
+// CHECK3-IRBUILDER-NEXT:    br label [[OMP_REGION_FINALIZE:%.*]]
+// CHECK3-IRBUILDER:       omp_region.finalize:
 // CHECK3-IRBUILDER-NEXT:    call void @__kmpc_end_ordered(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM2]])
 // CHECK3-IRBUILDER-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK3-IRBUILDER:       omp.body.continue:
@@ -2124,6 +2136,8 @@ void foo_simd(int low, int up) {
 // CHECK3-IRBUILDER-NEXT:    store float [[MUL7]], ptr [[ARRAYIDX8]], align 4
 // CHECK3-IRBUILDER-NEXT:    br label [[OMP_INNER_FOR_BODY_ORDERED_AFTER:%.*]]
 // CHECK3-IRBUILDER:       omp.inner.for.body.ordered.after:
+// CHECK3-IRBUILDER-NEXT:    br label [[OMP_REGION_FINALIZE:%.*]]
+// CHECK3-IRBUILDER:       omp_region.finalize:
 // CHECK3-IRBUILDER-NEXT:    call void @__kmpc_end_ordered(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM3]])
 // CHECK3-IRBUILDER-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK3-IRBUILDER:       omp.body.continue:
@@ -2262,6 +2276,8 @@ void foo_simd(int low, int up) {
 // CHECK3-IRBUILDER-NEXT:    store float [[MUL29]], ptr [[ARRAYIDX31]], align 4
 // CHECK3-IRBUILDER-NEXT:    br label [[OMP_INNER_FOR_BODY_ORDERED_AFTER:%.*]]
 // CHECK3-IRBUILDER:       omp.inner.for.body.ordered.after:
+// CHECK3-IRBUILDER-NEXT:    br label [[OMP_REGION_FINALIZE:%.*]]
+// CHECK3-IRBUILDER:       omp_region.finalize:
 // CHECK3-IRBUILDER-NEXT:    call void @__kmpc_end_ordered(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM23]])
 // CHECK3-IRBUILDER-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK3-IRBUILDER:       omp.body.continue:
@@ -2371,6 +2387,8 @@ void foo_simd(int low, int up) {
 // CHECK3-IRBUILDER-NEXT:    store float [[MUL14]], ptr [[ARRAYIDX16]], align 4
 // CHECK3-IRBUILDER-NEXT:    br label [[OMP_INNER_FOR_BODY_ORDERED_AFTER:%.*]]
 // CHECK3-IRBUILDER:       omp.inner.for.body.ordered.after:
+// CHECK3-IRBUILDER-NEXT:    br label [[OMP_REGION_FINALIZE:%.*]]
+// CHECK3-IRBUILDER:       omp_region.finalize:
 // CHECK3-IRBUILDER-NEXT:    call void @__kmpc_end_ordered(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM8]])
 // CHECK3-IRBUILDER-NEXT:    br label [[OMP_BODY_CONTINUE:%.*]]
 // CHECK3-IRBUILDER:       omp.body.continue:
@@ -2536,17 +2554,19 @@ void foo_simd(int low, int up) {
 // CHECK3-IRBUILDER-NEXT:    call void @__captured_stmt.1(ptr [[I28]])
 // CHECK3-IRBUILDER-NEXT:    br label [[OMP_INNER_FOR_BODY33_ORDERED_AFTER:%.*]]
 // CHECK3-IRBUILDER:       omp.inner.for.body33.ordered.after:
-// CHECK3-IRBUILDER-NEXT:    br label [[OMP_BODY_CONTINUE38:%.*]]
-// CHECK3-IRBUILDER:       omp.body.continue38:
-// CHECK3-IRBUILDER-NEXT:    br label [[OMP_INNER_FOR_INC39:%.*]]
-// CHECK3-IRBUILDER:       omp.inner.for.inc39:
+// CHECK3-IRBUILDER-NEXT:    br label [[OMP_REGION_FINALIZE38:%.*]]
+// CHECK3-IRBUILDER:       omp_region.finalize38:
+// CHECK3-IRBUILDER-NEXT:    br label [[OMP_BODY_CONTINUE39:%.*]]
+// CHECK3-IRBUILDER:       omp.body.continue39:
+// CHECK3-IRBUILDER-NEXT:    br label [[OMP_INNER_FOR_INC40:%.*]]
+// CHECK3-IRBUILDER:       omp.inner.for.inc40:
 // CHECK3-IRBUILDER-NEXT:    [[TMP32:%.*]] = load i32, ptr [[DOTOMP_IV16]], align 4
 // CHECK3-IRBUILDER-NEXT:    [[ADD40:%.*]] = add i32 [[TMP32]], 1
 // CHECK3-IRBUILDER-NEXT:    store i32 [[ADD40]], ptr [[DOTOMP_IV16]], align 4
 // CHECK3-IRBUILDER-NEXT:    [[OMP_GLOBAL_THREAD_NUM41:%.*]] = call i32 @__kmpc_global_thread_num(ptr @[[GLOB12]])
 // CHECK3-IRBUILDER-NEXT:    call void @__kmpc_dispatch_fini_4u(ptr @[[GLOB1]], i32 [[OMP_GLOBAL_THREAD_NUM41]])
 // CHECK3-IRBUILDER-NEXT:    br label [[OMP_INNER_FOR_COND30]], !llvm.loop [[LOOP5:![0-9]+]]
-// CHECK3-IRBUILDER:       omp.inner.for.end42:
+// CHECK3-IRBUILDER:       omp.inner.for.end43:
 // CHECK3-IRBUILDER-NEXT:    br label [[OMP_DISPATCH_INC:%.*]]
 // CHECK3-IRBUILDER:       omp.dispatch.inc:
 // CHECK3-IRBUILDER-NEXT:    br label [[OMP_DISPATCH_COND]]

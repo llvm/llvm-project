@@ -76,7 +76,7 @@ will ignore it when used without `Xflang`.
 As hinted above, `flang` and `flang -fc1` are two separate tools. The
 fact that these tools are accessed through one binary, `flang`, is just an
 implementation detail. Each tool has a separate list of options, albeit defined
-in the same file: `clang/include/clang/Driver/Options.td`.
+in the same file: `clang/include/clang/Options/Options.td`.
 
 The separation helps us split various tasks and allows us to implement more
 specialised tools. In particular, `flang` is not aware of various
@@ -112,7 +112,7 @@ in terms of Clang's driver library, `clangDriver`. This approach allows us to:
   as linkers and assemblers.
 One implication of this dependency on Clang is that all of Flang's compiler
 options are defined alongside Clang's options in
-`clang/include/clang/Driver/Options.td`. For options that are common for both
+`clang/include/clang/Options/Options.td`. For options that are common for both
 Flang and Clang, the corresponding definitions are shared.
 
 Internally, a `clangDriver` based compiler driver works by creating actions
@@ -242,7 +242,7 @@ Adding a new compiler option in Flang consists of two steps:
 
 ### Option Definition
 All of Flang's compiler and frontend driver options are defined in
-`clang/include/clang/Driver/Options.td` in Clang. When adding a new option to
+`clang/include/clang/Options/Options.td` in Clang. When adding a new option to
 Flang, you will either:
   * extend the existing definition for an option that is already available
     in one of Clang's drivers (e.g.  `clang`), but not yet available in Flang, or
@@ -314,7 +314,7 @@ add, you will have to add a dedicated entry in that enum (e.g.
 `ParseSyntaxOnly` for `-fsyntax-only`) and a corresponding `case` in
 `ParseFrontendArgs` function in the `CompilerInvocation.cpp` file, e.g.:
 ```cpp
-    case clang::driver::options::OPT_fsyntax_only:
+    case clang::options::OPT_fsyntax_only:
       opts.programAction = ParseSyntaxOnly;
       break;
 ```

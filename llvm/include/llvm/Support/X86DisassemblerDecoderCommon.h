@@ -511,7 +511,6 @@ enum OperandEncoding { ENCODINGS ENCODING_max };
   ENUM_ENTRY(TYPE_VK, "mask register")                                         \
   ENUM_ENTRY(TYPE_VK_PAIR, "mask register pair")                               \
   ENUM_ENTRY(TYPE_TMM, "tile")                                                 \
-  ENUM_ENTRY(TYPE_TMM_PAIR, "tile pair")                                       \
   ENUM_ENTRY(TYPE_SEGMENTREG, "Segment register operand")                      \
   ENUM_ENTRY(TYPE_DEBUGREG, "Debug register operand")                          \
   ENUM_ENTRY(TYPE_CONTROLREG, "Control register operand")                      \

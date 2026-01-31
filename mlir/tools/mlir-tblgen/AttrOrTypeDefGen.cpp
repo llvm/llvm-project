@@ -13,6 +13,7 @@
 #include "mlir/TableGen/Format.h"
 #include "mlir/TableGen/GenInfo.h"
 #include "mlir/TableGen/Interfaces.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/TableGen/CodeGenHelpers.h"
@@ -246,11 +247,11 @@ void DefGen::createParentWithTraits() {
                                           def.getStorageClassName())
                                  : strfmt("::mlir::{0}Storage", valueType));
   SmallVector<std::string> traitNames =
-      llvm::to_vector(llvm::map_range(def.getTraits(), [](auto &trait) {
+      llvm::map_to_vector(def.getTraits(), [](auto &trait) {
         return isa<NativeTrait>(&trait)
                    ? cast<NativeTrait>(&trait)->getFullyQualifiedTraitName()
                    : cast<InterfaceTrait>(&trait)->getFullyQualifiedTraitName();
-      }));
+      });
   for (auto &traitName : traitNames)
     defParent.addTemplateParam(traitName);
 
@@ -637,8 +638,10 @@ void DefGen::emitTraitMethods(const InterfaceTrait &trait) {
   for (auto &method : iface.getMethods()) {
     // Don't declare if the method has a body. Or if the method has a default
     // implementation and the def didn't request that it always be declared.
-    if (method.getBody() || (method.getDefaultImplementation() &&
-                             !alwaysDeclared.count(method.getName()))) {
+    if (method.getBody())
+      continue;
+    if (method.getDefaultImplementation() &&
+        !alwaysDeclared.count(method.getName())) {
       genTraitMethodUsingDecl(trait, method);
       continue;
     }

@@ -32,6 +32,7 @@
 #include <iterator>
 #include <optional>
 #include <tuple>
+#include <utility>
 
 namespace mlir::shard {
 
@@ -44,7 +45,7 @@ static bool arePartialAxesCompatible(const SourceAxes &sourceAxes,
 }
 
 static Sharding targetShardingInSplitLastAxis(MLIRContext *ctx,
-                                              Sharding sourceSharding,
+                                              const Sharding &sourceSharding,
                                               int64_t splitTensorAxis,
                                               GridAxis splitGridAxis) {
   SmallVector<GridAxesAttr> targetShardingSplitAxes =
@@ -69,12 +70,13 @@ splitLastAxisInResharding(ImplicitLocOpBuilder &builder,
                           Sharding sourceSharding,
                           TypedValue<ShapedType> sourceShard, GridOp grid,
                           int64_t splitTensorAxis, GridAxis splitGridAxis) {
-  TypedValue<ShapedType> targetShard = cast<TypedValue<ShapedType>>(
+  TypedValue<ShapedType> targetShard =
       AllSliceOp::create(builder, sourceShard, grid,
                          ArrayRef<GridAxis>(splitGridAxis), splitTensorAxis)
-          .getResult());
+          .getResult();
   Sharding targetSharding = targetShardingInSplitLastAxis(
-      builder.getContext(), sourceSharding, splitTensorAxis, splitGridAxis);
+      builder.getContext(), std::move(sourceSharding), splitTensorAxis,
+      splitGridAxis);
   return {targetShard, targetSharding};
 }
 
@@ -84,8 +86,8 @@ splitLastAxisInResharding(ImplicitLocOpBuilder &builder,
 // Does not detect insertions like
 // [[0, 1]] -> [[0, 2, 1]].
 static std::optional<std::tuple<int64_t, GridAxis>>
-detectSplitLastAxisInResharding(Sharding sourceSharding,
-                                Sharding targetSharding) {
+detectSplitLastAxisInResharding(const Sharding &sourceSharding,
+                                const Sharding &targetSharding) {
   for (size_t tensorAxis = 0; tensorAxis < targetSharding.getSplitAxes().size();
        ++tensorAxis) {
     if (sourceSharding.getSplitAxes().size() > tensorAxis) {
@@ -117,10 +119,11 @@ detectSplitLastAxisInResharding(Sharding sourceSharding,
 
 static std::optional<std::tuple<TypedValue<ShapedType>, Sharding>>
 trySplitLastAxisInResharding(ImplicitLocOpBuilder &builder, GridOp grid,
-                             Sharding sourceSharding, Sharding targetSharding,
+                             const Sharding &sourceSharding,
+                             Sharding targetSharding,
                              TypedValue<ShapedType> sourceShard) {
-  if (auto detectRes =
-          detectSplitLastAxisInResharding(sourceSharding, targetSharding)) {
+  if (auto detectRes = detectSplitLastAxisInResharding(
+          sourceSharding, std::move(targetSharding))) {
     auto [tensorAxis, gridAxis] = detectRes.value();
     return splitLastAxisInResharding(builder, sourceSharding, sourceShard, grid,
                                      tensorAxis, gridAxis);
@@ -133,8 +136,8 @@ trySplitLastAxisInResharding(ImplicitLocOpBuilder &builder, GridOp grid,
 // [[0, 1, 2]] -> [[0, 1]].
 // If detected, returns the corresponding tensor axis grid axis pair.
 static std::optional<std::tuple<int64_t, GridAxis>>
-detectUnsplitLastAxisInResharding(Sharding sourceSharding,
-                                  Sharding targetSharding) {
+detectUnsplitLastAxisInResharding(const Sharding &sourceSharding,
+                                  const Sharding &targetSharding) {
   for (size_t tensorAxis = 0; tensorAxis < sourceSharding.getSplitAxes().size();
        ++tensorAxis) {
     if (targetSharding.getSplitAxes().size() > tensorAxis) {
@@ -162,7 +165,7 @@ detectUnsplitLastAxisInResharding(Sharding sourceSharding,
 }
 
 static Sharding targetShardingInUnsplitLastAxis(MLIRContext *ctx,
-                                                Sharding sourceSharding,
+                                                const Sharding &sourceSharding,
                                                 int64_t splitTensorAxis) {
   SmallVector<GridAxesAttr> targetShardingSplitAxes =
       llvm::to_vector(sourceSharding.getSplitAxes());
@@ -192,8 +195,8 @@ static std::tuple<TypedValue<ShapedType>, Sharding> unsplitLastAxisInResharding(
   MLIRContext *ctx = builder.getContext();
   builder.setInsertionPointAfterValue(sourceShard);
 
-  Sharding targetSharding =
-      targetShardingInUnsplitLastAxis(ctx, sourceSharding, splitTensorAxis);
+  Sharding targetSharding = targetShardingInUnsplitLastAxis(
+      ctx, std::move(sourceSharding), splitTensorAxis);
   ShapedType allGatherResultShape = allGatherResultShapeInUnsplitLastAxis(
       sourceShard.getType(), grid.getShape()[splitGridAxis], splitTensorAxis);
   Value allGatherResult = AllGatherOp::create(
@@ -204,19 +207,19 @@ static std::tuple<TypedValue<ShapedType>, Sharding> unsplitLastAxisInResharding(
       APInt(64, splitTensorAxis));
   ShapedType targetShape =
       shardShapedType(sourceUnshardedShape, grid, targetSharding);
-  TypedValue<ShapedType> targetShard = cast<TypedValue<ShapedType>>(
-      tensor::CastOp::create(builder, targetShape, allGatherResult)
-          .getResult());
+  TypedValue<ShapedType> targetShard =
+      tensor::CastOp::create(builder, targetShape, allGatherResult).getResult();
   return {targetShard, targetSharding};
 }
 
 static std::optional<std::tuple<TypedValue<ShapedType>, Sharding>>
 tryUnsplitLastAxisInResharding(ImplicitLocOpBuilder &builder, GridOp grid,
-                               Sharding sourceSharding, Sharding targetSharding,
+                               const Sharding &sourceSharding,
+                               Sharding targetSharding,
                                ShapedType sourceUnshardedShape,
                                TypedValue<ShapedType> sourceShard) {
-  if (auto detectRes =
-          detectUnsplitLastAxisInResharding(sourceSharding, targetSharding)) {
+  if (auto detectRes = detectUnsplitLastAxisInResharding(
+          sourceSharding, std::move(targetSharding))) {
     auto [tensorAxis, gridAxis] = detectRes.value();
     return unsplitLastAxisInResharding(builder, sourceSharding,
                                        sourceUnshardedShape, sourceShard, grid,
@@ -232,8 +235,8 @@ tryUnsplitLastAxisInResharding(ImplicitLocOpBuilder &builder, GridOp grid,
 // If detected, returns the corresponding (source_tensor_axis,
 // target_tensor_axis, grid_axis) tuple.
 static std::optional<std::tuple<int64_t, int64_t, GridAxis>>
-detectMoveLastSplitAxisInResharding(Sharding sourceSharding,
-                                    Sharding targetSharding) {
+detectMoveLastSplitAxisInResharding(const Sharding &sourceSharding,
+                                    const Sharding &targetSharding) {
   for (size_t sourceTensorAxis = 0;
        sourceTensorAxis < sourceSharding.getSplitAxes().size();
        ++sourceTensorAxis) {
@@ -274,7 +277,7 @@ detectMoveLastSplitAxisInResharding(Sharding sourceSharding,
 }
 
 static Sharding targetShardingInMoveLastAxis(MLIRContext *ctx,
-                                             Sharding sourceSharding,
+                                             const Sharding &sourceSharding,
                                              int64_t sourceTensorAxis,
                                              int64_t targetTensorAxis) {
   SmallVector<GridAxesAttr> targetShardingSplitAxes =
@@ -324,7 +327,7 @@ moveLastSplitAxisInResharding(ImplicitLocOpBuilder &builder, GridOp grid,
   builder.setInsertionPointAfterValue(sourceShard);
 
   Sharding targetSharding = targetShardingInMoveLastAxis(
-      ctx, sourceSharding, sourceTensorAxis, targetTensorAxis);
+      ctx, std::move(sourceSharding), sourceTensorAxis, targetTensorAxis);
   ShapedType allToAllResultShape = allToAllResultShapeInMoveLastAxis(
       sourceShard.getType(), grid.getShape()[gridAxis], sourceTensorAxis,
       targetTensorAxis);
@@ -336,19 +339,19 @@ moveLastSplitAxisInResharding(ImplicitLocOpBuilder &builder, GridOp grid,
       APInt(64, targetTensorAxis), APInt(64, sourceTensorAxis));
   ShapedType targetShape =
       shardShapedType(sourceUnshardedShape, grid, targetSharding);
-  TypedValue<ShapedType> targetShard = cast<TypedValue<ShapedType>>(
-      tensor::CastOp::create(builder, targetShape, allToAllResult).getResult());
+  TypedValue<ShapedType> targetShard =
+      tensor::CastOp::create(builder, targetShape, allToAllResult).getResult();
   return {targetShard, targetSharding};
 }
 
 static std::optional<std::tuple<TypedValue<ShapedType>, Sharding>>
 tryMoveLastSplitAxisInResharding(ImplicitLocOpBuilder &builder, GridOp grid,
-                                 Sharding sourceSharding,
+                                 const Sharding &sourceSharding,
                                  Sharding targetSharding,
                                  ShapedType sourceUnshardedShape,
                                  TypedValue<ShapedType> sourceShard) {
-  if (auto detectRes =
-          detectMoveLastSplitAxisInResharding(sourceSharding, targetSharding)) {
+  if (auto detectRes = detectMoveLastSplitAxisInResharding(
+          sourceSharding, std::move(targetSharding))) {
     auto [sourceTensorAxis, targetTensorAxis, gridAxis] = detectRes.value();
     return moveLastSplitAxisInResharding(
         builder, grid, sourceSharding, sourceUnshardedShape, sourceShard,
@@ -364,7 +367,8 @@ tryMoveLastSplitAxisInResharding(ImplicitLocOpBuilder &builder, GridOp grid,
 // operation.
 static std::optional<std::tuple<TypedValue<ShapedType>, Sharding>>
 tryUpdateHaloInResharding(ImplicitLocOpBuilder &builder, GridOp grid,
-                          Sharding sourceSharding, Sharding targetSharding,
+                          const Sharding &sourceSharding,
+                          const Sharding &targetSharding,
                           ShapedType sourceUnshardedShape,
                           TypedValue<ShapedType> sourceShard) {
   // Currently handles only cases where halo sizes differ but everything else
@@ -437,7 +441,7 @@ tryUpdateHaloInResharding(ImplicitLocOpBuilder &builder, GridOp grid,
 // grid axis size.
 static TypedValue<ShapedType>
 reshardOn1DGrid(ImplicitLocOpBuilder &builder, GridOp grid,
-                Sharding sourceSharding, Sharding targetSharding,
+                const Sharding &sourceSharding, const Sharding &targetSharding,
                 TypedValue<ShapedType> sourceUnshardedValue,
                 TypedValue<ShapedType> sourceShard) {
   assert(sourceShard.getType() ==
@@ -478,8 +482,9 @@ reshardOn1DGrid(ImplicitLocOpBuilder &builder, GridOp grid,
 }
 
 static TypedValue<ShapedType>
-reshard(ImplicitLocOpBuilder &builder, GridOp grid, Sharding sourceSharding,
-        Sharding targetSharding, TypedValue<ShapedType> sourceUnshardedValue,
+reshard(ImplicitLocOpBuilder &builder, GridOp grid,
+        const Sharding &sourceSharding, const Sharding &targetSharding,
+        TypedValue<ShapedType> sourceUnshardedValue,
         TypedValue<ShapedType> sourceShard) {
   // If source and destination sharding are the same, no need to do anything.
   if (sourceSharding == targetSharding || (isFullReplication(sourceSharding) &&
@@ -510,8 +515,7 @@ TypedValue<ShapedType> reshard(OpBuilder &builder, GridOp grid, ShardOp source,
   auto targetSharding = target.getSharding();
   ImplicitLocOpBuilder implicitLocOpBuilder(target->getLoc(), builder);
   return reshard(implicitLocOpBuilder, grid, sourceSharding, targetSharding,
-                 cast<TypedValue<ShapedType>>(source.getSrc()),
-                 sourceShardValue);
+                 source.getSrc(), sourceShardValue);
 }
 
 TypedValue<ShapedType> reshard(OpBuilder &builder, ShardOp source,
@@ -665,6 +669,79 @@ partitionOperation(ShardOp shardOp, IRMapping &partitionMap,
   return success();
 }
 
+// Check if the block args are correctly annotated with sharding information:
+//   - non-tensor and 0d-tensor args are ignored
+//   - each tensor arg must have exactly one use, which must be a shard.shard
+//   operation
+static LogicalResult checkFullyAnnotated(Block &block) {
+  for (const BlockArgument &arg : block.getArguments()) {
+    auto rankedTensorArg = dyn_cast<TypedValue<RankedTensorType>>(arg);
+    if (!rankedTensorArg || rankedTensorArg.getType().getRank() == 0)
+      continue;
+
+    if (rankedTensorArg.getNumUses() > 1)
+      return emitError(block.getParent()->getLoc())
+             << "Cannot partition: expected a single use for block argument "
+             << arg.getArgNumber() << " in block "
+             << block.computeBlockNumber();
+    Operation *useOp = *rankedTensorArg.getUsers().begin();
+    auto shardOp = dyn_cast<ShardOp>(useOp);
+    if (!shardOp)
+      return emitError(block.getParent()->getLoc())
+             << "Cannot partition: expected a shard.shard op for block "
+             << "argument " << arg.getArgNumber() << " in block "
+             << block.computeBlockNumber();
+  }
+  return success();
+}
+
+// Check if the operation is correctly and fully annotated with sharding
+// information:
+//   - Operation results must have exactly one use (e.g. the shard operation).
+//   - All operands and all results must be annotated, e.g. they must be
+//     produced by/consumed by a shard.shard operation.
+//   - Result annotations must not include the 'annotate_for_users' attribute.
+//   - Operand annotations must include the 'annotate_for_users' attribute.
+// raises an error if the operation is not correctly and fully annotated.
+static LogicalResult checkFullyAnnotated(Operation *op) {
+  // constant ops do not need to have sharding annotations
+  if (op->hasTrait<OpTrait::ConstantLike>())
+    return success();
+
+  for (OpOperand &operand : op->getOpOperands()) {
+    // non-tensor and 0d-tensor operands are ignored
+    auto rankedTT = dyn_cast<RankedTensorType>(operand.get().getType());
+    if (!rankedTT || rankedTT.getRank() == 0)
+      continue;
+
+    auto shard = operand.get().getDefiningOp<ShardOp>();
+    if (!shard)
+      return op->emitError() << "Cannot partition: tensor operand "
+                             << operand.getOperandNumber()
+                             << " must be defined by a shard.shard operation.";
+    if (!shard.getAnnotateForUsers())
+      return op->emitError()
+             << "Cannot partition: shard.shard for operand "
+             << operand.getOperandNumber() << " must set 'annotate_for_users'.";
+  }
+  for (const OpResult &result : op->getResults()) {
+    if (!result.hasOneUse())
+      return op->emitError()
+             << "Cannot partition: result " << result.getResultNumber()
+             << " must have exactly one use.";
+    auto shard = dyn_cast<ShardOp>(*result.user_begin());
+    if (!shard)
+      return op->emitError()
+             << "Cannot partition: user of result " << result.getResultNumber()
+             << " must be shard.shard operation.";
+    if (shard.getAnnotateForUsers())
+      return op->emitError() << "Cannot partition: shard.shard for result "
+                             << result.getResultNumber()
+                             << " must not set 'annotate_for_users'.";
+  }
+  return success();
+}
+
 static LogicalResult
 partitionOperation(Operation &op, IRMapping &partitionMap,
                    SymbolTableCollection &symbolTableCollection,
@@ -672,6 +749,7 @@ partitionOperation(Operation &op, IRMapping &partitionMap,
   if (isa<ShardingOp>(op)) {
     return success();
   }
+
   if (auto getShardingOp = dyn_cast<GetShardingOp>(op)) {
     auto shardOp = getShardingOp.getSource().getDefiningOp<ShardOp>();
     if (!shardOp) {
@@ -688,6 +766,10 @@ partitionOperation(Operation &op, IRMapping &partitionMap,
                               builder);
   }
 
+  // Check if operation is correctly and fully annotated.
+  if (failed(checkFullyAnnotated(&op)))
+    return failure();
+
   SmallVector<Value> partitionedOperands;
   llvm::transform(op.getOperands(), std::back_inserter(partitionedOperands),
                   [&partitionMap](Value operand) {
@@ -703,6 +785,9 @@ static LogicalResult
 partitionBlock(Block &block, IRMapping &partitionMap,
                SymbolTableCollection &symbolTableCollection,
                OpBuilder &builder) {
+
+  if (failed(checkFullyAnnotated(block)))
+    return failure();
 
   SmallVector<Location> argLocations;
   llvm::transform(block.getArguments(), std::back_inserter(argLocations),

@@ -7,7 +7,7 @@
 # ==-------------------------------------------------------------------------==#
 
 import re
-from functools import total_ordering
+from hdrgen.symbol import Symbol
 from hdrgen.type import Type
 
 
@@ -37,14 +37,13 @@ KEYWORDS = [
 NONIDENTIFIER = re.compile("[^a-zA-Z0-9_]+")
 
 
-@total_ordering
-class Function:
+class Function(Symbol):
     def __init__(
         self, return_type, name, arguments, standards, guard=None, attributes=[]
     ):
+        super().__init__(name)
         assert return_type
         self.return_type = return_type
-        self.name = name
         self.arguments = [
             arg if isinstance(arg, str) else arg["type"] for arg in arguments
         ]
@@ -52,15 +51,6 @@ class Function:
         self.standards = standards
         self.guard = guard
         self.attributes = attributes or []
-
-    def __eq__(self, other):
-        return self.name == other.name
-
-    def __lt__(self, other):
-        return self.name < other.name
-
-    def __hash__(self):
-        return self.name.__hash__()
 
     def signature_types(self):
         def collapse(type_string):
