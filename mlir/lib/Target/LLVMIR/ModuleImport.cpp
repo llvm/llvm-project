@@ -1749,7 +1749,7 @@ FailureOr<Value> ModuleImport::convertConstant(llvm::Constant *constant) {
     // since later calls to `getAsInstruction` may return the same address
     // resulting in a conflicting `valueMapping` entry.
     llvm::Instruction *inst = constExpr->getAsInstruction();
-    auto guard = llvm::make_scope_exit([&]() {
+    llvm::scope_exit guard([&]() {
       assert(!noResultOpMapping.contains(inst) &&
              "expected constant expression to return a result");
       valueMapping.erase(inst);
@@ -2653,21 +2653,29 @@ static constexpr std::array kExplicitLLVMFuncOpAttributes{
     StringLiteral("aarch64_pstate_sm_compatible"),
     StringLiteral("aarch64_pstate_sm_enabled"),
     StringLiteral("alwaysinline"),
+    StringLiteral("cold"),
     StringLiteral("convergent"),
     StringLiteral("denormal-fp-math"),
     StringLiteral("denormal-fp-math-f32"),
     StringLiteral("fp-contract"),
     StringLiteral("frame-pointer"),
+    StringLiteral("hot"),
     StringLiteral("inlinehint"),
     StringLiteral("instrument-function-entry"),
     StringLiteral("instrument-function-exit"),
+    StringLiteral("modular-format"),
     StringLiteral("memory"),
+    StringLiteral("no_caller_saved_registers"),
     StringLiteral("no-infs-fp-math"),
     StringLiteral("no-nans-fp-math"),
     StringLiteral("no-signed-zeros-fp-math"),
+    StringLiteral("nocallback"),
+    StringLiteral("noduplicate"),
     StringLiteral("noinline"),
+    StringLiteral("noreturn"),
     StringLiteral("nounwind"),
     StringLiteral("optnone"),
+    StringLiteral("returns_twice"),
     StringLiteral("target-features"),
     StringLiteral("tune-cpu"),
     StringLiteral("uwtable"),
@@ -2707,6 +2715,23 @@ void ModuleImport::processFunctionAttributes(llvm::Function *func,
     funcOp.setNoUnwind(true);
   if (func->hasFnAttribute(llvm::Attribute::WillReturn))
     funcOp.setWillReturn(true);
+  if (func->hasFnAttribute(llvm::Attribute::NoReturn))
+    funcOp.setNoreturn(true);
+  if (func->hasFnAttribute(llvm::Attribute::ReturnsTwice))
+    funcOp.setReturnsTwice(true);
+  if (func->hasFnAttribute(llvm::Attribute::Cold))
+    funcOp.setCold(true);
+  if (func->hasFnAttribute(llvm::Attribute::Hot))
+    funcOp.setHot(true);
+  if (func->hasFnAttribute(llvm::Attribute::NoDuplicate))
+    funcOp.setNoduplicate(true);
+  if (func->hasFnAttribute("no_caller_saved_registers"))
+    funcOp.setNoCallerSavedRegisters(true);
+  if (func->hasFnAttribute(llvm::Attribute::NoCallback))
+    funcOp.setNocallback(true);
+  if (llvm::Attribute attr = func->getFnAttribute("modular-format");
+      attr.isStringAttribute())
+    funcOp.setModularFormat(StringAttr::get(context, attr.getValueAsString()));
 
   if (func->hasFnAttribute("aarch64_pstate_sm_enabled"))
     funcOp.setArmStreaming(true);
@@ -2927,6 +2952,20 @@ LogicalResult ModuleImport::convertCallAttributes(llvm::CallInst *inst,
   op.setConvergent(callAttrs.getFnAttr(llvm::Attribute::Convergent).isValid());
   op.setNoUnwind(callAttrs.getFnAttr(llvm::Attribute::NoUnwind).isValid());
   op.setWillReturn(callAttrs.getFnAttr(llvm::Attribute::WillReturn).isValid());
+  op.setNoreturn(callAttrs.getFnAttr(llvm::Attribute::NoReturn).isValid());
+  op.setReturnsTwice(
+      callAttrs.getFnAttr(llvm::Attribute::ReturnsTwice).isValid());
+  op.setHot(callAttrs.getFnAttr(llvm::Attribute::Hot).isValid());
+  op.setCold(callAttrs.getFnAttr(llvm::Attribute::Cold).isValid());
+  op.setNoduplicate(
+      callAttrs.getFnAttr(llvm::Attribute::NoDuplicate).isValid());
+  op.setNoCallerSavedRegisters(
+      callAttrs.getFnAttr("no_caller_saved_registers").isValid());
+  op.setNocallback(callAttrs.getFnAttr(llvm::Attribute::NoCallback).isValid());
+
+  if (llvm::Attribute attr = callAttrs.getFnAttr("modular-format");
+      attr.isStringAttribute())
+    op.setModularFormat(StringAttr::get(context, attr.getValueAsString()));
   op.setNoInline(callAttrs.getFnAttr(llvm::Attribute::NoInline).isValid());
   op.setAlwaysInline(
       callAttrs.getFnAttr(llvm::Attribute::AlwaysInline).isValid());

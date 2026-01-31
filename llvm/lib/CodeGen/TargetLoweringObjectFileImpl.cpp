@@ -1924,8 +1924,11 @@ void TargetLoweringObjectFileCOFF::emitModuleMetadata(MCStreamer &Streamer,
     if (MCSymbol *Sym =
             static_cast<MCSectionCOFF *>(Streamer.getCurrentSectionOnly())
                 ->getCOMDATSymbol())
-      if (Sym->isUndefined())
+      if (Sym->isUndefined()) {
+        // COMDAT symbol must be external to perform deduplication.
+        Streamer.emitSymbolAttribute(Sym, MCSA_Global);
         Streamer.emitLabel(Sym);
+      }
   });
 }
 
@@ -1953,7 +1956,6 @@ void TargetLoweringObjectFileCOFF::emitLinkerDirectives(
     raw_string_ostream OS(Flags);
     emitLinkerFlagsForGlobalCOFF(OS, &GV, getContext().getTargetTriple(),
                                  getMangler());
-    OS.flush();
     if (!Flags.empty()) {
       Streamer.switchSection(getDrectveSection());
       Streamer.emitBytes(Flags);
@@ -1978,7 +1980,6 @@ void TargetLoweringObjectFileCOFF::emitLinkerDirectives(
         raw_string_ostream OS(Flags);
         emitLinkerFlagsForUsedCOFF(OS, GV, getContext().getTargetTriple(),
                                    getMangler());
-        OS.flush();
 
         if (!Flags.empty()) {
           Streamer.switchSection(getDrectveSection());
@@ -2542,7 +2543,7 @@ MCSection *TargetLoweringObjectFileXCOFF::SelectSectionForGlobal(
 
   // For BSS kind, zero initialized data must be emitted to the .data section
   // because external linkage control sections that get mapped to the .bss
-  // section will be linked as tentative defintions, which is only appropriate
+  // section will be linked as tentative definitions, which is only appropriate
   // for SectionKind::Common.
   if (Kind.isData() || Kind.isReadOnlyWithRel() || Kind.isBSS()) {
     if (TM.getDataSections()) {
@@ -2794,6 +2795,10 @@ void TargetLoweringObjectFileGOFF::getModuleMetadata(Module &M) {
   TextLD->setWeak(false);
   TextLD->setADA(ADAPR);
   TextSection->setBeginSymbol(TextLD);
+  // Initialize the label for the ADA section.
+  MCSymbolGOFF *ADASym = static_cast<MCSymbolGOFF *>(
+      getContext().getOrCreateSymbol(ADAPR->getName()));
+  ADAPR->setBeginSymbol(ADASym);
 }
 
 MCSection *TargetLoweringObjectFileGOFF::getExplicitSectionGlobal(
@@ -2856,4 +2861,36 @@ MCSection *TargetLoweringObjectFileGOFF::SelectSectionForGlobal(
                                        ED);
   }
   return TextSection;
+}
+
+MCSection *
+TargetLoweringObjectFileGOFF::getStaticXtorSection(unsigned Priority) const {
+  // XL C/C++ compilers on z/OS support priorities from min-int to max-int, with
+  // sinit as source priority 0. For clang, sinit has source priority 65535.
+  // For GOFF, the priority sortkey field is an unsigned value. So, we
+  // add min-int to get sorting to work properly but also subtract the
+  // clang sinit (65535) value so internally xl sinit and clang sinit have
+  // the same unsigned GOFF priority sortkey field value (i.e. 0x80000000).
+  static constexpr const uint32_t ClangDefaultSinitPriority = 65535;
+  uint32_t Prio = Priority + (0x80000000 - ClangDefaultSinitPriority);
+
+  std::string Name(".xtor");
+  if (Priority != ClangDefaultSinitPriority)
+    Name = llvm::Twine(Name).concat(".").concat(llvm::utostr(Priority)).str();
+
+  MCContext &Ctx = getContext();
+  MCSectionGOFF *SInit = Ctx.getGOFFSection(
+      SectionKind::getMetadata(), GOFF::CLASS_SINIT,
+      GOFF::EDAttr{false, GOFF::ESD_RMODE_64, GOFF::ESD_NS_Parts,
+                   GOFF::ESD_TS_ByteOriented, GOFF::ESD_BA_Merge,
+                   GOFF::ESD_LB_Initial, GOFF::ESD_RQ_0,
+                   GOFF::ESD_ALIGN_Doubleword},
+      static_cast<const MCSectionGOFF *>(TextSection)->getParent());
+
+  MCSectionGOFF *Xtor = Ctx.getGOFFSection(
+      SectionKind::getData(), Name,
+      GOFF::PRAttr{true, GOFF::ESD_EXE_DATA, GOFF::ESD_LT_XPLink,
+                   GOFF::ESD_BSC_Section, Prio},
+      SInit);
+  return Xtor;
 }

@@ -103,6 +103,28 @@ inline VPIRFlags getFlagsFromIndDesc(const InductionDescriptor &ID) {
          "Expected int induction");
   return VPIRFlags::WrapFlagsTy(false, false);
 }
+
+/// Search \p Start's users for a recipe satisfying \p Pred, looking through
+/// recipes with definitions.
+template <typename PredT>
+inline VPRecipeBase *findRecipe(VPValue *Start, PredT Pred) {
+  SetVector<VPValue *> Worklist;
+  Worklist.insert(Start);
+  for (unsigned I = 0; I != Worklist.size(); ++I) {
+    VPValue *Cur = Worklist[I];
+    auto *R = Cur->getDefiningRecipe();
+    if (!R)
+      continue;
+    if (Pred(R))
+      return R;
+    for (VPUser *U : Cur->users()) {
+      for (VPValue *V : cast<VPRecipeBase>(U)->definedValues())
+        Worklist.insert(V);
+    }
+  }
+  return nullptr;
+}
+
 } // namespace vputils
 
 //===----------------------------------------------------------------------===//
@@ -174,8 +196,7 @@ public:
                             unsigned PredIdx = -1u, unsigned SuccIdx = -1u) {
     assert((From->getParent() == To->getParent()) &&
            "Can't connect two block with different parents");
-    assert((SuccIdx != -1u || From->getNumSuccessors() < 2) &&
-           "Blocks can't have more than two successors.");
+
     if (SuccIdx == -1u)
       From->appendSuccessor(To);
     else

@@ -3,6 +3,7 @@
 // RUN: | %fcheck-generic
 
 // REQUIRES: unified_shared_memory
+// XFAIL: intelgpu
 
 #include <stdio.h>
 

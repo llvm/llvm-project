@@ -215,8 +215,8 @@ bool AtosSymbolizer::SymbolizePC(uptr addr, SymbolizedStack *stack) {
 
     // Upon failure, ParseCommandOutput returns NULL.
     if (!buf) {
-      Report("WARNING: atos failed to symbolize buf address \"0x%zx\"\n", addr);
-      return NULL;
+      Report("WARNING: atos failed to symbolize address \"0x%zx\"\n", addr);
+      return false;
     }
     cur->info.line = (int)line;
 
