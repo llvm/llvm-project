@@ -416,16 +416,8 @@ add_entrypoint_object(
   HDRS
     ../sincosf.h
   DEPENDS
-    libc.src.__support.math.range_reduction
-    libc.src.__support.math.sincosf_utils
+    libc.src.__support.math.sincosf
     libc.src.errno.errno
-    libc.src.__support.FPUtil.fenv_impl
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.FPUtil.fma
-    libc.src.__support.FPUtil.multiply_add
-    libc.src.__support.FPUtil.polyeval
-    libc.src.__support.FPUtil.rounding_mode
-    libc.src.__support.macros.optimization
 )
 
 add_entrypoint_object(
@@ -2976,7 +2968,6 @@ add_entrypoint_object(
     libc.src.__support.math.sqrt
 )
 
-
 add_entrypoint_object(
   sqrtf
   SRCS
@@ -2984,7 +2975,7 @@ add_entrypoint_object(
   HDRS
     ../sqrtf.h
   DEPENDS
-    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.math.sqrtf
 )
 
 add_entrypoint_object(
@@ -5070,8 +5061,7 @@ add_entrypoint_object(
   HDRS
     ../f16sqrt.h
   DEPENDS
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.math.f16sqrt
 )
 
 add_entrypoint_object(

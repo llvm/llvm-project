@@ -1320,6 +1320,11 @@ AArch64TargetLowering::AArch64TargetLowering(const TargetMachine &TM,
 
     setOperationAction(ISD::CTLZ,       MVT::v1i64, Expand);
     setOperationAction(ISD::CTLZ,       MVT::v2i64, Expand);
+    // CTLS (Count Leading Sign bits) - Legal for BHS types (8/16/32-bit
+    // elements) No hardware support for 64-bit element vectors
+    for (auto VT : {MVT::v8i8, MVT::v16i8, MVT::v4i16, MVT::v8i16, MVT::v2i32,
+                    MVT::v4i32})
+      setOperationAction(ISD::CTLS, VT, Legal);
     setOperationAction(ISD::BITREVERSE, MVT::v8i8, Legal);
     setOperationAction(ISD::BITREVERSE, MVT::v16i8, Legal);
     setOperationAction(ISD::BITREVERSE, MVT::v2i32, Custom);
@@ -6923,6 +6928,10 @@ SDValue AArch64TargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op,
     SDValue Res = DAG.getNode(ISD::CTLS, DL, Op.getOperand(1).getValueType(),
                               Op.getOperand(1));
     return DAG.getNode(ISD::TRUNCATE, DL, Op.getValueType(), Res);
+  }
+  case Intrinsic::aarch64_neon_cls: {
+    // Lower NEON CLS intrinsic to ISD::CTLS
+    return DAG.getNode(ISD::CTLS, DL, Op.getValueType(), Op.getOperand(1));
   }
   case Intrinsic::aarch64_sve_pmul:
   case Intrinsic::aarch64_neon_pmul:
@@ -27867,10 +27876,10 @@ performSignExtendInRegCombine(SDNode *N, TargetLowering::DAGCombinerInfo &DCI,
     SDValue ExtOp = Src->getOperand(0);
     auto VT = cast<VTSDNode>(N->getOperand(1))->getVT();
     EVT EltTy = VT.getVectorElementType();
-    (void)EltTy;
 
-    assert((EltTy == MVT::i8 || EltTy == MVT::i16 || EltTy == MVT::i32) &&
-           "Sign extending from an invalid type");
+    if (EltTy.getSizeInBits() >
+        ExtOp.getValueType().getScalarType().getSizeInBits())
+      return SDValue();
 
     EVT ExtVT = VT.getDoubleNumVectorElementsVT(*DAG.getContext());
 
