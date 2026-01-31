@@ -2301,7 +2301,7 @@ static bool isUserWritingOffTheEnd(const ASTContext &Ctx, const Pointer &Ptr) {
          isFlexibleArrayMember(FieldDesc);
 }
 
-UnsignedOrNone EvaluateBuiltinObjectSize(const ASTContext &ASTCtx,
+UnsignedOrNone evaluateBuiltinObjectSize(const ASTContext &ASTCtx,
                                          unsigned Kind, Pointer &Ptr) {
   if (Ptr.isZero() || !Ptr.isBlockPointer())
     return std::nullopt;
