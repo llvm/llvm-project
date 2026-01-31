@@ -808,3 +808,4 @@ func.func @dpp_vector_src_does_not_assert(%tile: vector<[16]x[16]xi8>, %pop: vec
   %r = amdgpu.dpp %pop %tile row_shl(1 : i32) : vector<[16]x[16]xi8>
   func.return
 }
+
