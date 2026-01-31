@@ -21,10 +21,13 @@ class Stmt;
 
 namespace tidy::utils::lexer {
 
-/// Returns previous token or ``tok::unknown`` if not found.
-Token getPreviousToken(SourceLocation Location, const SourceManager &SM,
-                       const LangOptions &LangOpts, bool SkipComments = true);
-std::pair<Token, SourceLocation>
+/// Returns previous token or ``std::nullopt`` if not found.
+std::optional<Token> getPreviousToken(SourceLocation Location,
+                                      const SourceManager &SM,
+                                      const LangOptions &LangOpts,
+                                      bool SkipComments = true);
+
+std::pair<std::optional<Token>, SourceLocation>
 getPreviousTokenAndStart(SourceLocation Location, const SourceManager &SM,
                          const LangOptions &LangOpts, bool SkipComments = true);
 
