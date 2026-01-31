@@ -1211,7 +1211,10 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
   if (!Ptr.isBlockPointer())
     return false;
 
-  unsigned PtrOffset = Ptr.getIndex();
+  // For one-past-end pointers, we can't call getIndex() since it asserts.
+  // Use getNumElems() instead which gives the correct index for past-end.
+  unsigned PtrOffset =
+      Ptr.isElementPastEnd() ? Ptr.getNumElems() : Ptr.getIndex();
   CharUnits BaseAlignment =
       S.getASTContext().getDeclAlign(Ptr.getDeclDesc()->asValueDecl());
   CharUnits PtrAlign =
