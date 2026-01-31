@@ -6876,8 +6876,8 @@ static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
         SDNodeFlags Flags = LHS->getFlags() & RHS->getFlags();
         SDValue MinMaxValue =
             DAG.getNode(NewOpcode, DL, OpVT, Operand1, Operand2, Flags);
-        SelectionDAG::FlagInserter FlagInserter(DAG, Flags);
-        return DAG.getSetCC(DL, VT, MinMaxValue, CommonValue, CC);
+        return DAG.getSetCC(DL, VT, MinMaxValue, CommonValue, CC, /*Chain=*/{},
+                            /*IsSignaling=*/false, Flags);
       }
     }
   }
