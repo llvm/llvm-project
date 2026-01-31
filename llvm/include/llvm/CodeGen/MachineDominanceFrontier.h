@@ -31,8 +31,8 @@ public:
 
  MachineDominanceFrontier() = default;
 
- bool invalidate(Function &F, const PreservedAnalyses &PA,
-                 FunctionAnalysisManager::Invalidator &);
+ bool invalidate(MachineFunction &F, const PreservedAnalyses &PA,
+                 MachineFunctionAnalysisManager::Invalidator &);
 };
 
 class MachineDominanceFrontierWrapperPass : public MachineFunctionPass {

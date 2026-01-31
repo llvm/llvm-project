@@ -37,8 +37,8 @@ char &llvm::MachineDominanceFrontierID =
     MachineDominanceFrontierWrapperPass::ID;
 
 bool MachineDominanceFrontier::invalidate(
-    Function &F, const PreservedAnalyses &PA,
-    FunctionAnalysisManager::Invalidator &) {
+    MachineFunction &F, const PreservedAnalyses &PA,
+    MachineFunctionAnalysisManager::Invalidator &) {
   auto PAC = PA.getChecker<MachineDominanceFrontierAnalysis>();
   return !(PAC.preserved() ||
            PAC.preservedSet<AllAnalysesOn<MachineFunction>>() ||
