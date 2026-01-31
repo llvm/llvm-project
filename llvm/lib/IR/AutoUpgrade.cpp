@@ -66,7 +66,7 @@ static void rename(GlobalValue *GV) { GV->setName(GV->getName() + ".old"); }
 // Report a fatal error along with the
 // Call Instruction which caused the error
 [[noreturn]] static void reportFatalUsageErrorWithCI(StringRef reason,
-                                                    CallBase *CI) {
+                                                     CallBase *CI) {
   CI->dump();
   reportFatalUsageError(reason);
 }
