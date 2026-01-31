@@ -60,7 +60,7 @@ LIBC_INLINE_VAR const double SIN_K_PI_OVER_32[64] = {
     -0x1.917a6bc29b42cp-4,
 };
 
-static LIBC_INLINE void sincosf_poly_eval(int64_t k, double y, double &sin_k,
+LIBC_INLINE void sincosf_poly_eval(int64_t k, double y, double &sin_k,
                                           double &cos_k, double &sin_y,
                                           double &cosm1_y) {
   // After range reduction, k = round(x * 32 / pi) and y = (x * 32 / pi) - k.
@@ -88,7 +88,7 @@ static LIBC_INLINE void sincosf_poly_eval(int64_t k, double y, double &sin_k,
                                    0x1.03c1f070c2e27p-18, -0x1.55cc84bd942p-30);
 }
 
-LIBC_INLINE static void sincosf_eval(double xd, uint32_t x_abs, double &sin_k,
+LIBC_INLINE void sincosf_eval(double xd, uint32_t x_abs, double &sin_k,
                                      double &cos_k, double &sin_y,
                                      double &cosm1_y) {
   int64_t k;
@@ -107,14 +107,14 @@ LIBC_INLINE static void sincosf_eval(double xd, uint32_t x_abs, double &sin_k,
 // Return k and y, where
 //   k = round(x * 32) and y = (x * 32) - k.
 //   => pi * x = (k + y) * pi / 32
-static LIBC_INLINE int64_t range_reduction_sincospi(double x, double &y) {
+LIBC_INLINE int64_t range_reduction_sincospi(double x, double &y) {
   double kd = fputil::nearest_integer(x * 32);
   y = fputil::multiply_add(x, 32.0, -kd);
 
   return static_cast<int64_t>(kd);
 }
 
-LIBC_INLINE static void sincospif_eval(double xd, double &sin_k, double &cos_k,
+LIBC_INLINE void sincospif_eval(double xd, double &sin_k, double &cos_k,
                                        double &sin_y, double &cosm1_y) {
   double y;
   int64_t k = range_reduction_sincospi(xd, y);
