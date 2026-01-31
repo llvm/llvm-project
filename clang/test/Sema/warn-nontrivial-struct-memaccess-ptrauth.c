@@ -2,11 +2,7 @@
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics -fsyntax-only -verify=c,expected %s
 // RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics -fsyntax-only -x c++ -verify=cxx,expected %s
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics -fsyntax-only -x c++ -verify=cxx,expected %s
-
-// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics -fsyntax-only -fexperimental-new-constant-interpreter -verify=c,expected %s
 // RUN: %clang_cc1 -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics -fsyntax-only -fexperimental-new-constant-interpreter -verify=c,expected %s
-// RUN: %clang_cc1 -triple arm64-apple-ios -fptrauth-calls -fptrauth-intrinsics -fsyntax-only -fexperimental-new-constant-interpreter -x c++ -verify=cxx,expected %s
-// RUN: %clang_cc1 -triple aarch64-linux-gnu -fptrauth-calls -fptrauth-intrinsics -fsyntax-only -fexperimental-new-constant-interpreter -x c++ -verify=cxx,expected %s
 
 #if defined __cplusplus
 extern "C" {

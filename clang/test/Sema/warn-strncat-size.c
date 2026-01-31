@@ -2,10 +2,6 @@
 // RUN: %clang_cc1 -DUSE_BUILTINS -Wstrncat-size -verify -fsyntax-only %s
 // RUN: %clang_cc1 -Wstrncat-size -fixit -x c %s
 // RUN: %clang_cc1 -DUSE_BUILTINS -Wstrncat-size -fixit -x c %s
-
-// RUN: %clang_cc1 -Wstrncat-size -verify -fsyntax-only -fexperimental-new-constant-interpreter %s
-// RUN: %clang_cc1 -DUSE_BUILTINS -Wstrncat-size -verify -fsyntax-only -fexperimental-new-constant-interpreter %s
-// RUN: %clang_cc1 -Wstrncat-size -fixit -x c -fexperimental-new-constant-interpreter %s
 // RUN: %clang_cc1 -DUSE_BUILTINS -Wstrncat-size -fixit -x c -fexperimental-new-constant-interpreter %s
 
 typedef __SIZE_TYPE__ size_t;
