@@ -30,6 +30,7 @@ static_library("CodeGen") {
     "//llvm/lib/MC",
     "//llvm/lib/Object",
     "//llvm/lib/Passes",
+    "//llvm/lib/Plugins",
     "//llvm/lib/ProfileData",
     "//llvm/lib/ProfileData/Coverage",
     "//llvm/lib/Support",

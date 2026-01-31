@@ -1225,3 +1225,58 @@ namespace ConditionalTemporaries {
   static_assert(foo(false)== 13);
   static_assert(foo(true)== 12);
 }
+
+namespace PointerCmp {
+  struct  K {
+    struct  {
+      double a;
+      alignas(8) int b;
+    } m;
+    char c;
+  };
+  constexpr K k{1,2, 3};
+  static_assert((void*)(&k.m.a + 1) == (void*)&k.m.b);
+  static_assert((void*)(&k.m + 1) == (void*)&k.c);
+  static_assert((void*)(&k + 1) != (void*)(&k.c + 1));
+
+  struct  K2 {
+    struct  {
+      int a;
+      alignas(8) int b;
+    } m;
+    double c;
+  };
+  constexpr K2 k2{1,2, 3};
+  static_assert((void*)(&k2.m.a + 1) != (void*)&k2.m.b);
+ /// static_assert((void*)(&k2.m.a + 1) < (void*)&k2.m.b);  FIXME
+  static_assert((void*)(&k2.m + 1) == (void*)&k2.c);
+  static_assert((void*)(&k2 + 1) == (void*)(&k2.c + 1));
+
+
+  struct tuple {
+    int a;
+    int b;
+  };
+
+  constexpr tuple tpl{1,2};
+  static_assert((void*)&tpl == (void*)&tpl.a);
+
+
+  struct B {
+    int a;
+  };
+
+  struct tuple2 : public B {
+    int b;
+  };
+  constexpr tuple2 tpl2{1,2};
+  static_assert((void*)&tpl2 == (void*)&tpl2.a);
+
+  struct  A {
+    int i[3];
+    double c;
+  };
+  constexpr A a{1,2, 3};
+  static_assert((void*)(&a.i + 1) != (void*)(&a.i[1])); // expected-error {{static assertion failed}}
+  static_assert((void*)(&a.i[2] + 1) == (void*)(&a.i[3]));
+}

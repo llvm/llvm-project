@@ -1908,9 +1908,11 @@ void SemaHLSL::diagnoseSystemSemanticAttr(Decl *D, const ParsedAttr &AL,
 }
 
 void SemaHLSL::handleSemanticAttr(Decl *D, const ParsedAttr &AL) {
-  uint32_t IndexValue, ExplicitIndex;
-  SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(0), IndexValue);
-  SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(1), ExplicitIndex);
+  uint32_t IndexValue(0), ExplicitIndex(0);
+  if (!SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(0), IndexValue) ||
+      !SemaRef.checkUInt32Argument(AL, AL.getArgAsExpr(1), ExplicitIndex)) {
+    assert(0 && "HLSLUnparsedSemantic is expected to have 2 int arguments.");
+  }
   assert(IndexValue > 0 ? ExplicitIndex : true);
   std::optional<unsigned> Index =
       ExplicitIndex ? std::optional<unsigned>(IndexValue) : std::nullopt;
@@ -2003,6 +2005,7 @@ bool clang::CreateHLSLAttributedResourceType(
   HLSLAttributedResourceType::Attributes ResAttrs;
 
   bool HasResourceClass = false;
+  bool HasResourceDimension = false;
   for (const Attr *A : AttrList) {
     if (!A)
       continue;
@@ -2019,6 +2022,20 @@ bool clang::CreateHLSLAttributedResourceType(
       }
       ResAttrs.ResourceClass = RC;
       HasResourceClass = true;
+      break;
+    }
+    case attr::HLSLResourceDimension: {
+      llvm::dxil::ResourceDimension RD =
+          cast<HLSLResourceDimensionAttr>(A)->getDimension();
+      if (HasResourceDimension) {
+        S.Diag(A->getLocation(), ResAttrs.ResourceDimension == RD
+                                     ? diag::warn_duplicate_attribute_exact
+                                     : diag::warn_duplicate_attribute)
+            << A;
+        return false;
+      }
+      ResAttrs.ResourceDimension = RD;
+      HasResourceDimension = true;
       break;
     }
     case attr::HLSLROV:
@@ -2359,6 +2376,107 @@ static bool DiagnoseHLSLRegisterAttribute(Sema &S, SourceLocation &ArgLoc,
   return ValidateMultipleRegisterAnnotations(S, D, RegType);
 }
 
+// return false if the slot count exceeds the limit, true otherwise
+static bool AccumulateHLSLResourceSlots(QualType Ty, uint64_t &StartSlot,
+                                        const uint64_t &Limit,
+                                        const ResourceClass ResClass,
+                                        ASTContext &Ctx,
+                                        uint64_t ArrayCount = 1) {
+  Ty = Ty.getCanonicalType();
+  const Type *T = Ty.getTypePtr();
+
+  // Early exit if already overflowed
+  if (StartSlot > Limit)
+    return false;
+
+  // Case 1: array type
+  if (const auto *AT = dyn_cast<ArrayType>(T)) {
+    uint64_t Count = 1;
+
+    if (const auto *CAT = dyn_cast<ConstantArrayType>(AT))
+      Count = CAT->getSize().getZExtValue();
+
+    QualType ElemTy = AT->getElementType();
+    return AccumulateHLSLResourceSlots(ElemTy, StartSlot, Limit, ResClass, Ctx,
+                                       ArrayCount * Count);
+  }
+
+  // Case 2: resource leaf
+  if (auto ResTy = dyn_cast<HLSLAttributedResourceType>(T)) {
+    // First ensure this resource counts towards the corresponding
+    // register type limit.
+    if (ResTy->getAttrs().ResourceClass != ResClass)
+      return true;
+
+    // Validate highest slot used
+    uint64_t EndSlot = StartSlot + ArrayCount - 1;
+    if (EndSlot > Limit)
+      return false;
+
+    // Advance SlotCount past the consumed range
+    StartSlot = EndSlot + 1;
+    return true;
+  }
+
+  // Case 3: struct / record
+  if (const auto *RT = dyn_cast<RecordType>(T)) {
+    const RecordDecl *RD = RT->getDecl();
+
+    if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+      for (const CXXBaseSpecifier &Base : CXXRD->bases()) {
+        if (!AccumulateHLSLResourceSlots(Base.getType(), StartSlot, Limit,
+                                         ResClass, Ctx, ArrayCount))
+          return false;
+      }
+    }
+
+    for (const FieldDecl *Field : RD->fields()) {
+      if (!AccumulateHLSLResourceSlots(Field->getType(), StartSlot, Limit,
+                                       ResClass, Ctx, ArrayCount))
+        return false;
+    }
+
+    return true;
+  }
+
+  // Case 4: everything else
+  return true;
+}
+
+// return true if there is something invalid, false otherwise
+static bool ValidateRegisterNumber(uint64_t SlotNum, Decl *TheDecl,
+                                   ASTContext &Ctx, RegisterType RegTy) {
+  const uint64_t Limit = UINT32_MAX;
+  if (SlotNum > Limit)
+    return true;
+
+  // after verifying the number doesn't exceed uint32max, we don't need
+  // to look further into c or i register types
+  if (RegTy == RegisterType::C || RegTy == RegisterType::I)
+    return false;
+
+  if (VarDecl *VD = dyn_cast<VarDecl>(TheDecl)) {
+    uint64_t BaseSlot = SlotNum;
+
+    if (!AccumulateHLSLResourceSlots(VD->getType(), SlotNum, Limit,
+                                     getResourceClass(RegTy), Ctx))
+      return true;
+
+    // After AccumulateHLSLResourceSlots runs, SlotNum is now
+    // the first free slot; last used was SlotNum - 1
+    return (BaseSlot > Limit);
+  }
+  // handle the cbuffer/tbuffer case
+  if (isa<HLSLBufferDecl>(TheDecl))
+    // resources cannot be put within a cbuffer, so no need
+    // to analyze the structure since the register number
+    // won't be pushed any higher.
+    return (SlotNum > Limit);
+
+  // we don't expect any other decl type, so fail
+  llvm_unreachable("unexpected decl type");
+}
+
 void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
   if (VarDecl *VD = dyn_cast<VarDecl>(TheDecl)) {
     QualType Ty = VD->getType();
@@ -2417,13 +2535,26 @@ void SemaHLSL::handleResourceBindingAttr(Decl *TheDecl, const ParsedAttr &AL) {
       Diag(SlotLoc, diag::warn_hlsl_deprecated_register_type_i);
       return;
     }
-    StringRef SlotNumStr = Slot.substr(1);
-    unsigned N;
+    const StringRef SlotNumStr = Slot.substr(1);
+
+    uint64_t N;
+
+    // validate that the slot number is a non-empty number
     if (SlotNumStr.getAsInteger(10, N)) {
       Diag(SlotLoc, diag::err_hlsl_unsupported_register_number);
       return;
     }
-    SlotNum = N;
+
+    // Validate register number. It should not exceed UINT32_MAX,
+    // including if the resource type is an array that starts
+    // before UINT32_MAX, but ends afterwards.
+    if (ValidateRegisterNumber(N, TheDecl, getASTContext(), RegType)) {
+      Diag(SlotLoc, diag::err_hlsl_register_number_too_large);
+      return;
+    }
+
+    // the slot number has been validated and does not exceed UINT32_MAX
+    SlotNum = (unsigned)N;
   }
 
   // Validate space
@@ -2693,7 +2824,7 @@ void DiagnoseHLSLAvailability::RunOnFunction(const FunctionDecl *FD) {
 
 bool DiagnoseHLSLAvailability::HasMatchingEnvironmentOrNone(
     const AvailabilityAttr *AA) {
-  IdentifierInfo *IIEnvironment = AA->getEnvironment();
+  const IdentifierInfo *IIEnvironment = AA->getEnvironment();
   if (!IIEnvironment)
     return true;
 
@@ -2737,7 +2868,7 @@ void DiagnoseHLSLAvailability::CheckDeclAvailability(NamedDecl *D,
                                                      const AvailabilityAttr *AA,
                                                      SourceRange Range) {
 
-  IdentifierInfo *IIEnv = AA->getEnvironment();
+  const IdentifierInfo *IIEnv = AA->getEnvironment();
 
   if (!IIEnv) {
     // The availability attribute does not have environment -> it depends only
@@ -2879,6 +3010,20 @@ static bool CheckAllArgTypesAreCorrect(
     if (Check(S, Arg->getBeginLoc(), I + 1, Arg->getType()))
       return true;
   }
+  return false;
+}
+
+static bool CheckFloatRepresentation(Sema *S, SourceLocation Loc,
+                                     int ArgOrdinal,
+                                     clang::QualType PassedType) {
+  clang::QualType BaseType =
+      PassedType->isVectorType()
+          ? PassedType->castAs<clang::VectorType>()->getElementType()
+          : PassedType;
+  if (!BaseType->isFloat32Type())
+    return S->Diag(Loc, diag::err_builtin_invalid_arg_type)
+           << ArgOrdinal << /* scalar or vector of */ 5 << /* no int */ 0
+           << /* float */ 1 << PassedType;
   return false;
 }
 
@@ -3148,6 +3293,23 @@ static bool CheckResourceHandle(
   return false;
 }
 
+static bool CheckVectorElementCount(Sema *S, QualType PassedType,
+                                    QualType BaseType, unsigned ExpectedCount,
+                                    SourceLocation Loc) {
+  unsigned PassedCount = 1;
+  if (const auto *VecTy = PassedType->getAs<VectorType>())
+    PassedCount = VecTy->getNumElements();
+
+  if (PassedCount != ExpectedCount) {
+    QualType ExpectedType =
+        S->Context.getExtVectorType(BaseType, ExpectedCount);
+    S->Diag(Loc, diag::err_typecheck_convert_incompatible)
+        << PassedType << ExpectedType << 1 << 0 << 0;
+    return true;
+  }
+  return false;
+}
+
 // Note: returning true in this case results in CheckBuiltinFunctionCall
 // returning an ExprError
 bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
@@ -3218,7 +3380,59 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
     break;
   }
+  case Builtin::BI__builtin_hlsl_resource_sample: {
+    if (SemaRef.checkArgCountRange(TheCall, 3, 5))
+      return true;
 
+    if (CheckResourceHandle(&SemaRef, TheCall, 0,
+                            [](const HLSLAttributedResourceType *ResType) {
+                              return ResType->getAttrs().ResourceDimension ==
+                                     llvm::dxil::ResourceDimension::Unknown;
+                            }))
+      return true;
+
+    if (CheckResourceHandle(&SemaRef, TheCall, 1,
+                            [](const HLSLAttributedResourceType *ResType) {
+                              return ResType->getAttrs().ResourceClass !=
+                                     llvm::hlsl::ResourceClass::Sampler;
+                            }))
+      return true;
+
+    auto *ResourceTy =
+        TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
+
+    unsigned ExpectedDim =
+        getResourceDimensions(ResourceTy->getAttrs().ResourceDimension);
+    if (CheckVectorElementCount(&SemaRef, TheCall->getArg(2)->getType(),
+                                SemaRef.Context.FloatTy, ExpectedDim,
+                                TheCall->getArg(2)->getBeginLoc()))
+      return true;
+
+    if (TheCall->getNumArgs() > 3) {
+      if (CheckVectorElementCount(&SemaRef, TheCall->getArg(3)->getType(),
+                                  SemaRef.Context.IntTy, ExpectedDim,
+                                  TheCall->getArg(3)->getBeginLoc()))
+        return true;
+    }
+
+    if (TheCall->getNumArgs() > 4) {
+      QualType ClampTy = TheCall->getArg(4)->getType();
+      if (!ClampTy->isFloatingType() || ClampTy->isVectorType()) {
+        SemaRef.Diag(TheCall->getArg(4)->getBeginLoc(),
+                     diag::err_typecheck_convert_incompatible)
+            << ClampTy << SemaRef.Context.FloatTy << 1 << 0 << 0;
+        return true;
+      }
+    }
+
+    assert(ResourceTy->hasContainedType() &&
+           "Expecting a contained type for resource with a dimension "
+           "attribute.");
+    QualType ReturnType = ResourceTy->getContainedType();
+    TheCall->setType(ReturnType);
+
+    break;
+  }
   case Builtin::BI__builtin_hlsl_resource_uninitializedhandle: {
     assert(TheCall->getNumArgs() == 1 && "expected 1 arg");
     // Update return type to be the attributed resource type from arg0.
@@ -3477,6 +3691,28 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
       return true;
     break;
   }
+  case Builtin::BI__builtin_hlsl_wave_prefix_count_bits: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+
+    QualType ArgType = TheCall->getArg(0)->getType();
+
+    if (!(ArgType->isScalarType())) {
+      SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
+                   diag::err_typecheck_expect_any_scalar_or_vector)
+          << ArgType << 0;
+      return true;
+    }
+
+    if (!(ArgType->isBooleanType())) {
+      SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
+                   diag::err_typecheck_expect_any_scalar_or_vector)
+          << ArgType << 0;
+      return true;
+    }
+
+    break;
+  }
   case Builtin::BI__builtin_hlsl_wave_read_lane_at: {
     if (SemaRef.checkArgCount(TheCall, 2))
       return true;
@@ -3598,6 +3834,15 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     }
 
     SetElementTypeAsReturnType(&SemaRef, TheCall, getASTContext().FloatTy);
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_elementwise_f32tof16: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+    if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall, CheckFloatRepresentation))
+      return true;
+    SetElementTypeAsReturnType(&SemaRef, TheCall,
+                               getASTContext().UnsignedIntTy);
     break;
   }
   }
@@ -4464,8 +4709,8 @@ class InitListTransformer {
       unsigned Cols = MTy->getNumColumns();
       QualType ElemTy = MTy->getElementType();
 
-      for (unsigned C = 0; C < Cols; ++C) {
-        for (unsigned R = 0; R < Rows; ++R) {
+      for (unsigned R = 0; R < Rows; ++R) {
+        for (unsigned C = 0; C < Cols; ++C) {
           // row index literal
           Expr *RowIdx = IntegerLiteral::Create(
               Ctx, llvm::APInt(Ctx.getIntWidth(Ctx.IntTy), R), Ctx.IntTy,
@@ -4621,6 +4866,40 @@ public:
 };
 } // namespace
 
+// Recursively detect any incomplete array anywhere in the type graph,
+// including arrays, struct fields, and base classes.
+static bool containsIncompleteArrayType(QualType Ty) {
+  Ty = Ty.getCanonicalType();
+
+  // Array types
+  if (const ArrayType *AT = dyn_cast<ArrayType>(Ty)) {
+    if (isa<IncompleteArrayType>(AT))
+      return true;
+    return containsIncompleteArrayType(AT->getElementType());
+  }
+
+  // Record (struct/class) types
+  if (const auto *RT = Ty->getAs<RecordType>()) {
+    const RecordDecl *RD = RT->getDecl();
+
+    // Walk base classes (for C++ / HLSL structs with inheritance)
+    if (const auto *CXXRD = dyn_cast<CXXRecordDecl>(RD)) {
+      for (const CXXBaseSpecifier &Base : CXXRD->bases()) {
+        if (containsIncompleteArrayType(Base.getType()))
+          return true;
+      }
+    }
+
+    // Walk fields
+    for (const FieldDecl *F : RD->fields()) {
+      if (containsIncompleteArrayType(F->getType()))
+        return true;
+    }
+  }
+
+  return false;
+}
+
 bool SemaHLSL::transformInitList(const InitializedEntity &Entity,
                                  InitListExpr *Init) {
   // If the initializer is a scalar, just return it.
@@ -4647,6 +4926,19 @@ bool SemaHLSL::transformInitList(const InitializedEntity &Entity,
   if (ExpectedSize == 0 && ActualSize == 0)
     return true;
 
+  // Reject empty initializer if *any* incomplete array exists structurally
+  if (ActualSize == 0 && containsIncompleteArrayType(Entity.getType())) {
+    QualType InitTy = Entity.getType().getNonReferenceType();
+    if (InitTy.hasAddressSpace())
+      InitTy = SemaRef.getASTContext().removeAddrSpaceQualType(InitTy);
+
+    SemaRef.Diag(Init->getBeginLoc(), diag::err_hlsl_incorrect_num_initializers)
+        << /*TooManyOrFew=*/(int)(ExpectedSize < ActualSize) << InitTy
+        << /*ExpectedSize=*/ExpectedSize << /*ActualSize=*/ActualSize;
+    return false;
+  }
+
+  // We infer size after validating legality.
   // For incomplete arrays it is completely arbitrary to choose whether we think
   // the user intended fewer or more elements. This implementation assumes that
   // the user intended more, and errors that there are too few initializers to

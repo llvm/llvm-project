@@ -1,6 +1,6 @@
 // RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti -show-encoding %s | FileCheck --check-prefix=SI %s
 // RUN: llvm-mc -triple=amdgcn -mcpu=gfx1250 -show-encoding %s | FileCheck --check-prefix=GFX1250 %s
-// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti -show-encoding %s 2>&1 | FileCheck --check-prefix=SI-ERR --implicit-check-not=error: --strict-whitespace %s
+// RUN: not llvm-mc -triple=amdgcn -mcpu=tahiti -filetype=null %s 2>&1 | FileCheck --check-prefix=SI-ERR --implicit-check-not=error: --strict-whitespace %s
 
 .LL1:
 .LL2:

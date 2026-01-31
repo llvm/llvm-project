@@ -134,6 +134,8 @@ namespace fs {
 const file_t kInvalidFile = INVALID_HANDLE_VALUE;
 
 std::string getMainExecutable(const char *argv0, void *MainExecAddr) {
+  auto BypassSandbox = sandbox::scopedDisable();
+
   SmallVector<wchar_t, MAX_PATH> PathName;
   PathName.resize_for_overwrite(PathName.capacity());
   DWORD Size = ::GetModuleFileNameW(NULL, PathName.data(), PathName.size());
@@ -1049,6 +1051,31 @@ void mapped_file_region::unmapImpl() {
 
 void mapped_file_region::dontNeedImpl() {}
 
+void mapped_file_region::willNeedImpl() {
+  struct MEMORY_RANGE_ENTRY {
+    PVOID VirtualAddress;
+    SIZE_T NumberOfBytes;
+  };
+  // PrefetchVirtualMemory is only available on Windows 8 and later. Since we
+  // still support compilation on Windows 7, we load the function dynamically.
+  typedef BOOL(WINAPI * PrefetchVirtualMemory_t)(
+      HANDLE hProcess, ULONG_PTR NumberOfEntries,
+      MEMORY_RANGE_ENTRY * VirtualAddresses, ULONG Flags);
+
+  static auto pfnPrefetchVirtualMemory = []() -> PrefetchVirtualMemory_t {
+    HMODULE kernelM =
+        llvm::sys::windows::loadSystemModuleSecure(L"kernel32.dll");
+    if (!kernelM)
+      return nullptr;
+    return (PrefetchVirtualMemory_t)::GetProcAddress(kernelM,
+                                                     "PrefetchVirtualMemory");
+  }();
+  if (pfnPrefetchVirtualMemory) {
+    MEMORY_RANGE_ENTRY Range{Mapping, Size};
+    pfnPrefetchVirtualMemory(::GetCurrentProcess(), 1, &Range, 0);
+  }
+}
+
 std::error_code mapped_file_region::sync() const {
   if (!::FlushViewOfFile(Mapping, Size))
     return mapWindowsError(GetLastError());
@@ -1468,23 +1495,23 @@ std::error_code remove_directories(const Twine &path, bool IgnoreErrors) {
         CoInitializeEx(NULL, COINIT_APARTMENTTHREADED | COINIT_DISABLE_OLE1DDE);
     if (FAILED(HR))
       break;
-    auto Uninitialize = make_scope_exit([] { CoUninitialize(); });
+    llvm::scope_exit Uninitialize([] { CoUninitialize(); });
     IFileOperation *FileOp = NULL;
     HR = CoCreateInstance(CLSID_FileOperation, NULL, CLSCTX_ALL,
                           IID_PPV_ARGS(&FileOp));
     if (FAILED(HR))
       break;
-    auto FileOpRelease = make_scope_exit([&FileOp] { FileOp->Release(); });
+    llvm::scope_exit FileOpRelease([&FileOp] { FileOp->Release(); });
     HR = FileOp->SetOperationFlags(FOF_NO_UI | FOFX_NOCOPYHOOKS);
     if (FAILED(HR))
       break;
     PIDLIST_ABSOLUTE PIDL = ILCreateFromPathW(Path16.data());
-    auto FreePIDL = make_scope_exit([&PIDL] { ILFree(PIDL); });
+    llvm::scope_exit FreePIDL([&PIDL] { ILFree(PIDL); });
     IShellItem *ShItem = NULL;
     HR = SHCreateItemFromIDList(PIDL, IID_PPV_ARGS(&ShItem));
     if (FAILED(HR))
       break;
-    auto ShItemRelease = make_scope_exit([&ShItem] { ShItem->Release(); });
+    llvm::scope_exit ShItemRelease([&ShItem] { ShItem->Release(); });
     HR = FileOp->DeleteItem(ShItem, NULL);
     if (FAILED(HR))
       break;

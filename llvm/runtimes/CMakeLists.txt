@@ -258,11 +258,23 @@ function(runtime_default_target)
     # The target libomp-mod is a dependee of check-flang needed to run its
     # OpenMP tests
     list(APPEND extra_targets "libomp-mod")
+
+    # Let the "doxygen" build target also build openmp's doxygen, just like
+    # "check" and "install" also apply to the runtimes builds.
+    # TODO: Generalize for all runtimes, but currently openmp is the only
+    #       runtime that has a doxygen target.
+    if (LLVM_ENABLE_DOXYGEN)
+      list(APPEND extra_targets "doxygen-openmp")
+      if (TARGET doxygen)
+        add_dependencies(doxygen doxygen-openmp)
+      endif ()
+    endif ()
   endif ()
 
   if(LLVM_INCLUDE_TESTS)
     set_property(GLOBAL APPEND PROPERTY LLVM_ALL_LIT_TESTSUITES "@${LLVM_BINARY_DIR}/runtimes/runtimes-bins/lit.tests")
-    list(APPEND test_targets runtimes-test-depends check-runtimes)
+    list(APPEND test_targets runtimes-test-depends check-runtimes check-builtins)
+    list(APPEND ARG_CMAKE_ARGS "-DCOMPILER_RT_TEST_EXTERNAL_BUILTINS=ON")
   endif()
 
   set_enable_per_target_runtime_dir()
@@ -277,6 +289,7 @@ function(runtime_default_target)
                                       -DLLVM_ENABLE_PROJECTS_USED=${LLVM_ENABLE_PROJECTS_USED}
                                       -DLLVM_ENABLE_PER_TARGET_RUNTIME_DIR=${LLVM_ENABLE_PER_TARGET_RUNTIME_DIR}
                                       -DLLVM_BUILD_TOOLS=${LLVM_BUILD_TOOLS}
+                                      -DLLVM_ENABLE_DOXYGEN=${LLVM_ENABLE_DOXYGEN}
                                       -DCMAKE_C_COMPILER_WORKS=ON
                                       -DCMAKE_CXX_COMPILER_WORKS=ON
                                       -DCMAKE_Fortran_COMPILER_WORKS=ON
@@ -369,6 +382,15 @@ function(runtime_register_target name)
       list(APPEND ${name}_test_targets ${target}-${name})
       list(APPEND test_targets ${target}-${name})
     endforeach()
+
+    # If a builtins-${name} target exists, we'll test those builtins
+    # with this runtimes build
+    if(TARGET builtins-${name})
+      list(APPEND ARG_CMAKE_ARGS "-DCOMPILER_RT_TEST_EXTERNAL_BUILTINS=ON")
+      set(check-builtins-${name} check-builtins)
+      list(APPEND ${name}_test_targets check-builtins-${name})
+      list(APPEND test_targets check-builtins-${name})
+    endif()
     set(test_targets "${test_targets}" PARENT_SCOPE)
   endif()
 
@@ -434,6 +456,9 @@ function(runtime_register_target name)
   if(LLVM_INCLUDE_TESTS)
     add_dependencies(check-runtimes check-runtimes-${name})
     add_dependencies(runtimes-test-depends runtimes-test-depends-${name})
+    if(TARGET builtins-${name})
+      add_dependencies(check-builtins check-builtins-${name})
+    endif()
   endif()
   foreach(runtime_name ${runtime_names})
     if(NOT TARGET ${runtime_name})
@@ -609,6 +634,17 @@ if(build_runtimes)
           PROPERTIES FOLDER "Runtimes"
         )
         set(test_targets "")
+
+        # NOTE: Currently, the builtins tests are run with the runtimes build,
+        # and the default runtimes target installs a check-builtins target
+        # which forwards to the default builtins build. If the default runtimes
+        # target is not used, we create a custom target which will depend on
+        # each check-builtins-${name}.
+        add_custom_target(check-builtins)
+        set_target_properties(
+          check-builtins
+          PROPERTIES FOLDER "Compiler-RT"
+        )
       endif()
       if(LLVM_RUNTIME_DISTRIBUTION_COMPONENTS)
         foreach(component ${LLVM_RUNTIME_DISTRIBUTION_COMPONENTS})
@@ -664,13 +700,6 @@ if(build_runtimes)
     # We need to add the runtimes as a dependency because compiler-rt can be
     # built as part of runtimes and we need the profile runtime for PGO
     add_dependencies(clang-bootstrap-deps runtimes)
-    # The bootstrap build will attempt to configure the offload runtime
-    # before the openmp project which will error out due to failing to
-    # find libomp.so. We must add omp as a dependency before runtimes
-    # are configured.
-    if("openmp" IN_LIST LLVM_ENABLE_PROJECTS AND "offload" IN_LIST LLVM_ENABLE_RUNTIMES)
-      add_dependencies(clang-bootstrap-deps omp)
-    endif()
   endif()
 
   if(LLVM_INCLUDE_TESTS)

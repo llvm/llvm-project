@@ -46,7 +46,7 @@ define amdgpu_kernel void @permlane64_uniform(ptr addrspace(1) %out, i32 %src) {
   ret void
 }
 
-define amdgpu_kernel void @permlane64_nonuniform(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @permlane64_nonuniform(ptr addrspace(1) %out) {
 ; CURRENT-CHECK-LABEL: define amdgpu_kernel void @permlane64_nonuniform(
 ; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1:[0-9]+]] {
 ; CURRENT-CHECK-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -74,12 +74,12 @@ define amdgpu_kernel void @permlane64_nonuniform(i32 addrspace(1)* %out) {
 ;
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %v = call i32 @llvm.amdgcn.permlane64(i32 %tid)
-  %out_ptr = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
-  store i32 %v, i32 addrspace(1)* %out_ptr
+  %out_ptr = getelementptr i32, ptr addrspace(1) %out, i32 %tid
+  store i32 %v, ptr addrspace(1) %out_ptr
   ret void
 }
 
-define amdgpu_kernel void @permlane64_nonuniform_expression(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @permlane64_nonuniform_expression(ptr addrspace(1) %out) {
 ; CURRENT-CHECK-LABEL: define amdgpu_kernel void @permlane64_nonuniform_expression(
 ; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1]] {
 ; CURRENT-CHECK-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -111,8 +111,8 @@ define amdgpu_kernel void @permlane64_nonuniform_expression(i32 addrspace(1)* %o
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid2 = add i32 %tid, 1
   %v = call i32 @llvm.amdgcn.permlane64(i32 %tid2)
-  %out_ptr = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
-  store i32 %v, i32 addrspace(1)* %out_ptr
+  %out_ptr = getelementptr i32, ptr addrspace(1) %out, i32 %tid
+  store i32 %v, ptr addrspace(1) %out_ptr
   ret void
 }
 
@@ -158,7 +158,7 @@ define amdgpu_kernel void @readlane_nonuniform_indices(ptr addrspace(1) %out, i3
   ret void
 }
 
-define amdgpu_kernel void @readlane_nonuniform_workitem(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @readlane_nonuniform_workitem(ptr addrspace(1) %out) {
 ; CURRENT-CHECK-LABEL: define amdgpu_kernel void @readlane_nonuniform_workitem(
 ; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) [[OUT:%.*]]) local_unnamed_addr #[[ATTR2:[0-9]+]] {
 ; CURRENT-CHECK-NEXT:    [[TIDX:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -190,12 +190,12 @@ define amdgpu_kernel void @readlane_nonuniform_workitem(i32 addrspace(1)* %out) 
   %tidx = call i32 @llvm.amdgcn.workitem.id.x()
   %tidy = call i32 @llvm.amdgcn.workitem.id.y()
   %v = call i32 @llvm.amdgcn.readlane(i32 %tidx, i32 %tidy)
-  %out_ptr = getelementptr i32, i32 addrspace(1)* %out, i32 %tidx
-  store i32 %v, i32 addrspace(1)* %out_ptr
+  %out_ptr = getelementptr i32, ptr addrspace(1) %out, i32 %tidx
+  store i32 %v, ptr addrspace(1) %out_ptr
   ret void
 }
 
-define amdgpu_kernel void @readlane_nonuniform_expression(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @readlane_nonuniform_expression(ptr addrspace(1) %out) {
 ; CURRENT-CHECK-LABEL: define amdgpu_kernel void @readlane_nonuniform_expression(
 ; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) [[OUT:%.*]]) local_unnamed_addr #[[ATTR2]] {
 ; CURRENT-CHECK-NEXT:    [[TIDX:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -235,8 +235,8 @@ define amdgpu_kernel void @readlane_nonuniform_expression(i32 addrspace(1)* %out
   %tidx2 = add i32 %tidx, 1
   %tidy2 = add i32 %tidy, 2
   %v = call i32 @llvm.amdgcn.readlane(i32 %tidx2, i32 %tidy2)
-  %out_ptr = getelementptr i32, i32 addrspace(1)* %out, i32 %tidx
-  store i32 %v, i32 addrspace(1)* %out_ptr
+  %out_ptr = getelementptr i32, ptr addrspace(1) %out, i32 %tidx
+  store i32 %v, ptr addrspace(1) %out_ptr
   ret void
 }
 
@@ -286,7 +286,7 @@ define amdgpu_kernel void @readfirstlane_with_argument(ptr addrspace(1) %out, i3
   ret void
 }
 
-define amdgpu_kernel void @readfirstlane_with_workitem_id(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @readfirstlane_with_workitem_id(ptr addrspace(1) %out) {
 ; CURRENT-CHECK-LABEL: define amdgpu_kernel void @readfirstlane_with_workitem_id(
 ; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1]] {
 ; CURRENT-CHECK-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -314,12 +314,12 @@ define amdgpu_kernel void @readfirstlane_with_workitem_id(i32 addrspace(1)* %out
 ;
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %v = call i32 @llvm.amdgcn.readfirstlane(i32 %tid)
-  %out_ptr = getelementptr i32, i32 addrspace(1)* %out, i32 %tid
-  store i32 %v, i32 addrspace(1)* %out_ptr
+  %out_ptr = getelementptr i32, ptr addrspace(1) %out, i32 %tid
+  store i32 %v, ptr addrspace(1) %out_ptr
   ret void
 }
 
-define amdgpu_kernel void @readfirstlane_expression(i32 addrspace(1)* %out) {
+define amdgpu_kernel void @readfirstlane_expression(ptr addrspace(1) %out) {
 ; CURRENT-CHECK-LABEL: define amdgpu_kernel void @readfirstlane_expression(
 ; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) [[OUT:%.*]]) local_unnamed_addr #[[ATTR1]] {
 ; CURRENT-CHECK-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
@@ -351,8 +351,8 @@ define amdgpu_kernel void @readfirstlane_expression(i32 addrspace(1)* %out) {
   %tid = call i32 @llvm.amdgcn.workitem.id.x()
   %tid2 = add i32 %tid, 1
   %v = call i32 @llvm.amdgcn.readfirstlane(i32 %tid2)
-  %out_ptr = getelementptr i32, i32 addrspace(1)* %out, i32 %tid2
-  store i32 %v, i32 addrspace(1)* %out_ptr
+  %out_ptr = getelementptr i32, ptr addrspace(1) %out, i32 %tid2
+  store i32 %v, ptr addrspace(1) %out_ptr
   ret void
 }
 
@@ -805,3 +805,122 @@ define void @test_readlane_v8i16(ptr addrspace(1) %out, <8 x i16> %src, i32 %src
   call void asm sideeffect "; use $0", "s"(<8 x i16> %x)
   ret void
 }
+
+define amdgpu_kernel void @wave_shuffle_nonuniform_value_and_index(ptr addrspace(1) %out) {
+; CURRENT-CHECK-LABEL: define amdgpu_kernel void @wave_shuffle_nonuniform_value_and_index(
+; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CURRENT-CHECK-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
+; CURRENT-CHECK-NEXT:    [[IDX:%.*]] = add nuw nsw i32 [[TID]], 1
+; CURRENT-CHECK-NEXT:    [[RES:%.*]] = tail call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[TID]], i32 [[IDX]])
+; CURRENT-CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT]], align 4
+; CURRENT-CHECK-NEXT:    ret void
+;
+; PASS-CHECK-LABEL: define amdgpu_kernel void @wave_shuffle_nonuniform_value_and_index(
+; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; PASS-CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; PASS-CHECK-NEXT:    [[IDX:%.*]] = add i32 [[TID]], 1
+; PASS-CHECK-NEXT:    [[RES:%.*]] = tail call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[TID]], i32 [[IDX]])
+; PASS-CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT]], align 4
+; PASS-CHECK-NEXT:    ret void
+;
+; DCE-CHECK-LABEL: define amdgpu_kernel void @wave_shuffle_nonuniform_value_and_index(
+; DCE-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; DCE-CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; DCE-CHECK-NEXT:    [[IDX:%.*]] = add i32 [[TID]], 1
+; DCE-CHECK-NEXT:    [[RES:%.*]] = tail call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[TID]], i32 [[IDX]])
+; DCE-CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT]], align 4
+; DCE-CHECK-NEXT:    ret void
+;
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %tid2 = add i32 %tid, 1
+  %res = tail call i32 @llvm.amdgcn.wave.shuffle(i32 %tid, i32 %tid2)
+  store i32 %res, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @wave_shuffle_nonuniform_value_uniform_index(ptr addrspace(1) %in, ptr addrspace(1) %out) {
+; CURRENT-CHECK-LABEL: define amdgpu_kernel void @wave_shuffle_nonuniform_value_uniform_index(
+; CURRENT-CHECK-SAME: ptr addrspace(1) readnone captures(none) [[IN:%.*]], ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CURRENT-CHECK-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
+; CURRENT-CHECK-NEXT:    [[RES:%.*]] = tail call i32 @llvm.amdgcn.wave.shuffle.i32(i32 [[TID]], i32 5), !foo [[META0:![0-9]+]]
+; CURRENT-CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT]], align 4
+; CURRENT-CHECK-NEXT:    ret void
+;
+; PASS-CHECK-LABEL: define amdgpu_kernel void @wave_shuffle_nonuniform_value_uniform_index(
+; PASS-CHECK-SAME: ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; PASS-CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; PASS-CHECK-NEXT:    [[RES:%.*]] = tail call i32 @llvm.amdgcn.readlane.i32(i32 [[TID]], i32 5), !foo [[META0:![0-9]+]]
+; PASS-CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT]], align 4
+; PASS-CHECK-NEXT:    ret void
+;
+; DCE-CHECK-LABEL: define amdgpu_kernel void @wave_shuffle_nonuniform_value_uniform_index(
+; DCE-CHECK-SAME: ptr addrspace(1) [[IN:%.*]], ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; DCE-CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; DCE-CHECK-NEXT:    [[RES:%.*]] = tail call i32 @llvm.amdgcn.readlane.i32(i32 [[TID]], i32 5), !foo [[META0:![0-9]+]]
+; DCE-CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT]], align 4
+; DCE-CHECK-NEXT:    ret void
+;
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %res = tail call i32 @llvm.amdgcn.wave.shuffle(i32 %tid, i32 5), !foo !0
+  store i32 %res, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @wave_shuffle_uniform_value_nonuniform_index(ptr addrspace(1) %out) {
+; CURRENT-CHECK-LABEL: define amdgpu_kernel void @wave_shuffle_uniform_value_nonuniform_index(
+; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CURRENT-CHECK-NEXT:    [[TID:%.*]] = tail call i32 @llvm.amdgcn.workitem.id.x()
+; CURRENT-CHECK-NEXT:    [[IDX:%.*]] = add nuw nsw i32 [[TID]], 1
+; CURRENT-CHECK-NEXT:    [[RES:%.*]] = tail call i32 @llvm.amdgcn.wave.shuffle.i32(i32 42, i32 [[IDX]])
+; CURRENT-CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT]], align 4
+; CURRENT-CHECK-NEXT:    ret void
+;
+; PASS-CHECK-LABEL: define amdgpu_kernel void @wave_shuffle_uniform_value_nonuniform_index(
+; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; PASS-CHECK-NEXT:    [[TID:%.*]] = call i32 @llvm.amdgcn.workitem.id.x()
+; PASS-CHECK-NEXT:    [[TID2:%.*]] = add i32 [[TID]], 1
+; PASS-CHECK-NEXT:    store i32 42, ptr addrspace(1) [[OUT]], align 4
+; PASS-CHECK-NEXT:    ret void
+;
+; DCE-CHECK-LABEL: define amdgpu_kernel void @wave_shuffle_uniform_value_nonuniform_index(
+; DCE-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; DCE-CHECK-NEXT:    store i32 42, ptr addrspace(1) [[OUT]], align 4
+; DCE-CHECK-NEXT:    ret void
+;
+  %tid = call i32 @llvm.amdgcn.workitem.id.x()
+  %tid2 = add i32 %tid, 1
+  %res = tail call i32 @llvm.amdgcn.wave.shuffle(i32 42, i32 %tid2)
+  store i32 %res, ptr addrspace(1) %out
+  ret void
+}
+
+define amdgpu_kernel void @wave_shuffle_uniform_value_and_index(ptr addrspace(1) %out) {
+; CURRENT-CHECK-LABEL: define amdgpu_kernel void @wave_shuffle_uniform_value_and_index(
+; CURRENT-CHECK-SAME: ptr addrspace(1) writeonly captures(none) initializes((0, 4)) [[OUT:%.*]]) local_unnamed_addr #[[ATTR0]] {
+; CURRENT-CHECK-NEXT:    [[RES:%.*]] = tail call i32 @llvm.amdgcn.wave.shuffle.i32(i32 42, i32 5)
+; CURRENT-CHECK-NEXT:    store i32 [[RES]], ptr addrspace(1) [[OUT]], align 4
+; CURRENT-CHECK-NEXT:    ret void
+;
+; PASS-CHECK-LABEL: define amdgpu_kernel void @wave_shuffle_uniform_value_and_index(
+; PASS-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; PASS-CHECK-NEXT:    store i32 42, ptr addrspace(1) [[OUT]], align 4
+; PASS-CHECK-NEXT:    ret void
+;
+; DCE-CHECK-LABEL: define amdgpu_kernel void @wave_shuffle_uniform_value_and_index(
+; DCE-CHECK-SAME: ptr addrspace(1) [[OUT:%.*]]) #[[ATTR0]] {
+; DCE-CHECK-NEXT:    store i32 42, ptr addrspace(1) [[OUT]], align 4
+; DCE-CHECK-NEXT:    ret void
+;
+  %res = tail call i32 @llvm.amdgcn.wave.shuffle(i32 42, i32 5)
+  store i32 %res, ptr addrspace(1) %out
+  ret void
+}
+
+!0 = !{i32 5489}
+;.
+; CURRENT-CHECK: [[META0]] = !{i32 5489}
+;.
+; PASS-CHECK: [[META0]] = !{i32 5489}
+;.
+; DCE-CHECK: [[META0]] = !{i32 5489}
+;.

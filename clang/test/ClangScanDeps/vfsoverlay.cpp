@@ -8,12 +8,13 @@
 // RUN: cp %S/Inputs/header.h %t.dir/Inputs/header.h
 // RUN: sed -e "s|DIR|%/t.dir|g" %S/Inputs/vfsoverlay_cdb.json > %t.cdb
 //
-// RUN: clang-scan-deps -compilation-database %t.cdb -mode preprocess-dependency-directives -j 1 | FileCheck %s
-// RUN: clang-scan-deps -compilation-database %t.cdb -mode preprocess                       -j 1 | FileCheck %s
+// RUN: clang-scan-deps -compilation-database %t.cdb -mode preprocess-dependency-directives -j 1 | FileCheck %s %if system-darwin %{ --check-prefixes=CHECK,CHECK-DARWIN %}
+// RUN: clang-scan-deps -compilation-database %t.cdb -mode preprocess                       -j 1 | FileCheck %s %if system-darwin %{ --check-prefixes=CHECK,CHECK-DARWIN %}
 
 #include "not_real.h"
 
 // CHECK: vfsoverlay_input.o
+// CHECK-DARWIN-NEXT: SDKSettings.json
 // CHECK-NEXT: vfsoverlay_input.cpp
 // CHECK-NEXT: Inputs{{/|\\}}header.h
 

@@ -3,6 +3,11 @@
 ; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/coff-profile.perfscript --binary=%S/Inputs/coff-profile.exe --output=%t
 ; RUN: FileCheck %s --input-file %t --check-prefix=PROBE
 
+; RUN: mkdir %t.dir
+; RUN: llvm-objcopy --strip-debug --remove-section=.pseudo_probe --remove-section=.pseudo_probe_desc %S/Inputs/coff-profile.exe %t.dir/coff-profile.exe
+; RUN: llvm-profgen --format=text --perfscript=%S/Inputs/coff-profile.perfscript --binary=%t.dir/coff-profile.exe --debug-binary=%S/Inputs/coff-profile.exe --output=%t
+; RUN: FileCheck %s --input-file %t --check-prefix=PROBE
+
 DWARF:      main:31341:0
 DWARF-NEXT:  0: 0
 DWARF-NEXT:  3: 0
