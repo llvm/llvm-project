@@ -19,6 +19,7 @@
 
 #include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 
+#include "clang/CIR/Interfaces/ASTAttrInterfaces.h"
 #include "clang/CIR/Interfaces/CIRTypeInterfaces.h"
 
 //===----------------------------------------------------------------------===//
