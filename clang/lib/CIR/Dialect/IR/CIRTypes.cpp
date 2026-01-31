@@ -60,6 +60,14 @@ static void printFuncTypeParams(mlir::AsmPrinter &p,
 // AddressSpace
 //===----------------------------------------------------------------------===//
 
+mlir::ParseResult
+parseAddressSpaceValue(mlir::AsmParser &p,
+                       mlir::ptr::MemorySpaceAttrInterface &attr);
+
+void printAddressSpaceValue(mlir::AsmPrinter &printer,
+                            mlir::ptr::MemorySpaceAttrInterface attr);
+
+// Custom parser/printer for the `addrSpace` parameter in `!cir.ptr`.
 mlir::ParseResult parseTargetAddressSpace(mlir::AsmParser &p,
                                           cir::TargetAddressSpaceAttr &attr);
 
@@ -930,8 +938,110 @@ void cir::VectorType::print(mlir::AsmPrinter &odsPrinter) const {
 }
 
 //===----------------------------------------------------------------------===//
-// TargetAddressSpace definitions
+// AddressSpace definitions
 //===----------------------------------------------------------------------===//
+
+cir::LangAddressSpace cir::toCIRLangAddressSpace(clang::LangAS langAS) {
+  using clang::LangAS;
+  switch (langAS) {
+  case LangAS::Default:
+    return LangAddressSpace::Default;
+  case LangAS::opencl_global:
+    return LangAddressSpace::OffloadGlobal;
+  case LangAS::opencl_local:
+  case LangAS::cuda_shared:
+    // Local means local among the work-group (OpenCL) or block (CUDA).
+    // All threads inside the kernel can access local memory.
+    return LangAddressSpace::OffloadLocal;
+  case LangAS::cuda_device:
+    return LangAddressSpace::OffloadGlobal;
+  case LangAS::opencl_constant:
+  case LangAS::cuda_constant:
+    return LangAddressSpace::OffloadConstant;
+  case LangAS::opencl_private:
+    return LangAddressSpace::OffloadPrivate;
+  case LangAS::opencl_generic:
+    return LangAddressSpace::OffloadGeneric;
+  case LangAS::opencl_global_device:
+  case LangAS::opencl_global_host:
+  case LangAS::sycl_global:
+  case LangAS::sycl_global_device:
+  case LangAS::sycl_global_host:
+  case LangAS::sycl_local:
+  case LangAS::sycl_private:
+  case LangAS::ptr32_sptr:
+  case LangAS::ptr32_uptr:
+  case LangAS::ptr64:
+  case LangAS::hlsl_groupshared:
+  case LangAS::wasm_funcref:
+    llvm_unreachable("NYI");
+  default:
+    llvm_unreachable("unknown/unsupported clang language address space");
+  }
+}
+
+mlir::ParseResult
+parseAddressSpaceValue(mlir::AsmParser &p,
+                       mlir::ptr::MemorySpaceAttrInterface &attr) {
+
+  llvm::SMLoc loc = p.getCurrentLocation();
+
+  // Try to parse target address space first.
+  attr = nullptr;
+  if (p.parseOptionalKeyword("target_address_space").succeeded()) {
+    unsigned val;
+    if (p.parseLParen())
+      return p.emitError(loc, "expected '(' after 'target_address_space'");
+
+    if (p.parseInteger(val))
+      return p.emitError(loc, "expected target address space value");
+
+    if (p.parseRParen())
+      return p.emitError(loc, "expected ')'");
+
+    attr = cir::TargetAddressSpaceAttr::get(
+        p.getContext(), p.getBuilder().getUI32IntegerAttr(val));
+    return mlir::success();
+  }
+
+  // Try to parse language specific address space.
+  if (p.parseOptionalKeyword("lang_address_space").succeeded()) {
+    if (p.parseLParen())
+      return p.emitError(loc, "expected '(' after 'lang_address_space'");
+
+    mlir::FailureOr<cir::LangAddressSpace> result =
+        mlir::FieldParser<cir::LangAddressSpace>::parse(p);
+    if (mlir::failed(result))
+      return p.emitError(loc, "expected language address space keyword");
+
+    if (p.parseRParen())
+      return p.emitError(loc, "expected ')'");
+
+    attr = cir::LangAddressSpaceAttr::get(p.getContext(), result.value());
+    return mlir::success();
+  }
+
+  return mlir::success();
+}
+
+void printAddressSpaceValue(mlir::AsmPrinter &p,
+                            mlir::ptr::MemorySpaceAttrInterface attr) {
+  if (!attr)
+    return;
+
+  if (auto language = dyn_cast<cir::LangAddressSpaceAttr>(attr)) {
+    p << "lang_address_space("
+      << cir::stringifyLangAddressSpace(language.getValue()) << ')';
+    return;
+  }
+
+  if (auto target = dyn_cast<cir::TargetAddressSpaceAttr>(attr)) {
+    p << "target_address_space(" << target.getValue() << ')';
+    return;
+  }
+
+  llvm_unreachable("unexpected address-space attribute kind");
+}
 
 cir::TargetAddressSpaceAttr
 cir::toCIRTargetAddressSpace(mlir::MLIRContext &context, clang::LangAS langAS) {

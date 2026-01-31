@@ -14,6 +14,7 @@
 #define CLANG_CIR_DIALECT_IR_CIRATTRS_TD
 
 include "mlir/IR/BuiltinAttributeInterfaces.td"
+include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.td"
 
 include "clang/CIR/Dialect/IR/CIRAttrConstraints.td"
 include "clang/CIR/Dialect/IR/CIRDialect.td"
@@ -767,15 +768,63 @@ def CIR_DynamicCastInfoAttr : CIR_Attr<"DynamicCastInfo", "dyn_cast_info"> {
 }
 
 //===----------------------------------------------------------------------===//
+// LangAddressSpaceAttr
+//===----------------------------------------------------------------------===//
+
+def CIR_LangAddressSpaceAttr : CIR_EnumAttr<CIR_LangAddressSpace,
+                                            "lang_address_space", [
+    DeclareAttrInterfaceMethods<MemorySpaceAttrInterface>
+]> {
+  let summary = "Represents a language address space";
+  let description = [{
+    Encodes the semantic address spaces defined by the front-end language
+    (e.g. `__shared__`, `__constant__`, `__local__`). Values are stored using the
+    `cir::LangAddressSpace` enum, keeping the representation compact and
+    preserving the qualifier until it is mapped onto target/LLVM address-space
+    numbers.
+
+    Example:
+    ```mlir
+    !cir.ptr<!s32i, lang_address_space(offload_local)>
+    cir.global constant external lang_address_space(offload_constant)
+    ```
+  }];
+
+  let builders = [
+    AttrBuilder<(ins "clang::LangAS":$langAS), [{
+      return $_get($_ctxt, cir::toCIRLangAddressSpace(langAS));
+    }]>
+  ];
+
+  let assemblyFormat = [{
+    `(` custom<AddressSpaceValue>($value) `)`
+  }];
+
+  let defaultValue = "cir::LangAddressSpace::Default";
+
+  let extraClassDeclaration = [{
+    unsigned getAsUnsignedValue() const;
+  }];
+
+  let extraClassDefinition = [{
+    unsigned $cppClass::getAsUnsignedValue() const {
+      return static_cast<unsigned>(getValue());
+    }
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // TargetAddressSpaceAttr
 //===----------------------------------------------------------------------===//
 
 def CIR_TargetAddressSpaceAttr : CIR_Attr< "TargetAddressSpace",
-                                         "target_address_space"> {
+                                         "target_address_space", [
+    DeclareAttrInterfaceMethods<MemorySpaceAttrInterface>
+  ]> {
   let summary = "Represents a target-specific numeric address space";
   let description = [{
     The TargetAddressSpaceAttr represents a target-specific numeric address space,
-    corresponding to the LLVM IR `addressspace` qualifier and the clang
+    corresponding to the LLVM IR `addrspace` qualifier and the clang
      `address_space` attribute.
     
     A value of zero represents the default address space. The semantics of non-zero

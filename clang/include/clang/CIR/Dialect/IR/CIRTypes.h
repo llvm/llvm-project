@@ -13,6 +13,7 @@
 #ifndef CLANG_CIR_DIALECT_IR_CIRTYPES_H
 #define CLANG_CIR_DIALECT_IR_CIRTYPES_H
 
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/MLIRContext.h"
@@ -43,6 +44,9 @@ bool isSized(mlir::Type ty);
 //===----------------------------------------------------------------------===//
 // AddressSpace helpers
 //===----------------------------------------------------------------------===//
+
+cir::LangAddressSpace toCIRLangAddressSpace(clang::LangAS langAS);
+
 cir::TargetAddressSpaceAttr toCIRTargetAddressSpace(mlir::MLIRContext &context,
                                                     clang::LangAS langAS);
 
