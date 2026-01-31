@@ -36,24 +36,25 @@ MachineDominanceFrontierWrapperPass::MachineDominanceFrontierWrapperPass()
 char &llvm::MachineDominanceFrontierID =
     MachineDominanceFrontierWrapperPass::ID;
 
-bool MachineDominanceFrontierWrapperPass::runOnMachineFunction(
-    MachineFunction &) {
-  auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  return MDF.analyze(MDT);
+bool MachineDominanceFrontier::invalidate(
+    Function &F, const PreservedAnalyses &PA,
+    FunctionAnalysisManager::Invalidator &) {
+  auto PAC = PA.getChecker<MachineDominanceFrontierAnalysis>();
+  return !(PAC.preserved() ||
+           PAC.preservedSet<AllAnalysesOn<MachineFunction>>() ||
+           PAC.preservedSet<CFGAnalyses>());
 }
 
-bool MachineDominanceFrontier::analyze(MachineDominatorTree &MDT) {
-  releaseMemory();
-  Base.analyze(MDT);
+bool MachineDominanceFrontierWrapperPass::runOnMachineFunction(
+    MachineFunction &) {
+  MDF.releaseMemory();
+  auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  MDF.analyze(MDT);
   return false;
 }
 
 void MachineDominanceFrontierWrapperPass::releaseMemory() {
   MDF.releaseMemory();
-}
-
-void MachineDominanceFrontier::releaseMemory() {
-  Base.releaseMemory();
 }
 
 void MachineDominanceFrontierWrapperPass::getAnalysisUsage(

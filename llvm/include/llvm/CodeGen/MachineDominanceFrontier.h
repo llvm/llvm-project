@@ -19,9 +19,8 @@
 
 namespace llvm {
 
-class MachineDominanceFrontier {
-  ForwardDominanceFrontierBase<MachineBasicBlock> Base;
-
+class MachineDominanceFrontier
+    : public ForwardDominanceFrontierBase<MachineBasicBlock> {
 public:
  using DomTreeT = DomTreeBase<MachineBasicBlock>;
  using DomTreeNodeT = DomTreeNodeBase<MachineBasicBlock>;
@@ -32,47 +31,8 @@ public:
 
  MachineDominanceFrontier() = default;
 
- ForwardDominanceFrontierBase<MachineBasicBlock> &getBase() { return Base; }
-
- const SmallVectorImpl<MachineBasicBlock *> &getRoots() const {
-   return Base.getRoots();
-  }
-
-  MachineBasicBlock *getRoot() const {
-    return Base.getRoot();
-  }
-
-  bool isPostDominator() const {
-    return Base.isPostDominator();
-  }
-
-  iterator begin() {
-    return Base.begin();
-  }
-
-  const_iterator begin() const {
-    return Base.begin();
-  }
-
-  iterator end() {
-    return Base.end();
-  }
-
-  const_iterator end() const {
-    return Base.end();
-  }
-
-  iterator find(MachineBasicBlock *B) {
-    return Base.find(B);
-  }
-
-  const_iterator find(MachineBasicBlock *B) const {
-    return Base.find(B);
-  }
-
-  bool analyze(MachineDominatorTree &MDT);
-
-  void releaseMemory();
+ bool invalidate(Function &F, const PreservedAnalyses &PA,
+                 FunctionAnalysisManager::Invalidator &);
 };
 
 class MachineDominanceFrontierWrapperPass : public MachineFunctionPass {
