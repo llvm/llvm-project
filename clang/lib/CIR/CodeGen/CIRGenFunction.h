@@ -31,6 +31,7 @@
 #include "clang/AST/Stmt.h"
 #include "clang/AST/Type.h"
 #include "clang/Basic/OperatorKinds.h"
+#include "clang/Basic/TargetBuiltins.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/MissingFeatures.h"
 #include "clang/CIR/TypeEvaluationKind.h"
@@ -210,7 +211,7 @@ public:
   /// Get integer from a mlir::Value that is an int constant or a constant op.
   static int64_t getSExtIntValueFromConstOp(mlir::Value val) {
     auto constOp = val.getDefiningOp<cir::ConstantOp>();
-    assert(constOp && "getIntValueFromConstOp call with non ConstantOp");
+    assert(constOp && "getSExtIntValueFromConstOp call with non ConstantOp");
     return constOp.getIntValue().getSExtValue();
   }
 
@@ -218,8 +219,7 @@ public:
   /// constant op.
   static int64_t getZExtIntValueFromConstOp(mlir::Value val) {
     auto constOp = val.getDefiningOp<cir::ConstantOp>();
-    assert(constOp &&
-           "getZeroExtendedIntValueFromConstOp call with non ConstantOp");
+    assert(constOp && "getZExtIntValueFromConstOp call with non ConstantOp");
     return constOp.getIntValue().getZExtValue();
   }
 
@@ -1266,6 +1266,9 @@ public:
   /// CIR emit functions
   /// ----------------------
 public:
+  bool getAArch64SVEProcessedOperands(unsigned builtinID, const CallExpr *expr,
+                                      SmallVectorImpl<mlir::Value> &ops,
+                                      clang::SVETypeFlags typeFlags);
   std::optional<mlir::Value>
   emitAArch64BuiltinExpr(unsigned builtinID, const CallExpr *expr,
                          ReturnValueSlot returnValue,
@@ -1309,6 +1312,8 @@ public:
   void emitAggregateStore(mlir::Value value, Address dest);
 
   void emitAggExpr(const clang::Expr *e, AggValueSlot slot);
+
+  enum ExprValueKind { EVK_RValue, EVK_NonRValue };
 
   LValue emitAggExprToLValue(const Expr *e);
 
@@ -1355,6 +1360,13 @@ public:
   Address emitArrayToPointerDecay(const Expr *e,
                                   LValueBaseInfo *baseInfo = nullptr);
 
+  std::pair<mlir::Value, mlir::Type>
+  emitAsmInputLValue(const TargetInfo::ConstraintInfo &info, LValue inputValue,
+                     QualType inputType, std::string &constraintString,
+                     SourceLocation loc);
+  std::pair<mlir::Value, mlir::Type>
+  emitAsmInput(const TargetInfo::ConstraintInfo &info, const Expr *inputExpr,
+               std::string &constraintString);
   mlir::LogicalResult emitAsmStmt(const clang::AsmStmt &s);
 
   RValue emitAtomicExpr(AtomicExpr *e);
@@ -1548,6 +1560,9 @@ public:
       clang::NestedNameSpecifier qualifier, bool isArrow,
       const clang::Expr *base);
 
+  RValue emitCXXMemberPointerCallExpr(const CXXMemberCallExpr *ce,
+                                      ReturnValueSlot returnValue);
+
   mlir::Value emitCXXNewExpr(const CXXNewExpr *e);
 
   void emitNewArrayInitializer(const CXXNewExpr *e, QualType elementType,
@@ -1659,6 +1674,10 @@ public:
                                   CallArgList &callArgs);
 
   RValue emitCoawaitExpr(const CoawaitExpr &e,
+                         AggValueSlot aggSlot = AggValueSlot::ignored(),
+                         bool ignoreResult = false);
+
+  RValue emitCoyieldExpr(const CoyieldExpr &e,
                          AggValueSlot aggSlot = AggValueSlot::ignored(),
                          bool ignoreResult = false);
   /// Emit the computation of the specified expression of complex type,
@@ -1855,6 +1874,10 @@ public:
   /// Note: CIR defers most of the special casting to the final lowering passes
   /// to conserve the high level information.
   mlir::Value emitToMemory(mlir::Value value, clang::QualType ty);
+
+  /// EmitFromMemory - Change a scalar value from its memory
+  /// representation to its value representation.
+  mlir::Value emitFromMemory(mlir::Value value, clang::QualType ty);
 
   /// Emit a trap instruction, which is used to abort the program in an abnormal
   /// way, usually for debugging purposes.

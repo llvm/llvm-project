@@ -358,7 +358,8 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
 
   // Any return value split in to more than two values can't be returned
   // directly. Vectors are returned via the available vector registers.
-  if (!LocVT.isVector() && IsRet && ValNo > 1)
+  if ((!LocVT.isVector() || Subtarget.isPExtPackedType(ValVT)) && IsRet &&
+      ValNo > 1)
     return true;
 
   // UseGPRForF16_F32 if targeting one of the soft-float ABIs, if passing a
@@ -510,25 +511,11 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
     return false;
   }
 
-  // Split arguments might be passed indirectly, so keep track of the pending
-  // values. Split vectors are passed via a mix of registers and indirectly, so
-  // treat them as we would any other argument.
-  if (ValVT.isScalarInteger() && (ArgFlags.isSplit() || !PendingLocs.empty())) {
-    LocVT = XLenVT;
-    LocInfo = CCValAssign::Indirect;
-    PendingLocs.push_back(
-        CCValAssign::getPending(ValNo, ValVT, LocVT, LocInfo));
-    PendingArgFlags.push_back(ArgFlags);
-    if (!ArgFlags.isSplitEnd()) {
-      return false;
-    }
-  }
-
   // If the split argument only had two elements, it should be passed directly
   // in registers or on the stack.
-  if (ValVT.isScalarInteger() && ArgFlags.isSplitEnd() &&
-      PendingLocs.size() <= 2) {
-    assert(PendingLocs.size() == 2 && "Unexpected PendingLocs.size()");
+  if ((ValVT.isScalarInteger() || Subtarget.isPExtPackedType(ValVT)) &&
+      ArgFlags.isSplitEnd() && PendingLocs.size() <= 1) {
+    assert(PendingLocs.size() == 1 && "Unexpected PendingLocs.size()");
     // Apply the normal calling convention rules to the first half of the
     // split argument.
     CCValAssign VA = PendingLocs[0];
@@ -540,12 +527,29 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
         ABI == RISCVABI::ABI_ILP32E || ABI == RISCVABI::ABI_LP64E);
   }
 
+  // Split arguments might be passed indirectly, so keep track of the pending
+  // values. Split vectors excluding P extension packed vectors(see
+  // isPExtPackedType) are passed via a mix of registers and indirectly, so
+  // treat them as we would any other argument.
+  if ((ValVT.isScalarInteger() || Subtarget.isPExtPackedType(ValVT)) &&
+      (ArgFlags.isSplit() || !PendingLocs.empty())) {
+    PendingLocs.push_back(
+        CCValAssign::getPending(ValNo, ValVT, LocVT, LocInfo));
+    PendingArgFlags.push_back(ArgFlags);
+    if (!ArgFlags.isSplitEnd()) {
+      return false;
+    }
+  }
+
   // Allocate to a register if possible, or else a stack slot.
   MCRegister Reg;
   unsigned StoreSizeBytes = XLen / 8;
   Align StackAlign = Align(XLen / 8);
 
-  if (ValVT.isVector() || ValVT.isRISCVVectorTuple()) {
+  // FIXME: If P extension and V extension are enabled at the same time,
+  // who should go first?
+  if (!Subtarget.isPExtPackedType(ValVT) &&
+      (ValVT.isVector() || ValVT.isRISCVVectorTuple())) {
     Reg = allocateRVVReg(ValVT, ValNo, State, TLI);
     if (Reg) {
       // Fixed-length vectors are located in the corresponding scalable-vector
@@ -559,8 +563,6 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
     } else {
       // For return values, the vector must be passed fully via registers or
       // via the stack.
-      // FIXME: The proposed vector ABI only mandates v8-v15 for return values,
-      // but we're using all of them.
       if (IsRet)
         return true;
       // Try using a GPR to pass the address
@@ -592,10 +594,12 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
 
     for (auto &It : PendingLocs) {
       if (Reg)
-        It.convertToReg(Reg);
+        State.addLoc(CCValAssign::getReg(It.getValNo(), It.getValVT(), Reg,
+                                         XLenVT, CCValAssign::Indirect));
       else
-        It.convertToMem(StackOffset);
-      State.addLoc(It);
+        State.addLoc(CCValAssign::getMem(It.getValNo(), It.getValVT(),
+                                         StackOffset, XLenVT,
+                                         CCValAssign::Indirect));
     }
     PendingLocs.clear();
     PendingArgFlags.clear();
@@ -603,6 +607,7 @@ bool llvm::CC_RISCV(unsigned ValNo, MVT ValVT, MVT LocVT,
   }
 
   assert(((ValVT.isFloatingPoint() && !ValVT.isVector()) || LocVT == XLenVT ||
+          Subtarget.isPExtPackedType(LocVT) ||
           (TLI.getSubtarget().hasVInstructions() &&
            (ValVT.isVector() || ValVT.isRISCVVectorTuple()))) &&
          "Expected an XLenVT or vector types at this stage");

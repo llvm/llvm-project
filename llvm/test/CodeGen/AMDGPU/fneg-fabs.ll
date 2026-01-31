@@ -95,37 +95,6 @@ define amdgpu_kernel void @fneg_fabsf_free_f32(ptr addrspace(1) %out, i32 %in) {
   ret void
 }
 
-define amdgpu_kernel void @fneg_fabsf_fn_free_f32(ptr addrspace(1) %out, i32 %in) {
-; SI-LABEL: fneg_fabsf_fn_free_f32:
-; SI:       ; %bb.0:
-; SI-NEXT:    s_load_dword s2, s[4:5], 0xb
-; SI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x9
-; SI-NEXT:    s_mov_b32 s3, 0xf000
-; SI-NEXT:    s_waitcnt lgkmcnt(0)
-; SI-NEXT:    s_or_b32 s4, s2, 0x80000000
-; SI-NEXT:    s_mov_b32 s2, -1
-; SI-NEXT:    v_mov_b32_e32 v0, s4
-; SI-NEXT:    buffer_store_dword v0, off, s[0:3], 0
-; SI-NEXT:    s_endpgm
-;
-; VI-LABEL: fneg_fabsf_fn_free_f32:
-; VI:       ; %bb.0:
-; VI-NEXT:    s_load_dword s2, s[4:5], 0x2c
-; VI-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
-; VI-NEXT:    s_waitcnt lgkmcnt(0)
-; VI-NEXT:    s_bitset1_b32 s2, 31
-; VI-NEXT:    v_mov_b32_e32 v0, s0
-; VI-NEXT:    v_mov_b32_e32 v1, s1
-; VI-NEXT:    v_mov_b32_e32 v2, s2
-; VI-NEXT:    flat_store_dword v[0:1], v2
-; VI-NEXT:    s_endpgm
-  %bc = bitcast i32 %in to float
-  %fabs = call float @fabsf(float %bc)
-  %fsub = fsub float -0.000000e+00, %fabs
-  store float %fsub, ptr addrspace(1) %out
-  ret void
-}
-
 define amdgpu_kernel void @fneg_fabsf_f32(ptr addrspace(1) %out, float %in) {
 ; SI-LABEL: fneg_fabsf_f32:
 ; SI:       ; %bb.0:
@@ -270,7 +239,6 @@ define amdgpu_kernel void @fneg_fabsf_v4f32(ptr addrspace(1) %out, <4 x float> %
   ret void
 }
 
-declare float @fabsf(float) readnone
 declare float @llvm.fabs.f32(float) readnone
 declare <2 x float> @llvm.fabs.v2f32(<2 x float>) readnone
 declare <4 x float> @llvm.fabs.v4f32(<4 x float>) readnone

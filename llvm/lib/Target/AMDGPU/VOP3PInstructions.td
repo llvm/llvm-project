@@ -996,6 +996,7 @@ class MAIInst<string OpName, VOPProfile P, SDPatternOperator node, bit Scaled = 
   Instruction Opcode = !cast<Instruction>(NAME);
   bit is_dgemm = 0;
   bit is_gfx940_xdl = 0;
+  let isConvergent = 1;
   let PseudoInstr = NAME; // FIXME: Why is this not the default
 }
 
@@ -1033,7 +1034,7 @@ multiclass MAIInst<string OpName, string P, SDPatternOperator node = null_frag,
   defvar ProfileVGPR = !cast<VOPProfileMAI>("VOPProfileMAI_" # P # "_VCD");
 
 
-  let isConvergent = 1, mayRaiseFPException = 0, ReadsModeReg = 1 in {
+  let mayRaiseFPException = 0, ReadsModeReg = 1 in {
     // FP32 denorm mode is respected, rounding mode is not. Exceptions are not supported.
     let Constraints = !if(NoDstOverlap, "@earlyclobber $vdst", "") in {
       def _e64 : MAIInst<OpName, ProfileAGPR,
@@ -1060,7 +1061,7 @@ multiclass MAIInst<string OpName, string P, SDPatternOperator node = null_frag,
                               MFMATable<1, "VGPR", NAME # "_vgprcd_e64", NAME # "_mac_e64">;
       }
     }
-  } // End isConvergent = 1, mayRaiseFPException = 0, ReadsModeReg = 1
+  } // mayRaiseFPException = 0, ReadsModeReg = 1
 }
 
 // Provide a wrapper around MAIInst that provides the appended operands from V_MFMA_LD_SCALE_B32
@@ -1396,13 +1397,13 @@ multiclass WMMAInst<string Suffix, string Instr, VOPProfile P, SDPatternOperator
   defvar WMMAConstraints3Addr = "@earlyclobber $vdst";
 
   defvar WMMAProfile = VOPProfileWMMA<P, Suffix, _Src01RC64, Type.hasClamp, Type.hasOpsel>;
-  let Mnemonic = Instr, mayRaiseFPException = 0, ReadsModeReg = 0 in {
+  let isConvergent = 1, Mnemonic = Instr, mayRaiseFPException = 0, ReadsModeReg = 0 in {
     let Constraints = WMMAConstraints2Addr, isConvertibleToThreeAddress = convertibleTo3Addr in {
       def _twoaddr # Suffix : VOP3P_Pseudo<Instr # Suffix, WMMAProfile>;
     }
   }
   if convertibleTo3Addr then {
-    let Mnemonic = Instr, mayRaiseFPException = 0, ReadsModeReg = 0 in {
+    let isConvergent = 1, Mnemonic = Instr, mayRaiseFPException = 0, ReadsModeReg = 0 in {
       let Constraints = WMMAConstraints3Addr, SchedRW = [Write32Bit, Write32Bit] in {
         def _threeaddr # Suffix : VOP3P_Pseudo<Instr # Suffix, WMMAProfile>;
       }
@@ -1463,7 +1464,7 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
   let HasMatrixReuse = _HasMatrixReuse;
 
   bit HasIModOp = _Has_ImodOp;
-  let HasClamp = !and(IsIU, !not(HasIModOp));
+  let HasClamp = IsIU;
   let IsPacked = 1;
   let IsWMMA = !not(_IsSWMMAC);
   let IsSWMMAC = _IsSWMMAC;
@@ -1568,7 +1569,7 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
                                              MatrixAScaleFmt:$matrix_a_scale_fmt, MatrixBScaleFmt:$matrix_b_scale_fmt),
                                         (ins));
   dag MatrixReuse = !if(HasMatrixReuse, (ins MatrixAReuse:$matrix_a_reuse, MatrixBReuse:$matrix_b_reuse), (ins));
-  dag Clamp = !if(HasClamp, (ins Clamp0:$clamp), (ins));
+  dag ClampOp = !if(HasClamp, (ins Clamp:$clamp), (ins));
   dag Neg = !cond(!and(NegLoAny, NegHiAny)             : (ins neg_lo0:$neg_lo, neg_hi0:$neg_hi),
                   !and(NegLoAny, !not(NegHiAny))       : (ins neg_lo0:$neg_lo),
                   !and(!not(NegLoAny), !not(NegHiAny)) : (ins));
@@ -1580,7 +1581,7 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
                                                  (ins VRegSrc_64:$src2),
                                                  (ins VRegSrc_32:$src2)),
                                             IndexKey)),
-                      MatrixScaleSrc, MatrixFMT, MatrixScale, MatrixReuse, Clamp, Neg);
+                      MatrixScaleSrc, ClampOp, MatrixFMT, MatrixScale, MatrixReuse, Neg);
 
   // asm
 
@@ -1669,17 +1670,17 @@ class VOP3PWMMA_Profile<list<ValueType> ArgTy, bit _IsSWMMAC, int _IndexType,
   dag MatrixReuseOutModPat = !if(HasMatrixReuse, (ins i1:$matrix_a_reuse, i1:$matrix_b_reuse), (ins));
 
   dag WmmaInPat  = !con(Src0InPat, Src1InPat, Src2InPatWmma, MatrixScaleInPat, MatrixReuseInPat, ClampPat);
-  dag WmmaOutPat = !con(Src0OutPat, Src1OutPat, Src2OutPatWmma, MatrixScaleOutSrcPat, MatrixFMTOutPat,
-                        MatrixScaleOutModPat, MatrixReuseOutModPat, ClampPat);
+  dag WmmaOutPat = !con(Src0OutPat, Src1OutPat, Src2OutPatWmma, MatrixScaleOutSrcPat, ClampPat, MatrixFMTOutPat,
+                        MatrixScaleOutModPat, MatrixReuseOutModPat);
 
   dag SwmmacInPat  = !con(Src0InPat, Src1InPat, (ins Src2VT:$srcTiedDef), IndexInPat, MatrixReuseInPat, ClampPat);
-  dag SwmmacOutPat = !con(Src0OutPat, Src1OutPat, (ins Src2VT:$srcTiedDef), IndexOutPat, MatrixReuseOutModPat, ClampPat);
+  dag SwmmacOutPat = !con(Src0OutPat, Src1OutPat, (ins Src2VT:$srcTiedDef), IndexOutPat, ClampPat, MatrixReuseOutModPat);
 
   // wmma pattern where src2 is inline imm uses _threeaddr pseudo,
   // can't use _twoaddr since it would violate src2 tied to vdst constraint.
   dag WmmaInlineInPat  = !con(Src0InPat, Src1InPat, Src2InlineInPat, MatrixScaleInPat, MatrixReuseInPat, ClampPat);
-  dag WmmaInlineOutPat = !con(Src0OutPat, Src1OutPat, Src2InlineOutPat, MatrixScaleOutSrcPat,
-                              MatrixFMTOutPat, MatrixScaleOutModPat, MatrixReuseOutModPat, ClampPat);
+  dag WmmaInlineOutPat = !con(Src0OutPat, Src1OutPat, Src2InlineOutPat, MatrixScaleOutSrcPat, ClampPat,
+                              MatrixFMTOutPat, MatrixScaleOutModPat, MatrixReuseOutModPat);
 }
 
 def WMMAInstInfoTable : GenericTable {
@@ -1751,68 +1752,89 @@ multiclass SWMMACInstGFX12<string Instr, VOP3PWMMA_Profile WMMAProfile, string P
 // Non-standard types (iu8, iu4, fp8, bf8) will be packed in vectors of i32s.
 // Original type for them is in comment on the right and refers to A and B.
 
-def F32_F16_WMMA_w32    : VOP3PWMMA_Profile<[v8f32, v8f16, v8f16, v8f32], 0, 0, 0, 0>;
-def F32_BF16_WMMA_w32   : VOP3PWMMA_Profile<[v8f32, v8i16, v8i16, v8f32], 0, 0, 0, 0>;
-def F16_F16_WMMA_w32    : VOP3PWMMA_Profile<[v8f16, v8f16, v8f16, v8f16], 0, 0, 0, 0>;
-def BF16_BF16_WMMA_w32  : VOP3PWMMA_Profile<[v8i16, v8i16, v8i16, v8i16], 0, 0, 0, 0>;
-def I32_IU8_WMMA_w32    : VOP3PWMMA_Profile<[v8i32, v2i32, v2i32, v8i32], 0, 0, 1, 0>; // 8xi8
-def I32_IU4X16_WMMA_w32 : VOP3PWMMA_Profile<[v8i32,   i32,   i32, v8i32], 0, 0, 1, 0>; // 8xi4
-def F32_FP8BF8_WMMA_w32 : VOP3PWMMA_Profile<[v8f32, v2i32, v2i32, v8f32], 0, 0, 0, 1>; // 8xf8
-def I32_IU4X32_WMMA_w32 : VOP3PWMMA_Profile<[v8i32, v2i32, v2i32, v8i32], 0, 0, 1, 0>; // 16xi4
+def F32_F16_WMMA_w32    : VOP3PWMMA_Profile<[v8f32, v8f16, v8f16, v8f32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8XF32=*/0>;
+def F32_BF16_WMMA_w32   : VOP3PWMMA_Profile<[v8f32, v8i16, v8i16, v8f32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8XF32=*/0>;
+def F16_F16_WMMA_w32    : VOP3PWMMA_Profile<[v8f16, v8f16, v8f16, v8f16], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8XF32=*/0>;
+def BF16_BF16_WMMA_w32  : VOP3PWMMA_Profile<[v8i16, v8i16, v8i16, v8i16], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8XF32=*/0>;
+def I32_IU8_WMMA_w32    : VOP3PWMMA_Profile<[v8i32, v2i32, v2i32, v8i32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/1, /*_IsFP8BF8XF32=*/0>; // 8xi8
+def I32_IU4X16_WMMA_w32 : VOP3PWMMA_Profile<[v8i32,   i32,   i32, v8i32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/1, /*_IsFP8BF8XF32=*/0>; // 8xi4
+def F32_FP8BF8_WMMA_w32 : VOP3PWMMA_Profile<[v8f32, v2i32, v2i32, v8f32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8XF32=*/1>; // 8xf8
+def I32_IU4X32_WMMA_w32 : VOP3PWMMA_Profile<[v8i32, v2i32, v2i32, v8i32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/1, /*_IsFP8BF8XF32=*/0>; // 16xi4
 
-def F32_F16_WMMA_w64    : VOP3PWMMA_Profile<[v4f32, v4f16, v4f16, v4f32], 0, 0, 0, 0>;
-def F32_BF16_WMMA_w64   : VOP3PWMMA_Profile<[v4f32, v4i16, v4i16, v4f32], 0, 0, 0, 0>;
-def F16_F16_WMMA_w64    : VOP3PWMMA_Profile<[v4f16, v4f16, v4f16, v4f16], 0, 0, 0, 0>;
-def BF16_BF16_WMMA_w64  : VOP3PWMMA_Profile<[v4i16, v4i16, v4i16, v4i16], 0, 0, 0, 0>;
-def I32_IU8_WMMA_w64    : VOP3PWMMA_Profile<[v4i32,   i32,   i32, v4i32], 0, 0, 1, 0>; // 4xi8
-def I32_IU4X16_WMMA_w64 : VOP3PWMMA_Profile<[v4i32,   i32,   i32, v4i32], 0, 0, 1, 0>; // 8xi4 *
-def F32_FP8BF8_WMMA_w64 : VOP3PWMMA_Profile<[v4f32,   i32,   i32, v4f32], 0, 0, 0, 1>; // 4xf8
-def I32_IU4X32_WMMA_w64 : VOP3PWMMA_Profile<[v4i32,   i32,   i32, v4i32], 0, 0, 1, 0>; // 8xi4
+def F32_F16_WMMA_w64    : VOP3PWMMA_Profile<[v4f32, v4f16, v4f16, v4f32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8XF32=*/0>;
+def F32_BF16_WMMA_w64   : VOP3PWMMA_Profile<[v4f32, v4i16, v4i16, v4f32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8XF32=*/0>;
+def F16_F16_WMMA_w64    : VOP3PWMMA_Profile<[v4f16, v4f16, v4f16, v4f16], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8XF32=*/0>;
+def BF16_BF16_WMMA_w64  : VOP3PWMMA_Profile<[v4i16, v4i16, v4i16, v4i16], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8XF32=*/0>;
+def I32_IU8_WMMA_w64    : VOP3PWMMA_Profile<[v4i32,   i32,   i32, v4i32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/1, /*_IsFP8BF8XF32=*/0>; // 4xi8
+def I32_IU4X16_WMMA_w64 : VOP3PWMMA_Profile<[v4i32,   i32,   i32, v4i32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/1, /*_IsFP8BF8XF32=*/0>; // 8xi4 *
+def F32_FP8BF8_WMMA_w64 : VOP3PWMMA_Profile<[v4f32,   i32,   i32, v4f32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8XF32=*/1>; // 4xf8
+def I32_IU4X32_WMMA_w64 : VOP3PWMMA_Profile<[v4i32,   i32,   i32, v4i32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/1, /*_IsFP8BF8XF32=*/0>; // 8xi4
 
-def F32_F16_SWMMAC_w32    : VOP3PWMMA_Profile<[v8f32, v8f16, v16f16, v8f32], 1, 16, 0, 0>;
-def F32_BF16_SWMMAC_w32   : VOP3PWMMA_Profile<[v8f32, v8i16, v16i16, v8f32], 1, 16, 0, 0>;
-def F16_F16_SWMMAC_w32    : VOP3PWMMA_Profile<[v8f16, v8f16, v16f16, v8f16], 1, 16, 0, 0>;
-def BF16_BF16_SWMMAC_w32  : VOP3PWMMA_Profile<[v8i16, v8i16, v16i16, v8i16], 1, 16, 0, 0>;
-def I32_IU8_SWMMAC_w32    : VOP3PWMMA_Profile<[v8i32, v2i32,  v4i32, v8i32], 1, 16, 1, 0>; // 8xi8, 16xi8
-def I32_IU4X32_SWMMAC_w32 : VOP3PWMMA_Profile<[v8i32,   i32,  v2i32, v8i32], 1, 16, 1, 0>; // 8xi4, 16xi4
-def I32_IU4X64_SWMMAC_w32 : VOP3PWMMA_Profile<[v8i32, v2i32,  v4i32, v8i32], 1,  0, 1, 0>; // 16xi4, 32xi4 **
-def F32_FP8BF8_SWMMAC_w32 : VOP3PWMMA_Profile<[v8f32, v2i32,  v4i32, v8f32], 1, 16, 0, 1>; // 8xf8, 16xf8
+def F32_F16_SWMMAC_w32    : VOP3PWMMA_Profile<[v8f32, v8f16, v16f16, v8f32], /*_IsSWMMAC=*/1, /*_IndexType=*/16, /*_IsIU=*/0, /*_IsFP8BF8XF32=*/0>;
+def F32_BF16_SWMMAC_w32   : VOP3PWMMA_Profile<[v8f32, v8i16, v16i16, v8f32], /*_IsSWMMAC=*/1, /*_IndexType=*/16, /*_IsIU=*/0, /*_IsFP8BF8XF32=*/0>;
+def F16_F16_SWMMAC_w32    : VOP3PWMMA_Profile<[v8f16, v8f16, v16f16, v8f16], /*_IsSWMMAC=*/1, /*_IndexType=*/16, /*_IsIU=*/0, /*_IsFP8BF8XF32=*/0>;
+def BF16_BF16_SWMMAC_w32  : VOP3PWMMA_Profile<[v8i16, v8i16, v16i16, v8i16], /*_IsSWMMAC=*/1, /*_IndexType=*/16, /*_IsIU=*/0, /*_IsFP8BF8XF32=*/0>;
+def I32_IU8_SWMMAC_w32    : VOP3PWMMA_Profile<[v8i32, v2i32,  v4i32, v8i32], /*_IsSWMMAC=*/1, /*_IndexType=*/16, /*_IsIU=*/1, /*_IsFP8BF8XF32=*/0>; // 8xi8, 16xi8
+def I32_IU4X32_SWMMAC_w32 : VOP3PWMMA_Profile<[v8i32,   i32,  v2i32, v8i32], /*_IsSWMMAC=*/1, /*_IndexType=*/16, /*_IsIU=*/1, /*_IsFP8BF8XF32=*/0>; // 8xi4, 16xi4
+def I32_IU4X64_SWMMAC_w32 : VOP3PWMMA_Profile<[v8i32, v2i32,  v4i32, v8i32], /*_IsSWMMAC=*/1, /*_IndexType=*/0,  /*_IsIU=*/1, /*_IsFP8BF8XF32=*/0>; // 16xi4, 32xi4 **
+def F32_FP8BF8_SWMMAC_w32 : VOP3PWMMA_Profile<[v8f32, v2i32,  v4i32, v8f32], /*_IsSWMMAC=*/1, /*_IndexType=*/16, /*_IsIU=*/0, /*_IsFP8BF8XF32=*/1>; // 8xf8, 16xf8
 
-def F32_F16_SWMMAC_w64    : VOP3PWMMA_Profile<[v4f32, v4f16, v8f16, v4f32], 1,  8, 0, 0>;
-def F32_BF16_SWMMAC_w64   : VOP3PWMMA_Profile<[v4f32, v4i16, v8i16, v4f32], 1,  8, 0, 0>;
-def F16_F16_SWMMAC_w64    : VOP3PWMMA_Profile<[v4f16, v4f16, v8f16, v4f16], 1,  8, 0, 0>;
-def BF16_BF16_SWMMAC_w64  : VOP3PWMMA_Profile<[v4i16, v4i16, v8i16, v4i16], 1,  8, 0, 0>;
-def I32_IU8_SWMMAC_w64    : VOP3PWMMA_Profile<[v4i32,   i32, v2i32, v4i32], 1,  8, 1, 0>; // 4xi8, 8xi8
-def I32_IU4X32_SWMMAC_w64 : VOP3PWMMA_Profile<[v4i32,   i32,   i32, v4i32], 1, 16, 1, 0>; // 8xi4, 8xi4 ***
-def I32_IU4X64_SWMMAC_w64 : VOP3PWMMA_Profile<[v4i32,   i32, v2i32, v4i32], 1, 16, 1, 0>; // 8xi4, 16xi4
-def F32_FP8BF8_SWMMAC_w64 : VOP3PWMMA_Profile<[v4f32,   i32, v2i32, v4f32], 1,  8, 0, 1>; // 4xf8, 8xf8
+def F32_F16_SWMMAC_w64    : VOP3PWMMA_Profile<[v4f32, v4f16, v8f16, v4f32], /*_IsSWMMAC=*/1, /*_IndexType=*/8,  /*_IsIU=*/0, /*_IsFP8BF8XF32=*/0>;
+def F32_BF16_SWMMAC_w64   : VOP3PWMMA_Profile<[v4f32, v4i16, v8i16, v4f32], /*_IsSWMMAC=*/1, /*_IndexType=*/8,  /*_IsIU=*/0, /*_IsFP8BF8XF32=*/0>;
+def F16_F16_SWMMAC_w64    : VOP3PWMMA_Profile<[v4f16, v4f16, v8f16, v4f16], /*_IsSWMMAC=*/1, /*_IndexType=*/8,  /*_IsIU=*/0, /*_IsFP8BF8XF32=*/0>;
+def BF16_BF16_SWMMAC_w64  : VOP3PWMMA_Profile<[v4i16, v4i16, v8i16, v4i16], /*_IsSWMMAC=*/1, /*_IndexType=*/8,  /*_IsIU=*/0, /*_IsFP8BF8XF32=*/0>;
+def I32_IU8_SWMMAC_w64    : VOP3PWMMA_Profile<[v4i32,   i32, v2i32, v4i32], /*_IsSWMMAC=*/1, /*_IndexType=*/8,  /*_IsIU=*/1, /*_IsFP8BF8XF32=*/0>; // 4xi8, 8xi8
+def I32_IU4X32_SWMMAC_w64 : VOP3PWMMA_Profile<[v4i32,   i32,   i32, v4i32], /*_IsSWMMAC=*/1, /*_IndexType=*/16, /*_IsIU=*/1, /*_IsFP8BF8XF32=*/0>; // 8xi4, 8xi4 ***
+def I32_IU4X64_SWMMAC_w64 : VOP3PWMMA_Profile<[v4i32,   i32, v2i32, v4i32], /*_IsSWMMAC=*/1, /*_IndexType=*/16, /*_IsIU=*/1, /*_IsFP8BF8XF32=*/0>; // 8xi4, 16xi4
+def F32_FP8BF8_SWMMAC_w64 : VOP3PWMMA_Profile<[v4f32,   i32, v2i32, v4f32], /*_IsSWMMAC=*/1, /*_IndexType=*/8,  /*_IsIU=*/0, /*_IsFP8BF8XF32=*/1>; // 4xf8, 8xf8
 
 // *   IU4X16_WMMA_w64 lanes 0-31 will have 8xi4, remaining lanes are ignored
 // **  IU4X64_SWMMAC_w32 index is i32, index_key is not used
 // *** IU4X32_SWMMAC_w64 lanes 0-31 will have 8xi4 remaining lanes are ignored
 //                       for matrix A, index is i16; Matrix B uses all lanes
 
-def F32_F32_WMMA_w32             : VOP3PWMMA_Profile<[v8f32, v2f32, v2f32, v8f32], 0, 0, 0, 0, 1, 0, 0, 0, 1>;
-def F32_BF16X32_WMMA_w32         : VOP3PWMMA_Profile<[v8f32, v16bf16, v16bf16, v8f32], 0, 0, 0, 0, 1, 0, 0, 0, 1>;
-def F32_F16X32_WMMA_w32          : VOP3PWMMA_Profile<[v8f32, v16f16, v16f16, v8f32], 0, 0, 0, 0, 1, 0, 0, 0, 1>;
-def F16_F16X32_WMMA_w32          : VOP3PWMMA_Profile<[v8f16, v16f16, v16f16, v8f16], 0, 0, 0, 0, 1, 0, 0, 0, 1>;
-def BF16_BF16X32_WMMA_w32        : VOP3PWMMA_Profile<[v8bf16, v16bf16, v16bf16, v8bf16], 0, 0, 0, 0, 1, 0, 0, 0, 1>;
-def BF16F32_BF16_WMMA_w32        : VOP3PWMMA_Profile<[v8bf16, v16bf16, v16bf16, v8f32], 0, 0, 0, 0, 1, 0, 0, 0, 1>;
-def F32_FP8BF8X64_WMMA_w32       : VOP3PWMMA_Profile<[v8f32, v8i32, v8i32, v8f32], 0, 0, 0, 1, 1, 0, 0, 0, 1>;
-def F32_FP8BF8X128_WMMA_w32      : VOP3PWMMA_Profile<[v8f32, v16i32, v16i32, v8f32], 0, 0, 0, 1, 1, 0, 0, 0, 1>;
-def F16_FP8BF8X64_WMMA_w32       : VOP3PWMMA_Profile<[v8f16, v8i32, v8i32, v8f16], 0, 0, 0, 1, 1, 0, 0, 0, 1>;
-def F16_FP8BF8X128_WMMA_w32      : VOP3PWMMA_Profile<[v8f16, v16i32, v16i32, v8f16], 0, 0, 0, 1, 1, 0, 0, 0, 1>;
-def F32_32X16X128_F4_WMMA_w32    : VOP3PWMMA_Profile<[v16f32, v16i32, v8i32, v16f32], 0, 0, 0, 0, 1, 0, 0, 0, 0, 1>;
-def I32_IU8X64_WMMA_w32          : VOP3PWMMA_Profile<[v8i32, v8i32, v8i32, v8i32], 0, 0, 1, 0, 1, 0, 0, 0, 1>;
-def F32_32X16X128_F4_SCALE_w32   : VOP3PWMMA_Profile<[v16f32, v16i32,  v8i32,  v16f32], 0, 0, 0, 1, 1, 0, 1, 0, 1>;
-def F32_32X16X128_F4_SCALE16_w32 : VOP3PWMMA_Profile<[v16f32, v16i32,  v8i32,  v16f32], 0, 0, 0, 1, 1, 0, 1, 1, 1>;
-def F32_F16X64_SWMMAC_w32        : VOP3PWMMA_Profile<[v8f32, v16f16, v32f16, v8f32], 1, 16, 0, 0, 1, 0, 0, 0, 1>;
-def F32_BF16X64_SWMMAC_w32       : VOP3PWMMA_Profile<[v8f32, v16bf16, v32bf16, v8f32], 1, 16, 0, 0, 1, 0, 0, 0, 1>;
-def F16_F16X64_SWMMAC_w32        : VOP3PWMMA_Profile<[v8f16, v16f16, v32f16, v8f16], 1, 16, 0, 0, 1, 0, 0, 0, 1>;
-def BF16_BF16X64_SWMMAC_w32      : VOP3PWMMA_Profile<[v8bf16, v16bf16, v32bf16, v8bf16], 1, 16, 0, 0, 1, 0, 0, 0, 1>;
-def F32_FP8BF8X128_SWMMAC_w32    : VOP3PWMMA_Profile<[v8f32, v8i32,  v16i32, v8f32], 1, 32, 0, 1, 1, 0, 0, 0, 1>;
-def F16_FP8BF8X128_SWMMAC_w32    : VOP3PWMMA_Profile<[v8f16, v8i32,  v16i32, v8f16], 1, 32, 0, 1, 1, 0, 0, 0, 1>;
-def I32_IU8X128_SWMMAC_w32       : VOP3PWMMA_Profile<[v8i32, v8i32,  v16i32, v8i32], 1, 32, 1, 0, 1, 0, 0, 0, 1>;
+def F32_F32_WMMA_w32             : VOP3PWMMA_Profile<[v8f32, v2f32,    v2f32,    v8f32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8XF32=*/0,
+                                     /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
+def F32_BF16X32_WMMA_w32         : VOP3PWMMA_Profile<[v8f32, v16bf16,  v16bf16,  v8f32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8XF32=*/0,
+                                     /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
+def F32_F16X32_WMMA_w32          : VOP3PWMMA_Profile<[v8f32, v16f16,   v16f16,   v8f32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8XF32=*/0,
+                                     /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
+def F16_F16X32_WMMA_w32          : VOP3PWMMA_Profile<[v8f16, v16f16,   v16f16,   v8f16], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8XF32=*/0,
+                                     /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
+def BF16_BF16X32_WMMA_w32        : VOP3PWMMA_Profile<[v8bf16, v16bf16, v16bf16, v8bf16], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8XF32=*/0,
+                                     /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
+def BF16F32_BF16_WMMA_w32        : VOP3PWMMA_Profile<[v8bf16, v16bf16, v16bf16,  v8f32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8XF32=*/0,
+                                     /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
+def F32_FP8BF8X64_WMMA_w32       : VOP3PWMMA_Profile<[v8f32, v8i32,    v8i32,    v8f32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8XF32=*/1,
+                                     /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
+def F32_FP8BF8X128_WMMA_w32      : VOP3PWMMA_Profile<[v8f32, v16i32,   v16i32,   v8f32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8XF32=*/1,
+                                     /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
+def F16_FP8BF8X64_WMMA_w32       : VOP3PWMMA_Profile<[v8f16, v8i32,    v8i32,    v8f16], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8XF32=*/1,
+                                     /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
+def F16_FP8BF8X128_WMMA_w32      : VOP3PWMMA_Profile<[v8f16, v16i32,   v16i32,   v8f16], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8XF32=*/1,
+                                     /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
+def F32_32X16X128_F4_WMMA_w32    : VOP3PWMMA_Profile<[v16f32, v16i32,  v8i32,   v16f32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/0, /*_IsFP8BF8XF32=*/0,
+                                     /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/0, /*_IsF4=*/1>;
+def I32_IU8X64_WMMA_w32          : VOP3PWMMA_Profile<[v8i32, v8i32,    v8i32,    v8i32], /*_IsSWMMAC=*/0, /*_IndexType=*/0, /*_IsIU=*/1, /*_IsFP8BF8XF32=*/0,
+                                     /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
+def F32_32X16X128_F4_SCALE_w32   : VOP3PWMMA_Profile<[v16f32, v16i32,  v8i32,   v16f32], /*_IsSWMMAC=*/0, /*_IndexType=*/0,  /*_IsIU=*/0, /*_IsFP8BF8XF32=*/1,
+                                     /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/1, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
+def F32_32X16X128_F4_SCALE16_w32 : VOP3PWMMA_Profile<[v16f32, v16i32,  v8i32,   v16f32], /*_IsSWMMAC=*/0, /*_IndexType=*/0,  /*_IsIU=*/0, /*_IsFP8BF8XF32=*/1,
+                                     /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/1, /*_Scale16=*/1, /*_HasMatrixReuse=*/1>;
+def F32_F16X64_SWMMAC_w32        : VOP3PWMMA_Profile<[v8f32, v16f16,   v32f16,   v8f32], /*_IsSWMMAC=*/1, /*_IndexType=*/16, /*_IsIU=*/0, /*_IsFP8BF8XF32=*/0,
+                                     /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
+def F32_BF16X64_SWMMAC_w32       : VOP3PWMMA_Profile<[v8f32, v16bf16,  v32bf16,  v8f32], /*_IsSWMMAC=*/1, /*_IndexType=*/16, /*_IsIU=*/0, /*_IsFP8BF8XF32=*/0,
+                                     /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
+def F16_F16X64_SWMMAC_w32        : VOP3PWMMA_Profile<[v8f16, v16f16,   v32f16,   v8f16], /*_IsSWMMAC=*/1, /*_IndexType=*/16, /*_IsIU=*/0, /*_IsFP8BF8XF32=*/0,
+                                     /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
+def BF16_BF16X64_SWMMAC_w32      : VOP3PWMMA_Profile<[v8bf16, v16bf16, v32bf16, v8bf16], /*_IsSWMMAC=*/1, /*_IndexType=*/16, /*_IsIU=*/0, /*_IsFP8BF8XF32=*/0,
+                                     /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
+def F32_FP8BF8X128_SWMMAC_w32    : VOP3PWMMA_Profile<[v8f32, v8i32,    v16i32,   v8f32], /*_IsSWMMAC=*/1, /*_IndexType=*/32, /*_IsIU=*/0, /*_IsFP8BF8XF32=*/1,
+                                     /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
+def F16_FP8BF8X128_SWMMAC_w32    : VOP3PWMMA_Profile<[v8f16, v8i32,    v16i32,   v8f16], /*_IsSWMMAC=*/1, /*_IndexType=*/32, /*_IsIU=*/0, /*_IsFP8BF8XF32=*/1,
+                                     /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
+def I32_IU8X128_SWMMAC_w32       : VOP3PWMMA_Profile<[v8i32, v8i32,    v16i32,   v8i32], /*_IsSWMMAC=*/1, /*_IndexType=*/32, /*_IsIU=*/1, /*_IsFP8BF8XF32=*/0,
+                                     /*_Has_ImodOp=*/1, /*_HasMatrixFMT=*/0, /*_HasMatrixScale=*/0, /*_Scale16=*/0, /*_HasMatrixReuse=*/1>;
 
 // Helper class to compute the destination vector type of WMMA_F8F6F4 instructions based on element type and dimensions.
 class getWMMAF8F6F4DstVTy<ValueType DstEltTy, int M, int N> {
@@ -2236,7 +2258,7 @@ class VOP3PX2e <bits<8> op, bits<8> LdScaleOp, VOP3PWMMA_Profile P> : Enc128, VO
   let Inst{23-16} = LdScaleOp;
   let Inst{40-32} = scale_src0;
   let Inst{49-41} = scale_src1;
-  let Inst{58-50} = 0x100; // scale src2 = vgpr0 (dummy)
+  let Inst{58-50} = ?; // scale src2
   let Inst{59}    = matrix_b_scale{0}; // scale_op_sel_hi(0)
   let Inst{60}    = 0;                 // scale_op_sel_hi(1)
   let Inst{63-61} = {0, matrix_a_scale_fmt{1-0}}; // neg (lo)
@@ -2255,9 +2277,9 @@ class VOP3PX2e <bits<8> op, bits<8> LdScaleOp, VOP3PWMMA_Profile P> : Enc128, VO
 
   let Inst{87-80} = op;
   let Inst{95-88} = 0xcc; //encoding
-  let Inst{104-96} = !if(P.HasSrc0, src0, 0);
-  let Inst{113-105} = !if(P.HasSrc1, src1, 0);
-  let Inst{122-114} = !if(P.HasSrc2, src2, 0);
+  let Inst{104-96} = !if(P.HasSrc0, src0, ?);
+  let Inst{113-105} = !if(P.HasSrc1, src1, ?);
+  let Inst{122-114} = !if(P.HasSrc2, src2, ?);
 
   // neg_lo
   let Inst{125} = !if(P.NegLo01, src0_modifiers{0}, 0);
@@ -2266,11 +2288,13 @@ class VOP3PX2e <bits<8> op, bits<8> LdScaleOp, VOP3PWMMA_Profile P> : Enc128, VO
 }
 
 multiclass VOP3PX2_Real_ScaledWMMA_F4<string Gen, bits<8> op, bits<8> LdScaleOp, VOP3PWMMA_Profile WMMAP> {
-   defvar PS = !cast<VOP3P_Pseudo>(NAME # "_twoaddr");
-   if !eq(Gen, "gfx1250") then {
-     def _gfx1250 : VOP3P_Real_Gen<PS, GFX1250Gen, PS.Mnemonic>,
-                    VOP3PX2e <op, LdScaleOp, WMMAP>;
-   }
+  defvar PS = !cast<VOP3P_Pseudo>(NAME # "_twoaddr");
+  if !eq(Gen, "gfx1250") then {
+    def _gfx1250 : VOP3P_Real_Gen<PS, GFX1250Gen, PS.Mnemonic>,
+                   VOP3PX2e <op, LdScaleOp, WMMAP> {
+      let PostEncoderMethod = "postEncodeVOP3<true, true, false>";
+    }
+  }
 }
 
 multiclass VOP3PX2_Real_ScaledWMMA<string Gen, bits<8> op, bits<8> LdScaleOp, VOP3PWMMA_Profile WMMAP> {
@@ -2282,6 +2306,7 @@ multiclass VOP3PX2_Real_ScaledWMMA<string Gen, bits<8> op, bits<8> LdScaleOp, VO
                    VOP3PX2e <op, LdScaleOp, WMMAP>,
                    MFMA_F8F6F4_WithSizeTable_Helper<PS, psName # "_f8_f8_w32_" # Gen> {
       let AsmString = asmName # PS.AsmOperands;
+      let PostEncoderMethod = "postEncodeVOP3<true, true, false>";
     }
   }
 }
@@ -2451,15 +2476,6 @@ multiclass VOP3P_Real_with_name_gfx12<bits<8> op,
                           string asmName = !cast<VOP3P_Pseudo>(NAME).Mnemonic> :
   VOP3P_Real_with_name<GFX12Gen, op, backing_ps_name, asmName>;
 
-multiclass VOP3P_Real_LD_SCALE_gfx1250<bits<8> op> {
-  defvar ps = !cast<VOP3P_Pseudo>(NAME);
-  def _gfx1250 :
-    VOP3P_Real_Gen<ps, GFX1250Gen, ps.Mnemonic>,
-    VOP3Pe_gfx11_gfx12<op, ps.Pfl> {
-      let Inst{58-50} = 0x100; // scale src2 = vgpr0 (dummy)
-    }
-}
-
 defm V_PK_MIN_NUM_F16 : VOP3P_Real_with_name_gfx12<0x1b, "V_PK_MIN_F16", "v_pk_min_num_f16">;
 defm V_PK_MAX_NUM_F16 : VOP3P_Real_with_name_gfx12<0x1c, "V_PK_MAX_F16", "v_pk_max_num_f16">;
 
@@ -2489,8 +2505,10 @@ defm V_FMA_MIX_F32_BF16 : VOP3P_Realtriple<GFX1250Gen, 0x3d>;
 defm V_FMA_MIXLO_BF16   : VOP3P_Realtriple<GFX1250Gen, 0x3e>;
 defm V_FMA_MIXHI_BF16   : VOP3P_Realtriple<GFX1250Gen, 0x3f>;
 
-defm V_WMMA_LD_SCALE_PAIRED_B32   : VOP3P_Real_LD_SCALE_gfx1250<0x35>;
-defm V_WMMA_LD_SCALE16_PAIRED_B64 : VOP3P_Real_LD_SCALE_gfx1250<0x3a>;
+let PostEncoderMethod = "postEncodeVOP3<true, true, false>" in {
+  defm V_WMMA_LD_SCALE_PAIRED_B32   : VOP3P_Real_gfx1250<0x35>;
+  defm V_WMMA_LD_SCALE16_PAIRED_B64 : VOP3P_Real_gfx1250<0x3a>;
+}
 
 let AssemblerPredicate = isGFX1250Plus in
 def : AMDGPUMnemonicAlias<"v_fma_mix_f32_f16",  "v_fma_mix_f32">;

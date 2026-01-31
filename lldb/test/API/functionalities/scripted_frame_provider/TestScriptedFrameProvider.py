@@ -638,3 +638,148 @@ class ScriptedFrameProviderTestCase(TestBase):
         frame2 = thread.GetFrameAtIndex(2)
         self.assertIsNotNone(frame2)
         self.assertIn("thread_func", frame2.GetFunctionName())
+
+    def test_chained_frame_providers(self):
+        """Test that multiple frame providers chain together."""
+        self.build()
+        target, process, thread, bkpt = lldbutil.run_to_source_breakpoint(
+            self, "Break here", lldb.SBFileSpec(self.source), only_one_thread=False
+        )
+
+        # Get original frame count.
+        original_frame_count = thread.GetNumFrames()
+        self.assertGreaterEqual(
+            original_frame_count, 2, "Should have at least 2 real frames"
+        )
+
+        # Import the test frame providers.
+        script_path = os.path.join(self.getSourceDir(), "test_frame_providers.py")
+        self.runCmd("command script import " + script_path)
+
+        # Register 3 providers with different priorities.
+        # Each provider adds 1 frame at the beginning.
+        error = lldb.SBError()
+
+        # Provider 1: Priority 10 - adds "foo" frame
+        provider_id_1 = target.RegisterScriptedFrameProvider(
+            "test_frame_providers.AddFooFrameProvider",
+            lldb.SBStructuredData(),
+            error,
+        )
+        self.assertTrue(error.Success(), f"Failed to register foo provider: {error}")
+
+        # Provider 2: Priority 20 - adds "bar" frame
+        provider_id_2 = target.RegisterScriptedFrameProvider(
+            "test_frame_providers.AddBarFrameProvider",
+            lldb.SBStructuredData(),
+            error,
+        )
+        self.assertTrue(error.Success(), f"Failed to register bar provider: {error}")
+
+        # Provider 3: Priority 30 - adds "baz" frame
+        provider_id_3 = target.RegisterScriptedFrameProvider(
+            "test_frame_providers.AddBazFrameProvider",
+            lldb.SBStructuredData(),
+            error,
+        )
+        self.assertTrue(error.Success(), f"Failed to register baz provider: {error}")
+
+        # Verify we have 3 more frames (one from each provider).
+        new_frame_count = thread.GetNumFrames()
+        self.assertEqual(
+            new_frame_count,
+            original_frame_count + 3,
+            "Should have original frames + 3 chained frames",
+        )
+
+        # Verify the chaining order: baz, bar, foo, then real frames.
+        # Since priority is lower = higher, the order should be:
+        # Provider 1 (priority 10) transforms real frames first -> adds "foo"
+        # Provider 2 (priority 20) transforms Provider 1's output -> adds "bar"
+        # Provider 3 (priority 30) transforms Provider 2's output -> adds "baz"
+        # So final stack is: baz, bar, foo, real frames...
+
+        frame0 = thread.GetFrameAtIndex(0)
+        self.assertIsNotNone(frame0)
+        self.assertEqual(
+            frame0.GetFunctionName(),
+            "baz",
+            "Frame 0 should be 'baz' from last provider in chain",
+        )
+        self.assertEqual(frame0.GetPC(), 0xBAC)
+
+        frame1 = thread.GetFrameAtIndex(1)
+        self.assertIsNotNone(frame1)
+        self.assertEqual(
+            frame1.GetFunctionName(),
+            "bar",
+            "Frame 1 should be 'bar' from second provider in chain",
+        )
+        self.assertEqual(frame1.GetPC(), 0xBAA)
+
+        frame2 = thread.GetFrameAtIndex(2)
+        self.assertIsNotNone(frame2)
+        self.assertEqual(
+            frame2.GetFunctionName(),
+            "foo",
+            "Frame 2 should be 'foo' from first provider in chain",
+        )
+        self.assertEqual(frame2.GetPC(), 0xF00)
+
+        # Frame 3 should be the original real frame 0.
+        frame3 = thread.GetFrameAtIndex(3)
+        self.assertIsNotNone(frame3)
+        self.assertIn("thread_func", frame3.GetFunctionName())
+
+    def test_get_values(self):
+        """Test a frame that provides values."""
+        self.build()
+        # Set the breakpoint after the variable_in_main variable exists and can be queried.
+        target, process, thread, bkpt = lldbutil.run_to_line_breakpoint(
+            self, lldb.SBFileSpec(self.source), 35, only_one_thread=False
+        )
+
+        # Get original frame count.
+        original_frame_count = thread.GetNumFrames()
+        self.assertGreaterEqual(
+            original_frame_count, 2, "Should have at least 2 real frames"
+        )
+
+        # Import the test frame providers.
+        script_path = os.path.join(self.getSourceDir(), "test_frame_providers.py")
+        self.runCmd("command script import " + script_path)
+
+        # Register a provider that can provide variables.
+        error = lldb.SBError()
+        target.RegisterScriptedFrameProvider(
+            "test_frame_providers.ValueProvidingFrameProvider",
+            lldb.SBStructuredData(),
+            error,
+        )
+        self.assertTrue(error.Success(), f"Failed to register provider: {error}")
+
+        # Verify we have 1 more frame.
+        new_frame_count = thread.GetNumFrames()
+        self.assertEqual(
+            new_frame_count,
+            original_frame_count + 1,
+            "Should have original frames + 1 extra frames",
+        )
+
+        # Check that we can get variables from this frame.
+        frame0 = thread.GetFrameAtIndex(0)
+        self.assertIsNotNone(frame0)
+        # Get every variable visible at this point
+        variables = frame0.GetVariables(True, True, True, False)
+        self.assertTrue(variables.IsValid() and variables.GetSize() == 1)
+
+        # Check that we can get values from paths. `_handler_one` is a special
+        # value we provide through only our expression handler in the frame
+        # implementation.
+        one = frame0.GetValueForVariablePath("_handler_one")
+        self.assertEqual(one.unsigned, 1)
+        var = frame0.GetValueForVariablePath("variable_in_main")
+        # The names won't necessarily match, but the values should (the frame renames the SBValue)
+        self.assertEqual(var.unsigned, variables.GetValueAtIndex(0).unsigned)
+        varp1 = frame0.GetValueForVariablePath("variable_in_main + 1")
+        self.assertEqual(varp1.unsigned, 124)

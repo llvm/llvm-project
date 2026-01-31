@@ -258,7 +258,7 @@ public:
   /// thread.
   ///
   /// \return
-  ///   \b true if there was a command in progress to recieve the interrupt.
+  ///   \b true if there was a command in progress to receive the interrupt.
   ///   \b false if there's no command currently in flight.
   bool InterruptCommand();
 
