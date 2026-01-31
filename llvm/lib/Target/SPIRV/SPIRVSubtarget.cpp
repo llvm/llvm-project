@@ -173,6 +173,25 @@ void SPIRVSubtarget::initAvailableExtInstSets() {
   accountForAMDShaderTrinaryMinmax();
 }
 
+void SPIRVSubtarget::resolveEnvFromModule(const Module &M) {
+  if (Env != Unknown)
+    return;
+
+  bool HasShaderAttr = false;
+  for (const Function &F : M) {
+    if (F.getFnAttribute("hlsl.shader").isValid()) {
+      HasShaderAttr = true;
+      break;
+    }
+  }
+
+  Env = HasShaderAttr ? Shader : Kernel;
+
+  // Reinitialize Env-dependent state: ext inst sets and legalizer info.
+  initAvailableExtInstSets();
+  Legalizer = std::make_unique<SPIRVLegalizerInfo>(*this);
+}
+
 // Set available extensions after SPIRVSubtarget is created.
 void SPIRVSubtarget::initAvailableExtensions(
     const std::set<SPIRV::Extension::Extension> &AllowedExtIds) {
