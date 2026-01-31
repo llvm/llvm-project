@@ -680,7 +680,8 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
           const auto &lowerOptIntExpr{std::get<0>(boundsArray->t)};
           const auto &upperIntExpr{std::get<1>(boundsArray->t)};
           
-          int64_t boundsArraySize{-1};
+          int64_t upperBoundsArraySize{-1};
+          int64_t lowerBoundsArraySize{-1};
           
           // Try to get size from upper bounds (always present)
           if (const auto *upperExpr{GetExpr(context, upperIntExpr)}) {
@@ -688,7 +689,7 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
               if (auto shape{evaluate::GetShape(context.foldingContext(), *upperExpr)}) {
                 if (shape->size() == 1 && (*shape)[0]) {
                   if (auto extent{evaluate::ToInt64(*(*shape)[0])}) {
-                    boundsArraySize = *extent;
+                    upperBoundsArraySize = *extent;
                   }
                 }
               }
@@ -696,13 +697,13 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
           }
           
           // If upper was scalar, try to get size from lower bounds
-          if (boundsArraySize < 0 && lowerOptIntExpr) {
+          if (lowerOptIntExpr) {
             if (const auto *lowerExpr{GetExpr(context, *lowerOptIntExpr)}) {
               if (lowerExpr->Rank() == 1) {
                 if (auto shape{evaluate::GetShape(context.foldingContext(), *lowerExpr)}) {
                   if (shape->size() == 1 && (*shape)[0]) {
                     if (auto extent{evaluate::ToInt64(*(*shape)[0])}) {
-                      boundsArraySize = *extent;
+                      lowerBoundsArraySize = *extent;
                     }
                   }
                 }
@@ -711,10 +712,10 @@ bool AllocationCheckerHelper::RunChecks(SemanticsContext &context) {
           }
           
           // Check if bounds array size matches the object's rank
-          if (boundsArraySize > 0 && boundsArraySize != rank_) {
+          if ((lowerBoundsArraySize == upperBoundsArraySize) && (upperBoundsArraySize > 0) && (upperBoundsArraySize != rank_)) {
             context.Say(name_.source,
                 "ALLOCATE bounds array has %jd elements but allocatable object '%s' has rank %d"_err_en_US,
-                static_cast<std::intmax_t>(boundsArraySize),
+                static_cast<std::intmax_t>(upperBoundsArraySize),
                 name_.source,
                 rank_);
             return false;
