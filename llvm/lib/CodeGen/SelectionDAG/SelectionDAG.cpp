@@ -6559,6 +6559,7 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
   case ISD::CTTZ:
   case ISD::CTTZ_ZERO_UNDEF:
   case ISD::CTPOP:
+  case ISD::CTLS:
   case ISD::STEP_VECTOR: {
     SDValue Ops = {N1};
     if (SDValue Fold = FoldConstantArithmetic(Opcode, DL, VT, Ops))
@@ -6844,6 +6845,10 @@ SDValue SelectionDAG::getNode(unsigned Opcode, const SDLoc &DL, EVT VT,
     if (N1.getValueType().getScalarType() == MVT::i1)
       return getNOT(DL, N1, N1.getValueType());
     break;
+  case ISD::CTLS:
+    if (N1.getValueType().getScalarType() == MVT::i1)
+      return getConstant(0, DL, VT);
+    break;
   case ISD::VECREDUCE_ADD:
     if (N1.getValueType().getScalarType() == MVT::i1)
       return getNode(ISD::VECREDUCE_XOR, DL, VT, N1);
@@ -7094,6 +7099,10 @@ SDValue SelectionDAG::FoldConstantArithmetic(unsigned Opcode, const SDLoc &DL,
       case ISD::CTTZ_ZERO_UNDEF:
         return getConstant(Val.countr_zero(), DL, VT, C->isTargetOpcode(),
                            C->isOpaque());
+      case ISD::CTLS:
+        // CTLS returns the number of extra sign bits so subtract one.
+        return getConstant(Val.getNumSignBits() - 1, DL, VT,
+                           C->isTargetOpcode(), C->isOpaque());
       case ISD::UINT_TO_FP:
       case ISD::SINT_TO_FP: {
         APFloat FPV(VT.getFltSemantics(), APInt::getZero(VT.getSizeInBits()));
@@ -8779,7 +8788,7 @@ static SDValue getMemcpyLoadsAndStores(
                                      *SrcAlign, isVol, CopyFromConstant);
   if (!TLI.findOptimalMemOpLowering(
           C, MemOps, Limit, Op, DstPtrInfo.getAddrSpace(),
-          SrcPtrInfo.getAddrSpace(), MF.getFunction().getAttributes()))
+          SrcPtrInfo.getAddrSpace(), MF.getFunction().getAttributes(), nullptr))
     return SDValue();
 
   if (DstAlignCanChange) {
@@ -8974,7 +8983,7 @@ static SDValue getMemmoveLoadsAndStores(SelectionDAG &DAG, const SDLoc &dl,
           MemOp::Copy(Size, DstAlignCanChange, Alignment, *SrcAlign,
                       /*IsVolatile*/ true),
           DstPtrInfo.getAddrSpace(), SrcPtrInfo.getAddrSpace(),
-          MF.getFunction().getAttributes()))
+          MF.getFunction().getAttributes(), nullptr))
     return SDValue();
 
   if (DstAlignCanChange) {
@@ -9089,10 +9098,12 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
   bool IsZeroVal = isNullConstant(Src);
   unsigned Limit = AlwaysInline ? ~0 : TLI.getMaxStoresPerMemset(OptSize);
 
+  EVT LargestVT;
   if (!TLI.findOptimalMemOpLowering(
           C, MemOps, Limit,
           MemOp::Set(Size, DstAlignCanChange, Alignment, IsZeroVal, isVol),
-          DstPtrInfo.getAddrSpace(), ~0u, MF.getFunction().getAttributes()))
+          DstPtrInfo.getAddrSpace(), ~0u, MF.getFunction().getAttributes(),
+          &LargestVT))
     return SDValue();
 
   if (DstAlignCanChange) {
@@ -9121,10 +9132,13 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
   unsigned NumMemOps = MemOps.size();
 
   // Find the largest store and generate the bit pattern for it.
-  EVT LargestVT = MemOps[0];
-  for (unsigned i = 1; i < NumMemOps; i++)
-    if (MemOps[i].bitsGT(LargestVT))
-      LargestVT = MemOps[i];
+  // If target didn't set LargestVT, compute it from MemOps.
+  if (!LargestVT.isSimple()) {
+    LargestVT = MemOps[0];
+    for (unsigned i = 1; i < NumMemOps; i++)
+      if (MemOps[i].bitsGT(LargestVT))
+        LargestVT = MemOps[i];
+  }
   SDValue MemSetValue = getMemsetValue(Src, LargestVT, DAG, dl);
 
   // Prepare AAInfo for loads/stores after lowering this memset.
@@ -9134,8 +9148,12 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
   for (unsigned i = 0; i < NumMemOps; i++) {
     EVT VT = MemOps[i];
     unsigned VTSize = VT.getSizeInBits() / 8;
+    // The target should specify store types that exactly cover the memset size
+    // (with the last store potentially being oversized for overlapping stores).
+    assert(Size > 0 && "Target specified more stores than needed in "
+                       "findOptimalMemOpLowering");
     if (VTSize > Size) {
-      // Issuing an unaligned load / store pair  that overlaps with the previous
+      // Issuing an unaligned load / store pair that overlaps with the previous
       // pair. Adjust the offset accordingly.
       assert(i == NumMemOps-1 && i != 0);
       DstOff -= VTSize - Size;
@@ -9174,8 +9192,19 @@ static SDValue getMemsetStores(SelectionDAG &DAG, const SDLoc &dl,
         NewAAInfo);
     OutChains.push_back(Store);
     DstOff += VT.getSizeInBits() / 8;
-    Size -= VTSize;
+    // For oversized overlapping stores, only subtract the remaining bytes.
+    // For normal stores, subtract the full store size.
+    if (VTSize > Size) {
+      Size = 0;
+    } else {
+      Size -= VTSize;
+    }
   }
+
+  // After processing all stores, Size should be exactly 0. Any remaining bytes
+  // indicate a bug in the target's findOptimalMemOpLowering implementation.
+  assert(Size == 0 && "Target's findOptimalMemOpLowering did not specify "
+                      "stores that exactly cover the memset size");
 
   return DAG.getNode(ISD::TokenFactor, dl, MVT::Other, OutChains);
 }
@@ -14164,25 +14193,58 @@ BuildVectorSDNode::isConstantSequence() const {
   if (NumOps < 2)
     return std::nullopt;
 
-  if (!isa<ConstantSDNode>(getOperand(0)) ||
-      !isa<ConstantSDNode>(getOperand(1)))
-    return std::nullopt;
-
   unsigned EltSize = getValueType(0).getScalarSizeInBits();
-  APInt Start = getConstantOperandAPInt(0).trunc(EltSize);
-  APInt Stride = getConstantOperandAPInt(1).trunc(EltSize) - Start;
+  APInt Start, Stride;
+  int FirstIdx = -1, SecondIdx = -1;
 
-  if (Stride.isZero())
-    return std::nullopt;
-
-  for (unsigned i = 2; i < NumOps; ++i) {
-    if (!isa<ConstantSDNode>(getOperand(i)))
+  // Find the first two non-undef constant elements to determine Start and
+  // Stride, then verify all remaining elements match the sequence.
+  for (unsigned I = 0; I < NumOps; ++I) {
+    SDValue Op = getOperand(I);
+    if (Op->isUndef())
+      continue;
+    if (!isa<ConstantSDNode>(Op))
       return std::nullopt;
 
-    APInt Val = getConstantOperandAPInt(i).trunc(EltSize);
-    if (Val != (Start + (Stride * i)))
-      return std::nullopt;
+    APInt Val = getConstantOperandAPInt(I).trunc(EltSize);
+    if (FirstIdx < 0) {
+      FirstIdx = I;
+      Start = Val;
+    } else if (SecondIdx < 0) {
+      SecondIdx = I;
+      // Compute stride using modular arithmetic. Simple division would handle
+      // common strides (1, 2, -1, etc.), but modular inverse maximizes matches.
+      // Example: <0, poison, poison, 0xFF> has stride 0x55 since 3*0x55 = 0xFF
+      // Note that modular arithmetic is agnostic to signed/unsigned.
+      unsigned IdxDiff = I - FirstIdx;
+      APInt ValDiff = Val - Start;
+
+      // Step 1: Factor out common powers of 2 from IdxDiff and ValDiff.
+      unsigned CommonPow2Bits = llvm::countr_zero(IdxDiff);
+      if (ValDiff.countr_zero() < CommonPow2Bits)
+        return std::nullopt; // ValDiff not divisible by 2^CommonPow2Bits
+      IdxDiff >>= CommonPow2Bits;
+      ValDiff.lshrInPlace(CommonPow2Bits);
+
+      // Step 2: IdxDiff is now odd, so its inverse mod 2^EltSize exists.
+      // TODO: There are 2^CommonPow2Bits valid strides; currently we only try
+      // one, but we could try all candidates to handle more cases.
+      Stride = ValDiff * APInt(EltSize, IdxDiff).multiplicativeInverse();
+      if (Stride.isZero())
+        return std::nullopt;
+
+      // Step 3: Adjust Start based on the first defined element's index.
+      Start -= Stride * FirstIdx;
+    } else {
+      // Verify this element matches the sequence.
+      if (Val != Start + Stride * I)
+        return std::nullopt;
+    }
   }
+
+  // Need at least two defined elements.
+  if (SecondIdx < 0)
+    return std::nullopt;
 
   return std::make_pair(Start, Stride);
 }

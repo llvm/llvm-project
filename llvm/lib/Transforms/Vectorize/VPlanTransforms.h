@@ -16,6 +16,7 @@
 #include "VPlan.h"
 #include "VPlanVerifier.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/Compiler.h"
 
@@ -35,26 +36,36 @@ struct VFRange;
 LLVM_ABI_FOR_TEST extern cl::opt<bool> VerifyEachVPlan;
 LLVM_ABI_FOR_TEST extern cl::opt<bool> EnableWideActiveLaneMask;
 
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+LLVM_ABI_FOR_TEST extern cl::opt<bool> PrintAfterEachVPlanPass;
+#endif
+
 struct VPlanTransforms {
-  /// Helper to run a VPlan transform \p Transform on \p VPlan, forwarding extra
-  /// arguments to the transform. Returns the boolean returned by the transform.
-  template <typename... ArgsTy>
-  static bool runPass(bool (*Transform)(VPlan &, ArgsTy...), VPlan &Plan,
-                      typename std::remove_reference<ArgsTy>::type &...Args) {
-    bool Res = Transform(Plan, Args...);
-    if (VerifyEachVPlan)
-      verifyVPlanIsValid(Plan);
-    return Res;
+  /// Helper to run a VPlan pass \p Pass on \p VPlan, forwarding extra arguments
+  /// to the pass. Performs verification/printing after each VPlan pass if
+  /// requested via command line options.
+  template <bool EnableVerify = true, typename PassTy, typename... ArgsTy>
+  static decltype(auto) runPass(StringRef PassName, PassTy &&Pass, VPlan &Plan,
+                                ArgsTy &&...Args) {
+    scope_exit PostTransformActions{[&]() {
+#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
+      // Make sure to print before verification, so that output is more useful
+      // in case of failures:
+      if (PrintAfterEachVPlanPass) {
+        dbgs() << "VPlan after " << PassName << '\n';
+        dbgs() << Plan << '\n';
+      }
+#endif
+      if (VerifyEachVPlan && EnableVerify)
+        verifyVPlanIsValid(Plan);
+    }};
+
+    return std::forward<PassTy>(Pass)(Plan, std::forward<ArgsTy>(Args)...);
   }
-  /// Helper to run a VPlan transform \p Transform on \p VPlan, forwarding extra
-  /// arguments to the transform.
-  template <typename... ArgsTy>
-  static void runPass(void (*Fn)(VPlan &, ArgsTy...), VPlan &Plan,
-                      typename std::remove_reference<ArgsTy>::type &...Args) {
-    Fn(Plan, Args...);
-    if (VerifyEachVPlan)
-      verifyVPlanIsValid(Plan);
-  }
+#define RUN_VPLAN_PASS(PASS, ...)                                              \
+  llvm::VPlanTransforms::runPass(#PASS, PASS, __VA_ARGS__)
+#define RUN_VPLAN_PASS_NO_VERIFY(PASS, ...)                                    \
+  llvm::VPlanTransforms::runPass<false>(#PASS, PASS, __VA_ARGS__)
 
   /// Create a base VPlan0, serving as the common starting point for all later
   /// candidates. It consists of an initial plain CFG loop with loop blocks from
