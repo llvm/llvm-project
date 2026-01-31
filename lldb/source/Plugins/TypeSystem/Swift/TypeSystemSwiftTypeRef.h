@@ -614,7 +614,6 @@ protected:
     unsigned char retry_count = 0;
   };
 
-  std::once_flag m_fallback_warning;
   mutable std::mutex m_swift_ast_context_lock;
   /// The "precise" SwiftASTContexts managed by this scratch context. There
   /// exists one per Swift module. The keys in this map are module names.
