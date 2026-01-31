@@ -2051,8 +2051,14 @@ static LogicalResult verifyTensorReshapeOp(TensorReshapeOp op,
 }
 
 LogicalResult ExpandShapeOp::verify() {
-  auto srcType = getSrcType();
-  auto resultType = getResultType();
+  auto srcType = llvm::dyn_cast<RankedTensorType>(getSrc().getType());
+  if (!srcType)
+    return emitOpError("expects ranked tensor source type, but got ")
+           << getSrc().getType();
+  auto resultType = llvm::dyn_cast<RankedTensorType>(getResult().getType());
+  if (!resultType)
+    return emitOpError("expects ranked tensor result type, but got ")
+           << getResult().getType();
 
   if ((int64_t)getStaticOutputShape().size() != resultType.getRank())
     return emitOpError("expected number of static shape dims to be equal to "
@@ -2077,7 +2083,17 @@ LogicalResult CollapseShapeOp::verify() {
                    [](ReassociationIndices group) { return group.empty(); })) {
     return op.emitOpError("reassociation indices must not be empty");
   }
-  return verifyTensorReshapeOp(*this, getSrcType(), getResultType());
+  auto srcType = llvm::dyn_cast<RankedTensorType>(op.getSrc().getType());
+  if (!srcType)
+    return op.emitOpError("expects ranked tensor source type, but got ")
+           << op.getSrc().getType();
+
+  auto resultType = llvm::dyn_cast<RankedTensorType>(op.getResult().getType());
+  if (!resultType)
+    return op.emitOpError("expects ranked tensor result type, but got ")
+           << op.getResult().getType();
+
+  return verifyTensorReshapeOp(op, srcType, resultType);
 }
 
 namespace {
