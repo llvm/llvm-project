@@ -14,6 +14,7 @@
 #include "GCNRegPressure.h"
 #include "AMDGPU.h"
 #include "SIMachineFunctionInfo.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineLoopInfo.h"
 #include "llvm/CodeGen/RegisterPressure.h"
 
@@ -481,6 +482,80 @@ bool GCNRPTracker::isUnitLiveAt(MCRegUnit Unit, SlotIndex SI) const {
   return LR->liveAt(SI);
 }
 
+// Check if all register units of Reg are currently live in PhysLiveRegs.
+bool GCNRPTracker::allRegUnitsLive(Register Reg) const {
+  assert(MRI && "MRI not initialized");
+  const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
+  return llvm::all_of(TRI->regunits(Reg), [&](MCRegUnit Unit) {
+    return PhysLiveRegs.contains(VirtRegOrUnit(Unit)).any();
+  });
+}
+
+// Return true if Reg has any killed units at the given slot index. Otherwise
+// return false.
+bool GCNRPTracker::checkRegKilled(Register Reg, SlotIndex SI) const {
+  assert(MRI && "MRI not initialized");
+  const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
+  return llvm::any_of(TRI->regunits(Reg), [&](MCRegUnit Unit) {
+    return PhysLiveRegs.contains(VirtRegOrUnit(Unit)).any() &&
+           !isUnitLiveAt(Unit, SI);
+  });
+}
+
+// Return true if Reg has any killed units and erase them from PhysLiveRegs.
+bool GCNRPTracker::eraseKilledUnits(Register Reg, SlotIndex SI) {
+  assert(MRI && "MRI not initialized");
+  const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
+  bool IsKilled = false;
+
+  for (MCRegUnit Unit : TRI->regunits(Reg)) {
+    VirtRegOrUnit VRU(Unit);
+    LaneBitmask PrevMask = PhysLiveRegs.contains(VRU);
+    if (PrevMask.any()) {
+      if (!isUnitLiveAt(Unit, SI)) {
+        IsKilled = true;
+        PhysLiveRegs.erase(VRegMaskOrUnit(VRU, LaneBitmask::getAll()));
+      }
+    }
+  }
+  return IsKilled;
+}
+
+// Erase all live units of Reg from PhysLiveRegs.
+bool GCNRPTracker::eraseAllLiveUnits(Register Reg) {
+  assert(MRI && "MRI not initialized");
+  const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
+  bool WasLive = false;
+
+  for (MCRegUnit Unit : TRI->regunits(Reg)) {
+    VirtRegOrUnit VRU(Unit);
+    LaneBitmask PrevMask = PhysLiveRegs.contains(VRU);
+    if (PrevMask.any()) {
+      WasLive = true;
+      PhysLiveRegs.erase(VRegMaskOrUnit(VRU, LaneBitmask::getAll()));
+    }
+  }
+
+  return WasLive;
+}
+
+// Insert a reg-unit into PhysLiveRegs if not already live.
+bool GCNRPTracker::insertAllNotLiveUnits(Register Reg) {
+  assert(MRI && "MRI not initialized");
+  const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
+  bool WasNotLive = false;
+
+  for (MCRegUnit Unit : TRI->regunits(Reg)) {
+    VirtRegOrUnit VRU(Unit);
+    LaneBitmask PrevMask = PhysLiveRegs.contains(VRU);
+    if (PrevMask.none()) {
+      WasNotLive = true;
+      PhysLiveRegs.insert(VRegMaskOrUnit(VRU, LaneBitmask::getAll()));
+    }
+  }
+  return WasNotLive;
+}
+
 LaneBitmask llvm::getLiveLaneMask(const LiveInterval &LI, SlotIndex SI,
                                   const MachineRegisterInfo &MRI,
                                   LaneBitmask LaneMaskFilter) {
@@ -641,16 +716,9 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
       if (!STRI->shouldTrackRegisterForPressure(*MRI, Reg))
         continue;
 
-      // Check if any unit of this register was live before.
-      bool WasLive = false;
-      for (MCRegUnit Unit : TRI->regunits(Reg)) {
-        VirtRegOrUnit VRU(static_cast<MCRegUnit>(Unit));
-        LaneBitmask PrevMask = PhysLiveRegs.contains(VRU);
-        if (PrevMask.any()) {
-          WasLive = true;
-          PhysLiveRegs.erase(VRegMaskOrUnit(VRU, LaneBitmask::getAll()));
-        }
-      }
+      // Check if any unit of this register was live before and erase them.
+      bool WasLive = eraseAllLiveUnits(Reg);
+
       // Update pressure once per register if it was live.
       if (WasLive)
         CurPhysPressure.inc(Reg, LaneBitmask::getAll(), LaneBitmask::getNone(),
@@ -664,16 +732,9 @@ void GCNUpwardRPTracker::recede(const MachineInstr &MI) {
       Register Reg = MO.getReg();
       if (!STRI->shouldTrackRegisterForPressure(*MRI, Reg))
         continue;
-      // Check if any unit of this register was not live before.
-      bool WasNotLive = false;
-      for (MCRegUnit Unit : TRI->regunits(Reg)) {
-        VirtRegOrUnit VRU(static_cast<MCRegUnit>(Unit));
-        LaneBitmask PrevMask = PhysLiveRegs.contains(VRU);
-        if (PrevMask.none()) {
-          WasNotLive = true;
-          PhysLiveRegs.insert(VRegMaskOrUnit(VRU, LaneBitmask::getAll()));
-        }
-      }
+      // Check if any unit of this register was not live before and insert them.
+      bool WasNotLive = insertAllNotLiveUnits(Reg);
+
       // Update pressure once per register if it wasn't live before.
       if (WasNotLive) {
         CurPhysPressure.inc(Reg, LaneBitmask::getNone(), LaneBitmask::getAll(),
@@ -763,7 +824,7 @@ bool GCNDownwardRPTracker::advanceBeforeNext(MachineInstr *MI,
     }
   }
 
-  // Track physical register deaths (only if enabled).
+  // Track physical register kills (only if enabled).
   if (TrackPhysRegs) {
     const TargetRegisterInfo *TRI = MRI->getTargetRegisterInfo();
     const SIRegisterInfo *STRI = static_cast<const SIRegisterInfo *>(TRI);
@@ -778,24 +839,11 @@ bool GCNDownwardRPTracker::advanceBeforeNext(MachineInstr *MI,
           !SeenRegs.insert(Reg).second)
         continue;
 
-      // Check if any unit of this register is dying.
-      bool WasLive = false;
-      bool IsDying = false;
-      for (MCRegUnit Unit : TRI->regunits(Reg)) {
-        VirtRegOrUnit VRU(static_cast<MCRegUnit>(Unit));
-        LaneBitmask PrevMask = PhysLiveRegs.contains(VRU);
-        if (PrevMask.any()) {
-          WasLive = true;
-          // Use LiveIntervals to check if unit dies at SI.
-          if (!isUnitLiveAt(Unit, SI)) {
-            IsDying = true;
-            PhysLiveRegs.erase(VRegMaskOrUnit(VRU, LaneBitmask::getAll()));
-          }
-        }
-      }
+      // Check if any unit of this register is killed and erase killed units.
+      bool IsKilled = eraseKilledUnits(Reg, SI);
 
-      // Update pressure once per register if it was live and is now dying.
-      if (WasLive && IsDying)
+      // Update pressure once per register if it was live and is now killed.
+      if (IsKilled)
         CurPhysPressure.inc(Reg, LaneBitmask::getAll(), LaneBitmask::getNone(),
                             *MRI);
     }
@@ -989,14 +1037,7 @@ GCNDownwardRPTracker::bumpDownwardPressure(const MachineInstr *MI,
         continue;
 
       // Check if any unit of this register is not currently live.
-      bool WasNotLive = false;
-      for (MCRegUnit Unit : TRI->regunits(Reg)) {
-        if (PhysLiveRegs.contains(VirtRegOrUnit(static_cast<MCRegUnit>(Unit)))
-                .none()) {
-          WasNotLive = true;
-          break;
-        }
-      }
+      bool WasNotLive = !allRegUnitsLive(Reg);
 
       if (WasNotLive && !MO.isDead()) {
         TempPhysPressure.inc(Reg, LaneBitmask::getNone(), LaneBitmask::getAll(),
@@ -1014,21 +1055,10 @@ GCNDownwardRPTracker::bumpDownwardPressure(const MachineInstr *MI,
           !SeenRegs.insert(Reg).second)
         continue;
 
-      // Check if any unit of this register is dying.
-      bool IsDying = false;
-      bool IsLive = false;
-      for (MCRegUnit Unit : TRI->regunits(Reg)) {
-        VirtRegOrUnit VRU(static_cast<MCRegUnit>(Unit));
-        if (PhysLiveRegs.contains(VRU).any()) {
-          IsLive = true;
-          if (!isUnitLiveAt(Unit, SlotIdx)) {
-            IsDying = true;
-            break;
-          }
-        }
-      }
+      // Check if any unit of this register is killed.
+      bool IsKilled = checkRegKilled(Reg, SlotIdx);
 
-      if (IsLive && IsDying) {
+      if (IsKilled) {
         TempPhysPressure.inc(Reg, LaneBitmask::getAll(), LaneBitmask::getNone(),
                              *MRI);
       }

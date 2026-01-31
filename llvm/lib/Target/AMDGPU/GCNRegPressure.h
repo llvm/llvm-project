@@ -332,6 +332,23 @@ protected:
   Register getPhysRegFromUnit(MCRegUnit Unit) const;
   bool isUnitLiveAt(MCRegUnit Unit, SlotIndex SI) const;
 
+  // Check if all register units of Reg are currently live in PhysLiveRegs.
+  bool allRegUnitsLive(Register Reg) const;
+
+  // Check if Reg has any killed units at the given slot index.
+  bool checkRegKilled(Register Reg, SlotIndex SI) const;
+
+  // Check if Reg has any killed units and erase them from PhysLiveRegs.
+  bool eraseKilledUnits(Register Reg, SlotIndex SI);
+
+  // Erase all live units of Reg from PhysLiveRegs.
+  // Returns true if any unit was live (and thus erased).
+  bool eraseAllLiveUnits(Register Reg);
+
+  // Insert all not-live units of Reg into PhysLiveRegs.
+  // Returns true if any unit was not live (and thus inserted).
+  bool insertAllNotLiveUnits(Register Reg);
+
 public:
   // Initialize PhysLiveRegs capacity. Must be called before first use.
   void initPhysLiveRegs(const MachineRegisterInfo &MRI_) {
