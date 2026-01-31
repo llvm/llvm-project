@@ -424,6 +424,8 @@ static llvm::Error serveConnection(
     return status.takeError();
   }
 
+  DAPSessionManager::GetInstance().SetServerMode();
+
   std::string address = llvm::join(listener->GetListeningConnectionURI(), ", ");
   DAP_LOG(log, "started with connection listeners {0}", address);
 

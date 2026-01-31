@@ -59,6 +59,9 @@ public:
   /// Get the singleton instance of the DAP session manager.
   static DAPSessionManager &GetInstance();
 
+  void SetServerMode() { m_server_mode = true; }
+  bool GetServerMode() { return m_server_mode; }
+
   /// Register a DAP session.
   void RegisterSession(lldb_private::MainLoop *loop, DAP *dap);
 
@@ -103,6 +106,7 @@ private:
   DAPSessionManager(DAPSessionManager &&) = delete;
   DAPSessionManager &operator=(DAPSessionManager &&) = delete;
 
+  bool m_server_mode = false;
   bool m_client_failed = false;
   std::mutex m_sessions_mutex;
   std::condition_variable m_sessions_condition;
