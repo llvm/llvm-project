@@ -42,30 +42,25 @@ LLT llvm::getLLTForType(Type &Ty, const DataLayout &DL) {
       return LLT::scalar(SizeInBits);
 
     // Choose more precise LLT variant
-    if (Ty.isFloatingPointTy()) {
-      if (Ty.isHalfTy())
+    if (Ty.isFloatingPointTy())
+      switch (Ty.getTypeID()) {
+      default:
+        llvm_unreachable("Unhandled LLVM IR floating point type");
+      case Type::HalfTyID:
         return LLT::float16();
-
-      if (Ty.isBFloatTy())
+      case Type::BFloatTyID:
         return LLT::bfloat16();
-
-      if (Ty.isFloatTy())
+      case Type::FloatTyID:
         return LLT::float32();
-
-      if (Ty.isDoubleTy())
+      case Type::DoubleTyID:
         return LLT::float64();
-
-      if (Ty.isX86_FP80Ty())
+      case Type::X86_FP80TyID:
         return LLT::x86fp80();
-
-      if (Ty.isFP128Ty())
+      case Type::FP128TyID:
         return LLT::float128();
-
-      if (Ty.isPPC_FP128Ty())
+      case Type::PPC_FP128TyID:
         return LLT::ppcf128();
-
-      llvm_unreachable("Unhandled LLVM IR floating point type");
-    }
+      }
 
     if (Ty.isIntegerTy())
       return LLT::integer(SizeInBits);
@@ -85,13 +80,13 @@ MVT llvm::getMVTForLLT(LLT Ty) {
                             Ty.getElementCount());
 
   if (Ty.isFloat()) {
-    if (Ty == LLT::bfloat16())
+    if (Ty.isBFloat16())
       return MVT::bf16;
 
-    if (Ty == LLT::x86fp80())
+    if (Ty.isX86FP80())
       return MVT::f80;
 
-    if (Ty == LLT::ppcf128())
+    if (Ty.isPPCF128())
       return MVT::ppcf128;
 
     return MVT::getFloatingPointVT(Ty.getSizeInBits());
@@ -115,6 +110,7 @@ const llvm::fltSemantics &llvm::getFltSemanticForLLT(LLT Ty) {
   assert((Ty.isAnyScalar() || Ty.isFloat()) &&
          "Expected a any scalar or float type.");
 
+  // Any scalar type always matches IEEE format
   if (Ty.isAnyScalar()) {
     switch (Ty.getSizeInBits()) {
     default:
