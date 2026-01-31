@@ -33,7 +33,7 @@ public:
   }
 
   void emitWarningAndChangeOperatorsIfPossible(
-      const BinaryOperator *BinOp, const BinaryOperator *ParentBinOp,
+      const BinaryOperator *BinOp, const Expr *ParensExpr,
       const clang::SourceManager &SM, clang::ASTContext &Ctx,
       bool CanApplyFixIt);
 

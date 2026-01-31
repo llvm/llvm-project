@@ -10,6 +10,7 @@
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/Lex/Lexer.h"
+#include "llvm/Support/Casting.h"
 #include <array>
 #include <utility>
 
@@ -149,16 +150,45 @@ void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
           allOf(hasAnyOperatorName("|=", "&="),
                 hasLHS(ignoringImpCasts(anyOf(declRefExpr(), memberExpr()))))));
 
+  // Parentheses decision logic:
+  // Case 1: | with parent && → parens needed around BinOp (the || result)
+  //         e.g., a && b | c → a && (b || c)
+  // Case 2: & with parent ^ or | → parens needed around BinOp (the && result)
+  //         e.g., a ^ b & c → a ^ (b && c)
+  // Case 3: &= with RHS || → parens needed around RHS
+  //         e.g., a &= b || c → a = a && (b || c)
+  //
+  // If the expression is already wrapped in ParenExpr, no additional parens
+  // are needed. For cases 1 & 2, if BinOp is in parens, its parent is
+  // ParenExpr (not binaryOperator), so hasParent won't match.
+  // For case 3, if RHS is in parens, hasRHS(binaryOperator(||)) won't match.
+
+  // Case 1: | with && parent
+  auto ParensCase1 = allOf(
+      hasOperatorName("|"),
+      hasParent(binaryOperator(hasOperatorName("&&")).bind("parensParent")));
+
+  // Case 2: & with ^ or | parent
+  auto ParensCase2 = allOf(
+      hasOperatorName("&"),
+      hasParent(
+          binaryOperator(hasAnyOperatorName("^", "|")).bind("parensParent")));
+
+  // Case 3: &= with || RHS
+  auto ParensCase3 =
+      allOf(hasOperatorName("&="),
+            hasRHS(binaryOperator(hasOperatorName("||")).bind("parensExpr")));
+
   auto BaseMatcher = binaryOperator(
       hasAnyOperatorName("|", "&", "|=", "&="), hasLHS(BooleanLeaves),
-      hasRHS(BooleanLeaves), optionally(hasParent(binaryOperator().bind("p"))),
-      optionally(FixItMatcher.bind("fixit")));
+      hasRHS(BooleanLeaves), optionally(FixItMatcher.bind("fixit")),
+      optionally(anyOf(ParensCase1, ParensCase2)), optionally(ParensCase3));
 
   Finder->addMatcher(BaseMatcher.bind("binOp"), this);
 }
 
 void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
-    const BinaryOperator *BinOp, const BinaryOperator *ParentBinOp,
+    const BinaryOperator *BinOp, const Expr *ParensExpr,
     const clang::SourceManager &SM, clang::ASTContext &Ctx,
     bool CanApplyFixIt) {
   auto DiagEmitter = [BinOp, this] {
@@ -221,36 +251,15 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
 
   auto ReplaceOperator = FixItHint::CreateReplacement(TokenRange, FixSpelling);
 
-  std::optional<BinaryOperatorKind> ParentOpcode;
-  if (ParentBinOp)
-    ParentOpcode = ParentBinOp->getOpcode();
-
-  const auto *RHS = dyn_cast<BinaryOperator>(BinOp->getRHS()->IgnoreImpCasts());
-  std::optional<BinaryOperatorKind> RHSOpcode;
-  if (RHS)
-    RHSOpcode = RHS->getOpcode();
-
-  const Expr *SurroundedExpr = nullptr;
-  if ((BinOp->getOpcode() == BO_Or && ParentOpcode == BO_LAnd) ||
-      (BinOp->getOpcode() == BO_And &&
-       llvm::is_contained({BO_Xor, BO_Or}, ParentOpcode))) {
-    const Expr *Side = ParentBinOp->getLHS()->IgnoreParenImpCasts() == BinOp
-                           ? ParentBinOp->getLHS()
-                           : ParentBinOp->getRHS();
-    SurroundedExpr = Side->IgnoreImpCasts();
-    assert(SurroundedExpr->IgnoreParens() == BinOp);
-  } else if (BinOp->getOpcode() == BO_AndAssign && RHSOpcode == BO_LOr)
-    SurroundedExpr = RHS;
-
-  if (isa_and_nonnull<ParenExpr>(SurroundedExpr))
-    SurroundedExpr = nullptr;
-
+  // Generate parentheses fix-its if ParensExpr is provided.
+  // The matcher already determined which expression needs parentheses
+  // and skipped if already wrapped in ParenExpr.
   FixItHint InsertBrace1;
   FixItHint InsertBrace2;
-  if (SurroundedExpr) {
-    const SourceLocation InsertFirstLoc = SurroundedExpr->getBeginLoc();
+  if (ParensExpr) {
+    const SourceLocation InsertFirstLoc = ParensExpr->getBeginLoc();
     const SourceLocation InsertSecondLoc = clang::Lexer::getLocForEndOfToken(
-        SurroundedExpr->getEndLoc(), 0, SM, Ctx.getLangOpts());
+        ParensExpr->getEndLoc(), 0, SM, Ctx.getLangOpts());
     if (InsertFirstLoc.isInvalid() || InsertFirstLoc.isMacroID() ||
         InsertSecondLoc.isInvalid() || InsertSecondLoc.isMacroID()) {
       IgnoreMacros || DiagEmitterForStrictMode();
@@ -266,15 +275,34 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
 
 void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *BinOp = Result.Nodes.getNodeAs<BinaryOperator>("binOp");
-  const auto *Parent = Result.Nodes.getNodeAs<BinaryOperator>("p");
   const auto *FixItBinOp = Result.Nodes.getNodeAs<BinaryOperator>("fixit");
   assert(BinOp);
+
+  // Determine if parentheses are needed and around which expression.
+  // - parensParent bound → cases 1 & 2: parens around BinOp itself
+  // - parensExpr bound → case 3: parens around the bound RHS expression
+  const auto *ParensParent =
+      Result.Nodes.getNodeAs<BinaryOperator>("parensParent");
+  const auto *ParensExprRHS = Result.Nodes.getNodeAs<Expr>("parensExpr");
+
+  const Expr *PE = nullptr;
+  if (ParensParent) {
+    // Cases 1 & 2: parens around BinOp (| or &)
+    PE = BinOp;
+  } else if (ParensExprRHS) {
+    // Case 3: parens around RHS (||)
+    PE = ParensExprRHS;
+  }
+
+  if (isa_and_nonnull<ParenExpr>(PE)) {
+    PE = nullptr;
+  }
 
   const SourceManager &SM = *Result.SourceManager;
   ASTContext &Ctx = *Result.Context;
 
   const bool CanApplyFixIt = (FixItBinOp != nullptr && FixItBinOp == BinOp);
-  emitWarningAndChangeOperatorsIfPossible(BinOp, Parent, SM, Ctx,
+  emitWarningAndChangeOperatorsIfPossible(BinOp, PE, SM, Ctx,
                                           CanApplyFixIt);
 }
 
