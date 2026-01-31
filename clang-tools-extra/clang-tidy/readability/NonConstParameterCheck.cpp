@@ -41,6 +41,12 @@ void NonConstParameterCheck::check(const MatchFinder::MatchResult &Result) {
       if (const auto *M = dyn_cast<CXXMethodDecl>(D)) {
         if (M->isVirtual() || M->size_overridden_methods() != 0)
           return;
+        // Skip parameters in generic lambdas to avoid false positives.
+        // Generic lambdas may have template-dependent usage that cannot
+        // be analyzed at parse time. Fixes issue #177354.
+        if (M->getParent()->isLambda() && 
+            M->getDescribedFunctionTemplate() != nullptr)
+          return;
       }
     }
     addParm(Parm);
