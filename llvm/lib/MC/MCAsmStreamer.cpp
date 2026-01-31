@@ -309,6 +309,8 @@ public:
                              StringRef Location = {}) override;
   void emitDwarfLocLabelDirective(SMLoc Loc, StringRef Name) override;
 
+  /// This is same as emitDwarfLocDirective, except also emits inlined function
+  /// and inlined callsite information.
   void emitDwarfLocDirectiveWithInlinedAt(unsigned FileNo, unsigned Line,
                                           unsigned Column, unsigned FileIA,
                                           unsigned LineIA, unsigned ColIA,

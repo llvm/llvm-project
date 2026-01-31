@@ -2256,7 +2256,7 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
     PrevInstLoc = DL;
 }
 
-// Default implementation of target-specific source line recording.
+/// Default implementation of target-specific source line recording.
 void DwarfDebug::recordTargetSourceLine(const DebugLoc &DL, unsigned Flags) {
   SmallString<128> LocationString;
   if (Asm->OutStreamer->isVerboseAsm()) {

@@ -35,49 +35,49 @@ static cl::opt<bool> LineInfoWithInlinedAt(
 
 NVPTXDwarfDebug::NVPTXDwarfDebug(AsmPrinter *A) : DwarfDebug(A) {}
 
-// NVPTX-specific source line recording with inlined_at support.
-//
-// Why this exists:
-// NVPTX supports an "enhanced lineinfo" mode where inlining context is carried
-// via line-table directives, rather than full DWARF DIEs. This is conceptually
-// similar to proposals[1] for richer DWARF line tables that carry inline call
-// context and callee identity in the line table. NVPTX implements this via
-// target-specific `.loc` extensions in the PTX ISA[3].
-//
-// How it impacts PTX assembly generation:
-// - When enabled (PTX ISA >= 7.2 + line-tables-only / debug-directives-only),
-//   we emit multiple consecutive `.loc` directives for a single inlined
-//   instruction: the instruction's own location and its `inlined_at` parent
-//   chain.
-// - During emission we use `MCStreamer::emitDwarfLocDirectiveWithInlinedAt` to
-//   emit an enhanced `.loc` directive[3] that carries the extra `function_name`
-//   and `inlined_at` operands in the PTX assembly stream.
-//
-// Example (conceptual PTX `.loc` sequence for an inlined callsite):
-//   .loc 1 16 3                            // caller location
-//   .loc 1  5 3, function_name $L__info_stringN, inlined_at 1 16 3
-//                                         // inlined callee location
-//   Here, $L__info_stringN is a label (or label+immediate) referring into
-//   `.debug_str`.
-//
-// How this impacts DWARF :
-// DWARF generation tools that consume this PTX(e.g. ptxas assembler) can use
-// the `inlined_at` and `function_name` operands to extend the DWARF v2
-// line table information.
-// This adds:
-// - a `context` column[2]: the `inlined_at <file> <line> <col>` information
-//   populates an inlining "context" (a reference to the parent/callsite row)
-//   enabling reconstruction of inline call chains from the line table.
-// - a `function_name` column[2]: the `.loc ... function_name <sym>` identifies
-//   the inlined callee associated with a non-zero context.
-//
-// References:
-// - [1] DWARF line tables / Two-Level Line Tables:
-//   https://wiki.dwarfstd.org/TwoLevelLineTables.md
-// - [2] DWARF issue tracking for Two-Level Line Tables:
-//   https://dwarfstd.org/issues/140906.1.html
-// - [3] NVIDIA PTX ISA `.loc` (debugging directives; PTX ISA 7.2+):
-//   https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#debugging-directives-loc
+/// NVPTX-specific source line recording with inlined_at support.
+///
+/// Why this exists:
+/// NVPTX supports an "enhanced lineinfo" mode where inlining context is carried
+/// via line-table directives, rather than full DWARF DIEs. This is conceptually
+/// similar to proposals[1] for richer DWARF line tables that carry inline call
+/// context and callee identity in the line table. NVPTX implements this via
+/// target-specific `.loc` extensions in the PTX ISA[3].
+///
+/// How it impacts PTX assembly generation:
+/// - When enabled (PTX ISA >= 7.2 + line-tables-only / debug-directives-only),
+///   we emit multiple consecutive `.loc` directives for a single inlined
+///   instruction: the instruction's own location and its `inlined_at` parent
+///   chain.
+/// - During emission we use `MCStreamer::emitDwarfLocDirectiveWithInlinedAt` to
+///   emit an enhanced `.loc` directive[3] that carries the extra
+///   `function_name` and `inlined_at` operands in the PTX assembly stream.
+///
+/// Example (conceptual PTX `.loc` sequence for an inlined callsite):
+///   .loc 1 16 3                            // caller location
+///   .loc 1  5 3, function_name $L__info_stringN, inlined_at 1 16 3
+///                                         // inlined callee location
+///   Here, $L__info_stringN is a label (or label+immediate) referring into
+///   `.debug_str`.
+///
+/// How this impacts DWARF :
+/// DWARF generation tools that consume this PTX(e.g. ptxas assembler) can use
+/// the `inlined_at` and `function_name` operands to extend the DWARF v2
+/// line table information.
+/// This adds:
+/// - a `context` column[2]: the `inlined_at <file> <line> <col>` information
+///   populates an inlining "context" (a reference to the parent/callsite row)
+///   enabling reconstruction of inline call chains from the line table.
+/// - a `function_name` column[2]: the `.loc ... function_name <sym>` identifies
+///   the inlined callee associated with a non-zero context.
+///
+/// References:
+/// - [1] DWARF line tables / Two-Level Line Tables:
+///   https://wiki.dwarfstd.org/TwoLevelLineTables.md
+/// - [2] DWARF issue tracking for Two-Level Line Tables:
+///   https://dwarfstd.org/issues/140906.1.html
+/// - [3] NVIDIA PTX ISA `.loc` (debugging directives; PTX ISA 7.2+):
+///   https://docs.nvidia.com/cuda/parallel-thread-execution/index.html#debugging-directives-loc
 void NVPTXDwarfDebug::recordTargetSourceLine(const DebugLoc &DL,
                                              unsigned Flags) {
   // Maintain a work list of .loc to be emitted. If we are emitting the
@@ -170,7 +170,7 @@ void NVPTXDwarfDebug::recordTargetSourceLine(const DebugLoc &DL,
   }
 }
 
-// NVPTX-specific debug info initialization.
+/// NVPTX-specific debug info initialization.
 void NVPTXDwarfDebug::initializeTargetDebugInfo(const MachineFunction &MF) {
   // Clear the set of emitted inlined_at locations for each new function.
   EmittedInlinedAtLocs.clear();

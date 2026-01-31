@@ -194,7 +194,7 @@ protected:
   bool doInitialization(Module &M) override;
   bool doFinalization(Module &M) override;
 
-  // Create NVPTX-specific DwarfDebug handler.
+  /// Create NVPTX-specific DwarfDebug handler.
   DwarfDebug *createDwarfDebug() override;
 
 private:

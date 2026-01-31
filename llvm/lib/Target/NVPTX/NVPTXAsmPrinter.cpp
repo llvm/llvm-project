@@ -677,6 +677,7 @@ void NVPTXAsmPrinter::emitStartOfAsmFile(Module &M) {
   OutStreamer->emitRawText(OS1.str());
 }
 
+/// Create NVPTX-specific DwarfDebug handler.
 DwarfDebug *NVPTXAsmPrinter::createDwarfDebug() {
   return new NVPTXDwarfDebug(this);
 }

@@ -482,6 +482,7 @@ const MCSection *AsmPrinter::getCurrentSection() const {
   return OutStreamer->getCurrentSectionOnly();
 }
 
+/// createDwarfDebug() - Create the DwarfDebug handler.
 DwarfDebug *AsmPrinter::createDwarfDebug() { return new DwarfDebug(this); }
 
 void AsmPrinter::getAnalysisUsage(AnalysisUsage &AU) const {
