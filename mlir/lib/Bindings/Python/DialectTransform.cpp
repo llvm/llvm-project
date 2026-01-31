@@ -402,9 +402,9 @@ void consumesHandle(nb::iterable &operands,
 
 void producesHandle(nb::iterable &results,
                     PyMemoryEffectsInstanceList effects) {
-  std::vector<MlirOpResult> resultsVec;
+  std::vector<MlirValue> resultsVec;
   for (auto result : results)
-    resultsVec.push_back(nb::cast<PyOpResult>(result));
+    resultsVec.push_back(nb::cast<PyOpResult>(result).get());
   mlirTransformProducesHandle(resultsVec.data(), resultsVec.size(),
                               effects.effects);
 };

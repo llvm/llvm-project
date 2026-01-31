@@ -223,7 +223,7 @@ mlirTransformConsumesHandle(MlirOpOperand *operands, intptr_t numOperands,
 
 /// Helper to mark results as producing handles.
 MLIR_CAPI_EXPORTED void
-mlirTransformProducesHandle(MlirOpResult *results, intptr_t numResults,
+mlirTransformProducesHandle(MlirValue *results, intptr_t numResults,
                             MlirMemoryEffectInstancesList effects);
 
 /// Helper to mark potential modifications to the payload IR.

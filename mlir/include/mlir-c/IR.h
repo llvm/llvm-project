@@ -55,7 +55,6 @@ DEFINE_C_API_STRUCT(MlirDialect, void);
 DEFINE_C_API_STRUCT(MlirDialectRegistry, void);
 DEFINE_C_API_STRUCT(MlirOperation, void);
 DEFINE_C_API_STRUCT(MlirOpOperand, void);
-DEFINE_C_API_STRUCT(MlirOpResult, void);
 DEFINE_C_API_STRUCT(MlirOpPrintingFlags, void);
 DEFINE_C_API_STRUCT(MlirBlock, void);
 DEFINE_C_API_STRUCT(MlirRegion, void);
@@ -1048,9 +1047,6 @@ MLIR_CAPI_EXPORTED bool mlirValueIsABlockArgument(MlirValue value);
 
 /// Returns 1 if the value is an operation result, 0 otherwise.
 MLIR_CAPI_EXPORTED bool mlirValueIsAOpResult(MlirValue value);
-
-/// Cast the value to an OpResult. Asserts if the value is not an op result.
-MLIR_CAPI_EXPORTED MlirOpResult mlirValueToOpResult(MlirValue value);
 
 /// Returns the block in which this value is defined as an argument. Asserts if
 /// the value is not a block argument.

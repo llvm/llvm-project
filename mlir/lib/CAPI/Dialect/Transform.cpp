@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Transform/IR/TransformDialect.h"
 #include "mlir/Dialect/Transform/IR/TransformTypes.h"
 #include "mlir/Dialect/Transform/Interfaces/TransformInterfaces.h"
+#include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
 
@@ -320,14 +321,18 @@ void mlirTransformConsumesHandle(MlirOpOperand *operands, intptr_t numOperands,
 }
 
 /// Set the effect for the results to that they produce transform handles.
-void mlirTransformProducesHandle(MlirOpResult *results, intptr_t numResults,
+void mlirTransformProducesHandle(MlirValue *results, intptr_t numResults,
                                  MlirMemoryEffectInstancesList effects) {
   // NB: calling `producesHandle()` `numResults` as we cannot cast array of
   // `OpResult`s to a single `ResultRange` (and neither is `ResultRange` exposed
   // to Python). `producesHandle` iterates over the given `ResultRange` anyway.
+  SmallVectorImpl<MemoryEffects::EffectInstance> &effectList = *unwrap(effects);
   for (intptr_t i = 0; i < numResults; ++i)
-    transform::producesHandle(ResultRange(*unwrap(results[i])),
-                              *unwrap(effects));
+    TypeSwitch<Value, void>(unwrap(results[i]))
+        .Case<OpResult>([&](OpResult opResult) {
+          transform::producesHandle(ResultRange(opResult), effectList);
+        })
+        .DefaultUnreachable("expected an OpResult");
 }
 
 /// Set the effect of potentially modifying payload IR.
