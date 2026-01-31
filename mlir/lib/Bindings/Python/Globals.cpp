@@ -137,6 +137,18 @@ void PyGlobals::registerOperationImpl(const std::string &operationName,
   found = std::move(pyClass);
 }
 
+void PyGlobals::registerOpAdaptorImpl(const std::string &operationName,
+                                      nb::object pyClass, bool replace) {
+  nb::ft_lock_guard lock(mutex);
+  nb::object &found = opAdaptorClassMap[operationName];
+  if (found && !replace) {
+    throw std::runtime_error((llvm::Twine("Operation adaptor of '") +
+                              operationName + "' is already registered.")
+                                 .str());
+  }
+  found = std::move(pyClass);
+}
+
 std::optional<nb::callable>
 PyGlobals::lookupAttributeBuilder(const std::string &attributeKind) {
   nb::ft_lock_guard lock(mutex);
@@ -201,6 +213,24 @@ PyGlobals::lookupOperationClass(llvm::StringRef operationName) {
   auto foundIt = operationClassMap.find(operationName);
   if (foundIt != operationClassMap.end()) {
     assert(foundIt->second && "OpView is defined");
+    return foundIt->second;
+  }
+  // Not found and loading did not yield a registration.
+  return std::nullopt;
+}
+
+std::optional<nb::object>
+PyGlobals::lookupOpAdaptorClass(llvm::StringRef operationName) {
+  // Make sure dialect module is loaded.
+  auto split = operationName.split('.');
+  llvm::StringRef dialectNamespace = split.first;
+  if (!loadDialectModule(dialectNamespace))
+    return std::nullopt;
+
+  nb::ft_lock_guard lock(mutex);
+  auto foundIt = opAdaptorClassMap.find(operationName);
+  if (foundIt != opAdaptorClassMap.end()) {
+    assert(foundIt->second && "OpAdaptor is defined");
     return foundIt->second;
   }
   // Not found and loading did not yield a registration.
