@@ -1,0 +1,42 @@
+# RUN: not --crash clangd -lit-test < %s 2> %t.err
+# RUN: FileCheck %s < %t.err
+# RUN: not --crash clangd -lit-test -sync=0 < %s 2> %t.async.err
+# RUN: FileCheck %s < %t.async.err
+
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{}}
+---
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{
+  "uri":"file:///",
+  "languageId":"c",
+  "version":1,
+  "text":""
+}}}
+#      CHECK: I[{{.*}}] Ignoring didOpen for directory: /
+---
+{"jsonrpc":"2.0","method":"textDocument/didOpen","params":{"textDocument":{
+  "uri":"file:///tmp",
+  "languageId":"cpp",
+  "version":1,
+  "text":"int main() {}"
+}}}
+#      CHECK: I[{{.*}}] Ignoring didOpen for directory: /tmp
+---
+{"jsonrpc":"2.0","id":1,"method":"textDocument/documentSymbol","params":{"textDocument":{"uri":"file:///"}}}
+#      CHECK: "error": {
+# CHECK-NEXT:   "code": -32602,
+# CHECK-NEXT:   "message": "URI is a directory"
+# CHECK-NEXT: },
+# CHECK-NEXT: "id": 1,
+# CHECK-NEXT: "jsonrpc": "2.0"
+---
+{"jsonrpc":"2.0","id":2,"method":"textDocument/documentSymbol","params":{"textDocument":{"uri":"file:///tmp"}}}
+#      CHECK: "error": {
+# CHECK-NEXT:   "code": -32602,
+# CHECK-NEXT:   "message": "URI is a directory"
+# CHECK-NEXT: },
+# CHECK-NEXT: "id": 2,
+# CHECK-NEXT: "jsonrpc": "2.0"
+---
+{"jsonrpc":"2.0","id":3,"method":"shutdown"}
+---
+{"jsonrpc":"2.0","method":"exit"}
