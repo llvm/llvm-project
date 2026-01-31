@@ -1,4 +1,4 @@
-// RUN: cir-opt %s --verify-roundtrip | FileCheck %s
+// RUN: cir-opt %s --cir-flatten-cfg --verify-roundtrip | FileCheck %s
 
 cir.func coroutine @checkPrintParse(%arg0 : !cir.bool) {
   cir.await(user, ready : {
@@ -19,3 +19,29 @@ cir.func coroutine @checkPrintParse(%arg0 : !cir.bool) {
 // CHECK:  }, resume : {
 // CHECK:    cir.yield
 // CHECK:  },)
+
+#true = #cir.bool<true> : !cir.bool
+
+cir.func coroutine @checkReadyRegion() {
+  cir.await(init, ready : {
+    %1 = cir.scope {
+      %0 = cir.const #true
+      cir.yield %0 : !cir.bool
+    } : !cir.bool
+    cir.condition(%1)
+  }, suspend : {
+    cir.yield
+  }, resume : {
+    cir.yield
+  },)
+  cir.return
+}
+
+// CHECK:  cir.await(init, ready : {
+// CHECK:    cir.br ^bb1
+// CHECK:^bb1
+// CHECK:    %0 = cir.const #true
+// CHECK:    cir.br ^bb2(%0 : !cir.bool)
+// CHECK:^bb2(%1: !cir.bool)
+// CHECK:    cir.condition(%1)
+// CHECK:  },

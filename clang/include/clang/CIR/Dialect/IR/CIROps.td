@@ -3411,7 +3411,7 @@ def CIR_AwaitOp : CIR_Op<"await",[
   }];
 
   let arguments = (ins CIR_AwaitKind:$kind);
-  let regions = (region SizedRegion<1>:$ready,
+  let regions = (region MinSizedRegion<1>:$ready,
                         SizedRegion<1>:$suspend,
                         SizedRegion<1>:$resume);
   let assemblyFormat = [{
