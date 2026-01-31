@@ -23,6 +23,7 @@
 
 #include <__iterator/capacity_aware_iterator.h>
 #include <compare>
+#include <concepts>
 #include <iterator>
 
 #include "test_iterators.h"
@@ -40,48 +41,54 @@ constexpr bool test() {
 
   // operator==
   {
+    std::same_as<bool> decltype(auto) res = iter1 == iter1;
     ASSERT_NOEXCEPT(iter1 == iter2);
-    assert(iter1 == iter1);
+    assert(res);
     assert(!(iter1 == iter2));
   }
 
   // operator!=
   {
+    std::same_as<bool> decltype(auto) res = iter1 != iter2;
     ASSERT_NOEXCEPT(iter1 != iter2);
-    assert(iter1 != iter2);
+    assert(res);
     assert(!(iter1 != iter1));
   }
 
   // operator<
   {
+    std::same_as<bool> decltype(auto) res = iter1 < iter2;
     ASSERT_NOEXCEPT(iter1 < iter2);
-    assert(iter1 < iter2);
+    assert(res);
     assert(!(iter1 < iter1));
     assert(!(iter2 < iter1));
   }
 
   // operator<=
   {
+    std::same_as<bool> decltype(auto) res = iter1 <= iter2;
     ASSERT_NOEXCEPT(iter1 <= iter2);
-    assert(iter1 <= iter2);
+    assert(res);
     assert(iter1 <= iter1);
     assert(!(iter2 <= iter1));
   }
 
   // operator>
   {
+    std::same_as<bool> decltype(auto) res = iter1 > iter2;
     ASSERT_NOEXCEPT(iter1 > iter2);
     assert(iter2 > iter1);
-    assert(!(iter1 > iter2));
+    assert(!res);
     assert(!(iter1 > iter1));
   }
 
   // operator>=
   {
+    std::same_as<bool> decltype(auto) res = iter1 >= iter2;
     ASSERT_NOEXCEPT(iter1 >= iter2);
     assert(iter2 >= iter1);
     assert(iter1 >= iter1);
-    assert(!(iter1 >= iter2));
+    assert(!res);
   }
 
   // operator <=>
@@ -102,7 +109,7 @@ constexpr bool test() {
 }
 
 int main(int, char**) {
-  assert(test<contiguous_iterator<int*>>());
+  test<contiguous_iterator<int*>>();
   static_assert(test<contiguous_iterator<int*>>());
 
   return 0;

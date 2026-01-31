@@ -18,6 +18,7 @@
 // operator->();
 
 #include <__iterator/capacity_aware_iterator.h>
+#include <concepts>
 
 #include "test_iterators.h"
 #include "test_macros.h"
@@ -38,34 +39,41 @@ constexpr bool test() {
 
   // operator[]
   {
+    std::same_as<Foo&> decltype(auto) res = it[0];
     ASSERT_NOEXCEPT(it[0]);
-    assert(it[0] == Foo{1});
-    assert(it[1] == Foo{2});
-    assert(it[2] == Foo{3});
+    assert(res == arr[0]);
+    assert(&res == &arr[0]);
+    assert(it[1] == arr[1]);
+    assert(it[2] == arr[2]);
 
     CapIter it2 = it + 2;
 
-    assert(it2[-1] == Foo{2});
-    assert(it2[-2] == Foo{1});
+    assert(it2[-1] == arr[1]);
+    assert(it2[-2] == arr[0]);
   }
 
   // operator*
   {
+    std::same_as<Foo&> decltype(auto) res = *it;
     ASSERT_NOEXCEPT(*it);
-    assert(*it == Foo{1});
+    assert(*it == arr[0]);
+    assert(&res == &arr[0]);
+    assert(&res == &(*it));
   }
 
   // operator->
   {
+    std::same_as<Foo*> decltype(auto) ptr = it.operator->();
     ASSERT_NOEXCEPT(it->x);
-    assert(it->x == 1);
+    assert(ptr->x == 1);
+    assert(ptr == &arr[0]);
   }
 
   return true;
 }
 
 int main(int, char**) {
-  assert(test<three_way_contiguous_iterator<Foo*>>());
+  test<three_way_contiguous_iterator<Foo*>>();
   static_assert(test<three_way_contiguous_iterator<Foo*>>());
 
   return 0;

@@ -42,8 +42,8 @@ constexpr bool test() {
     assert(it1 == it2);
     assert(!(it1 != it2));
 
-    static_assert(std::same_as<decltype(it1 <=> it2), std::strong_ordering>);
-    assert(it1 <=> it2 == std::strong_ordering::equal);
+    std::same_as<std::strong_ordering> decltype(auto) spaceship = it1 <=> it2;
+    assert(spaceship == std::strong_ordering::equal);
   }
 
   {
@@ -65,8 +65,8 @@ constexpr bool test() {
     assert(cit1 == cit2);
     assert(!(cit1 != cit2));
 
-    static_assert(std::same_as<decltype(cit1 <=> cit2), std::strong_ordering>);
-    assert(cit1 <=> cit2 == std::strong_ordering::equal);
+    std::same_as<std::strong_ordering> decltype(auto) spaceship = cit1 <=> cit2;
+    assert(spaceship == std::strong_ordering::equal);
   }
 
   {
@@ -93,7 +93,7 @@ constexpr bool test() {
 }
 
 int main(int, char**) {
-  assert(test());
+  test();
   static_assert(test());
 
   return 0;
