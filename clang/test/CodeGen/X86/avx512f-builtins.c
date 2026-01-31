@@ -5882,7 +5882,7 @@ __mmask16 test_mm512_test_epi32_mask(__m512i __A, __m512i __B) {
 TEST_CONSTEXPR(_mm512_test_epi32_mask(
     ((__m512i)(__v16si){12, 25, 38, 51, 64, 77, 90, 103, 116, 129, 142, 155, 168, 181, 194, 207}),
     ((__m512i)(__v16si){4, 0, 6, 0, 8, 0, 10, 0, 12, 0, 14, 0, 16, 0, 18, 0})
-) == (__mmask16)0x5555);
+) == (__mmask16)0x4545);
 
 __mmask16 test_mm512_testn_epi32_mask(__m512i __A, __m512i __B) {
   // CHECK-LABEL: test_mm512_testn_epi32_mask
@@ -5911,7 +5911,7 @@ TEST_CONSTEXPR(_mm512_mask_testn_epi32_mask(
 ) == (__mmask16)0x0000);
 
 __mmask8 test_mm512_test_epi64_mask(__m512i __A, __m512i __B) {
-  // CHECK-LABEL: test_mm512_testn_epi64_mask
+  // CHECK-LABEL: test_mm512_test_epi64_mask
   // CHECK: and <16 x i32> %{{.*}}, %{{.*}}
   // CHECK: icmp ne <8 x i64> %{{.*}}, %{{.*}}
   return _mm512_test_epi64_mask(__A, __B); 
@@ -5926,7 +5926,7 @@ __mmask8 test_mm512_testn_epi64_mask(__m512i __A, __m512i __B) {
   // CHECK-LABEL: test_mm512_testn_epi64_mask
   // CHECK: and <16 x i32> %{{.*}}, %{{.*}}
   // CHECK: icmp eq <8 x i64> %{{.*}}, %{{.*}}
-  return _mm512_testn_epi64_mask(__A, __B); 
+  return _mm512_testn_epi64_mask(__A, __B);
 }
 
 TEST_CONSTEXPR(_mm512_testn_epi64_mask(
