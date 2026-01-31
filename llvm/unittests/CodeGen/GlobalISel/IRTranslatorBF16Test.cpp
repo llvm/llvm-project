@@ -46,7 +46,7 @@ public:
     TargetOptions Options;
     return std::unique_ptr<TargetMachine>(
         T->createTargetMachine(TargetTriple, "", "", Options, std::nullopt,
-                               std::nullopt, CodeGenOptLevel::Aggressive));
+                               std::nullopt, CodeGenOptLevel::None));
   }
 
   std::unique_ptr<Module> parseIR(const char *IR) {
