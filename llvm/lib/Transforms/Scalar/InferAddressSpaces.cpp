@@ -97,6 +97,7 @@
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/Analysis/ValueTracking.h"
+#include "llvm/IR/Argument.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/Constant.h"
 #include "llvm/IR/Constants.h"
@@ -110,6 +111,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/LLVMContext.h"
 #include "llvm/IR/Operator.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/Use.h"
@@ -137,6 +139,7 @@
 #define DEBUG_TYPE "infer-address-spaces"
 
 using namespace llvm;
+using namespace llvm::PatternMatch;
 
 static cl::opt<bool> AssumeDefaultIsFlatAddressSpace(
     "assume-default-is-flat-addrspace", cl::init(false), cl::ReallyHidden,
@@ -195,7 +198,8 @@ class InferAddressSpacesImpl {
   unsigned FlatAddrSpace = 0;
   mutable DenseMap<const Value *, Value *> PtrIntCastPairs;
 
-  bool isSafeToCastPtrIntPair(const Operator *I2P, const DataLayout &DL) const;
+  bool isSafeToCastIntToPtrAddrSpace(const Operator *I2P,
+                                     const DataLayout &DL) const;
   bool isAddressExpression(const Value &V, const DataLayout &DL,
                            const TargetTransformInfo *TTI) const;
   Value *cloneConstantExprWithNewAddressSpace(
@@ -356,7 +360,8 @@ bool InferAddressSpacesImpl::isAddressExpression(
     return II && II->getIntrinsicID() == Intrinsic::ptrmask;
   }
   case Instruction::IntToPtr:
-    return isNoopPtrIntCastPair(Op, DL, TTI) || isSafeToCastPtrIntPair(Op, DL);
+    return isNoopPtrIntCastPair(Op, DL, TTI) ||
+           isSafeToCastIntToPtrAddrSpace(Op, DL);
   default:
     // That value is an address expression if it has an assumed address space.
     return TTI->getAssumedAddrSpace(&V) != UninitializedAddressSpace;
@@ -395,7 +400,7 @@ SmallVector<Value *, 2> InferAddressSpacesImpl::getPointerOperands(
       auto *P2I = cast<Operator>(Op.getOperand(0));
       return {P2I->getOperand(0)};
     }
-    assert(isSafeToCastPtrIntPair(&Op, DL));
+    assert(isSafeToCastIntToPtrAddrSpace(&Op, DL));
     return {PtrIntCastPairs[&Op]};
   }
   default:
@@ -421,7 +426,7 @@ static APInt computeMaxChangedPtrBits(const Operator *Op, const Value *Mask,
   }
 }
 
-bool InferAddressSpacesImpl::isSafeToCastPtrIntPair(
+bool InferAddressSpacesImpl::isSafeToCastIntToPtrAddrSpace(
     const Operator *I2P, const DataLayout &DL) const {
   assert(I2P->getOpcode() == Instruction::IntToPtr);
   // If I2P has been checked before and has the corresponding old pointer value,
@@ -432,34 +437,23 @@ bool InferAddressSpacesImpl::isSafeToCastPtrIntPair(
   if (I2P->getType()->isVectorTy())
     return false;
 
-  Operator *LogicOP = dyn_cast<Operator>(I2P->getOperand(0));
-  if (!LogicOP)
+  Value *LogicalOp = I2P->getOperand(0);
+  Value *OldPtr, *Mask;
+  if (!match(LogicalOp,
+             m_c_BitwiseLogic(m_PtrToInt(m_Value(OldPtr)), m_Value(Mask))))
     return false;
 
-  if (LogicOP->getOpcode() != Instruction::Xor &&
-      LogicOP->getOpcode() != Instruction::Or &&
-      LogicOP->getOpcode() != Instruction::And)
-    return false;
-
-  Value *LHS = LogicOP->getOperand(0);
-  Value *Mask = LogicOP->getOperand(1);
-  Operator *P2I = dyn_cast<Operator>(LHS);
-  if (!P2I || P2I->getOpcode() != Instruction::PtrToInt)
-    std::swap(LHS, Mask);
-  P2I = dyn_cast<Operator>(LHS);
-  if (!P2I || P2I->getOpcode() != Instruction::PtrToInt)
-    return false;
-
-  Operator *ASCast = dyn_cast<Operator>(P2I->getOperand(0));
-  if (!ASCast || ASCast->getOpcode() != Instruction::AddrSpaceCast)
+  Operator *AsCast = dyn_cast<AddrSpaceCastOperator>(OldPtr);
+  if (!AsCast)
     return false;
 
   unsigned SrcAS = I2P->getType()->getPointerAddressSpace();
-  unsigned DstAS = ASCast->getOperand(0)->getType()->getPointerAddressSpace();
+  unsigned DstAS = AsCast->getOperand(0)->getType()->getPointerAddressSpace();
   APInt PreservedPtrMask = TTI->getAddrSpaceCastPreservedPtrMask(SrcAS, DstAS);
   if (PreservedPtrMask.isZero())
     return false;
-  APInt ChangedPtrBits = computeMaxChangedPtrBits(LogicOP, Mask, DL, &AC, DT);
+  APInt ChangedPtrBits =
+      computeMaxChangedPtrBits(cast<Operator>(LogicalOp), Mask, DL, &AC, DT);
   // Check if the address bits change is within the preserved mask. If the bits
   // change is not preserved, it is not safe to perform address space cast.
   // The following pattern is not safe to cast address space.
@@ -468,7 +462,7 @@ bool InferAddressSpacesImpl::isSafeToCastPtrIntPair(
   //   %gp = inttoptr i64 %2 to ptr
   assert(ChangedPtrBits.getBitWidth() == PreservedPtrMask.getBitWidth());
   if (ChangedPtrBits.isSubsetOf(PreservedPtrMask)) {
-    PtrIntCastPairs.insert({I2P, P2I->getOperand(0)});
+    PtrIntCastPairs.insert({I2P, OldPtr});
     return true;
   }
 
@@ -683,7 +677,7 @@ InferAddressSpacesImpl::collectFlatAddressExpressions(Function &F) const {
     } else if (auto *I2P = dyn_cast<IntToPtrInst>(&I)) {
       if (isNoopPtrIntCastPair(cast<Operator>(I2P), *DL, TTI))
         PushPtrOperand(cast<Operator>(I2P->getOperand(0))->getOperand(0));
-      else if (isSafeToCastPtrIntPair(cast<Operator>(I2P), *DL))
+      else if (isSafeToCastIntToPtrAddrSpace(cast<Operator>(I2P), *DL))
         PushPtrOperand(PtrIntCastPairs[I2P]);
     } else if (auto *RI = dyn_cast<ReturnInst>(&I)) {
       if (auto *RV = RI->getReturnValue();
@@ -941,7 +935,7 @@ Value *InferAddressSpacesImpl::cloneInstructionWithNewAddressSpace(
       // cast back.
       return new AddrSpaceCastInst(Src, NewPtrType);
     }
-    assert(isSafeToCastPtrIntPair(cast<Operator>(I), *DL));
+    assert(isSafeToCastIntToPtrAddrSpace(cast<Operator>(I), *DL));
     AddrSpaceCastInst *AsCast = new AddrSpaceCastInst(I, NewPtrType);
     AsCast->insertAfter(I);
     return AsCast;
@@ -984,7 +978,7 @@ Value *InferAddressSpacesImpl::cloneConstantExprWithNewAddressSpace(
       assert(Src->getType()->getPointerAddressSpace() == NewAddrSpace);
       return Src;
     }
-    assert(isSafeToCastPtrIntPair(cast<Operator>(CE), *DL));
+    assert(isSafeToCastIntToPtrAddrSpace(cast<Operator>(CE), *DL));
     return ConstantExpr::getAddrSpaceCast(CE, TargetType);
   }
 

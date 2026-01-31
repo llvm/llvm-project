@@ -568,7 +568,8 @@ public:
       unsigned FromAS, unsigned ToAS, const KnownBits &FromPtrBits) const;
 
   /// Return the preserved ptr bit mask that is safe to cast integer to pointer
-  /// with new address space. The address of integer form may only change in the
+  /// with new address space. The returned APInt size is identical to the source
+  /// address space size. The address of integer form may only change in the
   /// least significant bit (e.g. within a page). In that case target can
   /// determine if it is safe to cast the generic address space to the original
   /// address space. For below example, we can replace `%gp2 = inttoptr i64 %b
