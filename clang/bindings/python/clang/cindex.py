@@ -3357,8 +3357,8 @@ class CodeCompletionResults(ClangObject):
     @property
     def results(self) -> CCRStructure:
         warnings.warn(
-            "Access to 'CodeCompletionResult's through "
-            "'CodeCompletionResults.results' will be removed in a future release. "
+            "'CodeCompletionResults.results' will become an implementation detail "
+            "with changed behavior in a future release and should not be used directly. "
             "Existing uses of 'CodeCompletionResults.results' should be changed "
             "to directly use 'CodeCompletionResults': it nows supports '__len__' "
             "and '__getitem__', so it can be used the same as "
