@@ -714,7 +714,8 @@ struct UnrollMultiReductionOuterGeneralCase
         masks.push_back(nullptr);
 
     SmallVector<bool> fullReductionMask = multiReductionOp.getReductionMask();
-    ArrayRef<bool> reductionMask = ArrayRef<bool>(fullReductionMask).drop_front();
+    ArrayRef<bool> reductionMask =
+        ArrayRef<bool>(fullReductionMask).drop_front();
     Value result = multiReductionOp.getAcc();
     for (auto [innerVector, innerMask] : llvm::zip(vectors, masks)) {
 
