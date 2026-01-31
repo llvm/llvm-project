@@ -40,30 +40,8 @@ public:
 
   /// \name Scalar TTI Implementations
   /// @{
-  InstructionCost getIntImmCost(const APInt &Imm, Type *Ty,
-                                TTI::TargetCostKind CostKind) const override;
-
-  InstructionCost getIntImmCostInst(unsigned Opcode, unsigned Idx,
-                                    const APInt &Imm, Type *Ty,
-                                    TTI::TargetCostKind CostKind,
-                                    Instruction *Inst = nullptr) const override;
-  InstructionCost
-  getIntImmCostIntrin(Intrinsic::ID IID, unsigned Idx, const APInt &Imm,
-                      Type *Ty, TTI::TargetCostKind CostKind) const override {
-    return getIntImmCost(Imm, Ty, CostKind);
-  };
 
   TTI::PopcntSupportKind getPopcntSupport(unsigned TyWidth) const override;
-  /// @}
-
-  /// \name Vector TTI Implementations
-  /// @{
-  enum SparcRegisterClass { GPRRC, FPRRC, FP128RRC, VRRC };
-  unsigned getNumberOfRegisters(unsigned ClassID) const override;
-  unsigned getRegisterClassForType(bool Vector,
-                                   Type *Ty = nullptr) const override;
-  TypeSize
-  getRegisterBitWidth(TargetTransformInfo::RegisterKind K) const override;
   /// @}
 };
 
