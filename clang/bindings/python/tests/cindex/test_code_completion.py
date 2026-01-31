@@ -17,14 +17,18 @@ class TestCodeCompletion(unittest.TestCase):
         self.assertIsNotNone(cr)
         self.assertEqual(len(cr.diagnostics), 0)
 
-        completions = [str(c) for c in cr]
+        with warnings.catch_warnings(record=True) as log:
+            completions = [str(c) for c in cr]
+            self.assertEqual(len(log), 2)
+            for warning in log:
+                self.assertIsInstance(warning.message, DeprecationWarning)
 
         for c in expected:
             self.assertIn(c, completions)
 
         with warnings.catch_warnings(record=True) as log:
             completions_deprecated = [str(c) for c in cr.results]
-            self.assertEqual(len(log), 2)
+            self.assertEqual(len(log), 3)
             for warning in log:
                 self.assertIsInstance(warning.message, DeprecationWarning)
 
