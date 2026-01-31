@@ -665,6 +665,49 @@ exit:
   ret i32 %res
 }
 
+define i32 @argmin_trunc_iv(ptr %src) {
+; CHECK-LABEL: define i32 @argmin_trunc_iv(
+; CHECK-SAME: ptr [[SRC:%.*]]) {
+; CHECK-NEXT:  [[ENTRY:.*]]:
+; CHECK-NEXT:    br label %[[LOOP:.*]]
+; CHECK:       [[LOOP]]:
+; CHECK-NEXT:    [[IV:%.*]] = phi i64 [ 1, %[[ENTRY]] ], [ [[IV_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MIN_RDX:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[MIN_RDX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[MIN_IDX:%.*]] = phi i32 [ 0, %[[ENTRY]] ], [ [[MIN_IDX_NEXT:%.*]], %[[LOOP]] ]
+; CHECK-NEXT:    [[GEP_SRC:%.*]] = getelementptr i32, ptr [[SRC]], i64 [[IV]]
+; CHECK-NEXT:    [[L:%.*]] = load i32, ptr [[GEP_SRC]], align 4
+; CHECK-NEXT:    [[MIN_CMP:%.*]] = icmp slt i32 [[L]], [[MIN_RDX]]
+; CHECK-NEXT:    [[IV_TRUNC:%.*]] = trunc i64 [[IV]] to i32
+; CHECK-NEXT:    [[MIN_IDX_NEXT]] = select i1 [[MIN_CMP]], i32 [[IV_TRUNC]], i32 [[MIN_IDX]]
+; CHECK-NEXT:    [[MIN_RDX_NEXT]] = call i32 @llvm.smin.i32(i32 [[L]], i32 [[MIN_RDX]])
+; CHECK-NEXT:    [[IV_NEXT]] = add i64 [[IV]], 1
+; CHECK-NEXT:    [[EC:%.*]] = icmp eq i64 [[IV]], 101
+; CHECK-NEXT:    br i1 [[EC]], label %[[EXIT:.*]], label %[[LOOP]]
+; CHECK:       [[EXIT]]:
+; CHECK-NEXT:    [[MIN_IDX_NEXT_LCSSA:%.*]] = phi i32 [ [[MIN_IDX_NEXT]], %[[LOOP]] ]
+; CHECK-NEXT:    ret i32 [[MIN_IDX_NEXT_LCSSA]]
+;
+entry:
+  br label %loop
+
+loop:
+  %iv = phi i64 [ 1, %entry ], [ %iv.next, %loop ]
+  %min.rdx = phi i32 [ 0, %entry ], [ %min.rdx.next, %loop ]
+  %min.idx = phi i32 [ 0, %entry ], [ %min.idx.next, %loop ]
+  %gep.src = getelementptr i32, ptr %src, i64 %iv
+  %l = load i32, ptr %gep.src, align 4
+  %min.cmp = icmp slt i32 %l, %min.rdx
+  %iv.trunc = trunc i64 %iv to i32
+  %min.idx.next = select i1 %min.cmp, i32 %iv.trunc, i32 %min.idx
+  %min.rdx.next = call i32 @llvm.smin.i32(i32 %l, i32 %min.rdx)
+  %iv.next = add i64 %iv, 1
+  %ec = icmp eq i64 %iv, 101
+  br i1 %ec, label %exit, label %loop
+
+exit:
+  ret i32 %min.idx.next
+}
+
 declare i32 @llvm.umin.i32(i32, i32)
 
 attributes #0 = { optsize "target-cpu"="neoverse-v2" }

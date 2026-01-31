@@ -34,6 +34,13 @@ class TensorDescType;
 
 namespace xegpu {
 
+enum class LayoutKind { Lane, InstData, Subgroup };
+
+LogicalResult propagateLayouts(OpBuilder &builder, Operation *target,
+                               LayoutKind layoutKind, bool printOnly = false);
+
+LogicalResult resolveLayoutConflicts(Operation *target);
+
 /// [to-be-deprecated] Set the DistributeLayoutAttr for each OpOperand and
 /// OpResult of of the given operation. If the operation contains regions, it is
 /// also applied recursively to the contained operations operation.
@@ -106,7 +113,7 @@ inferInsertStridedSliceSourceLayout(DistributeLayoutAttr resLayout,
 /// with the consumer's preferred layout. This minimizes data redistribution
 /// overhead. The SliceAttr for the result is then created based on the
 /// derived source layout and the specified reduction dimensions.
-SliceAttr setupMultiReductionResultLayout(xegpu::LayoutKind layoutKind,
+SliceAttr setupMultiReductionResultLayout(LayoutKind layoutKind,
                                           VectorType srcVectorTy,
                                           DistributeLayoutAttr consumerLayout,
                                           SmallVector<int64_t> reductionDims,

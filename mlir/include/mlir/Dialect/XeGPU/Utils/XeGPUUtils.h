@@ -26,11 +26,13 @@ namespace xegpu {
 class DistributeLayoutAttr;
 class LayoutAttr;
 class TensorDescType;
+
+namespace uArch {
+struct uArch;
+} // namespace uArch
 } // namespace xegpu
 
 namespace xegpu {
-
-enum class LayoutKind { Lane, InstData, Subgroup };
 
 /// Flatten a set of ValueRange into a single SmallVector<Value>
 SmallVector<Value> flattenValues(ArrayRef<ValueRange> values);
@@ -64,6 +66,21 @@ FailureOr<VectorType> getDistributedVectorType(xegpu::TensorDescType tdescTy);
 /// to a given LayoutAttr.
 FailureOr<VectorType> getDistributedVectorType(VectorType originalType,
                                                LayoutAttr layout);
+
+/// Helper function to get distributed vector type for a source vector type
+/// according to the lane_layout. We simply divide each dimension of tensor
+/// descriptor shape by corresponding lane_layout dimension. If
+/// array_length > 1, that is appended to the front of the distributed shape.
+///
+/// Examples:
+/// | original vector shape | lane_layout | distributed vector shape |
+/// |-----------------------|-------------|--------------------------|
+/// | 32x16                 | [1, 16]     | 32x1                     |
+/// | 32x16                 | [2, 8]      | 16x2                     |
+/// | 2x32x16               | [1, 16]     | 2x32x1                   |
+FailureOr<VectorType>
+getDistVecTypeBasedOnLaneLayout(DistributeLayoutAttr layout,
+                                VectorType originalType);
 
 /// Extract a set of small vectors from a value with a given shape using
 /// vector.extract_stride_slice
@@ -160,6 +177,14 @@ template <typename T,
                                       std::is_same_v<T, OpResult>>>
 void setTemporaryLayout(const T &operandOrResult,
                         const DistributeLayoutAttr layout);
+
+/// Helper function to check if the layout is packed. Layout is packed if it is
+/// 2D and lane_data[0] != 1 (data packed from col dimension).
+/// TODO: Move to target info.
+bool requirePacked(const LayoutAttr layout);
+
+/// Helper function to check if the layout requires a transpose effect.
+bool requireTranspose(const LayoutAttr layout, const uArch::uArch *uArch);
 
 } // namespace xegpu
 

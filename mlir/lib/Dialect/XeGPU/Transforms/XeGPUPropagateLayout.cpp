@@ -17,6 +17,7 @@
 #include "mlir/Dialect/XeGPU/Transforms/Passes.h"
 #include "mlir/Dialect/XeGPU/Transforms/XeGPULayoutImpls.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
+#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
@@ -26,6 +27,7 @@
 #include "mlir/IR/Visitors.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/FunctionInterfaces.h"
+#include "mlir/Interfaces/LoopLikeInterface.h"
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/ArrayRef.h"
 #include "llvm/ADT/STLExtras.h"
@@ -36,8 +38,6 @@
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/LogicalResult.h"
 #include "llvm/Support/raw_ostream.h"
-
-#include "mlir/Dialect/XeGPU/uArch/IntelGpuXe2.h"
 
 namespace mlir {
 namespace xegpu {
@@ -455,49 +455,51 @@ LogicalResult LayoutInfoPropagation::visitOperation(
     Operation *op, ArrayRef<LayoutInfoLattice *> operands,
     ArrayRef<const LayoutInfoLattice *> results) {
   TypeSwitch<Operation *>(op)
-      .Case<xegpu::DpasOp>(
-          [&](auto dpasOp) { visitDpasOp(dpasOp, operands, results); })
-      .Case<xegpu::StoreNdOp>(
-          [&](auto storeNdOp) { visitStoreNdOp(storeNdOp, operands, results); })
-      .Case<xegpu::StoreScatterOp>([&](auto storeScatterOp) {
+      .Case(
+          [&](xegpu::DpasOp dpasOp) { visitDpasOp(dpasOp, operands, results); })
+      .Case([&](xegpu::StoreNdOp storeNdOp) {
+        visitStoreNdOp(storeNdOp, operands, results);
+      })
+      .Case([&](xegpu::StoreScatterOp storeScatterOp) {
         visitStoreScatterOp(storeScatterOp, operands, results);
       })
-      .Case<xegpu::LoadNdOp>(
-          [&](auto loadNdOp) { visitLoadNdOp(loadNdOp, operands, results); })
-      .Case<xegpu::LoadGatherOp>([&](auto loadGatherOp) {
+      .Case([&](xegpu::LoadNdOp loadNdOp) {
+        visitLoadNdOp(loadNdOp, operands, results);
+      })
+      .Case([&](xegpu::LoadGatherOp loadGatherOp) {
         visitLoadGatherOp(loadGatherOp, operands, results);
       })
-      .Case<xegpu::CreateDescOp>([&](auto createDescOp) {
+      .Case([&](xegpu::CreateDescOp createDescOp) {
         visitCreateDescOp(createDescOp, operands, results);
       })
-      .Case<xegpu::UpdateNdOffsetOp>([&](auto updateNdOffsetOp) {
+      .Case([&](xegpu::UpdateNdOffsetOp updateNdOffsetOp) {
         visitUpdateNdOffsetOp(updateNdOffsetOp, operands, results);
       })
-      .Case<xegpu::PrefetchNdOp>([&](auto prefetchNdOp) {
+      .Case([&](xegpu::PrefetchNdOp prefetchNdOp) {
         visitPrefetchNdOp(prefetchNdOp, operands, results);
       })
-      .Case<vector::TransposeOp>([&](auto transposeOp) {
+      .Case([&](vector::TransposeOp transposeOp) {
         visitTransposeOp(transposeOp, operands, results);
       })
-      .Case<vector::BitCastOp>([&](auto bitcastOp) {
+      .Case([&](vector::BitCastOp bitcastOp) {
         visitVectorBitcastOp(bitcastOp, operands, results);
       })
-      .Case<vector::MultiDimReductionOp>([&](auto reductionOp) {
+      .Case([&](vector::MultiDimReductionOp reductionOp) {
         visitVectorMultiReductionOp(reductionOp, operands, results);
       })
-      .Case<vector::BroadcastOp>([&](auto broadcastOp) {
+      .Case([&](vector::BroadcastOp broadcastOp) {
         visitVectorBroadCastOp(broadcastOp, operands, results);
       })
-      .Case<vector::ShapeCastOp>([&](auto shapeCastOp) {
+      .Case([&](vector::ShapeCastOp shapeCastOp) {
         visitShapeCastOp(shapeCastOp, operands, results);
       })
-      .Case<vector::InsertStridedSliceOp>([&](auto insertStridedSliceOp) {
+      .Case([&](vector::InsertStridedSliceOp insertStridedSliceOp) {
         visitInsertStridedSliceOp(insertStridedSliceOp, operands, results);
       })
-      .Case<xegpu::LoadMatrixOp>([&](auto loadMatrixOp) {
+      .Case([&](xegpu::LoadMatrixOp loadMatrixOp) {
         visitLoadMatrixOp(loadMatrixOp, operands, results);
       })
-      .Case<xegpu::StoreMatrixOp>([&](auto storeMatrixOp) {
+      .Case([&](xegpu::StoreMatrixOp storeMatrixOp) {
         visitStoreMatrixOp(storeMatrixOp, operands, results);
       })
       // All other ops.
@@ -1383,6 +1385,121 @@ void RunLayoutInfoPropagation::printAnalysisResult(llvm::raw_ostream &os) {
     printFunctionResult(funcOp);
 }
 
+namespace {
+
+//===----------------------------------------------------------------------===//
+// ResolveLayoutConflicts
+//===----------------------------------------------------------------------===//
+struct ResolveLayoutConflicts {
+  ResolveLayoutConflicts(Operation *parentOp)
+      : parentOp(parentOp), builder(parentOp->getContext()) {}
+  LogicalResult run();
+
+private:
+  Operation *parentOp;
+  OpBuilder builder;
+  LogicalResult resolveTensorDescConsumer(OpOperand &operand);
+  LogicalResult resolveVectorConsumer(OpOperand &operand);
+};
+
+} // namespace
+
+LogicalResult ResolveLayoutConflicts::run() {
+  // Scan all operations in the parent op and resolve layout conflicts at
+  // tensor descriptor and vector use points.
+  auto r = parentOp->walk([&](Operation *op) -> WalkResult {
+    for (OpOperand &operand : op->getOpOperands()) {
+      // Handle conflicts in tensor descriptor operands.
+      Type operandType = operand.get().getType();
+      if (isa<xegpu::AnchorLayoutInterface>(op) &&
+          isa<xegpu::TensorDescType>(operandType)) {
+        auto res = resolveTensorDescConsumer(operand);
+        return succeeded(res) ? WalkResult::advance() : WalkResult::interrupt();
+      }
+      // Handle conflicts in vector operands.
+      if (isa<VectorType>(operandType)) {
+        auto res = resolveVectorConsumer(operand);
+        return succeeded(res) ? WalkResult::advance() : WalkResult::interrupt();
+      }
+    }
+    return WalkResult::advance();
+  });
+
+  return r.wasInterrupted() ? failure() : success();
+}
+
+/// Helper to get the defining CreateNdDescOp of a tensor descriptor value. This
+/// function tries to find the defining CreateNdDescOp recursively accross
+/// control-flow boundaries.
+static xegpu::CreateNdDescOp getDefiningCreateNdDescOp(Value tdescValue) {
+  // Try to get the defining CreateNdDescOp of the tensor descriptor.
+  auto definingOp = tdescValue.getDefiningOp<xegpu::CreateNdDescOp>();
+  if (definingOp)
+    return definingOp;
+  // If tdescValue is an argument, try to get the tied init value from the
+  // parent loop-like op.
+  if (auto arg = dyn_cast<BlockArgument>(tdescValue)) {
+    auto *parentOp = arg.getOwner()->getParentOp();
+    if (auto loop = dyn_cast<LoopLikeOpInterface>(parentOp)) {
+      OpOperand *tiedInit = loop.getTiedLoopInit(arg);
+      if (tiedInit)
+        return getDefiningCreateNdDescOp(tiedInit->get());
+    }
+  }
+  // If not found, return null.
+  return nullptr;
+}
+
+LogicalResult
+ResolveLayoutConflicts::resolveVectorConsumer(OpOperand &operand) {
+  // TODO: Implement vector consumer layout conflict resolution. Requires layout
+  // utilities.
+  return success();
+}
+
+LogicalResult
+ResolveLayoutConflicts::resolveTensorDescConsumer(OpOperand &operand) {
+  Operation *consumerOp = operand.getOwner();
+  Value tdescValue = operand.get();
+  auto anchorOp = dyn_cast<xegpu::AnchorLayoutInterface>(consumerOp);
+  auto currTDescType = dyn_cast<xegpu::TensorDescType>(tdescValue.getType());
+  assert(anchorOp && currTDescType &&
+         "Expected anchor layout op and tensor descriptor consumer.");
+  // TODO: Scattered tensor desc is not supported for now.
+  if (currTDescType.isScattered()) {
+    DBGS() << "Scattered tensor descriptor not supported: " << tdescValue
+           << "\n";
+    return failure();
+  }
+  Attribute currLayout = currTDescType.getLayout();
+  Attribute expectedLayout = anchorOp.getAnchorLayout();
+  // A conflict exists in tensor descriptor operand if tensor descriptor's
+  // layout is different from the anchor layout expected by the consumer.
+  if (expectedLayout && currLayout && expectedLayout != currLayout) {
+    // Try to get the defining CreateNdDescOp of the tensor descriptor.
+    auto conflictingCreateNdOp = getDefiningCreateNdDescOp(tdescValue);
+    if (!conflictingCreateNdOp) {
+      DBGS() << "Unable to find defining CreateNdDescOp for tensor descriptor: "
+             << tdescValue << "\n";
+      return failure();
+    }
+    // Duplicate the CreateNdDescOp with the expected layout.
+    builder.setInsertionPointAfter(conflictingCreateNdOp);
+    auto newTensorDescType = xegpu::TensorDescType::get(
+        conflictingCreateNdOp.getContext(), currTDescType.getShape(),
+        currTDescType.getElementType(), currTDescType.getEncoding(),
+        expectedLayout);
+    xegpu::CreateNdDescOp newOp = xegpu::CreateNdDescOp::create(
+        builder, consumerOp->getLoc(), newTensorDescType,
+        conflictingCreateNdOp->getOperands(),
+        conflictingCreateNdOp->getAttrs());
+    // Replace the tensor descriptor operand in the consumer op with the new
+    // tensor descriptor.
+    consumerOp->replaceUsesOfWith(tdescValue, newOp.getResult());
+  }
+  return success();
+}
+
 using GetLayoutFnTy = function_ref<xegpu::DistributeLayoutAttr(Value)>;
 /// Update an operation with the layout of its results. If the result type is
 /// a vector type, a temporary layout attribute is added to the operation. If
@@ -1546,26 +1663,14 @@ struct XeGPUPropagateLayoutPass final
 
 } // namespace
 
-void XeGPUPropagateLayoutPass::runOnOperation() {
-  xegpu::LayoutKind layoutKind;
-  if (this->layoutKind == "lane") {
-    layoutKind = xegpu::LayoutKind::Lane;
-  } else if (this->layoutKind == "inst") {
-    layoutKind = xegpu::LayoutKind::InstData;
-  } else if (this->layoutKind == "subgroup") {
-    layoutKind = xegpu::LayoutKind::Subgroup;
-  } else {
-    getOperation()->emitError("Unsupported layout kind option: " +
-                              this->layoutKind);
-    signalPassFailure();
-    return;
-  }
-  RunLayoutInfoPropagation analysis(getOperation(), layoutKind);
+LogicalResult xegpu::propagateLayouts(OpBuilder &builder, Operation *target,
+                                      LayoutKind layoutKind, bool printOnly) {
+  RunLayoutInfoPropagation analysis(target, layoutKind);
   // Print the analysis result and exit. (for debugging purposes)
   if (printOnly) {
     auto &os = llvm::outs();
     analysis.printAnalysisResult(os);
-    return;
+    return success();
   }
   // Helper to convert LayoutInfo to xegpu::LayoutAttr.
   auto getXeGPULayoutForValue = [&](Value val) -> xegpu::DistributeLayoutAttr {
@@ -1593,22 +1698,19 @@ void XeGPUPropagateLayoutPass::runOnOperation() {
     return cast<xegpu::LayoutAttr>(layoutAttr);
   };
 
-  mlir::OpBuilder builder(&getContext());
-  Operation *op = getOperation();
+  Operation *op = target;
   auto walkResult = op->walk([&](mlir::Block *block) -> WalkResult {
     for (mlir::Operation &op : llvm::reverse(block->getOperations())) {
       LogicalResult r = success();
       TypeSwitch<Operation *>(&op)
-          .Case<mlir::RegionBranchTerminatorOpInterface>(
-              [&](mlir::RegionBranchTerminatorOpInterface branchTermOp) {
-                r = updateControlFlowOps(builder, branchTermOp,
-                                         getXeGPULayoutForValue);
-              })
-          .Case<mlir::FunctionOpInterface>(
-              [&](mlir::FunctionOpInterface funcOp) {
-                r = updateFunctionOpInterface(builder, funcOp,
-                                              getXeGPULayoutForValue);
-              })
+          .Case([&](mlir::RegionBranchTerminatorOpInterface branchTermOp) {
+            r = updateControlFlowOps(builder, branchTermOp,
+                                     getXeGPULayoutForValue);
+          })
+          .Case([&](mlir::FunctionOpInterface funcOp) {
+            r = updateFunctionOpInterface(builder, funcOp,
+                                          getXeGPULayoutForValue);
+          })
           .Default([&](Operation *op) {
             r = updateOp(builder, op, getXeGPULayoutForValue);
           });
@@ -1619,7 +1721,39 @@ void XeGPUPropagateLayoutPass::runOnOperation() {
     }
     return WalkResult::advance();
   });
-  if (walkResult.wasInterrupted()) {
+  if (walkResult.wasInterrupted())
+    return failure();
+
+  return success();
+}
+
+LogicalResult xegpu::resolveLayoutConflicts(Operation *target) {
+  ResolveLayoutConflicts resolver(target);
+  return resolver.run();
+}
+
+void XeGPUPropagateLayoutPass::runOnOperation() {
+  xegpu::LayoutKind layoutKind;
+  if (this->layoutKind == "lane") {
+    layoutKind = xegpu::LayoutKind::Lane;
+  } else if (this->layoutKind == "inst") {
+    layoutKind = xegpu::LayoutKind::InstData;
+  } else if (this->layoutKind == "subgroup") {
+    layoutKind = xegpu::LayoutKind::Subgroup;
+  } else {
+    getOperation()->emitError("Unsupported layout kind option: " +
+                              this->layoutKind);
+    signalPassFailure();
+    return;
+  }
+  OpBuilder builder(&getContext());
+  if (failed(xegpu::propagateLayouts(builder, getOperation(), layoutKind,
+                                     this->printOnly))) {
+    signalPassFailure();
+    return;
+  }
+  // Resolve layout conflicts if any.
+  if (failed(xegpu::resolveLayoutConflicts(getOperation()))) {
     signalPassFailure();
     return;
   }
