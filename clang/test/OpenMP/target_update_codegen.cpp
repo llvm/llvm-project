@@ -1187,7 +1187,7 @@ void foo(int arg) {
 // CK21: [[STRUCT_ST:%.+]] = type { [10 x [10 x [10 x ptr]]] }
 // CK21: [[STRUCT_DESCRIPTOR:%.+]]  = type { i64, i64, i64 }
 
-// CK21: [[SIZE:@.+]] = private unnamed_addr constant [2 x i64] zeroinitializer
+// CK21: [[SIZE:@.+]] = private unnamed_addr constant [2 x i64] [i64 0, i64 4]
 // CK21: [[MTYPE:@.+]] = {{.+}}constant [2 x i64] [i64 0, i64 299067162755073]
 
 struct ST {
@@ -1234,8 +1234,9 @@ struct ST {
     // CK21-DAG: call void @__tgt_target_data_update_mapper(ptr @{{.+}}, i64 -1, i32 2, ptr [[GEPBP:%.+]], ptr [[GEPP:%.+]], ptr [[GEPSZ:%.+]], ptr [[MTYPE]]{{.+}})
     // CK21-DAG: [[GEPBP]] = getelementptr inbounds {{.+}}[[BP]]
     // CK21-DAG: [[GEPP]] = getelementptr inbounds {{.+}}[[P:%[^,]+]]
-    // CK21-DAG: [[PTRS:%.+]] = getelementptr inbounds [2 x ptr], ptr %.offload_ptrs, i32 0, i32 0
-    // CK21-DAG: store ptr [[DIMS]], ptr [[PTRS]],
+    // CK21-DAG: store ptr [[DIMS]], ptr [[PTRS1:%.+]],
+    // CK21-DAG: [[PTRS1]] = getelementptr inbounds [2 x ptr], ptr [[P]], i32 0, i32 1
+    // CK21: ret void
 #pragma omp target update to(dptr[0:2][1:3][0:4])
   }
 };

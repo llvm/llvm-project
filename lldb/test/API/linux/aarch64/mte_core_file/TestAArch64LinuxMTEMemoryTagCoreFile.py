@@ -154,7 +154,7 @@ class AArch64LinuxMTEMemoryTagCoreFileTestCase(TestBase):
             ],
         )
 
-        # For the intial alignment of start/end to granule boundaries the tag manager
+        # For the initial alignment of start/end to granule boundaries the tag manager
         # is used, so this reads 1 tag as it would normally.
         self.expect(
             "memory tag read {addr} {addr}+1".format(addr=self.MTE_BUF_ADDR),

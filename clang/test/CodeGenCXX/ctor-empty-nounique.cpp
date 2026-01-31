@@ -6,7 +6,7 @@
 // some don't. (Currently, at least x86_64-windows-* and powerpc64le-* don't
 // treat it as void.)
 //
-// When intializing a struct with such a no_unique_address member, make sure we
+// When initializing a struct with such a no_unique_address member, make sure we
 // don't write the dummy i8 into the struct where there's no space allocated for
 // it.
 //

@@ -12,14 +12,22 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/MDBuilder.h"
+#include "llvm/IR/ProfDataUtils.h"
+#include "llvm/ProfileData/InstrProf.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Transforms/Utils/BasicBlockUtils.h"
+#include "llvm/Transforms/Utils/LoopUtils.h"
+#include <limits>
 #include <optional>
 
 #define DEBUG_TYPE "lower-mem-intrinsics"
 
 using namespace llvm;
+
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
 
 /// \returns \p Len urem \p OpSize, checking for optimization opportunities.
 /// \p OpSizeVal must be the integer value of the \c ConstantInt \p OpSize.
@@ -60,6 +68,28 @@ struct LoopExpansionInfo {
   /// required.
   Value *ResidualLoopIndex = nullptr;
 };
+
+std::optional<uint64_t> getAverageMemOpLoopTripCount(const MemIntrinsic &I) {
+  if (ProfcheckDisableMetadataFixes)
+    return std::nullopt;
+  if (std::optional<Function::ProfileCount> EC =
+          I.getFunction()->getEntryCount();
+      !EC || !EC->getCount())
+    return std::nullopt;
+  if (const auto Len = I.getLengthInBytes())
+    return Len->getZExtValue();
+  uint64_t Total = 0;
+  SmallVector<InstrProfValueData> ProfData =
+      getValueProfDataFromInst(I, InstrProfValueKind::IPVK_MemOPSize,
+                               std::numeric_limits<uint32_t>::max(), Total);
+  if (!Total)
+    return std::nullopt;
+  uint64_t TripCount = 0;
+  for (const auto &P : ProfData)
+    TripCount += P.Count * P.Value;
+  return std::round(1.0 * TripCount / Total);
+}
+
 } // namespace
 
 /// Insert the control flow and loop counters for a memcpy/memset loop
@@ -94,10 +124,11 @@ struct LoopExpansionInfo {
 /// to \p MainLoopStep.
 /// The generated \c MainLoopIP, \c MainLoopIndex, \c ResidualLoopIP, and
 /// \c ResidualLoopIndex are returned in a \c LoopExpansionInfo object.
-static LoopExpansionInfo insertLoopExpansion(Instruction *InsertBefore,
-                                             Value *Len, unsigned MainLoopStep,
-                                             unsigned ResidualLoopStep,
-                                             StringRef BBNamePrefix) {
+static LoopExpansionInfo
+insertLoopExpansion(Instruction *InsertBefore, Value *Len,
+                    unsigned MainLoopStep, unsigned ResidualLoopStep,
+                    StringRef BBNamePrefix,
+                    std::optional<uint64_t> AverageTripCount) {
   assert((ResidualLoopStep == 0 || MainLoopStep % ResidualLoopStep == 0) &&
          "ResidualLoopStep must divide MainLoopStep if specified");
   assert(ResidualLoopStep <= MainLoopStep &&
@@ -109,7 +140,9 @@ static LoopExpansionInfo insertLoopExpansion(Instruction *InsertBefore,
       InsertBefore, BBNamePrefix + "-post-expansion");
   Function *ParentFunc = PreLoopBB->getParent();
   LLVMContext &Ctx = PreLoopBB->getContext();
+  const DebugLoc &DbgLoc = InsertBefore->getStableDebugLoc();
   IRBuilder<> PreLoopBuilder(PreLoopBB->getTerminator());
+  PreLoopBuilder.SetCurrentDebugLocation(DbgLoc);
 
   // Calculate the main loop trip count and remaining units to cover after the
   // loop.
@@ -148,6 +181,7 @@ static LoopExpansionInfo insertLoopExpansion(Instruction *InsertBefore,
   BasicBlock *MainLoopBB = BasicBlock::Create(
       Ctx, BBNamePrefix + "-expansion-main-body", ParentFunc, PostLoopBB);
   IRBuilder<> LoopBuilder(MainLoopBB);
+  LoopBuilder.SetCurrentDebugLocation(DbgLoc);
 
   PHINode *LoopIndex = LoopBuilder.CreatePHI(LenType, 2, "loop-index");
   LEI.MainLoopIndex = LoopIndex;
@@ -175,9 +209,19 @@ static LoopExpansionInfo insertLoopExpansion(Instruction *InsertBefore,
     ConstantInt *Zero = ConstantInt::get(ILenType, 0U);
     if (MustTakeMainLoop)
       PreLoopBuilder.CreateBr(MainLoopBB);
-    else
-      PreLoopBuilder.CreateCondBr(PreLoopBuilder.CreateICmpNE(LoopUnits, Zero),
-                                  MainLoopBB, ResidualCondBB);
+    else {
+      auto *BR = PreLoopBuilder.CreateCondBr(
+          PreLoopBuilder.CreateICmpNE(LoopUnits, Zero), MainLoopBB,
+          ResidualCondBB);
+      if (AverageTripCount.has_value()) {
+        MDBuilder MDB(ParentFunc->getContext());
+        setFittedBranchWeights(*BR,
+                               {AverageTripCount.value() % MainLoopStep, 1},
+                               /*IsExpected=*/false);
+      } else {
+        setExplicitlyUnknownBranchWeightsIfProfiled(*BR, DEBUG_TYPE);
+      }
+    }
     PreLoopBB->getTerminator()->eraseFromParent();
 
     // Stay in the MainLoop until we have handled all the LoopUnits. Then go to
@@ -187,10 +231,12 @@ static LoopExpansionInfo insertLoopExpansion(Instruction *InsertBefore,
 
     // Determine if we need to branch to the residual loop or bypass it.
     IRBuilder<> RCBuilder(ResidualCondBB);
+    RCBuilder.SetCurrentDebugLocation(DbgLoc);
     RCBuilder.CreateCondBr(RCBuilder.CreateICmpNE(ResidualUnits, Zero),
                            ResLoopBB, PostLoopBB);
 
     IRBuilder<> ResBuilder(ResLoopBB);
+    ResBuilder.SetCurrentDebugLocation(DbgLoc);
     PHINode *ResidualIndex =
         ResBuilder.CreatePHI(LenType, 2, "residual-loop-index");
     ResidualIndex->addIncoming(Zero, ResidualCondBB);
@@ -222,22 +268,32 @@ static LoopExpansionInfo insertLoopExpansion(Instruction *InsertBefore,
       PreLoopBuilder.CreateBr(MainLoopBB);
     } else {
       ConstantInt *Zero = ConstantInt::get(ILenType, 0U);
+      MDBuilder B(ParentFunc->getContext());
       PreLoopBuilder.CreateCondBr(PreLoopBuilder.CreateICmpNE(LoopUnits, Zero),
-                                  MainLoopBB, PostLoopBB);
+                                  MainLoopBB, PostLoopBB,
+                                  B.createLikelyBranchWeights());
     }
     PreLoopBB->getTerminator()->eraseFromParent();
     // Stay in the MainLoop until we have handled all the LoopUnits.
-    LoopBuilder.CreateCondBr(LoopBuilder.CreateICmpULT(NewIndex, LoopUnits),
-                             MainLoopBB, PostLoopBB);
+    auto *Br = LoopBuilder.CreateCondBr(
+        LoopBuilder.CreateICmpULT(NewIndex, LoopUnits), MainLoopBB, PostLoopBB);
+    if (AverageTripCount.has_value())
+      setFittedBranchWeights(*Br, {AverageTripCount.value() / MainLoopStep, 1},
+                             /*IsExpected=*/false);
+    else
+      setExplicitlyUnknownBranchWeightsIfProfiled(*Br, DEBUG_TYPE);
   }
   return LEI;
 }
 
-void llvm::createMemCpyLoopKnownSize(
-    Instruction *InsertBefore, Value *SrcAddr, Value *DstAddr,
-    ConstantInt *CopyLen, Align SrcAlign, Align DstAlign, bool SrcIsVolatile,
-    bool DstIsVolatile, bool CanOverlap, const TargetTransformInfo &TTI,
-    std::optional<uint32_t> AtomicElementSize) {
+void llvm::createMemCpyLoopKnownSize(Instruction *InsertBefore, Value *SrcAddr,
+                                     Value *DstAddr, ConstantInt *CopyLen,
+                                     Align SrcAlign, Align DstAlign,
+                                     bool SrcIsVolatile, bool DstIsVolatile,
+                                     bool CanOverlap,
+                                     const TargetTransformInfo &TTI,
+                                     std::optional<uint32_t> AtomicElementSize,
+                                     std::optional<uint64_t> AverageTripCount) {
   // No need to expand zero length copies.
   if (CopyLen->isZero())
     return;
@@ -269,8 +325,9 @@ void llvm::createMemCpyLoopKnownSize(
 
   // Skip the loop expansion entirely if the loop would never be taken.
   if (LoopEndCount != 0) {
-    LoopExpansionInfo LEI = insertLoopExpansion(InsertBefore, CopyLen,
-                                                LoopOpSize, 0, "static-memcpy");
+    LoopExpansionInfo LEI =
+        insertLoopExpansion(InsertBefore, CopyLen, LoopOpSize, 0,
+                            "static-memcpy", AverageTripCount);
 
     // Fill MainLoopBB
     IRBuilder<> MainLoopBuilder(LEI.MainLoopIP);
@@ -357,7 +414,8 @@ void llvm::createMemCpyLoopUnknownSize(
     Instruction *InsertBefore, Value *SrcAddr, Value *DstAddr, Value *CopyLen,
     Align SrcAlign, Align DstAlign, bool SrcIsVolatile, bool DstIsVolatile,
     bool CanOverlap, const TargetTransformInfo &TTI,
-    std::optional<uint32_t> AtomicElementSize) {
+    std::optional<uint32_t> AtomicElementSize,
+    std::optional<uint64_t> AverageTripCount) {
   BasicBlock *PreLoopBB = InsertBefore->getParent();
   Function *ParentFunc = PreLoopBB->getParent();
   const DataLayout &DL = ParentFunc->getDataLayout();
@@ -387,8 +445,9 @@ void llvm::createMemCpyLoopUnknownSize(
   assert(ResidualLoopOpSize == (AtomicElementSize ? *AtomicElementSize : 1) &&
          "Store size is expected to match type size");
 
-  LoopExpansionInfo LEI = insertLoopExpansion(
-      InsertBefore, CopyLen, LoopOpSize, ResidualLoopOpSize, "dynamic-memcpy");
+  LoopExpansionInfo LEI =
+      insertLoopExpansion(InsertBefore, CopyLen, LoopOpSize, ResidualLoopOpSize,
+                          "dynamic-memcpy", AverageTripCount);
 
   // Fill MainLoopBB
   IRBuilder<> MainLoopBuilder(LEI.MainLoopIP);
@@ -535,7 +594,9 @@ static void createMemMoveLoopUnknownSize(Instruction *InsertBefore,
       ConstantInt::get(ILengthType, ResidualLoopOpSize);
   ConstantInt *Zero = ConstantInt::get(ILengthType, 0);
 
+  const DebugLoc &DbgLoc = InsertBefore->getStableDebugLoc();
   IRBuilder<> PLBuilder(InsertBefore);
+  PLBuilder.SetCurrentDebugLocation(DbgLoc);
 
   Value *RuntimeLoopBytes = CopyLen;
   Value *RuntimeLoopRemainder = nullptr;
@@ -621,6 +682,7 @@ static void createMemMoveLoopUnknownSize(Instruction *InsertBefore,
       BasicBlock *ResidualLoopBB = BasicBlock::Create(
           F->getContext(), "memmove_bwd_residual_loop", F, MainLoopBB);
       IRBuilder<> ResidualLoopBuilder(ResidualLoopBB);
+      ResidualLoopBuilder.SetCurrentDebugLocation(DbgLoc);
       PHINode *ResidualLoopPhi = ResidualLoopBuilder.CreatePHI(ILengthType, 0);
       Value *ResidualIndex = ResidualLoopBuilder.CreateSub(
           ResidualLoopPhi, CIResidualLoopOpSize, "bwd_residual_index");
@@ -643,6 +705,7 @@ static void createMemMoveLoopUnknownSize(Instruction *InsertBefore,
           F->getContext(), "memmove_bwd_middle", F, MainLoopBB);
       // Later code expects a terminator in the PredBB.
       IRBuilder<> IntermediateBuilder(IntermediateBB);
+      IntermediateBuilder.SetCurrentDebugLocation(DbgLoc);
       IntermediateBuilder.CreateUnreachable();
       ResidualLoopBuilder.CreateCondBr(
           ResidualLoopBuilder.CreateICmpEQ(ResidualIndex, RuntimeLoopBytes),
@@ -652,8 +715,10 @@ static void createMemMoveLoopUnknownSize(Instruction *InsertBefore,
       ResidualLoopPhi->addIncoming(CopyLen, CopyBackwardsBB);
 
       // How to get to the residual:
-      BranchInst::Create(IntermediateBB, ResidualLoopBB, SkipResidualCondition,
-                         ThenTerm->getIterator());
+      BranchInst *BrInst =
+          BranchInst::Create(IntermediateBB, ResidualLoopBB,
+                             SkipResidualCondition, ThenTerm->getIterator());
+      BrInst->setDebugLoc(DbgLoc);
       ThenTerm->eraseFromParent();
 
       PredBB = IntermediateBB;
@@ -661,6 +726,7 @@ static void createMemMoveLoopUnknownSize(Instruction *InsertBefore,
 
     // main loop
     IRBuilder<> MainLoopBuilder(MainLoopBB);
+    MainLoopBuilder.SetCurrentDebugLocation(DbgLoc);
     PHINode *MainLoopPhi = MainLoopBuilder.CreatePHI(ILengthType, 0);
     Value *MainIndex =
         MainLoopBuilder.CreateSub(MainLoopPhi, CILoopOpSize, "bwd_main_index");
@@ -679,8 +745,9 @@ static void createMemMoveLoopUnknownSize(Instruction *InsertBefore,
 
     // How to get to the main loop:
     Instruction *PredBBTerm = PredBB->getTerminator();
-    BranchInst::Create(ExitBB, MainLoopBB, SkipMainCondition,
-                       PredBBTerm->getIterator());
+    BranchInst *BrInst = BranchInst::Create(
+        ExitBB, MainLoopBB, SkipMainCondition, PredBBTerm->getIterator());
+    BrInst->setDebugLoc(DbgLoc);
     PredBBTerm->eraseFromParent();
   }
 
@@ -690,6 +757,7 @@ static void createMemMoveLoopUnknownSize(Instruction *InsertBefore,
     BasicBlock *MainLoopBB =
         BasicBlock::Create(F->getContext(), "memmove_fwd_main_loop", F, ExitBB);
     IRBuilder<> MainLoopBuilder(MainLoopBB);
+    MainLoopBuilder.SetCurrentDebugLocation(DbgLoc);
     PHINode *MainLoopPhi =
         MainLoopBuilder.CreatePHI(ILengthType, 0, "fwd_main_index");
     Value *LoadGEP =
@@ -716,13 +784,16 @@ static void createMemMoveLoopUnknownSize(Instruction *InsertBefore,
         MainLoopBB);
 
     // getting in or skipping the main loop
-    BranchInst::Create(SuccessorBB, MainLoopBB, SkipMainCondition,
-                       CopyFwdBBTerm->getIterator());
+    BranchInst *BrInst =
+        BranchInst::Create(SuccessorBB, MainLoopBB, SkipMainCondition,
+                           CopyFwdBBTerm->getIterator());
+    BrInst->setDebugLoc(DbgLoc);
     CopyFwdBBTerm->eraseFromParent();
 
     if (RequiresResidual) {
       BasicBlock *IntermediateBB = SuccessorBB;
       IRBuilder<> IntermediateBuilder(IntermediateBB);
+      IntermediateBuilder.SetCurrentDebugLocation(DbgLoc);
       BasicBlock *ResidualLoopBB = BasicBlock::Create(
           F->getContext(), "memmove_fwd_residual_loop", F, ExitBB);
       IntermediateBuilder.CreateCondBr(SkipResidualCondition, ExitBB,
@@ -730,6 +801,7 @@ static void createMemMoveLoopUnknownSize(Instruction *InsertBefore,
 
       // Residual loop
       IRBuilder<> ResidualLoopBuilder(ResidualLoopBB);
+      ResidualLoopBuilder.SetCurrentDebugLocation(DbgLoc);
       PHINode *ResidualLoopPhi =
           ResidualLoopBuilder.CreatePHI(ILengthType, 0, "fwd_residual_index");
       Value *LoadGEP = ResidualLoopBuilder.CreateInBoundsGEP(Int8Type, SrcAddr,
@@ -787,7 +859,9 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
   ConstantInt *LoopBound = ConstantInt::get(ILengthType, BytesCopiedInLoop);
   ConstantInt *CILoopOpSize = ConstantInt::get(ILengthType, LoopOpSize);
 
+  const DebugLoc &DbgLoc = InsertBefore->getStableDebugLoc();
   IRBuilder<> PLBuilder(InsertBefore);
+  PLBuilder.SetCurrentDebugLocation(DbgLoc);
 
   auto [CmpSrcAddr, CmpDstAddr] =
       tryInsertCastToCommonAddrSpace(PLBuilder, SrcAddr, DstAddr, TTI);
@@ -840,6 +914,7 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
     // instead of after it.
     IRBuilder<> BwdResBuilder(CopyBackwardsBB,
                               CopyBackwardsBB->getFirstNonPHIIt());
+    BwdResBuilder.SetCurrentDebugLocation(DbgLoc);
     SmallVector<Type *, 5> RemainingOps;
     TTI.getMemcpyLoopResidualLoweringType(RemainingOps, Ctx, RemainingBytes,
                                           SrcAS, DstAS, PartSrcAlign,
@@ -863,6 +938,7 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
       CopyBackwardsBB->setName("memmove_bwd_loop");
     }
     IRBuilder<> LoopBuilder(LoopBB->getTerminator());
+    LoopBuilder.SetCurrentDebugLocation(DbgLoc);
     PHINode *LoopPhi = LoopBuilder.CreatePHI(ILengthType, 0);
     Value *Index = LoopBuilder.CreateSub(LoopPhi, CILoopOpSize, "bwd_index");
     Value *LoadGEP = LoopBuilder.CreateInBoundsGEP(Int8Type, SrcAddr, Index);
@@ -896,6 +972,7 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
       FwdResidualBB = SuccBB;
     }
     IRBuilder<> LoopBuilder(LoopBB->getTerminator());
+    LoopBuilder.SetCurrentDebugLocation(DbgLoc);
     PHINode *LoopPhi = LoopBuilder.CreatePHI(ILengthType, 0, "fwd_index");
     Value *LoadGEP = LoopBuilder.CreateInBoundsGEP(Int8Type, SrcAddr, LoopPhi);
     Value *Element = LoopBuilder.CreateAlignedLoad(
@@ -920,6 +997,7 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
     // Residual code is required to move the remaining bytes. In the forward
     // case, we emit it in the normal order.
     IRBuilder<> FwdResBuilder(FwdResidualBB->getTerminator());
+    FwdResBuilder.SetCurrentDebugLocation(DbgLoc);
     SmallVector<Type *, 5> RemainingOps;
     TTI.getMemcpyLoopResidualLoweringType(RemainingOps, Ctx, RemainingBytes,
                                           SrcAS, DstAS, PartSrcAlign,
@@ -931,6 +1009,7 @@ static void createMemMoveLoopKnownSize(Instruction *InsertBefore,
 
 static void createMemSetLoop(Instruction *InsertBefore, Value *DstAddr,
                              Value *CopyLen, Value *SetValue, Align DstAlign,
+                             std::optional<uint64_t> AverageTripCount,
                              bool IsVolatile) {
   Type *TypeOfCopyLen = CopyLen->getType();
   BasicBlock *OrigBB = InsertBefore->getParent();
@@ -941,17 +1020,27 @@ static void createMemSetLoop(Instruction *InsertBefore, Value *DstAddr,
   BasicBlock *LoopBB
     = BasicBlock::Create(F->getContext(), "loadstoreloop", F, NewBB);
 
+  const DebugLoc &DbgLoc = InsertBefore->getStableDebugLoc();
   IRBuilder<> Builder(OrigBB->getTerminator());
+  Builder.SetCurrentDebugLocation(DbgLoc);
 
-  Builder.CreateCondBr(
+  auto *ToLoopBR = Builder.CreateCondBr(
       Builder.CreateICmpEQ(ConstantInt::get(TypeOfCopyLen, 0), CopyLen), NewBB,
       LoopBB);
+  MDBuilder MDB(F->getContext());
+  if (AverageTripCount.has_value())
+    ToLoopBR->setMetadata(LLVMContext::MD_prof,
+                          MDB.createLikelyBranchWeights());
+  else
+    setExplicitlyUnknownBranchWeightsIfProfiled(*ToLoopBR, DEBUG_TYPE);
+
   OrigBB->getTerminator()->eraseFromParent();
 
   unsigned PartSize = DL.getTypeStoreSize(SetValue->getType());
   Align PartAlign(commonAlignment(DstAlign, PartSize));
 
   IRBuilder<> LoopBuilder(LoopBB);
+  LoopBuilder.SetCurrentDebugLocation(DbgLoc);
   PHINode *LoopIndex = LoopBuilder.CreatePHI(TypeOfCopyLen, 0);
   LoopIndex->addIncoming(ConstantInt::get(TypeOfCopyLen, 0), OrigBB);
 
@@ -964,8 +1053,13 @@ static void createMemSetLoop(Instruction *InsertBefore, Value *DstAddr,
       LoopBuilder.CreateAdd(LoopIndex, ConstantInt::get(TypeOfCopyLen, 1));
   LoopIndex->addIncoming(NewIndex, LoopBB);
 
-  LoopBuilder.CreateCondBr(LoopBuilder.CreateICmpULT(NewIndex, CopyLen), LoopBB,
-                           NewBB);
+  auto *LoopBR = LoopBuilder.CreateCondBr(
+      LoopBuilder.CreateICmpULT(NewIndex, CopyLen), LoopBB, NewBB);
+  if (AverageTripCount.has_value())
+    setFittedBranchWeights(*LoopBR, {AverageTripCount.value(), 1},
+                           /*IsExpected=*/false);
+  else
+    setExplicitlyUnknownBranchWeightsIfProfiled(*LoopBR, DEBUG_TYPE);
 }
 
 template <typename T>
@@ -983,6 +1077,7 @@ void llvm::expandMemCpyAsLoop(MemCpyInst *Memcpy,
                               const TargetTransformInfo &TTI,
                               ScalarEvolution *SE) {
   bool CanOverlap = canOverlap(Memcpy, SE);
+  auto TripCount = getAverageMemOpLoopTripCount(*Memcpy);
   if (ConstantInt *CI = dyn_cast<ConstantInt>(Memcpy->getLength())) {
     createMemCpyLoopKnownSize(
         /* InsertBefore */ Memcpy,
@@ -994,7 +1089,9 @@ void llvm::expandMemCpyAsLoop(MemCpyInst *Memcpy,
         /* SrcIsVolatile */ Memcpy->isVolatile(),
         /* DstIsVolatile */ Memcpy->isVolatile(),
         /* CanOverlap */ CanOverlap,
-        /* TargetTransformInfo */ TTI);
+        /* TargetTransformInfo */ TTI,
+        /* AtomicElementSize */ std::nullopt,
+        /* AverageTripCount */ TripCount);
   } else {
     createMemCpyLoopUnknownSize(
         /* InsertBefore */ Memcpy,
@@ -1006,7 +1103,9 @@ void llvm::expandMemCpyAsLoop(MemCpyInst *Memcpy,
         /* SrcIsVolatile */ Memcpy->isVolatile(),
         /* DstIsVolatile */ Memcpy->isVolatile(),
         /* CanOverlap */ CanOverlap,
-        /* TargetTransformInfo */ TTI);
+        /* TargetTransformInfo */ TTI,
+        /* AtomicElementSize */ std::nullopt,
+        /* AverageTripCount */ TripCount);
   }
 }
 
@@ -1020,6 +1119,7 @@ bool llvm::expandMemMoveAsLoop(MemMoveInst *Memmove,
   bool SrcIsVolatile = Memmove->isVolatile();
   bool DstIsVolatile = SrcIsVolatile;
   IRBuilder<> CastBuilder(Memmove);
+  CastBuilder.SetCurrentDebugLocation(Memmove->getStableDebugLoc());
 
   unsigned SrcAS = SrcAddr->getType()->getPointerAddressSpace();
   unsigned DstAS = DstAddr->getType()->getPointerAddressSpace();
@@ -1027,16 +1127,17 @@ bool llvm::expandMemMoveAsLoop(MemMoveInst *Memmove,
     if (!TTI.addrspacesMayAlias(SrcAS, DstAS)) {
       // We may not be able to emit a pointer comparison, but we don't have
       // to. Expand as memcpy.
+      auto AverageTripCount = getAverageMemOpLoopTripCount(*Memmove);
       if (ConstantInt *CI = dyn_cast<ConstantInt>(CopyLen)) {
-        createMemCpyLoopKnownSize(/*InsertBefore=*/Memmove, SrcAddr, DstAddr,
-                                  CI, SrcAlign, DstAlign, SrcIsVolatile,
-                                  DstIsVolatile,
-                                  /*CanOverlap=*/false, TTI);
+        createMemCpyLoopKnownSize(
+            /*InsertBefore=*/Memmove, SrcAddr, DstAddr, CI, SrcAlign, DstAlign,
+            SrcIsVolatile, DstIsVolatile,
+            /*CanOverlap=*/false, TTI, std::nullopt, AverageTripCount);
       } else {
-        createMemCpyLoopUnknownSize(/*InsertBefore=*/Memmove, SrcAddr, DstAddr,
-                                    CopyLen, SrcAlign, DstAlign, SrcIsVolatile,
-                                    DstIsVolatile,
-                                    /*CanOverlap=*/false, TTI);
+        createMemCpyLoopUnknownSize(
+            /*InsertBefore=*/Memmove, SrcAddr, DstAddr, CopyLen, SrcAlign,
+            DstAlign, SrcIsVolatile, DstIsVolatile,
+            /*CanOverlap=*/false, TTI, std::nullopt, AverageTripCount);
       }
 
       return true;
@@ -1072,7 +1173,8 @@ void llvm::expandMemSetAsLoop(MemSetInst *Memset) {
                    /* CopyLen */ Memset->getLength(),
                    /* SetValue */ Memset->getValue(),
                    /* Alignment */ Memset->getDestAlign().valueOrOne(),
-                   Memset->isVolatile());
+                   /* AverageTripCount */ getAverageMemOpLoopTripCount(*Memset),
+                   /* IsVolatile */ Memset->isVolatile());
 }
 
 void llvm::expandMemSetPatternAsLoop(MemSetPatternInst *Memset) {
@@ -1081,7 +1183,8 @@ void llvm::expandMemSetPatternAsLoop(MemSetPatternInst *Memset) {
                    /* CopyLen=*/Memset->getLength(),
                    /* SetValue=*/Memset->getValue(),
                    /* Alignment=*/Memset->getDestAlign().valueOrOne(),
-                   Memset->isVolatile());
+                   /* AverageTripCount */ getAverageMemOpLoopTripCount(*Memset),
+                   /* IsVolatile */ Memset->isVolatile());
 }
 
 void llvm::expandAtomicMemCpyAsLoop(AnyMemCpyInst *AtomicMemcpy,
@@ -1100,7 +1203,7 @@ void llvm::expandAtomicMemCpyAsLoop(AnyMemCpyInst *AtomicMemcpy,
         /* DstIsVolatile */ AtomicMemcpy->isVolatile(),
         /* CanOverlap */ false, // SrcAddr & DstAddr may not overlap by spec.
         /* TargetTransformInfo */ TTI,
-        /* AtomicCpySize */ AtomicMemcpy->getElementSizeInBytes());
+        /* AtomicElementSize */ AtomicMemcpy->getElementSizeInBytes());
   } else {
     createMemCpyLoopUnknownSize(
         /* InsertBefore */ AtomicMemcpy,
@@ -1113,6 +1216,6 @@ void llvm::expandAtomicMemCpyAsLoop(AnyMemCpyInst *AtomicMemcpy,
         /* DstIsVolatile */ AtomicMemcpy->isVolatile(),
         /* CanOverlap */ false, // SrcAddr & DstAddr may not overlap by spec.
         /* TargetTransformInfo */ TTI,
-        /* AtomicCpySize */ AtomicMemcpy->getElementSizeInBytes());
+        /* AtomicElementSize */ AtomicMemcpy->getElementSizeInBytes());
   }
 }

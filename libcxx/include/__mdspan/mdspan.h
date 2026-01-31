@@ -96,9 +96,8 @@ public:
   }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr index_type extent(rank_type __r) const noexcept {
     return __map_.extents().extent(__r);
-  };
+  }
 
-public:
   //--------------------------------------------------------------------------------
   // [mdspan.mdspan.cons], mdspan constructors, assignment, and destructor
 
@@ -242,26 +241,26 @@ public:
 
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const extents_type& extents() const noexcept {
     return __map_.extents();
-  };
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const data_handle_type& data_handle() const noexcept { return __ptr_; };
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const mapping_type& mapping() const noexcept { return __map_; };
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const accessor_type& accessor() const noexcept { return __acc_; };
+  }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const data_handle_type& data_handle() const noexcept { return __ptr_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const mapping_type& mapping() const noexcept { return __map_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr const accessor_type& accessor() const noexcept { return __acc_; }
 
   // per LWG-4021 "mdspan::is_always_meow() should be noexcept"
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr bool is_always_unique() noexcept {
     return mapping_type::is_always_unique();
-  };
+  }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr bool is_always_exhaustive() noexcept {
     return mapping_type::is_always_exhaustive();
-  };
+  }
   [[nodiscard]] _LIBCPP_HIDE_FROM_ABI static constexpr bool is_always_strided() noexcept {
     return mapping_type::is_always_strided();
-  };
+  }
 
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool is_unique() const { return __map_.is_unique(); };
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool is_exhaustive() const { return __map_.is_exhaustive(); };
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool is_strided() const { return __map_.is_strided(); };
-  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr index_type stride(rank_type __r) const { return __map_.stride(__r); };
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool is_unique() const { return __map_.is_unique(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool is_exhaustive() const { return __map_.is_exhaustive(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr bool is_strided() const { return __map_.is_strided(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI constexpr index_type stride(rank_type __r) const { return __map_.stride(__r); }
 
 private:
   _LIBCPP_NO_UNIQUE_ADDRESS data_handle_type __ptr_{};

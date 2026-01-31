@@ -9,12 +9,46 @@
 #include "clang/Analysis/Analyses/LifetimeSafety/Origins.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
+#include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/DeclTemplate.h"
+#include "clang/AST/Expr.h"
+#include "clang/AST/ExprCXX.h"
+#include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/AST/TypeBase.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeStats.h"
+#include "llvm/ADT/StringMap.h"
 
 namespace clang::lifetimes::internal {
+namespace {
+/// A utility class to traverse the function body in the analysis
+/// context and collect the count of expressions with missing origins.
+class MissingOriginCollector
+    : public RecursiveASTVisitor<MissingOriginCollector> {
+public:
+  MissingOriginCollector(
+      const llvm::DenseMap<const clang::Expr *, OriginList *> &ExprToOriginList,
+      LifetimeSafetyStats &LSStats)
+      : ExprToOriginList(ExprToOriginList), LSStats(LSStats) {}
+  bool VisitExpr(Expr *E) {
+    if (!hasOrigins(E))
+      return true;
+    // Check if we have an origin for this expression.
+    if (!ExprToOriginList.contains(E)) {
+      // No origin found: count this as missing origin.
+      LSStats.ExprTypeToMissingOriginCount[E->getType().getTypePtr()]++;
+      LSStats.ExprStmtClassToMissingOriginCount[std::string(
+          E->getStmtClassName())]++;
+    }
+    return true;
+  }
+
+private:
+  const llvm::DenseMap<const clang::Expr *, OriginList *> &ExprToOriginList;
+  LifetimeSafetyStats &LSStats;
+};
+} // namespace
 
 bool hasOrigins(QualType QT) {
   return QT->isPointerOrReferenceType() || isGslPointerType(QT);
@@ -51,6 +85,12 @@ bool hasOrigins(const Expr *E) {
 /// Currently, this function returns false for all reference types.
 bool doesDeclHaveStorage(const ValueDecl *D) {
   return !D->getType()->isReferenceType();
+}
+
+OriginManager::OriginManager(ASTContext &AST, const Decl *D) : AST(AST) {
+  if (const auto *MD = llvm::dyn_cast_or_null<CXXMethodDecl>(D);
+      MD && MD->isInstance())
+    ThisOrigins = buildListForType(MD->getThisType(), MD);
 }
 
 OriginList *OriginManager::createNode(const ValueDecl *D, QualType QT) {
@@ -92,6 +132,9 @@ OriginList *OriginManager::getOrCreateList(const ValueDecl *D) {
 OriginList *OriginManager::getOrCreateList(const Expr *E) {
   if (auto *ParenIgnored = E->IgnoreParens(); ParenIgnored != E)
     return getOrCreateList(ParenIgnored);
+  // We do not see CFG stmts for ExprWithCleanups. Simply peel them.
+  if (const ExprWithCleanups *EWC = dyn_cast<ExprWithCleanups>(E))
+    return getOrCreateList(EWC->getSubExpr());
 
   if (!hasOrigins(E))
     return nullptr;
@@ -101,26 +144,40 @@ OriginList *OriginManager::getOrCreateList(const Expr *E) {
     return It->second;
 
   QualType Type = E->getType();
+  // Special handling for 'this' expressions to share origins with the method's
+  // implicit object parameter.
+  if (llvm::isa<CXXThisExpr>(E)) {
+    assert(ThisOrigins && "origins for 'this' should be set for a method decl");
+    return *ThisOrigins;
+  }
 
-  // Special handling for DeclRefExpr to share origins with the underlying decl.
-  if (auto *DRE = dyn_cast<DeclRefExpr>(E)) {
+  // Special handling for expressions referring to a decl to share origins with
+  // the underlying decl.
+  const ValueDecl *ReferencedDecl = nullptr;
+  if (auto *DRE = dyn_cast<DeclRefExpr>(E))
+    ReferencedDecl = DRE->getDecl();
+  else if (auto *ME = dyn_cast<MemberExpr>(E))
+    if (auto *Field = dyn_cast<FieldDecl>(ME->getMemberDecl());
+        Field && isa<CXXThisExpr>(ME->getBase()))
+      ReferencedDecl = Field;
+  if (ReferencedDecl) {
     OriginList *Head = nullptr;
-    // For non-reference declarations (e.g., `int* p`), the DeclRefExpr is an
+    // For non-reference declarations (e.g., `int* p`), the expression is an
     // lvalue (addressable) that can be borrowed, so we create an outer origin
     // for the lvalue itself, with the pointee being the declaration's list.
     // This models taking the address: `&p` borrows the storage of `p`, not what
     // `p` points to.
-    if (doesDeclHaveStorage(DRE->getDecl())) {
-      Head = createNode(DRE, QualType{});
-      // This ensures origin sharing: multiple DeclRefExprs to the same
+    if (doesDeclHaveStorage(ReferencedDecl)) {
+      Head = createNode(E, QualType{});
+      // This ensures origin sharing: multiple expressions to the same
       // declaration share the same underlying origins.
-      Head->setInnerOriginList(getOrCreateList(DRE->getDecl()));
+      Head->setInnerOriginList(getOrCreateList(ReferencedDecl));
     } else {
       // For reference-typed declarations (e.g., `int& r = p`) which have no
       // storage, the DeclRefExpr directly reuses the declaration's list since
       // references don't add an extra level of indirection at the expression
       // level.
-      Head = getOrCreateList(DRE->getDecl());
+      Head = getOrCreateList(ReferencedDecl);
     }
     return ExprToList[E] = Head;
   }
@@ -155,6 +212,12 @@ void OriginManager::dump(OriginID OID, llvm::raw_ostream &OS) const {
 const Origin &OriginManager::getOrigin(OriginID ID) const {
   assert(ID.Value < AllOrigins.size());
   return AllOrigins[ID.Value];
+}
+
+void OriginManager::collectMissingOrigins(Stmt &FunctionBody,
+                                          LifetimeSafetyStats &LSStats) {
+  MissingOriginCollector Collector(this->ExprToList, LSStats);
+  Collector.TraverseStmt(const_cast<Stmt *>(&FunctionBody));
 }
 
 } // namespace clang::lifetimes::internal

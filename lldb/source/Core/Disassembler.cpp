@@ -501,7 +501,7 @@ void Disassembler::PrintInstructions(Debugger &debugger, const ArchSpec &arch,
   // inlined functions which the user wants to skip).
 
   std::map<FileSpec, std::set<uint32_t>> source_lines_seen;
-  Symbol *previous_symbol = nullptr;
+  const Symbol *previous_symbol = nullptr;
 
   size_t address_text_size = 0;
   for (size_t i = 0; i < num_instructions_found; ++i) {
@@ -1187,6 +1187,47 @@ bool Instruction::Emulate(
 
 uint32_t Instruction::GetData(DataExtractor &data) {
   return m_opcode.GetData(data);
+}
+
+StructuredData::ArraySP Instruction::GetVariableAnnotations() {
+  VariableAnnotator annotator;
+  std::vector<VariableAnnotation> annotations =
+      annotator.AnnotateStructured(*this);
+
+  StructuredData::ArraySP array_sp = std::make_shared<StructuredData::Array>();
+
+  for (const VariableAnnotation &ann : annotations) {
+    StructuredData::DictionarySP dict_sp =
+        std::make_shared<StructuredData::Dictionary>();
+
+    dict_sp->AddStringItem("variable_name", ann.variable_name);
+    dict_sp->AddStringItem("location_description", ann.location_description);
+    if (ann.address_range.has_value()) {
+      const auto &range = *ann.address_range;
+      dict_sp->AddItem("start_address",
+                       std::make_shared<StructuredData::UnsignedInteger>(
+                           range.GetBaseAddress().GetFileAddress()));
+      dict_sp->AddItem(
+          "end_address",
+          std::make_shared<StructuredData::UnsignedInteger>(
+              range.GetBaseAddress().GetFileAddress() + range.GetByteSize()));
+    }
+    dict_sp->AddItem(
+        "register_kind",
+        std::make_shared<StructuredData::UnsignedInteger>(ann.register_kind));
+    if (ann.decl_file.has_value())
+      dict_sp->AddStringItem("decl_file", *ann.decl_file);
+    if (ann.decl_line.has_value())
+      dict_sp->AddItem(
+          "decl_line",
+          std::make_shared<StructuredData::UnsignedInteger>(*ann.decl_line));
+    if (ann.type_name.has_value())
+      dict_sp->AddStringItem("type_name", *ann.type_name);
+
+    array_sp->AddItem(dict_sp);
+  }
+
+  return array_sp;
 }
 
 InstructionList::InstructionList() : m_instructions() {}

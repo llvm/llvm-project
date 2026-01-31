@@ -21,17 +21,16 @@ define dso_local void @test_dmsha3hash(ptr %vopp, ptr %resp) nounwind {
 ; CHECK-NEXT:    std r30, 288(r1) # 8-byte Folded Spill
 ; CHECK-NEXT:    lxvp vsp34, 0(r3)
 ; CHECK-NEXT:    lxvp vsp36, 32(r3)
-; CHECK-NEXT:    mr r30, r4
+; CHECK-NEXT:    lxvp vsp32, 64(r3)
+; CHECK-NEXT:    lxvp vsp38, 96(r3)
+; CHECK-NEXT:    lxvp vsp40, 128(r3)
+; CHECK-NEXT:    lxvp vsp42, 160(r3)
+; CHECK-NEXT:    lxvp vsp44, 192(r3)
+; CHECK-NEXT:    lxvp vsp46, 224(r3)
 ; CHECK-NEXT:    dmxxinstdmr512 wacc_hi1, vsp36, vsp34, 1
-; CHECK-NEXT:    lxvp vsp34, 64(r3)
-; CHECK-NEXT:    lxvp vsp36, 96(r3)
-; CHECK-NEXT:    dmxxinstdmr512 wacc1, vsp36, vsp34, 0
-; CHECK-NEXT:    lxvp vsp34, 128(r3)
-; CHECK-NEXT:    lxvp vsp36, 160(r3)
-; CHECK-NEXT:    dmxxinstdmr512 wacc_hi0, vsp36, vsp34, 1
-; CHECK-NEXT:    lxvp vsp34, 192(r3)
-; CHECK-NEXT:    lxvp vsp36, 224(r3)
-; CHECK-NEXT:    dmxxinstdmr512 wacc0, vsp36, vsp34, 0
+; CHECK-NEXT:    dmxxinstdmr512 wacc1, vsp38, vsp32, 0
+; CHECK-NEXT:    dmxxinstdmr512 wacc_hi0, vsp42, vsp40, 1
+; CHECK-NEXT:    dmxxinstdmr512 wacc0, vsp46, vsp44, 0
 ; CHECK-NEXT:    dmsha3hash dmrp0, 5
 ; CHECK-NEXT:    dmxxextfdmr512 vsp36, vsp34, wacc1, 0
 ; CHECK-NEXT:    stxvp vsp36, 128(r1)
@@ -43,6 +42,7 @@ define dso_local void @test_dmsha3hash(ptr %vopp, ptr %resp) nounwind {
 ; CHECK-NEXT:    stxvp vsp36, 256(r1)
 ; CHECK-NEXT:    stxvp vsp34, 224(r1)
 ; CHECK-NEXT:    dmxxextfdmr512 vsp36, vsp34, wacc_hi0, 1
+; CHECK-NEXT:    mr r30, r4
 ; CHECK-NEXT:    stxvp vsp36, 192(r1)
 ; CHECK-NEXT:    stxvp vsp34, 160(r1)
 ; CHECK-NEXT:    bl dummy_func@notoc
@@ -84,17 +84,16 @@ define dso_local void @test_dmsha3hash(ptr %vopp, ptr %resp) nounwind {
 ; AIX-NEXT:    std r31, 376(r1) # 8-byte Folded Spill
 ; AIX-NEXT:    lxvp vsp34, 224(r3)
 ; AIX-NEXT:    lxvp vsp36, 192(r3)
-; AIX-NEXT:    mr r31, r4
+; AIX-NEXT:    lxvp vsp32, 160(r3)
+; AIX-NEXT:    lxvp vsp38, 128(r3)
+; AIX-NEXT:    lxvp vsp40, 96(r3)
+; AIX-NEXT:    lxvp vsp42, 64(r3)
+; AIX-NEXT:    lxvp vsp44, 32(r3)
+; AIX-NEXT:    lxvp vsp46, 0(r3)
 ; AIX-NEXT:    dmxxinstdmr512 wacc_hi1, vsp36, vsp34, 1
-; AIX-NEXT:    lxvp vsp34, 160(r3)
-; AIX-NEXT:    lxvp vsp36, 128(r3)
-; AIX-NEXT:    dmxxinstdmr512 wacc1, vsp36, vsp34, 0
-; AIX-NEXT:    lxvp vsp34, 96(r3)
-; AIX-NEXT:    lxvp vsp36, 64(r3)
-; AIX-NEXT:    dmxxinstdmr512 wacc_hi0, vsp36, vsp34, 1
-; AIX-NEXT:    lxvp vsp34, 32(r3)
-; AIX-NEXT:    lxvp vsp36, 0(r3)
-; AIX-NEXT:    dmxxinstdmr512 wacc0, vsp36, vsp34, 0
+; AIX-NEXT:    dmxxinstdmr512 wacc1, vsp38, vsp32, 0
+; AIX-NEXT:    dmxxinstdmr512 wacc_hi0, vsp42, vsp40, 1
+; AIX-NEXT:    dmxxinstdmr512 wacc0, vsp46, vsp44, 0
 ; AIX-NEXT:    dmsha3hash dmrp0, 5
 ; AIX-NEXT:    dmxxextfdmr512 vsp36, vsp34, wacc1, 0
 ; AIX-NEXT:    stxvp vsp36, 112(r1)
@@ -106,6 +105,7 @@ define dso_local void @test_dmsha3hash(ptr %vopp, ptr %resp) nounwind {
 ; AIX-NEXT:    stxvp vsp36, 240(r1)
 ; AIX-NEXT:    stxvp vsp34, 272(r1)
 ; AIX-NEXT:    dmxxextfdmr512 vsp36, vsp34, wacc_hi0, 1
+; AIX-NEXT:    mr r31, r4
 ; AIX-NEXT:    stxvp vsp36, 304(r1)
 ; AIX-NEXT:    stxvp vsp34, 336(r1)
 ; AIX-NEXT:    bl .dummy_func[PR]
@@ -148,17 +148,16 @@ define dso_local void @test_dmsha3hash(ptr %vopp, ptr %resp) nounwind {
 ; AIX32-NEXT:    stw r31, 332(r1) # 4-byte Folded Spill
 ; AIX32-NEXT:    lxvp vsp34, 224(r3)
 ; AIX32-NEXT:    lxvp vsp36, 192(r3)
-; AIX32-NEXT:    mr r31, r4
+; AIX32-NEXT:    lxvp vsp32, 160(r3)
+; AIX32-NEXT:    lxvp vsp38, 128(r3)
+; AIX32-NEXT:    lxvp vsp40, 96(r3)
+; AIX32-NEXT:    lxvp vsp42, 64(r3)
+; AIX32-NEXT:    lxvp vsp44, 32(r3)
+; AIX32-NEXT:    lxvp vsp46, 0(r3)
 ; AIX32-NEXT:    dmxxinstdmr512 wacc_hi1, vsp36, vsp34, 1
-; AIX32-NEXT:    lxvp vsp34, 160(r3)
-; AIX32-NEXT:    lxvp vsp36, 128(r3)
-; AIX32-NEXT:    dmxxinstdmr512 wacc1, vsp36, vsp34, 0
-; AIX32-NEXT:    lxvp vsp34, 96(r3)
-; AIX32-NEXT:    lxvp vsp36, 64(r3)
-; AIX32-NEXT:    dmxxinstdmr512 wacc_hi0, vsp36, vsp34, 1
-; AIX32-NEXT:    lxvp vsp34, 32(r3)
-; AIX32-NEXT:    lxvp vsp36, 0(r3)
-; AIX32-NEXT:    dmxxinstdmr512 wacc0, vsp36, vsp34, 0
+; AIX32-NEXT:    dmxxinstdmr512 wacc1, vsp38, vsp32, 0
+; AIX32-NEXT:    dmxxinstdmr512 wacc_hi0, vsp42, vsp40, 1
+; AIX32-NEXT:    dmxxinstdmr512 wacc0, vsp46, vsp44, 0
 ; AIX32-NEXT:    dmsha3hash dmrp0, 5
 ; AIX32-NEXT:    dmxxextfdmr512 vsp36, vsp34, wacc1, 0
 ; AIX32-NEXT:    stxvp vsp36, 64(r1)
@@ -170,6 +169,7 @@ define dso_local void @test_dmsha3hash(ptr %vopp, ptr %resp) nounwind {
 ; AIX32-NEXT:    stxvp vsp36, 192(r1)
 ; AIX32-NEXT:    stxvp vsp34, 224(r1)
 ; AIX32-NEXT:    dmxxextfdmr512 vsp36, vsp34, wacc_hi0, 1
+; AIX32-NEXT:    mr r31, r4
 ; AIX32-NEXT:    stxvp vsp36, 256(r1)
 ; AIX32-NEXT:    stxvp vsp34, 288(r1)
 ; AIX32-NEXT:    bl .dummy_func[PR]

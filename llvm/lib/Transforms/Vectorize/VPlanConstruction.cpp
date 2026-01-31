@@ -13,6 +13,7 @@
 
 #include "LoopVectorizationPlanner.h"
 #include "VPlan.h"
+#include "VPlanAnalysis.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
 #include "VPlanPatternMatch.h"
@@ -428,16 +429,17 @@ static void createLoopRegion(VPlan &Plan, VPBlockBase *HeaderVPB) {
 
   VPBlockUtils::disconnectBlocks(PreheaderVPBB, HeaderVPB);
   VPBlockUtils::disconnectBlocks(LatchVPBB, HeaderVPB);
-  VPBlockBase *LatchExitVPB = LatchVPBB->getSingleSuccessor();
-  assert(LatchExitVPB && "Latch expected to be left with a single successor");
 
   // Create an empty region first and insert it between PreheaderVPBB and
-  // LatchExitVPB, taking care to preserve the original predecessor & successor
-  // order of blocks. Set region entry and exiting after both HeaderVPB and
-  // LatchVPBB have been disconnected from their predecessors/successors.
+  // the exit blocks, taking care to preserve the original predecessor &
+  // successor order of blocks. Set region entry and exiting after both
+  // HeaderVPB and LatchVPBB have been disconnected from their
+  // predecessors/successors.
   auto *R = Plan.createLoopRegion();
-  VPBlockUtils::insertOnEdge(LatchVPBB, LatchExitVPB, R);
-  VPBlockUtils::disconnectBlocks(LatchVPBB, R);
+
+  // Transfer latch's successors to the region.
+  VPBlockUtils::transferSuccessors(LatchVPBB, R);
+
   VPBlockUtils::connectBlocks(PreheaderVPBB, R);
   R->setEntry(HeaderVPB);
   R->setExiting(LatchVPBB);
@@ -578,11 +580,14 @@ static void simplifyLiveInsWithSCEV(VPlan &Plan,
     return nullptr;
   };
 
-  for (VPValue *LiveIn : Plan.getLiveIns()) {
+  for (VPValue *LiveIn : to_vector(Plan.getLiveIns())) {
     if (VPValue *SimplifiedLiveIn = GetSimplifiedLiveInViaSCEV(LiveIn))
       LiveIn->replaceAllUsesWith(SimplifiedLiveIn);
   }
 }
+
+/// To make RUN_VPLAN_PASS print initial VPlan.
+static void printAfterInitialConstruction(VPlan &) {}
 
 std::unique_ptr<VPlan>
 VPlanTransforms::buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
@@ -592,13 +597,15 @@ VPlanTransforms::buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
   std::unique_ptr<VPlan> VPlan0 = Builder.buildPlainCFG();
   addInitialSkeleton(*VPlan0, InductionTy, IVDL, PSE, TheLoop);
   simplifyLiveInsWithSCEV(*VPlan0, PSE);
+
+  RUN_VPLAN_PASS_NO_VERIFY(printAfterInitialConstruction, *VPlan0);
   return VPlan0;
 }
 
 /// Creates a VPWidenIntOrFpInductionRecipe or VPWidenPointerInductionRecipe
 /// for \p Phi based on \p IndDesc.
 static VPHeaderPHIRecipe *
-createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPValue *Start,
+createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
                            const InductionDescriptor &IndDesc, VPlan &Plan,
                            PredicatedScalarEvolution &PSE, Loop &OrigLoop,
                            DebugLoc DL) {
@@ -659,7 +666,7 @@ void VPlanTransforms::createHeaderPhiRecipes(
            "Must have 2 operands for header phis");
 
     // Extract common values once.
-    VPValue *Start = PhiR->getOperand(0);
+    VPIRValue *Start = cast<VPIRValue>(PhiR->getOperand(0));
     VPValue *BackedgeValue = PhiR->getOperand(1);
 
     if (FixedOrderRecurrences.contains(Phi)) {
@@ -700,6 +707,168 @@ void VPlanTransforms::createHeaderPhiRecipes(
     PhiR->replaceAllUsesWith(HeaderPhiR);
     PhiR->eraseFromParent();
   }
+}
+
+void VPlanTransforms::createInLoopReductionRecipes(
+    VPlan &Plan, const DenseMap<VPBasicBlock *, VPValue *> &BlockMaskCache,
+    const DenseSet<BasicBlock *> &BlocksNeedingPredication,
+    ElementCount MinVF) {
+  VPTypeAnalysis TypeInfo(Plan);
+  VPBasicBlock *Header = Plan.getVectorLoopRegion()->getEntryBasicBlock();
+  SmallVector<VPRecipeBase *> ToDelete;
+
+  for (VPRecipeBase &R : Header->phis()) {
+    auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&R);
+    if (!PhiR || !PhiR->isInLoop() || (MinVF.isScalar() && !PhiR->isOrdered()))
+      continue;
+
+    RecurKind Kind = PhiR->getRecurrenceKind();
+    assert(!RecurrenceDescriptor::isFindLastRecurrenceKind(Kind) &&
+           !RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind) &&
+           !RecurrenceDescriptor::isFindIVRecurrenceKind(Kind) &&
+           "AnyOf and Find reductions are not allowed for in-loop reductions");
+
+    bool IsFPRecurrence =
+        RecurrenceDescriptor::isFloatingPointRecurrenceKind(Kind);
+    FastMathFlags FMFs =
+        IsFPRecurrence ? FastMathFlags::getFast() : FastMathFlags();
+
+    // Collect the chain of "link" recipes for the reduction starting at PhiR.
+    SetVector<VPSingleDefRecipe *> Worklist;
+    Worklist.insert(PhiR);
+    for (unsigned I = 0; I != Worklist.size(); ++I) {
+      VPSingleDefRecipe *Cur = Worklist[I];
+      for (VPUser *U : Cur->users()) {
+        auto *UserRecipe = cast<VPSingleDefRecipe>(U);
+        if (!UserRecipe->getParent()->getEnclosingLoopRegion()) {
+          assert((UserRecipe->getParent() == Plan.getMiddleBlock() ||
+                  UserRecipe->getParent() == Plan.getScalarPreheader()) &&
+                 "U must be either in the loop region, the middle block or the "
+                 "scalar preheader.");
+          continue;
+        }
+
+        // Stores using instructions will be sunk later.
+        if (match(UserRecipe, m_VPInstruction<Instruction::Store>()))
+          continue;
+        Worklist.insert(UserRecipe);
+      }
+    }
+
+    // Visit operation "Links" along the reduction chain top-down starting from
+    // the phi until LoopExitValue. We keep track of the previous item
+    // (PreviousLink) to tell which of the two operands of a Link will remain
+    // scalar and which will be reduced. For minmax by select(cmp), Link will be
+    // the select instructions. Blend recipes of in-loop reduction phi's will
+    // get folded to their non-phi operand, as the reduction recipe handles the
+    // condition directly.
+    VPSingleDefRecipe *PreviousLink = PhiR; // Aka Worklist[0].
+    for (VPSingleDefRecipe *CurrentLink : drop_begin(Worklist)) {
+      if (auto *Blend = dyn_cast<VPBlendRecipe>(CurrentLink)) {
+        assert(Blend->getNumIncomingValues() == 2 &&
+               "Blend must have 2 incoming values");
+        unsigned PhiRIdx = Blend->getIncomingValue(0) == PhiR ? 0 : 1;
+        assert(Blend->getIncomingValue(PhiRIdx) == PhiR &&
+               "PhiR must be an operand of the blend");
+        Blend->replaceAllUsesWith(Blend->getIncomingValue(1 - PhiRIdx));
+        continue;
+      }
+
+      if (IsFPRecurrence) {
+        FastMathFlags CurFMF =
+            cast<VPRecipeWithIRFlags>(CurrentLink)->getFastMathFlags();
+        if (match(CurrentLink, m_Select(m_VPValue(), m_VPValue(), m_VPValue())))
+          CurFMF |= cast<VPRecipeWithIRFlags>(CurrentLink->getOperand(0))
+                        ->getFastMathFlags();
+        FMFs &= CurFMF;
+      }
+
+      Instruction *CurrentLinkI = CurrentLink->getUnderlyingInstr();
+
+      // Recognize a call to the llvm.fmuladd intrinsic.
+      bool IsFMulAdd = Kind == RecurKind::FMulAdd;
+      VPValue *VecOp;
+      VPBasicBlock *LinkVPBB = CurrentLink->getParent();
+      if (IsFMulAdd) {
+        assert(RecurrenceDescriptor::isFMulAddIntrinsic(CurrentLinkI) &&
+               "Expected current VPInstruction to be a call to the "
+               "llvm.fmuladd intrinsic");
+        assert(CurrentLink->getOperand(2) == PreviousLink &&
+               "expected a call where the previous link is the added operand");
+
+        // If the instruction is a call to the llvm.fmuladd intrinsic then we
+        // need to create an fmul recipe (multiplying the first two operands of
+        // the fmuladd together) to use as the vector operand for the fadd
+        // reduction.
+        auto *FMulRecipe = new VPInstruction(
+            Instruction::FMul,
+            {CurrentLink->getOperand(0), CurrentLink->getOperand(1)},
+            CurrentLinkI->getFastMathFlags());
+        LinkVPBB->insert(FMulRecipe, CurrentLink->getIterator());
+        VecOp = FMulRecipe;
+      } else if (Kind == RecurKind::AddChainWithSubs &&
+                 match(CurrentLink, m_Sub(m_VPValue(), m_VPValue()))) {
+        Type *PhiTy = TypeInfo.inferScalarType(PhiR);
+        auto *Zero = Plan.getConstantInt(PhiTy, 0);
+        auto *Sub = new VPInstruction(Instruction::Sub,
+                                      {Zero, CurrentLink->getOperand(1)}, {},
+                                      {}, CurrentLinkI->getDebugLoc());
+        Sub->setUnderlyingValue(CurrentLinkI);
+        LinkVPBB->insert(Sub, CurrentLink->getIterator());
+        VecOp = Sub;
+      } else {
+        // Index of the first operand which holds a non-mask vector operand.
+        unsigned IndexOfFirstOperand = 0;
+        if (RecurrenceDescriptor::isMinMaxRecurrenceKind(Kind)) {
+          if (match(CurrentLink, m_Cmp(m_VPValue(), m_VPValue())))
+            continue;
+          assert(match(CurrentLink,
+                       m_Select(m_VPValue(), m_VPValue(), m_VPValue())) &&
+                 "must be a select recipe");
+          IndexOfFirstOperand = 1;
+        }
+        // Note that for non-commutable operands (cmp-selects), the semantics of
+        // the cmp-select are captured in the recurrence kind.
+        unsigned VecOpId =
+            CurrentLink->getOperand(IndexOfFirstOperand) == PreviousLink
+                ? IndexOfFirstOperand + 1
+                : IndexOfFirstOperand;
+        VecOp = CurrentLink->getOperand(VecOpId);
+        assert(VecOp != PreviousLink &&
+               CurrentLink->getOperand(CurrentLink->getNumOperands() - 1 -
+                                       (VecOpId - IndexOfFirstOperand)) ==
+                   PreviousLink &&
+               "PreviousLink must be the operand other than VecOp");
+      }
+
+      // Get block mask from BlockMaskCache if the block needs predication.
+      VPValue *CondOp = nullptr;
+      if (BlocksNeedingPredication.contains(CurrentLinkI->getParent()))
+        CondOp = BlockMaskCache.lookup(LinkVPBB);
+
+      assert(PhiR->getVFScaleFactor() == 1 &&
+             "inloop reductions must be unscaled");
+      auto *RedRecipe = new VPReductionRecipe(
+          Kind, FMFs, CurrentLinkI, PreviousLink, VecOp, CondOp,
+          getReductionStyle(/*IsInLoop=*/true, PhiR->isOrdered(), 1),
+          CurrentLinkI->getDebugLoc());
+      // Append the recipe to the end of the VPBasicBlock because we need to
+      // ensure that it comes after all of it's inputs, including CondOp.
+      // Delete CurrentLink as it will be invalid if its operand is replaced
+      // with a reduction defined at the bottom of the block in the next link.
+      if (LinkVPBB->getNumSuccessors() == 0)
+        RedRecipe->insertBefore(&*std::prev(std::prev(LinkVPBB->end())));
+      else
+        LinkVPBB->appendRecipe(RedRecipe);
+
+      CurrentLink->replaceAllUsesWith(RedRecipe);
+      ToDelete.push_back(CurrentLink);
+      PreviousLink = RedRecipe;
+    }
+  }
+
+  for (VPRecipeBase *R : ToDelete)
+    R->eraseFromParent();
 }
 
 void VPlanTransforms::handleEarlyExits(VPlan &Plan,
@@ -876,6 +1045,8 @@ void VPlanTransforms::addMinimumIterationCheck(
       // an overflow to zero when updating induction variables and so an
       // additional overflow check is required before entering the vector loop.
 
+      VPValue *StepVPV = Builder.createExpandSCEV(Step);
+
       // Get the maximum unsigned value for the type.
       VPValue *MaxUIntTripCount =
           Plan.getConstantInt(cast<IntegerType>(TripCountTy)->getMask());
@@ -886,8 +1057,8 @@ void VPlanTransforms::addMinimumIterationCheck(
       // Don't execute the vector loop if (UMax - n) < (VF * UF).
       // FIXME: Should only check VF * UF, but currently checks Step=max(VF*UF,
       // minProfitableTripCount).
-      TripCountCheck = Builder.createICmp(ICmpInst::ICMP_ULT, DistanceToMax,
-                                          Builder.createExpandSCEV(Step), DL);
+      TripCountCheck =
+          Builder.createICmp(ICmpInst::ICMP_ULT, DistanceToMax, StepVPV, DL);
     } else {
       // TripCountCheck = false, folding tail implies positive vector trip
       // count.
@@ -970,31 +1141,62 @@ template <unsigned Opcode> static VPInstruction *findUserOf(VPValue *V) {
   return cast_or_null<VPInstruction>(findUserOf(V, m_VPInstruction<Opcode>()));
 }
 
+/// Find the ComputeReductionResult recipe for \p PhiR, looking through selects
+/// inserted for predicated reductions or tail folding.
+static VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR) {
+  VPValue *BackedgeVal = PhiR->getBackedgeValue();
+  if (auto *Res =
+          findUserOf<VPInstruction::ComputeReductionResult>(BackedgeVal))
+    return Res;
+
+  // Look through selects inserted for tail folding or predicated reductions.
+  VPRecipeBase *SelR =
+      findUserOf(BackedgeVal, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
+  if (!SelR)
+    return nullptr;
+  return findUserOf<VPInstruction::ComputeReductionResult>(
+      cast<VPSingleDefRecipe>(SelR));
+}
+
+/// Find and return the final select instruction of the FindIV result pattern
+/// for the given \p BackedgeVal:
+/// select(icmp ne ComputeReductionResult(ReducedIV), Sentinel),
+///        ComputeReductionResult(ReducedIV), Start.
+static VPInstruction *findFindIVSelect(VPValue *BackedgeVal) {
+  return cast<VPInstruction>(
+      vputils::findRecipe(BackedgeVal, [BackedgeVal](VPRecipeBase *R) {
+        auto *VPI = dyn_cast<VPInstruction>(R);
+        return VPI &&
+               matchFindIVResult(VPI, m_Specific(BackedgeVal), m_VPValue());
+      }));
+}
+
 bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
-  auto GetMinMaxCompareValue = [](VPReductionPHIRecipe *RedPhiR) -> VPValue * {
-    auto *MinMaxR =
+  auto GetMinOrMaxCompareValue =
+      [](VPReductionPHIRecipe *RedPhiR) -> VPValue * {
+    auto *MinOrMaxR =
         dyn_cast_or_null<VPRecipeWithIRFlags>(RedPhiR->getBackedgeValue());
-    if (!MinMaxR)
+    if (!MinOrMaxR)
       return nullptr;
 
-    // Check that MinMaxR is a VPWidenIntrinsicRecipe or VPReplicateRecipe
+    // Check that MinOrMaxR is a VPWidenIntrinsicRecipe or VPReplicateRecipe
     // with an intrinsic that matches the reduction kind.
     Intrinsic::ID ExpectedIntrinsicID =
         getMinMaxReductionIntrinsicOp(RedPhiR->getRecurrenceKind());
-    if (!match(MinMaxR, m_Intrinsic(ExpectedIntrinsicID)))
+    if (!match(MinOrMaxR, m_Intrinsic(ExpectedIntrinsicID)))
       return nullptr;
 
-    if (MinMaxR->getOperand(0) == RedPhiR)
-      return MinMaxR->getOperand(1);
+    if (MinOrMaxR->getOperand(0) == RedPhiR)
+      return MinOrMaxR->getOperand(1);
 
-    assert(MinMaxR->getOperand(1) == RedPhiR &&
+    assert(MinOrMaxR->getOperand(1) == RedPhiR &&
            "Reduction phi operand expected");
-    return MinMaxR->getOperand(0);
+    return MinOrMaxR->getOperand(0);
   };
 
   VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
   SmallVector<std::pair<VPReductionPHIRecipe *, VPValue *>>
-      MinMaxNumReductionsToHandle;
+      MinOrMaxNumReductionsToHandle;
   bool HasUnsupportedPhi = false;
   for (auto &R : LoopRegion->getEntryBasicBlock()->phis()) {
     if (isa<VPCanonicalIVPHIRecipe, VPWidenIntOrFpInductionRecipe>(&R))
@@ -1011,14 +1213,14 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
       continue;
     }
 
-    VPValue *MinMaxOp = GetMinMaxCompareValue(Cur);
-    if (!MinMaxOp)
+    VPValue *MinOrMaxOp = GetMinOrMaxCompareValue(Cur);
+    if (!MinOrMaxOp)
       return false;
 
-    MinMaxNumReductionsToHandle.emplace_back(Cur, MinMaxOp);
+    MinOrMaxNumReductionsToHandle.emplace_back(Cur, MinOrMaxOp);
   }
 
-  if (MinMaxNumReductionsToHandle.empty())
+  if (MinOrMaxNumReductionsToHandle.empty())
     return true;
 
   // We won't be able to resume execution in the scalar tail, if there are
@@ -1046,9 +1248,9 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   VPBuilder LatchBuilder(LatchVPBB->getTerminator());
   VPValue *AllNaNLanes = nullptr;
   SmallPtrSet<VPValue *, 2> RdxResults;
-  for (const auto &[_, MinMaxOp] : MinMaxNumReductionsToHandle) {
+  for (const auto &[_, MinOrMaxOp] : MinOrMaxNumReductionsToHandle) {
     VPValue *RedNaNLanes =
-        LatchBuilder.createFCmp(CmpInst::FCMP_UNO, MinMaxOp, MinMaxOp);
+        LatchBuilder.createFCmp(CmpInst::FCMP_UNO, MinOrMaxOp, MinOrMaxOp);
     AllNaNLanes = AllNaNLanes ? LatchBuilder.createOr(AllNaNLanes, RedNaNLanes)
                               : RedNaNLanes;
   }
@@ -1057,19 +1259,19 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
       LatchBuilder.createNaryOp(VPInstruction::AnyOf, {AllNaNLanes});
   VPBasicBlock *MiddleVPBB = Plan.getMiddleBlock();
   VPBuilder MiddleBuilder(MiddleVPBB, MiddleVPBB->begin());
-  for (const auto &[RedPhiR, _] : MinMaxNumReductionsToHandle) {
+  for (const auto &[RedPhiR, _] : MinOrMaxNumReductionsToHandle) {
     assert(RecurrenceDescriptor::isFPMinMaxNumRecurrenceKind(
                RedPhiR->getRecurrenceKind()) &&
            "unsupported reduction");
 
     // If we exit early due to NaNs, compute the final reduction result based on
     // the reduction phi at the beginning of the last vector iteration.
-    auto *RdxResult =
-        findUserOf<VPInstruction::ComputeReductionResult>(RedPhiR);
+    auto *RdxResult = findComputeReductionResult(RedPhiR);
+    assert(RdxResult && "must find a ComputeReductionResult");
 
     auto *NewSel = MiddleBuilder.createSelect(AnyNaNLane, RedPhiR,
-                                              RdxResult->getOperand(1));
-    RdxResult->setOperand(1, NewSel);
+                                              RdxResult->getOperand(0));
+    RdxResult->setOperand(0, NewSel);
     assert(!RdxResults.contains(RdxResult) && "RdxResult already used");
     RdxResults.insert(RdxResult);
   }
@@ -1125,70 +1327,153 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
   return true;
 }
 
+bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
+  if (Plan.hasScalarVFOnly())
+    return false;
+
+  // We want to create the following nodes:
+  // vector.body:
+  //   ...new WidenPHI recipe introduced to keep the mask value for the latest
+  //      iteration where any lane was active.
+  //   mask.phi = phi [ ir<false>, vector.ph ], [ vp<new.mask>, vector.body ]
+  //   ...data.phi (a VPReductionPHIRecipe for a FindLast reduction) already
+  //      exists, but needs updating to use 'new.data' for the backedge value.
+  //   data.phi = phi ir<default.val>, vp<new.data>
+  //
+  //   ...'data' and 'compare' created by existing nodes...
+  //
+  //   ...new recipes introduced to determine whether to update the reduction
+  //      values or keep the current one.
+  //   any.active = i1 any-of ir<compare>
+  //   new.mask = select vp<any.active>, ir<compare>, vp<mask.phi>
+  //   new.data = select vp<any.active>, ir<data>, ir<data.phi>
+  //
+  // middle.block:
+  //   ...extract-last-active replaces compute-reduction-result.
+  //   result = extract-last-active vp<new.data>, vp<new.mask>, ir<default.val>
+
+  for (auto &Phi : Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis()) {
+    auto *PhiR = dyn_cast<VPReductionPHIRecipe>(&Phi);
+    if (!PhiR || !RecurrenceDescriptor::isFindLastRecurrenceKind(
+                     PhiR->getRecurrenceKind()))
+      continue;
+
+    // Find the condition for the select.
+    auto *SelectR = cast<VPSingleDefRecipe>(&PhiR->getBackedgeRecipe());
+    VPValue *Cond = nullptr, *Op1 = nullptr, *Op2 = nullptr;
+    if (!match(SelectR,
+               m_Select(m_VPValue(Cond), m_VPValue(Op1), m_VPValue(Op2))))
+      return false;
+
+    // Add mask phi.
+    VPBuilder Builder = VPBuilder::getToInsertAfter(PhiR);
+    auto *MaskPHI = new VPWidenPHIRecipe(nullptr, /*Start=*/Plan.getFalse());
+    Builder.insert(MaskPHI);
+
+    // Add select for mask.
+    Builder.setInsertPoint(SelectR);
+
+    if (Op1 == PhiR) {
+      // Normalize to selecting the data operand when the condition is true by
+      // swapping operands and negating the condition.
+      std::swap(Op1, Op2);
+      Cond = Builder.createNot(Cond);
+    }
+    assert(Op2 == PhiR && "data value must be selected if Cond is true");
+
+    VPValue *AnyOf = Builder.createNaryOp(VPInstruction::AnyOf, {Cond});
+    VPValue *MaskSelect = Builder.createSelect(AnyOf, Cond, MaskPHI);
+    MaskPHI->addOperand(MaskSelect);
+
+    // Replace select for data.
+    VPValue *DataSelect =
+        Builder.createSelect(AnyOf, Op1, Op2, SelectR->getDebugLoc());
+    SelectR->replaceAllUsesWith(DataSelect);
+    SelectR->eraseFromParent();
+
+    // Find final reduction computation and replace it with an
+    // extract.last.active intrinsic.
+    auto *RdxResult =
+        findUserOf<VPInstruction::ComputeReductionResult>(DataSelect);
+    // TODO: Handle tail-folding.
+    if (!RdxResult)
+      return false;
+    Builder.setInsertPoint(RdxResult);
+    auto *ExtractLastActive =
+        Builder.createNaryOp(VPInstruction::ExtractLastActive,
+                             {DataSelect, MaskSelect, PhiR->getStartValue()},
+                             RdxResult->getDebugLoc());
+    RdxResult->replaceAllUsesWith(ExtractLastActive);
+    RdxResult->eraseFromParent();
+  }
+
+  return true;
+}
+
 bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
   for (auto &PhiR : make_early_inc_range(
            Plan.getVectorLoopRegion()->getEntryBasicBlock()->phis())) {
-    auto *MinMaxPhiR = dyn_cast<VPReductionPHIRecipe>(&PhiR);
+    auto *MinOrMaxPhiR = dyn_cast<VPReductionPHIRecipe>(&PhiR);
     // TODO: check for multi-uses in VPlan directly.
-    if (!MinMaxPhiR || !MinMaxPhiR->hasUsesOutsideReductionChain())
+    if (!MinOrMaxPhiR || !MinOrMaxPhiR->hasUsesOutsideReductionChain())
       continue;
 
-    // MinMaxPhiR has users outside the reduction cycle in the loop. Check if
-    // the only other user is a FindLastIV reduction. MinMaxPhiR must have
-    // exactly 3 users: 1) the min/max operation, the compare of a FindLastIV
-    // reduction and ComputeReductionResult. The comparisom must compare
-    // MinMaxPhiR against the min/max operand used for the min/max reduction
-    // and only be used by the select of the FindLastIV reduction.
-    RecurKind RdxKind = MinMaxPhiR->getRecurrenceKind();
+    // MinOrMaxPhiR has users outside the reduction cycle in the loop. Check if
+    // the only other user is a FindLastIV reduction. MinOrMaxPhiR must have
+    // exactly 2 users:
+    // 1) the min/max operation of the reduction cycle, and
+    // 2) the compare of a FindLastIV reduction cycle. This compare must match
+    // the min/max operation - comparing MinOrMaxPhiR with the operand of the
+    // min/max operation, and be used only by the select of the FindLastIV
+    // reduction cycle.
+    RecurKind RdxKind = MinOrMaxPhiR->getRecurrenceKind();
     assert(
         RecurrenceDescriptor::isIntMinMaxRecurrenceKind(RdxKind) &&
         "only min/max recurrences support users outside the reduction chain");
 
-    auto *MinMaxOp =
-        dyn_cast<VPRecipeWithIRFlags>(MinMaxPhiR->getBackedgeValue());
-    if (!MinMaxOp)
+    auto *MinOrMaxOp =
+        dyn_cast<VPRecipeWithIRFlags>(MinOrMaxPhiR->getBackedgeValue());
+    if (!MinOrMaxOp)
       return false;
 
-    // Check that MinMaxOp is a VPWidenIntrinsicRecipe or VPReplicateRecipe
+    // Check that MinOrMaxOp is a VPWidenIntrinsicRecipe or VPReplicateRecipe
     // with an intrinsic that matches the reduction kind.
     Intrinsic::ID ExpectedIntrinsicID = getMinMaxReductionIntrinsicOp(RdxKind);
-    if (!match(MinMaxOp, m_Intrinsic(ExpectedIntrinsicID)))
+    if (!match(MinOrMaxOp, m_Intrinsic(ExpectedIntrinsicID)))
       return false;
 
-    // MinMaxOp must have 2 users: 1) MinMaxPhiR and 2) ComputeReductionResult
-    // (asserted below).
-    assert(MinMaxOp->getNumUsers() == 2 &&
-           "MinMaxOp must have exactly 2 users");
-    VPValue *MinMaxOpValue = MinMaxOp->getOperand(0);
-    if (MinMaxOpValue == MinMaxPhiR)
-      MinMaxOpValue = MinMaxOp->getOperand(1);
+    // MinOrMaxOp must have 2 users: 1) MinOrMaxPhiR and 2)
+    // ComputeReductionResult.
+    assert(MinOrMaxOp->getNumUsers() == 2 &&
+           "MinOrMaxOp must have exactly 2 users");
+    VPValue *MinOrMaxOpValue = MinOrMaxOp->getOperand(0);
+    if (MinOrMaxOpValue == MinOrMaxPhiR)
+      MinOrMaxOpValue = MinOrMaxOp->getOperand(1);
 
     VPValue *CmpOpA;
     VPValue *CmpOpB;
     CmpPredicate Pred;
     auto *Cmp = dyn_cast_or_null<VPRecipeWithIRFlags>(findUserOf(
-        MinMaxPhiR, m_Cmp(Pred, m_VPValue(CmpOpA), m_VPValue(CmpOpB))));
+        MinOrMaxPhiR, m_Cmp(Pred, m_VPValue(CmpOpA), m_VPValue(CmpOpB))));
     if (!Cmp || Cmp->getNumUsers() != 1 ||
-        (CmpOpA != MinMaxOpValue && CmpOpB != MinMaxOpValue))
+        (CmpOpA != MinOrMaxOpValue && CmpOpB != MinOrMaxOpValue))
       return false;
 
-    if (MinMaxOpValue != CmpOpB)
+    if (MinOrMaxOpValue != CmpOpB)
       Pred = CmpInst::getSwappedPredicate(Pred);
 
-    // MinMaxPhiR must have exactly 3 users:
-    // * MinMaxOp,
-    // * Cmp (that's part of a FindLastIV chain),
-    // * ComputeReductionResult.
-    if (MinMaxPhiR->getNumUsers() != 3)
+    // MinOrMaxPhiR must have exactly 2 users:
+    // * MinOrMaxOp,
+    // * Cmp (that's part of a FindLastIV chain).
+    if (MinOrMaxPhiR->getNumUsers() != 2)
       return false;
 
-    VPInstruction *MinMaxResult =
-        findUserOf<VPInstruction::ComputeReductionResult>(MinMaxPhiR);
-    assert(is_contained(MinMaxPhiR->users(), MinMaxOp) &&
-           "one user must be MinMaxOp");
-    assert(MinMaxResult && "MinMaxResult must be a user of MinMaxPhiR");
-    assert(is_contained(MinMaxOp->users(), MinMaxResult) &&
-           "MinMaxResult must be a user of MinMaxOp (and of MinMaxPhiR");
+    VPInstruction *MinOrMaxResult =
+        findUserOf<VPInstruction::ComputeReductionResult>(MinOrMaxOp);
+    assert(is_contained(MinOrMaxPhiR->users(), MinOrMaxOp) &&
+           "one user must be MinOrMaxOp");
+    assert(MinOrMaxResult &&
+           "MinOrMaxOp must have a ComputeReductionResult user");
 
     // Cmp must be used by the select of a FindLastIV chain.
     VPValue *Sel = dyn_cast<VPSingleDefRecipe>(Cmp->getSingleUser());
@@ -1236,7 +1521,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     assert(!FindIVPhiR->isInLoop() && !FindIVPhiR->isOrdered() &&
            "cannot handle inloop/ordered reductions yet");
 
-    // The reduction using MinMaxPhiR needs adjusting to compute the correct
+    // The reduction using MinOrMaxPhiR needs adjusting to compute the correct
     // result:
     //  1. We need to find the last IV for which the condition based on the
     //     min/max recurrence is true,
@@ -1245,34 +1530,38 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     //     correspond to the lanes matching the min/max reduction result.
     //
     // For example, this transforms
-    // vp<%min.result> = compute-reduction-result ir<%min.val>,
-    //                                            ir<%min.val.next>
-    // vp<%find.iv.result = compute-find-iv-result ir<%min.idx>, ir<0>,
-    //                                             SENTINEL, vp<%min.idx.next>
+    // vp<%min.result> = compute-reduction-result ir<%min.val.next>
+    // vp<%iv.rdx> = compute-reduction-result (smax) vp<%min.idx.next>
+    // vp<%cmp> = icmp ne vp<%iv.rdx>, SENTINEL
+    // vp<%find.iv.result> = select vp<%cmp>, vp<%iv.rdx>, ir<0>
     //
     // into:
     //
-    // vp<min.result> = compute-reduction-result ir<%min.val>, ir<%min.val.next>
+    // vp<min.result> = compute-reduction-result ir<%min.val.next>
     // vp<%final.min.cmp> = icmp eq ir<%min.val.next>, vp<min.result>
-    // vp<%final.iv> = select vp<%final.min.cmp>, ir<%min.idx.next>, SENTINEL
-    // vp<%find.iv.result> = compute-find-iv-result ir<%min.idx>, ir<0>,
-    //                                             SENTINEL, vp<%final.iv>
-    VPInstruction *FindIVResult =
-        findUserOf<VPInstruction::ComputeFindIVResult>(FindIVPhiR);
-    assert(FindIVResult->getParent() == MinMaxResult->getParent() &&
+    // vp<%final.iv> = select vp<%final.min.cmp>, vp<%min.idx.next>, SENTINEL
+    // vp<%iv.rdx> = compute-reduction-result (smax) vp<%final.iv>
+    // vp<%cmp> = icmp ne vp<%iv.rdx>, SENTINEL
+    // vp<%find.iv.result> = select vp<%cmp>, vp<%iv.rdx>, ir<0>
+    //
+    // Find the FindIV result pattern.
+    auto *FindIVSelect = findFindIVSelect(FindIVPhiR->getBackedgeValue());
+    auto *FindIVCmp = FindIVSelect->getOperand(0)->getDefiningRecipe();
+    auto *FindIVRdxResult = cast<VPInstruction>(FindIVCmp->getOperand(0));
+    assert(FindIVSelect->getParent() == MinOrMaxResult->getParent() &&
            "both results must be computed in the same block");
-    MinMaxResult->moveBefore(*FindIVResult->getParent(),
-                             FindIVResult->getIterator());
+    MinOrMaxResult->moveBefore(*FindIVRdxResult->getParent(),
+                               FindIVRdxResult->getIterator());
 
-    VPBuilder B(FindIVResult);
-    VPValue *MinMaxExiting = MinMaxResult->getOperand(1);
-    auto *FinalMinMaxCmp =
-        B.createICmp(CmpInst::ICMP_EQ, MinMaxExiting, MinMaxResult);
-    VPValue *Sentinel = FindIVResult->getOperand(2);
-    VPValue *LastIVExiting = FindIVResult->getOperand(3);
+    VPBuilder B(FindIVRdxResult);
+    VPValue *MinOrMaxExiting = MinOrMaxResult->getOperand(0);
+    auto *FinalMinOrMaxCmp =
+        B.createICmp(CmpInst::ICMP_EQ, MinOrMaxExiting, MinOrMaxResult);
+    VPValue *Sentinel = FindIVCmp->getOperand(1);
+    VPValue *LastIVExiting = FindIVRdxResult->getOperand(0);
     auto *FinalIVSelect =
-        B.createSelect(FinalMinMaxCmp, LastIVExiting, Sentinel);
-    FindIVResult->setOperand(3, FinalIVSelect);
+        B.createSelect(FinalMinOrMaxCmp, LastIVExiting, Sentinel);
+    FindIVRdxResult->setOperand(0, FinalIVSelect);
   }
   return true;
 }

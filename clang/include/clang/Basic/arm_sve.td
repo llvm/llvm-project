@@ -778,6 +778,13 @@ defm SVRINTX : SInstZPZ<"svrintx", "hfd", "aarch64_sve_frintx">;
 defm SVRINTZ : SInstZPZ<"svrintz", "hfd", "aarch64_sve_frintz">;
 defm SVSQRT  : SInstZPZ<"svsqrt",  "hfd", "aarch64_sve_fsqrt">;
 
+let SVETargetGuard = "sve2p2|sme2p2", SMETargetGuard = "sve2p2|sme2p2" in {
+defm SVRINT32X : SInstZPZ<"svrint32x", "fd", "aarch64_sve_frint32x">;
+defm SVRINT32Z : SInstZPZ<"svrint32z", "fd", "aarch64_sve_frint32z">;
+defm SVRINT64X : SInstZPZ<"svrint64x", "fd", "aarch64_sve_frint64x">;
+defm SVRINT64Z : SInstZPZ<"svrint64z", "fd", "aarch64_sve_frint64z">;
+}
+
 let SMETargetGuard = "sme2,ssve-fexpa" in {
 def SVEXPA  : SInst<"svexpa[_{d}]",  "du",   "hfd", MergeNone, "aarch64_sve_fexpa_x", [VerifyRuntimeMode]>;
 }
@@ -978,6 +985,18 @@ def SVCVTXNT_F32_F64   : SInst<"svcvtxnt_f32[_f64]", "MMPd", "d", MergeOp1, "aar
 //  SVCVTXNT_X_F32_F64 : Implemented as macro by SveEmitter.cpp
 }
 
+let SVETargetGuard = "sve2p2|sme2p2", SMETargetGuard = "sve2p2|sme2p2" in {
+
+def SVCVTNT_Z_F16_F32  : SInst<"svcvtnt_f16[_f32]_z",  "hhPd", "f", MergeNone, "aarch64_sve_fcvtnt_z_f16f32", [IsOverloadNone, VerifyRuntimeMode]>;
+def SVCVTNT_Z_F32_F64  : SInst<"svcvtnt_f32[_f64]_z",  "hhPd", "d", MergeNone, "aarch64_sve_fcvtnt_z_f32f64", [IsOverloadNone, VerifyRuntimeMode]>;
+def SVCVTNT_Z_BF16_F32 : SInst<"svcvtnt_bf16[_f32]_z", "$$Pd", "f", MergeNone, "aarch64_sve_fcvtnt_z_bf16f32", [IsOverloadNone, VerifyRuntimeMode]>;
+
+def SVCVTXNT_Z_F32_F64 : SInst<"svcvtxnt_f32[_f64]_z", "MMPd", "d", MergeNone, "aarch64_sve_fcvtxnt_z_f32f64", [IsOverloadNone, VerifyRuntimeMode]>;
+
+def SVCVTLT_Z_F32_F16  : SInst<"svcvtlt_f32[_f16]", "dPh", "f", MergeZeroExp, "aarch64_sve_fcvtlt_f32f16", [IsOverloadNone, VerifyRuntimeMode]>;
+def SVCVTLT_Z_F64_F32  : SInst<"svcvtlt_f64[_f32]", "dPh", "d", MergeZeroExp, "aarch64_sve_fcvtlt_f64f32",  [IsOverloadNone, VerifyRuntimeMode]>;
+
+}
 ////////////////////////////////////////////////////////////////////////////////
 // Permutations and selection
 
@@ -1871,6 +1890,23 @@ def SVPMULLB_PAIR_N_U64 : SInst<"svpmullb_pair[_n_{d}]", "dda", "Ul", MergeNone,
 
 def SVPMULLT_PAIR_U64   : SInst<"svpmullt_pair[_{d}]",   "ddd", "Ul", MergeNone, "aarch64_sve_pmullt_pair", [VerifyRuntimeMode]>;
 def SVPMULLT_PAIR_N_U64 : SInst<"svpmullt_pair[_n_{d}]", "dda", "Ul", MergeNone, "aarch64_sve_pmullt_pair", [VerifyRuntimeMode]>;
+}
+
+let SVETargetGuard = "sve-aes2", SMETargetGuard = "sve-aes2,ssve-aes" in {
+def SVAESD_X2   : SInst<"svaesd_lane[_{d}_x2]",   "22di", "Uc", MergeNone, "aarch64_sve_aesd_lane_x2", [IsOverloadNone, VerifyRuntimeMode], [ImmCheck<2, ImmCheck0_3>]>;
+def SVAESDIMC_X2 : SInst<"svaesdimc_lane[_{d}_x2]", "22di",  "Uc", MergeNone, "aarch64_sve_aesdimc_lane_x2", [IsOverloadNone, VerifyRuntimeMode], [ImmCheck<2, ImmCheck0_3>]>;
+def SVAESE_X2   : SInst<"svaese_lane[_{d}_x2]",   "22di", "Uc", MergeNone, "aarch64_sve_aese_lane_x2", [IsOverloadNone, VerifyRuntimeMode], [ImmCheck<2, ImmCheck0_3>]>;
+def SVAESEMC_X2  : SInst<"svaesemc_lane[_{d}_x2]",  "22di",  "Uc", MergeNone, "aarch64_sve_aesemc_lane_x2", [IsOverloadNone, VerifyRuntimeMode], [ImmCheck<2, ImmCheck0_3>]>;
+
+def SVAESD_X4   : SInst<"svaesd_lane[_{d}_x4]",   "44di", "Uc", MergeNone, "aarch64_sve_aesd_lane_x4", [IsOverloadNone, VerifyRuntimeMode], [ImmCheck<2, ImmCheck0_3>]>;
+def SVAESDIMC_X4 : SInst<"svaesdimc_lane[_{d}_x4]", "44di",  "Uc", MergeNone, "aarch64_sve_aesdimc_lane_x4", [IsOverloadNone, VerifyRuntimeMode], [ImmCheck<2, ImmCheck0_3>]>;
+def SVAESE_X4   : SInst<"svaese_lane[_{d}_x4]",   "44di", "Uc", MergeNone, "aarch64_sve_aese_lane_x4", [IsOverloadNone, VerifyRuntimeMode], [ImmCheck<2, ImmCheck0_3>]>;
+def SVAESEMC_X4  : SInst<"svaesemc_lane[_{d}_x4]",  "44di",  "Uc", MergeNone, "aarch64_sve_aesemc_lane_x4", [IsOverloadNone, VerifyRuntimeMode], [ImmCheck<2, ImmCheck0_3>]>;
+
+def SVPMULL_PAIR_U64   : SInst<"svpmull_pair[_{d}_x2]",   "2dd", "Ul", MergeNone, "aarch64_sve_pmull_pair_x2", [IsOverloadNone, VerifyRuntimeMode]>;
+def SVPMULL_PAIR_N_U64 : SInst<"svpmull_pair[_n_{d}_x2]", "2da", "Ul", MergeNone, "aarch64_sve_pmull_pair_x2", [IsOverloadNone, VerifyRuntimeMode]>;
+def SVPMLAL_PAIR_U64   : SInst<"svpmlal_pair[_{d}_x2]",   "22dd", "Ul", MergeNone, "aarch64_sve_pmlal_pair_x2", [IsOverloadNone, VerifyRuntimeMode]>;
+def SVPMLAL_PAIR_N_U64 : SInst<"svpmlal_pair[_n_{d}_x2]", "22da", "Ul", MergeNone, "aarch64_sve_pmlal_pair_x2", [IsOverloadNone, VerifyRuntimeMode]>;
 }
 
 let SVETargetGuard = "sve-sha3", SMETargetGuard = "sme2p1,sve-sha3" in {

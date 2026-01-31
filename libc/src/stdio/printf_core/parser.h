@@ -27,6 +27,9 @@
 #ifndef LIBC_COPT_PRINTF_DISABLE_STRERROR
 #include "src/__support/libc_errno.h"
 #endif // LIBC_COPT_PRINTF_DISABLE_STRERROR
+#ifndef LIBC_COPT_PRINTF_DISABLE_WIDE
+#include "hdr/types/wint_t.h"
+#endif // LIBC_COPT_PRINTF_DISABLE_WIDE
 
 namespace LIBC_NAMESPACE_DECL {
 namespace printf_core {
@@ -73,9 +76,9 @@ template <typename ArgProvider> class Parser {
   ArgProvider args_cur;
 
 #ifndef LIBC_COPT_PRINTF_DISABLE_INDEX_MODE
-  // args_start stores the start of the va_args, which is allows getting the
-  // value of arguments that have already been passed. args_index is tracked so
-  // that we know which argument args_cur is on.
+  // args_start stores the start of the va_args, which helps in getting the
+  // number of arguments that have already been passed. args_index is tracked
+  // so that we know which argument args_cur is on.
   ArgProvider args_start;
   size_t args_index = 1;
 
@@ -173,7 +176,17 @@ public:
         section.has_conv = true;
         break;
       case ('c'):
-        WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, int, conv_index);
+        if (section.length_modifier == LengthModifier::l) {
+#ifdef LIBC_COPT_PRINTF_DISABLE_WIDE
+          using WideCharArgType = int;
+#else
+          using WideCharArgType = wint_t;
+#endif // LIBC_COPT_PRINTF_DISABLE_WIDE
+          WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, WideCharArgType,
+                                 conv_index);
+        } else {
+          WRITE_ARG_VAL_SIMPLEST(section.conv_val_raw, int, conv_index);
+        }
         break;
       case ('d'):
       case ('i'):
@@ -574,7 +587,16 @@ private:
           conv_size = type_desc_from_type<void>();
           break;
         case ('c'):
-          conv_size = type_desc_from_type<int>();
+          if (lm == LengthModifier::l) {
+#ifdef LIBC_COPT_PRINTF_DISABLE_WIDE
+            using WideCharArgType = int;
+#else
+            using WideCharArgType = wint_t;
+#endif // LIBC_COPT_PRINTF_DISABLE_WIDE
+            conv_size = type_desc_from_type<WideCharArgType>();
+          } else {
+            conv_size = type_desc_from_type<int>();
+          }
           break;
         case ('d'):
         case ('i'):
