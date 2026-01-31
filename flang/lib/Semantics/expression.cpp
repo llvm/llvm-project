@@ -4455,11 +4455,11 @@ MaybeExpr ExpressionAnalyzer::Analyze(const parser::AllocateShapeSpecArrayList &
   if(foundArray) {
     // Check for size mismatch BEFORE the rewrite (when both are arrays)
     if (ubRank == 1 && lbRank == 1 && ubSize > 0 && lbSize > 0 && ubSize != lbSize) {
-      Say("ALLOCATE bounds arrays must have the same size; "
+      parser::CharBlock at{parser::FindSourceLocation(upperBoundExpr)};
+      Say(at, "ALLOCATE bounds arrays must have the same size; "
           "lower bounds has %jd elements, upper bounds has %jd elements"_err_en_US,
           static_cast<std::intmax_t>(lbSize), 
           static_cast<std::intmax_t>(ubSize));
-      return std::nullopt;
     }
     
     // Get the IntExpr from the upper bound (BoundExpr.thing is the IntExpr)
