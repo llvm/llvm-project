@@ -371,7 +371,7 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
   DL = &Mod->getDataLayout();
 
   const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, F);
-  if (!ST.isPromoteAllocaEnabled())
+  if (!ST.enablePromoteAlloca())
     return false;
 
   bool SufficientLDS = PromoteToLDS && hasSufficientLocalMem(F);
@@ -1166,9 +1166,18 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
   });
 
   // Now fixup the placeholders.
-  for (Instruction *Placeholder : Placeholders) {
-    Placeholder->replaceAllUsesWith(
-        Updater.GetValueInMiddleOfBlock(Placeholder->getParent()));
+  SmallVector<Value *> PlaceholderToNewVal(Placeholders.size());
+  for (auto [Index, Placeholder] : enumerate(Placeholders)) {
+    Value *NewVal = Updater.GetValueInMiddleOfBlock(Placeholder->getParent());
+    PlaceholderToNewVal[Index] = NewVal;
+    Placeholder->replaceAllUsesWith(NewVal);
+  }
+  // Note: we cannot merge this loop with the previous one because it is
+  // possible that the placeholder itself can be used in the SSAUpdater. The
+  // replaceAllUsesWith doesn't replace those uses.
+  for (auto [Index, Placeholder] : enumerate(Placeholders)) {
+    if (!Placeholder->use_empty())
+      Placeholder->replaceAllUsesWith(PlaceholderToNewVal[Index]);
     Placeholder->eraseFromParent();
   }
 
@@ -1529,7 +1538,7 @@ bool AMDGPUPromoteAllocaImpl::hasSufficientLocalMem(const Function &F) {
   for (const GlobalVariable *GV : UsedLDS) {
     Align Alignment =
         DL.getValueOrABITypeAlignment(GV->getAlign(), GV->getValueType());
-    uint64_t AllocSize = DL.getTypeAllocSize(GV->getValueType());
+    uint64_t AllocSize = GV->getGlobalSize(DL);
 
     // HIP uses an extern unsized array in local address space for dynamically
     // allocated shared memory.  In that case, we have to disable the promotion.

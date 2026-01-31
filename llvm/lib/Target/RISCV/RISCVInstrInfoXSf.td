@@ -14,9 +14,8 @@
 // XSFVCP extension instructions.
 //===----------------------------------------------------------------------===//
 
-def VCIXVS2    : RISCVVConstraint<VS2Constraint.Value>;
-def VCIXVS2VS1 : RISCVVConstraint<!or(VS2Constraint.Value,
-                                      VS1Constraint.Value)>;
+def VCIXVS2    : RISCVVConstraint<VS2 = 1>;
+def VCIXVS2VS1 : RISCVVConstraint<VS2 = 1, VS1 = 1>;
 
 class VCIXType<bits<4> val> {
   bits<4> Val = val;

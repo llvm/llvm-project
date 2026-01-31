@@ -795,6 +795,10 @@ def LLVM_CallOp
       DefaultValuedAttr<TailCallKind, "TailCallKind::None">:$TailCallKind,
       OptionalAttr<LLVM_MemoryEffectsAttr>:$memory_effects,
       UnitAttr:$convergent, UnitAttr:$no_unwind, UnitAttr:$will_return,
+      UnitAttr:$noreturn, UnitAttr:$returns_twice, UnitAttr:$hot,
+      UnitAttr:$cold, UnitAttr:$noduplicate,
+      UnitAttr:$no_caller_saved_registers, UnitAttr:$nocallback,
+      OptionalAttr<StrAttr>:$modular_format,
       VariadicOfVariadic<LLVM_Type, "op_bundle_sizes">:$op_bundle_operands,
       DenseI32ArrayAttr:$op_bundle_sizes,
       OptionalAttr<ArrayAttr>:$op_bundle_tags,
@@ -940,6 +944,7 @@ def LLVM_InsertValueOp : LLVM_Op<
   }];
 
   let hasVerifier = 1;
+  let hasCanonicalizer = 1;
 
   string llvmInstName = "InsertValue";
   string llvmBuilder = [{
@@ -1991,7 +1996,15 @@ def LLVM_LLVMFuncOp : LLVM_Op<"func", [
     OptionalAttr<UnitAttr>:$inline_hint,
     OptionalAttr<UnitAttr>:$no_unwind,
     OptionalAttr<UnitAttr>:$will_return,
+    OptionalAttr<UnitAttr>:$noreturn,
     OptionalAttr<UnitAttr>:$optimize_none,
+    OptionalAttr<UnitAttr>:$returns_twice,
+    OptionalAttr<UnitAttr>:$hot,
+    OptionalAttr<UnitAttr>:$cold,
+    OptionalAttr<UnitAttr>:$noduplicate,
+    OptionalAttr<UnitAttr>:$no_caller_saved_registers,
+    OptionalAttr<UnitAttr>:$nocallback,
+    OptionalAttr<StrAttr>:$modular_format,
     OptionalAttr<LLVM_VecTypeHintAttr>:$vec_type_hint,
     OptionalAttr<DenseI32ArrayAttr>:$work_group_size_hint,
     OptionalAttr<DenseI32ArrayAttr>:$reqd_work_group_size,

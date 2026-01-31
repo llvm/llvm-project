@@ -26,7 +26,7 @@ qc.bnei t1, 10, undef
 # ASM: qc.e.bgeui s0, 20, undef
 # OBJ-NEXT: qc.e.bgeui s0, 0x14, 0x4 <this_section+0x4>
 # OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
-# OBJ-NEXT: R_RISCV_CUSTOM193 undef{{$}}
+# OBJ-NEXT: R_RISCV_QC_E_BRANCH undef{{$}}
 qc.e.bgeui s0, 20, undef
 
 
@@ -47,7 +47,7 @@ qc.bnei t2, 12, same_section_extern
 # ASM: qc.e.bgeui s1, 22, same_section_extern
 # OBJ-NEXT: qc.e.bgeui s1, 0x16, 0x18 <this_section+0x18>
 # OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
-# OBJ-NEXT: R_RISCV_CUSTOM193 same_section_extern{{$}}
+# OBJ-NEXT: R_RISCV_QC_E_BRANCH same_section_extern{{$}}
 qc.e.bgeui s1, 22, same_section_extern
 
 
@@ -59,7 +59,7 @@ qc.bnei t3, 13, other_section
 # ASM: qc.e.bgeui s2, 23, other_section
 # OBJ-NEXT: qc.e.bgeui s2, 0x17, 0x22 <this_section+0x22>
 # OBJ-NEXT: R_RISCV_VENDOR QUALCOMM{{$}}
-# OBJ-NEXT: R_RISCV_CUSTOM193 other_section{{$}}
+# OBJ-NEXT: R_RISCV_QC_E_BRANCH other_section{{$}}
 qc.e.bgeui s2, 23, other_section
 
 
@@ -91,12 +91,14 @@ qc.e.bgeui s2, 24, same_section
 # OBJ: qc.beqi t1, 0xa, 0x42 <same_section_extern+0x16>
 # OBJ-NEXT: j 0x3e <same_section_extern+0x12>
 # OBJ-NEXT: R_RISCV_JAL undef{{$}}
+# OBJ-NEXT: R_RISCV_RELAX *ABS*{{$}}
 qc.bnei t1, 10, undef
 
 # ASM: qc.e.bgeui s0, 40, undef
 # OBJ-NEXT: qc.e.bltui s0, 0x28, 0x4c <same_section_extern+0x20>
 # OBJ-NEXT: j 0x48 <same_section_extern+0x1c>
 # OBJ-NEXT: R_RISCV_JAL undef{{$}}
+# OBJ-NEXT: R_RISCV_RELAX *ABS*{{$}}
 qc.e.bgeui s0, 40, undef
 
 .section .text.second, "ax", @progbits
