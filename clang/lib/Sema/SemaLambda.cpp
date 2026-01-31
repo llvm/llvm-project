@@ -294,6 +294,14 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
   bool IsInNonspecializedTemplate =
       inTemplateInstantiation() || CurContext->isDependentContext();
 
+  // If we must allocate mangling numbers but the `ManglingContextDecl`
+  // is a local variable, use the `DeclContext` containing the lambda expression
+  // instead.
+  if (ManglingContextDecl)
+    if (VarDecl *Var = dyn_cast<VarDecl>(ManglingContextDecl);
+        Var && Var->isLocalVarDecl())
+      ManglingContextDecl = const_cast<Decl *>(cast<Decl>(DC));
+
   // Default arguments of member function parameters that appear in a class
   // definition, as well as the initializers of data members, receive special
   // treatment. Identify them.
