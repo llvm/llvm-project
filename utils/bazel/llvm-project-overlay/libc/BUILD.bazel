@@ -5311,7 +5311,7 @@ libc_math_function(
     additional_deps = [
         ":__support_math_asinpif16",
         ":errno",
-    ]
+    ],
 )
 
 libc_math_function(
