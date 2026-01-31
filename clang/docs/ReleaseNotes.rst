@@ -210,6 +210,7 @@ Improvements to Clang's time-trace
 Improvements to Coverage Mapping
 --------------------------------
 
+- [MC/DC] Nested expressions are handled as individual MC/DC expressions.
 - "Single byte coverage" now supports branch coverage and can be used
   together with ``-fcoverage-mcdc``.
 

@@ -2043,7 +2043,7 @@ private:
   static std::string getDisplayName(DarwinPlatformKind TargetPlatform,
                                     DarwinEnvironmentKind TargetEnvironment,
                                     VersionTuple Version) {
-    SmallVector<StringRef, 3> Components;
+    SmallVector<std::string, 3> Components;
     switch (TargetPlatform) {
     case DarwinPlatformKind::MacOS:
       Components.push_back("macOS");
@@ -2076,8 +2076,7 @@ private:
                                   std::to_string(TargetEnvironment) +
                                   "' is unsupported when inferring SDK Info.");
     }
-    std::string VersionString = Version.getAsString();
-    Components.push_back(VersionString);
+    Components.push_back(Version.getAsString());
     return join(Components, " ");
   }
 
