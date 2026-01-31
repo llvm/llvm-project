@@ -68,8 +68,8 @@ template <> struct DenseMapInfo<DivRemMapKey> {
 ///
 /// This optimization may add basic blocks immediately after BB; for obvious
 /// reasons, you shouldn't pass those blocks to bypassSlowDivision.
-bool bypassSlowDivision(BasicBlock *BB,
-                        const DenseMap<unsigned int, unsigned int> &BypassWidth);
+bool bypassSlowDivision(
+    BasicBlock *BB, const DenseMap<unsigned int, unsigned int> &BypassWidth);
 
 } // end namespace llvm
 

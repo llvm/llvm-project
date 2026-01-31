@@ -661,7 +661,8 @@ bool CodeGenPrepare::_run(Function &F) {
   while (MadeChange) {
     MadeChange = false;
 
-    // Flush pending updates as we may delete BasicBlocks in previous iteration of the current loop.
+    // Flush pending updates as we may delete BasicBlocks in previous iteration
+    // of the current loop.
     DTU->flush();
 
     for (BasicBlock &BB : llvm::make_early_inc_range(F)) {
@@ -6477,7 +6478,8 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
   SmallVector<DominatorTree::UpdateType, 8> DTUpdates;
 
   // New BBs:
-  BasicBlock *OverflowEntryBB = SplitBlock(I->getParent(), I, DTU, LI, nullptr, "", /*Before*/ true);
+  BasicBlock *OverflowEntryBB =
+      SplitBlock(I->getParent(), I, DTU, LI, nullptr, "", /*Before*/ true);
   OverflowEntryBB->takeName(I->getParent());
   // Keep the 'br' instruction that is generated as a result of the split to be
   // erased/replaced later.
