@@ -170,7 +170,7 @@ public:
 
       auto *RHSVal = Env.getValue(*RHS);
       if (RHSVal == nullptr)
-        break;
+        RHSVal = Env.createValue(LHS->getType());
 
       // Assign a value to the storage location of the left-hand side.
       Env.setValue(*LHSLoc, *RHSVal);
