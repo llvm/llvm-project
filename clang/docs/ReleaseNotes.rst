@@ -52,13 +52,6 @@ AST Dumping Potentially Breaking Changes
 Clang Frontend Potentially Breaking Changes
 -------------------------------------------
 
-- HIPSPV toolchain: `--offload-targets=spirv{32,64}` option is
-  deprecated and will be removed when the new offload driver becomes
-  default. The replacement for the option is
-  `--offload-targets=spirv{32,64}-unknown-chipstar` when using the new
-  offload driver (`--offload-new-driver`).
-
-
 Clang Python Bindings Potentially Breaking Changes
 --------------------------------------------------
 - Remove ``CompletionString.Availability``. No libclang interfaces returned instances of it.
@@ -128,6 +121,9 @@ Non-comprehensive list of changes in this release
 
 New Compiler Flags
 ------------------
+- New option ``-fms-anonymous-structs`` / ``-fno-ms-anonymous-structs`` added
+  to enable or disable Microsoft's anonymous struct/union extension without
+  enabling other ``-fms-extensions`` features (#GH177607).
 
 Deprecated Compiler Flags
 -------------------------
@@ -205,6 +201,8 @@ Improvements to Clang's diagnostics
       std::string_view view;
       DanglingView(std::string s) : view(s) {}  // warning: address of stack memory escapes to a field
     };
+
+- Improved ``-Wassign-enum`` performance by caching enum enumerator values. (#GH176454)
 
 Improvements to Clang's time-trace
 ----------------------------------
