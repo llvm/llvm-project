@@ -4877,7 +4877,7 @@ SDValue AArch64TargetLowering::LowerFP_ROUND(SDValue Op,
     SDValue ToF32 = DAG.getNode(ISD::FP_ROUND, DL, MVT::f32, Narrow,
                                  DAG.getTargetConstant(0, DL, MVT::i64));
     Narrow = DAG.getNode(ISD::BITCAST, DL, I32, ToF32);
-    }else {
+    } else {
       return SDValue();
     }
     if (!Trunc) {
