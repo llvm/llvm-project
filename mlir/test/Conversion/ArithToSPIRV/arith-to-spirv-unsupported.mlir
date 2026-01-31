@@ -209,9 +209,9 @@ module attributes {
 
 // Tensor truncation is not supported; ensure conversion fails gracefully (no crash).
 func.func @unsupported_tensor_trunci(%arg0: tensor<1xi32>) -> tensor<1xi16> {
-// expected-error@+1 {{failed to legalize operation 'arith.trunci'}}
-%t = arith.trunci %arg0 : tensor<1xi32> to tensor<1xi16>
-return %t : tensor<1xi16>
+  // expected-error@+1 {{failed to legalize operation 'arith.trunci'}}
+  %t = arith.trunci %arg0 : tensor<1xi32> to tensor<1xi16>
+  return %t : tensor<1xi16>
 }
 
 } // end module
