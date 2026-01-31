@@ -40,7 +40,7 @@ def SCF_Dialect : Dialect {
     and then lowered to some final target like LLVM or SPIR-V.
   }];
 
-  let dependentDialects = ["arith::ArithDialect"];
+  let dependentDialects = ["arith::ArithDialect", "ub::UBDialect"];
 }
 
 // Base class for SCF dialect ops.
@@ -160,7 +160,7 @@ def ForOp : SCF_Op<"for",
        AllTypesMatch<["lowerBound", "upperBound", "step"]>,
        ConditionallySpeculatable,
        DeclareOpInterfaceMethods<RegionBranchOpInterface,
-        ["getEntrySuccessorOperands", "getSuccessorInputs"]>,
+        ["getEntrySuccessorOperands", "getSuccessorInputs", "mustProgress"]>,
        SingleBlockImplicitTerminator<"scf::YieldOp">,
        RecursiveMemoryEffects]> {
   let summary = "for operation";
@@ -265,7 +265,8 @@ def ForOp : SCF_Op<"for",
                        AnySignlessIntegerOrIndex:$upperBound,
                        AnySignlessIntegerOrIndex:$step,
                        Variadic<AnyType>:$initArgs,
-                       UnitAttr:$unsignedCmp);
+                       UnitAttr:$unsignedCmp,
+                       DefaultValuedAttr<BoolAttr, "true">:$mustProgress);
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$region);
 
@@ -983,7 +984,7 @@ def ReduceReturnOp :
 
 def WhileOp : SCF_Op<"while",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface,
-        ["getEntrySuccessorOperands", "getSuccessorInputs"]>,
+        ["getEntrySuccessorOperands", "getSuccessorInputs", "mustProgress"]>,
      DeclareOpInterfaceMethods<LoopLikeOpInterface,
         ["getRegionIterArgs", "getYieldedValuesMutable"]>,
      RecursiveMemoryEffects, SingleBlock]> {
@@ -1101,14 +1102,18 @@ def WhileOp : SCF_Op<"while",
     ```
   }];
 
-  let arguments = (ins Variadic<AnyType>:$inits);
+  let arguments = (ins Variadic<AnyType>:$inits,
+                       DefaultValuedAttr<BoolAttr, "true">:$mustProgress);
   let results = (outs Variadic<AnyType>:$results);
   let regions = (region SizedRegion<1>:$before, SizedRegion<1>:$after);
 
+  let skipDefaultBuilders = 1;
   let builders = [
     OpBuilder<(ins "TypeRange":$resultTypes, "ValueRange":$inits,
       "function_ref<void(OpBuilder &, Location, ValueRange)>":$beforeBuilder,
-      "function_ref<void(OpBuilder &, Location, ValueRange)>":$afterBuilder)>
+      "function_ref<void(OpBuilder &, Location, ValueRange)>":$afterBuilder)>,
+    OpBuilder<(ins "TypeRange":$resultTypes, "ValueRange":$inits,
+                   CArg<"bool", "true">:$mustProgress)>
   ];
 
   let extraClassDeclaration = [{
