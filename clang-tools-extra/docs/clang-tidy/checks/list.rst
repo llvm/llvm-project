@@ -334,6 +334,7 @@ Clang-Tidy Checks
    :doc:`modernize-use-std-numbers <modernize/use-std-numbers>`, "Yes"
    :doc:`modernize-use-std-print <modernize/use-std-print>`, "Yes"
    :doc:`modernize-use-string-view <modernize/use-string-view>`, "Yes"
+   :doc:`modernize-use-structured-binding <modernize/use-structured-binding>`, "Yes"
    :doc:`modernize-use-trailing-return-type <modernize/use-trailing-return-type>`, "Yes"
    :doc:`modernize-use-transparent-functors <modernize/use-transparent-functors>`, "Yes"
    :doc:`modernize-use-uncaught-exceptions <modernize/use-uncaught-exceptions>`, "Yes"
