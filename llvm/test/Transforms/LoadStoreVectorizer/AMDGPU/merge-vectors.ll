@@ -30,10 +30,8 @@ define amdgpu_kernel void @merge_v1i32_v1i32(ptr addrspace(1) nocapture %a, ptr 
 ; CHECK-SAME: ptr addrspace(1) captures(none) [[A:%.*]], ptr addrspace(1) readonly captures(none) [[B:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i32>, ptr addrspace(1) [[B]], align 4
-; CHECK-NEXT:    [[LD_C1:%.*]] = extractelement <2 x i32> [[TMP0]], i32 0
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast i32 [[LD_C1]] to <1 x i32>
-; CHECK-NEXT:    [[LD_C_IDX_12:%.*]] = extractelement <2 x i32> [[TMP0]], i32 1
-; CHECK-NEXT:    [[TMP2:%.*]] = bitcast i32 [[LD_C_IDX_12]] to <1 x i32>
+; CHECK-NEXT:    [[LD_C1:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <1 x i32> zeroinitializer
+; CHECK-NEXT:    [[LD_C_IDX_12:%.*]] = shufflevector <2 x i32> [[TMP0]], <2 x i32> poison, <1 x i32> <i32 1>
 ; CHECK-NEXT:    store <2 x i32> zeroinitializer, ptr addrspace(1) [[A]], align 4
 ; CHECK-NEXT:    ret void
 ;
@@ -132,14 +130,13 @@ entry:
   ret void
 }
 
-; Ideally this would be merged
 define amdgpu_kernel void @merge_load_i32_v2i16(ptr addrspace(1) nocapture %a) #0 {
 ; CHECK-LABEL: define amdgpu_kernel void @merge_load_i32_v2i16(
 ; CHECK-SAME: ptr addrspace(1) captures(none) [[A:%.*]]) #[[ATTR0]] {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load <4 x i16>, ptr addrspace(1) [[A]], align 4
-; CHECK-NEXT:    [[LD_01:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> poison, <2 x i32> <i32 0, i32 1>
-; CHECK-NEXT:    [[TMP1:%.*]] = bitcast <2 x i16> [[LD_01]] to i32
+; CHECK-NEXT:    [[LD_01:%.*]] = extractelement <4 x i16> [[TMP0]], i32 0
+; CHECK-NEXT:    [[TMP1:%.*]] = zext i16 [[LD_01]] to i32
 ; CHECK-NEXT:    [[LD_12:%.*]] = shufflevector <4 x i16> [[TMP0]], <4 x i16> poison, <2 x i32> <i32 2, i32 3>
 ; CHECK-NEXT:    ret void
 ;
@@ -148,6 +145,36 @@ entry:
 
   %ld.0 = load i32, ptr addrspace(1) %a
   %ld.1 = load <2 x i16>, ptr addrspace(1) %a.1
+
+  ret void
+}
+
+define amdgpu_kernel void @merge_load_ptr_i16(ptr addrspace(1) nocapture %a) #0 {
+; CHECK-LABEL: define amdgpu_kernel void @merge_load_ptr_i16(
+; CHECK-SAME: ptr addrspace(1) captures(none) [[A:%.*]]) #[[ATTR0]] {
+; CHECK-NEXT:  [[ENTRY:.*:]]
+; CHECK-NEXT:    [[A_1:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[A]], i32 1
+; CHECK-NEXT:    [[A_2:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[A]], i32 2
+; CHECK-NEXT:    [[A_3:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[A]], i32 3
+; CHECK-NEXT:    [[A_4:%.*]] = getelementptr inbounds i16, ptr addrspace(1) [[A]], i32 4
+; CHECK-NEXT:    [[LD_0:%.*]] = load ptr addrspace(2), ptr addrspace(1) [[A]], align 4
+; CHECK-NEXT:    [[LD_1:%.*]] = load ptr addrspace(2), ptr addrspace(1) [[A_1]], align 4
+; CHECK-NEXT:    [[LD_2:%.*]] = load i16, ptr addrspace(1) [[A_2]], align 2
+; CHECK-NEXT:    [[LD_3:%.*]] = load i16, ptr addrspace(1) [[A_3]], align 2
+; CHECK-NEXT:    [[LD_4:%.*]] = load i16, ptr addrspace(1) [[A_4]], align 2
+; CHECK-NEXT:    ret void
+;
+entry:
+  %a.1 = getelementptr inbounds i16, ptr addrspace(1) %a, i32 1
+  %a.2 = getelementptr inbounds i16, ptr addrspace(1) %a, i32 2
+  %a.3 = getelementptr inbounds i16, ptr addrspace(1) %a, i32 3
+  %a.4 = getelementptr inbounds i16, ptr addrspace(1) %a, i32 4
+
+  %ld.0 = load ptr addrspace(2), ptr addrspace(1) %a
+  %ld.1 = load ptr addrspace(2), ptr addrspace(1) %a.1
+  %ld.2 = load i16, ptr addrspace(1) %a.2
+  %ld.3 = load i16, ptr addrspace(1) %a.3
+  %ld.4 = load i16, ptr addrspace(1) %a.4
 
   ret void
 }

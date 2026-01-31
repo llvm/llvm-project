@@ -98,6 +98,7 @@
 #include "llvm/Support/Alignment.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/Debug.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/KnownBits.h"
 #include "llvm/Support/MathExtras.h"
 #include "llvm/Support/ModRef.h"
@@ -254,8 +255,8 @@ class Vectorizer {
 public:
   Vectorizer(Function &F, AliasAnalysis &AA, AssumptionCache &AC,
              DominatorTree &DT, ScalarEvolution &SE, TargetTransformInfo &TTI)
-      : F(F), AA(AA), AC(AC), DT(DT), SE(SE), TTI(TTI), DL(F.getDataLayout()),
-        Builder(SE.getContext()) {}
+      : F(F), AA(AA), AC(AC), DT(DT), SE(SE), TTI(TTI),
+        DL(F.getDataLayout()), Builder(SE.getContext()) {}
 
   bool run();
 
@@ -816,6 +817,12 @@ Type *Vectorizer::getChainElemTy(const Chain &C) {
       return Type::getFloatTy(F.getContext());
     case 64:
       return Type::getDoubleTy(F.getContext());
+    case 80:
+      return Type::getX86_FP80Ty(F.getContext());
+    case 128:
+      return Type::getFP128Ty(F.getContext());
+    default:
+      llvm_unreachable("Unsupported floating point type size");
     }
   }
 
@@ -1152,10 +1159,10 @@ bool Vectorizer::vectorizeChain(Chain &C) {
 
   sortChainInOffsetOrder(C);
 
-  {
+  LLVM_DEBUG({
     dbgs() << "LSV: Vectorizing chain of " << C.size() << " instructions:\n";
     dumpChain(C);
-  };
+  });
 
   Type *VecElemTy = getChainElemTy(C);
   unsigned VecElemSize = DL.getTypeSizeInBits(VecElemTy);
@@ -1210,10 +1217,6 @@ bool Vectorizer::vectorizeChain(Chain &C) {
     }
   }
 
-  // unsigned ChainBytes = std::accumulate(
-  //     C.begin(), C.end(), 0u, [&](unsigned Bytes, const ChainElem &E) {
-  //       return Bytes + DL.getTypeStoreSize(getLoadStoreType(E.Inst));
-  //     });
   assert(ChainBytes % DL.getTypeStoreSize(VecElemTy) == 0);
   // VecTy is a power of 2 and 1 byte at smallest, but VecElemTy may be smaller
   // than 1 byte (e.g. VecTy == <32 x i1>).
@@ -1672,9 +1675,8 @@ std::optional<APInt> Vectorizer::getConstantOffsetComplexAddrs(
   return std::nullopt;
 }
 
-std::optional<APInt>
-Vectorizer::getConstantOffsetSelects(Value *PtrA, Value *PtrB,
-                                     Instruction *ContextInst, unsigned Depth) {
+std::optional<APInt> Vectorizer::getConstantOffsetSelects(
+    Value *PtrA, Value *PtrB, Instruction *ContextInst, unsigned Depth) {
   if (Depth++ == MaxDepth)
     return std::nullopt;
 
