@@ -45,6 +45,7 @@
 #include <cstdint>
 #include <functional>
 #include <map>
+#include <optional>
 #include <set>
 #include <string>
 #include <tuple>
@@ -1373,18 +1374,22 @@ public:
   /// ISD::CondCode instead of an SDValue.
   SDValue getSetCC(const SDLoc &DL, EVT VT, SDValue LHS, SDValue RHS,
                    ISD::CondCode Cond, SDValue Chain = SDValue(),
-                   bool IsSignaling = false, SDNodeFlags Flags = {}) {
+                   bool IsSignaling = false,
+                   std::optional<SDNodeFlags> Flags = {}) {
     assert(LHS.getValueType().isVector() == RHS.getValueType().isVector() &&
            "Vector/scalar operand type mismatch for setcc");
     assert(LHS.getValueType().isVector() == VT.isVector() &&
            "Vector/scalar result type mismatch for setcc");
     assert(Cond != ISD::SETCC_INVALID &&
            "Cannot create a setCC of an invalid node.");
+    // TODO: Get rid of FlagInserter when TargetLowering can handle SDNodeFlags.
+    SDNodeFlags NodeFlags =
+        Flags.value_or(Inserter ? Inserter->getFlags() : SDNodeFlags());
     if (Chain)
       return getNode(IsSignaling ? ISD::STRICT_FSETCCS : ISD::STRICT_FSETCC, DL,
                      {VT, MVT::Other}, {Chain, LHS, RHS, getCondCode(Cond)},
-                     Flags);
-    return getNode(ISD::SETCC, DL, VT, LHS, RHS, getCondCode(Cond), Flags);
+                     NodeFlags);
+    return getNode(ISD::SETCC, DL, VT, LHS, RHS, getCondCode(Cond), NodeFlags);
   }
 
   /// Helper function to make it easier to build VP_SETCCs if you just have an
