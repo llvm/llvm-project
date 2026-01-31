@@ -65,7 +65,8 @@ static void rename(GlobalValue *GV) { GV->setName(GV->getName() + ".old"); }
 
 // Report a fatal error along with the
 // Call Instruction which caused the error
-[[noreturn]] static void reportFatalUsageErrorWithCI(StringRef reason, CallBase *CI) {
+[[noreturn]] static void reportFatalUsageErrorWithCI(StringRef reason,
+                                                    CallBase *CI) {
   CI->dump();
   reportFatalUsageError(reason);
 }
@@ -4404,8 +4405,8 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
       else if (VecWidth == 512)
         NewArgType = VectorType::get(Builder.getInt8Ty(), 64, false);
       else
-        reportFatalUsageErrorWithCI(
-            "Intrinsic has unexpected vector bit width", CI);
+        reportFatalUsageErrorWithCI("Intrinsic has unexpected vector bit width",
+                                    CI);
 
       Args[1] = Builder.CreateBitCast(Args[1], NewArgType);
       Args[2] = Builder.CreateBitCast(Args[2], NewArgType);
@@ -4460,8 +4461,8 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
       else if (VecWidth == 512)
         NewArgType = VectorType::get(Builder.getInt16Ty(), 32, false);
       else
-        reportFatalUsageErrorWithCI(
-            "Intrinsic has unexpected vector bit width", CI);
+        reportFatalUsageErrorWithCI("Intrinsic has unexpected vector bit width",
+                                    CI);
 
       Args[1] = Builder.CreateBitCast(Args[1], NewArgType);
       Args[2] = Builder.CreateBitCast(Args[2], NewArgType);
