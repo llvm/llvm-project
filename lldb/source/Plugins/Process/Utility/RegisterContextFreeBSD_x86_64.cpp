@@ -15,7 +15,7 @@
 using namespace lldb_private;
 using namespace lldb;
 
-// https://github.com/freebsd/freebsd-src/blob/main/sys/x86/include/reg.h
+// https://cgit.freebsd.org/src/tree/sys/x86/include/reg.h
 typedef struct _GPR {
   uint64_t r15;
   uint64_t r14;
