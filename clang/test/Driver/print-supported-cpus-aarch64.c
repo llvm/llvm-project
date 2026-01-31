@@ -15,6 +15,7 @@
 // CHECK: apple-a16
 // CHECK: apple-a17
 // CHECK: apple-a18
+// CHECK: apple-a19
 // CHECK: apple-a7
 // CHECK: apple-a8
 // CHECK: apple-a9
@@ -22,6 +23,7 @@
 // CHECK: apple-m2
 // CHECK: apple-m3
 // CHECK: apple-m4
+// CHECK: apple-m5
 // CHECK: apple-s10
 // CHECK: apple-s4
 // CHECK: apple-s5

@@ -291,7 +291,6 @@ void DbgValueRangeTable::addVariable(Function *F, DebugVariableAggregate DVA) {
 
   // We don't have a single location for the variable's entire scope, so instead
   // we must now perform a liveness analysis to create a location list.
-  DenseMap<BasicBlock *, DbgValueDef> LiveInMap;
   SmallVector<DbgSSAPhi *> HypotheticalPHIs;
   DebugSSAUpdater SSAUpdater(&HypotheticalPHIs);
   SSAUpdater.initialize();

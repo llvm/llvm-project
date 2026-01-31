@@ -8,6 +8,11 @@
 ; RUN: wasm-ld %t.o -o %t_static.wasm -save-temps -r -mllvm -relocation-model=static
 ; RUN: llvm-readobj -r %t_static.wasm.lto.o | FileCheck %s --check-prefix=STATIC
 
+;; Linking with --unresolved-symbols=import-dynamic should also generate PIC
+;; code for external references.
+; RUN: wasm-ld %t.o -o %t_import.wasm -save-temps --experimental-pic --unresolved-symbols=import-dynamic
+; RUN: llvm-readobj -r %t_import.wasm.lto.o | FileCheck %s --check-prefix=PIC
+
 ; PIC: R_WASM_GLOBAL_INDEX_LEB foo
 ; STATIC: R_WASM_MEMORY_ADDR_LEB foo
 

@@ -27,7 +27,7 @@ struct Parser::TokenInfo {
   }
 
   // Known identifiers.
-  static const char *const ID_Extract;
+  static const char *const idExtract;
 
   llvm::StringRef text;
   TokenKind kind = TokenKind::Eof;
@@ -35,7 +35,7 @@ struct Parser::TokenInfo {
   VariantValue value;
 };
 
-const char *const Parser::TokenInfo::ID_Extract = "extract";
+const char *const Parser::TokenInfo::idExtract = "extract";
 
 class Parser::CodeTokenizer {
 public:
@@ -452,13 +452,13 @@ bool Parser::parseMatcherExpressionImpl(const TokenInfo &nameToken,
     }
 
     if (chainCallToken.kind != TokenKind::Ident ||
-        chainCallToken.text != TokenInfo::ID_Extract) {
+        chainCallToken.text != TokenInfo::idExtract) {
       error->addError(chainCallToken.range,
                       ErrorType::ParserMalformedChainedExpr);
       return false;
     }
 
-    if (chainCallToken.text == TokenInfo::ID_Extract &&
+    if (chainCallToken.text == TokenInfo::idExtract &&
         !parseChainedExpression(functionName))
       return false;
   }

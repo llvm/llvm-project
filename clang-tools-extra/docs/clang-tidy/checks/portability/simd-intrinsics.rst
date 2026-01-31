@@ -19,18 +19,18 @@ objects.
 Otherwise, it just complains the intrinsics are non-portable (and there are
 `P0214`_ alternatives).
 
-Many architectures provide SIMD operations (e.g. x86 SSE/AVX, Power AltiVec/VSX,
-ARM NEON). It is common that SIMD code implementing the same algorithm, is
-written in multiple target-dispatching pieces to optimize for different
-architectures or micro-architectures.
+Many architectures provide SIMD operations (e.g. x86 SSE/AVX, Power
+AltiVec/VSX, ARM NEON). It is common that SIMD code implementing the same
+algorithm, is written in multiple target-dispatching pieces to optimize for
+different architectures or micro-architectures.
 
 The C++ standard proposal `P0214`_ and its extensions cover many common SIMD
 operations. By migrating from target-dependent intrinsics to `P0214`_
-operations, the SIMD code can be simplified and pieces for different targets can
-be unified.
+operations, the SIMD code can be simplified and pieces for different targets
+can be unified.
 
-Refer to `P0214`_ for introduction and motivation for the data-parallel standard
-library.
+Refer to `P0214`_ for introduction and motivation for the data-parallel
+standard library.
 
 Options
 -------

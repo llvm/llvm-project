@@ -3,7 +3,7 @@
 // CHECK: VarDecl {{.*}} global_scalar 'hlsl_private int' static cinit
 static int global_scalar = 0;
 
-// CHECK: VarDecl {{.*}} global_buffer 'RWBuffer<float>':'hlsl::RWBuffer<float>' static callinit
+// CHECK: VarDecl {{.*}} global_buffer 'RWBuffer<float>':'hlsl::RWBuffer<float>' callinit
 RWBuffer<float> global_buffer;
 
 class A {

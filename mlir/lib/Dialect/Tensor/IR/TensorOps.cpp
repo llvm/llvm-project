@@ -15,6 +15,7 @@
 #include "mlir/Dialect/Utils/IndexingUtils.h"
 #include "mlir/Dialect/Utils/ReshapeOpsUtils.h"
 #include "mlir/Dialect/Utils/StaticValueUtils.h"
+#include "mlir/Dialect/Utils/VerificationUtils.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributeInterfaces.h"
 #include "mlir/IR/BuiltinTypeInterfaces.h"
@@ -33,6 +34,7 @@
 #include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallBitVector.h"
+#include "llvm/ADT/SmallVectorExtras.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/Support/Casting.h"
 #include "llvm/Support/MathExtras.h"
@@ -40,10 +42,6 @@
 
 using namespace mlir;
 using namespace mlir::tensor;
-
-using llvm::divideCeilSigned;
-using llvm::divideFloorSigned;
-using llvm::mod;
 
 /// Materialize a single constant operation from a given attribute value with
 /// the desired resultant type.
@@ -555,9 +553,7 @@ void CastOp::getCanonicalizationPatterns(RewritePatternSet &results,
 RankedTensorType ConcatOp::inferResultType(int64_t dim, TypeRange inputTypes) {
   assert(!inputTypes.empty() && "cannot concatenate 0 tensors");
   auto tensorTypes =
-      llvm::to_vector<4>(llvm::map_range(inputTypes, [](Type type) {
-        return llvm::cast<RankedTensorType>(type);
-      }));
+      llvm::map_to_vector<4>(inputTypes, llvm::CastTo<RankedTensorType>);
   int64_t concatRank = tensorTypes[0].getRank();
 
   // The concatenation dim must be in the range [0, rank).
@@ -1081,11 +1077,8 @@ void EmptyOp::build(OpBuilder &builder, OperationState &result,
 }
 
 LogicalResult EmptyOp::verify() {
-  if (getType().getNumDynamicDims() != getDynamicSizes().size())
-    return emitOpError("incorrect number of dynamic sizes, has ")
-           << getDynamicSizes().size() << ", expected "
-           << getType().getNumDynamicDims();
-  return success();
+  return verifyDynamicDimensionCount(getOperation(), getType(),
+                                     getDynamicSizes());
 }
 
 LogicalResult
@@ -1115,12 +1108,12 @@ Value EmptyOp::getDynamicSize(unsigned idx) {
 SmallVector<OpFoldResult> EmptyOp::getMixedSizes() {
   SmallVector<OpFoldResult> result;
   unsigned ctr = 0;
-  OpBuilder b(getContext());
-  for (int64_t i = 0; i < getType().getRank(); ++i) {
-    if (getType().isDynamicDim(i)) {
+  Builder b(getContext());
+  for (int64_t dim : getType().getShape()) {
+    if (ShapedType::isDynamic(dim)) {
       result.push_back(getDynamicSizes()[ctr++]);
     } else {
-      result.push_back(b.getIndexAttr(getType().getShape()[i]));
+      result.push_back(b.getIndexAttr(dim));
     }
   }
   return result;
@@ -1672,9 +1665,9 @@ LogicalResult GenerateOp::verify() {
   // Ensure that the tensor type has as many dynamic dimensions as are
   // specified by the operands.
   RankedTensorType resultType = llvm::cast<RankedTensorType>(getType());
-  if (getNumOperands() != resultType.getNumDynamicDims())
-    return emitError("must have as many index operands as dynamic extents "
-                     "in the result type");
+  if (failed(verifyDynamicDimensionCount(getOperation(), resultType,
+                                         getOperands())))
+    return failure();
   return success();
 }
 
@@ -1991,7 +1984,7 @@ SmallVector<ReassociationExprs, 4> ExpandShapeOp::getReassociationExprs() {
 }
 
 RankedTensorType CollapseShapeOp::inferCollapsedType(
-    RankedTensorType type, SmallVector<ReassociationIndices> reassociation) {
+    RankedTensorType type, ArrayRef<ReassociationIndices> reassociation) {
   return inferCollapsedType(
       type, getSymbolLessAffineMaps(convertReassociationIndicesToExprs(
                 type.getContext(), reassociation)));
@@ -2029,10 +2022,11 @@ CollapseShapeOp::inferCollapsedType(RankedTensorType type,
 void CollapseShapeOp::build(OpBuilder &b, OperationState &result, Value src,
                             ArrayRef<ReassociationIndices> reassociation,
                             ArrayRef<NamedAttribute> attrs) {
-  auto resultType = inferCollapsedType(
-      llvm::cast<RankedTensorType>(src.getType()),
-      getSymbolLessAffineMaps(
-          convertReassociationIndicesToExprs(b.getContext(), reassociation)));
+  auto srcType = llvm::cast<RankedTensorType>(src.getType());
+  RankedTensorType collapsedType = inferCollapsedType(srcType, reassociation);
+  auto resultType =
+      RankedTensorType::get(collapsedType.getShape(), srcType.getElementType(),
+                            srcType.getEncoding());
   result.addAttribute(getReassociationAttrStrName(),
                       getReassociationIndicesAttribute(b, reassociation));
   build(b, result, resultType, src, attrs);
@@ -2078,6 +2072,11 @@ LogicalResult ExpandShapeOp::verify() {
 }
 
 LogicalResult CollapseShapeOp::verify() {
+  CollapseShapeOp op = *this;
+  if (llvm::any_of(op.getReassociationIndices(),
+                   [](ReassociationIndices group) { return group.empty(); })) {
+    return op.emitOpError("reassociation indices must not be empty");
+  }
   return verifyTensorReshapeOp(*this, getSrcType(), getResultType());
 }
 
@@ -2257,7 +2256,7 @@ void ExpandShapeOp::getCanonicalizationPatterns(RewritePatternSet &results,
                                                 MLIRContext *context) {
   results.add<
       ComposeReassociativeReshapeOps<ExpandShapeOp, ReshapeOpKind::kExpand>,
-      ComposeExpandOfCollapseOp<ExpandShapeOp, CollapseShapeOp>,
+      ComposeExpandOfCollapseOp<ExpandShapeOp, CollapseShapeOp, CastOp>,
       ConvertToStaticExpandShape, FoldReshapeWithConstant<ExpandShapeOp>,
       FoldReshapeWithSplat<ExpandShapeOp>,
       FoldReshapeWithFromElements<ExpandShapeOp>>(context);
@@ -2297,9 +2296,9 @@ void ExtractSliceOp::getAsmResultNames(
 /// An extract_slice result type can be inferred, when it is not
 /// rank-reduced, from the source type and the static representation of
 /// offsets, sizes and strides. Special sentinels encode the dynamic case.
-RankedTensorType ExtractSliceOp::inferResultType(
-    RankedTensorType sourceTensorType, ArrayRef<int64_t> staticOffsets,
-    ArrayRef<int64_t> staticSizes, ArrayRef<int64_t> staticStrides) {
+RankedTensorType
+ExtractSliceOp::inferResultType(RankedTensorType sourceTensorType,
+                                ArrayRef<int64_t> staticSizes) {
   // An extract_slice op may specify only a leading subset of offset/sizes/
   // strides in which case we complete with offset=0, sizes from memref type
   // and strides=1.
@@ -2311,11 +2310,12 @@ RankedTensorType ExtractSliceOp::inferResultType(
 }
 
 // TODO: This uses neither offsets nor strides!
-RankedTensorType ExtractSliceOp::inferResultType(
-    RankedTensorType sourceTensorType, ArrayRef<OpFoldResult> offsets,
-    ArrayRef<OpFoldResult> sizes, ArrayRef<OpFoldResult> strides) {
+RankedTensorType
+ExtractSliceOp::inferResultType(RankedTensorType sourceTensorType,
+                                ArrayRef<OpFoldResult> sizes) {
   SmallVector<int64_t> staticSizes;
   std::tie(staticSizes, std::ignore) = decomposeMixedValues(sizes);
+
   assert(static_cast<int64_t>(staticSizes.size()) ==
              sourceTensorType.getRank() &&
          "unexpected staticSizes not equal to rank of source");
@@ -2333,11 +2333,10 @@ RankedTensorType ExtractSliceOp::inferResultType(
 /// To disambiguate, this function always drops the first 1 sizes occurrences.
 RankedTensorType ExtractSliceOp::inferCanonicalRankReducedResultType(
     unsigned desiredResultRank, RankedTensorType sourceRankedTensorType,
-    ArrayRef<int64_t> offsets, ArrayRef<int64_t> sizes,
-    ArrayRef<int64_t> strides) {
+    ArrayRef<int64_t> sizes) {
   // Type inferred in the absence of rank-reducing behavior.
   auto inferredType = llvm::cast<RankedTensorType>(
-      inferResultType(sourceRankedTensorType, offsets, sizes, strides));
+      inferResultType(sourceRankedTensorType, sizes));
   int rankDiff = inferredType.getRank() - desiredResultRank;
   if (rankDiff > 0) {
     auto shape = inferredType.getShape();
@@ -2356,16 +2355,12 @@ RankedTensorType ExtractSliceOp::inferCanonicalRankReducedResultType(
 
 RankedTensorType ExtractSliceOp::inferCanonicalRankReducedResultType(
     unsigned desiredResultRank, RankedTensorType sourceRankedTensorType,
-    ArrayRef<OpFoldResult> offsets, ArrayRef<OpFoldResult> sizes,
-    ArrayRef<OpFoldResult> strides) {
-  SmallVector<int64_t> staticOffsets, staticSizes, staticStrides;
-  SmallVector<Value> dynamicOffsets, dynamicSizes, dynamicStrides;
-  dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
+    ArrayRef<OpFoldResult> sizes) {
+  SmallVector<int64_t> staticSizes;
+  SmallVector<Value> dynamicSizes;
   dispatchIndexOpFoldResults(sizes, dynamicSizes, staticSizes);
-  dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
   return ExtractSliceOp::inferCanonicalRankReducedResultType(
-      desiredResultRank, sourceRankedTensorType, staticOffsets, staticSizes,
-      staticStrides);
+      desiredResultRank, sourceRankedTensorType, staticSizes);
 }
 
 /// Build an ExtractSliceOp with mixed static and dynamic entries and custom
@@ -2384,8 +2379,8 @@ void ExtractSliceOp::build(OpBuilder &b, OperationState &result,
   auto sourceRankedTensorType = llvm::cast<RankedTensorType>(source.getType());
   // Structuring implementation this way avoids duplication between builders.
   if (!resultType) {
-    resultType = llvm::cast<RankedTensorType>(ExtractSliceOp::inferResultType(
-        sourceRankedTensorType, staticOffsets, staticSizes, staticStrides));
+    resultType = llvm::cast<RankedTensorType>(
+        ExtractSliceOp::inferResultType(sourceRankedTensorType, staticSizes));
   }
   result.addAttributes(attrs);
   build(b, result, resultType, source, dynamicOffsets, dynamicSizes,
@@ -2419,12 +2414,12 @@ void ExtractSliceOp::build(OpBuilder &b, OperationState &result,
                            RankedTensorType resultType, Value source,
                            ValueRange offsets, ValueRange sizes,
                            ValueRange strides, ArrayRef<NamedAttribute> attrs) {
-  SmallVector<OpFoldResult> offsetValues = llvm::to_vector<4>(
-      llvm::map_range(offsets, [](Value v) -> OpFoldResult { return v; }));
-  SmallVector<OpFoldResult> sizeValues = llvm::to_vector<4>(
-      llvm::map_range(sizes, [](Value v) -> OpFoldResult { return v; }));
-  SmallVector<OpFoldResult> strideValues = llvm::to_vector<4>(
-      llvm::map_range(strides, [](Value v) -> OpFoldResult { return v; }));
+  SmallVector<OpFoldResult> offsetValues = llvm::map_to_vector<4>(
+      offsets, [](Value v) -> OpFoldResult { return v; });
+  SmallVector<OpFoldResult> sizeValues =
+      llvm::map_to_vector<4>(sizes, [](Value v) -> OpFoldResult { return v; });
+  SmallVector<OpFoldResult> strideValues = llvm::map_to_vector<4>(
+      strides, [](Value v) -> OpFoldResult { return v; });
   build(b, result, resultType, source, offsetValues, sizeValues, strideValues);
 }
 
@@ -2455,13 +2450,26 @@ static LogicalResult produceSliceErrorMsg(SliceVerificationResult result,
   }
 }
 
+/// Build an ExtractSliceOp with mixed static and dynamic sizes, inferred
+/// result type, offsets set to 0 and strides set to 1.
+void ExtractSliceOp::build(OpBuilder &b, OperationState &result,
+                           RankedTensorType resultType, Value source,
+                           ArrayRef<OpFoldResult> sizes,
+                           ArrayRef<NamedAttribute> attrs) {
+  Attribute zeroIdxAttr = b.getIndexAttr(0);
+  Attribute oneIdxAttr = b.getIndexAttr(1);
+  SmallVector<OpFoldResult> readStrides(sizes.size(), oneIdxAttr);
+  SmallVector<OpFoldResult> readOffsets(sizes.size(), zeroIdxAttr);
+  build(b, result, resultType, source, readOffsets, sizes, readStrides, attrs);
+}
+
 /// Verifier for ExtractSliceOp.
 LogicalResult ExtractSliceOp::verify() {
   RankedTensorType sourceType = getSourceType();
 
   // Verify result type against inferred type.
-  RankedTensorType expectedType = ExtractSliceOp::inferResultType(
-      sourceType, getMixedOffsets(), getMixedSizes(), getMixedStrides());
+  RankedTensorType expectedType =
+      ExtractSliceOp::inferResultType(sourceType, getMixedSizes());
   SliceVerificationResult result = isRankReducedType(expectedType, getType());
   if (result != SliceVerificationResult::Success)
     return produceSliceErrorMsg(result, *this, expectedType);
@@ -2700,9 +2708,24 @@ struct SliceReturnTypeCanonicalizer {
                               ArrayRef<OpFoldResult> mixedOffsets,
                               ArrayRef<OpFoldResult> mixedSizes,
                               ArrayRef<OpFoldResult> mixedStrides) {
-    return ExtractSliceOp::inferCanonicalRankReducedResultType(
-        op.getType().getRank(), op.getSourceType(), mixedOffsets, mixedSizes,
-        mixedStrides);
+    // Infer a tensor type without taking into account any rank reductions.
+    RankedTensorType nonReducedType =
+        ExtractSliceOp::inferResultType(op.getSourceType(), mixedSizes);
+
+    // Directly return the non-rank reduced type if there are no dropped
+    // dims.
+    llvm::SmallBitVector droppedDims = op.getDroppedDims();
+    if (droppedDims.none())
+      return nonReducedType;
+
+    // Build the reduced shape, preserving the original rank reduction pattern.
+    SmallVector<int64_t> targetShape;
+    for (auto i : llvm::seq<int64_t>(mixedSizes.size()))
+      if (!droppedDims.test(i))
+        targetShape.push_back(nonReducedType.getDimSize(i));
+
+    return RankedTensorType::get(targetShape, nonReducedType.getElementType(),
+                                 nonReducedType.getEncoding());
   }
 };
 
@@ -2826,12 +2849,12 @@ void InsertSliceOp::build(OpBuilder &b, OperationState &result, Value source,
 void InsertSliceOp::build(OpBuilder &b, OperationState &result, Value source,
                           Value dest, ValueRange offsets, ValueRange sizes,
                           ValueRange strides, ArrayRef<NamedAttribute> attrs) {
-  SmallVector<OpFoldResult> offsetValues = llvm::to_vector<4>(
-      llvm::map_range(offsets, [](Value v) -> OpFoldResult { return v; }));
-  SmallVector<OpFoldResult> sizeValues = llvm::to_vector<4>(
-      llvm::map_range(sizes, [](Value v) -> OpFoldResult { return v; }));
-  SmallVector<OpFoldResult> strideValues = llvm::to_vector<4>(
-      llvm::map_range(strides, [](Value v) -> OpFoldResult { return v; }));
+  SmallVector<OpFoldResult> offsetValues = llvm::map_to_vector<4>(
+      offsets, [](Value v) -> OpFoldResult { return v; });
+  SmallVector<OpFoldResult> sizeValues =
+      llvm::map_to_vector<4>(sizes, [](Value v) -> OpFoldResult { return v; });
+  SmallVector<OpFoldResult> strideValues = llvm::map_to_vector<4>(
+      strides, [](Value v) -> OpFoldResult { return v; });
   build(b, result, source, dest, offsetValues, sizeValues, strideValues);
 }
 
@@ -2843,8 +2866,8 @@ static SliceVerificationResult verifyInsertSliceOp(
     ArrayRef<int64_t> staticStrides, RankedTensorType *expectedType = nullptr) {
   // insert_slice is the inverse of extract_slice, use the same type
   // inference.
-  RankedTensorType expected = ExtractSliceOp::inferResultType(
-      dstType, staticOffsets, staticSizes, staticStrides);
+  RankedTensorType expected =
+      ExtractSliceOp::inferResultType(dstType, staticSizes);
   if (expectedType)
     *expectedType = expected;
   return isRankReducedType(expected, srcType);
@@ -2972,7 +2995,7 @@ public:
     // Create the new op in canonical form.
     auto sourceType = ExtractSliceOp::inferCanonicalRankReducedResultType(
         insertSliceOp.getSourceType().getRank(), insertSliceOp.getDestType(),
-        mixedOffsets, mixedSizes, mixedStrides);
+        mixedSizes);
     Value toInsert = insertSliceOp.getSource();
     if (sourceType != insertSliceOp.getSourceType()) {
       OpBuilder::InsertionGuard g(rewriter);
@@ -3891,13 +3914,25 @@ void ParallelInsertSliceOp::build(OpBuilder &b, OperationState &result,
                                   Value source, Value dest, ValueRange offsets,
                                   ValueRange sizes, ValueRange strides,
                                   ArrayRef<NamedAttribute> attrs) {
-  SmallVector<OpFoldResult> offsetValues = llvm::to_vector<4>(
-      llvm::map_range(offsets, [](Value v) -> OpFoldResult { return v; }));
-  SmallVector<OpFoldResult> sizeValues = llvm::to_vector<4>(
-      llvm::map_range(sizes, [](Value v) -> OpFoldResult { return v; }));
-  SmallVector<OpFoldResult> strideValues = llvm::to_vector<4>(
-      llvm::map_range(strides, [](Value v) -> OpFoldResult { return v; }));
+  SmallVector<OpFoldResult> offsetValues = llvm::map_to_vector<4>(
+      offsets, [](Value v) -> OpFoldResult { return v; });
+  SmallVector<OpFoldResult> sizeValues =
+      llvm::map_to_vector<4>(sizes, [](Value v) -> OpFoldResult { return v; });
+  SmallVector<OpFoldResult> strideValues = llvm::map_to_vector<4>(
+      strides, [](Value v) -> OpFoldResult { return v; });
   build(b, result, source, dest, offsetValues, sizeValues, strideValues);
+}
+
+// Build an InsertSliceOp with mixed static and dynamic sizes, offsets set
+// to 0, strides set to 1 and inferred result type.
+void InsertSliceOp::build(OpBuilder &b, OperationState &result, Value source,
+                          Value dest, ArrayRef<OpFoldResult> sizes,
+                          ArrayRef<NamedAttribute> attrs) {
+  Attribute zeroIdxAttr = b.getIndexAttr(0);
+  Attribute oneIdxAttr = b.getIndexAttr(1);
+  SmallVector<OpFoldResult> writeStrides(sizes.size(), oneIdxAttr);
+  SmallVector<OpFoldResult> writeOffsets(sizes.size(), zeroIdxAttr);
+  build(b, result, source, dest, writeOffsets, sizes, writeStrides, attrs);
 }
 
 LogicalResult ParallelInsertSliceOp::verify() {
@@ -4019,11 +4054,8 @@ void SplatOp::getAsmResultNames(
 }
 
 LogicalResult SplatOp::verify() {
-  if (getType().getNumDynamicDims() != getDynamicSizes().size())
-    return emitOpError("incorrect number of dynamic sizes, has ")
-           << getDynamicSizes().size() << ", expected "
-           << getType().getNumDynamicDims();
-  return success();
+  return verifyDynamicDimensionCount(getOperation(), getType(),
+                                     getDynamicSizes());
 }
 
 LogicalResult

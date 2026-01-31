@@ -12,49 +12,116 @@
 
 #include "orc-rt/Session.h"
 
-#include <future>
-
 namespace orc_rt {
+
+Session::ControllerAccess::~ControllerAccess() = default;
 
 Session::~Session() { waitForShutdown(); }
 
 void Session::shutdown(OnShutdownCompleteFn OnShutdownComplete) {
-  std::vector<std::unique_ptr<ResourceManager>> ToShutdown;
+  assert(OnShutdownComplete && "OnShutdownComplete must be set");
+
+  // Safe to call concurrently / redundantly.
+  detachFromController();
 
   {
     std::scoped_lock<std::mutex> Lock(M);
-    std::swap(ResourceMgrs, ToShutdown);
+    if (SI) {
+      // SI exists: someone called shutdown already. If the shutdown is not yet
+      // complete then just add OnShutdownComplete to the list of pending
+      // callbacks for the in-progress shutdown, then return.
+      // (If the shutdown is already complete then we'll run the handler
+      // directly below).
+      if (!SI->Complete)
+        return SI->OnCompletes.push_back(std::move(OnShutdownComplete));
+    } else {
+      // SI does not exist: We're the first to call shutdown. Create a
+      // ShutdownInfo struct and add OnShutdownComplete to the list of pending
+      // callbacks, then call shutdownNext below (outside the lock).
+      SI = std::make_unique<ShutdownInfo>();
+      SI->OnCompletes.push_back(std::move(OnShutdownComplete));
+      std::swap(SI->ResourceMgrs, ResourceMgrs);
+    }
   }
 
-  shutdownNext(std::move(OnShutdownComplete), Error::success(),
-               std::move(ToShutdown));
+  // OnShutdownComplete is set (i.e. not moved into the list of pending
+  // callbacks). This can only happen if shutdown is already complete. Call
+  // OnComplete directly and return.
+  if (OnShutdownComplete)
+    return OnShutdownComplete();
+
+  // OnShutdownComplete is _not_ set (i.e. was moved into the list of pending
+  // handlers), and we didn't return under the lock above, so we must be
+  // responsible for the shutdown. Call shutdownNext.
+  shutdownNext(Error::success());
 }
 
 void Session::waitForShutdown() {
-  std::promise<void> P;
-  auto F = P.get_future();
-
-  shutdown([P = std::move(P)]() mutable { P.set_value(); });
-
-  F.wait();
+  shutdown([]() {});
+  std::unique_lock<std::mutex> Lock(M);
+  SI->CompleteCV.wait(Lock, [&]() { return SI->Complete; });
 }
 
-void Session::shutdownNext(
-    OnShutdownCompleteFn OnComplete, Error Err,
-    std::vector<std::unique_ptr<ResourceManager>> RemainingRMs) {
+void Session::addResourceManager(std::unique_ptr<ResourceManager> RM) {
+  std::scoped_lock<std::mutex> Lock(M);
+  assert(!SI && "addResourceManager called after shutdown");
+  ResourceMgrs.push_back(std::move(RM));
+}
+
+void Session::setController(std::shared_ptr<ControllerAccess> CA) {
+  assert(CA && "Cannot attach null controller");
+  std::scoped_lock<std::mutex> Lock(M);
+  assert(!this->CA && "Cannot re-attach controller");
+  assert(!SI && "Cannot attach controller after shutdown");
+  this->CA = std::move(CA);
+}
+
+void Session::detachFromController() {
+  if (auto TmpCA = CA) {
+    TmpCA->doDisconnect();
+    CA = nullptr;
+  }
+}
+
+void Session::shutdownNext(Error Err) {
   if (Err)
     reportError(std::move(Err));
 
-  if (RemainingRMs.empty())
-    return OnComplete();
+  if (SI->ResourceMgrs.empty())
+    return shutdownComplete();
 
-  auto NextRM = std::move(RemainingRMs.back());
-  RemainingRMs.pop_back();
-  NextRM->shutdown([this, RemainingRMs = std::move(RemainingRMs),
-                    OnComplete = std::move(OnComplete)](Error Err) mutable {
-    shutdownNext(std::move(OnComplete), std::move(Err),
-                 std::move(RemainingRMs));
-  });
+  // Get the next ResourceManager to shut down.
+  auto NextRM = std::move(SI->ResourceMgrs.back());
+  SI->ResourceMgrs.pop_back();
+  NextRM->shutdown([this](Error Err) { shutdownNext(std::move(Err)); });
+}
+
+void Session::shutdownComplete() {
+
+  std::unique_ptr<TaskDispatcher> TmpDispatcher;
+  {
+    std::lock_guard<std::mutex> Lock(M);
+    TmpDispatcher = std::move(Dispatcher);
+  }
+
+  TmpDispatcher->shutdown();
+
+  std::vector<OnShutdownCompleteFn> OnCompletes;
+  {
+    std::lock_guard<std::mutex> Lock(M);
+    SI->Complete = true;
+    OnCompletes = std::move(SI->OnCompletes);
+  }
+
+  for (auto &OnShutdownComplete : OnCompletes)
+    OnShutdownComplete();
+
+  SI->CompleteCV.notify_all();
+}
+
+void Session::wrapperReturn(orc_rt_SessionRef S, uint64_t CallId,
+                            orc_rt_WrapperFunctionBuffer ResultBytes) {
+  unwrap(S)->sendWrapperResult(CallId, WrapperFunctionBuffer(ResultBytes));
 }
 
 } // namespace orc_rt

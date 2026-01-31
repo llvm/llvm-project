@@ -3108,9 +3108,9 @@ TypeSourceInfo *ASTContext::CreateTypeSourceInfo(QualType T,
 
 TypeSourceInfo *ASTContext::getTrivialTypeSourceInfo(QualType T,
                                                      SourceLocation L) const {
-  TypeSourceInfo *DI = CreateTypeSourceInfo(T);
-  DI->getTypeLoc().initialize(const_cast<ASTContext &>(*this), L);
-  return DI;
+  TypeSourceInfo *TSI = CreateTypeSourceInfo(T);
+  TSI->getTypeLoc().initialize(const_cast<ASTContext &>(*this), L);
+  return TSI;
 }
 
 const ASTRecordLayout &
@@ -4712,7 +4712,7 @@ QualType ASTContext::getConstantMatrixType(QualType ElementTy, unsigned NumRows,
   ConstantMatrixType::Profile(ID, ElementTy, NumRows, NumColumns,
                               Type::ConstantMatrix);
 
-  assert(MatrixType::isValidElementType(ElementTy) &&
+  assert(MatrixType::isValidElementType(ElementTy, getLangOpts()) &&
          "need a valid element type");
   assert(NumRows > 0 && NumRows <= LangOpts.MaxMatrixDimension &&
          NumColumns > 0 && NumColumns <= LangOpts.MaxMatrixDimension &&
@@ -5891,11 +5891,11 @@ TypeSourceInfo *ASTContext::getTemplateSpecializationTypeInfo(
   QualType TST = getTemplateSpecializationType(
       Keyword, Name, SpecifiedArgs.arguments(), CanonicalArgs, Underlying);
 
-  TypeSourceInfo *DI = CreateTypeSourceInfo(TST);
-  DI->getTypeLoc().castAs<TemplateSpecializationTypeLoc>().set(
+  TypeSourceInfo *TSI = CreateTypeSourceInfo(TST);
+  TSI->getTypeLoc().castAs<TemplateSpecializationTypeLoc>().set(
       ElaboratedKeywordLoc, QualifierLoc, TemplateKeywordLoc, NameLoc,
       SpecifiedArgs);
-  return DI;
+  return TSI;
 }
 
 QualType ASTContext::getTemplateSpecializationType(
@@ -10527,6 +10527,21 @@ bool ASTContext::areCompatibleVectorTypes(QualType FirstVec,
       Second->getVectorKind() != VectorKind::RVVFixedLengthMask_4)
     return true;
 
+  // In OpenCL, treat half and _Float16 vector types as compatible.
+  if (getLangOpts().OpenCL &&
+      First->getNumElements() == Second->getNumElements()) {
+    QualType FirstElt = First->getElementType();
+    QualType SecondElt = Second->getElementType();
+
+    if ((FirstElt->isFloat16Type() && SecondElt->isHalfType()) ||
+        (FirstElt->isHalfType() && SecondElt->isFloat16Type())) {
+      if (First->getVectorKind() != VectorKind::AltiVecPixel &&
+          First->getVectorKind() != VectorKind::AltiVecBool &&
+          Second->getVectorKind() != VectorKind::AltiVecPixel &&
+          Second->getVectorKind() != VectorKind::AltiVecBool)
+        return true;
+    }
+  }
   return false;
 }
 
@@ -12040,7 +12055,7 @@ bool ASTContext::mergeExtParameterInfo(
 void ASTContext::ResetObjCLayout(const ObjCInterfaceDecl *D) {
   if (auto It = ObjCLayouts.find(D); It != ObjCLayouts.end()) {
     It->second = nullptr;
-    for (auto *SubClass : ObjCSubClasses[D])
+    for (auto *SubClass : ObjCSubClasses.lookup(D))
       ResetObjCLayout(SubClass);
   }
 }
@@ -12402,7 +12417,8 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
 
   // Read the base type.
   switch (*Str++) {
-  default: llvm_unreachable("Unknown builtin type letter!");
+  default:
+    llvm_unreachable("Unknown builtin type letter!");
   case 'x':
     assert(HowLong == 0 && !Signed && !Unsigned &&
            "Bad modifiers used with 'x'!");
@@ -12533,6 +12549,10 @@ static QualType DecodeTypeFromStr(const char *&Str, const ASTContext &Context,
     }
     case 't': {
       Type = Context.AMDGPUTextureTy;
+      break;
+    }
+    case 'r': {
+      Type = Context.HLSLResourceTy;
       break;
     }
     default:
@@ -13326,6 +13346,91 @@ void ASTContext::setIsTypeAwareOperatorNewOrDelete(const FunctionDecl *FD,
 
 bool ASTContext::isTypeAwareOperatorNewOrDelete(const FunctionDecl *FD) const {
   return TypeAwareOperatorNewAndDeletes.contains(FD->getCanonicalDecl());
+}
+
+void ASTContext::addOperatorDeleteForVDtor(const CXXDestructorDecl *Dtor,
+                                           FunctionDecl *OperatorDelete,
+                                           OperatorDeleteKind K) const {
+  switch (K) {
+  case OperatorDeleteKind::Regular:
+    OperatorDeletesForVirtualDtor[Dtor->getCanonicalDecl()] = OperatorDelete;
+    break;
+  case OperatorDeleteKind::GlobalRegular:
+    GlobalOperatorDeletesForVirtualDtor[Dtor->getCanonicalDecl()] =
+        OperatorDelete;
+    break;
+  case OperatorDeleteKind::Array:
+    ArrayOperatorDeletesForVirtualDtor[Dtor->getCanonicalDecl()] =
+        OperatorDelete;
+    break;
+  case OperatorDeleteKind::ArrayGlobal:
+    GlobalArrayOperatorDeletesForVirtualDtor[Dtor->getCanonicalDecl()] =
+        OperatorDelete;
+    break;
+  }
+}
+
+bool ASTContext::dtorHasOperatorDelete(const CXXDestructorDecl *Dtor,
+                                       OperatorDeleteKind K) const {
+  switch (K) {
+  case OperatorDeleteKind::Regular:
+    return OperatorDeletesForVirtualDtor.contains(Dtor->getCanonicalDecl());
+  case OperatorDeleteKind::GlobalRegular:
+    return GlobalOperatorDeletesForVirtualDtor.contains(
+        Dtor->getCanonicalDecl());
+  case OperatorDeleteKind::Array:
+    return ArrayOperatorDeletesForVirtualDtor.contains(
+        Dtor->getCanonicalDecl());
+  case OperatorDeleteKind::ArrayGlobal:
+    return GlobalArrayOperatorDeletesForVirtualDtor.contains(
+        Dtor->getCanonicalDecl());
+  }
+  return false;
+}
+
+FunctionDecl *
+ASTContext::getOperatorDeleteForVDtor(const CXXDestructorDecl *Dtor,
+                                      OperatorDeleteKind K) const {
+  const CXXDestructorDecl *Canon = Dtor->getCanonicalDecl();
+  switch (K) {
+  case OperatorDeleteKind::Regular:
+    if (OperatorDeletesForVirtualDtor.contains(Canon))
+      return OperatorDeletesForVirtualDtor[Canon];
+    return nullptr;
+  case OperatorDeleteKind::GlobalRegular:
+    if (GlobalOperatorDeletesForVirtualDtor.contains(Canon))
+      return GlobalOperatorDeletesForVirtualDtor[Canon];
+    return nullptr;
+  case OperatorDeleteKind::Array:
+    if (ArrayOperatorDeletesForVirtualDtor.contains(Canon))
+      return ArrayOperatorDeletesForVirtualDtor[Canon];
+    return nullptr;
+  case OperatorDeleteKind::ArrayGlobal:
+    if (GlobalArrayOperatorDeletesForVirtualDtor.contains(Canon))
+      return GlobalArrayOperatorDeletesForVirtualDtor[Canon];
+    return nullptr;
+  }
+  return nullptr;
+}
+
+bool ASTContext::classNeedsVectorDeletingDestructor(const CXXRecordDecl *RD) {
+  if (!getTargetInfo().emitVectorDeletingDtors(getLangOpts()))
+    return false;
+  CXXDestructorDecl *Dtor = RD->getDestructor();
+  // The compiler can't know if new[]/delete[] will be used outside of the DLL,
+  // so just force vector deleting destructor emission if dllexport is present.
+  // This matches MSVC behavior.
+  if (Dtor && Dtor->isVirtual() && Dtor->hasAttr<DLLExportAttr>())
+    return true;
+
+  return RequireVectorDeletingDtor.count(RD);
+}
+
+void ASTContext::setClassNeedsVectorDeletingDestructor(
+    const CXXRecordDecl *RD) {
+  if (!getTargetInfo().emitVectorDeletingDtors(getLangOpts()))
+    return;
+  RequireVectorDeletingDtor.insert(RD);
 }
 
 MangleNumberingContext &

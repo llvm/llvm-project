@@ -18,6 +18,7 @@
 #include "llvm/ADT/FunctionExtras.h"
 #include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
+#include "llvm/Support/Compiler.h"
 #include "llvm/Support/FormatAdapters.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/LSP/Logging.h"
@@ -81,8 +82,8 @@ public:
   bool hasError() const final { return ferror(In); }
   bool isEndOfInput() const final { return feof(In); }
 
-  LogicalResult readDelimitedMessage(std::string &Json) final;
-  LogicalResult readStandardMessage(std::string &Json) final;
+  LLVM_ABI_FOR_TEST LogicalResult readDelimitedMessage(std::string &Json) final;
+  LLVM_ABI_FOR_TEST LogicalResult readStandardMessage(std::string &Json) final;
 
 private:
   std::FILE *In;
@@ -103,12 +104,14 @@ public:
         PrettyOutput(PrettyOutput) {}
 
   /// The following methods are used to send a message to the LSP client.
-  void notify(StringRef Method, llvm::json::Value Params);
-  void call(StringRef Method, llvm::json::Value Params, llvm::json::Value Id);
-  void reply(llvm::json::Value Id, llvm::Expected<llvm::json::Value> Result);
+  LLVM_ABI_FOR_TEST void notify(StringRef Method, llvm::json::Value Params);
+  LLVM_ABI_FOR_TEST void call(StringRef Method, llvm::json::Value Params,
+                              llvm::json::Value Id);
+  LLVM_ABI_FOR_TEST void reply(llvm::json::Value Id,
+                               llvm::Expected<llvm::json::Value> Result);
 
   /// Start executing the JSON-RPC transport.
-  llvm::Error run(MessageHandler &Handler);
+  LLVM_ABI_FOR_TEST llvm::Error run(MessageHandler &Handler);
 
 private:
   /// Dispatches the given incoming json message to the message handler.

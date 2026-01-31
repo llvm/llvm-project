@@ -595,6 +595,7 @@ define float @v_mad_mix_f32_bf16lo_cast_from_half_bf16lo_bf16lo(half %src0, bflo
 define amdgpu_kernel void @test_fma_mix_f32_bf16_src2_bf16lo(float %x, i32 %y, ptr addrspace(1) %out) {
 ; GFX1250-LABEL: test_fma_mix_f32_bf16_src2_bf16lo:
 ; GFX1250:       ; %bb.0: ; %entry
+; GFX1250-NEXT:    s_setreg_imm32_b32 hwreg(HW_REG_WAVE_MODE, 25, 1), 1
 ; GFX1250-NEXT:    s_load_b128 s[0:3], s[4:5], 0x24
 ; GFX1250-NEXT:    s_wait_kmcnt 0x0
 ; GFX1250-NEXT:    v_fma_mix_f32_bf16 v0, s0, 0, s1 op_sel_hi:[0,0,1]

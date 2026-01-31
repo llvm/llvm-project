@@ -43,8 +43,13 @@ INITIALIZE_PASS(NVPTXAssignValidGlobalNames, "nvptx-assign-valid-global-names",
 
 bool NVPTXAssignValidGlobalNames::runOnModule(Module &M) {
   for (GlobalVariable &GV : M.globals()) {
-    // We are only allowed to rename local symbols.
-    if (GV.hasLocalLinkage()) {
+    // We are only allowed to rename symbols that are not externally linked by
+    // name
+    // - local symbols, as all references will be renamed
+    // - .extern .shared symbols, as they're the same regardless of name
+    if (GV.hasLocalLinkage() ||
+        (GV.hasExternalLinkage() &&
+         GV.getAddressSpace() == NVPTX::AddressSpace::Shared)) {
       // setName doesn't do extra work if the name does not change.
       // Note: this does not create collisions - if setName is asked to set the
       // name to something that already exists, it adds a proper postfix to

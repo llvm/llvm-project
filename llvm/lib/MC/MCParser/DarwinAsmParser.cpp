@@ -1192,10 +1192,6 @@ bool DarwinAsmParser::parseDirectiveCGProfile(StringRef S, SMLoc Loc) {
   return MCAsmParserExtension::parseDirectiveCGProfile(S, Loc);
 }
 
-namespace llvm {
-
-MCAsmParserExtension *createDarwinAsmParser() {
+MCAsmParserExtension *llvm::createDarwinAsmParser() {
   return new DarwinAsmParser;
 }
-
-} // end llvm namespace

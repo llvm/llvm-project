@@ -811,8 +811,8 @@ ArrayRef<int> hi(ArrayRef<int> Vuu) { return Vuu.take_back(Vuu.size() / 2); }
 MaskT vshuffvdd(ArrayRef<int> Vu, ArrayRef<int> Vv, unsigned Rt) {
   int Len = Vu.size();
   MaskT Vdd(2 * Len);
-  std::copy(Vv.begin(), Vv.end(), Vdd.begin());
-  std::copy(Vu.begin(), Vu.end(), Vdd.begin() + Len);
+  llvm::copy(Vv, Vdd.begin());
+  llvm::copy(Vu, Vdd.begin() + Len);
 
   auto Vd0 = MutableArrayRef<int>(Vdd).take_front(Len);
   auto Vd1 = MutableArrayRef<int>(Vdd).take_back(Len);
@@ -831,8 +831,8 @@ MaskT vshuffvdd(ArrayRef<int> Vu, ArrayRef<int> Vv, unsigned Rt) {
 MaskT vdealvdd(ArrayRef<int> Vu, ArrayRef<int> Vv, unsigned Rt) {
   int Len = Vu.size();
   MaskT Vdd(2 * Len);
-  std::copy(Vv.begin(), Vv.end(), Vdd.begin());
-  std::copy(Vu.begin(), Vu.end(), Vdd.begin() + Len);
+  llvm::copy(Vv, Vdd.begin());
+  llvm::copy(Vu, Vdd.begin() + Len);
 
   auto Vd0 = MutableArrayRef<int>(Vdd).take_front(Len);
   auto Vd1 = MutableArrayRef<int>(Vdd).take_back(Len);

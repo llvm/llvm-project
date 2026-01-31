@@ -118,9 +118,9 @@ const int Hexagon_ADDI_OFFSET_MIN = -32768;
 void HexagonInstrInfo::anchor() {}
 
 HexagonInstrInfo::HexagonInstrInfo(const HexagonSubtarget &ST)
-    : HexagonGenInstrInfo(ST, Hexagon::ADJCALLSTACKDOWN,
+    : HexagonGenInstrInfo(ST, RegInfo, Hexagon::ADJCALLSTACKDOWN,
                           Hexagon::ADJCALLSTACKUP),
-      Subtarget(ST) {}
+      RegInfo(ST.getHwMode()), Subtarget(ST) {}
 
 namespace llvm {
 namespace HexagonFUnits {
@@ -677,11 +677,11 @@ unsigned HexagonInstrInfo::insertBranch(MachineBasicBlock &MBB,
       // New value jump
       // (ins IntRegs:$src1, IntRegs:$src2, brtarget:$offset)
       // (ins IntRegs:$src1, u5Imm:$src2, brtarget:$offset)
-      unsigned Flags1 = getUndefRegState(Cond[1].isUndef());
+      RegState Flags1 = getUndefRegState(Cond[1].isUndef());
       LLVM_DEBUG(dbgs() << "\nInserting NVJump for "
                         << printMBBReference(MBB););
       if (Cond[2].isReg()) {
-        unsigned Flags2 = getUndefRegState(Cond[2].isUndef());
+        RegState Flags2 = getUndefRegState(Cond[2].isUndef());
         BuildMI(&MBB, DL, get(BccOpc)).addReg(Cond[1].getReg(), Flags1).
           addReg(Cond[2].getReg(), Flags2).addMBB(TBB);
       } else if(Cond[2].isImm()) {
@@ -692,7 +692,7 @@ unsigned HexagonInstrInfo::insertBranch(MachineBasicBlock &MBB,
     } else {
       assert((Cond.size() == 2) && "Malformed cond vector");
       const MachineOperand &RO = Cond[1];
-      unsigned Flags = getUndefRegState(RO.isUndef());
+      RegState Flags = getUndefRegState(RO.isUndef());
       BuildMI(&MBB, DL, get(BccOpc)).addReg(RO.getReg(), Flags).addMBB(TBB);
     }
     return 1;
@@ -716,7 +716,7 @@ unsigned HexagonInstrInfo::insertBranch(MachineBasicBlock &MBB,
     BuildMI(&MBB, DL, get(EndLoopOp)).addMBB(TBB);
   } else {
     const MachineOperand &RO = Cond[1];
-    unsigned Flags = getUndefRegState(RO.isUndef());
+    RegState Flags = getUndefRegState(RO.isUndef());
     BuildMI(&MBB, DL, get(BccOpc)).addReg(RO.getReg(), Flags).addMBB(TBB);
   }
   BuildMI(&MBB, DL, get(BOpc)).addMBB(FBB);
@@ -864,7 +864,7 @@ void HexagonInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
                                    bool RenamableDest,
                                    bool RenamableSrc) const {
   const HexagonRegisterInfo &HRI = *Subtarget.getRegisterInfo();
-  unsigned KillFlag = getKillRegState(KillSrc);
+  RegState KillFlag = getKillRegState(KillSrc);
 
   if (Hexagon::IntRegsRegClass.contains(SrcReg, DestReg)) {
     BuildMI(MBB, I, DL, get(Hexagon::A2_tfr), DestReg)
@@ -928,8 +928,8 @@ void HexagonInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     getLiveInRegsAt(LiveAtMI, *I);
     Register SrcLo = HRI.getSubReg(SrcReg, Hexagon::vsub_lo);
     Register SrcHi = HRI.getSubReg(SrcReg, Hexagon::vsub_hi);
-    unsigned UndefLo = getUndefRegState(!LiveAtMI.contains(SrcLo));
-    unsigned UndefHi = getUndefRegState(!LiveAtMI.contains(SrcHi));
+    RegState UndefLo = getUndefRegState(!LiveAtMI.contains(SrcLo));
+    RegState UndefHi = getUndefRegState(!LiveAtMI.contains(SrcHi));
     BuildMI(MBB, I, DL, get(Hexagon::V6_vcombine), DestReg)
       .addReg(SrcHi, KillFlag | UndefHi)
       .addReg(SrcLo, KillFlag | UndefLo);
@@ -964,13 +964,12 @@ void HexagonInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
                                            MachineBasicBlock::iterator I,
                                            Register SrcReg, bool isKill, int FI,
                                            const TargetRegisterClass *RC,
-                                           const TargetRegisterInfo *TRI,
                                            Register VReg,
                                            MachineInstr::MIFlag Flags) const {
   DebugLoc DL = MBB.findDebugLoc(I);
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
-  unsigned KillFlag = getKillRegState(isKill);
+  RegState KillFlag = getKillRegState(isKill);
 
   MachineMemOperand *MMO = MF.getMachineMemOperand(
       MachinePointerInfo::getFixedStack(MF, FI), MachineMemOperand::MOStore,
@@ -1009,10 +1008,12 @@ void HexagonInstrInfo::storeRegToStackSlot(MachineBasicBlock &MBB,
   }
 }
 
-void HexagonInstrInfo::loadRegFromStackSlot(
-    MachineBasicBlock &MBB, MachineBasicBlock::iterator I, Register DestReg,
-    int FI, const TargetRegisterClass *RC, const TargetRegisterInfo *TRI,
-    Register VReg, MachineInstr::MIFlag Flags) const {
+void HexagonInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
+                                            MachineBasicBlock::iterator I,
+                                            Register DestReg, int FI,
+                                            const TargetRegisterClass *RC,
+                                            Register VReg, unsigned SubReg,
+                                            MachineInstr::MIFlag Flags) const {
   DebugLoc DL = MBB.findDebugLoc(I);
   MachineFunction &MF = *MBB.getParent();
   MachineFrameInfo &MFI = MF.getFrameInfo();
@@ -1145,9 +1146,9 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       Register SrcLo = HRI.getSubReg(SrcReg, Hexagon::vsub_lo);
       Register SrcHi = HRI.getSubReg(SrcReg, Hexagon::vsub_hi);
       getLiveInRegsAt(LiveIn, MI);
-      unsigned UndefLo = getUndefRegState(!LiveIn.contains(SrcLo));
-      unsigned UndefHi = getUndefRegState(!LiveIn.contains(SrcHi));
-      unsigned Kill = getKillRegState(MI.getOperand(1).isKill());
+      RegState UndefLo = getUndefRegState(!LiveIn.contains(SrcLo));
+      RegState UndefHi = getUndefRegState(!LiveIn.contains(SrcHi));
+      RegState Kill = getKillRegState(MI.getOperand(1).isKill());
       BuildMI(MBB, MI, DL, get(Hexagon::V6_vcombine), DstReg)
           .addReg(SrcHi, UndefHi)
           .addReg(SrcLo, Kill | UndefLo);
@@ -1351,13 +1352,13 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       Register Rs = Op2.getReg();
       Register Rt = Op3.getReg();
       DebugLoc DL = MI.getDebugLoc();
-      unsigned K1 = getKillRegState(Op1.isKill());
-      unsigned K2 = getKillRegState(Op2.isKill());
-      unsigned K3 = getKillRegState(Op3.isKill());
+      RegState K1 = getKillRegState(Op1.isKill());
+      RegState K2 = getKillRegState(Op2.isKill());
+      RegState K3 = getKillRegState(Op3.isKill());
       if (Rd != Rs)
         BuildMI(MBB, MI, DL, get(Hexagon::A2_tfrpt), Rd)
-          .addReg(Pu, (Rd == Rt) ? K1 : 0)
-          .addReg(Rs, K2);
+            .addReg(Pu, (Rd == Rt) ? K1 : RegState::NoFlags)
+            .addReg(Rs, K2);
       if (Rd != Rt)
         BuildMI(MBB, MI, DL, get(Hexagon::A2_tfrpf), Rd)
           .addReg(Pu, K1)
@@ -1374,11 +1375,11 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       bool IsDestLive = !LiveOut.available(MRI, Op0.getReg());
       Register PReg = Op1.getReg();
       assert(Op1.getSubReg() == 0);
-      unsigned PState = getRegState(Op1);
+      RegState PState = getRegState(Op1);
 
       if (Op0.getReg() != Op2.getReg()) {
-        unsigned S = Op0.getReg() != Op3.getReg() ? PState & ~RegState::Kill
-                                                  : PState;
+        RegState S =
+            Op0.getReg() != Op3.getReg() ? PState & ~RegState::Kill : PState;
         auto T = BuildMI(MBB, MI, DL, get(Hexagon::V6_vcmov))
                      .add(Op0)
                      .addReg(PReg, S)
@@ -1407,11 +1408,11 @@ bool HexagonInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       bool IsDestLive = !LiveOut.available(MRI, Op0.getReg());
       Register PReg = Op1.getReg();
       assert(Op1.getSubReg() == 0);
-      unsigned PState = getRegState(Op1);
+      RegState PState = getRegState(Op1);
 
       if (Op0.getReg() != Op2.getReg()) {
-        unsigned S = Op0.getReg() != Op3.getReg() ? PState & ~RegState::Kill
-                                                  : PState;
+        RegState S =
+            Op0.getReg() != Op3.getReg() ? PState & ~RegState::Kill : PState;
         Register SrcLo = HRI.getSubReg(Op2.getReg(), Hexagon::vsub_lo);
         Register SrcHi = HRI.getSubReg(Op2.getReg(), Hexagon::vsub_hi);
         auto T = BuildMI(MBB, MI, DL, get(Hexagon::V6_vccombine))
@@ -1716,7 +1717,8 @@ bool HexagonInstrInfo::PredicateInstruction(
   }
 
   Register PredReg;
-  unsigned PredRegPos, PredRegFlags;
+  unsigned PredRegPos;
+  RegState PredRegFlags = {};
   bool GotPredReg = getPredReg(Cond, PredReg, PredRegPos, PredRegFlags);
   (void)GotPredReg;
   assert(GotPredReg);
@@ -1805,6 +1807,20 @@ bool HexagonInstrInfo::isPredicable(const MachineInstr &MI) const {
     }
   }
   return true;
+}
+
+bool HexagonInstrInfo::isAssociativeAndCommutative(const MachineInstr &Inst,
+                                                   bool Invert) const {
+  if (Invert)
+    return false;
+
+  switch (Inst.getOpcode()) {
+  // TODO: Add more instructions to be handled by MachineCombiner.
+  case Hexagon::F2_sfadd:
+    return Inst.getFlag(MachineInstr::MIFlag::FmReassoc);
+  default:
+    return false;
+  }
 }
 
 bool HexagonInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
@@ -4566,7 +4582,8 @@ short HexagonInstrInfo::getNonExtOpcode(const MachineInstr &MI) const {
 }
 
 bool HexagonInstrInfo::getPredReg(ArrayRef<MachineOperand> Cond,
-      Register &PredReg, unsigned &PredRegPos, unsigned &PredRegFlags) const {
+                                  Register &PredReg, unsigned &PredRegPos,
+                                  RegState &PredRegFlags) const {
   if (Cond.empty())
     return false;
   assert(Cond.size() == 2);
@@ -4577,7 +4594,7 @@ bool HexagonInstrInfo::getPredReg(ArrayRef<MachineOperand> Cond,
   PredReg = Cond[1].getReg();
   PredRegPos = 1;
   // See IfConversion.cpp why we add RegState::Implicit | RegState::Undef
-  PredRegFlags = 0;
+  PredRegFlags = {};
   if (Cond[1].isImplicit())
     PredRegFlags = RegState::Implicit;
   if (Cond[1].isUndef())
@@ -4751,6 +4768,19 @@ bool HexagonInstrInfo::getBundleNoShuf(const MachineInstr &MIB) const {
   assert(MIB.isBundle());
   const MachineOperand &Operand = MIB.getOperand(0);
   return (Operand.isImm() && (Operand.getImm() & memShufDisabledMask) != 0);
+}
+
+bool HexagonInstrInfo::isQFPMul(const MachineInstr *MI) const {
+  return (MI->getOpcode() == Hexagon::V6_vmpy_qf16_hf ||
+          MI->getOpcode() == Hexagon::V6_vmpy_qf16_mix_hf ||
+          MI->getOpcode() == Hexagon::V6_vmpy_qf32_hf ||
+          MI->getOpcode() == Hexagon::V6_vmpy_qf32_mix_hf ||
+          MI->getOpcode() == Hexagon::V6_vmpy_qf32_sf ||
+          MI->getOpcode() == Hexagon::V6_vmpy_qf16_mix_hf ||
+          MI->getOpcode() == Hexagon::V6_vmpy_qf16 ||
+          MI->getOpcode() == Hexagon::V6_vmpy_qf32_mix_hf ||
+          MI->getOpcode() == Hexagon::V6_vmpy_qf32_qf16 ||
+          MI->getOpcode() == Hexagon::V6_vmpy_qf32);
 }
 
 // Addressing mode relations.

@@ -138,6 +138,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(argumentCountAtLeast);
   REGISTER_MATCHER(arraySubscriptExpr);
   REGISTER_MATCHER(arrayType);
+  REGISTER_MATCHER(arrayTypeLoc);
   REGISTER_MATCHER(asString);
   REGISTER_MATCHER(asmStmt);
   REGISTER_MATCHER(atomicExpr);
@@ -246,6 +247,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(expr);
   REGISTER_MATCHER(exprWithCleanups);
   REGISTER_MATCHER(fieldDecl);
+  REGISTER_MATCHER(fileScopeAsmDecl);
   REGISTER_MATCHER(fixedPointLiteral);
   REGISTER_MATCHER(floatLiteral);
   REGISTER_MATCHER(forCallable);
@@ -267,6 +269,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(functionProtoType);
   REGISTER_MATCHER(functionTemplateDecl);
   REGISTER_MATCHER(functionType);
+  REGISTER_MATCHER(functionTypeLoc);
   REGISTER_MATCHER(genericSelectionExpr);
   REGISTER_MATCHER(gnuNullExpr);
   REGISTER_MATCHER(gotoStmt);
@@ -527,7 +530,10 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(ofClass);
   REGISTER_MATCHER(ofKind);
   REGISTER_MATCHER(ompDefaultClause);
+  REGISTER_MATCHER(ompFromClause);
+  REGISTER_MATCHER(ompToClause);
   REGISTER_MATCHER(ompExecutableDirective);
+  REGISTER_MATCHER(ompTargetUpdateDirective);
   REGISTER_MATCHER(on);
   REGISTER_MATCHER(onImplicitObjectArgument);
   REGISTER_MATCHER(opaqueValueExpr);

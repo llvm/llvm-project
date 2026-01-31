@@ -21,13 +21,13 @@ define void @load_i32_stride3_vf2(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; SSE-NEXT:    movdqa (%rdi), %xmm0
 ; SSE-NEXT:    movdqa 16(%rdi), %xmm1
 ; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[0,3,2,3]
-; SSE-NEXT:    pshufd {{.*#+}} xmm3 = xmm0[1,1,1,1]
-; SSE-NEXT:    punpckldq {{.*#+}} xmm3 = xmm3[0],xmm1[0],xmm3[1],xmm1[1]
+; SSE-NEXT:    movq %xmm2, (%rsi)
+; SSE-NEXT:    pshufd {{.*#+}} xmm2 = xmm0[1,1,1,1]
+; SSE-NEXT:    punpckldq {{.*#+}} xmm2 = xmm2[0],xmm1[0],xmm2[1],xmm1[1]
+; SSE-NEXT:    movq %xmm2, (%rdx)
 ; SSE-NEXT:    pshufd {{.*#+}} xmm1 = xmm1[1,1,1,1]
 ; SSE-NEXT:    pshufd {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; SSE-NEXT:    punpckldq {{.*#+}} xmm0 = xmm0[0],xmm1[0],xmm0[1],xmm1[1]
-; SSE-NEXT:    movq %xmm2, (%rsi)
-; SSE-NEXT:    movq %xmm3, (%rdx)
 ; SSE-NEXT:    movq %xmm0, (%rcx)
 ; SSE-NEXT:    retq
 ;
@@ -36,12 +36,12 @@ define void @load_i32_stride3_vf2(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX-NEXT:    vmovaps (%rdi), %xmm0
 ; AVX-NEXT:    vmovaps 16(%rdi), %xmm1
 ; AVX-NEXT:    vshufps {{.*#+}} xmm2 = xmm0[0,3,2,3]
-; AVX-NEXT:    vblendps {{.*#+}} xmm3 = xmm1[0],xmm0[1],xmm1[2,3]
-; AVX-NEXT:    vshufps {{.*#+}} xmm3 = xmm3[1,0,2,3]
+; AVX-NEXT:    vmovlps %xmm2, (%rsi)
+; AVX-NEXT:    vblendps {{.*#+}} xmm2 = xmm1[0],xmm0[1],xmm1[2,3]
+; AVX-NEXT:    vshufps {{.*#+}} xmm2 = xmm2[1,0,2,3]
+; AVX-NEXT:    vmovlps %xmm2, (%rdx)
 ; AVX-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[2,3,2,3]
 ; AVX-NEXT:    vblendps {{.*#+}} xmm0 = xmm0[0],xmm1[1],xmm0[2,3]
-; AVX-NEXT:    vmovlps %xmm2, (%rsi)
-; AVX-NEXT:    vmovlps %xmm3, (%rdx)
 ; AVX-NEXT:    vmovlps %xmm0, (%rcx)
 ; AVX-NEXT:    retq
 ;
@@ -50,13 +50,13 @@ define void @load_i32_stride3_vf2(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX2-NEXT:    vmovaps (%rdi), %xmm0
 ; AVX2-NEXT:    vmovaps 16(%rdi), %xmm1
 ; AVX2-NEXT:    vshufps {{.*#+}} xmm2 = xmm0[0,3,2,3]
+; AVX2-NEXT:    vbroadcastss 8(%rdi), %xmm3
+; AVX2-NEXT:    vmovlps %xmm2, (%rsi)
 ; AVX2-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2,3]
 ; AVX2-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,0,2,3]
-; AVX2-NEXT:    vbroadcastss 8(%rdi), %xmm3
-; AVX2-NEXT:    vblendps {{.*#+}} xmm1 = xmm3[0],xmm1[1],xmm3[2,3]
-; AVX2-NEXT:    vmovlps %xmm2, (%rsi)
 ; AVX2-NEXT:    vmovlps %xmm0, (%rdx)
-; AVX2-NEXT:    vmovlps %xmm1, (%rcx)
+; AVX2-NEXT:    vblendps {{.*#+}} xmm0 = xmm3[0],xmm1[1],xmm3[2,3]
+; AVX2-NEXT:    vmovlps %xmm0, (%rcx)
 ; AVX2-NEXT:    retq
 ;
 ; AVX2-FP-LABEL: load_i32_stride3_vf2:
@@ -64,13 +64,13 @@ define void @load_i32_stride3_vf2(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX2-FP-NEXT:    vmovaps (%rdi), %xmm0
 ; AVX2-FP-NEXT:    vmovaps 16(%rdi), %xmm1
 ; AVX2-FP-NEXT:    vshufps {{.*#+}} xmm2 = xmm0[0,3,2,3]
+; AVX2-FP-NEXT:    vbroadcastss 8(%rdi), %xmm3
+; AVX2-FP-NEXT:    vmovlps %xmm2, (%rsi)
 ; AVX2-FP-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2,3]
 ; AVX2-FP-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,0,2,3]
-; AVX2-FP-NEXT:    vbroadcastss 8(%rdi), %xmm3
-; AVX2-FP-NEXT:    vblendps {{.*#+}} xmm1 = xmm3[0],xmm1[1],xmm3[2,3]
-; AVX2-FP-NEXT:    vmovlps %xmm2, (%rsi)
 ; AVX2-FP-NEXT:    vmovlps %xmm0, (%rdx)
-; AVX2-FP-NEXT:    vmovlps %xmm1, (%rcx)
+; AVX2-FP-NEXT:    vblendps {{.*#+}} xmm0 = xmm3[0],xmm1[1],xmm3[2,3]
+; AVX2-FP-NEXT:    vmovlps %xmm0, (%rcx)
 ; AVX2-FP-NEXT:    retq
 ;
 ; AVX2-FCP-LABEL: load_i32_stride3_vf2:
@@ -78,13 +78,13 @@ define void @load_i32_stride3_vf2(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX2-FCP-NEXT:    vmovaps (%rdi), %xmm0
 ; AVX2-FCP-NEXT:    vmovaps 16(%rdi), %xmm1
 ; AVX2-FCP-NEXT:    vshufps {{.*#+}} xmm2 = xmm0[0,3,2,3]
+; AVX2-FCP-NEXT:    vbroadcastss 8(%rdi), %xmm3
+; AVX2-FCP-NEXT:    vmovlps %xmm2, (%rsi)
 ; AVX2-FCP-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2,3]
 ; AVX2-FCP-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,0,2,3]
-; AVX2-FCP-NEXT:    vbroadcastss 8(%rdi), %xmm3
-; AVX2-FCP-NEXT:    vblendps {{.*#+}} xmm1 = xmm3[0],xmm1[1],xmm3[2,3]
-; AVX2-FCP-NEXT:    vmovlps %xmm2, (%rsi)
 ; AVX2-FCP-NEXT:    vmovlps %xmm0, (%rdx)
-; AVX2-FCP-NEXT:    vmovlps %xmm1, (%rcx)
+; AVX2-FCP-NEXT:    vblendps {{.*#+}} xmm0 = xmm3[0],xmm1[1],xmm3[2,3]
+; AVX2-FCP-NEXT:    vmovlps %xmm0, (%rcx)
 ; AVX2-FCP-NEXT:    retq
 ;
 ; AVX512-LABEL: load_i32_stride3_vf2:
@@ -92,13 +92,13 @@ define void @load_i32_stride3_vf2(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512-NEXT:    vmovaps (%rdi), %xmm0
 ; AVX512-NEXT:    vmovaps 16(%rdi), %xmm1
 ; AVX512-NEXT:    vshufps {{.*#+}} xmm2 = xmm0[0,3,2,3]
+; AVX512-NEXT:    vbroadcastss 8(%rdi), %xmm3
+; AVX512-NEXT:    vmovlps %xmm2, (%rsi)
 ; AVX512-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2,3]
 ; AVX512-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,0,2,3]
-; AVX512-NEXT:    vbroadcastss 8(%rdi), %xmm3
-; AVX512-NEXT:    vblendps {{.*#+}} xmm1 = xmm3[0],xmm1[1],xmm3[2,3]
-; AVX512-NEXT:    vmovlps %xmm2, (%rsi)
 ; AVX512-NEXT:    vmovlps %xmm0, (%rdx)
-; AVX512-NEXT:    vmovlps %xmm1, (%rcx)
+; AVX512-NEXT:    vblendps {{.*#+}} xmm0 = xmm3[0],xmm1[1],xmm3[2,3]
+; AVX512-NEXT:    vmovlps %xmm0, (%rcx)
 ; AVX512-NEXT:    retq
 ;
 ; AVX512-FCP-LABEL: load_i32_stride3_vf2:
@@ -119,13 +119,13 @@ define void @load_i32_stride3_vf2(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512DQ-NEXT:    vmovaps (%rdi), %xmm0
 ; AVX512DQ-NEXT:    vmovaps 16(%rdi), %xmm1
 ; AVX512DQ-NEXT:    vshufps {{.*#+}} xmm2 = xmm0[0,3,2,3]
+; AVX512DQ-NEXT:    vbroadcastss 8(%rdi), %xmm3
+; AVX512DQ-NEXT:    vmovlps %xmm2, (%rsi)
 ; AVX512DQ-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2,3]
 ; AVX512DQ-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,0,2,3]
-; AVX512DQ-NEXT:    vbroadcastss 8(%rdi), %xmm3
-; AVX512DQ-NEXT:    vblendps {{.*#+}} xmm1 = xmm3[0],xmm1[1],xmm3[2,3]
-; AVX512DQ-NEXT:    vmovlps %xmm2, (%rsi)
 ; AVX512DQ-NEXT:    vmovlps %xmm0, (%rdx)
-; AVX512DQ-NEXT:    vmovlps %xmm1, (%rcx)
+; AVX512DQ-NEXT:    vblendps {{.*#+}} xmm0 = xmm3[0],xmm1[1],xmm3[2,3]
+; AVX512DQ-NEXT:    vmovlps %xmm0, (%rcx)
 ; AVX512DQ-NEXT:    retq
 ;
 ; AVX512DQ-FCP-LABEL: load_i32_stride3_vf2:
@@ -146,13 +146,13 @@ define void @load_i32_stride3_vf2(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512BW-NEXT:    vmovaps (%rdi), %xmm0
 ; AVX512BW-NEXT:    vmovaps 16(%rdi), %xmm1
 ; AVX512BW-NEXT:    vshufps {{.*#+}} xmm2 = xmm0[0,3,2,3]
+; AVX512BW-NEXT:    vbroadcastss 8(%rdi), %xmm3
+; AVX512BW-NEXT:    vmovlps %xmm2, (%rsi)
 ; AVX512BW-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2,3]
 ; AVX512BW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,0,2,3]
-; AVX512BW-NEXT:    vbroadcastss 8(%rdi), %xmm3
-; AVX512BW-NEXT:    vblendps {{.*#+}} xmm1 = xmm3[0],xmm1[1],xmm3[2,3]
-; AVX512BW-NEXT:    vmovlps %xmm2, (%rsi)
 ; AVX512BW-NEXT:    vmovlps %xmm0, (%rdx)
-; AVX512BW-NEXT:    vmovlps %xmm1, (%rcx)
+; AVX512BW-NEXT:    vblendps {{.*#+}} xmm0 = xmm3[0],xmm1[1],xmm3[2,3]
+; AVX512BW-NEXT:    vmovlps %xmm0, (%rcx)
 ; AVX512BW-NEXT:    retq
 ;
 ; AVX512BW-FCP-LABEL: load_i32_stride3_vf2:
@@ -173,13 +173,13 @@ define void @load_i32_stride3_vf2(ptr %in.vec, ptr %out.vec0, ptr %out.vec1, ptr
 ; AVX512DQ-BW-NEXT:    vmovaps (%rdi), %xmm0
 ; AVX512DQ-BW-NEXT:    vmovaps 16(%rdi), %xmm1
 ; AVX512DQ-BW-NEXT:    vshufps {{.*#+}} xmm2 = xmm0[0,3,2,3]
+; AVX512DQ-BW-NEXT:    vbroadcastss 8(%rdi), %xmm3
+; AVX512DQ-BW-NEXT:    vmovlps %xmm2, (%rsi)
 ; AVX512DQ-BW-NEXT:    vblendps {{.*#+}} xmm0 = xmm1[0],xmm0[1],xmm1[2,3]
 ; AVX512DQ-BW-NEXT:    vshufps {{.*#+}} xmm0 = xmm0[1,0,2,3]
-; AVX512DQ-BW-NEXT:    vbroadcastss 8(%rdi), %xmm3
-; AVX512DQ-BW-NEXT:    vblendps {{.*#+}} xmm1 = xmm3[0],xmm1[1],xmm3[2,3]
-; AVX512DQ-BW-NEXT:    vmovlps %xmm2, (%rsi)
 ; AVX512DQ-BW-NEXT:    vmovlps %xmm0, (%rdx)
-; AVX512DQ-BW-NEXT:    vmovlps %xmm1, (%rcx)
+; AVX512DQ-BW-NEXT:    vblendps {{.*#+}} xmm0 = xmm3[0],xmm1[1],xmm3[2,3]
+; AVX512DQ-BW-NEXT:    vmovlps %xmm0, (%rcx)
 ; AVX512DQ-BW-NEXT:    retq
 ;
 ; AVX512DQ-BW-FCP-LABEL: load_i32_stride3_vf2:

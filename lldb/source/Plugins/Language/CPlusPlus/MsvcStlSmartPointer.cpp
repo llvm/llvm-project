@@ -147,11 +147,12 @@ lldb_private::formatters::MsvcStlSmartPointerSyntheticFrontEnd::Update() {
   if (!valobj_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  auto ptr_obj_sp = valobj_sp->GetChildMemberWithName("_Ptr");
+  ValueObjectSP ptr_obj_sp = valobj_sp->GetChildMemberWithName("_Ptr");
   if (!ptr_obj_sp)
     return lldb::ChildCacheState::eRefetch;
 
-  auto cast_ptr_sp = GetDesugaredSmartPointerValue(*ptr_obj_sp, *valobj_sp);
+  ValueObjectSP cast_ptr_sp =
+      GetDesugaredSmartPointerValue(*ptr_obj_sp, *valobj_sp);
   if (!cast_ptr_sp)
     return lldb::ChildCacheState::eRefetch;
 

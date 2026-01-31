@@ -22,8 +22,6 @@
 #include "llvm/CodeGen/GlobalISel/MachineIRBuilder.h"
 #include "llvm/CodeGen/MachineModuleInfo.h"
 
-#include <type_traits>
-
 namespace llvm {
 namespace SPIRV {
 
@@ -66,6 +64,7 @@ enum SpecialTypeKind {
   STK_Value,
   STK_MachineInstr,
   STK_VkBuffer,
+  STK_Padding,
   STK_ExplictLayoutType,
   STK_Last = -1
 };
@@ -149,6 +148,10 @@ inline IRHandle irhandle_vkbuffer(const Type *ElementType,
                                   bool IsWriteable) {
   return std::make_tuple(ElementType, (SC << 1) | IsWriteable,
                          SpecialTypeKind::STK_VkBuffer);
+}
+
+inline IRHandle irhandle_padding() {
+  return std::make_tuple(nullptr, 0, SpecialTypeKind::STK_Padding);
 }
 
 inline IRHandle irhandle_explict_layout_type(const Type *Ty) {
