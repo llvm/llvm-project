@@ -1731,7 +1731,9 @@ private:
     if (type_) {
       auto len{type_->LEN()};
       if (explicitType_ ||
-          (len && IsConstantExpr(*len) && !ContainsAnyImpliedDoIndex(*len))) {
+          (len &&
+              IsConstantExpr(
+                  *len, &exprAnalyzer_.context().foldingContext()))) {
         return len;
       }
     }
