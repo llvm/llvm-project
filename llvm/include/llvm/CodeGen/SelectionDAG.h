@@ -2113,7 +2113,7 @@ public:
 
   /// Constant fold a setcc to true or false.
   LLVM_ABI SDValue FoldSetCC(EVT VT, SDValue N1, SDValue N2, ISD::CondCode Cond,
-                             const SDLoc &dl);
+                             const SDLoc &dl, SDNodeFlags Flags = {});
 
   /// Return true if the sign bit of Op is known to be zero.
   /// We use this predicate to simplify operations downstream.
