@@ -2835,10 +2835,10 @@ bool SPIRVInstructionSelector::selectWaveReduceProduct(Register ResVReg,
                                                        MachineInstr &I) const {
   return selectWaveReduce(ResVReg, ResType, I, /*IsUnsigned*/ false,
                           [&](Register InputRegister, bool IsUnsigned) {
-                          bool IsFloatTy = GR.isScalarOrVectorOfType(
-                              InputRegister, SPIRV::OpTypeFloat);
-                          return IsFloatTy ? SPIRV::OpGroupNonUniformFMul
-                                           : SPIRV::OpGroupNonUniformIMul;
+                            bool IsFloatTy = GR.isScalarOrVectorOfType(
+                                InputRegister, SPIRV::OpTypeFloat);
+                            return IsFloatTy ? SPIRV::OpGroupNonUniformFMul
+                                             : SPIRV::OpGroupNonUniformIMul;
                           });
 }
 
