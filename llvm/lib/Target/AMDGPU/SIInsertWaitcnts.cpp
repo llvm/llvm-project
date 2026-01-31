@@ -893,9 +893,12 @@ public:
   }
 
   void setStateOnFunctionEntryOrReturn() {
-    setScoreUB(STORE_CNT, getScoreUB(STORE_CNT) +
-                              getWaitCountMax(Context->getLimits(), STORE_CNT));
-    PendingEvents |= Context->getWaitEventMask()[STORE_CNT];
+    if (Context->ST->hasVscnt()) {
+      setScoreUB(STORE_CNT,
+                 getScoreUB(STORE_CNT) +
+                     getWaitCountMax(Context->getLimits(), STORE_CNT));
+      PendingEvents |= Context->getWaitEventMask()[STORE_CNT];
+    }
   }
 
   ArrayRef<const MachineInstr *> getLDSDMAStores() const {
@@ -1436,10 +1439,25 @@ void WaitcntBrackets::simplifyVmVsrc(const AMDGPU::Waitcnt &CheckWait,
   // Waiting for some counters implies waiting for VM_VSRC, since an
   // instruction that decrements a counter on completion would have
   // decremented VM_VSRC once its VGPR operands had been read.
-  if (CheckWait.VmVsrc >=
-      std::min({CheckWait.LoadCnt, CheckWait.StoreCnt, CheckWait.SampleCnt,
-                CheckWait.BvhCnt, CheckWait.DsCnt}))
-    UpdateWait.VmVsrc = ~0u;
+  static constexpr InstCounterType VmemCounters[] = {
+      LOAD_CNT, STORE_CNT, SAMPLE_CNT, BVH_CNT, DS_CNT};
+  unsigned VmemEvents =
+      llvm::accumulate(VmemCounters, 0u, [&](unsigned Acc, InstCounterType T) {
+        return Acc | Context->getWaitEventMask()[T];
+      });
+  unsigned PendingVmemEvents = PendingEvents & VmemEvents;
+  auto Simplify = [&](InstCounterType T, unsigned CheckCount) {
+    if (UpdateWait.VmVsrc >= CheckCount &&
+        (CheckCount == 0 || !counterOutOfOrder(T)) &&
+        (PendingVmemEvents & ~Context->getWaitEventMask()[T]) == 0)
+      UpdateWait.VmVsrc = ~0u;
+  };
+  Simplify(LOAD_CNT, CheckWait.LoadCnt);
+  Simplify(STORE_CNT, CheckWait.StoreCnt);
+  Simplify(SAMPLE_CNT, CheckWait.SampleCnt);
+  Simplify(BVH_CNT, CheckWait.BvhCnt);
+  Simplify(DS_CNT, CheckWait.DsCnt);
+
   simplifyWaitcnt(VM_VSRC, UpdateWait.VmVsrc);
 }
 
