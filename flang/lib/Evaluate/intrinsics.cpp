@@ -2564,7 +2564,7 @@ std::optional<SpecificCall> IntrinsicInterface::Match(
           }
         }
         if (context.analyzingPDTComponentKindSelector() && expr &&
-            IsConstantExpr(*expr)) {
+            IsConstantExpr(*expr, &context)) {
           // Don't emit an error about a KIND= actual argument value when
           // processing a kind selector in a PDT component declaration before
           // it is instantianted, so long as it's a constant expression.

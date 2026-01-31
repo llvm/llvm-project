@@ -268,7 +268,7 @@ public:
                   semantics::IsAssumedSizeArray(symbol)) {
                 // last dimension of assumed-size dummy array: don't worry
                 // about handling an empty dimension
-                ok = !invariantOnly_ || IsScopeInvariantExpr(*lbound);
+                ok = !invariantOnly_ || IsScopeInvariantExpr(*lbound, context_);
               } else if (lbValue.value_or(0) == 1) {
                 // Lower bound is 1, regardless of extent
                 ok = true;
@@ -651,7 +651,7 @@ static MaybeExtentExpr GetExplicitUBOUND(FoldingContext *context,
     const semantics::ShapeSpec &shapeSpec, bool invariantOnly) {
   const auto &ubound{shapeSpec.ubound().GetExplicit()};
   if (ubound && ubound->Rank() == 0 &&
-      (!invariantOnly || IsScopeInvariantExpr(*ubound))) {
+      (!invariantOnly || IsScopeInvariantExpr(*ubound, context))) {
     if (auto extent{GetNonNegativeExtent(shapeSpec, invariantOnly)}) {
       if (auto cstExtent{ToInt64(
               context ? Fold(*context, std::move(*extent)) : *extent)}) {
