@@ -548,7 +548,13 @@ public:
     // Move the block back to its original position.
     Region::iterator before =
         insertBeforeBlock ? Region::iterator(insertBeforeBlock) : region->end();
-    region->getBlocks().splice(before, block->getParent()->getBlocks(), block);
+    if (Region *currentParent = block->getParent()) {
+      // Block is still in a region, use cheap splice to move it back.
+      region->getBlocks().splice(before, currentParent->getBlocks(), block);
+      return;
+    }
+    // Block was orphaned by a prior rollback, can't splice.
+    region->getBlocks().insert(before, block);
   }
 
 private:
