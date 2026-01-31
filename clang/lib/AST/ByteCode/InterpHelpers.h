@@ -66,7 +66,7 @@ bool CheckNewDeleteForms(InterpState &S, CodePtr OpPC,
 /// Copy the contents of Src into Dest.
 bool DoMemcpy(InterpState &S, CodePtr OpPC, const Pointer &Src, Pointer &Dest);
 
-UnsignedOrNone EvaluateBuiltinObjectSize(const ASTContext &ASTCtx,
+UnsignedOrNone evaluateBuiltinObjectSize(const ASTContext &ASTCtx,
                                          unsigned Kind, Pointer &Ptr);
 
 template <typename T>

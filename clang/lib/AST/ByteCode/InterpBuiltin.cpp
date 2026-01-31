@@ -2388,7 +2388,7 @@ static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
     return true;
   }
 
-  if (auto Result = EvaluateBuiltinObjectSize(ASTCtx, Kind, Ptr)) {
+  if (auto Result = evaluateBuiltinObjectSize(ASTCtx, Kind, Ptr)) {
     pushInteger(S, *Result, Call->getType());
     return true;
   }

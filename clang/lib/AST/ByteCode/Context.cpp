@@ -341,7 +341,7 @@ bool Context::tryEvaluateObjectSize(State &Parent, const Expr *E, unsigned Kind,
       return false;
 
     Pointer P = Ptr;
-    if (auto ObjectSize = EvaluateBuiltinObjectSize(getASTContext(), Kind, P)) {
+    if (auto ObjectSize = evaluateBuiltinObjectSize(getASTContext(), Kind, P)) {
       Result = *ObjectSize;
       return true;
     }
