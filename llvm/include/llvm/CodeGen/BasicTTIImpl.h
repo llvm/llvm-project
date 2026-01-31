@@ -2212,9 +2212,6 @@ public:
       Cost += thisT()->getIntrinsicInstrCost(Attrs, CostKind);
       return Cost;
     }
-    case Intrinsic::clmul: {
-      return thisT()->getTypeBasedIntrinsicInstrCost(ICA, CostKind);
-    }
     }
 
     // Assume that we need to scalarize this intrinsic.)
