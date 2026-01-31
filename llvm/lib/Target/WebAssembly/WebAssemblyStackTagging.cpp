@@ -224,34 +224,45 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
         TagCallArguments.push_back(Base);
         TagCallArguments.push_back(ConstantInt::get(IntPtrType, Tag));
       }
-      auto *TagPCall =
-          IRB.CreateCall(RandomOrHintMayStoreTagDecl, TagCallArguments);
+      if (combineStore) {
+        IntrinsicInst *Start = Info.LifetimeStart[0];
+        IRBuilder<> IRBStart(Start->getNextNode());
+        IRBStart.CreateCall(RandomOrHintMayStoreTagDecl, TagCallArguments);
+        IntrinsicInst *End = Info.LifetimeEnd[0];
+        IRBuilder<> IRBEnd(End);
+        IRBEnd.CreateCall(UntagStoreDecl,
+                          {ConstantInt::get(Int32Type, 0), Info.AI,
+                           ConstantInt::get(IntPtrType, Size)});
+        Start->eraseFromParent();
+        End->eraseFromParent();
+      } else {
+        auto *TagPCall =
+            IRB.CreateCall(RandomOrHintMayStoreTagDecl, TagCallArguments);
 
-      if (Info.AI->hasName())
-        TagPCall->setName(Info.AI->getName() + ".tag");
+        if (Info.AI->hasName())
+          TagPCall->setName(Info.AI->getName() + ".tag");
 
-      Info.AI->replaceUsesWithIf(TagPCall, [&](const Use &U) {
-        return !isa<LifetimeIntrinsic>(U.getUser());
-      });
+        Info.AI->replaceUsesWithIf(TagPCall, [&](const Use &U) {
+          return !isa<LifetimeIntrinsic>(U.getUser());
+        });
 
-      TagPCall->setOperand(1, Info.AI);
+        TagPCall->setOperand(1, Info.AI);
 
-      if (!combineStore) {
         for (IntrinsicInst *Start : Info.LifetimeStart) {
           IRBuilder<> IRB2(Start->getNextNode());
           IRB2.CreateCall(StoreTagDecl,
                           {ConstantInt::get(Int32Type, 0), TagPCall,
                            ConstantInt::get(IntPtrType, Size)});
         }
-      }
-      auto TagEnd = [&](Instruction *Node) {
-        untagAlloca(AI, Node, Size, UntagStoreDecl, IntPtrType);
-      };
-      if (!DT || !PDT ||
-          !memtag::forAllReachableExits(*DT, *PDT, *LI, Info, SInfo.RetVec,
-                                        TagEnd)) {
-        for (auto *End : Info.LifetimeEnd)
-          End->eraseFromParent();
+        auto TagEnd = [&](Instruction *Node) {
+          untagAlloca(AI, Node, Size, UntagStoreDecl, IntPtrType);
+        };
+        if (!DT || !PDT ||
+            !memtag::forAllReachableExits(*DT, *PDT, *LI, Info, SInfo.RetVec,
+                                          TagEnd)) {
+          for (auto *End : Info.LifetimeEnd)
+            End->eraseFromParent();
+        }
       }
     } else {
       uint64_t Size = *Info.AI->getAllocationSize(*DL);
