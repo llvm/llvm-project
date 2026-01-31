@@ -1,0 +1,47 @@
+//===- ExtensibleDialect - C API for MLIR Extensible Dialect
+//-----------------===//
+//
+// Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
+// See https://llvm.org/LICENSE.txt for license information.
+// SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
+//
+//===----------------------------------------------------------------------===//
+
+#include "mlir-c/ExtensibleDialect.h"
+#include "mlir/CAPI/IR.h"
+#include "mlir/CAPI/Support.h"
+#include "mlir/IR/ExtensibleDialect.h"
+#include "mlir/IR/OperationSupport.h"
+
+using namespace mlir;
+
+DEFINE_C_API_PTR_METHODS(MlirDynamicOpTrait, DynamicOpTrait)
+
+bool mlirDynamicOpTraitAttach(MlirDynamicOpTrait dynamicOpTrait,
+                              MlirStringRef opName, MlirContext context) {
+  std::optional<RegisteredOperationName> opNameFound =
+      RegisteredOperationName::lookup(unwrap(opName), unwrap(context));
+  assert(opNameFound && "operation name must be registered in the context");
+
+  // The original getImpl() is protected, so we create a small helper struct
+  // here.
+  struct RegisteredOperationNameWithImpl : RegisteredOperationName {
+    Impl *getImpl() { return RegisteredOperationName::getImpl(); }
+  };
+  OperationName::Impl *impl =
+      static_cast<RegisteredOperationNameWithImpl &>(*opNameFound).getImpl();
+
+  DynamicOpTrait *trait = unwrap(dynamicOpTrait);
+  // TODO: we should check whether the `impl` is a DynamicOpDefinition here
+  // via llvm-style RTTI.
+  return static_cast<DynamicOpDefinition *>(impl)->addTrait(
+      std::unique_ptr<DynamicOpTrait>(trait));
+}
+
+MlirDynamicOpTrait mlirDynamicOpTraitGetIsTerminator() {
+  return wrap(new DynamicOpTraits::IsTerminator());
+}
+
+MlirDynamicOpTrait mlirDynamicOpTraitGetNoTerminator() {
+  return wrap(new DynamicOpTraits::NoTerminator());
+}

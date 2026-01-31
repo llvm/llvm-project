@@ -66,7 +66,8 @@ if(MLIR_PYTHON_STUBGEN_ENABLED)
   if(NOT EXTERNAL_PROJECT_BUILD)
     set(_core_type_stub_sources
       _mlir/__init__.pyi
-      _mlir/ir.pyi
+      _mlir/ir/__init__.pyi
+      _mlir/ir/dynamic_op_traits.pyi
       _mlir/passmanager.pyi
       _mlir/rewrite.pyi
     )

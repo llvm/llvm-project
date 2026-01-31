@@ -2521,6 +2521,22 @@ void PyOpAdaptor::bind(nb::module_ &m) {
           "Returns the attributes of the adaptor.");
 }
 
+void PyDynamicOpTrait::bind(nb::module_ &m) {
+  nb::class_<PyDynamicOpTrait>(m, "DynamicOpTrait")
+      .def("attach", &PyDynamicOpTrait::attach,
+           "Attach the dynamic op trait to the given operation name.",
+           nb::arg("op_name"), nb::arg("context").none() = nb::none())
+      .def(
+          "attach",
+          [](PyDynamicOpTrait &self, const nb::type_object &opView,
+             DefaultingPyMlirContext context) {
+            return self.attach(
+                nb::cast<std::string>(opView.attr("OPERATION_NAME")), context);
+          },
+          "Attach the dynamic op trait to the given OpView class.",
+          nb::arg("op_view"), nb::arg("context").none() = nb::none());
+}
+
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python
 } // namespace mlir
@@ -4844,6 +4860,11 @@ void populateIRCore(nb::module_ &m) {
 
   // Attribute builder getter.
   PyAttrBuilderMap::bind(m);
+
+  // Extensible Dialect
+  PyDynamicOpTrait::bind(m);
+  PyDynamicOpTraits::IsTerminator::bind(m);
+  PyDynamicOpTraits::NoTerminator::bind(m);
 }
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python

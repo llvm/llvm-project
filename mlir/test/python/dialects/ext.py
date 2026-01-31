@@ -76,6 +76,8 @@ def testMyInt():
         print(add1._ODS_OPERAND_SEGMENTS)
         # CHECK: None
         print(add1._ODS_RESULT_SEGMENTS)
+        # CHECK: (0, True)
+        print(add1._ODS_REGIONS)
         # CHECK: %0 = "myint.constant"() {value = 2 : i32} : () -> i32
         print(add1.lhs.owner)
         # CHECK: %1 = "myint.constant"() {value = 3 : i32} : () -> i32
@@ -338,3 +340,80 @@ def testExtDialect():
             except TypeError as e:
                 # CHECK：too many positional arguments
                 print(e)
+
+
+# CHECK: TEST: testExtDialectWithRegion
+@run
+def testExtDialectWithRegion():
+    class TestRegion(Dialect, name="ext_region"):
+        pass
+
+    class IfOp(TestRegion.Operation, name="if"):
+        cond: Operand[IntegerType[1]]
+        result: Result[Any]
+        then: Region
+        else_: Region
+
+    class YieldOp(TestRegion.Operation, name="yield"):
+        val: Operand[Any]
+
+    with Context(), Location.unknown():
+        TestRegion.load()
+        # CHECK: irdl.dialect @ext_region {
+        # CHECK:     irdl.operation @if {
+        # CHECK:     %0 = irdl.is i1
+        # CHECK:     irdl.operands(cond: %0)
+        # CHECK:     %1 = irdl.any
+        # CHECK:     irdl.results(result: %1)
+        # CHECK:     %2 = irdl.region
+        # CHECK:     %3 = irdl.region
+        # CHECK:     irdl.regions(then: %2, else_: %3)
+        # CHECK: }
+        # CHECK: irdl.operation @yield {
+        # CHECK:     %0 = irdl.any
+        # CHECK:     irdl.operands(val: %0)
+        # CHECK: }
+        print(TestRegion._mlir_module)
+
+        IsTerminatorTrait().attach(YieldOp)
+
+        # CHECK: (self, /, result, cond, *, loc=None, ip=None)
+        print(IfOp.__init__.__signature__)
+
+        # CHECK: None None
+        print(IfOp._ODS_OPERAND_SEGMENTS, IfOp._ODS_RESULT_SEGMENTS)
+        # CHECK: (2, True)
+        print(IfOp._ODS_REGIONS)
+
+        from mlir.dialects import llvm
+
+        module = Module.create()
+        with InsertionPoint(module.body):
+            i1 = IntegerType.get_signless(1)
+            i32 = IntegerType.get_signless(32)
+            cond = arith.constant(i1, 1)
+
+            if_ = IfOp(i32, cond)
+            if_.then.blocks.append()
+            if_.else_.blocks.append()
+
+            with InsertionPoint(if_.then.blocks[0]):
+                v = arith.constant(i32, 2)
+                YieldOp(v)
+
+            with InsertionPoint(if_.else_.blocks[0]):
+                v = arith.constant(i32, 3)
+                YieldOp(v)
+
+        assert module.operation.verify()
+        # CHECK: module {
+        # CHECK:     %true = arith.constant true
+        # CHECK:     %0 = "ext_region.if"(%true) ({
+        # CHECK:         %c2_i32 = arith.constant 2 : i32
+        # CHECK:         "ext_region.yield"(%c2_i32) : (i32) -> ()
+        # CHECK:     }, {
+        # CHECK:         %c3_i32 = arith.constant 3 : i32
+        # CHECK:         "ext_region.yield"(%c3_i32) : (i32) -> ()
+        # CHECK:     }) : (i1) -> i32
+        # CHECK: }
+        print(module)
