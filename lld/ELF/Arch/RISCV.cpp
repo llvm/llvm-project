@@ -714,8 +714,8 @@ void elf::initSymbolAnchors(Ctx &ctx) {
       }
     }
   }
-  // Store anchors (st_value and st_value+st_size) for symbols relative to text
-  // sections.
+  // Store symbol anchors for adjusting st_value/st_size during relaxation.
+  // We include symbols where d->file == file for the prevailing copies.
   //
   // For a defined symbol foo, we may have `d->file != file` with --wrap=foo.
   // We should process foo, as the defining object file's symbol table may not
@@ -738,8 +738,8 @@ void elf::initSymbolAnchors(Ctx &ctx) {
       if (d && (d->file == file || d->scriptDefined))
         addAnchor(d);
     }
-  // Also add anchors for IRELATIVE symbols, which are clones of ifunc resolver
-  // symbols created during postScanRelocations.
+  // Add anchors for IRELATIVE symbols (see `handleNonPreemptibleIfunc`).
+  // Their values must be adjusted so IRELATIVE addends remain correct.
   for (Defined *d : ctx.irelativeSyms)
     addAnchor(d);
   // Sort anchors by offset so that we can find the closest relocation
