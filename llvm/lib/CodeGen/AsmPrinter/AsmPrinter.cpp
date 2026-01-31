@@ -192,6 +192,11 @@ static cl::opt<bool> PrintLatency(
     cl::desc("Print instruction latencies as verbose asm comments"), cl::Hidden,
     cl::init(false));
 
+static cl::opt<std::string>
+    StackUsageFile("stack-usage-file",
+                   cl::desc("Output filename for stack usage information"),
+                   cl::value_desc("filename"), cl::Hidden);
+
 extern cl::opt<bool> EmitBBHash;
 
 STATISTIC(EmittedInsts, "Number of machine instrs printed");
@@ -1683,7 +1688,9 @@ void AsmPrinter::emitStackSizeSection(const MachineFunction &MF) {
 }
 
 void AsmPrinter::emitStackUsage(const MachineFunction &MF) {
-  const std::string &OutputFilename = MF.getTarget().Options.StackUsageOutput;
+  const std::string OutputFilename =
+      !StackUsageFile.empty() ? StackUsageFile
+                              : MF.getTarget().Options.StackUsageFile;
 
   // OutputFilename empty implies -fstack-usage is not passed.
   if (OutputFilename.empty())
