@@ -225,10 +225,19 @@ bool WebAssemblyStackTagging::runOnFunction(Function &Fn) {
         TagCallArguments.push_back(ConstantInt::get(IntPtrType, Tag));
       }
       if (combineStore) {
-        IntrinsicInst *Start = Info.LifetimeStart[0];
+        IntrinsicInst *Start = Info.LifetimeStart.front();
         IRBuilder<> IRBStart(Start->getNextNode());
-        IRBStart.CreateCall(RandomOrHintMayStoreTagDecl, TagCallArguments);
-        IntrinsicInst *End = Info.LifetimeEnd[0];
+        CallInst *TagPCall =
+            IRBStart.CreateCall(RandomOrHintMayStoreTagDecl, TagCallArguments);
+        if (Info.AI->hasName())
+          TagPCall->setName(Info.AI->getName() + ".tag");
+
+        Info.AI->replaceUsesWithIf(TagPCall, [&](const Use &U) {
+          return U.getUser() != TagPCall &&
+                !isa<LifetimeIntrinsic>(U.getUser());
+        });
+        TagPCall->setOperand(1, Info.AI);
+        IntrinsicInst *End = Info.LifetimeEnd.front();
         IRBuilder<> IRBEnd(End);
         IRBEnd.CreateCall(UntagStoreDecl,
                           {ConstantInt::get(Int32Type, 0), Info.AI,
