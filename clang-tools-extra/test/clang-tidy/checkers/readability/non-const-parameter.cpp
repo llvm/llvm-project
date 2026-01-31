@@ -363,3 +363,17 @@ void gh176623() {
     auto const V1 = []<bool tc>(char* p) { auto X = A<tc>(p); };
     auto const V2 = []<bool tc>(char* p) { auto Y = B(p); };
 }
+
+void testGenericLambdaIssue177354() {
+  // Generic lambdas should not trigger the warning
+  auto genericLambda = []<typename T>(int *p) {
+    // CHECK-MESSAGES-NOT: warning: pointer parameter 'p' can be
+    int x = *p;
+  };
+
+  // CHECK-MESSAGES: :[[@LINE+1]]:31: warning: pointer parameter 'p' can be pointer to const
+  auto regularLambda = [](int *p) {
+    // CHECK-FIXES: auto regularLambda = [](const int *p) {
+    int x = *p;
+  };
+}

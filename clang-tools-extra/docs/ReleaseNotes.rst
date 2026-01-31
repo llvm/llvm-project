@@ -94,6 +94,10 @@ Improvements to clang-query
 Improvements to clang-tidy
 --------------------------
 
+- Fixed false positive in :doc:`readability-non-const-parameter
+  <clang-tidy/checks/readability/non-const-parameter>` check for generic
+  lambda parameters with explicit template parameters.
+
 New checks
 ^^^^^^^^^^
 
@@ -115,7 +119,7 @@ New checks
 
   Looks for functions returning ``std::[w|u8|u16|u32]string`` and suggests to
   change it to ``std::[...]string_view`` for performance reasons if possible.
-  
+
 - New :doc:`modernize-use-structured-binding
   <clang-tidy/checks/modernize/use-structured-binding>` check.
 
