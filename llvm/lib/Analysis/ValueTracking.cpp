@@ -5945,16 +5945,15 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
             case Intrinsic::fma:
             case Intrinsic::fmuladd: {
               KnownFPClass KnownStart, KnownL;
-              computeKnownFPClass(Init, DemandedElts, InterestedClasses, KnownStart,
-                                  Q, Depth + 1);
+              computeKnownFPClass(Init, DemandedElts, InterestedClasses,
+                                  KnownStart, Q, Depth + 1);
               if (KnownStart.isUnknown())
                 break;
               computeKnownFPClass(L, DemandedElts, InterestedClasses, KnownL, Q,
                                   Depth + 1);
               if (L == R &&
                   isGuaranteedNotToBeUndef(L, Q.AC, Q.CxtI, Q.DT, Depth + 1))
-                Known = KnownFPClass::fma_square(KnownL, KnownStart,
-                                                Mode);
+                Known = KnownFPClass::fma_square(KnownL, KnownStart, Mode);
               break;
             }
             }
