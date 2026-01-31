@@ -589,6 +589,9 @@ static void simplifyLiveInsWithSCEV(VPlan &Plan,
   }
 }
 
+/// To make RUN_VPLAN_PASS print initial VPlan.
+static void printAfterInitialConstruction(VPlan &) {}
+
 std::unique_ptr<VPlan>
 VPlanTransforms::buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
                              DebugLoc IVDL, PredicatedScalarEvolution &PSE,
@@ -597,6 +600,8 @@ VPlanTransforms::buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
   std::unique_ptr<VPlan> VPlan0 = Builder.buildPlainCFG();
   addInitialSkeleton(*VPlan0, InductionTy, IVDL, PSE, TheLoop);
   simplifyLiveInsWithSCEV(*VPlan0, PSE);
+
+  RUN_VPLAN_PASS_NO_VERIFY(printAfterInitialConstruction, *VPlan0);
   return VPlan0;
 }
 
