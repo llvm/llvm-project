@@ -338,6 +338,7 @@ LogicalResult ProfileInfoDepot::populatationDispatch(Operation *op) {
   // of the data type, meaning any compatible type can be used. No type
   // constraint for those operations.
   POPULATE_PROFILE_INFO_SKIP(AddShape)
+  POPULATE_PROFILE_INFO_SKIP(AssertEqualShape)
   POPULATE_PROFILE_INFO_SKIP(ConcatShape)
   POPULATE_PROFILE_INFO_SKIP(ConstShape)
   POPULATE_PROFILE_INFO_SKIP(DivCeilShape)

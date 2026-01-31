@@ -344,7 +344,7 @@ typedef int InExternCPP;
 }
 
 namespace ISSUE_72179
-{  
+{
   void foo()
   {
     typedef int a;
@@ -460,4 +460,30 @@ namespace GH173732 {
   typedef char (&refArray)[2], (*ptrArray)[2];
   // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
   // CHECK-MESSAGES: :[[@LINE-2]]:29: warning: use 'using' instead of 'typedef' [modernize-use-using]
+}
+
+namespace GH176267 {
+  typedef int(f1)(double);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
+  // CHECK-FIXES: using f1 = int(double);
+
+  typedef int(f2)(double);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
+  // CHECK-FIXES: using f2 = int(double);
+
+  typedef int f3(double);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
+  // CHECK-FIXES: using f3 = int (double);
+
+  typedef int (*f4)(double);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
+  // CHECK-FIXES: using f4 = int (*)(double);
+
+  typedef int ((f5))(double);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
+  // CHECK-FIXES: using f5 = int (double);
+
+  typedef int ( /* comment */ f6 ) (double);
+  // CHECK-MESSAGES: :[[@LINE-1]]:3: warning: use 'using' instead of 'typedef' [modernize-use-using]
+  // CHECK-FIXES: using f6 = int  (double);
 }

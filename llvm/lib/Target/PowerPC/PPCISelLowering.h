@@ -535,8 +535,10 @@ namespace llvm {
 
     /// createFastISel - This method returns a target-specific FastISel object,
     /// or null if the target does not support "fast" instruction selection.
-    FastISel *createFastISel(FunctionLoweringInfo &FuncInfo,
-                             const TargetLibraryInfo *LibInfo) const override;
+    FastISel *
+    createFastISel(FunctionLoweringInfo &FuncInfo,
+                   const TargetLibraryInfo *LibInfo,
+                   const LibcallLoweringInfo *LibcallLowering) const override;
 
     /// Returns true if an argument of type Ty needs to be passed in a
     /// contiguous block of registers in calling convention CallConv.
@@ -935,8 +937,9 @@ namespace llvm {
 
   namespace PPC {
 
-    FastISel *createFastISel(FunctionLoweringInfo &FuncInfo,
-                             const TargetLibraryInfo *LibInfo);
+  FastISel *createFastISel(FunctionLoweringInfo &FuncInfo,
+                           const TargetLibraryInfo *LibInfo,
+                           const LibcallLoweringInfo *LibcallLowering);
 
   } // end namespace PPC
 
