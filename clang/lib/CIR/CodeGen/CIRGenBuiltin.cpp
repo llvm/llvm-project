@@ -1370,7 +1370,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
     mlir::Location loc = getLoc(e->getExprLoc());
 
     cir::EhLongjmpOp::create(builder, loc, buf);
-    builder.create<cir::UnreachableOp>(loc);
+    cir::UnreachableOp::create(builder, loc);
     return RValue::get(nullptr);
   }
   case Builtin::BI__builtin_launder:
