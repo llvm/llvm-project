@@ -5958,30 +5958,37 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
     // initial value and is incremented by a squared value.
     // This will propagate sign information out of such loops.
     if (P->getNumIncomingValues() == 2) {
-      Value *RecurValue = P->getIncomingValue(1);
-      IntrinsicInst *I = dyn_cast<IntrinsicInst>(RecurValue);
-      if (!I)
-        break;
-      Value *R, *L;
-      Value *Init;
-      PHINode *PN;
-      if (matchSimpleTernaryIntrinsicRecurrence(I, PN, Init, L, R)) {
-        switch (I->getIntrinsicID()) {
-        case Intrinsic::fma:
-        case Intrinsic::fmuladd: {
-          KnownFPClass KnownStart, KnownL;
-          computeKnownFPClass(Init, DemandedElts, InterestedClasses, KnownStart,
-                              Q, Depth + 1);
-          if (KnownStart.isUnknown())
-            break;
-          computeKnownFPClass(L, DemandedElts, InterestedClasses, KnownL, Q,
-                              Depth + 1);
-          if (L == R &&
-              isGuaranteedNotToBeUndef(L, Q.AC, Q.CxtI, Q.DT, Depth + 1))
-            Known = KnownFPClass::fma_square(KnownL, KnownStart,
-                                             DenormalMode::getDynamic());
-          break;
-        }
+      for (int i = 0; i < 2; i++) {
+        Value *RecurValue = P->getIncomingValue(1 - i);
+        IntrinsicInst *I = dyn_cast<IntrinsicInst>(RecurValue);
+        if (I) {
+          Value *R, *L;
+          Value *Init;
+          PHINode *PN;
+          const Function *F = I->getFunction();
+          const fltSemantics &FltSem =
+              I->getType()->getScalarType()->getFltSemantics();
+          DenormalMode Mode =
+              F ? F->getDenormalMode(FltSem) : DenormalMode::getDynamic();
+          if (matchSimpleTernaryIntrinsicRecurrence(I, PN, Init, L, R)) {
+            switch (I->getIntrinsicID()) {
+            case Intrinsic::fma:
+            case Intrinsic::fmuladd: {
+              KnownFPClass KnownStart, KnownL;
+              computeKnownFPClass(Init, DemandedElts, InterestedClasses, KnownStart,
+                                  Q, Depth + 1);
+              if (KnownStart.isUnknown())
+                break;
+              computeKnownFPClass(L, DemandedElts, InterestedClasses, KnownL, Q,
+                                  Depth + 1);
+              if (L == R &&
+                  isGuaranteedNotToBeUndef(L, Q.AC, Q.CxtI, Q.DT, Depth + 1))
+                Known = KnownFPClass::fma_square(KnownL, KnownStart,
+                                                Mode);
+              break;
+            }
+            }
+          }
         }
       }
     }
