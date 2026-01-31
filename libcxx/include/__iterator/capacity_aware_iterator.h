@@ -46,7 +46,7 @@ class __capacity_aware_iterator {
 private:
   _Iter __iter_;
 
-  template <class, class, std::size_t>
+  template <class, class, size_t>
   friend class __capacity_aware_iterator;
 
 public:
