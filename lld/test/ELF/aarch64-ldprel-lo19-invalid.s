@@ -1,9 +1,9 @@
 # REQUIRES: aarch64
 
 # RUN: llvm-mc -filetype=obj -triple=aarch64-linux-none %s -o %t.o
-# RUN: not ld.lld -shared %t.o -o /dev/null 2>&1 | FileCheck %s
+# RUN: not ld.lld -shared %t.o -o /dev/null 2>&1 | FileCheck %s --implicit-check-not=error:
 
-# CHECK: relocation R_AARCH64_LD_PREL_LO19 out of range: 2131192 is not in [-1048576, 1048575]
+# CHECK: error: {{.*}}:(.text+0x0): relocation R_AARCH64_LD_PREL_LO19 out of range: 2131192 is not in [-1048576, 1048575]
 
   ldr x8, patatino
   .data
