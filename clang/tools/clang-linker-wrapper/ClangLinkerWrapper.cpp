@@ -546,6 +546,9 @@ Expected<StringRef> clang(ArrayRef<StringRef> InputFiles, const ArgList &Args,
         LinkerArgs.push_back(Args.MakeArgString("-Wl,--whole-archive"));
       else if (Arg->getOption().matches(OPT_no_whole_archive))
         LinkerArgs.push_back(Args.MakeArgString("-Wl,--no-whole-archive"));
+      else if (Arg->getOption().matches(OPT_rpath))
+        LinkerArgs.push_back(
+            Args.MakeArgString("-Wl,-rpath," + Twine(Arg->getValue())));
       else
         Arg->render(Args, LinkerArgs);
     }

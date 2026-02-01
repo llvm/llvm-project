@@ -66,6 +66,7 @@ __attribute__((visibility("protected"), used)) int x;
 // RUN: llvm-ar rcs %t.a %t.o
 // RUN: clang-linker-wrapper --host-triple=x86_64-unknown-linux-gnu --dry-run \
 // RUN:   --linker-path=/usr/bin/ld.lld --whole-archive %t.a --no-whole-archive \
+// RUN:   -rpath %S/Inputs/linker-wrapper
 // RUN:   %t.o -o a.out 2>&1 | FileCheck %s --check-prefix=CPU-LINK
 
 // CPU-LINK: clang{{.*}} -o {{.*}}.img -dumpdir a.out.x86_64..img. --target=x86_64-unknown-linux-gnu -Wl,--no-undefined {{.*}}.o {{.*}}.o -Wl,-Bsymbolic -shared -Wl,--whole-archive {{.*}}.a -Wl,--no-whole-archive
