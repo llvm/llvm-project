@@ -132,3 +132,8 @@ namespace RetVoidInInvalidFunc {
   };
   X<foo()> x; // both-error {{non-type template argument is not a constant expression}}
 }
+
+namespace BitCastWithErrors {
+  template<class T> int f(); // both-note {{candidate template ignored}}
+  static union { char *x = f(); }; // both-error {{no matching function for call to 'f'}}
+}

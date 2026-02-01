@@ -327,6 +327,35 @@ bool Context::evaluateStrlen(State &Parent, const Expr *E, uint64_t &Result) {
   return true;
 }
 
+bool Context::tryEvaluateObjectSize(State &Parent, const Expr *E, unsigned Kind,
+                                    uint64_t &Result) {
+  assert(Stk.empty());
+  Compiler<EvalEmitter> C(*this, *P, Parent, Stk);
+
+  auto PtrRes = C.interpretAsPointer(E, [&](const Pointer &Ptr) {
+    const Descriptor *DeclDesc = Ptr.getDeclDesc();
+    assert(DeclDesc);
+    QualType T = DeclDesc->getType().getNonReferenceType();
+    if (T->isIncompleteType() || T->isFunctionType() ||
+        !T->isConstantSizeType())
+      return false;
+
+    Pointer P = Ptr;
+    if (auto ObjectSize = evaluateBuiltinObjectSize(getASTContext(), Kind, P)) {
+      Result = *ObjectSize;
+      return true;
+    }
+    return false;
+  });
+
+  if (PtrRes.isInvalid()) {
+    C.cleanup();
+    Stk.clear();
+    return false;
+  }
+  return true;
+}
+
 const LangOptions &Context::getLangOpts() const { return Ctx.getLangOpts(); }
 
 static PrimType integralTypeToPrimTypeS(unsigned BitWidth) {
