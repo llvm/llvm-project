@@ -150,7 +150,6 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
   VGPRCriticalLimit -= std::min(VGPRLimitBias + ErrorMargin, VGPRCriticalLimit);
   SGPRExcessLimit -= std::min(SGPRLimitBias + ErrorMargin, SGPRExcessLimit);
   VGPRExcessLimit -= std::min(VGPRLimitBias + ErrorMargin, VGPRExcessLimit);
-
   LLVM_DEBUG(dbgs() << "VGPRCriticalLimit = " << VGPRCriticalLimit
                     << ", VGPRExcessLimit = " << VGPRExcessLimit
                     << ", SGPRCriticalLimit = " << SGPRCriticalLimit
@@ -1172,6 +1171,8 @@ void GCNScheduleDAGMILive::runSchedStages() {
 
       ScheduleDAGMILive::schedule();
       Stage->finalizeGCNRegion();
+      Stage->advanceRegion();
+      exitRegion();
     }
 
     Stage->finalizeGCNSchedStage();
@@ -1586,9 +1587,6 @@ void GCNSchedStage::finalizeGCNRegion() {
   if (DAG.RegionsWithIGLPInstrs[RegionIdx] &&
       StageID != GCNSchedStageID::UnclusteredHighRPReschedule)
     SavedMutations.swap(DAG.Mutations);
-
-  DAG.exitRegion();
-  advanceRegion();
 }
 
 void GCNSchedStage::checkScheduling() {
@@ -1657,10 +1655,12 @@ void GCNSchedStage::checkScheduling() {
 
   // Revert if this region's schedule would cause a drop in occupancy or
   // spilling.
-  if (shouldRevertScheduling(WavesAfter))
-    revertScheduling();
-  else
+  if (shouldRevertScheduling(WavesAfter)) {
+    modifyRegionSchedule(RegionIdx, DAG.BB, Unsched);
+    std::tie(DAG.RegionBegin, DAG.RegionEnd) = DAG.Regions[RegionIdx];
+  } else {
     DAG.Pressure[RegionIdx] = PressureAfter;
+  }
 }
 
 unsigned
@@ -1888,73 +1888,64 @@ bool GCNSchedStage::mayCauseSpilling(unsigned WavesAfter) {
   return false;
 }
 
-void GCNSchedStage::revertScheduling() {
-  LLVM_DEBUG(dbgs() << "Attempting to revert scheduling.\n");
-  DAG.RegionEnd = DAG.RegionBegin;
-  int SkippedDebugInstr = 0;
-  for (MachineInstr *MI : Unsched) {
-    if (MI->isDebugInstr()) {
-      ++SkippedDebugInstr;
-      continue;
-    }
+void GCNSchedStage::modifyRegionSchedule(unsigned RegionIdx,
+                                         MachineBasicBlock *MBB,
+                                         ArrayRef<MachineInstr *> MIOrder) {
+  assert(static_cast<size_t>(std::distance(DAG.Regions[RegionIdx].first,
+                                           DAG.Regions[RegionIdx].second)) ==
+             MIOrder.size() &&
+         "instruction number mismatch");
+  if (MIOrder.empty())
+    return;
 
+  LLVM_DEBUG(dbgs() << "Reverting scheduling for region " << RegionIdx << '\n');
+
+  // Reconstruct MI sequence by moving instructions in desired order before
+  // the current region's start.
+  MachineBasicBlock::iterator RegionEnd = DAG.Regions[RegionIdx].first;
+  for (MachineInstr *MI : MIOrder) {
+    // Either move the next MI in order before the end of the region or move the
+    // region end past the MI if it is at the correct position.
     MachineBasicBlock::iterator MII = MI->getIterator();
-    if (MII != DAG.RegionEnd) {
+    if (MII != RegionEnd) {
       // Will subsequent splice move MI up past a non-debug instruction?
       bool NonDebugReordered =
-          skipDebugInstructionsForward(DAG.RegionEnd, MII) != MII;
-      DAG.BB->splice(DAG.RegionEnd, DAG.BB, MI);
+          !MI->isDebugInstr() &&
+          skipDebugInstructionsForward(RegionEnd, MII) != MII;
+      MBB->splice(RegionEnd, MBB, MI);
       // Only update LiveIntervals information if non-debug instructions are
       // reordered. Otherwise debug instructions could cause code generation to
       // change.
       if (NonDebugReordered)
         DAG.LIS->handleMove(*MI, true);
+    } else {
+      ++RegionEnd;
+    }
+    if (MI->isDebugInstr()) {
+      LLVM_DEBUG(dbgs() << "Scheduling " << *MI);
+      continue;
     }
 
     // Reset read-undef flags and update them later.
-    for (auto &Op : MI->all_defs())
+    for (MachineOperand &Op : MI->all_defs())
       Op.setIsUndef(false);
     RegisterOperands RegOpers;
     RegOpers.collect(*MI, *DAG.TRI, DAG.MRI, DAG.ShouldTrackLaneMasks, false);
-    if (!MI->isDebugInstr()) {
-      if (DAG.ShouldTrackLaneMasks) {
-        // Adjust liveness and add missing dead+read-undef flags.
-        SlotIndex SlotIdx = DAG.LIS->getInstructionIndex(*MI).getRegSlot();
-        RegOpers.adjustLaneLiveness(*DAG.LIS, DAG.MRI, SlotIdx, MI);
-      } else {
-        // Adjust for missing dead-def flags.
-        RegOpers.detectDeadDefs(*MI, *DAG.LIS);
-      }
+    if (DAG.ShouldTrackLaneMasks) {
+      // Adjust liveness and add missing dead+read-undef flags.
+      SlotIndex SlotIdx = DAG.LIS->getInstructionIndex(*MI).getRegSlot();
+      RegOpers.adjustLaneLiveness(*DAG.LIS, DAG.MRI, SlotIdx, MI);
+    } else {
+      // Adjust for missing dead-def flags.
+      RegOpers.detectDeadDefs(*MI, *DAG.LIS);
     }
-    DAG.RegionEnd = MI->getIterator();
-    ++DAG.RegionEnd;
     LLVM_DEBUG(dbgs() << "Scheduling " << *MI);
   }
 
-  // After reverting schedule, debug instrs will now be at the end of the block
-  // and RegionEnd will point to the first debug instr. Increment RegionEnd
-  // pass debug instrs to the actual end of the scheduling region.
-  while (SkippedDebugInstr-- > 0)
-    ++DAG.RegionEnd;
-
-  // If Unsched.front() instruction is a debug instruction, this will actually
-  // shrink the region since we moved all debug instructions to the end of the
-  // block. Find the first instruction that is not a debug instruction.
-  DAG.RegionBegin = Unsched.front()->getIterator();
-  if (DAG.RegionBegin->isDebugInstr()) {
-    for (MachineInstr *MI : Unsched) {
-      if (MI->isDebugInstr())
-        continue;
-      DAG.RegionBegin = MI->getIterator();
-      break;
-    }
-  }
-
-  // Then move the debug instructions back into their correct place and set
-  // RegionBegin and RegionEnd if needed.
-  DAG.placeDebugValues();
-
-  DAG.Regions[RegionIdx] = std::pair(DAG.RegionBegin, DAG.RegionEnd);
+  // The region end doesn't change throughout scheduling since it itself is
+  // outside the region (whether that is a MBB end or a terminator MI).
+  assert(RegionEnd == DAG.Regions[RegionIdx].second && "region end mismatch");
+  DAG.Regions[RegionIdx].first = MIOrder.front();
 }
 
 bool RewriteMFMAFormStage::isRewriteCandidate(MachineInstr *MI) const {
