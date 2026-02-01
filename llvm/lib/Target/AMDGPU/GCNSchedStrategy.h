@@ -402,8 +402,12 @@ public:
   // Returns true if the new schedule may result in more spilling.
   bool mayCauseSpilling(unsigned WavesAfter);
 
-  // Attempt to revert scheduling for this region.
-  void revertScheduling();
+  /// Sets the schedule of region \p RegionIdx in block \p MBB to \p MIOrder.
+  /// The MIs in \p MIOrder must be exactly the same as the ones currently
+  /// existing inside the region, only in a different order that honors def-use
+  /// chains.
+  void modifyRegionSchedule(unsigned RegionIdx, MachineBasicBlock *MBB,
+                            ArrayRef<MachineInstr *> MIOrder);
 
   void advanceRegion() { RegionIdx++; }
 
