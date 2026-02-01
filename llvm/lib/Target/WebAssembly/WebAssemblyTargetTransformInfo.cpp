@@ -627,7 +627,9 @@ bool WebAssemblyTTIImpl::shouldExpandReduction(const IntrinsicInst *II) const {
   default:
     return true;
   case Intrinsic::vector_reduce_and:
-  case Intrinsic::vector_reduce_or:
-    return false;
+  case Intrinsic::vector_reduce_or: {
+    auto *VTy = dyn_cast<FixedVectorType>(II->getOperand(0)->getType());
+    return !VTy || VTy->getPrimitiveSizeInBits() != 128;
+  }
   }
 }

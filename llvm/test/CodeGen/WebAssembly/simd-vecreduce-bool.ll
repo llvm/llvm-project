@@ -244,13 +244,25 @@ define i1 @test_any_v7i1(<7 x i1> %x) {
 ; CHECK-LABEL: test_any_v7i1:
 ; CHECK:         .functype test_any_v7i1 (i32, i32, i32, i32, i32, i32, i32) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.or $push0=, $0, $1
-; CHECK-NEXT:    i32.or $push1=, $pop0, $2
-; CHECK-NEXT:    i32.or $push2=, $pop1, $3
-; CHECK-NEXT:    i32.or $push3=, $pop2, $4
-; CHECK-NEXT:    i32.or $push4=, $pop3, $5
-; CHECK-NEXT:    i32.or $push5=, $pop4, $6
-; CHECK-NEXT:    return $pop5
+; CHECK-NEXT:    v128.const $push0=, 0, 0, 0, 0, 0, 0, 0, 0
+; CHECK-NEXT:    i16x8.replace_lane $push1=, $pop0, 0, $0
+; CHECK-NEXT:    i16x8.replace_lane $push2=, $pop1, 1, $1
+; CHECK-NEXT:    i16x8.replace_lane $push3=, $pop2, 2, $2
+; CHECK-NEXT:    i16x8.replace_lane $push4=, $pop3, 3, $3
+; CHECK-NEXT:    i16x8.replace_lane $push5=, $pop4, 4, $4
+; CHECK-NEXT:    i16x8.replace_lane $push6=, $pop5, 5, $5
+; CHECK-NEXT:    i16x8.replace_lane $push17=, $pop6, 6, $6
+; CHECK-NEXT:    local.tee $push16=, $7=, $pop17
+; CHECK-NEXT:    i8x16.shuffle $push7=, $7, $7, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK-NEXT:    v128.or $push15=, $pop16, $pop7
+; CHECK-NEXT:    local.tee $push14=, $7=, $pop15
+; CHECK-NEXT:    i8x16.shuffle $push8=, $7, $7, 4, 5, 6, 7, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK-NEXT:    v128.or $push13=, $pop14, $pop8
+; CHECK-NEXT:    local.tee $push12=, $7=, $pop13
+; CHECK-NEXT:    i8x16.shuffle $push9=, $7, $7, 2, 3, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK-NEXT:    v128.or $push10=, $pop12, $pop9
+; CHECK-NEXT:    i16x8.extract_lane_u $push11=, $pop10, 0
+; CHECK-NEXT:    return $pop11
   %ret = call i1 @llvm.vector.reduce.or.v7i1(<7 x i1> %x)
   ret i1 %ret
 }
@@ -259,15 +271,25 @@ define i1 @test_all_v7i1(<7 x i1> %x) {
 ; CHECK-LABEL: test_all_v7i1:
 ; CHECK:         .functype test_all_v7i1 (i32, i32, i32, i32, i32, i32, i32) -> (i32)
 ; CHECK-NEXT:  # %bb.0:
-; CHECK-NEXT:    i32.and $push0=, $0, $1
-; CHECK-NEXT:    i32.and $push1=, $pop0, $2
-; CHECK-NEXT:    i32.and $push2=, $pop1, $3
-; CHECK-NEXT:    i32.and $push3=, $pop2, $4
-; CHECK-NEXT:    i32.and $push4=, $pop3, $5
-; CHECK-NEXT:    i32.and $push5=, $pop4, $6
-; CHECK-NEXT:    i32.const $push6=, 1
-; CHECK-NEXT:    i32.and $push7=, $pop5, $pop6
-; CHECK-NEXT:    return $pop7
+; CHECK-NEXT:    v128.const $push0=, 0, 0, 0, 0, 0, 0, 0, 1
+; CHECK-NEXT:    i16x8.replace_lane $push1=, $pop0, 0, $0
+; CHECK-NEXT:    i16x8.replace_lane $push2=, $pop1, 1, $1
+; CHECK-NEXT:    i16x8.replace_lane $push3=, $pop2, 2, $2
+; CHECK-NEXT:    i16x8.replace_lane $push4=, $pop3, 3, $3
+; CHECK-NEXT:    i16x8.replace_lane $push5=, $pop4, 4, $4
+; CHECK-NEXT:    i16x8.replace_lane $push6=, $pop5, 5, $5
+; CHECK-NEXT:    i16x8.replace_lane $push17=, $pop6, 6, $6
+; CHECK-NEXT:    local.tee $push16=, $7=, $pop17
+; CHECK-NEXT:    i8x16.shuffle $push7=, $7, $7, 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK-NEXT:    v128.and $push15=, $pop16, $pop7
+; CHECK-NEXT:    local.tee $push14=, $7=, $pop15
+; CHECK-NEXT:    i8x16.shuffle $push8=, $7, $7, 4, 5, 6, 7, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK-NEXT:    v128.and $push13=, $pop14, $pop8
+; CHECK-NEXT:    local.tee $push12=, $7=, $pop13
+; CHECK-NEXT:    i8x16.shuffle $push9=, $7, $7, 2, 3, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1, 0, 1
+; CHECK-NEXT:    v128.and $push10=, $pop12, $pop9
+; CHECK-NEXT:    i16x8.extract_lane_u $push11=, $pop10, 0
+; CHECK-NEXT:    return $pop11
   %ret = call i1 @llvm.vector.reduce.and.v7i1(<7 x i1> %x)
   ret i1 %ret
 }
