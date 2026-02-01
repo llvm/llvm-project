@@ -18,6 +18,8 @@
 #include "SPIRVSubtarget.h"
 #include "llvm/CodeGen/MachineInstrBuilder.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
+#include "llvm/CodeGen/TargetLowering.h"
+#include "llvm/IR/Instructions.h"
 #include "llvm/IR/IntrinsicsSPIRV.h"
 
 #define DEBUG_TYPE "spirv-lower"
@@ -26,7 +28,12 @@ using namespace llvm;
 
 SPIRVTargetLowering::SPIRVTargetLowering(const TargetMachine &TM,
                                          const SPIRVSubtarget &ST)
-    : TargetLowering(TM, ST), STI(ST) {}
+    : TargetLowering(TM, ST), STI(ST) {
+  // Avoid AtomicExpand treating all atomics as unsupported and lowering them
+  // to libcalls.
+  setMaxAtomicSizeInBitsSupported(64);
+  setMinCmpXchgSizeInBits(32);
+}
 
 // Returns true of the types logically match, as defined in
 // https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#OpCopyLogical.
@@ -625,4 +632,27 @@ bool SPIRVTargetLowering::insertLogicalCopyOnResult(
       .addUse(NewResultReg)
       .constrainAllUses(*STI.getInstrInfo(), *STI.getRegisterInfo(),
                         *STI.getRegBankInfo());
+}
+
+TargetLowering::AtomicExpansionKind
+SPIRVTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *RMW) const {
+  switch (RMW->getOperation()) {
+  case AtomicRMWInst::FAdd:
+  case AtomicRMWInst::FSub:
+  case AtomicRMWInst::FMin:
+  case AtomicRMWInst::FMax:
+    return AtomicExpansionKind::None;
+  case AtomicRMWInst::UIncWrap:
+  case AtomicRMWInst::UDecWrap:
+    return AtomicExpansionKind::CmpXChg;
+  default:
+    return TargetLowering::shouldExpandAtomicRMWInIR(RMW);
+  }
+}
+
+TargetLowering::AtomicExpansionKind
+SPIRVTargetLowering::shouldCastAtomicRMWIInIR(AtomicRMWInst *RMWI) const {
+  // Do not cast atomic exchange at all since SPIR-V natively supports
+  // floating-point and pointer exchanges.
+  return AtomicExpansionKind::None;
 }
