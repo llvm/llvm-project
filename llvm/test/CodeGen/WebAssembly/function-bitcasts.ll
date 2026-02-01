@@ -121,7 +121,7 @@ define void @test_store() {
 ; CHECK-NEXT: .functype test_load () -> (i32){{$}}
 ; CHECK-NEXT: i32.const   $push[[L0:[0-9]+]]=, 0{{$}}
 ; CHECK-NEXT: i32.load    $push[[L1:[0-9]+]]=, global_func($pop[[L0]]){{$}}
-; CHECK-NEXT: call_indirect $push{{[0-9]+}}=, $pop[[L1]]{{$}}
+; CHECK-NEXT: call_indirect __indirect_function_table, () -> (i32), $push{{[0-9]+}}=, $pop[[L1]]{{$}}
 define i32 @test_load() {
   %1 = load ptr, ptr @global_func
   %2 = call i32 %1()

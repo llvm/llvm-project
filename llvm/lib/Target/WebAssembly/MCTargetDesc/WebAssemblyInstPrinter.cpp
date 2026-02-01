@@ -49,6 +49,24 @@ void WebAssemblyInstPrinter::printInst(const MCInst *MI, uint64_t Address,
                                        const MCSubtargetInfo &STI,
                                        raw_ostream &OS) {
   switch (MI->getOpcode()) {
+  case WebAssembly::CALL_INDIRECT:
+  case WebAssembly::RET_CALL_INDIRECT: {
+    OS << "\t" << getMnemonic(*MI).first << "\t";
+    unsigned TypeOperand = 0;
+    unsigned TableOperand = 1;
+    if (MI->getOpcode() == WebAssembly::CALL_INDIRECT) {
+      unsigned NumDefs = MI->getOperand(0).getImm();
+      TypeOperand = 1 + NumDefs;      // Type 위치 보정
+      TableOperand = 1 + NumDefs + 1; // Table 위치 보정
+    }
+    printOperand(MI, TableOperand, OS);
+    OS << ", ";
+    printOperand(MI, TypeOperand, OS);
+    if (MI->getOpcode() == WebAssembly::CALL_INDIRECT) {
+      OS << ", ";
+    }
+    break;
+  }
   case WebAssembly::CALL_INDIRECT_S:
   case WebAssembly::RET_CALL_INDIRECT_S: {
     // A special case for call_indirect (and ret_call_indirect), if the table

@@ -94,7 +94,7 @@ define i32 @call_i32_binary(i32 %a, i32 %b) {
 ; CHECK-LABEL: call_indirect_void:
 ; CHECK-NEXT: .functype call_indirect_void (i32) -> (){{$}}
 ; CHECK-NEXT: local.get $push[[L0:[0-9]+]]=, 0{{$}}
-; CHECK-NEXT: {{^}} call_indirect $pop[[L0]]{{$}}
+; CHECK-NEXT: {{^}} call_indirect __indirect_function_table, () -> (), $pop[[L0]]{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @call_indirect_void(ptr %callee) {
   call void %callee()
@@ -104,7 +104,7 @@ define void @call_indirect_void(ptr %callee) {
 ; CHECK-LABEL: call_indirect_i32:
 ; CHECK-NEXT: .functype call_indirect_i32 (i32) -> (i32){{$}}
 ; CHECK-NEXT: local.get $push[[L0:[0-9]+]]=, 0{{$}}
-; CHECK-NEXT: {{^}} call_indirect $push[[NUM:[0-9]+]]=, $pop[[L0]]{{$}}
+; CHECK-NEXT: call_indirect __indirect_function_table, () -> (i32), $push[[NUM:[0-9]+]]=, $pop[[L0]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i32 @call_indirect_i32(ptr %callee) {
   %t = call i32 %callee()
@@ -114,7 +114,7 @@ define i32 @call_indirect_i32(ptr %callee) {
 ; CHECK-LABEL: call_indirect_i64:
 ; CHECK-NEXT: .functype call_indirect_i64 (i32) -> (i64){{$}}
 ; CHECK-NEXT: local.get $push[[L0:[0-9]+]]=, 0{{$}}
-; CHECK-NEXT: {{^}} call_indirect $push[[NUM:[0-9]+]]=, $pop[[L0]]{{$}}
+; CHECK-NEXT: {{^}} call_indirect __indirect_function_table, () -> (i64), $push[[NUM:[0-9]+]]=, $pop[[L0]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define i64 @call_indirect_i64(ptr %callee) {
   %t = call i64 %callee()
@@ -124,7 +124,7 @@ define i64 @call_indirect_i64(ptr %callee) {
 ; CHECK-LABEL: call_indirect_float:
 ; CHECK-NEXT: .functype call_indirect_float (i32) -> (f32){{$}}
 ; CHECK-NEXT: local.get $push[[L0:[0-9]+]]=, 0{{$}}
-; CHECK-NEXT: {{^}} call_indirect $push[[NUM:[0-9]+]]=, $pop[[L0]]{{$}}
+; CHECK-NEXT: {{^}} call_indirect __indirect_function_table, () -> (f32), $push[[NUM:[0-9]+]]=, $pop[[L0]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define float @call_indirect_float(ptr %callee) {
   %t = call float %callee()
@@ -134,7 +134,7 @@ define float @call_indirect_float(ptr %callee) {
 ; CHECK-LABEL: call_indirect_double:
 ; CHECK-NEXT: .functype call_indirect_double (i32) -> (f64){{$}}
 ; CHECK-NEXT: local.get $push[[L0:[0-9]+]]=, 0{{$}}
-; CHECK-NEXT: {{^}} call_indirect $push[[NUM:[0-9]+]]=, $pop[[L0]]{{$}}
+; CHECK-NEXT: {{^}} call_indirect __indirect_function_table, () -> (f64), $push[[NUM:[0-9]+]]=, $pop[[L0]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define double @call_indirect_double(ptr %callee) {
   %t = call double %callee()
@@ -144,7 +144,7 @@ define double @call_indirect_double(ptr %callee) {
 ; CHECK-LABEL: call_indirect_v128:
 ; CHECK-NEXT: .functype call_indirect_v128 (i32) -> (v128){{$}}
 ; CHECK-NEXT: local.get $push[[L0:[0-9]+]]=, 0{{$}}
-; CHECK-NEXT: {{^}} call_indirect $push[[NUM:[0-9]+]]=, $pop[[L0]]{{$}}
+; CHECK-NEXT: {{^}} call_indirect __indirect_function_table, () -> (v128), $push[[NUM:[0-9]+]]=, $pop[[L0]]{{$}}
 ; CHECK-NEXT: return $pop[[NUM]]{{$}}
 define <16 x i8> @call_indirect_v128(ptr %callee) {
   %t = call <16 x i8> %callee()
@@ -155,7 +155,7 @@ define <16 x i8> @call_indirect_v128(ptr %callee) {
 ; CHECK-NEXT: .functype call_indirect_arg (i32, i32) -> (){{$}}
 ; CHECK-NEXT: local.get $push[[L0:[0-9]+]]=, 1{{$}}
 ; CHECK-NEXT: local.get $push[[L1:[0-9]+]]=, 0{{$}}
-; CHECK-NEXT: {{^}} call_indirect $pop[[L0]], $pop[[L1]]{{$}}
+; CHECK-NEXT: {{^}} call_indirect __indirect_function_table, (i32) -> (), $pop[[L0]], $pop[[L1]]{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @call_indirect_arg(ptr %callee, i32 %arg) {
   call void %callee(i32 %arg)
@@ -167,7 +167,7 @@ define void @call_indirect_arg(ptr %callee, i32 %arg) {
 ; CHECK-NEXT: local.get $push[[L0:[0-9]+]]=, 1{{$}}
 ; CHECK-NEXT: local.get $push[[L1:[0-9]+]]=, 2{{$}}
 ; CHECK-NEXT: local.get $push[[L2:[0-9]+]]=, 0{{$}}
-; CHECK-NEXT: {{^}} call_indirect $push[[NUM:[0-9]+]]=, $pop[[L0]], $pop[[L1]], $pop[[L2]]{{$}}
+; CHECK-NEXT: {{^}} call_indirect __indirect_function_table, (i32, i32) -> (i32), $push[[NUM:[0-9]+]]=, $pop[[L0]], $pop[[L1]], $pop[[L2]]{{$}}
 ; CHECK-NEXT: drop $pop[[NUM]]{{$}}
 ; CHECK-NEXT: return{{$}}
 define void @call_indirect_arg_2(ptr %callee, i32 %arg, i32 %arg2) {
@@ -219,7 +219,7 @@ define void @coldcc_tail_call_void_nullary() {
 ; CHECK-NEXT: i32.const	$push[[L3:[0-9]+]]=, void_nullary{{$}}
 ; CHECK-NEXT: i32.const	$push[[L2:[0-9]+]]=, other_void_nullary{{$}}
 ; CHECK-NEXT: i32.add 	$push[[L4:[0-9]+]]=, $pop[[L3]], $pop[[L2]]{{$}}
-; CHECK-NEXT: call_indirect	$pop[[L4]]{{$}}
+; CHECK-NEXT: call_indirect	__indirect_function_table, () -> (), $pop[[L4]]{{$}}
 ; CHECK-NEXT: call void_nullary{{$}}
 ; CHECK-NEXT: return{{$}}
 declare void @vararg_func(...)
@@ -243,7 +243,7 @@ bb2:
 ; CHECK-NEXT: local.get  $push{{.*}}=, [[L0]]
 ; CHECK-NEXT: i32.const  $push{{.*}}=, 12
 ; CHECK-NEXT: i32.add
-; CHECK-NEXT: call_indirect  $pop{{.*}}
+; CHECK-NEXT: call_indirect __indirect_function_table, () -> (), $pop{{.*}}
 define void @call_indirect_alloca() {
 entry:
   %ptr = alloca i32, align 4
@@ -254,9 +254,9 @@ entry:
 ; Calling non-functional globals should be lowered to call_indirects.
 ; CHECK-LABEL: call_indirect_int:
 ; CHECK:      i32.const  $push[[L0:[0-9]+]]=, global_i8
-; CHECK-NEXT: call_indirect  $pop[[L0]]
+; CHECK-NEXT: call_indirect __indirect_function_table, () -> (), $pop[[L0]]
 ; CHECK-NEXT: i32.const  $push[[L1:[0-9]+]]=, global_i32
-; CHECK-NEXT: call_indirect  $pop[[L1]]
+; CHECK-NEXT: call_indirect __indirect_function_table, () -> (), $pop[[L1]]
 @global_i8 = global i8 0
 @global_i32 = global i32 0
 define void @call_indirect_int() {
@@ -268,9 +268,9 @@ define void @call_indirect_int() {
 ; Calling aliases of non-functional globals should be lowered to call_indirects.
 ; CHECK-LABEL: call_indirect_int_alias:
 ; CHECK:      i32.const  $push[[L0:[0-9]+]]=, global_i8_alias
-; CHECK-NEXT: call_indirect  $pop[[L0]]
+; CHECK-NEXT: call_indirect __indirect_function_table, () -> (), $pop[[L0]]
 ; CHECK-NEXT: i32.const  $push[[L1:[0-9]+]]=, global_i32_alias
-; CHECK-NEXT: call_indirect  $pop[[L1]]
+; CHECK-NEXT: call_indirect __indirect_function_table, () -> (), $pop[[L1]]
 @global_i8_alias = alias i8, ptr @global_i8
 @global_i32_alias = alias i32, ptr @global_i32
 define void @call_indirect_int_alias() {
@@ -284,7 +284,7 @@ define void @call_indirect_int_alias() {
 ; CHECK-LABEL: call_func_alias:
 ; SLOW:      call  func_alias
 ; FAST:      i32.const  $push[[L0:[0-9]+]]=, func_alias
-; FAST-NEXT: call_indirect  $pop[[L0]]
+; FAST-NEXT: call_indirect __indirect_function_table, () -> (), $pop[[L0]]
 @func_alias = alias void (), ptr @call_void_nullary
 define void @call_func_alias() {
   call void @func_alias()
