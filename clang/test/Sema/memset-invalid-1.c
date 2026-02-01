@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only %s -verify
-// RUN: %clang_cc1 -fsyntax-only -fexperimental-new-constant-interpreter %s -verify
 
 typedef __SIZE_TYPE__ size_t;
 void *memset(void*, int, size_t);

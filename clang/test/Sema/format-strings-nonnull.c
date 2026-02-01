@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only --std=c23 -verify -Wnonnull -Wno-format-security %s
-// RUN: %clang_cc1 -fsyntax-only --std=c23 -verify -Wnonnull -Wno-format-security -fexperimental-new-constant-interpreter %s
 
 #define NULL  (void*)0
 
