@@ -2713,10 +2713,10 @@ reportNewIrLegalizationFatalError(const Pattern &pattern,
   auto modifiedOpNames = llvm::map_range(
       modifiedOps, [](Operation *op) { return op->getName().getStringRef(); });
   llvm::reportFatalInternalError("pattern '" + pattern.getDebugName() +
-                           "' produced IR that could not be legalized. " +
-                           "new ops: {" + llvm::join(newOpNames, ", ") + "}, " +
-                           "modified ops: {" +
-                           llvm::join(modifiedOpNames, ", ") + "}");
+                                 "' produced IR that could not be legalized. " +
+                                 "new ops: {" + llvm::join(newOpNames, ", ") +
+                                 "}, " + "modified ops: {" +
+                                 llvm::join(modifiedOpNames, ", ") + "}");
 }
 
 LogicalResult OperationLegalizer::legalizeWithPattern(Operation *op) {
@@ -2773,8 +2773,9 @@ LogicalResult OperationLegalizer::legalizeWithPattern(Operation *op) {
       if (checkOp && topLevelFingerPrint) {
         OperationFingerPrint fingerPrintAfterPattern(checkOp);
         if (fingerPrintAfterPattern != *topLevelFingerPrint)
-          llvm::reportFatalInternalError("pattern '" + pattern.getDebugName() +
-                                   "' returned failure but IR did change");
+          llvm::reportFatalInternalError(
+              "pattern '" + pattern.getDebugName() +
+              "' returned failure but IR did change");
       }
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
     }
@@ -2871,8 +2872,9 @@ LogicalResult OperationLegalizer::legalizePatternResult(
       return hasRewrite<ModifyOperationRewrite>(newRewrites, op);
     };
     if (!replacedRoot() && !updatedRootInPlace())
-      llvm::reportFatalInternalError("expected pattern to replace the root operation "
-                               "or modify it in place");
+      llvm::reportFatalInternalError(
+          "expected pattern to replace the root operation "
+          "or modify it in place");
   }
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 
