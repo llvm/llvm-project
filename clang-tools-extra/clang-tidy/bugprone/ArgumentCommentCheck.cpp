@@ -271,9 +271,8 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
   if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(Callee)) {
     if (Ctor->isInheritingConstructor()) {
       if (const auto *BaseCtor =
-              Ctor->getInheritedConstructor().getConstructor()) {
+              Ctor->getInheritedConstructor().getConstructor())
         Callee = BaseCtor->getFirstDecl();
-      }
     }
   }
   const unsigned NumArgs =
