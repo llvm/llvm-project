@@ -21,9 +21,9 @@
 
 struct OmniConv {
   OmniConv(const auto&);
-  friend bool operator==(OmniConv, OmniConv); // found by ADL via things related to OmniConv
+  friend bool operator==(OmniConv, OmniConv) = default; // found by ADL via things related to OmniConv
 
-  friend bool operator<=>(OmniConv, OmniConv);
+  friend auto operator<=>(OmniConv, OmniConv) = default;
 };
 
 void test() {
