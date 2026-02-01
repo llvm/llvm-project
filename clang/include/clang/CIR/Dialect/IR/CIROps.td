@@ -1505,7 +1505,7 @@ def CIR_LabelOp : CIR_Op<"label", [AlwaysSpeculatable]> {
   let hasVerifier = 1;
 
   let customLLVMLoweringConstructorDecl =
-    LoweringBuilders<(ins "LLVMBlockAddressInfo &":$blockInfoAddr)>;
+    LoweringBuilders<(ins "[[maybe_unused]] LLVMBlockAddressInfo &":$blockInfoAddr)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -5255,44 +5255,6 @@ def CIR_PrefetchOp : CIR_Op<"prefetch"> {
 }
 
 //===----------------------------------------------------------------------===//
-// ClearCacheOp
-//===----------------------------------------------------------------------===//
-
-def CIR_ClearCacheOp : CIR_Op<"clear_cache", [
-  AllTypesMatch<["begin", "end"]>
-]> {
-  let summary = "Clear the processor's instruction cache if required.";
-  let description = [{
-    The `cir.clear_cache` operation provides a representation for the
-    `__builtin__clear_cache` builtin and corresponds to the
-    `llvm.clear_cache` intrinsic in LLVM IR.
-
-    This operation ensures visibility of modifications in the specified
-    range to the execution unit of the processor. On targets with
-    non-unified instruction and data cache, the implementation flushes
-    the instruction cache.
-
-    On platforms with coherent instruction and data caches (e.g., x86),
-    this intrinsic is a nop. On platforms with non-coherent instruction
-    and data cache (e.g., ARM, MIPS), the operation will be lowered
-    either to appropriate instructions or a system call, if cache
-    flushing requires special privileges.
-
-    The default behavior is to emit a call to `__clear_cache` from the
-    runtime library.
-
-    This operation does not empty the instruction pipeline. Modifications
-    of the current function are outside the scope of the operation.
-  }];
-
-  let arguments = (ins CIR_VoidPtrType:$begin, CIR_VoidPtrType:$end);
-  let assemblyFormat = [{
-    $begin `,` $end `:` qualified(type($begin))
-    attr-dict
-  }];
-}
-
-//===----------------------------------------------------------------------===//
 // ObjSizeOp
 //===----------------------------------------------------------------------===//
 
@@ -6236,7 +6198,7 @@ def CIR_BlockAddressOp : CIR_Op<"block_address", [Pure]> {
   }];
 
   let customLLVMLoweringConstructorDecl =
-    LoweringBuilders<(ins "LLVMBlockAddressInfo &":$blockInfoAddr)>;
+    LoweringBuilders<(ins "[[maybe_unused]] LLVMBlockAddressInfo &":$blockInfoAddr)>;
 }
 
 //===----------------------------------------------------------------------===//
