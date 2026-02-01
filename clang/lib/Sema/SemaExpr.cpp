@@ -1919,18 +1919,26 @@ ExprResult Sema::CreateGenericSelectionExpr(
   // Look at the canonical type of the controlling expression in case it was a
   // deduced type like __auto_type. However, when issuing diagnostics, use the
   // type the user wrote in source rather than the canonical one.
+  //
+  // Note: there is an edge case for this in C where you can get a
+  // qualified rvalue and the qualifiers are not stripped by the lvalue
+  // conversion applied above. e.g.,
+  //
+  //   struct { const int i; } foo();
+  //   _Generic(foo().i, ...);
+  //
+  // Therefore, in C, we will still ask for the non-atomic, unqualified
+  // type despite those qualifiers generally being stripped above.
+  QualType ControllingTypeToUse =
+      ControllingExpr ? ControllingExpr->getType() : ControllingType->getType();
+  ControllingTypeToUse = ControllingTypeToUse.getCanonicalType();
+  if (!getLangOpts().CPlusPlus && ControllingExpr)
+    ControllingTypeToUse = ControllingTypeToUse.getAtomicUnqualifiedType();
   for (unsigned i = 0; i < NumAssocs; ++i) {
     if (!Types[i])
       DefaultIndex = i;
-    else if (ControllingExpr &&
-             Context.typesAreCompatible(
-                 ControllingExpr->getType().getCanonicalType(),
-                 Types[i]->getType()))
-      CompatIndices.push_back(i);
-    else if (ControllingType &&
-             Context.typesAreCompatible(
-                 ControllingType->getType().getCanonicalType(),
-                 Types[i]->getType()))
+    else if (Context.typesAreCompatible(ControllingTypeToUse,
+                                        Types[i]->getType()))
       CompatIndices.push_back(i);
   }
 

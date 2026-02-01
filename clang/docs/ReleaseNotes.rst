@@ -222,6 +222,10 @@ Bug Fixes in This Version
 - Fixed a preprocessor crash in ``__has_cpp_attribute`` on incomplete scoped attributes. (#GH178098)
 - Fixes an assertion failure when evaluating ``__underlying_type`` on enum redeclarations. (#GH177943)
 
+- When passing a qualified rvalue as the controlling expression of a
+  ``_Generic`` selection expression, Clang now properly strips the qualifiers.
+  Fixes #GH96713
+
 Bug Fixes to Compiler Builtins
 ^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
 
