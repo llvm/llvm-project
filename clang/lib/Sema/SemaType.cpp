@@ -2259,6 +2259,8 @@ QualType Sema::BuildArrayType(QualType T, ArraySizeModifier ASM,
              isSFINAEContext() ? diag::err_typecheck_zero_array_size
                                : diag::ext_typecheck_zero_array_size)
             << 0 << ArraySize->getSourceRange();
+        if (isSFINAEContext())
+          return QualType();
       }
 
       // Is the array too large?
@@ -2465,7 +2467,7 @@ QualType Sema::BuildMatrixType(QualType ElementTy, Expr *NumRows, Expr *NumCols,
 
   // Check element type, if it is not dependent.
   if (!ElementTy->isDependentType() &&
-      !MatrixType::isValidElementType(ElementTy)) {
+      !MatrixType::isValidElementType(ElementTy, getLangOpts())) {
     Diag(AttrLoc, diag::err_attribute_invalid_matrix_type) << ElementTy;
     return QualType();
   }
@@ -3796,8 +3798,10 @@ static CallingConv getCCForDeclaratorChunk(
       }
     }
   }
+
   for (const ParsedAttr &AL : llvm::concat<ParsedAttr>(
-           D.getDeclSpec().getAttributes(), D.getAttributes())) {
+           D.getDeclSpec().getAttributes(), D.getAttributes(),
+           D.getDeclarationAttributes())) {
     if (AL.getKind() == ParsedAttr::AT_DeviceKernel) {
       CC = CC_DeviceKernel;
       break;
@@ -4830,66 +4834,65 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       IsQualifiedFunction =
           FTI.hasMethodTypeQualifiers() || FTI.hasRefQualifier();
 
+      auto IsClassType = [&](CXXScopeSpec &SS) {
+        // If there already was an problem with the scope, don’t issue another
+        // error about the explicit object parameter.
+        return SS.isInvalid() ||
+               isa_and_present<CXXRecordDecl>(S.computeDeclContext(SS));
+      };
+
+      // C++23 [dcl.fct]p6:
+      //
+      // An explicit-object-parameter-declaration is a parameter-declaration
+      // with a this specifier. An explicit-object-parameter-declaration shall
+      // appear only as the first parameter-declaration of a
+      // parameter-declaration-list of one of:
+      //
+      // - a declaration of a member function or member function template
+      //   ([class.mem]), or
+      //
+      // - an explicit instantiation ([temp.explicit]) or explicit
+      //   specialization ([temp.expl.spec]) of a templated member function,
+      //   or
+      //
+      // - a lambda-declarator [expr.prim.lambda].
+      DeclaratorContext C = D.getContext();
+      ParmVarDecl *First =
+          FTI.NumParams ? dyn_cast_if_present<ParmVarDecl>(FTI.Params[0].Param)
+                        : nullptr;
+
+      bool IsFunctionDecl = D.getInnermostNonParenChunk() == &DeclType;
+      if (First && First->isExplicitObjectParameter() &&
+          C != DeclaratorContext::LambdaExpr &&
+
+          // Either not a member or nested declarator in a member.
+          //
+          // Note that e.g. 'static' or 'friend' declarations are accepted
+          // here; we diagnose them later when we build the member function
+          // because it's easier that way.
+          (C != DeclaratorContext::Member || !IsFunctionDecl) &&
+
+          // Allow out-of-line definitions of member functions.
+          !IsClassType(D.getCXXScopeSpec())) {
+        if (IsFunctionDecl)
+          S.Diag(First->getBeginLoc(),
+                 diag::err_explicit_object_parameter_nonmember)
+              << /*non-member*/ 2 << /*function*/ 0 << First->getSourceRange();
+        else
+          S.Diag(First->getBeginLoc(),
+                 diag::err_explicit_object_parameter_invalid)
+              << First->getSourceRange();
+
+        // Do let non-member function have explicit parameters
+        // to not break assumptions elsewhere in the code.
+        First->setExplicitObjectParameterLoc(SourceLocation());
+        D.setInvalidType();
+        AreDeclaratorChunksValid = false;
+      }
+
       // Check for auto functions and trailing return type and adjust the
       // return type accordingly.
       if (!D.isInvalidType()) {
-        auto IsClassType = [&](CXXScopeSpec &SS) {
-          // If there already was an problem with the scope, don’t issue another
-          // error about the explicit object parameter.
-          return SS.isInvalid() ||
-                 isa_and_present<CXXRecordDecl>(S.computeDeclContext(SS));
-        };
-
-        // C++23 [dcl.fct]p6:
-        //
-        // An explicit-object-parameter-declaration is a parameter-declaration
-        // with a this specifier. An explicit-object-parameter-declaration shall
-        // appear only as the first parameter-declaration of a
-        // parameter-declaration-list of one of:
-        //
-        // - a declaration of a member function or member function template
-        //   ([class.mem]), or
-        //
-        // - an explicit instantiation ([temp.explicit]) or explicit
-        //   specialization ([temp.expl.spec]) of a templated member function,
-        //   or
-        //
-        // - a lambda-declarator [expr.prim.lambda].
-        DeclaratorContext C = D.getContext();
-        ParmVarDecl *First =
-            FTI.NumParams
-                ? dyn_cast_if_present<ParmVarDecl>(FTI.Params[0].Param)
-                : nullptr;
-
-        bool IsFunctionDecl = D.getInnermostNonParenChunk() == &DeclType;
-        if (First && First->isExplicitObjectParameter() &&
-            C != DeclaratorContext::LambdaExpr &&
-
-            // Either not a member or nested declarator in a member.
-            //
-            // Note that e.g. 'static' or 'friend' declarations are accepted
-            // here; we diagnose them later when we build the member function
-            // because it's easier that way.
-            (C != DeclaratorContext::Member || !IsFunctionDecl) &&
-
-            // Allow out-of-line definitions of member functions.
-            !IsClassType(D.getCXXScopeSpec())) {
-          if (IsFunctionDecl)
-            S.Diag(First->getBeginLoc(),
-                   diag::err_explicit_object_parameter_nonmember)
-                << /*non-member*/ 2 << /*function*/ 0
-                << First->getSourceRange();
-          else
-            S.Diag(First->getBeginLoc(),
-                   diag::err_explicit_object_parameter_invalid)
-                << First->getSourceRange();
-          // Do let non-member function have explicit parameters
-          // to not break assumptions elsewhere in the code.
-          First->setExplicitObjectParameterLoc(SourceLocation());
-          D.setInvalidType();
-          AreDeclaratorChunksValid = false;
-        }
-
         // trailing-return-type is only required if we're declaring a function,
         // and not, for instance, a pointer to a function.
         if (D.getDeclSpec().hasAutoTypeSpec() &&
@@ -5067,8 +5070,11 @@ static TypeSourceInfo *GetFullTypeForDeclarator(TypeProcessingState &state,
       // cv-qualifiers on return types are pointless except when the type is a
       // class type in C++.
       if ((T.getCVRQualifiers() || T->isAtomicType()) &&
+          // A dependent type or an undeduced type might later become a class
+          // type.
           !(S.getLangOpts().CPlusPlus &&
-            (T->isDependentType() || T->isRecordType()))) {
+            (T->isRecordType() || T->isDependentType() ||
+             T->isUndeducedAutoType()))) {
         if (T->isVoidType() && !S.getLangOpts().CPlusPlus &&
             D.getFunctionDefinitionKind() ==
                 FunctionDefinitionKind::Definition) {
@@ -7170,6 +7176,14 @@ static bool HandleWebAssemblyFuncrefAttr(TypeProcessingState &State,
   // already been applied, flag it.
   if (Attrs[NewAttrKind]) {
     S.Diag(PAttr.getLoc(), diag::warn_duplicate_attribute_exact) << PAttr;
+    return true;
+  }
+
+  // Check that the type is a function pointer type.
+  QualType Desugared = QT.getDesugaredType(S.Context);
+  const auto *Ptr = dyn_cast<PointerType>(Desugared);
+  if (!Ptr || !Ptr->getPointeeType()->isFunctionType()) {
+    S.Diag(PAttr.getLoc(), diag::err_attribute_webassembly_funcref);
     return true;
   }
 
@@ -9874,10 +9888,6 @@ static QualType GetEnumUnderlyingType(Sema &S, QualType BaseType,
 
   QualType Underlying = ED->getIntegerType();
   if (Underlying.isNull()) {
-    // This is an enum without a fixed underlying type which we skipped parsing
-    // the body because we saw its definition previously in another module.
-    // Use the definition's integer type in that case.
-    assert(ED->isThisDeclarationADemotedDefinition());
     Underlying = ED->getDefinition()->getIntegerType();
     assert(!Underlying.isNull());
   }

@@ -1,7 +1,7 @@
-; RUN: opt -S -passes=lowertypetests -mtriple=i686-unknown-linux-gnu %s | FileCheck --check-prefixes=X86,X86-LINUX,NATIVE,JT8 %s
-; RUN: opt -S -passes=lowertypetests -mtriple=x86_64-unknown-linux-gnu %s | FileCheck --check-prefixes=X86,X86-LINUX,NATIVE,JT8 %s
-; RUN: opt -S -passes=lowertypetests -mtriple=i686-pc-win32 %s | FileCheck --check-prefixes=X86,X86-WIN32,NATIVE,JT8 %s
-; RUN: opt -S -passes=lowertypetests -mtriple=x86_64-pc-win32 %s | FileCheck --check-prefixes=X86,X86-WIN32,NATIVE,JT8 %s
+; RUN: opt -S -passes=lowertypetests -mtriple=i686-unknown-linux-gnu %s | FileCheck --check-prefixes=X86,NATIVE,JT8 %s
+; RUN: opt -S -passes=lowertypetests -mtriple=x86_64-unknown-linux-gnu %s | FileCheck --check-prefixes=X86,NATIVE,JT8 %s
+; RUN: opt -S -passes=lowertypetests -mtriple=i686-pc-win32 %s | FileCheck --check-prefixes=X86,NATIVE,JT8 %s
+; RUN: opt -S -passes=lowertypetests -mtriple=x86_64-pc-win32 %s | FileCheck --check-prefixes=X86,NATIVE,JT8 %s
 ; RUN: opt -S -passes=lowertypetests -mtriple=riscv32-unknown-linux-gnu %s | FileCheck --check-prefixes=RISCV,NATIVE,JT8 %s
 ; RUN: opt -S -passes=lowertypetests -mtriple=riscv64-unknown-linux-gnu %s | FileCheck --check-prefixes=RISCV,NATIVE,JT8 %s
 ; RUN: opt -S -passes=lowertypetests -mtriple=wasm32-unknown-unknown %s | FileCheck --check-prefix=WASM32 %s
@@ -114,8 +114,7 @@ define i1 @foo(ptr %p) {
 
 ; NATIVE-SAME: "s"(ptr @g.cfi)
 
-; X86-LINUX: attributes #[[ATTR]] = { naked nocf_check noinline }
-; X86-WIN32: attributes #[[ATTR]] = { nocf_check noinline }
+; X86: attributes #[[ATTR]] = { naked nocf_check noinline }
 ; ARM: attributes #[[ATTR]] = { naked noinline
 ; THUMB: attributes #[[ATTR]] = { naked noinline "target-cpu"="cortex-a8" "target-features"="+thumb-mode" }
 ; THUMBV6M: attributes #[[ATTR]] = { naked noinline "target-features"="+thumb-mode" }

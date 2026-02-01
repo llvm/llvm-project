@@ -22,7 +22,7 @@
 // Verify that the input files are added before the SDL files in llvm-link command
 // This tests the ordering fix to match HIPAMD behavior
 // SDL-LINK: "{{.*}}clang-offload-bundler" "-unbundle" "-type=a" "-input={{.*}}libSDL.a" "-targets=hip-spirv64-unknown-unknown-unknown-generic" "-output=[[SDL_A:.*\.a]]" "-allow-missing-bundles"
-// SDL-LINK: "{{.*}}llvm-link" "{{.*}}.bc" "[[SDL_A]]" "-o"
+// SDL-LINK: "{{.*}}llvm-link" "-o" "{{.*}}.bc" "{{.*}}.bc" "[[SDL_A]]"
 
 // SDL-ARCHIVE: "{{.*}}clang-offload-bundler" "-unbundle" "-type=a" "-input={{.*}}libSDL.a" "-targets=hip-spirv64-unknown-unknown-unknown-generic" "-output=[[SDL_A:.*\.a]]" "-allow-missing-bundles"  
-// SDL-ARCHIVE: "{{.*}}llvm-link" "{{.*}}.bc" "[[SDL_A]]" "-o"
+// SDL-ARCHIVE: "{{.*}}llvm-link" "-o" "{{.*}}.bc" "{{.*}}.bc" "[[SDL_A]]"

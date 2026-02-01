@@ -5,7 +5,7 @@ add_libc_test(
   SRCS
     raw_mutex_test.cpp
   DEPENDS
-    libc.src.__support.threads.linux.raw_mutex
+    libc.src.__support.threads.raw_mutex
     libc.src.sys.mman.mmap
     libc.src.sys.mman.munmap
     libc.src.stdlib.exit

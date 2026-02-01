@@ -498,6 +498,11 @@ static void InitializeStandardPredefinedMacros(const TargetInfo &TI,
   Builder.defineMacro("__STDC_EMBED_EMPTY__",
                       llvm::itostr(static_cast<int>(EmbedResult::Empty)));
 
+  // We define this to '1' here to indicate that we only support '_Defer'
+  // as a keyword.
+  if (LangOpts.DeferTS)
+    Builder.defineMacro("__STDC_DEFER_TS25755__", "1");
+
   if (LangOpts.ObjC)
     Builder.defineMacro("__OBJC__");
 
@@ -1636,5 +1641,12 @@ void clang::InitializePreprocessor(Preprocessor &PP,
   if (FEOpts.DashX.isPreprocessed()) {
     PP.getDiagnostics().setSeverity(diag::ext_pp_gnu_line_directive,
                                     diag::Severity::Ignored, SourceLocation());
+
+    // Compiling with -xc++-cpp-output should suppress module directive
+    // recognition. __preprocessed_module can either get the directive treatment
+    // or be accepted directly by phase 7 in a module declaration. In the latter
+    // case, __preprocessed_module will work even if there are preprocessing
+    // tokens on the same line that precede it.
+    PP.markMainFileAsPreprocessedModuleFile();
   }
 }

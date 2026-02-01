@@ -22,7 +22,7 @@ define void @licm_replicate_call(double %x, ptr %dst) {
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul <2 x double> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = fmul <2 x double> [[TMP3]], [[TMP5]]
 ; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr inbounds double, ptr [[DST]], i64 [[INDEX]]
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds double, ptr [[TMP8]], i32 2
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr inbounds double, ptr [[TMP8]], i64 2
 ; CHECK-NEXT:    store <2 x double> [[TMP6]], ptr [[TMP8]], align 8
 ; CHECK-NEXT:    store <2 x double> [[TMP7]], ptr [[TMP10]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

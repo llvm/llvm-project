@@ -69,10 +69,10 @@ static cl::opt<bool> UseMIPSCCMovInsn("use-riscv-mips-ccmov",
                                       cl::desc("Use 'mips.ccmov' instruction"),
                                       cl::init(true), cl::Hidden);
 
-static cl::opt<bool> EnablePExtCodeGen(
-    "enable-p-ext-codegen",
-    cl::desc("Turn on P Extension codegen(This is a temporary switch where "
-             "only partial codegen is currently supported)"),
+static cl::opt<bool> EnablePExtSIMDCodeGen(
+    "riscv-enable-p-ext-simd-codegen",
+    cl::desc("Turn on P Extension SIMD codegen(This is a temporary switch "
+             "where only partial codegen is currently supported)"),
     cl::init(false), cl::Hidden);
 
 void RISCVSubtarget::anchor() {}
@@ -109,7 +109,8 @@ RISCVSubtarget::RISCVSubtarget(const Triple &TT, StringRef CPU,
                                unsigned RVVVectorBitsMax,
                                const TargetMachine &TM)
     : RISCVGenSubtargetInfo(TT, CPU, TuneCPU, FS),
-      RVVVectorBitsMin(RVVVectorBitsMin), RVVVectorBitsMax(RVVVectorBitsMax),
+      IsLittleEndian(TT.isLittleEndian()), RVVVectorBitsMin(RVVVectorBitsMin),
+      RVVVectorBitsMax(RVVVectorBitsMax),
       FrameLowering(
           initializeSubtargetDependencies(TT, CPU, TuneCPU, FS, ABIName)),
       InstrInfo(*this), TLInfo(TM, *this) {
@@ -153,8 +154,18 @@ bool RISCVSubtarget::useConstantPoolForLargeInts() const {
   return !RISCVDisableUsingConstantPoolForLargeInts;
 }
 
-bool RISCVSubtarget::enablePExtCodeGen() const {
-  return HasStdExtP && EnablePExtCodeGen;
+bool RISCVSubtarget::enablePExtSIMDCodeGen() const {
+  return HasStdExtP && EnablePExtSIMDCodeGen;
+}
+
+// Returns true if VT is a P extension packed SIMD type that fits in XLen.
+bool RISCVSubtarget::isPExtPackedType(MVT VT) const {
+  if (!enablePExtSIMDCodeGen())
+    return false;
+
+  if (is64Bit())
+    return VT == MVT::v8i8 || VT == MVT::v4i16 || VT == MVT::v2i32;
+  return VT == MVT::v4i8 || VT == MVT::v2i16;
 }
 
 unsigned RISCVSubtarget::getMaxBuildIntsCost() const {

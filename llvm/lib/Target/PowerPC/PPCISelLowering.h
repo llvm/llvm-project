@@ -352,10 +352,10 @@ namespace llvm {
     bool shouldInlineQuadwordAtomics() const;
 
     TargetLowering::AtomicExpansionKind
-    shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const override;
+    shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const override;
 
     TargetLowering::AtomicExpansionKind
-    shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const override;
+    shouldExpandAtomicCmpXchgInIR(const AtomicCmpXchgInst *AI) const override;
 
     Value *emitMaskedAtomicRMWIntrinsic(IRBuilderBase &Builder,
                                         AtomicRMWInst *AI, Value *AlignedAddr,
@@ -492,8 +492,7 @@ namespace llvm {
 
     bool isOffsetFoldingLegal(const GlobalAddressSDNode *GA) const override;
 
-    bool getTgtMemIntrinsic(IntrinsicInfo &Info,
-                            const CallInst &I,
+    bool getTgtMemIntrinsic(IntrinsicInfo &Info, const CallBase &I,
                             MachineFunction &MF,
                             unsigned Intrinsic) const override;
 
@@ -536,8 +535,10 @@ namespace llvm {
 
     /// createFastISel - This method returns a target-specific FastISel object,
     /// or null if the target does not support "fast" instruction selection.
-    FastISel *createFastISel(FunctionLoweringInfo &FuncInfo,
-                             const TargetLibraryInfo *LibInfo) const override;
+    FastISel *
+    createFastISel(FunctionLoweringInfo &FuncInfo,
+                   const TargetLibraryInfo *LibInfo,
+                   const LibcallLoweringInfo *LibcallLowering) const override;
 
     /// Returns true if an argument of type Ty needs to be passed in a
     /// contiguous block of registers in calling convention CallConv.
@@ -936,8 +937,9 @@ namespace llvm {
 
   namespace PPC {
 
-    FastISel *createFastISel(FunctionLoweringInfo &FuncInfo,
-                             const TargetLibraryInfo *LibInfo);
+  FastISel *createFastISel(FunctionLoweringInfo &FuncInfo,
+                           const TargetLibraryInfo *LibInfo,
+                           const LibcallLoweringInfo *LibcallLowering);
 
   } // end namespace PPC
 

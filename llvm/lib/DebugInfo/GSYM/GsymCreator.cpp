@@ -564,7 +564,6 @@ llvm::Error GsymCreator::saveSegments(StringRef Path,
       std::optional<uint64_t> FirstFuncAddr = GC->getFirstFunctionAddress();
       if (FirstFuncAddr) {
         SGP << Path << "-" << llvm::format_hex(*FirstFuncAddr, 1);
-        SGP.flush();
         Err = GC->save(SegmentedGsymPath, ByteOrder, std::nullopt);
         if (Err)
           return Err;

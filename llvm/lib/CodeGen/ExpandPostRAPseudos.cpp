@@ -41,9 +41,7 @@ private:
 
 struct ExpandPostRALegacy : public MachineFunctionPass {
   static char ID;
-  ExpandPostRALegacy() : MachineFunctionPass(ID) {
-    initializeExpandPostRALegacyPass(*PassRegistry::getPassRegistry());
-  }
+  ExpandPostRALegacy() : MachineFunctionPass(ID) {}
 
   void getAnalysisUsage(AnalysisUsage &AU) const override {
     AU.setPreservesCFG();

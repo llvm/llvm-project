@@ -34,6 +34,7 @@
 #include "llvm/MC/MCInstrItineraries.h"
 #include "llvm/Support/CommandLine.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/InterleavedRange.h"
 #include "llvm/Support/raw_ostream.h"
 #include "llvm/Target/TargetMachine.h"
 
@@ -65,10 +66,6 @@ const TargetRegisterClass *TargetInstrInfo::getRegClass(const MCInstrDesc &MCID,
 
   const MCOperandInfo &OpInfo = MCID.operands()[OpNum];
   int16_t RegClass = getOpRegClassID(OpInfo);
-
-  // TODO: Remove isLookupPtrRegClass in favor of isLookupRegClassByHwMode
-  if (OpInfo.isLookupPtrRegClass())
-    return TRI.getPointerRegClass(RegClass);
 
   // Instructions like INSERT_SUBREG do not have fixed register classes.
   if (RegClass < 0)
@@ -1121,7 +1118,7 @@ void TargetInstrInfo::reduceAccumulatorTree(
   if (RegistersToReduce.size() % 2 != 0)
     NewRegs.push_back(RegistersToReduce[RegistersToReduce.size() - 1]);
 
-  RegistersToReduce = NewRegs;
+  RegistersToReduce = std::move(NewRegs);
 }
 
 // The concept of the reassociation pass is that these operations can benefit
@@ -2052,14 +2049,7 @@ std::string TargetInstrInfo::createMIROperandComment(
   if (OpIdx == InlineAsm::MIOp_ExtraInfo) {
     // Print HasSideEffects, MayLoad, MayStore, IsAlignStack
     unsigned ExtraInfo = Op.getImm();
-    bool First = true;
-    for (StringRef Info : InlineAsm::getExtraInfoNames(ExtraInfo)) {
-      if (!First)
-        OS << " ";
-      First = false;
-      OS << Info;
-    }
-
+    OS << interleaved(InlineAsm::getExtraInfoNames(ExtraInfo), " ");
     return Flags;
   }
 

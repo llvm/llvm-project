@@ -16,7 +16,7 @@ subroutine loop_transformation_construct1
   do x = 1, i
     v(x) = v(x) * 2
   end do
-  !ERROR: The END DO directive must follow the DO loop associated with the loop construct
+  !ERROR: Misplaced OpenMP end-directive
   !$omp end do
 end subroutine
 
@@ -34,6 +34,6 @@ subroutine loop_transformation_construct2
   do x = 1, i
     v(x) = v(x) * 2
   end do
-  !ERROR: The END TILE directive must follow the DO loop associated with the loop construct
+  !ERROR: Misplaced OpenMP end-directive
   !$omp end tile
 end subroutine

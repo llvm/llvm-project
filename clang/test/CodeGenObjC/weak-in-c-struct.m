@@ -130,7 +130,7 @@ void test_move_assignment_Weak(Weak *p) {
   *p = getWeak();
 }
 
-// COMMON: define{{.*}} void @test_parameter_Weak(ptr dead_on_return noundef %[[A:.*]])
+// COMMON: define{{.*}} void @test_parameter_Weak(ptr noundef dead_on_return %[[A:.*]])
 // COMMON: call void @__destructor_{{.*}}(ptr %[[A]])
 
 void test_parameter_Weak(Weak a) {
@@ -142,7 +142,7 @@ void test_parameter_Weak(Weak a) {
 // COMMON: store ptr %[[A]], ptr %[[A_ADDR]]
 // COMMON: %[[V0:.*]] = load ptr, ptr %[[A_ADDR]]
 // COMMON: call void @__copy_constructor_{{.*}}(ptr %[[AGG_TMP]], ptr %[[V0]])
-// COMMON: call void @calleeWeak(ptr dead_on_return noundef %[[AGG_TMP]])
+// COMMON: call void @calleeWeak(ptr noundef dead_on_return %[[AGG_TMP]])
 // COMMON-NEXT: ret
 
 void test_argument_Weak(Weak *a) {
@@ -164,7 +164,7 @@ Weak test_return_Weak(Weak *a) {
 // COMMON: %[[AGG_TMP:.*]] = alloca %[[STRUCT_WEAK]]
 // COMMON: br i1
 
-// COMMON: call void @objc_msgSend({{.*}}, ptr dead_on_return noundef %[[AGG_TMP]])
+// COMMON: call void @objc_msgSend({{.*}}, ptr noundef dead_on_return %[[AGG_TMP]])
 // COMMON: br
 
 // COMMON: call void @__destructor_{{.*}}(ptr %[[AGG_TMP]])

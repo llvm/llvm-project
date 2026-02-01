@@ -441,7 +441,7 @@ public:
       return KernelSet;
 
     for (Function &Func : M.functions()) {
-      if (Func.isDeclaration() || !isKernelLDS(&Func))
+      if (Func.isDeclaration() || !isKernel(Func))
         continue;
       for (GlobalVariable *GV : LDSUsesInfo.indirect_access[&Func]) {
         if (VariableSet.contains(GV)) {
@@ -501,9 +501,7 @@ public:
         // strategy
         continue;
       }
-      CandidateTy Candidate(
-          GV, K.second.size(),
-          DL.getTypeAllocSize(GV->getValueType()).getFixedValue());
+      CandidateTy Candidate(GV, K.second.size(), GV->getGlobalSize(DL));
       if (MostUsed < Candidate)
         MostUsed = Candidate;
     }
@@ -555,7 +553,7 @@ public:
       for (Function &Func : M->functions()) {
         if (Func.isDeclaration())
           continue;
-        if (!isKernelLDS(&Func))
+        if (!isKernel(Func))
           continue;
 
         if (KernelsThatAllocateTableLDS.contains(&Func) ||
@@ -703,7 +701,7 @@ public:
             return false;
           }
           Function *F = I->getFunction();
-          return !isKernelLDS(F);
+          return !isKernel(*F);
         });
 
     // Replace uses of module scope variable from kernel functions that
@@ -711,7 +709,7 @@ public:
     // Record on each kernel whether the module scope global is used by it
 
     for (Function &Func : M.functions()) {
-      if (Func.isDeclaration() || !isKernelLDS(&Func))
+      if (Func.isDeclaration() || !isKernel(Func))
         continue;
 
       if (KernelsThatAllocateModuleLDS.contains(&Func)) {
@@ -743,7 +741,7 @@ public:
 
     DenseMap<Function *, LDSVariableReplacement> KernelToReplacement;
     for (Function &Func : M.functions()) {
-      if (Func.isDeclaration() || !isKernelLDS(&Func))
+      if (Func.isDeclaration() || !isKernel(Func))
         continue;
 
       DenseSet<GlobalVariable *> KernelUsedVariables;
@@ -828,7 +826,7 @@ public:
     // semantics. Setting the alignment here allows this IR pass to accurately
     // predict the exact constant at which it will be allocated.
 
-    assert(isKernelLDS(func));
+    assert(isKernel(*func));
 
     LLVMContext &Ctx = M.getContext();
     const DataLayout &DL = M.getDataLayout();
@@ -878,7 +876,7 @@ public:
       for (auto &func : OrderedKernels) {
 
         if (KernelsThatIndirectlyAllocateDynamicLDS.contains(func)) {
-          assert(isKernelLDS(func));
+          assert(isKernel(*func));
           if (!func->hasName()) {
             reportFatalUsageError("anonymous kernels cannot use LDS variables");
           }
@@ -912,7 +910,7 @@ public:
           auto *I = dyn_cast<Instruction>(U.getUser());
           if (!I)
             continue;
-          if (isKernelLDS(I->getFunction()))
+          if (isKernel(*I->getFunction()))
             continue;
 
           replaceUseWithTableLookup(M, Builder, table, GV, U, nullptr);
@@ -938,7 +936,7 @@ public:
     VariableFunctionMap LDSToKernelsThatNeedToAccessItIndirectly;
     for (auto &K : LDSUsesInfo.indirect_access) {
       Function *F = K.first;
-      assert(isKernelLDS(F));
+      assert(isKernel(*F));
       for (GlobalVariable *GV : K.second) {
         LDSToKernelsThatNeedToAccessItIndirectly[GV].insert(F);
       }
@@ -1031,7 +1029,7 @@ public:
       const DataLayout &DL = M.getDataLayout();
 
       for (Function &Func : M.functions()) {
-        if (Func.isDeclaration() || !isKernelLDS(&Func))
+        if (Func.isDeclaration() || !isKernel(Func))
           continue;
 
         // All three of these are optional. The first variable is allocated at
@@ -1061,14 +1059,14 @@ public:
         if (AllocateModuleScopeStruct) {
           // Allocated at zero, recorded once on construction, not once per
           // kernel
-          Offset += DL.getTypeAllocSize(MaybeModuleScopeStruct->getValueType());
+          Offset += MaybeModuleScopeStruct->getGlobalSize(DL);
         }
 
         if (AllocateKernelScopeStruct) {
           GlobalVariable *KernelStruct = Replacement->second.SGV;
           Offset = alignTo(Offset, AMDGPU::getAlign(DL, KernelStruct));
           recordLDSAbsoluteAddress(&M, KernelStruct, Offset);
-          Offset += DL.getTypeAllocSize(KernelStruct->getValueType());
+          Offset += KernelStruct->getGlobalSize(DL);
         }
 
         // If there is dynamic allocation, the alignment needed is included in
@@ -1138,7 +1136,7 @@ private:
       }
 
       Align Alignment = AMDGPU::getAlign(DL, &GV);
-      TypeSize GVSize = DL.getTypeAllocSize(GV.getValueType());
+      uint64_t GVSize = GV.getGlobalSize(DL);
 
       if (GVSize > 8) {
         // We might want to use a b96 or b128 load/store
@@ -1184,8 +1182,7 @@ private:
           LDSVarsToTransform.begin(), LDSVarsToTransform.end()));
 
       for (GlobalVariable *GV : Sorted) {
-        OptimizedStructLayoutField F(GV,
-                                     DL.getTypeAllocSize(GV->getValueType()),
+        OptimizedStructLayoutField F(GV, GV->getGlobalSize(DL),
                                      AMDGPU::getAlign(DL, GV));
         LayoutFields.emplace_back(F);
       }

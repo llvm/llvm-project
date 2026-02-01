@@ -330,7 +330,7 @@ AST_POLYMORPHIC_MATCHER_REGEX(isExpansionInFileMatching,
 /// appearances of the macro.
 AST_POLYMORPHIC_MATCHER_P(isExpandedFromMacro,
                           AST_POLYMORPHIC_SUPPORTED_TYPES(Decl, Stmt, TypeLoc),
-                          StringRef, MacroName) {
+                          std::string, MacroName) {
   // Verifies that the statement' beginning and ending are both expanded from
   // the same instance of the given macro.
   auto& Context = Finder->getASTContext();
@@ -7003,6 +7003,32 @@ AST_MATCHER_P(ReferenceTypeLoc, hasReferentLoc, internal::Matcher<TypeLoc>,
   return ReferentMatcher.matches(Node.getPointeeLoc(), Finder, Builder);
 }
 
+/// Matches `ArrayTypeLoc`s.
+///
+/// Given
+/// \code
+///   int a[] = {1, 2};
+///   int b[3];
+///   void f() { int c[a[0]]; }
+/// \endcode
+/// arrayTypeLoc()
+///   matches "int a[]", "int b[3]" and "int c[a[0]]".
+extern const internal::VariadicDynCastAllOfMatcher<TypeLoc, ArrayTypeLoc>
+    arrayTypeLoc;
+
+/// Matches `FunctionTypeLoc`s.
+///
+/// Given
+/// \code
+///   void f(int);
+///   using g = double (char, float);
+///   char (*fn_ptr)();
+/// \endcode
+/// functionTypeLoc()
+///   matches "void (int)", "double (char, float)", and "char ()".
+extern const internal::VariadicDynCastAllOfMatcher<TypeLoc, FunctionTypeLoc>
+    functionTypeLoc;
+
 /// Matches template specialization `TypeLoc`s.
 ///
 /// Given
@@ -8740,6 +8766,21 @@ AST_MATCHER_P(OMPExecutableDirective, hasAnyClause,
                                     Builder) != Clauses.end();
 }
 
+/// Matches any ``#pragma omp target update`` executable directive.
+///
+/// Given
+///
+/// \code
+///   #pragma omp target update from(a)
+///   #pragma omp target update to(b)
+/// \endcode
+///
+/// ``ompTargetUpdateDirective()`` matches both ``omp target update from(a)``
+/// and ``omp target update to(b)``.
+extern const internal::VariadicDynCastAllOfMatcher<Stmt,
+                                                   OMPTargetUpdateDirective>
+    ompTargetUpdateDirective;
+
 /// Matches OpenMP ``default`` clause.
 ///
 /// Given
@@ -8852,6 +8893,30 @@ AST_MATCHER_P(OMPExecutableDirective, isAllowedToContainClauseKind,
       Node.getDirectiveKind(), CKind,
       Finder->getASTContext().getLangOpts().OpenMP);
 }
+
+/// Matches OpenMP ``from`` clause.
+///
+/// Given
+///
+/// \code
+///   #pragma omp target update from(a)
+/// \endcode
+///
+/// ``ompFromClause()`` matches ``from(a)``.
+extern const internal::VariadicDynCastAllOfMatcher<OMPClause, OMPFromClause>
+    ompFromClause;
+
+/// Matches OpenMP ``to`` clause.
+///
+/// Given
+///
+/// \code
+///   #pragma omp target update to(a)
+/// \endcode
+///
+/// ``ompToClause()`` matches ``to(a)``.
+extern const internal::VariadicDynCastAllOfMatcher<OMPClause, OMPToClause>
+    ompToClause;
 
 //----------------------------------------------------------------------------//
 // End OpenMP handling.

@@ -164,7 +164,7 @@ end
 !PARSE-TREE: | | | | | | | | | | DataRef -> Name = 'omp_out'
 !PARSE-TREE: | | | | | | | | | | Name = 'x'
 !PARSE-TREE: | | | OmpClauseList ->
-!PARSE-TREE: | | | Flags = None
+!PARSE-TREE: | | | Flags = {}
 
 subroutine f04
   !$omp metadirective when(user={condition(.true.)}: &

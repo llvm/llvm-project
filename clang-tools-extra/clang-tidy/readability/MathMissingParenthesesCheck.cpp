@@ -48,11 +48,17 @@ static int getPrecedence(const BinaryOperator *BinOp) {
     return 0;
   }
 }
-static void addParentheses(const BinaryOperator *BinOp,
-                           const BinaryOperator *ParentBinOp,
+static void addParentheses(const Expr *E, const BinaryOperator *ParentBinOp,
                            ClangTidyCheck *Check,
                            const clang::SourceManager &SM,
                            const clang::LangOptions &LangOpts) {
+  if (const auto *Paren = dyn_cast<ParenExpr>(E)) {
+    addParentheses(Paren->getSubExpr()->IgnoreImpCasts(), nullptr, Check, SM,
+                   LangOpts);
+    return;
+  }
+
+  const auto *BinOp = dyn_cast<BinaryOperator>(E);
   if (!BinOp)
     return;
 
@@ -81,10 +87,8 @@ static void addParentheses(const BinaryOperator *BinOp,
     }
   }
 
-  addParentheses(dyn_cast<BinaryOperator>(BinOp->getLHS()->IgnoreImpCasts()),
-                 BinOp, Check, SM, LangOpts);
-  addParentheses(dyn_cast<BinaryOperator>(BinOp->getRHS()->IgnoreImpCasts()),
-                 BinOp, Check, SM, LangOpts);
+  addParentheses(BinOp->getLHS()->IgnoreImpCasts(), BinOp, Check, SM, LangOpts);
+  addParentheses(BinOp->getRHS()->IgnoreImpCasts(), BinOp, Check, SM, LangOpts);
 }
 
 void MathMissingParenthesesCheck::check(
