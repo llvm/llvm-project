@@ -298,8 +298,8 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
   // is a local variable, use the `DeclContext` containing the lambda expression
   // instead.
   if (VarDecl *Var = dyn_cast_or_null<VarDecl>(ManglingContextDecl);
-        Var && Var->isLocalVarDecl())
-      ManglingContextDecl = const_cast<Decl *>(cast<Decl>(DC));
+      Var && Var->isLocalVarDecl())
+    ManglingContextDecl = const_cast<Decl *>(cast<Decl>(DC));
 
   // Default arguments of member function parameters that appear in a class
   // definition, as well as the initializers of data members, receive special
