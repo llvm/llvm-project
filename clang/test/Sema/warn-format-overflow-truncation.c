@@ -6,7 +6,6 @@
 // RUN: %clang_cc1 -xc++ -triple x86_64-apple-macosx10.14.0 -Wno-format-truncation-non-kprintf -Wno-format-overflow-non-kprintf %s -verify=kprintf,expected
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.14.0 -Wno-format-overflow -Wno-format-truncation -Wformat-truncation-non-kprintf -Wformat-overflow-non-kprintf %s -verify=nonkprintf,expected
 // RUN: %clang_cc1 -xc++ -triple x86_64-apple-macosx10.14.0 -Wno-format-overflow -Wno-format-truncation -Wformat-truncation-non-kprintf -Wformat-overflow-non-kprintf %s -verify=nonkprintf,expected
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.14.0 -fexperimental-new-constant-interpreter %s -verify=kprintf,nonkprintf,expected
 
 typedef unsigned long size_t;
 

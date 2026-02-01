@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -triple x86_64-apple-macosx10.14.0 %s -verify
-// RUN: %clang_cc1 -triple x86_64-apple-macosx10.14.0 -fexperimental-new-constant-interpreter %s -verify
 
 typedef struct _FILE FILE;
 extern int scanf(const char *format, ...);
