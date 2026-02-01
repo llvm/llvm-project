@@ -276,8 +276,9 @@ template <typename Operation>
 static RValue emitBinaryFPBuiltin(CIRGenFunction &cgf, const CallExpr &e) {
   mlir::Value arg0 = cgf.emitScalarExpr(e.getArg(0));
   mlir::Value arg1 = cgf.emitScalarExpr(e.getArg(1));
-  auto call = 
-      Operation::create(cgf.getBuilder(), cgf.getLoc(e.getSourceRange()), arg0.getType(), arg0, arg1);
+  auto call =
+      Operation::create(cgf.getBuilder(), cgf.getLoc(e.getSourceRange()),
+                        arg0.getType(), arg0, arg1);
   return RValue::get(call->getResult(0));
 }
 

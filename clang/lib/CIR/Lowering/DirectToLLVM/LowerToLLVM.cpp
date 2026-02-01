@@ -1557,7 +1557,8 @@ mlir::LogicalResult CIRToLLVMATan2OpLowering::matchAndRewrite(
     cir::ATan2Op op, OpAdaptor adaptor,
     mlir::ConversionPatternRewriter &rewriter) const {
   mlir::Type resTy = typeConverter->convertType(op.getType());
-  rewriter.replaceOpWithNewOp<mlir::LLVM::ATan2Op>(op, resTy, adaptor.getLhs(), adaptor.getRhs());
+  rewriter.replaceOpWithNewOp<mlir::LLVM::ATan2Op>(op, resTy, adaptor.getLhs(),
+                                                   adaptor.getRhs());
   return mlir::success();
 }
 
