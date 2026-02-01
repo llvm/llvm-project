@@ -46,8 +46,15 @@ static std::unique_ptr<CIRCXXABI> createCXXABI(LowerModule &lm) {
 
 static std::unique_ptr<TargetLoweringInfo>
 createTargetLoweringInfo(LowerModule &lm) {
-  assert(!cir::MissingFeatures::targetLoweringInfo());
-  return std::make_unique<TargetLoweringInfo>();
+  const llvm::Triple &triple = lm.getTarget().getTriple();
+
+  switch (triple.getArch()) {
+  case llvm::Triple::amdgcn:
+    return createAMDGPUTargetLoweringInfo();
+  default:
+    assert(!cir::MissingFeatures::targetLoweringInfo());
+    return std::make_unique<TargetLoweringInfo>();
+  }
 }
 
 LowerModule::LowerModule(clang::LangOptions langOpts,

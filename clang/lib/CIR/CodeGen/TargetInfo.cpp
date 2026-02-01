@@ -54,7 +54,48 @@ public:
   X8664TargetCIRGenInfo(CIRGenTypes &cgt)
       : TargetCIRGenInfo(std::make_unique<X8664ABIInfo>(cgt)) {}
 };
+class AMDGPUABIInfo : public ABIInfo {
+public:
+  AMDGPUABIInfo(CIRGenTypes &cgt) : ABIInfo(cgt) {}
+};
 
+class AMDGPUTargetCIRGenInfo : public TargetCIRGenInfo {
+public:
+  AMDGPUTargetCIRGenInfo(CIRGenTypes &cgt)
+      : TargetCIRGenInfo(std::make_unique<AMDGPUABIInfo>(cgt)) {}
+
+  clang::LangAS
+  getGlobalVarAddressSpace(CIRGenModule &cgm,
+                           const clang::VarDecl *decl) const override {
+    using clang::LangAS;
+    assert(!cgm.getLangOpts().OpenCL &&
+           !(cgm.getLangOpts().CUDA && cgm.getLangOpts().CUDAIsDevice) &&
+           "Address space agnostic languages only");
+    LangAS defaultGlobalAS = LangAS::opencl_global;
+    if (!decl)
+      return defaultGlobalAS;
+
+    LangAS addrSpace = decl->getType().getAddressSpace();
+    if (addrSpace != LangAS::Default)
+      return addrSpace;
+
+    // Only promote to address space 4 if VarDecl has constant initialization.
+    if (decl->getType().isConstantStorage(cgm.getASTContext(), false, false) &&
+        decl->hasConstantInitialization()) {
+      if (auto constAS = cgm.getTarget().getConstantAddressSpace())
+        return *constAS;
+    }
+
+    return defaultGlobalAS;
+  }
+
+  mlir::ptr::MemorySpaceAttrInterface
+  getCIRAllocaAddressSpace() const override {
+    return cir::LangAddressSpaceAttr::get(
+        &getABIInfo().cgt.getMLIRContext(),
+        cir::LangAddressSpace::OffloadPrivate);
+  }
+};
 } // namespace
 
 namespace {
@@ -74,6 +115,11 @@ public:
 std::unique_ptr<TargetCIRGenInfo>
 clang::CIRGen::createNVPTXTargetCIRGenInfo(CIRGenTypes &cgt) {
   return std::make_unique<NVPTXTargetCIRGenInfo>(cgt);
+}
+
+std::unique_ptr<TargetCIRGenInfo>
+clang::CIRGen::createAMDGPUTargetCIRGenInfo(CIRGenTypes &cgt) {
+  return std::make_unique<AMDGPUTargetCIRGenInfo>(cgt);
 }
 
 std::unique_ptr<TargetCIRGenInfo>

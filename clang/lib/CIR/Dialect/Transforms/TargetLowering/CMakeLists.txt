@@ -3,6 +3,7 @@ add_clang_library(MLIRCIRTargetLowering
   LowerModule.cpp
   LowerItaniumCXXABI.cpp
   TargetLoweringInfo.cpp
+  Targets/AMDGPU.cpp
 
   DEPENDS
   clangBasic
