@@ -3776,14 +3776,14 @@ Preprocessor::LexEmbedParameters(Token &CurTok, bool ForHasEmbed) {
           std::pair<tok::TokenKind, SourceLocation> Matches) {
         Diag(CurTok, diag::err_expected) << Expected;
         Diag(Matches.second, diag::note_matching) << Matches.first;
-        if (CurTok.isNot(EndTokenKind))
+        if (CurTok.isNot(tok::eod))
           DiscardUntilEndOfDirective(CurTok);
       };
 
   auto ExpectOrDiagAndSkipToEOD = [&](tok::TokenKind Kind) {
     if (CurTok.isNot(Kind)) {
       Diag(CurTok, diag::err_expected) << Kind;
-      if (CurTok.isNot(EndTokenKind))
+      if (CurTok.isNot(tok::eod))
         DiscardUntilEndOfDirective(CurTok);
       return false;
     }

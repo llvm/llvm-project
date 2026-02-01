@@ -184,6 +184,10 @@ public:
     return cir::MethodAttr::get(ty, methodFuncSymbolRef);
   }
 
+  cir::MethodAttr getNullMethodAttr(cir::MethodType ty) {
+    return cir::MethodAttr::get(ty);
+  }
+
   cir::BoolAttr getCIRBoolAttr(bool state) {
     return cir::BoolAttr::get(getContext(), state);
   }
@@ -490,6 +494,24 @@ public:
 
   mlir::Value createAddrSpaceCast(mlir::Value src, mlir::Type newTy) {
     return createAddrSpaceCast(src.getLoc(), src, newTy);
+  }
+
+  //===--------------------------------------------------------------------===//
+  // Other Instructions
+  //===--------------------------------------------------------------------===//
+
+  mlir::Value createExtractElement(mlir::Location loc, mlir::Value vec,
+                                   uint64_t idx) {
+    mlir::Value idxVal =
+        getConstAPInt(loc, getUIntNTy(64), llvm::APInt(64, idx));
+    return cir::VecExtractOp::create(*this, loc, vec, idxVal);
+  }
+
+  mlir::Value createInsertElement(mlir::Location loc, mlir::Value vec,
+                                  mlir::Value newElt, uint64_t idx) {
+    mlir::Value idxVal =
+        getConstAPInt(loc, getUIntNTy(64), llvm::APInt(64, idx));
+    return cir::VecInsertOp::create(*this, loc, vec, newElt, idxVal);
   }
 
   //===--------------------------------------------------------------------===//
