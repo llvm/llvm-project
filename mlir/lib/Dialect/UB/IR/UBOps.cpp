@@ -59,7 +59,44 @@ Operation *UBDialect::materializeConstant(OpBuilder &builder, Attribute value,
   return nullptr;
 }
 
+//===----------------------------------------------------------------------===//
+// PoisonOp
+//===----------------------------------------------------------------------===//
+
 OpFoldResult PoisonOp::fold(FoldAdaptor /*adaptor*/) { return getValue(); }
+
+//===----------------------------------------------------------------------===//
+// UnreachableOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult UnreachableOp::canonicalize(UnreachableOp unreachableOp,
+                                          PatternRewriter &rewriter) {
+  // Erase operations that precede ub.unreachable (if they must progress).
+  Block *block = unreachableOp->getBlock();
+  if (llvm::hasSingleElement(*block))
+    return rewriter.notifyMatchFailure(
+        unreachableOp, "unreachable op is the only operation in the block");
+
+  // Erase all other operations in the block. They must be dead.
+  auto it = unreachableOp->getIterator();
+  --it;
+  bool reachedBegin = false;
+  bool changed = false;
+  do {
+    Operation *op = &*it;
+    // Do not erase ops that may not progress (and ops that precede them).
+    if (!mustProgress(op))
+      break;
+    reachedBegin = it == block->begin();
+    if (!reachedBegin)
+      --it;
+    rewriter.eraseOp(op);
+    changed = true;
+    if (reachedBegin)
+      break;
+  } while (!reachedBegin);
+  return success(changed);
+}
 
 #include "mlir/Dialect/UB/IR/UBOpsInterfaces.cpp.inc"
 

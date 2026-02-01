@@ -84,6 +84,7 @@ def UnreachableOp : UB_Op<"unreachable", [Terminator]> {
   }];
 
   let assemblyFormat = "attr-dict";
+  let hasCanonicalizeMethod = 1;
 }
 
 #endif // MLIR_DIALECT_UB_IR_UBOPS_TD
