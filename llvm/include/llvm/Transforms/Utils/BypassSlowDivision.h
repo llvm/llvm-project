@@ -25,8 +25,6 @@
 namespace llvm {
 
 class BasicBlock;
-class DomTreeUpdater;
-class LoopInfo;
 class Value;
 
 struct DivRemMapKey {
