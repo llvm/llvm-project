@@ -272,6 +272,15 @@ static RValue emitUnaryFPBuiltin(CIRGenFunction &cgf, const CallExpr &e) {
   return RValue::get(call->getResult(0));
 }
 
+template <typename Operation>
+static RValue emitBinaryFPBuiltin(CIRGenFunction &cgf, const CallExpr &e) {
+  mlir::Value arg0 = cgf.emitScalarExpr(e.getArg(0));
+  mlir::Value arg1 = cgf.emitScalarExpr(e.getArg(1));
+  auto call = 
+      Operation::create(cgf.getBuilder(), cgf.getLoc(e.getSourceRange()), arg0.getType(), arg0, arg1);
+  return RValue::get(call->getResult(0));
+}
+
 static RValue errorBuiltinNYI(CIRGenFunction &cgf, const CallExpr *e,
                               unsigned builtinID) {
 
@@ -1211,6 +1220,7 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
   case Builtin::BI__builtin_elementwise_atan:
     return emitUnaryFPBuiltin<cir::ATanOp>(*this, *e);
   case Builtin::BI__builtin_elementwise_atan2:
+    return emitBinaryFPBuiltin<cir::ATan2Op>(*this, *e);
   case Builtin::BI__builtin_elementwise_ceil:
   case Builtin::BI__builtin_elementwise_exp:
   case Builtin::BI__builtin_elementwise_exp2:
