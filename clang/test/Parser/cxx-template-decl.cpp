@@ -22,7 +22,7 @@ template<template<int+>> struct x3; // expected-error {{expected ',' or '>' in t
                                          cpp14-error {{template template parameter requires 'class' after the parameter list}} \
                                          cpp17-error {{template template parameter requires 'class' or 'typename' after the parameter list}}
 template <template X> struct Err1; // expected-error {{expected '<' after 'template'}} \
-// expected-error{{extraneous}}
+// expected-note{{did you mean to use 'typename'?}}
 template <template <typename> > struct Err2;       // cpp14-error {{template template parameter requires 'class' after the parameter list}}
 // cpp17-error@-1{{template template parameter requires 'class' or 'typename' after the parameter list}}
 template <template <typename> Foo> struct Err3;    // cpp14-error {{template template parameter requires 'class' after the parameter list}}
