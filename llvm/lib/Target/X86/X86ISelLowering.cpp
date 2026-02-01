@@ -29,7 +29,6 @@
 #include "llvm/Analysis/BlockFrequencyInfo.h"
 #include "llvm/Analysis/ProfileSummaryInfo.h"
 #include "llvm/Analysis/VectorUtils.h"
-#include "llvm/CodeGen/ISDOpcodes.h"
 #include "llvm/CodeGen/LivePhysRegs.h"
 #include "llvm/CodeGen/MachineFrameInfo.h"
 #include "llvm/CodeGen/MachineFunction.h"
@@ -34261,6 +34260,8 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
   case ISD::ADD:
   case ISD::SUB: {
     // Use Kogge-Stone parallel carry/borrow propagation for i512 add/sub.
+    // Article : https://www.numberworld.org/y-cruncher/internals/addition.html
+    // related work : combineStore -> if (VT == MVT::i256 || VT == MVT::i512)
     // TODO: ISD::UADDO_CARRY
     SDValue LHS = N->getOperand(0);
     SDValue RHS = N->getOperand(1);
@@ -34280,35 +34281,29 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue Vec1 = DAG.getBitcast(VecVT, RHS);
     SDValue AllOnes = DAG.getAllOnesConstant(dl, VecVT);
 
-    // Compute partial sum/difference (per-lane, no carry propagation).
     SDValue Partial = DAG.getNode(Opc, dl, VecVT, Vec0, Vec1);
 
-    // Detect carry/borrow generation.
     ISD::CondCode CarryCC = IsAdd ? ISD::SETULT : ISD::SETUGT;
     SDValue Carry = DAG.getSetCC(dl, BoolVT, Partial, Vec0, CarryCC);
 
-    // Detect propagate lanes.
     SDValue PropCmp = IsAdd ? AllOnes : DAG.getConstant(0, dl, VecVT);
     SDValue Propagate = DAG.getSetCC(dl, BoolVT, Partial, PropCmp, ISD::SETEQ);
 
-    // Convert masks to scalar for Kogge-Stone propagation.
-    SDValue CarryIn = DAG.getNode(ISD::BITCAST, dl, MVT::i8, Carry);
-    SDValue PropIn = DAG.getNode(ISD::BITCAST, dl, MVT::i8, Propagate);
+    SDValue CarryIn = DAG.getBitcast(MVT::i8, Carry);
+    SDValue PropIn = DAG.getBitcast(MVT::i8, Propagate);
     CarryIn = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i32, CarryIn);
     PropIn = DAG.getNode(ISD::ZERO_EXTEND, dl, MVT::i32, PropIn);
 
-    // Kogge-Stone: shift carry left and add propagate.
-    SDValue ShiftedCarry = DAG.getNode(ISD::SHL, dl, MVT::i32, CarryIn,
-                                       DAG.getConstant(1, dl, MVT::i8));
+    SDValue ShiftedCarry =
+        DAG.getNode(ISD::SHL, dl, MVT::i32, CarryIn,
+                    DAG.getShiftAmountConstant(1, MVT::i8, dl));
     SDValue CarryOut =
         DAG.getNode(ISD::ADD, dl, MVT::i32, ShiftedCarry, PropIn);
 
-    // Correction mask: lanes that received a carry/borrow.
     SDValue CorrMask = DAG.getNode(ISD::XOR, dl, MVT::i32, PropIn, CarryOut);
     CorrMask = DAG.getNode(ISD::TRUNCATE, dl, MVT::i8, CorrMask);
     SDValue CorrVec = DAG.getNode(ISD::BITCAST, dl, BoolVT, CorrMask);
 
-    // Apply correction: +1 for ADD (via -(-1)), -1 for SUB (via +(-1)).
     unsigned AdjustOpc = IsAdd ? ISD::SUB : ISD::ADD;
     SDValue Adjusted = DAG.getNode(AdjustOpc, dl, VecVT, Partial, AllOnes);
     SDValue Res =
@@ -54626,6 +54621,10 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   // vector type or the operation is likely to expand to a vector type
   // (legalization can scalarize back if it the op failed).
   if (VT == MVT::i256 || VT == MVT::i512) {
+    // Issue : 173996 , PRs : [174761,179503] : when add/sub lowered on avx512 we hit a
+    // regression issue. my approach is to allow the combine only when the
+    // operation is done by our custome handling.
+    // X86TargetLowering::ReplaceNodeResults (ADD/SUB) cases.
     MVT VecVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
     if (TLI.isTypeLegal(VecVT) && ISD::isNormalStore(St) &&
         mayFoldIntoVector(StoredVal, Subtarget))
