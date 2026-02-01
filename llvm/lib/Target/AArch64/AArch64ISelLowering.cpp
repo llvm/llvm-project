@@ -15904,7 +15904,7 @@ SDValue AArch64TargetLowering::LowerFixedLengthBuildVectorToSVE(
   EVT ContainerVT = getContainerForFixedLengthVector(DAG, VT);
   auto *BVN = cast<BuildVectorSDNode>(Op);
 
-  if (auto SeqInfo = BVN->isConstantSequence()) {
+  if (auto SeqInfo = BVN->isArithmeticSequence()) {
     SDValue Start = DAG.getConstant(SeqInfo->first, DL, ContainerVT);
     SDValue Steps = DAG.getStepVector(DL, ContainerVT, SeqInfo->second);
     SDValue Seq = DAG.getNode(ISD::ADD, DL, ContainerVT, Start, Steps);
@@ -15961,7 +15961,7 @@ SDValue AArch64TargetLowering::LowerBUILD_VECTOR(SDValue Op,
   EVT VT = Op.getValueType();
 
   bool OverrideNEON = !Subtarget->isNeonAvailable() ||
-                      cast<BuildVectorSDNode>(Op)->isConstantSequence();
+                      cast<BuildVectorSDNode>(Op)->isArithmeticSequence();
   if (useSVEForFixedLengthVectorVT(VT, OverrideNEON))
     return LowerFixedLengthBuildVectorToSVE(Op, DAG);
 
