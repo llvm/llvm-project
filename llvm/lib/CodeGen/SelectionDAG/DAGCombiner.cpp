@@ -18916,6 +18916,8 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
   EVT VT = N->getValueType(0);
   SDLoc DL(N);
   SDNodeFlags Flags = N->getFlags();
+  SDNodeFlags FlagsN1 = N1->getFlags();
+
   SelectionDAG::FlagInserter FlagsInserter(DAG, N);
 
   if (SDValue R = DAG.simplifyFPBinop(N->getOpcode(), N0, N1, Flags))
@@ -18957,23 +18959,27 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
                          DAG.getConstantFP(Recip, DL, VT));
   }
 
-  if (Flags.hasAllowReciprocal()) {
+  // Rewriting 1 / sqrt(Y) to rsqrt(Y) requires contract
+  if (Flags.hasAllowReciprocal() && Flags.hasAllowContract()) {
     // If this FDIV is part of a reciprocal square root, it may be folded
     // into a target-specific square root estimate instruction.
-    bool N1AllowReciprocal = N1->getFlags().hasAllowReciprocal();
-    if (N1.getOpcode() == ISD::FSQRT) {
+    // X / sqrt(Y) -> X * (1 / sqrt(Y)) -> X * rsqrt(Y)
+    // X / fpext/fpround(sqrt(Y)) -> X * (fpext/fpround(1 / sqrt(Y))) ->
+    // X * fpext/fpround(rsqrt(Y))
+    if (N1.getOpcode() == ISD::FSQRT && FlagsN1.hasAllowContract()) {
       if (SDValue RV = buildRsqrtEstimate(N1.getOperand(0)))
         return DAG.getNode(ISD::FMUL, DL, VT, N0, RV);
     } else if (N1.getOpcode() == ISD::FP_EXTEND &&
                N1.getOperand(0).getOpcode() == ISD::FSQRT &&
-               N1AllowReciprocal) {
+               N1.getOperand(0)->getFlags().hasAllowContract()) {
       if (SDValue RV = buildRsqrtEstimate(N1.getOperand(0).getOperand(0))) {
         RV = DAG.getNode(ISD::FP_EXTEND, SDLoc(N1), VT, RV);
         AddToWorklist(RV.getNode());
         return DAG.getNode(ISD::FMUL, DL, VT, N0, RV);
       }
     } else if (N1.getOpcode() == ISD::FP_ROUND &&
-               N1.getOperand(0).getOpcode() == ISD::FSQRT) {
+               N1.getOperand(0).getOpcode() == ISD::FSQRT &&
+               N1.getOperand(0)->getFlags().hasAllowContract()) {
       if (SDValue RV = buildRsqrtEstimate(N1.getOperand(0).getOperand(0))) {
         RV = DAG.getNode(ISD::FP_ROUND, SDLoc(N1), VT, RV, N1.getOperand(1));
         AddToWorklist(RV.getNode());
@@ -18993,16 +18999,21 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
       if (Sqrt.getNode()) {
         // If the other multiply operand is known positive, pull it into the
         // sqrt. That will eliminate the division if we convert to an estimate.
-        if (Flags.hasAllowReassociation() && N1.hasOneUse() &&
-            N1->getFlags().hasAllowReassociation() && Sqrt.hasOneUse()) {
+        if (N1.hasOneUse() && Sqrt.hasOneUse() &&
+            Sqrt->getFlags().hasAllowReassociation() &&
+            FlagsN1.hasAllowReassociation() && FlagsN1.hasAllowContract() &&
+            Sqrt->getFlags().hasAllowContract()) {
           SDValue A;
           if (Y.getOpcode() == ISD::FABS && Y.hasOneUse())
             A = Y.getOperand(0);
           else if (Y == Sqrt.getOperand(0))
             A = Y;
           if (A) {
-            // X / (fabs(A) * sqrt(Z)) --> X / sqrt(A*A*Z) --> X * rsqrt(A*A*Z)
-            // X / (A * sqrt(A))       --> X / sqrt(A*A*A) --> X * rsqrt(A*A*A)
+            // X / (fabs(A) * sqrt(Z)) -> X / sqrt(A*A*Z) ->
+            // X * (1 / sqrt(A*A*Z)) -> X * rsqrt(A*A*Z)
+
+            // X / (A * sqrt(A)) -> X / sqrt(A*A*A) ->
+            // X * (1 / sqrt(A*A*A)) -> X * rsqrt(A*A*A)
             SDValue AA = DAG.getNode(ISD::FMUL, DL, VT, A, A);
             SDValue AAZ =
                 DAG.getNode(ISD::FMUL, DL, VT, AA, Sqrt.getOperand(0));
@@ -19015,22 +19026,28 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
         }
 
         // We found a FSQRT, so try to make this fold:
-        // X / (Y * sqrt(Z)) -> X * (rsqrt(Z) / Y)
-        if (SDValue Rsqrt = buildRsqrtEstimate(Sqrt.getOperand(0))) {
+        // X / (Y * sqrt(Z)) -> X * (1 / (Y * sqrt(Z))) ->
+        // X * ((1 / sqrt(Z)) / Y) -> X * (rsqrt(Z) / Y)
+        SDValue Rsqrt;
+        if (Flags.hasAllowReassociation() &&
+            N1->getFlags().hasAllowReassociation() &&
+            Sqrt->getFlags().hasAllowContract() &&
+            (Rsqrt = buildRsqrtEstimate(Sqrt.getOperand(0)))) {
+          Rsqrt = buildRsqrtEstimate(Sqrt.getOperand(0));
           SDValue Div = DAG.getNode(ISD::FDIV, SDLoc(N1), VT, Rsqrt, Y);
           AddToWorklist(Div.getNode());
           return DAG.getNode(ISD::FMUL, DL, VT, N0, Div);
         }
       }
     }
-
-    // Fold into a reciprocal estimate and multiply instead of a real divide.
-    if (Flags.hasNoInfs())
-      if (SDValue RV = BuildDivEstimate(N0, N1, Flags))
-        return RV;
   }
 
-  // Fold X/Sqrt(X) -> Sqrt(X)
+  // Fold into a reciprocal estimate and multiply instead of a real divide.
+  if (Flags.hasAllowReciprocal() && Flags.hasNoInfs())
+    if (SDValue RV = BuildDivEstimate(N0, N1, Flags))
+      return RV;
+
+  // Fold X / Sqrt(X) -> Sqrt(X)
   if ((Flags.hasNoSignedZeros() || DAG.canIgnoreSignBitOfZero(SDValue(N, 0))) &&
       Flags.hasAllowReassociation())
     if (N1.getOpcode() == ISD::FSQRT && N0 == N1.getOperand(0))

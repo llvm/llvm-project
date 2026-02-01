@@ -116,8 +116,8 @@ define double @no_estimate_refinement_f64(double %a, double %b) #0 {
 ; CHECK-P9-NEXT:    xsrsqrtedp f0, f2
 ; CHECK-P9-NEXT:    xsmuldp f1, f1, f0
 ; CHECK-P9-NEXT:    blr
-  %x = call arcp reassoc double @llvm.sqrt.f64(double %b)
-  %r = fdiv arcp reassoc double %a, %x
+  %x = call arcp reassoc contract double @llvm.sqrt.f64(double %b)
+  %r = fdiv arcp reassoc contract double %a, %x
   ret double %r
 }
 
@@ -373,8 +373,8 @@ define float @no_estimate_refinement_f32(float %a, float %b) #0 {
 ; CHECK-P9-NEXT:    xsrsqrtesp f0, f2
 ; CHECK-P9-NEXT:    xsmulsp f1, f1, f0
 ; CHECK-P9-NEXT:    blr
-  %x = call reassoc arcp float @llvm.sqrt.f32(float %b)
-  %r = fdiv reassoc arcp float %a, %x
+  %x = call reassoc arcp contract float @llvm.sqrt.f32(float %b)
+  %r = fdiv reassoc arcp contract float %a, %x
   ret float %r
 }
 

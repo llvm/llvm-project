@@ -333,7 +333,7 @@ define float @f32_estimate(float %x) #1 {
 ; AVX512-NEXT:    vmulss {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX512-NEXT:    vmulss %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    retq
-  %sqrt = tail call float @llvm.sqrt.f32(float %x)
+  %sqrt = tail call contract float @llvm.sqrt.f32(float %x)
   %div = fdiv fast float 1.0, %sqrt
   ret float %div
 }
@@ -402,7 +402,7 @@ define <4 x float> @v4f32_estimate(<4 x float> %x) #1 {
 ; AVX512-NEXT:    vmulps %xmm0, %xmm1, %xmm0
 ; AVX512-NEXT:    vmulps %xmm2, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
-  %sqrt = tail call <4 x float> @llvm.sqrt.v4f32(<4 x float> %x)
+  %sqrt = tail call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> %x)
   %div = fdiv fast <4 x float> <float 1.0, float 1.0, float 1.0, float 1.0>, %sqrt
   ret <4 x float> %div
 }
@@ -467,7 +467,7 @@ define <8 x float> @v8f32_no_estimate(<8 x float> %x) #0 {
 ; AVX512-NEXT:    vbroadcastss {{.*#+}} ymm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; AVX512-NEXT:    vdivps %ymm0, %ymm1, %ymm0
 ; AVX512-NEXT:    retq
-  %sqrt = tail call <8 x float> @llvm.sqrt.v8f32(<8 x float> %x)
+  %sqrt = tail call contract <8 x float> @llvm.sqrt.v8f32(<8 x float> %x)
   %div = fdiv fast <8 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>, %sqrt
   ret <8 x float> %div
 }
@@ -511,7 +511,7 @@ define <8 x float> @v8f32_estimate(<8 x float> %x) #1 {
 ; AVX512-NEXT:    vmulps %ymm3, %ymm1, %ymm0
 ; AVX512-NEXT:    vmulps %ymm2, %ymm0, %ymm0
 ; AVX512-NEXT:    retq
-  %sqrt = tail call <8 x float> @llvm.sqrt.v8f32(<8 x float> %x)
+  %sqrt = tail call contract <8 x float> @llvm.sqrt.v8f32(<8 x float> %x)
   %div = fdiv fast <8 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>, %sqrt
   ret <8 x float> %div
 }
@@ -548,7 +548,7 @@ define <16 x float> @v16f32_no_estimate(<16 x float> %x) #0 {
 ; AVX512-NEXT:    vbroadcastss {{.*#+}} zmm1 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0,1.0E+0]
 ; AVX512-NEXT:    vdivps %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    retq
-  %sqrt = tail call <16 x float> @llvm.sqrt.v16f32(<16 x float> %x)
+  %sqrt = tail call contract <16 x float> @llvm.sqrt.v16f32(<16 x float> %x)
   %div = fdiv fast <16 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>, %sqrt
   ret <16 x float> %div
 }
@@ -610,7 +610,7 @@ define <16 x float> @v16f32_estimate(<16 x float> %x) #1 {
 ; AVX512-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip){1to16}, %zmm1, %zmm1
 ; AVX512-NEXT:    vmulps %zmm0, %zmm1, %zmm0
 ; AVX512-NEXT:    retq
-  %sqrt = tail call <16 x float> @llvm.sqrt.v16f32(<16 x float> %x)
+  %sqrt = tail call contract <16 x float> @llvm.sqrt.v16f32(<16 x float> %x)
   %div = fdiv fast <16 x float> <float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0, float 1.0>, %sqrt
   ret <16 x float> %div
 }
@@ -705,16 +705,15 @@ define <4 x float> @div_sqrt_fabs_v4f32(<4 x float> %x, <4 x float> %y, <4 x flo
 ; AVX512-NEXT:    vmulps %xmm3, %xmm1, %xmm1
 ; AVX512-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
-  %s = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %z)
-  %a = call <4 x float> @llvm.fabs.v4f32(<4 x float> %y)
+  %s = call contract reassoc <4 x float> @llvm.sqrt.v4f32(<4 x float> %z)
+  %a = call contract reassoc <4 x float> @llvm.fabs.v4f32(<4 x float> %y)
   %m = fmul contract reassoc <4 x float> %a, %s
   %d = fdiv contract reassoc arcp <4 x float> %x, %m
   ret <4 x float> %d
 }
 
-; This has 'arcp' but does not have 'reassoc' FMF.
-; We allow converting the sqrt to an estimate, but
-; do not pull the divisor into the estimate.
+; sqrt does not have 'reassoc' FMF, so we pull don't divisior into the
+; estimate.
 ; x / (fabs(y) * sqrt(z)) --> x * rsqrt(z) / fabs(y)
 
 define <4 x float> @div_sqrt_fabs_v4f32_fmf(<4 x float> %x, <4 x float> %y, <4 x float> %z) {
@@ -747,22 +746,21 @@ define <4 x float> @div_sqrt_fabs_v4f32_fmf(<4 x float> %x, <4 x float> %y, <4 x
 ; AVX512-LABEL: div_sqrt_fabs_v4f32_fmf:
 ; AVX512:       # %bb.0:
 ; AVX512-NEXT:    vrsqrtps %xmm2, %xmm3
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm4 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
-; AVX512-NEXT:    vmulps %xmm4, %xmm3, %xmm4
 ; AVX512-NEXT:    vmulps %xmm3, %xmm2, %xmm2
-; AVX512-NEXT:    vmulps %xmm3, %xmm2, %xmm2
-; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm3 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
-; AVX512-NEXT:    vaddps %xmm3, %xmm2, %xmm2
-; AVX512-NEXT:    vmulps %xmm2, %xmm4, %xmm2
+; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm4 = [-3.0E+0,-3.0E+0,-3.0E+0,-3.0E+0]
+; AVX512-NEXT:    vfmadd231ps {{.*#+}} xmm4 = (xmm3 * xmm2) + xmm4
+; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm2 = [-5.0E-1,-5.0E-1,-5.0E-1,-5.0E-1]
+; AVX512-NEXT:    vmulps %xmm2, %xmm3, %xmm2
+; AVX512-NEXT:    vmulps %xmm4, %xmm2, %xmm2
 ; AVX512-NEXT:    vbroadcastss {{.*#+}} xmm3 = [NaN,NaN,NaN,NaN]
 ; AVX512-NEXT:    vandps %xmm3, %xmm1, %xmm1
 ; AVX512-NEXT:    vdivps %xmm1, %xmm2, %xmm1
 ; AVX512-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
-  %s = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %z)
+  %s = call contract <4 x float> @llvm.sqrt.v4f32(<4 x float> %z)
   %a = call <4 x float> @llvm.fabs.v4f32(<4 x float> %y)
-  %m = fmul <4 x float> %a, %s
-  %d = fdiv arcp <4 x float> %x, %m
+  %m = fmul reassoc <4 x float> %a, %s
+  %d = fdiv arcp reassoc contract<4 x float> %x, %m
   ret <4 x float> %d
 }
 
@@ -888,7 +886,7 @@ define <4 x float> @div_sqrt_v4f32(<4 x float> %x, <4 x float> %y) {
 ; AVX512-NEXT:    vmulps %xmm3, %xmm1, %xmm1
 ; AVX512-NEXT:    vmulps %xmm1, %xmm0, %xmm0
 ; AVX512-NEXT:    retq
-  %s = call <4 x float> @llvm.sqrt.v4f32(<4 x float> %y)
+  %s = call contract reassoc <4 x float> @llvm.sqrt.v4f32(<4 x float> %y)
   %m = fmul contract reassoc <4 x float> %y, %s
   %d = fdiv contract reassoc arcp <4 x float> %x, %m
   ret <4 x float> %d
