@@ -251,12 +251,28 @@ void populatePassManagerSubmodule(nb::module_ &m) {
           "run",
           [](PyPassManager &passManager, PyOperationBase &op) {
             // Actually run the pass manager.
-            PyMlirContext::ErrorCapture errors(op.getOperation().getContext());
+            PyMlirContext::ErrorCapture errorCapture(
+                op.getOperation().getContext());
             MlirLogicalResult status = mlirPassManagerRunOnOp(
                 passManager.get(), op.getOperation().get());
-            if (mlirLogicalResultIsFailure(status))
+            auto errors = errorCapture.take();
+            if (mlirLogicalResultIsFailure(status)) {
               throw MLIRError("Failure while executing pass pipeline",
-                              errors.take());
+                              std::move(errors));
+            } else if (!errors.empty()) {
+              // If errors were emitted without a failure, issue a warning.
+              static const char *message =
+                  "An MLIR pass emitted an error but did not signal failure. "
+                  "Unfortunately, this error information has been lost as a "
+                  "result. Setting "
+                  "`context.emit_error_diagnostics = True` can ensure "
+                  "that all diagnostics are printed to stderr, even when being "
+                  "captured for Python exception handling.";
+              if (PyErr_WarnEx(PyExc_UserWarning, message, /*stack_level=*/1) !=
+                  0) {
+                throw py::error_already_set();
+              }
+            }
           },
           "operation"_a,
           // clang-format off
