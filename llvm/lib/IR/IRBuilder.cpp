@@ -135,6 +135,15 @@ Value *IRBuilderBase::CreateTypeSize(Type *Ty, TypeSize Size) {
   return CreateVScaleMultiple(*this, Ty, Size.getKnownMinValue());
 }
 
+Value *IRBuilderBase::CreateAllocationSize(Type *DestTy, AllocaInst *AI) {
+  const DataLayout &DL = BB->getDataLayout();
+  TypeSize ElemSize = DL.getTypeAllocSize(AI->getAllocatedType());
+  Value *Size = CreateTypeSize(DestTy, ElemSize);
+  if (AI->isArrayAllocation())
+    Size = CreateMul(CreateZExtOrTrunc(AI->getArraySize(), DestTy), Size);
+  return Size;
+}
+
 Value *IRBuilderBase::CreateStepVector(Type *DstType, const Twine &Name) {
   Type *STy = DstType->getScalarType();
   if (isa<ScalableVectorType>(DstType)) {

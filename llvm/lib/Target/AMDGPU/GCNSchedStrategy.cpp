@@ -150,7 +150,6 @@ void GCNSchedStrategy::initialize(ScheduleDAGMI *DAG) {
   VGPRCriticalLimit -= std::min(VGPRLimitBias + ErrorMargin, VGPRCriticalLimit);
   SGPRExcessLimit -= std::min(SGPRLimitBias + ErrorMargin, SGPRExcessLimit);
   VGPRExcessLimit -= std::min(VGPRLimitBias + ErrorMargin, VGPRExcessLimit);
-
   LLVM_DEBUG(dbgs() << "VGPRCriticalLimit = " << VGPRCriticalLimit
                     << ", VGPRExcessLimit = " << VGPRExcessLimit
                     << ", SGPRCriticalLimit = " << SGPRCriticalLimit
@@ -1172,6 +1171,8 @@ void GCNScheduleDAGMILive::runSchedStages() {
 
       ScheduleDAGMILive::schedule();
       Stage->finalizeGCNRegion();
+      Stage->advanceRegion();
+      exitRegion();
     }
 
     Stage->finalizeGCNSchedStage();
@@ -1586,9 +1587,6 @@ void GCNSchedStage::finalizeGCNRegion() {
   if (DAG.RegionsWithIGLPInstrs[RegionIdx] &&
       StageID != GCNSchedStageID::UnclusteredHighRPReschedule)
     SavedMutations.swap(DAG.Mutations);
-
-  DAG.exitRegion();
-  advanceRegion();
 }
 
 void GCNSchedStage::checkScheduling() {
@@ -1898,9 +1896,16 @@ void GCNSchedStage::revertScheduling() {
       continue;
     }
 
-    if (MI->getIterator() != DAG.RegionEnd) {
+    MachineBasicBlock::iterator MII = MI->getIterator();
+    if (MII != DAG.RegionEnd) {
+      // Will subsequent splice move MI up past a non-debug instruction?
+      bool NonDebugReordered =
+          skipDebugInstructionsForward(DAG.RegionEnd, MII) != MII;
       DAG.BB->splice(DAG.RegionEnd, DAG.BB, MI);
-      if (!MI->isDebugInstr())
+      // Only update LiveIntervals information if non-debug instructions are
+      // reordered. Otherwise debug instructions could cause code generation to
+      // change.
+      if (NonDebugReordered)
         DAG.LIS->handleMove(*MI, true);
     }
 
