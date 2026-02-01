@@ -361,10 +361,13 @@ static SDValue getCopyFromPartsVector(SelectionDAG &DAG, const SDLoc &DL,
     } else {
       if (!ValueVT.isScalableVector() && PartVT.isVector() &&
           !PartVT.isScalableVector()) {
-        if (ValueVT.getSizeInBits() % PartVT.getSizeInBits() == 0) {
+        TypeSize ValueSize = ValueVT.getSizeInBits();
+        TypeSize PartSize = PartVT.getSizeInBits();
+        if (ValueSize.isKnownMultipleOf(PartSize)) {
           MVT NewEltVT = PartVT.getVectorElementType();
+          TypeSize NewEltSize = NewEltVT.getSizeInBits();
           unsigned NewNumElts =
-              ValueVT.getSizeInBits() / NewEltVT.getSizeInBits();
+              ValueSize.getKnownMinValue() / NewEltSize.getKnownMinValue();
           ValueVT = MVT::getVectorVT(NewEltVT, NewNumElts);
         }
       }
@@ -774,10 +777,13 @@ static void getCopyToPartsVector(SelectionDAG &DAG, const SDLoc &DL,
   } else {
     if (!ValueVT.isScalableVector() && PartVT.isVector() &&
         !PartVT.isScalableVector()) {
-      if (ValueVT.getSizeInBits() % PartVT.getSizeInBits() == 0) {
+      TypeSize ValueSize = ValueVT.getSizeInBits();
+      TypeSize PartSize = PartVT.getSizeInBits();
+      if (ValueSize.isKnownMultipleOf(PartSize)) {
         MVT NewEltVT = PartVT.getVectorElementType();
+        TypeSize NewEltSize = NewEltVT.getSizeInBits();
         unsigned NewNumElts =
-            ValueVT.getSizeInBits() / NewEltVT.getSizeInBits();
+            ValueSize.getKnownMinValue() / NewEltSize.getKnownMinValue();
         ValueVT = MVT::getVectorVT(NewEltVT, NewNumElts);
         Val = DAG.getNode(ISD::BITCAST, DL, ValueVT, Val);
       }
