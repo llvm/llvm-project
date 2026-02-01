@@ -459,10 +459,12 @@ arith::AddUIExtendedOp::fold(FoldAdaptor adaptor,
   if (Attribute sumAttr = constFoldBinaryOp<IntegerAttr>(
           adaptor.getOperands(),
           [](APInt a, const APInt &b) { return std::move(a) + b; })) {
+    auto typedSumAttr = llvm::dyn_cast<TypedAttr>(sumAttr);
+    if (!typedSumAttr)
+      return failure();
     Attribute overflowAttr = constFoldBinaryOp<IntegerAttr>(
         ArrayRef({sumAttr, adaptor.getLhs()}),
-        getI1SameShape(llvm::cast<TypedAttr>(sumAttr).getType()),
-        calculateUnsignedOverflow);
+        getI1SameShape(typedSumAttr.getType()), calculateUnsignedOverflow);
     if (!overflowAttr)
       return failure();
 
