@@ -297,8 +297,7 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
   // If we must allocate mangling numbers but the `ManglingContextDecl`
   // is a local variable, use the `DeclContext` containing the lambda expression
   // instead.
-  if (ManglingContextDecl)
-    if (VarDecl *Var = dyn_cast<VarDecl>(ManglingContextDecl);
+  if (VarDecl *Var = dyn_cast_or_null<VarDecl>(ManglingContextDecl);
         Var && Var->isLocalVarDecl())
       ManglingContextDecl = const_cast<Decl *>(cast<Decl>(DC));
 
