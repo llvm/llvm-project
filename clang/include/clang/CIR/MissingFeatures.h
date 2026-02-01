@@ -278,7 +278,7 @@ struct MissingFeatures {
   static bool emitNullabilityCheck() { return false; }
   static bool emitTypeCheck() { return false; }
   static bool emitTypeMetadataCodeForVCall() { return false; }
-  
+
   // Fast math.
   static bool fastMathGuard() { return false; }
   // Should be implemented with a moduleOp level attribute and directly

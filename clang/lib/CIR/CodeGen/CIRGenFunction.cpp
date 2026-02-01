@@ -1154,7 +1154,7 @@ void CIRGenFunction::CIRGenFPOptionsRAII::ConstructorHelper(
   cgf.curFPFeatures = fpFeatures;
 
   oldExcept = cgf.builder.getDefaultConstrainedExcept();
-  oldRounding =cgf.builder.getDefaultConstrainedRounding();
+  oldRounding = cgf.builder.getDefaultConstrainedRounding();
 
   if (oldFPFeatures == fpFeatures)
     return;
