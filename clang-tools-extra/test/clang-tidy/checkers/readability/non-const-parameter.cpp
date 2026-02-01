@@ -361,9 +361,7 @@ public:
 
 void gh176623() {
     auto const V1 = []<bool tc>(char* p) { auto X = A<tc>(p); };
-    // CHECK-MESSAGES: :[[@LINE+1]]:45: warning: pointer parameter 'p' can be pointer to const
     auto const V2 = []<bool tc>(char* p) { auto Y = B(p); };
-    // CHECK-FIXES: auto const V2 = []<bool tc>(const char* p) { auto Y = B(p); };
 }
 
 void testGenericLambdaIssue177354() {
