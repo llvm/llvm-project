@@ -242,9 +242,13 @@ bool ProcessFreeBSDKernel::DoUpdateThreadList(ThreadList &old_thread_list,
           thread_desc += llvm::formatv(" (on CPU {0})", oncpu);
         }
 
-        ThreadSP thread_sp{
-            new ThreadFreeBSDKernel(*this, tid, pcb_addr, thread_desc)};
-        new_thread_list.AddThread(thread_sp);
+        auto thread =
+            new ThreadFreeBSDKernel(*this, tid, pcb_addr, thread_desc);
+
+        if (tid == dumptid)
+          thread->SetIsCrashedThread(true);
+
+        new_thread_list.AddThread(static_cast<ThreadSP>(thread));
       }
     }
   } else {
