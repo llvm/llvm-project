@@ -3473,9 +3473,10 @@ libc_support_library(
         ":__support_fputil_fenv_impl",
         ":__support_fputil_fp_bits",
         ":__support_fputil_rounding_mode",
-        ":__support_fputil_sqrt",
+        ":__support_common",
         ":__support_macros_optimization",
-        ":__support_macros_properties_types",
+        ":__support_uint128",
+        ":llvm_libc_types_float128",
     ],
 )
 

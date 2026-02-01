@@ -1465,9 +1465,9 @@ add_header_library(
     libc.src.__support.FPUtil.fenv_impl
     libc.src.__support.FPUtil.fp_bits
     libc.src.__support.FPUtil.rounding_mode
+    libc.src.__support.common
     libc.src.__support.macros.optimization
-    libc.src.__support.macros.properties.types
-    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.uint128
     libc.include.llvm-libc-types.float128
 )
 
