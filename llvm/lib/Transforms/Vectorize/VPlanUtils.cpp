@@ -178,6 +178,22 @@ const SCEV *vputils::getSCEVExprForVPValue(const VPValue *V,
       return SE.getMinusSCEV(SE.getMinusOne(Ops[0]->getType()), Ops[0]);
     });
   }
+  if (match(V, m_Mul(m_VPValue(LHSVal), m_VPValue(RHSVal))))
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+      return SE.getMulExpr(Ops[0], Ops[1], SCEV::FlagAnyWrap, 0);
+    });
+  if (match(V,
+            m_Binary<Instruction::UDiv>(m_VPValue(LHSVal), m_VPValue(RHSVal))))
+    return CreateSCEV({LHSVal, RHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+      return SE.getUDivExpr(Ops[0], Ops[1]);
+    });
+  // Handle AND with constant mask: x & (2^n - 1) can be represented as x % 2^n.
+  const APInt *Mask;
+  if (match(V, m_c_BinaryAnd(m_VPValue(LHSVal), m_APInt(Mask))) &&
+      (*Mask + 1).isPowerOf2())
+    return CreateSCEV({LHSVal}, [&](ArrayRef<const SCEV *> Ops) {
+      return SE.getURemExpr(Ops[0], SE.getConstant(*Mask + 1));
+    });
   if (match(V, m_Trunc(m_VPValue(LHSVal)))) {
     const VPlan *Plan = V->getDefiningRecipe()->getParent()->getPlan();
     Type *DestTy = VPTypeAnalysis(*Plan).inferScalarType(V);
