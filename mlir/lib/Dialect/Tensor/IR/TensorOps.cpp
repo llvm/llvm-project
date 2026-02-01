@@ -1456,9 +1456,19 @@ void FromElementsOp::build(OpBuilder &builder, OperationState &result,
 }
 
 OpFoldResult FromElementsOp::fold(FoldAdaptor adaptor) {
-  if (!llvm::is_contained(adaptor.getElements(), nullptr))
-    return DenseElementsAttr::get(getType(), adaptor.getElements());
-  return {};
+  if (llvm::is_contained(adaptor.getElements(), nullptr))
+    return {};
+
+  // DenseElementsAttr::get only accepts IntegerAttr, FloatAttr, StringAttr,
+  // or ArrayAttr (for complex types). Check that all elements are valid
+  // attribute types before constructing the DenseElementsAttr.
+  // This avoids crashes when e.g. a PoisonAttr is folded in.
+  if (!llvm::all_of(adaptor.getElements(), [](Attribute attr) {
+        return isa<IntegerAttr, FloatAttr, StringAttr, ArrayAttr>(attr);
+      }))
+    return {};
+
+  return DenseElementsAttr::get(getType(), adaptor.getElements());
 }
 
 namespace {
