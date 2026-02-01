@@ -1731,110 +1731,62 @@ TEST(ConstantRange, MakeAllowedICmpRegionEdgeCases) {
                   .isFullSet());
 }
 
-TEST(ConstantRange, MakeAllowedICmpRegionSameSign) {
-  APInt Positive(8, 10);
-  APInt Negative(8, -10, true);
-  ConstantRange AllPositive(Positive);
-  ConstantRange AllNegative(Negative);
-  ConstantRange BothPosAndNeg(Negative, Positive + 1);
-  ConstantRange Wrapped(Positive, Negative + 1);
+template <typename SIV>
+auto getSameSignTester(SIV ShouldIncludeValue, CmpInst::Predicate Cmp) {
+  return [Cmp, ShouldIncludeValue](const ConstantRange &CR) {
+    uint32_t BitWidth = CR.getBitWidth();
+    unsigned Max = 1 << BitWidth;
+    SmallBitVector Elems(Max);
+    if (!CR.isEmptySet()) {
+      for (unsigned I : llvm::seq(Max)) {
+        APInt Current(BitWidth, I);
+        if (ShouldIncludeValue(Current, CR))
+          Elems.set(I);
+      }
+    }
 
-  CmpPredicate UGE(ICmpInst::ICMP_UGE, true);
-  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(UGE, AllPositive),
-            ConstantRange(Positive, APInt::getSignedMinValue(8)));
-  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(UGE, AllNegative),
-            ConstantRange(Negative, APInt::getZero(8)));
-  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(UGE, BothPosAndNeg),
-            ConstantRange(Negative, APInt::getSignedMinValue(8)));
-  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(UGE, Wrapped),
-            ConstantRange(Positive, APInt::getMinValue(8)));
-
-  CmpPredicate UGT(ICmpInst::ICMP_UGT, true);
-  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(UGT, AllPositive),
-            ConstantRange(Positive + 1, APInt::getSignedMinValue(8)));
-  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(UGT, AllNegative),
-            ConstantRange(Negative + 1, APInt::getZero(8)));
-  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(UGT, BothPosAndNeg),
-            ConstantRange(Negative + 1, APInt::getSignedMinValue(8)));
-  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(UGT, Wrapped),
-            ConstantRange(Positive + 1, APInt::getMinValue(8)));
-
-  CmpPredicate ULE(ICmpInst::ICMP_ULE, true);
-  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(ULE, AllPositive),
-            ConstantRange(APInt::getZero(8), Positive + 1));
-  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(ULE, AllNegative),
-            ConstantRange(APInt::getSignedMinValue(8), Negative + 1));
-  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(ULE, BothPosAndNeg),
-            ConstantRange(APInt::getSignedMinValue(8), Positive + 1));
-  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(ULE, Wrapped),
-            ConstantRange(APInt::getZero(8), Negative + 1));
-
-  CmpPredicate ULT(ICmpInst::ICMP_ULT, true);
-  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(ULT, AllPositive),
-            ConstantRange(APInt::getZero(8), Positive));
-  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(ULT, AllNegative),
-            ConstantRange(APInt::getSignedMinValue(8), Negative));
-  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(ULT, BothPosAndNeg),
-            ConstantRange(APInt::getSignedMinValue(8), Positive));
-  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(ULT, Wrapped),
-            ConstantRange(APInt::getZero(8), Negative));
+    CmpPredicate CmpPred(Cmp, true);
+    TestRange(ConstantRange::makeAllowedICmpRegion(CmpPred, CR), Elems,
+              PreferSmallest, {});
+  };
 }
 
-TEST(ConstantRange, MakeAllowedICmpRegionBoolean) {
-  ConstantRange One(APInt(1, 1));
-  ConstantRange Zero(APInt(1, 0));
+TEST(ConstantRange, MakeAllowedICmpRegionExaustive) {
+  EnumerateInterestingConstantRanges(getSameSignTester(
+      [](const APInt &A, const ConstantRange &B) {
+        if (A.isNegative())
+          return A.sge(B.getSignedMin());
+        return A.uge(B.getUnsignedMin());
+      },
+      ICmpInst::ICMP_UGE));
 
-  EXPECT_TRUE(ConstantRange::makeAllowedICmpRegion(
-                  CmpPredicate(ICmpInst::ICMP_UGE, /*HasSameSign=*/false), Zero)
-                  .isFullSet());
-  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(
-                CmpPredicate(ICmpInst::ICMP_UGE, /*HasSameSign=*/false), One),
-            One);
-  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(
-                CmpPredicate(ICmpInst::ICMP_UGE, /*HasSameSign=*/true), Zero),
-            Zero);
-  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(
-                CmpPredicate(ICmpInst::ICMP_UGE, /*HasSameSign=*/true), One),
-            One);
+  EnumerateInterestingConstantRanges(getSameSignTester(
+      [](const APInt &A, const ConstantRange &B) {
+        if (A.isNegative())
+          return A.sgt(B.getSignedMin());
+        return A.ugt(B.getUnsignedMin());
+      },
+      ICmpInst::ICMP_UGT));
 
-  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(
-                CmpPredicate(ICmpInst::ICMP_UGT, /*HasSameSign=*/false), Zero),
-            One);
-  EXPECT_TRUE(ConstantRange::makeAllowedICmpRegion(
-                  CmpPredicate(ICmpInst::ICMP_UGT, /*HasSameSign=*/false), One)
-                  .isEmptySet());
-  EXPECT_TRUE(ConstantRange::makeAllowedICmpRegion(
-                  CmpPredicate(ICmpInst::ICMP_UGT, /*HasSameSign=*/true), Zero)
-                  .isEmptySet());
-  EXPECT_TRUE(ConstantRange::makeAllowedICmpRegion(
-                  CmpPredicate(ICmpInst::ICMP_UGT, /*HasSameSign=*/true), One)
-                  .isEmptySet());
+  EnumerateInterestingConstantRanges(getSameSignTester(
+      [](const APInt &A, const ConstantRange &B) {
+        if (A.isNegative() && B.getUnsignedMax().isNegative())
+          return A.sle(B.getUnsignedMax());
+        if (A.isNonNegative() && B.getSignedMax().isNonNegative())
+          return A.ule(B.getSignedMax());
+        return false;
+      },
+      ICmpInst::ICMP_ULE));
 
-  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(
-                CmpPredicate(ICmpInst::ICMP_ULE, /*HasSameSign=*/false), Zero),
-            Zero);
-  EXPECT_TRUE(ConstantRange::makeAllowedICmpRegion(
-                  CmpPredicate(ICmpInst::ICMP_ULE, /*HasSameSign=*/false), One)
-                  .isFullSet());
-  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(
-                CmpPredicate(ICmpInst::ICMP_ULE, /*HasSameSign=*/true), Zero),
-            Zero);
-  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(
-                CmpPredicate(ICmpInst::ICMP_ULE, /*HasSameSign=*/true), One),
-            One);
-
-  EXPECT_TRUE(ConstantRange::makeAllowedICmpRegion(
-                  CmpPredicate(ICmpInst::ICMP_ULT, /*HasSameSign=*/false), Zero)
-                  .isEmptySet());
-  EXPECT_EQ(ConstantRange::makeAllowedICmpRegion(
-                CmpPredicate(ICmpInst::ICMP_ULT, /*HasSameSign=*/false), One),
-            Zero);
-  EXPECT_TRUE(ConstantRange::makeAllowedICmpRegion(
-                  CmpPredicate(ICmpInst::ICMP_ULT, /*HasSameSign=*/true), Zero)
-                  .isEmptySet());
-  EXPECT_TRUE(ConstantRange::makeAllowedICmpRegion(
-                  CmpPredicate(ICmpInst::ICMP_ULT, /*HasSameSign=*/true), One)
-                  .isEmptySet());
+  EnumerateInterestingConstantRanges(getSameSignTester(
+      [](const APInt &A, const ConstantRange &B) {
+        if (A.isNegative() && B.getUnsignedMax().isNegative())
+          return A.slt(B.getUnsignedMax());
+        if (A.isNonNegative() && B.getSignedMax().isNonNegative())
+          return A.ult(B.getSignedMax());
+        return false;
+      },
+      ICmpInst::ICMP_ULT));
 }
 
 TEST(ConstantRange, MakeExactICmpRegion) {
