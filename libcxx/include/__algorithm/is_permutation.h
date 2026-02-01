@@ -100,7 +100,7 @@ _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __is_permutation_impl(
 
       // Count number of *__i in [__i, l1) (we can start with 1)
       _D1 __c1 = 1;
-      for (auto __j = _IterOps<_AlgPolicy>::next(__i); __j != __last1; ++__j) {
+      for (auto __j = _IterOps<_AlgPolicy>::__next_n(__i); __j != __last1; ++__j) {
         if (std::__invoke(__pred, std::__invoke(__proj1, *__i), std::__invoke(__proj1, *__j)))
           ++__c1;
       }
@@ -130,7 +130,7 @@ template <class _AlgPolicy, class _ForwardIterator1, class _Sentinel1, class _Fo
   _D1 __l1  = _IterOps<_AlgPolicy>::distance(__first1, __last1);
   if (__l1 == _D1(1))
     return false;
-  auto __last2 = _IterOps<_AlgPolicy>::next(__first2, __l1);
+  auto __last2 = _IterOps<_AlgPolicy>::__next_n(__first2, __l1);
 
   return std::__is_permutation_impl<_AlgPolicy>(
       std::move(__first1),
