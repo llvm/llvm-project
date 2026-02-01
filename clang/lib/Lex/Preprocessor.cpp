@@ -1041,10 +1041,16 @@ void Preprocessor::LexTokensUntilEOF(std::vector<Token> *Tokens) {
 bool Preprocessor::LexHeaderName(Token &FilenameTok, bool AllowMacroExpansion) {
   // Lex using header-name tokenization rules if tokens are being lexed from
   // a file. Just grab a token normally if we're in a macro expansion.
-  if (CurPPLexer)
-    CurPPLexer->LexIncludeFilename(FilenameTok);
-  else
+  if (CurPPLexer) {
+    // Avoid nested header-name lexing when macro expansion recurses
+    // __has_include(__has_include))
+    if (CurPPLexer->ParsingFilename)
+      LexUnexpandedToken(FilenameTok);
+    else
+      CurPPLexer->LexIncludeFilename(FilenameTok);
+  } else {
     Lex(FilenameTok);
+  }
 
   // This could be a <foo/bar.h> file coming from a macro expansion.  In this
   // case, glue the tokens together into an angle_string_literal token.
