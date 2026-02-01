@@ -22,6 +22,7 @@ add_clang_library(clangDriver
   Distro.cpp
   Driver.cpp
   Job.cpp
+  ModulesDriver.cpp
   Multilib.cpp
   MultilibBuilder.cpp
   OffloadBundler.cpp
@@ -99,6 +100,7 @@ add_clang_library(clangDriver
 
   LINK_LIBS
   clangBasic
+  clangDependencyScanning
   clangFrontend
   clangSerialization
   clangLex
