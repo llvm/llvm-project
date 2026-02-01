@@ -16,12 +16,15 @@
 #include "VPlanAnalysis.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
+#include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
+#include "VPlanUtils.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -1135,37 +1138,6 @@ void VPlanTransforms::addMinimumVectorEpilogueIterationCheck(
   Branch->setMetadata(LLVMContext::MD_prof, BranchWeights);
 }
 
-/// If \p V is used by a recipe matching pattern \p P, return it. Otherwise
-/// return nullptr;
-template <typename MatchT>
-static VPRecipeBase *findUserOf(VPValue *V, const MatchT &P) {
-  auto It = find_if(V->users(), match_fn(P));
-  return It == V->user_end() ? nullptr : cast<VPRecipeBase>(*It);
-}
-
-/// If \p V is used by a VPInstruction with \p Opcode, return it. Otherwise
-/// return nullptr.
-template <unsigned Opcode> static VPInstruction *findUserOf(VPValue *V) {
-  return cast_or_null<VPInstruction>(findUserOf(V, m_VPInstruction<Opcode>()));
-}
-
-/// Find the ComputeReductionResult recipe for \p PhiR, looking through selects
-/// inserted for predicated reductions or tail folding.
-static VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR) {
-  VPValue *BackedgeVal = PhiR->getBackedgeValue();
-  if (auto *Res =
-          findUserOf<VPInstruction::ComputeReductionResult>(BackedgeVal))
-    return Res;
-
-  // Look through selects inserted for tail folding or predicated reductions.
-  VPRecipeBase *SelR =
-      findUserOf(BackedgeVal, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
-  if (!SelR)
-    return nullptr;
-  return findUserOf<VPInstruction::ComputeReductionResult>(
-      cast<VPSingleDefRecipe>(SelR));
-}
-
 /// Find and return the final select instruction of the FindIV result pattern
 /// for the given \p BackedgeVal:
 /// select(icmp ne ComputeReductionResult(ReducedIV), Sentinel),
@@ -1274,7 +1246,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
 
     // If we exit early due to NaNs, compute the final reduction result based on
     // the reduction phi at the beginning of the last vector iteration.
-    auto *RdxResult = findComputeReductionResult(RedPhiR);
+    auto *RdxResult = vputils::findComputeReductionResult(RedPhiR);
     assert(RdxResult && "must find a ComputeReductionResult");
 
     auto *NewSel = MiddleBuilder.createSelect(AnyNaNLane, RedPhiR,
@@ -1402,7 +1374,7 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
     // Find final reduction computation and replace it with an
     // extract.last.active intrinsic.
     auto *RdxResult =
-        findUserOf<VPInstruction::ComputeReductionResult>(DataSelect);
+        vputils::findUserOf<VPInstruction::ComputeReductionResult>(DataSelect);
     // TODO: Handle tail-folding.
     if (!RdxResult)
       return false;
@@ -1461,7 +1433,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     VPValue *CmpOpA;
     VPValue *CmpOpB;
     CmpPredicate Pred;
-    auto *Cmp = dyn_cast_or_null<VPRecipeWithIRFlags>(findUserOf(
+    auto *Cmp = dyn_cast_or_null<VPRecipeWithIRFlags>(vputils::findUserOf(
         MinOrMaxPhiR, m_Cmp(Pred, m_VPValue(CmpOpA), m_VPValue(CmpOpB))));
     if (!Cmp || Cmp->getNumUsers() != 1 ||
         (CmpOpA != MinOrMaxOpValue && CmpOpB != MinOrMaxOpValue))
@@ -1477,7 +1449,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
       return false;
 
     VPInstruction *MinOrMaxResult =
-        findUserOf<VPInstruction::ComputeReductionResult>(MinOrMaxOp);
+        vputils::findUserOf<VPInstruction::ComputeReductionResult>(MinOrMaxOp);
     assert(is_contained(MinOrMaxPhiR->users(), MinOrMaxOp) &&
            "one user must be MinOrMaxOp");
     assert(MinOrMaxResult &&
