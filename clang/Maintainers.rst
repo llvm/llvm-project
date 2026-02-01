@@ -42,9 +42,6 @@ AST Visitors
 
 Clang LLVM IR generation
 ~~~~~~~~~~~~~~~~~~~~~~~~
-| John McCall
-| rjmccall\@apple.com (email), rjmccall (Phabricator), rjmccall (GitHub)
-
 | Eli Friedman
 | efriedma\@qti.qualcomm.com (email), efriedma (Phabricator), efriedma-quic (GitHub)
 
@@ -113,6 +110,12 @@ Templates
 | ekeane\@nvidia.com (email), ErichKeane (Phabricator), erichkeane (GitHub)
 
 
+Concepts
+~~~~~~~~
+| Corentin Jabot
+| corentin.jabot\@gmail.com (email), cor3ntin (Phabricator), cor3ntin (GitHub)
+
+
 Lambdas
 ~~~~~~~
 | Corentin Jabot
@@ -148,6 +151,10 @@ Clang static analyzer
 | Balázs Benics
 | benicsbalazs\@gmail.com (email), steakhal (Phabricator), steakhal (GitHub)
 
+| Donát Nagy
+| donat.nagy\@ericsson.com (email), NagyDonat (GitHub), DonatNagyE (Discourse)
+
+
 Compiler options
 ~~~~~~~~~~~~~~~~
 | Jan Svoboda
@@ -172,6 +179,9 @@ Offloading driver
 ~~~~~~~~~~~~~~~~~
 | Joseph Huber
 | joseph.huber\@amd.com (email), jhuber6 (GitHub)
+
+| Nick Sarnie
+| nick.sarnie\@intel.com (email), sarnex (GitHub)
 
 
 Driver parts not covered by someone else
@@ -261,8 +271,8 @@ compiler.
 
 Attributes
 ~~~~~~~~~~
-| Erich Keane
-| ekeane\@nvidia.com (email), ErichKeane (Phabricator), erichkeane (GitHub)
+| Aaron Ballman
+| aaron\@aaronballman.com (email), aaron.ballman (Phabricator), AaronBallman (GitHub), AaronBallman (Discourse), aaronballman (Discord)
 
 
 Plugins
@@ -279,9 +289,6 @@ Inline assembly
 
 Text encodings
 ~~~~~~~~~~~~~~
-| Tom Honermann
-| tom\@honermann.net (email), tahonermann (Phabricator), tahonermann (GitHub)
-
 | Corentin Jabot
 | corentin.jabot\@gmail.com (email), cor3ntin (Phabricator), cor3ntin (GitHub)
 
@@ -400,3 +407,5 @@ Inactive component maintainers
 | Chandler Carruth (chandlerc\@gmail.com, chandlerc\@google.com) -- CMake, library layering
 | Devin Coughlin (dcoughlin\@apple.com) -- Clang static analyzer
 | Manuel Klimek (klimek\@google.com (email), klimek (Phabricator), r4nt (GitHub)) -- Tooling, AST matchers
+| Tom Honermann (tom\@honermann.net (email), tahonermann (Phabricator), tahonermann (GitHub)) -- Text Encodings
+| John McCall (rjmccall\@apple.com (email), rjmccall (Phabricator), rjmccall (GitHub)) -- Clang LLVM IR generation
