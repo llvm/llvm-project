@@ -11,17 +11,21 @@
 #define _LIBCPP___ALGORITHM_EQUAL_H
 
 #include <__algorithm/comp.h>
+#include <__algorithm/find_segment_if.h>
 #include <__algorithm/min.h>
 #include <__algorithm/unwrap_iter.h>
 #include <__config>
 #include <__functional/identity.h>
 #include <__fwd/bit_reference.h>
 #include <__iterator/iterator_traits.h>
+#include <__iterator/segmented_iterator.h>
 #include <__string/constexpr_c_functions.h>
+#include <__type_traits/common_type.h>
 #include <__type_traits/desugars_to.h>
 #include <__type_traits/enable_if.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_equality_comparable.h>
+#include <__type_traits/is_same.h>
 #include <__type_traits/is_volatile.h>
 #include <__utility/move.h>
 
@@ -174,15 +178,6 @@ template <class _Cp,
   return std::__equal_unaligned(__first1, __last1, __first2);
 }
 
-template <class _InIter1, class _Sent1, class _InIter2, class _Pred, class _Proj1, class _Proj2>
-[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __equal_iter_impl(
-    _InIter1 __first1, _Sent1 __last1, _InIter2 __first2, _Pred& __pred, _Proj1& __proj1, _Proj2& __proj2) {
-  for (; __first1 != __last1; ++__first1, (void)++__first2)
-    if (!std::__invoke(__pred, std::__invoke(__proj1, *__first1), std::__invoke(__proj2, *__first2)))
-      return false;
-  return true;
-}
-
 template <class _Tp,
           class _Up,
           class _BinaryPredicate,
@@ -195,6 +190,58 @@ template <class _Tp,
 [[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool
 __equal_iter_impl(_Tp* __first1, _Tp* __last1, _Up* __first2, _BinaryPredicate&, _Proj1&, _Proj2&) {
   return std::__constexpr_memcmp_equal(__first1, __first2, __element_count(__last1 - __first1));
+}
+
+template <class _InIter1, class _Sent1, class _InIter2, class _Pred, class _Proj1, class _Proj2>
+[[__nodiscard__]] inline _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX20 bool __equal_iter_impl(
+    _InIter1 __first1, _Sent1 __last1, _InIter2 __first2, _Pred& __pred, _Proj1& __proj1, _Proj2& __proj2) {
+#ifndef _LIBCPP_CXX03_LANG
+  if constexpr (__has_random_access_iterator_category<_InIter1>::value &&
+                __has_random_access_iterator_category<_InIter2>::value) {
+    if constexpr (is_same<_InIter1, _Sent1>::value && __is_segmented_iterator_v<_InIter1>) {
+      using __local_iterator_t = typename __segmented_iterator_traits<_InIter1>::__local_iterator;
+      bool __is_equal          = true;
+      std::__find_segment_if(__first1, __last1, [&](__local_iterator_t __lfirst, __local_iterator_t __llast) {
+        if (std::__equal_iter_impl(
+                std::__unwrap_iter(__lfirst), std::__unwrap_iter(__llast), __first2, __pred, __proj1, __proj2)) {
+          __first2 += __llast - __lfirst;
+          return __llast;
+        }
+        __is_equal = false;
+        return __lfirst;
+      });
+      return __is_equal;
+    } else if constexpr (__is_segmented_iterator_v<_InIter2>) {
+      using _Traits = __segmented_iterator_traits<_InIter2>;
+      using _DiffT =
+          typename common_type<__iterator_difference_type<_InIter1>, __iterator_difference_type<_InIter2> >::type;
+
+      if (__first1 == __last1)
+        return true;
+
+      auto __local_first      = _Traits::__local(__first2);
+      auto __segment_iterator = _Traits::__segment(__first2);
+
+      while (true) {
+        auto __local_last = _Traits::__end(__segment_iterator);
+        auto __size       = std::min<_DiffT>(__local_last - __local_first, __last1 - __first1);
+        if (!std::__equal_iter_impl(
+                __first1, __first1 + __size, std::__unwrap_iter(__local_first), __pred, __proj1, __proj2))
+          return false;
+
+        __first1 += __size;
+        if (__first1 == __last1)
+          return true;
+
+        __local_first = _Traits::__begin(++__segment_iterator);
+      }
+    }
+  }
+#endif
+  for (; __first1 != __last1; ++__first1, (void)++__first2)
+    if (!std::__invoke(__pred, std::__invoke(__proj1, *__first1), std::__invoke(__proj2, *__first2)))
+      return false;
+  return true;
 }
 
 template <class _InputIterator1, class _InputIterator2, class _BinaryPredicate>
