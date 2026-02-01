@@ -6,7 +6,7 @@ add_flang_library(HLFIRTransforms
   ExpressionSimplification.cpp
   InlineElementals.cpp
   InlineHLFIRAssign.cpp
-  InlineHLFIRCopyIn.cpp
+  InlineHLFIRCopy.cpp
   LowerHLFIRIntrinsics.cpp
   LowerHLFIROrderedAssignments.cpp
   ScheduleOrderedAssignments.cpp

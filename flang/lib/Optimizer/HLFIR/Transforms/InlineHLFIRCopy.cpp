@@ -1,4 +1,4 @@
-//===- InlineHLFIRCopyIn.cpp - Inline hlfir.copy_in ops -------------------===//
+//===- InlineHLFIRCopy.cpp - Inline hlfir.copy_in/copy_out ops ------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -9,6 +9,9 @@
 // per element assignments. For simplicity, the inlining is done for trivial
 // data types when the copy_in does not require a corresponding copy_out and
 // when the input array is not behind a pointer. This may change in the future.
+//
+// When the copy_in is inlined, the corresponding copy_out (deallocation-only
+// case, i.e., when var is null) is also inlined with direct fir.freemem.
 //===----------------------------------------------------------------------===//
 
 #include "flang/Optimizer/Builder/FIRBuilder.h"
@@ -21,15 +24,15 @@
 #include "mlir/Transforms/GreedyPatternRewriteDriver.h"
 
 namespace hlfir {
-#define GEN_PASS_DEF_INLINEHLFIRCOPYIN
+#define GEN_PASS_DEF_INLINEHLFIRCOPY
 #include "flang/Optimizer/HLFIR/Passes.h.inc"
 } // namespace hlfir
 
-#define DEBUG_TYPE "inline-hlfir-copy-in"
+#define DEBUG_TYPE "inline-hlfir-copy"
 
-static llvm::cl::opt<bool> noInlineHLFIRCopyIn(
-    "no-inline-hlfir-copy-in",
-    llvm::cl::desc("Do not inline hlfir.copy_in operations"),
+static llvm::cl::opt<bool> noInlineHLFIRCopy(
+    "no-inline-hlfir-copy",
+    llvm::cl::desc("Do not inline hlfir.copy_in/copy_out operations"),
     llvm::cl::init(false));
 
 namespace {
@@ -41,6 +44,31 @@ public:
   matchAndRewrite(hlfir::CopyInOp copyIn,
                   mlir::PatternRewriter &rewriter) const override;
 };
+
+// Helper function to inline a copy_out deallocation (no copy-back case).
+// Generates: if (wasCopied) { freemem(box_addr(load(tempBox))) }
+static void inlineCopyOutDeallocation(fir::FirOpBuilder &builder,
+                                      mlir::Location loc,
+                                      mlir::Value tempBox,
+                                      mlir::Value wasCopied,
+                                      mlir::Type sequenceType) {
+  builder.genIfOp(loc, {}, wasCopied, /*withElseRegion=*/false)
+      .genThen([&]() {
+        mlir::Value box = fir::LoadOp::create(builder, loc, tempBox);
+        mlir::Value addr = fir::BoxAddrOp::create(builder, loc, box);
+        auto heapType = fir::HeapType::get(sequenceType);
+        mlir::Value heapAddr =
+            fir::ConvertOp::create(builder, loc, heapType, addr);
+        fir::FreeMemOp::create(builder, loc, heapAddr);
+      });
+}
+
+// Note: We don't have a separate InlineCopyOutConversion pattern.
+// Copy_out inlining is handled by InlineCopyInConversion when it inlines
+// the paired copy_in. For copy_outs that aren't paired with an eligible
+// copy_in (e.g., optional args, assumed-rank, non-trivial types), the
+// copy_out is left as-is and will be lowered to a runtime call.
+// This is the conservative approach for the upstream pass.
 
 llvm::LogicalResult
 InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
@@ -148,20 +176,28 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
   mlir::OpResult resultBox = results[0];
   mlir::OpResult needsCleanup = results[1];
 
-  // Prepare the corresponding copyOut to free the temporary if it is required
+  // Inline the corresponding copyOut to free the temporary if it is required.
+  // Generate: if (needsCleanup) { freemem(box_addr(resultBox)) }
+  // We need to store the resultBox first since it's a box value, then generate
+  // the deallocation code at the copyOut location.
   auto alloca = fir::AllocaOp::create(builder, loc, resultBox.getType());
-  auto store = fir::StoreOp::create(builder, loc, resultBox, alloca);
-  rewriter.startOpModification(copyOut);
-  copyOut->setOperand(0, store.getMemref());
-  copyOut->setOperand(1, needsCleanup);
-  rewriter.finalizeOpModification(copyOut);
+  fir::StoreOp::create(builder, loc, resultBox, alloca);
+
+  // Move to the copyOut location to generate the deallocation
+  rewriter.setInsertionPoint(copyOut);
+  fir::FirOpBuilder copyOutBuilder(rewriter, copyOut.getOperation());
+  inlineCopyOutDeallocation(copyOutBuilder, copyOut.getLoc(), alloca,
+                            needsCleanup, sequenceType);
+
+  // Erase the copyOut since we've inlined it
+  rewriter.eraseOp(copyOut);
 
   rewriter.replaceOp(copyIn, {resultBox, builder.genNot(loc, isContiguous)});
   return mlir::success();
 }
 
-class InlineHLFIRCopyInPass
-    : public hlfir::impl::InlineHLFIRCopyInBase<InlineHLFIRCopyInPass> {
+class InlineHLFIRCopyPass
+    : public hlfir::impl::InlineHLFIRCopyBase<InlineHLFIRCopyPass> {
 public:
   void runOnOperation() override {
     mlir::MLIRContext *context = &getContext();
@@ -172,14 +208,14 @@ public:
         mlir::GreedySimplifyRegionLevel::Disabled);
 
     mlir::RewritePatternSet patterns(context);
-    if (!noInlineHLFIRCopyIn) {
+    if (!noInlineHLFIRCopy) {
       patterns.insert<InlineCopyInConversion>(context);
     }
 
     if (mlir::failed(mlir::applyPatternsGreedily(
             getOperation(), std::move(patterns), config))) {
       mlir::emitError(getOperation()->getLoc(),
-                      "failure in hlfir.copy_in inlining");
+                      "failure in hlfir.copy_in/copy_out inlining");
       signalPassFailure();
     }
   }
