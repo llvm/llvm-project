@@ -350,18 +350,6 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
       "bool", "areTypesCompatible",
       (ins "::mlir::Type":$lhs, "::mlir::Type":$rhs), [{}],
       /*defaultImplementation=*/[{ return lhs == rhs; }]
-    >,
-    InterfaceMethod<[{
-        Region branch ops that "must progress" are required to terminate (i.e.,
-        not loop infinitely between their regions) or interact with the
-        environment in an observable way. If a "must progress" op is found to
-        loop infinitely without interacting with the environment, it may be
-        erased. See "llvm.loop.mustprogress" for more details.
-
-        Region branch ops must progress by default.
-      }],
-      "bool", "mustProgress", (ins), [{}],
-      /*defaultImplementation=*/[{ return true; }]
     >
   ];
 

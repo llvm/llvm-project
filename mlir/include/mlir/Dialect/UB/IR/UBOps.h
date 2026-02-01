@@ -25,15 +25,13 @@
 
 #include "mlir/Dialect/UB/IR/UBOpsDialect.h.inc"
 
-namespace mlir {
-namespace ub {
+namespace mlir::ub {
 /// Populate a canonicalization pattern that erases "must progress" region
-/// branch ops that loop infinitely and replaces their results with poisoned
+/// branch ops that loop infinitely and replaces their results with poison
 /// values.
 void populateEraseInfiniteRegionBranchLoopPattern(RewritePatternSet &patterns,
                                                   StringRef opName,
                                                   PatternBenefit benefit = 1);
-} // namespace ub
-} // namespace mlir
+} // namespace mlir::ub
 
 #endif // MLIR_DIALECT_UB_IR_OPS_H

@@ -11,4 +11,5 @@ add_mlir_dialect_library(MLIRUBDialect
 
   LINK_LIBS PUBLIC
   MLIRIR
+  MLIRExecutionProgressOpInterface
   )

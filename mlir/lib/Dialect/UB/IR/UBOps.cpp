@@ -9,6 +9,7 @@
 #include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
+#include "mlir/Interfaces/ExecutionProgressOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 
 #include "mlir/IR/Builders.h"
@@ -80,7 +81,7 @@ struct EraseInfiniteRegionBranchLoop : public RewritePattern {
   LogicalResult matchAndRewrite(Operation *op,
                                 PatternRewriter &rewriter) const override {
     auto regionBranchOp = cast<RegionBranchOpInterface>(op);
-    if (!regionBranchOp.mustProgress())
+    if (!mustProgress(op))
       return rewriter.notifyMatchFailure(
           op, "only loops that must progress are removed");
     if (!wouldOpBeTriviallyDead(op))

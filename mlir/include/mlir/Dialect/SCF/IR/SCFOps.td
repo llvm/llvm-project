@@ -18,6 +18,7 @@ include "mlir/Interfaces/LoopLikeInterface.td"
 include "mlir/IR/RegionKindInterface.td"
 include "mlir/Dialect/SCF/IR/DeviceMappingInterface.td"
 include "mlir/Interfaces/DestinationStyleOpInterface.td"
+include "mlir/Interfaces/ExecutionProgressOpInterface.td"
 include "mlir/Interfaces/InferTypeOpInterface.td"
 include "mlir/Interfaces/ParallelCombiningOpInterface.td"
 include "mlir/Interfaces/SideEffectInterfaces.td"
@@ -160,7 +161,9 @@ def ForOp : SCF_Op<"for",
        AllTypesMatch<["lowerBound", "upperBound", "step"]>,
        ConditionallySpeculatable,
        DeclareOpInterfaceMethods<RegionBranchOpInterface,
-        ["getEntrySuccessorOperands", "getSuccessorInputs", "mustProgress"]>,
+        ["getEntrySuccessorOperands", "getSuccessorInputs"]>,
+       DeclareOpInterfaceMethods<ExecutionProgressOpInterface,
+        ["mustProgress"]>,
        SingleBlockImplicitTerminator<"scf::YieldOp">,
        RecursiveMemoryEffects]> {
   let summary = "for operation";
@@ -984,9 +987,10 @@ def ReduceReturnOp :
 
 def WhileOp : SCF_Op<"while",
     [DeclareOpInterfaceMethods<RegionBranchOpInterface,
-        ["getEntrySuccessorOperands", "getSuccessorInputs", "mustProgress"]>,
+        ["getEntrySuccessorOperands", "getSuccessorInputs"]>,
      DeclareOpInterfaceMethods<LoopLikeOpInterface,
         ["getRegionIterArgs", "getYieldedValuesMutable"]>,
+     DeclareOpInterfaceMethods<ExecutionProgressOpInterface, ["mustProgress"]>,
      RecursiveMemoryEffects, SingleBlock]> {
   let summary = "a generic 'while' loop";
   let description = [{
