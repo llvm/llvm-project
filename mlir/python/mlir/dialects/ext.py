@@ -30,6 +30,7 @@ __all__ = [
     "Operand",
     "Result",
     "Region",
+    "Operation",
 ]
 
 Operand = ir.Value
@@ -228,6 +229,11 @@ class Operation(ir.OpView):
         # just treat them as normal classes
         if not name:
             return
+
+        if not hasattr(cls, "_dialect_name") or not hasattr(cls, "_dialect_obj"):
+            raise RuntimeError(
+                "Operation subclasses must inherit from a Dialect's Operation subclass"
+            )
 
         op_name = name
         cls._op_name = op_name
