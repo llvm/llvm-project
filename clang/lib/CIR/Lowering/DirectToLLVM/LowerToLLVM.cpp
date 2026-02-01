@@ -111,39 +111,6 @@ lowerCIRVisibilityToLLVMVisibility(cir::VisibilityKind visibilityKind) {
   }
 }
 
-// Make sure the LLVM function we are about to create a call for actually
-// exists, if not create one. Returns a function
-void getOrCreateLLVMFuncOp(mlir::ConversionPatternRewriter &rewriter,
-                           mlir::Operation *srcOp, llvm::StringRef fnName,
-                           mlir::Type fnTy) {
-  if (!fnTy) {
-    srcOp->emitError("failed to materialize LLVM function type for ") << fnName;
-    return;
-  }
-  auto llvmFnTy = mlir::dyn_cast<mlir::LLVM::LLVMFunctionType>(fnTy);
-  if (!llvmFnTy) {
-    srcOp->emitError("expected LLVM function type for ")
-        << fnName << " but got " << fnTy;
-    return;
-  }
-  auto modOp = srcOp->getParentOfType<mlir::ModuleOp>();
-  if (!modOp) {
-    srcOp->emitError("expected parent module when declaring ") << fnName;
-    return;
-  }
-  auto enclosingFnOp = srcOp->getParentOfType<mlir::LLVM::LLVMFuncOp>();
-  if (!enclosingFnOp) {
-    srcOp->emitError("expected parent LLVM function when declaring ") << fnName;
-    return;
-  }
-  auto *sourceSymbol = mlir::SymbolTable::lookupSymbolIn(modOp, fnName);
-  if (!sourceSymbol) {
-    mlir::OpBuilder::InsertionGuard guard(rewriter);
-    rewriter.setInsertionPoint(enclosingFnOp);
-    mlir::LLVM::LLVMFuncOp::create(rewriter, srcOp->getLoc(), fnName, llvmFnTy);
-  }
-}
-
 /// Emits the value from memory as expected by its users. Should be called when
 /// the memory represetnation of a CIR type is not equal to its scalar
 /// representation.
@@ -3662,7 +3629,7 @@ mlir::LogicalResult CIRToLLVMEhSetjmpOpLowering::matchAndRewrite(
   auto llvmPtrTy = mlir::LLVM::LLVMPointerType::get(rewriter.getContext());
   auto fnType = mlir::LLVM::LLVMFunctionType::get(returnType, llvmPtrTy,
                                                   /*isVarArg=*/false);
-  getOrCreateLLVMFuncOp(rewriter, op, fnName, fnType);
+  createLLVMFuncOpIfNotExist(rewriter, op, fnName, fnType);
   rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(op, returnType, fnName,
                                                   adaptor.getEnv());
   return mlir::success();

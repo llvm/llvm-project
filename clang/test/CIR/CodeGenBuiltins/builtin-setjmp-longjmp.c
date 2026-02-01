@@ -14,7 +14,7 @@ void test_setjmp(void *env) {
   // CIR-NEXT: [[ZERO:%[0-9]+]] = cir.const #cir.int<0>
   // CIR-NEXT: [[FA:%[0-9]+]] = cir.frame_address([[ZERO]])
   // CIR-NEXT: cir.store [[FA]], [[CAST]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
-  // CIR-NEXT: [[SS:%[0-9]+]] = cir.stack_save
+  // CIR-NEXT: [[SS:%[0-9]+]] = cir.stacksave
   // CIR-NEXT: [[TWO:%[0-9]+]] = cir.const #cir.int<2>
   // CIR-NEXT: [[GEP:%[0-9]+]] = cir.ptr_stride [[CAST]], [[TWO]] : (!cir.ptr<!cir.ptr<!void>>, !s32i) -> !cir.ptr<!cir.ptr<!void>>
   // CIR-NEXT: cir.store [[SS]], [[GEP]] : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
