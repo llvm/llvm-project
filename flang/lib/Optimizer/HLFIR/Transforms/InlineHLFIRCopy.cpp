@@ -54,36 +54,34 @@ static void inlineCopyOut(fir::FirOpBuilder &builder, mlir::Location loc,
                           mlir::Value tempBox, mlir::Value wasCopied,
                           mlir::Value copyBackDest, mlir::Value shape,
                           mlir::Type sequenceType) {
-  builder.genIfOp(loc, {}, wasCopied, /*withElseRegion=*/false)
-      .genThen([&]() {
-        mlir::Value box = fir::LoadOp::create(builder, loc, tempBox);
+  builder.genIfOp(loc, {}, wasCopied, /*withElseRegion=*/false).genThen([&]() {
+    mlir::Value box = fir::LoadOp::create(builder, loc, tempBox);
 
-        // If we need to copy back, generate the copy loop
-        if (copyBackDest) {
-          hlfir::Entity temp{box};
-          hlfir::Entity dest{copyBackDest};
-          llvm::SmallVector<mlir::Value> extents =
-              hlfir::getIndexExtents(loc, builder, shape);
-          hlfir::LoopNest loopNest =
-              hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true,
-                                 /*workshare=*/false, /*couldVectorize=*/false);
-          builder.setInsertionPointToStart(loopNest.body);
-          hlfir::Entity tempElem = hlfir::getElementAt(
-              loc, builder, temp, loopNest.oneBasedIndices);
-          tempElem = hlfir::loadTrivialScalar(loc, builder, tempElem);
-          hlfir::Entity destElem = hlfir::getElementAt(
-              loc, builder, dest, loopNest.oneBasedIndices);
-          hlfir::AssignOp::create(builder, loc, tempElem, destElem);
-          builder.setInsertionPointAfter(loopNest.outerOp);
-        }
+    // If we need to copy back, generate the copy loop
+    if (copyBackDest) {
+      hlfir::Entity temp{box};
+      hlfir::Entity dest{copyBackDest};
+      llvm::SmallVector<mlir::Value> extents =
+          hlfir::getIndexExtents(loc, builder, shape);
+      hlfir::LoopNest loopNest =
+          hlfir::genLoopNest(loc, builder, extents, /*isUnordered=*/true,
+                             /*workshare=*/false, /*couldVectorize=*/false);
+      builder.setInsertionPointToStart(loopNest.body);
+      hlfir::Entity tempElem =
+          hlfir::getElementAt(loc, builder, temp, loopNest.oneBasedIndices);
+      tempElem = hlfir::loadTrivialScalar(loc, builder, tempElem);
+      hlfir::Entity destElem =
+          hlfir::getElementAt(loc, builder, dest, loopNest.oneBasedIndices);
+      hlfir::AssignOp::create(builder, loc, tempElem, destElem);
+      builder.setInsertionPointAfter(loopNest.outerOp);
+    }
 
-        // Free the temporary
-        mlir::Value addr = fir::BoxAddrOp::create(builder, loc, box);
-        auto heapType = fir::HeapType::get(sequenceType);
-        mlir::Value heapAddr =
-            fir::ConvertOp::create(builder, loc, heapType, addr);
-        fir::FreeMemOp::create(builder, loc, heapAddr);
-      });
+    // Free the temporary
+    mlir::Value addr = fir::BoxAddrOp::create(builder, loc, box);
+    auto heapType = fir::HeapType::get(sequenceType);
+    mlir::Value heapAddr = fir::ConvertOp::create(builder, loc, heapType, addr);
+    fir::FreeMemOp::create(builder, loc, heapAddr);
+  });
 }
 
 // Note: We don't have a separate InlineCopyOutConversion pattern.
@@ -125,8 +123,7 @@ InlineCopyInConversion::matchAndRewrite(hlfir::CopyInOp copyIn,
   mlir::Value copyBackDest;
   if (mlir::Value destVar = copyOut.getVar()) {
     hlfir::Entity destEntity{destVar};
-    destEntity =
-        hlfir::derefPointersAndAllocatables(loc, builder, destEntity);
+    destEntity = hlfir::derefPointersAndAllocatables(loc, builder, destEntity);
     copyBackDest = destEntity;
   }
 
