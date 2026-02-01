@@ -225,9 +225,6 @@ void NonConstParameterCheck::markCanNotBeConst(const Expr *E,
     for (unsigned I = 0U; I < ILE->getNumInits(); ++I)
       markCanNotBeConst(ILE->getInit(I), true);
   } else if (const auto *UCE = dyn_cast<CXXUnresolvedConstructExpr>(E)) {
-    // Template-dependent constructor (e.g., in generic lambdas).
-    // Cannot analyze parameter usage at parse time, so conservatively
-    // mark arguments.
     for (const auto *Arg : UCE->arguments())
       markCanNotBeConst(Arg, CanNotBeConst);
   } else if (CanNotBeConst) {

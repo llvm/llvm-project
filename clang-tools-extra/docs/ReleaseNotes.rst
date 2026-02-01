@@ -192,10 +192,7 @@ Changes in existing checks
 - Improved :doc:`readability-non-const-parameter
   <clang-tidy/checks/readability/non-const-parameter>` check by avoiding false
   positives on parameters used in template-dependent expressions, including
-  generic lambda parameters. Fixes `#177354
-  <https://github.com/llvm/llvm-project/issues/177354>`_.
-
-
+  generic lambda parameters.
 
 Removed checks
 ^^^^^^^^^^^^^^
