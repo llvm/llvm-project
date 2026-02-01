@@ -5475,6 +5475,33 @@ def CIR_FloorOp : CIR_UnaryFPToFPBuiltinOp<"floor", "FloorOp"> {
   }];
 }
 
+class CIR_BinaryFPToFPBuiltinOp<string mnemonic, string llvmOpName>
+    : CIR_Op<mnemonic, [Pure, SameOperandsAndResultType]>
+{
+  let arguments = (ins 
+    CIR_AnyFloatOrVecOfFloatType:$lhs,
+    CIR_AnyFloatOrVecOfFloatType:$rhs 
+  );
+
+  let results = (outs CIR_AnyFloatOrVecOfFloatType:$result);
+
+  let assemblyFormat = [{
+    $lhs `,` $rhs `:` qualified(type($lhs)) attr-dict
+  }];
+
+  let llvmOp = llvmOpName;
+}
+
+def CIR_ATan2Op : CIR_BinaryFPToFPBuiltinOp<"atan2", "ATan2Op"> {
+  let summary = "Computes the 2-argument floating-point arcus tangent value";
+  let description = [{
+    `cir.atan2` computes the 2-argument arcus tangent of two floating-point 
+    operands and returns a result of the same type as the operands.
+
+    Floating-point exceptions are ignored, and it does not set `errno`.
+  }];
+}
+
 //===----------------------------------------------------------------------===//
 // Variadic Operations
 //===----------------------------------------------------------------------===//
