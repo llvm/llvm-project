@@ -1,0 +1,46 @@
+// RUN: cir-opt %s -cir-to-llvm -o %t.mlir
+// RUN: FileCheck --input-file=%t.mlir %s
+
+!s32i = !cir.int<s, 32>
+
+module {
+  cir.global external target_address_space(1) @global_as1 = #cir.int<42> : !s32i
+  // CHECK: llvm.mlir.global external @global_as1(42 : i32) {addr_space = 1 : i32} : i32
+
+  cir.global external target_address_space(3) @global_as3 = #cir.int<100> : !s32i
+  // CHECK: llvm.mlir.global external @global_as3(100 : i32) {addr_space = 3 : i32} : i32
+
+  cir.global external @global_default = #cir.int<0> : !s32i
+  // CHECK: llvm.mlir.global external @global_default(0 : i32) {addr_space = 0 : i32} : i32
+
+  // Test cir.get_global with address space produces correct llvm.mlir.addressof type
+  // CHECK-LABEL: llvm.func @test_get_global_as1
+  cir.func @test_get_global_as1() -> !s32i {
+    // CHECK: %[[ADDR:.*]] = llvm.mlir.addressof @global_as1 : !llvm.ptr<1>
+    // CHECK: %[[VAL:.*]] = llvm.load %[[ADDR]] {{.*}} : !llvm.ptr<1> -> i32
+    // CHECK: llvm.return %[[VAL]] : i32
+    %0 = cir.get_global @global_as1 : !cir.ptr<!s32i, target_address_space(1)>
+    %1 = cir.load %0 : !cir.ptr<!s32i, target_address_space(1)>, !s32i
+    cir.return %1 : !s32i
+  }
+
+  // CHECK-LABEL: llvm.func @test_get_global_as3
+  cir.func @test_get_global_as3() -> !s32i {
+    // CHECK: %[[ADDR:.*]] = llvm.mlir.addressof @global_as3 : !llvm.ptr<3>
+    // CHECK: %[[VAL:.*]] = llvm.load %[[ADDR]] {{.*}} : !llvm.ptr<3> -> i32
+    // CHECK: llvm.return %[[VAL]] : i32
+    %0 = cir.get_global @global_as3 : !cir.ptr<!s32i, target_address_space(3)>
+    %1 = cir.load %0 : !cir.ptr<!s32i, target_address_space(3)>, !s32i
+    cir.return %1 : !s32i
+  }
+
+  // CHECK-LABEL: llvm.func @test_get_global_default
+  cir.func @test_get_global_default() -> !s32i {
+    // CHECK: %[[ADDR:.*]] = llvm.mlir.addressof @global_default : !llvm.ptr
+    // CHECK: %[[VAL:.*]] = llvm.load %[[ADDR]] {{.*}} : !llvm.ptr -> i32
+    // CHECK: llvm.return %[[VAL]] : i32
+    %0 = cir.get_global @global_default : !cir.ptr<!s32i>
+    %1 = cir.load %0 : !cir.ptr<!s32i>, !s32i
+    cir.return %1 : !s32i
+  }
+}
