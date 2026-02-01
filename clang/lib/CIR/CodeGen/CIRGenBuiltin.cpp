@@ -1348,12 +1348,12 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
       llvm_unreachable("SYSTEMZ NYI");
     }
 
-    mlir::Value frameaddress =
+    mlir::Value frameAddress =
         cir::FrameAddrOp::create(builder, loc, builder.getVoidPtrTy(),
                                  mlir::ValueRange{builder.getUInt32(0, loc)})
             .getResult();
 
-    builder.createStore(loc, frameaddress, castBuf);
+    builder.createStore(loc, frameAddress, castBuf);
 
     mlir::Value stacksave =
         cir::StackSaveOp::create(builder, loc, builder.getVoidPtrTy())
