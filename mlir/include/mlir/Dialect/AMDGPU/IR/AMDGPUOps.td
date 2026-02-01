@@ -35,7 +35,7 @@ def AnyIntegerOrFloatOr1DVector :
 
 // Types with element width up to 64 bits, used to keep dpp operands legal.
 def AMDGPU_IntOrFloatWidthLeq64 : Type<
-  CPred<"([](::mlir::Type t) { return t.isIntOrFloat() && t.getIntOrFloatBitWidth() <= 64; })(::mlir::getElementTypeOrSelf($_self))">,
+  CPred<"$_self.isIntOrFloat() && $_self.getIntOrFloatBitWidth() <= 64">,
   "integer or float with element bitwidth <= 64">;
 
 def AMDGPU_IntOrFloatOr1DVectorWidthLeq64 :

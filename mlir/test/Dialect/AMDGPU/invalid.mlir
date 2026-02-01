@@ -516,3 +516,11 @@ func.func @sparse_mfma_wrong_dest_count(%a: vector<4xf16>, %b: vector<8xf16>, %c
   %d = amdgpu.sparse_mfma 16x16x32 %a * %b + %c sparse(%idx : vector<4xi8>) : vector<4xf16>, vector<8xf16>, vector<16xf32>
   func.return %d : vector<16xf32>
 }
+
+// -----
+
+func.func @dpp_rejects_scalable(%a: vector<[16]x[16]xi8>, %b: vector<[16]x[16]xi8>) {
+  // expected-error @+1 {{operand #0 must be integer or float with element bitwidth <= 64}}
+  %0 = amdgpu.dpp %a %b row_shl(1 : i32) : vector<[16]x[16]xi8>
+  func.return
+}
