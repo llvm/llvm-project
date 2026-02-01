@@ -1279,6 +1279,12 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   if (match(Def, m_c_BinaryOr(m_VPValue(X), m_ZeroInt())))
     return Def->replaceAllUsesWith(X);
 
+  // x | !x -> AllOnes
+  if (match(Def, m_c_BinaryOr(m_VPValue(X), m_Not(m_Deferred(X))))) {
+    return Def->replaceAllUsesWith(Plan->getOrAddLiveIn(
+        ConstantInt::getAllOnesValue(TypeInfo.inferScalarType(Def))));
+  }
+
   // x & 0 -> 0
   if (match(Def, m_c_BinaryAnd(m_VPValue(X), m_ZeroInt())))
     return Def->replaceAllUsesWith(Def->getOperand(Def->getOperand(0) == X));
@@ -5560,7 +5566,9 @@ getScaledReductions(VPSingleDefRecipe *RedPhiR, VPValue *PrevValue,
   std::optional<TTI::PartialReductionExtendKind> OuterExtKind;
   if (match(Op, m_ZExtOrSExt(m_Mul(m_VPValue(), m_VPValue()))) ||
       match(Op, m_FPExt(m_FMul(m_VPValue(), m_VPValue())))) {
-    auto *CastRecipe = cast<VPWidenCastRecipe>(Op);
+    auto *CastRecipe = dyn_cast<VPWidenCastRecipe>(Op);
+    if (!CastRecipe)
+      return false;
     auto CastOp = static_cast<Instruction::CastOps>(CastRecipe->getOpcode());
     OuterExtKind = TTI::getPartialReductionExtendKind(CastOp);
     Op = CastRecipe->getOperand(0);
@@ -5600,7 +5608,9 @@ getScaledReductions(VPSingleDefRecipe *RedPhiR, VPValue *PrevValue,
           !match(OpVal, m_FPExt(m_VPValue(ExtInput))))
         return false;
 
-      CastRecipes[I] = cast<VPWidenCastRecipe>(OpVal);
+      CastRecipes[I] = dyn_cast<VPWidenCastRecipe>(OpVal);
+      if (!CastRecipes[I])
+        return false;
 
       // The outer extend kind must match the inner extends for folding.
       if (OuterExtKind) {

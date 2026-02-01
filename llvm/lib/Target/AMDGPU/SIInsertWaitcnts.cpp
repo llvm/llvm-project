@@ -2302,22 +2302,26 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
   AMDGPU::Waitcnt Wait;
   const unsigned Opc = MI.getOpcode();
 
-  // FIXME: This should have already been handled by the memory legalizer.
-  // Removing this currently doesn't affect any lit tests, but we need to
-  // verify that nothing was relying on this. The number of buffer invalidates
-  // being handled here should not be expanded.
-  if (Opc == AMDGPU::BUFFER_WBINVL1 || Opc == AMDGPU::BUFFER_WBINVL1_SC ||
-      Opc == AMDGPU::BUFFER_WBINVL1_VOL || Opc == AMDGPU::BUFFER_GL0_INV ||
-      Opc == AMDGPU::BUFFER_GL1_INV) {
+  switch (Opc) {
+  case AMDGPU::BUFFER_WBINVL1:
+  case AMDGPU::BUFFER_WBINVL1_SC:
+  case AMDGPU::BUFFER_WBINVL1_VOL:
+  case AMDGPU::BUFFER_GL0_INV:
+  case AMDGPU::BUFFER_GL1_INV: {
+    // FIXME: This should have already been handled by the memory legalizer.
+    // Removing this currently doesn't affect any lit tests, but we need to
+    // verify that nothing was relying on this. The number of buffer invalidates
+    // being handled here should not be expanded.
     Wait.LoadCnt = 0;
+    break;
   }
-
-  // All waits must be resolved at call return.
-  // NOTE: this could be improved with knowledge of all call sites or
-  //   with knowledge of the called routines.
-  if (Opc == AMDGPU::SI_RETURN_TO_EPILOG || Opc == AMDGPU::SI_RETURN ||
-      Opc == AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN ||
-      Opc == AMDGPU::S_SETPC_B64_return) {
+  case AMDGPU::SI_RETURN_TO_EPILOG:
+  case AMDGPU::SI_RETURN:
+  case AMDGPU::SI_WHOLE_WAVE_FUNC_RETURN:
+  case AMDGPU::S_SETPC_B64_return: {
+    // All waits must be resolved at call return.
+    // NOTE: this could be improved with knowledge of all call sites or
+    //   with knowledge of the called routines.
     ReturnInsts.insert(&MI);
     AMDGPU::Waitcnt AllZeroWait =
         WCG->getAllZeroWaitcnt(/*IncludeVSCnt=*/false);
@@ -2329,32 +2333,39 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
         !ScoreBrackets.hasPendingEvent(VMEM_ACCESS))
       AllZeroWait.LoadCnt = ~0u;
     Wait = Wait.combined(AllZeroWait);
+    break;
   }
-  // In dynamic VGPR mode, we want to release the VGPRs before the wave exits.
-  // Technically the hardware will do this on its own if we don't, but that
-  // might cost extra cycles compared to doing it explicitly.
-  // When not in dynamic VGPR mode, identify S_ENDPGM instructions which may
-  // have to wait for outstanding VMEM stores. In this case it can be useful to
-  // send a message to explicitly release all VGPRs before the stores have
-  // completed, but it is only safe to do this if there are no outstanding
-  // scratch stores.
-  else if (Opc == AMDGPU::S_ENDPGM || Opc == AMDGPU::S_ENDPGM_SAVED) {
+  case AMDGPU::S_ENDPGM:
+  case AMDGPU::S_ENDPGM_SAVED: {
+    // In dynamic VGPR mode, we want to release the VGPRs before the wave exits.
+    // Technically the hardware will do this on its own if we don't, but that
+    // might cost extra cycles compared to doing it explicitly.
+    // When not in dynamic VGPR mode, identify S_ENDPGM instructions which may
+    // have to wait for outstanding VMEM stores. In this case it can be useful
+    // to send a message to explicitly release all VGPRs before the stores have
+    // completed, but it is only safe to do this if there are no outstanding
+    // scratch stores.
     EndPgmInsts[&MI] = ScoreBrackets.getScoreRange(STORE_CNT) != 0 &&
                        !ScoreBrackets.hasPendingEvent(SCRATCH_WRITE_ACCESS);
+    break;
   }
-  // Resolve vm waits before gs-done.
-  else if ((Opc == AMDGPU::S_SENDMSG || Opc == AMDGPU::S_SENDMSGHALT) &&
-           ST->hasLegacyGeometry() &&
-           ((MI.getOperand(0).getImm() & AMDGPU::SendMsg::ID_MASK_PreGFX11_) ==
-            AMDGPU::SendMsg::ID_GS_DONE_PreGFX11)) {
-    Wait.LoadCnt = 0;
+  case AMDGPU::S_SENDMSG:
+  case AMDGPU::S_SENDMSGHALT: {
+    if (ST->hasLegacyGeometry() &&
+        ((MI.getOperand(0).getImm() & AMDGPU::SendMsg::ID_MASK_PreGFX11_) ==
+         AMDGPU::SendMsg::ID_GS_DONE_PreGFX11)) {
+      // Resolve vm waits before gs-done.
+      Wait.LoadCnt = 0;
+      break;
+    }
+    [[fallthrough]];
   }
+  default: {
 
-  // Export & GDS instructions do not read the EXEC mask until after the export
-  // is granted (which can occur well after the instruction is issued).
-  // The shader program must flush all EXP operations on the export-count
-  // before overwriting the EXEC mask.
-  else {
+    // Export & GDS instructions do not read the EXEC mask until after the
+    // export is granted (which can occur well after the instruction is issued).
+    // The shader program must flush all EXP operations on the export-count
+    // before overwriting the EXEC mask.
     if (MI.modifiesRegister(AMDGPU::EXEC, TRI)) {
       // Export and GDS are tracked individually, either may trigger a waitcnt
       // for EXEC.
@@ -2500,6 +2511,7 @@ bool SIInsertWaitcnts::generateWaitcntInstBefore(
           ScoreBrackets.determineWaitForPhysReg(X_CNT, Reg, Wait);
       }
     }
+  }
   }
 
   // Ensure safety against exceptions from outstanding memory operations while
