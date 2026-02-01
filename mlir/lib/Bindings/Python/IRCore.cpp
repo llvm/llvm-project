@@ -19,6 +19,7 @@
 #include "mlir-c/IR.h"
 #include "mlir-c/Support.h"
 
+#include <functional>
 #include <optional>
 #include <sstream>
 #include <string>
@@ -56,6 +57,12 @@ static std::string join(const Ts &...args) {
   return oss.str();
 }
 
+/// Local helper to compute std::hash for a value.
+template <typename T>
+static size_t hash(const T &value) {
+  return std::hash<T>{}(value);
+}
+
 /// Helper for creating an @classmethod.
 template <class Func, typename... Args>
 static nb::object classmethod(Func f, Args... args) {
@@ -87,14 +94,14 @@ MlirBlock createBlock(const nb::sequence &pyArgTypes,
                       const std::optional<nb::sequence> &pyArgLocs) {
   std::vector<MlirType> argTypes;
   argTypes.reserve(nb::len(pyArgTypes));
-  for (const auto &pyType : pyArgTypes)
+  for (nb::handle pyType : pyArgTypes)
     argTypes.push_back(
         nb::cast<python::MLIR_BINDINGS_PYTHON_DOMAIN::PyType &>(pyType));
 
   std::vector<MlirLocation> argLocs;
   if (pyArgLocs) {
     argLocs.reserve(nb::len(*pyArgLocs));
-    for (const auto &pyLoc : *pyArgLocs)
+    for (nb::handle pyLoc : *pyArgLocs)
       argLocs.push_back(
           nb::cast<python::MLIR_BINDINGS_PYTHON_DOMAIN::PyLocation &>(pyLoc));
   } else if (!argTypes.empty()) {
@@ -1314,7 +1321,7 @@ nb::object PyOperation::create(std::string_view name,
   // Unpack/validate successors.
   if (successors) {
     mlirSuccessors.reserve(successors->size());
-    for (auto *successor : *successors) {
+    for (PyBlock *successor : *successors) {
       // TODO: Verify successor originate from the same context.
       if (!successor)
         throw nb::value_error("successor block cannot be None");
@@ -1338,7 +1345,7 @@ nb::object PyOperation::create(std::string_view name,
     // on.
     std::vector<MlirNamedAttribute> mlirNamedAttributes;
     mlirNamedAttributes.reserve(mlirAttributes.size());
-    for (auto &it : mlirAttributes)
+    for (const std::pair<std::string, MlirAttribute> &it : mlirAttributes)
       mlirNamedAttributes.push_back(mlirNamedAttributeGet(
           mlirIdentifierGet(mlirAttributeGetContext(it.second),
                             toMlirStringRef(it.first)),
@@ -1476,16 +1483,18 @@ static void populateResultTypes(std::string_view name, nb::list resultTypeList,
   resultTypes.reserve(resultTypeList.size());
   if (resultSegmentSpecObj.is_none()) {
     // Non-variadic result unpacking.
-    for (const auto &it : llvm::enumerate(resultTypeList)) {
+    size_t index = 0;
+    for (nb::handle resultType : resultTypeList) {
       try {
-        resultTypes.push_back(nb::cast<PyType *>(it.value()));
+        resultTypes.push_back(nb::cast<PyType *>(resultType));
         if (!resultTypes.back())
           throw nb::cast_error();
       } catch (nb::cast_error &err) {
-        throw nb::value_error(join("Result ", it.index(), " of operation \"",
-                                   name, "\" must be a Type (", err.what(), ")")
+        throw nb::value_error(join("Result ", index, " of operation \"", name,
+                                   "\" must be a Type (", err.what(), ")")
                                   .c_str());
       }
+      ++index;
     }
   } else {
     // Sized result unpacking.
@@ -1497,13 +1506,12 @@ static void populateResultTypes(std::string_view name, nb::list resultTypeList,
               .c_str());
     }
     resultSegmentLengths.reserve(resultTypeList.size());
-    for (const auto &it :
-         llvm::enumerate(llvm::zip(resultTypeList, resultSegmentSpec))) {
-      int segmentSpec = std::get<1>(it.value());
+    for (size_t i = 0, e = resultSegmentSpec.size(); i < e; ++i) {
+      int segmentSpec = resultSegmentSpec[i];
       if (segmentSpec == 1 || segmentSpec == 0) {
         // Unpack unary element.
         try {
-          auto *resultType = nb::cast<PyType *>(std::get<0>(it.value()));
+          auto *resultType = nb::cast<PyType *>(resultTypeList[i]);
           if (resultType) {
             resultTypes.push_back(resultType);
             resultSegmentLengths.push_back(1);
@@ -1512,25 +1520,24 @@ static void populateResultTypes(std::string_view name, nb::list resultTypeList,
             resultSegmentLengths.push_back(0);
           } else {
             throw nb::value_error(
-                join("Result ", it.index(), " of operation \"", name,
+                join("Result ", i, " of operation \"", name,
                      "\" must be a Type (was None and result is not optional)")
                     .c_str());
           }
         } catch (nb::cast_error &err) {
-          throw nb::value_error(join("Result ", it.index(), " of operation \"",
-                                     name, "\" must be a Type (", err.what(),
-                                     ")")
+          throw nb::value_error(join("Result ", i, " of operation \"", name,
+                                     "\" must be a Type (", err.what(), ")")
                                     .c_str());
         }
       } else if (segmentSpec == -1) {
         // Unpack sequence by appending.
         try {
-          if (std::get<0>(it.value()).is_none()) {
+          if (resultTypeList[i].is_none()) {
             // Treat it as an empty list.
             resultSegmentLengths.push_back(0);
           } else {
             // Unpack the list.
-            auto segment = nb::cast<nb::sequence>(std::get<0>(it.value()));
+            auto segment = nb::cast<nb::sequence>(resultTypeList[i]);
             for (nb::handle segmentItem : segment) {
               resultTypes.push_back(nb::cast<PyType *>(segmentItem));
               if (!resultTypes.back()) {
@@ -1543,8 +1550,8 @@ static void populateResultTypes(std::string_view name, nb::list resultTypeList,
           // NOTE: Sloppy to be using a catch-all here, but there are at least
           // three different unrelated exceptions that can be thrown in the
           // above "casts". Just keep the scope above small and catch them all.
-          throw nb::value_error(join("Result ", it.index(), " of operation \"",
-                                     name, "\" must be a Sequence of Types (",
+          throw nb::value_error(join("Result ", i, " of operation \"", name,
+                                     "\" must be a Sequence of Types (",
                                      err.what(), ")")
                                     .c_str());
         }
@@ -1637,17 +1644,18 @@ nb::object PyOpView::buildGeneric(
   // Unpack operands.
   std::vector<MlirValue> operands;
   operands.reserve(operands.size());
+  size_t index = 0;
   if (operandSegmentSpecObj.is_none()) {
     // Non-sized operand unpacking.
-    for (const auto &it : llvm::enumerate(operandList)) {
+    for (nb::handle operand : operandList) {
       try {
-        operands.push_back(getOpResultOrValue(it.value()));
+        operands.push_back(getOpResultOrValue(operand));
       } catch (nb::builtin_exception &err) {
-        throw nb::value_error(join("Operand ", it.index(), " of operation \"",
-                                   name, "\" must be a Value (", err.what(),
-                                   ")")
+        throw nb::value_error(join("Operand ", index, " of operation \"", name,
+                                   "\" must be a Value (", err.what(), ")")
                                   .c_str());
       }
+      ++index;
     }
   } else {
     // Sized operand unpacking.
@@ -1659,19 +1667,16 @@ nb::object PyOpView::buildGeneric(
               .c_str());
     }
     operandSegmentLengths.reserve(operandList.size());
-    for (const auto &it :
-         llvm::enumerate(llvm::zip(operandList, operandSegmentSpec))) {
-      int segmentSpec = std::get<1>(it.value());
+    for (size_t i = 0, e = operandSegmentSpec.size(); i < e; ++i) {
+      int segmentSpec = operandSegmentSpec[i];
       if (segmentSpec == 1 || segmentSpec == 0) {
         // Unpack unary element.
-        auto &operand = std::get<0>(it.value());
+        const auto operand = operandList[i];
         if (!operand.is_none()) {
           try {
-
             operands.push_back(getOpResultOrValue(operand));
           } catch (nb::builtin_exception &err) {
-            throw nb::value_error(join("Operand ", it.index(),
-                                       " of operation \"", name,
+            throw nb::value_error(join("Operand ", i, " of operation \"", name,
                                        "\" must be a Value (", err.what(), ")")
                                       .c_str());
           }
@@ -1682,19 +1687,19 @@ nb::object PyOpView::buildGeneric(
           operandSegmentLengths.push_back(0);
         } else {
           throw nb::value_error(
-              join("Operand ", it.index(), " of operation \"", name,
+              join("Operand ", i, " of operation \"", name,
                    "\" must be a Value (was None and operand is not optional)")
                   .c_str());
         }
       } else if (segmentSpec == -1) {
         // Unpack sequence by appending.
         try {
-          if (std::get<0>(it.value()).is_none()) {
+          if (operandList[i].is_none()) {
             // Treat it as an empty list.
             operandSegmentLengths.push_back(0);
           } else {
             // Unpack the list.
-            auto segment = nb::cast<nb::sequence>(std::get<0>(it.value()));
+            auto segment = nb::cast<nb::sequence>(operandList[i]);
             for (nb::handle segmentItem : segment) {
               operands.push_back(getOpResultOrValue(segmentItem));
             }
@@ -1704,8 +1709,8 @@ nb::object PyOpView::buildGeneric(
           // NOTE: Sloppy to be using a catch-all here, but there are at least
           // three different unrelated exceptions that can be thrown in the
           // above "casts". Just keep the scope above small and catch them all.
-          throw nb::value_error(join("Operand ", it.index(), " of operation \"",
-                                     name, "\" must be a Sequence of Values (",
+          throw nb::value_error(join("Operand ", i, " of operation \"", name,
+                                     "\" must be a Sequence of Values (",
                                      err.what(), ")")
                                     .c_str());
         }
@@ -2500,6 +2505,22 @@ void PyOpAttributeMap::bind(nb::module_ &m) {
           "Returns a list of `(name, attribute)` tuples.");
 }
 
+void PyOpAdaptor::bind(nb::module_ &m) {
+  nb::class_<PyOpAdaptor>(m, "OpAdaptor")
+      .def(nb::init<nb::list, PyOpAttributeMap>(),
+           "Creates an OpAdaptor with the given operands and attributes.",
+           "operands"_a, "attributes"_a)
+      .def(nb::init<nb::list, PyOpView &>(),
+           "Creates an OpAdaptor with the given operands and operation view.",
+           "operands"_a, "opview"_a)
+      .def_prop_ro(
+          "operands", [](PyOpAdaptor &self) { return self.operands; },
+          "Returns the operands of the adaptor.")
+      .def_prop_ro(
+          "attributes", [](PyOpAdaptor &self) { return self.attributes; },
+          "Returns the attributes of the adaptor.");
+}
+
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python
 } // namespace mlir
@@ -2750,6 +2771,28 @@ void populateRoot(nb::module_ &m) {
       "dialect_class"_a, nb::kw_only(), "replace"_a = false,
       "Produce a class decorator for registering an Operation class as part of "
       "a dialect");
+  m.def(
+      "register_op_adaptor",
+      [](const nb::type_object &opClass, bool replace) -> nb::object {
+        return nb::cpp_function(
+            [opClass,
+             replace](nb::type_object adaptorClass) -> nb::type_object {
+              std::string operationName =
+                  nb::cast<std::string>(adaptorClass.attr("OPERATION_NAME"));
+              PyGlobals::get().registerOpAdaptorImpl(operationName,
+                                                     adaptorClass, replace);
+              // Dict-stuff the new adaptorClass by name onto the opClass.
+              opClass.attr("Adaptor") = adaptorClass;
+              return adaptorClass;
+            });
+      },
+      // clang-format off
+      nb::sig("def register_op_adaptor(op_class: type, *, replace: bool = False) "
+        "-> typing.Callable[[type[T]], type[T]]"),
+      // clang-format on
+      "op_class"_a, nb::kw_only(), "replace"_a = false,
+      "Produce a class decorator for registering an OpAdaptor class for an "
+      "operation.");
   m.def(
       MLIR_PYTHON_CAPI_TYPE_CASTER_REGISTER_ATTR,
       [](PyTypeID mlirTypeID, bool replace) -> nb::object {
@@ -3166,9 +3209,9 @@ void populateIRCore(nb::module_ &m) {
             if (frames.empty())
               throw nb::value_error("No caller frames provided.");
             MlirLocation caller = frames.back().get();
-            for (const PyLocation &frame :
-                 llvm::reverse(llvm::ArrayRef(frames).drop_back()))
-              caller = mlirLocationCallSiteGet(frame.get(), caller);
+            for (size_t index = frames.size() - 1; index-- > 0;) {
+              caller = mlirLocationCallSiteGet(frames[index].get(), caller);
+            }
             return PyLocation(context->getRef(),
                               mlirLocationCallSiteGet(callee.get(), caller));
           },
@@ -3237,7 +3280,7 @@ void populateIRCore(nb::module_ &m) {
              DefaultingPyMlirContext context) {
             std::vector<MlirLocation> locations;
             locations.reserve(pyLocations.size());
-            for (auto &pyLocation : pyLocations)
+            for (const PyLocation &pyLocation : pyLocations)
               locations.push_back(pyLocation.get());
             MlirLocation location = mlirLocationFusedGet(
                 context->get(), locations.size(), locations.data(),
@@ -3928,6 +3971,8 @@ void populateIRCore(nb::module_ &m) {
       "context"_a = nb::none(),
       "Parses a specific, generated OpView based on class level attributes.");
 
+  PyOpAdaptor::bind(m);
+
   //----------------------------------------------------------------------------
   // Mapping of PyRegion.
   //----------------------------------------------------------------------------
@@ -4096,10 +4141,7 @@ void populateIRCore(nb::module_ &m) {
           "__eq__", [](PyBlock &self, nb::object &other) { return false; },
           "Compares block with non-block object (always returns False).")
       .def(
-          "__hash__",
-          [](PyBlock &self) {
-            return static_cast<size_t>(llvm::hash_value(self.get().ptr));
-          },
+          "__hash__", [](PyBlock &self) { return hash(self.get().ptr); },
           "Returns the hash value of the block.")
       .def(
           "__str__",
@@ -4284,10 +4326,7 @@ void populateIRCore(nb::module_ &m) {
           "Compares attribute with non-attribute object (always returns "
           "False).")
       .def(
-          "__hash__",
-          [](PyAttribute &self) {
-            return static_cast<size_t>(llvm::hash_value(self.get().ptr));
-          },
+          "__hash__", [](PyAttribute &self) { return hash(self.get().ptr); },
           "Returns the hash value of the attribute.")
       .def(
           "dump", [](PyAttribute &self) { mlirAttributeDump(self); },
@@ -4409,10 +4448,7 @@ void populateIRCore(nb::module_ &m) {
           "other"_a.none(),
           "Compares type with non-type object (always returns False).")
       .def(
-          "__hash__",
-          [](PyType &self) {
-            return static_cast<size_t>(llvm::hash_value(self.get().ptr));
-          },
+          "__hash__", [](PyType &self) { return hash(self.get().ptr); },
           "Returns the hash value of the `Type`.")
       .def(
           "dump", [](PyType &self) { mlirTypeDump(self); }, kDumpDocstring)
@@ -4551,10 +4587,7 @@ void populateIRCore(nb::module_ &m) {
           "__eq__", [](PyValue &self, nb::object other) { return false; },
           "Compares value with non-value object (always returns False).")
       .def(
-          "__hash__",
-          [](PyValue &self) {
-            return static_cast<size_t>(llvm::hash_value(self.get().ptr));
-          },
+          "__hash__", [](PyValue &self) { return hash(self.get().ptr); },
           "Returns the hash value of the value.")
       .def(
           "__str__",

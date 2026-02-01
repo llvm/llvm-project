@@ -2005,6 +2005,7 @@ bool clang::CreateHLSLAttributedResourceType(
   HLSLAttributedResourceType::Attributes ResAttrs;
 
   bool HasResourceClass = false;
+  bool HasResourceDimension = false;
   for (const Attr *A : AttrList) {
     if (!A)
       continue;
@@ -2021,6 +2022,20 @@ bool clang::CreateHLSLAttributedResourceType(
       }
       ResAttrs.ResourceClass = RC;
       HasResourceClass = true;
+      break;
+    }
+    case attr::HLSLResourceDimension: {
+      llvm::dxil::ResourceDimension RD =
+          cast<HLSLResourceDimensionAttr>(A)->getDimension();
+      if (HasResourceDimension) {
+        S.Diag(A->getLocation(), ResAttrs.ResourceDimension == RD
+                                     ? diag::warn_duplicate_attribute_exact
+                                     : diag::warn_duplicate_attribute)
+            << A;
+        return false;
+      }
+      ResAttrs.ResourceDimension = RD;
+      HasResourceDimension = true;
       break;
     }
     case attr::HLSLROV:
@@ -3278,6 +3293,23 @@ static bool CheckResourceHandle(
   return false;
 }
 
+static bool CheckVectorElementCount(Sema *S, QualType PassedType,
+                                    QualType BaseType, unsigned ExpectedCount,
+                                    SourceLocation Loc) {
+  unsigned PassedCount = 1;
+  if (const auto *VecTy = PassedType->getAs<VectorType>())
+    PassedCount = VecTy->getNumElements();
+
+  if (PassedCount != ExpectedCount) {
+    QualType ExpectedType =
+        S->Context.getExtVectorType(BaseType, ExpectedCount);
+    S->Diag(Loc, diag::err_typecheck_convert_incompatible)
+        << PassedType << ExpectedType << 1 << 0 << 0;
+    return true;
+  }
+  return false;
+}
+
 // Note: returning true in this case results in CheckBuiltinFunctionCall
 // returning an ExprError
 bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
@@ -3348,7 +3380,59 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
 
     break;
   }
+  case Builtin::BI__builtin_hlsl_resource_sample: {
+    if (SemaRef.checkArgCountRange(TheCall, 3, 5))
+      return true;
 
+    if (CheckResourceHandle(&SemaRef, TheCall, 0,
+                            [](const HLSLAttributedResourceType *ResType) {
+                              return ResType->getAttrs().ResourceDimension ==
+                                     llvm::dxil::ResourceDimension::Unknown;
+                            }))
+      return true;
+
+    if (CheckResourceHandle(&SemaRef, TheCall, 1,
+                            [](const HLSLAttributedResourceType *ResType) {
+                              return ResType->getAttrs().ResourceClass !=
+                                     llvm::hlsl::ResourceClass::Sampler;
+                            }))
+      return true;
+
+    auto *ResourceTy =
+        TheCall->getArg(0)->getType()->castAs<HLSLAttributedResourceType>();
+
+    unsigned ExpectedDim =
+        getResourceDimensions(ResourceTy->getAttrs().ResourceDimension);
+    if (CheckVectorElementCount(&SemaRef, TheCall->getArg(2)->getType(),
+                                SemaRef.Context.FloatTy, ExpectedDim,
+                                TheCall->getArg(2)->getBeginLoc()))
+      return true;
+
+    if (TheCall->getNumArgs() > 3) {
+      if (CheckVectorElementCount(&SemaRef, TheCall->getArg(3)->getType(),
+                                  SemaRef.Context.IntTy, ExpectedDim,
+                                  TheCall->getArg(3)->getBeginLoc()))
+        return true;
+    }
+
+    if (TheCall->getNumArgs() > 4) {
+      QualType ClampTy = TheCall->getArg(4)->getType();
+      if (!ClampTy->isFloatingType() || ClampTy->isVectorType()) {
+        SemaRef.Diag(TheCall->getArg(4)->getBeginLoc(),
+                     diag::err_typecheck_convert_incompatible)
+            << ClampTy << SemaRef.Context.FloatTy << 1 << 0 << 0;
+        return true;
+      }
+    }
+
+    assert(ResourceTy->hasContainedType() &&
+           "Expecting a contained type for resource with a dimension "
+           "attribute.");
+    QualType ReturnType = ResourceTy->getContainedType();
+    TheCall->setType(ReturnType);
+
+    break;
+  }
   case Builtin::BI__builtin_hlsl_resource_uninitializedhandle: {
     assert(TheCall->getNumArgs() == 1 && "expected 1 arg");
     // Update return type to be the attributed resource type from arg0.
@@ -3605,6 +3689,28 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     if (CheckAllArgTypesAreCorrect(&SemaRef, TheCall,
                                    CheckUnsignedIntRepresentation))
       return true;
+    break;
+  }
+  case Builtin::BI__builtin_hlsl_wave_prefix_count_bits: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+
+    QualType ArgType = TheCall->getArg(0)->getType();
+
+    if (!(ArgType->isScalarType())) {
+      SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
+                   diag::err_typecheck_expect_any_scalar_or_vector)
+          << ArgType << 0;
+      return true;
+    }
+
+    if (!(ArgType->isBooleanType())) {
+      SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
+                   diag::err_typecheck_expect_any_scalar_or_vector)
+          << ArgType << 0;
+      return true;
+    }
+
     break;
   }
   case Builtin::BI__builtin_hlsl_wave_read_lane_at: {
@@ -4603,8 +4709,8 @@ class InitListTransformer {
       unsigned Cols = MTy->getNumColumns();
       QualType ElemTy = MTy->getElementType();
 
-      for (unsigned C = 0; C < Cols; ++C) {
-        for (unsigned R = 0; R < Rows; ++R) {
+      for (unsigned R = 0; R < Rows; ++R) {
+        for (unsigned C = 0; C < Cols; ++C) {
           // row index literal
           Expr *RowIdx = IntegerLiteral::Create(
               Ctx, llvm::APInt(Ctx.getIntWidth(Ctx.IntTy), R), Ctx.IntTy,
