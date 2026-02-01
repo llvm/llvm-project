@@ -6249,6 +6249,9 @@ bool SelectionDAG::cannotBeOrderedNegativeFP(SDValue Op) const {
 bool SelectionDAG::canIgnoreSignBitOfZero(const SDUse &Use) const {
   assert(Use.getValueType().isFloatingPoint());
   const SDNode *User = Use.getUser();
+  if (User->getFlags().hasNoSignedZeros())
+    return true;
+
   unsigned OperandNo = Use.getOperandNo();
   // Check if this use is insensitive to the sign of zero
   switch (User->getOpcode()) {
@@ -6277,6 +6280,8 @@ bool SelectionDAG::canIgnoreSignBitOfZero(const SDUse &Use) const {
 }
 
 bool SelectionDAG::canIgnoreSignBitOfZero(SDValue Op) const {
+  if (Op->getFlags().hasNoSignedZeros())
+    return true;
   // FIXME: Limit the amount of checked uses to not introduce a compile-time
   // regression. Ideally, this should be implemented as a demanded-bits
   // optimization that stems from the users.

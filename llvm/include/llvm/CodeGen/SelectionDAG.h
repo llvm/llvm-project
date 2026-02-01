@@ -2365,7 +2365,8 @@ public:
   /// Check if a use of a float value is insensitive to signed zeros.
   LLVM_ABI bool canIgnoreSignBitOfZero(const SDUse &Use) const;
 
-  /// Check if at most two uses of a value are insensitive to signed zeros.
+  /// Check if \p Op has no-signed-zeros, or all users (limited to checking two
+  /// for compile-time performance) are insensitive to signed zeros.
   LLVM_ABI bool canIgnoreSignBitOfZero(SDValue Op) const;
 
   /// Test whether two SDValues are known to compare equal. This
