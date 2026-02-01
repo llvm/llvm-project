@@ -477,6 +477,8 @@ bool Compiler<Emitter>::VisitCastExpr(const CastExpr *CE) {
     return this->delegate(SubExpr);
 
   case CK_BitCast: {
+    if (CE->containsErrors())
+      return false;
     QualType CETy = CE->getType();
     // Reject bitcasts to atomic types.
     if (CETy->isAtomicType()) {
