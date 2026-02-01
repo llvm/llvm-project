@@ -3390,7 +3390,10 @@ bool X86TargetLowering::decomposeMulByConstant(LLVMContext &Context, EVT VT,
     return false;
 
   if (VT.isVector() && VT.getScalarSizeInBits() == 8) {
-    // Decompose 2^m ± 2^n as 2^(a+b) ± 2^b
+    // Check whether a vXi8 multiply can be decomposed into two shifts
+    // (decomposing 2^m ± 2^n as 2^(a+b) ± 2^b). Similar to
+    // DAGCombiner::visitMUL, consider the constant `2` decomposable as
+    // (2^0 + 1).
     APInt ShiftedMulC = MulC.abs();
     unsigned TZeros = ShiftedMulC == 2 ? 0 : ShiftedMulC.countr_zero();
     ShiftedMulC.lshrInPlace(TZeros);

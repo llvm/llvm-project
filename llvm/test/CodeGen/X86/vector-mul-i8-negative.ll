@@ -5,18 +5,11 @@
 ; This file tests edge cases and non-decomposable constants for 8-bit vector multiply optimization.
 ; These cases should NOT be decomposed into shift-add-sub sequences, but should use standard
 ; multiply instructions or other existing optimizations.
-;
-; To run this test:
-;   llvm-lit llvm/test/CodeGen/X86/vector-mul-i8-negative.ll
-; To run all X86 CodeGen tests:
-;   llvm-lit llvm/test/CodeGen/X86/
-; To regenerate CHECK lines after modifying the test:
-;   python llvm/utils/update_llc_test_checks.py --llc-binary build/Release/bin/llc.exe llvm/test/CodeGen/X86/vector-mul-i8-negative.ll
 
 ; Test non-decomposable constants that cannot be efficiently represented as sum/difference of powers of 2
 
-define <16 x i8> @mul_v16i8_11(<16 x i8> %a) nounwind {
 ; Test multiply by 11 (not decomposable)
+define <16 x i8> @mul_v16i8_11(<16 x i8> %a) nounwind {
 ; SSE2-LABEL: mul_v16i8_11:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
@@ -44,8 +37,8 @@ define <16 x i8> @mul_v16i8_11(<16 x i8> %a) nounwind {
   ret <16 x i8> %result
 }
 
-define <16 x i8> @mul_v16i8_13(<16 x i8> %a) nounwind {
 ; Test multiply by 13 (not decomposable)
+define <16 x i8> @mul_v16i8_13(<16 x i8> %a) nounwind {
 ; SSE2-LABEL: mul_v16i8_13:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
@@ -73,8 +66,8 @@ define <16 x i8> @mul_v16i8_13(<16 x i8> %a) nounwind {
   ret <16 x i8> %result
 }
 
-define <16 x i8> @mul_v16i8_19(<16 x i8> %a) nounwind {
 ; Test multiply by 19 (not decomposable)
+define <16 x i8> @mul_v16i8_19(<16 x i8> %a) nounwind {
 ; SSE2-LABEL: mul_v16i8_19:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
@@ -102,8 +95,8 @@ define <16 x i8> @mul_v16i8_19(<16 x i8> %a) nounwind {
   ret <16 x i8> %result
 }
 
-define <16 x i8> @mul_v16i8_23(<16 x i8> %a) nounwind {
 ; Test multiply by 23 (not decomposable)
+define <16 x i8> @mul_v16i8_23(<16 x i8> %a) nounwind {
 ; SSE2-LABEL: mul_v16i8_23:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
@@ -131,8 +124,8 @@ define <16 x i8> @mul_v16i8_23(<16 x i8> %a) nounwind {
   ret <16 x i8> %result
 }
 
-define <16 x i8> @mul_v16i8_29(<16 x i8> %a) nounwind {
 ; Test multiply by 29 (not decomposable)
+define <16 x i8> @mul_v16i8_29(<16 x i8> %a) nounwind {
 ; SSE2-LABEL: mul_v16i8_29:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
@@ -160,8 +153,8 @@ define <16 x i8> @mul_v16i8_29(<16 x i8> %a) nounwind {
   ret <16 x i8> %result
 }
 
-define <16 x i8> @mul_v16i8_37(<16 x i8> %a) nounwind {
 ; Test multiply by 37 (not decomposable)
+define <16 x i8> @mul_v16i8_37(<16 x i8> %a) nounwind {
 ; SSE2-LABEL: mul_v16i8_37:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
@@ -189,8 +182,8 @@ define <16 x i8> @mul_v16i8_37(<16 x i8> %a) nounwind {
   ret <16 x i8> %result
 }
 
-define <16 x i8> @mul_v16i8_41(<16 x i8> %a) nounwind {
 ; Test multiply by 41 (not decomposable)
+define <16 x i8> @mul_v16i8_41(<16 x i8> %a) nounwind {
 ; SSE2-LABEL: mul_v16i8_41:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
@@ -220,8 +213,8 @@ define <16 x i8> @mul_v16i8_41(<16 x i8> %a) nounwind {
 
 ; Test special cases: multiply by 0 and 1
 
-define <16 x i8> @mul_v16i8_0(<16 x i8> %a) nounwind {
 ; Test multiply by 0 (should be optimized to zero vector)
+define <16 x i8> @mul_v16i8_0(<16 x i8> %a) nounwind {
 ; SSE2-LABEL: mul_v16i8_0:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    xorps %xmm0, %xmm0
@@ -235,8 +228,8 @@ define <16 x i8> @mul_v16i8_0(<16 x i8> %a) nounwind {
   ret <16 x i8> %result
 }
 
-define <16 x i8> @mul_v16i8_1(<16 x i8> %a) nounwind {
 ; Test multiply by 1 (should be optimized to identity)
+define <16 x i8> @mul_v16i8_1(<16 x i8> %a) nounwind {
 ; CHECK-LABEL: mul_v16i8_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    retq
@@ -246,8 +239,8 @@ define <16 x i8> @mul_v16i8_1(<16 x i8> %a) nounwind {
 
 ; Test non-uniform (non-splat) vectors - optimization should only apply to uniform constants
 
-define <16 x i8> @mul_v16i8_non_uniform_all_decomposable(<16 x i8> %a) nounwind {
 ; All constants are individually decomposable (3, 5, 7), but vector is non-uniform
+define <16 x i8> @mul_v16i8_non_uniform_all_decomposable(<16 x i8> %a) nounwind {
 ; SSE2-LABEL: mul_v16i8_non_uniform_all_decomposable:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
@@ -274,8 +267,8 @@ define <16 x i8> @mul_v16i8_non_uniform_all_decomposable(<16 x i8> %a) nounwind 
   ret <16 x i8> %result
 }
 
-define <16 x i8> @mul_v16i8_non_uniform_mixed(<16 x i8> %a) nounwind {
 ; Mixed decomposable and non-decomposable constants
+define <16 x i8> @mul_v16i8_non_uniform_mixed(<16 x i8> %a) nounwind {
 ; SSE2-LABEL: mul_v16i8_non_uniform_mixed:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
@@ -302,8 +295,8 @@ define <16 x i8> @mul_v16i8_non_uniform_mixed(<16 x i8> %a) nounwind {
   ret <16 x i8> %result
 }
 
-define <16 x i8> @mul_v16i8_non_uniform_powers_of_2(<16 x i8> %a) nounwind {
 ; Different powers of 2 (non-uniform)
+define <16 x i8> @mul_v16i8_non_uniform_powers_of_2(<16 x i8> %a) nounwind {
 ; SSE2-LABEL: mul_v16i8_non_uniform_powers_of_2:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm1
@@ -332,8 +325,8 @@ define <16 x i8> @mul_v16i8_non_uniform_powers_of_2(<16 x i8> %a) nounwind {
 
 ; Test v32i8 non-decomposable cases (AVX2)
 
-define <32 x i8> @mul_v32i8_11(<32 x i8> %a) nounwind {
 ; Test v32i8 multiply by 11 (not decomposable)
+define <32 x i8> @mul_v32i8_11(<32 x i8> %a) nounwind {
 ; SSE2-LABEL: mul_v32i8_11:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
@@ -368,8 +361,8 @@ define <32 x i8> @mul_v32i8_11(<32 x i8> %a) nounwind {
   ret <32 x i8> %result
 }
 
-define <32 x i8> @mul_v32i8_13(<32 x i8> %a) nounwind {
 ; Test v32i8 multiply by 13 (not decomposable)
+define <32 x i8> @mul_v32i8_13(<32 x i8> %a) nounwind {
 ; SSE2-LABEL: mul_v32i8_13:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
@@ -404,8 +397,8 @@ define <32 x i8> @mul_v32i8_13(<32 x i8> %a) nounwind {
   ret <32 x i8> %result
 }
 
-define <32 x i8> @mul_v32i8_0(<32 x i8> %a) nounwind {
 ; Test v32i8 multiply by 0
+define <32 x i8> @mul_v32i8_0(<32 x i8> %a) nounwind {
 ; SSE2-LABEL: mul_v32i8_0:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    xorps %xmm0, %xmm0
@@ -420,8 +413,8 @@ define <32 x i8> @mul_v32i8_0(<32 x i8> %a) nounwind {
   ret <32 x i8> %result
 }
 
-define <32 x i8> @mul_v32i8_1(<32 x i8> %a) nounwind {
 ; Test v32i8 multiply by 1
+define <32 x i8> @mul_v32i8_1(<32 x i8> %a) nounwind {
 ; CHECK-LABEL: mul_v32i8_1:
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    retq
@@ -429,8 +422,8 @@ define <32 x i8> @mul_v32i8_1(<32 x i8> %a) nounwind {
   ret <32 x i8> %result
 }
 
-define <32 x i8> @mul_v32i8_non_uniform(<32 x i8> %a) nounwind {
 ; Test v32i8 non-uniform vector
+define <32 x i8> @mul_v32i8_non_uniform(<32 x i8> %a) nounwind {
 ; SSE2-LABEL: mul_v32i8_non_uniform:
 ; SSE2:       # %bb.0:
 ; SSE2-NEXT:    movdqa %xmm0, %xmm2
