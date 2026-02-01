@@ -3,7 +3,7 @@ add_custom_target(libc-support-wctype-tests)
 add_libc_test(
   wctype_classification_utils_test
   SUITE
-    libc-support-tests
+    libc-support-wctype-tests
   SRCS
     wctype_classification_utils_test.cpp
   DEPENDS
@@ -11,3 +11,4 @@ add_libc_test(
     libc.src.__support.wctype.wctype_classification_utils
 )
 
+add_subdirectory(conversion)

@@ -1,0 +1,11 @@
+add_header_library(
+  slice
+  HDRS
+    slice.h
+  DEPENDS
+    libc.hdr.types.size_t
+    libc.src.__support.CPP.algorithm
+    libc.src.__support.CPP.expected
+    libc.src.__support.CPP.span
+    libc.src.__support.libc_assert
+)
