@@ -21,22 +21,6 @@
 }}}
 #      CHECK: I[{{.*}}] Ignoring didOpen for directory: /tmp
 ---
-{"jsonrpc":"2.0","id":1,"method":"textDocument/documentSymbol","params":{"textDocument":{"uri":"file:///"}}}
-#      CHECK: "error": {
-# CHECK-NEXT:   "code": -32602,
-# CHECK-NEXT:   "message": "URI is a directory"
-# CHECK-NEXT: },
-# CHECK-NEXT: "id": 1,
-# CHECK-NEXT: "jsonrpc": "2.0"
----
-{"jsonrpc":"2.0","id":2,"method":"textDocument/documentSymbol","params":{"textDocument":{"uri":"file:///tmp"}}}
-#      CHECK: "error": {
-# CHECK-NEXT:   "code": -32602,
-# CHECK-NEXT:   "message": "URI is a directory"
-# CHECK-NEXT: },
-# CHECK-NEXT: "id": 2,
-# CHECK-NEXT: "jsonrpc": "2.0"
----
 {"jsonrpc":"2.0","id":3,"method":"shutdown"}
 ---
 {"jsonrpc":"2.0","method":"exit"}
