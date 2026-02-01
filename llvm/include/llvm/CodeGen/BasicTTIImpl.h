@@ -2702,6 +2702,9 @@ public:
     case Intrinsic::scmp:
       ISD = ISD::SCMP;
       break;
+    case Intrinsic::clmul:
+      ISD = ISD::CLMUL;
+      break;
     }
 
     auto *ST = dyn_cast<StructType>(RetTy);
@@ -3016,6 +3019,15 @@ public:
         return LT.first + FCanonicalizeCost * 2;
       }
       break;
+    }
+    case Intrinsic::clmul: {
+      // This cost model should match the expansion in
+      // TargetLowering::expandCLMUL.
+      InstructionCost PerBitCost =
+          thisT()->getArithmeticInstrCost(Instruction::And, RetTy, CostKind) +
+          thisT()->getArithmeticInstrCost(Instruction::Mul, RetTy, CostKind) +
+          thisT()->getArithmeticInstrCost(Instruction::Xor, RetTy, CostKind);
+      return RetTy->getScalarSizeInBits() * PerBitCost;
     }
     default:
       break;
