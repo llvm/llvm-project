@@ -268,6 +268,14 @@ void ArgumentCommentCheck::checkCallArgs(ASTContext *Ctx,
     return;
 
   Callee = Callee->getFirstDecl();
+  if (const auto *Ctor = dyn_cast<CXXConstructorDecl>(Callee)) {
+    if (Ctor->isInheritingConstructor()) {
+      if (const auto *BaseCtor =
+              Ctor->getInheritedConstructor().getConstructor()) {
+        Callee = BaseCtor->getFirstDecl();
+      }
+    }
+  }
   const unsigned NumArgs =
       std::min<unsigned>(Args.size(), Callee->getNumParams());
   if ((NumArgs == 0) || (IgnoreSingleArgument && NumArgs == 1))
