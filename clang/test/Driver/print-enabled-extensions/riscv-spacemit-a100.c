@@ -23,6 +23,7 @@
 // CHECK-NEXT:     zicntr               2.0       'Zicntr' (Base Counters and Timers)
 // CHECK-NEXT:     zicond               1.0       'Zicond' (Integer Conditional Operations)
 // CHECK-NEXT:     zicsr                2.0       'Zicsr' (CSRs)
+// CHECK-NEXT:     zifencei             2.0       'Zifencei' (fence.i)
 // CHECK-NEXT:     zihintntl            1.0       'Zihintntl' (Non-Temporal Locality Hints)
 // CHECK-NEXT:     zihintpause          2.0       'Zihintpause' (Pause Hint)
 // CHECK-NEXT:     zihpm                2.0       'Zihpm' (Hardware Performance Counters)
@@ -77,8 +78,25 @@
 // CHECK-NEXT:     zvl32b               1.0       'Zvl32b' (Minimum Vector Length 32)
 // CHECK-NEXT:     zvl512b              1.0       'Zvl512b' (Minimum Vector Length 512)
 // CHECK-NEXT:     zvl64b               1.0       'Zvl64b' (Minimum Vector Length 64)
+// CHECK-NEXT:     smepmp               1.0       'Smepmp' (Enhanced Physical Memory Protection)
+// CHECK-NEXT:     smnpm                1.0       'Smnpm' (Machine-level Pointer Masking for next lower privilege mode)
+// CHECK-NEXT:     smstateen            1.0       'Smstateen' (Machine-mode view of the state-enable extension)
+// CHECK-NEXT:     ssccptr              1.0       'Ssccptr' (Main memory supports page table reads)
+// CHECK-NEXT:     sscofpmf             1.0       'Sscofpmf' (Count Overflow and Mode-Based Filtering)
+// CHECK-NEXT:     sscounterenw         1.0       'Sscounterenw' (Support writeable scounteren enable bit for any hpmcounter that is not read-only zero)
+// CHECK-NEXT:     ssnpm                1.0       'Ssnpm' (Supervisor-level Pointer Masking for next lower privilege mode)
+// CHECK-NEXT:     sspm                 1.0       'Sspm' (Indicates Supervisor-mode Pointer Masking)
+// CHECK-NEXT:     sstc                 1.0       'Sstc' (Supervisor-mode timer interrupts)
+// CHECK-NEXT:     sstvala              1.0       'Sstvala' (stval provides all needed values)
+// CHECK-NEXT:     sstvecd              1.0       'Sstvecd' (stvec supports Direct mode)
+// CHECK-NEXT:     ssu64xl              1.0       'Ssu64xl' (UXLEN=64 supported)
 // CHECK-NEXT:     supm                 1.0       'Supm' (Indicates User-mode Pointer Masking)
+// CHECK-NEXT:     svade                1.0       'Svade' (Raise exceptions on improper A/D bits)
+// CHECK-NEXT:     svbare               1.0       'Svbare' (satp mode Bare supported)
+// CHECK-NEXT:     svinval              1.0       'Svinval' (Fine-Grained Address-Translation Cache Invalidation)
+// CHECK-NEXT:     svnapot              1.0       'Svnapot' (NAPOT Translation Contiguity)
+// CHECK-NEXT:     svpbmt               1.0       'Svpbmt' (Page-Based Memory Types)
 // CHECK-EMPTY:
 // CHECK-NEXT: Experimental extensions
 // CHECK-EMPTY:
-// CHECK-NEXT: ISA String: rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_b1p0_v1p0_zic64b1p0_zicbom1p0_zicbop1p0_zicboz1p0_ziccamoa1p0_ziccif1p0_zicclsm1p0_ziccrse1p0_zicntr2p0_zicond1p0_zicsr2p0_zihintntl1p0_zihintpause2p0_zihpm2p0_zimop1p0_zmmul1p0_za64rs1p0_zaamo1p0_zalrsc1p0_zawrs1p0_zfa1p0_zfbfmin1p0_zfh1p0_zfhmin1p0_zca1p0_zcb1p0_zcd1p0_zcmop1p0_zba1p0_zbb1p0_zbc1p0_zbkc1p0_zbs1p0_zkt1p0_zvbb1p0_zvbc1p0_zve32f1p0_zve32x1p0_zve64d1p0_zve64f1p0_zve64x1p0_zvfbfmin1p0_zvfbfwma1p0_zvfh1p0_zvfhmin1p0_zvkb1p0_zvkg1p0_zvkn1p0_zvknc1p0_zvkned1p0_zvkng1p0_zvknha1p0_zvknhb1p0_zvks1p0_zvksc1p0_zvksed1p0_zvksg1p0_zvksh1p0_zvkt1p0_zvl1024b1p0_zvl128b1p0_zvl256b1p0_zvl32b1p0_zvl512b1p0_zvl64b1p0_supm1p0
+// CHECK-NEXT: ISA String: rv64i2p1_m2p0_a2p1_f2p2_d2p2_c2p0_b1p0_v1p0_zic64b1p0_zicbom1p0_zicbop1p0_zicboz1p0_ziccamoa1p0_ziccif1p0_zicclsm1p0_ziccrse1p0_zicntr2p0_zicond1p0_zicsr2p0_zifencei2p0_zihintntl1p0_zihintpause2p0_zihpm2p0_zimop1p0_zmmul1p0_za64rs1p0_zaamo1p0_zalrsc1p0_zawrs1p0_zfa1p0_zfbfmin1p0_zfh1p0_zfhmin1p0_zca1p0_zcb1p0_zcd1p0_zcmop1p0_zba1p0_zbb1p0_zbc1p0_zbkc1p0_zbs1p0_zkt1p0_zvbb1p0_zvbc1p0_zve32f1p0_zve32x1p0_zve64d1p0_zve64f1p0_zve64x1p0_zvfbfmin1p0_zvfbfwma1p0_zvfh1p0_zvfhmin1p0_zvkb1p0_zvkg1p0_zvkn1p0_zvknc1p0_zvkned1p0_zvkng1p0_zvknha1p0_zvknhb1p0_zvks1p0_zvksc1p0_zvksed1p0_zvksg1p0_zvksh1p0_zvkt1p0_zvl1024b1p0_zvl128b1p0_zvl256b1p0_zvl32b1p0_zvl512b1p0_zvl64b1p0_smepmp1p0_smnpm1p0_smstateen1p0_ssccptr1p0_sscofpmf1p0_sscounterenw1p0_ssnpm1p0_sspm1p0_sstc1p0_sstvala1p0_sstvecd1p0_ssu64xl1p0_supm1p0_svade1p0_svbare1p0_svinval1p0_svnapot1p0_svpbmt1p0
