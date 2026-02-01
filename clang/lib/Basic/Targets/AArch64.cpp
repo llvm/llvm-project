@@ -1399,6 +1399,24 @@ ParsedTargetAttr AArch64TargetInfo::parseTargetAttr(StringRef Features) const {
   return Ret;
 }
 
+bool AArch64TargetInfo::initFeatureMap(
+     llvm::StringMap<bool> &Features, DiagnosticsEngine &Diags, StringRef CPU,
+     const std::vector<std::string> &FeaturesVec) const {
+  std::vector<std::string> UpdatedFeaturesVec;
+  // Parse the CPU and add any implied features.
+  std::optional<llvm::AArch64::CpuInfo> CpuInfo = llvm::AArch64::parseCpu(CPU);
+  if (CpuInfo) {
+    auto Exts = CpuInfo->getImpliedExtensions();
+    std::vector<StringRef> CPUFeats;
+    llvm::AArch64::getExtensionFeatures(Exts, CPUFeats);
+    for (auto F : CPUFeats) {
+      assert((F[0] == '+' || F[0] == '-') && "Expected +/- in target feature!");
+      UpdatedFeaturesVec.push_back(F.str());
+    }
+  }
+  return TargetInfo::initFeatureMap(Features, Diags, CPU, UpdatedFeaturesVec);
+}
+
 bool AArch64TargetInfo::hasBFloat16Type() const {
   return true;
 }
