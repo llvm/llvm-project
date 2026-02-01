@@ -528,8 +528,7 @@ public:
     return ConstantInt::get(getInt64Ty(), C);
   }
 
-  /// Get a constant N-bit value, zero extended or truncated from
-  /// a 64-bit value.
+  /// Get a constant N-bit value, zero extended from a 64-bit value.
   ConstantInt *getIntN(unsigned N, uint64_t C) {
     return ConstantInt::get(getIntNTy(N), C);
   }
@@ -968,6 +967,10 @@ public:
   /// at runtime. This works for both units of bits and bytes. This can result
   /// in poison if type \p Ty is not big enough to hold the value.
   LLVM_ABI Value *CreateTypeSize(Type *Ty, TypeSize Size);
+
+  /// Get allocation size of an alloca as a runtime Value* (handles both static
+  /// and dynamic allocas and vscale factor).
+  LLVM_ABI Value *CreateAllocationSize(Type *DestTy, AllocaInst *AI);
 
   /// Creates a vector of type \p DstType with the linear sequence <0, 1, ...>
   LLVM_ABI Value *CreateStepVector(Type *DstType, const Twine &Name = "");
@@ -1738,12 +1741,13 @@ public:
   }
 
   Value *CreateLogicalOp(Instruction::BinaryOps Opc, Value *Cond1, Value *Cond2,
-                         const Twine &Name = "") {
+                         const Twine &Name = "",
+                         Instruction *MDFrom = nullptr) {
     switch (Opc) {
     case Instruction::And:
-      return CreateLogicalAnd(Cond1, Cond2, Name);
+      return CreateLogicalAnd(Cond1, Cond2, Name, MDFrom);
     case Instruction::Or:
-      return CreateLogicalOr(Cond1, Cond2, Name);
+      return CreateLogicalOr(Cond1, Cond2, Name, MDFrom);
     default:
       break;
     }
@@ -2664,15 +2668,27 @@ public:
   /// Return a vector value that contains the vector V reversed
   LLVM_ABI Value *CreateVectorReverse(Value *V, const Twine &Name = "");
 
-  /// Return a vector splice intrinsic if using scalable vectors, otherwise
-  /// return a shufflevector. If the immediate is positive, a vector is
-  /// extracted from concat(V1, V2), starting at Imm. If the immediate
-  /// is negative, we extract -Imm elements from V1 and the remaining
-  /// elements from V2. Imm is a signed integer in the range
-  /// -VL <= Imm < VL (where VL is the runtime vector length of the
-  /// source/result vector)
-  LLVM_ABI Value *CreateVectorSplice(Value *V1, Value *V2, int64_t Imm,
-                                     const Twine &Name = "");
+  /// Create a vector.splice.left intrinsic call, or a shufflevector that
+  /// produces the same result if the result type is a fixed-length vector and
+  /// \p Offset is a constant.
+  LLVM_ABI Value *CreateVectorSpliceLeft(Value *V1, Value *V2, Value *Offset,
+                                         const Twine &Name = "");
+
+  Value *CreateVectorSpliceLeft(Value *V1, Value *V2, uint32_t Offset,
+                                const Twine &Name = "") {
+    return CreateVectorSpliceLeft(V1, V2, getInt32(Offset), Name);
+  }
+
+  /// Create a vector.splice.right intrinsic call, or a shufflevector that
+  /// produces the same result if the result type is a fixed-length vector and
+  /// \p Offset is a constant.
+  LLVM_ABI Value *CreateVectorSpliceRight(Value *V1, Value *V2, Value *Offset,
+                                          const Twine &Name = "");
+
+  Value *CreateVectorSpliceRight(Value *V1, Value *V2, uint32_t Offset,
+                                 const Twine &Name = "") {
+    return CreateVectorSpliceRight(V1, V2, getInt32(Offset), Name);
+  }
 
   /// Return a vector value that contains \arg V broadcasted to \p
   /// NumElts elements.

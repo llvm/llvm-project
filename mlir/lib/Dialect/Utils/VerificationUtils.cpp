@@ -36,3 +36,16 @@ LogicalResult mlir::verifyRanksMatch(Operation *op, ShapedType lhs,
   }
   return success();
 }
+
+LogicalResult mlir::verifyElementTypesMatch(Operation *op, ShapedType lhs,
+                                            ShapedType rhs, StringRef lhsName,
+                                            StringRef rhsName) {
+  Type lhsElementType = lhs.getElementType();
+  Type rhsElementType = rhs.getElementType();
+  if (lhsElementType != rhsElementType) {
+    return op->emitOpError() << lhsName << " element type (" << lhsElementType
+                             << ") does not match " << rhsName
+                             << " element type (" << rhsElementType << ")";
+  }
+  return success();
+}

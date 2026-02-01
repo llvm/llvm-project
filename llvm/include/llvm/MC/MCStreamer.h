@@ -1056,7 +1056,7 @@ public:
   /// Get the .xdata section used for the given section.
   MCSection *getAssociatedXDataSection(const MCSection *TextSec);
 
-  virtual void emitSyntaxDirective();
+  virtual void emitSyntaxDirective(StringRef Syntax, StringRef Options);
 
   /// Record a relocation described by the .reloc directive.
   virtual void emitRelocDirective(const MCExpr &Offset, StringRef Name,

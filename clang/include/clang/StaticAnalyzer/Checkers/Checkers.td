@@ -907,12 +907,25 @@ def UncheckedReturn : Checker<"UncheckedReturn">,
   Dependencies<[SecuritySyntaxChecker]>,
   Documentation<HasDocumentation>;
 
-def DeprecatedOrUnsafeBufferHandling :
-  Checker<"DeprecatedOrUnsafeBufferHandling">,
-  HelpText<"Warn on uses of unsecure or deprecated buffer manipulating "
-           "functions">,
-  Dependencies<[SecuritySyntaxChecker]>,
-  Documentation<HasDocumentation>;
+def DeprecatedOrUnsafeBufferHandling
+    : Checker<"DeprecatedOrUnsafeBufferHandling">,
+      HelpText<"Warn on uses of unsecure or deprecated buffer manipulating "
+               "functions">,
+      Dependencies<[SecuritySyntaxChecker]>,
+      CheckerOptions<
+          [CmdLineOption<
+               String, "ReportMode",
+               "Controls when warnings are reported. \"all\" reports all "
+               "unsafe functions regardless of C standard or Annex K "
+               "availability. \"actionable\" only reports when Annex K is "
+               "available (C11 with __STDC_LIB_EXT1__ and "
+               "__STDC_WANT_LIB_EXT1__=1). \"c11-only\" reports when C11 "
+               "standard is enabled (does not take Annex K availability into "
+               "account).",
+               "c11-only",
+               Released>,
+      ]>,
+      Documentation<HasDocumentation>;
 
 def decodeValueOfObjCType : Checker<"decodeValueOfObjCType">,
   HelpText<"Warn on uses of the '-decodeValueOfObjCType:at:' method">,
@@ -1621,6 +1634,14 @@ def TaintPropagationChecker : Checker<"TaintPropagation">, // Modelling checker
                   "Config",
                   "Specifies the name of the configuration file.",
                   "",
+                  Released>,
+    CmdLineOption<Boolean,
+                  "EnableDefaultConfig",
+                  "If set to false, the default source, "
+                  "sink and propagation rules are not loaded."
+                  "This way, advanced users can fully customize "
+                  "their taint configuration model.",
+                  "true",
                   Released>
   ]>,
   Documentation<NotDocumented>,
@@ -1695,6 +1716,10 @@ def ForwardDeclChecker : Checker<"ForwardDeclChecker">,
 
 def MemoryUnsafeCastChecker : Checker<"MemoryUnsafeCastChecker">,
   HelpText<"Check for memory unsafe casts from base type to derived type.">,
+  Documentation<HasDocumentation>;
+
+def NoDeleteChecker : Checker<"NoDeleteChecker">,
+  HelpText<"Check for [[clang::annotate_type(\"webkit.nodelete\")]] annotation">,
   Documentation<HasDocumentation>;
 
 def NoUncheckedPtrMemberChecker : Checker<"NoUncheckedPtrMemberChecker">,

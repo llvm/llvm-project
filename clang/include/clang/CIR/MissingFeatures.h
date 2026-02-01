@@ -148,8 +148,6 @@ struct MissingFeatures {
   static bool zeroSizeRecordMembers() { return false; }
 
   // Coroutines
-  static bool coroEndBuiltinCall() { return false; }
-  static bool emitBodyAndFallthrough() { return false; }
   static bool coroOutsideFrameMD() { return false; }
   static bool coroutineExceptions() { return false; };
 
@@ -351,7 +349,6 @@ struct MissingFeatures {
   static bool useEHCleanupForArray() { return false; }
   static bool vaArgABILowering() { return false; }
   static bool vectorConstants() { return false; }
-  static bool virtualMethodAttr() { return false; }
   static bool vlas() { return false; }
   static bool vtableInitialization() { return false; }
   static bool vtableEmitMetadata() { return false; }

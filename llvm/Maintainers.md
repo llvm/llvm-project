@@ -275,7 +275,7 @@ jholewinski@nvidia.com (email), [jholewinski](https://github.com/jholewinski) (G
 Artem Belevich \
 tra@google.com (email), [Artem-B](https://github.com/Artem-B) (GitHub) \
 Alex MacLean \
-amaclean@nvidia.com (email), [AlexMaclean](https://github.com/AlexMaclean) (GitHub) \
+amaclean@nvidia.com (email), [AlexMaclean](https://github.com/AlexMaclean) (GitHub)
 
 #### PowerPC backend
 

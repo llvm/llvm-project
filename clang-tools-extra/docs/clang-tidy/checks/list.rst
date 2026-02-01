@@ -256,8 +256,10 @@ Clang-Tidy Checks
    :doc:`llvm-prefer-register-over-unsigned <llvm/prefer-register-over-unsigned>`, "Yes"
    :doc:`llvm-prefer-static-over-anonymous-namespace <llvm/prefer-static-over-anonymous-namespace>`,
    :doc:`llvm-twine-local <llvm/twine-local>`, "Yes"
+   :doc:`llvm-type-switch-case-types <llvm/type-switch-case-types>`, "Yes"
    :doc:`llvm-use-new-mlir-op-builder <llvm/use-new-mlir-op-builder>`, "Yes"
    :doc:`llvm-use-ranges <llvm/use-ranges>`, "Yes"
+   :doc:`llvm-use-vector-utils <llvm/use-vector-utils>`, "Yes"
    :doc:`llvmlibc-callee-namespace <llvmlibc/callee-namespace>`,
    :doc:`llvmlibc-implementation-in-namespace <llvmlibc/implementation-in-namespace>`,
    :doc:`llvmlibc-inline-function-decl <llvmlibc/inline-function-decl>`, "Yes"
@@ -331,6 +333,8 @@ Clang-Tidy Checks
    :doc:`modernize-use-std-format <modernize/use-std-format>`, "Yes"
    :doc:`modernize-use-std-numbers <modernize/use-std-numbers>`, "Yes"
    :doc:`modernize-use-std-print <modernize/use-std-print>`, "Yes"
+   :doc:`modernize-use-string-view <modernize/use-string-view>`, "Yes"
+   :doc:`modernize-use-structured-binding <modernize/use-structured-binding>`, "Yes"
    :doc:`modernize-use-trailing-return-type <modernize/use-trailing-return-type>`, "Yes"
    :doc:`modernize-use-transparent-functors <modernize/use-transparent-functors>`, "Yes"
    :doc:`modernize-use-uncaught-exceptions <modernize/use-uncaught-exceptions>`, "Yes"
@@ -425,6 +429,7 @@ Clang-Tidy Checks
    :doc:`readability-static-definition-in-anonymous-namespace <readability/static-definition-in-anonymous-namespace>`, "Yes"
    :doc:`readability-string-compare <readability/string-compare>`, "Yes"
    :doc:`readability-suspicious-call-argument <readability/suspicious-call-argument>`,
+   :doc:`readability-trailing-comma <readability/trailing-comma>`, "Yes"
    :doc:`readability-uniqueptr-delete-release <readability/uniqueptr-delete-release>`, "Yes"
    :doc:`readability-uppercase-literal-suffix <readability/uppercase-literal-suffix>`, "Yes"
    :doc:`readability-use-anyofallof <readability/use-anyofallof>`,
