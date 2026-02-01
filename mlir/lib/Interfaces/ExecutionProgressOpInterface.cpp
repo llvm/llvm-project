@@ -18,6 +18,6 @@ bool mlir::mustProgress(Operation *op) {
   auto executionProgressOpInterface =
       dyn_cast<ExecutionProgressOpInterface>(op);
   if (!executionProgressOpInterface)
-    return true;
+    return false;
   return executionProgressOpInterface.mustProgress();
 }

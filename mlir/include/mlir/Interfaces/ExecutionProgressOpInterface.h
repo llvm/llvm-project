@@ -15,8 +15,10 @@
 
 namespace mlir {
 /// Return "true" if the operation must progress. Operations that do not
-/// implement the ExecutionProgressOpInterface must progress by default. For
-/// all other ops, the "must progress" property is queried from the interface.
+/// implement the ExecutionProgressOpInterface are treated conservatively: they
+/// may not necessarily progress (i.e., return "false"). For ops that do
+/// implement the interface, the "must progress" property is queried from the
+/// interface.
 bool mustProgress(Operation *op);
 } // namespace mlir
 
