@@ -405,3 +405,8 @@ def testExtDialectWithRegion():
         # CHECK:     }) : (i1) -> ()
         # CHECK: }
         print(module)
+
+        # CHECK: %c2_i32 = arith.constant 2 : i32
+        print(if_.then.blocks[0])
+        # CHECK: %c3_i32 = arith.constant 3 : i32
+        print(if_.else_.blocks[0])
