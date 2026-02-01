@@ -10,7 +10,6 @@
 #define LLVM_TRANSFORMS_VECTORIZE_VPLANUTILS_H
 
 #include "VPlan.h"
-#include "VPlanPatternMatch.h"
 #include "llvm/Support/Compiler.h"
 
 namespace llvm {
@@ -125,25 +124,6 @@ inline VPRecipeBase *findRecipe(VPValue *Start, PredT Pred) {
   }
   return nullptr;
 }
-
-/// If \p V is used by a recipe matching pattern \p P, return it. Otherwise
-/// return nullptr;
-template <typename MatchT>
-static VPRecipeBase *findUserOf(VPValue *V, const MatchT &P) {
-  auto It = find_if(V->users(), match_fn(P));
-  return It == V->user_end() ? nullptr : cast<VPRecipeBase>(*It);
-}
-
-/// If \p V is used by a VPInstruction with \p Opcode, return it. Otherwise
-/// return nullptr.
-template <unsigned Opcode> static VPInstruction *findUserOf(VPValue *V) {
-  using namespace llvm::VPlanPatternMatch;
-  return cast_or_null<VPInstruction>(findUserOf(V, m_VPInstruction<Opcode>()));
-}
-
-/// Find the ComputeReductionResult recipe for \p PhiR, looking through selects
-/// inserted for predicated reductions or tail folding.
-VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR);
 
 } // namespace vputils
 

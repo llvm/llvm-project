@@ -1641,19 +1641,11 @@ public:
     setUnderlyingValue(&I);
   }
 
-  VPWidenRecipe(unsigned Opcode, ArrayRef<VPValue *> Operands,
-                const VPIRFlags &Flags = {}, const VPIRMetadata &Metadata = {},
-                DebugLoc DL = {})
-      : VPRecipeWithIRFlags(VPRecipeBase::VPWidenSC, Operands, Flags, DL),
-        VPIRMetadata(Metadata), Opcode(Opcode) {}
-
   ~VPWidenRecipe() override = default;
 
   VPWidenRecipe *clone() override {
-    if (auto *UV = getUnderlyingValue())
-      return new VPWidenRecipe(*cast<Instruction>(UV), operands(), *this, *this,
-                               getDebugLoc());
-    return new VPWidenRecipe(Opcode, operands(), *this, *this, getDebugLoc());
+    return new VPWidenRecipe(*getUnderlyingInstr(), operands(), *this, *this,
+                             getDebugLoc());
   }
 
   VP_CLASSOF_IMPL(VPRecipeBase::VPWidenSC)
