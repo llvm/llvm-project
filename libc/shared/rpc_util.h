@@ -42,18 +42,94 @@ template <class T, T v> struct type_constant {
   static inline constexpr T value = v;
 };
 
+/// Freestanding type trait helpers.
+template <class T> struct remove_cv : type_identity<T> {};
+template <class T> struct remove_cv<const T> : type_identity<T> {};
+template <class T> using remove_cv_t = typename remove_cv<T>::type;
+
+template <class T> struct remove_pointer : type_identity<T> {};
+template <class T> struct remove_pointer<T *> : type_identity<T> {};
+template <class T> using remove_pointer_t = typename remove_pointer<T>::type;
+
+template <class T> struct remove_const : type_identity<T> {};
+template <class T> struct remove_const<const T> : type_identity<T> {};
+template <class T> using remove_const_t = typename remove_const<T>::type;
+
 template <class T> struct remove_reference : type_identity<T> {};
 template <class T> struct remove_reference<T &> : type_identity<T> {};
 template <class T> struct remove_reference<T &&> : type_identity<T> {};
+template <class T>
+using remove_reference_t = typename remove_reference<T>::type;
 
 template <class T> struct is_const : type_constant<bool, false> {};
 template <class T> struct is_const<const T> : type_constant<bool, true> {};
+template <class T> RPC_ATTRS constexpr bool is_const_v = is_const<T>::value;
+
+template <typename T> struct is_pointer : type_constant<bool, false> {};
+template <typename T> struct is_pointer<T *> : type_constant<bool, true> {};
+template <typename T>
+struct is_pointer<T *const> : type_constant<bool, true> {};
+template <typename T>
+RPC_ATTRS constexpr bool is_pointer_v = is_pointer<T>::value;
+
+template <typename T, typename U>
+struct is_same : type_constant<bool, false> {};
+template <typename T> struct is_same<T, T> : type_constant<bool, true> {};
+template <typename T, typename U>
+RPC_ATTRS constexpr bool is_same_v = is_same<T, U>::value;
+
+template <class T> struct is_void : type_constant<bool, false> {};
+template <> struct is_void<void> : type_constant<bool, true> {};
+template <typename T> RPC_ATTRS constexpr bool is_void_v = is_void<T>::value;
+
+template <class T>
+struct is_trivially_copyable
+    : public type_constant<bool, __is_trivially_copyable(T)> {};
+template <class T>
+RPC_ATTRS constexpr bool is_trivially_copyable_v =
+    is_trivially_copyable<T>::value;
+
+template <class T, class... Args>
+struct is_trivially_constructible
+    : type_constant<bool, __is_trivially_constructible(T, Args...)> {};
+template <class T, class... Args>
+RPC_ATTRS constexpr bool is_trivially_constructible_v =
+    is_trivially_constructible<T>::value;
+
+template <bool B, class T, class F> struct conditional : type_identity<T> {};
+template <class T, class F>
+struct conditional<false, T, F> : type_identity<F> {};
+template <bool B, class T, class F>
+using conditional_t = typename conditional<B, T, F>::type;
 
 /// Freestanding implementation of std::move.
 template <class T>
 RPC_ATTRS constexpr typename remove_reference<T>::type &&move(T &&t) {
   return static_cast<typename remove_reference<T>::type &&>(t);
 }
+
+/// Freestanding integer sequence.
+template <typename T, T... Ints> struct integer_sequence {
+  template <T Next> using append = integer_sequence<T, Ints..., Next>;
+};
+
+namespace detail {
+template <typename T, int N> struct make_integer_sequence {
+  using type =
+      typename make_integer_sequence<T, N - 1>::type::template append<N>;
+};
+template <typename T> struct make_integer_sequence<T, -1> {
+  using type = integer_sequence<T>;
+};
+} // namespace detail
+
+template <uint64_t... Ints>
+using index_sequence = integer_sequence<uint64_t, Ints...>;
+template <int N>
+using make_index_sequence =
+    typename detail::make_integer_sequence<uint64_t, N - 1>::type;
+template <typename... Ts>
+using index_sequence_for = make_index_sequence<sizeof...(Ts)>;
 
 /// Freestanding implementation of std::forward.
 template <typename T>
@@ -149,6 +225,84 @@ public:
   RPC_ATTRS constexpr T &&value() && { return move(storage.stored_value); }
   RPC_ATTRS constexpr T &&operator*() && { return move(storage.stored_value); }
 };
+
+/// Minimal array type.
+template <typename T, uint64_t N> struct array {
+  T elems[N];
+
+  RPC_ATTRS constexpr T *data() { return elems; }
+  RPC_ATTRS constexpr const T *data() const { return elems; }
+  RPC_ATTRS static constexpr uint64_t size() { return N; }
+
+  RPC_ATTRS constexpr T &operator[](uint64_t i) { return elems[i]; }
+  RPC_ATTRS constexpr const T &operator[](uint64_t i) const { return elems[i]; }
+};
+
+/// Minimal tuple type.
+template <typename... Ts> struct tuple;
+template <> struct tuple<> {};
+
+template <typename Head, typename... Tail>
+struct tuple<Head, Tail...> : tuple<Tail...> {
+  Head head;
+
+  RPC_ATTRS constexpr tuple() = default;
+
+  template <typename OHead, typename... OTail>
+  RPC_ATTRS constexpr tuple &operator=(const tuple<OHead, OTail...> &other) {
+    head = other.get_head();
+    this->get_tail() = other.get_tail();
+    return *this;
+  }
+
+  RPC_ATTRS constexpr tuple(const Head &h, const Tail &...t)
+      : tuple<Tail...>(t...), head(h) {}
+
+  RPC_ATTRS constexpr Head &get_head() { return head; }
+  RPC_ATTRS constexpr const Head &get_head() const { return head; }
+
+  RPC_ATTRS constexpr tuple<Tail...> &get_tail() { return *this; }
+  RPC_ATTRS constexpr const tuple<Tail...> &get_tail() const { return *this; }
+};
+
+template <size_t Idx, typename T> struct tuple_element;
+template <size_t Idx, typename Head, typename... Tail>
+struct tuple_element<Idx, tuple<Head, Tail...>>
+    : tuple_element<Idx - 1, tuple<Tail...>> {};
+template <typename Head, typename... Tail>
+struct tuple_element<0, tuple<Head, Tail...>> {
+  using type = remove_cv_t<remove_reference_t<Head>>;
+};
+template <size_t Idx, typename T>
+using tuple_element_t = typename tuple_element<Idx, T>::type;
+
+template <uint64_t Idx, typename Head, typename... Tail>
+RPC_ATTRS constexpr auto &get(tuple<Head, Tail...> &t) {
+  if constexpr (Idx == 0)
+    return t.get_head();
+  else
+    return get<Idx - 1>(t.get_tail());
+}
+template <uint64_t Idx, typename Head, typename... Tail>
+RPC_ATTRS constexpr const auto &get(const tuple<Head, Tail...> &t) {
+  if constexpr (Idx == 0)
+    return t.get_head();
+  else
+    return get<Idx - 1>(t.get_tail());
+}
+
+namespace detail {
+template <typename F, typename Tuple, uint64_t... Is>
+RPC_ATTRS auto apply(F &&f, Tuple &&t, index_sequence<Is...>) {
+  return f(get<Is>(static_cast<Tuple &&>(t))...);
+}
+} // namespace detail
+
+template <typename F, typename... Ts>
+RPC_ATTRS auto apply(F &&f, tuple<Ts...> &t) {
+  return detail::apply(static_cast<F &&>(f), t,
+                       make_index_sequence<sizeof...(Ts)>{});
+}
 
 /// Suspend the thread briefly to assist the thread scheduler during busy loops.
 RPC_ATTRS void sleep_briefly() {
@@ -263,12 +417,24 @@ template <typename T, typename U> RPC_ATTRS T *advance(T *ptr, U bytes) {
 }
 
 /// Wrapper around the optimal memory copy implementation for the target.
-RPC_ATTRS void rpc_memcpy(void *dst, const void *src, size_t count) {
+RPC_ATTRS void rpc_memcpy(void *dst, const void *src, uint64_t count) {
   __builtin_memcpy(dst, src, count);
 }
 
-template <class T> RPC_ATTRS constexpr const T &max(const T &a, const T &b) {
+/// Minimal string length function.
+RPC_ATTRS constexpr uint64_t string_length(const char *s) {
+  const char *end = s;
+  for (; *end != '\0'; ++end)
+    ;
+  return static_cast<uint64_t>(end - s + 1);
+}
+
+template <class T, class U> RPC_ATTRS constexpr T max(const T &a, const U &b) {
   return (a < b) ? b : a;
+}
+
+template <class T, class U> RPC_ATTRS constexpr T min(const T &a, const U &b) {
+  return (a < b) ? a : b;
 }
 
 } // namespace rpc
