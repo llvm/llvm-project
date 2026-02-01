@@ -5466,6 +5466,23 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
 
       // TODO: Copy inf handling from instructions
       break;
+
+    case Intrinsic::amdgcn_fract: {
+      Known.knownNot(fcInf);
+
+      if (InterestedClasses & fcNan) {
+        KnownFPClass KnownSrc;
+        computeKnownFPClass(II->getArgOperand(0), DemandedElts,
+                            InterestedClasses, KnownSrc, Q, Depth + 1);
+
+        if (KnownSrc.isKnownNeverInfOrNaN())
+          Known.knownNot(fcNan);
+        else if (KnownSrc.isKnownNever(fcSNan))
+          Known.knownNot(fcSNan);
+      }
+
+      break;
+    }
     case Intrinsic::amdgcn_rcp: {
       KnownFPClass KnownSrc;
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
