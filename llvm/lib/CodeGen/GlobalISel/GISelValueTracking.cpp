@@ -234,6 +234,44 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
     Known = Known.trunc(BitWidth);
     break;
   }
+
+  case TargetOpcode::G_BITCAST: {
+    Register SrcReg = MI.getOperand(1).getReg();
+    LLT SrcTy = MRI.getType(SrcReg);
+    APInt SrcDemanded;
+
+    // Only handle fixed vectors
+    if (SrcTy.isFixedVector() && DstTy.isFixedVector()) {
+      unsigned SrcNumElts = SrcTy.getNumElements();
+      unsigned DstNumElts = DstTy.getNumElements();
+
+      if (SrcNumElts == DstNumElts) {
+        SrcDemanded = DemandedElts;
+      } else if (DstNumElts > SrcNumElts) {
+        unsigned Ratio = DstNumElts / SrcNumElts;
+        SrcDemanded = APInt(SrcNumElts, 0);
+        for (unsigned i = 0; i < SrcNumElts; ++i) {
+          if (DemandedElts.extractBits(Ratio, i * Ratio).getBoolValue())
+            SrcDemanded.setBit(i);
+        }
+      } else {
+        unsigned Ratio = SrcNumElts / DstNumElts;
+        SrcDemanded = APInt(SrcNumElts, 0);
+        for (unsigned i = 0; i < DstNumElts; ++i) {
+          if (DemandedElts[i]) {
+            SrcDemanded.setBits(i * Ratio, (i + 1) * Ratio);
+          }
+        }
+      }
+    } else {
+      SrcDemanded = SrcTy.isFixedVector()
+                        ? APInt::getAllOnes(SrcTy.getNumElements())
+                        : APInt(1, 1);
+    }
+    computeKnownBitsImpl(SrcReg, Known2, SrcDemanded, Depth + 1);
+    Known = Known2;
+    break;
+  }
   case TargetOpcode::COPY:
   case TargetOpcode::G_PHI:
   case TargetOpcode::PHI: {
@@ -258,12 +296,16 @@ void GISelValueTracking::computeKnownBitsImpl(Register R, KnownBits &Known,
       // it's always defined to be 0 by tablegen.
       if (SrcReg.isVirtual() && Src.getSubReg() == 0 /*NoSubRegister*/ &&
           SrcTy.isValid()) {
-        // In case we're forwarding from a vector register to a non-vector
-        // register we need to update the demanded elements to reflect this
-        // before recursing.
-        APInt NowDemandedElts = SrcTy.isFixedVector() && !DstTy.isFixedVector()
-                                    ? APInt::getAllOnes(SrcTy.getNumElements())
-                                    : DemandedElts; // Known to be APInt(1, 1)
+        APInt NowDemandedElts;
+        if (!SrcTy.isFixedVector()) {
+          NowDemandedElts = APInt(1, 1);
+        } else if (DstTy.isFixedVector() &&
+                   SrcTy.getNumElements() == DstTy.getNumElements()) {
+          NowDemandedElts = DemandedElts;
+        } else {
+          NowDemandedElts = APInt::getAllOnes(SrcTy.getNumElements());
+        }
+
         // For COPYs we don't do anything, don't increase the depth.
         computeKnownBitsImpl(SrcReg, Known2, NowDemandedElts,
                              Depth + (Opcode != TargetOpcode::COPY));
