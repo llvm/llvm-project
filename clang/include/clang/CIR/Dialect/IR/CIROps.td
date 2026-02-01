@@ -2766,6 +2766,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
                        OptionalAttr<StrAttr>:$sym_visibility,
                        TypeAttr:$sym_type,
                        CIR_GlobalLinkageKind:$linkage,
+                       OptionalAttr<MemorySpaceAttrInterface>:$addr_space,
                        OptionalAttr<CIR_TLSModel>:$tls_model,
                        OptionalAttr<AnyAttr>:$initial_value,
                        UnitAttr:$comdat,
@@ -2787,6 +2788,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
     ($tls_model^)?
     (`dso_local` $dso_local^)?
     (`static_local_guard` `` $static_local_guard^)?
+    (` ` custom<GlobalAddressSpaceValue>($addr_space)^ )?
     $sym_name
     custom<GlobalOpTypeAndInitialValue>($sym_type, $initial_value,
                                         $ctorRegion, $dtorRegion)
@@ -2807,6 +2809,7 @@ def CIR_GlobalOp : CIR_Op<"global", [
       "llvm::StringRef":$sym_name,
       "mlir::Type":$sym_type,
       CArg<"bool", "false">:$isConstant,
+      CArg<"mlir::ptr::MemorySpaceAttrInterface", "{}">:$addrSpace,
       // CIR defaults to external linkage.
       CArg<"cir::GlobalLinkageKind",
            "cir::GlobalLinkageKind::ExternalLinkage">:$linkage,

@@ -27,12 +27,14 @@
 #include "clang/Basic/SourceManager.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
+#include "clang/CIR/Dialect/IR/CIROpsEnums.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/Interfaces/CIROpInterfaces.h"
 #include "clang/CIR/MissingFeatures.h"
 
 #include "CIRGenFunctionInfo.h"
 #include "TargetInfo.h"
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
@@ -608,10 +610,11 @@ mlir::Operation *CIRGenModule::getGlobalValue(StringRef name) {
   return mlir::SymbolTable::lookupSymbolIn(theModule, name);
 }
 
-cir::GlobalOp CIRGenModule::createGlobalOp(CIRGenModule &cgm,
-                                           mlir::Location loc, StringRef name,
-                                           mlir::Type t, bool isConstant,
-                                           mlir::Operation *insertPoint) {
+cir::GlobalOp
+CIRGenModule::createGlobalOp(CIRGenModule &cgm, mlir::Location loc,
+                             StringRef name, mlir::Type t, bool isConstant,
+                             mlir::ptr::MemorySpaceAttrInterface addrSpace,
+                             mlir::Operation *insertPoint) {
   cir::GlobalOp g;
   CIRGenBuilderTy &builder = cgm.getBuilder();
 
@@ -631,7 +634,7 @@ cir::GlobalOp CIRGenModule::createGlobalOp(CIRGenModule &cgm,
         builder.setInsertionPointToStart(cgm.getModule().getBody());
     }
 
-    g = cir::GlobalOp::create(builder, loc, name, t, isConstant);
+    g = cir::GlobalOp::create(builder, loc, name, t, isConstant, addrSpace);
     if (!insertPoint)
       cgm.lastGlobalOp = g;
 
@@ -678,6 +681,39 @@ std::optional<cir::SourceLanguage> CIRGenModule::getCIRSourceLanguage() const {
   assert(!cir::MissingFeatures::sourceLanguageCases());
   errorNYI("CIR does not yet support the given source language");
   return std::nullopt;
+}
+
+LangAS CIRGenModule::getGlobalVarAddressSpace(const VarDecl *d) {
+  if (langOpts.OpenCL) {
+    LangAS as = d ? d->getType().getAddressSpace() : LangAS::opencl_global;
+    assert(as == LangAS::opencl_global || as == LangAS::opencl_global_device ||
+           as == LangAS::opencl_global_host || as == LangAS::opencl_constant ||
+           as == LangAS::opencl_local || as >= LangAS::FirstTargetAddressSpace);
+    return as;
+  }
+
+  if (langOpts.SYCLIsDevice &&
+      (!d || d->getType().getAddressSpace() == LangAS::Default))
+    llvm_unreachable("NYI");
+
+  if (langOpts.CUDA && langOpts.CUDAIsDevice) {
+    if (d) {
+      if (d->hasAttr<CUDAConstantAttr>())
+        return LangAS::cuda_constant;
+      if (d->hasAttr<CUDASharedAttr>())
+        return LangAS::cuda_shared;
+      if (d->hasAttr<CUDADeviceAttr>())
+        return LangAS::cuda_device;
+      if (d->getType().isConstQualified())
+        return LangAS::cuda_constant;
+    }
+    return LangAS::cuda_device;
+  }
+
+  if (langOpts.OpenMP)
+    llvm_unreachable("NYI");
+
+  return getTargetCIRGenInfo().getGlobalVarAddressSpace(*this, d);
 }
 
 static void setLinkageForGV(cir::GlobalOp &gv, const NamedDecl *nd) {
@@ -760,7 +796,6 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
   }
 
   if (entry) {
-    assert(!cir::MissingFeatures::addressSpace());
     assert(!cir::MissingFeatures::opGlobalWeakRef());
 
     assert(!cir::MissingFeatures::setDLLStorageClass());
@@ -789,6 +824,9 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
       return entry;
   }
 
+  mlir::ptr::MemorySpaceAttrInterface declCIRAS =
+      cir::toCIRAddressSpaceAttr(getMLIRContext(), getGlobalVarAddressSpace(d));
+
   mlir::Location loc = getLoc(d->getSourceRange());
 
   // Calculate constant storage flag before creating the global. This was moved
@@ -804,9 +842,9 @@ CIRGenModule::getOrCreateCIRGlobal(StringRef mangledName, mlir::Type ty,
 
   // mlir::SymbolTable::Visibility::Public is the default, no need to explicitly
   // mark it as such.
-  cir::GlobalOp gv =
-      CIRGenModule::createGlobalOp(*this, loc, mangledName, ty, isConstant,
-                                   /*insertPoint=*/entry.getOperation());
+  cir::GlobalOp gv = CIRGenModule::createGlobalOp(
+      *this, loc, mangledName, ty, isConstant, declCIRAS,
+      /*insertPoint=*/entry.getOperation());
 
   // If we already created a global with the same mangled name (but different
   // type) before, remove it from its parent.
@@ -911,7 +949,7 @@ mlir::Value CIRGenModule::getAddrOfGlobalVar(const VarDecl *d, mlir::Type ty,
 
   bool tlsAccess = d->getTLSKind() != VarDecl::TLS_None;
   cir::GlobalOp g = getOrCreateCIRGlobal(d, ty, isForDefinition);
-  mlir::Type ptrTy = builder.getPointerTo(g.getSymType());
+  mlir::Type ptrTy = builder.getPointerTo(g.getSymType(), g.getAddrSpaceAttr());
   return cir::GetGlobalOp::create(
       builder, getLoc(d->getSourceRange()), ptrTy, g.getSymNameAttr(),
       tlsAccess,
@@ -923,8 +961,8 @@ cir::GlobalViewAttr CIRGenModule::getAddrOfGlobalVarAttr(const VarDecl *d) {
   mlir::Type ty = getTypes().convertTypeForMem(d->getType());
 
   cir::GlobalOp globalOp = getOrCreateCIRGlobal(d, ty, NotForDefinition);
-  assert(!cir::MissingFeatures::addressSpace());
-  cir::PointerType ptrTy = builder.getPointerTo(globalOp.getSymType());
+  cir::PointerType ptrTy =
+      builder.getPointerTo(globalOp.getSymType(), globalOp.getAddrSpaceAttr());
   return builder.getGlobalViewAttr(ptrTy, globalOp);
 }
 
