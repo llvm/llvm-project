@@ -296,9 +296,9 @@ static LValue emitGlobalVarDeclLValue(CIRGenFunction &cgf, const Expr *e,
   // as part of getAddrOfGlobalVar.
   mlir::Value v = cgf.cgm.getAddrOfGlobalVar(vd);
 
-  assert(!cir::MissingFeatures::addressSpace());
   mlir::Type realVarTy = cgf.convertTypeForMem(vd->getType());
-  cir::PointerType realPtrTy = cgf.getBuilder().getPointerTo(realVarTy);
+  cir::PointerType realPtrTy = cir::PointerType::get(
+      realVarTy, mlir::cast<cir::PointerType>(v.getType()).getAddrSpace());
   if (realPtrTy != v.getType())
     v = cgf.getBuilder().createBitcast(v.getLoc(), v, realPtrTy);
 

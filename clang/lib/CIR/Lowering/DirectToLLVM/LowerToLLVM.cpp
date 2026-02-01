@@ -102,6 +102,21 @@ static mlir::Value createIntCast(mlir::OpBuilder &bld, mlir::Value src,
   return mlir::LLVM::BitcastOp::create(bld, loc, dstTy, src);
 }
 
+static unsigned
+getNumericASFromCIRAS(mlir::ptr::MemorySpaceAttrInterface asAttr,
+                      [[maybe_unused]] cir::LowerModule *lowerModule) {
+  if (!asAttr)
+    return 0; // default AS
+  if (auto targetAddrSpaceAttr =
+          mlir::dyn_cast_if_present<cir::TargetAddressSpaceAttr>(asAttr))
+    return targetAddrSpaceAttr.getValue();
+
+  if (mlir::isa_and_present<cir::LangAddressSpaceAttr>(asAttr))
+    llvm_unreachable("lowering LangAddressSpaceAttr NYI");
+
+  llvm_unreachable("unexpected address Space attribute kindI");
+}
+
 static mlir::LLVM::Visibility
 lowerCIRVisibilityToLLVMVisibility(cir::VisibilityKind visibilityKind) {
   switch (visibilityKind) {
@@ -2265,8 +2280,8 @@ void CIRToLLVMGlobalOpLowering::setupRegionInitializedLLVMGlobalOp(
   //        in CIRToLLVMGlobalOpLowering::matchAndRewrite() but that will go
   //        away when the placeholders are no longer needed.
   const bool isConst = op.getConstant();
-  assert(!cir::MissingFeatures::addressSpace());
-  const unsigned addrSpace = 0;
+  const unsigned addrSpace =
+      getNumericASFromCIRAS(op.getAddrSpaceAttr(), lowerMod);
   const bool isDsoLocal = op.getDsoLocal();
   const bool isThreadLocal = (bool)op.getTlsModelAttr();
   const uint64_t alignment = op.getAlignment().value_or(0);
@@ -2322,11 +2337,9 @@ mlir::LogicalResult CIRToLLVMGlobalOpLowering::matchAndRewrite(
   // This is the LLVM dialect type.
   const mlir::Type llvmType =
       convertTypeForMemory(*getTypeConverter(), dataLayout, cirSymType);
-  // FIXME: These default values are placeholders until the the equivalent
-  //        attributes are available on cir.global ops.
   const bool isConst = op.getConstant();
-  assert(!cir::MissingFeatures::addressSpace());
-  const unsigned addrSpace = 0;
+  const unsigned addrSpace =
+      getNumericASFromCIRAS(op.getAddrSpaceAttr(), lowerMod);
   const bool isDsoLocal = op.getDsoLocal();
   const bool isThreadLocal = (bool)op.getTlsModelAttr();
   const uint64_t alignment = op.getAlignment().value_or(0);
@@ -3040,20 +3053,6 @@ std::unique_ptr<cir::LowerModule> prepareLowerModule(mlir::ModuleOp module) {
   if (!module->hasAttr(cir::CIRDialect::getTripleAttrName()))
     return {};
   return cir::createLowerModule(module, rewriter);
-}
-static unsigned
-getNumericASFromCIRAS(mlir::ptr::MemorySpaceAttrInterface asAttr,
-                      [[maybe_unused]] cir::LowerModule *lowerModule) {
-  if (!asAttr)
-    return 0; // default AS
-  if (auto targetAddrSpaceAttr =
-          mlir::dyn_cast_if_present<cir::TargetAddressSpaceAttr>(asAttr))
-    return targetAddrSpaceAttr.getValue();
-
-  if (mlir::isa_and_present<cir::LangAddressSpaceAttr>(asAttr))
-    llvm_unreachable("lowering LangAddressSpaceAttr NYI");
-
-  llvm_unreachable("unexpected address Space attribute kindI");
 }
 
 static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,

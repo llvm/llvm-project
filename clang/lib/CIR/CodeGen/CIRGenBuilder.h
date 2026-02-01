@@ -12,6 +12,7 @@
 #include "Address.h"
 #include "CIRGenRecordLayout.h"
 #include "CIRGenTypeCache.h"
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/Support/LLVM.h"
@@ -605,7 +606,8 @@ public:
   [[nodiscard]] cir::GlobalOp
   createVersionedGlobal(mlir::ModuleOp module, mlir::Location loc,
                         mlir::StringRef name, mlir::Type type, bool isConstant,
-                        cir::GlobalLinkageKind linkage) {
+                        cir::GlobalLinkageKind linkage,
+                        mlir::ptr::MemorySpaceAttrInterface addrSpace = {}) {
     // Create a unique name if the given name is already taken.
     std::string uniqueName;
     if (unsigned version = globalsVersioning[name.str()]++)
@@ -613,7 +615,8 @@ public:
     else
       uniqueName = name.str();
 
-    return createGlobal(module, loc, uniqueName, type, isConstant, linkage);
+    return createGlobal(module, loc, uniqueName, type, isConstant, linkage,
+                        addrSpace);
   }
 
   cir::StackSaveOp createStackSave(mlir::Location loc, mlir::Type ty) {

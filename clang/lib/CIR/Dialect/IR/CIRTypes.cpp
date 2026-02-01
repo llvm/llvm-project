@@ -1057,6 +1057,21 @@ void printAddressSpaceValue(mlir::AsmPrinter &p,
   llvm_unreachable("unexpected address-space attribute kind");
 }
 
+mlir::OptionalParseResult
+parseGlobalAddressSpaceValue(mlir::AsmParser &p,
+                             mlir::ptr::MemorySpaceAttrInterface &attr) {
+
+  mlir::SMLoc loc = p.getCurrentLocation();
+  if (parseAddressSpaceValue(p, attr).failed())
+    return p.emitError(loc, "failed to parse Address Space Value for GlobalOp");
+  return mlir::success();
+}
+
+void printGlobalAddressSpaceValue(mlir::AsmPrinter &printer, cir::GlobalOp,
+                                  mlir::ptr::MemorySpaceAttrInterface attr) {
+  printAddressSpaceValue(printer, attr);
+}
+
 mlir::ptr::MemorySpaceAttrInterface
 cir::toCIRAddressSpaceAttr(mlir::MLIRContext *ctx, clang::LangAS langAS) {
   using clang::LangAS;

@@ -26,6 +26,7 @@
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 
 #include "TargetInfo.h"
+#include "mlir/Dialect/Ptr/IR/MemorySpaceInterfaces.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/MLIRContext.h"
@@ -180,10 +181,11 @@ public:
   cir::GlobalOp getOrCreateCIRGlobal(const VarDecl *d, mlir::Type ty,
                                      ForDefinition_t isForDefinition);
 
-  static cir::GlobalOp createGlobalOp(CIRGenModule &cgm, mlir::Location loc,
-                                      llvm::StringRef name, mlir::Type t,
-                                      bool isConstant = false,
-                                      mlir::Operation *insertPoint = nullptr);
+  static cir::GlobalOp
+  createGlobalOp(CIRGenModule &cgm, mlir::Location loc, llvm::StringRef name,
+                 mlir::Type t, bool isConstant = false,
+                 mlir::ptr::MemorySpaceAttrInterface addrSpace = {},
+                 mlir::Operation *insertPoint = nullptr);
 
   /// Add a global constructor or destructor to the module.
   /// The priority is optional, if not specified, the default priority is used.
@@ -716,6 +718,16 @@ private:
 
   /// Map source language used to a CIR attribute.
   std::optional<cir::SourceLanguage> getCIRSourceLanguage() const;
+
+  /// Return the AST address space of the underlying global variable for D, as
+  /// determined by its declaration. Normally this is the same as the address
+  /// space of D's type, but in CUDA, address spaces are associated with
+  /// declarations, not types. If D is nullptr, return the default address
+  /// space for global variable.
+  ///
+  /// For languages without explicit address spaces, if D has default address
+  /// space, target-specific global or constant address space may be returned.
+  LangAS getGlobalVarAddressSpace(const VarDecl *decl);
 };
 } // namespace CIRGen
 
