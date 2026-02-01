@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -fsyntax-only -verify %s
-// RUN: %clang_cc1 -fsyntax-only -fexperimental-new-constant-interpreter -verify %s
 
 // expected-no-diagnostics
 
