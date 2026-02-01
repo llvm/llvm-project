@@ -40,9 +40,9 @@ bool MachineDominanceFrontier::invalidate(
     MachineFunction &F, const PreservedAnalyses &PA,
     MachineFunctionAnalysisManager::Invalidator &) {
   auto PAC = PA.getChecker<MachineDominanceFrontierAnalysis>();
-  return !(PAC.preserved() ||
-           PAC.preservedSet<AllAnalysesOn<MachineFunction>>() ||
-           PAC.preservedSet<CFGAnalyses>());
+  return !PAC.preserved() &&
+         !PAC.preservedSet<AllAnalysesOn<MachineFunction>>() &&
+         !PAC.preservedSet<CFGAnalyses>();
 }
 
 bool MachineDominanceFrontierWrapperPass::runOnMachineFunction(
