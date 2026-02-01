@@ -23,6 +23,7 @@ func.func @shuffle_VC_output_flat_layout(
         !memrefB, !vecB
   %4 = vector.load %arg2[%c0, %c0] :
         !memrefC, !vecC
+  %sqrt = math.sqrt %4 : !vecC 
   %5 = vector.load %arg2[%c0, %c8] :
         !memrefC, !vecC
 
@@ -30,7 +31,7 @@ func.func @shuffle_VC_output_flat_layout(
     indexing_maps = [#map, #map1, #map2],
     iterator_types = ["reduction", "parallel", "parallel", "reduction"],
     kind = #vector.kind<add>}
-    %1, %2, %4
+    %1, %2, %sqrt
     : !vecA, !vecB into !vecC
 
   %7 = vector.contract {

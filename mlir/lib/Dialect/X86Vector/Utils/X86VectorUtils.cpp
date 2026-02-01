@@ -155,10 +155,9 @@ Operation *traceToVectorReadLikeParentOperation(Value v) {
         return nullptr;
       }
 
-      // Continue tracing (accumulators usually forward the value)
       if (defOp->getNumOperands() == 1) {
         v = defOp->getOperand(0);
-        continue;
+        return defOp;
       }
 
       return nullptr;
