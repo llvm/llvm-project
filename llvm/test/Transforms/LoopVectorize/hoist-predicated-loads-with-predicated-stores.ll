@@ -1069,10 +1069,8 @@ define void @test_three_stores_with_different_predicates(ptr %dst, ptr %src, ptr
 ; CHECK-NEXT:    store i32 1, ptr [[TMP7]], align 4, !alias.scope [[META95]], !noalias [[META92]]
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE3]]
 ; CHECK:       [[PRED_STORE_CONTINUE3]]:
-; CHECK-NEXT:    [[TMP8:%.*]] = xor <2 x i1> [[TMP3]], splat (i1 true)
-; CHECK-NEXT:    [[TMP9:%.*]] = or <2 x i1> [[TMP3]], [[TMP8]]
 ; CHECK-NEXT:    [[TMP10:%.*]] = icmp ule <2 x i32> [[WIDE_LOAD]], splat (i32 10)
-; CHECK-NEXT:    [[TMP11:%.*]] = select <2 x i1> [[TMP9]], <2 x i1> [[TMP10]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP11:%.*]] = select <2 x i1> splat (i1 true), <2 x i1> [[TMP10]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <2 x i1> [[TMP11]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP12]], label %[[PRED_STORE_IF4:.*]], label %[[PRED_STORE_CONTINUE5:.*]]
 ; CHECK:       [[PRED_STORE_IF4]]:
@@ -1088,7 +1086,7 @@ define void @test_three_stores_with_different_predicates(ptr %dst, ptr %src, ptr
 ; CHECK-NEXT:    br label %[[PRED_STORE_CONTINUE7]]
 ; CHECK:       [[PRED_STORE_CONTINUE7]]:
 ; CHECK-NEXT:    [[TMP16:%.*]] = icmp ule <2 x i32> [[WIDE_LOAD]], splat (i32 9)
-; CHECK-NEXT:    [[TMP17:%.*]] = select <2 x i1> [[TMP9]], <2 x i1> [[TMP16]], <2 x i1> zeroinitializer
+; CHECK-NEXT:    [[TMP17:%.*]] = select <2 x i1> splat (i1 true), <2 x i1> [[TMP16]], <2 x i1> zeroinitializer
 ; CHECK-NEXT:    [[TMP18:%.*]] = extractelement <2 x i1> [[TMP17]], i32 0
 ; CHECK-NEXT:    br i1 [[TMP18]], label %[[PRED_STORE_IF8:.*]], label %[[PRED_STORE_CONTINUE9:.*]]
 ; CHECK:       [[PRED_STORE_IF8]]:
