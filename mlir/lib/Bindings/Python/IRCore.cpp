@@ -1671,7 +1671,7 @@ nb::object PyOpView::buildGeneric(
       int segmentSpec = operandSegmentSpec[i];
       if (segmentSpec == 1 || segmentSpec == 0) {
         // Unpack unary element.
-        const auto operand = operandList[i];
+        const nanobind::handle operand = operandList[i];
         if (!operand.is_none()) {
           try {
             operands.push_back(getOpResultOrValue(operand));
