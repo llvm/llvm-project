@@ -5,6 +5,7 @@
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -emit-llvm %s -o - | FileCheck %s
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fno-lifetime-dse -emit-llvm %s -o - | FileCheck %s --check-prefix NO-LIFETIME-DSE
 
+void opaque();
 void opaque(char*);
 
 class Foo {
@@ -69,4 +70,17 @@ private:
 // NO-LIFETIME-DSE-SAME: ptr noundef nonnull align 8 dereferenceable(24) [[THIS:%.*]]) unnamed_addr #[[ATTR0:[0-9]+]] align 2 {
 BarVirtualInheritsFoo::~BarVirtualInheritsFoo() {
   opaque(BarVar);
+}
+
+class Empty {
+public:
+  ~Empty();
+};
+
+// CHECK-LABEL: define dso_local void @_ZN5EmptyD1Ev(
+// CHECK-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) unnamed_addr #[[ATTR0:[0-9]+]] align 2 {
+// NO-LIFETIME-DSE-LABEL: define dso_local void @_ZN5EmptyD1Ev(
+// NO-LIFETIME-DSE-SAME: ptr noundef nonnull align 1 dereferenceable(1) [[THIS:%.*]]) unnamed_addr #[[ATTR0:[0-9]+]] align 2 {
+Empty::~Empty() {
+  opaque();
 }
