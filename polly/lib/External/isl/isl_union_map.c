@@ -2198,6 +2198,45 @@ __isl_give isl_union_set *isl_union_set_simple_hull(
 	return isl_union_map_simple_hull(uset);
 }
 
+/* Compute a superset of the convex hull of "map" that is described
+ * by only the constraints in the constituents of "map" and
+ * return the result as an isl_map.
+ * In particular, the result is composed of constraints that appear
+ * in each of the basic maps of "map".
+ */
+static __isl_give isl_map *isl_map_plain_unshifted_simple_hull_map(
+	__isl_take isl_map *map)
+{
+	return isl_map_from_basic_map(isl_map_plain_unshifted_simple_hull(map));
+}
+
+/* For each map in "umap", compute a superset of the convex hull
+ * that is described by only the constraints in the constituents of that map and
+ * collect the results.
+ * In particular, each result is composed of constraints that appear
+ * in each of the basic maps of the corresponding map.
+ */
+__isl_give isl_union_map *isl_union_map_plain_unshifted_simple_hull(
+	__isl_take isl_union_map *umap)
+{
+	return total(umap, &isl_map_plain_unshifted_simple_hull_map);
+}
+
+/* For each set in "uset", compute a superset of the convex hull
+ * that is described by only the constraints in the constituents of that set and
+ * collect the results.
+ * In particular, each result is composed of constraints that appear
+ * in each of the basic sets of the corresponding set.
+ */
+__isl_give isl_union_set *isl_union_set_plain_unshifted_simple_hull(
+	__isl_take isl_union_set *uset)
+{
+	isl_union_map *umap;
+
+	umap = isl_union_map_plain_unshifted_simple_hull(uset_to_umap(uset));
+	return uset_from_umap(umap);
+}
+
 static __isl_give isl_union_map *inplace(__isl_take isl_union_map *umap,
 	__isl_give isl_map *(*fn)(__isl_take isl_map *))
 {
