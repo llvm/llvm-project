@@ -662,9 +662,9 @@ namespace {
                           bool InexpensiveOnly = false,
                           std::optional<EVT> OutVT = std::nullopt);
     SDValue BuildDivEstimate(SDValue N, SDValue Op, SDNodeFlags Flags);
-    SDValue buildRsqrtEstimate(SDValue Op);
-    SDValue buildSqrtEstimate(SDValue Op);
-    SDValue buildSqrtEstimateImpl(SDValue Op, bool Recip);
+    SDValue buildRsqrtEstimate(SDValue Op, SDNodeFlags Flags);
+    SDValue buildSqrtEstimate(SDValue Op, SDNodeFlags Flags);
+    SDValue buildSqrtEstimateImpl(SDValue Op, bool Recip, SDNodeFlags Flags);
     SDValue buildSqrtNROneConst(SDValue Arg, SDValue Est, unsigned Iterations,
                                 bool Reciprocal);
     SDValue buildSqrtNRTwoConst(SDValue Arg, SDValue Est, unsigned Iterations,
@@ -14849,7 +14849,8 @@ SDValue DAGCombiner::foldSextSetcc(SDNode *N) {
   SDLoc DL(N);
 
   // Propagate fast-math-flags.
-  SelectionDAG::FlagInserter FlagsInserter(DAG, N0->getFlags());
+  SDNodeFlags Flags = N0->getFlags();
+  SelectionDAG::FlagInserter FlagsInserter(DAG, Flags);
 
   // On some architectures (such as SSE/NEON/etc) the SETCC result type is
   // the same size as the compared operands. Try to optimize sext(setcc())
@@ -14867,14 +14868,16 @@ SDValue DAGCombiner::foldSextSetcc(SDNode *N) {
       // we know that the element size of the sext'd result matches the
       // element size of the compare operands.
       if (VT.getSizeInBits() == SVT.getSizeInBits())
-        return DAG.getSetCC(DL, VT, N00, N01, CC);
+        return DAG.getSetCC(DL, VT, N00, N01, CC, /*Chain=*/{},
+                            /*Signaling=*/false, Flags);
 
       // If the desired elements are smaller or larger than the source
       // elements, we can use a matching integer vector type and then
       // truncate/sign extend.
       EVT MatchingVecType = N00VT.changeVectorElementTypeToInteger();
       if (SVT == MatchingVecType) {
-        SDValue VsetCC = DAG.getSetCC(DL, MatchingVecType, N00, N01, CC);
+        SDValue VsetCC = DAG.getSetCC(DL, MatchingVecType, N00, N01, CC,
+                                      /*Chain=*/{}, /*Signaling=*/false, Flags);
         return DAG.getSExtOrTrunc(VsetCC, DL, VT);
       }
     }
@@ -14920,7 +14923,8 @@ SDValue DAGCombiner::foldSextSetcc(SDNode *N) {
       if (IsFreeToExtend(N00) && IsFreeToExtend(N01)) {
         SDValue Ext0 = DAG.getNode(ExtOpcode, DL, VT, N00);
         SDValue Ext1 = DAG.getNode(ExtOpcode, DL, VT, N01);
-        return DAG.getSetCC(DL, VT, Ext0, Ext1, CC);
+        return DAG.getSetCC(DL, VT, Ext0, Ext1, CC, /*Chain=*/{},
+                            /*Signaling=*/false, Flags);
       }
     }
   }
@@ -14952,7 +14956,8 @@ SDValue DAGCombiner::foldSextSetcc(SDNode *N) {
     // because a sext is likely cheaper than a select?
     if (SetCCVT.getScalarSizeInBits() != 1 &&
         (!LegalOperations || TLI.isOperationLegal(ISD::SETCC, N00VT))) {
-      SDValue SetCC = DAG.getSetCC(DL, SetCCVT, N00, N01, CC);
+      SDValue SetCC = DAG.getSetCC(DL, SetCCVT, N00, N01, CC, /*Chain=*/{},
+                                   /*Signaling=*/false, Flags);
       return DAG.getSelect(DL, VT, SetCC, ExtTrueVal, Zero);
     }
   }
@@ -15692,7 +15697,8 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
 
   if (N0.getOpcode() == ISD::SETCC) {
     // Propagate fast-math-flags.
-    SelectionDAG::FlagInserter FlagsInserter(DAG, N0->getFlags());
+    SDNodeFlags Flags = N0->getFlags();
+    SelectionDAG::FlagInserter FlagsInserter(DAG, Flags);
 
     // For vectors:
     // aext(setcc) -> vsetcc
@@ -15711,7 +15717,8 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
       // element size of the compare operands.
       if (VT.getSizeInBits() == N00VT.getSizeInBits())
         return DAG.getSetCC(DL, VT, N0.getOperand(0), N0.getOperand(1),
-                            cast<CondCodeSDNode>(N0.getOperand(2))->get());
+                            cast<CondCodeSDNode>(N0.getOperand(2))->get(),
+                            /*Chain=*/{}, /*Signaling=*/false, Flags);
 
       // If the desired elements are smaller or larger than the source
       // elements we can use a matching integer vector type and then
@@ -15719,7 +15726,8 @@ SDValue DAGCombiner::visitANY_EXTEND(SDNode *N) {
       EVT MatchingVectorType = N00VT.changeVectorElementTypeToInteger();
       SDValue VsetCC = DAG.getSetCC(
           DL, MatchingVectorType, N0.getOperand(0), N0.getOperand(1),
-          cast<CondCodeSDNode>(N0.getOperand(2))->get());
+          cast<CondCodeSDNode>(N0.getOperand(2))->get(), /*Chain=*/{},
+          /*Signaling=*/false, Flags);
       return DAG.getAnyExtOrTrunc(VsetCC, DL, VT);
     }
 
@@ -18999,19 +19007,21 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
     // into a target-specific square root estimate instruction.
     bool N1AllowReciprocal = N1->getFlags().hasAllowReciprocal();
     if (N1.getOpcode() == ISD::FSQRT) {
-      if (SDValue RV = buildRsqrtEstimate(N1.getOperand(0)))
+      if (SDValue RV = buildRsqrtEstimate(N1.getOperand(0), N1->getFlags()))
         return DAG.getNode(ISD::FMUL, DL, VT, N0, RV);
     } else if (N1.getOpcode() == ISD::FP_EXTEND &&
                N1.getOperand(0).getOpcode() == ISD::FSQRT &&
                N1AllowReciprocal) {
-      if (SDValue RV = buildRsqrtEstimate(N1.getOperand(0).getOperand(0))) {
+      if (SDValue RV = buildRsqrtEstimate(N1.getOperand(0).getOperand(0),
+                                          N1.getOperand(0)->getFlags())) {
         RV = DAG.getNode(ISD::FP_EXTEND, SDLoc(N1), VT, RV);
         AddToWorklist(RV.getNode());
         return DAG.getNode(ISD::FMUL, DL, VT, N0, RV);
       }
     } else if (N1.getOpcode() == ISD::FP_ROUND &&
                N1.getOperand(0).getOpcode() == ISD::FSQRT) {
-      if (SDValue RV = buildRsqrtEstimate(N1.getOperand(0).getOperand(0))) {
+      if (SDValue RV = buildRsqrtEstimate(N1.getOperand(0).getOperand(0),
+                                          N1.getOperand(0)->getFlags())) {
         RV = DAG.getNode(ISD::FP_ROUND, SDLoc(N1), VT, RV, N1.getOperand(1));
         AddToWorklist(RV.getNode());
         return DAG.getNode(ISD::FMUL, DL, VT, N0, RV);
@@ -19043,7 +19053,7 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
             SDValue AA = DAG.getNode(ISD::FMUL, DL, VT, A, A);
             SDValue AAZ =
                 DAG.getNode(ISD::FMUL, DL, VT, AA, Sqrt.getOperand(0));
-            if (SDValue Rsqrt = buildRsqrtEstimate(AAZ))
+            if (SDValue Rsqrt = buildRsqrtEstimate(AAZ, Sqrt->getFlags()))
               return DAG.getNode(ISD::FMUL, DL, VT, N0, Rsqrt);
 
             // Estimate creation failed. Clean up speculatively created nodes.
@@ -19053,7 +19063,8 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
 
         // We found a FSQRT, so try to make this fold:
         // X / (Y * sqrt(Z)) -> X * (rsqrt(Z) / Y)
-        if (SDValue Rsqrt = buildRsqrtEstimate(Sqrt.getOperand(0))) {
+        if (SDValue Rsqrt =
+                buildRsqrtEstimate(Sqrt.getOperand(0), Sqrt->getFlags())) {
           SDValue Div = DAG.getNode(ISD::FDIV, SDLoc(N1), VT, Rsqrt, Y);
           AddToWorklist(Div.getNode());
           return DAG.getNode(ISD::FMUL, DL, VT, N0, Div);
@@ -19156,7 +19167,7 @@ SDValue DAGCombiner::visitFSQRT(SDNode *N) {
   //       transform the fdiv, we may produce a sub-optimal estimate sequence
   //       because the reciprocal calculation may not have to filter out a
   //       0.0 input.
-  return buildSqrtEstimate(N0);
+  return buildSqrtEstimate(N0, Flags);
 }
 
 /// copysign(x, fp_extend(y)) -> copysign(x, y)
@@ -30420,7 +30431,8 @@ SDValue DAGCombiner::buildSqrtNRTwoConst(SDValue Arg, SDValue Est,
 /// Build code to calculate either rsqrt(Op) or sqrt(Op). In the latter case
 /// Op*rsqrt(Op) is actually computed, so additional postprocessing is needed if
 /// Op can be zero.
-SDValue DAGCombiner::buildSqrtEstimateImpl(SDValue Op, bool Reciprocal) {
+SDValue DAGCombiner::buildSqrtEstimateImpl(SDValue Op, bool Reciprocal,
+                                           SDNodeFlags Flags) {
   if (LegalDAG)
     return SDValue();
 
@@ -30453,7 +30465,8 @@ SDValue DAGCombiner::buildSqrtEstimateImpl(SDValue Op, bool Reciprocal) {
     if (!Reciprocal) {
       SDLoc DL(Op);
       // Try the target specific test first.
-      SDValue Test = TLI.getSqrtInputTest(Op, DAG, DAG.getDenormalMode(VT));
+      SDValue Test =
+          TLI.getSqrtInputTest(Op, DAG, DAG.getDenormalMode(VT), Flags);
 
       // The estimate is now completely wrong if the input was exactly 0.0 or
       // possibly a denormal. Force the answer to 0.0 or value provided by
@@ -30467,12 +30480,12 @@ SDValue DAGCombiner::buildSqrtEstimateImpl(SDValue Op, bool Reciprocal) {
   return SDValue();
 }
 
-SDValue DAGCombiner::buildRsqrtEstimate(SDValue Op) {
-  return buildSqrtEstimateImpl(Op, true);
+SDValue DAGCombiner::buildRsqrtEstimate(SDValue Op, SDNodeFlags Flags) {
+  return buildSqrtEstimateImpl(Op, true, Flags);
 }
 
-SDValue DAGCombiner::buildSqrtEstimate(SDValue Op) {
-  return buildSqrtEstimateImpl(Op, false);
+SDValue DAGCombiner::buildSqrtEstimate(SDValue Op, SDNodeFlags Flags) {
+  return buildSqrtEstimateImpl(Op, false, Flags);
 }
 
 /// Return true if there is any possibility that the two addresses overlap.
