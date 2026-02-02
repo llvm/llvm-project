@@ -22,6 +22,72 @@
 #include <optional>
 #include <string>
 
+#define LLDB_DAP_INVALID_VAR_REF UINT32_MAX
+#define LLDB_DAP_INVALID_SRC_REF 0
+#define LLDB_DAP_INVALID_VALUE_LOC 0
+#define LLDB_DAP_INVALID_STACK_FRAME_ID UINT64_MAX
+
+namespace lldb_dap {
+enum ReferenceKind : uint8_t {
+  eReferenceKindTemporary = 0,
+  eReferenceKindPermanent = 1,
+  eReferenceKindScope = 1 << 1,
+  eReferenceKindInvalid = 0xFF
+};
+
+/// The var_ref_t hold two values, the `ReferenceKind` and the
+/// `variablesReference`.
+struct var_ref_t {
+private:
+  static constexpr uint32_t k_kind_bit_size = sizeof(ReferenceKind) * 8;
+  static constexpr uint32_t k_reference_bit_size =
+      std::numeric_limits<uint32_t>::digits - k_kind_bit_size;
+  static constexpr uint32_t k_reference_bit_mask =
+      (1 << k_reference_bit_size) - 1;
+  static constexpr uint32_t k_kind_mask = 0xFF;
+
+public:
+  explicit var_ref_t(uint32_t reference, ReferenceKind kind)
+      : reference(reference), kind(kind) {}
+  explicit var_ref_t(uint32_t masked_ref = LLDB_DAP_INVALID_VAR_REF)
+      : reference(masked_ref & k_reference_bit_mask),
+        kind((masked_ref >> k_reference_bit_size) & k_kind_mask) {}
+
+  [[nodiscard]] uint32_t AsUInt32() const {
+    uint32_t result = 0;
+    std::memcpy(&result, this, sizeof(result));
+    return result;
+  };
+
+  [[nodiscard]] ReferenceKind Kind() const {
+    return static_cast<ReferenceKind>(kind);
+  }
+
+  [[nodiscard]] uint32_t Reference() const { return reference; }
+
+  // We should be able to store at least 8 million variables for each store
+  // type at every stopped state.
+  static constexpr uint32_t k_variables_reference_threshold = 8'000'000;
+  static constexpr uint32_t k_max_variables_references =
+      k_reference_bit_mask - 1;
+  static_assert((k_max_variables_references >
+                 k_variables_reference_threshold) &&
+                "not enough variablesReferences to store 8 million variables.");
+
+private:
+  uint32_t reference : k_reference_bit_size;
+  uint32_t kind : k_kind_bit_size;
+};
+static_assert(sizeof(var_ref_t) == sizeof(uint32_t) &&
+              "the size of var_ref_t must be equal to the size of uint32_t.");
+
+bool fromJSON(const llvm::json::Value &, var_ref_t &, llvm::json::Path);
+inline llvm::json::Value toJSON(const var_ref_t &var_ref) {
+  return var_ref.AsUInt32();
+}
+
+} // namespace lldb_dap
+
 namespace lldb_dap::protocol {
 
 /// Data used to help lldb-dap resolve breakpoints persistently across different

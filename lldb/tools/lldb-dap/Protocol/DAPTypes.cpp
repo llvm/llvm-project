@@ -4,6 +4,17 @@
 
 using namespace llvm;
 
+namespace lldb_dap {
+
+bool fromJSON(const json::Value &E, var_ref_t &Out, json::Path P) {
+  if (auto S = E.getAsInteger()) {
+    Out = var_ref_t(*S);
+    return true;
+  }
+  P.report("expected unsigned integer");
+  return false;
+}
+} // namespace lldb_dap
 namespace lldb_dap::protocol {
 
 bool fromJSON(const llvm::json::Value &Params, PersistenceData &PD,

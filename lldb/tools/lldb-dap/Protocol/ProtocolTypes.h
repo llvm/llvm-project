@@ -29,11 +29,6 @@
 #include <optional>
 #include <string>
 
-#define LLDB_DAP_INVALID_VAR_REF INT64_MAX
-#define LLDB_DAP_INVALID_SRC_REF 0
-#define LLDB_DAP_INVALID_VALUE_LOC 0
-#define LLDB_DAP_INVALID_STACK_FRAME_ID UINT64_MAX
-
 namespace lldb_dap::protocol {
 
 /// An `ExceptionBreakpointsFilter` is shown in the UI as an filter option for
@@ -464,7 +459,7 @@ struct Scope {
   /// remains suspended. See 'Lifetime of Object References' in the Overview
   /// section for details.
   ////
-  uint64_t variablesReference = LLDB_DAP_INVALID_VAR_REF;
+  var_ref_t variablesReference{LLDB_DAP_INVALID_VAR_REF};
 
   /// The number of named variables in this scope.
   /// The client can use this information to present the variables in a paged UI
@@ -963,7 +958,7 @@ struct Variable {
   /// children can be retrieved by passing `variablesReference` to the
   /// `variables` request as long as execution remains suspended. See 'Lifetime
   /// of Object References' in the Overview section for details.
-  uint64_t variablesReference = 0;
+  var_ref_t variablesReference{0};
 
   /// The number of named child variables.
   ///
