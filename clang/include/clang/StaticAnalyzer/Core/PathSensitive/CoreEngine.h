@@ -516,13 +516,11 @@ public:
 class SwitchNodeBuilder {
   const CoreEngine &Eng;
   const CFGBlock *Src;
-  const Expr *Condition;
   ExplodedNode *Pred;
 
 public:
-  SwitchNodeBuilder(ExplodedNode *P, const CFGBlock *S, const Expr *C,
-                    CoreEngine &E)
-      : Eng(E), Src(S), Condition(C), Pred(P) {}
+  SwitchNodeBuilder(ExplodedNode *P, const CFGBlock *S, CoreEngine &E)
+      : Eng(E), Src(S), Pred(P) {}
 
   using iterator = CFGBlock::const_succ_reverse_iterator;
 

@@ -3111,7 +3111,7 @@ void ExprEngine::processSwitch(const SwitchStmt *Switch, CoreEngine &CoreEng,
                                const CFGBlock *B, ExplodedNode *Pred) {
   const Expr *Condition = Switch->getCond();
 
-  SwitchNodeBuilder Builder(Pred, B, Condition, CoreEng);
+  SwitchNodeBuilder Builder(Pred, B, CoreEng);
 
   ProgramStateRef State = Pred->getState();
   SVal CondV = State->getSVal(Condition, Pred->getLocationContext());
