@@ -903,6 +903,8 @@ Crash and bug fixes
 - The ``core.builtin.BuiltinFunctions`` checker crashed when passing
   ``_BitInt(N)`` or ``__int128_t`` to ``__builtin_add_overflow`` or similar
   checked arithmetic builtin functions. (#GH173795)
+- Fixed a crash introduced in clang-20 when analyzing some "swap" functions.
+  (#GH178797)
 
 Improvements
 ^^^^^^^^^^^^
