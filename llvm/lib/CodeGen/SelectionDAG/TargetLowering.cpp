@@ -9581,7 +9581,7 @@ SDValue TargetLowering::expandCTLZ(SDNode *Node, SelectionDAG &DAG) const {
 SDValue TargetLowering::expandCTLS(SDNode *Node, SelectionDAG &DAG) const {
   SDLoc dl(Node);
   EVT VT = Node->getValueType(0);
-  SDValue Op = Node->getOperand(0);
+  SDValue Op = DAG.getFreeze(Node->getOperand(0));
   unsigned NumBitsPerElt = VT.getScalarSizeInBits();
 
   // CTLS(x) = CTLZ(OR(SHL(XOR(x, SRA(x, BW-1)), 1), 1))
