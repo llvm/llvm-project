@@ -2071,12 +2071,8 @@ VPIRFlags VPIRFlags::getDefaultFlags(unsigned Opcode) {
   case Instruction::AShr:
   case Instruction::LShr:
   case Instruction::UDiv:
-  case Instruction::SDiv: {
-    VPIRFlags F;
-    F.OpType = OperationType::PossiblyExactOp;
-    F.ExactFlags = ExactFlagsTy(false);
-    return F;
-  }
+  case Instruction::SDiv:
+    return ExactFlagsTy(false);
   case Instruction::GetElementPtr:
   case VPInstruction::PtrAdd:
   case VPInstruction::WidePtrAdd:

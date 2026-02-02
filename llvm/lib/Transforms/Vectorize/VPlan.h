@@ -817,6 +817,9 @@ public:
   VPIRFlags(NonNegFlagsTy NonNegFlags)
       : OpType(OperationType::NonNegOp), NonNegFlags(NonNegFlags) {}
 
+  VPIRFlags(ExactFlagsTy ExactFlags)
+      : OpType(OperationType::PossiblyExactOp), ExactFlags(ExactFlags) {}
+
   VPIRFlags(GEPNoWrapFlags GEPFlags)
       : OpType(OperationType::GEPOp), GEPFlags(GEPFlags) {}
 
