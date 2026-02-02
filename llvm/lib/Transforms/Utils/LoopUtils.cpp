@@ -30,7 +30,6 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionAliasAnalysis.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
-#include "llvm/Analysis/ValueTracking.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Instructions.h"
@@ -1896,11 +1895,9 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
     // invalidating iterators.
     if (isInstructionTriviallyDead(Inst, TLI))
       DeadInsts.push_back(Inst);
-    ExitVal->dump();
     // Replace PN with ExitVal if that is legal and does not break LCSSA.
     if (PN->getNumIncomingValues() == 1 &&
         LI->replacementPreservesLCSSAForm(PN, ExitVal)) {
-      llvm::errs() << "Hello";
       PN->replaceAllUsesWith(ExitVal);
       PN->eraseFromParent();
     }
