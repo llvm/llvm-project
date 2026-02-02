@@ -14,10 +14,10 @@
 #include <__memory/allocator_traits.h>
 #include <__memory/compressed_pair.h>
 #include <__memory/swap_allocator.h>
+#include <__split_buffer>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__utility/move.h>
 #include <__utility/swap.h>
-#include <__split_buffer>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
@@ -57,11 +57,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 ///
 ///    __begin_ = 0xE4FD0, __end_ = 0xE4FF0, __capacity_ = 0xE5000
 ///                 0xE4FD0                             0xE4FF0           0xE5000
-///                    ↓                                   ↓                 ↓
+///                    v                                   v                 v
 ///    ┌───────────────┬────────┬────────┬────────┬────────┬────────┬────────┬─────────────────────┐
 ///    │ ????????????? │   3174 │   5656 │    648 │    489 │ ------ │ ------ │ ??????????????????? │
 ///    └───────────────┴────────┴────────┴────────┴────────┴────────┴────────┴─────────────────────┘
-///                    ↑                                   ↑                 ↑
+///                    ^                                   ^                 ^
 ///                __begin_                             __end_          __capacity_
 ///
 ///    Figure 1: A visual representation of a pointer-based `std::vector<short>`. This vector has
@@ -78,11 +78,11 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 ///
 ///    __begin_ = 0xE4FD0, __size_ = 4, __capacity_ = 6
 ///                 0xE4FD0
-///                    ↓
+///                    v
 ///    ┌───────────────┬────────┬────────┬────────┬────────┬────────┬────────┬─────────────────────┐
 ///    │ ????????????? │   3174 │   5656 │    648 │    489 │ ------ │ ------ │ ??????????????????? │
 ///    └───────────────┴────────┴────────┴────────┴────────┴────────┴────────┴─────────────────────┘
-///                    ↑
+///                    ^
 ///                __begin_
 ///
 ///    Figure 2: A visual representation of this a pointer-based layout. Blank boxes are not a part
@@ -106,58 +106,52 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 template <class _Tp, class _Allocator>
 class __vector_layout {
 public:
-  using value_type _LIBCPP_NODEBUG = _Tp;
+  using value_type _LIBCPP_NODEBUG     = _Tp;
   using allocator_type _LIBCPP_NODEBUG = _Allocator;
   using __alloc_traits _LIBCPP_NODEBUG = allocator_traits<allocator_type>;
-  using size_type _LIBCPP_NODEBUG = typename __alloc_traits::size_type;
-  using pointer _LIBCPP_NODEBUG = typename __alloc_traits::pointer;
-  using const_pointer _LIBCPP_NODEBUG = typename __alloc_traits::const_pointer;
+  using size_type _LIBCPP_NODEBUG      = typename __alloc_traits::size_type;
+  using pointer _LIBCPP_NODEBUG        = typename __alloc_traits::pointer;
+  using const_pointer _LIBCPP_NODEBUG  = typename __alloc_traits::const_pointer;
 #ifdef _LIBCPP_ABI_SIZE_BASED_VECTOR
-  using _SplitBuffer _LIBCPP_NODEBUG = __split_buffer<_Tp, _Allocator, __split_buffer_size_layout>;
+  using _SplitBuffer _LIBCPP_NODEBUG    = __split_buffer<_Tp, _Allocator, __split_buffer_size_layout>;
   using __boundary_type _LIBCPP_NODEBUG = size_type;
 #else
-  using _SplitBuffer _LIBCPP_NODEBUG = __split_buffer<_Tp, _Allocator, __split_buffer_pointer_layout>;
+  using _SplitBuffer _LIBCPP_NODEBUG    = __split_buffer<_Tp, _Allocator, __split_buffer_pointer_layout>;
   using __boundary_type _LIBCPP_NODEBUG = pointer;
 #endif
 
   // Cannot be defaulted, since `_LIBCPP_COMPRESSED_PAIR` isn't an aggregate before C++14.
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-  __vector_layout() _NOEXCEPT_(is_nothrow_default_constructible<allocator_type>::value)
-  : __capacity_()
-  {}
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __vector_layout()
+      _NOEXCEPT_(is_nothrow_default_constructible<allocator_type>::value)
+      : __capacity_() {}
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit
-  __vector_layout(allocator_type const& __a) _NOEXCEPT_(is_nothrow_copy_constructible<allocator_type>::value)
-  : __capacity_()
-  , __alloc_(__a)
-  {}
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit __vector_layout(allocator_type const& __a)
+      _NOEXCEPT_(is_nothrow_copy_constructible<allocator_type>::value)
+      : __capacity_(), __alloc_(__a) {}
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-  explicit __vector_layout(allocator_type&& __a) _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
-  : __capacity_()
-  , __alloc_(std::move(__a))
-  {}
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI explicit __vector_layout(allocator_type&& __a)
+      _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
+      : __capacity_(), __alloc_(std::move(__a)) {}
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __vector_layout(__vector_layout&& __other) _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
-  : __begin_(std::move(__other.__begin_))
-  , __boundary_(std::move(__other.__boundary_))
-  , __capacity_(std::move(__other.__capacity_))
-  , __alloc_(std::move(__other.__alloc_))
-  {
-    __other.__begin_ = nullptr;
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __vector_layout(__vector_layout&& __other)
+      _NOEXCEPT_(is_nothrow_move_constructible<allocator_type>::value)
+      : __begin_(std::move(__other.__begin_)),
+        __boundary_(std::move(__other.__boundary_)),
+        __capacity_(std::move(__other.__capacity_)),
+        __alloc_(std::move(__other.__alloc_)) {
+    __other.__begin_    = nullptr;
     __other.__boundary_ = {};
     __other.__capacity_ = {};
   }
 
   /// Returns a reference to the stored allocator.
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-  allocator_type& __alloc() _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI allocator_type& __alloc() _NOEXCEPT {
     return __alloc_;
   }
 
   /// Returns a reference to the stored allocator.
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-  allocator_type const& __alloc() const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI allocator_type const&
+  __alloc() const _NOEXCEPT {
     return __alloc_;
   }
 
@@ -165,8 +159,7 @@ public:
   ///
   /// `__begin_ptr()` is not called `data()` because `vector::data()` returns `T*`, but `__begin_`
   /// is allowed to be a fancy pointer.
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-  pointer __begin_ptr() const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer __begin_ptr() const _NOEXCEPT {
     return __begin_;
   }
 
@@ -175,8 +168,8 @@ public:
   /// `__boundary_representation()` should only be used when directly operating on the layout from
   /// outside `__vector_layout`. Its result must be used with type deduction to avoid compile-time
   /// failures.
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-  __boundary_type __boundary_representation() const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __boundary_type
+  __boundary_representation() const _NOEXCEPT {
     return __boundary_;
   }
 
@@ -185,55 +178,50 @@ public:
   /// `__capacity_representation()` should only be used when directly operating on the layout from
   /// outside `__vector_layout`. Its result must be used with type deduction to avoid compile-time
   /// failures.
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-  __boundary_type __capacity_representation() const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI __boundary_type
+  __capacity_representation() const _NOEXCEPT {
     return __capacity_;
   }
 
   /// Returns how many elements can be added before a reallocation occurs.
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-  size_type __remaining_capacity() const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI size_type
+  __remaining_capacity() const _NOEXCEPT {
     return __capacity_ - __boundary_;
   }
 
   /// Determines if a reallocation is necessary.
-  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-  bool __is_full() const _NOEXCEPT {
+  [[__nodiscard__]] _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI bool __is_full() const _NOEXCEPT {
     return __boundary_ == __capacity_;
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-  void __set_valid_range(pointer __begin, size_type __size) _NOEXCEPT {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
+  __set_valid_range(pointer __begin, size_type __size) _NOEXCEPT {
     __begin_ = __begin;
     __set_boundary(__size);
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-  void __set_valid_range(pointer __begin, pointer __end) _NOEXCEPT {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_valid_range(pointer __begin, pointer __end) _NOEXCEPT {
     __begin_ = __begin;
     __set_boundary(__end);
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-  void swap(__vector_layout& __other) _NOEXCEPT {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void swap(__vector_layout& __other) _NOEXCEPT {
     std::swap(__begin_, __other.__begin_);
     std::swap(__boundary_, __other.__boundary_);
     std::swap(__capacity_, __other.__capacity_);
     std::__swap_allocator(__alloc_, __other.__alloc_);
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-  void __swap_layouts(_SplitBuffer& __other) _NOEXCEPT {
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __swap_layouts(_SplitBuffer& __other) _NOEXCEPT {
     __other.__swap_layouts(__begin_, __boundary_, __capacity_);
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
-  void __move_layout(__vector_layout& __other) _NOEXCEPT {
-    __begin_ = __other.__begin_;
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __move_layout(__vector_layout& __other) _NOEXCEPT {
+    __begin_    = __other.__begin_;
     __boundary_ = __other.__boundary_;
     __capacity_ = __other.__capacity_;
 
-    __other.__begin_ = nullptr;
+    __other.__begin_    = nullptr;
     __other.__boundary_ = {};
     __other.__capacity_ = {};
   }
@@ -250,6 +238,7 @@ public:
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_boundary(pointer __end) _NOEXCEPT;
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_capacity(size_type __size) _NOEXCEPT;
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __set_capacity(pointer __end) _NOEXCEPT;
+
 private:
   pointer __begin_ = nullptr;
   __boundary_type __boundary_{};
