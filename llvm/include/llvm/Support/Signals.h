@@ -99,14 +99,15 @@ using SignalHandlerCallback = void (*)(void *);
 
 /// Add a function to be called when an abort/kill signal is delivered to the
 /// process. The handler can have a cookie passed to it to identify what
-/// instance of the handler it is. On Unix systems, the argument IsClangDriver
-/// indicates whether the function is called from a Clang driver so that the
-/// implementation ensures the Clang signal handling complies with POSIX.
+/// instance of the handler it is. On Unix systems, the
+/// NeedsPOSIXUtilitySignalHandling argument indicates whether POSIX signal
+/// handling semantics are followed, so that the signal handler resignals
+/// itself to terminate after handling the signal.
 #ifdef _WIN32
 LLVM_ABI void AddSignalHandler(SignalHandlerCallback FnPtr, void *Cookie);
 #else
 LLVM_ABI void AddSignalHandler(SignalHandlerCallback FnPtr, void *Cookie,
-                               bool IsClangDriver = false);
+                               bool NeedsPOSIXUtilitySignalHandling = false);
 #endif
 
 /// This function registers a function to be called when the user "interrupts"

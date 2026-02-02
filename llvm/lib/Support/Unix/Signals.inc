@@ -293,7 +293,7 @@ static void CreateSigAltStack() {
 static void CreateSigAltStack() {}
 #endif
 
-static void RegisterHandlers(bool IsClangDriver = false) { // Not signal-safe.
+static void RegisterHandlers(bool NeedsPOSIXUtilitySignalHandling = false) { // Not signal-safe.
   // The mutex prevents other threads from registering handlers while we're
   // doing it. We also have to protect the handlers and their count because
   // a signal handler could fire while we're registering handlers.
@@ -322,9 +322,9 @@ static void RegisterHandlers(bool IsClangDriver = false) { // Not signal-safe.
       NewHandler.sa_flags = SA_NODEFER | SA_RESETHAND | SA_ONSTACK | SA_SIGINFO;
       break;
     case SignalKind::IsInfo:
-      if (IsClangDriver)
-        // If it is the Clang driver the signal handler resignal itself to
-        // terminate after handling the signal.
+      if (NeedsPOSIXUtilitySignalHandling)
+        // If POSIX signal-handling semantics are followed, the signal handler
+        // resignal itself to terminate after handling the signal.
         NewHandler.sa_handler = InfoSignalHandlerTerminate;
       else
         NewHandler.sa_handler = InfoSignalHandler;
@@ -506,10 +506,10 @@ void llvm::sys::DontRemoveFileOnSignal(StringRef Filename) {
 /// handler can have a cookie passed to it to identify what instance of the
 /// handler it is.
 void llvm::sys::AddSignalHandler(sys::SignalHandlerCallback FnPtr, void *Cookie,
-                                 bool IsClangDriver) {
+                                 bool NeedsPOSIXUtilitySignalHandling) {
   // Signal-safe.
   insertSignalHandler(FnPtr, Cookie);
-  RegisterHandlers(IsClangDriver);
+  RegisterHandlers(NeedsPOSIXUtilitySignalHandling);
 }
 
 #if ENABLE_BACKTRACES && defined(HAVE_BACKTRACE) &&                            \

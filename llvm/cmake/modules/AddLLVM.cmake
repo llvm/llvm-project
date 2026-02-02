@@ -1008,7 +1008,7 @@ macro(generate_llvm_objects name)
     set(INITLLVM_ARGS "")
 
     if(${name} STREQUAL "clang")
-      set(INITLLVM_ARGS ", /*InstallPipeSignalExitHandler=*/true, /*IsClangDriver=*/true")
+      set(INITLLVM_ARGS ", /*InstallPipeSignalExitHandler=*/true, /*NeedsPOSIXUtilitySignalHandling=*/true")
     endif()
 
     foreach(path ${CMAKE_MODULE_PATH})
