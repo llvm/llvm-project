@@ -36,11 +36,9 @@ bool OpaqueSTLFunctionsModeling::evalCall(const CallEvent &Call,
   if (!ModeledFunctions.contains(Call))
     return false;
 
-  ProgramStateRef State = C.getState();
-  State = Call.invalidateRegions(C.blockCount(), State);
-  static const SimpleProgramPointTag OpaqueCallTag{getDebugTag(),
-                                                   "Forced Opaque Call"};
-  C.addTransition(State, &OpaqueCallTag);
+  ProgramStateRef InvalidatedRegionsState =
+      Call.invalidateRegions(C.blockCount(), C.getState());
+  C.addTransition(InvalidatedRegionsState);
   return true;
 }
 
