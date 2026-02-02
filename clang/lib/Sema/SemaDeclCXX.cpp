@@ -2049,10 +2049,11 @@ static bool CheckConstexprDeclStmt(Sema &SemaRef, const FunctionDecl *Dcl,
     case Decl::CXXRecord:
       // C++1y allows types to be defined, not just declared.
       if (cast<TagDecl>(DclIt)->isThisDeclarationADefinition()) {
+        enum { Function, Constructor }; // Define enum locally
         if (Kind == Sema::CheckConstexprKind::Diagnose) {
           SemaRef.DiagCompat(DS->getBeginLoc(),
                              diag_compat::constexpr_type_definition)
-              << isa<CXXConstructorDecl>(Dcl);
+              << (isa<CXXConstructorDecl>(Dcl) ? Constructor : Function);
         } else if (!SemaRef.getLangOpts().CPlusPlus14) {
           return false;
         }
@@ -2427,15 +2428,18 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
         (Cxx2aLoc.isValid() && !SemaRef.getLangOpts().CPlusPlus20) ||
         (Cxx1yLoc.isValid() && !SemaRef.getLangOpts().CPlusPlus17))
       return false;
-  } else if (Cxx2bLoc.isValid()) {
-    SemaRef.DiagCompat(Cxx2bLoc, diag_compat::cxx23_constexpr_body_invalid_stmt)
-        << isa<CXXConstructorDecl>(Dcl);
-  } else if (Cxx2aLoc.isValid()) {
-    SemaRef.DiagCompat(Cxx2aLoc, diag_compat::cxx20_constexpr_body_invalid_stmt)
-        << isa<CXXConstructorDecl>(Dcl);
-  } else if (Cxx1yLoc.isValid()) {
-    SemaRef.DiagCompat(Cxx1yLoc, diag_compat::cxx14_constexpr_body_invalid_stmt)
-        << isa<CXXConstructorDecl>(Dcl);
+  } else {
+    enum { Function, Constructor };
+    if (Cxx2bLoc.isValid()) {
+      SemaRef.DiagCompat(Cxx2bLoc, diag_compat::cxx23_constexpr_body_invalid_stmt)
+          << (isa<CXXConstructorDecl>(Dcl) ? Constructor : Function);
+    } else if (Cxx2aLoc.isValid()) {
+      SemaRef.DiagCompat(Cxx2aLoc, diag_compat::cxx20_constexpr_body_invalid_stmt)
+          << (isa<CXXConstructorDecl>(Dcl) ? Constructor : Function);
+    } else if (Cxx1yLoc.isValid()) {
+      SemaRef.DiagCompat(Cxx1yLoc, diag_compat::cxx14_constexpr_body_invalid_stmt)
+          << (isa<CXXConstructorDecl>(Dcl) ? Constructor : Function);
+    }
   }
 
   if (const CXXConstructorDecl *Constructor
