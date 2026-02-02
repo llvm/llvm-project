@@ -1,4 +1,5 @@
 // RUN: %clang_cc1 -fsyntax-only -Wunused-but-set-variable -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wunused-but-set-variable -I %S -verify %S/Inputs/warn-unused-but-set-static-global-header-test.c
 
 #define NULL (void*)0
 
