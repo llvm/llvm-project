@@ -498,7 +498,7 @@ void applyExtUaddvToUaddlv(MachineInstr &MI, MachineRegisterInfo &MRI,
   unsigned MidScalarSize = MainTy.getScalarSizeInBits() * 2;
   LLT MidScalarLLT =
       MainTy.changeElementSize(MidScalarSize).changeElementCount(1);
-  Register ZeroReg = B.buildConstant(LLT::integer(64), 0).getReg(0);
+  Register ZeroReg = B.buildConstant(LLT::buildInteger(64), 0).getReg(0);
   for (unsigned I = 0; I < WorkingRegisters.size(); I++) {
     // If the number of elements is too small to build an instruction, extend
     // its size before applying addlv
