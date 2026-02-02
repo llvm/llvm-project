@@ -9,6 +9,7 @@ from clang.cindex import (
 
 import unittest
 from pathlib import Path
+import warnings
 
 
 class TestCodeCompletion(unittest.TestCase):
@@ -16,10 +17,23 @@ class TestCodeCompletion(unittest.TestCase):
         self.assertIsNotNone(cr)
         self.assertEqual(len(cr.diagnostics), 0)
 
-        completions = [str(c) for c in cr.results]
+        with warnings.catch_warnings(record=True) as log:
+            completions = [str(c) for c in cr]
+            self.assertEqual(len(log), 2)
+            for warning in log:
+                self.assertIsInstance(warning.message, DeprecationWarning)
 
         for c in expected:
             self.assertIn(c, completions)
+
+        with warnings.catch_warnings(record=True) as log:
+            completions_deprecated = [str(c) for c in cr.results]
+            self.assertEqual(len(log), 3)
+            for warning in log:
+                self.assertIsInstance(warning.message, DeprecationWarning)
+
+        for c in expected:
+            self.assertIn(c, completions_deprecated)
 
     def test_code_complete(self):
         files = [
@@ -180,7 +194,10 @@ void f(P x, Q y) {
         }
         for id, string in kindStringMap.items():
             kind = CompletionString.AvailabilityKindCompat.from_id(id)
-            self.assertEqual(str(kind), string)
+            with warnings.catch_warnings(record=True) as log:
+                self.assertEqual(str(kind), string)
+                self.assertEqual(len(log), 1)
+                self.assertIsInstance(log[0].message, DeprecationWarning)
 
     def test_completion_chunk_kind_compatibility(self):
         value_to_old_str = {
@@ -210,12 +227,18 @@ void f(P x, Q y) {
         # Check that all new kinds correspond to an old kind
         for new_kind in CompletionChunkKind:
             old_str = value_to_old_str[new_kind.value]
-            self.assertEqual(old_str, str(new_kind))
+            with warnings.catch_warnings(record=True) as log:
+                self.assertEqual(old_str, str(new_kind))
+                self.assertEqual(len(log), 1)
+                self.assertIsInstance(log[0].message, DeprecationWarning)
 
         # Check that all old kinds correspond to a new kind
         for value, old_str in value_to_old_str.items():
             new_kind = CompletionChunkKind.from_id(value)
-            self.assertEqual(old_str, str(new_kind))
+            with warnings.catch_warnings(record=True) as log:
+                self.assertEqual(old_str, str(new_kind))
+                self.assertEqual(len(log), 1)
+                self.assertIsInstance(log[0].message, DeprecationWarning)
 
     def test_spelling_cache_missing_attribute(self):
         # Test that accessing missing attributes on SpellingCacheAlias raises
@@ -227,9 +250,13 @@ void f(P x, Q y) {
         kind_keys = list(CompletionChunk.SPELLING_CACHE)
         self.assertEqual(len(kind_keys), 13)
         for kind_key in kind_keys:
-            self.assertEqual(
-                SPELLING_CACHE[kind_key.value], CompletionChunk.SPELLING_CACHE[kind_key]
-            )
+            with warnings.catch_warnings(record=True) as log:
+                self.assertEqual(
+                    SPELLING_CACHE[kind_key.value],
+                    CompletionChunk.SPELLING_CACHE[kind_key],
+                )
+                self.assertEqual(len(log), 1)
+                self.assertIsInstance(log[0].message, DeprecationWarning)
 
     def test_spelling_cache_missing_attribute(self):
         # Test that accessing missing attributes on SpellingCacheAlias raises

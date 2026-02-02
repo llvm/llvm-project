@@ -679,8 +679,8 @@ BasicBlock *llvm::SplitEdge(BasicBlock *BB, BasicBlock *Succ, DominatorTree *DT,
     // block.
     assert(SP == BB && "CFG broken");
     (void)SP;
-    return SplitBlock(Succ, &Succ->front(), DT, LI, MSSAU, BBName,
-                      /*Before=*/true);
+    DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
+    return splitBlockBefore(Succ, &Succ->front(), &DTU, LI, MSSAU, BBName);
   }
 
   // Otherwise, if BB has a single successor, split it at the bottom of the
@@ -996,13 +996,7 @@ llvm::SplitAllCriticalEdges(Function &F,
 static BasicBlock *SplitBlockImpl(BasicBlock *Old, BasicBlock::iterator SplitPt,
                                   DomTreeUpdater *DTU, DominatorTree *DT,
                                   LoopInfo *LI, MemorySSAUpdater *MSSAU,
-                                  const Twine &BBName, bool Before) {
-  if (Before) {
-    DomTreeUpdater LocalDTU(DT, DomTreeUpdater::UpdateStrategy::Lazy);
-    return splitBlockBefore(Old, SplitPt,
-                            DTU ? DTU : (DT ? &LocalDTU : nullptr), LI, MSSAU,
-                            BBName);
-  }
+                                  const Twine &BBName) {
   BasicBlock::iterator SplitIt = SplitPt;
   while (isa<PHINode>(SplitIt) || SplitIt->isEHPad()) {
     ++SplitIt;
@@ -1051,17 +1045,13 @@ static BasicBlock *SplitBlockImpl(BasicBlock *Old, BasicBlock::iterator SplitPt,
 
 BasicBlock *llvm::SplitBlock(BasicBlock *Old, BasicBlock::iterator SplitPt,
                              DominatorTree *DT, LoopInfo *LI,
-                             MemorySSAUpdater *MSSAU, const Twine &BBName,
-                             bool Before) {
-  return SplitBlockImpl(Old, SplitPt, /*DTU=*/nullptr, DT, LI, MSSAU, BBName,
-                        Before);
+                             MemorySSAUpdater *MSSAU, const Twine &BBName) {
+  return SplitBlockImpl(Old, SplitPt, /*DTU=*/nullptr, DT, LI, MSSAU, BBName);
 }
 BasicBlock *llvm::SplitBlock(BasicBlock *Old, BasicBlock::iterator SplitPt,
                              DomTreeUpdater *DTU, LoopInfo *LI,
-                             MemorySSAUpdater *MSSAU, const Twine &BBName,
-                             bool Before) {
-  return SplitBlockImpl(Old, SplitPt, DTU, /*DT=*/nullptr, LI, MSSAU, BBName,
-                        Before);
+                             MemorySSAUpdater *MSSAU, const Twine &BBName) {
+  return SplitBlockImpl(Old, SplitPt, DTU, /*DT=*/nullptr, LI, MSSAU, BBName);
 }
 
 /// Update DominatorTree, LoopInfo, and LCCSA analysis information.
