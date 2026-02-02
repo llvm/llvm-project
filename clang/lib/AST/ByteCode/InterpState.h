@@ -35,9 +35,9 @@ struct StdAllocatorCaller {
 /// Interpreter context.
 class InterpState final : public State, public SourceMapper {
 public:
-  InterpState(State &Parent, Program &P, InterpStack &Stk, Context &Ctx,
+  InterpState(const State &Parent, Program &P, InterpStack &Stk, Context &Ctx,
               SourceMapper *M = nullptr);
-  InterpState(State &Parent, Program &P, InterpStack &Stk, Context &Ctx,
+  InterpState(const State &Parent, Program &P, InterpStack &Stk, Context &Ctx,
               const Function *Func);
 
   ~InterpState();
@@ -50,41 +50,14 @@ public:
   bool diagnosing() const { return getEvalStatus().Diag != nullptr; }
 
   // Stack frame accessors.
-  Frame *getCurrentFrame() override;
+  const Frame *getCurrentFrame() override;
   unsigned getCallStackDepth() override {
     return Current ? (Current->getDepth() + 1) : 1;
   }
   const Frame *getBottomFrame() const override { return &BottomFrame; }
 
-  // Access objects from the walker context.
-  Expr::EvalStatus &getEvalStatus() const override {
-    return Parent.getEvalStatus();
-  }
-  ASTContext &getASTContext() const override { return Ctx.getASTContext(); }
-  const LangOptions &getLangOpts() const {
-    return Ctx.getASTContext().getLangOpts();
-  }
-
-  // Forward status checks and updates to the walker.
-  bool keepEvaluatingAfterFailure() const override {
-    return Parent.keepEvaluatingAfterFailure();
-  }
-  bool keepEvaluatingAfterSideEffect() const override {
-    return Parent.keepEvaluatingAfterSideEffect();
-  }
-  bool noteUndefinedBehavior() override {
-    return Parent.noteUndefinedBehavior();
-  }
+  bool stepsLeft() const override { return true; }
   bool inConstantContext() const;
-  bool hasActiveDiagnostic() override { return Parent.hasActiveDiagnostic(); }
-  void setActiveDiagnostic(bool Flag) override {
-    Parent.setActiveDiagnostic(Flag);
-  }
-  void setFoldFailureDiagnostic(bool Flag) override {
-    Parent.setFoldFailureDiagnostic(Flag);
-  }
-  bool hasPriorDiagnostic() override { return Parent.hasPriorDiagnostic(); }
-  bool noteSideEffect() override { return Parent.noteSideEffect(); }
 
   /// Deallocates a pointer.
   void deallocate(Block *B);
@@ -149,8 +122,6 @@ public:
 private:
   friend class EvaluationResult;
   friend class InterpStateCCOverride;
-  /// AST Walker state.
-  State &Parent;
   /// Dead block chain.
   DeadBlock *DeadBlocks = nullptr;
   /// Reference to the offset-source mapping.
