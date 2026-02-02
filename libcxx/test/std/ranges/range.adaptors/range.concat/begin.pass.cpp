@@ -100,6 +100,15 @@ constexpr bool test() {
     assert(v.begin() == v.end());
   }
 
+  // testing concatable constraint
+  {
+    static_assert(!ConcatableConstViews<ViewWithNoConstBegin>);
+    static_assert(ConcatableConstViews<ViewWithConstBegin>);
+    static_assert(!ConcatableConstViews<ViewWithNoConstBegin, ViewWithConstBegin>);
+    static_assert(!ConcatableConstViews<ViewWithNoConstBegin, ViewWithConstBegin, SizedViewWithConstBegin>);
+    static_assert(ConcatableConstViews<ViewWithConstBegin, SizedViewWithConstBegin>);
+  }
+
   return true;
 }
 

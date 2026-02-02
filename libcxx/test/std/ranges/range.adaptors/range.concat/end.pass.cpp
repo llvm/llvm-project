@@ -97,6 +97,15 @@ constexpr bool test() {
     assert(sum == 1 + 2 + 3 + 4 + 5 + 6 + 7);
   }
 
+  {
+    // testing concatable constraint
+    static_assert(!ConcatableConstViews<ViewWithNoConstBegin>);
+    static_assert(ConcatableConstViews<ViewWithConstBegin>);
+    static_assert(!ConcatableConstViews<ViewWithNoConstBegin, ViewWithConstBegin>);
+    static_assert(!ConcatableConstViews<ViewWithNoConstBegin, ViewWithConstBegin, SizedViewWithConstBegin>);
+    static_assert(ConcatableConstViews<ViewWithConstBegin, SizedViewWithConstBegin>);
+  }
+
   return true;
 }
 
