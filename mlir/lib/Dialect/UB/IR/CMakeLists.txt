@@ -10,8 +10,6 @@ add_mlir_dialect_library(MLIRUBDialect
   MLIRUBOpsInterfacesIncGen
 
   LINK_LIBS PUBLIC
-  MLIRControlFlowInterfaces
   MLIRIR
   MLIRExecutionProgressOpInterface
-  MLIRSideEffectInterfaces
   )
