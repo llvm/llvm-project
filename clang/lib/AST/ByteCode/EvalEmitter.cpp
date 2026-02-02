@@ -193,12 +193,6 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
     return true;
 
   const Pointer &Ptr = S.Stk.pop<Pointer>();
-
-  if (Ptr.isFunctionPointer()) {
-    EvalResult.takeValue(Ptr.toAPValue(Ctx.getASTContext()));
-    return true;
-  }
-
   // If we're returning a raw pointer, call our callback.
   if (this->PtrCB)
     return (*this->PtrCB)(Ptr);
@@ -207,6 +201,12 @@ template <> bool EvalEmitter::emitRet<PT_Ptr>(SourceInfo Info) {
     return false;
   if (CheckFullyInitialized && !EvalResult.checkFullyInitialized(S, Ptr))
     return false;
+
+  // Function pointers are alway returned as lvalues.
+  if (Ptr.isFunctionPointer()) {
+    EvalResult.takeValue(Ptr.toAPValue(Ctx.getASTContext()));
+    return true;
+  }
 
   // Implicitly convert lvalue to rvalue, if requested.
   if (ConvertResultToRValue) {
