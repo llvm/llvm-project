@@ -129,7 +129,7 @@ Options to Control Error and Warning Messages
 .. This is in plain monospaced font because it generates the same label as
 .. -Werror, and Sphinx complains.
 
-``-Werror=foo``
+.. option:: -Werror=foo
 
   Turn warning "foo" into an error.
 
