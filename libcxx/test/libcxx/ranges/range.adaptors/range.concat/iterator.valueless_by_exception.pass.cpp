@@ -272,6 +272,7 @@ int main() {
     flag       = true;
     try {
       iter1 = std::move(iter2);
+      assert(false);
     } catch (...) {
       TEST_LIBCPP_ASSERT_FAILURE([&] { --iter1; }(), "Trying to decrement a valueless iterator of concat_view.");
     }
