@@ -1429,51 +1429,43 @@ bool SPIRVInstructionSelector::selectSincos(Register ResVReg,
         createVirtualRegister(PointerType, &GR, MRI, MRI->getMF());
 
     auto It = getOpVariableMBBIt(I);
-    auto MIB = BuildMI(*It->getParent(), It, It->getDebugLoc(),
-                       TII.get(SPIRV::OpVariable))
-                   .addDef(PointerVReg)
-                   .addUse(GR.getSPIRVTypeID(PointerType))
-                   .addImm(static_cast<uint32_t>(SPIRV::StorageClass::Function))
-                   .constrainAllUses(TII, TRI, RBI);
-
-    MIB = MIB &
-          BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
-              .addDef(ResVReg)
-              .addUse(ResTypeReg)
-              .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::OpenCL_std))
-              .addImm(CL::sincos)
-              .add(I.getOperand(SrcIdx))
-              .addUse(PointerVReg)
-              .constrainAllUses(TII, TRI, RBI);
-
-    MIB = MIB &
-          BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpLoad))
-              .addDef(CosResVReg)
-              .addUse(ResTypeReg)
-              .addUse(PointerVReg)
-              .constrainAllUses(TII, TRI, RBI);
-    return MIB;
+    BuildMI(*It->getParent(), It, It->getDebugLoc(),
+            TII.get(SPIRV::OpVariable))
+        .addDef(PointerVReg)
+        .addUse(GR.getSPIRVTypeID(PointerType))
+        .addImm(static_cast<uint32_t>(SPIRV::StorageClass::Function))
+        .constrainAllUses(TII, TRI, RBI);
+    BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
+        .addDef(ResVReg)
+        .addUse(ResTypeReg)
+        .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::OpenCL_std))
+        .addImm(CL::sincos)
+        .add(I.getOperand(SrcIdx))
+        .addUse(PointerVReg)
+        .constrainAllUses(TII, TRI, RBI);
+    BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpLoad))
+        .addDef(CosResVReg)
+        .addUse(ResTypeReg)
+        .addUse(PointerVReg)
+        .constrainAllUses(TII, TRI, RBI);
+    return true;
   } else if (STI.canUseExtInstSet(SPIRV::InstructionSet::GLSL_std_450)) {
     // GLSL.std.450 has no combined sincos; emit separate Sin and Cos.
-    auto MIB =
-        BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
-            .addDef(ResVReg)
-            .addUse(ResTypeReg)
-            .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
-            .addImm(GL::Sin)
-            .add(I.getOperand(SrcIdx))
-            .constrainAllUses(TII, TRI, RBI);
-
-    MIB =
-        MIB &
-        BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
-            .addDef(CosResVReg)
-            .addUse(ResTypeReg)
-            .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
-            .addImm(GL::Cos)
-            .add(I.getOperand(SrcIdx))
-            .constrainAllUses(TII, TRI, RBI);
-    return MIB;
+    BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
+        .addDef(ResVReg)
+        .addUse(ResTypeReg)
+        .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
+        .addImm(GL::Sin)
+        .add(I.getOperand(SrcIdx))
+        .constrainAllUses(TII, TRI, RBI);
+    BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(SPIRV::OpExtInst))
+        .addDef(CosResVReg)
+        .addUse(ResTypeReg)
+        .addImm(static_cast<uint32_t>(SPIRV::InstructionSet::GLSL_std_450))
+        .addImm(GL::Cos)
+        .add(I.getOperand(SrcIdx))
+        .constrainAllUses(TII, TRI, RBI);
+    return true;
   }
   return false;
 }

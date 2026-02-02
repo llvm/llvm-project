@@ -1,6 +1,9 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s
 ; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown %s -o - -filetype=obj | spirv-val %}
 
+; Test if llvm.sincos is lowered to opencl::sincos with the result
+; correctly reused by the original llvm.sincos user.
+
 ; CHECK-DAG: %[[#ExtInstId:]] = OpExtInstImport "OpenCL.std"
 ; CHECK-DAG: %[[#FloatTy:]] = OpTypeFloat 32
 ; CHECK-DAG: %[[#FnPtrTy:]] = OpTypePointer Function %[[#FloatTy]]
