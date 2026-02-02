@@ -294,13 +294,6 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
   bool IsInNonspecializedTemplate =
       inTemplateInstantiation() || CurContext->isDependentContext();
 
-  // If we must allocate mangling numbers but the `ManglingContextDecl`
-  // is a local variable, use the `DeclContext` containing the lambda expression
-  // instead.
-  if (VarDecl *Var = dyn_cast_or_null<VarDecl>(ManglingContextDecl);
-      Var && Var->isLocalVarDecl())
-    ManglingContextDecl = const_cast<Decl *>(cast<Decl>(DC));
-
   // Default arguments of member function parameters that appear in a class
   // definition, as well as the initializers of data members, receive special
   // treatment. Identify them.
@@ -311,12 +304,24 @@ Sema::getCurrentMangleNumberContext(const DeclContext *DC) {
     //    Yeah, I think the only cases left where lambdas don't need a
     //    mangling are when they have (effectively) internal linkage or appear
     //    in a non-inline function in a non-module translation unit.
-    if (auto *ND = dyn_cast<NamedDecl>(ManglingContextDecl ? ManglingContextDecl
-                                                           : cast<Decl>(DC));
+
+    Decl *ManglingContextDeclForModule = [&]() {
+      if (!ManglingContextDecl || [&]() {
+            // If we must allocate mangling numbers but the
+            // `ManglingContextDecl` is a local variable, use the `DeclContext`
+            // containing the lambda expression instead.
+            VarDecl *Var = dyn_cast<VarDecl>(ManglingContextDecl);
+            return Var && Var->isLocalVarDecl();
+          }())
+        return const_cast<Decl *>(cast<Decl>(DC));
+
+      return ManglingContextDecl;
+    }();
+
+    if (auto *ND = dyn_cast<NamedDecl>(ManglingContextDeclForModule);
         ND && (ND->isInNamedModule() || ND->isFromGlobalModule()) &&
         ND->isExternallyVisible()) {
-      if (!ManglingContextDecl)
-        ManglingContextDecl = const_cast<Decl *>(cast<Decl>(DC));
+      ManglingContextDecl = ND;
       return NonInlineInModulePurview;
     }
 
