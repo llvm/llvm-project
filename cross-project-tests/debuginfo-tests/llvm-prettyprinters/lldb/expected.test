@@ -1,0 +1,32 @@
+# REQUIRES: lldb-formatters-compatibility
+#
+# RUN: split-file %s %t
+# RUN: lldb -x \
+# RUN:   -o 'command script import %llvm_src_root/utils/lldbDataFormatters.py' \
+# RUN:   -s %t/commands.input %llvm_tools_dir/check-lldb-llvm-support-expected \
+# RUN:   -o quit \
+# RUN:   | FileCheck %t/checks
+
+#--- commands.input
+break set -p "Break here"
+run
+
+v -T ExpectedInt
+v -T ExpectedPtr
+v -T ExpectedRef
+
+#--- checks
+# CHECK:      (lldb) v -T ExpectedInt
+# CHECK-NEXT: (llvm::Expected<int>) ExpectedInt = {
+# CHECK-NEXT:   (llvm::Expected<int>::storage_type) value = 42
+# CHECK-NEXT: }
+
+# CHECK:      (lldb) v -T ExpectedPtr
+# CHECK-NEXT: (llvm::Expected<int *>) ExpectedPtr = {
+# CHECK-NEXT:   (llvm::Expected<int *>::storage_type) value = 0x{{[0-9a-fA-F]+}}
+# CHECK-NEXT: }
+
+# CHECK:      (lldb) v -T ExpectedRef
+# CHECK-NEXT: (llvm::Expected<int &>) ExpectedRef = {
+# CHECK-NEXT:   (int) value = {{-?[0-9]+}}
+# CHECK-NEXT: }

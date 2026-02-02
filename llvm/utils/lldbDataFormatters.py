@@ -488,8 +488,13 @@ class ExpectedSynthetic:
         # Anonymous union.
         union = self.expected.child[0]
         storage = union.GetChildMemberWithName(member)
-        stored_type = storage.type.template_args[0]
-        self.stored_value = storage.Cast(stored_type).Clone(name)
+        # For reference types, storage_type is std::reference_wrapper<T>,
+        # so we need to unwrap it. For non-reference types, storage_type is T directly.
+        if storage.type.GetNumberOfTemplateArguments() > 0:
+            stored_type = storage.type.template_args[0]
+            self.stored_value = storage.Cast(stored_type).Clone(name)
+        else:
+            self.stored_value = storage.Clone(name)
 
     def num_children(self) -> int:
         return 1

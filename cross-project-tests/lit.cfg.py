@@ -285,9 +285,16 @@ def get_lldb_version_string():
     --version output is formatted unexpectedly.
     """
     try:
-        cmd = ["lldb", "--version"]
         if platform.system() == "Darwin":
-            cmd = ["xcrun"] + cmd
+            # On Darwin, use system lldb which has Apple-specific versioning.
+            cmd = ["xcrun", "lldb", "--version"]
+        else:
+            # On non-Darwin, use the locally-built lldb from llvm_tools_dir.
+            lldb_path = os.path.join(config.llvm_tools_dir, "lldb")
+            if not os.path.exists(lldb_path):
+                print(f"LLDB not found at {lldb_path}", file=sys.stderr)
+                return None
+            cmd = [lldb_path, "--version"]
 
         lldb_vers_lines = subprocess.check_output(cmd).decode().splitlines()
     except:
@@ -308,10 +315,13 @@ def set_lldb_formatters_compatibility_feature():
         return
 
     if platform.system() == "Darwin":
-        # The Apple LLDB version doesn't follow the LLVM release versioning.
+        # Apple LLDB uses Xcode-based versioning (e.g., "1700" = Xcode 17),
+        # not LLVM release versions.
         min_required_lldb_version = "1700"
     else:
-        min_required_lldb_version = "1900"
+        # Minimum version required for SBType::FindDirectNestedType API
+        # which some LLVM data formatters depend on.
+        min_required_lldb_version = "19.0.0"
 
     try:
         from packaging import version
