@@ -26,7 +26,7 @@ namespace llvm {
 //===----------------------------------------------------------------------===//
 
 /// Iterator to traverse all successors/predecessors of a VPBlockBase node,
-/// including its hierarchical successors/predecessors. For example: that:
+/// including its hierarchical successors/predecessors:
 ///
 ///     A
 ///     |
