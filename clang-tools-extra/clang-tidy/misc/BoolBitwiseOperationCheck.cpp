@@ -157,11 +157,6 @@ void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
   //         e.g., a ^ b & c → a ^ (b && c)
   // Case 3: &= with RHS || → parens needed around RHS
   //         e.g., a &= b || c → a = a && (b || c)
-  //
-  // If the expression is already wrapped in ParenExpr, no additional parens
-  // are needed. For cases 1 & 2, if BinOp is in parens, its parent is
-  // ParenExpr (not binaryOperator), so hasParent won't match.
-  // For case 3, if RHS is in parens, hasRHS(binaryOperator(||)) won't match.
 
   // Case 1: | with && parent
   auto ParensCase1 = allOf(
@@ -273,6 +268,39 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
                 << InsertBrace2;
 }
 
+/// Checks if an expression is already wrapped in a ParenExpr in the source.
+static bool isAlreadyInParenExpr(const Expr *E, ASTContext &Ctx) {
+  TraversalKindScope RAII(Ctx, TK_AsIs);
+  const Expr *Current = E;
+  while (Current) {
+    const DynTypedNodeList Parents = Ctx.getParents(*Current);
+    if (Parents.empty())
+      break;
+
+    for (const DynTypedNode &Parent : Parents) {
+      // If we find a ParenExpr, the expression is already parenthesized
+      if (Parent.get<ParenExpr>())
+        return true;
+      // Skip ImplicitCastExpr, FullExpr, and MaterializeTemporaryExpr
+      if (const auto *Cast = Parent.get<ImplicitCastExpr>()) {
+        Current = Cast;
+        break;
+      }
+      if (const auto *Full = Parent.get<FullExpr>()) {
+        Current = Full;
+        break;
+      }
+      if (const auto *Materialize = Parent.get<MaterializeTemporaryExpr>()) {
+        Current = Materialize;
+        break;
+      }
+      // If we hit something else (like a BinaryOperator), stop searching
+      return false;
+    }
+  }
+  return false;
+}
+
 void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *BinOp = Result.Nodes.getNodeAs<BinaryOperator>("binOp");
   const auto *FixItBinOp = Result.Nodes.getNodeAs<BinaryOperator>("fixit");
@@ -294,16 +322,14 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
     PE = ParensExprRHS;
   }
 
-  if (isa_and_nonnull<ParenExpr>(PE)) {
-    PE = nullptr;
-  }
-
   const SourceManager &SM = *Result.SourceManager;
   ASTContext &Ctx = *Result.Context;
 
+  if (PE && isAlreadyInParenExpr(PE, Ctx))
+    PE = nullptr;
+
   const bool CanApplyFixIt = (FixItBinOp != nullptr && FixItBinOp == BinOp);
-  emitWarningAndChangeOperatorsIfPossible(BinOp, PE, SM, Ctx,
-                                          CanApplyFixIt);
+  emitWarningAndChangeOperatorsIfPossible(BinOp, PE, SM, Ctx, CanApplyFixIt);
 }
 
 } // namespace clang::tidy::misc
