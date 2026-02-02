@@ -126,11 +126,9 @@ static bool isBoolScalarOrVector(Type type) {
 /// If `excludeBool` is true, i1/bool types are excluded.
 static bool isScalarOrVectorOfScalar(Type type, bool excludeBool = false) {
   auto isScalarOk = [&](Type t) {
-    if (!isa<spirv::ScalarType>(t))
-      return false;
     if (excludeBool && t.isInteger(1))
       return false;
-    return true;
+    return isa<mlir::spirv::ScalarType>(t);
   };
 
   if (isScalarOk(type))
