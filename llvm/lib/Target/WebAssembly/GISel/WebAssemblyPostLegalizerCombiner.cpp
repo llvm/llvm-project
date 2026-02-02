@@ -90,7 +90,7 @@ class WebAssemblyPostLegalizerCombiner : public MachineFunctionPass {
 public:
   static char ID;
 
-  WebAssemblyPostLegalizerCombiner(bool IsOptNone = false);
+  WebAssemblyPostLegalizerCombiner();
 
   StringRef getPassName() const override {
     return "WebAssemblyPostLegalizerCombiner";
@@ -100,7 +100,6 @@ public:
   void getAnalysisUsage(AnalysisUsage &AU) const override;
 
 private:
-  bool IsOptNone;
   WebAssemblyPostLegalizerCombinerImplRuleConfig RuleConfig;
 };
 } // end anonymous namespace
@@ -112,18 +111,15 @@ void WebAssemblyPostLegalizerCombiner::getAnalysisUsage(
   getSelectionDAGFallbackAnalysisUsage(AU);
   AU.addRequired<GISelValueTrackingAnalysisLegacy>();
   AU.addPreserved<GISelValueTrackingAnalysisLegacy>();
-  if (!IsOptNone) {
-    AU.addRequired<MachineDominatorTreeWrapperPass>();
-    AU.addPreserved<MachineDominatorTreeWrapperPass>();
-    AU.addRequired<GISelCSEAnalysisWrapperPass>();
-    AU.addPreserved<GISelCSEAnalysisWrapperPass>();
-  }
+  AU.addRequired<MachineDominatorTreeWrapperPass>();
+  AU.addPreserved<MachineDominatorTreeWrapperPass>();
+  AU.addRequired<GISelCSEAnalysisWrapperPass>();
+  AU.addPreserved<GISelCSEAnalysisWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 
-WebAssemblyPostLegalizerCombiner::WebAssemblyPostLegalizerCombiner(
-    bool IsOptNone)
-    : MachineFunctionPass(ID), IsOptNone(IsOptNone) {
+WebAssemblyPostLegalizerCombiner::WebAssemblyPostLegalizerCombiner()
+    : MachineFunctionPass(ID) {
   if (!RuleConfig.parseCommandLineOption())
     report_fatal_error("Invalid rule identifier");
 }
@@ -146,13 +142,11 @@ bool WebAssemblyPostLegalizerCombiner::runOnMachineFunction(
   MachineDominatorTree *MDT = nullptr;
   GISelCSEInfo *CSEInfo = nullptr;
 
-  if (!IsOptNone) {
-    MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
+  MDT = &getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
 
-    GISelCSEAnalysisWrapper &Wrapper =
-        getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
-    CSEInfo = &Wrapper.get(TPC->getCSEConfig());
-  }
+  GISelCSEAnalysisWrapper &Wrapper =
+      getAnalysis<GISelCSEAnalysisWrapperPass>().getCSEWrapper();
+  CSEInfo = &Wrapper.get(TPC->getCSEConfig());
 
   CombinerInfo CInfo(/*AllowIllegalOps*/ true, /*ShouldLegalizeIllegal*/ false,
                      /*LegalizerInfo*/ nullptr, EnableOpt, F.hasOptSize(),
@@ -177,6 +171,6 @@ INITIALIZE_PASS_END(WebAssemblyPostLegalizerCombiner, DEBUG_TYPE,
                     "Combine WebAssembly MachineInstrs after legalization",
                     false, false)
 
-FunctionPass *llvm::createWebAssemblyPostLegalizerCombiner(bool IsOptNone) {
-  return new WebAssemblyPostLegalizerCombiner(IsOptNone);
+FunctionPass *llvm::createWebAssemblyPostLegalizerCombiner() {
+  return new WebAssemblyPostLegalizerCombiner();
 }

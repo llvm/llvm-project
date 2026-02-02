@@ -15,14 +15,14 @@
 ; RUN:   | FileCheck %s --check-prefixes=DISABLED
 
 ; ENABLED:       IRTranslator
+; ENABLED-O0-NEXT:  Analysis containing CSE Info
 ; ENABLED-NEXT:  Analysis for ComputingKnownBits
-; ENABLED-O0-NEXT:  WebAssemblyO0PreLegalizerCombiner
 ; ENABLED-O1-NEXT:  MachineDominator Tree Construction
-; ENABLED-NEXT:  Analysis containing CSE Info
+; ENABLED-O1-NEXT:  Analysis containing CSE Info
 ; ENABLED-O1-NEXT:  WebAssemblyPreLegalizerCombiner
 ; ENABLED-NEXT:  Legalizer
 ; ENABLED-O1-NEXT:  MachineDominator Tree Construction
-; ENABLED-NEXT:  WebAssemblyPostLegalizerCombiner
+; ENABLED-O1-NEXT:  WebAssemblyPostLegalizerCombiner
 ; ENABLED-NEXT:  RegBankSelect
 ; ENABLED-NEXT:  Analysis for ComputingKnownBits
 ; ENABLED-O1-NEXT:  Natural Loop Information

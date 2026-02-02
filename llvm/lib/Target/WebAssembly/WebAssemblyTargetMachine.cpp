@@ -97,7 +97,6 @@ LLVMInitializeWebAssemblyTarget() {
   // Register backend passes
   auto &PR = *PassRegistry::getPassRegistry();
   initializeGlobalISel(PR);
-  initializeWebAssemblyO0PreLegalizerCombinerPass(PR);
   initializeWebAssemblyPreLegalizerCombinerPass(PR);
   initializeWebAssemblyPostLegalizerCombinerPass(PR);
   initializeWebAssemblyAddMissingPrototypesPass(PR);
@@ -683,9 +682,7 @@ bool WebAssemblyPassConfig::addIRTranslator() {
 }
 
 void WebAssemblyPassConfig::addPreLegalizeMachineIR() {
-  if (getOptLevel() == CodeGenOptLevel::None) {
-    addPass(createWebAssemblyO0PreLegalizerCombiner());
-  } else {
+  if (getOptLevel() != CodeGenOptLevel::None) {
     addPass(createWebAssemblyPreLegalizerCombiner());
   }
 }
@@ -695,8 +692,9 @@ bool WebAssemblyPassConfig::addLegalizeMachineIR() {
 }
 
 void WebAssemblyPassConfig::addPreRegBankSelect() {
-  addPass(createWebAssemblyPostLegalizerCombiner(getOptLevel() ==
-                                                 CodeGenOptLevel::None));
+  if (getOptLevel() != CodeGenOptLevel::None) {
+    addPass(createWebAssemblyPostLegalizerCombiner());
+  }
 }
 
 bool WebAssemblyPassConfig::addRegBankSelect() {

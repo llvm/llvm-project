@@ -15,10 +15,6 @@ def WebAssemblyPreLegalizerCombiner: GICombiner<
   "WebAssemblyPreLegalizerCombinerImpl", []> {
 }
 
-def WebAssemblyO0PreLegalizerCombiner: GICombiner<
-  "WebAssemblyO0PreLegalizerCombinerImpl", []> {
-}
-
 // Post-legalization combines which are primarily optimizations.
 def WebAssemblyPostLegalizerCombiner
     : GICombiner<"WebAssemblyPostLegalizerCombinerImpl",

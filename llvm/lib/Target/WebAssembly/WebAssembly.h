@@ -41,11 +41,8 @@ createWebAssemblyInstructionSelector(const WebAssemblyTargetMachine &,
                                      const WebAssemblySubtarget &,
                                      const WebAssemblyRegisterBankInfo &);
 
-FunctionPass *createWebAssemblyPostLegalizerCombiner(bool IsOptNone);
+FunctionPass *createWebAssemblyPostLegalizerCombiner();
 void initializeWebAssemblyPostLegalizerCombinerPass(PassRegistry &);
-
-FunctionPass *createWebAssemblyO0PreLegalizerCombiner();
-void initializeWebAssemblyO0PreLegalizerCombinerPass(PassRegistry &);
 
 FunctionPass *createWebAssemblyPreLegalizerCombiner();
 void initializeWebAssemblyPreLegalizerCombinerPass(PassRegistry &);
