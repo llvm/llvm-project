@@ -1755,45 +1755,64 @@ public:
   bool HasWrite = false;
   bool HasRead = false;
   const ValueDecl *TargetParam;
+  llvm::SmallSet<const Expr *, 4> WriteOnlyExprs;
 
   ParamUsageVisitor(const ValueDecl *P) : TargetParam(P) {}
 
-  // Any reference to the target is at least a read, unless we later
-  // identify it specifically as a write (e.g. assignment/inc/dec on LHS).
-  bool VisitDeclRefExpr(DeclRefExpr *DRE) {
-    if (DRE->getDecl() == TargetParam)
-      HasRead = true;
-    return true;
-  }
-
-  bool VisitUnaryOperator(UnaryOperator *UO) {
-    // Check for increment/decrement on parameter
-    if (UO->isIncrementDecrementOp()) {
-      if (auto *DRE = dyn_cast<DeclRefExpr>(UO->getSubExpr())) {
-        if (DRE->getDecl() == TargetParam) {
-          HasWrite = true;
-        }
-      }
-    }
-    return true;
-  }
-  bool VisitBinaryOperator(BinaryOperator *BO) {
-    // Check for assignment to parameter
+  // Identify write-only contexts before visiting children
+  bool TraverseBinaryOperator(BinaryOperator *BO) {
     if (BO->isAssignmentOp()) {
-      if (isa<DeclRefExpr>(BO->getLHS())) {
-        auto *DRE = dyn_cast<DeclRefExpr>(BO->getLHS());
+      auto *LHS = BO->getLHS()->IgnoreParenImpCasts();
+      if (auto *DRE = dyn_cast<DeclRefExpr>(LHS)) {
         if (DRE->getDecl() == TargetParam) {
+          HasWrite = true;
+          // For pure assignment (=), LHS is write-only
+          if (BO->getOpcode() == BO_Assign)
+            WriteOnlyExprs.insert(DRE);
+        }
+      } else if (auto *ME = dyn_cast<MemberExpr>(LHS)) {
+        if (ME->getMemberDecl() == TargetParam) {
+          HasWrite = true;
+          if (BO->getOpcode() == BO_Assign)
+            WriteOnlyExprs.insert(ME);
+        }
+      }
+    }
+    // Continue with default traversal
+    return RecursiveASTVisitor::TraverseBinaryOperator(BO);
+  }
+
+  bool TraverseUnaryOperator(UnaryOperator *UO) {
+    if (UO->isIncrementDecrementOp()) {
+      auto *SubExpr = UO->getSubExpr()->IgnoreParenImpCasts();
+      if (auto *DRE = dyn_cast<DeclRefExpr>(SubExpr)) {
+        if (DRE->getDecl() == TargetParam) {
+          HasWrite = true;
+          // Inc/Dec is both read and write, don't add to WriteOnlyExprs
+        }
+      } else if (auto *ME = dyn_cast<MemberExpr>(SubExpr)) {
+        if (ME->getMemberDecl() == TargetParam) {
           HasWrite = true;
         }
       }
     }
+    return RecursiveASTVisitor::TraverseUnaryOperator(UO);
+  }
 
-    // Any other use is at least a read
-    if (isa<DeclRefExpr>(BO->getRHS())) {
-      auto *DRE = dyn_cast<DeclRefExpr>(BO->getRHS());
-      if (DRE->getDecl() == TargetParam) {
+  // Check for reads, excluding write-only contexts
+  bool VisitDeclRefExpr(DeclRefExpr *DRE) {
+    if (DRE->getDecl() == TargetParam) {
+      if (!WriteOnlyExprs.count(DRE))
         HasRead = true;
-      }
+    }
+    return true;
+  }
+
+  // Handle member expressions
+  bool VisitMemberExpr(MemberExpr *ME) {
+    if (ME->getMemberDecl() == TargetParam) {
+      if (!WriteOnlyExprs.count(ME))
+        HasRead = true;
     }
     return true;
   }
@@ -2511,8 +2530,13 @@ incomingCalls(const CallHierarchyItem &Item, const SymbolIndex *Index,
           if (Decl.has_value() && Decl.value() != nullptr) {
             if (const auto *VD =
                     llvm::dyn_cast<clang::ValueDecl>(Decl.value())) {
-              CHI->referenceTags =
-                  analyseParameterUsage(FD, VD); // FD is the caller of var
+              // Use the function definition if available, not just a
+              // declaration
+              const FunctionDecl *FuncDef = FD->getDefinition();
+              if (!FuncDef)
+                FuncDef = FD;
+              CHI->referenceTags = analyseParameterUsage(
+                  FuncDef, VD); // FuncDef is the caller of value decl VD
             }
           }
         }
