@@ -5,10 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// \file
-// This file implements a target parser to recognise AVR hardware features.
-//
+///
+/// \file
+/// This file implements a target parser to recognise AVR hardware features.
+///
 //===----------------------------------------------------------------------===//
 
 #ifndef LLVM_TARGETPARSER_AVRTARGETPARSER_H
