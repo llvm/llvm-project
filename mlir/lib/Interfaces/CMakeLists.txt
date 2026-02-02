@@ -6,7 +6,6 @@ set(LLVM_OPTIONAL_SOURCES
   DataLayoutInterfaces.cpp
   DerivedAttributeOpInterface.cpp
   DestinationStyleOpInterface.cpp
-  ExecutionProgressOpInterface.cpp
   FunctionImplementation.cpp
   FunctionInterfaces.cpp
   IndexingMapOpInterface.cpp
@@ -50,7 +49,6 @@ add_mlir_interface_library(ControlFlowInterfaces)
 add_mlir_interface_library(DataLayoutInterfaces)
 add_mlir_interface_library(DerivedAttributeOpInterface)
 add_mlir_interface_library(DestinationStyleOpInterface)
-add_mlir_interface_library(ExecutionProgressOpInterface)
 
 add_mlir_library(MLIRFunctionInterfaces
   FunctionInterfaces.cpp
