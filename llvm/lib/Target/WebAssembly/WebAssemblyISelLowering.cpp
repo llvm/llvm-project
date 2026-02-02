@@ -2289,10 +2289,7 @@ WebAssemblyTargetLowering::LowerSIGN_EXTEND_INREG(SDValue Op,
 
 static SDValue GetExtendHigh(SDValue Op, unsigned UserOpc, EVT VT,
                              SelectionDAG &DAG) {
-  SDValue Source = Op;
-  if (Source.getOpcode() == ISD::BITCAST)
-    Source = Source.getOperand(0);
-
+  SDValue Source = peekThroughBitcasts(Op);
   if (Source.getOpcode() != ISD::VECTOR_SHUFFLE)
     return SDValue();
 
