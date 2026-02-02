@@ -342,6 +342,22 @@ getTypeWithIgnoreTkrC(mlir::FunctionType funcType,
   return std::nullopt;
 }
 
+static bool mustDestroyOrFinalizeFunctionResult(
+    mlir::FunctionType callSiteType,
+    std::optional<Fortran::evaluate::DynamicType> retTy) {
+  if (callSiteType.getNumResults() == 0 || !retTy.has_value())
+    return false;
+  if (fir::isPointerType(callSiteType.getResult(0)))
+    return false;
+  if (retTy->IsPolymorphic() || retTy->IsUnlimitedPolymorphic())
+    return true;
+  if (retTy->category() != Fortran::common::TypeCategory::Derived)
+    return false;
+  return Fortran::semantics::MayRequireFinalization(
+             retTy->GetDerivedTypeSpec()) ||
+         hlfir::mayHaveAllocatableComponent(callSiteType.getResult(0));
+}
+
 std::tuple<Fortran::lower::LoweredResult, bool, mlir::Operation *>
 Fortran::lower::genCallOpAndResult(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
@@ -803,10 +819,7 @@ Fortran::lower::genCallOpAndResult(
   // the resulting array result will be finalized/destroyed
   // as needed by hlfir.destroy.
   const bool mustFinalizeResult =
-      !isElemental && callSiteType.getNumResults() > 0 &&
-      !fir::isPointerType(callSiteType.getResult(0)) && retTy.has_value() &&
-      (retTy->category() == Fortran::common::TypeCategory::Derived ||
-       retTy->IsPolymorphic() || retTy->IsUnlimitedPolymorphic());
+      !isElemental && mustDestroyOrFinalizeFunctionResult(callSiteType, retTy);
 
   if (caller.mustSaveResult()) {
     assert(allocatedResult.has_value());
@@ -859,38 +872,17 @@ Fortran::lower::genCallOpAndResult(
         [](const auto &) {});
 
     // 7.5.6.3 point 5. Derived-type finalization for nonpointer function.
-    bool resultIsFinalized = false;
-    // Check if the derived-type is finalizable if it is a monomorphic
-    // derived-type.
-    // For polymorphic and unlimited polymorphic entities call the runtime
-    // in any cases.
+    // Note that this is also done for derived type with no final routines
+    // that have allocatable components to ensure the allocatable
+    // components are deallocated.
     if (mustFinalizeResult) {
-      if (retTy->IsPolymorphic() || retTy->IsUnlimitedPolymorphic()) {
-        auto *bldr = &converter.getFirOpBuilder();
-        stmtCtx.attachCleanup([bldr, loc, allocatedResult]() {
-          fir::runtime::genDerivedTypeDestroy(*bldr, loc,
-                                              fir::getBase(*allocatedResult));
-        });
-        resultIsFinalized = true;
-      } else {
-        const Fortran::semantics::DerivedTypeSpec &typeSpec =
-            retTy->GetDerivedTypeSpec();
-        // If the result type may require finalization
-        // or have allocatable components, we need to make sure
-        // everything is properly finalized/deallocated.
-        if (Fortran::semantics::MayRequireFinalization(typeSpec) ||
-            // We can use DerivedTypeDestroy even if finalization is not needed.
-            hlfir::mayHaveAllocatableComponent(funcType.getResults()[0])) {
-          auto *bldr = &converter.getFirOpBuilder();
-          stmtCtx.attachCleanup([bldr, loc, allocatedResult]() {
-            mlir::Value box = bldr->createBox(loc, *allocatedResult);
-            fir::runtime::genDerivedTypeDestroy(*bldr, loc, box);
-          });
-          resultIsFinalized = true;
-        }
-      }
+      auto *bldr = &converter.getFirOpBuilder();
+      stmtCtx.attachCleanup([bldr, loc, allocatedResult]() {
+        mlir::Value box = bldr->createBox(loc, *allocatedResult);
+        fir::runtime::genDerivedTypeDestroy(*bldr, loc, box);
+      });
     }
-    return {LoweredResult{*allocatedResult}, resultIsFinalized, callOp};
+    return {LoweredResult{*allocatedResult}, mustFinalizeResult, callOp};
   }
 
   if (allocatedResult)
