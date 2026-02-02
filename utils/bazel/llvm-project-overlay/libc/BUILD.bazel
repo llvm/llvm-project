@@ -2799,6 +2799,19 @@ libc_support_library(
         ":__support_fputil_multiply_add",
         ":__support_fputil_polyeval",
         ":__support_macros_optimization",
+        ":__support_math_common_constants",
+    ],
+)
+
+libc_support_library(
+    name = "__support_math_erff16",
+    hdrs = ["src/__support/math/erff16.h"],
+    deps = [
+        ":__support_fputil_fenv_impl",
+        ":__support_fputil_fp_bits",
+        ":__support_fputil_multiply_add",
+        ":__support_macros_optimization",
+        ":__support_math_common_constants",
     ],
 )
 
@@ -4379,6 +4392,13 @@ libc_math_function(name = "dsubf128")
 libc_math_function(
     name = "erff",
     additional_deps = [":__support_math_erff"],
+)
+
+libc_math_function(
+    name = "erff16",
+    additional_deps = [
+        ":__support_math_erff16",
+    ],
 )
 
 libc_math_function(

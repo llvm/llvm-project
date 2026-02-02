@@ -499,6 +499,7 @@ set(TARGET_LIBM_ENTRYPOINTS
     libc.src.math.ddivl
     libc.src.math.dsubl
     libc.src.math.erff
+    libc.src.math.erff16
     libc.src.math.exp
     libc.src.math.exp10
     libc.src.math.exp10f

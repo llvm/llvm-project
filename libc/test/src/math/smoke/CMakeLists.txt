@@ -5074,6 +5074,16 @@ add_fp_unittest(
 )
 
 add_fp_unittest(
+  erff16_test
+  SUITE
+    libc-math-smoke-tests
+  SRCS
+    erff16_test.cpp
+  DEPENDS
+    libc.src.math.erff16
+)
+
+add_fp_unittest(
   pow_test
   SUITE
     libc-math-smoke-tests
