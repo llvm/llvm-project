@@ -503,6 +503,7 @@ constexpr llvm::StringLiteral constantIdEnumAttrs[] = {
     "SPIRV_MatrixLayoutAttr",
     "SPIRV_TosaExtAccTypeAttr",
     "SPIRV_TosaExtNaNPropagationModeAttr",
+    "SPIRV_QuadSwapDirectionAttr",
 };
 
 /// Generates code to serialize attributes of a SPIRV_Op `op` into `os`. The

@@ -5830,8 +5830,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyWorkshareLoopTarget(
 
   // Mark the body loop as region which needs to be extracted
   OI.EntryBB = CLI->getBody();
-  OI.ExitBB = CLI->getLatch()->splitBasicBlock(CLI->getLatch()->begin(),
-                                               "omp.prelatch", true);
+  OI.ExitBB = CLI->getLatch()->splitBasicBlockBefore(CLI->getLatch()->begin(),
+                                                     "omp.prelatch");
 
   // Prepare loop body for extraction
   Builder.restoreIP({CLI->getPreheader(), CLI->getPreheader()->begin()});
@@ -6649,8 +6649,8 @@ void OpenMPIRBuilder::createIfVersion(CanonicalLoopInfo *CanonicalLoop,
 
   // The loop latch must have only one predecessor. Currently it is branched to
   // from both the 'then' and 'else' branches.
-  L->getLoopLatch()->splitBasicBlock(
-      L->getLoopLatch()->begin(), NamePrefix + ".pre_latch", /*Before=*/true);
+  L->getLoopLatch()->splitBasicBlockBefore(L->getLoopLatch()->begin(),
+                                           NamePrefix + ".pre_latch");
 
   // Ensure that the then block is added to the loop so we add the attributes in
   // the next step
@@ -7850,17 +7850,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTargetData(
     return InsertPointTy();
 
   Builder.restoreIP(CodeGenIP);
-  // Disable TargetData CodeGen on Device pass.
-  if (Config.IsTargetDevice.value_or(false)) {
-    if (BodyGenCB) {
-      InsertPointOrErrorTy AfterIP =
-          BodyGenCB(Builder.saveIP(), BodyGenTy::NoPriv);
-      if (!AfterIP)
-        return AfterIP.takeError();
-      Builder.restoreIP(*AfterIP);
-    }
-    return Builder.saveIP();
-  }
 
   bool IsStandAlone = !BodyGenCB;
   MapInfosTy *MapInfo;

@@ -367,8 +367,10 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
   unsigned ElemSize = StrPtr.getFieldDesc()->getElemSize();
 
   if (ID == Builtin::BI__builtin_wcslen || ID == Builtin::BIwcslen) {
-    [[maybe_unused]] const ASTContext &AC = S.getASTContext();
-    assert(ElemSize == AC.getTypeSizeInChars(AC.getWCharType()).getQuantity());
+    const ASTContext &AC = S.getASTContext();
+    unsigned WCharSize = AC.getTypeSizeInChars(AC.getWCharType()).getQuantity();
+    if (ElemSize != WCharSize)
+      return false;
   }
 
   size_t Len = 0;
@@ -1209,7 +1211,10 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
   if (!Ptr.isBlockPointer())
     return false;
 
-  unsigned PtrOffset = Ptr.getIndex();
+  // For one-past-end pointers, we can't call getIndex() since it asserts.
+  // Use getNumElems() instead which gives the correct index for past-end.
+  unsigned PtrOffset =
+      Ptr.isElementPastEnd() ? Ptr.getNumElems() : Ptr.getIndex();
   CharUnits BaseAlignment =
       S.getASTContext().getDeclAlign(Ptr.getDeclDesc()->asValueDecl());
   CharUnits PtrAlign =
@@ -2299,54 +2304,41 @@ static bool isUserWritingOffTheEnd(const ASTContext &Ctx, const Pointer &Ptr) {
          isFlexibleArrayMember(FieldDesc);
 }
 
-static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
-                                        const InterpFrame *Frame,
-                                        const CallExpr *Call) {
-  const ASTContext &ASTCtx = S.getASTContext();
-  // From the GCC docs:
-  // Kind is an integer constant from 0 to 3. If the least significant bit is
-  // clear, objects are whole variables. If it is set, a closest surrounding
-  // subobject is considered the object a pointer points to. The second bit
-  // determines if maximum or minimum of remaining bytes is computed.
-  unsigned Kind = popToUInt64(S, Call->getArg(1));
-  assert(Kind <= 3 && "unexpected kind");
-  bool UseFieldDesc = (Kind & 1u);
-  bool ReportMinimum = (Kind & 2u);
-  Pointer Ptr = S.Stk.pop<Pointer>();
-
-  if (Call->getArg(0)->HasSideEffects(ASTCtx)) {
-    // "If there are any side effects in them, it returns (size_t) -1
-    // for type 0 or 1 and (size_t) 0 for type 2 or 3."
-    pushInteger(S, Kind <= 1 ? -1 : 0, Call->getType());
-    return true;
-  }
-
+UnsignedOrNone evaluateBuiltinObjectSize(const ASTContext &ASTCtx,
+                                         unsigned Kind, Pointer &Ptr) {
   if (Ptr.isZero() || !Ptr.isBlockPointer())
-    return false;
+    return std::nullopt;
 
-  // We can't load through pointers.
   if (Ptr.isDummy() && Ptr.getType()->isPointerType())
-    return false;
+    return std::nullopt;
+
+  // According to the GCC documentation, we want the size of the subobject
+  // denoted by the pointer. But that's not quite right -- what we actually
+  // want is the size of the immediately-enclosing array, if there is one.
+  if (Ptr.isArrayElement())
+    Ptr = Ptr.expand();
 
   bool DetermineForCompleteObject = Ptr.getFieldDesc() == Ptr.getDeclDesc();
   const Descriptor *DeclDesc = Ptr.getDeclDesc();
   assert(DeclDesc);
 
+  bool UseFieldDesc = (Kind & 1u);
+  bool ReportMinimum = (Kind & 2u);
   if (!UseFieldDesc || DetermineForCompleteObject) {
     // Lower bound, so we can't fall back to this.
     if (ReportMinimum && !DetermineForCompleteObject)
-      return false;
+      return std::nullopt;
 
     // Can't read beyond the pointer decl desc.
     if (!UseFieldDesc && !ReportMinimum && DeclDesc->getType()->isPointerType())
-      return false;
+      return std::nullopt;
   } else {
-    if (isUserWritingOffTheEnd(ASTCtx, Ptr.expand())) {
+    if (isUserWritingOffTheEnd(ASTCtx, Ptr)) {
       // If we cannot determine the size of the initial allocation, then we
       // can't given an accurate upper-bound. However, we are still able to give
       // conservative lower-bounds for Type=3.
       if (Kind == 1)
-        return false;
+        return std::nullopt;
     }
   }
 
@@ -2360,7 +2352,7 @@ static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
 
   std::optional<unsigned> FullSize = computeFullDescSize(ASTCtx, Desc);
   if (!FullSize)
-    return false;
+    return std::nullopt;
 
   unsigned ByteOffset;
   if (UseFieldDesc) {
@@ -2381,10 +2373,34 @@ static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
     ByteOffset = computePointerOffset(ASTCtx, Ptr);
 
   assert(ByteOffset <= *FullSize);
-  unsigned Result = *FullSize - ByteOffset;
+  return *FullSize - ByteOffset;
+}
 
-  pushInteger(S, Result, Call->getType());
-  return true;
+static bool interp__builtin_object_size(InterpState &S, CodePtr OpPC,
+                                        const InterpFrame *Frame,
+                                        const CallExpr *Call) {
+  const ASTContext &ASTCtx = S.getASTContext();
+  // From the GCC docs:
+  // Kind is an integer constant from 0 to 3. If the least significant bit is
+  // clear, objects are whole variables. If it is set, a closest surrounding
+  // subobject is considered the object a pointer points to. The second bit
+  // determines if maximum or minimum of remaining bytes is computed.
+  unsigned Kind = popToUInt64(S, Call->getArg(1));
+  assert(Kind <= 3 && "unexpected kind");
+  Pointer Ptr = S.Stk.pop<Pointer>();
+
+  if (Call->getArg(0)->HasSideEffects(ASTCtx)) {
+    // "If there are any side effects in them, it returns (size_t) -1
+    // for type 0 or 1 and (size_t) 0 for type 2 or 3."
+    pushInteger(S, Kind <= 1 ? -1 : 0, Call->getType());
+    return true;
+  }
+
+  if (auto Result = evaluateBuiltinObjectSize(ASTCtx, Kind, Ptr)) {
+    pushInteger(S, *Result, Call->getType());
+    return true;
+  }
+  return false;
 }
 
 static bool interp__builtin_is_within_lifetime(InterpState &S, CodePtr OpPC,
@@ -2480,8 +2496,8 @@ static bool interp__builtin_elementwise_int_unaryop(
 
 static bool interp__builtin_elementwise_fp_binop(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
-    llvm::function_ref<APFloat(const APFloat &, const APFloat &,
-                               std::optional<APSInt> RoundingMode)>
+    llvm::function_ref<std::optional<APFloat>(
+        const APFloat &, const APFloat &, std::optional<APSInt> RoundingMode)>
         Fn) {
   assert((Call->getNumArgs() == 2) || (Call->getNumArgs() == 3));
   const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
@@ -2507,10 +2523,10 @@ static bool interp__builtin_elementwise_fp_binop(
     using T = PrimConv<PT_Float>::T;
     APFloat ElemA = APtr.elem<T>(ElemIdx).getAPFloat();
     APFloat ElemB = BPtr.elem<T>(ElemIdx).getAPFloat();
-    if (ElemA.isNaN() || ElemA.isInfinity() || ElemA.isDenormal() ||
-        ElemB.isNaN() || ElemB.isInfinity() || ElemB.isDenormal())
+    std::optional<APFloat> Result = Fn(ElemA, ElemB, RoundingMode);
+    if (!Result)
       return false;
-    Dst.elem<T>(ElemIdx) = static_cast<T>(Fn(ElemA, ElemB, RoundingMode));
+    Dst.elem<T>(ElemIdx) = static_cast<T>(*Result);
   }
 
   Dst.initializeAllElements();
@@ -5820,7 +5836,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_minph512:
     return interp__builtin_elementwise_fp_binop(
         S, OpPC, Call,
-        [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
+        [](const APFloat &A, const APFloat &B,
+           std::optional<APSInt>) -> std::optional<APFloat> {
+          if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
+              B.isInfinity() || B.isDenormal())
+            return std::nullopt;
           if (A.isZero() && B.isZero())
             return B;
           return llvm::minimum(A, B);
@@ -5837,7 +5857,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_maxph512:
     return interp__builtin_elementwise_fp_binop(
         S, OpPC, Call,
-        [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
+        [](const APFloat &A, const APFloat &B,
+           std::optional<APSInt>) -> std::optional<APFloat> {
+          if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
+              B.isInfinity() || B.isDenormal())
+            return std::nullopt;
           if (A.isZero() && B.isZero())
             return B;
           return llvm::maximum(A, B);

@@ -19,6 +19,7 @@
 
 using namespace llvm;
 using namespace llvm::cas;
+using namespace llvm::unittest::cas;
 
 TEST_P(CASTest, ActionCacheHit) {
   std::unique_ptr<ObjectStore> CAS = createObjectStore();

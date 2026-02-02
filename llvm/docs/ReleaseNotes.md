@@ -66,6 +66,8 @@ Changes to the LLVM IR
 Changes to LLVM infrastructure
 ------------------------------
 
+* Removed TypePromoteFloat legalization from SelectionDAG
+
 Changes to building LLVM
 ------------------------
 
@@ -120,6 +122,10 @@ Changes to the PowerPC Backend
 Changes to the RISC-V Backend
 -----------------------------
 
+* `llvm-objdump` now has support for `--symbolize-operands` with RISC-V.
+* `-mcpu=spacemit-x100` was added.
+* Change P extension version to match the 019 draft specification. Encoded in `-march` as `0p19`.
+
 Changes to the WebAssembly Backend
 ----------------------------------
 
@@ -158,6 +164,8 @@ Changes to the LLVM tools
 -------------------------
 
 * `llvm-objcopy` no longer corrupts the symbol table when `--update-section` is called for ELF files.
+* `FileCheck` option `-check-prefix` now accepts a comma-separated list of
+  prefixes, making it an alias of the existing `-check-prefixes` option.
 
 Changes to LLDB
 ---------------

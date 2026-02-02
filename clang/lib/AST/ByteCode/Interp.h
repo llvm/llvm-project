@@ -409,11 +409,19 @@ inline bool Mulc(InterpState &S, CodePtr OpPC) {
 
     // real(Result) = (real(LHS) * real(RHS)) - (imag(LHS) * imag(RHS))
     T A;
+    if constexpr (needsAlloc<T>())
+      A = S.allocAP<T>(Bits);
     if (T::mul(LHSR, RHSR, Bits, &A))
       return false;
+
     T B;
+    if constexpr (needsAlloc<T>())
+      B = S.allocAP<T>(Bits);
     if (T::mul(LHSI, RHSI, Bits, &B))
       return false;
+
+    if constexpr (needsAlloc<T>())
+      Result.elem<T>(0) = S.allocAP<T>(Bits);
     if (T::sub(A, B, Bits, &Result.elem<T>(0)))
       return false;
 
@@ -422,6 +430,9 @@ inline bool Mulc(InterpState &S, CodePtr OpPC) {
       return false;
     if (T::mul(LHSI, RHSR, Bits, &B))
       return false;
+
+    if constexpr (needsAlloc<T>())
+      Result.elem<T>(1) = S.allocAP<T>(Bits);
     if (T::add(A, B, Bits, &Result.elem<T>(1)))
       return false;
     Result.initialize();
@@ -475,10 +486,18 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
 
     // Den = real(RHS)² + imag(RHS)²
     T A, B;
+    if constexpr (needsAlloc<T>()) {
+      A = S.allocAP<T>(Bits);
+      B = S.allocAP<T>(Bits);
+    }
+
     if (T::mul(RHSR, RHSR, Bits, &A) || T::mul(RHSI, RHSI, Bits, &B)) {
       // Ignore overflow here, because that's what the current interpeter does.
     }
     T Den;
+    if constexpr (needsAlloc<T>())
+      Den = S.allocAP<T>(Bits);
+
     if (T::add(A, B, Bits, &Den))
       return false;
 
@@ -491,7 +510,10 @@ inline bool Divc(InterpState &S, CodePtr OpPC) {
     // real(Result) = ((real(LHS) * real(RHS)) + (imag(LHS) * imag(RHS))) / Den
     T &ResultR = Result.elem<T>(0);
     T &ResultI = Result.elem<T>(1);
-
+    if constexpr (needsAlloc<T>()) {
+      ResultR = S.allocAP<T>(Bits);
+      ResultI = S.allocAP<T>(Bits);
+    }
     if (T::mul(LHSR, RHSR, Bits, &A) || T::mul(LHSI, RHSI, Bits, &B))
       return false;
     if (T::add(A, B, Bits, &ResultR))
@@ -2606,8 +2628,9 @@ static inline bool CastFloatingIntegralAP(InterpState &S, CodePtr OpPC,
   auto Status = F.convertToInteger(Result);
 
   // Float-to-Integral overflow check.
-  if ((Status & APFloat::opStatus::opInvalidOp) && F.isFinite())
-    return handleOverflow(S, OpPC, F.getAPFloat());
+  if ((Status & APFloat::opStatus::opInvalidOp) && F.isFinite() &&
+      !handleOverflow(S, OpPC, F.getAPFloat()))
+    return false;
 
   FPOptions FPO = FPOptions::getFromOpaqueInt(FPOI);
 
@@ -2627,8 +2650,9 @@ static inline bool CastFloatingIntegralAPS(InterpState &S, CodePtr OpPC,
   auto Status = F.convertToInteger(Result);
 
   // Float-to-Integral overflow check.
-  if ((Status & APFloat::opStatus::opInvalidOp) && F.isFinite())
-    return handleOverflow(S, OpPC, F.getAPFloat());
+  if ((Status & APFloat::opStatus::opInvalidOp) && F.isFinite() &&
+      !handleOverflow(S, OpPC, F.getAPFloat()))
+    return false;
 
   FPOptions FPO = FPOptions::getFromOpaqueInt(FPOI);
 
