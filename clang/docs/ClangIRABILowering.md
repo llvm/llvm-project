@@ -35,54 +35,29 @@ Calling convention lowering is currently implemented separately for each MLIR di
 
 ### 1.2 Proposed Solution
 
-This design proposes a three-layer architecture that separates concerns and enables code reuse. The first layer contains pure ABI classification logic that is completely dialect-agnostic, operating only on abstract type representations. The second layer provides interface-based abstractions for querying type properties and layout information, allowing the classification logic to work with any dialect's types. The third layer handles dialect-specific operation rewriting, where each dialect implements its own operation creation logic while reusing the classification results from the lower layers.
+This design proposes a shared MLIR ABI lowering infrastructure that multiple dialects can leverage. The framework sits at the top, providing common interfaces and target-specific ABI classification logic. Each MLIR dialect (CIR, FIR, and future dialects) implements a small amount of dialect-specific glue code to connect to this infrastructure. At the bottom, target-specific implementations handle the complex ABI rules for architectures like x86_64 and AArch64. This approach enables code reuse while maintaining the flexibility for each dialect to handle its own operation creation patterns.
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                    MLIR-Agnostic ABI Lowering                       │
-│                         (Three-Layer Design)                        │
-└─────────────────────────────────────────────────────────────────────┘
-
-┌─────────────────────────────────────────────────────────────────────┐
-│ Layer 3: Dialect-Specific Operation Rewriting                       │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                  │
-│  │ CIR Rewrite │  │ FIR Rewrite │  │ Other       │                  │
-│  │ Context     │  │ Context     │  │ Dialects    │                  │
-│  └──────┬──────┘  └───────┬─────┘  └────────┬────┘                  │
-│         │                 │                 │                       │
-│         └─────────────────┼─────────────────┘                       │
-│                           │                                         │
-└───────────────────────────┼─────────────────────────────────────────┘
-                            │ ABIRewriteContext Interface
-┌───────────────────────────┼─────────────────────────────────────────┐
-│ Layer 2: Interface-Based Type Abstractions                          │
-│                           │                                         │
-│  ┌────────────────────────▼──────────────────────────┐              │
-│  │ ABITypeInterface (TypeInterface)                  │              │
-│  │  - isRecord(), isInteger(), isFloatingPoint()     │              │
-│  │  - getNumFields(), getFieldType()                 │              │
-│  │  - getAlignof(), getSizeof()                      │              │
-│  └────────────────────────┬──────────────────────────┘              │
-│                           │                                         │
-└───────────────────────────┼─────────────────────────────────────────┘
-                            │ Abstract Type Queries
-┌───────────────────────────┼─────────────────────────────────────────┐
-│ Layer 1: Pure ABI Classification Logic (Dialect-Agnostic)           │
-│                           │                                         │
-│  ┌────────────────────────▼──────────────────────────┐              │
-│  │ ABIInfo (Target-Specific)                         │              │
-│  │  - classifyArgumentType()                         │              │
-│  │  - classifyReturnType()                           │              │
-│  └──────┬─────────────────────────┬──────────────┬───┘              │
-│         │                         │              │                  │
-│  ┌──────▼──────┐  ┌───────────────▼───┐  ┌───────▼──────┐           │
-│  │ X86_64      │  │ AArch64           │  │ Other        │           │
-│  │ ABIInfo     │  │ ABIInfo           │  │ Targets      │           │
-│  └─────────────┘  └───────────────────┘  └──────────────┘           │
-│                                                                     │
-│  Output: LowerFunctionInfo + ABIArgInfo                             │
-└─────────────────────────────────────────────────────────────────────┘
-
+┌──────────────────────────────────────────────────────────────┐
+│         MLIR ABI Lowering Infrastructure                     │
+│         mlir/include/mlir/Interfaces/ABI/                    │
+└──────────────────────────────────────────────────────────────┘
+                              │
+            ┌─────────────────┼─────────────────┐
+            │                 │                 │
+            ▼                 ▼                 ▼
+    ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
+    │ CIR Dialect  │  │ FIR Dialect  │  │   Future     │
+    │              │  │              │  │   Dialects   │
+    └──────────────┘  └──────────────┘  └──────────────┘
+         │                 │                 │
+         └─────────────────┴─────────────────┘
+                           │
+                           ▼
+               ┌───────────────────────┐
+               │  Target ABI Logic     │
+               │  X86, AArch64, etc.   │
+               └───────────────────────┘
 ```
 
 ### 1.3 Key Benefits
@@ -137,57 +112,63 @@ CIR needs to lower C/C++ calling conventions correctly, with initial support for
 
 ### 3.1 Architecture Diagram
 
+The following diagram provides a detailed view of the three-layer architecture introduced in Section 1.2. At the top (Layer 3), each dialect provides its own rewrite context for creating dialect-specific operations. In the middle (Layer 2), the `ABITypeInterface` provides a dialect-agnostic way to query type properties, allowing the classification logic below to work with any dialect's types. At the bottom (Layer 1), target-specific `ABIInfo` implementations (e.g., X86_64, AArch64) perform the actual ABI classification using only the abstract type information from Layer 2. Data flows downward for classification, then back upward for operation rewriting.
+
 ```
-┌──────────────────────────────────────────────────────────────┐
-│         MLIR ABI Lowering Infrastructure                     │
-│         mlir/include/mlir/Interfaces/ABI/                    │
-└──────────────────────────────────────────────────────────────┘
-                              │
-            ┌─────────────────┼─────────────────┐
-            │                 │                 │
-            ▼                 ▼                 ▼
-    ┌──────────────┐  ┌──────────────┐  ┌──────────────┐
-    │ CIR Dialect  │  │ FIR Dialect  │  │   Future     │
-    │              │  │              │  │   Dialects   │
-    └──────────────┘  └──────────────┘  └──────────────┘
-         │                 │                 │
-         └─────────────────┴─────────────────┘
-                           │
-                           ▼
-               ┌───────────────────────┐
-               │  Target ABI Logic     │
-               │  X86, AArch64, etc.   │
-               └───────────────────────┘
+┌─────────────────────────────────────────────────────────────────────┐
+│                    MLIR-Agnostic ABI Lowering                       │
+│                         (Three-Layer Design)                        │
+└─────────────────────────────────────────────────────────────────────┘
+
+┌─────────────────────────────────────────────────────────────────────┐
+│ Layer 3: Dialect-Specific Operation Rewriting                       │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                  │
+│  │ CIR Rewrite │  │ FIR Rewrite │  │ Other       │                  │
+│  │ Context     │  │ Context     │  │ Dialects    │                  │
+│  └──────┬──────┘  └───────┬─────┘  └────────┬────┘                  │
+│         │                 │                 │                       │
+│         └─────────────────┼─────────────────┘                       │
+│                           │                                         │
+└───────────────────────────┼─────────────────────────────────────────┘
+                            │ ABIRewriteContext Interface
+┌───────────────────────────┼─────────────────────────────────────────┐
+│ Layer 2: Interface-Based Type Abstractions                          │
+│                           │                                         │
+│  ┌────────────────────────▼──────────────────────────┐              │
+│  │ ABITypeInterface (TypeInterface)                  │              │
+│  │  - isRecord(), isInteger(), isFloatingPoint()     │              │
+│  │  - getNumFields(), getFieldType()                 │              │
+│  │  - getAlignof(), getSizeof()                      │              │
+│  └────────────────────────┬──────────────────────────┘              │
+│                           │                                         │
+└───────────────────────────┼─────────────────────────────────────────┘
+                            │ Abstract Type Queries
+┌───────────────────────────┼─────────────────────────────────────────┐
+│ Layer 1: Pure ABI Classification Logic (Dialect-Agnostic)           │
+│                           │                                         │
+│  ┌────────────────────────▼──────────────────────────┐              │
+│  │ ABIInfo (Target-Specific)                         │              │
+│  │  - classifyArgumentType()                         │              │
+│  │  - classifyReturnType()                           │              │
+│  └──────┬─────────────────────────┬──────────────┬───┘              │
+│         │                         │              │                  │
+│  ┌──────▼──────┐  ┌───────────────▼───┐  ┌───────▼──────┐           │
+│  │ X86_64      │  │ AArch64           │  │ Other        │           │
+│  │ ABIInfo     │  │ ABIInfo           │  │ Targets      │           │
+│  └─────────────┘  └───────────────────┘  └──────────────┘           │
+│                                                                     │
+│  Output: LowerFunctionInfo + ABIArgInfo                             │
+└─────────────────────────────────────────────────────────────────────┘
+
 ```
 
 ### 3.2 Three-Layer Design
 
-**Layer 1: Pure ABI Classification**
-- Input: mlir::Type + metadata
-- Output: ABIArgInfo (how to pass)
-- No dialect knowledge
-- Target-specific algorithms
-
-**Layer 2: Type/Layout Abstraction**
-- ABITypeInterface for type queries
-- DataLayoutInterface (MLIR standard)
-- ABIArgInfo, LowerFunctionInfo data structures
-- Target info access
-
-**Layer 3: Dialect-Specific Rewriting**
-- ABIRewriteContext interface
-- Dialect implements operation creation
-- Pass infrastructure per dialect
-- Value coercion, temporary allocation
+The architecture is organized into three distinct layers, each with clear responsibilities. Layer 1 performs pure ABI classification, taking an `mlir::Type` and metadata as input and producing `ABIArgInfo` that describes how to pass the value. This layer has no dialect knowledge and implements target-specific algorithms. Layer 2 provides type and layout abstraction through the `ABITypeInterface` for querying type properties, leveraging MLIR's standard `DataLayoutInterface`, and using shared data structures like `ABIArgInfo` and `LowerFunctionInfo` to capture classification results. Layer 3 handles dialect-specific rewriting through the `ABIRewriteContext` interface, where each dialect implements its own operation creation logic, pass infrastructure, value coercion, and temporary allocation strategies.
 
 ### 3.3 Key Components
 
-1. **ABIArgInfo**: Classification result (Direct, Indirect, Expand, etc.)
-2. **LowerFunctionInfo**: Classified function signature
-3. **ABITypeInterface**: Type queries for ABI decisions
-4. **ABIInfo**: Target-specific classification logic
-5. **ABIRewriteContext**: Dialect-specific operation rewriting
-6. **TargetRegistry**: Maps target triple to ABI implementation
+The framework consists of six key components that work together to perform ABI lowering. `ABIArgInfo` captures the classification result, indicating whether an argument should be passed directly, indirectly, expanded, or handled through other strategies. `LowerFunctionInfo` represents a fully classified function signature, aggregating the `ABIArgInfo` results for all parameters and the return value. `ABITypeInterface` provides the type query mechanism that enables ABI classification logic to inspect type properties without coupling to specific dialects. `ABIInfo` implements the target-specific classification algorithms (e.g., x86_64 System V, AArch64 PCS). `ABIRewriteContext` defines the interface for dialect-specific operation creation and rewriting. Finally, `TargetRegistry` maps target triples to their corresponding ABI implementations, enabling runtime selection of the appropriate target-specific logic.
 
 ### 3.4 ABI Lowering Flow: How the Pieces Fit Together
 
@@ -195,7 +176,7 @@ This section describes the end-to-end flow of ABI lowering, showing how all inte
 
 #### Step 1: Function Signature Analysis
 
-When the ABI lowering pass encounters a function operation:
+The ABI lowering pass begins by analyzing the function signature. When it encounters a function operation, it extracts the parameter types and return type to prepare them for classification. At this stage, the types are still in their high-level, dialect-specific form (e.g., `!cir.struct` for CIR, or `!fir.type` for FIR). The pass collects these types into a list that will be fed to the classification logic in the next step.
 
 ```
 Input: func @foo(%arg0: !cir.int<u, 32>, %arg1: !cir.struct<{!cir.int<u, 64>, !cir.int<u, 64>}>) -> !cir.int<u, 32>
@@ -237,7 +218,7 @@ Output: `LowerFunctionInfo` containing classification for all arguments:
 
 #### Step 4: Function Signature Rewriting
 
-Using `ABIRewriteContext`, the dialect-specific pass rewrites the function:
+After classification is complete, the pass must rewrite the function to match the ABI requirements. This involves creating a new function with a transformed signature that reflects how arguments will actually be passed at the machine level. For example, if a struct is classified as "Expand", the new function signature will have multiple scalar parameters instead of the single struct parameter. The `ABIRewriteContext` provides the dialect-specific hooks to create this new function operation while preserving the dialect's semantics.
 
 ```cpp
 ABIRewriteContext &ctx = getDialectRewriteContext();
@@ -247,9 +228,11 @@ FunctionType newType = ...; // (i32, i64, i64) -> i32
 Operation *newFunc = ctx.createFunction(loc, "foo", newType);
 ```
 
+**Key Point**: The original function had signature `(i32, struct) -> i32`, but the ABI-lowered function has signature `(i32, i64, i64) -> i32` with the struct expanded into its constituent fields.
+
 #### Step 5: Argument Expansion
 
-For each call site, expand struct arguments using `ABIRewriteContext`:
+With the function signature rewritten, the pass must now update all call sites to match the new signature. For arguments that were classified as "Expand", the pass needs to break down the aggregate value into its constituent parts. In our example, the struct argument must be split into two separate i64 values. The `ABIRewriteContext` provides operations to extract fields from aggregates and construct the new call with the expanded argument list.
 
 ```cpp
 // Original call: call @foo(%val0, %structVal)
@@ -336,30 +319,15 @@ Value result = ctx.createLoad(loc, sretPtr);
 
 #### Key Interactions Between Components
 
-**ABITypeInterface ↔ ABIInfo**:
-- `ABIInfo` calls `ABITypeInterface` methods to inspect types
-- Enables target logic to work with any dialect's types
-- Example: `isRecord()`, `getNumFields()`, `getFieldType()`
+The framework's power comes from how these components interact with clear separation of concerns. The `ABITypeInterface` and `ABIInfo` interaction is foundational: `ABIInfo` calls `ABITypeInterface` methods like `isRecord()`, `getNumFields()`, and `getFieldType()` to inspect types, which enables the target logic to work with any dialect's types without coupling to specific type implementations.
 
-**ABIInfo → ABIArgInfo**:
-- `ABIInfo` produces `ABIArgInfo` for each argument
-- `ABIArgInfo` is dialect-agnostic (just describes "how to pass")
-- Stored in `LowerFunctionInfo`
+The `ABIInfo` produces `ABIArgInfo` structures for each argument, where `ABIArgInfo` remains completely dialect-agnostic by only describing "how to pass" the value (Direct, Indirect, Expand, etc.). These classification results are stored in `LowerFunctionInfo`, creating a complete specification of the function's calling convention.
 
-**LowerFunctionInfo → ABIRewriteContext**:
-- Pass reads `LowerFunctionInfo` to know what transformations to apply
-- Calls `ABIRewriteContext` methods to perform actual IR rewriting
-- Example: If `ABIArgInfo::Expand`, call `createExtractValue()` for each field
+The lowering pass then reads `LowerFunctionInfo` to understand what transformations to apply, and calls `ABIRewriteContext` methods to perform the actual IR rewriting. For example, if an argument has `ABIArgInfo::Expand`, the pass will call `createExtractValue()` for each field that needs to be separated.
 
-**ABIRewriteContext ↔ Dialect Operations**:
-- Dialect implements `ABIRewriteContext` interface
-- Returns dialect-specific operations (cir.call, fir.call, etc.)
-- ABI lowering logic never directly creates dialect operations
+Finally, the dialect implements the `ABIRewriteContext` interface to return dialect-specific operations (like `cir.call` for CIR or `fir.call` for FIR). This ensures that the ABI lowering logic never directly creates dialect operations, maintaining clean separation.
 
-This separation enables:
-1. **Target logic reuse**: `ABIInfo` works with any dialect via interfaces
-2. **Dialect flexibility**: Each dialect controls its own operation creation
-3. **Testability**: Can test ABIInfo classification independently of dialect operations
+This layered separation enables three key benefits: target logic reuse where `ABIInfo` works with any dialect via interfaces, dialect flexibility where each dialect controls its own operation creation patterns, and testability where ABIInfo classification can be tested independently of dialect operations.
 
 ## 4. Detailed Component Design
 
