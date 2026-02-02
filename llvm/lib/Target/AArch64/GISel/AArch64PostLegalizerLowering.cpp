@@ -758,7 +758,7 @@ bool matchStorei128AsV2i64(MachineInstr &MI, const MachineRegisterInfo &MRI) {
     return false;
 
   return isPointerRoX(MRI, Store);
-};
+}
 
 void applyStorei128AsV2i64(MachineInstr &MI, const MachineRegisterInfo &MRI,
                            MachineIRBuilder &MIB) {
@@ -772,7 +772,7 @@ void applyStorei128AsV2i64(MachineInstr &MI, const MachineRegisterInfo &MRI,
                            {Merge->getSourceReg(0), Merge->getSourceReg(1)})
           .getReg(0);
   MI.getOperand(0).setReg(BV);
-};
+}
 
 /// Determine whether or not it is possible to update the RHS and predicate of
 /// a G_ICMP instruction such that the RHS will be selected as an arithmetic
