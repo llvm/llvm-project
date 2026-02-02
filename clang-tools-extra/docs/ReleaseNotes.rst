@@ -97,6 +97,11 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`bugprone-missing-end-comparison
+  <clang-tidy/checks/bugprone/missing-end-comparison>` check.
+
+  FIXME: Write a short description.
+
 - New :doc:`llvm-use-vector-utils
   <clang-tidy/checks/llvm/use-vector-utils>` check.
 
