@@ -479,26 +479,26 @@ private:
       int ubRank = ubExpr->Rank();
       int lbRank = lbExpr ? lbExpr->Rank() : 0;
       
-      // Get numDims from whichever bound is an array (at least one must be)
-      int64_t numDims = -1;
+      // Get extent from whichever bound is an array (at least one must be)
+      int64_t extent = -1;
       if (ubRank == 1) {
         auto ubShape = Fortran::evaluate::GetShape(
             converter.getFoldingContext(), *ubExpr);
-        if (const auto &extent = (*ubShape)[0]) {
-          if (auto constExtent = Fortran::evaluate::ToInt64(*extent)) {
-            numDims = *constExtent;
+        if (const auto &_extent = (*ubShape)[0]) {
+          if (auto constExtent = Fortran::evaluate::ToInt64(*_extent)) {
+            extent = *constExtent;
           }
         }
       } else if (lbRank == 1) {
         auto lbShape = Fortran::evaluate::GetShape(
             converter.getFoldingContext(), *lbExpr);
-        if (const auto &extent = (*lbShape)[0]) {
-          if (auto constExtent = Fortran::evaluate::ToInt64(*extent)) {
-            numDims = *constExtent;
+        if (const auto &_extent = (*lbShape)[0]) {
+          if (auto constExtent = Fortran::evaluate::ToInt64(*_extent)) {
+            extent = *constExtent;
           }
         }
       }
-      assert(numDims > 0 && "bounds array must have known constant size");
+      assert(extent > 0 && "bounds array must have known constant size");
       
       // Prepare upper bounds
       llvm::SmallVector<mlir::Value> ubValues;
@@ -511,7 +511,7 @@ private:
         mlir::Type elemTy = ubSeqTy.getEleTy();
         mlir::Type elemRefTy = builder.getRefType(elemTy);
         
-        for (int64_t i = 0; i < numDims; ++i) {
+        for (int64_t i = 0; i < extent; ++i) {
           mlir::Value idx = builder.createIntegerConstant(loc, idxTy, i);
           mlir::Value ubElemAddr = fir::CoordinateOp::create(builder,
               loc, elemRefTy, ubBase, idx);
@@ -524,7 +524,7 @@ private:
         mlir::Value ubScalar = fir::getBase(
             converter.genExprValue(loc, *ubExpr, stmtCtx));
         ubScalar = builder.createConvert(loc, idxTy, ubScalar);
-        for (int64_t i = 0; i < numDims; ++i) {
+        for (int64_t i = 0; i < extent; ++i) {
           ubValues.push_back(ubScalar);
         }
       }
@@ -541,7 +541,7 @@ private:
           mlir::Type elemTy = lbSeqTy.getEleTy();
           mlir::Type elemRefTy = builder.getRefType(elemTy);
           
-          for (int64_t i = 0; i < numDims; ++i) {
+          for (int64_t i = 0; i < extent; ++i) {
             mlir::Value idx = builder.createIntegerConstant(loc, idxTy, i);
             mlir::Value lbElemAddr = fir::CoordinateOp::create(builder,
                 loc, elemRefTy, lbBase, idx);
@@ -554,14 +554,14 @@ private:
           mlir::Value lbScalar = fir::getBase(
               converter.genExprValue(loc, *lbExpr, stmtCtx));
           lbScalar = builder.createConvert(loc, idxTy, lbScalar);
-          for (int64_t i = 0; i < numDims; ++i) {
+          for (int64_t i = 0; i < extent; ++i) {
             lbValues.push_back(lbScalar);
           }
         }
       }
       
       // Compute extents from bounds
-      for (int64_t i = 0; i < numDims; ++i) {
+      for (int64_t i = 0; i < extent; ++i) {
         if (!lbValues.empty()) {
           lbounds.emplace_back(lbValues[i]);
           // extent = ub - lb + 1
