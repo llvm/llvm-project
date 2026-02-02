@@ -2617,16 +2617,10 @@ InstructionCost RISCVTTIImpl::getArithmeticInstrCost(
   std::pair<InstructionCost, MVT> LT = getTypeLegalizationCost(Ty);
   unsigned ISDOpcode = TLI->InstructionOpcodeToISD(Opcode);
 
-  // Vector unsigned division/remainder will be simplified to shifts/masks.
-  if ((ISDOpcode == ISD::UDIV || ISDOpcode == ISD::UREM) &&
-      Op2Info.isConstant() && Op2Info.isPowerOf2()) {
-    if (ISDOpcode == ISD::UDIV)
-      return getArithmeticInstrCost(Instruction::LShr, Ty, CostKind,
-                                    Op1Info.getNoProps(), Op2Info.getNoProps());
-    // UREM
-    return getArithmeticInstrCost(Instruction::And, Ty, CostKind,
-                                  Op1Info.getNoProps(), Op2Info.getNoProps());
-  }
+  InstructionCost ConvertedCost;
+  if (getConvertedArithmeticInstructionCost(ISDOpcode, Ty, CostKind, Op1Info,
+                                            Op2Info, Args, CxtI, ConvertedCost))
+    return ConvertedCost;
 
   // TODO: Handle scalar type.
   if (!LT.second.isVector()) {

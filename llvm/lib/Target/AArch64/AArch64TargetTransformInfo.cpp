@@ -4290,6 +4290,11 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
     return LT.first;
   }
 
+  InstructionCost ConvertedCost;
+  if (getConvertedArithmeticInstructionCost(ISD, Ty, CostKind, Op1Info, Op2Info,
+                                            Args, CxtI, ConvertedCost))
+    return ConvertedCost;
+
   switch (ISD) {
   default:
     return BaseT::getArithmeticInstrCost(Opcode, Ty, CostKind, Op1Info,
@@ -4413,16 +4418,6 @@ InstructionCost AArch64TTIImpl::getArithmeticInstrCost(
   case ISD::UREM: {
     auto VT = TLI->getValueType(DL, Ty);
     if (Op2Info.isConstant()) {
-      // If the operand is a power of 2 we can use the shift or and cost.
-      if (ISD == ISD::UDIV && Op2Info.isPowerOf2())
-        return getArithmeticInstrCost(Instruction::LShr, Ty, CostKind,
-                                      Op1Info.getNoProps(),
-                                      Op2Info.getNoProps());
-      if (ISD == ISD::UREM && Op2Info.isPowerOf2())
-        return getArithmeticInstrCost(Instruction::And, Ty, CostKind,
-                                      Op1Info.getNoProps(),
-                                      Op2Info.getNoProps());
-
       if (ISD == ISD::UDIV || ISD == ISD::UREM) {
         // Divides by a constant are expanded to MULHU + SUB + SRL + ADD + SRL.
         // The MULHU will be expanded to UMULL for the types not listed below,
