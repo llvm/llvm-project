@@ -23,7 +23,7 @@ TEST(CASConfigurationTest, roundTrips) {
     ASSERT_THAT_ERROR(
         CASConfiguration::createFromConfig(Serialized).moveInto(NewConfig),
         Succeeded());
-    ASSERT_TRUE(Config == *NewConfig);
+    EXPECT_EQ(Config, *NewConfig);
   };
 
   CASConfiguration Config;
@@ -83,6 +83,6 @@ TEST(CASConfigurationTest, configFileSearch) {
   auto NewConfig =
       CASConfiguration::createFromSearchConfigFile(PathToE.str(), VFS);
   ASSERT_TRUE(NewConfig);
-  ASSERT_TRUE(NewConfig->first == PathToDConfig.str());
-  ASSERT_TRUE(Config == NewConfig->second);
+  EXPECT_EQ(NewConfig->first, PathToDConfig.str());
+  EXPECT_EQ(Config, NewConfig->second);
 }
