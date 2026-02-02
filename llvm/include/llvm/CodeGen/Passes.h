@@ -629,6 +629,10 @@ LLVM_ABI ModulePass *createWindowsSecureHotPatchingPass();
 
 /// Lowers KCFI operand bundles for indirect calls.
 LLVM_ABI FunctionPass *createKCFIPass();
+
+/// This pass is designed to hoist ReduceCall operations out of loops to
+/// reduce the number of instructions within the loop body.
+LLVM_ABI FunctionPass *createLoopReduceMotionPass();
 } // namespace llvm
 
 #endif
