@@ -33,7 +33,8 @@ private:
   using CDM = CallDescription::Mode;
   const CallDescriptionSet ModeledFunctions{
       {CDM::SimpleFunc, {"std", "sort"}},
-      {CDM::SimpleFunc, {"std", "stable_sort"}}};
+      {CDM::SimpleFunc, {"std", "stable_sort"}},
+      {CDM::SimpleFunc, {"std", "inplace_merge"}}};
 };
 } // anonymous namespace
 

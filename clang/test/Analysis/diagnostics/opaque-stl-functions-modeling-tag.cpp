@@ -10,5 +10,7 @@ void testOpaqueSTLTags() {
 // CHECK: \"tag\": \"cplusplus.OpaqueSTLFunctionsModeling : Forced Opaque Call\"
   std::stable_sort(arr, arr + 5);
 // CHECK: \"tag\": \"cplusplus.OpaqueSTLFunctionsModeling : Forced Opaque Call\"
+  std::inplace_merge(arr, arr + 2, arr + 5);
+// CHECK: \"tag\": \"cplusplus.OpaqueSTLFunctionsModeling : Forced Opaque Call\"
 }
 

@@ -148,5 +148,10 @@ void sort(_RandomAccessIterator __first, _RandomAccessIterator __last) {}
 
 template<typename _RandomAccessIterator>
 void stable_sort(_RandomAccessIterator __first, _RandomAccessIterator __last) {}
+
+template<typename _BidirectionalIterator>
+void inplace_merge(_BidirectionalIterator __first,
+                   _BidirectionalIterator,
+                   _BidirectionalIterator __last) {}
 }
 
