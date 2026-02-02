@@ -1199,7 +1199,7 @@ bool DXILResourceBindingWrapperPass::runOnModule(Module &M) {
 
 void DXILResourceBindingWrapperPass::releaseMemory() { BindingInfo.reset(); }
 
-INITIALIZE_PASS(DXILResourceBindingWrapperPass, "dxil-resource-bindings",
+INITIALIZE_PASS(DXILResourceBindingWrapperPass, "dxil-resource-binding",
                 "DXIL Resource Binding Analysis", false, true)
 char DXILResourceBindingWrapperPass::ID = 0;
 
