@@ -467,7 +467,8 @@ static SmallVector<IntrinsicInst *> collectUsedHandles(Value *Ptr) {
 
 static hlsl::Binding getHandleIntrinsicBinding(IntrinsicInst *Handle,
                                                DXILResourceTypeMap &DRTM) {
-  assert(llvm::is_contained(HandleIntrins, Handle->getIntrinsicID()));
+  assert(llvm::is_contained(HandleIntrins, Handle->getIntrinsicID()) &&
+         "Only expects a Handle as determined from collectUsedHandles.");
 
   auto *HandleTy = cast<TargetExtType>(Handle->getType());
   dxil::ResourceClass Class = DRTM[HandleTy].getResourceClass();
