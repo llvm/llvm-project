@@ -21661,18 +21661,25 @@ bool Expr::isPotentialConstantExprUnevaluated(Expr *E,
   return Diags.empty();
 }
 
-bool Expr::tryEvaluateObjectSize(uint64_t &Result, ASTContext &Ctx,
-                                 unsigned Type) const {
+std::optional<uint64_t> Expr::tryEvaluateObjectSize(const ASTContext &Ctx,
+                                                    unsigned Type) const {
   if (!getType()->isPointerType())
     return false;
 
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
-  if (Info.EnableNewConstInterp) {
-    return Info.Ctx.getInterpContext().tryEvaluateObjectSize(Info, this, Type,
-                                                             Result);
-  }
-  return tryEvaluateBuiltinObjectSize(this, Type, Info, Result);
+  uint64_t Result = ~0u;
+  bool Success;
+  if (Info.EnableNewConstInterp)
+    Success = Info.Ctx.getInterpContext().tryEvaluateObjectSize(Info, this,
+                                                                Type, Result);
+  else
+    Success = tryEvaluateBuiltinObjectSize(this, Type, Info, Result);
+
+  if (!Success)
+    return std::nullopt;
+
+  return Result;
 }
 
 static bool EvaluateBuiltinStrLen(const Expr *E, uint64_t &Result,
@@ -21816,14 +21823,20 @@ bool Expr::EvaluateCharRangeAsString(APValue &Result,
                                        PtrExpression, Ctx, Status);
 }
 
-bool Expr::tryEvaluateStrLen(uint64_t &Result, ASTContext &Ctx) const {
+std::optional<uint64_t> Expr::tryEvaluateStrLen(const ASTContext &Ctx) const {
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
 
-  if (Info.EnableNewConstInterp)
-    return Info.Ctx.getInterpContext().evaluateStrlen(Info, this, Result);
+  uint64_t Result = ~0u;
+  if (Info.EnableNewConstInterp) {
+    if (!Info.Ctx.getInterpContext().evaluateStrlen(Info, this, Result))
+      return std::nullopt;
+  } else {
+    if (!EvaluateBuiltinStrLen(this, Result, Info))
+      return std::nullopt;
+  }
 
-  return EvaluateBuiltinStrLen(this, Result, Info);
+  return Result;
 }
 
 namespace {
