@@ -212,11 +212,7 @@ public:
 
 template <class T, class ID>
 class min_pointer {
-#if TEST_STD_VER >= 11
-  T* ptr_{};
-#else
   T* ptr_;
-#endif
 
   TEST_CONSTEXPR_CXX14 explicit min_pointer(T* p) TEST_NOEXCEPT : ptr_(p) {}
 
