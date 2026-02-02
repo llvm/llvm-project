@@ -661,6 +661,26 @@ func.func @remove_zero_iteration_loop() {
 
 // -----
 
+// CHECK-LABEL: @remove_while_zero_iteration_loop
+//  CHECK-NEXT:   %[[init:.*]] = "test.init"
+//  CHECK-NEXT:   %[[inner1:.*]] = "test.before"(%[[init]])
+//  CHECK-NEXT:   return %[[inner1]]
+func.func @remove_while_zero_iteration_loop() -> i64 {
+  %init = "test.init"() : () -> i32
+  %false = arith.constant false
+  %0 = scf.while (%arg0 = %init) : (i32) -> (i64) {
+    %inner1 = "test.before"(%arg0) : (i32) -> i64
+    scf.condition(%false) %inner1 : i64
+  } do {
+  ^bb0(%arg1: i64):
+    %inner2 = "test.before"(%arg1) : (i64) -> i32
+    scf.yield %inner2 : i32
+  }
+  return %0 : i64
+}
+
+// -----
+
 // CHECK-LABEL: @remove_zero_iteration_loop_vals
 func.func @remove_zero_iteration_loop_vals(%arg0: index) {
   %c2 = arith.constant 2 : index
@@ -2187,13 +2207,14 @@ func.func @index_switch_fold_no_res() {
 
 // -----
 
-// Step 0 is invalid, the loop is eliminated.
+// Step size 0: The loop has an infinite number of iterations.
 // CHECK-LABEL: func @scf_for_all_step_size_0()
-//       CHECK-NOT:   scf.forall
+//       CHECK:   scf.forall (%[[arg0:.*]]) = (0) to (1) step (0)
+//       CHECK:     vector.print %[[arg0]]
 func.func @scf_for_all_step_size_0()  {
   %x = arith.constant 0 : index
   scf.forall (%i, %j) = (0, 4) to (1, 5) step (%x, 8) {
-    vector.print %x : index
+    vector.print %i : index
     scf.forall.in_parallel {}
   }
   return
@@ -2262,4 +2283,55 @@ func.func @iter_args_cycles_non_cycle_start(%lb : index, %ub : index, %step : in
     scf.yield %1, %2, %1 : i32, i32, i32
   }
   return %res#0, %res#1, %res#2 : i32, i32, i32
+}
+
+// -----
+
+// CHECK-LABEL: @erase_infinite_scf_for_loop
+//       CHECK:   %[[poison:.*]] = ub.poison : index
+//       CHECK:   return %[[poison]]
+func.func @erase_infinite_scf_for_loop(%init: index) -> index {
+  %lb = arith.constant 3 : index
+  %ub = arith.constant 4 : index
+  %step = arith.constant 0 : index
+  %res = scf.for %iv = %lb to %ub step %step iter_args(%iter = %init) -> index {
+    %0 = arith.addi %iter, %iter : index
+    scf.yield %0 : index
+  }
+  return %res : index
+}
+
+// -----
+
+// CHECK-LABEL: @do_not_erase_infinite_loop_with_side_effect
+//       CHECK:   %[[res:.*]] = scf.for
+//       CHECK:     vector.print
+//       CHECK:   return %[[res]]
+func.func @do_not_erase_infinite_loop_with_side_effect(%init: index) -> index {
+  %lb = arith.constant 3 : index
+  %ub = arith.constant 4 : index
+  %step = arith.constant 0 : index
+  %res = scf.for %iv = %lb to %ub step %step iter_args(%iter = %init) -> index {
+    %0 = arith.addi %iter, %iter : index
+    vector.print %0 : index
+    scf.yield %0 : index
+  }
+  return %res : index
+}
+
+// -----
+
+// CHECK-LABEL: @erase_infinite_scf_while_loop
+//       CHECK:   %[[poison:.*]] = ub.poison : index
+//       CHECK:   return %[[poison]]
+func.func @erase_infinite_scf_while_loop(%init: index) -> index {
+  %res = scf.while (%arg0 = %init) : (index) -> (index) {
+    %true = arith.constant true
+    scf.condition(%true) %arg0 : index
+  } do {
+  ^bb0(%arg1: index):
+    %0 = arith.addi %arg1, %arg1 : index
+    scf.yield %0 : index
+  }
+  return %res : index
 }

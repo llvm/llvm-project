@@ -313,7 +313,7 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
             predecessorValues.push_back($_op.getEntrySuccessorOperands(successor)[index]);
             continue;
           }
-          auto terminator = cast<RegionBranchTerminatorOpInterface>(predecessor.getTerminatorPredecessorOrNull());
+          auto terminator = predecessor.getTerminatorPredecessorOrNull();
           predecessorValues.push_back(terminator.getSuccessorOperands(successor)[index]);
         }
       }]>,
@@ -350,7 +350,7 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
       "bool", "areTypesCompatible",
       (ins "::mlir::Type":$lhs, "::mlir::Type":$rhs), [{}],
       /*defaultImplementation=*/[{ return lhs == rhs; }]
-    >,
+    >
   ];
 
   let verify = [{
@@ -378,6 +378,13 @@ def RegionBranchOpInterface : OpInterface<"RegionBranchOpInterface"> {
     /// of the respective terminator.
     ::mlir::OperandRange getSuccessorOperands(
         ::mlir::RegionBranchPoint src, ::mlir::RegionSuccessor dest);
+
+    /// Return all successor inputs for the given region successor.
+    ///
+    /// If the "successor" is a region, it will return non-forwarded arguments,
+    /// if it is a "parent", it will return non-forwarded results.
+    ::llvm::SmallVector<Value> getNonSuccessorInputs(
+        ::mlir::RegionSuccessor successor);
 
     /// Build a mapping from successor operands to successor input. Each
     /// successor operand could be forwarded to multiple successor inputs.

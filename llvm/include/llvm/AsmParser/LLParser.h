@@ -319,7 +319,9 @@ namespace llvm {
     bool parseOptionalAlignment(MaybeAlign &Alignment,
                                 bool AllowParens = false);
     bool parseOptionalCodeModel(CodeModel::Model &model);
-    bool parseOptionalDerefAttrBytes(lltok::Kind AttrKind, uint64_t &Bytes);
+    bool parseOptionalAttrBytes(lltok::Kind AttrKind,
+                                std::optional<uint64_t> &Bytes,
+                                bool ErrorNoBytes = true);
     bool parseOptionalUWTableKind(UWTableKind &Kind);
     bool parseAllocKind(AllocFnKind &Kind);
     std::optional<MemoryEffects> parseMemoryAttr();
@@ -612,10 +614,12 @@ namespace llvm {
     struct ArgInfo {
       LocTy Loc;
       Type *Ty;
+      std::optional<FileLocRange> IdentLoc;
       AttributeSet Attrs;
       std::string Name;
-      ArgInfo(LocTy L, Type *ty, AttributeSet Attr, const std::string &N)
-          : Loc(L), Ty(ty), Attrs(Attr), Name(N) {}
+      ArgInfo(LocTy L, Type *ty, std::optional<FileLocRange> IdentLoc,
+              AttributeSet Attr, const std::string &N)
+          : Loc(L), Ty(ty), IdentLoc(IdentLoc), Attrs(Attr), Name(N) {}
     };
     bool parseArgumentList(SmallVectorImpl<ArgInfo> &ArgList,
                            SmallVectorImpl<unsigned> &UnnamedArgNums,

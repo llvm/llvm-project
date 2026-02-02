@@ -28,11 +28,6 @@ static OptBisect &getOptBisector() {
   return OptBisector;
 }
 
-static OptDisable &getOptDisabler() {
-  static OptDisable OptDisabler;
-  return OptDisabler;
-}
-
 static cl::opt<int> OptBisectLimit(
     "opt-bisect-limit", cl::Hidden, cl::init(-1), cl::Optional,
     cl::cb<void, int>([](int Limit) {
@@ -80,20 +75,16 @@ static cl::opt<std::string> OptBisectIntervals(
 
 static cl::opt<bool> OptBisectVerbose(
     "opt-bisect-verbose",
-    cl::desc("Show verbose output when opt-bisect-limit is set"), cl::Hidden,
-    cl::init(true), cl::Optional);
+    cl::desc(
+        "Show verbose output when opt-bisect-limit and/or opt-disable are set"),
+    cl::Hidden, cl::init(true), cl::Optional);
 
 static cl::list<std::string> OptDisablePasses(
     "opt-disable", cl::Hidden, cl::CommaSeparated, cl::Optional,
     cl::cb<void, std::string>([](const std::string &Pass) {
-      getOptDisabler().setDisabled(Pass);
+      getOptBisector().setDisabled(Pass);
     }),
     cl::desc("Optimization pass(es) to disable (comma-separated list)"));
-
-static cl::opt<bool>
-    OptDisableVerbose("opt-disable-enable-verbosity",
-                      cl::desc("Show verbose output when opt-disable is set"),
-                      cl::Hidden, cl::init(false), cl::Optional);
 
 static void printPassMessage(StringRef Name, int PassNum, StringRef TargetDesc,
                              bool Running) {
@@ -109,35 +100,18 @@ bool OptBisect::shouldRunPass(StringRef PassName,
   int CurBisectNum = ++LastBisectNum;
 
   // Check if current pass number falls within any of the specified intervals.
+  // Since the bisector may be enabled by opt-disable, we also need to check if
+  // the BisectIntervals are empty.
   bool ShouldRun =
+      BisectIntervals.empty() ||
       IntegerInclusiveIntervalUtils::contains(BisectIntervals, CurBisectNum);
+
+  // Also check if the pass is disabled via -opt-disable.
+  ShouldRun = ShouldRun && !DisabledPasses.contains(PassName);
 
   if (OptBisectVerbose)
     printPassMessage(PassName, CurBisectNum, IRDescription, ShouldRun);
   return ShouldRun;
 }
 
-static void printDisablePassMessage(const StringRef &Name, StringRef TargetDesc,
-                                    bool Running) {
-  StringRef Status = Running ? "" : "NOT ";
-  dbgs() << "OptDisable: " << Status << "running pass " << Name << " on "
-         << TargetDesc << "\n";
-}
-
-void OptDisable::setDisabled(StringRef Pass) { DisabledPasses.insert(Pass); }
-
-bool OptDisable::shouldRunPass(StringRef PassName,
-                               StringRef IRDescription) const {
-  assert(isEnabled());
-
-  const bool ShouldRun = !DisabledPasses.contains(PassName);
-  if (OptDisableVerbose)
-    printDisablePassMessage(PassName, IRDescription, ShouldRun);
-  return ShouldRun;
-}
-
-OptPassGate &llvm::getGlobalPassGate() {
-  if (getOptDisabler().isEnabled())
-    return getOptDisabler();
-  return getOptBisector();
-}
+OptPassGate &llvm::getGlobalPassGate() { return getOptBisector(); }

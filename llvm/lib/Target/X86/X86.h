@@ -280,7 +280,13 @@ FunctionPass *createX86CompressEVEXLegacyPass();
 FunctionPass *createX86IndirectThunksPass();
 
 /// This pass replaces ret instructions with jmp's to __x86_return thunk.
-FunctionPass *createX86ReturnThunksPass();
+class X86ReturnThunksPass : public PassInfoMixin<X86ReturnThunksPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86ReturnThunksLegacyPass();
 
 /// This pass insert wait instruction after X87 instructions which could raise
 /// fp exceptions when strict-fp enabled.
@@ -346,6 +352,7 @@ InstructionSelector *createX86InstructionSelector(const X86TargetMachine &TM,
                                                   const X86Subtarget &,
                                                   const X86RegisterBankInfo &);
 
+FunctionPass *createX86PostLegalizerCombiner();
 FunctionPass *createX86PreLegalizerCombiner();
 FunctionPass *createX86LoadValueInjectionLoadHardeningPass();
 
@@ -415,7 +422,7 @@ void initializeX86LowerTileCopyLegacyPass(PassRegistry &);
 void initializeX86OptimizeLEAsLegacyPass(PassRegistry &);
 void initializeX86PartialReductionLegacyPass(PassRegistry &);
 void initializeX86PreTileConfigLegacyPass(PassRegistry &);
-void initializeX86ReturnThunksPass(PassRegistry &);
+void initializeX86ReturnThunksLegacyPass(PassRegistry &);
 void initializeX86SpeculativeExecutionSideEffectSuppressionLegacyPass(
     PassRegistry &);
 void initializeX86SpeculativeLoadHardeningLegacyPass(PassRegistry &);
@@ -423,6 +430,7 @@ void initializeX86SuppressAPXForRelocationLegacyPass(PassRegistry &);
 void initializeX86TileConfigLegacyPass(PassRegistry &);
 void initializeX86WinEHUnwindV2Pass(PassRegistry &);
 void initializeX86PreLegalizerCombinerPass(PassRegistry &);
+void initializeX86PostLegalizerCombinerPass(PassRegistry &);
 
 namespace X86AS {
 enum : unsigned {
