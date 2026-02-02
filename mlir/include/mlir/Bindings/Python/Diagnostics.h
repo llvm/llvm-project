@@ -30,16 +30,14 @@ public:
                                            /*deleteUserData=*/nullptr);
   }
   ~CollectDiagnosticsToStringScope() {
-    assert(message.empty() && "unchecked error message");
+    assert(messageStream.str().empty() && "unchecked error message");
     mlirContextDetachDiagnosticHandler(context, handlerID);
   }
 
   [[nodiscard]] std::string takeMessage() {
-    message = messageStream.str();
+    std::string newMessage = messageStream.str();
     messageStream.str("");
     messageStream.clear();
-    std::string newMessage;
-    std::swap(message, newMessage);
     return newMessage;
   }
 
@@ -65,7 +63,6 @@ private:
   MlirContext context;
   MlirDiagnosticHandlerID handlerID;
 
-  std::string message;
   std::ostringstream messageStream;
 };
 
