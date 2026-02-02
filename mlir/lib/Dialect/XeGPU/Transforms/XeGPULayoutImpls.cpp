@@ -1,4 +1,5 @@
-//===---- XeGPUUtils.cpp - MLIR Utilities for XeGPUOps   ------------------===//
+//===---- XeGPULayoutImpls.cpp - MLIR Utilities for XeGPUOps
+//------------------===//
 //
 // Part of the MLIR Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -6,7 +7,8 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements utility methods for working with the XeGPU dialect.
+// This file implements layout utility functions for XeGPU dialect
+// transformation.
 //
 //===----------------------------------------------------------------------===//
 
@@ -454,8 +456,7 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
 
   xegpu::DistributeLayoutAttr srcLayout;
 
-  switch (layoutKind) {
-  case xegpu::LayoutKind::Subgroup: {
+  if (layoutKind == xegpu::LayoutKind::Subgroup) {
     SmallVector<int64_t> sgLayout(srcRank), sgData(srcRank);
     SmallVector<int64_t> consumerSgLayout =
         consumerLayout.getEffectiveSgLayoutAsInt();
@@ -490,19 +491,17 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
     srcLayout =
         xegpu::LayoutAttr::get(context, toInt32Attr(sgLayout),
                                toInt32Attr(sgData), consumerLayout.getOrder());
-    break;
-  }
 
-  case xegpu::LayoutKind::InstData: {
+  } else if (layoutKind == xegpu::LayoutKind::InstData) {
+
     SmallVector<int64_t> instData(srcRank, 1);
     instData[srcRank - 2] =
         std::min(maxReduceVectorSize, srcShape[srcRank - 2]);
     instData[srcRank - 1] = subgroupSize;
     srcLayout = xegpu::LayoutAttr::get(context, toInt32Attr(instData));
-    break;
-  }
 
-  case xegpu::LayoutKind::Lane: {
+  } else if (layoutKind == xegpu::LayoutKind::Lane) {
+
     SmallVector<int64_t> laneLayout(srcRank, 1), laneData(srcRank, 1);
     laneLayout[srcRank - 1] = subgroupSize;
     laneData[srcRank - 2] =
@@ -510,11 +509,6 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
     srcLayout = xegpu::LayoutAttr::get(context, toInt32Attr(laneLayout),
                                        toInt32Attr(laneData),
                                        consumerLayout.getOrder());
-    break;
-  }
-
-  default:
-    llvm_unreachable("unsupported layout kind");
   }
 
   return xegpu::SliceAttr::get(context, srcLayout,
@@ -550,13 +544,11 @@ xegpu::DistributeLayoutAttr xegpu::setupBitCastResultLayout(
     // source layout.
     int bitWidthRatio = srcElemTyBitWidth / resElemTyBitWidth;
     int innermostDimLaneLayout = subgroupSize;
-    switch (layoutKind) {
-    case xegpu::LayoutKind::Subgroup:
+    if (layoutKind == xegpu::LayoutKind::Subgroup) {
       assert(sgData.size() == srcShape.size() &&
              "sgData must be available for all dimensions");
       sgDataValue = sgData[dim];
-      break;
-    case xegpu::LayoutKind::InstData:
+    } else if (layoutKind == xegpu::LayoutKind::InstData) {
       assert(instData.size() == srcShape.size() &&
              "instData must be available for all dimensions");
       instDataValue = instData[dim];
@@ -567,17 +559,13 @@ xegpu::DistributeLayoutAttr xegpu::setupBitCastResultLayout(
         instDataValue *= 2;
       assert((srcShape[dim] % instDataValue) == 0 &&
              "srcShape, instData, and lanelayout for innermost must be 2^n !");
-      break;
-    case xegpu::LayoutKind::Lane:
+    } else if (layoutKind == xegpu::LayoutKind::Lane) {
       assert(laneData.size() == srcShape.size() &&
              "laneData must be available for all dimensions");
       laneDataValue = laneData[dim];
       while ((laneDataValue <= srcShape[dim]) &&
              (laneDataValue % bitWidthRatio != 0))
         laneDataValue *= 2;
-      break;
-    default:
-      llvm_unreachable("unsupported layout kind");
     }
     // Now set only instData and laneData, preserving sgData
     xegpu::DistributeLayoutAttr resLayout;
@@ -589,13 +577,13 @@ xegpu::DistributeLayoutAttr xegpu::setupBitCastResultLayout(
 }
 
 /// Sets up the result layout for an insert strided slice operation.
-/// Creates a default layout based on the specified layout kind (InstData or
+/// Creates a result layout based on the specified layout kind (InstData or
 /// Lane).
 /// Subgroup layout is currently not supported for this operation.
-/// InstData layout requires {1, .., subgroupSize} by default.
-/// Lane layout requires {1, ..., subgroupSize} with lane data {1, ..., 1}.
-/// The instData and laneData is adjusted to contain packed data, by checking if
-/// the consumerLayout's innermost dimension.
+/// InstData layout is first set to be {1, .., subgroupSize}.
+/// Lane layout is first set to be {1, ..., subgroupSize} with lane data {1,
+/// ..., 1}. The instData and laneData is then adjusted to contain packed data,
+/// by checking if the consumerLayout's innermost dimension.
 xegpu::DistributeLayoutAttr xegpu::setupInsertStridedSliceResultLayout(
     xegpu::LayoutKind layoutKind, VectorType resVectorTy,
     xegpu::DistributeLayoutAttr consumerLayout,
@@ -620,26 +608,20 @@ xegpu::DistributeLayoutAttr xegpu::setupInsertStridedSliceResultLayout(
   int packingFactor = bitwidth < packingSize ? packingSize / bitwidth : 1;
   int packedDataSize = subgroupSize * packingFactor;
 
-  switch (layoutKind) {
-  case xegpu::LayoutKind::Subgroup:
+  if (layoutKind == xegpu::LayoutKind::Subgroup) {
     assert(true &&
            "subgroup layout assignment not supported for insertStridedSlice.");
-    break;
-  case xegpu::LayoutKind::InstData:
+  } else if (layoutKind == xegpu::LayoutKind::InstData) {
     instData[resShapeSize - 1] = subgroupSize;
     if (consumerInstData[resShapeSize - 1] == packedDataSize)
       instData[resShapeSize - 1] = packedDataSize;
     requiredResLayout = xegpu::LayoutAttr::get(context, instData);
-    break;
-  case xegpu::LayoutKind::Lane:
+  } else if (layoutKind == xegpu::LayoutKind::Lane) {
     laneLayout[resShapeSize - 1] = subgroupSize;
     laneData[resShapeSize - 1] = 1;
     if (consumerLaneData[resShapeSize - 1] == packingFactor)
       laneData[resShapeSize - 1] = packingFactor;
     requiredResLayout = xegpu::LayoutAttr::get(context, laneLayout, laneData);
-    break;
-  default:
-    llvm_unreachable("unsupported layout kind");
   }
   return requiredResLayout;
 }

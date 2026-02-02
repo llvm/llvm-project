@@ -1,5 +1,4 @@
-//===- XeGPULayoutUtils.h - Layout Utilities --------------------------*- C++
-//-*-===//
+//===- XeGPULayoutImpls.h - Layout utility functions ------------*- C++ -*-===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -7,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef MLIR_DIALECT_XEGPU_UTILS_XEGPULAYOUTUTILS_H_
-#define MLIR_DIALECT_XEGPU_UTILS_XEGPULAYOUTUTILS_H_
+#ifndef MLIR_DIALECT_XEGPU_UTILS_XEGPULAYOUTIMPLS_H_
+#define MLIR_DIALECT_XEGPU_UTILS_XEGPULAYOUTIMPLS_H_
 
 #include "mlir/Dialect/XeGPU/IR/XeGPU.h"
 #include "mlir/Dialect/XeGPU/Utils/XeGPUUtils.h"
@@ -132,28 +131,36 @@ DistributeLayoutAttr setupBitCastResultLayout(
     LayoutKind layoutKind, VectorType srcVectorTy, VectorType resVectorTy,
     DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
 
+/// Sets up the result layout for an insert strided slice operation.
+/// Creates a result layout based on the specified layout kind (InstData or
+/// Lane).
 DistributeLayoutAttr setupInsertStridedSliceResultLayout(
     LayoutKind layoutKind, VectorType resVectorTy,
     DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
 
-DistributeLayoutAttr
-setupLoadMatrixAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,
-                            DistributeLayoutAttr consumerLayout,
-                            const uArch::uArch *uArch);
-
-DistributeLayoutAttr setupStoreMatrixAnchorLayout(LayoutKind layoutKind,
-                                                  VectorType vectorTy,
-                                                  const uArch::uArch *uArch);
-
+/// Sets up the anchor layout for a load gather operation.
 DistributeLayoutAttr
 setupLoadGatherAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,
                             int chunkSize, DistributeLayoutAttr consumerLayout,
                             const uArch::uArch *uArch);
 
+/// Sets up the anchor layout for load matrix operation.
+DistributeLayoutAttr
+setupLoadMatrixAnchorLayout(LayoutKind layoutKind, VectorType vectorTy,
+                            DistributeLayoutAttr consumerLayout,
+                            const uArch::uArch *uArch);
+
+/// Sets up the anchor layout for a store scatter operation.
 DistributeLayoutAttr setupStoreScatterAnchorLayout(LayoutKind layoutKind,
                                                    VectorType vectorTy,
                                                    int chunkSize,
                                                    const uArch::uArch *uArch);
+
+/// Sets up the anchor layout for a store matrix operation.
+DistributeLayoutAttr setupStoreMatrixAnchorLayout(LayoutKind layoutKind,
+                                                  VectorType vectorTy,
+                                                  const uArch::uArch *uArch);
+
 } // namespace xegpu
 
 } // namespace mlir
