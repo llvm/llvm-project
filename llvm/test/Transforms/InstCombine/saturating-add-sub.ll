@@ -2718,8 +2718,7 @@ define i8 @neg_neg_constant(i8 %x, i8 %y) {
 ; (x <= -119) ? -128 : (x + -10) --> sadd.sat(x, -10)
 define i8 @sadd_sat_neg_constant(i8 %x) {
 ; CHECK-LABEL: @sadd_sat_neg_constant(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[X:%.*]], i8 -118)
-; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[TMP1]], -10
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[X:%.*]], i8 -10)
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %cmp = icmp sle i8 %x, -119
@@ -2731,8 +2730,7 @@ define i8 @sadd_sat_neg_constant(i8 %x) {
 ; (x < -118) ? -128 : (x + -10) --> sadd.sat(x, -10)
 define i8 @sadd_sat_neg_constant_slt(i8 %x) {
 ; CHECK-LABEL: @sadd_sat_neg_constant_slt(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[X:%.*]], i8 -118)
-; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[TMP1]], -10
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[X:%.*]], i8 -10)
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %cmp = icmp slt i8 %x, -118
@@ -2744,8 +2742,7 @@ define i8 @sadd_sat_neg_constant_slt(i8 %x) {
 ; Commuted select: (x >= threshold) ? (x + C) : INT_MIN --> sadd.sat(x, C)
 define i8 @sadd_sat_neg_constant_commuted_select(i8 %x) {
 ; CHECK-LABEL: @sadd_sat_neg_constant_commuted_select(
-; CHECK-NEXT:    [[TMP1:%.*]] = call i8 @llvm.smax.i8(i8 [[X:%.*]], i8 -118)
-; CHECK-NEXT:    [[R:%.*]] = add nsw i8 [[TMP1]], -10
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[X:%.*]], i8 -10)
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %cmp = icmp sge i8 %x, -118
@@ -2758,9 +2755,7 @@ define i8 @sadd_sat_neg_constant_commuted_select(i8 %x) {
 ; (x == INT_MIN) ? INT_MIN : x + -1 --> sadd.sat(x, -1)
 define i8 @sadd_sat_eq_int_min(i8 %x) {
 ; CHECK-LABEL: @sadd_sat_eq_int_min(
-; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[X:%.*]], -128
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], -1
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i8 -128, i8 [[ADD]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[X:%.*]], i8 -1)
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %cmp = icmp eq i8 %x, -128
@@ -2772,8 +2767,7 @@ define i8 @sadd_sat_eq_int_min(i8 %x) {
 ; Vector version of negative constant pattern
 define <2 x i8> @sadd_sat_neg_constant_vector(<2 x i8> %x) {
 ; CHECK-LABEL: @sadd_sat_neg_constant_vector(
-; CHECK-NEXT:    [[TMP1:%.*]] = call <2 x i8> @llvm.smax.v2i8(<2 x i8> [[X:%.*]], <2 x i8> splat (i8 -118))
-; CHECK-NEXT:    [[R:%.*]] = add nsw <2 x i8> [[TMP1]], splat (i8 -10)
+; CHECK-NEXT:    [[R:%.*]] = call <2 x i8> @llvm.sadd.sat.v2i8(<2 x i8> [[X:%.*]], <2 x i8> splat (i8 -10))
 ; CHECK-NEXT:    ret <2 x i8> [[R]]
 ;
   %cmp = icmp sle <2 x i8> %x, <i8 -119, i8 -119>
@@ -2785,10 +2779,7 @@ define <2 x i8> @sadd_sat_neg_constant_vector(<2 x i8> %x) {
 ; Pattern with variable: (INT_MIN - X > Y) ? INT_MIN : (X + Y) with nsw sub
 define i8 @sadd_sat_int_min_minus_x_nsw(i8 %x, i8 %y) {
 ; CHECK-LABEL: @sadd_sat_int_min_minus_x_nsw(
-; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i8 -128, [[X:%.*]]
-; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i8 [[SUB]], [[Y:%.*]]
-; CHECK-NEXT:    [[ADD:%.*]] = add i8 [[X]], [[Y]]
-; CHECK-NEXT:    [[R:%.*]] = select i1 [[CMP]], i8 -128, i8 [[ADD]]
+; CHECK-NEXT:    [[R:%.*]] = call i8 @llvm.sadd.sat.i8(i8 [[X:%.*]], i8 [[Y:%.*]])
 ; CHECK-NEXT:    ret i8 [[R]]
 ;
   %sub = sub nsw i8 -128, %x
