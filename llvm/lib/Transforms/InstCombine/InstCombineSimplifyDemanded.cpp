@@ -2261,6 +2261,8 @@ simplifyDemandedUseFPClassFPTrunc(InstCombinerImpl &IC, Instruction &I,
                                   KnownFPClass &Known, unsigned Depth) {
 
   FPClassTest SrcDemandedMask = DemandedMask;
+  if (DemandedMask & fcNan)
+    SrcDemandedMask |= fcNan;
 
   // Zero results may have been rounded from subnormal or normal sources.
   if (DemandedMask & fcNegZero)
@@ -2366,6 +2368,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
 
       FPClassTest SrcDemandedMask = DemandedMask;
+      if (DemandedMask & fcNan)
+        SrcDemandedMask |= fcNan;
 
       // Doubling a subnormal could have resulted in a normal value.
       if (DemandedMask & fcPosNormal)
@@ -2465,7 +2469,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
 
     if (DemandedMask & fcNan) {
       // mul +/-inf, 0 => nan
-      SrcDemandedMask |= fcZero | fcInf;
+      SrcDemandedMask |= fcZero | fcInf | fcNan;
 
       // TODO: Mode check
       // mul +/-inf, sub => nan if daz
@@ -2645,7 +2649,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       // Subnormal is added in case of DAZ, but this isn't strictly
       // necessary. Every other input class implies a possible subnormal source,
       // so this only could matter in the degenerate case of only-nan results.
-      SrcDemandedMask |= fcZero | fcInf;
+      SrcDemandedMask |= fcZero | fcInf | fcNan;
     }
 
     // Zero outputs may be the result of underflow.
@@ -2731,6 +2735,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
                                              Known, Depth);
   case Instruction::FPExt: {
     FPClassTest SrcDemandedMask = DemandedMask;
+    if (DemandedMask & fcNan)
+      SrcDemandedMask |= fcNan;
 
     // No subnormal result does not imply not-subnormal in the source type.
     if ((DemandedMask & fcNegNormal) != fcNone)
@@ -2828,7 +2834,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     case Intrinsic::fmuladd: {
       // We can't do any simplification on the source besides stripping out
       // unneeded nans.
-      FPClassTest SrcDemandedMask = (DemandedMask & fcNan) | ~fcNan;
+      FPClassTest SrcDemandedMask = DemandedMask | ~fcNan;
+      if (DemandedMask & fcNan)
+        SrcDemandedMask |= fcNan;
 
       KnownFPClass KnownSrc[3];
 
@@ -2870,7 +2878,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       // operands (e.g., a known-positive result could have been clamped), but
       // we can still prune known-nan inputs.
       FPClassTest SrcDemandedMask =
-          PropagateNaN ? DemandedMask | ~fcNan : fcAllFlags;
+          PropagateNaN && ((DemandedMask & fcNan) == fcNone)
+              ? DemandedMask | ~fcNan
+              : fcAllFlags;
 
       KnownFPClass KnownLHS, KnownRHS;
       if (SimplifyDemandedFPClass(CI, 1, SrcDemandedMask, KnownRHS,
@@ -2937,6 +2947,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
       }
 
       FPClassTest SrcDemandedMask = DemandedMask & fcNan;
+      if (DemandedMask & fcNan)
+        SrcDemandedMask |= fcNan;
 
       if (DemandedMask & fcZero) {
         // exp(-infinity) = 0
@@ -3022,6 +3034,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     case Intrinsic::log2:
     case Intrinsic::log10: {
       FPClassTest DemandedSrcMask = DemandedMask & (fcNan | fcPosInf);
+      if (DemandedMask & fcNan)
+        DemandedSrcMask |= fcNan;
 
       Type *EltTy = VTy->getScalarType();
       DenormalMode Mode = F.getDenormalMode(EltTy->getFltSemantics());
@@ -3061,7 +3075,7 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
           DemandedMask & (fcNegZero | fcPositive | fcNan);
 
       if (DemandedMask & fcNan)
-        DemandedSrcMask |= (fcNegative & ~fcNegZero);
+        DemandedSrcMask |= fcNan | (fcNegative & ~fcNegZero);
 
       // sqrt(max_subnormal) is a normal value
       if (DemandedMask & fcPosNormal)
@@ -3111,6 +3125,8 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     case Intrinsic::round:
     case Intrinsic::roundeven: {
       FPClassTest DemandedSrcMask = DemandedMask;
+      if (DemandedMask & fcNan)
+        DemandedSrcMask |= fcNan;
 
       // Zero results imply valid subnormal sources.
       if (DemandedMask & fcNegZero)

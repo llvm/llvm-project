@@ -2300,7 +2300,8 @@ define nofpclass(snan) half @qnan_result_demands_snan_src_lhs(i1 %cond, half %un
 ; CHECK-LABEL: define nofpclass(snan) half @qnan_result_demands_snan_src_lhs(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[SNAN:%.*]] = call half @returns_snan()
-; CHECK-NEXT:    [[MUL:%.*]] = fdiv half [[UNKNOWN0]], [[UNKNOWN1]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[SNAN]], half [[UNKNOWN0]]
+; CHECK-NEXT:    [[MUL:%.*]] = fdiv half [[SELECT]], [[UNKNOWN1]]
 ; CHECK-NEXT:    ret half [[MUL]]
 ;
   %snan = call half @returns_snan()
@@ -2313,7 +2314,8 @@ define nofpclass(snan) half @qnan_result_demands_snan_src_rhs(i1 %cond, half %un
 ; CHECK-LABEL: define nofpclass(snan) half @qnan_result_demands_snan_src_rhs(
 ; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[SNAN:%.*]] = call half @returns_snan()
-; CHECK-NEXT:    [[MUL:%.*]] = fdiv half [[UNKNOWN1]], [[UNKNOWN0]]
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[SNAN]], half [[UNKNOWN0]]
+; CHECK-NEXT:    [[MUL:%.*]] = fdiv half [[UNKNOWN1]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[MUL]]
 ;
   %snan = call half @returns_snan()

@@ -1248,7 +1248,8 @@ define nofpclass(snan) float @qnan_result_demands_snan_src__trunc(i1 %cond, floa
 ; CHECK-LABEL: define nofpclass(snan) float @qnan_result_demands_snan_src__trunc(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[SNAN:%.*]] = call float @returns_snan()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.trunc.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SNAN]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.trunc.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %snan = call float @returns_snan()
@@ -1261,7 +1262,8 @@ define nofpclass(snan) float @qnan_result_demands_snan_src__floor(i1 %cond, floa
 ; CHECK-LABEL: define nofpclass(snan) float @qnan_result_demands_snan_src__floor(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[SNAN:%.*]] = call float @returns_snan()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.floor.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SNAN]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.floor.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %snan = call float @returns_snan()
@@ -1274,7 +1276,8 @@ define nofpclass(snan) float @qnan_result_demands_snan_src__ceil(i1 %cond, float
 ; CHECK-LABEL: define nofpclass(snan) float @qnan_result_demands_snan_src__ceil(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[SNAN:%.*]] = call float @returns_snan()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.ceil.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SNAN]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.ceil.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %snan = call float @returns_snan()
@@ -1287,7 +1290,8 @@ define nofpclass(snan) float @qnan_result_demands_snan_src__rint(i1 %cond, float
 ; CHECK-LABEL: define nofpclass(snan) float @qnan_result_demands_snan_src__rint(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[SNAN:%.*]] = call float @returns_snan()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.rint.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SNAN]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.rint.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %snan = call float @returns_snan()
@@ -1300,7 +1304,8 @@ define nofpclass(snan) float @qnan_result_demands_snan_src__nearbyint(i1 %cond, 
 ; CHECK-LABEL: define nofpclass(snan) float @qnan_result_demands_snan_src__nearbyint(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[SNAN:%.*]] = call float @returns_snan()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.nearbyint.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SNAN]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.nearbyint.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %snan = call float @returns_snan()
@@ -1313,7 +1318,8 @@ define nofpclass(snan) float @qnan_result_demands_snan_src__round(i1 %cond, floa
 ; CHECK-LABEL: define nofpclass(snan) float @qnan_result_demands_snan_src__round(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[SNAN:%.*]] = call float @returns_snan()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.round.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SNAN]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.round.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %snan = call float @returns_snan()
@@ -1326,7 +1332,8 @@ define nofpclass(snan) float @qnan_result_demands_snan_src__roundeven(i1 %cond, 
 ; CHECK-LABEL: define nofpclass(snan) float @qnan_result_demands_snan_src__roundeven(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[SNAN:%.*]] = call float @returns_snan()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.roundeven.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SNAN]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.roundeven.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %snan = call float @returns_snan()
