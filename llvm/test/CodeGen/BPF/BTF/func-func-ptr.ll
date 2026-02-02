@@ -28,7 +28,7 @@ entry:
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   104
 ; CHECK-NEXT:        .long   104
-; CHECK-NEXT:        .long   49
+; CHECK-NEXT:        .long   32
 ; CHECK-NEXT:        .long   1                       # BTF_KIND_INT(id = 1)
 ; CHECK-NEXT:        .long   16777216                # 0x1000000
 ; CHECK-NEXT:        .long   4
@@ -49,10 +49,10 @@ entry:
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   1
-; CHECK-NEXT:        .long   43                      # BTF_KIND_STRUCT(id = 6)
+; CHECK-NEXT:        .long   26                      # BTF_KIND_STRUCT(id = 6)
 ; CHECK-NEXT:        .long   67108865                # 0x4000001
 ; CHECK-NEXT:        .long   8
-; CHECK-NEXT:        .long   46
+; CHECK-NEXT:        .long   29
 ; CHECK-NEXT:        .long   4
 ; CHECK-NEXT:        .long   0                       # 0x0
 ; CHECK-NEXT:        .byte   0                       # string offset=0
@@ -66,11 +66,9 @@ entry:
 ; CHECK-NEXT:        .byte   0
 ; CHECK-NEXT:        .ascii  "/tmp/t.c"              # string offset=17
 ; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .ascii  "int main(void) {"      # string offset=26
+; CHECK-NEXT:        .ascii  "t1"                    # string offset=26
 ; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .ascii  "t1"                    # string offset=43
-; CHECK-NEXT:        .byte   0
-; CHECK-NEXT:        .ascii  "a1"                    # string offset=46
+; CHECK-NEXT:        .ascii  "a1"                    # string offset=29
 ; CHECK-NEXT:        .byte   0
 ; CHECK-NEXT:        .section        .BTF.ext,"",@progbits
 ; CHECK-NEXT:        .short  60319                   # 0xeb9f
@@ -93,7 +91,7 @@ entry:
 ; CHECK-NEXT:        .long   1
 ; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   17
-; CHECK-NEXT:        .long   26
+; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   3091                    # Line 3 Col 19
 
 ; Function Attrs: nounwind readnone speculatable
