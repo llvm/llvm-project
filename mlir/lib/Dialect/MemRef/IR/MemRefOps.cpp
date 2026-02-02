@@ -766,7 +766,7 @@ bool CastOp::areCastCompatible(TypeRange inputs, TypeRange outputs) {
       if (!checkCompatible(aOffset, bOffset))
         return false;
       for (const auto &[index, aStride] : enumerate(aStrides)) {
-        if (aT.getDimSize(index) == 1)
+        if (aT.getDimSize(index) == 1 || bT.getDimSize(index) == 1)
           continue;
         if (!checkCompatible(aStride, bStrides[index]))
           return false;
@@ -1128,7 +1128,7 @@ struct DimOfMemRefReshape : public OpRewritePattern<DimOp> {
         }
       } // else dim.getIndex is a block argument to reshape->getBlock and
         // dominates reshape
-    } // Check condition 2
+    }   // Check condition 2
     else if (dim->getBlock() != reshape->getBlock() &&
              !dim.getIndex().getParentRegion()->isProperAncestor(
                  reshape->getParentRegion())) {
