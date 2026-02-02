@@ -1076,6 +1076,41 @@ getIntegerVecAttribute(const Function &F, StringRef Name, unsigned Size);
 /// Checks if \p Val is inside \p MD, a !range-like metadata.
 bool hasValueInRangeLikeMetadata(const MDNode &MD, int64_t Val);
 
+// Class of object that encapsulates latest instruction counter score
+// associated with the operand.  Used for determining whether
+// s_waitcnt instruction needs to be emitted.
+
+enum InstCounterType {
+  LOAD_CNT = 0, // VMcnt prior to gfx12.
+  DS_CNT,       // LKGMcnt prior to gfx12.
+  EXP_CNT,      //
+  STORE_CNT,    // VScnt in gfx10/gfx11.
+  NUM_NORMAL_INST_CNTS,
+  SAMPLE_CNT = NUM_NORMAL_INST_CNTS, // gfx12+ only.
+  BVH_CNT,                           // gfx12+ only.
+  KM_CNT,                            // gfx12+ only.
+  X_CNT,                             // gfx1250.
+  NUM_EXTENDED_INST_CNTS,
+  VA_VDST = NUM_EXTENDED_INST_CNTS, // gfx12+ expert mode only.
+  VM_VSRC,                          // gfx12+ expert mode only.
+  NUM_EXPERT_INST_CNTS,
+  NUM_INST_CNTS = NUM_EXPERT_INST_CNTS
+};
+
+// Return an iterator over all counters between LOAD_CNT (the first counter)
+// and \c MaxCounter (exclusive, default value yields an enumeration over
+// all counters).
+iota_range<InstCounterType>
+inst_counter_types(InstCounterType MaxCounter = NUM_INST_CNTS);
+
+} // namespace AMDGPU
+
+template <> struct enum_iteration_traits<AMDGPU::InstCounterType> {
+  static constexpr bool is_iterable = true;
+};
+
+namespace AMDGPU {
+
 /// Represents the counter values to wait for in an s_waitcnt instruction.
 ///
 /// Large values (including the maximum possible integer) can be used to
@@ -1091,6 +1126,43 @@ struct Waitcnt {
   unsigned XCnt = ~0u;      // gfx1250.
   unsigned VaVdst = ~0u;    // gfx12+ expert scheduling mode only.
   unsigned VmVsrc = ~0u;    // gfx12+ expert scheduling mode only.
+
+  unsigned get(InstCounterType T) const {
+    // clang-format off
+    switch (T) {
+    case LOAD_CNT:   return LoadCnt;
+    case EXP_CNT:    return ExpCnt;
+    case DS_CNT:     return DsCnt;
+    case STORE_CNT:  return StoreCnt;
+    case SAMPLE_CNT: return SampleCnt;
+    case BVH_CNT:    return BvhCnt;
+    case KM_CNT:     return KmCnt;
+    case X_CNT:      return XCnt;
+    case VA_VDST:    return VaVdst;
+    case VM_VSRC:    return VmVsrc;
+    default:
+      llvm_unreachable("bad InstCounterType");
+    }
+    // clang-format on
+  }
+  void set(InstCounterType T, unsigned Val) {
+    // clang-format off
+    switch (T) {
+    case LOAD_CNT:   LoadCnt = Val;   break;
+    case EXP_CNT:    ExpCnt = Val;    break;
+    case DS_CNT:     DsCnt = Val;     break;
+    case STORE_CNT:  StoreCnt = Val;  break;
+    case SAMPLE_CNT: SampleCnt = Val; break;
+    case BVH_CNT:    BvhCnt = Val;    break;
+    case KM_CNT:     KmCnt = Val;     break;
+    case X_CNT:      XCnt = Val;      break;
+    case VA_VDST:    VaVdst = Val;    break;
+    case VM_VSRC:    VmVsrc = Val;    break;
+    default:
+      llvm_unreachable("bad InstCounterType");
+    }
+    // clang-format on
+  }
 
   Waitcnt() = default;
   // Pre-gfx12 constructor.
@@ -1932,7 +2004,7 @@ private:
   Kind AttrKind = Kind::Unknown;
 };
 
-} // end namespace AMDGPU
+} // namespace AMDGPU
 
 raw_ostream &operator<<(raw_ostream &OS,
                         const AMDGPU::IsaInfo::TargetIDSetting S);
