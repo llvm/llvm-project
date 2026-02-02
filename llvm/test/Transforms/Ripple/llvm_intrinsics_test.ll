@@ -23,8 +23,8 @@ entry:
   %val = load i16, ptr %in_ptr, align 2
   ; CHECK: .ripple.call.loop.body.call.block:
   ; CHECK: %[[RESULT:.*]] = extractelement <64 x i16> %.ripple.LS.instance, i64 %ripple.scalarcall.iterator
-  ; CHECK: call float @llvm.convert.from.fp16.f32(i16 %[[RESULT]])
-  %result = call float @llvm.convert.from.fp16.f32(i16 %val)
+  ; CHECK: call float @llvm.convert.from.arbitrary.fp.f32.i16(i16 %[[RESULT]], metadata !"Float6E3M2FN")
+  %result = call float @llvm.convert.from.arbitrary.fp.f32.i16(i16 %val, metadata !"Float6E3M2FN")
   %out_ptr = getelementptr inbounds float, ptr %dest, i64 %idx
   store float %result, ptr %out_ptr, align 4
   ret void

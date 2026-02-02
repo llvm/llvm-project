@@ -6474,6 +6474,11 @@ Ripple::vectorizableOperands(const Instruction *I) {
     // Pair Shuffle
     if (!cast<ConstantInt>(cast<CallInst>(I)->getArgOperand(2))->isZero())
       End = std::next(End);
+  } else if (auto *ConvertFromTo =
+                 intrinsicWithId(I, {Intrinsic::convert_from_arbitrary_fp,
+                                     Intrinsic::convert_to_arbitrary_fp})) {
+    Begin = ConvertFromTo->arg_begin();
+    End = std::next(Begin);
   } else if (const CallInst *CallI = dyn_cast<CallInst>(I)) {
     // For other call instructions, skip the Function operand
     Begin = CallI->arg_begin();
