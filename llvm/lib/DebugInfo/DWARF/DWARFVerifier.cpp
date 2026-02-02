@@ -820,25 +820,24 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
                                       (IsZeroIndexed ? "0" : "1"),
                                       *LastFileIdx));
           } else {
-            ReportError("Invalid file index in DW_AT_decl_file",
-                        "DIE has " + AttributeString(Attr) +
-                            " with an invalid file index " +
-                            llvm::formatv("{0}", *FileIdx) +
-                            " (the file table in the prologue is empty)");
+            ReportError(
+                "Invalid file index in DW_AT_decl_file",
+                llvm::formatv("DIE has {0} with an invalid file index {1} (the "
+                              "file table in the prologue is empty)",
+                              AttributeString(Attr), *FileIdx));
           }
         }
       } else {
         ReportError(
             "File index in DW_AT_decl_file reference CU with no line table",
-            "DIE has " + AttributeString(Attr) +
-                " that references a file with index " +
-                llvm::formatv("{0}", *FileIdx) +
-                " and the compile unit has no line table");
+            llvm::formatv("DIE has {0} that references a file with index {1} "
+                          "and the compile unit has no line table",
+                          AttributeString(Attr), *FileIdx));
       }
     } else {
       ReportError("Invalid encoding in DW_AT_decl_file",
-                  "DIE has " + AttributeString(Attr) +
-                      " with invalid encoding");
+                  llvm::formatv("DIE has {0} with invalid encoding",
+                                AttributeString(Attr)));
     }
     break;
   }
@@ -909,11 +908,9 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
     // Check if the offset is within the bounds of this specific line table
     if (*SectionOffset < SequencesStart || *SectionOffset >= LineTableEnd) {
       ReportError("DW_AT_LLVM_stmt_sequence offset out of line table bounds",
-                  "DW_AT_LLVM_stmt_sequence offset " +
-                      llvm::formatv("{0:x8}", *SectionOffset) +
-                      " is not within the line table bounds [" +
-                      llvm::formatv("{0:x8}", SequencesStart) + ", " +
-                      llvm::formatv("{0:x8}", LineTableEnd) + ")");
+                  llvm::formatv("DW_AT_LLVM_stmt_sequence offset {0:x8} is not "
+                                "within the line table bounds [{1:x8}, {2:x8})",
+                                *SectionOffset, SequencesStart, LineTableEnd));
       break;
     }
 
@@ -926,9 +923,9 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
     if (It == LineTable->Sequences.end())
       ReportError(
           "Invalid DW_AT_LLVM_stmt_sequence offset",
-          "DW_AT_LLVM_stmt_sequence offset " +
-              llvm::formatv("{0:x8}", *SectionOffset) +
-              " does not point to a valid sequence offset in the line table");
+          llvm::formatv("DW_AT_LLVM_stmt_sequence offset {0:x8} does not point "
+                        "to a valid sequence offset in the line table",
+                        *SectionOffset));
     break;
   }
   default:
@@ -1167,13 +1164,12 @@ void DWARFVerifier::verifyDebugLineRows() {
       if (!LineTable->hasFileAtIndex(Row.File)) {
         ++NumDebugLineErrors;
         ErrorCategory.Report("Invalid file index in debug_line", [&]() {
-          error() << formatv(
-                         ".debug_line[{0:x+8}][{1}] has invalid file index {2}",
-                         *toSectionOffset(Die.find(DW_AT_stmt_list)), RowIndex,
-                         Row.File)
-                  << " (valid values are [" << MinFileIndex << ','
-                  << LineTable->Prologue.FileNames.size()
-                  << (isDWARF5 ? ")" : "]") << "):\n";
+          error() << formatv(".debug_line[{0:x+8}][{1}] has invalid file index "
+                             "{2}  (valid values are [{3},{4}:\n",
+                             *toSectionOffset(Die.find(DW_AT_stmt_list)),
+                             RowIndex, Row.File, MinFileIndex,
+                             LineTable->Prologue.FileNames.size(),
+                             (isDWARF5 ? ")" : "]"));
           DWARFDebugLine::Row::dumpTableHeader(OS, 0);
           Row.dump(OS);
           OS << '\n';
@@ -1309,10 +1305,10 @@ void DWARFVerifier::verifyAppleAccelTable(const DWARFSection *AccelSection,
         }
         if ((Tag != dwarf::DW_TAG_null) && (Die.getTag() != Tag)) {
           ErrorCategory.Report("Mismatched Tag in accellerator table", [&]() {
-            error() << "Tag " << dwarf::TagString(Tag)
-                    << " in accelerator table does not match Tag "
-                    << dwarf::TagString(Die.getTag()) << " of DIE["
-                    << HashDataIdx << "].\n";
+            error() << formatv("Tag {0} in accelerator table does not match "
+                               "Tag {1} of DIE[{2}].\n",
+                               dwarf::TagString(Tag),
+                               dwarf::TagString(Die.getTag()), HashDataIdx);
           });
         }
       }
@@ -2369,9 +2365,9 @@ void DWARFVerifier::summarize() {
     raw_fd_ostream JsonStream(DumpOpts.JsonErrSummaryFile, EC,
                               sys::fs::OF_Text);
     if (EC) {
-      error() << "unable to open json summary file '"
-              << DumpOpts.JsonErrSummaryFile
-              << "' for writing: " << EC.message() << '\n';
+      error() << formatv(
+          "unable to open json summary file {0} for writing: {1}\n",
+          DumpOpts.JsonErrSummaryFile, EC.message());
       return;
     }
 
