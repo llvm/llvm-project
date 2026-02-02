@@ -702,10 +702,10 @@ define <2 x float> @ret_ldexp_v2f32_known_pos_exp_noinf(<2 x float> nofpclass(in
 }
 
 define <2 x float> @ret_ldexp_v2f32_known_neg_exp_noinf(<2 x float> nofpclass(inf) %arg0, <2 x i32> %arg1) #0 {
-; CHECK-LABEL: define <2 x float> @ret_ldexp_v2f32_known_neg_exp_noinf
+; CHECK-LABEL: define nofpclass(inf) <2 x float> @ret_ldexp_v2f32_known_neg_exp_noinf
 ; CHECK-SAME: (<2 x float> nofpclass(inf) [[ARG0:%.*]], <2 x i32> [[ARG1:%.*]]) #[[ATTR1]] {
 ; CHECK-NEXT:    [[OR_ARG1:%.*]] = or <2 x i32> [[ARG1]], <i32 -16, i32 -32>
-; CHECK-NEXT:    [[CALL:%.*]] = call <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> nofpclass(inf) [[ARG0]], <2 x i32> [[OR_ARG1]]) #[[ATTR10]]
+; CHECK-NEXT:    [[CALL:%.*]] = call nofpclass(inf) <2 x float> @llvm.ldexp.v2f32.v2i32(<2 x float> nofpclass(inf) [[ARG0]], <2 x i32> [[OR_ARG1]]) #[[ATTR10]]
 ; CHECK-NEXT:    ret <2 x float> [[CALL]]
 ;
   %or.arg1 = or <2 x i32> %arg1, <i32 -16, i32 -32>

@@ -11,6 +11,7 @@ declare nofpclass(nan inf norm nsub zero) half @returns_psub()
 declare nofpclass(nan inf norm psub zero) half @returns_nsub()
 declare nofpclass(nan inf sub zero) half @returns_norm()
 declare nofpclass(nan norm sub zero) half @returns_inf()
+declare nofpclass(qnan inf norm sub zero) half @returns_snan()
 declare void @use(half)
 
 define nofpclass(pinf) half @ret_nofpclass_pinf__fdiv_unknown_or_pinf(i1 %cond, half %x, half %y) {
@@ -2291,6 +2292,32 @@ define nofpclass(inf norm sub zero) half @nan_result_demands_subnorm_rhs__dynami
 ; CHECK-NEXT:    ret half 0xH7E00
 ;
   %select = select i1 %cond, half %unknown0, half %only.sub
+  %div = fdiv half %unknown1, %select
+  ret half %div
+}
+
+define nofpclass(snan) half @qnan_result_demands_snan_src_lhs(i1 %cond, half %unknown0, half %unknown1) {
+; CHECK-LABEL: define nofpclass(snan) half @qnan_result_demands_snan_src_lhs(
+; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[SNAN:%.*]] = call half @returns_snan()
+; CHECK-NEXT:    [[MUL:%.*]] = fdiv half [[UNKNOWN0]], [[UNKNOWN1]]
+; CHECK-NEXT:    ret half [[MUL]]
+;
+  %snan = call half @returns_snan()
+  %select = select i1 %cond, half %snan, half %unknown0
+  %div = fdiv half %select, %unknown1
+  ret half %div
+}
+
+define nofpclass(snan) half @qnan_result_demands_snan_src_rhs(i1 %cond, half %unknown0, half %unknown1) {
+; CHECK-LABEL: define nofpclass(snan) half @qnan_result_demands_snan_src_rhs(
+; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[SNAN:%.*]] = call half @returns_snan()
+; CHECK-NEXT:    [[MUL:%.*]] = fdiv half [[UNKNOWN1]], [[UNKNOWN0]]
+; CHECK-NEXT:    ret half [[MUL]]
+;
+  %snan = call half @returns_snan()
+  %select = select i1 %cond, half %snan, half %unknown0
   %div = fdiv half %unknown1, %select
   ret half %div
 }

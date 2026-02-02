@@ -238,6 +238,7 @@ struct MissingFeatures {
   static bool cleanupAfterErrorDiags() { return false; }
   static bool cleanupAppendInsts() { return false; }
   static bool cleanupBranchThrough() { return false; }
+  static bool cleanupDeactivationScope() { return false; }
   static bool cleanupIndexAndBIAdjustment() { return false; }
   static bool cleanupWithPreservedValues() { return false; }
   static bool cleanupsToDeactivate() { return false; }

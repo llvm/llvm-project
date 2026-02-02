@@ -336,7 +336,7 @@ mlir::ROCDL::assembleIsa(StringRef isa, StringRef targetTriple, StringRef chip,
 }
 
 FailureOr<SmallVector<char, 0>>
-mlir::ROCDL::linkObjectCode(ArrayRef<char> objectCode, StringRef toolkitPath,
+mlir::ROCDL::linkObjectCode(ArrayRef<char> objectCode, StringRef lldPath,
                             function_ref<InFlightDiagnostic()> emitError) {
   // Save the ISA binary to a temp file.
   int tempIsaBinaryFd = -1;
@@ -361,8 +361,6 @@ mlir::ROCDL::linkObjectCode(ArrayRef<char> objectCode, StringRef toolkitPath,
 
   llvm::FileRemover cleanupHsaco(tempHsacoFilename);
 
-  llvm::SmallString<128> lldPath(toolkitPath);
-  llvm::sys::path::append(lldPath, "llvm", "bin", "ld.lld");
   int lldResult = llvm::sys::ExecuteAndWait(
       lldPath,
       {"ld.lld", "-shared", tempIsaBinaryFilename, "-o", tempHsacoFilename});
@@ -392,8 +390,10 @@ SerializeGPUModuleBase::compileToBinary(StringRef serializedISA) {
     return failure();
 
   // Link the object code.
+  llvm::SmallString<128> lldPath(toolkitPath);
+  llvm::sys::path::append(lldPath, "llvm", "bin", "ld.lld");
   FailureOr<SmallVector<char, 0>> linkedCode =
-      ROCDL::linkObjectCode(*isaBinary, toolkitPath, errCallback);
+      ROCDL::linkObjectCode(*isaBinary, lldPath, errCallback);
   if (failed(linkedCode))
     return failure();
 

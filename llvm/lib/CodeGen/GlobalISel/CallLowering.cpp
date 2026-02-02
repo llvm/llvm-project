@@ -371,13 +371,10 @@ mergeVectorRegsToResultRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
   return B.buildUnmerge(PadDstRegs, UnmergeSrcReg);
 }
 
-/// Create a sequence of instructions to combine pieces split into register
-/// typed values to the original IR value. \p OrigRegs contains the destination
-/// value registers of type \p LLTy, and \p Regs contains the legalized pieces
-/// with type \p PartLLT. This is used for incoming values (physregs to vregs).
-static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
-                              ArrayRef<Register> Regs, LLT LLTy, LLT PartLLT,
-                              const ISD::ArgFlagsTy Flags) {
+void CallLowering::buildCopyFromRegs(MachineIRBuilder &B,
+                                     ArrayRef<Register> OrigRegs,
+                                     ArrayRef<Register> Regs, LLT LLTy,
+                                     LLT PartLLT, const ISD::ArgFlagsTy Flags) {
   MachineRegisterInfo &MRI = *B.getMRI();
 
   if (PartLLT == LLTy) {
@@ -555,14 +552,9 @@ static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
   }
 }
 
-/// Create a sequence of instructions to expand the value in \p SrcReg (of type
-/// \p SrcTy) to the types in \p DstRegs (of type \p PartTy). \p ExtendOp should
-/// contain the type of scalar value extension if necessary.
-///
-/// This is used for outgoing values (vregs to physregs)
-static void buildCopyToRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
-                            Register SrcReg, LLT SrcTy, LLT PartTy,
-                            unsigned ExtendOp = TargetOpcode::G_ANYEXT) {
+void CallLowering::buildCopyToRegs(MachineIRBuilder &B,
+                                   ArrayRef<Register> DstRegs, Register SrcReg,
+                                   LLT SrcTy, LLT PartTy, unsigned ExtendOp) {
   // We could just insert a regular copy, but this is unreachable at the moment.
   assert(SrcTy != PartTy && "identical part types shouldn't reach here");
 

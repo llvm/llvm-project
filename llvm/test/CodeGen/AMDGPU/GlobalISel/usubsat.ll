@@ -483,7 +483,8 @@ define amdgpu_ps i16 @s_usubsat_v2i8(i16 inreg %lhs.arg, i16 inreg %rhs.arg) {
 ; GFX11-TRUE16-NEXT:    s_lshr_b32 s1, s1, 0x80008
 ; GFX11-TRUE16-NEXT:    s_lshr_b32 s0, s0, 8
 ; GFX11-TRUE16-NEXT:    s_pack_ll_b32_b16 s0, s1, s0
-; GFX11-TRUE16-NEXT:    s_lshl_b32 s1, s0, 8
+; GFX11-TRUE16-NEXT:    s_lshr_b32 s1, s0, 16
+; GFX11-TRUE16-NEXT:    s_lshl_b32 s1, s1, 8
 ; GFX11-TRUE16-NEXT:    s_or_b32 s0, s0, s1
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
@@ -946,19 +947,23 @@ define amdgpu_ps i32 @s_usubsat_v4i8(i32 inreg %lhs.arg, i32 inreg %rhs.arg) {
 ; GFX11-TRUE16-NEXT:    s_lshr_b32 s0, s0, 16
 ; GFX11-TRUE16-NEXT:    s_lshr_b32 s2, s2, 0x80008
 ; GFX11-TRUE16-NEXT:    s_lshr_b32 s0, s0, 8
-; GFX11-TRUE16-NEXT:    s_pack_ll_b32_b16 s0, s2, s0
-; GFX11-TRUE16-NEXT:    s_and_b32 s2, s1, 0xffff
+; GFX11-TRUE16-NEXT:    s_and_b32 s3, s1, 0xffff
 ; GFX11-TRUE16-NEXT:    s_lshr_b32 s1, s1, 16
-; GFX11-TRUE16-NEXT:    s_lshr_b32 s2, s2, 0x80008
+; GFX11-TRUE16-NEXT:    s_pack_ll_b32_b16 s0, s2, s0
+; GFX11-TRUE16-NEXT:    s_lshr_b32 s3, s3, 0x80008
 ; GFX11-TRUE16-NEXT:    s_lshr_b32 s1, s1, 8
+; GFX11-TRUE16-NEXT:    s_lshr_b32 s2, s0, 16
+; GFX11-TRUE16-NEXT:    s_pack_ll_b32_b16 s1, s3, s1
+; GFX11-TRUE16-NEXT:    s_and_b32 s2, s2, 0xff
+; GFX11-TRUE16-NEXT:    s_lshr_b32 s3, s1, 16
 ; GFX11-TRUE16-NEXT:    s_and_b32 s0, s0, 0xff
-; GFX11-TRUE16-NEXT:    s_pack_ll_b32_b16 s1, s2, s1
-; GFX11-TRUE16-NEXT:    s_lshl_b32 s2, s0, 8
+; GFX11-TRUE16-NEXT:    s_lshl_b32 s2, s2, 8
 ; GFX11-TRUE16-NEXT:    s_and_b32 s1, s1, 0xff
 ; GFX11-TRUE16-NEXT:    s_or_b32 s0, s0, s2
-; GFX11-TRUE16-NEXT:    s_lshl_b32 s2, s1, 16
-; GFX11-TRUE16-NEXT:    s_lshl_b32 s1, s1, 24
-; GFX11-TRUE16-NEXT:    s_or_b32 s0, s0, s2
+; GFX11-TRUE16-NEXT:    s_lshl_b32 s1, s1, 16
+; GFX11-TRUE16-NEXT:    s_and_b32 s2, s3, 0xff
+; GFX11-TRUE16-NEXT:    s_or_b32 s0, s0, s1
+; GFX11-TRUE16-NEXT:    s_lshl_b32 s1, s2, 24
 ; GFX11-TRUE16-NEXT:    s_or_b32 s0, s0, s1
 ; GFX11-TRUE16-NEXT:    ; return to shader part epilog
 ;
