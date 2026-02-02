@@ -108,8 +108,6 @@ if(LLVM_RUNTIMES_TARGET)
   set(explicit_target_triple ${LLVM_RUNTIMES_TARGET})
 elseif(LIBC_TARGET_TRIPLE)
   set(explicit_target_triple ${LIBC_TARGET_TRIPLE})
-elseif(LLVM_DEFAULT_TARGET_TRIPLE AND NOT CMAKE_COMPILER_IS_GNUCXX)
-  set(explicit_target_triple ${LLVM_DEFAULT_TARGET_TRIPLE})
 endif()
 
 # The libc's target architecture and OS are set to match the compiler's default
