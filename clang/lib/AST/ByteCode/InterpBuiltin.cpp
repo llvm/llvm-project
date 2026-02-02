@@ -1402,7 +1402,7 @@ static bool interp__builtin_infer_alloc_token(InterpState &S, CodePtr OpPC,
 
   // We do not read any of the arguments; discard them.
   for (int I = Call->getNumArgs() - 1; I >= 0; --I)
-    discard(S.Stk, *S.getContext().classify(Call->getArg(I)));
+    discard(S.Stk, S.getContext().classify(Call->getArg(I)).value_or(PT_Ptr));
 
   // Note: Type inference from a surrounding cast is not supported in
   // constexpr evaluation.
