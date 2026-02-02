@@ -609,7 +609,6 @@ void PhiLoweringHelper::insertMask(const Incoming &Incoming, Register DstReg) {
       .addReg(SavedSCC)
       .addImm(0)
       .addReg(AMDGPU::SCC, RegState::ImplicitDefine);
-  return;
 }
 
 bool PhiLoweringHelper::lowerPhis() {
