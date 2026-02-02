@@ -1812,7 +1812,7 @@ void OmpVisitor::AddOmpSourceRange(const parser::CharBlock &source) {
 }
 
 void OmpVisitor::PushScopeWithSource(
-      Scope::Kind kind, parser::CharBlock source, Symbol *symbol) {
+    Scope::Kind kind, parser::CharBlock source, Symbol *symbol) {
   PushScope(kind, symbol);
   currScope().AddSourceRange(source);
 }
