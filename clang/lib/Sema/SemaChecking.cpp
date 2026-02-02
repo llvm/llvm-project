@@ -2249,7 +2249,8 @@ static bool BuiltinBswapg(Sema &S, CallExpr *TheCall) {
     return true;
   }
   if (const auto *BT = dyn_cast<BitIntType>(ArgTy)) {
-    if (BT->getNumBits() % 16 != 0 && BT->getNumBits() != 8 && BT->getNumBits() != 1) {
+    if (BT->getNumBits() % 16 != 0 && BT->getNumBits() != 8 &&
+        BT->getNumBits() != 1) {
       S.Diag(Arg->getBeginLoc(), diag::err_bswapg_invalid_bit_width)
           << ArgTy << BT->getNumBits();
       return true;
