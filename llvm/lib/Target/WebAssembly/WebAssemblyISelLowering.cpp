@@ -2289,13 +2289,17 @@ WebAssemblyTargetLowering::LowerSIGN_EXTEND_INREG(SDValue Op,
 
 static SDValue GetExtendHigh(SDValue Op, unsigned UserOpc, EVT VT,
                              SelectionDAG &DAG) {
-  if (Op.getOpcode() != ISD::VECTOR_SHUFFLE)
+  SDValue Source = Op;
+  if (Source.getOpcode() == ISD::BITCAST)
+    Source = Source.getOperand(0);
+
+  if (Source.getOpcode() != ISD::VECTOR_SHUFFLE)
     return SDValue();
 
   assert((UserOpc == WebAssemblyISD::EXTEND_LOW_U ||
           UserOpc == WebAssemblyISD::EXTEND_LOW_S) &&
          "expected extend_low");
-  auto *Shuffle = cast<ShuffleVectorSDNode>(Op.getNode());
+  auto *Shuffle = cast<ShuffleVectorSDNode>(Source.getNode());
 
   ArrayRef<int> Mask = Shuffle->getMask();
   // Look for a shuffle which moves from the high half to the low half.
@@ -2310,7 +2314,11 @@ static SDValue GetExtendHigh(SDValue Op, unsigned UserOpc, EVT VT,
   unsigned Opc = UserOpc == WebAssemblyISD::EXTEND_LOW_S
                      ? WebAssemblyISD::EXTEND_HIGH_S
                      : WebAssemblyISD::EXTEND_HIGH_U;
-  return DAG.getNode(Opc, DL, VT, Shuffle->getOperand(0));
+  SDValue ShuffleSrc = Shuffle->getOperand(0);
+  if (Op.getOpcode() == ISD::BITCAST)
+    ShuffleSrc = DAG.getBitcast(Op.getValueType(), ShuffleSrc);
+
+  return DAG.getNode(Opc, DL, VT, ShuffleSrc);
 }
 
 SDValue

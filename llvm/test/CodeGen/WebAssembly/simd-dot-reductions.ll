@@ -108,25 +108,10 @@ define <4 x i32> @dot_wrong_shuffle(<8 x i16> %a, <8 x i16> %b) {
 define dso_local <4 x i32> @dot_with_bitcast_both(<4 x i32> %a, <4 x i32> %b) unnamed_addr {
 ; CHECK-LABEL: dot_with_bitcast_both:
 ; CHECK:         .functype dot_with_bitcast_both (v128, v128) -> (v128)
-; CHECK-NEXT:    .local v128
 ; CHECK-NEXT:  # %bb.0: # %start
 ; CHECK-NEXT:    local.get 1
 ; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i32x4.extmul_low_i16x8_s
-; CHECK-NEXT:    local.tee 2
-; CHECK-NEXT:    local.get 1
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 8, 9, 10, 11, 12, 13, 14, 15, 0, 1, 2, 3, 0, 1, 2, 3
-; CHECK-NEXT:    i32x4.extmul_low_i16x8_s
-; CHECK-NEXT:    local.tee 0
-; CHECK-NEXT:    i8x16.shuffle 0, 1, 2, 3, 8, 9, 10, 11, 16, 17, 18, 19, 24, 25, 26, 27
-; CHECK-NEXT:    local.get 2
-; CHECK-NEXT:    local.get 0
-; CHECK-NEXT:    i8x16.shuffle 4, 5, 6, 7, 12, 13, 14, 15, 20, 21, 22, 23, 28, 29, 30, 31
-; CHECK-NEXT:    i32x4.add
+; CHECK-NEXT:    i32x4.dot_i16x8_s
 ; CHECK-NEXT:    # fallthrough-return
 start:
   %_4 = bitcast <4 x i32> %a to <8 x i16>
