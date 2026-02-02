@@ -206,8 +206,8 @@ PyGlobals::lookupDialectClass(const std::string &dialectNamespace) {
 std::optional<nb::object>
 PyGlobals::lookupOperationClass(std::string_view operationName) {
   // Make sure dialect module is loaded.
-  size_t splitPos = operationName.find('.');
-  std::string_view dialectNamespace = operationName.substr(0, splitPos);
+  std::string_view dialectNamespace =
+      operationName.substr(0, operationName.find_first_of('.'));
   (void)loadDialectModule(dialectNamespace);
 
   nb::ft_lock_guard lock(mutex);
