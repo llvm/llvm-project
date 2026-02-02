@@ -13,7 +13,7 @@ template <typename T> struct generator {
       this->current_value = value;
       return {};
     }
-    std::suspend_always initial_suspend() { return {}; }
+    std::suspend_always initial_suspend() noexcept { return {}; }
     std::suspend_always final_suspend() noexcept { return {}; }
     generator get_return_object() { return generator{this}; };
     void unhandled_exception() {}
