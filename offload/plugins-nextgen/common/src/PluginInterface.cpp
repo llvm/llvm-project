@@ -1025,8 +1025,7 @@ Error PinnedAllocationMapTy::unregisterHostBuffer(void *HstPtr) {
 }
 
 Expected<void *> PinnedAllocationMapTy::lockHostBuffer(
-    void *HstPtr, size_t Size, bool RegisterMappedBuffer, bool LockMappedMemory,
-    bool IgnoreLockErrors) {
+    void *HstPtr, size_t Size, bool RegisterMappedBuffer, bool LockMemory) {
   assert(HstPtr && "Invalid pointer");
   assert(Size && "Invalid size");
 
@@ -1064,20 +1063,14 @@ Expected<void *> PinnedAllocationMapTy::lockHostBuffer(
   }
 
   // Not externally pinned. Do nothing if locking of mapped buffers is disabled.
-  if (!LockMappedMemory)
+  if (!LockMemory)
     return nullptr;
 
   // No intersecting registered allocation found in the map. First, lock the
   // host buffer and retrieve the device accessible pointer.
   auto DevAccessiblePtrOrErr = Device.dataLockImpl(HstPtr, Size);
-  if (!DevAccessiblePtrOrErr) {
-    // Errors may be tolerated.
-    if (!IgnoreLockErrors)
+  if (!DevAccessiblePtrOrErr)
       return std::move(DevAccessiblePtrOrErr.takeError());
-
-    consumeError(DevAccessiblePtrOrErr.takeError());
-    return nullptr;
-  }
 
   // Now insert the new entry into the map.
   if (auto Err = insertEntry(HstPtr, *DevAccessiblePtrOrErr, Size))
@@ -1087,9 +1080,7 @@ Expected<void *> PinnedAllocationMapTy::lockHostBuffer(
   return *DevAccessiblePtrOrErr;
 }
 
-Error PinnedAllocationMapTy::unlockHostBuffer(void *HstPtr,
-                                              bool LockMappedMemory,
-                                              bool IgnoreLockErrors) {
+Error PinnedAllocationMapTy::unlockHostBuffer(void *HstPtr, bool LockMemory) {
   assert(HstPtr && "Invalid pointer");
 
   std::lock_guard<std::shared_mutex> Lock(Mutex);
@@ -1098,12 +1089,7 @@ Error PinnedAllocationMapTy::unlockHostBuffer(void *HstPtr,
 
   // No entry but automatic locking of mapped buffers is disabled, so
   // nothing to do.
-  if (!Entry && !LockMappedMemory)
-    return Plugin::success();
-
-  // No entry, automatic locking is enabled, but the locking may have failed, so
-  // do nothing.
-  if (!Entry && IgnoreLockErrors)
+  if (!Entry && !LockMemory)
     return Plugin::success();
 
   if (!Entry)
@@ -1132,8 +1118,7 @@ Error PinnedAllocationMapTy::unlockHostBuffer(void *HstPtr,
 }
 
 Error PinnedAllocationMapTy::lockMappedHostBuffer(void *HstPtr, size_t Size) {
-  auto Result = lockHostBuffer(HstPtr, Size, true, LockMappedBuffers,
-                               IgnoreLockMappedFailures);
+  auto Result = lockHostBuffer(HstPtr, Size, true, LockMappedBuffers);
   if (!Result)
     return Result.takeError();
 
@@ -1141,7 +1126,7 @@ Error PinnedAllocationMapTy::lockMappedHostBuffer(void *HstPtr, size_t Size) {
 }
 
 Error PinnedAllocationMapTy::unlockUnmappedHostBuffer(void *HstPtr) {
-  return unlockHostBuffer(HstPtr, LockMappedBuffers, IgnoreLockMappedFailures);
+  return unlockHostBuffer(HstPtr, LockMappedBuffers);
 }
 
 Error GenericDeviceTy::synchronize(__tgt_async_info *AsyncInfo,

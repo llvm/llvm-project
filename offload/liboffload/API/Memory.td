@@ -30,7 +30,6 @@ def ol_memory_register_flag_t : Enum {
   let etors =[
     Etor<"REGISTER_MAPPED_MEMORY", "Memory may already been locked outside of the API">,
     Etor<"LOCK_MEMORY", "Lock the memory">,
-    Etor<"IGNORE_LOCK_FAILURE", "Ignore memory locking errors">,
   ];
 }
 
