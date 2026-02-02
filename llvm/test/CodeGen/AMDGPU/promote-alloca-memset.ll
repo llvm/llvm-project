@@ -44,7 +44,7 @@ define amdgpu_kernel void @memset_volatile_nopromote(i64 %val) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[STACK:%.*]] = alloca [4 x i64], align 4, addrspace(5)
 ; CHECK-NEXT:    call void @llvm.memset.p5.i64(ptr addrspace(5) [[STACK]], i8 0, i64 32, i1 true)
-; CHECK-NEXT:    store i64 [[VAL:%.*]], ptr addrspace(5) [[STACK]], align 8
+; CHECK-NEXT:    store i64 [[VAL:%.*]], ptr addrspace(5) [[STACK]], align 8, !amdgpu.non.volatile [[META0:![0-9]+]]
 ; CHECK-NEXT:    ret void
 ;
 entry:
@@ -59,7 +59,7 @@ define amdgpu_kernel void @memset_badsize_nopromote(i64 %val) {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[STACK:%.*]] = alloca [4 x i64], align 4, addrspace(5)
 ; CHECK-NEXT:    call void @llvm.memset.p5.i64(ptr addrspace(5) [[STACK]], i8 0, i64 31, i1 true)
-; CHECK-NEXT:    store i64 [[VAL:%.*]], ptr addrspace(5) [[STACK]], align 8
+; CHECK-NEXT:    store i64 [[VAL:%.*]], ptr addrspace(5) [[STACK]], align 8, !amdgpu.non.volatile [[META0]]
 ; CHECK-NEXT:    ret void
 ;
 entry:

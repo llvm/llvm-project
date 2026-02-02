@@ -120,6 +120,11 @@ struct AllocaAnalysis {
   } LDS;
 
   explicit AllocaAnalysis(AllocaInst *Alloca) : Alloca(Alloca) {}
+
+  void eraseAlloca() {
+    Alloca->eraseFromParent();
+    Alloca = nullptr;
+  }
 };
 
 // Shared implementation which can do both promotion to vector and to LDS.
@@ -152,6 +157,10 @@ private:
   bool binaryOpIsDerivedFromSameAlloca(Value *Alloca, Value *Val,
                                        Instruction *UseInst, int OpIdx0,
                                        int OpIdx1) const;
+  /// Set the amdgpu.non.volatile metadata on all load/store users of \p AA.
+  /// This assumes the pointer of the alloca never escapes, and thus the memory
+  /// is thread-local.
+  void setNonVolatileMetadata(AllocaAnalysis &AA);
 
   /// Check whether we have enough local memory for promotion.
   bool hasSufficientLocalMem(const Function &F);
@@ -443,6 +452,15 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
     if (AA.LDS.Enable &&
         tryPromoteAllocaToLDS(AA, SufficientLDS, DeferredIntrs))
       Changed = true;
+
+    // If we were unable to remove this alloca, mark all accesses to it as
+    // non-volatile instead. This pass rejects all allocas whose pointer escape,
+    // so the memory of the alloca is known to never be written to outside this
+    // thread.
+    if (AA.Alloca) {
+      setNonVolatileMetadata(AA);
+      Changed = true;
+    }
   }
   finishDeferredAllocaToLDSPromotion(DeferredIntrs);
 
@@ -1160,7 +1178,7 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
 
   // Alloca should now be dead too.
   assert(AA.Alloca->use_empty());
-  AA.Alloca->eraseFromParent();
+  AA.eraseAlloca();
 }
 
 std::pair<Value *, Value *>
@@ -1432,6 +1450,15 @@ void AMDGPUPromoteAllocaImpl::analyzePromoteToLDS(AllocaAnalysis &AA) const {
   AA.LDS.Enable = true;
 }
 
+void AMDGPUPromoteAllocaImpl::setNonVolatileMetadata(AllocaAnalysis &AA) {
+  for (Use *U : AA.Uses) {
+    Instruction *I = dyn_cast<Instruction>(U->getUser());
+    if (isa<LoadInst>(I) || isa<StoreInst>(I)) {
+      I->setMetadata("amdgpu.non.volatile", MDNode::get(I->getContext(), {}));
+    }
+  }
+}
+
 bool AMDGPUPromoteAllocaImpl::hasSufficientLocalMem(const Function &F) {
 
   FunctionType *FTy = F.getFunctionType();
@@ -1629,7 +1656,7 @@ bool AMDGPUPromoteAllocaImpl::tryPromoteAllocaToLDS(
   Value *Offset = Builder.CreateInBoundsGEP(GVTy, GV, Indices);
   AA.Alloca->mutateType(Offset->getType());
   AA.Alloca->replaceAllUsesWith(Offset);
-  AA.Alloca->eraseFromParent();
+  AA.eraseAlloca();
 
   PointerType *NewPtrTy = PointerType::get(Context, AMDGPUAS::LOCAL_ADDRESS);
 
