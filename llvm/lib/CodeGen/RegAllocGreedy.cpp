@@ -2434,9 +2434,9 @@ void RAGreedy::initializeCSRCost() {
       return;
     }
     uint64_t FixedEntry = 1 << 14;
-    if (ActualEntry < FixedEntry)
+    if (ActualEntry < FixedEntry) {
       CSRCost *= BranchProbability(ActualEntry, FixedEntry);
-    else if (ActualEntry <= UINT32_MAX) {
+    } else if (ActualEntry <= UINT32_MAX) {
       // Invert the fraction and divide.
       CSRCost /= BranchProbability(FixedEntry, ActualEntry);
     } else {
