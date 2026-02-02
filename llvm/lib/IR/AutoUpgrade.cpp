@@ -2625,7 +2625,7 @@ static bool upgradeAVX512MaskToSelect(StringRef Name, IRBuilder<> &Builder,
     else if (Name[9] == 'q' && VecWidth == 512)
       IID = Intrinsic::x86_avx512_conflict_q_512;
     else
-      llvm_unreachable("Unexpected intrinsic");
+      llvm_unreachable("  ");
   } else if (Name.starts_with("pavg.")) {
     if (Name[5] == 'b' && VecWidth == 128)
       IID = Intrinsic::x86_sse2_pavg_b;
@@ -3030,7 +3030,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     Intrinsic::ID IID;
     switch (VecWidth) {
     default:
-      reportFatalUsageErrorWithCI("Intrinsic is unexpected", CI);
+      reportFatalUsageErrorWithCI("Unexpected intrinsic", CI);
       break;
     case 128:
       IID = Intrinsic::x86_avx512_vpshufbitqmb_128;
@@ -3064,7 +3064,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     else if (VecWidth == 512 && EltWidth == 64)
       IID = Intrinsic::x86_avx512_fpclass_pd_512;
     else
-      reportFatalUsageErrorWithCI("Intrinsic is unexpected", CI);
+      reportFatalUsageErrorWithCI("Unexpected intrinsic", CI);
 
     Rep =
         Builder.CreateIntrinsic(IID, {CI->getOperand(0), CI->getArgOperand(1)});
@@ -3088,7 +3088,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     else if (VecWidth == 512 && EltWidth == 64)
       IID = Intrinsic::x86_avx512_mask_cmp_pd_512;
     else
-      reportFatalUsageErrorWithCI("Intrinsic is unexpected", CI);
+      reportFatalUsageErrorWithCI("Unexpected intrinsic", CI);
 
     Value *Mask = Constant::getAllOnesValue(CI->getType());
     if (VecWidth == 512)
@@ -4244,7 +4244,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     else if (VecWidth == 256 && EltWidth == 64)
       IID = Intrinsic::x86_fma_vfmaddsub_pd_256;
     else
-      reportFatalUsageErrorWithCI("Intrinsic is unexpected", CI);
+      reportFatalUsageErrorWithCI("Unexpected intrinsic", CI);
 
     Value *Ops[] = {CI->getArgOperand(0), CI->getArgOperand(1),
                     CI->getArgOperand(2)};
@@ -4319,7 +4319,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     else if (VecWidth == 512 && EltWidth == 64)
       IID = Intrinsic::x86_avx512_pternlog_q_512;
     else
-      reportFatalUsageErrorWithCI("Intrinsic is unexpected", CI);
+      reportFatalUsageErrorWithCI("Unexpected intrinsic", CI);
 
     Value *Args[] = {CI->getArgOperand(0), CI->getArgOperand(1),
                      CI->getArgOperand(2), CI->getArgOperand(3)};
@@ -4346,7 +4346,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     else if (VecWidth == 512 && High)
       IID = Intrinsic::x86_avx512_vpmadd52h_uq_512;
     else
-      reportFatalUsageErrorWithCI("Intrinsic is unexpected", CI);
+      reportFatalUsageErrorWithCI("Unexpected intrinsic", CI);
 
     Value *Args[] = {CI->getArgOperand(0), CI->getArgOperand(1),
                      CI->getArgOperand(2)};
@@ -4381,7 +4381,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     else if (VecWidth == 512 && IsSaturating)
       IID = Intrinsic::x86_avx512_vpdpbusds_512;
     else
-      reportFatalUsageErrorWithCI("Intrinsic is unexpected", CI);
+      reportFatalUsageErrorWithCI("Unexpected intrinsic", CI);
 
     Value *Args[] = {CI->getArgOperand(0), CI->getArgOperand(1),
                      CI->getArgOperand(2)};
@@ -4437,7 +4437,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     else if (VecWidth == 512 && IsSaturating)
       IID = Intrinsic::x86_avx512_vpdpwssds_512;
     else
-      reportFatalUsageErrorWithCI("Intrinsic is unexpected", CI);
+      reportFatalUsageErrorWithCI("Unexpected intrinsic", CI);
 
     Value *Args[] = {CI->getArgOperand(0), CI->getArgOperand(1),
                      CI->getArgOperand(2)};
@@ -4485,7 +4485,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     else if (Name[0] == 's' && Name.back() == '4')
       IID = Intrinsic::x86_subborrow_64;
     else
-      reportFatalUsageErrorWithCI("Intrinsic is unexpected", CI);
+      reportFatalUsageErrorWithCI("Unexpected intrinsic", CI);
 
     // Make a call with 3 operands.
     Value *Args[] = {CI->getArgOperand(0), CI->getArgOperand(1),
@@ -4504,7 +4504,7 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
              upgradeAVX512MaskToSelect(Name, Builder, *CI, Rep)) {
     // Rep will be updated by the call in the condition.
   } else
-    reportFatalUsageErrorWithCI("Intrinsic is invalid", CI);
+    reportFatalUsageErrorWithCI("Unexpected intrinsic", CI);
 
   return Rep;
 }
