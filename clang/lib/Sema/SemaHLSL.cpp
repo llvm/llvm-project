@@ -3681,6 +3681,28 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ArgTyExpr);
     break;
   }
+  case Builtin::BI__builtin_hlsl_wave_active_bit_or: {
+    if (SemaRef.checkArgCount(TheCall, 1))
+      return true;
+
+    QualType ArgType = TheCall->getArg(0)->getType();
+
+    // Ensure input expr type is a scalar/vector
+    if (!ArgType->hasIntegerRepresentation()) {
+      SemaRef.Diag(TheCall->getArg(0)->getBeginLoc(),
+                   diag::err_builtin_invalid_arg_type)
+          << 1 // %ordinal0: 1st argument
+          << 5 // %select1: scalar or vector of
+          << 1 // %select2: integer
+          << 0 // %select3: no floating-point
+          << TheCall->getArg(0)->getType();
+      return true;
+    }
+
+    // Set the return type to the arg type
+    TheCall->setType(ArgType);
+    break;
+  }
   // Note these are llvm builtins that we want to catch invalid intrinsic
   // generation. Normal handling of these builtins will occur elsewhere.
   case Builtin::BI__builtin_elementwise_bitreverse: {

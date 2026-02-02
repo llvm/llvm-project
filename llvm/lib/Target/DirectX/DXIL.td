@@ -215,6 +215,7 @@ defset list<DXILOpClass> OpClasses = {
   def waveActiveAllEqual : DXILOpClass;
   def waveActiveBit : DXILOpClass;
   def waveActiveOp : DXILOpClass;
+  def waveBitOp : DXILOpClass;
   def waveAllOp : DXILOpClass;
   def waveAllTrue : DXILOpClass;
   def waveAnyTrue : DXILOpClass;
@@ -316,6 +317,10 @@ defvar WaveOpKind_Sum = 0;
 defvar WaveOpKind_Product = 1;
 defvar WaveOpKind_Min = 2;
 defvar WaveOpKind_Max = 3;
+
+defvar WaveBitOpKind_And = 0;
+defvar WaveBitOpKind_Or = 1;
+defvar WaveBitOpKind_Xor = 2;
 
 defvar SignedOpKind_Signed = 0;
 defvar SignedOpKind_Unsigned = 1;
@@ -1119,6 +1124,25 @@ def WaveActiveOp : DXILOp<119, waveActiveOp> {
   let result = OverloadTy;
   let overloads = [
     Overloads<DXIL1_0, [HalfTy, FloatTy, DoubleTy, Int16Ty, Int32Ty, Int64Ty]>
+  ];
+  let stages = [Stages<DXIL1_0, [all_stages]>];
+  let attributes = [Attributes<DXIL1_0, []>];
+}
+
+def WaveBitOp : DXILOp<120, waveBitOp> {
+  let Doc = "returns the result of the bitwise operation across waves";
+  let intrinsics = [
+    IntrinSelect<int_dx_wave_bit_or,
+                 [
+                   IntrinArgIndex<0>, IntrinArgI8<WaveBitOpKind_Or>,
+                   IntrinArgI8<SignedOpKind_Signed>
+                 ]>
+  ];
+
+  let arguments = [OverloadTy, Int8Ty, Int8Ty];
+  let result = OverloadTy;
+  let overloads = [
+    Overloads<DXIL1_0, [Int16Ty, Int32Ty, Int64Ty]>
   ];
   let stages = [Stages<DXIL1_0, [all_stages]>];
   let attributes = [Attributes<DXIL1_0, []>];

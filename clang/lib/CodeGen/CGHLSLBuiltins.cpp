@@ -992,6 +992,19 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
 
     return handleHlslWaveActiveBallot(*this, E);
   }
+  case Builtin::BI__builtin_hlsl_wave_active_bit_or: {
+    Value *Op = EmitScalarExpr(E->getArg(0));
+    llvm::Type *Ty = Op->getType();
+    assert(Ty->isIntegerTy() ||
+           (Ty->isVectorTy() && Ty->getScalarType()->isIntegerTy()) &&
+               "Intrinsic WaveActiveBitOr operand must be integer or "
+               "vector of integers");
+
+    Intrinsic::ID IID = CGM.getHLSLRuntime().getWaveActiveBitOpOrIntrinsic();
+    return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
+                               &CGM.getModule(), IID, {Op->getType()}),
+                           ArrayRef{Op}, "hlsl.wave.active.bit.or");
+  }
   case Builtin::BI__builtin_hlsl_wave_active_count_bits: {
     Value *OpExpr = EmitScalarExpr(E->getArg(0));
     Intrinsic::ID ID = CGM.getHLSLRuntime().getWaveActiveCountBitsIntrinsic();
