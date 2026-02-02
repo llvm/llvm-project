@@ -141,7 +141,7 @@ uint64_t TextOutputSection::estimateFurthestBranchTargetEndVA() const {
   ArrayRef<OutputSection *> fromThis =
       sections.drop_until([this](const OutputSection *s) { return s == this; });
   assert(!fromThis.empty() && "section not found in parent segment");
-  ArrayRef<OutputSection *> subsequentSections = fromThis.drop_front(1);
+  ArrayRef<OutputSection *> subsequentSections = fromThis.drop_front();
 
   // Walk sections after this one, simulating layout (alignment + size).
   // Track the end VA of the furthest branch target section.
