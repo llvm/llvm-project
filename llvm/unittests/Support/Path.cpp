@@ -2487,24 +2487,28 @@ TEST_F(FileSystemTest, widenPath) {
 
 #ifdef _WIN32
 /// Checks whether short 8.3 form names are enabled in the given UTF-8 path.
-/// This is the best way I have found of checking this. Note that short 8.3 form
-/// names can be enabled and disabled on a per-folder, per-volume, and
-/// per-system basis.
-static bool areShortNamesEnabled(llvm::StringRef Path8) {
+static llvm::Expected<bool> areShortNamesEnabled(llvm::StringRef Path8) {
   // Create a directory under Path8 with a name long enough that Windows will
   // provide a short 8.3 form name, if short 8.3 form names are enabled.
   SmallString<256> Dir(Path8);
   path::append(Dir, "verylongdir");
   if (std::error_code EC = fs::create_directories(Dir))
-    return false;
+    return llvm::errorCodeToError(EC);
+  scope_exit Close([&] { fs::remove_directories(Dir); });
 
-  // Check if the expected short 8.3 form name was created.
-  SmallString<256> Short(Path8);
-  path::append(Short, "verylo~1");
-  bool Result = fs::is_directory(Short);
+  SmallVector<wchar_t, MAX_PATH> Path16;
+  if (std::error_code EC = sys::windows::widenPath(Dir, Path16))
+    return llvm::errorCodeToError(EC);
 
-  fs::remove_directories(Dir);
-  return Result;
+  WIN32_FIND_DATAW Data;
+  HANDLE H = ::FindFirstFileW(Path16.data(), &Data);
+  if (H == INVALID_HANDLE_VALUE)
+    return llvm::make_error<llvm::StringError>(
+        "FindFirstFileW returned invalid handle",
+        llvm::inconvertibleErrorCode());
+  ::FindClose(H);
+
+  return (Data.cAlternateFileName[0] != L'\0');
 }
 
 /// Returns the short 8.3 form path for the given UTF-8 path, or an empty string
@@ -2557,7 +2561,10 @@ static std::string stripPrefix(llvm::StringRef P) {
 }
 
 TEST_F(FileSystemTest, makeLongFormPath) {
-  if (!areShortNamesEnabled(TestDirectory.str()))
+  auto Enabled = areShortNamesEnabled(TestDirectory.str());
+  ASSERT_TRUE(static_cast<bool>(Enabled))
+      << llvm::toString(Enabled.takeError());
+  if (!*Enabled)
     GTEST_SKIP() << "Short 8.3 form names not enabled in: " << TestDirectory;
 
   // Setup: A test directory longer than 8 characters for which a distinct
