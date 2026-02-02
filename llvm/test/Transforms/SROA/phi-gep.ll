@@ -774,6 +774,39 @@ exit:
   ret i32 %val
 }
 
+define i32 @test_gep_phi_gep_self(i1 %cond) {
+; CHECK-LABEL: @test_gep_phi_gep_self(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[A:%.*]] = alloca [4 x i32], align 4
+; CHECK-NEXT:    call void @use(ptr [[A]])
+; CHECK-NEXT:    [[GEP_A:%.*]] = getelementptr inbounds [4 x i32], ptr [[A]], i64 0, i64 0
+; CHECK-NEXT:    br label [[LOOP:%.*]]
+; CHECK:       loop:
+; CHECK-NEXT:    [[PHI:%.*]] = phi ptr [ [[GEP_A]], [[ENTRY:%.*]] ], [ [[PHI]], [[LOOP]] ]
+; CHECK-NEXT:    [[GEP:%.*]] = getelementptr inbounds i32, ptr [[PHI]], i64 1
+; CHECK-NEXT:    [[VAL:%.*]] = load i32, ptr [[GEP]], align 4
+; CHECK-NEXT:    [[DONE:%.*]] = icmp eq i32 [[VAL]], 0
+; CHECK-NEXT:    br i1 [[DONE]], label [[EXIT:%.*]], label [[LOOP]]
+; CHECK:       exit:
+; CHECK-NEXT:    ret i32 [[VAL]]
+;
+entry:
+  %a = alloca [4 x i32], align 4
+  call void @use(ptr %a)
+  %gep_a = getelementptr inbounds [4 x i32], ptr %a, i64 0, i64 0
+  br label %loop
+
+loop:
+  %phi = phi ptr [ %gep_a, %entry ], [ %phi, %loop ]
+  %gep = getelementptr inbounds i32, ptr %phi, i64 1
+  %val = load i32, ptr %gep, align 4
+  %done = icmp eq i32 %val, 0
+  br i1 %done, label %exit, label %loop
+
+exit:
+  ret i32 %val
+}
+
 define i32 @test_gep_phi_gep_non_alloca_operands(i1 %cond) {
 ; CHECK-LABEL: @test_gep_phi_gep_non_alloca_operands(
 ; CHECK-NEXT:  entry:
