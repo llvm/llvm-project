@@ -3,7 +3,7 @@
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
 load("@bazel_skylib//lib:selects.bzl", "selects")
-load("@bazel_skylib//rules:common_settings.bzl", "string_flag")
+load("@bazel_skylib//rules:common_settings.bzl", "bool_setting", "string_flag")
 load("@bazel_skylib//rules:expand_template.bzl", "expand_template")
 load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@rules_cc//cc:cc_binary.bzl", "cc_binary")
@@ -256,22 +256,26 @@ config_setting(
     flag_values = {"@rules_cc//cc/compiler:compiler": "clang"},
 )
 
-# TODO(zbarsky): Is there a better way to express this?
-config_setting(
-    name = "_stamp_binary_on_check",
-    values = {"stamp": "1"},
+bool_setting(
+    name = "_bool",
+    build_setting_default = False,
 )
 
 config_setting(
-    name = "_stamp_binary_off_check",
-    values = {"stamp": "0"},
+    name = "_bool_on_check",
+    flag_values = {":_bool": "true"},
+)
+
+config_setting(
+    name = "_bool_off_check",
+    flag_values = {":_bool": "false"},
 )
 
 selects.config_setting_group(
     name = "_true",
     match_any = [
-        ":_stamp_binary_on_check",
-        ":_stamp_binary_off_check",
+        ":_bool_on_check",
+        ":_bool_off_check",
     ],
 )
 
