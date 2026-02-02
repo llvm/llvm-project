@@ -270,9 +270,10 @@ define i64 @test_input_with_matching_constraint_to_physical_register() {
   ; CHECK-LABEL: name: test_input_with_matching_constraint_to_physical_register
   ; CHECK: bb.1 (%ir-block.0):
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(i64) = G_CONSTANT i64 0
-  ; CHECK-NEXT:   INLINEASM &"", 0 /* attdialect */, 10 /* regdef */, implicit-def $x2, 2147483657 /* reguse tiedto:$0 */, [[C]](tied-def 3)(i64)
-  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i64) = COPY $x2
-  ; CHECK-NEXT:   $x0 = COPY [[COPY]](i64)
+  ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr64arg = COPY [[C]](i64)
+  ; CHECK-NEXT:   INLINEASM &"", 0 /* attdialect */, 10 /* regdef */, implicit-def $x2, 2147483657 /* reguse tiedto:$0 */, [[COPY]](tied-def 3)
+  ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(i64) = COPY $x2
+  ; CHECK-NEXT:   $x0 = COPY [[COPY1]](i64)
   ; CHECK-NEXT:   RET_ReallyLR implicit $x0
   %1 = tail call i64 asm "", "={x2},0"(i64 0)
   ret i64 %1

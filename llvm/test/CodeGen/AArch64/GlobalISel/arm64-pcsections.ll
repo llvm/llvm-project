@@ -1239,16 +1239,13 @@ define { i8, i1 } @cmpxchg_i8(ptr %ptr, i8 %desired, i8 %new) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.cmpxchg.trystore:
   ; CHECK-NEXT:   successors: %bb.4(0x7ffff800), %bb.1(0x00000800)
-  ; CHECK-NEXT:   successors: %bb.4(0x7ffff800), %bb.1(0x00000800)
   ; CHECK-NEXT:   liveins: $w1, $w2, $x0, $x8
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   early-clobber renamable $w10 = STXRB renamable $w2, renamable $x8, pcsections !0 :: (volatile store (i8) into %ir.ptr)
   ; CHECK-NEXT:   renamable $w9 = MOVZWi 1, 0
   ; CHECK-NEXT:   CBNZW killed renamable $w10, %bb.1
   ; CHECK-NEXT:   B %bb.4
-  ; CHECK-NEXT:   B %bb.4
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-NEXT: bb.3.cmpxchg.nostore:
   ; CHECK-NEXT: bb.3.cmpxchg.nostore:
   ; CHECK-NEXT:   successors: %bb.4(0x80000000)
   ; CHECK-NEXT:   liveins: $x0
@@ -1284,7 +1281,6 @@ define { i16, i1 } @cmpxchg_i16(ptr %ptr, i16 %desired, i16 %new) {
   ; CHECK-NEXT:   Bcc 1, %bb.3, implicit killed $nzcv, pcsections !0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2.cmpxchg.trystore:
-  ; CHECK-NEXT:   successors: %bb.4(0x7ffff800), %bb.1(0x00000800)
   ; CHECK-NEXT:   successors: %bb.4(0x7ffff800), %bb.1(0x00000800)
   ; CHECK-NEXT:   liveins: $w1, $w2, $x0, $x8
   ; CHECK-NEXT: {{  $}}
