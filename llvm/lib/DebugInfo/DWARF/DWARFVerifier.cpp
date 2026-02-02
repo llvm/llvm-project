@@ -421,7 +421,7 @@ unsigned DWARFVerifier::verifyUnits(const DWARFUnitVector &Units) {
   unsigned Index = 1;
 
   for (const auto &Unit : Units) {
-    OS << formatv("Verifying unit: {0} / {1}\n", Index, Units.getNumUnits());
+    OS << formatv("Verifying unit: {0} / {1}", Index, Units.getNumUnits());
     if (const char* Name = Unit->getUnitDIE(true).getShortName())
       OS << formatv(", \"{0}\"", Name);
     OS << '\n';
@@ -1167,7 +1167,7 @@ void DWARFVerifier::verifyDebugLineRows() {
         ++NumDebugLineErrors;
         ErrorCategory.Report("Invalid file index in debug_line", [&]() {
           error() << formatv(".debug_line[{0:x+8}][{1}] has invalid file index "
-                             "{2}  (valid values are [{3},{4}:\n",
+                             "{2}  (valid values are [{3},{4}{5}):\n",
                              *toSectionOffset(Die.find(DW_AT_stmt_list)),
                              RowIndex, Row.File, MinFileIndex,
                              LineTable->Prologue.FileNames.size(),
