@@ -1101,18 +1101,26 @@ ModuleList::GetSharedModule(const ModuleSpec &module_spec, ModuleSP &module_sp,
   if (module_sp)
     return error;
 
-  // Try target's platform locate module callback before second attempt.
+  // Try platform's locate module callback before second attempt.
+  // The platform can come from either the Target (if available) or directly
+  // from the ModuleSpec (useful when Target is not yet created, e.g., during
+  // target creation for launch mode).
   if (invoke_locate_callback) {
-    TargetSP target_sp = module_spec.GetTargetSP();
-    if (target_sp && target_sp->IsValid()) {
-      if (PlatformSP platform_sp = target_sp->GetPlatform()) {
-        FileSpec symbol_file_spec;
-        platform_sp->CallLocateModuleCallbackIfSet(
-            module_spec, module_sp, symbol_file_spec, did_create_ptr);
-        if (module_sp) {
-          // The callback found a module.
-          return error;
-        }
+    PlatformSP platform_sp;
+    if (TargetSP target_sp = module_spec.GetTargetSP()) {
+      if (target_sp->IsValid())
+        platform_sp = target_sp->GetPlatform();
+    }
+    if (!platform_sp)
+      platform_sp = module_spec.GetPlatformSP();
+
+    if (platform_sp) {
+      FileSpec symbol_file_spec;
+      platform_sp->CallLocateModuleCallbackIfSet(
+          module_spec, module_sp, symbol_file_spec, did_create_ptr);
+      if (module_sp) {
+        // The callback found a module.
+        return error;
       }
     }
   }
