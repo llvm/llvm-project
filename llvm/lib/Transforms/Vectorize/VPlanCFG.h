@@ -25,8 +25,8 @@ namespace llvm {
 // GraphTraits specializations for VPlan Hierarchical Control-Flow Graphs     //
 //===----------------------------------------------------------------------===//
 
-/// Iterator to traverse all successors/predecessors of a VPBlockBase node, including its hierarchical successors/predecessors. For example:
-/// that:
+/// Iterator to traverse all successors/predecessors of a VPBlockBase node,
+/// including its hierarchical successors/predecessors. For example: that:
 ///
 ///     A
 ///     |
@@ -40,18 +40,23 @@ namespace llvm {
 ///     |
 ///     B
 ///
-///  children(A) == {R} ; Forward == true
-///  children(R) == {b} ; Forward == true
-///  children(e) == {B} ; Forward == true
+///  Forward == true:
+///    Region blocks themselves traverse only their entries directly:
+///    Region's successor is traversed when processing its exiting block:
+///    children(A) == {R}
+///    children(R) == {b}
+///    children(e) == {B}
 ///
-///  children(B) == {R} ; Forward == false
-///  children(R) == {e} ; Forward == false
-///  children(b) == {A} ; Forward == false
+///  Forward == false:
+///    Region blocks themselves traverse only their exiting blocks directly:
+///    Region's predecessor is traversed when processing its entry block:
+///    children(B) == {R}
+///    children(R) == {e}
+///    children(b) == {A}
 ///
 /// This ensures that all blocks of the region are visited before continuing
 /// traversal outside the region when doing a reverse post-order traversal of
 /// the VPlan.
-///
 template <typename BlockPtrTy, bool Forward = true>
 class VPImmediateHierarchicalChildrenIterator
     : public iterator_facade_base<
