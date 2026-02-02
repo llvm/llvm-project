@@ -63,7 +63,8 @@ namespace llvm {
 /// registers to regions where these registers are used, with the option of
 /// re-using non-root registers or their previous rematerializations instead of
 /// rematerializing them again. It also optionally supports rolling back
-/// previous rematerializations to restore the MIR state to what it was
+/// previous rematerializations (set during analysis phase, see \ref
+/// Rematerializer::analyze) to restore the MIR state to what it was
 /// pre-rematerialization. When enabled, machine instructions defining
 /// rematerializable registers that no longer have any uses following previous
 /// rematerializations will not be deleted from the MIR; their opcode will
@@ -175,15 +176,16 @@ public:
   /// Simply initializes some internal state, does not identify
   /// rematerialization candidates.
   Rematerializer(MachineFunction &MF,
-                 SmallVectorImpl<RegionBoundaries> &Regions,
-                 bool RegionsTopDown, LiveIntervals &LIS)
-      : MF(MF), Regions(Regions), MRI(MF.getRegInfo()), LIS(LIS),
-        TII(*MF.getSubtarget().getInstrInfo()), TRI(TII.getRegisterInfo()),
-        RegionsTopDown(RegionsTopDown) {}
+                 SmallVectorImpl<RegionBoundaries> &Regions, LiveIntervals &LIS)
+      : Regions(Regions), MRI(MF.getRegInfo()), LIS(LIS),
+        TII(*MF.getSubtarget().getInstrInfo()), TRI(TII.getRegisterInfo()) {}
 
   /// Goes through the whole MF and identifies all rematerializable registers.
-  /// Returns whether there is any rematerializable register in the MF.
-  bool analyze();
+  /// When \p SupportRollback is set, rematerializations of original registers
+  /// can be rolled back and original registers are maintained in the IR even
+  /// when they longer have any users. Returns whether there is any
+  /// rematerializable register in regions.
+  bool analyze(bool SupportRollback);
 
   inline const Reg &getReg(unsigned RegIdx) const {
     assert(RegIdx < Regs.size() && "out of bounds");
@@ -276,9 +278,7 @@ public:
   /// Rematerializes register \p RootIdx just before its first user inside
   /// region \p UseRegion, transfers all its users in the region to the new
   /// register, and returns the latter's index. The root's dependency DAG is
-  /// rematerialized or re-used according to \p DRI. If \p SupportRollback is
-  /// true, rematerializations of registers that lose all their users as a
-  /// consequence of the rematerializations can later be rolled back.
+  /// rematerialized or re-used according to \p DRI.
   ///
   /// When the method returns, \p DRI contains additional mappings of all
   /// transitive dependencies that had to be rematerialized to their
@@ -286,7 +286,6 @@ public:
   /// Rematerializer::Reg should be considered invalidated by calls to this
   /// method.
   unsigned rematerializeToRegion(unsigned RootIdx, unsigned UseRegion,
-                                 bool SupportRollback,
                                  DependencyReuseInfo &DRI);
 
   /// Rematerializes register \p RootIdx to position \p InsertPos and returns
@@ -326,20 +325,16 @@ public:
   /// Transfers all users of register \p FromRegIdx in region \p UseRegion to \p
   /// ToRegIdx, the latter of which must be a rematerialization of the former or
   /// have the same origin register. Users in \p UseRegion must be reachable
-  /// from \p ToRegIdx. If \p SupportRollback is true, rematerializations of
-  /// registers that lose all their users as a consequence of the transfer can
-  /// later be rolled back.
+  /// from \p ToRegIdx.
   void transferRegionUsers(unsigned FromRegIdx, unsigned ToRegIdx,
-                           unsigned UseRegion, bool SupportRollback);
+                           unsigned UseRegion);
 
   /// Transfers user \p UserMI from register \p FromRegIdx to \p ToRegIdx,
   /// the latter of which must be a rematerialization of the former or have the
   /// same origin register. \p UserMI must be a direct user of \p FromRegIdx. \p
-  /// UserMI must be reachable from \p ToRegIdx. If \p SupportRollback is true,
-  /// rematerializations of registers that lose all their users as a consequence
-  /// of the transfer can later be rolled back.
+  /// UserMI must be reachable from \p ToRegIdx.
   void transferUser(unsigned FromRegIdx, unsigned ToRegIdx,
-                    MachineInstr &UserMI, bool SupportRollback);
+                    MachineInstr &UserMI);
 
   /// Recomputes all live intervals that have changed as a result of previous
   /// rematerializations/rollbacks.
@@ -367,13 +362,11 @@ public:
   Printable printUser(const MachineInstr *MI) const;
 
 private:
-  MachineFunction &MF;
   SmallVectorImpl<RegionBoundaries> &Regions;
   MachineRegisterInfo &MRI;
   LiveIntervals &LIS;
   const TargetInstrInfo &TII;
   const TargetRegisterInfo &TRI;
-  bool RegionsTopDown;
 
   /// Rematerializable registers identified since the rematerializer's creation,
   /// both dead and alive, originals and rematerializations. No register is ever
@@ -400,7 +393,7 @@ private:
   /// in the MIR.
   DenseMap<Register, unsigned> RegToIdx;
   /// Maps all MIs to their parent region. Region terminators are considered
-  /// part of the region they end.
+  /// part of the region they terminate.
   DenseMap<MachineInstr *, unsigned> MIRegion;
   /// Set of registers whose live-range may have changed during past
   /// rematerializations/rollbacks.
@@ -409,9 +402,11 @@ private:
   /// currently rollback-able. Values map register machine operand indices to
   /// their original register.
   DenseMap<unsigned, DenseMap<unsigned, Register>> Rollbackable;
+  /// Whether all rematerializations of registers identified during the last
+  /// analysis phase will be rollback-able.
+  bool SupportRollback = false;
 
-  /// Collects all rematerializable registers inside region \p DefRegion.
-  void collectRegs(unsigned DefRegion);
+  void addRegIfRematerializable(unsigned VirtRegIdx, BitVector &SeenRegs);
 
   /// Determines whether \p MI is considered rematerializable. This further
   /// restricts constraints imposed by the TII on rematerializable instructions,
@@ -439,10 +434,8 @@ private:
 
   /// Deletes register \p RootIdx if it no longer has any user. If the register
   /// is deleted, recursively deletes any of its transitive rematerializable
-  /// dependencies that no longer have users as a result. When \p
-  /// SupportRollback is true, allows to rollback rematerializations of the
-  /// deleted register later on.
-  bool deleteRegIfUnused(unsigned RootIdx, bool SupportRollback);
+  /// dependencies that no longer have users as a result.
+  bool deleteRegIfUnused(unsigned RootIdx);
 
   /// Deletes rematerializable register \p RegIdx from the DAG and relevant
   /// internal state.
