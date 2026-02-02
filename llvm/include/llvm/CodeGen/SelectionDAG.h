@@ -1291,6 +1291,12 @@ public:
                                                  SDValue Size,
                                                  const CallInst *CI);
 
+  /// Lower a strcmp operation into a target library call and return the
+  /// resulting chain and call result as SelectionDAG SDValues.
+  LLVM_ABI std::pair<SDValue, SDValue> getStrcmp(SDValue Chain, const SDLoc &dl,
+                                                 SDValue S0, SDValue S1,
+                                                 const CallInst *CI);
+
   /// Lower a strcpy operation into a target library call and return the
   /// resulting chain and call result as SelectionDAG SDValues.
   LLVM_ABI std::pair<SDValue, SDValue> getStrcpy(SDValue Chain, const SDLoc &dl,
@@ -2365,7 +2371,8 @@ public:
   /// Check if a use of a float value is insensitive to signed zeros.
   LLVM_ABI bool canIgnoreSignBitOfZero(const SDUse &Use) const;
 
-  /// Check if at most two uses of a value are insensitive to signed zeros.
+  /// Check if \p Op has no-signed-zeros, or all users (limited to checking two
+  /// for compile-time performance) are insensitive to signed zeros.
   LLVM_ABI bool canIgnoreSignBitOfZero(SDValue Op) const;
 
   /// Test whether two SDValues are known to compare equal. This

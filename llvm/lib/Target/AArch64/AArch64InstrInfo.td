@@ -5747,7 +5747,7 @@ let Predicates = [HasFullFP16] in {
 //===----------------------------------------------------------------------===//
 
 defm ABS    : SIMDTwoVectorBHSD<0, 0b01011, "abs", abs>;
-defm CLS    : SIMDTwoVectorBHS<0, 0b00100, "cls", int_aarch64_neon_cls>;
+defm CLS    : SIMDTwoVectorBHS<0, 0b00100, "cls", ctls>;
 defm CLZ    : SIMDTwoVectorBHS<1, 0b00100, "clz", ctlz>;
 defm CMEQ   : SIMDCmpTwoVector<0, 0b01001, "cmeq", AArch64cmeqz>;
 defm CMGE   : SIMDCmpTwoVector<1, 0b01000, "cmge", AArch64cmgez>;
@@ -9084,10 +9084,8 @@ defm SHL     : SIMDVectorLShiftBHSD<0, 0b01010, "shl", AArch64vshl>;
 let Predicates = [HasNEON] in {
 def : Pat<(v2f32 (sint_to_fp (v2i32 (AArch64vashr_exact v2i32:$Vn, i32:$shift)))),
           (SCVTFv2i32_shift $Vn, vecshiftR32:$shift)>;
-
 def : Pat<(v4f32 (sint_to_fp (v4i32 (AArch64vashr_exact v4i32:$Vn, i32:$shift)))),
           (SCVTFv4i32_shift $Vn, vecshiftR32:$shift)>;
-
 def : Pat<(v2f64 (sint_to_fp (v2i64 (AArch64vashr_exact v2i64:$Vn, i32:$shift)))),
           (SCVTFv2i64_shift $Vn, vecshiftR64:$shift)>;
 }
@@ -9095,9 +9093,36 @@ def : Pat<(v2f64 (sint_to_fp (v2i64 (AArch64vashr_exact v2i64:$Vn, i32:$shift)))
 let Predicates = [HasNEON, HasFullFP16] in {
 def : Pat<(v4f16 (sint_to_fp (v4i16 (AArch64vashr_exact v4i16:$Vn, i32:$shift)))),
           (SCVTFv4i16_shift $Vn, vecshiftR16:$shift)>;
-
 def : Pat<(v8f16 (sint_to_fp (v8i16 (AArch64vashr_exact v8i16:$Vn, i32:$shift)))),
           (SCVTFv8i16_shift $Vn, vecshiftR16:$shift)>;
+}
+
+multiclass FCVTPat<ValueType FVT, ValueType IVT, ValueType ScalarVT, RegisterOperand RC> {
+  // fptosi(fadd(x, x)) -> FCVTZS_shift x, 1
+  def : Pat<(IVT (fp_to_sint (FVT (fadd RC:$Vn, RC:$Vn)))),
+            (!cast<Instruction>("FCVTZS"#IVT#"_shift") (FVT RC:$Vn), (i32 1))>;
+  def : Pat<(IVT (fp_to_sint_sat (FVT (fadd RC:$Vn, RC:$Vn)), ScalarVT)),
+            (!cast<Instruction>("FCVTZS"#IVT#"_shift") (FVT RC:$Vn), (i32 1))>;
+  def : Pat<(IVT (fp_to_sint_sat_gi (FVT (fadd RC:$Vn, RC:$Vn)))),
+            (!cast<Instruction>("FCVTZS"#IVT#"_shift") (FVT RC:$Vn), (i32 1))>;
+
+  // fptoui(fadd(x, x)) -> FCVTZU_shift x, 1
+  def : Pat<(IVT (fp_to_uint (FVT (fadd RC:$Vn, RC:$Vn)))),
+            (!cast<Instruction>("FCVTZU"#IVT#"_shift") (FVT RC:$Vn), (i32 1))>;
+  def : Pat<(IVT (fp_to_uint_sat (FVT (fadd RC:$Vn, RC:$Vn)), ScalarVT)),
+            (!cast<Instruction>("FCVTZU"#IVT#"_shift") (FVT RC:$Vn), (i32 1))>;
+  def : Pat<(IVT (fp_to_uint_sat_gi (FVT (fadd RC:$Vn, RC:$Vn)))),
+            (!cast<Instruction>("FCVTZU"#IVT#"_shift") (FVT RC:$Vn), (i32 1))>;
+}
+
+let Predicates = [HasNEON] in {
+defm : FCVTPat<v2f64, v2i64, i64, V128>;
+defm : FCVTPat<v2f32, v2i32, i32, V64>;
+defm : FCVTPat<v4f32, v4i32, i32, V128>;
+}
+let Predicates = [HasNEON, HasFullFP16] in {
+defm : FCVTPat<v4f16, v4i16, i16, V64>;
+defm : FCVTPat<v8f16, v8i16, i16, V128>;
 }
 
 // X << 1 ==> X + X
