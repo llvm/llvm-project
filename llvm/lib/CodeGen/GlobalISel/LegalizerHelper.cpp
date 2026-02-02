@@ -4599,26 +4599,24 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     auto [Res, ResTy, SubByReg, SubByRegTy] = MI.getFirst2RegLLTs();
     LLT TyInt =
         ResTy.changeElementType(LLT::buildInteger(ResTy.getScalarSizeInBits()));
-    Register castedSubByReg = SubByReg;
+    Register CastedSubByReg = SubByReg;
 
     if (!(SubByRegTy.getScalarType().isAnyScalar() ||
-          SubByRegTy.getScalarType().isInteger()))
-      castedSubByReg =
-          MIRBuilder
-              .buildBitcast(SubByRegTy.changeElementType(LLT::buildInteger(
-                                SubByRegTy.getScalarSizeInBits())),
-                            SubByReg)
-              .getReg(0);
+          SubByRegTy.getScalarType().isInteger())) {
+      auto BitcastDst = SubByRegTy.changeElementType(
+          LLT::buildInteger(SubByRegTy.getScalarSizeInBits()));
+      CastedSubByReg = MIRBuilder.buildBitcast(BitcastDst, SubByReg).getReg(0);
+    }
 
     auto SignMask = MIRBuilder.buildConstant(
         TyInt, APInt::getSignMask(TyInt.getScalarSizeInBits()));
 
     if (ResTy != TyInt) {
       Register NewDst =
-          MIRBuilder.buildXor(TyInt, castedSubByReg, SignMask).getReg(0);
+          MIRBuilder.buildXor(TyInt, CastedSubByReg, SignMask).getReg(0);
       MIRBuilder.buildBitcast(Res, NewDst);
     } else
-      MIRBuilder.buildXor(Res, castedSubByReg, SignMask).getReg(0);
+      MIRBuilder.buildXor(Res, CastedSubByReg, SignMask).getReg(0);
 
     MI.eraseFromParent();
     return Legalized;
@@ -10219,12 +10217,11 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerSelect(MachineInstr &MI) {
     Op1Reg = MIRBuilder.buildBitcast(Op1TyInt, Op1Reg).getReg(0);
 
   if (!(Op2Ty.getScalarType().isAnyScalar() ||
-        Op2Ty.getScalarType().isInteger()))
-    Op2Reg = MIRBuilder
-                 .buildBitcast(Op2Ty.changeElementType(LLT::buildInteger(
-                                   Op2Ty.getScalarSizeInBits())),
-                               Op2Reg)
-                 .getReg(0);
+        Op2Ty.getScalarType().isInteger())) {
+    auto Op2TyInt =
+        Op2Ty.changeElementType(LLT::buildInteger(Op2Ty.getScalarSizeInBits()));
+    Op2Reg = MIRBuilder.buildBitcast(Op2TyInt, Op2Reg).getReg(0);
+  }
 
   auto NotMask = MIRBuilder.buildNot(MaskTy, MaskReg);
   auto NewOp1 = MIRBuilder.buildAnd(MaskTy, Op1Reg, MaskReg);
@@ -10357,21 +10354,20 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerFAbs(MachineInstr &MI) {
   auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
   LLT TyInt =
       DstTy.changeElementType(LLT::buildInteger(DstTy.getScalarSizeInBits()));
-  Register castedSrc = SrcReg;
+  Register CastedSrc = SrcReg;
 
   if (!(SrcTy.getScalarType().isAnyScalar() ||
-        SrcTy.getScalarType().isInteger()))
-    castedSrc = MIRBuilder
-                    .buildBitcast(SrcTy.changeElementType(LLT::buildInteger(
-                                      SrcTy.getScalarSizeInBits())),
-                                  SrcReg)
-                    .getReg(0);
+        SrcTy.getScalarType().isInteger())) {
+    auto SrcTyInt =
+        SrcTy.changeElementType(LLT::buildInteger(SrcTy.getScalarSizeInBits()));
+    CastedSrc = MIRBuilder.buildBitcast(SrcTyInt, SrcReg).getReg(0);
+  }
 
   if (MRI.getType(DstReg) != TyInt) {
     // Reset sign bit
     Register NewDst =
         MIRBuilder
-            .buildAnd(TyInt, castedSrc,
+            .buildAnd(TyInt, CastedSrc,
                       MIRBuilder.buildConstant(
                           TyInt, APInt::getSignedMaxValue(
                                      DstTy.getScalarSizeInBits())))
@@ -10381,7 +10377,7 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerFAbs(MachineInstr &MI) {
   } else
     MIRBuilder
         .buildAnd(
-            DstReg, castedSrc,
+            DstReg, CastedSrc,
             MIRBuilder.buildConstant(
                 TyInt, APInt::getSignedMaxValue(DstTy.getScalarSizeInBits())))
         .getReg(0);

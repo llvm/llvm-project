@@ -345,12 +345,11 @@ mergeVectorRegsToResultRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
     llvm::copy(SrcRegs, ConcatRegs.begin());
 
     if (LLTy.getScalarType() != PartLLT.getScalarType())
-      for (int I = 0; I != SrcRegs.size(); ++I)
-        ConcatRegs[I] =
-            B.buildBitcast(MRI.getType(SrcRegs[I])
-                               .changeElementType(LLTy.getScalarType()),
-                           SrcRegs[I])
-                .getReg(0);
+      for (size_t I = 0, E = SrcRegs.size(); I != E; ++I) {
+        auto BitcastDst =
+            MRI.getType(SrcRegs[I]).changeElementType(LLTy.getScalarType());
+        ConcatRegs[I] = B.buildBitcast(BitcastDst, SrcRegs[I]).getReg(0);
+      }
 
     return B.buildConcatVectors(DstRegs[0], ConcatRegs);
   }
@@ -369,13 +368,13 @@ mergeVectorRegsToResultRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
     UnmergeSrcReg = SrcRegs[0];
   }
 
-  int NumDst = LCMTy.getSizeInBits() / LLTy.getSizeInBits();
+  size_t NumDst = LCMTy.getSizeInBits() / LLTy.getSizeInBits();
 
   SmallVector<Register, 8> PadDstRegs(NumDst);
   llvm::copy(DstRegs, PadDstRegs.begin());
 
   // Create the excess dead defs for the unmerge.
-  for (int I = DstRegs.size(); I != NumDst; ++I)
+  for (size_t I = DstRegs.size(); I != NumDst; ++I)
     PadDstRegs[I] = MRI.createGenericVirtualRegister(LLTy);
 
   if (PartLLT != LCMTy)
