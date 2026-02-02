@@ -1465,7 +1465,7 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
           "space");
 
     mlir::Value v = getTargetHooks().performAddrSpaceCast(
-        *this, lv.getPointer(), srcAS, convertType(destTy));
+        *this, lv.getPointer(), convertType(destTy));
 
     return makeAddrLValue(Address(v, convertTypeForMem(e->getType()),
                                   lv.getAddress().getAlignment()),
@@ -2504,20 +2504,13 @@ Address CIRGenFunction::createTempAlloca(mlir::Type ty, CharUnits align,
   // in C++ the auto variables are in the default address space. Therefore
   // cast alloca to the default address space when necessary.
 
-  LangAS allocaAS = alloca.getAddressSpace()
-                        ? clang::getLangASFromTargetAS(
-                              alloca.getAddressSpace().getValue().getUInt())
-                        : clang::LangAS::Default;
-  LangAS dstTyAS = clang::LangAS::Default;
-  if (getCIRAllocaAddressSpace()) {
-    dstTyAS = clang::getLangASFromTargetAS(
-        getCIRAllocaAddressSpace().getValue().getUInt());
-  }
+  cir::PointerType dstTy;
+  if (getCIRAllocaAddressSpace())
+    dstTy = builder.getPointerTo(ty, getCIRAllocaAddressSpace());
+  else
+    dstTy = builder.getPointerTo(ty, clang::LangAS::Default);
+  v = getTargetHooks().performAddrSpaceCast(*this, v, dstTy);
 
-  if (dstTyAS != allocaAS) {
-    getTargetHooks().performAddrSpaceCast(*this, v, getCIRAllocaAddressSpace(),
-                                          builder.getPointerTo(ty, dstTyAS));
-  }
   return Address(v, ty, align);
 }
 

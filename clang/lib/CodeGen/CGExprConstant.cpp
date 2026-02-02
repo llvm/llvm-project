@@ -1227,10 +1227,8 @@ public:
       auto C = Emitter.tryEmitPrivate(subExpr, subExpr->getType());
       if (!C)
         return nullptr;
-      LangAS srcAS = subExpr->getType()->getPointeeType().getAddressSpace();
       llvm::Type *destTy = ConvertType(E->getType());
-      return CGM.getTargetCodeGenInfo().performAddrSpaceCast(CGM, C, srcAS,
-                                                             destTy);
+      return CGM.getTargetCodeGenInfo().performAddrSpaceCast(CGM, C, destTy);
     }
 
     case CK_LValueToRValue: {

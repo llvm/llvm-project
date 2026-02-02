@@ -113,7 +113,7 @@ RValue CodeGenFunction::EmitCXXDestructorCall(
   if (SrcAS != DstAS) {
     QualType DstTy = DtorDecl->getThisType();
     llvm::Type *NewType = CGM.getTypes().ConvertType(DstTy);
-    This = getTargetHooks().performAddrSpaceCast(*this, This, SrcAS, NewType);
+    This = getTargetHooks().performAddrSpaceCast(*this, This, NewType);
   }
 
   CallArgList Args;
@@ -2182,7 +2182,7 @@ llvm::Value *CodeGenFunction::EmitCXXTypeidExpr(const CXXTypeidExpr *E) {
   auto MaybeASCast = [=](auto &&TypeInfo) {
     if (GlobAS == LangAS::Default)
       return TypeInfo;
-    return getTargetHooks().performAddrSpaceCast(CGM, TypeInfo, GlobAS, PtrTy);
+    return getTargetHooks().performAddrSpaceCast(CGM, TypeInfo, PtrTy);
   };
 
   if (E->isTypeOperand()) {

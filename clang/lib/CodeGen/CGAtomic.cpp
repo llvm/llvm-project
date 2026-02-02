@@ -1145,8 +1145,7 @@ RValue CodeGenFunction::EmitAtomicExpr(AtomicExpr *E) {
       auto DestAS = getContext().getTargetAddressSpace(LangAS::opencl_generic);
       auto *DestType = llvm::PointerType::get(getLLVMContext(), DestAS);
 
-      return getTargetHooks().performAddrSpaceCast(*this, V, AS, DestType,
-                                                   false);
+      return getTargetHooks().performAddrSpaceCast(*this, V, DestType, false);
     };
 
     Args.add(RValue::get(CastToGenericAddrSpace(Ptr.emitRawPointer(*this),
