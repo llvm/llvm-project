@@ -9,7 +9,7 @@ entry:
   indirectbr ptr %arg, [label %exit.0, label %loop]
 
 exit.0:
-  unreachable
+  ret void
 
 loop:
   %iv = phi i32 [0, %entry], [%iv.next, %loop]
