@@ -5,6 +5,8 @@
 
 #include "../Inputs/system-header-simulator-cxx-std-suppression.h"
 
+// expected-no-diagnostics
+
 void test_sort() {
   int arr[5];
   std::sort(arr, arr + 5); // no-warning
