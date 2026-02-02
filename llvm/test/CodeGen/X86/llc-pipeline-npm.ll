@@ -235,6 +235,7 @@
 ; O0-WINDOWS-NEXT: x86-seses
 ; O0-WINDOWS-NEXT: x86-return-thunks
 ; O0-WINDOWS-NEXT: x86-avoid-trailing-call
+; O0-WINDOWS-NEXT: x86-wineh-unwindv2
 ; O0-WINDOWS-NEXT: verify)
 ; O0-WINDOWS-NEXT: free-machine-function)
 
@@ -349,5 +350,6 @@
 ; O3-WINDOWS-NEXT: x86-seses
 ; O3-WINDOWS-NEXT: x86-return-thunks
 ; O3-WINDOWS-NEXT: x86-avoid-trailing-call
+; O3-WINDOWS-NEXT: x86-wineh-unwindv2
 ; O3-WINDOWS-NEXT: verify)
 ; O3-WINDOWS-NEXT: free-machine-function)
