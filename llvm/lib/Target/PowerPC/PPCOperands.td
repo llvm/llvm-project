@@ -173,14 +173,22 @@ defm u1imm : UnsignedImmediate<i32,
   [{ return isUInt<1>(N->getZExtValue()); }], NOOP_SDNodeXForm, "U1Imm", 1>;
 defm u2imm : UnsignedImmediate<i32,
   [{ return isUInt<2>(N->getZExtValue()); }], NOOP_SDNodeXForm, "U2Imm", 2>;
-def u3imm   : UnsignedImmOp<i32, "U3Imm", 3>;
-def u4imm   : UnsignedImmOp<i32, "U4Imm", 4>;
-def u5imm   : UnsignedImmOp<i32, "U5Imm", 5>;
-def u6imm   : UnsignedImmOp<i32, "U6Imm", 6>;
-def u7imm   : UnsignedImmOp<i32, "U7Imm", 7>;
-def u8imm   : UnsignedImmOp<i32, "U8Imm", 8>;
-def u10imm  : UnsignedImmOp<i32, "U10Imm", 10>;
-def u12imm  : UnsignedImmOp<i32, "U12Imm", 12>;
+defm u3imm : UnsignedImmediate<i32,
+  [{ return isUInt<3>(N->getZExtValue()); }], NOOP_SDNodeXForm, "U3Imm", 3>;
+defm u4imm : UnsignedImmediate<i32,
+  [{ return isUInt<4>(N->getZExtValue()); }], NOOP_SDNodeXForm, "U4Imm", 4>;
+defm u5imm : UnsignedImmediate<i32,
+  [{ return isUInt<5>(N->getZExtValue()); }], NOOP_SDNodeXForm, "U5Imm", 5>;
+defm u6imm : UnsignedImmediate<i32,
+  [{ return isUInt<6>(N->getZExtValue()); }], NOOP_SDNodeXForm, "U6Imm", 6>;
+defm u7imm : UnsignedImmediate<i32,
+  [{ return isUInt<7>(N->getZExtValue()); }], NOOP_SDNodeXForm, "U7Imm", 7>;
+defm u8imm : UnsignedImmediate<i32,
+  [{ return isUInt<8>(N->getZExtValue()); }], NOOP_SDNodeXForm, "U8Imm", 8>;
+defm u10imm : UnsignedImmediate<i32,
+  [{ return isUInt<10>(N->getZExtValue()); }], NOOP_SDNodeXForm, "U10Imm", 10>;
+defm u12imm : UnsignedImmediate<i32,
+  [{ return isUInt<12>(N->getZExtValue()); }], NOOP_SDNodeXForm, "U12Imm", 12>;
 
 def s5imm   : SignedImmOp<i32, "S5Imm", 5>;
 

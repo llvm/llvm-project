@@ -1448,15 +1448,15 @@ let Predicates = [IsISA3_1] in {
                                 [(set v16i8:$VRT,
                                       (int_ppc_altivec_vsldbi v16i8:$VRA,
                                                               v16i8:$VRB,
-                                                              timm:$SD))]>;
+                                                              u3imm_timm:$SD))]>;
   def VSRDBI : VNForm_VTAB5_SD3<22, 1, (outs vrrc:$VRT),
                                 (ins vrrc:$VRA, vrrc:$VRB, u3imm:$SD),
                                 "vsrdbi $VRT, $VRA, $VRB, $SD",
                                 IIC_VecGeneral,
                                 [(set v16i8:$VRT,
                                       (int_ppc_altivec_vsrdbi v16i8:$VRA,
-                                                              v16i8:$VRB, 
-                                                              timm:$SD))]>;
+                                                              v16i8:$VRB,
+                                                              u3imm_timm:$SD))]>;
   defm VSTRIBR : VXForm_VTB5_RCr<13, 1, (outs vrrc:$VT), (ins vrrc:$VB),
                                  "vstribr", "$VT, $VB", IIC_VecGeneral,
 				 [(set v16i8:$VT,
@@ -1477,13 +1477,13 @@ let Predicates = [IsISA3_1] in {
     VXForm_1<207, (outs vrrc:$VD), (ins vrrc:$VDi, u4imm:$VA, gprc:$VB),
              "vinsw $VD, $VB, $VA", IIC_VecGeneral,
              [(set v4i32:$VD,
-                   (int_ppc_altivec_vinsw v4i32:$VDi, i32:$VB, timm:$VA))]>,
+                   (int_ppc_altivec_vinsw v4i32:$VDi, i32:$VB, u4imm_timm:$VA))]>,
              RegConstraint<"$VDi = $VD">;
   def VINSD :
     VXForm_1<463, (outs vrrc:$VD), (ins vrrc:$VDi, u4imm:$VA, g8rc:$VB),
              "vinsd $VD, $VB, $VA", IIC_VecGeneral,
              [(set v2i64:$VD,
-                   (int_ppc_altivec_vinsd v2i64:$VDi, i64:$VB, timm:$VA))]>,
+                   (int_ppc_altivec_vinsd v2i64:$VDi, i64:$VB, u4imm_timm:$VA))]>,
              RegConstraint<"$VDi = $VD">;
   def VINSBVLX :
     VXForm_VTB5_RA5_ins<15, "vinsbvlx",
@@ -1730,7 +1730,7 @@ let Predicates = [IsISA3_1] in {
    def VGNB : VXForm_RD5_N3_VB5<1228, (outs g8rc:$RD), (ins vrrc:$VB, u3imm:$N),
                                 "vgnb $RD, $VB, $N", IIC_VecGeneral,
                                 [(set i64:$RD,
-                                (int_ppc_altivec_vgnb v1i128:$VB, timm:$N))]>;
+                                (int_ppc_altivec_vgnb v1i128:$VB, u3imm_timm:$N))]>;
    def CFUGED : XForm_6<31, 220, (outs g8rc:$RA), (ins g8rc:$RST, g8rc:$RB),
                         "cfuged $RA, $RST, $RB", IIC_IntGeneral,
                         [(set i64:$RA, (int_ppc_cfuged i64:$RST, i64:$RB))]>;
@@ -1739,7 +1739,7 @@ let Predicates = [IsISA3_1] in {
                             vsrc:$XC, u8imm:$IMM),
                             "xxeval $XT, $XA, $XB, $XC, $IMM", IIC_VecGeneral,
                             [(set v2i64:$XT, (int_ppc_vsx_xxeval v2i64:$XA,
-                                  v2i64:$XB, v2i64:$XC, timm:$IMM))]>;
+                                  v2i64:$XB, v2i64:$XC, u8imm_timm:$IMM))]>;
    def VCLZDM : VXForm_1<1924, (outs vrrc:$VD), (ins vrrc:$VA, vrrc:$VB),
                          "vclzdm $VD, $VA, $VB", IIC_VecGeneral,
                          [(set v2i64:$VD,
@@ -2762,7 +2762,7 @@ let Predicates = [PrefixInstrs, HasP10Vector] in {
 
   def : Pat<(i32 imm34:$imm), (PLI (getImmAs64BitInt imm:$imm))>;
   def : Pat<(i64 imm34:$imm), (PLI8 (getImmAs64BitInt imm:$imm))>;
-  def : Pat<(v16i8 (int_ppc_vsx_xxpermx v16i8:$A, v16i8:$B, v16i8:$C, timm:$D)),
+  def : Pat<(v16i8 (int_ppc_vsx_xxpermx v16i8:$A, v16i8:$B, v16i8:$C, u3imm_timm:$D)),
             (COPY_TO_REGCLASS (XXPERMX (COPY_TO_REGCLASS $A, VSRC),
                                        (COPY_TO_REGCLASS $B, VSRC),
                                        (COPY_TO_REGCLASS $C, VSRC), $D), VSRC)>;

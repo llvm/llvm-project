@@ -533,19 +533,19 @@ def VANDC : VXForm_1<1092, (outs vrrc:$VD), (ins vrrc:$VA, vrrc:$VB),
 def VCFSX  : VXForm_1<842, (outs vrrc:$VD), (ins u5imm:$VA, vrrc:$VB),
                       "vcfsx $VD, $VB, $VA", IIC_VecFP,
                       [(set v4f32:$VD,
-                             (int_ppc_altivec_vcfsx v4i32:$VB, timm:$VA))]>;
+                             (int_ppc_altivec_vcfsx v4i32:$VB, u5imm_timm:$VA))]>;
 def VCFUX  : VXForm_1<778, (outs vrrc:$VD), (ins u5imm:$VA, vrrc:$VB),
                       "vcfux $VD, $VB, $VA", IIC_VecFP,
                       [(set v4f32:$VD,
-                             (int_ppc_altivec_vcfux v4i32:$VB, timm:$VA))]>;
+                             (int_ppc_altivec_vcfux v4i32:$VB, u5imm_timm:$VA))]>;
 def VCTSXS : VXForm_1<970, (outs vrrc:$VD), (ins u5imm:$VA, vrrc:$VB),
                       "vctsxs $VD, $VB, $VA", IIC_VecFP,
                       [(set v4i32:$VD,
-                             (int_ppc_altivec_vctsxs v4f32:$VB, timm:$VA))]>;
+                             (int_ppc_altivec_vctsxs v4f32:$VB, u5imm_timm:$VA))]>;
 def VCTUXS : VXForm_1<906, (outs vrrc:$VD), (ins u5imm:$VA, vrrc:$VB),
                       "vctuxs $VD, $VB, $VA", IIC_VecFP,
                       [(set v4i32:$VD,
-                             (int_ppc_altivec_vctuxs v4f32:$VB, timm:$VA))]>;
+                             (int_ppc_altivec_vctuxs v4f32:$VB, u5imm_timm:$VA))]>;
 
 // Defines with the UIM field set to 0 for floating-point
 // to integer (fp_to_sint/fp_to_uint) conversions and integer
