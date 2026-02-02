@@ -40,6 +40,7 @@ class NoopCoroElider : public PtrUseVisitor<NoopCoroElider> {
   using Base = PtrUseVisitor<NoopCoroElider>;
 
   IRBuilder<> Builder;
+
 public:
   NoopCoroElider(const DataLayout &DL, LLVMContext &C) : Base(DL), Builder(C) {}
 
@@ -48,6 +49,7 @@ public:
   void visitLoadInst(LoadInst &I) { enqueueUsers(I); }
   void visitCallBase(CallBase &CB);
   void visitIntrinsicInst(IntrinsicInst &II);
+
 private:
   bool tryEraseCallInvoke(Instruction *I);
 };
