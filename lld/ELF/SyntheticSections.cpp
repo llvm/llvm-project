@@ -600,18 +600,25 @@ bool EhFrameHeader::isNeeded() const {
   return isLive() && getPartition(ctx).ehFrame->isNeeded();
 }
 
-bool EhFrameSection::updateAllocSize(Ctx &ctx) {
-  if (!isLive())
-    return false;
-  EhFrameHeader *hdr = getPartition(ctx).ehFrameHdr.get();
-  if (!hdr || !hdr->getParent())
-    return false;
+void EhFrameHeader::finalizeContents() {
+  // Compute size: 4-byte header + eh_frame_ptr + fde_count + FDE table.
+  // Initially `large` is false; updateAllocSize may set it to true if addresses
+  // exceed the 32-bit range, then call finalizeContents again.
+  auto numFdes = getPartition(ctx).ehFrame->numFdes;
+  size = 4 + (large ? 8 : 4) + 4 + numFdes * (large ? 16 : 8);
+}
+
+bool EhFrameHeader::updateAllocSize(Ctx &ctx) {
+  EhFrameSection *ehFrame = getPartition(ctx).ehFrame.get();
+  uint64_t hdrVA = getVA();
+  int64_t ehFramePtr = ehFrame->getParent()->addr - hdrVA - 4;
+  // Determine if 64-bit encodings are needed.
+  bool newLarge = !isInt<32>(ehFramePtr);
 
   // Collect FDE entries. For each FDE, compute pcRel and fdeVARel relative to
   // .eh_frame_hdr's VA.
-  uint64_t hdrVA = hdr->getVA();
-  hdr->fdes.clear();
-  for (CieRecord *rec : cieRecords) {
+  fdes.clear();
+  for (CieRecord *rec : ehFrame->getCieRecords()) {
     uint8_t enc = getFdeEncoding(rec->cie);
     if ((enc & 0x70) != DW_EH_PE_absptr && (enc & 0x70) != DW_EH_PE_pcrel) {
       Err(ctx) << "unknown FDE size encoding";
@@ -623,36 +630,32 @@ bool EhFrameSection::updateAllocSize(Ctx &ctx) {
       auto *isec = cast<EhInputSection>(fde->sec);
       auto &reloc = isec->rels[fde->firstRelocation];
       assert(isa<Defined>(reloc.sym) && "isFdeLive should have checked this");
-      uint64_t pc = reloc.sym->getVA(ctx) + reloc.addend;
-      uint64_t fdeVA = getParent()->addr + fde->outputOff;
-      hdr->fdes.push_back({int64_t(pc - hdrVA), int64_t(fdeVA - hdrVA)});
+      int64_t pcRel = reloc.sym->getVA(ctx) + reloc.addend - hdrVA;
+      int64_t fdeVARel = ehFrame->getParent()->addr + fde->outputOff - hdrVA;
+      fdes.push_back({pcRel, fdeVARel});
+      newLarge |= !isInt<32>(pcRel) || !isInt<32>(fdeVARel);
     }
   }
 
-  // Sort the FDE list by their PC and uniqueify. Usually there is only one FDE
-  // for a PC (i.e. function), but there can be more than one FDEs pointing to
-  // the address.
-  llvm::stable_sort(hdr->fdes, [](const FdeData &a, const FdeData &b) {
-    return a.pcRel < b.pcRel;
-  });
-  hdr->fdes.erase(llvm::unique(hdr->fdes,
-                               [](const FdeData &a, const FdeData &b) {
-                                 return a.pcRel == b.pcRel;
-                               }),
-                  hdr->fdes.end());
+  // Sort the FDE list by their PC and uniquify. Usually there is only one FDE
+  // at an address, but there can be more than one FDEs pointing to the address.
+  llvm::stable_sort(
+      fdes, [](const EhFrameSection::FdeData &a,
+               const EhFrameSection::FdeData &b) { return a.pcRel < b.pcRel; });
+  fdes.erase(llvm::unique(fdes,
+                          [](const EhFrameSection::FdeData &a,
+                             const EhFrameSection::FdeData &b) {
+                            return a.pcRel == b.pcRel;
+                          }),
+             fdes.end());
+  ehFrame->numFdes = fdes.size();
 
-  // Determine if 64-bit encodings are needed.
-  size_t oldSize = hdr->size;
-  int64_t ehFramePtr = getParent()->addr - hdrVA - 4;
-  hdr->large =
-      !isInt<32>(ehFramePtr) || llvm::any_of(hdr->fdes, [](const FdeData &f) {
-        return !isInt<32>(f.pcRel) || !isInt<32>(f.fdeVARel);
-      });
+  large = newLarge;
 
-  // Compute size: 4-byte header + eh_frame_ptr + fde_count + FDE table.
-  hdr->size =
-      4 + (hdr->large ? 8 : 4) + 4 + hdr->fdes.size() * (hdr->large ? 16 : 8);
-  return hdr->size != oldSize;
+  // Compute size.
+  size_t oldSize = size;
+  finalizeContents();
+  return size != oldSize;
 }
 
 GotSection::GotSection(Ctx &ctx)

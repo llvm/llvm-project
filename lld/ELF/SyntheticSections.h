@@ -55,7 +55,6 @@ public:
   void finalizeContents() override;
   bool isNeeded() const override { return !sections.empty(); }
   size_t getSize() const override { return size; }
-  bool updateAllocSize(Ctx &) override;
 
   static bool classof(const SectionBase *d) {
     return SyntheticSection::classof(d) && d->name == ".eh_frame";
@@ -102,6 +101,8 @@ public:
   void writeTo(uint8_t *buf) override;
   size_t getSize() const override { return size; }
   bool isNeeded() const override;
+  void finalizeContents() override;
+  bool updateAllocSize(Ctx &) override;
 
   // Cached FDE data computed by updateAllocSize, used by writeTo.
   SmallVector<EhFrameSection::FdeData, 0> fdes;
