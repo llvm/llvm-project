@@ -550,9 +550,9 @@ public:
               !isaFunction(rawAttribute)) {
             auto origRepr =
                 nanobind::cast<std::string>(nanobind::repr(otherAttribute));
-            throw std::invalid_argument(join("Cannot cast attribute to ",
-                                             captureTypeName, " (from ",
-                                             origRepr, ")"));
+            throw std::invalid_argument(nanobind::detail::join(
+                "Cannot cast attribute to ", captureTypeName, " (from ",
+                origRepr, ")"));
           }
           nanobind::object self = superCls.attr("__new__")(cls, otherAttribute);
           return self;
@@ -632,9 +632,9 @@ public:
               !isaFunction(rawType)) {
             auto origRepr =
                 nanobind::cast<std::string>(nanobind::repr(otherType));
-            throw std::invalid_argument(join("Cannot cast type to ",
-                                             captureTypeName, " (from ",
-                                             origRepr, ")"));
+            throw std::invalid_argument(nanobind::detail::join(
+                "Cannot cast type to ", captureTypeName, " (from ", origRepr,
+                ")"));
           }
           nanobind::object self = superCls.attr("__new__")(cls, otherType);
           return self;
@@ -718,9 +718,9 @@ public:
               !isaFunction(rawValue)) {
             auto origRepr =
                 nanobind::cast<std::string>(nanobind::repr(otherValue));
-            throw std::invalid_argument(join("Cannot cast value to ",
-                                             captureValueName, " (from ",
-                                             origRepr, ")"));
+            throw std::invalid_argument(nanobind::detail::join(
+                "Cannot cast value to ", captureValueName, " (from ", origRepr,
+                ")"));
           }
           nanobind::object self = superCls.attr("__new__")(cls, otherValue);
           return self;

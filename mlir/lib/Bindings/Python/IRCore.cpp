@@ -26,6 +26,7 @@
 namespace nb = nanobind;
 using namespace nb::literals;
 using namespace mlir;
+using nanobind::detail::join;
 
 static const char kModuleParseDocstring[] =
     R"(Parses a module's assembly format from a string.

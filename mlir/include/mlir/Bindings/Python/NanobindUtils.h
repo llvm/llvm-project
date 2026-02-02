@@ -37,14 +37,6 @@ struct std::iterator_traits<nanobind::detail::fast_iterator> {
 namespace mlir {
 namespace python {
 
-/// Helper function to concatenate arguments into a `std::string`.
-template <typename... Ts>
-inline std::string join(const Ts &...args) {
-  std::ostringstream oss;
-  (oss << ... << args);
-  return oss.str();
-}
-
 struct MlirTypeIDHash {
   size_t operator()(MlirTypeID typeID) const {
     return mlirTypeIDHashValue(typeID);
@@ -93,6 +85,14 @@ private:
 
 namespace nanobind {
 namespace detail {
+
+/// Helper function to concatenate arguments into a `std::string`.
+template <typename... Ts>
+inline std::string join(const Ts &...args) {
+  std::ostringstream oss;
+  (oss << ... << args);
+  return oss.str();
+}
 
 template <typename DefaultingTy>
 struct MlirDefaultingCaster {
