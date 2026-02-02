@@ -14593,8 +14593,7 @@ static SDValue tryToFoldExtOfExtload(SelectionDAG &DAG, DAGCombiner &Combiner,
                                      bool LegalOperations, SDNode *N,
                                      SDValue N0, ISD::LoadExtType ExtLoadType) {
   bool Frozen = N0.getOpcode() == ISD::FREEZE;
-  auto OldExtLoad =
-      dyn_cast<LoadSDNode>(Frozen ? N0.getOperand(0).getNode() : N0.getNode());
+  auto *OldExtLoad = dyn_cast<LoadSDNode>(Frozen ? N0.getOperand(0) : N0);
   if (!OldExtLoad)
     return SDValue();
 
