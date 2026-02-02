@@ -277,7 +277,7 @@ class Operation(ir.OpView):
         args = result_args + [
             i
             for i in fields
-            if not isinstance(i, ResultDef) and not isinstance(i, RegionDef)
+            if not isinstance(i, ResultDef | RegionDef)
         ]
         positional_args = [
             i.name for i in args if i.variadicity != Variadicity.optional
