@@ -104,7 +104,8 @@ public:
   void finalizeContents() override;
   bool updateAllocSize(Ctx &) override;
 
-  // Cached FDE data computed by updateAllocSize, used by writeTo.
+  // Cached FDE data computed by updateAllocSize, used by
+  // EhFrameSection::writeTo.
   SmallVector<EhFrameSection::FdeData, 0> fdes;
   bool large = false; // Whether to use sdata8 encoding.
   size_t size = 0;
