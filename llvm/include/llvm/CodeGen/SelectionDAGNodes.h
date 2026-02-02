@@ -2328,10 +2328,12 @@ public:
 
   LLVM_ABI bool isConstant() const;
 
-  /// If this BuildVector is constant and represents the numerical series
-  /// "<a, a+n, a+2n, a+3n, ...>" where a is integer and n is a non-zero integer,
-  /// the value "<a,n>" is returned.
-  LLVM_ABI std::optional<std::pair<APInt, APInt>> isConstantSequence() const;
+  /// If this BuildVector is constant and represents an arithmetic sequence
+  /// "<a, a+n, a+2n, a+3n, ...>" where a is integer and n is a non-zero
+  /// integer, the value "<a, n>" is returned. Arithmetic is performed modulo
+  /// 2^BitWidth, so this also matches sequences that wrap around. Poison
+  /// elements are ignored and can take any value.
+  LLVM_ABI std::optional<std::pair<APInt, APInt>> isArithmeticSequence() const;
 
   /// Recast bit data \p SrcBitElements to \p DstEltSizeInBits wide elements.
   /// Undef elements are treated as zero, and entirely undefined elements are

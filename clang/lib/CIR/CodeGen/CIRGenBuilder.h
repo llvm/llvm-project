@@ -197,6 +197,12 @@ public:
                              mlir::Value src, mlir::Value len) {
     return cir::MemCpyOp::create(*this, loc, dst, src, len);
   }
+
+  cir::MemSetOp createMemSet(mlir::Location loc, mlir::Value dst,
+                             mlir::Value val, mlir::Value len) {
+    assert(val.getType() == getUInt8Ty());
+    return cir::MemSetOp::create(*this, loc, dst, val, len);
+  }
   // ---------------------------
 
   cir::DataMemberAttr getDataMemberAttr(cir::DataMemberType ty,
@@ -378,6 +384,10 @@ public:
   cir::ConstantOp getNullDataMemberPtr(cir::DataMemberType ty,
                                        mlir::Location loc) {
     return cir::ConstantOp::create(*this, loc, getNullDataMemberAttr(ty));
+  }
+
+  cir::ConstantOp getNullMethodPtr(cir::MethodType ty, mlir::Location loc) {
+    return cir::ConstantOp::create(*this, loc, getNullMethodAttr(ty));
   }
 
   // TODO: split this to createFPExt/createFPTrunc when we have dedicated cast
@@ -677,6 +687,15 @@ public:
     cir::ConstantOp poison =
         getConstant(loc, cir::PoisonAttr::get(vec1.getType()));
     return createVecShuffle(loc, vec1, poison, mask);
+  }
+
+  template <typename... Operands>
+  mlir::Value emitIntrinsicCallOp(mlir::Location loc, const llvm::StringRef str,
+                                  const mlir::Type &resTy, Operands &&...op) {
+    return cir::LLVMIntrinsicCallOp::create(*this, loc,
+                                            this->getStringAttr(str), resTy,
+                                            std::forward<Operands>(op)...)
+        .getResult();
   }
 };
 

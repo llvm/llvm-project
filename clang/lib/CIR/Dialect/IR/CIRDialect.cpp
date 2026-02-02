@@ -18,6 +18,7 @@
 
 #include "mlir/IR/Attributes.h"
 #include "mlir/IR/DialectImplementation.h"
+#include "mlir/IR/PatternMatch.h"
 #include "mlir/Interfaces/ControlFlowInterfaces.h"
 #include "mlir/Interfaces/FunctionImplementation.h"
 #include "mlir/Support/LLVM.h"
@@ -1306,8 +1307,82 @@ LogicalResult cir::ScopeOp::fold(FoldAdaptor /*adaptor*/,
 }
 
 //===----------------------------------------------------------------------===//
+// CleanupScopeOp
+//===----------------------------------------------------------------------===//
+
+void cir::CleanupScopeOp::getSuccessorRegions(
+    mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (!point.isParent()) {
+    regions.push_back(RegionSuccessor::parent());
+    return;
+  }
+
+  // Execution always proceeds from the body region to the cleanup region.
+  regions.push_back(RegionSuccessor(&getBodyRegion()));
+  regions.push_back(RegionSuccessor(&getCleanupRegion()));
+}
+
+mlir::ValueRange
+cir::CleanupScopeOp::getSuccessorInputs(RegionSuccessor successor) {
+  return ValueRange();
+}
+
+void cir::CleanupScopeOp::build(
+    OpBuilder &builder, OperationState &result, CleanupKind cleanupKind,
+    function_ref<void(OpBuilder &, Location)> bodyBuilder,
+    function_ref<void(OpBuilder &, Location)> cleanupBuilder) {
+  result.addAttribute(getCleanupKindAttrName(result.name),
+                      CleanupKindAttr::get(builder.getContext(), cleanupKind));
+
+  OpBuilder::InsertionGuard guard(builder);
+
+  // Build body region.
+  Region *bodyRegion = result.addRegion();
+  builder.createBlock(bodyRegion);
+  if (bodyBuilder)
+    bodyBuilder(builder, result.location);
+
+  // Build cleanup region.
+  Region *cleanupRegion = result.addRegion();
+  builder.createBlock(cleanupRegion);
+  if (cleanupBuilder)
+    cleanupBuilder(builder, result.location);
+}
+
+//===----------------------------------------------------------------------===//
 // BrOp
 //===----------------------------------------------------------------------===//
+
+/// Merges blocks connected by a unique unconditional branch.
+///
+///   ^bb0:              ^bb0:
+///     ...                ...
+///     cir.br ^bb1  =>    ...
+///   ^bb1:                cir.return
+///     ...
+///     cir.return
+LogicalResult cir::BrOp::canonicalize(BrOp op, PatternRewriter &rewriter) {
+  Block *src = op->getBlock();
+  Block *dst = op.getDest();
+
+  // Do not fold self-loops.
+  if (src == dst)
+    return failure();
+
+  // Only merge when this is the unique edge between the blocks.
+  if (src->getNumSuccessors() != 1 || dst->getSinglePredecessor() != src)
+    return failure();
+
+  // Don't merge blocks that start with LabelOp or IndirectBrOp.
+  // This is to avoid merging blocks that have an indirect predecessor.
+  if (isa<cir::LabelOp, cir::IndirectBrOp>(dst->front()))
+    return failure();
+
+  auto operands = op.getDestOperands();
+  rewriter.eraseOp(op);
+  rewriter.mergeBlocks(dst, src, operands);
+  return success();
+}
 
 mlir::SuccessorOperands cir::BrOp::getSuccessorOperands(unsigned index) {
   assert(index == 0 && "invalid successor index");
@@ -2054,6 +2129,18 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
       }).failed())
     return failure();
 
+  if (parser.parseOptionalKeyword("side_effect").succeeded()) {
+    cir::SideEffect sideEffect;
+
+    if (parser.parseLParen().failed() ||
+        parseCIRKeyword<cir::SideEffect>(parser, sideEffect).failed() ||
+        parser.parseRParen().failed())
+      return failure();
+
+    auto attr = cir::SideEffectAttr::get(parser.getContext(), sideEffect);
+    state.addAttribute(CIRDialect::getSideEffectAttrName(), attr);
+  }
+
   // Parse the rest of the attributes.
   NamedAttrList parsedAttrs;
   if (parser.parseOptionalAttrDictWithKeyword(parsedAttrs))
@@ -2223,6 +2310,13 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
     p << " global_dtor";
     if (globalDtorPriority.value() != 65535)
       p << "(" << globalDtorPriority.value() << ")";
+  }
+
+  if (std::optional<cir::SideEffect> sideEffect = getSideEffect();
+      sideEffect && *sideEffect != cir::SideEffect::All) {
+    p << " side_effect(";
+    p << stringifySideEffect(*sideEffect);
+    p << ")";
   }
 
   function_interface_impl::printFunctionAttributes(
@@ -2614,6 +2708,18 @@ LogicalResult cir::DerivedDataMemberOp::verify() {
 }
 
 //===----------------------------------------------------------------------===//
+// BaseMethodOp & DerivedMethodOp
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::BaseMethodOp::verify() {
+  return verifyMemberPtrCast(getOperation(), getSrc(), getType());
+}
+
+LogicalResult cir::DerivedMethodOp::verify() {
+  return verifyMemberPtrCast(getOperation(), getSrc(), getType());
+}
+
+//===----------------------------------------------------------------------===//
 // AwaitOp
 //===----------------------------------------------------------------------===//
 
@@ -2788,6 +2894,22 @@ LogicalResult cir::ExtractMemberOp::verify() {
     return emitError() << "member index out of bounds";
   if (recordTy.getMembers()[getIndex()] != getType())
     return emitError() << "member type mismatch";
+  return mlir::success();
+}
+
+//===----------------------------------------------------------------------===//
+// InsertMemberOp Definitions
+//===----------------------------------------------------------------------===//
+
+LogicalResult cir::InsertMemberOp::verify() {
+  auto recordTy = mlir::cast<cir::RecordType>(getRecord().getType());
+  if (recordTy.getKind() == cir::RecordType::Union)
+    return emitError() << "cir.insert_member currently does not support unions";
+  if (recordTy.getMembers().size() <= getIndex())
+    return emitError() << "member index out of bounds";
+  if (recordTy.getMembers()[getIndex()] != getValue().getType())
+    return emitError() << "member type mismatch";
+  // The op trait already checks that the types of $result and $record match.
   return mlir::success();
 }
 

@@ -438,21 +438,28 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
 
 void Intrinsic::getIntrinsicInfoTableEntries(
     ID id, SmallVectorImpl<IITDescriptor> &T) {
-  static_assert(sizeof(IIT_Table[0]) == 2,
-                "Expect 16-bit entries in IIT_Table");
-  // Check to see if the intrinsic's type was expressible by the table.
-  uint16_t TableVal = IIT_Table[id - 1];
+  // Note that `FixedEncodingTy` is defined in IntrinsicImpl.inc and can be
+  // uint16_t or uint32_t based on the the value of `Use16BitFixedEncoding` in
+  // IntrinsicEmitter.cpp.
+  constexpr unsigned FixedEncodingBits = sizeof(FixedEncodingTy) * CHAR_BIT;
+  constexpr unsigned MSBPosition = FixedEncodingBits - 1;
+  // Mask with all bits 1 except the most significant bit.
+  constexpr unsigned Mask = (1U << MSBPosition) - 1;
+
+  FixedEncodingTy TableVal = IIT_Table[id - 1];
 
   // Decode the TableVal into an array of IITValues.
   SmallVector<unsigned char> IITValues;
   ArrayRef<unsigned char> IITEntries;
   unsigned NextElt = 0;
-  if (TableVal >> 15) {
+  // Check to see if the intrinsic's type was inlined in the fixed encoding
+  // table.
+  if (TableVal >> MSBPosition) {
     // This is an offset into the IIT_LongEncodingTable.
     IITEntries = IIT_LongEncodingTable;
 
     // Strip sentinel bit.
-    NextElt = TableVal & 0x7fff;
+    NextElt = TableVal & Mask;
   } else {
     // If the entry was encoded into a single word in the table itself, decode
     // it from an array of nibbles to an array of bytes.
@@ -974,14 +981,18 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
 
     return Ty != NewTy;
   }
-  case IITDescriptor::OneNthEltsVecArgument:
+  case IITDescriptor::OneNthEltsVecArgument: {
     // If this is a forward reference, defer the check for later.
     if (D.getRefArgNumber() >= ArgTys.size())
       return IsDeferredCheck || DeferCheck(Ty);
-    return !isa<VectorType>(ArgTys[D.getRefArgNumber()]) ||
-           VectorType::getOneNthElementsVectorType(
-               cast<VectorType>(ArgTys[D.getRefArgNumber()]),
-               D.getVectorDivisor()) != Ty;
+    auto *VTy = dyn_cast<VectorType>(ArgTys[D.getRefArgNumber()]);
+    if (!VTy)
+      return true;
+    if (!VTy->getElementCount().isKnownMultipleOf(D.getVectorDivisor()))
+      return true;
+    return VectorType::getOneNthElementsVectorType(VTy, D.getVectorDivisor()) !=
+           Ty;
+  }
   case IITDescriptor::SameVecWidthArgument: {
     if (D.getArgumentNumber() >= ArgTys.size()) {
       // Defer check and subsequent check for the vector element type.

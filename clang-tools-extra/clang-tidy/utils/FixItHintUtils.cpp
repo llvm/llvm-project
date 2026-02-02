@@ -19,15 +19,15 @@ namespace clang::tidy::utils::fixit {
 
 FixItHint changeVarDeclToReference(const VarDecl &Var, ASTContext &Context) {
   SourceLocation AmpLocation = Var.getLocation();
-  auto Token = utils::lexer::getPreviousToken(
+  const std::optional<Token> Token = utils::lexer::getPreviousToken(
       AmpLocation, Context.getSourceManager(), Context.getLangOpts());
 
   // For parameter packs the '&' must go before the '...' token
-  if (Token.is(tok::ellipsis))
-    return FixItHint::CreateInsertion(Token.getLocation(), "&");
+  if (Token && Token->is(tok::ellipsis))
+    return FixItHint::CreateInsertion(Token->getLocation(), "&");
 
-  if (!Token.is(tok::unknown))
-    AmpLocation = Lexer::getLocForEndOfToken(Token.getLocation(), 0,
+  if (Token)
+    AmpLocation = Lexer::getLocForEndOfToken(Token->getLocation(), 0,
                                              Context.getSourceManager(),
                                              Context.getLangOpts());
   return FixItHint::CreateInsertion(AmpLocation, "&");
@@ -53,10 +53,9 @@ skipLParensBackwards(SourceLocation Start, const ASTContext &Context) {
     return std::nullopt;
 
   auto PreviousTokenLParen = [&Start, &Context]() {
-    Token T;
-    T = lexer::getPreviousToken(Start, Context.getSourceManager(),
-                                Context.getLangOpts());
-    return T.is(tok::l_paren);
+    const std::optional<Token> T = lexer::getPreviousToken(
+        Start, Context.getSourceManager(), Context.getLangOpts());
+    return T && T->is(tok::l_paren);
   };
 
   while (Start.isValid() && PreviousTokenLParen())

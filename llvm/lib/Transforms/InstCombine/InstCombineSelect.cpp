@@ -35,6 +35,7 @@
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
+#include "llvm/IR/ProfDataUtils.h"
 #include "llvm/IR/Type.h"
 #include "llvm/IR/User.h"
 #include "llvm/IR/Value.h"
@@ -4357,7 +4358,20 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
 
     // Canonicalize select of FP values where NaN and -0.0 are not valid as
     // minnum/maxnum intrinsics.
-    if (SIFPOp->hasNoNaNs() &&
+    //
+    // Note that the `nnan` flag is propagated from the comparison, not from the
+    // select. While it's technically possible to transform a `fcmp` + `select
+    // nnan` to a `minnum`/`maxnum` call *without* an `nnan`, that would be a
+    // pessimization in practice. Many targets can't map `minnum`/`maxnum` to a
+    // single instruction, and if they cannot prove the absence of NaN, must
+    // lower it to a routine or a libcall. There are additional reasons besides
+    // performance to avoid introducing libcalls where none existed before
+    // (https://github.com/llvm/llvm-project/issues/54554).
+    //
+    // As such, we want to ensure that the generated `minnum`/`maxnum` intrinsic
+    // has the `nnan nsz` flags, which allow it to be lowered *back* to a
+    // fcmp+select if that's the best way to express it on the target.
+    if (FCmp && FCmp->hasNoNaNs() &&
         (SIFPOp->hasNoSignedZeros() ||
          (SIFPOp->hasOneUse() &&
           canIgnoreSignBitOfZero(*SIFPOp->use_begin())))) {
@@ -4366,8 +4380,18 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         Value *BinIntr =
             Builder.CreateBinaryIntrinsic(Intrinsic::maxnum, X, Y, &SI);
         if (auto *BinIntrInst = dyn_cast<Instruction>(BinIntr)) {
-          BinIntrInst->setHasNoNaNs(FCmp->hasNoNaNs());
+          // `ninf` must be propagated from the comparison too, rather than the
+          // select: https://github.com/llvm/llvm-project/pull/136433
           BinIntrInst->setHasNoInfs(FCmp->hasNoInfs());
+          // The `nsz` flag is a precondition, so let's ensure it's always added
+          // to the min/max operation, even if it wasn't on the select. This
+          // could happen if `canIgnoreSignBitOfZero` is true--for instance, if
+          // the select doesn't have `nsz`, but the result is being used in an
+          // operation that doesn't care about signed zero.
+          BinIntrInst->setHasNoSignedZeros(true);
+          // As mentioned above, `nnan` is also a precondition, so we always set
+          // the flag.
+          BinIntrInst->setHasNoNaNs(true);
         }
         return replaceInstUsesWith(SI, BinIntr);
       }
@@ -4376,8 +4400,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         Value *BinIntr =
             Builder.CreateBinaryIntrinsic(Intrinsic::minnum, X, Y, &SI);
         if (auto *BinIntrInst = dyn_cast<Instruction>(BinIntr)) {
-          BinIntrInst->setHasNoNaNs(FCmp->hasNoNaNs());
           BinIntrInst->setHasNoInfs(FCmp->hasNoInfs());
+          BinIntrInst->setHasNoSignedZeros(true);
+          BinIntrInst->setHasNoNaNs(true);
         }
         return replaceInstUsesWith(SI, BinIntr);
       }
@@ -4515,15 +4540,33 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
               *TrueSI, CondVal, /*CondIsTrue=*/true, DL))
         return replaceOperand(SI, 1, V);
 
-      // select(C0, select(C1, a, b), b) -> select(C0&C1, a, b)
       // We choose this as normal form to enable folding on the And and
       // shortening paths for the values (this helps getUnderlyingObjects() for
       // example).
-      if (TrueSI->getFalseValue() == FalseVal && TrueSI->hasOneUse()) {
-        Value *And = Builder.CreateLogicalAnd(CondVal, TrueSI->getCondition());
-        replaceOperand(SI, 0, And);
-        replaceOperand(SI, 1, TrueSI->getTrueValue());
-        return &SI;
+      if (TrueSI->hasOneUse()) {
+        Value *And = nullptr, *OtherVal = nullptr;
+        // select(C0, select(C1, a, b), b) -> select(C0&&C1, a, b)
+        if (TrueSI->getFalseValue() == FalseVal) {
+          And = Builder.CreateLogicalAnd(CondVal, TrueSI->getCondition(), "",
+                                         ProfcheckDisableMetadataFixes ? nullptr
+                                                                       : &SI);
+          OtherVal = TrueSI->getTrueValue();
+        }
+        // select(C0, select(C1, b, a), b) -> select(C0&&!C1, a, b)
+        else if (TrueSI->getTrueValue() == FalseVal) {
+          Value *InvertedCond = Builder.CreateNot(TrueSI->getCondition());
+          And = Builder.CreateLogicalAnd(CondVal, InvertedCond, "",
+                                         ProfcheckDisableMetadataFixes ? nullptr
+                                                                       : &SI);
+          OtherVal = TrueSI->getFalseValue();
+        }
+        if (And && OtherVal) {
+          replaceOperand(SI, 0, And);
+          replaceOperand(SI, 1, OtherVal);
+          if (!ProfcheckDisableMetadataFixes)
+            setExplicitlyUnknownBranchWeightsIfProfiled(SI, DEBUG_TYPE);
+          return &SI;
+        }
       }
     }
   }
@@ -4535,12 +4578,30 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
               *FalseSI, CondVal, /*CondIsTrue=*/false, DL))
         return replaceOperand(SI, 2, V);
 
-      // select(C0, a, select(C1, a, b)) -> select(C0|C1, a, b)
-      if (FalseSI->getTrueValue() == TrueVal && FalseSI->hasOneUse()) {
-        Value *Or = Builder.CreateLogicalOr(CondVal, FalseSI->getCondition());
-        replaceOperand(SI, 0, Or);
-        replaceOperand(SI, 2, FalseSI->getFalseValue());
-        return &SI;
+      if (FalseSI->hasOneUse()) {
+        Value *Or = nullptr, *OtherVal = nullptr;
+        // select(C0, a, select(C1, a, b)) -> select(C0||C1, a, b)
+        if (FalseSI->getTrueValue() == TrueVal) {
+          Or = Builder.CreateLogicalOr(CondVal, FalseSI->getCondition(), "",
+                                       ProfcheckDisableMetadataFixes ? nullptr
+                                                                     : &SI);
+          OtherVal = FalseSI->getFalseValue();
+        }
+        // select(C0, a, select(C1, b, a)) -> select(C0||!C1, a, b)
+        else if (FalseSI->getFalseValue() == TrueVal) {
+          Value *InvertedCond = Builder.CreateNot(FalseSI->getCondition());
+          Or = Builder.CreateLogicalOr(CondVal, InvertedCond, "",
+                                       ProfcheckDisableMetadataFixes ? nullptr
+                                                                     : &SI);
+          OtherVal = FalseSI->getTrueValue();
+        }
+        if (Or && OtherVal) {
+          replaceOperand(SI, 0, Or);
+          replaceOperand(SI, 2, OtherVal);
+          if (!ProfcheckDisableMetadataFixes)
+            setExplicitlyUnknownBranchWeightsIfProfiled(SI, DEBUG_TYPE);
+          return &SI;
+        }
       }
     }
   }

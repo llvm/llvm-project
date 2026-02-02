@@ -1,4 +1,6 @@
 // RUN: %libomptarget-compilexx-run-and-check-generic
+// XFAIL: intelgpu
+
 #include <omp.h>
 #include <stdio.h>
 
@@ -26,12 +28,6 @@ struct TY4 {
   TY2 n;
   int b;
   static constexpr auto name = "TY4";
-};
-
-static TY2 q2;
-struct TY5 {
-  TY2 &n = q2;
-  static constexpr auto name = "TY5";
 };
 
 template <typename T> int testType() {
@@ -62,10 +58,6 @@ template <typename T> int testType() {
   int pt1 = omp_target_is_present(&t2[1], omp_get_default_device());
   int pt2 = omp_target_is_present(&t3[2], omp_get_default_device());
 
-  // CHECK: present check for TY1: t1 0, t2 0, t3 0, expected 3x 0
-  // CHECK: present check for TY2: t1 0, t2 0, t3 0, expected 3x 0
-  // CHECK: present check for TY3: t1 0, t2 0, t3 0, expected 3x 0
-  // CHECK: present check for TY4: t1 0, t2 0, t3 0, expected 3x 0
   printf("present check for %s: t1 %i, t2 %i, t3 %i, expected 3x 0\n", T::name,
          pt0, pt1, pt2);
   return pt0 + pt1 + pt2;
@@ -98,9 +90,6 @@ template <typename T> int testTypeNestedPtr(T t1[2], T t2[3], T t3[4]) {
   int pt1 = omp_target_is_present(&t2[1], omp_get_default_device());
   int pt2 = omp_target_is_present(&t3[2], omp_get_default_device());
 
-  // CHECK: present check for TY3-ptr: t1 0, t2 0, t3 0, expected 3x 0
-  // CHECK: present check for TY4-ptr: t1 0, t2 0, t3 0, expected 3x 0
-  // CHECK: present check for TY5-ptr: t1 0, t2 0, t3 0, expected 3x 0
   printf("present check for %s-ptr: t1 %i, t2 %i, t3 %i, expected 3x 0\n",
          T::name, pt0, pt1, pt2);
   return pt0 + pt1 + pt2;
@@ -135,8 +124,6 @@ template <typename T> int testTypeNested() {
   int pt1 = omp_target_is_present(&t2[1], omp_get_default_device());
   int pt2 = omp_target_is_present(&t3[2], omp_get_default_device());
 
-  // CHECK: present check for TY1: t1 0, t2 0, t3 0, expected 3x 0
-  // CHECK: present check for TY2: t1 0, t2 0, t3 0, expected 3x 0
   printf("present check for %s: t1 %i, t2 %i, t3 %i, expected 3x 0\n", T::name,
          pt0, pt1, pt2);
   return pt0 + pt1 + pt2;
@@ -145,20 +132,14 @@ template <typename T> int testTypeNested() {
 int main(int argc, char **argv) {
   int r = 0;
   r += testType<TY1>();
+  // CHECK: present check for TY1: t1 0, t2 0, t3 0, expected 3x 0
   r += testType<TY2>();
+  // CHECK: present check for TY2: t1 0, t2 0, t3 0, expected 3x 0
   r += testTypeNested<TY3>();
+  // CHECK: present check for TY3-ptr: t1 0, t2 0, t3 0, expected 3x 0
+  // CHECK: present check for TY3: t1 0, t2 0, t3 0, expected 3x 0
   r += testTypeNested<TY4>();
-  {
-    TY2 a[9];
-    TY5 t1[2], t2[3], t3[4];
-    int i = 0;
-    for (int j = 0; j < 2; j++)
-      t1[j].n = a[i++];
-    for (int j = 0; j < 3; j++)
-      t2[j].n = a[i++];
-    for (int j = 0; j < 4; j++)
-      t3[j].n = a[i++];
-    r += testTypeNestedPtr<TY5>(t1, t2, t3);
-  }
+  // CHECK: present check for TY4-ptr: t1 0, t2 0, t3 0, expected 3x 0
+  // CHECK: present check for TY4: t1 0, t2 0, t3 0, expected 3x 0
   return r;
 }

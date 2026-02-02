@@ -939,6 +939,14 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setIndexedStoreAction(ISD::POST_INC, MVT::i32,  Legal);
   }
 
+  // Custom loads/stores to possible use __aeabi_uread/write*
+  if (Subtarget->isTargetAEABI() && !Subtarget->allowsUnalignedMem()) {
+    setOperationAction(ISD::STORE, MVT::i32, Custom);
+    setOperationAction(ISD::STORE, MVT::i64, Custom);
+    setOperationAction(ISD::LOAD, MVT::i32, Custom);
+    setOperationAction(ISD::LOAD, MVT::i64, Custom);
+  }
+
   setOperationAction(ISD::SADDO, MVT::i32, Custom);
   setOperationAction(ISD::UADDO, MVT::i32, Custom);
   setOperationAction(ISD::SSUBO, MVT::i32, Custom);
@@ -9737,6 +9745,95 @@ void ARMTargetLowering::ExpandDIV_Windows(
   Results.push_back(DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Lower, Upper));
 }
 
+std::pair<SDValue, SDValue>
+ARMTargetLowering::LowerAEABIUnalignedLoad(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  // If we have an unaligned load from a i32 or i64 that would normally be
+  // split into separate ldrb's, we can use the __aeabi_uread4/__aeabi_uread8
+  // functions instead.
+  LoadSDNode *LD = cast<LoadSDNode>(Op.getNode());
+  EVT MemVT = LD->getMemoryVT();
+  if (MemVT != MVT::i32 && MemVT != MVT::i64)
+    return std::make_pair(SDValue(), SDValue());
+
+  const auto &MF = DAG.getMachineFunction();
+  unsigned AS = LD->getAddressSpace();
+  Align Alignment = LD->getAlign();
+  const DataLayout &DL = DAG.getDataLayout();
+  bool AllowsUnaligned = Subtarget->allowsUnalignedMem();
+
+  if (MF.getFunction().hasMinSize() && !AllowsUnaligned &&
+      Alignment <= llvm::Align(2)) {
+
+    RTLIB::Libcall LC =
+        (MemVT == MVT::i32) ? RTLIB::AEABI_UREAD4 : RTLIB::AEABI_UREAD8;
+
+    MakeLibCallOptions Opts;
+    SDLoc dl(Op);
+
+    auto Pair = makeLibCall(DAG, LC, MemVT.getSimpleVT(), LD->getBasePtr(),
+                            Opts, dl, LD->getChain());
+
+    // If necessary, extend the node to 64bit
+    if (LD->getExtensionType() != ISD::NON_EXTLOAD) {
+      unsigned ExtType = LD->getExtensionType() == ISD::SEXTLOAD
+                             ? ISD::SIGN_EXTEND
+                             : ISD::ZERO_EXTEND;
+      SDValue EN = DAG.getNode(ExtType, dl, LD->getValueType(0), Pair.first);
+      Pair.first = EN;
+    }
+    return Pair;
+  }
+
+  // Default expand to individual loads
+  if (!allowsMemoryAccess(*DAG.getContext(), DL, MemVT, AS, Alignment))
+    return expandUnalignedLoad(LD, DAG);
+  return std::make_pair(SDValue(), SDValue());
+}
+
+SDValue ARMTargetLowering::LowerAEABIUnalignedStore(SDValue Op,
+                                                    SelectionDAG &DAG) const {
+  // If we have an unaligned store to a i32 or i64 that would normally be
+  // split into separate ldrb's, we can use the __aeabi_uwrite4/__aeabi_uwrite8
+  // functions instead.
+  StoreSDNode *ST = cast<StoreSDNode>(Op.getNode());
+  EVT MemVT = ST->getMemoryVT();
+  if (MemVT != MVT::i32 && MemVT != MVT::i64)
+    return SDValue();
+
+  const auto &MF = DAG.getMachineFunction();
+  unsigned AS = ST->getAddressSpace();
+  Align Alignment = ST->getAlign();
+  const DataLayout &DL = DAG.getDataLayout();
+  bool AllowsUnaligned = Subtarget->allowsUnalignedMem();
+
+  if (MF.getFunction().hasMinSize() && !AllowsUnaligned &&
+      Alignment <= llvm::Align(2)) {
+
+    SDLoc dl(Op);
+
+    // If necessary, trunc the value to 32bit
+    SDValue StoreVal = ST->getOperand(1);
+    if (ST->isTruncatingStore())
+      StoreVal = DAG.getNode(ISD::TRUNCATE, dl, MemVT, ST->getOperand(1));
+
+    RTLIB::Libcall LC =
+        (MemVT == MVT::i32) ? RTLIB::AEABI_UWRITE4 : RTLIB::AEABI_UWRITE8;
+
+    MakeLibCallOptions Opts;
+    auto CallResult =
+        makeLibCall(DAG, LC, MVT::isVoid, {StoreVal, ST->getBasePtr()}, Opts,
+                    dl, ST->getChain());
+
+    return CallResult.second;
+  }
+
+  // Default expand to individual stores
+  if (!allowsMemoryAccess(*DAG.getContext(), DL, MemVT, AS, Alignment))
+    return expandUnalignedStore(ST, DAG);
+  return SDValue();
+}
+
 static SDValue LowerPredicateLoad(SDValue Op, SelectionDAG &DAG) {
   LoadSDNode *LD = cast<LoadSDNode>(Op.getNode());
   EVT MemVT = LD->getMemoryVT();
@@ -9779,11 +9876,11 @@ void ARMTargetLowering::LowerLOAD(SDNode *N, SmallVectorImpl<SDValue> &Results,
                                   SelectionDAG &DAG) const {
   LoadSDNode *LD = cast<LoadSDNode>(N);
   EVT MemVT = LD->getMemoryVT();
-  assert(LD->isUnindexed() && "Loads should be unindexed at this point.");
 
   if (MemVT == MVT::i64 && Subtarget->hasV5TEOps() &&
       !Subtarget->isThumb1Only() && LD->isVolatile() &&
       LD->getAlign() >= Subtarget->getDualLoadStoreAlignment()) {
+    assert(LD->isUnindexed() && "Loads should be unindexed at this point.");
     SDLoc dl(N);
     SDValue Result = DAG.getMemIntrinsicNode(
         ARMISD::LDRD, dl, DAG.getVTList({MVT::i32, MVT::i32, MVT::Other}),
@@ -9792,6 +9889,12 @@ void ARMTargetLowering::LowerLOAD(SDNode *N, SmallVectorImpl<SDValue> &Results,
     SDValue Hi = Result.getValue(DAG.getDataLayout().isLittleEndian() ? 1 : 0);
     SDValue Pair = DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Lo, Hi);
     Results.append({Pair, Result.getValue(2)});
+  } else if (MemVT == MVT::i32 || MemVT == MVT::i64) {
+    auto Pair = LowerAEABIUnalignedLoad(SDValue(N, 0), DAG);
+    if (Pair.first) {
+      Results.push_back(Pair.first);
+      Results.push_back(Pair.second);
+    }
   }
 }
 
@@ -9833,15 +9936,15 @@ static SDValue LowerPredicateStore(SDValue Op, SelectionDAG &DAG) {
       ST->getMemOperand());
 }
 
-static SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG,
-                          const ARMSubtarget *Subtarget) {
+SDValue ARMTargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG,
+                                      const ARMSubtarget *Subtarget) const {
   StoreSDNode *ST = cast<StoreSDNode>(Op.getNode());
   EVT MemVT = ST->getMemoryVT();
-  assert(ST->isUnindexed() && "Stores should be unindexed at this point.");
 
   if (MemVT == MVT::i64 && Subtarget->hasV5TEOps() &&
       !Subtarget->isThumb1Only() && ST->isVolatile() &&
       ST->getAlign() >= Subtarget->getDualLoadStoreAlignment()) {
+    assert(ST->isUnindexed() && "Stores should be unindexed at this point.");
     SDNode *N = Op.getNode();
     SDLoc dl(N);
 
@@ -9861,8 +9964,9 @@ static SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG,
              ((MemVT == MVT::v2i1 || MemVT == MVT::v4i1 || MemVT == MVT::v8i1 ||
                MemVT == MVT::v16i1))) {
     return LowerPredicateStore(Op, DAG);
+  } else if (MemVT == MVT::i32 || MemVT == MVT::i64) {
+    return LowerAEABIUnalignedStore(Op, DAG);
   }
-
   return SDValue();
 }
 
@@ -10394,8 +10498,19 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::UADDSAT:
   case ISD::USUBSAT:
     return LowerADDSUBSAT(Op, DAG, Subtarget);
-  case ISD::LOAD:
-    return LowerPredicateLoad(Op, DAG);
+  case ISD::LOAD: {
+    auto *LD = cast<LoadSDNode>(Op);
+    EVT MemVT = LD->getMemoryVT();
+    if (Subtarget->hasMVEIntegerOps() &&
+        (MemVT == MVT::v2i1 || MemVT == MVT::v4i1 || MemVT == MVT::v8i1 ||
+         MemVT == MVT::v16i1))
+      return LowerPredicateLoad(Op, DAG);
+
+    auto Pair = LowerAEABIUnalignedLoad(Op, DAG);
+    if (Pair.first)
+      return DAG.getMergeValues({Pair.first, Pair.second}, SDLoc(Pair.first));
+    return SDValue();
+  }
   case ISD::STORE:
     return LowerSTORE(Op, DAG, Subtarget);
   case ISD::MLOAD:
@@ -10535,6 +10650,9 @@ void ARMTargetLowering::ReplaceNodeResults(SDNode *N,
     return ReplaceLongIntrinsic(N, Results, DAG);
   case ISD::LOAD:
     LowerLOAD(N, Results, DAG);
+    break;
+  case ISD::STORE:
+    Res = LowerAEABIUnalignedStore(SDValue(N, 0), DAG);
     break;
   case ISD::TRUNCATE:
     Res = LowerTruncate(N, DAG, Subtarget);
@@ -19591,30 +19709,44 @@ ARMTargetLowering::getPreIndexedAddressParts(SDNode *N, SDValue &Base,
   EVT VT;
   SDValue Ptr;
   Align Alignment;
+  unsigned AS = 0;
   bool isSEXTLoad = false;
   bool IsMasked = false;
   if (LoadSDNode *LD = dyn_cast<LoadSDNode>(N)) {
     Ptr = LD->getBasePtr();
     VT = LD->getMemoryVT();
     Alignment = LD->getAlign();
+    AS = LD->getAddressSpace();
     isSEXTLoad = LD->getExtensionType() == ISD::SEXTLOAD;
   } else if (StoreSDNode *ST = dyn_cast<StoreSDNode>(N)) {
     Ptr = ST->getBasePtr();
     VT = ST->getMemoryVT();
     Alignment = ST->getAlign();
+    AS = ST->getAddressSpace();
   } else if (MaskedLoadSDNode *LD = dyn_cast<MaskedLoadSDNode>(N)) {
     Ptr = LD->getBasePtr();
     VT = LD->getMemoryVT();
     Alignment = LD->getAlign();
+    AS = LD->getAddressSpace();
     isSEXTLoad = LD->getExtensionType() == ISD::SEXTLOAD;
     IsMasked = true;
   } else if (MaskedStoreSDNode *ST = dyn_cast<MaskedStoreSDNode>(N)) {
     Ptr = ST->getBasePtr();
     VT = ST->getMemoryVT();
     Alignment = ST->getAlign();
+    AS = ST->getAddressSpace();
     IsMasked = true;
   } else
     return false;
+
+  unsigned Fast = 0;
+  if (!allowsMisalignedMemoryAccesses(VT, AS, Alignment,
+                                      MachineMemOperand::MONone, &Fast)) {
+    // Only generate post-increment or pre-increment forms when a real
+    // hardware instruction exists for them. Do not emit postinc/preinc
+    // if the operation will end up as a libcall.
+    return false;
+  }
 
   bool isInc;
   bool isLegal = false;

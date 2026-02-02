@@ -78,7 +78,7 @@
 ; O2-NEXT: x86-lower-amx-intrinsics
 ; O2-NEXT: x86-lower-amx-type
 ; O2-NEXT: verify
-; O2-NEXT: loop-mssa(canon-freeze
+; O2-NEXT: loop(canon-freeze
 ; O2-NEXT: loop-reduce)
 ; O2-NEXT: mergeicmps
 ; O2-NEXT: expand-memcmp
@@ -235,6 +235,7 @@
 ; O0-WINDOWS-NEXT: x86-seses
 ; O0-WINDOWS-NEXT: x86-return-thunks
 ; O0-WINDOWS-NEXT: x86-avoid-trailing-call
+; O0-WINDOWS-NEXT: x86-wineh-unwindv2
 ; O0-WINDOWS-NEXT: verify)
 ; O0-WINDOWS-NEXT: free-machine-function)
 
@@ -249,7 +250,7 @@
 ; O3-WINDOWS-NEXT: x86-lower-amx-intrinsics
 ; O3-WINDOWS-NEXT: x86-lower-amx-type
 ; O3-WINDOWS-NEXT: verify
-; O3-WINDOWS-NEXT: loop-mssa(canon-freeze
+; O3-WINDOWS-NEXT: loop(canon-freeze
 ; O3-WINDOWS-NEXT: loop-reduce)
 ; O3-WINDOWS-NEXT: mergeicmps
 ; O3-WINDOWS-NEXT: expand-memcmp
@@ -349,5 +350,6 @@
 ; O3-WINDOWS-NEXT: x86-seses
 ; O3-WINDOWS-NEXT: x86-return-thunks
 ; O3-WINDOWS-NEXT: x86-avoid-trailing-call
+; O3-WINDOWS-NEXT: x86-wineh-unwindv2
 ; O3-WINDOWS-NEXT: verify)
 ; O3-WINDOWS-NEXT: free-machine-function)
