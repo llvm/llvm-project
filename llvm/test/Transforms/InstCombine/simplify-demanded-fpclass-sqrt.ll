@@ -12,7 +12,7 @@ declare nofpclass(pinf pnorm psub pzero) float @returns_negative_or_nan()
 declare nofpclass(pinf pnorm psub zero nan) float @returns_negative_nonzero()
 declare nofpclass(pinf pnorm psub zero nan) <2 x float> @returns_negative_nonzero_vec()
 declare nofpclass(pinf pnorm psub zero) float @returns_negative_nonzero_or_nan()
-
+declare nofpclass(qnan inf norm sub zero) float @returns_snan()
 
 ; -> qnan
 define nofpclass(inf norm sub zero) float @ret_only_nan_sqrt(float %x) {
@@ -342,6 +342,19 @@ define nofpclass(nan) float @ret_no_nan__sqrt__no_inf_inputs(float nofpclass(inf
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = call contract float @llvm.sqrt.f32(float %x)
+  ret float %result
+}
+
+define nofpclass(snan) float @qnan_result_demands_snan_src(i1 %cond, float %unknown) {
+; CHECK-LABEL: define nofpclass(snan) float @qnan_result_demands_snan_src(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[SNAN:%.*]] = call float @returns_snan()
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.sqrt.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %snan = call float @returns_snan()
+  %select = select i1 %cond, float %snan, float %unknown
+  %result = call float @llvm.sqrt.f32(float %select)
   ret float %result
 }
 
