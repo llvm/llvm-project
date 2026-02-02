@@ -1896,63 +1896,6 @@ struct MemrefExtractAlignedPointerAsIndexDistribution final
   }
 };
 
-struct MemrefAllocaDistribution final : public gpu::WarpDistributionPattern {
-  using gpu::WarpDistributionPattern::WarpDistributionPattern;
-  LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
-                                PatternRewriter &rewriter) const override {
-    OpOperand *operand = getWarpResult(warpOp, [&](Operation *op) {
-      // Check if the yield operand that was produced by the *last* scattered
-      // load op to avoid creating multiple copies due to multiple users.
-      return llvm::IsaPred<memref::AllocaOp>(op) &&
-             warpOp.getTerminator()->getPrevNode() == op;
-    });
-    if (!operand)
-      return rewriter.notifyMatchFailure(
-          warpOp, "warp result is not a memref::Alloca op");
-    auto allocaOp = operand->get().getDefiningOp<memref::AllocaOp>();
-    unsigned operandIdx = operand->getOperandNumber();
-    SmallVector<size_t> newRetIndices;
-    gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
-        rewriter, warpOp, ValueRange{}, TypeRange{}, newRetIndices);
-    rewriter.setInsertionPointAfter(newWarpOp);
-    auto newAllocaOp = memref::AllocaOp::create(rewriter, newWarpOp.getLoc(),
-                                                allocaOp.getType(), nullptr);
-    Value resultVal = newWarpOp.getResult(operandIdx);
-    rewriter.replaceAllUsesWith(resultVal, newAllocaOp.getResult());
-    return success();
-  }
-};
-
-struct CreateMemDescDistribution final : public gpu::WarpDistributionPattern {
-  using gpu::WarpDistributionPattern::WarpDistributionPattern;
-  LogicalResult matchAndRewrite(gpu::WarpExecuteOnLane0Op warpOp,
-                                PatternRewriter &rewriter) const override {
-    OpOperand *operand = getWarpResult(warpOp, [&](Operation *op) {
-      // Check if the yield operand that was produced by the *last* scattered
-      // load op to avoid creating multiple copies due to multiple users.
-      return llvm::IsaPred<xegpu::CreateMemDescOp>(op) &&
-             warpOp.getTerminator()->getPrevNode() == op;
-    });
-    if (!operand)
-      return rewriter.notifyMatchFailure(
-          warpOp, "warp result is not a xegpu::CreateMemDesc op");
-    auto createMemDescOp =
-        operand->get().getDefiningOp<xegpu::CreateMemDescOp>();
-    unsigned operandIdx = operand->getOperandNumber();
-    SmallVector<size_t> newRetIndices;
-    gpu::WarpExecuteOnLane0Op newWarpOp = moveRegionToNewWarpOpAndAppendReturns(
-        rewriter, warpOp, createMemDescOp.getSource(),
-        TypeRange{createMemDescOp.getSource().getType()}, newRetIndices);
-    rewriter.setInsertionPointAfter(newWarpOp);
-    auto newCreateMemDescOp = xegpu::CreateMemDescOp::create(
-        rewriter, newWarpOp.getLoc(), createMemDescOp.getType(),
-        newWarpOp.getResult(newRetIndices[0]));
-    Value resultVal = newWarpOp.getResult(operandIdx);
-    rewriter.replaceAllUsesWith(resultVal, newCreateMemDescOp.getResult());
-    return success();
-  }
-};
-
 /// Distribute a vector::BitCastOp feeding into yield op of an enclosing
 /// `gpu.warp_execute_on_lane_0` region. Bitcast only impacts the innermost
 /// diemension of the source/result vectors. Equivalent vector::BitCastOp is
@@ -2076,8 +2019,7 @@ void xegpu::populateXeGPUSubgroupDistributePatterns(
                LoadDistribution, StoreDistribution, VectorTransposeDistribution,
                VectorBitcastDistribution, LoadMatrixDistribution,
                StoreMatrixDistribution,
-               MemrefExtractAlignedPointerAsIndexDistribution,
-               MemrefAllocaDistribution, CreateMemDescDistribution>(
+               MemrefExtractAlignedPointerAsIndexDistribution>(
       patterns.getContext(),
       /*pattern benefit=*/PatternHierarchy::Regular);
   // For following patterns, we need to override the regular vector distribution
