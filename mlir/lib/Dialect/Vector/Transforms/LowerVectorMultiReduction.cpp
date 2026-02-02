@@ -920,15 +920,10 @@ void mlir::vector::populateVectorUnrollMultiReduction(
     RewritePatternSet &patterns, VectorMultiReductionLowering options,
     PatternBenefit benefit) {
   patterns.add<OneDimMultiReductionToReduction>(patterns.getContext(), benefit);
-
-  if (options == VectorMultiReductionLowering::InnerReduction) {
-    patterns.add<UnrollInnerReductionAlongOuterParallel>(patterns.getContext(),
-                                                         benefit);
-  } else {
-    patterns.add<UnrollMultiReductionOuterBaseCase,
-                 UnrollMultiReductionOuterGeneralCase>(patterns.getContext(),
+  patterns.add<UnrollMultiReductionOuterBaseCase,
+               UnrollMultiReductionOuterGeneralCase,
+               UnrollInnerReductionAlongOuterParallel>(patterns.getContext(),
                                                        benefit);
-  }
 }
 
 void mlir::vector::populateVectorMultiReductionLoweringPatterns(
