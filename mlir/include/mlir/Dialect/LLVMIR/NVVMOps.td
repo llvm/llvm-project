@@ -1862,16 +1862,37 @@ def FPRoundingModeAttr : EnumAttr<NVVM_Dialect, FPRoundingMode, "fp_rnd_mode"> {
   let assemblyFormat = "`<` $value `>`";
 }
 
-def SaturationModeNone   : I32EnumCase<"NONE", 0, "none">;
-def SaturationModeFinite : I32EnumCase<"SATFINITE", 1, "satfinite">;
-def SaturationModeSat    : I32EnumCase<"SAT", 2, "sat">;
+def SaturationModeNone   : I32EnumAttrCase<"NONE", 0, "none">;
+def SaturationModeFinite : I32EnumAttrCase<"SATFINITE", 1, "satfinite">;
+def SaturationModeSat    : I32EnumAttrCase<"SAT", 2, "sat">;
 
-def SaturationMode : I32Enum<"SaturationMode", "NVVM SaturationMode kind",
+def SaturationMode : I32EnumAttr<"SaturationMode", "NVVM SaturationMode kind",
   [SaturationModeNone, SaturationModeFinite, SaturationModeSat]> {
+  let genSpecializedAttr = 0;
   let cppNamespace = "::mlir::NVVM";
 }
 def SaturationModeAttr : EnumAttr<NVVM_Dialect, SaturationMode, "sat_mode"> {
-  let assemblyFormat = "`<` $value `>`";
+  let summary = "Describes the saturation mode";
+  let description = [{
+    A `nvvm.sat_mode` attribute specifies the saturation mode for instructions 
+    involving floating points or integers. It can be one of the following 
+    values:
+    - `none`: No saturation is applied.
+    - `satfinite`: If the absolute value of input (ignoring sign) is greater 
+      than the `MAX_NORM` of the specified destination format, then the result 
+      is the sign-preserved `MAX_NORM` of the destination format and a positive 
+      `MAX_NORM` in unsigned datatypes for which the destination sign is not 
+      supported. If the input is `NaN`, then the result can be `NaN` or th 
+      `MAX_NORM` of the destination format, depending on the format.
+    - `sat`: For integer destination types, this limits the value to `MININT..
+      MAXINT` and applies to both signed and unsigned integer datatypes. For 
+      floating point destination types (applies to only `F16`, `F32`, and `F64` 
+      types), this limits the value to the range `[0.0, 1.0]` and flushes NaN 
+      results to positive zero.
+
+    [For more information, see PTX ISA](https://docs.nvidia.com/cuda/parallel-thread-execution/#data-movement-and-conversion-instructions-cvt)
+}];
+ let assemblyFormat = "`<` $value `>`";
 }
 
 def NVVM_ConvertFloatToTF32Op : NVVM_Op<"convert.float.to.tf32"> {
@@ -6247,6 +6268,8 @@ def NVVM_Tcgen05MMAWsSparseOp : NVVM_Op<"tcgen05.mma.ws.sp",
   }];
 }
 
+def NVVMFloatType : AnyTypeOf<[F16, BF16, F32, F64, VectorOfLengthAndType<[2], [F16, BF16]>]>;
+
 def NVVM_FloatAdditionOp : 
   NVVM_SingleResultIntrinsicOp<"fadd", [Pure, Commutative]> {
   let summary = [{
@@ -6259,21 +6282,22 @@ def NVVM_FloatAdditionOp :
     The rounding mode to be used is specified by the `rnd` attribute, 
     saturation mode by the `sat` attribute, and FTZ by the `ftz` unit attribute.
     
-    The result type must be at least as wide as the operands. The operands are 
-    converted to the result type before addition if it is wider.
+    The result type must be at least as wide as the operands. When the type of 
+    the `res` is wider than the type of the operands, the operands are first 
+    converted to the result type, and then the addition is performed.
     
     For more information, see PTX ISA - [floating point addition](https://docs.nvidia.com/cuda/parallel-thread-execution/#floating-point-instructions-add), 
     [half-precision floating point addition](https://docs.nvidia.com/cuda/parallel-thread-execution/#half-precision-floating-point-instructions-add), 
     [mixed precision floating point addition](https://docs.nvidia.com/cuda/parallel-thread-execution/#mixed-precision-floating-point-instructions-add).
   }];
   let arguments = (ins
-    AnyTypeOf<[F16, BF16, F32, F64, VectorOfLengthAndType<[2], [F16, BF16]>]>:$lhs,
-    AnyTypeOf<[F16, BF16, F32, F64, VectorOfLengthAndType<[2], [F16, BF16]>]>:$rhs,
+    NVVMFloatType:$lhs,
+    NVVMFloatType:$rhs,
     DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::NONE">:$rnd,
     DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
     UnitAttr:$ftz
   );
-  let results = (outs AnyTypeOf<[F16, BF16, F32, F64, VectorOfLengthAndType<[2], [F16, BF16]>]>:$res);
+  let results = (outs NVVMFloatType:$res);
   let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type(operands) `->` type($res)";
   let hasVerifier = 1;
   
@@ -6307,13 +6331,13 @@ def NVVM_FloatSubtractionOp :
  
   }];
   let arguments = (ins
-    AnyTypeOf<[F16, BF16, F32, F64, VectorOfLengthAndType<[2], [F16, BF16]>]>:$lhs,
-    AnyTypeOf<[F16, BF16, F32, F64, VectorOfLengthAndType<[2], [F16, BF16]>]>:$rhs,
+    NVVMFloatType:$lhs,
+    NVVMFloatType:$rhs,
     DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::NONE">:$rnd,
     DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
     UnitAttr:$ftz
   );
-  let results = (outs AnyTypeOf<[F16, BF16, F32, F64, VectorOfLengthAndType<[2], [F16, BF16]>]>:$res);
+  let results = (outs NVVMFloatType:$res);
   let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type(operands) `->` type($res)";
   let hasCanonicalizer = 1;
 }

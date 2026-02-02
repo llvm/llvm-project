@@ -3119,8 +3119,8 @@ LogicalResult NVVM::FloatAdditionOp::verify() {
   if (resBaseFType.isF16()) {
     if (!(rndMode == NVVM::FPRoundingMode::RN ||
           rndMode == NVVM::FPRoundingMode::NONE))
-    return emitOpError("only RN rounding mode is supported for f16 and "
-                       "vector<2xf16> additions");
+      return emitOpError("only RN rounding mode is supported for f16 and "
+                         "vector<2xf16> additions");
     if (!sameTypeOperation)
       return emitOpError("only f16 + f16 is supported for f16 result type");
   }
