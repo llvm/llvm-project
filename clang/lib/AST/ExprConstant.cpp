@@ -21781,6 +21781,10 @@ bool Expr::tryEvaluateObjectSize(uint64_t &Result, ASTContext &Ctx,
 
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
+  if (Info.EnableNewConstInterp) {
+    return Info.Ctx.getInterpContext().tryEvaluateObjectSize(Info, this, Type,
+                                                             Result);
+  }
   return tryEvaluateBuiltinObjectSize(this, Type, Info, Result);
 }
 
