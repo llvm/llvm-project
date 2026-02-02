@@ -168,6 +168,7 @@ std::error_code makeLongFormPath(const Twine &Path8,
   llvm::SmallVector<wchar_t, 128> Long16;
   DWORD Len = static_cast<DWORD>(Path16.size());
 
+  // Loop instead of a double call to be defensive against TOCTOU races.
   do {
     Long16.resize_for_overwrite(Len);
 
