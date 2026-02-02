@@ -995,7 +995,18 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
         V = log2(std::abs(V));
         DVal.push_back(V);
       }
-      if (getArgType(FInfo) == AMDGPULibFunc::F32) {
+      if (getArgType(FInfo) == AMDGPULibFunc::F16) {
+        SmallVector<uint16_t, 0> HVal;
+        for (double D : DVal) {
+          APFloat APF(D);
+          bool LosesInfo;
+          APF.convert(APFloat::IEEEhalf(), APFloat::rmNearestTiesToEven,
+                      &LosesInfo);
+          HVal.push_back(APF.bitcastToAPInt().getZExtValue());
+        }
+        ArrayRef<uint16_t> tmp(HVal);
+        cnval = ConstantDataVector::getFP(eltType, tmp);
+      } else if (getArgType(FInfo) == AMDGPULibFunc::F32) {
         SmallVector<float, 0> FVal;
         for (double D : DVal)
           FVal.push_back((float)D);

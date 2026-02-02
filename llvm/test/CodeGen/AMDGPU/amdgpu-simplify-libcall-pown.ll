@@ -1155,5 +1155,17 @@ entry:
   ret float %call
 }
 
+; Test for constant half vector base with variable exponent (regression test for F16 constant folding).
+; This triggered an assertion without proper F16 handling for constant vectors.
+define <2 x half> @test_pown_afn_nnan_ninf_v2f16_constant_base_variable_exp(<2 x i32> %y) {
+; CHECK-LABEL: define <2 x half> @test_pown_afn_nnan_ninf_v2f16_constant_base_variable_exp
+; CHECK-SAME: (<2 x i32> [[Y:%.*]]) {
+; CHECK-NEXT:    [[__EXP2:%.*]] = call nnan ninf afn <2 x half> @llvm.ldexp.v2f16.v2i32(<2 x half> splat (half 0xH3C00), <2 x i32> [[Y]])
+; CHECK-NEXT:    ret <2 x half> [[__EXP2]]
+;
+  %call = call nnan ninf afn <2 x half> @_Z4pownDv2_DhDv2_i(<2 x half> <half 0xH4000, half 0xH4000>, <2 x i32> %y)
+  ret <2 x half> %call
+}
+
 attributes #0 = { nobuiltin }
 attributes #1 = { strictfp }
