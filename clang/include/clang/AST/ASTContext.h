@@ -2681,17 +2681,6 @@ public:
   uint64_t getTypeSize(QualType T) const { return getTypeInfo(T).Width; }
   uint64_t getTypeSize(const Type *T) const { return getTypeInfo(T).Width; }
 
-  std::optional<uint64_t> getTypeSizeIfKnown(QualType Ty) const {
-    if (Ty->isIncompleteType() || Ty->isDependentType() ||
-        Ty->isUndeducedType())
-      return std::nullopt;
-    return getTypeSize(Ty);
-  }
-
-  std::optional<uint64_t> getTypeSizeIfKnown(const Type *Ty) const {
-    return getTypeSizeIfKnown(QualType(Ty, 0));
-  }
-
   /// Return the size of the character type, in bits.
   uint64_t getCharWidth() const {
     return getTypeSize(CharTy);
@@ -2709,7 +2698,8 @@ public:
   CharUnits getTypeSizeInChars(const Type *T) const;
 
   std::optional<CharUnits> getTypeSizeInCharsIfKnown(QualType Ty) const {
-    if (Ty->isIncompleteType() || Ty->isDependentType())
+    if (Ty->isIncompleteType() || Ty->isDependentType() ||
+        Ty->isUndeducedType())
       return std::nullopt;
     return getTypeSizeInChars(Ty);
   }

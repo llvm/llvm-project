@@ -5144,8 +5144,9 @@ static bool checkCommonVarDeclAddressSpaceAttr(Sema &S, const VarDecl *VD,
   // is determined by how far a pointer in that address space can reach.
   llvm::APInt MaxSizeForAddrSpace =
       llvm::APInt::getMaxValue(Context.getTargetInfo().getPointerWidth(AS));
-  std::optional<uint64_t> TSizeInChars = Context.getTypeSizeIfKnown(T);
-  if (TSizeInChars && *TSizeInChars > MaxSizeForAddrSpace.getZExtValue()) {
+  std::optional<CharUnits> TSizeInChars = Context.getTypeSizeInCharsIfKnown(T);
+  if (TSizeInChars && static_cast<uint64_t>(TSizeInChars->getQuantity()) >
+                          MaxSizeForAddrSpace.getZExtValue()) {
     S.Diag(AL.getLoc(), diag::err_type_too_large_for_address_space)
         << T << MaxSizeForAddrSpace;
     return false;
