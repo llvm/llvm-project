@@ -172,6 +172,19 @@ template <typename T> class UncompressibleAllocator : public std::allocator<T> {
   };
 };
 
+// Helper function to check pretty printing of short strings returned by
+// debugger-called functions.
+std::string return_short_string() {
+  return "abc";
+}
+
+// Helper function to check pretty printing of long strings returned by
+// debugger-called functions.
+std::basic_string<char, std::char_traits<char>, UncompressibleAllocator<char>>
+return_long_string() {
+  return "this is a string that is too long to fit in the string object";
+}
+
 void string_test() {
   std::string short_string("kdjflskdjf");
   // The display_hint "string" adds quotes the printed result.
@@ -181,7 +194,14 @@ void string_test() {
       long_string("mehmet bizim dostumuz agzi kirik testimiz");
   ComparePrettyPrintToChars(long_string,
                             "\"mehmet bizim dostumuz agzi kirik testimiz\"");
-}
+
+  // GDB handles strings that are returned from a debugger called function or
+  // when stepping out of a function differently from string variables. These
+  // two tests check that pretty printing works also for this case.
+  CompareExpressionPrettyPrintToChars("return_short_string()", "\"abc\"");
+  CompareExpressionPrettyPrintToChars("return_long_string()",
+      "\"this is a string that is too long to fit in the string object\"");
+  }
 
 namespace a_namespace {
 // To test name-lookup in the presence of using inside a namespace. Inside this
