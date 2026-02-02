@@ -4998,7 +4998,6 @@ mlir::NVVM::IDArgPair FloatAdditionOp::getIntrinsicIDAndArgs(
   auto thisOp = cast<NVVM::FloatAdditionOp>(op);
   llvm::SmallVector<llvm::Value *> args;
   auto rndMode = thisOp.getRnd();
-  bool isRndRN = rndMode == NVVM::FPRoundingMode::RN;
   auto isSat = thisOp.getSat() == NVVM::SaturationMode::SAT;
   auto isFTZ = thisOp.getFtz();
 
