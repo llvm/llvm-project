@@ -350,8 +350,7 @@ def run_single_test(
         "-o",
         "/dev/null",
         "-ftime-trace=" + trace_file,
-        "-Xclang",
-        "-fexperimental-lifetime-safety",
+        "-Wlifetime-safety",
         "-std=c++17",
         source_file,
     ]

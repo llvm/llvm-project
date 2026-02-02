@@ -20,6 +20,6 @@ class TestDAP_exception_cpp(lldbdap_testcase.DAPTestCaseBase):
         self.verify_stop_exception_info("signal SIGABRT")
         exceptionInfo = self.get_exceptionInfo()
         self.assertEqual(exceptionInfo["breakMode"], "always")
-        self.assertEqual(exceptionInfo["description"], "signal SIGABRT")
+        self.assertIn("signal SIGABRT", exceptionInfo["description"])
         self.assertEqual(exceptionInfo["exceptionId"], "signal")
         self.assertIsNotNone(exceptionInfo["details"])

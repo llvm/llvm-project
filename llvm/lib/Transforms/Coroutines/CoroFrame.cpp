@@ -25,6 +25,7 @@
 #include "llvm/IR/IRBuilder.h"
 #include "llvm/IR/InstIterator.h"
 #include "llvm/IR/IntrinsicInst.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/Debug.h"
@@ -979,6 +980,37 @@ static StructType *buildFrameType(Function &F, coro::Shape &Shape,
   return FrameTy;
 }
 
+/// If MaybeArgument is a byval Argument, return its byval type. Also removes
+/// the captures attribute, so that the argument *value* may be stored directly
+/// on the coroutine frame.
+static Type *extractByvalIfArgument(Value *MaybeArgument) {
+  if (auto *Arg = dyn_cast<Argument>(MaybeArgument)) {
+    Arg->getParent()->removeParamAttr(Arg->getArgNo(), Attribute::Captures);
+
+    if (Arg->hasByValAttr())
+      return Arg->getParamByValType();
+  }
+  return nullptr;
+}
+
+/// Store Def into the coroutine frame.
+static void createStoreIntoFrame(IRBuilder<> &Builder, Value *Def,
+                                 Type *ByValTy, const coro::Shape &Shape,
+                                 const FrameDataInfo &FrameData) {
+  auto Index = FrameData.getFieldIndex(Def);
+  auto *G = Builder.CreateConstInBoundsGEP2_32(
+      Shape.FrameTy, Shape.FramePtr, 0, Index,
+      Def->getName() + Twine(".spill.addr"));
+  auto SpillAlignment = Align(FrameData.getAlign(Def));
+
+  // For byval arguments, store the pointed-to value in the frame.
+  if (ByValTy)
+    Builder.CreateAlignedStore(Builder.CreateLoad(ByValTy, Def), G,
+                               SpillAlignment);
+  else
+    Builder.CreateAlignedStore(Def, G, SpillAlignment);
+}
+
 /// Returns a GEP into the coroutine frame at the offset where Orig is located.
 static Value *createGEPToFramePointer(const FrameDataInfo &FrameData,
                                       IRBuilder<> &Builder, coro::Shape &Shape,
@@ -1025,6 +1057,37 @@ static Value *createGEPToFramePointer(const FrameDataInfo &FrameData,
   return GEP;
 }
 
+/// Find dbg.declare or dbg.declare_value records referencing `Def`. If none are
+/// found, walk up the load chain to find one.
+template <DbgVariableRecord::LocationType record_type>
+static TinyPtrVector<DbgVariableRecord *>
+findDbgRecordsThroughLoads(Function &F, Value *Def) {
+  static_assert(record_type == DbgVariableRecord::LocationType::Declare ||
+                record_type == DbgVariableRecord::LocationType::DeclareValue);
+  constexpr auto FindFunc =
+      record_type == DbgVariableRecord::LocationType::Declare
+          ? findDVRDeclares
+          : findDVRDeclareValues;
+
+  TinyPtrVector<DbgVariableRecord *> Records = FindFunc(Def);
+
+  if (!F.getSubprogram())
+    return Records;
+
+  Value *CurDef = Def;
+  while (Records.empty() && isa<LoadInst>(CurDef)) {
+    auto *LdInst = cast<LoadInst>(CurDef);
+    if (!LdInst->getType()->isPointerTy())
+      break;
+    CurDef = LdInst->getPointerOperand();
+    if (!isa<AllocaInst, LoadInst>(CurDef))
+      break;
+    Records = FindFunc(CurDef);
+  }
+
+  return Records;
+}
+
 // Replace all alloca and SSA values that are accessed across suspend points
 // with GetElementPointer from coroutine frame + loads and stores. Create an
 // AllocaSpillBB that will become the new entry block for the resume parts of
@@ -1051,39 +1114,29 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
   Function *F = Shape.CoroBegin->getFunction();
   IRBuilder<> Builder(C);
   StructType *FrameTy = Shape.FrameTy;
-  Value *FramePtr = Shape.FramePtr;
   DominatorTree DT(*F);
   SmallDenseMap<Argument *, AllocaInst *, 4> ArgToAllocaMap;
 
+  MDBuilder MDB(C);
+  // Create a TBAA tag for accesses to certain coroutine frame slots, so that
+  // subsequent alias analysis will understand they do not intersect with
+  // user memory.
+  // We do this only if a suitable TBAA root already exists in the module.
+  MDNode *TBAATag = nullptr;
+  if (auto *CppTBAAStr = MDString::getIfExists(C, "Simple C++ TBAA")) {
+    auto *TBAARoot = MDNode::getIfExists(C, CppTBAAStr);
+    // Create a "fake" scalar type; all other types defined in the source
+    // language will be assumed non-aliasing with this type.
+    MDNode *Scalar = MDB.createTBAAScalarTypeNode(
+        (F->getName() + ".Frame Slot").str(), TBAARoot);
+    TBAATag = MDB.createTBAAStructTagNode(Scalar, Scalar, 0);
+  }
   for (auto const &E : FrameData.Spills) {
     Value *Def = E.first;
-    auto SpillAlignment = Align(FrameData.getAlign(Def));
-    // Create a store instruction storing the value into the
-    // coroutine frame.
-    BasicBlock::iterator InsertPt = coro::getSpillInsertionPt(Shape, Def, DT);
+    Type *ByValTy = extractByvalIfArgument(Def);
 
-    Type *ByValTy = nullptr;
-    if (auto *Arg = dyn_cast<Argument>(Def)) {
-      // If we're spilling an Argument, make sure we clear 'captures'
-      // from the coroutine function.
-      Arg->getParent()->removeParamAttr(Arg->getArgNo(), Attribute::Captures);
-
-      if (Arg->hasByValAttr())
-        ByValTy = Arg->getParamByValType();
-    }
-
-    auto Index = FrameData.getFieldIndex(Def);
-    Builder.SetInsertPoint(InsertPt->getParent(), InsertPt);
-    auto *G = Builder.CreateConstInBoundsGEP2_32(
-        FrameTy, FramePtr, 0, Index, Def->getName() + Twine(".spill.addr"));
-    if (ByValTy) {
-      // For byval arguments, we need to store the pointed value in the frame,
-      // instead of the pointer itself.
-      auto *Value = Builder.CreateLoad(ByValTy, Def);
-      Builder.CreateAlignedStore(Value, G, SpillAlignment);
-    } else {
-      Builder.CreateAlignedStore(Def, G, SpillAlignment);
-    }
+    Builder.SetInsertPoint(coro::getSpillInsertionPt(Shape, Def, DT));
+    createStoreIntoFrame(Builder, Def, ByValTy, Shape, FrameData);
 
     BasicBlock *CurrentBlock = nullptr;
     Value *CurrentReload = nullptr;
@@ -1098,30 +1151,20 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
 
         auto *GEP = createGEPToFramePointer(FrameData, Builder, Shape, E.first);
         GEP->setName(E.first->getName() + Twine(".reload.addr"));
-        if (ByValTy)
+        if (ByValTy) {
           CurrentReload = GEP;
-        else
-          CurrentReload = Builder.CreateAlignedLoad(
+        } else {
+          auto SpillAlignment = Align(FrameData.getAlign(Def));
+          auto *LI = Builder.CreateAlignedLoad(
               FrameTy->getElementType(FrameData.getFieldIndex(E.first)), GEP,
               SpillAlignment, E.first->getName() + Twine(".reload"));
-
-        TinyPtrVector<DbgVariableRecord *> DVRs = findDVRDeclares(Def);
-        // Try best to find dbg.declare. If the spill is a temp, there may not
-        // be a direct dbg.declare. Walk up the load chain to find one from an
-        // alias.
-        if (F->getSubprogram()) {
-          auto *CurDef = Def;
-          while (DVRs.empty() && isa<LoadInst>(CurDef)) {
-            auto *LdInst = cast<LoadInst>(CurDef);
-            // Only consider ptr to ptr same type load.
-            if (LdInst->getPointerOperandType() != LdInst->getType())
-              break;
-            CurDef = LdInst->getPointerOperand();
-            if (!isa<AllocaInst, LoadInst>(CurDef))
-              break;
-            DVRs = findDVRDeclares(CurDef);
-          }
+          if (TBAATag)
+            LI->setMetadata(LLVMContext::MD_tbaa, TBAATag);
+          CurrentReload = LI;
         }
+
+        TinyPtrVector<DbgVariableRecord *> DVRs = findDbgRecordsThroughLoads<
+            DbgVariableRecord::LocationType::Declare>(*F, Def);
 
         auto SalvageOne = [&](DbgVariableRecord *DDI) {
           // This dbg.declare is preserved for all coro-split function
@@ -1141,23 +1184,8 @@ static void insertSpills(const FrameDataInfo &FrameData, coro::Shape &Shape) {
       }
 
       TinyPtrVector<DbgVariableRecord *> DVRDeclareValues =
-          findDVRDeclareValues(Def);
-      // Try best to find dbg.declare_value. If the spill is a temp, there may
-      // not be a direct dbg.declare_value. Walk up the load chain to find one
-      // from an alias.
-      if (F->getSubprogram()) {
-        auto *CurDef = Def;
-        while (DVRDeclareValues.empty() && isa<LoadInst>(CurDef)) {
-          auto *LdInst = cast<LoadInst>(CurDef);
-          // Only consider ptr to ptr same type load.
-          if (LdInst->getPointerOperandType() != LdInst->getType())
-            break;
-          CurDef = LdInst->getPointerOperand();
-          if (!isa<AllocaInst, LoadInst>(CurDef))
-            break;
-          DVRDeclareValues = findDVRDeclareValues(CurDef);
-        }
-      }
+          findDbgRecordsThroughLoads<
+              DbgVariableRecord::LocationType::DeclareValue>(*F, Def);
 
       auto SalvageOneCoro = [&](auto *DDI) {
         // This dbg.declare_value is preserved for all coro-split function

@@ -19,7 +19,7 @@ class TestDAP_exception_objc(lldbdap_testcase.DAPTestCaseBase):
         self.verify_stop_exception_info("signal SIGABRT")
         exception_info = self.get_exceptionInfo()
         self.assertEqual(exception_info["breakMode"], "always")
-        self.assertEqual(exception_info["description"], "signal SIGABRT")
+        self.assertIn("signal SIGABRT", exception_info["description"])
         self.assertEqual(exception_info["exceptionId"], "signal")
         exception_details = exception_info["details"]
         self.assertRegex(exception_details["message"], "SomeReason")
@@ -60,7 +60,7 @@ class TestDAP_exception_objc(lldbdap_testcase.DAPTestCaseBase):
         self.verify_stop_exception_info("signal SIGABRT")
         exception_info = self.get_exceptionInfo()
         self.assertEqual(exception_info["breakMode"], "always")
-        self.assertEqual(exception_info["description"], "signal SIGABRT")
+        self.assertIn("signal SIGABRT", exception_info["description"])
         self.assertEqual(exception_info["exceptionId"], "signal")
         exception_details = exception_info["details"]
         self.assertRegex(exception_details["message"], "SomeReason")

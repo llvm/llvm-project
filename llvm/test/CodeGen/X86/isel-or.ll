@@ -335,10 +335,9 @@ define i64 @or_imm8_i64(i64 %a) {
 ;
 ; GISEL-X86-LABEL: or_imm8_i64:
 ; GISEL-X86:       # %bb.0:
+; GISEL-X86-NEXT:    movl {{[0-9]+}}(%esp), %edx
 ; GISEL-X86-NEXT:    movl $1, %eax
-; GISEL-X86-NEXT:    xorl %edx, %edx
 ; GISEL-X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
-; GISEL-X86-NEXT:    orl {{[0-9]+}}(%esp), %edx
 ; GISEL-X86-NEXT:    retl
 ;
 ; X64-LABEL: or_imm8_i64:
@@ -441,9 +440,8 @@ define i64 @or_imm16_i64(i64 %a) {
 ; GISEL-X86-LABEL: or_imm16_i64:
 ; GISEL-X86:       # %bb.0:
 ; GISEL-X86-NEXT:    movl $-5022, %eax # imm = 0xEC62
-; GISEL-X86-NEXT:    movl $-1, %edx
 ; GISEL-X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
-; GISEL-X86-NEXT:    orl {{[0-9]+}}(%esp), %edx
+; GISEL-X86-NEXT:    movl $-1, %edx
 ; GISEL-X86-NEXT:    retl
 ;
 ; X64-LABEL: or_imm16_i64:
@@ -501,9 +499,8 @@ define i64 @or_imm32_i64(i64 %a) {
 ; GISEL-X86-LABEL: or_imm32_i64:
 ; GISEL-X86:       # %bb.0:
 ; GISEL-X86-NEXT:    movl $-125778, %eax # imm = 0xFFFE14AE
-; GISEL-X86-NEXT:    movl $-1, %edx
 ; GISEL-X86-NEXT:    orl {{[0-9]+}}(%esp), %eax
-; GISEL-X86-NEXT:    orl {{[0-9]+}}(%esp), %edx
+; GISEL-X86-NEXT:    movl $-1, %edx
 ; GISEL-X86-NEXT:    retl
 ;
 ; X64-LABEL: or_imm32_i64:

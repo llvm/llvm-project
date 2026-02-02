@@ -6777,7 +6777,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     StringRef S0 = A->getValue(), S = S0;
     unsigned Size, Offset = 0;
     if (!Triple.isAArch64() && !Triple.isLoongArch() && !Triple.isRISCV() &&
-        !Triple.isX86() &&
+        !Triple.isX86() && !Triple.isSystemZ() &&
         !(!Triple.isOSAIX() && (Triple.getArch() == llvm::Triple::ppc ||
                                 Triple.getArch() == llvm::Triple::ppc64 ||
                                 Triple.getArch() == llvm::Triple::ppc64le)))
@@ -7171,6 +7171,60 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       CmdArgs.push_back("-fms-define-stdc");
   }
 
+  // -fms-anonymous-structs is disabled by default.
+  // Determine whether to enable Microsoft named anonymous struct/union support.
+  // This implements "last flag wins" semantics for -fms-anonymous-structs,
+  // where the feature can be:
+  // - Explicitly enabled via -fms-anonymous-structs.
+  // - Explicitly disabled via fno-ms-anonymous-structs
+  // - Implicitly enabled via -fms-extensions or -fms-compatibility
+  // - Implicitly disabled via -fno-ms-extensions or -fno-ms-compatibility
+  //
+  // When multiple relevent options are present, the last option on the command
+  // line takes precedence. This allows users to selectively override implicit
+  // enablement. Examples:
+  //   -fms-extensions -fno-ms-anonymous-structs -> disabled (explicit override)
+  //   -fno-ms-anonymous-structs -fms-extensions -> enabled (last flag wins)
+  auto MSAnonymousStructsOptionToUseOrNull =
+      [](const ArgList &Args) -> const char * {
+    const char *Option = nullptr;
+    constexpr const char *Enable = "-fms-anonymous-structs";
+    constexpr const char *Disable = "-fno-ms-anonymous-structs";
+
+    // Iterate through all arguments in order to implement "last flag wins".
+    for (const Arg *A : Args) {
+      switch (A->getOption().getID()) {
+      case options::OPT_fms_anonymous_structs:
+        A->claim();
+        Option = Enable;
+        break;
+      case options::OPT_fno_ms_anonymous_structs:
+        A->claim();
+        Option = Disable;
+        break;
+      // Each of -fms-extensions and -fms-compatibility implicitly enables the
+      // feature.
+      case options::OPT_fms_extensions:
+      case options::OPT_fms_compatibility:
+        Option = Enable;
+        break;
+      // Each of -fno-ms-extensions and -fno-ms-compatibility implicitly
+      // disables the feature.
+      case options::OPT_fno_ms_extensions:
+      case options::OPT_fno_ms_compatibility:
+        Option = Disable;
+        break;
+      default:
+        break;
+      }
+    }
+    return Option;
+  };
+
+  // Only pass a flag to CC1 if a relevant option was seen
+  if (auto MSAnonOpt = MSAnonymousStructsOptionToUseOrNull(Args))
+    CmdArgs.push_back(MSAnonOpt);
+
   if (Triple.isWindowsMSVCEnvironment() && !D.IsCLMode() &&
       Args.hasArg(options::OPT_fms_runtime_lib_EQ))
     ProcessVSRuntimeLibrary(getToolChain(), Args, CmdArgs);
@@ -7211,6 +7265,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
       LanguageStandard = llvm::StringSwitch<StringRef>(StdArg->getValue())
                              .Case("c11", "-std=c11")
                              .Case("c17", "-std=c17")
+                             // If you add cases below for spellings that are
+                             // not in LangStandards.def, update
+                             // TransferableCommand::tryParseStdArg() in
+                             // lib/Tooling/InterpolatingCompilationDatabase.cpp
+                             // to match.
                              // TODO: add c23 when MSVC supports it.
                              .Case("clatest", "-std=c23")
                              .Default("");
@@ -7228,6 +7287,11 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
                              .Case("c++14", "-std=c++14")
                              .Case("c++17", "-std=c++17")
                              .Case("c++20", "-std=c++20")
+                             // If you add cases below for spellings that are
+                             // not in LangStandards.def, update
+                             // TransferableCommand::tryParseStdArg() in
+                             // lib/Tooling/InterpolatingCompilationDatabase.cpp
+                             // to match.
                              // TODO add c++23 and c++26 when MSVC supports it.
                              .Case("c++23preview", "-std=c++23")
                              .Case("c++latest", "-std=c++26")
@@ -7930,36 +7994,7 @@ void Clang::ConstructJob(Compilation &C, const JobAction &JA,
     }
   }
 
-  if (Arg *A = Args.getLastArg(options::OPT_fglobal_isel,
-                               options::OPT_fno_global_isel)) {
-    CmdArgs.push_back("-mllvm");
-    if (A->getOption().matches(options::OPT_fglobal_isel)) {
-      CmdArgs.push_back("-global-isel=1");
-
-      // GISel is on by default on AArch64 -O0, so don't bother adding
-      // the fallback remarks for it. Other combinations will add a warning of
-      // some kind.
-      bool IsArchSupported = Triple.getArch() == llvm::Triple::aarch64;
-      bool IsOptLevelSupported = false;
-
-      Arg *A = Args.getLastArg(options::OPT_O_Group);
-      if (Triple.getArch() == llvm::Triple::aarch64) {
-        if (!A || A->getOption().matches(options::OPT_O0))
-          IsOptLevelSupported = true;
-      }
-      if (!IsArchSupported || !IsOptLevelSupported) {
-        CmdArgs.push_back("-mllvm");
-        CmdArgs.push_back("-global-isel-abort=2");
-
-        if (!IsArchSupported)
-          D.Diag(diag::warn_drv_global_isel_incomplete) << Triple.getArchName();
-        else
-          D.Diag(diag::warn_drv_global_isel_incomplete_opt);
-      }
-    } else {
-      CmdArgs.push_back("-global-isel=0");
-    }
-  }
+  renderGlobalISelOptions(D, Args, CmdArgs, Triple);
 
   if (Arg *A = Args.getLastArg(options::OPT_fforce_enable_int128,
                                options::OPT_fno_force_enable_int128)) {

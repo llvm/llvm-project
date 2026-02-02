@@ -4,6 +4,8 @@ struct IntWrapper {
   IntWrapper getIncremented() const { return {value + 1}; }
 
   IntWrapper operator+(const IntWrapper& RHS) const { return {value + RHS.value}; }
+
+  const int& operator*() const { return value; }
 };
 
 extern "C++" {

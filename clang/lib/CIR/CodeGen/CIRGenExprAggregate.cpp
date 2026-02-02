@@ -233,6 +233,29 @@ public:
   // Stubs -- These should be moved up when they are implemented.
   void VisitCastExpr(CastExpr *e) {
     switch (e->getCastKind()) {
+    case CK_LValueToRValueBitCast: {
+      if (dest.isIgnored()) {
+        cgf.emitAnyExpr(e->getSubExpr(), AggValueSlot::ignored(),
+                        /*ignoreResult=*/true);
+        break;
+      }
+
+      LValue sourceLV = cgf.emitLValue(e->getSubExpr());
+      Address sourceAddress =
+          sourceLV.getAddress().withElementType(cgf.getBuilder(), cgf.voidTy);
+      Address destAddress =
+          dest.getAddress().withElementType(cgf.getBuilder(), cgf.voidTy);
+
+      mlir::Location loc = cgf.getLoc(e->getExprLoc());
+
+      mlir::Value sizeVal = cgf.getBuilder().getConstInt(
+          loc, cgf.sizeTy,
+          cgf.getContext().getTypeSizeInChars(e->getType()).getQuantity());
+      cgf.getBuilder().createMemCpy(loc, destAddress.getPointer(),
+                                    sourceAddress.getPointer(), sizeVal);
+
+      break;
+    }
     case CK_LValueToRValue:
       // If we're loading from a volatile type, force the destination
       // into existence.
