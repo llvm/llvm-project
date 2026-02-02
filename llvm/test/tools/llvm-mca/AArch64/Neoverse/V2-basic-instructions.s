@@ -407,17 +407,17 @@
 # CHECK-NEXT:  1      1     0.17                        cneg	xzr, x4, le
 # CHECK-NEXT:  1      1     0.17                        cneg	x9, xzr, lt
 # CHECK-NEXT:  1      1     0.17                        csneg	x4, x8, x8, al
-# CHECK-NEXT:  1      1     0.17                        rbit	w0, w7
-# CHECK-NEXT:  1      1     0.17                        rbit	x18, x3
+# CHECK-NEXT:  1      2     4.00                        rbit	w0, w7
+# CHECK-NEXT:  1      2     4.00                        rbit	x18, x3
 # CHECK-NEXT:  1      1     0.17                        rev16	w17, w1
 # CHECK-NEXT:  1      1     0.17                        rev16	x5, x2
 # CHECK-NEXT:  1      1     0.17                        rev	w18, w0
 # CHECK-NEXT:  1      1     0.17                        rev32	x20, x1
 # CHECK-NEXT:  1      1     0.17                        rev	x22, x2
-# CHECK-NEXT:  1      1     0.17                        clz	w24, w3
-# CHECK-NEXT:  1      1     0.17                        clz	x26, x4
-# CHECK-NEXT:  1      1     0.17                        cls	w3, w5
-# CHECK-NEXT:  1      1     0.17                        cls	x20, x5
+# CHECK-NEXT:  1      2     4.00                        clz	w24, w3
+# CHECK-NEXT:  1      2     4.00                        clz	x26, x4
+# CHECK-NEXT:  1      2     4.00                        cls	w3, w5
+# CHECK-NEXT:  1      2     4.00                        cls	x20, x5
 # CHECK-NEXT:  1      12    12.00                       udiv	w0, w7, w10
 # CHECK-NEXT:  1      20    20.00                       udiv	x9, x22, x4
 # CHECK-NEXT:  1      12    12.00                       sdiv	w12, w21, w0
@@ -1274,7 +1274,7 @@
 
 # CHECK:      Resource pressure per iteration:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]
-# CHECK-NEXT: 13.00  13.00  34.00  34.00  54.33  54.33  54.33  99.33  170.33 170.33 341.50 184.50 116.50 116.50 87.00  87.00  207.25 155.75 39.25  13.75
+# CHECK-NEXT: 13.00  13.00  34.00  34.00  54.33  54.33  54.33  99.33  170.33 170.33 340.50 183.50 115.50 115.50 86.00  86.00  231.25 155.75 39.25  13.75
 
 # CHECK:      Resource pressure by instruction:
 # CHECK-NEXT: [0.0]  [0.1]  [1.0]  [1.1]  [2.0]  [2.1]  [2.2]  [3]    [4.0]  [4.1]  [5]    [6]    [7]    [8]    [9]    [10]   [11]   [12]   [13]   [14]   Instructions:
@@ -1675,17 +1675,17 @@
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     cneg	xzr, x4, le
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     cneg	x9, xzr, lt
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     csneg	x4, x8, x8, al
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     rbit	w0, w7
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     rbit	x18, x3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -     rbit	w0, w7
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -     rbit	x18, x3
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     rev16	w17, w1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     rev16	x5, x2
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     rev	w18, w0
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     rev32	x20, x1
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     rev	x22, x2
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     clz	w24, w3
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     clz	x26, x4
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     cls	w3, w5
-# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     0.17   0.17   0.17   0.17   0.17   0.17    -      -      -      -     cls	x20, x5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -     clz	w24, w3
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -     clz	x26, x4
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -     cls	w3, w5
+# CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -      -      -      -      -      -      -     4.00    -      -      -     cls	x20, x5
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     12.00   -      -      -      -      -      -      -      -      -     udiv	w0, w7, w10
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     20.00   -      -      -      -      -      -      -      -      -     udiv	x9, x22, x4
 # CHECK-NEXT:  -      -      -      -      -      -      -      -      -      -     12.00   -      -      -      -      -      -      -      -      -     sdiv	w12, w21, w0

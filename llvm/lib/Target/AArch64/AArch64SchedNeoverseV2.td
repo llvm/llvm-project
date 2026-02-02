@@ -1229,6 +1229,14 @@ def : SchedAlias<WriteIS, V2Write_1c_1I>;
 // Bitfield move, insert
 def : InstRW<[V2Write_2c_1M], (instregex "^BFM[WX]ri$")>;
 
+// Count/Reverse bits
+def V2Write_2c_1V0_4rc : SchedWriteRes<[V2UnitV0]> {
+  let Latency = 2;
+  let ReleaseAtCycles = [4];
+}
+
+def : InstRW<[V2Write_2c_1V0_4rc], (instregex "^CLS(W|X)r$", "^CLZ(W|X)r$", "^RBIT(W|X)r$")>;
+
 // Load instructions
 // -----------------------------------------------------------------------------
 
