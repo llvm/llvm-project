@@ -20,6 +20,7 @@
 #include "Plugins/ExpressionParser/Swift/SwiftPersistentExpressionState.h"
 #include "Plugins/ExpressionParser/Swift/SwiftUserExpression.h"
 #include "Plugins/LanguageRuntime/Swift/SwiftLanguageRuntime.h"
+#include "Plugins/Language/Swift/LogChannelSwift.h"
 #include "Plugins/SymbolFile/DWARF/DWARFASTParserSwift.h"
 #include "Plugins/TypeSystem/Clang/TypeSystemClang.h"
 #include "TypeSystemSwiftTypeRef.h"
@@ -3194,9 +3195,9 @@ void TypeSystemSwiftTypeRef::DiagnoseSwiftASTContextFallback(
   llvm::raw_string_ostream(msg)
       << "TypeSystemSwiftTypeRef::" << func_name
       << ": had to engage SwiftASTContext fallback for type " << type_name;
-  Debugger::ReportWarning(msg, debugger_id, &m_fallback_warning);
 
   LLDB_LOGF(GetLog(LLDBLog::Types), "%s", msg.c_str());
+  LLDB_LOGF(lldb_private::GetSwiftHealthLog(), "%s", msg.c_str());
 }
 
 CompilerType
