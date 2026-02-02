@@ -728,6 +728,30 @@ TEST(CallHierarchy, HierarchyOnVarWithWriteReference) {
       ElementsAre(AllOf(from(
           AllOf(withName("caller"), withReferenceTags(ReferenceTag::Write))))));
 }
+
+TEST(CallHierarchy, HierarchyOnClassMemberWithWriteReference) {
+  Annotations Source(R"cpp(
+    int v^ar = 1;
+    class MyClass {
+    public:
+      void caller() {
+        var = 2;
+      }
+    };
+  )cpp");
+  TestTU TU = TestTU::withCode(Source.code());
+  auto AST = TU.build();
+  auto Index = TU.index();
+
+  std::vector<CallHierarchyItem> Items =
+      prepareCallHierarchy(AST, Source.point(), testPath(TU.Filename));
+  ASSERT_THAT(Items, ElementsAre(withName("var")));
+  auto IncomingLevel1 = incomingCalls(Items[0], Index.get(), AST);
+  ASSERT_FALSE(IncomingLevel1.empty());
+  EXPECT_THAT(
+      IncomingLevel1,
+      ElementsAre(AllOf(from(
+          AllOf(withName("caller"), withReferenceTags(ReferenceTag::Write))))));
 }
 
 TEST(CallHierarchy, HierarchyOnVarWithUnaryReadWriteReference) {
