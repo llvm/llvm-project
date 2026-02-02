@@ -302,7 +302,7 @@ struct VPlanTransforms {
                                          VPBasicBlock *LatchVPBB);
 
   /// Replaces the exit condition from
-  ///   (branch-on-count CanonicalIVInc, VectorTripCount)
+  ///   (branch-on-cond eq CanonicalIVInc, VectorTripCount)
   /// to
   ///   (branch-on-cond eq AVLNext, 0)
   static void convertEVLExitCond(VPlan &Plan);
