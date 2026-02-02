@@ -2073,33 +2073,39 @@ static bool CheckConstexprDeclStmt(Sema &SemaRef, const FunctionDecl *Dcl,
       //   thread storage duration or [before C++2a] for which no
       //   initialization is performed.
       const auto *VD = cast<VarDecl>(DclIt);
+
+      // Define the enum UP HERE so it is visible to all the checks below
+      enum { Function, Constructor };
+
       if (VD->isThisDeclarationADefinition()) {
         if (VD->isStaticLocal()) {
           if (Kind == Sema::CheckConstexprKind::Diagnose) {
             SemaRef.DiagCompat(VD->getLocation(),
                                diag_compat::constexpr_static_var)
-                << isa<CXXConstructorDecl>(Dcl)
+                << (isa<CXXConstructorDecl>(Dcl) ? Constructor : Function)
                 << (VD->getTLSKind() == VarDecl::TLS_Dynamic);
           } else if (!SemaRef.getLangOpts().CPlusPlus23) {
             return false;
           }
         }
+
         if (SemaRef.LangOpts.CPlusPlus23) {
           CheckLiteralType(SemaRef, Kind, VD->getLocation(), VD->getType(),
                            diag::warn_cxx20_compat_constexpr_var,
-                           isa<CXXConstructorDecl>(Dcl));
+                           isa<CXXConstructorDecl>(Dcl) ? Constructor
+                                                        : Function);
         } else if (CheckLiteralType(
                        SemaRef, Kind, VD->getLocation(), VD->getType(),
                        diag::err_constexpr_local_var_non_literal_type,
-                       isa<CXXConstructorDecl>(Dcl))) {
+                       isa<CXXConstructorDecl>(Dcl) ? Constructor : Function)) {
           return false;
         }
-        if (!VD->getType()->isDependentType() &&
-            !VD->hasInit() && !VD->isCXXForRangeDecl()) {
+        if (!VD->getType()->isDependentType() && !VD->hasInit() &&
+            !VD->isCXXForRangeDecl()) {
           if (Kind == Sema::CheckConstexprKind::Diagnose) {
             SemaRef.DiagCompat(VD->getLocation(),
                                diag_compat::constexpr_local_var_no_init)
-                << isa<CXXConstructorDecl>(Dcl);
+                << (isa<CXXConstructorDecl>(Dcl) ? Constructor : Function);
           } else if (!SemaRef.getLangOpts().CPlusPlus20) {
             return false;
           }
@@ -2108,7 +2114,7 @@ static bool CheckConstexprDeclStmt(Sema &SemaRef, const FunctionDecl *Dcl,
       }
       if (Kind == Sema::CheckConstexprKind::Diagnose) {
         SemaRef.DiagCompat(VD->getLocation(), diag_compat::constexpr_local_var)
-            << isa<CXXConstructorDecl>(Dcl);
+            << (isa<CXXConstructorDecl>(Dcl) ? Constructor : Function);
       } else if (!SemaRef.getLangOpts().CPlusPlus14) {
         return false;
       }
@@ -2382,6 +2388,10 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
     //
     // This restriction is lifted in C++2a, as long as inner statements also
     // apply the general constexpr rules.
+    
+    // <--- START FIX
+    enum { Function, Constructor }; // Defined locally for this block
+
     switch (Kind) {
     case Sema::CheckConstexprKind::CheckValid:
       if (!SemaRef.getLangOpts().CPlusPlus20)
@@ -2391,11 +2401,12 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
     case Sema::CheckConstexprKind::Diagnose:
       SemaRef.DiagCompat(Body->getBeginLoc(),
                          diag_compat::constexpr_function_try_block)
-          << isa<CXXConstructorDecl>(Dcl);
+          << (isa<CXXConstructorDecl>(Dcl) ? Constructor : Function);
       break;
     }
+    // <--- END FIX
   }
-
+    
   // - its function-body shall be [...] a compound-statement that contains only
   //   [... list of cases ...]
   //
@@ -2502,10 +2513,14 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
         break;
       }
     } else if (ReturnStmts.size() > 1) {
+      // Define the enum locally again because the previous one is out of scope
+      enum { Function, Constructor };
+        
       switch (Kind) {
       case Sema::CheckConstexprKind::Diagnose:
         SemaRef.DiagCompat(ReturnStmts.back(),
-                           diag_compat::constexpr_body_multiple_return);
+                           diag_compat::constexpr_body_multiple_return)
+            << (isa<CXXConstructorDecl>(Dcl) ? Constructor : Function);
         for (unsigned I = 0; I < ReturnStmts.size() - 1; ++I)
           SemaRef.Diag(ReturnStmts[I],
                        diag::note_constexpr_body_previous_return);
