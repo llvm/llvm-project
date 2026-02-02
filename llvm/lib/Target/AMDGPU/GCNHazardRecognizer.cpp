@@ -1447,7 +1447,7 @@ bool GCNHazardRecognizer::fixSMEMtoVectorWriteHazards(MachineInstr *MI) {
         const int64_t Imm = MI.getOperand(0).getImm();
         AMDGPU::Waitcnt Decoded = AMDGPU::decodeWaitcnt(IV, Imm);
         // DsCnt corresponds to LGKMCnt here.
-        return (Decoded.DsCnt == 0);
+        return (Decoded.get(AMDGPU::DS_CNT) == 0);
       }
       default:
         assert((!SIInstrInfo::isWaitcnt(MI.getOpcode()) ||
