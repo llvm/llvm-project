@@ -3697,6 +3697,13 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     }
     return MIB.constrainAllUses(TII, TRI, RBI);
   }
+  case Intrinsic::spv_loop_control_intel: {
+    auto MIB =
+        BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpLoopControlINTEL));
+    for (unsigned J = 1; J < I.getNumExplicitOperands(); ++J)
+      MIB.addImm(foldImm(I.getOperand(J), MRI));
+    return MIB.constrainAllUses(TII, TRI, RBI);
+  }
   case Intrinsic::spv_selection_merge: {
     auto MIB =
         BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpSelectionMerge));

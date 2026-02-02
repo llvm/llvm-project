@@ -2337,6 +2337,11 @@ void addInstrRequirements(const MachineInstr &MI,
     Reqs.addCapability(SPIRV::Capability::DerivativeControl);
     break;
   }
+  case SPIRV::OpLoopControlINTEL: {
+    Reqs.addExtension(SPIRV::Extension::SPV_INTEL_unstructured_loop_controls);
+    Reqs.addCapability(SPIRV::Capability::UnstructuredLoopControlsINTEL);
+    break;
+  }
 
   default:
     break;

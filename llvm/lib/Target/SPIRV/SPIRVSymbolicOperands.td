@@ -625,6 +625,7 @@ defm BFloat16CooperativeMatrixKHR : CapabilityOperand<5118, 0, 0, [SPV_KHR_bfloa
 defm BlockingPipesALTERA : CapabilityOperand<5945, 0, 0, [SPV_ALTERA_blocking_pipes], []>;
 defm ArbitraryPrecisionFixedPointALTERA : CapabilityOperand<5922, 0, 0, [SPV_ALTERA_arbitrary_precision_fixed_point], []>;
 defm ArbitraryPrecisionFloatingPointALTERA : CapabilityOperand<5845, 0, 0,[SPV_ALTERA_arbitrary_precision_floating_point], []>;
+defm UnstructuredLoopControlsINTEL : CapabilityOperand<5886, 0, 0, [SPV_INTEL_unstructured_loop_controls], []>;
 
 //===----------------------------------------------------------------------===//
 // Multiclass used to define SourceLanguage enum values and at the same time
