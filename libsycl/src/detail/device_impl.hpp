@@ -97,7 +97,9 @@ public:
 
     if constexpr (std::is_same_v<typename Param::return_type, std::string>) {
       std::string Result;
-      Result.resize(ExpectedSize);
+      // liboffload counts null terminator in the size while std::string
+      // doesn't.
+      Result.resize(ExpectedSize - 1);
       callAndThrow(olGetDeviceInfo, MOffloadDevice, olInfo, ExpectedSize,
                    Result.data());
       return Result;
