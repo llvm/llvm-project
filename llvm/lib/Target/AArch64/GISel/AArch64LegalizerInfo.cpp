@@ -1821,20 +1821,22 @@ bool AArch64LegalizerInfo::legalizeIntrinsic(LegalizerHelper &Helper,
     Register DstReg = MI.getOperand(0).getReg();
     Register SrcReg = MI.getOperand(2).getReg();
     LLT DstTy = MRI.getType(DstReg);
+    LLT DstTyScalar = DstTy.getScalarType();
 
     LLT MidTy, ExtTy;
     if (DstTy.isScalar() && DstTy.getScalarSizeInBits() <= 32) {
-      MidTy = LLT::fixed_vector(4, 32);
-      ExtTy = LLT::scalar(32);
+      ExtTy = DstTyScalar.changeElementSize(32);
+      MidTy = LLT::fixed_vector(4, ExtTy);
     } else {
-      MidTy = LLT::fixed_vector(2, 64);
-      ExtTy = LLT::scalar(64);
+      ExtTy = DstTy.changeElementSize(64);
+      MidTy = LLT::fixed_vector(2, ExtTy);
     }
 
     Register MidReg =
         MIB.buildInstr(Opc, {MidTy}, {SrcReg})->getOperand(0).getReg();
-    Register ZeroReg =
-        MIB.buildConstant(LLT::scalar(64), 0)->getOperand(0).getReg();
+    Register ZeroReg = MIB.buildConstant(DstTyScalar.changeElementSize(64), 0)
+                           ->getOperand(0)
+                           .getReg();
     Register ExtReg = MIB.buildInstr(AArch64::G_EXTRACT_VECTOR_ELT, {ExtTy},
                                      {MidReg, ZeroReg})
                           .getReg(0);
@@ -2039,6 +2041,7 @@ bool AArch64LegalizerInfo::legalizeShlAshrLshr(
   // If the shift amount is a G_CONSTANT, promote it to a 64 bit type so the
   // imported patterns can select it later. Either way, it will be legal.
   Register AmtReg = MI.getOperand(2).getReg();
+  LLT AmtRegEltTy = MRI.getType(AmtReg).getScalarType();
   auto VRegAndVal = getIConstantVRegValWithLookThrough(AmtReg, MRI);
   if (!VRegAndVal)
     return true;
@@ -2046,7 +2049,8 @@ bool AArch64LegalizerInfo::legalizeShlAshrLshr(
   int64_t Amount = VRegAndVal->Value.getSExtValue();
   if (Amount > 31)
     return true; // This will have to remain a register variant.
-  auto ExtCst = MIRBuilder.buildConstant(LLT::scalar(64), Amount);
+  auto ExtCst =
+      MIRBuilder.buildConstant(AmtRegEltTy.changeElementSize(64), Amount);
   Observer.changingInstr(MI);
   MI.getOperand(2).setReg(ExtCst.getReg(0));
   Observer.changedInstr(MI);
@@ -2250,7 +2254,7 @@ bool AArch64LegalizerInfo::legalizeCTPOP(MachineInstr &MI,
          "Expected src and dst to have the same type!");
 
   if (ST->hasCSSC() && Ty.isScalar() && Size == 128) {
-    LLT s64 = LLT::scalar(64);
+    LLT s64 = Ty.changeElementSize(64);
 
     auto Split = MIRBuilder.buildUnmerge(s64, Val);
     auto CTPOP1 = MIRBuilder.buildCTPOP(s64, Split->getOperand(0));
@@ -2273,11 +2277,13 @@ bool AArch64LegalizerInfo::legalizeCTPOP(MachineInstr &MI,
   // Pre-conditioning: widen Val up to the nearest vector type.
   // s32,s64,v4s16,v2s32 -> v8i8
   // v8s16,v4s32,v2s64 -> v16i8
-  LLT VTy = Size == 128 ? LLT::fixed_vector(16, 8) : LLT::fixed_vector(8, 8);
+  LLT ScalarTy = Ty.getScalarType();
+  LLT VTy = Size == 128 ? LLT::fixed_vector(16, ScalarTy.changeElementSize(8))
+                        : LLT::fixed_vector(8, ScalarTy.changeElementSize(8));
   if (Ty.isScalar()) {
     assert((Size == 32 || Size == 64 || Size == 128) && "Expected only 32, 64, or 128 bit scalars!");
     if (Size == 32) {
-      Val = MIRBuilder.buildZExt(LLT::scalar(64), Val).getReg(0);
+      Val = MIRBuilder.buildZExt(ScalarTy.changeElementSize(64), Val).getReg(0);
     }
   }
   Val = MIRBuilder.buildBitcast(VTy, Val).getReg(0);
@@ -2286,15 +2292,16 @@ bool AArch64LegalizerInfo::legalizeCTPOP(MachineInstr &MI,
   auto CTPOP = MIRBuilder.buildCTPOP(VTy, Val);
 
   // Sum across lanes.
-
   if (ST->hasDotProd() && Ty.isVector() && Ty.getNumElements() >= 2 &&
       Ty.getScalarSizeInBits() != 16) {
-    LLT Dt = Ty == LLT::fixed_vector(2, 64) ? LLT::fixed_vector(4, 32) : Ty;
+    LLT Dt = Ty == LLT::fixed_vector(2, ScalarTy.changeElementSize(64))
+                 ? LLT::fixed_vector(4, ScalarTy.changeElementSize(32))
+                 : Ty;
     auto Zeros = MIRBuilder.buildConstant(Dt, 0);
     auto Ones = MIRBuilder.buildConstant(VTy, 1);
     MachineInstrBuilder Sum;
 
-    if (Ty == LLT::fixed_vector(2, 64)) {
+    if (Ty == LLT::fixed_vector(2, ScalarTy.changeElementSize(64))) {
       auto UDOT =
           MIRBuilder.buildInstr(AArch64::G_UDOT, {Dt}, {Zeros, Ones, CTPOP});
       Sum = MIRBuilder.buildInstr(AArch64::G_UADDLP, {Ty}, {UDOT});
@@ -2316,26 +2323,26 @@ bool AArch64LegalizerInfo::legalizeCTPOP(MachineInstr &MI,
   SmallVector<LLT> HAddTys;
   if (Ty.isScalar()) {
     Opc = Intrinsic::aarch64_neon_uaddlv;
-    HAddTys.push_back(LLT::scalar(32));
-  } else if (Ty == LLT::fixed_vector(8, 16)) {
+    HAddTys.push_back(ScalarTy.changeElementSize(32));
+  } else if (Ty == LLT::fixed_vector(8, ScalarTy.changeElementSize(16))) {
     Opc = Intrinsic::aarch64_neon_uaddlp;
-    HAddTys.push_back(LLT::fixed_vector(8, 16));
-  } else if (Ty == LLT::fixed_vector(4, 32)) {
+    HAddTys.push_back(LLT::fixed_vector(8, ScalarTy.changeElementSize(16)));
+  } else if (Ty == LLT::fixed_vector(4, ScalarTy.changeElementSize(32))) {
     Opc = Intrinsic::aarch64_neon_uaddlp;
-    HAddTys.push_back(LLT::fixed_vector(8, 16));
-    HAddTys.push_back(LLT::fixed_vector(4, 32));
-  } else if (Ty == LLT::fixed_vector(2, 64)) {
+    HAddTys.push_back(LLT::fixed_vector(8, ScalarTy.changeElementSize(16)));
+    HAddTys.push_back(LLT::fixed_vector(4, ScalarTy.changeElementSize(32)));
+  } else if (Ty == LLT::fixed_vector(2, ScalarTy.changeElementSize(64))) {
     Opc = Intrinsic::aarch64_neon_uaddlp;
-    HAddTys.push_back(LLT::fixed_vector(8, 16));
-    HAddTys.push_back(LLT::fixed_vector(4, 32));
-    HAddTys.push_back(LLT::fixed_vector(2, 64));
-  } else if (Ty == LLT::fixed_vector(4, 16)) {
+    HAddTys.push_back(LLT::fixed_vector(8, ScalarTy.changeElementSize(16)));
+    HAddTys.push_back(LLT::fixed_vector(4, ScalarTy.changeElementSize(32)));
+    HAddTys.push_back(LLT::fixed_vector(2, ScalarTy.changeElementSize(64)));
+  } else if (Ty == LLT::fixed_vector(4, ScalarTy.changeElementSize(16))) {
     Opc = Intrinsic::aarch64_neon_uaddlp;
-    HAddTys.push_back(LLT::fixed_vector(4, 16));
-  } else if (Ty == LLT::fixed_vector(2, 32)) {
+    HAddTys.push_back(LLT::fixed_vector(4, ScalarTy.changeElementSize(16)));
+  } else if (Ty == LLT::fixed_vector(2, ScalarTy.changeElementSize(32))) {
     Opc = Intrinsic::aarch64_neon_uaddlp;
-    HAddTys.push_back(LLT::fixed_vector(4, 16));
-    HAddTys.push_back(LLT::fixed_vector(2, 32));
+    HAddTys.push_back(LLT::fixed_vector(4, ScalarTy.changeElementSize(16)));
+    HAddTys.push_back(LLT::fixed_vector(2, ScalarTy.changeElementSize(32)));
   } else
     llvm_unreachable("unexpected vector shape");
   MachineInstrBuilder UADD;
@@ -2356,12 +2363,12 @@ bool AArch64LegalizerInfo::legalizeCTPOP(MachineInstr &MI,
 bool AArch64LegalizerInfo::legalizeAtomicCmpxchg128(
     MachineInstr &MI, MachineRegisterInfo &MRI, LegalizerHelper &Helper) const {
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
-  LLT s64 = LLT::scalar(64);
+  LLT i64 = LLT::integer(64);
   auto Addr = MI.getOperand(1).getReg();
-  auto DesiredI = MIRBuilder.buildUnmerge({s64, s64}, MI.getOperand(2));
-  auto NewI = MIRBuilder.buildUnmerge({s64, s64}, MI.getOperand(3));
-  auto DstLo = MRI.createGenericVirtualRegister(s64);
-  auto DstHi = MRI.createGenericVirtualRegister(s64);
+  auto DesiredI = MIRBuilder.buildUnmerge({i64, i64}, MI.getOperand(2));
+  auto NewI = MIRBuilder.buildUnmerge({i64, i64}, MI.getOperand(3));
+  auto DstLo = MRI.createGenericVirtualRegister(i64);
+  auto DstHi = MRI.createGenericVirtualRegister(i64);
 
   MachineInstrBuilder CAS;
   if (ST->hasLSE()) {
@@ -2564,14 +2571,11 @@ bool AArch64LegalizerInfo::legalizeFptrunc(MachineInstr &MI,
   assert(SrcTy.isFixedVector() && isPowerOf2_32(SrcTy.getNumElements()) &&
          "Expected a power of 2 elements");
 
-  LLT s16 = LLT::scalar(16);
-  LLT s32 = LLT::scalar(32);
-  LLT s64 = LLT::scalar(64);
-  LLT v2s16 = LLT::fixed_vector(2, s16);
-  LLT v4s16 = LLT::fixed_vector(4, s16);
-  LLT v2s32 = LLT::fixed_vector(2, s32);
-  LLT v4s32 = LLT::fixed_vector(4, s32);
-  LLT v2s64 = LLT::fixed_vector(2, s64);
+  LLT v2s16 = DstTy.changeElementCount(2);
+  LLT v4s16 = DstTy.changeElementCount(4);
+  LLT v2s32 = SrcTy.changeElementCount(2).changeElementSize(32);
+  LLT v4s32 = SrcTy.changeElementCount(4).changeElementSize(32);
+  LLT v2s64 = SrcTy.changeElementCount(2);
 
   SmallVector<Register> RegsToUnmergeTo;
   SmallVector<Register> TruncOddDstRegs;

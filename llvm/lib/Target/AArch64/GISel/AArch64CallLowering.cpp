@@ -258,7 +258,7 @@ struct OutgoingArgHandler : public CallLowering::OutgoingValueHandler {
                            ISD::ArgFlagsTy Flags) override {
     MachineFunction &MF = MIRBuilder.getMF();
     LLT p0 = LLT::pointer(0, 64);
-    LLT s64 = LLT::scalar(64);
+    LLT s64 = LLT::integer(64);
 
     if (IsTailCall) {
       assert(!Flags.isByVal() && "byval unhandled with tail calls");
@@ -445,7 +445,7 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
       auto &Flags = CurArgInfo.Flags[0];
       if (MRI.getType(CurVReg).getSizeInBits() == TypeSize::getFixed(1) &&
           !Flags.isSExt() && !Flags.isZExt()) {
-        CurVReg = MIRBuilder.buildZExt(LLT::scalar(8), CurVReg).getReg(0);
+        CurVReg = MIRBuilder.buildZExt(LLT::integer(8), CurVReg).getReg(0);
       } else if (TLI.getNumRegistersForCallingConv(Ctx, CC, SplitEVTs[i]) ==
                  1) {
         // Some types will need extending as specified by the CC.
@@ -628,7 +628,7 @@ void AArch64CallLowering::saveVarArgRegisters(
   bool IsWin64CC = Subtarget.isCallingConvWin64(CCInfo.getCallingConv(),
                                                 MF.getFunction().isVarArg());
   const LLT p0 = LLT::pointer(0, 64);
-  const LLT s64 = LLT::scalar(64);
+  const LLT s64 = LLT::integer(64);
 
   unsigned FirstVariadicGPR = CCInfo.getFirstUnallocated(GPRArgRegs);
   unsigned NumVariadicGPRArgRegs = GPRArgRegs.size() - FirstVariadicGPR + 1;
@@ -752,7 +752,7 @@ bool AArch64CallLowering::lowerFormalArguments(
       if (!Flags.isZExt() && !Flags.isSExt()) {
         // Lower i1 argument as i8, and insert AssertZExt + Trunc later.
         Register OrigReg = OrigArg.Regs[0];
-        Register WideReg = MRI.createGenericVirtualRegister(LLT::scalar(8));
+        Register WideReg = MRI.createGenericVirtualRegister(LLT::integer(8));
         OrigArg.Regs[0] = WideReg;
         BoolArgs.push_back({OrigReg, WideReg});
       }
@@ -1358,7 +1358,7 @@ bool AArch64CallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
       // We cannot use a ZExt ArgInfo flag here, because it will
       // zero-extend the argument to i32 instead of just i8.
       OutArg.Regs[0] =
-          MIRBuilder.buildZExt(LLT::scalar(8), OutArg.Regs[0]).getReg(0);
+          MIRBuilder.buildZExt(LLT::integer(8), OutArg.Regs[0]).getReg(0);
       LLVMContext &Ctx = MF.getFunction().getContext();
       OutArg.Ty = Type::getInt8Ty(Ctx);
     }

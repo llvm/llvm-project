@@ -543,9 +543,9 @@ void applyINS(MachineInstr &MI, MachineRegisterInfo &MRI,
   Register DstVec, SrcVec;
   int DstLane, SrcLane;
   std::tie(DstVec, DstLane, SrcVec, SrcLane) = MatchInfo;
-  auto SrcCst = Builder.buildConstant(LLT::scalar(64), SrcLane);
+  auto SrcCst = Builder.buildConstant(LLT::integer(64), SrcLane);
   auto Extract = Builder.buildExtractVectorElement(ScalarTy, SrcVec, SrcCst);
-  auto DstCst = Builder.buildConstant(LLT::scalar(64), DstLane);
+  auto DstCst = Builder.buildConstant(LLT::integer(64), DstLane);
   Builder.buildInsertVectorElement(Dst, DstVec, Extract, DstCst);
   MI.eraseFromParent();
 }
@@ -958,7 +958,9 @@ void applySwapICmpOperands(MachineInstr &MI, GISelChangeObserver &Observer) {
 std::function<Register(MachineIRBuilder &)>
 getVectorFCMP(AArch64CC::CondCode CC, Register LHS, Register RHS, bool NoNans,
               MachineRegisterInfo &MRI) {
-  LLT DstTy = MRI.getType(LHS);
+  LLT OldTy = MRI.getType(LHS);
+  LLT DstTy =
+      LLT::fixed_vector(OldTy.getNumElements(), OldTy.getScalarSizeInBits());
   assert(DstTy.isVector() && "Expected vector types only?");
   assert(DstTy == MRI.getType(RHS) && "Src and Dst types must match!");
   switch (CC) {
@@ -1090,7 +1092,7 @@ void applyLowerBuildToInsertVecElt(MachineInstr &MI, MachineRegisterInfo &MRI,
     Register SrcReg = GBuildVec->getSourceReg(I);
     if (mi_match(SrcReg, MRI, m_GImplicitDef()))
       continue;
-    auto IdxReg = B.buildConstant(LLT::scalar(64), I);
+    auto IdxReg = B.buildConstant(LLT::integer(64), I);
     DstReg =
         B.buildInsertVectorElement(DstTy, DstReg, SrcReg, IdxReg).getReg(0);
   }
