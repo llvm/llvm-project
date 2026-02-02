@@ -7,7 +7,7 @@
 
 # Make sure not and env commands are included in printed commands.
 
-# CHECK: -- Testing: 17 tests{{.*}}
+# CHECK: -- Testing: 18 tests{{.*}}
 
 # CHECK: FAIL: shtest-not :: exclamation-args-nested-none.txt {{.*}}
 # CHECK: ! ! !
@@ -69,6 +69,12 @@
 # CHECK: # executed command: not --crash :
 # CHECK: # | Error: 'not --crash' cannot call ':'
 # CHECK: # error: command failed with exit status: {{.*}}
+
+# CHECK: PASS: shtest-not :: not-calls-crash.txt {{.*}}
+# CHECK: not not [[PYTHON]] crash.py
+# CHECK: # executed command: not not [[PYTHON_BARE]] crash.py
+# CHECK: not --crash [[PYTHON]] crash.py
+# CHECK: # executed command: not --crash [[PYTHON_BARE]] crash.py
 
 # CHECK: FAIL: shtest-not :: not-calls-diff-with-crash.txt {{.*}}
 # CHECK: not --crash diff -u {{.*}}
@@ -184,7 +190,7 @@
 # CHECK: # | Error: 'not --crash' cannot call 'rm'
 # CHECK: # error: command failed with exit status: {{.*}}
 
-# CHECK: Total Discovered Tests: 17
-# CHECK: Passed:  1 {{\([0-9]*\.[0-9]*%\)}}
+# CHECK: Total Discovered Tests: 18
+# CHECK: Passed:  2 {{\([0-9]*\.[0-9]*%\)}}
 # CHECK: Failed: 16 {{\([0-9]*\.[0-9]*%\)}}
 # CHECK-NOT: {{.}}

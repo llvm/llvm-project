@@ -1,0 +1,4 @@
+# Verify that 'not' treats signal deaths as failures.
+
+# RUN: not not %{python} crash.py
+# RUN: not --crash %{python} crash.py

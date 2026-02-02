@@ -1071,6 +1071,10 @@ def _executeShCmd(cmd, shenv, results, timeoutHelper):
         # Detect Ctrl-C in subprocess.
         if res == -signal.SIGINT:
             raise KeyboardInterrupt
+        # Treat crashes as failures
+        if res < 0 and proc_not_counts[i] > 0:
+            res = 1
+            proc_not_counts[i] -= 1
         if proc_not_counts[i] % 2:
             if proc_not_fail_if_crash[i]:
                 res = int(res <= 0)
