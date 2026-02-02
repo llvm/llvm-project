@@ -3078,29 +3078,7 @@ LogicalResult NVVM::FloatAdditionOp::verify() {
   auto rhsFType = getRhs().getType();
   auto rndMode = getRnd();
   auto satMode = getSat();
-  auto isFTZ = getFtz();
-
-  if (satMode == NVVM::SaturationMode::SATFINITE)
-    return emitOpError("SATFINITE saturation mode is not supported for "
-                       "floating point addition operation");
-
-  if (isa<VectorType>(resFType) != isa<VectorType>(lhsFType) ||
-      isa<VectorType>(resFType) != isa<VectorType>(rhsFType))
-    return emitOpError("cannot mix vector and scalar types for floating point "
-                       "addition operation");
-
-  if (isa<VectorType>(lhsFType) &&
-      ((cast<VectorType>(lhsFType).getElementType() !=
-        cast<VectorType>(rhsFType).getElementType()) ||
-       (cast<VectorType>(lhsFType).getElementType() !=
-        cast<VectorType>(resFType).getElementType())))
-    return emitOpError(
-        "cannot mix different element types for vector floating point "
-        "addition operation");
-
-  if (resFType.isF64() && (satMode != NVVM::SaturationMode::NONE || isFTZ))
-    return emitOpError("FTZ and saturation are not supported for additions "
-                       "involving f64 type");
+  bool isFTZ = getFtz();
 
   auto getBaseFType = [](Type type) -> Type {
     if (isa<VectorType>(type))
@@ -3112,15 +3090,40 @@ LogicalResult NVVM::FloatAdditionOp::verify() {
   auto lhsBaseFType = getBaseFType(lhsFType);
   auto rhsBaseFType = getBaseFType(rhsFType);
 
+  bool sameTypeOperation =
+      llvm::all_equal({lhsBaseFType, rhsBaseFType, resBaseFType});
+
+  if (satMode == NVVM::SaturationMode::SATFINITE)
+    return emitOpError("SATFINITE saturation mode is not supported for "
+                       "floating point addition operation");
+
+  if (!llvm::all_equal({isa<VectorType>(resFType), isa<VectorType>(lhsFType),
+                        isa<VectorType>(rhsFType)}))
+    return emitOpError("cannot mix vector and scalar types for floating point "
+                       "addition operation");
+
+  if (isa<VectorType>(resFType) && !sameTypeOperation)
+    return emitOpError(
+        "cannot mix different element types for vector floating point "
+        "addition operation");
+
+  if (resFType.isF64() && (satMode != NVVM::SaturationMode::NONE || isFTZ))
+    return emitOpError("FTZ and saturation are not supported for additions "
+                       "involving f64 type");
+
   if (resBaseFType.getIntOrFloatBitWidth() <
       std::max(lhsBaseFType.getIntOrFloatBitWidth(),
                rhsBaseFType.getIntOrFloatBitWidth()))
     return emitOpError("result type must be at least as wide as the operands");
 
-  if (resBaseFType.isF16() && rndMode != NVVM::FPRoundingMode::RN &&
-      rndMode != NVVM::FPRoundingMode::NONE)
+  if (resBaseFType.isF16()) {
+    if (!(rndMode == NVVM::FPRoundingMode::RN ||
+          rndMode == NVVM::FPRoundingMode::NONE))
     return emitOpError("only RN rounding mode is supported for f16 and "
                        "vector<2xf16> additions");
+    if (!sameTypeOperation)
+      return emitOpError("only f16 + f16 is supported for f16 result type");
+  }
 
   if (resBaseFType.isBF16()) {
     if (rndMode != NVVM::FPRoundingMode::RN &&
@@ -3130,14 +3133,9 @@ LogicalResult NVVM::FloatAdditionOp::verify() {
     if (satMode != NVVM::SaturationMode::NONE || isFTZ)
       return emitOpError("FTZ and saturation are not supported for bf16 and "
                          "vector<2xbf16> additions");
+    if (!sameTypeOperation)
+      return emitOpError("only bf16 + bf16 is supported for bf16 result type");
   }
-
-  if (resBaseFType.isF16() && !(lhsBaseFType.isF16() && rhsBaseFType.isF16()))
-    return emitOpError("only f16 + f16 is supported for f16 result type");
-
-  if (resBaseFType.isBF16() &&
-      !(lhsBaseFType.isBF16() && rhsBaseFType.isBF16()))
-    return emitOpError("only bf16 + bf16 is supported for bf16 result type");
 
   // FIXME: This is a temporary check disallowing lowering to add.rn.ftz.f16(x2)
   // PTX instructions since the corresponding LLVM intrinsic is missing. This
