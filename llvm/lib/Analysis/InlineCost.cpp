@@ -1728,7 +1728,7 @@ bool CallAnalyzer::canFoldInboundsGEP(GetElementPtrInst &I) {
     return false;
 
   // Add the result as a new mapping to Base + Offset.
-  ConstantOffsetPtrs[&I] = BaseAndOffset;
+  ConstantOffsetPtrs[&I] = std::move(BaseAndOffset);
 
   return true;
 }
