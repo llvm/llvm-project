@@ -995,15 +995,15 @@ static VPValue *optimizeEarlyExitInductionUser(VPlan &Plan,
 static VPValue *optimizeLatchExitInductionUser(
     VPlan &Plan, VPTypeAnalysis &TypeInfo, VPBlockBase *PredVPBB, VPValue *Op,
     DenseMap<VPValue *, VPValue *> &EndValues, PredicatedScalarEvolution &PSE) {
-  VPValue *IVCand;
   VPValue *Incoming;
-  if (!match(Op, m_ExitingIVValue(m_VPValue(IVCand), m_VPValue(Incoming)))) {
-    if (!match(Op, m_ExtractLastLaneOfLastPart(m_VPValue(IVCand))))
-      return nullptr;
-    Incoming = IVCand;
+  VPWidenInductionRecipe *WideIV = nullptr;
+  if (match(Op, m_ExitingIVValue(m_VPValue(), m_VPValue(Incoming)))) {
+    WideIV = getOptimizableIVOf(Op->getDefiningRecipe()->getOperand(0), PSE);
+    assert(WideIV && "must have an optimizable IV");
+  } else if (match(Op, m_ExtractLastLaneOfLastPart(m_VPValue(Incoming)))) {
+    WideIV = getOptimizableIVOf(Incoming, PSE);
   }
 
-  auto *WideIV = getOptimizableIVOf(IVCand, PSE);
   if (!WideIV)
     return nullptr;
 

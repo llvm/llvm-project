@@ -647,7 +647,8 @@ createWidenInductionRecipe(PHINode *Phi, VPPhi *PhiR, VPIRValue *Start,
   auto *WideIV = new VPWidenIntOrFpInductionRecipe(
       Phi, Start, Step, &Plan.getVF(), IndDesc, Flags, DL);
 
-  // Replace live-out extracts of WideIV by ExitingIVValue recipes.
+  // Replace live-out extracts of WideIV's backedge value by ExitingIVValue
+  // recipes.
   VPValue *BackedgeVal = PhiR->getOperand(1);
   for (VPUser *U : to_vector(BackedgeVal->users())) {
     if (!match(U, m_ExtractLastPart(m_VPValue())))
