@@ -9,7 +9,6 @@ LLVM Testing Infrastructure Guide
    :hidden:
 
    TestSuiteGuide
-   TestSuiteMakefileGuide
 
 Overview
 ========
