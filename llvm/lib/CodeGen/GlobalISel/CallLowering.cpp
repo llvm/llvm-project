@@ -340,13 +340,25 @@ mergeVectorRegsToResultRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
   if (LCMTy == LLTy) {
     // Common case where no padding is needed.
     assert(DstRegs.size() == 1);
-    return B.buildConcatVectors(DstRegs[0], SrcRegs);
+
+    SmallVector<Register, 8> ConcatRegs(SrcRegs.size());
+    llvm::copy(SrcRegs, ConcatRegs.begin());
+
+    if (LLTy.getScalarType() != PartLLT.getScalarType())
+      for (int I = 0; I != SrcRegs.size(); ++I)
+        ConcatRegs[I] =
+            B.buildBitcast(MRI.getType(SrcRegs[I])
+                               .changeElementType(LLTy.getScalarType()),
+                           SrcRegs[I])
+                .getReg(0);
+
+    return B.buildConcatVectors(DstRegs[0], ConcatRegs);
   }
 
   // We need to create an unmerge to the result registers, which may require
   // widening the original value.
   Register UnmergeSrcReg;
-  if (LCMTy != PartLLT) {
+  if (LCMTy.getSizeInBits() != PartLLT.getSizeInBits()) {
     assert(DstRegs.size() == 1);
     return B.buildDeleteTrailingVectorElements(
         DstRegs[0], B.buildMergeLikeInstr(LCMTy, SrcRegs));
@@ -365,6 +377,9 @@ mergeVectorRegsToResultRegs(MachineIRBuilder &B, ArrayRef<Register> DstRegs,
   // Create the excess dead defs for the unmerge.
   for (int I = DstRegs.size(); I != NumDst; ++I)
     PadDstRegs[I] = MRI.createGenericVirtualRegister(LLTy);
+
+  if (PartLLT != LCMTy)
+    UnmergeSrcReg = B.buildBitcast(LCMTy, UnmergeSrcReg).getReg(0);
 
   if (PadDstRegs.size() == 1)
     return B.buildDeleteTrailingVectorElements(DstRegs[0], UnmergeSrcReg);
@@ -456,7 +471,7 @@ static void buildCopyFromRegs(MachineIRBuilder &B, ArrayRef<Register> OrigRegs,
       PartLLT = NewTy;
     }
 
-    if (LLTy.getScalarType() == PartLLT.getElementType()) {
+    if (LLTy.getScalarSizeInBits() == PartLLT.getScalarSizeInBits()) {
       mergeVectorRegsToResultRegs(B, OrigRegs, CastRegs);
     } else {
       unsigned I = 0;
@@ -1411,7 +1426,7 @@ static bool isCopyCompatibleType(LLT SrcTy, LLT DstTy) {
 void CallLowering::IncomingValueHandler::assignValueToReg(
     Register ValVReg, Register PhysReg, const CCValAssign &VA) {
   const MVT LocVT = VA.getLocVT();
-  const LLT LocTy(LocVT);
+  const LLT LocTy = getLLTForMVT(LocVT);
   const LLT RegTy = MRI.getType(ValVReg);
 
   if (isCopyCompatibleType(RegTy, LocTy)) {

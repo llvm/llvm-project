@@ -4597,12 +4597,30 @@ LegalizerHelper::lower(MachineInstr &MI, unsigned TypeIdx, LLT LowerHintTy) {
     return Legalized;
   }
   case TargetOpcode::G_FNEG: {
-    auto [Res, SubByReg] = MI.getFirst2Regs();
-    LLT Ty = MRI.getType(Res);
+    auto [Res, ResTy, SubByReg, SubByRegTy] = MI.getFirst2RegLLTs();
+    LLT TyInt =
+        ResTy.changeElementType(LLT::integer(ResTy.getScalarSizeInBits()));
+    Register castedSubByReg = SubByReg;
+
+    if (!(SubByRegTy.getScalarType().isAnyScalar() ||
+          SubByRegTy.getScalarType().isInteger()))
+      castedSubByReg =
+          MIRBuilder
+              .buildBitcast(SubByRegTy.changeElementType(
+                                LLT::integer(SubByRegTy.getScalarSizeInBits())),
+                            SubByReg)
+              .getReg(0);
 
     auto SignMask = MIRBuilder.buildConstant(
-        Ty, APInt::getSignMask(Ty.getScalarSizeInBits()));
-    MIRBuilder.buildXor(Res, SubByReg, SignMask);
+        TyInt, APInt::getSignMask(TyInt.getScalarSizeInBits()));
+
+    if (ResTy != TyInt) {
+      Register NewDst =
+        MIRBuilder.buildXor(TyInt, castedSubByReg, SignMask).getReg(0);
+      MIRBuilder.buildBitcast(Res, NewDst);
+    } else
+      MIRBuilder.buildXor(Res, castedSubByReg, SignMask).getReg(0);
+
     MI.eraseFromParent();
     return Legalized;
   }
@@ -8857,7 +8875,12 @@ LegalizerHelper::lowerFCopySign(MachineInstr &MI) {
   // We masked the sign bit and the not-sign bit, so these are disjoint.
   Flags |= MachineInstr::Disjoint;
 
-  MIRBuilder.buildOr(Dst, And0, And1, Flags);
+  if (DstTy == DstIntTy)
+    MIRBuilder.buildOr(Dst, And0, And1, Flags).getReg(0);
+  else {
+    Register NewDst = MIRBuilder.buildOr(DstIntTy, And0, And1, Flags).getReg(0);
+    MIRBuilder.buildBitcast(Dst, NewDst);
+  }
 
   MI.eraseFromParent();
   return Legalized;
@@ -10147,12 +10170,17 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerSelect(MachineInstr &MI) {
   auto [DstReg, DstTy, MaskReg, MaskTy, Op1Reg, Op1Ty, Op2Reg, Op2Ty] =
       MI.getFirst4RegLLTs();
 
+  LLT Op1TyInt =
+      Op1Ty.changeElementType(LLT::integer(Op1Ty.getScalarSizeInBits()));
+
   bool IsEltPtr = DstTy.isPointerOrPointerVector();
   if (IsEltPtr) {
     LLT ScalarPtrTy = LLT::scalar(DstTy.getScalarSizeInBits());
     LLT NewTy = DstTy.changeElementType(ScalarPtrTy);
     Op1Reg = MIRBuilder.buildPtrToInt(NewTy, Op1Reg).getReg(0);
+    Op1Ty = MRI.getType(Op1Reg);
     Op2Reg = MIRBuilder.buildPtrToInt(NewTy, Op2Reg).getReg(0);
+    Op2Ty = MRI.getType(Op2Reg);
     DstTy = NewTy;
   }
 
@@ -10187,6 +10215,18 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerSelect(MachineInstr &MI) {
     return UnableToLegalize;
   }
 
+  if (!(Op1Ty.getScalarType().isAnyScalar() ||
+        Op1Ty.getScalarType().isInteger()))
+    Op1Reg = MIRBuilder.buildBitcast(Op1TyInt, Op1Reg).getReg(0);
+
+  if (!(Op2Ty.getScalarType().isAnyScalar() ||
+        Op2Ty.getScalarType().isInteger()))
+    Op2Reg = MIRBuilder
+                 .buildBitcast(Op2Ty.changeElementType(
+                                   LLT::integer(Op2Ty.getScalarSizeInBits())),
+                               Op2Reg)
+                 .getReg(0);
+
   auto NotMask = MIRBuilder.buildNot(MaskTy, MaskReg);
   auto NewOp1 = MIRBuilder.buildAnd(MaskTy, Op1Reg, MaskReg);
   auto NewOp2 = MIRBuilder.buildAnd(MaskTy, Op2Reg, NotMask);
@@ -10194,7 +10234,12 @@ LegalizerHelper::LegalizeResult LegalizerHelper::lowerSelect(MachineInstr &MI) {
     auto Or = MIRBuilder.buildOr(DstTy, NewOp1, NewOp2);
     MIRBuilder.buildIntToPtr(DstReg, Or);
   } else {
-    MIRBuilder.buildOr(DstReg, NewOp1, NewOp2);
+    if (DstTy == Op1TyInt)
+      MIRBuilder.buildOr(DstReg, NewOp1, NewOp2);
+    else {
+      auto Or = MIRBuilder.buildOr(Op1TyInt, NewOp1, NewOp2);
+      MIRBuilder.buildBitcast(DstReg, Or.getReg(0));
+    }
   }
   MI.eraseFromParent();
   return Legalized;
@@ -10310,16 +10355,37 @@ LegalizerHelper::lowerAbsDiffToMinMax(MachineInstr &MI) {
 }
 
 LegalizerHelper::LegalizeResult LegalizerHelper::lowerFAbs(MachineInstr &MI) {
-  Register SrcReg = MI.getOperand(1).getReg();
-  Register DstReg = MI.getOperand(0).getReg();
+  auto [DstReg, DstTy, SrcReg, SrcTy] = MI.getFirst2RegLLTs();
+  LLT TyInt =
+      DstTy.changeElementType(LLT::integer(DstTy.getScalarSizeInBits()));
+  Register castedSrc = SrcReg;
 
-  LLT Ty = MRI.getType(DstReg);
+  if (!(SrcTy.getScalarType().isAnyScalar() ||
+        SrcTy.getScalarType().isInteger()))
+    castedSrc = MIRBuilder
+                    .buildBitcast(SrcTy.changeElementType(LLT::integer(
+                                      SrcTy.getScalarSizeInBits())),
+                                  SrcReg)
+                    .getReg(0);
 
-  // Reset sign bit
-  MIRBuilder.buildAnd(
-      DstReg, SrcReg,
-      MIRBuilder.buildConstant(
-          Ty, APInt::getSignedMaxValue(Ty.getScalarSizeInBits())));
+  if (MRI.getType(DstReg) != TyInt) {
+    // Reset sign bit
+    Register NewDst =
+        MIRBuilder
+            .buildAnd(
+                TyInt, castedSrc,
+                MIRBuilder.buildConstant(
+                    TyInt, APInt::getSignedMaxValue(DstTy.getScalarSizeInBits())))
+            .getReg(0);
+
+    MIRBuilder.buildBitcast(DstReg, NewDst);
+  } else
+    MIRBuilder
+            .buildAnd(
+                DstReg, castedSrc,
+                MIRBuilder.buildConstant(
+                    TyInt, APInt::getSignedMaxValue(DstTy.getScalarSizeInBits())))
+            .getReg(0);
 
   MI.eraseFromParent();
   return Legalized;
