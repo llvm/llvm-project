@@ -147,7 +147,6 @@ public:
       return Result[0];
     return '\0';
   }
-
 };
 
 } // namespace llvm

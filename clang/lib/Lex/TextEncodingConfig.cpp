@@ -37,14 +37,15 @@ TextEncodingConfig::setConvertersFromOptions(TextEncodingConfig &TEC,
     return std::error_code();
   ErrorOr<TextEncodingConverter> ErrorOrConverter =
       llvm::TextEncodingConverter::create(UTF8, TEC.ExecEncoding);
-  if (ErrorOrConverter)
+  if (ErrorOrConverter) {
     TEC.ToExecEncodingConverter =
         new TextEncodingConverter(std::move(*ErrorOrConverter));
-  else
+    TInfo.ExecStrConverter = TEC.ToExecEncodingConverter;
+  } else
     return ErrorOrConverter.getError();
 
-  ErrorOrConverter = llvm::TextEncodingConverter::create(TEC.SystemEncoding,
-                                                         TEC.InternalEncoding);
+  ErrorOrConverter = llvm::TextEncodingConverter::create(
+      TInfo.getTriple().getDefaultNarrowTextEncoding(), UTF8);
 
   if (ErrorOrConverter)
     TInfo.FormatStrConverter =
