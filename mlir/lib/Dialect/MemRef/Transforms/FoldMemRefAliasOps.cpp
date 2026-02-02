@@ -323,25 +323,42 @@ LogicalResult LoadOpOfExpandShapeOpFolder<OpTy>::matchAndRewrite(
         return success();
       })
       .Case([&](vector::TransferReadOp op) {
-        // We only support minor identity maps in the permutation attribute.
-        if (!op.getPermutationMap().isMinorIdentity())
-          return failure();
-
         // We only support the case where the source of the expand shape has
         // rank greater than or equal to the vector rank.
-        const int64_t sourceRank = sourceIndices.size();
         const int64_t vectorRank = op.getVectorType().getRank();
+        const int64_t sourceRank = sourceIndices.size();
         if (sourceRank < vectorRank)
           return failure();
 
-        // We need to construct a new minor identity map since we will have lost
-        // some dimensions in folding away the expand shape.
-        auto minorIdMap = AffineMap::getMinorIdentityMap(sourceRank, vectorRank,
-                                                         op.getContext());
+        SmallVector<AffineExpr> newResults;
+        // We can only fold if the permutation map uses only the least
+        // significant dimension from an expanded shape.
+        for (AffineExpr result : op.getPermutationMap().getResults()) {
+          bool foundExpr = false;
+
+          for (auto reassocationIndices :
+               llvm::enumerate(expandShapeOp.getReassociationIndices())) {
+            auto reassociation = reassocationIndices.value();
+
+            AffineExpr dim = getAffineDimExpr(
+                reassociation[reassociation.size() - 1], rewriter.getContext());
+            if (dim == result) {
+              newResults.push_back(getAffineDimExpr(reassocationIndices.index(),
+                                                    rewriter.getContext()));
+              foundExpr = true;
+              break;
+            }
+          }
+          if (!foundExpr)
+            return failure();
+        }
+
+        auto newMap =
+            AffineMap::get(sourceRank, 0, newResults, op.getContext());
 
         rewriter.replaceOpWithNewOp<vector::TransferReadOp>(
             op, op.getVectorType(), expandShapeOp.getViewSource(),
-            sourceIndices, minorIdMap, op.getPadding(), op.getMask(),
+            sourceIndices, newMap, op.getPadding(), op.getMask(),
             op.getInBounds());
         return success();
       })

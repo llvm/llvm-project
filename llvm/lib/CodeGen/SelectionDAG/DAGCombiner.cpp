@@ -28343,7 +28343,8 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
     unsigned SrcOpcode = N0.getOpcode();
     if (TLI.isBinOp(SrcOpcode) && N->isOnlyUserOf(N0.getNode()) &&
         (N1.isUndef() ||
-         (SrcOpcode == N1.getOpcode() && N->isOnlyUserOf(N1.getNode())))) {
+         (SrcOpcode == N1.getOpcode() && N->isOnlyUserOf(N1.getNode()) &&
+          N0.getResNo() == N1.getResNo()))) {
       // Get binop source ops, or just pass on the undef.
       SDValue Op00 = N0.getOperand(0);
       SDValue Op01 = N0.getOperand(1);
@@ -28408,7 +28409,8 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
           SDValue RHS = DAG.getVectorShuffle(
               VT, DL, RightSV0 ? RightSV0 : DAG.getPOISON(VT),
               RightSV1 ? RightSV1 : DAG.getPOISON(VT), RightMask);
-          return DAG.getNode(SrcOpcode, DL, VT, LHS, RHS);
+          return DAG.getNode(SrcOpcode, DL, N0->getVTList(), LHS, RHS)
+              .getValue(N0.getResNo());
         }
       }
     }
