@@ -367,8 +367,10 @@ static bool interp__builtin_strlen(InterpState &S, CodePtr OpPC,
   unsigned ElemSize = StrPtr.getFieldDesc()->getElemSize();
 
   if (ID == Builtin::BI__builtin_wcslen || ID == Builtin::BIwcslen) {
-    [[maybe_unused]] const ASTContext &AC = S.getASTContext();
-    assert(ElemSize == AC.getTypeSizeInChars(AC.getWCharType()).getQuantity());
+    const ASTContext &AC = S.getASTContext();
+    unsigned WCharSize = AC.getTypeSizeInChars(AC.getWCharType()).getQuantity();
+    if (ElemSize != WCharSize)
+      return false;
   }
 
   size_t Len = 0;
@@ -1209,7 +1211,10 @@ static bool interp__builtin_is_aligned_up_down(InterpState &S, CodePtr OpPC,
   if (!Ptr.isBlockPointer())
     return false;
 
-  unsigned PtrOffset = Ptr.getIndex();
+  // For one-past-end pointers, we can't call getIndex() since it asserts.
+  // Use getNumElems() instead which gives the correct index for past-end.
+  unsigned PtrOffset =
+      Ptr.isElementPastEnd() ? Ptr.getNumElems() : Ptr.getIndex();
   CharUnits BaseAlignment =
       S.getASTContext().getDeclAlign(Ptr.getDeclDesc()->asValueDecl());
   CharUnits PtrAlign =
@@ -2480,8 +2485,8 @@ static bool interp__builtin_elementwise_int_unaryop(
 
 static bool interp__builtin_elementwise_fp_binop(
     InterpState &S, CodePtr OpPC, const CallExpr *Call,
-    llvm::function_ref<APFloat(const APFloat &, const APFloat &,
-                               std::optional<APSInt> RoundingMode)>
+    llvm::function_ref<std::optional<APFloat>(
+        const APFloat &, const APFloat &, std::optional<APSInt> RoundingMode)>
         Fn) {
   assert((Call->getNumArgs() == 2) || (Call->getNumArgs() == 3));
   const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
@@ -2507,10 +2512,10 @@ static bool interp__builtin_elementwise_fp_binop(
     using T = PrimConv<PT_Float>::T;
     APFloat ElemA = APtr.elem<T>(ElemIdx).getAPFloat();
     APFloat ElemB = BPtr.elem<T>(ElemIdx).getAPFloat();
-    if (ElemA.isNaN() || ElemA.isInfinity() || ElemA.isDenormal() ||
-        ElemB.isNaN() || ElemB.isInfinity() || ElemB.isDenormal())
+    std::optional<APFloat> Result = Fn(ElemA, ElemB, RoundingMode);
+    if (!Result)
       return false;
-    Dst.elem<T>(ElemIdx) = static_cast<T>(Fn(ElemA, ElemB, RoundingMode));
+    Dst.elem<T>(ElemIdx) = static_cast<T>(*Result);
   }
 
   Dst.initializeAllElements();
@@ -5820,7 +5825,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_minph512:
     return interp__builtin_elementwise_fp_binop(
         S, OpPC, Call,
-        [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
+        [](const APFloat &A, const APFloat &B,
+           std::optional<APSInt>) -> std::optional<APFloat> {
+          if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
+              B.isInfinity() || B.isDenormal())
+            return std::nullopt;
           if (A.isZero() && B.isZero())
             return B;
           return llvm::minimum(A, B);
@@ -5837,7 +5846,11 @@ bool InterpretBuiltin(InterpState &S, CodePtr OpPC, const CallExpr *Call,
   case clang::X86::BI__builtin_ia32_maxph512:
     return interp__builtin_elementwise_fp_binop(
         S, OpPC, Call,
-        [](const APFloat &A, const APFloat &B, std::optional<APSInt>) {
+        [](const APFloat &A, const APFloat &B,
+           std::optional<APSInt>) -> std::optional<APFloat> {
+          if (A.isNaN() || A.isInfinity() || A.isDenormal() || B.isNaN() ||
+              B.isInfinity() || B.isDenormal())
+            return std::nullopt;
           if (A.isZero() && B.isZero())
             return B;
           return llvm::maximum(A, B);

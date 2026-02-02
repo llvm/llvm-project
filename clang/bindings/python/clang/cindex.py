@@ -3157,19 +3157,55 @@ class CompletionChunk:
             return None
         return CompletionString(res)
 
+    __deprecation_message = (
+        "'CompletionChunk.{}' will be removed in a future release. "
+        "All uses of 'CompletionChunk.{}' should be replaced by checking "
+        "if 'CompletionChunk.kind` is equal to 'CompletionChunkKind.{}'."
+    )
+
     def isKindOptional(self) -> bool:
+        deprecation_message = self.__deprecation_message.format(
+            "isKindOptional",
+            "isKindOptional",
+            "OPTIONAL",
+        )
+        warnings.warn(deprecation_message, DeprecationWarning)
         return self.kind == CompletionChunkKind.OPTIONAL
 
     def isKindTypedText(self) -> bool:
+        deprecation_message = self.__deprecation_message.format(
+            "isKindTypedText",
+            "isKindTypedText",
+            "TYPED_TEXT",
+        )
+        warnings.warn(deprecation_message, DeprecationWarning)
         return self.kind == CompletionChunkKind.TYPED_TEXT
 
     def isKindPlaceHolder(self) -> bool:
+        deprecation_message = self.__deprecation_message.format(
+            "isKindPlaceHolder",
+            "isKindPlaceHolder",
+            "PLACEHOLDER",
+        )
+        warnings.warn(deprecation_message, DeprecationWarning)
         return self.kind == CompletionChunkKind.PLACEHOLDER
 
     def isKindInformative(self) -> bool:
+        deprecation_message = self.__deprecation_message.format(
+            "isKindInformative",
+            "isKindInformative",
+            "INFORMATIVE",
+        )
+        warnings.warn(deprecation_message, DeprecationWarning)
         return self.kind == CompletionChunkKind.INFORMATIVE
 
     def isKindResultType(self) -> bool:
+        deprecation_message = self.__deprecation_message.format(
+            "isKindResultType",
+            "isKindResultType",
+            "RESULT_TYPE",
+        )
+        warnings.warn(deprecation_message, DeprecationWarning)
         return self.kind == CompletionChunkKind.RESULT_TYPE
 
 
@@ -3309,8 +3345,26 @@ class CodeCompletionResults(ClangObject):
     def __del__(self) -> None:
         conf.lib.clang_disposeCodeCompleteResults(self)
 
+    def __len__(self) -> int:
+        return self.ptr.contents.numResults
+
+    def __getitem__(self, key: int) -> CodeCompletionResult:
+        if len(self) <= key:
+            raise IndexError
+
+        return self.ptr.contents.results[key]
+
     @property
     def results(self) -> CCRStructure:
+        warnings.warn(
+            "'CodeCompletionResults.results' will become an implementation detail "
+            "with changed behavior in a future release and should not be used directly. "
+            "Existing uses of 'CodeCompletionResults.results' should be changed "
+            "to directly use 'CodeCompletionResults': it nows supports '__len__' "
+            "and '__getitem__', so it can be used the same as "
+            "'CodeCompletionResults.results'.",
+            DeprecationWarning,
+        )
         return self.ptr.contents
 
     @property
