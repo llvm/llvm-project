@@ -208,8 +208,7 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) const {
                          PMW);
   // TODO(boomanaiden154): Add X86IndirectThunksPass here
   // once it has been ported.
-  // TODO(boomanaiden154): Add X86ReturnThunksPass here
-  // once it has been ported.
+  addMachineFunctionPass(X86ReturnThunksPass(), PMW);
 
   // Insert extra int3 instructions after trailing call instructions to avoid
   // issues in the unwinder.
@@ -250,8 +249,7 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) const {
   // Analyzes and emits pseudos to support Win x64 Unwind V2. This pass must run
   // after all real instructions have been added to the epilog.
   if (TT.isOSWindows() && TT.isX86_64()) {
-    // TODO(boomanaiden154): Add X86WinEHUnwindV2Pass here once it has been
-    // ported.
+    addMachineFunctionPass(X86WinEHUnwindV2Pass(), PMW);
   }
 }
 

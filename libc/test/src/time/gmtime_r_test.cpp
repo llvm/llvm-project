@@ -31,7 +31,7 @@ TEST_F(LlvmLibcGmTimeR, EndOf32BitEpochYear) {
           0,  // tm_mon starts with 0 for Jan
           2038 - LIBC_NAMESPACE::time_constants::TIME_YEAR_BASE, // year
           2,                                                     // wday
-          7,                                                     // yday
+          18,                                                    // yday
           0}),
       *tm_data_ptr);
   EXPECT_TM_EQ(*tm_data_ptr, tm_data);
@@ -53,7 +53,7 @@ TEST_F(LlvmLibcGmTimeR, Max64BitYear) {
           0,  // tm_mon starts with 0 for Jan
           2147483647 - LIBC_NAMESPACE::time_constants::TIME_YEAR_BASE, // year
           2,                                                           // wday
-          50,                                                          // yday
+          0,                                                           // yday
           0}),
       *tm_data_ptr);
   EXPECT_TM_EQ(*tm_data_ptr, tm_data);

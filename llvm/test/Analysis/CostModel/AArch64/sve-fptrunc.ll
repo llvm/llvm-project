@@ -10,13 +10,13 @@ define void @sve_fptruncs() {
 ; CHECK-LABEL: 'sve_fptruncs'
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv2_f16_from_f32 = fptrunc <vscale x 2 x float> poison to <vscale x 2 x half>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv4_f16_from_f32 = fptrunc <vscale x 4 x float> poison to <vscale x 4 x half>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %nxv8_f16_from_f32 = fptrunc <vscale x 8 x float> poison to <vscale x 8 x half>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %nxv8_f16_from_f32 = fptrunc <vscale x 8 x float> poison to <vscale x 8 x half>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv2_f16_from_f64 = fptrunc <vscale x 2 x double> poison to <vscale x 2 x half>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %nxv4_f16_from_f64 = fptrunc <vscale x 4 x double> poison to <vscale x 4 x half>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:7 CodeSize:1 Lat:1 SizeLat:1 for: %nxv8_f16_from_f64 = fptrunc <vscale x 8 x double> poison to <vscale x 8 x half>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %nxv4_f16_from_f64 = fptrunc <vscale x 4 x double> poison to <vscale x 4 x half>
+; CHECK-NEXT:  Cost Model: Found costs of 7 for: %nxv8_f16_from_f64 = fptrunc <vscale x 8 x double> poison to <vscale x 8 x half>
 ; CHECK-NEXT:  Cost Model: Found costs of 1 for: %nxv2_f32_from_f64 = fptrunc <vscale x 2 x double> poison to <vscale x 2 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %nxv4_f32_from_f64 = fptrunc <vscale x 4 x double> poison to <vscale x 4 x float>
-; CHECK-NEXT:  Cost Model: Found costs of RThru:6 CodeSize:1 Lat:1 SizeLat:1 for: %nxv8_f32_from_f64 = fptrunc <vscale x 8 x double> poison to <vscale x 8 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 3 for: %nxv4_f32_from_f64 = fptrunc <vscale x 4 x double> poison to <vscale x 4 x float>
+; CHECK-NEXT:  Cost Model: Found costs of 6 for: %nxv8_f32_from_f64 = fptrunc <vscale x 8 x double> poison to <vscale x 8 x float>
 ; CHECK-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %nxv2_f16_from_f32 = fptrunc <vscale x 2 x float> poison to <vscale x 2 x half>
@@ -36,30 +36,30 @@ define void @sve_fptruncs() {
 
 define void @sve_fptruncs_bf16() {
 ; CHECK-SVE-LABEL: 'sve_fptruncs_bf16'
-; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %nxv2_f16_from_f32 = fptrunc <vscale x 2 x float> poison to <vscale x 2 x bfloat>
-; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %nxv4_f16_from_f32 = fptrunc <vscale x 4 x float> poison to <vscale x 4 x bfloat>
-; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:1 Lat:1 SizeLat:1 for: %nxv8_f16_from_f32 = fptrunc <vscale x 8 x float> poison to <vscale x 8 x bfloat>
+; CHECK-SVE-NEXT:  Cost Model: Found costs of 8 for: %nxv2_f16_from_f32 = fptrunc <vscale x 2 x float> poison to <vscale x 2 x bfloat>
+; CHECK-SVE-NEXT:  Cost Model: Found costs of 8 for: %nxv4_f16_from_f32 = fptrunc <vscale x 4 x float> poison to <vscale x 4 x bfloat>
+; CHECK-SVE-NEXT:  Cost Model: Found costs of 17 for: %nxv8_f16_from_f32 = fptrunc <vscale x 8 x float> poison to <vscale x 8 x bfloat>
 ; CHECK-SVE-NEXT:  Cost Model: Found costs of Invalid for: %nxv2_f16_from_f64 = fptrunc <vscale x 2 x double> poison to <vscale x 2 x bfloat>
 ; CHECK-SVE-NEXT:  Cost Model: Found costs of Invalid for: %nxv4_f16_from_f64 = fptrunc <vscale x 4 x double> poison to <vscale x 4 x bfloat>
 ; CHECK-SVE-NEXT:  Cost Model: Found costs of Invalid for: %nxv8_f16_from_f64 = fptrunc <vscale x 8 x double> poison to <vscale x 8 x bfloat>
 ; CHECK-SVE-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-SVE2-LABEL: 'sve_fptruncs_bf16'
-; CHECK-SVE2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %nxv2_f16_from_f32 = fptrunc <vscale x 2 x float> poison to <vscale x 2 x bfloat>
-; CHECK-SVE2-NEXT:  Cost Model: Found costs of RThru:8 CodeSize:1 Lat:1 SizeLat:1 for: %nxv4_f16_from_f32 = fptrunc <vscale x 4 x float> poison to <vscale x 4 x bfloat>
-; CHECK-SVE2-NEXT:  Cost Model: Found costs of RThru:17 CodeSize:1 Lat:1 SizeLat:1 for: %nxv8_f16_from_f32 = fptrunc <vscale x 8 x float> poison to <vscale x 8 x bfloat>
-; CHECK-SVE2-NEXT:  Cost Model: Found costs of RThru:9 CodeSize:1 Lat:1 SizeLat:1 for: %nxv2_f16_from_f64 = fptrunc <vscale x 2 x double> poison to <vscale x 2 x bfloat>
-; CHECK-SVE2-NEXT:  Cost Model: Found costs of RThru:19 CodeSize:1 Lat:1 SizeLat:1 for: %nxv4_f16_from_f64 = fptrunc <vscale x 4 x double> poison to <vscale x 4 x bfloat>
-; CHECK-SVE2-NEXT:  Cost Model: Found costs of RThru:39 CodeSize:1 Lat:1 SizeLat:1 for: %nxv8_f16_from_f64 = fptrunc <vscale x 8 x double> poison to <vscale x 8 x bfloat>
+; CHECK-SVE2-NEXT:  Cost Model: Found costs of 8 for: %nxv2_f16_from_f32 = fptrunc <vscale x 2 x float> poison to <vscale x 2 x bfloat>
+; CHECK-SVE2-NEXT:  Cost Model: Found costs of 8 for: %nxv4_f16_from_f32 = fptrunc <vscale x 4 x float> poison to <vscale x 4 x bfloat>
+; CHECK-SVE2-NEXT:  Cost Model: Found costs of 17 for: %nxv8_f16_from_f32 = fptrunc <vscale x 8 x float> poison to <vscale x 8 x bfloat>
+; CHECK-SVE2-NEXT:  Cost Model: Found costs of 9 for: %nxv2_f16_from_f64 = fptrunc <vscale x 2 x double> poison to <vscale x 2 x bfloat>
+; CHECK-SVE2-NEXT:  Cost Model: Found costs of 19 for: %nxv4_f16_from_f64 = fptrunc <vscale x 4 x double> poison to <vscale x 4 x bfloat>
+; CHECK-SVE2-NEXT:  Cost Model: Found costs of 39 for: %nxv8_f16_from_f64 = fptrunc <vscale x 8 x double> poison to <vscale x 8 x bfloat>
 ; CHECK-SVE2-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
 ; CHECK-BF16-LABEL: 'sve_fptruncs_bf16'
 ; CHECK-BF16-NEXT:  Cost Model: Found costs of 1 for: %nxv2_f16_from_f32 = fptrunc <vscale x 2 x float> poison to <vscale x 2 x bfloat>
 ; CHECK-BF16-NEXT:  Cost Model: Found costs of 1 for: %nxv4_f16_from_f32 = fptrunc <vscale x 4 x float> poison to <vscale x 4 x bfloat>
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:3 CodeSize:1 Lat:1 SizeLat:1 for: %nxv8_f16_from_f32 = fptrunc <vscale x 8 x float> poison to <vscale x 8 x bfloat>
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:2 CodeSize:1 Lat:1 SizeLat:1 for: %nxv2_f16_from_f64 = fptrunc <vscale x 2 x double> poison to <vscale x 2 x bfloat>
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:5 CodeSize:1 Lat:1 SizeLat:1 for: %nxv4_f16_from_f64 = fptrunc <vscale x 4 x double> poison to <vscale x 4 x bfloat>
-; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:11 CodeSize:1 Lat:1 SizeLat:1 for: %nxv8_f16_from_f64 = fptrunc <vscale x 8 x double> poison to <vscale x 8 x bfloat>
+; CHECK-BF16-NEXT:  Cost Model: Found costs of 3 for: %nxv8_f16_from_f32 = fptrunc <vscale x 8 x float> poison to <vscale x 8 x bfloat>
+; CHECK-BF16-NEXT:  Cost Model: Found costs of 2 for: %nxv2_f16_from_f64 = fptrunc <vscale x 2 x double> poison to <vscale x 2 x bfloat>
+; CHECK-BF16-NEXT:  Cost Model: Found costs of 5 for: %nxv4_f16_from_f64 = fptrunc <vscale x 4 x double> poison to <vscale x 4 x bfloat>
+; CHECK-BF16-NEXT:  Cost Model: Found costs of 11 for: %nxv8_f16_from_f64 = fptrunc <vscale x 8 x double> poison to <vscale x 8 x bfloat>
 ; CHECK-BF16-NEXT:  Cost Model: Found costs of RThru:0 CodeSize:1 Lat:1 SizeLat:1 for: ret void
 ;
   %nxv2_f16_from_f32 = fptrunc <vscale x 2 x float> poison to <vscale x 2 x bfloat>

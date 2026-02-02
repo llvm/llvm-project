@@ -16,6 +16,9 @@ template<typename T> struct remove_reference       { typedef T type; };
 template<typename T> struct remove_reference<T &>  { typedef T type; };
 template<typename T> struct remove_reference<T &&> { typedef T type; };
 
+template< class InputIt, class T >
+InputIt find( InputIt first, InputIt last, const T& value );
+
 template<typename T>
 typename remove_reference<T>::type &&move(T &&t) noexcept;
 
@@ -49,12 +52,19 @@ struct vector {
   template<typename InputIterator>
 	vector(InputIterator first, InputIterator __last);
 
-  T &at(int n);
+  T &  at(int n) &;
+  T && at(int n) &&;
 
   void push_back(const T&);
   void push_back(T&&);
   const T& back() const;
   void insert(iterator, T&&);
+};
+
+template<typename A, typename B>
+struct pair {
+  A first;
+  B second;
 };
 
 template<typename T>

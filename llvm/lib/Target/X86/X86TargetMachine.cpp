@@ -98,8 +98,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86LoadValueInjectionRetHardeningLegacyPass(PR);
   initializeX86OptimizeLEAsLegacyPass(PR);
   initializeX86PartialReductionLegacyPass(PR);
-  initializePseudoProbeInserterPass(PR);
-  initializeX86ReturnThunksPass(PR);
+  initializeX86ReturnThunksLegacyPass(PR);
   initializeX86DAGToDAGISelLegacyPass(PR);
   initializeX86ArgumentStackSlotLegacyPass(PR);
   initializeX86AsmPrinterPass(PR);
@@ -107,7 +106,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86FixupVectorConstantsLegacyPass(PR);
   initializeX86DynAllocaExpanderLegacyPass(PR);
   initializeX86SuppressAPXForRelocationLegacyPass(PR);
-  initializeX86WinEHUnwindV2Pass(PR);
+  initializeX86WinEHUnwindV2LegacyPass(PR);
   initializeX86PreLegalizerCombinerPass(PR);
 }
 
@@ -373,6 +372,7 @@ public:
   bool addInstSelector() override;
   bool addIRTranslator() override;
   bool addLegalizeMachineIR() override;
+  void addPreRegBankSelect() override;
   bool addRegBankSelect() override;
   bool addGlobalInstructionSelect() override;
   void addPreLegalizeMachineIR() override;
@@ -472,6 +472,12 @@ bool X86PassConfig::addIRTranslator() {
   return false;
 }
 
+void X86PassConfig::addPreRegBankSelect() {
+  bool IsOptNone = getOptLevel() == CodeGenOptLevel::None;
+  if (!IsOptNone) {
+    addPass(createX86PostLegalizerCombiner());
+  }
+}
 bool X86PassConfig::addLegalizeMachineIR() {
   addPass(new Legalizer());
   return false;
@@ -590,7 +596,7 @@ void X86PassConfig::addPreEmitPass2() {
   // hand inspection of the codegen output.
   addPass(createX86SpeculativeExecutionSideEffectSuppressionLegacyPass());
   addPass(createX86IndirectThunksPass());
-  addPass(createX86ReturnThunksPass());
+  addPass(createX86ReturnThunksLegacyPass());
 
   // Insert extra int3 instructions after trailing call instructions to avoid
   // issues in the unwinder.
@@ -632,7 +638,7 @@ void X86PassConfig::addPreEmitPass2() {
   // Analyzes and emits pseudos to support Win x64 Unwind V2. This pass must run
   // after all real instructions have been added to the epilog.
   if (TT.isOSWindows() && TT.isX86_64())
-    addPass(createX86WinEHUnwindV2Pass());
+    addPass(createX86WinEHUnwindV2LegacyPass());
 }
 
 bool X86PassConfig::addPostFastRegAllocRewrite() {

@@ -16,12 +16,15 @@
 #include "VPlanAnalysis.h"
 #include "VPlanCFG.h"
 #include "VPlanDominatorTree.h"
+#include "VPlanHelpers.h"
 #include "VPlanPatternMatch.h"
 #include "VPlanTransforms.h"
+#include "VPlanUtils.h"
 #include "llvm/Analysis/LoopInfo.h"
 #include "llvm/Analysis/LoopIterator.h"
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/Analysis/ScalarEvolutionExpressions.h"
+#include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/Transforms/Utils/LoopUtils.h"
@@ -586,6 +589,9 @@ static void simplifyLiveInsWithSCEV(VPlan &Plan,
   }
 }
 
+/// To make RUN_VPLAN_PASS print initial VPlan.
+static void printAfterInitialConstruction(VPlan &) {}
+
 std::unique_ptr<VPlan>
 VPlanTransforms::buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
                              DebugLoc IVDL, PredicatedScalarEvolution &PSE,
@@ -594,6 +600,8 @@ VPlanTransforms::buildVPlan0(Loop *TheLoop, LoopInfo &LI, Type *InductionTy,
   std::unique_ptr<VPlan> VPlan0 = Builder.buildPlainCFG();
   addInitialSkeleton(*VPlan0, InductionTy, IVDL, PSE, TheLoop);
   simplifyLiveInsWithSCEV(*VPlan0, PSE);
+
+  RUN_VPLAN_PASS_NO_VERIFY(printAfterInitialConstruction, *VPlan0);
   return VPlan0;
 }
 
@@ -958,44 +966,52 @@ void VPlanTransforms::createLoopRegions(VPlan &Plan) {
   TopRegion->getEntryBasicBlock()->setName("vector.body");
 }
 
-// Likelyhood of bypassing the vectorized loop due to a runtime check block,
-// including memory overlap checks block and wrapping/unit-stride checks block.
-static constexpr uint32_t CheckBypassWeights[] = {1, 127};
-
-void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
-                                       BasicBlock *CheckBlock,
-                                       bool AddBranchWeights) {
-  VPValue *CondVPV = Plan.getOrAddLiveIn(Cond);
-  VPBasicBlock *CheckBlockVPBB = Plan.createVPIRBasicBlock(CheckBlock);
+/// Insert \p CheckBlockVPBB on the edge leading to the vector preheader,
+/// connecting it to both vector and scalar preheaders. Updates scalar
+/// preheader phis to account for the new predecessor.
+static void insertCheckBlockBeforeVectorLoop(VPlan &Plan,
+                                             VPBasicBlock *CheckBlockVPBB) {
   VPBlockBase *VectorPH = Plan.getVectorPreheader();
-  VPBlockBase *ScalarPH = Plan.getScalarPreheader();
+  auto *ScalarPH = cast<VPBasicBlock>(Plan.getScalarPreheader());
   VPBlockBase *PreVectorPH = VectorPH->getSinglePredecessor();
   VPBlockUtils::insertOnEdge(PreVectorPH, VectorPH, CheckBlockVPBB);
   VPBlockUtils::connectBlocks(CheckBlockVPBB, ScalarPH);
   CheckBlockVPBB->swapSuccessors();
-
-  // We just connected a new block to the scalar preheader. Update all
-  // VPPhis by adding an incoming value for it, replicating the last value.
-  unsigned NumPredecessors = ScalarPH->getNumPredecessors();
-  for (VPRecipeBase &R : cast<VPBasicBlock>(ScalarPH)->phis()) {
-    assert(isa<VPPhi>(&R) && "Phi expected to be VPPhi");
-    assert(cast<VPPhi>(&R)->getNumIncoming() == NumPredecessors - 1 &&
-           "must have incoming values for all operands");
-    R.addOperand(R.getOperand(NumPredecessors - 2));
+  unsigned NumPreds = ScalarPH->getNumPredecessors();
+  for (VPRecipeBase &R : ScalarPH->phis()) {
+    auto *Phi = cast<VPPhi>(&R);
+    assert(Phi->getNumIncoming() == NumPreds - 1 &&
+           "must have incoming values for all predecessors");
+    Phi->addOperand(Phi->getOperand(NumPreds - 2));
   }
+}
 
-  VPIRMetadata VPBranchWeights;
-  auto *Term =
-      VPBuilder(CheckBlockVPBB)
-          .createNaryOp(
-              VPInstruction::BranchOnCond, {CondVPV},
-              Plan.getVectorLoopRegion()->getCanonicalIV()->getDebugLoc());
+// Likelyhood of bypassing the vectorized loop due to a runtime check block,
+// including memory overlap checks block and wrapping/unit-stride checks block.
+static constexpr uint32_t CheckBypassWeights[] = {1, 127};
+
+/// Create a BranchOnCond terminator in \p CheckBlockVPBB. Optionally adds
+/// branch weights.
+static void addBypassBranch(VPlan &Plan, VPBasicBlock *CheckBlockVPBB,
+                            VPValue *Cond, bool AddBranchWeights) {
+  DebugLoc DL = Plan.getVectorLoopRegion()->getCanonicalIV()->getDebugLoc();
+  auto *Term = VPBuilder(CheckBlockVPBB)
+                   .createNaryOp(VPInstruction::BranchOnCond, {Cond}, DL);
   if (AddBranchWeights) {
     MDBuilder MDB(Plan.getContext());
     MDNode *BranchWeights =
         MDB.createBranchWeights(CheckBypassWeights, /*IsExpected=*/false);
     Term->setMetadata(LLVMContext::MD_prof, BranchWeights);
   }
+}
+
+void VPlanTransforms::attachCheckBlock(VPlan &Plan, Value *Cond,
+                                       BasicBlock *CheckBlock,
+                                       bool AddBranchWeights) {
+  VPValue *CondVPV = Plan.getOrAddLiveIn(Cond);
+  VPBasicBlock *CheckBlockVPBB = Plan.createVPIRBasicBlock(CheckBlock);
+  insertCheckBlockBeforeVectorLoop(Plan, CheckBlockVPBB);
+  addBypassBranch(Plan, CheckBlockVPBB, CondVPV, AddBranchWeights);
 }
 
 void VPlanTransforms::addMinimumIterationCheck(
@@ -1040,6 +1056,8 @@ void VPlanTransforms::addMinimumIterationCheck(
       // an overflow to zero when updating induction variables and so an
       // additional overflow check is required before entering the vector loop.
 
+      VPValue *StepVPV = Builder.createExpandSCEV(Step);
+
       // Get the maximum unsigned value for the type.
       VPValue *MaxUIntTripCount =
           Plan.getConstantInt(cast<IntegerType>(TripCountTy)->getMask());
@@ -1050,8 +1068,8 @@ void VPlanTransforms::addMinimumIterationCheck(
       // Don't execute the vector loop if (UMax - n) < (VF * UF).
       // FIXME: Should only check VF * UF, but currently checks Step=max(VF*UF,
       // minProfitableTripCount).
-      TripCountCheck = Builder.createICmp(ICmpInst::ICMP_ULT, DistanceToMax,
-                                          Builder.createExpandSCEV(Step), DL);
+      TripCountCheck =
+          Builder.createICmp(ICmpInst::ICMP_ULT, DistanceToMax, StepVPV, DL);
     } else {
       // TripCountCheck = false, folding tail implies positive vector trip
       // count.
@@ -1120,35 +1138,17 @@ void VPlanTransforms::addMinimumVectorEpilogueIterationCheck(
   Branch->setMetadata(LLVMContext::MD_prof, BranchWeights);
 }
 
-/// If \p V is used by a recipe matching pattern \p P, return it. Otherwise
-/// return nullptr;
-template <typename MatchT>
-static VPRecipeBase *findUserOf(VPValue *V, const MatchT &P) {
-  auto It = find_if(V->users(), match_fn(P));
-  return It == V->user_end() ? nullptr : cast<VPRecipeBase>(*It);
-}
-
-/// If \p V is used by a VPInstruction with \p Opcode, return it. Otherwise
-/// return nullptr.
-template <unsigned Opcode> static VPInstruction *findUserOf(VPValue *V) {
-  return cast_or_null<VPInstruction>(findUserOf(V, m_VPInstruction<Opcode>()));
-}
-
-/// Find the ComputeReductionResult recipe for \p PhiR, looking through selects
-/// inserted for predicated reductions or tail folding.
-static VPInstruction *findComputeReductionResult(VPReductionPHIRecipe *PhiR) {
-  VPValue *BackedgeVal = PhiR->getBackedgeValue();
-  if (auto *Res =
-          findUserOf<VPInstruction::ComputeReductionResult>(BackedgeVal))
-    return Res;
-
-  // Look through selects inserted for tail folding or predicated reductions.
-  VPRecipeBase *SelR =
-      findUserOf(BackedgeVal, m_Select(m_VPValue(), m_VPValue(), m_VPValue()));
-  if (!SelR)
-    return nullptr;
-  return findUserOf<VPInstruction::ComputeReductionResult>(
-      cast<VPSingleDefRecipe>(SelR));
+/// Find and return the final select instruction of the FindIV result pattern
+/// for the given \p BackedgeVal:
+/// select(icmp ne ComputeReductionResult(ReducedIV), Sentinel),
+///        ComputeReductionResult(ReducedIV), Start.
+static VPInstruction *findFindIVSelect(VPValue *BackedgeVal) {
+  return cast<VPInstruction>(
+      vputils::findRecipe(BackedgeVal, [BackedgeVal](VPRecipeBase *R) {
+        auto *VPI = dyn_cast<VPInstruction>(R);
+        return VPI &&
+               matchFindIVResult(VPI, m_Specific(BackedgeVal), m_VPValue());
+      }));
 }
 
 bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
@@ -1246,7 +1246,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
 
     // If we exit early due to NaNs, compute the final reduction result based on
     // the reduction phi at the beginning of the last vector iteration.
-    auto *RdxResult = findComputeReductionResult(RedPhiR);
+    auto *RdxResult = vputils::findComputeReductionResult(RedPhiR);
     assert(RdxResult && "must find a ComputeReductionResult");
 
     auto *NewSel = MiddleBuilder.createSelect(AnyNaNLane, RedPhiR,
@@ -1352,6 +1352,15 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
 
     // Add select for mask.
     Builder.setInsertPoint(SelectR);
+
+    if (Op1 == PhiR) {
+      // Normalize to selecting the data operand when the condition is true by
+      // swapping operands and negating the condition.
+      std::swap(Op1, Op2);
+      Cond = Builder.createNot(Cond);
+    }
+    assert(Op2 == PhiR && "data value must be selected if Cond is true");
+
     VPValue *AnyOf = Builder.createNaryOp(VPInstruction::AnyOf, {Cond});
     VPValue *MaskSelect = Builder.createSelect(AnyOf, Cond, MaskPHI);
     MaskPHI->addOperand(MaskSelect);
@@ -1365,7 +1374,7 @@ bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
     // Find final reduction computation and replace it with an
     // extract.last.active intrinsic.
     auto *RdxResult =
-        findUserOf<VPInstruction::ComputeReductionResult>(DataSelect);
+        vputils::findUserOf<VPInstruction::ComputeReductionResult>(DataSelect);
     // TODO: Handle tail-folding.
     if (!RdxResult)
       return false;
@@ -1424,7 +1433,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     VPValue *CmpOpA;
     VPValue *CmpOpB;
     CmpPredicate Pred;
-    auto *Cmp = dyn_cast_or_null<VPRecipeWithIRFlags>(findUserOf(
+    auto *Cmp = dyn_cast_or_null<VPRecipeWithIRFlags>(vputils::findUserOf(
         MinOrMaxPhiR, m_Cmp(Pred, m_VPValue(CmpOpA), m_VPValue(CmpOpB))));
     if (!Cmp || Cmp->getNumUsers() != 1 ||
         (CmpOpA != MinOrMaxOpValue && CmpOpB != MinOrMaxOpValue))
@@ -1440,7 +1449,7 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
       return false;
 
     VPInstruction *MinOrMaxResult =
-        findUserOf<VPInstruction::ComputeReductionResult>(MinOrMaxOp);
+        vputils::findUserOf<VPInstruction::ComputeReductionResult>(MinOrMaxOp);
     assert(is_contained(MinOrMaxPhiR->users(), MinOrMaxOp) &&
            "one user must be MinOrMaxOp");
     assert(MinOrMaxResult &&
@@ -1502,32 +1511,37 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     //
     // For example, this transforms
     // vp<%min.result> = compute-reduction-result ir<%min.val.next>
-    // vp<%find.iv.result = compute-find-iv-result ir<%min.idx>, ir<0>,
-    //                                             SENTINEL, vp<%min.idx.next>
+    // vp<%iv.rdx> = compute-reduction-result (smax) vp<%min.idx.next>
+    // vp<%cmp> = icmp ne vp<%iv.rdx>, SENTINEL
+    // vp<%find.iv.result> = select vp<%cmp>, vp<%iv.rdx>, ir<0>
     //
     // into:
     //
     // vp<min.result> = compute-reduction-result ir<%min.val.next>
     // vp<%final.min.cmp> = icmp eq ir<%min.val.next>, vp<min.result>
-    // vp<%final.iv> = select vp<%final.min.cmp>, ir<%min.idx.next>, SENTINEL
-    // vp<%find.iv.result> = compute-find-iv-result ir<%min.idx>, ir<0>,
-    //                                             SENTINEL, vp<%final.iv>
-    VPInstruction *FindIVResult =
-        findUserOf<VPInstruction::ComputeFindIVResult>(FindIVPhiR);
-    assert(FindIVResult->getParent() == MinOrMaxResult->getParent() &&
+    // vp<%final.iv> = select vp<%final.min.cmp>, vp<%min.idx.next>, SENTINEL
+    // vp<%iv.rdx> = compute-reduction-result (smax) vp<%final.iv>
+    // vp<%cmp> = icmp ne vp<%iv.rdx>, SENTINEL
+    // vp<%find.iv.result> = select vp<%cmp>, vp<%iv.rdx>, ir<0>
+    //
+    // Find the FindIV result pattern.
+    auto *FindIVSelect = findFindIVSelect(FindIVPhiR->getBackedgeValue());
+    auto *FindIVCmp = FindIVSelect->getOperand(0)->getDefiningRecipe();
+    auto *FindIVRdxResult = cast<VPInstruction>(FindIVCmp->getOperand(0));
+    assert(FindIVSelect->getParent() == MinOrMaxResult->getParent() &&
            "both results must be computed in the same block");
-    MinOrMaxResult->moveBefore(*FindIVResult->getParent(),
-                               FindIVResult->getIterator());
+    MinOrMaxResult->moveBefore(*FindIVRdxResult->getParent(),
+                               FindIVRdxResult->getIterator());
 
-    VPBuilder B(FindIVResult);
+    VPBuilder B(FindIVRdxResult);
     VPValue *MinOrMaxExiting = MinOrMaxResult->getOperand(0);
     auto *FinalMinOrMaxCmp =
         B.createICmp(CmpInst::ICMP_EQ, MinOrMaxExiting, MinOrMaxResult);
-    VPValue *Sentinel = FindIVResult->getOperand(2);
-    VPValue *LastIVExiting = FindIVResult->getOperand(3);
+    VPValue *Sentinel = FindIVCmp->getOperand(1);
+    VPValue *LastIVExiting = FindIVRdxResult->getOperand(0);
     auto *FinalIVSelect =
         B.createSelect(FinalMinOrMaxCmp, LastIVExiting, Sentinel);
-    FindIVResult->setOperand(3, FinalIVSelect);
+    FindIVRdxResult->setOperand(0, FinalIVSelect);
   }
   return true;
 }
