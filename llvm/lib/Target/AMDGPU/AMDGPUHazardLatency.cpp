@@ -42,6 +42,7 @@ public:
 void HazardLatency::apply(ScheduleDAGInstrs *DAG) {
   constexpr unsigned MaskLatencyBoost = 3;
 
+  // Hazard only manifests in Wave64
   if (!ST.hasVALUMaskWriteHazard() || !ST.isWave64())
     return;
 
