@@ -1310,7 +1310,7 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
     ORE.emit([&]() {
       return OptimizationRemark(DEBUG_TYPE, "Peeled", L->getStartLoc(),
                                 L->getHeader())
-             << " peeled loop by " << ore::NV("PeelCount", PP.PeelCount)
+             << "peeled loop by " << ore::NV("PeelCount", PP.PeelCount)
              << " iterations";
     });
 
