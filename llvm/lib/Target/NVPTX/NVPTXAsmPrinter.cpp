@@ -17,6 +17,7 @@
 #include "MCTargetDesc/NVPTXMCAsmInfo.h"
 #include "MCTargetDesc/NVPTXTargetStreamer.h"
 #include "NVPTX.h"
+#include "NVPTXDwarfDebug.h"
 #include "NVPTXMCExpr.h"
 #include "NVPTXMachineFunctionInfo.h"
 #include "NVPTXRegisterInfo.h"
@@ -674,6 +675,11 @@ void NVPTXAsmPrinter::emitStartOfAsmFile(Module &M) {
   // Emit header before any dwarf directives are emitted below.
   emitHeader(M, OS1, *STI);
   OutStreamer->emitRawText(OS1.str());
+}
+
+/// Create NVPTX-specific DwarfDebug handler.
+DwarfDebug *NVPTXAsmPrinter::createDwarfDebug() {
+  return new NVPTXDwarfDebug(this);
 }
 
 bool NVPTXAsmPrinter::doInitialization(Module &M) {

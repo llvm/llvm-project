@@ -32,7 +32,7 @@ char WebAssemblyExceptionInfo::ID = 0;
 INITIALIZE_PASS_BEGIN(WebAssemblyExceptionInfo, DEBUG_TYPE,
                       "WebAssembly Exception Information", true, true)
 INITIALIZE_PASS_DEPENDENCY(MachineDominatorTreeWrapperPass)
-INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontier)
+INITIALIZE_PASS_DEPENDENCY(MachineDominanceFrontierWrapperPass)
 INITIALIZE_PASS_END(WebAssemblyExceptionInfo, DEBUG_TYPE,
                     "WebAssembly Exception Information", true, true)
 
@@ -46,7 +46,7 @@ bool WebAssemblyExceptionInfo::runOnMachineFunction(MachineFunction &MF) {
       !MF.getFunction().hasPersonalityFn())
     return false;
   auto &MDT = getAnalysis<MachineDominatorTreeWrapperPass>().getDomTree();
-  auto &MDF = getAnalysis<MachineDominanceFrontier>();
+  auto &MDF = getAnalysis<MachineDominanceFrontierWrapperPass>().getMDF();
   recalculate(MF, MDT, MDF);
   LLVM_DEBUG(dump());
   return false;
@@ -275,7 +275,7 @@ void WebAssemblyExceptionInfo::releaseMemory() {
 void WebAssemblyExceptionInfo::getAnalysisUsage(AnalysisUsage &AU) const {
   AU.setPreservesAll();
   AU.addRequired<MachineDominatorTreeWrapperPass>();
-  AU.addRequired<MachineDominanceFrontier>();
+  AU.addRequired<MachineDominanceFrontierWrapperPass>();
   MachineFunctionPass::getAnalysisUsage(AU);
 }
 

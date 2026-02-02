@@ -333,9 +333,9 @@ static AccelTableKind computeAccelTableKind(unsigned DwarfVersion,
 
 DwarfDebug::DwarfDebug(AsmPrinter *A)
     : DebugHandlerBase(A), DebugLocs(A->OutStreamer->isVerboseAsm()),
-      InfoHolder(A, "info_string", DIEValueAllocator),
       SkeletonHolder(A, "skel_string", DIEValueAllocator),
-      IsDarwin(A->TM.getTargetTriple().isOSDarwin()) {
+      IsDarwin(A->TM.getTargetTriple().isOSDarwin()),
+      InfoHolder(A, "info_string", DIEValueAllocator) {
   const Triple &TT = Asm->TM.getTargetTriple();
 
   // Make sure we know our "debugger tuning".  The target option takes
@@ -2248,11 +2248,23 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
       Flags |= DWARF2_FLAG_IS_STMT;
   }
 
-  RecordSourceLine(DL, Flags);
+  // Call target-specific source line recording.
+  recordTargetSourceLine(DL, Flags);
 
   // If we're not at line 0, remember this location.
   if (DL.getLine())
     PrevInstLoc = DL;
+}
+
+/// Default implementation of target-specific source line recording.
+void DwarfDebug::recordTargetSourceLine(const DebugLoc &DL, unsigned Flags) {
+  SmallString<128> LocationString;
+  if (Asm->OutStreamer->isVerboseAsm()) {
+    raw_svector_ostream OS(LocationString);
+    DL.print(OS);
+  }
+  recordSourceLine(DL.getLine(), DL.getCol(), DL.getScope(), Flags,
+                   LocationString);
 }
 
 // Returns the position where we should place prologue_end, potentially nullptr,
@@ -2748,6 +2760,9 @@ void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
 
   Asm->OutStreamer->getContext().setDwarfCompileUnitID(
       getDwarfCompileUnitIDForLineTable(CU));
+
+  // Call target-specific debug info initialization.
+  initializeTargetDebugInfo(*MF);
 
   // Record beginning of function.
   PrologEndLoc = emitInitialLocDirective(
