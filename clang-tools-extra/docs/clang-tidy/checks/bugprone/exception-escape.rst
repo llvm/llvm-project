@@ -28,7 +28,8 @@ Functions declared explicitly with ``noexcept(false)`` or ``throw(exception)``
 will be excluded from the analysis, as even though it is not recommended for
 functions like ``swap()``, ``main()``, move constructors, move assignment
 operators and destructors, it is a clear indication of the developer's
-intention and should be respected. To still check for this situation, the check
+intention and should be respected. To check if these special functions are
+marked as potentially throwing, the check
 :doc:`bugprone-unsafe-to-allow-exceptions <unsafe-to-allow-exceptions>` can be
 used.
 
