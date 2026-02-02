@@ -78,10 +78,7 @@ class VPHierarchicalChildrenIterator
       return Current->getNumPredecessors();
   }
 
-  /// Auto-deduce resulting type depending on the constness of the template type
-  /// parameter BlockPtrTy. Use `decltype(auto)` instead of just `auto` to
-  /// preserve reference and avoid copies.
-  static decltype(auto) getOutgoingEdges(BlockPtrTy Current) {
+  static ArrayRef<BlockPtrTy> getOutgoingEdges(BlockPtrTy Current) {
     if constexpr (Forward)
       return Current->getSuccessors();
     else
