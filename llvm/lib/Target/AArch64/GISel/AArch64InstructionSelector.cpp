@@ -2363,8 +2363,8 @@ bool AArch64InstructionSelector::earlySelect(MachineInstr &I) {
     // Before selecting a DUP instruction, check if it is better selected as a
     // MOV or load from a constant pool.
     Register Src = I.getOperand(1).getReg();
-    auto ValAndVReg =
-        getAnyConstantVRegValWithLookThrough(Src, MRI, true, true);
+    auto ValAndVReg = getAnyConstantVRegValWithLookThrough(
+        Src, MRI, /*LookThroughInstrs=*/true, /*LookThroughAnyExt=*/true);
     if (!ValAndVReg)
       return false;
     LLVMContext &Ctx = MF.getFunction().getContext();
@@ -2688,8 +2688,7 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
     return true;
   }
 
-  case TargetOpcode::G_FCONSTANT:
-  case TargetOpcode::G_CONSTANT: {
+  case TargetOpcode::G_FCONSTANT: {
     const bool isFP = Opcode == TargetOpcode::G_FCONSTANT;
 
     const Register DefReg = I.getOperand(0).getReg();
@@ -5754,8 +5753,9 @@ bool AArch64InstructionSelector::tryOptConstantBuildVec(
   SmallVector<Constant *, 16> Csts;
   for (unsigned Idx = 1; Idx < I.getNumOperands(); ++Idx) {
     Register OpReg = I.getOperand(Idx).getReg();
-    if (auto AnyConst =
-            getAnyConstantVRegValWithLookThrough(OpReg, MRI, true, true)) {
+    if (auto AnyConst = getAnyConstantVRegValWithLookThrough(
+            OpReg, MRI, /*LookThroughInstrs=*/true,
+            /*LookThroughAnyExt=*/true)) {
       MachineInstr *DefMI = MRI.getVRegDef(AnyConst->VReg);
 
       if (DefMI->getOpcode() == TargetOpcode::G_CONSTANT) {
