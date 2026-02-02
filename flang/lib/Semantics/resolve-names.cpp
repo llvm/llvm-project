@@ -1575,6 +1575,10 @@ public:
   static bool NeedsScope(const parser::OmpBlockConstruct &);
   static bool NeedsScope(const parser::OmpClause &);
 
+  bool Pre(const parser::OpenMPRequiresConstruct &x) {
+    AddOmpSourceRange(x.source);
+    return true;
+  }
   bool Pre(const parser::OmpBlockConstruct &);
   void Post(const parser::OmpBlockConstruct &);
   bool Pre(const parser::OmpBeginDirective &x) {
