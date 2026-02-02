@@ -1276,6 +1276,12 @@ static void simplifyRecipe(VPSingleDefRecipe *Def, VPTypeAnalysis &TypeInfo) {
   if (match(Def, m_c_BinaryOr(m_VPValue(X), m_ZeroInt())))
     return Def->replaceAllUsesWith(X);
 
+  // x | !x -> AllOnes
+  if (match(Def, m_c_BinaryOr(m_VPValue(X), m_Not(m_Deferred(X))))) {
+    return Def->replaceAllUsesWith(Plan->getOrAddLiveIn(
+        ConstantInt::getAllOnesValue(TypeInfo.inferScalarType(Def))));
+  }
+
   // x & 0 -> 0
   if (match(Def, m_c_BinaryAnd(m_VPValue(X), m_ZeroInt())))
     return Def->replaceAllUsesWith(Def->getOperand(Def->getOperand(0) == X));
@@ -3268,22 +3274,6 @@ void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
 
   VPBasicBlock *HeaderVPBB = EVLPhi->getParent();
   VPValue *EVLIncrement = EVLPhi->getBackedgeValue();
-  VPValue *AVL;
-  [[maybe_unused]] bool FoundAVL =
-      match(EVLIncrement,
-            m_c_Add(m_ZExtOrSelf(m_EVL(m_VPValue(AVL))), m_Specific(EVLPhi)));
-  assert(FoundAVL && "Didn't find AVL?");
-
-  // The AVL may be capped to a safe distance.
-  VPValue *SafeAVL;
-  if (match(AVL, m_Select(m_VPValue(), m_VPValue(SafeAVL), m_VPValue())))
-    AVL = SafeAVL;
-
-  VPValue *AVLNext;
-  [[maybe_unused]] bool FoundAVLNext =
-      match(AVL, m_VPInstruction<Instruction::PHI>(
-                     m_Specific(Plan.getTripCount()), m_VPValue(AVLNext)));
-  assert(FoundAVLNext && "Didn't find AVL backedge?");
 
   // Convert EVLPhi to concrete recipe.
   auto *ScalarR =
@@ -3304,27 +3294,57 @@ void VPlanTransforms::canonicalizeEVLLoops(VPlan &Plan) {
   VPRecipeBase *CanonicalIVIncrement = Backedge->getDefiningRecipe();
   CanonicalIVIncrement->eraseFromParent();
   CanonicalIV->eraseFromParent();
+}
 
-  // Replace the use of VectorTripCount in the latch-exiting block.
-  // Before: (branch-on-cond (icmp eq EVLIVInc, VectorTripCount))
-  // After: (branch-on-cond icmp eq AVLNext, 0)
-  VPBasicBlock *LatchExiting =
-      HeaderVPBB->getPredecessors()[1]->getEntryBasicBlock();
-  auto *LatchExitingBr = cast<VPInstruction>(LatchExiting->getTerminator());
-  if (match(LatchExitingBr, m_BranchOnCond(m_True())))
+void VPlanTransforms::convertEVLExitCond(VPlan &Plan) {
+  VPRegionBlock *LoopRegion = Plan.getVectorLoopRegion();
+  // The canonical IV may not exist at this stage.
+  if (!LoopRegion ||
+      !isa<VPCanonicalIVPHIRecipe>(LoopRegion->getEntryBasicBlock()->front()))
+    return;
+  VPCanonicalIVPHIRecipe *CanIV = LoopRegion->getCanonicalIV();
+  if (std::next(CanIV->getIterator()) == CanIV->getParent()->end())
+    return;
+  // The EVL IV is always immediately after the canonical IV.
+  auto *EVLPhi =
+      dyn_cast_or_null<VPEVLBasedIVPHIRecipe>(std::next(CanIV->getIterator()));
+  if (!EVLPhi)
     return;
 
-  assert(match(LatchExitingBr, m_BranchOnCond(m_SpecificCmp(
-                                   CmpInst::ICMP_EQ, m_VPValue(EVLIncrement),
-                                   m_Specific(&Plan.getVectorTripCount())))) &&
-         "Expected BranchOnCond with ICmp comparing EVL increment with vector "
-         "trip count");
+  // Bail if not an EVL tail folded loop.
+  VPValue *AVL;
+  if (!match(EVLPhi->getBackedgeValue(),
+             m_c_Add(m_ZExtOrSelf(m_EVL(m_VPValue(AVL))), m_Specific(EVLPhi))))
+    return;
+
+  // The AVL may be capped to a safe distance.
+  VPValue *SafeAVL;
+  if (match(AVL, m_Select(m_VPValue(), m_VPValue(SafeAVL), m_VPValue())))
+    AVL = SafeAVL;
+
+  VPValue *AVLNext;
+  [[maybe_unused]] bool FoundAVLNext =
+      match(AVL, m_VPInstruction<Instruction::PHI>(
+                     m_Specific(Plan.getTripCount()), m_VPValue(AVLNext)));
+  assert(FoundAVLNext && "Didn't find AVL backedge?");
+
+  VPBasicBlock *Latch = LoopRegion->getExitingBasicBlock();
+  auto *LatchBr = cast<VPInstruction>(Latch->getTerminator());
+  if (match(LatchBr, m_BranchOnCond(m_True())))
+    return;
+
+  assert(
+      match(LatchBr,
+            m_BranchOnCond(m_SpecificCmp(
+                CmpInst::ICMP_EQ, m_Specific(CanIV->getIncomingValue(1)),
+                m_Specific(&Plan.getVectorTripCount())))) &&
+      "Expected BranchOnCond with ICmp comparing CanIV increment with vector "
+      "trip count");
 
   Type *AVLTy = VPTypeAnalysis(Plan).inferScalarType(AVLNext);
-  VPBuilder Builder(LatchExitingBr);
-  LatchExitingBr->setOperand(0,
-                             Builder.createICmp(CmpInst::ICMP_EQ, AVLNext,
-                                                Plan.getConstantInt(AVLTy, 0)));
+  VPBuilder Builder(LatchBr);
+  LatchBr->setOperand(0, Builder.createICmp(CmpInst::ICMP_EQ, AVLNext,
+                                            Plan.getConstantInt(AVLTy, 0)));
 }
 
 void VPlanTransforms::replaceSymbolicStrides(
