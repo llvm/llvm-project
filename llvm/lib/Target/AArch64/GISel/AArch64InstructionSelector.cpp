@@ -2689,43 +2689,39 @@ bool AArch64InstructionSelector::select(MachineInstr &I) {
   }
 
   case TargetOpcode::G_FCONSTANT: {
-    const bool isFP = Opcode == TargetOpcode::G_FCONSTANT;
-
     const Register DefReg = I.getOperand(0).getReg();
     const LLT DefTy = MRI.getType(DefReg);
     const unsigned DefSize = DefTy.getSizeInBits();
     const RegisterBank &RB = *RBI.getRegBank(DefReg, MRI, TRI);
 
-    if (isFP) {
-      const TargetRegisterClass &FPRRC = *getRegClassForTypeOnBank(DefTy, RB);
-      // For 16, 64, and 128b values, emit a constant pool load.
-      switch (DefSize) {
-      default:
-        llvm_unreachable("Unexpected destination size for G_FCONSTANT?");
-      case 32:
-      case 64: {
-        bool OptForSize = shouldOptForSize(&MF);
-        const auto &TLI = MF.getSubtarget().getTargetLowering();
-        // If TLI says that this fpimm is illegal, then we'll expand to a
-        // constant pool load.
-        if (TLI->isFPImmLegal(I.getOperand(1).getFPImm()->getValueAPF(),
-                              EVT::getFloatingPointVT(DefSize), OptForSize))
-          break;
-        [[fallthrough]];
+    const TargetRegisterClass &FPRRC = *getRegClassForTypeOnBank(DefTy, RB);
+    // For 16, 64, and 128b values, emit a constant pool load.
+    switch (DefSize) {
+    default:
+      llvm_unreachable("Unexpected destination size for G_FCONSTANT?");
+    case 32:
+    case 64: {
+      bool OptForSize = shouldOptForSize(&MF);
+      const auto &TLI = MF.getSubtarget().getTargetLowering();
+      // If TLI says that this fpimm is illegal, then we'll expand to a
+      // constant pool load.
+      if (TLI->isFPImmLegal(I.getOperand(1).getFPImm()->getValueAPF(),
+                            EVT::getFloatingPointVT(DefSize), OptForSize))
+        break;
+      [[fallthrough]];
+    }
+    case 16:
+    case 128: {
+      auto *FPImm = I.getOperand(1).getFPImm();
+      auto *LoadMI = emitLoadFromConstantPool(FPImm, MIB);
+      if (!LoadMI) {
+        LLVM_DEBUG(dbgs() << "Failed to load double constant pool entry\n");
+        return false;
       }
-      case 16:
-      case 128: {
-        auto *FPImm = I.getOperand(1).getFPImm();
-        auto *LoadMI = emitLoadFromConstantPool(FPImm, MIB);
-        if (!LoadMI) {
-          LLVM_DEBUG(dbgs() << "Failed to load double constant pool entry\n");
-          return false;
-        }
-        MIB.buildCopy({DefReg}, {LoadMI->getOperand(0).getReg()});
-        I.eraseFromParent();
-        return RBI.constrainGenericRegister(DefReg, FPRRC, MRI);
-      }
-      }
+      MIB.buildCopy({DefReg}, {LoadMI->getOperand(0).getReg()});
+      I.eraseFromParent();
+      return RBI.constrainGenericRegister(DefReg, FPRRC, MRI);
+    }
     }
 
     return false;
