@@ -129,6 +129,13 @@ static bool isIntScalarOrVectorType(Type type) {
          (isa<IntegerType>(type) || isa<VectorType>(type));
 }
 
+/// Returns true if the given `type` is an integer or float scalar or vector.
+static bool isIntOrFloatScalarOrVectorType(Type type) {
+  auto eltTy = getElementTypeOrSelf(type);
+  return eltTy && eltTy.isIntOrFloat() &&
+         (isa<VectorType>(type) || type == eltTy);
+}
+
 /// Creates a scalar/vector integer constant.
 static Value getScalarOrVectorConstInt(Type type, uint64_t value,
                                        OpBuilder &builder, Location loc) {
@@ -718,9 +725,18 @@ struct ExtSIPattern final : public OpConversionPattern<arith::ExtSIOp> {
     if (isBoolScalarOrVector(srcType))
       return failure();
 
+    // extSI is only meaningful for integer scalar/vector types in SPIR-V.
+    if (!isIntScalarOrVectorType(srcType))
+      return rewriter.notifyMatchFailure(
+          op, "expected integer scalar or vector input type");
+
     Type dstType = getTypeConverter()->convertType(op.getType());
     if (!dstType)
       return getTypeConversionFailure(rewriter, op);
+
+    if (!isIntScalarOrVectorType(dstType))
+      return rewriter.notifyMatchFailure(
+          op, "expected integer scalar or vector result type");
 
     if (dstType == srcType) {
       // We can have the same source and destination type due to type emulation.
@@ -794,9 +810,17 @@ struct ExtUIPattern final : public OpConversionPattern<arith::ExtUIOp> {
     if (isBoolScalarOrVector(srcType))
       return failure();
 
+    if (!isIntScalarOrVectorType(srcType))
+      return rewriter.notifyMatchFailure(
+          op, "expected integer scalar or vector input type");
+
     Type dstType = getTypeConverter()->convertType(op.getType());
     if (!dstType)
       return getTypeConversionFailure(rewriter, op);
+
+    if (!isIntScalarOrVectorType(dstType))
+      return rewriter.notifyMatchFailure(
+          op, "expected integer scalar or vector result type");
 
     if (dstType == srcType) {
       // We can have the same source and destination type due to type emulation.
@@ -839,6 +863,10 @@ struct TruncII1Pattern final : public OpConversionPattern<arith::TruncIOp> {
 
     Location loc = op.getLoc();
     auto srcType = adaptor.getOperands().front().getType();
+    if (!isIntScalarOrVectorType(srcType))
+      return rewriter.notifyMatchFailure(
+          op, "expected integer scalar or vector source type");
+
     // Check if (x & 1) == 1.
     Value mask = spirv::ConstantOp::getOne(srcType, loc, rewriter);
     Value maskedSrc = spirv::BitwiseAndOp::create(
@@ -942,6 +970,13 @@ struct TypeCastingOpPattern final : public OpConversionPattern<Op> {
 
     if (isBoolScalarOrVector(srcType) || isBoolScalarOrVector(dstType))
       return failure();
+
+    if (!isIntOrFloatScalarOrVectorType(srcType) ||
+        !isIntOrFloatScalarOrVectorType(dstType))
+      return rewriter.notifyMatchFailure(
+          op, llvm::formatv(
+                  "expected int/float scalar or vector types, got {0} -> {1}",
+                  srcType, dstType));
 
     if (dstType == srcType) {
       // Due to type conversion, we are seeing the same source and target type.
