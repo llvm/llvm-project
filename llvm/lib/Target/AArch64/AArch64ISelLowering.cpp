@@ -20010,7 +20010,8 @@ static SDValue performBuildShuffleExtendCombine(SDValue BV, SelectionDAG &DAG) {
   // Shuffle inputs are vector, limit to SIGN_EXTEND/ZERO_EXTEND/ANY_EXTEND to
   // ensure calculatePreExtendType will work without issue.
   if (BV.getOpcode() == ISD::VECTOR_SHUFFLE &&
-      ExtendOpcode != ISD::SIGN_EXTEND && ExtendOpcode != ISD::ZERO_EXTEND)
+      ExtendOpcode != ISD::SIGN_EXTEND && ExtendOpcode != ISD::ZERO_EXTEND &&
+      ExtendOpcode != ISD::ANY_EXTEND)
     return SDValue();
 
   // Restrict valid pre-extend data type
@@ -20029,8 +20030,8 @@ static SDValue performBuildShuffleExtendCombine(SDValue BV, SelectionDAG &DAG) {
       return SDValue();
 
     unsigned Opc = Op.getOpcode();
-    if (BV.getOpcode() == ISD::VECTOR_SHUFFLE &&
-        (Opc != ISD::SIGN_EXTEND && Opc != ISD::ZERO_EXTEND))
+    if (BV.getOpcode() == ISD::VECTOR_SHUFFLE && Opc != ISD::SIGN_EXTEND &&
+        Opc != ISD::ZERO_EXTEND && Opc != ISD::ANY_EXTEND)
       return SDValue();
 
     if (Opc == ISD::ANY_EXTEND)
