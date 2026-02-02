@@ -1050,7 +1050,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
 
   // Loop over all of the register classes... emitting each one.
   {
-    NamespaceEmitter AnonNS(OS, "", /*Anonymous=*/true);
+    AnonNamespaceEmitter AnonNS(OS);
     OS << "// Register classes...\n";
 
     // Emit the register enum value arrays for each RegisterClass
@@ -1462,7 +1462,7 @@ void RegisterInfoEmitter::runTargetDesc(raw_ostream &OS, raw_ostream &MainOS,
   }
 
   {
-    NamespaceEmitter AnonNS(OS, "", /*Anynymous=*/true);
+    AnonNamespaceEmitter AnonNS(OS);
     OS << "  const TargetRegisterClass *const RegisterClasses[] = {\n";
     for (const auto &RC : RegisterClasses)
       OS << "    &" << RC.getQualifiedName() << "RegClass,\n";

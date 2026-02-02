@@ -83,17 +83,14 @@ private:
 // namespace scope.
 class NamespaceEmitter {
 public:
-  NamespaceEmitter(raw_ostream &OS, StringRef NameUntrimmed,
-                   bool Anonymous = false)
-      : Name(trim(NameUntrimmed).str()), OS(OS), Anonymous(Anonymous) {
-    assert((!Anonymous || NameUntrimmed.empty()) &&
-           "Expect empty name for anonymous namespace");
-    if (enableEmit())
+  NamespaceEmitter(raw_ostream &OS, StringRef NameUntrimmed)
+      : Name(trim(NameUntrimmed).str()), OS(OS) {
+    if (!Name.empty())
       OS << "namespace " << Name << " {\n\n";
   }
 
   ~NamespaceEmitter() {
-    if (enableEmit())
+    if (!Name.empty())
       OS << "\n} // namespace " << Name << "\n";
   }
 
@@ -110,12 +107,18 @@ private:
     return Name;
   }
 
-  // Emit the namespace if its not empty or if its anonymous.
-  bool enableEmit() const { return !Name.empty() || Anonymous; }
-
   std::string Name;
   raw_ostream &OS;
-  bool Anonymous;
+};
+
+// Simple RAII helper for emitting anonymous namespace scope.
+class AnonNamespaceEmitter {
+public:
+  AnonNamespaceEmitter(raw_ostream &OS) : OS(OS) { OS << "namespace {\n\n"; }
+  ~AnonNamespaceEmitter() { OS << "} // namespace\n"; }
+
+private:
+  raw_ostream &OS;
 };
 
 } // end namespace llvm
