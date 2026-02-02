@@ -276,6 +276,11 @@ def DropEquivalentBufferResultsPass
     Note: If a bbArg buffer is not returned directly but casted to beforehand,
     the buffer is still considered equivalent.
   }];
+  let options = [
+    Option<"modifyPublicFunctions", "modify-public-functions", "bool",
+           /*default=*/"false", "Modify function signatures of public "
+           "functions.">,
+  ];
   let dependentDialects = ["memref::MemRefDialect"];
 }
 
