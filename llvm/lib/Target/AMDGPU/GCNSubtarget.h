@@ -475,7 +475,9 @@ public:
     return HasDPP && getGeneration() < GFX10;
   }
 
-  bool hasDPPRowShare() const { return HasDPP && (HasGFX90AInsts || getGeneration() >= GFX10); }
+  bool hasDPPRowShare() const {
+    return HasDPP && (HasGFX90AInsts || getGeneration() >= GFX10);
+  }
 
   // Has V_PK_MOV_B32 opcode
   bool hasPkMovB32() const { return HasGFX90AInsts; }

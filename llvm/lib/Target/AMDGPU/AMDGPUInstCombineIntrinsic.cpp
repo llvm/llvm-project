@@ -626,10 +626,11 @@ tryWaveShuffleDPP(const GCNSubtarget &ST, InstCombiner &IC, IntrinsicInst &II) {
     }
 
     if (CanDPP16RowShare) {
-      CallInst *UpdateDPP = B.CreateIntrinsic(
-          Intrinsic::amdgcn_update_dpp, Val->getType(),
-          {PoisonValue::get(Val->getType()), Val, B.getInt32(AMDGPU::DPP::ROW_SHARE0 | RowIdx),
-           B.getInt32(0xF), B.getInt32(0xF), B.getFalse()});
+      CallInst *UpdateDPP =
+          B.CreateIntrinsic(Intrinsic::amdgcn_update_dpp, Val->getType(),
+                            {PoisonValue::get(Val->getType()), Val,
+                             B.getInt32(AMDGPU::DPP::ROW_SHARE0 | RowIdx),
+                             B.getInt32(0xF), B.getInt32(0xF), B.getFalse()});
       UpdateDPP->takeName(&II);
       UpdateDPP->copyMetadata(II);
       return IC.replaceInstUsesWith(II, UpdateDPP);
