@@ -3597,7 +3597,7 @@ void SelectionDAGISel::SelectCodeCommon(SDNode *NodeToMatch,
     }
     case OPC_RecordMemRef:
       if (auto *MN = dyn_cast<MemSDNode>(N))
-        MatchedMemRefs.push_back(MN->getMemOperand());
+        llvm::append_range(MatchedMemRefs, MN->memoperands());
       else {
         LLVM_DEBUG(dbgs() << "Expected MemSDNode "; N->dump(CurDAG);
                    dbgs() << '\n');

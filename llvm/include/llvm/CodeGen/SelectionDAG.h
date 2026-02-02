@@ -438,10 +438,18 @@ private:
 
   template <typename SDNodeTy>
   static uint16_t getSyntheticNodeSubclassData(unsigned Opc, unsigned Order,
-                                                SDVTList VTs, EVT MemoryVT,
-                                                MachineMemOperand *MMO) {
+                                               SDVTList VTs, EVT MemoryVT,
+                                               MachineMemOperand *MMO) {
     return SDNodeTy(Opc, Order, DebugLoc(), VTs, MemoryVT, MMO)
-         .getRawSubclassData();
+        .getRawSubclassData();
+  }
+
+  template <typename SDNodeTy>
+  static uint16_t getSyntheticNodeSubclassData(
+      unsigned Opc, unsigned Order, SDVTList VTs, EVT MemoryVT,
+      PointerUnion<MachineMemOperand *, MachineMemOperand **> MemRefs) {
+    return SDNodeTy(Opc, Order, DebugLoc(), VTs, MemoryVT, MemRefs)
+        .getRawSubclassData();
   }
 
   void createOperands(SDNode *Node, ArrayRef<SDValue> Vals);
@@ -1480,6 +1488,12 @@ public:
   LLVM_ABI SDValue getMemIntrinsicNode(unsigned Opcode, const SDLoc &dl,
                                        SDVTList VTList, ArrayRef<SDValue> Ops,
                                        EVT MemVT, MachineMemOperand *MMO);
+
+  /// getMemIntrinsicNode - Creates a MemIntrinsicNode with multiple MMOs.
+  LLVM_ABI SDValue getMemIntrinsicNode(unsigned Opcode, const SDLoc &dl,
+                                       SDVTList VTList, ArrayRef<SDValue> Ops,
+                                       EVT MemVT,
+                                       ArrayRef<MachineMemOperand *> MMOs);
 
   /// Creates a LifetimeSDNode that starts (`IsStart==true`) or ends
   /// (`IsStart==false`) the lifetime of the `FrameIndex`.
