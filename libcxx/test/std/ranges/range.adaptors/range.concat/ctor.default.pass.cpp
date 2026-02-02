@@ -47,7 +47,7 @@ constexpr bool test() {
   static_assert(!std::is_default_constructible_v<BadView2>);
 
   {
-    DefaultView view;
+    DefaultView view = DefaultView();
     assert(view.size() == 8);
     auto it = view.begin();
     assert(*it++ == 0);
@@ -57,7 +57,7 @@ constexpr bool test() {
   }
 
   {
-    DefaultViewWithDiffTypes view;
+    DefaultViewWithDiffTypes view = DefaultViewWithDiffTypes();
     assert(view.size() == 4);
     auto it = view.begin();
     assert(*it++ == 0);
