@@ -60,29 +60,28 @@ static bool is_separator(const wchar_t value) {
   }
 }
 
-// Extended-length path prefix constants (UTF-8).
-static constexpr llvm::StringLiteral ExtendedPrefix8 = R"(\\?\)";
-static constexpr llvm::StringLiteral ExtendedUNCPrefix8 = R"(\\?\UNC\)";
+// Long path path prefix constants (UTF-8).
+static constexpr llvm::StringLiteral LongPathPrefix8 = R"(\\?\)";
+static constexpr llvm::StringLiteral LongPathUNCPrefix8 = R"(\\?\UNC\)";
 
-// Extended-length path prefix constants (UTF-16).
-static constexpr wchar_t ExtendedPrefix16[] = LR"(\\?\)";
-static constexpr wchar_t ExtendedUNCPathPrefix16[] = LR"(\\?\UNC\)";
+// Long path prefix constants (UTF-16).
+static constexpr wchar_t LongPathPrefix16[] = LR"(\\?\)";
+static constexpr wchar_t LongPathUNCPrefix16[] = LR"(\\?\UNC\)";
 
-static constexpr DWORD ExtendedPrefix16Len =
-    static_cast<DWORD>(std::size(ExtendedPrefix16) - 1);
-static constexpr DWORD ExtendedUNCPathPrefix16Len =
-    static_cast<DWORD>(std::size(ExtendedUNCPathPrefix16) - 1);
+static constexpr DWORD LongPathPrefix16Len =
+    static_cast<DWORD>(std::size(LongPathPrefix16) - 1);
+static constexpr DWORD LongPathUNCPrefix16Len =
+    static_cast<DWORD>(std::size(LongPathUNCPrefix16) - 1);
 
-static void stripExtendedPrefix(wchar_t *&Data, DWORD &CountChars) {
-  if (CountChars >= ExtendedUNCPathPrefix16Len &&
-      ::wmemcmp(Data, ExtendedUNCPathPrefix16, ExtendedUNCPathPrefix16Len) ==
-          0) {
+static void stripLongPathPrefix(wchar_t *&Data, DWORD &CountChars) {
+  if (CountChars >= LongPathUNCPrefix16Len &&
+      ::wmemcmp(Data, LongPathUNCPrefix16, LongPathUNCPrefix16Len) == 0) {
     // Convert \\?\UNC\foo\bar to \\foo\bar
     CountChars -= 6;
     Data += 6;
     Data[0] = L'\\';
-  } else if (CountChars >= ExtendedPrefix16Len &&
-             ::wmemcmp(Data, ExtendedPrefix16, ExtendedPrefix16Len) == 0) {
+  } else if (CountChars >= LongPathPrefix16Len &&
+             ::wmemcmp(Data, LongPathPrefix16, LongPathPrefix16Len) == 0) {
     // Convert \\?\C:\foo to C:\foo
     CountChars -= 4;
     Data += 4;
@@ -125,7 +124,7 @@ std::error_code widenPath(const Twine &Path8, SmallVectorImpl<wchar_t> &Path16,
   }
 
   if ((Path16.size() + CurPathLen) < MaxPathLen ||
-      Path8Str.starts_with(ExtendedPrefix8))
+      Path8Str.starts_with(LongPathPrefix8))
     return std::error_code();
 
   if (!IsAbsolute) {
@@ -145,10 +144,10 @@ std::error_code widenPath(const Twine &Path8, SmallVectorImpl<wchar_t> &Path16,
 
   SmallString<2 * MAX_PATH> FullPath;
   if (RootName[1] != ':') { // Check if UNC.
-    FullPath.append(ExtendedUNCPrefix8);
+    FullPath.append(LongPathUNCPrefix8);
     FullPath.append(Path8Str.begin() + 2, Path8Str.end());
   } else {
-    FullPath.append(ExtendedPrefix8);
+    FullPath.append(LongPathPrefix8);
     FullPath.append(Path8Str);
   }
 
@@ -159,7 +158,7 @@ std::error_code makeLongFormPath(const Twine &Path8,
                                  llvm::SmallVectorImpl<char> &Result8) {
   SmallString<128> PathStorage;
   StringRef PathStr = Path8.toStringRef(PathStorage);
-  bool HadPrefix = PathStr.starts_with(ExtendedPrefix8);
+  bool HadPrefix = PathStr.starts_with(LongPathPrefix8);
 
   SmallVector<wchar_t, 128> Path16;
   if (std::error_code EC = widenPath(PathStr, Path16))
@@ -189,11 +188,11 @@ std::error_code makeLongFormPath(const Twine &Path8,
   // including the null-terminator.
   Long16.truncate(Len);
 
-  // Strip \\?\ or \\?\UNC\ extended length prefix if it wasn't part of the
+  // Strip \\?\ or \\?\UNC\ long length prefix if it wasn't part of the
   // original path.
   wchar_t *Data = Long16.data();
   if (!HadPrefix)
-    stripExtendedPrefix(Data, Len);
+    stripLongPathPrefix(Data, Len);
 
   return sys::windows::UTF16ToUTF8(Data, Len, Result8);
 }
@@ -478,7 +477,7 @@ static std::error_code realPathFromHandle(HANDLE H,
   // paths don't get canonicalized by file APIs.
   wchar_t *Data = Buffer.data();
   DWORD CountChars = Buffer.size();
-  stripExtendedPrefix(Data, CountChars);
+  stripLongPathPrefix(Data, CountChars);
 
   // Convert the result from UTF-16 to UTF-8.
   if (std::error_code EC = UTF16ToUTF8(Data, CountChars, RealPath))

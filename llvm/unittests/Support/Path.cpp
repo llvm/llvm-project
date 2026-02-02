@@ -2490,7 +2490,7 @@ TEST_F(FileSystemTest, widenPath) {
 static llvm::Expected<bool> areShortNamesEnabled(llvm::StringRef Path8) {
   // Create a directory under Path8 with a name long enough that Windows will
   // provide a short 8.3 form name, if short 8.3 form names are enabled.
-  SmallString<256> Dir(Path8);
+  SmallString<MAX_PATH> Dir(Path8);
   path::append(Dir, "verylongdir");
   if (std::error_code EC = fs::create_directories(Dir))
     return llvm::errorCodeToError(EC);
@@ -2535,7 +2535,7 @@ static std::string getShortPathName(llvm::StringRef Path8) {
 
   ShortPath.truncate(Written);
 
-  SmallString<128> Utf8Result;
+  SmallString<MAX_PATH> Utf8Result;
   if (std::error_code EC = sys::windows::UTF16ToUTF8(
           ShortPath.data(), ShortPath.size(), Utf8Result))
     return {};
@@ -2550,7 +2550,7 @@ static bool sameEntity(llvm::StringRef P1, llvm::StringRef P2) {
   return !fs::getUniqueID(P1, ID1) && !fs::getUniqueID(P2, ID2) && ID1 == ID2;
 }
 
-/// Removes the Windows extended path prefix (\\?\ or \\?\UNC\) from the given
+/// Removes the Windows long path path prefix (\\?\ or \\?\UNC\) from the given
 /// UTF-8 path, if present.
 static std::string stripPrefix(llvm::StringRef P) {
   if (P.starts_with(R"(\\?\UNC\)"))
@@ -2588,33 +2588,53 @@ TEST_F(FileSystemTest, makeLongFormPath) {
   std::string DeepShort = stripPrefix(DeepShortWithPrefix);
 
   // Setup: Create a short 8.3 form path for the first-level directory.
-  SmallString<256> FirstLevel(TestDirectory);
+  SmallString<MAX_PATH> FirstLevel(TestDirectory);
   FirstLevel.append(OneDir);
   std::string Short = getShortPathName(FirstLevel);
   ASSERT_FALSE(Short.empty())
       << "Expected short 8.3 form path for test directory.";
 
+  // Setup: Create a short 8.3 form path with . and .. components for the
+  // first-level directory.
+  llvm::SmallString<MAX_PATH> WithDots(FirstLevel);
+  llvm::sys::path::append(WithDots, ".", "..", OneDir);
+  std::string DotAndDotDot = getShortPathName(WithDots);
+  ASSERT_FALSE(DotAndDotDot.empty())
+      << "Expected short 8.3 form path for test directory.";
+  auto ContainsDotAndDotDot = [](llvm::StringRef S) {
+    return S.contains("\\.\\") && S.contains("\\..\\");
+  };
+  ASSERT_TRUE(ContainsDotAndDotDot(DotAndDotDot))
+      << "Expected '.' and '..' components in: " << DotAndDotDot;
+
   // Case 1: Non-existent short 8.3 form path.
-  SmallString<128> NoExist("NotEre~1");
+  SmallString<MAX_PATH> NoExist("NotEre~1");
   ASSERT_FALSE(fs::exists(NoExist));
-  SmallString<128> NoExistResult;
+  SmallString<MAX_PATH> NoExistResult;
   EXPECT_TRUE(windows::makeLongFormPath(NoExist, NoExistResult));
   EXPECT_TRUE(NoExistResult.empty());
 
   // Case 2: Valid short 8.3 form path.
-  SmallString<128> ShortResult;
+  SmallString<MAX_PATH> ShortResult;
   ASSERT_FALSE(windows::makeLongFormPath(Short, ShortResult));
   EXPECT_TRUE(sameEntity(Short, ShortResult));
 
-  // Case 3: Deep short 8.3 form path without \\?\ prefix.
-  SmallString<128> DeepResult;
+  // Case 3: Valid . and .. short 8.3 form path.
+  SmallString<MAX_PATH> DotAndDotDotResult;
+  ASSERT_FALSE(windows::makeLongFormPath(DotAndDotDot, DotAndDotDotResult));
+  EXPECT_TRUE(sameEntity(DotAndDotDot, DotAndDotDotResult));
+  // Assert that '.' and '..' remain as path components.
+  ASSERT_TRUE(ContainsDotAndDotDot(DotAndDotDotResult));
+
+  // Case 4: Deep short 8.3 form path without \\?\ prefix.
+  SmallString<MAX_PATH> DeepResult;
   ASSERT_FALSE(windows::makeLongFormPath(DeepShort, DeepResult));
   EXPECT_TRUE(sameEntity(DeepShort, DeepResult));
   EXPECT_FALSE(StringRef(DeepResult).starts_with(R"(\\?\)"))
       << "Expected unprefixed result, got: " << DeepResult;
 
-  // Case 4: Deep short 8.3 form path with \\?\ prefix.
-  SmallString<128> DeepPrefixedResult;
+  // Case 5: Deep short 8.3 form path with \\?\ prefix.
+  SmallString<MAX_PATH> DeepPrefixedResult;
   ASSERT_FALSE(
       windows::makeLongFormPath(DeepShortWithPrefix, DeepPrefixedResult));
   EXPECT_TRUE(sameEntity(DeepShortWithPrefix, DeepPrefixedResult));
