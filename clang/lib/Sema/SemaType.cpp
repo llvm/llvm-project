@@ -7424,6 +7424,24 @@ bool Sema::CheckImplicitNullabilityTypeSpecifier(QualType &Type,
       /*isContextSensitive*/ false, AllowArrayTypes, OverrideExisting);
 }
 
+bool Sema::CheckVarDeclSizeAddressSpace(const VarDecl *VD, LangAS AS) {
+  QualType T = VD->getType();
+
+  // Check that the variable's type can fit in the specified address space. This
+  // is determined by how far a pointer in that address space can reach.
+  llvm::APInt MaxSizeForAddrSpace =
+      llvm::APInt::getMaxValue(Context.getTargetInfo().getPointerWidth(AS));
+  std::optional<CharUnits> TSizeInChars = Context.getTypeSizeInCharsIfKnown(T);
+  if (TSizeInChars && static_cast<uint64_t>(TSizeInChars->getQuantity()) >
+                          MaxSizeForAddrSpace.getZExtValue()) {
+    Diag(VD->getLocation(), diag::err_type_too_large_for_address_space)
+        << T << MaxSizeForAddrSpace;
+    return false;
+  }
+
+  return true;
+}
+
 /// Check the application of the Objective-C '__kindof' qualifier to
 /// the given type.
 static bool checkObjCKindOfType(TypeProcessingState &state, QualType &type,

@@ -2699,7 +2699,7 @@ public:
 
   std::optional<CharUnits> getTypeSizeInCharsIfKnown(QualType Ty) const {
     if (Ty->isIncompleteType() || Ty->isDependentType() ||
-        Ty->isUndeducedType())
+        Ty->isUndeducedType() || Ty->isSizelessType())
       return std::nullopt;
     return getTypeSizeInChars(Ty);
   }

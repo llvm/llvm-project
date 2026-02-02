@@ -15340,6 +15340,17 @@ public:
                                              bool AllowArrayTypes,
                                              bool OverrideExisting);
 
+  /// Check whether the given variable declaration has a size that fits within
+  /// the address space it is declared in. This issues a diagnostic if not.
+  ///
+  /// \param VD The variable declaration to check the size of.
+  ///
+  /// \param AS The address space to check the size of \p VD against.
+  ///
+  /// \returns true if the variable's size fits within the address space, false
+  /// otherwise.
+  bool CheckVarDeclSizeAddressSpace(const VarDecl *VD, LangAS AS);
+
   /// Get the type of expression E, triggering instantiation to complete the
   /// type if necessary -- that is, if the expression refers to a templated
   /// static data member of incomplete array type.

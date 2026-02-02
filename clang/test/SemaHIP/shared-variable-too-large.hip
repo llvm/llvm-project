@@ -4,7 +4,8 @@
 #define __device__ __attribute__((device))
 #define __shared__ __attribute__((shared))
 
-__shared__ short global_arr[2147483648]; // expected-error {{'short[2147483648]' is too large for the address space (maximum allowed size of 4'294'967'295 bytes)}}
+__shared__ short global_arr1[2147483648]; // expected-error {{'short[2147483648]' is too large for the address space (maximum allowed size of 4'294'967'295 bytes)}}
+[[clang::loader_uninitialized]] short [[clang::address_space(3)]] global_arr1[2147483648]; // expected-error {{'__attribute__((address_space(3))) short[2147483648]' is too large for the address space (maximum allowed size of 4'294'967'295 bytes)}}
 
 __device__ void func() {
   __shared__ int arr[1073741824]; // expected-error {{'int[1073741824]' is too large for the address space (maximum allowed size of 4'294'967'295 bytes)}}
