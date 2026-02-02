@@ -14,7 +14,7 @@ void *memmove(void *s1, const void *s2, size_t n);
 do {         \
   int z = 0; \
   z = 5/z;   \
-} while (0);
+} while (0)
 
 namespace std {
 
@@ -47,7 +47,7 @@ namespace std {
       // Fake use-after-free.
       // No warning is expected as we are suppressing warning coming
       // out of std::list.
-      TRIGGER_DIV_BY_ZERO
+      TRIGGER_DIV_BY_ZERO;
     }
     bool empty() const;
   };
@@ -74,7 +74,7 @@ namespace std {
       // Fake error trigger.
       // No warning is expected as we are suppressing warning coming
       // out of std::basic_string.
-      TRIGGER_DIV_BY_ZERO
+      TRIGGER_DIV_BY_ZERO;
     }
 
     _CharT *getBuffer() {
@@ -112,7 +112,7 @@ __independent_bits_engine<_Engine, _UIntType>
   // Fake error trigger.
   // No warning is expected as we are suppressing warning coming
   // out of std::__independent_bits_engine.
-  TRIGGER_DIV_BY_ZERO
+  TRIGGER_DIV_BY_ZERO;
 }
 
 #if __has_feature(cxx_decltype)
@@ -133,7 +133,7 @@ public:
     // Fake error trigger.
     // No warning is expected as we are suppressing warning coming
     // out of std::shared_ptr.
-    TRIGGER_DIV_BY_ZERO
+    TRIGGER_DIV_BY_ZERO;
   }
 };
 
@@ -149,14 +149,14 @@ template<typename _RandomAccessIterator>
 void sort(_RandomAccessIterator __first, _RandomAccessIterator __last) {
   // Fake error trigger
   // std::sort is expected to be evaluated conservatively.
-  TRIGGER_DIV_BY_ZERO
+  TRIGGER_DIV_BY_ZERO;
 }
 
 template<typename _RandomAccessIterator>
 void stable_sort(_RandomAccessIterator __first, _RandomAccessIterator __last) {
   // Fake error trigger
   // std::stable_sort is expected to be evaluated conservatively.
-  TRIGGER_DIV_BY_ZERO
+  TRIGGER_DIV_BY_ZERO;
 }
 
 template<typename _BidirectionalIterator>
@@ -165,7 +165,7 @@ void inplace_merge(_BidirectionalIterator __first,
                    _BidirectionalIterator __last) {
   // Fake error trigger
   // std::inplace_merge is expected to be evaluated conservatively.
-  TRIGGER_DIV_BY_ZERO
+  TRIGGER_DIV_BY_ZERO;
   }
 } // namespace std
 
