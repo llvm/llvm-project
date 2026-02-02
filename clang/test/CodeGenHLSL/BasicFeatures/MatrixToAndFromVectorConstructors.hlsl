@@ -11,12 +11,12 @@
 // CHECK-NEXT:    [[MATRIXEXT:%.*]] = extractelement <4 x float> [[TMP0]], i32 0
 // CHECK-NEXT:    [[VECINIT:%.*]] = insertelement <4 x float> poison, float [[MATRIXEXT]], i32 0
 // CHECK-NEXT:    [[TMP1:%.*]] = load <4 x float>, ptr [[M_ADDR]], align 4
-// COL-CHECK-NEXT:    [[MATRIXEXT1:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
-// ROW-CHECK-NEXT:    [[MATRIXEXT1:%.*]] = extractelement <4 x float> [[TMP1]], i32 2
+// COL-CHECK-NEXT:    [[MATRIXEXT1:%.*]] = extractelement <4 x float> [[TMP1]], i32 2
+// ROW-CHECK-NEXT:    [[MATRIXEXT1:%.*]] = extractelement <4 x float> [[TMP1]], i32 1
 // CHECK-NEXT:    [[VECINIT2:%.*]] = insertelement <4 x float> [[VECINIT]], float [[MATRIXEXT1]], i32 1
 // CHECK-NEXT:    [[TMP2:%.*]] = load <4 x float>, ptr [[M_ADDR]], align 4
-// COL-CHECK-NEXT:    [[MATRIXEXT3:%.*]] = extractelement <4 x float> [[TMP2]], i32 2
-// ROW-CHECK-NEXT:    [[MATRIXEXT3:%.*]] = extractelement <4 x float> [[TMP2]], i32 1
+// COL-CHECK-NEXT:    [[MATRIXEXT3:%.*]] = extractelement <4 x float> [[TMP2]], i32 1
+// ROW-CHECK-NEXT:    [[MATRIXEXT3:%.*]] = extractelement <4 x float> [[TMP2]], i32 2
 // CHECK-NEXT:    [[VECINIT4:%.*]] = insertelement <4 x float> [[VECINIT2]], float [[MATRIXEXT3]], i32 2
 // CHECK-NEXT:    [[TMP3:%.*]] = load <4 x float>, ptr [[M_ADDR]], align 4
 // CHECK-NEXT:    [[MATRIXEXT5:%.*]] = extractelement <4 x float> [[TMP3]], i32 3
