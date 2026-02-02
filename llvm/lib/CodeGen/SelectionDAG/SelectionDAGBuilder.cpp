@@ -7129,6 +7129,27 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
                              DAG.getValueType(VT.getScalarType())));
     return;
   }
+  case Intrinsic::convert_from_arbitrary_fp: {
+    // Extract format metadata and convert to semantics enum.
+    Metadata *MD = cast<MetadataAsValue>(I.getArgOperand(1))->getMetadata();
+    StringRef FormatStr = cast<MDString>(MD)->getString();
+    const fltSemantics *SrcSem =
+        APFloatBase::getArbitraryFPSemantics(FormatStr);
+    if (!SrcSem)
+      report_fatal_error("convert_from_arbitrary_fp: not implemented format '" +
+                         FormatStr + "'");
+    APFloatBase::Semantics SemEnum = APFloatBase::SemanticsToEnum(*SrcSem);
+
+    SDValue IntVal = getValue(I.getArgOperand(0));
+    EVT DstVT = TLI.getValueType(DAG.getDataLayout(), I.getType());
+
+    // Emit ISD::CONVERT_FROM_ARBITRARY_FP node.
+    SDValue SemConst =
+        DAG.getTargetConstant(static_cast<int>(SemEnum), sdl, MVT::i32);
+    setValue(&I, DAG.getNode(ISD::CONVERT_FROM_ARBITRARY_FP, sdl, DstVT, IntVal,
+                             SemConst));
+    return;
+  }
   case Intrinsic::set_rounding:
     Res = DAG.getNode(ISD::SET_ROUNDING, sdl, MVT::Other,
                       {getRoot(), getValue(I.getArgOperand(0))});

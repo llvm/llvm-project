@@ -412,6 +412,10 @@ public:
   /// format interpretation for llvm.convert.to.arbitrary.fp and
   /// llvm.convert.from.arbitrary.fp intrinsics.
   LLVM_ABI static bool isValidArbitraryFPFormat(StringRef Format);
+
+  /// Returns the fltSemantics for a given arbitrary FP format string,
+  /// or nullptr if invalid.
+  LLVM_ABI static const fltSemantics *getArbitraryFPSemantics(StringRef Format);
 };
 
 namespace detail {
