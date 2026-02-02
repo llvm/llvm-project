@@ -68,3 +68,39 @@ __device__ void f(int x, bool b) {
         }
     }
 }
+
+__attribute__((target("arch=gfx1030")))
+__device__ void h(int x) {
+    if (__builtin_amdgcn_processor_is("gfx1030")) // Fine, same processor
+        return;
+
+    long v15_16;
+    __asm volatile("v_lshlrev_b64 v[15:16], 0, %0" : "={v[15:16]}"(v15_16) : "v"(x)); // "Fine", explicit gfx target
+
+    __builtin_amdgcn_s_ttracedata_imm(42); // expected-warning {{'__builtin_amdgcn_s_ttracedata_imm' might be unavailable on some AMDGPU targets}}
+    // expected-note@-1 {{enclose '__builtin_amdgcn_s_ttracedata_imm' in a __builtin_amdgcn_is_invocable check to silence this warning}}
+
+    __builtin_amdgcn_s_barrier_signal_isfirst(42); // expected-error {{'__builtin_amdgcn_s_barrier_signal_isfirst' cannot be invoked in the current context, as it requires the 'gfx12-insts' feature(s), which 'gfx1030' does not provide}}
+    // expected-note@-12 {{predicate guard, with establishes the context, inserted here}}
+
+    if (__builtin_amdgcn_processor_is("gfx906")) // expected-error {{conflicting check for AMDGCN processor '__builtin_amdgcn_processor_is("gfx906")' found in a scope already controlled by a check for AMDGCN processor}}
+    // expected-note@-15 {{predicate guard, with establishes the context, inserted here}}
+        __builtin_trap();
+}
+
+__attribute__((target("gfx11-insts")))
+__device__ void i(int x) {
+    __builtin_amdgcn_s_wait_event_export_ready(); // expected-warning {{'__builtin_amdgcn_s_wait_event_export_ready' might be unavailable on some AMDGPU targets}}
+    // expected-note@-1 {{enclose '__builtin_amdgcn_s_wait_event_export_ready' in a __builtin_amdgcn_is_invocable check to silence this warning}}
+
+    __builtin_amdgcn_s_barrier_signal_isfirst(42); // expected-error {{'__builtin_amdgcn_s_barrier_signal_isfirst' cannot be invoked in the current context, as it requires the 'gfx12-insts' feature(s)}}
+}
+
+__attribute__((target("gfx11-insts,gfx12-insts")))
+__device__ void j(int x) {
+    __builtin_amdgcn_s_wait_event_export_ready(); // expected-warning {{'__builtin_amdgcn_s_wait_event_export_ready' might be unavailable on some AMDGPU targets}}
+    // expected-note@-1 {{enclose '__builtin_amdgcn_s_wait_event_export_ready' in a __builtin_amdgcn_is_invocable check to silence this warning}}
+
+    __builtin_amdgcn_s_barrier_signal_isfirst(42); // expected-warning {{'__builtin_amdgcn_s_barrier_signal_isfirst' might be unavailable on some AMDGPU targets}}
+    // expected-note@-1 {{enclose '__builtin_amdgcn_s_barrier_signal_isfirst' in a __builtin_amdgcn_is_invocable check to silence this warning}}
+}
