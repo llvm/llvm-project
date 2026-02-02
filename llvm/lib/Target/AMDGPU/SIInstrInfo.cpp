@@ -10688,6 +10688,12 @@ SIInstrInfo::getGenericInstructionUniformity(const MachineInstr &MI) const {
   return InstructionUniformity::Default;
 }
 
+const MIRFormatter *SIInstrInfo::getMIRFormatter() const {
+  if (!Formatter)
+    Formatter = std::make_unique<AMDGPUMIRFormatter>(ST);
+  return Formatter.get();
+}
+
 InstructionUniformity
 SIInstrInfo::getInstructionUniformity(const MachineInstr &MI) const {
 

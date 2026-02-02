@@ -1237,6 +1237,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       // readfirstlaning just in case register is not in sgpr.
       .Any({{UniS32, _, UniS32}, {{}, {Sgpr32, None, Vgpr32}}});
 
+  addRulesForIOpcs({amdgcn_s_sleep}).Any({{_, _}, {{}, {IntrId, Imm}}});
+
   addRulesForIOpcs({amdgcn_mul_u24, amdgcn_mul_i24}, Standard)
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32}})
@@ -1248,6 +1250,10 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32}})
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32}});
 
+  addRulesForIOpcs({amdgcn_fma_legacy}, Standard)
+      .Uni(S32, {{UniInVgprS32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
+      .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}});
+
   addRulesForIOpcs({amdgcn_frexp_mant, amdgcn_fract}, Standard)
       .Uni(S16, {{UniInVgprS16}, {IntrId, Vgpr16}})
       .Div(S16, {{Vgpr16}, {IntrId, Vgpr16}})
@@ -1255,6 +1261,10 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32}})
       .Uni(S64, {{UniInVgprS64}, {IntrId, Vgpr64}})
       .Div(S64, {{Vgpr64}, {IntrId, Vgpr64}});
+
+  addRulesForIOpcs({amdgcn_prng_b32})
+      .Any({{UniS32}, {{UniInVgprS32}, {IntrId, Vgpr32}}})
+      .Any({{DivS32}, {{Vgpr32}, {IntrId, Vgpr32}}});
 
   addRulesForIOpcs({amdgcn_ubfe, amdgcn_sbfe}, Standard)
       .Div(S32, {{Vgpr32}, {IntrId, Vgpr32, Vgpr32, Vgpr32}})
@@ -1269,5 +1279,19 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForIOpcs({amdgcn_global_load_tr_b128})
       .Any({{DivB64}, {{VgprB64}, {IntrId, SgprP1}}})
       .Any({{DivB128}, {{VgprB128}, {IntrId, SgprP1}}});
+
+  addRulesForIOpcs({amdgcn_wwm, amdgcn_strict_wwm}, StandardB)
+      .Div(B32, {{VgprB32}, {IntrId, VgprB32}})
+      .Uni(B32, {{SgprB32}, {IntrId, SgprB32}})
+      .Div(B64, {{VgprB64}, {IntrId, VgprB64}})
+      .Uni(B64, {{SgprB64}, {IntrId, SgprB64}})
+      .Div(B96, {{VgprB96}, {IntrId, VgprB96}})
+      .Uni(B96, {{SgprB96}, {IntrId, SgprB96}})
+      .Div(B128, {{VgprB128}, {IntrId, VgprB128}})
+      .Uni(B128, {{SgprB128}, {IntrId, SgprB128}})
+      .Any({{UniB256}, {{SgprB256}, {IntrId, SgprB256}}})
+      .Any({{DivB256}, {{VgprB256}, {IntrId, VgprB256}}})
+      .Any({{UniB512}, {{SgprB512}, {IntrId, SgprB512}}})
+      .Any({{DivB512}, {{VgprB512}, {IntrId, VgprB512}}});
 
 } // end initialize rules
