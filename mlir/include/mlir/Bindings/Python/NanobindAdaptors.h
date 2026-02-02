@@ -632,9 +632,9 @@ public:
               !isaFunction(rawType)) {
             auto origRepr =
                 nanobind::cast<std::string>(nanobind::repr(otherType));
-            throw std::invalid_argument(nanobind::detail::join(
-                "Cannot cast type to ", captureTypeName, " (from ", origRepr,
-                ")"));
+            throw std::invalid_argument(
+                nanobind::detail::join("Cannot cast type to ", captureTypeName,
+                                       " (from ", origRepr, ")"));
           }
           nanobind::object self = superCls.attr("__new__")(cls, otherType);
           return self;
