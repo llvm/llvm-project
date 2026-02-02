@@ -59,6 +59,8 @@
 // RISCV64-SAME: {{^}}, veyron-v1
 // RISCV64-SAME: {{^}}, xiangshan-kunminghu
 // RISCV64-SAME: {{^}}, xiangshan-nanhu
+// RISCV64-SAME: {{^}}, xt-c910v2
+// RISCV64-SAME: {{^}}, xt-c920v2
 // RISCV64-SAME: {{$}}
 
 // RUN: not %clang_cc1 -triple riscv32 -tune-cpu not-a-cpu -fsyntax-only %s 2>&1 | FileCheck %s --check-prefix TUNE-RISCV32
@@ -123,6 +125,8 @@
 // TUNE-RISCV64-SAME: {{^}}, veyron-v1
 // TUNE-RISCV64-SAME: {{^}}, xiangshan-kunminghu
 // TUNE-RISCV64-SAME: {{^}}, xiangshan-nanhu
+// TUNE-RISCV64-SAME: {{^}}, xt-c910v2
+// TUNE-RISCV64-SAME: {{^}}, xt-c920v2
 // TUNE-RISCV64-SAME: {{^}}, andes-45-series
 // TUNE-RISCV64-SAME: {{^}}, generic
 // TUNE-RISCV64-SAME: {{^}}, generic-ooo

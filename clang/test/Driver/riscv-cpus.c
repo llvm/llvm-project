@@ -787,3 +787,13 @@
 
 // RUN: %clang --target=riscv64 -### -c %s 2>&1 -mtune=andes-ax45mpv | FileCheck -check-prefix=MTUNE-ANDES-AX45MPV %s
 // MTUNE-ANDES-AX45MPV: "-tune-cpu" "andes-ax45mpv"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=xt-c910v2 | FileCheck -check-prefix=MCPU-XT-C910V2 %s
+// COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-xt-c910v2.c`
+// MCPU-XT-C910V2: "-target-cpu" "xt-c910v2"
+// MCPU-XT-C910V2-SAME: "-target-abi" "lp64d"
+
+// RUN: %clang --target=riscv64 -### -c %s 2>&1 -mcpu=xt-c920v2 | FileCheck -check-prefix=MCPU-XT-C920V2 %s
+// COM: The list of extensions are tested in `test/Driver/print-enabled-extensions/riscv-xt-c920v2.c`
+// MCPU-XT-C920V2: "-target-cpu" "xt-c920v2"
+// MCPU-XT-C920V2-SAME: "-target-abi" "lp64d"
