@@ -48977,12 +48977,16 @@ static SDValue checkSignTestSetCCCombine(SDValue Cmp, X86::CondCode &CC,
     if (!isNullConstant(Cmp.getOperand(1)))
       return SDValue();
     Src = Cmp.getOperand(0);
-    // Peek through a SRA node as we just need the signbit.
     // TODO: Remove one use limit once sdiv-fix regressions are fixed.
-    // TODO: Use SimplifyDemandedBits instead of just SRA?
-    if (Src.getOpcode() != ISD::SRA || !Src.hasOneUse())
+    if (!Src.hasOneUse())
       return SDValue();
-    Src = Src.getOperand(0);
+    // Peek through a SRA node as we just need the signbit.
+    // TODO: Use SimplifyMultipleUseDemandedBits instead of just SRA?
+    if (Src.getOpcode() == ISD::SRA)
+      Src = Src.getOperand(0);
+    else if (Src.getOpcode() != ISD::SHL &&
+             Src.getOpcode() != ISD::SIGN_EXTEND_INREG)
+      return SDValue();
   } else if (Cmp.getOpcode() == X86ISD::OR) {
     // OR(X,Y) -> see if only one operand contributes to the signbit.
     // TODO: XOR(X,Y) -> see if only one operand contributes to the signbit.
