@@ -143,9 +143,9 @@ public:
   , __capacity_(std::move(__other.__capacity_))
   , __alloc_(std::move(__other.__alloc_))
   {
-    __begin_ = nullptr;
-    __boundary_ = {};
-    __capacity_ = {};
+    __other.__begin_ = nullptr;
+    __other.__boundary_ = {};
+    __other.__capacity_ = {};
   }
 
   /// Returns a reference to the stored allocator.
@@ -219,6 +219,22 @@ public:
     std::swap(__boundary_, __other.__boundary_);
     std::swap(__capacity_, __other.__capacity_);
     std::__swap_allocator(__alloc_, __other.__alloc_);
+  }
+
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
+  void __swap_layouts(_SplitBuffer& __other) _NOEXCEPT {
+    __other.__swap_layouts(__begin_, __boundary_, __capacity_);
+  }
+
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI
+  void __move_layout(__vector_layout& __other) _NOEXCEPT {
+    __begin_ = __other.__begin_;
+    __boundary_ = __other.__boundary_;
+    __capacity_ = __other.__capacity_;
+
+    __other.__begin_ = nullptr;
+    __other.__boundary_ = {};
+    __other.__capacity_ = {};
   }
 
   // The following member functions must be implemented per vector layout.

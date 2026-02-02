@@ -98,9 +98,11 @@ class vector : __vector_layout<_Tp, _Allocator> {
   using __base_type::__capacity_representation;
   using __base_type::__remaining_capacity;
   using __base_type::__is_full;
+  using __base_type::__move_layout;
   using __base_type::__set_valid_range;
   using __base_type::__set_boundary;
   using __base_type::__set_capacity;
+  using __base_type::__swap_layouts;
 public:
   //
   // Types
@@ -689,7 +691,7 @@ private:
     return std::__make_bounded_iter(
         std::__wrap_iter<pointer>(__p),
         std::__wrap_iter<pointer>(this->__begin_ptr()),
-        std::__wrap_iter<pointer>(__capacity_representation()));
+        std::__wrap_iter<pointer>(this->__capacity_ptr()));
 #else
     return iterator(__p);
 #endif // _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
@@ -701,7 +703,7 @@ private:
     return std::__make_bounded_iter(
         std::__wrap_iter<const_pointer>(__p),
         std::__wrap_iter<const_pointer>(this->__begin_ptr()),
-        std::__wrap_iter<const_pointer>(__capacity_representation()));
+        std::__wrap_iter<const_pointer>(this->__capacity_ptr()));
 #else
     return const_iterator(__p);
 #endif // _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
@@ -831,23 +833,6 @@ private:
   static _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI _LIBCPP_NO_CFI pointer
   __add_alignment_assumption(_Ptr __p) _NOEXCEPT {
     return __p;
-  }
-
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
-  __swap_layouts(_SplitBuffer& __sb) {
-    auto __vector_begin    = __begin_ptr();
-    auto __vector_boundary = __boundary_representation();
-    auto __vector_cap      = __capacity_representation();
-
-    auto __sb_begin    = __sb.begin();
-    auto __sb_sentinel = __sb.__raw_sentinel();
-    auto __sb_cap      = __sb.__raw_capacity();
-
-    __set_valid_range(__sb_begin, __sb_sentinel);
-    __set_capacity(__sb_cap);
-
-    __sb.__set_valid_range(__vector_begin, __vector_boundary);
-    __sb.__set_capacity(__vector_cap);
   }
 };
 
@@ -1004,10 +989,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 inline _LIBCPP_HIDE_FROM_ABI
 vector<_Tp, _Allocator>::vector(vector&& __x, const __type_identity_t<allocator_type>& __a)
     : __base_type(__a) {
   if (__a == __x.__alloc()) {
-    __set_valid_range(__x.__begin_ptr(), __x.__boundary_representation());
-    __set_capacity(__x.__capacity_representation());
-    __x.__set_valid_range(nullptr, static_cast<size_type>(0));
-    __x.__set_capacity(static_cast<size_type>(0));
+    __move_layout(static_cast<__base_type&>(__x));
   } else {
     typedef move_iterator<iterator> _Ip;
     __init_with_size(_Ip(__x.begin()), _Ip(__x.end()), __x.size());
@@ -1029,10 +1011,7 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__move_assign(vector
     _NOEXCEPT_(is_nothrow_move_assignable<allocator_type>::value) {
   __vdeallocate();
   __move_assign_alloc(__c); // this can throw
-  __set_valid_range(__c.__begin_ptr(), __c.__boundary_representation());
-  __set_capacity(__c.__capacity_representation());
-  __c.__set_valid_range(nullptr, static_cast<size_type>(0));
-  __c.__set_capacity(static_cast<size_type>(0));
+  __move_layout(static_cast<__base_type&>(__c));
 }
 
 template <class _Tp, class _Allocator>
