@@ -7,7 +7,7 @@
 // RUN:  .text : { *(.text) *(.rodata.foo) } \
 // RUN:  .rodata : { *(.rodata.bar) } \
 // RUN: }" > %t.lds
-// RUN: not ld.lld -T%t.lds %t.o -o /dev/null --execute-only 2>&1 | FileCheck %s
+// RUN: not ld.lld -T%t.lds %t.o -o /dev/null --execute-only 2>&1 | FileCheck %s --implicit-check-not=error:
 
 // RUN: echo "SECTIONS \
 // RUN: { \
@@ -16,7 +16,7 @@
 // RUN: }" > %t.lds
 // RUN: ld.lld -T%t.lds %t.o -o %t -execute-only 2>&1
 
-// CHECK: cannot place {{.*}}:(.rodata.foo) into .text: --execute-only does not support intermingling data and code
+// CHECK: error: cannot place {{.*}}:(.rodata.foo) into .text: --execute-only does not support intermingling data and code
 
     br lr
 
