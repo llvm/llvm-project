@@ -638,6 +638,31 @@ subroutine test_cache_nested_derived_type()
 ! CHECK: acc.yield
 end subroutine
 
+! Test cache with allocatable component in combined construct
+! CHECK-LABEL: func.func @_QPtest_cache_combined_allocatable(
+subroutine test_cache_combined_allocatable(data, C, M)
+  type :: dt
+    real, dimension(:), allocatable :: A
+  end type
+
+  type(dt), intent(inout) :: data
+  real, dimension(:), intent(out) :: C
+  integer, intent(in) :: M
+  integer :: i
+
+  !$acc parallel loop gang vector copyin(data, data%A(-3:M+4)) copyout(C(1:M))
+  do i = 1, M
+    !$acc cache(data%A(i-4:i+4))
+    C(i) = data%A(i)
+  end do
+
+! CHECK: acc.parallel {{.*}} {
+! CHECK: acc.loop
+! CHECK: acc.cache varPtr(%{{.*}}) bounds(%{{.*}}) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {name = "data%a(i-4_4:i+4_4)", structured = false}
+! CHECK: hlfir.declare %{{.*}} {uniq_name = "data%a(i-4_4:i+4_4)"}
+! CHECK: acc.yield
+end subroutine
+
 ! Test cache with temporary in designator bounds - verifies local statement context
 ! doesn't cause issues with temporary cleanup
 ! CHECK-LABEL: func.func @_QPtest_cache_temp_in_designator(
