@@ -20,6 +20,7 @@ declare nofpclass(inf sub norm pzero) float @returns_nzero_or_nan()
 declare nofpclass(inf sub norm nan nzero) float @returns_pzero()
 declare nofpclass(inf sub norm nzero) float @returns_pzero_or_nan()
 declare nofpclass(inf norm sub zero) float @returns_nan()
+declare nofpclass(qnan inf norm sub zero) float @returns_snan()
 
 declare nofpclass(ninf norm sub zero nan) float @returns_pinf()
 declare nofpclass(ninf norm sub zero) float @returns_pinf_or_nan()
@@ -2144,6 +2145,33 @@ define nofpclass(snan) float @cannot_fold_negative_or_zero__positive_or_zero_1__
   %must.be.negative.or.zero = call float @returns_negative_or_zero()
   %result = call float @llvm.minimum.f32(float %must.be.positive.or.zero, float %must.be.negative.or.zero)
   store float %result, ptr %ptr
+  ret float %result
+}
+
+
+define nofpclass(snan) float @qnan_result_demands_snan_lhs(i1 %cond, float %unknown0, float %unknown1) {
+; CHECK-LABEL: define nofpclass(snan) float @qnan_result_demands_snan_lhs(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN0:%.*]], float [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[SNAN:%.*]] = call float @returns_snan()
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.minimum.f32(float [[UNKNOWN0]], float [[UNKNOWN1]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %snan = call float @returns_snan()
+  %select = select i1 %cond, float %snan, float %unknown0
+  %result = call float @llvm.minimum.f32(float %select, float %unknown1)
+  ret float %result
+}
+
+define nofpclass(snan) float @qnan_result_demands_snan_rhs(i1 %cond, float %unknown0, float %unknown1) {
+; CHECK-LABEL: define nofpclass(snan) float @qnan_result_demands_snan_rhs(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN0:%.*]], float [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[SNAN:%.*]] = call float @returns_snan()
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.minimum.f32(float [[UNKNOWN1]], float [[UNKNOWN0]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %snan = call float @returns_snan()
+  %select = select i1 %cond, float %snan, float %unknown0
+  %result = call float @llvm.minimum.f32(float %unknown1, float %select)
   ret float %result
 }
 
