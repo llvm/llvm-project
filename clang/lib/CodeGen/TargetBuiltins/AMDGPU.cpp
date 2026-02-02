@@ -12,6 +12,7 @@
 
 #include "CGBuiltin.h"
 #include "CodeGenFunction.h"
+#include "TargetInfo.h"
 #include "clang/Basic/DiagnosticFrontend.h"
 #include "clang/Basic/SyncScope.h"
 #include "clang/Basic/TargetBuiltins.h"
@@ -21,6 +22,7 @@
 #include "llvm/IR/IntrinsicsR600.h"
 #include "llvm/IR/MemoryModelRelaxationAnnotations.h"
 #include "llvm/Support/AMDGPUAddrSpace.h"
+#include "llvm/Support/AtomicOrdering.h"
 
 using namespace clang;
 using namespace CodeGen;
@@ -272,6 +274,26 @@ static inline StringRef mapScopeToSPIRV(StringRef AMDGCNScope) {
   return AMDGCNScope;
 }
 
+static llvm::AtomicOrdering mapCABIAtomicOrdering(unsigned AO) {
+  // Map C11/C++11 memory ordering to LLVM memory ordering
+  assert(llvm::isValidAtomicOrderingCABI(AO));
+  switch (static_cast<llvm::AtomicOrderingCABI>(AO)) {
+  case llvm::AtomicOrderingCABI::acquire:
+  case llvm::AtomicOrderingCABI::consume:
+    return llvm::AtomicOrdering::Acquire;
+    break;
+  case llvm::AtomicOrderingCABI::release:
+    return llvm::AtomicOrdering::Release;
+  case llvm::AtomicOrderingCABI::acq_rel:
+    return llvm::AtomicOrdering::AcquireRelease;
+  case llvm::AtomicOrderingCABI::seq_cst:
+    return llvm::AtomicOrdering::SequentiallyConsistent;
+  case llvm::AtomicOrderingCABI::relaxed:
+    return llvm::AtomicOrdering::Monotonic;
+  }
+  llvm_unreachable("unknown CABI Ordering");
+}
+
 // For processing memory ordering and memory scope arguments of various
 // amdgcn builtins.
 // \p Order takes a C++11 compatible memory-ordering specifier and converts
@@ -284,25 +306,7 @@ void CodeGenFunction::ProcessOrderScopeAMDGCN(Value *Order, Value *Scope,
   int ord = cast<llvm::ConstantInt>(Order)->getZExtValue();
 
   // Map C11/C++11 memory ordering to LLVM memory ordering
-  assert(llvm::isValidAtomicOrderingCABI(ord));
-  switch (static_cast<llvm::AtomicOrderingCABI>(ord)) {
-  case llvm::AtomicOrderingCABI::acquire:
-  case llvm::AtomicOrderingCABI::consume:
-    AO = llvm::AtomicOrdering::Acquire;
-    break;
-  case llvm::AtomicOrderingCABI::release:
-    AO = llvm::AtomicOrdering::Release;
-    break;
-  case llvm::AtomicOrderingCABI::acq_rel:
-    AO = llvm::AtomicOrdering::AcquireRelease;
-    break;
-  case llvm::AtomicOrderingCABI::seq_cst:
-    AO = llvm::AtomicOrdering::SequentiallyConsistent;
-    break;
-  case llvm::AtomicOrderingCABI::relaxed:
-    AO = llvm::AtomicOrdering::Monotonic;
-    break;
-  }
+  AO = mapCABIAtomicOrdering(ord);
 
   // Some of the atomic builtins take the scope as a string name.
   StringRef scp;
@@ -364,33 +368,6 @@ void CodeGenFunction::AddAMDGPUFenceAddressSpaceMMRA(llvm::Instruction *Inst,
   llvm::sort(MMRAs);
   MMRAs.erase(llvm::unique(MMRAs), MMRAs.end());
   Inst->setMetadata(LLVMContext::MD_mmra, MMRAMetadata::getMD(Ctx, MMRAs));
-}
-
-static StringRef getSyncscopeIDAsString(llvm::LLVMContext &Ctx,
-                                        clang::SyncScope Scope) {
-  switch (Scope) {
-  case clang::SyncScope::HIPSingleThread:
-  case clang::SyncScope::SingleScope:
-    return "singlethread";
-  case clang::SyncScope::HIPWavefront:
-  case clang::SyncScope::OpenCLSubGroup:
-  case clang::SyncScope::WavefrontScope:
-    return "wavefront";
-  case clang::SyncScope::HIPCluster:
-  case clang::SyncScope::ClusterScope:
-  case clang::SyncScope::HIPWorkgroup:
-  case clang::SyncScope::OpenCLWorkGroup:
-  case clang::SyncScope::WorkgroupScope:
-    return "workgroup";
-  case clang::SyncScope::HIPAgent:
-  case clang::SyncScope::OpenCLDevice:
-  case clang::SyncScope::DeviceScope:
-    return "agent";
-  case clang::SyncScope::SystemScope:
-  case clang::SyncScope::HIPSystem:
-  case clang::SyncScope::OpenCLAllSVMDevices:
-    return "";
-  }
 }
 
 static Intrinsic::ID getIntrinsicIDforWaveReduction(unsigned BuiltinID) {
@@ -848,16 +825,21 @@ Value *CodeGenFunction::EmitAMDGPUBuiltinExpr(unsigned BuiltinID,
     LLVMContext &Ctx = CGM.getLLVMContext();
     llvm::Type *LoadTy = ConvertType(E->getType());
     llvm::Value *Addr = EmitScalarExpr(E->getArg(0));
-    llvm::Value *AO = EmitScalarExpr(E->getArg(1));
 
-    auto *Scope = dyn_cast<llvm::ConstantInt>(EmitScalarExpr(E->getArg(2)));
-    StringRef ScopeStr = getSyncscopeIDAsString(
-        Ctx, static_cast<clang::SyncScope>(Scope->getZExtValue()));
+    auto *AOExpr = cast<llvm::ConstantInt>(EmitScalarExpr(E->getArg(1)));
+    auto *ScopeExpr = cast<llvm::ConstantInt>(EmitScalarExpr(E->getArg(2)));
+
+    auto Scope = static_cast<SyncScope>(ScopeExpr->getZExtValue());
+    llvm::AtomicOrdering AO = mapCABIAtomicOrdering(AOExpr->getZExtValue());
+
+    std::string ScopeStr = CGM.getTargetCodeGenInfo().getLLVMSyncScopeStr(
+        CGM.getLangOpts(), Scope, AO);
+
     llvm::MDNode *MD =
         llvm::MDNode::get(Ctx, {llvm::MDString::get(Ctx, ScopeStr)});
     llvm::Value *ScopeMD = llvm::MetadataAsValue::get(Ctx, MD);
     llvm::Function *F = CGM.getIntrinsic(IID, {LoadTy});
-    return Builder.CreateCall(F, {Addr, AO, ScopeMD});
+    return Builder.CreateCall(F, {Addr, AOExpr, ScopeMD});
   }
   case AMDGPU::BI__builtin_amdgcn_cluster_load_b32:
   case AMDGPU::BI__builtin_amdgcn_cluster_load_b64:

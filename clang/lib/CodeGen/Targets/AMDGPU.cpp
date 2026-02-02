@@ -310,10 +310,8 @@ public:
   }
   LangAS getGlobalVarAddressSpace(CodeGenModule &CGM,
                                   const VarDecl *D) const override;
-  llvm::SyncScope::ID getLLVMSyncScopeID(const LangOptions &LangOpts,
-                                         SyncScope Scope,
-                                         llvm::AtomicOrdering Ordering,
-                                         llvm::LLVMContext &Ctx) const override;
+  std::string getLLVMSyncScopeStr(const LangOptions &LangOpts, SyncScope Scope,
+                                  llvm::AtomicOrdering Ordering) const override;
   void setTargetAtomicMetadata(CodeGenFunction &CGF,
                                llvm::Instruction &AtomicInst,
                                const AtomicExpr *Expr = nullptr) const override;
@@ -493,11 +491,9 @@ AMDGPUTargetCodeGenInfo::getGlobalVarAddressSpace(CodeGenModule &CGM,
   return DefaultGlobalAS;
 }
 
-llvm::SyncScope::ID
-AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
-                                            SyncScope Scope,
-                                            llvm::AtomicOrdering Ordering,
-                                            llvm::LLVMContext &Ctx) const {
+std::string AMDGPUTargetCodeGenInfo::getLLVMSyncScopeStr(
+    const LangOptions &LangOpts, SyncScope Scope,
+    llvm::AtomicOrdering Ordering) const {
   std::string Name;
   switch (Scope) {
   case SyncScope::HIPSingleThread:
@@ -541,7 +537,7 @@ AMDGPUTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &LangOpts,
     Name = Twine(Twine(Name) + Twine("one-as")).str();
   }
 
-  return Ctx.getOrInsertSyncScopeID(Name);
+  return Name;
 }
 
 void AMDGPUTargetCodeGenInfo::setTargetAtomicMetadata(

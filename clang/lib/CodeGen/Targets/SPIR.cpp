@@ -131,42 +131,13 @@ public:
                                   const VarDecl *D) const override;
   void setTargetAttributes(const Decl *D, llvm::GlobalValue *GV,
                            CodeGen::CodeGenModule &M) const override;
-  llvm::SyncScope::ID getLLVMSyncScopeID(const LangOptions &LangOpts,
-                                         SyncScope Scope,
-                                         llvm::AtomicOrdering Ordering,
-                                         llvm::LLVMContext &Ctx) const override;
+  std::string getLLVMSyncScopeStr(const LangOptions &LangOpts, SyncScope Scope,
+                                  llvm::AtomicOrdering Ordering) const override;
   bool supportsLibCall() const override {
     return getABIInfo().getTarget().getTriple().getVendor() !=
            llvm::Triple::AMD;
   }
 };
-
-inline StringRef mapClangSyncScopeToLLVM(SyncScope Scope) {
-  switch (Scope) {
-  case SyncScope::HIPSingleThread:
-  case SyncScope::SingleScope:
-    return "singlethread";
-  case SyncScope::HIPWavefront:
-  case SyncScope::OpenCLSubGroup:
-  case SyncScope::WavefrontScope:
-    return "subgroup";
-  case SyncScope::HIPCluster:
-  case SyncScope::ClusterScope:
-  case SyncScope::HIPWorkgroup:
-  case SyncScope::OpenCLWorkGroup:
-  case SyncScope::WorkgroupScope:
-    return "workgroup";
-  case SyncScope::HIPAgent:
-  case SyncScope::OpenCLDevice:
-  case SyncScope::DeviceScope:
-    return "device";
-  case SyncScope::SystemScope:
-  case SyncScope::HIPSystem:
-  case SyncScope::OpenCLAllSVMDevices:
-    return "";
-  }
-  return "";
-}
 } // End anonymous namespace.
 
 void CommonSPIRABIInfo::setCCs() {
@@ -563,11 +534,32 @@ void SPIRVTargetCodeGenInfo::setTargetAttributes(
                  llvm::MDNode::get(M.getLLVMContext(), AttrMDArgs));
 }
 
-llvm::SyncScope::ID
-SPIRVTargetCodeGenInfo::getLLVMSyncScopeID(const LangOptions &, SyncScope Scope,
-                                           llvm::AtomicOrdering,
-                                           llvm::LLVMContext &Ctx) const {
-  return Ctx.getOrInsertSyncScopeID(mapClangSyncScopeToLLVM(Scope));
+std::string SPIRVTargetCodeGenInfo::getLLVMSyncScopeStr(
+    const LangOptions &, SyncScope Scope, llvm::AtomicOrdering) const {
+  switch (Scope) {
+  case SyncScope::HIPSingleThread:
+  case SyncScope::SingleScope:
+    return "singlethread";
+  case SyncScope::HIPWavefront:
+  case SyncScope::OpenCLSubGroup:
+  case SyncScope::WavefrontScope:
+    return "subgroup";
+  case SyncScope::HIPCluster:
+  case SyncScope::ClusterScope:
+  case SyncScope::HIPWorkgroup:
+  case SyncScope::OpenCLWorkGroup:
+  case SyncScope::WorkgroupScope:
+    return "workgroup";
+  case SyncScope::HIPAgent:
+  case SyncScope::OpenCLDevice:
+  case SyncScope::DeviceScope:
+    return "device";
+  case SyncScope::SystemScope:
+  case SyncScope::HIPSystem:
+  case SyncScope::OpenCLAllSVMDevices:
+    return "";
+  }
+  return "";
 }
 
 /// Construct a SPIR-V target extension type for the given OpenCL image type.

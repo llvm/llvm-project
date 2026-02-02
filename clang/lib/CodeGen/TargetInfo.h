@@ -326,11 +326,16 @@ public:
     return LangAS::Default;
   }
 
-  /// Get the syncscope used in LLVM IR.
-  virtual llvm::SyncScope::ID getLLVMSyncScopeID(const LangOptions &LangOpts,
-                                                 SyncScope Scope,
-                                                 llvm::AtomicOrdering Ordering,
-                                                 llvm::LLVMContext &Ctx) const;
+  /// Get the syncscope used in LLVM IR as a string
+  virtual std::string getLLVMSyncScopeStr(const LangOptions &LangOpts,
+                                          SyncScope Scope,
+                                          llvm::AtomicOrdering Ordering) const;
+
+  /// Get the syncscope used in LLVM IR as a SyncScope ID.
+  llvm::SyncScope::ID getLLVMSyncScopeID(const LangOptions &LangOpts,
+                                         SyncScope Scope,
+                                         llvm::AtomicOrdering Ordering,
+                                         llvm::LLVMContext &Ctx) const;
 
   /// Allow the target to apply other metadata to an atomic instruction
   virtual void setTargetAtomicMetadata(CodeGenFunction &CGF,
