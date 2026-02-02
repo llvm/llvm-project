@@ -11,7 +11,7 @@ namespace std {
 
 struct task {
   struct promise_type {
-    auto initial_suspend() { return std::suspend_always{}; }
+    auto initial_suspend() noexcept { return std::suspend_always{}; }
     auto final_suspend() noexcept { return std::suspend_always{}; }
     auto get_return_object() { return task{}; }
     void unhandled_exception() {}
@@ -30,7 +30,7 @@ task f() {
 struct generator {
     struct promise_type {
         generator get_return_object();
-        std::suspend_always initial_suspend();
+        std::suspend_always initial_suspend() noexcept;
         std::suspend_always final_suspend() noexcept;
         void return_void();
         [[noreturn]] void unhandled_exception();

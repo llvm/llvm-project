@@ -8,7 +8,7 @@ public:
   class invoker_promise {
   public:
     invoker get_return_object() { return invoker{}; }
-    auto initial_suspend() { return std::suspend_never{}; }
+    auto initial_suspend() noexcept { return std::suspend_never{}; }
     auto final_suspend() noexcept { return std::suspend_never{}; }
     void return_void() {}
     void unhandled_exception() {}
