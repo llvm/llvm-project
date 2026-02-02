@@ -307,7 +307,14 @@ public:
 FunctionPass *createX86PartialReductionLegacyPass();
 
 /// // Analyzes and emits pseudos to support Win x64 Unwind V2.
-FunctionPass *createX86WinEHUnwindV2Pass();
+class X86WinEHUnwindV2Pass : public PassInfoMixin<X86WinEHUnwindV2Pass> {
+public:
+  X86WinEHUnwindV2Pass() = default;
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86WinEHUnwindV2LegacyPass();
 
 /// The pass transforms load/store <256 x i32> to AMX load/store intrinsics
 /// or split the data to two <128 x i32>.
@@ -427,7 +434,7 @@ void initializeX86SpeculativeExecutionSideEffectSuppressionLegacyPass(
 void initializeX86SpeculativeLoadHardeningLegacyPass(PassRegistry &);
 void initializeX86SuppressAPXForRelocationLegacyPass(PassRegistry &);
 void initializeX86TileConfigLegacyPass(PassRegistry &);
-void initializeX86WinEHUnwindV2Pass(PassRegistry &);
+void initializeX86WinEHUnwindV2LegacyPass(PassRegistry &);
 void initializeX86PreLegalizerCombinerPass(PassRegistry &);
 
 namespace X86AS {

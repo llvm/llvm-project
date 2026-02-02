@@ -106,7 +106,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86FixupVectorConstantsLegacyPass(PR);
   initializeX86DynAllocaExpanderLegacyPass(PR);
   initializeX86SuppressAPXForRelocationLegacyPass(PR);
-  initializeX86WinEHUnwindV2Pass(PR);
+  initializeX86WinEHUnwindV2LegacyPass(PR);
   initializeX86PreLegalizerCombinerPass(PR);
 }
 
@@ -631,7 +631,7 @@ void X86PassConfig::addPreEmitPass2() {
   // Analyzes and emits pseudos to support Win x64 Unwind V2. This pass must run
   // after all real instructions have been added to the epilog.
   if (TT.isOSWindows() && TT.isX86_64())
-    addPass(createX86WinEHUnwindV2Pass());
+    addPass(createX86WinEHUnwindV2LegacyPass());
 }
 
 bool X86PassConfig::addPostFastRegAllocRewrite() {
