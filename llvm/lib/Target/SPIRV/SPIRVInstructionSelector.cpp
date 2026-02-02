@@ -1429,8 +1429,7 @@ bool SPIRVInstructionSelector::selectSincos(Register ResVReg,
         createVirtualRegister(PointerType, &GR, MRI, MRI->getMF());
 
     auto It = getOpVariableMBBIt(I);
-    BuildMI(*It->getParent(), It, It->getDebugLoc(),
-            TII.get(SPIRV::OpVariable))
+    BuildMI(*It->getParent(), It, It->getDebugLoc(), TII.get(SPIRV::OpVariable))
         .addDef(PointerVReg)
         .addUse(GR.getSPIRVTypeID(PointerType))
         .addImm(static_cast<uint32_t>(SPIRV::StorageClass::Function))
