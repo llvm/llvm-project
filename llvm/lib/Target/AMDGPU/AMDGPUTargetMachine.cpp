@@ -266,7 +266,7 @@ static cl::opt<RegAllocType, false, RegAllocTypeParser> WWMRegAllocNPM(
 static Error checkRegAllocSupported(RegAllocType RAType, StringRef RegName) {
   if (RAType == RegAllocType::Basic || RAType == RegAllocType::PBQP) {
     return make_error<StringError>(
-        Twine("Unsupported register allocator '") +
+        Twine("unsupported register allocator '") +
             (RAType == RegAllocType::Basic ? "basic" : "pbqp") + "' for " +
             RegName + " registers",
         inconvertibleErrorCode());
@@ -276,21 +276,23 @@ static Error checkRegAllocSupported(RegAllocType RAType, StringRef RegName) {
 
 Error AMDGPUCodeGenPassBuilder::validateRegAllocOptions() const {
   // 1. Generic --regalloc-npm is not supported for AMDGPU.
-  if (Opt.RegAlloc != RegAllocType::Unset)
+  if (Opt.RegAlloc != RegAllocType::Unset) {
     return make_error<StringError>(
         "-regalloc-npm not supported for amdgcn. Use -sgpr-regalloc-npm, "
         "-vgpr-regalloc-npm, and -wwm-regalloc-npm",
         inconvertibleErrorCode());
+  }
 
   // 2. Legacy PM regalloc options are not compatible with NPM.
   if (SGPRRegAlloc.getNumOccurrences() > 0 ||
       VGPRRegAlloc.getNumOccurrences() > 0 ||
-      WWMRegAlloc.getNumOccurrences() > 0)
+      WWMRegAlloc.getNumOccurrences() > 0) {
     return make_error<StringError>(
         "-sgpr-regalloc, -vgpr-regalloc, and -wwm-regalloc are legacy PM "
         "options. Use -sgpr-regalloc-npm, -vgpr-regalloc-npm, and "
         "-wwm-regalloc-npm with the new pass manager",
         inconvertibleErrorCode());
+  }
 
   // 3. Only Fast and Greedy allocators are supported for AMDGPU.
   if (auto Err = checkRegAllocSupported(SGPRRegAllocNPM, "SGPR"))

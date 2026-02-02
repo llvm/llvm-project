@@ -53,8 +53,8 @@
 # NPM-MIXED: greedy<vgpr>
 
 # Error messages for unsupported allocators.
-# ERR-BASIC: Unsupported register allocator 'basic' for SGPR registers
-# ERR-PBQP: Unsupported register allocator 'pbqp' for VGPR registers
+# ERR-BASIC: unsupported register allocator 'basic' for SGPR registers
+# ERR-PBQP: unsupported register allocator 'pbqp' for VGPR registers
 
 # Error message for legacy PM options with NPM.
 # ERR-LEGACY: -sgpr-regalloc, -vgpr-regalloc, and -wwm-regalloc are legacy PM options
