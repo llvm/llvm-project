@@ -1207,8 +1207,9 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   // unrolling from interfering with the user requested transformation.
   if (hasUnrollAndJamTransformation(L) == TM_ForcedByUser &&
       hasUnrollTransformation(L) != TM_ForcedByUser) {
-    LLVM_DEBUG(dbgs().indent(1)
-               << "Not unrolling loop since it has llvm.loop.unroll_and_jam.\n");
+    LLVM_DEBUG(
+        dbgs().indent(1)
+        << "Not unrolling loop since it has llvm.loop.unroll_and_jam.\n");
     return LoopUnrollResult::Unmodified;
   }
 
@@ -1255,7 +1256,8 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
     UP.Threshold = std::max(UP.Threshold, LoopSize + 1);
 
   if (UCE.NumInlineCandidates != 0) {
-    LLVM_DEBUG(dbgs().indent(1) << "Not unrolling loop with inlinable calls.\n");
+    LLVM_DEBUG(dbgs().indent(1)
+               << "Not unrolling loop with inlinable calls.\n");
     return LoopUnrollResult::Unmodified;
   }
 
