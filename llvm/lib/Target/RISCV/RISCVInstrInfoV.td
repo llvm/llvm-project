@@ -1683,12 +1683,18 @@ def VID_V : RVInstVUnary<0b010100, 0b10001, OPMVV, (outs VR:$vd),
 let vm = 1 in {
 def VMV_X_S : RVInstVUnaryRd<0b010000, 0b00000, OPMVV, (outs GPR:$rd),
                              (ins VR:$vs2), "vmv.x.s", "$rd, $vs2">,
-              Sched<[WriteVMovXS, ReadVMovXS]>;
-let RVVConstraint = NoConstraint, Constraints = "$vd = $vd_wb" in
-def VMV_S_X : RVInstV2<0b010000, 0b00000, OPMVX, (outs VR:$vd_wb),
-                      (ins VR:$vd, GPR:$rs1), "vmv.s.x", "$vd, $rs1">,
-              Sched<[WriteVMovSX, ReadVMovSX_V, ReadVMovSX_X]>;
+              Sched<[WriteVMovXS, ReadVMovXS]> {
+  let Uses = [VTYPE];
 }
+def VMV_S_X : RVInstVX<0b010000, OPMVX, (outs VR:$vd_wb),
+                      (ins VR:$vd, GPR:$rs1), "vmv.s.x", "$vd, $rs1">,
+              Sched<[WriteVMovSX, ReadVMovSX_V, ReadVMovSX_X]> {
+  let vs2 = 0;
+
+  let Constraints = "$vd = $vd_wb";
+  let RVVConstraint = NoConstraint;
+}
+} // vm = 1
 
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
@@ -1700,11 +1706,17 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0, vm = 1 in {
 // Floating-Point Scalar Move Instructions
 def VFMV_F_S : RVInstVUnaryRd<0b010000, 0b00000, OPFVV, (outs FPR32:$rd),
                               (ins VR:$vs2), "vfmv.f.s", "$rd, $vs2">,
-               Sched<[WriteVMovFS, ReadVMovFS]>;
-let RVVConstraint = NoConstraint, Constraints = "$vd = $vd_wb" in
-def VFMV_S_F : RVInstV2<0b010000, 0b00000, OPFVF, (outs VR:$vd_wb),
+               Sched<[WriteVMovFS, ReadVMovFS]> {
+  let Uses = [VTYPE];
+}
+def VFMV_S_F : RVInstVX<0b010000, OPFVF, (outs VR:$vd_wb),
                        (ins VR:$vd, FPR32:$rs1), "vfmv.s.f", "$vd, $rs1">,
-               Sched<[WriteVMovSF, ReadVMovSF_V, ReadVMovSF_F]>;
+               Sched<[WriteVMovSF, ReadVMovSF_V, ReadVMovSF_F]> {
+  let vs2 = 0;
+
+  let Constraints = "$vd = $vd_wb";
+  let RVVConstraint = NoConstraint;
+}
 
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0, vm = 1
 

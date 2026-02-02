@@ -333,16 +333,16 @@ static void convertModuleFlagsOp(ArrayAttr flags, llvm::IRBuilderBase &builder,
   for (auto flagAttr : flags.getAsRange<ModuleFlagAttr>()) {
     llvm::Metadata *valueMetadata =
         llvm::TypeSwitch<Attribute, llvm::Metadata *>(flagAttr.getValue())
-            .Case<StringAttr>([&](auto strAttr) {
+            .Case([&](StringAttr strAttr) {
               return llvm::MDString::get(builder.getContext(),
                                          strAttr.getValue());
             })
-            .Case<IntegerAttr>([&](auto intAttr) {
+            .Case([&](IntegerAttr intAttr) {
               return llvm::ConstantAsMetadata::get(llvm::ConstantInt::get(
                   llvm::Type::getInt32Ty(builder.getContext()),
                   intAttr.getInt()));
             })
-            .Case<ArrayAttr>([&](auto arrayAttr) {
+            .Case([&](ArrayAttr arrayAttr) {
               return convertModuleFlagValue(flagAttr.getKey().getValue(),
                                             arrayAttr, builder,
                                             moduleTranslation);
@@ -421,12 +421,40 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
       call->addFnAttr(llvm::Attribute::NoUnwind);
     if (callOp.getWillReturnAttr())
       call->addFnAttr(llvm::Attribute::WillReturn);
+    if (callOp.getNoreturnAttr())
+      call->addFnAttr(llvm::Attribute::NoReturn);
+    if (callOp.getReturnsTwiceAttr())
+      call->addFnAttr(llvm::Attribute::ReturnsTwice);
+    if (callOp.getColdAttr())
+      call->addFnAttr(llvm::Attribute::Cold);
+    if (callOp.getHotAttr())
+      call->addFnAttr(llvm::Attribute::Hot);
+    if (callOp.getNoduplicateAttr())
+      call->addFnAttr(llvm::Attribute::NoDuplicate);
     if (callOp.getNoInlineAttr())
       call->addFnAttr(llvm::Attribute::NoInline);
     if (callOp.getAlwaysInlineAttr())
       call->addFnAttr(llvm::Attribute::AlwaysInline);
     if (callOp.getInlineHintAttr())
       call->addFnAttr(llvm::Attribute::InlineHint);
+    if (callOp.getNoCallerSavedRegistersAttr())
+      call->addFnAttr(llvm::Attribute::get(moduleTranslation.getLLVMContext(),
+                                           "no_caller_saved_registers"));
+    if (callOp.getNocallbackAttr())
+      call->addFnAttr(llvm::Attribute::NoCallback);
+    if (StringAttr modFormat = callOp.getModularFormatAttr())
+      call->addFnAttr(llvm::Attribute::get(moduleTranslation.getLLVMContext(),
+                                           "modular-format",
+                                           modFormat.getValue()));
+
+    if (ArrayAttr noBuiltins = callOp.getNobuiltinsAttr()) {
+      if (noBuiltins.empty())
+        call->addFnAttr(llvm::Attribute::get(moduleTranslation.getLLVMContext(),
+                                             "no-builtins"));
+
+      moduleTranslation.convertFunctionArrayAttr(
+          noBuiltins, call, ModuleTranslation::convertNoBuiltin);
+    }
 
     if (failed(moduleTranslation.convertArgAndResultAttrs(callOp, call)))
       return failure();

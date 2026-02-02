@@ -120,15 +120,6 @@ class RVInstVX<bits<6> funct6, RISCVVFormat opv, dag outs, dag ins,
   let Inst{19-15} = rs1;
 }
 
-class RVInstV2<bits<6> funct6, bits<5> vs2, RISCVVFormat opv, dag outs, dag ins,
-                string opcodestr, string argstr>
-    : RVInstVBase<funct6, opv, outs, ins, opcodestr, argstr> {
-  bits<5> rs1;
-
-  let Inst{24-20} = vs2;
-  let Inst{19-15} = rs1;
-}
-
 class RVInstIVI<bits<6> funct6, dag outs, dag ins, string opcodestr,
                 string argstr>
     : RVInstVBase<funct6, OPIVI, outs, ins, opcodestr, argstr> {
