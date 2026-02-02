@@ -7873,8 +7873,7 @@ SDValue AArch64TargetLowering::LowerFMUL(SDValue Op, SelectionDAG &DAG) const {
                                     : Intrinsic::aarch64_neon_bfmlalt);
 
   EVT AccVT = UseSVEBFMLAL ? MVT::nxv4f32 : MVT::v4f32;
-  bool IgnoreZeroSign =
-      Op->getFlags().hasNoSignedZeros() || DAG.canIgnoreSignBitOfZero(Op);
+  bool IgnoreZeroSign = DAG.canIgnoreSignBitOfZero(Op);
   SDValue Zero = DAG.getConstantFP(IgnoreZeroSign ? +0.0F : -0.0F, DL, AccVT);
   SDValue Pg = getPredicateForVector(DAG, DL, AccVT);
 
@@ -20011,7 +20010,8 @@ static SDValue performBuildShuffleExtendCombine(SDValue BV, SelectionDAG &DAG) {
   // Shuffle inputs are vector, limit to SIGN_EXTEND/ZERO_EXTEND/ANY_EXTEND to
   // ensure calculatePreExtendType will work without issue.
   if (BV.getOpcode() == ISD::VECTOR_SHUFFLE &&
-      ExtendOpcode != ISD::SIGN_EXTEND && ExtendOpcode != ISD::ZERO_EXTEND)
+      ExtendOpcode != ISD::SIGN_EXTEND && ExtendOpcode != ISD::ZERO_EXTEND &&
+      ExtendOpcode != ISD::ANY_EXTEND)
     return SDValue();
 
   // Restrict valid pre-extend data type
@@ -20030,8 +20030,8 @@ static SDValue performBuildShuffleExtendCombine(SDValue BV, SelectionDAG &DAG) {
       return SDValue();
 
     unsigned Opc = Op.getOpcode();
-    if (BV.getOpcode() == ISD::VECTOR_SHUFFLE &&
-        (Opc != ISD::SIGN_EXTEND && Opc != ISD::ZERO_EXTEND))
+    if (BV.getOpcode() == ISD::VECTOR_SHUFFLE && Opc != ISD::SIGN_EXTEND &&
+        Opc != ISD::ZERO_EXTEND && Opc != ISD::ANY_EXTEND)
       return SDValue();
 
     if (Opc == ISD::ANY_EXTEND)
