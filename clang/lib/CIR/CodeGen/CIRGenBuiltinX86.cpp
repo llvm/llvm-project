@@ -201,20 +201,19 @@ static mlir::Value emitX86CompressExpand(CIRGenBuilderTy &builder,
 static mlir::Value
 emitEncodeKey(mlir::MLIRContext *context, CIRGenBuilderTy &builder,
               const mlir::Location &location, mlir::ValueRange inputOperands,
-              mlir::Value &outputOperand, std::uint8_t vecOutputCount,
+              mlir::Value outputOperand, std::uint8_t vecOutputCount,
               const std::string &intrinsicName) {
   cir::VectorType resVector = cir::VectorType::get(builder.getUInt64Ty(), 2);
-  auto membersRng = llvm::concat<mlir::Type>(
-      llvm::SmallVector<mlir::Type>{builder.getUInt32Ty()},
-      llvm::SmallVector<mlir::Type>(vecOutputCount, resVector));
-  cir::RecordType resRecord =
-      cir::RecordType::get(context, llvm::to_vector(membersRng), false, false,
-                           cir::RecordType::RecordKind::Struct);
+  llvm::SmallVector<mlir::Type> members{builder.getUInt32Ty()};
+  llvm::append_range(members,
+                     llvm::SmallVector<mlir::Type>(vecOutputCount, resVector));
+  cir::RecordType resRecord = cir::RecordType::get(
+      context, members, false, false, cir::RecordType::RecordKind::Struct);
 
   mlir::Value outputPtr =
       builder.createBitcast(outputOperand, cir::PointerType::get(resVector));
-  mlir::Value call = emitIntrinsicCallOp(builder, location, intrinsicName,
-                                         resRecord, inputOperands);
+  mlir::Value call = builder.emitIntrinsicCallOp(location, intrinsicName,
+                                                 resRecord, inputOperands);
   for (std::size_t i = 0; i < inputOperands.size() + 1; ++i) {
     mlir::Value vecValue =
         cir::ExtractMemberOp::create(builder, location, call, i + 1);
