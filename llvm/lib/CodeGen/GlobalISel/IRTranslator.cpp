@@ -889,7 +889,7 @@ bool IRTranslator::emitJumpTableHeader(SwitchCG::JumpTable &JT,
   auto Cst = getOrCreateVReg(
       *ConstantInt::get(SValue.getType(), JTH.Last - JTH.First));
   Cst = MIB.buildZExtOrTrunc(PtrScalarTy, Cst).getReg(0);
-  auto Cmp = MIB.buildICmp(CmpInst::ICMP_UGT, LLT::scalar(1), Sub, Cst);
+  auto Cmp = MIB.buildICmp(CmpInst::ICMP_UGT, LLT::integer(1), Sub, Cst);
 
   auto BrCond = MIB.buildBrCond(Cmp.getReg(0), *JT.Default);
 
@@ -920,7 +920,7 @@ void IRTranslator::emitSwitchCase(SwitchCG::CaseBlock &CB,
     return;
   }
 
-  const LLT i1Ty = LLT::scalar(1);
+  const LLT i1Ty = LLT::integer(1);
   // Build the compare.
   if (!CB.CmpMHS) {
     const auto *CI = dyn_cast<ConstantInt>(CB.CmpRHS);
@@ -1132,7 +1132,7 @@ void IRTranslator::emitBitTestHeader(SwitchCG::BitTestBlock &B,
   if (!B.FallthroughUnreachable) {
     // Conditional branch to the default block.
     auto RangeCst = MIB.buildConstant(SwitchOpTy, B.Range);
-    auto RangeCmp = MIB.buildICmp(CmpInst::Predicate::ICMP_UGT, LLT::scalar(1),
+    auto RangeCmp = MIB.buildICmp(CmpInst::Predicate::ICMP_UGT, LLT::integer(1),
                                   RangeSub, RangeCst);
     MIB.buildBrCond(RangeCmp, *B.Default);
   }
@@ -1158,15 +1158,16 @@ void IRTranslator::emitBitTestCase(SwitchCG::BitTestBlock &BB,
     // would need to be to shift a 1 bit in that position.
     auto MaskTrailingZeros =
         MIB.buildConstant(SwitchTy, llvm::countr_zero(B.Mask));
-    Cmp =
-        MIB.buildICmp(ICmpInst::ICMP_EQ, LLT::scalar(1), Reg, MaskTrailingZeros)
-            .getReg(0);
+    Cmp = MIB.buildICmp(ICmpInst::ICMP_EQ, LLT::integer(1), Reg,
+                        MaskTrailingZeros)
+              .getReg(0);
   } else if (PopCount == BB.Range) {
     // There is only one zero bit in the range, test for it directly.
     auto MaskTrailingOnes =
         MIB.buildConstant(SwitchTy, llvm::countr_one(B.Mask));
-    Cmp = MIB.buildICmp(CmpInst::ICMP_NE, LLT::scalar(1), Reg, MaskTrailingOnes)
-              .getReg(0);
+    Cmp =
+        MIB.buildICmp(CmpInst::ICMP_NE, LLT::integer(1), Reg, MaskTrailingOnes)
+            .getReg(0);
   } else {
     // Make desired shift.
     auto CstOne = MIB.buildConstant(SwitchTy, 1);
@@ -1176,7 +1177,7 @@ void IRTranslator::emitBitTestCase(SwitchCG::BitTestBlock &BB,
     auto CstMask = MIB.buildConstant(SwitchTy, B.Mask);
     auto AndOp = MIB.buildAnd(SwitchTy, SwitchVal, CstMask);
     auto CstZero = MIB.buildConstant(SwitchTy, 0);
-    Cmp = MIB.buildICmp(CmpInst::ICMP_NE, LLT::scalar(1), AndOp, CstZero)
+    Cmp = MIB.buildICmp(CmpInst::ICMP_NE, LLT::integer(1), AndOp, CstZero)
               .getReg(0);
   }
 
@@ -1723,7 +1724,7 @@ bool IRTranslator::translateMemFunc(const CallInst &CI,
     SrcRegs.push_back(SrcReg);
   }
 
-  LLT SizeTy = LLT::scalar(MinPtrSize);
+  LLT SizeTy = LLT::integer(MinPtrSize);
 
   // The size operand should be the minimum of the pointer sizes.
   Register &SizeOpReg = SrcRegs[SrcRegs.size() - 1];
@@ -3255,7 +3256,8 @@ bool IRTranslator::translateInsertElement(const User &U,
   if (!Idx)
     Idx = getOrCreateVReg(*U.getOperand(2));
   if (MRI->getType(Idx).getSizeInBits() != PreferredVecIdxWidth) {
-    const LLT VecIdxTy = LLT::scalar(PreferredVecIdxWidth);
+    const LLT VecIdxTy =
+        MRI->getType(Idx).changeElementSize(PreferredVecIdxWidth);
     Idx = MIRBuilder.buildZExtOrTrunc(VecIdxTy, Idx).getReg(0);
   }
   MIRBuilder.buildInsertVectorElement(Res, Val, Elt, Idx);
@@ -3336,7 +3338,8 @@ bool IRTranslator::translateExtractElement(const User &U,
   if (!Idx)
     Idx = getOrCreateVReg(*U.getOperand(1));
   if (MRI->getType(Idx).getSizeInBits() != PreferredVecIdxWidth) {
-    const LLT VecIdxTy = LLT::scalar(PreferredVecIdxWidth);
+    const LLT VecIdxTy =
+        MRI->getType(Idx).changeElementSize(PreferredVecIdxWidth);
     Idx = MIRBuilder.buildZExtOrTrunc(VecIdxTy, Idx).getReg(0);
   }
   MIRBuilder.buildExtractVectorElement(Res, Val, Idx);
@@ -4061,7 +4064,7 @@ bool IRTranslator::emitSPDescriptorParent(StackProtectorDescriptor &SPD,
 
   // Perform the comparison.
   auto Cmp =
-      CurBuilder->buildICmp(CmpInst::ICMP_NE, LLT::scalar(1), Guard, GuardVal);
+      CurBuilder->buildICmp(CmpInst::ICMP_NE, LLT::integer(1), Guard, GuardVal);
   // If the guard/stackslot do not equal, branch to failure MBB.
   CurBuilder->buildBrCond(Cmp, *SPD.getFailureMBB());
   // Otherwise branch to success MBB.
