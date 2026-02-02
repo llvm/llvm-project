@@ -190,20 +190,20 @@ def TuneFusionLogicImmReg
 //   add(w) rd, rd, rs3
 def TuneFusionMulAdd
   : SimpleFusion<"fusion-mul-add", "HasFusionMulAdd",
-           "Enable MUL+ADD macrofusion",
-           CheckOpcode<[MUL, MULW]>,
-           CheckOpcode<[ADD, ADDW]>,
-           epilog = [
-             // Check that both instructions have the same width
-             FusionPredicateWithCode<[{
-               if ((FirstMI->getDesc().TSFlags & RISCVII::IsSignExtendingOpWMask) !=
-                   (SecondMI.getDesc().TSFlags & RISCVII::IsSignExtendingOpWMask))
-                 return false;
-             }]>,
-             SecondFusionPredicateWithMCInstPredicate<
-               CheckNot<CheckSameRegOperand<0, 2>>
-             >
-           ]>;
+                 "Enable MUL+ADD macrofusion",
+                 CheckOpcode<[MUL, MULW]>,
+                 CheckOpcode<[ADD, ADDW]>,
+                 epilog = [
+                   // Check that both instructions have the same width
+                   FusionPredicateWithCode<[{
+                     if ((FirstMI->getDesc().TSFlags & RISCVII::IsSignExtendingOpWMask) !=
+                         (SecondMI.getDesc().TSFlags & RISCVII::IsSignExtendingOpWMask))
+                       return false;
+                   }]>,
+                   SecondFusionPredicateWithMCInstPredicate<
+                     CheckNot<CheckSameRegOperand<0, 2>>
+                   >
+                 ]>;
 
 // Fuse add with load or store with zero offset:
 //   add rd, rs1, rs2
@@ -236,21 +236,22 @@ def TuneFusionAddMem
 //   where imm1 <= imm2
 def TuneFusionShiftBitExtract
   : SimpleFusion<"fusion-shift-bit-extract", "HasFusionShiftBitExtract",
-           "Enable SLLI+SRLI/SRAI macrofusion",
-           CheckOpcode<ShiftLeft>,
-           CheckOpcode<ShiftRight>,
-           epilog = [
-             // Check that both instructions have the same width
-             FusionPredicateWithCode<[{
-               if ((FirstMI->getDesc().TSFlags & RISCVII::IsSignExtendingOpWMask) !=
-                   (SecondMI.getDesc().TSFlags & RISCVII::IsSignExtendingOpWMask))
-                 return false;
-             }]>,
-             // Check that FirstMI's immediate <= SecondMI's immediate
-             FusionPredicateWithCode<[{
-               if (!(FirstMI->getOperand(2).isImm() &&
-                     SecondMI.getOperand(2).isImm() &&
-                     FirstMI->getOperand(2).getImm() <= SecondMI.getOperand(2).getImm()))
-                 return false;
-             }]>,
-           ]>;
+                 "Enable SLLI+SRLI/SRAI macrofusion",
+                 CheckOpcode<ShiftLeft>,
+                 CheckOpcode<ShiftRight>,
+                 epilog = [
+                   // Check that both instructions have the same width
+                   FusionPredicateWithCode<[{
+                     if ((FirstMI->getDesc().TSFlags & RISCVII::IsSignExtendingOpWMask) !=
+                         (SecondMI.getDesc().TSFlags & RISCVII::IsSignExtendingOpWMask))
+                       return false;
+                   }]>,
+                   // Check that FirstMI's immediate <= SecondMI's immediate
+                   FusionPredicateWithCode<[{
+                     if (!(FirstMI->getOperand(2).isImm() &&
+                           SecondMI.getOperand(2).isImm() &&
+                           FirstMI->getOperand(2).getImm() <=
+                           SecondMI.getOperand(2).getImm()))
+                       return false;
+                   }]>,
+                 ]>;
