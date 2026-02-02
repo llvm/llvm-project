@@ -247,11 +247,10 @@ def ApplyUnrollMultiReductionPatternsOp : Op<Transform_Dialect,
     "apply_patterns.vector.unroll_multi_reduction",
     [DeclareOpInterfaceMethods<PatternDescriptorOpInterface>]> {
   let description = [{
-    Unrolls vector.multi_reduction operations by progressively reducing rank
-    along the outermost dimension.
-
-    This is an alternative to the flattening-based lowering that preserves
-    the n-D structure during progressive lowering.
+    Populates patterns that unroll vector.multi_reduction operations by
+    progressively reducing rank. Terminal cases lower to either:
+    - vector.reduction (for 1-D reductions), or
+    - elementwise arith ops (when outermost dim is the only reduction dim).
   }];
 
   let arguments = (ins DefaultValuedAttr<VectorMultiReductionLoweringAttr,
