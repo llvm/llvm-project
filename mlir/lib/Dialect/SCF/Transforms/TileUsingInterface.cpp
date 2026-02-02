@@ -1509,6 +1509,14 @@ FailureOr<SmallVector<Operation *>> mlir::scf::yieldReplacementForFusedProducer(
     auto tilableOp = cast<TilingInterface>(originalOwner);
     // b. get iterDomain Offset and Sizes based on sliceOp tile
     SmallVector<OpFoldResult> iterDomainOffset, iterDomainSizes;
+    // Set insertion point before any operations that might create new SSA
+    // values used in offset/size computations. This ensures all values created
+    // by getIterationDomainTileFromResultTile and getResultTilePosition
+    // dominate the extract_slice operations created later.
+    if (auto tiledDestStyleOp =
+            dyn_cast<DestinationStyleOpInterface>(tiledOwner)) {
+      rewriter.setInsertionPoint(tiledDestStyleOp);
+    }
     // skip tensor.pack/unpack/pad, which expects single opResult
     if (tilableOp->getNumResults() > 1 &&
         failed(tilableOp.getIterationDomainTileFromResultTile(
@@ -1550,7 +1558,6 @@ FailureOr<SmallVector<Operation *>> mlir::scf::yieldReplacementForFusedProducer(
     // necessary
     if (auto tiledDestStyleOp =
             dyn_cast<DestinationStyleOpInterface>(tiledOwner)) {
-      rewriter.setInsertionPoint(tiledDestStyleOp);
       for (const auto &&[index, newRegionArg] :
            llvm::enumerate(newRegionIterArgs)) {
         auto destSlice = tensor::ExtractSliceOp::create(
