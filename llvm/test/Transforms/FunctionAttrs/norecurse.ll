@@ -27,6 +27,7 @@ define i32 @self_rec() {
 ; ATTRIBUTOR: Function Attrs: nofree nosync nounwind memory(none)
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@self_rec
 ; ATTRIBUTOR-SAME: () #[[ATTR1:[0-9]+]] {
+; ATTRIBUTOR-NEXT:    [[A:%.*]] = call i32 @self_rec() #[[ATTR1]]
 ; ATTRIBUTOR-NEXT:    ret i32 4
 ;
   %a = call i32 @self_rec()
@@ -116,7 +117,7 @@ define internal i32 @called_by_norecurse() {
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@called_by_norecurse
 ; ATTRIBUTOR-SAME: () #[[ATTR6:[0-9]+]] {
 ; ATTRIBUTOR-NEXT:    [[A:%.*]] = call i32 @k() #[[ATTR7]]
-; ATTRIBUTOR-NEXT:    ret i32 undef
+; ATTRIBUTOR-NEXT:    ret i32 [[A]]
 ;
   %a = call i32 @k()
   ret i32 %a
@@ -150,7 +151,7 @@ define internal i32 @called_by_norecurse_indirectly() {
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@called_by_norecurse_indirectly
 ; ATTRIBUTOR-SAME: () #[[ATTR6]] {
 ; ATTRIBUTOR-NEXT:    [[A:%.*]] = call i32 @k() #[[ATTR7]]
-; ATTRIBUTOR-NEXT:    ret i32 undef
+; ATTRIBUTOR-NEXT:    ret i32 [[A]]
 ;
   %a = call i32 @k()
   ret i32 %a
@@ -217,7 +218,7 @@ define internal void @q() {
 ; ATTRIBUTOR: Function Attrs: norecurse nosync memory(none)
 ; ATTRIBUTOR-LABEL: define {{[^@]+}}@q
 ; ATTRIBUTOR-SAME: () #[[ATTR6]] {
-; ATTRIBUTOR-NEXT:    [[A:%.*]] = call i32 @escapes_as_parameter(ptr nofree nonnull readnone captures(none) undef) #[[ATTR2]]
+; ATTRIBUTOR-NEXT:    [[A:%.*]] = call i32 @escapes_as_parameter(ptr nofree nonnull readnone captures(none) @escapes_as_parameter) #[[ATTR2]]
 ; ATTRIBUTOR-NEXT:    ret void
 ;
   %a = call i32 @escapes_as_parameter(ptr @escapes_as_parameter)

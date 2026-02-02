@@ -204,6 +204,7 @@ define i32 @volatile_load(ptr %0) norecurse nounwind uwtable {
 }
 
 ; CHECK: Function Attrs: noinline nosync nounwind uwtable
+; CHECK-NEXT: declare void @nosync_function()
 declare void @nosync_function() noinline nounwind uwtable nosync
 
 define void @call_nosync_function() nounwind uwtable noinline {
@@ -217,6 +218,7 @@ define void @call_nosync_function() nounwind uwtable noinline {
 }
 
 ; CHECK: Function Attrs: noinline nounwind uwtable
+; CHECK-NEXT: declare void @might_sync()
 declare void @might_sync() noinline nounwind uwtable
 
 define void @call_might_sync() nounwind uwtable noinline {
@@ -278,6 +280,7 @@ define void @convergent_readnone(){
 }
 
 ; CHECK: Function Attrs: nounwind
+; CHECK-NEXT: declare void @llvm.x86.sse2.clflush(ptr)
 declare void @llvm.x86.sse2.clflush(ptr)
 @a = common global i32 0, align 4
 
