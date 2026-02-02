@@ -308,7 +308,8 @@ private:
 
 class EvaluateExpressionOptions {
 public:
-    EvaluateExpressionOptions() : m_language_options_sp(std::make_shared<StructuredData::Dictionary>()) {}
+  EvaluateExpressionOptions()
+      : m_language_options_sp(std::make_shared<StructuredData::Dictionary>()) {}
 
 // MSVC has a bug here that reports C4268: 'const' static/global data
 // initialized with compiler generated default constructor fills the object
@@ -505,13 +506,13 @@ public:
 
 private:
   const StructuredData::Dictionary &GetLanguageOptions() const {
-    assert (m_language_options_sp);
+    assert(m_language_options_sp);
 
     return *m_language_options_sp;
   }
 
   StructuredData::Dictionary &GetLanguageOptions() {
-    assert (m_language_options_sp);
+    assert(m_language_options_sp);
 
     return *m_language_options_sp;
   }

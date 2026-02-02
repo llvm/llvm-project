@@ -256,17 +256,19 @@ void SBExpressionOptions::SetAllowJIT(bool allow) {
                                         : eExecutionPolicyNever);
 }
 
-bool SBExpressionOptions::GetLanguageOptionAsBoolean(const char *option_name) const {
+bool SBExpressionOptions::GetLanguageOptionAsBoolean(
+    const char *option_name) const {
   LLDB_INSTRUMENT_VA(this, option_name);
 
   return m_opaque_up->GetLanguageOptionAsBoolean(option_name);
 }
 
-void SBExpressionOptions::SetLanguageOption(const char *option_name, bool value) {
+void SBExpressionOptions::SetLanguageOption(const char *option_name,
+                                            bool value) {
   LLDB_INSTRUMENT_VA(this, option_name, value);
 
   m_opaque_up->SetLanguageOption(option_name, value);
- }
+}
 
 EvaluateExpressionOptions *SBExpressionOptions::get() const {
   return m_opaque_up.get();

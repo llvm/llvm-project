@@ -109,7 +109,7 @@ public:
   void SetAllowJIT(bool allow);
 
   bool GetLanguageOptionAsBoolean(const char *option_name) const;
- 
+
   void SetLanguageOption(const char *option_name, bool value);
 
 protected:
