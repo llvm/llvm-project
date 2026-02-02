@@ -272,8 +272,8 @@ unsigned DWARFVerifier::verifyUnitContents(DWARFUnit &Unit,
     if (Die.hasChildren()) {
       if (Die.getFirstChild().isValid() &&
           Die.getFirstChild().getTag() == DW_TAG_null) {
-        warn() << dwarf::TagString(Die.getTag())
-               << " has DW_CHILDREN_yes but DIE has no children: ";
+        warn() << formatv("{0} has DW_CHILDREN_yes but DIE has no children: ",
+                          dwarf::TagString(Die.getTag()));
         Die.dump(OS);
       }
     }
@@ -292,8 +292,8 @@ unsigned DWARFVerifier::verifyUnitContents(DWARFUnit &Unit,
 
   if (!dwarf::isUnitType(Die.getTag())) {
     ErrorCategory.Report("Compilation unit root DIE is not a unit DIE", [&]() {
-      error() << "Compilation unit root DIE is not a unit DIE: "
-              << dwarf::TagString(Die.getTag()) << ".\n";
+      error() << formatv("Compilation unit root DIE is not a unit DIE: {0}.\n",
+                         dwarf::TagString(Die.getTag()));
     });
     NumUnitErrors++;
   }
@@ -301,9 +301,9 @@ unsigned DWARFVerifier::verifyUnitContents(DWARFUnit &Unit,
   uint8_t UnitType = Unit.getUnitType();
   if (!DWARFUnit::isMatchingUnitTypeAndTag(UnitType, Die.getTag())) {
     ErrorCategory.Report("Mismatched unit type", [&]() {
-      error() << "Compilation unit type (" << dwarf::UnitTypeString(UnitType)
-              << ") and root DIE (" << dwarf::TagString(Die.getTag())
-              << ") do not match.\n";
+      error() << formatv(
+          "Compilation unit type ({0}) and root DIE ({1}) do not match.\n",
+          dwarf::UnitTypeString(UnitType), dwarf::TagString(Die.getTag()));
     });
     NumUnitErrors++;
   }
@@ -389,8 +389,9 @@ unsigned DWARFVerifier::verifyAbbrevSection(const DWARFDebugAbbrev *Abbrev) {
       if (!Result.second) {
         ErrorCategory.Report(
             "Abbreviation declartion contains multiple attributes", [&]() {
-              error() << "Abbreviation declaration contains multiple "
-                      << AttributeString(Attribute.Attr) << " attributes.\n";
+              error() << formatv("Abbreviation declaration contains multiple "
+                                 "{0} attributes.\n",
+                                 AttributeString(Attribute.Attr));
               AbbrDecl.dump(OS);
             });
         ++NumErrors;
@@ -418,10 +419,11 @@ unsigned DWARFVerifier::verifyUnits(const DWARFUnitVector &Units) {
   ReferenceMap CrossUnitReferences;
 
   unsigned Index = 1;
+
   for (const auto &Unit : Units) {
-    OS << "Verifying unit: " << Index << " / " << Units.getNumUnits();
+    OS << formatv("Verifying unit: {0} / {1}\n", Index, Units.getNumUnits());
     if (const char* Name = Unit->getUnitDIE(true).getShortName())
-      OS << ", \"" << Name << '\"';
+      OS << formatv(", \"{0}\"", Name);
     OS << '\n';
     OS.flush();
     ReferenceMap UnitLocalReferences;
@@ -600,7 +602,7 @@ unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
       if (!Range.valid()) {
         ++NumErrors;
         ErrorCategory.Report("Invalid address range", [&]() {
-          error() << "Invalid address range " << Range << "\n";
+          error() << formatv("Invalid address range {0}\n", Range);
           DumpDieAfterError = true;
         });
         continue;
@@ -615,8 +617,9 @@ unsigned DWARFVerifier::verifyDieRanges(const DWARFDie &Die,
       if (auto PrevRange = RI.insert(Range)) {
         ++NumErrors;
         ErrorCategory.Report("DIE has overlapping DW_AT_ranges", [&]() {
-          error() << "DIE has overlapping ranges in DW_AT_ranges attribute: "
-                  << *PrevRange << " and " << Range << '\n';
+          error() << formatv("DIE has overlapping ranges in DW_AT_ranges "
+                             "attribute: {0} and {1}\n",
+                             *PrevRange, Range);
           DumpDieAfterError = true;
         });
       }
@@ -693,7 +696,7 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
   auto ReportError = [&](StringRef category, const Twine &TitleMsg) {
     ++NumErrors;
     ErrorCategory.Report(category, [&]() {
-      error() << TitleMsg << '\n';
+      error() << formatv("{0}\n", TitleMsg);
       dump(Die) << '\n';
     });
   };
@@ -785,11 +788,10 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
       if (DieTag == DW_TAG_GNU_call_site && RefTag == DW_TAG_subprogram)
         break;
       ReportError("Incompatible DW_AT_abstract_origin tag reference",
-                  "DIE with tag " + TagString(DieTag) + " has " +
-                      AttributeString(Attr) +
-                      " that points to DIE with "
-                      "incompatible tag " +
-                      TagString(RefTag));
+                  formatv("DIE with tag {0} has {1} that points to DIE with "
+                          "incompatible tag {2}",
+                          TagString(DieTag), AttributeString(Attr),
+                          TagString(RefTag)));
     }
     break;
   }
@@ -797,8 +799,8 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
     DWARFDie TypeDie = Die.getAttributeValueAsReferencedDie(DW_AT_type);
     if (TypeDie && !isType(TypeDie.getTag())) {
       ReportError("Incompatible DW_AT_type attribute tag",
-                  "DIE has " + AttributeString(Attr) +
-                      " with incompatible tag " + TagString(TypeDie.getTag()));
+                  formatv("DIE has {0} with incompatible tag {1}",
+                          AttributeString(Attr), TagString(TypeDie.getTag())));
     }
     break;
   }
@@ -847,7 +849,7 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
       ReportError(
           Attr == DW_AT_call_line ? "Invalid file index in DW_AT_decl_line"
                                   : "Invalid file index in DW_AT_call_line",
-          "DIE has " + AttributeString(Attr) + " with invalid encoding");
+          formatv("DIE has {0} with invalid encoding", AttributeString(Attr)));
     }
     break;
   }
@@ -1003,7 +1005,7 @@ unsigned DWARFVerifier::verifyDebugInfoForm(const DWARFDie &Die,
       ++NumErrors;
       std::string ErrMsg = toString(std::move(E));
       ErrorCategory.Report("Invalid DW_FORM attribute", [&]() {
-        error() << ErrMsg << ":\n";
+        error() << formatv("{0}:\n", ErrMsg);
         dump(Die) << '\n';
       });
     }
@@ -2310,7 +2312,7 @@ bool DWARFVerifier::verifyDebugStrOffsets(
   if (Error E = C.takeError()) {
     std::string Msg = toString(std::move(E));
     ErrorCategory.Report("String offset error", [&]() {
-      error() << SectionName << ": " << Msg << '\n';
+      error() << formatv("{0}: {1}\n", SectionName, Msg);
       return false;
     });
   }
@@ -2357,7 +2359,7 @@ void DWARFVerifier::summarize() {
   if (DumpOpts.ShowAggregateErrors && ErrorCategory.GetNumCategories()) {
     error() << "Aggregated error counts:\n";
     ErrorCategory.EnumerateResults([&](StringRef s, unsigned count) {
-      error() << s << " occurred " << count << " time(s).\n";
+      error() << formatv("{0} occurred {1} time(s).\n", s, count);
     });
   }
   if (!DumpOpts.JsonErrSummaryFile.empty()) {
