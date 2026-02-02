@@ -2077,15 +2077,8 @@ LogicalResult CollapseShapeOp::verify() {
                    [](ReassociationIndices group) { return group.empty(); })) {
     return op.emitOpError("reassociation indices must not be empty");
   }
-  auto srcType = llvm::dyn_cast<RankedTensorType>(op.getSrc().getType());
-  if (!srcType)
-    return op.emitOpError("expects ranked tensor source type, but got ")
-           << op.getSrc().getType();
-
-  auto resultType = llvm::dyn_cast<RankedTensorType>(op.getResult().getType());
-  if (!resultType)
-    return op.emitOpError("expects ranked tensor result type, but got ")
-           << op.getResult().getType();
+  auto srcType = llvm::cast<RankedTensorType>(op.getSrc().getType());
+  auto resultType = llvm::cast<RankedTensorType>(op.getResult().getType());
 
   return verifyTensorReshapeOp(op, srcType, resultType);
 }
