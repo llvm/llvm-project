@@ -399,7 +399,9 @@ void AArch64RegisterBankInfo::applyMappingImpl(
   case TargetOpcode::G_INSERT_VECTOR_ELT: {
     // Extend smaller gpr operands to 32 bit.
     Builder.setInsertPt(*MI.getParent(), MI.getIterator());
-    auto Ext = Builder.buildAnyExt(LLT::scalar(32), MI.getOperand(2).getReg());
+    LLT OperandType = MRI.getType(MI.getOperand(2).getReg());
+    auto Ext = Builder.buildAnyExt(OperandType.changeElementSize(32),
+                                   MI.getOperand(2).getReg());
     MRI.setRegBank(Ext.getReg(0), getRegBank(AArch64::GPRRegBankID));
     MI.getOperand(2).setReg(Ext.getReg(0));
     return applyDefaultMapping(OpdMapper);
