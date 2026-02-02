@@ -24,7 +24,7 @@ AArch64GISelUtils::getAArch64VectorSplat(const MachineInstr &MI,
     return std::nullopt;
   Register Src = MI.getOperand(1).getReg();
   if (auto ValAndVReg = getAnyConstantVRegValWithLookThrough(
-          MI.getOperand(1).getReg(), MRI, true, true))
+          Src, MRI, /*LookThroughInstrs=*/true, /*LookThroughAnyExt=*/true))
     return RegOrConstant(ValAndVReg->Value.getSExtValue());
   return RegOrConstant(Src);
 }

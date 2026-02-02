@@ -99,19 +99,26 @@ define dso_local float @float_ret_optnone() optnone noinline {
 define dso_local double @double_ret_optnone() optnone noinline {
 ; CHECK-LABEL: double_ret_optnone:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    adrp x8, .LCPI2_0
-; CHECK-NEXT:    ldr d0, [x8, :lo12:.LCPI2_0]
+; CHECK-NEXT:    mov x8, #-7378697629483820647 // =0x9999999999999999
+; CHECK-NEXT:    movk x8, #39322
+; CHECK-NEXT:    movk x8, #16313, lsl #48
+; CHECK-NEXT:    fmov d0, x8
 ; CHECK-NEXT:    ret
 ;
 ; CHECK-LARGE-LABEL: double_ret_optnone:
 ; CHECK-LARGE:       // %bb.0:
-; CHECK-LARGE-NEXT:    adrp x8, .LCPI2_0
-; CHECK-LARGE-NEXT:    ldr d0, [x8, :lo12:.LCPI2_0]
+; CHECK-LARGE-NEXT:    mov x8, #-7378697629483820647 // =0x9999999999999999
+; CHECK-LARGE-NEXT:    movk x8, #39322
+; CHECK-LARGE-NEXT:    movk x8, #16313, lsl #48
+; CHECK-LARGE-NEXT:    fmov d0, x8
 ; CHECK-LARGE-NEXT:    ret
 ;
 ; CHECK-TINY-LABEL: double_ret_optnone:
 ; CHECK-TINY:       // %bb.0:
-; CHECK-TINY-NEXT:    ldr d0, .LCPI2_0
+; CHECK-TINY-NEXT:    mov x8, #-7378697629483820647 // =0x9999999999999999
+; CHECK-TINY-NEXT:    movk x8, #39322
+; CHECK-TINY-NEXT:    movk x8, #16313, lsl #48
+; CHECK-TINY-NEXT:    fmov d0, x8
 ; CHECK-TINY-NEXT:    ret
 ;
 ; CHECK-NOFP-LABEL: double_ret_optnone:
@@ -136,3 +143,4 @@ define dso_local double @double_ret_optnone() optnone noinline {
 ; CHECK-NOFP-TINY-NEXT:    ret
   ret double 0.1
 }
+

@@ -12,6 +12,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "AArch64RegisterBankInfo.h"
+#include "AArch64ISelLowering.h"
 #include "AArch64RegisterInfo.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64MCTargetDesc.h"
@@ -374,7 +375,7 @@ static bool isLegalFPImm(const MachineInstr &MI, const MachineRegisterInfo &MRI,
   EVT VT = EVT::getFloatingPointVT(Bits);
   bool OptForSize = MI.getMF()->getFunction().hasOptSize() ||
                     MI.getMF()->getFunction().hasMinSize();
-  const TargetLowering *TLI = STI.getTargetLowering();
+  const AArch64TargetLowering *TLI = STI.getTargetLowering();
   return TLI->isFPImmLegal(MI.getOperand(1).getFPImm()->getValueAPF(), VT,
                            OptForSize);
 }
@@ -931,8 +932,8 @@ AArch64RegisterBankInfo::getInstrMapping(const MachineInstr &MI) const {
     break;
   }
   case TargetOpcode::G_FCONSTANT: {
-    if (!isLegalFPImm(MI, MRI, STI) &&
-        MRI.getType(MI.getOperand(0).getReg()).getScalarSizeInBits() != 128) {
+    LLT ImmTy = MRI.getType(MI.getOperand(0).getReg());
+    if (ImmTy.getScalarSizeInBits() != 128 && !isLegalFPImm(MI, MRI, STI)) {
       // Materialize in GPR and rely on later bank copies for FP uses.
       MappingID = CustomMappingID;
       OpRegBankIdx = {PMI_FirstGPR};
