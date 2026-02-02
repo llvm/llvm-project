@@ -49,8 +49,9 @@ struct ForLoopLoweringPattern : public OpRewritePattern<ForOp> {
     SmallVector<Value> initArgs;
     initArgs.push_back(forOp.getLowerBound());
     llvm::append_range(initArgs, forOp.getInitArgs());
-    auto whileOp = WhileOp::create(rewriter, forOp.getLoc(), lcvTypes, initArgs,
-                                   forOp->getAttrs());
+    auto whileOp =
+        WhileOp::create(rewriter, forOp.getLoc(), lcvTypes, initArgs);
+    whileOp->setAttrs(forOp->getAttrDictionary());
 
     // 'before' region contains the loop condition and forwarding of iteration
     // arguments to the 'after' region.
