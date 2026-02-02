@@ -80,7 +80,7 @@ def PseudoMOP_SSPOPCHK : Pseudo<(outs), (ins GPRX1X5:$rs1), []>,
 let Predicates = [HasStdExtZcmop] in {
 let Uses = [X1], hasSideEffects = 1, mayLoad = 0, mayStore = 1 in
 def PseudoMOP_C_SSPUSH : Pseudo<(outs), (ins), []>,
-    PseudoInstExpansion<(C_MOP_1)>;
+    PseudoInstExpansion<(C_SSPUSH X1)>;
 } // Predicates = [HasStdExtZcmop]
 
 //===----------------------------------------------------------------------===/
@@ -91,3 +91,10 @@ let Predicates = [HasStdExtZcmop] in {
 def : CompressPat<(SSPUSH X1), (C_SSPUSH X1)>;
 def : CompressPat<(SSPOPCHK X5), (C_SSPOPCHK X5)>;
 } // Predicates = [HasStdExtZcmop]
+
+// c.mop.1 and c.mop.5 are aliases for c.sspush ra and c.sspopchk t0.
+// Use EmitPriority=0 so disassembler prints c.sspush/c.sspopchk.
+let Predicates = [HasStdExtZcmop], EmitPriority = 0 in {
+def : InstAlias<"c.mop.1", (C_SSPUSH X1)>;
+def : InstAlias<"c.mop.5", (C_SSPOPCHK X5)>;
+} // Predicates = [HasStdExtZcmop], EmitPriority = 0

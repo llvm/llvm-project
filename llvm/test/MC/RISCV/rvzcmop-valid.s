@@ -9,10 +9,9 @@
 # RUN:     | llvm-objdump --mattr=+zcmop -d -r - \
 # RUN:     | FileCheck --check-prefix=CHECK-OBJ %s
 
-# c.mop.1 disassembles as c.sspush ra when Zcmop is enabled
-# (riscv-non-isa/riscv-elf-psabi-doc#474).
+# c.mop.1 is an alias for c.sspush ra.
 # CHECK-OBJ: c.sspush ra
-# CHECK-ASM: c.mop.1
+# CHECK-ASM: c.sspush ra
 # CHECK-ASM: encoding: [0x81,0x60]
 c.mop.1
 
@@ -21,10 +20,9 @@ c.mop.1
 # CHECK-ASM: encoding: [0x81,0x61]
 c.mop.3
 
-# c.mop.5 disassembles as c.sspopchk t0 when Zcmop is enabled
-# (riscv-non-isa/riscv-elf-psabi-doc#474).
+# c.mop.5 is an alias for c.sspopchk t0.
 # CHECK-OBJ: c.sspopchk t0
-# CHECK-ASM: c.mop.5
+# CHECK-ASM: c.sspopchk t0
 # CHECK-ASM: encoding: [0x81,0x62]
 c.mop.5
 
