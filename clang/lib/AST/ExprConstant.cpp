@@ -14619,7 +14619,7 @@ bool MatrixExprEvaluator::VisitInitListExpr(const InitListExpr *E) {
          "of matrix elements");
 
   SmallVector<APValue, 16> Elements;
-  Elements.reserve(NumRows * NumCols);
+  Elements.reserve(MT->getNumElementsFlattened());
 
   // The initializer list elements are stored in column-major order, but APValue
   // stores matrix elements in row-major order. Convert by iterating in
