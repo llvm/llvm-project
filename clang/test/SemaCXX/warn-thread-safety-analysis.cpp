@@ -1,7 +1,7 @@
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=0 %s
 // RUN: %clang_cc1 -fsyntax-only -verify -std=c++11 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=1 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=0 %s
-// RUN: %clang_cc1 -fsyntax-only -verify -std=c++17 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=1 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=0 %s
+// RUN: %clang_cc1 -fsyntax-only -verify -std=c++20 -Wthread-safety -Wthread-safety-pointer -Wthread-safety-beta -Wno-thread-safety-negative -fcxx-exceptions -DUSE_CAPABILITY=1 %s
 
 // FIXME: should also run  %clang_cc1 -fsyntax-only -verify -Wthread-safety -std=c++11 -Wc++98-compat %s
 // FIXME: should also run  %clang_cc1 -fsyntax-only -verify -Wthread-safety %s
@@ -1847,6 +1847,14 @@ struct TestScopedLockable {
     a = b + 1;
     b = a + 1;
   }
+
+#if __cplusplus >= 202002L
+  void rangeForLoopInitializer() {
+    for (MutexLock lock{&mu1}; int& x : (int[]){1, 2, 3}) {
+      a = 42;
+    }
+  }
+#endif
 };
 
 namespace test_function_param_lock_unlock {
@@ -7488,6 +7496,27 @@ void testReassignment() {
   f1.data = 42;           // expected-warning{{writing variable 'data' requires holding mutex 'f1.mu'}} \
                           // expected-note{{found near match 'f2.mu'}}
   ptr->mu.Unlock();
+}
+
+// Alias reassignment through pointer-to-pointer (nor ptr-to-ptr-to-ptr...) does
+// not invalidate aliases for now.
+//
+// While this may result in either false positives or negatives, there's rarely
+// a good reason not to just do direct assignment within the same scope. For the
+// time being, we retain this as a deliberate "escape hatch": specifically, this
+// may be used to help the alias analysis to "see through" complex helper macros
+// that e.g. read a value (such as a pointer) via inline assembly or other
+// opaque helpers.
+void testReassignmentPointerToAlias(Foo *f) {
+  Mutex *mu = &f->mu;
+  // Escape hatch.
+  Mutex **mu_p = &mu;
+  Mutex *actual_mu = [&] { /* ... */ return mu; }();
+  *mu_p = actual_mu;
+
+  mu->Lock();
+  f->data = 42;
+  mu->Unlock();
 }
 
 // Nested field access through pointer

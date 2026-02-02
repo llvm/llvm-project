@@ -333,9 +333,9 @@ static AccelTableKind computeAccelTableKind(unsigned DwarfVersion,
 
 DwarfDebug::DwarfDebug(AsmPrinter *A)
     : DebugHandlerBase(A), DebugLocs(A->OutStreamer->isVerboseAsm()),
-      InfoHolder(A, "info_string", DIEValueAllocator),
       SkeletonHolder(A, "skel_string", DIEValueAllocator),
-      IsDarwin(A->TM.getTargetTriple().isOSDarwin()) {
+      IsDarwin(A->TM.getTargetTriple().isOSDarwin()),
+      InfoHolder(A, "info_string", DIEValueAllocator) {
   const Triple &TT = Asm->TM.getTargetTriple();
 
   // Make sure we know our "debugger tuning".  The target option takes
@@ -614,11 +614,6 @@ static void finishCallSiteParams(ValT Val, const DIExpression *Expr,
   for (auto Param : DescribedParams) {
     bool ShouldCombineExpressions = Expr && Param.Expr->getNumElements() > 0;
 
-    // TODO: Entry value operations can currently not be combined with any
-    // other expressions, so we can't emit call site entries in those cases.
-    if (ShouldCombineExpressions && Expr->isEntryValue())
-      continue;
-
     // If a parameter's call site value is produced by a chain of
     // instructions we may have already created an expression for the
     // parameter when walking through the instructions. Append that to the
@@ -672,6 +667,58 @@ static void interpretValues(const MachineInstr *CurMI,
   const auto &TII = *MF->getSubtarget().getInstrInfo();
   const auto &TLI = *MF->getSubtarget().getTargetLowering();
 
+  // It's possible that we find a copy from a non-volatile register to the param
+  // register, which is clobbered in the meantime. Test for clobbered reg unit
+  // overlaps before completing.
+  auto IsRegClobberedInMeantime = [&](Register Reg) -> bool {
+    for (auto &RegUnit : ClobberedRegUnits)
+      if (TRI.hasRegUnit(Reg, RegUnit))
+        return true;
+    return false;
+  };
+
+  auto DescribeFwdRegsByCalleeSavedCopy = [&](const DestSourcePair &CopyInst) {
+    Register CopyDestReg = CopyInst.Destination->getReg();
+    Register CopySrcReg = CopyInst.Source->getReg();
+    if (IsRegClobberedInMeantime(CopyDestReg))
+      return;
+    // FIXME: This may be incorrect in cases where the caller and callee use
+    // different calling conventions.
+    if (!TRI.isCalleeSavedPhysReg(CopyDestReg, *MF))
+      return;
+    // Describe any forward registers matching the source register. If the
+    // forward register is a sub-register of the source, we describe it using
+    // the corresponding sub-register in the destination, if such a
+    // sub-register exists. The end iterator in the MapVector is invalidated at
+    // erase(), so it needs to be evaluated at each iteration.
+    for (auto FwdRegIt = ForwardedRegWorklist.begin();
+         FwdRegIt != ForwardedRegWorklist.end();) {
+      Register CalleeSavedReg = MCRegister::NoRegister;
+      if (FwdRegIt->first == CopySrcReg)
+        CalleeSavedReg = CopyDestReg;
+      else if (unsigned SubRegIdx =
+                   TRI.getSubRegIndex(CopySrcReg, FwdRegIt->first))
+        if (Register CopyDestSubReg = TRI.getSubReg(CopyDestReg, SubRegIdx))
+          CalleeSavedReg = CopyDestSubReg;
+
+      if (CalleeSavedReg == MCRegister::NoRegister) {
+        ++FwdRegIt;
+        continue;
+      }
+
+      MachineLocation MLoc(CalleeSavedReg, /*Indirect=*/false);
+      finishCallSiteParams(MLoc, EmptyExpr, FwdRegIt->second, Params);
+      FwdRegIt = ForwardedRegWorklist.erase(FwdRegIt);
+    }
+  };
+
+  // Detect if this is a copy instruction. If this saves any of the forward
+  // registers in callee-saved registers, we can finalize those parameters
+  // directly.
+  // TODO: Can we do something similar for stack saves?
+  if (auto CopyInst = TII.isCopyInstr(*CurMI))
+    DescribeFwdRegsByCalleeSavedCopy(*CopyInst);
+
   // If an instruction defines more than one item in the worklist, we may run
   // into situations where a worklist register's value is (potentially)
   // described by the previous value of another register that is also defined
@@ -721,16 +768,6 @@ static void interpretValues(const MachineInstr *CurMI,
     return;
   }
 
-  // It's possible that we find a copy from a non-volatile register to the param
-  // register, which is clobbered in the meantime. Test for clobbered reg unit
-  // overlaps before completing.
-  auto IsRegClobberedInMeantime = [&](Register Reg) -> bool {
-    for (auto &RegUnit : ClobberedRegUnits)
-      if (TRI.hasRegUnit(Reg, RegUnit))
-        return true;
-    return false;
-  };
-
   for (auto ParamFwdReg : FwdRegDefs) {
     if (auto ParamValue = TII.describeLoadedValue(*CurMI, ParamFwdReg)) {
       if (ParamValue->first.isImm()) {
@@ -742,6 +779,8 @@ static void interpretValues(const MachineInstr *CurMI,
         Register SP = TLI.getStackPointerRegisterToSaveRestore();
         Register FP = TRI.getFrameRegister(*MF);
         bool IsSPorFP = (RegLoc == SP) || (RegLoc == FP);
+        // FIXME: This may be incorrect in cases where the caller and callee use
+        // different calling conventions.
         if (!IsRegClobberedInMeantime(RegLoc) &&
             (TRI.isCalleeSavedPhysReg(RegLoc, *MF) || IsSPorFP)) {
           MachineLocation MLoc(RegLoc, /*Indirect=*/IsSPorFP);
@@ -2209,11 +2248,23 @@ void DwarfDebug::beginInstruction(const MachineInstr *MI) {
       Flags |= DWARF2_FLAG_IS_STMT;
   }
 
-  RecordSourceLine(DL, Flags);
+  // Call target-specific source line recording.
+  recordTargetSourceLine(DL, Flags);
 
   // If we're not at line 0, remember this location.
   if (DL.getLine())
     PrevInstLoc = DL;
+}
+
+/// Default implementation of target-specific source line recording.
+void DwarfDebug::recordTargetSourceLine(const DebugLoc &DL, unsigned Flags) {
+  SmallString<128> LocationString;
+  if (Asm->OutStreamer->isVerboseAsm()) {
+    raw_svector_ostream OS(LocationString);
+    DL.print(OS);
+  }
+  recordSourceLine(DL.getLine(), DL.getCol(), DL.getScope(), Flags,
+                   LocationString);
 }
 
 // Returns the position where we should place prologue_end, potentially nullptr,
@@ -2709,6 +2760,9 @@ void DwarfDebug::beginFunctionImpl(const MachineFunction *MF) {
 
   Asm->OutStreamer->getContext().setDwarfCompileUnitID(
       getDwarfCompileUnitIDForLineTable(CU));
+
+  // Call target-specific debug info initialization.
+  initializeTargetDebugInfo(*MF);
 
   // Record beginning of function.
   PrologEndLoc = emitInitialLocDirective(

@@ -1527,9 +1527,15 @@ mlir::Value CIRGenModule::emitMemberPointerConstant(const UnaryOperator *e) {
   const auto *decl = cast<DeclRefExpr>(e->getSubExpr())->getDecl();
 
   // A member function pointer.
-  if (isa<CXXMethodDecl>(decl)) {
-    errorNYI(e->getSourceRange(), "emitMemberPointerConstant: method pointer");
-    return {};
+  if (const auto *methodDecl = dyn_cast<CXXMethodDecl>(decl)) {
+    auto ty = mlir::cast<cir::MethodType>(convertType(e->getType()));
+    if (methodDecl->isVirtual())
+      return cir::ConstantOp::create(
+          builder, loc, getCXXABI().buildVirtualMethodAttr(ty, methodDecl));
+
+    cir::FuncOp methodFuncOp = getAddrOfFunction(methodDecl);
+    return cir::ConstantOp::create(builder, loc,
+                                   builder.getMethodAttr(ty, methodFuncOp));
   }
 
   // Otherwise, a member data pointer.
@@ -2121,6 +2127,35 @@ void CIRGenModule::setTLSMode(mlir::Operation *op, const VarDecl &d) {
   global.setTlsModel(tlm);
 }
 
+void CIRGenModule::setCIRFunctionAttributes(GlobalDecl globalDecl,
+                                            const CIRGenFunctionInfo &info,
+                                            cir::FuncOp func, bool isThunk) {
+  // TODO(cir): More logic of constructAttributeList is needed.
+  cir::CallingConv callingConv;
+  cir::SideEffect sideEffect;
+
+  // TODO(cir): The current list should be initialized with the extra function
+  // attributes, but we don't have those yet.  For now, the PAL is initialized
+  // with nothing.
+  assert(!cir::MissingFeatures::opFuncExtraAttrs());
+  // Initialize PAL with existing attributes to merge attributes.
+  mlir::NamedAttrList pal{};
+  constructAttributeList(func.getName(), info, globalDecl, pal, callingConv,
+                         sideEffect,
+                         /*attrOnCallSite=*/false, isThunk);
+
+  for (mlir::NamedAttribute attr : pal)
+    func->setAttr(attr.getName(), attr.getValue());
+
+  // TODO(cir): Check X86_VectorCall incompatibility wiht WinARM64EC
+
+  // TODO(cir): typically the calling conv is set right here, but since
+  // cir::CallingConv is empty and we've not yet added calling-conv to FuncOop,
+  // this isn't really useful here.  This should call func.setCallingConv/etc
+  // later.
+  assert(!cir::MissingFeatures::opFuncCallingConv());
+}
+
 void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
                                          cir::FuncOp func,
                                          bool isIncompleteFunction,
@@ -2129,7 +2164,11 @@ void CIRGenModule::setFunctionAttributes(GlobalDecl globalDecl,
   // represent them in dedicated ops. The correct attributes are ensured during
   // translation to LLVM. Thus, we don't need to check for them here.
 
-  assert(!cir::MissingFeatures::setFunctionAttributes());
+  if (!isIncompleteFunction)
+    setCIRFunctionAttributes(globalDecl,
+                             getTypes().arrangeGlobalDeclaration(globalDecl),
+                             func, isThunk);
+
   assert(!cir::MissingFeatures::setTargetAttributes());
 
   // TODO(cir): This needs a lot of work to better match CodeGen. That
@@ -2698,6 +2737,26 @@ DiagnosticBuilder CIRGenModule::errorNYI(SourceLocation loc,
 DiagnosticBuilder CIRGenModule::errorNYI(SourceRange loc,
                                          llvm::StringRef feature) {
   return errorNYI(loc.getBegin(), feature) << loc;
+}
+
+void CIRGenModule::error(SourceLocation loc, StringRef error) {
+  unsigned diagID = getDiags().getCustomDiagID(DiagnosticsEngine::Error, "%0");
+  getDiags().Report(astContext.getFullLoc(loc), diagID) << error;
+}
+
+/// Print out an error that codegen doesn't support the specified stmt yet.
+void CIRGenModule::errorUnsupported(const Stmt *s, llvm::StringRef type) {
+  unsigned diagId = diags.getCustomDiagID(DiagnosticsEngine::Error,
+                                          "cannot compile this %0 yet");
+  diags.Report(astContext.getFullLoc(s->getBeginLoc()), diagId)
+      << type << s->getSourceRange();
+}
+
+/// Print out an error that codegen doesn't support the specified decl yet.
+void CIRGenModule::errorUnsupported(const Decl *d, llvm::StringRef type) {
+  unsigned diagId = diags.getCustomDiagID(DiagnosticsEngine::Error,
+                                          "cannot compile this %0 yet");
+  diags.Report(astContext.getFullLoc(d->getLocation()), diagId) << type;
 }
 
 void CIRGenModule::mapBlockAddress(cir::BlockAddrInfoAttr blockInfo,

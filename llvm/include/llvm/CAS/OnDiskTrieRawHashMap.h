@@ -30,6 +30,9 @@ class raw_ostream;
 
 namespace cas {
 
+namespace ondisk {
+class OnDiskCASLogger;
+} // namespace ondisk
 /// OnDiskTrieRawHashMap is a persistent trie data structure used as hash maps.
 /// The keys are fixed length, and are expected to be binary hashes with a
 /// normal distribution.
@@ -219,6 +222,7 @@ public:
   create(const Twine &Path, const Twine &TrieName, size_t NumHashBits,
          uint64_t DataSize, uint64_t MaxFileSize,
          std::optional<uint64_t> NewFileInitialSize,
+         std::shared_ptr<ondisk::OnDiskCASLogger> Logger = nullptr,
          std::optional<size_t> NewTableNumRootBits = std::nullopt,
          std::optional<size_t> NewTableNumSubtrieBits = std::nullopt);
 

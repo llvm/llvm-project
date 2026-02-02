@@ -226,7 +226,7 @@ public:
   bool Pre(const parser::LoopBounds<parser::ScalarName, A> &x) {
     if (!dirContext_.empty() && GetContext().withinConstruct) {
       if (auto *symbol{ResolveAcc(
-              x.name.thing, Symbol::Flag::AccPrivate, currScope())}) {
+              x.Name().thing, Symbol::Flag::AccPrivate, currScope())}) {
         AddToContextObjectWithDSA(*symbol, Symbol::Flag::AccPrivate);
       }
     }
@@ -334,6 +334,20 @@ public:
 
   bool Pre(const parser::AccClause::UseDevice &x) {
     ResolveAccObjectList(x.v, Symbol::Flag::AccUseDevice);
+    // use_device is only valid on host_data directive
+    assert(GetContext().directive == llvm::acc::Directive::ACCD_host_data &&
+        "use_device clause is only valid on host_data directive");
+    // Check for duplicate use_device variables
+    for (const auto &accObject : x.v.v) {
+      if (const auto *designator{
+              std::get_if<parser::Designator>(&accObject.u)}) {
+        if (const auto *name{parser::GetDesignatorNameIfDataRef(*designator)}) {
+          if (name->symbol) {
+            AddUseDeviceObject(*name->symbol, *name);
+          }
+        }
+      }
+    }
     return false;
   }
 
@@ -379,6 +393,13 @@ private:
       const llvm::acc::Clause clause, const parser::AccObjectList &objectList);
   void AddRoutineInfoToSymbol(
       Symbol &, const parser::OpenACCRoutineConstruct &);
+
+  // Track use_device variables and check for duplicates.
+  // Emits an error if the object was already added.
+  void AddUseDeviceObject(const Symbol &, const parser::Name &);
+  void ClearUseDeviceObjects() { useDeviceObjects_.clear(); }
+  UnorderedSymbolSet useDeviceObjects_;
+
   Scope *topScope_;
 };
 
@@ -786,9 +807,9 @@ public:
           }
           if (auto *procRef{
                   parser::Unwrap<parser::ProcComponentRef>(procD->u)}) {
-            if (!procRef->v.thing.component.symbol) {
-              if (!ResolveName(&procRef->v.thing.component)) {
-                createDummyProcSymbol(&procRef->v.thing.component);
+            if (!procRef->v.thing.Component().symbol) {
+              if (!ResolveName(&procRef->v.thing.Component())) {
+                createDummyProcSymbol(&procRef->v.thing.Component());
               }
             }
           }
@@ -1109,9 +1130,9 @@ std::tuple<const parser::Name *, const parser::ScalarExpr *,
 DirectiveAttributeVisitor<T>::GetLoopBounds(const parser::DoConstruct &x) {
   using Bounds = parser::LoopControl::Bounds;
   if (x.GetLoopControl()) {
-    if (const Bounds * b{std::get_if<Bounds>(&x.GetLoopControl()->u)}) {
-      auto &step = b->step;
-      return {&b->name.thing, &b->lower, &b->upper,
+    if (const Bounds *b{std::get_if<Bounds>(&x.GetLoopControl()->u)}) {
+      const auto &step = b->Step();
+      return {&b->Name().thing, &b->Lower(), &b->Upper(),
           step.has_value() ? &step.value() : nullptr};
     }
   } else {
@@ -1185,6 +1206,7 @@ bool AccAttributeVisitor::Pre(const parser::OpenACCBlockConstruct &x) {
     break;
   }
   ClearDataSharingAttributeObjects();
+  ClearUseDeviceObjects();
   return true;
 }
 
@@ -1655,12 +1677,12 @@ void AccAttributeVisitor::CheckAssociatedLoop(
       if (auto *symbol{ResolveAcc(*ivName, flag, currScope())}) {
         if (auto &control{loop->GetLoopControl()}) {
           if (const Bounds * b{std::get_if<Bounds>(&control->u)}) {
-            if (auto lowerExpr{semantics::AnalyzeExpr(context_, b->lower)}) {
+            if (auto lowerExpr{semantics::AnalyzeExpr(context_, b->Lower())}) {
               semantics::UnorderedSymbolSet lowerSyms =
                   evaluate::CollectSymbols(*lowerExpr);
               checkExprHasSymbols(ivs, lowerSyms);
             }
-            if (auto upperExpr{semantics::AnalyzeExpr(context_, b->upper)}) {
+            if (auto upperExpr{semantics::AnalyzeExpr(context_, b->Upper())}) {
               semantics::UnorderedSymbolSet upperSyms =
                   evaluate::CollectSymbols(*upperExpr);
               checkExprHasSymbols(ivs, upperSyms);
@@ -1764,6 +1786,15 @@ Symbol *AccAttributeVisitor::ResolveAccCommonBlockName(
     }
   }
   return nullptr;
+}
+
+void AccAttributeVisitor::AddUseDeviceObject(
+    const Symbol &object, const parser::Name &name) {
+  if (!useDeviceObjects_.insert(object).second) {
+    context_.Say(name.source,
+        "'%s' appears in more than one USE_DEVICE clause on the same HOST_DATA directive"_err_en_US,
+        name.ToString());
+  }
 }
 
 void AccAttributeVisitor::ResolveAccObjectList(

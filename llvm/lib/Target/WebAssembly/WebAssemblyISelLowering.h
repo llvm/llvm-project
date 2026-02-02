@@ -29,17 +29,18 @@ public:
   MVT getPointerTy(const DataLayout &DL, uint32_t AS = 0) const override;
   MVT getPointerMemTy(const DataLayout &DL, uint32_t AS = 0) const override;
 
-  bool softPromoteHalfType() const override { return true; }
-
 private:
   /// Keep a pointer to the WebAssemblySubtarget around so that we can make the
   /// right decision when generating code for different targets.
   const WebAssemblySubtarget *Subtarget;
 
-  AtomicExpansionKind shouldExpandAtomicRMWInIR(AtomicRMWInst *) const override;
+  AtomicExpansionKind
+  shouldExpandAtomicRMWInIR(const AtomicRMWInst *) const override;
   bool shouldScalarizeBinop(SDValue VecOp) const override;
-  FastISel *createFastISel(FunctionLoweringInfo &FuncInfo,
-                           const TargetLibraryInfo *LibInfo) const override;
+  FastISel *
+  createFastISel(FunctionLoweringInfo &FuncInfo,
+                 const TargetLibraryInfo *LibInfo,
+                 const LibcallLoweringInfo *LibcallLowering) const override;
   MVT getScalarShiftAmountTy(const DataLayout &DL, EVT) const override;
   MachineBasicBlock *
   EmitInstrWithCustomInserter(MachineInstr &MI,
@@ -118,6 +119,8 @@ private:
   SDValue LowerAccessVectorElement(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerShift(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerFP_TO_INT_SAT(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFMIN(SDValue Op, SelectionDAG &DAG) const;
+  SDValue LowerFMAX(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerLoad(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerStore(SDValue Op, SelectionDAG &DAG) const;
   SDValue LowerMUL_LOHI(SDValue Op, SelectionDAG &DAG) const;
@@ -132,7 +135,8 @@ private:
 
 namespace WebAssembly {
 FastISel *createFastISel(FunctionLoweringInfo &funcInfo,
-                         const TargetLibraryInfo *libInfo);
+                         const TargetLibraryInfo *libInfo,
+                         const LibcallLoweringInfo *libcallLowering);
 } // end namespace WebAssembly
 
 } // end namespace llvm
