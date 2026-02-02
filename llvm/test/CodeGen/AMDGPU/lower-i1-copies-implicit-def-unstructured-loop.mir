@@ -16,7 +16,7 @@ machineFunctionInfo:
 body:             |
   ; CHECK-LABEL: name: recursive_vreg_1_phi
   ; CHECK: bb.0:
-  ; CHECK-NEXT:   successors: %bb.1(0x{{[0-9a-fA-F]+}})
+  ; CHECK-NEXT:   successors: %bb.1(0x80000000)
   ; CHECK-NEXT:   liveins: $vgpr0, $vgpr1, $vgpr2, $sgpr4_sgpr5, $sgpr6_sgpr7, $sgpr8_sgpr9, $sgpr10_sgpr11, $sgpr14, $sgpr15, $sgpr16
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
@@ -47,23 +47,23 @@ body:             |
   ; CHECK-NEXT:   [[S_MOV_B64_:%[0-9]+]]:sreg_64 = S_MOV_B64 0
   ; CHECK-NEXT:   [[DEF6:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-LABEL: bb.1:
-  ; CHECK-NEXT:   successors: %bb.2(0x{{[0-9a-fA-F]+}}), %bb.3(0x{{[0-9a-fA-F]+}})
+  ; CHECK-NEXT: bb.1:
+  ; CHECK-NEXT:   successors: %bb.2(0x40000000), %bb.3(0x40000000)
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-DAG:   [[PHI:%[0-9]+]]:sreg_64 = PHI [[DEF6]], %bb.0, %31, %bb.3
-  ; CHECK-DAG:   [[PHI1:%[0-9]+]]:sreg_64 = PHI [[S_MOV_B64_]], %bb.0, %54, %bb.3
-  ; CHECK-DAG:   [[PHI2:%[0-9]+]]:sreg_32 = PHI [[S_MOV_B32_3]], %bb.0, %29, %bb.3
-  ; CHECK-DAG:   [[S_MOV_B32_6:%[0-9]+]]:sreg_32 = S_MOV_B32 0
-  ; CHECK-DAG:   [[S_ANDN2_B64_:%[0-9]+]]:sreg_64 = S_ANDN2_B64 [[PHI]], $exec, implicit-def $scc
-  ; CHECK-DAG:   [[COPY6:%[0-9]+]]:sreg_64 = COPY [[S_ANDN2_B64_]]
-  ; CHECK-DAG:   S_CMP_EQ_U32 [[PHI2]], killed [[S_MOV_B32_6]], implicit-def $scc
-  ; CHECK-DAG:   [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 -1
-  ; CHECK-DAG:   [[DEF7:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; CHECK-NEXT:   [[PHI:%[0-9]+]]:sreg_64 = PHI [[DEF6]], %bb.0, %31, %bb.3
+  ; CHECK-NEXT:   [[PHI1:%[0-9]+]]:sreg_64 = PHI [[S_MOV_B64_]], %bb.0, %54, %bb.3
+  ; CHECK-NEXT:   [[PHI2:%[0-9]+]]:sreg_32 = PHI [[S_MOV_B32_3]], %bb.0, %29, %bb.3
+  ; CHECK-NEXT:   [[S_MOV_B32_6:%[0-9]+]]:sreg_32 = S_MOV_B32 0
+  ; CHECK-NEXT:   [[S_ANDN2_B64_:%[0-9]+]]:sreg_64 = S_ANDN2_B64 [[PHI]], $exec, implicit-def $scc
+  ; CHECK-NEXT:   [[COPY6:%[0-9]+]]:sreg_64 = COPY [[S_ANDN2_B64_]]
+  ; CHECK-NEXT:   S_CMP_EQ_U32 [[PHI2]], killed [[S_MOV_B32_6]], implicit-def $scc
+  ; CHECK-NEXT:   [[S_MOV_B64_1:%[0-9]+]]:sreg_64 = S_MOV_B64 -1
+  ; CHECK-NEXT:   [[DEF7:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
   ; CHECK-NEXT:   S_CBRANCH_SCC1 %bb.3, implicit $scc
   ; CHECK-NEXT:   S_BRANCH %bb.2
   ; CHECK-NEXT: {{  $}}
-  ; CHECK-LABEL: bb.2:
-  ; CHECK-NEXT:   successors: %bb.3(0x{{[0-9a-fA-F]+}})
+  ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   successors: %bb.3(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[FLAT_LOAD_DWORD1:%[0-9]+]]:vgpr_32 = FLAT_LOAD_DWORD [[V_MAD_I64_I32_e64_]], 0, 0, implicit $exec, implicit $flat_scr :: (load (s32), addrspace 1)
   ; CHECK-NEXT:   [[S_MOV_B32_7:%[0-9]+]]:sreg_32 = S_MOV_B32 6
@@ -83,7 +83,7 @@ body:             |
   ; CHECK-NEXT:   [[S_OR_B64_1:%[0-9]+]]:sreg_64 = S_OR_B64 [[S_ANDN2_B64_1]], [[S_AND_B64_1]], implicit-def $scc
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.3:
-  ; CHECK-NEXT:   successors: %bb.4(0x{{[0-9a-fA-F]+}}), %bb.1(0x{{[0-9a-fA-F]+}})
+  ; CHECK-NEXT:   successors: %bb.4(0x00000000), %bb.1(0x80000000)
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[PHI3:%[0-9]+]]:sreg_64 = PHI [[COPY6]], %bb.1, [[S_OR_B64_1]], %bb.2
   ; CHECK-NEXT:   [[PHI4:%[0-9]+]]:sreg_64 = PHI [[PHI1]], %bb.1, [[DEF9]], %bb.2
