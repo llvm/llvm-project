@@ -491,7 +491,7 @@ static void instrDefsUsesSCC(const MachineInstr &MI, bool &Def, bool &Use) {
 /// Move instruction to a new position inside the same MBB, if there is no
 /// operand's dependencies. Change the InstrToMovePos after the moved
 /// instruction. returns true if instruction moved, false if not.
-bool moveIfPossible(MachineBasicBlock &MBB,
+static bool moveIfPossible(MachineBasicBlock &MBB,
                     llvm::MachineBasicBlock::iterator &InstrToMovePos,
                     const llvm::MachineBasicBlock::iterator &MoveAfterPos) {
   MachineInstr &MI = *InstrToMovePos;
@@ -502,18 +502,20 @@ bool moveIfPossible(MachineBasicBlock &MBB,
       continue;
     if (MO.isUse()) {
       for (auto I = std::next(MI.getIterator()); I != MoveAfterPos; ++I) {
-        for (const MachineOperand &MOI : I->operands())
+        for (const MachineOperand &MOI : I->operands()) {
           if (MOI.isReg() && MOI.isDef() && MOI.getReg() == MO.getReg())
             return false;
+        }
       }
     }
 
     // Check if MI defines any register used before InsertPos
     if (MO.isDef()) {
       for (auto I = MoveAfterPos; I != MI.getIterator(); --I) {
-        for (const MachineOperand &MOI : I->operands())
+        for (const MachineOperand &MOI : I->operands()) {
           if (MOI.isReg() && MOI.isUse() && MOI.getReg() == MO.getReg())
             return false;
+        }
       }
     }
   }
@@ -556,9 +558,8 @@ void PhiLoweringHelper::insertMask(const Incoming &Incoming, Register DstReg) {
 
       Register R = MO.getReg();
 
-      if (R == Incoming.Reg) {
+      if (R == Incoming.Reg)
         curRegDefPos = I;
-      }
 
       if (R == AMDGPU::SCC) {
         sccDefPos = I;
