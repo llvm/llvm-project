@@ -334,10 +334,14 @@ define i32 @extract_v4iptr_vector_insert_const_fixed_legal(<4 x ptr> %a, <4 x pt
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(<2 x s64>) = COPY $q0
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:_(<2 x s64>) = COPY $q1
-  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x p0>) = G_CONCAT_VECTORS [[COPY]](<2 x s64>), [[COPY1]](<2 x s64>)
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(<2 x p0>) = G_BITCAST [[COPY]](<2 x s64>)
+  ; CHECK-NEXT:   [[BITCAST1:%[0-9]+]]:_(<2 x p0>) = G_BITCAST [[COPY1]](<2 x s64>)
+  ; CHECK-NEXT:   [[CONCAT_VECTORS:%[0-9]+]]:_(<4 x p0>) = G_CONCAT_VECTORS [[BITCAST]](<2 x p0>), [[BITCAST1]](<2 x p0>)
   ; CHECK-NEXT:   [[COPY2:%[0-9]+]]:_(<2 x s64>) = COPY $q2
   ; CHECK-NEXT:   [[COPY3:%[0-9]+]]:_(<2 x s64>) = COPY $q3
-  ; CHECK-NEXT:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<4 x p0>) = G_CONCAT_VECTORS [[COPY2]](<2 x s64>), [[COPY3]](<2 x s64>)
+  ; CHECK-NEXT:   [[BITCAST2:%[0-9]+]]:_(<2 x p0>) = G_BITCAST [[COPY2]](<2 x s64>)
+  ; CHECK-NEXT:   [[BITCAST3:%[0-9]+]]:_(<2 x p0>) = G_BITCAST [[COPY3]](<2 x s64>)
+  ; CHECK-NEXT:   [[CONCAT_VECTORS1:%[0-9]+]]:_(<4 x p0>) = G_CONCAT_VECTORS [[BITCAST2]](<2 x p0>), [[BITCAST3]](<2 x p0>)
   ; CHECK-NEXT:   [[COPY4:%[0-9]+]]:_(p0) = COPY $x0
   ; CHECK-NEXT:   [[COPY5:%[0-9]+]]:_(p0) = COPY $x1
   ; CHECK-NEXT:   [[C:%[0-9]+]]:_(s32) = G_CONSTANT i32 1
