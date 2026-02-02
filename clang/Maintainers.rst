@@ -295,9 +295,6 @@ CMake integration
 | Petr Hosek
 | phosek\@google.com (email), phosek (Phabricator), petrhosek (GitHub)
 
-| John Ericson
-| git\@johnericson.me (email), Ericson2314 (Phabricator), Ericson2314 (GitHub)
-
 
 General Windows support
 ~~~~~~~~~~~~~~~~~~~~~~~
@@ -407,3 +404,4 @@ Inactive component maintainers
 | Dmitri Gribenko (gribozavr\@gmail.com (email), gribozavr (Phabricator), gribozavr (GitHub)) -- Analysis & CFG
 | Tom Honermann (tom\@honermann.net (email), tahonermann (Phabricator), tahonermann (GitHub)) -- Text Encodings
 | John McCall (rjmccall\@apple.com (email), rjmccall (Phabricator), rjmccall (GitHub)) -- Clang LLVM IR generation
+| John Ericson (git\@johnericson.me (email), Ericson2314 (Phabricator), Ericson2314 (GitHub)) -- CMake Integration
