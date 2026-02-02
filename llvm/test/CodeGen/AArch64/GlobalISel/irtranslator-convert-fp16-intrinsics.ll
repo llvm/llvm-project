@@ -7,8 +7,9 @@ define i16 @convert_to_fp16(float %src) {
   ; CHECK-NEXT:   liveins: $s0
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(f32) = COPY $s0
-  ; CHECK-NEXT:   [[FPTRUNC:%[0-9]+]]:_(i16) = G_FPTRUNC [[COPY]](f32)
-  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[FPTRUNC]](i16)
+  ; CHECK-NEXT:   [[FPTRUNC:%[0-9]+]]:_(f16) = G_FPTRUNC [[COPY]](f32)
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(i16) = G_BITCAST [[FPTRUNC]](f16)
+  ; CHECK-NEXT:   [[ANYEXT:%[0-9]+]]:_(i32) = G_ANYEXT [[BITCAST]](i16)
   ; CHECK-NEXT:   $w0 = COPY [[ANYEXT]](i32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $w0
   %cvt = call i16 @llvm.convert.to.fp16.f32(float %src)
@@ -22,7 +23,8 @@ define float @convert_from_fp16(i16 %src) {
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:_(i32) = COPY $w0
   ; CHECK-NEXT:   [[TRUNC:%[0-9]+]]:_(i16) = G_TRUNC [[COPY]](i32)
-  ; CHECK-NEXT:   [[FPEXT:%[0-9]+]]:_(f32) = G_FPEXT [[TRUNC]](i16)
+  ; CHECK-NEXT:   [[BITCAST:%[0-9]+]]:_(f16) = G_BITCAST [[TRUNC]](i16)
+  ; CHECK-NEXT:   [[FPEXT:%[0-9]+]]:_(f32) = G_FPEXT [[BITCAST]](f16)
   ; CHECK-NEXT:   $s0 = COPY [[FPEXT]](f32)
   ; CHECK-NEXT:   RET_ReallyLR implicit $s0
   %cvt = call float @llvm.convert.from.fp16.f32(i16 %src)
