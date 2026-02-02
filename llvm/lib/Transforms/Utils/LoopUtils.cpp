@@ -1895,6 +1895,7 @@ int llvm::rewriteLoopExitValues(Loop *L, LoopInfo *LI, TargetLibraryInfo *TLI,
     // invalidating iterators.
     if (isInstructionTriviallyDead(Inst, TLI))
       DeadInsts.push_back(Inst);
+
     // Replace PN with ExitVal if that is legal and does not break LCSSA.
     if (PN->getNumIncomingValues() == 1 &&
         LI->replacementPreservesLCSSAForm(PN, ExitVal)) {
