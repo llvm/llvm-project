@@ -747,11 +747,13 @@ class TargetRegisterInfo;
     /// Makes a DFS traversal and mark all nodes affected by the edge insertion.
     /// These nodes will later get new topological indexes by means of the Shift
     /// method.
+    ///
+    /// Calling resets Visited.
     void DFS(const SUnit *SU, int UpperBound, bool& HasLoop);
 
     /// Reassigns topological indexes for the nodes in the DAG to
     /// preserve the topological ordering.
-    void Shift(BitVector& Visited, int LowerBound, int UpperBound);
+    void Shift(int LowerBound, int UpperBound);
 
     /// Assigns the topological index to the node n.
     void Allocate(int n, int index);
