@@ -32,7 +32,7 @@ void populateExpressionPatterns(RewritePatternSet &patterns);
 // The WrapFuncInClass pass.
 //===----------------------------------------------------------------------===//
 
-void populateWrapFuncInClass(RewritePatternSet &patterns, std::string &fName);
+void populateWrapFuncInClass(RewritePatternSet &patterns, StringRef fName);
 
 } // namespace emitc
 } // namespace mlir

@@ -54,7 +54,7 @@ def WrapFuncInClassPass : Pass<"wrap-emitc-func-in-class"> {
   let dependentDialects = ["emitc::EmitCDialect"];
   let options = [
       Option<"funcName", "func-name", "std::string",
-      /*default=*/[{"operator"}],
+      /*default=*/[{"operator()"}],
       "The name of the newly generated member function with body "
       "matching the input function.">
   ];
