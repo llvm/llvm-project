@@ -509,7 +509,7 @@ class MUBUF_Load_Pseudo <string opName,
   let AsmMatchConverter = "cvtMubuf";
 
   let Constraints = !if(HasTiedDest, "$vdata = $vdata_in", "");
-  let LGKM_CNT = isLds;
+  let LGKM_CNT = 0;
   let has_vdata = !not(!or(isLds, isLdsOpc));
   let mayLoad = 1;
   let mayStore = isLds;
