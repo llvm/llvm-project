@@ -712,11 +712,12 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
       if (U->isDWOUnit() && RangeSection.Data.empty())
         break;
       if (*SectionOffset >= RangeSection.Data.size())
-        ReportError("DW_AT_ranges offset out of bounds",
-                    "DW_AT_ranges offset is beyond " +
-                        StringRef(DwarfVersion < 5 ? ".debug_ranges"
-                                                   : ".debug_rnglists") +
-                        " bounds: " + llvm::formatv("{0:x8}", *SectionOffset));
+        ReportError(
+            "DW_AT_ranges offset out of bounds",
+            llvm::formatv("DW_AT_ranges offset is beyond {0} bounds: {1:x8}",
+                          StringRef(DwarfVersion < 5 ? ".debug_ranges"
+                                                     : ".debug_rnglists"),
+                          *SectionOffset));
       break;
     }
     ReportError("Invalid DW_AT_ranges encoding",
@@ -726,9 +727,11 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
     // Make sure the offset in the DW_AT_stmt_list attribute is valid.
     if (auto SectionOffset = AttrValue.Value.getAsSectionOffset()) {
       if (*SectionOffset >= U->getLineSection().Data.size())
-        ReportError("DW_AT_stmt_list offset out of bounds",
-                    "DW_AT_stmt_list offset is beyond .debug_line bounds: " +
-                        llvm::formatv("{0:x8}", *SectionOffset));
+        ReportError(
+            "DW_AT_stmt_list offset out of bounds",
+            llvm::formatv(
+                "DW_AT_stmt_list offset is beyond .debug_line bounds: {0:x8}",
+                *SectionOffset));
       break;
     }
     ReportError("Invalid DW_AT_stmt_list encoding",
@@ -811,12 +814,11 @@ unsigned DWARFVerifier::verifyDebugInfoAttribute(const DWARFDie &Die,
           if (std::optional<uint64_t> LastFileIdx =
                   LT->getLastValidFileIndex()) {
             ReportError("Invalid file index in DW_AT_decl_file",
-                        "DIE has " + AttributeString(Attr) +
-                            " with an invalid file index " +
-                            llvm::formatv("{0}", *FileIdx) +
-                            " (valid values are [" +
-                            (IsZeroIndexed ? "0-" : "1-") +
-                            llvm::formatv("{0}", *LastFileIdx) + "])");
+                        llvm::formatv("DIE has {0} with an invalid file index "
+                                      "{1} (valid values are [{2}-{3}])",
+                                      AttributeString(Attr), *FileIdx,
+                                      (IsZeroIndexed ? "0" : "1"),
+                                      *LastFileIdx));
           } else {
             ReportError("Invalid file index in DW_AT_decl_file",
                         "DIE has " + AttributeString(Attr) +
