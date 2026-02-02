@@ -122,18 +122,15 @@ static bool isBoolScalarOrVector(Type type) {
   return false;
 }
 
-/// Returns true if the given `type` is an integer scalar or vector type.
-static bool isIntScalarOrVectorType(Type type) {
-  auto eltTy = getElementTypeOrSelf(type);
-  return eltTy && isa<IntegerType>(eltTy) &&
-         (isa<IntegerType>(type) || isa<VectorType>(type));
-}
+/// Returns true if `type` is a SPIR-V scalar type or a vector of SPIR-V scalar.
+static bool isScalarOrVectorOfScalar(Type type) {
+  if (isa<spirv::ScalarType>(type))
+    return true;
 
-/// Returns true if the given `type` is an integer or float scalar or vector.
-static bool isIntOrFloatScalarOrVectorType(Type type) {
-  auto eltTy = getElementTypeOrSelf(type);
-  return eltTy && eltTy.isIntOrFloat() &&
-         (isa<VectorType>(type) || type == eltTy);
+  if (auto vecTy = dyn_cast<VectorType>(type))
+    return isa<spirv::ScalarType>(vecTy.getElementType());
+
+  return false;
 }
 
 /// Creates a scalar/vector integer constant.
@@ -726,7 +723,7 @@ struct ExtSIPattern final : public OpConversionPattern<arith::ExtSIOp> {
       return failure();
 
     // extSI is only meaningful for integer scalar/vector types in SPIR-V.
-    if (!isIntScalarOrVectorType(srcType))
+    if (!isScalarOrVectorOfScalar(srcType))
       return rewriter.notifyMatchFailure(
           op, "expected integer scalar or vector input type");
 
@@ -734,7 +731,7 @@ struct ExtSIPattern final : public OpConversionPattern<arith::ExtSIOp> {
     if (!dstType)
       return getTypeConversionFailure(rewriter, op);
 
-    if (!isIntScalarOrVectorType(dstType))
+    if (!isScalarOrVectorOfScalar(dstType))
       return rewriter.notifyMatchFailure(
           op, "expected integer scalar or vector result type");
 
@@ -810,7 +807,7 @@ struct ExtUIPattern final : public OpConversionPattern<arith::ExtUIOp> {
     if (isBoolScalarOrVector(srcType))
       return failure();
 
-    if (!isIntScalarOrVectorType(srcType))
+    if (!isScalarOrVectorOfScalar(srcType))
       return rewriter.notifyMatchFailure(
           op, "expected integer scalar or vector input type");
 
@@ -818,7 +815,7 @@ struct ExtUIPattern final : public OpConversionPattern<arith::ExtUIOp> {
     if (!dstType)
       return getTypeConversionFailure(rewriter, op);
 
-    if (!isIntScalarOrVectorType(dstType))
+    if (!isScalarOrVectorOfScalar(dstType))
       return rewriter.notifyMatchFailure(
           op, "expected integer scalar or vector result type");
 
@@ -863,7 +860,7 @@ struct TruncII1Pattern final : public OpConversionPattern<arith::TruncIOp> {
 
     Location loc = op.getLoc();
     auto srcType = adaptor.getOperands().front().getType();
-    if (!isIntScalarOrVectorType(srcType))
+    if (!isScalarOrVectorOfScalar(srcType))
       return rewriter.notifyMatchFailure(
           op, "expected integer scalar or vector source type");
 
@@ -903,8 +900,8 @@ struct TruncIPattern final : public OpConversionPattern<arith::TruncIOp> {
 
     // Ensure we are only lowering scalar/vector integer truncs.
     // This prevents trying to build SPIR-V ops on tensors.
-    if (!isIntScalarOrVectorType(convertedSrcType) ||
-        !isIntScalarOrVectorType(dstType))
+    if (!isScalarOrVectorOfScalar(convertedSrcType) ||
+        !isScalarOrVectorOfScalar(dstType))
       return rewriter.notifyMatchFailure(
           op, "only int scalar or vector type for SPIR-V");
 
@@ -963,6 +960,7 @@ struct TypeCastingOpPattern final : public OpConversionPattern<Op> {
   LogicalResult
   matchAndRewrite(Op op, typename Op::Adaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
+
     Type srcType = llvm::getSingleElement(adaptor.getOperands()).getType();
     Type dstType = this->getTypeConverter()->convertType(op.getType());
     if (!dstType)
@@ -971,8 +969,17 @@ struct TypeCastingOpPattern final : public OpConversionPattern<Op> {
     if (isBoolScalarOrVector(srcType) || isBoolScalarOrVector(dstType))
       return failure();
 
-    if (!isIntOrFloatScalarOrVectorType(srcType) ||
-        !isIntOrFloatScalarOrVectorType(dstType))
+    auto isIntOrFloatScalarOrVectorNotI1 = [](Type type) {
+      Type elt = getElementTypeOrSelf(type);
+      if (!elt || (!elt.isIntOrFloat()))
+        return false;
+      if (elt.isInteger(1))
+        return false;
+      return (type == elt) || isa<VectorType>(type);
+    };
+
+    if (!isIntOrFloatScalarOrVectorNotI1(srcType) ||
+        !isIntOrFloatScalarOrVectorNotI1(dstType))
       return rewriter.notifyMatchFailure(
           op, llvm::formatv(
                   "expected int/float scalar or vector types, got {0} -> {1}",
