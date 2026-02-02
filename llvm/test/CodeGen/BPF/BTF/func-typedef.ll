@@ -23,7 +23,7 @@ entry:
 ; CHECK-NEXT:        .long   0
 ; CHECK-NEXT:        .long   72
 ; CHECK-NEXT:        .long   72
-; CHECK-NEXT:        .long   35
+; CHECK-NEXT:        .long   52
 ; CHECK-NEXT:        .long   1                       # BTF_KIND_TYPEDEF(id = 1)
 ; CHECK-NEXT:        .long   134217728               # 0x8000000
 ; CHECK-NEXT:        .long   2
@@ -57,6 +57,8 @@ entry:
 ; CHECK-NEXT:        .byte   0
 ; CHECK-NEXT:        .ascii  "/tmp/t.c"              # string offset=26
 ; CHECK-NEXT:        .byte   0
+; CHECK-NEXT:        .ascii  "int main(void) {"      # string offset=35
+; CHECK-NEXT:        .byte   0
 ; CHECK-NEXT:        .section        .BTF.ext,"",@progbits
 ; CHECK-NEXT:        .short  60319                   # 0xeb9f
 ; CHECK-NEXT:        .byte   1
@@ -78,11 +80,11 @@ entry:
 ; CHECK-NEXT:        .long   2
 ; CHECK-NEXT:        .long   .Lfunc_begin0
 ; CHECK-NEXT:        .long   26
-; CHECK-NEXT:        .long   0
+; CHECK-NEXT:        .long   35
 ; CHECK-NEXT:        .long   3072                    # Line 3 Col 0
 ; CHECK-NEXT:        .long   .Ltmp{{[0-9]+}}
 ; CHECK-NEXT:        .long   26
-; CHECK-NEXT:        .long   0
+; CHECK-NEXT:        .long   35
 ; CHECK-NEXT:        .long   3092                    # Line 3 Col 20
 
 ; Function Attrs: nounwind readnone speculatable
