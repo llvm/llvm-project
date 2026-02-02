@@ -17,6 +17,8 @@
 #include "llvm/Support/raw_ostream.h"
 #include <memory>
 
+struct MLIRToLLVMPassPipelineConfig;
+
 namespace fir {
 
 class LLVMTypeConverter;
@@ -64,6 +66,11 @@ struct FIRToLLVMPassOptions {
   // Conversion pass of the MLIR complex dialect.
   Fortran::frontend::CodeGenOptions::ComplexRangeKind ComplexRange =
       Fortran::frontend::CodeGenOptions::ComplexRangeKind::CX_Full;
+
+  // Default constructor.
+  FIRToLLVMPassOptions() = default;
+
+  FIRToLLVMPassOptions(const MLIRToLLVMPassPipelineConfig &config);
 };
 
 /// Convert FIR to the LLVM IR dialect with default options.

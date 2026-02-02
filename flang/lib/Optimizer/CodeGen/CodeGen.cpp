@@ -22,6 +22,7 @@
 #include "flang/Optimizer/Dialect/FIRDialect.h"
 #include "flang/Optimizer/Dialect/FIROps.h"
 #include "flang/Optimizer/Dialect/FIRType.h"
+#include "flang/Optimizer/Passes/CommandLineOpts.h"
 #include "flang/Optimizer/Support/DataLayout.h"
 #include "flang/Optimizer/Support/InternalNames.h"
 #include "flang/Optimizer/Support/TypeCode.h"
@@ -31,6 +32,7 @@
 #include "flang/Runtime/allocator-registry-consts.h"
 #include "flang/Runtime/descriptor-consts.h"
 #include "flang/Semantics/runtime-type-info.h"
+#include "flang/Tools/CrossToolHelpers.h"
 #include "mlir/Conversion/ArithCommon/AttrToLLVMConverter.h"
 #include "mlir/Conversion/ArithToLLVM/ArithToLLVM.h"
 #include "mlir/Conversion/ComplexToLLVM/ComplexToLLVM.h"
@@ -4491,6 +4493,16 @@ private:
 };
 
 } // namespace
+
+fir::FIRToLLVMPassOptions::FIRToLLVMPassOptions(
+    const MLIRToLLVMPassPipelineConfig &config) {
+  ignoreMissingTypeDescriptors = ::ignoreMissingTypeDescriptors;
+  skipExternalRttiDefinition = ::skipExternalRttiDefinition;
+  applyTBAA = config.AliasAnalysis;
+  forceUnifiedTBAATree = useOldAliasTags;
+  typeDescriptorsRenamedForAssembly = !disableCompilerGeneratedNamesConversion;
+  ComplexRange = config.ComplexRange;
+}
 
 std::unique_ptr<mlir::Pass> fir::createFIRToLLVMPass() {
   return std::make_unique<FIRToLLVMLowering>();
