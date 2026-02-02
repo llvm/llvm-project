@@ -1,0 +1,424 @@
+--- !ELF
+FileHeader:
+  Class:           ELFCLASS64
+  Data:            ELFDATA2LSB
+  OSABI:           ELFOSABI_GNU
+  Type:            ET_EXEC
+  Machine:         EM_X86_64
+  Entry:           0x401050
+ProgramHeaders:
+  - Type:            PT_PHDR
+    Flags:           [ PF_R ]
+    VAddr:           0x400040
+    Align:           0x8
+    Offset:          0x40
+  - Type:            PT_INTERP
+    Flags:           [ PF_R ]
+    FirstSec:        .interp
+    LastSec:         .interp
+    VAddr:           0x400270
+    Offset:          0x270
+  - Type:            PT_LOAD
+    Flags:           [ PF_R ]
+    FirstSec:        .interp
+    LastSec:         .rela.plt
+    VAddr:           0x400000
+    Align:           0x1000
+    Offset:          0x0
+  - Type:            PT_LOAD
+    Flags:           [ PF_X, PF_R ]
+    FirstSec:        .plt
+    LastSec:         .text
+    VAddr:           0x401000
+    Align:           0x1000
+    Offset:          0x1000
+  - Type:            PT_LOAD
+    Flags:           [ PF_R ]
+    FirstSec:        .rodata
+    LastSec:         .eh_frame
+    VAddr:           0x402000
+    Align:           0x1000
+    Offset:          0x2000
+  - Type:            PT_LOAD
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .dynamic
+    LastSec:         .got.plt
+    VAddr:           0x403EB8
+    Align:           0x1000
+    Offset:          0x2EB8
+  - Type:            PT_DYNAMIC
+    Flags:           [ PF_W, PF_R ]
+    FirstSec:        .dynamic
+    LastSec:         .dynamic
+    VAddr:           0x403EB8
+    Align:           0x8
+    Offset:          0x2EB8
+  - Type:            PT_GNU_EH_FRAME
+    Flags:           [ PF_R ]
+    FirstSec:        .eh_frame_hdr
+    LastSec:         .eh_frame_hdr
+    VAddr:           0x402004
+    Align:           0x4
+    Offset:          0x2004
+  - Type:            PT_GNU_STACK
+    Flags:           [ PF_W, PF_R ]
+    Align:           0x10
+    Offset:          0x0
+  - Type:            PT_GNU_RELRO
+    Flags:           [ PF_R ]
+    FirstSec:        .dynamic
+    LastSec:         .got
+    VAddr:           0x403EB8
+    Offset:          0x2EB8
+Sections:
+  - Name:            .interp
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x400270
+    AddressAlign:    0x1
+    Content:         2F6C696236342F6C642D6C696E75782D7838362D36342E736F2E3200
+  - Name:            .gnu.hash
+    Type:            SHT_GNU_HASH
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x400290
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Header:
+      SymNdx:          0x1
+      Shift2:          0x0
+    BloomFilter:     [ 0x0 ]
+    HashBuckets:     [ 0x0 ]
+    HashValues:      [  ]
+  - Name:            .dynsym
+    Type:            SHT_DYNSYM
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x4002B0
+    Link:            .dynstr
+    AddressAlign:    0x8
+  - Name:            .dynstr
+    Type:            SHT_STRTAB
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x400310
+    AddressAlign:    0x1
+  - Name:            .rela.dyn
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x400330
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Relocations:
+      - Offset:          0x403FF8
+        Symbol:          memcpy
+        Type:            R_X86_64_GLOB_DAT
+  - Name:            .rela.plt
+    Type:            SHT_RELA
+    Flags:           [ SHF_ALLOC, SHF_INFO_LINK ]
+    Address:         0x400348
+    Link:            .dynsym
+    AddressAlign:    0x8
+    Info:            .got.plt
+    Relocations:
+      - Offset:          0x404018
+        Symbol:          printf
+        Type:            R_X86_64_JUMP_SLOT
+      - Offset:          0x404028
+        Symbol:          rand
+        Type:            R_X86_64_JUMP_SLOT
+      - Offset:          0x404030
+        Type:            R_X86_64_IRELATIVE
+        Addend:          4198480
+      - Offset:          0x404020
+        Type:            R_X86_64_IRELATIVE
+        Addend:          4198496
+  - Name:            .plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x401000
+    AddressAlign:    0x10
+    EntSize:         0x10
+    Offset:          0x1000
+    Content:         FF3502300000FF25043000000F1F4000FF25023000006800000000E9E0FFFFFFFF25FA2F00006803000000E9D0FFFFFFFF25F22F00006801000000E9C0FFFFFFFF25EA2F00006802000000E9B0FFFFFF
+  - Name:            .text
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_EXECINSTR ]
+    Address:         0x401050
+    AddressAlign:    0x10
+    Content:         488D0579000000C30F1F840000000000488B05912F0000C30F1F840000000000554889E54883EC10C745FC00000000C745F8EFBEADDEC745F400000000488D7DF4488D75F8BA04000000E881FFFFFF8B45F83B45F40F840C000000C745FCFFFFFFFFE907000000B000E882FFFFFF8B45FC4883C4105DC3660F1F840000000000554889E54883EC10E853FFFFFF8945FC8B75FC488D3D160F0000B000E81FFFFFFF4883C4105DC3
+  - Name:            .rodata
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC, SHF_MERGE, SHF_STRINGS ]
+    Address:         0x402000
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Offset:          0x2000
+    Content:         '256400'
+  - Name:            .eh_frame_hdr
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x402004
+    AddressAlign:    0x4
+    Content:         011B033B3000000005000000FCEFFFFFB40000004CF0FFFF4C0000005CF0FFFF600000006CF0FFFF74000000CCF0FFFF94000000
+  - Name:            .eh_frame
+    Type:            SHT_X86_64_UNWIND
+    Flags:           [ SHF_ALLOC ]
+    Address:         0x402038
+    AddressAlign:    0x8
+    Content:         1400000000000000017A5200017810011B0C070890010000100000001C000000F8EFFFFF08000000000000001000000030000000F4EFFFFF08000000000000001C00000044000000F0EFFFFF5700000000410E108602430D0602520C070800001C0000006400000030F0FFFF2700000000410E108602430D06620C0708000000200000008400000040EFFFFF50000000000E10460E184A0F0B770880003F1A3B2A332422
+  - Name:            .dynamic
+    Type:            SHT_DYNAMIC
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x403EB8
+    Link:            .dynstr
+    AddressAlign:    0x8
+    Offset:          0x2EB8
+    Entries:
+      - Tag:             DT_NEEDED
+        Value:           0x1
+      - Tag:             DT_GNU_HASH
+        Value:           0x400290
+      - Tag:             DT_STRTAB
+        Value:           0x400310
+      - Tag:             DT_SYMTAB
+        Value:           0x4002B0
+      - Tag:             DT_STRSZ
+        Value:           0x1F
+      - Tag:             DT_SYMENT
+        Value:           0x18
+      - Tag:             DT_DEBUG
+        Value:           0x0
+      - Tag:             DT_PLTGOT
+        Value:           0x404000
+      - Tag:             DT_PLTRELSZ
+        Value:           0x60
+      - Tag:             DT_PLTREL
+        Value:           0x7
+      - Tag:             DT_JMPREL
+        Value:           0x400348
+      - Tag:             DT_RELA
+        Value:           0x400330
+      - Tag:             DT_RELASZ
+        Value:           0x18
+      - Tag:             DT_RELAENT
+        Value:           0x18
+      - Tag:             DT_NULL
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+      - Tag:             DT_NULL
+        Value:           0x0
+  - Name:            .got
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x403FF8
+    AddressAlign:    0x8
+    EntSize:         0x8
+    Content:         '0000000000000000'
+  - Name:            .got.plt
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_WRITE, SHF_ALLOC ]
+    Address:         0x404000
+    AddressAlign:    0x8
+    EntSize:         0x8
+    Content:         B83E400000000000000000000000000000000000000000001610400000000000261040000000000036104000000000004610400000000000
+  - Name:            .comment
+    Type:            SHT_PROGBITS
+    Flags:           [ SHF_MERGE, SHF_STRINGS ]
+    AddressAlign:    0x1
+    EntSize:         0x1
+    Content:         636C616E672076657273696F6E2031372E302E362028416C696261626120436C6F756420436F6D70696C65722031372E302E362E312D32342E30352E31302E616C696F73372900
+  - Name:            .rela.text
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .text
+    Relocations:
+      - Offset:          0x401063
+        Symbol:          memcpy
+        Type:            R_X86_64_REX_GOTPCRELX
+        Addend:          -4
+      - Offset:          0x40109B
+        Symbol:          imemcpy
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x4010BA
+        Symbol:          ifoo
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x4010D9
+        Symbol:          rand
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+      - Offset:          0x4010E6
+        Symbol:          .L.str
+        Type:            R_X86_64_PC32
+        Addend:          -4
+      - Offset:          0x4010ED
+        Symbol:          printf
+        Type:            R_X86_64_PLT32
+        Addend:          -4
+  - Name:            .rela.eh_frame
+    Type:            SHT_RELA
+    Flags:           [ SHF_INFO_LINK ]
+    Link:            .symtab
+    AddressAlign:    0x8
+    Info:            .eh_frame
+    Relocations:
+      - Offset:          0x402058
+        Symbol:          .text
+        Type:            R_X86_64_PC32
+      - Offset:          0x40206C
+        Symbol:          .text
+        Type:            R_X86_64_PC32
+        Addend:          16
+      - Offset:          0x402080
+        Symbol:          .text
+        Type:            R_X86_64_PC32
+        Addend:          32
+      - Offset:          0x4020A0
+        Symbol:          .text
+        Type:            R_X86_64_PC32
+        Addend:          128
+  - Type:            SectionHeaderTable
+    Sections:
+      - Name:            .interp
+      - Name:            .gnu.hash
+      - Name:            .dynsym
+      - Name:            .dynstr
+      - Name:            .rela.dyn
+      - Name:            .rela.plt
+      - Name:            .plt
+      - Name:            .text
+      - Name:            .rela.text
+      - Name:            .rodata
+      - Name:            .eh_frame_hdr
+      - Name:            .eh_frame
+      - Name:            .rela.eh_frame
+      - Name:            .dynamic
+      - Name:            .got
+      - Name:            .got.plt
+      - Name:            .comment
+      - Name:            .symtab
+      - Name:            .strtab
+      - Name:            .shstrtab
+Symbols:
+  - Name:            .interp
+    Type:            STT_SECTION
+    Section:         .interp
+    Value:           0x400270
+  - Name:            .gnu.hash
+    Type:            STT_SECTION
+    Section:         .gnu.hash
+    Value:           0x400290
+  - Name:            .dynsym
+    Type:            STT_SECTION
+    Section:         .dynsym
+    Value:           0x4002B0
+  - Name:            .dynstr
+    Type:            STT_SECTION
+    Section:         .dynstr
+    Value:           0x400310
+  - Name:            .rela.dyn
+    Type:            STT_SECTION
+    Section:         .rela.dyn
+    Value:           0x400330
+  - Name:            .rela.plt
+    Type:            STT_SECTION
+    Section:         .rela.plt
+    Value:           0x400348
+  - Name:            .plt
+    Type:            STT_SECTION
+    Section:         .plt
+    Value:           0x401000
+  - Name:            .text
+    Type:            STT_SECTION
+    Section:         .text
+    Value:           0x401050
+  - Name:            .rodata
+    Type:            STT_SECTION
+    Section:         .rodata
+    Value:           0x402000
+  - Name:            .eh_frame_hdr
+    Type:            STT_SECTION
+    Section:         .eh_frame_hdr
+    Value:           0x402004
+  - Name:            .eh_frame
+    Type:            STT_SECTION
+    Section:         .eh_frame
+    Value:           0x402038
+  - Name:            .dynamic
+    Type:            STT_SECTION
+    Section:         .dynamic
+    Value:           0x403EB8
+  - Name:            .got
+    Type:            STT_SECTION
+    Section:         .got
+    Value:           0x403FF8
+  - Name:            .got.plt
+    Type:            STT_SECTION
+    Section:         .got.plt
+    Value:           0x404000
+  - Name:            .comment
+    Type:            STT_SECTION
+    Section:         .comment
+  - Name:            .L.str
+    Type:            STT_OBJECT
+    Section:         .rodata
+    Value:           0x402000
+    Size:            0x3
+  - Name:            printf
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            imemcpy
+    Type:            STT_GNU_IFUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x401060
+    Size:            0x8
+  - Name:            memcpy
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            rand
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            __bss_start
+    Section:         .got.plt
+    Binding:         STB_GLOBAL
+    Value:           0x404038
+  - Name:            main
+    Type:            STT_FUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x401070
+    Size:            0x57
+  - Name:            _edata
+    Section:         .got.plt
+    Binding:         STB_GLOBAL
+    Value:           0x404038
+  - Name:            _end
+    Section:         .got.plt
+    Binding:         STB_GLOBAL
+    Value:           0x404038
+  - Name:            ifoo
+    Type:            STT_GNU_IFUNC
+    Section:         .text
+    Binding:         STB_GLOBAL
+    Value:           0x401050
+    Size:            0x8
+DynamicSymbols:
+  - Name:            printf
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            memcpy
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+  - Name:            rand
+    Type:            STT_FUNC
+    Binding:         STB_GLOBAL
+...
