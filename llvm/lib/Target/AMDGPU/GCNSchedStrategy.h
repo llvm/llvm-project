@@ -313,6 +313,9 @@ class GCNScheduleDAGMILive final : public ScheduleDAGMILive {
                               MachineBasicBlock::iterator MI,
                               MachineInstr *NewMI);
 
+  /// Makes the scheduler try to achieve an occupancy of \p TargetOccupancy.
+  void setTargetOccupancy(unsigned TargetOccupancy);
+
   void runSchedStages();
 
   std::unique_ptr<GCNSchedStage> createSchedStage(GCNSchedStageID SchedStageID);
@@ -555,8 +558,29 @@ private:
   /// objective is spilling reduction.
   std::optional<unsigned> TargetOcc;
   /// Achieved occupancy *only* through rematerializations (pre-rescheduling).
-  /// Smaller than or equal to the target occupancy.
   unsigned AchievedOcc;
+
+  /// State of a region pre-re-scheduling but post-rematerializations that we
+  /// must keep to be able to revert re-scheduling effects.
+  struct RegionSchedRevert {
+    /// Region number;
+    unsigned RegionIdx;
+    /// Original instruction order (both debug and non-debug MIs).
+    std::vector<MachineInstr *> OrigMIOrder;
+    /// Maximum pressure recorded in the region.
+    GCNRegPressure MaxPressure;
+
+    RegionSchedRevert(unsigned RegionIdx, ArrayRef<MachineInstr *> OrigMIOrder,
+                      const GCNRegPressure &MaxPressure)
+        : RegionIdx(RegionIdx), OrigMIOrder(OrigMIOrder),
+          MaxPressure(MaxPressure) {}
+  };
+  /// After re-scheduling, contains pre-re-scheduling data for all re-scheduled
+  /// regions.
+  SmallVector<RegionSchedRevert> RegionReverts;
+
+  /// Returns the occupancy the stage is trying to achieve.
+  unsigned getStageTargetOccupancy() const;
 
   /// Returns whether remat can reduce spilling or increase function occupancy
   /// by 1 through rematerialization. If it can do one, collects instructions in
@@ -581,6 +605,8 @@ public:
   bool initGCNSchedStage() override;
 
   bool initGCNRegion() override;
+
+  void finalizeGCNRegion() override;
 
   bool shouldRevertScheduling(unsigned WavesAfter) override;
 
