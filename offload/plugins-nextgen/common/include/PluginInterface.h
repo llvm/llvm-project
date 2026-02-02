@@ -739,7 +739,6 @@ public:
   /// allowed. The function returns the device accessible pointer of the pinned
   /// buffer. The buffer must be unlocked using the unlockHostBuffer function.
   Expected<void *> lockHostBuffer(void *HstPtr, size_t Size,
-                                  bool RegisterMappedBuffer = false,
                                   bool LockMemory = true);
 
   /// Unlock the host buffer at \p HstPtr or unregister a user if other users
@@ -886,10 +885,8 @@ struct GenericDeviceTy : public DeviceAllocatorTy {
   /// pointer that devices should use for memory transfers involving the host
   /// pinned allocation.
   Expected<void *> dataLock(void *HstPtr, int64_t Size,
-                            bool RegisterMappedBuffer = false,
                             bool LockMemory = true) {
-    return PinnedAllocs.lockHostBuffer(HstPtr, Size, RegisterMappedBuffer,
-                                       LockMemory);
+    return PinnedAllocs.lockHostBuffer(HstPtr, Size, LockMemory);
   }
 
   /// Unpin a host memory buffer that was previously pinned.

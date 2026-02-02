@@ -87,7 +87,7 @@ TEST_P(olMemRegisterTest, PartialOverlapPtrRegister) {
 TEST_P(olMemRegisterTest, SuccessMappedRegister) {
   int Arr[50];
   ol_memory_register_flags_t Flags =
-      OL_MEMORY_REGISTER_FLAG_REGISTER_MAPPED_MEMORY;
+      OL_MEMORY_REGISTER_FLAG_LOCK_MEMORY;
   void *PinnedPtr = nullptr;
   ASSERT_SUCCESS(olMemRegister(Device, Arr, sizeof(Arr), Flags, &PinnedPtr));
   ASSERT_SUCCESS(olMemUnregister(Device, Arr, Flags));
@@ -97,7 +97,7 @@ TEST_P(olMemRegisterTest, SuccessMultipleMappedRegister) {
   int Arr[50];
   void *PinnedPtr = nullptr;
   ol_memory_register_flags_t Flags =
-      OL_MEMORY_REGISTER_FLAG_REGISTER_MAPPED_MEMORY;
+      OL_MEMORY_REGISTER_FLAG_LOCK_MEMORY;
   ASSERT_SUCCESS(olMemRegister(Device, Arr, sizeof(Arr), Flags, &PinnedPtr));
   ASSERT_SUCCESS(olMemRegister(Device, Arr, sizeof(Arr), Flags, &PinnedPtr));
   ASSERT_SUCCESS(olMemUnregister(Device, Arr, Flags));
@@ -108,7 +108,7 @@ TEST_P(olMemRegisterTest, InvalidSizeMappedRegister) {
   int Arr[50];
   void *PinnedPtr = nullptr;
   ol_memory_register_flags_t Flags =
-      OL_MEMORY_REGISTER_FLAG_REGISTER_MAPPED_MEMORY;
+      OL_MEMORY_REGISTER_FLAG_LOCK_MEMORY;
   ASSERT_ERROR(OL_ERRC_INVALID_SIZE,
                olMemRegister(Device, Arr, 0, Flags, &PinnedPtr));
 }
@@ -117,7 +117,7 @@ TEST_P(olMemRegisterTest, InvalidPtrMappedRegister) {
   int Arr[50];
   void *PinnedPtr = nullptr;
   ol_memory_register_flags_t Flags =
-      OL_MEMORY_REGISTER_FLAG_REGISTER_MAPPED_MEMORY;
+      OL_MEMORY_REGISTER_FLAG_LOCK_MEMORY;
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
                olMemRegister(Device, nullptr, sizeof(Arr), Flags, &PinnedPtr));
 }
@@ -126,7 +126,7 @@ TEST_P(olMemRegisterTest, InvalidPtrMappedUnRegister) {
   int Arr[50];
   void *PinnedPtr = nullptr;
   ol_memory_register_flags_t Flags =
-      OL_MEMORY_REGISTER_FLAG_REGISTER_MAPPED_MEMORY;
+      OL_MEMORY_REGISTER_FLAG_LOCK_MEMORY;
   ASSERT_SUCCESS(olMemRegister(Device, Arr, sizeof(Arr), Flags, &PinnedPtr));
   ASSERT_ERROR(OL_ERRC_INVALID_NULL_POINTER,
                olMemUnregister(Device, nullptr, Flags));

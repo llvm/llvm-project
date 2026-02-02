@@ -1025,7 +1025,7 @@ Error PinnedAllocationMapTy::unregisterHostBuffer(void *HstPtr) {
 }
 
 Expected<void *> PinnedAllocationMapTy::lockHostBuffer(
-    void *HstPtr, size_t Size, bool RegisterMappedBuffer, bool LockMemory) {
+    void *HstPtr, size_t Size, bool LockMemory) {
   assert(HstPtr && "Invalid pointer");
   assert(Size && "Invalid size");
 
@@ -1043,23 +1043,21 @@ Expected<void *> PinnedAllocationMapTy::lockHostBuffer(
                              utils::getPtrDiff(HstPtr, Entry->HstPtr));
   }
 
-  if (RegisterMappedBuffer) {
-    size_t BaseSize;
-    void *BaseHstPtr, *BaseDevAccessiblePtr;
+  size_t BaseSize;
+  void *BaseHstPtr, *BaseDevAccessiblePtr;
 
-    // Check if it was externally pinned by a vendor-specific API.
-    auto IsPinnedOrErr = Device.isPinnedPtrImpl(HstPtr, BaseHstPtr,
-                                                BaseDevAccessiblePtr, BaseSize);
-    if (!IsPinnedOrErr)
-      return std::move(IsPinnedOrErr.takeError());
+  // Check if it was externally pinned by a vendor-specific API.
+  auto IsPinnedOrErr = Device.isPinnedPtrImpl(HstPtr, BaseHstPtr,
+                                              BaseDevAccessiblePtr, BaseSize);
+  if (!IsPinnedOrErr)
+    return std::move(IsPinnedOrErr.takeError());
 
-    // If pinned, just insert the entry representing the whole pinned buffer.
-    if (*IsPinnedOrErr) {
-      if (auto Err = insertEntry(BaseHstPtr, BaseDevAccessiblePtr, BaseSize,
-                                 /*Externallylocked=*/true))
-        return std::move(Err);
-      return BaseDevAccessiblePtr;
-    }
+  // If pinned, just insert the entry representing the whole pinned buffer.
+  if (*IsPinnedOrErr) {
+    if (auto Err = insertEntry(BaseHstPtr, BaseDevAccessiblePtr, BaseSize,
+                               /*Externallylocked=*/true))
+      return std::move(Err);
+    return BaseDevAccessiblePtr;
   }
 
   // Not externally pinned. Do nothing if locking of mapped buffers is disabled.
@@ -1070,7 +1068,7 @@ Expected<void *> PinnedAllocationMapTy::lockHostBuffer(
   // host buffer and retrieve the device accessible pointer.
   auto DevAccessiblePtrOrErr = Device.dataLockImpl(HstPtr, Size);
   if (!DevAccessiblePtrOrErr)
-      return std::move(DevAccessiblePtrOrErr.takeError());
+    return std::move(DevAccessiblePtrOrErr.takeError());
 
   // Now insert the new entry into the map.
   if (auto Err = insertEntry(HstPtr, *DevAccessiblePtrOrErr, Size))
@@ -1118,15 +1116,88 @@ Error PinnedAllocationMapTy::unlockHostBuffer(void *HstPtr, bool LockMemory) {
 }
 
 Error PinnedAllocationMapTy::lockMappedHostBuffer(void *HstPtr, size_t Size) {
-  auto Result = lockHostBuffer(HstPtr, Size, true, LockMappedBuffers);
-  if (!Result)
-    return Result.takeError();
+  assert(HstPtr && "Invalid pointer");
+  assert(Size && "Invalid size");
 
-  return Plugin::success();
+  std::lock_guard<std::shared_mutex> Lock(Mutex);
+
+  // If previously registered, just register a new user on the entry.
+  const EntryTy *Entry = findIntersecting(HstPtr);
+  if (Entry)
+    return registerEntryUse(*Entry, HstPtr, Size);
+
+  size_t BaseSize;
+  void *BaseHstPtr, *BaseDevAccessiblePtr;
+
+  // Check if it was externally pinned by a vendor-specific API.
+  auto IsPinnedOrErr = Device.isPinnedPtrImpl(HstPtr, BaseHstPtr,
+                                              BaseDevAccessiblePtr, BaseSize);
+  if (!IsPinnedOrErr)
+    return IsPinnedOrErr.takeError();
+
+  // If pinned, just insert the entry representing the whole pinned buffer.
+  if (*IsPinnedOrErr)
+    return insertEntry(BaseHstPtr, BaseDevAccessiblePtr, BaseSize,
+                       /*Externallylocked=*/true);
+
+  // Not externally pinned. Do nothing if locking of mapped buffers is disabled.
+  if (!LockMappedBuffers)
+    return Plugin::success();
+
+  // Otherwise, lock the buffer and insert the new entry.
+  auto DevAccessiblePtrOrErr = Device.dataLockImpl(HstPtr, Size);
+  if (!DevAccessiblePtrOrErr) {
+    // Errors may be tolerated.
+    if (!IgnoreLockMappedFailures)
+      return DevAccessiblePtrOrErr.takeError();
+
+    consumeError(DevAccessiblePtrOrErr.takeError());
+    return Plugin::success();
+  }
+
+  return insertEntry(HstPtr, *DevAccessiblePtrOrErr, Size);
 }
 
 Error PinnedAllocationMapTy::unlockUnmappedHostBuffer(void *HstPtr) {
-  return unlockHostBuffer(HstPtr, LockMappedBuffers);
+  assert(HstPtr && "Invalid pointer");
+
+  std::lock_guard<std::shared_mutex> Lock(Mutex);
+
+  // Check whether there is any intersecting entry.
+  const EntryTy *Entry = findIntersecting(HstPtr);
+
+  // No entry but automatic locking of mapped buffers is disabled, so
+  // nothing to do.
+  if (!Entry && !LockMappedBuffers)
+    return Plugin::success();
+
+  // No entry, automatic locking is enabled, but the locking may have failed, so
+  // do nothing.
+  if (!Entry && IgnoreLockMappedFailures)
+    return Plugin::success();
+
+  // No entry, but the automatic locking is enabled, so this is an error.
+  if (!Entry)
+    return Plugin::error(ErrorCode::INVALID_ARGUMENT,
+                         "locked buffer not found");
+
+  // There is entry, so unregister a user and check whether it was the last one.
+  auto LastUseOrErr = unregisterEntryUse(*Entry);
+  if (!LastUseOrErr)
+    return LastUseOrErr.takeError();
+
+  // If it is not the last one, there is nothing to do.
+  if (!(*LastUseOrErr))
+    return Plugin::success();
+
+  // Otherwise, if it was the last and the buffer was locked by the plugin,
+  // unlock it.
+  if (!Entry->ExternallyLocked)
+    if (auto Err = Device.dataUnlockImpl(Entry->HstPtr))
+      return Err;
+
+  // Finally erase the entry from the map.
+  return eraseEntry(*Entry);
 }
 
 Error GenericDeviceTy::synchronize(__tgt_async_info *AsyncInfo,
