@@ -3295,7 +3295,7 @@ void VPlanTransforms::convertEVLExitCond(VPlan &Plan) {
       !isa<VPCanonicalIVPHIRecipe>(LoopRegion->getEntryBasicBlock()->front()))
     return;
   VPCanonicalIVPHIRecipe *CanIV = LoopRegion->getCanonicalIV();
-  if (!CanIV || std::next(CanIV->getIterator()) == CanIV->getParent()->end())
+  if (std::next(CanIV->getIterator()) == CanIV->getParent()->end())
     return;
   // The EVL IV is always immediately after the canonical IV.
   auto *EVLPhi =
