@@ -21,7 +21,7 @@ using namespace llvm;
 
 MCAsmInfoGOFF::MCAsmInfoGOFF() {
   Data64bitsDirective = "\t.quad\t";
-  WeakRefDirective = "WXTRN";
+  WeakRefDirective = " WXTRN ";
   PrivateGlobalPrefix = "L#";
   PrivateLabelPrefix = "L#";
   ZeroDirective = "\t.space\t";
