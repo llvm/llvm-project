@@ -6657,51 +6657,52 @@ SDValue DAGCombiner::foldLogicSetCCToMul(SDNode *N, const SDLoc &DL) {
     return SDValue();
 
   unsigned Opcode = N->getOpcode();
+  ISD::CondCode ExpectedCC;
+  if (Opcode == ISD::OR)
+    ExpectedCC = ISD::SETEQ;
+  else if (Opcode == ISD::AND)
+    ExpectedCC = ISD::SETNE;
+  else
+    return SDValue();
+
+  SDValue A, B;
+  ISD::CondCode CC0, CC1;
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
 
-  ISD::CondCode ExpectedCC;
-  if (Opcode == ISD::OR) {
-    ExpectedCC = ISD::SETEQ;
-  } else if (Opcode == ISD::AND) {
-    ExpectedCC = ISD::SETNE;
-  } else {
-    return SDValue();
-  }
-
-  if (N0.getOpcode() != ISD::SETCC || N1.getOpcode() != ISD::SETCC)
+  if (!N0.hasOneUse() || !N1.hasOneUse())
     return SDValue();
 
-  SDValue A = N0.getOperand(0);
-  SDValue B = N1.getOperand(0);
-  SDValue C0 = N0.getOperand(1);
-  SDValue C1 = N1.getOperand(1);
-  ISD::CondCode CC0 = cast<CondCodeSDNode>(N0.getOperand(2))->get();
-  ISD::CondCode CC1 = cast<CondCodeSDNode>(N1.getOperand(2))->get();
-
-  if (CC0 != ExpectedCC || CC1 != ExpectedCC ||
-      !A.getValueType().isScalarInteger() ||
-      A.getValueType() != B.getValueType() || !isNullConstant(C0) ||
-      !isNullConstant(C1))
+  if (!sd_match(N0, m_SetCC(m_Value(A), m_Zero(), m_CondCode(CC0))) ||
+      !sd_match(N1, m_SetCC(m_Value(B), m_Zero(), m_CondCode(CC1))))
     return SDValue();
 
-  const TargetLowering &TLI = DAG.getTargetLoweringInfo();
-  if (!TLI.isOperationLegalOrCustom(ISD::MUL, A.getValueType()))
+  if (CC0 != ExpectedCC || CC1 != ExpectedCC)
     return SDValue();
 
-  unsigned BitWidth = A.getValueSizeInBits();
+  EVT VT = A.getValueType();
+  if (!VT.isInteger() || VT != B.getValueType())
+    return SDValue();
+
+  if (!hasOperation(ISD::MUL, VT))
+    return SDValue();
+
+  unsigned BitWidth = A.getScalarValueSizeInBits();
   KnownBits KnownA = DAG.computeKnownBits(A);
+
+  if (KnownA.countMaxActiveBits() >= BitWidth)
+    return SDValue();
+
   KnownBits KnownB = DAG.computeKnownBits(B);
 
   if (KnownA.countMaxActiveBits() + KnownB.countMaxActiveBits() > BitWidth)
     return SDValue();
 
-  SDNodeFlags Flags;
-  Flags.setNoUnsignedWrap(true);
+  SDValue Mul =
+      DAG.getNode(ISD::MUL, DL, VT, A, B, SDNodeFlags::NoUnsignedWrap);
 
-  SDValue Mul = DAG.getNode(ISD::MUL, DL, A.getValueType(), A, B, Flags);
-
-  return DAG.getSetCC(DL, N->getValueType(0), Mul, C0, ExpectedCC);
+  return DAG.getSetCC(DL, N->getValueType(0), Mul, DAG.getConstant(0, DL, VT),
+                      ExpectedCC);
 }
 
 static SDValue foldAndOrOfSETCC(SDNode *LogicOp, SelectionDAG &DAG) {
