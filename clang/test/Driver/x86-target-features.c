@@ -417,11 +417,12 @@
 
 // RUN: not %clang -### --target=i386 -muintr %s 2>&1 | FileCheck --check-prefix=NON-UINTR %s
 // RUN: %clang -### --target=i386 -mno-uintr %s 2>&1 > /dev/null
-// RUN: not %clang -### --target=i386 -mapx-features=ndd %s 2>&1 | FileCheck --check-prefix=NON-APX %s
-// RUN: not %clang -### --target=i386 -mapxf %s 2>&1 | FileCheck --check-prefix=NON-APX %s
+// RUN: not %clang -### --target=i386 -mapx-features=ndd %s 2>&1 | FileCheck --check-prefixes=NON-APX,NON-APXFS %s
+// RUN: not %clang -### --target=i386 -mapxf %s 2>&1 | FileCheck --check-prefixes=NON-APX,NON-APXF %s
 // RUN: %clang -### --target=i386 -mno-apxf %s 2>&1 > /dev/null
 // NON-UINTR:    error: unsupported option '-muintr' for target 'i386'
-// NON-APX:      error: unsupported option '-mapx-features=|-mapxf' for target 'i386'
+// NON-APXF:     error: unsupported option '-mapxf' for target 'i386'
+// NON-APXFS:    error: unsupported option '-mapx-features=' for target 'i386'
 // NON-APX-NOT:  error: {{.*}} -mapx-features=
 
 // RUN: %clang --target=i386 -march=i386 -mharden-sls=return %s -### -o %t.o 2>&1 | FileCheck -check-prefixes=SLS-RET,NO-SLS %s
@@ -443,8 +444,8 @@
 // RUN: %clang --target=x86_64-unknown-linux-gnu -mno-apxf -mapxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=APXF %s
 // RUN: %clang --target=x86_64-unknown-linux-gnu -mapxf -mno-apxf %s -### -o %t.o 2>&1 | FileCheck -check-prefix=NO-APXF %s
 //
-// APXF: "-target-feature" "+egpr" "-target-feature" "+push2pop2" "-target-feature" "+ppx" "-target-feature" "+ndd" "-target-feature" "+ccmp" "-target-feature" "+nf" "-target-feature" "+zu"
-// NO-APXF: "-target-feature" "-egpr" "-target-feature" "-push2pop2" "-target-feature" "-ppx" "-target-feature" "-ndd" "-target-feature" "-ccmp" "-target-feature" "-nf" "-target-feature" "-zu"
+// APXF: "-target-feature" "+egpr" "-target-feature" "+ndd" "-target-feature" "+ccmp" "-target-feature" "+nf" "-target-feature" "+zu" "-target-feature" "+push2pop2" "-target-feature" "+ppx"
+// NO-APXF: "-target-feature" "-egpr" "-target-feature" "-ndd" "-target-feature" "-ccmp" "-target-feature" "-nf" "-target-feature" "-zu" "-target-feature" "-push2pop2" "-target-feature" "-ppx"
 
 // RUN: %clang --target=x86_64-unknown-linux-gnu -mapx-features=egpr %s -### -o %t.o 2>&1 | FileCheck -check-prefix=EGPR %s
 // RUN: %clang --target=x86_64-unknown-linux-gnu -mapx-features=push2pop2 %s -### -o %t.o 2>&1 | FileCheck -check-prefix=PUSH2POP2 %s
