@@ -372,6 +372,18 @@ module {
     llvm.return
   }
 
+  llvm.func @no_builtins_all() attributes { nobuiltins = [] } {
+    // CHECK: @no_builtins_all
+    // CHECK-SAME: attributes {nobuiltins = []}
+    llvm.return
+  }
+
+  llvm.func @no_builtins_2() attributes { nobuiltins = ["foo", "bar"] } {
+    // CHECK: @no_builtins_2
+    // CHECK-SAME: attributes {nobuiltins = ["foo", "bar"]}
+    llvm.return
+  }
+
 }
 
 // -----

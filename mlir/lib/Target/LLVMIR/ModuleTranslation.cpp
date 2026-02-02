@@ -1660,7 +1660,7 @@ static void convertFunctionMemoryAttributes(LLVMFuncOp func,
 }
 
 /// Converts function attributes from `func` and attaches them to `llvmFunc`.
-static void convertFunctionAttributes(LLVMFuncOp func,
+static void convertFunctionAttributes(ModuleTranslation &mod, LLVMFuncOp func,
                                       llvm::Function *llvmFunc) {
   if (func.getNoInlineAttr())
     llvmFunc->addFnAttr(llvm::Attribute::NoInline);
@@ -1700,6 +1700,15 @@ static void convertFunctionAttributes(LLVMFuncOp func,
   if (UWTableKindAttr uwTableKindAttr = func.getUwtableKindAttr())
     llvmFunc->setUWTableKind(
         convertUWTableKindToLLVM(uwTableKindAttr.getUwtableKind()));
+
+  if (ArrayAttr noBuiltins = func.getNobuiltinsAttr()) {
+    if (noBuiltins.empty())
+      llvmFunc->addFnAttr("no-builtins");
+
+    mod.convertFunctionArrayAttr(noBuiltins, llvmFunc,
+                                 ModuleTranslation::convertNoBuiltin);
+  }
+
   convertFunctionMemoryAttributes(func, llvmFunc);
 }
 
@@ -1869,7 +1878,7 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
     addRuntimePreemptionSpecifier(function.getDsoLocal(), llvmFunc);
 
     // Convert function attributes.
-    convertFunctionAttributes(function, llvmFunc);
+    convertFunctionAttributes(*this, function, llvmFunc);
 
     // Convert function kernel attributes to metadata.
     convertFunctionKernelAttributes(function, llvmFunc, *this);

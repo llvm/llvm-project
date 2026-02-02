@@ -60,6 +60,7 @@ def CIR_Dialect : Dialect {
     // of a [a-zA-Z0-9_] character regex(numbers only if not first), so there is
     // no way to get an underscore into this, even with escaping.
     static llvm::StringRef getModularFormatAttrName() { return "modular_format"; }
+    static llvm::StringRef getNoBuiltinsAttrName() { return "nobuiltins"; }
 
     void registerAttributes();
     void registerTypes();
