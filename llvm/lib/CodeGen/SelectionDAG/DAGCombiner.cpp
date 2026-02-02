@@ -11798,10 +11798,10 @@ SDValue DAGCombiner::foldABSToABD(SDNode *N, const SDLoc &DL) {
     return SDValue();
   }
 
-  // The IsAdd case explicitly checks for const/bv-of-const. This implies eihter
+  // The IsAdd case explicitly checks for const/bv-of-const. This implies either
   // (Opc0 != Op1.getOpcode() || Opc0 is not in {zext/sext/sign_ext_inreg}. This
   // implies it was alrady handled by the above if statement.
-  assert(!IsAdd);
+  assert(!IsAdd && "Unexpected abs(add(x,y)) pattern");
 
   EVT VT0, VT1;
   if (Opc0 == ISD::SIGN_EXTEND_INREG) {
