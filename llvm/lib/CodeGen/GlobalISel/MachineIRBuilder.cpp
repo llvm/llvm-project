@@ -787,7 +787,7 @@ MachineInstrBuilder MachineIRBuilder::buildShuffleSplat(const DstOp &Res,
   assert(Src.getLLTTy(*getMRI()) == DstTy.getElementType() &&
          "Expected Src to match Dst elt ty");
   auto UndefVec = buildUndef(DstTy);
-  auto Zero = buildConstant(LLT::integer(64), 0);
+  auto Zero = buildConstant(LLT::buildInteger(64), 0);
   auto InsElt = buildInsertVectorElement(DstTy, UndefVec, Src, Zero);
   SmallVector<int, 16> ZeroMask(DstTy.getNumElements());
   return buildShuffleVector(DstTy, InsElt, UndefVec, ZeroMask);

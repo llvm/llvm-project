@@ -1325,7 +1325,7 @@ void CallLowering::ValueHandler::copyArgumentMemory(
       MemSize, DstAlign);
 
   const LLT PtrTy = MRI.getType(DstPtr);
-  const LLT SizeTy = LLT::integer(PtrTy.getSizeInBits());
+  const LLT SizeTy = LLT::buildInteger(PtrTy.getSizeInBits());
 
   auto SizeConst = MIRBuilder.buildConstant(SizeTy, MemSize);
   MIRBuilder.buildMemCpy(DstPtr, SrcPtr, SizeConst, *DstMMO, *SrcMMO);
