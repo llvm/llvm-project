@@ -11553,11 +11553,15 @@ SDValue DAGCombiner::visitSRL(SDNode *N) {
     if (sd_match(N0, m_Clmul(m_ZExt(m_Value(X)), m_ZExt(m_Value(Y)))) &&
         X.getScalarValueSizeInBits() == HalfBW &&
         Y.getScalarValueSizeInBits() == HalfBW) {
-      if (N1C->getZExtValue() == HalfBW - 1)
+      if (N1C->getZExtValue() == HalfBW - 1 &&
+          (!LegalOperations ||
+           TLI.isOperationLegalOrCustom(ISD::CLMULR, X.getValueType())))
         return DAG.getNode(
             ISD::ZERO_EXTEND, DL, VT,
             DAG.getNode(ISD::CLMULR, DL, X.getValueType(), X, Y));
-      if (N1C->getZExtValue() == HalfBW)
+      if (N1C->getZExtValue() == HalfBW &&
+          (!LegalOperations ||
+           TLI.isOperationLegalOrCustom(ISD::CLMULH, X.getValueType())))
         return DAG.getNode(
             ISD::ZERO_EXTEND, DL, VT,
             DAG.getNode(ISD::CLMULH, DL, X.getValueType(), X, Y));
@@ -18150,8 +18154,7 @@ SDValue DAGCombiner::visitFADD(SDNode *N) {
   // N0 + -0.0 --> N0 (also allowed with +0.0 and fast-math)
   ConstantFPSDNode *N1C = isConstOrConstSplatFP(N1, true);
   if (N1C && N1C->isZero())
-    if (N1C->isNegative() || Flags.hasNoSignedZeros() ||
-        DAG.canIgnoreSignBitOfZero(SDValue(N, 0)))
+    if (N1C->isNegative() || DAG.canIgnoreSignBitOfZero(SDValue(N, 0)))
       return N0;
 
   if (SDValue NewSel = foldBinOpIntoSelect(N))
@@ -18363,8 +18366,7 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
 
   // (fsub A, 0) -> A
   if (N1CFP && N1CFP->isZero()) {
-    if (!N1CFP->isNegative() || Flags.hasNoSignedZeros() ||
-        DAG.canIgnoreSignBitOfZero(SDValue(N, 0))) {
+    if (!N1CFP->isNegative() || DAG.canIgnoreSignBitOfZero(SDValue(N, 0))) {
       return N0;
     }
   }
@@ -18377,8 +18379,7 @@ SDValue DAGCombiner::visitFSUB(SDNode *N) {
 
   // (fsub -0.0, N1) -> -N1
   if (N0CFP && N0CFP->isZero()) {
-    if (N0CFP->isNegative() || Flags.hasNoSignedZeros() ||
-        DAG.canIgnoreSignBitOfZero(SDValue(N, 0))) {
+    if (N0CFP->isNegative() || DAG.canIgnoreSignBitOfZero(SDValue(N, 0))) {
       // We cannot replace an FSUB(+-0.0,X) with FNEG(X) when denormals are
       // flushed to zero, unless all users treat denorms as zero (DAZ).
       // FIXME: This transform will change the sign of a NaN and the behavior
@@ -19027,7 +19028,7 @@ SDValue DAGCombiner::visitFDIV(SDNode *N) {
   }
 
   // Fold X/Sqrt(X) -> Sqrt(X)
-  if ((Flags.hasNoSignedZeros() || DAG.canIgnoreSignBitOfZero(SDValue(N, 0))) &&
+  if (DAG.canIgnoreSignBitOfZero(SDValue(N, 0)) &&
       Flags.hasAllowReassociation())
     if (N1.getOpcode() == ISD::FSQRT && N0 == N1.getOperand(0))
       return N1;
@@ -19079,8 +19080,7 @@ SDValue DAGCombiner::visitFREM(SDNode *N) {
       TLI.isOperationLegalOrCustom(ISD::FDIV, VT) &&
       TLI.isOperationLegalOrCustom(ISD::FTRUNC, VT) &&
       DAG.isKnownToBeAPowerOfTwoFP(N1)) {
-    bool NeedsCopySign = !Flags.hasNoSignedZeros() &&
-                         !DAG.canIgnoreSignBitOfZero(SDValue(N, 0)) &&
+    bool NeedsCopySign = !DAG.canIgnoreSignBitOfZero(SDValue(N, 0)) &&
                          !DAG.cannotBeOrderedNegativeFP(N0);
     SDValue Div = DAG.getNode(ISD::FDIV, DL, VT, N0, N1);
     SDValue Rnd = DAG.getNode(ISD::FTRUNC, DL, VT, Div);
@@ -20743,9 +20743,32 @@ SDValue DAGCombiner::ForwardStoreValueToDirectLoad(LoadSDNode *LD) {
     if (!isTypeLegal(LDMemType))
       break;
     if (STMemType != LDMemType) {
-      // TODO: Support vectors? This requires extract_subvector/bitcast.
-      if (!STMemType.isVector() && !LDMemType.isVector() &&
-          STMemType.isInteger() && LDMemType.isInteger())
+      if (LdMemSize == StMemSize) {
+        if (TLI.isOperationLegal(ISD::BITCAST, LDMemType) &&
+            isTypeLegal(LDMemType) &&
+            TLI.isOperationLegal(ISD::BITCAST, STMemType) &&
+            isTypeLegal(STMemType) &&
+            TLI.isLoadBitCastBeneficial(LDMemType, STMemType, DAG,
+                                        *LD->getMemOperand()))
+          Val = DAG.getBitcast(LDMemType, Val);
+        else
+          break;
+      } else if (LDMemType.isVector() && isTypeLegal(STMemType)) {
+        EVT EltVT = LDMemType.getVectorElementType();
+        TypeSize EltSize = EltVT.getSizeInBits();
+
+        if (!StMemSize.isKnownMultipleOf(EltSize))
+          break;
+
+        EVT InterVT = EVT::getVectorVT(*DAG.getContext(), EltVT,
+                                       StMemSize.divideCoefficientBy(EltSize));
+        if (!TLI.isOperationLegalOrCustom(ISD::EXTRACT_SUBVECTOR, InterVT))
+          break;
+
+        Val = DAG.getExtractSubvector(SDLoc(LD), LDMemType,
+                                      DAG.getBitcast(InterVT, Val), 0);
+      } else if (!STMemType.isVector() && !LDMemType.isVector() &&
+                 STMemType.isInteger() && LDMemType.isInteger())
         Val = DAG.getNode(ISD::TRUNCATE, SDLoc(LD), LDMemType, Val);
       else
         break;
@@ -28320,7 +28343,8 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
     unsigned SrcOpcode = N0.getOpcode();
     if (TLI.isBinOp(SrcOpcode) && N->isOnlyUserOf(N0.getNode()) &&
         (N1.isUndef() ||
-         (SrcOpcode == N1.getOpcode() && N->isOnlyUserOf(N1.getNode())))) {
+         (SrcOpcode == N1.getOpcode() && N->isOnlyUserOf(N1.getNode()) &&
+          N0.getResNo() == N1.getResNo()))) {
       // Get binop source ops, or just pass on the undef.
       SDValue Op00 = N0.getOperand(0);
       SDValue Op01 = N0.getOperand(1);
@@ -28385,7 +28409,8 @@ SDValue DAGCombiner::visitVECTOR_SHUFFLE(SDNode *N) {
           SDValue RHS = DAG.getVectorShuffle(
               VT, DL, RightSV0 ? RightSV0 : DAG.getPOISON(VT),
               RightSV1 ? RightSV1 : DAG.getPOISON(VT), RightMask);
-          return DAG.getNode(SrcOpcode, DL, VT, LHS, RHS);
+          return DAG.getNode(SrcOpcode, DL, N0->getVTList(), LHS, RHS)
+              .getValue(N0.getResNo());
         }
       }
     }
