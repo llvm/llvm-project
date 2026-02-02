@@ -2012,6 +2012,7 @@ static bool CheckConstexprDeclStmt(Sema &SemaRef, const FunctionDecl *Dcl,
   // C++11 [dcl.constexpr]p3 and p4:
   //  The definition of a constexpr function(p3) or constructor(p4) [...] shall
   //  contain only
+  enum { Function = 0, Constructor = 1 };
   for (const auto *DclIt : DS->decls()) {
     switch (DclIt->getKind()) {
     case Decl::StaticAssert:
@@ -2049,7 +2050,6 @@ static bool CheckConstexprDeclStmt(Sema &SemaRef, const FunctionDecl *Dcl,
     case Decl::CXXRecord:
       // C++1y allows types to be defined, not just declared.
       if (cast<TagDecl>(DclIt)->isThisDeclarationADefinition()) {
-        enum { Function, Constructor }; // Define enum locally
         if (Kind == Sema::CheckConstexprKind::Diagnose) {
           SemaRef.DiagCompat(DS->getBeginLoc(),
                              diag_compat::constexpr_type_definition)
@@ -2075,8 +2075,6 @@ static bool CheckConstexprDeclStmt(Sema &SemaRef, const FunctionDecl *Dcl,
       //   initialization is performed.
       const auto *VD = cast<VarDecl>(DclIt);
 
-      // Define the enum UP HERE so it is visible to all the checks below
-      enum { Function, Constructor };
 
       if (VD->isThisDeclarationADefinition()) {
         if (VD->isStaticLocal()) {
@@ -2215,6 +2213,7 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
                            SourceLocation &Cxx2bLoc,
                            Sema::CheckConstexprKind Kind) {
   // - its function-body shall be [...] a compound-statement that contains only
+  enum { Function = 0, Constructor = 1 };
   switch (S->getStmtClass()) {
   case Stmt::NullStmtClass:
     //   - null statements,
@@ -2374,6 +2373,7 @@ CheckConstexprFunctionStmt(Sema &SemaRef, const FunctionDecl *Dcl, Stmt *S,
 static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
                                        Stmt *Body,
                                        Sema::CheckConstexprKind Kind) {
+  enum { Function = 0, Constructor = 1 };
   SmallVector<SourceLocation, 4> ReturnStmts;
 
   if (isa<CXXTryStmt>(Body)) {
@@ -2389,9 +2389,6 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
     //
     // This restriction is lifted in C++2a, as long as inner statements also
     // apply the general constexpr rules.
-    
-    // <--- START FIX
-    enum { Function, Constructor }; // Defined locally for this block
 
     switch (Kind) {
     case Sema::CheckConstexprKind::CheckValid:
@@ -2405,7 +2402,6 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
           << (isa<CXXConstructorDecl>(Dcl) ? Constructor : Function);
       break;
     }
-    // <--- END FIX
   }
     
   // - its function-body shall be [...] a compound-statement that contains only
@@ -2429,7 +2425,6 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
         (Cxx1yLoc.isValid() && !SemaRef.getLangOpts().CPlusPlus17))
       return false;
   } else {
-    enum { Function, Constructor };
     if (Cxx2bLoc.isValid()) {
       SemaRef.DiagCompat(Cxx2bLoc, diag_compat::cxx23_constexpr_body_invalid_stmt)
           << (isa<CXXConstructorDecl>(Dcl) ? Constructor : Function);
@@ -2516,10 +2511,7 @@ static bool CheckConstexprFunctionBody(Sema &SemaRef, const FunctionDecl *Dcl,
           return false;
         break;
       }
-    } else if (ReturnStmts.size() > 1) {
-      // Define the enum locally again because the previous one is out of scope
-      enum { Function, Constructor };
-        
+    } else if (ReturnStmts.size() > 1) {      
       switch (Kind) {
       case Sema::CheckConstexprKind::Diagnose:
         SemaRef.DiagCompat(ReturnStmts.back(),
