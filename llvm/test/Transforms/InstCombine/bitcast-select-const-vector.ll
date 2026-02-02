@@ -56,3 +56,18 @@ define <2 x i32> @bitcast_select_double_to_v2i32_const_lhs(i64 %i, double %i41) 
   %astype13.i.i = bitcast double %s.0.i.i to <2 x i32>
   ret <2 x i32> %astype13.i.i
 }
+
+; Negative test, don't do for vselect
+define double @bitcast_v2i32_vselect_to_double_const_rhs(<2 x double> %cmp.vec, <2 x i32> %val) {
+; CHECK-LABEL: define double @bitcast_v2i32_vselect_to_double_const_rhs(
+; CHECK-SAME: <2 x double> [[CMP_VEC:%.*]], <2 x i32> [[VAL:%.*]]) {
+; CHECK-NEXT:    [[VCMP:%.*]] = fcmp one <2 x double> [[CMP_VEC]], splat (double 0x7FF0000000000000)
+; CHECK-NEXT:    [[S_0_I_I:%.*]] = select <2 x i1> [[VCMP]], <2 x i32> [[VAL]], <2 x i32> <i32 0, i32 2146959360>
+; CHECK-NEXT:    [[ASTYPE13_I_I:%.*]] = bitcast <2 x i32> [[S_0_I_I]] to double
+; CHECK-NEXT:    ret double [[ASTYPE13_I_I]]
+;
+  %vcmp = fcmp one <2 x double> %cmp.vec, splat (double 0x7FF0000000000000)
+  %select = select <2 x i1> %vcmp, <2 x i32> %val, <2 x i32> <i32 0, i32 2146959360>
+  %cast = bitcast <2 x i32> %select to double
+  ret double %cast
+}
