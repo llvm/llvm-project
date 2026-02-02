@@ -148,6 +148,10 @@ typedef struct VPDataReaderType {
                                         uint32_t N);
 } VPDataReaderType;
 
+/* Get value profile data size including the header and padding. */
+uint64_t lprofgetValueProfDataSize(VPDataReaderType *VPDataReader,
+                                   const __llvm_profile_data *Data);
+
 /* Write profile data to destination. If SkipNameDataWrite is set to 1,
    the name data is already in destination, we just skip over it. */
 int lprofWriteData(ProfDataWriter *Writer, VPDataReaderType *VPDataReader,
