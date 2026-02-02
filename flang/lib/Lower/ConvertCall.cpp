@@ -342,7 +342,7 @@ getTypeWithIgnoreTkrC(mlir::FunctionType funcType,
   return std::nullopt;
 }
 
-std::pair<Fortran::lower::LoweredResult, bool>
+std::tuple<Fortran::lower::LoweredResult, bool, mlir::Operation *>
 Fortran::lower::genCallOpAndResult(
     mlir::Location loc, Fortran::lower::AbstractConverter &converter,
     Fortran::lower::SymMap &symMap, Fortran::lower::StatementContext &stmtCtx,
@@ -351,6 +351,7 @@ Fortran::lower::genCallOpAndResult(
   fir::FirOpBuilder &builder = converter.getFirOpBuilder();
   using PassBy = Fortran::lower::CallerInterface::PassEntityBy;
   bool mustPopSymMap = false;
+  mlir::Operation *callOp = nullptr;
 
   llvm::SmallVector<mlir::Value> resultLengths;
   if (isElemental)
@@ -713,10 +714,10 @@ Fortran::lower::genCallOpAndResult(
       }
     }
 
-    cuf::KernelLaunchOp::create(builder, loc, funcType.getResults(),
-                                funcSymbolAttr, grid_x, grid_y, grid_z, block_x,
-                                block_y, block_z, bytes, stream, operands,
-                                /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr);
+    callOp = cuf::KernelLaunchOp::create(
+        builder, loc, funcType.getResults(), funcSymbolAttr, grid_x, grid_y,
+        grid_z, block_x, block_y, block_z, bytes, stream, operands,
+        /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr);
     callNumResults = 0;
   } else if (caller.requireDispatchCall()) {
     // Procedure call requiring a dynamic dispatch. Call is created with
@@ -748,6 +749,7 @@ Fortran::lower::genCallOpAndResult(
           passActual, operands, builder.getI32IntegerAttr(*passArg),
           /*arg_attrs=*/nullptr,
           /*res_attrs=*/nullptr, procAttrs);
+      callOp = dispatch;
     } else {
       // NOPASS
       const Fortran::evaluate::Component *component =
@@ -764,6 +766,7 @@ Fortran::lower::genCallOpAndResult(
           builder, loc, funcType.getResults(), builder.getStringAttr(procName),
           passObject, operands, nullptr, /*arg_attrs=*/nullptr,
           /*res_attrs=*/nullptr, procAttrs);
+      callOp = dispatch;
     }
     callNumResults = dispatch.getNumResults();
     if (callNumResults != 0)
@@ -785,6 +788,7 @@ Fortran::lower::genCallOpAndResult(
         builder, loc, funcType.getResults(), funcSymbolAttr, operands,
         /*arg_attrs=*/nullptr, /*res_attrs=*/nullptr, procAttrs, inlineAttr,
         /*accessGroups=*/mlir::ArrayAttr{});
+    callOp = call;
 
     callNumResults = call.getNumResults();
     if (callNumResults != 0)
@@ -821,7 +825,7 @@ Fortran::lower::genCallOpAndResult(
                                  /*finalize=*/mustFinalizeResult);
       });
     return {LoweredResult{hlfir::EntityWithAttributes{expr}},
-            mustFinalizeResult};
+            mustFinalizeResult, callOp};
   }
 
   if (allocatedResult) {
@@ -880,13 +884,13 @@ Fortran::lower::genCallOpAndResult(
         }
       }
     }
-    return {LoweredResult{*allocatedResult}, resultIsFinalized};
+    return {LoweredResult{*allocatedResult}, resultIsFinalized, callOp};
   }
 
   // subroutine call
   if (!resultType)
     return {LoweredResult{fir::ExtendedValue{mlir::Value{}}},
-            /*resultIsFinalized=*/false};
+            /*resultIsFinalized=*/false, callOp};
 
   // For now, Fortran return values are implemented with a single MLIR
   // function return value.
@@ -902,11 +906,11 @@ Fortran::lower::genCallOpAndResult(
         loc, builder.getCharacterLengthType(), charTy.getLen());
     return {
         LoweredResult{fir::ExtendedValue{fir::CharBoxValue{callResult, len}}},
-        /*resultIsFinalized=*/false};
+        /*resultIsFinalized=*/false, callOp};
   }
 
   return {LoweredResult{fir::ExtendedValue{callResult}},
-          /*resultIsFinalized=*/false};
+          /*resultIsFinalized=*/false, callOp};
 }
 
 static hlfir::EntityWithAttributes genStmtFunctionRef(
@@ -1050,8 +1054,8 @@ using ExvAndCleanup =
 // Helper to transform a fir::ExtendedValue to an hlfir::EntityWithAttributes.
 static hlfir::EntityWithAttributes
 extendedValueToHlfirEntity(mlir::Location loc, fir::FirOpBuilder &builder,
-                           const fir::ExtendedValue &exv,
-                           llvm::StringRef name) {
+                           const fir::ExtendedValue &exv, llvm::StringRef name,
+                           mlir::Operation *insertBefore = nullptr) {
   mlir::Value firBase = fir::getBase(exv);
   mlir::Type firBaseTy = firBase.getType();
   if (fir::isa_trivial(firBaseTy))
@@ -1073,8 +1077,26 @@ extendedValueToHlfirEntity(mlir::Location loc, fir::FirOpBuilder &builder,
         builder, loc, storage, /*mustFree=*/builder.createBool(loc, false));
     return hlfir::EntityWithAttributes{asExpr.getResult()};
   }
-  return hlfir::genDeclare(loc, builder, exv, name,
-                           fir::FortranVariableFlagsAttr{});
+  // TODO: better scoping model in FIR.
+  // The declare for result storage allocated on the callee side must
+  // currently be emitted before the call so that MLIR level inlining does not
+  // break aliasing by introducing a fir.dummy_scope between the alloca and
+  // fir.declare that leads the alias analysis to think that the result
+  // allocation is a local inside the callee scope that cannot alias with the
+  // usage of that temporary inside the callee because they are made through a
+  // declare with the TARGET attribute.
+  mlir::OpBuilder::InsertionGuard guard(builder);
+  if (insertBefore)
+    builder.setInsertionPoint(insertBefore);
+  hlfir::EntityWithAttributes declare = hlfir::genDeclare(
+      loc, builder, exv, name, fir::FortranVariableFlagsAttr{});
+  // Replace the fir.save_result "to" by the declare results instead of
+  // directly using the alloca.
+  if (insertBefore && insertBefore->getNumResults() == 1)
+    for (auto resUser : insertBefore->getResult(0).getUsers())
+      if (auto save_result = llvm::dyn_cast<fir::SaveResultOp>(resUser))
+        save_result.getMemrefMutable().assign(declare.getFirBase());
+  return declare;
 }
 namespace {
 /// Structure to hold the clean-up related to a dummy argument preparation
@@ -1909,10 +1931,11 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
   // Prepare lowered arguments according to the interface
   // and map the lowered values to the dummy
   // arguments.
-  auto [loweredResult, resultIsFinalized] = Fortran::lower::genCallOpAndResult(
-      loc, callContext.converter, callContext.symMap, callContext.stmtCtx,
-      caller, callSiteType, callContext.resultType,
-      callContext.isElementalProcWithArrayArgs());
+  auto [loweredResult, resultIsFinalized, callOp] =
+      Fortran::lower::genCallOpAndResult(
+          loc, callContext.converter, callContext.symMap, callContext.stmtCtx,
+          caller, callSiteType, callContext.resultType,
+          callContext.isElementalProcWithArrayArgs());
 
   // Clean-up associations and copy-in.
   // The association clean-ups are postponed to the end of the statement
@@ -1948,8 +1971,8 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
     return extendedValueToHlfirEntity(loc, builder, result, tempResultName);
 
   if (!resultIsFinalized) {
-    hlfir::Entity resultEntity =
-        extendedValueToHlfirEntity(loc, builder, result, tempResultName);
+    hlfir::Entity resultEntity = extendedValueToHlfirEntity(
+        loc, builder, result, tempResultName, /*insertBefore=*/callOp);
     resultEntity = loadTrivialScalar(loc, builder, resultEntity);
     if (resultEntity.isVariable()) {
       // If the result has no finalization, it can be moved into an expression.
@@ -1981,7 +2004,9 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
                                             /*mayBePolymorphic=*/true,
                                             /*preserveLowerBounds=*/false)
           : result;
-  return extendedValueToHlfirEntity(loc, builder, loadedResult, tempResultName);
+  return extendedValueToHlfirEntity(
+      loc, builder, loadedResult, tempResultName,
+      /*insertBefore=*/!allocatable ? callOp : nullptr);
 }
 
 /// Create an optional dummy argument value from an entity that may be

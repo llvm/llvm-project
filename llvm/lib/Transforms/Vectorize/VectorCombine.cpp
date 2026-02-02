@@ -150,6 +150,7 @@ private:
   bool foldCastFromReductions(Instruction &I);
   bool foldSignBitReductionCmp(Instruction &I);
   bool foldICmpEqZeroVectorReduce(Instruction &I);
+  bool foldEquivalentReductionCmp(Instruction &I);
   bool foldSelectShuffle(Instruction &I, bool FromReduction = false);
   bool foldInterleaveIntrinsics(Instruction &I);
   bool shrinkType(Instruction &I);
@@ -1654,7 +1655,13 @@ bool VectorCombine::foldSelectsFromBitcast(Instruction &I) {
     }
 
     // Create the vector select and bitcast once for this condition.
-    Builder.SetInsertPoint(BC->getNextNode());
+    auto InsertPt = std::next(BC->getIterator());
+
+    if (auto *CondInst = dyn_cast<Instruction>(Cond))
+      if (DT.dominates(BC, CondInst))
+        InsertPt = std::next(CondInst->getIterator());
+
+    Builder.SetInsertPoint(InsertPt);
     Value *VecSel =
         Builder.CreateSelect(Cond, SrcVec, Constant::getNullValue(SrcVecTy));
     Value *NewBC = Builder.CreateBitCast(VecSel, DstVecTy);
@@ -2489,7 +2496,7 @@ bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
   }
   if (Match1) {
     InstructionCost Shuf1Cost = TTI.getShuffleCost(
-        TargetTransformInfo::SK_PermuteTwoSrc, BinOpTy, Op0Ty, Mask0, CostKind,
+        TargetTransformInfo::SK_PermuteTwoSrc, BinOpTy, Op1Ty, Mask1, CostKind,
         0, nullptr, {Op10, Op11}, cast<Instruction>(BinOp->getOperand(1)));
     OldCost += Shuf1Cost;
     if (!BinOp->hasOneUse() || !BinOp->getOperand(1)->hasOneUse())
@@ -4347,7 +4354,8 @@ bool VectorCombine::foldSignBitReductionCmp(Instruction &I) {
         TTI.getArithmeticReductionCost(getArithmeticReductionInstruction(Arith),
                                        VecTy, std::nullopt, CostKind);
     InstructionCost MinMaxCost =
-        TTI.getMinMaxReductionCost(MinMax, VecTy, FastMathFlags(), CostKind);
+        TTI.getMinMaxReductionCost(getMinMaxReductionIntrinsicOp(MinMax), VecTy,
+                                   FastMathFlags(), CostKind);
     return ArithCost <= MinMaxCost ? std::make_pair(Arith, ArithCost)
                                    : std::make_pair(MinMax, MinMaxCost);
   };
@@ -4521,10 +4529,10 @@ bool VectorCombine::foldICmpEqZeroVectorReduce(Instruction &I) {
     case Intrinsic::vector_reduce_umax:
     case Intrinsic::vector_reduce_smin:
     case Intrinsic::vector_reduce_smax:
-      OldReduceCost =
-          TTI.getMinMaxReductionCost(IID, FXTy, FastMathFlags(), CostKind);
-      NewReduceCost =
-          TTI.getMinMaxReductionCost(IID, XTy, FastMathFlags(), CostKind);
+      OldReduceCost = TTI.getMinMaxReductionCost(
+          getMinMaxReductionIntrinsicOp(IID), FXTy, FastMathFlags(), CostKind);
+      NewReduceCost = TTI.getMinMaxReductionCost(
+          getMinMaxReductionIntrinsicOp(IID), XTy, FastMathFlags(), CostKind);
       break;
     default:
       llvm_unreachable("Unexpected reduction");
@@ -4552,6 +4560,141 @@ bool VectorCombine::foldICmpEqZeroVectorReduce(Instruction &I) {
   Value *NewReduce = Builder.CreateIntrinsic(Ty, II->getIntrinsicID(), {X});
   Value *NewCmp =
       Builder.CreateICmp(Pred, NewReduce, ConstantInt::getNullValue(Ty));
+  replaceValue(I, *NewCmp);
+  return true;
+}
+
+/// Fold comparisons of reduce.or/reduce.and with reduce.umax/reduce.umin
+/// based on cost, preserving the comparison semantics.
+///
+/// We use two fundamental properties for each pair:
+///
+///   1. or(X) == 0 <=> umax(X) == 0
+///   2. or(X) == 1 <=> umax(X) == 1
+///   3. sign(or(X)) == sign(umax(X))
+///
+///   1. and(X) == -1 <=> umin(X) == -1
+///   2. and(X) == -2 <=> umin(X) == -2
+///   3. sign(and(X)) == sign(umin(X))
+///
+/// From these we can infer the following transformations:
+///   a. or(X) ==/!= 0   <-> umax(X) ==/!= 0
+///   b. or(X) s< 0      <-> umax(X) s< 0
+///   c. or(X) s> -1     <-> umax(X) s> -1
+///   d. or(X) s< 1      <-> umax(X) s< 1
+///   e. or(X) ==/!= 1   <-> umax(X) ==/!= 1
+///   f. or(X) s< 2      <-> umax(X) s< 2
+///   g. and(X) ==/!= -1 <-> umin(X) ==/!= -1
+///   h. and(X) s< 0     <-> umin(X) s< 0
+///   i. and(X) s> -1    <-> umin(X) s> -1
+///   j. and(X) s> -2    <-> umin(X) s> -2
+///   k. and(X) ==/!= -2 <-> umin(X) ==/!= -2
+///   l. and(X) s> -3    <-> umin(X) s> -3
+///
+bool VectorCombine::foldEquivalentReductionCmp(Instruction &I) {
+  CmpPredicate Pred;
+  Value *ReduceOp;
+  const APInt *CmpVal;
+  if (!match(&I, m_ICmp(Pred, m_Value(ReduceOp), m_APInt(CmpVal))))
+    return false;
+
+  auto *II = dyn_cast<IntrinsicInst>(ReduceOp);
+  if (!II || !II->hasOneUse())
+    return false;
+
+  const auto IsValidOrUmaxCmp = [&]() {
+    // Cases a and e
+    bool IsEquality =
+        (CmpVal->isZero() || CmpVal->isOne()) && ICmpInst::isEquality(Pred);
+    // Case c
+    bool IsPositive = CmpVal->isAllOnes() && Pred == ICmpInst::ICMP_SGT;
+    // Cases b, d, and f
+    bool IsNegative = (CmpVal->isZero() || CmpVal->isOne() || *CmpVal == 2) &&
+                      Pred == ICmpInst::ICMP_SLT;
+    return IsEquality || IsPositive || IsNegative;
+  };
+
+  const auto IsValidAndUminCmp = [&]() {
+    const auto LeadingOnes = CmpVal->countl_one();
+
+    // Cases g and k
+    bool IsEquality =
+        (CmpVal->isAllOnes() || LeadingOnes + 1 == CmpVal->getBitWidth()) &&
+        ICmpInst::isEquality(Pred);
+    // Case h
+    bool IsNegative = CmpVal->isZero() && Pred == ICmpInst::ICMP_SLT;
+    // Cases i, j, and l
+    bool IsPositive =
+        // if the number has at least N - 2 leading ones
+        // and the two LSBs are:
+        //   - 1 x 1 -> -1
+        //   - 1 x 0 -> -2
+        //   - 0 x 1 -> -3
+        LeadingOnes + 2 >= CmpVal->getBitWidth() &&
+        ((*CmpVal)[0] || (*CmpVal)[1]) && Pred == ICmpInst::ICMP_SGT;
+    return IsEquality || IsNegative || IsPositive;
+  };
+
+  Intrinsic::ID OriginalIID = II->getIntrinsicID();
+  Intrinsic::ID AlternativeIID;
+
+  // Check if this is a valid comparison pattern and determine the alternate
+  // reduction intrinsic.
+  switch (OriginalIID) {
+  case Intrinsic::vector_reduce_or:
+    if (!IsValidOrUmaxCmp())
+      return false;
+    AlternativeIID = Intrinsic::vector_reduce_umax;
+    break;
+  case Intrinsic::vector_reduce_umax:
+    if (!IsValidOrUmaxCmp())
+      return false;
+    AlternativeIID = Intrinsic::vector_reduce_or;
+    break;
+  case Intrinsic::vector_reduce_and:
+    if (!IsValidAndUminCmp())
+      return false;
+    AlternativeIID = Intrinsic::vector_reduce_umin;
+    break;
+  case Intrinsic::vector_reduce_umin:
+    if (!IsValidAndUminCmp())
+      return false;
+    AlternativeIID = Intrinsic::vector_reduce_and;
+    break;
+  default:
+    return false;
+  }
+
+  Value *X = II->getArgOperand(0);
+  auto *VecTy = dyn_cast<FixedVectorType>(X->getType());
+  if (!VecTy)
+    return false;
+
+  const auto GetReductionCost = [&](Intrinsic::ID IID) -> InstructionCost {
+    unsigned ReductionOpc = getArithmeticReductionInstruction(IID);
+    if (ReductionOpc != Instruction::ICmp)
+      return TTI.getArithmeticReductionCost(ReductionOpc, VecTy, std::nullopt,
+                                            CostKind);
+    return TTI.getMinMaxReductionCost(getMinMaxReductionIntrinsicOp(IID), VecTy,
+                                      FastMathFlags(), CostKind);
+  };
+
+  InstructionCost OrigCost = GetReductionCost(OriginalIID);
+  InstructionCost AltCost = GetReductionCost(AlternativeIID);
+
+  LLVM_DEBUG(dbgs() << "Found equivalent reduction cmp: " << I
+                    << "\n  OrigCost: " << OrigCost
+                    << " vs AltCost: " << AltCost << "\n");
+
+  if (AltCost >= OrigCost)
+    return false;
+
+  Builder.SetInsertPoint(&I);
+  Type *ScalarTy = VecTy->getScalarType();
+  Value *NewReduce = Builder.CreateIntrinsic(ScalarTy, AlternativeIID, {X});
+  Value *NewCmp =
+      Builder.CreateICmp(Pred, NewReduce, ConstantInt::get(ScalarTy, *CmpVal));
+
   replaceValue(I, *NewCmp);
   return true;
 }
@@ -5277,7 +5420,7 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
 
   // Get the range of vector elements used by shufflevector instructions.
   if (std::optional<IndexRange> Indices = GetIndexRangeInShuffles()) {
-    unsigned const NewNumElements = Indices->second + 1u;
+    unsigned const NewNumElements = (Indices->second + 1) - Indices->first;
 
     // If the range of vector elements is smaller than the full load, attempt
     // to create a smaller load.
@@ -5299,19 +5442,28 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
 
       using UseEntry = std::pair<ShuffleVectorInst *, std::vector<int>>;
       SmallVector<UseEntry, 4u> NewUses;
-      unsigned const MaxIndex = NewNumElements * 2u;
+      unsigned const LowOffset = Indices->first;
+      unsigned const HighOffset = OldNumElements - (Indices->second + 1);
 
       for (llvm::Use &Use : I.uses()) {
         auto *Shuffle = cast<ShuffleVectorInst>(Use.getUser());
         ArrayRef<int> OldMask = Shuffle->getShuffleMask();
 
         // Create entry for new use.
-        NewUses.push_back({Shuffle, OldMask});
-
-        // Validate mask indices.
+        NewUses.push_back({Shuffle, {}});
+        std::vector<int> &NewMask = NewUses.back().second;
         for (int Index : OldMask) {
-          if (Index >= static_cast<int>(MaxIndex))
+          // Preserve poison indices without modification.
+          if (Index == PoisonMaskElem) {
+            NewMask.push_back(Index);
+            continue;
+          }
+          int NewIndex = Index >= static_cast<int>(OldNumElements)
+                             ? Index - LowOffset - HighOffset
+                             : Index - LowOffset;
+          if (NewIndex >= static_cast<int>(NewNumElements * 2u))
             return false;
+          NewMask.push_back(NewIndex);
         }
 
         // Update costs.
@@ -5320,7 +5472,7 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
                                OldLoadTy, OldMask, CostKind);
         NewCost +=
             TTI.getShuffleCost(TTI::SK_PermuteSingleSrc, Shuffle->getType(),
-                               NewLoadTy, OldMask, CostKind);
+                               NewLoadTy, NewMask, CostKind);
       }
 
       LLVM_DEBUG(
@@ -5332,8 +5484,16 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
         return false;
 
       // Create new load of smaller vector.
+      Type *IndexTy = DL->getIndexType(PtrOp->getType());
+      TypeSize ElemSize = DL->getTypeAllocSize(ElemTy);
+      Value *NewPtr =
+          LowOffset > 0u
+              ? Builder.CreateInBoundsPtrAdd(
+                    PtrOp, ConstantInt::get(IndexTy, LowOffset * ElemSize))
+              : PtrOp;
+
       auto *NewLoad = cast<LoadInst>(
-          Builder.CreateAlignedLoad(NewLoadTy, PtrOp, OldLoad->getAlign()));
+          Builder.CreateAlignedLoad(NewLoadTy, NewPtr, OldLoad->getAlign()));
       NewLoad->copyMetadata(I);
 
       // Replace all uses.
@@ -5591,6 +5751,8 @@ bool VectorCombine::run() {
         if (foldSignBitReductionCmp(I))
           return true;
         if (foldICmpEqZeroVectorReduce(I))
+          return true;
+        if (foldEquivalentReductionCmp(I))
           return true;
         [[fallthrough]];
       case Instruction::FCmp:

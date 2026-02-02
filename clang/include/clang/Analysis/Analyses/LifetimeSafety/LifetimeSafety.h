@@ -62,14 +62,25 @@ public:
                                   Confidence Confidence) {}
 
   virtual void reportUseAfterReturn(const Expr *IssueExpr,
-                                    const Expr *EscapeExpr,
+                                    const Expr *ReturnExpr,
                                     SourceLocation ExpiryLoc,
                                     Confidence Confidence) {}
+
+  virtual void reportDanglingField(const Expr *IssueExpr,
+                                   const FieldDecl *Field,
+                                   SourceLocation ExpiryLoc) {}
 
   // Suggests lifetime bound annotations for function paramters.
   virtual void suggestLifetimeboundToParmVar(SuggestionScope Scope,
                                              const ParmVarDecl *ParmToAnnotate,
                                              const Expr *EscapeExpr) {}
+
+  // Reports misuse of [[clang::noescape]] when parameter escapes through return
+  virtual void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
+                                       const Expr *EscapeExpr) {}
+  // Reports misuse of [[clang::noescape]] when parameter escapes through field
+  virtual void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
+                                       const FieldDecl *EscapeField) {}
 
   // Suggests lifetime bound annotations for implicit this.
   virtual void suggestLifetimeboundToImplicitThis(SuggestionScope Scope,
