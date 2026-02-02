@@ -396,6 +396,10 @@ struct KnownFPClass {
   ldexp(const KnownFPClass &Src, const KnownBits &N, const fltSemantics &Flt,
         DenormalMode Mode = DenormalMode::getDynamic());
 
+  /// Propagate known class for powi
+  static LLVM_ABI KnownFPClass powi(const KnownFPClass &Src,
+                                    const KnownBits &N);
+
   void resetAll() { *this = KnownFPClass(); }
 };
 
