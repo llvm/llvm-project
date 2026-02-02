@@ -480,8 +480,13 @@ private:
   bool SelectCVTFixedPosOperand(SDValue N, SDValue &FixedPos) {
     return SelectCVTFixedPosOperand(N, FixedPos, RegWidth);
   }
-
   bool SelectCVTFixedPosOperand(SDValue N, SDValue &FixedPos, unsigned Width);
+
+  template <unsigned RegWidth>
+  bool SelectCVTFixedPointVec(SDValue N, SDValue &FixedPos) {
+    return SelectCVTFixedPointVec(N, FixedPos, RegWidth);
+  }
+  bool SelectCVTFixedPointVec(SDValue N, SDValue &FixedPos, unsigned Width);
 
   template<unsigned RegWidth>
   bool SelectCVTFixedPosRecipOperand(SDValue N, SDValue &FixedPos) {
@@ -4004,6 +4009,38 @@ bool AArch64DAGToDAGISel::tryShiftAmountMod(SDNode *N) {
   return true;
 }
 
+static unsigned CheckFixedPointOperandConstant(APFloat &FVal, unsigned RegWidth,
+                                               bool isReciprocal) {
+  // An FCVT[SU] instruction performs: convertToInt(Val * 2^fbits) where fbits
+  // is between 1 and 32 for a destination w-register, or 1 and 64 for an
+  // x-register.
+  //
+  // By this stage, we've detected (fp_to_[su]int (fmul Val, THIS_NODE)) so we
+  // want THIS_NODE to be 2^fbits. This is much easier to deal with using
+  // integers.
+  bool IsExact;
+
+  if (isReciprocal)
+    if (!FVal.getExactInverse(&FVal))
+      return 0;
+
+  // fbits is between 1 and 64 in the worst-case, which means the fmul
+  // could have 2^64 as an actual operand. Need 65 bits of precision.
+  APSInt IntVal(65, true);
+  FVal.convertToInteger(IntVal, APFloat::rmTowardZero, &IsExact);
+
+  // N.b. isPowerOf2 also checks for > 0.
+  if (!IsExact || !IntVal.isPowerOf2())
+    return 0;
+  unsigned FBits = IntVal.logBase2();
+
+  // Checks above should have guaranteed that we haven't lost information in
+  // finding FBits, but it must still be in range.
+  if (FBits == 0 || FBits > RegWidth)
+    return 0;
+  return FBits;
+}
+
 static bool checkCVTFixedPointOperandWithFBits(SelectionDAG *CurDAG, SDValue N,
                                                SDValue &FixedPos,
                                                unsigned RegWidth,
@@ -4023,48 +4060,81 @@ static bool checkCVTFixedPointOperandWithFBits(SelectionDAG *CurDAG, SDValue N,
   } else
     return false;
 
-  // An FCVT[SU] instruction performs: convertToInt(Val * 2^fbits) where fbits
-  // is between 1 and 32 for a destination w-register, or 1 and 64 for an
-  // x-register.
-  //
-  // By this stage, we've detected (fp_to_[su]int (fmul Val, THIS_NODE)) so we
-  // want THIS_NODE to be 2^fbits. This is much easier to deal with using
-  // integers.
-  bool IsExact;
+  if (unsigned FBits =
+          CheckFixedPointOperandConstant(FVal, RegWidth, isReciprocal)) {
+    FixedPos = CurDAG->getTargetConstant(FBits, SDLoc(N), MVT::i32);
+    return true;
+  }
 
-  if (isReciprocal)
-    if (!FVal.getExactInverse(&FVal))
-      return false;
-
-  // fbits is between 1 and 64 in the worst-case, which means the fmul
-  // could have 2^64 as an actual operand. Need 65 bits of precision.
-  APSInt IntVal(65, true);
-  FVal.convertToInteger(IntVal, APFloat::rmTowardZero, &IsExact);
-
-  // N.b. isPowerOf2 also checks for > 0.
-  if (!IsExact || !IntVal.isPowerOf2())
-    return false;
-  unsigned FBits = IntVal.logBase2();
-
-  // Checks above should have guaranteed that we haven't lost information in
-  // finding FBits, but it must still be in range.
-  if (FBits == 0 || FBits > RegWidth) return false;
-
-  FixedPos = CurDAG->getTargetConstant(FBits, SDLoc(N), MVT::i32);
-  return true;
+  return false;
 }
 
 bool AArch64DAGToDAGISel::SelectCVTFixedPosOperand(SDValue N, SDValue &FixedPos,
                                                    unsigned RegWidth) {
   return checkCVTFixedPointOperandWithFBits(CurDAG, N, FixedPos, RegWidth,
-                                            false);
+                                            /*isReciprocal*/ false);
+}
+
+bool AArch64DAGToDAGISel::SelectCVTFixedPointVec(SDValue N, SDValue &FixedPos,
+                                                 unsigned RegWidth) {
+  if ((N.getOpcode() == AArch64ISD::NVCAST || N.getOpcode() == ISD::BITCAST) &&
+      N.getValueType().getScalarSizeInBits() ==
+          N.getOperand(0).getValueType().getScalarSizeInBits())
+    N = N.getOperand(0);
+
+  auto ImmToFloat = [RegWidth](APInt Imm) {
+    switch (RegWidth) {
+    case 16:
+      return APFloat(APFloat::IEEEhalf(), Imm);
+    case 32:
+      return APFloat(APFloat::IEEEsingle(), Imm);
+    case 64:
+      return APFloat(APFloat::IEEEdouble(), Imm);
+    default:
+      llvm_unreachable("Unexpected RegWidth!");
+    };
+  };
+
+  APFloat FVal(0.0);
+  switch (N->getOpcode()) {
+  case AArch64ISD::MOVIshift:
+    FVal = ImmToFloat(APInt(RegWidth, N.getConstantOperandVal(0)
+                                          << N.getConstantOperandVal(1)));
+    break;
+  case AArch64ISD::FMOV:
+    assert(RegWidth == 32 || RegWidth == 64);
+    if (RegWidth == 32)
+      FVal = ImmToFloat(
+          APInt(RegWidth, (uint32_t)AArch64_AM::decodeAdvSIMDModImmType11(
+                              N.getConstantOperandVal(0))));
+    else
+      FVal = ImmToFloat(APInt(RegWidth, AArch64_AM::decodeAdvSIMDModImmType12(
+                                            N.getConstantOperandVal(0))));
+    break;
+  case AArch64ISD::DUP:
+    if (isa<ConstantSDNode>(N.getOperand(0)))
+      FVal = ImmToFloat(N.getConstantOperandAPInt(0).trunc(RegWidth));
+    else
+      return false;
+    break;
+  default:
+    return false;
+  }
+
+  if (unsigned FBits = CheckFixedPointOperandConstant(FVal, RegWidth,
+                                                      /*isReciprocal*/ false)) {
+    FixedPos = CurDAG->getTargetConstant(FBits, SDLoc(N), MVT::i32);
+    return true;
+  }
+
+  return false;
 }
 
 bool AArch64DAGToDAGISel::SelectCVTFixedPosRecipOperand(SDValue N,
                                                         SDValue &FixedPos,
                                                         unsigned RegWidth) {
   return checkCVTFixedPointOperandWithFBits(CurDAG, N, FixedPos, RegWidth,
-                                            true);
+                                            /*isReciprocal*/ true);
 }
 
 // Inspects a register string of the form o0:op1:CRn:CRm:op2 gets the fields

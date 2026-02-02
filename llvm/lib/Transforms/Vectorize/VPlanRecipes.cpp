@@ -48,7 +48,7 @@ using VectorParts = SmallVector<Value *, 2>;
 #define DEBUG_TYPE LV_NAME
 
 bool VPRecipeBase::mayWriteToMemory() const {
-  switch (getVPDefID()) {
+  switch (getVPRecipeID()) {
   case VPExpressionSC:
     return cast<VPExpressionRecipe>(this)->mayReadOrWriteMemory();
   case VPInstructionSC: {
@@ -73,6 +73,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
                 ->onlyReadsMemory();
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayWriteToMemory();
+  case VPActiveLaneMaskPHISC:
   case VPCanonicalIVPHISC:
   case VPBranchOnMaskSC:
   case VPDerivedIVSC:
@@ -107,7 +108,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
 }
 
 bool VPRecipeBase::mayReadFromMemory() const {
-  switch (getVPDefID()) {
+  switch (getVPRecipeID()) {
   case VPExpressionSC:
     return cast<VPExpressionRecipe>(this)->mayReadOrWriteMemory();
   case VPInstructionSC:
@@ -127,6 +128,7 @@ bool VPRecipeBase::mayReadFromMemory() const {
   case VPBranchOnMaskSC:
   case VPDerivedIVSC:
   case VPFirstOrderRecurrencePHISC:
+  case VPReductionPHISC:
   case VPPredInstPHISC:
   case VPScalarIVStepsSC:
   case VPWidenStoreEVLSC:
@@ -157,11 +159,13 @@ bool VPRecipeBase::mayReadFromMemory() const {
 }
 
 bool VPRecipeBase::mayHaveSideEffects() const {
-  switch (getVPDefID()) {
+  switch (getVPRecipeID()) {
   case VPExpressionSC:
     return cast<VPExpressionRecipe>(this)->mayHaveSideEffects();
+  case VPActiveLaneMaskPHISC:
   case VPDerivedIVSC:
   case VPFirstOrderRecurrencePHISC:
+  case VPReductionPHISC:
   case VPPredInstPHISC:
   case VPVectorEndPointerSC:
     return false;
@@ -302,7 +306,7 @@ InstructionCost VPRecipeBase::computeCost(ElementCount VF,
 }
 
 bool VPRecipeBase::isPhi() const {
-  return (getVPDefID() >= VPFirstPHISC && getVPDefID() <= VPLastPHISC) ||
+  return (getVPRecipeID() >= VPFirstPHISC && getVPRecipeID() <= VPLastPHISC) ||
          isa<VPPhi, VPIRPhi>(this);
 }
 
@@ -378,7 +382,7 @@ FastMathFlags VPIRFlags::getFastMathFlags() const {
 }
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-void VPSingleDefRecipe::dump() const { VPDef::dump(); }
+void VPSingleDefRecipe::dump() const { VPRecipeBase::dump(); }
 
 void VPRecipeBase::print(raw_ostream &O, const Twine &Indent,
                          VPSlotTracker &SlotTracker) const {
@@ -417,7 +421,7 @@ template class VPUnrollPartAccessor<3>;
 VPInstruction::VPInstruction(unsigned Opcode, ArrayRef<VPValue *> Operands,
                              const VPIRFlags &Flags, const VPIRMetadata &MD,
                              DebugLoc DL, const Twine &Name)
-    : VPRecipeWithIRFlags(VPDef::VPInstructionSC, Operands, Flags, DL),
+    : VPRecipeWithIRFlags(VPRecipeBase::VPInstructionSC, Operands, Flags, DL),
       VPIRMetadata(MD), Opcode(Opcode), Name(Name.str()) {
   assert(flagsValidForOpcode(getOpcode()) &&
          "Set flags not supported for the provided opcode");
@@ -473,7 +477,6 @@ unsigned VPInstruction::getNumOperandsForOpcode(unsigned Opcode) {
   case Instruction::Select:
   case VPInstruction::ActiveLaneMask:
   case VPInstruction::ComputeAnyOfResult:
-  case VPInstruction::ComputeFindIVResult:
   case VPInstruction::ReductionStartVector:
   case VPInstruction::ExtractLastActive:
     return 3;
@@ -725,42 +728,12 @@ Value *VPInstruction::generate(VPTransformState &State) {
     ReducedResult = Builder.CreateFreeze(ReducedResult);
     return Builder.CreateSelect(ReducedResult, NewVal, Start, "rdx.select");
   }
-  case VPInstruction::ComputeFindIVResult: {
-    // The recipe's operands are the start value, the sentinel value, followed
-    // by one operand for each part of the reduction.
-    unsigned UF = getNumOperands() - 2;
-    Value *ReducedResult = State.get(getOperand(2));
-    RecurKind MinMaxKind = getRecurKind();
-    assert((MinMaxKind == RecurKind::SMin || MinMaxKind == RecurKind::SMax ||
-            MinMaxKind == RecurKind::UMin || MinMaxKind == RecurKind::UMax) &&
-           "unexpected recurrence kind for ComputeFindIVResult");
-    for (unsigned Part = 1; Part < UF; ++Part)
-      ReducedResult = createMinMaxOp(Builder, MinMaxKind, ReducedResult,
-                                     State.get(getOperand(2 + Part)));
-
-    // Reduce the vector to a scalar.
-    bool IsMaxRdx =
-        MinMaxKind == RecurKind::SMax || MinMaxKind == RecurKind::UMax;
-    bool IsSigned =
-        MinMaxKind == RecurKind::SMin || MinMaxKind == RecurKind::SMax;
-    if (ReducedResult->getType()->isVectorTy())
-      ReducedResult = IsMaxRdx
-                          ? Builder.CreateIntMaxReduce(ReducedResult, IsSigned)
-                          : Builder.CreateIntMinReduce(ReducedResult, IsSigned);
-    // Correct the final reduction result back to the start value if the
-    // reduction result is the sentinel value.
-    Value *Start = State.get(getOperand(0), true);
-    Value *Sentinel = getOperand(1)->getLiveInIRValue();
-    Value *Cmp =
-        Builder.CreateICmpNE(ReducedResult, Sentinel, "rdx.select.cmp");
-    return Builder.CreateSelect(Cmp, ReducedResult, Start, "rdx.select");
-  }
   case VPInstruction::ComputeReductionResult: {
     RecurKind RK = getRecurKind();
     bool IsOrdered = isReductionOrdered();
     bool IsInLoop = isReductionInLoop();
     assert(!RecurrenceDescriptor::isFindIVRecurrenceKind(RK) &&
-           "should be handled by ComputeFindIVResult");
+           "FindIV should use min/max reduction kinds");
 
     // The recipe may have multiple operands to be reduced together.
     unsigned NumOperandsToReduce = getNumOperands();
@@ -1280,7 +1253,6 @@ bool VPInstruction::isVectorToScalar() const {
          getOpcode() == VPInstruction::FirstActiveLane ||
          getOpcode() == VPInstruction::LastActiveLane ||
          getOpcode() == VPInstruction::ComputeAnyOfResult ||
-         getOpcode() == VPInstruction::ComputeFindIVResult ||
          getOpcode() == VPInstruction::ExtractLastActive ||
          getOpcode() == VPInstruction::ComputeReductionResult ||
          getOpcode() == VPInstruction::AnyOf;
@@ -1409,8 +1381,6 @@ bool VPInstruction::usesFirstLaneOnly(const VPValue *Op) const {
     return false;
   case VPInstruction::ComputeAnyOfResult:
     return Op == getOperand(0) || Op == getOperand(1);
-  case VPInstruction::ComputeFindIVResult:
-    return Op == getOperand(0);
   case VPInstruction::ExtractLane:
     return Op == getOperand(0);
   };
@@ -1510,9 +1480,6 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
     break;
   case VPInstruction::ComputeAnyOfResult:
     O << "compute-anyof-result";
-    break;
-  case VPInstruction::ComputeFindIVResult:
-    O << "compute-find-iv-result";
     break;
   case VPInstruction::ComputeReductionResult:
     O << "compute-reduction-result";
@@ -2118,8 +2085,7 @@ bool VPIRFlags::flagsValidForOpcode(unsigned Opcode) const {
   case OperationType::Cmp:
     return Opcode == Instruction::FCmp || Opcode == Instruction::ICmp;
   case OperationType::ReductionOp:
-    return Opcode == VPInstruction::ComputeReductionResult ||
-           Opcode == VPInstruction::ComputeFindIVResult;
+    return Opcode == VPInstruction::ComputeReductionResult;
   case OperationType::Other:
     return true;
   }
@@ -2646,9 +2612,9 @@ void VPVectorEndPointerRecipe::execute(VPTransformState &State) {
     LastLane =
         Builder.CreateMul(ConstantInt::getSigned(IndexTy, Stride), LastLane);
   Value *Ptr = State.get(getOperand(0), VPLane(0));
-  Value *ResultPtr =
-      Builder.CreateGEP(IndexedTy, Ptr, NumElt, "", getGEPNoWrapFlags());
-  ResultPtr = Builder.CreateGEP(IndexedTy, ResultPtr, LastLane, "",
+  Value *ResultPtr = Builder.CreateGEP(getSourceElementType(), Ptr, NumElt, "",
+                                       getGEPNoWrapFlags());
+  ResultPtr = Builder.CreateGEP(getSourceElementType(), ResultPtr, LastLane, "",
                                 getGEPNoWrapFlags());
 
   State.set(this, ResultPtr, /*IsScalar*/ true);
@@ -2760,11 +2726,15 @@ void VPReductionRecipe::execute(VPTransformState &State) {
     PrevInChain = NewRed;
     NextInChain = NewRed;
   } else if (isPartialReduction()) {
-    assert(Kind == RecurKind::Add && "Unexpected partial reduction kind");
+    assert((Kind == RecurKind::Add || Kind == RecurKind::FAdd) &&
+           "Unexpected partial reduction kind");
     Value *PrevInChain = State.get(getChainOp(), /*IsScalar*/ false);
     NewRed = State.Builder.CreateIntrinsic(
-        PrevInChain->getType(), Intrinsic::vector_partial_reduce_add,
-        {PrevInChain, NewVecOp}, nullptr, "partial.reduce");
+        PrevInChain->getType(),
+        Kind == RecurKind::Add ? Intrinsic::vector_partial_reduce_add
+                               : Intrinsic::vector_partial_reduce_fadd,
+        {PrevInChain, NewVecOp}, State.Builder.getFastMathFlags(),
+        "partial.reduce");
     PrevInChain = NewRed;
     NextInChain = NewRed;
   } else {
@@ -2837,9 +2807,8 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
     }
     return CondCost + Ctx.TTI.getPartialReductionCost(
                           Opcode, ElementTy, ElementTy, ElementTy, VF,
-                          TargetTransformInfo::PR_None,
-                          TargetTransformInfo::PR_None, std::nullopt,
-                          Ctx.CostKind);
+                          TTI::PR_None, TTI::PR_None, {}, Ctx.CostKind,
+                          OptionalFMF);
   }
 
   // TODO: Support any-of reductions.
@@ -2864,7 +2833,7 @@ InstructionCost VPReductionRecipe::computeCost(ElementCount VF,
 VPExpressionRecipe::VPExpressionRecipe(
     ExpressionTypes ExpressionType,
     ArrayRef<VPSingleDefRecipe *> ExpressionRecipes)
-    : VPSingleDefRecipe(VPDef::VPExpressionSC, {}, {}),
+    : VPSingleDefRecipe(VPRecipeBase::VPExpressionSC, {}, {}),
       ExpressionRecipes(ExpressionRecipes), ExpressionType(ExpressionType) {
   assert(!ExpressionRecipes.empty() && "Nothing to combine?");
   assert(
@@ -2938,8 +2907,6 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
   Type *RedTy = Ctx.Types.inferScalarType(this);
   auto *SrcVecTy = cast<VectorType>(
       toVectorTy(Ctx.Types.inferScalarType(getOperand(0)), VF));
-  assert(RedTy->isIntegerTy() &&
-         "VPExpressionRecipe only supports integer types currently.");
   unsigned Opcode = RecurrenceDescriptor::getOpcode(
       cast<VPReductionRecipe>(ExpressionRecipes.back())->getRecurrenceKind());
   switch (ExpressionType) {
@@ -2947,18 +2914,22 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
     unsigned Opcode = RecurrenceDescriptor::getOpcode(
         cast<VPReductionRecipe>(ExpressionRecipes[1])->getRecurrenceKind());
     auto *ExtR = cast<VPWidenCastRecipe>(ExpressionRecipes[0]);
+    auto *RedR = cast<VPReductionRecipe>(ExpressionRecipes.back());
 
-    return cast<VPReductionRecipe>(ExpressionRecipes.back())
-                   ->isPartialReduction()
-               ? Ctx.TTI.getPartialReductionCost(
-                     Opcode, Ctx.Types.inferScalarType(getOperand(0)), nullptr,
-                     RedTy, VF,
-                     TargetTransformInfo::getPartialReductionExtendKind(
-                         ExtR->getOpcode()),
-                     TargetTransformInfo::PR_None, std::nullopt, Ctx.CostKind)
-               : Ctx.TTI.getExtendedReductionCost(
-                     Opcode, ExtR->getOpcode() == Instruction::ZExt, RedTy,
-                     SrcVecTy, std::nullopt, Ctx.CostKind);
+    if (RedR->isPartialReduction())
+      return Ctx.TTI.getPartialReductionCost(
+          Opcode, Ctx.Types.inferScalarType(getOperand(0)), nullptr, RedTy, VF,
+          TargetTransformInfo::getPartialReductionExtendKind(ExtR->getOpcode()),
+          TargetTransformInfo::PR_None, std::nullopt, Ctx.CostKind,
+          RedTy->isFloatingPointTy() ? std::optional{RedR->getFastMathFlags()}
+                                     : std::nullopt);
+    else if (!RedTy->isFloatingPointTy())
+      // TTI::getExtendedReductionCost only supports integer types.
+      return Ctx.TTI.getExtendedReductionCost(
+          Opcode, ExtR->getOpcode() == Instruction::ZExt, RedTy, SrcVecTy,
+          std::nullopt, Ctx.CostKind);
+    else
+      return InstructionCost::getInvalid();
   }
   case ExpressionTypes::MulAccReduction:
     return Ctx.TTI.getMulAccReductionCost(false, Opcode, RedTy, SrcVecTy,
@@ -2981,7 +2952,9 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
               Ext0R->getOpcode()),
           TargetTransformInfo::getPartialReductionExtendKind(
               Ext1R->getOpcode()),
-          Mul->getOpcode(), Ctx.CostKind);
+          Mul->getOpcode(), Ctx.CostKind,
+          RedTy->isFloatingPointTy() ? std::optional{RedR->getFastMathFlags()}
+                                     : std::nullopt);
     }
     return Ctx.TTI.getMulAccReductionCost(
         cast<VPWidenCastRecipe>(ExpressionRecipes.front())->getOpcode() ==
@@ -3486,8 +3459,11 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
         ResultTy = Ctx.Types.inferScalarType(this);
     }
 
+    TTI::VectorInstrContext VIC =
+        IsLoad ? TTI::VectorInstrContext::Load : TTI::VectorInstrContext::Store;
     return (ScalarCost * VF.getFixedValue()) +
-           Ctx.getScalarizationOverhead(ResultTy, OpsToScalarize, VF, true);
+           Ctx.getScalarizationOverhead(ResultTy, OpsToScalarize, VF, VIC,
+                                        true);
   }
   case Instruction::SExt:
   case Instruction::ZExt:

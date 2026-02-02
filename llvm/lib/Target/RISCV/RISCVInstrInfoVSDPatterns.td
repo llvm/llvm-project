@@ -125,9 +125,10 @@ class VPatBinarySDNode_XI<SDPatternOperator vop,
 
 multiclass VPatBinarySDNode_VV_VX<SDPatternOperator vop, string instruction_name,
                                   list<VTypeInfo> vtilist = AllIntegerVectors,
-                                  bit isSEWAware = 0> {
+                                  bit isSEWAware = 0,
+                                  list<Predicate> ExtraPreds = []> {
   foreach vti = vtilist in {
-    let Predicates = GetVTypePredicates<vti>.Predicates in {
+    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in {
       def : VPatBinarySDNode_VV<vop, instruction_name,
                                 vti.Vector, vti.Vector, vti.Log2SEW,
                                 vti.LMul, vti.AVL, vti.RegClass, isSEWAware>;
@@ -140,10 +141,11 @@ multiclass VPatBinarySDNode_VV_VX<SDPatternOperator vop, string instruction_name
 }
 
 multiclass VPatBinarySDNode_VV_VX_VI<SDPatternOperator vop, string instruction_name,
-                                     Operand ImmType = simm5>
-    : VPatBinarySDNode_VV_VX<vop, instruction_name> {
+                                     Operand ImmType = simm5,
+                                     list<Predicate> ExtraPreds = []>
+    : VPatBinarySDNode_VV_VX<vop, instruction_name, ExtraPreds=ExtraPreds> {
   foreach vti = AllIntegerVectors in {
-    let Predicates = GetVTypePredicates<vti>.Predicates in
+    let Predicates = !listconcat(ExtraPreds, GetVTypePredicates<vti>.Predicates) in
     def : VPatBinarySDNode_XI<vop, instruction_name, "VI",
                               vti.Vector, vti.Vector, vti.Log2SEW,
                               vti.LMul, vti.AVL, vti.RegClass,

@@ -2672,7 +2672,7 @@ bool CodeGenPrepare::optimizeCallInst(CallInst *CI, ModifyDT &ModifiedDT) {
       GlobalVariable *GV;
       if ((GV = dyn_cast<GlobalVariable>(Val)) && GV->canIncreaseAlignment() &&
           GV->getPointerAlignment(*DL) < PrefAlign &&
-          DL->getTypeAllocSize(GV->getValueType()) >= MinSize + Offset2)
+          GV->getGlobalSize(*DL) >= MinSize + Offset2)
         GV->setAlignment(PrefAlign);
     }
   }
@@ -6464,8 +6464,7 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
   Type *LegalTy = Ty->getWithNewBitWidth(VTHalfBitWidth);
 
   // New BBs:
-  BasicBlock *OverflowEntryBB =
-      I->getParent()->splitBasicBlock(I, "", /*Before*/ true);
+  BasicBlock *OverflowEntryBB = I->getParent()->splitBasicBlockBefore(I, "");
   OverflowEntryBB->takeName(I->getParent());
   // Keep the 'br' instruction that is generated as a result of the split to be
   // erased/replaced later.
