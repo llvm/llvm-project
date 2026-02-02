@@ -1291,6 +1291,12 @@ public:
                                                  SDValue Size,
                                                  const CallInst *CI);
 
+  /// Lower a strcmp operation into a target library call and return the
+  /// resulting chain and call result as SelectionDAG SDValues.
+  LLVM_ABI std::pair<SDValue, SDValue> getStrcmp(SDValue Chain, const SDLoc &dl,
+                                                 SDValue S0, SDValue S1,
+                                                 const CallInst *CI);
+
   /// Lower a strcpy operation into a target library call and return the
   /// resulting chain and call result as SelectionDAG SDValues.
   LLVM_ABI std::pair<SDValue, SDValue> getStrcpy(SDValue Chain, const SDLoc &dl,
