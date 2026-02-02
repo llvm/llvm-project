@@ -489,7 +489,8 @@ bool AArch64CallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
             // If the split EVT was a <1 x T> vector, and NewVT is T, then we
             // don't have to do anything since we don't distinguish between the
             // two.
-            if (NewLLT != MRI.getType(CurVReg)) {
+            if (NewLLT.getScalarSizeInBits() !=
+                MRI.getType(CurVReg).getScalarSizeInBits()) {
               // A scalar extend.
               CurVReg = MIRBuilder.buildInstr(ExtendOp, {NewLLT}, {CurVReg})
                             .getReg(0);
