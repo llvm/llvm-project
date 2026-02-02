@@ -24,7 +24,7 @@ Quickstart
    ```
 
    Installing the official Python release of lit in a Python virtual
-   environment could also work. This will install the most recent 
+   environment could also work. This will install the most recent
    release of lit:
 
    ```bash
@@ -35,7 +35,7 @@ Quickstart
    lit 18.1.8
    ```
 
-   Please note that recent tests may rely on features not in the latest released lit. 
+   Please note that recent tests may rely on features not in the latest released lit.
    If in doubt, try one of the previous methods.
 
 2. Check out the `test-suite` module with:
@@ -485,13 +485,3 @@ The LNT tool can run the test-suite. Use this when submitting test results to
 an LNT instance.  See
 [https://llvm.org/docs/lnt/tests.html#llvm-cmake-test-suite](https://llvm.org/docs/lnt/tests.html#llvm-cmake-test-suite)
 for details.
-
-Running the test-suite via Makefiles (deprecated)
--------------------------------------------------
-
-**Note**: The test-suite comes with a set of Makefiles that are considered
-deprecated.  They do not support newer testing modes like `Bitcode` or
-`Microbenchmarks` and are harder to use.
-
-Old documentation is available in the
-[test-suite Makefile Guide](TestSuiteMakefileGuide).
