@@ -7,7 +7,6 @@ o test_expr_options:
   Test expression command options.
 """
 
-
 import lldb
 import lldbsuite.test.lldbutil as lldbutil
 from lldbsuite.test.decorators import *
@@ -85,3 +84,27 @@ class ExprOptionsTestCase(TestBase):
         val = frame.EvaluateExpression("id == 0", options)
         self.assertTrue(val.IsValid())
         self.assertFalse(val.GetError().Success())
+
+    def test_expr_options_language_options(self):
+        """Test SetLanguageOption/GetLanguageOption SBAPIs"""
+
+        options = lldb.SBExpressionOptions()
+        self.assertFalse(options.GetLanguageOptionAsBoolean("foo"))
+        self.assertFalse(options.GetLanguageOptionAsBoolean("bar"))
+
+        options.SetLanguageOption("foo", True)
+        options.SetLanguageOption("bar", True)
+        self.assertTrue(options.GetLanguageOptionAsBoolean("foo"))
+        self.assertTrue(options.GetLanguageOptionAsBoolean("bar"))
+
+        options.SetLanguageOption("foo", False)
+        options.SetLanguageOption("bar", False)
+        self.assertFalse(options.GetLanguageOptionAsBoolean("foo"))
+        self.assertFalse(options.GetLanguageOptionAsBoolean("bar"))
+
+        self.assertFalse(options.GetLanguageOptionAsBoolean(""))
+        options.SetLanguageOption("", True)
+        self.assertFalse(options.GetLanguageOptionAsBoolean(""))
+
+        options.SetLanguageOption(None, True)
+        self.assertFalse(options.GetLanguageOptionAsBoolean(None))

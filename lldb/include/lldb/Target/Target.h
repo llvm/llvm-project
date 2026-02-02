@@ -15,6 +15,7 @@
 #include <string>
 #include <vector>
 
+#include "lldb/API/SBStructuredData.h"
 #include "lldb/Breakpoint/BreakpointList.h"
 #include "lldb/Breakpoint/BreakpointName.h"
 #include "lldb/Breakpoint/WatchpointList.h"
@@ -307,6 +308,8 @@ private:
 
 class EvaluateExpressionOptions {
 public:
+    EvaluateExpressionOptions() : m_language_options_sp(std::make_shared<StructuredData::Dictionary>()) {}
+
 // MSVC has a bug here that reports C4268: 'const' static/global data
 // initialized with compiler generated default constructor fills the object
 // with zeros. Confirmed that MSVC is *not* zero-initializing, it's just a
@@ -322,8 +325,6 @@ public:
 
   static constexpr ExecutionPolicy default_execution_policy =
       eExecutionPolicyOnlyWhenNeeded;
-
-  EvaluateExpressionOptions() = default;
 
   ExecutionPolicy GetExecutionPolicy() const { return m_execution_policy; }
 
@@ -481,7 +482,40 @@ public:
 
   void SetIsForUtilityExpr(bool b) { m_running_utility_expression = b; }
 
+  /// Set language-plugin specific option called \c option_name to
+  /// the specified boolean \c value.
+  void SetLanguageOption(llvm::StringRef option_name, bool value) {
+    if (option_name.empty())
+      return;
+
+    GetLanguageOptions().AddBooleanItem(option_name, value);
+  }
+
+  /// Get the language-plugin specific boolean option called \c option_name.
+  ///
+  /// If the option doesn't exist or is not a boolean option, returns false.
+  /// Otherwise returns the boolean value of the option.
+  bool GetLanguageOptionAsBoolean(llvm::StringRef option_name) const {
+    bool result;
+    if (!GetLanguageOptions().GetValueForKeyAsBoolean(option_name, result))
+      return false;
+
+    return result;
+  }
+
 private:
+  const StructuredData::Dictionary &GetLanguageOptions() const {
+    assert (m_language_options_sp);
+
+    return *m_language_options_sp;
+  }
+
+  StructuredData::Dictionary &GetLanguageOptions() {
+    assert (m_language_options_sp);
+
+    return *m_language_options_sp;
+  }
+
   ExecutionPolicy m_execution_policy = default_execution_policy;
   SourceLanguage m_language;
   std::string m_prefix;
@@ -513,6 +547,10 @@ private:
   // originates
   mutable std::string m_pound_line_file;
   mutable uint32_t m_pound_line_line = 0;
+
+  /// Dictionary mapping names of language-plugin specific options
+  /// to values.
+  StructuredData::DictionarySP m_language_options_sp = nullptr;
 
   /// During expression evaluation, any SymbolContext in this list will be
   /// used for symbol/function lookup before any other context (except for

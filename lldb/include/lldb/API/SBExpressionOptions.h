@@ -11,6 +11,7 @@
 
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBLanguages.h"
+#include "lldb/API/SBStructuredData.h"
 
 #include <vector>
 
@@ -106,6 +107,10 @@ public:
 
   // Sets whether we will JIT an expression if it cannot be interpreted
   void SetAllowJIT(bool allow);
+
+  bool GetLanguageOptionAsBoolean(const char *option_name) const;
+ 
+  void SetLanguageOption(const char *option_name, bool value);
 
 protected:
   lldb_private::EvaluateExpressionOptions *get() const;

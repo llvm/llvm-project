@@ -10,6 +10,7 @@
 #include "gtest/gtest.h"
 
 #include "TestingSupport/TestUtilities.h"
+#include "lldb/Target/Target.h"
 #include "lldb/Expression/Expression.h"
 #include "llvm/Testing/Support/Error.h"
 
@@ -127,3 +128,27 @@ TEST_P(ExpressionTestFixture, FunctionCallLabel) {
 
 INSTANTIATE_TEST_SUITE_P(FunctionCallLabelTest, ExpressionTestFixture,
                          testing::ValuesIn(g_label_test_cases));
+
+TEST(ExpressionTests, ExpressionOptions_Basic) {
+  EvaluateExpressionOptions options;
+
+  ASSERT_FALSE(options.GetLanguageOptionAsBoolean("foo"));
+  ASSERT_FALSE(options.GetLanguageOptionAsBoolean("bar"));
+
+  options.SetLanguageOption("foo", true);
+  options.SetLanguageOption("bar", true);
+
+  ASSERT_TRUE(options.GetLanguageOptionAsBoolean("foo"));
+  ASSERT_TRUE(options.GetLanguageOptionAsBoolean("bar"));
+
+  options.SetLanguageOption("foo", false);
+  options.SetLanguageOption("bar", false);
+
+  ASSERT_FALSE(options.GetLanguageOptionAsBoolean("foo"));
+  ASSERT_FALSE(options.GetLanguageOptionAsBoolean("bar"));
+
+  // Empty option names not allowed.
+  ASSERT_FALSE(options.GetLanguageOptionAsBoolean(""));
+  options.SetLanguageOption("", true);
+  ASSERT_FALSE(options.GetLanguageOptionAsBoolean(""));
+}
