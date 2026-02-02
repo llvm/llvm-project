@@ -22,6 +22,10 @@
 // CHECK-NEXT:/*    27*/ 0, // End of Scope
 // CHECK-NEXT:  }; // Total Array size is 28 bytes
 
+// CHECK:        static const uint8_t OperandLists[] = {
+// CHECK-NEXT:     /* 0 */ 0,
+// CHECK-NEXT:   }
+
 include "llvm/Target/Target.td"
 
 def my_cap_ty : LLVMQualPointerType<200> {
