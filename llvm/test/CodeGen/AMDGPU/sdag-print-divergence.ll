@@ -9,21 +9,21 @@
 ; GCN: SelectionDAG has 11 nodes:
 
 ; GCN-DEFAULT:  t0: ch,glue = EntryToken
-; GCN-DEFAULT:  t1: i32 = TargetConstant<
-; GCN-DEFAULT:  t3: f32,ch = CopyFromReg t0, Register:f32 %0
-; GCN-DEFAULT:      t6: f32 = fadd t3, t3
-; GCN-DEFAULT:      t5: f32,ch = CopyFromReg # D:1 t0, Register:f32 %1
-; GCN-DEFAULT:   t7: f32 = fadd # D:1 t6, t5
-; GCN-DEFAULT:  t9: ch,glue = CopyToReg # D:1 t0, Register:f32 $vgpr0, t7
+; GCN-DEFAULT:  t2: f32,ch = CopyFromReg t0, Register:f32 %0
+; GCN-DEFAULT:  t7: i32 = TargetConstant<
+; GCN-DEFAULT:      t5: f32 = fadd t2, t2
+; GCN-DEFAULT:      t4: f32,ch = CopyFromReg # D:1 t0, Register:f32 %1
+; GCN-DEFAULT:   t6: f32 = fadd # D:1 t5, t4
+; GCN-DEFAULT:  t9: ch,glue = CopyToReg # D:1 t0, Register:f32 $vgpr0, t6
 ; GCN-DEFAULT:  t10: ch = AMDGPUISD::RETURN_TO_EPILOG t9, Register:f32 $vgpr0, t9:1
 
 ; GCN-VERBOSE:  t0: ch,glue = EntryToken # D:0
-; GCN-VERBOSE:  t1: i32 = TargetConstant<
-; GCN-VERBOSE:  t3: f32,ch = CopyFromReg [ORD=1] # D:0 t0, Register:f32 %0 # D:0
-; GCN-VERBOSE:      t6: f32 = fadd [ORD=2] # D:0 t3, t3
-; GCN-VERBOSE:      t5: f32,ch = CopyFromReg [ORD=1] # D:1 t0, Register:f32 %1 # D:0
-; GCN-VERBOSE:    t7: f32 = fadd [ORD=3] # D:1 t6, t5
-; GCN-VERBOSE:  t9: ch,glue = CopyToReg [ORD=4] # D:1 t0, Register:f32 $vgpr0 # D:0, t7
+; GCN-VERBOSE:  t2: f32,ch = CopyFromReg [ORD=1] # D:0 t0, Register:f32 %0 # D:0
+; GCN-VERBOSE:  t7: i32 = TargetConstant<
+; GCN-VERBOSE:      t5: f32 = fadd [ORD=2] # D:0 t2, t2
+; GCN-VERBOSE:      t4: f32,ch = CopyFromReg [ORD=1] # D:1 t0, Register:f32 %1 # D:0
+; GCN-VERBOSE:    t6: f32 = fadd [ORD=3] # D:1 t5, t4
+; GCN-VERBOSE:  t9: ch,glue = CopyToReg [ORD=4] # D:1 t0, Register:f32 $vgpr0 # D:0, t6
 ; GCN-VERBOSE:  t10: ch = AMDGPUISD::RETURN_TO_EPILOG [ORD=4] # D:0 t9, Register:f32 $vgpr0 # D:0, t9:1
 
 define amdgpu_ps float @test_sdag_dump(float inreg %scalar, float %vector)  {

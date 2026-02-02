@@ -3394,8 +3394,7 @@ SDValue SITargetLowering::LowerFormalArguments(
   // kern arg offset.
   const Align KernelArgBaseAlign = Align(16);
 
-  SDValue ReadFirstLaneID =
-      DAG.getTargetConstant(Intrinsic::amdgcn_readfirstlane, DL, MVT::i32);
+  SDValue ReadFirstLaneID = SDValue();
 
   for (unsigned i = IsWholeWaveFunc ? 1 : 0, e = Ins.size(), ArgIdx = 0; i != e;
        ++i) {
@@ -3565,6 +3564,9 @@ SDValue SITargetLowering::LowerFormalArguments(
     Reg = MF.addLiveIn(Reg, RC);
     SDValue Val = DAG.getCopyFromReg(Chain, DL, Reg, VT);
     if (Arg.Flags.isInReg() && RC == &AMDGPU::VGPR_32RegClass) {
+      if (ReadFirstLaneID == SDValue())
+        ReadFirstLaneID = DAG.getTargetConstant(Intrinsic::amdgcn_readfirstlane,
+                                                DL, MVT::i32);
       Val = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Val.getValueType(),
                         ReadFirstLaneID, Val);
     }
