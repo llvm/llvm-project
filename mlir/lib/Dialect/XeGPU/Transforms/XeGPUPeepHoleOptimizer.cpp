@@ -246,10 +246,14 @@ public:
     // Get the target uArch info.
     auto chipStr = xegpu::getChipStr(createNdOp);
     // Check if the chip is supported.
-    assert(
-        chipStr && (chipStr.value() == "pvc" || chipStr.value() == "bmg") &&
-        "Expecting target chip to be pvc or bmg for transpose optimization.");
+    if (!chipStr)
+      return rewriter.notifyMatchFailure(
+          createNdOp, "Missing target attribute for transpose optimization.");
     const uArch *targetuArch = xegpu::uArch::getUArch(chipStr.value());
+    if (!targetuArch)
+      return rewriter.notifyMatchFailure(
+          createNdOp, "Unsupported target chip for transpose optimization. "
+                      "Expecting pvc or bmg.");
 
     auto convertType = tryOptimize(tdescTy, targetuArch);
     if (convertType == tdescTy)
