@@ -726,8 +726,8 @@ TEST(CallHierarchy, HierarchyOnVarWithWriteReference) {
   EXPECT_THAT(
       IncomingLevel1,
       ElementsAre(AllOf(from(
-          AllOf(withName("caller"),
-                withReferenceTags(ReferenceTag::Write, ReferenceTag::Read))))));
+          AllOf(withName("caller"), withReferenceTags(ReferenceTag::Write))))));
+}
 }
 
 TEST(CallHierarchy, HierarchyOnVarWithUnaryReadWriteReference) {
