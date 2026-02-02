@@ -17,9 +17,9 @@ define void @test_pm_event() {
   ; CHECK: pmevent.mask 0xffffU;
   call void @llvm.nvvm.pm.event.mask(i16 u0xFFFF)
 
-  ;; LLVM doesn't distinguish signed and unsigned integers. So, NVVM calls with
-  ;; negative integers are functionally correct here and processed correctly
-  ;; in NVPTX backend
+  ;; LLVM IR doesn't distinguish signed and unsigned integers. So, NVVM calls
+  ;; with negative integers are functionally correct here and processed
+  ;; correctly in NVPTX backend
 
   ; CHECK: pmevent.mask 0x8000U;
   call void @llvm.nvvm.pm.event.mask(i16 -32768)

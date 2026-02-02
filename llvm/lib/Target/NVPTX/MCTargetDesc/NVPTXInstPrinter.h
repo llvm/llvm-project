@@ -58,7 +58,7 @@ public:
   void printFTZFlag(const MCInst *MI, int OpNum, raw_ostream &O);
 
   template <unsigned Bits>
-  void printUImm(const MCInst *MI, int OpNum, raw_ostream &O);
+  void printHexUImm(const MCInst *MI, int OpNum, raw_ostream &O);
 };
 
 }

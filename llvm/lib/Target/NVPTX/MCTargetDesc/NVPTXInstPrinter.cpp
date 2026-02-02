@@ -537,7 +537,8 @@ void NVPTXInstPrinter::printCallOperand(const MCInst *MI, int OpNum,
 }
 
 template <unsigned Bits>
-void NVPTXInstPrinter::printUImm(const MCInst *MI, int OpNum, raw_ostream &O) {
+void NVPTXInstPrinter::printHexUImm(const MCInst *MI, int OpNum,
+                                    raw_ostream &O) {
   const MCOperand &MO = MI->getOperand(OpNum);
   assert(MO.isImm() && "Expected immediate operand");
   assert(isInt<Bits>(MO.getImm()) &&
