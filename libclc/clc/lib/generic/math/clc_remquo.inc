@@ -70,7 +70,7 @@ _CLC_DEF _CLC_OVERLOAD float __clc_remquo(float x, float y,
 
     int qsgn = 1 + (((__clc_as_int(x) ^ __clc_as_int(y)) >> 31) << 1);
     float t = __clc_fma(y, -(float)qsgn, x);
-    ret = c ? t : __builtin_elementwise_canonicalize(x);
+    ret = c ? t : x;
     q7 = c ? qsgn : q7;
     ret = ax == ay ? __clc_copysign(0.0f, x) : ret;
     q7 = ax == ay ? qsgn : q7;
