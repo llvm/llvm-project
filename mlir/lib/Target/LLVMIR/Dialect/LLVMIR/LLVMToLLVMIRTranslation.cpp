@@ -447,6 +447,15 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
                                            "modular-format",
                                            modFormat.getValue()));
 
+    if (ArrayAttr noBuiltins = callOp.getNobuiltinsAttr()) {
+      if (noBuiltins.empty())
+        call->addFnAttr(llvm::Attribute::get(moduleTranslation.getLLVMContext(),
+                                             "no-builtins"));
+
+      moduleTranslation.convertFunctionArrayAttr(
+          noBuiltins, call, ModuleTranslation::convertNoBuiltin);
+    }
+
     if (failed(moduleTranslation.convertArgAndResultAttrs(callOp, call)))
       return failure();
 

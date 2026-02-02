@@ -459,5 +459,17 @@ declare void @modular_format_attribute(i32) "modular-format" = "Ident,1,1,Foo,Ba
 
 // -----
 
+; CHECK-LABEL: @no_builtins_all
+; CHECK-SAME: attributes {nobuiltins = []}
+declare void @no_builtins_all() "no-builtins"
+
+// -----
+
+; CHECK-LABEL: @no_builtins_2
+; CHECK-SAME: attributes {nobuiltins = ["asdf", "defg"]}
+declare void @no_builtins_2() "no-builtin-asdf" "no-builtin-defg"
+
+// -----
+
 ; expected-warning @unknown {{'preallocated' attribute is invalid on current operation, skipping it}}
 declare void @test() preallocated(i32)

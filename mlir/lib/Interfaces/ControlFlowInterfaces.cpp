@@ -577,49 +577,6 @@ Region *mlir::getEnclosingRepetitiveRegion(Value value) {
   return nullptr;
 }
 
-/// Return "true" if the given region branch op is guaranteed to loop
-/// infinitely. Every path starting from "parent" enters the region, but the
-/// "parent" is not reachable from there.
-bool mlir::isGuaranteedToLoopInfinitely(RegionBranchOpInterface op) {
-  llvm::SmallDenseSet<Region *> visited;
-
-  // Path starts with "parent".
-  SmallVector<RegionBranchPoint> worklist;
-  worklist.push_back(RegionBranchPoint::parent());
-  bool enteredRegion = false;
-  while (!worklist.empty()) {
-    RegionBranchPoint next = worklist.pop_back_val();
-    SmallVector<RegionSuccessor> successors =
-        getSuccessorRegionsWithAttrs(op, next);
-    for (RegionSuccessor successor : successors) {
-      if (successor.isParent()) {
-        // Found path that ends with "parent".
-        return false;
-      }
-      enteredRegion = true;
-      Region *region = successor.getSuccessor();
-      if (!visited.insert(region).second) {
-        // We have already visited this region.
-        continue;
-      }
-      for (Block &block : *region) {
-        auto terminator =
-            dyn_cast<RegionBranchTerminatorOpInterface>(block.back());
-        if (!terminator) {
-          // Region has no RegionBranchTerminatorOpInterface terminator. E.g.,
-          // the terminator could be a "ub.unreachable" op or a "cf.br" op.
-          continue;
-        }
-        worklist.push_back(RegionBranchPoint(terminator));
-      }
-    }
-  }
-  // We visited all paths through the region branch op and the parent was not
-  // reached. If we visited at least one region, it means that we got stuck
-  // inside the region branch op, indicating an infinite loop.
-  return enteredRegion;
-}
-
 /// Return "true" if `a` can be used in lieu of `b`, where `b` is a region
 /// successor input and `a` is a "reachable value" of `b`. Reachable values
 /// are successor operand values that are (maybe transitively) forwarded to
@@ -720,36 +677,6 @@ static llvm::SmallDenseSet<Value> computeReachableValuesFromSuccessorInput(
   // Note: The result does not contain any successor inputs. (Therefore,
   // `value` is also guaranteed to be excluded.)
   return reachableValues;
-}
-
-/// Given a range of values, return a vector of attributes of the same size,
-/// where the i-th attribute is the constant value of the i-th value. If a
-/// value is not constant, the corresponding attribute is null.
-static SmallVector<Attribute> extractConstants(ValueRange values) {
-  return llvm::map_to_vector(values, [](Value value) {
-    Attribute attr;
-    matchPattern(value, m_Constant(&attr));
-    return attr;
-  });
-}
-
-/// Return all successor regions when branching from the given region branch
-/// point. This helper functions extracts all constant operand values and
-/// passes them to the `RegionBranchOpInterface`.
-SmallVector<RegionSuccessor>
-mlir::getSuccessorRegionsWithAttrs(RegionBranchOpInterface op,
-                                   RegionBranchPoint point) {
-  SmallVector<RegionSuccessor> successors;
-  if (point.isParent()) {
-    op.getEntrySuccessorRegions(extractConstants(op->getOperands()),
-                                successors);
-    return successors;
-  }
-  RegionBranchTerminatorOpInterface terminator =
-      point.getTerminatorPredecessorOrNull();
-  terminator.getSuccessorRegions(extractConstants(terminator->getOperands()),
-                                 successors);
-  return successors;
 }
 
 namespace {
@@ -1117,6 +1044,36 @@ struct RemoveDuplicateSuccessorInputUses : public RewritePattern {
     return success(changed);
   }
 };
+
+/// Given a range of values, return a vector of attributes of the same size,
+/// where the i-th attribute is the constant value of the i-th value. If a
+/// value is not constant, the corresponding attribute is null.
+static SmallVector<Attribute> extractConstants(ValueRange values) {
+  return llvm::map_to_vector(values, [](Value value) {
+    Attribute attr;
+    matchPattern(value, m_Constant(&attr));
+    return attr;
+  });
+}
+
+/// Return all successor regions when branching from the given region branch
+/// point. This helper functions extracts all constant operand values and
+/// passes them to the `RegionBranchOpInterface`.
+static SmallVector<RegionSuccessor>
+getSuccessorRegionsWithAttrs(RegionBranchOpInterface op,
+                             RegionBranchPoint point) {
+  SmallVector<RegionSuccessor> successors;
+  if (point.isParent()) {
+    op.getEntrySuccessorRegions(extractConstants(op->getOperands()),
+                                successors);
+    return successors;
+  }
+  RegionBranchTerminatorOpInterface terminator =
+      point.getTerminatorPredecessorOrNull();
+  terminator.getSuccessorRegions(extractConstants(terminator->getOperands()),
+                                 successors);
+  return successors;
+}
 
 /// Find the single acyclic path through the given region branch op. Return an
 /// empty vector if no such path or multiple such paths exist.

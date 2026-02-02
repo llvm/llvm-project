@@ -743,6 +743,60 @@ entry:
   ret <8 x i32> %r
 }
 
+define <4 x i32> @abs_sub(<4 x i32> %a, <4 x i32> %b) {
+; CHECK-LABEL: abs_sub:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    sabd v0.4s, v1.4s, v0.4s
+; CHECK-NEXT:    ret
+entry:
+  %add =  sub nsw <4 x i32> %b, %a
+  %cmp.i = icmp slt <4 x i32> %add, zeroinitializer
+  %sub.i = sub nsw <4 x i32> zeroinitializer, %add
+  %cond.i = select <4 x i1> %cmp.i, <4 x i32> %sub.i, <4 x i32> %add
+  ret <4 x i32> %cond.i
+}
+
+; short abs_diff_add_i16_rir(short a, short c) {
+;   return abs(a - 0x492) + c;
+; }
+define <4 x i16> @abs_diff_add_v4i16(<4 x i16> %a, <4 x i16> %c) {
+; CHECK-LABEL: abs_diff_add_v4i16:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #1170 // =0x492
+; CHECK-NEXT:    dup v2.4h, w8
+; CHECK-NEXT:    saba v1.4h, v0.4h, v2.4h
+; CHECK-NEXT:    fmov d0, d1
+; CHECK-NEXT:    ret
+entry:
+  %conv = sext <4 x i16> %a to <4 x i32>
+  %sub = add nsw <4 x i32> %conv, splat(i32 -1170)
+  %0 = tail call <4 x i32> @llvm.abs.v4i32(<4 x i32> %sub, i1 true)
+  %1 = trunc <4 x i32> %0 to <4 x i16>
+  %conv2 = add <4 x i16> %1, %c
+  ret <4 x i16> %conv2
+}
+
+; short abs_diff_add_<4 x i16>_rii(short a) {
+;   return abs(a - 0x93) + 0x943;
+; }
+define <4 x i16> @abs_diff_add_v4i16_rii(<4 x i16> %a) {
+; CHECK-LABEL: abs_diff_add_v4i16_rii:
+; CHECK:       // %bb.0: // %entry
+; CHECK-NEXT:    mov w8, #2371 // =0x943
+; CHECK-NEXT:    movi v2.4h, #147
+; CHECK-NEXT:    dup v1.4h, w8
+; CHECK-NEXT:    saba v1.4h, v0.4h, v2.4h
+; CHECK-NEXT:    fmov d0, d1
+; CHECK-NEXT:    ret
+entry:
+  %conv = sext <4 x i16> %a to <4 x i32>
+  %sub = add nsw <4 x i32> %conv, splat(i32 -147)
+  %0 = tail call <4 x i32> @llvm.abs.v4i32(<4 x i32> %sub, i1 true)
+  %1 = trunc <4 x i32> %0 to <4 x i16>
+  %conv1 = add nuw <4 x i16> %1, splat(i16 2371)
+  ret <4 x i16> %conv1
+}
+
 declare <8 x i8> @llvm.abs.v8i8(<8 x i8>, i1)
 declare <16 x i8> @llvm.abs.v16i8(<16 x i8>, i1)
 
