@@ -12,7 +12,7 @@ func.func @std_for(%arg0 : index, %arg1 : index, %arg2 : index) {
       %max_cmp = arith.cmpi sge, %i0, %i1 : index
       %max = arith.select %max_cmp, %i0, %i1 : index
       scf.for %i2 = %min to %max step %i1 {
-      } {mustProgress = false}
+      }
     }
   }
   return
@@ -25,7 +25,6 @@ func.func @std_for(%arg0 : index, %arg1 : index, %arg2 : index) {
 //  CHECK-NEXT:       %{{.*}} = arith.cmpi sge, %{{.*}}, %{{.*}} : index
 //  CHECK-NEXT:       %{{.*}} = arith.select %{{.*}}, %{{.*}}, %{{.*}} : index
 //  CHECK-NEXT:       scf.for %{{.*}} = %{{.*}} to %{{.*}} step %{{.*}} {
-//  CHECK-NEXT:       } {mustProgress = false}
 
 func.func @std_for_i32(%arg0 : i32, %arg1 : i32, %arg2 : i32) {
   scf.for %i0 = %arg0 to %arg1 step %arg2 : i32 {
@@ -281,8 +280,8 @@ func.func @while() {
     %5:2 = "test.some_operation"(%arg2, %arg3): (i64, f64) -> (i32, f32)
     // CHECK: scf.yield %{{.*}}, %{{.*}} : i32, f32
     scf.yield %5#0, %5#1 : i32, f32
-  // CHECK: attributes {foo = "bar", mustProgress = false}
-  } attributes {foo="bar", mustProgress=false}
+  // CHECK: attributes {foo = "bar"}
+  } attributes {foo="bar"}
   return
 }
 
