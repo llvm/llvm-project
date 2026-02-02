@@ -134,24 +134,27 @@ static SmallString<32> buildSuspendPrefixStr(CGCoroData &Coro, AwaitKind Kind) {
 
 // Check if function can throw based on prototype noexcept, also works for
 // destructors which are implicitly noexcept but can be marked noexcept(false).
-static bool FunctionCanThrow(const FunctionDecl *D) {
+static bool FunctionCanThrow(const FunctionDecl *D, bool InitialSuspend) {
   const auto *Proto = D->getType()->getAs<FunctionProtoType>();
   if (!Proto) {
     // Function proto is not found, we conservatively assume throwing.
     return true;
   }
+  if (InitialSuspend && D->getIdentifier() &&
+      (D->getIdentifier()->getName() == "await_resume"))
+    return false;
   return !isNoexceptExceptionSpec(Proto->getExceptionSpecType()) ||
          Proto->canThrow() != CT_Cannot;
 }
 
-static bool StmtCanThrow(const Stmt *S) {
+static bool StmtCanThrow(const Stmt *S, bool InitialSuspend = false) {
   if (const auto *CE = dyn_cast<CallExpr>(S)) {
     const auto *Callee = CE->getDirectCallee();
     if (!Callee)
       // We don't have direct callee. Conservatively assume throwing.
       return true;
 
-    if (FunctionCanThrow(Callee))
+    if (FunctionCanThrow(Callee, InitialSuspend))
       return true;
 
     // Fall through to visit the children.
@@ -163,14 +166,14 @@ static bool StmtCanThrow(const Stmt *S) {
     // We need to mark entire statement as throwing if the destructor of the
     // temporary throws.
     const auto *Dtor = TE->getTemporary()->getDestructor();
-    if (FunctionCanThrow(Dtor))
+    if (FunctionCanThrow(Dtor, false))
       return true;
 
     // Fall through to visit the children.
   }
 
   for (const auto *child : S->children())
-    if (StmtCanThrow(child))
+    if (StmtCanThrow(child, InitialSuspend))
       return true;
 
   return false;
@@ -657,10 +660,19 @@ struct GetReturnObjectManager {
   bool DirectEmit = false;
 
   Address GroActiveFlag;
+  // Active flag used for DirectEmit return value cleanup. When the coroutine
+  // return value is directly emitted into the return slot, we need to run its
+  // destructor if an exception is thrown before initial-await-resume.
+  // DirectGroActiveFlag is unused when InitialSuspendCanThrow is false.
+  bool InitialSuspendCanThrow = false;
+  Address DirectGroActiveFlag;
+
   CodeGenFunction::AutoVarEmission GroEmission;
 
   GetReturnObjectManager(CodeGenFunction &CGF, const CoroutineBodyStmt &S)
       : CGF(CGF), Builder(CGF.Builder), S(S), GroActiveFlag(Address::invalid()),
+        InitialSuspendCanThrow(StmtCanThrow(S.getInitSuspendStmt(), true)),
+        DirectGroActiveFlag(Address::invalid()),
         GroEmission(CodeGenFunction::AutoVarEmission::invalid()) {
     // The call to get_­return_­object is sequenced before the call to
     // initial_­suspend and is invoked at most once, but there are caveats
@@ -768,6 +780,26 @@ struct GetReturnObjectManager {
         CGF.EmitAnyExprToMem(S.getReturnValue(), CGF.ReturnValue,
                              S.getReturnValue()->getType().getQualifiers(),
                              /*IsInit*/ true);
+        // If the return value has a non-trivial destructor, register a
+        // conditional cleanup that will destroy it if an exception is thrown
+        // before initial-await-resume. The cleanup is activated now and will
+        // be deactivated once initial_suspend completes normally.
+        if (InitialSuspendCanThrow) {
+          if (QualType::DestructionKind DtorKind =
+                  S.getReturnValue()->getType().isDestructedType();
+              DtorKind) {
+            // Create an active flag (initialize to true) for conditional
+            // cleanup. We are not necessarily in a conditional branch here so
+            // use a simple temp alloca instead of createCleanupActiveFlag().
+            auto ActiveFlag = CGF.CreateTempAlloca(
+                Builder.getInt1Ty(), CharUnits::One(), "direct.gro.active");
+            Builder.CreateStore(Builder.getTrue(), ActiveFlag);
+            CGF.pushDestroyAndDeferDeactivation(DtorKind, CGF.ReturnValue,
+                                                S.getReturnValue()->getType());
+            CGF.initFullExprCleanupWithFlag(ActiveFlag);
+            DirectGroActiveFlag = ActiveFlag;
+          }
+        }
       }
       return;
     }
@@ -782,6 +814,7 @@ struct GetReturnObjectManager {
     CGF.EmitAutoVarInit(GroEmission);
     Builder.CreateStore(Builder.getTrue(), GroActiveFlag);
   }
+
   // The GRO returns either when it is first suspended or when it completes
   // without ever being suspended. The EmitGroConv function evaluates these
   // conditions and perform the conversion if needed.
@@ -987,6 +1020,15 @@ void CodeGenFunction::EmitCoroutineBody(const CoroutineBodyStmt &S) {
     CurCoro.Data->CurrentAwaitKind = AwaitKind::Init;
     CurCoro.Data->ExceptionHandler = S.getExceptionHandler();
     EmitStmt(S.getInitSuspendStmt());
+
+    // If we emitted the return value directly into the return slot, the
+    // destructor cleanup we registered above should only be active while
+    // initial_suspend is in progress. After initial_suspend completes
+    // normally, deactivate the cleanup so the return value is not
+    // destroyed here.
+    if (GroManager.DirectEmit && GroManager.DirectGroActiveFlag.isValid())
+      Builder.CreateStore(Builder.getFalse(), GroManager.DirectGroActiveFlag);
+
     CurCoro.Data->FinalJD = getJumpDestInCurrentScope(FinalBB);
 
     CurCoro.Data->CurrentAwaitKind = AwaitKind::Normal;
