@@ -2234,8 +2234,15 @@ void ASTDeclWriter::VisitRedeclarable(Redeclarable<T> *D) {
       // redecl chain.
       unsigned I = Record.size();
       Record.push_back(0);
-      if (Writer.Chain)
-        AddFirstDeclFromEachModule(DAsT, /*IncludeLocal*/false);
+      if (Writer.Chain) {
+        // Namespace can have many redeclaration in many TU.
+        // We try to avoid touching every redeclaration to try to
+        // reduce the dependencies as much as possible.
+        if (!isa<NamespaceDecl>(DAsT))
+          AddFirstDeclFromEachModule(DAsT, /*IncludeLocal*/ false);
+        else
+          Record.AddDeclRef(nullptr);
+      }
       // This is the number of imported first declarations + 1.
       Record[I] = Record.size() - I;
 
@@ -2265,8 +2272,10 @@ void ASTDeclWriter::VisitRedeclarable(Redeclarable<T> *D) {
     //
     // FIXME: This is not correct; when we reach an imported declaration we
     // won't emit its previous declaration.
-    (void)Writer.GetDeclRef(D->getPreviousDecl());
-    (void)Writer.GetDeclRef(MostRecent);
+    if (D->getPreviousDecl() && !D->getPreviousDecl()->isFromASTFile())
+      (void)Writer.GetDeclRef(D->getPreviousDecl());
+    if (!MostRecent->isFromASTFile())
+      (void)Writer.GetDeclRef(MostRecent);
   } else {
     // We use the sentinel value 0 to indicate an only declaration.
     Record.push_back(0);
