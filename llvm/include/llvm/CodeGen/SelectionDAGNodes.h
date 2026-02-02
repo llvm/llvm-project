@@ -2333,7 +2333,7 @@ public:
   /// integer, the value "<a, n>" is returned. Arithmetic is performed modulo
   /// 2^BitWidth, so this also matches sequences that wrap around. Poison
   /// elements are ignored and can take any value.
-  LLVM_ABI std::optional<std::pair<APInt, APInt>> isConstantSequence() const;
+  LLVM_ABI std::optional<std::pair<APInt, APInt>> isArithmeticSequence() const;
 
   /// Recast bit data \p SrcBitElements to \p DstEltSizeInBits wide elements.
   /// Undef elements are treated as zero, and entirely undefined elements are
