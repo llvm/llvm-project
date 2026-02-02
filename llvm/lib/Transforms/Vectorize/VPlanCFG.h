@@ -25,7 +25,7 @@ namespace llvm {
 // GraphTraits specializations for VPlan Hierarchical Control-Flow Graphs     //
 //===----------------------------------------------------------------------===//
 
-/// Iterator to traverse all successors/predecessors of a VPBlockBase node, such
+/// Iterator to traverse all successors/predecessors of a VPBlockBase node, including its hierarchical successors/predecessors. For example:
 /// that:
 ///
 ///     A
@@ -66,14 +66,14 @@ class VPImmediateHierarchicalChildrenIterator
   /// successors/predecessors array.
   size_t EdgeIdx;
 
-  static auto getNumOutgoingEdges(BlockPtrTy Current) {
+  static size_t getNumOutgoingEdges(BlockPtrTy Current) {
     if constexpr (Forward)
       return Current->getNumSuccessors();
     else
       return Current->getNumPredecessors();
   }
 
-  static decltype(auto) getOutgoingEdges(BlockPtrTy Current) {
+  static SmallVectorImpl<BlockPtrTy> &getOutgoingEdges(BlockPtrTy Current) {
     if constexpr (Forward)
       return Current->getSuccessors();
     else
@@ -339,7 +339,7 @@ template <> struct GraphTraits<Inverse<VPBlockBase *>> {
   static NodeRef getEntryNode(Inverse<NodeRef> B) { return B.Graph; }
 
   static inline ChildIteratorType child_begin(NodeRef N) {
-    return ChildIteratorType{N};
+    return ChildIteratorType(N);
   }
 
   static inline ChildIteratorType child_end(NodeRef N) {
