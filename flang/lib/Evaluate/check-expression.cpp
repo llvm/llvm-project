@@ -133,12 +133,12 @@ bool IsConstantExprHelper<INVARIANT>::operator()(
       auto base{ExtractNamedEntity(call.arguments()[0]->UnwrapExpr())};
       if (base) {
         auto shape{GetShape(*base)};
-	return shape && IsConstantExprShape(*shape);
+        return shape && IsConstantExprShape(*shape);
       } else {
         // Argument is not a named entity (e.g., it's a function call);
-	// it must be a constant expression for SIZE/SHAPE to be constant.
-	const auto *argExpr{call.arguments()[0]->UnwrapExpr()};
-	return argExpr && (*this)(*argExpr);
+        // it must be a constant expression for SIZE/SHAPE to be constant.
+        const auto *argExpr{call.arguments()[0]->UnwrapExpr()};
+        return argExpr && (*this)(*argExpr);
       }
     } else if (proc.IsPure()) {
       std::size_t j{0};

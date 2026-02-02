@@ -14,7 +14,7 @@
 namespace Fortran::evaluate {
 
 // Check if the argument is a TRANSFER intrinsic call with a non-constant
-// source. SIZE of such a call cannot be folded.
+// source.
 static bool IsNonConstantTransferArg(const ActualArgument &arg) {
   if (const auto *expr{arg.UnwrapExpr()}) {
     if (const auto *procRef{UnwrapProcedureRef(*expr)}) {
@@ -1408,9 +1408,10 @@ Expr<Type<TypeCategory::Integer, KIND>> FoldIntrinsicFunction(
           return result.value;
         }));
   } else if (name == "size") {
-    // Don't fold SIZE of TRANSFER with non-constant source.
+    // Warn about SIZE of TRANSFER with non-constant source.
     if (IsNonConstantTransferArg(args[0].value())) {
-      return Expr<T>{std::move(funcRef)};
+      context.Warn(common::UsageWarning::Portability,
+          "SIZE(TRANSFER(variable,..)) is not portable"_port_en_US);
     }
     if (auto shape{GetContextFreeShape(context, args[0])}) {
       if (args[1]) { // DIM= is present, get one extent
