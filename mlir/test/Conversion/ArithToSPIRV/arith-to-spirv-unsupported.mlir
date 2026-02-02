@@ -215,3 +215,33 @@ func.func @unsupported_tensor_trunci(%arg0: tensor<1xi32>) -> tensor<1xi16> {
 }
 
 } // end module
+
+// -----
+
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [], []>, #spirv.resource_limits<>>
+} {
+
+  // Tensor extui is not supported; ensure conversion fails (and does not crash).
+  func.func @unsupported_tensor_extui(%arg0: tensor<1xi8>) -> tensor<1xi32> {
+    // expected-error @+1 {{failed to legalize operation 'arith.extui'}}
+    %t = arith.extui %arg0 : tensor<1xi8> to tensor<1xi32>
+    return %t : tensor<1xi32>
+  }
+} // end module
+
+// -----
+
+module attributes {
+  spirv.target_env = #spirv.target_env<
+    #spirv.vce<v1.0, [], []>, #spirv.resource_limits<>>
+} {
+
+  // Tensor extsi is not supported; ensure conversion fails (and does not crash).
+  func.func @unsupported_tensor_extsi(%arg0: tensor<1xi8>) -> tensor<1xi32> {
+    // expected-error @+1 {{failed to legalize operation 'arith.extsi'}}
+    %t = arith.extsi %arg0 : tensor<1xi8> to tensor<1xi32>
+    return %t : tensor<1xi32>
+  }
+} // end module
