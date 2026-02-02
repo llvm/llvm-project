@@ -62,94 +62,6 @@ namespace llvm::SPIRV {
 } // namespace llvm::SPIRV
 
 namespace {
-// This class keeps track of which functions reference which global variables.
-class GlobalVariableUsers {
-  template <typename T1, typename T2>
-  using OneToManyMapTy = DenseMap<T1, SmallPtrSet<T2, 4>>;
-
-  OneToManyMapTy<const GlobalVariable *, const Function *> GlobalIsUsedByFun;
-
-  void collectGlobalUsers(
-      const GlobalVariable *GV,
-      OneToManyMapTy<const GlobalVariable *, const GlobalVariable *>
-          &GlobalIsUsedByGlobal) {
-    SmallVector<const Value *> Stack = {GV->user_begin(), GV->user_end()};
-    while (!Stack.empty()) {
-      const Value *V = Stack.pop_back_val();
-
-      if (const Instruction *I = dyn_cast<Instruction>(V)) {
-        GlobalIsUsedByFun[GV].insert(I->getFunction());
-        continue;
-      }
-
-      if (const GlobalVariable *UserGV = dyn_cast<GlobalVariable>(V)) {
-        GlobalIsUsedByGlobal[GV].insert(UserGV);
-        continue;
-      }
-
-      if (const Constant *C = dyn_cast<Constant>(V))
-        Stack.append(C->user_begin(), C->user_end());
-    }
-  }
-
-  bool propagateGlobalToGlobalUsers(
-      OneToManyMapTy<const GlobalVariable *, const GlobalVariable *>
-          &GlobalIsUsedByGlobal) {
-    SmallVector<const GlobalVariable *> OldUsersGlobals;
-    bool Changed = false;
-    for (auto &[GV, UserGlobals] : GlobalIsUsedByGlobal) {
-      OldUsersGlobals.assign(UserGlobals.begin(), UserGlobals.end());
-      for (const GlobalVariable *UserGV : OldUsersGlobals) {
-        auto It = GlobalIsUsedByGlobal.find(UserGV);
-        if (It == GlobalIsUsedByGlobal.end())
-          continue;
-        Changed |= set_union(UserGlobals, It->second);
-      }
-    }
-    return Changed;
-  }
-
-  void propagateGlobalToFunctionReferences(
-      OneToManyMapTy<const GlobalVariable *, const GlobalVariable *>
-          &GlobalIsUsedByGlobal) {
-    for (auto &[GV, UserGlobals] : GlobalIsUsedByGlobal) {
-      auto &UserFunctions = GlobalIsUsedByFun[GV];
-      for (const GlobalVariable *UserGV : UserGlobals) {
-        auto It = GlobalIsUsedByFun.find(UserGV);
-        if (It == GlobalIsUsedByFun.end())
-          continue;
-        set_union(UserFunctions, It->second);
-      }
-    }
-  }
-
-public:
-  void init(Module &M) {
-    // Collect which global variables are referenced by which global variables
-    // and which functions reference each global variables.
-    OneToManyMapTy<const GlobalVariable *, const GlobalVariable *>
-        GlobalIsUsedByGlobal;
-    GlobalIsUsedByFun.clear();
-    for (GlobalVariable &GV : M.globals())
-      collectGlobalUsers(&GV, GlobalIsUsedByGlobal);
-
-    // Compute indirect references by iterating until a fixed point is reached.
-    while (propagateGlobalToGlobalUsers(GlobalIsUsedByGlobal))
-      (void)0;
-
-    propagateGlobalToFunctionReferences(GlobalIsUsedByGlobal);
-  }
-
-  const auto &getTransitiveUserFunctions(const GlobalVariable &GV) const {
-    auto It = GlobalIsUsedByFun.find(&GV);
-    if (It != GlobalIsUsedByFun.end())
-      return It->second;
-
-    using FunctionSetType = typename decltype(GlobalIsUsedByFun)::mapped_type;
-    const static FunctionSetType Empty;
-    return Empty;
-  }
-};
 
 class SPIRVEmitIntrinsics
     : public ModulePass,
@@ -162,7 +74,6 @@ class SPIRVEmitIntrinsics
   DenseMap<Instruction *, Constant *> AggrConsts;
   DenseMap<Instruction *, Type *> AggrConstTypes;
   DenseSet<Instruction *> AggrStores;
-  GlobalVariableUsers GVUsers;
   std::unordered_set<Value *> Named;
 
   // map of function declarations to <pointer arg index => element type>
@@ -293,7 +204,10 @@ class SPIRVEmitIntrinsics
   bool postprocessTypes(Module &M);
   bool processFunctionPointers(Module &M);
   void parseFunDeclarations(Module &M);
+
   void useRoundingMode(ConstrainedFPIntrinsic *FPI, IRBuilder<> &B);
+
+  void emitUnstructuredLoopControls(Function &F, IRBuilder<> &B);
 
   // Tries to walk the type accessed by the given GEP instruction.
   // For each nested type access, one of the 2 callbacks is called:
@@ -2205,36 +2119,13 @@ Instruction *SPIRVEmitIntrinsics::visitUnreachableInst(UnreachableInst &I) {
   return &I;
 }
 
-static bool
-shouldEmitIntrinsicsForGlobalValue(const GlobalVariableUsers &GVUsers,
-                                   const GlobalVariable &GV,
-                                   const Function *F) {
+void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
+                                             IRBuilder<> &B) {
   // Skip special artificial variables.
   static const StringSet<> ArtificialGlobals{"llvm.global.annotations",
                                              "llvm.compiler.used"};
+
   if (ArtificialGlobals.contains(GV.getName()))
-    return false;
-
-  auto &UserFunctions = GVUsers.getTransitiveUserFunctions(GV);
-  if (UserFunctions.contains(F))
-    return true;
-
-  // Do not emit the intrinsics in this function, it's going to be emitted on
-  // the functions that reference it.
-  if (!UserFunctions.empty())
-    return false;
-
-  // Emit definitions for globals that are not referenced by any function on the
-  // first function definition.
-  const Module &M = *F->getParent();
-  const Function &FirstDefinition = *M.getFunctionDefs().begin();
-  return F == &FirstDefinition;
-}
-
-void SPIRVEmitIntrinsics::processGlobalValue(GlobalVariable &GV,
-                                             IRBuilder<> &B) {
-
-  if (!shouldEmitIntrinsicsForGlobalValue(GVUsers, GV, CurrF))
     return;
 
   Constant *Init = nullptr;
@@ -2989,6 +2880,38 @@ SPIRVEmitIntrinsics::simplifyZeroLengthArrayGepInst(GetElementPtrInst *GEP) {
   return nullptr;
 }
 
+void SPIRVEmitIntrinsics::emitUnstructuredLoopControls(Function &F,
+                                                       IRBuilder<> &B) {
+  const SPIRVSubtarget *ST = TM->getSubtargetImpl(F);
+  // Shaders use SPIRVStructurizer which emits OpLoopMerge via spv_loop_merge.
+  if (ST->isShader())
+    return;
+  if (!ST->canUseExtension(
+          SPIRV::Extension::SPV_INTEL_unstructured_loop_controls))
+    return;
+
+  for (BasicBlock &BB : F) {
+    Instruction *Term = BB.getTerminator();
+    MDNode *LoopMD = Term->getMetadata(LLVMContext::MD_loop);
+    if (!LoopMD)
+      continue;
+
+    SmallVector<unsigned, 1> Ops =
+        getSpirvLoopControlOperandsFromLoopMetadata(LoopMD);
+    unsigned LC = Ops[0];
+    if (LC == SPIRV::LoopControl::None)
+      continue;
+
+    // Emit intrinsic: loop control mask + optional parameters.
+    B.SetInsertPoint(Term);
+    SmallVector<Value *, 4> IntrArgs;
+    IntrArgs.push_back(B.getInt32(LC));
+    for (unsigned I = 1; I < Ops.size(); ++I)
+      IntrArgs.push_back(B.getInt32(Ops[I]));
+    B.CreateIntrinsic(Intrinsic::spv_loop_control_intel, IntrArgs);
+  }
+}
+
 bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
   if (Func.isDeclaration())
     return false;
@@ -3105,6 +3028,8 @@ bool SPIRVEmitIntrinsics::runOnFunction(Function &Func) {
     processInstrAfterVisit(I, B);
   }
 
+  emitUnstructuredLoopControls(Func, B);
+
   return true;
 }
 
@@ -3216,7 +3141,6 @@ bool SPIRVEmitIntrinsics::runOnModule(Module &M) {
 
   parseFunDeclarations(M);
   insertConstantsForFPFastMathDefault(M);
-  GVUsers.init(M);
 
   TodoType.clear();
   for (auto &F : M)
