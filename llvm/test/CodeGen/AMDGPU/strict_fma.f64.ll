@@ -136,15 +136,15 @@ define <2 x double> @v_constained_fma_v2f64_fpexcept_strict_fneg_fneg(<2 x doubl
 ; GCN-LABEL: v_constained_fma_v2f64_fpexcept_strict_fneg_fneg:
 ; GCN:       ; %bb.0:
 ; GCN-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GCN-NEXT:    v_fma_f64 v[0:1], -v[0:1], -v[4:5], v[8:9]
-; GCN-NEXT:    v_fma_f64 v[2:3], -v[2:3], -v[6:7], v[10:11]
+; GCN-NEXT:    v_fma_f64 v[0:1], v[0:1], v[4:5], v[8:9]
+; GCN-NEXT:    v_fma_f64 v[2:3], v[2:3], v[6:7], v[10:11]
 ; GCN-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX10-LABEL: v_constained_fma_v2f64_fpexcept_strict_fneg_fneg:
 ; GFX10:       ; %bb.0:
 ; GFX10-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX10-NEXT:    v_fma_f64 v[0:1], -v[0:1], -v[4:5], v[8:9]
-; GFX10-NEXT:    v_fma_f64 v[2:3], -v[2:3], -v[6:7], v[10:11]
+; GFX10-NEXT:    v_fma_f64 v[0:1], v[0:1], v[4:5], v[8:9]
+; GFX10-NEXT:    v_fma_f64 v[2:3], v[2:3], v[6:7], v[10:11]
 ; GFX10-NEXT:    s_setpc_b64 s[30:31]
   %neg.x = fneg <2 x double> %x
   %neg.y = fneg <2 x double> %y

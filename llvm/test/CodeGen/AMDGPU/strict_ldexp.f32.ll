@@ -48,26 +48,26 @@ define float @test_ldexp_f32_i32(ptr addrspace(1) %out, float %a, i32 %b) #0 {
 ; }
 
 define <2 x float> @test_ldexp_v2f32_v2i32(ptr addrspace(1) %out, <2 x float> %a, <2 x i32> %b) #0 {
-; GFX6-SDAG-LABEL: test_ldexp_v2f32_v2i32:
-; GFX6-SDAG:       ; %bb.0:
-; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-SDAG-NEXT:    v_ldexp_f32_e32 v1, v3, v5
-; GFX6-SDAG-NEXT:    v_ldexp_f32_e32 v0, v2, v4
-; GFX6-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX6-LABEL: test_ldexp_v2f32_v2i32:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_ldexp_f32_e32 v0, v2, v4
+; GFX6-NEXT:    v_ldexp_f32_e32 v1, v3, v5
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX8-SDAG-LABEL: test_ldexp_v2f32_v2i32:
-; GFX8-SDAG:       ; %bb.0:
-; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-SDAG-NEXT:    v_ldexp_f32 v1, v3, v5
-; GFX8-SDAG-NEXT:    v_ldexp_f32 v0, v2, v4
-; GFX8-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX8-LABEL: test_ldexp_v2f32_v2i32:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_ldexp_f32 v0, v2, v4
+; GFX8-NEXT:    v_ldexp_f32 v1, v3, v5
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-SDAG-LABEL: test_ldexp_v2f32_v2i32:
-; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_ldexp_f32 v1, v3, v5
-; GFX9-SDAG-NEXT:    v_ldexp_f32 v0, v2, v4
-; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-LABEL: test_ldexp_v2f32_v2i32:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_ldexp_f32 v0, v2, v4
+; GFX9-NEXT:    v_ldexp_f32 v1, v3, v5
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: test_ldexp_v2f32_v2i32:
 ; GFX11:       ; %bb.0:
@@ -75,58 +75,34 @@ define <2 x float> @test_ldexp_v2f32_v2i32(ptr addrspace(1) %out, <2 x float> %a
 ; GFX11-NEXT:    v_ldexp_f32 v0, v2, v4
 ; GFX11-NEXT:    v_ldexp_f32 v1, v3, v5
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX6-GISEL-LABEL: test_ldexp_v2f32_v2i32:
-; GFX6-GISEL:       ; %bb.0:
-; GFX6-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-GISEL-NEXT:    v_ldexp_f32_e32 v0, v2, v4
-; GFX6-GISEL-NEXT:    v_ldexp_f32_e32 v1, v3, v5
-; GFX6-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX8-GISEL-LABEL: test_ldexp_v2f32_v2i32:
-; GFX8-GISEL:       ; %bb.0:
-; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-GISEL-NEXT:    v_ldexp_f32 v0, v2, v4
-; GFX8-GISEL-NEXT:    v_ldexp_f32 v1, v3, v5
-; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX9-GISEL-LABEL: test_ldexp_v2f32_v2i32:
-; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_ldexp_f32 v0, v2, v4
-; GFX9-GISEL-NEXT:    v_ldexp_f32 v1, v3, v5
-; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %result = call <2 x float> @llvm.experimental.constrained.ldexp.v2f32.v2i32(<2 x float> %a, <2 x i32> %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <2 x float> %result
 }
 
 define <3 x float> @test_ldexp_v3f32_v3i32(ptr addrspace(1) %out, <3 x float> %a, <3 x i32> %b) #0 {
-; GFX6-SDAG-LABEL: test_ldexp_v3f32_v3i32:
-; GFX6-SDAG:       ; %bb.0:
-; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-SDAG-NEXT:    v_ldexp_f32_e32 v4, v4, v7
-; GFX6-SDAG-NEXT:    v_ldexp_f32_e32 v1, v3, v6
-; GFX6-SDAG-NEXT:    v_ldexp_f32_e32 v0, v2, v5
-; GFX6-SDAG-NEXT:    v_mov_b32_e32 v2, v4
-; GFX6-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX6-LABEL: test_ldexp_v3f32_v3i32:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_ldexp_f32_e32 v0, v2, v5
+; GFX6-NEXT:    v_ldexp_f32_e32 v1, v3, v6
+; GFX6-NEXT:    v_ldexp_f32_e32 v2, v4, v7
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX8-SDAG-LABEL: test_ldexp_v3f32_v3i32:
-; GFX8-SDAG:       ; %bb.0:
-; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-SDAG-NEXT:    v_ldexp_f32 v4, v4, v7
-; GFX8-SDAG-NEXT:    v_ldexp_f32 v1, v3, v6
-; GFX8-SDAG-NEXT:    v_ldexp_f32 v0, v2, v5
-; GFX8-SDAG-NEXT:    v_mov_b32_e32 v2, v4
-; GFX8-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX8-LABEL: test_ldexp_v3f32_v3i32:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_ldexp_f32 v0, v2, v5
+; GFX8-NEXT:    v_ldexp_f32 v1, v3, v6
+; GFX8-NEXT:    v_ldexp_f32 v2, v4, v7
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-SDAG-LABEL: test_ldexp_v3f32_v3i32:
-; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_ldexp_f32 v4, v4, v7
-; GFX9-SDAG-NEXT:    v_ldexp_f32 v1, v3, v6
-; GFX9-SDAG-NEXT:    v_ldexp_f32 v0, v2, v5
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v2, v4
-; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-LABEL: test_ldexp_v3f32_v3i32:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_ldexp_f32 v0, v2, v5
+; GFX9-NEXT:    v_ldexp_f32 v1, v3, v6
+; GFX9-NEXT:    v_ldexp_f32 v2, v4, v7
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: test_ldexp_v3f32_v3i32:
 ; GFX11:       ; %bb.0:
@@ -135,67 +111,37 @@ define <3 x float> @test_ldexp_v3f32_v3i32(ptr addrspace(1) %out, <3 x float> %a
 ; GFX11-NEXT:    v_ldexp_f32 v1, v3, v6
 ; GFX11-NEXT:    v_ldexp_f32 v2, v4, v7
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX6-GISEL-LABEL: test_ldexp_v3f32_v3i32:
-; GFX6-GISEL:       ; %bb.0:
-; GFX6-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-GISEL-NEXT:    v_ldexp_f32_e32 v0, v2, v5
-; GFX6-GISEL-NEXT:    v_ldexp_f32_e32 v1, v3, v6
-; GFX6-GISEL-NEXT:    v_ldexp_f32_e32 v2, v4, v7
-; GFX6-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX8-GISEL-LABEL: test_ldexp_v3f32_v3i32:
-; GFX8-GISEL:       ; %bb.0:
-; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-GISEL-NEXT:    v_ldexp_f32 v0, v2, v5
-; GFX8-GISEL-NEXT:    v_ldexp_f32 v1, v3, v6
-; GFX8-GISEL-NEXT:    v_ldexp_f32 v2, v4, v7
-; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX9-GISEL-LABEL: test_ldexp_v3f32_v3i32:
-; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_ldexp_f32 v0, v2, v5
-; GFX9-GISEL-NEXT:    v_ldexp_f32 v1, v3, v6
-; GFX9-GISEL-NEXT:    v_ldexp_f32 v2, v4, v7
-; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %result = call <3 x float> @llvm.experimental.constrained.ldexp.v3f32.v3i32(<3 x float> %a, <3 x i32> %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <3 x float> %result
 }
 
 define <4 x float> @test_ldexp_v4f32_v4i32(ptr addrspace(1) %out, <4 x float> %a, <4 x i32> %b) #0 {
-; GFX6-SDAG-LABEL: test_ldexp_v4f32_v4i32:
-; GFX6-SDAG:       ; %bb.0:
-; GFX6-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-SDAG-NEXT:    v_ldexp_f32_e32 v5, v5, v9
-; GFX6-SDAG-NEXT:    v_ldexp_f32_e32 v4, v4, v8
-; GFX6-SDAG-NEXT:    v_ldexp_f32_e32 v1, v3, v7
-; GFX6-SDAG-NEXT:    v_ldexp_f32_e32 v0, v2, v6
-; GFX6-SDAG-NEXT:    v_mov_b32_e32 v2, v4
-; GFX6-SDAG-NEXT:    v_mov_b32_e32 v3, v5
-; GFX6-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX6-LABEL: test_ldexp_v4f32_v4i32:
+; GFX6:       ; %bb.0:
+; GFX6-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX6-NEXT:    v_ldexp_f32_e32 v0, v2, v6
+; GFX6-NEXT:    v_ldexp_f32_e32 v1, v3, v7
+; GFX6-NEXT:    v_ldexp_f32_e32 v2, v4, v8
+; GFX6-NEXT:    v_ldexp_f32_e32 v3, v5, v9
+; GFX6-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX8-SDAG-LABEL: test_ldexp_v4f32_v4i32:
-; GFX8-SDAG:       ; %bb.0:
-; GFX8-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-SDAG-NEXT:    v_ldexp_f32 v5, v5, v9
-; GFX8-SDAG-NEXT:    v_ldexp_f32 v4, v4, v8
-; GFX8-SDAG-NEXT:    v_ldexp_f32 v1, v3, v7
-; GFX8-SDAG-NEXT:    v_ldexp_f32 v0, v2, v6
-; GFX8-SDAG-NEXT:    v_mov_b32_e32 v2, v4
-; GFX8-SDAG-NEXT:    v_mov_b32_e32 v3, v5
-; GFX8-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX8-LABEL: test_ldexp_v4f32_v4i32:
+; GFX8:       ; %bb.0:
+; GFX8-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX8-NEXT:    v_ldexp_f32 v0, v2, v6
+; GFX8-NEXT:    v_ldexp_f32 v1, v3, v7
+; GFX8-NEXT:    v_ldexp_f32 v2, v4, v8
+; GFX8-NEXT:    v_ldexp_f32 v3, v5, v9
+; GFX8-NEXT:    s_setpc_b64 s[30:31]
 ;
-; GFX9-SDAG-LABEL: test_ldexp_v4f32_v4i32:
-; GFX9-SDAG:       ; %bb.0:
-; GFX9-SDAG-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-SDAG-NEXT:    v_ldexp_f32 v5, v5, v9
-; GFX9-SDAG-NEXT:    v_ldexp_f32 v4, v4, v8
-; GFX9-SDAG-NEXT:    v_ldexp_f32 v1, v3, v7
-; GFX9-SDAG-NEXT:    v_ldexp_f32 v0, v2, v6
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v2, v4
-; GFX9-SDAG-NEXT:    v_mov_b32_e32 v3, v5
-; GFX9-SDAG-NEXT:    s_setpc_b64 s[30:31]
+; GFX9-LABEL: test_ldexp_v4f32_v4i32:
+; GFX9:       ; %bb.0:
+; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; GFX9-NEXT:    v_ldexp_f32 v0, v2, v6
+; GFX9-NEXT:    v_ldexp_f32 v1, v3, v7
+; GFX9-NEXT:    v_ldexp_f32 v2, v4, v8
+; GFX9-NEXT:    v_ldexp_f32 v3, v5, v9
+; GFX9-NEXT:    s_setpc_b64 s[30:31]
 ;
 ; GFX11-LABEL: test_ldexp_v4f32_v4i32:
 ; GFX11:       ; %bb.0:
@@ -205,33 +151,6 @@ define <4 x float> @test_ldexp_v4f32_v4i32(ptr addrspace(1) %out, <4 x float> %a
 ; GFX11-NEXT:    v_ldexp_f32 v2, v4, v8
 ; GFX11-NEXT:    v_ldexp_f32 v3, v5, v9
 ; GFX11-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX6-GISEL-LABEL: test_ldexp_v4f32_v4i32:
-; GFX6-GISEL:       ; %bb.0:
-; GFX6-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX6-GISEL-NEXT:    v_ldexp_f32_e32 v0, v2, v6
-; GFX6-GISEL-NEXT:    v_ldexp_f32_e32 v1, v3, v7
-; GFX6-GISEL-NEXT:    v_ldexp_f32_e32 v2, v4, v8
-; GFX6-GISEL-NEXT:    v_ldexp_f32_e32 v3, v5, v9
-; GFX6-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX8-GISEL-LABEL: test_ldexp_v4f32_v4i32:
-; GFX8-GISEL:       ; %bb.0:
-; GFX8-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX8-GISEL-NEXT:    v_ldexp_f32 v0, v2, v6
-; GFX8-GISEL-NEXT:    v_ldexp_f32 v1, v3, v7
-; GFX8-GISEL-NEXT:    v_ldexp_f32 v2, v4, v8
-; GFX8-GISEL-NEXT:    v_ldexp_f32 v3, v5, v9
-; GFX8-GISEL-NEXT:    s_setpc_b64 s[30:31]
-;
-; GFX9-GISEL-LABEL: test_ldexp_v4f32_v4i32:
-; GFX9-GISEL:       ; %bb.0:
-; GFX9-GISEL-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-GISEL-NEXT:    v_ldexp_f32 v0, v2, v6
-; GFX9-GISEL-NEXT:    v_ldexp_f32 v1, v3, v7
-; GFX9-GISEL-NEXT:    v_ldexp_f32 v2, v4, v8
-; GFX9-GISEL-NEXT:    v_ldexp_f32 v3, v5, v9
-; GFX9-GISEL-NEXT:    s_setpc_b64 s[30:31]
   %result = call <4 x float> @llvm.experimental.constrained.ldexp.v4f32.v4i32(<4 x float> %a, <4 x i32> %b, metadata !"round.dynamic", metadata !"fpexcept.strict")
   ret <4 x float> %result
 }
@@ -249,3 +168,9 @@ attributes #1 = { nocallback nofree nosync nounwind willreturn memory(inaccessib
 ; GCN: {{.*}}
 ; GFX11-GISEL: {{.*}}
 ; GFX11-SDAG: {{.*}}
+; GFX6-GISEL: {{.*}}
+; GFX6-SDAG: {{.*}}
+; GFX8-GISEL: {{.*}}
+; GFX8-SDAG: {{.*}}
+; GFX9-GISEL: {{.*}}
+; GFX9-SDAG: {{.*}}

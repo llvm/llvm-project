@@ -179,36 +179,12 @@ entry:
 define <2 x double> @constrained_vector_frem_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_frem_v2f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    subq $24, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [2.0E+0,0.0E+0]
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [1.0E+1,0.0E+0]
-; CHECK-NEXT:    callq fmod@PLT
-; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.0E+0,0.0E+0]
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [1.0E+1,0.0E+0]
-; CHECK-NEXT:    callq fmod@PLT
-; CHECK-NEXT:    unpcklpd (%rsp), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0]
-; CHECK-NEXT:    addq $24, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [1.0E+0,2.0E+0]
 ; CHECK-NEXT:    retq
 ;
 ; AVX-LABEL: constrained_vector_frem_v2f64:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    subq $24, %rsp
-; AVX-NEXT:    .cfi_def_cfa_offset 32
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [2.0E+0,0.0E+0]
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [1.0E+1,0.0E+0]
-; AVX-NEXT:    callq fmod@PLT
-; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [1.0E+0,0.0E+0]
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [1.0E+1,0.0E+0]
-; AVX-NEXT:    callq fmod@PLT
-; AVX-NEXT:    vunpcklpd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; AVX-NEXT:    # xmm0 = xmm0[0],mem[0]
-; AVX-NEXT:    addq $24, %rsp
-; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [1.0E+0,2.0E+0]
 ; AVX-NEXT:    retq
 entry:
   %rem = call <2 x double> @llvm.experimental.constrained.frem.v2f64(
@@ -278,51 +254,30 @@ entry:
 define <3 x double> @constrained_vector_frem_v3f64() #0 {
 ; CHECK-LABEL: constrained_vector_frem_v3f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    subq $24, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [2.0E+0,0.0E+0]
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [1.0E+1,0.0E+0]
-; CHECK-NEXT:    callq fmod@PLT
-; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.0E+0,0.0E+0]
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [1.0E+1,0.0E+0]
-; CHECK-NEXT:    callq fmod@PLT
-; CHECK-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [3.0E+0,0.0E+0]
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [1.0E+1,0.0E+0]
 ; CHECK-NEXT:    callq fmod@PLT
-; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    fldl {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movsd %xmm0, (%rsp)
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.0E+0,0.0E+0]
+; CHECK-NEXT:    fldl (%rsp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    movsd (%rsp), %xmm0 # 8-byte Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
-; CHECK-NEXT:    # xmm1 = mem[0],zero
-; CHECK-NEXT:    addq $24, %rsp
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.0E+0,0.0E+0]
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
 ; AVX-LABEL: constrained_vector_frem_v3f64:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    subq $40, %rsp
-; AVX-NEXT:    .cfi_def_cfa_offset 48
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [2.0E+0,0.0E+0]
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [1.0E+1,0.0E+0]
-; AVX-NEXT:    callq fmod@PLT
-; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [1.0E+0,0.0E+0]
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [1.0E+1,0.0E+0]
-; AVX-NEXT:    callq fmod@PLT
-; AVX-NEXT:    vunpcklpd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; AVX-NEXT:    # xmm0 = xmm0[0],mem[0]
-; AVX-NEXT:    vmovups %ymm0, (%rsp) # 32-byte Spill
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [3.0E+0,0.0E+0]
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [1.0E+1,0.0E+0]
-; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    callq fmod@PLT
-; AVX-NEXT:    vmovups (%rsp), %ymm1 # 32-byte Reload
+; AVX-NEXT:    vmovaps {{.*#+}} xmm1 = [1.0E+0,2.0E+0]
 ; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX-NEXT:    addq $40, %rsp
+; AVX-NEXT:    popq %rax
 ; AVX-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-NEXT:    retq
 entry:
@@ -337,59 +292,13 @@ entry:
 define <4 x double> @constrained_vector_frem_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_frem_v4f64:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    subq $40, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [2.0E+0,0.0E+0]
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [1.0E+1,0.0E+0]
-; CHECK-NEXT:    callq fmod@PLT
-; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [1.0E+0,0.0E+0]
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [1.0E+1,0.0E+0]
-; CHECK-NEXT:    callq fmod@PLT
-; CHECK-NEXT:    unpcklpd (%rsp), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0]
-; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.0E+0,0.0E+0]
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [1.0E+1,0.0E+0]
-; CHECK-NEXT:    callq fmod@PLT
-; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [3.0E+0,0.0E+0]
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [1.0E+1,0.0E+0]
-; CHECK-NEXT:    callq fmod@PLT
-; CHECK-NEXT:    movaps %xmm0, %xmm1
-; CHECK-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm1 = xmm1[0],mem[0]
-; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    addq $40, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [1.0E+0,2.0E+0]
+; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [3.0E+0,4.0E+0]
 ; CHECK-NEXT:    retq
 ;
 ; AVX-LABEL: constrained_vector_frem_v4f64:
 ; AVX:       # %bb.0:
-; AVX-NEXT:    subq $40, %rsp
-; AVX-NEXT:    .cfi_def_cfa_offset 48
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.0E+0,0.0E+0]
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [1.0E+1,0.0E+0]
-; AVX-NEXT:    callq fmod@PLT
-; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [3.0E+0,0.0E+0]
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [1.0E+1,0.0E+0]
-; AVX-NEXT:    callq fmod@PLT
-; AVX-NEXT:    vunpcklpd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; AVX-NEXT:    # xmm0 = xmm0[0],mem[0]
-; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [2.0E+0,0.0E+0]
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [1.0E+1,0.0E+0]
-; AVX-NEXT:    callq fmod@PLT
-; AVX-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [1.0E+0,0.0E+0]
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [1.0E+1,0.0E+0]
-; AVX-NEXT:    callq fmod@PLT
-; AVX-NEXT:    vunpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
-; AVX-NEXT:    # xmm0 = xmm0[0],mem[0]
-; AVX-NEXT:    vinsertf128 $1, (%rsp), %ymm0, %ymm0 # 16-byte Folded Reload
-; AVX-NEXT:    addq $40, %rsp
-; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    vmovaps {{.*#+}} ymm0 = [1.0E+0,2.0E+0,3.0E+0,4.0E+0]
 ; AVX-NEXT:    retq
   %rem = call <4 x double> @llvm.experimental.constrained.frem.v4f64(
            <4 x double> <double 1.000000e+00, double 2.000000e+00,
@@ -1058,11 +967,11 @@ define <3 x double> @constrained_vector_pow_v3f64() #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [3.0E+0,0.0E+0]
 ; CHECK-NEXT:    callq pow@PLT
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [3.0E+0,0.0E+0]
 ; CHECK-NEXT:    callq pow@PLT
 ; CHECK-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
@@ -1072,9 +981,9 @@ define <3 x double> @constrained_vector_pow_v3f64() #0 {
 ; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    movsd (%rsp), %xmm0 # 8-byte Reload
+; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
+; CHECK-NEXT:    movsd (%rsp), %xmm1 # 8-byte Reload
 ; CHECK-NEXT:    # xmm1 = mem[0],zero
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -1315,11 +1224,11 @@ define <3 x double> @constrained_vector_powi_v3f64() #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
 ; CHECK-NEXT:    movl $3, %edi
 ; CHECK-NEXT:    callq __powidf2@PLT
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
 ; CHECK-NEXT:    movl $3, %edi
 ; CHECK-NEXT:    callq __powidf2@PLT
 ; CHECK-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
@@ -1329,9 +1238,9 @@ define <3 x double> @constrained_vector_powi_v3f64() #0 {
 ; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    movsd (%rsp), %xmm0 # 8-byte Reload
+; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
+; CHECK-NEXT:    movsd (%rsp), %xmm1 # 8-byte Reload
 ; CHECK-NEXT:    # xmm1 = mem[0],zero
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -1556,10 +1465,10 @@ define <3 x double> @constrained_vector_sin_v3f64() #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
 ; CHECK-NEXT:    callq sin@PLT
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
 ; CHECK-NEXT:    callq sin@PLT
 ; CHECK-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2200000000000003E+1,0.0E+0]
@@ -1567,9 +1476,9 @@ define <3 x double> @constrained_vector_sin_v3f64() #0 {
 ; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    movsd (%rsp), %xmm0 # 8-byte Reload
+; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
+; CHECK-NEXT:    movsd (%rsp), %xmm1 # 8-byte Reload
 ; CHECK-NEXT:    # xmm1 = mem[0],zero
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -1781,10 +1690,10 @@ define <3 x double> @constrained_vector_cos_v3f64() #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
 ; CHECK-NEXT:    callq cos@PLT
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
 ; CHECK-NEXT:    callq cos@PLT
 ; CHECK-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2200000000000003E+1,0.0E+0]
@@ -1792,9 +1701,9 @@ define <3 x double> @constrained_vector_cos_v3f64() #0 {
 ; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    movsd (%rsp), %xmm0 # 8-byte Reload
+; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
+; CHECK-NEXT:    movsd (%rsp), %xmm1 # 8-byte Reload
 ; CHECK-NEXT:    # xmm1 = mem[0],zero
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -2006,10 +1915,10 @@ define <3 x double> @constrained_vector_exp_v3f64() #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
 ; CHECK-NEXT:    callq exp@PLT
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
 ; CHECK-NEXT:    callq exp@PLT
 ; CHECK-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2200000000000003E+1,0.0E+0]
@@ -2017,9 +1926,9 @@ define <3 x double> @constrained_vector_exp_v3f64() #0 {
 ; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    movsd (%rsp), %xmm0 # 8-byte Reload
+; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
+; CHECK-NEXT:    movsd (%rsp), %xmm1 # 8-byte Reload
 ; CHECK-NEXT:    # xmm1 = mem[0],zero
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -2231,10 +2140,10 @@ define <3 x double> @constrained_vector_exp2_v3f64() #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
 ; CHECK-NEXT:    callq exp2@PLT
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
 ; CHECK-NEXT:    callq exp2@PLT
 ; CHECK-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2200000000000003E+1,0.0E+0]
@@ -2242,9 +2151,9 @@ define <3 x double> @constrained_vector_exp2_v3f64() #0 {
 ; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    movsd (%rsp), %xmm0 # 8-byte Reload
+; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
+; CHECK-NEXT:    movsd (%rsp), %xmm1 # 8-byte Reload
 ; CHECK-NEXT:    # xmm1 = mem[0],zero
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -2456,10 +2365,10 @@ define <3 x double> @constrained_vector_log_v3f64() #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
 ; CHECK-NEXT:    callq log@PLT
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
 ; CHECK-NEXT:    callq log@PLT
 ; CHECK-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2200000000000003E+1,0.0E+0]
@@ -2467,9 +2376,9 @@ define <3 x double> @constrained_vector_log_v3f64() #0 {
 ; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    movsd (%rsp), %xmm0 # 8-byte Reload
+; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
+; CHECK-NEXT:    movsd (%rsp), %xmm1 # 8-byte Reload
 ; CHECK-NEXT:    # xmm1 = mem[0],zero
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -2681,10 +2590,10 @@ define <3 x double> @constrained_vector_log10_v3f64() #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
 ; CHECK-NEXT:    callq log10@PLT
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
 ; CHECK-NEXT:    callq log10@PLT
 ; CHECK-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2200000000000003E+1,0.0E+0]
@@ -2692,9 +2601,9 @@ define <3 x double> @constrained_vector_log10_v3f64() #0 {
 ; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    movsd (%rsp), %xmm0 # 8-byte Reload
+; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
+; CHECK-NEXT:    movsd (%rsp), %xmm1 # 8-byte Reload
 ; CHECK-NEXT:    # xmm1 = mem[0],zero
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -2906,10 +2815,10 @@ define <3 x double> @constrained_vector_log2_v3f64() #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
 ; CHECK-NEXT:    callq log2@PLT
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
 ; CHECK-NEXT:    callq log2@PLT
 ; CHECK-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2200000000000003E+1,0.0E+0]
@@ -2917,9 +2826,9 @@ define <3 x double> @constrained_vector_log2_v3f64() #0 {
 ; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    movsd (%rsp), %xmm0 # 8-byte Reload
+; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
+; CHECK-NEXT:    movsd (%rsp), %xmm1 # 8-byte Reload
 ; CHECK-NEXT:    # xmm1 = mem[0],zero
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -3145,10 +3054,10 @@ define <3 x double> @constrained_vector_rint_v3f64() #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
 ; CHECK-NEXT:    callq rint@PLT
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
 ; CHECK-NEXT:    callq rint@PLT
 ; CHECK-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2200000000000003E+1,0.0E+0]
@@ -3156,9 +3065,9 @@ define <3 x double> @constrained_vector_rint_v3f64() #0 {
 ; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    movsd (%rsp), %xmm0 # 8-byte Reload
+; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
+; CHECK-NEXT:    movsd (%rsp), %xmm1 # 8-byte Reload
 ; CHECK-NEXT:    # xmm1 = mem[0],zero
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -3188,10 +3097,10 @@ define <3 x double> @constrained_vector_rint_v3f64_var(ptr %a) #0 {
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movaps (%rdi), %xmm0
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    callq rint@PLT
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    callq rint@PLT
 ; CHECK-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
 ; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
@@ -3200,9 +3109,9 @@ define <3 x double> @constrained_vector_rint_v3f64_var(ptr %a) #0 {
 ; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    movsd (%rsp), %xmm0 # 8-byte Reload
+; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
+; CHECK-NEXT:    movsd (%rsp), %xmm1 # 8-byte Reload
 ; CHECK-NEXT:    # xmm1 = mem[0],zero
 ; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -3441,10 +3350,10 @@ define <3 x double> @constrained_vector_nearby_v3f64() #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
 ; CHECK-NEXT:    callq nearbyint@PLT
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
 ; CHECK-NEXT:    callq nearbyint@PLT
 ; CHECK-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2200000000000003E+1,0.0E+0]
@@ -3452,9 +3361,9 @@ define <3 x double> @constrained_vector_nearby_v3f64() #0 {
 ; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    movsd (%rsp), %xmm0 # 8-byte Reload
+; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
+; CHECK-NEXT:    movsd (%rsp), %xmm1 # 8-byte Reload
 ; CHECK-NEXT:    # xmm1 = mem[0],zero
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -3484,10 +3393,10 @@ define <3 x double> @constrained_vector_nearbyint_v3f64_var(ptr %a) #0 {
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movaps (%rdi), %xmm0
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    callq nearbyint@PLT
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    callq nearbyint@PLT
 ; CHECK-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
 ; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
@@ -3496,9 +3405,9 @@ define <3 x double> @constrained_vector_nearbyint_v3f64_var(ptr %a) #0 {
 ; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    movsd (%rsp), %xmm0 # 8-byte Reload
+; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
+; CHECK-NEXT:    movsd (%rsp), %xmm1 # 8-byte Reload
 ; CHECK-NEXT:    # xmm1 = mem[0],zero
 ; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -3635,36 +3544,12 @@ entry:
 define <2 x double> @constrained_vector_maxnum_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_maxnum_v2f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    subq $24, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [4.0E+1,0.0E+0]
-; CHECK-NEXT:    callq fmax@PLT
-; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.3E+1,0.0E+0]
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [4.1E+1,0.0E+0]
-; CHECK-NEXT:    callq fmax@PLT
-; CHECK-NEXT:    unpcklpd (%rsp), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0]
-; CHECK-NEXT:    addq $24, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [4.3E+1,4.2E+1]
 ; CHECK-NEXT:    retq
 ;
 ; AVX-LABEL: constrained_vector_maxnum_v2f64:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    subq $24, %rsp
-; AVX-NEXT:    .cfi_def_cfa_offset 32
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [4.0E+1,0.0E+0]
-; AVX-NEXT:    callq fmax@PLT
-; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.3E+1,0.0E+0]
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [4.1E+1,0.0E+0]
-; AVX-NEXT:    callq fmax@PLT
-; AVX-NEXT:    vunpcklpd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; AVX-NEXT:    # xmm0 = xmm0[0],mem[0]
-; AVX-NEXT:    addq $24, %rsp
-; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [4.3E+1,4.2E+1]
 ; AVX-NEXT:    retq
 entry:
   %max = call <2 x double> @llvm.experimental.constrained.maxnum.v2f64(
@@ -3732,51 +3617,30 @@ entry:
 define <3 x double> @constrained_vector_max_v3f64() #0 {
 ; CHECK-LABEL: constrained_vector_max_v3f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    subq $24, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.4E+1,0.0E+0]
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [4.1E+1,0.0E+0]
-; CHECK-NEXT:    callq fmax@PLT
-; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.3E+1,0.0E+0]
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [4.0E+1,0.0E+0]
-; CHECK-NEXT:    callq fmax@PLT
-; CHECK-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.5E+1,0.0E+0]
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [4.2E+1,0.0E+0]
 ; CHECK-NEXT:    callq fmax@PLT
-; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    fldl {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movsd %xmm0, (%rsp)
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.3E+1,0.0E+0]
+; CHECK-NEXT:    fldl (%rsp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    movsd (%rsp), %xmm0 # 8-byte Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
-; CHECK-NEXT:    # xmm1 = mem[0],zero
-; CHECK-NEXT:    addq $24, %rsp
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [4.4E+1,0.0E+0]
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
 ; AVX-LABEL: constrained_vector_max_v3f64:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    subq $40, %rsp
-; AVX-NEXT:    .cfi_def_cfa_offset 48
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.4E+1,0.0E+0]
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [4.1E+1,0.0E+0]
-; AVX-NEXT:    callq fmax@PLT
-; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.3E+1,0.0E+0]
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [4.0E+1,0.0E+0]
-; AVX-NEXT:    callq fmax@PLT
-; AVX-NEXT:    vunpcklpd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; AVX-NEXT:    # xmm0 = xmm0[0],mem[0]
-; AVX-NEXT:    vmovups %ymm0, (%rsp) # 32-byte Spill
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.5E+1,0.0E+0]
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [4.2E+1,0.0E+0]
-; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    callq fmax@PLT
-; AVX-NEXT:    vmovups (%rsp), %ymm1 # 32-byte Reload
+; AVX-NEXT:    vmovaps {{.*#+}} xmm1 = [4.3E+1,4.4E+1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX-NEXT:    addq $40, %rsp
+; AVX-NEXT:    popq %rax
 ; AVX-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-NEXT:    retq
 entry:
@@ -3790,59 +3654,13 @@ entry:
 define <4 x double> @constrained_vector_maxnum_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_maxnum_v4f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    subq $40, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.5E+1,0.0E+0]
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [4.1E+1,0.0E+0]
-; CHECK-NEXT:    callq fmax@PLT
-; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.4E+1,0.0E+0]
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [4.0E+1,0.0E+0]
-; CHECK-NEXT:    callq fmax@PLT
-; CHECK-NEXT:    unpcklpd (%rsp), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0]
-; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.7E+1,0.0E+0]
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [4.3E+1,0.0E+0]
-; CHECK-NEXT:    callq fmax@PLT
-; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.6E+1,0.0E+0]
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [4.2E+1,0.0E+0]
-; CHECK-NEXT:    callq fmax@PLT
-; CHECK-NEXT:    movaps %xmm0, %xmm1
-; CHECK-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm1 = xmm1[0],mem[0]
-; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    addq $40, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [4.4E+1,4.5E+1]
+; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [4.6E+1,4.7E+1]
 ; CHECK-NEXT:    retq
 ;
 ; AVX-LABEL: constrained_vector_maxnum_v4f64:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    subq $40, %rsp
-; AVX-NEXT:    .cfi_def_cfa_offset 48
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.7E+1,0.0E+0]
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [4.3E+1,0.0E+0]
-; AVX-NEXT:    callq fmax@PLT
-; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.6E+1,0.0E+0]
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [4.2E+1,0.0E+0]
-; AVX-NEXT:    callq fmax@PLT
-; AVX-NEXT:    vunpcklpd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; AVX-NEXT:    # xmm0 = xmm0[0],mem[0]
-; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.5E+1,0.0E+0]
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [4.1E+1,0.0E+0]
-; AVX-NEXT:    callq fmax@PLT
-; AVX-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.4E+1,0.0E+0]
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [4.0E+1,0.0E+0]
-; AVX-NEXT:    callq fmax@PLT
-; AVX-NEXT:    vunpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
-; AVX-NEXT:    # xmm0 = xmm0[0],mem[0]
-; AVX-NEXT:    vinsertf128 $1, (%rsp), %ymm0, %ymm0 # 16-byte Folded Reload
-; AVX-NEXT:    addq $40, %rsp
-; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    vmovaps {{.*#+}} ymm0 = [4.4E+1,4.5E+1,4.6E+1,4.7E+1]
 ; AVX-NEXT:    retq
 entry:
   %max = call <4 x double> @llvm.experimental.constrained.maxnum.v4f64(
@@ -3886,36 +3704,12 @@ define <1 x float> @constrained_vector_minnum_v1f32() #0 {
 define <2 x double> @constrained_vector_minnum_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_minnum_v2f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    subq $24, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [4.0E+1,0.0E+0]
-; CHECK-NEXT:    callq fmin@PLT
-; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.3E+1,0.0E+0]
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [4.1E+1,0.0E+0]
-; CHECK-NEXT:    callq fmin@PLT
-; CHECK-NEXT:    unpcklpd (%rsp), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0]
-; CHECK-NEXT:    addq $24, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [4.1E+1,4.0E+1]
 ; CHECK-NEXT:    retq
 ;
 ; AVX-LABEL: constrained_vector_minnum_v2f64:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    subq $24, %rsp
-; AVX-NEXT:    .cfi_def_cfa_offset 32
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [4.0E+1,0.0E+0]
-; AVX-NEXT:    callq fmin@PLT
-; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.3E+1,0.0E+0]
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [4.1E+1,0.0E+0]
-; AVX-NEXT:    callq fmin@PLT
-; AVX-NEXT:    vunpcklpd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; AVX-NEXT:    # xmm0 = xmm0[0],mem[0]
-; AVX-NEXT:    addq $24, %rsp
-; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [4.1E+1,4.0E+1]
 ; AVX-NEXT:    retq
 entry:
   %min = call <2 x double> @llvm.experimental.constrained.minnum.v2f64(
@@ -3983,51 +3777,30 @@ entry:
 define <3 x double> @constrained_vector_min_v3f64() #0 {
 ; CHECK-LABEL: constrained_vector_min_v3f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    subq $24, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.4E+1,0.0E+0]
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [4.1E+1,0.0E+0]
-; CHECK-NEXT:    callq fmin@PLT
-; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.3E+1,0.0E+0]
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [4.0E+1,0.0E+0]
-; CHECK-NEXT:    callq fmin@PLT
-; CHECK-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
+; CHECK-NEXT:    pushq %rax
+; CHECK-NEXT:    .cfi_def_cfa_offset 16
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.5E+1,0.0E+0]
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [4.2E+1,0.0E+0]
 ; CHECK-NEXT:    callq fmin@PLT
-; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
-; CHECK-NEXT:    fldl {{[0-9]+}}(%rsp)
+; CHECK-NEXT:    movsd %xmm0, (%rsp)
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.0E+1,0.0E+0]
+; CHECK-NEXT:    fldl (%rsp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    movsd (%rsp), %xmm0 # 8-byte Reload
-; CHECK-NEXT:    # xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
-; CHECK-NEXT:    # xmm1 = mem[0],zero
-; CHECK-NEXT:    addq $24, %rsp
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [4.1E+1,0.0E+0]
+; CHECK-NEXT:    popq %rax
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
 ; CHECK-NEXT:    retq
 ;
 ; AVX-LABEL: constrained_vector_min_v3f64:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    subq $40, %rsp
-; AVX-NEXT:    .cfi_def_cfa_offset 48
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.4E+1,0.0E+0]
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [4.1E+1,0.0E+0]
-; AVX-NEXT:    callq fmin@PLT
-; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.3E+1,0.0E+0]
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [4.0E+1,0.0E+0]
-; AVX-NEXT:    callq fmin@PLT
-; AVX-NEXT:    vunpcklpd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; AVX-NEXT:    # xmm0 = xmm0[0],mem[0]
-; AVX-NEXT:    vmovups %ymm0, (%rsp) # 32-byte Spill
+; AVX-NEXT:    pushq %rax
+; AVX-NEXT:    .cfi_def_cfa_offset 16
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.5E+1,0.0E+0]
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [4.2E+1,0.0E+0]
-; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    callq fmin@PLT
-; AVX-NEXT:    vmovups (%rsp), %ymm1 # 32-byte Reload
+; AVX-NEXT:    vmovaps {{.*#+}} xmm1 = [4.0E+1,4.1E+1]
 ; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX-NEXT:    addq $40, %rsp
+; AVX-NEXT:    popq %rax
 ; AVX-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-NEXT:    retq
 entry:
@@ -4041,59 +3814,13 @@ entry:
 define <4 x double> @constrained_vector_minnum_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_minnum_v4f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    subq $40, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 48
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.5E+1,0.0E+0]
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [4.1E+1,0.0E+0]
-; CHECK-NEXT:    callq fmin@PLT
-; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.4E+1,0.0E+0]
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [4.0E+1,0.0E+0]
-; CHECK-NEXT:    callq fmin@PLT
-; CHECK-NEXT:    unpcklpd (%rsp), %xmm0 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm0 = xmm0[0],mem[0]
-; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.7E+1,0.0E+0]
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [4.3E+1,0.0E+0]
-; CHECK-NEXT:    callq fmin@PLT
-; CHECK-NEXT:    movaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.6E+1,0.0E+0]
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [4.2E+1,0.0E+0]
-; CHECK-NEXT:    callq fmin@PLT
-; CHECK-NEXT:    movaps %xmm0, %xmm1
-; CHECK-NEXT:    unpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 16-byte Folded Reload
-; CHECK-NEXT:    # xmm1 = xmm1[0],mem[0]
-; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
-; CHECK-NEXT:    addq $40, %rsp
-; CHECK-NEXT:    .cfi_def_cfa_offset 8
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [4.0E+1,4.1E+1]
+; CHECK-NEXT:    movaps {{.*#+}} xmm1 = [4.2E+1,4.3E+1]
 ; CHECK-NEXT:    retq
 ;
 ; AVX-LABEL: constrained_vector_minnum_v4f64:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    subq $40, %rsp
-; AVX-NEXT:    .cfi_def_cfa_offset 48
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.7E+1,0.0E+0]
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [4.3E+1,0.0E+0]
-; AVX-NEXT:    callq fmin@PLT
-; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.6E+1,0.0E+0]
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [4.2E+1,0.0E+0]
-; AVX-NEXT:    callq fmin@PLT
-; AVX-NEXT:    vunpcklpd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; AVX-NEXT:    # xmm0 = xmm0[0],mem[0]
-; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.5E+1,0.0E+0]
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [4.1E+1,0.0E+0]
-; AVX-NEXT:    callq fmin@PLT
-; AVX-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = [4.4E+1,0.0E+0]
-; AVX-NEXT:    vmovsd {{.*#+}} xmm1 = [4.0E+1,0.0E+0]
-; AVX-NEXT:    callq fmin@PLT
-; AVX-NEXT:    vunpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
-; AVX-NEXT:    # xmm0 = xmm0[0],mem[0]
-; AVX-NEXT:    vinsertf128 $1, (%rsp), %ymm0, %ymm0 # 16-byte Folded Reload
-; AVX-NEXT:    addq $40, %rsp
-; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    vmovaps {{.*#+}} ymm0 = [4.0E+1,4.1E+1,4.2E+1,4.3E+1]
 ; AVX-NEXT:    retq
 entry:
   %min = call <4 x double> @llvm.experimental.constrained.minnum.v4f64(
@@ -4301,32 +4028,12 @@ define <4 x i64> @constrained_vector_fptosi_v4i64_v4f32() #0 {
 ;
 ; AVX1-LABEL: constrained_vector_fptosi_v4i64_v4f32:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vcvttss2si {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rax
-; AVX1-NEXT:    vmovq %rax, %xmm0
-; AVX1-NEXT:    vcvttss2si {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rax
-; AVX1-NEXT:    vmovq %rax, %xmm1
-; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX1-NEXT:    vcvttss2si {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rax
-; AVX1-NEXT:    vmovq %rax, %xmm1
-; AVX1-NEXT:    vcvttss2si {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rax
-; AVX1-NEXT:    vmovq %rax, %xmm2
-; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    vmovaps {{.*#+}} ymm0 = [42,43,44,45]
 ; AVX1-NEXT:    retq
 ;
 ; AVX512F-LABEL: constrained_vector_fptosi_v4i64_v4f32:
 ; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    vcvttss2si {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rax
-; AVX512F-NEXT:    vmovq %rax, %xmm0
-; AVX512F-NEXT:    vcvttss2si {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rax
-; AVX512F-NEXT:    vmovq %rax, %xmm1
-; AVX512F-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512F-NEXT:    vcvttss2si {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rax
-; AVX512F-NEXT:    vmovq %rax, %xmm1
-; AVX512F-NEXT:    vcvttss2si {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rax
-; AVX512F-NEXT:    vmovq %rax, %xmm2
-; AVX512F-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVX512F-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX512F-NEXT:    vpmovsxbq {{.*#+}} ymm0 = [42,43,44,45]
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: constrained_vector_fptosi_v4i64_v4f32:
@@ -4448,29 +4155,18 @@ entry:
 define <2 x i64> @constrained_vector_fptosi_v2i64_v2f64() #0 {
 ; CHECK-LABEL: constrained_vector_fptosi_v2i64_v2f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cvttsd2si {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rax
-; CHECK-NEXT:    movq %rax, %xmm1
-; CHECK-NEXT:    cvttsd2si {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rax
-; CHECK-NEXT:    movq %rax, %xmm0
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [42,42]
 ; CHECK-NEXT:    retq
 ;
 ; AVX1-LABEL: constrained_vector_fptosi_v2i64_v2f64:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vcvttsd2si {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rax
-; AVX1-NEXT:    vmovq %rax, %xmm0
-; AVX1-NEXT:    vcvttsd2si {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rax
-; AVX1-NEXT:    vmovq %rax, %xmm1
-; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX1-NEXT:    vmovddup {{.*#+}} xmm0 = [42,42]
+; AVX1-NEXT:    # xmm0 = mem[0,0]
 ; AVX1-NEXT:    retq
 ;
 ; AVX512F-LABEL: constrained_vector_fptosi_v2i64_v2f64:
 ; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    vcvttsd2si {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rax
-; AVX512F-NEXT:    vmovq %rax, %xmm0
-; AVX512F-NEXT:    vcvttsd2si {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rax
-; AVX512F-NEXT:    vmovq %rax, %xmm1
-; AVX512F-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
+; AVX512F-NEXT:    vpmovsxbq {{.*#+}} xmm0 = [42,42]
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: constrained_vector_fptosi_v2i64_v2f64:
@@ -4529,46 +4225,18 @@ entry:
 define <4 x i64> @constrained_vector_fptosi_v4i64_v4f64() #0 {
 ; CHECK-LABEL: constrained_vector_fptosi_v4i64_v4f64:
 ; CHECK:       # %bb.0: # %entry
-; CHECK-NEXT:    cvttsd2si {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rax
-; CHECK-NEXT:    movq %rax, %xmm1
-; CHECK-NEXT:    cvttsd2si {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rax
-; CHECK-NEXT:    movq %rax, %xmm0
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm0 = xmm0[0],xmm1[0]
-; CHECK-NEXT:    cvttsd2si {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rax
-; CHECK-NEXT:    movq %rax, %xmm2
-; CHECK-NEXT:    cvttsd2si {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rax
-; CHECK-NEXT:    movq %rax, %xmm1
-; CHECK-NEXT:    punpcklqdq {{.*#+}} xmm1 = xmm1[0],xmm2[0]
+; CHECK-NEXT:    movaps {{.*#+}} xmm0 = [42,42]
+; CHECK-NEXT:    movaps %xmm0, %xmm1
 ; CHECK-NEXT:    retq
 ;
 ; AVX1-LABEL: constrained_vector_fptosi_v4i64_v4f64:
 ; AVX1:       # %bb.0: # %entry
-; AVX1-NEXT:    vcvttsd2si {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rax
-; AVX1-NEXT:    vmovq %rax, %xmm0
-; AVX1-NEXT:    vcvttsd2si {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rax
-; AVX1-NEXT:    vmovq %rax, %xmm1
-; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX1-NEXT:    vcvttsd2si {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rax
-; AVX1-NEXT:    vmovq %rax, %xmm1
-; AVX1-NEXT:    vcvttsd2si {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rax
-; AVX1-NEXT:    vmovq %rax, %xmm2
-; AVX1-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVX1-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
+; AVX1-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [42,42,42,42]
 ; AVX1-NEXT:    retq
 ;
 ; AVX512F-LABEL: constrained_vector_fptosi_v4i64_v4f64:
 ; AVX512F:       # %bb.0: # %entry
-; AVX512F-NEXT:    vcvttsd2si {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rax
-; AVX512F-NEXT:    vmovq %rax, %xmm0
-; AVX512F-NEXT:    vcvttsd2si {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rax
-; AVX512F-NEXT:    vmovq %rax, %xmm1
-; AVX512F-NEXT:    vpunpcklqdq {{.*#+}} xmm0 = xmm1[0],xmm0[0]
-; AVX512F-NEXT:    vcvttsd2si {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rax
-; AVX512F-NEXT:    vmovq %rax, %xmm1
-; AVX512F-NEXT:    vcvttsd2si {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %rax
-; AVX512F-NEXT:    vmovq %rax, %xmm2
-; AVX512F-NEXT:    vpunpcklqdq {{.*#+}} xmm1 = xmm2[0],xmm1[0]
-; AVX512F-NEXT:    vinserti128 $1, %xmm0, %ymm1, %ymm0
+; AVX512F-NEXT:    vbroadcastsd {{.*#+}} ymm0 = [42,42,42,42]
 ; AVX512F-NEXT:    retq
 ;
 ; AVX512DQ-LABEL: constrained_vector_fptosi_v4i64_v4f64:
@@ -5977,10 +5645,10 @@ define <3 x double> @constrained_vector_ceil_v3f64_var(ptr %a) #0 {
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movaps (%rdi), %xmm0
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    callq ceil@PLT
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    callq ceil@PLT
 ; CHECK-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
 ; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
@@ -5989,9 +5657,9 @@ define <3 x double> @constrained_vector_ceil_v3f64_var(ptr %a) #0 {
 ; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    movsd (%rsp), %xmm0 # 8-byte Reload
+; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
+; CHECK-NEXT:    movsd (%rsp), %xmm1 # 8-byte Reload
 ; CHECK-NEXT:    # xmm1 = mem[0],zero
 ; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -6120,10 +5788,10 @@ define <3 x double> @constrained_vector_floor_v3f64_var(ptr %a) #0 {
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movaps (%rdi), %xmm0
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    callq floor@PLT
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    callq floor@PLT
 ; CHECK-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
 ; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
@@ -6132,9 +5800,9 @@ define <3 x double> @constrained_vector_floor_v3f64_var(ptr %a) #0 {
 ; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    movsd (%rsp), %xmm0 # 8-byte Reload
+; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
+; CHECK-NEXT:    movsd (%rsp), %xmm1 # 8-byte Reload
 ; CHECK-NEXT:    # xmm1 = mem[0],zero
 ; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -6204,20 +5872,11 @@ define <2 x double> @constrained_vector_round_v2f64_var(ptr %a) #0 {
 ;
 ; AVX-LABEL: constrained_vector_round_v2f64_var:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    subq $40, %rsp
-; AVX-NEXT:    .cfi_def_cfa_offset 48
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    callq round@PLT
-; AVX-NEXT:    vmovaps %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 16-byte Spill
-; AVX-NEXT:    vmovsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
-; AVX-NEXT:    # xmm0 = mem[0],zero
-; AVX-NEXT:    callq round@PLT
-; AVX-NEXT:    vunpcklpd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0, %xmm0 # 16-byte Folded Reload
-; AVX-NEXT:    # xmm0 = xmm0[0],mem[0]
-; AVX-NEXT:    addq $40, %rsp
-; AVX-NEXT:    .cfi_def_cfa_offset 8
+; AVX-NEXT:    vmovapd (%rdi), %xmm0
+; AVX-NEXT:    vandpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX-NEXT:    vorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vroundpd $11, %xmm0, %xmm0
 ; AVX-NEXT:    retq
 entry:
   %b = load <2 x double>, ptr %a
@@ -6297,10 +5956,10 @@ define <3 x double> @constrained_vector_round_v3f64_var(ptr %a) #0 {
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movaps (%rdi), %xmm0
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    callq round@PLT
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    callq round@PLT
 ; CHECK-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
 ; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
@@ -6309,9 +5968,9 @@ define <3 x double> @constrained_vector_round_v3f64_var(ptr %a) #0 {
 ; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    movsd (%rsp), %xmm0 # 8-byte Reload
+; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
+; CHECK-NEXT:    movsd (%rsp), %xmm1 # 8-byte Reload
 ; CHECK-NEXT:    # xmm1 = mem[0],zero
 ; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -6319,31 +5978,20 @@ define <3 x double> @constrained_vector_round_v3f64_var(ptr %a) #0 {
 ;
 ; AVX-LABEL: constrained_vector_round_v3f64_var:
 ; AVX:       # %bb.0: # %entry
-; AVX-NEXT:    pushq %rbx
-; AVX-NEXT:    .cfi_def_cfa_offset 16
-; AVX-NEXT:    subq $48, %rsp
-; AVX-NEXT:    .cfi_def_cfa_offset 64
-; AVX-NEXT:    .cfi_offset %rbx, -16
-; AVX-NEXT:    movq %rdi, %rbx
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    vmovsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
-; AVX-NEXT:    callq round@PLT
-; AVX-NEXT:    vmovaps %xmm0, (%rsp) # 16-byte Spill
-; AVX-NEXT:    vmovsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
-; AVX-NEXT:    # xmm0 = mem[0],zero
-; AVX-NEXT:    callq round@PLT
-; AVX-NEXT:    vunpcklpd (%rsp), %xmm0, %xmm0 # 16-byte Folded Reload
-; AVX-NEXT:    # xmm0 = xmm0[0],mem[0]
-; AVX-NEXT:    vmovups %ymm0, {{[-0-9]+}}(%r{{[sb]}}p) # 32-byte Spill
+; AVX-NEXT:    subq $40, %rsp
+; AVX-NEXT:    .cfi_def_cfa_offset 48
+; AVX-NEXT:    vmovapd (%rdi), %xmm0
+; AVX-NEXT:    vandpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm0, %xmm1
+; AVX-NEXT:    vorpd {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX-NEXT:    vaddpd %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    vroundpd $11, %xmm0, %xmm0
+; AVX-NEXT:    vmovupd %ymm0, (%rsp) # 32-byte Spill
 ; AVX-NEXT:    vmovsd {{.*#+}} xmm0 = mem[0],zero
 ; AVX-NEXT:    vzeroupper
 ; AVX-NEXT:    callq round@PLT
-; AVX-NEXT:    vmovups {{[-0-9]+}}(%r{{[sb]}}p), %ymm1 # 32-byte Reload
+; AVX-NEXT:    vmovups (%rsp), %ymm1 # 32-byte Reload
 ; AVX-NEXT:    vinsertf128 $1, %xmm0, %ymm1, %ymm0
-; AVX-NEXT:    addq $48, %rsp
-; AVX-NEXT:    .cfi_def_cfa_offset 16
-; AVX-NEXT:    popq %rbx
+; AVX-NEXT:    addq $40, %rsp
 ; AVX-NEXT:    .cfi_def_cfa_offset 8
 ; AVX-NEXT:    retq
 entry:
@@ -6461,10 +6109,10 @@ define <3 x double> @constrained_vector_trunc_v3f64_var(ptr %a) #0 {
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movaps (%rdi), %xmm0
 ; CHECK-NEXT:    movaps %xmm0, (%rsp) # 16-byte Spill
-; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    callq trunc@PLT
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movaps (%rsp), %xmm0 # 16-byte Reload
+; CHECK-NEXT:    movhlps {{.*#+}} xmm0 = xmm0[1,1]
 ; CHECK-NEXT:    callq trunc@PLT
 ; CHECK-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
 ; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
@@ -6473,9 +6121,9 @@ define <3 x double> @constrained_vector_trunc_v3f64_var(ptr %a) #0 {
 ; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    movsd (%rsp), %xmm0 # 8-byte Reload
+; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
+; CHECK-NEXT:    movsd (%rsp), %xmm1 # 8-byte Reload
 ; CHECK-NEXT:    # xmm1 = mem[0],zero
 ; CHECK-NEXT:    addq $40, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -8217,10 +7865,10 @@ define <3 x double> @constrained_vector_tan_v3f64() #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
 ; CHECK-NEXT:    callq tan@PLT
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
 ; CHECK-NEXT:    callq tan@PLT
 ; CHECK-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2200000000000003E+1,0.0E+0]
@@ -8228,9 +7876,9 @@ define <3 x double> @constrained_vector_tan_v3f64() #0 {
 ; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    movsd (%rsp), %xmm0 # 8-byte Reload
+; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
+; CHECK-NEXT:    movsd (%rsp), %xmm1 # 8-byte Reload
 ; CHECK-NEXT:    # xmm1 = mem[0],zero
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -8442,10 +8090,10 @@ define <3 x double> @constrained_vector_acos_v3f64() #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
 ; CHECK-NEXT:    callq acos@PLT
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
 ; CHECK-NEXT:    callq acos@PLT
 ; CHECK-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2200000000000003E+1,0.0E+0]
@@ -8453,9 +8101,9 @@ define <3 x double> @constrained_vector_acos_v3f64() #0 {
 ; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    movsd (%rsp), %xmm0 # 8-byte Reload
+; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
+; CHECK-NEXT:    movsd (%rsp), %xmm1 # 8-byte Reload
 ; CHECK-NEXT:    # xmm1 = mem[0],zero
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -8667,10 +8315,10 @@ define <3 x double> @constrained_vector_asin_v3f64() #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
 ; CHECK-NEXT:    callq asin@PLT
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
 ; CHECK-NEXT:    callq asin@PLT
 ; CHECK-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2200000000000003E+1,0.0E+0]
@@ -8678,9 +8326,9 @@ define <3 x double> @constrained_vector_asin_v3f64() #0 {
 ; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    movsd (%rsp), %xmm0 # 8-byte Reload
+; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
+; CHECK-NEXT:    movsd (%rsp), %xmm1 # 8-byte Reload
 ; CHECK-NEXT:    # xmm1 = mem[0],zero
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -8892,10 +8540,10 @@ define <3 x double> @constrained_vector_atan_v3f64() #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
 ; CHECK-NEXT:    callq atan@PLT
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
 ; CHECK-NEXT:    callq atan@PLT
 ; CHECK-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2200000000000003E+1,0.0E+0]
@@ -8903,9 +8551,9 @@ define <3 x double> @constrained_vector_atan_v3f64() #0 {
 ; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    movsd (%rsp), %xmm0 # 8-byte Reload
+; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
+; CHECK-NEXT:    movsd (%rsp), %xmm1 # 8-byte Reload
 ; CHECK-NEXT:    # xmm1 = mem[0],zero
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -9132,12 +8780,12 @@ define <3 x double> @constrained_vector_atan2_v3f64() #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
-; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.3100000000000001E+1,0.0E+0]
-; CHECK-NEXT:    callq atan2@PLT
-; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
 ; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.3E+1,0.0E+0]
+; CHECK-NEXT:    callq atan2@PLT
+; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm1 = [2.3100000000000001E+1,0.0E+0]
 ; CHECK-NEXT:    callq atan2@PLT
 ; CHECK-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2200000000000003E+1,0.0E+0]
@@ -9146,9 +8794,9 @@ define <3 x double> @constrained_vector_atan2_v3f64() #0 {
 ; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    movsd (%rsp), %xmm0 # 8-byte Reload
+; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
+; CHECK-NEXT:    movsd (%rsp), %xmm1 # 8-byte Reload
 ; CHECK-NEXT:    # xmm1 = mem[0],zero
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -9374,10 +9022,10 @@ define <3 x double> @constrained_vector_cosh_v3f64() #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
 ; CHECK-NEXT:    callq cosh@PLT
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
 ; CHECK-NEXT:    callq cosh@PLT
 ; CHECK-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2200000000000003E+1,0.0E+0]
@@ -9385,9 +9033,9 @@ define <3 x double> @constrained_vector_cosh_v3f64() #0 {
 ; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    movsd (%rsp), %xmm0 # 8-byte Reload
+; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
+; CHECK-NEXT:    movsd (%rsp), %xmm1 # 8-byte Reload
 ; CHECK-NEXT:    # xmm1 = mem[0],zero
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -9599,10 +9247,10 @@ define <3 x double> @constrained_vector_sinh_v3f64() #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
 ; CHECK-NEXT:    callq sinh@PLT
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
 ; CHECK-NEXT:    callq sinh@PLT
 ; CHECK-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2200000000000003E+1,0.0E+0]
@@ -9610,9 +9258,9 @@ define <3 x double> @constrained_vector_sinh_v3f64() #0 {
 ; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    movsd (%rsp), %xmm0 # 8-byte Reload
+; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
+; CHECK-NEXT:    movsd (%rsp), %xmm1 # 8-byte Reload
 ; CHECK-NEXT:    # xmm1 = mem[0],zero
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
@@ -9824,10 +9472,10 @@ define <3 x double> @constrained_vector_tanh_v3f64() #0 {
 ; CHECK:       # %bb.0: # %entry
 ; CHECK-NEXT:    subq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 32
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
 ; CHECK-NEXT:    callq tanh@PLT
 ; CHECK-NEXT:    movsd %xmm0, {{[-0-9]+}}(%r{{[sb]}}p) # 8-byte Spill
-; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2E+1,0.0E+0]
+; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2100000000000001E+1,0.0E+0]
 ; CHECK-NEXT:    callq tanh@PLT
 ; CHECK-NEXT:    movsd %xmm0, (%rsp) # 8-byte Spill
 ; CHECK-NEXT:    movsd {{.*#+}} xmm0 = [4.2200000000000003E+1,0.0E+0]
@@ -9835,9 +9483,9 @@ define <3 x double> @constrained_vector_tanh_v3f64() #0 {
 ; CHECK-NEXT:    movsd %xmm0, {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    fldl {{[0-9]+}}(%rsp)
 ; CHECK-NEXT:    wait
-; CHECK-NEXT:    movsd (%rsp), %xmm0 # 8-byte Reload
+; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm0 # 8-byte Reload
 ; CHECK-NEXT:    # xmm0 = mem[0],zero
-; CHECK-NEXT:    movsd {{[-0-9]+}}(%r{{[sb]}}p), %xmm1 # 8-byte Reload
+; CHECK-NEXT:    movsd (%rsp), %xmm1 # 8-byte Reload
 ; CHECK-NEXT:    # xmm1 = mem[0],zero
 ; CHECK-NEXT:    addq $24, %rsp
 ; CHECK-NEXT:    .cfi_def_cfa_offset 8
