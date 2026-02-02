@@ -1636,7 +1636,9 @@ void Sema::ActOnEndOfTranslationUnit() {
   // referenced by the TU end
   for (const auto &Ref : RefsMinusAssignments) {
     const VarDecl *VD = Ref.first;
-    if (VD->isFileVarDecl() && VD->getStorageClass() == SC_Static) {
+    // only diagnose static file vars defined in the main file to match
+    // -Wunused-variable behavior and avoid false positives from header vars
+    if (VD->isStaticFileVar() && SourceMgr.isInMainFile(VD->getLocation())) {
       DiagnoseUnusedButSetDecl(VD, addDiag);
       RefsMinusAssignments.erase(VD);
     }

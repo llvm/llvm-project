@@ -1212,6 +1212,11 @@ public:
       && !isFileVarDecl();
   }
 
+  /// Returns true if a variable is a static file-scope variable.
+  bool isStaticFileVar() const {
+    return isFileVarDecl() && getStorageClass() == SC_Static;
+  }
+
   /// Returns true if a variable has extern or __private_extern__
   /// storage.
   bool hasExternalStorage() const {

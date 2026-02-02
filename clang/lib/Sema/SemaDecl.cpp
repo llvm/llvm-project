@@ -2295,9 +2295,7 @@ void Sema::ActOnPopScope(SourceLocation Loc, Scope *S) {
         DiagnoseUnusedNestedTypedefs(RD, addDiag);
       if (VarDecl *VD = dyn_cast<VarDecl>(D)) {
         // wait until end of TU to diagnose static globals
-        bool isStaticGlobal =
-            VD->isFileVarDecl() && VD->getStorageClass() == SC_Static;
-        if (!isStaticGlobal) {
+        if (!VD->isStaticFileVar()) {
           DiagnoseUnusedButSetDecl(VD, addDiag);
           RefsMinusAssignments.erase(VD);
         }

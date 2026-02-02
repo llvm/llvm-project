@@ -20257,10 +20257,10 @@ static void DoMarkVarDeclReferenced(
   bool UsableInConstantExpr =
       Var->mightBeUsableInConstantExpressions(SemaRef.Context);
 
-  bool StaticGlobalReferenced =
-      Var->isFileVarDecl() && Var->getStorageClass() == SC_Static &&
-      !Var->isStaticDataMember() && !Var->getType()->isFunctionPointerType();
-  if ((Var->isLocalVarDeclOrParm() || StaticGlobalReferenced) &&
+  bool ShouldTrackForUnusedButSet = Var->isStaticFileVar() &&
+                                    !Var->isStaticDataMember() &&
+                                    !Var->getType()->isFunctionPointerType();
+  if ((Var->isLocalVarDeclOrParm() || ShouldTrackForUnusedButSet) &&
       !Var->hasExternalStorage()) {
     RefsMinusAssignments.insert({Var, 0}).first->getSecond()++;
   }
