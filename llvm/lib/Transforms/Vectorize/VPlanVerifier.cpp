@@ -103,6 +103,12 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
       return false;
     }
 
+    if (isa<VPEVLBasedIVPHIRecipe>(RecipeI) &&
+        !isa_and_nonnull<VPCanonicalIVPHIRecipe>(std::prev(RecipeI))) {
+      errs() << "EVL based IV is not immediately after canonical IV\n";
+      return false;
+    }
+
     // Check if the recipe operands match the number of predecessors.
     // TODO Extend to other phi-like recipes.
     if (auto *PhiIRI = dyn_cast<VPIRPhi>(&*RecipeI)) {
