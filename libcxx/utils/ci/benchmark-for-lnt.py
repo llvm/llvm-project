@@ -46,7 +46,7 @@ def main(argv):
         help='Print the output of all subcommands.')
     args = parser.parse_args(argv)
 
-    def run(command, *posargs, **kwargs):
+    def run(command, *posargs, enforce_success=True, **kwargs):
         command = [str(c) for c in command]
         if args.dry_run:
             print(f'$ {" ".join(command)}')
@@ -61,7 +61,10 @@ def main(argv):
                     kwargs.update({'stdout': subprocess.DEVNULL})
                 if 'stderr' not in kwargs:
                     kwargs.update({'stderr': subprocess.DEVNULL})
-            subprocess.check_call(command, *posargs, **kwargs)
+            if enforce_success:
+                subprocess.check_call(command, *posargs, **kwargs)
+            else:
+                subprocess.call(command, *posargs, **kwargs)
 
     with tempfile.TemporaryDirectory() as build_dir:
         build_dir = pathlib.Path(build_dir)
@@ -86,7 +89,8 @@ def main(argv):
                         '--param', 'std=c++17',
                         '--param', f'spec_dir={args.spec_dir}',
                         build_dir / 'spec/libcxx/test',
-                        '--filter', 'benchmarks/spec.gen.py'])
+                        '--filter', 'benchmarks/spec.gen.py'],
+                        enforce_success=False)
 
         # TODO: For now, we run only a subset of the benchmarks because running the whole test suite is too slow.
         #       Run the whole test suite once https://github.com/llvm/llvm-project/issues/173032 is resolved.
@@ -101,7 +105,8 @@ def main(argv):
                         '--param', 'optimization=speed',
                         '--param', 'std=c++26',
                         build_dir / 'micro/libcxx/test',
-                        '--filter', 'benchmarks/(algorithms|containers|iterators|locale|memory|streams|numeric|utility)'])
+                        '--filter', 'benchmarks/(algorithms|containers|iterators|locale|memory|streams|numeric|utility)'],
+                        enforce_success=False)
 
         step('Installing LNT')
         run(['python', '-m', 'venv', build_dir / '.venv'])

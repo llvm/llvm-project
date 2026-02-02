@@ -5361,24 +5361,13 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       computeKnownBits(Exp, isa<VectorType>(ExpTy) ? DemandedElts : APInt(1, 1),
                        ExponentKnownBits, Q, Depth + 1);
 
-      if (ExponentKnownBits.Zero[0]) { // Is even
-        Known.knownNot(fcNegative);
-        break;
+      KnownFPClass KnownSrc;
+      if (!ExponentKnownBits.isEven()) {
+        computeKnownFPClass(II->getArgOperand(0), DemandedElts, fcNegative,
+                            KnownSrc, Q, Depth + 1);
       }
 
-      // Given that exp is an integer, here are the
-      // ways that pow can return a negative value:
-      //
-      //   pow(-x, exp)   --> negative if exp is odd and x is negative.
-      //   pow(-0, exp)   --> -inf if exp is negative odd.
-      //   pow(-0, exp)   --> -0 if exp is positive odd.
-      //   pow(-inf, exp) --> -0 if exp is negative odd.
-      //   pow(-inf, exp) --> -inf if exp is positive odd.
-      KnownFPClass KnownSrc;
-      computeKnownFPClass(II->getArgOperand(0), DemandedElts, fcNegative,
-                          KnownSrc, Q, Depth + 1);
-      if (KnownSrc.isKnownNever(fcNegative))
-        Known.knownNot(fcNegative);
+      Known = KnownFPClass::powi(KnownSrc, ExponentKnownBits);
       break;
     }
     case Intrinsic::ldexp: {

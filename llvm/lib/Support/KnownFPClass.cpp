@@ -674,3 +674,25 @@ KnownFPClass KnownFPClass::ldexp(const KnownFPClass &KnownSrc,
 
   return Known;
 }
+
+KnownFPClass KnownFPClass::powi(const KnownFPClass &KnownSrc,
+                                const KnownBits &ExponentKnownBits) {
+  KnownFPClass Known;
+  if (ExponentKnownBits.isEven()) {
+    Known.knownNot(fcNegative);
+    return Known;
+  }
+
+  // Given that exp is an integer, here are the
+  // ways that pow can return a negative value:
+  //
+  //   pow(-x, exp)   --> negative if exp is odd and x is negative.
+  //   pow(-0, exp)   --> -inf if exp is negative odd.
+  //   pow(-0, exp)   --> -0 if exp is positive odd.
+  //   pow(-inf, exp) --> -0 if exp is negative odd.
+  //   pow(-inf, exp) --> -inf if exp is positive odd.
+  if (KnownSrc.isKnownNever(fcNegative))
+    Known.knownNot(fcNegative);
+
+  return Known;
+}
