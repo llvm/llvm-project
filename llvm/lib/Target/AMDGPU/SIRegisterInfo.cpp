@@ -1548,6 +1548,10 @@ void SIRegisterInfo::buildSpillLoadStore(
   unsigned NumRemSubRegs = RemSize ? 1 : 0;
   int64_t Offset = InstOffset + MFI.getObjectOffset(Index);
   int64_t MaterializedOffset = Offset;
+
+  // Maxoffset is the starting offset for the last chunk to be spilled.
+  // In case of non-zero remainder element, max offset will be the
+  // last address(offset + Size) after spilling  all the EltSize chunks.
   int64_t MaxOffset = Offset + Size - (RemSize ? 0 : EltSize);
   int64_t ScratchOffsetRegDelta = 0;
 
