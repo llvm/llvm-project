@@ -271,6 +271,10 @@ protected:
   AsmPrinter(TargetMachine &TM, std::unique_ptr<MCStreamer> Streamer,
              char &ID = AsmPrinter::ID);
 
+  /// Create the DwarfDebug handler. Targets can override this to provide
+  /// custom debug information handling.
+  virtual DwarfDebug *createDwarfDebug();
+
 public:
   ~AsmPrinter() override;
 
