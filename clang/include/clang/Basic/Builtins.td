@@ -4970,8 +4970,7 @@ def OSLogFormatBufferSize : Builtin {
 
 def OSLogFormat : Builtin {
   let Spellings = ["__builtin_os_log_format"];
-  // FIXME: The printf attribute looks suspiciously like it should be argument #1.
-  let Attributes = [PrintfFormat<0>, NoThrow, CustomTypeChecking];
+  let Attributes = [PrintfFormat<1>, NoThrow, CustomTypeChecking];
   let Prototype = "void*(void*, char const*, ...)";
 }
 
