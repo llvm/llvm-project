@@ -7033,6 +7033,17 @@ namespace {
 
       // Look in the on-disk hash table for an entry for this file name.
       HeaderFileInfoLookupTable::iterator Pos = Table->find(FE);
+      // Preambles may be reused with different main-file content.
+      // A second entry with size zero is stored for the main-file, try that.
+      // To avoid doing this on every miss, require the bare filename to match.
+      if (Pos == Table->end() && M.Kind == clang::serialization::MK_Preamble &&
+          llvm::sys::path::filename(FE.getName()) ==
+              llvm::sys::path::filename(M.OriginalSourceFileName)) {
+        auto InternalKey = Table->getInfoObj().GetInternalKey(FE);
+        InternalKey.Size = 0;
+        Pos = Table->find_hashed(InternalKey,
+                                 Table->getInfoObj().ComputeHash(InternalKey));
+      }
       if (Pos == Table->end())
         return false;
 
