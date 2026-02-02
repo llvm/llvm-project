@@ -1005,9 +1005,6 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::ROTR, VT, Expand);
   }
   setOperationAction(ISD::CTTZ,  MVT::i32, Custom);
-  // Note: arm_cls and arm_cls64 intrinsics are expanded directly in
-  // LowerINTRINSIC_WO_CHAIN since there's no native scalar CLS instruction.
-  // Vector CTLS is Legal when NEON/MVE is available (set elsewhere).
   // TODO: These two should be set to LibCall, but this currently breaks
   //   the Linux kernel build. See #101786.
   setOperationAction(ISD::CTPOP, MVT::i32, Expand);
@@ -3840,6 +3837,9 @@ ARMTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG,
     return DAG.getNode(ARMISD::THREAD_POINTER, dl, PtrVT);
   }
   case Intrinsic::arm_cls: {
+    // Note: arm_cls and arm_cls64 intrinsics are expanded directly here
+    // in LowerINTRINSIC_WO_CHAIN since there's no native scalar CLS instruction.
+    // Vector CTLS is Legal when NEON/MVE is available (set elsewhere).
     const SDValue &Operand = Op.getOperand(1);
     const EVT VTy = Op.getValueType();
     return DAG.getNode(ISD::CTLS, dl, VTy, Operand);
@@ -3847,16 +3847,14 @@ ARMTargetLowering::LowerINTRINSIC_WO_CHAIN(SDValue Op, SelectionDAG &DAG,
   case Intrinsic::arm_cls64: {
     // arm_cls64 returns i32 but takes i64 input.
     // Use ISD::CTLS for i64 and truncate the result.
-    const SDValue &Operand = Op.getOperand(1);
-    SDValue CTLS64 = DAG.getNode(ISD::CTLS, dl, MVT::i64, Operand);
+    SDValue CTLS64 = DAG.getNode(ISD::CTLS, dl, MVT::i64, Op.getOperand(1));
     return DAG.getNode(ISD::TRUNCATE, dl, MVT::i32, CTLS64);
   }
   case Intrinsic::arm_neon_vcls:
   case Intrinsic::arm_mve_vcls: {
     // Lower vector CLS intrinsics to ISD::CTLS
-    const SDValue &Operand = Op.getOperand(1);
     const EVT VTy = Op.getValueType();
-    return DAG.getNode(ISD::CTLS, dl, VTy, Operand);
+    return DAG.getNode(ISD::CTLS, dl, VTy, Op.getOperand(1));
   }
   case Intrinsic::eh_sjlj_lsda: {
     MachineFunction &MF = DAG.getMachineFunction();
@@ -10333,9 +10331,7 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SHL_PARTS:     return LowerShiftLeftParts(Op, DAG);
   case ISD::SRL_PARTS:
   case ISD::SRA_PARTS:     return LowerShiftRightParts(Op, DAG);
-  case ISD::CTTZ:
-  case ISD::CTTZ_ZERO_UNDEF:
-    return LowerCTTZ(Op.getNode(), DAG, Subtarget);
+  case ISD::CTTZ:          return LowerCTTZ(Op.getNode(), DAG, Subtarget);
   case ISD::CTPOP:         return LowerCTPOP(Op.getNode(), DAG, Subtarget);
   case ISD::SETCC:         return LowerVSETCC(Op, DAG, Subtarget);
   case ISD::SETCCCARRY:    return LowerSETCCCARRY(Op, DAG);
