@@ -3429,7 +3429,7 @@ bool SemaHLSL::CheckBuiltinFunctionCall(unsigned BuiltinID, CallExpr *TheCall) {
     TheCall->setType(ReturnType);
 
     break;
-  }  
+  }
   case Builtin::BI__builtin_hlsl_resource_sample: {
     if (SemaRef.checkArgCountRange(TheCall, 3, 5))
       return true;
