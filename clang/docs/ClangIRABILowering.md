@@ -1,33 +1,8 @@
 # ClangIR ABI Lowering - Design Document
 
-**Version**: 1.0  
-**Date**: January 2026  
-**Authors**: Adam Smith (CIR Team)  
-**Status**: Complete Specification - Ready for Implementation  
-**Target**: x86_64 and AArch64 (primary), extensible to other targets
+## 1. Introduction
 
----
-
-## Quick Start: How to Read This Document
-
-**If you have 5 minutes**: Read Section 1 (Executive Summary)  
-**If you have 30 minutes**: Read Section 1 (Executive Summary) + Section 5 (Implementation Phases)  
-**If you have 2 hours**: Read the entire document  
-**If you're implementing**: Focus on Section 4 (Detailed Component Design) and Section 5 (Implementation Phases)  
-**If you're reviewing for approval**: Focus on Section 10 (Open Questions) and Section 11 (Success Metrics)  
-**If you're new to MLIR**: Read Section 2 (Background) first
-
----
-
-## Document Purpose
-
-This document proposes a comprehensive design for creating an MLIR-agnostic calling convention lowering framework. The framework will:
-1. Enable CIR to perform ABI-compliant calling convention lowering
-2. Be reusable by other MLIR dialects (FIR, future dialects)
-3. Achieve parity with CIR incubator implementation for x86_64 and AArch64
-4. Integrate with or inform the GSoC ABI Lowering Library project
-
-## 1. Executive Summary
+This document proposes a comprehensive design for creating an MLIR-agnostic calling convention lowering framework. The framework will enable CIR to perform ABI-compliant calling convention lowering, be reusable by other MLIR dialects (particularly FIR), achieve parity with the CIR incubator implementation for x86_64 and AArch64, and integrate with or inform the GSoC ABI Lowering Library project.
 
 ### 1.1 Problem Statement
 
