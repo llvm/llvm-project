@@ -4,7 +4,8 @@
 ## eh_frame_ptr or a table entry exceeds the 32-bit range.
 
 # RUN: rm -rf %t && split-file %s %t && cd %t
-# RUN: llvm-mc -filetype=obj -triple=x86_64-pc-linux a.s --large-code-model -o a.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 a.s --large-code-model -o a.o
+# RUN: llvm-mc -filetype=obj -triple=x86_64 bad.s -o bad.o
 
 ## Case 1: .text at high address - pcRel exceeds 32-bit range.
 # RUN: ld.lld --eh-frame-hdr -T 1.lds a.o -o out1
@@ -35,6 +36,10 @@
 # CHECK2-EMPTY:
 # CHECK3:      011c033c 2c000000 00000000 02000000
 # CHECK3-NEXT: 00800000 01000000 48000000 00000000
+
+## A corrupted .eh_frame reports exactly one error (not duplicated by the loop).
+# RUN: not ld.lld --eh-frame-hdr -T 1.lds a.o bad.o 2>&1 | FileCheck %s --check-prefix=ERR --implicit-check-not=error:
+# ERR: error: corrupted .eh_frame: unexpected end of CIE
 
 #--- a.s
 .text
@@ -93,3 +98,13 @@ SECTIONS {
   .text : {}
   ASSERT(SIZEOF(.relr.dyn) > 16, ".relr.dyn size should increase from 16 to 24")
 }
+
+#--- bad.s
+## Malformed CIE: length says 8 bytes but content is truncated.
+.section .eh_frame,"a",@unwind
+  .long 8       # length
+  .long 0       # CIE id
+  .byte 1       # version
+  .byte 0       # augmentation string (empty)
+  ## Missing: code/data alignment, return column, etc.
+  .space 2

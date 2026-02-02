@@ -609,6 +609,9 @@ void EhFrameHeader::finalizeContents() {
 }
 
 bool EhFrameHeader::updateAllocSize(Ctx &ctx) {
+  // This is called after `finalizeSynthetic`, so in the typical case without
+  // .relr.dyn, this function will not change the size and assignAddresses
+  // will not need another iteration.
   EhFrameSection *ehFrame = getPartition(ctx).ehFrame.get();
   uint64_t hdrVA = getVA();
   int64_t ehFramePtr = ehFrame->getParent()->addr - hdrVA - 4;
