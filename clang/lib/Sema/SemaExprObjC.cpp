@@ -74,8 +74,7 @@ ExprResult SemaObjC::ParseObjCStringLiteral(SourceLocation *AtLocs,
         CAT->getElementType(), llvm::APInt(32, StrBuf.size() + 1), nullptr,
         CAT->getSizeModifier(), CAT->getIndexTypeCVRQualifiers());
     S = StringLiteral::Create(Context, StrBuf, StringLiteralKind::Ordinary,
-                              /*Pascal=*/false, StrTy, &StrLocs[0],
-                              StrLocs.size());
+                              /*Pascal=*/false, StrTy, StrLocs);
   }
 
   return BuildObjCStringLiteral(AtLocs[0], S);
@@ -639,15 +638,14 @@ ExprResult SemaObjC::BuildObjCBoxedExpr(SourceRange SR, Expr *ValueExpr) {
     // Look for the appropriate method within NSNumber.
     BoxingMethod = getNSNumberFactoryMethod(*this, Loc, ValueType);
     BoxedType = NSNumberPointer;
-  } else if (const EnumType *ET = ValueType->getAs<EnumType>()) {
-    if (!ET->getDecl()->isComplete()) {
+  } else if (const auto *ED = ValueType->getAsEnumDecl()) {
+    if (!ED->isComplete()) {
       Diag(Loc, diag::err_objc_incomplete_boxed_expression_type)
         << ValueType << ValueExpr->getSourceRange();
       return ExprError();
     }
 
-    BoxingMethod = getNSNumberFactoryMethod(*this, Loc,
-                                            ET->getDecl()->getIntegerType());
+    BoxingMethod = getNSNumberFactoryMethod(*this, Loc, ED->getIntegerType());
     BoxedType = NSNumberPointer;
   } else if (ValueType->isObjCBoxableRecordType()) {
     // Support for structure types, that marked as objc_boxable
@@ -2338,10 +2336,10 @@ SemaObjC::getObjCMessageKind(Scope *S, IdentifierInfo *Name,
     if (ObjCInterfaceDecl *Class = dyn_cast<ObjCInterfaceDecl>(ND))
       T = Context.getObjCInterfaceType(Class);
     else if (TypeDecl *Type = dyn_cast<TypeDecl>(ND)) {
-      T = Context.getTypeDeclType(Type);
       SemaRef.DiagnoseUseOfDecl(Type, NameLoc);
-    }
-    else
+      T = Context.getTypeDeclType(ElaboratedTypeKeyword::None,
+                                  /*Qualifier=*/std::nullopt, Type);
+    } else
       return ObjCInstanceMessage;
 
     //  We have a class message, and T is the type we're
@@ -3847,7 +3845,7 @@ static inline T *getObjCBridgeAttr(const TypedefType *TD) {
   QualType QT = TDNDecl->getUnderlyingType();
   if (QT->isPointerType()) {
     QT = QT->getPointeeType();
-    if (const RecordType *RT = QT->getAs<RecordType>()) {
+    if (const RecordType *RT = QT->getAsCanonical<RecordType>()) {
       for (auto *Redecl : RT->getDecl()->getMostRecentDecl()->redecls()) {
         if (auto *attr = Redecl->getAttr<T>())
           return attr;
@@ -4009,7 +4007,7 @@ static bool CheckObjCBridgeNSCast(Sema &S, QualType castType, Expr *castExpr,
   while (const auto *TD = T->getAs<TypedefType>()) {
     TypedefNameDecl *TDNDecl = TD->getDecl();
     if (TB *ObjCBAttr = getObjCBridgeAttr<TB>(TD)) {
-      if (IdentifierInfo *Parm = ObjCBAttr->getBridgedType()) {
+      if (const IdentifierInfo *Parm = ObjCBAttr->getBridgedType()) {
         HadTheAttribute = true;
         if (Parm->isStr("id"))
           return true;
@@ -4072,7 +4070,7 @@ static bool CheckObjCBridgeCFCast(Sema &S, QualType castType, Expr *castExpr,
   while (const auto *TD = T->getAs<TypedefType>()) {
     TypedefNameDecl *TDNDecl = TD->getDecl();
     if (TB *ObjCBAttr = getObjCBridgeAttr<TB>(TD)) {
-      if (IdentifierInfo *Parm = ObjCBAttr->getBridgedType()) {
+      if (const IdentifierInfo *Parm = ObjCBAttr->getBridgedType()) {
         HadTheAttribute = true;
         if (Parm->isStr("id"))
           return true;
@@ -4230,9 +4228,9 @@ bool SemaObjC::checkObjCBridgeRelatedComponents(
   if (!ObjCBAttr)
     return false;
 
-  IdentifierInfo *RCId = ObjCBAttr->getRelatedClass();
-  IdentifierInfo *CMId = ObjCBAttr->getClassMethod();
-  IdentifierInfo *IMId = ObjCBAttr->getInstanceMethod();
+  const IdentifierInfo *RCId = ObjCBAttr->getRelatedClass();
+  const IdentifierInfo *CMId = ObjCBAttr->getClassMethod();
+  const IdentifierInfo *IMId = ObjCBAttr->getInstanceMethod();
   if (!RCId)
     return false;
   NamedDecl *Target = nullptr;

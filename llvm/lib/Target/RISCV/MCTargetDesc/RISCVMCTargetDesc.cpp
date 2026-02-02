@@ -30,6 +30,7 @@
 #include "llvm/MC/TargetRegistry.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/Support/ErrorHandling.h"
+#include "llvm/Support/MathExtras.h"
 #include <bitset>
 
 #define GET_INSTRINFO_MC_DESC
@@ -59,7 +60,13 @@ static MCRegisterInfo *createRISCVMCRegisterInfo(const Triple &TT) {
 static MCAsmInfo *createRISCVMCAsmInfo(const MCRegisterInfo &MRI,
                                        const Triple &TT,
                                        const MCTargetOptions &Options) {
-  MCAsmInfo *MAI = new RISCVMCAsmInfo(TT);
+  MCAsmInfo *MAI = nullptr;
+  if (TT.isOSBinFormatELF())
+    MAI = new RISCVMCAsmInfo(TT);
+  else if (TT.isOSBinFormatMachO())
+    MAI = new RISCVMCAsmInfoDarwin();
+  else
+    reportFatalUsageError("unsupported object format");
 
   unsigned SP = MRI.getDwarfRegNum(RISCV::X2, true);
   MCCFIInstruction Inst = MCCFIInstruction::cfiDefCfa(nullptr, SP, 0);
@@ -112,7 +119,17 @@ createRISCVObjectTargetStreamer(MCStreamer &S, const MCSubtargetInfo &STI) {
   const Triple &TT = STI.getTargetTriple();
   if (TT.isOSBinFormatELF())
     return new RISCVTargetELFStreamer(S, STI);
-  return nullptr;
+  return new RISCVTargetStreamer(S);
+}
+
+static MCStreamer *
+createMachOStreamer(MCContext &Ctx, std::unique_ptr<MCAsmBackend> &&TAB,
+                    std::unique_ptr<MCObjectWriter> &&OW,
+                    std::unique_ptr<MCCodeEmitter> &&Emitter) {
+  return createMachOStreamer(Ctx, std::move(TAB), std::move(OW),
+                             std::move(Emitter),
+                             /*DWARFMustBeAtTheEnd*/ false,
+                             /*LabelSections*/ true);
 }
 
 static MCTargetStreamer *
@@ -134,14 +151,24 @@ class RISCVMCInstrAnalysis : public MCInstrAnalysis {
   static bool isGPR(MCRegister Reg) {
     return Reg >= RISCV::X0 && Reg <= RISCV::X31;
   }
+  static bool isYGPR(MCRegister Reg) {
+    return Reg >= RISCV::X0_Y && Reg <= RISCV::X31_Y;
+  }
+  static bool isZeroReg(MCRegister Reg) {
+    return Reg == RISCV::X0 || Reg == RISCV::X0_Y;
+  }
 
   static unsigned getRegIndex(MCRegister Reg) {
+    if (isYGPR(Reg)) {
+      assert(Reg != RISCV::X0_Y && "Invalid GPR reg");
+      return Reg - RISCV::X1_Y;
+    }
     assert(isGPR(Reg) && Reg != RISCV::X0 && "Invalid GPR reg");
     return Reg - RISCV::X1;
   }
 
   void setGPRState(MCRegister Reg, std::optional<int64_t> Value) {
-    if (Reg == RISCV::X0)
+    if (isZeroReg(Reg))
       return;
 
     auto Index = getRegIndex(Reg);
@@ -155,7 +182,7 @@ class RISCVMCInstrAnalysis : public MCInstrAnalysis {
   }
 
   std::optional<int64_t> getGPRState(MCRegister Reg) const {
-    if (Reg == RISCV::X0)
+    if (isZeroReg(Reg))
       return 0;
 
     auto Index = getRegIndex(Reg);
@@ -305,6 +332,47 @@ public:
     }
   }
 
+  /// Returns (PLT virtual address, GOT virtual address) pairs for PLT entries.
+  std::vector<std::pair<uint64_t, uint64_t>>
+  findPltEntries(uint64_t PltSectionVA, ArrayRef<uint8_t> PltContents,
+                 const MCSubtargetInfo &STI) const override {
+    uint32_t LoadInsnOpCode;
+    if (const Triple &T = STI.getTargetTriple(); T.isRISCV64())
+      LoadInsnOpCode = 0x3003; // ld
+    else if (T.isRISCV32())
+      LoadInsnOpCode = 0x2003; // lw
+    else
+      return {};
+
+    constexpr uint64_t FirstEntryAt = 32, EntrySize = 16;
+    if (PltContents.size() < FirstEntryAt + EntrySize)
+      return {};
+
+    std::vector<std::pair<uint64_t, uint64_t>> Results;
+    for (uint64_t EntryStart = FirstEntryAt,
+                  EntryStartEnd = PltContents.size() - EntrySize;
+         EntryStart <= EntryStartEnd; EntryStart += EntrySize) {
+      const uint32_t AuipcInsn =
+          support::endian::read32le(PltContents.data() + EntryStart);
+      const bool IsAuipc = (AuipcInsn & 0x7F) == 0x17;
+      if (!IsAuipc)
+        continue;
+
+      const uint32_t LoadInsn =
+          support::endian::read32le(PltContents.data() + EntryStart + 4);
+      const bool IsLoad = (LoadInsn & 0x707F) == LoadInsnOpCode;
+      if (!IsLoad)
+        continue;
+
+      const uint64_t GotPltSlotVA = PltSectionVA + EntryStart +
+                                    (AuipcInsn & 0xFFFFF000) +
+                                    SignExtend64<12>(LoadInsn >> 20);
+      Results.emplace_back(PltSectionVA + EntryStart, GotPltSlotVA);
+    }
+
+    return Results;
+  }
+
 private:
   static bool maybeReturnAddress(MCRegister Reg) {
     // X1 is used for normal returns, X5 for returns from outlined functions.
@@ -334,7 +402,8 @@ static MCInstrAnalysis *createRISCVInstrAnalysis(const MCInstrInfo *Info) {
 
 extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void
 LLVMInitializeRISCVTargetMC() {
-  for (Target *T : {&getTheRISCV32Target(), &getTheRISCV64Target()}) {
+  for (Target *T : {&getTheRISCV32Target(), &getTheRISCV64Target(),
+                    &getTheRISCV32beTarget(), &getTheRISCV64beTarget()}) {
     TargetRegistry::RegisterMCAsmInfo(*T, createRISCVMCAsmInfo);
     TargetRegistry::RegisterMCObjectFileInfo(*T, createRISCVMCObjectFileInfo);
     TargetRegistry::RegisterMCInstrInfo(*T, createRISCVMCInstrInfo);
@@ -344,6 +413,7 @@ LLVMInitializeRISCVTargetMC() {
     TargetRegistry::RegisterMCInstPrinter(*T, createRISCVMCInstPrinter);
     TargetRegistry::RegisterMCSubtargetInfo(*T, createRISCVMCSubtargetInfo);
     TargetRegistry::RegisterELFStreamer(*T, createRISCVELFStreamer);
+    TargetRegistry::RegisterMachOStreamer(*T, createMachOStreamer);
     TargetRegistry::RegisterObjectTargetStreamer(
         *T, createRISCVObjectTargetStreamer);
     TargetRegistry::RegisterMCInstrAnalysis(*T, createRISCVInstrAnalysis);

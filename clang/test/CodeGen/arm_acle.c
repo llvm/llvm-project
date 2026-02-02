@@ -139,29 +139,10 @@ void test_dbg(void) {
 #endif
 
 /* 8.5 Swap */
-// AArch32-LABEL: @test_swp(
-// AArch32-NEXT:  entry:
-// AArch32-NEXT:    br label [[DO_BODY_I:%.*]]
-// AArch32:       do.body.i:
-// AArch32-NEXT:    [[LDREX_I:%.*]] = call i32 @llvm.arm.ldrex.p0(ptr elementtype(i32) [[P:%.*]])
-// AArch32-NEXT:    [[STREX_I:%.*]] = call i32 @llvm.arm.strex.p0(i32 [[X:%.*]], ptr elementtype(i32) [[P]])
-// AArch32-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[STREX_I]], 0
-// AArch32-NEXT:    br i1 [[TOBOOL_I]], label [[DO_BODY_I]], label [[__SWP_EXIT:%.*]], !llvm.loop [[LOOP3:![0-9]+]]
-// AArch32:       __swp.exit:
-// AArch32-NEXT:    ret void
-//
-// AArch64-LABEL: @test_swp(
-// AArch64-NEXT:  entry:
-// AArch64-NEXT:    br label [[DO_BODY_I:%.*]]
-// AArch64:       do.body.i:
-// AArch64-NEXT:    [[LDXR_I:%.*]] = call i64 @llvm.aarch64.ldxr.p0(ptr elementtype(i32) [[P:%.*]])
-// AArch64-NEXT:    [[TMP0:%.*]] = trunc i64 [[LDXR_I]] to i32
-// AArch64-NEXT:    [[TMP1:%.*]] = zext i32 [[X:%.*]] to i64
-// AArch64-NEXT:    [[STXR_I:%.*]] = call i32 @llvm.aarch64.stxr.p0(i64 [[TMP1]], ptr elementtype(i32) [[P]])
-// AArch64-NEXT:    [[TOBOOL_I:%.*]] = icmp ne i32 [[STXR_I]], 0
-// AArch64-NEXT:    br i1 [[TOBOOL_I]], label [[DO_BODY_I]], label [[__SWP_EXIT:%.*]], !llvm.loop [[LOOP2:![0-9]+]]
-// AArch64:       __swp.exit:
-// AArch64-NEXT:    ret void
+// ARM-LABEL: @test_swp(
+// ARM-NEXT:  entry:
+// ARM-NEXT:    [[TMP0:%.*]] = atomicrmw volatile xchg ptr [[P:%.*]], i32 [[X:%.*]] monotonic, align 4
+// ARM-NEXT:    ret void
 //
 void test_swp(uint32_t x, volatile void *p) {
   __swp(x, p);
@@ -182,6 +163,28 @@ void test_swp(uint32_t x, volatile void *p) {
 void test_pld() {
   __pld(0);
 }
+
+#if defined(__ARM_64BIT_STATE) && defined(__ARM_PREFETCH_RANGE)
+
+// AArch64-LABEL: @test_pld_range(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    call void @llvm.aarch64.range.prefetch(ptr null, i32 0, i32 1, i64 [[MD:%.*]])
+// AArch64-NEXT:    ret void
+//
+void test_pld_range(uint64_t md) {
+  __pld_range(0, 1, md, 0);
+}
+
+// AArch64-LABEL: @test_pldx_range(
+// AArch64-NEXT:  entry:
+// AArch64-NEXT:    call void @llvm.aarch64.range.prefetch(ptr null, i32 0, i32 1, i64 -576460477427613697)
+// AArch64-NEXT:    ret void
+//
+void test_pldx_range() {
+  __pldx_range(0, 1, 2097151, 65536, -2097152, 15, 0);
+}
+
+#endif
 
 // AArch32-LABEL: @test_pldx(
 // AArch32-NEXT:  entry:

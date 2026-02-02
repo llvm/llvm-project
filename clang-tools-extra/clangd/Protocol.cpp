@@ -297,6 +297,9 @@ SymbolKind adjustKindToCapability(SymbolKind Kind,
 
 SymbolKind indexSymbolKindToSymbolKind(index::SymbolKind Kind) {
   switch (Kind) {
+  // FIXME: for backwards compatibility, the include directive kind is treated
+  // the same as Unknown
+  case index::SymbolKind::IncludeDirective:
   case index::SymbolKind::Unknown:
     return SymbolKind::Variable;
   case index::SymbolKind::Module:
@@ -961,6 +964,8 @@ llvm::json::Value toJSON(const DocumentSymbol &S) {
     Result["children"] = S.children;
   if (S.deprecated)
     Result["deprecated"] = true;
+  if (!S.tags.empty())
+    Result["tags"] = S.tags;
   // FIXME: workaround for older gcc/clang
   return std::move(Result);
 }

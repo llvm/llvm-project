@@ -51,6 +51,13 @@ static cl::opt<bool>
                                cl::desc("Disable load/store vectorizer"),
                                cl::init(false), cl::Hidden);
 
+// NVPTX IR Peephole is a new pass; this option will lets us turn it off in case
+// we encounter some issues.
+static cl::opt<bool>
+    DisableNVPTXIRPeephole("disable-nvptx-ir-peephole",
+                           cl::desc("Disable NVPTX IR Peephole"),
+                           cl::init(false), cl::Hidden);
+
 // TODO: Remove this flag when we are confident with no regressions.
 static cl::opt<bool> DisableRequireStructuredCFG(
     "disable-nvptx-require-structured-cfg",
@@ -115,24 +122,8 @@ extern "C" LLVM_ABI LLVM_EXTERNAL_VISIBILITY void LLVMInitializeNVPTXTarget() {
   initializeNVPTXExternalAAWrapperPass(PR);
   initializeNVPTXPeepholePass(PR);
   initializeNVPTXTagInvariantLoadLegacyPassPass(PR);
-}
-
-static std::string computeDataLayout(bool is64Bit, bool UseShortPointers) {
-  std::string Ret = "e";
-
-  // Tensor Memory (addrspace:6) is always 32-bits.
-  // Distributed Shared Memory (addrspace:7) follows shared memory
-  // (addrspace:3).
-  if (!is64Bit)
-    Ret += "-p:32:32-p6:32:32-p7:32:32";
-  else if (UseShortPointers) {
-    Ret += "-p3:32:32-p4:32:32-p5:32:32-p6:32:32-p7:32:32";
-  } else
-    Ret += "-p6:32:32";
-
-  Ret += "-i64:64-i128:128-v16:16-v32:32-n16:32:64";
-
-  return Ret;
+  initializeNVPTXIRPeepholePass(PR);
+  initializeNVPTXPrologEpilogPassPass(PR);
 }
 
 NVPTXTargetMachine::NVPTXTargetMachine(const Target &T, const Triple &TT,
@@ -143,10 +134,10 @@ NVPTXTargetMachine::NVPTXTargetMachine(const Target &T, const Triple &TT,
                                        CodeGenOptLevel OL, bool is64bit)
     // The pic relocation model is used regardless of what the client has
     // specified, as it is the only relocation model currently supported.
-    : CodeGenTargetMachineImpl(T,
-                               computeDataLayout(is64bit, UseShortPointersOpt),
-                               TT, CPU, FS, Options, Reloc::PIC_,
-                               getEffectiveCodeModel(CM, CodeModel::Small), OL),
+    : CodeGenTargetMachineImpl(
+          T, TT.computeDataLayout(UseShortPointersOpt ? "shortptr" : ""), TT,
+          CPU, FS, Options, Reloc::PIC_,
+          getEffectiveCodeModel(CM, CodeModel::Small), OL),
       is64bit(is64bit), TLOF(std::make_unique<NVPTXTargetObjectFile>()),
       Subtarget(TT, std::string(CPU), std::string(FS), *this),
       StrPool(StrAlloc) {
@@ -396,6 +387,8 @@ void NVPTXPassConfig::addIRPasses() {
       addPass(createLoadStoreVectorizerPass());
     addPass(createSROAPass());
     addPass(createNVPTXTagInvariantLoadsPass());
+    if (!DisableNVPTXIRPeephole)
+      addPass(createNVPTXIRPeepholePass());
   }
 
   if (ST.hasPTXASUnreachableBug()) {

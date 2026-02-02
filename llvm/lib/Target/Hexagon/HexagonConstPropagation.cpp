@@ -105,8 +105,7 @@ namespace {
     };
 
     LatticeCell() : Kind(Top), Size(0), IsSpecial(false) {
-      for (const Constant *&Value : Values)
-        Value = nullptr;
+      llvm::fill(Values, nullptr);
     }
 
     bool meet(const LatticeCell &L);
@@ -1006,7 +1005,7 @@ bool MachineConstPropagator::rewrite(MachineFunction &MF) {
       SmallVector<MachineBasicBlock*,2> ToRemove;
       for (MachineBasicBlock *SB : B->successors()) {
         if (!Targets.count(SB))
-          ToRemove.push_back(const_cast<MachineBasicBlock*>(SB));
+          ToRemove.push_back(SB);
         Targets.remove(SB);
       }
       for (MachineBasicBlock *MBB : ToRemove)
@@ -2248,7 +2247,8 @@ bool HexagonConstEvaluator::evaluate(const RegSubRegPair &R,
     int32_t V32;
     memcpy(&V32, &U32, sizeof V32);
     IntegerType *Ty = Type::getInt32Ty(CX);
-    const ConstantInt *C32 = ConstantInt::get(Ty, static_cast<int64_t>(V32));
+    const ConstantInt *C32 =
+        ConstantInt::getSigned(Ty, static_cast<int64_t>(V32));
     Result.add(C32);
   }
   return true;

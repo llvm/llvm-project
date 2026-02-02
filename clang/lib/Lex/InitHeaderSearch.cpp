@@ -221,7 +221,7 @@ bool InitHeaderSearch::ShouldAddDefaultIncludePaths(
   case llvm::Triple::Hurd:
   case llvm::Triple::Linux:
   case llvm::Triple::LiteOS:
-  case llvm::Triple::NaCl:
+  case llvm::Triple::Managarm:
   case llvm::Triple::NetBSD:
   case llvm::Triple::OpenBSD:
   case llvm::Triple::PS4:
@@ -230,6 +230,9 @@ bool InitHeaderSearch::ShouldAddDefaultIncludePaths(
   case llvm::Triple::Solaris:
   case llvm::Triple::UEFI:
   case llvm::Triple::WASI:
+  case llvm::Triple::WASIp1:
+  case llvm::Triple::WASIp2:
+  case llvm::Triple::WASIp3:
   case llvm::Triple::Win32:
   case llvm::Triple::ZOS:
     return false;

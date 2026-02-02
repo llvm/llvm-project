@@ -12,19 +12,14 @@
 
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.h"
 #include "mlir/Dialect/GPU/IR/GPUDialect.h"
-#include "mlir/Dialect/LLVMIR/LLVMTypes.h"
 #include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/BuiltinTypes.h"
 #include "mlir/IR/Diagnostics.h"
 #include "mlir/IR/DialectImplementation.h"
-#include "mlir/IR/Matchers.h"
-#include "mlir/IR/OpImplementation.h"
-#include "mlir/IR/PatternMatch.h"
 #include "mlir/IR/TypeUtilities.h"
 #include "mlir/IR/Verifier.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/StringExtras.h"
 #include "llvm/ADT/TypeSwitch.h"
 
 using namespace mlir;
@@ -32,7 +27,7 @@ using namespace mlir::nvgpu;
 
 #include "mlir/Dialect/NVGPU/IR/NVGPUDialect.cpp.inc"
 
-void nvgpu::NVGPUDialect::initialize() {
+void NVGPUDialect::initialize() {
   addTypes<
 #define GET_TYPEDEF_LIST
 #include "mlir/Dialect/NVGPU/IR/NVGPUTypeDefs.cpp.inc"
@@ -47,7 +42,7 @@ void nvgpu::NVGPUDialect::initialize() {
       >();
 }
 
-bool nvgpu::NVGPUDialect::isSharedMemoryAddressSpace(Attribute memorySpace) {
+bool NVGPUDialect::isSharedMemoryAddressSpace(Attribute memorySpace) {
   if (!memorySpace)
     return false;
   if (auto intAttr = llvm::dyn_cast<IntegerAttr>(memorySpace))
@@ -57,7 +52,7 @@ bool nvgpu::NVGPUDialect::isSharedMemoryAddressSpace(Attribute memorySpace) {
   return false;
 }
 
-bool nvgpu::NVGPUDialect::hasSharedMemoryAddressSpace(MemRefType type) {
+bool NVGPUDialect::hasSharedMemoryAddressSpace(MemRefType type) {
   Attribute memorySpace = type.getMemorySpace();
   return isSharedMemoryAddressSpace(memorySpace);
 }
@@ -145,7 +140,6 @@ static LogicalResult verifyMmaSyncOp(Operation *op,
                                      TypedValue<VectorType> matrixC,
                                      const std::array<int64_t, 3> &mmaShape,
                                      bool tf32Enabled, bool sparse = false) {
-
   // The verification for mma.sync covering various shapes and data types is
   // based on the fundamental tensor core shape.
 
@@ -297,7 +291,6 @@ LogicalResult MmaSparseSyncOp::verify() {
 // NVGPU_LdMatrixOp
 //===----------------------------------------------------------------------===//
 LogicalResult LdMatrixOp::verify() {
-
   // ldmatrix reads data from source in shared memory
   auto srcMemref = llvm::cast<MemRefType>(getSrcMemref().getType());
 
@@ -350,8 +343,21 @@ LogicalResult LdMatrixOp::verify() {
 // NVGPU_TmaAsyncLoadOp
 //===----------------------------------------------------------------------===//
 
+static unsigned getSwizzleBytes(TensorMapSwizzleKind kind) {
+  switch (kind) {
+  case TensorMapSwizzleKind::SWIZZLE_32B:
+    return 32;
+  case TensorMapSwizzleKind::SWIZZLE_64B:
+    return 64;
+  case TensorMapSwizzleKind::SWIZZLE_128B:
+    return 128;
+  default:
+    return 0;
+  }
+}
+
 std::optional<InFlightDiagnostic> verifyTmaDescriptorWithMemref(
-    Operation *op, nvgpu::TensorMapDescriptorType descType,
+    Operation *op, TensorMapDescriptorType descType,
     std::optional<MemRefType> memrefType = std::nullopt) {
   MemRefType descMemref = descType.getTensor();
   // Limitation
@@ -378,10 +384,11 @@ std::optional<InFlightDiagnostic> verifyTmaDescriptorWithMemref(
       descType.getSwizzle() != TensorMapSwizzleKind::SWIZZLE_NONE) {
     unsigned lastDimensionByte =
         descMemref.getElementTypeBitWidth() * descMemref.getShape().back() / 8;
-    if (lastDimensionByte != kMaxTMALastdimByte)
+    unsigned expectByte = getSwizzleBytes(descType.getSwizzle());
+    if (lastDimensionByte != expectByte)
       return op->emitError() << "the tensormap descriptor must have last "
                                 "dimension of "
-                             << kMaxTMALastdimByte << " bytes but it is "
+                             << expectByte << " bytes but it is "
                              << lastDimensionByte << " bytes";
   }
 
@@ -413,6 +420,12 @@ std::optional<InFlightDiagnostic> verifyTmaDescriptorWithMemref(
                            << descMemref << " != " << dstMemref;
   }
 
+  int lastDimBytes =
+      descMemref.getShape().back() * descMemref.getElementTypeBitWidth() / 8;
+  if (lastDimBytes % kTMALastdimByte != 0) {
+    return op->emitError() << "the bytes in the last dimension of the tensor "
+                              "map must be a multiple of 16";
+  }
   return std::nullopt;
 }
 
@@ -640,8 +653,7 @@ LogicalResult WarpgroupMmaStoreOp::verify() {
 //===----------------------------------------------------------------------===//
 
 LogicalResult WarpgroupMmaInitAccumulatorOp::verify() {
-
-  nvgpu::WarpgroupAccumulatorType accType = getMatrixC().getType();
+  WarpgroupAccumulatorType accType = getMatrixC().getType();
   int64_t sizeM = accType.getFragmented().getDimSize(0);
   int64_t sizeN = accType.getFragmented().getDimSize(1);
   Type elemType = accType.getFragmented().getElementType();

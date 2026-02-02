@@ -486,7 +486,7 @@ EngineBuilder &EngineBuilder::setMCJITMemoryManager(
                                    std::unique_ptr<RTDyldMemoryManager> mcjmm) {
   auto SharedMM = std::shared_ptr<RTDyldMemoryManager>(std::move(mcjmm));
   MemMgr = SharedMM;
-  Resolver = SharedMM;
+  Resolver = std::move(SharedMM);
   return *this;
 }
 
@@ -952,8 +952,7 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
       if (CAZ) {
         GenericValue floatZero;
         floatZero.FloatVal = 0.f;
-        std::fill(Result.AggregateVal.begin(), Result.AggregateVal.end(),
-                  floatZero);
+        llvm::fill(Result.AggregateVal, floatZero);
         break;
       }
       if(CV) {
@@ -974,8 +973,7 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
       if (CAZ) {
         GenericValue doubleZero;
         doubleZero.DoubleVal = 0.0;
-        std::fill(Result.AggregateVal.begin(), Result.AggregateVal.end(),
-                  doubleZero);
+        llvm::fill(Result.AggregateVal, doubleZero);
         break;
       }
       if(CV) {
@@ -996,8 +994,7 @@ GenericValue ExecutionEngine::getConstantValue(const Constant *C) {
       if (CAZ) {
         GenericValue intZero;
         intZero.IntVal = APInt(ElemTy->getScalarSizeInBits(), 0ull);
-        std::fill(Result.AggregateVal.begin(), Result.AggregateVal.end(),
-                  intZero);
+        llvm::fill(Result.AggregateVal, intZero);
         break;
       }
       if(CV) {

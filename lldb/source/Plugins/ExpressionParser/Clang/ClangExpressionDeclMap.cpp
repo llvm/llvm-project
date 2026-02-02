@@ -690,8 +690,7 @@ void ClangExpressionDeclMap::FindExternalVisibleDecls(
 
   if (const NamespaceDecl *namespace_context =
           dyn_cast<NamespaceDecl>(context.m_decl_context)) {
-    if (namespace_context->getName().str() ==
-        std::string(g_lldb_local_vars_namespace_cstr)) {
+    if (namespace_context->getName() == g_lldb_local_vars_namespace_cstr) {
       CompilerDeclContext compiler_decl_ctx =
           m_clang_ast_context->CreateDeclContext(
               const_cast<clang::DeclContext *>(context.m_decl_context));
@@ -785,6 +784,10 @@ void ClangExpressionDeclMap::LookUpLldbClass(NameSearchContext &context) {
     sym_ctx = frame->GetSymbolContext(lldb::eSymbolContextFunction |
                                       lldb::eSymbolContextBlock);
 
+  // FIXME: Currently m_ctx_obj is only used through
+  // SBValue::EvaluateExpression. Can we instead *always* use m_ctx_obj
+  // regardless of which EvaluateExpression path we go through? Then we wouldn't
+  // need two separate code-paths here.
   if (m_ctx_obj) {
     Status status;
     lldb::ValueObjectSP ctx_obj_ptr = m_ctx_obj->AddressOf(status);
@@ -839,7 +842,7 @@ void ClangExpressionDeclMap::LookUpLldbClass(NameSearchContext &context) {
 
     clang::CXXRecordDecl *class_decl = method_decl->getParent();
 
-    QualType class_qual_type(class_decl->getTypeForDecl(), 0);
+    QualType class_qual_type = m_ast_context->getCanonicalTagType(class_decl);
 
     TypeFromUser class_user_type(
         class_qual_type.getAsOpaquePtr(),
@@ -852,14 +855,19 @@ void ClangExpressionDeclMap::LookUpLldbClass(NameSearchContext &context) {
     return;
   }
 
-  // This branch will get hit if we are executing code in the context of
-  // a function that claims to have an object pointer (through
-  // DW_AT_object_pointer?) but is not formally a method of the class.
-  // In that case, just look up the "this" variable in the current scope
-  // and use its type.
-  // FIXME: This code is formally correct, but clang doesn't currently
-  // emit DW_AT_object_pointer
-  // for C++ so it hasn't actually been tested.
+  // FIXME: this code is supposed to handl cases where a function decl
+  // was not attached to a class scope but its DIE had a `DW_AT_object_pointer`
+  // (and thus has a local `this` variable). This isn't a tested flow and
+  // even -flimit-debug-info doesn't seem to generate DWARF like that, so
+  // we should get rid of this code-path. An alternative fix if we ever
+  // encounter such DWARF is for the TypeSystem to attach the function
+  // to some valid class context (we can derive the type of the context
+  // through the `this` pointer anyway.
+  //
+  // The actual reason we can't remove this code is that LLDB currently
+  // creates decls for function templates by attaching them to the TU instead
+  // of a class context. So we can actually have template methods scoped
+  // outside of a class. Once we fix that, we can remove this code-path.
 
   VariableList *vars = frame->GetVariableList(false, nullptr);
 
@@ -1023,13 +1031,14 @@ void ClangExpressionDeclMap::LookupInModulesDeclVendor(
 
   bool append = false;
   uint32_t max_matches = 1;
-  std::vector<clang::NamedDecl *> decls;
+  std::vector<CompilerDecl> decls;
 
   if (!modules_decl_vendor->FindDecls(name, append, max_matches, decls))
     return;
 
   assert(!decls.empty() && "FindDecls returned true but no decls?");
-  clang::NamedDecl *const decl_from_modules = decls[0];
+  auto *const decl_from_modules =
+      llvm::cast<NamedDecl>(ClangUtil::GetDecl(decls[0]));
 
   LLDB_LOG(log,
            "  CAS::FEVD Matching decl found for "
@@ -1223,7 +1232,7 @@ bool ClangExpressionDeclMap::LookupFunction(
 
   Target *target = m_parser_vars->m_exe_ctx.GetTargetPtr();
 
-  std::vector<clang::NamedDecl *> decls_from_modules;
+  std::vector<CompilerDecl> decls_from_modules;
 
   if (target) {
     if (std::shared_ptr<ClangModulesDeclVendor> decl_vendor =
@@ -1282,8 +1291,8 @@ bool ClangExpressionDeclMap::LookupFunction(
   bool found_function_with_type_info = false;
 
   if (sc_list.GetSize()) {
-    Symbol *extern_symbol = nullptr;
-    Symbol *non_extern_symbol = nullptr;
+    const Symbol *extern_symbol = nullptr;
+    const Symbol *non_extern_symbol = nullptr;
 
     for (const SymbolContext &sym_ctx : sc_list) {
       if (sym_ctx.function) {
@@ -1299,7 +1308,7 @@ bool ClangExpressionDeclMap::LookupFunction(
         AddOneFunction(context, sym_ctx.function, nullptr);
         found_function_with_type_info = true;
       } else if (sym_ctx.symbol) {
-        Symbol *symbol = sym_ctx.symbol;
+        const Symbol *symbol = sym_ctx.symbol;
         if (target && symbol->GetType() == eSymbolTypeReExported) {
           symbol = symbol->ResolveReExportedSymbol(*target);
           if (symbol == nullptr)
@@ -1314,7 +1323,8 @@ bool ClangExpressionDeclMap::LookupFunction(
     }
 
     if (!found_function_with_type_info) {
-      for (clang::NamedDecl *decl : decls_from_modules) {
+      for (const CompilerDecl &compiler_decl : decls_from_modules) {
+        clang::Decl *decl = ClangUtil::GetDecl(compiler_decl);
         if (llvm::isa<clang::FunctionDecl>(decl)) {
           clang::NamedDecl *copied_decl =
               llvm::cast_or_null<FunctionDecl>(CopyDecl(decl));
@@ -1561,7 +1571,7 @@ ClangExpressionDeclMap::AddExpressionVariable(NameSearchContext &context,
 
   if (const clang::Type *parser_type = parser_opaque_type.getTypePtr()) {
     if (const TagType *tag_type = dyn_cast<TagType>(parser_type))
-      CompleteType(tag_type->getDecl());
+      CompleteType(tag_type->getDecl()->getDefinitionOrSelf());
     if (const ObjCObjectPointerType *objc_object_ptr_type =
             dyn_cast<ObjCObjectPointerType>(parser_type))
       CompleteType(objc_object_ptr_type->getInterfaceDecl());
@@ -1792,7 +1802,7 @@ void ClangExpressionDeclMap::AddOneRegister(NameSearchContext &context,
 
 void ClangExpressionDeclMap::AddOneFunction(NameSearchContext &context,
                                             Function *function,
-                                            Symbol *symbol) {
+                                            const Symbol *symbol) {
   assert(m_parser_vars.get());
 
   Log *log = GetLog(LLDBLog::Expressions);
@@ -1991,7 +2001,7 @@ void ClangExpressionDeclMap::AddContextClassType(NameSearchContext &context,
     const bool is_artificial = false;
 
     CXXMethodDecl *method_decl = m_clang_ast_context->AddMethodToCXXRecordType(
-        copied_clang_type.GetOpaqueQualType(), "$__lldb_expr", nullptr,
+        copied_clang_type.GetOpaqueQualType(), "$__lldb_expr", /*asm_label=*/{},
         method_type, lldb::eAccessPublic, is_virtual, is_static, is_inline,
         is_explicit, is_attr_used, is_artificial);
 

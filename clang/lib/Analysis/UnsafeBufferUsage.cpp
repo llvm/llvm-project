@@ -13,6 +13,7 @@
 #include "clang/AST/Attr.h"
 #include "clang/AST/Decl.h"
 #include "clang/AST/DeclCXX.h"
+#include "clang/AST/DeclTemplate.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/AST/FormatString.h"
@@ -25,9 +26,9 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Lex/Lexer.h"
 #include "clang/Lex/Preprocessor.h"
+#include "llvm/ADT/APInt.h"
 #include "llvm/ADT/APSInt.h"
 #include "llvm/ADT/STLFunctionalExtras.h"
-#include "llvm/ADT/SmallSet.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/ADT/StringRef.h"
 #include <cstddef>
@@ -115,6 +116,10 @@ private:
 };
 } // namespace
 
+#define SIZED_CONTAINER_OR_VIEW_LIST                                           \
+  "span", "array", "vector", "basic_string_view", "basic_string",              \
+      "initializer_list",
+
 // A `RecursiveASTVisitor` that traverses all descendants of a given node "n"
 // except for those belonging to a different callable of "n".
 class MatchDescendantVisitor : public DynamicRecursiveASTVisitor {
@@ -123,10 +128,10 @@ public:
   // descendants of a given node "n" except for the ones
   // belonging to a different callable of "n".
   MatchDescendantVisitor(ASTContext &Context, FastMatcher &Matcher,
-                         bool FindAll, bool ignoreUnevaluatedContext,
+                         bool FindAll, bool IgnoreUnevaluatedContext,
                          const UnsafeBufferUsageHandler &NewHandler)
       : Matcher(&Matcher), FindAll(FindAll), Matches(false),
-        ignoreUnevaluatedContext(ignoreUnevaluatedContext),
+        IgnoreUnevaluatedContext(IgnoreUnevaluatedContext),
         ActiveASTContext(&Context), Handler(&NewHandler) {
     ShouldVisitTemplateInstantiations = true;
     ShouldVisitImplicitCode = false; // TODO: let's ignore implicit code for now
@@ -164,7 +169,7 @@ public:
 
   bool TraverseGenericSelectionExpr(GenericSelectionExpr *Node) override {
     // These are unevaluated, except the result expression.
-    if (ignoreUnevaluatedContext)
+    if (IgnoreUnevaluatedContext)
       return TraverseStmt(Node->getResultExpr());
     return DynamicRecursiveASTVisitor::TraverseGenericSelectionExpr(Node);
   }
@@ -172,35 +177,39 @@ public:
   bool
   TraverseUnaryExprOrTypeTraitExpr(UnaryExprOrTypeTraitExpr *Node) override {
     // Unevaluated context.
-    if (ignoreUnevaluatedContext)
+    if (IgnoreUnevaluatedContext)
       return true;
     return DynamicRecursiveASTVisitor::TraverseUnaryExprOrTypeTraitExpr(Node);
   }
 
-  bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc Node) override {
+  bool TraverseTypeOfExprTypeLoc(TypeOfExprTypeLoc Node,
+                                 bool TraverseQualifier) override {
     // Unevaluated context.
-    if (ignoreUnevaluatedContext)
+    if (IgnoreUnevaluatedContext)
       return true;
-    return DynamicRecursiveASTVisitor::TraverseTypeOfExprTypeLoc(Node);
+    return DynamicRecursiveASTVisitor::TraverseTypeOfExprTypeLoc(
+        Node, TraverseQualifier);
   }
 
-  bool TraverseDecltypeTypeLoc(DecltypeTypeLoc Node) override {
+  bool TraverseDecltypeTypeLoc(DecltypeTypeLoc Node,
+                               bool TraverseQualifier) override {
     // Unevaluated context.
-    if (ignoreUnevaluatedContext)
+    if (IgnoreUnevaluatedContext)
       return true;
-    return DynamicRecursiveASTVisitor::TraverseDecltypeTypeLoc(Node);
+    return DynamicRecursiveASTVisitor::TraverseDecltypeTypeLoc(
+        Node, TraverseQualifier);
   }
 
   bool TraverseCXXNoexceptExpr(CXXNoexceptExpr *Node) override {
     // Unevaluated context.
-    if (ignoreUnevaluatedContext)
+    if (IgnoreUnevaluatedContext)
       return true;
     return DynamicRecursiveASTVisitor::TraverseCXXNoexceptExpr(Node);
   }
 
   bool TraverseCXXTypeidExpr(CXXTypeidExpr *Node) override {
     // Unevaluated context.
-    if (ignoreUnevaluatedContext)
+    if (IgnoreUnevaluatedContext)
       return true;
     return DynamicRecursiveASTVisitor::TraverseCXXTypeidExpr(Node);
   }
@@ -238,7 +247,7 @@ private:
   // When true, finds all matches. When false, finds the first match and stops.
   const bool FindAll;
   bool Matches;
-  bool ignoreUnevaluatedContext;
+  bool IgnoreUnevaluatedContext;
   ASTContext *ActiveASTContext;
   const UnsafeBufferUsageHandler *Handler;
 };
@@ -257,7 +266,7 @@ forEachDescendantEvaluatedStmt(const Stmt *S, ASTContext &Ctx,
                                const UnsafeBufferUsageHandler &Handler,
                                FastMatcher &Matcher) {
   MatchDescendantVisitor Visitor(Ctx, Matcher, /*FindAll=*/true,
-                                 /*ignoreUnevaluatedContext=*/true, Handler);
+                                 /*IgnoreUnevaluatedContext=*/true, Handler);
   Visitor.findMatch(DynTypedNode::create(*S));
 }
 
@@ -265,7 +274,7 @@ static void forEachDescendantStmt(const Stmt *S, ASTContext &Ctx,
                                   const UnsafeBufferUsageHandler &Handler,
                                   FastMatcher &Matcher) {
   MatchDescendantVisitor Visitor(Ctx, Matcher, /*FindAll=*/true,
-                                 /*ignoreUnevaluatedContext=*/false, Handler);
+                                 /*IgnoreUnevaluatedContext=*/false, Handler);
   Visitor.findMatch(DynTypedNode::create(*S));
 }
 
@@ -449,20 +458,110 @@ static bool areEqualIntegers(const Expr *E1, const Expr *E2, ASTContext &Ctx) {
   }
 }
 
+// Providing that `Ptr` is a pointer and `Size` is an unsigned-integral
+// expression, returns true iff they follow one of the following safe
+// patterns:
+//  1. Ptr is `DRE.data()` and Size is `DRE.size()`, where DRE is a hardened
+//     container or view;
+//
+//  2. Ptr is `a` and Size is `n`, where `a` is of an array-of-T with constant
+//     size `n`;
+//
+//  3. Ptr is `&var` and Size is `1`; or
+//     Ptr is `std::addressof(...)` and Size is `1`;
+//
+//  4. Size is `0`;
+static bool isPtrBufferSafe(const Expr *Ptr, const Expr *Size,
+                            ASTContext &Ctx) {
+  // Pattern 1:
+  if (auto *MCEPtr = dyn_cast<CXXMemberCallExpr>(Ptr->IgnoreParenImpCasts()))
+    if (auto *MCESize =
+            dyn_cast<CXXMemberCallExpr>(Size->IgnoreParenImpCasts())) {
+      auto *DREOfPtr = dyn_cast<DeclRefExpr>(
+          MCEPtr->getImplicitObjectArgument()->IgnoreParenImpCasts());
+      auto *DREOfSize = dyn_cast<DeclRefExpr>(
+          MCESize->getImplicitObjectArgument()->IgnoreParenImpCasts());
+
+      if (!DREOfPtr || !DREOfSize)
+        return false; // not in safe pattern
+      // We need to make sure 'a' is identical to 'b' for 'a.data()' and
+      // 'b.size()' otherwise we do not know they match:
+      if (DREOfPtr->getDecl() != DREOfSize->getDecl())
+        return false;
+      if (MCEPtr->getMethodDecl()->getName() != "data")
+        return false;
+      // `MCEPtr->getRecordDecl()` must be non-null as `DREOfPtr` is non-null:
+      if (!MCEPtr->getRecordDecl()->isInStdNamespace())
+        return false;
+
+      auto *ObjII = MCEPtr->getRecordDecl()->getIdentifier();
+
+      if (!ObjII)
+        return false;
+
+      bool AcceptSizeBytes = Ptr->getType()->getPointeeType()->isCharType();
+
+      if (!((AcceptSizeBytes &&
+             MCESize->getMethodDecl()->getName() == "size_bytes") ||
+            // Note here the pointer must be a pointer-to-char type unless there
+            // is explicit casting.  If there is explicit casting, this branch
+            // is unreachable. Thus, at this branch "size" and "size_bytes" are
+            // equivalent as the pointer is a char pointer:
+            MCESize->getMethodDecl()->getName() == "size"))
+        return false;
+
+      return llvm::is_contained({SIZED_CONTAINER_OR_VIEW_LIST},
+                                ObjII->getName());
+    }
+
+  Expr::EvalResult ER;
+
+  // Pattern 2-4:
+  if (Size->EvaluateAsInt(ER, Ctx)) {
+    // Pattern 2:
+    if (auto *DRE = dyn_cast<DeclRefExpr>(Ptr->IgnoreParenImpCasts())) {
+      if (auto *CAT = Ctx.getAsConstantArrayType(DRE->getType())) {
+        llvm::APSInt SizeInt = ER.Val.getInt();
+
+        return llvm::APSInt::compareValues(
+                   SizeInt, llvm::APSInt(CAT->getSize(), true)) == 0;
+      }
+      return false;
+    }
+
+    // Pattern 3:
+    if (ER.Val.getInt().isOne()) {
+      if (auto *UO = dyn_cast<UnaryOperator>(Ptr->IgnoreParenImpCasts()))
+        return UO && UO->getOpcode() == UnaryOperator::Opcode::UO_AddrOf;
+      if (auto *CE = dyn_cast<CallExpr>(Ptr->IgnoreParenImpCasts())) {
+        auto *FnDecl = CE->getDirectCallee();
+
+        return FnDecl && FnDecl->getNameAsString() == "addressof" &&
+               FnDecl->isInStdNamespace();
+      }
+      return false;
+    }
+    // Pattern 4:
+    if (ER.Val.getInt().isZero())
+      return true;
+  }
+  return false;
+}
+
 // Given a two-param std::span construct call, matches iff the call has the
 // following forms:
 //   1. `std::span<T>{new T[n], n}`, where `n` is a literal or a DRE
 //   2. `std::span<T>{new T, 1}`
-//   3. `std::span<T>{&var, 1}` or `std::span<T>{std::addressof(...), 1}`
-//   4. `std::span<T>{a, n}`, where `a` is of an array-of-T with constant size
-//   `n`
-//   5. `std::span<T>{any, 0}`
-//   6. `std::span<T>{ (char *)f(args), args[N] * arg*[M]}`, where
+//   3. `std::span<T>{ (char *)f(args), args[N] * arg*[M]}`, where
 //       `f` is a function with attribute `alloc_size(N, M)`;
 //       `args` represents the list of arguments;
 //       `N, M` are parameter indexes to the allocating element number and size.
 //        Sometimes, there is only one parameter index representing the total
 //        size.
+//   4. `std::span<T>{x.begin(), x.end()}` where `x` is an object in the
+//      SIZED_CONTAINER_OR_VIEW_LIST.
+//   5. `isPtrBufferSafe` returns true for the two arguments of the span
+//      constructor
 static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
                                         ASTContext &Ctx) {
   assert(Node.getNumArgs() == 2 &&
@@ -489,7 +588,7 @@ static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
     // Check form 5:
     return true;
 
-  // Check forms 1-3:
+  // Check forms 1-2:
   switch (Arg0->getStmtClass()) {
   case Stmt::CXXNewExprClass:
     if (auto Size = cast<CXXNewExpr>(Arg0)->getArraySize()) {
@@ -503,35 +602,11 @@ static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
       return Arg1CV && Arg1CV->isOne();
     }
     break;
-  case Stmt::UnaryOperatorClass:
-    if (cast<UnaryOperator>(Arg0)->getOpcode() ==
-        UnaryOperator::Opcode::UO_AddrOf)
-      // Check form 3:
-      return Arg1CV && Arg1CV->isOne();
-    break;
-  case Stmt::CallExprClass:
-    // Check form 3:
-    if (const auto *CE = dyn_cast<CallExpr>(Arg0)) {
-      const auto FnDecl = CE->getDirectCallee();
-      if (FnDecl && FnDecl->getNameAsString() == "addressof" &&
-          FnDecl->isInStdNamespace()) {
-        return Arg1CV && Arg1CV->isOne();
-      }
-    }
-    break;
   default:
     break;
   }
 
-  QualType Arg0Ty = Arg0->IgnoreImplicit()->getType();
-
-  if (auto *ConstArrTy = Ctx.getAsConstantArrayType(Arg0Ty)) {
-    const llvm::APSInt ConstArrSize = llvm::APSInt(ConstArrTy->getSize());
-
-    // Check form 4:
-    return Arg1CV && llvm::APSInt::compareValues(ConstArrSize, *Arg1CV) == 0;
-  }
-  // Check form 6:
+  // Check form 3:
   if (auto CCast = dyn_cast<CStyleCastExpr>(Arg0)) {
     if (!CCast->getType()->isPointerType())
       return false;
@@ -560,11 +635,40 @@ static bool isSafeSpanTwoParamConstruct(const CXXConstructExpr &Node,
         }
     }
   }
-  return false;
+  // Check form 4:
+  auto IsMethodCallToSizedObject = [](const Stmt *Node, StringRef MethodName) {
+    if (const auto *MC = dyn_cast<CXXMemberCallExpr>(Node)) {
+      const auto *MD = MC->getMethodDecl();
+      const auto *RD = MC->getRecordDecl();
+
+      if (RD && MD)
+        if (auto *II = RD->getDeclName().getAsIdentifierInfo();
+            II && RD->isInStdNamespace())
+          return llvm::is_contained({SIZED_CONTAINER_OR_VIEW_LIST},
+                                    II->getName()) &&
+                 MD->getName() == MethodName;
+    }
+    return false;
+  };
+
+  if (IsMethodCallToSizedObject(Arg0, "begin") &&
+      IsMethodCallToSizedObject(Arg1, "end"))
+    return AreSameDRE(
+        // We know Arg0 and Arg1 are `CXXMemberCallExpr`s:
+        cast<CXXMemberCallExpr>(Arg0)
+            ->getImplicitObjectArgument()
+            ->IgnoreParenImpCasts(),
+        cast<CXXMemberCallExpr>(Arg1)
+            ->getImplicitObjectArgument()
+            ->IgnoreParenImpCasts());
+
+  // Check 5:
+  return isPtrBufferSafe(Arg0, Arg1, Ctx);
 }
 
 static bool isSafeArraySubscript(const ArraySubscriptExpr &Node,
-                                 const ASTContext &Ctx) {
+                                 const ASTContext &Ctx,
+                                 const bool IgnoreStaticSizedArrays) {
   // FIXME: Proper solution:
   //  - refactor Sema::CheckArrayAccess
   //    - split safe/OOB/unknown decision logic from diagnostics emitting code
@@ -584,6 +688,12 @@ static bool isSafeArraySubscript(const ArraySubscriptExpr &Node,
     limit = SLiteral->getLength() + 1;
   } else {
     return false;
+  }
+
+  if (IgnoreStaticSizedArrays) {
+    // If we made it here, it means a size was found for the var being accessed
+    // (either string literal or array). If it's fixed size, we can ignore it.
+    return true;
   }
 
   Expr::EvalResult EVResult;
@@ -632,6 +742,104 @@ static bool isSafeArraySubscript(const ArraySubscriptExpr &Node,
   return false;
 }
 
+// Constant fold a conditional expression 'cond ? A : B' to
+// - 'A', if 'cond' has constant true value;
+// - 'B', if 'cond' has constant false value.
+static const Expr *tryConstantFoldConditionalExpr(const Expr *E,
+                                                  const ASTContext &Ctx) {
+  // FIXME: more places can use this function
+  if (const auto *CE = dyn_cast<ConditionalOperator>(E)) {
+    bool CondEval;
+    const auto *Cond = CE->getCond();
+
+    if (!Cond->isValueDependent() &&
+        Cond->EvaluateAsBooleanCondition(CondEval, Ctx))
+      return CondEval ? CE->getLHS() : CE->getRHS();
+  }
+  return E;
+}
+
+// A pointer type expression is known to be null-terminated, if it has the
+// form: E.c_str(), for any expression E of `std::string` type.
+static bool isNullTermPointer(const Expr *Ptr, ASTContext &Ctx) {
+  // Strip CXXDefaultArgExpr before check:
+  Ptr = Ptr->IgnoreParenImpCasts();
+  if (const auto *DefaultArgE = dyn_cast<CXXDefaultArgExpr>(Ptr))
+    Ptr = DefaultArgE->getExpr()->IgnoreParenImpCasts();
+  // Try to perform constant fold recursively:
+  if (const auto *NewPtr = tryConstantFoldConditionalExpr(Ptr, Ctx);
+      NewPtr != Ptr)
+    return isNullTermPointer(NewPtr, Ctx);
+  // Split the analysis for conditional expressions that cannot be
+  // constant-folded:
+  if (const auto *CondE = dyn_cast<ConditionalOperator>(Ptr)) {
+    return isNullTermPointer(CondE->getLHS(), Ctx) &&
+           isNullTermPointer(CondE->getRHS(), Ctx);
+  }
+
+  if (isa<clang::StringLiteral>(Ptr))
+    return true;
+  if (isa<PredefinedExpr>(Ptr))
+    return true;
+  if (auto *MCE = dyn_cast<CXXMemberCallExpr>(Ptr)) {
+    const CXXMethodDecl *MD = MCE->getMethodDecl();
+    const CXXRecordDecl *RD = MCE->getRecordDecl()->getCanonicalDecl();
+
+    if (MD && RD && RD->isInStdNamespace() && MD->getIdentifier())
+      if (MD->getName() == "c_str" && RD->getName() == "basic_string")
+        return true;
+  }
+
+  // Functions known to return properly null terminated strings.
+  static const llvm::StringSet<> NullTermFunctions = {"strerror"};
+  if (auto *CE = dyn_cast<CallExpr>(Ptr)) {
+    const FunctionDecl *F = CE->getDirectCallee();
+    if (F && F->getIdentifier() && NullTermFunctions.contains(F->getName()))
+      return true;
+  }
+  return false;
+}
+
+// Given an expression like `&X` or `std::addressof(X)`, returns the `Expr`
+// corresponding to `X` (after removing parens and implicit casts).
+// Returns null if the input expression `E` is not an address-of expression.
+static const Expr *getSubExprInAddressOfExpr(const Expr *E) {
+  if (!E->getType()->isPointerType())
+    return nullptr;
+  const Expr *Ptr = E->IgnoreParenImpCasts();
+
+  // `&X` where `X` is an `Expr`.
+  if (const auto *UO = dyn_cast<UnaryOperator>(Ptr)) {
+    if (UO->getOpcode() != UnaryOperator::Opcode::UO_AddrOf)
+      return nullptr;
+    return UO->getSubExpr()->IgnoreParenImpCasts();
+  }
+
+  // `std::addressof(X)` where `X` is an `Expr`.
+  if (const auto *CE = dyn_cast<CallExpr>(Ptr)) {
+    const FunctionDecl *FnDecl = CE->getDirectCallee();
+    if (!FnDecl || !FnDecl->isInStdNamespace() ||
+        FnDecl->getNameAsString() != "addressof" || CE->getNumArgs() != 1)
+      return nullptr;
+    return CE->getArg(0)->IgnoreParenImpCasts();
+  }
+
+  return nullptr;
+}
+
+// Given an expression like `sizeof(X)`, returns the `Expr` corresponding to `X`
+// (after removing parens and implicit casts). Returns null if the expression
+// `E` is not a `sizeof` expression or is `sizeof(T)` for a type `T`.
+static const Expr *getSubExprInSizeOfExpr(const Expr *E) {
+  const auto *SizeOfExpr =
+      dyn_cast<UnaryExprOrTypeTraitExpr>(E->IgnoreParenImpCasts());
+  if (!SizeOfExpr || SizeOfExpr->getKind() != UETT_SizeOf)
+    return nullptr;
+  if (SizeOfExpr->isArgumentType())
+    return nullptr;
+  return SizeOfExpr->getArgumentExpr()->IgnoreParenImpCasts();
+}
+
 namespace libc_func_matchers {
 // Under `libc_func_matchers`, define a set of matchers that match unsafe
 // functions in libc and unsafe calls to them.
@@ -677,24 +885,6 @@ struct LibcFunNamePrefixSuffixParser {
   }
 };
 
-// A pointer type expression is known to be null-terminated, if it has the
-// form: E.c_str(), for any expression E of `std::string` type.
-static bool isNullTermPointer(const Expr *Ptr) {
-  if (isa<clang::StringLiteral>(Ptr->IgnoreParenImpCasts()))
-    return true;
-  if (isa<PredefinedExpr>(Ptr->IgnoreParenImpCasts()))
-    return true;
-  if (auto *MCE = dyn_cast<CXXMemberCallExpr>(Ptr->IgnoreParenImpCasts())) {
-    const CXXMethodDecl *MD = MCE->getMethodDecl();
-    const CXXRecordDecl *RD = MCE->getRecordDecl()->getCanonicalDecl();
-
-    if (MD && RD && RD->isInStdNamespace() && MD->getIdentifier())
-      if (MD->getName() == "c_str" && RD->getName() == "basic_string")
-        return true;
-  }
-  return false;
-}
-
 // Return true iff at least one of following cases holds:
 //  1. Format string is a literal and there is an unsafe pointer argument
 //     corresponding to an `s` specifier;
@@ -703,65 +893,138 @@ static bool isNullTermPointer(const Expr *Ptr) {
 //
 // `UnsafeArg` is the output argument that will be set only if this function
 // returns true.
-static bool hasUnsafeFormatOrSArg(const CallExpr *Call, const Expr *&UnsafeArg,
-                                  const unsigned FmtArgIdx, ASTContext &Ctx,
-                                  bool isKprintf = false) {
+//
+// Format arguments start at `FmtIdx` + 1, if `FmtArgIdx` is insignificant.
+static bool
+hasUnsafeFormatOrSArg(ASTContext &Ctx, const CallExpr *Call,
+                      const Expr *&UnsafeArg, const unsigned FmtIdx,
+                      std::optional<const unsigned> FmtArgIdx = std::nullopt,
+                      bool isKprintf = false) {
   class StringFormatStringHandler
       : public analyze_format_string::FormatStringHandler {
     const CallExpr *Call;
     unsigned FmtArgIdx;
     const Expr *&UnsafeArg;
+    ASTContext &Ctx;
+    bool UnsafeArgSet;
+
+    // Returns an `Expr` representing the precision if specified, null
+    // otherwise.
+    // The parameter `Call` is a printf call and the parameter `Precision` is
+    // the precision of a format specifier of the `Call`.
+    //
+    // For example, for the `printf("%d, %.10s", 10, p)` call
+    // `Precision` can be the precision of either "%d" or "%.10s". The former
+    // one will have `NotSpecified` kind.
+    const Expr *
+    getPrecisionAsExpr(const analyze_printf::OptionalAmount &Precision,
+                       const CallExpr *Call) {
+      if (Precision.hasDataArgument()) {
+        unsigned PArgIdx = Precision.getArgIndex() + FmtArgIdx;
+
+        if (PArgIdx < Call->getNumArgs()) {
+          const Expr *PArg = Call->getArg(PArgIdx);
+
+          // Strip the cast if `PArg` is a cast-to-int expression:
+          if (auto *CE = dyn_cast<CastExpr>(PArg);
+              CE && CE->getType()->isSignedIntegerType())
+            PArg = CE->getSubExpr();
+          return PArg;
+        }
+      }
+      if (Precision.getHowSpecified() ==
+          analyze_printf::OptionalAmount::HowSpecified::Constant) {
+        auto SizeTy = Ctx.getSizeType();
+        llvm::APSInt PArgVal = llvm::APSInt(
+            llvm::APInt(Ctx.getTypeSize(SizeTy), Precision.getConstantAmount()),
+            true);
+
+        return IntegerLiteral::Create(Ctx, PArgVal, Ctx.getSizeType(), {});
+      }
+      return nullptr;
+    }
 
   public:
     StringFormatStringHandler(const CallExpr *Call, unsigned FmtArgIdx,
-                              const Expr *&UnsafeArg)
-        : Call(Call), FmtArgIdx(FmtArgIdx), UnsafeArg(UnsafeArg) {}
+                              const Expr *&UnsafeArg, ASTContext &Ctx)
+        : Call(Call), FmtArgIdx(FmtArgIdx), UnsafeArg(UnsafeArg), Ctx(Ctx),
+          UnsafeArgSet(false) {}
 
     bool HandlePrintfSpecifier(const analyze_printf::PrintfSpecifier &FS,
                                const char *startSpecifier,
                                unsigned specifierLen,
                                const TargetInfo &Target) override {
-      if (FS.getConversionSpecifier().getKind() ==
-          analyze_printf::PrintfConversionSpecifier::sArg) {
-        unsigned ArgIdx = FS.getPositionalArgIndex() + FmtArgIdx;
+      if (FS.getConversionSpecifier().getKind() !=
+          analyze_printf::PrintfConversionSpecifier::sArg)
+        return true; // continue parsing
 
-        if (0 < ArgIdx && ArgIdx < Call->getNumArgs())
-          if (!isNullTermPointer(Call->getArg(ArgIdx))) {
-            UnsafeArg = Call->getArg(ArgIdx); // output
-            // returning false stops parsing immediately
-            return false;
-          }
-      }
-      return true; // continue parsing
+      unsigned ArgIdx = FS.getArgIndex() + FmtArgIdx;
+
+      if (ArgIdx >= Call->getNumArgs())
+        // If the `ArgIdx` is invalid, give up.
+        return true; // continue parsing
+
+      const Expr *Arg = Call->getArg(ArgIdx);
+
+      if (isNullTermPointer(Arg, Ctx))
+        // If Arg is a null-terminated pointer, it is safe anyway.
+        return true; // continue parsing
+
+      // Otherwise, check if the specifier has a precision and if the character
+      // pointer is safely bound by the precision:
+      auto LengthModifier = FS.getLengthModifier();
+      QualType ArgType = Arg->getType();
+      bool IsArgTypeValid = // Is ArgType a character pointer type?
+          ArgType->isPointerType() &&
+          (LengthModifier.getKind() == LengthModifier.AsWideChar
+               ? ArgType->getPointeeType()->isWideCharType()
+               : ArgType->getPointeeType()->isCharType());
+
+      if (auto *Precision = getPrecisionAsExpr(FS.getPrecision(), Call);
+          Precision && IsArgTypeValid)
+        if (isPtrBufferSafe(Arg, Precision, Ctx))
+          return true;
+      // Handle unsafe case:
+      UnsafeArg = Call->getArg(ArgIdx); // output
+      UnsafeArgSet = true;
+      return false; // returning false stops parsing immediately
     }
+
+    bool isUnsafeArgSet() { return UnsafeArgSet; }
   };
 
-  const Expr *Fmt = Call->getArg(FmtArgIdx);
+  const Expr *Fmt = Call->getArg(FmtIdx);
+  unsigned FmtArgStartingIdx =
+      FmtArgIdx.has_value() ? static_cast<unsigned>(*FmtArgIdx) : FmtIdx + 1;
 
   if (auto *SL = dyn_cast<clang::StringLiteral>(Fmt->IgnoreParenImpCasts())) {
-    StringRef FmtStr;
+    if (SL->getCharByteWidth() == 1) {
+      StringRef FmtStr = SL->getString();
+      StringFormatStringHandler Handler(Call, FmtArgStartingIdx, UnsafeArg,
+                                        Ctx);
 
-    if (SL->getCharByteWidth() == 1)
-      FmtStr = SL->getString();
-    else if (auto EvaledFmtStr = SL->tryEvaluateString(Ctx))
-      FmtStr = *EvaledFmtStr;
-    else
-      goto CHECK_UNSAFE_PTR;
+      return analyze_format_string::ParsePrintfString(
+                 Handler, FmtStr.begin(), FmtStr.end(), Ctx.getLangOpts(),
+                 Ctx.getTargetInfo(), isKprintf) &&
+             Handler.isUnsafeArgSet();
+    }
 
-    StringFormatStringHandler Handler(Call, FmtArgIdx, UnsafeArg);
-
-    return analyze_format_string::ParsePrintfString(
-        Handler, FmtStr.begin(), FmtStr.end(), Ctx.getLangOpts(),
-        Ctx.getTargetInfo(), isKprintf);
+    if (auto FmtStr = SL->tryEvaluateString(Ctx)) {
+      StringFormatStringHandler Handler(Call, FmtArgStartingIdx, UnsafeArg,
+                                        Ctx);
+      return analyze_format_string::ParsePrintfString(
+                 Handler, FmtStr->data(), FmtStr->data() + FmtStr->size(),
+                 Ctx.getLangOpts(), Ctx.getTargetInfo(), isKprintf) &&
+             Handler.isUnsafeArgSet();
+    }
   }
-CHECK_UNSAFE_PTR:
   // If format is not a string literal, we cannot analyze the format string.
   // In this case, this call is considered unsafe if at least one argument
   // (including the format argument) is unsafe pointer.
   return llvm::any_of(
-      llvm::make_range(Call->arg_begin() + FmtArgIdx, Call->arg_end()),
-      [&UnsafeArg](const Expr *Arg) -> bool {
-        if (Arg->getType()->isPointerType() && !isNullTermPointer(Arg)) {
+      llvm::make_range(Call->arg_begin() + FmtIdx, Call->arg_end()),
+      [&UnsafeArg, &Ctx](const Expr *Arg) -> bool {
+        if (Arg->getType()->isPointerType() && !isNullTermPointer(Arg, Ctx)) {
           UnsafeArg = Arg;
           return true;
         }
@@ -834,7 +1097,6 @@ static bool isPredefinedUnsafeLibcFunc(const FunctionDecl &Node) {
             "wmemcpy",
             "memmove",
             "wmemmove",
-            "memset",
             "wmemset",
             // IO:
             "fread",
@@ -880,6 +1142,44 @@ static bool isPredefinedUnsafeLibcFunc(const FunctionDecl &Node) {
   // All `scanf` functions are unsafe (including `sscanf`, `vsscanf`, etc.. They
   // all should end with "scanf"):
   return Name.ends_with("scanf");
+}
+
+// Returns true if this is an unsafe call to `memset`.
+// The only call we currently consider safe is of the form
+// `memset(&x, 0, sizeof(x))`, with possible variations in parentheses.
+static bool isUnsafeMemset(const CallExpr &Node, ASTContext &Ctx) {
+  const FunctionDecl *FD = Node.getDirectCallee();
+  assert(FD && "It should have been checked that FD is non-null.");
+
+  const IdentifierInfo *II = FD->getIdentifier();
+  if (!II)
+    return false;
+
+  StringRef Name = LibcFunNamePrefixSuffixParser().matchName(
+      II->getName(), FD->getBuiltinID());
+  if (Name != "memset")
+    return false;
+
+  // We currently only handle the basic forms of `memset` with 3 parameters.
+  // There is also `__builtin___memset_chk()` which takes a 4th `destlen`
+  // parameter for bounds checking, but we don't consider its safe forms yet.
+  // https://refspecs.linuxbase.org/LSB_4.1.0/LSB-Core-generic/LSB-Core-generic/libc---memset-chk-1.html
+  if (FD->getNumParams() != 3)
+    return true;
+
+  // Now we have a known version of `memset`, consider it unsafe unless it's in
+  // the form `memset(&x, 0, sizeof(x))`.
+  const auto *AddressOfVar = dyn_cast_if_present<DeclRefExpr>(
+      getSubExprInAddressOfExpr(Node.getArg(0)));
+  if (!AddressOfVar)
+    return true;
+
+  const auto *SizeOfVar =
+      dyn_cast_if_present<DeclRefExpr>(getSubExprInSizeOfExpr(Node.getArg(2)));
+  if (!SizeOfVar)
+    return true;
+
+  return AddressOfVar->getDecl() != SizeOfVar->getDecl();
 }
 
 // Match a call to one of the `v*printf` functions taking `va_list`.  We cannot
@@ -974,7 +1274,7 @@ static bool hasUnsafePrintfStringArg(const CallExpr &Node, ASTContext &Ctx,
     // It is a fprintf:
     const Expr *UnsafeArg;
 
-    if (hasUnsafeFormatOrSArg(&Node, UnsafeArg, 1, Ctx, false)) {
+    if (hasUnsafeFormatOrSArg(Ctx, &Node, UnsafeArg, /* FmtIdx= */ 1)) {
       Result.addNode(Tag, DynTypedNode::create(*UnsafeArg));
       return true;
     }
@@ -988,7 +1288,8 @@ static bool hasUnsafePrintfStringArg(const CallExpr &Node, ASTContext &Ctx,
 
     if (auto *II = FD->getIdentifier())
       isKprintf = II->getName() == "kprintf";
-    if (hasUnsafeFormatOrSArg(&Node, UnsafeArg, 0, Ctx, isKprintf)) {
+    if (hasUnsafeFormatOrSArg(Ctx, &Node, UnsafeArg, /* FmtIdx= */ 0,
+                              /* FmtArgIdx= */ std::nullopt, isKprintf)) {
       Result.addNode(Tag, DynTypedNode::create(*UnsafeArg));
       return true;
     }
@@ -1003,7 +1304,7 @@ static bool hasUnsafePrintfStringArg(const CallExpr &Node, ASTContext &Ctx,
       // second is an integer, it is a snprintf:
       const Expr *UnsafeArg;
 
-      if (hasUnsafeFormatOrSArg(&Node, UnsafeArg, 2, Ctx, false)) {
+      if (hasUnsafeFormatOrSArg(Ctx, &Node, UnsafeArg, /* FmtIdx= */ 2)) {
         Result.addNode(Tag, DynTypedNode::create(*UnsafeArg));
         return true;
       }
@@ -1013,31 +1314,18 @@ static bool hasUnsafePrintfStringArg(const CallExpr &Node, ASTContext &Ctx,
   // We don't really recognize this "normal" printf, the only thing we
   // can do is to require all pointers to be null-terminated:
   for (const auto *Arg : Node.arguments())
-    if (Arg->getType()->isPointerType() && !isNullTermPointer(Arg)) {
+    if (Arg->getType()->isPointerType() && !isNullTermPointer(Arg, Ctx)) {
       Result.addNode(Tag, DynTypedNode::create(*Arg));
       return true;
     }
   return false;
 }
 
-// This matcher requires that it is known that the callee `isNormalPrintf`.
-// Then it matches if the first two arguments of the call is a pointer and an
-// integer and they are not in a safe pattern.
-//
-// For the first two arguments: `ptr` and `size`, they are safe if in the
-// following patterns:
-//
-// Pattern 1:
-//    ptr := DRE.data();
-//    size:= DRE.size()/DRE.size_bytes()
-// And DRE is a hardened container or view.
-//
-// Pattern 2:
-//    ptr := Constant-Array-DRE;
-//    size:= any expression that has compile-time constant value equivalent to
-//           sizeof (Constant-Array-DRE)
-static bool hasUnsafeSnprintfBuffer(const CallExpr &Node,
-                                    const ASTContext &Ctx) {
+// This function requires that it is known that the callee `isNormalPrintf`.
+// It returns true iff the first two arguments of the call is a pointer
+// `Ptr` and an unsigned integer `Size` and they are NOT safe, i.e.,
+// `!isPtrBufferSafe(Ptr, Size)`.
+static bool hasUnsafeSnprintfBuffer(const CallExpr &Node, ASTContext &Ctx) {
   const FunctionDecl *FD = Node.getDirectCallee();
 
   assert(FD && "It should have been checked that FD is non-null.");
@@ -1053,58 +1341,12 @@ static bool hasUnsafeSnprintfBuffer(const CallExpr &Node,
   QualType FirstPteTy = FirstParmTy->castAs<PointerType>()->getPointeeType();
   const Expr *Buf = Node.getArg(0), *Size = Node.getArg(1);
 
-  if (FirstPteTy.isConstQualified() || !Buf->getType()->isPointerType() ||
-      !Size->getType()->isIntegerType())
+  if (FirstPteTy.isConstQualified() || !FirstPteTy->isAnyCharacterType() ||
+      !Buf->getType()->isPointerType() ||
+      !Size->getType()->isUnsignedIntegerType())
     return false; // not an snprintf call
 
-  // Pattern 1:
-  static StringRef SizedObjs[] = {"span", "array", "vector",
-                                  "basic_string_view", "basic_string"};
-  Buf = Buf->IgnoreParenImpCasts();
-  Size = Size->IgnoreParenImpCasts();
-  if (auto *MCEPtr = dyn_cast<CXXMemberCallExpr>(Buf))
-    if (auto *MCESize = dyn_cast<CXXMemberCallExpr>(Size)) {
-      auto *DREOfPtr = dyn_cast<DeclRefExpr>(
-          MCEPtr->getImplicitObjectArgument()->IgnoreParenImpCasts());
-      auto *DREOfSize = dyn_cast<DeclRefExpr>(
-          MCESize->getImplicitObjectArgument()->IgnoreParenImpCasts());
-
-      if (!DREOfPtr || !DREOfSize)
-        return true; // not in safe pattern
-      if (DREOfPtr->getDecl() != DREOfSize->getDecl())
-        return true; // not in safe pattern
-      if (MCEPtr->getMethodDecl()->getName() != "data")
-        return true; // not in safe pattern
-
-      if (MCESize->getMethodDecl()->getName() == "size_bytes" ||
-          // Note here the pointer must be a pointer-to-char type unless there
-          // is explicit casting.  If there is explicit casting, this branch
-          // is unreachable. Thus, at this branch "size" and "size_bytes" are
-          // equivalent as the pointer is a char pointer:
-          MCESize->getMethodDecl()->getName() == "size")
-        for (StringRef SizedObj : SizedObjs)
-          if (MCEPtr->getRecordDecl()->isInStdNamespace() &&
-              MCEPtr->getRecordDecl()->getCanonicalDecl()->getName() ==
-                  SizedObj)
-            return false; // It is in fact safe
-    }
-
-  // Pattern 2:
-  if (auto *DRE = dyn_cast<DeclRefExpr>(Buf->IgnoreParenImpCasts())) {
-    if (auto *CAT = Ctx.getAsConstantArrayType(DRE->getType())) {
-      Expr::EvalResult ER;
-      // The array element type must be compatible with `char` otherwise an
-      // explicit cast will be needed, which will make this check unreachable.
-      // Therefore, the array extent is same as its' bytewise size.
-      if (Size->EvaluateAsInt(ER, Ctx)) {
-        llvm::APSInt EVal = ER.Val.getInt(); // Size must have integer type
-
-        return llvm::APSInt::compareValues(
-                   EVal, llvm::APSInt(CAT->getSize(), true)) != 0;
-      }
-    }
-  }
-  return true; // ptr and size are not in safe pattern
+  return !isPtrBufferSafe(Buf, Size, Ctx);
 }
 } // namespace libc_func_matchers
 
@@ -1215,6 +1457,97 @@ static bool isSupportedVariable(const DeclRefExpr &Node) {
   const Decl *D = Node.getDecl();
   return D != nullptr && isa<VarDecl>(D);
 }
+
+// Returns true for RecordDecl of type std::unique_ptr<T[]>
+static bool isUniquePtrArray(const CXXRecordDecl *RecordDecl) {
+  if (!RecordDecl || !RecordDecl->isInStdNamespace() ||
+      RecordDecl->getNameAsString() != "unique_ptr")
+    return false;
+
+  const ClassTemplateSpecializationDecl *class_template_specialization_decl =
+      dyn_cast<ClassTemplateSpecializationDecl>(RecordDecl);
+  if (!class_template_specialization_decl)
+    return false;
+
+  const TemplateArgumentList &template_args =
+      class_template_specialization_decl->getTemplateArgs();
+  if (template_args.size() == 0)
+    return false;
+
+  const TemplateArgument &first_arg = template_args[0];
+  if (first_arg.getKind() != TemplateArgument::Type)
+    return false;
+
+  QualType referred_type = first_arg.getAsType();
+  return referred_type->isArrayType();
+}
+
+class UniquePtrArrayAccessGadget : public WarningGadget {
+private:
+  static constexpr const char *const AccessorTag = "unique_ptr_array_access";
+  const CXXOperatorCallExpr *AccessorExpr;
+
+public:
+  UniquePtrArrayAccessGadget(const MatchResult &Result)
+      : WarningGadget(Kind::UniquePtrArrayAccess),
+        AccessorExpr(Result.getNodeAs<CXXOperatorCallExpr>(AccessorTag)) {
+    assert(AccessorExpr &&
+           "UniquePtrArrayAccessGadget requires a matched CXXOperatorCallExpr");
+  }
+
+  static bool classof(const Gadget *G) {
+    return G->getKind() == Kind::UniquePtrArrayAccess;
+  }
+
+  static bool matches(const Stmt *S, const ASTContext &Ctx,
+                      MatchResult &Result) {
+
+    const CXXOperatorCallExpr *OpCall = dyn_cast<CXXOperatorCallExpr>(S);
+    if (!OpCall || OpCall->getOperator() != OO_Subscript)
+      return false;
+
+    const Expr *Callee = OpCall->getCallee()->IgnoreParenImpCasts();
+    if (!Callee)
+      return false;
+
+    const CXXMethodDecl *Method =
+        dyn_cast_or_null<CXXMethodDecl>(OpCall->getDirectCallee());
+    if (!Method)
+      return false;
+
+    if (Method->getOverloadedOperator() != OO_Subscript)
+      return false;
+
+    const CXXRecordDecl *RecordDecl = Method->getParent();
+    if (!isUniquePtrArray(RecordDecl))
+      return false;
+
+    const Expr *IndexExpr = OpCall->getArg(1);
+    clang::Expr::EvalResult Eval;
+
+    // Allow [0]
+    if (IndexExpr->EvaluateAsInt(Eval, Ctx) && Eval.Val.getInt().isZero())
+      return false;
+
+    Result.addNode(AccessorTag, DynTypedNode::create(*OpCall));
+    return true;
+  }
+  void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
+                             bool IsRelatedToDecl,
+                             ASTContext &Ctx) const override {
+    Handler.handleUnsafeUniquePtrArrayAccess(
+        DynTypedNode::create(*AccessorExpr), IsRelatedToDecl, Ctx);
+  }
+
+  SourceLocation getSourceLoc() const override {
+    if (AccessorExpr)
+      return AccessorExpr->getOperatorLoc();
+    return SourceLocation();
+  }
+
+  DeclUseList getClaimedVarUseSites() const override { return {}; }
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override { return {}; }
+};
 
 using FixableGadgetList = std::vector<std::unique_ptr<FixableGadget>>;
 using WarningGadgetList = std::vector<std::unique_ptr<WarningGadget>>;
@@ -1330,6 +1663,7 @@ public:
   }
 
   static bool matches(const Stmt *S, const ASTContext &Ctx,
+                      const UnsafeBufferUsageHandler *Handler,
                       MatchResult &Result) {
     const auto *ASE = dyn_cast<ArraySubscriptExpr>(S);
     if (!ASE)
@@ -1340,7 +1674,10 @@ public:
     const auto *Idx = dyn_cast<IntegerLiteral>(ASE->getIdx());
     bool IsSafeIndex = (Idx && Idx->getValue().isZero()) ||
                        isa<ArrayInitIndexExpr>(ASE->getIdx());
-    if (IsSafeIndex || isSafeArraySubscript(*ASE, Ctx))
+    if (IsSafeIndex ||
+        isSafeArraySubscript(
+            *ASE, Ctx,
+            Handler->ignoreUnsafeBufferInStaticSizedArray(S->getBeginLoc())))
       return false;
     Result.addNode(ArraySubscrTag, DynTypedNode::create(*ASE));
     return true;
@@ -1826,9 +2163,8 @@ private:
     auto *method = cast<CXXMethodDecl>(callee);
     if (method->getNameAsString() == "data" &&
         method->getParent()->isInStdNamespace() &&
-        (method->getParent()->getName() == "span" ||
-         method->getParent()->getName() == "array" ||
-         method->getParent()->getName() == "vector"))
+        llvm::is_contained({SIZED_CONTAINER_OR_VIEW_LIST},
+                           method->getParent()->getName()))
       return true;
     return false;
   }
@@ -1850,6 +2186,7 @@ class UnsafeLibcFunctionCallGadget : public WarningGadget {
   constexpr static const char *const UnsafeVaListTag =
       "UnsafeLibcFunctionCall_va_list";
 
+public:
   enum UnsafeKind {
     OTHERS = 0,  // no specific information, the callee function is unsafe
     SPRINTF = 1, // never call `-sprintf`s, call `-snprintf`s instead.
@@ -1860,9 +2197,9 @@ class UnsafeLibcFunctionCallGadget : public WarningGadget {
                  // guarantee null-termination
     VA_LIST = 4, // one of the `-printf`s function that take va_list, which is
                  // considered unsafe as it is not compile-time check
+    FORMAT_ATTR = 8, // flag: the callee has the format attribute
   } WarnedFunKind = OTHERS;
 
-public:
   UnsafeLibcFunctionCallGadget(const MatchResult &Result)
       : WarningGadget(Kind::UnsafeLibcFunctionCall),
         Call(Result.getNodeAs<CallExpr>(Tag)) {
@@ -1883,20 +2220,35 @@ public:
                       MatchResult &Result) {
     if (ignoreUnsafeLibcCall(Ctx, *S, Handler))
       return false;
-    auto *CE = dyn_cast<CallExpr>(S);
-    if (!CE || !CE->getDirectCallee())
+    const auto *CE = dyn_cast<CallExpr>(S);
+    if (!CE)
       return false;
-    const auto *FD = dyn_cast<FunctionDecl>(CE->getDirectCallee());
+    const auto *FD = CE->getDirectCallee();
     if (!FD)
       return false;
-    auto isSingleStringLiteralArg = false;
-    if (CE->getNumArgs() == 1) {
-      isSingleStringLiteralArg =
-          isa<clang::StringLiteral>(CE->getArg(0)->IgnoreParenImpCasts());
-    }
+
+    const bool IsGlobalAndNotInAnyNamespace =
+        FD->isGlobal() && !FD->getEnclosingNamespaceContext()->isNamespace();
+
+    // A libc function must either be in the std:: namespace or a global
+    // function that is not in any namespace:
+    if (!FD->isInStdNamespace() && !IsGlobalAndNotInAnyNamespace)
+      return false;
+    // If the call has a sole null-terminated argument, e.g., strlen,
+    //  printf, atoi, we consider it safe:
+    if (CE->getNumArgs() == 1 && isNullTermPointer(CE->getArg(0), Ctx))
+      return false;
+
+    const bool isSingleStringLiteralArg =
+        CE->getNumArgs() == 1 &&
+        isa<clang::StringLiteral>(CE->getArg(0)->IgnoreParenImpCasts());
     if (!isSingleStringLiteralArg) {
       // (unless the call has a sole string literal argument):
       if (libc_func_matchers::isPredefinedUnsafeLibcFunc(*FD)) {
+        Result.addNode(Tag, DynTypedNode::create(*CE));
+        return true;
+      }
+      if (libc_func_matchers::isUnsafeMemset(*CE, Ctx)) {
         Result.addNode(Tag, DynTypedNode::create(*CE));
         return true;
       }
@@ -1934,6 +2286,115 @@ public:
                              bool IsRelatedToDecl,
                              ASTContext &Ctx) const override {
     Handler.handleUnsafeLibcCall(Call, WarnedFunKind, Ctx, UnsafeArg);
+  }
+
+  DeclUseList getClaimedVarUseSites() const override { return {}; }
+
+  SmallVector<const Expr *, 1> getUnsafePtrs() const override { return {}; }
+};
+
+class UnsafeFormatAttributedFunctionCallGadget : public WarningGadget {
+  const CallExpr *const Call;
+  const Expr *UnsafeArg = nullptr;
+  constexpr static const char *const Tag = "UnsafeFormatAttributedFunctionCall";
+  constexpr static const char *const UnsafeStringTag =
+      "UnsafeFormatAttributedFunctionCall_string";
+
+public:
+  UnsafeFormatAttributedFunctionCallGadget(const MatchResult &Result)
+      : WarningGadget(Kind::UnsafeLibcFunctionCall),
+        Call(Result.getNodeAs<CallExpr>(Tag)),
+        UnsafeArg(Result.getNodeAs<Expr>(UnsafeStringTag)) {}
+
+  static bool matches(const Stmt *S, ASTContext &Ctx,
+                      const UnsafeBufferUsageHandler *Handler,
+                      MatchResult &Result) {
+    if (ignoreUnsafeLibcCall(Ctx, *S, Handler))
+      return false;
+    auto *CE = dyn_cast<CallExpr>(S);
+    if (!CE || !CE->getDirectCallee())
+      return false;
+    const auto *FD = dyn_cast<FunctionDecl>(CE->getDirectCallee());
+    if (!FD)
+      return false;
+
+    const FormatAttr *Attr = nullptr;
+    bool IsPrintf = false;
+    bool AnyAttr = llvm::any_of(
+        FD->specific_attrs<FormatAttr>(),
+        [&Attr, &IsPrintf](const FormatAttr *FA) -> bool {
+          if (const auto *II = FA->getType()) {
+            if (II->getName() == "printf" || II->getName() == "scanf") {
+              Attr = FA;
+              IsPrintf = II->getName() == "printf";
+              return true;
+            }
+          }
+          return false;
+        });
+    const Expr *UnsafeArg;
+
+    if (!AnyAttr)
+      return false;
+
+    // FormatAttribute indexes are 1-based:
+    unsigned FmtIdx = Attr->getFormatIdx() - 1;
+    std::optional<unsigned> FmtArgIdx = Attr->getFirstArg() - 1;
+
+    if (isa<CXXMemberCallExpr>(CE)) {
+      // For CXX member calls, attribute parameters are specified as if there is
+      // an implicit "this".  The implicit "this" is invisible through CallExpr
+      // `CE`. (What makes it even less ergonomic is that the
+      //  implicit "this" is visible through CallExpr `CE` for CXX operator
+      //  calls!)
+      --FmtIdx;
+      --*FmtArgIdx;
+    } else if (CE->getStmtClass() != Stmt::CallExprClass &&
+               !isa<CXXOperatorCallExpr>(CE))
+      return false; // Ignore unsupported CallExpr subclasses
+    if (*FmtArgIdx >= CE->getNumArgs())
+      // Format arguments are allowed to be absent when variadic parameter is
+      // used.  So we need to check if those arguments exist. Moreover, when
+      // variadic parameter is NOT used, `Attr->getFirstArg()` could be an
+      // out-of-bound value. E.g.,
+      // clang does not complain about `__attribute__((__format__(__printf__, 2,
+      // 99))) void f(int, char *);`.
+      FmtArgIdx = std::nullopt;
+
+    if (AnyAttr && !IsPrintf && FmtArgIdx) {
+      // For scanf-like functions, any format argument is considered unsafe:
+      Result.addNode(Tag, DynTypedNode::create(*CE));
+      return true;
+    }
+    // For printf-like functions:
+    if (AnyAttr && libc_func_matchers::hasUnsafeFormatOrSArg(
+                       Ctx, CE, UnsafeArg, FmtIdx, FmtArgIdx)) {
+      Result.addNode(Tag, DynTypedNode::create(*CE));
+      Result.addNode(UnsafeStringTag, DynTypedNode::create(*UnsafeArg));
+      return true;
+    }
+    return false;
+  }
+
+  const Stmt *getBaseStmt() const { return Call; }
+
+  SourceLocation getSourceLoc() const override { return Call->getBeginLoc(); }
+
+  void handleUnsafeOperation(UnsafeBufferUsageHandler &Handler,
+                             bool IsRelatedToDecl,
+                             ASTContext &Ctx) const override {
+    if (UnsafeArg)
+      Handler.handleUnsafeLibcCall(
+          Call,
+          UnsafeLibcFunctionCallGadget::UnsafeKind::STRING |
+              UnsafeLibcFunctionCallGadget::UnsafeKind::FORMAT_ATTR,
+          Ctx, UnsafeArg);
+    else
+      Handler.handleUnsafeLibcCall(
+          Call,
+          UnsafeLibcFunctionCallGadget::UnsafeKind::OTHERS |
+              UnsafeLibcFunctionCallGadget::UnsafeKind::FORMAT_ATTR,
+          Ctx);
   }
 
   DeclUseList getClaimedVarUseSites() const override { return {}; }
@@ -2147,7 +2608,7 @@ namespace {
 // declarations to its uses and make sure we've covered all uses with our
 // analysis before we try to fix the declaration.
 class DeclUseTracker {
-  using UseSetTy = llvm::SmallSet<const DeclRefExpr *, 16>;
+  using UseSetTy = llvm::SmallPtrSet<const DeclRefExpr *, 16>;
   using DefMapTy = llvm::DenseMap<const VarDecl *, const DeclStmt *>;
 
   // Allocate on the heap for easier move.
@@ -2523,13 +2984,20 @@ std::set<const Expr *> clang::findUnsafePointers(const FunctionDecl *FD) {
                                    const VariableGroupsManager &, FixItList &&,
                                    const Decl *,
                                    const FixitStrategy &) override {}
-    bool isSafeBufferOptOut(const SourceLocation &) const override {
-      return false;
-    }
+    void handleUnsafeUniquePtrArrayAccess(const DynTypedNode &Node,
+                                          bool IsRelatedToDecl,
+                                          ASTContext &Ctx) override {}
     bool ignoreUnsafeBufferInContainer(const SourceLocation &) const override {
       return false;
     }
+    bool isSafeBufferOptOut(const SourceLocation &) const override {
+      return false;
+    }
     bool ignoreUnsafeBufferInLibcCall(const SourceLocation &) const override {
+      return false;
+    }
+    bool ignoreUnsafeBufferInStaticSizedArray(
+        const SourceLocation &Loc) const override {
       return false;
     }
     std::string getUnsafeBufferUsageAttributeTextAt(
@@ -3316,7 +3784,7 @@ static bool hasConflictingOverload(const FunctionDecl *FD) {
 //   1. Add the `[[clang::unsafe_buffer_usage]]` attribute to each declaration
 //   of 'F';
 //   2. Create a declaration of "NewF" next to each declaration of `F`;
-//   3. Create a definition of "F" (as its' original definition is now belongs
+//   3. Create a definition of "F" (as its original definition is now belongs
 //      to "NewF") next to its original definition.  The body of the creating
 //      definition calls to "NewF".
 //
@@ -3848,7 +4316,7 @@ getFixIts(FixableGadgetSets &FixablesForAllVars, const FixitStrategy &S,
   }
 
   // `FixItsForVariable` now contains only variables that can be
-  // fixed. A variable can be fixed if its' declaration and all Fixables
+  // fixed. A variable can be fixed if its declaration and all Fixables
   // associated to it can all be fixed.
 
   // To further remove from `FixItsForVariable` variables whose group mates
@@ -3919,7 +4387,7 @@ getNaiveStrategy(llvm::iterator_range<VarDeclIterTy> UnsafeVars) {
 
 //  Manages variable groups:
 class VariableGroupsManagerImpl : public VariableGroupsManager {
-  const std::vector<VarGrpTy> Groups;
+  const std::vector<VarGrpTy> &Groups;
   const std::map<const VarDecl *, unsigned> &VarGrpMap;
   const llvm::SetVector<const VarDecl *> &GrpsUnionForParms;
 
@@ -4238,6 +4706,10 @@ void clang::checkUnsafeBufferUsage(const Decl *D,
   SmallVector<Stmt *> Stmts;
 
   if (const auto *FD = dyn_cast<FunctionDecl>(D)) {
+    // Consteval functions are free of UB by the spec, so we don't need to
+    // visit them or produce diagnostics.
+    if (FD->isConsteval())
+      return;
     // We do not want to visit a Lambda expression defined inside a method
     // independently. Instead, it should be visited along with the outer method.
     // FIXME: do we want to do the same thing for `BlockDecl`s?

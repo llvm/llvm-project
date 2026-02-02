@@ -20,7 +20,7 @@
 #include "llvm/DebugInfo/DWARF/DWARFDebugLine.h"
 #include "llvm/DebugInfo/DWARF/DWARFDebugRangeList.h"
 #include "llvm/DebugInfo/DWARF/DWARFDie.h"
-#include "llvm/DebugInfo/DWARF/DWARFExpression.h"
+#include "llvm/DebugInfo/DWARF/LowLevel/DWARFExpression.h"
 #include "llvm/Support/Compiler.h"
 #include <map>
 
@@ -708,7 +708,11 @@ private:
     /// already there.
     /// \returns is a name was found.
     bool getDIENames(const DWARFDie &Die, AttributesInfo &Info,
-                     OffsetsStringPool &StringPool, bool StripTemplate = false);
+                     OffsetsStringPool &StringPool, const DWARFFile &File,
+                     CompileUnit &Unit, bool StripTemplate = false);
+
+    llvm::StringRef getCanonicalDIEName(DWARFDie Die, const DWARFFile &File,
+                                        CompileUnit *Unit);
 
     uint32_t hashFullyQualifiedName(DWARFDie DIE, CompileUnit &U,
                                     const DWARFFile &File,

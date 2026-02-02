@@ -23,6 +23,9 @@ struct support::adapt_operations<std::unordered_multimap<K, V>> {
 
   using InsertionResult = typename std::unordered_multimap<K, V>::iterator;
   static auto get_iterator(InsertionResult const& result) { return result; }
+
+  template <class Allocator>
+  using rebind_alloc = std::unordered_multimap<K, V, std::hash<K>, std::equal_to<K>, Allocator>;
 };
 
 int main(int argc, char** argv) {

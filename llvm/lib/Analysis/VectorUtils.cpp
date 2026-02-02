@@ -65,6 +65,12 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::smul_fix_sat:
   case Intrinsic::umul_fix:
   case Intrinsic::umul_fix_sat:
+  case Intrinsic::uadd_with_overflow:
+  case Intrinsic::sadd_with_overflow:
+  case Intrinsic::usub_with_overflow:
+  case Intrinsic::ssub_with_overflow:
+  case Intrinsic::umul_with_overflow:
+  case Intrinsic::smul_with_overflow:
   case Intrinsic::sqrt: // Begin floating-point.
   case Intrinsic::asin:
   case Intrinsic::acos:
@@ -81,6 +87,8 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::exp:
   case Intrinsic::exp10:
   case Intrinsic::exp2:
+  case Intrinsic::frexp:
+  case Intrinsic::ldexp:
   case Intrinsic::log:
   case Intrinsic::log10:
   case Intrinsic::log2:
@@ -108,6 +116,8 @@ bool llvm::isTriviallyVectorizable(Intrinsic::ID ID) {
   case Intrinsic::canonicalize:
   case Intrinsic::fptosi_sat:
   case Intrinsic::fptoui_sat:
+  case Intrinsic::lround:
+  case Intrinsic::llround:
   case Intrinsic::lrint:
   case Intrinsic::llrint:
   case Intrinsic::ucmp:
@@ -126,18 +136,6 @@ bool llvm::isTriviallyScalarizable(Intrinsic::ID ID,
   if (TTI && Intrinsic::isTargetIntrinsic(ID))
     return TTI->isTargetIntrinsicTriviallyScalarizable(ID);
 
-  // TODO: Move frexp to isTriviallyVectorizable.
-  // https://github.com/llvm/llvm-project/issues/112408
-  switch (ID) {
-  case Intrinsic::frexp:
-  case Intrinsic::uadd_with_overflow:
-  case Intrinsic::sadd_with_overflow:
-  case Intrinsic::ssub_with_overflow:
-  case Intrinsic::usub_with_overflow:
-  case Intrinsic::umul_with_overflow:
-  case Intrinsic::smul_with_overflow:
-    return true;
-  }
   return false;
 }
 
@@ -163,6 +161,7 @@ bool llvm::isVectorIntrinsicWithScalarOpAtArg(Intrinsic::ID ID,
   case Intrinsic::is_fpclass:
   case Intrinsic::vp_is_fpclass:
   case Intrinsic::powi:
+  case Intrinsic::vector_extract:
     return (ScalarOpdIdx == 1);
   case Intrinsic::smul_fix:
   case Intrinsic::smul_fix_sat:
@@ -189,12 +188,15 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
   switch (ID) {
   case Intrinsic::fptosi_sat:
   case Intrinsic::fptoui_sat:
+  case Intrinsic::lround:
+  case Intrinsic::llround:
   case Intrinsic::lrint:
   case Intrinsic::llrint:
   case Intrinsic::vp_lrint:
   case Intrinsic::vp_llrint:
   case Intrinsic::ucmp:
   case Intrinsic::scmp:
+  case Intrinsic::vector_extract:
     return OpdIdx == -1 || OpdIdx == 0;
   case Intrinsic::modf:
   case Intrinsic::sincos:
@@ -203,6 +205,7 @@ bool llvm::isVectorIntrinsicWithOverloadTypeAtArg(
   case Intrinsic::vp_is_fpclass:
     return OpdIdx == 0;
   case Intrinsic::powi:
+  case Intrinsic::ldexp:
     return OpdIdx == -1 || OpdIdx == 1;
   default:
     return OpdIdx == -1;
@@ -240,28 +243,55 @@ Intrinsic::ID llvm::getVectorIntrinsicIDForCall(const CallInst *CI,
   return Intrinsic::not_intrinsic;
 }
 
-struct InterleaveIntrinsic {
-  Intrinsic::ID Interleave, Deinterleave;
-};
-
-static InterleaveIntrinsic InterleaveIntrinsics[] = {
-    {Intrinsic::vector_interleave2, Intrinsic::vector_deinterleave2},
-    {Intrinsic::vector_interleave3, Intrinsic::vector_deinterleave3},
-    {Intrinsic::vector_interleave4, Intrinsic::vector_deinterleave4},
-    {Intrinsic::vector_interleave5, Intrinsic::vector_deinterleave5},
-    {Intrinsic::vector_interleave6, Intrinsic::vector_deinterleave6},
-    {Intrinsic::vector_interleave7, Intrinsic::vector_deinterleave7},
-    {Intrinsic::vector_interleave8, Intrinsic::vector_deinterleave8},
-};
-
-Intrinsic::ID llvm::getInterleaveIntrinsicID(unsigned Factor) {
-  assert(Factor >= 2 && Factor <= 8 && "Unexpected factor");
-  return InterleaveIntrinsics[Factor - 2].Interleave;
+unsigned llvm::getInterleaveIntrinsicFactor(Intrinsic::ID ID) {
+  switch (ID) {
+  case Intrinsic::vector_interleave2:
+    return 2;
+  case Intrinsic::vector_interleave3:
+    return 3;
+  case Intrinsic::vector_interleave4:
+    return 4;
+  case Intrinsic::vector_interleave5:
+    return 5;
+  case Intrinsic::vector_interleave6:
+    return 6;
+  case Intrinsic::vector_interleave7:
+    return 7;
+  case Intrinsic::vector_interleave8:
+    return 8;
+  default:
+    return 0;
+  }
 }
 
-Intrinsic::ID llvm::getDeinterleaveIntrinsicID(unsigned Factor) {
-  assert(Factor >= 2 && Factor <= 8 && "Unexpected factor");
-  return InterleaveIntrinsics[Factor - 2].Deinterleave;
+unsigned llvm::getDeinterleaveIntrinsicFactor(Intrinsic::ID ID) {
+  switch (ID) {
+  case Intrinsic::vector_deinterleave2:
+    return 2;
+  case Intrinsic::vector_deinterleave3:
+    return 3;
+  case Intrinsic::vector_deinterleave4:
+    return 4;
+  case Intrinsic::vector_deinterleave5:
+    return 5;
+  case Intrinsic::vector_deinterleave6:
+    return 6;
+  case Intrinsic::vector_deinterleave7:
+    return 7;
+  case Intrinsic::vector_deinterleave8:
+    return 8;
+  default:
+    return 0;
+  }
+}
+
+VectorType *llvm::getDeinterleavedVectorType(IntrinsicInst *DI) {
+  [[maybe_unused]] unsigned Factor =
+      getDeinterleaveIntrinsicFactor(DI->getIntrinsicID());
+  ArrayRef<Type *> DISubtypes = DI->getType()->subtypes();
+  assert(Factor && Factor == DISubtypes.size() &&
+         "unexpected deinterleave factor or result type");
+  return cast<VectorType>(DISubtypes[0]);
 }
 
 /// Given a vector and an element number, see if the scalar value is
@@ -282,9 +312,9 @@ Value *llvm::findScalarElement(Value *V, unsigned EltNo) {
 
   if (InsertElementInst *III = dyn_cast<InsertElementInst>(V)) {
     // If this is an insert to a variable element, we don't know what it is.
-    if (!isa<ConstantInt>(III->getOperand(2)))
+    uint64_t IIElt;
+    if (!match(III->getOperand(2), m_ConstantInt(IIElt)))
       return nullptr;
-    unsigned IIElt = cast<ConstantInt>(III->getOperand(2))->getZExtValue();
 
     // If this is an insert to the element we are looking for, return the
     // inserted value.
@@ -424,7 +454,7 @@ bool llvm::getShuffleDemandedElts(int SrcWidth, ArrayRef<int> Mask,
     return true;
 
   // Simple case of a shuffle with zeroinitializer.
-  if (all_of(Mask, [](int Elt) { return Elt == 0; })) {
+  if (all_of(Mask, equal_to(0))) {
     DemandedLHS.setBit(0);
     return true;
   }
@@ -459,7 +489,7 @@ bool llvm::isMaskedSlidePair(ArrayRef<int> Mask, int NumElts,
   for (auto [i, M] : enumerate(Mask)) {
     if (M < 0)
       continue;
-    int Src = M >= (int)NumElts;
+    int Src = M >= NumElts;
     int Diff = (int)i - (M % NumElts);
     bool Match = false;
     for (int j = 0; j < 2; j++) {
@@ -1049,6 +1079,10 @@ Instruction *llvm::propagateMetadata(Instruction *Inst, ArrayRef<Value *> VL) {
   getMetadataToPropagate(cast<Instruction>(VL[0]), Metadata);
 
   for (auto &[Kind, MD] : Metadata) {
+    // Skip MMRA metadata if the instruction cannot have it.
+    if (Kind == LLVMContext::MD_mmra && !canInstructionHaveMMRAs(*Inst))
+      continue;
+
     for (int J = 1, E = VL.size(); MD && J != E; ++J) {
       const Instruction *IJ = cast<Instruction>(VL[J]);
       MDNode *IMD = IJ->getMetadata(Kind);
@@ -1090,7 +1124,7 @@ Constant *
 llvm::createBitMaskForGaps(IRBuilderBase &Builder, unsigned VF,
                            const InterleaveGroup<Instruction> &Group) {
   // All 1's means mask is not needed.
-  if (Group.getNumMembers() == Group.getFactor())
+  if (Group.isFull())
     return nullptr;
 
   // TODO: support reversed access.
@@ -1352,9 +1386,9 @@ void InterleavedAccessInfo::collectConstStrideAccesses(
       // wrap around the address space we would do a memory access at nullptr
       // even without the transformation. The wrapping checks are therefore
       // deferred until after we've formed the interleaved groups.
-      int64_t Stride =
-        getPtrStride(PSE, ElementTy, Ptr, TheLoop, Strides,
-                     /*Assume=*/true, /*ShouldCheckWrap=*/false).value_or(0);
+      int64_t Stride = getPtrStride(PSE, ElementTy, Ptr, TheLoop, *DT, Strides,
+                                    /*Assume=*/true, /*ShouldCheckWrap=*/false)
+                           .value_or(0);
 
       const SCEV *Scev = replaceSymbolicStrideSCEV(PSE, Strides, Ptr);
       AccessStrideInfo[&I] = StrideDescriptor(Stride, Scev, Size,
@@ -1608,8 +1642,9 @@ void InterleavedAccessInfo::analyzeInterleaving(
     assert(Member && "Group member does not exist");
     Value *MemberPtr = getLoadStorePointerOperand(Member);
     Type *AccessTy = getLoadStoreType(Member);
-    if (getPtrStride(PSE, AccessTy, MemberPtr, TheLoop, Strides,
-                     /*Assume=*/false, /*ShouldCheckWrap=*/true).value_or(0))
+    if (getPtrStride(PSE, AccessTy, MemberPtr, TheLoop, *DT, Strides,
+                     /*Assume=*/false, /*ShouldCheckWrap=*/true)
+            .value_or(0))
       return false;
     LLVM_DEBUG(dbgs() << "LV: Invalidate candidate interleaved group due to "
                       << FirstOrLast
@@ -1636,7 +1671,7 @@ void InterleavedAccessInfo::analyzeInterleaving(
     // Case 1: A full group. Can Skip the checks; For full groups, if the wide
     // load would wrap around the address space we would do a memory access at
     // nullptr even without the transformation.
-    if (Group->getNumMembers() == Group->getFactor())
+    if (Group->isFull())
       continue;
 
     // Case 2: If first and last members of the group don't wrap this implies
@@ -1671,7 +1706,7 @@ void InterleavedAccessInfo::analyzeInterleaving(
     // Case 1: A full group. Can Skip the checks; For full groups, if the wide
     // store would wrap around the address space we would do a memory access at
     // nullptr even without the transformation.
-    if (Group->getNumMembers() == Group->getFactor())
+    if (Group->isFull())
       continue;
 
     // Interleave-store-group with gaps is implemented using masked wide store.

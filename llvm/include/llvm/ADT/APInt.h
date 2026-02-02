@@ -77,7 +77,7 @@ inline APInt operator-(APInt);
 ///
 class [[nodiscard]] APInt {
 public:
-  typedef uint64_t WordType;
+  using WordType = uint64_t;
 
   /// Byte size of a word.
   static constexpr unsigned APINT_WORD_SIZE = sizeof(WordType);
@@ -151,9 +151,10 @@ public:
   /// deprecated because this constructor is prone to ambiguity with the
   /// APInt(unsigned, uint64_t, bool) constructor.
   ///
-  /// If this overload is ever deleted, care should be taken to prevent calls
-  /// from being incorrectly captured by the APInt(unsigned, uint64_t, bool)
-  /// constructor.
+  /// Once all uses of this constructor are migrated to other constructors,
+  /// consider marking this overload ""= delete" to prevent calls from being
+  /// incorrectly bound to the APInt(unsigned, uint64_t, bool) constructor.
+  [[deprecated("Use other constructors of APInt")]]
   LLVM_ABI APInt(unsigned numBits, unsigned numWords, const uint64_t bigVal[]);
 
   /// Construct an APInt from a string representation.
@@ -548,20 +549,26 @@ public:
   /// \returns the low "numBits" bits of this APInt.
   LLVM_ABI APInt getLoBits(unsigned numBits) const;
 
-  /// Determine if two APInts have the same value, after zero-extending
-  /// one of them (if needed!) to ensure that the bit-widths match.
-  static bool isSameValue(const APInt &I1, const APInt &I2) {
+  /// Determine if two APInts have the same value, after zero-extending or
+  /// sign-extending (if \p SignedCompare) one of them (if needed!) to ensure
+  /// that the bit-widths match.
+  static bool isSameValue(const APInt &I1, const APInt &I2,
+                          bool SignedCompare = false) {
     if (I1.getBitWidth() == I2.getBitWidth())
       return I1 == I2;
 
-    if (I1.getBitWidth() > I2.getBitWidth())
-      return I1 == I2.zext(I1.getBitWidth());
+    auto ZExtOrSExt = [SignedCompare](const APInt &I, unsigned BitWidth) {
+      return SignedCompare ? I.sext(BitWidth) : I.zext(BitWidth);
+    };
 
-    return I1.zext(I2.getBitWidth()) == I2;
+    if (I1.getBitWidth() > I2.getBitWidth())
+      return I1 == ZExtOrSExt(I2, I1.getBitWidth());
+
+    return ZExtOrSExt(I1, I2.getBitWidth()) == I2;
   }
 
   /// Overload to compute a hash_code for an APInt value.
-  friend hash_code hash_value(const APInt &Arg);
+  LLVM_ABI friend hash_code hash_value(const APInt &Arg);
 
   /// This function returns a pointer to the internal storage of the APInt.
   /// This is useful for writing out the APInt in binary form without any
@@ -1277,12 +1284,20 @@ public:
   /// the new bitwidth, then return truncated APInt. Else, return max value.
   LLVM_ABI APInt truncUSat(unsigned width) const;
 
-  /// Truncate to new width with signed saturation.
+  /// Truncate to new width with signed saturation to signed result.
   ///
   /// If this APInt, treated as signed integer, can be losslessly truncated to
   /// the new bitwidth, then return truncated APInt. Else, return either
   /// signed min value if the APInt was negative, or signed max value.
   LLVM_ABI APInt truncSSat(unsigned width) const;
+
+  /// Truncate to new width with signed saturation to unsigned result.
+  ///
+  /// If this APInt, treated as signed integer, can be losslessly truncated to
+  /// the new bitwidth, then return truncated APInt. Else, return either
+  /// zero if the APInt was negative, or unsigned max value.
+  /// If \p width matches the current bit width then no changes are made.
+  LLVM_ABI APInt truncSSatU(unsigned width) const;
 
   /// Sign extend to a new width.
   ///
@@ -2294,6 +2309,12 @@ LLVM_ABI APInt mulhs(const APInt &C1, const APInt &C2);
 /// Returns the high N bits of the multiplication result.
 LLVM_ABI APInt mulhu(const APInt &C1, const APInt &C2);
 
+/// Performs (2*N)-bit multiplication on sign-extended operands.
+LLVM_ABI APInt mulsExtended(const APInt &C1, const APInt &C2);
+
+/// Performs (2*N)-bit multiplication on zero-extended operands.
+LLVM_ABI APInt muluExtended(const APInt &C1, const APInt &C2);
+
 /// Compute X^N for N>=0.
 /// 0^0 is supported and returns 1.
 LLVM_ABI APInt pow(const APInt &X, int64_t N);
@@ -2404,6 +2425,56 @@ LLVM_ABI std::optional<unsigned> GetMostSignificantDifferentBit(const APInt &A,
 /// A.getBitwidth() or NewBitWidth must be a whole multiples of the other.
 LLVM_ABI APInt ScaleBitMask(const APInt &A, unsigned NewBitWidth,
                             bool MatchAllBits = false);
+
+/// Perform a funnel shift left.
+///
+/// Concatenate Hi and Lo (Hi is the most significant bits of the wide value),
+/// the combined value is shifted left by Shift (modulo the bit width of the
+/// original arguments), and the most significant bits are extracted to produce
+/// a result that is the same size as the original arguments.
+///
+/// Examples:
+/// (1) fshl(i8 255, i8 0, i8 15) = 128 (0b10000000)
+/// (2) fshl(i8 15, i8 15, i8 11) = 120 (0b01111000)
+/// (3) fshl(i8 0, i8 255, i8 8)  = 0   (0b00000000)
+/// (4) fshl(i8 255, i8 0, i8 15) = fshl(i8 255, i8 0, i8 7) // 15 % 8
+LLVM_ABI APInt fshl(const APInt &Hi, const APInt &Lo, const APInt &Shift);
+
+/// Perform a funnel shift right.
+///
+/// Concatenate Hi and Lo (Hi is the most significant bits of the wide value),
+/// the combined value is shifted right by Shift (modulo the bit width of the
+/// original arguments), and the least significant bits are extracted to produce
+/// a result that is the same size as the original arguments.
+///
+/// Examples:
+/// (1) fshr(i8 255, i8 0, i8 15) = 254 (0b11111110)
+/// (2) fshr(i8 15, i8 15, i8 11) = 225 (0b11100001)
+/// (3) fshr(i8 0, i8 255, i8 8)  = 255 (0b11111111)
+/// (4) fshr(i8 255, i8 0, i8 9)  = fshr(i8 255, i8 0, i8 1) // 9 % 8
+LLVM_ABI APInt fshr(const APInt &Hi, const APInt &Lo, const APInt &Shift);
+
+/// Perform a carry-less multiply, also known as XOR multiplication, and return
+/// low-bits. All arguments and result have the same bitwidth.
+///
+/// Examples:
+/// (1) clmul(i4 1, i4 2)   = 2
+/// (2) clmul(i4 5, i4 6)   = 14
+/// (3) clmul(i4 -4, i4 2)  = -8
+/// (4) clmul(i4 -4, i4 -5) = 4
+LLVM_ABI APInt clmul(const APInt &LHS, const APInt &RHS);
+
+/// Perform a reversed carry-less multiply.
+///
+/// clmulr(a, b) = bitreverse(clmul(bitreverse(a), bitreverse(b)))
+LLVM_ABI APInt clmulr(const APInt &LHS, const APInt &RHS);
+
+/// Perform a carry-less multiply, and return high-bits. All arguments and
+/// result have the same bitwidth.
+///
+/// clmulh(a, b) = clmulr(a, b) >> 1
+LLVM_ABI APInt clmulh(const APInt &LHS, const APInt &RHS);
+
 } // namespace APIntOps
 
 // See friend declaration above. This additional declaration is required in

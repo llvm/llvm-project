@@ -6,14 +6,83 @@
 //
 //===----------------------------------------------------------------------===//
 //
-// This file implements a pass that looks for any AArch64 return instructions
-// that may not be protected by PAuth authentication instructions when needed.
+// This file implements a pass that analyzes code hardened using Pointer
+// Authentication and looks for non-protected or insufficiently protected parts.
+// While the existing implementation only applies to AArch64, it is intended
+// to keep this file reasonably target-neutral, and place AArch64-specific
+// hooks in AArch64MCPlusBuilder.
+//
+// Various gadget kinds (patterns of unsafe instruction usage) can be detected.
+// Gadgets of the particular kind are detected by inspecting the susceptible
+// instructions (such as "all return instructions" or "all indirect branches
+// and calls") and validating properties of their operands. This is achieved
+// by first running a dataflow analysis on the entire function to compute the
+// properties of registers before or after each instruction is executed. Then,
+// each instruction together with the computed state is passed to a number of
+// gadget detectors, which consume the results of this particular analysis.
+// If CFG information is not available for a particular function, a simplified
+// analysis is run instead of a dataflow analysis.
+//
+// There are two broad groups of gadget detectors:
+// * Those analyzing the input operands of the instructions. They consume
+//   SrcState holding properties of the registers prior to execution of the
+//   instruction. SrcState is computed by iterating forwards over the
+//   instructions, by DataflowSrcSafetyAnalysis class. If BOLT was unable to
+//   reconstruct the CFG for a particular function, CFGUnawareSrcSafetyAnalysis
+//   class is used instead.
+// * Those analyzing the output operands of the instructions. They mirror the
+//   former group by consuming DstState corresponding to the state *after*
+//   execution of the instruction. Such state is computed by iterating
+//   *backwards* over the instructions by DataflowDstSafetyAnalysis or its
+//   CFG-unaware counterpart.
+//
+// Furthermore, when producing a diagnostic for a found gadget, this tool tries
+// to provide the clues on which instructions made the operands unsafe (such as
+// the set of last instructions that wrote an unsafe value to the register
+// along various possible paths of execution leading to this instruction).
+// This is achieved by re-running the same analysis for the second time to
+// collect the detailed information to improve the reports produced on the
+// first run. Since it is expected that most of the functions do not have any
+// issues to be reported, the second analysis run which is more time- and
+// memory-consuming is skipped for most functions. Please note that unlike
+// the reports themselves, these clues are provided on a best-effort basis.
+//
+// Hierarchy of the analysis classes:
+//
+//   SrcSafetyAnalysis                                    DstSafetyAnalysis
+// (computes `SrcState`s)                               (computes `DstState`s)
+//      |    |                                                    |   |
+//      |    |                  DataflowAnalysis                  |   |
+//      |    |                 (provided by BOLT)                 |   |
+//      |    |                   |            |                   |   |
+//      |    v                   v            v                   v   |
+//      |   DataflowSrcSafetyAnalysis      DataflowDstSafetyAnalysis  |
+//      |                                                             |
+//      |                                                             |
+//      |                      CFGUnawareAnalysis                     |
+//      |                  (implemented in this file)                 |
+//      |                    |                   |                    |
+//      v                    v                   v                    v
+//   CFGUnawareSrcSafetyAnalysis               CFGUnawareDstSafetyAnalysis
+//
+// Detector functions:
+//
+// shouldReportReturnGadget                   shouldReportAuthOracle
+// shouldReportCallGadget
+// ...
+//
+// Dispatched by (member functions of FunctionAnalysisContext):
+//
+// findUnsafeUses                             findUnsafeDefs
+// handleSimpleReports                        handleSimpleReports
+// augmentUnsafeUseReports                    augmentUnsafeDefReports
 //
 //===----------------------------------------------------------------------===//
 
 #include "bolt/Passes/PAuthGadgetScanner.h"
 #include "bolt/Core/ParallelUtilities.h"
 #include "bolt/Passes/DataflowAnalysis.h"
+#include "bolt/Utils/CommandLineOpts.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallSet.h"
 #include "llvm/MC/MCInst.h"
@@ -24,40 +93,12 @@
 
 namespace llvm {
 namespace bolt {
-
-raw_ostream &operator<<(raw_ostream &OS, const MCInstInBBReference &Ref) {
-  OS << "MCInstBBRef<";
-  if (Ref.BB == nullptr)
-    OS << "BB:(null)";
-  else
-    OS << "BB:" << Ref.BB->getName() << ":" << Ref.BBIndex;
-  OS << ">";
-  return OS;
-}
-
-raw_ostream &operator<<(raw_ostream &OS, const MCInstInBFReference &Ref) {
-  OS << "MCInstBFRef<";
-  if (Ref.BF == nullptr)
-    OS << "BF:(null)";
-  else
-    OS << "BF:" << Ref.BF->getPrintName() << ":" << Ref.getOffset();
-  OS << ">";
-  return OS;
-}
-
-raw_ostream &operator<<(raw_ostream &OS, const MCInstReference &Ref) {
-  switch (Ref.ParentKind) {
-  case MCInstReference::BasicBlockParent:
-    OS << Ref.U.BBRef;
-    return OS;
-  case MCInstReference::FunctionParent:
-    OS << Ref.U.BFRef;
-    return OS;
-  }
-  llvm_unreachable("");
-}
-
 namespace PAuthGadgetScanner {
+
+static cl::opt<bool> AuthTrapsOnFailure(
+    "auth-traps-on-failure",
+    cl::desc("Assume authentication instructions always trap on failure"),
+    cl::cat(opts::BinaryAnalysisCategory));
 
 [[maybe_unused]] static void traceInst(const BinaryContext &BC, StringRef Label,
                                        const MCInst &MI) {
@@ -82,6 +123,22 @@ namespace PAuthGadgetScanner {
   dbgs() << "\n";
 }
 
+// Iterates over BinaryFunction's instructions like a range-based for loop:
+//
+// iterateOverInstrs(BF, [&](MCInstReference Inst) {
+//   // loop body
+// });
+template <typename T> static void iterateOverInstrs(BinaryFunction &BF, T Fn) {
+  if (BF.hasCFG()) {
+    for (BinaryBasicBlock &BB : BF)
+      for (int64_t I = 0, E = BB.size(); I < E; ++I)
+        Fn(MCInstReference(BB, I));
+  } else {
+    for (auto I = BF.instrs().begin(), E = BF.instrs().end(); I != E; ++I)
+      Fn(MCInstReference(BF, I));
+  }
+}
+
 // This class represents mapping from a set of arbitrary physical registers to
 // consecutive array indexes.
 class TrackedRegisters {
@@ -99,13 +156,13 @@ public:
   TrackedRegisters(ArrayRef<MCPhysReg> RegsToTrack)
       : Registers(RegsToTrack),
         RegToIndexMapping(getMappingSize(RegsToTrack), NoIndex) {
-    for (unsigned I = 0; I < RegsToTrack.size(); ++I)
-      RegToIndexMapping[RegsToTrack[I]] = I;
+    for (auto [MappedIndex, Reg] : llvm::enumerate(RegsToTrack))
+      RegToIndexMapping[Reg] = MappedIndex;
   }
 
   ArrayRef<MCPhysReg> getRegisters() const { return Registers; }
 
-  size_t getNumTrackedRegisters() const { return Registers.size(); }
+  size_t getNumRegisters() const { return Registers.size(); }
 
   bool empty() const { return Registers.empty(); }
 
@@ -122,41 +179,13 @@ public:
   }
 };
 
-// The security property that is checked is:
-// When a register is used as the address to jump to in a return instruction,
-// that register must be safe-to-dereference. It must either
-// (a) be safe-to-dereference at function entry and never be changed within this
-//     function, i.e. have the same value as when the function started, or
-// (b) the last write to the register must be by an authentication instruction.
-
-// This property is checked by using dataflow analysis to keep track of which
-// registers have been written (def-ed), since last authenticated. For pac-ret,
-// any return instruction using a register which is not safe-to-dereference is
-// a gadget to be reported. For PAuthABI, probably at least any indirect control
-// flow using such a register should be reported.
-
-// Furthermore, when producing a diagnostic for a found non-pac-ret protected
-// return, the analysis also lists the last instructions that wrote to the
-// register used in the return instruction.
-// The total set of registers used in return instructions in a given function is
-// small. It almost always is just `X30`.
-// In order to reduce the memory consumption of storing this additional state
-// during the dataflow analysis, this is computed by running the dataflow
-// analysis twice:
-// 1. In the first run, the dataflow analysis only keeps track of the security
-//    property: i.e. which registers have been overwritten since the last
-//    time they've been authenticated.
-// 2. If the first run finds any return instructions using a register last
-//    written by a non-authenticating instruction, the dataflow analysis will
-//    be run a second time. The first run will return which registers are used
-//    in the gadgets to be reported. This information is used in the second run
-//    to also track which instructions last wrote to those registers.
+typedef SmallPtrSet<const MCInst *, 4> SetOfRelatedInsts;
 
 /// A state representing which registers are safe to use by an instruction
 /// at a given program point.
 ///
 /// To simplify reasoning, let's stick with the following approach:
-/// * when state is updated by the data-flow analysis, the sub-, super- and
+/// * when state is updated by the dataflow analysis, the sub-, super- and
 ///   overlapping registers are marked as needed
 /// * when the particular instruction is checked if it represents a gadget,
 ///   the specific bit of BitVector should be usable to answer this.
@@ -171,14 +200,20 @@ public:
 ///   X30 is safe-to-dereference - the state computed for sub- and
 ///   super-registers is not inspected.
 struct SrcState {
-  /// A BitVector containing the registers that are either authenticated
-  /// (assuming failed authentication is permitted to produce an invalid
-  /// address, provided it generates an error on memory access) or whose
-  /// value is known not to be attacker-controlled under Pointer Authentication
-  /// threat model. The registers in this set are either
+  /// A BitVector containing the registers that are either authenticated or
+  /// whose value is known not to be attacker-controlled under Pointer
+  /// Authentication threat model. If AuthTrapsOnFailure is false, a failed
+  /// authentication is permitted to produce an invalid address that generates
+  /// an error on memory access. The registers in this set are either
   /// * not clobbered since being authenticated, or
   /// * trusted at function entry and were not clobbered yet, or
   /// * contain a safely materialized address.
+  ///
+  /// Safe-to-dereference registers are considered to be safe to use by the
+  /// instructions that perform memory access and generate an error on failed
+  /// address translation. These registers are not generally safe to be used
+  /// by the instructions like pointer signing, as such usage may hide the
+  /// authentication failure.
   BitVector SafeToDerefRegs;
   /// A BitVector containing the registers that are either authenticated
   /// *successfully* or whose value is known not to be attacker-controlled
@@ -188,22 +223,30 @@ struct SrcState {
   ///   (and not clobbered since then), or
   /// * trusted at function entry and were not clobbered yet, or
   /// * contain a safely materialized address.
+  ///
+  /// When authentication instructions are assumed to always trap on error,
+  /// this is identical to SafeToDerefRegs.
   BitVector TrustedRegs;
-  /// A vector of sets, only used in the second data flow run.
+  /// A vector of sets, only used on the second analysis run.
   /// Each element in the vector represents one of the registers for which we
-  /// track the set of last instructions that wrote to this register. For
-  /// pac-ret analysis, the expectation is that almost all return instructions
-  /// only use register `X30`, and therefore, this vector will probably have
-  /// length 1 in the second run.
-  std::vector<SmallPtrSet<const MCInst *, 4>> LastInstWritingReg;
+  /// track the set of last instructions that wrote to this register, excluding
+  /// authentications. This is intended to provide best-effort clues on which
+  /// instruction caused the particular register not to be safe-to-dereference.
+  ///
+  /// Please note that the mapping from MCPhysReg values to indexes in this
+  /// vector is provided by RegsToTrack field of SrcSafetyAnalysis.
+  std::vector<SetOfRelatedInsts> LastInstWritingReg;
 
-  /// Construct an empty state.
+  /// Constructs an empty state (no registers at all).
   SrcState() {}
 
+  /// Constructs a new state with all registers marked unsafe.
   SrcState(unsigned NumRegs, unsigned NumRegsToTrack)
       : SafeToDerefRegs(NumRegs), TrustedRegs(NumRegs),
         LastInstWritingReg(NumRegsToTrack) {}
 
+  /// Updates *this to account for the state incoming from a predecessor basic
+  /// block (i.e. computes the least safe states among *this and StateIn).
   SrcState &merge(const SrcState &StateIn) {
     if (StateIn.empty())
       return *this;
@@ -212,9 +255,9 @@ struct SrcState {
 
     SafeToDerefRegs &= StateIn.SafeToDerefRegs;
     TrustedRegs &= StateIn.TrustedRegs;
-    for (unsigned I = 0; I < LastInstWritingReg.size(); ++I)
-      for (const MCInst *J : StateIn.LastInstWritingReg[I])
-        LastInstWritingReg[I].insert(J);
+    for (auto [ThisSet, OtherSet] :
+         llvm::zip_equal(LastInstWritingReg, StateIn.LastInstWritingReg))
+      ThisSet.insert_range(OtherSet);
     return *this;
   }
 
@@ -230,27 +273,24 @@ struct SrcState {
   bool operator!=(const SrcState &RHS) const { return !((*this) == RHS); }
 };
 
-static void
-printLastInsts(raw_ostream &OS,
-               ArrayRef<SmallPtrSet<const MCInst *, 4>> LastInstWritingReg) {
+static void printInstsShort(raw_ostream &OS,
+                            ArrayRef<SetOfRelatedInsts> Insts) {
   OS << "Insts: ";
-  for (unsigned I = 0; I < LastInstWritingReg.size(); ++I) {
-    auto &Set = LastInstWritingReg[I];
+  for (auto [I, PtrSet] : llvm::enumerate(Insts)) {
     OS << "[" << I << "](";
-    for (const MCInst *MCInstP : Set)
-      OS << MCInstP << " ";
+    interleave(PtrSet, OS, " ");
     OS << ")";
   }
 }
 
-raw_ostream &operator<<(raw_ostream &OS, const SrcState &S) {
+static raw_ostream &operator<<(raw_ostream &OS, const SrcState &S) {
   OS << "src-state<";
   if (S.empty()) {
     OS << "empty";
   } else {
     OS << "SafeToDerefRegs: " << S.SafeToDerefRegs << ", ";
     OS << "TrustedRegs: " << S.TrustedRegs << ", ";
-    printLastInsts(OS, S.LastInstWritingReg);
+    printInstsShort(OS, S.LastInstWritingReg);
   }
   OS << ">";
   return OS;
@@ -279,7 +319,7 @@ void SrcStatePrinter::print(raw_ostream &OS, const SrcState &S) const {
     OS << ", TrustedRegs: ";
     RegStatePrinter.print(OS, S.TrustedRegs);
     OS << ", ";
-    printLastInsts(OS, S.LastInstWritingReg);
+    printInstsShort(OS, S.LastInstWritingReg);
   }
   OS << ">";
 }
@@ -292,15 +332,15 @@ void SrcStatePrinter::print(raw_ostream &OS, const SrcState &S) const {
 /// version for functions without reconstructed CFG.
 class SrcSafetyAnalysis {
 public:
-  SrcSafetyAnalysis(BinaryFunction &BF, ArrayRef<MCPhysReg> RegsToTrackInstsFor)
+  SrcSafetyAnalysis(BinaryFunction &BF, ArrayRef<MCPhysReg> RegsToTrack)
       : BC(BF.getBinaryContext()), NumRegs(BC.MRI->getNumRegs()),
-        RegsToTrackInstsFor(RegsToTrackInstsFor) {}
+        RegsToTrack(RegsToTrack) {}
 
   virtual ~SrcSafetyAnalysis() {}
 
   static std::shared_ptr<SrcSafetyAnalysis>
   create(BinaryFunction &BF, MCPlusBuilder::AllocatorIdTy AllocId,
-         ArrayRef<MCPhysReg> RegsToTrackInstsFor);
+         ArrayRef<MCPhysReg> RegsToTrack);
 
   virtual void run() = 0;
   virtual const SrcState &getStateBefore(const MCInst &Inst) const = 0;
@@ -308,9 +348,11 @@ public:
 protected:
   BinaryContext &BC;
   const unsigned NumRegs;
-  /// RegToTrackInstsFor is the set of registers for which the dataflow analysis
-  /// must compute which the last set of instructions writing to it are.
-  const TrackedRegisters RegsToTrackInstsFor;
+
+  /// The set of registers for which the dataflow analysis must compute the set
+  /// of last writing instructions.
+  const TrackedRegisters RegsToTrack;
+
   /// Stores information about the detected instruction sequences emitted to
   /// check an authenticated pointer. Specifically, if such sequence is detected
   /// in a basic block, it maps the last instruction of that basic block to
@@ -323,22 +365,45 @@ protected:
   DenseMap<const MCInst *, std::pair<MCPhysReg, const MCInst *>>
       CheckerSequenceInfo;
 
-  SmallPtrSet<const MCInst *, 4> &lastWritingInsts(SrcState &S,
-                                                   MCPhysReg Reg) const {
-    unsigned Index = RegsToTrackInstsFor.getIndex(Reg);
+  SetOfRelatedInsts &lastWritingInsts(SrcState &S, MCPhysReg Reg) const {
+    unsigned Index = RegsToTrack.getIndex(Reg);
     return S.LastInstWritingReg[Index];
   }
-  const SmallPtrSet<const MCInst *, 4> &lastWritingInsts(const SrcState &S,
-                                                         MCPhysReg Reg) const {
-    unsigned Index = RegsToTrackInstsFor.getIndex(Reg);
+  const SetOfRelatedInsts &lastWritingInsts(const SrcState &S,
+                                            MCPhysReg Reg) const {
+    unsigned Index = RegsToTrack.getIndex(Reg);
     return S.LastInstWritingReg[Index];
   }
 
+  /// Computes SrcState observed on function entry.
   SrcState createEntryState() {
-    SrcState S(NumRegs, RegsToTrackInstsFor.getNumTrackedRegisters());
+    SrcState S(NumRegs, RegsToTrack.getNumRegisters());
     for (MCPhysReg Reg : BC.MIB->getTrustedLiveInRegs())
       S.TrustedRegs |= BC.MIB->getAliases(Reg, /*OnlySmaller=*/true);
     S.SafeToDerefRegs = S.TrustedRegs;
+    return S;
+  }
+
+  /// Computes a reasonably pessimistic estimation of the register state when
+  /// the previous instruction is not known for sure. Takes the set of registers
+  /// which are trusted at function entry and removes all registers that can be
+  /// clobbered inside this function.
+  SrcState computePessimisticState(BinaryFunction &BF) {
+    BitVector ClobberedRegs(NumRegs);
+    iterateOverInstrs(BF, [&](MCInstReference Inst) {
+      BC.MIB->getClobberedRegs(Inst, ClobberedRegs);
+
+      // If this is a call instruction, no register is safe anymore, unless
+      // it is a tail call. Ignore tail calls for the purpose of estimating the
+      // worst-case scenario, assuming no instructions are executed in the
+      // caller after this point anyway.
+      if (BC.MIB->isCall(Inst) && !BC.MIB->isTailCall(Inst))
+        ClobberedRegs.set();
+    });
+
+    SrcState S = createEntryState();
+    S.SafeToDerefRegs.reset(ClobberedRegs);
+    S.TrustedRegs.reset(ClobberedRegs);
     return S;
   }
 
@@ -349,13 +414,39 @@ protected:
     // saved on the stack at some point during execution of the callee.
     // Therefore they should also be considered as potentially modified by an
     // attacker/written to.
-    // Also, not all functions may respect the AAPCS ABI rules about
-    // caller/callee-saved registers.
     if (BC.MIB->isCall(Point))
       Clobbered.set();
     else
       BC.MIB->getClobberedRegs(Point, Clobbered);
     return Clobbered;
+  }
+
+  std::optional<MCPhysReg> getRegMadeTrustedByChecking(const MCInst &Inst,
+                                                       SrcState Cur) const {
+    // This function cannot return multiple registers. This is never the case
+    // on AArch64.
+    std::optional<MCPhysReg> RegCheckedByInst =
+        BC.MIB->getAuthCheckedReg(Inst, /*MayOverwrite=*/false);
+    if (RegCheckedByInst && Cur.SafeToDerefRegs[*RegCheckedByInst])
+      return *RegCheckedByInst;
+
+    auto It = CheckerSequenceInfo.find(&Inst);
+    if (It == CheckerSequenceInfo.end())
+      return std::nullopt;
+
+    MCPhysReg RegCheckedBySequence = It->second.first;
+    const MCInst *FirstCheckerInst = It->second.second;
+
+    // FirstCheckerInst should belong to the same basic block (see the
+    // assertion in DataflowSrcSafetyAnalysis::run()), meaning it was
+    // deterministically processed a few steps before this instruction.
+    const SrcState &StateBeforeChecker = getStateBefore(*FirstCheckerInst);
+
+    // The sequence checks the register, but it should be authenticated before.
+    if (!StateBeforeChecker.SafeToDerefRegs[RegCheckedBySequence])
+      return std::nullopt;
+
+    return RegCheckedBySequence;
   }
 
   // Returns all registers that can be treated as if they are written by an
@@ -364,21 +455,43 @@ protected:
                                                 const SrcState &Cur) const {
     SmallVector<MCPhysReg> Regs;
 
-    // A signed pointer can be authenticated, or
+    // A signed pointer can be authenticated, ...
     bool Dummy = false;
     if (auto AutReg = BC.MIB->getWrittenAuthenticatedReg(Point, Dummy))
       Regs.push_back(*AutReg);
 
-    // ... a safe address can be materialized, or
+    // ... or a safe address can be materialized, ...
     if (auto NewAddrReg = BC.MIB->getMaterializedAddressRegForPtrAuth(Point))
       Regs.push_back(*NewAddrReg);
 
-    // ... an address can be updated in a safe manner, producing the result
+    // ... or an address can be updated in a safe manner, producing the result
     // which is as trusted as the input address.
     if (auto DstAndSrc = BC.MIB->analyzeAddressArithmeticsForPtrAuth(Point)) {
-      if (Cur.SafeToDerefRegs[DstAndSrc->second])
-        Regs.push_back(DstAndSrc->first);
+      auto [DstReg, SrcReg] = *DstAndSrc;
+      if (Cur.SafeToDerefRegs[SrcReg])
+        Regs.push_back(DstReg);
     }
+
+    // Make sure explicit checker sequence keeps register safe-to-dereference
+    // when the register would be clobbered according to the regular rules:
+    //
+    //    ; LR is safe to dereference here
+    //    mov   x16, x30  ; start of the sequence, LR is s-t-d right before
+    //    xpaclri         ; clobbers LR, LR is not safe anymore
+    //    cmp   x30, x16
+    //    b.eq  1f        ; end of the sequence: LR is marked as trusted
+    //    brk   0xc470
+    //  1:
+    //    ; at this point LR would be marked as trusted,
+    //    ; but not safe-to-dereference
+    //
+    // or even just
+    //
+    //    ; X1 is safe to dereference here
+    //    ldr x0, [x1, #8]!
+    //    ; X1 is trusted here, but it was clobbered due to address write-back
+    if (auto CheckedReg = getRegMadeTrustedByChecking(Point, Cur))
+      Regs.push_back(*CheckedReg);
 
     return Regs;
   }
@@ -386,63 +499,54 @@ protected:
   // Returns all registers made trusted by this instruction.
   SmallVector<MCPhysReg> getRegsMadeTrusted(const MCInst &Point,
                                             const SrcState &Cur) const {
+    assert(!AuthTrapsOnFailure && "Use getRegsMadeSafeToDeref instead");
     SmallVector<MCPhysReg> Regs;
 
-    // An authenticated pointer can be checked, or
-    std::optional<MCPhysReg> CheckedReg =
-        BC.MIB->getAuthCheckedReg(Point, /*MayOverwrite=*/false);
-    if (CheckedReg && Cur.SafeToDerefRegs[*CheckedReg])
+    // An authenticated pointer can be checked, ...
+    if (auto CheckedReg = getRegMadeTrustedByChecking(Point, Cur))
       Regs.push_back(*CheckedReg);
 
-    // ... a pointer can be authenticated by an instruction that always checks
-    // the pointer, or
+    // ... or a pointer can be authenticated by an instruction that always
+    // checks the pointer, ...
     bool IsChecked = false;
     std::optional<MCPhysReg> AutReg =
         BC.MIB->getWrittenAuthenticatedReg(Point, IsChecked);
     if (AutReg && IsChecked)
       Regs.push_back(*AutReg);
 
-    if (CheckerSequenceInfo.contains(&Point)) {
-      MCPhysReg CheckedReg;
-      const MCInst *FirstCheckerInst;
-      std::tie(CheckedReg, FirstCheckerInst) = CheckerSequenceInfo.at(&Point);
-
-      // FirstCheckerInst should belong to the same basic block (see the
-      // assertion in DataflowSrcSafetyAnalysis::run()), meaning it was
-      // deterministically processed a few steps before this instruction.
-      const SrcState &StateBeforeChecker = getStateBefore(*FirstCheckerInst);
-      if (StateBeforeChecker.SafeToDerefRegs[CheckedReg])
-        Regs.push_back(CheckedReg);
-    }
-
-    // ... a safe address can be materialized, or
+    // ... or a safe address can be materialized, ...
     if (auto NewAddrReg = BC.MIB->getMaterializedAddressRegForPtrAuth(Point))
       Regs.push_back(*NewAddrReg);
 
-    // ... an address can be updated in a safe manner, producing the result
+    // ... or an address can be updated in a safe manner, producing the result
     // which is as trusted as the input address.
     if (auto DstAndSrc = BC.MIB->analyzeAddressArithmeticsForPtrAuth(Point)) {
-      if (Cur.TrustedRegs[DstAndSrc->second])
-        Regs.push_back(DstAndSrc->first);
+      auto [DstReg, SrcReg] = *DstAndSrc;
+      if (Cur.TrustedRegs[SrcReg])
+        Regs.push_back(DstReg);
     }
 
     return Regs;
   }
 
   SrcState computeNext(const MCInst &Point, const SrcState &Cur) {
+    if (BC.MIB->isCFI(Point))
+      return Cur;
+
     SrcStatePrinter P(BC);
     LLVM_DEBUG({
       dbgs() << "  SrcSafetyAnalysis::ComputeNext(";
-      BC.InstPrinter->printInst(&const_cast<MCInst &>(Point), 0, "", *BC.STI,
-                                dbgs());
+      BC.InstPrinter->printInst(&Point, 0, "", *BC.STI, dbgs());
       dbgs() << ", ";
       P.print(dbgs(), Cur);
       dbgs() << ")\n";
     });
 
-    // If this instruction is reachable, a non-empty state will be propagated
-    // to it from the entry basic block sooner or later. Until then, it is both
-    // more efficient and easier to reason about to skip computeNext().
+    // Skip this instruction until a non-empty state is propagated here.
+    // When performing a dataflow analysis, it is technically possible that
+    // Cur is always empty at a given program point - then just keep it empty.
+    // For details, see DataflowSrcSafetyAnalysis::getStartingStateAtBB() and
+    // FunctionAnalysis::findUnsafeUses().
     if (Cur.empty()) {
       LLVM_DEBUG(
           { dbgs() << "Skipping computeNext(Point, Cur) as Cur is empty.\n"; });
@@ -455,28 +559,11 @@ protected:
     BitVector Clobbered = getClobberedRegs(Point);
     SmallVector<MCPhysReg> NewSafeToDerefRegs =
         getRegsMadeSafeToDeref(Point, Cur);
-    SmallVector<MCPhysReg> NewTrustedRegs = getRegsMadeTrusted(Point, Cur);
-
-    // Ideally, being trusted is a strictly stronger property than being
-    // safe-to-dereference. To simplify the computation of Next state, enforce
-    // this for NewSafeToDerefRegs and NewTrustedRegs. Additionally, this
-    // fixes the properly for "cumulative" register states in tricky cases
-    // like the following:
-    //
-    //    ; LR is safe to dereference here
-    //    mov   x16, x30  ; start of the sequence, LR is s-t-d right before
-    //    xpaclri         ; clobbers LR, LR is not safe anymore
-    //    cmp   x30, x16
-    //    b.eq  1f        ; end of the sequence: LR is marked as trusted
-    //    brk   0x1234
-    //  1:
-    //    ; at this point LR would be marked as trusted,
-    //    ; but not safe-to-dereference
-    //
-    for (auto TrustedReg : NewTrustedRegs) {
-      if (!is_contained(NewSafeToDerefRegs, TrustedReg))
-        NewSafeToDerefRegs.push_back(TrustedReg);
-    }
+    // If authentication instructions trap on failure, safe-to-dereference
+    // registers are always trusted.
+    SmallVector<MCPhysReg> NewTrustedRegs =
+        AuthTrapsOnFailure ? NewSafeToDerefRegs
+                           : getRegsMadeTrusted(Point, Cur);
 
     // Then, compute the state after this instruction is executed.
     SrcState Next = Cur;
@@ -485,7 +572,7 @@ protected:
     Next.TrustedRegs.reset(Clobbered);
     // Keep track of this instruction if it writes to any of the registers we
     // need to track that for:
-    for (MCPhysReg Reg : RegsToTrackInstsFor.getRegisters())
+    for (MCPhysReg Reg : RegsToTrack.getRegisters())
       if (Clobbered[Reg])
         lastWritingInsts(Next, Reg) = {&Point};
 
@@ -499,7 +586,7 @@ protected:
       NewSafeSubregs |= BC.MIB->getAliases(SafeReg, /*OnlySmaller=*/true);
     for (MCPhysReg Reg : NewSafeSubregs.set_bits()) {
       Next.SafeToDerefRegs.set(Reg);
-      if (RegsToTrackInstsFor.isTracked(Reg))
+      if (RegsToTrack.isTracked(Reg))
         lastWritingInsts(Next, Reg).clear();
     }
 
@@ -513,6 +600,11 @@ protected:
       dbgs() << ")\n";
     });
 
+    // Being trusted is a strictly stronger property than being
+    // safe-to-dereference.
+    assert(Next.TrustedRegs.subsetOf(Next.SafeToDerefRegs) &&
+           "SafeToDerefRegs should contain all TrustedRegs");
+
     return Next;
   }
 
@@ -523,11 +615,8 @@ public:
     const SrcState &S = getStateBefore(Inst);
 
     std::vector<MCInstReference> Result;
-    for (const MCInst *Inst : lastWritingInsts(S, ClobberedReg)) {
-      MCInstReference Ref = MCInstReference::get(Inst, BF);
-      assert(Ref && "Expected Inst to be found");
-      Result.push_back(Ref);
-    }
+    for (const MCInst *Inst : lastWritingInsts(S, ClobberedReg))
+      Result.push_back(MCInstReference::get(*Inst, BF));
     return Result;
   }
 };
@@ -543,11 +632,15 @@ class DataflowSrcSafetyAnalysis
   using SrcSafetyAnalysis::BC;
   using SrcSafetyAnalysis::computeNext;
 
+  // Pessimistic initial state for basic blocks without any predecessors
+  // (not needed for most functions, thus initialized lazily).
+  SrcState PessimisticState;
+
 public:
   DataflowSrcSafetyAnalysis(BinaryFunction &BF,
                             MCPlusBuilder::AllocatorIdTy AllocId,
-                            ArrayRef<MCPhysReg> RegsToTrackInstsFor)
-      : SrcSafetyAnalysis(BF, RegsToTrackInstsFor), DFParent(BF, AllocId) {}
+                            ArrayRef<MCPhysReg> RegsToTrack)
+      : SrcSafetyAnalysis(BF, RegsToTrack), DFParent(BF, AllocId) {}
 
   const SrcState &getStateBefore(const MCInst &Inst) const override {
     return DFParent::getStateBefore(Inst).get();
@@ -569,7 +662,7 @@ public:
         (void)CheckedReg;
         (void)FirstInst;
         assert(llvm::any_of(BB, [&](MCInst &I) { return &I == &FirstInst; }) &&
-               "Data-flow analysis expects the checker not to cross BBs");
+               "Dataflow analysis expects the checker not to cross BBs");
         CheckerSequenceInfo[&LastInst] = *CheckerInfo;
       }
     }
@@ -582,6 +675,18 @@ protected:
   SrcState getStartingStateAtBB(const BinaryBasicBlock &BB) {
     if (BB.isEntryPoint())
       return createEntryState();
+
+    // If a basic block without any predecessors is found in an optimized code,
+    // this likely means that some CFG edges were not detected. Pessimistically
+    // assume any register that can ever be clobbered in this function to be
+    // unsafe before this basic block.
+    // Warn about this fact in FunctionAnalysis::findUnsafeUses(), as it likely
+    // means imprecise CFG information.
+    if (BB.pred_empty()) {
+      if (PessimisticState.empty())
+        PessimisticState = computePessimisticState(*BB.getParent());
+      return PessimisticState;
+    }
 
     return SrcState();
   }
@@ -612,6 +717,42 @@ protected:
   StringRef getAnnotationName() const { return "DataflowSrcSafetyAnalysis"; }
 };
 
+/// A helper base class for implementing a simplified counterpart of a dataflow
+/// analysis for functions without CFG information.
+template <typename StateTy> class CFGUnawareAnalysis {
+  BinaryContext &BC;
+  BinaryFunction &BF;
+  MCPlusBuilder::AllocatorIdTy AllocId;
+  unsigned StateAnnotationIndex;
+
+  void cleanStateAnnotations() {
+    for (auto &I : BF.instrs())
+      BC.MIB->removeAnnotation(I.second, StateAnnotationIndex);
+  }
+
+protected:
+  CFGUnawareAnalysis(BinaryFunction &BF, MCPlusBuilder::AllocatorIdTy AllocId,
+                     StringRef AnnotationName)
+      : BC(BF.getBinaryContext()), BF(BF), AllocId(AllocId) {
+    StateAnnotationIndex = BC.MIB->getOrCreateAnnotationIndex(AnnotationName);
+  }
+
+  void setState(MCInst &Inst, const StateTy &S) {
+    // Check if we need to remove an old annotation (this is the case if
+    // this is the second, detailed run of the analysis).
+    if (BC.MIB->hasAnnotation(Inst, StateAnnotationIndex))
+      BC.MIB->removeAnnotation(Inst, StateAnnotationIndex);
+    // Attach the state.
+    BC.MIB->addAnnotation(Inst, StateAnnotationIndex, S, AllocId);
+  }
+
+  const StateTy &getState(const MCInst &Inst) const {
+    return BC.MIB->getAnnotationAs<StateTy>(Inst, StateAnnotationIndex);
+  }
+
+  virtual ~CFGUnawareAnalysis() { cleanStateAnnotations(); }
+};
+
 // A simplified implementation of DataflowSrcSafetyAnalysis for functions
 // lacking CFG information.
 //
@@ -639,42 +780,34 @@ protected:
 //     ret
 //   JTI0:
 //     .byte some_label - Ltmp0 ; computing offsets using labels may probably
-//                                work too, provided enough information is
-//                                retained by the assembler and linker
+//                                be detected too, provided enough information
+//                                is retained by the assembler and linker
 //
 // Then, a function can be split into a number of disjoint contiguous sequences
 // of instructions without labels in between. These sequences can be processed
-// the same way basic blocks are processed by data-flow analysis, assuming
-// pessimistically that all registers are unsafe at the start of each sequence.
-class CFGUnawareSrcSafetyAnalysis : public SrcSafetyAnalysis {
+// the same way basic blocks are processed by dataflow analysis, with the same
+// pessimistic estimation of the initial state at the start of each sequence
+// (except the first instruction of the function).
+class CFGUnawareSrcSafetyAnalysis : public SrcSafetyAnalysis,
+                                    public CFGUnawareAnalysis<SrcState> {
+  using SrcSafetyAnalysis::BC;
   BinaryFunction &BF;
-  MCPlusBuilder::AllocatorIdTy AllocId;
-  unsigned StateAnnotationIndex;
-
-  void cleanStateAnnotations() {
-    for (auto &I : BF.instrs())
-      BC.MIB->removeAnnotation(I.second, StateAnnotationIndex);
-  }
-
-  /// Creates a state with all registers marked unsafe (not to be confused
-  /// with empty state).
-  SrcState createUnsafeState() const {
-    return SrcState(NumRegs, RegsToTrackInstsFor.getNumTrackedRegisters());
-  }
 
 public:
   CFGUnawareSrcSafetyAnalysis(BinaryFunction &BF,
                               MCPlusBuilder::AllocatorIdTy AllocId,
-                              ArrayRef<MCPhysReg> RegsToTrackInstsFor)
-      : SrcSafetyAnalysis(BF, RegsToTrackInstsFor), BF(BF), AllocId(AllocId) {
-    StateAnnotationIndex =
-        BC.MIB->getOrCreateAnnotationIndex("CFGUnawareSrcSafetyAnalysis");
+                              ArrayRef<MCPhysReg> RegsToTrack)
+      : SrcSafetyAnalysis(BF, RegsToTrack),
+        CFGUnawareAnalysis(BF, AllocId, "CFGUnawareSrcSafetyAnalysis"), BF(BF) {
   }
 
   void run() override {
+    const SrcState DefaultState = computePessimisticState(BF);
     SrcState S = createEntryState();
     for (auto &I : BF.instrs()) {
       MCInst &Inst = I.second;
+      if (BC.MIB->isCFI(Inst))
+        continue;
 
       // If there is a label before this instruction, it is possible that it
       // can be jumped-to, thus conservatively resetting S. As an exception,
@@ -684,15 +817,11 @@ public:
         LLVM_DEBUG({
           traceInst(BC, "Due to label, resetting the state before", Inst);
         });
-        S = createUnsafeState();
+        S = DefaultState;
       }
 
-      // Check if we need to remove an old annotation (this is the case if
-      // this is the second, detailed, run of the analysis).
-      if (BC.MIB->hasAnnotation(Inst, StateAnnotationIndex))
-        BC.MIB->removeAnnotation(Inst, StateAnnotationIndex);
       // Attach the state *before* this instruction executes.
-      BC.MIB->addAnnotation(Inst, StateAnnotationIndex, S, AllocId);
+      setState(Inst, S);
 
       // Compute the state after this instruction executes.
       S = computeNext(Inst, S);
@@ -700,21 +829,511 @@ public:
   }
 
   const SrcState &getStateBefore(const MCInst &Inst) const override {
-    return BC.MIB->getAnnotationAs<SrcState>(Inst, StateAnnotationIndex);
+    return getState(Inst);
   }
-
-  ~CFGUnawareSrcSafetyAnalysis() { cleanStateAnnotations(); }
 };
 
 std::shared_ptr<SrcSafetyAnalysis>
 SrcSafetyAnalysis::create(BinaryFunction &BF,
                           MCPlusBuilder::AllocatorIdTy AllocId,
-                          ArrayRef<MCPhysReg> RegsToTrackInstsFor) {
+                          ArrayRef<MCPhysReg> RegsToTrack) {
   if (BF.hasCFG())
     return std::make_shared<DataflowSrcSafetyAnalysis>(BF, AllocId,
-                                                       RegsToTrackInstsFor);
+                                                       RegsToTrack);
   return std::make_shared<CFGUnawareSrcSafetyAnalysis>(BF, AllocId,
-                                                       RegsToTrackInstsFor);
+                                                       RegsToTrack);
+}
+
+/// A state representing which registers are safe to be used as the destination
+/// operand of an authentication instruction.
+///
+/// Similar to SrcState, it is the responsibility of the analysis to take
+/// register aliasing into account.
+///
+/// Depending on the implementation (such as whether FEAT_FPAC is implemented
+/// by an AArch64 CPU or not), it may be possible that an authentication
+/// instruction returns an invalid pointer on failure instead of terminating
+/// the program immediately (assuming the program will crash as soon as that
+/// pointer is dereferenced). Since few bits are usually allocated for the PAC
+/// field (such as less than 16 bits on a typical AArch64 system), an attacker
+/// can try every possible signature and guess the correct one if there is a
+/// gadget that tells whether the particular pointer has a correct signature
+/// (a so called "authentication oracle"). For that reason, it should be
+/// impossible for an attacker to test if a pointer is correctly signed -
+/// either the program should be terminated on authentication failure or
+/// the result of authentication should not be accessible to an attacker.
+///
+/// Considering the instructions in forward order as they are executed, a
+/// restricted set of operations can be allowed on any register containing a
+/// value derived from the result of an authentication instruction until that
+/// value is checked not to contain the result of a failed authentication.
+/// In DstSafetyAnalysis, these rules are adapted, so that the safety property
+/// for a register is computed by iterating the instructions in backward order.
+/// Then the resulting properties are used at authentication instruction sites
+/// to check output registers and report the particular instruction if it writes
+/// to an unsafe register.
+///
+/// Another approach would be to simulate the above rules as-is, iterating over
+/// the instructions in forward direction. To make it possible to report the
+/// particular instructions as oracles, this would probably require tracking
+/// references to these instructions for each register currently containing
+/// sensitive data.
+///
+/// In DstSafetyAnalysis, the source register Xn of an instruction Inst is safe
+/// if at least one of the following is true:
+/// * Inst checks if Xn contains the result of a successful authentication and
+///   terminates the program on failure. Note that Inst can either naturally
+///   dereference Xn (load, branch, return, etc. instructions) or be the first
+///   instruction of an explicit checking sequence.
+/// * Inst performs safe address arithmetic AND both source and result
+///   registers, as well as any temporary registers, must be safe after
+///   execution of Inst (temporaries are not used on AArch64 and thus not
+///   currently supported/allowed).
+///   See MCPlusBuilder::analyzeAddressArithmeticsForPtrAuth for the details.
+/// * Inst fully overwrites Xn with a constant.
+struct DstState {
+  /// The set of registers whose values cannot be inspected by an attacker in
+  /// a way usable as an authentication oracle. The results of authentication
+  /// instructions should only be written to such registers.
+  BitVector CannotEscapeUnchecked;
+
+  /// A vector of sets, only used on the second analysis run.
+  /// Each element in this vector represents one of the tracked registers.
+  /// For each such register we track the set of first instructions that leak
+  /// the authenticated pointer before it was checked. This is intended to
+  /// provide clues on which instruction made the particular register unsafe.
+  ///
+  /// Please note that the mapping from MCPhysReg values to indexes in this
+  /// vector is provided by RegsToTrack field of DstSafetyAnalysis.
+  std::vector<SetOfRelatedInsts> FirstInstLeakingReg;
+
+  /// Constructs an empty state (no registers at all).
+  DstState() {}
+
+  /// Constructs a new state with all registers marked unsafe.
+  DstState(unsigned NumRegs, unsigned NumRegsToTrack)
+      : CannotEscapeUnchecked(NumRegs), FirstInstLeakingReg(NumRegsToTrack) {}
+
+  /// Updates *this to account for the state observed in a successor basic
+  /// block (i.e. computes the least safe states among *this and StateIn).
+  DstState &merge(const DstState &StateIn) {
+    if (StateIn.empty())
+      return *this;
+    if (empty())
+      return (*this = StateIn);
+
+    CannotEscapeUnchecked &= StateIn.CannotEscapeUnchecked;
+    for (auto [ThisSet, OtherSet] :
+         llvm::zip_equal(FirstInstLeakingReg, StateIn.FirstInstLeakingReg))
+      ThisSet.insert_range(OtherSet);
+    return *this;
+  }
+
+  /// Returns true if this object does not store state of any registers -
+  /// neither safe, nor unsafe ones.
+  bool empty() const { return CannotEscapeUnchecked.empty(); }
+
+  bool operator==(const DstState &RHS) const {
+    return CannotEscapeUnchecked == RHS.CannotEscapeUnchecked &&
+           FirstInstLeakingReg == RHS.FirstInstLeakingReg;
+  }
+  bool operator!=(const DstState &RHS) const { return !((*this) == RHS); }
+};
+
+static raw_ostream &operator<<(raw_ostream &OS, const DstState &S) {
+  OS << "dst-state<";
+  if (S.empty()) {
+    OS << "empty";
+  } else {
+    OS << "CannotEscapeUnchecked: " << S.CannotEscapeUnchecked << ", ";
+    printInstsShort(OS, S.FirstInstLeakingReg);
+  }
+  OS << ">";
+  return OS;
+}
+
+class DstStatePrinter {
+public:
+  void print(raw_ostream &OS, const DstState &S) const;
+  explicit DstStatePrinter(const BinaryContext &BC) : BC(BC) {}
+
+private:
+  const BinaryContext &BC;
+};
+
+void DstStatePrinter::print(raw_ostream &OS, const DstState &S) const {
+  RegStatePrinter RegStatePrinter(BC);
+  OS << "dst-state<";
+  if (S.empty()) {
+    assert(S.CannotEscapeUnchecked.empty());
+    assert(S.FirstInstLeakingReg.empty());
+    OS << "empty";
+  } else {
+    OS << "CannotEscapeUnchecked: ";
+    RegStatePrinter.print(OS, S.CannotEscapeUnchecked);
+    OS << ", ";
+    printInstsShort(OS, S.FirstInstLeakingReg);
+  }
+  OS << ">";
+}
+
+/// Computes which registers are safe to be written to by auth instructions.
+///
+/// This is the base class for two implementations: a dataflow-based analysis
+/// which is intended to be used for most functions and a simplified CFG-unaware
+/// version for functions without reconstructed CFG.
+class DstSafetyAnalysis {
+public:
+  DstSafetyAnalysis(BinaryFunction &BF, ArrayRef<MCPhysReg> RegsToTrack)
+      : BC(BF.getBinaryContext()), NumRegs(BC.MRI->getNumRegs()),
+        RegsToTrack(RegsToTrack) {}
+
+  virtual ~DstSafetyAnalysis() {}
+
+  static std::shared_ptr<DstSafetyAnalysis>
+  create(BinaryFunction &BF, MCPlusBuilder::AllocatorIdTy AllocId,
+         ArrayRef<MCPhysReg> RegsToTrack);
+
+  virtual void run() = 0;
+  virtual const DstState &getStateAfter(const MCInst &Inst) const = 0;
+
+protected:
+  BinaryContext &BC;
+  const unsigned NumRegs;
+
+  /// The set of registers for which the dataflow analysis must compute the set
+  /// of last writing instructions.
+  const TrackedRegisters RegsToTrack;
+
+  /// Stores information about the detected instruction sequences emitted to
+  /// check an authenticated pointer. Specifically, if such sequence is detected
+  /// in a basic block, it maps the first instruction of that sequence to the
+  /// register being checked.
+  ///
+  /// As the detection of such sequences requires iterating over the adjacent
+  /// instructions, it should be done before calling computeNext(), which
+  /// operates on separate instructions.
+  DenseMap<const MCInst *, MCPhysReg> RegCheckedAt;
+
+  SetOfRelatedInsts &firstLeakingInsts(DstState &S, MCPhysReg Reg) const {
+    unsigned Index = RegsToTrack.getIndex(Reg);
+    return S.FirstInstLeakingReg[Index];
+  }
+  const SetOfRelatedInsts &firstLeakingInsts(const DstState &S,
+                                             MCPhysReg Reg) const {
+    unsigned Index = RegsToTrack.getIndex(Reg);
+    return S.FirstInstLeakingReg[Index];
+  }
+
+  /// Creates a state with all registers marked unsafe (not to be confused
+  /// with empty state).
+  DstState createUnsafeState() {
+    return DstState(NumRegs, RegsToTrack.getNumRegisters());
+  }
+
+  /// Returns the set of registers that can be leaked by this instruction.
+  /// A register is considered leaked if it has any intersection with any
+  /// register read by Inst. This is similar to how the set of clobbered
+  /// registers is computed, but taking input operands instead of outputs.
+  BitVector getLeakedRegs(const MCInst &Inst) const {
+    BitVector Leaked(NumRegs);
+
+    // Assume a call can read all registers.
+    if (BC.MIB->isCall(Inst)) {
+      Leaked.set();
+      return Leaked;
+    }
+
+    // Compute the set of registers overlapping with any register used by
+    // this instruction.
+
+    const MCInstrDesc &Desc = BC.MII->get(Inst.getOpcode());
+
+    for (MCPhysReg Reg : Desc.implicit_uses())
+      Leaked |= BC.MIB->getAliases(Reg, /*OnlySmaller=*/false);
+
+    for (const MCOperand &Op : BC.MIB->useOperands(Inst)) {
+      if (Op.isReg())
+        Leaked |= BC.MIB->getAliases(Op.getReg(), /*OnlySmaller=*/false);
+    }
+
+    return Leaked;
+  }
+
+  SmallVector<MCPhysReg> getRegsMadeProtected(const MCInst &Inst,
+                                              const BitVector &LeakedRegs,
+                                              const DstState &Cur) const {
+    SmallVector<MCPhysReg> Regs;
+
+    // A pointer can be checked, ...
+    if (auto CheckedReg =
+            BC.MIB->getAuthCheckedReg(Inst, /*MayOverwrite=*/true))
+      Regs.push_back(*CheckedReg);
+    if (RegCheckedAt.contains(&Inst))
+      Regs.push_back(RegCheckedAt.at(&Inst));
+
+    // ... or it can be used as a branch target, ...
+    if (BC.MIB->isIndirectBranch(Inst) || BC.MIB->isIndirectCall(Inst)) {
+      bool IsAuthenticated;
+      MCPhysReg BranchDestReg =
+          BC.MIB->getRegUsedAsIndirectBranchDest(Inst, IsAuthenticated);
+      assert(BranchDestReg != BC.MIB->getNoRegister());
+      if (!IsAuthenticated)
+        Regs.push_back(BranchDestReg);
+    }
+
+    // ... or it can be used as a return target, ...
+    if (BC.MIB->isReturn(Inst)) {
+      bool IsAuthenticated = false;
+      std::optional<MCPhysReg> RetReg =
+          BC.MIB->getRegUsedAsRetDest(Inst, IsAuthenticated);
+      if (RetReg && !IsAuthenticated)
+        Regs.push_back(*RetReg);
+    }
+
+    // ... or an address can be updated in a safe manner, ...
+    if (auto DstAndSrc = BC.MIB->analyzeAddressArithmeticsForPtrAuth(Inst)) {
+      auto [DstReg, SrcReg] = *DstAndSrc;
+      // Note that *all* registers containing the derived values must be safe,
+      // both source and destination ones. No temporaries are supported at now.
+      if (Cur.CannotEscapeUnchecked[SrcReg] &&
+          Cur.CannotEscapeUnchecked[DstReg])
+        Regs.push_back(SrcReg);
+    }
+
+    // ... or the register can be overwritten in whole with a constant: for that
+    // purpose, look for the instructions with no register inputs (neither
+    // explicit nor implicit ones) and no side effects (to rule out reading
+    // not modelled locations).
+    const MCInstrDesc &Desc = BC.MII->get(Inst.getOpcode());
+    bool HasExplicitSrcRegs = llvm::any_of(BC.MIB->useOperands(Inst),
+                                           [](auto Op) { return Op.isReg(); });
+    if (!Desc.hasUnmodeledSideEffects() && !HasExplicitSrcRegs &&
+        Desc.implicit_uses().empty()) {
+      for (const MCOperand &Def : BC.MIB->defOperands(Inst))
+        Regs.push_back(Def.getReg());
+    }
+
+    return Regs;
+  }
+
+  DstState computeNext(const MCInst &Point, const DstState &Cur) {
+    if (BC.MIB->isCFI(Point))
+      return Cur;
+
+    DstStatePrinter P(BC);
+    LLVM_DEBUG({
+      dbgs() << "  DstSafetyAnalysis::ComputeNext(";
+      BC.InstPrinter->printInst(&Point, 0, "", *BC.STI, dbgs());
+      dbgs() << ", ";
+      P.print(dbgs(), Cur);
+      dbgs() << ")\n";
+    });
+
+    // If this instruction terminates the program immediately, no
+    // authentication oracles are possible past this point.
+    if (BC.MIB->isTrap(Point)) {
+      LLVM_DEBUG(traceInst(BC, "Trap instruction found", Point));
+      DstState Next(NumRegs, RegsToTrack.getNumRegisters());
+      Next.CannotEscapeUnchecked.set();
+      return Next;
+    }
+
+    // If this instruction is reachable by the analysis, a non-empty state will
+    // be propagated to it sooner or later. Until then, skip computeNext().
+    if (Cur.empty()) {
+      LLVM_DEBUG(
+          { dbgs() << "Skipping computeNext(Point, Cur) as Cur is empty.\n"; });
+      return DstState();
+    }
+
+    // First, compute various properties of the instruction, taking the state
+    // after its execution into account, if necessary.
+
+    BitVector LeakedRegs = getLeakedRegs(Point);
+    SmallVector<MCPhysReg> NewProtectedRegs =
+        getRegsMadeProtected(Point, LeakedRegs, Cur);
+
+    // Then, compute the state before this instruction is executed.
+    DstState Next = Cur;
+
+    Next.CannotEscapeUnchecked.reset(LeakedRegs);
+    for (MCPhysReg Reg : RegsToTrack.getRegisters()) {
+      if (LeakedRegs[Reg])
+        firstLeakingInsts(Next, Reg) = {&Point};
+    }
+
+    BitVector NewProtectedSubregs(NumRegs);
+    for (MCPhysReg Reg : NewProtectedRegs)
+      NewProtectedSubregs |= BC.MIB->getAliases(Reg, /*OnlySmaller=*/true);
+    Next.CannotEscapeUnchecked |= NewProtectedSubregs;
+    for (MCPhysReg Reg : RegsToTrack.getRegisters()) {
+      if (NewProtectedSubregs[Reg])
+        firstLeakingInsts(Next, Reg).clear();
+    }
+
+    LLVM_DEBUG({
+      dbgs() << "    .. result: (";
+      P.print(dbgs(), Next);
+      dbgs() << ")\n";
+    });
+
+    return Next;
+  }
+
+public:
+  std::vector<MCInstReference> getLeakingInsts(const MCInst &Inst,
+                                               BinaryFunction &BF,
+                                               MCPhysReg LeakedReg) const {
+    const DstState &S = getStateAfter(Inst);
+
+    std::vector<MCInstReference> Result;
+    for (const MCInst *Inst : firstLeakingInsts(S, LeakedReg))
+      Result.push_back(MCInstReference::get(*Inst, BF));
+    return Result;
+  }
+};
+
+class DataflowDstSafetyAnalysis
+    : public DstSafetyAnalysis,
+      public DataflowAnalysis<DataflowDstSafetyAnalysis, DstState,
+                              /*Backward=*/true, DstStatePrinter> {
+  using DFParent = DataflowAnalysis<DataflowDstSafetyAnalysis, DstState, true,
+                                    DstStatePrinter>;
+  friend DFParent;
+
+  using DstSafetyAnalysis::BC;
+  using DstSafetyAnalysis::computeNext;
+
+public:
+  DataflowDstSafetyAnalysis(BinaryFunction &BF,
+                            MCPlusBuilder::AllocatorIdTy AllocId,
+                            ArrayRef<MCPhysReg> RegsToTrack)
+      : DstSafetyAnalysis(BF, RegsToTrack), DFParent(BF, AllocId) {}
+
+  const DstState &getStateAfter(const MCInst &Inst) const override {
+    // The dataflow analysis base class iterates backwards over the
+    // instructions, thus "after" vs. "before" difference.
+    return DFParent::getStateBefore(Inst).get();
+  }
+
+  void run() override {
+    // As long as DstSafetyAnalysis is only computed to detect authentication
+    // oracles, it is a waste of time to compute it when authentication
+    // instructions are known to always trap on failure.
+    assert(!AuthTrapsOnFailure &&
+           "DstSafetyAnalysis is useless with faulting auth");
+    for (BinaryBasicBlock &BB : Func) {
+      if (auto CheckerInfo = BC.MIB->getAuthCheckedReg(BB)) {
+        LLVM_DEBUG({
+          dbgs() << "Found pointer checking sequence in " << BB.getName()
+                 << ":\n";
+          traceReg(BC, "Checked register", CheckerInfo->first);
+          traceInst(BC, "First instruction", *CheckerInfo->second);
+        });
+        RegCheckedAt[CheckerInfo->second] = CheckerInfo->first;
+      }
+    }
+    DFParent::run();
+  }
+
+protected:
+  void preflight() {}
+
+  DstState getStartingStateAtBB(const BinaryBasicBlock &BB) {
+    // In general, the initial state should be empty, not everything-is-unsafe,
+    // to give a chance for some meaningful state to be propagated to BB from
+    // an indirectly reachable "exit basic block" ending with a return or tail
+    // call instruction.
+    //
+    // A basic block without any successors, on the other hand, can be
+    // pessimistically initialized to everything-is-unsafe: this will naturally
+    // handle return, trap and tail call instructions. At the same time, it is
+    // harmless for internal indirect branch instructions, like computed gotos.
+    if (BB.succ_empty())
+      return createUnsafeState();
+
+    return DstState();
+  }
+
+  DstState getStartingStateAtPoint(const MCInst &Point) { return DstState(); }
+
+  void doConfluence(DstState &StateOut, const DstState &StateIn) {
+    DstStatePrinter P(BC);
+    LLVM_DEBUG({
+      dbgs() << "  DataflowDstSafetyAnalysis::Confluence(\n";
+      dbgs() << "    State 1: ";
+      P.print(dbgs(), StateOut);
+      dbgs() << "\n";
+      dbgs() << "    State 2: ";
+      P.print(dbgs(), StateIn);
+      dbgs() << ")\n";
+    });
+
+    StateOut.merge(StateIn);
+
+    LLVM_DEBUG({
+      dbgs() << "    merged state: ";
+      P.print(dbgs(), StateOut);
+      dbgs() << "\n";
+    });
+  }
+
+  StringRef getAnnotationName() const { return "DataflowDstSafetyAnalysis"; }
+};
+
+class CFGUnawareDstSafetyAnalysis : public DstSafetyAnalysis,
+                                    public CFGUnawareAnalysis<DstState> {
+  using DstSafetyAnalysis::BC;
+  BinaryFunction &BF;
+
+public:
+  CFGUnawareDstSafetyAnalysis(BinaryFunction &BF,
+                              MCPlusBuilder::AllocatorIdTy AllocId,
+                              ArrayRef<MCPhysReg> RegsToTrack)
+      : DstSafetyAnalysis(BF, RegsToTrack),
+        CFGUnawareAnalysis(BF, AllocId, "CFGUnawareDstSafetyAnalysis"), BF(BF) {
+  }
+
+  void run() override {
+    DstState S = createUnsafeState();
+    for (auto &I : llvm::reverse(BF.instrs())) {
+      MCInst &Inst = I.second;
+      if (BC.MIB->isCFI(Inst))
+        continue;
+
+      // If Inst can change the control flow, we cannot be sure that the next
+      // instruction (to be executed in analyzed program) is the one processed
+      // on the previous iteration, thus pessimistically reset S before
+      // starting to analyze Inst.
+      if (BC.MIB->isCall(Inst) || BC.MIB->isBranch(Inst) ||
+          BC.MIB->isReturn(Inst)) {
+        LLVM_DEBUG(traceInst(BC, "Control flow instruction", Inst));
+        S = createUnsafeState();
+      }
+
+      // Attach the state *after* this instruction executes.
+      setState(Inst, S);
+
+      // Compute the state before this instruction executes.
+      S = computeNext(Inst, S);
+    }
+  }
+
+  const DstState &getStateAfter(const MCInst &Inst) const override {
+    return getState(Inst);
+  }
+};
+
+std::shared_ptr<DstSafetyAnalysis>
+DstSafetyAnalysis::create(BinaryFunction &BF,
+                          MCPlusBuilder::AllocatorIdTy AllocId,
+                          ArrayRef<MCPhysReg> RegsToTrack) {
+  if (BF.hasCFG())
+    return std::make_shared<DataflowDstSafetyAnalysis>(BF, AllocId,
+                                                       RegsToTrack);
+  return std::make_shared<CFGUnawareDstSafetyAnalysis>(BF, AllocId,
+                                                       RegsToTrack);
 }
 
 // This function could return PartialReport<T>, but currently T is always
@@ -763,6 +1382,89 @@ shouldReportReturnGadget(const BinaryContext &BC, const MCInstReference &Inst,
   return make_gadget_report(RetKind, Inst, *RetReg);
 }
 
+/// While BOLT already marks some of the branch instructions as tail calls,
+/// this function tries to detect less obvious cases, assuming false positives
+/// are acceptable as long as there are not too many of them.
+///
+/// It is possible that not all the instructions classified as tail calls by
+/// this function are safe to be considered as such for the purpose of code
+/// transformations performed by BOLT. The intention of this function is to
+/// spot some of actually missed tail calls (and likely a number of unrelated
+/// indirect branch instructions) as long as this doesn't increase the amount
+/// of false positive reports unacceptably.
+static bool shouldAnalyzeTailCallInst(const BinaryContext &BC,
+                                      const BinaryFunction &BF,
+                                      const MCInstReference &Inst) {
+  // Some BC.MIB->isXYZ(Inst) methods simply delegate to MCInstrDesc::isXYZ()
+  // (such as isBranch at the time of writing this comment), some don't (such
+  // as isCall). For that reason, call MCInstrDesc's methods explicitly when
+  // it is important.
+  const MCInstrDesc &Desc = BC.MII->get(Inst.getMCInst().getOpcode());
+  // Tail call should be a branch (but not necessarily an indirect one).
+  if (!Desc.isBranch())
+    return false;
+
+  // Always analyze the branches already marked as tail calls by BOLT.
+  if (BC.MIB->isTailCall(Inst))
+    return true;
+
+  // Try to also check the branches marked as "UNKNOWN CONTROL FLOW" - the
+  // below is a simplified condition from BinaryContext::printInstruction.
+  bool IsUnknownControlFlow =
+      BC.MIB->isIndirectBranch(Inst) && !BC.MIB->getJumpTable(Inst);
+
+  if (BF.hasCFG() && IsUnknownControlFlow)
+    return true;
+
+  return false;
+}
+
+static std::optional<PartialReport<MCPhysReg>>
+shouldReportUnsafeTailCall(const BinaryContext &BC, const BinaryFunction &BF,
+                           const MCInstReference &Inst, const SrcState &S) {
+  static const GadgetKind UntrustedLRKind(
+      "untrusted link register found before tail call");
+
+  if (!shouldAnalyzeTailCallInst(BC, BF, Inst))
+    return std::nullopt;
+
+  // Not only the set of registers returned by getTrustedLiveInRegs() can be
+  // seen as a reasonable target-independent _approximation_ of "the LR", these
+  // are *exactly* those registers used by SrcSafetyAnalysis to initialize the
+  // set of trusted registers on function entry.
+  // Thus, this function basically checks that the precondition expected to be
+  // imposed by a function call instruction (which is hardcoded into the target-
+  // specific getTrustedLiveInRegs() function) is also respected on tail calls.
+  SmallVector<MCPhysReg> RegsToCheck = BC.MIB->getTrustedLiveInRegs();
+  LLVM_DEBUG({
+    traceInst(BC, "Found tail call inst", Inst);
+    traceRegMask(BC, "Trusted regs", S.TrustedRegs);
+  });
+
+  // In musl on AArch64, the _start function sets LR to zero and calls the next
+  // stage initialization function at the end, something along these lines:
+  //
+  //   _start:
+  //     mov     x30, #0
+  //     ; ... other initialization ...
+  //     b       _start_c ; performs "exit" system call at some point
+  //
+  // As this would produce a false positive for every executable linked with
+  // such libc, ignore tail calls performed by ELF entry function.
+  if (BC.StartFunctionAddress &&
+      *BC.StartFunctionAddress == Inst.getFunction()->getAddress()) {
+    LLVM_DEBUG(dbgs() << "  Skipping tail call in ELF entry function.\n");
+    return std::nullopt;
+  }
+
+  // Returns at most one report per instruction - this is probably OK...
+  for (auto Reg : RegsToCheck)
+    if (!S.TrustedRegs[Reg])
+      return make_gadget_report(UntrustedLRKind, Inst, Reg);
+
+  return std::nullopt;
+}
+
 static std::optional<PartialReport<MCPhysReg>>
 shouldReportCallGadget(const BinaryContext &BC, const MCInstReference &Inst,
                        const SrcState &S) {
@@ -808,15 +1510,35 @@ shouldReportSigningOracle(const BinaryContext &BC, const MCInstReference &Inst,
   return make_gadget_report(SigningOracleKind, Inst, *SignedReg);
 }
 
-template <typename T> static void iterateOverInstrs(BinaryFunction &BF, T Fn) {
-  if (BF.hasCFG()) {
-    for (BinaryBasicBlock &BB : BF)
-      for (int64_t I = 0, E = BB.size(); I < E; ++I)
-        Fn(MCInstInBBReference(&BB, I));
-  } else {
-    for (auto I : BF.instrs())
-      Fn(MCInstInBFReference(&BF, I.first));
+static std::optional<PartialReport<MCPhysReg>>
+shouldReportAuthOracle(const BinaryContext &BC, const MCInstReference &Inst,
+                       const DstState &S) {
+  static const GadgetKind AuthOracleKind("authentication oracle found");
+
+  bool IsChecked = false;
+  std::optional<MCPhysReg> AuthReg =
+      BC.MIB->getWrittenAuthenticatedReg(Inst, IsChecked);
+  if (!AuthReg || IsChecked)
+    return std::nullopt;
+
+  LLVM_DEBUG({
+    traceInst(BC, "Found auth inst", Inst);
+    traceReg(BC, "Authenticated reg", *AuthReg);
+  });
+
+  if (S.empty()) {
+    LLVM_DEBUG(dbgs() << "    DstState is empty!\n");
+    return make_generic_report(
+        Inst, "Warning: no state computed for an authentication instruction "
+              "(possibly unreachable)");
   }
+
+  LLVM_DEBUG(
+      { traceRegMask(BC, "safe output registers", S.CannotEscapeUnchecked); });
+  if (S.CannotEscapeUnchecked[*AuthReg])
+    return std::nullopt;
+
+  return make_gadget_report(AuthOracleKind, Inst, *AuthReg);
 }
 
 static SmallVector<MCPhysReg>
@@ -832,21 +1554,66 @@ collectRegsToTrack(ArrayRef<PartialReport<MCPhysReg>> Reports) {
 void FunctionAnalysisContext::findUnsafeUses(
     SmallVector<PartialReport<MCPhysReg>> &Reports) {
   auto Analysis = SrcSafetyAnalysis::create(BF, AllocatorId, {});
-  LLVM_DEBUG({ dbgs() << "Running src register safety analysis...\n"; });
+  LLVM_DEBUG(dbgs() << "Running src register safety analysis...\n");
   Analysis->run();
   LLVM_DEBUG({
     dbgs() << "After src register safety analysis:\n";
     BF.dump();
   });
 
-  iterateOverInstrs(BF, [&](MCInstReference Inst) {
-    const SrcState &S = Analysis->getStateBefore(Inst);
+  bool UnreachableBBReported = false;
+  if (BF.hasCFG()) {
+    // Warn on basic blocks being unreachable according to BOLT (at most once
+    // per BinaryFunction), as this likely means the CFG reconstructed by BOLT
+    // is imprecise. A basic block can be
+    // * reachable from an entry basic block - a hopefully correct non-empty
+    //   state is propagated to that basic block sooner or later. All basic
+    //   blocks are expected to belong to this category under normal conditions.
+    // * reachable from a "directly unreachable" BB (a basic block that has no
+    //   direct predecessors and this is not because it is an entry BB) - *some*
+    //   non-empty state is propagated to this basic block sooner or later, as
+    //   the initial state of directly unreachable basic blocks is initialized
+    //   to a pessimistic approximation, see computePessimisticState()
+    //   - a warning can be printed for the "directly unreachable" basic block
+    // * neither reachable from an entry nor from a "directly unreachable" BB
+    //   (such as if this BB is in an isolated loop of basic blocks) - the final
+    //   state is computed to be empty for this basic block
+    //   - a warning can be printed for this basic block
+    for (BinaryBasicBlock &BB : BF) {
+      MCInst *FirstInst = BB.getFirstNonPseudoInstr();
+      // Skip empty basic block early for simplicity.
+      if (!FirstInst)
+        continue;
 
-    // If non-empty state was never propagated from the entry basic block
-    // to Inst, assume it to be unreachable and report a warning.
+      bool IsDirectlyUnreachable = BB.pred_empty() && !BB.isEntryPoint();
+      bool HasNoStateComputed = Analysis->getStateBefore(*FirstInst).empty();
+      if (!IsDirectlyUnreachable && !HasNoStateComputed)
+        continue;
+
+      // Arbitrarily attach the report to the first instruction of BB.
+      // This is printed as "[message] in function [name], basic block ...,
+      // at address ..." when the issue is reported to the user.
+      Reports.push_back(make_generic_report(
+          MCInstReference(BB, *FirstInst),
+          "Warning: possibly imprecise CFG, the analysis quality may be "
+          "degraded in this function. According to BOLT, unreachable code is "
+          "found" /* in function [name]... */));
+      UnreachableBBReported = true;
+      break; // One warning per function.
+    }
+  }
+  // FIXME: Warn the user about imprecise analysis when the function has no CFG
+  //        information at all.
+
+  iterateOverInstrs(BF, [&](MCInstReference Inst) {
+    if (BC.MIB->isCFI(Inst))
+      return;
+
+    const SrcState &S = Analysis->getStateBefore(Inst);
     if (S.empty()) {
-      Reports.push_back(
-          make_generic_report(Inst, "Warning: unreachable instruction found"));
+      LLVM_DEBUG(traceInst(BC, "Instruction has no state, skipping", Inst));
+      assert(UnreachableBBReported && "Should be reported at least once");
+      (void)UnreachableBBReported;
       return;
     }
 
@@ -855,6 +1622,9 @@ void FunctionAnalysisContext::findUnsafeUses(
 
     if (PacRetGadgetsOnly)
       return;
+
+    if (auto Report = shouldReportUnsafeTailCall(BC, BF, Inst, S))
+      Reports.push_back(*Report);
 
     if (auto Report = shouldReportCallGadget(BC, Inst, S))
       Reports.push_back(*Report);
@@ -868,8 +1638,7 @@ void FunctionAnalysisContext::augmentUnsafeUseReports(
   SmallVector<MCPhysReg> RegsToTrack = collectRegsToTrack(Reports);
   // Re-compute the analysis with register tracking.
   auto Analysis = SrcSafetyAnalysis::create(BF, AllocatorId, RegsToTrack);
-  LLVM_DEBUG(
-      { dbgs() << "\nRunning detailed src register safety analysis...\n"; });
+  LLVM_DEBUG(dbgs() << "\nRunning detailed src register safety analysis...\n");
   Analysis->run();
   LLVM_DEBUG({
     dbgs() << "After detailed src register safety analysis:\n";
@@ -879,12 +1648,62 @@ void FunctionAnalysisContext::augmentUnsafeUseReports(
   // Augment gadget reports.
   for (auto &Report : Reports) {
     MCInstReference Location = Report.Issue->Location;
-    LLVM_DEBUG({ traceInst(BC, "Attaching clobbering info to", Location); });
+    LLVM_DEBUG(traceInst(BC, "Attaching clobbering info to", Location));
     assert(Report.RequestedDetails &&
            "Should be removed by handleSimpleReports");
     auto DetailedInfo =
         std::make_shared<ClobberingInfo>(Analysis->getLastClobberingInsts(
             Location, BF, *Report.RequestedDetails));
+    Result.Diagnostics.emplace_back(Report.Issue, DetailedInfo);
+  }
+}
+
+void FunctionAnalysisContext::findUnsafeDefs(
+    SmallVector<PartialReport<MCPhysReg>> &Reports) {
+  if (PacRetGadgetsOnly)
+    return;
+  if (AuthTrapsOnFailure)
+    return;
+
+  auto Analysis = DstSafetyAnalysis::create(BF, AllocatorId, {});
+  LLVM_DEBUG(dbgs() << "Running dst register safety analysis...\n");
+  Analysis->run();
+  LLVM_DEBUG({
+    dbgs() << "After dst register safety analysis:\n";
+    BF.dump();
+  });
+
+  iterateOverInstrs(BF, [&](MCInstReference Inst) {
+    if (BC.MIB->isCFI(Inst))
+      return;
+
+    const DstState &S = Analysis->getStateAfter(Inst);
+
+    if (auto Report = shouldReportAuthOracle(BC, Inst, S))
+      Reports.push_back(*Report);
+  });
+}
+
+void FunctionAnalysisContext::augmentUnsafeDefReports(
+    ArrayRef<PartialReport<MCPhysReg>> Reports) {
+  SmallVector<MCPhysReg> RegsToTrack = collectRegsToTrack(Reports);
+  // Re-compute the analysis with register tracking.
+  auto Analysis = DstSafetyAnalysis::create(BF, AllocatorId, RegsToTrack);
+  LLVM_DEBUG(dbgs() << "\nRunning detailed dst register safety analysis...\n");
+  Analysis->run();
+  LLVM_DEBUG({
+    dbgs() << "After detailed dst register safety analysis:\n";
+    BF.dump();
+  });
+
+  // Augment gadget reports.
+  for (auto &Report : Reports) {
+    MCInstReference Location = Report.Issue->Location;
+    LLVM_DEBUG(traceInst(BC, "Attaching leakage info to", Location));
+    assert(Report.RequestedDetails &&
+           "Should be removed by handleSimpleReports");
+    auto DetailedInfo = std::make_shared<LeakageInfo>(
+        Analysis->getLeakingInsts(Location, BF, *Report.RequestedDetails));
     Result.Diagnostics.emplace_back(Report.Issue, DetailedInfo);
   }
 }
@@ -912,6 +1731,12 @@ void FunctionAnalysisContext::run() {
   handleSimpleReports(UnsafeUses);
   if (!UnsafeUses.empty())
     augmentUnsafeUseReports(UnsafeUses);
+
+  SmallVector<PartialReport<MCPhysReg>> UnsafeDefs;
+  findUnsafeDefs(UnsafeDefs);
+  handleSimpleReports(UnsafeDefs);
+  if (!UnsafeDefs.empty())
+    augmentUnsafeDefReports(UnsafeDefs);
 }
 
 void Analysis::runOnFunction(BinaryFunction &BF,
@@ -932,48 +1757,44 @@ void Analysis::runOnFunction(BinaryFunction &BF,
   }
 }
 
-static void printBB(const BinaryContext &BC, const BinaryBasicBlock *BB,
+static void printBB(const BinaryContext &BC, const BinaryBasicBlock &BB,
                     size_t StartIndex = 0, size_t EndIndex = -1) {
   if (EndIndex == (size_t)-1)
-    EndIndex = BB->size() - 1;
-  const BinaryFunction *BF = BB->getFunction();
+    EndIndex = BB.size() - 1;
+  const BinaryFunction *BF = BB.getFunction();
   for (unsigned I = StartIndex; I <= EndIndex; ++I) {
-    // FIXME: this assumes all instructions are 4 bytes in size. This is true
-    // for AArch64, but it might be good to extract this function so it can be
-    // used elsewhere and for other targets too.
-    uint64_t Address = BB->getOffset() + BF->getAddress() + 4 * I;
-    const MCInst &Inst = BB->getInstructionAtIndex(I);
+    MCInstReference Inst(BB, I);
     if (BC.MIB->isCFI(Inst))
       continue;
-    BC.printInstruction(outs(), Inst, Address, BF);
+    BC.printInstruction(outs(), Inst, Inst.computeAddress(), BF);
   }
 }
 
 static void reportFoundGadgetInSingleBBSingleRelatedInst(
     raw_ostream &OS, const BinaryContext &BC, const MCInstReference RelatedInst,
     const MCInstReference Location) {
-  BinaryBasicBlock *BB = Location.getBasicBlock();
-  assert(RelatedInst.ParentKind == MCInstReference::BasicBlockParent);
-  assert(Location.ParentKind == MCInstReference::BasicBlockParent);
-  MCInstInBBReference RelatedInstBB = RelatedInst.U.BBRef;
-  if (BB == RelatedInstBB.BB) {
+  const BinaryBasicBlock *BB = Location.getBasicBlock();
+  assert(RelatedInst.hasCFG());
+  assert(Location.hasCFG());
+  if (BB == RelatedInst.getBasicBlock()) {
     OS << "  This happens in the following basic block:\n";
-    printBB(BC, BB);
+    printBB(BC, *BB);
   }
 }
 
 void Diagnostic::printBasicInfo(raw_ostream &OS, const BinaryContext &BC,
                                 StringRef IssueKind) const {
-  BinaryFunction *BF = Location.getFunction();
-  BinaryBasicBlock *BB = Location.getBasicBlock();
+  const BinaryBasicBlock *BB = Location.getBasicBlock();
+  const BinaryFunction *BF = Location.getFunction();
+  const uint64_t Address = Location.computeAddress();
 
   OS << "\nGS-PAUTH: " << IssueKind;
   OS << " in function " << BF->getPrintName();
   if (BB)
     OS << ", basic block " << BB->getName();
-  OS << ", at address " << llvm::format("%x", Location.getAddress()) << "\n";
+  OS << ", at address " << llvm::format("%x", Address) << "\n";
   OS << "  The instruction is ";
-  BC.printInstruction(OS, Location, Location.getAddress(), BF);
+  BC.printInstruction(OS, Location, Address, BF);
 }
 
 void GadgetDiagnostic::generateReport(raw_ostream &OS,
@@ -987,21 +1808,23 @@ static void printRelatedInstrs(raw_ostream &OS, const MCInstReference Location,
   const BinaryContext &BC = BF.getBinaryContext();
 
   // Sort by address to ensure output is deterministic.
-  SmallVector<MCInstReference> RI(RelatedInstrs);
-  llvm::sort(RI, [](const MCInstReference &A, const MCInstReference &B) {
-    return A.getAddress() < B.getAddress();
-  });
+  SmallVector<std::pair<uint64_t, MCInstReference>> RI;
+  for (auto &InstRef : RelatedInstrs)
+    RI.push_back(std::make_pair(InstRef.computeAddress(), InstRef));
+  llvm::sort(RI, [](auto A, auto B) { return A.first < B.first; });
+
   for (unsigned I = 0; I < RI.size(); ++I) {
-    MCInstReference InstRef = RI[I];
+    auto [Address, InstRef] = RI[I];
     OS << "  " << (I + 1) << ". ";
-    BC.printInstruction(OS, InstRef, InstRef.getAddress(), &BF);
+    BC.printInstruction(OS, InstRef, Address, &BF);
   };
+
   if (RelatedInstrs.size() == 1) {
     const MCInstReference RelatedInst = RelatedInstrs[0];
-    // Printing the details for the MCInstReference::FunctionParent case
-    // is not implemented not to overcomplicate the code, as most functions
-    // are expected to have CFG information.
-    if (RelatedInst.ParentKind == MCInstReference::BasicBlockParent)
+    // Printing the details is only implemented when CFG is available,
+    // not to overcomplicate the code, as most functions are expected to
+    // have CFG information.
+    if (RelatedInst.hasCFG())
       reportFoundGadgetInSingleBBSingleRelatedInst(OS, BC, RelatedInst,
                                                    Location);
   }
@@ -1013,6 +1836,12 @@ void ClobberingInfo::print(raw_ostream &OS,
      << " instructions that write to the affected registers after any "
         "authentication are:\n";
   printRelatedInstrs(OS, Location, ClobberingInstrs);
+}
+
+void LeakageInfo::print(raw_ostream &OS, const MCInstReference Location) const {
+  OS << "  The " << LeakingInstrs.size()
+     << " instructions that leak the affected registers are:\n";
+  printRelatedInstrs(OS, Location, LeakingInstrs);
 }
 
 void GenericDiagnostic::generateReport(raw_ostream &OS,

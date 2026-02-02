@@ -193,7 +193,7 @@ private:
   /// cannot be skipped.
   bool MarkFlatProfiles = false;
 
-  LLVM_ABI_FRIEND friend ErrorOr<std::unique_ptr<SampleProfileWriter>>
+  LLVM_ABI friend ErrorOr<std::unique_ptr<SampleProfileWriter>>
   SampleProfileWriter::create(std::unique_ptr<raw_ostream> &OS,
                               SampleProfileFormat Format);
 };
@@ -217,15 +217,22 @@ protected:
   std::error_code writeBody(const FunctionSamples &S);
   inline void stablizeNameTable(MapVector<FunctionId, uint32_t> &NameTable,
                                 std::set<FunctionId> &V);
-  
+
   MapVector<FunctionId, uint32_t> NameTable;
-  
+
   void addName(FunctionId FName);
   virtual void addContext(const SampleContext &Context);
   void addNames(const FunctionSamples &S);
 
+  /// Write \p CallsiteTypeMap to the output stream \p OS.
+  std::error_code
+  writeCallsiteVTableProf(const CallsiteTypeMap &CallsiteTypeMap,
+                          raw_ostream &OS);
+
+  bool WriteVTableProf = false;
+
 private:
-  LLVM_ABI_FRIEND friend ErrorOr<std::unique_ptr<SampleProfileWriter>>
+  LLVM_ABI friend ErrorOr<std::unique_ptr<SampleProfileWriter>>
   SampleProfileWriter::create(std::unique_ptr<raw_ostream> &OS,
                               SampleProfileFormat Format);
 };
@@ -412,8 +419,7 @@ private:
 class LLVM_ABI SampleProfileWriterExtBinary
     : public SampleProfileWriterExtBinaryBase {
 public:
-  SampleProfileWriterExtBinary(std::unique_ptr<raw_ostream> &OS)
-      : SampleProfileWriterExtBinaryBase(OS) {}
+  SampleProfileWriterExtBinary(std::unique_ptr<raw_ostream> &OS);
 
 private:
   std::error_code writeDefaultLayout(const SampleProfileMap &ProfileMap);

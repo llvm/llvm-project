@@ -224,6 +224,11 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     K = CXCursor_ReturnStmt;
     break;
 
+  // Not exposed for now because '_Defer' is currently just a TS.
+  case Stmt::DeferStmtClass:
+    K = CXCursor_UnexposedStmt;
+    break;
+
   case Stmt::GCCAsmStmtClass:
     K = CXCursor_GCCAsmStmt;
     break;
@@ -423,6 +428,11 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
   case Stmt::MSPropertySubscriptExprClass:
   case Stmt::ArraySubscriptExprClass:
     K = CXCursor_ArraySubscriptExpr;
+    break;
+
+  case Stmt::MatrixSingleSubscriptExprClass:
+    // TODO: add support for MatrixSingleSubscriptExpr.
+    K = CXCursor_UnexposedExpr;
     break;
 
   case Stmt::MatrixSubscriptExprClass:
@@ -686,6 +696,9 @@ CXCursor cxcursor::MakeCXCursor(const Stmt *S, const Decl *Parent,
     break;
   case Stmt::OMPInterchangeDirectiveClass:
     K = CXCursor_OMPInterchangeDirective;
+    break;
+  case Stmt::OMPFuseDirectiveClass:
+    K = CXCursor_OMPFuseDirective;
     break;
   case Stmt::OMPForDirectiveClass:
     K = CXCursor_OMPForDirective;
@@ -1331,12 +1344,6 @@ CXCursor cxcursor::getTypeRefCursor(CXCursor cursor) {
   QualType Ty = Type->getType();
   TypeLoc TL = Type->getTypeLoc();
   SourceLocation Loc = TL.getBeginLoc();
-
-  if (const ElaboratedType *ElabT = Ty->getAs<ElaboratedType>()) {
-    Ty = ElabT->getNamedType();
-    ElaboratedTypeLoc ElabTL = TL.castAs<ElaboratedTypeLoc>();
-    Loc = ElabTL.getNamedTypeLoc().getBeginLoc();
-  }
 
   if (const TypedefType *Typedef = Ty->getAs<TypedefType>())
     return MakeCursorTypeRef(Typedef->getDecl(), Loc, TU);

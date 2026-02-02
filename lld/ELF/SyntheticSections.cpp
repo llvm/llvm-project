@@ -54,8 +54,6 @@ using llvm::support::endian::read32le;
 using llvm::support::endian::write32le;
 using llvm::support::endian::write64le;
 
-constexpr size_t MergeNoTailSection::numShards;
-
 static uint64_t readUint(Ctx &ctx, uint8_t *buf) {
   return ctx.arg.is64 ? read64(ctx, buf) : read32(ctx, buf);
 }
@@ -403,12 +401,12 @@ EhFrameSection::EhFrameSection(Ctx &ctx)
 // Search for an existing CIE record or create a new one.
 // CIE records from input object files are uniquified by their contents
 // and where their relocations point to.
-template <class ELFT, class RelTy>
-CieRecord *EhFrameSection::addCie(EhSectionPiece &cie, ArrayRef<RelTy> rels) {
+CieRecord *EhFrameSection::addCie(EhSectionPiece &cie,
+                                  ArrayRef<Relocation> rels) {
   Symbol *personality = nullptr;
   unsigned firstRelI = cie.firstRelocation;
   if (firstRelI != (unsigned)-1)
-    personality = &cie.sec->file->getRelocTargetSym(rels[firstRelI]);
+    personality = rels[firstRelI].sym;
 
   // Search for an existing CIE by CIE contents/relocation target pair.
   CieRecord *&rec = cieMap[{cie.data(), personality}];
@@ -424,25 +422,20 @@ CieRecord *EhFrameSection::addCie(EhSectionPiece &cie, ArrayRef<RelTy> rels) {
 
 // There is one FDE per function. Returns a non-null pointer to the function
 // symbol if the given FDE points to a live function.
-template <class ELFT, class RelTy>
-Defined *EhFrameSection::isFdeLive(EhSectionPiece &fde, ArrayRef<RelTy> rels) {
-  auto *sec = cast<EhInputSection>(fde.sec);
-  unsigned firstRelI = fde.firstRelocation;
-
+Defined *EhFrameSection::isFdeLive(EhSectionPiece &fde,
+                                   ArrayRef<Relocation> rels) {
   // An FDE should point to some function because FDEs are to describe
   // functions. That's however not always the case due to an issue of
   // ld.gold with -r. ld.gold may discard only functions and leave their
   // corresponding FDEs, which results in creating bad .eh_frame sections.
   // To deal with that, we ignore such FDEs.
+  unsigned firstRelI = fde.firstRelocation;
   if (firstRelI == (unsigned)-1)
     return nullptr;
 
-  const RelTy &rel = rels[firstRelI];
-  Symbol &b = sec->file->getRelocTargetSym(rel);
-
   // FDEs for garbage-collected or merged-by-ICF sections, or sections in
   // another partition, are dead.
-  if (auto *d = dyn_cast<Defined>(&b))
+  if (auto *d = dyn_cast<Defined>(rels[firstRelI].sym))
     if (!d->folded && d->section && d->section->partition == partition)
       return d;
   return nullptr;
@@ -452,41 +445,29 @@ Defined *EhFrameSection::isFdeLive(EhSectionPiece &fde, ArrayRef<RelTy> rels) {
 // is one CIE record per input object file which is followed by
 // a list of FDEs. This function searches an existing CIE or create a new
 // one and associates FDEs to the CIE.
-template <class ELFT, class RelTy>
-void EhFrameSection::addRecords(EhInputSection *sec, ArrayRef<RelTy> rels) {
+template <endianness e> void EhFrameSection::addRecords(EhInputSection *sec) {
+  auto rels = sec->rels;
   offsetToCie.clear();
   for (EhSectionPiece &cie : sec->cies)
-    offsetToCie[cie.inputOff] = addCie<ELFT>(cie, rels);
+    offsetToCie[cie.inputOff] = addCie(cie, rels);
   for (EhSectionPiece &fde : sec->fdes) {
-    uint32_t id = endian::read32<ELFT::Endianness>(fde.data().data() + 4);
+    uint32_t id = endian::read32<e>(fde.data().data() + 4);
     CieRecord *rec = offsetToCie[fde.inputOff + 4 - id];
     if (!rec)
       Fatal(ctx) << sec << ": invalid CIE reference";
 
-    if (!isFdeLive<ELFT>(fde, rels))
+    if (!isFdeLive(fde, rels))
       continue;
     rec->fdes.push_back(&fde);
     numFdes++;
   }
 }
 
-template <class ELFT>
-void EhFrameSection::addSectionAux(EhInputSection *sec) {
-  if (!sec->isLive())
-    return;
-  const RelsOrRelas<ELFT> rels =
-      sec->template relsOrRelas<ELFT>(/*supportsCrel=*/false);
-  if (rels.areRelocsRel())
-    addRecords<ELFT>(sec, rels.rels);
-  else
-    addRecords<ELFT>(sec, rels.relas);
-}
-
 // Used by ICF<ELFT>::handleLSDA(). This function is very similar to
 // EhFrameSection::addRecords().
-template <class ELFT, class RelTy>
+template <class ELFT>
 void EhFrameSection::iterateFDEWithLSDAAux(
-    EhInputSection &sec, ArrayRef<RelTy> rels, DenseSet<size_t> &ciesWithLSDA,
+    EhInputSection &sec, DenseSet<size_t> &ciesWithLSDA,
     llvm::function_ref<void(InputSection &)> fn) {
   for (EhSectionPiece &cie : sec.cies)
     if (hasLSDA(cie))
@@ -497,7 +478,7 @@ void EhFrameSection::iterateFDEWithLSDAAux(
       continue;
 
     // The CIE has a LSDA argument. Call fn with d's section.
-    if (Defined *d = isFdeLive<ELFT>(fde, rels))
+    if (Defined *d = isFdeLive(fde, sec.rels))
       if (auto *s = dyn_cast_or_null<InputSection>(d->section))
         fn(*s);
   }
@@ -509,12 +490,7 @@ void EhFrameSection::iterateFDEWithLSDA(
   DenseSet<size_t> ciesWithLSDA;
   for (EhInputSection *sec : sections) {
     ciesWithLSDA.clear();
-    const RelsOrRelas<ELFT> rels =
-        sec->template relsOrRelas<ELFT>(/*supportsCrel=*/false);
-    if (rels.areRelocsRel())
-      iterateFDEWithLSDAAux<ELFT>(*sec, rels.rels, ciesWithLSDA, fn);
-    else
-      iterateFDEWithLSDAAux<ELFT>(*sec, rels.relas, ciesWithLSDA, fn);
+    iterateFDEWithLSDAAux<ELFT>(*sec, ciesWithLSDA, fn);
   }
 }
 
@@ -531,20 +507,16 @@ void EhFrameSection::finalizeContents() {
   case ELFNoneKind:
     llvm_unreachable("invalid ekind");
   case ELF32LEKind:
-    for (EhInputSection *sec : sections)
-      addSectionAux<ELF32LE>(sec);
-    break;
-  case ELF32BEKind:
-    for (EhInputSection *sec : sections)
-      addSectionAux<ELF32BE>(sec);
-    break;
   case ELF64LEKind:
     for (EhInputSection *sec : sections)
-      addSectionAux<ELF64LE>(sec);
+      if (sec->isLive())
+        addRecords<endianness::little>(sec);
     break;
+  case ELF32BEKind:
   case ELF64BEKind:
     for (EhInputSection *sec : sections)
-      addSectionAux<ELF64BE>(sec);
+      if (sec->isLive())
+        addRecords<endianness::big>(sec);
     break;
   }
 
@@ -566,43 +538,6 @@ void EhFrameSection::finalizeContents() {
   off += 4;
 
   this->size = off;
-}
-
-// Returns data for .eh_frame_hdr. .eh_frame_hdr is a binary search table
-// to get an FDE from an address to which FDE is applied. This function
-// returns a list of such pairs.
-SmallVector<EhFrameSection::FdeData, 0> EhFrameSection::getFdeData() const {
-  uint8_t *buf = ctx.bufferStart + getParent()->offset + outSecOff;
-  SmallVector<FdeData, 0> ret;
-
-  uint64_t va = getPartition(ctx).ehFrameHdr->getVA();
-  for (CieRecord *rec : cieRecords) {
-    uint8_t enc = getFdeEncoding(rec->cie);
-    for (EhSectionPiece *fde : rec->fdes) {
-      uint64_t pc = getFdePc(buf, fde->outputOff, enc);
-      uint64_t fdeVA = getParent()->addr + fde->outputOff;
-      if (!isInt<32>(pc - va)) {
-        Err(ctx) << fde->sec << ": PC offset is too large: 0x"
-                 << Twine::utohexstr(pc - va);
-        continue;
-      }
-      ret.push_back({uint32_t(pc - va), uint32_t(fdeVA - va)});
-    }
-  }
-
-  // Sort the FDE list by their PC and uniqueify. Usually there is only
-  // one FDE for a PC (i.e. function), but if ICF merges two functions
-  // into one, there can be more than one FDEs pointing to the address.
-  auto less = [](const FdeData &a, const FdeData &b) {
-    return a.pcRel < b.pcRel;
-  };
-  llvm::stable_sort(ret, less);
-  auto eq = [](const FdeData &a, const FdeData &b) {
-    return a.pcRel == b.pcRel;
-  };
-  ret.erase(llvm::unique(ret, eq), ret.end());
-
-  return ret;
 }
 
 static uint64_t readFdeAddr(Ctx &ctx, uint8_t *buf, int size) {
@@ -658,14 +593,79 @@ void EhFrameSection::writeTo(uint8_t *buf) {
     }
   }
 
-  // Apply relocations. .eh_frame section contents are not contiguous
-  // in the output buffer, but relocateAlloc() still works because
-  // getOffset() takes care of discontiguous section pieces.
+  // Apply relocations to .eh_frame entries. This includes CIE personality
+  // pointers, FDE initial_location fields, and LSDA pointers.
   for (EhInputSection *s : sections)
-    ctx.target->relocateAlloc(*s, buf);
+    ctx.target->relocateEh(*s, buf);
 
-  if (getPartition(ctx).ehFrameHdr && getPartition(ctx).ehFrameHdr->getParent())
-    getPartition(ctx).ehFrameHdr->write();
+  EhFrameHeader *hdr = getPartition(ctx).ehFrameHdr.get();
+  if (!hdr || !hdr->getParent())
+    return;
+
+  // Write the .eh_frame_hdr section, which contains a binary search table of
+  // pointers to FDEs. This must be written after .eh_frame relocation since
+  // the content depends on relocated initial_location fields in FDEs.
+  using FdeData = EhFrameSection::FdeData;
+  SmallVector<FdeData, 0> fdes;
+  uint64_t va = hdr->getVA();
+  for (CieRecord *rec : cieRecords) {
+    uint8_t enc = getFdeEncoding(rec->cie);
+    for (EhSectionPiece *fde : rec->fdes) {
+      uint64_t pc = getFdePc(buf, fde->outputOff, enc);
+      uint64_t fdeVA = getParent()->addr + fde->outputOff;
+      if (!isInt<32>(pc - va)) {
+        Err(ctx) << fde->sec << ": PC offset is too large: 0x"
+                 << Twine::utohexstr(pc - va);
+        continue;
+      }
+      fdes.push_back({uint32_t(pc - va), uint32_t(fdeVA - va)});
+    }
+  }
+
+  // Sort the FDE list by their PC and uniqueify. Usually there is only
+  // one FDE for a PC (i.e. function), but if ICF merges two functions
+  // into one, there can be more than one FDEs pointing to the address.
+  llvm::stable_sort(fdes, [](const FdeData &a, const FdeData &b) {
+    return a.pcRel < b.pcRel;
+  });
+  fdes.erase(
+      llvm::unique(fdes, [](auto &a, auto &b) { return a.pcRel == b.pcRel; }),
+      fdes.end());
+
+  // Write header.
+  uint8_t *hdrBuf = ctx.bufferStart + hdr->getParent()->offset + hdr->outSecOff;
+  hdrBuf[0] = 1;                                  // version
+  hdrBuf[1] = DW_EH_PE_pcrel | DW_EH_PE_sdata4;   // eh_frame_ptr_enc
+  hdrBuf[2] = DW_EH_PE_udata4;                    // fde_count_enc
+  hdrBuf[3] = DW_EH_PE_datarel | DW_EH_PE_sdata4; // table_enc
+  write32(ctx, hdrBuf + 4,
+          getParent()->addr - hdr->getVA() - 4); // eh_frame_ptr
+  write32(ctx, hdrBuf + 8, fdes.size());         // fde_count
+  hdrBuf += 12;
+
+  // Write binary search table. Each entry describes the starting PC and the FDE
+  // address.
+  for (FdeData &fde : fdes) {
+    write32(ctx, hdrBuf, fde.pcRel);
+    write32(ctx, hdrBuf + 4, fde.fdeVARel);
+    hdrBuf += 8;
+  }
+}
+
+EhFrameHeader::EhFrameHeader(Ctx &ctx)
+    : SyntheticSection(ctx, ".eh_frame_hdr", SHT_PROGBITS, SHF_ALLOC, 4) {}
+
+void EhFrameHeader::writeTo(uint8_t *buf) {
+  // The section content is written during EhFrameSection::writeTo.
+}
+
+size_t EhFrameHeader::getSize() const {
+  // .eh_frame_hdr has a 12 bytes header followed by an array of FDEs.
+  return 12 + getPartition(ctx).ehFrame->numFdes * 8;
+}
+
+bool EhFrameHeader::isNeeded() const {
+  return isLive() && getPartition(ctx).ehFrame->isNeeded();
 }
 
 GotSection::GotSection(Ctx &ctx)
@@ -674,7 +674,6 @@ GotSection::GotSection(Ctx &ctx)
   numEntries = ctx.target->gotHeaderEntriesNum;
 }
 
-void GotSection::addConstant(const Relocation &r) { relocations.push_back(r); }
 void GotSection::addEntry(const Symbol &sym) {
   assert(sym.auxIdx == ctx.symAux.size() - 1);
   ctx.symAux.back().gotIdx = numEntries++;
@@ -769,10 +768,6 @@ void GotSection::writeTo(uint8_t *buf) {
   }
 }
 
-static uint64_t getMipsPageAddr(uint64_t addr) {
-  return (addr + 0x8000) & ~0xffff;
-}
-
 static uint64_t getMipsPageCount(uint64_t size) {
   return (size + 0xfffe) / 0xffff + 1;
 }
@@ -781,12 +776,16 @@ MipsGotSection::MipsGotSection(Ctx &ctx)
     : SyntheticSection(ctx, ".got", SHT_PROGBITS,
                        SHF_ALLOC | SHF_WRITE | SHF_MIPS_GPREL, 16) {}
 
+void MipsGotSection::addConstant(const Relocation &r) {
+  relocations.push_back(r);
+}
+
 void MipsGotSection::addEntry(InputFile &file, Symbol &sym, int64_t addend,
                               RelExpr expr) {
   FileGot &g = getGot(file);
   if (expr == RE_MIPS_GOT_LOCAL_PAGE) {
     if (const OutputSection *os = sym.getOutputSection())
-      g.pagesMap.insert({os, {}});
+      g.pagesMap.insert({os, {&sym}});
     else
       g.local16.insert({{nullptr, getMipsPageAddr(sym.getVA(ctx, addend))}, 0});
   } else if (sym.isTls())
@@ -948,7 +947,7 @@ void MipsGotSection::build() {
   // using 32-bit value at the end of 16-bit entries.
   for (FileGot &got : gots) {
     got.relocs.remove_if([&](const std::pair<Symbol *, size_t> &p) {
-      return got.global.count(p.first);
+      return got.global.contains(p.first);
     });
     set_union(got.local16, got.local32);
     got.local32.clear();
@@ -1010,7 +1009,7 @@ void MipsGotSection::build() {
   // by subtracting "global" entries in the primary GOT.
   primGot = &gots.front();
   primGot->relocs.remove_if([&](const std::pair<Symbol *, size_t> &p) {
-    return primGot->global.count(p.first);
+    return primGot->global.contains(p.first);
   });
 
   // Calculate indexes for each GOT entry.
@@ -1055,75 +1054,104 @@ void MipsGotSection::build() {
     ctx.symAux.back().gotIdx = p.second;
   }
 
-  // Create dynamic relocations.
+  // Create relocations.
+  //
+  // Note the primary GOT's local and global relocations are implicit, and the
+  // MIPS ABI requires the VA be written even for the global entries, so we
+  // treat both as constants here.
   for (FileGot &got : gots) {
-    // Create dynamic relocations for TLS entries.
+    // Create relocations for TLS entries.
     for (std::pair<Symbol *, size_t> &p : got.tls) {
       Symbol *s = p.first;
       uint64_t offset = p.second * ctx.arg.wordsize;
       // When building a shared library we still need a dynamic relocation
       // for the TP-relative offset as we don't know how much other data will
       // be allocated before us in the static TLS block.
-      if (s->isPreemptible || ctx.arg.shared)
-        ctx.mainPart->relaDyn->addReloc(
-            {ctx.target->tlsGotRel, this, offset,
-             DynamicReloc::AgainstSymbolWithTargetVA, *s, 0, R_ABS});
+      if (!s->isPreemptible && !ctx.arg.shared)
+        addConstant({R_TPREL, ctx.target->symbolicRel, offset, 0, s});
+      else
+        ctx.mainPart->relaDyn->addAddendOnlyRelocIfNonPreemptible(
+            ctx.target->tlsGotRel, *this, offset, *s, ctx.target->symbolicRel);
     }
     for (std::pair<Symbol *, size_t> &p : got.dynTlsSymbols) {
       Symbol *s = p.first;
       uint64_t offset = p.second * ctx.arg.wordsize;
       if (s == nullptr) {
-        if (!ctx.arg.shared)
-          continue;
-        ctx.mainPart->relaDyn->addReloc(
-            {ctx.target->tlsModuleIndexRel, this, offset});
+        if (ctx.arg.shared)
+          ctx.mainPart->relaDyn->addReloc(
+              {ctx.target->tlsModuleIndexRel, this, offset});
+        else
+          addConstant(
+              {R_ADDEND, ctx.target->symbolicRel, offset, 1, ctx.dummySym});
       } else {
         // When building a shared library we still need a dynamic relocation
         // for the module index. Therefore only checking for
         // S->isPreemptible is not sufficient (this happens e.g. for
         // thread-locals that have been marked as local through a linker script)
         if (!s->isPreemptible && !ctx.arg.shared)
-          continue;
-        ctx.mainPart->relaDyn->addSymbolReloc(ctx.target->tlsModuleIndexRel,
-                                              *this, offset, *s);
+          // Write one to the GOT slot.
+          addConstant({R_ADDEND, ctx.target->symbolicRel, offset, 1, s});
+        else
+          ctx.mainPart->relaDyn->addSymbolReloc(ctx.target->tlsModuleIndexRel,
+                                                *this, offset, *s);
+        offset += ctx.arg.wordsize;
         // However, we can skip writing the TLS offset reloc for non-preemptible
         // symbols since it is known even in shared libraries
-        if (!s->isPreemptible)
-          continue;
-        offset += ctx.arg.wordsize;
-        ctx.mainPart->relaDyn->addSymbolReloc(ctx.target->tlsOffsetRel, *this,
-                                              offset, *s);
+        if (s->isPreemptible)
+          ctx.mainPart->relaDyn->addSymbolReloc(ctx.target->tlsOffsetRel, *this,
+                                                offset, *s);
+        else
+          addConstant({R_ABS, ctx.target->tlsOffsetRel, offset, 0, s});
       }
     }
 
-    // Do not create dynamic relocations for non-TLS
-    // entries in the primary GOT.
-    if (&got == primGot)
-      continue;
-
-    // Dynamic relocations for "global" entries.
+    // Relocations for "global" entries.
     for (const std::pair<Symbol *, size_t> &p : got.global) {
       uint64_t offset = p.second * ctx.arg.wordsize;
-      ctx.mainPart->relaDyn->addSymbolReloc(ctx.target->relativeRel, *this,
-                                            offset, *p.first);
+      if (&got == primGot)
+        addConstant({R_ABS, ctx.target->relativeRel, offset, 0, p.first});
+      else
+        ctx.mainPart->relaDyn->addSymbolReloc(ctx.target->relativeRel, *this,
+                                              offset, *p.first);
     }
-    if (!ctx.arg.isPic)
-      continue;
-    // Dynamic relocations for "local" entries in case of PIC.
+    // Relocation-only entries exist as dummy entries for dynamic symbols that
+    // aren't otherwise in the primary GOT, as the ABI requires an entry for
+    // each dynamic symbol. Secondary GOTs have no need for them.
+    assert((got.relocs.empty() || &got == primGot) &&
+           "Relocation-only entries should only be in the primary GOT");
+    for (const std::pair<Symbol *, size_t> &p : got.relocs) {
+      uint64_t offset = p.second * ctx.arg.wordsize;
+      addConstant({R_ABS, ctx.target->relativeRel, offset, 0, p.first});
+    }
+
+    // Relocations for "local" entries
     for (const std::pair<const OutputSection *, FileGot::PageBlock> &l :
          got.pagesMap) {
       size_t pageCount = l.second.count;
       for (size_t pi = 0; pi < pageCount; ++pi) {
         uint64_t offset = (l.second.firstIndex + pi) * ctx.arg.wordsize;
-        ctx.mainPart->relaDyn->addReloc({ctx.target->relativeRel, this, offset,
-                                         l.first, int64_t(pi * 0x10000)});
+        int64_t addend = int64_t(pi * 0x10000);
+        if (!ctx.arg.isPic || &got == primGot)
+          addConstant({RE_MIPS_OSEC_LOCAL_PAGE, ctx.target->relativeRel, offset,
+                       addend, l.second.repSym});
+        else
+          ctx.mainPart->relaDyn->addRelativeReloc(
+              ctx.target->relativeRel, *this, offset, *l.second.repSym, addend,
+              ctx.target->relativeRel, RE_MIPS_OSEC_LOCAL_PAGE);
       }
     }
     for (const std::pair<GotEntry, size_t> &p : got.local16) {
       uint64_t offset = p.second * ctx.arg.wordsize;
-      ctx.mainPart->relaDyn->addReloc({ctx.target->relativeRel, this, offset,
-                                       DynamicReloc::AddendOnlyWithTargetVA,
-                                       *p.first.first, p.first.second, R_ABS});
+      if (p.first.first == nullptr)
+        addConstant({R_ADDEND, ctx.target->relativeRel, offset, p.first.second,
+                     ctx.dummySym});
+      else if (!ctx.arg.isPic || &got == primGot)
+        addConstant({R_ABS, ctx.target->relativeRel, offset, p.first.second,
+                     p.first.first});
+      else
+        ctx.mainPart->relaDyn->addRelativeReloc(
+            ctx.target->relativeRel, *this, offset, *p.first.first,
+            p.first.second, ctx.target->relativeRel, R_ABS);
     }
   }
 }
@@ -1160,51 +1188,7 @@ void MipsGotSection::writeTo(uint8_t *buf) {
   // if we had to do this.
   writeUint(ctx, buf + ctx.arg.wordsize,
             (uint64_t)1 << (ctx.arg.wordsize * 8 - 1));
-  for (const FileGot &g : gots) {
-    auto write = [&](size_t i, const Symbol *s, int64_t a) {
-      uint64_t va = a;
-      if (s)
-        va = s->getVA(ctx, a);
-      writeUint(ctx, buf + i * ctx.arg.wordsize, va);
-    };
-    // Write 'page address' entries to the local part of the GOT.
-    for (const std::pair<const OutputSection *, FileGot::PageBlock> &l :
-         g.pagesMap) {
-      size_t pageCount = l.second.count;
-      uint64_t firstPageAddr = getMipsPageAddr(l.first->addr);
-      for (size_t pi = 0; pi < pageCount; ++pi)
-        write(l.second.firstIndex + pi, nullptr, firstPageAddr + pi * 0x10000);
-    }
-    // Local, global, TLS, reloc-only  entries.
-    // If TLS entry has a corresponding dynamic relocations, leave it
-    // initialized by zero. Write down adjusted TLS symbol's values otherwise.
-    // To calculate the adjustments use offsets for thread-local storage.
-    // http://web.archive.org/web/20190324223224/https://www.linux-mips.org/wiki/NPTL
-    for (const std::pair<GotEntry, size_t> &p : g.local16)
-      write(p.second, p.first.first, p.first.second);
-    // Write VA to the primary GOT only. For secondary GOTs that
-    // will be done by REL32 dynamic relocations.
-    if (&g == &gots.front())
-      for (const std::pair<Symbol *, size_t> &p : g.global)
-        write(p.second, p.first, 0);
-    for (const std::pair<Symbol *, size_t> &p : g.relocs)
-      write(p.second, p.first, 0);
-    for (const std::pair<Symbol *, size_t> &p : g.tls)
-      write(p.second, p.first,
-            p.first->isPreemptible || ctx.arg.shared ? 0 : -0x7000);
-    for (const std::pair<Symbol *, size_t> &p : g.dynTlsSymbols) {
-      if (p.first == nullptr && !ctx.arg.shared)
-        write(p.second, nullptr, 1);
-      else if (p.first && !p.first->isPreemptible) {
-        // If we are emitting a shared library with relocations we mustn't write
-        // anything to the GOT here. When using Elf_Rel relocations the value
-        // one will be treated as an addend and will cause crashes at runtime
-        if (!ctx.arg.shared)
-          write(p.second, nullptr, 1);
-        write(p.second + 1, p.first, -0x8000);
-      }
-    }
-  }
+  ctx.target->relocateAlloc(*this, buf);
 }
 
 // On PowerPC the .plt section is used to hold the table of function addresses
@@ -1578,7 +1562,7 @@ DynamicSection<ELFT>::computeContents() {
     addInSec(DT_VERNEED, *part.verNeed);
     unsigned needNum = 0;
     for (SharedFile *f : ctx.sharedFiles)
-      if (!f->vernauxs.empty())
+      if (!f->verneedInfo.empty())
         ++needNum;
     addInt(DT_VERNEEDNUM, needNum);
   }
@@ -1646,24 +1630,10 @@ uint64_t DynamicReloc::getOffset() const {
 }
 
 int64_t DynamicReloc::computeAddend(Ctx &ctx) const {
-  switch (kind) {
-  case AddendOnly:
-    assert(sym == nullptr);
-    return addend;
-  case AgainstSymbol:
-    assert(sym != nullptr);
-    return addend;
-  case AddendOnlyWithTargetVA:
-  case AgainstSymbolWithTargetVA: {
-    uint64_t ca = inputSec->getRelocTargetVA(
-        ctx, Relocation{expr, type, 0, addend, sym}, getOffset());
-    return ctx.arg.is64 ? ca : SignExtend64<32>(ca);
-  }
-  case MipsMultiGotPage:
-    assert(sym == nullptr);
-    return getMipsPageAddr(outputSec->addr) + addend;
-  }
-  llvm_unreachable("Unknown DynamicReloc::Kind enum");
+  assert(!isFinal && "addend already computed");
+  uint64_t ca = inputSec->getRelocTargetVA(
+      ctx, Relocation{expr, type, 0, addend, sym}, getOffset());
+  return ctx.arg.is64 ? ca : SignExtend64<32>(ca);
 }
 
 uint32_t DynamicReloc::getSymIndex(SymbolTableBaseSection *symTab) const {
@@ -1691,8 +1661,8 @@ RelocationBaseSection::RelocationBaseSection(Ctx &ctx, StringRef name,
 void RelocationBaseSection::addSymbolReloc(
     RelType dynType, InputSectionBase &isec, uint64_t offsetInSec, Symbol &sym,
     int64_t addend, std::optional<RelType> addendRelType) {
-  addReloc(DynamicReloc::AgainstSymbol, dynType, isec, offsetInSec, sym, addend,
-           R_ADDEND, addendRelType ? *addendRelType : ctx.target->noneRel);
+  addReloc(true, dynType, isec, offsetInSec, sym, addend, R_ADDEND,
+           addendRelType ? *addendRelType : ctx.target->noneRel);
 }
 
 void RelocationBaseSection::addAddendOnlyRelocIfNonPreemptible(
@@ -1700,11 +1670,9 @@ void RelocationBaseSection::addAddendOnlyRelocIfNonPreemptible(
     RelType addendRelType) {
   // No need to write an addend to the section for preemptible symbols.
   if (sym.isPreemptible)
-    addReloc({dynType, &isec, offsetInSec, DynamicReloc::AgainstSymbol, sym, 0,
-              R_ABS});
+    addReloc({dynType, &isec, offsetInSec, true, sym, 0, R_ADDEND});
   else
-    addReloc(DynamicReloc::AddendOnlyWithTargetVA, dynType, isec, offsetInSec,
-             sym, 0, R_ABS, addendRelType);
+    addReloc(false, dynType, isec, offsetInSec, sym, 0, R_ABS, addendRelType);
 }
 
 void RelocationBaseSection::mergeRels() {
@@ -1728,6 +1696,9 @@ void RelocationBaseSection::partitionRels() {
 }
 
 void RelocationBaseSection::finalizeContents() {
+  mergeRels();
+  // Compute DT_RELACOUNT to be used by part.dynamic.
+  partitionRels();
   SymbolTableBaseSection *symTab = getPartition(ctx).dynSymTab.get();
 
   // When linking glibc statically, .rel{,a}.plt contains R_*_IRELATIVE
@@ -1744,17 +1715,17 @@ void RelocationBaseSection::finalizeContents() {
   }
 }
 
-void DynamicReloc::computeRaw(Ctx &ctx, SymbolTableBaseSection *symt) {
+void DynamicReloc::finalize(Ctx &ctx, SymbolTableBaseSection *symt) {
   r_offset = getOffset();
   r_sym = getSymIndex(symt);
   addend = computeAddend(ctx);
-  kind = AddendOnly; // Catch errors
+  isFinal = true; // Catch errors
 }
 
 void RelocationBaseSection::computeRels() {
   SymbolTableBaseSection *symTab = getPartition(ctx).dynSymTab.get();
   parallelForEach(relocs, [&ctx = ctx, symTab](DynamicReloc &rel) {
-    rel.computeRaw(ctx, symTab);
+    rel.finalize(ctx, symTab);
   });
 
   auto irelative = std::stable_partition(
@@ -1816,6 +1787,8 @@ void RelrBaseSection::mergeRels() {
     llvm::append_range(relocs, v);
   relocsVec.clear();
 }
+
+void RelrBaseSection::finalizeContents() { mergeRels(); }
 
 template <class ELFT>
 AndroidPackedRelocationSection<ELFT>::AndroidPackedRelocationSection(
@@ -2795,14 +2768,13 @@ RelroPaddingSection::RelroPaddingSection(Ctx &ctx)
     : SyntheticSection(ctx, ".relro_padding", SHT_NOBITS, SHF_ALLOC | SHF_WRITE,
                        1) {}
 
-RandomizePaddingSection::RandomizePaddingSection(Ctx &ctx, uint64_t size,
-                                                 OutputSection *parent)
-    : SyntheticSection(ctx, ".randomize_padding", SHT_PROGBITS, SHF_ALLOC, 1),
-      size(size) {
+PaddingSection::PaddingSection(Ctx &ctx, uint64_t amount, OutputSection *parent)
+    : SyntheticSection(ctx, ".padding", SHT_PROGBITS, SHF_ALLOC, 1) {
+  size = amount;
   this->parent = parent;
 }
 
-void RandomizePaddingSection::writeTo(uint8_t *buf) {
+void PaddingSection::writeTo(uint8_t *buf) {
   std::array<uint8_t, 4> filler = getParent()->getFiller(ctx);
   uint8_t *end = buf + size;
   for (; buf + 4 <= end; buf += 4)
@@ -3707,51 +3679,6 @@ void GdbIndexSection::writeTo(uint8_t *buf) {
 
 bool GdbIndexSection::isNeeded() const { return !chunks.empty(); }
 
-EhFrameHeader::EhFrameHeader(Ctx &ctx)
-    : SyntheticSection(ctx, ".eh_frame_hdr", SHT_PROGBITS, SHF_ALLOC, 4) {}
-
-void EhFrameHeader::writeTo(uint8_t *buf) {
-  // Unlike most sections, the EhFrameHeader section is written while writing
-  // another section, namely EhFrameSection, which calls the write() function
-  // below from its writeTo() function. This is necessary because the contents
-  // of EhFrameHeader depend on the relocated contents of EhFrameSection and we
-  // don't know which order the sections will be written in.
-}
-
-// .eh_frame_hdr contains a binary search table of pointers to FDEs.
-// Each entry of the search table consists of two values,
-// the starting PC from where FDEs covers, and the FDE's address.
-// It is sorted by PC.
-void EhFrameHeader::write() {
-  uint8_t *buf = ctx.bufferStart + getParent()->offset + outSecOff;
-  using FdeData = EhFrameSection::FdeData;
-  SmallVector<FdeData, 0> fdes = getPartition(ctx).ehFrame->getFdeData();
-
-  buf[0] = 1;
-  buf[1] = DW_EH_PE_pcrel | DW_EH_PE_sdata4;
-  buf[2] = DW_EH_PE_udata4;
-  buf[3] = DW_EH_PE_datarel | DW_EH_PE_sdata4;
-  write32(ctx, buf + 4,
-          getPartition(ctx).ehFrame->getParent()->addr - this->getVA() - 4);
-  write32(ctx, buf + 8, fdes.size());
-  buf += 12;
-
-  for (FdeData &fde : fdes) {
-    write32(ctx, buf, fde.pcRel);
-    write32(ctx, buf + 4, fde.fdeVARel);
-    buf += 8;
-  }
-}
-
-size_t EhFrameHeader::getSize() const {
-  // .eh_frame_hdr has a 12 bytes header followed by an array of FDEs.
-  return 12 + getPartition(ctx).ehFrame->numFdes * 8;
-}
-
-bool EhFrameHeader::isNeeded() const {
-  return isLive() && getPartition(ctx).ehFrame->isNeeded();
-}
-
 VersionDefinitionSection::VersionDefinitionSection(Ctx &ctx)
     : SyntheticSection(ctx, ".gnu.version_d", SHT_GNU_verdef, SHF_ALLOC,
                        sizeof(uint32_t)) {}
@@ -3833,9 +3760,10 @@ void VersionTableSection::writeTo(uint8_t *buf) {
   buf += 2;
   for (const SymbolTableEntry &s : getPartition(ctx).dynSymTab->getSymbols()) {
     // For an unextracted lazy symbol (undefined weak), it must have been
-    // converted to Undefined and have VER_NDX_GLOBAL version here.
+    // converted to Undefined.
     assert(!s.sym->isLazy());
-    write16(ctx, buf, s.sym->versionId);
+    // Undefined symbols should use index 0 when unversioned.
+    write16(ctx, buf, s.sym->isUndefined() ? 0 : s.sym->versionId);
     buf += 2;
   }
 }
@@ -3850,17 +3778,18 @@ void elf::addVerneed(Ctx &ctx, Symbol &ss) {
   if (ss.versionId == VER_NDX_GLOBAL)
     return;
 
-  if (file.vernauxs.empty())
-    file.vernauxs.resize(file.verdefs.size());
+  if (file.verneedInfo.empty())
+    file.verneedInfo.resize(file.verdefs.size());
 
   // Select a version identifier for the vernaux data structure, if we haven't
   // already allocated one. The verdef identifiers cover the range
   // [1..getVerDefNum(ctx)]; this causes the vernaux identifiers to start from
   // getVerDefNum(ctx)+1.
-  if (file.vernauxs[ss.versionId] == 0)
-    file.vernauxs[ss.versionId] = ++ctx.vernauxNum + getVerDefNum(ctx);
+  if (file.verneedInfo[ss.versionId].id == 0)
+    file.verneedInfo[ss.versionId].id = ++ctx.vernauxNum + getVerDefNum(ctx);
+  file.verneedInfo[ss.versionId].weak &= ss.isWeak();
 
-  ss.versionId = file.vernauxs[ss.versionId];
+  ss.versionId = file.verneedInfo[ss.versionId].id;
 }
 
 template <class ELFT>
@@ -3870,29 +3799,34 @@ VersionNeedSection<ELFT>::VersionNeedSection(Ctx &ctx)
 
 template <class ELFT> void VersionNeedSection<ELFT>::finalizeContents() {
   for (SharedFile *f : ctx.sharedFiles) {
-    if (f->vernauxs.empty())
+    if (f->verneedInfo.empty())
       continue;
     verneeds.emplace_back();
     Verneed &vn = verneeds.back();
     vn.nameStrTab = getPartition(ctx).dynStrTab->addString(f->soName);
     bool isLibc = ctx.arg.relrGlibc && f->soName.starts_with("libc.so.");
     bool isGlibc2 = false;
-    for (unsigned i = 0; i != f->vernauxs.size(); ++i) {
-      if (f->vernauxs[i] == 0)
+    for (unsigned i = 0; i != f->verneedInfo.size(); ++i) {
+      if (f->verneedInfo[i].id == 0)
         continue;
+      // Each Verdef has one or more Verdaux entries. The first Verdaux gives
+      // the version name; subsequent entries (if any) are parent versions
+      // (e.g., v2 {} v1;). We only use the first one, as parent versions have
+      // no rtld behavior difference in practice.
       auto *verdef =
           reinterpret_cast<const typename ELFT::Verdef *>(f->verdefs[i]);
       StringRef ver(f->getStringTable().data() + verdef->getAux()->vda_name);
       if (isLibc && ver.starts_with("GLIBC_2."))
         isGlibc2 = true;
-      vn.vernauxs.push_back({verdef->vd_hash, f->vernauxs[i],
+      vn.vernauxs.push_back({verdef->vd_hash, f->verneedInfo[i],
                              getPartition(ctx).dynStrTab->addString(ver)});
     }
     if (isGlibc2) {
       const char *ver = "GLIBC_ABI_DT_RELR";
-      vn.vernauxs.push_back({hashSysV(ver),
-                             ++ctx.vernauxNum + getVerDefNum(ctx),
-                             getPartition(ctx).dynStrTab->addString(ver)});
+      vn.vernauxs.push_back(
+          {hashSysV(ver),
+           {uint16_t(++ctx.vernauxNum + getVerDefNum(ctx)), false},
+           getPartition(ctx).dynStrTab->addString(ver)});
     }
   }
 
@@ -3919,8 +3853,8 @@ template <class ELFT> void VersionNeedSection<ELFT>::writeTo(uint8_t *buf) {
     // Create the Elf_Vernauxs for this Elf_Verneed.
     for (auto &vna : vn.vernauxs) {
       vernaux->vna_hash = vna.hash;
-      vernaux->vna_flags = 0;
-      vernaux->vna_other = vna.verneedIndex;
+      vernaux->vna_flags = vna.verneedInfo.weak ? VER_FLG_WEAK : 0;
+      vernaux->vna_other = vna.verneedInfo.id;
       vernaux->vna_name = vna.nameStrTab;
       vernaux->vna_next = sizeof(Elf_Vernaux);
       ++vernaux;

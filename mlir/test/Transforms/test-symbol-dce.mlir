@@ -98,3 +98,38 @@ module {
   // CHECK: "live.user"() {uses = [@unknown_symbol]} : () -> ()
   "live.user"() {uses = [@unknown_symbol]} : () -> ()
 }
+
+// -----
+
+// Check that we don't DCE nested symbols if they are nested inside region
+// without SymbolTable.
+
+// CHECK-LABEL: module attributes {test.nested_nosymboltable_region}
+module attributes { test.nested_nosymboltable_region } {
+  "test.one_region_op"() ({
+    "test.symbol_scope"() ({
+      // CHECK: func nested @nfunction
+      func.func nested @nfunction() {
+        return
+      }
+      func.call @nfunction() : () -> ()
+      "test.finish"() : () -> ()
+    }) : () -> ()
+    "test.finish"() : () -> ()
+  }) : () -> ()
+}
+
+// -----
+
+// CHECK-LABEL: module attributes {test.nested_nosymboltable_region_notcalled}
+// CHECK-NOT: @nested
+// CHECK: @main
+module attributes { test.nested_nosymboltable_region_notcalled } {
+  "test.one_region_op"() ({
+    module {
+      func.func nested @nested() { return }
+      func.func @main() { return }
+    }
+    "test.finish"() : () -> ()
+  }) : () -> ()
+}

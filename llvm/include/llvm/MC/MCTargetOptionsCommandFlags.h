@@ -22,6 +22,7 @@ namespace llvm {
 
 class MCTargetOptions;
 enum class EmitDwarfUnwindType;
+class StringRef;
 
 namespace mc {
 
@@ -39,6 +40,8 @@ LLVM_ABI bool getDwarf64();
 LLVM_ABI EmitDwarfUnwindType getEmitDwarfUnwind();
 
 LLVM_ABI bool getEmitCompactUnwindNonCanonical();
+
+LLVM_ABI bool getEmitSFrameUnwind();
 
 LLVM_ABI bool getShowMCInst();
 
@@ -60,9 +63,9 @@ LLVM_ABI bool getX86RelaxRelocations();
 
 LLVM_ABI bool getX86Sse2Avx();
 
-LLVM_ABI std::string getABIName();
+LLVM_ABI StringRef getABIName();
 
-LLVM_ABI std::string getAsSecureLogFile();
+LLVM_ABI StringRef getAsSecureLogFile();
 
 /// Create this object with static storage to register mc-related command
 /// line options.

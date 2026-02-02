@@ -27,7 +27,7 @@ TEST_F(VPPatternMatchTest, ScalarIVSteps) {
   VPBuilder Builder(VPBB);
 
   IntegerType *I64Ty = IntegerType::get(C, 64);
-  VPValue *StartV = Plan.getOrAddLiveIn(ConstantInt::get(I64Ty, 0));
+  VPIRValue *StartV = Plan.getConstantInt(I64Ty, 0);
   auto *CanonicalIVPHI = new VPCanonicalIVPHIRecipe(StartV, DebugLoc());
   Builder.insert(CanonicalIVPHI);
 
@@ -51,5 +51,29 @@ TEST_F(VPPatternMatchTest, ScalarIVSteps) {
                                             m_SpecificInt(2), m_Specific(VF))));
 }
 
+TEST_F(VPPatternMatchTest, GetElementPtr) {
+  VPlan &Plan = getPlan();
+  VPBasicBlock *VPBB = Plan.createVPBasicBlock("entry");
+  VPBuilder Builder(VPBB);
+
+  IntegerType *I64Ty = IntegerType::get(C, 64);
+  VPValue *One = Plan.getOrAddLiveIn(ConstantInt::get(I64Ty, 1));
+  VPValue *Two = Plan.getOrAddLiveIn(ConstantInt::get(I64Ty, 2));
+  VPValue *Ptr =
+      Plan.getOrAddLiveIn(Constant::getNullValue(PointerType::get(C, 0)));
+
+  VPInstruction *PtrAdd = Builder.createPtrAdd(Ptr, One);
+  VPInstruction *WidePtrAdd = Builder.createWidePtrAdd(Ptr, Two);
+
+  using namespace VPlanPatternMatch;
+  ASSERT_TRUE(
+      match(PtrAdd, m_GetElementPtr(m_Specific(Ptr), m_SpecificInt(1))));
+  ASSERT_FALSE(
+      match(PtrAdd, m_GetElementPtr(m_Specific(Ptr), m_SpecificInt(2))));
+  ASSERT_TRUE(
+      match(WidePtrAdd, m_GetElementPtr(m_Specific(Ptr), m_SpecificInt(2))));
+  ASSERT_FALSE(
+      match(WidePtrAdd, m_GetElementPtr(m_Specific(Ptr), m_SpecificInt(1))));
+}
 } // namespace
 } // namespace llvm

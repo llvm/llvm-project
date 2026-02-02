@@ -133,7 +133,7 @@
 #endif
 
 #if (!(defined(_WIN32) || defined(__CYGWIN__)) ||                              \
-     (defined(__MINGW32__) && defined(__clang__)))
+     ((defined(__MINGW32__) || defined(__CYGWIN__)) && defined(__clang__)))
 #define LLVM_LIBRARY_VISIBILITY LLVM_ATTRIBUTE_VISIBILITY_HIDDEN
 // Clang compilers older then 15 do not support gnu style attributes on
 // namespaces.
@@ -171,32 +171,19 @@
 /// for both functions and classes. On windows its turned in to dllimport for
 /// library consumers, for other platforms its a default visibility attribute.
 ///
-/// LLVM_ABI_FRIEND is for annotating friend function declarations when the
-/// target function's original declaration is annotated with LLVM_ABI. This
-/// macro matches the LLVM_ABI macro on Windows, on other platforms it does
-/// nothing.
+/// LLVM_ABI_FOR_TEST is for annotating symbols that are only exported because
+/// they are imported from a test. These symbols are not technically part of the
+/// LLVM public interface and could be conditionally excluded when not building
+/// tests in the future.
 ///
-/// LLVM_C_ABI is used to annotated functions and data that need to be exported
-/// for the libllvm-c API. This used both for the llvm-c headers and for the
-/// functions declared in the different Target's c++ source files that don't
-/// include the header forward declaring them.
 #ifndef LLVM_ABI_GENERATING_ANNOTATIONS
 // Marker to add to classes or functions in public headers that should not have
 // export macros added to them by the clang tool
 #define LLVM_ABI_NOT_EXPORTED
-#if defined(LLVM_BUILD_LLVM_DYLIB) || defined(LLVM_BUILD_SHARED_LIBS) ||       \
-    defined(LLVM_ENABLE_PLUGINS)
-// Some libraries like those for tablegen are linked in to tools that used
-// in the build so can't depend on the llvm shared library. If export macros
-// were left enabled when building these we would get duplicate or
-// missing symbol linker errors on windows.
-#if defined(LLVM_BUILD_STATIC)
-#define LLVM_ABI
-#define LLVM_ABI_FRIEND
-#define LLVM_TEMPLATE_ABI
-#define LLVM_EXPORT_TEMPLATE
-#define LLVM_ABI_EXPORT
-#elif defined(_WIN32) && !defined(__MINGW32__)
+// TODO(https://github.com/llvm/llvm-project/issues/145406): eliminate need for
+// two preprocessor definitions to gate LLVM_ABI macro definitions.
+#if defined(LLVM_ENABLE_LLVM_EXPORT_ANNOTATIONS) && !defined(LLVM_BUILD_STATIC)
+#if defined(_WIN32) && !defined(__MINGW32__)
 #if defined(LLVM_EXPORTS)
 #define LLVM_ABI __declspec(dllexport)
 #define LLVM_TEMPLATE_ABI
@@ -206,30 +193,29 @@
 #define LLVM_TEMPLATE_ABI __declspec(dllimport)
 #define LLVM_EXPORT_TEMPLATE
 #endif
-#define LLVM_ABI_FRIEND LLVM_ABI
 #define LLVM_ABI_EXPORT __declspec(dllexport)
-#elif defined(__ELF__) || defined(__MINGW32__) || defined(_AIX) ||             \
+#elif __has_attribute(visibility)
+#if defined(__ELF__) || defined(__MINGW32__) || defined(_AIX) ||               \
     defined(__MVS__) || defined(__CYGWIN__)
-#define LLVM_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
-#define LLVM_ABI_FRIEND
-#define LLVM_TEMPLATE_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
+#define LLVM_ABI __attribute__((visibility("default")))
+#define LLVM_TEMPLATE_ABI LLVM_ABI
 #define LLVM_EXPORT_TEMPLATE
-#define LLVM_ABI_EXPORT LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
+#define LLVM_ABI_EXPORT LLVM_ABI
 #elif defined(__MACH__) || defined(__WASM__) || defined(__EMSCRIPTEN__)
-#define LLVM_ABI LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
-#define LLVM_ABI_FRIEND
+#define LLVM_ABI __attribute__((visibility("default")))
 #define LLVM_TEMPLATE_ABI
 #define LLVM_EXPORT_TEMPLATE
-#define LLVM_ABI_EXPORT LLVM_ATTRIBUTE_VISIBILITY_DEFAULT
+#define LLVM_ABI_EXPORT LLVM_ABI
 #endif
-#else
+#endif
+#endif
+#if !defined(LLVM_ABI)
 #define LLVM_ABI
-#define LLVM_ABI_FRIEND
 #define LLVM_TEMPLATE_ABI
 #define LLVM_EXPORT_TEMPLATE
 #define LLVM_ABI_EXPORT
 #endif
-#define LLVM_C_ABI LLVM_ABI
+#define LLVM_ABI_FOR_TEST LLVM_ABI
 #endif
 
 #if defined(__GNUC__)
@@ -453,6 +439,29 @@
 #define LLVM_CTOR_NODISCARD [[nodiscard]]
 #else
 #define LLVM_CTOR_NODISCARD
+#endif
+
+// Macro to suppress the MSVC warning C4848:
+// "support for attribute [[msvc::no_unique_address]] in C++17 and earlier
+// is a vendor extension".
+// This warning is removed in versions >= 19.43.
+#if !defined(_MSC_VER) || _MSC_VER >= 1943 || defined(__clang__)
+#define LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_PUSH
+#define LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_POP
+#else // MSVC < 19.43
+#define LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_PUSH                             \
+  _Pragma("warning(push)") _Pragma("warning(disable : 4848)")
+#define LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_POP _Pragma("warning(pop)")
+#endif
+
+#if LLVM_HAS_CPP_ATTRIBUTE(no_unique_address)
+#define LLVM_NO_UNIQUE_ADDRESS [[no_unique_address]]
+#elif LLVM_HAS_CPP_ATTRIBUTE(msvc::no_unique_address)
+#define LLVM_NO_UNIQUE_ADDRESS                                                 \
+  LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_PUSH                                   \
+  [[msvc::no_unique_address]] LLVM_SUPPRESS_MSVC_ATTR_IS_VENDOR_EXT_POP
+#else
+#define LLVM_NO_UNIQUE_ADDRESS
 #endif
 
 /// LLVM_EXTENSION - Support compilers where we have a keyword to suppress
@@ -718,6 +727,15 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 #define LLVM_PREFERRED_TYPE(T) __attribute__((preferred_type(T)))
 #else
 #define LLVM_PREFERRED_TYPE(T)
+#endif
+
+#if LLVM_HAS_CPP_ATTRIBUTE(clang::ptrauth_vtable_pointer) &&                   \
+    (defined(__PTRAUTH__) || __has_feature(ptrauth_calls))
+#define LLVM_MOVABLE_POLYMORPHIC_TYPE                                          \
+  [[clang::ptrauth_vtable_pointer(default_key, no_address_discrimination,      \
+                                  default_extra_discrimination)]]
+#else
+#define LLVM_MOVABLE_POLYMORPHIC_TYPE
 #endif
 
 /// \macro LLVM_VIRTUAL_ANCHOR_FUNCTION

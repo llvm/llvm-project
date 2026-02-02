@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
+#include <clc/opencl/opencl-base.h>
 
 _CLC_DEF void __clc_r600_barrier(void) __asm("llvm.r600.group.barrier");
 

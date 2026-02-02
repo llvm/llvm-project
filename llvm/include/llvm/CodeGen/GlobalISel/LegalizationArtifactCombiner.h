@@ -356,7 +356,7 @@ public:
     // trunc(ext x) -> x
     ArtifactValueFinder Finder(MRI, Builder, LI);
     if (Register FoundReg =
-            Finder.findValueFromDef(DstReg, 0, DstTy.getSizeInBits())) {
+            Finder.findValueFromDef(DstReg, 0, DstTy.getSizeInBits(), DstTy)) {
       LLT FoundRegTy = MRI.getType(FoundReg);
       if (DstTy == FoundRegTy) {
         LLVM_DEBUG(dbgs() << ".. Combine G_TRUNC(G_[S,Z,ANY]EXT/G_TRUNC...): "
@@ -641,10 +641,11 @@ public:
       Register SrcReg = Concat.getReg(StartSrcIdx);
       if (InRegOffset == 0 && Size == SrcSize) {
         CurrentBest = SrcReg;
-        return findValueFromDefImpl(SrcReg, 0, Size);
+        return findValueFromDefImpl(SrcReg, 0, Size, MRI.getType(SrcReg));
       }
 
-      return findValueFromDefImpl(SrcReg, InRegOffset, Size);
+      return findValueFromDefImpl(SrcReg, InRegOffset, Size,
+                                  MRI.getType(SrcReg));
     }
 
     /// Given an build_vector op \p BV and a start bit and size, try to find
@@ -759,7 +760,8 @@ public:
       if (EndBit <= InsertOffset || InsertedEndBit <= StartBit) {
         SrcRegToUse = ContainerSrcReg;
         NewStartBit = StartBit;
-        return findValueFromDefImpl(SrcRegToUse, NewStartBit, Size);
+        return findValueFromDefImpl(SrcRegToUse, NewStartBit, Size,
+                                    MRI.getType(SrcRegToUse));
       }
       if (InsertOffset <= StartBit && EndBit <= InsertedEndBit) {
         SrcRegToUse = InsertedReg;
@@ -767,7 +769,8 @@ public:
         if (NewStartBit == 0 &&
             Size == MRI.getType(SrcRegToUse).getSizeInBits())
           CurrentBest = SrcRegToUse;
-        return findValueFromDefImpl(SrcRegToUse, NewStartBit, Size);
+        return findValueFromDefImpl(SrcRegToUse, NewStartBit, Size,
+                                    MRI.getType(SrcRegToUse));
       }
       // The bit range spans both the inserted and container regions.
       return Register();
@@ -799,7 +802,7 @@ public:
 
       if (StartBit == 0 && SrcType.getSizeInBits() == Size)
         CurrentBest = SrcReg;
-      return findValueFromDefImpl(SrcReg, StartBit, Size);
+      return findValueFromDefImpl(SrcReg, StartBit, Size, SrcType);
     }
 
     /// Given an G_TRUNC op \p MI and a start bit and size, try to find
@@ -819,14 +822,14 @@ public:
       if (!SrcType.isScalar())
         return CurrentBest;
 
-      return findValueFromDefImpl(SrcReg, StartBit, Size);
+      return findValueFromDefImpl(SrcReg, StartBit, Size, SrcType);
     }
 
     /// Internal implementation for findValueFromDef(). findValueFromDef()
     /// initializes some data like the CurrentBest register, which this method
     /// and its callees rely upon.
     Register findValueFromDefImpl(Register DefReg, unsigned StartBit,
-                                  unsigned Size) {
+                                  unsigned Size, LLT DstTy) {
       std::optional<DefinitionAndSourceRegister> DefSrcReg =
           getDefSrcRegIgnoringCopies(DefReg, MRI);
       MachineInstr *Def = DefSrcReg->MI;
@@ -847,7 +850,7 @@ public:
         }
         Register SrcReg = Def->getOperand(Def->getNumOperands() - 1).getReg();
         Register SrcOriginReg =
-            findValueFromDefImpl(SrcReg, StartBit + DefStartBit, Size);
+            findValueFromDefImpl(SrcReg, StartBit + DefStartBit, Size, DstTy);
         if (SrcOriginReg)
           return SrcOriginReg;
         // Failed to find a further value. If the StartBit and Size perfectly
@@ -868,6 +871,12 @@ public:
       case TargetOpcode::G_ZEXT:
       case TargetOpcode::G_ANYEXT:
         return findValueFromExt(*Def, StartBit, Size);
+      case TargetOpcode::G_IMPLICIT_DEF: {
+        if (MRI.getType(DefReg) == DstTy)
+          return DefReg;
+        MIB.setInstrAndDebugLoc(*Def);
+        return MIB.buildUndef(DstTy).getReg(0);
+      }
       default:
         return CurrentBest;
       }
@@ -882,10 +891,10 @@ public:
     /// at position \p StartBit with size \p Size.
     /// \returns a register with the requested size, or an empty Register if no
     /// better value could be found.
-    Register findValueFromDef(Register DefReg, unsigned StartBit,
-                              unsigned Size) {
+    Register findValueFromDef(Register DefReg, unsigned StartBit, unsigned Size,
+                              LLT DstTy) {
       CurrentBest = Register();
-      Register FoundReg = findValueFromDefImpl(DefReg, StartBit, Size);
+      Register FoundReg = findValueFromDefImpl(DefReg, StartBit, Size, DstTy);
       return FoundReg != DefReg ? FoundReg : Register();
     }
 
@@ -904,7 +913,8 @@ public:
           DeadDefs[DefIdx] = true;
           continue;
         }
-        Register FoundVal = findValueFromDef(DefReg, 0, DestTy.getSizeInBits());
+        Register FoundVal =
+            findValueFromDef(DefReg, 0, DestTy.getSizeInBits(), DestTy);
         if (!FoundVal)
           continue;
         if (MRI.getType(FoundVal) != DestTy)
@@ -923,7 +933,7 @@ public:
 
     GUnmerge *findUnmergeThatDefinesReg(Register Reg, unsigned Size,
                                         unsigned &DefOperandIdx) {
-      if (Register Def = findValueFromDefImpl(Reg, 0, Size)) {
+      if (Register Def = findValueFromDefImpl(Reg, 0, Size, MRI.getType(Reg))) {
         if (auto *Unmerge = dyn_cast<GUnmerge>(MRI.getVRegDef(Def))) {
           DefOperandIdx =
               Unmerge->findRegisterDefOperandIdx(Def, /*TRI=*/nullptr);
@@ -1067,13 +1077,15 @@ public:
                                GISelChangeObserver &Observer) {
     unsigned NumDefs = MI.getNumDefs();
     Register SrcReg = MI.getSourceReg();
-    MachineInstr *SrcDef = getDefIgnoringCopies(SrcReg, MRI);
-    if (!SrcDef)
+    std::optional<DefinitionAndSourceRegister> DefSrcReg =
+        getDefSrcRegIgnoringCopies(SrcReg, MRI);
+    if (!DefSrcReg)
       return false;
+    MachineInstr *SrcDef = DefSrcReg->MI;
 
     LLT OpTy = MRI.getType(SrcReg);
     LLT DestTy = MRI.getType(MI.getReg(0));
-    unsigned SrcDefIdx = getDefIndex(*SrcDef, SrcReg);
+    unsigned SrcDefIdx = getDefIndex(*SrcDef, DefSrcReg->Reg);
 
     Builder.setInstrAndDebugLoc(MI);
 
@@ -1286,12 +1298,19 @@ public:
     // for N >= %2.getSizeInBits() / 2
     //    %3 = G_EXTRACT %1, (N - %0.getSizeInBits()
 
+    Register DstReg = MI.getOperand(0).getReg();
     Register SrcReg = lookThroughCopyInstrs(MI.getOperand(1).getReg());
     MachineInstr *MergeI = MRI.getVRegDef(SrcReg);
+    if (MergeI && MergeI->getOpcode() == TargetOpcode::G_IMPLICIT_DEF) {
+      Builder.setInstrAndDebugLoc(MI);
+      Builder.buildUndef(DstReg);
+      UpdatedDefs.push_back(DstReg);
+      markInstAndDefDead(MI, *MergeI, DeadInsts);
+      return true;
+    }
     if (!MergeI || !isa<GMergeLikeInstr>(MergeI))
       return false;
 
-    Register DstReg = MI.getOperand(0).getReg();
     LLT DstTy = MRI.getType(DstReg);
     LLT SrcTy = MRI.getType(SrcReg);
 

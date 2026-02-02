@@ -788,8 +788,8 @@ void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
     IRBuilder<> Builder(Call);
     Value *State;
     if (InCleanup) {
-      Value *StateField = Builder.CreateStructGEP(RegNode->getAllocatedType(),
-                                                  RegNode, StateFieldIndex);
+      Value *StateField =
+          Builder.CreateStructGEP(RegNodeTy, RegNode, StateFieldIndex);
       State = Builder.CreateLoad(Builder.getInt32Ty(), StateField);
     } else {
       State = Builder.getInt32(getStateForCall(BlockColors, FuncInfo, *Call));
@@ -800,8 +800,8 @@ void WinEHStatePass::addStateStores(Function &F, WinEHFuncInfo &FuncInfo) {
 
 void WinEHStatePass::insertStateNumberStore(Instruction *IP, int State) {
   IRBuilder<> Builder(IP);
-  Value *StateField = Builder.CreateStructGEP(RegNode->getAllocatedType(),
-                                              RegNode, StateFieldIndex);
+  Value *StateField =
+      Builder.CreateStructGEP(RegNodeTy, RegNode, StateFieldIndex);
   Builder.CreateStore(Builder.getInt32(State), StateField);
 }
 
@@ -811,7 +811,7 @@ void WinEHStatePass::updateEspForInAllocas(Function &F) {
       if (auto *Alloca = dyn_cast<AllocaInst>(&I)) {
         if (Alloca->isStaticAlloca())
           continue;
-        IRBuilder<> Builder(Alloca->getNextNonDebugInstruction());
+        IRBuilder<> Builder(Alloca->getNextNode());
         // SavedESP = llvm.stacksave()
         Value *SP = Builder.CreateStackSave();
         Builder.CreateStore(SP, Builder.CreateStructGEP(RegNodeTy, RegNode, 0));
@@ -820,7 +820,7 @@ void WinEHStatePass::updateEspForInAllocas(Function &F) {
       if (auto *II = dyn_cast<IntrinsicInst>(&I)) {
         if (II->getIntrinsicID() != Intrinsic::stackrestore)
           continue;
-        IRBuilder<> Builder(II->getNextNonDebugInstruction());
+        IRBuilder<> Builder(II->getNextNode());
         // SavedESP = llvm.stacksave()
         Value *SP = Builder.CreateStackSave();
         Builder.CreateStore(SP, Builder.CreateStructGEP(RegNodeTy, RegNode, 0));

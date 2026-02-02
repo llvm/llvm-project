@@ -316,9 +316,14 @@ public:
 };
 
 class TargetLoweringObjectFileGOFF : public TargetLoweringObjectFile {
+  std::string DefaultRootSDName;
+  std::string DefaultADAPRName;
+
 public:
   TargetLoweringObjectFileGOFF();
   ~TargetLoweringObjectFileGOFF() override = default;
+
+  void getModuleMetadata(Module &M) override;
 
   MCSection *SelectSectionForGlobal(const GlobalObject *GO, SectionKind Kind,
                                     const TargetMachine &TM) const override;
@@ -326,6 +331,7 @@ public:
                                       const TargetMachine &TM) const override;
   MCSection *getSectionForLSDA(const Function &F, const MCSymbol &FnSym,
                                const TargetMachine &TM) const override;
+  MCSection *getStaticXtorSection(unsigned Priority) const;
 };
 
 } // end namespace llvm

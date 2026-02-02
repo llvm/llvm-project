@@ -11,16 +11,13 @@
 
 #define _CLC_OVERLOAD __attribute__((overloadable))
 #define _CLC_DECL
-#define _CLC_INLINE __attribute__((always_inline)) inline
+#define _CLC_INLINE inline
+#define _CLC_CONST __attribute__((const))
 
-// avoid inlines for SPIR-V related targets since we'll optimise later in the
-// chain
-#if defined(CLC_SPIRV)
-#define _CLC_DEF
-#elif defined(CLC_CLSPV)
+#if defined(CLC_CLSPV)
 #define _CLC_DEF __attribute__((noinline)) __attribute__((clspv_libclc_builtin))
 #else
-#define _CLC_DEF __attribute__((always_inline))
+#define _CLC_DEF
 #endif
 
 #if __OPENCL_C_VERSION__ == CL_VERSION_2_0 ||                                  \

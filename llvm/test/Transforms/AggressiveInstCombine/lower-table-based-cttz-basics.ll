@@ -91,12 +91,13 @@
 
 @ctz7.table = internal unnamed_addr constant [32 x i8] c"\00\01\1C\02\1D\0E\18\03\1E\16\14\0F\19\11\04\08\1F\1B\0D\17\15\13\10\07\1A\0C\12\06\0B\05\0A\09", align 1
 
-define i32 @ctz1(i32 %x) {
+define i32 @ctz1(i32 %x) !prof !0 {
 ; CHECK-LABEL: @ctz1(
+; CHECK: !prof [[PROF_0:![0-9]+]] {
 ; CHECK-NEXT:  entry:
 ; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X]], 0
-; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 0, i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 0, i32 [[TMP0]], !prof [[PROF_1:![0-9]+]]
 ; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
 ; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP3]] to i32
 ; CHECK-NEXT:    ret i32 [[CONV]]
@@ -190,6 +191,39 @@ return:                                           ; preds = %entry, %if.end
   ret i32 %retval.0
 }
 
+define i32 @ctz3_with_i8gep(i32 %x) {
+; CHECK-LABEL: @ctz3_with_i8gep(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i32 [[X:%.*]], 0
+; CHECK-NEXT:    br i1 [[CMP]], label [[RETURN:%.*]], label [[IF_END:%.*]]
+; CHECK:       if.end:
+; CHECK-NEXT:    [[TMP2:%.*]] = call i32 @llvm.cttz.i32(i32 [[X]], i1 true)
+; CHECK-NEXT:    br label [[RETURN]]
+; CHECK:       return:
+; CHECK-NEXT:    [[RETVAL_0:%.*]] = phi i32 [ [[TMP2]], [[IF_END]] ], [ 32, [[ENTRY:%.*]] ]
+; CHECK-NEXT:    ret i32 [[RETVAL_0]]
+;
+entry:
+  %cmp = icmp eq i32 %x, 0
+  br i1 %cmp, label %return, label %if.end
+
+if.end:                                           ; preds = %entry
+  %sub = sub i32 0, %x
+  %and = and i32 %x, %sub
+  %mul = mul i32 %and, 81224991
+  %0 = lshr i32 %mul, 25
+  %1 = and i32 %0, 124
+  %arrayidx.idx = zext nneg i32 %1 to i64
+  %arrayidx = getelementptr inbounds nuw i8, ptr @ctz3.table, i64 %arrayidx.idx
+  %2 = load i32, ptr %arrayidx, align 4
+  br label %return
+
+return:                                           ; preds = %if.end, %entry
+  %retval.0 = phi i32 [ %2, %if.end ], [ 32, %entry ]
+  ret i32 %retval.0
+}
+
+
 @table = internal unnamed_addr constant [64 x i32] [i32 0, i32 1, i32 12, i32 2, i32 13, i32 22, i32 17, i32 3, i32 14, i32 33, i32 23, i32 36, i32 18, i32 58, i32 28, i32 4, i32 62, i32 15, i32 34, i32 26, i32 24, i32 48, i32 50, i32 37, i32 19, i32 55, i32 59, i32 52, i32 29, i32 44, i32 39, i32 5, i32 63, i32 11, i32 21, i32 16, i32 32, i32 35, i32 57, i32 27, i32 61, i32 25, i32 47, i32 49, i32 54, i32 51, i32 43, i32 38, i32 10, i32 20, i32 31, i32 56, i32 60, i32 46, i32 53, i32 42, i32 9, i32 30, i32 45, i32 41, i32 8, i32 40, i32 7, i32 6], align 4
 
 define i32 @ctz4(i64 %b) {
@@ -276,3 +310,196 @@ entry:
   %0 = load i32, ptr %arrayidx, align 4
   ret i32 %0
 }
+
+;; This has a wrong table size but is otherwise fine.
+@ctz9.table = internal unnamed_addr constant [128 x i8] c"\00\01\1C\02\1D\0E\18\03\1E\16\14\0F\19\11\04\08\1F\1B\0D\17\15\13\10\07\1A\0C\12\06\0B\05\0A\09\00\01\1C\02\1D\0E\18\03\1E\16\14\0F\19\11\04\08\1F\1B\0D\17\15\13\10\07\1A\0C\12\06\0B\05\0A\09\00\01\1C\02\1D\0E\18\03\1E\16\14\0F\19\11\04\08\1F\1B\0D\17\15\13\10\07\1A\0C\12\06\0B\05\0A\09\00\01\1C\02\1D\0E\18\03\1E\16\14\0F\19\11\04\08\1F\1B\0D\17\15\13\10\07\1A\0C\12\06\0B\05\0A\09", align 1
+define i32 @ctz9(i32 %x) {
+; CHECK-LABEL: @ctz9(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 0, i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
+; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP3]] to i32
+; CHECK-NEXT:    ret i32 [[CONV]]
+;
+entry:
+  %sub = sub i32 0, %x
+  %and = and i32 %sub, %x
+  %mul = mul i32 %and, 125613361
+  %shr = lshr i32 %mul, 27
+  %idxprom = zext i32 %shr to i64
+  %arrayidx = getelementptr inbounds [128 x i8], ptr @ctz9.table, i64 0, i64 %idxprom
+  %0 = load i8, ptr %arrayidx, align 1
+  %conv = zext i8 %0 to i32
+  ret i32 %conv
+}
+
+define i32 @ctz1_with_i8_gep(i32 %x) {
+; CHECK-LABEL: @ctz1_with_i8_gep(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 0, i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = trunc i32 [[TMP2]] to i8
+; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP3]] to i32
+; CHECK-NEXT:    ret i32 [[CONV]]
+;
+entry:
+  %sub = sub i32 0, %x
+  %and = and i32 %sub, %x
+  %mul = mul i32 %and, 125613361
+  %shr = lshr i32 %mul, 27
+  %idxprom = zext i32 %shr to i64
+  %arrayidx = getelementptr inbounds i8, ptr @ctz7.table, i64 %idxprom
+  %0 = load i8, ptr %arrayidx, align 1
+  %conv = zext i8 %0 to i32
+  ret i32 %conv
+}
+
+; This is the same a ctz2 (i16 table) with an i8 gep making the indices invalid
+define i32 @ctz2_with_i8_gep(i32 %x) {
+; CHECK-LABEL: @ctz2_with_i8_gep(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 0, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i32 [[SUB]], [[X]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i32 [[AND]], 72416175
+; CHECK-NEXT:    [[SHR:%.*]] = lshr i32 [[MUL]], 26
+; CHECK-NEXT:    [[IDXPROM:%.*]] = zext i32 [[SHR]] to i64
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds [64 x i8], ptr @ctz2.table, i64 0, i64 [[IDXPROM]]
+; CHECK-NEXT:    [[TMP0:%.*]] = load i16, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[TMP0]] to i32
+; CHECK-NEXT:    ret i32 [[CONV]]
+;
+entry:
+  %sub = sub i32 0, %x
+  %and = and i32 %sub, %x
+  %mul = mul i32 %and, 72416175
+  %shr = lshr i32 %mul, 26
+  %idxprom = zext i32 %shr to i64
+  %arrayidx = getelementptr inbounds [64 x i8], ptr @ctz2.table, i64 0, i64 %idxprom
+  %0 = load i16, ptr %arrayidx, align 1
+  %conv = sext i16 %0 to i32
+  ret i32 %conv
+}
+
+; This is the same a ctz2_with_i8_gep but with the gep index multiplied by 2.
+define i32 @ctz2_with_i8_gep_fixed(i32 %x) {
+; CHECK-LABEL: @ctz2_with_i8_gep_fixed(
+; CHECK-NEXT:    [[TMP1:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[TMP2:%.*]] = trunc i32 [[TMP1]] to i16
+; CHECK-NEXT:    [[CONV:%.*]] = sext i16 [[TMP2]] to i32
+; CHECK-NEXT:    ret i32 [[CONV]]
+;
+  %sub = sub i32 0, %x
+  %and = and i32 %x, %sub
+  %mul = mul i32 %and, 72416175
+  %shr = lshr i32 %mul, 25
+  %shr2 = and i32 %shr, 126
+  %1 = zext nneg i32 %shr2 to i64
+  %arrayidx = getelementptr inbounds nuw i8, ptr @ctz2.table, i64 %1
+  %2 = load i16, ptr %arrayidx, align 2
+  %conv = sext i16 %2 to i32
+  ret i32 %conv
+}
+
+; This is a i16 input with the debruijn table stored in a single i128.
+@tablei128 = internal unnamed_addr constant i128 16018378897745984667142067713738932480, align 16
+define i32 @cttz_i16_via_i128(i16 noundef %x) {
+; CHECK-LABEL: @cttz_i16_via_i128(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i16 @llvm.cttz.i16(i16 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[TMP3:%.*]] = icmp eq i16 [[X]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP3]], i16 0, i16 [[TMP0]]
+; CHECK-NEXT:    [[TMP1:%.*]] = trunc i16 [[TMP2]] to i8
+; CHECK-NEXT:    [[CONV6:%.*]] = zext i8 [[TMP1]] to i32
+; CHECK-NEXT:    ret i32 [[CONV6]]
+;
+entry:
+  %sub = sub i16 0, %x
+  %and = and i16 %x, %sub
+  %mul = mul i16 %and, 2479
+  %0 = lshr i16 %mul, 12
+  %idxprom = zext nneg i16 %0 to i64
+  %arrayidx = getelementptr inbounds nuw i8, ptr @tablei128, i64 %idxprom
+  %1 = load i8, ptr %arrayidx, align 1
+  %conv6 = zext i8 %1 to i32
+  ret i32 %conv6
+}
+
+; Same as above but the table is a little off
+@tablei128b = internal unnamed_addr constant i128 16018378897745984667142068813250560256, align 16
+define i32 @cttz_i16_via_i128_incorrecttable(i16 noundef %x) {
+; CHECK-LABEL: @cttz_i16_via_i128_incorrecttable(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[SUB:%.*]] = sub i16 0, [[X:%.*]]
+; CHECK-NEXT:    [[AND:%.*]] = and i16 [[X]], [[SUB]]
+; CHECK-NEXT:    [[MUL:%.*]] = mul i16 [[AND]], 2479
+; CHECK-NEXT:    [[TMP0:%.*]] = lshr i16 [[MUL]], 12
+; CHECK-NEXT:    [[IDXPROM:%.*]] = zext nneg i16 [[TMP0]] to i64
+; CHECK-NEXT:    [[ARRAYIDX:%.*]] = getelementptr inbounds nuw i8, ptr @tablei128b, i64 [[IDXPROM]]
+; CHECK-NEXT:    [[TMP3:%.*]] = load i8, ptr [[ARRAYIDX]], align 1
+; CHECK-NEXT:    [[CONV6:%.*]] = zext i8 [[TMP3]] to i32
+; CHECK-NEXT:    ret i32 [[CONV6]]
+;
+entry:
+  %sub = sub i16 0, %x
+  %and = and i16 %x, %sub
+  %mul = mul i16 %and, 2479
+  %0 = lshr i16 %mul, 12
+  %idxprom = zext nneg i16 %0 to i64
+  %arrayidx = getelementptr inbounds nuw i8, ptr @tablei128b, i64 %idxprom
+  %1 = load i8, ptr %arrayidx, align 1
+  %conv6 = zext i8 %1 to i32
+  ret i32 %conv6
+}
+
+; Same as ctz1 but the table and load is very large
+@ctz7i128.table = internal unnamed_addr constant [32 x i128] [i128 0, i128 1, i128 28, i128 2, i128 29, i128 14, i128 24, i128 3, i128 30, i128 22, i128 20, i128 15, i128 25, i128 17, i128 4, i128 8, i128 31, i128 27, i128 13, i128 23, i128 21, i128 19, i128 16, i128 7, i128 26, i128 12, i128 18, i128 6, i128 11, i128 5, i128 10, i128 9], align 16
+define i128 @ctz1_i128(i32 %x) {
+; CHECK-LABEL: @ctz1_i128(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = call i32 @llvm.cttz.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i32 [[X]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i32 0, i32 [[TMP0]]
+; CHECK-NEXT:    [[TMP3:%.*]] = zext i32 [[TMP2]] to i128
+; CHECK-NEXT:    ret i128 [[TMP3]]
+;
+entry:
+  %sub = sub i32 0, %x
+  %and = and i32 %sub, %x
+  %mul = mul i32 %and, 125613361
+  %shr = lshr i32 %mul, 27
+  %idxprom = zext i32 %shr to i64
+  %arrayidx = getelementptr inbounds [32 x i128], ptr @ctz7i128.table, i64 0, i64 %idxprom
+  %l = load i128, ptr %arrayidx, align 1
+  ret i128 %l
+}
+
+; This is roughly the same as ctz1 but using i128.
+@table.i128 = internal unnamed_addr constant [128 x i8] c"\00\01e\02tf<\03|ug^R=!\04}yvWoh_5ZSE>0\22\14\05~rzPwmX.pkiI`K6\1Ab[TBMF?'81*#\1C\15\0E\06\7Fds;{]Q xVn4YD/\13qOl-jHJ\19aAL&7)\1B\0Dc:\\\1FU3C\12N,G\18@%(\0C9\1E2\11+\17$\0B\1D\10\16\0A\0F\09\08\07", align 1
+define i32 @src(i128 noundef %x) {
+; CHECK-LABEL: @src(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP3:%.*]] = call i128 @llvm.cttz.i128(i128 [[X:%.*]], i1 true)
+; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i128 [[X]], 0
+; CHECK-NEXT:    [[TMP2:%.*]] = select i1 [[TMP1]], i128 0, i128 [[TMP3]]
+; CHECK-NEXT:    [[TMP0:%.*]] = trunc i128 [[TMP2]] to i8
+; CHECK-NEXT:    [[CONV:%.*]] = zext i8 [[TMP0]] to i32
+; CHECK-NEXT:    ret i32 [[CONV]]
+;
+entry:
+  %sub = sub i128 0, %x
+  %and = and i128 %x, %sub
+  %mul = mul i128 %and, 2647824804797170443043024478319300753
+  %shr = lshr i128 %mul, 121
+  %idxprom = trunc i128 %shr to i64
+  %arrayidx = getelementptr inbounds nuw i8, ptr @table.i128, i64 %idxprom
+  %0 = load i8, ptr %arrayidx, align 1
+  %conv = zext i8 %0 to i32
+  ret i32 %conv
+}
+
+!0 = !{!"function_entry_count", i64 1000}
+; CHECK: [[PROF_0]] = !{!"function_entry_count", i64 1000}
+; CHECK: [[PROF_1]] = !{!"branch_weights", i32 1, i32 1048575}

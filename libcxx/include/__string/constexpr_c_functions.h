@@ -22,7 +22,6 @@
 #include <__type_traits/is_equality_comparable.h>
 #include <__type_traits/is_integral.h>
 #include <__type_traits/is_same.h>
-#include <__type_traits/is_trivially_copyable.h>
 #include <__type_traits/is_trivially_lexicographically_comparable.h>
 #include <__type_traits/remove_cv.h>
 #include <__utility/element_count.h>
@@ -96,14 +95,13 @@ __constexpr_memcmp(const _Tp* __lhs, const _Up* __rhs, __element_count __n) {
   }
 }
 
-// Because of __libcpp_is_trivially_equality_comparable we know that comparing the object representations is equivalent
+// Because of __is_trivially_equality_comparable_v we know that comparing the object representations is equivalent
 // to a std::memcmp(...) == 0. Since we have multiple objects contiguously in memory, we can call memcmp once instead
 // of invoking it on every object individually.
 template <class _Tp, class _Up>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 bool
 __constexpr_memcmp_equal(const _Tp* __lhs, const _Up* __rhs, __element_count __n) {
-  static_assert(__libcpp_is_trivially_equality_comparable<_Tp, _Up>::value,
-                "_Tp and _Up have to be trivially equality comparable");
+  static_assert(__is_trivially_equality_comparable_v<_Tp, _Up>, "_Tp and _Up have to be trivially equality comparable");
 
   auto __count = static_cast<size_t>(__n);
 
@@ -128,7 +126,7 @@ __constexpr_memcmp_equal(const _Tp* __lhs, const _Up* __rhs, __element_count __n
 
 template <class _Tp, class _Up>
 _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 _Tp* __constexpr_memchr(_Tp* __str, _Up __value, size_t __count) {
-  static_assert(sizeof(_Tp) == 1 && __libcpp_is_trivially_equality_comparable<_Tp, _Up>::value,
+  static_assert(sizeof(_Tp) == 1 && __is_trivially_equality_comparable_v<_Tp, _Up>,
                 "Calling memchr on non-trivially equality comparable types is unsafe.");
 
   if (__libcpp_is_constant_evaluated()) {
@@ -225,6 +223,8 @@ __constexpr_memmove(_Tp* __dest, _Up* __src, __element_count __n) {
           std::__assign_trivially_copyable(__dest[__i], __src[__i]);
       }
     }
+  } else if _LIBCPP_CONSTEXPR (sizeof(_Tp) == __datasizeof_v<_Tp>) {
+    ::__builtin_memmove(__dest, __src, __count * sizeof(_Tp));
   } else if (__count > 0) {
     ::__builtin_memmove(__dest, __src, (__count - 1) * sizeof(_Tp) + __datasizeof_v<_Tp>);
   }

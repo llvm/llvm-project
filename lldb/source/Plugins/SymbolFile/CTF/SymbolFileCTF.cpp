@@ -738,8 +738,28 @@ size_t SymbolFileCTF::ParseTypes(CompileUnit &cu) {
 
   LLDB_LOG(log, "Parsed {0} CTF types", m_ctf_types.size());
 
-  for (lldb::user_id_t uid = 1; uid < type_uid; ++uid)
+  for (lldb::user_id_t uid = 1; uid < type_uid; ++uid) {
     ResolveTypeUID(uid);
+
+    // Remove the CTF type because we don't need it anymore, except for record
+    // types which we may need to complete later.
+    auto ctf_type_it = m_ctf_types.find(uid);
+    if (ctf_type_it != m_ctf_types.end()) {
+      CTFType *ctf_type = ctf_type_it->second.get();
+      if (!llvm::isa<CTFRecord>(ctf_type))
+        m_ctf_types.erase(uid);
+    }
+  }
+
+#ifndef NDEBUG
+  // Verify that the only CTF types left at this point are record types.
+  for (auto &t : m_ctf_types) {
+    CTFType *ctf_type = t.second.get();
+    assert(ctf_type && "invalid type in m_ctf_types");
+    assert(llvm::isa<CTFRecord>(ctf_type) && "leaking non record type");
+  }
+
+#endif
 
   LLDB_LOG(log, "Created {0} CTF types", m_types.size());
 
@@ -773,7 +793,7 @@ size_t SymbolFileCTF::ParseFunctions(CompileUnit &cu) {
     const uint16_t kind = GetKind(info);
     const uint16_t variable_length = GetVLen(info);
 
-    Symbol *symbol = symtab->FindSymbolWithType(
+    const Symbol *symbol = symtab->FindSymbolWithType(
         eSymbolTypeCode, Symtab::eDebugYes, Symtab::eVisibilityAny, symbol_idx);
 
     // Skip padding.
@@ -848,7 +868,7 @@ static DWARFExpression CreateDWARFExpression(ModuleSP module_sp,
   uint32_t byte_size = architecture.GetDataByteSize();
 
   StreamBuffer<32> stream(Stream::eBinary, address_size, byte_order);
-  stream.PutHex8(lldb_private::dwarf::DW_OP_addr);
+  stream.PutHex8(llvm::dwarf::DW_OP_addr);
   stream.PutMaxHex64(symbol.GetFileAddress(), address_size, byte_order);
 
   DataBufferSP buffer =
@@ -887,7 +907,7 @@ size_t SymbolFileCTF::ParseObjects(CompileUnit &comp_unit) {
   while (object_offset < object_offset_end) {
     const uint32_t type_uid = m_data.GetU32(&object_offset);
 
-    if (Symbol *symbol =
+    if (const Symbol *symbol =
             symtab->FindSymbolWithType(eSymbolTypeData, Symtab::eDebugYes,
                                        Symtab::eVisibilityAny, symbol_idx)) {
       Variable::RangeList ranges;
@@ -994,6 +1014,8 @@ lldb_private::Type *SymbolFileCTF::ResolveTypeUID(lldb::user_id_t type_uid) {
 
   CTFType *ctf_type = ctf_type_it->second.get();
   assert(ctf_type && "m_ctf_types should only contain valid CTF types");
+  assert(ctf_type->uid == type_uid &&
+         "CTF type UID doesn't match UID in m_ctf_types");
 
   Log *log = GetLog(LLDBLog::Symbols);
 
@@ -1014,11 +1036,6 @@ lldb_private::Type *SymbolFileCTF::ResolveTypeUID(lldb::user_id_t type_uid) {
   }
 
   m_types[type_uid] = type_sp;
-
-  // Except for record types which we'll need to complete later, we don't need
-  // the CTF type anymore.
-  if (!isa<CTFRecord>(ctf_type))
-    m_ctf_types.erase(type_uid);
 
   return type_sp.get();
 }

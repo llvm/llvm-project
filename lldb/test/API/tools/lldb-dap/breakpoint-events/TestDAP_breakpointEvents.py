@@ -58,38 +58,38 @@ class TestDAP_breakpointEvents(lldbdap_testcase.DAPTestCaseBase):
         # Set breakpoints and verify that they got set correctly
         dap_breakpoint_ids = []
         response = self.dap_server.request_setBreakpoints(
-            Source(main_source_path), [main_bp_line]
+            Source.build(path=main_source_path), [main_bp_line]
         )
         self.assertTrue(response["success"])
         breakpoints = response["body"]["breakpoints"]
         for breakpoint in breakpoints:
             main_bp_id = breakpoint["id"]
-            dap_breakpoint_ids.append("%i" % (main_bp_id))
+            dap_breakpoint_ids.append(main_bp_id)
             self.assertTrue(
                 breakpoint["verified"], "expect main breakpoint to be verified"
             )
 
         response = self.dap_server.request_setBreakpoints(
-            Source(foo_source_path), [foo_bp1_line]
+            Source.build(path=foo_source_path), [foo_bp1_line]
         )
         self.assertTrue(response["success"])
         breakpoints = response["body"]["breakpoints"]
         for breakpoint in breakpoints:
             foo_bp_id = breakpoint["id"]
-            dap_breakpoint_ids.append("%i" % (foo_bp_id))
+            dap_breakpoint_ids.append(foo_bp_id)
             self.assertFalse(
                 breakpoint["verified"], "expect foo breakpoint to not be verified"
             )
 
         # Flush the breakpoint events.
-        self.dap_server.wait_for_breakpoint_events(timeout=5)
+        self.dap_server.wait_for_breakpoint_events()
 
         # Continue to the breakpoint
         self.continue_to_breakpoints(dap_breakpoint_ids)
 
         verified_breakpoint_ids = []
         unverified_breakpoint_ids = []
-        for breakpoint_event in self.dap_server.wait_for_breakpoint_events(timeout=5):
+        for breakpoint_event in self.dap_server.wait_for_breakpoint_events():
             breakpoint = breakpoint_event["body"]["breakpoint"]
             id = breakpoint["id"]
             if breakpoint["verified"]:

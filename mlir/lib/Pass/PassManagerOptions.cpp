@@ -146,6 +146,14 @@ LogicalResult mlir::applyPassManagerCLOptions(PassManager &pm) {
   if (!options.isConstructed())
     return failure();
 
+  if (options->reproducerFile.getNumOccurrences() && options->localReproducer &&
+      pm.getContext()->isMultithreadingEnabled()) {
+    emitError(UnknownLoc::get(pm.getContext()))
+        << "Local crash reproduction may not be used without disabling "
+           "mutli-threading first.";
+    return failure();
+  }
+
   // Generate a reproducer on crash/failure.
   if (options->reproducerFile.getNumOccurrences())
     pm.enableCrashReproducerGeneration(options->reproducerFile,

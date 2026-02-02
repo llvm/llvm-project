@@ -52,6 +52,7 @@ gpu::setMappingAttr(ParallelOp ploopOp,
 namespace gpu {
 namespace {
 enum MappingLevel { MapGrid = 0, MapBlock = 1, Sequential = 2 };
+enum class MappingPolicy { OutermostFirst, InnermostFirst };
 } // namespace
 
 static constexpr int kNumHardwareIds = 3;
@@ -65,16 +66,30 @@ static MappingLevel &operator++(MappingLevel &mappingLevel) {
   return mappingLevel;
 }
 
+// Map the policy string to a typed mapping policy.
+// TODO: Revisit this and possibly use a loop interchange pass instead.
+static FailureOr<MappingPolicy> getMappingPolicyFromStr(StringRef policy) {
+  std::string policyCanonical = policy.trim().lower();
+
+  std::optional<MappingPolicy> option =
+      llvm::StringSwitch<std::optional<MappingPolicy>>(policyCanonical)
+          .Case("innermost-first", MappingPolicy::InnermostFirst)
+          .Case("outermost-first", MappingPolicy::OutermostFirst)
+          .Default(std::nullopt);
+
+  if (!option)
+    return failure();
+  return *option;
+}
+
 /// Computed the hardware id to use for a given mapping level. Will
 /// assign x,y and z hardware ids for the first 3 dimensions and use
 /// sequential after.
-/// TODO: Make this use x for the inner-most loop that is
-/// distributed to map to x, the next innermost to y and the next innermost to
-/// z.
 static Processor getHardwareIdForMapping(MappingLevel level, int dimension) {
 
   if (dimension >= kNumHardwareIds || level == Sequential)
     return Processor::Sequential;
+
   switch (level) {
   case MapGrid:
     switch (dimension) {
@@ -107,20 +122,35 @@ static Processor getHardwareIdForMapping(MappingLevel level, int dimension) {
 /// Add mapping information to the given parallel loop. Do not add
 /// mapping information if the loop already has it. Also, don't
 /// start a mapping at a nested loop.
-static void mapParallelOp(ParallelOp parallelOp,
-                          MappingLevel mappingLevel = MapGrid) {
+static void
+mapParallelOp(ParallelOp parallelOp, MappingLevel mappingLevel = MapGrid,
+              MappingPolicy mappingPolicy = MappingPolicy::OutermostFirst) {
   // Do not try to add a mapping to already mapped loops or nested loops.
   if (parallelOp->getAttr(getMappingAttrName()) ||
       ((mappingLevel == MapGrid) && parallelOp->getParentOfType<ParallelOp>()))
     return;
 
+  const int numLoops = static_cast<int>(parallelOp.getNumLoops());
+  const int loopsToMap = std::min(numLoops, kNumHardwareIds);
+
   MLIRContext *ctx = parallelOp.getContext();
   Builder b(ctx);
   SmallVector<ParallelLoopDimMappingAttr, 4> attrs;
-  attrs.reserve(parallelOp.getNumLoops());
-  for (int i = 0, e = parallelOp.getNumLoops(); i < e; ++i) {
+  attrs.reserve(numLoops);
+
+  for (int i = 0; i < numLoops; ++i) {
+
+    // Determine the mapping to use for this loop.
+    // If the are more loops to map than HW IDs map to sequential.
+    int hwMapping = kNumHardwareIds;
+    if (i < loopsToMap) {
+      hwMapping = (mappingPolicy == MappingPolicy::OutermostFirst)
+                      ? i
+                      : (loopsToMap - 1 - i);
+    }
+
     attrs.push_back(b.getAttr<ParallelLoopDimMappingAttr>(
-        getHardwareIdForMapping(mappingLevel, i), b.getDimIdentityMap(),
+        getHardwareIdForMapping(mappingLevel, hwMapping), b.getDimIdentityMap(),
         b.getDimIdentityMap()));
   }
   (void)setMappingAttr(parallelOp, attrs);
@@ -129,16 +159,31 @@ static void mapParallelOp(ParallelOp parallelOp,
   // walk but just iterate over the operations.
   for (Operation &op : *parallelOp.getBody()) {
     if (ParallelOp nested = dyn_cast<ParallelOp>(op))
-      mapParallelOp(nested, mappingLevel);
+      mapParallelOp(nested, mappingLevel, mappingPolicy);
   }
 }
 
 namespace {
 struct GpuMapParallelLoopsPass
     : public impl::GpuMapParallelLoopsPassBase<GpuMapParallelLoopsPass> {
+  using Base::Base;
+
   void runOnOperation() override {
+    // Parse the mapping policy.
+    FailureOr<MappingPolicy> policyOrFailure =
+        getMappingPolicyFromStr(mappingPolicyStr);
+    if (failed(policyOrFailure)) {
+      getOperation()->emitError() << "Invalid mapping policy specified.";
+      return signalPassFailure();
+    }
+
+    MappingPolicy policy = *policyOrFailure;
+    MappingLevel topLevel = MappingLevel::MapGrid;
+
     for (Region &region : getOperation()->getRegions()) {
-      region.walk([](ParallelOp parallelOp) { mapParallelOp(parallelOp); });
+      region.walk([&](ParallelOp parallelOp) {
+        mapParallelOp(parallelOp, topLevel, policy);
+      });
     }
   }
 };

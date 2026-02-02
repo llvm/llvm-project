@@ -20,17 +20,11 @@
 #include "llvm/Analysis/ScalarEvolution.h"
 #include "llvm/IR/PassManager.h"
 #include "llvm/IR/Value.h"
-#include "llvm/Support/KnownBits.h"
 #include <variant>
 
 namespace llvm {
 
 class LPMUpdater;
-
-/// A tuple of bits that are expected to be zero, number N of them expected to
-/// be zero, with a boolean indicating whether it's the top or bottom N bits
-/// expected to be zero.
-using ErrBits = std::tuple<KnownBits, unsigned, bool>;
 
 /// A custom std::array with 256 entries, that also has a print function.
 struct CRCTable : public std::array<APInt, 256> {
@@ -84,12 +78,13 @@ class HashRecognize {
 public:
   HashRecognize(const Loop &L, ScalarEvolution &SE);
 
-  // The main analysis entry point.
-  std::variant<PolynomialInfo, ErrBits, StringRef> recognizeCRC() const;
+  // The main analysis entry points.
+  std::variant<PolynomialInfo, StringRef> recognizeCRC() const;
+  std::optional<PolynomialInfo> getResult() const;
 
   // Auxilary entry point after analysis to interleave the generating polynomial
   // and return a 256-entry CRC table.
-  CRCTable genSarwateTable(const APInt &GenPoly, bool ByteOrderSwapped) const;
+  static CRCTable genSarwateTable(const APInt &GenPoly, bool ByteOrderSwapped);
 
   void print(raw_ostream &OS) const;
 
@@ -106,15 +101,6 @@ public:
   explicit HashRecognizePrinterPass(raw_ostream &OS) : OS(OS) {}
   PreservedAnalyses run(Loop &L, LoopAnalysisManager &AM,
                         LoopStandardAnalysisResults &AR, LPMUpdater &);
-};
-
-class HashRecognizeAnalysis : public AnalysisInfoMixin<HashRecognizeAnalysis> {
-  friend AnalysisInfoMixin<HashRecognizeAnalysis>;
-  static AnalysisKey Key;
-
-public:
-  using Result = HashRecognize;
-  Result run(Loop &L, LoopAnalysisManager &AM, LoopStandardAnalysisResults &AR);
 };
 } // namespace llvm
 

@@ -34,8 +34,6 @@ static cl::opt<bool> ImportConstantsWithRefs(
     "import-constants-with-refs", cl::init(true), cl::Hidden,
     cl::desc("Import constant global variables with references"));
 
-constexpr uint32_t FunctionSummary::ParamAccess::RangeWidth;
-
 FunctionSummary FunctionSummary::ExternalNode =
     FunctionSummary::makeDummyFunctionSummary(
         SmallVector<FunctionSummary::EdgeTy, 0>());
@@ -88,8 +86,6 @@ std::pair<unsigned, unsigned> FunctionSummary::specialRefCounts() const {
   return {RORefCnt, WORefCnt};
 }
 
-constexpr uint64_t ModuleSummaryIndex::BitcodeSummaryVersion;
-
 uint64_t ModuleSummaryIndex::getFlags() const {
   uint64_t Flags = 0;
   // Flags & 0x4 is reserved. DO NOT REUSE.
@@ -111,11 +107,13 @@ uint64_t ModuleSummaryIndex::getFlags() const {
     Flags |= 0x100;
   if (hasUnifiedLTO())
     Flags |= 0x200;
+  if (withInternalizeAndPromote())
+    Flags |= 0x400;
   return Flags;
 }
 
 void ModuleSummaryIndex::setFlags(uint64_t Flags) {
-  assert(Flags <= 0x2ff && "Unexpected bits in flag");
+  assert(Flags <= 0x7ff && "Unexpected bits in flag");
   // 1 bit: WithGlobalValueDeadStripping flag.
   // Set on combined index only.
   if (Flags & 0x1)
@@ -154,6 +152,10 @@ void ModuleSummaryIndex::setFlags(uint64_t Flags) {
   // Set on combined index only.
   if (Flags & 0x200)
     setUnifiedLTO();
+  // 1 bit: WithInternalizeAndPromote flag.
+  // Set on combined index only.
+  if (Flags & 0x400)
+    setWithInternalizeAndPromote();
 }
 
 // Collect for the given module the list of function it defines
@@ -162,7 +164,7 @@ void ModuleSummaryIndex::collectDefinedFunctionsForModule(
     StringRef ModulePath, GVSummaryMapTy &GVSummaryMap) const {
   for (auto &GlobalList : *this) {
     auto GUID = GlobalList.first;
-    for (auto &GlobSummary : GlobalList.second.SummaryList) {
+    for (auto &GlobSummary : GlobalList.second.getSummaryList()) {
       auto *Summary = dyn_cast_or_null<FunctionSummary>(GlobSummary.get());
       if (!Summary)
         // Ignore global variable, focus on functions
@@ -217,7 +219,8 @@ propagateAttributesToRefs(GlobalValueSummary *S,
         continue;
     } else if (MarkedNonReadWriteOnly.contains(VI))
       continue;
-    for (auto &Ref : VI.getSummaryList())
+    bool HasNonGVar = false;
+    for (auto &Ref : VI.getSummaryList()) {
       // If references to alias is not read/writeonly then aliasee
       // is not read/writeonly
       if (auto *GVS = dyn_cast<GlobalVarSummary>(Ref->getBaseObject())) {
@@ -225,7 +228,29 @@ propagateAttributesToRefs(GlobalValueSummary *S,
           GVS->setReadOnly(false);
         if (!VI.isWriteOnly())
           GVS->setWriteOnly(false);
+      } else {
+        // Note that this needs special processing.
+        HasNonGVar = true;
+        break;
       }
+    }
+    // In the case where we have a reference to a VI that is a function not a
+    // variable, conservatively mark all summaries as non-read or write only.
+    // In most cases that would have happened in the above loop. However,
+    // this will make a difference in a few rare cases where there are same
+    // named locals in modules without enough distinguishing path, which end up
+    // with the same GUID. If these are a mix of variables and functions we want
+    // to handle the variables conservatively.
+    if (HasNonGVar) {
+      for (auto &Ref : VI.getSummaryList()) {
+        auto *GVS = dyn_cast<GlobalVarSummary>(Ref->getBaseObject());
+        if (!GVS)
+          continue;
+        GVS->setReadOnly(false);
+        GVS->setWriteOnly(false);
+      }
+      MarkedNonReadWriteOnly.insert(VI);
+    }
   }
 }
 
@@ -249,7 +274,9 @@ propagateAttributesToRefs(GlobalValueSummary *S,
 //      reference is not readonly
 //   d. clear WO attribute from variable referenced by a function when
 //      reference is not writeonly
-//   e. clear IsDSOLocal flag in every summary if any of them is false.
+//   e. clear RO and WO attributes from variables with the same GUID as
+//      a non-variable.
+//   f. clear IsDSOLocal flag in every summary if any of them is false.
 //
 //   Because of (c, d) we don't internalize variables read by function A
 //   and modified by function B.
@@ -263,7 +290,7 @@ void ModuleSummaryIndex::propagateAttributes(
   DenseSet<ValueInfo> MarkedNonReadWriteOnly;
   for (auto &P : *this) {
     bool IsDSOLocal = true;
-    for (auto &S : P.second.SummaryList) {
+    for (auto &S : P.second.getSummaryList()) {
       if (!isGlobalValueLive(S.get())) {
         // computeDeadSymbolsAndUpdateIndirectCalls should have marked all
         // copies live. Note that it is possible that there is a GUID collision
@@ -273,7 +300,7 @@ void ModuleSummaryIndex::propagateAttributes(
         // all copies live we can assert here that all are dead if any copy is
         // dead.
         assert(llvm::none_of(
-            P.second.SummaryList,
+            P.second.getSummaryList(),
             [&](const std::unique_ptr<GlobalValueSummary> &Summary) {
               return isGlobalValueLive(Summary.get());
             }));
@@ -308,16 +335,16 @@ void ModuleSummaryIndex::propagateAttributes(
       // Mark the flag in all summaries false so that we can do quick check
       // without going through the whole list.
       for (const std::unique_ptr<GlobalValueSummary> &Summary :
-           P.second.SummaryList)
+           P.second.getSummaryList())
         Summary->setDSOLocal(false);
   }
   setWithAttributePropagation();
   setWithDSOLocalPropagation();
   if (llvm::AreStatisticsEnabled())
     for (auto &P : *this)
-      if (P.second.SummaryList.size())
+      if (P.second.getSummaryList().size())
         if (auto *GVS = dyn_cast<GlobalVarSummary>(
-                P.second.SummaryList[0]->getBaseObject()))
+                P.second.getSummaryList()[0]->getBaseObject()))
           if (isGlobalValueLive(GVS)) {
             if (GVS->maybeReadOnly())
               ReadOnlyLiveGVars++;
@@ -409,7 +436,7 @@ struct Edge {
   GlobalValue::GUID Src;
   GlobalValue::GUID Dst;
 };
-}
+} // namespace
 
 void Attributes::add(const Twine &Name, const Twine &Value,
                      const Twine &Comment) {

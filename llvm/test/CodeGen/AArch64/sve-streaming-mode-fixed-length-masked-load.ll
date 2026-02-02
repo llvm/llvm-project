@@ -120,7 +120,7 @@ define <8 x i8> @masked_load_v8i8(ptr %src, <8 x i1> %mask) {
 ; NONEON-NOSVE-LABEL: masked_load_v8i8:
 ; NONEON-NOSVE:       // %bb.0:
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #272
-; NONEON-NOSVE-NEXT:    str x29, [sp, #256] // 8-byte Folded Spill
+; NONEON-NOSVE-NEXT:    str x29, [sp, #256] // 8-byte Spill
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 272
 ; NONEON-NOSVE-NEXT:    .cfi_offset w29, -16
 ; NONEON-NOSVE-NEXT:    str d0, [sp, #240]
@@ -212,7 +212,7 @@ define <8 x i8> @masked_load_v8i8(ptr %src, <8 x i1> %mask) {
 ; NONEON-NOSVE-NEXT:    strb w8, [sp, #31]
 ; NONEON-NOSVE-NEXT:    ldr d0, [sp, #24]
 ; NONEON-NOSVE-NEXT:  .LBB1_11: // %else20
-; NONEON-NOSVE-NEXT:    ldr x29, [sp, #256] // 8-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr x29, [sp, #256] // 8-byte Reload
 ; NONEON-NOSVE-NEXT:    add sp, sp, #272
 ; NONEON-NOSVE-NEXT:    ret
 ; NONEON-NOSVE-NEXT:  .LBB1_12: // %cond.load4
@@ -1466,8 +1466,8 @@ define <32 x i8> @masked_load_v32i8(ptr %src, <32 x i1> %mask) {
 define <2 x half> @masked_load_v2f16(ptr %src, <2 x i1> %mask) {
 ; CHECK-LABEL: masked_load_v2f16:
 ; CHECK:       // %bb.0:
-; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    fmov s1, wzr
+; CHECK-NEXT:    // kill: def $d0 killed $d0 def $z0
 ; CHECK-NEXT:    mov z2.s, z0.s[1]
 ; CHECK-NEXT:    ptrue p0.h, vl4
 ; CHECK-NEXT:    zip1 z0.h, z0.h, z2.h
@@ -1630,7 +1630,7 @@ define <8 x half> @masked_load_v8f16(ptr %src, <8 x i1> %mask) {
 ; NONEON-NOSVE-LABEL: masked_load_v8f16:
 ; NONEON-NOSVE:       // %bb.0:
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #496
-; NONEON-NOSVE-NEXT:    str x29, [sp, #480] // 8-byte Folded Spill
+; NONEON-NOSVE-NEXT:    str x29, [sp, #480] // 8-byte Spill
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 496
 ; NONEON-NOSVE-NEXT:    .cfi_offset w29, -16
 ; NONEON-NOSVE-NEXT:    str d0, [sp, #464]
@@ -1723,7 +1723,7 @@ define <8 x half> @masked_load_v8f16(ptr %src, <8 x i1> %mask) {
 ; NONEON-NOSVE-NEXT:    str h0, [sp, #46]
 ; NONEON-NOSVE-NEXT:    ldr q0, [sp, #32]
 ; NONEON-NOSVE-NEXT:  .LBB6_11: // %else20
-; NONEON-NOSVE-NEXT:    ldr x29, [sp, #480] // 8-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr x29, [sp, #480] // 8-byte Reload
 ; NONEON-NOSVE-NEXT:    add sp, sp, #496
 ; NONEON-NOSVE-NEXT:    ret
 ; NONEON-NOSVE-NEXT:  .LBB6_12: // %cond.load4
@@ -1815,17 +1815,18 @@ define <16 x half> @masked_load_v16f16(ptr %src, <16 x i1> %mask) {
 ; CHECK-LABEL: masked_load_v16f16:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 def $z0
-; CHECK-NEXT:    uunpklo z1.h, z0.b
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
 ; CHECK-NEXT:    ptrue p0.h, vl8
 ; CHECK-NEXT:    mov x8, #8 // =0x8
-; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z0.h, z0.b
-; CHECK-NEXT:    lsl z1.h, z1.h, #15
-; CHECK-NEXT:    asr z1.h, z1.h, #15
+; CHECK-NEXT:    uunpklo z1.h, z1.b
 ; CHECK-NEXT:    lsl z0.h, z0.h, #15
-; CHECK-NEXT:    cmpne p1.h, p0/z, z1.h, #0
+; CHECK-NEXT:    lsl z1.h, z1.h, #15
 ; CHECK-NEXT:    asr z0.h, z0.h, #15
-; CHECK-NEXT:    cmpne p0.h, p0/z, z0.h, #0
+; CHECK-NEXT:    asr z1.h, z1.h, #15
+; CHECK-NEXT:    cmpne p1.h, p0/z, z0.h, #0
+; CHECK-NEXT:    cmpne p0.h, p0/z, z1.h, #0
 ; CHECK-NEXT:    ld1h { z0.h }, p1/z, [x0]
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ld1h { z1.h }, p0/z, [x0, x8, lsl #1]
@@ -2345,7 +2346,7 @@ define <8 x float> @masked_load_v8f32(ptr %src, <8 x i1> %mask) {
 ; NONEON-NOSVE-LABEL: masked_load_v8f32:
 ; NONEON-NOSVE:       // %bb.0:
 ; NONEON-NOSVE-NEXT:    sub sp, sp, #496
-; NONEON-NOSVE-NEXT:    str x29, [sp, #480] // 8-byte Folded Spill
+; NONEON-NOSVE-NEXT:    str x29, [sp, #480] // 8-byte Spill
 ; NONEON-NOSVE-NEXT:    .cfi_def_cfa_offset 496
 ; NONEON-NOSVE-NEXT:    .cfi_offset w29, -16
 ; NONEON-NOSVE-NEXT:    str d0, [sp, #464]
@@ -2435,7 +2436,7 @@ define <8 x float> @masked_load_v8f32(ptr %src, <8 x i1> %mask) {
 ; NONEON-NOSVE-NEXT:    stp s2, s1, [sp, #40]
 ; NONEON-NOSVE-NEXT:    ldr q1, [sp, #32]
 ; NONEON-NOSVE-NEXT:  .LBB10_11: // %else20
-; NONEON-NOSVE-NEXT:    ldr x29, [sp, #480] // 8-byte Folded Reload
+; NONEON-NOSVE-NEXT:    ldr x29, [sp, #480] // 8-byte Reload
 ; NONEON-NOSVE-NEXT:    add sp, sp, #496
 ; NONEON-NOSVE-NEXT:    ret
 ; NONEON-NOSVE-NEXT:  .LBB10_12: // %cond.load4
@@ -2572,15 +2573,16 @@ define <4 x double> @masked_load_v4f64(ptr %src, <4 x i1> %mask) {
 ; CHECK-NEXT:    ptrue p0.d, vl2
 ; CHECK-NEXT:    mov x8, #2 // =0x2
 ; CHECK-NEXT:    uunpklo z0.s, z0.h
-; CHECK-NEXT:    uunpklo z1.d, z0.s
-; CHECK-NEXT:    ext z0.b, z0.b, z0.b, #8
+; CHECK-NEXT:    movprfx z1, z0
+; CHECK-NEXT:    ext z1.b, z1.b, z0.b, #8
 ; CHECK-NEXT:    uunpklo z0.d, z0.s
-; CHECK-NEXT:    lsl z1.d, z1.d, #63
+; CHECK-NEXT:    uunpklo z1.d, z1.s
 ; CHECK-NEXT:    lsl z0.d, z0.d, #63
-; CHECK-NEXT:    asr z1.d, z1.d, #63
+; CHECK-NEXT:    lsl z1.d, z1.d, #63
 ; CHECK-NEXT:    asr z0.d, z0.d, #63
-; CHECK-NEXT:    cmpne p1.d, p0/z, z1.d, #0
-; CHECK-NEXT:    cmpne p0.d, p0/z, z0.d, #0
+; CHECK-NEXT:    asr z1.d, z1.d, #63
+; CHECK-NEXT:    cmpne p1.d, p0/z, z0.d, #0
+; CHECK-NEXT:    cmpne p0.d, p0/z, z1.d, #0
 ; CHECK-NEXT:    ld1d { z0.d }, p1/z, [x0]
 ; CHECK-NEXT:    // kill: def $q0 killed $q0 killed $z0
 ; CHECK-NEXT:    ld1d { z1.d }, p0/z, [x0, x8, lsl #3]

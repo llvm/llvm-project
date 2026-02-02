@@ -231,11 +231,11 @@
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/RecursiveASTVisitor.h"
 #include "clang/Basic/SourceManager.h"
-#include "clang/Driver/Options.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Frontend/FrontendAction.h"
 #include "clang/Frontend/FrontendActions.h"
 #include "clang/Lex/Preprocessor.h"
+#include "clang/Options/Options.h"
 #include "clang/Tooling/CompilationDatabase.h"
 #include "clang/Tooling/Tooling.h"
 #include "llvm/Option/Arg.h"
@@ -254,7 +254,7 @@
 
 using namespace clang;
 using namespace clang::driver;
-using namespace clang::driver::options;
+using namespace clang::options;
 using namespace clang::tooling;
 using namespace llvm;
 using namespace llvm::opt;
@@ -395,7 +395,7 @@ struct Location {
     Column = SM.getColumnNumber(Decomposed.first, Decomposed.second);
   }
 
-  operator bool() const { return File != nullptr; }
+  explicit operator bool() const { return File != nullptr; }
 
   friend bool operator==(const Location &X, const Location &Y) {
     return X.File == Y.File && X.Line == Y.Line && X.Column == Y.Column;
@@ -459,7 +459,7 @@ struct HeaderEntry {
     return !(X == Y);
   }
   friend bool operator<(const HeaderEntry &X, const HeaderEntry &Y) {
-    return X.Loc < Y.Loc || (X.Loc == Y.Loc && X.Name < Y.Name);
+    return std::tie(X.Loc, X.Name) < std::tie(Y.Loc, Y.Name);
   }
   friend bool operator>(const HeaderEntry &X, const HeaderEntry &Y) {
     return Y < X;

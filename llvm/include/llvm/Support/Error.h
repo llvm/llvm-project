@@ -1191,7 +1191,7 @@ private:
 /// (or Expected) and you want to call code that still returns
 /// std::error_codes.
 class LLVM_ABI ECError : public ErrorInfo<ECError> {
-  LLVM_ABI_FRIEND friend Error errorCodeToError(std::error_code);
+  LLVM_ABI friend Error errorCodeToError(std::error_code);
 
   void anchor() override;
 
@@ -1306,7 +1306,7 @@ inline Error createStringError(std::error_code EC, char const *Fmt,
                                const Ts &... Vals) {
   std::string Buffer;
   raw_string_ostream(Buffer) << format(Fmt, Vals...);
-  return make_error<StringError>(Buffer, EC);
+  return make_error<StringError>(std::move(Buffer), EC, true);
 }
 
 LLVM_ABI Error createStringError(std::string &&Msg, std::error_code EC);

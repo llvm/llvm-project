@@ -1,7 +1,7 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx801 -verify-machineinstrs -denormal-fp-math-f32=preserve-sign < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,VI-FLUSH,GCN-FLUSH %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx801 -verify-machineinstrs -denormal-fp-math-f32=ieee < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,VI-DENORM,GCN-DENORM %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -denormal-fp-math-f32=ieee < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-DENORM,GCN-DENORM %s
-; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -verify-machineinstrs -denormal-fp-math-f32=preserve-sign < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-FLUSH,GCN-FLUSH %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx801 -denormal-fp-math-f32=preserve-sign < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,VI-FLUSH,GCN-FLUSH %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx801 -denormal-fp-math-f32=ieee < %s | FileCheck -enable-var-scope -check-prefixes=GCN,VI,VI-DENORM,GCN-DENORM %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -denormal-fp-math-f32=ieee < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-DENORM,GCN-DENORM %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx900 -denormal-fp-math-f32=preserve-sign < %s | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9,GFX9-FLUSH,GCN-FLUSH %s
 
 ; GCN-LABEL: {{^}}test_no_fold_canonicalize_loaded_value_f32:
 ; VI: v_mul_f32_e32 v{{[0-9]+}}, 1.0, v{{[0-9]+}}
@@ -371,7 +371,7 @@ define amdgpu_kernel void @test_fold_canonicalize_fabs_value_f32(ptr addrspace(1
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds float, ptr addrspace(1) %arg, i32 %id
   %load = load float, ptr addrspace(1) %gep, align 4
-  %v0 = fadd float %load, 0.0
+  %v0 = fadd float %load, 1.0
   %v = tail call float @llvm.fabs.f32(float %v0)
   %canonicalized = tail call float @llvm.canonicalize.f32(float %v)
   store float %canonicalized, ptr addrspace(1) %gep, align 4
@@ -497,7 +497,7 @@ define amdgpu_kernel void @test_fold_canonicalize_minnum_value_f32(ptr addrspace
   ret void
 }
 
-; FIXME: Should there be more checks here? minnum with NaN operand is simplified away.
+; FIXME: Should there be more checks here? minnum with sNaN operand might get simplified away.
 
 ; GCN-LABEL: test_fold_canonicalize_sNaN_value_f32:
 ; GCN: {{flat|global}}_load_dword [[LOAD:v[0-9]+]]

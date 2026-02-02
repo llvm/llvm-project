@@ -54,8 +54,8 @@
 // CK23: [[MTYPE04:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
 
 // CK23-LABEL: @.__omp_offloading_{{.*}}explicit_maps_inside_captured{{.*}}_l{{[0-9]+}}.region_id = weak constant i8 0
-// CK23: [[SIZE05:@.+]] = private {{.*}}constant [1 x i64] [i64 16]
-// CK23: [[MTYPE05:@.+]] = private {{.*}}constant [1 x i64] [i64 35]
+// CK23: [[SIZE05:@.+]] = private {{.*}}constant [2 x i64] [i64 16, i64 {{4|8}}]
+// CK23: [[MTYPE05:@.+]] = private {{.*}}constant [2 x i64] [i64 35, i64 16384]
 
 // CK23-LABEL: explicit_maps_inside_captured{{.*}}(
 int explicit_maps_inside_captured(int a){
@@ -175,6 +175,10 @@ int explicit_maps_inside_captured(int a){
       { c[3]+=1; }
 
 // Region 05
+
+//  &d[0], &d[2], 4 * sizeof(d[0]), TO | FROM
+//  &d,    &d[2], sizeof(d),        ATTACH
+
 // CK23-DAG: call i32 @__tgt_target_kernel(ptr @{{.+}}, i64 -1, i32 -1, i32 0, ptr @.{{.+}}.region_id, ptr [[ARGS:%.+]])
 // CK23-DAG: [[BPARG:%.+]] = getelementptr inbounds {{.+}}[[ARGS]], i32 0, i32 2
 // CK23-DAG: store ptr [[BPGEP:%.+]], ptr [[BPARG]]
@@ -195,6 +199,16 @@ int explicit_maps_inside_captured(int a){
 // CK23-DAG: [[VAR00]] = load ptr, ptr [[CAP00:%[^,]+]]
 // CK23-DAG: [[CAP00]] = getelementptr inbounds nuw %class.anon,
 
+// CK23-DAG: [[BP1:%.+]] = getelementptr inbounds {{.+}}[[BP]], i{{.+}} 0, i{{.+}} 1
+// CK23-DAG: [[P1:%.+]] = getelementptr inbounds {{.+}}[[P]], i{{.+}} 0, i{{.+}} 1
+// CK23-DAG: store ptr [[VAR1:%.+]], ptr [[BP1]]
+// CK23-DAG: store ptr [[SEC1:%.+]], ptr [[P1]]
+// CK23-DAG: [[VAR1]] = load ptr, ptr [[CAP1:%[^,]+]]
+// CK23-DAG: [[CAP1]] = getelementptr inbounds nuw %class.anon,
+// CK23-DAG: [[SEC1]] = getelementptr {{.*}}ptr [[RVAR1:%.+]], i{{.+}} 2
+// CK23-DAG: [[RVAR1]] = load ptr, ptr [[VAR11:%[^,]+]]
+// CK23-DAG: [[VAR11]] = load ptr, ptr [[CAP11:%[^,]+]]
+// CK23-DAG: [[CAP11]] = getelementptr inbounds nuw %class.anon,
 // CK23: call void [[CALL05:@.+]](ptr {{[^,]+}})
 #pragma omp target map(d [2:4])
       { d[3]+=1; }

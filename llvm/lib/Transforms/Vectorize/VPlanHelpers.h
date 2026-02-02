@@ -23,6 +23,7 @@
 #include "llvm/Analysis/DomTreeUpdater.h"
 #include "llvm/Analysis/TargetTransformInfo.h"
 #include "llvm/IR/DebugLoc.h"
+#include "llvm/IR/ModuleSlotTracker.h"
 #include "llvm/Support/InstructionCost.h"
 
 namespace llvm {
@@ -49,20 +50,14 @@ Value *getRuntimeVF(IRBuilderBase &B, Type *Ty, ElementCount VF);
 Value *createStepForVF(IRBuilderBase &B, Type *Ty, ElementCount VF,
                        int64_t Step);
 
-/// A helper function that returns how much we should divide the cost of a
-/// predicated block by. Typically this is the reciprocal of the block
-/// probability, i.e. if we return X we are assuming the predicated block will
-/// execute once for every X iterations of the loop header so the block should
-/// only contribute 1/X of its cost to the total cost calculation, but when
-/// optimizing for code size it will just be 1 as code size costs don't depend
-/// on execution probabilities.
-///
-/// TODO: We should use actual block probability here, if available. Currently,
-///       we always assume predicated blocks have a 50% chance of executing.
-inline unsigned
-getPredBlockCostDivisor(TargetTransformInfo::TargetCostKind CostKind) {
-  return CostKind == TTI::TCK_CodeSize ? 1 : 2;
-}
+/// Compute the transformed value of Index at offset StartValue using step
+/// StepValue.
+/// For integer induction, returns StartValue + Index * StepValue.
+/// For pointer induction, returns StartValue[Index * StepValue].
+Value *emitTransformedIndex(IRBuilderBase &B, Value *Index, Value *StartValue,
+                            Value *Step,
+                            InductionDescriptor::InductionKind InductionKind,
+                            const BinaryOperator *InductionBinOp);
 
 /// A range of powers-of-2 vectorization factors with fixed start and
 /// adjustable end. The range includes start and excludes end, e.g.,:
@@ -286,9 +281,10 @@ struct VPTransformState {
   /// Set the debug location in the builder using the debug location \p DL.
   void setDebugLocFrom(DebugLoc DL);
 
-  /// Construct the vectorized value of a scalarized value \p V one lane at a
-  /// time.
-  void packScalarIntoVectorizedValue(const VPValue *Def, const VPLane &Lane);
+  /// Insert the scalar value of \p Def at \p Lane into \p Lane of \p WideValue
+  /// and return the resulting value.
+  Value *packScalarIntoVectorizedValue(const VPValue *Def, Value *WideValue,
+                                       const VPLane &Lane);
 
   /// Hold state information used when constructing the CFG of the output IR,
   /// traversing the VPBasicBlocks and generating corresponding IR BasicBlocks.
@@ -347,12 +343,15 @@ struct VPCostContext {
   LoopVectorizationCostModel &CM;
   SmallPtrSet<Instruction *, 8> SkipCostComputation;
   TargetTransformInfo::TargetCostKind CostKind;
+  PredicatedScalarEvolution &PSE;
+  const Loop *L;
 
   VPCostContext(const TargetTransformInfo &TTI, const TargetLibraryInfo &TLI,
-                Type *CanIVTy, LoopVectorizationCostModel &CM,
-                TargetTransformInfo::TargetCostKind CostKind)
-      : TTI(TTI), TLI(TLI), Types(CanIVTy), LLVMCtx(CanIVTy->getContext()),
-        CM(CM), CostKind(CostKind) {}
+                const VPlan &Plan, LoopVectorizationCostModel &CM,
+                TargetTransformInfo::TargetCostKind CostKind,
+                PredicatedScalarEvolution &PSE, const Loop *L)
+      : TTI(TTI), TLI(TLI), Types(Plan), LLVMCtx(Plan.getContext()), CM(CM),
+        CostKind(CostKind), PSE(PSE), L(L) {}
 
   /// Return the cost for \p UI with \p VF using the legacy cost model as
   /// fallback until computing the cost of all recipes migrates to VPlan.
@@ -362,6 +361,10 @@ struct VPCostContext {
   /// has already been pre-computed.
   bool skipCostComputation(Instruction *UI, bool IsVector) const;
 
+  /// \returns how much the cost of a predicated block should be divided by.
+  /// Forwards to LoopVectorizationCostModel::getPredBlockCostDivisor.
+  unsigned getPredBlockCostDivisor(BasicBlock *BB) const;
+
   /// Returns the OperandInfo for \p V, if it is a live-in.
   TargetTransformInfo::OperandValueInfo getOperandInfo(VPValue *V) const;
 
@@ -369,6 +372,17 @@ struct VPCostContext {
   /// legacy cost model for \p VF. Only used to check for additional VPlan
   /// simplifications.
   bool isLegacyUniformAfterVectorization(Instruction *I, ElementCount VF) const;
+
+  /// Estimate the overhead of scalarizing a recipe with result type \p ResultTy
+  /// and \p Operands with \p VF. This is a convenience wrapper for the
+  /// type-based getScalarizationOverhead API. \p VIC provides context about
+  /// whether the scalarization is for a load/store operation. If \p
+  /// AlwaysIncludeReplicatingR is true, always compute the cost of scalarizing
+  /// replicating operands.
+  InstructionCost getScalarizationOverhead(
+      Type *ResultTy, ArrayRef<const VPValue *> Operands, ElementCount VF,
+      TTI::VectorInstrContext VIC = TTI::VectorInstrContext::None,
+      bool AlwaysIncludeReplicatingR = false);
 };
 
 /// This class can be used to assign names to VPValues. For VPValues without
@@ -387,20 +401,44 @@ class VPSlotTracker {
   /// Number to assign to the next VPValue without underlying value.
   unsigned NextSlot = 0;
 
+  /// Lazily created ModuleSlotTracker, used only when unnamed IR instructions
+  /// require slot tracking.
+  std::unique_ptr<ModuleSlotTracker> MST;
+
+  /// Cached metadata kind names from the Module's LLVMContext.
+  SmallVector<StringRef> MDNames;
+
+  /// Cached Module pointer for printing metadata.
+  const Module *M = nullptr;
+
   void assignName(const VPValue *V);
-  void assignNames(const VPlan &Plan);
+  LLVM_ABI_FOR_TEST void assignNames(const VPlan &Plan);
   void assignNames(const VPBasicBlock *VPBB);
+  std::string getName(const Value *V);
 
 public:
   VPSlotTracker(const VPlan *Plan = nullptr) {
-    if (Plan)
+    if (Plan) {
       assignNames(*Plan);
+      if (auto *ScalarHeader = Plan->getScalarHeader())
+        M = ScalarHeader->getIRBasicBlock()->getModule();
+    }
   }
 
   /// Returns the name assigned to \p V, if there is one, otherwise try to
   /// construct one from the underlying value, if there's one; else return
   /// <badref>.
   std::string getOrCreateName(const VPValue *V) const;
+
+  /// Returns the cached metadata kind names.
+  ArrayRef<StringRef> getMDNames() {
+    if (MDNames.empty() && M)
+      M->getContext().getMDKindNames(MDNames);
+    return MDNames;
+  }
+
+  /// Returns the cached Module pointer.
+  const Module *getModule() const { return M; }
 };
 
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
@@ -454,6 +492,10 @@ public:
 };
 #endif
 
+/// Check if a constant \p CI can be safely treated as having been extended
+/// from a narrower type with the given extension kind.
+bool canConstantBeExtended(const APInt *C, Type *NarrowType,
+                           TTI::PartialReductionExtendKind ExtKind);
 } // end namespace llvm
 
 #endif // LLVM_TRANSFORMS_VECTORIZE_VPLAN_H

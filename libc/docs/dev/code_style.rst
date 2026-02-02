@@ -159,6 +159,7 @@ this:
 .. code-block:: c++
 
    #include "src/__support/CPP/new.h"
+   #include "src/__support/alloc-checker.h"
 
    ...
 
@@ -191,9 +192,10 @@ Header Inclusion Policy
 =======================
 
 Because llvm-libc supports
-`Overlay Mode <https://libc.llvm.org/overlay_mode.html>`__ and
-`Fullbuild Mode <https://libc.llvm.org/fullbuild_mode.html>`__ care must be
-taken when ``#include``'ing certain headers.
+`Overlay Mode <https://libc.llvm.org/overlay_mode.html>`__,
+`Full Host Build Mode <https://libc.llvm.org/full_host_build.html>`__ and
+`Full Cross Build Mode <https://libc.llvm.org/full_cross_build.html>`__ care
+must be taken when ``#include``'ing certain headers.
 
 The ``include/`` directory contains public facing headers that users must
 consume for fullbuild mode. As such, types defined here will have ABI

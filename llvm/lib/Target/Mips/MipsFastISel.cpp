@@ -82,7 +82,7 @@ class MipsFastISel final : public FastISel {
   // All possible address modes.
   class Address {
   public:
-    using BaseKind = enum { RegBase, FrameIndexBase };
+    enum BaseKind { RegBase, FrameIndexBase };
 
   private:
     BaseKind Kind = RegBase;
@@ -246,8 +246,10 @@ private:
 public:
   // Backend specific FastISel code.
   explicit MipsFastISel(FunctionLoweringInfo &funcInfo,
-                        const TargetLibraryInfo *libInfo)
-      : FastISel(funcInfo, libInfo), TM(funcInfo.MF->getTarget()),
+                        const TargetLibraryInfo *libInfo,
+                        const LibcallLoweringInfo *libcallLowering)
+      : FastISel(funcInfo, libInfo, libcallLowering),
+        TM(funcInfo.MF->getTarget()),
         Subtarget(&funcInfo.MF->getSubtarget<MipsSubtarget>()),
         TII(*Subtarget->getInstrInfo()), TLI(*Subtarget->getTargetLowering()) {
     MFI = funcInfo.MF->getInfo<MipsFunctionInfo>();
@@ -264,19 +266,22 @@ public:
 
 } // end anonymous namespace
 
-static bool CC_Mips(unsigned ValNo, MVT ValVT, MVT LocVT,
-                    CCValAssign::LocInfo LocInfo, ISD::ArgFlagsTy ArgFlags,
-                    CCState &State) LLVM_ATTRIBUTE_UNUSED;
+[[maybe_unused]] static bool CC_Mips(unsigned ValNo, MVT ValVT, MVT LocVT,
+                                     CCValAssign::LocInfo LocInfo,
+                                     ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                                     CCState &State);
 
 static bool CC_MipsO32_FP32(unsigned ValNo, MVT ValVT, MVT LocVT,
                             CCValAssign::LocInfo LocInfo,
-                            ISD::ArgFlagsTy ArgFlags, CCState &State) {
+                            ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                            CCState &State) {
   llvm_unreachable("should not be called");
 }
 
 static bool CC_MipsO32_FP64(unsigned ValNo, MVT ValVT, MVT LocVT,
                             CCValAssign::LocInfo LocInfo,
-                            ISD::ArgFlagsTy ArgFlags, CCState &State) {
+                            ISD::ArgFlagsTy ArgFlags, Type *OrigTy,
+                            CCState &State) {
   llvm_unreachable("should not be called");
 }
 
@@ -1144,8 +1149,12 @@ bool MipsFastISel::processCallArgs(CallLoweringInfo &CLI,
                                    unsigned &NumBytes) {
   CallingConv::ID CC = CLI.CallConv;
   SmallVector<CCValAssign, 16> ArgLocs;
+  SmallVector<Type *, 16> ArgTys;
+  for (const ArgListEntry &Arg : CLI.Args)
+    ArgTys.push_back(Arg.Val->getType());
   CCState CCInfo(CC, false, *FuncInfo.MF, ArgLocs, *Context);
-  CCInfo.AnalyzeCallOperands(OutVTs, CLI.OutFlags, CCAssignFnForCall(CC));
+  CCInfo.AnalyzeCallOperands(OutVTs, CLI.OutFlags, ArgTys,
+                             CCAssignFnForCall(CC));
   // Get a count of how many bytes are to be pushed on the stack.
   NumBytes = CCInfo.getStackSize();
   // This is the minimum argument area used for A0-A3.
@@ -1287,9 +1296,7 @@ bool MipsFastISel::finishCall(CallLoweringInfo &CLI, MVT RetVT,
     SmallVector<CCValAssign, 16> RVLocs;
     MipsCCState CCInfo(CC, false, *FuncInfo.MF, RVLocs, *Context);
 
-    CCInfo.AnalyzeCallResult(CLI.Ins, RetCC_Mips, CLI.RetTy,
-                             CLI.Symbol ? CLI.Symbol->getName().data()
-                                        : nullptr);
+    CCInfo.AnalyzeCallResult(CLI.Ins, RetCC_Mips);
 
     // Only handle a single return value.
     if (RVLocs.size() != 1)
@@ -2156,8 +2163,9 @@ unsigned MipsFastISel::fastEmitInst_rr(unsigned MachineInstOpcode,
 namespace llvm {
 
 FastISel *Mips::createFastISel(FunctionLoweringInfo &funcInfo,
-                               const TargetLibraryInfo *libInfo) {
-  return new MipsFastISel(funcInfo, libInfo);
+                               const TargetLibraryInfo *libInfo,
+                               const LibcallLoweringInfo *libcallLowering) {
+  return new MipsFastISel(funcInfo, libInfo, libcallLowering);
 }
 
 } // end namespace llvm

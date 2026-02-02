@@ -13,6 +13,7 @@
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/SmallVector.h"
 #include "llvm/DebugInfo/CodeView/CodeView.h"
+#include "llvm/DebugInfo/PDB/IPDBLineNumber.h"
 #include "llvm/Support/Compiler.h"
 #include <memory>
 

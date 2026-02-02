@@ -135,17 +135,17 @@ public:
   MCRegister getFPReg() const { return FPReg; }
 
   void emitFnStartLocNotes() const {
-    for (const SMLoc &Loc : FnStartLocs)
+    for (SMLoc Loc : FnStartLocs)
       Parser.Note(Loc, ".fnstart was specified here");
   }
 
   void emitCantUnwindLocNotes() const {
-    for (const SMLoc &Loc : CantUnwindLocs)
+    for (SMLoc Loc : CantUnwindLocs)
       Parser.Note(Loc, ".cantunwind was specified here");
   }
 
   void emitHandlerDataLocNotes() const {
-    for (const SMLoc &Loc : HandlerDataLocs)
+    for (SMLoc Loc : HandlerDataLocs)
       Parser.Note(Loc, ".handlerdata was specified here");
   }
 
@@ -426,15 +426,15 @@ class ARMAsmParser : public MCTargetAsmParser {
       VPTState.CurPosition = ~0U;
   }
 
-  void Note(SMLoc L, const Twine &Msg, SMRange Range = std::nullopt) {
+  void Note(SMLoc L, const Twine &Msg, SMRange Range = {}) {
     return getParser().Note(L, Msg, Range);
   }
 
-  bool Warning(SMLoc L, const Twine &Msg, SMRange Range = std::nullopt) {
+  bool Warning(SMLoc L, const Twine &Msg, SMRange Range = {}) {
     return getParser().Warning(L, Msg, Range);
   }
 
-  bool Error(SMLoc L, const Twine &Msg, SMRange Range = std::nullopt) {
+  bool Error(SMLoc L, const Twine &Msg, SMRange Range = {}) {
     return getParser().Error(L, Msg, Range);
   }
 
@@ -3373,12 +3373,12 @@ public:
 
   void addMSRMaskOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createImm(unsigned(getMSRMask())));
+    Inst.addOperand(MCOperand::createImm(getMSRMask()));
   }
 
   void addBankedRegOperands(MCInst &Inst, unsigned N) const {
     assert(N == 1 && "Invalid number of operands!");
-    Inst.addOperand(MCOperand::createImm(unsigned(getBankedReg())));
+    Inst.addOperand(MCOperand::createImm(getBankedReg()));
   }
 
   void addProcIFlagsOperands(MCInst &Inst, unsigned N) const {
@@ -3629,7 +3629,7 @@ public:
     Inst.addOperand(MCOperand::createImm(Imm == 48 ? 1 : 0));
   }
 
-  void print(raw_ostream &OS) const override;
+  void print(raw_ostream &OS, const MCAsmInfo &MAI) const override;
 
   static std::unique_ptr<ARMOperand> CreateITMask(unsigned Mask, SMLoc S,
                                                   ARMAsmParser &Parser) {
@@ -3979,7 +3979,7 @@ public:
 
 } // end anonymous namespace.
 
-void ARMOperand::print(raw_ostream &OS) const {
+void ARMOperand::print(raw_ostream &OS, const MCAsmInfo &MAI) const {
   auto RegName = [](MCRegister Reg) {
     if (Reg)
       return ARMInstPrinter::getRegisterName(Reg);
@@ -4024,7 +4024,7 @@ void ARMOperand::print(raw_ostream &OS) const {
     OS << "<banked reg: " << getBankedReg() << ">";
     break;
   case k_Immediate:
-    OS << *getImm();
+    MAI.printExpr(OS, *getImm());
     break;
   case k_MemBarrierOpt:
     OS << "<ARM_MB::" << MemBOptToString(getMemBarrierOpt(), false) << ">";
@@ -4039,8 +4039,10 @@ void ARMOperand::print(raw_ostream &OS) const {
     OS << "<memory";
     if (Memory.BaseRegNum)
       OS << " base:" << RegName(Memory.BaseRegNum);
-    if (Memory.OffsetImm)
-      OS << " offset-imm:" << *Memory.OffsetImm;
+    if (Memory.OffsetImm) {
+      OS << " offset-imm:";
+      MAI.printExpr(OS, *Memory.OffsetImm);
+    }
     if (Memory.OffsetRegNum)
       OS << " offset-reg:" << (Memory.isNegative ? "-" : "")
          << RegName(Memory.OffsetRegNum);
@@ -4094,7 +4096,8 @@ void ARMOperand::print(raw_ostream &OS) const {
        <<  ModImm.Rot << ")>";
     break;
   case k_ConstantPoolImmediate:
-    OS << "<constant_pool_imm #" << *getConstantPoolImm();
+    OS << "<constant_pool_imm #";
+    MAI.printExpr(OS, *getConstantPoolImm());
     break;
   case k_BitfieldDescriptor:
     OS << "<bitfield " << "lsb: " << Bitfield.LSB
@@ -6433,7 +6436,7 @@ bool ARMAsmParser::parseOperand(OperandVector &Operands, StringRef Mnemonic) {
       return true;
 
     const auto *ExprVal =
-        MCSpecifierExpr::create(SubExprVal, Spec, getContext());
+        MCSpecifierExpr::create(SubExprVal, Spec, getContext(), S);
     E = SMLoc::getFromPointer(Parser.getTok().getLoc().getPointer() - 1);
     Operands.push_back(ARMOperand::CreateImm(ExprVal, S, E, *this));
     return false;
@@ -12324,7 +12327,7 @@ bool ARMAsmParser::parseDirectiveEven(SMLoc L) {
   }
 
   assert(Section && "must have section to emit alignment");
-  if (Section->useCodeAlign())
+  if (getContext().getAsmInfo()->useCodeAlign(*Section))
     getStreamer().emitCodeAlignment(Align(2), &getSTI());
   else
     getStreamer().emitValueToAlignment(Align(2));
@@ -12522,7 +12525,7 @@ bool ARMAsmParser::parseDirectiveAlign(SMLoc L) {
     // '.align' is target specifically handled to mean 2**2 byte alignment.
     const MCSection *Section = getStreamer().getCurrentSectionOnly();
     assert(Section && "must have section to emit alignment");
-    if (Section->useCodeAlign())
+    if (getContext().getAsmInfo()->useCodeAlign(*Section))
       getStreamer().emitCodeAlignment(Align(4), &getSTI(), 0);
     else
       getStreamer().emitValueToAlignment(Align(4), 0, 1, 0);

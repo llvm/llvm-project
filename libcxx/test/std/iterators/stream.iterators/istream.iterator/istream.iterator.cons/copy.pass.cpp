@@ -27,9 +27,9 @@ TEST_CONSTEXPR_CXX14 bool test_constexpr() {
   return true;
 }
 
-struct thowing_copy_constructor {
-  thowing_copy_constructor() {}
-  thowing_copy_constructor(const thowing_copy_constructor&) TEST_NOEXCEPT_FALSE {}
+struct throwing_copy_constructor {
+  throwing_copy_constructor() {}
+  throwing_copy_constructor(const throwing_copy_constructor&) TEST_NOEXCEPT_FALSE {}
 };
 
 int main(int, char**)
@@ -43,11 +43,11 @@ int main(int, char**)
 #endif
     }
     {
-      std::istream_iterator<thowing_copy_constructor> io;
-      std::istream_iterator<thowing_copy_constructor> i = io;
-      assert(i == std::istream_iterator<thowing_copy_constructor>());
+      std::istream_iterator<throwing_copy_constructor> io;
+      std::istream_iterator<throwing_copy_constructor> i = io;
+      assert(i == std::istream_iterator<throwing_copy_constructor>());
 #if TEST_STD_VER >= 11
-      static_assert(!std::is_nothrow_copy_constructible<std::istream_iterator<thowing_copy_constructor>>::value, "");
+      static_assert(!std::is_nothrow_copy_constructible<std::istream_iterator<throwing_copy_constructor>>::value, "");
 #endif
     }
     {

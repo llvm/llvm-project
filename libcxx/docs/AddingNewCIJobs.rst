@@ -28,6 +28,9 @@ An example of a job definition is:
 
   - label: "C++11"
     command: "libcxx/utils/ci/run-buildbot generic-cxx11"
+    env:
+      CC: clang
+      CXX: clang++
     artifact_paths:
       - "**/test-results.xml"
     agents:

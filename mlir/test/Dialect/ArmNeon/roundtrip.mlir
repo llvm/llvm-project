@@ -60,3 +60,15 @@ func.func @arm_neon_usmmla(%a: vector<16xi8>,
   %0 = arm_neon.intr.usmmla %c, %a, %b : vector<16xi8> to vector<4xi32>
   return %0 : vector<4xi32>
 }
+
+
+// -----
+
+// CHECK-LABEL: arm_neon_bfmmla
+func.func @arm_neon_bfmmla(%a: vector<8xbf16>,
+                           %b: vector<8xbf16>,
+                           %c: vector<4xf32>) -> vector<4xf32> {
+  // CHECK: arm_neon.intr.bfmmla {{.*}}: vector<8xbf16> to vector<4xf32>
+  %0 = arm_neon.intr.bfmmla %c, %a, %b : vector<8xbf16> to vector<4xf32>
+  return %0 : vector<4xf32>
+}

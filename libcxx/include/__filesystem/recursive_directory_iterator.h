@@ -33,8 +33,6 @@ _LIBCPP_PUSH_MACROS
 
 _LIBCPP_BEGIN_NAMESPACE_FILESYSTEM
 
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_PUSH
-
 class recursive_directory_iterator {
 public:
   using value_type        = directory_entry;
@@ -73,7 +71,7 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI ~recursive_directory_iterator() = default;
 
-  _LIBCPP_HIDE_FROM_ABI const directory_entry& operator*() const { return __dereference(); }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI const directory_entry& operator*() const { return __dereference(); }
 
   _LIBCPP_HIDE_FROM_ABI const directory_entry* operator->() const { return &__dereference(); }
 
@@ -87,14 +85,14 @@ public:
 
   _LIBCPP_HIDE_FROM_ABI recursive_directory_iterator& increment(error_code& __ec) { return __increment(&__ec); }
 
-  _LIBCPP_EXPORTED_FROM_ABI directory_options options() const;
-  _LIBCPP_EXPORTED_FROM_ABI int depth() const;
+  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI directory_options options() const;
+  [[nodiscard]] _LIBCPP_EXPORTED_FROM_ABI int depth() const;
 
   _LIBCPP_HIDE_FROM_ABI void pop() { __pop(); }
 
   _LIBCPP_HIDE_FROM_ABI void pop(error_code& __ec) { __pop(&__ec); }
 
-  _LIBCPP_HIDE_FROM_ABI bool recursion_pending() const { return __rec_; }
+  [[nodiscard]] _LIBCPP_HIDE_FROM_ABI bool recursion_pending() const { return __rec_; }
 
   _LIBCPP_HIDE_FROM_ABI void disable_recursion_pending() { __rec_ = false; }
 
@@ -132,27 +130,24 @@ operator!=(const recursive_directory_iterator& __lhs, const recursive_directory_
   return !(__lhs == __rhs);
 }
 // enable recursive_directory_iterator range-based for statements
-inline _LIBCPP_HIDE_FROM_ABI recursive_directory_iterator begin(recursive_directory_iterator __iter) noexcept {
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI recursive_directory_iterator
+begin(recursive_directory_iterator __iter) noexcept {
   return __iter;
 }
 
-inline _LIBCPP_HIDE_FROM_ABI recursive_directory_iterator end(recursive_directory_iterator) noexcept {
+[[nodiscard]] inline _LIBCPP_HIDE_FROM_ABI recursive_directory_iterator end(recursive_directory_iterator) noexcept {
   return recursive_directory_iterator();
 }
-
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY_POP
 
 _LIBCPP_END_NAMESPACE_FILESYSTEM
 
 #  if _LIBCPP_STD_VER >= 20
 
 template <>
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY inline constexpr bool
-    std::ranges::enable_borrowed_range<std::filesystem::recursive_directory_iterator> = true;
+inline constexpr bool std::ranges::enable_borrowed_range<std::filesystem::recursive_directory_iterator> = true;
 
 template <>
-_LIBCPP_AVAILABILITY_FILESYSTEM_LIBRARY inline constexpr bool
-    std::ranges::enable_view<std::filesystem::recursive_directory_iterator> = true;
+inline constexpr bool std::ranges::enable_view<std::filesystem::recursive_directory_iterator> = true;
 
 #  endif // _LIBCPP_STD_VER >= 20
 

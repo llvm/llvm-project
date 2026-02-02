@@ -23,8 +23,55 @@
 #include "test_macros.h"
 #include "../../../test_compare.h"
 #include "test_allocator.h"
+#include "MinSequenceContainer.h"
+#include "min_allocator.h"
 
-void test() {
+template <class KeyContainer>
+constexpr void test_compare() {
+  {
+    using C = test_less<int>;
+    auto m  = std::flat_set<int, C, KeyContainer>(C(3));
+    assert(m.empty());
+    assert(m.begin() == m.end());
+    assert(m.key_comp() == C(3));
+  }
+  {
+    // The one-argument ctor is explicit.
+    using C = test_less<int>;
+    static_assert(std::is_constructible_v<std::flat_set<int, C, KeyContainer>, C>);
+    static_assert(!std::is_convertible_v<C, std::flat_set<int, C, KeyContainer>>);
+
+    static_assert(std::is_constructible_v<std::flat_set<int, std::less<int>, KeyContainer>, std::less<int>>);
+    static_assert(!std::is_convertible_v<std::less<int>, std::flat_set<int, std::less<int>, KeyContainer>>);
+  }
+}
+
+template <template <class...> class KeyContainer>
+constexpr void test_compare_alloc() {
+  {
+    using C  = test_less<int>;
+    using A1 = test_allocator<int>;
+    auto m   = std::flat_set<int, C, KeyContainer<int, A1>>(C(4), A1(5));
+    assert(m.empty());
+    assert(m.begin() == m.end());
+    assert(m.key_comp() == C(4));
+    auto keys = std::move(m).extract();
+    assert(keys.get_allocator() == A1(5));
+  }
+  {
+    // explicit(false)
+    using C                                        = test_less<int>;
+    using A1                                       = test_allocator<int>;
+    std::flat_set<int, C, KeyContainer<int, A1>> m = {C(4), A1(5)};
+    assert(m.empty());
+    assert(m.begin() == m.end());
+    assert(m.key_comp() == C(4));
+    auto keys = std::move(m).extract();
+    assert(keys.get_allocator() == A1(5));
+  }
+}
+
+constexpr bool test() {
   {
     // The constructors in this subclause shall not participate in overload
     // resolution unless uses_allocator_v<container_type, Alloc> is true.
@@ -41,47 +88,28 @@ void test() {
     static_assert(!std::is_constructible_v<M1, const C&, const A2&>);
     static_assert(!std::is_constructible_v<M2, const C&, const A1&>);
   }
-  {
-    using C = test_less<int>;
-    auto m  = std::flat_set<int, C>(C(3));
-    assert(m.empty());
-    assert(m.begin() == m.end());
-    assert(m.key_comp() == C(3));
-  }
-  {
-    // The one-argument ctor is explicit.
-    using C = test_less<int>;
-    static_assert(std::is_constructible_v<std::flat_set<int, C>, C>);
-    static_assert(!std::is_convertible_v<C, std::flat_set<int, C>>);
+  test_compare<std::vector<int>>();
+  test_compare<MinSequenceContainer<int>>();
+  test_compare<std::vector<int, min_allocator<int>>>();
 
-    static_assert(std::is_constructible_v<std::flat_set<int>, std::less<int>>);
-    static_assert(!std::is_convertible_v<std::less<int>, std::flat_set<int>>);
-  }
+  test_compare_alloc<std::vector>();
+
+#ifndef __cpp_lib_constexpr_deque
+  if (!TEST_IS_CONSTANT_EVALUATED)
+#endif
   {
-    using C  = test_less<int>;
-    using A1 = test_allocator<int>;
-    auto m   = std::flat_set<int, C, std::vector<int, A1>>(C(4), A1(5));
-    assert(m.empty());
-    assert(m.begin() == m.end());
-    assert(m.key_comp() == C(4));
-    auto keys = std::move(m).extract();
-    assert(keys.get_allocator() == A1(5));
+    test_compare<std::deque<int>>();
+    test_compare_alloc<std::deque>();
   }
-  {
-    // explicit(false)
-    using C                                      = test_less<int>;
-    using A1                                     = test_allocator<int>;
-    std::flat_set<int, C, std::deque<int, A1>> m = {C(4), A1(5)};
-    assert(m.empty());
-    assert(m.begin() == m.end());
-    assert(m.key_comp() == C(4));
-    auto keys = std::move(m).extract();
-    assert(keys.get_allocator() == A1(5));
-  }
+
+  return true;
 }
 
 int main(int, char**) {
   test();
+#if TEST_STD_VER >= 26
+  static_assert(test());
+#endif
 
   return 0;
 }

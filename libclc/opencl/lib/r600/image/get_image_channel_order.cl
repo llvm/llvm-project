@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
+#include <clc/opencl/opencl-base.h>
 
 _CLC_DECL int __clc_get_image_channel_order_2d(image2d_t);
 _CLC_DECL int __clc_get_image_channel_order_3d(image3d_t);

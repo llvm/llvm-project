@@ -69,14 +69,14 @@ endif()
 
 # Do checks with _XOPEN_SOURCE and large-file API on AIX, because we will build
 # with those too.
-if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
           list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_XOPEN_SOURCE=700")
           list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_LARGE_FILE_API")
 endif()
 
 # Do checks with _FILE_OFFSET_BITS=64 on Solaris, because we will build
 # with those too.
-if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "SunOS")
+if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "SunOS")
           list(APPEND CMAKE_REQUIRED_DEFINITIONS "-D_FILE_OFFSET_BITS=64")
 endif()
 
@@ -122,7 +122,7 @@ if(APPLE)
     HAVE_CRASHREPORTER_INFO)
 endif()
 
-if(${CMAKE_SYSTEM_NAME} STREQUAL "Linux")
+if("${CMAKE_SYSTEM_NAME}" STREQUAL "Linux")
   check_include_file(linux/magic.h HAVE_LINUX_MAGIC_H)
   if(NOT HAVE_LINUX_MAGIC_H)
     # older kernels use split files
@@ -411,7 +411,7 @@ endif()
 
 CHECK_STRUCT_HAS_MEMBER("struct stat" st_mtimespec.tv_nsec
     "sys/types.h;sys/stat.h" HAVE_STRUCT_STAT_ST_MTIMESPEC_TV_NSEC)
-if (UNIX AND ${CMAKE_SYSTEM_NAME} MATCHES "AIX")
+if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
 # The st_mtim.tv_nsec member of a `stat` structure is not reliable on some AIX
 # environments.
   set(HAVE_STRUCT_STAT_ST_MTIM_TV_NSEC 0)
@@ -447,25 +447,6 @@ if (NOT WIN32)
     list(REMOVE_ITEM CMAKE_REQUIRED_LIBRARIES dl)
   endif()
 endif()
-
-# available programs checks
-function(llvm_find_program name)
-  string(TOUPPER ${name} NAME)
-  string(REGEX REPLACE "\\." "_" NAME ${NAME})
-
-  find_program(LLVM_PATH_${NAME} NAMES ${ARGV})
-  mark_as_advanced(LLVM_PATH_${NAME})
-  if(LLVM_PATH_${NAME})
-    set(HAVE_${NAME} 1 CACHE INTERNAL "Is ${name} available ?")
-    mark_as_advanced(HAVE_${NAME})
-  else(LLVM_PATH_${NAME})
-    set(HAVE_${NAME} "" CACHE INTERNAL "Is ${name} available ?")
-  endif(LLVM_PATH_${NAME})
-endfunction()
-
-if (LLVM_ENABLE_DOXYGEN)
-  llvm_find_program(dot)
-endif ()
 
 if(LLVM_ENABLE_FFI)
   set(FFI_REQUIRE_INCLUDE On)
@@ -510,7 +491,7 @@ set(USE_NO_UNINITIALIZED 0)
 # false positives.
 if (CMAKE_COMPILER_IS_GNUCXX)
   # Disable all -Wuninitialized warning for old GCC versions.
-  if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 12.0)
+  if (CMAKE_CXX_COMPILER_VERSION VERSION_LESS 15.0)
     set(USE_NO_UNINITIALIZED 1)
   else()
     set(USE_NO_MAYBE_UNINITIALIZED 1)
@@ -668,28 +649,6 @@ if( LLVM_ENABLE_THREADS )
   message(STATUS "Threads enabled.")
 else( LLVM_ENABLE_THREADS )
   message(STATUS "Threads disabled.")
-endif()
-
-if (LLVM_ENABLE_DOXYGEN)
-  message(STATUS "Doxygen enabled.")
-  find_package(Doxygen REQUIRED)
-
-  if (DOXYGEN_FOUND)
-    # If we find doxygen and we want to enable doxygen by default create a
-    # global aggregate doxygen target for generating llvm and any/all
-    # subprojects doxygen documentation.
-    if (LLVM_BUILD_DOCS)
-      add_custom_target(doxygen ALL)
-    endif()
-
-    option(LLVM_DOXYGEN_EXTERNAL_SEARCH "Enable doxygen external search." OFF)
-    if (LLVM_DOXYGEN_EXTERNAL_SEARCH)
-      set(LLVM_DOXYGEN_SEARCHENGINE_URL "" CACHE STRING "URL to use for external search.")
-      set(LLVM_DOXYGEN_SEARCH_MAPPINGS "" CACHE STRING "Doxygen Search Mappings")
-    endif()
-  endif()
-else()
-  message(STATUS "Doxygen disabled.")
 endif()
 
 find_program(GOLD_EXECUTABLE NAMES ${LLVM_DEFAULT_TARGET_TRIPLE}-ld.gold ld.gold ${LLVM_DEFAULT_TARGET_TRIPLE}-ld ld DOC "The gold linker")

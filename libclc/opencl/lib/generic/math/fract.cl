@@ -7,8 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/math/clc_fract.h>
-#include <clc/opencl/clc.h>
 
-#define FUNCTION fract
+#define __CLC_FUNCTION fract
 #define __CLC_BODY <clc/math/unary_def_with_ptr.inc>
 #include <clc/math/gentype.inc>

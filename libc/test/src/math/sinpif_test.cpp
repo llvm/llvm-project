@@ -6,13 +6,13 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/libc_errno.h"
+#include "hdr/errno_macros.h"
 #include "src/math/sinpif.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/src/math/sdcomp26094.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
 
-#include <stdint.h>
+#include "hdr/stdint_proxy.h"
 
 using LlvmLibcSinpifTest = LIBC_NAMESPACE::testing::FPTest<float>;
 
@@ -21,8 +21,6 @@ using LIBC_NAMESPACE::testing::SDCOMP26094_VALUES;
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;
 
 TEST_F(LlvmLibcSinpifTest, SpecialNumbers) {
-  libc_errno = 0;
-
   EXPECT_FP_EQ(aNaN, LIBC_NAMESPACE::sinpif(aNaN));
   EXPECT_MATH_ERRNO(0);
 
@@ -100,7 +98,7 @@ TEST_F(LlvmLibcSinpifTest, SmallValues) {
                                  LIBC_NAMESPACE::sinpif(x), 0.5);
 }
 
-// SDCOMP-26094: check sinfpi in the cases for which the range reducer
+// SDCOMP-26094: check sinpif in the cases for which the range reducer
 // returns values furthest beyond its nominal upper bound of pi/4.
 TEST_F(LlvmLibcSinpifTest, SDCOMP_26094) {
   for (uint32_t v : SDCOMP26094_VALUES) {

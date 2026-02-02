@@ -74,6 +74,7 @@ static_library("Core") {
     "Opcode.cpp",
     "PluginManager.cpp",
     "Progress.cpp",
+    "ProtocolServer.cpp",
     "RichManglingContext.cpp",
     "SearchFilter.cpp",
     "Section.cpp",

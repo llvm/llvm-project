@@ -24,8 +24,6 @@
 #include "llvm/Support/GenericDomTree.h"
 #include "llvm/Support/raw_ostream.h"
 #include <cassert>
-#include <set>
-#include <utility>
 #include <vector>
 
 namespace llvm {
@@ -76,11 +74,9 @@ void DominanceFrontierBase<BlockT, IsPostDom>::dump() const {
 #endif
 
 template <class BlockT>
-const typename ForwardDominanceFrontierBase<BlockT>::DomSetType &
-ForwardDominanceFrontierBase<BlockT>::calculate(const DomTreeT &DT,
-                                                const DomTreeNodeT *Node) {
+void ForwardDominanceFrontierBase<BlockT>::calculate(const DomTreeT &DT,
+                                                     const DomTreeNodeT *Node) {
   BlockT *BB = Node->getBlock();
-  DomSetType *Result = nullptr;
 
   std::vector<DFCalculateWorkObject<BlockT>> workList;
   SmallPtrSet<BlockT *, 32> visited;
@@ -128,7 +124,6 @@ ForwardDominanceFrontierBase<BlockT>::calculate(const DomTreeT &DT,
     // from the workList.
     if (!visitChild) {
       if (!parentBB) {
-        Result = &S;
         break;
       }
 
@@ -142,8 +137,6 @@ ForwardDominanceFrontierBase<BlockT>::calculate(const DomTreeT &DT,
     }
 
   } while (!workList.empty());
-
-  return *Result;
 }
 
 } // end namespace llvm

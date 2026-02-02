@@ -44,6 +44,7 @@
 #include "llvm/Support/MemoryBuffer.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/RandomNumberGenerator.h"
+#include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/VersionTuple.h"
 #include <cassert>
 #include <cstdint>
@@ -97,6 +98,11 @@ Module &Module::operator=(Module &&Other) {
 
   NamedMDList.clear();
   NamedMDList.splice(NamedMDList.begin(), Other.NamedMDList);
+  for (NamedMDNode &NMD : NamedMDList)
+    NMD.setParent(this);
+
+  NamedMDSymTab = std::move(Other.NamedMDSymTab);
+  ComdatSymTab = std::move(Other.ComdatSymTab);
   GlobalScopeAsm = std::move(Other.GlobalScopeAsm);
   OwnedMemoryBuffer = std::move(Other.OwnedMemoryBuffer);
   Materializer = std::move(Other.Materializer);
@@ -119,26 +125,30 @@ Module::~Module() {
 }
 
 void Module::removeDebugIntrinsicDeclarations() {
-  auto *DeclareIntrinsicFn =
-      Intrinsic::getOrInsertDeclaration(this, Intrinsic::dbg_declare);
-  assert((!isMaterialized() || DeclareIntrinsicFn->hasZeroLiveUses()) &&
-         "Debug declare intrinsic should have had uses removed.");
-  DeclareIntrinsicFn->eraseFromParent();
-  auto *ValueIntrinsicFn =
-      Intrinsic::getOrInsertDeclaration(this, Intrinsic::dbg_value);
-  assert((!isMaterialized() || ValueIntrinsicFn->hasZeroLiveUses()) &&
-         "Debug value intrinsic should have had uses removed.");
-  ValueIntrinsicFn->eraseFromParent();
-  auto *AssignIntrinsicFn =
-      Intrinsic::getOrInsertDeclaration(this, Intrinsic::dbg_assign);
-  assert((!isMaterialized() || AssignIntrinsicFn->hasZeroLiveUses()) &&
-         "Debug assign intrinsic should have had uses removed.");
-  AssignIntrinsicFn->eraseFromParent();
-  auto *LabelntrinsicFn =
-      Intrinsic::getOrInsertDeclaration(this, Intrinsic::dbg_label);
-  assert((!isMaterialized() || LabelntrinsicFn->hasZeroLiveUses()) &&
-         "Debug label intrinsic should have had uses removed.");
-  LabelntrinsicFn->eraseFromParent();
+  if (auto *DeclareIntrinsicFn =
+          Intrinsic::getDeclarationIfExists(this, Intrinsic::dbg_declare)) {
+    assert((!isMaterialized() || DeclareIntrinsicFn->hasZeroLiveUses()) &&
+           "Debug declare intrinsic should have had uses removed.");
+    DeclareIntrinsicFn->eraseFromParent();
+  }
+  if (auto *ValueIntrinsicFn =
+          Intrinsic::getDeclarationIfExists(this, Intrinsic::dbg_value)) {
+    assert((!isMaterialized() || ValueIntrinsicFn->hasZeroLiveUses()) &&
+           "Debug value intrinsic should have had uses removed.");
+    ValueIntrinsicFn->eraseFromParent();
+  }
+  if (auto *AssignIntrinsicFn =
+          Intrinsic::getDeclarationIfExists(this, Intrinsic::dbg_assign)) {
+    assert((!isMaterialized() || AssignIntrinsicFn->hasZeroLiveUses()) &&
+           "Debug assign intrinsic should have had uses removed.");
+    AssignIntrinsicFn->eraseFromParent();
+  }
+  if (auto *LabelntrinsicFn =
+          Intrinsic::getDeclarationIfExists(this, Intrinsic::dbg_label)) {
+    assert((!isMaterialized() || LabelntrinsicFn->hasZeroLiveUses()) &&
+           "Debug label intrinsic should have had uses removed.");
+    LabelntrinsicFn->eraseFromParent();
+  }
 }
 
 std::unique_ptr<RandomNumberGenerator>
@@ -398,9 +408,14 @@ void Module::setModuleFlag(ModFlagBehavior Behavior, StringRef Key,
                            Metadata *Val) {
   NamedMDNode *ModFlags = getOrInsertModuleFlagsMetadata();
   // Replace the flag if it already exists.
-  for (MDNode *Flag : ModFlags->operands()) {
+  for (unsigned i = 0; i < ModFlags->getNumOperands(); ++i) {
+    MDNode *Flag = ModFlags->getOperand(i);
     if (cast<MDString>(Flag->getOperand(1))->getString() == Key) {
-      Flag->replaceOperandWith(2, Val);
+      Type *Int32Ty = Type::getInt32Ty(Context);
+      Metadata *Ops[3] = {
+          ConstantAsMetadata::get(ConstantInt::get(Int32Ty, Behavior)),
+          MDString::get(Context, Key), Val};
+      ModFlags->setOperand(i, MDNode::get(Context, Ops));
       return;
     }
   }
@@ -474,6 +489,7 @@ Error Module::materializeAll() {
 }
 
 Error Module::materializeMetadata() {
+  llvm::TimeTraceScope timeScope("Materialize metadata");
   if (!Materializer)
     return Error::success();
   return Materializer->materializeMetadata();
@@ -923,4 +939,11 @@ WinX64EHUnwindV2Mode Module::getWinX64EHUnwindV2Mode() const {
   if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))
     return static_cast<WinX64EHUnwindV2Mode>(CI->getZExtValue());
   return WinX64EHUnwindV2Mode::Disabled;
+}
+
+ControlFlowGuardMode Module::getControlFlowGuardMode() const {
+  Metadata *MD = getModuleFlag("cfguard");
+  if (auto *CI = mdconst::dyn_extract_or_null<ConstantInt>(MD))
+    return static_cast<ControlFlowGuardMode>(CI->getZExtValue());
+  return ControlFlowGuardMode::Disabled;
 }

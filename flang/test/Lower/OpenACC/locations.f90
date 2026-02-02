@@ -114,7 +114,7 @@ module acc_locations
   subroutine atomic_read_loc()
     integer(4) :: x
     integer(8) :: y
-  
+
     !$acc atomic read
     y = x
   end
@@ -123,10 +123,10 @@ module acc_locations
   subroutine atomic_capture_loc()
     implicit none
     integer :: k, v, i
-  
+
     k = 1
     v = 0
-  
+
     !$acc atomic capture
     v = k
     k = (i + 1) * 3.14
@@ -142,13 +142,13 @@ module acc_locations
   subroutine atomic_update_loc()
     implicit none
     integer :: x, y, z
-    
-    !$acc atomic 
+
+    !$acc atomic
     y = y + 1
 ! CHECK: acc.atomic.update %{{.*}} : !fir.ref<i32> {
 ! CHECK: ^bb0(%{{.*}}: i32 loc("{{.*}}locations.f90":142:3)):
 ! CHECK: } loc("{{.*}}locations.f90":142:3)
-    
+
     !$acc atomic update
     z = x * z
   end subroutine
@@ -183,5 +183,3 @@ module acc_locations
     !CHECK-SAME:  loc("{{.*}}locations.f90":181:11)
   end subroutine
 end module
-
-

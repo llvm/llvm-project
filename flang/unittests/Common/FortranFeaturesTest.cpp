@@ -364,9 +364,6 @@ TEST(FortranFeaturesTest, CamelCaseToLowerCaseHyphenated) {
       CamelCaseToLowerCaseHyphenated(EnumToString(LanguageFeature::Unsigned)),
       "unsigned");
   EXPECT_EQ(CamelCaseToLowerCaseHyphenated(
-                EnumToString(LanguageFeature::AmbiguousStructureConstructor)),
-      "ambiguous-structure-constructor");
-  EXPECT_EQ(CamelCaseToLowerCaseHyphenated(
                 EnumToString(LanguageFeature::ContiguousOkForSeqAssociation)),
       "contiguous-ok-for-seq-association");
   EXPECT_EQ(CamelCaseToLowerCaseHyphenated(
@@ -556,6 +553,14 @@ TEST(FortranFeaturesTest, CamelCaseToLowerCaseHyphenated) {
   EXPECT_EQ(CamelCaseToLowerCaseHyphenated(
                 EnumToString(UsageWarning::NonVolatilePointerToVolatile)),
       "non-volatile-pointer-to-volatile");
+}
+
+TEST(FortranFeaturesTest, HintLanguageControlFlag) {
+  LanguageFeatureControl control{};
+  EXPECT_EQ(control.getDefaultCliSpelling(LanguageFeature::BenignNameClash),
+      "benign-name-clash");
+  EXPECT_EQ(
+      control.getDefaultCliSpelling(UsageWarning::Portability), "portability");
 }
 
 } // namespace Fortran::common::details

@@ -122,7 +122,10 @@ public:
     Disjoint = 1 << 19,      // Each bit is zero in at least one of the inputs.
     NoUSWrap = 1 << 20,      // Instruction supports geps
                              // no unsigned signed wrap.
-    SameSign = 1 << 21       // Both operands have the same sign.
+    SameSign = 1 << 21,      // Both operands have the same sign.
+    InBounds = 1 << 22,      // Pointer arithmetic remains inbounds.
+                             // Implies NoUSWrap.
+    LRSplit = 1 << 23        // Instruction for live range split.
   };
 
 private:
@@ -133,7 +136,7 @@ private:
   MachineOperand *Operands = nullptr;   // Pointer to the first operand.
 
 #define LLVM_MI_NUMOPERANDS_BITS 24
-#define LLVM_MI_FLAGS_BITS 24
+#define LLVM_MI_FLAGS_BITS 32
 #define LLVM_MI_ASMPRINTERFLAGS_BITS 8
 
   /// Number of operands on instruction.
@@ -145,12 +148,19 @@ private:
   OperandCapacity CapOperands;          // Capacity of the Operands array.
 
   /// Various bits of additional information about the machine instruction.
-  uint32_t Flags : LLVM_MI_FLAGS_BITS;
+  uint32_t Flags;
 
   /// Various bits of information used by the AsmPrinter to emit helpful
   /// comments.  This is *not* semantic information.  Do not use this for
   /// anything other than to convey comment information to AsmPrinter.
-  uint32_t AsmPrinterFlags : LLVM_MI_ASMPRINTERFLAGS_BITS;
+  uint8_t AsmPrinterFlags;
+
+  /// Cached opcode from MCID.
+  uint16_t Opcode;
+
+  /// Unique instruction number. Used by DBG_INSTR_REFs to refer to the values
+  /// defined by this instruction.
+  unsigned DebugInstrNum;
 
   /// Internal implementation detail class that provides out-of-line storage for
   /// extra info used by the machine instruction when this info cannot be stored
@@ -158,8 +168,9 @@ private:
   ///
   /// This has to be defined eagerly due to the implementation constraints of
   /// `PointerSumType` where it is used.
-  class ExtraInfo final : TrailingObjects<ExtraInfo, MachineMemOperand *,
-                                          MCSymbol *, MDNode *, uint32_t> {
+  class ExtraInfo final
+      : TrailingObjects<ExtraInfo, MachineMemOperand *, MCSymbol *, MDNode *,
+                        uint32_t, Value *> {
   public:
     static ExtraInfo *create(BumpPtrAllocator &Allocator,
                              ArrayRef<MachineMemOperand *> MMOs,
@@ -167,24 +178,26 @@ private:
                              MCSymbol *PostInstrSymbol = nullptr,
                              MDNode *HeapAllocMarker = nullptr,
                              MDNode *PCSections = nullptr, uint32_t CFIType = 0,
-                             MDNode *MMRAs = nullptr) {
+                             MDNode *MMRAs = nullptr, Value *DS = nullptr) {
       bool HasPreInstrSymbol = PreInstrSymbol != nullptr;
       bool HasPostInstrSymbol = PostInstrSymbol != nullptr;
       bool HasHeapAllocMarker = HeapAllocMarker != nullptr;
       bool HasMMRAs = MMRAs != nullptr;
       bool HasCFIType = CFIType != 0;
       bool HasPCSections = PCSections != nullptr;
+      bool HasDS = DS != nullptr;
       auto *Result = new (Allocator.Allocate(
-          totalSizeToAlloc<MachineMemOperand *, MCSymbol *, MDNode *, uint32_t>(
+          totalSizeToAlloc<MachineMemOperand *, MCSymbol *, MDNode *, uint32_t,
+                           Value *>(
               MMOs.size(), HasPreInstrSymbol + HasPostInstrSymbol,
-              HasHeapAllocMarker + HasPCSections + HasMMRAs, HasCFIType),
+              HasHeapAllocMarker + HasPCSections + HasMMRAs, HasCFIType, HasDS),
           alignof(ExtraInfo)))
           ExtraInfo(MMOs.size(), HasPreInstrSymbol, HasPostInstrSymbol,
-                    HasHeapAllocMarker, HasPCSections, HasCFIType, HasMMRAs);
+                    HasHeapAllocMarker, HasPCSections, HasCFIType, HasMMRAs,
+                    HasDS);
 
       // Copy the actual data into the trailing objects.
-      std::copy(MMOs.begin(), MMOs.end(),
-                Result->getTrailingObjects<MachineMemOperand *>());
+      llvm::copy(MMOs, Result->getTrailingObjects<MachineMemOperand *>());
 
       unsigned MDNodeIdx = 0;
 
@@ -201,6 +214,8 @@ private:
         Result->getTrailingObjects<uint32_t>()[0] = CFIType;
       if (HasMMRAs)
         Result->getTrailingObjects<MDNode *>()[MDNodeIdx++] = MMRAs;
+      if (HasDS)
+        Result->getTrailingObjects<Value *>()[0] = DS;
 
       return Result;
     }
@@ -239,6 +254,10 @@ private:
                       : nullptr;
     }
 
+    Value *getDeactivationSymbol() const {
+      return HasDS ? getTrailingObjects<Value *>()[0] : 0;
+    }
+
   private:
     friend TrailingObjects;
 
@@ -254,6 +273,7 @@ private:
     const bool HasPCSections;
     const bool HasCFIType;
     const bool HasMMRAs;
+    const bool HasDS;
 
     // Implement the `TrailingObjects` internal API.
     size_t numTrailingObjects(OverloadToken<MachineMemOperand *>) const {
@@ -268,16 +288,17 @@ private:
     size_t numTrailingObjects(OverloadToken<uint32_t>) const {
       return HasCFIType;
     }
+    size_t numTrailingObjects(OverloadToken<Value *>) const { return HasDS; }
 
     // Just a boring constructor to allow us to initialize the sizes. Always use
     // the `create` routine above.
     ExtraInfo(int NumMMOs, bool HasPreInstrSymbol, bool HasPostInstrSymbol,
               bool HasHeapAllocMarker, bool HasPCSections, bool HasCFIType,
-              bool HasMMRAs)
+              bool HasMMRAs, bool HasDS)
         : NumMMOs(NumMMOs), HasPreInstrSymbol(HasPreInstrSymbol),
           HasPostInstrSymbol(HasPostInstrSymbol),
           HasHeapAllocMarker(HasHeapAllocMarker), HasPCSections(HasPCSections),
-          HasCFIType(HasCFIType), HasMMRAs(HasMMRAs) {}
+          HasCFIType(HasCFIType), HasMMRAs(HasMMRAs), HasDS(HasDS) {}
   };
 
   /// Enumeration of the kinds of inline extra info available. It is important
@@ -303,13 +324,6 @@ private:
       Info;
 
   DebugLoc DbgLoc; // Source line information.
-
-  /// Unique instruction number. Used by DBG_INSTR_REFs to refer to the values
-  /// defined by this instruction.
-  unsigned DebugInstrNum;
-
-  /// Cached opcode from MCID.
-  uint16_t Opcode;
 
   // Intrusive list support
   friend struct ilist_traits<MachineInstr>;
@@ -866,6 +880,14 @@ public:
     return nullptr;
   }
 
+  Value *getDeactivationSymbol() const {
+    if (!Info)
+      return nullptr;
+    if (ExtraInfo *EI = Info.get<EIIK_OutOfLine>())
+      return EI->getDeactivationSymbol();
+    return nullptr;
+  }
+
   /// Helper to extract a CFI type hash if one has been added.
   uint32_t getCFIType() const {
     if (!Info)
@@ -1227,7 +1249,7 @@ public:
 
   /// Returns true if this instruction is a candidate for remat.
   /// This flag is deprecated, please don't use it anymore.  If this
-  /// flag is set, the isReallyTriviallyReMaterializable() method is called to
+  /// flag is set, the isReMaterializableImpl() method is called to
   /// verify the instruction is really rematerializable.
   bool isRematerializable(QueryType Type = AllInBundle) const {
     // It's only possible to re-mat a bundle if all bundled instructions are
@@ -1430,6 +1452,10 @@ public:
     return getOpcode() == TargetOpcode::COPY;
   }
 
+  bool isCopyLaneMask() const {
+    return getOpcode() == TargetOpcode::COPY_LANEMASK;
+  }
+
   bool isFullCopy() const {
     return isCopy() && !getOperand(0).getSubReg() && !getOperand(1).getSubReg();
   }
@@ -1463,6 +1489,7 @@ public:
     case TargetOpcode::PHI:
     case TargetOpcode::G_PHI:
     case TargetOpcode::COPY:
+    case TargetOpcode::COPY_LANEMASK:
     case TargetOpcode::INSERT_SUBREG:
     case TargetOpcode::SUBREG_TO_REG:
     case TargetOpcode::REG_SEQUENCE:
@@ -1968,6 +1995,8 @@ public:
   /// Set the CFI type for the instruction.
   LLVM_ABI void setCFIType(MachineFunction &MF, uint32_t Type);
 
+  LLVM_ABI void setDeactivationSymbol(MachineFunction &MF, Value *DS);
+
   /// Return the MIFlags which represent both MachineInstrs. This
   /// should be used when merging two MachineInstrs into one. This routine does
   /// not modify the MIFlags of this MachineInstr.
@@ -1997,6 +2026,15 @@ public:
   /// Find all DBG_VALUEs that point to the register def in this instruction
   /// and point them to \p Reg instead.
   LLVM_ABI void changeDebugValuesDefReg(Register Reg);
+
+  /// Remove all incoming values of Phi instruction for the given block.
+  ///
+  /// Return deleted operands count.
+  ///
+  /// Method does not erase PHI instruction even if it has single income or does
+  /// not have incoming values at all. It is a caller responsibility to make
+  /// decision how to process PHI instruction after incoming values removed.
+  LLVM_ABI unsigned removePHIIncomingValueFor(const MachineBasicBlock &MBB);
 
   /// Sets all register debug operands in this debug value instruction to be
   /// undef.
@@ -2078,7 +2116,7 @@ private:
   void setExtraInfo(MachineFunction &MF, ArrayRef<MachineMemOperand *> MMOs,
                     MCSymbol *PreInstrSymbol, MCSymbol *PostInstrSymbol,
                     MDNode *HeapAllocMarker, MDNode *PCSections,
-                    uint32_t CFIType, MDNode *MMRAs);
+                    uint32_t CFIType, MDNode *MMRAs, Value *DS);
 };
 
 /// Special DenseMapInfo traits to compare MachineInstr* by *value* of the

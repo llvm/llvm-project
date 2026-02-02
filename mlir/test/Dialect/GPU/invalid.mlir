@@ -35,6 +35,17 @@ func.func @launch_requires_gpu_return(%sz : index) {
 
 // -----
 
+func.func @launch_result_no_async() {
+  %c1 = arith.constant 1 : index
+  // expected-error@+1 {{gpu.launch requires 'async' keyword to return a value}}
+  %0 = gpu.launch blocks(%bx, %by, %bz) in (%gx = %c1, %gy = %c1, %gz = %c1) threads(%tx, %ty, %tz) in (%lx = %c1, %ly = %c1, %lz = %c1) {
+    gpu.terminator
+  }
+  return
+}
+
+// -----
+
 func.func @launch_func_too_few_operands(%sz : index) {
   // expected-error@+1 {{expected 6 or more operands}}
   "gpu.launch_func"(%sz, %sz, %sz, %sz, %sz)
@@ -478,6 +489,56 @@ func.func @shuffle_unsupported_type_vec(%arg0 : vector<[4]xf32>, %arg1 : i32, %a
 
 // -----
 
+func.func @rotate_mismatching_type(%arg0 : f32) {
+  // expected-error@+1 {{op failed to verify that all of {value, rotateResult} have same type}}
+  %rotate, %valid = "gpu.rotate"(%arg0) { offset = 4 : i32, width = 16 : i32 } : (f32) -> (i32, i1)
+  return
+}
+
+// -----
+
+func.func @rotate_unsupported_type(%arg0 : index) {
+  // expected-error@+1 {{op operand #0 must be Integer or Float or fixed-length vector of Integer or Float values of ranks 1, but got 'index'}}
+  %rotate, %valid = gpu.rotate %arg0, 4, 16 : index
+  return
+}
+
+// -----
+
+func.func @rotate_unsupported_type_vec(%arg0 : vector<[4]xf32>) {
+  %offset = arith.constant 4 : i32
+  %width = arith.constant 16 : i32
+  // expected-error@+1 {{op operand #0 must be Integer or Float or fixed-length vector of Integer or Float values of ranks 1, but got 'vector<[4]xf32>'}}
+  %rotate, %valid = gpu.rotate %arg0, 4, 16 : vector<[4]xf32>
+  return
+}
+
+// -----
+
+func.func @rotate_unsupported_width(%arg0 : f32) {
+  // expected-error@+1 {{'gpu.rotate' op attribute 'width' failed to satisfy constraint: 32-bit signless integer attribute whose value is a power of two > 0}}
+  %rotate, %valid = "gpu.rotate"(%arg0) { offset = 4 : i32, width = 15 : i32 } : (f32) -> (f32, i1)
+  return
+}
+
+// -----
+
+func.func @rotate_unsupported_offset(%arg0 : f32) {
+  // expected-error@+1 {{op offset must be in the range [0, 16)}}
+  %rotate, %valid = "gpu.rotate"(%arg0) { offset = 16 : i32, width = 16 : i32 }: (f32) -> (f32, i1)
+  return
+}
+
+// -----
+
+func.func @rotate_unsupported_offset_minus(%arg0 : f32) {
+  // expected-error@+1 {{'gpu.rotate' op attribute 'offset' failed to satisfy constraint: 32-bit signless integer attribute whose minimum value is 0}}
+  %rotate, %valid = "gpu.rotate"(%arg0) { offset = -1 : i32, width = 16 : i32 } : (f32) -> (f32, i1)
+  return
+}
+
+// -----
+
 module {
   gpu.module @gpu_funcs {
     // expected-error @+1 {{custom op 'gpu.func' gpu.func requires named arguments}}
@@ -638,7 +699,7 @@ func.func @mmamatrix_operand_type(){
 func.func @mmamatrix_invalid_element_type(){
     %wg = memref.alloca() {alignment = 32} : memref<32x32xf16, 3>
     %i = arith.constant 16 : index
-    // expected-error @+1 {{MMAMatrixType elements must be SI8, UI8, I32, F16, or F32}}
+    // expected-error @+1 {{MMAMatrixType elements must be SI8, UI8, I32, F16, F32, or F64}}
     %0 = gpu.subgroup_mma_load_matrix %wg[%i, %i] {leadDimension = 32 : index} : memref<32x32xf16, 3> -> !gpu.mma_matrix<16x16xbf16, "AOp">
     return
 }
@@ -658,7 +719,7 @@ func.func @mmaLoadOp_identity_layout(){
 // -----
 
 func.func @mma_invalid_memref_type(%src: memref<32x4xvector<4x8xf32>>, %i: index) {
-    // expected-error @+1 {{operand #0 must be memref of 8-bit signless integer or 32-bit signless integer or 16-bit float or 32-bit float or vector of 8-bit signless integer or 32-bit signless integer or 16-bit float or 32-bit float values of ranks 1 values}}
+    // expected-error @+1 {{operand #0 must be memref of 8-bit signless integer or 32-bit signless integer or 16-bit float or 32-bit float or 64-bit float or vector of 8-bit signless integer or 32-bit signless integer or 16-bit float or 32-bit float or 64-bit float values of ranks 1 values}}
     %0 = gpu.subgroup_mma_load_matrix %src[%i, %i] {leadDimension = 4 : index} : memref<32x4xvector<4x8xf32>> -> !gpu.mma_matrix<16x16xf16, "AOp">
     return
 }
@@ -727,7 +788,7 @@ func.func @alloc() {
 // Number of dynamic dimension operand count greater than memref dynamic dimension count.
 func.func @alloc() {
    %0 = arith.constant 7 : index
-   // expected-error@+1 {{dimension operand count does not equal memref dynamic dimension count}}
+   // expected-error@+1 {{incorrect number of dynamic sizes, has 2, expected 1}}
    %1 = gpu.alloc(%0, %0) : memref<2x?xf32, 1>
    return
 }
@@ -737,7 +798,7 @@ func.func @alloc() {
 // Number of dynamic dimension operand count less than memref dynamic dimension count.
 func.func @alloc() {
    %0 = arith.constant 7 : index
-   // expected-error@+1 {{dimension operand count does not equal memref dynamic dimension count}}
+   // expected-error@+1 {{incorrect number of dynamic sizes, has 1, expected 2}}
    %1 = gpu.alloc(%0) : memref<2x?x?xf32, 1>
    return
 }

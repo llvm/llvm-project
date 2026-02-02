@@ -8,73 +8,86 @@
 
 _CLC_DEF _CLC_OVERLOAD float __clc_remquo(float x, float y,
                                           __CLC_ADDRESS_SPACE int *quo) {
-  x = __clc_flush_denormal_if_not_supported(x);
-  y = __clc_flush_denormal_if_not_supported(y);
-  int ux = __clc_as_int(x);
-  int ax = ux & EXSIGNBIT_SP32;
-  float xa = __clc_as_float(ax);
-  int sx = ux ^ ax;
-  int ex = ax >> EXPSHIFTBITS_SP32;
+  const int bits = 12;
+  float ax = __clc_fabs(x);
+  float ay = __clc_fabs(y);
+  float ret;
+  int q7;
+  if (ax > ay) {
+    int ex, ey;
+    {
+      int _exp;
+      float _mant = __clc_frexp(ax, &_exp);
+      ex = _exp - 1;
+      ax = __clc_ldexp(_mant, bits);
+    }
+    {
+      int _exp;
+      float _mant = __clc_frexp(ay, &_exp);
+      ey = _exp - 1;
+      ay = __clc_ldexp(_mant, 1);
+    }
+    int nb = ex - ey;
+    float ayinv = __clc_native_recip(ay);
+    int qacc = 0;
+    while (nb > bits) {
+      float q = __clc_rint(ax * ayinv);
+      ax = __clc_fma(-q, ay, ax);
+      int clt = ax < 0.0f;
+      float axp = ax + ay;
+      ax = clt ? axp : ax;
 
-  int uy = __clc_as_int(y);
-  int ay = uy & EXSIGNBIT_SP32;
-  float ya = __clc_as_float(ay);
-  int sy = uy ^ ay;
-  int ey = ay >> EXPSHIFTBITS_SP32;
+      int iq = (int)q;
+      iq -= clt;
+      qacc = (qacc << bits) | iq;
 
-  float xr = __clc_as_float(0x3f800000 | (ax & 0x007fffff));
-  float yr = __clc_as_float(0x3f800000 | (ay & 0x007fffff));
-  int c;
-  int k = ex - ey;
+      ax = __clc_ldexp(ax, bits);
+      nb -= bits;
+    }
+    ax = __clc_ldexp(ax, nb - bits + 1);
+    {
+      float q = __clc_rint(ax * ayinv);
+      ax = __clc_fma(-q, ay, ax);
+      int clt = ax < 0.0f;
+      float axp = ax + ay;
+      ax = clt ? axp : ax;
+      int iq = (int)q;
+      iq -= clt;
+      qacc = (qacc << (nb + 1)) | iq;
+    }
+    int aq = (2.0f * ax > ay) | ((qacc & 0x1) & (2.0f * ax == ay));
+    ax = ax - (aq ? ay : 0.0f);
+    qacc += aq;
+    int qneg = (__clc_as_int(x) ^ __clc_as_int(y)) >> 31;
+    q7 = ((qacc & 0x7f) ^ qneg) - qneg;
+    ax = __clc_ldexp(ax, ey);
+    ret =
+        __clc_as_float((__clc_as_int(x) & (int)0x80000000) ^ __clc_as_int(ax));
+  } else {
+    ret = x;
+    q7 = 0;
+    bool c = (ay < 0x1.0p+127f & 2.0f * ax > ay) | (ax > 0.5f * ay);
 
-  uint q = 0;
-
-  while (k > 0) {
-    c = xr >= yr;
-    q = (q << 1) | c;
-    xr -= c ? yr : 0.0f;
-    xr += xr;
-    --k;
+    int qsgn = 1 + (((__clc_as_int(x) ^ __clc_as_int(y)) >> 31) << 1);
+    float t = __clc_fma(y, -(float)qsgn, x);
+    ret = c ? t : __builtin_elementwise_canonicalize(x);
+    q7 = c ? qsgn : q7;
+    ret = ax == ay ? __clc_copysign(0.0f, x) : ret;
+    q7 = ax == ay ? qsgn : q7;
   }
 
-  c = xr > yr;
-  q = (q << 1) | c;
-  xr -= c ? yr : 0.0f;
+  ret = y == 0.0f ? __clc_nan(0) : ret;
+  q7 = y == 0.0f ? 0 : q7;
+  bool c = !__clc_isnan(y) && __clc_isfinite(x);
+  ret = c ? ret : __clc_nan(0);
+  q7 = c ? q7 : 0;
 
-  int lt = ex < ey;
-
-  q = lt ? 0 : q;
-  xr = lt ? xa : xr;
-  yr = lt ? ya : yr;
-
-  c = (yr < 2.0f * xr) | ((yr == 2.0f * xr) & ((q & 0x1) == 0x1));
-  xr -= c ? yr : 0.0f;
-  q += c;
-
-  float s = __clc_as_float(ey << EXPSHIFTBITS_SP32);
-  xr *= lt ? 1.0f : s;
-
-  int qsgn = sx == sy ? 1 : -1;
-  int quot = (q & 0x7f) * qsgn;
-
-  c = ax == ay;
-  quot = c ? qsgn : quot;
-  xr = c ? 0.0f : xr;
-
-  xr = __clc_as_float(sx ^ __clc_as_int(xr));
-
-  c = ax > PINFBITPATT_SP32 | ay > PINFBITPATT_SP32 | ax == PINFBITPATT_SP32 |
-      ay == 0;
-  quot = c ? 0 : quot;
-  xr = c ? __clc_as_float(QNANBITPATT_SP32) : xr;
-
-  *quo = quot;
-
-  return xr;
+  *quo = q7;
+  return ret;
 }
 
 // remquo signature is special, we don't have macro for this
-#define __VEC_REMQUO(TYPE, VEC_SIZE, HALF_VEC_SIZE)                            \
+#define __CLC_VEC_REMQUO(TYPE, VEC_SIZE, HALF_VEC_SIZE)                        \
   _CLC_DEF _CLC_OVERLOAD TYPE##VEC_SIZE __clc_remquo(                          \
       TYPE##VEC_SIZE x, TYPE##VEC_SIZE y,                                      \
       __CLC_ADDRESS_SPACE int##VEC_SIZE *quo) {                                \
@@ -87,7 +100,7 @@ _CLC_DEF _CLC_OVERLOAD float __clc_remquo(float x, float y,
     return ret;                                                                \
   }
 
-#define __VEC3_REMQUO(TYPE)                                                    \
+#define __CLC_VEC3_REMQUO(TYPE)                                                \
   _CLC_DEF _CLC_OVERLOAD TYPE##3 __clc_remquo(                                 \
       TYPE##3 x, TYPE##3 y, __CLC_ADDRESS_SPACE int##3 * quo) {                \
     int2 lo;                                                                   \
@@ -99,11 +112,11 @@ _CLC_DEF _CLC_OVERLOAD float __clc_remquo(float x, float y,
     (*quo).s2 = hi;                                                            \
     return ret;                                                                \
   }
-__VEC_REMQUO(float, 2, )
-__VEC3_REMQUO(float)
-__VEC_REMQUO(float, 4, 2)
-__VEC_REMQUO(float, 8, 4)
-__VEC_REMQUO(float, 16, 8)
+__CLC_VEC_REMQUO(float, 2, )
+__CLC_VEC3_REMQUO(float)
+__CLC_VEC_REMQUO(float, 4, 2)
+__CLC_VEC_REMQUO(float, 8, 4)
+__CLC_VEC_REMQUO(float, 16, 8)
 
 #ifdef cl_khr_fp64
 
@@ -246,11 +259,11 @@ _CLC_DEF _CLC_OVERLOAD double __clc_remquo(double x, double y,
   *pquo = quo;
   return ret;
 }
-__VEC_REMQUO(double, 2, )
-__VEC3_REMQUO(double)
-__VEC_REMQUO(double, 4, 2)
-__VEC_REMQUO(double, 8, 4)
-__VEC_REMQUO(double, 16, 8)
+__CLC_VEC_REMQUO(double, 2, )
+__CLC_VEC3_REMQUO(double)
+__CLC_VEC_REMQUO(double, 4, 2)
+__CLC_VEC_REMQUO(double, 8, 4)
+__CLC_VEC_REMQUO(double, 16, 8)
 
 #endif
 
@@ -262,10 +275,10 @@ _CLC_OVERLOAD _CLC_DEF half __clc_remquo(half x, half y,
                                          __CLC_ADDRESS_SPACE int *pquo) {
   return (half)__clc_remquo((float)x, (float)y, pquo);
 }
-__VEC_REMQUO(half, 2, )
-__VEC3_REMQUO(half)
-__VEC_REMQUO(half, 4, 2)
-__VEC_REMQUO(half, 8, 4)
-__VEC_REMQUO(half, 16, 8)
+__CLC_VEC_REMQUO(half, 2, )
+__CLC_VEC3_REMQUO(half)
+__CLC_VEC_REMQUO(half, 4, 2)
+__CLC_VEC_REMQUO(half, 8, 4)
+__CLC_VEC_REMQUO(half, 16, 8)
 
 #endif

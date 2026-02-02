@@ -50,6 +50,18 @@ namespace llvm {
     };
   }
 
+  enum class ExceptionHandling {
+    None,     ///< No exception support
+    DwarfCFI, ///< DWARF-like instruction based exceptions
+    SjLj,     ///< setjmp/longjmp based exceptions
+    ARM,      ///< ARM EHABI
+    WinEH,    ///< Windows Exception Handling
+    Wasm,     ///< WebAssembly Exception Handling
+    AIX,      ///< AIX Exception Handling
+    ZOS, ///< z/OS MVS Exception Handling. Very similar to DwarfCFI, but the
+         ///< PPA1 is used instead of an .eh_frame section.
+  };
+
   namespace FloatABI {
   enum ABIType {
     Default, // Target-specific (either soft or hard depending on triple, etc).
@@ -70,7 +82,7 @@ namespace llvm {
   enum class CodeGenOptLevel {
     None = 0,      ///< -O0
     Less = 1,      ///< -O1
-    Default = 2,   ///< -O2, -Os
+    Default = 2,   ///< -O2, -Os, -Oz
     Aggressive = 3 ///< -O3
   };
 
@@ -103,7 +115,13 @@ namespace llvm {
   };
 
   // Specify what functions should keep the frame pointer.
-  enum class FramePointerKind { None, NonLeaf, All, Reserved };
+  enum class FramePointerKind {
+    None,
+    NonLeaf,
+    All,
+    Reserved,
+    NonLeafNoReserve
+  };
 
   // Specify what type of zeroing callee-used registers.
   namespace ZeroCallUsedRegs {
@@ -153,6 +171,16 @@ namespace llvm {
     BestEffort = 1,
     // Use unwind v2 everywhere, otherwise raise an error.
     Required = 2,
+  };
+
+  enum class ControlFlowGuardMode {
+    // Don't enable Control Flow Guard.
+    Disabled = 0,
+    // Emit the Control Flow Guard tables in the binary, but don't emit any
+    // checks.
+    TableOnly = 1,
+    // Enable Control Flow Guard checks and emit the tables.
+    Enabled = 2,
   };
 
   } // namespace llvm

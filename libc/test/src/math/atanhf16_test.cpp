@@ -6,11 +6,11 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "hdr/stdint_proxy.h"
 #include "src/math/atanhf16.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 #include "utils/MPFRWrapper/MPFRUtils.h"
-#include <stdint.h>
 
 using LlvmLibcAtanhf16Test = LIBC_NAMESPACE::testing::FPTest<float16>;
 namespace mpfr = LIBC_NAMESPACE::testing::mpfr;

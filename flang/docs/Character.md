@@ -6,7 +6,7 @@
 
 -->
 
-# Implementation of `CHARACTER` types in f18
+# Implementation of `CHARACTER` types in Flang
 
 ```{contents}
 ---
@@ -16,7 +16,7 @@ local:
 
 ## Kinds and Character Sets
 
-The f18 compiler and runtime support three kinds of the intrinsic
+The Flang compiler and runtime support three kinds of the intrinsic
 `CHARACTER` type of Fortran 2018.
 The default (`CHARACTER(KIND=1)`) holds 8-bit character codes;
 `CHARACTER(KIND=2)` holds 16-bit character codes;
@@ -108,12 +108,12 @@ The result of `//` may be used
 * as the value of a specifier of an I/O statement,
 * or as the value of a statement function.
 
-The f18 compiler has a general (but slow) means of implementing concatenation
+The Flang compiler has a general (but slow) means of implementing concatenation
 and a specialized (fast) option to optimize the most common case.
 
 ### General concatenation
 
-In the most general case, the f18 compiler's generated code and
+In the most general case, Flang's generated code and
 runtime support library represent the result as a deferred-length allocatable
 `CHARACTER` temporary scalar or array variable that is initialized
 as a zero-length array by `AllocatableInitCharacter()`

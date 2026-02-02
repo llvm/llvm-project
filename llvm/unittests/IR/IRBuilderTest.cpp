@@ -6,11 +6,12 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/IR/IRBuilder.h"
+#include "llvm/Analysis/InstSimplifyFolder.h"
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DataLayout.h"
+#include "llvm/IR/DebugInfoMetadata.h"
 #include "llvm/IR/Function.h"
 #include "llvm/IR/IntrinsicInst.h"
 #include "llvm/IR/IntrinsicsAArch64.h"
@@ -18,6 +19,7 @@
 #include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/NoFolder.h"
+#include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Verifier.h"
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -25,6 +27,7 @@
 #include <type_traits>
 
 using namespace llvm;
+using namespace PatternMatch;
 using ::testing::UnorderedElementsAre;
 
 namespace {
@@ -200,7 +203,6 @@ TEST_F(IRBuilderTest, IntrinsicsWithScalableVectors) {
 
   Args.clear();
   Args.push_back(UndefValue::get(PtrToVecTy));
-  Args.push_back(UndefValue::get(Builder.getInt32Ty()));
   Args.push_back(UndefValue::get(PredTy));
   Args.push_back(UndefValue::get(VecTy));
 
@@ -255,6 +257,62 @@ TEST_F(IRBuilderTest, CreateStepVectorI3) {
   FunctionType *FTy = Call->getFunctionType();
   EXPECT_EQ(FTy->getReturnType(), VecI8Ty);
   EXPECT_EQ(Call->getIntrinsicID(), Intrinsic::stepvector);
+}
+
+TEST_F(IRBuilderTest, CreateVectorSpliceLeft) {
+  IRBuilder<> Builder(BB);
+
+  // Fixed width vectors with constant offsets
+  Type *FixedTy = VectorType::get(Builder.getInt32Ty(), 4, false);
+  Value *FixedVec = Builder.CreateLoad(FixedTy, GV);
+  Value *Shuffle = Builder.CreateVectorSpliceLeft(FixedVec, FixedVec, 1);
+  EXPECT_TRUE(
+      match(Shuffle, m_Shuffle(m_Specific(FixedVec), m_Specific(FixedVec),
+                               m_SpecificMask({1, 2, 3, 4}))));
+
+  Value *Offset = Builder.CreateLoad(Builder.getInt32Ty(), GV);
+  Value *FixedSplice =
+      Builder.CreateVectorSpliceLeft(FixedVec, FixedVec, Offset);
+  EXPECT_TRUE(match(FixedSplice, m_Intrinsic<Intrinsic::vector_splice_left>(
+                                     m_Specific(FixedVec), m_Specific(FixedVec),
+                                     m_Specific(Offset))));
+
+  Type *ScalableTy = VectorType::get(Builder.getInt32Ty(), 4, true);
+  Value *ScalableVec = Builder.CreateLoad(ScalableTy, GV);
+  Value *ScalableSplice =
+      Builder.CreateVectorSpliceLeft(ScalableVec, ScalableVec, Offset);
+  EXPECT_TRUE(
+      match(ScalableSplice, m_Intrinsic<Intrinsic::vector_splice_left>(
+                                m_Specific(ScalableVec),
+                                m_Specific(ScalableVec), m_Specific(Offset))));
+}
+
+TEST_F(IRBuilderTest, CreateVectorSpliceRight) {
+  IRBuilder<> Builder(BB);
+
+  // Fixed width vectors with constant offsets
+  Type *FixedTy = VectorType::get(Builder.getInt32Ty(), 4, false);
+  Value *FixedVec = Builder.CreateLoad(FixedTy, GV);
+  Value *Shuffle = Builder.CreateVectorSpliceRight(FixedVec, FixedVec, 1);
+  EXPECT_TRUE(
+      match(Shuffle, m_Shuffle(m_Specific(FixedVec), m_Specific(FixedVec),
+                               m_SpecificMask({3, 4, 5, 6}))));
+
+  Value *Offset = Builder.CreateLoad(Builder.getInt32Ty(), GV);
+  Value *FixedSplice =
+      Builder.CreateVectorSpliceRight(FixedVec, FixedVec, Offset);
+  EXPECT_TRUE(match(FixedSplice, m_Intrinsic<Intrinsic::vector_splice_right>(
+                                     m_Specific(FixedVec), m_Specific(FixedVec),
+                                     m_Specific(Offset))));
+
+  Type *ScalableTy = VectorType::get(Builder.getInt32Ty(), 4, true);
+  Value *ScalableVec = Builder.CreateLoad(ScalableTy, GV);
+  Value *ScalableSplice =
+      Builder.CreateVectorSpliceRight(ScalableVec, ScalableVec, Offset);
+  EXPECT_TRUE(
+      match(ScalableSplice, m_Intrinsic<Intrinsic::vector_splice_right>(
+                                m_Specific(ScalableVec),
+                                m_Specific(ScalableVec), m_Specific(Offset))));
 }
 
 TEST_F(IRBuilderTest, ConstrainedFP) {
@@ -466,15 +524,11 @@ TEST_F(IRBuilderTest, Lifetime) {
 
   CallInst *Start1 = Builder.CreateLifetimeStart(Var1);
   CallInst *Start2 = Builder.CreateLifetimeStart(Var2);
-  CallInst *Start3 = Builder.CreateLifetimeStart(Var3, Builder.getInt64(100));
+  CallInst *Start3 = Builder.CreateLifetimeStart(Var3);
 
-  EXPECT_EQ(Start1->getArgOperand(0), Builder.getInt64(-1));
-  EXPECT_EQ(Start2->getArgOperand(0), Builder.getInt64(-1));
-  EXPECT_EQ(Start3->getArgOperand(0), Builder.getInt64(100));
-
-  EXPECT_EQ(Start1->getArgOperand(1), Var1);
-  EXPECT_EQ(Start2->getArgOperand(1)->stripPointerCasts(), Var2);
-  EXPECT_EQ(Start3->getArgOperand(1), Var3);
+  EXPECT_EQ(Start1->getArgOperand(0), Var1);
+  EXPECT_EQ(Start2->getArgOperand(0), Var2);
+  EXPECT_EQ(Start3->getArgOperand(0), Var3);
 
   Value *End1 = Builder.CreateLifetimeEnd(Var1);
   Builder.CreateLifetimeEnd(Var2);
@@ -863,8 +917,8 @@ TEST_F(IRBuilderTest, createFunction) {
   IRBuilder<> Builder(BB);
   DIBuilder DIB(*M);
   auto File = DIB.createFile("error.swift", "/");
-  auto CU =
-      DIB.createCompileUnit(dwarf::DW_LANG_Swift, File, "swiftc", true, "", 0);
+  auto CU = DIB.createCompileUnit(DISourceLanguageName(dwarf::DW_LANG_Swift),
+                                  File, "swiftc", true, "", 0);
   auto Type = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
   auto NoErr = DIB.createFunction(
       CU, "noerr", "", File, 1, Type, 1, DINode::FlagZero,
@@ -897,9 +951,9 @@ TEST_F(IRBuilderTest, DIBuilder) {
     IRBuilder<> Builder(BB);
     DIBuilder DIB(*M);
     auto File = DIB.createFile("F.CBL", "/");
-    auto CU = DIB.createCompileUnit(dwarf::DW_LANG_Cobol74,
-                                    DIB.createFile("F.CBL", "/"),
-                                    "llvm-cobol74", true, "", 0);
+    auto CU = DIB.createCompileUnit(
+        DISourceLanguageName(dwarf::DW_LANG_Cobol74),
+        DIB.createFile("F.CBL", "/"), "llvm-cobol74", true, "", 0);
     auto Type = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
     auto SP = DIB.createFunction(
         CU, "foo", "", File, 1, Type, 1, DINode::FlagZero,
@@ -920,9 +974,11 @@ TEST_F(IRBuilderTest, DIBuilder) {
     // --------------------------
     DILocation *LabelLoc = DILocation::get(Ctx, 1, 0, BarScope);
     DILabel *AlwaysPreserveLabel = DIB.createLabel(
-        BarScope, "meles_meles", File, 1, /*AlwaysPreserve*/ true);
-    DILabel *Label =
-        DIB.createLabel(BarScope, "badger", File, 1, /*AlwaysPreserve*/ false);
+        BarScope, "meles_meles", File, 1, /*Column*/ 0, /*IsArtificial*/ false,
+        /*CoroSuspendIdx*/ std::nullopt, /*AlwaysPreserve*/ true);
+    DILabel *Label = DIB.createLabel(
+        BarScope, "badger", File, 1, /*Column*/ 0, /*IsArtificial*/ false,
+        /*CoroSuspendIdx*/ std::nullopt, /*AlwaysPreserve*/ false);
 
     { /* dbg.label | DbgLabelRecord */
       // Insert before I and check order.
@@ -1006,7 +1062,8 @@ TEST_F(IRBuilderTest, createArtificialSubprogram) {
   IRBuilder<> Builder(BB);
   DIBuilder DIB(*M);
   auto File = DIB.createFile("main.c", "/");
-  auto CU = DIB.createCompileUnit(dwarf::DW_LANG_C, File, "clang",
+  auto CU = DIB.createCompileUnit(DISourceLanguageName(dwarf::DW_LANG_C), File,
+                                  "clang",
                                   /*isOptimized=*/true, /*Flags=*/"",
                                   /*Runtime Version=*/0);
   auto Type = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
@@ -1085,7 +1142,8 @@ TEST_F(IRBuilderTest, appendDebugInfo) {
   {
     DIBuilder DIB(*M);
     auto *File = DIB.createFile("main.c", "/");
-    CU = DIB.createCompileUnit(dwarf::DW_LANG_C, File, "clang",
+    CU = DIB.createCompileUnit(DISourceLanguageName(dwarf::DW_LANG_C), File,
+                               "clang",
                                /*isOptimized=*/true, /*Flags=*/"",
                                /*Runtime Version=*/0);
     auto *ByteTy = DIB.createBasicType("byte0", 8, dwarf::DW_ATE_signed);
@@ -1160,9 +1218,9 @@ TEST_F(IRBuilderTest, DebugLoc) {
 
   DIBuilder DIB(*M);
   auto File = DIB.createFile("tmp.cpp", "/");
-  auto CU = DIB.createCompileUnit(dwarf::DW_LANG_C_plus_plus_11,
-                                  DIB.createFile("tmp.cpp", "/"), "", true, "",
-                                  0);
+  auto CU =
+      DIB.createCompileUnit(DISourceLanguageName(dwarf::DW_LANG_C_plus_plus_11),
+                            DIB.createFile("tmp.cpp", "/"), "", true, "", 0);
   auto SPType = DIB.createSubroutineType(DIB.getOrCreateTypeArray({}));
   auto SP =
       DIB.createFunction(CU, "foo", "foo", File, 1, SPType, 1, DINode::FlagZero,
@@ -1193,9 +1251,8 @@ TEST_F(IRBuilderTest, DIImportedEntity) {
   IRBuilder<> Builder(BB);
   DIBuilder DIB(*M);
   auto F = DIB.createFile("F.CBL", "/");
-  auto CU = DIB.createCompileUnit(dwarf::DW_LANG_Cobol74,
-                                  F, "llvm-cobol74",
-                                  true, "", 0);
+  auto CU = DIB.createCompileUnit(DISourceLanguageName(dwarf::DW_LANG_Cobol74),
+                                  F, "llvm-cobol74", true, "", 0);
   MDTuple *Elements = MDTuple::getDistinct(Ctx, {});
 
   DIB.createImportedDeclaration(CU, nullptr, F, 1);
@@ -1220,8 +1277,9 @@ TEST_F(IRBuilderTest, DIBuilderMacro) {
   DIBuilder DIB(*M);
   auto File1 = DIB.createFile("main.c", "/");
   auto File2 = DIB.createFile("file.h", "/");
-  auto CU = DIB.createCompileUnit(
-      dwarf::DW_LANG_C, DIB.createFile("main.c", "/"), "llvm-c", true, "", 0);
+  auto CU = DIB.createCompileUnit(DISourceLanguageName(dwarf::DW_LANG_C),
+                                  DIB.createFile("main.c", "/"), "llvm-c", true,
+                                  "", 0);
   auto MDef0 =
       DIB.createMacro(nullptr, 0, dwarf::DW_MACINFO_define, "M0", "V0");
   auto TMF1 = DIB.createTempMacroFile(nullptr, 0, File1);

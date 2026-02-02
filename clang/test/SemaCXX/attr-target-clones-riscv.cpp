@@ -9,6 +9,9 @@ void __attribute__((target_clones("default", "mtune=sifive-u74"))) mtune() {}
 // expected-warning@+1 {{version list contains duplicate entries}}
 void __attribute__((target_clones("default", "arch=+c", "arch=+c"))) dupVersion() {}
 
+// expected-warning@+1 {{version list contains duplicate entries}}
+void __attribute__((target_clones(" default", "default "))) dupDefault() {}
+
 // expected-warning@+1 {{unsupported '' in the 'target_clones' attribute string; 'target_clones' attribute ignored}}
 void __attribute__((target_clones("default", ""))) emptyVersion() {}
 
@@ -47,4 +50,11 @@ void lambda() {
   // expected-error@+1 {{attribute 'target_clones' multiversioned functions do not yet support lambdas}}
   auto y = []() __attribute__((target_clones("arch=+v", "default"))){};
   y();
+}
+
+namespace GH173684 {
+  // expected-error@+1 {{'target_clones' multiversioning requires a default target}}
+  void __attribute__((target_clones())) withoutDefault() {}
+  // expected-error@+1 {{'target_clones' multiversioning requires a default target}}
+  void __attribute__((target_clones)) withoutDefault2() {}
 }

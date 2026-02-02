@@ -377,8 +377,10 @@ Error SyntheticTypeNameBuilder::addTypeName(UnitEntryPairTy InputUnitEntryPair,
   } break;
   }
 
-  // If name for the DIE is not determined yet add referenced types to the name.
-  if (!HasLinkageName && !HasShortName && !HasDeclFileName) {
+  // If name for the DIE is not determined yet or if the DIE is a typedef, add
+  // referenced types to the name.
+  if ((!HasLinkageName && !HasShortName && !HasDeclFileName) ||
+      InputUnitEntryPair.DieEntry->getTag() == dwarf::DW_TAG_typedef) {
     if (InputUnitEntryPair.CU->find(InputUnitEntryPair.DieEntry,
                                     getODRAttributes()))
       if (Error Err = addReferencedODRDies(InputUnitEntryPair, AddParentNames,

@@ -31,16 +31,17 @@ struct RootSignatureToken {
 
   Kind TokKind = Kind::invalid;
 
-  // Retain the SouceLocation of the token for diagnostics
-  clang::SourceLocation TokLoc;
+  // Retain the location offset of the token in the Signature
+  // string
+  uint32_t LocOffset;
 
   // Retain spelling of an numeric constant to be parsed later
   StringRef NumSpelling;
 
   // Constructors
-  RootSignatureToken(clang::SourceLocation TokLoc) : TokLoc(TokLoc) {}
-  RootSignatureToken(Kind TokKind, clang::SourceLocation TokLoc)
-      : TokKind(TokKind), TokLoc(TokLoc) {}
+  RootSignatureToken(uint32_t LocOffset) : LocOffset(LocOffset) {}
+  RootSignatureToken(Kind TokKind, uint32_t LocOffset)
+      : TokKind(TokKind), LocOffset(LocOffset) {}
 };
 
 inline const DiagnosticBuilder &
@@ -50,6 +51,10 @@ operator<<(const DiagnosticBuilder &DB, const RootSignatureToken::Kind Kind) {
   case RootSignatureToken::Kind::X:                                            \
     DB << SPELLING;                                                            \
     break;
+#define PUNCTUATOR(X, SPELLING)                                                \
+  case RootSignatureToken::Kind::pu_##X:                                       \
+    DB << #SPELLING;                                                           \
+    break;
 #include "clang/Lex/HLSLRootSignatureTokenKinds.def"
   }
   return DB;
@@ -57,8 +62,7 @@ operator<<(const DiagnosticBuilder &DB, const RootSignatureToken::Kind Kind) {
 
 class RootSignatureLexer {
 public:
-  RootSignatureLexer(StringRef Signature, clang::SourceLocation SourceLoc)
-      : Buffer(Signature), SourceLoc(SourceLoc) {}
+  RootSignatureLexer(StringRef Signature) : Buffer(Signature) {}
 
   /// Consumes and returns the next token.
   RootSignatureToken consumeToken();
@@ -72,14 +76,12 @@ public:
   }
 
 private:
-  // Internal buffer to iterate over
+  // Internal buffer state
   StringRef Buffer;
+  uint32_t LocOffset = 0;
 
   // Current peek state
   std::optional<RootSignatureToken> NextToken = std::nullopt;
-
-  // Passed down parameters from Sema
-  clang::SourceLocation SourceLoc;
 
   /// Consumes the buffer and returns the lexed token.
   RootSignatureToken lexToken();
@@ -88,7 +90,7 @@ private:
   /// Updates the SourceLocation appropriately.
   void advanceBuffer(unsigned NumCharacters = 1) {
     Buffer = Buffer.drop_front(NumCharacters);
-    SourceLoc = SourceLoc.getLocWithOffset(NumCharacters);
+    LocOffset += NumCharacters;
   }
 };
 

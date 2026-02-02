@@ -1,7 +1,7 @@
 # Xqcibi - Qualcomm uC Branch Immediate Extension
-# RUN: not llvm-mc -triple riscv32 -mattr=+experimental-xqcibi < %s 2>&1 \
+# RUN: not llvm-mc -triple riscv32 -mattr=+xqcibi < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-PLUS %s
-# RUN: not llvm-mc -triple riscv32 -mattr=-experimental-xqcibi < %s 2>&1 \
+# RUN: not llvm-mc -triple riscv32 -mattr=-xqcibi < %s 2>&1 \
 # RUN:     | FileCheck -check-prefixes=CHECK,CHECK-MINUS %s
 
 # CHECK-PLUS: :[[@LINE+2]]:9: error: register must be a GPR excluding zero (x0)

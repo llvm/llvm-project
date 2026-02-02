@@ -16,10 +16,10 @@
 #include "AArch64CallingConvention.h"
 #include "AArch64MachineFunctionInfo.h"
 #include "AArch64RegisterInfo.h"
+#include "AArch64SMEAttributes.h"
 #include "AArch64Subtarget.h"
 #include "MCTargetDesc/AArch64AddressingModes.h"
 #include "Utils/AArch64BaseInfo.h"
-#include "Utils/AArch64SMEAttributes.h"
 #include "llvm/ADT/APFloat.h"
 #include "llvm/ADT/APInt.h"
 #include "llvm/ADT/DenseMap.h"
@@ -81,10 +81,7 @@ namespace {
 class AArch64FastISel final : public FastISel {
   class Address {
   public:
-    using BaseKind = enum {
-      RegBase,
-      FrameIndexBase
-    };
+    enum BaseKind { RegBase, FrameIndexBase };
 
   private:
     BaseKind Kind = RegBase;
@@ -267,7 +264,7 @@ private:
 private:
   CCAssignFn *CCAssignFnForCall(CallingConv::ID CC) const;
   bool processCallArgs(CallLoweringInfo &CLI, SmallVectorImpl<MVT> &ArgVTs,
-                       unsigned &NumBytes);
+                       SmallVectorImpl<Type *> &OrigTys, unsigned &NumBytes);
   bool finishCall(CallLoweringInfo &CLI, unsigned NumBytes);
 
 public:
@@ -277,8 +274,10 @@ public:
   Register fastMaterializeFloatZero(const ConstantFP *CF) override;
 
   explicit AArch64FastISel(FunctionLoweringInfo &FuncInfo,
-                           const TargetLibraryInfo *LibInfo)
-      : FastISel(FuncInfo, LibInfo, /*SkipTargetIndependentISel=*/true) {
+                           const TargetLibraryInfo *LibInfo,
+                           const LibcallLoweringInfo *libcallLowering)
+      : FastISel(FuncInfo, LibInfo, libcallLowering,
+                 /*SkipTargetIndependentISel=*/true) {
     Subtarget = &FuncInfo.MF->getSubtarget<AArch64Subtarget>();
     Context = &FuncInfo.Fn->getContext();
   }
@@ -3011,11 +3010,13 @@ bool AArch64FastISel::fastLowerArguments() {
 
 bool AArch64FastISel::processCallArgs(CallLoweringInfo &CLI,
                                       SmallVectorImpl<MVT> &OutVTs,
+                                      SmallVectorImpl<Type *> &OrigTys,
                                       unsigned &NumBytes) {
   CallingConv::ID CC = CLI.CallConv;
   SmallVector<CCValAssign, 16> ArgLocs;
   CCState CCInfo(CC, false, *FuncInfo.MF, ArgLocs, *Context);
-  CCInfo.AnalyzeCallOperands(OutVTs, CLI.OutFlags, CCAssignFnForCall(CC));
+  CCInfo.AnalyzeCallOperands(OutVTs, CLI.OutFlags, OrigTys,
+                             CCAssignFnForCall(CC));
 
   // Get a count of how many bytes are to be pushed on the stack.
   NumBytes = CCInfo.getStackSize();
@@ -3194,6 +3195,7 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
   // Set up the argument vectors.
   SmallVector<MVT, 16> OutVTs;
+  SmallVector<Type *, 16> OrigTys;
   OutVTs.reserve(CLI.OutVals.size());
 
   for (auto *Val : CLI.OutVals) {
@@ -3207,6 +3209,7 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
       return false;
 
     OutVTs.push_back(VT);
+    OrigTys.push_back(Val->getType());
   }
 
   Address Addr;
@@ -3222,7 +3225,7 @@ bool AArch64FastISel::fastLowerCall(CallLoweringInfo &CLI) {
 
   // Handle the arguments now that we've gotten them.
   unsigned NumBytes;
-  if (!processCallArgs(CLI, OutVTs, NumBytes))
+  if (!processCallArgs(CLI, OutVTs, OrigTys, NumBytes))
     return false;
 
   const AArch64RegisterInfo *RegInfo = Subtarget->getRegisterInfo();
@@ -3574,17 +3577,19 @@ bool AArch64FastISel::fastLowerIntrinsicCall(const IntrinsicInst *II) {
     Args.reserve(II->arg_size());
 
     // Populate the argument list.
-    for (auto &Arg : II->args()) {
-      ArgListEntry Entry;
-      Entry.Val = Arg;
-      Entry.Ty = Arg->getType();
-      Args.push_back(Entry);
-    }
+    for (auto &Arg : II->args())
+      Args.emplace_back(Arg);
 
     CallLoweringInfo CLI;
     MCContext &Ctx = MF->getContext();
-    CLI.setCallee(DL, Ctx, TLI.getLibcallCallingConv(LC), II->getType(),
-                  TLI.getLibcallName(LC), std::move(Args));
+
+    RTLIB::LibcallImpl LCImpl = LibcallLowering->getLibcallImpl(LC);
+    if (LCImpl == RTLIB::Unsupported)
+      return false;
+
+    CallingConv::ID CC = LibcallLowering->getLibcallImplCallingConv(LCImpl);
+    StringRef FuncName = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LCImpl);
+    CLI.setCallee(DL, Ctx, CC, II->getType(), FuncName, std::move(Args));
     if (!lowerCallTo(CLI))
       return false;
     updateValueMap(II, CLI.ResultReg);
@@ -4854,33 +4859,24 @@ bool AArch64FastISel::selectFRem(const Instruction *I) {
   if (!isTypeLegal(I->getType(), RetVT))
     return false;
 
-  RTLIB::Libcall LC;
-  switch (RetVT.SimpleTy) {
-  default:
+  RTLIB::LibcallImpl LCImpl =
+      LibcallLowering->getLibcallImpl(RTLIB::getREM(RetVT));
+  if (LCImpl == RTLIB::Unsupported)
     return false;
-  case MVT::f32:
-    LC = RTLIB::REM_F32;
-    break;
-  case MVT::f64:
-    LC = RTLIB::REM_F64;
-    break;
-  }
 
   ArgListTy Args;
   Args.reserve(I->getNumOperands());
 
   // Populate the argument list.
-  for (auto &Arg : I->operands()) {
-    ArgListEntry Entry;
-    Entry.Val = Arg;
-    Entry.Ty = Arg->getType();
-    Args.push_back(Entry);
-  }
+  for (auto &Arg : I->operands())
+    Args.emplace_back(Arg);
 
   CallLoweringInfo CLI;
   MCContext &Ctx = MF->getContext();
-  CLI.setCallee(DL, Ctx, TLI.getLibcallCallingConv(LC), I->getType(),
-                TLI.getLibcallName(LC), std::move(Args));
+  CallingConv::ID CC = LibcallLowering->getLibcallImplCallingConv(LCImpl);
+  StringRef FuncName = RTLIB::RuntimeLibcallsInfo::getLibcallImplName(LCImpl);
+
+  CLI.setCallee(DL, Ctx, CC, I->getType(), FuncName, std::move(Args));
   if (!lowerCallTo(CLI))
     return false;
   updateValueMap(I, CLI.ResultReg);
@@ -5196,7 +5192,8 @@ bool AArch64FastISel::fastSelectInstruction(const Instruction *I) {
 }
 
 FastISel *AArch64::createFastISel(FunctionLoweringInfo &FuncInfo,
-                                        const TargetLibraryInfo *LibInfo) {
+                                  const TargetLibraryInfo *LibInfo,
+                                  const LibcallLoweringInfo *LibcallLowering) {
 
   SMEAttrs CallerAttrs =
       FuncInfo.MF->getInfo<AArch64FunctionInfo>()->getSMEFnAttrs();
@@ -5205,5 +5202,5 @@ FastISel *AArch64::createFastISel(FunctionLoweringInfo &FuncInfo,
       CallerAttrs.hasStreamingCompatibleInterface() ||
       CallerAttrs.hasAgnosticZAInterface())
     return nullptr;
-  return new AArch64FastISel(FuncInfo, LibInfo);
+  return new AArch64FastISel(FuncInfo, LibInfo, LibcallLowering);
 }

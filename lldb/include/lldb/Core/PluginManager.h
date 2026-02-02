@@ -261,8 +261,9 @@ public:
   static ObjectFileCreateMemoryInstance
   GetObjectFileCreateMemoryCallbackForPluginName(llvm::StringRef name);
 
-  static Status SaveCore(const lldb::ProcessSP &process_sp,
-                         lldb_private::SaveCoreOptions &core_options);
+  static Status SaveCore(lldb_private::SaveCoreOptions &core_options);
+
+  static std::vector<llvm::StringRef> GetSaveCorePluginNames();
 
   // ObjectContainer
   static bool RegisterPlugin(
@@ -321,6 +322,17 @@ public:
   static void AutoCompleteProcessName(llvm::StringRef partial_name,
                                       CompletionRequest &request);
 
+  // Protocol
+  static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                             ProtocolServerCreateInstance create_callback);
+
+  static bool UnregisterPlugin(ProtocolServerCreateInstance create_callback);
+
+  static llvm::StringRef GetProtocolServerPluginNameAtIndex(uint32_t idx);
+
+  static ProtocolServerCreateInstance
+  GetProtocolCreateCallbackForPluginName(llvm::StringRef name);
+
   // Register Type Provider
   static bool RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
                              RegisterTypeBuilderCreateInstance create_callback);
@@ -343,6 +355,24 @@ public:
   static lldb::ScriptInterpreterSP
   GetScriptInterpreterForLanguage(lldb::ScriptLanguage script_lang,
                                   Debugger &debugger);
+
+  // SyntheticFrameProvider
+  static bool
+  RegisterPlugin(llvm::StringRef name, llvm::StringRef description,
+                 SyntheticFrameProviderCreateInstance create_native_callback,
+                 ScriptedFrameProviderCreateInstance create_scripted_callback);
+
+  static bool
+  UnregisterPlugin(SyntheticFrameProviderCreateInstance create_callback);
+
+  static bool
+  UnregisterPlugin(ScriptedFrameProviderCreateInstance create_callback);
+
+  static SyntheticFrameProviderCreateInstance
+  GetSyntheticFrameProviderCreateCallbackForPluginName(llvm::StringRef name);
+
+  static ScriptedFrameProviderCreateInstance
+  GetScriptedFrameProviderCreateCallbackAtIndex(uint32_t idx);
 
   // StructuredDataPlugin
 
@@ -774,6 +804,9 @@ public:
 
   static std::vector<RegisteredPluginInfo> GetUnwindAssemblyPluginInfo();
   static bool SetUnwindAssemblyPluginEnabled(llvm::StringRef name, bool enable);
+
+  static void AutoCompletePluginName(llvm::StringRef partial_name,
+                                     CompletionRequest &request);
 };
 
 } // namespace lldb_private

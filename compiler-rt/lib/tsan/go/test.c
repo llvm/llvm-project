@@ -63,6 +63,13 @@ int main(void) {
   __tsan_init(&thr0, &proc0, symbolize_cb);
   current_proc = proc0;
 
+#if defined(__riscv) && (__riscv_xlen == 64) && defined(__linux__)
+  // Use correct go_heap for riscv64 sv39.
+  if (65 - __builtin_clzl((unsigned long)__builtin_frame_address(0)) == 39) {
+    go_heap = (void *)0x511100000;
+  }
+#endif
+
   // Allocate something resembling a heap in Go.
   buf0 = mmap(go_heap, 16384, PROT_READ | PROT_WRITE,
               MAP_PRIVATE | MAP_FIXED | MAP_ANON, -1, 0);
@@ -84,6 +91,10 @@ int main(void) {
   __tsan_go_start(thr0, &thr1, (char*)&barfoo + 1);
   void *thr2 = 0;
   __tsan_go_start(thr0, &thr2, (char*)&barfoo + 1);
+  // Goroutine that exits without a single event.
+  void *thr3 = 0;
+  __tsan_go_start(thr0, &thr3, (char*)&barfoo + 1);
+  __tsan_go_end(thr3);
   __tsan_func_exit(thr0);
   __tsan_func_enter(thr1, (char*)&foobar + 1);
   __tsan_func_enter(thr1, (char*)&foobar + 1);

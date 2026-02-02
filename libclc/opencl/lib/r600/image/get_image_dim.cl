@@ -6,7 +6,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/clc.h>
+#include <clc/opencl/opencl-base.h>
 
 _CLC_OVERLOAD _CLC_DEF int2 get_image_dim(image2d_t image) {
   return (int2)(get_image_width(image), get_image_height(image));

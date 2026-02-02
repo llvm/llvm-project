@@ -32,11 +32,11 @@ void EarlySanitizerInit() {}
 
 namespace __asan {
 
-// The system already set up the shadow memory for us.
-// __sanitizer::GetMaxUserVirtualAddress has already been called by
-// AsanInitInternal->InitializeHighMemEnd (asan_rtl.cpp).
-// Just do some additional sanity checks here.
 void InitializeShadowMemory() {
+  // Explicitly setup shadow here right beforer any of the ShadowBounds members
+  // are used.
+  InitShadowBounds();
+
   if (Verbosity())
     PrintAddressSpaceLayout();
 

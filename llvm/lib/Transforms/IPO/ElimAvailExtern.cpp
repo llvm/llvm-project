@@ -35,6 +35,10 @@ static cl::opt<bool> ConvertToLocal(
     cl::desc("Convert available_externally into locals, renaming them "
              "to avoid link-time clashes."));
 
+// This option was originally introduced to correctly support the lowering of
+// LDS variables for AMDGPU when ThinLTO is enabled. It can be utilized for
+// other purposes, but make sure it is safe to do so, as privatizing global
+// variables is generally not safe.
 static cl::opt<unsigned> ConvertGlobalVariableInAddrSpace(
     "avail-extern-gv-in-addrspace-to-local", cl::Hidden,
     cl::desc(

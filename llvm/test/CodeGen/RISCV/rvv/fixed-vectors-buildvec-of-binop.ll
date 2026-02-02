@@ -578,7 +578,7 @@ define <8 x i32> @add_constant_rhs_8xi32_partial(<8 x i32> %vin, i32 %a, i32 %b,
 ; CHECK-NEXT:    vslideup.vi v8, v10, 7
 ; CHECK-NEXT:    vadd.vv v8, v8, v12
 ; CHECK-NEXT:    ret
-  %vadd = add <8 x i32> %vin, <i32 1, i32 2, i32 3, i32 5, i32 undef, i32 undef, i32 undef, i32 undef>
+  %vadd = add <8 x i32> %vin, <i32 1, i32 2, i32 3, i32 5, i32 poison, i32 poison, i32 poison, i32 poison>
   %e0 = add i32 %a, 23
   %e1 = add i32 %b, 25
   %e2 = add i32 %c, 1

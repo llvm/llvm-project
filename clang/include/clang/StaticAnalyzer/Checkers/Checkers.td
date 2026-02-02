@@ -64,8 +64,6 @@ def Cplusplus : Package<"cplusplus">;
 def CplusplusAlpha : Package<"cplusplus">, ParentPackage<Alpha>;
 def CplusplusOptIn : Package<"cplusplus">, ParentPackage<OptIn>;
 
-def Valist : Package<"valist">;
-
 def DeadCode : Package<"deadcode">;
 def DeadCodeAlpha : Package<"deadcode">, ParentPackage<Alpha>;
 
@@ -77,9 +75,6 @@ def SecurityAlpha : Package<"security">, ParentPackage<Alpha>;
 
 def CERT : Package<"cert">, ParentPackage<Security>;
 def ENV : Package<"env">, ParentPackage<CERT>;
-
-def CERTAlpha : Package<"cert">, ParentPackage<SecurityAlpha>;
-def POSAlpha : Package<"pos">, ParentPackage<CERTAlpha>;
 
 def Unix : Package<"unix">;
 def UnixAlpha : Package<"unix">, ParentPackage<Alpha>;
@@ -143,84 +138,70 @@ def BitwiseShiftChecker : Checker<"BitwiseShift">,
   ]>,
   Documentation<HasDocumentation>;
 
-def CallAndMessageModeling : Checker<"CallAndMessageModeling">,
-  HelpText<"Responsible for essential modeling and assumptions after a "
-           "function/method call. For instance, if we can't reason about the "
-           "nullability of the implicit this parameter after a method call, "
-           "this checker conservatively assumes it to be non-null">,
-  Documentation<HasDocumentation>,
-  Hidden;
-
-def CallAndMessageChecker : Checker<"CallAndMessage">,
-  HelpText<"Check for logical errors for function calls and Objective-C "
-           "message expressions (e.g., uninitialized arguments, null function "
-           "pointers)">,
-  CheckerOptions<[
-    CmdLineOption<Boolean,
-                  "FunctionPointer",
-                  "Check whether a called function pointer is null or "
-                  "undefined",
-                  "true",
-                  Released>,
-    CmdLineOption<Boolean,
-                  "ParameterCount",
-                  "Check whether a function was called with the appropriate "
-                  "number of arguments",
-                  "true",
-                  Released>,
-    CmdLineOption<Boolean,
-                  "CXXThisMethodCall",
-                  "Check whether the implicit this parameter is null or "
-                  "undefined upon a method call",
-                  "true",
-                  Released>,
-    CmdLineOption<Boolean,
-                  "CXXDeallocationArg",
-                  "Check whether the argument of operator delete is undefined",
-                  "true",
-                  Released>,
-    CmdLineOption<Boolean,
-                  "ArgInitializedness",
-                  "Check whether any of the pass-by-value parameters is "
-                  "undefined",
-                  "true",
-                  Released>,
-    CmdLineOption<Boolean,
-                  "ArgPointeeInitializedness",
-                  "Check whether the pointee of a pass-by-reference or "
-                  "pass-by-pointer is undefined",
-                  "false",
-                  InAlpha>,
-    CmdLineOption<Boolean,
-                  "NilReceiver",
-                  "Check whether the reciever in the message expression is nil",
-                  "true",
-                  Released>,
-    CmdLineOption<Boolean,
-                  "UndefReceiver",
-                  "Check whether the reciever in the message expression is "
-                  "undefined",
-                  "true",
-                  Released>,
-  ]>,
-  Documentation<HasDocumentation>,
-  Dependencies<[CallAndMessageModeling]>;
-
-def DereferenceModeling : Checker<"DereferenceModeling">,
-  HelpText<"General support for dereference related checkers">,
-  Documentation<NotDocumented>,
-  Hidden;
+def CallAndMessageChecker
+    : Checker<"CallAndMessage">,
+      HelpText<
+          "Check for logical errors for function calls and Objective-C "
+          "message expressions (e.g., uninitialized arguments, null function "
+          "pointers)">,
+      CheckerOptions<
+          [CmdLineOption<Boolean, "FunctionPointer",
+                         "Check whether a called function pointer is null or "
+                         "undefined",
+                         "true", Released>,
+           CmdLineOption<
+               Boolean, "ParameterCount",
+               "Check whether a function was called with the appropriate "
+               "number of arguments",
+               "true", Released>,
+           CmdLineOption<Boolean, "CXXThisMethodCall",
+                         "Check whether the implicit this parameter is null or "
+                         "undefined upon a method call",
+                         "true", Released>,
+           CmdLineOption<
+               Boolean, "CXXDeallocationArg",
+               "Check whether the argument of operator delete is undefined",
+               "true", Released>,
+           CmdLineOption<Boolean, "ArgInitializedness",
+                         "Check whether any of the pass-by-value parameters is "
+                         "undefined",
+                         "true", Released>,
+           CmdLineOption<Boolean, "ArgPointeeInitializedness",
+                         "Check whether the pointee of a pass-by-reference or "
+                         "pass-by-pointer is undefined",
+                         "false", InAlpha>,
+           CmdLineOption<
+               Boolean, "NilReceiver",
+               "Check whether the receiver in the message expression is nil",
+               "true", Released>,
+           CmdLineOption<
+               Boolean, "UndefReceiver",
+               "Check whether the receiver in the message expression is "
+               "undefined",
+               "true", Released>,
+           CmdLineOption<
+               Boolean, "ArgPointeeInitializednessComplete",
+               "If set to true, treat a struct as initialized when all of its "
+               "members are initialized, otherwise when it has any initialized "
+               "member (used only at ArgPointeeInitializedness)",
+               "false", Released>,
+]>,
+      Documentation<HasDocumentation>;
 
 def FixedAddressDereferenceChecker
     : Checker<"FixedAddressDereference">,
       HelpText<"Check for dereferences of fixed addresses">,
-      Documentation<HasDocumentation>,
-      Dependencies<[DereferenceModeling]>;
+      Documentation<HasDocumentation>;
 
-def NullDereferenceChecker : Checker<"NullDereference">,
-  HelpText<"Check for dereferences of null pointers">,
-  Documentation<HasDocumentation>,
-  Dependencies<[DereferenceModeling]>;
+def NullDereferenceChecker
+    : Checker<"NullDereference">,
+      HelpText<"Check for dereferences of null pointers">,
+      Documentation<HasDocumentation>;
+
+def NullPointerArithmChecker
+    : Checker<"NullPointerArithm">,
+      HelpText<"Check for undefined arithmetic operations on null pointers">,
+      Documentation<HasDocumentation>;
 
 def NonNullParamChecker : Checker<"NonNullParamChecker">,
   HelpText<"Check for null pointers passed as arguments to a function whose "
@@ -239,15 +220,11 @@ def UndefResultChecker : Checker<"UndefinedBinaryOperatorResult">,
   HelpText<"Check for undefined results of binary operators">,
   Documentation<HasDocumentation>;
 
-def StackAddrEscapeBase : Checker<"StackAddrEscapeBase">,
-  HelpText<"Generate information about stack address escapes.">,
-  Documentation<NotDocumented>,
-  Hidden;
-
-def StackAddrEscapeChecker : Checker<"StackAddressEscape">,
-  HelpText<"Check that addresses to stack memory do not escape the function">,
-  Dependencies<[StackAddrEscapeBase]>,
-  Documentation<HasDocumentation>;
+def StackAddrEscapeChecker
+    : Checker<"StackAddressEscape">,
+      HelpText<
+          "Check that addresses to stack memory do not escape the function">,
+      Documentation<HasDocumentation>;
 
 def DynamicTypePropagation : Checker<"DynamicTypePropagation">,
   HelpText<"Generate dynamic type information">,
@@ -265,11 +242,6 @@ let ParentPackage = CoreAlpha in {
 
 def BoolAssignmentChecker : Checker<"BoolAssignment">,
   HelpText<"Warn about assigning non-{0,1} values to Boolean variables">,
-  Documentation<HasDocumentation>;
-
-def CastSizeChecker : Checker<"CastSize">,
-  HelpText<"Check when casting a malloc'ed type T, whether the size is a "
-           "multiple of the size of T">,
   Documentation<HasDocumentation>;
 
 def CastToStructChecker : Checker<"CastToStruct">,
@@ -294,14 +266,22 @@ def TestAfterDivZeroChecker : Checker<"TestAfterDivZero">,
            "Either the comparison is useless or there is division by zero.">,
   Documentation<HasDocumentation>;
 
-def DynamicTypeChecker : Checker<"DynamicTypeChecker">,
-  HelpText<"Check for cases where the dynamic and the static type of an object "
-           "are unrelated.">,
-  Documentation<HasDocumentation>;
+def DynamicTypeChecker
+    : Checker<"DynamicTypeChecker">,
+      HelpText<"Check for cases where the dynamic and the static type of an "
+               "object are unrelated.">,
+      Dependencies<[DynamicTypePropagation]>,
+      Documentation<HasDocumentation>;
 
-def StackAddrAsyncEscapeChecker : Checker<"StackAddressAsyncEscape">,
-  HelpText<"Check that addresses to stack memory do not escape the function">,
-  Dependencies<[StackAddrEscapeBase]>,
+def StackAddrAsyncEscapeChecker
+    : Checker<"StackAddressAsyncEscape">,
+      HelpText<
+          "Check that addresses to stack memory do not escape the function">,
+      Documentation<HasDocumentation>;
+
+def StoreToImmutableChecker : Checker<"StoreToImmutable">,
+  HelpText<"Check for writes to immutable memory regions. "
+           "This implements part of SEI CERT Rule ENV30-C.">,
   Documentation<HasDocumentation>;
 
 def PthreadLockBase : Checker<"PthreadLockBase">,
@@ -805,35 +785,6 @@ def SmartPtrChecker: Checker<"SmartPtr">,
 
 } // end: "alpha.cplusplus"
 
-
-//===----------------------------------------------------------------------===//
-// Valist checkers.
-//===----------------------------------------------------------------------===//
-
-let ParentPackage = Valist in {
-
-def ValistBase : Checker<"ValistBase">,
-  HelpText<"Gathers information about va_lists.">,
-  Documentation<NotDocumented>,
-  Hidden;
-
-def UninitializedChecker : Checker<"Uninitialized">,
-  HelpText<"Check for usages of uninitialized (or already released) va_lists.">,
-  Dependencies<[ValistBase]>,
-  Documentation<NotDocumented>;
-
-def UnterminatedChecker : Checker<"Unterminated">,
-  HelpText<"Check for va_lists which are not released by a va_end call.">,
-  Dependencies<[ValistBase]>,
-  Documentation<NotDocumented>;
-
-def CopyToSelfChecker : Checker<"CopyToSelf">,
-  HelpText<"Check for va_lists which are copied onto itself.">,
-  Dependencies<[ValistBase]>,
-  Documentation<NotDocumented>;
-
-} // end : "valist"
-
 //===----------------------------------------------------------------------===//
 // Deadcode checkers.
 //===----------------------------------------------------------------------===//
@@ -956,12 +907,25 @@ def UncheckedReturn : Checker<"UncheckedReturn">,
   Dependencies<[SecuritySyntaxChecker]>,
   Documentation<HasDocumentation>;
 
-def DeprecatedOrUnsafeBufferHandling :
-  Checker<"DeprecatedOrUnsafeBufferHandling">,
-  HelpText<"Warn on uses of unsecure or deprecated buffer manipulating "
-           "functions">,
-  Dependencies<[SecuritySyntaxChecker]>,
-  Documentation<HasDocumentation>;
+def DeprecatedOrUnsafeBufferHandling
+    : Checker<"DeprecatedOrUnsafeBufferHandling">,
+      HelpText<"Warn on uses of unsecure or deprecated buffer manipulating "
+               "functions">,
+      Dependencies<[SecuritySyntaxChecker]>,
+      CheckerOptions<
+          [CmdLineOption<
+               String, "ReportMode",
+               "Controls when warnings are reported. \"all\" reports all "
+               "unsafe functions regardless of C standard or Annex K "
+               "availability. \"actionable\" only reports when Annex K is "
+               "available (C11 with __STDC_LIB_EXT1__ and "
+               "__STDC_WANT_LIB_EXT1__=1). \"c11-only\" reports when C11 "
+               "standard is enabled (does not take Annex K availability into "
+               "account).",
+               "c11-only",
+               Released>,
+      ]>,
+      Documentation<HasDocumentation>;
 
 def decodeValueOfObjCType : Checker<"decodeValueOfObjCType">,
   HelpText<"Warn on uses of the '-decodeValueOfObjCType:at:' method">,
@@ -1008,6 +972,10 @@ let ParentPackage = Security in {
                  "'setuid(getuid())' (CERT: POS36-C)">,
         Documentation<HasDocumentation>;
 
+  def VAListChecker : Checker<"VAList">,
+                      HelpText<"Warn on misuse of va_list objects">,
+                      Documentation<HasDocumentation>;
+
 } // end "security"
 
 let ParentPackage = ENV in {
@@ -1050,11 +1018,6 @@ def RetainCountBase : Checker<"RetainCountBase">,
 } // end "osx.cocoa"
 
 let ParentPackage = OSX in {
-
-def NSOrCFErrorDerefChecker : Checker<"NSOrCFErrorDerefChecker">,
-  HelpText<"Implementation checker for NSErrorChecker and CFErrorChecker">,
-  Documentation<NotDocumented>,
-  Hidden;
 
 def NumberObjectConversionChecker : Checker<"NumberObjectConversion">,
   HelpText<"Check for erroneous conversions of objects representing numbers "
@@ -1153,9 +1116,8 @@ def ObjCSuperCallChecker : Checker<"MissingSuperCall">,
   Documentation<NotDocumented>;
 
 def NSErrorChecker : Checker<"NSError">,
-  HelpText<"Check usage of NSError** parameters">,
-  Dependencies<[NSOrCFErrorDerefChecker]>,
-  Documentation<HasDocumentation>;
+                     HelpText<"Check usage of NSError** parameters">,
+                     Documentation<HasDocumentation>;
 
 def RetainCountChecker : Checker<"RetainCount">,
   HelpText<"Check for leaks and improper reference count management">,
@@ -1257,9 +1219,8 @@ def CFRetainReleaseChecker : Checker<"CFRetainRelease">,
   Documentation<HasDocumentation>;
 
 def CFErrorChecker : Checker<"CFError">,
-  HelpText<"Check usage of CFErrorRef* parameters">,
-  Dependencies<[NSOrCFErrorDerefChecker]>,
-  Documentation<HasDocumentation>;
+                     HelpText<"Check usage of CFErrorRef* parameters">,
+                     Documentation<HasDocumentation>;
 
 } // end "osx.coreFoundation"
 
@@ -1654,8 +1615,8 @@ def CloneChecker : Checker<"CloneChecker">,
 let ParentPackage = PortabilityOptIn in {
 
 def UnixAPIPortabilityChecker : Checker<"UnixAPI">,
-  HelpText<"Finds implementation-defined behavior in UNIX/Posix functions">,
-  Documentation<NotDocumented>;
+  HelpText<"Finds dynamic memory allocation with size zero">,
+  Documentation<HasDocumentation>;
 
 } // end optin.portability
 
@@ -1673,6 +1634,14 @@ def TaintPropagationChecker : Checker<"TaintPropagation">, // Modelling checker
                   "Config",
                   "Specifies the name of the configuration file.",
                   "",
+                  Released>,
+    CmdLineOption<Boolean,
+                  "EnableDefaultConfig",
+                  "If set to false, the default source, "
+                  "sink and propagation rules are not loaded."
+                  "This way, advanced users can fully customize "
+                  "their taint configuration model.",
+                  "true",
                   Released>
   ]>,
   Documentation<NotDocumented>,
@@ -1749,6 +1718,10 @@ def MemoryUnsafeCastChecker : Checker<"MemoryUnsafeCastChecker">,
   HelpText<"Check for memory unsafe casts from base type to derived type.">,
   Documentation<HasDocumentation>;
 
+def NoDeleteChecker : Checker<"NoDeleteChecker">,
+  HelpText<"Check for [[clang::annotate_type(\"webkit.nodelete\")]] annotation">,
+  Documentation<HasDocumentation>;
+
 def NoUncheckedPtrMemberChecker : Checker<"NoUncheckedPtrMemberChecker">,
   HelpText<"Check for no unchecked member variables.">,
   Documentation<HasDocumentation>;
@@ -1786,7 +1759,7 @@ def UnretainedLocalVarsChecker : Checker<"UnretainedLocalVarsChecker">,
   Documentation<HasDocumentation>;
 
 def RetainPtrCtorAdoptChecker : Checker<"RetainPtrCtorAdoptChecker">,
-  HelpText<"Check for correct use of RetainPtr constructor, adoptNS, and adoptCF">,
+  HelpText<"Check for correct use of RetainPtr/OSObjectPtr constructor, adoptNS, adoptCF, and adoptOSObject">,
   Documentation<HasDocumentation>;
 
 } // end alpha.webkit

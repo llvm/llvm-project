@@ -1,5 +1,5 @@
-// RUN: %clang --target=riscv64 -mcpu=sifive-x390 -menable-experimental-extensions --print-enabled-extensions | FileCheck %s
 // REQUIRES: riscv-registered-target
+// RUN: %clang --target=riscv64 -mcpu=sifive-x390 -menable-experimental-extensions --print-enabled-extensions | FileCheck %s
 
 // CHECK:     Name                 Version   Description
 // CHECK-NEXT:     i                    2.1       'I' (Base Integer Instruction Set)

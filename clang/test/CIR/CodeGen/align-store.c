@@ -12,7 +12,7 @@ void test1(myint *p) {
   *p = 0;
 }
 
-// CIR: cir.func @test1
+// CIR: cir.func{{.*}} @test1
 // CIR:   cir.store align(1)
 
 // LLVM: @test1

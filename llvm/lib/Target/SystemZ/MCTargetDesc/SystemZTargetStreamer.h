@@ -20,6 +20,8 @@
 #include <utility>
 
 namespace llvm {
+class MCGOFFStreamer;
+class SystemZHLASMAsmStreamer;
 
 class SystemZTargetStreamer : public MCTargetStreamer {
 public:
@@ -56,8 +58,6 @@ public:
 
   virtual void emitMachine(StringRef CPUOrCommand) {};
 
-  virtual void emitExtern(StringRef Str) {};
-
   virtual const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
                                            const MCSymbol *Lo) {
     return nullptr;
@@ -77,7 +77,7 @@ class SystemZTargetHLASMStreamer : public SystemZTargetStreamer {
 public:
   SystemZTargetHLASMStreamer(MCStreamer &S, formatted_raw_ostream &OS)
       : SystemZTargetStreamer(S), OS(OS) {}
-  void emitExtern(StringRef Sym) override;
+  SystemZHLASMAsmStreamer &getHLASMStreamer();
   const MCExpr *createWordDiffExpr(MCContext &Ctx, const MCSymbol *Hi,
                                    const MCSymbol *Lo) override;
 };

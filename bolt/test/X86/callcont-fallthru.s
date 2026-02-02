@@ -10,7 +10,13 @@
 # RUN: link_fdata %s %t %t.pa-ret PREAGG-RET
 # Trace from an external location to a landing pad/entry point call continuation
 # RUN: link_fdata %s %t %t.pa-ext PREAGG-EXT
+# Return trace to a landing pad/entry point call continuation
+# RUN: link_fdata %s %t %t.pa-pret PREAGG-PRET
+# External return to a landing pad/entry point call continuation
+# RUN: link_fdata %s %t %t.pa-eret PREAGG-ERET
 # RUN-DISABLED: link_fdata %s %t %t.pa-plt PREAGG-PLT
+## Fall-through imputing test cases
+# RUN: link_fdata %s %t %t.pa-imp PREAGG-IMP
 
 # RUN: llvm-strip --strip-unneeded %t -o %t.strip
 # RUN: llvm-objcopy --remove-section=.eh_frame %t.strip %t.noeh
@@ -38,11 +44,31 @@
 # RUN: llvm-bolt %t.strip --pa -p %t.pa-ext -o %t.out \
 # RUN:   --print-cfg --print-only=main | FileCheck %s --check-prefix=CHECK-SKIP
 
+## Check pre-aggregated return traces from external location attach call
+## continuation fallthrough count to secondary entry point (unstripped)
+# RUN: llvm-bolt %t --pa -p %t.pa-pret -o %t.out \
+# RUN:   --print-cfg --print-only=main | FileCheck %s --check-prefix=CHECK-ATTACH
+## Check pre-aggregated return traces from external location attach call
+## continuation fallthrough count to landing pad (stripped, landing pad)
+# RUN: llvm-bolt %t.strip --pa -p %t.pa-pret -o %t.out \
+# RUN:   --print-cfg --print-only=main | FileCheck %s --check-prefix=CHECK-ATTACH
+
+## Same for external return type
+# RUN: llvm-bolt %t --pa -p %t.pa-eret -o %t.out \
+# RUN:   --print-cfg --print-only=main | FileCheck %s --check-prefix=CHECK-ATTACH
+# RUN: llvm-bolt %t.strip --pa -p %t.pa-eret -o %t.out \
+# RUN:   --print-cfg --print-only=main | FileCheck %s --check-prefix=CHECK-ATTACH
+
 ## Check pre-aggregated traces don't report zero-sized PLT fall-through as
 ## invalid trace
 # RUN-DISABLED: llvm-bolt %t.strip --pa -p %t.pa-plt -o %t.out | FileCheck %s \
 # RUN-DISABLED:   --check-prefix=CHECK-PLT
 # CHECK-PLT: traces mismatching disassembled function contents: 0
+
+## Check --impute-trace-fall-throughs accepting duplicate branch-only traces
+# RUN: perf2bolt %t --pa -p %t.pa-imp -o %t.pa-imp.fdata --impute-trace-fall-through
+# RUN: FileCheck %s --check-prefix=CHECK-IMP --input-file %t.pa-imp.fdata
+# CHECK-IMP: 0 [unknown] 0 1 main {{.*}} 0 3
 
   .globl foo
   .type foo, %function
@@ -83,6 +109,8 @@ Ltmp1:
 
 Ltmp4:
 	cmpl	$0x0, -0x14(%rbp)
+# PREAGG-IMP: B X:0 #Ltmp4_br# 1 0
+# PREAGG-IMP: B X:0 #Ltmp4_br# 2 0
 Ltmp4_br:
 	je	Ltmp0
 
@@ -92,6 +120,10 @@ Ltmp4_br:
 # PREAGG-RET: T #Lfoo_ret# #Ltmp3# #Ltmp3_br# 1
 ## Target is a secondary entry point (unstripped) or a landing pad (stripped)
 # PREAGG-EXT: T X:0 #Ltmp3# #Ltmp3_br# 1
+## Pre-aggregated return trace
+# PREAGG-PRET: R X:0 #Ltmp3# #Ltmp3_br# 1
+## External return
+# PREAGG-ERET: r #Ltmp3# #Ltmp3_br# 1
 
 # CHECK-ATTACH:      callq foo
 # CHECK-ATTACH-NEXT: count: 1

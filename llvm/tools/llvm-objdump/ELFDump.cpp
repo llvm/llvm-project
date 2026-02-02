@@ -164,7 +164,6 @@ static Error getRelocationValueString(const ELFObjectFile<ELFT> *Obj,
           : "+") << format("0x%" PRIx64,
                           (Addend < 0 ? -(uint64_t)Addend : (uint64_t)Addend));
   }
-  Fmt.flush();
   Result.append(FmtBuf.begin(), FmtBuf.end());
   return Error::success();
 }
@@ -290,6 +289,9 @@ template <class ELFT> void ELFDumper<ELFT>::printProgramHeaders() {
       break;
     case ELF::PT_GNU_STACK:
       outs() << "   STACK ";
+      break;
+    case ELF::PT_GNU_SFRAME:
+      outs() << "  SFRAME ";
       break;
     case ELF::PT_INTERP:
       outs() << "  INTERP ";

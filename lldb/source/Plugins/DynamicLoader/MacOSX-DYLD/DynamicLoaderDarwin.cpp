@@ -138,7 +138,7 @@ ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
     if (image_info.uuid &&
         (!module_spec.GetUUID() || module_spec.GetUUID() == image_info.uuid)) {
       ModuleSpec shared_cache_spec(module_spec.GetFileSpec(), image_info.uuid,
-                                   image_info.data_sp);
+                                   image_info.extractor_sp);
       module_sp =
           target.GetOrCreateModule(shared_cache_spec, false /* notify */);
     }
@@ -916,7 +916,7 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
   StackFrame *current_frame = thread.GetStackFrameAtIndex(0).get();
   const SymbolContext &current_context =
       current_frame->GetSymbolContext(eSymbolContextSymbol);
-  Symbol *current_symbol = current_context.symbol;
+  const Symbol *current_symbol = current_context.symbol;
   Log *log = GetLog(LLDBLog::Step);
   TargetSP target_sp(thread.CalculateTarget());
 
@@ -949,7 +949,7 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
                                           reexported_symbols);
         for (const SymbolContext &context : reexported_symbols) {
           if (context.symbol) {
-            Symbol *actual_symbol =
+            const Symbol *actual_symbol =
                 context.symbol->ResolveReExportedSymbol(*target_sp.get());
             if (actual_symbol) {
               const Address actual_symbol_addr = actual_symbol->GetAddress();
@@ -1008,7 +1008,7 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
       // and if they do, resolve them:
       std::vector<lldb::addr_t> load_addrs;
       for (Address address : addresses) {
-        Symbol *symbol = address.CalculateSymbolContextSymbol();
+        const Symbol *symbol = address.CalculateSymbolContextSymbol();
         if (symbol && symbol->IsIndirect()) {
           Status error;
           Address symbol_address = symbol->GetAddress();
@@ -1053,7 +1053,8 @@ DynamicLoaderDarwin::GetStepThroughTrampolinePlan(Thread &thread,
 }
 
 void DynamicLoaderDarwin::FindEquivalentSymbols(
-    lldb_private::Symbol *original_symbol, lldb_private::ModuleList &images,
+    const lldb_private::Symbol *original_symbol,
+    lldb_private::ModuleList &images,
     lldb_private::SymbolContextList &equivalent_symbols) {
   ConstString trampoline_name =
       original_symbol->GetMangled().GetName(Mangled::ePreferMangled);
@@ -1068,7 +1069,6 @@ void DynamicLoaderDarwin::FindEquivalentSymbols(
   RegularExpression equivalent_name_regex(equivalent_regex_buf);
   images.FindSymbolsMatchingRegExAndType(equivalent_name_regex, eSymbolTypeCode,
                                          equivalent_symbols);
-
 }
 
 lldb::ModuleSP DynamicLoaderDarwin::GetPThreadLibraryModule() {
@@ -1159,9 +1159,8 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
   //  size_t offset;
   // }
   //
-  // The strategy is to take get_addr, call it with the address of the
-  // containing TLS_Thunk structure, and add the offset to the resulting
-  // pointer to get the data block.
+  // The strategy is to take get_addr and call it with the address of the
+  // containing TLS_Thunk structure.
   //
   // On older apple platforms, the key is treated as a pthread_key_t and passed
   // to pthread_getspecific. The pointer returned from that call is added to
@@ -1190,7 +1189,7 @@ DynamicLoaderDarwin::GetThreadLocalData(const lldb::ModuleSP module_sp,
       const addr_t tls_data = evaluate_tls_address(
           thunk_load_addr, llvm::ArrayRef<addr_t>(tls_load_addr));
       if (tls_data != LLDB_INVALID_ADDRESS)
-        return tls_data + tls_offset;
+        return tls_data;
     }
   }
 

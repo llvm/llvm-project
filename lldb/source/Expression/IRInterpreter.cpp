@@ -259,7 +259,9 @@ public:
       break;
     case Value::FunctionVal:
       if (const Function *constant_func = dyn_cast<Function>(constant)) {
-        lldb_private::ConstString name(constant_func->getName());
+        lldb_private::ConstString name(
+            llvm::GlobalValue::dropLLVMManglingEscape(
+                constant_func->getName()));
         bool missing_weak = false;
         lldb::addr_t addr = m_execution_unit.FindSymbol(name, missing_weak);
         if (addr == LLDB_INVALID_ADDRESS)
@@ -882,9 +884,10 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
     case Instruction::Alloca: {
       const AllocaInst *alloca_inst = cast<AllocaInst>(inst);
 
-      if (alloca_inst->isArrayAllocation()) {
-        LLDB_LOGF(log,
-                  "AllocaInsts are not handled if isArrayAllocation() is true");
+      std::optional<TypeSize> alloca_size =
+          alloca_inst->getAllocationSize(frame.m_target_data);
+      if (!alloca_size || alloca_size->isScalable()) {
+        LLDB_LOGF(log, "AllocaInsts are not handled if size is not computable");
         error = lldb_private::Status::FromErrorString(unsupported_opcode_error);
         return false;
       }
@@ -896,10 +899,10 @@ bool IRInterpreter::Interpret(llvm::Module &module, llvm::Function &function,
       //   buffer
       //   Write the virtual address of R into P
 
-      Type *T = alloca_inst->getAllocatedType();
       Type *Tptr = alloca_inst->getType();
 
-      lldb::addr_t R = frame.Malloc(T);
+      lldb::addr_t R = frame.Malloc(alloca_size->getFixedValue(),
+                                    alloca_inst->getAlign().value());
 
       if (R == LLDB_INVALID_ADDRESS) {
         LLDB_LOGF(log, "Couldn't allocate memory for an AllocaInst");

@@ -60,7 +60,7 @@ program OmpAtomic
    m = m .AND. n
 !$omp atomic
    m = n .AND. m
-!$omp atomic 
+!$omp atomic
    !ERROR: The atomic variable m should appear as an argument of the top-level AND operator
    m = n .AND. l
 
@@ -68,7 +68,7 @@ program OmpAtomic
    m = m .OR. n
 !$omp atomic
    m = n .OR. m
-!$omp atomic 
+!$omp atomic
    !ERROR: The atomic variable m should appear as an argument of the top-level OR operator
    m = n .OR. l
 
@@ -175,13 +175,13 @@ subroutine more_invalid_atomic_update_stmts()
         real :: n(10)
     end type
     type(some_type) p
-    
+
     !$omp atomic
         x = x
 
     !$omp atomic update
-    !ERROR: The atomic variable x should appear as an argument in the update operation
-        x = 1    
+    !ERROR: This is not a valid ATOMIC UPDATE operation
+        x = 1
 
     !$omp atomic update
     !ERROR: The atomic variable a cannot be a proper subexpression of an argument (here: a*b) in the update operation
@@ -205,9 +205,8 @@ subroutine more_invalid_atomic_update_stmts()
     !ERROR: The atomic variable a should appear as an argument of the top-level + operator
         a = a * b + c
 
+    !This is expected to work due to reassociation.
     !$omp atomic update
-    !ERROR: The atomic variable a cannot be a proper subexpression of an argument (here: a+b) in the update operation
-    !ERROR: The atomic variable a should appear as an argument of the top-level + operator
         a = a + b + c
 
     !$omp atomic

@@ -146,6 +146,9 @@ INTERCEPTOR(void*, valloc, uptr size) {
   GET_STACK_TRACE_MALLOC;
   return lsan_valloc(size, stack);
 }
+#else
+#  define LSAN_MAYBE_INTERCEPT_FREE_SIZED
+#  define LSAN_MAYBE_INTERCEPT_FREE_ALIGNED_SIZED
 #endif  // !SANITIZER_APPLE
 
 #if SANITIZER_INTERCEPT_MEMALIGN
@@ -382,12 +385,12 @@ INTERCEPTOR(void, _lwp_exit) {
 #endif
 
 #if SANITIZER_INTERCEPT_THR_EXIT
-INTERCEPTOR(void, thr_exit, tid_t *state) {
+INTERCEPTOR(void, thr_exit, ThreadID *state) {
   ENSURE_LSAN_INITED;
   ThreadFinish();
   REAL(thr_exit)(state);
 }
-#define LSAN_MAYBE_INTERCEPT_THR_EXIT INTERCEPT_FUNCTION(thr_exit)
+#  define LSAN_MAYBE_INTERCEPT_THR_EXIT INTERCEPT_FUNCTION(thr_exit)
 #else
 #define LSAN_MAYBE_INTERCEPT_THR_EXIT
 #endif

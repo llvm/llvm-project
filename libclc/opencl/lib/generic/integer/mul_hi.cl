@@ -7,9 +7,8 @@
 //===----------------------------------------------------------------------===//
 
 #include <clc/integer/clc_mul_hi.h>
-#include <clc/opencl/clc.h>
 
-#define FUNCTION mul_hi
+#define __CLC_FUNCTION mul_hi
 #define __CLC_BODY <clc/shared/binary_def.inc>
 
 #include <clc/integer/gentype.inc>

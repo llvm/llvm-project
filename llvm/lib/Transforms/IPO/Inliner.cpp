@@ -279,7 +279,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
   // Capture updatable variable for the current SCC.
   auto *C = &InitialC;
 
-  auto AdvisorOnExit = make_scope_exit([&] { Advisor.onPassExit(C); });
+  llvm::scope_exit AdvisorOnExit([&] { Advisor.onPassExit(C); });
 
   if (Calls.empty())
     return PreservedAnalyses::all();
@@ -459,6 +459,9 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
                              }),
               Calls.end());
 
+          // Report inlining decision BEFORE deleting function contents, so we
+          // can still access e.g. the DebugLoc
+          Advice->recordInliningWithCalleeDeleted();
           // Clear the body and queue the function itself for call graph
           // updating when we finish inlining.
           makeFunctionBodyUnreachable(Callee);
@@ -470,9 +473,7 @@ PreservedAnalyses InlinerPass::run(LazyCallGraph::SCC &InitialC,
           DeadFunctionsInComdats.push_back(&Callee);
         }
       }
-      if (CalleeWasDeleted)
-        Advice->recordInliningWithCalleeDeleted();
-      else
+      if (!CalleeWasDeleted)
         Advice->recordInlining();
     }
 

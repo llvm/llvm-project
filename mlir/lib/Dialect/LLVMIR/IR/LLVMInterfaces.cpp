@@ -13,7 +13,6 @@
 #include "mlir/Dialect/LLVMIR/LLVMInterfaces.h"
 
 #include "mlir/Dialect/LLVMIR/LLVMDialect.h"
-#include "mlir/IR/PatternMatch.h"
 
 using namespace mlir;
 using namespace mlir::LLVM;

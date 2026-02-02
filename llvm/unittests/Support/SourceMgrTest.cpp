@@ -8,6 +8,7 @@
 
 #include "llvm/Support/SourceMgr.h"
 #include "llvm/Support/MemoryBuffer.h"
+#include "llvm/Support/VirtualFileSystem.h"
 #include "llvm/Support/raw_ostream.h"
 #include "gtest/gtest.h"
 
@@ -505,4 +506,14 @@ TEST_F(SourceMgrTest, PrintWithoutLoc) {
   Output.clear();
   Diag.print(nullptr, OS, false, false, false);
   EXPECT_EQ("message\n", Output);
+}
+
+TEST_F(SourceMgrTest, IncludeDirs) {
+  auto VFS = makeIntrusiveRefCnt<vfs::InMemoryFileSystem>();
+  VFS->addFile("include/file", 0, MemoryBuffer::getMemBuffer("contents"));
+  SM.setVirtualFileSystem(std::move(VFS));
+  SM.setIncludeDirs({"include"});
+  std::string ResolvedPath;
+  unsigned NumBuffers = SM.AddIncludeFile("file", SMLoc(), ResolvedPath);
+  EXPECT_EQ(NumBuffers, 1u);
 }

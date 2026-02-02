@@ -69,7 +69,7 @@ public:
     while (isa<CastExpr>(*It) || isa<ParenExpr>(*It)) {
       if (auto ICE = dyn_cast<ImplicitCastExpr>(*It)) {
         if (ICE->getCastKind() == CK_LValueToRValue)
-          Roles |= (unsigned)(unsigned)SymbolRole::Read;
+          Roles |= (unsigned)SymbolRole::Read;
       }
       if (It == StmtStack.begin())
         break;
