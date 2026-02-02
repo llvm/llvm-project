@@ -388,24 +388,23 @@ TEST_F(VPBasicBlockTest, TraversingIteratorTest) {
 
     // Successors of R1.
     SmallVector<const VPBlockBase *> FromIterator(
-        VPImmediateHierarchicalChildrenIterator<VPBlockBase *>(R1),
-        VPImmediateHierarchicalChildrenIterator<VPBlockBase *>::end(R1));
+        VPHierarchicalChildrenIterator<VPBlockBase *>(R1),
+        VPHierarchicalChildrenIterator<VPBlockBase *>::end(R1));
     EXPECT_EQ(1u, FromIterator.size());
     EXPECT_EQ(R1BB1, FromIterator[0]);
 
     // Predecessors of R1.
     FromIterator.clear();
-    copy(VPImmediateHierarchicalChildrenIterator<VPBlockBase *, false>(R1),
-         VPImmediateHierarchicalChildrenIterator<VPBlockBase *, false>::end(R1),
+    copy(VPHierarchicalChildrenIterator<VPBlockBase *, false>(R1),
+         VPHierarchicalChildrenIterator<VPBlockBase *, false>::end(R1),
          std::back_inserter(FromIterator));
     EXPECT_EQ(1u, FromIterator.size());
     EXPECT_EQ(R1BB4, FromIterator[0]);
 
     // Predecessors of R1BB1.
     FromIterator.clear();
-    copy(VPImmediateHierarchicalChildrenIterator<VPBlockBase *, false>(R1BB1),
-         VPImmediateHierarchicalChildrenIterator<VPBlockBase *, false>::end(
-             R1BB1),
+    copy(VPHierarchicalChildrenIterator<VPBlockBase *, false>(R1BB1),
+         VPHierarchicalChildrenIterator<VPBlockBase *, false>::end(R1BB1),
          std::back_inserter(FromIterator));
     EXPECT_EQ(1u, FromIterator.size());
     EXPECT_EQ(VPBB0, FromIterator[0]);

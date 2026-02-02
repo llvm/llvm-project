@@ -58,9 +58,9 @@ namespace llvm {
 /// traversal outside the region when doing a reverse post-order traversal of
 /// the VPlan.
 template <typename BlockPtrTy, bool Forward = true>
-class VPImmediateHierarchicalChildrenIterator
+class VPHierarchicalChildrenIterator
     : public iterator_facade_base<
-          VPImmediateHierarchicalChildrenIterator<BlockPtrTy, Forward>,
+          VPHierarchicalChildrenIterator<BlockPtrTy, Forward>,
           std::bidirectional_iterator_tag, VPBlockBase> {
   BlockPtrTy Block;
   /// Index of the current successor/predecessor.
@@ -113,20 +113,19 @@ public:
   /// Used by iterator_facade_base with bidirectional_iterator_tag.
   using reference = BlockPtrTy;
 
-  VPImmediateHierarchicalChildrenIterator(BlockPtrTy Block, size_t Idx = 0)
+  VPHierarchicalChildrenIterator(BlockPtrTy Block, size_t Idx = 0)
       : Block(Block), EdgeIdx(Idx) {}
-  VPImmediateHierarchicalChildrenIterator(
-      const VPImmediateHierarchicalChildrenIterator &Other)
+  VPHierarchicalChildrenIterator(const VPHierarchicalChildrenIterator &Other)
       : Block(Other.Block), EdgeIdx(Other.EdgeIdx) {}
 
-  VPImmediateHierarchicalChildrenIterator &
-  operator=(const VPImmediateHierarchicalChildrenIterator &R) {
+  VPHierarchicalChildrenIterator &
+  operator=(const VPHierarchicalChildrenIterator &R) {
     Block = R.Block;
     EdgeIdx = R.EdgeIdx;
     return *this;
   }
 
-  static VPImmediateHierarchicalChildrenIterator end(BlockPtrTy Block) {
+  static VPHierarchicalChildrenIterator end(BlockPtrTy Block) {
     if (auto *R = dyn_cast<VPRegionBlock>(Block)) {
       // Traverse through the region's entry/exiting (based on Forward) node.
       return {R, 1};
@@ -138,7 +137,7 @@ public:
     return {Block, NumOutgoingEdges};
   }
 
-  bool operator==(const VPImmediateHierarchicalChildrenIterator &R) const {
+  bool operator==(const VPHierarchicalChildrenIterator &R) const {
     return Block == R.Block && EdgeIdx == R.EdgeIdx;
   }
 
@@ -146,18 +145,18 @@ public:
 
   BlockPtrTy operator*() { return deref(Block, EdgeIdx); }
 
-  VPImmediateHierarchicalChildrenIterator &operator++() {
+  VPHierarchicalChildrenIterator &operator++() {
     EdgeIdx++;
     return *this;
   }
 
-  VPImmediateHierarchicalChildrenIterator &operator--() {
+  VPHierarchicalChildrenIterator &operator--() {
     EdgeIdx--;
     return *this;
   }
 
-  VPImmediateHierarchicalChildrenIterator operator++(int X) {
-    VPImmediateHierarchicalChildrenIterator Orig = *this;
+  VPHierarchicalChildrenIterator operator++(int X) {
+    VPHierarchicalChildrenIterator Orig = *this;
     EdgeIdx++;
     return Orig;
   }
@@ -179,8 +178,7 @@ public:
 /// reverse post-order traversal of the graph.
 template <> struct GraphTraits<VPBlockDeepTraversalWrapper<VPBlockBase *>> {
   using NodeRef = VPBlockBase *;
-  using ChildIteratorType =
-      VPImmediateHierarchicalChildrenIterator<VPBlockBase *>;
+  using ChildIteratorType = VPHierarchicalChildrenIterator<VPBlockBase *>;
 
   static NodeRef getEntryNode(VPBlockDeepTraversalWrapper<VPBlockBase *> N) {
     return N.getEntry();
@@ -198,8 +196,7 @@ template <> struct GraphTraits<VPBlockDeepTraversalWrapper<VPBlockBase *>> {
 template <>
 struct GraphTraits<VPBlockDeepTraversalWrapper<const VPBlockBase *>> {
   using NodeRef = const VPBlockBase *;
-  using ChildIteratorType =
-      VPImmediateHierarchicalChildrenIterator<const VPBlockBase *>;
+  using ChildIteratorType = VPHierarchicalChildrenIterator<const VPBlockBase *>;
 
   static NodeRef
   getEntryNode(VPBlockDeepTraversalWrapper<const VPBlockBase *> N) {
@@ -309,8 +306,7 @@ vp_depth_first_deep(const VPBlockBase *G) {
 
 template <> struct GraphTraits<VPBlockBase *> {
   using NodeRef = VPBlockBase *;
-  using ChildIteratorType =
-      VPImmediateHierarchicalChildrenIterator<VPBlockBase *>;
+  using ChildIteratorType = VPHierarchicalChildrenIterator<VPBlockBase *>;
 
   static NodeRef getEntryNode(NodeRef N) { return N; }
 
@@ -325,8 +321,7 @@ template <> struct GraphTraits<VPBlockBase *> {
 
 template <> struct GraphTraits<const VPBlockBase *> {
   using NodeRef = const VPBlockBase *;
-  using ChildIteratorType =
-      VPImmediateHierarchicalChildrenIterator<const VPBlockBase *>;
+  using ChildIteratorType = VPHierarchicalChildrenIterator<const VPBlockBase *>;
 
   static NodeRef getEntryNode(NodeRef N) { return N; }
 
@@ -342,7 +337,7 @@ template <> struct GraphTraits<const VPBlockBase *> {
 template <> struct GraphTraits<Inverse<VPBlockBase *>> {
   using NodeRef = VPBlockBase *;
   using ChildIteratorType =
-      VPImmediateHierarchicalChildrenIterator<VPBlockBase *, /*Forward=*/false>;
+      VPHierarchicalChildrenIterator<VPBlockBase *, /*Forward=*/false>;
 
   static NodeRef getEntryNode(Inverse<NodeRef> B) { return B.Graph; }
 
