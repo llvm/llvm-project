@@ -3214,9 +3214,7 @@ OMPClause *Parser::ParseOpenMPClause(OpenMPDirectiveKind DKind,
       ErrorFound = true;
     }
 
-    if (CKind == OMPC_transparent &&
-        (PP.LookAhead(0).isNot(tok::l_paren) ||
-         PP.LookAhead(0).is(tok::annot_pragma_openmp_end))) {
+    if (CKind == OMPC_transparent && PP.LookAhead(0).isNot(tok::l_paren)) {
       SourceLocation Loc = ConsumeToken();
       SourceLocation LLoc = Tok.getLocation();
       Clause = Actions.OpenMP().ActOnOpenMPTransparentClause(nullptr, LLoc,
