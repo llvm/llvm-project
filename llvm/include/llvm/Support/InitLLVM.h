@@ -41,7 +41,8 @@ public:
   InitLLVM(int &Argc, char **&Argv, bool InstallPipeSignalExitHandler = true,
            bool NeedsPOSIXUtilitySignalHandling = false)
       : InitLLVM(Argc, const_cast<const char **&>(Argv),
-                 InstallPipeSignalExitHandler, NeedsPOSIXUtilitySignalHandling) {}
+                 InstallPipeSignalExitHandler,
+                 NeedsPOSIXUtilitySignalHandling) {}
 
   LLVM_ABI ~InitLLVM();
 

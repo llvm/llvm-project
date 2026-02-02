@@ -73,7 +73,8 @@ using namespace llvm;
 using namespace llvm::sys;
 
 InitLLVM::InitLLVM(int &Argc, const char **&Argv,
-                   bool InstallPipeSignalExitHandler, bool NeedsPOSIXUtilitySignalHandling) {
+                   bool InstallPipeSignalExitHandler,
+                   bool NeedsPOSIXUtilitySignalHandling) {
 #ifndef NDEBUG
   static std::atomic<bool> Initialized{false};
   assert(!Initialized && "InitLLVM was already initialized!");
@@ -84,7 +85,8 @@ InitLLVM::InitLLVM(int &Argc, const char **&Argv,
 #ifdef _WIN32
   sys::AddSignalHandler(CleanupStdHandles, nullptr);
 #else
-  sys::AddSignalHandler(CleanupStdHandles, nullptr, NeedsPOSIXUtilitySignalHandling);
+  sys::AddSignalHandler(CleanupStdHandles, nullptr,
+                        NeedsPOSIXUtilitySignalHandling);
 #endif
 
   if (InstallPipeSignalExitHandler)
