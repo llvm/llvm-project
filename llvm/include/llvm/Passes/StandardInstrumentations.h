@@ -397,10 +397,10 @@ public:
 template <typename T>
 class FuncDataT : public OrderedChangedData<BlockDataT<T>> {
 public:
-  FuncDataT(std::string S) : EntryBlockName(S) {}
+  FuncDataT(const std::string &S) : EntryBlockName(S) {}
 
   // Return the name of the entry block
-  std::string getEntryBlockName() const { return EntryBlockName; }
+  const std::string &getEntryBlockName() const { return EntryBlockName; }
 
 protected:
   std::string EntryBlockName;

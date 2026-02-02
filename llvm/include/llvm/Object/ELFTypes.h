@@ -744,14 +744,14 @@ public:
     advanceNhdr(NhdrPos, NoteSize);
     return *this;
   }
-  bool operator==(Elf_Note_Iterator_Impl Other) const {
+  bool operator==(const Elf_Note_Iterator_Impl &Other) const {
     if (!Nhdr && Other.Err)
       (void)(bool)(*Other.Err);
     if (!Other.Nhdr && Err)
       (void)(bool)(*Err);
     return Nhdr == Other.Nhdr;
   }
-  bool operator!=(Elf_Note_Iterator_Impl Other) const {
+  bool operator!=(const Elf_Note_Iterator_Impl &Other) const {
     return !(*this == Other);
   }
   Elf_Note_Impl<ELFT> operator*() const {
