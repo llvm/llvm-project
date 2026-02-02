@@ -83,7 +83,8 @@ public:
   /// Get the instruction or function argument at the requested location range.
   /// If no single instruction occupies the queried range, or the record is
   /// missing, a nullptr is returned.
-  LLVM_ABI Value *getInstructionOrArgumentAtLocation(const FileLocRange &) const;
+  LLVM_ABI Value *
+  getInstructionOrArgumentAtLocation(const FileLocRange &) const;
   /// Get the instruction or function argument at the requested location.
   /// If no instruction occupies the queried location, or the record is missing,
   /// a nullptr is returned.
