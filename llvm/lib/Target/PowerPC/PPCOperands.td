@@ -15,28 +15,28 @@
 // Immediate operand base classes
 //===----------------------------------------------------------------------===//
 
-// Base class for immediate AsmOperandClass definitions
+// Base class for immediate AsmOperandClass definitions.
 class ImmediateAsmOperand : AsmOperandClass {
   let Name = NAME;
   let RenderMethod = "addImmOperands";
 }
 
-// Base class for immediate AsmOperandClass with custom predicate
+// Base class for immediate AsmOperandClass with custom predicate.
 class ImmediateAsmOperandWithPredicate<string predicate> : ImmediateAsmOperand {
   let PredicateMethod = predicate;
 }
 
-// Base class for unsigned immediate AsmOperandClass with templated predicate
+// Base class for unsigned immediate AsmOperandClass with templated predicate.
 class UnsignedImmAsmOperand<int width> : ImmediateAsmOperand {
   let PredicateMethod = "isUImm<" # width # ">";
 }
 
-// Base class for signed immediate AsmOperandClass with templated predicate
+// Base class for signed immediate AsmOperandClass with templated predicate.
 class SignedImmAsmOperand<int width> : ImmediateAsmOperand {
   let PredicateMethod = "isSImm<" # width # ">";
 }
 
-// Base class for immediate operands
+// Base class for immediate operands.
 class ImmediateOp<ValueType vt, string asmop, string decoder> : Operand<vt> {
   let PrintMethod = "print"#asmop#"Operand";
   let ParserMatchClass = !cast<AsmOperandClass>(asmop);
@@ -44,50 +44,49 @@ class ImmediateOp<ValueType vt, string asmop, string decoder> : Operand<vt> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
-// Immediate operand with pattern matching (combines Operand + PatLeaf)
-// Similar to SystemZ's ImmOpWithPattern
+// Immediate operand with pattern matching (combines Operand + PatLeaf).
 class ImmOpWithPattern<ValueType vt, string asmop, string decoder,
                        code pred, SDNodeXForm xform, SDNode ImmNode = imm>
   : ImmediateOp<vt, asmop, decoder>, PatLeaf<(vt ImmNode), pred, xform>;
 
-// Unsigned immediate operand
+// Unsigned immediate operand.
 class UnsignedImmOp<ValueType vt, string asmop, int width>
   : ImmediateOp<vt, asmop, "decodeUImmOperand<"#width#">">;
 
-// Unsigned immediate operand with pattern
+// Unsigned immediate operand with pattern.
 class UnsignedImmOpWithPattern<ValueType vt, string asmop, int width,
                                 code pred, SDNodeXForm xform, SDNode ImmNode = imm>
   : ImmOpWithPattern<vt, asmop, "decodeUImmOperand<"#width#">", pred, xform, ImmNode>;
 
-// Unsigned immediate operand with encoder
+// Unsigned immediate operand with encoder.
 class UnsignedImmOpWithEncoder<ValueType vt, string asmop, int width, string fixup>
   : UnsignedImmOp<vt, asmop, width> {
   let EncoderMethod = "getImmEncoding<" # fixup # ">";
 }
 
-// Signed immediate operand
+// Signed immediate operand.
 class SignedImmOp<ValueType vt, string asmop, int width>
   : ImmediateOp<vt, asmop, "decodeSImmOperand<"#width#">">;
 
-// Signed immediate operand with pattern
+// Signed immediate operand with pattern.
 class SignedImmOpWithPattern<ValueType vt, string asmop, int width,
                               code pred, SDNodeXForm xform, SDNode ImmNode = imm>
   : ImmOpWithPattern<vt, asmop, "decodeSImmOperand<"#width#">", pred, xform, ImmNode>;
 
-// Signed immediate operand with encoder
+// Signed immediate operand with encoder.
 class SignedImmOpWithEncoder<ValueType vt, string asmop, int width, string fixup>
   : SignedImmOp<vt, asmop, width> {
   let EncoderMethod = "getImmEncoding<" # fixup # ">";
 }
 
-// Multiclass for unsigned immediate operands with both regular and PC-relative versions
+// Multiclass for unsigned immediate operands with both regular and PC-relative versions.
 multiclass UnsignedImmOpWithPCRel<ValueType vt, string asmop, int width,
                                    string fixup_imm, string fixup_pcrel> {
   def "" : UnsignedImmOpWithEncoder<vt, asmop, width, fixup_imm>;
   def _pcrel : UnsignedImmOpWithEncoder<vt, asmop, width, fixup_pcrel>;
 }
 
-// Multiclass for signed immediate operands with both regular and PC-relative versions
+// Multiclass for signed immediate operands with both regular and PC-relative versions.
 multiclass SignedImmOpWithPCRel<ValueType vt, string asmop, int width,
                                  string fixup_imm, string fixup_pcrel> {
   def "" : SignedImmOpWithEncoder<vt, asmop, width, fixup_imm>;
@@ -95,33 +94,32 @@ multiclass SignedImmOpWithPCRel<ValueType vt, string asmop, int width,
 }
 
 //===----------------------------------------------------------------------===//
-// Multiclasses for complete immediate definitions (AsmOperand + Operand + PatLeaf)
-// Similar to SystemZ's Immediate multiclass but GlobalISel-compatible
+// Multiclasses for complete immediate definitions (AsmOperand + Operand + PatLeaf).
 //===----------------------------------------------------------------------===//
 
-// Creates Operand and separate PatLeaf definitions for unsigned immediates
-// This approach keeps Operand and PatLeaf separate for GlobalISel compatibility
-// while maintaining SystemZ-style organization and naming
+// Creates Operand and separate PatLeaf definitions for unsigned immediates.
+// This approach keeps Operand and PatLeaf separate for GlobalISel compatibility.
+// while maintaining SystemZ-style organization and naming.
 multiclass UnsignedImmediate<ValueType vt, code pred, SDNodeXForm xform, string asmop, int width> {
-  // Operand definition (for instruction operands)
+  // Operand definition (for instruction operands).
   def "" : UnsignedImmOp<vt, asmop, width>;
-  
-  // PatLeaf for imm nodes (for DAG pattern matching)
+
+  // PatLeaf for imm nodes (for DAG pattern matching).
   def _pat : PatLeaf<(vt imm), pred, xform>;
-  
-  // PatLeaf for timm nodes (for target-specific pattern matching, e.g., intrinsics)
+
+  // PatLeaf for timm nodes (for target-specific pattern matching, e.g., intrinsics).
   def _timm : PatLeaf<(vt timm), pred, xform>;
 }
 
-// Creates Operand and separate PatLeaf definitions for signed immediates
+// Creates Operand and separate PatLeaf definitions for signed immediates.
 multiclass SignedImmediate<ValueType vt, code pred, SDNodeXForm xform, string asmop, int width> {
   // Operand definition (for instruction operands)
   def "" : SignedImmOp<vt, asmop, width>;
-  
-  // PatLeaf for imm nodes (for DAG pattern matching)
+
+  // PatLeaf for imm nodes (for DAG pattern matching).
   def _pat : PatLeaf<(vt imm), pred, xform>;
-  
-  // PatLeaf for timm nodes (for target-specific pattern matching, e.g., intrinsics)
+
+  // PatLeaf for timm nodes (for target-specific pattern matching, e.g., intrinsics).
   def _timm : PatLeaf<(vt timm), pred, xform>;
 }
 
@@ -142,41 +140,39 @@ def U12Imm : UnsignedImmAsmOperand<12>;
 
 def S5Imm  : SignedImmAsmOperand<5>;
 
-// Special case: S32Imm and S34Imm have custom predicates that accept expressions
+// Special case: S32Imm and S34Imm have custom predicates that accept expressions.
 def S32Imm : ImmediateAsmOperandWithPredicate<"isS32Imm">;
 def S34Imm : ImmediateAsmOperandWithPredicate<"isS34Imm">;
 
-// Special case: S16Imm has custom render method
+// Special case: S16Imm has custom render method.
 def S16Imm : ImmediateAsmOperandWithPredicate<"isS16Imm"> {
   let RenderMethod = "addS16ImmOperands";
 }
 
-// Special case: U16Imm has custom render method
+// Special case: U16Imm has custom render method.
 def U16Imm : ImmediateAsmOperandWithPredicate<"isU16Imm"> {
   let RenderMethod = "addU16ImmOperands";
 }
 
-// Special case: S17Imm has custom predicate and render method
+// Special case: S17Imm has custom predicate and render method.
 def S17Imm : ImmediateAsmOperandWithPredicate<"isS17Imm"> {
   let RenderMethod = "addS16ImmOperands";
 }
 
-// Special case: ATBitsAsHint has custom predicate
+// Special case: ATBitsAsHint has custom predicate.
 def ATBitsAsHint : ImmediateAsmOperandWithPredicate<"isATBitsAsHint">;
 
-// Special case: ImmZero has custom predicate
+// Special case: ImmZero has custom predicate.
 def ImmZero : ImmediateAsmOperandWithPredicate<"isImmZero">;
 
 //===----------------------------------------------------------------------===//
 // i32 immediate operands
 //===----------------------------------------------------------------------===//
 
-// u1imm: 1-bit unsigned immediate (generates u1imm and u1imm_timm)
 defm u1imm : UnsignedImmediate<i32,
   [{ return isUInt<1>(N->getZExtValue()); }], NOOP_SDNodeXForm, "U1Imm", 1>;
-
-// def u1imm   : UnsignedImmOp<i32, "U1Imm", 1>;
-def u2imm   : UnsignedImmOp<i32, "U2Imm", 2>;
+defm u2imm : UnsignedImmediate<i32,
+  [{ return isUInt<2>(N->getZExtValue()); }], NOOP_SDNodeXForm, "U2Imm", 2>;
 def u3imm   : UnsignedImmOp<i32, "U3Imm", 3>;
 def u4imm   : UnsignedImmOp<i32, "U4Imm", 4>;
 def u5imm   : UnsignedImmOp<i32, "U5Imm", 5>;
@@ -188,14 +184,14 @@ def u12imm  : UnsignedImmOp<i32, "U12Imm", 12>;
 
 def s5imm   : SignedImmOp<i32, "S5Imm", 5>;
 
-// Special case: atimm has custom print method and no decoder
+// Special case: atimm has custom print method and no decoder.
 def atimm : Operand<i32> {
   let PrintMethod = "printATBitsAsHint";
   let ParserMatchClass = ATBitsAsHint;
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
-// Special case: immZero has custom print and decoder methods
+// Special case: immZero has custom print and decoder methods.
 def immZero : Operand<i32> {
   let PrintMethod = "printImmZeroOperand";
   let ParserMatchClass = ImmZero;
@@ -203,9 +199,8 @@ def immZero : Operand<i32> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
-// Special cases: s16imm and u16imm have custom encoder methods
+// Special cases: s16imm and u16imm have custom encoder methods.
 def s16imm : SignedImmOpWithEncoder<i32, "S16Imm", 16, "PPC::fixup_ppc_half16">;
-
 def u16imm : UnsignedImmOpWithEncoder<i32, "U16Imm", 16, "PPC::fixup_ppc_half16">;
 
 //===----------------------------------------------------------------------===//
@@ -213,20 +208,17 @@ def u16imm : UnsignedImmOpWithEncoder<i32, "U16Imm", 16, "PPC::fixup_ppc_half16"
 //===----------------------------------------------------------------------===//
 
 def s16imm64 : SignedImmOpWithEncoder<i64, "S16Imm", 16, "PPC::fixup_ppc_half16">;
-
 def u16imm64 : UnsignedImmOpWithEncoder<i64, "U16Imm", 16, "PPC::fixup_ppc_half16">;
 
-// Special case: s17imm uses S16Imm print method but accepts wider range
+// Special case: s17imm uses S16Imm print method but accepts wider range.
 def s17imm : SignedImmOpWithEncoder<i32, "S17Imm", 16, "PPC::fixup_ppc_half16"> {
   let PrintMethod = "printS16ImmOperand";
 }
-
 def s17imm64 : SignedImmOpWithEncoder<i64, "S17Imm", 16, "PPC::fixup_ppc_half16"> {
   let PrintMethod = "printS16ImmOperand";
 }
 
 defm s32imm : SignedImmOpWithPCRel<i64, "S32Imm", 32,
                                     "PPC::fixup_ppc_imm32", "PPC::fixup_ppc_pcrel32">;
-
 defm s34imm : SignedImmOpWithPCRel<i64, "S34Imm", 34,
                                     "PPC::fixup_ppc_imm34", "PPC::fixup_ppc_pcrel34">;

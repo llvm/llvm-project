@@ -472,7 +472,7 @@ let Predicates = [MMA, IsISAFuture] in {
   def DMXXINSTDMR256 : XX2Form_AT3_XBp5_P2<60, 485, (outs dmrrowp:$AT),
                                            (ins vsrprc:$XBp, u2imm:$P),
                                            "dmxxinstdmr256 $AT, $XBp, $P",
-                                           [(set v256i1:$AT, (PPCInst256 v256i1:$XBp, timm:$P))]>;
+                                           [(set v256i1:$AT, (PPCInst256 v256i1:$XBp, u2imm_timm:$P))]>;
 
   def DMMR
       : XForm_ATB3<31, 6, 177, (outs dmr:$AT), (ins dmr:$AB), "dmmr $AT, $AB",

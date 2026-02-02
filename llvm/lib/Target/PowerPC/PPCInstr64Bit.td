@@ -1823,7 +1823,7 @@ def ADDEX8 : Z23Form_RTAB5_CY2<31, 170, (outs g8rc:$RT),
                               (ins g8rc:$RA, g8rc:$RB, u2imm:$CY),
                               "addex $RT, $RA, $RB, $CY", IIC_IntGeneral,
                               [(set i64:$RT, (int_ppc_addex i64:$RA, i64:$RB,
-                                                            timm:$CY))]>;
+                                                            u2imm_timm:$CY))]>;
 
 //===----------------------------------------------------------------------===//
 // Instruction Patterns
