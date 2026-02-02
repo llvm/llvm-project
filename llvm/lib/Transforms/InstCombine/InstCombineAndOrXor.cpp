@@ -1315,8 +1315,14 @@ static Value *foldAndOrOfICmpsWithConstEq(ICmpInst *Cmp0, ICmpInst *Cmp1,
   if (IsLogical) {
     Instruction *MDFrom =
         ProfcheckDisableMetadataFixes && isa<SelectInst>(I) ? nullptr : &I;
-    return IsAnd ? Builder.CreateLogicalAnd(Cmp0, SubstituteCmp, "", MDFrom)
-                 : Builder.CreateLogicalOr(Cmp0, SubstituteCmp, "", MDFrom);
+    Value *V = IsAnd ? Builder.CreateLogicalAnd(Cmp0, SubstituteCmp, "", MDFrom)
+                     : Builder.CreateLogicalOr(Cmp0, SubstituteCmp, "", MDFrom);
+    applyProfMetadataIfEnabled(V, [&](Instruction *NewI) {
+      if (isa<SelectInst>(NewI) && !NewI->hasMetadata(LLVMContext::MD_prof))
+        setExplicitlyUnknownBranchWeightsIfProfiled(*NewI, DEBUG_TYPE,
+                                                    I.getFunction());
+    });
+    return V;
   }
   return Builder.CreateBinOp(IsAnd ? Instruction::And : Instruction::Or, Cmp0,
                              SubstituteCmp);
@@ -2394,20 +2400,32 @@ static Value *simplifyAndOrWithOpReplaced(Value *V, Value *Op, Value *RepOp,
 /// Reassociate and/or expressions to see if we can fold the inner and/or ops.
 /// TODO: Make this recursive; it's a little tricky because an arbitrary
 /// number of and/or instructions might have to be created.
-Value *InstCombinerImpl::reassociateBooleanAndOr(Value *LHS, Value *X, Value *Y,
-                                                 Instruction &I, bool IsAnd,
-                                                 bool RHSIsLogical) {
+Value *InstCombinerImpl::reassociateBooleanAndOr(
+    Value *LHS, Value *X, Value *Y, Instruction &I, bool IsAnd,
+    bool RHSIsLogical, Instruction *MDFrom) {
   Instruction::BinaryOps Opcode = IsAnd ? Instruction::And : Instruction::Or;
   // LHS bop (X lop Y) --> (LHS bop X) lop Y
   // LHS bop (X bop Y) --> (LHS bop X) bop Y
-  if (Value *Res = foldBooleanAndOr(LHS, X, I, IsAnd, /*IsLogical=*/false))
-    return RHSIsLogical ? Builder.CreateLogicalOp(Opcode, Res, Y)
-                        : Builder.CreateBinOp(Opcode, Res, Y);
+  if (Value *Res = foldBooleanAndOr(LHS, X, I, IsAnd, /*IsLogical=*/false)) {
+    Value *V = RHSIsLogical ? Builder.CreateLogicalOp(Opcode, Res, Y)
+                            : Builder.CreateBinOp(Opcode, Res, Y);
+    applyProfMetadataIfEnabled(V, [&](Instruction *NewI) {
+      if (isa<SelectInst>(NewI) && MDFrom && hasProfMD(*MDFrom))
+        setExplicitlyUnknownBranchWeightsIfProfiled(*NewI, DEBUG_TYPE, &F);
+    });
+    return V;
+  }
   // LHS bop (X bop Y) --> X bop (LHS bop Y)
   // LHS bop (X lop Y) --> X lop (LHS bop Y)
-  if (Value *Res = foldBooleanAndOr(LHS, Y, I, IsAnd, /*IsLogical=*/false))
-    return RHSIsLogical ? Builder.CreateLogicalOp(Opcode, X, Res)
-                        : Builder.CreateBinOp(Opcode, X, Res);
+  if (Value *Res = foldBooleanAndOr(LHS, Y, I, IsAnd, /*IsLogical=*/false)) {
+    Value *V = RHSIsLogical ? Builder.CreateLogicalOp(Opcode, X, Res)
+                            : Builder.CreateBinOp(Opcode, X, Res);
+    applyProfMetadataIfEnabled(V, [&](Instruction *NewI) {
+      if (isa<SelectInst>(NewI) && MDFrom && hasProfMD(*MDFrom))
+        setExplicitlyUnknownBranchWeightsIfProfiled(*NewI, DEBUG_TYPE, &F);
+    });
+    return V;
+  }
   return nullptr;
 }
 
@@ -2798,13 +2816,15 @@ Instruction *InstCombinerImpl::visitAnd(BinaryOperator &I) {
   if (match(Op1, m_OneUse(m_LogicalAnd(m_Value(X), m_Value(Y))))) {
     bool IsLogical = isa<SelectInst>(Op1);
     if (auto *V = reassociateBooleanAndOr(Op0, X, Y, I, /*IsAnd=*/true,
-                                          /*RHSIsLogical=*/IsLogical))
+                                          /*RHSIsLogical=*/IsLogical,
+                                          dyn_cast<Instruction>(Op1)))
       return replaceInstUsesWith(I, V);
   }
   if (match(Op0, m_OneUse(m_LogicalAnd(m_Value(X), m_Value(Y))))) {
     bool IsLogical = isa<SelectInst>(Op0);
     if (auto *V = reassociateBooleanAndOr(Op1, X, Y, I, /*IsAnd=*/true,
-                                          /*RHSIsLogical=*/IsLogical))
+                                          /*RHSIsLogical=*/IsLogical,
+                                          dyn_cast<Instruction>(Op0)))
       return replaceInstUsesWith(I, V);
   }
 
@@ -3596,18 +3616,36 @@ Value *InstCombinerImpl::foldBooleanAndOr(Value *LHS, Value *RHS,
   // (icmp ne (A & B), C) | (icmp ne (A & D), E)
   // (icmp eq (A & B), C) & (icmp eq (A & D), E)
   if (Value *V = foldLogOpOfMaskedICmps(LHS, RHS, IsAnd, IsLogical, Builder,
-                                        SQ.getWithInstruction(&I)))
+                                        SQ.getWithInstruction(&I))) {
+    applyProfMetadataIfEnabled(V, [&](Instruction *NewI) {
+      if (isa<SelectInst>(NewI) && !NewI->hasMetadata(LLVMContext::MD_prof))
+        setExplicitlyUnknownBranchWeightsIfProfiled(*NewI, DEBUG_TYPE,
+                                                    I.getFunction());
+    });
     return V;
+  }
 
   if (auto *LHSCmp = dyn_cast<ICmpInst>(LHS))
     if (auto *RHSCmp = dyn_cast<ICmpInst>(RHS))
-      if (Value *Res = foldAndOrOfICmps(LHSCmp, RHSCmp, I, IsAnd, IsLogical))
+      if (Value *Res = foldAndOrOfICmps(LHSCmp, RHSCmp, I, IsAnd, IsLogical)) {
+        applyProfMetadataIfEnabled(Res, [&](Instruction *NewI) {
+          if (isa<SelectInst>(NewI) && !NewI->hasMetadata(LLVMContext::MD_prof))
+            setExplicitlyUnknownBranchWeightsIfProfiled(*NewI, DEBUG_TYPE,
+                                                        I.getFunction());
+        });
         return Res;
+      }
 
   if (auto *LHSCmp = dyn_cast<FCmpInst>(LHS))
     if (auto *RHSCmp = dyn_cast<FCmpInst>(RHS))
-      if (Value *Res = foldLogicOfFCmps(LHSCmp, RHSCmp, IsAnd, IsLogical))
+      if (Value *Res = foldLogicOfFCmps(LHSCmp, RHSCmp, IsAnd, IsLogical)) {
+        applyProfMetadataIfEnabled(Res, [&](Instruction *NewI) {
+          if (isa<SelectInst>(NewI) && !NewI->hasMetadata(LLVMContext::MD_prof))
+            setExplicitlyUnknownBranchWeightsIfProfiled(*NewI, DEBUG_TYPE,
+                                                        I.getFunction());
+        });
         return Res;
+      }
 
   if (Value *Res = foldEqOfParts(LHS, RHS, IsAnd))
     return Res;
@@ -4305,13 +4343,15 @@ Instruction *InstCombinerImpl::visitOr(BinaryOperator &I) {
   if (match(Op1, m_OneUse(m_LogicalOr(m_Value(X), m_Value(Y))))) {
     bool IsLogical = isa<SelectInst>(Op1);
     if (auto *V = reassociateBooleanAndOr(Op0, X, Y, I, /*IsAnd=*/false,
-                                          /*RHSIsLogical=*/IsLogical))
+                                          /*RHSIsLogical=*/IsLogical,
+                                          dyn_cast<Instruction>(Op1)))
       return replaceInstUsesWith(I, V);
   }
   if (match(Op0, m_OneUse(m_LogicalOr(m_Value(X), m_Value(Y))))) {
     bool IsLogical = isa<SelectInst>(Op0);
     if (auto *V = reassociateBooleanAndOr(Op1, X, Y, I, /*IsAnd=*/false,
-                                          /*RHSIsLogical=*/IsLogical))
+                                          /*RHSIsLogical=*/IsLogical,
+                                          dyn_cast<Instruction>(Op0)))
       return replaceInstUsesWith(I, V);
   }
 

@@ -435,7 +435,8 @@ private:
                           bool IsLogical);
 
   Value *reassociateBooleanAndOr(Value *LHS, Value *X, Value *Y, Instruction &I,
-                                 bool IsAnd, bool RHSIsLogical);
+                                 bool IsAnd, bool RHSIsLogical,
+                                 Instruction *MDFrom = nullptr);
 
   Value *foldDisjointOr(Value *LHS, Value *RHS);
 
