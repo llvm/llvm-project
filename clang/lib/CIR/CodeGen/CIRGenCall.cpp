@@ -135,11 +135,10 @@ static void addNoBuiltinAttributes(mlir::MLIRContext &ctx,
   // Then, add attributes for builtins specified through -fno-builtin-<name>.
   llvm::for_each(langOpts.NoBuiltinFuncs, addNoBuiltinAttr);
 
-  if (nba) {
-    // Now, let's check the __attribute__((no_builtin("...")) attribute added to
-    // the source.
+  // Now, let's check the __attribute__((no_builtin("...")) attribute added to
+  // the source.
+  if (nba)
     llvm::for_each(nba->builtinNames(), addNoBuiltinAttr);
-  }
 
   if (!nbFuncs.empty())
     attrs.set(cir::CIRDialect::getNoBuiltinsAttrName(),
