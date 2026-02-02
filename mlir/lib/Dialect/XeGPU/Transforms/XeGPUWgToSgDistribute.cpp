@@ -139,87 +139,8 @@ genOffsetsList(ConversionPatternRewriter &rewriter, OpType op,
   return success();
 }
 
-/// This pattern transforms the CreateNdDescOp to create a subgroup descriptor
-/// from a workgroup descriptor. It replaces the offsets and sizes with
-/// appropriate values for the subgroup.
-/// It uses round-robin assignment to distribute the work to the subgroups.
-/// Following create_nd_desc operation:,
-///    %tdesc = xegpu.create_nd_tdesc %src[0, 0] : memref<24x24xf32>
-///       -> !xegpu.tensor_desc<24x24xf32, #xegpu.layout<sg_layout = [4, 4],
-///           sg_data = [2, 2], lane_layout = [2, 2], lane_data = [1, 1]>>
-/// is converted to 9 subgroup level operations based on the sg_layout &
-/// sg_data:
-///    %tdesc = xegpu.create_nd_tdesc %src[off1, off2] : memref<24x24xf32> ->
-///           !xegpu.tensor_desc<2x2xf32, #xegpu.layout<lane_layout = [2, 2],
-///           lane_data = [1, 1]>>
-///
-/// The sg_layout and sg_data attributes are dropped after the pass as they are
-/// no longer needed.
-///
-/// 24x24 matrix distribution example:
-/// sg_layout = [4, 4], sg_data = [2, 2]
-/// Each 8x8 matrix within the 24x24 matrix is called a distribution unit.
-/// dist_unit_shape = [8, 8] --> sg_layout[i] * sg_data[i]
-///
-/// +------------------------+
-/// | 8x8 | 8x8 | 8x8 |      <- 3 tiles across
-/// |-----+-----+-----|
-/// | 8x8 | 8x8 | 8x8 |      <- 3 tiles down
-/// |-----+-----+-----|
-/// | 8x8 | 8x8 | 8x8 |
-/// +------------------------+
-///
-/// Each 8x8 tile is further subdivided among subgroups:
-/// +------------------------+
-/// | 2x2 2x2 2x2 2x2 |  <- 4 subgroups across (each handles 2 columns)
-/// | 2x2 2x2 2x2 2x2 |  <- 4 subgroups down (each handles 2 rows)
-/// | 2x2 2x2 2x2 2x2 |
-/// | 2x2 2x2 2x2 2x2 |
-/// +------------------------+
-///
-/// Since the 24x24 matrix is divided into 8x8 distribution units, there will be
-/// 9 distribution units (3x3) in total. Hence the 9 subgroup level operations.
-
-/// The pass currently has entire distribution logic in the WgToSgCreateNdOp
-/// pattern and all the other ops just follow.
-/// TODO: Decouple the distribution logic from WgToSgCreateNdOp for all the
-/// ops in the pass.
-struct WgToSgCreateNdOp : public OpConversionPattern<xegpu::CreateNdDescOp> {
-  using OpConversionPattern<xegpu::CreateNdDescOp>::OpConversionPattern;
-
-  LogicalResult
-  matchAndRewrite(xegpu::CreateNdDescOp op, OneToNOpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    SmallVector<SmallVector<OpFoldResult>> offsetsList;
-    if (failed(genOffsetsList(rewriter, op, offsetsList)))
-      return failure();
-
-    MLIRContext *ctx = op.getContext();
-    xegpu::TensorDescType tdescTy = op.getType();
-    ArrayRef<int64_t> wgShape = tdescTy.getShape();
-    Type elemTy = tdescTy.getElementType();
-    xegpu::DistributeLayoutAttr layout = tdescTy.getLayoutAttr();
-    SmallVector<int64_t> sgShape = getSgShapeAndCount(wgShape, layout).first;
-    auto newTdescTy =
-        xegpu::TensorDescType::get(ctx, sgShape, elemTy, tdescTy.getEncoding(),
-                                   layout.dropSgLayoutAndData());
-
-    SmallVector<Value> newOps;
-    for (auto offsets : offsetsList) {
-      auto newOp = xegpu::CreateNdDescOp::create(
-          rewriter, op.getLoc(), newTdescTy, op.getSource(), offsets,
-          op.getMixedSizes(), op.getMixedStrides());
-
-      newOps.push_back(newOp);
-    }
-    rewriter.replaceOpWithMultiple(op, {newOps});
-
-    return success();
-  }
-};
-
-// This pattern transforms the CreateNdDescOp without offsets to create a
-// subgroup descriptor from a workgroup descriptor
+// This pattern transforms the CreateNdDescOp to create a subgroup descriptor
+// from a workgroup descriptor without offsets
 struct WgToSgCreateNdOpNoOffset
     : public OpConversionPattern<xegpu::CreateNdDescOp> {
   using OpConversionPattern<xegpu::CreateNdDescOp>::OpConversionPattern;
@@ -227,10 +148,6 @@ struct WgToSgCreateNdOpNoOffset
   LogicalResult
   matchAndRewrite(xegpu::CreateNdDescOp op, OneToNOpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
-
-    // Check no offsets are specified.
-    if (!op.getMixedOffsets().empty())
-      return failure();
 
     Location loc = op.getLoc();
     MLIRContext *ctx = op.getContext();
@@ -257,51 +174,6 @@ struct WgToSgCreateNdOpNoOffset
     });
 
     rewriter.replaceOpWithMultiple(op, {newCreateNdOps});
-    return success();
-  }
-};
-
-/// This pattern transforms the LoadNdOp to load subgroup data.
-struct WgToSgLoadNdOp : public OpConversionPattern<xegpu::LoadNdOp> {
-  using OpConversionPattern<xegpu::LoadNdOp>::OpConversionPattern;
-  LogicalResult
-  matchAndRewrite(xegpu::LoadNdOp op, OneToNOpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    if (!op.getMixedOffsets().empty())
-      return failure();
-
-    SmallVector<Value> newLoadOps;
-    for (auto src : adaptor.getTensorDesc()) {
-      xegpu::TensorDescType tdescTy =
-          dyn_cast<xegpu::TensorDescType>(src.getType());
-      ArrayRef<int64_t> srcShape = tdescTy.getShape();
-      VectorType newResTy = VectorType::get(srcShape, tdescTy.getElementType());
-      auto newLoadOp = xegpu::LoadNdOp::create(
-          rewriter, op.getLoc(), newResTy, src,
-          xegpu::dropSgLayoutAndDataOnAttrs(op->getAttrs()));
-      newLoadOps.push_back(newLoadOp);
-    }
-    rewriter.replaceOpWithMultiple(op, {newLoadOps});
-    return mlir::success();
-  }
-};
-
-/// This pattern transforms the StoreNdOp to store to a subgroup descriptor
-/// It creates a StoreNdOp op to store the updated values to the new subgroup
-/// src tensor descriptors.
-struct WgToSgStoreNdOp : public OpConversionPattern<xegpu::StoreNdOp> {
-  using OpConversionPattern<xegpu::StoreNdOp>::OpConversionPattern;
-  LogicalResult
-  matchAndRewrite(xegpu::StoreNdOp op, OneToNOpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-    if (!op.getMixedOffsets().empty())
-      return failure();
-
-    for (auto [v, t] : llvm::zip(adaptor.getValue(), adaptor.getTensorDesc()))
-      xegpu::StoreNdOp::create(rewriter, op.getLoc(), v, t, op.getL1HintAttr(),
-                               op.getL2HintAttr(), op.getL3HintAttr());
-
-    rewriter.eraseOp(op);
     return success();
   }
 };
@@ -458,26 +330,6 @@ struct WgToSgDpasOp : public OpConversionPattern<xegpu::DpasOp> {
       }
     }
     rewriter.replaceOpWithMultiple(op, {newDpasOps});
-    return success();
-  }
-};
-
-/// This pattern transforms the PrefetchNdOp to prefetch the subgroup data.
-struct WgToSgPrefetchNdOp : public OpConversionPattern<xegpu::PrefetchNdOp> {
-  using OpConversionPattern<xegpu::PrefetchNdOp>::OpConversionPattern;
-  LogicalResult
-  matchAndRewrite(xegpu::PrefetchNdOp op, OneToNOpAdaptor adaptor,
-                  ConversionPatternRewriter &rewriter) const override {
-
-    int64_t offsetSize = static_cast<int64_t>(op.getOffsets().size());
-    if ((offsetSize != 0) || op.getConstOffsetsAttr())
-      return failure();
-
-    for (auto src : adaptor.getTensorDesc())
-      xegpu::PrefetchNdOp::create(
-          rewriter, op.getLoc(), TypeRange(), src,
-          xegpu::dropSgLayoutAndDataOnAttrs(op->getAttrs()));
-    rewriter.eraseOp(op);
     return success();
   }
 };
@@ -1699,9 +1551,9 @@ namespace mlir {
 namespace xegpu {
 void populateXeGPUWgToSgDistributePatterns(RewritePatternSet &patterns) {
   patterns
-      .add<WgToSgCreateNdOp, WgToSgCreateNdOpNoOffset, WgToSgLoadNdOp,
-           WgToSgLoadNdOpWithOffset, WgToSgStoreNdOp, WgToSgStoreNdOpWithOffset,
-           WgToSgUpdateNdOffsetOp, WgToSgDpasOp, WgToSgPrefetchNdOp,
+      .add<WgToSgCreateNdOpNoOffset,
+           WgToSgLoadNdOpWithOffset, WgToSgStoreNdOpWithOffset,
+           WgToSgUpdateNdOffsetOp, WgToSgDpasOp,
            WgToSgPrefetchNdOpWithOffset, UnrealizedConversionCastOpPattern,
            WgToSgElementwiseOp, WgToSgVectorBroadcastOp, WgToSgConvertLayoutOp,
            WgToSgArithConstantOp, WgToSgLoadGatherOpWithOffset,

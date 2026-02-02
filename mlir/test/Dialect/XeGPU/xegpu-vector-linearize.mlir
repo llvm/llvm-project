@@ -210,18 +210,17 @@ func.func @gather_memref_2d(%base: memref<?x?xf32>, %v: vector<2x3xindex>, %mask
 // The `xegpu-vector-linearize` pass does not itself affect the XeGPU ops.
 
 // CHECK: gpu.func @test_kernel(%arg0: memref<8x16xf16>, %arg1: memref<16x16xf16>, %arg2: memref<8x16xf32>) kernel {
-// CHECK: %c0 = arith.constant 0 : index
 // CHECK: %cst = arith.constant dense<0.000000e+00> : vector<64xf16>
 // CHECK: %cst_0 = arith.constant dense<5.000000e+00> : vector<64xf32>
 
-// CHECK: %0 = xegpu.create_nd_tdesc %arg0[%c0, %c0]
-// CHECK: %1 = xegpu.load_nd %0
+// CHECK: %0 = xegpu.create_nd_tdesc %arg0
+// CHECK: %1 = xegpu.load_nd %0[0, 0]
 // CHECK: %2 = vector.shape_cast %1 : vector<8x16xf16> to vector<128xf16>
 // CHECK: %3 = vector.shuffle %2, %cst {{.*}} : vector<128xf16>, vector<64xf16>
 // CHECK: %4 = vector.shape_cast %3 : vector<128xf16> to vector<8x16xf16>
 
-// CHECK: %5 = xegpu.create_nd_tdesc %arg1[%c0, %c0]
-// CHECK: %6 = xegpu.load_nd %5
+// CHECK: %5 = xegpu.create_nd_tdesc %arg1
+// CHECK: %6 = xegpu.load_nd %5[0, 0]
 // CHECK: %7 = vector.shape_cast %6 : vector<16x16xf16> to vector<256xf16>
 // CHECK: %8 = vector.shuffle %7, %cst {{.*}} : vector<256xf16>, vector<64xf16>
 // CHECK: %9 = vector.shape_cast %8 : vector<256xf16> to vector<16x16xf16>
@@ -233,8 +232,8 @@ func.func @gather_memref_2d(%base: memref<?x?xf32>, %v: vector<2x3xindex>, %mask
 // CHECK: %14 = vector.shuffle %11, %13 {{.*}} : vector<128xf32>, vector<64xf32>
 // CHECK: %15 = vector.shape_cast %14 : vector<128xf32> to vector<8x16xf32>
 
-// CHECK: %16 = xegpu.create_nd_tdesc %arg2[%c0, %c0]
-// CHECK: xegpu.store_nd %15, %16
+// CHECK: %16 = xegpu.create_nd_tdesc %arg2
+// CHECK: xegpu.store_nd %15, %16[0, 0]
 // CHECK: gpu.return
 
 gpu.module @test_kernel {
@@ -243,19 +242,19 @@ gpu.module @test_kernel {
     %cst_vec_0 = arith.constant dense<0.000000e+00> : vector<8x8xf16>
     %cst_vec_1 = arith.constant dense<0.000000e+00> : vector<8x8xf16>
     %cst_vec_2 = arith.constant dense<5.000000e+00> : vector<8x8xf32>
-    %a_tdesc = xegpu.create_nd_tdesc %A[%c0, %c0] : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16, #xegpu.block_tdesc_attr<array_length = 1>>
-    %a_val = xegpu.load_nd %a_tdesc : !xegpu.tensor_desc<8x16xf16, #xegpu.block_tdesc_attr<array_length = 1>> -> vector<8x16xf16>
+    %a_tdesc = xegpu.create_nd_tdesc %A : memref<8x16xf16> -> !xegpu.tensor_desc<8x16xf16, #xegpu.block_tdesc_attr<array_length = 1>>
+    %a_val = xegpu.load_nd %a_tdesc[0, 0] : !xegpu.tensor_desc<8x16xf16, #xegpu.block_tdesc_attr<array_length = 1>> -> vector<8x16xf16>
     %a_val_0 = vector.insert_strided_slice %cst_vec_0, %a_val{offsets = [0, 0], sizes = [8, 8], strides = [1, 1]}: vector<8x8xf16> into vector<8x16xf16>
-    %b_tdesc = xegpu.create_nd_tdesc %B[%c0, %c0] : memref<16x16xf16> -> !xegpu.tensor_desc<16x16xf16, #xegpu.block_tdesc_attr<array_length = 1>>
+    %b_tdesc = xegpu.create_nd_tdesc %B : memref<16x16xf16> -> !xegpu.tensor_desc<16x16xf16, #xegpu.block_tdesc_attr<array_length = 1>>
 
-    %b_val = xegpu.load_nd  %b_tdesc : !xegpu.tensor_desc<16x16xf16, #xegpu.block_tdesc_attr<array_length = 1>> -> vector<16x16xf16>
+    %b_val = xegpu.load_nd  %b_tdesc[0, 0] : !xegpu.tensor_desc<16x16xf16, #xegpu.block_tdesc_attr<array_length = 1>> -> vector<16x16xf16>
     %b_val_0 = vector.insert_strided_slice %cst_vec_1, %b_val{offsets = [0, 0], sizes = [8, 8], strides = [1, 1]}: vector<8x8xf16> into vector<16x16xf16>
     %c_val = xegpu.dpas %a_val_0, %b_val_0 : vector<8x16xf16>, vector<16x16xf16> -> vector<8x16xf32>
     %c_val_0 = vector.extract_strided_slice %c_val {offsets = [0, 0], sizes = [8, 8], strides = [1, 1]} : vector<8x16xf32> to vector<8x8xf32>
     %c_addf = arith.addf %c_val_0, %cst_vec_2 : vector<8x8xf32>
     %c_result = vector.insert_strided_slice %c_addf, %c_val {offsets = [0, 0], sizes = [8, 8], strides = [1, 1]} : vector<8x8xf32> into vector<8x16xf32>
-    %c_tdesc = xegpu.create_nd_tdesc %C[%c0, %c0] : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32, #xegpu.block_tdesc_attr<array_length = 1>>
-    xegpu.store_nd %c_result, %c_tdesc : vector<8x16xf32>, !xegpu.tensor_desc<8x16xf32>
+    %c_tdesc = xegpu.create_nd_tdesc %C : memref<8x16xf32> -> !xegpu.tensor_desc<8x16xf32, #xegpu.block_tdesc_attr<array_length = 1>>
+    xegpu.store_nd %c_result, %c_tdesc[0, 0] : vector<8x16xf32>, !xegpu.tensor_desc<8x16xf32>
     gpu.return
   }
 }

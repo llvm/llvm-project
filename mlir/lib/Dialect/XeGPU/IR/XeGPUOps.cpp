@@ -247,10 +247,8 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
   [[maybe_unused]] auto ty = source.getType();
   assert(ty.hasStaticShape() && "expecting a memref with static shape");
 
-  build(builder, state, tdesc, source, ValueRange({}) /* dynamic offsets */,
-        ValueRange({}) /* empty dynamic shape */,
+  build(builder, state, tdesc, source, ValueRange({}) /* empty dynamic shape */,
         ValueRange({}) /* empty dynamic strides */,
-        DenseI64ArrayAttr({}) /* const offsets */,
         DenseI64ArrayAttr({}) /* empty const shape*/,
         DenseI64ArrayAttr({}) /* empty const strides*/);
 }
@@ -289,72 +287,9 @@ void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
     }
   }
 
-  build(builder, state, tdesc, source, ValueRange({}), dynamicShape,
-        dynamicStrides, builder.getDenseI64ArrayAttr({}), staticShapeAttr,
+  build(builder, state, tdesc, source, dynamicShape,
+        dynamicStrides, staticShapeAttr,
         staticStridesAttr);
-}
-
-void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
-                           Type tdesc, TypedValue<MemRefType> source,
-                           llvm::ArrayRef<OpFoldResult> offsets) {
-  [[maybe_unused]] auto ty = source.getType();
-  assert(ty.hasStaticShape() && offsets.size() == (size_t)ty.getRank());
-
-  llvm::SmallVector<int64_t> staticOffsets;
-  llvm::SmallVector<Value> dynamicOffsets;
-  dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
-
-  build(builder, state, tdesc, source, dynamicOffsets /* dynamic offsets */,
-        ValueRange({}) /* empty dynamic shape */,
-        ValueRange({}) /* empty dynamic strides */,
-        builder.getDenseI64ArrayAttr(staticOffsets) /* const offsets */,
-        {} /* empty const shape*/, {} /* empty const strides*/);
-}
-
-void CreateNdDescOp::build(OpBuilder &builder, OperationState &state,
-                           Type tdesc, Value source,
-                           llvm::ArrayRef<OpFoldResult> offsets,
-                           llvm::ArrayRef<OpFoldResult> shape,
-                           llvm::ArrayRef<OpFoldResult> strides) {
-  assert(!shape.empty() && !offsets.empty() && !strides.empty() &&
-         shape.size() == strides.size() && shape.size() == offsets.size());
-
-  Type srcTy = source.getType();
-  assert((isa<IntegerType, MemRefType>(srcTy)) &&
-         "Source has to be either int or memref.");
-
-  llvm::SmallVector<Value> dynamicOffsets;
-  llvm::SmallVector<Value> dynamicShape;
-  llvm::SmallVector<Value> dynamicStrides;
-
-  llvm::SmallVector<int64_t> staticOffsets;
-  llvm::SmallVector<int64_t> staticShape;
-  llvm::SmallVector<int64_t> staticStrides;
-
-  dispatchIndexOpFoldResults(offsets, dynamicOffsets, staticOffsets);
-  dispatchIndexOpFoldResults(shape, dynamicShape, staticShape);
-  dispatchIndexOpFoldResults(strides, dynamicStrides, staticStrides);
-
-  auto staticOffsetsAttr = builder.getDenseI64ArrayAttr(staticOffsets);
-  auto staticShapeAttr = builder.getDenseI64ArrayAttr(staticShape);
-  auto staticStridesAttr = builder.getDenseI64ArrayAttr(staticStrides);
-
-  if (auto memrefTy = dyn_cast<MemRefType>(srcTy)) {
-    auto memrefShape = memrefTy.getShape();
-    auto [memrefStrides, _] = memrefTy.getStridesAndOffset();
-
-    // if shape and strides are from Memref, we don't need attributes for them
-    // to keep the IR print clean (only do so for full-static case, otherwise
-    // printer would fail trying to print empty array-attr).
-    if (staticShape == memrefShape && staticStrides == memrefStrides &&
-        dynamicShape.empty() && dynamicStrides.empty()) {
-      staticShapeAttr = DenseI64ArrayAttr();
-      staticStridesAttr = DenseI64ArrayAttr();
-    }
-  }
-
-  build(builder, state, tdesc, source, dynamicOffsets, dynamicShape,
-        dynamicStrides, staticOffsetsAttr, staticShapeAttr, staticStridesAttr);
 }
 
 LogicalResult CreateNdDescOp::verify() {
@@ -373,9 +308,6 @@ LogicalResult CreateNdDescOp::verify() {
            << " Source: " << srcMemorySpace
            << ", TensorDesc: " << tdescMemorySpace;
 
-  if (size_t offsetRank = getMixedOffsets().size())
-    invalidRank |= (offsetRank != rank);
-
   // check source type matches the rank if it is a memref.
   // It also should have the same ElementType as TensorDesc.
   if (auto memrefTy = dyn_cast<MemRefType>(getSourceType()))
@@ -390,14 +322,14 @@ LogicalResult CreateNdDescOp::verify() {
 
   if (invalidRank)
     return emitOpError(
-        "Expecting the rank of shape, strides, offsets, and source (if source "
+        "Expecting the rank of shape, strides, and source (if source "
         "is a memref) should match with each other.");
 
   // check result TensorDesc rank
   if (getType().getRank() > (int64_t)rank)
     return emitOpError(
         "Expecting the TensorDesc rank is not greater than the "
-        "ranks of shape, strides, offsets or the memref source.");
+        "ranks of shape, strides or the memref source.");
 
   if (invalidElemTy)
     return emitOpError("TensorDesc should have the same element "
@@ -736,59 +668,6 @@ LogicalResult UpdateNdOffsetOp::verify() {
   if (ty.getRank() != (int64_t)getNumOffsets()) {
     return emitOpError("Invalid number of offsets.");
   }
-  return success();
-}
-
-//===----------------------------------------------------------------------===//
-// XeGPU_CreateDescOp
-//===----------------------------------------------------------------------===//
-
-void CreateDescOp::build(OpBuilder &builder, OperationState &state,
-                         TensorDescType TensorDesc, Value source,
-                         llvm::ArrayRef<OpFoldResult> offsets) {
-  auto loc = source.getLoc();
-  int64_t size = static_cast<int64_t>(offsets.size());
-  auto type = VectorType::get(size, builder.getIndexType());
-  auto values = getValueOrCreateConstantIndexOp(builder, loc, offsets);
-  auto offset = vector::FromElementsOp::create(builder, loc, type, values);
-  build(builder, state, TensorDesc, source, offset);
-}
-
-void CreateDescOp::build(OpBuilder &builder, OperationState &state,
-                         TensorDescType TensorDesc, Value source,
-                         llvm::ArrayRef<int64_t> offsets) {
-  auto ofrs = getAsIndexOpFoldResult(builder.getContext(), offsets);
-  build(builder, state, TensorDesc, source, ofrs);
-}
-
-LogicalResult CreateDescOp::verify() {
-  auto tdescTy = getTensorDescType();
-
-  if (!tdescTy.isScattered())
-    return emitOpError("Expects a scattered TensorDesc.\n");
-
-  // Memory space of created TensorDesc should match with the source.
-  // Both source and TensorDesc are considered for global memory by default,
-  // if the memory scope attr is not specified. If source is an integer,
-  // it is considered as ptr to global memory.
-  auto srcMemorySpace = getSourceMemorySpace();
-  auto tdescMemorySpace = static_cast<unsigned>(tdescTy.getMemorySpace());
-  if (srcMemorySpace != tdescMemorySpace)
-    return emitOpError("Memory space mismatch.")
-           << " Source: " << srcMemorySpace
-           << ", TensorDesc: " << tdescMemorySpace;
-
-  // check total size
-  auto chunkSize = tdescTy.getChunkSizeAsInt();
-  SmallVector<int64_t> shape(getOffsetsType().getShape());
-  if (chunkSize != 1)
-    shape.push_back(chunkSize);
-
-  auto tdescShape = getShapeOf(tdescTy);
-  if (shape != tdescShape)
-    return emitOpError("Incorrect TensorDesc shape. ")
-           << "Expected is " << makeString(shape) << "\n";
-
   return success();
 }
 

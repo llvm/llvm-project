@@ -28,6 +28,9 @@ using namespace mlir;
 
 namespace {
 /// Merges subview operation with xegpu.create_nd_tdesc operation.
+/// NOTE: This pattern is currently disabled because CreateNdDescOp no longer
+/// supports offsets. Offsets should be specified on load/store/prefetch ops.
+/*
 class XegpuCreateNdDescOpSubViewOpFolder final
     : public OpRewritePattern<xegpu::CreateNdDescOp> {
 public:
@@ -59,9 +62,12 @@ LogicalResult XegpuCreateNdDescOpSubViewOpFolder::matchAndRewrite(
 
   return success();
 }
+*/
+} // namespace
 
 void xegpu::populateXeGPUFoldAliasOpsPatterns(RewritePatternSet &patterns) {
-  patterns.add<XegpuCreateNdDescOpSubViewOpFolder>(patterns.getContext());
+  // XegpuCreateNdDescOpSubViewOpFolder is disabled - CreateNdDescOp no longer supports offsets
+  // patterns.add<XegpuCreateNdDescOpSubViewOpFolder>(patterns.getContext());
 }
 
 namespace {

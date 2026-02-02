@@ -170,8 +170,7 @@ static xegpu::CreateNdDescOp
 setDescLayout(transform::TransformRewriter &rewriter,
               xegpu::CreateNdDescOp descOp,
               xegpu::DistributeLayoutAttr layout) {
-  assert(descOp.getMixedOffsets().size() == 0 &&
-         "create desc op with offsets is not supported");
+  // CreateNdDescOp no longer supports offsets
   auto oldTensorDesc = descOp.getType();
   auto descType = xegpu::TensorDescType::get(
       oldTensorDesc.getShape(), oldTensorDesc.getElementType(),
@@ -461,7 +460,7 @@ transform::InsertPrefetchOp::apply(transform::TransformRewriter &rewriter,
   if (!maybeLoadOp)
     return emitSilenceableFailure(getLoc()) << "Could not find load op.";
   auto loadOp = *maybeLoadOp;
-  if (loadOp.getMixedOffsets().size() == 0) {
+  if (loadOp.getMixedOffsets().empty()) {
     auto diag = emitSilenceableFailure(getLoc())
                 << "Load op must have offsets.";
     diag.attachNote(loadOp.getLoc()) << "load op";
@@ -482,11 +481,7 @@ transform::InsertPrefetchOp::apply(transform::TransformRewriter &rewriter,
   if (!maybeDescOp)
     return emitSilenceableFailure(getLoc()) << "Could not find descriptor op.";
   auto descOp = *maybeDescOp;
-  if (descOp.getMixedOffsets().size() > 0) {
-    auto diag = emitSilenceableFailure(getLoc())
-                << "desc op with offsets is not supported.";
-    diag.attachNote(descOp.getLoc()) << "desc op";
-  }
+  // CreateNdDescOp no longer supports offsets
 
   // Clone desc op outside the loop.
   rewriter.setInsertionPoint(forOp);
