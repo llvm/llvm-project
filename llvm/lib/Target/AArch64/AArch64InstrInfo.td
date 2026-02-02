@@ -4348,59 +4348,70 @@ multiclass LoadInsertVTPatterns<SDPatternOperator LoadOp, ValueType VT, ValueTyp
 }
 
 multiclass LoadInsertPatterns<SDPatternOperator LoadOp, ValueType VT, ValueType HVT, ValueType SVT,
-                              ValueType ScalarVT, Instruction LoadInst, Instruction UnscaledLoadInst,
-                              Instruction ROWLoadInst, Instruction ROXLoadInst,
-                              ROAddrMode ro, ComplexPattern Addr, ComplexPattern UnscaledAddr,
-                              Operand AddrImm, SubRegIndex SubReg> {
+                              ValueType ScalarVT, SDPatternOperator VecInsVT,
+                              SDPatternOperator VecInsHVT, Instruction LoadInst,
+                              Instruction UnscaledLoadInst, Instruction ROWLoadInst,
+                              Instruction ROXLoadInst, ROAddrMode ro, ComplexPattern Addr,
+                              ComplexPattern UnscaledAddr, Operand AddrImm, SubRegIndex SubReg
+                              > {
   defm : LoadInsertVTPatterns<LoadOp, VT, ScalarVT, LoadInst, UnscaledLoadInst, ROWLoadInst,
-                              ROXLoadInst, ro, Addr, UnscaledAddr, AddrImm, SubReg, vec_ins_or_scal_vec_128>;
+                              ROXLoadInst, ro, Addr, UnscaledAddr, AddrImm, SubReg, VecInsVT>;
   defm : LoadInsertVTPatterns<LoadOp, HVT, ScalarVT, LoadInst, UnscaledLoadInst, ROWLoadInst,
-                              ROXLoadInst, ro, Addr, UnscaledAddr, AddrImm, SubReg, vec_ins_or_scal_vec_64>;
+                              ROXLoadInst, ro, Addr, UnscaledAddr, AddrImm, SubReg, VecInsHVT>;
   defm : LoadInsertVTPatterns<LoadOp, SVT, ScalarVT, LoadInst, UnscaledLoadInst, ROWLoadInst,
                               ROXLoadInst, ro, Addr, UnscaledAddr, AddrImm, SubReg, vec_ins_or_scal_vec>;
 }
 
 // Accept i8 scalar argument in GlobalISel.
 defm : LoadInsertPatterns<load,       v16i8,  v8i8,   nxv16i8,  i8,
+                          vec_ins_or_scal_vec, vec_ins_or_scal_vec,
                           LDRBui, LDURBi, LDRBroW, LDRBroX,
                           ro8, am_indexed8,  am_unscaled8,  uimm12s1, bsub>;
 defm : LoadInsertPatterns<extloadi8,  v16i8,  v8i8,   nxv16i8,  i32,
+                          vec_ins_or_scal_vec, vec_ins_or_scal_vec,
                           LDRBui, LDURBi, LDRBroW, LDRBroX,
                           ro8, am_indexed8,  am_unscaled8,  uimm12s1, bsub>;
 defm : LoadInsertPatterns<extloadi16, v8i16,  v4i16,  nxv8i16,  i32,
+                          vec_ins_or_scal_vec, vec_ins_or_scal_vec,
                           LDRHui, LDURHi, LDRHroW, LDRHroX,
                           ro16, am_indexed16, am_unscaled16, uimm12s2, hsub>;
 defm : LoadInsertPatterns<load,       v4i32,  v2i32,  nxv4i32,  i32,
+                          vec_ins_or_scal_vec_v4f32, vec_ins_or_scal_vec_v2f32,
                           LDRSui, LDURSi, LDRSroW, LDRSroX,
                           ro32, am_indexed32, am_unscaled32, uimm12s4, ssub>;
 defm : LoadInsertPatterns<load,       v2i64,  isVoid, nxv2i64,  i64,
+                          vec_ins_or_scal_vec_v2f64, null_frag,
                           LDRDui, LDURDi, LDRDroW, LDRDroX,
                           ro64, am_indexed64, am_unscaled64, uimm12s8, dsub>;
 defm : LoadInsertPatterns<load,       v8f16,  v4f16,  nxv8f16,  f16,
+                          vec_ins_or_scal_vec, vec_ins_or_scal_vec,
                           LDRHui, LDURHi, LDRHroW, LDRHroX,
                           ro16, am_indexed16, am_unscaled16, uimm12s2, hsub>;
 defm : LoadInsertPatterns<load,       v8bf16, v4bf16, nxv8bf16, bf16,
+                          vec_ins_or_scal_vec, vec_ins_or_scal_vec,
                           LDRHui, LDURHi, LDRHroW, LDRHroX,
                           ro16, am_indexed16, am_unscaled16, uimm12s2, hsub>;
 defm : LoadInsertPatterns<load,       v4f32,  v2f32,  nxv4f32,  f32,
+                          vec_ins_or_scal_vec, vec_ins_or_scal_vec,
                           LDRSui, LDURSi, LDRSroW, LDRSroX,
                           ro32, am_indexed32, am_unscaled32, uimm12s4, ssub>;
 defm : LoadInsertPatterns<load,       v2f64,  isVoid, nxv2f64,  f64,
+                          vec_ins_or_scal_vec, vec_ins_or_scal_vec,
                           LDRDui, LDURDi, LDRDroW, LDRDroX,
                           ro64, am_indexed64, am_unscaled64, uimm12s8, dsub>;
 
 // Extra patterns for v1f64 scalar_to_vector(load), which need to avoid the
 // SUBREG_TO_REG used above.
-def : Pat <(v1i64 (scalar_to_vector_any_64 (i64
+def : Pat <(v1i64 (scalar_to_vector_v1f64 (i64
                (load (am_indexed64 GPR64sp:$Rn, uimm12s8:$offset))))),
            (LDRDui GPR64sp:$Rn, uimm12s8:$offset)>;
-def : Pat <(v1i64 (scalar_to_vector_any_64 (i64
+def : Pat <(v1i64 (scalar_to_vector_v1f64 (i64
                (load (am_unscaled64 GPR64sp:$Rn, simm9:$offset))))),
            (LDURDi GPR64sp:$Rn, simm9:$offset)>;
-def : Pat <(v1i64 (scalar_to_vector_any_64 (i64
+def : Pat <(v1i64 (scalar_to_vector_v1f64 (i64
                (load (ro64.Wpat GPR64sp:$Rn, GPR32:$Rm, ro64.Wext:$extend))))),
            (LDRDroW GPR64sp:$Rn, GPR32:$Rm, ro64.Wext:$extend)>;
-def : Pat <(v1i64 (scalar_to_vector_any_64 (i64
+def : Pat <(v1i64 (scalar_to_vector_v1f64 (i64
                (load (ro64.Xpat GPR64sp:$Rn, GPR64:$Rm, ro64.Xext:$extend))))),
            (LDRDroX GPR64sp:$Rn, GPR64:$Rm, ro64.Xext:$extend)>;
 
@@ -4408,7 +4419,7 @@ def : Pat <(v1i64 (scalar_to_vector_any_64 (i64
 // Enables direct SIMD register loads for small integer types (i8/i16) that are
 // naturally zero-extended to i32/i64.
 multiclass ExtLoad8_16AllModes<ValueType OutTy, ValueType InnerTy,
-                                PatFrags OuterOp,
+                                SDPatternOperator OuterOp,
                                 PatFrags LoadOp8, PatFrags LoadOp16> {
   // 8-bit loads.
   def : Pat<(OutTy (OuterOp (InnerTy (LoadOp8 (am_indexed8 GPR64sp:$Rn, uimm12s1:$offset))))),
@@ -4433,7 +4444,7 @@ multiclass ExtLoad8_16AllModes<ValueType OutTy, ValueType InnerTy,
 
 // Extended multiclass that includes 32-bit loads in addition to 8-bit and 16-bit.
 multiclass ExtLoad8_16_32AllModes<ValueType OutTy, ValueType InnerTy,
-                                   PatFrags OuterOp,
+                                   SDPatternOperator OuterOp,
                                    PatFrags LoadOp8, PatFrags LoadOp16, PatFrags LoadOp32> {
   defm : ExtLoad8_16AllModes<OutTy, InnerTy, OuterOp, LoadOp8, LoadOp16>;
 
@@ -4451,20 +4462,18 @@ multiclass ExtLoad8_16_32AllModes<ValueType OutTy, ValueType InnerTy,
 // Instantiate bitconvert patterns for floating-point types.
 
 // Create a fragment to reuse same multiclass.
-def bitconvert_frag : PatFrags<(ops node:$src),
-                               [(bitconvert node:$src)]>;
-defm : ExtLoad8_16AllModes<f32, i32, bitconvert_frag, zextloadi8, zextloadi16>;
-defm : ExtLoad8_16_32AllModes<f64, i64, bitconvert_frag, zextloadi8, zextloadi16, zextloadi32>;
+defm : ExtLoad8_16AllModes<f32, i32, bitconvert, zextloadi8, zextloadi16>;
+defm : ExtLoad8_16_32AllModes<f64, i64, bitconvert, zextloadi8, zextloadi16, zextloadi32>;
 
 // Instantiate scalar_to_vector patterns for all vector types.
-defm : ExtLoad8_16AllModes<v16i8, i32, scalar_to_vector_any_128, zextloadi8, zextloadi16>;
-defm : ExtLoad8_16AllModes<v16i8, i32, scalar_to_vector_any_128, extloadi8, extloadi16>;
-defm : ExtLoad8_16AllModes<v8i16, i32, scalar_to_vector_any_128, zextloadi8, zextloadi16>;
-defm : ExtLoad8_16AllModes<v8i16, i32, scalar_to_vector_any_128, extloadi8, extloadi16>;
-defm : ExtLoad8_16AllModes<v4i32, i32, scalar_to_vector_any_128, zextloadi8, zextloadi16>;
-defm : ExtLoad8_16AllModes<v4i32, i32, scalar_to_vector_any_128, extloadi8, extloadi16>;
-defm : ExtLoad8_16_32AllModes<v2i64, i64, scalar_to_vector_any_128, zextloadi8, zextloadi16, zextloadi32>;
-defm : ExtLoad8_16_32AllModes<v2i64, i64, scalar_to_vector_any_128, extloadi8, extloadi16, extloadi32>;
+defm : ExtLoad8_16AllModes<v16i8, i32, scalar_to_vector, zextloadi8, zextloadi16>;
+defm : ExtLoad8_16AllModes<v16i8, i32, scalar_to_vector, extloadi8, extloadi16>;
+defm : ExtLoad8_16AllModes<v8i16, i32, scalar_to_vector, zextloadi8, zextloadi16>;
+defm : ExtLoad8_16AllModes<v8i16, i32, scalar_to_vector, extloadi8, extloadi16>;
+defm : ExtLoad8_16AllModes<v4i32, i32, scalar_to_vector_v4f32, zextloadi8, zextloadi16>;
+defm : ExtLoad8_16AllModes<v4i32, i32, scalar_to_vector_v4f32, extloadi8, extloadi16>;
+defm : ExtLoad8_16_32AllModes<v2i64, i64, scalar_to_vector_v2f64, zextloadi8, zextloadi16, zextloadi32>;
+defm : ExtLoad8_16_32AllModes<v2i64, i64, scalar_to_vector_v2f64, extloadi8, extloadi16, extloadi32>;
 
 // Pre-fetch.
 defm PRFUM : PrefetchUnscaled<0b11, 0, 0b10, "prfum",
@@ -8061,7 +8070,8 @@ def : Pat<(v2i64 (vector_insert v2i64:$src, (i64 (bitconvert (f64 FPR64:$Sn))), 
 
 // Patterns for i8/i16 -> v2i32/v4i16 lane moves via insert and extract that go via i32.
 multiclass Neon_INS_elt_ext_pattern<ValueType VT128, ValueType VT64, ValueType OutVT,
-                                    Instruction INS, Instruction DUP, SubRegIndex DUPSub,
+                                    SDPatternOperator ScalToVec, Instruction INS, 
+                                    Instruction DUP, SubRegIndex DUPSub,
                                     SDNodeXForm VecIndexMult> {
   // VT64->OutVT
   def : Pat<(OutVT (vector_insert (OutVT V64:$src),
@@ -8071,7 +8081,7 @@ multiclass Neon_INS_elt_ext_pattern<ValueType VT128, ValueType VT64, ValueType O
               (INS (INSERT_SUBREG (VT128 (IMPLICIT_DEF)), V64:$src, dsub), (VecIndexMult imm:$Immd),
                    (INSERT_SUBREG (VT128 (IMPLICIT_DEF)), V64:$Rn, dsub), imm:$Immn),
               dsub)>;
-  def : Pat<(OutVT (scalar_to_vector_any_64 (i32 (vector_extract (VT64 V64:$Rn), (i64 imm:$Immn))))),
+  def : Pat<(OutVT (ScalToVec (i32 (vector_extract (VT64 V64:$Rn), (i64 imm:$Immn))))),
             (EXTRACT_SUBREG
               (VT128 (SUBREG_TO_REG
                 (i64 0),
@@ -8087,7 +8097,7 @@ multiclass Neon_INS_elt_ext_pattern<ValueType VT128, ValueType VT64, ValueType O
               (INS (SUBREG_TO_REG (i64 0), V64:$src, dsub), (VecIndexMult imm:$Immd),
                    V128:$Rn, imm:$Immn),
               dsub)>;
-  def : Pat<(OutVT (scalar_to_vector_any_64 (i32 (vector_extract (VT128 V128:$Rn), (i64 imm:$Immn))))),
+  def : Pat<(OutVT (ScalToVec (i32 (vector_extract (VT128 V128:$Rn), (i64 imm:$Immn))))),
             (EXTRACT_SUBREG
               (VT128 (SUBREG_TO_REG
                 (i64 0),
@@ -8096,9 +8106,9 @@ multiclass Neon_INS_elt_ext_pattern<ValueType VT128, ValueType VT64, ValueType O
               dsub)>;
 }
 
-defm : Neon_INS_elt_ext_pattern<v16i8, v8i8, v4i16, INSvi8lane, DUPi8, bsub, VecIndex_x2>;
-defm : Neon_INS_elt_ext_pattern<v16i8, v8i8, v2i32, INSvi8lane, DUPi8, bsub, VecIndex_x4>;
-defm : Neon_INS_elt_ext_pattern<v8i16, v4i16, v2i32, INSvi16lane, DUPi16, hsub, VecIndex_x2>;
+defm : Neon_INS_elt_ext_pattern<v16i8, v8i8, v4i16, scalar_to_vector, INSvi8lane, DUPi8, bsub, VecIndex_x2>;
+defm : Neon_INS_elt_ext_pattern<v16i8, v8i8, v2i32, scalar_to_vector_v2f32, INSvi8lane, DUPi8, bsub, VecIndex_x4>;
+defm : Neon_INS_elt_ext_pattern<v8i16, v4i16, v2i32, scalar_to_vector_v2f32, INSvi16lane, DUPi16, hsub, VecIndex_x2>;
 
 // bitcast of an extract
 // f32 bitcast(vector_extract(v4i32 src, 0)) -> EXTRACT_SUBREG(src)
@@ -9632,14 +9642,15 @@ def : Ld1Lane64IdxOpPat<extloadi8, VectorIndexH, v4i16, i32, LD1i8, VectorIndexH
 // scalar_to_vector + insert_subvector instead of insert_vector_elt.
 let Predicates = [HasNEON] in {
   class Ld1Lane128FirstElm<ValueType ResultTy, ValueType VecTy,
-                          SDPatternOperator ExtLoad, Instruction LD1>
-    : Pat<(ResultTy (vec_ins_or_scal_vec_64 (i32 (ExtLoad GPR64sp:$Rn)))),
+                          SDPatternOperator ExtLoad, SDPatternOperator VecInsNode, 
+                          Instruction LD1>
+    : Pat<(ResultTy (VecInsNode (i32 (ExtLoad GPR64sp:$Rn)))),
             (ResultTy (EXTRACT_SUBREG
               (LD1 (VecTy (IMPLICIT_DEF)), 0, GPR64sp:$Rn), dsub))>;
 
-  def : Ld1Lane128FirstElm<v2i32, v8i16, extloadi16, LD1i16>;
-  def : Ld1Lane128FirstElm<v2i32, v16i8, extloadi8, LD1i8>;
-  def : Ld1Lane128FirstElm<v4i16, v16i8, extloadi8, LD1i8>;
+  def : Ld1Lane128FirstElm<v2i32, v8i16, extloadi16, vec_ins_or_scal_vec_v2f32, LD1i16>;
+  def : Ld1Lane128FirstElm<v2i32, v16i8, extloadi8, vec_ins_or_scal_vec_v2f32, LD1i8>;
+  def : Ld1Lane128FirstElm<v4i16, v16i8, extloadi8, vec_ins_or_scal_vec, LD1i8>;
 }
 class Ld1Lane64Pat<SDPatternOperator scalar_load, Operand VecIndex,
                    ValueType VTy, ValueType STy, Instruction LD1>
