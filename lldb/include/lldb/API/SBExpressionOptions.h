@@ -11,7 +11,6 @@
 
 #include "lldb/API/SBDefines.h"
 #include "lldb/API/SBLanguages.h"
-#include "lldb/API/SBStructuredData.h"
 
 #include <vector>
 
