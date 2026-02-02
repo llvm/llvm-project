@@ -15,17 +15,29 @@
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 #include "mlir/IR/Attributes.h"
+#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Location.h"
+#include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Types.h"
+#include "mlir/IR/Value.h"
 #include "mlir/IR/ValueRange.h"
+#include "clang/AST/CharUnits.h"
+#include "clang/AST/TypeBase.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
+#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
+#include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
+#include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
+#include <cstddef>
+#include <numeric>
 #include <string>
 
 using namespace clang;
@@ -184,6 +196,33 @@ static mlir::Value emitX86CompressExpand(CIRGenBuilderTy &builder,
       builder, loc, inputVector, cast<cir::VectorType>(resultTy).getSize());
   return builder.emitIntrinsicCallOp(loc, id, resultTy,
                                      mlir::ValueRange{source, mask, maskValue});
+}
+
+static mlir::Value
+emitEncodeKey(mlir::MLIRContext *context, CIRGenBuilderTy &builder,
+              const mlir::Location &location, mlir::ValueRange inputOperands,
+              mlir::Value &outputOperand, std::uint8_t vecOutputCount,
+              const std::string &intrinsicName) {
+  cir::VectorType resVector = cir::VectorType::get(builder.getUInt64Ty(), 2);
+  auto membersRng = llvm::concat<mlir::Type>(
+      llvm::SmallVector<mlir::Type>{builder.getUInt32Ty()},
+      llvm::SmallVector<mlir::Type>(vecOutputCount, resVector));
+  cir::RecordType resRecord =
+      cir::RecordType::get(context, llvm::to_vector(membersRng), false, false,
+                           cir::RecordType::RecordKind::Struct);
+
+  mlir::Value outputPtr =
+      builder.createBitcast(outputOperand, cir::PointerType::get(resVector));
+  mlir::Value call = emitIntrinsicCallOp(builder, location, intrinsicName,
+                                         resRecord, inputOperands);
+  for (std::size_t i = 0; i < inputOperands.size() + 1; ++i) {
+    mlir::Value vecValue =
+        cir::ExtractMemberOp::create(builder, location, call, i + 1);
+    mlir::Value index = builder.getSInt32(i, location);
+    mlir::Value ptr = builder.createPtrStride(location, outputPtr, index);
+    builder.createStore(location, vecValue, Address{ptr, CharUnits::One()});
+  }
+  return cir::ExtractMemberOp::create(builder, location, call, 0);
 }
 
 static mlir::Value emitX86Select(CIRGenBuilderTy &builder, mlir::Location loc,
@@ -2403,13 +2442,17 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__readgsword:
   case X86::BI__readgsdword:
   case X86::BI__readgsqword:
-  case X86::BI__builtin_ia32_encodekey128_u32:
-  case X86::BI__builtin_ia32_encodekey256_u32: {
-    cgm.errorNYI(expr->getSourceRange(),
-                 std::string("unimplemented X86 builtin call: ") +
-                     getContext().BuiltinInfo.getName(builtinID));
-    return mlir::Value{};
+  case X86::BI__builtin_ia32_encodekey128_u32: {
+    return emitEncodeKey(&getMLIRContext(), builder, getLoc(expr->getExprLoc()),
+                         {ops[0], ops[1]}, ops[2], 6, "x86.encodekey128");
   }
+  case X86::BI__builtin_ia32_encodekey256_u32: {
+
+    return emitEncodeKey(&getMLIRContext(), builder, getLoc(expr->getExprLoc()),
+                         {ops[0], ops[1], ops[2]}, ops[3], 7,
+                         "x86.encodekey256");
+  }
+
   case X86::BI__builtin_ia32_aesenc128kl_u8:
   case X86::BI__builtin_ia32_aesdec128kl_u8:
   case X86::BI__builtin_ia32_aesenc256kl_u8:
