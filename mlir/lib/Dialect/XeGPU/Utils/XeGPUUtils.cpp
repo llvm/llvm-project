@@ -166,6 +166,18 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
           defOp->getAttrOfType<xegpu::DistributeLayoutAttr>(layoutName);
       return layout;
     }
+
+    // Handle scf.for results by looking at yielded values
+    if (auto forOp = dyn_cast<scf::ForOp>(defOp)) {
+      auto resultIndex = result.getResultNumber();
+      if (auto yieldOp =
+              dyn_cast<scf::YieldOp>(forOp.getBody()->getTerminator())) {
+        if (resultIndex < yieldOp.getOperands().size()) {
+          auto yieldedValue = yieldOp.getOperand(resultIndex);
+          return getDistributeLayoutAttr(yieldedValue);
+        }
+      }
+    }
   }
 
   if (auto arg = dyn_cast<BlockArgument>(value)) {
@@ -179,6 +191,7 @@ xegpu::DistributeLayoutAttr xegpu::getDistributeLayoutAttr(const Value value) {
 
   return nullptr;
 }
+
 xegpu::DistributeLayoutAttr
 xegpu::getDistributeLayoutAttr(const OpOperand &opr) {
   Operation *op = opr.getOwner();

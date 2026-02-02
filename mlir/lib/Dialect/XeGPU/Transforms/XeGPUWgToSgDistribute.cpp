@@ -1723,12 +1723,11 @@ struct XeGPUWgToSgDistributePass
 
 void XeGPUWgToSgDistributePass::runOnOperation() {
 
-  // TODO-LayoutRefactor: unify the local propagation for layout preprocessing
-  // Operation *op = getOperation();
-  // if (!xegpu::recoverTemporaryLayouts(op)) {
-  //   signalPassFailure();
-  //   return;
-  // }
+  Operation *op = getOperation();
+  if (!xegpu::recoverTemporaryLayouts(op)) {
+    signalPassFailure();
+    return;
+  }
 
   // Track existing UnrealizedConversionCastOps
   SmallVector<Operation *> existingCastOps;
