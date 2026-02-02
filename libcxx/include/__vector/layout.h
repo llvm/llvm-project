@@ -140,8 +140,8 @@ public:
         __capacity_(std::move(__other.__capacity_)),
         __alloc_(std::move(__other.__alloc_)) {
     __other.__begin_    = nullptr;
-    __other.__boundary_ = {};
-    __other.__capacity_ = {};
+    __other.__boundary_ = __boundary_type();
+    __other.__capacity_ = __boundary_type();
   }
 
   /// Returns a reference to the stored allocator.
@@ -222,8 +222,8 @@ public:
     __capacity_ = __other.__capacity_;
 
     __other.__begin_    = nullptr;
-    __other.__boundary_ = {};
-    __other.__capacity_ = {};
+    __other.__boundary_ = __boundary_type();
+    __other.__capacity_ = __boundary_type();
   }
 
   // The following member functions must be implemented per vector layout.
@@ -241,44 +241,48 @@ public:
 
 private:
   pointer __begin_ = nullptr;
-  __boundary_type __boundary_{};
 
 #ifdef _LIBCPP_ABI_SIZE_BASED_VECTOR
+  size_type __boundary_ = 0;
   size_type __capacity_ = 0;
   [[no_unique_address]] allocator_type __alloc_;
 #else
+  pointer __boundary_ = nullptr;
   _LIBCPP_COMPRESSED_PAIR(pointer, __capacity_, allocator_type, __alloc_);
 #endif
 };
 
 #ifdef _LIBCPP_ABI_SIZE_BASED_VECTOR
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 auto __vector_layout<_Tp, _Alloc>::size() const _NOEXCEPT -> size_type {
+_LIBCPP_CONSTEXPR_SINCE_CXX20
+typename __vector_layout<_Tp, _Alloc>::size_type __vector_layout<_Tp, _Alloc>::size() const _NOEXCEPT {
   return __boundary_;
 }
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 auto __vector_layout<_Tp, _Alloc>::capacity() const _NOEXCEPT -> size_type {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::size_type
+__vector_layout<_Tp, _Alloc>::capacity() const _NOEXCEPT {
   return __capacity_;
 }
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 auto __vector_layout<_Tp, _Alloc>::empty() const _NOEXCEPT -> bool {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 bool __vector_layout<_Tp, _Alloc>::empty() const _NOEXCEPT {
   return __boundary_ == 0;
 }
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 auto __vector_layout<_Tp, _Alloc>::back() _NOEXCEPT -> _Tp& {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp& __vector_layout<_Tp, _Alloc>::back() _NOEXCEPT {
   return __begin_[__boundary_ - 1];
 }
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 auto __vector_layout<_Tp, _Alloc>::back() const _NOEXCEPT -> _Tp const& {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp const& __vector_layout<_Tp, _Alloc>::back() const _NOEXCEPT {
   return __begin_[__boundary_ - 1];
 }
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 auto __vector_layout<_Tp, _Alloc>::__end_ptr() const _NOEXCEPT -> pointer {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::pointer
+__vector_layout<_Tp, _Alloc>::__end_ptr() const _NOEXCEPT {
   return __begin_ + __boundary_;
 }
 
@@ -310,32 +314,35 @@ _LIBCPP_CONSTEXPR_SINCE_CXX20 void __vector_layout<_Tp, _Alloc>::__set_capacity(
 }
 #else
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 auto __vector_layout<_Tp, _Alloc>::size() const _NOEXCEPT -> size_type {
+_LIBCPP_CONSTEXPR_SINCE_CXX20
+typename __vector_layout<_Tp, _Alloc>::size_type __vector_layout<_Tp, _Alloc>::size() const _NOEXCEPT {
   return static_cast<size_type>(__boundary_ - __begin_);
 }
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 auto __vector_layout<_Tp, _Alloc>::capacity() const _NOEXCEPT -> size_type {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::size_type
+__vector_layout<_Tp, _Alloc>::capacity() const _NOEXCEPT {
   return static_cast<size_type>(__capacity_ - __begin_);
 }
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 auto __vector_layout<_Tp, _Alloc>::empty() const _NOEXCEPT -> bool {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 bool __vector_layout<_Tp, _Alloc>::empty() const _NOEXCEPT {
   return __begin_ == __boundary_;
 }
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 auto __vector_layout<_Tp, _Alloc>::back() _NOEXCEPT -> _Tp& {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp& __vector_layout<_Tp, _Alloc>::back() _NOEXCEPT {
   return __boundary_[-1];
 }
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 auto __vector_layout<_Tp, _Alloc>::back() const _NOEXCEPT -> _Tp const& {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 _Tp const& __vector_layout<_Tp, _Alloc>::back() const _NOEXCEPT {
   return __boundary_[-1];
 }
 
 template <class _Tp, class _Alloc>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 auto __vector_layout<_Tp, _Alloc>::__end_ptr() const _NOEXCEPT -> pointer {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 typename __vector_layout<_Tp, _Alloc>::pointer
+__vector_layout<_Tp, _Alloc>::__end_ptr() const _NOEXCEPT {
   return __boundary_;
 }
 

@@ -240,9 +240,8 @@ public:
 
 #if _LIBCPP_STD_VER >= 23
   template <_ContainerCompatibleRange<_Tp> _Range>
-  _LIBCPP_HIDE_FROM_ABI constexpr vector(
-      from_range_t, _Range&& __range, const allocator_type& __alloc = allocator_type())
-      : __base_type(__alloc) {
+  _LIBCPP_HIDE_FROM_ABI constexpr vector(from_range_t, _Range&& __range, const allocator_type& __a = allocator_type())
+      : __base_type(__a) {
     if constexpr (ranges::forward_range<_Range> || ranges::sized_range<_Range>) {
       auto __n = static_cast<size_type>(ranges::distance(__range));
       __init_with_size(ranges::begin(__range), ranges::end(__range), __n);
