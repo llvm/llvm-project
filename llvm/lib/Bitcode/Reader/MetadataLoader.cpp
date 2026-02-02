@@ -564,6 +564,15 @@ class MetadataLoader::MetadataLoaderImpl {
       return MDTuple::get(Context, Result);
     };
 
+    // For each CU:
+    // - Collect local metadata nodes from CU's imports: and enums: lists in
+    //   MetadataToRemove set.
+    // - Remove metadata nodes of MetadataToRemove set from CU's imports: and
+    //   enums: lists.
+    // - Group MetadataToRemove items by their parent subprograms (in
+    //   SPToEntities map).
+    // - For each subprogram SP in SPToEntities:
+    //   - Append collected local metadata nodes to SP's retainedNodes: list.
     for (MDNode *N : CUNodes->operands()) {
       auto *CU = dyn_cast<DICompileUnit>(N);
       if (!CU)
