@@ -2407,7 +2407,10 @@ Value *InstCombinerImpl::reassociateBooleanAndOr(
   // LHS bop (X lop Y) --> (LHS bop X) lop Y
   // LHS bop (X bop Y) --> (LHS bop X) bop Y
   if (Value *Res = foldBooleanAndOr(LHS, X, I, IsAnd, /*IsLogical=*/false)) {
-    Value *V = RHSIsLogical ? Builder.CreateLogicalOp(Opcode, Res, Y)
+    Value *V = RHSIsLogical ? Builder.CreateLogicalOp(Opcode, Res, Y, "",
+                                                      ProfcheckDisableMetadataFixes
+                                                          ? nullptr
+                                                          : MDFrom)
                             : Builder.CreateBinOp(Opcode, Res, Y);
     applyProfMetadataIfEnabled(V, [&](Instruction *NewI) {
       if (isa<SelectInst>(NewI) && MDFrom && hasProfMD(*MDFrom))
@@ -2418,7 +2421,10 @@ Value *InstCombinerImpl::reassociateBooleanAndOr(
   // LHS bop (X bop Y) --> X bop (LHS bop Y)
   // LHS bop (X lop Y) --> X lop (LHS bop Y)
   if (Value *Res = foldBooleanAndOr(LHS, Y, I, IsAnd, /*IsLogical=*/false)) {
-    Value *V = RHSIsLogical ? Builder.CreateLogicalOp(Opcode, X, Res)
+    Value *V = RHSIsLogical ? Builder.CreateLogicalOp(Opcode, X, Res, "",
+                                                      ProfcheckDisableMetadataFixes
+                                                          ? nullptr
+                                                          : MDFrom)
                             : Builder.CreateBinOp(Opcode, X, Res);
     applyProfMetadataIfEnabled(V, [&](Instruction *NewI) {
       if (isa<SelectInst>(NewI) && MDFrom && hasProfMD(*MDFrom))
@@ -2426,6 +2432,8 @@ Value *InstCombinerImpl::reassociateBooleanAndOr(
     });
     return V;
   }
+  return nullptr;
+}
   return nullptr;
 }
 
