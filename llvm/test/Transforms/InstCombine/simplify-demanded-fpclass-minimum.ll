@@ -2153,7 +2153,8 @@ define nofpclass(snan) float @qnan_result_demands_snan_lhs(i1 %cond, float %unkn
 ; CHECK-LABEL: define nofpclass(snan) float @qnan_result_demands_snan_lhs(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN0:%.*]], float [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[SNAN:%.*]] = call float @returns_snan()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.minimum.f32(float [[UNKNOWN0]], float [[UNKNOWN1]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SNAN]], float [[UNKNOWN0]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.minimum.f32(float [[SELECT]], float [[UNKNOWN1]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %snan = call float @returns_snan()
@@ -2166,7 +2167,8 @@ define nofpclass(snan) float @qnan_result_demands_snan_rhs(i1 %cond, float %unkn
 ; CHECK-LABEL: define nofpclass(snan) float @qnan_result_demands_snan_rhs(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN0:%.*]], float [[UNKNOWN1:%.*]]) {
 ; CHECK-NEXT:    [[SNAN:%.*]] = call float @returns_snan()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.minimum.f32(float [[UNKNOWN1]], float [[UNKNOWN0]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SNAN]], float [[UNKNOWN0]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.minimum.f32(float [[UNKNOWN1]], float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %snan = call float @returns_snan()

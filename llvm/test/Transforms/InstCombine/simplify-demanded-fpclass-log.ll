@@ -357,7 +357,8 @@ define nofpclass(snan) float @qnan_result_demands_snan_src(i1 %cond, float %unkn
 ; CHECK-LABEL: define nofpclass(snan) float @qnan_result_demands_snan_src(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[SNAN:%.*]] = call float @returns_snan()
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.log.f32(float [[UNKNOWN]])
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SNAN]], float [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.log.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %snan = call float @returns_snan()

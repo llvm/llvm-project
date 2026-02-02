@@ -623,7 +623,8 @@ define nofpclass(snan) half @qnan_result_demands_snan_src2(i1 %cond, float %unkn
 ; CHECK-LABEL: define nofpclass(snan) half @qnan_result_demands_snan_src2(
 ; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN0:%.*]]) {
 ; CHECK-NEXT:    [[SNAN:%.*]] = call float @returns_snan_f32()
-; CHECK-NEXT:    [[RESULT:%.*]] = call half @llvm.fptrunc.round.f16.f32(float [[UNKNOWN0]], metadata !"round.downward")
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SNAN]], float [[UNKNOWN0]]
+; CHECK-NEXT:    [[RESULT:%.*]] = call half @llvm.fptrunc.round.f16.f32(float [[SELECT]], metadata !"round.downward")
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %snan = call float @returns_snan_f32()

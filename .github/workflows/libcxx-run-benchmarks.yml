@@ -48,7 +48,7 @@ jobs:
 
           cat <<EOF | python >> ${GITHUB_OUTPUT}
           import github
-          repo = github.Github("${{ github.token }}").get_repo("${{ github.repository }}")
+          repo = github.Github(auth=github.Auth.Token("${{ github.token }}")).get_repo("${{ github.repository }}")
           pr = repo.get_pull(${{ github.event.issue.number }})
           print(f"pr_base={pr.base.sha}")
           print(f"pr_head={pr.head.sha}")
@@ -91,7 +91,7 @@ jobs:
           source .venv/bin/activate && cd repo
           cat <<EOF | python
           import github
-          repo = github.Github("${{ github.token }}").get_repo("${{ github.repository }}")
+          repo = github.Github(auth=github.Auth.Token("${{ github.token }}")).get_repo("${{ github.repository }}")
           pr = repo.get_pull(${{ github.event.issue.number }})
           comment = pr.get_issue_comment(${{ github.event.comment.id }})
           with open('results.txt', 'r') as f:

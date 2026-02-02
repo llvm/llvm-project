@@ -2049,7 +2049,7 @@ define nofpclass(snan) half @qnan_result_self_demands_snan(i1 noundef %cond, hal
 ; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
 ; CHECK-NEXT:    [[SNAN:%.*]] = call noundef half @returns_snan()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[SNAN]], half [[UNKNOWN]]
-; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[UNKNOWN]], [[SELECT]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[SELECT]], [[SELECT]]
 ; CHECK-NEXT:    ret half [[RESULT]]
 ;
   %snan = call noundef half @returns_snan()
