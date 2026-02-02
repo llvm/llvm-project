@@ -4,7 +4,7 @@ define void @test1(i32 %x) {
 ; CHECK-LABEL: @test1
 ; CHECK:         %asm_mem = alloca i32
 ; CHECK-NEXT:    store i32 %x, ptr %asm_mem
-; CHECK-NEXT:    call i32 asm sideeffect "mov $1, $0", "=r,*rm,~{dirflag},~{fpsr},~{flags}"(ptr %asm_mem)
+; CHECK-NEXT:    %0 = call i32 asm sideeffect "mov $1, $0", "=r,rm,~{dirflag},~{fpsr},~{flags}"(ptr %asm_mem)
 entry:
   %0 = call i32 asm sideeffect "mov $1, $0", "=r,rm,~{dirflag},~{fpsr},~{flags}"(i32 %x)
   ret void
