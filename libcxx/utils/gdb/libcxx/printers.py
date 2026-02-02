@@ -351,28 +351,38 @@ class StdVectorPrinter(object):
         """Set val, length, capacity, and iterator for bool and normal vectors."""
         self.val = val
         self.typename = _remove_generics(_prettify_typename(val.type))
-        begin = self.val["__begin_"]
         if self.val.type.template_argument(0).code == gdb.TYPE_CODE_BOOL:
             self.typename += "<bool>"
+            begin = self.val["__begin_"]
             self.length = self.val["__size_"]
             bits_per_word = self.val["__bits_per_word"]
             self.capacity = self.val["__cap_"] * bits_per_word
             self.iterator = self._VectorBoolIterator(begin, self.length, bits_per_word)
         else:
-            cap = self.val["__cap_"]
+            for i in self.val.type.fields():
+                if i.is_base_class:
+                    base = val[i]
+                    break
+
+            begin = base["__begin_"]
+            if self.val.type.fields()[0].is_base_class:
+                boundary = base["__boundary_"]
+                capacity = base["__capacity_"]
+            else:
+                boundary = base["__end_"]
+                capacity = base["__cap_"]
 
             # We test for integers because `vector<T>::size_type` is required to
             # be an unsigned integer, whereas `vector<T>::pointer` can be any
             # type that satisfies the Cpp17NullablePointer requirements.
-            if cap.type.strip_typedefs().code == gdb.TYPE_CODE_INT:
-                size = self.val["__size_"]
-                self.length = size
-                self.capacity = cap
-                end = begin + size
+            if boundary.type.strip_typedefs().code == gdb.TYPE_CODE_INT:
+                self.length = boundary
+                self.capacity = capacity
+                end = begin + boundary
             else:
-                end = self.val["__end_"]
+                end = boundary
                 self.length = end - begin
-                self.capacity = cap - begin
+                self.capacity = capacity - begin
 
             self.iterator = self._VectorIterator(begin, end)
 
