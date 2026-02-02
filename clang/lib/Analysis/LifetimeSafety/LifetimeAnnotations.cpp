@@ -174,13 +174,41 @@ bool shouldTrackImplicitObjectArg(const CXXMethodDecl *Callee,
 }
 
 bool shouldTrackFirstArgument(const FunctionDecl *FD) {
-  if (!FD->getIdentifier() || FD->getNumParams() != 1)
+  if (!FD->getIdentifier() || FD->getNumParams() < 1)
     return false;
+  if (!FD->isInStdNamespace())
+    return false;
+  // Track std:: algorithm functions that return an iterator whose lifetime is
+  // bound to the first argument.
+  if (FD->getNumParams() >= 2 && FD->isInStdNamespace() &&
+      isGslPointerType(FD->getReturnType())) {
+    if (llvm::StringSwitch<bool>(FD->getName())
+            .Cases(
+                {
+                    "find",
+                    "find_if",
+                    "find_if_not",
+                    "find_first_of",
+                    "adjacent_find",
+                    "search",
+                    "find_end",
+                    "lower_bound",
+                    "upper_bound",
+                    "partition_point",
+                },
+                true)
+            .Default(false))
+      return true;
+  }
   const auto *RD = FD->getParamDecl(0)->getType()->getPointeeCXXRecordDecl();
-  if (!FD->isInStdNamespace() || !RD || !RD->isInStdNamespace())
+  if (!RD || !RD->isInStdNamespace())
     return false;
   if (!RD->hasAttr<PointerAttr>() && !RD->hasAttr<OwnerAttr>())
     return false;
+
+  if (FD->getNumParams() != 1)
+    return false;
+
   if (FD->getReturnType()->isPointerType() ||
       isGslPointerType(FD->getReturnType())) {
     return llvm::StringSwitch<bool>(FD->getName())
