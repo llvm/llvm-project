@@ -87,22 +87,23 @@ _LIBCPP_BEGIN_NAMESPACE_STD
 
 template <class _Tp, class _Allocator /* = allocator<_Tp> */>
 class vector : __vector_layout<_Tp, _Allocator> {
-  using __base_type _LIBCPP_NODEBUG = __vector_layout<_Tp, _Allocator>;
+  using __base_type _LIBCPP_NODEBUG     = __vector_layout<_Tp, _Allocator>;
   using __boundary_type _LIBCPP_NODEBUG = typename __base_type::__boundary_type;
-  using _SplitBuffer _LIBCPP_NODEBUG = typename __base_type::_SplitBuffer;
+  using _SplitBuffer _LIBCPP_NODEBUG    = typename __base_type::_SplitBuffer;
 
   using __base_type::__alloc;
   using __base_type::__begin_ptr;
-  using __base_type::__end_ptr;
   using __base_type::__boundary_representation;
   using __base_type::__capacity_representation;
-  using __base_type::__remaining_capacity;
+  using __base_type::__end_ptr;
   using __base_type::__is_full;
   using __base_type::__move_layout;
-  using __base_type::__set_valid_range;
+  using __base_type::__remaining_capacity;
   using __base_type::__set_boundary;
   using __base_type::__set_capacity;
+  using __base_type::__set_valid_range;
   using __base_type::__swap_layouts;
+
 public:
   //
   // Types
@@ -588,6 +589,7 @@ public:
 #endif
 
   using __base_type::__invariants;
+
 private:
   //  Allocate space for __n objects
   //  throws length_error if __n > max_size()
@@ -709,8 +711,7 @@ private:
 #endif // _LIBCPP_ABI_BOUNDED_ITERATORS_IN_VECTOR
   }
 
-  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
-  __swap_out_circular_buffer(_SplitBuffer& __v);
+  _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void __swap_out_circular_buffer(_SplitBuffer& __v);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI pointer
   __swap_out_circular_buffer(_SplitBuffer& __v, pointer __p);
   _LIBCPP_CONSTEXPR_SINCE_CXX20 _LIBCPP_HIDE_FROM_ABI void
@@ -861,12 +862,14 @@ vector(from_range_t, _Range&&, _Alloc = _Alloc()) -> vector<ranges::range_value_
 // buffers of *this and __v. It is assumed that __v provides space for exactly size() objects in the front. This
 // function has a strong exception guarantee.
 template <class _Tp, class _Allocator>
-_LIBCPP_CONSTEXPR_SINCE_CXX20 void
-vector<_Tp, _Allocator>::__swap_out_circular_buffer(_SplitBuffer& __v) {
+_LIBCPP_CONSTEXPR_SINCE_CXX20 void vector<_Tp, _Allocator>::__swap_out_circular_buffer(_SplitBuffer& __v) {
   __annotate_delete();
   auto __new_begin = __v.begin() - size();
   std::__uninitialized_allocator_relocate(
-      this->__alloc(), std::__to_address(__begin_ptr()), std::__to_address(__end_ptr()), std::__to_address(__new_begin));
+      this->__alloc(),
+      std::__to_address(__begin_ptr()),
+      std::__to_address(__end_ptr()),
+      std::__to_address(__new_begin));
   __v.__set_valid_range(__new_begin, __v.end());
   __set_boundary(static_cast<size_type>(0)); // All the objects have been destroyed by relocating them.
 
@@ -881,8 +884,7 @@ vector<_Tp, _Allocator>::__swap_out_circular_buffer(_SplitBuffer& __v) {
 // function has a strong exception guarantee if __begin_ptr() == __p || size() == __p.
 template <class _Tp, class _Allocator>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 typename vector<_Tp, _Allocator>::pointer
-vector<_Tp, _Allocator>::__swap_out_circular_buffer(_SplitBuffer& __v,
-                                                    pointer __p) {
+vector<_Tp, _Allocator>::__swap_out_circular_buffer(_SplitBuffer& __v, pointer __p) {
   __annotate_delete();
   pointer __ret = __v.begin();
 
@@ -893,8 +895,8 @@ vector<_Tp, _Allocator>::__swap_out_circular_buffer(_SplitBuffer& __v,
       this->__alloc(), std::__to_address(__p), std::__to_address(__end), std::__to_address(__v.end()));
   auto __relocated_so_far = __end - __p;
   __v.__set_sentinel(__v.end() + __relocated_so_far);
-  __set_boundary(
-      __boundary_representation() - __relocated_so_far); // The objects in [__p, __end_) have been destroyed by relocating them.
+  __set_boundary(__boundary_representation() -
+                 __relocated_so_far); // The objects in [__p, __end_) have been destroyed by relocating them.
   auto __new_begin = __v.begin() - (__p - __begin_ptr());
 
   std::__uninitialized_allocator_relocate(
@@ -967,7 +969,8 @@ template <class _InputIterator, class _Sentinel>
 _LIBCPP_CONSTEXPR_SINCE_CXX20 void
 vector<_Tp, _Allocator>::__construct_at_end(_InputIterator __first, _Sentinel __last, size_type __n) {
   _ConstructTransaction __tx(*this, __n);
-  __tx.__pos_ = std::__uninitialized_allocator_copy(this->__alloc(), std::move(__first), std::move(__last), __tx.__pos_);
+  __tx.__pos_ =
+      std::__uninitialized_allocator_copy(this->__alloc(), std::move(__first), std::move(__last), __tx.__pos_);
 }
 
 template <class _Tp, class _Allocator>
@@ -1214,8 +1217,7 @@ vector<_Tp, _Allocator>::insert(const_iterator __position, const_reference __x) 
       *__p = *__xr;
     }
   } else {
-    _SplitBuffer __v(
-        __recommend(size() + 1), __p - this->__begin_ptr(), this->__alloc());
+    _SplitBuffer __v(__recommend(size() + 1), __p - this->__begin_ptr(), this->__alloc());
     __v.emplace_back(__x);
     __p = __swap_out_circular_buffer(__v, __p);
   }
@@ -1235,8 +1237,7 @@ vector<_Tp, _Allocator>::insert(const_iterator __position, value_type&& __x) {
       *__p = std::move(__x);
     }
   } else {
-    _SplitBuffer __v(
-        __recommend(size() + 1), __p - this->__begin_ptr(), this->__alloc());
+    _SplitBuffer __v(__recommend(size() + 1), __p - this->__begin_ptr(), this->__alloc());
     __v.emplace_back(std::move(__x));
     __p = __swap_out_circular_buffer(__v, __p);
   }
@@ -1258,8 +1259,7 @@ vector<_Tp, _Allocator>::emplace(const_iterator __position, _Args&&... __args) {
       *__p = std::move(__tmp.get());
     }
   } else {
-    _SplitBuffer __v(
-        __recommend(size() + 1), __p - this->__begin_ptr(), this->__alloc());
+    _SplitBuffer __v(__recommend(size() + 1), __p - this->__begin_ptr(), this->__alloc());
     __v.emplace_back(std::forward<_Args>(__args)...);
     __p = __swap_out_circular_buffer(__v, __p);
   }
@@ -1288,8 +1288,7 @@ vector<_Tp, _Allocator>::insert(const_iterator __position, size_type __n, const_
         std::fill_n(__p, __n, *__xr);
       }
     } else {
-      _SplitBuffer __v(
-          __recommend(size() + __n), __p - this->__begin_ptr(), this->__alloc());
+      _SplitBuffer __v(__recommend(size() + __n), __p - this->__begin_ptr(), this->__alloc());
       __v.__construct_at_end(__n, __x);
       __p = __swap_out_circular_buffer(__v, __p);
     }
@@ -1363,8 +1362,7 @@ vector<_Tp, _Allocator>::__insert_with_size(
         __insert_assign_n_unchecked<_AlgPolicy>(std::move(__first), __n, __p);
       }
     } else {
-      _SplitBuffer __v(
-          __recommend(size() + __n), __p - this->__begin_ptr(), this->__alloc());
+      _SplitBuffer __v(__recommend(size() + __n), __p - this->__begin_ptr(), this->__alloc());
       __v.__construct_at_end_with_size(std::move(__first), __n);
       __p = __swap_out_circular_buffer(__v, __p);
     }
