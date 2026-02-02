@@ -594,6 +594,16 @@ add_header_library(
 )
 
 add_header_library(
+  f16sqrt
+  HDRS
+    f16sqrt.h
+  DEPENDS
+    libc.src.__support.FPUtil.sqrt
+    libc.src.__support.common
+    libc.src.__support.macros.config
+)
+
+add_header_library(
   f16sqrtl
   HDRS
     f16sqrtl.h
@@ -608,13 +618,6 @@ add_header_library(
     ffma.h
   DEPENDS
     libc.src.__support.FPUtil.fma
-  f16sqrt
-  HDRS
-    f16sqrt.h
-  DEPENDS
-    libc.src.__support.FPUtil.sqrt
-    libc.src.__support.common
-    libc.src.__support.macros.config
 )
 
 add_header_library(
