@@ -5,13 +5,6 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-//
-// Forces conservative evaluation for STL internal implementation functions
-// (prefixed with '__') known to cause false positives. This prevents inlining
-// of complex STL internals and avoids wasting analysis time spent in
-// `BugReporterVisitor`s.
-//
-//===----------------------------------------------------------------------===//
 
 #include "clang/Analysis/ProgramPoint.h"
 #include "clang/Basic/IdentifierTable.h"
