@@ -1198,6 +1198,19 @@ void SelectionDAG::verifyNode(SDNode *N) const {
     }
     break;
   }
+  case ISD::SADDO:
+  case ISD::UADDO:
+  case ISD::SSUBO:
+  case ISD::USUBO:
+    assert(N->getNumValues() == 2 && "Wrong number of results!");
+    assert(N->getVTList().NumVTs == 2 && N->getNumOperands() == 2 &&
+           "Invalid add/sub overflow op!");
+    assert(N->getVTList().VTs[0].isInteger() &&
+           N->getVTList().VTs[1].isInteger() &&
+           N->getOperand(0).getValueType() == N->getOperand(1).getValueType() &&
+           N->getOperand(0).getValueType() == N->getVTList().VTs[0] &&
+           "Binary operator types must match!");
+    break;
   }
 }
 #endif // NDEBUG
@@ -6249,6 +6262,9 @@ bool SelectionDAG::cannotBeOrderedNegativeFP(SDValue Op) const {
 bool SelectionDAG::canIgnoreSignBitOfZero(const SDUse &Use) const {
   assert(Use.getValueType().isFloatingPoint());
   const SDNode *User = Use.getUser();
+  if (User->getFlags().hasNoSignedZeros())
+    return true;
+
   unsigned OperandNo = Use.getOperandNo();
   // Check if this use is insensitive to the sign of zero
   switch (User->getOpcode()) {
@@ -6277,6 +6293,8 @@ bool SelectionDAG::canIgnoreSignBitOfZero(const SDUse &Use) const {
 }
 
 bool SelectionDAG::canIgnoreSignBitOfZero(SDValue Op) const {
+  if (Op->getFlags().hasNoSignedZeros())
+    return true;
   // FIXME: Limit the amount of checked uses to not introduce a compile-time
   // regression. Ideally, this should be implemented as a demanded-bits
   // optimization that stems from the users.
@@ -9254,6 +9272,16 @@ getRuntimeCallSDValueHelper(SDValue Chain, const SDLoc &dl,
       .setTailCall(IsTailCall);
 
   return TLI->LowerCallTo(CLI);
+}
+
+std::pair<SDValue, SDValue> SelectionDAG::getStrcmp(SDValue Chain,
+                                                    const SDLoc &dl, SDValue S1,
+                                                    SDValue S2,
+                                                    const CallInst *CI) {
+  PointerType *PT = PointerType::getUnqual(*getContext());
+  TargetLowering::ArgListTy Args = {{S1, PT}, {S2, PT}};
+  return getRuntimeCallSDValueHelper(Chain, dl, std::move(Args), CI,
+                                     RTLIB::STRCMP, this, TLI);
 }
 
 std::pair<SDValue, SDValue> SelectionDAG::getStrstr(SDValue Chain,
