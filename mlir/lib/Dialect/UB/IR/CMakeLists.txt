@@ -5,13 +5,9 @@ add_mlir_dialect_library(MLIRUBDialect
   ${MLIR_MAIN_INCLUDE_DIR}/mlir/Dialect/UB
 
   DEPENDS
-  MLIRControlFlowInterfaces
   MLIRUBOpsIncGen
   MLIRUBOpsInterfacesIncGen
 
   LINK_LIBS PUBLIC
-  MLIRControlFlowInterfaces
   MLIRIR
-  MLIRExecutionProgressOpInterface
-  MLIRSideEffectInterfaces
   )
