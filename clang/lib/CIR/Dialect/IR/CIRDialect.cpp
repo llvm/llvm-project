@@ -1307,6 +1307,49 @@ LogicalResult cir::ScopeOp::fold(FoldAdaptor /*adaptor*/,
 }
 
 //===----------------------------------------------------------------------===//
+// CleanupScopeOp
+//===----------------------------------------------------------------------===//
+
+void cir::CleanupScopeOp::getSuccessorRegions(
+    mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (!point.isParent()) {
+    regions.push_back(RegionSuccessor::parent());
+    return;
+  }
+
+  // Execution always proceeds from the body region to the cleanup region.
+  regions.push_back(RegionSuccessor(&getBodyRegion()));
+  regions.push_back(RegionSuccessor(&getCleanupRegion()));
+}
+
+mlir::ValueRange
+cir::CleanupScopeOp::getSuccessorInputs(RegionSuccessor successor) {
+  return ValueRange();
+}
+
+void cir::CleanupScopeOp::build(
+    OpBuilder &builder, OperationState &result, CleanupKind cleanupKind,
+    function_ref<void(OpBuilder &, Location)> bodyBuilder,
+    function_ref<void(OpBuilder &, Location)> cleanupBuilder) {
+  result.addAttribute(getCleanupKindAttrName(result.name),
+                      CleanupKindAttr::get(builder.getContext(), cleanupKind));
+
+  OpBuilder::InsertionGuard guard(builder);
+
+  // Build body region.
+  Region *bodyRegion = result.addRegion();
+  builder.createBlock(bodyRegion);
+  if (bodyBuilder)
+    bodyBuilder(builder, result.location);
+
+  // Build cleanup region.
+  Region *cleanupRegion = result.addRegion();
+  builder.createBlock(cleanupRegion);
+  if (cleanupBuilder)
+    cleanupBuilder(builder, result.location);
+}
+
+//===----------------------------------------------------------------------===//
 // BrOp
 //===----------------------------------------------------------------------===//
 
