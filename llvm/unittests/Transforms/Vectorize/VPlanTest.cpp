@@ -749,7 +749,7 @@ TEST_F(VPBasicBlockTest, print) {
     std::string I3Dump;
     raw_string_ostream OS(I3Dump);
     VPSlotTracker SlotTracker;
-    I3->print(OS, "", SlotTracker);
+    cast<VPRecipeBase>(I3)->print(OS, "", SlotTracker);
     EXPECT_EQ("EMIT store <badref>, <badref>", I3Dump);
   }
 
@@ -818,7 +818,7 @@ Successor(s): ir-bb<scalar.header>
     std::string I3Dump;
     raw_string_ostream OS(I3Dump);
     VPSlotTracker SlotTracker(&Plan);
-    I3->print(OS, "", SlotTracker);
+    cast<VPRecipeBase>(I3)->print(OS, "", SlotTracker);
     EXPECT_EQ("EMIT store vp<%1>, vp<%2>", I3Dump);
   }
 
@@ -996,7 +996,7 @@ TEST_F(VPRecipeTest, CastVPInstructionToVPUser) {
   VPValue *Op2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
   VPInstruction Recipe(Instruction::Add, {Op1, Op2});
 
-  checkVPRecipeCastImpl<VPInstruction, VPUser>(&Recipe);
+  checkVPRecipeCastImpl<VPInstruction, VPUser, VPIRMetadata>(&Recipe);
 }
 
 TEST_F(VPRecipeTest, CastVPWidenRecipeToVPUser) {
@@ -1009,13 +1009,13 @@ TEST_F(VPRecipeTest, CastVPWidenRecipeToVPUser) {
   SmallVector<VPValue *, 2> Args;
   Args.push_back(Op1);
   Args.push_back(Op2);
-  VPWidenRecipe WidenR(*AI, make_range(Args.begin(), Args.end()));
+  VPWidenRecipe WidenR(*AI, Args);
 
-  checkVPRecipeCastImpl<VPWidenRecipe, VPUser>(&WidenR);
+  checkVPRecipeCastImpl<VPWidenRecipe, VPUser, VPIRMetadata>(&WidenR);
   delete AI;
 }
 
-TEST_F(VPRecipeTest, CastVPWidenCallRecipeToVPUserAndVPDef) {
+TEST_F(VPRecipeTest, CastVPWidenCallRecipeToVPUserAndVPRecipeBase) {
   VPlan &Plan = getPlan();
   IntegerType *Int32 = IntegerType::get(C, 32);
   FunctionType *FTy = FunctionType::get(Int32, false);
@@ -1030,7 +1030,7 @@ TEST_F(VPRecipeTest, CastVPWidenCallRecipeToVPUserAndVPDef) {
   Args.push_back(CalledFn);
   VPWidenCallRecipe Recipe(Call, Fn, Args);
 
-  checkVPRecipeCastImpl<VPWidenCallRecipe, VPUser>(&Recipe);
+  checkVPRecipeCastImpl<VPWidenCallRecipe, VPUser, VPIRMetadata>(&Recipe);
 
   VPValue *VPV = &Recipe;
   EXPECT_TRUE(VPV->getDefiningRecipe());
@@ -1038,30 +1038,6 @@ TEST_F(VPRecipeTest, CastVPWidenCallRecipeToVPUserAndVPDef) {
 
   delete Call;
   delete Fn;
-}
-
-TEST_F(VPRecipeTest, CastVPWidenSelectRecipeToVPUserAndVPDef) {
-  VPlan &Plan = getPlan();
-  IntegerType *Int1 = IntegerType::get(C, 1);
-  IntegerType *Int32 = IntegerType::get(C, 32);
-  auto *SelectI = SelectInst::Create(
-      PoisonValue::get(Int1), PoisonValue::get(Int32), PoisonValue::get(Int32));
-  VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
-  VPValue *Op2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
-  VPValue *Op3 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 3));
-  SmallVector<VPValue *, 4> Args;
-  Args.push_back(Op1);
-  Args.push_back(Op2);
-  Args.push_back(Op3);
-  VPWidenSelectRecipe WidenSelectR(*SelectI,
-                                   make_range(Args.begin(), Args.end()));
-
-  checkVPRecipeCastImpl<VPWidenSelectRecipe, VPUser>(&WidenSelectR);
-
-  VPValue *VPV = &WidenSelectR;
-  EXPECT_EQ(&WidenSelectR, VPV->getDefiningRecipe());
-
-  delete SelectI;
 }
 
 TEST_F(VPRecipeTest, CastVPWidenGEPRecipeToVPUserAndVPDef) {
@@ -1080,7 +1056,6 @@ TEST_F(VPRecipeTest, CastVPWidenGEPRecipeToVPUserAndVPDef) {
   checkVPRecipeCastImpl<VPWidenGEPRecipe, VPUser>(&Recipe);
 
   VPValue *VPV = &Recipe;
-  EXPECT_TRUE(isa<VPRecipeBase>(VPV->getDefiningRecipe()));
   EXPECT_EQ(&Recipe, VPV->getDefiningRecipe());
 
   delete GEP;
@@ -1092,9 +1067,9 @@ TEST_F(VPRecipeTest, CastVPWidenCastRecipeToVPUser) {
   IntegerType *Int64 = IntegerType::get(C, 64);
   auto *Cast = CastInst::CreateZExtOrBitCast(PoisonValue::get(Int32), Int64);
   VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
-  VPWidenCastRecipe Recipe(Instruction::ZExt, Op1, Int64, *Cast);
+  VPWidenCastRecipe Recipe(Instruction::ZExt, Op1, Int64, Cast);
 
-  checkVPRecipeCastImpl<VPWidenCastRecipe, VPUser>(&Recipe);
+  checkVPRecipeCastImpl<VPWidenCastRecipe, VPUser, VPIRMetadata>(&Recipe);
   delete Cast;
 }
 
@@ -1105,7 +1080,7 @@ TEST_F(VPRecipeTest, CastVPWidenIntrinsicRecipeToVPUser) {
   VPValue *Op2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
   VPWidenIntrinsicRecipe Recipe(Intrinsic::smax, {Op1, Op2}, Int32);
 
-  checkVPRecipeCastImpl<VPWidenIntrinsicRecipe, VPUser>(&Recipe);
+  checkVPRecipeCastImpl<VPWidenIntrinsicRecipe, VPUser, VPIRMetadata>(&Recipe);
 }
 
 TEST_F(VPRecipeTest, CastVPBlendRecipeToVPUser) {
@@ -1135,7 +1110,7 @@ TEST_F(VPRecipeTest, CastVPInterleaveRecipeToVPUser) {
   InterleaveGroup<Instruction> IG(4, false, Align(4));
   VPInterleaveRecipe Recipe(&IG, Addr, {}, Mask, false, {}, DebugLoc());
 
-  checkVPRecipeCastImpl<VPInterleaveRecipe, VPUser>(&Recipe);
+  checkVPRecipeCastImpl<VPInterleaveRecipe, VPUser, VPIRMetadata>(&Recipe);
 }
 
 TEST_F(VPRecipeTest, CastVPReplicateRecipeToVPUser) {
@@ -1151,7 +1126,7 @@ TEST_F(VPRecipeTest, CastVPReplicateRecipeToVPUser) {
   auto *Call = CallInst::Create(FTy, PoisonValue::get(FTy));
   VPReplicateRecipe Recipe(Call, make_range(Args.begin(), Args.end()), true);
 
-  checkVPRecipeCastImpl<VPReplicateRecipe, VPUser>(&Recipe);
+  checkVPRecipeCastImpl<VPReplicateRecipe, VPUser, VPIRMetadata>(&Recipe);
 
   delete Call;
 }
@@ -1165,7 +1140,7 @@ TEST_F(VPRecipeTest, CastVPBranchOnMaskRecipeToVPUser) {
   checkVPRecipeCastImpl<VPBranchOnMaskRecipe, VPUser>(&Recipe);
 }
 
-TEST_F(VPRecipeTest, CastVPWidenMemoryRecipeToVPUserAndVPDef) {
+TEST_F(VPRecipeTest, CastVPWidenMemoryRecipeToVPUserAndVPRecipeBase) {
   VPlan &Plan = getPlan();
   IntegerType *Int32 = IntegerType::get(C, 32);
   PointerType *Int32Ptr = PointerType::get(C, 0);
@@ -1175,10 +1150,9 @@ TEST_F(VPRecipeTest, CastVPWidenMemoryRecipeToVPUserAndVPDef) {
   VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
   VPWidenLoadRecipe Recipe(*Load, Addr, Mask, true, false, {}, {});
 
-  checkVPRecipeCastImpl<VPWidenLoadRecipe, VPUser>(&Recipe);
+  checkVPRecipeCastImpl<VPWidenLoadRecipe, VPUser, VPIRMetadata>(&Recipe);
 
   VPValue *VPV = Recipe.getVPSingleValue();
-  EXPECT_TRUE(isa<VPRecipeBase>(VPV->getDefiningRecipe()));
   EXPECT_EQ(&Recipe, VPV->getDefiningRecipe());
 
   delete Load;
@@ -1194,7 +1168,7 @@ TEST_F(VPRecipeTest, CastVPInterleaveEVLRecipeToVPUser) {
   VPInterleaveRecipe BaseRecipe(&IG, Addr, {}, Mask, false, {}, DebugLoc());
   VPInterleaveEVLRecipe Recipe(BaseRecipe, *EVL, Mask);
 
-  checkVPRecipeCastImpl<VPInterleaveEVLRecipe, VPUser>(&Recipe);
+  checkVPRecipeCastImpl<VPInterleaveEVLRecipe, VPUser, VPIRMetadata>(&Recipe);
 }
 
 TEST_F(VPRecipeTest, CastVPWidenLoadEVLRecipeToVPUser) {
@@ -1209,7 +1183,7 @@ TEST_F(VPRecipeTest, CastVPWidenLoadEVLRecipeToVPUser) {
   VPWidenLoadRecipe BaseLoad(*Load, Addr, Mask, true, false, {}, {});
   VPWidenLoadEVLRecipe Recipe(BaseLoad, Addr, *EVL, Mask);
 
-  checkVPRecipeCastImpl<VPWidenLoadEVLRecipe, VPUser>(&Recipe);
+  checkVPRecipeCastImpl<VPWidenLoadEVLRecipe, VPUser, VPIRMetadata>(&Recipe);
 
   delete Load;
 }
@@ -1225,7 +1199,7 @@ TEST_F(VPRecipeTest, CastVPWidenStoreRecipeToVPUser) {
   VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
   VPWidenStoreRecipe Recipe(*Store, Addr, StoredVal, Mask, true, false, {}, {});
 
-  checkVPRecipeCastImpl<VPWidenStoreRecipe, VPUser>(&Recipe);
+  checkVPRecipeCastImpl<VPWidenStoreRecipe, VPUser, VPIRMetadata>(&Recipe);
 
   delete Store;
 }
@@ -1242,15 +1216,14 @@ TEST_F(VPRecipeTest, CastVPWidenStoreEVLRecipeToVPUser) {
   VPValue *Mask = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
   VPWidenStoreRecipe BaseStore(*Store, Addr, StoredVal, Mask, true, false, {},
                                {});
-  VPWidenStoreEVLRecipe Recipe(BaseStore, Addr, *EVL, Mask);
+  VPWidenStoreEVLRecipe Recipe(BaseStore, Addr, StoredVal, *EVL, Mask);
 
-  checkVPRecipeCastImpl<VPWidenStoreEVLRecipe, VPUser>(&Recipe);
+  checkVPRecipeCastImpl<VPWidenStoreEVLRecipe, VPUser, VPIRMetadata>(&Recipe);
 
   delete Store;
 }
 
 TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
-  IntegerType *Int1 = IntegerType::get(C, 1);
   IntegerType *Int32 = IntegerType::get(C, 32);
   PointerType *Int32Ptr = PointerType::get(C, 0);
   VPlan &Plan = getPlan();
@@ -1263,31 +1236,12 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     SmallVector<VPValue *, 2> Args;
     Args.push_back(Op1);
     Args.push_back(Op2);
-    VPWidenRecipe Recipe(*AI, make_range(Args.begin(), Args.end()));
+    VPWidenRecipe Recipe(*AI, Args);
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
     EXPECT_FALSE(Recipe.mayReadOrWriteMemory());
     delete AI;
-  }
-
-  {
-    auto *SelectI =
-        SelectInst::Create(PoisonValue::get(Int1), PoisonValue::get(Int32),
-                           PoisonValue::get(Int32));
-    VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
-    VPValue *Op2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
-    VPValue *Op3 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 3));
-    SmallVector<VPValue *, 4> Args;
-    Args.push_back(Op1);
-    Args.push_back(Op2);
-    Args.push_back(Op3);
-    VPWidenSelectRecipe Recipe(*SelectI, make_range(Args.begin(), Args.end()));
-    EXPECT_FALSE(Recipe.mayHaveSideEffects());
-    EXPECT_FALSE(Recipe.mayReadFromMemory());
-    EXPECT_FALSE(Recipe.mayWriteToMemory());
-    EXPECT_FALSE(Recipe.mayReadOrWriteMemory());
-    delete SelectI;
   }
 
   {
@@ -1317,35 +1271,29 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   }
 
   {
-    auto *Add = BinaryOperator::CreateAdd(PoisonValue::get(Int32),
-                                          PoisonValue::get(Int32));
     VPValue *ChainOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
     VPValue *VecOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
     VPValue *CondOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 3));
-    VPReductionRecipe Recipe(RecurKind::Add, FastMathFlags(), Add, ChainOp,
-                             CondOp, VecOp, false);
+    VPReductionRecipe Recipe(RecurKind::Add, FastMathFlags(), ChainOp, VecOp,
+                             CondOp, RdxUnordered{});
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
     EXPECT_FALSE(Recipe.mayReadOrWriteMemory());
-    delete Add;
   }
 
   {
-    auto *Add = BinaryOperator::CreateAdd(PoisonValue::get(Int32),
-                                          PoisonValue::get(Int32));
     VPValue *ChainOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
     VPValue *VecOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
     VPValue *CondOp = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 3));
-    VPReductionRecipe Recipe(RecurKind::Add, FastMathFlags(), Add, ChainOp,
-                             CondOp, VecOp, false);
+    VPReductionRecipe Recipe(RecurKind::Add, FastMathFlags(), ChainOp, VecOp,
+                             CondOp, RdxUnordered{});
     VPValue *EVL = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 4));
     VPReductionEVLRecipe EVLRecipe(Recipe, *EVL, CondOp);
     EXPECT_FALSE(EVLRecipe.mayHaveSideEffects());
     EXPECT_FALSE(EVLRecipe.mayReadFromMemory());
     EXPECT_FALSE(EVLRecipe.mayWriteToMemory());
     EXPECT_FALSE(EVLRecipe.mayReadOrWriteMemory());
-    delete Add;
   }
 
   {
@@ -1411,7 +1359,7 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
     Args.push_back(Op1);
     Args.push_back(Op2);
     Args.push_back(CalledFn);
-    VPWidenCallRecipe Recipe(Call, TheFn, Args);
+    VPWidenCallRecipe Recipe(Call, TheFn, Args, VPIRFlags(), VPIRMetadata());
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
     EXPECT_FALSE(Recipe.mayWriteToMemory());
@@ -1467,8 +1415,7 @@ TEST_F(VPRecipeTest, dumpRecipeInPlan) {
   VPValue *ExtVPV2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
   Args.push_back(ExtVPV1);
   Args.push_back(ExtVPV2);
-  VPWidenRecipe *WidenR =
-      new VPWidenRecipe(*AI, make_range(Args.begin(), Args.end()));
+  VPWidenRecipe *WidenR = new VPWidenRecipe(*AI, Args);
   VPBB1->appendRecipe(WidenR);
 
   {
@@ -1483,7 +1430,7 @@ TEST_F(VPRecipeTest, dumpRecipeInPlan) {
         },
         testing::ExitedWithCode(0), "WIDEN ir<%a> = add ir<1>, ir<2>");
 
-    VPDef *Def = WidenR;
+    VPRecipeBase *Def = WidenR;
     EXPECT_EXIT(
         {
           Def->dump();
@@ -1503,15 +1450,6 @@ TEST_F(VPRecipeTest, dumpRecipeInPlan) {
     EXPECT_EXIT(
         {
           R->dump();
-          exit(0);
-        },
-        testing::ExitedWithCode(0), "WIDEN ir<%a> = add ir<1>, ir<2>");
-
-    // Test VPDef::dump().
-    VPDef *D = WidenR;
-    EXPECT_EXIT(
-        {
-          D->dump();
           exit(0);
         },
         testing::ExitedWithCode(0), "WIDEN ir<%a> = add ir<1>, ir<2>");
@@ -1562,15 +1500,6 @@ TEST_F(VPRecipeTest, dumpRecipeUnnamedVPValuesInPlan) {
           exit(0);
         },
         testing::ExitedWithCode(0), "EMIT vp<%1> = add ir<1>, ir<%a>");
-
-    // Test VPDef::dump().
-    VPDef *D = I1;
-    EXPECT_EXIT(
-        {
-          D->dump();
-          exit(0);
-        },
-        testing::ExitedWithCode(0), "EMIT vp<%1> = add ir<1>, ir<%a>");
   }
   // Check printing I2.
   {
@@ -1590,15 +1519,6 @@ TEST_F(VPRecipeTest, dumpRecipeUnnamedVPValuesInPlan) {
     EXPECT_EXIT(
         {
           R->dump();
-          exit(0);
-        },
-        testing::ExitedWithCode(0), "EMIT vp<%2> = mul vp<%1>, vp<%1>");
-
-    // Test VPDef::dump().
-    VPDef *D = I2;
-    EXPECT_EXIT(
-        {
-          D->dump();
           exit(0);
         },
         testing::ExitedWithCode(0), "EMIT vp<%2> = mul vp<%1>, vp<%1>");
@@ -1638,15 +1558,6 @@ TEST_F(VPRecipeTest, dumpRecipeUnnamedVPValuesNotInPlanOrBlock) {
           exit(0);
         },
         testing::ExitedWithCode(0), "EMIT <badref> = add ir<1>, ir<%a>");
-
-    // Test VPDef::dump().
-    VPDef *D = I1;
-    EXPECT_EXIT(
-        {
-          D->dump();
-          exit(0);
-        },
-        testing::ExitedWithCode(0), "EMIT <badref> = add ir<1>, ir<%a>");
   }
   // Check printing I2.
   {
@@ -1669,15 +1580,6 @@ TEST_F(VPRecipeTest, dumpRecipeUnnamedVPValuesNotInPlanOrBlock) {
           exit(0);
         },
         testing::ExitedWithCode(0), "EMIT <badref> = mul <badref>, <badref>");
-
-    // Test VPDef::dump().
-    VPDef *D = I2;
-    EXPECT_EXIT(
-        {
-          D->dump();
-          exit(0);
-        },
-        testing::ExitedWithCode(0), "EMIT <badref> = mul <badref>, <badref>");
   }
 
   delete I2;
@@ -1689,45 +1591,42 @@ TEST_F(VPRecipeTest, dumpRecipeUnnamedVPValuesNotInPlanOrBlock) {
 
 TEST_F(VPRecipeTest, CastVPReductionRecipeToVPUser) {
   IntegerType *Int32 = IntegerType::get(C, 32);
-  auto *Add = BinaryOperator::CreateAdd(PoisonValue::get(Int32),
-                                        PoisonValue::get(Int32));
   VPValue *ChainOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *VecOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 2));
   VPValue *CondOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 3));
-  VPReductionRecipe Recipe(RecurKind::Add, FastMathFlags(), Add, ChainOp,
-                           CondOp, VecOp, false);
+  VPReductionRecipe Recipe(RecurKind::Add, FastMathFlags(), ChainOp, VecOp,
+                           CondOp, RdxUnordered{});
   checkVPRecipeCastImpl<VPReductionRecipe, VPUser>(&Recipe);
-  delete Add;
+  EXPECT_TRUE(isa<VPUser>(&Recipe));
+  VPRecipeBase *BaseR = &Recipe;
+  EXPECT_TRUE(isa<VPUser>(BaseR));
 }
 
 TEST_F(VPRecipeTest, CastVPReductionEVLRecipeToVPUser) {
   IntegerType *Int32 = IntegerType::get(C, 32);
-  auto *Add = BinaryOperator::CreateAdd(PoisonValue::get(Int32),
-                                        PoisonValue::get(Int32));
   VPValue *ChainOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *VecOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 2));
   VPValue *CondOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 3));
-  VPReductionRecipe Recipe(RecurKind::Add, FastMathFlags(), Add, ChainOp,
-                           CondOp, VecOp, false);
+  VPReductionRecipe Recipe(RecurKind::Add, FastMathFlags(), ChainOp, VecOp,
+                           CondOp, RdxUnordered{});
   VPValue *EVL = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 0));
   VPReductionEVLRecipe EVLRecipe(Recipe, *EVL, CondOp);
   checkVPRecipeCastImpl<VPReductionEVLRecipe, VPUser>(&EVLRecipe);
-  delete Add;
 }
 } // namespace
 
 struct VPDoubleValueDef : public VPRecipeBase {
   VPDoubleValueDef(ArrayRef<VPValue *> Operands) : VPRecipeBase(99, Operands) {
-    new VPValue(nullptr, this);
-    new VPValue(nullptr, this);
+    new VPRecipeValue(this);
+    new VPRecipeValue(this);
   }
 
   VPRecipeBase *clone() override { return nullptr; }
 
   void execute(struct VPTransformState &State) override {}
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
-  void print(raw_ostream &O, const Twine &Indent,
-             VPSlotTracker &SlotTracker) const override {}
+  void printRecipe(raw_ostream &O, const Twine &Indent,
+                   VPSlotTracker &SlotTracker) const override {}
 #endif
 };
 
@@ -1737,7 +1636,7 @@ TEST(VPDoubleValueDefTest, traverseUseLists) {
   // Check that the def-use chains of a multi-def can be traversed in both
   // directions.
 
-  // Create a new VPDef which defines 2 values and has 2 operands.
+  // Create a new VPRecipeBase which defines 2 values and has 2 operands.
   VPInstruction Op0(VPInstruction::StepVector, {});
   VPInstruction Op1(VPInstruction::VScale, {});
   VPDoubleValueDef DoubleValueDef({&Op0, &Op1});
@@ -1748,7 +1647,7 @@ TEST(VPDoubleValueDefTest, traverseUseLists) {
   VPInstruction I2(Instruction::Freeze, {DoubleValueDef.getVPValue(0)});
   VPInstruction I3(Instruction::Freeze, {DoubleValueDef.getVPValue(1)});
 
-  // Check operands of the VPDef (traversing upwards).
+  // Check operands of the VPRecipeBase (traversing upwards).
   SmallVector<VPValue *, 4> DoubleOperands(DoubleValueDef.op_begin(),
                                            DoubleValueDef.op_end());
   EXPECT_EQ(2u, DoubleOperands.size());
@@ -1770,7 +1669,7 @@ TEST(VPDoubleValueDefTest, traverseUseLists) {
   EXPECT_EQ(&I1, DoubleValueDefV1Users[0]);
   EXPECT_EQ(&I3, DoubleValueDefV1Users[1]);
 
-  // Now check that we can get the right VPDef for each defined value.
+  // Now check that we can get the right VPRecipeBase for each defined value.
   EXPECT_EQ(&DoubleValueDef, I1.getOperand(0)->getDefiningRecipe());
   EXPECT_EQ(&DoubleValueDef, I1.getOperand(1)->getDefiningRecipe());
   EXPECT_EQ(&DoubleValueDef, I2.getOperand(0)->getDefiningRecipe());

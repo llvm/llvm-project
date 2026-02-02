@@ -127,7 +127,7 @@ static void extractInstrFromFunction(Oracle &O, MachineFunction &MF) {
         unsigned ImpDef = IsGeneric ? TargetOpcode::G_IMPLICIT_DEF
                                     : TargetOpcode::IMPLICIT_DEF;
 
-        unsigned State = getRegState(MO);
+        RegState State = getRegState(MO);
         if (MO.getSubReg())
           State |= RegState::Undef;
 

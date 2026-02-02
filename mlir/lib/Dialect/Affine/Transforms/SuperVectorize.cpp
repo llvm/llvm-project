@@ -11,7 +11,7 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "mlir/Dialect/Affine/Passes.h"
+#include "mlir/Dialect/Affine/Transforms/Passes.h"
 
 #include "mlir/Analysis/SliceAnalysis.h"
 #include "mlir/Dialect/Affine/Analysis/AffineAnalysis.h"
@@ -33,7 +33,7 @@
 namespace mlir {
 namespace affine {
 #define GEN_PASS_DEF_AFFINEVECTORIZE
-#include "mlir/Dialect/Affine/Passes.h.inc"
+#include "mlir/Dialect/Affine/Transforms/Passes.h.inc"
 } // namespace affine
 } // namespace mlir
 
@@ -1774,6 +1774,37 @@ static void vectorizeLoops(Operation *parentOp, DenseSet<Operation *> &loops,
   LLVM_DEBUG(dbgs() << "\n");
 }
 
+void affine::vectorizeChildAffineLoops(
+    Operation *parentOp, bool vectorizeReductions,
+    ArrayRef<int64_t> vectorSizes, ArrayRef<int64_t> fastestVaryingPattern) {
+  DenseSet<Operation *> parallelLoops;
+  ReductionLoopMap reductionLoops;
+
+  // If 'vectorize-reduction=true' is provided, we also populate the
+  // `reductionLoops` map.
+  if (vectorizeReductions) {
+    parentOp->walk([&parallelLoops, &reductionLoops](AffineForOp loop) {
+      SmallVector<LoopReduction, 2> reductions;
+      if (isLoopParallel(loop, &reductions)) {
+        parallelLoops.insert(loop);
+        // If it's not a reduction loop, adding it to the map is not necessary.
+        if (!reductions.empty())
+          reductionLoops[loop] = reductions;
+      }
+    });
+  } else {
+    parentOp->walk([&parallelLoops](AffineForOp loop) {
+      if (isLoopParallel(loop))
+        parallelLoops.insert(loop);
+    });
+  }
+
+  // Thread-safe RAII local context, BumpPtrAllocator freed on exit.
+  NestedPatternContext mlContext;
+  vectorizeLoops(parentOp, parallelLoops, vectorSizes, fastestVaryingPattern,
+                 reductionLoops);
+}
+
 /// Applies vectorization to the current function by searching over a bunch of
 /// predetermined patterns.
 void Vectorize::runOnOperation() {
@@ -1795,32 +1826,8 @@ void Vectorize::runOnOperation() {
     return signalPassFailure();
   }
 
-  DenseSet<Operation *> parallelLoops;
-  ReductionLoopMap reductionLoops;
-
-  // If 'vectorize-reduction=true' is provided, we also populate the
-  // `reductionLoops` map.
-  if (vectorizeReductions) {
-    f.walk([&parallelLoops, &reductionLoops](AffineForOp loop) {
-      SmallVector<LoopReduction, 2> reductions;
-      if (isLoopParallel(loop, &reductions)) {
-        parallelLoops.insert(loop);
-        // If it's not a reduction loop, adding it to the map is not necessary.
-        if (!reductions.empty())
-          reductionLoops[loop] = reductions;
-      }
-    });
-  } else {
-    f.walk([&parallelLoops](AffineForOp loop) {
-      if (isLoopParallel(loop))
-        parallelLoops.insert(loop);
-    });
-  }
-
-  // Thread-safe RAII local context, BumpPtrAllocator freed on exit.
-  NestedPatternContext mlContext;
-  vectorizeLoops(f, parallelLoops, vectorSizes, fastestVaryingPattern,
-                 reductionLoops);
+  vectorizeChildAffineLoops(f, vectorizeReductions, vectorSizes,
+                            fastestVaryingPattern);
 }
 
 /// Verify that affine loops in 'loops' meet the nesting criteria expected by

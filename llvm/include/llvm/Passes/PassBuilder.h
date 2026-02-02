@@ -99,6 +99,10 @@ public:
   // analyses after various module->function or cgscc->function adaptors in the
   // default pipelines.
   bool EagerlyInvalidateAnalyses;
+
+  // Tuning option to enable/disable speculative devirtualization.
+  // Its default value is false.
+  bool DevirtualizeSpeculatively;
 };
 
 /// This class provides access to building LLVM's passes.

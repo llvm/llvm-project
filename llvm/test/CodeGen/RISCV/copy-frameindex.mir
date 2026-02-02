@@ -15,8 +15,6 @@
     ret void
   }
 
-  declare void @llvm.dbg.value(metadata, metadata, metadata)
-
   !llvm.dbg.cu = !{!0}
 
   !0 = distinct !DICompileUnit(language: DW_LANG_C99, file: !4)

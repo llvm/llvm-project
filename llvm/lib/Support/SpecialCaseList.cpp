@@ -455,7 +455,7 @@ unsigned SpecialCaseList::Section::getLastMatch(StringRef Prefix,
 }
 
 bool SpecialCaseList::Section::hasPrefix(StringRef Prefix) const {
-  return Impl->Entries.find(Prefix) != Impl->Entries.end();
+  return Impl->Entries.contains(Prefix);
 }
 
 } // namespace llvm

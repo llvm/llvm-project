@@ -3954,6 +3954,14 @@ static const struct Extension {
     {"poe2", {AArch64::FeatureS1POE2}},
     {"tev", {AArch64::FeatureTEV}},
     {"btie", {AArch64::FeatureBTIE}},
+    {"dit", {AArch64::FeatureDIT}},
+    {"brbe", {AArch64::FeatureBRBE}},
+    {"bti", {AArch64::FeatureBranchTargetId}},
+    {"fcma", {AArch64::FeatureComplxNum}},
+    {"jscvt", {AArch64::FeatureJS}},
+    {"pauth-lr", {AArch64::FeaturePAuthLR}},
+    {"ssve-fexpa", {AArch64::FeatureSSVE_FEXPA}},
+    {"wfxt", {AArch64::FeatureWFxT}},
 };
 
 static void setRequiredFeatureString(FeatureBitset FBS, std::string &Str) {
@@ -4111,7 +4119,7 @@ bool AArch64AsmParser::parseSysAlias(StringRef Name, SMLoc NameLoc,
       setRequiredFeatureString(GIC->getRequiredFeatures(), Str);
       return TokError(Str);
     }
-    ExpectRegister = true;
+    ExpectRegister = GIC->NeedsReg;
     createSysAlias(GIC->Encoding, Operands, S);
   } else if (Mnemonic == "gsb") {
     const AArch64GSB::GSB *GSB = AArch64GSB::lookupGSBByName(Op);

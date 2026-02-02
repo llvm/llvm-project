@@ -8,6 +8,8 @@
 
 #include "DAP.h"
 #include "DAPLog.h"
+#include "Handler/RequestHandler.h"
+#include "Handler/ResponseHandler.h"
 #include "Protocol/ProtocolBase.h"
 #include "TestingSupport/Host/JSONTransportTestUtilities.h"
 #include "TestingSupport/SubsystemRAII.h"
@@ -60,6 +62,7 @@ protected:
   lldb_private::MainLoop::ReadHandleUP handles[2];
 
   std::unique_ptr<lldb_dap::Log> log;
+  lldb_dap::Log::Mutex log_mutex;
 
   std::unique_ptr<TestDAPTransport> to_client;
   MockMessageHandler<lldb_dap::ProtocolDescriptor> client;

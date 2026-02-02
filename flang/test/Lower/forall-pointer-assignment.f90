@@ -1,4 +1,4 @@
-! Test lower of FORALL pointer assignment 
+! Test lower of FORALL pointer assignment
 ! RUN: bbc -emit-fir %s -o - | FileCheck %s
 
 

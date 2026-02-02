@@ -1,4 +1,4 @@
-// UNSUPPORTED: ios
+// UNSUPPORTED: darwin-remote
 // FIXME(dliew): We currently have to use module map for this test due to the atos
 // symbolizer changing the module name from an absolute path to just the file name.
 // rdar://problem/49784442

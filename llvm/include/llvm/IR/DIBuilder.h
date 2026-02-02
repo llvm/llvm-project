@@ -777,7 +777,7 @@ namespace llvm {
     ///                        These flags are used to emit dwarf attributes.
     /// \param CC              Calling convention, e.g. dwarf::DW_CC_normal
     LLVM_ABI DISubroutineType *
-    createSubroutineType(DITypeRefArray ParameterTypes,
+    createSubroutineType(DITypeArray ParameterTypes,
                          DINode::DIFlags Flags = DINode::FlagZero,
                          unsigned CC = 0);
 
@@ -842,8 +842,8 @@ namespace llvm {
     LLVM_ABI DIMacroNodeArray
     getOrCreateMacroArray(ArrayRef<Metadata *> Elements);
 
-    /// Get a DITypeRefArray, create one if required.
-    LLVM_ABI DITypeRefArray getOrCreateTypeArray(ArrayRef<Metadata *> Elements);
+    /// Get a DITypeArray, create one if required.
+    LLVM_ABI DITypeArray getOrCreateTypeArray(ArrayRef<Metadata *> Elements);
 
     /// Create a descriptor for a value range.  This
     /// implicitly uniques the values returned.
@@ -1155,6 +1155,18 @@ namespace llvm {
                                       DILocalVariable *VarInfo,
                                       DIExpression *Expr, const DILocation *DL,
                                       InsertPosition InsertPt);
+
+    /// Insert a new llvm.dbg.declare_value intrinsic call.
+    /// \param Storage      llvm::Value of the variable
+    /// \param VarInfo      Variable's debug info descriptor.
+    /// \param Expr         A complex location expression.
+    /// \param DL           Debug info location.
+    /// \param InsertPt     Location for the new intrinsic.
+    LLVM_ABI DbgInstPtr insertDeclareValue(llvm::Value *Storage,
+                                           DILocalVariable *VarInfo,
+                                           DIExpression *Expr,
+                                           const DILocation *DL,
+                                           InsertPosition InsertPt);
 
     /// Insert a new llvm.dbg.label intrinsic call.
     /// \param LabelInfo    Label's debug info descriptor.

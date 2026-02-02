@@ -8,6 +8,7 @@
 #include "PassDetail.h"
 #include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/Passes.h"
+#include "llvm/ADT/SmallSet.h"
 #include "llvm/Support/TimeProfiler.h"
 #include <memory>
 
@@ -30,16 +31,28 @@ static void process(cir::FuncOp func) {
   mlir::OpBuilder rewriter(func.getContext());
   llvm::StringMap<Block *> labels;
   llvm::SmallVector<cir::GotoOp, 4> gotos;
+  llvm::SmallSet<StringRef, 4> blockAddrLabel;
 
   func.getBody().walk([&](mlir::Operation *op) {
     if (auto lab = dyn_cast<cir::LabelOp>(op)) {
-      // Will construct a string copy inplace. Safely erase the label
       labels.try_emplace(lab.getLabel(), lab->getBlock());
-      lab.erase();
     } else if (auto goTo = dyn_cast<cir::GotoOp>(op)) {
       gotos.push_back(goTo);
+    } else if (auto blockAddr = dyn_cast<cir::BlockAddressOp>(op)) {
+      blockAddrLabel.insert(blockAddr.getBlockAddrInfo().getLabel());
     }
   });
+
+  for (auto &lab : labels) {
+    StringRef labelName = lab.getKey();
+    Block *block = lab.getValue();
+    if (!blockAddrLabel.contains(labelName)) {
+      // erase the LabelOp inside the block if safe
+      if (auto lab = dyn_cast<cir::LabelOp>(&block->front())) {
+        lab.erase();
+      }
+    }
+  }
 
   for (auto goTo : gotos) {
     mlir::OpBuilder::InsertionGuard guard(rewriter);

@@ -29,7 +29,6 @@ struct MissingFeatures {
 
   // Unhandled global/linkage information.
   static bool opGlobalThreadLocal() { return false; }
-  static bool opGlobalConstant() { return false; }
   static bool opGlobalWeakRef() { return false; }
   static bool opGlobalUnnamedAddr() { return false; }
   static bool opGlobalSection() { return false; }
@@ -92,9 +91,7 @@ struct MissingFeatures {
   static bool opFuncUnwindTablesAttr() { return false; }
   static bool opFuncWillReturn() { return false; }
   static bool opFuncNoReturn() { return false; }
-  static bool setFunctionAttributes() { return false; }
   static bool setLLVMFunctionFEnvAttributes() { return false; }
-  static bool setFunctionPersonality() { return false; }
 
   // CallOp handling
   static bool opCallAggregateArgs() { return false; }
@@ -151,10 +148,8 @@ struct MissingFeatures {
   static bool zeroSizeRecordMembers() { return false; }
 
   // Coroutines
-  static bool coroEndBuiltinCall() { return false; }
-  static bool coroutineFrame() { return false; }
-  static bool emitBodyAndFallthrough() { return false; }
   static bool coroOutsideFrameMD() { return false; }
+  static bool coroutineExceptions() { return false; };
 
   // Various handling of deferred processing in CIRGenModule.
   static bool cgmRelease() { return false; }
@@ -180,6 +175,7 @@ struct MissingFeatures {
   static bool atomicInfoGetAtomicAddress() { return false; }
   static bool atomicScope() { return false; }
   static bool atomicSyncScopeID() { return false; }
+  static bool atomicMapTargetSyncScope() { return false; }
   static bool atomicTypes() { return false; }
   static bool atomicUseLibCall() { return false; }
   static bool atomicMicrosoftVolatile() { return false; }
@@ -189,7 +185,21 @@ struct MissingFeatures {
   static bool globalCtorLexOrder() { return false; }
   static bool globalCtorAssociatedData() { return false; }
 
+  // LowerModule handling
+  static bool lowerModuleCodeGenOpts() { return false; }
+  static bool lowerModuleLangOpts() { return false; }
+  static bool targetLoweringInfo() { return false; }
+
+  // Extra checks for lowerGetMethod in ItaniumCXXABI
+  static bool emitCFICheck() { return false; }
+  static bool emitVFEInfo() { return false; }
+  static bool emitWPDInfo() { return false; }
+
   // Misc
+  static bool aarch64SIMDIntrinsics() { return false; }
+  static bool aarch64SMEIntrinsics() { return false; }
+  static bool aarch64SVEIntrinsics() { return false; }
+  static bool aarch64TblBuiltinExpr() { return false; }
   static bool abiArgInfo() { return false; }
   static bool addAutoInitAnnotation() { return false; }
   static bool addHeapAllocSiteMetadata() { return false; }
@@ -201,14 +211,16 @@ struct MissingFeatures {
   static bool aggValueSlotMayOverlap() { return false; }
   static bool aggValueSlotVolatile() { return false; }
   static bool alignCXXRecordDecl() { return false; }
+  static bool allocToken() { return false; }
+  static bool appleArm64CXXABI() { return false; }
   static bool appleKext() { return false; }
   static bool armComputeVolatileBitfields() { return false; }
   static bool asmGoto() { return false; }
-  static bool asmInputOperands() { return false; }
   static bool asmLabelAttr() { return false; }
+  static bool asmLLVMAssume() { return false; }
   static bool asmMemoryEffects() { return false; }
-  static bool asmOutputOperands() { return false; }
   static bool asmUnwindClobber() { return false; }
+  static bool asmVectorType() { return false; }
   static bool assignMemcpyizer() { return false; }
   static bool astVarDeclInterface() { return false; }
   static bool attributeBuiltin() { return false; }
@@ -240,7 +252,6 @@ struct MissingFeatures {
   static bool ctorConstLvalueToRvalueConversion() { return false; }
   static bool ctorMemcpyizer() { return false; }
   static bool cudaSupport() { return false; }
-  static bool cxxRecordStaticMembers() { return false; }
   static bool dataLayoutTypeIsSized() { return false; }
   static bool dataLayoutTypeAllocSize() { return false; }
   static bool dataLayoutTypeStoreSize() { return false; }
@@ -250,15 +261,17 @@ struct MissingFeatures {
   static bool devirtualizeDestructor() { return false; }
   static bool devirtualizeMemberFunction() { return false; }
   static bool dtorCleanups() { return false; }
-  static bool ehCleanupFlags() { return false; }
+  static bool ehCleanupActiveFlag() { return false; }
   static bool ehCleanupHasPrebranchedFallthrough() { return false; }
   static bool ehCleanupScope() { return false; }
   static bool ehCleanupScopeRequiresEHCleanup() { return false; }
   static bool ehCleanupBranchFixups() { return false; }
+  static bool ehScopeFilter() { return false; }
   static bool ehstackBranches() { return false; }
   static bool emitBranchThroughCleanup() { return false; }
   static bool emitCheckedInBoundsGEP() { return false; }
   static bool emitCondLikelihoodViaExpectIntrinsic() { return false; }
+  static bool emitConstrainedFPCall() { return false; }
   static bool emitLifetimeMarkers() { return false; }
   static bool emitLValueAlignmentAssumption() { return false; }
   static bool emitNullCheckForDeleteCalls() { return false; }
@@ -266,8 +279,10 @@ struct MissingFeatures {
   static bool emitTypeCheck() { return false; }
   static bool emitTypeMetadataCodeForVCall() { return false; }
   static bool fastMathFlags() { return false; }
+
   static bool fpConstraints() { return false; }
   static bool generateDebugInfo() { return false; }
+  static bool getRuntimeFunctionDecl() { return false; }
   static bool globalViewIndices() { return false; }
   static bool globalViewIntLowering() { return false; }
   static bool handleBuiltinICEArguments() { return false; }
@@ -286,11 +301,15 @@ struct MissingFeatures {
   static bool lowerModeOptLevel() { return false; }
   static bool loweringPrepareX86CXXABI() { return false; }
   static bool loweringPrepareAArch64XXABI() { return false; }
+  static bool makeTripleAlwaysPresent() { return false; }
   static bool maybeHandleStaticInExternC() { return false; }
   static bool mergeAllConstants() { return false; }
+  static bool memberFuncPtrAuthInfo() { return false; }
+  static bool memberFuncPtrCast() { return false; }
   static bool metaDataNode() { return false; }
   static bool moduleNameHash() { return false; }
   static bool msabi() { return false; }
+  static bool neonSISDIntrinsics() { return false; }
   static bool nrvo() { return false; }
   static bool objCBlocks() { return false; }
   static bool objCGC() { return false; }
@@ -327,6 +346,7 @@ struct MissingFeatures {
   static bool thunks() { return false; }
   static bool tryEmitAsConstant() { return false; }
   static bool typeChecks() { return false; }
+  static bool useEHCleanupForArray() { return false; }
   static bool vaArgABILowering() { return false; }
   static bool vectorConstants() { return false; }
   static bool vlas() { return false; }
@@ -362,10 +382,12 @@ struct MissingFeatures {
   static bool tryOp() { return false; }
   static bool vecTernaryOp() { return false; }
   static bool zextOp() { return false; }
-  static bool catchParamOp() { return false; }
 
   // Future CIR attributes
   static bool optInfoAttr() { return false; }
+
+  // Maybe only needed for Windows exception handling
+  static bool currentFuncletPad() { return false; }
 };
 
 } // namespace cir

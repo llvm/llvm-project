@@ -1,0 +1,62 @@
+// RUN: cir-opt %s -cir-goto-solver --verify-roundtrip -o - | FileCheck %s
+
+!void = !cir.void
+
+cir.func @a(){
+  %0 = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["ptr", init] {alignment = 8 : i64}
+  %1 = cir.block_address <@a, "label1"> : !cir.ptr<!void>
+  cir.store align(8) %1, %0 : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
+  cir.br ^bb1
+^bb1:
+  cir.label "label1"
+  cir.br ^bb2
+^bb2:
+  // This label is not referenced by any blockaddressOp, so it should be removed
+  cir.label "label2"
+  cir.return
+}
+
+// CHECK:  cir.func @a()
+// CHECK:   %1 = cir.block_address <@a, "label1"> : !cir.ptr<!void>
+// CHECK: ^bb1:
+// CHECK:   cir.label "label1"
+// CHECK:   cir.br ^bb2
+// CHECK: ^bb2:
+// CHECK-NOT: cir.label "label2"
+
+cir.func @b(){
+  %0 = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["ptr", init] {alignment = 8 : i64}
+  %1 = cir.block_address <@b, "label1"> : !cir.ptr<!void>
+  cir.store align(8) %1, %0 : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
+  cir.goto "label2"
+^bb1:
+  cir.label "label1"
+  cir.br ^bb2
+^bb2:
+  // This label is not referenced by any blockaddressOp, so it should be removed
+  cir.label "label2"
+  cir.return
+}
+
+// CHECK: cir.func @b() {
+// CHECK:   %1 = cir.block_address <@b, "label1"> : !cir.ptr<!void>
+// CHECK:   cir.store align(8) %1, {{.*}} : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
+// CHECK:   cir.br ^bb2
+// CHECK: ^bb1:
+// CHECK:   cir.label "label1"
+// CHECK:   cir.br ^bb2
+// CHECK: ^bb2:
+// CHECK-NOT: cir.label "label2"
+
+cir.func @c() {
+  cir.label "label1"
+  %0 = cir.alloca !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>, ["ptr", init] {alignment = 8 : i64}
+  %1 = cir.block_address <@c, "label1"> : !cir.ptr<!void>
+  cir.store align(8) %1, %0 : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>
+  cir.return
+}
+
+// CHECK: cir.func @c
+// CHECK:   cir.label "label1"
+// CHECK:   %1 = cir.block_address <@c, "label1"> : !cir.ptr<!void>
+// CHECK:   cir.store align(8) %1, {{.*}} : !cir.ptr<!void>, !cir.ptr<!cir.ptr<!void>>

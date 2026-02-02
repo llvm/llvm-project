@@ -126,6 +126,14 @@ void SymbolFile::FindFunctions(const Module::LookupInfo &lookup_info,
                                bool include_inlines,
                                SymbolContextList &sc_list) {}
 
+void SymbolFile::FindFunctions(llvm::ArrayRef<Module::LookupInfo> lookup_infos,
+                               const CompilerDeclContext &parent_decl_ctx,
+                               bool include_inlines,
+                               SymbolContextList &sc_list) {
+  for (const auto &lookup_info : lookup_infos)
+    FindFunctions(lookup_info, parent_decl_ctx, include_inlines, sc_list);
+}
+
 void SymbolFile::FindFunctions(const RegularExpression &regex,
                                bool include_inlines,
                                SymbolContextList &sc_list) {}
