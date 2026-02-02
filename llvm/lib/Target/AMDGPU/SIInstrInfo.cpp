@@ -10614,7 +10614,8 @@ SIInstrInfo::getCalleeOperand(const MachineInstr &MI) const {
 }
 
 InstructionUniformity
-SIInstrInfo::getGenericInstructionUniformity(const MachineInstr &MI) const {
+SIInstrInfo::getGenericDefUniformity(const MachineInstr &MI,
+                                     unsigned DefIdx) const {
   const MachineRegisterInfo &MRI = MI.getMF()->getRegInfo();
   unsigned Opcode = MI.getOpcode();
 
@@ -10639,19 +10640,34 @@ SIInstrInfo::getGenericInstructionUniformity(const MachineInstr &MI) const {
   if (Opcode == TargetOpcode::G_ADDRSPACE_CAST)
     return HandleAddrSpaceCast(MI);
 
-  if (auto *GI = dyn_cast<GIntrinsic>(&MI)) {
-    auto IID = GI->getIntrinsicID();
-    if (AMDGPU::isIntrinsicSourceOfDivergence(IID))
-      return InstructionUniformity::NeverUniform;
+  if (const GIntrinsic *GI = dyn_cast<GIntrinsic>(&MI)) {
+    Intrinsic::ID IID = GI->getIntrinsicID();
+    if (AMDGPU::isIntrinsicSourceOfDivergence(IID)) {
+      // Some intrinsics produce multiple outputs with mixed uniformity.
+      // For these, we need to check DefIdx to determine which output is being
+      // queried and return the appropriate uniformity.
+      switch (IID) {
+      case Intrinsic::amdgcn_if:
+      case Intrinsic::amdgcn_else:
+        // These intrinsics produce two outputs:
+        //   DefIdx=0: "Exec mask not zero" flag (i1) - inherits divergence from
+        //             the input condition to ensure proper divergence
+        //             propagation.
+        //   DefIdx=1: Saved exec mask (i64) - always uniform as all active
+        //             lanes see the same mask value.
+        return DefIdx == 1 ? InstructionUniformity::AlwaysUniform
+                           : InstructionUniformity::Default;
+      default:
+        return InstructionUniformity::NeverUniform;
+      }
+    }
     if (AMDGPU::isIntrinsicAlwaysUniform(IID))
       return InstructionUniformity::AlwaysUniform;
 
     switch (IID) {
     case Intrinsic::amdgcn_addrspacecast_nonnull:
       return HandleAddrSpaceCast(MI);
-    case Intrinsic::amdgcn_if:
-    case Intrinsic::amdgcn_else:
-      // FIXME: Uniform if second result
+    default:
       break;
     }
 
@@ -10694,8 +10710,8 @@ const MIRFormatter *SIInstrInfo::getMIRFormatter() const {
   return Formatter.get();
 }
 
-InstructionUniformity
-SIInstrInfo::getInstructionUniformity(const MachineInstr &MI) const {
+InstructionUniformity SIInstrInfo::getDefUniformity(const MachineInstr &MI,
+                                                    unsigned DefIdx) const {
 
   if (isNeverUniform(MI))
     return InstructionUniformity::NeverUniform;
@@ -10719,7 +10735,7 @@ SIInstrInfo::getInstructionUniformity(const MachineInstr &MI) const {
 
   // GMIR handling
   if (MI.isPreISelOpcode())
-    return SIInstrInfo::getGenericInstructionUniformity(MI);
+    return SIInstrInfo::getGenericDefUniformity(MI, DefIdx);
 
   // Atomics are divergent because they are executed sequentially: when an
   // atomic operation refers to the same address in each thread, then each

@@ -34,7 +34,7 @@ template <> void llvm::GenericUniformityAnalysisImpl<SSAContext>::initialize() {
     InstructionUniformity IU = TTI->getInstructionUniformity(&I);
     switch (IU) {
     case InstructionUniformity::AlwaysUniform:
-      addUniformOverride(I);
+      addUniformOverride(&I);
       continue;
     case InstructionUniformity::NeverUniform:
       markDivergent(I);

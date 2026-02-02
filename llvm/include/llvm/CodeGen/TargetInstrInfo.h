@@ -2367,9 +2367,10 @@ public:
     llvm_unreachable("impossible call instruction");
   }
 
-  /// Return the uniformity behavior of the given instruction.
-  virtual InstructionUniformity
-  getInstructionUniformity(const MachineInstr &MI) const {
+  /// Return the uniformity behavior of the given instruction's output.
+  /// \p DefIdx specifies which output to query (for multi-output instructions).
+  virtual InstructionUniformity getDefUniformity(const MachineInstr &MI,
+                                                 unsigned DefIdx = 0) const {
     return InstructionUniformity::Default;
   }
 
