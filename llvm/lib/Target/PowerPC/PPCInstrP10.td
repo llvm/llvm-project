@@ -1629,22 +1629,22 @@ let Predicates = [IsISA3_1] in {
                                   (ins vrrc:$VB, u1imm:$MP),
                                   "vcntmbb $RD, $VB, $MP", IIC_VecGeneral,
                                   [(set i64:$RD, (int_ppc_altivec_vcntmbb
-                                        v16i8:$VB, timm:$MP))]>;
+                                        v16i8:$VB, u1imm_timm:$MP))]>;
   def VCNTMBH : VXForm_RD5_MP_VB5<1602, 13, (outs g8rc:$RD),
                                   (ins vrrc:$VB, u1imm:$MP),
                                   "vcntmbh $RD, $VB, $MP", IIC_VecGeneral,
                                   [(set i64:$RD, (int_ppc_altivec_vcntmbh
-                                        v8i16:$VB, timm:$MP))]>;
+                                        v8i16:$VB, u1imm_timm:$MP))]>;
   def VCNTMBW : VXForm_RD5_MP_VB5<1602, 14, (outs g8rc:$RD),
                                   (ins vrrc:$VB, u1imm:$MP),
                                   "vcntmbw $RD, $VB, $MP", IIC_VecGeneral,
                                   [(set i64:$RD, (int_ppc_altivec_vcntmbw
-                                        v4i32:$VB, timm:$MP))]>;
+                                        v4i32:$VB, u1imm_timm:$MP))]>;
   def VCNTMBD : VXForm_RD5_MP_VB5<1602, 15, (outs g8rc:$RD),
                                   (ins vrrc:$VB, u1imm:$MP),
                                   "vcntmbd $RD, $VB, $MP", IIC_VecGeneral,
                                   [(set i64:$RD, (int_ppc_altivec_vcntmbd
-                                        v2i64:$VB, timm:$MP))]>;
+                                        v2i64:$VB, u1imm_timm:$MP))]>;
   def VEXTDUBVLX : VAForm_1a<24, (outs vrrc:$RT),
                              (ins vrrc:$RA, vrrc:$RB, gprc:$RC),
                              "vextdubvlx $RT, $RA, $RB, $RC",

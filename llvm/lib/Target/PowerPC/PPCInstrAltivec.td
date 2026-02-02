@@ -343,7 +343,7 @@ class VXBX_Int_Ty<bits<11> xo, string opc, Intrinsic IntID, ValueType Ty>
 class VXCR_Int_Ty<bits<11> xo, string opc, Intrinsic IntID, ValueType Ty>
   : VXForm_CR<xo, (outs vrrc:$VD), (ins vrrc:$VA, u1imm:$ST, u4imm:$SIX),
               !strconcat(opc, " $VD, $VA, $ST, $SIX"), IIC_VecFP,
-              [(set Ty:$VD, (IntID Ty:$VA, timm:$ST, timm:$SIX))]>;
+              [(set Ty:$VD, (IntID Ty:$VA, u1imm_timm:$ST, timm:$SIX))]>;
 
 //===----------------------------------------------------------------------===//
 // Instruction Definitions.
@@ -1397,9 +1397,9 @@ def VUPKLSW : VX2_Int_Ty2<1742, "vupklsw", int_ppc_altivec_vupklsw,
 def BCDADD_rec : VX_VT5_VA5_VB5_PS1_XO9_o<1,  "bcdadd." , []>;
 def BCDSUB_rec : VX_VT5_VA5_VB5_PS1_XO9_o<65, "bcdsub." , []>;
 
-def : Pat<(v16i8 (int_ppc_bcdadd v16i8:$vA, v16i8:$vB, timm:$PS)),
+def : Pat<(v16i8 (int_ppc_bcdadd v16i8:$vA, v16i8:$vB, u1imm_timm:$PS)),
           (BCDADD_rec $vA, $vB, $PS)>;
-def : Pat<(v16i8 (int_ppc_bcdsub v16i8:$vA, v16i8:$vB, timm:$PS)),
+def : Pat<(v16i8 (int_ppc_bcdsub v16i8:$vA, v16i8:$vB, u1imm_timm:$PS)),
           (BCDSUB_rec $vA, $vB, $PS)>;
 
 // Shuffle patterns for unary and swapped (LE) vector pack modulo.

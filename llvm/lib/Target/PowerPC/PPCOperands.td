@@ -96,27 +96,33 @@ multiclass SignedImmOpWithPCRel<ValueType vt, string asmop, int width,
 
 //===----------------------------------------------------------------------===//
 // Multiclasses for complete immediate definitions (AsmOperand + Operand + PatLeaf)
-// Similar to SystemZ's Immediate multiclass
+// Similar to SystemZ's Immediate multiclass but GlobalISel-compatible
 //===----------------------------------------------------------------------===//
 
-// Creates both Operand and PatLeaf for unsigned immediates
-// Similar to SystemZ's Immediate multiclass
-// Note: PowerPC needs width parameter for decoder, so we add it after asmop
+// Creates Operand and separate PatLeaf definitions for unsigned immediates
+// This approach keeps Operand and PatLeaf separate for GlobalISel compatibility
+// while maintaining SystemZ-style organization and naming
 multiclass UnsignedImmediate<ValueType vt, code pred, SDNodeXForm xform, string asmop, int width> {
-  // Main operand definition with PatLeaf for imm nodes
-  def "" : UnsignedImmOpWithPattern<vt, asmop, width, pred, xform>;
+  // Operand definition (for instruction operands)
+  def "" : UnsignedImmOp<vt, asmop, width>;
   
-  // PatLeaf for timm (target immediate) nodes
-  def _timm : UnsignedImmOpWithPattern<vt, asmop, width, pred, xform, timm>;
+  // PatLeaf for imm nodes (for DAG pattern matching)
+  def _pat : PatLeaf<(vt imm), pred, xform>;
+  
+  // PatLeaf for timm nodes (for target-specific pattern matching, e.g., intrinsics)
+  def _timm : PatLeaf<(vt timm), pred, xform>;
 }
 
-// Creates both Operand and PatLeaf for signed immediates
+// Creates Operand and separate PatLeaf definitions for signed immediates
 multiclass SignedImmediate<ValueType vt, code pred, SDNodeXForm xform, string asmop, int width> {
-  // Main operand definition with PatLeaf for imm nodes
-  def "" : SignedImmOpWithPattern<vt, asmop, width, pred, xform>;
+  // Operand definition (for instruction operands)
+  def "" : SignedImmOp<vt, asmop, width>;
   
-  // PatLeaf for timm (target immediate) nodes
-  def _timm : SignedImmOpWithPattern<vt, asmop, width, pred, xform, timm>;
+  // PatLeaf for imm nodes (for DAG pattern matching)
+  def _pat : PatLeaf<(vt imm), pred, xform>;
+  
+  // PatLeaf for timm nodes (for target-specific pattern matching, e.g., intrinsics)
+  def _timm : PatLeaf<(vt timm), pred, xform>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -166,12 +172,10 @@ def ImmZero : ImmediateAsmOperandWithPredicate<"isImmZero">;
 //===----------------------------------------------------------------------===//
 
 // u1imm: 1-bit unsigned immediate (generates u1imm and u1imm_timm)
-/*
 defm u1imm : UnsignedImmediate<i32,
   [{ return isUInt<1>(N->getZExtValue()); }], NOOP_SDNodeXForm, "U1Imm", 1>;
-  */
 
-def u1imm   : UnsignedImmOp<i32, "U1Imm", 1>;
+// def u1imm   : UnsignedImmOp<i32, "U1Imm", 1>;
 def u2imm   : UnsignedImmOp<i32, "U2Imm", 2>;
 def u3imm   : UnsignedImmOp<i32, "U3Imm", 3>;
 def u4imm   : UnsignedImmOp<i32, "U4Imm", 4>;
