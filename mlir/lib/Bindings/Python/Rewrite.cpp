@@ -11,6 +11,7 @@
 #include "mlir-c/IR.h"
 #include "mlir-c/Rewrite.h"
 #include "mlir-c/Support.h"
+#include "mlir/Bindings/Python/Globals.h"
 #include "mlir/Bindings/Python/IRCore.h"
 // clang-format off
 #include "mlir/Bindings/Python/Nanobind.h"
@@ -18,6 +19,7 @@
 // clang-format on
 #include "mlir/Config/mlir-config.h"
 #include "nanobind/nanobind.h"
+#include <type_traits>
 
 namespace nb = nanobind;
 using namespace mlir;
@@ -62,9 +64,94 @@ private:
   PyMlirContextRef ctx;
 };
 
-struct PyMlirPDLResultList : MlirPDLResultList {};
+class PyConversionPatternRewriter : PyPatternRewriter {
+public:
+  PyConversionPatternRewriter(MlirConversionPatternRewriter rewriter)
+      : PyPatternRewriter(
+            mlirConversionPatternRewriterAsPatternRewriter(rewriter)) {}
+};
+
+class PyConversionTarget {
+public:
+  PyConversionTarget(MlirContext context)
+      : target(mlirConversionTargetCreate(context)) {}
+  ~PyConversionTarget() { mlirConversionTargetDestroy(target); }
+
+  void addLegalOp(const std::string &opName) {
+    mlirConversionTargetAddLegalOp(
+        target, mlirStringRefCreate(opName.data(), opName.size()));
+  }
+
+  void addIllegalOp(const std::string &opName) {
+    mlirConversionTargetAddIllegalOp(
+        target, mlirStringRefCreate(opName.data(), opName.size()));
+  }
+
+  void addLegalDialect(const std::string &dialectName) {
+    mlirConversionTargetAddLegalDialect(
+        target, mlirStringRefCreate(dialectName.data(), dialectName.size()));
+  }
+
+  void addIllegalDialect(const std::string &dialectName) {
+    mlirConversionTargetAddIllegalDialect(
+        target, mlirStringRefCreate(dialectName.data(), dialectName.size()));
+  }
+
+  MlirConversionTarget get() { return target; }
+
+private:
+  MlirConversionTarget target;
+};
+
+class PyTypeConverter {
+public:
+  PyTypeConverter() : typeConverter(mlirTypeConverterCreate()), owner(true) {}
+  PyTypeConverter(MlirTypeConverter typeConverter)
+      : typeConverter(typeConverter), owner(false) {}
+  ~PyTypeConverter() {
+    if (owner)
+      mlirTypeConverterDestroy(typeConverter);
+  }
+
+  void addConversion(const nb::callable &convert) {
+    mlirTypeConverterAddConversion(
+        typeConverter,
+        [](MlirType type, MlirType *converted,
+           void *userData) -> MlirLogicalResult {
+          nb::handle f = nb::handle(static_cast<PyObject *>(userData));
+          auto ctx = PyMlirContext::forContext(mlirTypeGetContext(type));
+          nb::object res = f(PyType(ctx, type).maybeDownCast());
+          if (res.is_none())
+            return mlirLogicalResultFailure();
+
+          *converted = nb::cast<PyType>(res).get();
+          return mlirLogicalResultSuccess();
+        },
+        convert.ptr());
+  }
+
+  MlirTypeConverter get() { return typeConverter; }
+
+private:
+  MlirTypeConverter typeConverter;
+  bool owner;
+};
+
+class PyConversionPattern {
+public:
+  PyConversionPattern(MlirConversionPattern pattern) : pattern(pattern) {}
+
+  PyTypeConverter getTypeConverter() {
+    return PyTypeConverter(mlirConversionPatternGetTypeConverter(pattern));
+  }
+
+private:
+  MlirConversionPattern pattern;
+};
 
 #if MLIR_ENABLE_PDL_IN_PATTERNMATCH
+struct PyMlirPDLResultList : MlirPDLResultList {};
+
 static nb::object objectFromPDLValue(MlirPDLValue value) {
   if (MlirValue v = mlirPDLValueAsValue(value); !mlirValueIsNull(v))
     return nb::cast(v);
@@ -216,6 +303,47 @@ public:
     mlirRewritePatternSetAdd(set, pattern);
   }
 
+  void addConversion(MlirStringRef rootName, unsigned benefit,
+                     const nb::callable &matchAndRewrite,
+                     PyTypeConverter &typeConverter) {
+    MlirConversionPatternCallbacks callbacks;
+    callbacks.construct = [](void *userData) {
+      nb::handle(static_cast<PyObject *>(userData)).inc_ref();
+    };
+    callbacks.destruct = [](void *userData) {
+      nb::handle(static_cast<PyObject *>(userData)).dec_ref();
+    };
+    callbacks.matchAndRewrite =
+        [](MlirConversionPattern pattern, MlirOperation op, intptr_t nOperands,
+           MlirValue *operands, MlirConversionPatternRewriter rewriter,
+           void *userData) -> MlirLogicalResult {
+      nb::handle f(static_cast<PyObject *>(userData));
+
+      PyMlirContextRef ctx =
+          PyMlirContext::forContext(mlirOperationGetContext(op));
+      nb::object opView = PyOperation::forOperation(ctx, op)->createOpView();
+
+      std::vector<MlirValue> operandsVec(operands, operands + nOperands);
+      nb::object adaptorCls =
+          PyGlobals::get()
+              .lookupOpAdaptorClass(
+                  unwrap(mlirIdentifierStr(mlirOperationGetName(op))))
+              .value_or(nb::borrow(nb::type<PyOpAdaptor>()));
+
+      nb::object res = f(opView, adaptorCls(operandsVec, opView),
+                         PyConversionPattern(pattern).getTypeConverter(),
+                         PyConversionPatternRewriter(rewriter));
+      return logicalResultFromObject(res);
+    };
+    MlirConversionPattern pattern = mlirOpConversionPatternCreate(
+        rootName, benefit, ctx, typeConverter.get(), callbacks,
+        matchAndRewrite.ptr(),
+        /* nGeneratedNames */ 0,
+        /* generatedNames */ nullptr);
+    mlirRewritePatternSetAdd(set,
+                             mlirConversionPatternAsRewritePattern(pattern));
+  }
+
   PyFrozenRewritePatternSet freeze() {
     MlirRewritePatternSet s = set;
     set.ptr = nullptr;
@@ -324,6 +452,46 @@ private:
   }
 };
 
+enum class PyDialectConversionFoldingMode : std::underlying_type_t<
+    MlirDialectConversionFoldingMode> {
+  Never = MLIR_DIALECT_CONVERSION_FOLDING_MODE_NEVER,
+  BeforePatterns = MLIR_DIALECT_CONVERSION_FOLDING_MODE_BEFORE_PATTERNS,
+  AfterPatterns = MLIR_DIALECT_CONVERSION_FOLDING_MODE_AFTER_PATTERNS,
+};
+
+class PyConversionConfig {
+public:
+  PyConversionConfig()
+      : config(mlirConversionConfigCreate().ptr,
+               PyConversionConfig::customDeleter) {}
+
+  MlirConversionConfig get() { return MlirConversionConfig{config.get()}; }
+
+  void setFoldingMode(PyDialectConversionFoldingMode mode) {
+    mlirConversionConfigSetFoldingMode(get(),
+                                       MlirDialectConversionFoldingMode(mode));
+  }
+
+  PyDialectConversionFoldingMode getFoldingMode() {
+    return PyDialectConversionFoldingMode(
+        mlirConversionConfigGetFoldingMode(get()));
+  }
+
+  void enableBuildMaterializations(bool enabled) {
+    mlirConversionConfigEnableBuildMaterializations(get(), enabled);
+  }
+
+  bool isBuildMaterializationsEnabled() {
+    return mlirConversionConfigIsBuildMaterializationsEnabled(get());
+  }
+
+private:
+  std::shared_ptr<void> config;
+  static void customDeleter(void *c) {
+    mlirConversionConfigDestroy(MlirConversionConfig{c});
+  }
+};
+
 /// Create the `mlir.rewrite` here.
 void populateRewriteSubmodule(nb::module_ &m) {
   // Enum definitions
@@ -337,6 +505,12 @@ void populateRewriteSubmodule(nb::module_ &m) {
       .value("DISABLED", PyGreedySimplifyRegionLevel::DISABLED)
       .value("NORMAL", PyGreedySimplifyRegionLevel::NORMAL)
       .value("AGGRESSIVE", PyGreedySimplifyRegionLevel::AGGRESSIVE);
+
+  nb::enum_<PyDialectConversionFoldingMode>(m, "DialectConversionFoldingMode")
+      .value("NEVER", PyDialectConversionFoldingMode::Never)
+      .value("BEFORE_PATTERNS", PyDialectConversionFoldingMode::BeforePatterns)
+      .value("AFTER_PATTERNS", PyDialectConversionFoldingMode::AfterPatterns);
+
   //----------------------------------------------------------------------------
   // Mapping of the PatternRewriter
   //----------------------------------------------------------------------------
@@ -409,8 +583,93 @@ void populateRewriteSubmodule(nb::module_ &m) {
                   If possible, the operation is cast to its corresponding OpView subclass
                   before being passed to the callable.
               benefit: The benefit of the pattern, defaulting to 1.)")
+      .def(
+          "add_conversion",
+          [](PyRewritePatternSet &self, nb::handle root, const nb::callable &fn,
+             PyTypeConverter &typeConverter, unsigned benefit) {
+            std::string opName =
+                nb::cast<std::string>(root.attr("OPERATION_NAME"));
+            self.addConversion(
+                mlirStringRefCreate(opName.data(), opName.size()), benefit, fn,
+                typeConverter);
+          },
+          "root"_a, "fn"_a, "type_converter"_a, "benefit"_a = 1,
+          R"(
+            Add a new conversion pattern on the specified root operation,
+            using the provided callable for matching and rewriting,
+            and assign it the given benefit.
+
+            Args:
+              root: The root operation to which this pattern applies.
+                    This may be either an OpView subclass (e.g., ``arith.AddIOp``) or
+                    an operation name string (e.g., ``"arith.addi"``).
+              fn: The callable to use for matching and rewriting,
+                  which takes an operation, its adaptor,
+                  the type converter and a pattern rewriter as arguments.
+                  The match is considered successful iff the callable returns
+                  a value where ``bool(value)`` is ``False`` (e.g. ``None``).
+                  If possible, the operation is cast to its corresponding OpView subclass
+                  before being passed to the callable.
+              type_converter: The type converter to convert types in the IR.
+              benefit: The benefit of the pattern, defaulting to 1.)")
       .def("freeze", &PyRewritePatternSet::freeze,
            "Freeze the pattern set into a frozen one.");
+
+  nb::class_<PyConversionPatternRewriter, PyPatternRewriter>(
+      m, "ConversionPatternRewriter");
+
+  nb::class_<PyConversionTarget>(m, "ConversionTarget")
+      .def(
+          "__init__",
+          [](PyConversionTarget &self, DefaultingPyMlirContext context) {
+            new (&self) PyConversionTarget(context.get()->get());
+          },
+          "context"_a = nb::none())
+      .def(
+          "add_legal_op",
+          [](PyConversionTarget &self, const nb::args &ops) {
+            for (auto op : ops) {
+              std::string opName =
+                  nb::cast<std::string>(op.attr("OPERATION_NAME"));
+              self.addLegalOp(opName);
+            }
+          },
+          "ops"_a, "Mark the given operations as legal.")
+      .def(
+          "add_illegal_op",
+          [](PyConversionTarget &self, const nb::args &ops) {
+            for (auto op : ops) {
+              std::string opName =
+                  nb::cast<std::string>(op.attr("OPERATION_NAME"));
+              self.addIllegalOp(opName);
+            }
+          },
+          "ops"_a, "Mark the given operations as illegal.")
+      .def(
+          "add_legal_dialect",
+          [](PyConversionTarget &self, const nb::args &dialects) {
+            for (auto dialect : dialects) {
+              std::string dialectName =
+                  nb::cast<std::string>(dialect.attr("DIALECT_NAMESPACE"));
+              self.addLegalDialect(dialectName);
+            }
+          },
+          "dialects"_a, "Mark the given dialects as legal.")
+      .def(
+          "add_illegal_dialect",
+          [](PyConversionTarget &self, const nb::args &dialects) {
+            for (auto dialect : dialects) {
+              std::string dialectName =
+                  nb::cast<std::string>(dialect.attr("DIALECT_NAMESPACE"));
+              self.addIllegalDialect(dialectName);
+            }
+          },
+          "dialects"_a, "Mark the given dialect as illegal.");
+
+  nb::class_<PyTypeConverter>(m, "TypeConverter")
+      .def(nb::init<>(), "Create a new TypeConverter.")
+      .def("add_conversion", &PyTypeConverter::addConversion, "convert"_a,
+           nb::keep_alive<0, 1>(), "Register a type conversion function.");
 
   //----------------------------------------------------------------------------
   // Mapping of the PDLResultList and PDLModule
@@ -498,6 +757,17 @@ void populateRewriteSubmodule(nb::module_ &m) {
                    &PyGreedyRewriteConfig::enableConstantCSE,
                    "Enable or disable constant CSE");
 
+  nb::class_<PyConversionConfig>(m, "ConversionConfig")
+      .def(nb::init<>(), "Create a conversion config with defaults")
+      .def_prop_rw("folding_mode", &PyConversionConfig::getFoldingMode,
+                   &PyConversionConfig::setFoldingMode,
+                   "folding behavior during dialect conversion")
+      .def_prop_rw("build_materializations",
+                   &PyConversionConfig::isBuildMaterializationsEnabled,
+                   &PyConversionConfig::enableBuildMaterializations,
+                   "Whether the dialect conversion attempts to build "
+                   "source/target materializations");
+
   nb::class_<PyFrozenRewritePatternSet>(m, "FrozenRewritePatternSet")
       .def_prop_ro(MLIR_PYTHON_CAPI_PTR_ATTR,
                    &PyFrozenRewritePatternSet::getCapsule)
@@ -539,7 +809,35 @@ void populateRewriteSubmodule(nb::module_ &m) {
           },
           "op"_a, "set"_a,
           "Applies the given patterns to the given op by a fast walk-based "
-          "driver.");
+          "driver.")
+      .def(
+          "apply_partial_conversion",
+          [](PyOperationBase &op, PyConversionTarget &target,
+             PyFrozenRewritePatternSet &set,
+             std::optional<PyConversionConfig> config) {
+            if (!config)
+              config.emplace(PyConversionConfig());
+            MlirLogicalResult status = mlirApplyPartialConversion(
+                op.getOperation(), target.get(), set.get(), config->get());
+            if (mlirLogicalResultIsFailure(status))
+              throw std::runtime_error("partial conversion failed");
+          },
+          "op"_a, "target"_a, "set"_a, "config"_a = nb::none(),
+          "Applies a partial conversion on the given operation.")
+      .def(
+          "apply_full_conversion",
+          [](PyOperationBase &op, PyConversionTarget &target,
+             PyFrozenRewritePatternSet &set,
+             std::optional<PyConversionConfig> config) {
+            if (!config)
+              config.emplace(PyConversionConfig());
+            MlirLogicalResult status = mlirApplyFullConversion(
+                op.getOperation(), target.get(), set.get(), config->get());
+            if (mlirLogicalResultIsFailure(status))
+              throw std::runtime_error("full conversion failed");
+          },
+          "op"_a, "target"_a, "set"_a, "config"_a = nb::none(),
+          "Applies a full conversion on the given operation.");
 }
 } // namespace MLIR_BINDINGS_PYTHON_DOMAIN
 } // namespace python
