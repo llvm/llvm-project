@@ -110,29 +110,13 @@ constexpr bool test() {
     auto it2 = ++cv.begin();
     it2++;
 
+    // always false: https://cplusplus.github.io/LWG/lwg-active.html#4489
+    static_assert(noexcept(std::ranges::iter_swap(it1, it2)) == false);
+
     std::ranges::iter_swap(it1, it2);
 
     // iter_swap
     assert(a1[0].v == 3 && a2[0].v == 1);
-  }
-
-  {
-    Elem a[2]{{1}, {2}};
-    Elem b[2]{{3}, {4}};
-
-    ViewA v1{IteratorA(a), SentinelA(IteratorA(a + 2))};
-    ViewB v2{IteratorB(b), SentinelB(IteratorB(b + 2))};
-
-    std::ranges::concat_view cv(v1, v2);
-
-    auto it1 = cv.begin();
-    auto it2 = ++cv.begin();
-    it2++;
-
-    std::ranges::iter_swap(it1, it2);
-
-    // ranges::swap(*x,*y)
-    assert(a[0].v == 3 && b[0].v == 1);
   }
 
   // Test that iter_swap requires the underlying iterator to be iter_swappable
