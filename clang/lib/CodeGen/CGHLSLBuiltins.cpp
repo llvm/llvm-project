@@ -346,44 +346,6 @@ static Intrinsic::ID getWaveActiveSumIntrinsic(llvm::Triple::ArchType Arch,
   }
 }
 
-// Return wave active max that corresponds to the QT scalar type
-static Intrinsic::ID getWaveActiveMaxIntrinsic(llvm::Triple::ArchType Arch,
-                                               CGHLSLRuntime &RT, QualType QT) {
-  switch (Arch) {
-  case llvm::Triple::spirv:
-    if (QT->isUnsignedIntegerType())
-      return Intrinsic::spv_wave_reduce_umax;
-    return Intrinsic::spv_wave_reduce_max;
-  case llvm::Triple::dxil: {
-    if (QT->isUnsignedIntegerType())
-      return Intrinsic::dx_wave_reduce_umax;
-    return Intrinsic::dx_wave_reduce_max;
-  }
-  default:
-    llvm_unreachable("Intrinsic WaveActiveMax"
-                     " not supported by target architecture");
-  }
-}
-
-// Return wave active min that corresponds to the QT scalar type
-static Intrinsic::ID getWaveActiveMinIntrinsic(llvm::Triple::ArchType Arch,
-                                               CGHLSLRuntime &RT, QualType QT) {
-  switch (Arch) {
-  case llvm::Triple::spirv:
-    if (QT->isUnsignedIntegerType())
-      return Intrinsic::spv_wave_reduce_umin;
-    return Intrinsic::spv_wave_reduce_min;
-  case llvm::Triple::dxil: {
-    if (QT->isUnsignedIntegerType())
-      return Intrinsic::dx_wave_reduce_umin;
-    return Intrinsic::dx_wave_reduce_min;
-  }
-  default:
-    llvm_unreachable("Intrinsic WaveActiveMin"
-                     " not supported by target architecture");
-  }
-}
-
 static Intrinsic::ID getPrefixCountBitsIntrinsic(llvm::Triple::ArchType Arch) {
   switch (Arch) {
   case llvm::Triple::spirv:
@@ -974,9 +936,12 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   case Builtin::BI__builtin_hlsl_wave_active_max: {
     // Due to the use of variadic arguments, explicitly retreive argument
     Value *OpExpr = EmitScalarExpr(E->getArg(0));
-    Intrinsic::ID IID = getWaveActiveMaxIntrinsic(
-        getTarget().getTriple().getArch(), CGM.getHLSLRuntime(),
-        E->getArg(0)->getType());
+    QualType QT = E->getArg(0)->getType();
+    Intrinsic::ID IID;
+    if (QT->isUnsignedIntegerType())
+      IID = CGM.getHLSLRuntime().getWaveActiveUMaxIntrinsic();
+    else
+      IID = CGM.getHLSLRuntime().getWaveActiveMaxIntrinsic();
 
     return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
                                &CGM.getModule(), IID, {OpExpr->getType()}),
@@ -985,9 +950,12 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   case Builtin::BI__builtin_hlsl_wave_active_min: {
     // Due to the use of variadic arguments, explicitly retreive argument
     Value *OpExpr = EmitScalarExpr(E->getArg(0));
-    Intrinsic::ID IID = getWaveActiveMinIntrinsic(
-        getTarget().getTriple().getArch(), CGM.getHLSLRuntime(),
-        E->getArg(0)->getType());
+    QualType QT = E->getArg(0)->getType();
+    Intrinsic::ID IID;
+    if (QT->isUnsignedIntegerType())
+      IID = CGM.getHLSLRuntime().getWaveActiveUMinIntrinsic();
+    else
+      IID = CGM.getHLSLRuntime().getWaveActiveMinIntrinsic();
 
     return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
                                &CGM.getModule(), IID, {OpExpr->getType()}),
