@@ -7,7 +7,7 @@
 
 ; REQUIRES: asserts, default_triple
 ; AArch64 uses GlobalISel for optnone functions meaning the output from 'isel' will be empty as it will not be run.
-; UNSUPPORTED: target=nvptx{{.*}}, target=aarch64{{.*}}
+; UNSUPPORTED: target=nvptx{{.*}}, target=aarch64{{.*}}, target=arm64{{.*}}
 
 ; This test verifies that we don't run Machine Function optimizations
 ; on optnone functions, and that we can turn off FastISel.
