@@ -125,9 +125,6 @@ public:
   };
   virtual VAArgSlotInfo slotInfo(const DataLayout &DL, Type *Parameter) = 0;
 
-  // Per-target overrides of special symbols.
-  virtual bool ignoreFunction(Function *F) { return false; }
-
   // Targets implemented so far all have the same trivial lowering for these
   bool vaEndIsNop() { return true; }
   bool vaCopyIsMemcpy() { return true; }
@@ -243,9 +240,6 @@ public:
   bool expansionApplicableToFunction(Module &M, Function *F) {
     if (F->isIntrinsic() || !F->isVarArg() ||
         F->hasFnAttribute(Attribute::Naked))
-      return false;
-
-    if (ABI->ignoreFunction(F))
       return false;
 
     if (!isValidCallingConv(F))
@@ -633,9 +627,6 @@ bool ExpandVariadics::expandCall(Module &M, IRBuilder<> &Builder, CallBase *CB,
   bool Changed = false;
   const DataLayout &DL = M.getDataLayout();
 
-  if (ABI->ignoreFunction(CB->getCalledFunction()))
-    return Changed;
-
   if (!expansionApplicableToFunctionCall(CB)) {
     if (rewriteABI())
       report_fatal_error("Cannot lower callbase instruction");
@@ -993,15 +984,6 @@ struct SPIRV final : public VariadicABIInfo {
     return {A, false};
   }
 
-  // The SPIR-V backend has special handling for SPIR-V mangled printf
-  // functions.
-  bool ignoreFunction(Function *F) override {
-    StringRef DemangledName =
-        llvm::itaniumDemangle(F->getName(), /*ParseArgs=*/false);
-    return DemangledName == "printf" ||
-           (DemangledName.starts_with('_') && DemangledName.contains("printf"));
-  }
-
   // We will likely see va intrinsics in the generic addrspace (4).
   SmallVector<unsigned> getTargetSpecificVaIntrinAddrSpaces() const override {
     return {4};
@@ -1064,6 +1046,7 @@ std::unique_ptr<VariadicABIInfo> VariadicABIInfo::create(const Triple &T) {
   }
 
   case Triple::spirv:
+  case Triple::spirv32:
   case Triple::spirv64: {
     return std::make_unique<SPIRV>();
   }
