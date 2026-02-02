@@ -16,7 +16,7 @@ namespace LIBC_NAMESPACE_DECL {
 
 namespace math {
 
-LIBC_INLINE static constexpr float ffma(double x, double y, double z) {
+LIBC_INLINE static float ffma(double x, double y, double z) {
   return fputil::fma<float>(x, y, z);
 }
 
