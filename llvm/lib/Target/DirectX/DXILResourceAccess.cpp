@@ -480,13 +480,23 @@ static hlsl::Binding getHandleIntrinsicBinding(IntrinsicInst *Handle,
   return hlsl::Binding(Class, Space, LowerBound, UpperBound, nullptr);
 }
 
-// getHandleIndicies traverses up the control flow that a ptr came from and
-// propagates back the GetPtrIdx and HandleIdx:
+namespace {
+/// Helper for propogating the current handle and ptr indicies.
+struct AccessIndicies {
+  Value *GetPtrIdx;
+  Value *HandleIdx;
+
+  bool hasGetPtrIdx() { return GetPtrIdx != nullptr; }
+};
+} // namespace
+
+// getAccessIndicies traverses up the control flow that a ptr came from and
+// propagates back the indicies used to access the resource (AccessIndicies):
 //
 //  - GetPtrIdx is the index of dx.resource.getpointer
 //  - HandleIdx is the index of dx.resource.handlefrom.*
-static std::pair<Value *, Value *>
-getHandleIndicies(Instruction *I,
+static AccessIndicies
+getAccessIndicies(Instruction *I,
                   SmallSetVector<Instruction *, 16> &DeadInsts) {
   if (auto *II = dyn_cast<IntrinsicInst>(I)) {
     if (llvm::is_contained(HandleIntrins, II->getIntrinsicID())) {
@@ -496,12 +506,13 @@ getHandleIndicies(Instruction *I,
 
     if (II->getIntrinsicID() == Intrinsic::dx_resource_getpointer) {
       auto *V = dyn_cast<Instruction>(II->getArgOperand(/*Handle=*/0));
-      auto Idx = getHandleIndicies(V, DeadInsts);
-      assert(Idx.first == nullptr &&
+      auto AccessIdx = getAccessIndicies(V, DeadInsts);
+      assert(!AccessIdx.hasGetPtrIdx() &&
              "Encountered multiple dx.resource.getpointers in ptr chain?");
+      AccessIdx.GetPtrIdx = II->getArgOperand(1);
 
       DeadInsts.insert(II);
-      return {II->getArgOperand(1), Idx.second};
+      return AccessIdx;
     }
   }
 
@@ -517,11 +528,11 @@ getHandleIndicies(Instruction *I,
     for (unsigned I = 0; I < NumEdges; I++) {
       auto *BB = Phi->getIncomingBlock(I);
       auto *V = dyn_cast<Instruction>(Phi->getIncomingValue(I));
-      auto [GetPtrIdx, HandleIdx] = getHandleIndicies(V, DeadInsts);
-      HasGetPtr &= GetPtrIdx != nullptr;
+      auto AccessIdx = getAccessIndicies(V, DeadInsts);
+      HasGetPtr &= AccessIdx.hasGetPtrIdx();
       if (HasGetPtr)
-        GetPtrPhi->addIncoming(GetPtrIdx, BB);
-      HandlePhi->addIncoming(HandleIdx, BB);
+        GetPtrPhi->addIncoming(AccessIdx.GetPtrIdx, BB);
+      HandlePhi->addIncoming(AccessIdx.HandleIdx, BB);
     }
 
     if (HasGetPtr)
@@ -537,21 +548,22 @@ getHandleIndicies(Instruction *I,
 
   if (auto *Select = dyn_cast<SelectInst>(I)) {
     auto *TrueV = dyn_cast<Instruction>(Select->getTrueValue());
-    auto [TrueGetPtrIdx, TrueHandleIdx] = getHandleIndicies(TrueV, DeadInsts);
+    auto TrueAccessIdx = getAccessIndicies(TrueV, DeadInsts);
 
     auto *FalseV = dyn_cast<Instruction>(Select->getFalseValue());
-    auto [FalseGetPtrIdx, FalseHandleIdx] =
-        getHandleIndicies(FalseV, DeadInsts);
+    auto FalseAccessIdx = getAccessIndicies(FalseV, DeadInsts);
 
     IRBuilder<> Builder(Select);
     Value *GetPtrSelect = nullptr;
 
-    if (TrueGetPtrIdx && FalseGetPtrIdx)
-      GetPtrSelect = Builder.CreateSelect(Select->getCondition(), TrueGetPtrIdx,
-                                          FalseGetPtrIdx);
+    if (TrueAccessIdx.hasGetPtrIdx() && FalseAccessIdx.hasGetPtrIdx())
+      GetPtrSelect =
+          Builder.CreateSelect(Select->getCondition(), TrueAccessIdx.GetPtrIdx,
+                               FalseAccessIdx.GetPtrIdx);
 
-    auto *HandleSelect = Builder.CreateSelect(Select->getCondition(),
-                                              TrueHandleIdx, FalseHandleIdx);
+    auto *HandleSelect =
+        Builder.CreateSelect(Select->getCondition(), TrueAccessIdx.HandleIdx,
+                             FalseAccessIdx.HandleIdx);
     DeadInsts.insert(Select);
     return {GetPtrSelect, HandleSelect};
   }
@@ -562,15 +574,16 @@ getHandleIndicies(Instruction *I,
 static void
 replaceHandleWithIndicies(Instruction *Ptr, IntrinsicInst *OldHandle,
                           SmallSetVector<Instruction *, 16> &DeadInsts) {
-  auto [GetPtrIdx, HandleIdx] = getHandleIndicies(Ptr, DeadInsts);
+  auto AccessIdx = getAccessIndicies(Ptr, DeadInsts);
 
   IRBuilder<> Builder(Ptr);
   IntrinsicInst *Handle = cast<IntrinsicInst>(OldHandle->clone());
-  Handle->setArgOperand(/*Index=*/3, HandleIdx);
+  Handle->setArgOperand(/*Index=*/3, AccessIdx.HandleIdx);
   Builder.Insert(Handle);
 
-  auto *GetPtr = Builder.CreateIntrinsic(
-      Ptr->getType(), Intrinsic::dx_resource_getpointer, {Handle, GetPtrIdx});
+  auto *GetPtr =
+      Builder.CreateIntrinsic(Ptr->getType(), Intrinsic::dx_resource_getpointer,
+                              {Handle, AccessIdx.GetPtrIdx});
 
   Ptr->replaceAllUsesWith(GetPtr);
   DeadInsts.insert(Ptr);
