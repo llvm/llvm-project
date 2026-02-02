@@ -1548,8 +1548,7 @@ void SIRegisterInfo::buildSpillLoadStore(
   unsigned NumRemSubRegs = RemSize ? 1 : 0;
   int64_t Offset = InstOffset + MFI.getObjectOffset(Index);
   int64_t MaterializedOffset = Offset;
-
-  int64_t MaxOffset = Offset + Size + RemSize - EltSize;
+  int64_t MaxOffset = Offset + Size - (RemSize ? 0 : EltSize);
   int64_t ScratchOffsetRegDelta = 0;
 
   if (IsFlat && EltSize > 4) {
