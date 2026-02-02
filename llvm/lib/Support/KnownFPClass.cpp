@@ -668,9 +668,21 @@ KnownFPClass KnownFPClass::ldexp(const KnownFPClass &KnownSrc,
   return Known;
 }
 
+// TODO: Detect no-infinity cases
 KnownFPClass KnownFPClass::powi(const KnownFPClass &KnownSrc,
                                 const KnownBits &ExponentKnownBits) {
   KnownFPClass Known;
+  Known.propagateNaN(KnownSrc);
+
+  if (ExponentKnownBits.isZero()) {
+    // powi(QNaN, 0) returns 1.0, and powi(SNaN, 0) may non-deterministically
+    // return 1.0 or a NaN.
+    FPClassTest PossibleVals =
+        KnownSrc.isKnownNever(fcSNan) ? fcPosNormal | fcNan : fcPosNormal;
+    Known.knownNot(~PossibleVals);
+    return Known;
+  }
+
   if (ExponentKnownBits.isEven()) {
     Known.knownNot(fcNegative);
     return Known;
