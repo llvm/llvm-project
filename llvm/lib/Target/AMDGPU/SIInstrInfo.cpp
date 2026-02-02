@@ -11280,7 +11280,7 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   case AMDGPU::S_CMPK_GE_I32:
     return optimizeCmpAnd(1, 32, false, true);
   case AMDGPU::S_CMP_EQ_U64:
-    return strengthReduceSCMP() | optimizeCmpAnd(1, 64, true, false);
+    return (int)strengthReduceSCMP() | (int)optimizeCmpAnd(1, 64, true, false);
   case AMDGPU::S_CMP_LG_U32:
   case AMDGPU::S_CMP_LG_I32:
   case AMDGPU::S_CMPK_LG_U32:
@@ -11294,9 +11294,8 @@ bool SIInstrInfo::optimizeCompareInstr(MachineInstr &CmpInstr, Register SrcReg,
   case AMDGPU::S_CMPK_GT_I32:
     return optimizeCmpAnd(0, 32, false, true);
   case AMDGPU::S_CMP_LG_U64:
-    return optimizeCmpAnd(0, 64, true, false) |
-           strengthReduceSCMP() |
-           optimizeCmpSelect(/*NeedInversion=*/false);
+    return (int)optimizeCmpAnd(0, 64, true, false) | (int)strengthReduceSCMP() |
+           (int)optimizeCmpSelect(/*NeedInversion=*/false);
   }
 
   return false;
