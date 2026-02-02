@@ -1,0 +1,164 @@
+# RUN: llc -mtriple=amdgcn -mcpu=gfx90a -run-pass=si-i1-copies -o - %s | FileCheck -check-prefixes=GCN %s
+
+---
+name:              phi_with_dependencies1
+# SCC def instruction (S_CMP_LG_U32) is below PHI dependancy ($17)
+tracksRegLiveness: true
+body:             |
+  ; GCN-LABEL: name: phi_with_dependencies1
+  ; GCN-LABEL: bb.0:
+  ; GCN-NEXT: successors: %bb.1(0x{{[0-9a-fA-F]+}})
+  ; GCN-NEXT: {{  $}}
+  ; GCN-DAG: [[REG1:%[0-9]+]]:sreg_32 = S_MOV_B32 1
+  ; GCN-DAG: [[IMPLICIT_DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; GCN-NEXT: S_BRANCH %bb.1
+  ; GCN-LABEL: bb.1:
+  ; GCN-NEXT: successors: %bb.2(0x{{[0-9a-fA-F]+}}), %bb.1(0x{{[0-9a-fA-F]+}})
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: [[NEW_PHI:%[0-9]+]]:sreg_64 = PHI [[IMPLICIT_DEF]], %bb.0, [[S_OR:%[0-9]+]], %bb.1
+  ; GCN-NEXT: [[S_MOV:%[0-9]+]]:sreg_32 = S_MOV_B32 2
+  ; GCN-NEXT: [[REG3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+  ; GCN-NEXT: [[V_CMP:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 killed [[REG3]], 1, implicit $exec
+  ; GCN-NEXT: [[S_ANDN:%[0-9]+]]:sreg_64 = S_ANDN2_B64 [[NEW_PHI]], $exec, implicit-def $scc
+  ; GCN-NEXT: [[S_AND:%[0-9]+]]:sreg_64 = S_AND_B64 [[V_CMP]], $exec, implicit-def $scc
+  ; GCN-NEXT: [[S_OR]]:sreg_64 = S_OR_B64 [[S_ANDN]], [[S_AND]], implicit-def $scc
+  ; GCN-NEXT: S_CMP_LG_U32 [[REG1]], killed [[S_MOV]], implicit-def $scc
+  ; GCN-NEXT: S_CBRANCH_SCC1 %bb.1, implicit $scc
+  ; GCN-NEXT: S_BRANCH %bb.2
+  ; GCN-LABEL: bb.2:
+  ; GCN-NEXT: {{%[0-9]+}}:sreg_64_xexec = COPY [[S_OR]]
+  ; GCN-NEXT: S_ENDPGM 0
+  bb.0:
+    successors: %bb.1(0x80000000)
+    %0:sreg_32 = S_MOV_B32 1
+    S_BRANCH %bb.1
+
+  bb.1:
+    successors: %bb.2, %bb.1
+    %13:sreg_32 = S_MOV_B32 2
+    %16:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %17:sreg_64 = V_CMP_EQ_U32_e64 killed %16:vgpr_32, 1, implicit $exec
+    %1:vreg_1 = COPY %17:sreg_64
+    S_CMP_LG_U32 %0:sreg_32, killed %13:sreg_32, implicit-def $scc
+    S_CBRANCH_SCC1 %bb.1, implicit $scc
+    S_BRANCH %bb.2
+
+  bb.2:
+  ; predecessors: %bb.1
+    %2:vreg_1 = PHI %1:vreg_1, %bb.1
+    %19:sreg_64_xexec = COPY %2:vreg_1
+    S_ENDPGM 0
+...
+
+# GCN-LABEL: name: phi_with_dependencies2
+---
+name:              phi_with_dependencies2
+# SCC def instruction (S_CMP_LG_U32) is above PHI dependancy ($17) definition and can be lowered
+tracksRegLiveness: true
+body:             |
+
+  ; GCN-LABEL: bb.0:
+  ; GCN-NEXT: successors: %bb.1(0x{{[0-9a-fA-F]+}})
+  ; GCN-NEXT: {{  $}}  
+  ; GCN-DAG: [[REG1:%[0-9]+]]:sreg_32 = S_MOV_B32 1
+  ; GCN-DAG: [[IMPLICIT_DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; GCN-NEXT: S_BRANCH %bb.1
+
+  ; GCN-LABEL: bb.1:
+  ; GCN-NEXT: successors: %bb.2(0x{{[0-9a-fA-F]+}}), %bb.1(0x{{[0-9a-fA-F]+}})
+  ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: [[NEW_PHI:%[0-9]+]]:sreg_64 = PHI [[IMPLICIT_DEF]], %bb.0, [[S_OR:%[0-9]+]], %bb.1
+  ; GCN-NEXT: [[S_MOV:%[0-9]+]]:sreg_32 = S_MOV_B32 2
+  ; GCN-NEXT: [[V_MOV:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+  ; GCN-NEXT: [[V_CMP_EQ:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 killed [[V_MOV]], 1, implicit $exec
+  ; GCN-NEXT: [[S_ANDN:%[0-9]+]]:sreg_64 = S_ANDN2_B64 %9, $exec, implicit-def $scc
+  ; GCN-NEXT: [[S_AND:%[0-9]+]]:sreg_64 = S_AND_B64 [[V_CMP_EQ]], $exec, implicit-def $scc
+  ; GCN-NEXT: [[S_OR:%[0-9]+]]:sreg_64 = S_OR_B64 [[S_ANDN]], [[S_AND]], implicit-def $scc
+  ; GCN-NEXT: S_CMP_LG_U32 [[REG1]], killed [[S_MOV]], implicit-def $scc
+  ; GCN-NEXT: S_CBRANCH_SCC1 %bb.1, implicit $scc
+  ; GCN-NEXT: S_BRANCH %bb.2
+
+  ; GCN-LABEL: bb.2:
+  ; GCN-NEXT: {{%[0-9]+}}:sreg_64_xexec = COPY [[S_OR]]
+  ; GCN-NEXT: S_ENDPGM 0
+
+  bb.0:
+    successors: %bb.1(0x80000000); %bb.1(100.00%)
+    %0:sreg_32 = S_MOV_B32 1
+    S_BRANCH %bb.1
+
+  bb.1:
+  ; predecessors: %bb.0, %bb.1
+    successors: %bb.2, %bb.1
+
+    %13:sreg_32 = S_MOV_B32 2
+    S_CMP_LG_U32 %0:sreg_32, killed %13:sreg_32, implicit-def $scc
+    %16:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+    %17:sreg_64 = V_CMP_EQ_U32_e64 killed %16:vgpr_32, 1, implicit $exec
+    %1:vreg_1 = COPY %17:sreg_64
+    S_CBRANCH_SCC1 %bb.1, implicit $scc
+    S_BRANCH %bb.2
+
+  bb.2:
+  ; predecessors: %bb.1
+    %2:vreg_1 = PHI %1:vreg_1, %bb.1
+    %19:sreg_64_xexec = COPY %2:vreg_1
+    S_ENDPGM 0
+...
+
+
+# GCN-LABEL: name: phi_with_dependencies3
+---
+name:              phi_with_dependencies3
+# SCC def instruction (V_MOV_B32_e32) is above PHI dependancy ($17) definition and cannot be lowered
+tracksRegLiveness: true
+body:             |
+  ; GCN-LABEL: bb.0:
+  ; GCN-NEXT: successors: %bb.1(0x{{[0-9a-fA-F]+}})
+  ; GCN-NEXT: {{  $}}
+  ; GCN-DAG: [[REG1:%[0-9]+]]:sreg_32 = S_MOV_B32 1
+  ; GCN-DAG: [[IMPLICIT_DEF:%[0-9]+]]:sreg_64 = IMPLICIT_DEF
+  ; GCN-NEXT: S_BRANCH %bb.1
+  ; GCN-LABEL: bb.1:
+  ; GCN-NEXT: successors: %bb.2(0x{{[0-9a-fA-F]+}}), %bb.1(0x{{[0-9a-fA-F]+}})
+    ; GCN-NEXT: {{  $}}
+  ; GCN-NEXT: [[NEW_PHI:%[0-9]+]]:sreg_64 = PHI [[IMPLICIT_DEF]], %bb.0, [[S_OR:%[0-9]+]], %bb.1
+  ; GCN-NEXT: [[S_MOV:%[0-9]+]]:sreg_32 = S_MOV_B32 2
+  ; GCN-NEXT: S_CMP_LG_U32 [[REG1]], killed [[S_MOV]], implicit-def $scc
+  ; GCN-NEXT: [[REG3:%[0-9]+]]:vgpr_32 = V_MOV_B32_e32 0, implicit $exec
+  ; GCN-NEXT: [[V_CMP:%[0-9]+]]:sreg_64 = V_CMP_EQ_U32_e64 killed [[REG3]], 1, implicit $exec
+  ; GCN-NEXT: [[HIDE_CSS:%[0-9]+]]:sreg_64 = S_CSELECT_B64 1, 0, implicit $scc
+  ; GCN-NEXT: [[S_ANDN:%[0-9]+]]:sreg_64 = S_ANDN2_B64 [[NEW_PHI]], $exec, implicit-def $scc
+  ; GCN-NEXT: [[S_AND:%[0-9]+]]:sreg_64 = S_AND_B64 [[V_CMP]], $exec, implicit-def $scc
+  ; GCN-NEXT: [[S_OR]]:sreg_64 = S_OR_B64 [[S_ANDN]], [[S_AND]], implicit-def $scc
+  ; GCN-NEXT: S_CMP_LG_U64 [[HIDE_CSS]], 0, implicit-def $scc, implicit-def $scc
+  ; GCN-NEXT: S_CBRANCH_SCC1 %bb.1, implicit $scc
+  ; GCN-NEXT: S_BRANCH %bb.2
+  ; GCN-LABEL: bb.2:
+  ; GCN-NEXT: {{%[0-9]+}}:sreg_64_xexec = COPY [[S_OR]]
+  ; GCN-NEXT: S_ENDPGM 0
+
+  bb.0:
+    successors: %bb.1(0x80000000); %bb.1(100.00%)
+    %0:sreg_32 = S_MOV_B32 1
+    S_BRANCH %bb.1
+
+  bb.1:
+  ; predecessors: %bb.0, %bb.1
+    successors: %bb.2(0x40000000), %bb.1(0x40000000); %bb.2(50.00%), %bb.1(50.00%)
+
+    %1:sreg_32 = S_MOV_B32 2
+    S_CMP_LG_U32 %0:sreg_32, killed %1:sreg_32, implicit-def $scc
+    %2:vgpr_32 = V_MOV_B32_e32 0, implicit $exec, implicit-def $scc
+    %4:sreg_64 = V_CMP_EQ_U32_e64 killed %2:vgpr_32, 1, implicit $exec
+    %5:vreg_1 = COPY %4:sreg_64
+    S_CBRANCH_SCC1 %bb.1, implicit $scc
+    S_BRANCH %bb.2
+
+  bb.2:
+  ; predecessors: %bb.1
+    %6:vreg_1 = PHI %5:vreg_1, %bb.1
+    %7:sreg_64_xexec = COPY %6:vreg_1
+    S_ENDPGM 0
+
+...

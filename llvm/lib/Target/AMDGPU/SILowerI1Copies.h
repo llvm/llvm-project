@@ -20,7 +20,7 @@
 
 namespace llvm {
 
-/// Incoming for lane maks phi as machine instruction, incoming register \p Reg
+/// Incoming for lane mask phi as machine instruction, incoming register \p Reg
 /// and incoming block \p Block are taken from machine instruction.
 /// \p UpdatedReg (if valid) is \p Reg lane mask merged with another lane mask.
 struct Incoming {
@@ -42,7 +42,7 @@ public:
   virtual ~PhiLoweringHelper() = default;
 
 protected:
-  bool IsWave32 = false;
+  unsigned WavefrontSize;
   MachineFunction *MF = nullptr;
   MachineDominatorTree *DT = nullptr;
   MachinePostDominatorTree *PDT = nullptr;
@@ -62,12 +62,15 @@ protected:
   unsigned XorOp;
   unsigned AndN2Op;
   unsigned OrN2Op;
+  unsigned CSelectOp;
+  unsigned CmpLGOp;
 
 public:
   bool lowerPhis();
   bool isConstantLaneMask(Register Reg, bool &Val) const;
   MachineBasicBlock::iterator
   getSaluInsertionAtEnd(MachineBasicBlock &MBB) const;
+  void insertMask(const Incoming &Incoming, Register DstReg);
 
   void initializeLaneMaskRegisterAttributes(Register LaneMask) {
     LaneMaskRegAttrs = MRI->getVRegAttrs(LaneMask);
