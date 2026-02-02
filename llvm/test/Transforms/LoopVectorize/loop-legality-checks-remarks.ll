@@ -6,9 +6,9 @@
 ; CHECK: LV: Not vectorizing: Loop doesn't have a legal pre-header.
 define void @not_exist_preheader(ptr %dst, ptr %arg) nounwind uwtable {
 entry:
-  indirectbr ptr %arg, [label %0, label %loop]
+  indirectbr ptr %arg, [label %exit.0, label %loop]
 
-0:
+exit.0:
   unreachable
 
 loop:
