@@ -4476,6 +4476,9 @@ LogicalResult DeclareSimdOp::verify() {
   if (!func)
     return emitOpError() << "must be nested inside a function";
 
+  if (getInbranch() && getNotinbranch())
+    return emitOpError("cannot have both 'inbranch' and 'notinbranch'");
+
   return verifyAlignedClause(*this, getAlignments(), getAlignedVars());
 }
 
@@ -4483,10 +4486,10 @@ void DeclareSimdOp::build(OpBuilder &odsBuilder, OperationState &odsState,
                           const DeclareSimdOperands &clauses) {
   MLIRContext *ctx = odsBuilder.getContext();
   DeclareSimdOp::build(odsBuilder, odsState, clauses.alignedVars,
-                       makeArrayAttr(ctx, clauses.alignments),
+                       makeArrayAttr(ctx, clauses.alignments), clauses.inbranch,
                        clauses.linearVars, clauses.linearStepVars,
-                       clauses.linearVarTypes, clauses.simdlen,
-                       clauses.uniformVars);
+                       clauses.linearVarTypes, clauses.notinbranch,
+                       clauses.simdlen, clauses.uniformVars);
 }
 
 //===----------------------------------------------------------------------===//

@@ -559,11 +559,16 @@ static std::vector<Signature> each_scc =
 static Signature map_from_range_and_domain =
 	{ { Domain, Range }, { { Range }, { Domain } } };
 
-/* Signature for creating a map from a domain,
- * where the range is given by an extra argument.
+
+/* Signatures for creating a set from a parameter set or
+ * a map from a domain,
+ * where the domain/range is given by an extra argument.
  */
+static Signature set_from_params = { { Domain }, { { }, { Domain } } };
 static Signature map_from_domain_and_range =
 	{ { Domain, Range }, { { Domain }, { Range } } };
+static std::vector<Signature> from_domain =
+	{ set_from_params, map_from_domain_and_range };
 
 /* Signatures for creating an anonymous set from a parameter set
  * or a map from a domain, where the range is anonymous.
@@ -573,11 +578,6 @@ static Signature anonymous_map_from_domain =
 	{ { Domain, Anonymous }, { { Domain } } };
 static std::vector<Signature> anonymous_from_domain =
 	{ anonymous_set_from_params, anonymous_map_from_domain };
-
-/* Signature for creating a set from a parameter set,
- * where the domain is given by an extra argument.
- */
-static Signature set_from_params = { { Domain }, { { }, { Domain } } };
 
 /* Signatures for creating an anonymous function from a domain,
  * where the second argument is an identifier (with an anonymous tuple).
@@ -614,7 +614,11 @@ static std::vector<Signature> fn_domain = { domain, set_params };
 
 /* Signatures for interchanging (wrapped) domain and range.
  */
+static Signature set_reverse =
+	{ { { Range, Domain } }, { { { Domain, Range } } } };
 static Signature map_reverse = { { Range, Domain }, { { Domain, Range } } };
+static Signature map_domain_reverse =
+	{ { { Domain2, Domain }, Range }, { { { Domain, Domain2 }, Range } } };
 static Signature map_range_reverse =
 	{ { Domain, { Range2, Range } }, { { Domain, { Range, Range2 } } } };
 
@@ -814,7 +818,10 @@ member_methods {
 				{ domain_factor_range } },
 	{ "domain_map",		{ domain_map } },
 	{ "domain_product",	{ domain_product } },
+	{ "domain_reverse",	{ map_domain_reverse } },
 	{ "drop",		ter_int_int },
+	{ "drop_all_params",	un_op },
+	{ "drop_unused_params",	un_op },
 	{ "eq_at",		{ map_cmp } },
 	{ "every",		each },
 	{ "extract",		bin_op },
@@ -859,7 +866,7 @@ member_methods {
 	{ "min_val",		range_op },
 	{ "min_multi_val",	range_op },
 	{ "mod",		bin_val },
-	{ "on_domain",		{ map_from_domain_and_range } },
+	{ "on_domain",		from_domain },
 	{ "neg",		fn_un_op },
 	{ "offset",		fn_un_op },
 	{ "param_on_domain",	anonymous_from_domain_bin_anon },
@@ -910,9 +917,19 @@ member_methods {
 	{ "unwrap",		{ unwrap } },
 	{ "upper_bound",	fn_bin_op },
 	{ "wrap",		{ wrap } },
+	{ "wrapped_reverse",	{ set_reverse } },
 	{ "zero",		fn_un_op },
 	{ "zero_on_domain",	{ anonymous_map_from_domain } },
 };
+
+/* Signatures for constructors of multi-expressions
+ * from a space and a list, with a special case for multi-union-expressions.
+ */
+static Signature from_list_set = { { Domain }, { { Domain }, { Anonymous } } };
+static Signature from_list_map =
+	{ { Domain, Range }, { { Domain, Range }, { Domain, Anonymous } } };
+static Signature from_list_map_union =
+	{ { Domain, Range }, { { Range }, { Domain, Anonymous } } };
 
 /* Signatures for methods of types containing a given substring
  * that override the default signatures, where larger substrings
@@ -921,6 +938,15 @@ member_methods {
  * In particular, "gist" is usually a regular binary operation,
  * but for any type derived from "aff", the argument refers
  * to the domain of the function.
+ *
+ * When constructing a multi-expression from a space and a list,
+ * the kind of the space is usually the same as that of
+ * the constructed multi-expression.  However, if the constructed object
+ * is a multi-union-expression, then the space is the fixed range space
+ * of the multi-union-expression, so it always has a single tuple.
+ * This happens in particular for constructing objects
+ * of type "multi_union_pw_aff".
+ * See also the "space" method below.
  *
  * The "size" method can usually simply be inherited from
  * the corresponding plain C++ type, but for a "fixed_box",
@@ -940,6 +966,9 @@ member_methods {
 static const infix_map_map special_member_methods {
 	{ "gist",
 	  { { "aff",		{ bin_set_params, bin_map_domain } } }
+	},
+	{ "multi_union_pw_aff",
+	  { { "space",		{ from_list_set, from_list_map_union } } }
 	},
 	{ "size",
 	  { { "fixed_box",	range_op } },
@@ -1883,13 +1912,6 @@ void template_cpp_generator::class_printer::print_static_method(
 {
 	print_special_method(method, static_methods);
 }
-
-/* Signatures for constructors of multi-expressions
- * from a space and a list.
- */
-static Signature from_list_set = { { Domain }, { { Domain }, { Anonymous } } };
-static Signature from_list_map =
-	{ { Domain, Range }, { { Domain, Range }, { Domain, Anonymous } } };
 
 /* Signatures for constructors from a string.
  */

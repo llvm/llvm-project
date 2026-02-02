@@ -1432,7 +1432,8 @@ def GPU_RotateOp : GPU_Op<
   let hasVerifier = 1;
 }
 
-def GPU_BarrierOp : GPU_Op<"barrier"> {
+def GPU_BarrierOp : GPU_Op<"barrier">,
+    Arguments<(ins OptionalAttr<GPU_AddressSpaceAttrArray> :$address_spaces)> {
   let summary = "Synchronizes all work items of a workgroup.";
   let description = [{
     The `barrier` op synchronizes all work items of a workgroup. It is used
@@ -1442,17 +1443,36 @@ def GPU_BarrierOp : GPU_Op<"barrier"> {
     gpu.barrier
     ```
 
-    waits until all work items in the workgroup have reached this point
+    waits until all work items in the workgroup have reached the operation
     and all memory accesses made by these work items prior to the op are
     visible to all work items in the workgroup. Data hazards between work items
     accessing the same memory can be avoided by synchronizing work items
     in-between these accesses.
 
+    If the `memfence` attribute is specified, the set of memory accesses that must
+    by completed after the barrier resolves is limited to only those accesses that
+    read from or write to the specified address spaces (though accesses to other
+    address spaces may be completed as well, especially if a particular combination
+    of address spaces is not supported on a given backend). In particular,
+    specifying `memfence []` creates a barrier that is not required to affect
+    the visibility of any memory operations and is purely used for synchronizing
+    work items.
+
+    ```mlir
+    // Only workgroup address spaces accesses required to be visible.
+    gpu.barrier memfence [#gpu.address_space<workgroup>]
+    // No memory accesses required to be visible.
+    gpu.barrier memfence []
+    // All memory accesses required to be visible.
+    gpu.barrier
+    ```
+
     Either none or all work items of a workgroup need to execute this op
     in convergence.
   }];
-  let assemblyFormat = "attr-dict";
+  let assemblyFormat = "(`memfence` $address_spaces^)? attr-dict";
   let hasCanonicalizer = 1;
+  let builders = [OpBuilder<(ins)>];
 }
 
 def GPU_GPUModuleOp : GPU_Op<"module", [

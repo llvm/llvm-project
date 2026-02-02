@@ -288,10 +288,6 @@ bool DAGTypeLegalizer::run() {
         WidenVectorResult(N, i);
         Changed = true;
         goto NodeDone;
-      case TargetLowering::TypePromoteFloat:
-        PromoteFloatResult(N, i);
-        Changed = true;
-        goto NodeDone;
       case TargetLowering::TypeSoftPromoteHalf:
         SoftPromoteHalfResult(N, i);
         Changed = true;
@@ -349,10 +345,6 @@ ScanOperands:
         break;
       case TargetLowering::TypeWidenVector:
         NeedsReanalyzing = WidenVectorOperand(N, i);
-        Changed = true;
-        break;
-      case TargetLowering::TypePromoteFloat:
-        NeedsReanalyzing = PromoteFloatOperand(N, i);
         Changed = true;
         break;
       case TargetLowering::TypeSoftPromoteHalf:

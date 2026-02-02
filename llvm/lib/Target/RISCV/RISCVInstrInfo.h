@@ -236,6 +236,7 @@ public:
 
   bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const override;
 
+  bool analyzeCandidate(outliner::Candidate &C) const;
   // Calculate target-specific information for a set of outlining candidates.
   std::optional<std::unique_ptr<outliner::OutlinedFunction>>
   getOutliningCandidateInfo(

@@ -371,7 +371,7 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
   DL = &Mod->getDataLayout();
 
   const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, F);
-  if (!ST.isPromoteAllocaEnabled())
+  if (!ST.enablePromoteAlloca())
     return false;
 
   bool SufficientLDS = PromoteToLDS && hasSufficientLocalMem(F);

@@ -195,7 +195,7 @@ public:
 class FactManager {
 public:
   FactManager(const AnalysisDeclContext &AC, const CFG &Cfg)
-      : OriginMgr(AC.getASTContext()) {
+      : OriginMgr(AC.getASTContext(), AC.getDecl()) {
     BlockToFacts.resize(Cfg.getNumBlockIDs());
   }
 

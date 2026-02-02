@@ -231,16 +231,6 @@ static DecodeStatus DecodeVectorRegisterClass(MCInst &Inst, uint32_t RegNo,
   return MCDisassembler::Success;
 }
 
-static DecodeStatus DecodeVMV0RegisterClass(MCInst &Inst, uint32_t RegNo,
-                                            uint64_t Address,
-                                            const MCDisassembler *Decoder) {
-  if (RegNo)
-    return MCDisassembler::Fail;
-
-  Inst.addOperand(MCOperand::createReg(RISCV::V0));
-  return MCDisassembler::Success;
-}
-
 static DecodeStatus DecodeTRM2RegisterClass(MCInst &Inst, uint32_t RegNo,
                                             uint64_t Address,
                                             const MCDisassembler *Decoder) {
@@ -424,16 +414,6 @@ static DecodeStatus decodeFRMArg(MCInst &Inst, uint32_t Imm, int64_t Address,
                                  const MCDisassembler *Decoder) {
   assert(isUInt<3>(Imm) && "Invalid immediate");
   if (!llvm::RISCVFPRndMode::isValidRoundingMode(Imm))
-    return MCDisassembler::Fail;
-
-  Inst.addOperand(MCOperand::createImm(Imm));
-  return MCDisassembler::Success;
-}
-
-static DecodeStatus decodeRTZArg(MCInst &Inst, uint32_t Imm, int64_t Address,
-                                 const MCDisassembler *Decoder) {
-  assert(isUInt<3>(Imm) && "Invalid immediate");
-  if (Imm != RISCVFPRndMode::RTZ)
     return MCDisassembler::Fail;
 
   Inst.addOperand(MCOperand::createImm(Imm));

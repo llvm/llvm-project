@@ -60,10 +60,28 @@ define void @ptrtoaddr_of_gep(ptr %in, ptr %out0) {
 ; CHECK-NEXT:    %in_adj = getelementptr inbounds i8, ptr %in, i64 42
 ; CHECK-NEXT:    --> (42 + %in) U: full-set S: full-set
 ; CHECK-NEXT:    %p0 = ptrtoaddr ptr %in_adj to i64
-; CHECK-NEXT:    --> (ptrtoaddr ptr (42 + %in) to i64) U: full-set S: full-set
+; CHECK-NEXT:    --> (42 + (ptrtoaddr ptr %in to i64)) U: full-set S: full-set
 ; CHECK-NEXT:  Determining loop execution counts for: @ptrtoaddr_of_gep
 ;
   %in_adj = getelementptr inbounds i8, ptr %in, i64 42
+  %p0 = ptrtoaddr ptr %in_adj to i64
+  store i64  %p0, ptr  %out0
+  ret void
+}
+
+define void @ptrtoaddr_of_gep_with_unknown_int(ptr %in, ptr %out0, ptr %offset) {
+; CHECK-LABEL: 'ptrtoaddr_of_gep_with_unknown_int'
+; CHECK-NEXT:  Classifying expressions for: @ptrtoaddr_of_gep_with_unknown_int
+; CHECK-NEXT:    %l = load i64, ptr %offset, align 4
+; CHECK-NEXT:    --> %l U: full-set S: full-set
+; CHECK-NEXT:    %in_adj = getelementptr inbounds i8, ptr %in, i64 %l
+; CHECK-NEXT:    --> (%l + %in) U: full-set S: full-set
+; CHECK-NEXT:    %p0 = ptrtoaddr ptr %in_adj to i64
+; CHECK-NEXT:    --> ((ptrtoaddr ptr %in to i64) + %l) U: full-set S: full-set
+; CHECK-NEXT:  Determining loop execution counts for: @ptrtoaddr_of_gep_with_unknown_int
+;
+  %l = load i64, ptr %offset
+  %in_adj = getelementptr inbounds i8, ptr %in, i64 %l
   %p0 = ptrtoaddr ptr %in_adj to i64
   store i64  %p0, ptr  %out0
   ret void

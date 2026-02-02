@@ -749,3 +749,60 @@ def testAttrNames():
         print(StringAttr.attr_name)
         # CHECK: builtin.float
         print(FloatAttr.attr_name)
+
+
+# CHECK-LABEL: TEST: testLargeIntegerAttr
+@run
+def testLargeIntegerAttr():
+    with Context():
+        # Test 128-bit unsigned integer
+        i128_type = IntegerType.get_unsigned(128)
+        large_value_128 = (1 << 127) + 12345
+        attr_128 = IntegerAttr.get(i128_type, large_value_128)
+        # CHECK: 128-bit value matches: True
+        print("128-bit value matches:", int(attr_128) == large_value_128)
+
+        # Test 256-bit unsigned integer (BN254 field modulus example)
+        i256_type = IntegerType.get_unsigned(256)
+        bn254_modulus = 21888242871839275222246405745257275088548364400416034343698204186575808495617
+        attr_256 = IntegerAttr.get(i256_type, bn254_modulus)
+        # CHECK: 256-bit value matches: True
+        print("256-bit value matches:", int(attr_256) == bn254_modulus)
+
+        # Test 256-bit signed integer (positive value)
+        si256_type = IntegerType.get_signed(256)
+        positive_signed = (1 << 200) + 999
+        attr_si256_pos = IntegerAttr.get(si256_type, positive_signed)
+        # CHECK: 256-bit signed positive matches: True
+        print(
+            "256-bit signed positive matches:", int(attr_si256_pos) == positive_signed
+        )
+
+        # Test 256-bit signed integer (negative value)
+        negative_signed = -((1 << 200) + 12345)
+        attr_si256_neg = IntegerAttr.get(si256_type, negative_signed)
+        # CHECK: 256-bit signed negative matches: True
+        print(
+            "256-bit signed negative matches:", int(attr_si256_neg) == negative_signed
+        )
+
+        # Test 64-bit boundary (should still work with fast path)
+        i64_type = IntegerType.get_signless(64)
+        value_64 = (1 << 63) - 1  # max signed 64-bit
+        attr_64 = IntegerAttr.get(i64_type, value_64)
+        # CHECK: 64-bit value matches: True
+        print("64-bit value matches:", int(attr_64) == value_64)
+
+        # Test edge case: 65-bit integer (just over 64-bit boundary)
+        i65_type = IntegerType.get_unsigned(65)
+        value_65 = (1 << 64) + 1
+        attr_65 = IntegerAttr.get(i65_type, value_65)
+        # CHECK: 65-bit value matches: True
+        print("65-bit value matches:", int(attr_65) == value_65)
+
+        # Test very large integer (512-bit)
+        i512_type = IntegerType.get_unsigned(512)
+        value_512 = (1 << 500) + (1 << 300) + (1 << 100) + 42
+        attr_512 = IntegerAttr.get(i512_type, value_512)
+        # CHECK: 512-bit value matches: True
+        print("512-bit value matches:", int(attr_512) == value_512)

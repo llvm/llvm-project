@@ -2054,6 +2054,18 @@ ParseResult cir::FuncOp::parse(OpAsmParser &parser, OperationState &state) {
       }).failed())
     return failure();
 
+  if (parser.parseOptionalKeyword("side_effect").succeeded()) {
+    cir::SideEffect sideEffect;
+
+    if (parser.parseLParen().failed() ||
+        parseCIRKeyword<cir::SideEffect>(parser, sideEffect).failed() ||
+        parser.parseRParen().failed())
+      return failure();
+
+    auto attr = cir::SideEffectAttr::get(parser.getContext(), sideEffect);
+    state.addAttribute(CIRDialect::getSideEffectAttrName(), attr);
+  }
+
   // Parse the rest of the attributes.
   NamedAttrList parsedAttrs;
   if (parser.parseOptionalAttrDictWithKeyword(parsedAttrs))
@@ -2223,6 +2235,13 @@ void cir::FuncOp::print(OpAsmPrinter &p) {
     p << " global_dtor";
     if (globalDtorPriority.value() != 65535)
       p << "(" << globalDtorPriority.value() << ")";
+  }
+
+  if (std::optional<cir::SideEffect> sideEffect = getSideEffect();
+      sideEffect && *sideEffect != cir::SideEffect::All) {
+    p << " side_effect(";
+    p << stringifySideEffect(*sideEffect);
+    p << ")";
   }
 
   function_interface_impl::printFunctionAttributes(

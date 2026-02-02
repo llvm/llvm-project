@@ -46,44 +46,43 @@ bool maybeReachableFromEachOther(const SmallVectorImpl<IntrinsicInst *> &Insts,
 } // namespace
 
 bool forAllReachableExits(const DominatorTree &DT, const PostDominatorTree &PDT,
-                          const LoopInfo &LI, const Instruction *Start,
-                          const SmallVectorImpl<IntrinsicInst *> &Ends,
+                          const LoopInfo &LI, const AllocaInfo &AInfo,
                           const SmallVectorImpl<Instruction *> &RetVec,
                           llvm::function_ref<void(Instruction *)> Callback) {
-  if (Ends.size() == 1 && PDT.dominates(Ends[0], Start)) {
-    Callback(Ends[0]);
+  if (AInfo.LifetimeEnd.size() == 1 && AInfo.LifetimeStart.size() == 1 &&
+      PDT.dominates(AInfo.LifetimeEnd[0], AInfo.LifetimeStart[0])) {
+    Callback(AInfo.LifetimeEnd[0]);
     return true;
   }
   SmallPtrSet<BasicBlock *, 2> EndBlocks;
-  for (auto *End : Ends) {
-    EndBlocks.insert(End->getParent());
+  SmallVector<BasicBlock *, 2> StartBlocks;
+  for (const auto &[BB, ID] : AInfo.LastBBLifetime) {
+    if (ID == Intrinsic::lifetime_end)
+      EndBlocks.insert(BB);
+    else
+      StartBlocks.push_back(BB);
   }
-  SmallVector<Instruction *, 8> ReachableRetVec;
-  unsigned NumCoveredExits = 0;
-  for (auto *RI : RetVec) {
-    if (!isPotentiallyReachable(Start, RI, nullptr, &DT, &LI))
-      continue;
-    ReachableRetVec.push_back(RI);
-    // If there is an end in the same basic block as the return, we know for
-    // sure that the return is covered. Otherwise, we can check whether there
-    // is a way to reach the RI from the start of the lifetime without passing
-    // through an end.
-    if (EndBlocks.contains(RI->getParent()) ||
-        !isPotentiallyReachable(Start, RI, &EndBlocks, &DT, &LI)) {
-      ++NumCoveredExits;
+  bool UncoveredRets = false;
+
+  if (!StartBlocks.empty()) {
+    for (auto *RI : RetVec) {
+      auto WL = StartBlocks;
+      // If the block with the return is an EndBlock (i.e. a block where the
+      // last relevant lifetime intrinsic is an end), we don't have to run a
+      // complicated algorithm to know that the RetInst is never reachable
+      // without going through an end.
+      if (!EndBlocks.contains(RI->getParent()) &&
+          isPotentiallyReachableFromMany(WL, RI->getParent(), &EndBlocks, &DT,
+                                         &LI)) {
+        Callback(RI);
+        UncoveredRets = true;
+      }
     }
   }
-  if (NumCoveredExits == ReachableRetVec.size()) {
-    for_each(Ends, Callback);
-  } else {
-    // If there's a mix of covered and non-covered exits, just put the untag
-    // on exits, so we avoid the redundancy of untagging twice.
-    for_each(ReachableRetVec, Callback);
-    // We may have inserted untag outside of the lifetime interval.
-    // Signal the caller to remove the lifetime end call for this alloca.
-    return false;
-  }
-  return true;
+  for_each(AInfo.LifetimeEnd, Callback);
+  // We may have inserted untag outside of the lifetime interval.
+  // Signal the caller to remove the lifetime end call for this alloca.
+  return !UncoveredRets;
 }
 
 bool isStandardLifetime(const SmallVectorImpl<IntrinsicInst *> &LifetimeStart,
@@ -93,7 +92,7 @@ bool isStandardLifetime(const SmallVectorImpl<IntrinsicInst *> &LifetimeStart,
   // An alloca that has exactly one start and end in every possible execution.
   // If it has multiple ends, they have to be unreachable from each other, so
   // at most one of them is actually used for each execution of the function.
-  return LifetimeStart.size() == 1 &&
+  return LifetimeStart.size() > 0 &&
          (LifetimeEnd.size() == 1 ||
           (LifetimeEnd.size() > 0 &&
            !maybeReachableFromEachOther(LifetimeEnd, DT, LI, MaxLifetimes)));
@@ -163,6 +162,8 @@ void StackInfoBuilder::visit(OptimizationRemarkEmitter &ORE,
       Info.AllocasToInstrument[AI].LifetimeStart.push_back(II);
     else
       Info.AllocasToInstrument[AI].LifetimeEnd.push_back(II);
+    Info.AllocasToInstrument[AI].LastBBLifetime[II->getParent()] =
+        II->getIntrinsicID();
     return;
   }
 
@@ -173,13 +174,14 @@ void StackInfoBuilder::visit(OptimizationRemarkEmitter &ORE,
 
 AllocaInterestingness
 StackInfoBuilder::getAllocaInterestingness(const AllocaInst &AI) {
-  if (AI.getAllocatedType()->isSized() &&
+  std::optional<TypeSize> Size = AI.getAllocationSize(AI.getDataLayout());
+  if (Size &&
       // FIXME: support vscale.
-      !AI.getAllocatedType()->isScalableTy() &&
+      !Size->isScalable() &&
       // FIXME: instrument dynamic allocas, too
       AI.isStaticAlloca() &&
       // alloca() may be called with 0 size, ignore it.
-      memtag::getAllocaSizeInBytes(AI) > 0 &&
+      !Size->isZero() &&
       // We are only interested in allocas not promotable to registers.
       // Promotable allocas are common under -O0.
       !isAllocaPromotable(&AI) &&

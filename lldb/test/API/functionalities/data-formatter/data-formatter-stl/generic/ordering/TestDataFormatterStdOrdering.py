@@ -9,6 +9,8 @@ from lldbsuite.test import lldbutil
 
 
 class StdOrderingTestCase(TestBase):
+    TEST_WITH_PDB_DEBUG_INFO = True
+
     def do_test(self):
         lldbutil.run_to_source_breakpoint(
             self, "// break here", lldb.SBFileSpec("main.cpp")
@@ -44,7 +46,17 @@ class StdOrderingTestCase(TestBase):
         self.assertEqual(frame.FindVariable("so_equivalent").summary, "equal")
         self.assertEqual(frame.FindVariable("so_greater").summary, "greater")
 
+    @add_test_categories(["libc++"])
+    def test_libstdcxx(self):
+        self.build(dictionary={"USE_LIBCPP": 1})
+        self.do_test()
+
     @add_test_categories(["libstdcxx"])
     def test_libstdcxx(self):
         self.build(dictionary={"USE_LIBSTDCPP": 1})
+        self.do_test()
+
+    @add_test_categories(["msvcstl"])
+    def test_msvcstl(self):
+        self.build()
         self.do_test()

@@ -521,7 +521,7 @@ void Pointer::startLifetime() const {
       IM.setInitMap(new InitMap(Desc->getNumElems(), IM.allInitialized()));
 
     IM->startElementLifetime(getIndex());
-    assert(this->getLifetime() == Lifetime::Started);
+    assert(isArrayRoot() || (this->getLifetime() == Lifetime::Started));
     return;
   }
 
@@ -541,7 +541,7 @@ void Pointer::endLifetime() const {
       IM.setInitMap(new InitMap(Desc->getNumElems(), IM.allInitialized()));
 
     IM->endElementLifetime(getIndex());
-    assert(this->getLifetime() == Lifetime::Ended);
+    assert(isArrayRoot() || (this->getLifetime() == Lifetime::Ended));
     return;
   }
 

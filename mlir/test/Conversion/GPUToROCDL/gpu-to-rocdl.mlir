@@ -130,17 +130,6 @@ gpu.module @test_module {
 // -----
 
 gpu.module @test_module {
-  // CHECK-LABEL: func @gpu_sync()
-  func.func @gpu_sync() {
-    // CHECK: rocdl.barrier
-    gpu.barrier
-    func.return
-  }
-}
-
-// -----
-
-gpu.module @test_module {
   // CHECK-LABEL: func @gpu_sqrt
   func.func @gpu_sqrt(%arg_f16 : f16, %arg_f32 : f32, %arg_f64 : f64) -> (f16, f32, f64) {
     %result16 = math.sqrt %arg_f16 : f16
@@ -612,7 +601,9 @@ gpu.module @test_module {
     // CHECK: llvm.select
     // CHECK: llvm.shl
     // CHECK: rocdl.ds_bpermute {{.*}}
-    // CHECK: rocdl.barrier
+    // CHECK: llvm.fence
+    // CHECK: rocdl.s.barrier
+    // CHECK: llvm.fence
     // CHECK: llvm.bitcast
     // CHECK: llvm.fadd
     %result = gpu.all_reduce add %arg0 uniform {} : (f32) -> (f32)
@@ -636,7 +627,9 @@ gpu.module @test_module {
     // CHECK: llvm.select
     // CHECK: llvm.shl
     // CHECK: rocdl.ds_bpermute {{.*}}
-    // CHECK: rocdl.barrier
+    // CHECK: llvm.fence
+    // CHECK: rocdl.s.barrier
+    // CHECK: llvm.fence
     %result = gpu.all_reduce %arg0 uniform {
     ^bb(%lhs : i32, %rhs : i32):
       %xor = arith.xori %lhs, %rhs : i32

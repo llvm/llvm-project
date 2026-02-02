@@ -33,6 +33,7 @@
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
+#include "clang/Analysis/Analyses/LifetimeSafety/LifetimeAnnotations.h"
 #include "clang/Basic/AttrSubjectMatchRules.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/CapturedStmt.h"
@@ -1255,6 +1256,10 @@ public:
   bool tryToRecoverWithCall(ExprResult &E, const PartialDiagnostic &PD,
                             bool ForceComplain = false,
                             bool (*IsPlausibleResult)(QualType) = nullptr);
+
+  // Adds implicit lifetime bound attribute for implicit this to its
+  // TypeSourceInfo.
+  void addLifetimeBoundToImplicitThis(CXXMethodDecl *MD);
 
   /// Figure out if an expression could be turned into a call.
   ///

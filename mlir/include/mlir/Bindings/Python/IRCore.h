@@ -957,7 +957,7 @@ public:
   }
 
   static void bind(nanobind::module_ &m) {
-    auto cls = ClassTy(m, DerivedTy::pyClassName);
+    auto cls = ClassTy(m, DerivedTy::pyClassName, nanobind::is_generic());
     cls.def(nanobind::init<PyType &>(), nanobind::keep_alive<0, 1>(),
             nanobind::arg("cast_from_type"));
     cls.def_prop_ro_static(
@@ -1092,9 +1092,10 @@ public:
   static void bind(nanobind::module_ &m, PyType_Slot *slots = nullptr) {
     ClassTy cls;
     if (slots) {
-      cls = ClassTy(m, DerivedTy::pyClassName, nanobind::type_slots(slots));
+      cls = ClassTy(m, DerivedTy::pyClassName, nanobind::type_slots(slots),
+                    nanobind::is_generic());
     } else {
-      cls = ClassTy(m, DerivedTy::pyClassName);
+      cls = ClassTy(m, DerivedTy::pyClassName, nanobind::is_generic());
     }
     cls.def(nanobind::init<PyAttribute &>(), nanobind::keep_alive<0, 1>(),
             nanobind::arg("cast_from_attr"));

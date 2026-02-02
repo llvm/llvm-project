@@ -34,6 +34,7 @@ static StringLiteral getVisibilityString(SymbolTable::Visibility visibility) {
   case SymbolTable::Visibility::Public:
     return "public";
   }
+  llvm_unreachable("Unknown SymbolTable::Visibility");
 }
 
 void OverriddenSymbolVisibilityOp::setVisibility(

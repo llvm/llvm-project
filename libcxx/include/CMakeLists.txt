@@ -157,6 +157,7 @@ set(files
   __algorithm/ranges_set_intersection.h
   __algorithm/ranges_set_symmetric_difference.h
   __algorithm/ranges_set_union.h
+  __algorithm/ranges_shift_left.h
   __algorithm/ranges_shuffle.h
   __algorithm/ranges_sort.h
   __algorithm/ranges_sort_heap.h
@@ -330,6 +331,7 @@ set(files
   __condition_variable/condition_variable.h
   __config
   __configuration/abi.h
+  __configuration/attributes.h
   __configuration/availability.h
   __configuration/compiler.h
   __configuration/experimental.h

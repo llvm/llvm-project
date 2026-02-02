@@ -4006,6 +4006,15 @@ TEST_F(TokenAnnotatorTest, SwitchExpression) {
   EXPECT_TOKEN(Tokens[20], tok::arrow, TT_CaseLabelArrow);
 }
 
+TEST_F(TokenAnnotatorTest, TextBlock) {
+  auto Tokens = annotate("String foo = \"\"\"\n"
+                         "    bar\n"
+                         "    \\\\\"\"\";",
+                         getLLVMStyle(FormatStyle::LK_Java));
+  ASSERT_EQ(Tokens.size(), 6u) << Tokens;
+  EXPECT_TOKEN(Tokens[3], tok::string_literal, TT_StringInConcatenation);
+}
+
 TEST_F(TokenAnnotatorTest, JavaRecord) {
   auto Tokens = annotate("public record MyRecord() {}",
                          getLLVMStyle(FormatStyle::LK_Java));

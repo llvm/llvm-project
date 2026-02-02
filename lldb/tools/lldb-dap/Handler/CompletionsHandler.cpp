@@ -12,6 +12,7 @@
 #include "Protocol/ProtocolTypes.h"
 #include "RequestHandler.h"
 #include "lldb/API/SBStringList.h"
+#include "llvm/ADT/SmallVector.h"
 #include "llvm/Support/ConvertUTF.h"
 
 using namespace llvm;
@@ -72,6 +73,19 @@ static std::optional<size_t> GetCursorPos(StringRef text, uint32_t line,
   return cursor_pos;
 }
 
+static size_t GetPartialTokenCodeUnits(StringRef line, size_t cursor_pos) {
+  line = line.substr(0, cursor_pos);
+  const size_t idx = line.rfind(' ');
+
+  const size_t byte_offset = (idx == StringRef::npos) ? 0 : idx + 1;
+  const StringRef byte_token = line.substr(byte_offset);
+  SmallVector<UTF16, 20> utf16_token;
+
+  if (convertUTF8ToUTF16String(byte_token, utf16_token))
+    return utf16_token.size();
+  return byte_token.size(); // fallback back to byte offset.
+}
+
 /// Returns a list of possible completions for a given caret position and text.
 ///
 /// Clients should only call this request if the corresponding capability
@@ -109,6 +123,7 @@ CompletionsRequestHandler::Run(const CompletionsArguments &args) const {
     cursor_pos -= escape_prefix.size();
   }
 
+  const size_t partial_token_cu = GetPartialTokenCodeUnits(text, cursor_pos);
   // While the user is typing then we likely have an incomplete input and cannot
   // reliably determine the precise intent (command vs variable), try completing
   // the text as both a command and variable expression, if applicable.
@@ -138,19 +153,13 @@ CompletionsRequestHandler::Run(const CompletionsArguments &args) const {
       const StringRef match = matches.GetStringAtIndex(i);
       const StringRef description = descriptions.GetStringAtIndex(i);
 
-      StringRef match_ref = match;
-      for (const StringRef commit_point : {".", "->"}) {
-        if (const size_t pos = match_ref.rfind(commit_point);
-            pos != StringRef::npos) {
-          match_ref = match_ref.substr(pos + commit_point.size());
-        }
-      }
-
       CompletionItem item;
-      item.text = match_ref;
       item.label = match;
       if (!description.empty())
         item.detail = description;
+      // lldb returned completions includes the partial typed token
+      // overwrite it.
+      item.length = partial_token_cu;
 
       targets.emplace_back(std::move(item));
     }

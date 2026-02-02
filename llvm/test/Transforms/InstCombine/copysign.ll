@@ -129,3 +129,136 @@ define float @fabs_mag(float %x, float %y) {
   %r = call float @llvm.copysign.f32(float %a, float %y)
   ret float %r
 }
+
+; Issue 177932
+define float @copysign_simplify_demanded_bits_sign(float %mag, float %sign) {
+; CHECK-LABEL: @copysign_simplify_demanded_bits_sign(
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.copysign.f32(float [[MAG:%.*]], float [[SIGN:%.*]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %sign.int = bitcast float %sign to i32
+  %and.sign = and i32 %sign.int, -2147483648
+  %cast.sign = bitcast i32 %and.sign to float
+  %result = call float @llvm.copysign.f32(float %mag, float %cast.sign)
+  ret float %result
+}
+
+define <2 x float> @copysign_simplify_demanded_bits_sign_vector(<2 x float> %mag, <2 x float> %sign) {
+; CHECK-LABEL: @copysign_simplify_demanded_bits_sign_vector(
+; CHECK-NEXT:    [[RESULT:%.*]] = call <2 x float> @llvm.copysign.v2f32(<2 x float> [[MAG:%.*]], <2 x float> [[SIGN:%.*]])
+; CHECK-NEXT:    ret <2 x float> [[RESULT]]
+;
+  %sign.int = bitcast <2 x float> %sign to <2 x i32>
+  %and.sign = and <2 x i32> %sign.int, splat (i32 -2147483648)
+  %cast.sign = bitcast <2 x i32> %and.sign to <2 x float>
+  %result = call <2 x float> @llvm.copysign.v2f32(<2 x float> %mag, <2 x float> %cast.sign)
+  ret <2 x float> %result
+}
+
+define float @copysign_simplify_demanded_bits_sign_multiple_use_cast(float %mag, float %sign, ptr %ptr) {
+; CHECK-LABEL: @copysign_simplify_demanded_bits_sign_multiple_use_cast(
+; CHECK-NEXT:    [[SIGN_INT:%.*]] = bitcast float [[SIGN:%.*]] to i32
+; CHECK-NEXT:    [[AND_SIGN:%.*]] = and i32 [[SIGN_INT]], -2147483648
+; CHECK-NEXT:    [[CAST_SIGN:%.*]] = bitcast i32 [[AND_SIGN]] to float
+; CHECK-NEXT:    store i32 [[AND_SIGN]], ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.copysign.f32(float [[MAG:%.*]], float [[CAST_SIGN]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %sign.int = bitcast float %sign to i32
+  %and.sign = and i32 %sign.int, -2147483648
+  %cast.sign = bitcast i32 %and.sign to float
+  store float %cast.sign, ptr %ptr
+  %result = call float @llvm.copysign.f32(float %mag, float %cast.sign)
+  ret float %result
+}
+
+define float @copysign_simplify_demanded_bits_sign_multiple_use_cast_src(float %mag, float %sign, ptr %ptr) {
+; CHECK-LABEL: @copysign_simplify_demanded_bits_sign_multiple_use_cast_src(
+; CHECK-NEXT:    [[SIGN_INT:%.*]] = bitcast float [[SIGN:%.*]] to i32
+; CHECK-NEXT:    [[AND_SIGN:%.*]] = and i32 [[SIGN_INT]], -2147483648
+; CHECK-NEXT:    store i32 [[AND_SIGN]], ptr [[PTR:%.*]], align 4
+; CHECK-NEXT:    [[CAST_SIGN:%.*]] = bitcast i32 [[AND_SIGN]] to float
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.copysign.f32(float [[MAG:%.*]], float [[CAST_SIGN]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %sign.int = bitcast float %sign to i32
+  %and.sign = and i32 %sign.int, -2147483648
+  store i32 %and.sign, ptr %ptr
+  %cast.sign = bitcast i32 %and.sign to float
+  %result = call float @llvm.copysign.f32(float %mag, float %cast.sign)
+  ret float %result
+}
+
+define float @copysign_simplify_demanded_bits_sign_constexpr(float %mag, float %sign) {
+; CHECK-LABEL: @copysign_simplify_demanded_bits_sign_constexpr(
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.copysign.f32(float [[MAG:%.*]], float bitcast (i32 ptrtoint (ptr @copysign_simplify_demanded_bits_sign_constexpr to i32) to float))
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call float @llvm.copysign.f32(float %mag, float bitcast (i32 ptrtoint (ptr @copysign_simplify_demanded_bits_sign_constexpr to i32) to float))
+  ret float %result
+}
+
+define <2 x half> @copysign_simplify_demanded_bits_sign_cast_not_elementwise_0(<2 x half> %mag, float %sign) {
+; CHECK-LABEL: @copysign_simplify_demanded_bits_sign_cast_not_elementwise_0(
+; CHECK-NEXT:    [[SIGN_INT:%.*]] = bitcast float [[SIGN:%.*]] to i32
+; CHECK-NEXT:    [[AND_SIGN:%.*]] = and i32 [[SIGN_INT]], -2147483648
+; CHECK-NEXT:    [[CAST_SIGN:%.*]] = bitcast i32 [[AND_SIGN]] to <2 x half>
+; CHECK-NEXT:    [[RESULT:%.*]] = call <2 x half> @llvm.copysign.v2f16(<2 x half> [[MAG:%.*]], <2 x half> [[CAST_SIGN]])
+; CHECK-NEXT:    ret <2 x half> [[RESULT]]
+;
+  %sign.int = bitcast float %sign to i32
+  %and.sign = and i32 %sign.int, -2147483648
+  %cast.sign = bitcast i32 %and.sign to <2 x half>
+  %result = call <2 x half> @llvm.copysign.v2f16(<2 x half> %mag, <2 x half> %cast.sign)
+  ret <2 x half> %result
+}
+
+define float @copysign_simplify_demanded_bits_sign_not_elementwise_1(float %mag, <2 x half> %sign) {
+; CHECK-LABEL: @copysign_simplify_demanded_bits_sign_not_elementwise_1(
+; CHECK-NEXT:    [[SIGN_INT:%.*]] = bitcast <2 x half> [[SIGN:%.*]] to <2 x i16>
+; CHECK-NEXT:    [[AND_SIGN:%.*]] = and <2 x i16> [[SIGN_INT]], splat (i16 -32768)
+; CHECK-NEXT:    [[CAST_SIGN:%.*]] = bitcast <2 x i16> [[AND_SIGN]] to float
+; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.copysign.f32(float [[MAG:%.*]], float [[CAST_SIGN]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %sign.int = bitcast <2 x half> %sign to <2 x i16>
+  %and.sign = and <2 x i16> %sign.int, splat (i16 -32768)
+  %cast.sign = bitcast <2 x i16> %and.sign to float
+  %result = call float @llvm.copysign.f32(float %mag, float %cast.sign)
+  ret float %result
+}
+
+define ppc_fp128 @copysign_simplify_demanded_bits_sign_ppcfp128(ppc_fp128 %mag, ppc_fp128 %sign) {
+; CHECK-LABEL: @copysign_simplify_demanded_bits_sign_ppcfp128(
+; CHECK-NEXT:    [[RESULT:%.*]] = call ppc_fp128 @llvm.copysign.ppcf128(ppc_fp128 [[MAG:%.*]], ppc_fp128 [[SIGN:%.*]])
+; CHECK-NEXT:    ret ppc_fp128 [[RESULT]]
+;
+  %sign.int = bitcast ppc_fp128 %sign to i128
+  %sign.mask = shl i128 1, 127
+  %and.sign = and i128 %sign.int, %sign.mask
+  %cast.sign = bitcast i128 %and.sign to ppc_fp128
+  %result = call ppc_fp128 @llvm.copysign.ppcfp128(ppc_fp128 %mag, ppc_fp128 %cast.sign)
+  ret ppc_fp128 %result
+}
+
+define bfloat @copysign_simplify_demanded_bits_sign_bitcast_not_int(bfloat %mag, half %sign) {
+; CHECK-LABEL: @copysign_simplify_demanded_bits_sign_bitcast_not_int(
+; CHECK-NEXT:    [[CAST_SIGN:%.*]] = bitcast half [[SIGN:%.*]] to bfloat
+; CHECK-NEXT:    [[RESULT:%.*]] = call bfloat @llvm.copysign.bf16(bfloat [[MAG:%.*]], bfloat [[CAST_SIGN]])
+; CHECK-NEXT:    ret bfloat [[RESULT]]
+;
+  %cast.sign = bitcast half %sign to bfloat
+  %result = call bfloat @llvm.copysign.bf16(bfloat %mag, bfloat %cast.sign)
+  ret bfloat %result
+}
+
+define <2 x bfloat> @copysign_simplify_demanded_bits_sign_bitcast_not_int_vec(<2 x bfloat> %mag, <2 x half> %sign) {
+; CHECK-LABEL: @copysign_simplify_demanded_bits_sign_bitcast_not_int_vec(
+; CHECK-NEXT:    [[CAST_SIGN:%.*]] = bitcast <2 x half> [[SIGN:%.*]] to <2 x bfloat>
+; CHECK-NEXT:    [[RESULT:%.*]] = call <2 x bfloat> @llvm.copysign.v2bf16(<2 x bfloat> [[MAG:%.*]], <2 x bfloat> [[CAST_SIGN]])
+; CHECK-NEXT:    ret <2 x bfloat> [[RESULT]]
+;
+  %cast.sign = bitcast <2 x half> %sign to <2 x bfloat>
+  %result = call <2 x bfloat> @llvm.copysign.v2bf16(<2 x bfloat> %mag, <2 x bfloat> %cast.sign)
+  ret <2 x bfloat> %result
+}

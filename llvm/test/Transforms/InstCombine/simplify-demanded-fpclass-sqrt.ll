@@ -214,7 +214,7 @@ define nofpclass(nan inf zero sub nnorm) float @pnorm_result_demands_pnorm_sourc
 ; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan) [[NOT_NAN:%.*]]) {
 ; CHECK-NEXT:    [[ONLY_PNORM:%.*]] = call nofpclass(nan inf zero sub nnorm) float @func()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NOT_NAN]], float [[ONLY_PNORM]]
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.sqrt.f32(float [[SELECT]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.sqrt.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %only.pnorm = call nofpclass(nan inf nnorm sub zero) float @func()
@@ -228,7 +228,7 @@ define nofpclass(nan inf zero sub nnorm) float @pnorm_result_demands_psub_source
 ; CHECK-SAME: i1 [[COND:%.*]], float nofpclass(nan) [[NOT_NAN:%.*]]) {
 ; CHECK-NEXT:    [[ONLY_PSUB:%.*]] = call nofpclass(nan inf zero nsub norm) float @func()
 ; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[NOT_NAN]], float [[ONLY_PSUB]]
-; CHECK-NEXT:    [[RESULT:%.*]] = call float @llvm.sqrt.f32(float [[SELECT]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf float @llvm.sqrt.f32(float [[SELECT]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %only.psub = call nofpclass(nan inf norm nsub zero) float @func()
@@ -252,7 +252,7 @@ define nofpclass(nan inf zero nsub norm) float @psub_result_implies_not_pnorm_so
 define nofpclass(nan) float @ret_no_nan__sqrt(float %x) {
 ; CHECK-LABEL: define nofpclass(nan) float @ret_no_nan__sqrt(
 ; CHECK-SAME: float [[X:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call contract float @llvm.sqrt.f32(float [[X]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan contract float @llvm.sqrt.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = call contract float @llvm.sqrt.f32(float %x)
@@ -272,7 +272,7 @@ define nofpclass(snan) float @ret_no_snan__sqrt__no_neg_inputs(float nofpclass(n
 define nofpclass(snan) float @ret_no_snan__sqrt__no_neg_or_nan_inputs(float nofpclass(nan ninf nnorm nsub) %x) {
 ; CHECK-LABEL: define nofpclass(snan) float @ret_no_snan__sqrt__no_neg_or_nan_inputs(
 ; CHECK-SAME: float nofpclass(nan ninf nsub nnorm) [[X:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call contract float @llvm.sqrt.f32(float [[X]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan contract float @llvm.sqrt.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = call contract float @llvm.sqrt.f32(float %x)
@@ -283,10 +283,65 @@ define nofpclass(snan) float @ret_no_snan__sqrt__no_neg_or_nan_inputs(float nofp
 define nofpclass(snan) float @ret_no_snan__noundef_sqrt__no_neg_or_nan_inputs(float nofpclass(nan ninf nnorm nsub) %x) {
 ; CHECK-LABEL: define nofpclass(snan) float @ret_no_snan__noundef_sqrt__no_neg_or_nan_inputs(
 ; CHECK-SAME: float nofpclass(nan ninf nsub nnorm) [[X:%.*]]) {
-; CHECK-NEXT:    [[RESULT:%.*]] = call contract noundef float @llvm.sqrt.f32(float [[X]])
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan contract float @llvm.sqrt.f32(float [[X]])
 ; CHECK-NEXT:    ret float [[RESULT]]
 ;
   %result = call contract noundef float @llvm.sqrt.f32(float %x)
+  ret float %result
+}
+
+define nofpclass(snan) float @ret_no_snan__sqrt__no_pinf_inputs(float nofpclass(pinf) %x) {
+; CHECK-LABEL: define nofpclass(snan) float @ret_no_snan__sqrt__no_pinf_inputs(
+; CHECK-SAME: float nofpclass(pinf) [[X:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = call contract float @llvm.sqrt.f32(float [[X]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call contract float @llvm.sqrt.f32(float %x)
+  ret float %result
+}
+
+; Cannot infer flags. A nan output could still be produced by a -inf
+; input.
+define nofpclass(pinf) float @ret_no_pinf__sqrt(float %x) {
+; CHECK-LABEL: define nofpclass(pinf) float @ret_no_pinf__sqrt(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = call contract float @llvm.sqrt.f32(float [[X]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call contract float @llvm.sqrt.f32(float %x)
+  ret float %result
+}
+
+; Infer nnan and ninf
+define nofpclass(nan pinf) float @ret_no_pinf_no_nan__sqrt(float %x) {
+; CHECK-LABEL: define nofpclass(nan pinf) float @ret_no_pinf_no_nan__sqrt(
+; CHECK-SAME: float [[X:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf contract float @llvm.sqrt.f32(float [[X]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call contract float @llvm.sqrt.f32(float %x)
+  ret float %result
+}
+
+; Infer nnan and ninf
+define nofpclass(nan) float @ret_no_nan__sqrt__no_pinf_inputs(float nofpclass(pinf) %x) {
+; CHECK-LABEL: define nofpclass(nan) float @ret_no_nan__sqrt__no_pinf_inputs(
+; CHECK-SAME: float nofpclass(pinf) [[X:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf contract float @llvm.sqrt.f32(float [[X]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call contract float @llvm.sqrt.f32(float %x)
+  ret float %result
+}
+
+; Infer nnan and ninf
+define nofpclass(nan) float @ret_no_nan__sqrt__no_inf_inputs(float nofpclass(inf) %x) {
+; CHECK-LABEL: define nofpclass(nan) float @ret_no_nan__sqrt__no_inf_inputs(
+; CHECK-SAME: float nofpclass(inf) [[X:%.*]]) {
+; CHECK-NEXT:    [[RESULT:%.*]] = call nnan ninf contract float @llvm.sqrt.f32(float [[X]])
+; CHECK-NEXT:    ret float [[RESULT]]
+;
+  %result = call contract float @llvm.sqrt.f32(float %x)
   ret float %result
 }
 

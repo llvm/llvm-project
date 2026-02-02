@@ -4815,6 +4815,10 @@ InstructionCost X86TTIImpl::getVectorInstrCost(unsigned Opcode, Type *Val,
    };
 
   assert(Val->isVectorTy() && "This must be a vector type");
+  auto *VT = cast<VectorType>(Val);
+  if (VT->isScalableTy())
+    return InstructionCost::getInvalid();
+
   Type *ScalarType = Val->getScalarType();
   InstructionCost RegisterFileMoveCost = 0;
 

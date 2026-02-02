@@ -1253,4 +1253,38 @@ def CIR_BlockAddrInfoAttr : CIR_Attr<"BlockAddrInfo", "block_addr_info"> {
   ];
 }
 
+//===----------------------------------------------------------------------===//
+// Side Effect
+//===----------------------------------------------------------------------===//
+
+def CIR_SideEffect : CIR_I32EnumAttr<
+    "SideEffect", "allowed side effects of a function", [
+      I32EnumAttrCase<"All", 0, "all">,
+      I32EnumAttrCase<"Pure", 1, "pure">,
+      I32EnumAttrCase<"Const", 2, "const">
+]> {
+  let description = [{
+    The side effect attribute specifies the possible side effects of a function
+    or the target of a call operation.  This is an enumeration attribute with
+    the following possible values:
+
+    - all: The function or callee can have any side effects. This is the default
+      if no side effects are explicitly listed.
+    - pure: The function or callee may read data from memory, but it cannot
+      write data to memory. This has the same effect as the GNU C/C++ attribute
+      `__attribute__((pure))`.
+    - const: The function or callee may not read or write data from memory. This
+      has the same effect as the GNU C/C++ attribute `__attribute__((const))`.
+
+    Examples:
+
+    ```mlir
+    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i
+    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(pure)
+    %2 = cir.call @add(%0, %1) : (!s32i, !s32i) -> !s32i side_effect(const)
+    ```
+  }];
+}
+
+
 #endif // CLANG_CIR_DIALECT_IR_CIRATTRS_TD

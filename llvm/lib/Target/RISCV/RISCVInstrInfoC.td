@@ -86,50 +86,35 @@ def c_lui_imm : RISCVOp,
   }];
 }
 
-// A 7-bit unsigned immediate where the least significant two bits are zero.
-def uimm7_lsb00 : RISCVOp,
-                  ImmLeaf<XLenVT, [{return isShiftedUInt<5, 2>(Imm);}]> {
-  let ParserMatchClass = UImmAsmOperand<7, "Lsb00">;
+// A N-bit unsigned immediate where the least significant bits are zero.
+class RISCVUImmLsbZeroOp<int width, int zeros>
+    : RISCVOp, ImmLeaf<XLenVT, [{return isShiftedUInt<}] # !sub(width, zeros) #
+                       [{, }] # zeros # [{>(Imm);}]> {
+
+  // Create suffix with the appropriate number of 0s to append to all names
+  defvar Suffix = !foldl("", !range(zeros), acc, ignore, !strconcat(acc, "0"));
+
+  let ParserMatchClass = UImmAsmOperand<width, "Lsb" # Suffix>;
   let EncoderMethod = "getImmOpValue";
-  let DecoderMethod = "decodeUImmOperand<7>";
-  let OperandType = "OPERAND_UIMM7_LSB00";
+  let DecoderMethod = "decodeUImmOperand<" # width # ">";
+  let OperandType = "OPERAND_UIMM" # width # "_LSB" # Suffix;
+
   let MCOperandPredicate = [{
     int64_t Imm;
     if (!MCOp.evaluateAsConstantImm(Imm))
       return false;
-    return isShiftedUInt<5, 2>(Imm);
+    return isShiftedUInt<}] # !sub(width, zeros) # [{, }] # zeros # [{>(Imm);
   }];
 }
+
+// A 7-bit unsigned immediate where the least significant two bits are zero.
+def uimm7_lsb00 : RISCVUImmLsbZeroOp<7, 2>;
 
 // A 8-bit unsigned immediate where the least significant two bits are zero.
-def uimm8_lsb00 : RISCVOp,
-                  ImmLeaf<XLenVT, [{return isShiftedUInt<6, 2>(Imm);}]> {
-  let ParserMatchClass = UImmAsmOperand<8, "Lsb00">;
-  let EncoderMethod = "getImmOpValue";
-  let DecoderMethod = "decodeUImmOperand<8>";
-  let OperandType = "OPERAND_UIMM8_LSB00";
-  let MCOperandPredicate = [{
-    int64_t Imm;
-    if (!MCOp.evaluateAsConstantImm(Imm))
-      return false;
-    return isShiftedUInt<6, 2>(Imm);
-  }];
-}
+def uimm8_lsb00 : RISCVUImmLsbZeroOp<8, 2>;
 
 // A 8-bit unsigned immediate where the least significant three bits are zero.
-def uimm8_lsb000 : RISCVOp,
-                   ImmLeaf<XLenVT, [{return isShiftedUInt<5, 3>(Imm);}]> {
-  let ParserMatchClass = UImmAsmOperand<8, "Lsb000">;
-  let EncoderMethod = "getImmOpValue";
-  let DecoderMethod = "decodeUImmOperand<8>";
-  let OperandType = "OPERAND_UIMM8_LSB000";
-  let MCOperandPredicate = [{
-    int64_t Imm;
-    if (!MCOp.evaluateAsConstantImm(Imm))
-      return false;
-    return isShiftedUInt<5, 3>(Imm);
-  }];
-}
+def uimm8_lsb000 : RISCVUImmLsbZeroOp<8, 3>;
 
 // A 9-bit signed immediate where the least significant bit is zero.
 def bare_simm9_lsb0 : Operand<OtherVT>,
@@ -148,19 +133,7 @@ def bare_simm9_lsb0 : Operand<OtherVT>,
 }
 
 // A 9-bit unsigned immediate where the least significant three bits are zero.
-def uimm9_lsb000 : RISCVOp,
-                   ImmLeaf<XLenVT, [{return isShiftedUInt<6, 3>(Imm);}]> {
-  let ParserMatchClass = UImmAsmOperand<9, "Lsb000">;
-  let EncoderMethod = "getImmOpValue";
-  let DecoderMethod = "decodeUImmOperand<9>";
-  let OperandType = "OPERAND_UIMM9_LSB000";
-  let MCOperandPredicate = [{
-    int64_t Imm;
-    if (!MCOp.evaluateAsConstantImm(Imm))
-      return false;
-    return isShiftedUInt<6, 3>(Imm);
-  }];
-}
+def uimm9_lsb000 : RISCVUImmLsbZeroOp<9, 3>;
 
 // A 10-bit unsigned immediate where the least significant two bits are zero
 // and the immediate can't be zero.

@@ -64,6 +64,12 @@ public:
     //
     // (c) there are no multiplication instructions for the widest integer
     //     type (v2i64).
+
+    // Expand (narrow) f16 vectors during type legalization to avoid
+    // operations for all elements as with expansion after widening.
+    if (VT.getScalarType() == MVT::f16)
+      return VT.getVectorElementCount().isScalar() ? TypeScalarizeVector
+                                                   : TypeSplitVector;
     if (VT.getScalarSizeInBits() % 8 == 0)
       return TypeWidenVector;
     return TargetLoweringBase::getPreferredVectorAction(VT);
@@ -76,8 +82,16 @@ public:
       return 1;
     return TargetLowering::getNumRegisters(Context, VT);
   }
+  unsigned
+  getVectorTypeBreakdownForCallingConv(LLVMContext &Context, CallingConv::ID CC,
+                                       EVT VT, EVT &IntermediateVT,
+                                       unsigned &NumIntermediates,
+                                       MVT &RegisterVT) const override;
   MVT getRegisterTypeForCallingConv(LLVMContext &Context, CallingConv::ID CC,
                                     EVT VT) const override;
+  unsigned getNumRegistersForCallingConv(LLVMContext &Context,
+                                         CallingConv::ID CC,
+                                         EVT VT) const override;
   bool isCheapToSpeculateCtlz(Type *) const override { return true; }
   bool isCheapToSpeculateCttz(Type *) const override { return true; }
   bool preferZeroCompareBranch() const override { return true; }

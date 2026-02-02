@@ -767,6 +767,34 @@ def SPACEMIT_X60 : RISCVProcessorModel<"spacemit-x60",
   let MImpID = 0x1000000049772200;
 }
 
+def SPACEMIT_X100 : RISCVProcessorModel<"spacemit-x100",
+                                        NoSchedModel,
+                                        !listconcat(RVA23U64Features,
+                                        [FeatureStdExtZbc,
+                                         FeatureStdExtZbkc,
+                                         FeatureStdExtZcd,
+                                         FeatureStdExtZfbfmin,
+                                         FeatureStdExtZfh,
+                                         FeatureStdExtZvbc,
+                                         FeatureStdExtZvfbfwma,
+                                         FeatureStdExtZvfh,
+                                         FeatureStdExtZvkng,
+                                         FeatureStdExtZvknha,
+                                         FeatureStdExtZvksc,
+                                         FeatureStdExtZvksg,
+                                         FeatureStdExtZvl256b,
+                                         FeatureVendorXSMTVDot,
+                                         FeatureUnalignedScalarMem]),
+                                        [TuneDLenFactor2,
+                                         TuneOptimizedNF2SegmentLoadStore,
+                                         TuneOptimizedNF3SegmentLoadStore,
+                                         TuneOptimizedNF4SegmentLoadStore,
+                                         TuneVXRMPipelineFlush]> {
+  let MVendorID = 0x710;
+  let MArchID = 0x8000000058000002;
+  let MImpID = 0x33d8a600;
+}
+
 def RP2350_HAZARD3 : RISCVProcessorModel<"rp2350-hazard3",
                                          NoSchedModel,
                                          [Feature32Bit,

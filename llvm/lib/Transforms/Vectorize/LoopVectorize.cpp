@@ -4120,40 +4120,40 @@ static bool willGenerateVectors(VPlan &Plan, ElementCount VF,
       // result. Note that this includes VPInstruction where some opcodes may
       // produce a vector, to preserve existing behavior as VPInstructions model
       // aspects not directly mapped to existing IR instructions.
-      switch (R.getVPDefID()) {
-      case VPDef::VPDerivedIVSC:
-      case VPDef::VPScalarIVStepsSC:
-      case VPDef::VPReplicateSC:
-      case VPDef::VPInstructionSC:
-      case VPDef::VPCanonicalIVPHISC:
-      case VPDef::VPVectorPointerSC:
-      case VPDef::VPVectorEndPointerSC:
-      case VPDef::VPExpandSCEVSC:
-      case VPDef::VPEVLBasedIVPHISC:
-      case VPDef::VPPredInstPHISC:
-      case VPDef::VPBranchOnMaskSC:
+      switch (R.getVPRecipeID()) {
+      case VPRecipeBase::VPDerivedIVSC:
+      case VPRecipeBase::VPScalarIVStepsSC:
+      case VPRecipeBase::VPReplicateSC:
+      case VPRecipeBase::VPInstructionSC:
+      case VPRecipeBase::VPCanonicalIVPHISC:
+      case VPRecipeBase::VPVectorPointerSC:
+      case VPRecipeBase::VPVectorEndPointerSC:
+      case VPRecipeBase::VPExpandSCEVSC:
+      case VPRecipeBase::VPEVLBasedIVPHISC:
+      case VPRecipeBase::VPPredInstPHISC:
+      case VPRecipeBase::VPBranchOnMaskSC:
         continue;
-      case VPDef::VPReductionSC:
-      case VPDef::VPActiveLaneMaskPHISC:
-      case VPDef::VPWidenCallSC:
-      case VPDef::VPWidenCanonicalIVSC:
-      case VPDef::VPWidenCastSC:
-      case VPDef::VPWidenGEPSC:
-      case VPDef::VPWidenIntrinsicSC:
-      case VPDef::VPWidenSC:
-      case VPDef::VPBlendSC:
-      case VPDef::VPFirstOrderRecurrencePHISC:
-      case VPDef::VPHistogramSC:
-      case VPDef::VPWidenPHISC:
-      case VPDef::VPWidenIntOrFpInductionSC:
-      case VPDef::VPWidenPointerInductionSC:
-      case VPDef::VPReductionPHISC:
-      case VPDef::VPInterleaveEVLSC:
-      case VPDef::VPInterleaveSC:
-      case VPDef::VPWidenLoadEVLSC:
-      case VPDef::VPWidenLoadSC:
-      case VPDef::VPWidenStoreEVLSC:
-      case VPDef::VPWidenStoreSC:
+      case VPRecipeBase::VPReductionSC:
+      case VPRecipeBase::VPActiveLaneMaskPHISC:
+      case VPRecipeBase::VPWidenCallSC:
+      case VPRecipeBase::VPWidenCanonicalIVSC:
+      case VPRecipeBase::VPWidenCastSC:
+      case VPRecipeBase::VPWidenGEPSC:
+      case VPRecipeBase::VPWidenIntrinsicSC:
+      case VPRecipeBase::VPWidenSC:
+      case VPRecipeBase::VPBlendSC:
+      case VPRecipeBase::VPFirstOrderRecurrencePHISC:
+      case VPRecipeBase::VPHistogramSC:
+      case VPRecipeBase::VPWidenPHISC:
+      case VPRecipeBase::VPWidenIntOrFpInductionSC:
+      case VPRecipeBase::VPWidenPointerInductionSC:
+      case VPRecipeBase::VPReductionPHISC:
+      case VPRecipeBase::VPInterleaveEVLSC:
+      case VPRecipeBase::VPInterleaveSC:
+      case VPRecipeBase::VPWidenLoadEVLSC:
+      case VPRecipeBase::VPWidenLoadSC:
+      case VPRecipeBase::VPWidenStoreEVLSC:
+      case VPRecipeBase::VPWidenStoreSC:
         break;
       default:
         llvm_unreachable("unhandled recipe");
@@ -7302,38 +7302,6 @@ VectorizationFactor LoopVectorizationPlanner::computeBestVF() {
   return BestFactor;
 }
 
-/// Search \p Start's users for a recipe satisfying \p Pred, looking through
-/// recipes with definitions.
-template <typename PredT>
-static VPRecipeBase *findRecipe(VPValue *Start, PredT Pred) {
-  SetVector<VPValue *> Worklist;
-  Worklist.insert(Start);
-  for (unsigned I = 0; I != Worklist.size(); ++I) {
-    VPValue *Cur = Worklist[I];
-    auto *R = Cur->getDefiningRecipe();
-    // TODO: Skip live-ins once no degenerate reductions (ones with constant
-    // backedge values) are generated.
-    if (R && Pred(R))
-      return R;
-    for (VPUser *U : Cur->users()) {
-      for (VPValue *V : cast<VPRecipeBase>(U)->definedValues())
-        Worklist.insert(V);
-    }
-  }
-  return nullptr;
-}
-
-/// Match FindIV result: select(icmp ne ReducedIV, Sentinel), ReducedIV, Start.
-template <typename Op0_t, typename Op1_t>
-static bool matchFindIVResult(VPInstruction *VPI, Op0_t ReducedIV,
-                              Op1_t Start) {
-  using namespace VPlanPatternMatch;
-  return match(VPI, m_Select(m_SpecificICmp(ICmpInst::ICMP_NE,
-                                            m_ComputeReductionResult(ReducedIV),
-                                            m_VPValue()),
-                             m_ComputeReductionResult(ReducedIV), Start));
-}
-
 // If \p EpiResumePhiR is resume VPPhi for a reduction when vectorizing the
 // epilog loop, fix the reduction's scalar PHI node by adding the incoming value
 // from the main vector loop.
@@ -7351,25 +7319,26 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
     return;
 
   VPValue *BackedgeVal;
+  bool IsFindIV = false;
   if (EpiRedResult->getOpcode() == VPInstruction::ComputeAnyOfResult ||
       EpiRedResult->getOpcode() == VPInstruction::ComputeReductionResult)
     BackedgeVal = EpiRedResult->getOperand(EpiRedResult->getNumOperands() - 1);
-  else if (!matchFindIVResult(EpiRedResult, m_VPValue(BackedgeVal),
-                              m_VPValue()))
+  else if (matchFindIVResult(EpiRedResult, m_VPValue(BackedgeVal), m_VPValue()))
+    IsFindIV = true;
+  else
     return;
 
   auto *EpiRedHeaderPhi = cast_if_present<VPReductionPHIRecipe>(
-      findRecipe(BackedgeVal, IsaPred<VPReductionPHIRecipe>));
+      vputils::findRecipe(BackedgeVal, IsaPred<VPReductionPHIRecipe>));
   if (!EpiRedHeaderPhi) {
     match(BackedgeVal,
           VPlanPatternMatch::m_Select(VPlanPatternMatch::m_VPValue(),
                                       VPlanPatternMatch::m_VPValue(BackedgeVal),
                                       VPlanPatternMatch::m_VPValue()));
     EpiRedHeaderPhi = cast<VPReductionPHIRecipe>(
-        findRecipe(BackedgeVal, IsaPred<VPReductionPHIRecipe>));
+        vputils::findRecipe(BackedgeVal, IsaPred<VPReductionPHIRecipe>));
   }
 
-  RecurKind Kind = EpiRedHeaderPhi->getRecurrenceKind();
   Value *MainResumeValue;
   if (auto *VPI = dyn_cast<VPInstruction>(EpiRedHeaderPhi->getStartValue())) {
     assert((VPI->getOpcode() == VPInstruction::Broadcast ||
@@ -7378,7 +7347,7 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
     MainResumeValue = VPI->getOperand(0)->getUnderlyingValue();
   } else
     MainResumeValue = EpiRedHeaderPhi->getStartValue()->getUnderlyingValue();
-  if (RecurrenceDescriptor::isAnyOfRecurrenceKind(Kind)) {
+  if (EpiRedResult->getOpcode() == VPInstruction::ComputeAnyOfResult) {
     [[maybe_unused]] Value *StartV =
         EpiRedResult->getOperand(0)->getLiveInIRValue();
     auto *Cmp = cast<ICmpInst>(MainResumeValue);
@@ -7388,7 +7357,7 @@ static void fixReductionScalarResumeWhenVectorizingEpilog(
            "AnyOf expected to start by comparing main resume value to original "
            "start value");
     MainResumeValue = Cmp->getOperand(0);
-  } else if (RecurrenceDescriptor::isFindIVRecurrenceKind(Kind)) {
+  } else if (IsFindIV) {
     MainResumeValue = cast<SelectInst>(MainResumeValue)->getFalseValue();
   }
   PHINode *MainResumePhi = cast<PHINode>(MainResumeValue);
@@ -9444,7 +9413,6 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
     Value *ResumeV = nullptr;
     // TODO: Move setting of resume values to prepareToExecute.
     if (auto *ReductionPhi = dyn_cast<VPReductionPHIRecipe>(&R)) {
-      RecurKind RK = ReductionPhi->getRecurrenceKind();
       // Find the reduction result by searching users of the phi or its backedge
       // value.
       auto IsReductionResult = [](VPRecipeBase *R) {
@@ -9455,12 +9423,23 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
                VPI->getOpcode() == VPInstruction::ComputeReductionResult;
       };
       auto *RdxResult = cast<VPInstruction>(
-          findRecipe(ReductionPhi->getBackedgeValue(), IsReductionResult));
+          vputils::findRecipe(ReductionPhi->getBackedgeValue(), IsReductionResult));
       assert(RdxResult && "expected to find reduction result");
 
       ResumeV = cast<PHINode>(ReductionPhi->getUnderlyingInstr())
                     ->getIncomingValueForBlock(L->getLoopPreheader());
-      if (RecurrenceDescriptor::isAnyOfRecurrenceKind(RK)) {
+
+      // Check for FindIV pattern by looking for icmp user of RdxResult.
+      // The pattern is: select(icmp ne RdxResult, Sentinel), RdxResult, Start
+      using namespace VPlanPatternMatch;
+      VPValue *SentinelVPV = nullptr;
+      bool IsFindIV = any_of(RdxResult->users(), [&](VPUser *U) {
+        return match(U, VPlanPatternMatch::m_SpecificICmp(
+                            ICmpInst::ICMP_NE, m_Specific(RdxResult),
+                            m_VPValue(SentinelVPV)));
+      });
+
+      if (RdxResult->getOpcode() == VPInstruction::ComputeAnyOfResult) {
         Value *StartV = RdxResult->getOperand(0)->getLiveInIRValue();
         // VPReductionPHIRecipes for AnyOf reductions expect a boolean as
         // start value; compare the final value from the main vector loop
@@ -9470,18 +9449,8 @@ static SmallVector<Instruction *> preparePlanForEpilogueVectorLoop(
         ResumeV = Builder.CreateICmpNE(ResumeV, StartV);
         if (auto *I = dyn_cast<Instruction>(ResumeV))
           InstsToMove.push_back(I);
-      } else if (RecurrenceDescriptor::isFindIVRecurrenceKind(RK)) {
-        using namespace VPlanPatternMatch;
-        // Find the icmp user of RdxResult to get the sentinel value.
-        // The pattern is: select(icmp ne RdxResult, Sentinel), RdxResult, Start
-        VPValue *SentinelVPV = nullptr;
-        [[maybe_unused]] bool Found =
-            any_of(RdxResult->users(), [&](VPUser *U) {
-              return match(U, VPlanPatternMatch::m_SpecificICmp(
-                                  ICmpInst::ICMP_NE, m_Specific(RdxResult),
-                                  m_VPValue(SentinelVPV)));
-            });
-        assert(Found && "expected to find icmp using RdxResult");
+      } else if (IsFindIV) {
+        assert(SentinelVPV && "expected to find icmp using RdxResult");
 
         // Get the frozen start value from the main loop.
         Value *FrozenStartV = cast<PHINode>(ResumeV)->getIncomingValueForBlock(

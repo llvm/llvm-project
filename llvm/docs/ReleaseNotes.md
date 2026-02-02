@@ -66,6 +66,8 @@ Changes to the LLVM IR
 Changes to LLVM infrastructure
 ------------------------------
 
+* Removed TypePromoteFloat legalization from SelectionDAG
+
 Changes to building LLVM
 ------------------------
 
@@ -121,6 +123,7 @@ Changes to the RISC-V Backend
 -----------------------------
 
 * `llvm-objdump` now has support for `--symbolize-operands` with RISC-V.
+* `-mcpu=spacemit-x100` was added.
 
 Changes to the WebAssembly Backend
 ----------------------------------

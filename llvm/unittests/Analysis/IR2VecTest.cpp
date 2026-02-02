@@ -14,7 +14,9 @@
 #include "llvm/IR/Module.h"
 #include "llvm/IR/Type.h"
 #include "llvm/Support/Error.h"
+#include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
+#include "llvm/Support/raw_ostream.h"
 
 #include "gmock/gmock.h"
 #include "gtest/gtest.h"
@@ -977,6 +979,272 @@ TEST(VocabStorageTest, IteratorComparison) {
   EXPECT_EQ(it1, end);
   EXPECT_EQ(it2, end);
   EXPECT_EQ(it1, it2);
+}
+
+// Helper class for creating temporary vocabulary files for testing
+class VocabFileTest : public ::testing::Test {
+protected:
+  SmallString<128> TempFilePath;
+  int TempFD = -1;
+
+  void SetUp() override { TempFilePath.clear(); }
+
+  void TearDown() override {
+    if (!TempFilePath.empty())
+      sys::fs::remove(TempFilePath);
+  }
+
+  // Create a temporary file with the given content
+  bool createTempFile(StringRef Content) {
+    if (auto EC = sys::fs::createTemporaryFile("vocab", "json", TempFD,
+                                               TempFilePath)) {
+      return false;
+    }
+    raw_fd_ostream OS(TempFD, /*shouldClose=*/true);
+    OS << Content;
+    return true;
+  }
+
+  // Generate a minimal valid vocabulary JSON with given dimension
+  static std::string generateMinimalVocabJSON(unsigned Dim) {
+    std::string JSON = "{\n  \"Opcodes\": {\n";
+
+    // Add all required opcodes
+    const char *Opcodes[] = {"Ret",
+                             "Br",
+                             "Switch",
+                             "IndirectBr",
+                             "Invoke",
+                             "Resume",
+                             "Unreachable",
+                             "CleanupRet",
+                             "CatchRet",
+                             "CatchSwitch",
+                             "CallBr",
+                             "FNeg",
+                             "Add",
+                             "FAdd",
+                             "Sub",
+                             "FSub",
+                             "Mul",
+                             "FMul",
+                             "UDiv",
+                             "SDiv",
+                             "FDiv",
+                             "URem",
+                             "SRem",
+                             "FRem",
+                             "Shl",
+                             "LShr",
+                             "AShr",
+                             "And",
+                             "Or",
+                             "Xor",
+                             "Alloca",
+                             "Load",
+                             "Store",
+                             "GetElementPtr",
+                             "Fence",
+                             "AtomicCmpXchg",
+                             "AtomicRMW",
+                             "Trunc",
+                             "ZExt",
+                             "SExt",
+                             "FPToUI",
+                             "FPToSI",
+                             "UIToFP",
+                             "SIToFP",
+                             "FPTrunc",
+                             "FPExt",
+                             "PtrToInt",
+                             "IntToPtr",
+                             "BitCast",
+                             "AddrSpaceCast",
+                             "ICmp",
+                             "FCmp",
+                             "PHI",
+                             "Call",
+                             "Select",
+                             "UserOp1",
+                             "UserOp2",
+                             "VAArg",
+                             "ExtractElement",
+                             "InsertElement",
+                             "ShuffleVector",
+                             "ExtractValue",
+                             "InsertValue",
+                             "LandingPad",
+                             "Freeze",
+                             "PtrToAddr",
+                             "AddrToPtr",
+                             "CleanupPad",
+                             "CatchPad"};
+
+    bool First = true;
+    for (const char *Op : Opcodes) {
+      if (!First)
+        JSON += ",\n";
+      First = false;
+      JSON += "    \"";
+      JSON += Op;
+      JSON += "\": [";
+      for (unsigned I = 0; I < Dim; ++I) {
+        if (I > 0)
+          JSON += ", ";
+        JSON += "1.0";
+      }
+      JSON += "]";
+    }
+
+    JSON += "\n  },\n  \"Types\": {\n";
+
+    // Add all required types
+    const char *Types[] = {"VoidTy",    "FloatTy",  "LabelTy",   "MetadataTy",
+                           "VectorTy",  "TokenTy",  "IntegerTy", "FunctionTy",
+                           "PointerTy", "StructTy", "ArrayTy",   "UnknownTy"};
+
+    First = true;
+    for (const char *Ty : Types) {
+      if (!First)
+        JSON += ",\n";
+      First = false;
+      JSON += "    \"";
+      JSON += Ty;
+      JSON += "\": [";
+      for (unsigned I = 0; I < Dim; ++I) {
+        if (I > 0)
+          JSON += ", ";
+        JSON += "0.5";
+      }
+      JSON += "]";
+    }
+
+    JSON += "\n  },\n  \"Arguments\": {\n";
+
+    // Add all required argument types
+    const char *Args[] = {"Function", "Pointer", "Constant", "Variable"};
+
+    First = true;
+    for (const char *Arg : Args) {
+      if (!First)
+        JSON += ",\n";
+      First = false;
+      JSON += "    \"";
+      JSON += Arg;
+      JSON += "\": [";
+      for (unsigned I = 0; I < Dim; ++I) {
+        if (I > 0)
+          JSON += ", ";
+        JSON += "0.2";
+      }
+      JSON += "]";
+    }
+
+    JSON += "\n  }\n}\n";
+    return JSON;
+  }
+};
+
+TEST_F(VocabFileTest, FromFileSuccess) {
+  std::string VocabJSON = generateMinimalVocabJSON(3);
+  ASSERT_TRUE(createTempFile(VocabJSON));
+
+  auto VocabOrErr = Vocabulary::fromFile(TempFilePath);
+  ASSERT_TRUE(static_cast<bool>(VocabOrErr))
+      << "Failed to load vocabulary: " << toString(VocabOrErr.takeError());
+
+  Vocabulary &V = *VocabOrErr;
+  EXPECT_TRUE(V.isValid());
+  EXPECT_EQ(V.getDimension(), 3u);
+}
+
+TEST_F(VocabFileTest, FromFileNonExistent) {
+  auto VocabOrErr = Vocabulary::fromFile("/nonexistent/path/vocab.json");
+  EXPECT_FALSE(static_cast<bool>(VocabOrErr));
+
+  // Consume the error
+  std::string ErrMsg = toString(VocabOrErr.takeError());
+  EXPECT_FALSE(ErrMsg.empty());
+}
+
+TEST_F(VocabFileTest, FromFileInvalidJSON) {
+  ASSERT_TRUE(createTempFile("{ invalid json }"));
+
+  auto VocabOrErr = Vocabulary::fromFile(TempFilePath);
+  EXPECT_FALSE(static_cast<bool>(VocabOrErr));
+
+  std::string ErrMsg = toString(VocabOrErr.takeError());
+  EXPECT_FALSE(ErrMsg.empty());
+}
+
+TEST_F(VocabFileTest, FromFileMissingSections) {
+  // JSON with only Opcodes section, missing Types and Arguments
+  ASSERT_TRUE(createTempFile(R"({
+    "Opcodes": { "Ret": [1.0, 2.0] }
+  })"));
+
+  auto VocabOrErr = Vocabulary::fromFile(TempFilePath);
+  EXPECT_FALSE(static_cast<bool>(VocabOrErr));
+
+  std::string ErrMsg = toString(VocabOrErr.takeError());
+  EXPECT_FALSE(ErrMsg.empty());
+}
+
+TEST_F(VocabFileTest, FromFileWithWeights) {
+  std::string VocabJSON = generateMinimalVocabJSON(2);
+  ASSERT_TRUE(createTempFile(VocabJSON));
+
+  // Load with custom weights
+  float OpcWeight = 2.0f;
+  float TypeWeight = 1.0f;
+  float ArgWeight = 0.5f;
+
+  auto VocabOrErr =
+      Vocabulary::fromFile(TempFilePath, OpcWeight, TypeWeight, ArgWeight);
+  ASSERT_TRUE(static_cast<bool>(VocabOrErr))
+      << "Failed to load vocabulary: " << toString(VocabOrErr.takeError());
+
+  Vocabulary &V = *VocabOrErr;
+  EXPECT_TRUE(V.isValid());
+  EXPECT_EQ(V.getDimension(), 2u);
+
+  // Verify that weights are applied by checking embedding values
+  // Original opcode values are [1.0, 1.0], with weight 2.0 -> [2.0, 2.0]
+  const Embedding &RetEmb = V[Instruction::Ret];
+  EXPECT_TRUE(RetEmb.approximatelyEquals(Embedding(2, 2.0)));
+
+  // Original type values are [0.5, 0.5], with weight 1.0 -> [0.5, 0.5]
+  const Embedding &IntTyEmb = V[Type::IntegerTyID];
+  EXPECT_TRUE(IntTyEmb.approximatelyEquals(Embedding(2, 0.5)));
+}
+
+TEST_F(VocabFileTest, FromFileDefaultWeights) {
+  std::string VocabJSON = generateMinimalVocabJSON(2);
+  ASSERT_TRUE(createTempFile(VocabJSON));
+
+  // Load with default weights (1.0, 0.5, 0.2)
+  auto VocabOrErr = Vocabulary::fromFile(TempFilePath);
+  ASSERT_TRUE(static_cast<bool>(VocabOrErr))
+      << "Failed to load vocabulary: " << toString(VocabOrErr.takeError());
+
+  Vocabulary &V = *VocabOrErr;
+  EXPECT_TRUE(V.isValid());
+
+  // Original opcode values are [1.0, 1.0], with default weight 1.0 ->
+  // [1.0, 1.0]
+  const Embedding &RetEmb = V[Instruction::Ret];
+  EXPECT_TRUE(RetEmb.approximatelyEquals(Embedding(2, 1.0)));
+
+  // Original type values are [0.5, 0.5], with default weight 0.5 -> [0.25,
+  // 0.25]
+  const Embedding &IntTyEmb = V[Type::IntegerTyID];
+  EXPECT_TRUE(IntTyEmb.approximatelyEquals(Embedding(2, 0.25)));
+
+  // Original arg values are [0.2, 0.2], with default weight 0.2 -> [0.04, 0.04]
+  LLVMContext Ctx;
+  Constant *C = ConstantInt::get(Type::getInt32Ty(Ctx), 42);
+  const Embedding &ConstEmb = V[*C];
+  EXPECT_TRUE(ConstEmb.approximatelyEquals(Embedding(2, 0.04)));
 }
 
 } // end anonymous namespace
