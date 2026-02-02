@@ -21,7 +21,8 @@ tablegen(LLVM X86GenSubtargetInfo.inc -gen-subtarget)
 tablegen(LLVM X86GenFoldTables.inc -gen-x86-fold-tables -asmwriternum=1)
 tablegen(LLVM X86GenPreLegalizeGICombiner.inc -gen-global-isel-combiner
               -combiners="X86PreLegalizerCombiner")
-
+tablegen(LLVM X86GenPostLegalizeGICombiner.inc -gen-global-isel-combiner
+              -combiners="X86PostLegalizerCombiner")
 add_public_tablegen_target(X86CommonTableGen)
 
 set(sources
@@ -89,6 +90,7 @@ set(sources
   GISel/X86CallLowering.cpp
   GISel/X86InstructionSelector.cpp
   GISel/X86LegalizerInfo.cpp
+  GISel/X86PostLegalizerCombiner.cpp
   GISel/X86PreLegalizerCombiner.cpp
   GISel/X86RegisterBankInfo.cpp
   )

@@ -106,6 +106,7 @@ inline uint32_t getResourceDimensions(llvm::dxil::ResourceDimension Dim) {
     llvm_unreachable(
         "We cannot get the dimension of a resource with unknown dimension.");
   }
+  llvm_unreachable("Unhandled llvm::dxil::ResourceDimension enum.");
 }
 
 } // namespace hlsl

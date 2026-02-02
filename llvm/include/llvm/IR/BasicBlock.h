@@ -623,9 +623,6 @@ public:
 
   /// Split the basic block into two basic blocks at the specified instruction.
   ///
-  /// If \p Before is true, splitBasicBlockBefore handles the
-  /// block splitting. Otherwise, execution proceeds as described below.
-  ///
   /// Note that all instructions BEFORE the specified iterator
   /// stay as part of the original basic block, an unconditional branch is added
   /// to the original BB, and the rest of the instructions in the BB are moved
@@ -639,11 +636,9 @@ public:
   ///
   /// Also note that this doesn't preserve any passes. To split blocks while
   /// keeping loop information consistent, use the SplitBlock utility function.
-  LLVM_ABI BasicBlock *splitBasicBlock(iterator I, const Twine &BBName = "",
-                                       bool Before = false);
-  BasicBlock *splitBasicBlock(Instruction *I, const Twine &BBName = "",
-                              bool Before = false) {
-    return splitBasicBlock(I->getIterator(), BBName, Before);
+  LLVM_ABI BasicBlock *splitBasicBlock(iterator I, const Twine &BBName = "");
+  BasicBlock *splitBasicBlock(Instruction *I, const Twine &BBName = "") {
+    return splitBasicBlock(I->getIterator(), BBName);
   }
 
   /// Split the basic block into two basic blocks at the specified instruction
