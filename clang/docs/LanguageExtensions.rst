@@ -842,20 +842,20 @@ of different sizes and signs is forbidden in binary and ternary builtins.
  T __builtin_elementwise_max(T x, T y)          return x or y, whichever is larger                                     integer and floating point types
                                                 For floating point types, follows semantics of maxNum
                                                 in IEEE 754-2008. See `LangRef
-                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
  T __builtin_elementwise_min(T x, T y)          return x or y, whichever is smaller                                    integer and floating point types
                                                 For floating point types, follows semantics of minNum
                                                 in IEEE 754-2008. See `LangRef
-                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
  T __builtin_elementwise_maxnum(T x, T y)       return x or y, whichever is larger. Follows IEEE 754-2008              floating point types
                                                 semantics (maxNum) with +0.0>-0.0. See `LangRef
-                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
  T __builtin_elementwise_minnum(T x, T y)       return x or y, whichever is smaller. Follows IEEE 754-2008             floating point types
                                                 semantics (minNum) with +0.0>-0.0. See `LangRef
-                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
  T __builtin_elementwise_add_sat(T x, T y)      return the sum of x and y, clamped to the range of                     integer types
                                                 representable values for the signed/unsigned integer type.
@@ -863,19 +863,19 @@ of different sizes and signs is forbidden in binary and ternary builtins.
                                                 representable values for the signed/unsigned integer type.
  T __builtin_elementwise_maximum(T x, T y)      return x or y, whichever is larger. Follows IEEE 754-2019              floating point types
                                                 semantics, see `LangRef
-                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
  T __builtin_elementwise_minimum(T x, T y)      return x or y, whichever is smaller. Follows IEEE 754-2019             floating point types
                                                 semantics, see `LangRef
-                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
  T __builtin_elementwise_maximumnum(T x, T y)   return x or y, whichever is larger. Follows IEEE 754-2019              floating point types
                                                 semantics, see `LangRef
-                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
  T __builtin_elementwise_minimumnum(T x, T y)   return x or y, whichever is smaller. Follows IEEE 754-2019             floating point types
                                                 semantics, see `LangRef
-                                                <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                                <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                                 for the comparison.
 T __builtin_elementwise_fshl(T x, T y, T z)     perform a funnel shift left. Concatenate x and y (x is the most        integer types
                                                 significant bits of the wide value), the combined value is shifted
@@ -940,11 +940,11 @@ Let ``VT`` be a vector type and ``ET`` the element type of ``VT``.
  ET __builtin_reduce_xor(VT a)           ^                                                                      integer types
  ET __builtin_reduce_maximum(VT a)       return the largest element of the vector. Follows IEEE 754-2019        floating point types
                                          semantics, see `LangRef
-                                         <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                         <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                          for the comparison.
  ET __builtin_reduce_minimum(VT a)       return the smallest element of the vector. Follows IEEE 754-2019       floating point types
                                          semantics, see `LangRef
-                                         <http://llvm.org/docs/LangRef.html#llvm-min-intrinsics-comparation>`_
+                                         <http://llvm.org/docs/LangRef.html#i-fminmax-family>`_
                                          for the comparison.
 ======================================= ====================================================================== ==================================
 
@@ -1192,6 +1192,50 @@ certain library facilities with ``_Float16``; for example, there is no ``printf`
 specifier for ``_Float16``, and (unlike ``float``) it will not be implicitly promoted to
 ``double`` when passed to ``printf``, so the programmer must explicitly cast it to
 ``double`` before using it with an ``%f`` or similar specifier.
+
+Pragmas
+=======
+
+#pragma export
+--------------
+
+Clang supports the export pragma used to indicate an
+external symbol is to be exported from the shared library being built.  The
+syntax for the pragma is:
+
+.. code-block:: c++
+
+  #pragma export (name)
+
+where ``name`` is the name of the external function or variable to be
+exported.  The symbol needs to have external linkage.  The pragma may appear
+before or after the declaration of ``name``, but must precede the
+definition.  The pragma must also appear at file scope.  If ``name`` is not
+defined, the pragma will have no effect.  The pragma needs to be specified
+in the same translation unit as ``name`` is defined.
+
+The pragma has the same effect as adding ``__attribute__((visibility("default")))``
+to the declaration of ``name``.
+
+In C++, the function being exported must be declared as ``extern "C"``.  If the
+function has overloads, the pragma only applies to the overload with ``extern "C"``
+linkage.  For example:
+
+.. code-block:: c++
+
+  #pragma export(func)
+  int func(double) { return 0; }
+  extern "C" int func(int) { return 4;}
+
+In the code above the pragma will export ``func(int)`` but not ``func(double)``.
+
+If none of the overloads are declared with ``extern "C"`` a warning will be
+generated saying the pragma didn't resolve to a declaration.  For example:
+
+.. code-block:: c++
+
+  #pragma export(func)
+  int func(double) { return 0; } // warning: failed to resolve '#pragma export' to a declaration
 
 Messages on ``deprecated`` and ``unavailable`` Attributes
 =========================================================
@@ -2424,6 +2468,50 @@ Clang provides support for Microsoft extensions to support enumerations with no 
 
   typedef enum empty { } A;
 
+Microsoft Anonymous Structs and Unions
+--------------------------------------
+
+Clang provides support for a Microsoft extension that allows use of named struct or union types to
+declare anonymous members inside another struct or union, making their fields directly accessible
+from the enclosing type.
+
+For example, consider the following code:
+
+.. code-block:: c
+
+    struct Inner {
+        int x;
+        int y;
+    };
+
+    struct Outer {
+        struct Inner;  /* Microsoft extension: named anonymous struct member */
+    };
+
+    void f(struct Outer *o) {
+        o->x = 1;      /* accesses x member of anonymous member of type Inner directly */
+        o->y = 1;      /* accesses x member of anonymous member of type Inner directly */
+    }
+
+Without this extension, such declarations generate a warning that the declaration does not
+declare anything, the associated member names are not available for access, and the layout
+of types containing such declarations are affected accordingly.
+
+This extension can be controlled independently of other Microsoft extensions:
+
+* ``-fms-anonymous-structs``
+    Enable named anonymous struct/union support
+
+* ``-fno-ms-anonymous-structs``
+    Disable anonymous struct/union support
+
+This extension is also **implicitly enabled** when either of the following options is used:
+
+* ``-fms-extensions``
+* ``-fms-compatibility``
+
+When multiple controlling options are specified, the last option on the command line takes
+precedence.
 
 Interoperability with C++11 lambdas
 -----------------------------------
@@ -2839,6 +2927,50 @@ between the host and device is known to be compatible.
     global OnlySL *d
   );
   #pragma OPENCL EXTENSION __cl_clang_non_portable_kernel_param_types : disable
+
+``__cl_clang_function_scope_local_variables``
+----------------------------------------------
+
+This extension allows declaring variables in the local address space within
+function scope, including non-kernel functions or nested scopes within a kernel,
+using regular OpenCL extension pragma mechanism detailed in `the OpenCL
+Extension Specification, section 1.2
+<https://www.khronos.org/registry/OpenCL/specs/3.0-unified/html/OpenCL_Ext.html#extensions-overview>`_.
+
+This relaxes the `Declaration Scopes and Variable Types
+<https://registry.khronos.org/OpenCL/specs/3.0-unified/html/OpenCL_C.html#_usage_for_declaration_scopes_and_variable_types>`_
+rule that limits local-address-space variable declarations to the outermost
+compound statement inside the body of the kernel function.
+
+To expose static local allocations at kernel scope, targets can either force-
+inline non-kernel functions that declare local memory or pass a kernel-allocated
+local buffer to those functions via an implicit argument.
+
+.. code-block:: c++
+
+  #pragma OPENCL EXTENSION __cl_clang_function_scope_local_variables : enable
+  kernel void kernel1(...)
+  {
+    {
+      local float a; // compiled - no diagnostic generated
+    }
+  }
+  void foo()
+  {
+    local float c; // compiled - no diagnostic generated
+  }
+
+  #pragma OPENCL EXTENSION __cl_clang_function_scope_local_variables : disable
+  kernel void kernel2(...)
+  {
+    {
+      local float a; // error - variables in the local address space can only be declared in the outermost scope of a kernel function
+    }
+  }
+  void bar()
+  {
+    local float c; // error - non-kernel function variable cannot be declared in local address space
+  }
 
 Remove address space builtin function
 -------------------------------------

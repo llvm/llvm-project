@@ -66,8 +66,7 @@ ObjectFile *ObjectFileXCOFF::CreateInstance(const lldb::ModuleSP &module_sp,
     data_offset = 0;
     extractor_sp = std::make_shared<lldb_private::DataExtractor>(data_sp);
   }
-  if (!ObjectFileXCOFF::MagicBytesMatch(extractor_sp->GetSharedDataBuffer(),
-                                        data_offset, length))
+  if (!ObjectFileXCOFF::MagicBytesMatch(extractor_sp, data_offset, length))
     return nullptr;
   // Update the data to contain the entire file if it doesn't already
   if (extractor_sp->GetByteSize() < length) {
@@ -128,12 +127,16 @@ ObjectFile *ObjectFileXCOFF::CreateMemoryInstance(
 }
 
 size_t ObjectFileXCOFF::GetModuleSpecifications(
-    const lldb_private::FileSpec &file, lldb::DataBufferSP &data_sp,
+    const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
     lldb::offset_t data_offset, lldb::offset_t file_offset,
     lldb::offset_t length, lldb_private::ModuleSpecList &specs) {
   const size_t initial_count = specs.GetSize();
 
-  if (ObjectFileXCOFF::MagicBytesMatch(data_sp, 0, data_sp->GetByteSize())) {
+  if (!extractor_sp || !extractor_sp->HasData())
+    return 0;
+
+  if (ObjectFileXCOFF::MagicBytesMatch(extractor_sp, 0,
+                                       extractor_sp->GetByteSize())) {
     ArchSpec arch_spec =
         ArchSpec(eArchTypeXCOFF, XCOFF::TCPU_PPC64, LLDB_INVALID_CPUTYPE);
     ModuleSpec spec(file, arch_spec);
@@ -160,15 +163,15 @@ static uint32_t XCOFFHeaderSizeFromMagic(uint32_t magic) {
   return 0;
 }
 
-bool ObjectFileXCOFF::MagicBytesMatch(DataBufferSP &data_sp,
+bool ObjectFileXCOFF::MagicBytesMatch(DataExtractorSP &extractor_sp,
                                       lldb::addr_t data_offset,
                                       lldb::addr_t data_length) {
-  lldb_private::DataExtractor extractor;
-  extractor.SetData(data_sp, data_offset, data_length);
+  DataExtractorSP magic_extractor_sp =
+      extractor_sp->GetSubsetExtractorSP(data_offset, data_length);
   // Need to set this as XCOFF is only compatible with Big Endian
-  extractor.SetByteOrder(eByteOrderBig);
+  magic_extractor_sp->SetByteOrder(eByteOrderBig);
   lldb::offset_t offset = 0;
-  uint16_t magic = extractor.GetU16(&offset);
+  uint16_t magic = magic_extractor_sp->GetU16(&offset);
   return XCOFFHeaderSizeFromMagic(magic) != 0;
 }
 

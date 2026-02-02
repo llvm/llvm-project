@@ -2928,6 +2928,15 @@ static void handleExternalSourceSymbolAttr(Sema &S, Decl *D,
       S.Context, AL, Language, DefinedIn, IsGeneratedDeclaration, USR));
 }
 
+void Sema::mergeVisibilityType(Decl *D, SourceLocation Loc,
+                               VisibilityAttr::VisibilityType Value) {
+  if (VisibilityAttr *Attr = D->getAttr<VisibilityAttr>()) {
+    if (Attr->getVisibility() != Value)
+      Diag(Loc, diag::err_mismatched_visibility);
+  } else
+    D->addAttr(VisibilityAttr::CreateImplicit(Context, Value));
+}
+
 template <class T>
 static T *mergeVisibilityAttr(Sema &S, Decl *D, const AttributeCommonInfo &CI,
                               typename T::VisibilityType value) {
@@ -7128,6 +7137,11 @@ ModularFormatAttr *Sema::mergeModularFormatAttr(
 
 static void handleModularFormat(Sema &S, Decl *D, const ParsedAttr &AL) {
   bool Valid = true;
+  if (!AL.isArgIdent(0)) {
+    S.Diag(AL.getLoc(), diag::err_attribute_argument_n_type)
+        << AL << 1 << AANT_ArgumentIdentifier;
+    Valid = false;
+  }
   StringRef ImplName;
   if (!S.checkStringLiteralArgumentAttr(AL, 1, ImplName))
     Valid = false;
