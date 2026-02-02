@@ -2077,7 +2077,7 @@ LogicalResult CollapseShapeOp::verify() {
                    [](ReassociationIndices group) { return group.empty(); })) {
     return op.emitOpError("reassociation indices must not be empty");
   }
-  auto srcType = llvm::cast<RankedTensorType>(op.getSrc().getType());
+  auto srcType = llvm::cast<RankedTensorType>(getSrc().getType());
   auto resultType = llvm::cast<RankedTensorType>(op.getResult().getType());
 
   return verifyTensorReshapeOp(op, srcType, resultType);
