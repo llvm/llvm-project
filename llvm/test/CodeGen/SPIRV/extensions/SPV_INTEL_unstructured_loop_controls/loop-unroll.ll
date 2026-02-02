@@ -1,5 +1,6 @@
 ; RUN: llc -verify-machineinstrs -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_unstructured_loop_controls %s -o - | FileCheck %s --check-prefix=CHECK-SPIRV
 ; RUN: llc -O0 -mtriple=spirv64-unknown-unknown %s -o - | FileCheck %s --check-prefix=CHECK-NO-EXT
+; RUN: %if spirv-tools %{ llc -O0 -mtriple=spirv64-unknown-unknown --spirv-ext=+SPV_INTEL_unstructured_loop_controls %s -o - -filetype=obj | spirv-val %}
 
 ; Check that extension and capability are emitted when extension is enabled.
 ; CHECK-SPIRV-DAG: OpCapability UnstructuredLoopControlsINTEL
