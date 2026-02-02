@@ -73,6 +73,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat) {
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::atan2f(0.0f, 0.0f));
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::atanf(0.0f));
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::atanhf(0.0f));
+  EXPECT_FP_EQ(0x0p+0, LIBC_NAMESPACE::shared::atanpif16(0.0));
   EXPECT_FP_EQ(0x0p+0f, LIBC_NAMESPACE::shared::cbrtf(0.0f));
   EXPECT_FP_EQ(0x1p+0f, LIBC_NAMESPACE::shared::cosf(0.0f));
   EXPECT_FP_EQ(0x1p+0f, LIBC_NAMESPACE::shared::coshf(0.0f));

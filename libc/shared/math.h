@@ -30,6 +30,7 @@
 #include "math/atanf16.h"
 #include "math/atanhf.h"
 #include "math/atanhf16.h"
+#include "math/atanpif16.h"
 #include "math/cbrt.h"
 #include "math/cbrtf.h"
 #include "math/cos.h"
