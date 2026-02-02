@@ -24,6 +24,7 @@ add_lldb_library(lldbPluginSwiftLanguage PLUGIN
   SwiftFrameRecognizers.cpp
   SwiftSet.cpp
   SwiftUnsafeTypes.cpp
+  SystemValueTypes.cpp
 
   LINK_LIBS
     lldbCore
