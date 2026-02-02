@@ -5453,6 +5453,11 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
         NewUses.push_back({Shuffle, {}});
         std::vector<int> &NewMask = NewUses.back().second;
         for (int Index : OldMask) {
+          // Preserve poison indices without modification.
+          if (Index == PoisonMaskElem) {
+            NewMask.push_back(Index);
+            continue;
+          }
           int NewIndex = Index >= static_cast<int>(OldNumElements)
                              ? Index - LowOffset - HighOffset
                              : Index - LowOffset;
@@ -5480,10 +5485,12 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
 
       // Create new load of smaller vector.
       Type *IndexTy = DL->getIndexType(PtrOp->getType());
-      Value *NewPtr = LowOffset > 0u
-                          ? Builder.CreateInBoundsPtrAdd(
-                                PtrOp, ConstantInt::get(IndexTy, LowOffset))
-                          : PtrOp;
+      TypeSize ElemSize = DL->getTypeAllocSize(ElemTy);
+      Value *NewPtr =
+          LowOffset > 0u
+              ? Builder.CreateInBoundsPtrAdd(
+                    PtrOp, ConstantInt::get(IndexTy, LowOffset * ElemSize))
+              : PtrOp;
 
       auto *NewLoad = cast<LoadInst>(
           Builder.CreateAlignedLoad(NewLoadTy, NewPtr, OldLoad->getAlign()));
