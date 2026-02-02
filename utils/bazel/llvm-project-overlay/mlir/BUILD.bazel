@@ -1523,12 +1523,6 @@ td_library(
     deps = [":OpBaseTdFiles"],
 )
 
-td_library(
-    name = "ExecutionProgressOpInterfaceTdFiles",
-    srcs = ["include/mlir/Interfaces/ExecutionProgressOpInterface.td"],
-    includes = ["include"],
-    deps = [":OpBaseTdFiles"],
-)
 
 td_library(
     name = "LoopLikeInterfaceTdFiles",
@@ -2893,7 +2887,6 @@ td_library(
     deps = [
         ":ControlFlowInterfacesTdFiles",
         ":DestinationStyleOpInterfaceTdFiles",
-        ":ExecutionProgressOpInterfaceTdFiles",
         ":InferTypeOpInterfaceTdFiles",
         ":LoopLikeInterfaceTdFiles",
         ":ParallelCombiningOpInterfaceTdFiles",
@@ -4565,7 +4558,6 @@ cc_library(
         ":ControlFlowInterfaces",
         ":ConvertToEmitCInterface",
         ":DestinationStyleOpInterface",
-        ":ExecutionProgressOpInterface",
         ":FunctionInterfaces",
         ":IR",
         ":InferTypeOpInterface",
@@ -4668,17 +4660,6 @@ cc_library(
     ],
 )
 
-cc_library(
-    name = "ExecutionProgressOpInterface",
-    srcs = ["lib/Interfaces/ExecutionProgressOpInterface.cpp"],
-    hdrs = ["include/mlir/Interfaces/ExecutionProgressOpInterface.h"],
-    includes = ["include"],
-    deps = [
-        ":ExecutionProgressOpInterfaceIncGen",
-        ":IR",
-        "//llvm:Support",
-    ],
-)
 
 cc_library(
     name = "MemorySlotInterfaces",
@@ -8081,16 +8062,6 @@ gentbl_cc_library(
     deps = [":LoopLikeInterfaceTdFiles"],
 )
 
-gentbl_cc_library(
-    name = "ExecutionProgressOpInterfaceIncGen",
-    tbl_outs = {
-        "include/mlir/Interfaces/ExecutionProgressOpInterface.h.inc": ["-gen-op-interface-decls"],
-        "include/mlir/Interfaces/ExecutionProgressOpInterface.cpp.inc": ["-gen-op-interface-defs"],
-    },
-    tblgen = ":mlir-tblgen",
-    td_file = "include/mlir/Interfaces/ExecutionProgressOpInterface.td",
-    deps = [":ExecutionProgressOpInterfaceTdFiles"],
-)
 
 gentbl_cc_library(
     name = "MemorySlotInterfacesIncGen",
@@ -14501,7 +14472,6 @@ td_library(
     ],
     includes = ["include"],
     deps = [
-        ":ExecutionProgressOpInterfaceTdFiles",
         ":OpBaseTdFiles",
         ":SideEffectInterfacesTdFiles",
     ],
@@ -14550,7 +14520,6 @@ cc_library(
         ":BytecodeOpInterface",
         ":ControlFlowInterfaces",
         ":ConvertToLLVMInterface",
-        ":ExecutionProgressOpInterface",
         ":IR",
         ":InliningUtils",
         ":SideEffectInterfaces",
