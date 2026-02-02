@@ -463,7 +463,7 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
                       return Op;
                     });
           UnrolledCost += TTI.getInstructionCost(I, Operands, CostKind);
-          LLVM_DEBUG(dbgs().indent(3)
+          LLVM_DEBUG(dbgs().indent(4)
                      << "Adding cost of instruction (iteration " << Iteration
                      << "): ");
           LLVM_DEBUG(I->dump());
@@ -501,7 +501,7 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
   assert(L->isLCSSAForm(DT) &&
          "Must have loops in LCSSA form to track live-out values.");
 
-  LLVM_DEBUG(dbgs().indent(3)
+  LLVM_DEBUG(dbgs().indent(4)
              << "Starting LoopUnroll profitability analysis...\n");
 
   TargetTransformInfo::TargetCostKind CostKind =
@@ -512,7 +512,7 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
   // Since the same load will take different values on different iterations,
   // we literally have to go through all loop's iterations.
   for (unsigned Iteration = 0; Iteration < TripCount; ++Iteration) {
-    LLVM_DEBUG(dbgs().indent(3) << "Analyzing iteration " << Iteration << "\n");
+    LLVM_DEBUG(dbgs().indent(4) << "Analyzing iteration " << Iteration << "\n");
 
     // Prepare for the iteration by collecting any simplified entry or backedge
     // inputs.
@@ -578,7 +578,7 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
         if (auto *CI = dyn_cast<CallInst>(&I)) {
           const Function *Callee = CI->getCalledFunction();
           if (!Callee || TTI.isLoweredToCall(Callee)) {
-            LLVM_DEBUG(dbgs().indent(3)
+            LLVM_DEBUG(dbgs().indent(4)
                        << "Can't analyze cost of loop with call\n");
             return std::nullopt;
           }
@@ -592,8 +592,8 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
         // If unrolled body turns out to be too big, bail out.
         if (UnrolledCost > MaxUnrolledLoopSize) {
           LLVM_DEBUG({
-            dbgs().indent(3) << "Exceeded threshold.. exiting.\n";
-            dbgs().indent(3)
+            dbgs().indent(4) << "Exceeded threshold.. exiting.\n";
+            dbgs().indent(4)
                 << "UnrolledCost: " << UnrolledCost
                 << ", MaxUnrolledLoopSize: " << MaxUnrolledLoopSize << "\n";
           });
@@ -654,8 +654,8 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
     // won't find them on later ones too.
     if (UnrolledCost == RolledDynamicCost) {
       LLVM_DEBUG({
-        dbgs().indent(3) << "No opportunities found.. exiting.\n";
-        dbgs().indent(3) << "UnrolledCost: " << UnrolledCost << "\n";
+        dbgs().indent(4) << "No opportunities found.. exiting.\n";
+        dbgs().indent(4) << "UnrolledCost: " << UnrolledCost << "\n";
       });
       return std::nullopt;
     }
@@ -682,8 +682,8 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
          "loop is rolled or unrolled.");
 
   LLVM_DEBUG({
-    dbgs().indent(3) << "Analysis finished:\n";
-    dbgs().indent(3) << "UnrolledCost: " << UnrolledCost
+    dbgs().indent(4) << "Analysis finished:\n";
+    dbgs().indent(4) << "UnrolledCost: " << UnrolledCost
                      << ", RolledDynamicCost: " << RolledDynamicCost << "\n";
   });
   return {{unsigned(UnrolledCost.getValue()),
@@ -830,7 +830,7 @@ shouldPragmaUnroll(Loop *L, const PragmaInfo &PInfo,
     // INT_MAX, Block full unrolling at a reasonable limit so that the compiler
     // doesn't hang trying to unroll the loop. See PR77842
     if (TripCount > PragmaUnrollFullMaxIterations) {
-      LLVM_DEBUG(dbgs().indent(2) << "Won't unroll; trip count is too large\n");
+      LLVM_DEBUG(dbgs().indent(3) << "Won't unroll; trip count is too large\n");
       return std::nullopt;
     }
 
@@ -883,7 +883,7 @@ shouldPartialUnroll(const unsigned LoopSize, const unsigned TripCount,
     return std::nullopt;
 
   if (!UP.Partial) {
-    LLVM_DEBUG(dbgs().indent(2) << "will not try to unroll partially because "
+    LLVM_DEBUG(dbgs().indent(3) << "will not try to unroll partially because "
                                 << "-unroll-allow-partial not given\n");
     return 0;
   }
@@ -920,7 +920,7 @@ shouldPartialUnroll(const unsigned LoopSize, const unsigned TripCount,
   if (count > UP.MaxCount)
     count = UP.MaxCount;
 
-  LLVM_DEBUG(dbgs().indent(2)
+  LLVM_DEBUG(dbgs().indent(3)
              << "partially unrolling with count: " << count << "\n");
 
   return count;
@@ -1105,7 +1105,7 @@ bool llvm::computeUnrollCount(
   }
   UP.Runtime |= PragmaEnableUnroll || PragmaCount > 0 || UserUnrollCount;
   if (!UP.Runtime) {
-    LLVM_DEBUG(dbgs().indent(1)
+    LLVM_DEBUG(dbgs().indent(2)
                << "will not try to unroll loop with runtime trip count "
                << "-unroll-runtime not given\n");
     UP.Count = 0;
@@ -1127,7 +1127,7 @@ bool llvm::computeUnrollCount(
   if (!UP.AllowRemainder && UP.Count != 0 && (TripMultiple % UP.Count) != 0) {
     while (UP.Count != 0 && TripMultiple % UP.Count != 0)
       UP.Count >>= 1;
-    LLVM_DEBUG(dbgs().indent(1)
+    LLVM_DEBUG(dbgs().indent(2)
                << "Remainder loop is restricted (that could architecture "
                   "specific or because the loop contains a convergent "
                   "instruction), so unroll count must divide the trip "
@@ -1159,7 +1159,7 @@ bool llvm::computeUnrollCount(
   if (MaxTripCount && UP.Count > MaxTripCount)
     UP.Count = MaxTripCount;
 
-  LLVM_DEBUG(dbgs().indent(1)
+  LLVM_DEBUG(dbgs().indent(2)
              << "runtime unrolling with count: " << UP.Count << "\n");
   if (UP.Count < 2)
     UP.Count = 0;
@@ -1197,8 +1197,8 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   if (ParentL != nullptr &&
       hasUnrollAndJamTransformation(ParentL) == TM_ForcedByUser &&
       hasUnrollTransformation(L) != TM_ForcedByUser) {
-    LLVM_DEBUG(dbgs() << "Not unrolling loop since parent loop has"
-                      << " llvm.loop.unroll_and_jam.\n");
+    LLVM_DEBUG(dbgs().indent(1) << "Not unrolling loop since parent loop has"
+                                << " llvm.loop.unroll_and_jam.\n");
     return LoopUnrollResult::Unmodified;
   }
 
@@ -1207,15 +1207,14 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   // unrolling from interfering with the user requested transformation.
   if (hasUnrollAndJamTransformation(L) == TM_ForcedByUser &&
       hasUnrollTransformation(L) != TM_ForcedByUser) {
-    LLVM_DEBUG(
-        dbgs()
-        << "Not unrolling loop since it has llvm.loop.unroll_and_jam.\n");
+    LLVM_DEBUG(dbgs().indent(1)
+               << "Not unrolling loop since it has llvm.loop.unroll_and_jam.\n");
     return LoopUnrollResult::Unmodified;
   }
 
   if (!L->isLoopSimplifyForm()) {
-    LLVM_DEBUG(
-        dbgs() << "Not unrolling loop which is not in loop-simplify form.\n");
+    LLVM_DEBUG(dbgs().indent(1)
+               << "Not unrolling loop which is not in loop-simplify form.\n");
     return LoopUnrollResult::Unmodified;
   }
 
@@ -1243,7 +1242,7 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
 
   UnrollCostEstimator UCE(L, TTI, EphValues, UP.BEInsns);
   if (!UCE.canUnroll()) {
-    LLVM_DEBUG(dbgs() << "Loop not considered unrollable.\n");
+    LLVM_DEBUG(dbgs().indent(1) << "Loop not considered unrollable.\n");
     return LoopUnrollResult::Unmodified;
   }
 
@@ -1256,7 +1255,7 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
     UP.Threshold = std::max(UP.Threshold, LoopSize + 1);
 
   if (UCE.NumInlineCandidates != 0) {
-    LLVM_DEBUG(dbgs() << "Not unrolling loop with inlinable calls.\n");
+    LLVM_DEBUG(dbgs().indent(1) << "Not unrolling loop with inlinable calls.\n");
     return LoopUnrollResult::Unmodified;
   }
 
@@ -1339,8 +1338,8 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
   // Do not attempt partial/runtime unrolling in FullLoopUnrolling
   if (OnlyFullUnroll && ((!TripCount && !MaxTripCount) ||
                          UP.Count < TripCount || UP.Count < MaxTripCount)) {
-    LLVM_DEBUG(
-        dbgs() << "Not attempting partial/runtime unroll in FullLoopUnroll.\n");
+    LLVM_DEBUG(dbgs().indent(1)
+               << "Not attempting partial/runtime unroll in FullLoopUnroll.\n");
     return LoopUnrollResult::Unmodified;
   }
 
