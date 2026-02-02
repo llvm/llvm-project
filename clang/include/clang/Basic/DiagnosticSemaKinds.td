@@ -23,9 +23,9 @@ defm typename_outside_of_template : CXX11Compat<"'typename' outside of a templat
 
 // C++14 compatibility with C++11 and earlier.
 defm constexpr_type_definition : CXX14Compat<
-  "type definition in a constexpr %select{function|constructor}0 is">;
+  "type definition in a constexpr %enum_select<Function, Constructor>0 is">;
 defm constexpr_local_var : CXX14Compat<
-  "variable declaration in a constexpr %select{function|constructor}0 is">;
+  "variable declaration in a constexpr %enum_select<Function, Constructor>0 is">;
 defm constexpr_body_multiple_return : CXX14Compat<
   "multiple return statements in constexpr function is">;
 defm variable_template : CXX14Compat<"variable templates are">;
@@ -38,9 +38,9 @@ defm inline_variable : CXX17Compat<"inline variables are">;
 defm decomp_decl_spec
     : CXX20Compat<"structured binding declaration declared '%0' is">;
 defm constexpr_local_var_no_init : CXX20Compat<
-  "uninitialized variable in a constexpr %select{function|constructor}0 is">;
+  "uninitialized variable in a constexpr %enum_select<Function, Constructor>0 is">;
 defm constexpr_function_try_block : CXX20Compat<
-  "function try block in constexpr %select{function|constructor}0 is">;
+  "function try block in constexpr %enum_select<Function, Constructor>0 is">;
 defm constexpr_union_ctor_no_init : CXX20Compat<
   "constexpr union constructor that does not initialize any member is">;
 defm constexpr_ctor_missing_init : CXX20Compat<
@@ -56,7 +56,7 @@ defm implicit_typename
 // C++23 compatibility with C++20 and earlier.
 defm constexpr_static_var : CXX23Compat<
   "definition of a %select{static|thread_local}1 variable "
-  "in a constexpr %select{function|constructor}0 "
+  "in a constexpr %enum_select<Function, Constructor>0 "
   "is">;
 
 // C++26 compatibility with C++23 and earlier.
@@ -65,7 +65,7 @@ defm decomp_decl_cond : CXX26Compat<"structured binding declaration in a conditi
 // Compatibility warnings duplicated across multiple language versions.
 foreach std = [14, 20, 23] in {
   defm cxx#std#_constexpr_body_invalid_stmt : CXXCompat<
-    "use of this statement in a constexpr %select{function|constructor}0 is", std>;
+    "use of this statement in a constexpr %enum_select<Function, Constructor>0 is", std>;
 }
 
 def note_previous_decl : Note<"%0 declared here">;
