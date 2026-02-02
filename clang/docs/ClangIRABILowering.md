@@ -10,12 +10,12 @@
 
 ## Quick Start: How to Read This Document
 
-**If you have 5 minutes**: Read Section I (Executive Summary)  
-**If you have 30 minutes**: Read Section I (Executive Summary) + Section V (Implementation Phases)  
+**If you have 5 minutes**: Read Section 1 (Executive Summary)  
+**If you have 30 minutes**: Read Section 1 (Executive Summary) + Section 5 (Implementation Phases)  
 **If you have 2 hours**: Read the entire document  
-**If you're implementing**: Focus on Section IV (Architecture) and Section V (Phases)  
-**If you're reviewing for approval**: Focus on Section X (Open Questions) and Section XI (Success Metrics)  
-**If you're new to MLIR**: Read Section II (Background) first
+**If you're implementing**: Focus on Section 4 (Detailed Component Design) and Section 5 (Implementation Phases)  
+**If you're reviewing for approval**: Focus on Section 10 (Open Questions) and Section 11 (Success Metrics)  
+**If you're new to MLIR**: Read Section 2 (Background) first
 
 ---
 
@@ -27,7 +27,7 @@ This document proposes a comprehensive design for creating an MLIR-agnostic call
 3. Achieve parity with CIR incubator implementation for x86_64 and AArch64
 4. Integrate with or inform the GSoC ABI Lowering Library project
 
-## I. Executive Summary
+## 1. Executive Summary
 
 ### 1.1 Problem Statement
 
@@ -687,7 +687,7 @@ std::unique_ptr<ABIInfo> TargetABIRegistry::createABIInfo(
 
 **Status**: ✨ New, straightforward to create.
 
-## V. Implementation Phases
+## 5. Implementation Phases
 
 ### Implementation Timeline & Risk Assessment
 
@@ -946,7 +946,7 @@ These types have the same size (16 bytes) but **different ABI classification**:
 
 **Not Priority**: MIPS, Sparc, Hexagon, etc. (less common)
 
-## VII. Testing Strategy
+## 7. Testing Strategy
 
 ### 7.1 Unit Tests
 
@@ -1124,7 +1124,7 @@ Once new implementation is stable:
 - Medium term (Q2-Q3 2026): Evaluate GSoC library
 - Long term (Q4 2026+): Potentially refactor to use GSoC
 
-## X. Open Questions and Risks
+## 10. Open Questions and Risks
 
 ### 10.1 Open Questions
 
