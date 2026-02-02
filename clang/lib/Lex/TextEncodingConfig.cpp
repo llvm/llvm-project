@@ -53,6 +53,7 @@ TextEncodingConfig::setConvertersFromOptions(TextEncodingConfig &TEC,
   if (ErrorOrConverter) {
     TEC.ToExecEncodingConverter =
         new TextEncodingConverter(std::move(*ErrorOrConverter));
+    TInfo.ExecStrConverter = TEC.ToExecEncodingConverter;
   } else
     return ErrorOrConverter.getError();
 

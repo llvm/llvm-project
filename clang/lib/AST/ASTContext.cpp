@@ -13491,6 +13491,16 @@ ASTContext::getPredefinedStringLiteralFromCache(StringRef Key) const {
         *this, Key, StringLiteralKind::Ordinary,
         /*Pascal*/ false, getStringLiteralArrayType(CharTy, Key.size()),
         SourceLocation());
+
+  llvm::TextEncodingConverter *Converter = getTargetInfo().ExecStrConverter;
+  if (Converter) {
+    SmallString<128> Converted;
+    Converter->convert(Result->getString(), Converted);
+    Result = StringLiteral::Create(
+        *this, Converted, StringLiteralKind::Ordinary, /*Pascal*/ false,
+        getStringLiteralArrayType(CharTy, Converted.size()), SourceLocation());
+  }
+
   return Result;
 }
 

@@ -194,6 +194,9 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
 
   FormatStrConverter = new llvm::TextEncodingConverter(
       std::move(*llvm::TextEncodingConverter::createNoopConverter()));
+
+  ExecStrConverter = new llvm::TextEncodingConverter(
+      std::move(*llvm::TextEncodingConverter::createNoopConverter()));
 }
 
 // Out of line virtual dtor for TargetInfo.

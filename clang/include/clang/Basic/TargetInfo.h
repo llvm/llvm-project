@@ -323,6 +323,8 @@ public:
 
   llvm::TextEncodingConverter *FormatStrConverter;
 
+  llvm::TextEncodingConverter *ExecStrConverter;
+
   /// Retrieve the target options.
   TargetOptions &getTargetOpts() const {
     assert(TargetOpts && "Missing target options");
