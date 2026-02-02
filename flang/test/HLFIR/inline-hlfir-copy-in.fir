@@ -1,5 +1,5 @@
-// Test inlining of hlfir.copy_in and hlfir.copy_out
-// RUN: fir-opt --inline-hlfir-copy %s | FileCheck %s
+// Test inlining of hlfir.copy_in
+// RUN: fir-opt --inline-hlfir-copy-in %s | FileCheck %s
 
 // Test inlining of hlfir.copy_in that does not require the array to be copied out
 func.func private @_test_inline_copy_in(%arg0: !fir.box<!fir.array<?x?x?xf64>> {fir.bindc_name = "x"}, %arg1: !fir.ref<i32> {fir.bindc_name = "i"}, %arg2: !fir.ref<i32> {fir.bindc_name = "j"}) {
@@ -72,17 +72,10 @@ func.func private @_test_inline_copy_in(%arg0: !fir.box<!fir.array<?x?x?xf64>> {
 // CHECK:      }
 // CHECK:      fir.result %[[VAL_25:.*]]#0, %[[VAL_3:.*]] : !fir.box<!fir.array<?xf64>>, i1
 // CHECK:    }
-// CHECK:    %[[VAL_ALLOCA:.*]] = fir.alloca !fir.box<!fir.array<?xf64>>
-// CHECK:    fir.store %[[VAL_21:.*]]#0 to %[[VAL_ALLOCA:.*]] : !fir.ref<!fir.box<!fir.array<?xf64>>>
 // CHECK:    %[[VAL_22:.*]] = fir.box_addr %[[VAL_21:.*]]#0 : (!fir.box<!fir.array<?xf64>>) -> !fir.ref<!fir.array<?xf64>>
 // CHECK:    %[[VAL_23:.*]]:3 = hlfir.associate %[[VAL_5:.*]] {adapt.valuebyref} : (i32) -> (!fir.ref<i32>, !fir.ref<i32>, i1)
 // CHECK:    fir.call @_QFPsb(%[[VAL_22:.*]], %[[VAL_23:.*]]#0) fastmath<contract> : (!fir.ref<!fir.array<?xf64>>, !fir.ref<i32>) -> ()
-// CHECK:    fir.if %[[VAL_21:.*]]#1 {
-// CHECK:      %[[VAL_BOX:.*]] = fir.load %[[VAL_ALLOCA:.*]] : !fir.ref<!fir.box<!fir.array<?xf64>>>
-// CHECK:      %[[VAL_ADDR:.*]] = fir.box_addr %[[VAL_BOX:.*]] : (!fir.box<!fir.array<?xf64>>) -> !fir.ref<!fir.array<?xf64>>
-// CHECK:      %[[VAL_HEAP:.*]] = fir.convert %[[VAL_ADDR:.*]] : (!fir.ref<!fir.array<?xf64>>) -> !fir.heap<!fir.array<?xf64>>
-// CHECK:      fir.freemem %[[VAL_HEAP:.*]] : !fir.heap<!fir.array<?xf64>>
-// CHECK:    }
+// CHECK:    hlfir.copy_out %{{.*}}, %[[VAL_21:.*]]#1 : (!fir.ref<!fir.box<!fir.array<?xf64>>>, i1) -> ()
 // CHECK:    hlfir.end_associate %[[VAL_23:.*]]#1, %[[VAL_23:.*]]#2 : !fir.ref<i32>, i1
 // CHECK:    return
 // CHECK:  }

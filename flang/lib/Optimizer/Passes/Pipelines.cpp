@@ -281,7 +281,7 @@ void createHLFIRToFIRPassPipeline(mlir::PassManager &pm,
 
     if (optLevel == llvm::OptimizationLevel::O3) {
       addNestedPassToAllTopLevelOperations<PassConstructor>(
-          pm, hlfir::createInlineHLFIRCopy);
+          pm, hlfir::createInlineHLFIRCopyIn);
     }
   }
   pm.addPass(hlfir::createLowerHLFIROrderedAssignments());
