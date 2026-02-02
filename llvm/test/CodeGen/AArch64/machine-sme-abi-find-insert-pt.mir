@@ -121,10 +121,6 @@ body:             |
   ; CHECK-NEXT:   [[COPY1:%[0-9]+]]:gpr64 = COPY $sp
   ; CHECK-NEXT:   $nzcv = IMPLICIT_DEF
   ; CHECK-NEXT:   $zab0 = IMPLICIT_DEF
-  ; CHECK-NEXT:   [[MRS:%[0-9]+]]:gpr64 = MRS 55824, implicit-def $nzcv, implicit $nzcv
-  ; CHECK-NEXT:   $x0 = COPY [[COPY1]]
-  ; CHECK-NEXT:   BL &__arm_sme_save, csr_aarch64_sme_abi_support_routines_preservemost_from_x1, implicit-def $lr, implicit $sp, implicit $x0
-  ; CHECK-NEXT:   MSR 55824, [[MRS]], implicit-def $nzcv
   ; CHECK-NEXT:   Bcc 2, %bb.1, implicit $nzcv
   ; CHECK-NEXT:   B %bb.2
   ; CHECK-NEXT: {{  $}}
@@ -132,6 +128,8 @@ body:             |
   ; CHECK-NEXT:   liveins: $nzcv
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   FAKE_USE $nzcv
+  ; CHECK-NEXT:   $x0 = COPY [[COPY1]]
+  ; CHECK-NEXT:   BL &__arm_sme_save, csr_aarch64_sme_abi_support_routines_preservemost_from_x1, implicit-def $lr, implicit $sp, implicit $x0
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   RequiresZASavePseudo
   ; CHECK-NEXT:   BL @clobber, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
@@ -141,6 +139,8 @@ body:             |
   ; CHECK-NEXT:   RET_ReallyLR
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT: bb.2:
+  ; CHECK-NEXT:   $x0 = COPY [[COPY1]]
+  ; CHECK-NEXT:   BL &__arm_sme_save, csr_aarch64_sme_abi_support_routines_preservemost_from_x1, implicit-def $lr, implicit $sp, implicit $x0
   ; CHECK-NEXT:   ADJCALLSTACKDOWN 0, 0, implicit-def dead $sp, implicit $sp
   ; CHECK-NEXT:   RequiresZASavePseudo
   ; CHECK-NEXT:   BL @clobber, csr_aarch64_aapcs, implicit-def dead $lr, implicit $sp, implicit-def $sp
