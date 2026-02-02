@@ -124,6 +124,10 @@ Changes to the RISC-V Backend
 
 * `llvm-objdump` now has support for `--symbolize-operands` with RISC-V.
 * `-mcpu=spacemit-x100` was added.
+* Mnemonics for MOP/HINT-based instructions (`lpad`, `pause`, `ntl.*`, `c.ntl.*`,
+  `sspush`, `sspopchk`, `ssrdp`, `c.sspush`, `c.sspopchk`) are now always
+  available in the assembler and disassembler without requiring their respective
+  extensions.
 
 Changes to the WebAssembly Backend
 ----------------------------------
