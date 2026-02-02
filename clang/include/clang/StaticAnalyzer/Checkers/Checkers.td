@@ -347,6 +347,10 @@ def ErrnoModeling : Checker<"Errno">,
   HelpText<"Make the special value 'errno' available to other checkers.">,
   Documentation<NotDocumented>;
 
+def OpaqueSTLFunctionsModeling : Checker<"OpaqueSTLFunctionsModeling">,
+  HelpText<"Model opaque, conservative evaluation of some STL functions">,
+  Documentation<NotDocumented>;
+
 def TrustNonnullChecker : Checker<"TrustNonnull">,
   HelpText<"Trust that returns from framework methods annotated with _Nonnull "
            "are not null">,
@@ -355,10 +359,6 @@ def TrustNonnullChecker : Checker<"TrustNonnull">,
 def TrustReturnsNonnullChecker : Checker<"TrustReturnsNonnull">,
   HelpText<"Trust that returns from methods annotated with returns_nonnull "
            "are not null">,
-  Documentation<NotDocumented>;
-
-def OpaqueSTLFunctionsModeling : Checker<"OpaqueSTLFunctionsModeling">,
-  HelpText<"Model opaque, conservative evaluation of some STL functions">,
   Documentation<NotDocumented>;
 
 } // end "apiModeling"
