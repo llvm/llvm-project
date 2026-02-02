@@ -3406,7 +3406,7 @@ bool SIInsertWaitcnts::run(MachineFunction &MF) {
   for (auto T : inst_counter_types())
     ForceEmitWaitcnt[T] = false;
 
-  SmemAccessCounter = WCG->getCounterFromEvent(SMEM_ACCESS);
+  SmemAccessCounter = getCounterFromEvent(SMEM_ACCESS);
 
   BlockInfos.clear();
   bool Modified = false;
