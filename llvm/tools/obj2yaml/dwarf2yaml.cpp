@@ -261,7 +261,10 @@ void dumpDebugInfo(DWARFContext &DCtx, DWARFYAML::Data &Y) {
 
       auto AbbrevDecl = DIE.getAbbreviationDeclarationPtr();
       if (AbbrevDecl) {
-        // May be too small with DW_FORM_indirect values
+        // This reserve doesn't account for DW_FORM_indirect values, which would
+        // result in more entries in NewEntry.Values than getNumAttributes()
+        // implies. Not all binaries have these, and it'll reduce the number of
+        // allocations in any case.
         NewEntry.Values.reserve(AbbrevDecl->getNumAttributes());
         for (const auto &AttrSpec : AbbrevDecl->attributes()) {
           DWARFYAML::FormValue NewValue;
