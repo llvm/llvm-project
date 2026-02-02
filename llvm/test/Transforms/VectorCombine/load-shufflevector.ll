@@ -425,3 +425,19 @@ define <8 x i16> @shuffle_with_poison_mask(ptr %p) {
   %shuf = shufflevector <8 x i16> %pre, <8 x i16> poison, <8 x i32> <i32 1, i32 3, i32 poison, i32 poison, i32 poison, i32 5, i32 poison, i32 7>
   ret <8 x i16> %shuf
 }
+
+; Verify that dead shuffle uses (with indices outside the range of used
+; shuffles) are properly skipped when shrinking loads.
+define <2 x double> @shuffle_with_dead_use(ptr %p) {
+; CHECK-LABEL: define <2 x double> @shuffle_with_dead_use(
+; CHECK-SAME: ptr [[P:%.*]]) {
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr inbounds i8, ptr [[P]], i64 16
+; CHECK-NEXT:    [[TMP2:%.*]] = load <1 x double>, ptr [[TMP1]], align 8
+; CHECK-NEXT:    [[SHUF2:%.*]] = shufflevector <1 x double> [[TMP2]], <1 x double> poison, <2 x i32> zeroinitializer
+; CHECK-NEXT:    ret <2 x double> [[SHUF2]]
+;
+  %load = load <3 x double>, ptr %p, align 8
+  %shuf1 = shufflevector <3 x double> %load, <3 x double> poison, <2 x i32> <i32 0, i32 2>
+  %shuf2 = shufflevector <3 x double> %load, <3 x double> poison, <2 x i32> <i32 2, i32 2>
+  ret <2 x double> %shuf2
+}

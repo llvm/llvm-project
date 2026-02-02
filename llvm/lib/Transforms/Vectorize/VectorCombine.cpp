@@ -5447,6 +5447,11 @@ bool VectorCombine::shrinkLoadForShuffles(Instruction &I) {
 
       for (llvm::Use &Use : I.uses()) {
         auto *Shuffle = cast<ShuffleVectorInst>(Use.getUser());
+
+        // Ignore shufflevector instructions that have no uses.
+        if (Shuffle->use_empty())
+          continue;
+
         ArrayRef<int> OldMask = Shuffle->getShuffleMask();
 
         // Create entry for new use.
