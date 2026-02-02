@@ -416,7 +416,10 @@ MipsTargetLowering::MipsTargetLowering(const MipsTargetMachine &TM,
                        ISD::OR, ISD::ADD, ISD::SUB, ISD::AssertZext, ISD::SHL,
                        ISD::SIGN_EXTEND});
 
-  if (Subtarget.isGP64bit())
+  // R5900 has no LL/SC instructions for atomic operations
+  if (Subtarget.isR5900())
+    setMaxAtomicSizeInBitsSupported(0);
+  else if (Subtarget.isGP64bit())
     setMaxAtomicSizeInBitsSupported(64);
   else
     setMaxAtomicSizeInBitsSupported(32);

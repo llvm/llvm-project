@@ -923,7 +923,7 @@ Attribute Parser::parseDenseArrayAttr(Type attrType) {
 
   // Only bool or integer and floating point elements divisible by bytes are
   // supported.
-  if (!eltType.isIntOrIndexOrFloat()) {
+  if (!eltType.isIntOrFloat()) {
     emitError(typeLoc, "expected integer or float type, got: ") << eltType;
     return {};
   }
@@ -940,7 +940,7 @@ Attribute Parser::parseDenseArrayAttr(Type attrType) {
     return {};
 
   DenseArrayElementParser eltParser(eltType);
-  if (eltType.isIntOrIndex()) {
+  if (isa<IntegerType>(eltType)) {
     if (parseCommaSeparatedList(
             [&] { return eltParser.parseIntegerElement(*this); }))
       return {};
