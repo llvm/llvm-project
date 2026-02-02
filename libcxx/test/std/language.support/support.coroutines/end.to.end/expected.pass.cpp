@@ -34,7 +34,7 @@ struct expected {
   struct promise_type {
     std::shared_ptr<Data> data;
     expected get_return_object() { data = std::make_shared<Data>(); return {data}; }
-    std::suspend_never initial_suspend() { return {}; }
+    std::suspend_never initial_suspend() noexcept { return {}; }
     std::suspend_never final_suspend() noexcept { return {}; }
     void return_value(T v) { data->val = v; data->error = {}; }
     void unhandled_exception() {}

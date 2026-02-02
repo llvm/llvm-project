@@ -35,7 +35,7 @@ struct Bug {
 };
 struct coro2 {
   struct promise_type {
-    std::suspend_never initial_suspend() { return {}; }
+    std::suspend_never initial_suspend() noexcept { return {}; }
     std::suspend_never final_suspend() noexcept { return {}; }
     coro2 get_return_object() { return {}; }
     void return_void() {}

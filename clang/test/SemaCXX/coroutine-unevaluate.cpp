@@ -4,7 +4,7 @@
 struct MyTask{
   struct promise_type {
     MyTask get_return_object();
-    std::suspend_always initial_suspend() { return {}; }
+    std::suspend_always initial_suspend() noexcept { return {}; }
 
     void unhandled_exception();
     void return_void();
