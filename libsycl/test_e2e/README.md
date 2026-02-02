@@ -1,8 +1,7 @@
 ## Getting Started
 
-This directory contains SYCL-related end-to-end tests distributed in
-subdirectories based on testing scope. `libsycl` uses LIT to configure and run
-its tests.
+This directory contains `libsycl` tests distributed in subdirectories based on
+testing scope. `libsycl` uses LIT to configure and run its tests.
 
 Please see the [Lit Command Guide](https://llvm.org/docs/CommandGuide/lit.html)
 for more information about LIT.
@@ -45,10 +44,6 @@ These parameters can be used to configure tests:
 
 `LLVM_LIT` - path to llvm-lit tool.
 
-`LEVEL_ZERO_INCLUDE_DIR` - path to Level Zero headers.
-
-`LEVEL_ZERO_LIBS_DIR` - path to Level Zero libraries.
-
 ## Creating or modifying tests
 
 ### LIT feature checks
@@ -80,10 +75,6 @@ configure test execution:
 * `extra_system_environment` - comma-separated list of variables to be
   propagated from the host environment to test environment. Can be also set by
   `LIT_EXTRA_SYSTEM_ENVIRONMENT` variable in CMake.
-* `level_zero_include` - directory containing Level_Zero native headers, can
-  be also set by CMake variable `LEVEL_ZERO_INCLUDE_DIR`.
-* `level_zero_libs_dir` - directory containing Level_Zero native libraries,
-  can be also set by CMake variable `LEVEL_ZERO_LIBS_DIR`.
 
 Example:
 

@@ -164,23 +164,22 @@ llvm_config.add_tool_substitutions(
     tools, [config.libsycl_bin_dir, config.llvm_tools_dir, os.environ.get("PATH", "")]
 )
 
-lit_config.note("Targeted devices: {}".format(", ".join(config.libsycl_devices)))
+lit_config.note("Targeted devices: all")
 with test_env():
     sycl_ls_output = subprocess.check_output(sycl_ls, text=True, shell=True)
 
-    if len(config.libsycl_devices) == 1 and config.libsycl_devices[0] == "all":
-        devices = set()
-        for line in sycl_ls_output.splitlines():
-            if not line.startswith("["):
-                continue
-            backend, device = line[1:].split("]")[0].split(":")
-            devices.add("{}:{}".format(backend, device))
-        config.libsycl_devices = list(devices)
+    devices = set()
+    for line in sycl_ls_output.splitlines():
+        if not line.startswith("["):
+            continue
+        backend, device = line[1:].split("]")[0].split(":")
+        devices.add("{}:{}".format(backend, device))
+    libsycl_devices = list(devices)
 
-if len(config.libsycl_devices) == 0:
+if len(libsycl_devices) == 0:
     lit_config.error("No sycl devices available.")
 
-if len(config.libsycl_devices) > 1:
+if len(libsycl_devices) > 1:
     lit_config.note(
         "Running on multiple devices, XFAIL-marked tests will be skipped on corresponding devices."
     )
@@ -188,14 +187,14 @@ if len(config.libsycl_devices) > 1:
 available_devices = {
     "level_zero": "gpu",
 }
-for d in config.libsycl_devices:
+for d in libsycl_devices:
     be, dev = d.split(":")
     if be not in available_devices:
         lit_config.error("Unsupported device {}".format(d))
     if dev not in available_devices[be]:
         lit_config.error("Unsupported device {}".format(d))
 
-for sycl_device in config.libsycl_devices:
+for sycl_device in libsycl_devices:
     be, dev = sycl_device.split(":")
     config.available_features.add("any-device-is-" + dev)
     config.available_features.add("any-device-is-" + be)

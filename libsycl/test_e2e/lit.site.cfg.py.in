@@ -28,11 +28,6 @@ config.libsycl_include = os.path.join(config.libsycl_root_dir, 'include')
 config.libsycl_obj_root = "@CMAKE_CURRENT_BINARY_DIR@"
 config.libsycl_libs_dir =  os.path.join(config.libsycl_root_dir, 'lib/x86_64-unknown-linux-gnu')
 
-config.level_zero_libs_dir = "@LEVEL_ZERO_LIBS_DIR@"
-config.level_zero_include = "@LEVEL_ZERO_INCLUDE@"
-
-config.libsycl_devices = lit_config.params.get("libsycl_devices", "@LIBSYCL_TEST_E2E_TARGETS@").split(';')
-
 import lit.llvm
 lit.llvm.initialize(lit_config, config)
 
