@@ -123,12 +123,21 @@ static bool isBoolScalarOrVector(Type type) {
 }
 
 /// Returns true if `type` is a SPIR-V scalar type or a vector of SPIR-V scalar.
-static bool isScalarOrVectorOfScalar(Type type) {
-  if (isa<spirv::ScalarType>(type))
+/// If `excludeBool` is true, i1/bool types are excluded.
+static bool isScalarOrVectorOfScalar(Type type, bool excludeBool = false) {
+  auto isScalarOk = [&](Type t) {
+    if (!isa<spirv::ScalarType>(t))
+      return false;
+    if (excludeBool && t.isInteger(1))
+      return false;
+    return true;
+  };
+
+  if (isScalarOk(type))
     return true;
 
   if (auto vecTy = dyn_cast<VectorType>(type))
-    return isa<spirv::ScalarType>(vecTy.getElementType());
+    return isScalarOk(vecTy.getElementType());
 
   return false;
 }
@@ -719,11 +728,9 @@ struct ExtSIPattern final : public OpConversionPattern<arith::ExtSIOp> {
   matchAndRewrite(arith::ExtSIOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Type srcType = adaptor.getIn().getType();
-    if (isBoolScalarOrVector(srcType))
-      return failure();
 
     // extSI is only meaningful for integer scalar/vector types in SPIR-V.
-    if (!isScalarOrVectorOfScalar(srcType))
+    if (!isScalarOrVectorOfScalar(srcType, /*excludeBool=*/true))
       return rewriter.notifyMatchFailure(
           op, "expected integer scalar or vector input type");
 
@@ -731,7 +738,7 @@ struct ExtSIPattern final : public OpConversionPattern<arith::ExtSIOp> {
     if (!dstType)
       return getTypeConversionFailure(rewriter, op);
 
-    if (!isScalarOrVectorOfScalar(dstType))
+    if (!isScalarOrVectorOfScalar(dstType, /*excludeBool=*/true))
       return rewriter.notifyMatchFailure(
           op, "expected integer scalar or vector result type");
 
@@ -804,10 +811,8 @@ struct ExtUIPattern final : public OpConversionPattern<arith::ExtUIOp> {
   matchAndRewrite(arith::ExtUIOp op, OpAdaptor adaptor,
                   ConversionPatternRewriter &rewriter) const override {
     Type srcType = adaptor.getIn().getType();
-    if (isBoolScalarOrVector(srcType))
-      return failure();
 
-    if (!isScalarOrVectorOfScalar(srcType))
+    if (!isScalarOrVectorOfScalar(srcType, /*excludeBool=*/true))
       return rewriter.notifyMatchFailure(
           op, "expected integer scalar or vector input type");
 
@@ -815,7 +820,7 @@ struct ExtUIPattern final : public OpConversionPattern<arith::ExtUIOp> {
     if (!dstType)
       return getTypeConversionFailure(rewriter, op);
 
-    if (!isScalarOrVectorOfScalar(dstType))
+    if (!isScalarOrVectorOfScalar(dstType, /*excludeBool=*/true))
       return rewriter.notifyMatchFailure(
           op, "expected integer scalar or vector result type");
 
@@ -860,7 +865,7 @@ struct TruncII1Pattern final : public OpConversionPattern<arith::TruncIOp> {
 
     Location loc = op.getLoc();
     auto srcType = adaptor.getOperands().front().getType();
-    if (!isScalarOrVectorOfScalar(srcType))
+    if (!isScalarOrVectorOfScalar(srcType, /*excludeBool=*/true))
       return rewriter.notifyMatchFailure(
           op, "expected integer scalar or vector source type");
 
@@ -898,12 +903,20 @@ struct TruncIPattern final : public OpConversionPattern<arith::TruncIOp> {
     if (!convertedSrcType)
       return getTypeConversionFailure(rewriter, op);
 
+    auto isIntScalarOrVectorNotI1 = [](Type type) {
+      Type elt = getElementTypeOrSelf(type);
+      if (!elt || !isa<IntegerType>(elt))
+        return false;
+      if (elt.isInteger(1))
+        return false;
+      return (type == elt) || isa<VectorType>(type);
+    };
     // Ensure we are only lowering scalar/vector integer truncs.
     // This prevents trying to build SPIR-V ops on tensors.
-    if (!isScalarOrVectorOfScalar(convertedSrcType) ||
-        !isScalarOrVectorOfScalar(dstType))
+    if (!isIntScalarOrVectorNotI1(convertedSrcType) ||
+        !isIntScalarOrVectorNotI1(dstType))
       return rewriter.notifyMatchFailure(
-          op, "only int scalar or vector type for SPIR-V");
+          op, "only int scalar or vector type (non-i1) types for SPIR-V");
 
     // Ensure the adaptor operand type matches the converted source type.
     if (adaptor.getIn().getType() != convertedSrcType)
