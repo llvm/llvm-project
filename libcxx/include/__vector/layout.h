@@ -12,6 +12,7 @@
 #include <__assert>
 #include <__config>
 #include <__memory/allocator_traits.h>
+#include <__memory/compressed_pair.h>
 #include <__memory/swap_allocator.h>
 #include <__type_traits/is_nothrow_constructible.h>
 #include <__utility/move.h>
