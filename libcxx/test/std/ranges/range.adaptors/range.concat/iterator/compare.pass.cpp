@@ -84,6 +84,7 @@ constexpr void test() {
 
     ++it1;
     assert(!(it1 == it2));
+    assert(!(it2 == it1));
   }
 
   {
@@ -99,8 +100,14 @@ constexpr void test() {
     ++it2;
     ++it2;
     assert(!(it1 == it2));
+    assert(!(it2 == it1));
+    assert(it2 != it1);
+    assert(it1 != it2);
     ++it2;
     assert(*it1 == *it2);
+    assert(*it2 == *it1);
+    assert(!(*it1 != *it2));
+    assert(!(*it2 != *it1));
   }
 
   {
@@ -112,6 +119,9 @@ constexpr void test() {
     decltype(auto) it2 = view.begin() + 3;
 
     assert(it1 != it2);
+    assert(it2 != it1);
+    assert(!(it1 == it2));
+    assert(!(it2 == it1));
     assert(*it1 == 0);
     assert(*it2 == 4);
     it1++;
@@ -124,6 +134,7 @@ constexpr void test() {
     std::array<int, 5> array{0, 1, 2, 3, 4};
     ConcatView view = make_concat_view(array.data(), array.data() + array.size());
     assert(!(view.begin() == view.end()));
+    assert(view.begin() != view.end());
   }
 
   {
@@ -134,12 +145,18 @@ constexpr void test() {
 
     auto it = v.begin();
     assert(!(it == std::default_sentinel_t{}));
+    assert(!(std::default_sentinel_t{} == it));
+    assert(it != std::default_sentinel_t{});
+    assert(std::default_sentinel_t{} != it);
 
     it++;
     it++;
     it++;
     it++;
     assert(it == std::default_sentinel_t{});
+    assert(std::default_sentinel_t{} == it);
+    assert(!(it != std::default_sentinel_t{}));
+    assert(!(std::default_sentinel_t{} != it));
 
     // const-iterator
     const auto& cv = v;
@@ -149,6 +166,9 @@ constexpr void test() {
     ++cit;
     ++cit;
     assert(cit == std::default_sentinel_t{});
+    assert(std::default_sentinel_t{} == cit);
+    assert(!(cit != std::default_sentinel_t{}));
+    assert(!(std::default_sentinel_t{} != cit));
   }
 }
 
