@@ -659,7 +659,61 @@ subroutine test_cache_combined_allocatable(data, C, M)
 ! CHECK: acc.parallel {{.*}} {
 ! CHECK: acc.loop
 ! CHECK: acc.cache varPtr(%{{.*}}) bounds(%{{.*}}) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {name = "data%a(i-4_4:i+4_4)", structured = false}
-! CHECK: hlfir.declare %{{.*}} {uniq_name = "data%a(i-4_4:i+4_4)"}
+! CHECK: hlfir.declare %{{.*}} {{{.*}}uniq_name = "data%a(i-4_4:i+4_4)"}
+! CHECK: acc.yield
+end subroutine
+
+! Test cache with copy of whole struct (not explicit component copyin)
+! CHECK-LABEL: func.func @_QPtest_cache_parallel_copy_struct(
+subroutine test_cache_parallel_copy_struct(data, M)
+  type :: dt
+    real, dimension(:), allocatable :: A
+  end type
+
+  type(dt), intent(inout) :: data
+  integer, intent(in) :: M
+  real :: r
+  integer :: i
+
+  !$acc parallel loop copy(data)
+  do i = 1, M
+    !$acc cache(data%A(i))
+    r = data%A(i)
+  end do
+
+! CHECK: acc.parallel {{.*}} {
+! CHECK: acc.loop
+! CHECK: acc.cache varPtr(%{{.*}}) bounds(%{{.*}}) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {name = "data%a(i)", structured = false}
+! CHECK: hlfir.declare %{{.*}} {{{.*}}uniq_name = "data%a(i)"}
+! CHECK: acc.yield
+end subroutine
+
+! Test cache with nested derived type in parallel loop with copyin
+! CHECK-LABEL: func.func @_QPtest_cache_nested_parallel(
+subroutine test_cache_nested_parallel(obj, N)
+  type :: inner
+    real, dimension(:), allocatable :: arr
+  end type
+
+  type :: outer
+    type(inner) :: in
+  end type
+
+  type(outer), intent(inout) :: obj
+  integer, intent(in) :: N
+  real :: r
+  integer :: i
+
+  !$acc parallel loop copyin(obj%in%arr(1:N))
+  do i = 1, N
+    !$acc cache(obj%in%arr(i))
+    r = obj%in%arr(i)
+  end do
+
+! CHECK: acc.parallel {{.*}} {
+! CHECK: acc.loop
+! CHECK: acc.cache varPtr(%{{.*}}) bounds(%{{.*}}) -> !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>> {name = "obj%in%arr(i)", structured = false}
+! CHECK: hlfir.declare %{{.*}} {{{.*}}uniq_name = "obj%in%arr(i)"}
 ! CHECK: acc.yield
 end subroutine
 
