@@ -49,19 +49,13 @@ func.func @unroll_vector_multi_reduction_masked(%source: vector<2x3x5xf32>, %mas
 
 // -----
 
-// The general case (multiple reduction dims where outermost is reduction) now
-// fully lowers through:
-// - UnrollMultiReductionOuterGeneralCase: extracts along outermost reduction,
-//   chains smaller multi_reductions with remaining reduction dims
-// - UnrollInnerReductionAlongOuterParallel: handles resulting operations where
-//   outermost becomes parallel
-// - OneDimMultiReductionToReduction: converts 1-D multi_reductions to vector.reduction
+// Multiple reduction dims with outermost as reduction. Fully lowers to
+// vector.reduction by combining outer and inner unrolling patterns.
 
 // CHECK-LABEL: func @unroll_vector_multi_reduction_general(
 // CHECK-SAME: %[[SOURCE:.+]]: vector<2x3x5xf32>,
 // CHECK-SAME: %[[ACC:.+]]: vector<3xf32>
 func.func @unroll_vector_multi_reduction_general(%source: vector<2x3x5xf32>, %acc: vector<3xf32>) -> (vector<3xf32>) {
-  // First row of reductions (source[0, ...])
   // CHECK: vector.extract %[[SOURCE]][0, 0] : vector<5xf32>
   // CHECK: vector.extract %[[SOURCE]][0, 1] : vector<5xf32>
   // CHECK: vector.extract %[[SOURCE]][0, 2] : vector<5xf32>
@@ -71,21 +65,15 @@ func.func @unroll_vector_multi_reduction_general(%source: vector<2x3x5xf32>, %ac
   // CHECK: %[[R0_0:.+]] = vector.reduction <add>, {{.*}}, %[[ACC_0]] : vector<5xf32> into f32
   // CHECK: %[[R0_1:.+]] = vector.reduction <add>, {{.*}}, %[[ACC_1]] : vector<5xf32> into f32
   // CHECK: %[[R0_2:.+]] = vector.reduction <add>, {{.*}}, %[[ACC_2]] : vector<5xf32> into f32
-
-  // Second row of reductions (source[1, ...]), chaining from first row results
   // CHECK: vector.extract %[[SOURCE]][1, 0] : vector<5xf32>
   // CHECK: vector.extract %[[SOURCE]][1, 1] : vector<5xf32>
   // CHECK: vector.extract %[[SOURCE]][1, 2] : vector<5xf32>
   // CHECK: %[[R1_0:.+]] = vector.reduction <add>, {{.*}}, %[[R0_0]] : vector<5xf32> into f32
   // CHECK: %[[R1_1:.+]] = vector.reduction <add>, {{.*}}, %[[R0_1]] : vector<5xf32> into f32
   // CHECK: %[[R1_2:.+]] = vector.reduction <add>, {{.*}}, %[[R0_2]] : vector<5xf32> into f32
-
-  // Final inserts to assemble result
   // CHECK: %[[INSERT_0:.+]] = vector.insert %[[R1_0]], %{{.*}} [0] : f32 into vector<3xf32>
   // CHECK: %[[INSERT_1:.+]] = vector.insert %[[R1_1]], %[[INSERT_0]] [1] : f32 into vector<3xf32>
   // CHECK: %[[INSERT_2:.+]] = vector.insert %[[R1_2]], %[[INSERT_1]] [2] : f32 into vector<3xf32>
-
-  // No original multi_reduction remains
   // CHECK-NOT: vector.multi_reduction
   %1 = vector.multi_reduction <add>, %source, %acc [0, 2] : vector<2x3x5xf32> to vector<3xf32>
 
@@ -100,7 +88,6 @@ func.func @unroll_vector_multi_reduction_general(%source: vector<2x3x5xf32>, %ac
 // CHECK-SAME: %[[MASK:.+]]: vector<2x3x5xi1>,
 // CHECK-SAME: %[[ACC:.+]]: vector<3xf32>
 func.func @unroll_vector_multi_reduction_general_masked(%source: vector<2x3x5xf32>, %mask: vector<2x3x5xi1>, %acc: vector<3xf32>) -> (vector<3xf32>) {
-  // First row of reductions (source[0, ...])
   // CHECK: vector.extract %[[SOURCE]][0, 0] : vector<5xf32>
   // CHECK: vector.extract %[[SOURCE]][0, 1] : vector<5xf32>
   // CHECK: vector.extract %[[SOURCE]][0, 2] : vector<5xf32>
@@ -113,8 +100,6 @@ func.func @unroll_vector_multi_reduction_general_masked(%source: vector<2x3x5xf3
   // CHECK: %[[R0_0:.+]] = vector.mask {{.*}} { vector.reduction <add>, {{.*}}, %[[ACC_0]] : vector<5xf32> into f32 }
   // CHECK: %[[R0_1:.+]] = vector.mask {{.*}} { vector.reduction <add>, {{.*}}, %[[ACC_1]] : vector<5xf32> into f32 }
   // CHECK: %[[R0_2:.+]] = vector.mask {{.*}} { vector.reduction <add>, {{.*}}, %[[ACC_2]] : vector<5xf32> into f32 }
-
-  // Second row of reductions (source[1, ...]), chaining from first row results
   // CHECK: vector.extract %[[SOURCE]][1, 0] : vector<5xf32>
   // CHECK: vector.extract %[[SOURCE]][1, 1] : vector<5xf32>
   // CHECK: vector.extract %[[SOURCE]][1, 2] : vector<5xf32>
@@ -124,13 +109,9 @@ func.func @unroll_vector_multi_reduction_general_masked(%source: vector<2x3x5xf3
   // CHECK: %[[R1_0:.+]] = vector.mask {{.*}} { vector.reduction <add>, {{.*}}, %[[R0_0]] : vector<5xf32> into f32 }
   // CHECK: %[[R1_1:.+]] = vector.mask {{.*}} { vector.reduction <add>, {{.*}}, %[[R0_1]] : vector<5xf32> into f32 }
   // CHECK: %[[R1_2:.+]] = vector.mask {{.*}} { vector.reduction <add>, {{.*}}, %[[R0_2]] : vector<5xf32> into f32 }
-
-  // Final inserts to assemble result
   // CHECK: %[[INSERT_0:.+]] = vector.insert %[[R1_0]], %{{.*}} [0] : f32 into vector<3xf32>
   // CHECK: %[[INSERT_1:.+]] = vector.insert %[[R1_1]], %[[INSERT_0]] [1] : f32 into vector<3xf32>
   // CHECK: %[[INSERT_2:.+]] = vector.insert %[[R1_2]], %[[INSERT_1]] [2] : f32 into vector<3xf32>
-
-  // No original multi_reduction remains
   // CHECK-NOT: vector.multi_reduction
 
   %0 = vector.mask %mask {
