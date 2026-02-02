@@ -12850,6 +12850,22 @@ class fixed_box(object):
         return obj
     def get_offset(arg0):
         return arg0.offset()
+    def plain_is_equal(arg0, arg1):
+        try:
+            if not arg0.__class__ is fixed_box:
+                arg0 = fixed_box(arg0)
+        except:
+            raise
+        try:
+            if not arg1.__class__ is fixed_box:
+                arg1 = fixed_box(arg1)
+        except:
+            raise
+        ctx = arg0.ctx
+        res = isl.isl_fixed_box_plain_is_equal(arg0.ptr, arg1.ptr)
+        if res < 0:
+            raise Error
+        return bool(res)
     def size(arg0):
         try:
             if not arg0.__class__ is fixed_box:
@@ -12880,6 +12896,7 @@ isl.isl_fixed_box_read_from_str.argtypes = [Context, c_char_p]
 isl.isl_fixed_box_is_valid.argtypes = [c_void_p]
 isl.isl_fixed_box_get_offset.restype = c_void_p
 isl.isl_fixed_box_get_offset.argtypes = [c_void_p]
+isl.isl_fixed_box_plain_is_equal.argtypes = [c_void_p, c_void_p]
 isl.isl_fixed_box_get_size.restype = c_void_p
 isl.isl_fixed_box_get_size.argtypes = [c_void_p]
 isl.isl_fixed_box_get_space.restype = c_void_p
@@ -13889,6 +13906,22 @@ class multi_val(object):
         if res < 0:
             raise Error
         return bool(res)
+    def is_equal(arg0, arg1):
+        try:
+            if not arg0.__class__ is multi_val:
+                arg0 = multi_val(arg0)
+        except:
+            raise
+        try:
+            if not arg1.__class__ is multi_val:
+                arg1 = multi_val(arg1)
+        except:
+            raise
+        ctx = arg0.ctx
+        res = isl.isl_multi_val_is_equal(arg0.ptr, arg1.ptr)
+        if res < 0:
+            raise Error
+        return bool(res)
     def list(arg0):
         try:
             if not arg0.__class__ is multi_val:
@@ -14164,6 +14197,7 @@ isl.isl_multi_val_flat_range_product.restype = c_void_p
 isl.isl_multi_val_flat_range_product.argtypes = [c_void_p, c_void_p]
 isl.isl_multi_val_has_range_tuple_id.argtypes = [c_void_p]
 isl.isl_multi_val_involves_nan.argtypes = [c_void_p]
+isl.isl_multi_val_is_equal.argtypes = [c_void_p, c_void_p]
 isl.isl_multi_val_get_list.restype = c_void_p
 isl.isl_multi_val_get_list.argtypes = [c_void_p]
 isl.isl_multi_val_max.restype = c_void_p

@@ -12,6 +12,7 @@
 
 #include <stdio.h>
 #include <stdlib.h>
+#include <string.h>
 
 #include <isl/arg.h>
 
@@ -85,7 +86,7 @@ typedef enum {
 	isl_stat_error = -1,
 	isl_stat_ok = 0
 } isl_stat;
-isl_stat isl_stat_non_null(void *obj);
+isl_stat isl_stat_non_null(const void *obj);
 typedef enum {
 	isl_bool_error = -1,
 	isl_bool_false = 0,
@@ -238,6 +239,21 @@ isl_stat prefix ## _set_ ## field(isl_ctx *ctx, const char *val)	\
 	if (!options->field)						\
 		return isl_stat_error;					\
 	return isl_stat_ok;						\
+}
+
+#define	ISL_CTX_APPEND_STR_LIST_DEF(prefix,st,args,field_n,field)	\
+isl_stat prefix ## _append_ ## field(isl_ctx *ctx, const char *val)	\
+{									\
+	st *options;							\
+	options = isl_ctx_peek_ ## prefix(ctx);				\
+	if (!options)							\
+		isl_die(ctx, isl_error_invalid,				\
+			"isl_ctx does not reference " #prefix,		\
+			return isl_stat_error);				\
+	if (!val)							\
+		return isl_stat_error;					\
+	return isl_arg_str_list_append(&options->field_n,		\
+		&options->field, val);					\
 }
 
 #define ISL_CTX_GET_BOOL_DEF(prefix,st,args,field)			\
