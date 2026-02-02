@@ -2819,20 +2819,16 @@ bool IRTranslator::translateCall(const User &U, MachineIRBuilder &MIRBuilder) {
   if (translateKnownIntrinsic(CI, ID, MIRBuilder))
     return true;
 
-  TargetLowering::IntrinsicInfo Info;
-  bool IsTgtMemIntrinsic = TLI->getTgtMemIntrinsic(Info, CI, *MF, ID);
+  SmallVector<TargetLowering::IntrinsicInfo> Infos;
+  TLI->getTgtMemIntrinsic(Infos, CI, *MF, ID);
 
-  return translateIntrinsic(CI, ID, MIRBuilder,
-                            IsTgtMemIntrinsic ? &Info : nullptr);
+  return translateIntrinsic(CI, ID, MIRBuilder, Infos);
 }
 
 /// Translate a call or callbr to an intrinsic.
-/// Depending on whether TLI->getTgtMemIntrinsic() is true, TgtMemIntrinsicInfo
-/// is a pointer to the correspondingly populated IntrinsicInfo object.
-/// Otherwise, this pointer is null.
 bool IRTranslator::translateIntrinsic(
     const CallBase &CB, Intrinsic::ID ID, MachineIRBuilder &MIRBuilder,
-    const TargetLowering::IntrinsicInfo *TgtMemIntrinsicInfo) {
+    ArrayRef<TargetLowering::IntrinsicInfo> TgtMemIntrinsicInfos) {
   ArrayRef<Register> ResultRegs;
   if (!CB.getType()->isVoidTy())
     ResultRegs = getOrCreateVRegs(CB);
@@ -2874,30 +2870,25 @@ bool IRTranslator::translateIntrinsic(
     }
   }
 
-  // Add a MachineMemOperand if it is a target mem intrinsic.
-  if (TgtMemIntrinsicInfo) {
-    const Function *F = CB.getCalledFunction();
+  // Add MachineMemOperands for each memory access described by the target.
+  for (const auto &Info : TgtMemIntrinsicInfos) {
+    Align Alignment = Info.align.value_or(
+        DL->getABITypeAlign(Info.memVT.getTypeForEVT(CB.getContext())));
+    LLT MemTy = Info.memVT.isSimple()
+                    ? getLLTForMVT(Info.memVT.getSimpleVT())
+                    : LLT::scalar(Info.memVT.getStoreSizeInBits());
 
-    Align Alignment = TgtMemIntrinsicInfo->align.value_or(DL->getABITypeAlign(
-        TgtMemIntrinsicInfo->memVT.getTypeForEVT(F->getContext())));
-    LLT MemTy =
-        TgtMemIntrinsicInfo->memVT.isSimple()
-            ? getLLTForMVT(TgtMemIntrinsicInfo->memVT.getSimpleVT())
-            : LLT::scalar(TgtMemIntrinsicInfo->memVT.getStoreSizeInBits());
-
-    // TODO: We currently just fallback to address space 0 if getTgtMemIntrinsic
-    //       didn't yield anything useful.
+    // TODO: We currently just fallback to address space 0 if
+    // getTgtMemIntrinsic didn't yield anything useful.
     MachinePointerInfo MPI;
-    if (TgtMemIntrinsicInfo->ptrVal) {
-      MPI = MachinePointerInfo(TgtMemIntrinsicInfo->ptrVal,
-                               TgtMemIntrinsicInfo->offset);
-    } else if (TgtMemIntrinsicInfo->fallbackAddressSpace) {
-      MPI = MachinePointerInfo(*TgtMemIntrinsicInfo->fallbackAddressSpace);
+    if (Info.ptrVal) {
+      MPI = MachinePointerInfo(Info.ptrVal, Info.offset);
+    } else if (Info.fallbackAddressSpace) {
+      MPI = MachinePointerInfo(*Info.fallbackAddressSpace);
     }
     MIB.addMemOperand(MF->getMachineMemOperand(
-        MPI, TgtMemIntrinsicInfo->flags, MemTy, Alignment, CB.getAAMetadata(),
-        /*Ranges=*/nullptr, TgtMemIntrinsicInfo->ssid,
-        TgtMemIntrinsicInfo->order, TgtMemIntrinsicInfo->failureOrder));
+        MPI, Info.flags, MemTy, Alignment, CB.getAAMetadata(),
+        /*Ranges=*/nullptr, Info.ssid, Info.order, Info.failureOrder));
   }
 
   if (CB.isConvergent()) {
