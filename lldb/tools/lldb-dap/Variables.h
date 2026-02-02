@@ -27,10 +27,10 @@ struct Variables {
   std::optional<lldb::SBValueList> globals;
   lldb::SBValueList registers;
 
-  /// Set the frame to be used for lazy fetching of globals if needed. Lazy
-  /// getching globals can improve performance and avoid having LLDB fetching
-  /// all file globals even if the user never requests them by expanding the
-  /// "Globals" scope.
+  /// Set the frame to be used for lazy fetching of globals. Only fetching
+  /// globals on demand improves performance by avoiding materializing all file
+  /// globals even if the user never requests them by expanding the "Globals"
+  /// scope.
   void SetFrameForLazyFetchingGlobals(lldb::SBFrame f) {
     globals = std::nullopt;
     frame = f;
