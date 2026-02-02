@@ -75,6 +75,19 @@ public:
   /// run strlen() on it.
   bool evaluateStrlen(State &Parent, const Expr *E, uint64_t &Result);
 
+  /// If \param E evaluates to a pointer the number of accessible bytes
+  /// past the pointer is estimated in \param Result as if evaluated by
+  /// the builtin function __builtin_object_size. This is a best effort
+  /// approximation, when Kind & 2 == 0 the object size is less
+  /// than or equal to the estimated size, when Kind & 2 == 1 the
+  /// true value is greater than or equal to the estimated size.
+  /// When Kind & 1 == 1 only bytes belonging to the same subobject
+  /// as the one referred to by E are considered, when Kind & 1 == 0
+  /// bytes belonging to the same storage (stack, heap allocation,
+  /// global variable) are considered.
+  bool tryEvaluateObjectSize(State &Parent, const Expr *E, unsigned Kind,
+                             uint64_t &Result);
+
   /// Returns the AST context.
   ASTContext &getASTContext() const { return Ctx; }
   /// Returns the language options.
