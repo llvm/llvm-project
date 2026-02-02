@@ -6560,6 +6560,13 @@ SITargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     MI.getOperand(0).setReg(OriginalExec);
     return BB;
   }
+  case AMDGPU::FPTRUNC_ROUND_RTZ_F16_F32_PSEUDO_e32: {
+    assert(MI.getOperand(3).getImm() == 3 &&
+           "FP rounding mode is not round to zero!");
+    MI.removeOperand(3);
+    MI.setDesc(TII->get(AMDGPU::V_CVT_PKRTZ_F16_F32_e32));
+    return BB;
+  }
   default:
     if (TII->isImage(MI) || TII->isMUBUF(MI)) {
       if (!MI.mayStore())

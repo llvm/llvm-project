@@ -294,7 +294,9 @@ def FPTRUNC_ROUND_F16_F32_PSEUDO_t16_e64 : VPseudoInstSI <(outs VOPDstOperand_t1
 
 // The operands of these pseudos should match V_CVT_PKRTZ_F16_F32_e32
 def FPTRUNC_ROUND_RTZ_F16_F32_PSEUDO_e32 : VPseudoInstSI <(outs VGPR_32:$vdst),
-  (ins VGPR_32:$src0, VGPR_32:$src1, i32imm:$round)>;
+  (ins VGPR_32:$src0, VGPR_32:$src1, i32imm:$round)> {
+  let usesCustomInserter = 1;
+}
 
 def FPTRUNC_ROUND_F32_F64_PSEUDO : VPseudoInstSI <(outs VGPR_32:$vdst),
   (ins VReg_64:$src0, i32imm:$round)>;

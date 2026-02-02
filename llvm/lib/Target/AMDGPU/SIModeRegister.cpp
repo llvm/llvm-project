@@ -174,7 +174,6 @@ Status SIModeRegister::getInstructionMode(MachineInstr &MI,
       Opcode == AMDGPU::FPTRUNC_ROUND_F16_F32_PSEUDO ||
       Opcode == AMDGPU::FPTRUNC_ROUND_F16_F32_PSEUDO_fake16_e32 ||
       Opcode == AMDGPU::FPTRUNC_ROUND_F16_F32_PSEUDO_t16_e64 ||
-      Opcode == AMDGPU::FPTRUNC_ROUND_RTZ_F16_F32_PSEUDO_e32 ||
       Opcode == AMDGPU::FPTRUNC_ROUND_F32_F64_PSEUDO) {
     switch (Opcode) {
     case AMDGPU::V_INTERP_P1LL_F16:
@@ -206,13 +205,6 @@ Status SIModeRegister::getInstructionMode(MachineInstr &MI,
       MI.removeOperand(2);
       MI.setDesc(TII->get(AMDGPU::V_CVT_F32_F64_e32));
       return Status(FP_ROUND_MODE_DP(3), FP_ROUND_MODE_DP(Mode));
-    }
-    case AMDGPU::FPTRUNC_ROUND_RTZ_F16_F32_PSEUDO_e32: {
-      assert(MI.getOperand(3).getImm() == 3 &&
-             "FP rounding mode is not round to zero!");
-      MI.removeOperand(3);
-      MI.setDesc(TII->get(AMDGPU::V_CVT_PKRTZ_F16_F32_e32));
-      return Status();
     }
     default:
       return DefaultStatus;
