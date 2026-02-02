@@ -2403,7 +2403,7 @@ bool AArch64LegalizerInfo::legalizeCTPOP(MachineInstr &MI,
 bool AArch64LegalizerInfo::legalizeAtomicCmpxchg128(
     MachineInstr &MI, MachineRegisterInfo &MRI, LegalizerHelper &Helper) const {
   MachineIRBuilder &MIRBuilder = Helper.MIRBuilder;
-  LLT i64 = LLT::integer(64);
+  LLT i64 = LLT::buildInteger(64);
   auto Addr = MI.getOperand(1).getReg();
   auto DesiredI = MIRBuilder.buildUnmerge({i64, i64}, MI.getOperand(2));
   auto NewI = MIRBuilder.buildUnmerge({i64, i64}, MI.getOperand(3));

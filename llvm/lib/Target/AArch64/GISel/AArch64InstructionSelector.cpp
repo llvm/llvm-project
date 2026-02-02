@@ -2246,8 +2246,8 @@ bool AArch64InstructionSelector::convertPtrAddToAdd(
     return false;
 
   const LLT CastPtrTy = PtrTy.isVector()
-                            ? LLT::fixed_vector(2, LLT::integer(64))
-                            : LLT::integer(64);
+                            ? LLT::fixed_vector(2, LLT::buildInteger(64))
+                            : LLT::buildInteger(64);
   auto PtrToInt = MIB.buildPtrToInt(CastPtrTy, AddOp1Reg);
   // Set regbanks on the registers.
   if (PtrTy.isVector())

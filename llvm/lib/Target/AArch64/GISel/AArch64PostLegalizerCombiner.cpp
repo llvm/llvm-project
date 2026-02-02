@@ -223,7 +223,7 @@ bool matchAArch64MulConstCombine(
     return false;
 
   ApplyFn = [=](MachineIRBuilder &B, Register DstReg) {
-    auto Shift = B.buildConstant(LLT::integer(64), ShiftAmt);
+    auto Shift = B.buildConstant(LLT::buildInteger(64), ShiftAmt);
     auto ShiftedVal = B.buildShl(Ty, LHS, Shift);
 
     Register AddSubLHS = ShiftValUseIsLHS ? ShiftedVal.getReg(0) : LHS;
@@ -239,7 +239,7 @@ bool matchAArch64MulConstCombine(
     // Shift the result.
     if (TrailingZeroes) {
       B.buildShl(DstReg, Res,
-                 B.buildConstant(LLT::integer(64), TrailingZeroes));
+                 B.buildConstant(LLT::buildInteger(64), TrailingZeroes));
       return;
     }
     B.buildCopy(DstReg, Res.getReg(0));
