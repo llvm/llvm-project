@@ -2173,11 +2173,14 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     Register DstLo = RI.getSubReg(Dst, AMDGPU::sub0);
     Register DstHi = RI.getSubReg(Dst, AMDGPU::sub1);
 
+    const MCInstrDesc &Mov64Desc = get(AMDGPU::V_MOV_B64_e32);
+    const TargetRegisterClass *Mov64RC = getRegClass(Mov64Desc, /*OpNum=*/0);
+
     const MachineOperand &SrcOp = MI.getOperand(1);
     // FIXME: Will this work for 64-bit floating point immediates?
     assert(!SrcOp.isFPImm());
-    if (ST.hasMovB64()) {
-      MI.setDesc(get(AMDGPU::V_MOV_B64_e32));
+    if (ST.hasMovB64() && Mov64RC->contains(Dst)) {
+      MI.setDesc(Mov64Desc);
       if (SrcOp.isReg() || isInlineConstant(MI, 1) ||
           isUInt<32>(SrcOp.getImm()) || ST.has64BitLiterals())
         break;
@@ -2186,17 +2189,21 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       APInt Imm(64, SrcOp.getImm());
       APInt Lo(32, Imm.getLoBits(32).getZExtValue());
       APInt Hi(32, Imm.getHiBits(32).getZExtValue());
-      if (ST.hasPkMovB32() && Lo == Hi && isInlineConstant(Lo)) {
-        BuildMI(MBB, MI, DL, get(AMDGPU::V_PK_MOV_B32), Dst)
-          .addImm(SISrcMods::OP_SEL_1)
-          .addImm(Lo.getSExtValue())
-          .addImm(SISrcMods::OP_SEL_1)
-          .addImm(Lo.getSExtValue())
-          .addImm(0)  // op_sel_lo
-          .addImm(0)  // op_sel_hi
-          .addImm(0)  // neg_lo
-          .addImm(0)  // neg_hi
-          .addImm(0); // clamp
+      const MCInstrDesc &PkMovDesc = get(AMDGPU::V_PK_MOV_B32);
+      const TargetRegisterClass *PkMovRC = getRegClass(PkMovDesc, /*OpNum=*/0);
+
+      if (ST.hasPkMovB32() && Lo == Hi && isInlineConstant(Lo) &&
+          PkMovRC->contains(Dst)) {
+        BuildMI(MBB, MI, DL, PkMovDesc, Dst)
+            .addImm(SISrcMods::OP_SEL_1)
+            .addImm(Lo.getSExtValue())
+            .addImm(SISrcMods::OP_SEL_1)
+            .addImm(Lo.getSExtValue())
+            .addImm(0)  // op_sel_lo
+            .addImm(0)  // op_sel_hi
+            .addImm(0)  // neg_lo
+            .addImm(0)  // neg_hi
+            .addImm(0); // clamp
       } else {
         BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_e32), DstLo)
           .addImm(Lo.getSExtValue())
@@ -2548,7 +2555,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     }
     break;
 
-  case AMDGPU::V_MAX_BF16_PSEUDO_e64:
+  case AMDGPU::V_MAX_BF16_PSEUDO_e64: {
     assert(ST.hasBF16PackedInsts());
     MI.setDesc(get(AMDGPU::V_PK_MAX_NUM_BF16));
     MI.addOperand(MachineOperand::CreateImm(0)); // op_sel
@@ -2559,6 +2566,7 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     auto Op1 = getNamedOperand(MI, AMDGPU::OpName::src1_modifiers);
     Op1->setImm(Op1->getImm() | SISrcMods::OP_SEL_1);
     break;
+  }
   }
 
   return true;
@@ -4481,13 +4489,14 @@ bool SIInstrInfo::mayAccessScratch(const MachineInstr &MI) const {
   if ((!isFLAT(MI) || isFLATGlobal(MI)) && !isBUF(MI))
     return false;
 
-  // If scratch is not initialized, we can never access it.
-  if (MI.getMF()->getFunction().hasFnAttribute("amdgpu-no-flat-scratch-init"))
-    return false;
-
   // SCRATCH instructions always access scratch.
   if (isFLATScratch(MI))
     return true;
+
+  // If FLAT_SCRATCH registers are not initialized, we can never access scratch
+  // via the aperture.
+  if (MI.getMF()->getFunction().hasFnAttribute("amdgpu-no-flat-scratch-init"))
+    return false;
 
   // If there are no memory operands then conservatively assume the flat
   // operation may access scratch.
@@ -5257,7 +5266,8 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     // aligned register constraint.
     // FIXME: We do not verify inline asm operands, but custom inline asm
     // verification is broken anyway
-    if (ST.needsAlignedVGPRs() && Opcode != AMDGPU::AV_MOV_B64_IMM_PSEUDO) {
+    if (ST.needsAlignedVGPRs() && Opcode != AMDGPU::AV_MOV_B64_IMM_PSEUDO &&
+        Opcode != AMDGPU::V_MOV_B64_PSEUDO) {
       const TargetRegisterClass *RC = RI.getRegClassForReg(MRI, Reg);
       if (RI.hasVectorRegisters(RC) && MO.getSubReg()) {
         if (const TargetRegisterClass *SubRC =
@@ -10676,6 +10686,12 @@ SIInstrInfo::getGenericInstructionUniformity(const MachineInstr &MI) const {
     return InstructionUniformity::NeverUniform;
   }
   return InstructionUniformity::Default;
+}
+
+const MIRFormatter *SIInstrInfo::getMIRFormatter() const {
+  if (!Formatter)
+    Formatter = std::make_unique<AMDGPUMIRFormatter>(ST);
+  return Formatter.get();
 }
 
 InstructionUniformity

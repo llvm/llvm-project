@@ -21,7 +21,6 @@
 #include "llvm/LTO/LTO.h"
 #include "llvm/Object/Archive.h"
 #include "llvm/Support/FileSystem.h"
-#include "llvm/Support/ManagedStatic.h"
 #include "llvm/Support/MemoryBufferRef.h"
 #include "llvm/Support/Path.h"
 #include "llvm/Support/Process.h"
@@ -29,7 +28,6 @@
 #include "llvm/Support/TimeProfiler.h"
 #include "llvm/Support/raw_ostream.h"
 
-#include <iostream>
 #include <string>
 
 using namespace llvm;
@@ -135,25 +133,29 @@ lto::DTLTO::addInput(std::unique_ptr<lto::InputFile> InputPtr) {
   StringRef ModuleId = Input->getName();
   StringRef ArchivePath = Input->getArchivePath();
 
-  // Only process archive members.
-  if (ArchivePath.empty())
+  // In most cases, the module ID already points to an individual bitcode file
+  // on disk, so no further preparation for distribution is required.
+  if (ArchivePath.empty() && !Input->isFatLTOObject())
     return Input;
 
   SmallString<64> NewModuleId;
   BitcodeModule &BM = Input->getPrimaryBitcodeModule();
 
-  // Check if the archive is a thin archive.
-  Expected<bool> IsThin = isThinArchive(ArchivePath);
-  if (!IsThin)
-    return IsThin.takeError();
+  // For a member of a thin archive that is not a FatLTO object, there is an
+  // existing file on disk that can be used, so we can avoid having to
+  // materialize.
+  Expected<bool> UseThinMember =
+      Input->isFatLTOObject() ? false : isThinArchive(ArchivePath);
+  if (!UseThinMember)
+    return UseThinMember.takeError();
 
-  if (*IsThin) {
+  if (*UseThinMember) {
     // For thin archives, use the path to the actual file.
     NewModuleId =
         computeThinArchiveMemberPath(ArchivePath, Input->getMemberName());
   } else {
-    // For regular archives, generate a unique name.
-    Input->memberOfArchive(true);
+    // For regular archives and FatLTO objects, generate a unique name.
+    Input->setSerializeForDistribution(true);
 
     // Create unique identifier using process ID and sequence number.
     std::string PID = utohexstr(sys::Process::getProcessId());
@@ -175,8 +177,8 @@ lto::DTLTO::addInput(std::unique_ptr<lto::InputFile> InputPtr) {
 // previously terminated linker process and can be safely overwritten.
 Error lto::DTLTO::saveInputArchiveMember(lto::InputFile *Input) {
   StringRef ModuleId = Input->getName();
-  if (Input->isMemberOfArchive()) {
-    TimeTraceScope TimeScope("Save input archive member for DTLTO", ModuleId);
+  if (Input->getSerializeForDistribution()) {
+    TimeTraceScope TimeScope("Serialize bitcode input for DTLTO", ModuleId);
     // Cleanup this file on abnormal process exit.
     if (!SaveTemps)
       llvm::sys::RemoveFileOnSignal(ModuleId);
@@ -216,7 +218,7 @@ void lto::DTLTO::cleanup() {
   if (!SaveTemps) {
     TimeTraceScope TimeScope("Remove temporary inputs for DTLTO");
     for (auto &Input : InputFiles) {
-      if (!Input->isMemberOfArchive())
+      if (!Input->getSerializeForDistribution())
         continue;
       std::error_code EC =
           sys::fs::remove(Input->getName(), /*IgnoreNonExisting=*/true);

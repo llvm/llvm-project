@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/BranchProbability.h"
@@ -999,6 +1000,8 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     Opcode = SystemZ::LDR;
   else if (SystemZ::FP128BitRegClass.contains(DestReg, SrcReg))
     Opcode = SystemZ::LXR;
+  else if (SystemZ::VR16BitRegClass.contains(DestReg, SrcReg))
+    Opcode = SystemZ::VLR16;
   else if (SystemZ::VR32BitRegClass.contains(DestReg, SrcReg))
     Opcode = SystemZ::VLR32;
   else if (SystemZ::VR64BitRegClass.contains(DestReg, SrcReg))
@@ -2375,4 +2378,8 @@ SystemZInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_ADA_INDIRECT_FUNC_DESC, "systemz-ada-indirectfuncdesc"},
       {MO_ADA_DIRECT_FUNC_DESC, "systemz-ada-directfuncdesc"}};
   return ArrayRef(TargetFlags);
+}
+
+MCInst SystemZInstrInfo::getNop() const {
+  return MCInstBuilder(SystemZ::NOPR).addReg(0);
 }
