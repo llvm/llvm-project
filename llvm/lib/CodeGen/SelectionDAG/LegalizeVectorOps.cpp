@@ -257,12 +257,24 @@ SDValue VectorLegalizer::TranslateLegalizeResults(SDValue Op, SDNode *Result) {
 SDValue
 VectorLegalizer::RecursivelyLegalizeResults(SDValue Op,
                                             MutableArrayRef<SDValue> Results) {
-  assert(Results.size() == Op->getNumValues() &&
-         "Unexpected number of results");
+  // If a strictfp node was lowered to non-strictfp one, the array Results has
+  // one value more than the number of values produced by Op. The additional
+  // value is the chain produced by the original strictfp operation.
+  if (Results.size() != Op->getNumValues()) {
+    assert(Results.size() == (Op->getNumValues() + 1) &&
+           "Unexpected number of results");
+    if (Op.getResNo() >= Op->getNumValues()) {
+      assert(Op.getResNo() + 1 == Results.size());
+      SDValue Chain = Results.back();
+      assert(Chain.getValueType() == MVT::Other);
+      return Chain;
+    }
+  }
   // Make sure that the generated code is itself legal.
   for (unsigned i = 0, e = Results.size(); i != e; ++i) {
     Results[i] = LegalizeOp(Results[i]);
-    AddLegalizedOperand(Op.getValue(i), Results[i]);
+    if (i < Op->getNumValues())
+      AddLegalizedOperand(Op.getValue(i), Results[i]);
   }
 
   return Results[Op.getResNo()];
@@ -2238,7 +2250,10 @@ void VectorLegalizer::ExpandStrictFPOp(SDNode *Node,
     return;
   }
 
-  UnrollStrictFPOp(Node, Results);
+  SDValue Chain = Node->getOperand(0);
+  assert(Chain.getValueType() == MVT::Other && "Wrong type of input chain");
+  Results.push_back(SDValue(DAG.mutateStrictFPToFP(Node), 0));
+  Results.push_back(Chain);
 }
 
 void VectorLegalizer::ExpandREM(SDNode *Node,

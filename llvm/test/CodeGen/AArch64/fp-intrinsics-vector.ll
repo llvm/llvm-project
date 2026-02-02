@@ -760,8 +760,7 @@ define <1 x double> @sitofp_v1f64_v1i64(<1 x i64> %x) #0 {
 ; CHECK-LABEL: sitofp_v1f64_v1i64:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 def $q0
-; CHECK-NEXT:    fmov x8, d0
-; CHECK-NEXT:    scvtf d0, x8
+; CHECK-NEXT:    scvtf d0, d0
 ; CHECK-NEXT:    ret
   %val = call <1 x double> @llvm.experimental.constrained.sitofp.v1f64.v1i64(<1 x i64> %x, metadata !"round.tonearest", metadata !"fpexcept.strict") #0
   ret <1 x double> %val
