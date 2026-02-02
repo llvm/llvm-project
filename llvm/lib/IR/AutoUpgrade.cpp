@@ -2625,7 +2625,7 @@ static bool upgradeAVX512MaskToSelect(StringRef Name, IRBuilder<> &Builder,
     else if (Name[9] == 'q' && VecWidth == 512)
       IID = Intrinsic::x86_avx512_conflict_q_512;
     else
-      llvm_unreachable("  ");
+      llvm_unreachable("Unexpected intrinsic");
   } else if (Name.starts_with("pavg.")) {
     if (Name[5] == 'b' && VecWidth == 128)
       IID = Intrinsic::x86_sse2_pavg_b;
