@@ -179,7 +179,7 @@ void SPIRVSubtarget::resolveEnvFromModule(const Module &M) {
 
   bool HasShaderAttr = false;
   for (const Function &F : M) {
-    if (F.getFnAttribute("hlsl.shader").isValid()) {
+    if (F.hasFnAttribute("hlsl.shader")) {
       HasShaderAttr = true;
       break;
     }
