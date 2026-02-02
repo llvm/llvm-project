@@ -280,7 +280,7 @@ parser.add_argument("--files", nargs="+", type=str)
 
 args = parser.parse_args()
 
-gh = github.Github(args.token)
+gh = github.Github(auth=github.Auth.Token(args.token))
 llvm_org = gh.get_organization("llvm")
 llvm_repo = llvm_org.get_repo("llvm-project")
 
@@ -291,7 +291,7 @@ if args.user:
     # Validate that this user is allowed to modify releases.
     user = gh.get_user(args.user)
     team = (
-        github.Github(args.user_token)
+        github.Github(auth=github.Auth.Token(args.user_token))
         .get_organization("llvm")
         .get_team_by_slug("llvm-release-managers")
     )
