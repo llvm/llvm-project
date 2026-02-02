@@ -100,7 +100,7 @@ void Session::shutdownComplete() {
 
   std::unique_ptr<TaskDispatcher> TmpDispatcher;
   {
-    std::lock_guard<std::mutex> Lock(M);
+    std::scoped_lock<std::mutex> Lock(M);
     TmpDispatcher = std::move(Dispatcher);
   }
 
@@ -108,7 +108,7 @@ void Session::shutdownComplete() {
 
   std::vector<OnShutdownCompleteFn> OnCompletes;
   {
-    std::lock_guard<std::mutex> Lock(M);
+    std::scoped_lock<std::mutex> Lock(M);
     SI->Complete = true;
     OnCompletes = std::move(SI->OnCompletes);
   }
