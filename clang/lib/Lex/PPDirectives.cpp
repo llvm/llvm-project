@@ -1187,9 +1187,9 @@ OptionalFileEntryRef Preprocessor::LookupFile(
   return std::nullopt;
 }
 
-OptionalFileEntryRef
-Preprocessor::LookupEmbedFile(StringRef Filename, bool isAngled, bool OpenFile,
-                              const FileEntry *LookupFromFile) {
+OptionalFileEntryRef Preprocessor::LookupEmbedFile(StringRef Filename,
+                                                   bool isAngled,
+                                                   bool OpenFile) {
   FileManager &FM = this->getFileManager();
   if (llvm::sys::path::is_absolute(Filename)) {
     // lookup path or immediately fail
@@ -1215,13 +1215,15 @@ Preprocessor::LookupEmbedFile(StringRef Filename, bool isAngled, bool OpenFile,
   SmallString<512> LookupPath;
   // Non-angled lookup
   if (!isAngled) {
+    OptionalFileEntryRef LookupFromFile = getCurrentFileLexer()->getFileEntry();
     if (LookupFromFile) {
       // Use file-based lookup.
-      StringRef FullFileDir = LookupFromFile->tryGetRealPathName();
-      if (!FullFileDir.empty()) {
-        SeparateComponents(LookupPath, FullFileDir, Filename, true);
+      SmallString<1024> TmpDir;
+      TmpDir = LookupFromFile->getDir().getName();
+      llvm::sys::path::append(TmpDir, Filename);
+      if (!TmpDir.empty()) {
         llvm::Expected<FileEntryRef> ShouldBeEntry = FM.getFileRef(
-            LookupPath, OpenFile, /*CacheFailure=*/true, /*IsText=*/false);
+            TmpDir, OpenFile, /*CacheFailure=*/true, /*IsText=*/false);
         if (ShouldBeEntry)
           return llvm::expectedToOptional(std::move(ShouldBeEntry));
         llvm::consumeError(ShouldBeEntry.takeError());
@@ -1487,12 +1489,8 @@ void Preprocessor::HandleDirective(Token &Result) {
       return HandleIdentSCCSDirective(Result);
     case tok::pp_sccs:
       return HandleIdentSCCSDirective(Result);
-    case tok::pp_embed: {
-      if (PreprocessorLexer *CurrentFileLexer = getCurrentFileLexer())
-        if (OptionalFileEntryRef FERef = CurrentFileLexer->getFileEntry())
-          return HandleEmbedDirective(Introducer.getLocation(), Result, *FERef);
-      return HandleEmbedDirective(Introducer.getLocation(), Result, nullptr);
-    }
+    case tok::pp_embed:
+      return HandleEmbedDirective(Introducer.getLocation(), Result);
     case tok::pp_assert:
       //isExtension = true;  // FIXME: implement #assert
       break;
@@ -4076,8 +4074,8 @@ void Preprocessor::HandleEmbedDirectiveImpl(
   EnterTokenStream(std::move(Toks), TotalNumToks, true, true);
 }
 
-void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
-                                        const FileEntry *LookupFromFile) {
+void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc,
+                                        Token &EmbedTok) {
   // Give the usual extension/compatibility warnings.
   if (LangOpts.C23)
     Diag(EmbedTok, diag::warn_compat_pp_embed_directive);
@@ -4126,7 +4124,7 @@ void Preprocessor::HandleEmbedDirective(SourceLocation HashLoc, Token &EmbedTok,
     return;
 
   OptionalFileEntryRef MaybeFileRef =
-      this->LookupEmbedFile(Filename, isAngled, true, LookupFromFile);
+      this->LookupEmbedFile(Filename, isAngled, /*OpenFile=*/true);
   if (!MaybeFileRef) {
     // could not find file
     if (Callbacks && Callbacks->EmbedFileNotFound(Filename)) {
