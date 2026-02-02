@@ -2206,6 +2206,15 @@ bool AArch64InstructionSelector::preISelLower(MachineInstr &I) {
       return false;
 
     if (RBI.getRegBank(SrcReg, MRI, TRI)->getID() == AArch64::FPRRegBankID) {
+      // Need to add a copy to change the type so that the existing patterns can
+      // match when there is an integer on an FPR bank.
+      if (SrcTy.getScalarType().isInteger()) {
+        auto Copy = MIB.buildCopy(DstTy, SrcReg);
+        I.getOperand(1).setReg(Copy.getReg(0));
+        MRI.setRegClass(Copy.getReg(0),
+                        getRegClassForTypeOnBank(
+                            SrcTy, RBI.getRegBank(AArch64::FPRRegBankID)));
+      }
       if (I.getOpcode() == TargetOpcode::G_SITOFP)
         I.setDesc(TII.get(AArch64::G_SITOF));
       else
