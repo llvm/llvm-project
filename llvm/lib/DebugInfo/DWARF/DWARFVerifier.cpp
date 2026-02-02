@@ -1110,11 +1110,10 @@ void DWARFVerifier::verifyDebugLineRows() {
         ErrorCategory.Report(
             "Invalid index in .debug_line->prologue.file_names->dir_idx",
             [&]() {
-              error() << formatv(".debug_line[{0:x+8}].prologue.file_names[{1}",
+              error() << formatv(".debug_line[{0:x+8}].prologue.file_names[{1}]"
+                                 ".dir_idx contains an invalid index: {2}\n",
                                  *toSectionOffset(Die.find(DW_AT_stmt_list)),
-                                 FileIndex)
-                      << "].dir_idx contains an invalid index: "
-                      << FileName.DirIdx << "\n";
+                                 FileIndex, FileName.DirIdx);
             });
       }
 
@@ -1127,10 +1126,10 @@ void DWARFVerifier::verifyDebugLineRows() {
       (void)HasFullPath;
       auto [It, Inserted] = FullPathMap.try_emplace(FullPath, FileIndex);
       if (!Inserted && It->second != FileIndex && DumpOpts.Verbose) {
-        warn() << formatv(".debug_line[{0:x+8}].prologue.file_names[{1}",
+        warn() << formatv(".debug_line[{0:x+8}].prologue.file_names[{1}] is a "
+                          "duplicate of file_names[{2}]\n",
                           *toSectionOffset(Die.find(DW_AT_stmt_list)),
-                          FileIndex)
-               << "] is a duplicate of file_names[" << It->second << "]\n";
+                          FileIndex, It->second);
       }
 
       FileIndex++;
@@ -1150,10 +1149,10 @@ void DWARFVerifier::verifyDebugLineRows() {
         ++NumDebugLineErrors;
         ErrorCategory.Report(
             "decreasing address between debug_line rows", [&]() {
-              error() << formatv(".debug_line[{0:x+8}] row[{1}",
+              error() << formatv(".debug_line[{0:x+8}] row[{1}] decreases in "
+                                 "address from previous row:\n",
                                  *toSectionOffset(Die.find(DW_AT_stmt_list)),
-                                 RowIndex)
-                      << "] decreases in address from previous row:\n";
+                                 RowIndex);
 
               DWARFDebugLine::Row::dumpTableHeader(OS, 0);
               if (RowIndex > 0)
