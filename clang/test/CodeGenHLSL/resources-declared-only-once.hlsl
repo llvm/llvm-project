@@ -5,7 +5,3 @@
 RWStructuredBuffer<float>;
 RWStructuredBuffer<uint> a; 
 RWStructuredBuffer<float> b;
-
-void run() {
-    a[0] = asuint(b[0]);
-}
