@@ -6648,8 +6648,8 @@ OpenMPIRBuilder::fuseLoops(DebugLoc DL, ArrayRef<CanonicalLoopInfo *> Loops) {
 
   // The loop latch must have only one predecessor. Currently it is branched to
   // from both the last condition block and the last loop body
-  fused->getLatch()->splitBasicBlock(fused->getLatch()->begin(),
-                                     "omp.fused.pre_latch", /*Before=*/true);
+  fused->getLatch()->splitBasicBlockBefore(fused->getLatch()->begin(),
+                                           "omp.fused.pre_latch");
 
   // Remove unused parts
   removeUnusedBlocksFromParent(oldControlBBs);
