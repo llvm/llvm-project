@@ -210,7 +210,7 @@ void NoopCoroElider::visitCallBase(CallBase &CB) {
   auto *V = U->get();
   bool ResumeOrDestroy = V == CB.getCalledOperand();
   if (ResumeOrDestroy) {
-    bool Success = tryEraseCallInvoke(&CB);
+    [[maybe_unused]] bool Success = tryEraseCallInvoke(&CB);
     assert(Success && "Unexpected CallBase");
     RecursivelyDeleteTriviallyDeadInstructions(V);
   }
