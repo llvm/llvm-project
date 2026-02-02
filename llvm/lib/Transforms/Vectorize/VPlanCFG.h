@@ -41,34 +41,34 @@ namespace llvm {
 ///     B
 ///
 ///  Forward == true:
-///    Region blocks themselves traverse only their entries directly:
-///    Region's successor is traversed when processing its exiting block:
+///    Region blocks themselves traverse only their entries directly.
+///    Region's successor is implictly traversed when processing its exiting
+///    block.
 ///    children(A) == {R}
 ///    children(R) == {b}
 ///    children(e) == {B}
 ///
 ///  Forward == false:
-///    Region blocks themselves traverse only their exiting blocks directly:
-///    Region's predecessor is traversed when processing its entry block:
+///    Region blocks themselves traverse only their exiting blocks directly.
+///    Region's predecessor is implicitly traversed when processing its entry
+///    block.
 ///    children(B) == {R}
 ///    children(R) == {e}
 ///    children(b) == {A}
 ///
-/// This ensures that all blocks of the region are visited before continuing
-/// traversal outside the region when doing a reverse post-order traversal of
-/// the VPlan.
+/// The scheme described above ensures that all blocks of the region are visited
+/// before continuing traversal outside the region when doing a reverse
+/// post-order traversal of the VPlan.
 template <typename BlockPtrTy, bool Forward = true>
 class VPHierarchicalChildrenIterator
     : public iterator_facade_base<
           VPHierarchicalChildrenIterator<BlockPtrTy, Forward>,
           std::bidirectional_iterator_tag, VPBlockBase> {
   BlockPtrTy Block;
-  /// Index of the current successor/predecessor.
-  ///
-  /// For VPBasicBlock nodes, this simply is the index for the
-  /// successors/predecessors array. For VPRegionBlock, EdgeIdx == 0 is used for
-  /// the region's entry/exiting block, and EdgeIdx - 1 are the indices for the
-  /// successors/predecessors array.
+  /// Index of the current successor/predecessor. For VPBasicBlock nodes, this
+  /// simply is the index for the successors/predecessors array. For
+  /// VPRegionBlock, EdgeIdx == 0 is used for the region's entry/exiting block,
+  /// and EdgeIdx - 1 are the indices for the successors/predecessors array.
   size_t EdgeIdx;
 
   static size_t getNumOutgoingEdges(BlockPtrTy Current) {
