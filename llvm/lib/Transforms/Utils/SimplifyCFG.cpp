@@ -348,6 +348,195 @@ isSelectInRoleOfConjunctionOrDisjunction(const SelectInst *SI) {
 
 } // end anonymous namespace
 
+/// Transform a pattern where one case of a select over pointers leads to a
+/// store(load) of the same address, avoiding the load and store all together.
+///
+/// Pattern:
+///   %gepA = getelementptr ... %a, ...
+///   %gepB = getelementptr ... %b, ...
+///   %sel = select i1 %cond, ptr %gepA, ptr %gepB
+///   %val = load ... %sel
+///   store ... %val, %gepA
+///
+/// When %sel chooses %gepA, the load and store
+/// access the same address - this is a no-op.
+///
+/// This transforms it to:
+///   br i1 %cond, label %cont, label %do_ldst
+/// do_ldst:
+///   %gepA = getelementptr ... %a, ...
+///   %gepB = getelementptr ... %b, ...
+///   %val = load ... %gepB
+///   store ... %val, %gepA
+///   br label %cont
+/// cont:
+///   ...
+static bool foldSelectPointerLoadStoreToNoop(BasicBlock *BB,
+                                             DomTreeUpdater *DTU) {
+  for (Instruction &I : *BB) {
+    auto *Sel = dyn_cast<SelectInst>(&I);
+    if (!Sel || !Sel->getType()->isPointerTy() || !Sel->hasOneUse())
+      continue;
+
+    Value *Cond = Sel->getCondition();
+    Value *TruePtr = Sel->getTrueValue();
+    Value *FalsePtr = Sel->getFalseValue();
+
+    // Select must be used by a GEP
+    auto *LoadGEP = dyn_cast<GetElementPtrInst>(*Sel->user_begin());
+    if (!LoadGEP || LoadGEP->getParent() != BB ||
+        LoadGEP->getPointerOperand() != Sel || !LoadGEP->hasOneUse())
+      continue;
+
+    // LoadGEP must be used by a load
+    auto *LI = dyn_cast<LoadInst>(*LoadGEP->user_begin());
+    if (!LI || LI->getParent() != BB || !LI->hasOneUse() || LI->isVolatile())
+      continue;
+
+    // Load must be used by a store
+    auto *SI = dyn_cast<StoreInst>(*LI->user_begin());
+    if (!SI || SI->getParent() != BB || SI->getValueOperand() != LI ||
+        SI->isVolatile())
+      continue;
+
+    // Store destination must be a GEP with single use
+    auto *StoreGEP = dyn_cast<GetElementPtrInst>(SI->getPointerOperand());
+    if (!StoreGEP || StoreGEP->getParent() != BB || !StoreGEP->hasOneUse())
+      continue;
+
+    // Check if indices match between load GEP and store GEP
+    if (LoadGEP->getNumIndices() != StoreGEP->getNumIndices())
+      continue;
+
+    bool IndicesMatch = true;
+    for (auto [LoadIdx, StoreIdx] :
+         zip(LoadGEP->indices(), StoreGEP->indices())) {
+      if (LoadIdx != StoreIdx) {
+        IndicesMatch = false;
+        break;
+      }
+    }
+    if (!IndicesMatch)
+      continue;
+
+    // Check if one of the select operands matches the store GEP's base pointer
+    Value *StoreBase = StoreGEP->getPointerOperand();
+    Value *EffectivePtr = nullptr; // The pointer that does actual work
+    bool NoopOnTrue = false;
+
+    if (TruePtr == StoreBase) {
+      EffectivePtr = FalsePtr;
+      NoopOnTrue = true;
+    } else if (FalsePtr == StoreBase) {
+      EffectivePtr = TruePtr;
+      NoopOnTrue = false;
+    } else {
+      continue;
+    }
+
+    // Check that no instruction between the load and store may write to
+    // memory or have side effects.
+    bool HasInterferingInst = false;
+    for (auto It = std::next(LI->getIterator()); &*It != SI; ++It) {
+      if (It->mayWriteToMemory() || It->mayHaveSideEffects()) {
+        HasInterferingInst = true;
+        break;
+      }
+    }
+    if (HasInterferingInst)
+      continue;
+
+    LLVM_DEBUG(dbgs() << "FOLDING SELECT LOAD STORE TO NOOP: " << *Sel << "\n");
+    LLVM_DEBUG(dbgs() << "  LoadGEP: " << *LoadGEP << "\n");
+    LLVM_DEBUG(dbgs() << "  Load: " << *LI << "\n");
+    LLVM_DEBUG(dbgs() << "  StoreGEP: " << *StoreGEP << "\n");
+    LLVM_DEBUG(dbgs() << "  Store: " << *SI << "\n");
+    LLVM_DEBUG(dbgs() << "  Noop on " << (NoopOnTrue ? "true" : "false")
+                      << "\n");
+
+    // Create a branch that skips the load/store
+    Function *F = BB->getParent();
+    BasicBlock *DoLdStBB =
+        BasicBlock::Create(F->getContext(), BB->getName() + ".do_ldst", F);
+    BasicBlock *ContBB =
+        BB->splitBasicBlock(SI->getIterator(), BB->getName() + ".cont");
+
+    // Remove the unconditional branch created by splitBasicBlock
+    BB->getTerminator()->eraseFromParent();
+
+    // Create conditional branch: skip load/store on noop case.
+    // Preserve the select's branch weights on the new conditional branch.
+    SmallVector<uint32_t, 2> SelectWeights(2);
+    auto *SelMD = Sel->getMetadata(LLVMContext::MD_prof);
+    bool HasWeights = extractBranchWeights(*Sel, SelectWeights);
+
+    IRBuilder<> Builder(BB);
+    CondBrInst *NewBI;
+    if (NoopOnTrue)
+      NewBI = Builder.CreateCondBr(Cond, ContBB, DoLdStBB);
+    else
+      NewBI = Builder.CreateCondBr(Cond, DoLdStBB, ContBB);
+
+    NewBI->setDebugLoc(Sel->getDebugLoc());
+    if (HasWeights)
+      setBranchWeights(*NewBI, SelectWeights,
+                       /*IsExpected=*/hasBranchWeightOrigin(SelMD));
+
+    // Build the load/store in DoLdStBB
+    Builder.SetInsertPoint(DoLdStBB);
+
+    // Create new load GEP with the effective pointer
+    SmallVector<Value *, 4> Indices(LoadGEP->indices());
+    auto *NewLoadGEP = Builder.CreateGEP(
+        LoadGEP->getSourceElementType(), EffectivePtr, Indices,
+        LoadGEP->getName() + ".eff", LoadGEP->getNoWrapFlags());
+
+    if (auto *NewLoadGEPInst = dyn_cast<GetElementPtrInst>(NewLoadGEP))
+      NewLoadGEPInst->setDebugLoc(LoadGEP->getDebugLoc());
+
+    // Create new load
+    auto *NewLoad = Builder.CreateAlignedLoad(
+        LI->getType(), NewLoadGEP, LI->getAlign(), LI->getName() + ".eff");
+
+    NewLoad->setDebugLoc(LI->getDebugLoc());
+    // Create new store GEP
+    SmallVector<Value *, 4> StoreIndices(StoreGEP->indices());
+    auto *NewStoreGEP = Builder.CreateGEP(
+        StoreGEP->getSourceElementType(), StoreBase, StoreIndices,
+        StoreGEP->getName() + ".eff", StoreGEP->getNoWrapFlags());
+
+    if (auto *NewStoreGEPInst = dyn_cast<GetElementPtrInst>(NewStoreGEP))
+      NewStoreGEPInst->setDebugLoc(StoreGEP->getDebugLoc());
+
+    // Create new store
+    Builder.CreateAlignedStore(NewLoad, NewStoreGEP, SI->getAlign())
+        ->setDebugLoc(SI->getDebugLoc());
+
+    // Branch to continuation
+    Builder.CreateBr(ContBB)->setDebugLoc(Sel->getDebugLoc());
+
+    // Remove the original instructions
+    SI->eraseFromParent();
+    LI->eraseFromParent();
+    StoreGEP->eraseFromParent();
+    LoadGEP->eraseFromParent();
+    Sel->eraseFromParent();
+
+    // Update dominator tree
+    if (DTU) {
+      SmallVector<DominatorTree::UpdateType, 4> Updates;
+      Updates.push_back({DominatorTree::Insert, BB, DoLdStBB});
+      Updates.push_back({DominatorTree::Insert, BB, ContBB});
+      Updates.push_back({DominatorTree::Insert, DoLdStBB, ContBB});
+      DTU->applyUpdates(Updates);
+    }
+
+    return true;
+  }
+
+  return false;
+}
+
 /// Return true if all the PHI nodes in the basic block \p BB
 /// receive compatible (identical) incoming values when coming from
 /// all of the predecessor blocks that are specified in \p IncomingBlocks.
@@ -8965,6 +9154,12 @@ bool SimplifyCFGOpt::simplifyOnce(BasicBlock *BB) {
     Changed |= simplifyIndirectBr(cast<IndirectBrInst>(Terminator));
     break;
   }
+
+  // Check for select over pointers that leads to a load/store where one
+  // case is a no-op. Transform to conditional branch.
+  if (!RequireAndPreserveDomTree)
+    if (foldSelectPointerLoadStoreToNoop(BB, DTU))
+      Changed |= requestResimplify();
 
   return Changed;
 }
