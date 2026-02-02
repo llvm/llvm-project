@@ -2051,14 +2051,8 @@ static LogicalResult verifyTensorReshapeOp(TensorReshapeOp op,
 }
 
 LogicalResult ExpandShapeOp::verify() {
-  auto srcType = llvm::dyn_cast<RankedTensorType>(getSrc().getType());
-  if (!srcType)
-    return emitOpError("expects ranked tensor source type, but got ")
-           << getSrc().getType();
-  auto resultType = llvm::dyn_cast<RankedTensorType>(getResult().getType());
-  if (!resultType)
-    return emitOpError("expects ranked tensor result type, but got ")
-           << getResult().getType();
+  auto srcType = llvm::cast<RankedTensorType>(getSrc().getType());
+  auto resultType = llvm::cast<RankedTensorType>(getResult().getType());
 
   if ((int64_t)getStaticOutputShape().size() != resultType.getRank())
     return emitOpError("expected number of static shape dims to be equal to "

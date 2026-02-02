@@ -1133,7 +1133,7 @@ def Tensor_ExpandShapeOp : Tensor_ReassociativeReshapeOp<"expand_shape"> {
     ```
   }];
 
-  let arguments = (ins AnyTensor:$src, IndexListArrayAttr:$reassociation,
+  let arguments = (ins AnyRankedTensor:$src, IndexListArrayAttr:$reassociation,
                        Variadic<Index>:$output_shape,
                        DenseI64ArrayAttr:$static_output_shape);
 
