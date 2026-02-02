@@ -14,6 +14,7 @@ struct [[gsl::Owner]] MyObj {
   MyObj operator+(MyObj);
   
   View getView() const [[clang::lifetimebound]];
+  const int* getData() const [[clang::lifetimebound]];
 };
 
 struct [[gsl::Owner]] MyTrivialObj {
@@ -25,6 +26,10 @@ struct [[gsl::Pointer()]] View {
   View(const MyTrivialObj &); // Borrows from MyTrivialObj
   View();
   void use() const;
+
+  const MyObj* data() const;
+  const MyObj& operator*() const;
+  const MyObj* operator->() const;
 };
 
 class TriviallyDestructedClass {
@@ -1455,6 +1460,76 @@ void bar() {
 }
 }
 
+namespace DereferenceViews {
+const MyObj& testDeref(MyObj obj) {
+  View v = obj; // expected-warning {{address of stack memory is returned later}}
+  return *v;    // expected-note {{returned here}}
+}
+const MyObj* testDerefAddr(MyObj obj) {
+  View v = obj; // expected-warning {{address of stack memory is returned later}}
+  return &*v;   // expected-note {{returned here}}
+}
+const MyObj* testData(MyObj obj) {
+  View v = obj;     // expected-warning {{address of stack memory is returned later}}
+  return v.data();  // expected-note {{returned here}}
+}
+const int* testLifetimeboundAccessorOfMyObj(MyObj obj) {
+  View v = obj;           // expected-warning {{address of stack memory is returned later}}
+  const MyObj* ptr = v.data();
+  return ptr->getData();  // expected-note {{returned here}}
+}
+const int* testLifetimeboundAccessorOfMyObjThroughDeref(MyObj obj) {
+  View v = obj;         // expected-warning {{address of stack memory is returned later}}
+  return v->getData();  // expected-note {{returned here}}
+}
+} // namespace DereferenceViews
+
+namespace ViewsBeginEndIterators {
+template <typename T>
+struct [[gsl::Pointer]] Iterator {
+  Iterator operator++();
+  T& operator*() const;
+  T* operator->() const;
+  bool operator!=(const Iterator& other) const;
+};
+
+template <typename T>
+struct [[gsl::Owner]] Container {
+using It = Iterator<T>;
+It begin() const [[clang::lifetimebound]];
+It end() const [[clang::lifetimebound]];
+};
+
+MyObj Global;
+
+const MyObj& ContainerMyObjReturnRef(Container<MyObj> c) {
+  for (const MyObj& x : c) {  // expected-warning {{address of stack memory is returned later}}
+    return x;                 // expected-note {{returned here}}
+  }
+  return Global;
+}
+
+View ContainerMyObjReturnView(Container<MyObj> c) {
+  for (const MyObj& x : c) {  // expected-warning {{address of stack memory is returned later}}
+    return x;                 // expected-note {{returned here}}
+  }
+  for (View x : c) {  // expected-warning {{address of stack memory is returned later}}
+    return x;         // expected-note {{returned here}}
+  }
+  return Global;
+}
+
+View ContainerViewsOk(Container<View> c) {
+  for (View x : c) {
+    return x;
+  }
+  for (const View& x : c) {
+    return x;
+  }
+  return Global;
+}
+} // namespace ViewsBeginEndIterators
+
 namespace reference_type_decl_ref_expr {
 struct S {
   S();
@@ -1616,3 +1691,25 @@ void test() {
 }
 
 } // namespace attr_on_template_params
+
+namespace non_trivial_views {
+struct [[gsl::Pointer]] View {
+    View(const std::string&);
+    ~View(); // Forces a CXXBindTemporaryExpr.
+};
+
+View test1(std::string a) {
+  // Make sure we handle CXXBindTemporaryExpr of view types.
+  return View(a); // expected-warning {{address of stack memory is returned later}} expected-note {{returned here}}
+}
+
+View test2(std::string a) {
+  View b = View(a); // expected-warning {{address of stack memory is returned later}}
+  return b;         // expected-note {{returned here}}
+}
+
+View test3(std::string a) {
+  const View& b = View(a);  // expected-warning {{address of stack memory is returned later}}
+  return b;                 // expected-note {{returned here}}
+}
+} // namespace non_trivial_views

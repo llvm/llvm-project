@@ -180,6 +180,7 @@ enum RegBankLLTMappingApplyID {
   VgprPtr128,
   VgprV2S16,
   VgprV2S32,
+  VgprV3S32,
   VgprB32,
   VgprB64,
   VgprB96,

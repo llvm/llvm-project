@@ -1704,6 +1704,7 @@ def : Pat<(i32 (setlt (i32 GPR:$rs1), 0)), (SRLI GPR:$rs1, 31)>; // compressible
 let Predicates = [IsRV64] in {
 def : Pat<(i64 (setlt (i64 GPR:$rs1), 0)), (SRLI GPR:$rs1, 63)>; // compressible
 def : Pat<(i64 (setlt (sext_inreg GPR:$rs1, i32), 0)), (SRLIW GPR:$rs1, 31)>;
+def : Pat<(i64 (setlt (shl GPR:$rs1, (i64 32)), 0)), (SRLIW GPR:$rs1, 31)>;
 }
 
 /// Branches and jumps
