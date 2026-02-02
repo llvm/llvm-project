@@ -7586,6 +7586,19 @@ void testNestedAcquire(Container *c) EXCLUSIVE_LOCK_FUNCTION(&c->foo.mu) {
   buf->mu.Lock();
 }
 
+void testArrayOfContainers() {
+  Container array[10];
+
+  Foo *ptr1 = &array[0].foo;
+  Foo *ptr2 = &array[1].foo;
+  ptr1->mu.Lock();
+  ptr2->mu.Lock();
+  array[0].foo.data = 0;
+  array[1].foo.data = 1;
+  ptr2->mu.Unlock();
+  ptr1->mu.Unlock();
+}
+
 struct ContainerOfPtr {
   Foo *foo_ptr;
   ContainerOfPtr *next;
