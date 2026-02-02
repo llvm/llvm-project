@@ -60,7 +60,7 @@ define i64 @two_early_exits_same_exit() {
 ; CHECK-NEXT:    [[EXITCOND:%.*]] = icmp ne i64 [[INDEX_NEXT]], 67
 ; CHECK-NEXT:    br i1 [[EXITCOND]], label %[[LOOP_HEADER]], label %[[EXIT]], !llvm.loop [[LOOP3:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[IV1]], %[[LOOP_HEADER]] ], [ 100, %[[EARLY_EXIT_0]] ], [ 43, %[[LOOP_LATCH]] ], [ 100, %[[VECTOR_EARLY_EXIT_1]] ], [ [[TMP9]], %[[VECTOR_EARLY_EXIT_0]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[IV1]], %[[LOOP_HEADER]] ], [ 100, %[[EARLY_EXIT_0]] ], [ 43, %[[LOOP_LATCH]] ], [ [[TMP9]], %[[VECTOR_EARLY_EXIT_0]] ], [ 100, %[[VECTOR_EARLY_EXIT_1]] ]
 ; CHECK-NEXT:    ret i64 [[RETVAL]]
 ;
 entry:
@@ -307,7 +307,7 @@ define i64 @three_early_exits_same_exit() {
 ; CHECK-NEXT:    [[TMP13:%.*]] = add i64 3, [[TMP12]]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP13]], %[[VECTOR_EARLY_EXIT_0]] ], [ 100, %[[VECTOR_EARLY_EXIT_1]] ], [ 200, %[[VECTOR_EARLY_EXIT_2]] ], [ 43, %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ 200, %[[VECTOR_EARLY_EXIT_2]] ], [ 100, %[[VECTOR_EARLY_EXIT_1]] ], [ [[TMP13]], %[[VECTOR_EARLY_EXIT_0]] ], [ 43, %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i64 [[RETVAL]]
 ;
 entry:
@@ -402,7 +402,7 @@ define i64 @four_early_exits_same_exit() {
 ; CHECK-NEXT:    [[TMP17:%.*]] = add i64 3, [[TMP16]]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP17]], %[[VECTOR_EARLY_EXIT_0]] ], [ 100, %[[VECTOR_EARLY_EXIT_1]] ], [ 200, %[[VECTOR_EARLY_EXIT_2]] ], [ 300, %[[VECTOR_EARLY_EXIT_3]] ], [ 43, %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ 300, %[[VECTOR_EARLY_EXIT_3]] ], [ 200, %[[VECTOR_EARLY_EXIT_2]] ], [ 100, %[[VECTOR_EARLY_EXIT_1]] ], [ [[TMP17]], %[[VECTOR_EARLY_EXIT_0]] ], [ 43, %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i64 [[RETVAL]]
 ;
 entry:
@@ -491,8 +491,8 @@ define i64 @two_early_exits_with_live_out_values() {
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i64 3, [[TMP13]]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP14]], %[[VECTOR_EARLY_EXIT_0]] ], [ [[TMP12]], %[[VECTOR_EARLY_EXIT_1]] ], [ 99, %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    [[RETVAL2:%.*]] = phi i8 [ 0, %[[VECTOR_EARLY_EXIT_0]] ], [ [[TMP10]], %[[VECTOR_EARLY_EXIT_1]] ], [ 0, %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP12]], %[[VECTOR_EARLY_EXIT_1]] ], [ [[TMP14]], %[[VECTOR_EARLY_EXIT_0]] ], [ 99, %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RETVAL2:%.*]] = phi i8 [ [[TMP10]], %[[VECTOR_EARLY_EXIT_1]] ], [ 0, %[[VECTOR_EARLY_EXIT_0]] ], [ 0, %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[RETVAL2]] to i64
 ; CHECK-NEXT:    [[RET:%.*]] = add i64 [[RETVAL]], [[EXT]]
 ; CHECK-NEXT:    ret i64 [[RET]]
@@ -588,7 +588,7 @@ define i64 @two_early_exits_negated_condition() {
 ; CHECK-NEXT:    [[EC:%.*]] = icmp ne i64 [[IV_NEXT]], 128
 ; CHECK-NEXT:    br i1 [[EC]], label %[[LOOP_HEADER]], label %[[EXIT]], !llvm.loop [[LOOP10:![0-9]+]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[IV1]], %[[LOOP_HEADER]] ], [ 100, %[[EARLY_EXIT_0]] ], [ 43, %[[LOOP_LATCH]] ], [ 100, %[[VECTOR_EARLY_EXIT_1]] ], [ [[TMP10]], %[[VECTOR_EARLY_EXIT_0]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[IV1]], %[[LOOP_HEADER]] ], [ 100, %[[EARLY_EXIT_0]] ], [ 43, %[[LOOP_LATCH]] ], [ [[TMP10]], %[[VECTOR_EARLY_EXIT_0]] ], [ 100, %[[VECTOR_EARLY_EXIT_1]] ]
 ; CHECK-NEXT:    ret i64 [[RETVAL]]
 ;
 entry:
@@ -832,8 +832,8 @@ define i64 @three_early_exits_iv_and_load_live_out() {
 ; CHECK-NEXT:    [[TMP14:%.*]] = add i64 [[INDEX]], [[FIRST_ACTIVE_LANE]]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RETVAL_IV:%.*]] = phi i64 [ [[TMP14]], %[[VECTOR_EARLY_EXIT_0]] ], [ 128, %[[MIDDLE_BLOCK]] ], [ [[TMP12]], %[[VECTOR_EARLY_EXIT_1]] ]
-; CHECK-NEXT:    [[RETVAL_LD:%.*]] = phi i8 [ [[TMP13]], %[[VECTOR_EARLY_EXIT_0]] ], [ 0, %[[MIDDLE_BLOCK]] ], [ [[TMP11]], %[[VECTOR_EARLY_EXIT_1]] ]
+; CHECK-NEXT:    [[RETVAL_IV:%.*]] = phi i64 [ [[TMP12]], %[[VECTOR_EARLY_EXIT_1]] ], [ 128, %[[MIDDLE_BLOCK]] ], [ [[TMP14]], %[[VECTOR_EARLY_EXIT_0]] ]
+; CHECK-NEXT:    [[RETVAL_LD:%.*]] = phi i8 [ [[TMP11]], %[[VECTOR_EARLY_EXIT_1]] ], [ 0, %[[MIDDLE_BLOCK]] ], [ [[TMP13]], %[[VECTOR_EARLY_EXIT_0]] ]
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[RETVAL_LD]] to i64
 ; CHECK-NEXT:    [[RET:%.*]] = add i64 [[RETVAL_IV]], [[EXT]]
 ; CHECK-NEXT:    ret i64 [[RET]]
@@ -993,7 +993,7 @@ define i64 @two_early_exits_iv_diff_incoming() {
 ; CHECK-NEXT:    [[TMP11:%.*]] = add i64 [[INDEX]], [[FIRST_ACTIVE_LANE]]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP11]], %[[VECTOR_EARLY_EXIT_0]] ], [ [[TMP10]], %[[VECTOR_EARLY_EXIT_1]] ], [ 200, %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP10]], %[[VECTOR_EARLY_EXIT_1]] ], [ [[TMP11]], %[[VECTOR_EARLY_EXIT_0]] ], [ 200, %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i64 [[RETVAL]]
 ;
 entry:
@@ -1079,8 +1079,8 @@ define { i64, i64 } @three_early_exits_multiple_live_outs() {
 ; CHECK-NEXT:    [[TMP19:%.*]] = add i64 [[INDEX]], [[FIRST_ACTIVE_LANE]]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RETVAL_IV:%.*]] = phi i64 [ [[TMP19]], %[[VECTOR_EARLY_EXIT_0]] ], [ [[TMP17]], %[[VECTOR_EARLY_EXIT_1]] ], [ [[TMP15]], %[[VECTOR_EARLY_EXIT_2]] ], [ 128, %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    [[RETVAL_VAL:%.*]] = phi i8 [ [[TMP18]], %[[VECTOR_EARLY_EXIT_0]] ], [ [[TMP16]], %[[VECTOR_EARLY_EXIT_1]] ], [ [[TMP14]], %[[VECTOR_EARLY_EXIT_2]] ], [ 0, %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RETVAL_IV:%.*]] = phi i64 [ [[TMP15]], %[[VECTOR_EARLY_EXIT_2]] ], [ [[TMP17]], %[[VECTOR_EARLY_EXIT_1]] ], [ [[TMP19]], %[[VECTOR_EARLY_EXIT_0]] ], [ 128, %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RETVAL_VAL:%.*]] = phi i8 [ [[TMP14]], %[[VECTOR_EARLY_EXIT_2]] ], [ [[TMP16]], %[[VECTOR_EARLY_EXIT_1]] ], [ [[TMP18]], %[[VECTOR_EARLY_EXIT_0]] ], [ 0, %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[EXT:%.*]] = zext i8 [[RETVAL_VAL]] to i64
 ; CHECK-NEXT:    [[R1:%.*]] = insertvalue { i64, i64 } undef, i64 [[RETVAL_IV]], 0
 ; CHECK-NEXT:    [[R2:%.*]] = insertvalue { i64, i64 } [[R1]], i64 [[EXT]], 1
@@ -1166,7 +1166,7 @@ define i64 @two_early_exits_load_in_early_exit_block() {
 ; CHECK-NEXT:    [[TMP10:%.*]] = add i64 [[IV]], [[FIRST_ACTIVE_LANE]]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP10]], %[[VECTOR_EARLY_EXIT_0]] ], [ [[TMP9]], %[[VECTOR_EARLY_EXIT_1]] ], [ 128, %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP9]], %[[VECTOR_EARLY_EXIT_1]] ], [ [[TMP10]], %[[VECTOR_EARLY_EXIT_0]] ], [ 128, %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i64 [[RETVAL]]
 ;
 entry:
@@ -1250,7 +1250,7 @@ define i64 @three_early_exits_loads_in_different_blocks() {
 ; CHECK-NEXT:    [[TMP15:%.*]] = add i64 [[IV]], [[FIRST_ACTIVE_LANE]]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP15]], %[[VECTOR_EARLY_EXIT_0]] ], [ [[TMP14]], %[[VECTOR_EARLY_EXIT_1]] ], [ [[TMP13]], %[[VECTOR_EARLY_EXIT_2]] ], [ 128, %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RETVAL:%.*]] = phi i64 [ [[TMP13]], %[[VECTOR_EARLY_EXIT_2]] ], [ [[TMP14]], %[[VECTOR_EARLY_EXIT_1]] ], [ [[TMP15]], %[[VECTOR_EARLY_EXIT_0]] ], [ 128, %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    ret i64 [[RETVAL]]
 ;
 entry:
@@ -1358,8 +1358,8 @@ define { i64, i8 } @four_early_exits_with_conditional_loads() {
 ; CHECK-NEXT:    [[TMP24:%.*]] = add i64 [[IV]], [[FIRST_ACTIVE_LANE]]
 ; CHECK-NEXT:    br label %[[EXIT]]
 ; CHECK:       [[EXIT]]:
-; CHECK-NEXT:    [[RETVAL_IV:%.*]] = phi i64 [ [[TMP24]], %[[VECTOR_EARLY_EXIT_0]] ], [ [[TMP22]], %[[VECTOR_EARLY_EXIT_1]] ], [ [[TMP20]], %[[VECTOR_EARLY_EXIT_2]] ], [ [[TMP18]], %[[VECTOR_EARLY_EXIT_3]] ], [ 128, %[[MIDDLE_BLOCK]] ]
-; CHECK-NEXT:    [[RETVAL_VAL:%.*]] = phi i8 [ [[TMP23]], %[[VECTOR_EARLY_EXIT_0]] ], [ [[TMP21]], %[[VECTOR_EARLY_EXIT_1]] ], [ [[TMP19]], %[[VECTOR_EARLY_EXIT_2]] ], [ [[TMP17]], %[[VECTOR_EARLY_EXIT_3]] ], [ 0, %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RETVAL_IV:%.*]] = phi i64 [ [[TMP18]], %[[VECTOR_EARLY_EXIT_3]] ], [ [[TMP20]], %[[VECTOR_EARLY_EXIT_2]] ], [ [[TMP22]], %[[VECTOR_EARLY_EXIT_1]] ], [ [[TMP24]], %[[VECTOR_EARLY_EXIT_0]] ], [ 128, %[[MIDDLE_BLOCK]] ]
+; CHECK-NEXT:    [[RETVAL_VAL:%.*]] = phi i8 [ [[TMP17]], %[[VECTOR_EARLY_EXIT_3]] ], [ [[TMP19]], %[[VECTOR_EARLY_EXIT_2]] ], [ [[TMP21]], %[[VECTOR_EARLY_EXIT_1]] ], [ [[TMP23]], %[[VECTOR_EARLY_EXIT_0]] ], [ 0, %[[MIDDLE_BLOCK]] ]
 ; CHECK-NEXT:    [[R1:%.*]] = insertvalue { i64, i8 } undef, i64 [[RETVAL_IV]], 0
 ; CHECK-NEXT:    [[R2:%.*]] = insertvalue { i64, i8 } [[R1]], i8 [[RETVAL_VAL]], 1
 ; CHECK-NEXT:    ret { i64, i8 } [[R2]]

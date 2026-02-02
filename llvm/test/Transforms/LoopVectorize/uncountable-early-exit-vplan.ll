@@ -298,7 +298,7 @@ define i64 @two_early_exits_same_exit_with_constant_live_outs() {
 ; CHECK-NEXT: Successor(s): ir-bb<exit>
 ; CHECK-EMPTY:
 ; CHECK-NEXT: ir-bb<exit>:
-; CHECK-NEXT:   IR   %retval = phi i64 [ %iv, %loop.header ], [ 100, %early.exit.0 ], [ 43, %loop.latch ] (extra operands: ir<43> from middle.block, ir<100> from vector.early.exit.1, vp<[[FINAL_IV]]> from vector.early.exit.0)
+; CHECK-NEXT:   IR   %retval = phi i64 [ %iv, %loop.header ], [ 100, %early.exit.0 ], [ 43, %loop.latch ] (extra operands: ir<43> from middle.block, vp<[[FINAL_IV]]> from vector.early.exit.0, ir<100> from vector.early.exit.1)
 ;
 entry:
   %A = alloca [1024 x i8]

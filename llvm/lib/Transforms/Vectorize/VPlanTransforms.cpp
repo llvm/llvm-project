@@ -3980,23 +3980,24 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
 
   VPBuilder Builder(LatchVPBB->getTerminator());
   SmallVector<EarlyExitInfo> Exits;
-  for (VPIRBasicBlock *EB : Plan.getExitBlocks()) {
-    for (VPBlockBase *Pred : to_vector(EB->getPredecessors())) {
+  for (VPIRBasicBlock *ExitBlock : Plan.getExitBlocks()) {
+    for (VPBlockBase *Pred : to_vector(ExitBlock->getPredecessors())) {
       if (Pred == MiddleVPBB)
         continue;
       // Collect condition for this early exit.
       auto *EarlyExitingVPBB = cast<VPBasicBlock>(Pred);
       VPBlockBase *TrueSucc = EarlyExitingVPBB->getSuccessors()[0];
-      assert(match(EarlyExitingVPBB->getTerminator(), m_BranchOnCond()) &&
-             "Terminator must be BranchOnCond");
-      VPValue *CondOfEarlyExitingVPBB =
-          EarlyExitingVPBB->getTerminator()->getOperand(0);
-      auto *CondToEarlyExit = TrueSucc == EB
+      VPValue *CondOfEarlyExitingVPBB;
+      [[maybe_unused]] bool Matched =
+          match(EarlyExitingVPBB->getTerminator(),
+                m_BranchOnCond(m_VPValue(CondOfEarlyExitingVPBB)));
+      assert(Matched && "Terminator must be BranchOnCond");
+      auto *CondToEarlyExit = TrueSucc == ExitBlock
                                   ? CondOfEarlyExitingVPBB
                                   : Builder.createNot(CondOfEarlyExitingVPBB);
       Exits.push_back({
           EarlyExitingVPBB,
-          EB,
+          ExitBlock,
           CondToEarlyExit,
       });
     }
@@ -4008,43 +4009,90 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
     return VPDT.dominates(A.EarlyExitingVPBB, B.EarlyExitingVPBB);
   });
 
-  // Build the AnyOf condition for the latch terminator. For multiple exits,
-  // also create an exit dispatch block to determine which exit to take.
+  // Build the AnyOf condition for the latch terminator.
   VPValue *Combined = Exits[0].CondToExit;
-  for (const auto &Exit : drop_begin(Exits))
-    Combined = Builder.createOr(Combined, Exit.CondToExit);
+  assert(
+      VPDT.dominates(Combined->getDefiningRecipe()->getParent(), LatchVPBB) &&
+      "All conditions must dominate the latch");
+  for (const auto &[_, _1, CondToExit] : drop_begin(Exits)) {
+    assert(VPDT.dominates(CondToExit->getDefiningRecipe()->getParent(),
+                          LatchVPBB) &&
+           "All conditions must dominate the latch");
+    Combined = Builder.createOr(Combined, CondToExit);
+  }
   VPValue *IsAnyExitTaken =
       Builder.createNaryOp(VPInstruction::AnyOf, {Combined});
 
-  VPSymbolicValue FirstActiveLane;
-  // Process exits in reverse order so phi operands are added in the order
-  // matching the original program order (last exit's operand added first
-  // becomes last). The vector is reversed afterwards to restore forward order
-  // for the dispatch logic.
-  SmallVector<VPBasicBlock *> VectorEarlyExitVPBBs;
-  for (auto [I, Exit] : enumerate(reverse(Exits))) {
-    auto &[EarlyExitingVPBB, EarlyExitVPBB, CondToExit] = Exit;
-    unsigned Idx = Exits.size() - 1 - I;
+  // Create the vector.early.exit blocks.
+  SmallVector<VPBasicBlock *> VectorEarlyExitVPBBs(Exits.size());
+  for (unsigned Idx = 0; Idx != Exits.size(); ++Idx) {
     Twine BlockSuffix = Exits.size() == 1 ? "" : Twine(".") + Twine(Idx);
     VPBasicBlock *VectorEarlyExitVPBB =
         Plan.createVPBasicBlock("vector.early.exit" + BlockSuffix);
-    VectorEarlyExitVPBBs.push_back(VectorEarlyExitVPBB);
+    VectorEarlyExitVPBBs[Idx] = VectorEarlyExitVPBB;
+  }
 
+  // Create the dispatch block (or reuse the single exit block if only one
+  // exit). The dispatch block computes the first active lane of the combined
+  // condition and, for multiple exits, chains through conditions to determine
+  // which exit to take.
+  VPBasicBlock *DispatchVPBB =
+      Exits.size() == 1 ? VectorEarlyExitVPBBs[0]
+                        : Plan.createVPBasicBlock("vector.early.exit.check");
+  VPBuilder DispatchBuilder(DispatchVPBB, DispatchVPBB->begin());
+  VPValue *FirstActiveLane =
+      DispatchBuilder.createNaryOp(VPInstruction::FirstActiveLane, {Combined},
+                                   DebugLoc::getUnknown(), "first.active.lane");
+
+  // For each early exit, disconnect the original exiting block
+  // (early.exiting.I) from the exit block (ir-bb<exit.I>) and route through a
+  // new vector.early.exit block. Update ir-bb<exit.I>'s phis to extract their
+  // values at the first active lane:
+  //
+  // Input:
+  //  early.exiting.I:
+  //     ...
+  //    EMIT branch-on-cond vp<%cond.I>
+  //  Successor(s): in.loop.succ, ir-bb<exit.I>
+  //
+  //  ir-bb<exit.I>:
+  //    IR %phi = phi [ vp<%incoming.I>, early.exiting.I ], ...
+  //
+  // Output:
+  //  early.exiting.I:
+  //    ...
+  //  Successor(s): in.loop.succ
+  //
+  //  vector.early.exit.I:
+  //    EMIT vp<%exit.val> = extract-lane vp<%first.lane>, vp<%incoming.I>
+  //  Successor(s): ir-bb<exit.I>
+  //
+  //  ir-bb<exit.I>:
+  //    IR %phi = phi ... (extra operand: vp<%exit.val> from
+  //                                      vector.early.exit.I)
+  //
+  for (auto [Exit, VectorEarlyExitVPBB] : zip(Exits, VectorEarlyExitVPBBs)) {
+    auto &[EarlyExitingVPBB, EarlyExitVPBB, CondToExit] = Exit;
+    // Adjust the phi nodes in EarlyExitVPBB.
+    //   1. remove incoming values from EarlyExitingVPBB,
+    //   2. extract the incoming value at FirstActiveLane
+    //   3. add back the extracts as last operands for the phis
+    // Then adjust the CFG, removing the edge between EarlyExitingVPBB and
+    // EarlyExitVPBB and adding a new edge between VectorEarlyExitVPBB and
+    // EarlyExitVPBB. The extracts at FirstActiveLane are now the incoming
+    // values from VectorEarlyExitVPBB.
     for (VPRecipeBase &R : EarlyExitVPBB->phis()) {
       auto *ExitIRI = cast<VPIRPhi>(&R);
       VPValue *IncomingVal =
           ExitIRI->getIncomingValueForBlock(EarlyExitingVPBB);
-
-      // Compute the incoming value for this early exit.
       VPValue *NewIncoming = IncomingVal;
       if (!isa<VPIRValue>(IncomingVal)) {
-        VPBuilder EarlyExitB(VectorEarlyExitVPBB);
-        NewIncoming = EarlyExitB.createNaryOp(
-            VPInstruction::ExtractLane, {&FirstActiveLane, IncomingVal},
+        VPBuilder EarlyExitBuilder(VectorEarlyExitVPBB);
+        NewIncoming = EarlyExitBuilder.createNaryOp(
+            VPInstruction::ExtractLane, {FirstActiveLane, IncomingVal},
             DebugLoc::getUnknown(), "early.exit.value");
       }
       ExitIRI->removeIncomingValueFor(EarlyExitingVPBB);
-      // Add the new incoming value for this early exit.
       ExitIRI->addOperand(NewIncoming);
     }
 
@@ -4052,33 +4100,53 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
     VPBlockUtils::disconnectBlocks(EarlyExitingVPBB, EarlyExitVPBB);
     VPBlockUtils::connectBlocks(VectorEarlyExitVPBB, EarlyExitVPBB);
   }
-  VectorEarlyExitVPBBs = to_vector(llvm::reverse(VectorEarlyExitVPBBs));
 
   // For exit blocks that also have the middle block as predecessor (latch
   // exits to the same block as an early exit), extract the last lane of the
   // first operand for the middle block's incoming value.
   VPBuilder MiddleBuilder(MiddleVPBB);
-  for (VPRecipeBase &R :
-       cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0])->phis()) {
-    auto *ExitIRI = cast<VPIRPhi>(&R);
-    if (ExitIRI->getNumOperands() == 1)
-      continue;
-    ExitIRI->extractLastLaneOfLastPartOfFirstOperand(MiddleBuilder);
+  VPBasicBlock *MiddleSuccVPBB =
+      cast<VPIRBasicBlock>(MiddleVPBB->getSuccessors()[0]);
+  if (MiddleSuccVPBB->getNumPredecessors() > 1) {
+    assert(all_of(MiddleSuccVPBB->getPredecessors(),
+                  [&](VPBlockBase *Pred) {
+                    return Pred == MiddleVPBB ||
+                           is_contained(VectorEarlyExitVPBBs, Pred);
+                  }) &&
+           "All predecessors must be either the middle block or early exit "
+           "blocks");
+
+    for (VPRecipeBase &R : MiddleSuccVPBB->phis()) {
+      auto *ExitIRI = cast<VPIRPhi>(&R);
+      assert(ExitIRI->getIncomingValueForBlock(MiddleVPBB) ==
+                 ExitIRI->getOperand(0) &&
+             "First operand must come from middle block");
+      ExitIRI->extractLastLaneOfLastPartOfFirstOperand(MiddleBuilder);
+    }
   }
 
   if (Exits.size() != 1) {
-    VPBasicBlock *DispatchBB =
-        Plan.createVPBasicBlock("vector.early.exit.check");
-    DispatchBB->setParent(VectorEarlyExitVPBBs[0]->getParent());
-    // In the dispatch block, compute the first active lane across all
-    // conditions and chain through exits.
-    VPBuilder DispatchBuilder(DispatchBB);
-    // Chain through exits: for each exit, check if its condition is true at the
-    // first active lane. If so, take that exit. Otherwise, try the next exit.
-    VPBasicBlock *CurrentBB = DispatchBB;
+    // Chain through exits: for each exit, check if its condition is true at
+    // the first active lane. If so, take that exit; otherwise, try the next.
+    // The last exit needs no check since it must be taken if all others fail.
+    //
+    // For 3 exits (cond.0, cond.1, cond.2), this creates:
+    //
+    // vector.early.exit.check:
+    //   EMIT vp<%combined> = or vp<%cond.0>, vp<%cond.1>, vp<%cond.2>
+    //   EMIT vp<%first.lane> = first-active-lane vp<%combined>
+    //   EMIT vp<%at.cond.0> = extract-lane vp<%first.lane>, vp<%cond.0>
+    //   EMIT branch-on-cond vp<%at.cond.0>
+    // Successor(s): vector.early.exit.0, vector.early.exit.check.0
+    //
+    // vector.early.exit.check.0:
+    //   EMIT vp<%at.cond.1> = extract-lane vp<%first.lane>, vp<%cond.1>
+    //   EMIT branch-on-cond vp<%at.cond.1>
+    // Successor(s): vector.early.exit.1, vector.early.exit.2
+    VPBasicBlock *CurrentBB = DispatchVPBB;
     for (auto [I, Exit] : enumerate(ArrayRef(Exits).drop_back())) {
       VPValue *LaneVal = DispatchBuilder.createNaryOp(
-          VPInstruction::ExtractLane, {&FirstActiveLane, Exit.CondToExit},
+          VPInstruction::ExtractLane, {FirstActiveLane, Exit.CondToExit},
           DebugLoc::getUnknown(), "exit.cond.at.lane");
 
       // For the last dispatch, branch directly to the last exit on false;
@@ -4096,20 +4164,10 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
       VectorEarlyExitVPBBs[I]->setPredecessors({CurrentBB});
       FalseBB->setPredecessors({CurrentBB});
 
-      if (!IsLastDispatch) {
-        CurrentBB = FalseBB;
-        DispatchBuilder.setInsertPoint(CurrentBB);
-      }
+      CurrentBB = FalseBB;
+      DispatchBuilder.setInsertPoint(CurrentBB);
     }
-    VectorEarlyExitVPBBs[0] = DispatchBB;
   }
-
-  VPBuilder DispatchBuilder(VectorEarlyExitVPBBs[0],
-                            VectorEarlyExitVPBBs[0]->begin());
-  VPValue *FirstLane =
-      DispatchBuilder.createNaryOp(VPInstruction::FirstActiveLane, {Combined},
-                                   DebugLoc::getUnknown(), "first.active.lane");
-  FirstActiveLane.replaceAllUsesWith(FirstLane);
 
   // Replace the latch terminator with the new branching logic.
   auto *LatchExitingBranch = cast<VPInstruction>(LatchVPBB->getTerminator());
@@ -4125,8 +4183,8 @@ void VPlanTransforms::handleUncountableEarlyExits(VPlan &Plan,
   Builder.createNaryOp(VPInstruction::BranchOnTwoConds,
                        {IsAnyExitTaken, IsLatchExitTaken}, LatchDL);
   LatchVPBB->clearSuccessors();
-  LatchVPBB->setSuccessors({VectorEarlyExitVPBBs[0], MiddleVPBB, HeaderVPBB});
-  VectorEarlyExitVPBBs[0]->setPredecessors({LatchVPBB});
+  LatchVPBB->setSuccessors({DispatchVPBB, MiddleVPBB, HeaderVPBB});
+  DispatchVPBB->setPredecessors({LatchVPBB});
 }
 
 /// This function tries convert extended in-loop reductions to
