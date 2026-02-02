@@ -142,7 +142,7 @@ private:
                                      SystemZMCInstLower &Lower);
   void LowerPATCHABLE_RET(const MachineInstr &MI, SystemZMCInstLower &Lower);
   void emitStackProtectorLocEntry();
-  void lowerLOAD_SGA(const MachineInstr& MI, SystemZMCInstLower &Lower);
+  void lowerLOAD_SGA(const MachineInstr &MI, SystemZMCInstLower &Lower);
   void emitAttributes(Module &M);
 };
 } // end namespace llvm

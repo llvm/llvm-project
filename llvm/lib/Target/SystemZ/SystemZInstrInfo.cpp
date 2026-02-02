@@ -34,9 +34,9 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
-#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/IR/GlobalVariable.h"
 #include "llvm/IR/Module.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/BranchProbability.h"
@@ -1837,11 +1837,11 @@ Register chooseAddrReg(MachineInstr &MI, MachineBasicBlock *MBB) {
 // Emit the stack guard address load, depending on guard type.
 // Return the register the stack guard address was loaded into.
 unsigned SystemZInstrInfo::emitLoadStackGuardAddress(MachineInstr &MI,
-                                                 Register AddrReg) const {
+                                                     Register AddrReg) const {
   MachineBasicBlock &MBB = *(MI.getParent());
   const MachineFunction &MF = *(MBB.getParent());
   const auto DL = MI.getDebugLoc();
-  
+
   const Module *M = MF.getFunction().getParent();
   StringRef GuardType = M->getStackProtectorGuard();
 
@@ -1858,13 +1858,13 @@ unsigned SystemZInstrInfo::emitLoadStackGuardAddress(MachineInstr &MI,
     return 0;
   }
 
-  llvm_unreachable(
-      (Twine("Unknown stack protector type \"") + GuardType + "\"")
-          .str()
-          .c_str());
+  llvm_unreachable((Twine("Unknown stack protector type \"") + GuardType + "\"")
+                       .str()
+                       .c_str());
 }
 
-void SystemZInstrInfo::expandStackGuardPseudo(MachineInstr &MI, unsigned Opcode) const {
+void SystemZInstrInfo::expandStackGuardPseudo(MachineInstr &MI,
+                                              unsigned Opcode) const {
   MachineBasicBlock *MBB = MI.getParent();
   Register AddrReg = chooseAddrReg(MI, MBB);
   unsigned Offset = emitLoadStackGuardAddress(MI, AddrReg);

@@ -754,11 +754,11 @@ void SystemZAsmPrinter::emitInstruction(const MachineInstr *MI) {
   case SystemZ::COMPARE_SG:
     llvm_unreachable("MOVE_SG and COMPARE_SG should have "
                      "been expanded by ExpandPostRAPseudo.");
-  
+
   case SystemZ::LOAD_TSGA:
   case SystemZ::LOAD_GSGA:
-      lowerLOAD_SGA(*MI, Lower);
-      return;
+    lowerLOAD_SGA(*MI, Lower);
+    return;
 
   default:
     Lower.lower(MI, LoweredMI);
@@ -1023,12 +1023,13 @@ void SystemZAsmPrinter::LowerPATCHABLE_RET(const MachineInstr &MI,
   recordSled(BeginOfSled, MI, SledKind::FUNCTION_EXIT, 2);
 }
 
-void SystemZAsmPrinter::lowerLOAD_SGA(const MachineInstr& MI, SystemZMCInstLower& Lower) {
+void SystemZAsmPrinter::lowerLOAD_SGA(const MachineInstr &MI,
+                                      SystemZMCInstLower &Lower) {
   Register AddrReg = MI.getOperand(0).getReg();
   const MachineBasicBlock &MBB = *(MI.getParent());
   const MachineFunction &MF = *(MBB.getParent());
   const MachineRegisterInfo &MRI = MF.getRegInfo();
-  const Module* M = MF.getFunction().getParent();
+  const Module *M = MF.getFunction().getParent();
 
   if (MI.getOpcode() == SystemZ::LOAD_TSGA) {
     // EAR can only load the low subregister so use a shift for %a0 to produce
@@ -1037,57 +1038,47 @@ void SystemZAsmPrinter::lowerLOAD_SGA(const MachineInstr& MI, SystemZMCInstLower
         MRI.getTargetRegisterInfo()->getSubReg(AddrReg, SystemZ::subreg_l32);
 
     // ear <reg>, %a0
-    EmitToStreamer(*OutStreamer, 
-      MCInstBuilder(SystemZ::EAR)
-      .addReg(Reg32)
-      .addReg(SystemZ::A0)
-    );
-    
+    EmitToStreamer(
+        *OutStreamer,
+        MCInstBuilder(SystemZ::EAR).addReg(Reg32).addReg(SystemZ::A0));
+
     // sllg <reg>, <reg>, 32
-    EmitToStreamer(*OutStreamer, 
-      MCInstBuilder(SystemZ::SLLG)
-      .addReg(AddrReg)
-      .addReg(AddrReg)
-      .addReg(0)
-      .addImm(32)
-    );
-    
+    EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::SLLG)
+                                     .addReg(AddrReg)
+                                     .addReg(AddrReg)
+                                     .addReg(0)
+                                     .addImm(32));
+
     // ear <reg>, %a1
-    EmitToStreamer(*OutStreamer, 
-      MCInstBuilder(SystemZ::EAR)
-      .addReg(Reg32)
-      .addReg(SystemZ::A1)
-    );
+    EmitToStreamer(
+        *OutStreamer,
+        MCInstBuilder(SystemZ::EAR).addReg(Reg32).addReg(SystemZ::A1));
     return;
   }
   if (MI.getOpcode() == SystemZ::LOAD_GSGA) {
     // Obtain the global value (assert if stack guard variable can't be found).
-    const TargetLowering* TLI = MF.getSubtarget().getTargetLowering();
-    const GlobalVariable* GV = cast<GlobalVariable>(TLI->getSDagStackGuard(*M, TLI->getLibcallLoweringInfo()));
+    const TargetLowering *TLI = MF.getSubtarget().getTargetLowering();
+    const GlobalVariable *GV = cast<GlobalVariable>(
+        TLI->getSDagStackGuard(*M, TLI->getLibcallLoweringInfo()));
     // If configured, emit the `__stack_protector_loc` entry
     if (MF.getFunction().hasFnAttribute("mstackprotector-guard-record"))
       emitStackProtectorLocEntry();
     // Emit the address load.
     if (M->getPICLevel() == PICLevel::NotPIC) {
-      EmitToStreamer(*OutStreamer, 
-        MCInstBuilder(SystemZ::LARL)
-        .addReg(AddrReg)
-        .addExpr(MCSymbolRefExpr::create(getSymbol(GV), OutContext))
-      );
+      EmitToStreamer(*OutStreamer, MCInstBuilder(SystemZ::LARL)
+                                       .addReg(AddrReg)
+                                       .addExpr(MCSymbolRefExpr::create(
+                                           getSymbol(GV), OutContext)));
     } else {
-      EmitToStreamer(*OutStreamer, 
-        MCInstBuilder(SystemZ::LGRL)
-        .addReg(AddrReg)
-        .addExpr(MCSymbolRefExpr::create(getSymbol(GV),
-                                            SystemZ::S_GOTENT,
-                                            OutContext))
-      );
+      EmitToStreamer(*OutStreamer,
+                     MCInstBuilder(SystemZ::LGRL)
+                         .addReg(AddrReg)
+                         .addExpr(MCSymbolRefExpr::create(
+                             getSymbol(GV), SystemZ::S_GOTENT, OutContext)));
     }
     return;
   }
-
 }
-
 
 // The *alignment* of 128-bit vector types is different between the software
 // and hardware vector ABIs. If the there is an externally visible use of a
