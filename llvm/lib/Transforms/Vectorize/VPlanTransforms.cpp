@@ -5408,7 +5408,6 @@ void VPlanTransforms::addExitUsersForFirstOrderRecurrences(VPlan &Plan,
     }
   }
 }
-<<<<<<< HEAD
 
 void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
                                                PredicatedScalarEvolution &PSE,
@@ -5417,11 +5416,11 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
   VPRegionBlock *VectorLoopRegion = Plan.getVectorLoopRegion();
 
   // Helper lambda to check if the IV range excludes the sentinel value.
-  auto CheckSentinel = [&SE](const SCEV *IVSCEV, bool IsFindLast,
+  auto CheckSentinel = [&SE](const SCEV *IVSCEV, bool UseMax,
                              bool Signed) -> std::optional<APInt> {
     unsigned BW = IVSCEV->getType()->getScalarSizeInBits();
     APInt Sentinel =
-        IsFindLast
+        UseMax
             ? (Signed ? APInt::getSignedMinValue(BW) : APInt::getMinValue(BW))
             : (Signed ? APInt::getSignedMaxValue(BW) : APInt::getMaxValue(BW));
 
@@ -5448,7 +5447,8 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
       continue;
 
     // The non-phi operand of the select is the IV.
-    VPValue *IV = (TrueVal == PhiR) ? FalseVal : TrueVal;
+    assert(is_contained(BackedgeVal->getDefiningRecipe()->operands(), PhiR));
+    VPValue *IV = TrueVal == PhiR ? FalseVal : TrueVal;
 
     const SCEV *IVSCEV = vputils::getSCEVExprForVPValue(IV, PSE, &L);
     const SCEV *Step;
@@ -5456,28 +5456,30 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
       continue;
 
     // Determine direction from SCEV step.
-    // Positive step means FindLast (ascending), negative means FindFirst.
     if (!SE.isKnownNonZero(Step))
       continue;
 
-    bool IsFindLast = SE.isKnownPositive(Step);
+    // Positive step means we need UMax/SMax to find the last IV value, and
+    // UMin/SMin otherwise.
+    bool UseMax = SE.isKnownPositive(Step);
     bool UseSigned = true;
-    std::optional<APInt> SentinelVal = CheckSentinel(IVSCEV, IsFindLast, true);
+    std::optional<APInt> SentinelVal =
+        CheckSentinel(IVSCEV, UseMax, /*IsSigned=*/true);
     if (!SentinelVal) {
-      SentinelVal = CheckSentinel(IVSCEV, IsFindLast, false);
+      SentinelVal = CheckSentinel(IVSCEV, UseMax, /*IsSigned=*/false);
       if (!SentinelVal)
         continue;
       UseSigned = false;
     }
 
-    VPInstruction *RdxResult = cast<VPInstruction>(vputils::findRecipe(
+    auto *RdxResult = cast<VPInstruction>(vputils::findRecipe(
         BackedgeVal,
         match_fn(m_VPInstruction<VPInstruction::ComputeReductionResult>())));
 
     // Create the reduction result in the middle block using sentinel directly.
     RecurKind MinMaxKind =
-        IsFindLast ? (UseSigned ? RecurKind::SMax : RecurKind::UMax)
-                   : (UseSigned ? RecurKind::SMin : RecurKind::UMin);
+        UseMax ? (UseSigned ? RecurKind::SMax : RecurKind::UMax)
+               : (UseSigned ? RecurKind::SMin : RecurKind::UMin);
     VPIRFlags Flags(MinMaxKind, /*IsOrdered=*/false, /*IsInLoop=*/false,
                     FastMathFlags());
     VPValue *Sentinel = Plan.getConstantInt(*SentinelVal);
@@ -5488,9 +5490,8 @@ void VPlanTransforms::optimizeFindIVReductions(VPlan &Plan,
                                    RdxResult->getOperand(0), Flags, ExitDL);
     auto *Cmp =
         MiddleBuilder.createICmp(CmpInst::ICMP_NE, ReducedIV, Sentinel, ExitDL);
-    VPInstruction *NewRdxResult =
-        cast<VPInstruction>(MiddleBuilder.createSelect(
-            Cmp, ReducedIV, PhiR->getStartValue(), ExitDL));
+    VPInstruction *NewRdxResult = MiddleBuilder.createSelect(
+        Cmp, ReducedIV, PhiR->getStartValue(), ExitDL);
     RdxResult->replaceAllUsesWith(NewRdxResult);
     RdxResult->eraseFromParent();
 

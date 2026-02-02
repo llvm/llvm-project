@@ -1476,10 +1476,10 @@ bool VPlanTransforms::handleMultiUseReductions(VPlan &Plan) {
     // Check if FindIVPhiR is a FindLast pattern by checking the MinMaxKind
     // on its ComputeReductionResult. SMax/UMax indicates FindLast.
     VPInstruction *FindIVResult =
-        findUserOf<VPInstruction::ComputeReductionResult>(
+        vputils::findUserOf<VPInstruction::ComputeReductionResult>(
             FindIVPhiR->getBackedgeValue());
-    if (!FindIVResult)
-      return false;
+    assert(FindIVResult &&
+           "must be able to retrieve the FindIVResult VPInstruction");
     RecurKind FindIVMinMaxKind = FindIVResult->getRecurKind();
     if (FindIVMinMaxKind != RecurKind::SMax &&
         FindIVMinMaxKind != RecurKind::UMax)
