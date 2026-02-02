@@ -357,6 +357,10 @@ def TrustReturnsNonnullChecker : Checker<"TrustReturnsNonnull">,
            "are not null">,
   Documentation<NotDocumented>;
 
+def OpaqueSTLFunctionsModeling : Checker<"OpaqueSTLFunctionsModeling">,
+  HelpText<"Model opaque, conservative evaluation of some STL functions">,
+  Documentation<NotDocumented>;
+
 } // end "apiModeling"
 
 //===----------------------------------------------------------------------===//
@@ -674,11 +678,6 @@ def PureVirtualCallChecker
       HelpText<
           "Check pure virtual function calls during construction/destruction">,
       Documentation<HasDocumentation>;
-
-def OpaqueSTLFunctionsModeling : Checker<"OpaqueSTLFunctionsModeling">,
-  HelpText<"Force opaque, conservative evaluation for STL internal implementation functions">,
-  Documentation<NotDocumented>,
-  Hidden;
 
 } // end: "cplusplus"
 
