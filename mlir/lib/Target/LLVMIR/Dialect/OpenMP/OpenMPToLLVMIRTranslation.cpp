@@ -8956,7 +8956,7 @@ static void extractHostEvalClauses(
                   break;
                 }
               }
-            } else {
+            } else
               llvm_unreachable("unsupported host_eval use");
             }
           })
