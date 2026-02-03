@@ -38,6 +38,7 @@ add_llvm_component_library(LLVMAnalysis
   AliasAnalysis.cpp
   AliasAnalysisEvaluator.cpp
   AliasSetTracker.cpp
+  MemSliceAnalysis.cpp
   Analysis.cpp
   AssumeBundleQueries.cpp
   AssumptionCache.cpp
