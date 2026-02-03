@@ -12,6 +12,7 @@
 //
 //===----------------------------------------------------------------------===//
 
+#include "AMDGPULaneMaskUtils.h"
 #include "GCNSubtarget.h"
 #include "llvm/CodeGen/MachineBasicBlock.h"
 #include "llvm/CodeGen/MachinePostDominators.h"
@@ -42,7 +43,7 @@ public:
   virtual ~PhiLoweringHelper() = default;
 
 protected:
-  unsigned WavefrontSize;
+  unsigned WavefrontSize; /// grem
   MachineFunction *MF = nullptr;
   MachineDominatorTree *DT = nullptr;
   MachinePostDominatorTree *PDT = nullptr;
@@ -50,20 +51,11 @@ protected:
   const GCNSubtarget *ST = nullptr;
   const SIInstrInfo *TII = nullptr;
   MachineRegisterInfo::VRegAttrs LaneMaskRegAttrs;
+  const AMDGPU::LaneMaskConstants &LMC;
 
 #ifndef NDEBUG
   DenseSet<Register> PhiRegisters;
 #endif
-
-  Register ExecReg;
-  unsigned MovOp;
-  unsigned AndOp;
-  unsigned OrOp;
-  unsigned XorOp;
-  unsigned AndN2Op;
-  unsigned OrN2Op;
-  unsigned CSelectOp;
-  unsigned CmpLGOp;
 
 public:
   bool lowerPhis();
