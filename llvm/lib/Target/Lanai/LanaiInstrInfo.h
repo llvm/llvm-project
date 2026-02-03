@@ -119,7 +119,7 @@ public:
   //
   // Lanai can optimize certain select instructions, for example by predicating
   // the instruction defining one of the operands and sets Optimizable to true.
-  bool analyzeSelect(const MachineInstr &MI, bool &Optimizable) const override;
+  bool analyzeSelect(const MachineInstr &MI) const override;
 
   // Given a select instruction that was understood by analyzeSelect and
   // returned Optimizable = true, attempt to optimize MI by merging it with one

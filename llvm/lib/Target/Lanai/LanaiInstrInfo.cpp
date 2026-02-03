@@ -436,10 +436,8 @@ bool LanaiInstrInfo::optimizeCompareInstr(
   return false;
 }
 
-bool LanaiInstrInfo::analyzeSelect(const MachineInstr &MI,
-                                   bool &Optimizable) const {
+bool LanaiInstrInfo::analyzeSelect(const MachineInstr &MI) const {
   assert(MI.getOpcode() == Lanai::SELECT && "unknown select instruction");
-  Optimizable = true;
   return false;
 }
 

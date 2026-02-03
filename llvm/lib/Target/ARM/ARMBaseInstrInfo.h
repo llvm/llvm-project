@@ -304,7 +304,7 @@ public:
                             Register SrcReg2, int64_t CmpMask, int64_t CmpValue,
                             const MachineRegisterInfo *MRI) const override;
 
-  bool analyzeSelect(const MachineInstr &MI, bool &Optimizable) const override;
+  bool analyzeSelect(const MachineInstr &MI) const override;
 
   MachineInstr *optimizeSelect(MachineInstr &MI,
                                SmallPtrSetImpl<MachineInstr *> &SeenMIs,

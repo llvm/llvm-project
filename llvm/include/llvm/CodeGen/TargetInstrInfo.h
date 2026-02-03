@@ -1022,16 +1022,12 @@ public:
   }
 
   /// Analyze the given select instruction, returning true if
-  /// it cannot be understood. It is assumed that MI->isSelect() is true.
-  ///
-  /// Some targets can optimize select instructions, for example by predicating
-  /// the instruction defining one of the operands. Such targets should set
-  /// Optimizable.
+  /// it cannot be optimised or it cannot be understood. It is assumed that
+  /// MI->isSelect() is true.
   ///
   /// @param         MI Select instruction to analyze.
-  /// @param Optimizable Returned as true if MI is optimizable.
   /// @returns False on success.
-  virtual bool analyzeSelect(const MachineInstr &MI, bool &Optimizable) const {
+  virtual bool analyzeSelect(const MachineInstr &MI) const {
     assert(MI.getDesc().isSelect() && "MI must be a select instruction");
     return true;
   }

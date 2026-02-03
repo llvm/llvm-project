@@ -1898,12 +1898,9 @@ static MachineInstr *canFoldAsPredicatedOp(Register Reg,
   return MI;
 }
 
-bool RISCVInstrInfo::analyzeSelect(const MachineInstr &MI,
-                                   bool &Optimizable) const {
+bool RISCVInstrInfo::analyzeSelect(const MachineInstr &MI) const {
   assert(MI.getOpcode() == RISCV::PseudoCCMOVGPR &&
          "Unknown select instruction");
-  // We can only fold when we support short forward branch opt.
-  Optimizable = STI.hasShortForwardBranchIALU();
   return false;
 }
 

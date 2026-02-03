@@ -175,7 +175,7 @@ public:
   bool isBranchOffsetInRange(unsigned BranchOpc,
                              int64_t BrOffset) const override;
 
-  bool analyzeSelect(const MachineInstr &MI, bool &Optimizable) const override;
+  bool analyzeSelect(const MachineInstr &MI) const override;
 
   MachineInstr *optimizeSelect(MachineInstr &MI,
                                SmallPtrSetImpl<MachineInstr *> &SeenMIs,
