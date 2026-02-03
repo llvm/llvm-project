@@ -340,6 +340,8 @@ The base class also provides common utility methods that are frequently needed a
 
 ### 4.5 Target-Specific ABIInfo Implementations
 
+The framework targets x86_64 System V and AArch64 PCS as initial platforms. These two targets provide valuable design validation: x86_64's chunk-based struct classification and AArch64's homogeneous aggregate detection represent fundamentally different ABI strategies, confirming that the ABITypeInterface abstraction can accommodate diverse classification approaches. Both target implementations are complete in the CIR incubator repository.
+
 Concrete `ABIInfo` subclasses implement the classification rules for specific platforms. The `X86_64ABIInfo` class, for example, implements the x86-64 System V ABI's complex struct classification algorithm, which assigns each 8-byte chunk of a struct to register classes (Integer, SSE, X87, etc.) and then merges those classifications to determine whether the struct can be passed in registers or must go to memory. The `AArch64ABIInfo` class similarly implements the ARM Architecture Procedure Call Standard (AAPCS64), which has different rules for homogeneous floating-point aggregates and different register usage conventions.
 
 These implementations represent thousands of lines of battle-tested code with extensive edge case handling. The x86_64 implementation alone handles over 20 distinct scenarios in its struct classification logic, covering cases like `__int128` (which passes in two integer registers), `_BitInt(N)` (which may pass indirectly depending on bit width), complex numbers (where `_Complex double` may pass in two SSE registers or via memory depending on surrounding struct members), and C++ objects with non-trivial lifecycle operations (which typically pass indirectly to enable proper copy construction and destruction). Rather than rewriting this complexity from scratch, the proposal reuses CIR's existing implementations—originally ported from Clang's `CodeGen/TargetInfo.cpp`—with targeted refactoring to replace CIR-specific type operations with `ABITypeInterface` queries.
@@ -360,72 +362,9 @@ The `TargetABIRegistry` provides a simple factory mechanism for instantiating th
 
 The implementation is straightforward: a `createABIInfo()` method switches on the target architecture enum and constructs the corresponding concrete class. For unsupported targets, it returns `nullptr`, allowing graceful handling of architectures that haven't yet been ported. This extensibility is important for a shared infrastructure that may eventually support ARM32, RISC-V, PowerPC, and other platforms beyond the initial x86_64 and AArch64 focus.
 
-## 5. Target-Specific Details
+## 5. Migration from CIR Incubator
 
-### 5.1 x86_64 System V ABI
-
-**Reference**: [System V AMD64 ABI](https://refspecs.linuxbase.org/elf/x86_64-abi-0.99.pdf)
-
-**Key Rules**:
-- Integer arguments in registers: RDI, RSI, RDX, RCX, R8, R9
-- FP arguments in XMM0-XMM7
-- Return in RAX/RDX (integer) or XMM0/XMM1 (FP)
-- Structs classified by 8-byte chunks
-- Memory arguments passed on stack
-
-**Classification Algorithm**:
-1. Divide type into 8-byte chunks
-2. Classify each chunk (Integer, SSE, X87, Memory, NoClass)
-3. Merge adjacent chunks
-4. Post-merge cleanup
-5. Map to registers or memory
-
-**Edge Case: `__int128` vs `_BitInt(128)`**
-
-These types have the same size (16 bytes) but **different ABI classification**:
-- `__int128`: **INTEGER** class → passed in RDI + RSI (return: RAX + RDX)
-- `_BitInt(128)`: **MEMORY** class → passed indirectly via hidden pointer
-- `_BitInt(64)`: **INTEGER** class → passed in single register RDI
-
-**Why This Matters**: Same size, different calling convention. Implementation must use ABITypeInterface methods `isInt128()` and `isBitInt()` to distinguish these types correctly.
-
-**Implementation Status**: ✅ Already implemented in CIR incubator
-
-**Migration Effort**: Low - mainly replacing CIR type checks
-
-### 5.2 AArch64 Procedure Call Standard
-
-**Reference**: [ARM AArch64 ABI](https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst)
-
-**Key Rules**:
-- Integer arguments in X0-X7
-- FP arguments in V0-V7
-- Return in X0/X1 (integer) or V0/V1 (FP)
-- Homogeneous Floating-point Aggregates (HFA) in FP registers
-- Homogeneous Short-Vector Aggregates (HVA) in vector registers
-
-**Classification**:
-1. Check if type is HFA/HVA
-2. If aggregate, check if fits in registers
-3. Otherwise, pass indirectly
-
-**Implementation Status**: ✅ Already implemented in CIR incubator
-
-**Migration Effort**: Low - similar to x86_64
-
-### 5.3 Future Targets
-
-**Candidates** (if time permits):
-- ARM32 (for embedded systems)
-- RISC-V (emerging importance)
-- WebAssembly (for WASM backends)
-- PowerPC (for HPC systems)
-
-**Not Priority**: MIPS, Sparc, Hexagon, etc. (less common)
-
-## 6. Migration from CIR Incubator
-
-### 6.1 Migration Steps
+### 5.1 Migration Steps
 
 1. **Parallel Implementation**:
    - Build new MLIR-agnostic infrastructure
@@ -449,7 +388,7 @@ These types have the same size (16 bytes) but **different ABI classification**:
    - Submit CIR adaptations to CIR upstream
    - Deprecate incubator implementation
 
-### 6.2 Compatibility Considerations
+### 5.2 Compatibility Considerations
 
 **Source Compatibility**:
 - New ABIArgInfo API should match old API where possible
@@ -464,7 +403,7 @@ These types have the same size (16 bytes) but **different ABI classification**:
 - Ensure all test cases still pass
 - Add new tests for edge cases
 
-### 6.3 Deprecation Plan
+### 5.3 Deprecation Plan
 
 Once new implementation is stable:
 1. Mark CIR incubator implementation as deprecated (Month 1)
@@ -472,16 +411,16 @@ Once new implementation is stable:
 3. Keep old code for 1-2 releases for safety (Months 1-6)
 4. Remove old implementation (Month 6+)
 
-## 7. Future Work
+## 6. Future Work
 
-### 7.1 Additional Targets
+### 6.1 Additional Targets
 
 - RISC-V (emerging ISA, growing importance)
 - WebAssembly (for web-based backends)
 - ARM32 (for embedded systems)
 - PowerPC (for HPC)
 
-### 7.2 Advanced Features
+### 6.2 Advanced Features
 
 **Varargs Support**:
 - Currently marked NYI in CIR
@@ -503,7 +442,7 @@ Once new implementation is stable:
 - SVE (ARM Scalable Vector Extension)
 - AVX-512 considerations
 
-### 7.3 Optimization Opportunities
+### 6.3 Optimization Opportunities
 
 **Return Value Optimization (RVO)**:
 - Avoid copies for returned aggregates
@@ -517,7 +456,7 @@ Once new implementation is stable:
 - Delay ABI lowering until after inlining
 - Can avoid unnecessary marshalling
 
-### 7.4 GSoC Integration
+### 6.4 GSoC Integration
 
 **Monitor GSoC Progress**:
 - Track PR #140112 development
@@ -534,9 +473,9 @@ Once new implementation is stable:
 - Medium term (Q2-Q3 2026): Evaluate GSoC library
 - Long term (Q4 2026+): Potentially refactor to use GSoC
 
-## 8. Open Questions and Risks
+## 7. Open Questions and Risks
 
-### 8.1 Open Questions
+### 7.1 Open Questions
 
 1. **Should we use TypeInterface or helper class for type queries?**
    - TypeInterface is more MLIR-idiomatic but requires modifying type definitions
@@ -791,7 +730,7 @@ class ABILowering {
    - Who owns the shared infrastructure?
    - **Recommendation**: Build CIR-first, engage FIR team at Phase 7 (after CIR proven)
 
-### 8.2 Risks
+### 7.2 Risks
 
 **Risk 1: TargetInfo Dependency Rejected** ⚠️ **CRITICAL**
 - **Impact**: High (could add 1-3 weeks to timeline)
@@ -840,22 +779,22 @@ class ABILowering {
 - **Description**: Edge cases and corner cases in ABI handling are complex
 - **Mitigation**: Incremental development, frequent validation against classic codegen, comprehensive testing
 
-## 9. Success Metrics
+## 8. Success Metrics
 
-### 9.1 Functional Metrics
+### 8.1 Functional Metrics
 
 - ✅ CIR can lower x86_64 calling conventions correctly (100% test pass rate)
 - ✅ CIR can lower AArch64 calling conventions correctly (100% test pass rate)
 - ✅ ABI output matches classic Clang codegen (validated by comparison tests)
 - ✅ All CIR incubator tests pass with new implementation
 
-### 9.2 Quality Metrics
+### 8.2 Quality Metrics
 
 - ✅ Code coverage > 90% for ABI classification logic
 - ✅ Zero known ABI compliance bugs
 - ✅ Documentation complete (API, user guide, design rationale)
 
-### 9.3 Performance Metrics
+### 8.3 Performance Metrics
 
 - ✅ CallConvLowering pass overhead < 5% compilation time
   - **Context**: This refers to **compile-time overhead**, not runtime performance
@@ -866,39 +805,39 @@ class ABILowering {
 - ✅ No degradation in generated code quality vs direct implementation
   - **Runtime performance unchanged**: ABI lowering is compile-time only
 
-### 9.4 Reusability Metrics
+### 8.4 Reusability Metrics
 
 - ✅ FIR can adopt infrastructure with < 2 weeks integration effort
 - ✅ New target can be added with < 1 week effort (given ABI spec)
 - ✅ ABITypeInterface requires < 10 methods implementation per dialect
 
-## 10. References
+## 9. References
 
-### 10.1 ABI Specifications
+### 9.1 ABI Specifications
 
 - [System V AMD64 ABI](https://refspecs.linuxbase.org/elf/x86_64-abi-0.99.pdf)
 - [ARM AArch64 PCS](https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst)
 - [Itanium C++ ABI](https://itanium-cxx-abi.github.io/cxx-abi/abi.html)
 
-### 10.2 LLVM/MLIR Documentation
+### 9.2 LLVM/MLIR Documentation
 
 - [MLIR Interfaces](https://mlir.llvm.org/docs/Interfaces/)
 - [MLIR Type System](https://mlir.llvm.org/docs/DefiningDialects/AttributesAndTypes/)
 - [MLIR Pass Infrastructure](https://mlir.llvm.org/docs/PassManagement/)
 
-### 10.3 Related Projects
+### 9.3 Related Projects
 
 - [GSoC ABI Lowering RFC](https://discourse.llvm.org/t/rfc-an-abi-lowering-library-for-llvm/84495)
 - [GSoC PR #140112](https://github.com/llvm/llvm-project/pull/140112)
 - [CIR Project](https://github.com/llvm/clangir)
 
-### 10.4 Related Implementation
+### 9.4 Related Implementation
 
 - Clang CodeGen: `clang/lib/CodeGen/`
 - CIR Incubator: `clang/lib/CIR/Dialect/Transforms/TargetLowering/`
 - SPIR-V ABI: `mlir/lib/Dialect/SPIRV/IR/TargetAndABI.cpp`
 
-## 11. Appendices
+## 10. Appendices
 
 ### A. Glossary
 
