@@ -321,9 +321,10 @@ void f(std::vector<int>& t) {
   }
   {
     FooProto foo;
-    // CHECK-FIXES-NOT: foo.mutable_x()->Reserve(5);
+    // CHECK-FIXES: foo.mutable_x()->Reserve(5);
     for (int i = 0; i < 5; i++) {
       foo.add_x(i);
+      // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'add_x' is called inside a loop
       foo.add_x(i);
     }
   }
@@ -339,9 +340,10 @@ void f(std::vector<int>& t) {
     FooProto foo;
     BarProto bar;
     bar.mutable_x();
-    // CHECK-FIXES-NOT: foo.mutable_x()->Reserve(5);
+    // CHECK-FIXES: foo.mutable_x()->Reserve(5);
     for (int i = 0; i < 5; i++) {
       foo.add_x();
+      // CHECK-MESSAGES: :[[@LINE-1]]:7: warning: 'add_x' is called inside a loop
       bar.add_x();
     }
   }
@@ -437,3 +439,4 @@ void multiple_statements_in_loop() {
     // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'push_back' is called inside a loop
   }
 }
+
