@@ -100,7 +100,7 @@ Sections:
 # RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t6 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t6 --check-prefix=WARN-MISSING-TYPEID
 
-# WARN-MISSING-TYPEID: warning: '[[FILE]]': failed while reading function type ID: unexpected end of data at offset 0xa while reading [0xa, 0x12)
+# WARN-MISSING-TYPEID: warning: '[[FILE]]': failed while reading function type Id: unexpected end of data at offset 0xa while reading [0xa, 0x12)
 
 ## Check for incomplete function Type ID.
 # RUN: yaml2obj --docnum=4 -DTYPEID=0x00,0x00 %s -o %t6
@@ -109,7 +109,7 @@ Sections:
 # RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t6 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t6 --check-prefix=WARN-INCOMPLETE-TYPEID
 
-# WARN-INCOMPLETE-TYPEID: warning: '[[FILE]]': failed while reading function type ID: unexpected end of data at offset 0xc while reading [0xa, 0x12)
+# WARN-INCOMPLETE-TYPEID: warning: '[[FILE]]': failed while reading function type Id: unexpected end of data at offset 0xc while reading [0xa, 0x12)
 
 --- !ELF
 FileHeader:
@@ -162,7 +162,7 @@ Sections:
 # RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t7 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t7 --check-prefix=WARN-MISSING-INDIRECT
 
-# WARN-MISSING-INDIRECT: warning: '[[FILE]]': failed while reading number of indirect target type IDs: unable to decode LEB128 at offset 0x00000012: malformed uleb128, extends past end
+# WARN-MISSING-INDIRECT: warning: '[[FILE]]': failed while reading number of indirect target type Ids: unable to decode LEB128 at offset 0x00000012: malformed uleb128, extends past end
 
 ## Check missing indirect target type ID.
 # RUN: yaml2obj --docnum=5 -DFLAGS=0x04 -DNUMCALLEES=0x01 %s -o %t10
@@ -171,7 +171,7 @@ Sections:
 # RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t10 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t10 --check-prefix=WARN-MISSING-INDIRECT-TARGET-TYPE-ID
 
-# WARN-MISSING-INDIRECT-TARGET-TYPE-ID: warning: '[[FILE]]': failed while reading indirect target type ID: unexpected end of data at offset 0x13 while reading [0x13, 0x1b)
+# WARN-MISSING-INDIRECT-TARGET-TYPE-ID: warning: '[[FILE]]': failed while reading indirect target type Id: unexpected end of data at offset 0x13 while reading [0x13, 0x1b)
 
 ## Check incomplete indirect target type ID.
 # RUN: yaml2obj --docnum=5 -DFLAGS=0x04 -DNUMCALLEES=0x01,0x00,0x00 %s -o %t8
@@ -180,7 +180,7 @@ Sections:
 # RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t8 2>&1 | \
 # RUN:   FileCheck %s -DFILE=%t8 --check-prefix=WARN-INCOMPLETE-TARGET-TYPE-ID
 
-# WARN-INCOMPLETE-TARGET-TYPE-ID: warning: '[[FILE]]': failed while reading indirect target type ID: unexpected end of data at offset 0x15 while reading [0x13, 0x1b)
+# WARN-INCOMPLETE-TARGET-TYPE-ID: warning: '[[FILE]]': failed while reading indirect target type Id: unexpected end of data at offset 0x15 while reading [0x13, 0x1b)
 
 --- !ELF
 FileHeader:
@@ -235,7 +235,7 @@ Sections:
         '5', ## Flag IsIndirectTarget true, HasIndirectTargetTypeIDs true
         '6', '0', '0', '0', '0', '0', '0', '0', ## bar()'s address
         '0', '0', '0', '0', '0', '0', '0', '0', ## bar()'s TypeID Unknown
-        '1', ## NumIndirectTargetTypeIDs
+        '1', ## NumIndirectTargetTypeIds
         '16', '0', '0', '0', '0', '0', '0', '0', ## Indirect callee type ID
         '0', ## Format version number
         '1', ## Flag IsIndirectTarget true
