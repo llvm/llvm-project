@@ -10,6 +10,7 @@
 #ifndef MLIR_BINDINGS_PYTHON_IRCORE_H
 #define MLIR_BINDINGS_PYTHON_IRCORE_H
 
+#include <cstddef>
 #include <optional>
 #include <sstream>
 #include <utility>
@@ -29,8 +30,6 @@
 #include "mlir/Bindings/Python/Nanobind.h"
 #include "mlir/Bindings/Python/NanobindAdaptors.h"
 
-#include "llvm/ADT/DenseMap.h"
-#include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/ThreadPool.h"
 
 namespace mlir {
@@ -255,7 +254,7 @@ private:
   // extension mechanism on the MlirContext for stashing user pointers.
   // Note that this holds a handle, which does not imply ownership.
   // Mappings will be removed when the context is destructed.
-  using LiveContextMap = llvm::DenseMap<void *, PyMlirContext *>;
+  using LiveContextMap = std::unordered_map<void *, PyMlirContext *>;
   static nanobind::ft_mutex live_contexts_mutex;
   static LiveContextMap &getLiveContexts();
 
@@ -264,7 +263,7 @@ private:
   // from this map, and while it still exists as an instance, any
   // attempt to access it will raise an error.
   using LiveModuleMap =
-      llvm::DenseMap<const void *, std::pair<nanobind::handle, PyModule *>>;
+      std::unordered_map<const void *, std::pair<nanobind::handle, PyModule *>>;
   LiveModuleMap liveModules;
 
   bool emitErrorDiagnostics = false;
@@ -687,7 +686,7 @@ public:
   /// Creates an operation. See corresponding python docstring.
   static nanobind::object
   create(std::string_view name, std::optional<std::vector<PyType *>> results,
-         llvm::ArrayRef<MlirValue> operands,
+         const MlirValue *operands, size_t numOperands,
          std::optional<nanobind::dict> attributes,
          std::optional<std::vector<PyBlock *>> successors, int regions,
          PyLocation &location, const nanobind::object &ip, bool inferType);
@@ -947,17 +946,16 @@ public:
     if (!DerivedTy::isaFunction(orig)) {
       auto origRepr =
           nanobind::cast<std::string>(nanobind::repr(nanobind::cast(orig)));
-      throw nanobind::value_error((::llvm::Twine("Cannot cast type to ") +
+      throw nanobind::value_error((std::string("Cannot cast type to ") +
                                    DerivedTy::pyClassName + " (from " +
                                    origRepr + ")")
-                                      .str()
                                       .c_str());
     }
     return orig;
   }
 
   static void bind(nanobind::module_ &m) {
-    auto cls = ClassTy(m, DerivedTy::pyClassName);
+    auto cls = ClassTy(m, DerivedTy::pyClassName, nanobind::is_generic());
     cls.def(nanobind::init<PyType &>(), nanobind::keep_alive<0, 1>(),
             nanobind::arg("cast_from_type"));
     cls.def_prop_ro_static(
@@ -966,8 +964,7 @@ public:
           if (DerivedTy::getTypeIdFunction)
             return PyTypeID(DerivedTy::getTypeIdFunction());
           throw nanobind::attribute_error(
-              (DerivedTy::pyClassName + ::llvm::Twine(" has no typeid."))
-                  .str()
+              (DerivedTy::pyClassName + std::string(" has no typeid."))
                   .c_str());
         },
         nanobind::sig("def static_typeid(/) -> TypeID"));
@@ -1080,10 +1077,9 @@ public:
     if (!DerivedTy::isaFunction(orig)) {
       auto origRepr =
           nanobind::cast<std::string>(nanobind::repr(nanobind::cast(orig)));
-      throw nanobind::value_error((::llvm::Twine("Cannot cast attribute to ") +
+      throw nanobind::value_error((std::string("Cannot cast attribute to ") +
                                    DerivedTy::pyClassName + " (from " +
                                    origRepr + ")")
-                                      .str()
                                       .c_str());
     }
     return orig;
@@ -1092,9 +1088,10 @@ public:
   static void bind(nanobind::module_ &m, PyType_Slot *slots = nullptr) {
     ClassTy cls;
     if (slots) {
-      cls = ClassTy(m, DerivedTy::pyClassName, nanobind::type_slots(slots));
+      cls = ClassTy(m, DerivedTy::pyClassName, nanobind::type_slots(slots),
+                    nanobind::is_generic());
     } else {
-      cls = ClassTy(m, DerivedTy::pyClassName);
+      cls = ClassTy(m, DerivedTy::pyClassName, nanobind::is_generic());
     }
     cls.def(nanobind::init<PyAttribute &>(), nanobind::keep_alive<0, 1>(),
             nanobind::arg("cast_from_attr"));
@@ -1110,8 +1107,7 @@ public:
           if (DerivedTy::getTypeIdFunction)
             return PyTypeID(DerivedTy::getTypeIdFunction());
           throw nanobind::attribute_error(
-              (DerivedTy::pyClassName + ::llvm::Twine(" has no typeid."))
-                  .str()
+              (DerivedTy::pyClassName + std::string(" has no typeid."))
                   .c_str());
         },
         nanobind::sig("def static_typeid(/) -> TypeID"));
@@ -1328,9 +1324,10 @@ private:
 /// Custom exception that allows access to error diagnostic information. This is
 /// converted to the `ir.MLIRError` python exception when thrown.
 struct MLIR_PYTHON_API_EXPORTED MLIRError {
-  MLIRError(::llvm::Twine message,
+  MLIRError(std::string message,
             std::vector<PyDiagnostic::DiagnosticInfo> &&errorDiagnostics = {})
-      : message(message.str()), errorDiagnostics(std::move(errorDiagnostics)) {}
+      : message(std::move(message)),
+        errorDiagnostics(std::move(errorDiagnostics)) {}
   std::string message;
   std::vector<PyDiagnostic::DiagnosticInfo> errorDiagnostics;
 };
@@ -1378,7 +1375,7 @@ public:
 
   PyRegionIterator &dunderIter() { return *this; }
 
-  PyRegion dunderNext();
+  nanobind::typed<nanobind::object, PyRegion> dunderNext();
 
   static void bind(nanobind::module_ &m);
 
@@ -1421,7 +1418,7 @@ public:
 
   PyBlockIterator &dunderIter() { return *this; }
 
-  PyBlock dunderNext();
+  nanobind::typed<nanobind::object, PyBlock> dunderNext();
 
   static void bind(nanobind::module_ &m);
 
@@ -1512,7 +1509,7 @@ public:
 
   PyOpOperandIterator &dunderIter() { return *this; }
 
-  PyOpOperand dunderNext();
+  nanobind::typed<nanobind::object, PyOpOperand> dunderNext();
 
   static void bind(nanobind::module_ &m);
 
@@ -1548,10 +1545,9 @@ public:
     if (!DerivedTy::isaFunction(orig.get())) {
       auto origRepr =
           nanobind::cast<std::string>(nanobind::repr(nanobind::cast(orig)));
-      throw nanobind::value_error((::llvm::Twine("Cannot cast value to ") +
+      throw nanobind::value_error((std::string("Cannot cast value to ") +
                                    DerivedTy::pyClassName + " (from " +
                                    origRepr + ")")
-                                      .str()
                                       .c_str());
     }
     return orig.get();
@@ -1560,9 +1556,8 @@ public:
   /// Binds the Python module objects to functions of this class.
   static void bind(nanobind::module_ &m) {
     auto cls = ClassTy(m, DerivedTy::pyClassName, nanobind::is_generic(),
-                       nanobind::sig((::llvm::Twine("class ") +
+                       nanobind::sig((std::string("class ") +
                                       DerivedTy::pyClassName + "(Value[_T])")
-                                         .str()
                                          .c_str()));
     cls.def(nanobind::init<PyValue &>(), nanobind::keep_alive<0, 1>(),
             nanobind::arg("value"));
@@ -1824,14 +1819,29 @@ public:
 
   bool dunderContains(const std::string &name);
 
-  static void
-  forEachAttr(MlirOperation op,
-              llvm::function_ref<void(MlirStringRef, MlirAttribute)> fn);
+  static void forEachAttr(MlirOperation op,
+                          std::function<void(MlirStringRef, MlirAttribute)> fn);
 
   static void bind(nanobind::module_ &m);
 
 private:
   PyOperationRef operation;
+};
+
+/// Base class of operation adaptors.
+class MLIR_PYTHON_API_EXPORTED PyOpAdaptor {
+public:
+  PyOpAdaptor(nanobind::list operands, PyOpAttributeMap attributes)
+      : operands(std::move(operands)), attributes(std::move(attributes)) {}
+  PyOpAdaptor(nanobind::list operands, PyOpView &opView)
+      : operands(std::move(operands)),
+        attributes(opView.getOperation().getRef()) {}
+
+  static void bind(nanobind::module_ &m);
+
+private:
+  nanobind::list operands;
+  PyOpAttributeMap attributes;
 };
 
 MLIR_PYTHON_API_EXPORTED MlirValue getUniqueResult(MlirOperation operation);

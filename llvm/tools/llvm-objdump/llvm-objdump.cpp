@@ -291,13 +291,6 @@ private:
 
 #define DEBUG_TYPE "objdump"
 
-enum class ColorOutput {
-  Auto,
-  Enable,
-  Disable,
-  Invalid,
-};
-
 static uint64_t AdjustVMA;
 static bool AllHeaders;
 static std::string ArchName;
@@ -310,7 +303,7 @@ bool objdump::SymbolDescription;
 bool objdump::TracebackTable;
 static std::vector<std::string> DisassembleSymbols;
 static bool DisassembleZeroes;
-static ColorOutput DisassemblyColor;
+ColorOutput objdump::DisassemblyColor;
 DIDumpType objdump::DwarfDumpType;
 static bool DynamicRelocations;
 static bool FaultMapSection;
@@ -1614,7 +1607,8 @@ collectLocalBranchTargets(ArrayRef<uint8_t> Bytes, MCInstrAnalysis *MIA,
   const bool isX86 = STI->getTargetTriple().isX86();
   const bool isAArch64 = STI->getTargetTriple().isAArch64();
   const bool isBPF = STI->getTargetTriple().isBPF();
-  if (!isPPC && !isX86 && !isAArch64 && !isBPF)
+  const bool isRISCV = STI->getTargetTriple().isRISCV();
+  if (!isPPC && !isX86 && !isAArch64 && !isBPF && !isRISCV)
     return;
 
   if (MIA)

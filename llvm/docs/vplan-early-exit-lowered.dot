@@ -8,13 +8,13 @@ compound=true
   ]
   N1 -> N2 [ label=""]
   N2 [label ="vector.body"]
+  N2 -> N5 [ label=""]
   N2 -> N4 [ label=""]
-  N2 -> N2 [ label="" dir=back]
   N4 [label =
-    "middle.split"
+    "vector.body.interim"
   ]
-  N4 -> N5 [ label=""]
   N4 -> N7 [ label=""]
+  N4:e -> N2:e [ label=""]
   N5 [label =
     "vector.early.exit"
   ]

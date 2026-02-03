@@ -324,6 +324,65 @@ module {
     llvm.return
   }
 
+  llvm.func @noreturn_function() attributes {noreturn} {
+    // CHECK: @noreturn_function
+    // CHECK-SAME: attributes {noreturn}
+    llvm.return
+  }
+
+  llvm.func @returnstwice_function() attributes {returnstwice} {
+    // CHECK: @returnstwice_function
+    // CHECK-SAME: attributes {returnstwice}
+    llvm.return
+  }
+
+  llvm.func @hot_function() attributes {hot} {
+    // CHECK: @hot_function
+    // CHECK-SAME: attributes {hot}
+    llvm.return
+  }
+
+  llvm.func @cold_function() attributes {cold} {
+    // CHECK: @cold_function
+    // CHECK-SAME: attributes {cold}
+    llvm.return
+  }
+
+  llvm.func @noduplicate_function() attributes {noduplicate} {
+    // CHECK: @noduplicate_function
+    // CHECK-SAME: attributes {noduplicate}
+    llvm.return
+  }
+
+  llvm.func @no_caller_saved_registers_function() attributes {no_caller_saved_registers} {
+    // CHECK: @no_caller_saved_registers_function
+    // CHECK-SAME: attributes {no_caller_saved_registers}
+    llvm.return
+  }
+
+  llvm.func @nocallback_function() attributes {nocallback} {
+    // CHECK: @nocallback_function
+    // CHECK-SAME: attributes {nocallback}
+    llvm.return
+  }
+
+  llvm.func @modular_format_function(%arg: i32) attributes {modular_format = "ident,1,1,foo,bar"} {
+    // CHECK: @modular_format_function
+    // CHECK-SAME: attributes {modular_format = "ident,1,1,foo,bar"}
+    llvm.return
+  }
+
+  llvm.func @no_builtins_all() attributes { nobuiltins = [] } {
+    // CHECK: @no_builtins_all
+    // CHECK-SAME: attributes {nobuiltins = []}
+    llvm.return
+  }
+
+  llvm.func @no_builtins_2() attributes { nobuiltins = ["foo", "bar"] } {
+    // CHECK: @no_builtins_2
+    // CHECK-SAME: attributes {nobuiltins = ["foo", "bar"]}
+    llvm.return
+  }
 
 }
 
