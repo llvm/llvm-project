@@ -42,8 +42,9 @@ public:
 
 private:
   template <bool RespectStrictMode>
-  auto createDiagBuilder(std::integral_constant<bool, RespectStrictMode>,
-                         const BinaryOperator *BinOp);
+  std::conditional_t<RespectStrictMode, void, DiagnosticBuilder>
+  createDiagBuilder(std::integral_constant<bool, RespectStrictMode>,
+                    const BinaryOperator *BinOp);
 
   bool UnsafeMode;
   bool IgnoreMacros;

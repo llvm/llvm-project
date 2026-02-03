@@ -240,7 +240,8 @@ void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
 }
 
 template <bool RespectStrictMode>
-auto BoolBitwiseOperationCheck::createDiagBuilder(
+std::conditional_t<RespectStrictMode, void, DiagnosticBuilder>
+BoolBitwiseOperationCheck::createDiagBuilder(
     std::integral_constant<bool, RespectStrictMode>,
     const BinaryOperator *BinOp) {
   if constexpr (RespectStrictMode) {
