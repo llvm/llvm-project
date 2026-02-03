@@ -276,7 +276,7 @@ static uint64_t adjustFixupValue(const MCFixup &Fixup, const MCValue &Target,
       }
     }
 
-    if (RefKind & AArch64::S_NC) {
+    if (AArch64::isNotChecked(RefKind)) {
       Value &= 0xFFFF;
     } else if (AArch64::getSymbolLoc(RefKind) == AArch64::S_SABS) {
       if (SignedValue > 0xFFFF || SignedValue < -0xFFFF)
@@ -486,7 +486,8 @@ void AArch64AsmBackend::applyFixup(const MCFragment &F, const MCFixup &Fixup,
   // handle this more cleanly. This may affect the output of -show-mc-encoding.
   AArch64::Specifier RefKind =
       static_cast<AArch64::Specifier>(Target.getSpecifier());
-  if (AArch64::getSymbolLoc(RefKind) == AArch64::S_SABS ||
+  if ((RefKind >= MCSymbolRefExpr::FirstTargetSpecifier &&
+       AArch64::getSymbolLoc(RefKind) == AArch64::S_SABS) ||
       (!RefKind && Fixup.getKind() == AArch64::fixup_aarch64_movw)) {
     // If the immediate is negative, generate MOVN else MOVZ.
     // (Bit 30 = 0) ==> MOVN, (Bit 30 = 1) ==> MOVZ.
