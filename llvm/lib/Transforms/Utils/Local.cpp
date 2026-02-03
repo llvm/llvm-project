@@ -275,7 +275,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
       Builder.CreateBr(TheOnlyDest);
       BasicBlock *BB = SI->getParent();
 
-      SmallSet<BasicBlock *, 8> RemovedSuccessors;
+      SmallPtrSet<BasicBlock *, 8> RemovedSuccessors;
 
       // Remove entries from PHI nodes which we no longer branch to...
       BasicBlock *SuccToKeep = TheOnlyDest;
@@ -343,7 +343,7 @@ bool llvm::ConstantFoldTerminator(BasicBlock *BB, bool DeleteDeadConditions,
     if (auto *BA =
           dyn_cast<BlockAddress>(IBI->getAddress()->stripPointerCasts())) {
       BasicBlock *TheOnlyDest = BA->getBasicBlock();
-      SmallSet<BasicBlock *, 8> RemovedSuccessors;
+      SmallPtrSet<BasicBlock *, 8> RemovedSuccessors;
 
       // Insert the new branch.
       Builder.CreateBr(TheOnlyDest);
@@ -925,17 +925,18 @@ using IncomingValueMap = SmallDenseMap<BasicBlock *, Value *, 16>;
 /// \returns the selected value.
 static Value *selectIncomingValueForBlock(Value *OldVal, BasicBlock *BB,
                                           IncomingValueMap &IncomingValues) {
+  IncomingValueMap::const_iterator It = IncomingValues.find(BB);
   if (!isa<UndefValue>(OldVal)) {
-    assert((!IncomingValues.count(BB) ||
-            IncomingValues.find(BB)->second == OldVal) &&
+    assert((It != IncomingValues.end() &&
+            (!(It->second) || It->second == OldVal)) &&
            "Expected OldVal to match incoming value from BB!");
 
-    IncomingValues.insert(std::make_pair(BB, OldVal));
+    IncomingValues.insert_or_assign(BB, OldVal);
     return OldVal;
   }
 
-  IncomingValueMap::const_iterator It = IncomingValues.find(BB);
-  if (It != IncomingValues.end()) return It->second;
+  if (It != IncomingValues.end() && It->second)
+    return It->second;
 
   return OldVal;
 }
@@ -943,19 +944,28 @@ static Value *selectIncomingValueForBlock(Value *OldVal, BasicBlock *BB,
 /// Create a map from block to value for the operands of a
 /// given phi.
 ///
-/// Create a map from block to value for each non-undef value flowing
-/// into \p PN.
+/// This function initializes the map with UndefValue for all predecessors
+/// in BBPreds, and then updates the map with concrete non-undef values
+/// found in the PHI node.
 ///
 /// \param PN The phi we are collecting the map for.
+/// \param BBPreds The list of all predecessor blocks to initialize with Undef.
 /// \param IncomingValues [out] The map from block to value for this phi.
 static void gatherIncomingValuesToPhi(PHINode *PN,
+                                      const PredBlockVector &BBPreds,
                                       IncomingValueMap &IncomingValues) {
-  for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
-    BasicBlock *BB = PN->getIncomingBlock(i);
-    Value *V = PN->getIncomingValue(i);
+  for (BasicBlock *Pred : BBPreds)
+    IncomingValues[Pred] = nullptr;
 
-    if (!isa<UndefValue>(V))
-      IncomingValues.insert(std::make_pair(BB, V));
+  for (unsigned i = 0, e = PN->getNumIncomingValues(); i != e; ++i) {
+    Value *V = PN->getIncomingValue(i);
+    if (isa<UndefValue>(V))
+      continue;
+
+    BasicBlock *BB = PN->getIncomingBlock(i);
+    auto It = IncomingValues.find(BB);
+    if (It != IncomingValues.end())
+      It->second = V;
   }
 }
 
@@ -974,12 +984,14 @@ static void replaceUndefValuesInPhi(PHINode *PN,
 
     BasicBlock *BB = PN->getIncomingBlock(i);
     IncomingValueMap::const_iterator It = IncomingValues.find(BB);
+    if (It == IncomingValues.end())
+      continue;
 
     // Keep track of undef/poison incoming values. Those must match, so we fix
     // them up below if needed.
     // Note: this is conservatively correct, but we could try harder and group
     // the undef values per incoming basic block.
-    if (It == IncomingValues.end()) {
+    if (!It->second) {
       TrueUndefOps.push_back(i);
       continue;
     }
@@ -1077,6 +1089,7 @@ static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
   Value *OldVal = PN->removeIncomingValue(BB, false);
   assert(OldVal && "No entry in PHI for Pred BB!");
 
+  // Map BBPreds to defined values or nullptr (representing undefined values).
   IncomingValueMap IncomingValues;
 
   // We are merging two blocks - BB, and the block containing PN - and
@@ -1088,7 +1101,7 @@ static void redirectValuesFromPredecessorsToPhi(BasicBlock *BB,
   // values flowing into PN, we want to rewrite those values to be
   // consistent with the non-undef values.
 
-  gatherIncomingValuesToPhi(PN, IncomingValues);
+  gatherIncomingValuesToPhi(PN, BBPreds, IncomingValues);
 
   // If this incoming value is one of the PHI nodes in BB, the new entries
   // in the PHI node are the entries from the old PHI.
@@ -2435,8 +2448,8 @@ bool llvm::replaceAllDbgUsesWith(Instruction &From, Value &To,
   // Handle integer-to-integer widening and narrowing.
   // FIXME: Use DW_OP_convert when it's available everywhere.
   if (FromTy->isIntegerTy() && ToTy->isIntegerTy()) {
-    uint64_t FromBits = FromTy->getPrimitiveSizeInBits();
-    uint64_t ToBits = ToTy->getPrimitiveSizeInBits();
+    uint64_t FromBits = FromTy->getIntegerBitWidth();
+    uint64_t ToBits = ToTy->getIntegerBitWidth();
     assert(FromBits != ToBits && "Unexpected no-op conversion");
 
     // When the width of the result grows, assume that a debugger will only
@@ -2518,7 +2531,7 @@ unsigned llvm::changeToUnreachable(Instruction *I, bool PreserveLCSSA,
   if (MSSAU)
     MSSAU->changeToUnreachable(I);
 
-  SmallSet<BasicBlock *, 8> UniqueSuccessors;
+  SmallPtrSet<BasicBlock *, 8> UniqueSuccessors;
 
   // Loop over all of the successors, removing BB's entry from any PHI
   // nodes.
@@ -2961,6 +2974,10 @@ static void combineMetadata(Instruction *K, const Instruction *J,
         if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
           K->setMetadata(Kind, MDNode::getMostGenericRange(JMD, KMD));
         break;
+      case LLVMContext::MD_nofpclass:
+        if (!AAOnly && (DoesKMove || !K->hasMetadata(LLVMContext::MD_noundef)))
+          K->setMetadata(Kind, MDNode::getMostGenericNoFPClass(JMD, KMD));
+        break;
       case LLVMContext::MD_fpmath:
         if (!AAOnly)
           K->setMetadata(Kind, MDNode::getMostGenericFPMath(JMD, KMD));
@@ -3024,6 +3041,19 @@ static void combineMetadata(Instruction *K, const Instruction *J,
       case LLVMContext::MD_nosanitize:
         // Preserve !nosanitize if both K and J have it.
         K->setMetadata(Kind, JMD);
+        break;
+      case LLVMContext::MD_captures:
+        K->setMetadata(
+            Kind, MDNode::fromCaptureComponents(
+                      K->getContext(), MDNode::toCaptureComponents(JMD) |
+                                           MDNode::toCaptureComponents(KMD)));
+        break;
+      case LLVMContext::MD_alloc_token:
+        // Preserve !alloc_token if both K and J have it, and they are equal.
+        if (KMD == JMD)
+          K->setMetadata(Kind, JMD);
+        else
+          K->setMetadata(Kind, nullptr);
         break;
       }
   }
@@ -3136,6 +3166,14 @@ void llvm::copyMetadataForLoad(LoadInst &Dest, const LoadInst &Source) {
     case LLVMContext::MD_range:
       copyRangeMetadata(DL, Source, N, Dest);
       break;
+
+    case LLVMContext::MD_nofpclass:
+      // This only applies if the floating-point type interpretation. This
+      // should handle degenerate cases like casting between a scalar and single
+      // element vector.
+      if (NewType->getScalarType() == Source.getType()->getScalarType())
+        Dest.setMetadata(ID, N);
+      break;
     }
   }
 }
@@ -3233,6 +3271,13 @@ unsigned llvm::replaceDominatedUsesWith(Value *From, Value *To,
   return ::replaceDominatedUsesWith(From, To, Dominates);
 }
 
+unsigned llvm::replaceDominatedUsesWith(Value *From, Value *To,
+                                        DominatorTree &DT,
+                                        const Instruction *I) {
+  auto Dominates = [&](const Use &U) { return DT.dominates(I, U); };
+  return ::replaceDominatedUsesWith(From, To, Dominates);
+}
+
 unsigned llvm::replaceDominatedUsesWithIf(
     Value *From, Value *To, DominatorTree &DT, const BasicBlockEdge &Root,
     function_ref<bool(const Use &U, const Value *To)> ShouldReplace) {
@@ -3247,6 +3292,15 @@ unsigned llvm::replaceDominatedUsesWithIf(
     function_ref<bool(const Use &U, const Value *To)> ShouldReplace) {
   auto DominatesAndShouldReplace = [&](const Use &U) {
     return DT.dominates(BB, U) && ShouldReplace(U, To);
+  };
+  return ::replaceDominatedUsesWith(From, To, DominatesAndShouldReplace);
+}
+
+unsigned llvm::replaceDominatedUsesWithIf(
+    Value *From, Value *To, DominatorTree &DT, const Instruction *I,
+    function_ref<bool(const Use &U, const Value *To)> ShouldReplace) {
+  auto DominatesAndShouldReplace = [&](const Use &U) {
+    return DT.dominates(I, U) && ShouldReplace(U, To);
   };
   return ::replaceDominatedUsesWith(From, To, DominatesAndShouldReplace);
 }
@@ -3342,8 +3396,11 @@ void llvm::hoistAllInstructionsInto(BasicBlock *DomBlock, Instruction *InsertPt,
   // retain their original debug locations (DILocations) and debug intrinsic
   // instructions.
   //
-  // Doing so would degrade the debugging experience and adversely affect the
-  // accuracy of profiling information.
+  // Doing so would degrade the debugging experience.
+  //
+  // FIXME: Issue #152767: debug info should also be the same as the
+  // original branch, **if** the user explicitly indicated that (for sampling
+  // PGO)
   //
   // Currently, when hoisting the instructions, we take the following actions:
   // - Remove their debug intrinsic instructions.
@@ -3384,7 +3441,11 @@ DIExpression *llvm::getExpressionForConstant(DIBuilder &DIB, const Constant &C,
   // Create integer constant expression.
   auto createIntegerExpression = [&DIB](const Constant &CV) -> DIExpression * {
     const APInt &API = cast<ConstantInt>(&CV)->getValue();
-    std::optional<int64_t> InitIntOpt = API.trySExtValue();
+    std::optional<int64_t> InitIntOpt;
+    if (API.getBitWidth() == 1)
+      InitIntOpt = API.tryZExtValue();
+    else
+      InitIntOpt = API.trySExtValue();
     return InitIntOpt ? DIB.createConstantValueExpression(
                             static_cast<uint64_t>(*InitIntOpt))
                       : nullptr;
@@ -3397,8 +3458,8 @@ DIExpression *llvm::getExpressionForConstant(DIBuilder &DIB, const Constant &C,
   if (FP && Ty.isFloatingPointTy() && Ty.getScalarSizeInBits() <= 64) {
     const APFloat &APF = FP->getValueAPF();
     APInt const &API = APF.bitcastToAPInt();
-    if (auto Temp = API.getZExtValue())
-      return DIB.createConstantValueExpression(static_cast<uint64_t>(Temp));
+    if (uint64_t Temp = API.getZExtValue())
+      return DIB.createConstantValueExpression(Temp);
     return DIB.createConstantValueExpression(*API.getRawData());
   }
 
@@ -3838,8 +3899,8 @@ void llvm::maybeMarkSanitizerLibraryCallNoBuiltin(
 
 bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
   const auto *Op = I->getOperand(OpIdx);
-  // We can't have a PHI with a metadata type.
-  if (Op->getType()->isMetadataTy())
+  // We can't have a PHI with a metadata or token type.
+  if (Op->getType()->isMetadataTy() || Op->getType()->isTokenLikeTy())
     return false;
 
   // swifterror pointers can only be used by a load, store, or as a swifterror
@@ -3847,6 +3908,12 @@ bool llvm::canReplaceOperandWithVariable(const Instruction *I, unsigned OpIdx) {
   // instructions.
   if (Op->isSwiftError())
     return false;
+
+  // Protected pointer field loads/stores should be paired with the intrinsic
+  // to avoid unnecessary address escapes.
+  if (auto *II = dyn_cast<IntrinsicInst>(Op))
+    if (II->getIntrinsicID() == Intrinsic::protected_field_ptr)
+      return false;
 
   // Cannot replace alloca argument with phi/select.
   if (I->isLifetimeStartOrEnd())

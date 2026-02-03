@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.2-library %s -fnative-half-type -verify
+// RUN: %clang_cc1 -finclude-default-header -triple dxil-pc-shadermodel6.2-library %s -fnative-half-type -fnative-int16-type -verify
 
 
 int16_t4 test_asint16_too_many_arg(uint16_t p0, uint16_t p1)

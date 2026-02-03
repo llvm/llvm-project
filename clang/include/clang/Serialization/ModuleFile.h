@@ -353,9 +353,6 @@ public:
   /// Base macro ID for macros local to this module.
   serialization::MacroID BaseMacroID = 0;
 
-  /// Remapping table for macro IDs in this module.
-  ContinuousRangeMap<uint32_t, int, 2> MacroRemap;
-
   /// The offset of the start of the set of defined macros.
   uint64_t MacroStartOffset = 0;
 
@@ -371,9 +368,6 @@ public:
   /// Base preprocessed entity ID for preprocessed entities local to
   /// this module.
   serialization::PreprocessedEntityID BasePreprocessedEntityID = 0;
-
-  /// Remapping table for preprocessed entity IDs in this module.
-  ContinuousRangeMap<uint32_t, int, 2> PreprocessedEntityRemap;
 
   const PPEntityOffset *PreprocessedEntityOffsets = nullptr;
   unsigned NumPreprocessedEntities = 0;

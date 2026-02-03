@@ -406,4 +406,11 @@ void testMultiLineDeclStmt(int * p) {
   foo(ap1[1]);  // expected-note{{used in buffer access here}}
 }
 
+#if __cplusplus >= 202002L
+consteval void testConstevalPtrArithmetic(int idx) {
+  int y[3] = {0, 1, 2};
+  foo(y[idx]);
+}
+#endif
+
 #endif

@@ -195,7 +195,7 @@ end
 
 ! CHECK-LABEL: func.func @_QMdispatch1Pdisplay_class(
 ! CHECK-SAME: %[[ARG:.*]]: [[CLASS:!fir.class<.*>>]]
-! CHECK: %[[ARG_DECL:.*]]:2 = hlfir.declare %[[ARG]] dummy_scope %{{[0-9]+}} {uniq_name = "_QMdispatch1Fdisplay_classEp"} : (!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>, !fir.dscope) -> (!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>, !fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>)
+! CHECK: %[[ARG_DECL:.*]]:2 = hlfir.declare %[[ARG]] dummy_scope %{{[0-9]+}} arg {{[0-9]+}} {uniq_name = "_QMdispatch1Fdisplay_classEp"} : (!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>, !fir.dscope) -> (!fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>, !fir.class<!fir.type<_QMdispatch1Tp1{a:i32,b:i32}>>)
 
 ! Check dynamic dispatch equal to `call p%display2()` with binding index = 2.
 ! CHECK: %[[BOXDESC:.*]] = fir.box_tdesc %[[ARG_DECL]]#0 : ([[CLASS]]) -> !fir.tdesc<none>
@@ -296,7 +296,7 @@ end
 ! CHECK-LABEL: _QMdispatch1Pno_pass_array_pointer
 ! CHECK-LABEL: _QMdispatch1Pcall_a1_proc
 
-! Check the layout of the binding table. This is easier to do in FIR than in 
+! Check the layout of the binding table. This is easier to do in FIR than in
 ! LLVM IR.
 
 ! BT-LABEL: fir.type_info @_QMdispatch1Tty_kindK10K20

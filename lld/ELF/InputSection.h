@@ -262,10 +262,6 @@ public:
     return {*this, sym, offset};
   }
 
-  // Each section knows how to relocate itself. These functions apply
-  // relocations, assuming that Buf points to this section's copy in
-  // the mmap'ed output buffer.
-  template <class ELFT> void relocate(Ctx &, uint8_t *buf, uint8_t *bufEnd);
   uint64_t getRelocTargetVA(Ctx &, const Relocation &r, uint64_t p) const;
 
   // The native ELF reloc data type is not very convenient to handle.
@@ -398,7 +394,7 @@ public:
                  StringRef name);
   static bool classof(const SectionBase *s) { return s->kind() == EHFrame; }
   template <class ELFT> void split();
-  template <class ELFT, class RelTy> void split(ArrayRef<RelTy> rels);
+  template <class ELFT, class RelTy> void preprocessRelocs(Relocs<RelTy> rels);
 
   // Splittable sections are handled as a sequence of data
   // rather than a single large blob of data.
@@ -406,6 +402,10 @@ public:
 
   SyntheticSection *getParent() const;
   uint64_t getParentOffset(uint64_t offset) const;
+
+  // Preprocessed relocations in uniform format to avoid REL/RELA/CREL
+  // relocation format handling throughout the codebase.
+  SmallVector<Relocation, 0> rels;
 };
 
 // This is a section that is added directly to an output section
@@ -443,8 +443,12 @@ public:
 
   InputSectionBase *getRelocatedSection() const;
 
+  // Each section knows how to relocate itself. These functions apply
+  // relocations, assuming that `buf` points to this section's copy in
+  // the mmap'ed output buffer.
   template <class ELFT, class RelTy>
   void relocateNonAlloc(Ctx &, uint8_t *buf, Relocs<RelTy> rels);
+  template <class ELFT> void relocate(Ctx &, uint8_t *buf, uint8_t *bufEnd);
 
   // Points to the canonical section. If ICF folds two sections, repl pointer of
   // one section points to the other.

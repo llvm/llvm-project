@@ -8,6 +8,7 @@
 
 #include "MCTargetDesc/SystemZMCTargetDesc.h"
 #include "TargetInfo/SystemZTargetInfo.h"
+#include "llvm/MC/MCDecoder.h"
 #include "llvm/MC/MCDecoderOps.h"
 #include "llvm/MC/MCDisassembler/MCDisassembler.h"
 #include "llvm/MC/MCInst.h"
@@ -19,6 +20,7 @@
 #include <cstdint>
 
 using namespace llvm;
+using namespace llvm::MCD;
 
 #define DEBUG_TYPE "systemz-disassembler"
 

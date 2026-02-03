@@ -96,7 +96,7 @@ struct MaskedArrayExpr {
   /// hlfir.elemental_addr that form the elemental tree producing
   /// the expression value. hlfir.elemental that produce values
   /// used inside transformational operations are not part of this set.
-  llvm::SmallSet<mlir::Operation *, 4> elementalParts{};
+  llvm::SmallPtrSet<mlir::Operation *, 4> elementalParts{};
   /// Was generateNoneElementalPart called?
   bool noneElementalPartWasGenerated = false;
   /// Is this expression the mask expression of the outer where statement?
@@ -517,7 +517,10 @@ void OrderedAssignmentRewriter::pre(hlfir::RegionAssignOp regionAssignOp) {
   } else {
     // TODO: preserve allocatable assignment aspects for forall once
     // they are conveyed in hlfir.region_assign.
-    hlfir::AssignOp::create(builder, loc, rhsEntity, lhsEntity);
+    auto assignOp = hlfir::AssignOp::create(builder, loc, rhsEntity, lhsEntity);
+    if (auto accessGroups = regionAssignOp->getAttrOfType<mlir::ArrayAttr>(
+            fir::getAccessGroupsAttrName()))
+      assignOp->setAttr(fir::getAccessGroupsAttrName(), accessGroups);
   }
   generateCleanupIfAny(loweredLhs.elementalCleanup);
   if (loweredLhs.vectorSubscriptLoopNest)

@@ -731,6 +731,12 @@ TEST_F(TargetDeclTest, BuiltinTemplates) {
     using type_pack_element = [[__type_pack_element]]<N, Pack...>;
   )cpp";
   EXPECT_DECLS("TemplateSpecializationTypeLoc", );
+
+  Code = R"cpp(
+    template <template <class...> class Templ, class... Types>
+    using dedup_types = Templ<[[__builtin_dedup_pack]]<Types...>...>;
+  )cpp";
+  EXPECT_DECLS("TemplateSpecializationTypeLoc", );
 }
 
 TEST_F(TargetDeclTest, MemberOfTemplate) {
@@ -1023,8 +1029,7 @@ TEST_F(TargetDeclTest, DependentTypes) {
         template <typename T>
         void foo(typename A<T>::template [[B]]<int>);
       )cpp";
-  EXPECT_DECLS("DependentTemplateSpecializationTypeLoc",
-               "template <typename> struct B");
+  EXPECT_DECLS("TemplateSpecializationTypeLoc", "template <typename> struct B");
 
   // Dependent name with recursive definition. We don't expect a
   // result, but we shouldn't get into a stack overflow either.
@@ -1822,7 +1827,7 @@ TEST_F(FindExplicitReferencesTest, AllRefsInFoo) {
               int (*$2^fptr)(int $3^a, int) = nullptr;
              }
            )cpp",
-           "0: targets = {(unnamed)}\n"
+           "0: targets = {(unnamed class)}\n"
            "1: targets = {x}, decl\n"
            "2: targets = {fptr}, decl\n"
            "3: targets = {a}, decl\n"},

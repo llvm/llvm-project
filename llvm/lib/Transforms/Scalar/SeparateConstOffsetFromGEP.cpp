@@ -216,7 +216,7 @@ public:
   /// Looks for a constant offset from the given GEP index without extracting
   /// it. It returns the numeric value of the extracted constant offset (0 if
   /// failed). The meaning of the arguments are the same as Extract.
-  static int64_t Find(Value *Idx, GetElementPtrInst *GEP);
+  static APInt Find(Value *Idx, GetElementPtrInst *GEP);
 
 private:
   ConstantOffsetExtractor(BasicBlock::iterator InsertionPt)
@@ -247,8 +247,8 @@ private:
   /// index I' according to UserChain produced by function "find".
   ///
   /// The building conceptually takes two steps:
-  /// 1) iteratively distribute s/zext towards the leaves of the expression tree
-  /// that computes I
+  /// 1) iteratively distribute sext/zext/trunc towards the leaves of the
+  /// expression tree that computes I
   /// 2) reassociate the expression tree to the form I' + C.
   ///
   /// For example, to extract the 5 from sext(a + (b + 5)), we first distribute
@@ -260,29 +260,30 @@ private:
   Value *rebuildWithoutConstOffset();
 
   /// After the first step of rebuilding the GEP index without the constant
-  /// offset, distribute s/zext to the operands of all operators in UserChain.
-  /// e.g., zext(sext(a + (b + 5)) (assuming no overflow) =>
+  /// offset, distribute sext/zext/trunc to the operands of all operators in
+  /// UserChain. e.g., zext(sext(a + (b + 5)) (assuming no overflow) =>
   /// zext(sext(a)) + (zext(sext(b)) + zext(sext(5))).
   ///
   /// The function also updates UserChain to point to new subexpressions after
-  /// distributing s/zext. e.g., the old UserChain of the above example is
-  /// 5 -> b + 5 -> a + (b + 5) -> sext(...) -> zext(sext(...)),
+  /// distributing sext/zext/trunc. e.g., the old UserChain of the above example
+  /// is
+  ///   5 -> b + 5 -> a + (b + 5) -> sext(...) -> zext(sext(...)),
   /// and the new UserChain is
-  /// zext(sext(5)) -> zext(sext(b)) + zext(sext(5)) ->
-  ///   zext(sext(a)) + (zext(sext(b)) + zext(sext(5))
+  ///   zext(sext(5)) -> zext(sext(b)) + zext(sext(5)) ->
+  ///     zext(sext(a)) + (zext(sext(b)) + zext(sext(5))
   ///
   /// \p ChainIndex The index to UserChain. ChainIndex is initially
   ///               UserChain.size() - 1, and is decremented during
   ///               the recursion.
-  Value *distributeExtsAndCloneChain(unsigned ChainIndex);
+  Value *distributeCastsAndCloneChain(unsigned ChainIndex);
 
   /// Reassociates the GEP index to the form I' + C and returns I'.
   Value *removeConstOffset(unsigned ChainIndex);
 
-  /// A helper function to apply ExtInsts, a list of s/zext, to value V.
-  /// e.g., if ExtInsts = [sext i32 to i64, zext i16 to i32], this function
+  /// A helper function to apply CastInsts, a list of sext/zext/trunc, to value
+  /// V.  e.g., if CastInsts = [sext i32 to i64, zext i16 to i32], this function
   /// returns "sext i32 (zext i16 V to i32) to i64".
-  Value *applyExts(Value *V);
+  Value *applyCasts(Value *V);
 
   /// A helper function that returns whether we can trace into the operands
   /// of binary operator BO for a constant offset.
@@ -307,8 +308,8 @@ private:
   SmallVector<User *, 8> UserChain;
 
   /// A data structure used in rebuildWithoutConstOffset. Contains all
-  /// sext/zext instructions along UserChain.
-  SmallVector<CastInst *, 16> ExtInsts;
+  /// sext/zext/trunc instructions along UserChain.
+  SmallVector<CastInst *, 16> CastInsts;
 
   /// Insertion position of cloned instructions.
   BasicBlock::iterator IP;
@@ -383,14 +384,14 @@ private:
   /// \p Variadic                  The variadic part of the original GEP.
   /// \p AccumulativeByteOffset    The constant offset.
   void lowerToSingleIndexGEPs(GetElementPtrInst *Variadic,
-                              int64_t AccumulativeByteOffset);
+                              const APInt &AccumulativeByteOffset);
 
   /// Finds the constant offset within each index and accumulates them. If
   /// LowerGEP is true, it finds in indices of both sequential and structure
   /// types, otherwise it only finds in sequential indices. The output
   /// NeedsExtraction indicates whether we successfully find a non-zero constant
   /// offset.
-  int64_t accumulateByteOffset(GetElementPtrInst *GEP, bool &NeedsExtraction);
+  APInt accumulateByteOffset(GetElementPtrInst *GEP, bool &NeedsExtraction);
 
   /// Canonicalize array indices to pointer-size integers. This helps to
   /// simplify the logic of splitting a GEP. For example, if a + b is a
@@ -491,7 +492,7 @@ bool ConstantOffsetExtractor::CanTraceInto(bool SignExtended,
   }
 
   Value *LHS = BO->getOperand(0), *RHS = BO->getOperand(1);
-  // Do not trace into "or" unless it is equivalent to "add".
+  // Do not trace into "or" unless it is equivalent to "add nuw nsw".
   // This is the case if the or's disjoint flag is set.
   if (BO->getOpcode() == Instruction::Or &&
       !cast<PossiblyDisjointInst>(BO)->isDisjoint())
@@ -503,8 +504,8 @@ bool ConstantOffsetExtractor::CanTraceInto(bool SignExtended,
   if (ZeroExtended && !SignExtended && BO->getOpcode() == Instruction::Sub)
     return false;
 
-  // In addition, tracing into BO requires that its surrounding s/zext (if
-  // any) is distributable to both operands.
+  // In addition, tracing into BO requires that its surrounding sext/zext/trunc
+  // (if any) is distributable to both operands.
   //
   // Suppose BO = A op B.
   //  SignExtended | ZeroExtended | Distributable?
@@ -628,11 +629,11 @@ APInt ConstantOffsetExtractor::find(Value *V, bool SignExtended,
   return ConstantOffset;
 }
 
-Value *ConstantOffsetExtractor::applyExts(Value *V) {
+Value *ConstantOffsetExtractor::applyCasts(Value *V) {
   Value *Current = V;
-  // ExtInsts is built in the use-def order. Therefore, we apply them to V
+  // CastInsts is built in the use-def order. Therefore, we apply them to V
   // in the reversed order.
-  for (CastInst *I : llvm::reverse(ExtInsts)) {
+  for (CastInst *I : llvm::reverse(CastInsts)) {
     if (Constant *C = dyn_cast<Constant>(Current)) {
       // Try to constant fold the cast.
       Current = ConstantFoldCastOperand(I->getOpcode(), C, I->getType(), DL);
@@ -640,17 +641,24 @@ Value *ConstantOffsetExtractor::applyExts(Value *V) {
         continue;
     }
 
-    Instruction *Ext = I->clone();
-    Ext->setOperand(0, Current);
-    Ext->insertBefore(*IP->getParent(), IP);
-    Current = Ext;
+    Instruction *Cast = I->clone();
+    Cast->setOperand(0, Current);
+    // In ConstantOffsetExtractor::find we do not analyze nuw/nsw for trunc, so
+    // we assume that it is ok to redistribute trunc over add/sub/or. But for
+    // example (add (trunc nuw A), (trunc nuw B)) is more poisonous than (trunc
+    // nuw (add A, B))). To make such redistributions legal we drop all the
+    // poison generating flags from cloned trunc instructions here.
+    if (isa<TruncInst>(Cast))
+      Cast->dropPoisonGeneratingFlags();
+    Cast->insertBefore(*IP->getParent(), IP);
+    Current = Cast;
   }
   return Current;
 }
 
 Value *ConstantOffsetExtractor::rebuildWithoutConstOffset() {
-  distributeExtsAndCloneChain(UserChain.size() - 1);
-  // Remove all nullptrs (used to be s/zext) from UserChain.
+  distributeCastsAndCloneChain(UserChain.size() - 1);
+  // Remove all nullptrs (used to be sext/zext/trunc) from UserChain.
   unsigned NewSize = 0;
   for (User *I : UserChain) {
     if (I != nullptr) {
@@ -663,29 +671,29 @@ Value *ConstantOffsetExtractor::rebuildWithoutConstOffset() {
 }
 
 Value *
-ConstantOffsetExtractor::distributeExtsAndCloneChain(unsigned ChainIndex) {
+ConstantOffsetExtractor::distributeCastsAndCloneChain(unsigned ChainIndex) {
   User *U = UserChain[ChainIndex];
   if (ChainIndex == 0) {
     assert(isa<ConstantInt>(U));
-    // If U is a ConstantInt, applyExts will return a ConstantInt as well.
-    return UserChain[ChainIndex] = cast<ConstantInt>(applyExts(U));
+    // If U is a ConstantInt, applyCasts will return a ConstantInt as well.
+    return UserChain[ChainIndex] = cast<ConstantInt>(applyCasts(U));
   }
 
   if (CastInst *Cast = dyn_cast<CastInst>(U)) {
     assert(
         (isa<SExtInst>(Cast) || isa<ZExtInst>(Cast) || isa<TruncInst>(Cast)) &&
         "Only following instructions can be traced: sext, zext & trunc");
-    ExtInsts.push_back(Cast);
+    CastInsts.push_back(Cast);
     UserChain[ChainIndex] = nullptr;
-    return distributeExtsAndCloneChain(ChainIndex - 1);
+    return distributeCastsAndCloneChain(ChainIndex - 1);
   }
 
   // Function find only trace into BinaryOperator and CastInst.
   BinaryOperator *BO = cast<BinaryOperator>(U);
   // OpNo = which operand of BO is UserChain[ChainIndex - 1]
   unsigned OpNo = (BO->getOperand(0) == UserChain[ChainIndex - 1] ? 0 : 1);
-  Value *TheOther = applyExts(BO->getOperand(1 - OpNo));
-  Value *NextInChain = distributeExtsAndCloneChain(ChainIndex - 1);
+  Value *TheOther = applyCasts(BO->getOperand(1 - OpNo));
+  Value *NextInChain = distributeCastsAndCloneChain(ChainIndex - 1);
 
   BinaryOperator *NewBO = nullptr;
   if (OpNo == 0) {
@@ -706,7 +714,7 @@ Value *ConstantOffsetExtractor::removeConstOffset(unsigned ChainIndex) {
 
   BinaryOperator *BO = cast<BinaryOperator>(UserChain[ChainIndex]);
   assert((BO->use_empty() || BO->hasOneUse()) &&
-         "distributeExtsAndCloneChain clones each BinaryOperator in "
+         "distributeCastsAndCloneChain clones each BinaryOperator in "
          "UserChain, so no one should be used more than "
          "once");
 
@@ -840,7 +848,8 @@ static bool allowsPreservingNUW(const User *U) {
   // "add nuw trunc(a), trunc(b)" is more poisonous than "trunc(add nuw a, b)"
   if (const TruncInst *TI = dyn_cast<TruncInst>(U))
     return TI->hasNoUnsignedWrap();
-  return isa<CastInst>(U) || isa<ConstantInt>(U);
+  assert((isa<CastInst>(U) || isa<ConstantInt>(U)) && "Unexpected User.");
+  return true;
 }
 
 Value *ConstantOffsetExtractor::Extract(Value *Idx, GetElementPtrInst *GEP,
@@ -865,12 +874,11 @@ Value *ConstantOffsetExtractor::Extract(Value *Idx, GetElementPtrInst *GEP,
   return IdxWithoutConstOffset;
 }
 
-int64_t ConstantOffsetExtractor::Find(Value *Idx, GetElementPtrInst *GEP) {
+APInt ConstantOffsetExtractor::Find(Value *Idx, GetElementPtrInst *GEP) {
   // If Idx is an index of an inbound GEP, Idx is guaranteed to be non-negative.
   return ConstantOffsetExtractor(GEP->getIterator())
       .find(Idx, /* SignExtended */ false, /* ZeroExtended */ false,
-            GEP->isInBounds())
-      .getSExtValue();
+            GEP->isInBounds());
 }
 
 bool SeparateConstOffsetFromGEP::canonicalizeArrayIndicesToIndexSize(
@@ -892,11 +900,11 @@ bool SeparateConstOffsetFromGEP::canonicalizeArrayIndicesToIndexSize(
   return Changed;
 }
 
-int64_t
-SeparateConstOffsetFromGEP::accumulateByteOffset(GetElementPtrInst *GEP,
-                                                 bool &NeedsExtraction) {
+APInt SeparateConstOffsetFromGEP::accumulateByteOffset(GetElementPtrInst *GEP,
+                                                       bool &NeedsExtraction) {
   NeedsExtraction = false;
-  int64_t AccumulativeByteOffset = 0;
+  unsigned IdxWidth = DL->getIndexTypeSizeInBits(GEP->getType());
+  APInt AccumulativeByteOffset(IdxWidth, 0);
   gep_type_iterator GTI = gep_type_begin(*GEP);
   for (unsigned I = 1, E = GEP->getNumOperands(); I != E; ++I, ++GTI) {
     if (GTI.isSequential()) {
@@ -905,15 +913,18 @@ SeparateConstOffsetFromGEP::accumulateByteOffset(GetElementPtrInst *GEP,
         continue;
 
       // Tries to extract a constant offset from this GEP index.
-      int64_t ConstantOffset =
-          ConstantOffsetExtractor::Find(GEP->getOperand(I), GEP);
+      APInt ConstantOffset =
+          ConstantOffsetExtractor::Find(GEP->getOperand(I), GEP)
+              .sextOrTrunc(IdxWidth);
       if (ConstantOffset != 0) {
         NeedsExtraction = true;
         // A GEP may have multiple indices.  We accumulate the extracted
         // constant offset to a byte offset, and later offset the remainder of
         // the original GEP with this byte offset.
         AccumulativeByteOffset +=
-            ConstantOffset * GTI.getSequentialElementStride(*DL);
+            ConstantOffset * APInt(IdxWidth,
+                                   GTI.getSequentialElementStride(*DL),
+                                   /*IsSigned=*/true, /*ImplicitTrunc=*/true);
       }
     } else if (LowerGEP) {
       StructType *StTy = GTI.getStructType();
@@ -922,7 +933,8 @@ SeparateConstOffsetFromGEP::accumulateByteOffset(GetElementPtrInst *GEP,
       if (Field != 0) {
         NeedsExtraction = true;
         AccumulativeByteOffset +=
-            DL->getStructLayout(StTy)->getElementOffset(Field);
+            APInt(IdxWidth, DL->getStructLayout(StTy)->getElementOffset(Field),
+                  /*IsSigned=*/true, /*ImplicitTrunc=*/true);
       }
     }
   }
@@ -930,7 +942,7 @@ SeparateConstOffsetFromGEP::accumulateByteOffset(GetElementPtrInst *GEP,
 }
 
 void SeparateConstOffsetFromGEP::lowerToSingleIndexGEPs(
-    GetElementPtrInst *Variadic, int64_t AccumulativeByteOffset) {
+    GetElementPtrInst *Variadic, const APInt &AccumulativeByteOffset) {
   IRBuilder<> Builder(Variadic);
   Type *PtrIndexTy = DL->getIndexType(Variadic->getType());
 
@@ -998,14 +1010,14 @@ bool SeparateConstOffsetFromGEP::reorderGEP(GetElementPtrInst *GEP,
     return false;
 
   bool NestedNeedsExtraction;
-  int64_t NestedByteOffset =
-      accumulateByteOffset(PtrGEP, NestedNeedsExtraction);
+  APInt NestedByteOffset = accumulateByteOffset(PtrGEP, NestedNeedsExtraction);
   if (!NestedNeedsExtraction)
     return false;
 
   unsigned AddrSpace = PtrGEP->getPointerAddressSpace();
   if (!TTI.isLegalAddressingMode(GEP->getResultElementType(),
-                                 /*BaseGV=*/nullptr, NestedByteOffset,
+                                 /*BaseGV=*/nullptr,
+                                 NestedByteOffset.getSExtValue(),
                                  /*HasBaseReg=*/true, /*Scale=*/0, AddrSpace))
     return false;
 
@@ -1039,19 +1051,33 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   if (GEP->getType()->isVectorTy())
     return false;
 
+  // If the base of this GEP is a ptradd of a constant, lets pass the constant
+  // along. This ensures that when we have a chain of GEPs the constant
+  // offset from each is accumulated.
+  Value *NewBase;
+  const APInt *BaseOffset;
+  const bool ExtractBase =
+      match(GEP->getPointerOperand(),
+            m_PtrAdd(m_Value(NewBase), m_APInt(BaseOffset)));
+
+  unsigned IdxWidth = DL->getIndexTypeSizeInBits(GEP->getType());
+  const APInt BaseByteOffset =
+      ExtractBase ? BaseOffset->sextOrTrunc(IdxWidth) : APInt(IdxWidth, 0);
+
   // The backend can already nicely handle the case where all indices are
   // constant.
-  if (GEP->hasAllConstantIndices())
+  if (GEP->hasAllConstantIndices() && !ExtractBase)
     return false;
 
   bool Changed = canonicalizeArrayIndicesToIndexSize(GEP);
 
   bool NeedsExtraction;
-  int64_t AccumulativeByteOffset = accumulateByteOffset(GEP, NeedsExtraction);
+  APInt AccumulativeByteOffset =
+      BaseByteOffset + accumulateByteOffset(GEP, NeedsExtraction);
 
   TargetTransformInfo &TTI = GetTTI(*GEP->getFunction());
 
-  if (!NeedsExtraction) {
+  if (!NeedsExtraction && !ExtractBase) {
     Changed |= reorderGEP(GEP, TTI);
     return Changed;
   }
@@ -1065,17 +1091,19 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   // case.
   if (!LowerGEP) {
     unsigned AddrSpace = GEP->getPointerAddressSpace();
-    if (!TTI.isLegalAddressingMode(GEP->getResultElementType(),
-                                   /*BaseGV=*/nullptr, AccumulativeByteOffset,
-                                   /*HasBaseReg=*/true, /*Scale=*/0,
-                                   AddrSpace)) {
+    if (!TTI.isLegalAddressingMode(
+            GEP->getResultElementType(),
+            /*BaseGV=*/nullptr, AccumulativeByteOffset.getSExtValue(),
+            /*HasBaseReg=*/true, /*Scale=*/0, AddrSpace)) {
       return Changed;
     }
   }
 
   // Track information for preserving GEP flags.
-  bool AllOffsetsNonNegative = AccumulativeByteOffset >= 0;
-  bool AllNUWPreserved = true;
+  bool AllOffsetsNonNegative = AccumulativeByteOffset.isNonNegative();
+  bool AllNUWPreserved = GEP->hasNoUnsignedWrap();
+  bool NewGEPInBounds = GEP->isInBounds();
+  bool NewGEPNUSW = GEP->hasNoUnsignedSignedWrap();
 
   // Remove the constant offset in each sequential index. The resultant GEP
   // computes the variadic base.
@@ -1093,23 +1121,34 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
 
       // Splits this GEP index into a variadic part and a constant offset, and
       // uses the variadic part as the new index.
-      Value *OldIdx = GEP->getOperand(I);
+      Value *Idx = GEP->getOperand(I);
       User *UserChainTail;
       bool PreservesNUW;
-      Value *NewIdx = ConstantOffsetExtractor::Extract(
-          OldIdx, GEP, UserChainTail, PreservesNUW);
+      Value *NewIdx = ConstantOffsetExtractor::Extract(Idx, GEP, UserChainTail,
+                                                       PreservesNUW);
       if (NewIdx != nullptr) {
         // Switches to the index with the constant offset removed.
         GEP->setOperand(I, NewIdx);
         // After switching to the new index, we can garbage-collect UserChain
         // and the old index if they are not used.
         RecursivelyDeleteTriviallyDeadInstructions(UserChainTail);
-        RecursivelyDeleteTriviallyDeadInstructions(OldIdx);
-        AllOffsetsNonNegative =
-            AllOffsetsNonNegative && isKnownNonNegative(NewIdx, *DL);
+        RecursivelyDeleteTriviallyDeadInstructions(Idx);
+        Idx = NewIdx;
         AllNUWPreserved &= PreservesNUW;
       }
+      AllOffsetsNonNegative =
+          AllOffsetsNonNegative && isKnownNonNegative(Idx, *DL);
     }
+  }
+  if (ExtractBase) {
+    GEPOperator *Base = cast<GEPOperator>(GEP->getPointerOperand());
+    AllNUWPreserved &= Base->hasNoUnsignedWrap();
+    NewGEPInBounds &= Base->isInBounds();
+    NewGEPNUSW &= Base->hasNoUnsignedSignedWrap();
+    AllOffsetsNonNegative &= BaseByteOffset.isNonNegative();
+
+    GEP->setOperand(0, NewBase);
+    RecursivelyDeleteTriviallyDeadInstructions(Base);
   }
 
   // Clear the inbounds attribute because the new index may be off-bound.
@@ -1138,7 +1177,7 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
 
   // If the initial GEP was NUW and all operations that we reassociate were NUW
   // additions, the resulting GEPs are also NUW.
-  if (GEP->hasNoUnsignedWrap() && AllNUWPreserved) {
+  if (AllNUWPreserved) {
     NewGEPFlags |= GEPNoWrapFlags::noUnsignedWrap();
     // If the initial GEP additionally had NUSW (or inbounds, which implies
     // NUSW), we know that the indices in the initial GEP must all have their
@@ -1146,13 +1185,13 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
     // add-operands therefore also don't have their signbit set. Therefore, all
     // indices of the resulting GEPs are non-negative -> we can preserve
     // the inbounds/nusw flag.
-    CanPreserveInBoundsNUSW |= GEP->hasNoUnsignedSignedWrap();
+    CanPreserveInBoundsNUSW |= NewGEPNUSW;
   }
 
   if (CanPreserveInBoundsNUSW) {
-    if (GEP->isInBounds())
+    if (NewGEPInBounds)
       NewGEPFlags |= GEPNoWrapFlags::inBounds();
-    else if (GEP->hasNoUnsignedSignedWrap())
+    else if (NewGEPNUSW)
       NewGEPFlags |= GEPNoWrapFlags::noUnsignedSignedWrap();
   }
 
@@ -1191,7 +1230,7 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
   Type *PtrIdxTy = DL->getIndexType(GEP->getType());
   IRBuilder<> Builder(GEP);
   NewGEP = cast<Instruction>(Builder.CreatePtrAdd(
-      NewGEP, ConstantInt::get(PtrIdxTy, AccumulativeByteOffset, true),
+      NewGEP, ConstantInt::get(PtrIdxTy, AccumulativeByteOffset),
       GEP->getName(), NewGEPFlags));
   NewGEP->copyMetadata(*GEP);
 
@@ -1220,11 +1259,13 @@ bool SeparateConstOffsetFromGEP::run(Function &F) {
 
   DL = &F.getDataLayout();
   bool Changed = false;
-  for (BasicBlock &B : F) {
-    if (!DT->isReachableFromEntry(&B))
+
+  ReversePostOrderTraversal<Function *> RPOT(&F);
+  for (BasicBlock *B : RPOT) {
+    if (!DT->isReachableFromEntry(B))
       continue;
 
-    for (Instruction &I : llvm::make_early_inc_range(B))
+    for (Instruction &I : llvm::make_early_inc_range(*B))
       if (GetElementPtrInst *GEP = dyn_cast<GetElementPtrInst>(&I))
         Changed |= splitGEP(GEP);
     // No need to split GEP ConstantExprs because all its indices are constant

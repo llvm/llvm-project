@@ -532,6 +532,9 @@ void GpuToLLVMConversionPass::runOnOperation() {
     // Vector transfer ops with rank > 1 should be lowered with VectorToSCF.
     vector::populateVectorTransferLoweringPatterns(patterns,
                                                    /*maxTransferRank=*/1);
+    // Transform N-D vector.from_elements to 1-D vector.from_elements before
+    // conversion.
+    vector::populateVectorFromElementsUnrollPatterns(patterns);
     if (failed(applyPatternsGreedily(getOperation(), std::move(patterns))))
       return signalPassFailure();
   }
@@ -546,7 +549,7 @@ void GpuToLLVMConversionPass::runOnOperation() {
   // Populate all patterns from all dialects that implement the
   // `ConvertToLLVMPatternInterface` interface.
   for (Dialect *dialect : context->getLoadedDialects()) {
-    auto iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
+    auto *iface = dyn_cast<ConvertToLLVMPatternInterface>(dialect);
     if (!iface)
       continue;
     iface->populateConvertToLLVMConversionPatterns(target, converter, patterns);

@@ -15,12 +15,31 @@
 #include "CIRGenFunction.h"
 
 #include "clang/AST/Decl.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/AST/GlobalDecl.h"
 
 using namespace clang;
 using namespace clang::CIRGen;
 
 CIRGenCXXABI::~CIRGenCXXABI() {}
+
+CIRGenCXXABI::AddedStructorArgCounts CIRGenCXXABI::addImplicitConstructorArgs(
+    CIRGenFunction &cgf, const CXXConstructorDecl *d, CXXCtorType type,
+    bool forVirtualBase, bool delegating, CallArgList &args) {
+  AddedStructorArgs addedArgs =
+      getImplicitConstructorArgs(cgf, d, type, forVirtualBase, delegating);
+  for (auto [idx, prefixArg] : llvm::enumerate(addedArgs.prefix))
+    args.insert(args.begin() + 1 + idx,
+                CallArg(RValue::get(prefixArg.value), prefixArg.type));
+  for (const auto &arg : addedArgs.suffix)
+    args.add(RValue::get(arg.value), arg.type);
+  return AddedStructorArgCounts(addedArgs.prefix.size(),
+                                addedArgs.suffix.size());
+}
+
+CatchTypeInfo CIRGenCXXABI::getCatchAllTypeInfo() {
+  return CatchTypeInfo{{}, 0};
+}
 
 void CIRGenCXXABI::buildThisParam(CIRGenFunction &cgf,
                                   FunctionArgList &params) {
@@ -51,8 +70,8 @@ cir::GlobalLinkageKind CIRGenCXXABI::getCXXDestructorLinkage(
 mlir::Value CIRGenCXXABI::loadIncomingCXXThis(CIRGenFunction &cgf) {
   ImplicitParamDecl *vd = getThisDecl(cgf);
   Address addr = cgf.getAddrOfLocalVar(vd);
-  return cgf.getBuilder().create<cir::LoadOp>(
-      cgf.getLoc(vd->getLocation()), addr.getElementType(), addr.getPointer());
+  return cir::LoadOp::create(cgf.getBuilder(), cgf.getLoc(vd->getLocation()),
+                             addr.getElementType(), addr.getPointer());
 }
 
 void CIRGenCXXABI::setCXXABIThisValue(CIRGenFunction &cgf,
@@ -60,4 +79,20 @@ void CIRGenCXXABI::setCXXABIThisValue(CIRGenFunction &cgf,
   /// Initialize the 'this' slot.
   assert(getThisDecl(cgf) && "no 'this' variable for function");
   cgf.cxxabiThisValue = thisPtr;
+}
+
+CharUnits CIRGenCXXABI::getArrayCookieSize(const CXXNewExpr *e) {
+  if (!requiresArrayCookie(e))
+    return CharUnits::Zero();
+
+  return getArrayCookieSizeImpl(e->getAllocatedType());
+}
+
+bool CIRGenCXXABI::requiresArrayCookie(const CXXNewExpr *e) {
+  // If the class's usual deallocation function takes two arguments,
+  // it needs a cookie.
+  if (e->doesUsualArrayDeleteWantSize())
+    return true;
+
+  return e->getAllocatedType().isDestructedType();
 }

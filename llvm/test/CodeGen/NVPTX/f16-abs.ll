@@ -4,7 +4,7 @@
 ; RUN: llc < %s -mcpu=sm_53 -mattr=+ptx60                                      \
 ; RUN:          -O0 -disable-post-ra -verify-machineinstrs                     \
 ; RUN: | FileCheck -check-prefix CHECK-NOF16 %s
-; RUN: %if ptxas %{                                                            \
+; RUN: %if ptxas-sm_53 %{                                                            \
 ; RUN:   llc < %s -mcpu=sm_53 -mattr=+ptx60                                    \
 ; RUN:            -O0 -disable-post-ra -verify-machineinstrs                   \
 ; RUN:   | %ptxas-verify -arch=sm_53                                           \
@@ -14,7 +14,7 @@
 ; RUN: llc < %s -mcpu=sm_53 -mattr=+ptx65 --nvptx-no-f16-math                  \
 ; RUN:          -O0 -disable-post-ra -verify-machineinstrs                     \
 ; RUN: | FileCheck -check-prefix CHECK-NOF16 %s
-; RUN: %if ptxas %{                                                            \
+; RUN: %if ptxas-sm_53 %{                                                            \
 ; RUN:   llc < %s -mcpu=sm_53 -mattr=+ptx65 --nvptx-no-f16-math                \
 ; RUN:            -O0 -disable-post-ra -verify-machineinstrs                   \
 ; RUN:   | %ptxas-verify -arch=sm_53                                           \
@@ -24,7 +24,7 @@
 ; RUN: llc < %s -mcpu=sm_52 -mattr=+ptx65                                      \
 ; RUN:          -O0 -disable-post-ra -verify-machineinstrs                     \
 ; RUN: | FileCheck -check-prefix CHECK-NOF16 %s
-; RUN: %if ptxas %{                                                            \
+; RUN: %if ptxas-sm_52 %{                                                            \
 ; RUN:   llc < %s -mcpu=sm_52 -mattr=+ptx65                                    \
 ; RUN:          -O0 -disable-post-ra -verify-machineinstrs                     \
 ; RUN:   | %ptxas-verify -arch=sm_52                                           \
@@ -34,7 +34,7 @@
 ; RUN: llc < %s -mcpu=sm_53 -mattr=+ptx65                                      \
 ; RUN:          -O0 -disable-post-ra -verify-machineinstrs                     \
 ; RUN: | FileCheck -check-prefix CHECK-F16-ABS %s
-; RUN: %if ptxas %{                                                            \
+; RUN: %if ptxas-sm_53 %{                                                            \
 ; RUN:   llc < %s -mcpu=sm_53 -mattr=+ptx65                                    \
 ; RUN:          -O0 -disable-post-ra -verify-machineinstrs                     \
 ; RUN:   | %ptxas-verify -arch=sm_53                                           \

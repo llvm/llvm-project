@@ -88,6 +88,7 @@ protected:
   std::optional<unsigned> StreamingHazardSize;
   unsigned MinSVEVectorSizeInBits;
   unsigned MaxSVEVectorSizeInBits;
+  bool EnableSRLTSubregToRegMitigation;
   unsigned VScaleForTuning = 1;
   TailFoldingOpts DefaultSVETFOpts = TailFoldingOpts::Disabled;
 
@@ -128,9 +129,8 @@ public:
                    unsigned MinSVEVectorSizeInBitsOverride = 0,
                    unsigned MaxSVEVectorSizeInBitsOverride = 0,
                    bool IsStreaming = false, bool IsStreamingCompatible = false,
-                   bool HasMinSize = false);
-
-  virtual unsigned getHwModeSet() const override;
+                   bool HasMinSize = false,
+                   bool EnableSRLTSubregToRegMitigation = false);
 
 // Getters for SubtargetFeatures defined in tablegen
 #define GET_SUBTARGETINFO_MACRO(ATTRIBUTE, DEFAULT, GETTER)                    \
@@ -169,6 +169,22 @@ public:
   /// initializeProperties().
   ARMProcFamilyEnum getProcFamily() const {
     return ARMProcFamily;
+  }
+
+  /// Returns true if the processor is an Apple M-series or aligned A-series
+  /// (A14 or newer).
+  bool isAppleMLike() const {
+    switch (ARMProcFamily) {
+    case AppleA14:
+    case AppleA15:
+    case AppleA16:
+    case AppleA17:
+    case AppleM4:
+    case AppleM5:
+      return true;
+    default:
+      return false;
+    }
   }
 
   bool isXRaySupported() const override { return true; }
@@ -212,6 +228,13 @@ public:
     return hasSVE() || isStreamingSVEAvailable();
   }
 
+  /// Returns true if the target has access to either the full range of SVE
+  /// instructions, or the streaming-compatible subset of SVE instructions
+  /// available to SME2.
+  bool isNonStreamingSVEorSME2Available() const {
+    return isSVEAvailable() || (isSVEorStreamingSVEAvailable() && hasSME2());
+  }
+
   unsigned getMinVectorRegisterBitWidth() const {
     // Don't assume any minimum vector size when PSTATE.SM may not be 0, because
     // we don't yet support streaming-compatible codegen support that we trust
@@ -239,8 +262,8 @@ public:
   /// Return true if the CPU supports any kind of instruction fusion.
   bool hasFusion() const {
     return hasArithmeticBccFusion() || hasArithmeticCbzFusion() ||
-           hasFuseAES() || hasFuseArithmeticLogic() || hasFuseCCSelect() ||
-           hasFuseAdrpAdd() || hasFuseLiterals();
+           hasFuseAES() || hasFuseArithmeticLogic() || hasFuseCmpCSel() ||
+           hasFuseCmpCSet() || hasFuseAdrpAdd() || hasFuseLiterals();
   }
 
   unsigned getEpilogueVectorizationMinVF() const {
@@ -288,6 +311,7 @@ public:
   bool isTargetAndroid() const { return TargetTriple.isAndroid(); }
   bool isTargetFuchsia() const { return TargetTriple.isOSFuchsia(); }
   bool isWindowsArm64EC() const { return TargetTriple.isWindowsArm64EC(); }
+  bool isLFI() const { return TargetTriple.isLFI(); }
 
   bool isTargetCOFF() const { return TargetTriple.isOSBinFormatCOFF(); }
   bool isTargetELF() const { return TargetTriple.isOSBinFormatELF(); }
@@ -445,10 +469,8 @@ public:
   /// add + cnt instructions.
   bool useScalarIncVL() const;
 
-  const char* getChkStkName() const {
-    if (isWindowsArm64EC())
-      return "#__chkstk_arm64ec";
-    return "__chkstk";
+  bool enableSRLTSubregToRegMitigation() const {
+    return EnableSRLTSubregToRegMitigation;
   }
 
   /// Choose a method of checking LR before performing a tail call.
@@ -464,6 +486,8 @@ public:
   /// a function.
   std::optional<uint16_t>
   getPtrAuthBlockAddressDiscriminatorIfEnabled(const Function &ParentFn) const;
+
+  bool enableAggressiveInterleaving() const { return AggressiveInterleaving; }
 };
 } // End llvm namespace
 

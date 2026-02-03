@@ -249,13 +249,6 @@ MCSymbol *WebAssemblyAsmPrinter::getOrCreateWasmSymbol(StringRef Name) {
   SmallVector<wasm::ValType, 4> Params;
   if (Name == "__cpp_exception" || Name == "__c_longjmp") {
     WasmSym->setType(wasm::WASM_SYMBOL_TYPE_TAG);
-    // In static linking we define tag symbols in WasmException::endModule().
-    // But we may have multiple objects to be linked together, each of which
-    // defines the tag symbols. To resolve them, we declare them as weak. In
-    // dynamic linking we make tag symbols undefined in the backend, define it
-    // in JS, and feed them to each importing module.
-    if (!isPositionIndependent())
-      WasmSym->setWeak(true);
     WasmSym->setExternal(true);
 
     // Currently both C++ exceptions and C longjmps have a single pointer type
@@ -411,7 +404,7 @@ void WebAssemblyAsmPrinter::emitEndOfAsmFile(Module &M) {
     if (!G.hasInitializer() && G.hasExternalLinkage() &&
         !WebAssembly::isWasmVarAddressSpace(G.getAddressSpace()) &&
         G.getValueType()->isSized()) {
-      uint16_t Size = M.getDataLayout().getTypeAllocSize(G.getValueType());
+      uint16_t Size = G.getGlobalSize(M.getDataLayout());
       OutStreamer->emitELFSize(getSymbol(&G),
                                MCConstantExpr::create(Size, OutContext));
     }
@@ -448,7 +441,9 @@ void WebAssemblyAsmPrinter::EmitProducerInfo(Module &M) {
     llvm::SmallSet<StringRef, 4> SeenLanguages;
     for (size_t I = 0, E = Debug->getNumOperands(); I < E; ++I) {
       const auto *CU = cast<DICompileUnit>(Debug->getOperand(I));
-      StringRef Language = dwarf::LanguageString(CU->getSourceLanguage());
+      StringRef Language =
+          dwarf::LanguageString(CU->getSourceLanguage().getUnversionedName());
+
       Language.consume_front("DW_LANG_");
       if (SeenLanguages.insert(Language).second)
         Languages.emplace_back(Language.str(), "");

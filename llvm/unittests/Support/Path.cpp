@@ -255,14 +255,14 @@ TEST(Support, Path) {
 
   {
     SmallString<32> Relative("foo.cpp");
-    sys::fs::make_absolute("/root", Relative);
+    path::make_absolute("/root", Relative);
     Relative[5] = '/'; // Fix up windows paths.
     ASSERT_EQ("/root/foo.cpp", Relative);
   }
 
   {
     SmallString<32> Relative("foo.cpp");
-    sys::fs::make_absolute("//root", Relative);
+    path::make_absolute("//root", Relative);
     Relative[6] = '/'; // Fix up windows paths.
     ASSERT_EQ("//root/foo.cpp", Relative);
   }
@@ -1428,7 +1428,7 @@ TEST_F(FileSystemTest, FileMapping) {
     fs::mapped_file_region mfr(fs::convertFDToNativeFile(FileDescriptor),
                                fs::mapped_file_region::readwrite, Size, 0, EC);
     ASSERT_NO_ERROR(EC);
-    std::copy(Val.begin(), Val.end(), mfr.data());
+    llvm::copy(Val, mfr.data());
     // Explicitly add a 0.
     mfr.data()[Val.size()] = 0;
 
@@ -1494,7 +1494,7 @@ TEST_F(FileSystemTest, FileMappingSync) {
 
     // Write content through mapped memory.
     ASSERT_NO_ERROR(EC);
-    std::copy(Content.begin(), Content.end(), MFR.data());
+    llvm::copy(Content, MFR.data());
 
     // Synchronize to file system.
     ASSERT_FALSE((bool)MFR.sync());
@@ -1799,7 +1799,7 @@ TEST_F(FileSystemTest, OpenDirectoryAsFileForRead) {
   EXPECT_EQ(errorToErrorCode(FD.takeError()), errc::is_a_directory);
 #else
   ASSERT_THAT_EXPECTED(FD, Succeeded());
-  auto Close = make_scope_exit([&] { fs::closeFile(*FD); });
+  scope_exit Close([&] { fs::closeFile(*FD); });
   Expected<size_t> BytesRead =
       fs::readNativeFile(*FD, MutableArrayRef(&*Buf.begin(), Buf.size()));
   EXPECT_EQ(errorToErrorCode(BytesRead.takeError()), errc::is_a_directory);
@@ -2025,7 +2025,7 @@ TEST_F(FileSystemTest, readNativeFile) {
     Expected<fs::file_t> FD = fs::openNativeFileForRead(NonExistantFile);
     if (!FD)
       return FD.takeError();
-    auto Close = make_scope_exit([&] { fs::closeFile(*FD); });
+    llvm::scope_exit Close([&] { fs::closeFile(*FD); });
     if (Expected<size_t> BytesRead = fs::readNativeFile(
             *FD, MutableArrayRef(&*Buf.begin(), Buf.size())))
       return Buf.substr(0, *BytesRead);
@@ -2046,7 +2046,7 @@ TEST_F(FileSystemTest, readNativeFileToEOF) {
     Expected<fs::file_t> FD = fs::openNativeFileForRead(NonExistantFile);
     if (!FD)
       return FD.takeError();
-    auto Close = make_scope_exit([&] { fs::closeFile(*FD); });
+    llvm::scope_exit Close([&] { fs::closeFile(*FD); });
     if (ChunkSize)
       return fs::readNativeFileToEOF(*FD, V, *ChunkSize);
     return fs::readNativeFileToEOF(*FD, V);
@@ -2089,7 +2089,7 @@ TEST_F(FileSystemTest, readNativeFileSlice) {
   FileRemover Cleanup(NonExistantFile);
   Expected<fs::file_t> FD = fs::openNativeFileForRead(NonExistantFile);
   ASSERT_THAT_EXPECTED(FD, Succeeded());
-  auto Close = make_scope_exit([&] { fs::closeFile(*FD); });
+  llvm::scope_exit Close([&] { fs::closeFile(*FD); });
   const auto &Read = [&](size_t Offset,
                          size_t ToRead) -> Expected<std::string> {
     std::string Buf(ToRead, '?');

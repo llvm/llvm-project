@@ -1,4 +1,4 @@
-//===--- ProBoundsPointerArithmeticCheck.cpp - clang-tidy------------------===//
+//===----------------------------------------------------------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -13,6 +13,18 @@
 using namespace clang::ast_matchers;
 
 namespace clang::tidy::cppcoreguidelines {
+
+ProBoundsPointerArithmeticCheck::ProBoundsPointerArithmeticCheck(
+    StringRef Name, ClangTidyContext *Context)
+    : ClangTidyCheck(Name, Context),
+      AllowIncrementDecrementOperators(
+          Options.get("AllowIncrementDecrementOperators", false)) {}
+
+void ProBoundsPointerArithmeticCheck::storeOptions(
+    ClangTidyOptions::OptionMap &Opts) {
+  Options.store(Opts, "AllowIncrementDecrementOperators",
+                AllowIncrementDecrementOperators);
+}
 
 void ProBoundsPointerArithmeticCheck::registerMatchers(MatchFinder *Finder) {
   const auto AllPointerTypes =
@@ -30,13 +42,14 @@ void ProBoundsPointerArithmeticCheck::registerMatchers(MatchFinder *Finder) {
       this);
 
   // Flag all operators ++, -- that result in a pointer
-  Finder->addMatcher(
-      unaryOperator(hasAnyOperatorName("++", "--"),
-                    hasType(hasUnqualifiedDesugaredType(pointerType())),
-                    unless(hasUnaryOperand(
-                        ignoringImpCasts(declRefExpr(to(isImplicit()))))))
-          .bind("expr"),
-      this);
+  if (!AllowIncrementDecrementOperators)
+    Finder->addMatcher(
+        unaryOperator(hasAnyOperatorName("++", "--"),
+                      hasType(hasUnqualifiedDesugaredType(pointerType())),
+                      unless(hasUnaryOperand(
+                          ignoringImpCasts(declRefExpr(to(isImplicit()))))))
+            .bind("expr"),
+        this);
 
   // Array subscript on a pointer (not an array) is also pointer arithmetic
   Finder->addMatcher(

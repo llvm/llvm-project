@@ -210,19 +210,33 @@ public:
           mapper.map(region.getArguments(), regionArgs);
           for (mlir::Operation &op : region.front().without_terminator())
             (void)rewriter.clone(op, mapper);
+
+          auto yield = mlir::cast<fir::YieldOp>(region.front().getTerminator());
+          assert(yield.getResults().size() < 2);
+
+          return yield.getResults().empty()
+                     ? mlir::Value{}
+                     : mapper.lookup(yield.getResults()[0]);
         };
 
-        if (!localizer.getInitRegion().empty())
-          cloneLocalizerRegion(localizer.getInitRegion(), {localVar, localArg},
-                               rewriter.getInsertionPoint());
+        if (!localizer.getInitRegion().empty()) {
+          // Prefer the value yielded from the init region to the allocated
+          // private variable in case the region is operating on arguments
+          // by-value (e.g. Fortran character boxes).
+          localAlloc = cloneLocalizerRegion(localizer.getInitRegion(),
+                                            {localVar, localAlloc},
+                                            rewriter.getInsertionPoint());
+          assert(localAlloc);
+        }
 
         if (localizer.getLocalitySpecifierType() ==
             fir::LocalitySpecifierType::LocalInit)
-          cloneLocalizerRegion(localizer.getCopyRegion(), {localVar, localArg},
+          cloneLocalizerRegion(localizer.getCopyRegion(),
+                               {localVar, localAlloc},
                                rewriter.getInsertionPoint());
 
         if (!localizer.getDeallocRegion().empty())
-          cloneLocalizerRegion(localizer.getDeallocRegion(), {localArg},
+          cloneLocalizerRegion(localizer.getDeallocRegion(), {localAlloc},
                                rewriter.getInsertionBlock()->end());
 
         rewriter.replaceAllUsesWith(localArg, localAlloc);
@@ -240,6 +254,10 @@ public:
 
     // Collect iteration variable(s) allocations so that we can move them
     // outside the `fir.do_concurrent` wrapper.
+    // There actually may be more operations that just allocations
+    // at the beginning of the wrapper block, e.g. LICM may move
+    // some operations from the inner fir.do_concurrent.loop into
+    // this block.
     llvm::SmallVector<mlir::Operation *> opsToMove;
     for (mlir::Operation &op : llvm::drop_end(wrapperBlock))
       opsToMove.push_back(&op);
@@ -248,8 +266,13 @@ public:
         rewriter, doConcurentOp->getParentOfType<mlir::ModuleOp>());
     auto *allocIt = firBuilder.getAllocaBlock();
 
-    for (mlir::Operation *op : llvm::reverse(opsToMove))
-      rewriter.moveOpBefore(op, allocIt, allocIt->begin());
+    // Move alloca operations into the alloca-block, and all other
+    // operations - right before fir.do_concurrent.
+    for (mlir::Operation *op : opsToMove)
+      if (mlir::isa<fir::AllocaOp>(op))
+        rewriter.moveOpBefore(op, allocIt, allocIt->begin());
+      else
+        rewriter.moveOpBefore(op, doConcurentOp);
 
     rewriter.setInsertionPointAfter(doConcurentOp);
     fir::DoLoopOp innermostUnorderdLoop;

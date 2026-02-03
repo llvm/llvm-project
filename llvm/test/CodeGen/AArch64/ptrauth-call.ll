@@ -181,8 +181,9 @@ define void @test_tailcall_omit_mov_x16_x16(ptr %objptr) #0 {
 ; ELF-NEXT:       movk    x8, #6503, lsl #48
 ; ELF-NEXT:       autda   x1, x8
 ; ELF-NEXT:       ldr     x2, [x1]
-; ELF-NEXT:       movk    x1, #54167, lsl #48
-; ELF-NEXT:       braa    x2, x1
+; ELF-NEXT:       mov     x16, x1
+; ELF-NEXT:       movk    x16, #54167, lsl #48
+; ELF-NEXT:       braa    x2, x16
   %vtable.signed = load ptr, ptr %objptr, align 8
   %objptr.int = ptrtoint ptr %objptr to i64
   %vtable.discr = tail call i64 @llvm.ptrauth.blend(i64 %objptr.int, i64 6503)
@@ -213,8 +214,9 @@ define i32 @test_call_omit_extra_moves(ptr %objptr) #0 {
 ; ELF-NEXT:      movk    x9, #6503, lsl #48
 ; ELF-NEXT:      autda   x8, x9
 ; ELF-NEXT:      ldr     x9, [x8]
-; ELF-NEXT:      movk    x8, #34646, lsl #48
-; ELF-NEXT:      blraa   x9, x8
+; ELF-NEXT:      mov     x17, x8
+; ELF-NEXT:      movk    x17, #34646, lsl #48
+; ELF-NEXT:      blraa   x9, x17
 ; ELF-NEXT:      mov     w0, #42
 ; ELF-NEXT:      ldr     x30, [sp], #16
 ; CHECK-NEXT:    ret
@@ -228,6 +230,97 @@ define i32 @test_call_omit_extra_moves(ptr %objptr) #0 {
   %callee.discr = tail call i64 @llvm.ptrauth.blend(i64 %vtable.int, i64 34646)
   %call.result = tail call i32 %callee.signed(ptr %objptr) [ "ptrauth"(i32 0, i64 %callee.discr) ]
   ret i32 42
+}
+
+; The second BLRA instruction should not reuse its AddrDisc operand as a scratch register (returned later).
+define i64 @test_call_discr_csr_live(ptr %fnptr, i64 %addr.discr) #0 {
+; ELF-LABEL: test_call_discr_csr_live:
+; ELF-NEXT:    str     x30, [sp, #-32]!
+; ELF-NEXT:    stp     x20, x19, [sp, #16]
+; ELF-DAG:     mov     x[[FNPTR:[0-9]+]], x0
+; ELF-DAG:     mov     x[[ADDR_DISC:[0-9]+]], x1
+; ELF-DAG:     mov     x17, x1
+; ELF-NEXT:    movk    x17, #6503, lsl #48
+; ELF-NEXT:    blraa   x0, x17
+; ELF-NEXT:    mov     x17, x[[ADDR_DISC]]
+; ELF-NEXT:    movk    x17, #6503, lsl #48
+; ELF-NEXT:    blraa   x[[FNPTR]], x17
+; ELF-NEXT:    mov     x0, x[[ADDR_DISC]]
+; ELF-NEXT:    ldp     x20, x19, [sp, #16]
+; ELF-NEXT:    ldr     x30, [sp], #32
+; ELF-NEXT:    ret
+  %discr = tail call i64 @llvm.ptrauth.blend(i64 %addr.discr, i64 6503)
+  tail call void %fnptr() [ "ptrauth"(i32 0, i64 %discr) ]
+  tail call void %fnptr() [ "ptrauth"(i32 0, i64 %discr) ]
+  ret i64 %addr.discr
+}
+
+; The second BLRA instruction may reuse its AddrDisc operand as a scratch register.
+define i64 @test_call_discr_csr_killed(ptr %fnptr, i64 %addr.discr) #0 {
+; ELF-LABEL: test_call_discr_csr_killed:
+; ELF-NEXT:    str     x30, [sp, #-32]!
+; ELF-NEXT:    stp     x20, x19, [sp, #16]
+; ELF-DAG:     mov     x[[FNPTR:[0-9]+]], x0
+; ELF-DAG:     mov     x[[ADDR_DISC:[0-9]+]], x1
+; ELF-DAG:     mov     x17, x1
+; ELF-NEXT:    movk    x17, #6503, lsl #48
+; ELF-NEXT:    blraa   x0, x17
+; ELF-DAG:     mov     x17, x[[ADDR_DISC]]
+; ELF-NEXT:    movk    x17, #6503, lsl #48
+; ELF-NEXT:    blraa   x[[FNPTR]], x17
+; ELF-NEXT:    ldp     x20, x19, [sp, #16]
+; ELF-NEXT:    mov     w0, #42
+; ELF-NEXT:    ldr     x30, [sp], #32
+; ELF-NEXT:    ret
+  %discr = tail call i64 @llvm.ptrauth.blend(i64 %addr.discr, i64 6503)
+  tail call void %fnptr() [ "ptrauth"(i32 0, i64 %discr) ]
+  tail call void %fnptr() [ "ptrauth"(i32 0, i64 %discr) ]
+  ret i64 42
+}
+
+; BLRA instruction should not reuse its AddrDisc operand as a scratch register (function argument).
+define i64 @test_call_discr_arg(ptr %fnptr, i64 %addr.discr) #0 {
+; ELF-LABEL: test_call_discr_arg:
+; ELF-NEXT:    str     x30, [sp, #-16]!
+; ELF-NEXT:    mov     x8, x0
+; ELF-NEXT:    mov     x0, xzr
+; ELF-NEXT:    mov     x17, x1
+; ELF-NEXT:    movk    x17, #6503, lsl #48
+; ELF-NEXT:    blraa   x8, x17
+; ELF-NEXT:    mov     w0, #42
+; ELF-NEXT:    ldr     x30, [sp], #16
+; ELF-NEXT:    ret
+  %discr = tail call i64 @llvm.ptrauth.blend(i64 %addr.discr, i64 6503)
+  tail call void %fnptr(ptr null, i64 %addr.discr) [ "ptrauth"(i32 0, i64 %discr) ]
+  ret i64 42
+}
+
+; BLRA instruction may reuse its AddrDisc operand as a scratch register.
+define i64 @test_call_discr_non_arg(ptr %fnptr, i64 %addr.discr) #0 {
+; ELF-LABEL: test_call_discr_non_arg:
+; ELF-NEXT:    str     x30, [sp, #-16]!
+; ELF-NEXT:    mov     x17, x1
+; ELF-NEXT:    movk    x17, #6503, lsl #48
+; ELF-NEXT:    blraa   x0, x17
+; ELF-NEXT:    mov     w0, #42
+; ELF-NEXT:    ldr     x30, [sp], #16
+; ELF-NEXT:    ret
+  %discr = tail call i64 @llvm.ptrauth.blend(i64 %addr.discr, i64 6503)
+  tail call void %fnptr() [ "ptrauth"(i32 0, i64 %discr) ]
+  ret i64 42
+}
+
+; AUTH_TCRETURN instruction should not reuse its AddrDisc operand as a scratch register (function argument).
+define i64 @test_tailcall_discr_arg(ptr %fnptr, i64 %addr.discr) #0 {
+; ELF-LABEL: test_tailcall_discr_arg:
+; ELF-NEXT:    mov     x2, x0
+; ELF-NEXT:    mov     x0, xzr
+; ELF-NEXT:    mov     x16, x1
+; ELF-NEXT:    movk    x16, #6503, lsl #48
+; ELF-NEXT:    braa    x2, x16
+  %discr = tail call i64 @llvm.ptrauth.blend(i64 %addr.discr, i64 6503)
+  %result = tail call i64 %fnptr(ptr null, i64 %addr.discr) [ "ptrauth"(i32 0, i64 %discr) ]
+  ret i64 %result
 }
 
 define i32 @test_call_ia_arg(ptr %arg0, i64 %arg1) #0 {

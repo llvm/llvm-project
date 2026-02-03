@@ -3550,14 +3550,14 @@ define <8 x i16> @PR141475(i32 %in) {
 ; SSE-LABEL: PR141475:
 ; SSE:       # %bb.0:
 ; SSE-NEXT:    movd %edi, %xmm0
-; SSE-NEXT:    pslld $1, %xmm0
+; SSE-NEXT:    paddd %xmm0, %xmm0
 ; SSE-NEXT:    pshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
 ; SSE-NEXT:    retq
 ;
 ; AVX-LABEL: PR141475:
 ; AVX:       # %bb.0:
 ; AVX-NEXT:    vmovd %edi, %xmm0
-; AVX-NEXT:    vpslld $1, %xmm0, %xmm0
+; AVX-NEXT:    vpaddd %xmm0, %xmm0, %xmm0
 ; AVX-NEXT:    vpshuflw {{.*#+}} xmm0 = xmm0[0,0,0,0,4,5,6,7]
 ; AVX-NEXT:    retq
   %mul = shl i32 %in, 1
@@ -3567,20 +3567,72 @@ define <8 x i16> @PR141475(i32 %in) {
   ret <8 x i16> %shuf
 }
 
+define <2 x i1> @PR179112(<2 x i32> %load) {
+; SSE2-LABEL: PR179112:
+; SSE2:       # %bb.0:
+; SSE2-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,1,1,3]
+; SSE2-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSE2-NEXT:    movdqa %xmm1, %xmm0
+; SSE2-NEXT:    pxor %xmm2, %xmm0
+; SSE2-NEXT:    pcmpeqd %xmm3, %xmm3
+; SSE2-NEXT:    psubd %xmm3, %xmm1
+; SSE2-NEXT:    pxor %xmm2, %xmm1
+; SSE2-NEXT:    pcmpgtd %xmm1, %xmm0
+; SSE2-NEXT:    retq
+;
+; SSSE3-LABEL: PR179112:
+; SSSE3:       # %bb.0:
+; SSSE3-NEXT:    pshufd {{.*#+}} xmm1 = xmm0[0,1,1,3]
+; SSSE3-NEXT:    movdqa {{.*#+}} xmm2 = [2147483648,2147483648,2147483648,2147483648]
+; SSSE3-NEXT:    movdqa %xmm1, %xmm0
+; SSSE3-NEXT:    pxor %xmm2, %xmm0
+; SSSE3-NEXT:    pcmpeqd %xmm3, %xmm3
+; SSSE3-NEXT:    psubd %xmm3, %xmm1
+; SSSE3-NEXT:    pxor %xmm2, %xmm1
+; SSSE3-NEXT:    pcmpgtd %xmm1, %xmm0
+; SSSE3-NEXT:    retq
+;
+; SSE41-LABEL: PR179112:
+; SSE41:       # %bb.0:
+; SSE41-NEXT:    pmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; SSE41-NEXT:    pcmpeqd %xmm1, %xmm1
+; SSE41-NEXT:    movdqa %xmm0, %xmm2
+; SSE41-NEXT:    psubd %xmm1, %xmm2
+; SSE41-NEXT:    pmaxud %xmm2, %xmm0
+; SSE41-NEXT:    pcmpeqd %xmm2, %xmm0
+; SSE41-NEXT:    pxor %xmm1, %xmm0
+; SSE41-NEXT:    retq
+;
+; AVX-LABEL: PR179112:
+; AVX:       # %bb.0:
+; AVX-NEXT:    vpmovzxdq {{.*#+}} xmm0 = xmm0[0],zero,xmm0[1],zero
+; AVX-NEXT:    vpcmpeqd %xmm1, %xmm1, %xmm1
+; AVX-NEXT:    vpsubd %xmm1, %xmm0, %xmm2
+; AVX-NEXT:    vpmaxud %xmm0, %xmm2, %xmm0
+; AVX-NEXT:    vpcmpeqd %xmm0, %xmm2, %xmm0
+; AVX-NEXT:    vpxor %xmm1, %xmm0, %xmm0
+; AVX-NEXT:    retq
+  %reverse.1 = shufflevector <2 x i32> %load, <2 x i32> zeroinitializer, <2 x i32> <i32 1, i32 0>
+  %uaddo = tail call { <2 x i32>, <2 x i1> } @llvm.uadd.with.overflow.v2i32(<2 x i32> splat (i32 1), <2 x i32> %reverse.1)
+  %overflow = extractvalue { <2 x i32>, <2 x i1> } %uaddo, 1
+  %reverse.2 = shufflevector <2 x i1> %overflow, <2 x i1> zeroinitializer, <2 x i32> <i32 1, i32 0>
+  ret <2 x i1> %reverse.2
+}
+
 ; Test case reported on D105827
 define void @SpinningCube() {
 ; SSE2-LABEL: SpinningCube:
 ; SSE2:       # %bb.0: # %entry
 ; SSE2-NEXT:    movl $1065353216, (%rax) # imm = 0x3F800000
-; SSE2-NEXT:    movaps {{.*#+}} xmm0 = [u,u,u,1.0E+0]
-; SSE2-NEXT:    movss {{.*#+}} xmm1 = [NaN,0.0E+0,0.0E+0,0.0E+0]
-; SSE2-NEXT:    movapd {{.*#+}} xmm2 = [u,u,-2.0E+0,u]
-; SSE2-NEXT:    movsd {{.*#+}} xmm2 = xmm1[0],xmm2[1]
-; SSE2-NEXT:    xorps %xmm3, %xmm3
-; SSE2-NEXT:    shufps {{.*#+}} xmm3 = xmm3[0,1],xmm2[2,0]
-; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[2,3]
-; SSE2-NEXT:    addps %xmm3, %xmm1
-; SSE2-NEXT:    movaps %xmm1, (%rax)
+; SSE2-NEXT:    xorps %xmm0, %xmm0
+; SSE2-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[0,1]
+; SSE2-NEXT:    movd {{.*#+}} xmm2 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; SSE2-NEXT:    movq {{.*#+}} xmm2 = xmm2[0],zero
+; SSE2-NEXT:    shufps {{.*#+}} xmm2 = xmm2[2,0],xmm1[2,0]
+; SSE2-NEXT:    addps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSE2-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,0]
+; SSE2-NEXT:    movaps %xmm2, (%rax)
 ; SSE2-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; SSE2-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0,0,0]
 ; SSE2-NEXT:    mulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
@@ -3591,15 +3643,15 @@ define void @SpinningCube() {
 ; SSSE3-LABEL: SpinningCube:
 ; SSSE3:       # %bb.0: # %entry
 ; SSSE3-NEXT:    movl $1065353216, (%rax) # imm = 0x3F800000
-; SSSE3-NEXT:    movaps {{.*#+}} xmm0 = [u,u,u,1.0E+0]
-; SSSE3-NEXT:    movss {{.*#+}} xmm1 = [NaN,0.0E+0,0.0E+0,0.0E+0]
-; SSSE3-NEXT:    movapd {{.*#+}} xmm2 = [u,u,-2.0E+0,u]
-; SSSE3-NEXT:    movsd {{.*#+}} xmm2 = xmm1[0],xmm2[1]
-; SSSE3-NEXT:    xorps %xmm3, %xmm3
-; SSSE3-NEXT:    shufps {{.*#+}} xmm3 = xmm3[0,1],xmm2[2,0]
-; SSSE3-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[2,3]
-; SSSE3-NEXT:    addps %xmm3, %xmm1
-; SSSE3-NEXT:    movaps %xmm1, (%rax)
+; SSSE3-NEXT:    xorps %xmm0, %xmm0
+; SSSE3-NEXT:    movss {{.*#+}} xmm1 = [1.0E+0,0.0E+0,0.0E+0,0.0E+0]
+; SSSE3-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0],xmm0[0,1]
+; SSSE3-NEXT:    movd {{.*#+}} xmm2 = [NaN,0.0E+0,0.0E+0,0.0E+0]
+; SSSE3-NEXT:    movq {{.*#+}} xmm2 = xmm2[0],zero
+; SSSE3-NEXT:    shufps {{.*#+}} xmm2 = xmm2[2,0],xmm1[2,0]
+; SSSE3-NEXT:    addps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm2
+; SSSE3-NEXT:    shufps {{.*#+}} xmm0 = xmm0[0,1],xmm1[2,0]
+; SSSE3-NEXT:    movaps %xmm2, (%rax)
 ; SSSE3-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
 ; SSSE3-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0,0,2]
 ; SSSE3-NEXT:    mulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
@@ -3609,35 +3661,28 @@ define void @SpinningCube() {
 ;
 ; SSE41-LABEL: SpinningCube:
 ; SSE41:       # %bb.0: # %entry
+; SSE41-NEXT:    insertps {{.*#+}} xmm0 = zero,zero,zero,mem[0]
+; SSE41-NEXT:    movaps %xmm0, %xmm1
+; SSE41-NEXT:    insertps {{.*#+}} xmm1 = xmm1[0],mem[0],xmm1[2,3]
+; SSE41-NEXT:    addps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
 ; SSE41-NEXT:    movl $1065353216, (%rax) # imm = 0x3F800000
-; SSE41-NEXT:    movaps {{.*#+}} xmm0 = [u,u,u,1.0E+0]
-; SSE41-NEXT:    movaps {{.*#+}} xmm1 = [0.0E+0,0.0E+0,-2.0E+0,u]
-; SSE41-NEXT:    movss {{.*#+}} xmm2 = [NaN,0.0E+0,0.0E+0,0.0E+0]
-; SSE41-NEXT:    movaps %xmm1, %xmm3
-; SSE41-NEXT:    insertps {{.*#+}} xmm3 = xmm3[0,1,2],xmm2[0]
-; SSE41-NEXT:    movaps %xmm0, %xmm4
-; SSE41-NEXT:    insertps {{.*#+}} xmm4 = xmm4[0],xmm2[0],xmm4[2,3]
-; SSE41-NEXT:    addps %xmm3, %xmm4
-; SSE41-NEXT:    movaps %xmm4, (%rax)
-; SSE41-NEXT:    movss {{.*#+}} xmm2 = mem[0],zero,zero,zero
-; SSE41-NEXT:    shufps {{.*#+}} xmm2 = xmm2[0,0,0,2]
-; SSE41-NEXT:    mulps %xmm1, %xmm2
-; SSE41-NEXT:    addps %xmm0, %xmm2
-; SSE41-NEXT:    movaps %xmm2, (%rax)
+; SSE41-NEXT:    movaps %xmm1, (%rax)
+; SSE41-NEXT:    movss {{.*#+}} xmm1 = mem[0],zero,zero,zero
+; SSE41-NEXT:    shufps {{.*#+}} xmm1 = xmm1[0,0,0,2]
+; SSE41-NEXT:    mulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1
+; SSE41-NEXT:    addps %xmm0, %xmm1
+; SSE41-NEXT:    movaps %xmm1, (%rax)
 ; SSE41-NEXT:    retq
 ;
 ; AVX-LABEL: SpinningCube:
 ; AVX:       # %bb.0: # %entry
 ; AVX-NEXT:    movl $1065353216, (%rax) # imm = 0x3F800000
-; AVX-NEXT:    vbroadcastss {{.*#+}} xmm0 = [1.0E+0,1.0E+0,1.0E+0,1.0E+0]
-; AVX-NEXT:    vmovaps {{.*#+}} xmm1 = [0.0E+0,0.0E+0,-2.0E+0,u]
-; AVX-NEXT:    vmovss {{.*#+}} xmm2 = [NaN,0.0E+0,0.0E+0,0.0E+0]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm3 = xmm1[0,1,2],xmm2[0]
-; AVX-NEXT:    vinsertps {{.*#+}} xmm2 = xmm0[0],xmm2[0],xmm0[2,3]
-; AVX-NEXT:    vaddps %xmm2, %xmm3, %xmm2
-; AVX-NEXT:    vmovaps %xmm2, (%rax)
-; AVX-NEXT:    vbroadcastss (%rax), %xmm2
-; AVX-NEXT:    vmulps %xmm1, %xmm2, %xmm1
+; AVX-NEXT:    vmovaps {{.*#+}} xmm0 = [0.0E+0,0.0E+0,0.0E+0,1.0E+0]
+; AVX-NEXT:    vinsertps {{.*#+}} xmm1 = xmm0[0],mem[0],xmm0[2,3]
+; AVX-NEXT:    vaddps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
+; AVX-NEXT:    vmovaps %xmm1, (%rax)
+; AVX-NEXT:    vbroadcastss (%rax), %xmm1
+; AVX-NEXT:    vmulps {{\.?LCPI[0-9]+_[0-9]+}}(%rip), %xmm1, %xmm1
 ; AVX-NEXT:    vaddps %xmm0, %xmm1, %xmm0
 ; AVX-NEXT:    vmovaps %xmm0, (%rax)
 ; AVX-NEXT:    retq
@@ -3675,9 +3720,9 @@ define void @autogen_SD25931() {
 ; CHECK-LABEL: autogen_SD25931:
 ; CHECK:       # %bb.0: # %BB
 ; CHECK-NEXT:    .p2align 4
-; CHECK-NEXT:  .LBB143_1: # %CF242
+; CHECK-NEXT:  .LBB144_1: # %CF242
 ; CHECK-NEXT:    # =>This Inner Loop Header: Depth=1
-; CHECK-NEXT:    jmp .LBB143_1
+; CHECK-NEXT:    jmp .LBB144_1
 BB:
   %Cmp16 = icmp uge <2 x i1> zeroinitializer, zeroinitializer
   %Shuff19 = shufflevector <2 x i1> zeroinitializer, <2 x i1> %Cmp16, <2 x i32> <i32 3, i32 1>

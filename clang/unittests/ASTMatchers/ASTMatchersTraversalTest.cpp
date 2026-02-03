@@ -5142,21 +5142,6 @@ TEST(ForEachLambdaCapture, MatchExplicitCapturesOnly) {
       matcher, std::make_unique<VerifyIdIsBoundTo<LambdaCapture>>("LC", 1)));
 }
 
-TEST(HasConditionVariableStatement, DoesNotMatchCondition) {
-  EXPECT_TRUE(notMatches(
-    "void x() { if(true) {} }",
-    ifStmt(hasConditionVariableStatement(declStmt()))));
-  EXPECT_TRUE(notMatches(
-    "void x() { int x; if((x = 42)) {} }",
-    ifStmt(hasConditionVariableStatement(declStmt()))));
-}
-
-TEST(HasConditionVariableStatement, MatchesConditionVariables) {
-  EXPECT_TRUE(matches(
-    "void x() { if(int* a = 0) {} }",
-    ifStmt(hasConditionVariableStatement(declStmt()))));
-}
-
 TEST(ForEach, BindsOneNode) {
   EXPECT_TRUE(matchAndVerifyResultTrue("class C { int x; };",
                                        recordDecl(hasName("C"), forEach(fieldDecl(hasName("x")).bind("x"))),

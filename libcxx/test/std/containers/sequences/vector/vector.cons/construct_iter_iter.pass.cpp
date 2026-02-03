@@ -10,6 +10,7 @@
 
 // template <class InputIter> vector(InputIter first, InputIter last);
 
+#include <algorithm>
 #include <vector>
 #include <cassert>
 #include <cstddef>
@@ -31,8 +32,7 @@ TEST_CONSTEXPR_CXX20 void test(Iterator first, Iterator last) {
     LIBCPP_ASSERT(c.__invariants());
     assert(c.size() == static_cast<std::size_t>(std::distance(first, last)));
     LIBCPP_ASSERT(is_contiguous_container_asan_correct(c));
-    for (typename C::const_iterator i = c.cbegin(), e = c.cend(); i != e; ++i, ++first)
-      assert(*i == *first);
+    assert(std::equal(c.cbegin(), c.cend(), first));
   }
   // Test with an empty range
   {
@@ -79,7 +79,7 @@ TEST_CONSTEXPR_CXX20 void basic_test_cases() {
   test<std::vector<int, safe_allocator<int> > >(
       random_access_iterator<const int*>(a), random_access_iterator<const int*>(an));
 
-  // Regression test for https://github.com/llvm/llvm-project/issues/46841
+  // Regression test for https://llvm.org/PR47497
   {
     std::vector<int> v1({}, forward_iterator<const int*>{});
     std::vector<int> v2(forward_iterator<const int*>{}, {});

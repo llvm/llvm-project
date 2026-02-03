@@ -5,11 +5,6 @@
 ; Done as a MIR test because eliminateFrameIndex will likely turn it
 ; back into an addi.
 
-declare void @llvm.riscv.vse.nxv1i64(
-  <vscale x 1 x i64>,
-  ptr,
-  i64);
-
 define i64 @test(<vscale x 1 x i64> %0) nounwind {
   ; CHECK-LABEL: name: test
   ; CHECK: bb.0.entry:

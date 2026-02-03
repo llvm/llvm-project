@@ -189,9 +189,11 @@ public:
   MPFRNumber add(const MPFRNumber &b) const;
   MPFRNumber asin() const;
   MPFRNumber asinh() const;
+  MPFRNumber asinpi() const;
   MPFRNumber atan() const;
   MPFRNumber atan2(const MPFRNumber &b);
   MPFRNumber atanh() const;
+  MPFRNumber atanpi() const;
   MPFRNumber cbrt() const;
   MPFRNumber ceil() const;
   MPFRNumber cos() const;
@@ -220,6 +222,7 @@ public:
   bool round_to_long(long &result) const;
   bool round_to_long(mpfr_rnd_t rnd, long &result) const;
   MPFRNumber rint(mpfr_rnd_t rnd) const;
+  MPFRNumber rsqrt() const;
   MPFRNumber mod_2pi() const;
   MPFRNumber mod_pi_over_2() const;
   MPFRNumber mod_pi_over_4() const;

@@ -614,7 +614,7 @@ LogicalResult TextualPipeline::addToPipeline(
   // it's preferrable to just error out if implicit nesting would be required.
   OpPassManager::Nesting nesting = pm.getNesting();
   pm.setNesting(OpPassManager::Nesting::Explicit);
-  auto restore = llvm::make_scope_exit([&]() { pm.setNesting(nesting); });
+  llvm::scope_exit restore([&]() { pm.setNesting(nesting); });
 
   return addToPipeline(pipeline, pm, errorHandler);
 }

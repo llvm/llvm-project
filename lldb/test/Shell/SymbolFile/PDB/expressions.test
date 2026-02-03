@@ -1,6 +1,7 @@
 REQUIRES: target-windows, msvc
 RUN: %build --compiler=msvc --nodefaultlib --output=%t.exe %S/Inputs/ExpressionsTest.cpp
-RUN: not %lldb -b -s %S/Inputs/ExpressionsTest0.script -s %S/Inputs/ExpressionsTest1.script -s %S/Inputs/ExpressionsTest2.script -- %t.exe 2>&1 | FileCheck %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=0 not %lldb -b -s %S/Inputs/ExpressionsTest0.script -s %S/Inputs/ExpressionsTest1.script -s %S/Inputs/ExpressionsTest2.script -- %t.exe 2>&1 | FileCheck %s
+RUN: env LLDB_USE_NATIVE_PDB_READER=1 not %lldb -b -s %S/Inputs/ExpressionsTest0.script -s %S/Inputs/ExpressionsTest1.script -s %S/Inputs/ExpressionsTest2.script -- %t.exe 2>&1 | FileCheck %s
 
 // Check the variable value through `expression`
 CHECK: (lldb) expression result

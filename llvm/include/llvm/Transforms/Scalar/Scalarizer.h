@@ -20,7 +20,6 @@
 
 #include "llvm/IR/PassManager.h"
 #include "llvm/Support/Compiler.h"
-#include <optional>
 
 namespace llvm {
 

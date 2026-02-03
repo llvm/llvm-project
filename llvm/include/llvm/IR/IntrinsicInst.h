@@ -101,6 +101,12 @@ public:
     }
   }
 
+  /// Return true if the operand is commutable.
+  bool isCommutableOperand(unsigned Op) const {
+    constexpr unsigned NumCommutativeOps = 2;
+    return isCommutative() && Op < NumCommutativeOps;
+  }
+
   /// Checks if the intrinsic is an annotation.
   bool isAssumeLikeIntrinsic() const {
     switch (getIntrinsicID()) {
@@ -810,6 +816,26 @@ public:
   /// Whether the intrinsic is signed or unsigned.
   bool isSigned() const { return isSigned(getIntrinsicID()); };
 
+  /// Whether the intrinsic is a smin or umin.
+  static bool isMin(Intrinsic::ID ID) {
+    switch (ID) {
+    case Intrinsic::umin:
+    case Intrinsic::smin:
+      return true;
+    case Intrinsic::umax:
+    case Intrinsic::smax:
+      return false;
+    default:
+      llvm_unreachable("Invalid intrinsic");
+    }
+  }
+
+  /// Whether the intrinsic is a smin or a umin.
+  bool isMin() const { return isMin(getIntrinsicID()); }
+
+  /// Whether the intrinsic is a smax or a umax.
+  bool isMax() const { return !isMin(getIntrinsicID()); }
+
   /// Min/max intrinsics are monotonic, they operate on a fixed-bitwidth values,
   /// so there is a certain threshold value, upon reaching which,
   /// their value can no longer change. Return said threshold.
@@ -987,6 +1013,13 @@ public:
   const Use &getLengthUse() const { return getArgOperandUse(ARG_LENGTH); }
   Use &getLengthUse() { return getArgOperandUse(ARG_LENGTH); }
 
+  std::optional<APInt> getLengthInBytes() const {
+    ConstantInt *C = dyn_cast<ConstantInt>(getLength());
+    if (!C)
+      return std::nullopt;
+    return C->getValue();
+  }
+
   /// This is just like getRawDest, but it strips off any cast
   /// instructions (including addrspacecast) that feed it, giving the
   /// original input.  The returned value is guaranteed to be a pointer.
@@ -1021,6 +1054,10 @@ public:
     assert(getLength()->getType() == L->getType() &&
            "setLength called with value of wrong type!");
     setArgOperand(ARG_LENGTH, L);
+  }
+
+  void setLength(uint64_t L) {
+    setLength(ConstantInt::get(getLength()->getType(), L));
   }
 };
 
@@ -1765,6 +1802,48 @@ public:
   LLVM_ABI static ConvergenceControlInst *CreateEntry(BasicBlock &BB);
   LLVM_ABI static ConvergenceControlInst *
   CreateLoop(BasicBlock &BB, ConvergenceControlInst *Parent);
+};
+
+class StructuredGEPInst : public IntrinsicInst {
+public:
+  static bool classof(const IntrinsicInst *I) {
+    return I->getIntrinsicID() == Intrinsic::structured_gep;
+  }
+
+  static bool classof(const Value *V) {
+    return isa<IntrinsicInst>(V) && classof(cast<IntrinsicInst>(V));
+  }
+
+  Type *getBaseType() const {
+    return getParamAttr(0, Attribute::ElementType).getValueAsType();
+  }
+
+  unsigned getNumIndices() const { return arg_size() - 1; }
+
+  Value *getIndexOperand(size_t Index) const {
+    assert(Index < getNumIndices());
+    return getOperand(Index + 1);
+  }
+
+  Type *getResultElementType() const {
+    Type *CurrentType = getBaseType();
+    for (unsigned I = 0; I < getNumIndices(); I++) {
+      if (ArrayType *AT = dyn_cast<ArrayType>(CurrentType)) {
+        CurrentType = AT->getElementType();
+      } else if (VectorType *VT = dyn_cast<VectorType>(CurrentType)) {
+        CurrentType = VT->getElementType();
+      } else if (StructType *ST = dyn_cast<StructType>(CurrentType)) {
+        ConstantInt *CI = cast<ConstantInt>(getIndexOperand(I));
+        CurrentType = ST->getElementType(CI->getZExtValue());
+      } else {
+        // FIXME(Keenuts): add testing reaching those places once initial
+        // implementation has landed.
+        llvm_unreachable("unimplemented");
+      }
+    }
+
+    return CurrentType;
+  }
 };
 
 } // end namespace llvm

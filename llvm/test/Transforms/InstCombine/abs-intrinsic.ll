@@ -429,7 +429,7 @@ define i32 @abs_sext(i8 %x) {
 ; CHECK-NEXT:    ret i32 [[A]]
 ;
   %s = sext i8 %x to i32
-  %a = call i32 @llvm.abs.i32(i32 %s, i1 0)
+  %a = call i32 @llvm.abs.i32(i32 %s, i1 false)
   ret i32 %a
 }
 
@@ -440,7 +440,7 @@ define <3 x i82> @abs_nsw_sext(<3 x i7> %x) {
 ; CHECK-NEXT:    ret <3 x i82> [[A]]
 ;
   %s = sext <3 x i7> %x to <3 x i82>
-  %a = call <3 x i82> @llvm.abs.v3i82(<3 x i82> %s, i1 1)
+  %a = call <3 x i82> @llvm.abs.v3i82(<3 x i82> %s, i1 true)
   ret <3 x i82> %a
 }
 
@@ -453,7 +453,7 @@ define i32 @abs_sext_extra_use(i8 %x, ptr %p) {
 ;
   %s = sext i8 %x to i32
   store i32 %s, ptr %p
-  %a = call i32 @llvm.abs.i32(i32 %s, i1 0)
+  %a = call i32 @llvm.abs.i32(i32 %s, i1 false)
   ret i32 %a
 }
 
@@ -846,4 +846,346 @@ cond.true:
 cond.end:
   %r = phi i32 [ %0, %cond.true ], [ 0, %entry ]
   ret i32 %r
+}
+
+; The AND should be removable based on range metadata. Make sure
+; computeKnownBits doesn't lose this.
+define i32 @abs_range_metadata(i32 %x) {
+; CHECK-LABEL: @abs_range_metadata(
+; CHECK-NEXT:    [[B:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false), !range [[RNG0:![0-9]+]]
+; CHECK-NEXT:    ret i32 [[B]]
+;
+  %a = call i32 @llvm.abs.i32(i32 %x, i1 false), !range !1
+  %b = and i32 %a, 15
+  ret i32 %b
+}
+
+!1 = !{i32 0, i32 16}
+
+define i32 @abs_diff(i32 %x, i32 %y) {
+; CHECK-LABEL: @abs_diff(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB]], i1 false)
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sub = sub nsw i32 %x, %y
+  %cmp = icmp sgt i32 %x, %y
+  %sub1 = sub i32 0, %sub
+  %cond = select i1 %cmp, i32 %sub, i32 %sub1
+  ret i32 %cond
+}
+
+define i32 @abs_diff_neg_no_nsw_neg(i32 %x, i32 %y) {
+; CHECK-LABEL: @abs_diff_neg_no_nsw_neg(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[SUB1:%.*]] = sub i32 0, [[SUB]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[SUB]], i32 [[SUB1]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sub = sub i32 %x, %y
+  %cmp = icmp sgt i32 %x, %y
+  %sub1 = sub i32 0, %sub
+  %cond = select i1 %cmp, i32 %sub, i32 %sub1
+  ret i32 %cond
+}
+
+define i32 @abs_diff_neg(i32 %x, i32 %y) {
+; CHECK-LABEL: @abs_diff_neg(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[SUB1:%.*]] = sub i32 0, [[SUB]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[SUB]], i32 [[SUB1]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sub = sub nsw i32 %y, %x
+  %cmp = icmp sgt i32 %x, %y
+  %sub1 = sub i32 0, %sub
+  %cond = select i1 %cmp, i32 %sub, i32 %sub1
+  ret i32 %cond
+}
+
+define i32 @abs_diff_neg_no_nsw(i32 %x, i32 %y) {
+; CHECK-LABEL: @abs_diff_neg_no_nsw(
+; CHECK-NEXT:    [[SUB:%.*]] = sub i32 [[Y:%.*]], [[X:%.*]]
+; CHECK-NEXT:    [[CMP:%.*]] = icmp sgt i32 [[X]], [[Y]]
+; CHECK-NEXT:    [[SUB1:%.*]] = sub i32 0, [[SUB]]
+; CHECK-NEXT:    [[COND:%.*]] = select i1 [[CMP]], i32 [[SUB]], i32 [[SUB1]]
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sub = sub i32 %y, %x
+  %cmp = icmp sgt i32 %x, %y
+  %sub1 = sub i32 0, %sub
+  %cond = select i1 %cmp, i32 %sub, i32 %sub1
+  ret i32 %cond
+}
+
+define i32 @abs_diff_ge(i32 %x, i32 %y) {
+; CHECK-LABEL: @abs_diff_ge(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB]], i1 false)
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sub = sub nsw i32 %x, %y
+  %cmp = icmp sge i32 %x, %y
+  %sub1 = sub i32 0, %sub
+  %cond = select i1 %cmp, i32 %sub, i32 %sub1
+  ret i32 %cond
+}
+
+define i32 @abs_diff_slt_commute(i32 %x, i32 %y) {
+; CHECK-LABEL: @abs_diff_slt_commute(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB]], i1 false)
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sub = sub nsw i32 %x, %y
+  %cmp = icmp slt i32 %y, %x
+  %sub1 = sub i32 0, %sub
+  %cond = select i1 %cmp, i32 %sub, i32 %sub1
+  ret i32 %cond
+}
+
+define i32 @abs_diff_sge_same(i32 %x, i32 %y) {
+; CHECK-LABEL: @abs_diff_sge_same(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB]], i1 false)
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sub = sub nsw i32 %x, %y
+  %cmp = icmp sge i32 %x, %y
+  %sub1 = sub i32 0, %sub
+  %cond = select i1 %cmp, i32 %sub, i32 %sub1
+  ret i32 %cond
+}
+
+define i32 @abs_diff_sle_inverted(i32 %x, i32 %y) {
+; CHECK-LABEL: @abs_diff_sle_inverted(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB]], i1 false)
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sub = sub nsw i32 %x, %y
+  %cmp = icmp sle i32 %x, %y
+  %sub1 = sub i32 0, %sub
+  %cond = select i1 %cmp, i32 %sub1, i32 %sub
+  ret i32 %cond
+}
+
+define i32 @abs_diff_sle_commute(i32 %x, i32 %y) {
+; CHECK-LABEL: @abs_diff_sle_commute(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i32 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.abs.i32(i32 [[SUB]], i1 false)
+; CHECK-NEXT:    ret i32 [[COND]]
+;
+  %sub = sub nsw i32 %x, %y
+  %cmp = icmp sle i32 %y, %x
+  %sub1 = sub i32 0, %sub
+  %cond = select i1 %cmp, i32 %sub, i32 %sub1
+  ret i32 %cond
+}
+
+define i8 @abs_diff_sle_y_x(i8 %x, i8 %y) {
+; CHECK-LABEL: @abs_diff_sle_y_x(
+; CHECK-NEXT:    [[SUB:%.*]] = sub nsw i8 [[X:%.*]], [[Y:%.*]]
+; CHECK-NEXT:    [[COND:%.*]] = call i8 @llvm.abs.i8(i8 [[SUB]], i1 false)
+; CHECK-NEXT:    ret i8 [[COND]]
+;
+  %sub = sub nsw i8 %x, %y
+  %cmp = icmp sle i8 %y, %x
+  %sub1 = sub i8 0, %sub
+  %cond = select i1 %cmp, i8 %sub, i8 %sub1
+  ret i8 %cond
+}
+
+define i1 @abs_cmp_ule_no_poison(i32 %x) {
+; CHECK-LABEL: @abs_cmp_ule_no_poison(
+; CHECK-NEXT:    [[X_ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X_ABS]], 32
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
+  %cmp = icmp ule i32 %x.abs, 31
+  ret i1 %cmp
+}
+
+define i1 @abs_cmp_ule_no_poison_multiuse(i32 %x) {
+; CHECK-LABEL: @abs_cmp_ule_no_poison_multiuse(
+; CHECK-NEXT:    [[X_ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    call void @use(i32 [[X_ABS]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X_ABS]], 32
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
+  call void @use(i32 %x.abs)
+  %cmp = icmp ule i32 %x.abs, 31
+  ret i1 %cmp
+}
+
+define i1 @abs_cmp_ule_poison(i32 %x) {
+; CHECK-LABEL: @abs_cmp_ule_poison(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], 31
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP1]], 63
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 true)
+  %cmp = icmp ule i32 %x.abs, 31
+  ret i1 %cmp
+}
+
+define i1 @abs_cmp_ule_poison_multiuse(i32 %x) {
+; CHECK-LABEL: @abs_cmp_ule_poison_multiuse(
+; CHECK-NEXT:    [[X_ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    call void @use(i32 [[X_ABS]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i32 [[X_ABS]], 32
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 true)
+  call void @use(i32 %x.abs)
+  %cmp = icmp ule i32 %x.abs, 31
+  ret i1 %cmp
+}
+
+define i1 @abs_cmp_ult_no_poison(i32 %x) {
+; CHECK-LABEL: @abs_cmp_ult_no_poison(
+; CHECK-NEXT:    [[X_ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X_ABS]], 32
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
+  %cmp = icmp ult i32 %x.abs, 32
+  ret i1 %cmp
+}
+
+define i1 @abs_cmp_ult_no_poison_multiuse(i32 %x) {
+; CHECK-LABEL: @abs_cmp_ult_no_poison_multiuse(
+; CHECK-NEXT:    [[X_ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    call void @use(i32 [[X_ABS]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[X_ABS]], 32
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
+  call void @use(i32 %x.abs)
+  %cmp = icmp ult i32 %x.abs, 32
+  ret i1 %cmp
+}
+
+define i1 @abs_cmp_ult_poison(i32 %x) {
+; CHECK-LABEL: @abs_cmp_ult_poison(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X_FR:%.*]], 31
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP1]], 63
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 true)
+  %cmp = icmp ult i32 %x.abs, 32
+  ret i1 %cmp
+}
+
+define i1 @abs_cmp_ult_poison_multiuse(i32 %x) {
+; CHECK-LABEL: @abs_cmp_ult_poison_multiuse(
+; CHECK-NEXT:    [[X_ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    call void @use(i32 [[X_ABS]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ult i32 [[X_ABS]], 32
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 true)
+  call void @use(i32 %x.abs)
+  %cmp = icmp ult i32 %x.abs, 32
+  ret i1 %cmp
+}
+
+define i1 @abs_cmp_uge_no_poison(i32 %x) {
+; CHECK-LABEL: @abs_cmp_uge_no_poison(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], -31
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP1]], -61
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
+  %cmp = icmp ugt i32 %x.abs, 30
+  ret i1 %cmp
+}
+
+define i1 @abs_cmp_uge_no_poison_multiuse(i32 %x) {
+; CHECK-LABEL: @abs_cmp_uge_no_poison_multiuse(
+; CHECK-NEXT:    [[X_ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    call void @use(i32 [[X_ABS]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X_ABS]], 30
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
+  call void @use(i32 %x.abs)
+  %cmp = icmp ugt i32 %x.abs, 30
+  ret i1 %cmp
+}
+
+define i1 @abs_cmp_uge_poison(i32 %x) {
+; CHECK-LABEL: @abs_cmp_uge_poison(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X_FR:%.*]], -31
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP1]], -61
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 true)
+  %cmp = icmp ugt i32 %x.abs, 30
+  ret i1 %cmp
+}
+
+define i1 @abs_cmp_uge_poison_multiuse(i32 %x) {
+; CHECK-LABEL: @abs_cmp_uge_poison_multiuse(
+; CHECK-NEXT:    [[X_ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    call void @use(i32 [[X_ABS]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[X_ABS]], 30
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 true)
+  call void @use(i32 %x.abs)
+  %cmp = icmp ugt i32 %x.abs, 30
+  ret i1 %cmp
+}
+
+define i1 @abs_cmp_ugt_no_poison(i32 %x) {
+; CHECK-LABEL: @abs_cmp_ugt_no_poison(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], -32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP1]], -63
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
+  %cmp = icmp ugt i32 %x.abs, 31
+  ret i1 %cmp
+}
+
+define i1 @abs_cmp_ugt_no_poison_multiuse(i32 %x) {
+; CHECK-LABEL: @abs_cmp_ugt_no_poison_multiuse(
+; CHECK-NEXT:    [[X_ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 false)
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ugt i32 [[X_ABS]], 31
+; CHECK-NEXT:    call void @use(i32 [[X_ABS]])
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 false)
+  %cmp = icmp ugt i32 %x.abs, 31
+  call void @use(i32 %x.abs)
+  ret i1 %cmp
+}
+
+define i1 @abs_cmp_ugt_poison(i32 %x) {
+; CHECK-LABEL: @abs_cmp_ugt_poison(
+; CHECK-NEXT:    [[TMP1:%.*]] = add i32 [[X:%.*]], -32
+; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i32 [[TMP1]], -63
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 true)
+  %cmp = icmp ugt i32 %x.abs, 31
+  ret i1 %cmp
+}
+
+define i1 @abs_cmp_ugt_poison_multiuse(i32 %x) {
+; CHECK-LABEL: @abs_cmp_ugt_poison_multiuse(
+; CHECK-NEXT:    [[X_ABS:%.*]] = call i32 @llvm.abs.i32(i32 [[X:%.*]], i1 true)
+; CHECK-NEXT:    call void @use(i32 [[X_ABS]])
+; CHECK-NEXT:    [[CMP:%.*]] = icmp samesign ugt i32 [[X_ABS]], 31
+; CHECK-NEXT:    ret i1 [[CMP]]
+;
+  %x.abs = call i32 @llvm.abs.i32(i32 %x, i1 true)
+  call void @use(i32 %x.abs)
+  %cmp = icmp ugt i32 %x.abs, 31
+  ret i1 %cmp
 }

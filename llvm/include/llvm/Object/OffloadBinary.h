@@ -48,6 +48,7 @@ enum ImageKind : uint16_t {
   IMG_Cubin,
   IMG_Fatbinary,
   IMG_PTX,
+  IMG_SPIRV,
   IMG_LAST,
 };
 
@@ -70,9 +71,9 @@ public:
 
   /// The offloading metadata that will be serialized to a memory buffer.
   struct OffloadingImage {
-    ImageKind TheImageKind;
-    OffloadKind TheOffloadKind;
-    uint32_t Flags;
+    ImageKind TheImageKind = ImageKind::IMG_None;
+    OffloadKind TheOffloadKind = OffloadKind::OFK_None;
+    uint32_t Flags = 0;
     MapVector<StringRef, StringRef> StringData;
     std::unique_ptr<MemoryBuffer> Image;
   };
@@ -99,9 +100,7 @@ public:
   }
 
   // Iterator over all the key and value pairs in the binary.
-  string_iterator_range strings() const {
-    return string_iterator_range(StringData.begin(), StringData.end());
-  }
+  string_iterator_range strings() const { return StringData; }
 
   StringRef getString(StringRef Key) const { return StringData.lookup(Key); }
 

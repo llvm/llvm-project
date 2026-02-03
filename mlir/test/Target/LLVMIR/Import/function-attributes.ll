@@ -22,14 +22,14 @@ define dso_local void @dsolocal_func() {
 ; // -----
 
 ; CHECK-LABEL: @func_readnone
-; CHECK-SAME:  attributes {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>}
+; CHECK-SAME:  attributes {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>}
 ; CHECK:   llvm.return
 define void @func_readnone() readnone {
   ret void
 }
 
 ; CHECK-LABEL: @func_readnone_indirect
-; CHECK-SAME:  attributes {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none>}
+; CHECK-SAME:  attributes {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>}
 declare void @func_readnone_indirect() #0
 attributes #0 = { readnone }
 
@@ -169,7 +169,7 @@ define void @entry_count() !prof !1 {
 ; // -----
 
 ; CHECK-LABEL: @func_memory
-; CHECK-SAME:  attributes {memory_effects = #llvm.memory_effects<other = readwrite, argMem = none, inaccessibleMem = readwrite>}
+; CHECK-SAME:  attributes {memory_effects = #llvm.memory_effects<other = readwrite, argMem = none, inaccessibleMem = readwrite, errnoMem = readwrite, targetMem0 = readwrite, targetMem1 = readwrite>}
 ; CHECK:   llvm.return
 define void @func_memory() memory(readwrite, argmem: none) {
   ret void
@@ -303,18 +303,6 @@ declare void @align_decl() align 64
 
 ; // -----
 
-; CHECK-LABEL: @func_attr_unsafe_fp_math_true
-; CHECK-SAME: attributes {unsafe_fp_math = true}
-declare void @func_attr_unsafe_fp_math_true() "unsafe-fp-math"="true"
-
-; // -----
-
-; CHECK-LABEL: @func_attr_unsafe_fp_math_false
-; CHECK-SAME: attributes {unsafe_fp_math = false}
-declare void @func_attr_unsafe_fp_math_false() "unsafe-fp-math"="false"
-
-; // -----
-
 ; CHECK-LABEL: @func_attr_no_infs_fp_math_true
 ; CHECK-SAME: attributes {no_infs_fp_math = true}
 declare void @func_attr_no_infs_fp_math_true() "no-infs-fp-math"="true"
@@ -336,18 +324,6 @@ declare void @func_attr_no_nans_fp_math_true() "no-nans-fp-math"="true"
 ; CHECK-LABEL: @func_attr_no_nans_fp_math_false
 ; CHECK-SAME: attributes {no_nans_fp_math = false}
 declare void @func_attr_no_nans_fp_math_false() "no-nans-fp-math"="false"
-
-; // -----
-
-; CHECK-LABEL: @func_attr_approx_func_fp_math_true
-; CHECK-SAME: attributes {approx_func_fp_math = true}
-declare void @func_attr_approx_func_fp_math_true() "approx-func-fp-math"="true"
-
-; // -----
-
-; CHECK-LABEL: @func_attr_approx_func_fp_math_false
-; CHECK-SAME: attributes {approx_func_fp_math = false}
-declare void @func_attr_approx_func_fp_math_false() "approx-func-fp-math"="false"
 
 ; // -----
 
@@ -405,6 +381,12 @@ declare void @alwaysinline_attribute() alwaysinline
 
 // -----
 
+; CHECK-LABEL: @inlinehint_attribute
+; CHECK-SAME: attributes {inline_hint}
+declare void @inlinehint_attribute() inlinehint
+
+// -----
+
 ; CHECK-LABEL: @optnone_attribute
 ; CHECK-SAME: attributes {no_inline, optimize_none}
 declare void @optnone_attribute() noinline optnone
@@ -426,3 +408,68 @@ declare void @nounwind_attribute() nounwind
 ; CHECK-LABEL: @willreturn_attribute
 ; CHECK-SAME: attributes {will_return}
 declare void @willreturn_attribute() willreturn
+
+// -----
+
+; CHECK-LABEL: @noreturn_attribute
+; CHECK-SAME: attributes {noreturn}
+declare void @noreturn_attribute() noreturn
+
+// -----
+
+; CHECK-LABEL: @returnstwice_attribute
+; CHECK-SAME: attributes {returns_twice}
+declare void @returnstwice_attribute() returns_twice
+
+// -----
+
+; CHECK-LABEL: @hot_attribute
+; CHECK-SAME: attributes {hot}
+declare void @hot_attribute() hot
+
+// -----
+
+; CHECK-LABEL: @cold_attribute
+; CHECK-SAME: attributes {cold}
+declare void @cold_attribute() cold
+
+// -----
+
+; CHECK-LABEL: @noduplicate_attribute
+; CHECK-SAME: attributes {noduplicate}
+declare void @noduplicate_attribute() noduplicate
+
+// -----
+
+; CHECK-LABEL: @no_caller_saved_registers_attribute
+; CHECK-SAME: attributes {no_caller_saved_registers}
+declare void @no_caller_saved_registers_attribute () "no_caller_saved_registers"
+
+// -----
+
+; CHECK-LABEL: @nocallback_attribute
+; CHECK-SAME: attributes {nocallback}
+declare void @nocallback_attribute() nocallback
+
+// -----
+
+; CHECK-LABEL: @modular_format_attribute
+; CHECK-SAME: attributes {modular_format = "Ident,1,1,Foo,Bar"}
+declare void @modular_format_attribute(i32) "modular-format" = "Ident,1,1,Foo,Bar"
+
+// -----
+
+; CHECK-LABEL: @no_builtins_all
+; CHECK-SAME: attributes {nobuiltins = []}
+declare void @no_builtins_all() "no-builtins"
+
+// -----
+
+; CHECK-LABEL: @no_builtins_2
+; CHECK-SAME: attributes {nobuiltins = ["asdf", "defg"]}
+declare void @no_builtins_2() "no-builtin-asdf" "no-builtin-defg"
+
+// -----
+
+; expected-warning @unknown {{'preallocated' attribute is invalid on current operation, skipping it}}
+declare void @test() preallocated(i32)

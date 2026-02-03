@@ -17,7 +17,7 @@ define i32 @foo(i32 %N) {
 ; EPILOG-NEXT:    [[TMP0:%.*]] = add i32 [[N:%.*]], 1
 ; EPILOG-NEXT:    [[XTRAITER:%.*]] = and i32 [[TMP0]], 1
 ; EPILOG-NEXT:    [[TMP1:%.*]] = icmp ult i32 [[N]], 1
-; EPILOG-NEXT:    br i1 [[TMP1]], label [[WHILE_END_UNR_LCSSA:%.*]], label [[ENTRY_NEW:%.*]]
+; EPILOG-NEXT:    br i1 [[TMP1]], label [[WHILE_BODY_EPIL_PREHEADER:%.*]], label [[ENTRY_NEW:%.*]]
 ; EPILOG:       entry.new:
 ; EPILOG-NEXT:    [[UNROLL_ITER:%.*]] = sub i32 [[TMP0]], [[XTRAITER]]
 ; EPILOG-NEXT:    br label [[WHILE_BODY:%.*]]
@@ -28,22 +28,21 @@ define i32 @foo(i32 %N) {
 ; EPILOG-NEXT:    [[INC_1]] = add i32 [[I]], 2
 ; EPILOG-NEXT:    [[NITER_NEXT_1]] = add i32 [[NITER]], 2
 ; EPILOG-NEXT:    [[NITER_NCMP_1:%.*]] = icmp eq i32 [[NITER_NEXT_1]], [[UNROLL_ITER]]
-; EPILOG-NEXT:    br i1 [[NITER_NCMP_1]], label [[WHILE_END_UNR_LCSSA_LOOPEXIT:%.*]], label [[WHILE_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
-; EPILOG:       while.end.unr-lcssa.loopexit:
+; EPILOG-NEXT:    br i1 [[NITER_NCMP_1]], label [[WHILE_END_UNR_LCSSA:%.*]], label [[WHILE_BODY]], !llvm.loop [[LOOP0:![0-9]+]]
+; EPILOG:       while.end.unr-lcssa:
 ; EPILOG-NEXT:    [[I_LCSSA_PH_PH:%.*]] = phi i32 [ [[INC]], [[WHILE_BODY]] ]
 ; EPILOG-NEXT:    [[I_UNR_PH:%.*]] = phi i32 [ [[INC_1]], [[WHILE_BODY]] ]
-; EPILOG-NEXT:    br label [[WHILE_END_UNR_LCSSA]]
-; EPILOG:       while.end.unr-lcssa:
-; EPILOG-NEXT:    [[I_LCSSA_PH:%.*]] = phi i32 [ poison, [[ENTRY:%.*]] ], [ [[I_LCSSA_PH_PH]], [[WHILE_END_UNR_LCSSA_LOOPEXIT]] ]
-; EPILOG-NEXT:    [[I_UNR:%.*]] = phi i32 [ 0, [[ENTRY]] ], [ [[I_UNR_PH]], [[WHILE_END_UNR_LCSSA_LOOPEXIT]] ]
 ; EPILOG-NEXT:    [[LCMP_MOD:%.*]] = icmp ne i32 [[XTRAITER]], 0
-; EPILOG-NEXT:    br i1 [[LCMP_MOD]], label [[WHILE_BODY_EPIL_PREHEADER:%.*]], label [[WHILE_END:%.*]]
+; EPILOG-NEXT:    br i1 [[LCMP_MOD]], label [[WHILE_BODY_EPIL_PREHEADER]], label [[WHILE_END:%.*]]
 ; EPILOG:       while.body.epil.preheader:
+; EPILOG-NEXT:    [[I_EPIL_INIT:%.*]] = phi i32 [ 0, [[ENTRY:%.*]] ], [ [[I_UNR_PH]], [[WHILE_END_UNR_LCSSA]] ]
+; EPILOG-NEXT:    [[LCMP_MOD2:%.*]] = icmp ne i32 [[XTRAITER]], 0
+; EPILOG-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD2]])
 ; EPILOG-NEXT:    br label [[WHILE_BODY_EPIL:%.*]]
 ; EPILOG:       while.body.epil:
 ; EPILOG-NEXT:    br label [[WHILE_END]]
 ; EPILOG:       while.end:
-; EPILOG-NEXT:    [[I_LCSSA:%.*]] = phi i32 [ [[I_LCSSA_PH]], [[WHILE_END_UNR_LCSSA]] ], [ [[I_UNR]], [[WHILE_BODY_EPIL]] ]
+; EPILOG-NEXT:    [[I_LCSSA:%.*]] = phi i32 [ [[I_LCSSA_PH_PH]], [[WHILE_END_UNR_LCSSA]] ], [ [[I_EPIL_INIT]], [[WHILE_BODY_EPIL]] ]
 ; EPILOG-NEXT:    ret i32 [[I_LCSSA]]
 ;
 ; PROLOG-LABEL: @foo(

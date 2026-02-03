@@ -161,17 +161,24 @@ DWARFUnit *DWARFUnitVector::getUnitForOffset(uint64_t Offset) const {
   return nullptr;
 }
 
-DWARFUnit *
-DWARFUnitVector::getUnitForIndexEntry(const DWARFUnitIndex::Entry &E) {
-  const auto *CUOff = E.getContribution(DW_SECT_INFO);
+DWARFUnit *DWARFUnitVector::getUnitForIndexEntry(const DWARFUnitIndex::Entry &E,
+                                                 DWARFSectionKind Sec,
+                                                 const DWARFSection *Section) {
+  const auto *CUOff = E.getContribution(Sec);
   if (!CUOff)
     return nullptr;
 
   uint64_t Offset = CUOff->getOffset();
-  auto end = begin() + getNumInfoUnits();
+  auto begin = this->begin();
+  auto end = begin + getNumInfoUnits();
+
+  if (Sec == DW_SECT_EXT_TYPES) {
+    begin = end;
+    end = this->end();
+  }
 
   auto *CU =
-      std::upper_bound(begin(), end, CUOff->getOffset(),
+      std::upper_bound(begin, end, CUOff->getOffset(),
                        [](uint64_t LHS, const std::unique_ptr<DWARFUnit> &RHS) {
                          return LHS < RHS->getNextUnitOffset();
                        });
@@ -181,13 +188,14 @@ DWARFUnitVector::getUnitForIndexEntry(const DWARFUnitIndex::Entry &E) {
   if (!Parser)
     return nullptr;
 
-  auto U = Parser(Offset, DW_SECT_INFO, nullptr, &E);
+  auto U = Parser(Offset, Sec, Section, &E);
   if (!U)
     return nullptr;
 
   auto *NewCU = U.get();
   this->insert(CU, std::move(U));
-  ++NumInfoUnits;
+  if (Sec == DW_SECT_INFO)
+    ++NumInfoUnits;
   return NewCU;
 }
 
@@ -1179,9 +1187,15 @@ DWARFUnit::determineStringOffsetsTableContributionDWO(DWARFDataExtractor &DA) {
   if (getVersion() >= 5) {
     if (DA.getData().data() == nullptr)
       return std::nullopt;
-    Offset += Header.getFormat() == dwarf::DwarfFormat::DWARF32 ? 8 : 16;
+    // FYI: The .debug_str_offsets.dwo section may use DWARF64 even when the
+    // rest of the file uses DWARF32, so respect whichever encoding the
+    // header/length uses.
+    uint64_t Length = 0;
+    DwarfFormat Format = dwarf::DwarfFormat::DWARF32;
+    std::tie(Length, Format) = DA.getInitialLength(&Offset);
+    Offset += 4; // Skip the DWARF version uint16_t and the uint16_t padding.
     // Look for a valid contribution at the given offset.
-    auto DescOrError = parseDWARFStringOffsetsTableHeader(DA, Header.getFormat(), Offset);
+    auto DescOrError = parseDWARFStringOffsetsTableHeader(DA, Format, Offset);
     if (!DescOrError)
       return DescOrError.takeError();
     return *DescOrError;

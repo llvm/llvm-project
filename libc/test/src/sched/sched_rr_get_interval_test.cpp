@@ -6,19 +6,21 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "src/__support/libc_errno.h"
 #include "src/sched/sched_get_priority_min.h"
 #include "src/sched/sched_getscheduler.h"
 #include "src/sched/sched_rr_get_interval.h"
 #include "src/sched/sched_setscheduler.h"
 #include "src/unistd/getuid.h"
+#include "test/UnitTest/ErrnoCheckingTest.h"
 #include "test/UnitTest/Test.h"
 
 #include "hdr/sched_macros.h"
 #include "hdr/types/struct_timespec.h"
 
-TEST(LlvmLibcSchedRRGetIntervalTest, SmokeTest) {
-  libc_errno = 0;
+using LlvmLibcSchedRRGetIntervalTest =
+    LIBC_NAMESPACE::testing::ErrnoCheckingTest;
+
+TEST_F(LlvmLibcSchedRRGetIntervalTest, SmokeTest) {
   auto SetSched = [&](int policy) {
     int min_priority = LIBC_NAMESPACE::sched_get_priority_min(policy);
     ASSERT_GE(min_priority, 0);
@@ -59,19 +61,16 @@ TEST(LlvmLibcSchedRRGetIntervalTest, SmokeTest) {
     // Null timespec
     ASSERT_EQ(LIBC_NAMESPACE::sched_rr_get_interval(0, nullptr), -1);
     ASSERT_ERRNO_EQ(EFAULT);
-    libc_errno = 0;
 
     // Negative pid
     ASSERT_EQ(LIBC_NAMESPACE::sched_rr_get_interval(-1, &ts), -1);
     ASSERT_ERRNO_EQ(EINVAL);
-    libc_errno = 0;
   }
 
   // Negative tests don't have SCHED_RR set
   SetSched(SCHED_OTHER);
   ASSERT_EQ(LIBC_NAMESPACE::sched_rr_get_interval(0, &ts), 0);
   ASSERT_ERRNO_SUCCESS();
-  libc_errno = 0;
 
   // TODO: Missing unkown pid -> ESRCH. This is read only so safe to try a few
   //       unlikely values.

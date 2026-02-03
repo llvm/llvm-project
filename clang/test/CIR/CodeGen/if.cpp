@@ -74,7 +74,7 @@ void if1(int a) {
 // CIR: cir.func{{.*}} @_Z3if1i(%arg0: !s32i loc({{.*}}))
 // CIR: cir.scope {
 // CIR:   %3 = cir.load{{.*}} %0 : !cir.ptr<!s32i>, !s32i
-// CIR:   %4 = cir.cast(int_to_bool, %3 : !s32i), !cir.bool
+// CIR:   %4 = cir.cast int_to_bool %3 : !s32i -> !cir.bool
 // CIR-NEXT:   cir.if %4 {
 // CIR-NEXT:     %5 = cir.const #cir.int<3> : !s32i
 // CIR-NEXT:     cir.store{{.*}} %5, %1 : !s32i, !cir.ptr<!s32i>
@@ -141,7 +141,7 @@ void if2(int a, bool b, bool c) {
 // CIR: cir.func{{.*}} @_Z3if2ibb(%arg0: !s32i loc({{.*}}), %arg1: !cir.bool loc({{.*}}), %arg2: !cir.bool loc({{.*}}))
 // CIR: cir.scope {
 // CIR:   %5 = cir.load{{.*}} %0 : !cir.ptr<!s32i>, !s32i
-// CIR:   %6 = cir.cast(int_to_bool, %5 : !s32i), !cir.bool
+// CIR:   %6 = cir.cast int_to_bool %5 : !s32i -> !cir.bool
 // CIR:   cir.if %6 {
 // CIR:     %7 = cir.const #cir.int<3> : !s32i
 // CIR:     cir.store{{.*}} %7, %3 : !s32i, !cir.ptr<!s32i>
@@ -267,7 +267,7 @@ int if_init() {
 // CIR:   %[[CONST42:.*]] = cir.const #cir.int<42> : !s32i
 // CIR:   cir.store{{.*}} %[[CONST42]], %[[X]] : !s32i, !cir.ptr<!s32i>
 // CIR:   %[[X_VAL:.*]] = cir.load{{.*}} %[[X]] : !cir.ptr<!s32i>, !s32i
-// CIR:   %[[COND:.*]] = cir.cast(int_to_bool, %[[X_VAL]] : !s32i), !cir.bool
+// CIR:   %[[COND:.*]] = cir.cast int_to_bool %[[X_VAL]] : !s32i -> !cir.bool
 // CIR:   cir.if %[[COND]] {
 // CIR:     %[[X_IF:.*]] = cir.load{{.*}} %[[X]] : !cir.ptr<!s32i>, !s32i
 // CIR:     %[[ONE:.*]] = cir.const #cir.int<1> : !s32i

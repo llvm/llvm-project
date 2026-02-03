@@ -48,11 +48,20 @@ let usesCustomInserter = 1 in {
 }
 def : Pat<(i64 (AArch64EntryPStateSM)), (EntryPStateSM)>;
 
-def AArch64VGSave : SDNode<"AArch64ISD::VG_SAVE", SDTypeProfile<0, 0, []>,
-                           [SDNPHasChain, SDNPSideEffect, SDNPOptInGlue, SDNPOutGlue]>;
+// Pseudo-instruction that compares the current SVE vector length (VL) with the
+// streaming vector length (SVL). If the two lengths do not match, the check
+// lowers to a `brk`, causing a trap.
+let hasSideEffects = 1, isCodeGenOnly = 1, usesCustomInserter = 1 in
+def CHECK_MATCHING_VL_PSEUDO : Pseudo<(outs), (ins), []>, Sched<[]>;
 
-def AArch64VGRestore : SDNode<"AArch64ISD::VG_RESTORE", SDTypeProfile<0, 0, []>,
-                              [SDNPHasChain, SDNPSideEffect, SDNPOptInGlue, SDNPOutGlue]>;
+def AArch64_check_matching_vl
+  : SDNode<"AArch64ISD::CHECK_MATCHING_VL", SDTypeProfile<0, 0,[]>,
+           [SDNPHasChain, SDNPOptInGlue, SDNPOutGlue]>;
+def : Pat<(AArch64_check_matching_vl), (CHECK_MATCHING_VL_PSEUDO)>;
+
+//===----------------------------------------------------------------------===//
+// Old SME ABI lowering ISD nodes/pseudos (deprecated)
+//===----------------------------------------------------------------------===//
 
 def AArch64AllocateZABuffer : SDNode<"AArch64ISD::ALLOCATE_ZA_BUFFER", SDTypeProfile<1, 1,
                               [SDTCisInt<0>, SDTCisInt<1>]>,
@@ -63,10 +72,10 @@ let usesCustomInserter = 1, Defs = [SP], Uses = [SP] in {
 def : Pat<(i64 (AArch64AllocateZABuffer GPR64:$size)),
           (AllocateZABuffer $size)>;
 
-def AArch64InitTPIDR2Obj  : SDNode<"AArch64ISD::INIT_TPIDR2OBJ", SDTypeProfile<0, 1,
-                              [SDTCisInt<0>]>, [SDNPHasChain, SDNPMayStore]>;
+def AArch64InitTPIDR2Obj  : SDNode<"AArch64ISD::INIT_TPIDR2OBJ", SDTypeProfile<0, 2,
+                              [SDTCisInt<0>, SDTCisInt<1>]>, [SDNPHasChain, SDNPMayStore]>;
 let usesCustomInserter = 1 in {
-  def InitTPIDR2Obj : Pseudo<(outs), (ins GPR64:$buffer), [(AArch64InitTPIDR2Obj GPR64:$buffer)]>, Sched<[WriteI]> {}
+  def InitTPIDR2Obj : Pseudo<(outs), (ins GPR64:$buffer, GPR64:$save_slices), [(AArch64InitTPIDR2Obj GPR64:$buffer, GPR64:$save_slices)]>, Sched<[WriteI]> {}
 }
 
 // Nodes to allocate a save buffer for SME.
@@ -87,6 +96,44 @@ def : Pat<(i64 (AArch64AllocateSMESaveBuffer GPR64:$size)),
           (AllocateSMESaveBuffer $size)>;
 
 //===----------------------------------------------------------------------===//
+// New SME ABI lowering ISD nodes/pseudos (-aarch64-new-sme-abi)
+//===----------------------------------------------------------------------===//
+
+let hasSideEffects = 1, isMeta = 1 in {
+  def InOutZAUsePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
+  def RequiresZASavePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
+  def RequiresZT0SavePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
+}
+
+def SMEStateAllocPseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
+
+def CommitZASavePseudo
+  : Pseudo<(outs),
+           (ins GPR64:$tpidr2_el0, i1imm:$zero_za, i1imm:$zero_zt0,
+                i64imm:$commit_routine, variable_ops), []>,
+           Sched<[]>;
+
+def AArch64_inout_za_use
+  : SDNode<"AArch64ISD::INOUT_ZA_USE", SDTypeProfile<0, 0,[]>,
+           [SDNPHasChain, SDNPInGlue, SDNPOutGlue]>;
+def : Pat<(AArch64_inout_za_use), (InOutZAUsePseudo)>;
+
+def AArch64_requires_za_save
+  : SDNode<"AArch64ISD::REQUIRES_ZA_SAVE", SDTypeProfile<0, 0,[]>,
+           [SDNPHasChain, SDNPInGlue, SDNPOutGlue]>;
+def : Pat<(AArch64_requires_za_save), (RequiresZASavePseudo)>;
+
+def AArch64_requires_zt0_save
+  : SDNode<"AArch64ISD::REQUIRES_ZT0_SAVE", SDTypeProfile<0, 0, []>,
+           [SDNPHasChain, SDNPInGlue, SDNPOutGlue]>;
+def : Pat<(AArch64_requires_zt0_save), (RequiresZT0SavePseudo)>;
+
+def AArch64_sme_state_alloc
+  : SDNode<"AArch64ISD::SME_STATE_ALLOC", SDTypeProfile<0, 0,[]>,
+           [SDNPHasChain]>;
+def : Pat<(AArch64_sme_state_alloc), (SMEStateAllocPseudo)>;
+
+//===----------------------------------------------------------------------===//
 // Instruction naming conventions.
 //===----------------------------------------------------------------------===//
 
@@ -105,10 +152,15 @@ def : Pat<(i64 (AArch64AllocateSMESaveBuffer GPR64:$size)),
 def SDT_AArch64RDSVL  : SDTypeProfile<1, 1, [SDTCisInt<0>, SDTCisInt<1>]>;
 def AArch64rdsvl : SDNode<"AArch64ISD::RDSVL", SDT_AArch64RDSVL>;
 
+def sme_rdsvl_shl_imm : ComplexPattern<i64, 1, "SelectRDSVLShiftImm<1, 31>">;
+
 let Predicates = [HasSMEandIsNonStreamingSafe] in {
 def RDSVLI_XI  : sve_int_read_vl_a<0b0, 0b11111, "rdsvl", /*streaming_sve=*/0b1>;
 def ADDSPL_XXI : sve_int_arith_vl<0b1, "addspl", /*streaming_sve=*/0b1>;
 def ADDSVL_XXI : sve_int_arith_vl<0b0, "addsvl", /*streaming_sve=*/0b1>;
+
+def : Pat<(i64 (shl (AArch64rdsvl (i32 1)), (sme_rdsvl_shl_imm i64:$imm))),
+          (RDSVLI_XI (!cast<SDNodeXForm>("trunc_imm") $imm))>;
 
 def : Pat<(AArch64rdsvl (i32 simm6_32b:$imm)), (RDSVLI_XI simm6_32b:$imm)>;
 }
@@ -333,16 +385,6 @@ def : Pat<(AArch64_smstart (i32 svcr_op:$pstate)),
           (MSRpstatesvcrImm1 svcr_op:$pstate, 0b1)>;
 def : Pat<(AArch64_smstop (i32 svcr_op:$pstate)),
           (MSRpstatesvcrImm1 svcr_op:$pstate, 0b0)>;
-
-
-// Pseudo to insert cfi_offset/cfi_restore instructions. Used to save or restore
-// the streaming value of VG around streaming-mode changes in locally-streaming
-// functions.
-def VGSavePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
-def : Pat<(AArch64VGSave), (VGSavePseudo)>;
-
-def VGRestorePseudo : Pseudo<(outs), (ins), []>, Sched<[]>;
-def : Pat<(AArch64VGRestore), (VGRestorePseudo)>;
 
 //===----------------------------------------------------------------------===//
 // SME2 Instructions
@@ -1051,7 +1093,7 @@ defm FMLAL_MZZI_BtoH      : sme2_fp8_fmlal_index_za16<"fmlal",      int_aarch64_
 defm FMLAL_VG2_M2ZZI_BtoH : sme2_fp8_fmlal_index_za16_vgx2<"fmlal", int_aarch64_sme_fp8_fmlal_lane_za16_vg2x2>;
 defm FMLAL_VG4_M4ZZI_BtoH : sme2_fp8_fmlal_index_za16_vgx4<"fmlal", int_aarch64_sme_fp8_fmlal_lane_za16_vg2x4>;
 
-defm FMLAL_VG2_MZZ_BtoH  : sme2_fp8_fmlal_single_za16<"fmlal", int_aarch64_sme_fp8_fmlal_single_za16_vg2x1>;
+defm FMLAL_VG2_MZZ_BtoH  : sme2_fp8_fmlal_single_za16<"fmlal", int_aarch64_sme_fp8_fmlal_za16_vg2x1>;
 defm FMLAL_VG2_M2ZZ_BtoH : sme2_fp_mla_long_array_vg2_single<"fmlal", 0b001, MatrixOp16, ZZ_b, ZPR4b8, nxv16i8,   int_aarch64_sme_fp8_fmlal_single_za16_vg2x2, [FPMR, FPCR]>;
 defm FMLAL_VG4_M4ZZ_BtoH : sme2_fp_mla_long_array_vg4_single<"fmlal", 0b001, MatrixOp16, ZZZZ_b, ZPR4b8, nxv16i8, int_aarch64_sme_fp8_fmlal_single_za16_vg2x4, [FPMR, FPCR]>;
 
@@ -1077,7 +1119,7 @@ defm FMLALL_MZZI_BtoS      : sme2_mla_ll_array_index_32b<"fmlall",     0b01, 0b0
 defm FMLALL_VG2_M2ZZI_BtoS : sme2_mla_ll_array_vg2_index_32b<"fmlall", 0b10, 0b100,  int_aarch64_sme_fp8_fmlall_lane_za32_vg4x2, [FPMR, FPCR]>;
 defm FMLALL_VG4_M4ZZI_BtoS : sme2_mla_ll_array_vg4_index_32b<"fmlall", 0b00, 0b1000, int_aarch64_sme_fp8_fmlall_lane_za32_vg4x4, [FPMR, FPCR]>;
 
-defm FMLALL_MZZ_BtoS       : sme2_mla_ll_array_single<"fmlall", 0b01000, MatrixOp32, ZPR8, ZPR4b8, nxv16i8, int_aarch64_sme_fp8_fmlall_single_za32_vg4x1, [FPMR, FPCR]>;
+defm FMLALL_MZZ_BtoS       : sme2_mla_ll_array_single<"fmlall", 0b01000, MatrixOp32, ZPR8, ZPR4b8, nxv16i8, int_aarch64_sme_fp8_fmlall_za32_vg4x1, [FPMR, FPCR]>;
 defm FMLALL_VG2_M2ZZ_BtoS  : sme2_mla_ll_array_vg2_single<"fmlall", 0b000001, MatrixOp32, ZZ_b, ZPR4b8, nxv16i8, int_aarch64_sme_fp8_fmlall_single_za32_vg4x2, [FPMR, FPCR]>;
 defm FMLALL_VG4_M4ZZ_BtoS  : sme2_mla_ll_array_vg4_single<"fmlall", 0b010001, MatrixOp32, ZZZZ_b, ZPR4b8, nxv16i8, int_aarch64_sme_fp8_fmlall_single_za32_vg4x4, [FPMR, FPCR]>;
 
@@ -1138,3 +1180,14 @@ let Predicates = [HasSME_MOP4, HasSMEF64F64] in {
   defm FMOP4A : sme2_fmop4as_fp64_non_widening<0, "fmop4a", "int_aarch64_sme_mop4a">;
   defm FMOP4S : sme2_fmop4as_fp64_non_widening<1, "fmop4s", "int_aarch64_sme_mop4s">;
 }
+
+//===----------------------------------------------------------------------===//
+// SME2.3 instructions
+//===----------------------------------------------------------------------===//
+let Predicates = [HasSME2p3] in {
+  def LUTI6_ZTZ       : sme2_lut_single<"luti6">;
+  def LUTI6_4ZT3Z     : sme2_luti6_zt_consecutive<"luti6">;
+  def LUTI6_S_4ZT3Z   : sme2_luti6_zt_strided<"luti6">;
+  def LUTI6_4Z2Z2ZI   : sme2_luti6_vector_vg4_consecutive<"luti6">;
+  def LUTI6_S_4Z2Z2ZI : sme2_luti6_vector_vg4_strided<"luti6">;
+} // [HasSME2p3]

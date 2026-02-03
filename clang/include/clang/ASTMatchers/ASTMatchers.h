@@ -2478,6 +2478,21 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, NullStmt> nullStmt;
 ///   matches '__asm("mov al, 2")'
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, AsmStmt> asmStmt;
 
+/// Matches top level asm declarations.
+///
+/// Given
+/// \code
+///    __asm("nop");
+///    void f() {
+///      __asm("mov al, 2");
+///    }
+/// \endcode
+/// fileScopeAsmDecl()
+///   matches '__asm("nop")',
+///   but not '__asm("mov al, 2")'.
+extern const internal::VariadicDynCastAllOfMatcher<Decl, FileScopeAsmDecl>
+    fileScopeAsmDecl;
+
 /// Matches bool literals.
 ///
 /// Example matches true
@@ -2762,6 +2777,20 @@ extern const internal::VariadicDynCastAllOfMatcher<Stmt, CXXDynamicCastExpr>
 /// \endcode
 extern const internal::VariadicDynCastAllOfMatcher<Stmt, CXXConstCastExpr>
     cxxConstCastExpr;
+
+/// Matches any named cast expression.
+///
+/// Example: Matches all four of the casts in
+/// \code
+///   struct S { virtual void f(); };
+///   S* p = nullptr;
+///   S* ptr1 = static_cast<S*>(p);
+///   S* ptr2 = reinterpret_cast<S*>(p);
+///   S* ptr3 = dynamic_cast<S*>(p);
+///   S* ptr4 = const_cast<S*>(p);
+/// \endcode
+extern const internal::VariadicDynCastAllOfMatcher<Stmt, CXXNamedCastExpr>
+    cxxNamedCastExpr;
 
 /// Matches a C-style cast expression.
 ///
@@ -5661,8 +5690,8 @@ AST_POLYMORPHIC_MATCHER_P(hasInitStatement,
   return Init != nullptr && InnerMatcher.matches(*Init, Finder, Builder);
 }
 
-/// Matches the condition expression of an if statement, for loop,
-/// switch statement or conditional operator.
+/// Matches the condition expression of an if statement, for loop, while loop,
+/// do-while loop, switch statement or conditional operator.
 ///
 /// Example matches true (matcher = hasCondition(cxxBoolLiteral(equals(true))))
 /// \code
@@ -5739,16 +5768,29 @@ AST_POLYMORPHIC_MATCHER_P(equalsBoundNode,
   return Builder->removeBindings(Predicate);
 }
 
-/// Matches the condition variable statement in an if statement.
+/// Matches a declaration if it declares the same entity as the node previously
+/// bound to \p ID.
+AST_MATCHER_P(Decl, declaresSameEntityAsBoundNode, std::string, ID) {
+  return Builder->removeBindings([&](const internal::BoundNodesMap &Nodes) {
+    return !clang::declaresSameEntity(&Node, Nodes.getNodeAs<Decl>(ID));
+  });
+}
+
+/// Matches the condition variable statement in an if statement, for loop,
+/// while loop or switch statement.
 ///
 /// Given
 /// \code
 ///   if (A* a = GetAPointer()) {}
+///   for (; A* a = GetAPointer(); ) {}
 /// \endcode
 /// hasConditionVariableStatement(...)
-///   matches 'A* a = GetAPointer()'.
-AST_MATCHER_P(IfStmt, hasConditionVariableStatement,
-              internal::Matcher<DeclStmt>, InnerMatcher) {
+///   matches both 'A* a = GetAPointer()'.
+AST_POLYMORPHIC_MATCHER_P(hasConditionVariableStatement,
+                          AST_POLYMORPHIC_SUPPORTED_TYPES(IfStmt, ForStmt,
+                                                          WhileStmt,
+                                                          SwitchStmt),
+                          internal::Matcher<DeclStmt>, InnerMatcher) {
   const DeclStmt* const DeclarationStatement =
     Node.getConditionVariableDeclStmt();
   return DeclarationStatement != nullptr &&
@@ -6961,6 +7003,32 @@ AST_MATCHER_P(ReferenceTypeLoc, hasReferentLoc, internal::Matcher<TypeLoc>,
   return ReferentMatcher.matches(Node.getPointeeLoc(), Finder, Builder);
 }
 
+/// Matches `ArrayTypeLoc`s.
+///
+/// Given
+/// \code
+///   int a[] = {1, 2};
+///   int b[3];
+///   void f() { int c[a[0]]; }
+/// \endcode
+/// arrayTypeLoc()
+///   matches "int a[]", "int b[3]" and "int c[a[0]]".
+extern const internal::VariadicDynCastAllOfMatcher<TypeLoc, ArrayTypeLoc>
+    arrayTypeLoc;
+
+/// Matches `FunctionTypeLoc`s.
+///
+/// Given
+/// \code
+///   void f(int);
+///   using g = double (char, float);
+///   char (*fn_ptr)();
+/// \endcode
+/// functionTypeLoc()
+///   matches "void (int)", "double (char, float)", and "char ()".
+extern const internal::VariadicDynCastAllOfMatcher<TypeLoc, FunctionTypeLoc>
+    functionTypeLoc;
+
 /// Matches template specialization `TypeLoc`s.
 ///
 /// Given
@@ -7698,18 +7766,6 @@ AST_MATCHER_P(DecayedType, hasDecayedType, internal::Matcher<QualType>,
 ///  };
 /// \endcode
 extern const AstTypeMatcher<DependentNameType> dependentNameType;
-
-/// Matches a dependent template specialization type
-///
-/// Example matches A<T>::template B<T>
-/// \code
-///   template<typename T> struct A;
-///   template<typename T> struct declToImport {
-///     typename A<T>::template B<T> a;
-///   };
-/// \endcode
-extern const AstTypeMatcher<DependentTemplateSpecializationType>
-    dependentTemplateSpecializationType;
 
 /// Matches declarations whose declaration context, interpreted as a
 /// Decl, matches \c InnerMatcher.
@@ -8710,6 +8766,21 @@ AST_MATCHER_P(OMPExecutableDirective, hasAnyClause,
                                     Builder) != Clauses.end();
 }
 
+/// Matches any ``#pragma omp target update`` executable directive.
+///
+/// Given
+///
+/// \code
+///   #pragma omp target update from(a)
+///   #pragma omp target update to(b)
+/// \endcode
+///
+/// ``ompTargetUpdateDirective()`` matches both ``omp target update from(a)``
+/// and ``omp target update to(b)``.
+extern const internal::VariadicDynCastAllOfMatcher<Stmt,
+                                                   OMPTargetUpdateDirective>
+    ompTargetUpdateDirective;
+
 /// Matches OpenMP ``default`` clause.
 ///
 /// Given
@@ -8810,7 +8881,7 @@ AST_MATCHER(OMPDefaultClause, isFirstPrivateKind) {
 ///   #pragma omp          for
 /// \endcode
 ///
-/// `ompExecutableDirective(isAllowedToContainClause(OMPC_default))`` matches
+/// ``ompExecutableDirective(isAllowedToContainClause(OMPC_default))`` matches
 /// ``omp parallel`` and ``omp parallel for``.
 ///
 /// If the matcher is use from clang-query, ``OpenMPClauseKind`` parameter
@@ -8822,6 +8893,30 @@ AST_MATCHER_P(OMPExecutableDirective, isAllowedToContainClauseKind,
       Node.getDirectiveKind(), CKind,
       Finder->getASTContext().getLangOpts().OpenMP);
 }
+
+/// Matches OpenMP ``from`` clause.
+///
+/// Given
+///
+/// \code
+///   #pragma omp target update from(a)
+/// \endcode
+///
+/// ``ompFromClause()`` matches ``from(a)``.
+extern const internal::VariadicDynCastAllOfMatcher<OMPClause, OMPFromClause>
+    ompFromClause;
+
+/// Matches OpenMP ``to`` clause.
+///
+/// Given
+///
+/// \code
+///   #pragma omp target update to(a)
+/// \endcode
+///
+/// ``ompToClause()`` matches ``to(a)``.
+extern const internal::VariadicDynCastAllOfMatcher<OMPClause, OMPToClause>
+    ompToClause;
 
 //----------------------------------------------------------------------------//
 // End OpenMP handling.

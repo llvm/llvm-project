@@ -287,6 +287,16 @@ namespace CallingConv {
     // Calling convention for AMDGPU whole wave functions.
     AMDGPU_Gfx_WholeWave = 124,
 
+    /// Calling convention used for CHERIoT when crossing a protection boundary.
+    CHERIoT_CompartmentCall = 125,
+    /// Calling convention used for the callee of CHERIoT_CompartmentCall.
+    /// Ignores the first two capability arguments and the first integer
+    /// argument, zeroes all unused return registers on return.
+    CHERIoT_CompartmentCallee = 126,
+    /// Calling convention used for CHERIoT for cross-library calls to a
+    /// stateless compartment.
+    CHERIoT_LibraryCall = 127,
+
     /// The highest possible ID. Must be some 2^k - 1.
     MaxID = 1023
   };

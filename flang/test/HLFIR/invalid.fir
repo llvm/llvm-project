@@ -37,6 +37,15 @@ func.func @bad_array_declare(%arg0: !fir.ref<!fir.array<?x?xf32>>) {
 }
 
 // -----
+func.func @bad_declare_skip_rebox(%arg0: !fir.ref<f32>) {
+  // expected-error@+1 {{'hlfir.declare' op skip_rebox attribute must only be set when the input is a box}}
+  %0:2 = hlfir.declare %arg0 skip_rebox {uniq_name = "x"} : (!fir.ref<f32>) -> (!fir.ref<f32>, !fir.ref<f32>)
+  return
+}
+
+// -----
+
+// -----
 func.func @bad_assign_scalar_character(%arg0: !fir.boxchar<1>, %arg1: !fir.char<1,?>) {
   // expected-error@+1 {{'hlfir.assign' op operand #0 must be any Fortran value or variable type, but got '!fir.char<1,?>'}}
   hlfir.assign %arg1 to %arg0 : !fir.char<1,?>, !fir.boxchar<1>
@@ -294,6 +303,23 @@ func.func @bad_concat_4(%arg0: !fir.ref<!fir.char<1,30>>) {
   // expected-error@+1 {{'hlfir.concat' op must be provided at least two string operands}}
   %0 = hlfir.concat %arg0 len %c30 : (!fir.ref<!fir.char<1,30>>, index) -> (!hlfir.expr<!fir.char<1,30>>)
   return
+}
+
+// -----
+func.func @bad_cmpchar_1(%arg0: !fir.ref<!fir.char<1,10>>, %arg1: !fir.ref<!fir.char<2,10>>) {
+  // expected-error@+1 {{'hlfir.cmpchar' op character arguments must have the same KIND}}
+  %0 = hlfir.cmpchar ne %arg0  %arg1 : (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<2,10>>) -> i1
+}
+
+func.func @bad_cmpchar_2(%arg0: !fir.ref<!fir.char<1,10>>, %arg1: !fir.ref<!fir.char<1,10>>) {
+  // expected-error@+1 {{'hlfir.cmpchar' op expected signed predicate}}
+  %0 = hlfir.cmpchar ugt %arg0  %arg1 : (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<1,10>>) -> i1
+}
+
+// -----
+func.func @bad_index_1(%arg0: !fir.ref<!fir.char<1,10>>, %arg1: !fir.ref<!fir.char<2,10>>) {
+  // expected-error@+1 {{'hlfir.index' op character arguments must have the same KIND}}
+  %0 = hlfir.index %arg0 in %arg1 : (!fir.ref<!fir.char<1,10>>, !fir.ref<!fir.char<2,10>>) -> i32
 }
 
 // -----
@@ -1648,3 +1674,28 @@ func.func @bad_eoshift11(%arg0: !hlfir.expr<2x2xi32>, %arg1: i32, %arg2: !hlfir.
   %0 = hlfir.eoshift %arg0 %arg1 boundary %arg2 : (!hlfir.expr<2x2xi32>, i32, !hlfir.expr<2x2xi32>) -> !hlfir.expr<2x2xi32>
   return
 }
+
+// -----
+
+func.func @fir_declare_bad_storage_offset(%arg0: !fir.ref<!fir.array<8xi8>>) {
+  %c0 = arith.constant 0 : index
+  %addr = fir.address_of(@block_) : !fir.ref<!fir.array<8xi8>>
+  %2 = fir.convert %addr : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
+  %var = fir.coordinate_of %2, %c0 : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+  // expected-error@+1 {{negative integer literal not valid for unsigned integer type}}
+  %decl:2 = hlfir.declare %var storage (%addr[-1]) {uniq_name = "a"} : (!fir.ref<i8>, !fir.ref<!fir.array<8xi8>>) -> (!fir.ref<i8>, !fir.ref<i8>)
+  return
+}
+
+// -----
+
+"func.func"() <{function_type = (!fir.ref<!fir.array<8xi8>>) -> (), sym_name = "fir_declare_bad_storage_offset"}> ({
+^bb0(%arg0: !fir.ref<!fir.array<8xi8>>):
+  %0 = "arith.constant"() <{value = 0 : index}> : () -> index
+  %1 = "fir.address_of"() <{symbol = @block_}> : () -> !fir.ref<!fir.array<8xi8>>
+  %2 = "fir.convert"(%1) : (!fir.ref<!fir.array<8xi8>>) -> !fir.ref<!fir.array<?xi8>>
+  %3 = "fir.coordinate_of"(%2, %0) <{baseType = !fir.ref<!fir.array<?xi8>>}> : (!fir.ref<!fir.array<?xi8>>, index) -> !fir.ref<i8>
+// expected-error@+1 {{storage offset specified without the storage reference}}
+  %4:2 = "hlfir.declare"(%3) <{operandSegmentSizes = array<i32: 1, 0, 0, 0, 0>, storage_offset = 1 : ui64, uniq_name = "a"}> : (!fir.ref<i8>) -> (!fir.ref<i8>, !fir.ref<i8>)
+  "func.return"() : () -> ()
+}) : () -> ()

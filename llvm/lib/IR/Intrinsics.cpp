@@ -32,6 +32,7 @@
 #include "llvm/IR/IntrinsicsX86.h"
 #include "llvm/IR/IntrinsicsXCore.h"
 #include "llvm/IR/Module.h"
+#include "llvm/IR/NVVMIntrinsicUtils.h"
 #include "llvm/IR/Type.h"
 
 using namespace llvm;
@@ -207,7 +208,6 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
   bool IsScalableVector = (LastInfo == IIT_SCALABLE_VEC);
 
   IIT_Info Info = IIT_Info(Infos[NextElt++]);
-  unsigned StructElts = 2;
 
   switch (Info) {
   case IIT_Done:
@@ -390,28 +390,9 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
   case IIT_EMPTYSTRUCT:
     OutputTable.push_back(IITDescriptor::get(IITDescriptor::Struct, 0));
     return;
-  case IIT_STRUCT9:
-    ++StructElts;
-    [[fallthrough]];
-  case IIT_STRUCT8:
-    ++StructElts;
-    [[fallthrough]];
-  case IIT_STRUCT7:
-    ++StructElts;
-    [[fallthrough]];
-  case IIT_STRUCT6:
-    ++StructElts;
-    [[fallthrough]];
-  case IIT_STRUCT5:
-    ++StructElts;
-    [[fallthrough]];
-  case IIT_STRUCT4:
-    ++StructElts;
-    [[fallthrough]];
-  case IIT_STRUCT3:
-    ++StructElts;
-    [[fallthrough]];
-  case IIT_STRUCT2: {
+  case IIT_STRUCT: {
+    unsigned StructElts = Infos[NextElt++] + 2;
+
     OutputTable.push_back(
         IITDescriptor::get(IITDescriptor::Struct, StructElts));
 
@@ -457,21 +438,28 @@ DecodeIITType(unsigned &NextElt, ArrayRef<unsigned char> Infos,
 
 void Intrinsic::getIntrinsicInfoTableEntries(
     ID id, SmallVectorImpl<IITDescriptor> &T) {
-  static_assert(sizeof(IIT_Table[0]) == 2,
-                "Expect 16-bit entries in IIT_Table");
-  // Check to see if the intrinsic's type was expressible by the table.
-  uint16_t TableVal = IIT_Table[id - 1];
+  // Note that `FixedEncodingTy` is defined in IntrinsicImpl.inc and can be
+  // uint16_t or uint32_t based on the the value of `Use16BitFixedEncoding` in
+  // IntrinsicEmitter.cpp.
+  constexpr unsigned FixedEncodingBits = sizeof(FixedEncodingTy) * CHAR_BIT;
+  constexpr unsigned MSBPosition = FixedEncodingBits - 1;
+  // Mask with all bits 1 except the most significant bit.
+  constexpr unsigned Mask = (1U << MSBPosition) - 1;
+
+  FixedEncodingTy TableVal = IIT_Table[id - 1];
 
   // Decode the TableVal into an array of IITValues.
   SmallVector<unsigned char> IITValues;
   ArrayRef<unsigned char> IITEntries;
   unsigned NextElt = 0;
-  if (TableVal >> 15) {
+  // Check to see if the intrinsic's type was inlined in the fixed encoding
+  // table.
+  if (TableVal >> MSBPosition) {
     // This is an offset into the IIT_LongEncodingTable.
     IITEntries = IIT_LongEncodingTable;
 
     // Strip sentinel bit.
-    NextElt = TableVal & 0x7fff;
+    NextElt = TableVal & Mask;
   } else {
     // If the entry was encoded into a single word in the table itself, decode
     // it from an array of nibbles to an array of bytes.
@@ -621,6 +609,12 @@ bool Intrinsic::isOverloaded(ID id) {
 #undef GET_INTRINSIC_OVERLOAD_TABLE
 }
 
+bool Intrinsic::hasPrettyPrintedArgs(ID id){
+#define GET_INTRINSIC_PRETTY_PRINT_TABLE
+#include "llvm/IR/IntrinsicImpl.inc"
+#undef GET_INTRINSIC_PRETTY_PRINT_TABLE
+}
+
 /// Table of per-target intrinsic name tables.
 #define GET_INTRINSIC_TARGET_DATA
 #include "llvm/IR/IntrinsicImpl.inc"
@@ -740,23 +734,66 @@ Intrinsic::ID Intrinsic::lookupIntrinsicID(StringRef Name) {
 #include "llvm/IR/IntrinsicImpl.inc"
 #undef GET_INTRINSIC_ATTRIBUTES
 
-AttributeSet Intrinsic::getFnAttributes(LLVMContext &C, ID id) {
-  if (id == 0)
-    return AttributeSet();
-  uint16_t PackedID = IntrinsicsToAttributesMap[id - 1];
-  uint8_t FnAttrID = PackedID >> 8;
-  return getIntrinsicFnAttributeSet(C, FnAttrID);
+static Function *getOrInsertIntrinsicDeclarationImpl(Module *M,
+                                                     Intrinsic::ID id,
+                                                     ArrayRef<Type *> Tys,
+                                                     FunctionType *FT) {
+  Function *F = cast<Function>(
+      M->getOrInsertFunction(Tys.empty() ? Intrinsic::getName(id)
+                                         : Intrinsic::getName(id, Tys, M, FT),
+                             FT)
+          .getCallee());
+  if (F->getFunctionType() == FT)
+    return F;
+
+  // It's possible that a declaration for this intrinsic already exists with an
+  // incorrect signature, if the signature has changed, but this particular
+  // declaration has not been auto-upgraded yet. In that case, rename the
+  // invalid declaration and insert a new one with the correct signature. The
+  // invalid declaration will get upgraded later.
+  F->setName(F->getName() + ".invalid");
+  return cast<Function>(
+      M->getOrInsertFunction(Tys.empty() ? Intrinsic::getName(id)
+                                         : Intrinsic::getName(id, Tys, M, FT),
+                             FT)
+          .getCallee());
 }
 
 Function *Intrinsic::getOrInsertDeclaration(Module *M, ID id,
                                             ArrayRef<Type *> Tys) {
   // There can never be multiple globals with the same name of different types,
   // because intrinsics must be a specific type.
-  auto *FT = getType(M->getContext(), id, Tys);
-  return cast<Function>(
-      M->getOrInsertFunction(
-           Tys.empty() ? getName(id) : getName(id, Tys, M, FT), FT)
-          .getCallee());
+  FunctionType *FT = getType(M->getContext(), id, Tys);
+  return getOrInsertIntrinsicDeclarationImpl(M, id, Tys, FT);
+}
+
+Function *Intrinsic::getOrInsertDeclaration(Module *M, ID id, Type *RetTy,
+                                            ArrayRef<Type *> ArgTys) {
+  // If the intrinsic is not overloaded, use the non-overloaded version.
+  if (!Intrinsic::isOverloaded(id))
+    return getOrInsertDeclaration(M, id);
+
+  // Get the intrinsic signature metadata.
+  SmallVector<Intrinsic::IITDescriptor, 8> Table;
+  getIntrinsicInfoTableEntries(id, Table);
+  ArrayRef<Intrinsic::IITDescriptor> TableRef = Table;
+
+  FunctionType *FTy = FunctionType::get(RetTy, ArgTys, /*isVarArg=*/false);
+
+  // Automatically determine the overloaded types.
+  SmallVector<Type *, 4> OverloadTys;
+  [[maybe_unused]] Intrinsic::MatchIntrinsicTypesResult Res =
+      matchIntrinsicSignature(FTy, TableRef, OverloadTys);
+  assert(Res == Intrinsic::MatchIntrinsicTypes_Match &&
+         "intrinsic signature mismatch");
+
+  // If intrinsic requires vararg, recreate the FunctionType accordingly.
+  if (!matchIntrinsicVarArg(/*isVarArg=*/true, TableRef))
+    FTy = FunctionType::get(RetTy, ArgTys, /*isVarArg=*/true);
+
+  assert(TableRef.empty() && "Unprocessed descriptors remain");
+
+  return getOrInsertIntrinsicDeclarationImpl(M, id, OverloadTys, FTy);
 }
 
 Function *Intrinsic::getDeclarationIfExists(const Module *M, ID id) {
@@ -944,14 +981,18 @@ matchIntrinsicType(Type *Ty, ArrayRef<Intrinsic::IITDescriptor> &Infos,
 
     return Ty != NewTy;
   }
-  case IITDescriptor::OneNthEltsVecArgument:
+  case IITDescriptor::OneNthEltsVecArgument: {
     // If this is a forward reference, defer the check for later.
     if (D.getRefArgNumber() >= ArgTys.size())
       return IsDeferredCheck || DeferCheck(Ty);
-    return !isa<VectorType>(ArgTys[D.getRefArgNumber()]) ||
-           VectorType::getOneNthElementsVectorType(
-               cast<VectorType>(ArgTys[D.getRefArgNumber()]),
-               D.getVectorDivisor()) != Ty;
+    auto *VTy = dyn_cast<VectorType>(ArgTys[D.getRefArgNumber()]);
+    if (!VTy)
+      return true;
+    if (!VTy->getElementCount().isKnownMultipleOf(D.getVectorDivisor()))
+      return true;
+    return VectorType::getOneNthElementsVectorType(VTy, D.getVectorDivisor()) !=
+           Ty;
+  }
   case IITDescriptor::SameVecWidthArgument: {
     if (D.getArgumentNumber() >= ArgTys.size()) {
       // Defer check and subsequent check for the vector element type.
@@ -1157,3 +1198,7 @@ Intrinsic::ID Intrinsic::getDeinterleaveIntrinsicID(unsigned Factor) {
   assert(Factor >= 2 && Factor <= 8 && "Unexpected factor");
   return InterleaveIntrinsics[Factor - 2].Deinterleave;
 }
+
+#define GET_INTRINSIC_PRETTY_PRINT_ARGUMENTS
+#include "llvm/IR/IntrinsicImpl.inc"
+#undef GET_INTRINSIC_PRETTY_PRINT_ARGUMENTS

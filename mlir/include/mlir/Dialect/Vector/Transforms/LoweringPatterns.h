@@ -42,7 +42,7 @@ namespace vector {
 ///
 /// [ContractionOpToDotLowering]
 /// Progressively lower a `vector.contract` with row-major matmul semantics to
-/// linearized `vector.extract` + `vector.reduce` + `vector.insert`.
+/// linearized `vector.extract` + `vector.reduction` + `vector.insert`.
 ///
 /// [ContractionOpToOuterProductOpLowering]
 /// Progressively lower a `vector.contract` with row-major matmul semantics to
@@ -291,6 +291,9 @@ void populateVectorInterleaveToShufflePatterns(RewritePatternSet &patterns,
 /// BitCastOp (of `targetRank`) + InsertOp.
 void populateVectorBitCastLoweringPatterns(RewritePatternSet &patterns,
                                            int64_t targetRank = 1,
+                                           PatternBenefit benefit = 1);
+
+void populateVectorShuffleLoweringPatterns(RewritePatternSet &patterns,
                                            PatternBenefit benefit = 1);
 
 /// Populates a pattern that rank-reduces n-D FMAs into (n-1)-D FMAs where

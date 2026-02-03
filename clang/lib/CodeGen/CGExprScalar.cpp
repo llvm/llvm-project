@@ -21,6 +21,7 @@
 #include "CodeGenModule.h"
 #include "ConstantEmitter.h"
 #include "TargetInfo.h"
+#include "TrapReasonBuilder.h"
 #include "clang/AST/ASTContext.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DeclObjC.h"
@@ -29,8 +30,10 @@
 #include "clang/AST/RecordLayout.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/CodeGenOptions.h"
+#include "clang/Basic/DiagnosticTrap.h"
 #include "clang/Basic/TargetInfo.h"
 #include "llvm/ADT/APFixedPoint.h"
+#include "llvm/ADT/ScopeExit.h"
 #include "llvm/IR/Argument.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
@@ -463,11 +466,16 @@ public:
       return nullptr;
 
     if (Value *Result = ConstantEmitter(CGF).tryEmitConstantExpr(E)) {
-      if (E->isGLValue())
+      if (E->isGLValue()) {
+        // This was already converted to an rvalue when it was constant
+        // evaluated.
+        if (E->hasAPValueResult() && !E->getAPValueResult().isLValue())
+          return Result;
         return CGF.EmitLoadOfScalar(
             Address(Result, CGF.convertTypeForLoadStore(E->getType()),
                     CGF.getContext().getTypeAlignInChars(E->getType())),
             /*Volatile*/ false, E->getType(), E->getExprLoc());
+      }
       return Result;
     }
     return Visit(E->getSubExpr());
@@ -502,7 +510,10 @@ public:
     return llvm::ConstantFP::get(VMContext, E->getValue());
   }
   Value *VisitCharacterLiteral(const CharacterLiteral *E) {
-    return llvm::ConstantInt::get(ConvertType(E->getType()), E->getValue());
+    // Character literals are always stored in an unsigned (even for signed
+    // char), so allow implicit truncation here.
+    return llvm::ConstantInt::get(ConvertType(E->getType()), E->getValue(),
+                                  /*IsSigned=*/false, /*ImplicitTrunc=*/true);
   }
   Value *VisitObjCBoolLiteralExpr(const ObjCBoolLiteralExpr *E) {
     return llvm::ConstantInt::get(ConvertType(E->getType()), E->getValue());
@@ -591,6 +602,7 @@ public:
   }
 
   Value *VisitArraySubscriptExpr(ArraySubscriptExpr *E);
+  Value *VisitMatrixSingleSubscriptExpr(MatrixSingleSubscriptExpr *E);
   Value *VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E);
   Value *VisitShuffleVectorExpr(ShuffleVectorExpr *E);
   Value *VisitConvertVectorExpr(ConvertVectorExpr *E);
@@ -1585,22 +1597,21 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
   if (SrcType->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType) {
     // Cast to FP using the intrinsic if the half type itself isn't supported.
     if (DstTy->isFloatingPointTy()) {
-      if (CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics())
-        return Builder.CreateCall(
-            CGF.CGM.getIntrinsic(llvm::Intrinsic::convert_from_fp16, DstTy),
-            Src);
+      if (CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics()) {
+        Value *BitCast = Builder.CreateBitCast(Src, CGF.CGM.HalfTy);
+        return Builder.CreateFPExt(BitCast, DstTy, "conv");
+      }
     } else {
       // Cast to other types through float, using either the intrinsic or FPExt,
       // depending on whether the half type itself is supported
       // (as opposed to operations on half, available with NativeHalfType).
-      if (CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics()) {
-        Src = Builder.CreateCall(
-            CGF.CGM.getIntrinsic(llvm::Intrinsic::convert_from_fp16,
-                                 CGF.CGM.FloatTy),
-            Src);
-      } else {
-        Src = Builder.CreateFPExt(Src, CGF.CGM.FloatTy, "conv");
+
+      if (Src->getType() != CGF.CGM.HalfTy) {
+        assert(CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics());
+        Src = Builder.CreateBitCast(Src, CGF.CGM.HalfTy);
       }
+
+      Src = Builder.CreateFPExt(Src, CGF.CGM.FloatTy, "conv");
       SrcType = CGF.getContext().FloatTy;
       SrcTy = CGF.FloatTy;
     }
@@ -1711,27 +1722,33 @@ Value *ScalarExprEmitter::EmitScalarConversion(Value *Src, QualType SrcType,
   if (DstType->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType) {
     // Make sure we cast in a single step if from another FP type.
     if (SrcTy->isFloatingPointTy()) {
-      // Use the intrinsic if the half type itself isn't supported
-      // (as opposed to operations on half, available with NativeHalfType).
-      if (CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics())
-        return Builder.CreateCall(
-            CGF.CGM.getIntrinsic(llvm::Intrinsic::convert_to_fp16, SrcTy), Src);
+      // Handle the case where the half type is represented as an integer (as
+      // opposed to operations on half, available with NativeHalfType).
+
       // If the half type is supported, just use an fptrunc.
-      return Builder.CreateFPTrunc(Src, DstTy);
+      Value *Res = Builder.CreateFPTrunc(Src, CGF.CGM.HalfTy, "conv");
+      if (DstTy == CGF.CGM.HalfTy)
+        return Res;
+
+      assert(DstTy->isIntegerTy(16) &&
+             CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics() &&
+             "Only half FP requires extra conversion");
+      return Builder.CreateBitCast(Res, DstTy);
     }
+
     DstTy = CGF.FloatTy;
   }
 
   Res = EmitScalarCast(Src, SrcType, DstType, SrcTy, DstTy, Opts);
 
   if (DstTy != ResTy) {
-    if (CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics()) {
-      assert(ResTy->isIntegerTy(16) && "Only half FP requires extra conversion");
-      Res = Builder.CreateCall(
-        CGF.CGM.getIntrinsic(llvm::Intrinsic::convert_to_fp16, CGF.CGM.FloatTy),
-        Res);
-    } else {
-      Res = Builder.CreateFPTrunc(Res, ResTy, "conv");
+    Res = Builder.CreateFPTrunc(Res, CGF.CGM.HalfTy, "conv");
+
+    if (ResTy != CGF.CGM.HalfTy) {
+      assert(ResTy->isIntegerTy(16) &&
+             CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics() &&
+             "Only half FP requires extra conversion");
+      Res = Builder.CreateBitCast(Res, ResTy);
     }
   }
 
@@ -1813,6 +1830,7 @@ void ScalarExprEmitter::EmitBinOpCheck(
   SanitizerHandler Check;
   SmallVector<llvm::Constant *, 4> StaticData;
   SmallVector<llvm::Value *, 2> DynamicData;
+  TrapReason TR;
 
   BinaryOperatorKind Opcode = Info.Opcode;
   if (BinaryOperator::isCompoundAssignmentOp(Opcode))
@@ -1839,19 +1857,43 @@ void ScalarExprEmitter::EmitBinOpCheck(
       StaticData.push_back(CGF.EmitCheckTypeDescriptor(Info.Ty));
     } else {
       // Arithmetic overflow (+, -, *).
+      int ArithOverflowKind = 0;
       switch (Opcode) {
-      case BO_Add: Check = SanitizerHandler::AddOverflow; break;
-      case BO_Sub: Check = SanitizerHandler::SubOverflow; break;
-      case BO_Mul: Check = SanitizerHandler::MulOverflow; break;
-      default: llvm_unreachable("unexpected opcode for bin op check");
+      case BO_Add: {
+        Check = SanitizerHandler::AddOverflow;
+        ArithOverflowKind = diag::UBSanArithKind::Add;
+        break;
+      }
+      case BO_Sub: {
+        Check = SanitizerHandler::SubOverflow;
+        ArithOverflowKind = diag::UBSanArithKind::Sub;
+        break;
+      }
+      case BO_Mul: {
+        Check = SanitizerHandler::MulOverflow;
+        ArithOverflowKind = diag::UBSanArithKind::Mul;
+        break;
+      }
+      default:
+        llvm_unreachable("unexpected opcode for bin op check");
       }
       StaticData.push_back(CGF.EmitCheckTypeDescriptor(Info.Ty));
+      if (CGF.CGM.getCodeGenOpts().SanitizeTrap.has(
+              SanitizerKind::UnsignedIntegerOverflow) ||
+          CGF.CGM.getCodeGenOpts().SanitizeTrap.has(
+              SanitizerKind::SignedIntegerOverflow)) {
+        // Only pay the cost for constructing the trap diagnostic if they are
+        // going to be used.
+        CGF.CGM.BuildTrapReason(diag::trap_ubsan_arith_overflow, TR)
+            << Info.Ty->isSignedIntegerOrEnumerationType() << ArithOverflowKind
+            << Info.E;
+      }
     }
     DynamicData.push_back(Info.LHS);
     DynamicData.push_back(Info.RHS);
   }
 
-  CGF.EmitCheck(Checks, Check, StaticData, DynamicData);
+  CGF.EmitCheck(Checks, Check, StaticData, DynamicData, &TR);
 }
 
 //===----------------------------------------------------------------------===//
@@ -2076,6 +2118,42 @@ Value *ScalarExprEmitter::VisitArraySubscriptExpr(ArraySubscriptExpr *E) {
   return Builder.CreateExtractElement(Base, Idx, "vecext");
 }
 
+Value *ScalarExprEmitter::VisitMatrixSingleSubscriptExpr(
+    MatrixSingleSubscriptExpr *E) {
+  TestAndClearIgnoreResultAssign();
+
+  auto *MatrixTy = E->getBase()->getType()->castAs<ConstantMatrixType>();
+  unsigned NumRows = MatrixTy->getNumRows();
+  unsigned NumColumns = MatrixTy->getNumColumns();
+
+  // Row index
+  Value *RowIdx = CGF.EmitMatrixIndexExpr(E->getRowIdx());
+  llvm::MatrixBuilder MB(Builder);
+
+  // The row index must be in [0, NumRows)
+  if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0)
+    MB.CreateIndexAssumption(RowIdx, NumRows);
+
+  Value *FlatMatrix = Visit(E->getBase());
+  llvm::Type *ElemTy = CGF.ConvertTypeForMem(MatrixTy->getElementType());
+  auto *ResultTy = llvm::FixedVectorType::get(ElemTy, NumColumns);
+  Value *RowVec = llvm::PoisonValue::get(ResultTy);
+
+  for (unsigned Col = 0; Col != NumColumns; ++Col) {
+    Value *ColVal = llvm::ConstantInt::get(RowIdx->getType(), Col);
+    bool IsMatrixRowMajor = CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
+                            LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+    Value *EltIdx = MB.CreateIndex(RowIdx, ColVal, NumRows, NumColumns,
+                                   IsMatrixRowMajor, "matrix_row_idx");
+    Value *Elt =
+        Builder.CreateExtractElement(FlatMatrix, EltIdx, "matrix_elem");
+    Value *Lane = llvm::ConstantInt::get(Builder.getInt32Ty(), Col);
+    RowVec = Builder.CreateInsertElement(RowVec, Elt, Lane, "matrix_row_ins");
+  }
+
+  return CGF.EmitFromMemory(RowVec, E->getType());
+}
+
 Value *ScalarExprEmitter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
   TestAndClearIgnoreResultAssign();
 
@@ -2085,9 +2163,15 @@ Value *ScalarExprEmitter::VisitMatrixSubscriptExpr(MatrixSubscriptExpr *E) {
   Value *ColumnIdx = CGF.EmitMatrixIndexExpr(E->getColumnIdx());
 
   const auto *MatrixTy = E->getBase()->getType()->castAs<ConstantMatrixType>();
-  unsigned NumRows = MatrixTy->getNumRows();
   llvm::MatrixBuilder MB(Builder);
-  Value *Idx = MB.CreateIndex(RowIdx, ColumnIdx, NumRows);
+
+  Value *Idx;
+  unsigned NumCols = MatrixTy->getNumColumns();
+  unsigned NumRows = MatrixTy->getNumRows();
+  bool IsMatrixRowMajor = CGF.getLangOpts().getDefaultMatrixMemoryLayout() ==
+                          LangOptions::MatrixMemoryLayout::MatrixRowMajor;
+  Idx = MB.CreateIndex(RowIdx, ColumnIdx, NumRows, NumCols, IsMatrixRowMajor);
+
   if (CGF.CGM.getCodeGenOpts().OptimizationLevel > 0)
     MB.CreateIndexAssumption(Idx, MatrixTy->getNumElementsFlattened());
 
@@ -2115,9 +2199,9 @@ Value *ScalarExprEmitter::VisitInitListExpr(InitListExpr *E) {
   bool Ignore = TestAndClearIgnoreResultAssign();
   (void)Ignore;
   unsigned NumInitElements = E->getNumInits();
-  assert(Ignore == false ||
-         (NumInitElements == 0 && E->getType()->isVoidType()) &&
-             "init list ignored");
+  assert((Ignore == false ||
+          (NumInitElements == 0 && E->getType()->isVoidType())) &&
+         "init list ignored");
 
   // HLSL initialization lists in the AST are an expansion which can contain
   // side-effecting expressions wrapped in opaque value expressions. To properly
@@ -2365,45 +2449,69 @@ bool CodeGenFunction::ShouldNullCheckClassCastValue(const CastExpr *CE) {
 }
 
 // RHS is an aggregate type
-static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, Address RHSVal,
-                                      QualType RHSTy, QualType LHSTy,
-                                      SourceLocation Loc) {
-  SmallVector<std::pair<Address, llvm::Value *>, 16> LoadGEPList;
-  SmallVector<QualType, 16> SrcTypes; // Flattened type
-  CGF.FlattenAccessAndType(RHSVal, RHSTy, LoadGEPList, SrcTypes);
-  // LHS is either a vector or a builtin?
+static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
+                                      QualType DestTy, SourceLocation Loc) {
+  SmallVector<LValue, 16> LoadList;
+  CGF.FlattenAccessAndTypeLValue(SrcVal, LoadList);
+  // Dest is either a vector or a builtin?
   // if its a vector create a temp alloca to store into and return that
-  if (auto *VecTy = LHSTy->getAs<VectorType>()) {
-    assert(SrcTypes.size() >= VecTy->getNumElements() &&
-           "Flattened type on RHS must have more elements than vector on LHS.");
+  if (auto *VecTy = DestTy->getAs<VectorType>()) {
+    assert(LoadList.size() >= VecTy->getNumElements() &&
+           "Flattened type on RHS must have the same number or more elements "
+           "than vector on LHS.");
     llvm::Value *V =
-        CGF.Builder.CreateLoad(CGF.CreateIRTemp(LHSTy, "flatcast.tmp"));
+        CGF.Builder.CreateLoad(CGF.CreateIRTemp(DestTy, "flatcast.tmp"));
     // write to V.
     for (unsigned I = 0, E = VecTy->getNumElements(); I < E; I++) {
-      llvm::Value *Load = CGF.Builder.CreateLoad(LoadGEPList[I].first, "load");
-      llvm::Value *Idx = LoadGEPList[I].second;
-      Load = Idx ? CGF.Builder.CreateExtractElement(Load, Idx, "vec.extract")
-                 : Load;
-      llvm::Value *Cast = CGF.EmitScalarConversion(
-          Load, SrcTypes[I], VecTy->getElementType(), Loc);
+      RValue RVal = CGF.EmitLoadOfLValue(LoadList[I], Loc);
+      assert(RVal.isScalar() &&
+             "All flattened source values should be scalars.");
+      llvm::Value *Cast =
+          CGF.EmitScalarConversion(RVal.getScalarVal(), LoadList[I].getType(),
+                                   VecTy->getElementType(), Loc);
       V = CGF.Builder.CreateInsertElement(V, Cast, I);
     }
     return V;
   }
-  // i its a builtin just do an extract element or load.
-  assert(LHSTy->isBuiltinType() &&
-         "Destination type must be a vector or builtin type.");
-  llvm::Value *Load = CGF.Builder.CreateLoad(LoadGEPList[0].first, "load");
-  llvm::Value *Idx = LoadGEPList[0].second;
-  Load =
-      Idx ? CGF.Builder.CreateExtractElement(Load, Idx, "vec.extract") : Load;
-  return CGF.EmitScalarConversion(Load, LHSTy, SrcTypes[0], Loc);
+  if (auto *MatTy = DestTy->getAs<ConstantMatrixType>()) {
+    assert(LoadList.size() >= MatTy->getNumElementsFlattened() &&
+           "Flattened type on RHS must have the same number or more elements "
+           "than vector on LHS.");
+
+    llvm::Value *V =
+        CGF.Builder.CreateLoad(CGF.CreateIRTemp(DestTy, "flatcast.tmp"));
+    // V is an allocated temporary to build the truncated matrix into.
+    for (unsigned I = 0, E = MatTy->getNumElementsFlattened(); I < E; I++) {
+      unsigned ColMajorIndex =
+          (I % MatTy->getNumRows()) * MatTy->getNumColumns() +
+          (I / MatTy->getNumRows());
+      RValue RVal = CGF.EmitLoadOfLValue(LoadList[ColMajorIndex], Loc);
+      assert(RVal.isScalar() &&
+             "All flattened source values should be scalars.");
+      llvm::Value *Cast = CGF.EmitScalarConversion(
+          RVal.getScalarVal(), LoadList[ColMajorIndex].getType(),
+          MatTy->getElementType(), Loc);
+      V = CGF.Builder.CreateInsertElement(V, Cast, I);
+    }
+    return V;
+  }
+  // if its a builtin just do an extract element or load.
+  assert(DestTy->isBuiltinType() &&
+         "Destination type must be a vector, matrix, or builtin type.");
+  RValue RVal = CGF.EmitLoadOfLValue(LoadList[0], Loc);
+  assert(RVal.isScalar() && "All flattened source values should be scalars.");
+  return CGF.EmitScalarConversion(RVal.getScalarVal(), LoadList[0].getType(),
+                                  DestTy, Loc);
 }
 
 // VisitCastExpr - Emit code for an explicit or implicit cast.  Implicit casts
 // have to handle a more broad range of conversions than explicit casts, as they
 // handle things like function to ptr-to-function decay etc.
 Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
+  llvm::scope_exit RestoreCurCast(
+      [this, Prev = CGF.CurCast] { CGF.CurCast = Prev; });
+  CGF.CurCast = CE;
+
   Expr *E = CE->getSubExpr();
   QualType DestTy = CE->getType();
   CastKind Kind = CE->getCastKind();
@@ -2919,16 +3027,47 @@ Value *ScalarExprEmitter::VisitCastExpr(CastExpr *CE) {
     llvm::Value *Zero = llvm::Constant::getNullValue(CGF.SizeTy);
     return Builder.CreateExtractElement(Vec, Zero, "cast.vtrunc");
   }
+  case CK_HLSLMatrixTruncation: {
+    assert((DestTy->isMatrixType() || DestTy->isBuiltinType()) &&
+           "Destination type must be a matrix or builtin type.");
+    Value *Mat = Visit(E);
+    if (auto *MatTy = DestTy->getAs<ConstantMatrixType>()) {
+      SmallVector<int> Mask;
+      unsigned NumCols = MatTy->getNumColumns();
+      unsigned NumRows = MatTy->getNumRows();
+      unsigned ColOffset = NumCols;
+      if (auto *SrcMatTy = E->getType()->getAs<ConstantMatrixType>())
+        ColOffset = SrcMatTy->getNumColumns();
+      for (unsigned R = 0; R < NumRows; R++) {
+        for (unsigned C = 0; C < NumCols; C++) {
+          unsigned I = R * ColOffset + C;
+          Mask.push_back(I);
+        }
+      }
+
+      return Builder.CreateShuffleVector(Mat, Mask, "trunc");
+    }
+    llvm::Value *Zero = llvm::Constant::getNullValue(CGF.SizeTy);
+    return Builder.CreateExtractElement(Mat, Zero, "cast.mtrunc");
+  }
   case CK_HLSLElementwiseCast: {
     RValue RV = CGF.EmitAnyExpr(E);
     SourceLocation Loc = CE->getExprLoc();
-    QualType SrcTy = E->getType();
 
-    assert(RV.isAggregate() && "Not a valid HLSL Elementwise Cast.");
-    // RHS is an aggregate
-    Address SrcVal = RV.getAggregateAddress();
-    return EmitHLSLElementwiseCast(CGF, SrcVal, SrcTy, DestTy, Loc);
+    Address SrcAddr = Address::invalid();
+
+    if (RV.isAggregate()) {
+      SrcAddr = RV.getAggregateAddress();
+    } else {
+      SrcAddr = CGF.CreateMemTemp(E->getType(), "hlsl.ewcast.src");
+      LValue TmpLV = CGF.MakeAddrLValue(SrcAddr, E->getType());
+      CGF.EmitStoreThroughLValue(RV, TmpLV);
+    }
+
+    LValue SrcVal = CGF.MakeAddrLValue(SrcAddr, E->getType());
+    return EmitHLSLElementwiseCast(CGF, SrcVal, DestTy, Loc);
   }
+
   } // end of switch
 
   llvm_unreachable("unknown scalar cast");
@@ -3199,7 +3338,10 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
       value = EmitOverflowCheckedBinOp(createBinOpInfoFromIncDec(
           E, value, isInc, E->getFPFeaturesInEffect(CGF.getLangOpts())));
     } else {
-      llvm::Value *amt = llvm::ConstantInt::get(value->getType(), amount, true);
+      // Treat positive amount as unsigned to support inc of i1 (needed for
+      // unsigned _BitInt(1)).
+      llvm::Value *amt =
+          llvm::ConstantInt::get(value->getType(), amount, !isInc);
       value = Builder.CreateAdd(value, amt, isInc ? "inc" : "dec");
     }
 
@@ -3247,7 +3389,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
   // Vector increment/decrement.
   } else if (type->isVectorType()) {
     if (type->hasIntegerRepresentation()) {
-      llvm::Value *amt = llvm::ConstantInt::get(value->getType(), amount);
+      llvm::Value *amt = llvm::ConstantInt::getSigned(value->getType(), amount);
 
       value = Builder.CreateAdd(value, amt, isInc ? "inc" : "dec");
     } else {
@@ -3264,15 +3406,10 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     CodeGenFunction::CGFPOptionsRAII FPOptsRAII(CGF, E);
 
     if (type->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType) {
-      // Another special case: half FP increment should be done via float
-      if (CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics()) {
-        value = Builder.CreateCall(
-            CGF.CGM.getIntrinsic(llvm::Intrinsic::convert_from_fp16,
-                                 CGF.CGM.FloatTy),
-            input, "incdec.conv");
-      } else {
-        value = Builder.CreateFPExt(input, CGF.CGM.FloatTy, "incdec.conv");
-      }
+      // Another special case: half FP increment should be done via float. If
+      // the input isn't already half, it may be i16.
+      Value *bitcast = Builder.CreateBitCast(input, CGF.CGM.HalfTy);
+      value = Builder.CreateFPExt(bitcast, CGF.CGM.FloatTy, "incdec.conv");
     }
 
     if (value->getType()->isFloatTy())
@@ -3305,14 +3442,8 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     value = Builder.CreateFAdd(value, amt, isInc ? "inc" : "dec");
 
     if (type->isHalfType() && !CGF.getContext().getLangOpts().NativeHalfType) {
-      if (CGF.getContext().getTargetInfo().useFP16ConversionIntrinsics()) {
-        value = Builder.CreateCall(
-            CGF.CGM.getIntrinsic(llvm::Intrinsic::convert_to_fp16,
-                                 CGF.CGM.FloatTy),
-            value, "incdec.conv");
-      } else {
-        value = Builder.CreateFPTrunc(value, input->getType(), "incdec.conv");
-      }
+      value = Builder.CreateFPTrunc(value, CGF.CGM.HalfTy, "incdec.conv");
+      value = Builder.CreateBitCast(value, input->getType());
     }
 
   // Fixed-point types.
@@ -3347,7 +3478,7 @@ ScalarExprEmitter::EmitScalarPrePostIncDec(const UnaryOperator *E, LValue LV,
     CharUnits size = CGF.getContext().getTypeSizeInChars(OPT->getObjectType());
     if (!isInc) size = -size;
     llvm::Value *sizeValue =
-      llvm::ConstantInt::get(CGF.SizeTy, size.getQuantity());
+        llvm::ConstantInt::getSigned(CGF.SizeTy, size.getQuantity());
 
     if (CGF.getLangOpts().PointerOverflowDefined)
       value = Builder.CreateGEP(CGF.Int8Ty, value, sizeValue, "incdec.objptr");
@@ -3515,9 +3646,7 @@ Value *ScalarExprEmitter::VisitOffsetOfExpr(OffsetOfExpr *E) {
 
     case OffsetOfNode::Field: {
       FieldDecl *MemberDecl = ON.getField();
-      RecordDecl *RD = CurrentType->castAs<RecordType>()
-                           ->getOriginalDecl()
-                           ->getDefinitionOrSelf();
+      auto *RD = CurrentType->castAsRecordDecl();
       const ASTRecordLayout &RL = CGF.getContext().getASTRecordLayout(RD);
 
       // Compute the index of the field in its parent.
@@ -3551,15 +3680,13 @@ Value *ScalarExprEmitter::VisitOffsetOfExpr(OffsetOfExpr *E) {
       }
 
       const ASTRecordLayout &RL = CGF.getContext().getASTRecordLayout(
-          CurrentType->castAs<RecordType>()->getOriginalDecl());
+          CurrentType->castAsCanonical<RecordType>()->getDecl());
 
       // Save the element type.
       CurrentType = ON.getBase()->getType();
 
       // Compute the offset to the base.
-      auto *BaseRT = CurrentType->castAs<RecordType>();
-      auto *BaseRD =
-          cast<CXXRecordDecl>(BaseRT->getOriginalDecl())->getDefinitionOrSelf();
+      auto *BaseRD = CurrentType->castAsCXXRecordDecl();
       CharUnits OffsetInt = RL.getBaseClassOffset(BaseRD);
       Offset = llvm::ConstantInt::get(ResultType, OffsetInt.getQuantity());
       break;
@@ -3649,17 +3776,19 @@ Value *ScalarExprEmitter::VisitReal(const UnaryOperator *E,
     // If it's an l-value, load through the appropriate subobject l-value.
     // Note that we have to ask E because Op might be an l-value that
     // this won't work for, e.g. an Obj-C property.
-    if (E->isGLValue())  {
+    if (E->isGLValue()) {
       if (!PromotionType.isNull()) {
         CodeGenFunction::ComplexPairTy result = CGF.EmitComplexExpr(
             Op, /*IgnoreReal*/ IgnoreResultAssign, /*IgnoreImag*/ true);
-        if (result.first)
-          result.first = CGF.EmitPromotedValue(result, PromotionType).first;
-        return result.first;
-      } else {
-        return CGF.EmitLoadOfLValue(CGF.EmitLValue(E), E->getExprLoc())
-            .getScalarVal();
+        PromotionType = PromotionType->isAnyComplexType()
+                            ? PromotionType
+                            : CGF.getContext().getComplexType(PromotionType);
+        return result.first ? CGF.EmitPromotedValue(result, PromotionType).first
+                            : result.first;
       }
+
+      return CGF.EmitLoadOfLValue(CGF.EmitLValue(E), E->getExprLoc())
+          .getScalarVal();
     }
     // Otherwise, calculate and project.
     return CGF.EmitComplexExpr(Op, false, true).first;
@@ -3692,13 +3821,16 @@ Value *ScalarExprEmitter::VisitImag(const UnaryOperator *E,
       if (!PromotionType.isNull()) {
         CodeGenFunction::ComplexPairTy result = CGF.EmitComplexExpr(
             Op, /*IgnoreReal*/ true, /*IgnoreImag*/ IgnoreResultAssign);
-        if (result.second)
-          result.second = CGF.EmitPromotedValue(result, PromotionType).second;
-        return result.second;
-      } else {
-        return CGF.EmitLoadOfLValue(CGF.EmitLValue(E), E->getExprLoc())
-            .getScalarVal();
+        PromotionType = PromotionType->isAnyComplexType()
+                            ? PromotionType
+                            : CGF.getContext().getComplexType(PromotionType);
+        return result.second
+                   ? CGF.EmitPromotedValue(result, PromotionType).second
+                   : result.second;
       }
+
+      return CGF.EmitLoadOfLValue(CGF.EmitLValue(E), E->getExprLoc())
+          .getScalarVal();
     }
     // Otherwise, calculate and project.
     return CGF.EmitComplexExpr(Op, true, false).second;
@@ -4186,7 +4318,9 @@ Value *ScalarExprEmitter::EmitOverflowCheckedBinOp(const BinOpInfo &Ops) {
   return phi;
 }
 
-/// This function is used for BO_Add/BO_Sub/BO_AddAssign/BO_SubAssign.
+/// BO_Add/BO_Sub are handled by EmitPointerWithAlignment to preserve alignment
+/// information.
+/// This function is used for BO_AddAssign/BO_SubAssign.
 static Value *emitPointerArithmetic(CodeGenFunction &CGF, const BinOpInfo &op,
                                     bool isSubtraction) {
   // Must have binary (not unary) expr here.  Unary pointer
@@ -5191,6 +5325,11 @@ Value *ScalarExprEmitter::VisitBinAssign(const BinaryOperator *E) {
       CGF.EmitStoreThroughLValue(RValue::get(RHS), LHS);
     }
   }
+  // OpenMP: Handle lastprivate(condition:) in scalar assignment
+  if (CGF.getLangOpts().OpenMP) {
+    CGF.CGM.getOpenMPRuntime().checkAndEmitLastprivateConditional(CGF,
+                                                                  E->getLHS());
+  }
 
   // If the result is clearly ignored, return now.
   if (Ignore)
@@ -5209,6 +5348,9 @@ Value *ScalarExprEmitter::VisitBinAssign(const BinaryOperator *E) {
 }
 
 Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
+  auto HasLHSSkip = CGF.hasSkipCounter(E);
+  auto HasRHSSkip = CGF.hasSkipCounter(E->getRHS());
+
   // Perform vector logical and on comparisons with zero vectors.
   if (E->getType()->isVectorType()) {
     CGF.incrementProfileCounter(E);
@@ -5237,13 +5379,11 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
   bool LHSCondVal;
   if (CGF.ConstantFoldsToSimpleInteger(E->getLHS(), LHSCondVal)) {
     if (LHSCondVal) { // If we have 1 && X, just emit X.
-      CGF.incrementProfileCounter(E);
+      CGF.incrementProfileCounter(CGF.UseExecPath, E, /*UseBoth=*/true);
 
       // If the top of the logical operator nest, reset the MCDC temp to 0.
-      if (CGF.MCDCLogOpStack.empty())
+      if (CGF.isMCDCDecisionExpr(E))
         CGF.maybeResetMCDCCondBitmap(E);
-
-      CGF.MCDCLogOpStack.push_back(E);
 
       Value *RHSCond = CGF.EvaluateExprAsBool(E->getRHS());
 
@@ -5255,18 +5395,23 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
           CodeGenFunction::isInstrumentedCondition(E->getRHS())) {
         CGF.maybeUpdateMCDCCondBitmap(E->getRHS(), RHSCond);
         llvm::BasicBlock *FBlock = CGF.createBasicBlock("land.end");
+        llvm::BasicBlock *RHSSkip =
+            (HasRHSSkip ? CGF.createBasicBlock("land.rhsskip") : FBlock);
         llvm::BasicBlock *RHSBlockCnt = CGF.createBasicBlock("land.rhscnt");
-        Builder.CreateCondBr(RHSCond, RHSBlockCnt, FBlock);
+        Builder.CreateCondBr(RHSCond, RHSBlockCnt, RHSSkip);
         CGF.EmitBlock(RHSBlockCnt);
-        CGF.incrementProfileCounter(E->getRHS());
+        CGF.incrementProfileCounter(CGF.UseExecPath, E->getRHS());
         CGF.EmitBranch(FBlock);
+        if (HasRHSSkip) {
+          CGF.EmitBlock(RHSSkip);
+          CGF.incrementProfileCounter(CGF.UseSkipPath, E->getRHS());
+        }
         CGF.EmitBlock(FBlock);
       } else
         CGF.markStmtMaybeUsed(E->getRHS());
 
-      CGF.MCDCLogOpStack.pop_back();
       // If the top of the logical operator nest, update the MCDC bitmap.
-      if (CGF.MCDCLogOpStack.empty())
+      if (CGF.isMCDCDecisionExpr(E))
         CGF.maybeUpdateMCDCTestVectorBitmap(E);
 
       // ZExt result to int or bool.
@@ -5275,25 +5420,37 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
 
     // 0 && RHS: If it is safe, just elide the RHS, and return 0/false.
     if (!CGF.ContainsLabel(E->getRHS())) {
+      CGF.markStmtAsUsed(false, E);
+      if (HasLHSSkip)
+        CGF.incrementProfileCounter(CGF.UseSkipPath, E);
+
       CGF.markStmtMaybeUsed(E->getRHS());
+
       return llvm::Constant::getNullValue(ResTy);
     }
   }
 
   // If the top of the logical operator nest, reset the MCDC temp to 0.
-  if (CGF.MCDCLogOpStack.empty())
+  if (CGF.isMCDCDecisionExpr(E))
     CGF.maybeResetMCDCCondBitmap(E);
-
-  CGF.MCDCLogOpStack.push_back(E);
 
   llvm::BasicBlock *ContBlock = CGF.createBasicBlock("land.end");
   llvm::BasicBlock *RHSBlock  = CGF.createBasicBlock("land.rhs");
 
+  llvm::BasicBlock *LHSFalseBlock =
+      (HasLHSSkip ? CGF.createBasicBlock("land.lhsskip") : ContBlock);
+
   CodeGenFunction::ConditionalEvaluation eval(CGF);
 
   // Branch on the LHS first.  If it is false, go to the failure (cont) block.
-  CGF.EmitBranchOnBoolExpr(E->getLHS(), RHSBlock, ContBlock,
+  CGF.EmitBranchOnBoolExpr(E->getLHS(), RHSBlock, LHSFalseBlock,
                            CGF.getProfileCount(E->getRHS()));
+
+  if (HasLHSSkip) {
+    CGF.EmitBlock(LHSFalseBlock);
+    CGF.incrementProfileCounter(CGF.UseSkipPath, E);
+    CGF.EmitBranch(ContBlock);
+  }
 
   // Any edges into the ContBlock are now from an (indeterminate number of)
   // edges from this first condition.  All of these values will be false.  Start
@@ -5306,7 +5463,7 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
 
   eval.begin(CGF);
   CGF.EmitBlock(RHSBlock);
-  CGF.incrementProfileCounter(E);
+  CGF.incrementProfileCounter(CGF.UseExecPath, E);
   Value *RHSCond = CGF.EvaluateExprAsBool(E->getRHS());
   eval.end(CGF);
 
@@ -5316,15 +5473,24 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
   // If we're generating for profiling or coverage, generate a branch on the
   // RHS to a block that increments the RHS true counter needed to track branch
   // condition coverage.
+  llvm::BasicBlock *ContIncoming = RHSBlock;
   if (InstrumentRegions &&
       CodeGenFunction::isInstrumentedCondition(E->getRHS())) {
     CGF.maybeUpdateMCDCCondBitmap(E->getRHS(), RHSCond);
     llvm::BasicBlock *RHSBlockCnt = CGF.createBasicBlock("land.rhscnt");
-    Builder.CreateCondBr(RHSCond, RHSBlockCnt, ContBlock);
+    llvm::BasicBlock *RHSBlockSkip =
+        (HasRHSSkip ? CGF.createBasicBlock("land.rhsskip") : ContBlock);
+    Builder.CreateCondBr(RHSCond, RHSBlockCnt, RHSBlockSkip);
     CGF.EmitBlock(RHSBlockCnt);
-    CGF.incrementProfileCounter(E->getRHS());
+    CGF.incrementProfileCounter(CGF.UseExecPath, E->getRHS());
     CGF.EmitBranch(ContBlock);
     PN->addIncoming(RHSCond, RHSBlockCnt);
+    if (HasRHSSkip) {
+      CGF.EmitBlock(RHSBlockSkip);
+      CGF.incrementProfileCounter(CGF.UseSkipPath, E->getRHS());
+      CGF.EmitBranch(ContBlock);
+      ContIncoming = RHSBlockSkip;
+    }
   }
 
   // Emit an unconditional branch from this block to ContBlock.
@@ -5334,11 +5500,10 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
     CGF.EmitBlock(ContBlock);
   }
   // Insert an entry into the phi node for the edge with the value of RHSCond.
-  PN->addIncoming(RHSCond, RHSBlock);
+  PN->addIncoming(RHSCond, ContIncoming);
 
-  CGF.MCDCLogOpStack.pop_back();
   // If the top of the logical operator nest, update the MCDC bitmap.
-  if (CGF.MCDCLogOpStack.empty())
+  if (CGF.isMCDCDecisionExpr(E))
     CGF.maybeUpdateMCDCTestVectorBitmap(E);
 
   // Artificial location to preserve the scope information
@@ -5352,6 +5517,9 @@ Value *ScalarExprEmitter::VisitBinLAnd(const BinaryOperator *E) {
 }
 
 Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
+  auto HasLHSSkip = CGF.hasSkipCounter(E);
+  auto HasRHSSkip = CGF.hasSkipCounter(E->getRHS());
+
   // Perform vector logical or on comparisons with zero vectors.
   if (E->getType()->isVectorType()) {
     CGF.incrementProfileCounter(E);
@@ -5380,13 +5548,11 @@ Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
   bool LHSCondVal;
   if (CGF.ConstantFoldsToSimpleInteger(E->getLHS(), LHSCondVal)) {
     if (!LHSCondVal) { // If we have 0 || X, just emit X.
-      CGF.incrementProfileCounter(E);
+      CGF.incrementProfileCounter(CGF.UseExecPath, E, /*UseBoth=*/true);
 
       // If the top of the logical operator nest, reset the MCDC temp to 0.
-      if (CGF.MCDCLogOpStack.empty())
+      if (CGF.isMCDCDecisionExpr(E))
         CGF.maybeResetMCDCCondBitmap(E);
-
-      CGF.MCDCLogOpStack.push_back(E);
 
       Value *RHSCond = CGF.EvaluateExprAsBool(E->getRHS());
 
@@ -5398,18 +5564,23 @@ Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
           CodeGenFunction::isInstrumentedCondition(E->getRHS())) {
         CGF.maybeUpdateMCDCCondBitmap(E->getRHS(), RHSCond);
         llvm::BasicBlock *FBlock = CGF.createBasicBlock("lor.end");
+        llvm::BasicBlock *RHSSkip =
+            (HasRHSSkip ? CGF.createBasicBlock("lor.rhsskip") : FBlock);
         llvm::BasicBlock *RHSBlockCnt = CGF.createBasicBlock("lor.rhscnt");
-        Builder.CreateCondBr(RHSCond, FBlock, RHSBlockCnt);
+        Builder.CreateCondBr(RHSCond, RHSSkip, RHSBlockCnt);
         CGF.EmitBlock(RHSBlockCnt);
-        CGF.incrementProfileCounter(E->getRHS());
+        CGF.incrementProfileCounter(CGF.UseExecPath, E->getRHS());
         CGF.EmitBranch(FBlock);
+        if (HasRHSSkip) {
+          CGF.EmitBlock(RHSSkip);
+          CGF.incrementProfileCounter(CGF.UseSkipPath, E->getRHS());
+        }
         CGF.EmitBlock(FBlock);
       } else
         CGF.markStmtMaybeUsed(E->getRHS());
 
-      CGF.MCDCLogOpStack.pop_back();
       // If the top of the logical operator nest, update the MCDC bitmap.
-      if (CGF.MCDCLogOpStack.empty())
+      if (CGF.isMCDCDecisionExpr(E))
         CGF.maybeUpdateMCDCTestVectorBitmap(E);
 
       // ZExt result to int or bool.
@@ -5418,26 +5589,37 @@ Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
 
     // 1 || RHS: If it is safe, just elide the RHS, and return 1/true.
     if (!CGF.ContainsLabel(E->getRHS())) {
+      CGF.markStmtAsUsed(false, E);
+      if (HasLHSSkip)
+        CGF.incrementProfileCounter(CGF.UseSkipPath, E);
+
       CGF.markStmtMaybeUsed(E->getRHS());
+
       return llvm::ConstantInt::get(ResTy, 1);
     }
   }
 
   // If the top of the logical operator nest, reset the MCDC temp to 0.
-  if (CGF.MCDCLogOpStack.empty())
+  if (CGF.isMCDCDecisionExpr(E))
     CGF.maybeResetMCDCCondBitmap(E);
-
-  CGF.MCDCLogOpStack.push_back(E);
 
   llvm::BasicBlock *ContBlock = CGF.createBasicBlock("lor.end");
   llvm::BasicBlock *RHSBlock = CGF.createBasicBlock("lor.rhs");
+  llvm::BasicBlock *LHSTrueBlock =
+      (HasLHSSkip ? CGF.createBasicBlock("lor.lhsskip") : ContBlock);
 
   CodeGenFunction::ConditionalEvaluation eval(CGF);
 
   // Branch on the LHS first.  If it is true, go to the success (cont) block.
-  CGF.EmitBranchOnBoolExpr(E->getLHS(), ContBlock, RHSBlock,
+  CGF.EmitBranchOnBoolExpr(E->getLHS(), LHSTrueBlock, RHSBlock,
                            CGF.getCurrentProfileCount() -
                                CGF.getProfileCount(E->getRHS()));
+
+  if (HasLHSSkip) {
+    CGF.EmitBlock(LHSTrueBlock);
+    CGF.incrementProfileCounter(CGF.UseSkipPath, E);
+    CGF.EmitBranch(ContBlock);
+  }
 
   // Any edges into the ContBlock are now from an (indeterminate number of)
   // edges from this first condition.  All of these values will be true.  Start
@@ -5452,7 +5634,7 @@ Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
 
   // Emit the RHS condition as a bool value.
   CGF.EmitBlock(RHSBlock);
-  CGF.incrementProfileCounter(E);
+  CGF.incrementProfileCounter(CGF.UseExecPath, E);
   Value *RHSCond = CGF.EvaluateExprAsBool(E->getRHS());
 
   eval.end(CGF);
@@ -5463,25 +5645,33 @@ Value *ScalarExprEmitter::VisitBinLOr(const BinaryOperator *E) {
   // If we're generating for profiling or coverage, generate a branch on the
   // RHS to a block that increments the RHS true counter needed to track branch
   // condition coverage.
+  llvm::BasicBlock *ContIncoming = RHSBlock;
   if (InstrumentRegions &&
       CodeGenFunction::isInstrumentedCondition(E->getRHS())) {
     CGF.maybeUpdateMCDCCondBitmap(E->getRHS(), RHSCond);
     llvm::BasicBlock *RHSBlockCnt = CGF.createBasicBlock("lor.rhscnt");
-    Builder.CreateCondBr(RHSCond, ContBlock, RHSBlockCnt);
+    llvm::BasicBlock *RHSTrueBlock =
+        (HasRHSSkip ? CGF.createBasicBlock("lor.rhsskip") : ContBlock);
+    Builder.CreateCondBr(RHSCond, RHSTrueBlock, RHSBlockCnt);
     CGF.EmitBlock(RHSBlockCnt);
-    CGF.incrementProfileCounter(E->getRHS());
+    CGF.incrementProfileCounter(CGF.UseExecPath, E->getRHS());
     CGF.EmitBranch(ContBlock);
     PN->addIncoming(RHSCond, RHSBlockCnt);
+    if (HasRHSSkip) {
+      CGF.EmitBlock(RHSTrueBlock);
+      CGF.incrementProfileCounter(CGF.UseSkipPath, E->getRHS());
+      CGF.EmitBranch(ContBlock);
+      ContIncoming = RHSTrueBlock;
+    }
   }
 
   // Emit an unconditional branch from this block to ContBlock.  Insert an entry
   // into the phi node for the edge with the value of RHSCond.
   CGF.EmitBlock(ContBlock);
-  PN->addIncoming(RHSCond, RHSBlock);
+  PN->addIncoming(RHSCond, ContIncoming);
 
-  CGF.MCDCLogOpStack.pop_back();
   // If the top of the logical operator nest, update the MCDC bitmap.
-  if (CGF.MCDCLogOpStack.empty())
+  if (CGF.isMCDCDecisionExpr(E))
     CGF.maybeUpdateMCDCTestVectorBitmap(E);
 
   // ZExt result to int.
@@ -5536,13 +5726,9 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
 
     // If the dead side doesn't have labels we need, just emit the Live part.
     if (!CGF.ContainsLabel(dead)) {
-      if (CondExprBool) {
-        if (llvm::EnableSingleByteCoverage) {
-          CGF.incrementProfileCounter(lhsExpr);
-          CGF.incrementProfileCounter(rhsExpr);
-        }
-        CGF.incrementProfileCounter(E);
-      }
+      CGF.incrementProfileCounter(CondExprBool ? CGF.UseExecPath
+                                               : CGF.UseSkipPath,
+                                  E, /*UseBoth=*/true);
       Value *Result = Visit(live);
       CGF.markStmtMaybeUsed(dead);
 
@@ -5558,8 +5744,8 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
 
   // OpenCL: If the condition is a vector, we can treat this condition like
   // the select function.
-  if ((CGF.getLangOpts().OpenCL && condExpr->getType()->isVectorType()) ||
-      condExpr->getType()->isExtVectorType()) {
+  if (CGF.getLangOpts().OpenCL && (condExpr->getType()->isVectorType() ||
+                                   condExpr->getType()->isExtVectorType())) {
     CGF.incrementProfileCounter(E);
 
     llvm::Value *CondV = CGF.EmitScalarExpr(condExpr);
@@ -5608,26 +5794,29 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
 
     llvm::Type *CondType = ConvertType(condExpr->getType());
     auto *VecTy = cast<llvm::VectorType>(CondType);
-    llvm::Value *ZeroVec = llvm::Constant::getNullValue(VecTy);
 
-    CondV = Builder.CreateICmpNE(CondV, ZeroVec, "vector_cond");
+    if (VecTy->getElementType()->isIntegerTy(1))
+      return Builder.CreateSelect(CondV, LHS, RHS, "vector_select");
+
+    // OpenCL uses the MSB of the mask vector.
+    llvm::Value *ZeroVec = llvm::Constant::getNullValue(VecTy);
+    if (condExpr->getType()->isExtVectorType())
+      CondV = Builder.CreateICmpSLT(CondV, ZeroVec, "vector_cond");
+    else
+      CondV = Builder.CreateICmpNE(CondV, ZeroVec, "vector_cond");
     return Builder.CreateSelect(CondV, LHS, RHS, "vector_select");
   }
 
   // If this is a really simple expression (like x ? 4 : 5), emit this as a
   // select instead of as control flow.  We can only do this if it is cheap and
   // safe to evaluate the LHS and RHS unconditionally.
-  if (isCheapEnoughToEvaluateUnconditionally(lhsExpr, CGF) &&
+  if (!llvm::EnableSingleByteCoverage &&
+      isCheapEnoughToEvaluateUnconditionally(lhsExpr, CGF) &&
       isCheapEnoughToEvaluateUnconditionally(rhsExpr, CGF)) {
     llvm::Value *CondV = CGF.EvaluateExprAsBool(condExpr);
     llvm::Value *StepV = Builder.CreateZExtOrBitCast(CondV, CGF.Int64Ty);
 
-    if (llvm::EnableSingleByteCoverage) {
-      CGF.incrementProfileCounter(lhsExpr);
-      CGF.incrementProfileCounter(rhsExpr);
-      CGF.incrementProfileCounter(E);
-    } else
-      CGF.incrementProfileCounter(E, StepV);
+    CGF.incrementProfileCounter(E, StepV);
 
     llvm::Value *LHS = Visit(lhsExpr);
     llvm::Value *RHS = Visit(rhsExpr);
@@ -5640,8 +5829,8 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   }
 
   // If the top of the logical operator nest, reset the MCDC temp to 0.
-  if (CGF.MCDCLogOpStack.empty())
-    CGF.maybeResetMCDCCondBitmap(condExpr);
+  if (auto E = CGF.stripCond(condExpr); CGF.isMCDCDecisionExpr(E))
+    CGF.maybeResetMCDCCondBitmap(E);
 
   llvm::BasicBlock *LHSBlock = CGF.createBasicBlock("cond.true");
   llvm::BasicBlock *RHSBlock = CGF.createBasicBlock("cond.false");
@@ -5656,14 +5845,10 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   // If the top of the logical operator nest, update the MCDC bitmap for the
   // ConditionalOperator prior to visiting its LHS and RHS blocks, since they
   // may also contain a boolean expression.
-  if (CGF.MCDCLogOpStack.empty())
-    CGF.maybeUpdateMCDCTestVectorBitmap(condExpr);
+  if (auto E = CGF.stripCond(condExpr); CGF.isMCDCDecisionExpr(E))
+    CGF.maybeUpdateMCDCTestVectorBitmap(E);
 
-  if (llvm::EnableSingleByteCoverage)
-    CGF.incrementProfileCounter(lhsExpr);
-  else
-    CGF.incrementProfileCounter(E);
-
+  CGF.incrementProfileCounter(CGF.UseExecPath, E);
   eval.begin(CGF);
   Value *LHS = Visit(lhsExpr);
   eval.end(CGF);
@@ -5676,12 +5861,10 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   // If the top of the logical operator nest, update the MCDC bitmap for the
   // ConditionalOperator prior to visiting its LHS and RHS blocks, since they
   // may also contain a boolean expression.
-  if (CGF.MCDCLogOpStack.empty())
-    CGF.maybeUpdateMCDCTestVectorBitmap(condExpr);
+  if (auto E = CGF.stripCond(condExpr); CGF.isMCDCDecisionExpr(E))
+    CGF.maybeUpdateMCDCTestVectorBitmap(E);
 
-  if (llvm::EnableSingleByteCoverage)
-    CGF.incrementProfileCounter(rhsExpr);
-
+  CGF.incrementProfileCounter(CGF.UseSkipPath, E);
   eval.begin(CGF);
   Value *RHS = Visit(rhsExpr);
   eval.end(CGF);
@@ -5699,11 +5882,6 @@ VisitAbstractConditionalOperator(const AbstractConditionalOperator *E) {
   llvm::PHINode *PN = Builder.CreatePHI(LHS->getType(), 2, "cond");
   PN->addIncoming(LHS, LHSBlock);
   PN->addIncoming(RHS, RHSBlock);
-
-  // When single byte coverage mode is enabled, add a counter to continuation
-  // block.
-  if (llvm::EnableSingleByteCoverage)
-    CGF.incrementProfileCounter(E);
 
   return PN;
 }

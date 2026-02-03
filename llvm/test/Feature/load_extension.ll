@@ -6,6 +6,8 @@
 ; RUN: llvm-lto2 run %t.o %loadbye %loadnewpmbye -opt-pipeline="goodbye" -wave-goodbye -o %t -r %t.o,somefunk,plx -r %t.o,junk,plx 2>&1 | FileCheck %s
 ; REQUIRES: plugins, examples
 ; UNSUPPORTED: target={{.*windows.*}}
+; Plugins are currently broken on AIX, at least in the CI.
+; XFAIL: target={{.*}}-aix{{.*}}
 ; CHECK: Bye
 
 target datalayout = "e-m:e-i64:64-f80:128-n8:16:32:64-S128"

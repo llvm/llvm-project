@@ -69,9 +69,13 @@ static Value *simplifyValueKnownNonZero(Value *V, InstCombinerImpl &IC,
       IC.isKnownToBeAPowerOfTwo(I->getOperand(0), false, &CxtI)) {
     // We know that this is an exact/nuw shift and that the input is a
     // non-zero context as well.
-    if (Value *V2 = simplifyValueKnownNonZero(I->getOperand(0), IC, CxtI)) {
-      IC.replaceOperand(*I, 0, V2);
-      MadeChange = true;
+    {
+      IRBuilderBase::InsertPointGuard Guard(IC.Builder);
+      IC.Builder.SetInsertPoint(I);
+      if (Value *V2 = simplifyValueKnownNonZero(I->getOperand(0), IC, CxtI)) {
+        IC.replaceOperand(*I, 0, V2);
+        MadeChange = true;
+      }
     }
 
     if (I->getOpcode() == Instruction::LShr && !I->isExact()) {
@@ -317,6 +321,9 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   if (Instruction *FoldedMul = foldBinOpIntoSelectOrPhi(I))
     return FoldedMul;
 
+  if (Instruction *FoldedLogic = foldBinOpSelectBinOp(I))
+    return FoldedLogic;
+
   if (Value *FoldedMul = foldMulSelectToNegate(I, Builder))
     return replaceInstUsesWith(I, FoldedMul);
 
@@ -488,23 +495,27 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   // (zext bool X) * Y --> X ? Y : 0
   // Y * (zext bool X) --> X ? Y : 0
   if (match(Op0, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1))
-    return SelectInst::Create(X, Op1, ConstantInt::getNullValue(Ty));
+    return createSelectInstWithUnknownProfile(X, Op1,
+                                              ConstantInt::getNullValue(Ty));
   if (match(Op1, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1))
-    return SelectInst::Create(X, Op0, ConstantInt::getNullValue(Ty));
+    return createSelectInstWithUnknownProfile(X, Op0,
+                                              ConstantInt::getNullValue(Ty));
 
   // mul (sext X), Y -> select X, -Y, 0
   // mul Y, (sext X) -> select X, -Y, 0
   if (match(&I, m_c_Mul(m_OneUse(m_SExt(m_Value(X))), m_Value(Y))) &&
       X->getType()->isIntOrIntVectorTy(1))
-    return SelectInst::Create(X, Builder.CreateNeg(Y, "", I.hasNoSignedWrap()),
-                              ConstantInt::getNullValue(Op0->getType()));
+    return createSelectInstWithUnknownProfile(
+        X, Builder.CreateNeg(Y, "", I.hasNoSignedWrap()),
+        ConstantInt::getNullValue(Op0->getType()));
 
   Constant *ImmC;
   if (match(Op1, m_ImmConstant(ImmC))) {
     // (sext bool X) * C --> X ? -C : 0
     if (match(Op0, m_SExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)) {
       Constant *NegC = ConstantExpr::getNeg(ImmC);
-      return SelectInst::Create(X, NegC, ConstantInt::getNullValue(Ty));
+      return createSelectInstWithUnknownProfile(X, NegC,
+                                                ConstantInt::getNullValue(Ty));
     }
 
     // (ashr i32 X, 31) * C --> (X < 0) ? -C : 0
@@ -513,7 +524,8 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
         *C == C->getBitWidth() - 1) {
       Constant *NegC = ConstantExpr::getNeg(ImmC);
       Value *IsNeg = Builder.CreateIsNeg(X, "isneg");
-      return SelectInst::Create(IsNeg, NegC, ConstantInt::getNullValue(Ty));
+      return createSelectInstWithUnknownProfile(IsNeg, NegC,
+                                                ConstantInt::getNullValue(Ty));
     }
   }
 
@@ -524,13 +536,15 @@ Instruction *InstCombinerImpl::visitMul(BinaryOperator &I) {
   if (match(&I, m_c_BinOp(m_LShr(m_Value(X), m_APInt(C)), m_Value(Y))) &&
       *C == C->getBitWidth() - 1) {
     Value *IsNeg = Builder.CreateIsNeg(X, "isneg");
-    return SelectInst::Create(IsNeg, Y, ConstantInt::getNullValue(Ty));
+    return createSelectInstWithUnknownProfile(IsNeg, Y,
+                                              ConstantInt::getNullValue(Ty));
   }
 
   // (and X, 1) * Y --> (trunc X) ? Y : 0
   if (match(&I, m_c_BinOp(m_OneUse(m_And(m_Value(X), m_One())), m_Value(Y)))) {
     Value *Tr = Builder.CreateTrunc(X, CmpInst::makeCmpResultType(Ty));
-    return SelectInst::Create(Tr, Y, ConstantInt::getNullValue(Ty));
+    return createSelectInstWithUnknownProfile(Tr, Y,
+                                              ConstantInt::getNullValue(Ty));
   }
 
   // ((ashr X, 31) | 1) * X --> abs(X)
@@ -1009,13 +1023,15 @@ Instruction *InstCombinerImpl::visitFMul(BinaryOperator &I) {
     // Note INF * 0 is NaN.
     if (match(Op0, m_UIToFP(m_Value(X))) &&
         X->getType()->isIntOrIntVectorTy(1)) {
-      auto *SI = SelectInst::Create(X, Op1, ConstantFP::get(I.getType(), 0.0));
+      auto *SI = createSelectInstWithUnknownProfile(
+          X, Op1, ConstantFP::get(I.getType(), 0.0));
       SI->copyFastMathFlags(I.getFastMathFlags());
       return SI;
     }
     if (match(Op1, m_UIToFP(m_Value(X))) &&
         X->getType()->isIntOrIntVectorTy(1)) {
-      auto *SI = SelectInst::Create(X, Op0, ConstantFP::get(I.getType(), 0.0));
+      auto *SI = createSelectInstWithUnknownProfile(
+          X, Op0, ConstantFP::get(I.getType(), 0.0));
       SI->copyFastMathFlags(I.getFastMathFlags());
       return SI;
     }
@@ -1418,7 +1434,8 @@ Instruction *InstCombinerImpl::commonIDivTransforms(BinaryOperator &I) {
         F1 = Builder.CreateFreeze(Op1, Op1->getName() + ".fr");
       Value *Inc = Builder.CreateAdd(F1, Op0);
       Value *Cmp = Builder.CreateICmpULT(Inc, ConstantInt::get(Ty, 3));
-      return SelectInst::Create(Cmp, F1, ConstantInt::get(Ty, 0));
+      return createSelectInstWithUnknownProfile(Cmp, F1,
+                                                ConstantInt::get(Ty, 0));
     } else {
       // If Op1 is 0 then it's undefined behaviour. If Op1 is 1 then the
       // result is one, otherwise it's zero.
@@ -1642,10 +1659,11 @@ static Instruction *narrowUDivURem(BinaryOperator &I,
   }
 
   Constant *C;
+  auto &DL = IC.getDataLayout();
   if (isa<Instruction>(N) && match(N, m_OneUse(m_ZExt(m_Value(X)))) &&
       match(D, m_Constant(C))) {
     // If the constant is the same in the smaller type, use the narrow version.
-    Constant *TruncC = IC.getLosslessUnsignedTrunc(C, X->getType());
+    Constant *TruncC = getLosslessUnsignedTrunc(C, X->getType(), DL);
     if (!TruncC)
       return nullptr;
 
@@ -1656,7 +1674,7 @@ static Instruction *narrowUDivURem(BinaryOperator &I,
   if (isa<Instruction>(D) && match(D, m_OneUse(m_ZExt(m_Value(X)))) &&
       match(N, m_Constant(C))) {
     // If the constant is the same in the smaller type, use the narrow version.
-    Constant *TruncC = IC.getLosslessUnsignedTrunc(C, X->getType());
+    Constant *TruncC = getLosslessUnsignedTrunc(C, X->getType(), DL);
     if (!TruncC)
       return nullptr;
 
@@ -1837,8 +1855,8 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
                     m_OneUse(m_Intrinsic<Intrinsic::abs>(m_Value(X), m_One())),
                     m_Deferred(X)))) {
     Value *Cond = Builder.CreateIsNotNeg(X);
-    return SelectInst::Create(Cond, ConstantInt::get(Ty, 1),
-                              ConstantInt::getAllOnesValue(Ty));
+    return createSelectInstWithUnknownProfile(Cond, ConstantInt::get(Ty, 1),
+                                              ConstantInt::getAllOnesValue(Ty));
   }
 
   KnownBits KnownDividend = computeKnownBits(Op0, &I);
@@ -1881,8 +1899,8 @@ Instruction *InstCombinerImpl::visitSDiv(BinaryOperator &I) {
   if (isKnownNegation(Op0, Op1)) {
     APInt MinVal = APInt::getSignedMinValue(Ty->getScalarSizeInBits());
     Value *Cond = Builder.CreateICmpEQ(Op0, ConstantInt::get(Ty, MinVal));
-    return SelectInst::Create(Cond, ConstantInt::get(Ty, 1),
-                              ConstantInt::getAllOnesValue(Ty));
+    return createSelectInstWithUnknownProfile(Cond, ConstantInt::get(Ty, 1),
+                                              ConstantInt::getAllOnesValue(Ty));
   }
   return nullptr;
 }
@@ -2442,7 +2460,7 @@ Instruction *InstCombinerImpl::visitURem(BinaryOperator &I) {
       F0 = Builder.CreateFreeze(Op0, Op0->getName() + ".fr");
     Value *Cmp = Builder.CreateICmpULT(F0, Op1);
     Value *Sub = Builder.CreateSub(F0, Op1);
-    return SelectInst::Create(Cmp, F0, Sub);
+    return createSelectInstWithUnknownProfile(Cmp, F0, Sub);
   }
 
   // If the divisor is a sext of a boolean, then the divisor must be max
@@ -2456,7 +2474,8 @@ Instruction *InstCombinerImpl::visitURem(BinaryOperator &I) {
       FrozenOp0 = Builder.CreateFreeze(Op0, Op0->getName() + ".frozen");
     Value *Cmp =
         Builder.CreateICmpEQ(FrozenOp0, ConstantInt::getAllOnesValue(Ty));
-    return SelectInst::Create(Cmp, ConstantInt::getNullValue(Ty), FrozenOp0);
+    return createSelectInstWithUnknownProfile(
+        Cmp, ConstantInt::getNullValue(Ty), FrozenOp0);
   }
 
   // For "(X + 1) % Op1" and if (X u< Op1) => (X + 1) == Op1 ? 0 : X + 1 .
@@ -2468,7 +2487,8 @@ Instruction *InstCombinerImpl::visitURem(BinaryOperator &I) {
       if (!isGuaranteedNotToBeUndef(Op0))
         FrozenOp0 = Builder.CreateFreeze(Op0, Op0->getName() + ".frozen");
       Value *Cmp = Builder.CreateICmpEQ(FrozenOp0, Op1);
-      return SelectInst::Create(Cmp, ConstantInt::getNullValue(Ty), FrozenOp0);
+      return createSelectInstWithUnknownProfile(
+          Cmp, ConstantInt::getNullValue(Ty), FrozenOp0);
     }
   }
 

@@ -47,12 +47,18 @@ and put the following in your settings.json file:
 .. code-block:: javascript
 
    {
-     "cmake.sourceDirectory": "${workspaceFolder}/llvm",
+     "cmake.sourceDirectory": "${workspaceFolder}/runtimes",
      "cmake.configureSettings": {
-         "LLVM_ENABLE_PROJECTS" : "libc",
-         "LLVM_LIBC_FULL_BUILD" : true,
-         "LLVM_ENABLE_SPHINX" : true,
-         "LIBC_INCLUDE_DOCS" : true
+       "LLVM_ENABLE_RUNTIMES" : ["libc", "compiler-rt"],
+       "LLVM_LIBC_FULL_BUILD" : true,
+       "LLVM_ENABLE_SPHINX" : true,
+       "LIBC_INCLUDE_DOCS" : true,
+       "LLVM_LIBC_INCLUDE_SCUDO" : true,
+       "COMPILER_RT_BUILD_SCUDO_STANDALONE_WITH_LLVM_LIBC": true,
+       "COMPILER_RT_BUILD_GWP_ASAN" : false,
+       "COMPILER_RT_SCUDO_STANDALONE_BUILD_SHARED" : false,
+       "CMAKE_EXPORT_COMPILE_COMMANDS" : true,
+       "LIBC_CMAKE_VERBOSE_LOGGING" : true
      }
    }
 

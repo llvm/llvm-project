@@ -10,6 +10,7 @@ add_subdirectory(lldb-fuzzer EXCLUDE_FROM_ALL)
 
 add_lldb_tool_subdirectory(lldb-instr)
 add_lldb_tool_subdirectory(lldb-dap)
+add_lldb_tool_subdirectory(lldb-mcp)
 if (LLDB_BUILD_LLDBRPC)
   add_lldb_tool_subdirectory(lldb-rpc-gen)
 endif()
@@ -27,3 +28,5 @@ endif()
 if (LLDB_CAN_USE_LLDB_SERVER)
   add_lldb_tool_subdirectory(lldb-server)
 endif()
+
+add_lldb_tool_subdirectory(yaml2macho-core)

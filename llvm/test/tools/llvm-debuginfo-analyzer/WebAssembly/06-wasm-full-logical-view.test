@@ -64,8 +64,6 @@
 ; ONE-NEXT: [0x000000005d][004]                    {Code} 'local.get	11'
 ; ONE-NEXT: [0x000000005f][004]                    {Code} 'i32.store	28'
 ; ONE-NEXT: [0x0000000062][004]                    {Code} 'br      	1'
-; ONE-NEXT: [0x0000000064][004]      0             {Line} '{{.*}}/general/test.cpp'
-; ONE-NEXT: [0x0000000064][004]                    {Code} 'end'
 ; ONE-NEXT: [0x000000005e][003]      2           {Parameter} 'ParamBool' -> [0x00000000b3]'bool'
 ; ONE-NEXT: [0x000000005e][004]                    {Coverage} 100.00%
 ; ONE-NEXT: [0x000000005f][004]                    {Location}
@@ -118,6 +116,8 @@
 ; ONE-NEXT: [0x0000000047][003]                  {Code} 'local.get	9'
 ; ONE-NEXT: [0x0000000049][003]                  {Code} 'i32.eqz'
 ; ONE-NEXT: [0x000000004a][003]                  {Code} 'br_if   	0'
+; ONE-NEXT: [0x0000000064][003]      0           {Line} '{{.*}}/general/test.cpp'
+; ONE-NEXT: [0x0000000064][003]                  {Code} 'end'
 ; ONE-NEXT: [0x0000000065][003]      8           {Line} {NewStatement} '{{.*}}/general/test.cpp'
 ; ONE-NEXT: [0x0000000065][003]                  {Code} 'local.get	5'
 ; ONE-NEXT: [0x0000000067][003]                  {Code} 'i32.load	20'
@@ -135,8 +135,8 @@
 ; ONE-NEXT: [0x000000007b][003]                  {Code} 'local.get	13'
 ; ONE-NEXT: [0x000000007d][003]                  {Code} 'return'
 ; ONE-NEXT: [0x000000007e][003]                  {Code} 'end'
-; ONE-NEXT: [0x000000007f][003]      9           {Line} {NewStatement} {EndSequence} '{{.*}}/general/test.cpp'
-; ONE-NEXT: [0x000000007f][003]                  {Code} 'unreachable'
+; ONE-NEXT: [0x000000007f][002]      9         {Line} {NewStatement} {EndSequence} '{{.*}}/general/test.cpp'
+; ONE-NEXT: [0x000000007f][002]                {Code} 'unreachable'
 ; ONE-EMPTY:
 ; ONE-NEXT: -----------------------------
 ; ONE-NEXT: Element      Total    Printed

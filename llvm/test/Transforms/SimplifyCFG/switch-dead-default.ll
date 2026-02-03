@@ -7,8 +7,7 @@ declare void @foo(i32)
 define void @test(i1 %a) {
 ; CHECK-LABEL: define void @test(
 ; CHECK-SAME: i1 [[A:%.*]]) {
-; CHECK-NEXT:    [[A_OFF:%.*]] = add i1 [[A]], true
-; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i1 [[A_OFF]], true
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp eq i1 [[A]], true
 ; CHECK-NEXT:    br i1 [[SWITCH]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
@@ -209,8 +208,7 @@ define void @test5(i8 %a) {
 ; CHECK-SAME: i8 [[A:%.*]]) {
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp ult i8 [[A]], 2
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[A_OFF:%.*]] = add i8 [[A]], -1
-; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i8 [[A_OFF]], 1
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp eq i8 [[A]], 1
 ; CHECK-NEXT:    br i1 [[SWITCH]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
@@ -243,8 +241,7 @@ define void @test6(i8 %a) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[A]], -2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[AND]], -2
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[A_OFF:%.*]] = add i8 [[A]], 1
-; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i8 [[A_OFF]], 1
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp eq i8 [[A]], -1
 ; CHECK-NEXT:    br i1 [[SWITCH]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
@@ -279,8 +276,7 @@ define void @test7(i8 %a) {
 ; CHECK-NEXT:    [[AND:%.*]] = and i8 [[A]], -2
 ; CHECK-NEXT:    [[CMP:%.*]] = icmp eq i8 [[AND]], -2
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[CMP]])
-; CHECK-NEXT:    [[A_OFF:%.*]] = add i8 [[A]], 1
-; CHECK-NEXT:    [[SWITCH:%.*]] = icmp ult i8 [[A_OFF]], 1
+; CHECK-NEXT:    [[SWITCH:%.*]] = icmp eq i8 [[A]], -1
 ; CHECK-NEXT:    br i1 [[SWITCH]], label [[TRUE:%.*]], label [[FALSE:%.*]]
 ; CHECK:       common.ret:
 ; CHECK-NEXT:    ret void
