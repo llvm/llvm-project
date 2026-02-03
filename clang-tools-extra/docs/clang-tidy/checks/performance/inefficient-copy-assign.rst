@@ -3,10 +3,8 @@
 performance-inefficient-copy-assign
 ===================================
 
-
-Warns on copy assignment operator recieving an lvalue reference when a
-profitable move assignment operator exist and would be used if the lvalue
-reference were moved through ``std::move``.
+Suggests insertion of ``std::move(...)`` to turn copy assignment operator calls
+into move assignment ones, when deemed valid and profitable.
 
 .. code-block:: c++
 
