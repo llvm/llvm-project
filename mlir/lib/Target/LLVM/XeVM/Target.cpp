@@ -279,6 +279,7 @@ void SPIRVSerializer::init() {
 static const std::vector<std::string> getDefaultSPIRVExtensions() {
   return {
       "SPV_INTEL_cache_controls",
+      "SPV_INTEL_variable_length_array",
   };
 }
 
