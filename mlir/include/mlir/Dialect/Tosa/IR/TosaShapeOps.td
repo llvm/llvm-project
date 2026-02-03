@@ -159,6 +159,8 @@ def Tosa_DivCeilShapeOp : Tosa_ElementwiseShapeOp<"div_ceil_shape", [Pure]> {
   );
 
   let results = (outs Tosa_Shape:$output);
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -177,6 +179,8 @@ def Tosa_DivFloorShapeOp : Tosa_ElementwiseShapeOp<"div_floor_shape", [Pure]> {
   );
 
   let results = (outs Tosa_Shape:$output);
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -282,6 +286,8 @@ def Tosa_ModShapeOp : Tosa_ElementwiseShapeOp<"mod_shape", [Pure]> {
   );
 
   let results = (outs Tosa_Shape:$output);
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -300,6 +306,8 @@ def Tosa_MulShapeOp : Tosa_ElementwiseShapeOp<"mul_shape", [Pure]> {
   );
 
   let results = (outs Tosa_Shape:$output);
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//
@@ -339,6 +347,8 @@ def Tosa_SubShapeOp : Tosa_ElementwiseShapeOp<"sub_shape", [Pure]> {
   );
 
   let results = (outs Tosa_Shape:$output);
+
+  let hasFolder = 1;
 }
 
 //===----------------------------------------------------------------------===//

@@ -360,6 +360,7 @@ def SPV_EXT_shader_image_int64           : I32EnumAttrCase<"SPV_EXT_shader_image
 def SPV_EXT_shader_atomic_float16_add    : I32EnumAttrCase<"SPV_EXT_shader_atomic_float16_add", 1011>;
 def SPV_EXT_mesh_shader                  : I32EnumAttrCase<"SPV_EXT_mesh_shader", 1012>;
 def SPV_EXT_replicated_composites        : I32EnumAttrCase<"SPV_EXT_replicated_composites", 1013>;
+def SPV_EXT_float8                       : I32EnumAttrCase<"SPV_EXT_float8", 1014>;
 
 def SPV_AMD_gpu_shader_half_float_fetch          : I32EnumAttrCase<"SPV_AMD_gpu_shader_half_float_fetch", 2000>;
 def SPV_AMD_shader_ballot                        : I32EnumAttrCase<"SPV_AMD_shader_ballot", 2001>;
@@ -449,7 +450,7 @@ def SPIRV_ExtensionAttr :
       SPV_EXT_shader_stencil_export, SPV_EXT_shader_viewport_index_layer,
       SPV_EXT_shader_atomic_float_add, SPV_EXT_shader_atomic_float_min_max,
       SPV_EXT_shader_image_int64, SPV_EXT_shader_atomic_float16_add,
-      SPV_EXT_mesh_shader, SPV_EXT_replicated_composites,
+      SPV_EXT_mesh_shader, SPV_EXT_replicated_composites, SPV_EXT_float8,
       SPV_ARM_tensors, SPV_ARM_graph,
       SPV_AMD_gpu_shader_half_float_fetch, SPV_AMD_shader_ballot,
       SPV_AMD_shader_explicit_vertex_parameter, SPV_AMD_shader_fragment_mask,
@@ -1486,6 +1487,12 @@ def SPIRV_C_CacheControlsINTEL : I32EnumAttrCase<"CacheControlsINTEL", 6441> {
   ];
 }
 
+def SPIRV_C_Float8EXT : I32EnumAttrCase<"Float8EXT", 4212> {
+  list<Availability> availability = [
+    Extension<[SPV_EXT_float8]>
+  ];
+}
+
 def SPIRV_CapabilityAttr :
     SPIRV_I32EnumAttr<"Capability", "valid SPIR-V Capability", "capability", [
       SPIRV_C_Matrix, SPIRV_C_Addresses, SPIRV_C_Linkage, SPIRV_C_Kernel, SPIRV_C_Float16,
@@ -1583,7 +1590,7 @@ def SPIRV_CapabilityAttr :
       SPIRV_C_ShaderStereoViewNV, SPIRV_C_Bfloat16ConversionINTEL,
       SPIRV_C_CacheControlsINTEL, SPIRV_C_BFloat16TypeKHR,
       SPIRV_C_BFloat16DotProductKHR, SPIRV_C_BFloat16CooperativeMatrixKHR,
-      SPIRV_C_TensorFloat32RoundingINTEL
+      SPIRV_C_TensorFloat32RoundingINTEL, SPIRV_C_Float8EXT
     ]>;
 
 def SPIRV_AM_Logical                 : I32EnumAttrCase<"Logical", 0>;
@@ -3287,9 +3294,24 @@ def SPIRV_FPE_BFloat16KHR : I32EnumAttrCase<"BFloat16KHR", 0> {
     Capability<[SPIRV_C_BFloat16TypeKHR]>
   ];
 }
+
+def SPIRV_FPE_Float8E4M3EXT : I32EnumAttrCase<"Float8E4M3EXT", 4214> {
+  list<Availability> availability = [
+    Capability<[SPIRV_C_Float8EXT]>
+  ];
+}
+
+def SPIRV_FPE_Float8E5M2EXT : I32EnumAttrCase<"Float8E5M2EXT", 4215> {
+  list<Availability> availability = [
+    Capability<[SPIRV_C_Float8EXT]>
+  ];
+}
+
 def SPIRV_FPEncodingAttr :
     SPIRV_I32EnumAttr<"FPEncoding", "valid SPIR-V FPEncoding", "f_p_encoding", [
-      SPIRV_FPE_BFloat16KHR
+      SPIRV_FPE_BFloat16KHR,
+      SPIRV_FPE_Float8E4M3EXT,
+      SPIRV_FPE_Float8E5M2EXT,
     ]>;
 
 def SPIRV_FC_None         : I32BitEnumAttrCaseNone<"None">;
@@ -4248,9 +4270,11 @@ def SPIRV_Int32 : TypeAlias<I32, "Int32">;
 def SPIRV_Float16 : TypeAlias<F16, "Float16">;
 def SPIRV_Float32 : TypeAlias<F32, "Float32">;
 def SPIRV_BFloat16KHR : TypeAlias<BF16, "BFloat16">;
+def SPIRV_Float8E4M3EXT : TypeAlias<F8E4M3FN, "Float8E4M3">;
+def SPIRV_Float8E5M2EXT : TypeAlias<F8E5M2, "Float8E5M2">;
 def SPIRV_Float : FloatOfWidths<[16, 32, 64]>;
 def SPIRV_Float16or32 : FloatOfWidths<[16, 32]>;
-def SPIRV_AnyFloat : AnyTypeOf<[SPIRV_Float, SPIRV_BFloat16KHR]>;
+def SPIRV_AnyFloat : AnyTypeOf<[SPIRV_Float, SPIRV_BFloat16KHR, SPIRV_Float8E4M3EXT, SPIRV_Float8E5M2EXT]>;
 def SPIRV_Vector : VectorOfRankAndLengthAndType<[1], [2, 3, 4, 8, 16],
                                        [SPIRV_Bool, SPIRV_Integer, SPIRV_AnyFloat]>;
 // Component type check is done in the type parser for the following SPIR-V
