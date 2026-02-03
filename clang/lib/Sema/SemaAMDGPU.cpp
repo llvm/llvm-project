@@ -303,8 +303,8 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
     if ((!ValTy->isIntegerType() && !ValTy->isFloatingType()) ||
         SemaRef.getASTContext().getTypeSize(ValTy) > 32)
       return Diag(Val->getExprLoc(), diag::err_builtin_invalid_arg_type)
-          << Val << /*scalar=*/1 << /*'int'=*/4 << /*floating point=*/2
-          << ValTy;
+             << Val << /*scalar=*/1 << /*'int'=*/4 << /*floating point=*/2
+             << ValTy;
 
     Expr *Idx = TheCall->getArg(1);
     QualType IdxTy = Idx->getType();
@@ -312,8 +312,8 @@ bool SemaAMDGPU::CheckAMDGCNBuiltinFunctionCall(unsigned BuiltinID,
       return Diag(Idx->getExprLoc(), diag::err_typecheck_expect_int) << IdxTy;
     if (SemaRef.getASTContext().getTypeSize(IdxTy) > 32)
       return Diag(Idx->getExprLoc(), diag::err_builtin_invalid_arg_type)
-          << Idx << /*scalar=*/1 << /*'int'=*/4 << /*floating point=*/0
-          << IdxTy;
+             << Idx << /*scalar=*/1 << /*'int'=*/4 << /*floating point=*/0
+             << IdxTy;
 
     // Resolve the overload here, now that we know that the invocation is
     // correct: the intrinsic returns the type of the value argument.
