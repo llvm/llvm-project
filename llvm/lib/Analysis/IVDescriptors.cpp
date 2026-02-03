@@ -283,9 +283,10 @@ bool RecurrenceDescriptor::AddReductionVar(
   // Obtain the reduction start value from the value that comes from the loop
   // preheader.
   Value *RdxStart;
-  if (TheLoop->getLoopPreheader())
-    RdxStart = Phi->getIncomingValueForBlock(TheLoop->getLoopPreheader());
+  if (!TheLoop->getLoopPreheader())
+    return false;
 
+  RdxStart = Phi->getIncomingValueForBlock(TheLoop->getLoopPreheader());
   // ExitInstruction is the single value which is used outside the loop.
   // We only allow for a single reduction value to be used outside the loop.
   // This includes users of the reduction, variables (which form a cycle
@@ -650,9 +651,6 @@ bool RecurrenceDescriptor::AddReductionVar(
   //       kept simple enough.
   collectCastInstrs(TheLoop, ExitInstruction, RecurrenceType, CastInsts,
                     MinWidthCastToRecurrenceType);
-
-  if (!RdxStart)
-    return false;
 
   // We found a reduction var if we have reached the original phi node and we
   // only have a single instruction with out-of-loop users.
