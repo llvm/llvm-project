@@ -38,7 +38,7 @@ void X86MnemonicTablesEmitter::run(raw_ostream &OS) {
   const Record *AsmWriter = Target.getAsmWriter();
   unsigned Variant = AsmWriter->getValueAsInt("Variant");
 
-  // Hold all instructions grouped by mnemonic
+  // Hold all instructions grouped by mnemonic.
   StringMap<SmallVector<const CodeGenInstruction *, 0>> MnemonicToCGInstrMap;
 
   for (const CodeGenInstruction *I : Target.getInstructions()) {
@@ -49,9 +49,9 @@ void X86MnemonicTablesEmitter::run(raw_ostream &OS) {
     X86Disassembler::RecognizableInstrBase RI(*I);
     if (!RI.shouldBeEmitted())
       continue;
-    if ( // Non-parsable instruction defs contain prefix as part of AsmString
+    if ( // Non-parsable instruction defs contain prefix as part of AsmString.
         Def->getValueAsString("AsmVariantName") == "NonParsable" ||
-        // Skip prefix byte
+        // Skip prefix byte.
         RI.Form == X86Local::PrefixByte)
       continue;
     std::string Mnemonic = X86Disassembler::getMnemonic(I, Variant);
@@ -70,7 +70,7 @@ void X86MnemonicTablesEmitter::run(raw_ostream &OS) {
     NamespaceEmitter NS(OS, "llvm::X86");
     for (StringRef Mnemonic : MnemonicToCGInstrMap.keys()) {
       OS << "bool is" << Mnemonic << "(unsigned Opcode) {\n";
-      auto Mnemonics = MnemonicToCGInstrMap[Mnemonic];
+      const auto &Mnemonics = MnemonicToCGInstrMap[Mnemonic];
       if (Mnemonics.size() == 1) {
         const CodeGenInstruction *CGI = Mnemonics.front();
         OS << "  return Opcode == " << CGI->getName() << ";\n}\n\n";
