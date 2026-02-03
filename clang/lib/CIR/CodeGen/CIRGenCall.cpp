@@ -145,6 +145,169 @@ static void addNoBuiltinAttributes(mlir::MLIRContext &ctx,
               mlir::ArrayAttr::get(&ctx, nbFuncs.getArrayRef()));
 }
 
+/// Add denormal-fp-math and denormal-fp-math-f32 as appropriate for the
+/// requested denormal behavior, accounting for the overriding behavior of the
+/// -f32 case.
+static void addDenormalModeAttrs(llvm::DenormalMode fpDenormalMode,
+                                 llvm::DenormalMode fp32DenormalMode,
+                                 mlir::NamedAttrList &attrs) {
+  // TODO(cir): Classic-codegen sets the denormal modes here. There are two
+  // values, both with a string, but it seems that perhaps we could combine
+  // these into a single attribute?  It seems a little silly to have two so
+  // similar named attributes that do the same thing.
+}
+
+/// Add default attributes to a function, which have merge semantics under
+/// -mlink-builtin-bitcode and should not simply overwrite any existing
+/// attributes in the linked library.
+static void
+addMergeableDefaultFunctionAttributes(const CodeGenOptions &CodeGenOpts,
+                                      mlir::NamedAttrList &attrs) {
+  addDenormalModeAttrs(CodeGenOpts.FPDenormalMode, CodeGenOpts.FP32DenormalMode,
+                       attrs);
+}
+
+llvm::StringLiteral
+getZeroCallUsedRegsKindStr(llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind k) {
+  switch (k) {
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::Skip:
+    llvm_unreachable("No string value, shouldn't be able to get here");
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::UsedGPRArg:
+    return "used-gpr-arg";
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::UsedGPR:
+    return "used-gpr";
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::UsedArg:
+    return "used-arg";
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::Used:
+    return "used";
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::AllGPRArg:
+    return "all-gpr-arg";
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::AllGPR:
+    return "all-gpr";
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::AllArg:
+    return "all-arg";
+  case llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::All:
+    return "all";
+  }
+
+  llvm_unreachable("Unknown kind?");
+}
+
+/// Add default attributes to a function, which have merge semantics under
+/// -mlink-builtin-bitcode and should not simply overwrite any existing
+/// attributes in the linked library.
+static void addTrivialDefaultFunctionAttributes(
+    mlir::MLIRContext *mlirCtx, StringRef name, bool hasOptNoneAttr,
+    const CodeGenOptions &codeGenOpts, const LangOptions &langOpts,
+    bool attrOnCallSite, mlir::NamedAttrList &attrs) {
+  // TODO(cir): Handle optimize attribute flag here.
+  // OptimizeNoneAttr takes precedence over -Os or -Oz. No warning needed.
+  if (!hasOptNoneAttr) {
+    if (codeGenOpts.OptimizeSize)
+      attrs.set(cir::CIRDialect::getOptimizeForSizeAttrName(),
+                mlir::UnitAttr::get(mlirCtx));
+    if (codeGenOpts.OptimizeSize == 2)
+      attrs.set(cir::CIRDialect::getMinSizeAttrName(),
+                mlir::UnitAttr::get(mlirCtx));
+  }
+
+  // TODO(cir): Classic codegen adds 'DisableRedZone', 'indirect-tls-seg-refs'
+  // and 'NoImplicitFloat' here.
+
+  if (attrOnCallSite) {
+    // Add the 'nobuiltin' tag, which is different from 'no-builtins'.
+    if (!codeGenOpts.SimplifyLibCalls || langOpts.isNoBuiltinFunc(name))
+      attrs.set(cir::CIRDialect::getNoBuiltinAttrName(),
+                mlir::UnitAttr::get(mlirCtx));
+
+    if (!codeGenOpts.TrapFuncName.empty())
+      attrs.set(cir::CIRDialect::getTrapFuncNameAttrName(),
+                mlir::StringAttr::get(mlirCtx, codeGenOpts.TrapFuncName));
+  } else {
+    // TODO(cir): Set frame pointer attribute here.
+    // TODO(cir): a number of other attribute 1-offs based on codegen/lang opts
+    // should be done here: less-recise-fpmad null-pointer-is-valid
+    // no-trapping-math
+    // various inf/nan/nsz/etc work here.
+    //
+    // TODO(cir): set stack-protector buffer size attribute (sorted oddly in
+    // classic compiler inside of the above region, but should be done on its
+    // own).
+    // TODO(cir): other attributes here:
+    // reciprocal estimates, prefer-vector-width, stackrealign, backchain,
+    // split-stack, speculative-load-hardening.
+
+    if (codeGenOpts.getZeroCallUsedRegs() ==
+        llvm::ZeroCallUsedRegs::ZeroCallUsedRegsKind::Skip)
+      attrs.erase(cir::CIRDialect::getZeroCallUsedRegsAttrName());
+    else
+      attrs.set(cir::CIRDialect::getZeroCallUsedRegsAttrName(),
+                mlir::StringAttr::get(mlirCtx,
+                                      getZeroCallUsedRegsKindStr(
+                                          codeGenOpts.getZeroCallUsedRegs())));
+  }
+
+  if (langOpts.assumeFunctionsAreConvergent()) {
+    // Conservatively, mark all functions and calls in CUDA and OpenCL as
+    // convergent (meaning, they may call an intrinsically convergent op, such
+    // as __syncthreads() / barrier(), and so can't have certain optimizations
+    // applied around them).  LLVM will remove this attribute where it safely
+    // can.
+    attrs.set(cir::CIRDialect::getConvergentAttrName(),
+              mlir::UnitAttr::get(mlirCtx));
+  }
+
+  // TODO(cir): Classic codegen adds 'nounwind' here in a bunch of offload
+  // targets.
+
+  if (codeGenOpts.SaveRegParams && !attrOnCallSite)
+    attrs.set(cir::CIRDialect::getSaveRegParamsAttrName(),
+              mlir::UnitAttr::get(mlirCtx));
+
+  // These come in the form of an optional equality sign, so make sure we pass
+  // these on correctly. These will eventually just be passed through to
+  // LLVM-IR, but we want to put them all in 1 array to simplify the
+  // LLVM-MLIR dialect.
+  SmallVector<mlir::NamedAttribute> defaultFuncAttrs;
+  llvm::transform(
+      codeGenOpts.DefaultFunctionAttrs, std::back_inserter(defaultFuncAttrs),
+      [mlirCtx](llvm::StringRef arg) {
+        auto [var, value] = arg.split('=');
+        auto valueAttr =
+            value.empty()
+                ? cast<mlir::Attribute>(mlir::UnitAttr::get(mlirCtx))
+                : cast<mlir::Attribute>(mlir::StringAttr::get(mlirCtx, value));
+        return mlir::NamedAttribute(var, valueAttr);
+      });
+
+  if (!defaultFuncAttrs.empty())
+    attrs.set(cir::CIRDialect::getDefaultFuncAttrsAttrName(),
+              mlir::DictionaryAttr::get(mlirCtx, defaultFuncAttrs));
+
+  // TODO(cir): Do branch protection attributes here.
+}
+
+/// This function matches the behavior of 'getDefaultFunctionAttributes' from
+/// classic codegen, despite the similarity of its name to
+/// 'addDefaultFunctionDefinitionAttributes', which is a caller of this
+/// function.
+void CIRGenModule::addDefaultFunctionAttributes(StringRef name,
+                                                bool hasOptNoneAttr,
+                                                bool attrOnCallSite,
+                                                mlir::NamedAttrList &attrs) {
+
+  addTrivialDefaultFunctionAttributes(&getMLIRContext(), name, hasOptNoneAttr,
+                                      codeGenOpts, langOpts, attrOnCallSite,
+                                      attrs);
+
+  if (!attrOnCallSite) {
+    // TODO(cir): Classic codegen adds pointer-auth attributes here, by calling
+    // into TargetCodeGenInfo.  At the moment, we've not looked into this as it
+    // is somewhat less used.
+    addMergeableDefaultFunctionAttributes(codeGenOpts, attrs);
+  }
+}
+
 /// Construct the CIR attribute list of a function or call.
 void CIRGenModule::constructAttributeList(llvm::StringRef name,
                                           const CIRGenFunctionInfo &info,
@@ -244,9 +407,6 @@ void CIRGenModule::constructAttributeList(llvm::StringRef name,
     // TODO(cir): Implement 'BPFFastCall' attribute here.  This requires C, and
     // the BPF target.
 
-    // TODO(cir): Detecting 'OptimizeNone' is done here in classic codegen, when
-    // we figure out when to do that, we should do it here.
-
     if (auto *allocSizeAttr = targetDecl->getAttr<AllocSizeAttr>()) {
       unsigned size = allocSizeAttr->getElemSizeParam().getLLVMIndex();
 
@@ -283,11 +443,44 @@ void CIRGenModule::constructAttributeList(llvm::StringRef name,
 
   addNoBuiltinAttributes(getMLIRContext(), attrs, getLangOpts(), nba);
 
-  // TODO(cir): We should set default function attrs here.
+  bool hasOptNoneAttr = targetDecl && targetDecl->hasAttr<OptimizeNoneAttr>();
+  addDefaultFunctionAttributes(name, hasOptNoneAttr, attrOnCallSite, attrs);
+  if (targetDecl) {
+    // TODO(cir): There is another region of `if (targetDecl)` that handles
+    // removing some attributes that are necessary modifications of the
+    // default-function attrs. Including:
+    // NoSpeculativeLoadHardening
+    // SpeculativeLoadHardening
+    // NoSplitStack
+    // Non-lazy-bind
+    // 'sample-profile-suffix-elision-policy'.
 
-  // TODO(cir): There is another region of `if (targetDecl)` that handles
-  // removing some attributes that are necessary modifications of the
-  // default-function attrs.  We should do that here.
+    if (targetDecl->hasAttr<ZeroCallUsedRegsAttr>()) {
+      // A function "__attribute__((...))" overrides the command-line flag.
+      auto kind =
+          targetDecl->getAttr<ZeroCallUsedRegsAttr>()->getZeroCallUsedRegs();
+      attrs.set(
+          cir::CIRDialect::getZeroCallUsedRegsAttrName(),
+          mlir::StringAttr::get(
+              &getMLIRContext(),
+              ZeroCallUsedRegsAttr::ConvertZeroCallUsedRegsKindToStr(kind)));
+    }
+
+    if (targetDecl->hasAttr<NoConvergentAttr>())
+      attrs.erase(cir::CIRDialect::getConvergentAttrName());
+  }
+
+  // TODO(cir): A bunch of non-call-site function IR attributes from
+  // declaration-specific information, including tail calls,
+  // cmse_nonsecure_entry, additional/automatic 'returns-twice' functions,
+  // CPU-features/overrides, and hotpatch support.
+
+  // TODO(cir): Add loader-replaceable attribute here.
+
+  // TODO(cir): Ret attrs.
+  //
+  // TODO(cir): Arg attrs.
+
   assert(!cir::MissingFeatures::opCallAttrs());
 }
 

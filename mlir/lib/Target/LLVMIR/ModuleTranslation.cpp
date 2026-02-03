@@ -1700,6 +1700,12 @@ static void convertFunctionAttributes(ModuleTranslation &mod, LLVMFuncOp func,
     llvmFunc->addFnAttr(llvm::Attribute::WillReturn);
   if (func.getNoreturnAttr())
     llvmFunc->addFnAttr(llvm::Attribute::NoReturn);
+  if (func.getOptsizeAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::OptimizeForSize);
+  if (func.getMinsizeAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::MinSize);
+  if (func.getSaveRegParamsAttr())
+    llvmFunc->addFnAttr("save-reg-params");
   if (func.getNoCallerSavedRegistersAttr())
     llvmFunc->addFnAttr("no_caller_saved_registers");
   if (func.getNocallbackAttr())
@@ -1714,6 +1720,8 @@ static void convertFunctionAttributes(ModuleTranslation &mod, LLVMFuncOp func,
   if (UWTableKindAttr uwTableKindAttr = func.getUwtableKindAttr())
     llvmFunc->setUWTableKind(
         convertUWTableKindToLLVM(uwTableKindAttr.getUwtableKind()));
+  if (StringAttr zcsr = func.getZeroCallUsedRegsAttr())
+    llvmFunc->addFnAttr("zero-call-used-regs", zcsr.getValue());
 
   if (ArrayAttr noBuiltins = func.getNobuiltinsAttr()) {
     if (noBuiltins.empty())
@@ -1722,6 +1730,9 @@ static void convertFunctionAttributes(ModuleTranslation &mod, LLVMFuncOp func,
     mod.convertFunctionArrayAttr(noBuiltins, llvmFunc,
                                  ModuleTranslation::convertNoBuiltin);
   }
+
+  mod.convertFunctionArrayAttr(func.getDefaultFuncAttrsAttr(), llvmFunc,
+                               ModuleTranslation::convertDefaultFuncAttr);
 
   if (llvm::Attribute attr = mod.convertAllocsizeAttr(func.getAllocsizeAttr());
       attr.isValid())

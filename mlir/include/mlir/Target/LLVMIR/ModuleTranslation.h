@@ -351,22 +351,38 @@ public:
 
   // A helper callback that takes an attribute, and if it is a StringAttr,
   // properly converts it to the 'no-builtin-VALUE' form.
-  static std::optional<std::string> convertNoBuiltin(mlir::Attribute a) {
+  static std::optional<llvm::Attribute> convertNoBuiltin(llvm::LLVMContext &ctx,
+                                                         mlir::Attribute a) {
     if (auto str = dyn_cast<StringAttr>(a))
-      return ("no-builtin-" + str.getValue()).str();
+      return llvm::Attribute::get(ctx, ("no-builtin-" + str.getValue()).str());
+    return std::nullopt;
+  }
+
+  static std::optional<llvm::Attribute>
+  convertDefaultFuncAttr(llvm::LLVMContext &ctx,
+                         mlir::NamedAttribute namedAttr) {
+    StringAttr name = namedAttr.getName();
+    Attribute value = namedAttr.getValue();
+
+    if (auto strVal = dyn_cast<StringAttr>(value))
+      return llvm::Attribute::get(ctx, name.getValue(), strVal.getValue());
+    if (mlir::isa<UnitAttr>(value))
+      return llvm::Attribute::get(ctx, name.getValue());
     return std::nullopt;
   }
 
   /// A template that takes an ArrayAttr, converts it via a user provided
   /// callback, then adds each element to as function attributes to the provided
   /// operation.
-  template <typename Operation, typename Converter>
-  void convertFunctionArrayAttr(ArrayAttr array, Operation *op,
+  template <typename ArrayTy, typename Operation, typename Converter>
+  void convertFunctionArrayAttr(ArrayTy arrayAttr, Operation *op,
                                 const Converter &conv) {
-    for (Attribute a : array) {
-      auto result = conv(a);
+    if (!arrayAttr)
+      return;
+    for (auto elt : arrayAttr) {
+      auto result = conv(getLLVMContext(), elt);
       if (result)
-        op->addFnAttr(llvm::Attribute::get(getLLVMContext(), *result));
+        op->addFnAttr(*result);
     }
   }
 
