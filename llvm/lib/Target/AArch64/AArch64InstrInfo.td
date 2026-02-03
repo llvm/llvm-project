@@ -1224,8 +1224,8 @@ def AArch64rshrnb_pf : PatFrags<(ops node:$rs, node:$i),
                             [(AArch64rshrnb node:$rs, node:$i),
                             (int_aarch64_sve_rshrnb node:$rs, node:$i)]>;
 
-def AArch64CttzElts : SDNode<"AArch64ISD::CTTZ_ELTS", SDTypeProfile<1, 1,
-                             [SDTCisInt<0>, SDTCisVec<1>]>, []>;
+def AArch64CttzElts : SDNode<"AArch64ISD::CTTZ_ELTS", SDTypeProfile<1, 2,
+                             [SDTCisInt<0>, SDTCisVec<1>, SDTCisInt<2>]>, []>;
 
 // NEON Load/Store with post-increment base updates.
 // TODO: Complete SDTypeProfile constraints.
@@ -2213,10 +2213,21 @@ let Predicates = [HasPAuth] in {
     let Uses = [X16];
   }
 
+  // AArch64AsmPrinter can clobber the $AddrDisc register as long as it is
+  // marked "killed", otherwise an assertion in emitPtrauthDiscriminator checks
+  // that $Scratch != $AddrDisc. The problem is that it is always correct to
+  // *omit* the "killed" flag, thus an instruction like this is valid:
+  //
+  //     $x8, $x9 = AUTxMxN $x8, 0, 12345, /* is actually killed */ $x9, implicit-def $nzcv
+  //     // $x9 is dead past this point
+  //
+  // While it is possible to allow emitPtrauthDiscriminator to clobber $Scratch
+  // iff ($AddrDisc is killed OR $Scratch == $AddrDisc), it is easier and more
+  // straightforward to mark $Scratch as @earlyclobber.
   def AUTxMxN : Pseudo<(outs GPR64:$AuthVal, GPR64common:$Scratch),
                        (ins GPR64:$Val, i32imm:$Key,
                             i64imm:$Disc, GPR64:$AddrDisc),
-                       [], "$AuthVal = $Val">, Sched<[WriteI, ReadI]> {
+                       [], "$AuthVal = $Val,@earlyclobber $Scratch">, Sched<[WriteI, ReadI]> {
     let isCodeGenOnly = 1;
     let hasSideEffects = 1;
     let mayStore = 0;
@@ -2261,6 +2272,26 @@ let Predicates = [HasPAuth] in {
     let mayLoad = 0;
     let Size = 48;
     let Defs = [X16,X17,NZCV];
+    let Uses = [X16];
+  }
+
+  // Similiar to AUTPAC, except a 32bit value is loaded at Addend offset from
+  // pointer and this value is added to the pointer before signing. This
+  // directly manipulates x16/x17, which are the only registers the OS
+  // guarantees are safe to use for sensitive operations.
+  def AUTRELLOADPAC
+      : Pseudo<(outs),
+               (ins i32imm:$AUTKey, i64imm:$AUTDisc, GPR64:$AUTAddrDisc,
+                   i32imm:$PACKey, i64imm:$PACDisc, GPR64noip:$PACAddrDisc,
+                   i64imm:$Addend),
+               []>,
+        Sched<[WriteI, ReadI]> {
+    let isCodeGenOnly = 1;
+    let hasSideEffects = 1;
+    let mayStore = 0;
+    let mayLoad = 1;
+    let Size = 84;
+    let Defs = [X16, X17, NZCV];
     let Uses = [X16];
   }
 
@@ -9081,6 +9112,25 @@ defm SCVTF: SIMDVectorRShiftToFP<0, 0b11100, "scvtf",
 defm RSHRN   : SIMDVectorRShiftNarrowBHS<0, 0b10001, "rshrn", AArch64rshrn>;
 defm SHL     : SIMDVectorLShiftBHSD<0, 0b01010, "shl", AArch64vshl>;
 
+class fixedpoint_vec_f64<ValueType FloatVT>
+    : ComplexPattern<FloatVT, 1, "SelectCVTFixedPointVec<64>">;
+class fixedpoint_vec_f32<ValueType FloatVT>
+    : ComplexPattern<FloatVT, 1, "SelectCVTFixedPointVec<32>">;
+class fixedpoint_vec_f16<ValueType FloatVT>
+    : ComplexPattern<FloatVT, 1, "SelectCVTFixedPointVec<16>">;
+// This thing just allows us to change the type of the node produced. The imm
+// value we want is already in V from SelectCVTFixedPointVec.
+def fixedpoint_vec_xform : SDNodeXForm<timm, [{
+  (void)N;
+  return V;
+}]>;
+
+def fixedpoint_v2f64 : fixedpoint_vec_f64<v2f64>;
+def fixedpoint_v2f32 : fixedpoint_vec_f32<v2f32>;
+def fixedpoint_v4f32 : fixedpoint_vec_f32<v4f32>;
+def fixedpoint_v4f16 : fixedpoint_vec_f16<v4f16>;
+def fixedpoint_v8f16 : fixedpoint_vec_f16<v8f16>;
+
 let Predicates = [HasNEON] in {
 def : Pat<(v2f32 (sint_to_fp (v2i32 (AArch64vashr_exact v2i32:$Vn, i32:$shift)))),
           (SCVTFv2i32_shift $Vn, vecshiftR32:$shift)>;
@@ -9097,7 +9147,7 @@ def : Pat<(v8f16 (sint_to_fp (v8i16 (AArch64vashr_exact v8i16:$Vn, i32:$shift)))
           (SCVTFv8i16_shift $Vn, vecshiftR16:$shift)>;
 }
 
-multiclass FCVTPat<ValueType FVT, ValueType IVT, ValueType ScalarVT, RegisterOperand RC> {
+multiclass FCVTPat<ValueType FVT, ValueType IVT, ValueType ScalarVT, RegisterOperand RC, ComplexPattern fixedpoint> {
   // fptosi(fadd(x, x)) -> FCVTZS_shift x, 1
   def : Pat<(IVT (fp_to_sint (FVT (fadd RC:$Vn, RC:$Vn)))),
             (!cast<Instruction>("FCVTZS"#IVT#"_shift") (FVT RC:$Vn), (i32 1))>;
@@ -9113,16 +9163,28 @@ multiclass FCVTPat<ValueType FVT, ValueType IVT, ValueType ScalarVT, RegisterOpe
             (!cast<Instruction>("FCVTZU"#IVT#"_shift") (FVT RC:$Vn), (i32 1))>;
   def : Pat<(IVT (fp_to_uint_sat_gi (FVT (fadd RC:$Vn, RC:$Vn)))),
             (!cast<Instruction>("FCVTZU"#IVT#"_shift") (FVT RC:$Vn), (i32 1))>;
+
+  // fptosi(fmul(x, power2)) -> FCVTZS_shift x, log2(power2)
+  def : Pat<(IVT (fp_to_sint (FVT (fmul FVT:$Vn, fixedpoint:$scale)))),
+            (!cast<Instruction>("FCVTZS"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
+  def : Pat<(IVT (fp_to_sint_sat (FVT (fmul FVT:$Vn, fixedpoint:$scale)), ScalarVT)),
+            (!cast<Instruction>("FCVTZS"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
+
+  // fptoui(fmul(x, power2)) -> FCVTZU_shift x, log2(power2)
+  def : Pat<(IVT (fp_to_uint (FVT (fmul FVT:$Vn, fixedpoint:$scale)))),
+            (!cast<Instruction>("FCVTZU"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
+  def : Pat<(IVT (fp_to_uint_sat (FVT (fmul FVT:$Vn, fixedpoint:$scale)), ScalarVT)),
+            (!cast<Instruction>("FCVTZU"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
 }
 
 let Predicates = [HasNEON] in {
-defm : FCVTPat<v2f64, v2i64, i64, V128>;
-defm : FCVTPat<v2f32, v2i32, i32, V64>;
-defm : FCVTPat<v4f32, v4i32, i32, V128>;
+defm : FCVTPat<v2f64, v2i64, i64, V128, fixedpoint_v2f64>;
+defm : FCVTPat<v2f32, v2i32, i32, V64, fixedpoint_v2f32>;
+defm : FCVTPat<v4f32, v4i32, i32, V128, fixedpoint_v4f32>;
 }
 let Predicates = [HasNEON, HasFullFP16] in {
-defm : FCVTPat<v4f16, v4i16, i16, V64>;
-defm : FCVTPat<v8f16, v8i16, i16, V128>;
+defm : FCVTPat<v4f16, v4i16, i16, V64, fixedpoint_v4f16>;
+defm : FCVTPat<v8f16, v8i16, i16, V128, fixedpoint_v8f16>;
 }
 
 // X << 1 ==> X + X

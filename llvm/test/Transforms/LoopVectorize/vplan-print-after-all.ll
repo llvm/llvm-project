@@ -9,6 +9,7 @@
 ; CHECK: VPlan after VPlanTransforms::handleMultiUseReductions
 ; CHECK: VPlan after VPlanTransforms::handleMaxMinNumReductions
 ; CHECK: VPlan after VPlanTransforms::handleFindLastReductions
+; CHECK: VPlan after VPlanTransforms::createPartialReductions
 ; CHECK: VPlan after VPlanTransforms::convertToAbstractRecipes
 ; CHECK: VPlan after VPlanTransforms::createInterleaveGroups
 ; CHECK: VPlan after VPlanTransforms::replaceSymbolicStrides
