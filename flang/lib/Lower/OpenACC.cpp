@@ -4310,19 +4310,19 @@ genACC(Fortran::lower::AbstractConverter &converter,
           extractComponentFromDesignator(designator);
       assert(componentRef &&
              "expected component reference for derived type cache operand");
-      // When component is mapped via copyin, base is the mapped address.
-      mlir::Value shape;
-      llvm::SmallVector<mlir::Value> lenParams;
+      // When component is mapped via a data clause, base may be a declare op
+      // instead of a designate op.
+      auto varIface = base.getDefiningOp<fir::FortranVariableOpInterface>();
+      assert(varIface &&
+             "expected FortranVariableOpInterface for component reference");
       fir::FortranVariableFlagsAttr attrs;
-      if (auto designate = base.getDefiningOp<hlfir::DesignateOp>()) {
-        shape = designate.getShape();
-        lenParams = llvm::SmallVector<mlir::Value>(
-            designate.getTypeparams().begin(), designate.getTypeparams().end());
-        attrs = designate.getFortranAttrsAttr();
-      }
+      if (auto fortranAttrs = varIface.getFortranAttrs())
+        attrs = fir::FortranVariableFlagsAttr::get(builder.getContext(),
+                                                   *fortranAttrs);
       auto declareOp = hlfir::DeclareOp::create(
-          builder, operandLocation, cacheOp.getAccVar(), asFortran.str(), shape,
-          lenParams, /*dummyScope=*/nullptr, /*storage=*/nullptr,
+          builder, operandLocation, cacheOp.getAccVar(), asFortran.str(),
+          varIface.getShape(), varIface.getExplicitTypeParams(),
+          /*dummyScope=*/nullptr, /*storage=*/nullptr,
           /*storageOffset=*/0, attrs);
       converter.getSymbolMap().addComponentOverride(*componentRef, declareOp);
     }

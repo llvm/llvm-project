@@ -717,6 +717,31 @@ subroutine test_cache_nested_parallel(obj, N)
 ! CHECK: acc.yield
 end subroutine
 
+! Test cache with explicit shape component in parallel loop with copyin
+! CHECK-LABEL: func.func @_QPtest_cache_explicit_shape_comp(
+subroutine test_cache_explicit_shape_comp(data, C, M)
+  type :: dt
+    real, dimension(10) :: A
+  end type
+
+  type(dt), intent(inout) :: data
+  real, dimension(:), intent(out) :: C
+  integer, intent(in) :: M
+  integer :: i
+
+  !$acc parallel loop gang vector copyin(data, data%A(1:M)) copyout(C(1:M))
+  do i = 1, M
+    !$acc cache(data%A(i:i+4))
+    C(i) = data%A(i)
+  end do
+
+! CHECK: acc.parallel {{.*}} {
+! CHECK: acc.loop
+! CHECK: acc.cache varPtr(%{{.*}}) bounds(%{{.*}}) -> !fir.ref<!fir.array<10xf32>> {name = "data%a(i:i+4_4)", structured = false}
+! CHECK: hlfir.declare %{{.*}}(%{{.*}}) {uniq_name = "data%a(i:i+4_4)"}
+! CHECK: acc.yield
+end subroutine
+
 ! Test cache with temporary in designator bounds - verifies local statement context
 ! doesn't cause issues with temporary cleanup
 ! CHECK-LABEL: func.func @_QPtest_cache_temp_in_designator(
