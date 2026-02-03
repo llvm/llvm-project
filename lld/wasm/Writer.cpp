@@ -94,6 +94,8 @@ private:
   void addSections();
 
   void createCustomSections();
+  // branch hint custom section must be placed before code section
+  void createBranchHintSection();
   void createSyntheticSections();
   void createSyntheticSectionsPostLayout();
   void finalizeSections();
@@ -164,15 +166,34 @@ void Writer::createCustomSections() {
   log("createCustomSections");
   for (auto &pair : customSectionMapping) {
     StringRef name = pair.first;
-    LLVM_DEBUG(dbgs() << "createCustomSection: " << name << "\n");
-
-    OutputSection *sec = make<CustomSection>(std::string(name), pair.second);
-    if (ctx.arg.relocatable || ctx.arg.emitRelocs) {
-      auto *sym = make<OutputSectionSymbol>(sec);
-      out.linkingSec->addToSymtab(sym);
-      sec->sectionSym = sym;
+    if (name == "metadata.code.branch_hint") {
+      // Branch hint section is created separately.
+      continue;
     }
-    addSection(sec);
+    LLVM_DEBUG(dbgs() << "createCustomSection: " << name << "\n");
+    OutputSection *Sec = make<CustomSection>(std::string(name), pair.second);
+    if (ctx.arg.relocatable || ctx.arg.emitRelocs) {
+      auto *sym = make<OutputSectionSymbol>(Sec);
+      out.linkingSec->addToSymtab(sym);
+      Sec->sectionSym = sym;
+    }
+    addSection(Sec);
+  }
+}
+
+void Writer::createBranchHintSection() {
+  log("createBranchHintSection");
+  std::string SectionName = "metadata.code.branch_hint";
+  if (const auto &Ins = customSectionMapping.find(SectionName);
+      Ins != customSectionMapping.end()) {
+    OutputSection *Sec =
+        make<CodeMetaDataOutputSection>(std::move(SectionName), Ins->second);
+    if (ctx.arg.relocatable || ctx.arg.emitRelocs) {
+      auto *sym = make<OutputSectionSymbol>(Sec);
+      out.linkingSec->addToSymtab(sym);
+      Sec->sectionSym = sym;
+    }
+    addSection(Sec);
   }
 }
 
@@ -543,6 +564,8 @@ void Writer::addSections() {
   addSection(out.startSec);
   addSection(out.elemSec);
   addSection(out.dataCountSec);
+
+  createBranchHintSection();
 
   addSection(make<CodeSection>(out.functionSec->inputFunctions));
   addSection(make<DataSection>(segments));

@@ -282,5 +282,46 @@ void CustomSection::writeRelocations(raw_ostream &os) const {
     s->writeRelocations(os);
 }
 
+void CodeMetaDataOutputSection::writeTo(uint8_t *buf) {
+  log("writing " + toString(*this) + " offset=" + Twine(offset) +
+      " size=" + Twine(getSize()) + " chunks=" + Twine(inputSections.size()));
+
+  assert(offset);
+  buf += offset;
+
+  // Write section header
+  memcpy(buf, header.data(), header.size());
+  buf += header.size();
+  memcpy(buf, nameData.data(), nameData.size());
+  buf += nameData.size();
+
+  // all input sections' outSecOff is relative to the buffer AFTER this leading
+  // count
+  buf += encodeULEB128(NumFuncHints, buf);
+  for (InputChunk *Section : inputSections) {
+    assert(!Section->discarded);
+    CodeMetaDataInputSection *CMSec =
+        dyn_cast<CodeMetaDataInputSection>(Section);
+    CMSec->writeTo(buf);
+  }
+}
+
+void CodeMetaDataOutputSection::finalizeContents() {
+  raw_string_ostream os(nameData);
+  encodeULEB128(name.size(), os);
+  os << name;
+
+  for (InputChunk *Section : inputSections) {
+    assert(!Section->discarded);
+    CodeMetaDataInputSection *CMSec =
+        dyn_cast<CodeMetaDataInputSection>(Section);
+    CMSec->finalizeContents();
+    NumFuncHints += CMSec->getNumFuncHints();
+    CMSec->outSecOff = payloadSize;
+    payloadSize += CMSec->getSize();
+  }
+  payloadSize += getULEB128Size(NumFuncHints);
+  createHeader(payloadSize + nameData.size());
+}
 } // namespace wasm
 } // namespace lld

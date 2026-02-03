@@ -45,6 +45,7 @@ public:
     Function,
     SyntheticFunction,
     Section,
+    CodeMetadata,
   };
 
   StringRef name;
@@ -359,6 +360,26 @@ protected:
   const WasmSection &section;
 };
 
+class CodeMetaDataInputSection : public InputSection {
+public:
+  CodeMetaDataInputSection(const WasmSection &s, ObjFile *f, uint32_t alignment)
+      : InputSection(s, f, alignment) {
+    sectionKind = CodeMetadata;
+  }
+
+  static bool classof(const InputChunk *c) {
+    return c->kind() == InputChunk::CodeMetadata;
+  }
+  void finalizeContents();
+  void writeTo(uint8_t *Buf) const;
+  uint32_t getSize() const;
+  uint32_t getNumFuncHints() const;
+
+private:
+  // func_idx -> generic hints array
+  SmallVector<ArrayRef<uint8_t>> Hints;
+  std::vector<uint8_t> RelocatedData;
+};
 } // namespace wasm
 
 std::string toString(const wasm::InputChunk *);

@@ -142,6 +142,9 @@ public:
   ArrayRef<wasm::WasmFeatureEntry> getTargetFeatures() const {
     return TargetFeatures;
   }
+  ArrayRef<wasm::WasmFunctionBranchHints> getBranchHints() const {
+    return BranchHints;
+  }
   ArrayRef<wasm::WasmSignature> types() const { return Signatures; }
   ArrayRef<wasm::WasmImport> imports() const { return Imports; }
   ArrayRef<wasm::WasmTable> tables() const { return Tables; }
@@ -275,12 +278,15 @@ private:
   Error parseProducersSection(ReadContext &Ctx);
   Error parseTargetFeaturesSection(ReadContext &Ctx);
   Error parseRelocSection(StringRef Name, ReadContext &Ctx);
+  Error parseCodeMetadataSection(StringRef Name, ReadContext &Ctx);
+  Error parseBranchHintSection(ReadContext &Ctx);
 
   wasm::WasmObjectHeader Header;
   std::vector<WasmSection> Sections;
   wasm::WasmDylinkInfo DylinkInfo;
   wasm::WasmProducerInfo ProducerInfo;
   std::vector<wasm::WasmFeatureEntry> TargetFeatures;
+  std::vector<wasm::WasmFunctionBranchHints> BranchHints;
   std::vector<wasm::WasmSignature> Signatures;
   std::vector<wasm::WasmTable> Tables;
   std::vector<wasm::WasmLimits> Memories;
