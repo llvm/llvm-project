@@ -908,10 +908,10 @@ SIMemOpAccess::getLDSDMAInfo(const MachineBasicBlock::iterator &MI) const {
 /// \returns true if \p MI has one or more MMO, and all of them are fit for
 /// being marked as non-volatile. This means that either they are accessing the
 /// constant address space, are accessing a known invariant memory location, or
-/// that they are marked with MONonVolatile.
+/// that they are marked with the non-volatile metadata/MMO flag.
 static bool isNonVolatileMemoryAccess(const MachineInstr &MI) {
   static constexpr unsigned NVFlags =
-      (MONonVolatile | MachineMemOperand::MOInvariant);
+      (MOThreadPrivate | MachineMemOperand::MOInvariant);
   if (MI.getNumMemOperands() == 0)
     return false;
   return all_of(MI.memoperands(), [&](const MachineMemOperand *MMO) {
