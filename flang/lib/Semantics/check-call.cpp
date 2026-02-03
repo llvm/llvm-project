@@ -986,8 +986,7 @@ static void CheckExplicitDataArg(const characteristics::DummyDataObject &dummy,
         messages.Say(
             "If a POINTER or ALLOCATABLE dummy or actual argument is polymorphic, both must be so"_err_en_US);
       }
-    }
-    else if (dummy.ignoreTKR.test(common::IgnoreTKR::Rank) &&
+    } else if (dummy.ignoreTKR.test(common::IgnoreTKR::Rank) &&
         dummy.ignoreTKR.test(common::IgnoreTKR::Contiguous)) {
       // Descriptor based dummy args passed with ignore_tkr(rc) are allowed
       // to have rank differences

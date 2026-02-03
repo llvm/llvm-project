@@ -478,7 +478,7 @@ std::optional<MessageFormattedText> PointerAssignmentChecker::CheckRanks(
     // Turn off rank mismatch error if we have ignore_tkr(rc)
     if (lhsRank != rhsRank &&
         !(ignoreTKR_.test(common::IgnoreTKR::Rank) &&
-          ignoreTKR_.test(common::IgnoreTKR::Contiguous))) {
+            ignoreTKR_.test(common::IgnoreTKR::Contiguous))) {
       return MessageFormattedText{
           "Pointer has rank %d but target has rank %d"_err_en_US, lhsRank,
           rhsRank};
