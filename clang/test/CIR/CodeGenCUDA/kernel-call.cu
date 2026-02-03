@@ -2,11 +2,11 @@
 // Tests device stub body emission for CUDA kernels.
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-sdk-version=9.2 \
-// RUN:   -emit-cir %s -I%S/../Inputs/ -x cuda -o %t.cir
+// RUN:   -emit-cir %s -x cuda -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CUDA-NEW
 
 
-#include "cuda.h"
+#include "Inputs/cuda.h"
 
 
 // TODO: Test CUDA legacy (< 9.0) when legacy stub body is implemented
