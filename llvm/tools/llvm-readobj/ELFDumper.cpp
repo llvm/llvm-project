@@ -8386,7 +8386,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
   };
 
   ListScope CGI(W, "CallGraph");
-  for (const auto &CGInfo : this->FuncCGInfos) {
+  for (const FunctionCallgraphInfo &CGInfo : this->FuncCGInfos) {
     DictScope D(W, "Function");
     PrintFunc(CGInfo.FunctionAddress);
     W.printNumber("Version", CGInfo.FormatVersionNumber);
@@ -8395,7 +8395,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
     W.printNumber("NumDirectCallees", CGInfo.DirectCallees.size());
     {
       ListScope DCs(W, "DirectCallees");
-      for (auto CalleePC : CGInfo.DirectCallees) {
+      for (uint64_t CalleePC : CGInfo.DirectCallees) {
         DictScope D(W);
         PrintFunc(CalleePC);
       }
