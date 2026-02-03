@@ -109,23 +109,25 @@ bool FileAction::Close(int fd) {
   return false;
 }
 
-bool FileAction::Duplicate(int fd, int dup_fd) {
-  Clear();
-  if (fd >= 0 && dup_fd >= 0) {
-    m_action = eFileActionDuplicate;
-    m_file = fd;
-    m_arg = dup_fd;
-    return true;
-  }
-  return false;
-}
-
+#ifdef _WIN32
 bool FileAction::Duplicate(HANDLE fh, HANDLE dup_fh) {
   Clear();
   if (fh != INVALID_HANDLE_VALUE && dup_fh != INVALID_HANDLE_VALUE) {
     m_action = eFileActionDuplicate;
     m_file = fh;
     m_arg = dup_fh;
+    return true;
+  }
+  return false;
+}
+#endif
+
+bool FileAction::Duplicate(int fd, int dup_fd) {
+  Clear();
+  if (fd >= 0 && dup_fd >= 0) {
+    m_action = eFileActionDuplicate;
+    m_file = fd;
+    m_arg = dup_fd;
     return true;
   }
   return false;
