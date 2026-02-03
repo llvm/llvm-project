@@ -7,6 +7,7 @@ declare nofpclass(nan inf pzero sub norm) float @returns_nzero()
 declare nofpclass(nan inf zero sub nnorm) float @returns_pnorm()
 declare nofpclass(nan inf norm zero) float @returns_sub()
 declare nofpclass(nan inf sub zero) float @returns_norm()
+declare nofpclass(qnan inf norm sub zero) float @returns_snan()
 declare void @use(float)
 
 ; No inf result implies no inf inputs.
@@ -1398,6 +1399,48 @@ define nofpclass(nan inf sub zero) float @norm_result_demands_sub_source_rhs(i1 
 ;
   %sub = call float @returns_sub()
   %select = select i1 %cond, float %sub, float %unknown0
+  %mul = fmul float %unknown1, %select
+  ret float %mul
+}
+
+define nofpclass(snan) float @qnan_result_square_demands_snan(i1 noundef %cond, float noundef %unknown0) {
+; CHECK-LABEL: define nofpclass(snan) float @qnan_result_square_demands_snan(
+; CHECK-SAME: i1 noundef [[COND:%.*]], float noundef [[UNKNOWN0:%.*]]) {
+; CHECK-NEXT:    [[SNAN:%.*]] = call noundef float @returns_snan()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SNAN]], float [[UNKNOWN0]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SELECT]], [[SELECT]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %snan = call noundef float @returns_snan()
+  %select = select i1 %cond, float %snan, float %unknown0
+  %mul = fmul float %select, %select
+  ret float %mul
+}
+
+define nofpclass(snan) float @qnan_result_demands_snan_lhs(i1 %cond, float %unknown0, float %unknown1) {
+; CHECK-LABEL: define nofpclass(snan) float @qnan_result_demands_snan_lhs(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN0:%.*]], float [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[SNAN:%.*]] = call float @returns_snan()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SNAN]], float [[UNKNOWN0]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[SELECT]], [[UNKNOWN1]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %snan = call float @returns_snan()
+  %select = select i1 %cond, float %snan, float %unknown0
+  %mul = fmul float %select, %unknown1
+  ret float %mul
+}
+
+define nofpclass(snan) float @qnan_result_demands_snan_rhs(i1 %cond, float %unknown0, float %unknown1) {
+; CHECK-LABEL: define nofpclass(snan) float @qnan_result_demands_snan_rhs(
+; CHECK-SAME: i1 [[COND:%.*]], float [[UNKNOWN0:%.*]], float [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[SNAN:%.*]] = call float @returns_snan()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], float [[SNAN]], float [[UNKNOWN0]]
+; CHECK-NEXT:    [[MUL:%.*]] = fmul float [[UNKNOWN1]], [[SELECT]]
+; CHECK-NEXT:    ret float [[MUL]]
+;
+  %snan = call float @returns_snan()
+  %select = select i1 %cond, float %snan, float %unknown0
   %mul = fmul float %unknown1, %select
   ret float %mul
 }
