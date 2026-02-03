@@ -315,8 +315,7 @@ def set_lldb_formatters_compatibility_feature():
         return
 
     if platform.system() == "Darwin":
-        # Apple LLDB uses Xcode-based versioning (e.g., "1700" = Xcode 17),
-        # not LLVM release versions.
+        # The Apple LLDB version doesn't follow the LLVM release versioning.
         min_required_lldb_version = "1700"
     else:
         # Minimum version required for SBType::FindDirectNestedType API
