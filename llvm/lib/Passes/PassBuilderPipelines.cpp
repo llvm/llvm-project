@@ -285,8 +285,8 @@ static cl::opt<bool> EnableConstraintElimination(
 static cl::opt<AttributorRunOption> AttributorRun(
     "attributor-enable", cl::Hidden, cl::init(AttributorRunOption::NONE),
     cl::desc("Enable the attributor inter-procedural deduction pass"),
-    cl::values(clEnumValN(AttributorRunOption::ALL, "all",
-                          "enable all attributor runs"),
+    cl::values(clEnumValN(AttributorRunOption::FULL, "full",
+                          "enable all full attributor runs"),
                clEnumValN(AttributorRunOption::LIGHT, "light",
                           "enable all attributor-light runs"),
                clEnumValN(AttributorRunOption::MODULE, "module",

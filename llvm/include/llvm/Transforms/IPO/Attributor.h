@@ -6628,7 +6628,7 @@ enum AttributorRunOption {
   MODULE_LIGHT = 1 << 2,
   CGSCC_LIGHT = 1 << 3,
 
-  ALL = MODULE | CGSCC,
+  FULL = MODULE | CGSCC,
   LIGHT = MODULE_LIGHT | CGSCC_LIGHT
 };
 
