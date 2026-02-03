@@ -122,7 +122,7 @@ static constexpr auto BuiltinAArch64Infos =
 #define TARGET_BUILTIN CLANG_TARGET_BUILTIN_ENTRY
 #define LANGBUILTIN CLANG_LANGBUILTIN_ENTRY
 #define TARGET_HEADER_BUILTIN CLANG_TARGET_HEADER_BUILTIN_ENTRY
-#include "clang/Basic/BuiltinsAArch64.def"
+#include "clang/Basic/BuiltinsAArch64.inc"
     });
 
 AArch64TargetInfo::AArch64TargetInfo(const llvm::Triple &Triple,

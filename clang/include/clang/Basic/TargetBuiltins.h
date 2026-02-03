@@ -85,6 +85,19 @@ namespace clang {
   }
 
   /// AArch64 builtins
+  //namespace AArch64 {
+  //enum {
+  //  LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1,
+  //  LastNEONBuiltin = NEON::FirstTSBuiltin - 1,
+  //  FirstSVEBuiltin = NEON::FirstTSBuiltin,
+  //  LastSVEBuiltin = SVE::FirstTSBuiltin - 1,
+  //  FirstSMEBuiltin = SVE::FirstTSBuiltin,
+  //  LastSMEBuiltin = SME::FirstTSBuiltin - 1,
+  //#define BUILTIN(ID, TYPE, ATTRS) BI##ID,
+  //#include "clang/Basic/BuiltinsAArch64.def"
+  //  LastTSBuiltin
+  //};
+  //}
   namespace AArch64 {
   enum {
     LastTIBuiltin = clang::Builtin::FirstTSBuiltin - 1,
@@ -93,8 +106,9 @@ namespace clang {
     LastSVEBuiltin = SVE::FirstTSBuiltin - 1,
     FirstSMEBuiltin = SVE::FirstTSBuiltin,
     LastSMEBuiltin = SME::FirstTSBuiltin - 1,
-  #define BUILTIN(ID, TYPE, ATTRS) BI##ID,
-  #include "clang/Basic/BuiltinsAArch64.def"
+#define GET_BUILTIN_ENUMERATORS
+#include "clang/Basic/BuiltinsSPIRVCommon.inc"
+#undef GET_BUILTIN_ENUMERATORS
     LastTSBuiltin
   };
   }
