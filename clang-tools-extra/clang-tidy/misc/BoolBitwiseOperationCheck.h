@@ -32,10 +32,12 @@ public:
     return TK_IgnoreUnlessSpelledInSource;
   }
 
-  void emitWarningAndChangeOperatorsIfPossible(
-      const BinaryOperator *BinOp, const Expr *ParensExpr,
-      const clang::SourceManager &SM, clang::ASTContext &Ctx,
-      bool CanApplyFixIt);
+  void emitWarningAndChangeOperatorsIfPossible(const BinaryOperator *BinOp,
+                                               const Expr *ParensExpr,
+                                               const Expr *LhsOfCompound,
+                                               const clang::SourceManager &SM,
+                                               clang::ASTContext &Ctx,
+                                               bool CanApplyFixIt);
 
 private:
   bool UnsafeMode;

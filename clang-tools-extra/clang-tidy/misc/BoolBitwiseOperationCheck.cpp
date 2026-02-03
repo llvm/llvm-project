@@ -12,7 +12,6 @@
 #include "clang/ASTMatchers/ASTMatchFinder.h"
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Lex/Lexer.h"
-#include "llvm/Support/Casting.h"
 #include <array>
 #include <utility>
 
@@ -60,6 +59,35 @@ getOperatorTokenRangeForFixIt(const BinaryOperator *BinOp,
     return std::nullopt;
 
   return TokenRange;
+}
+
+static std::optional<SourceLocation>
+getSpellingLocationForFixIt(SourceLocation Loc, const SourceManager &SM) {
+  if (Loc.isInvalid() || Loc.isMacroID())
+    return std::nullopt;
+
+  Loc = SM.getSpellingLoc(Loc);
+  if (Loc.isInvalid() || Loc.isMacroID())
+    return std::nullopt;
+
+  return Loc;
+}
+
+static std::optional<SourceLocation>
+getEndOfTokenLocationForFixIt(SourceLocation Loc, const SourceManager &SM,
+                              const LangOptions &LangOpts) {
+  if (Loc.isInvalid() || Loc.isMacroID())
+    return std::nullopt;
+
+  Loc = SM.getSpellingLoc(Loc);
+  if (Loc.isInvalid() || Loc.isMacroID())
+    return std::nullopt;
+
+  SourceLocation EndLoc = Lexer::getLocForEndOfToken(Loc, 0, SM, LangOpts);
+  if (EndLoc.isInvalid() || EndLoc.isMacroID())
+    return std::nullopt;
+
+  return EndLoc;
 }
 
 /// Checks if all leaf nodes in a bitwise expression satisfy a given condition.
@@ -177,17 +205,15 @@ void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
   // https://clang.llvm.org/docs/InternalsManual.html#how-to-add-an-expression-or-statement
 
   // Case 1: | with && parent
-  auto ParensCase1 = allOf(
-      hasOperatorName("|"), NotAlreadyInParenExpr,
-      binaryOperator().bind("parensExpr"),
-      hasParent(binaryOperator(hasOperatorName("&&"))));
+  auto ParensCase1 = allOf(hasOperatorName("|"), NotAlreadyInParenExpr,
+                           binaryOperator().bind("parensExpr"),
+                           hasParent(binaryOperator(hasOperatorName("&&"))));
 
   // Case 2: & with ^ or | parent
-  auto ParensCase2 = allOf(
-      hasOperatorName("&"), NotAlreadyInParenExpr,
-      binaryOperator().bind("parensExpr"),
-      hasParent(
-          binaryOperator(hasAnyOperatorName("^", "|"))));
+  auto ParensCase2 =
+      allOf(hasOperatorName("&"), NotAlreadyInParenExpr,
+            binaryOperator().bind("parensExpr"),
+            hasParent(binaryOperator(hasAnyOperatorName("^", "|"))));
 
   // Case 3: &= with || RHS
   auto ParensCase3 = allOf(
@@ -195,18 +221,21 @@ void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
       hasRHS(allOf(binaryOperator(hasOperatorName("||")).bind("parensExpr"),
                    NotAlreadyInParenExpr)));
 
-  auto BaseMatcher = binaryOperator(
-      hasAnyOperatorName("|", "&", "|=", "&="), hasLHS(BooleanLeaves),
-      hasRHS(BooleanLeaves), optionally(FixItMatcher.bind("fixit")),
-      optionally(anyOf(ParensCase1, ParensCase2)), optionally(ParensCase3));
+  auto BaseMatcher =
+      binaryOperator(hasAnyOperatorName("|", "&", "|=", "&="),
+                     hasLHS(BooleanLeaves), hasRHS(BooleanLeaves),
+                     optionally(allOf(hasAnyOperatorName("|=", "&="),
+                                      hasLHS(expr().bind("lhsOfCompound")))),
+                     optionally(FixItMatcher.bind("fixit")),
+                     optionally(anyOf(ParensCase1, ParensCase2, ParensCase3)));
 
   Finder->addMatcher(BaseMatcher.bind("binOp"), this);
 }
 
 void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
     const BinaryOperator *BinOp, const Expr *ParensExpr,
-    const clang::SourceManager &SM, clang::ASTContext &Ctx,
-    bool CanApplyFixIt) {
+    const Expr *LhsOfCompound, const clang::SourceManager &SM,
+    clang::ASTContext &Ctx, bool CanApplyFixIt) {
   auto DiagEmitter = [BinOp, this] {
     return diag(BinOp->getOperatorLoc(),
                 "use logical operator '%0' for boolean semantics instead of "
@@ -241,48 +270,42 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
     return;
   }
 
+  // Insert ' = a' if it's needed
   FixItHint InsertEqual;
-  if (BinOp->isCompoundAssignmentOp()) {
-    const Expr *LHS = BinOp->getLHS()->IgnoreImpCasts();
-    // the matcher ensures that `LHS` is a simple
-    // declaration or member expression suitable for duplication.
-    const SourceLocation LocLHS = LHS->getEndLoc();
-    if (LocLHS.isInvalid() || LocLHS.isMacroID()) {
+  if (LhsOfCompound) {
+    const auto MaybeInsertLoc = getEndOfTokenLocationForFixIt(
+        LhsOfCompound->getEndLoc(), SM, Ctx.getLangOpts());
+    if (!MaybeInsertLoc) {
       IgnoreMacros || DiagEmitterForStrictMode();
       return;
     }
-    const SourceLocation InsertLoc =
-        clang::Lexer::getLocForEndOfToken(LocLHS, 0, SM, Ctx.getLangOpts());
-    if (InsertLoc.isInvalid() || InsertLoc.isMacroID()) {
-      IgnoreMacros || DiagEmitterForStrictMode();
-      return;
-    }
-    auto SourceText = static_cast<std::string>(Lexer::getSourceText(
-        CharSourceRange::getTokenRange(LHS->getSourceRange()), SM,
-        Ctx.getLangOpts()));
+    const SourceLocation InsertLoc = *MaybeInsertLoc;
+    std::string SourceText{Lexer::getSourceText(
+        CharSourceRange::getTokenRange(LhsOfCompound->getSourceRange()), SM,
+        Ctx.getLangOpts())};
     llvm::erase_if(SourceText,
                    [](unsigned char Ch) { return std::isspace(Ch); });
     InsertEqual = FixItHint::CreateInsertion(InsertLoc, " = " + SourceText);
   }
 
-  auto ReplaceOperator = FixItHint::CreateReplacement(TokenRange, FixSpelling);
+  // Replace '&' to '&&' and and so on.
+  const auto ReplaceOperator =
+      FixItHint::CreateReplacement(TokenRange, FixSpelling);
 
-  // Generate parentheses fix-its if ParensExpr is provided.
-  // The matcher already determined which expression needs parentheses
-  // and skipped if already wrapped in ParenExpr.
+  // Insert parentheses if it's needed
   FixItHint InsertBrace1;
   FixItHint InsertBrace2;
   if (ParensExpr) {
-    const SourceLocation InsertFirstLoc = ParensExpr->getBeginLoc();
-    const SourceLocation InsertSecondLoc = clang::Lexer::getLocForEndOfToken(
-        ParensExpr->getEndLoc(), 0, SM, Ctx.getLangOpts());
-    if (InsertFirstLoc.isInvalid() || InsertFirstLoc.isMacroID() ||
-        InsertSecondLoc.isInvalid() || InsertSecondLoc.isMacroID()) {
+    const auto MaybeInsertFirstLoc =
+        getSpellingLocationForFixIt(ParensExpr->getBeginLoc(), SM);
+    const auto MaybeInsertSecondLoc = getEndOfTokenLocationForFixIt(
+        ParensExpr->getEndLoc(), SM, Ctx.getLangOpts());
+    if (!MaybeInsertFirstLoc || !MaybeInsertSecondLoc) {
       IgnoreMacros || DiagEmitterForStrictMode();
       return;
     }
-    InsertBrace1 = FixItHint::CreateInsertion(InsertFirstLoc, "(");
-    InsertBrace2 = FixItHint::CreateInsertion(InsertSecondLoc, ")");
+    InsertBrace1 = FixItHint::CreateInsertion(*MaybeInsertFirstLoc, "(");
+    InsertBrace2 = FixItHint::CreateInsertion(*MaybeInsertSecondLoc, ")");
   }
 
   DiagEmitter() << InsertEqual << ReplaceOperator << InsertBrace1
@@ -293,13 +316,15 @@ void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *BinOp = Result.Nodes.getNodeAs<BinaryOperator>("binOp");
   const auto *FixItBinOp = Result.Nodes.getNodeAs<BinaryOperator>("fixit");
   const auto *ParensExpr = Result.Nodes.getNodeAs<Expr>("parensExpr");
+  const auto *LhsOfCompound = Result.Nodes.getNodeAs<Expr>("lhsOfCompound");
   assert(BinOp);
 
   const SourceManager &SM = *Result.SourceManager;
   ASTContext &Ctx = *Result.Context;
 
   const bool CanApplyFixIt = (FixItBinOp != nullptr && FixItBinOp == BinOp);
-  emitWarningAndChangeOperatorsIfPossible(BinOp, ParensExpr, SM, Ctx, CanApplyFixIt);
+  emitWarningAndChangeOperatorsIfPossible(BinOp, ParensExpr, LhsOfCompound, SM,
+                                          Ctx, CanApplyFixIt);
 }
 
 } // namespace clang::tidy::misc
