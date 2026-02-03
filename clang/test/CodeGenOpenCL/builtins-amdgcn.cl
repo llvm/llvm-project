@@ -937,6 +937,27 @@ void test_wave_reduce_max_u64_dpp(global int* out, long in)
   *out = __builtin_amdgcn_wave_reduce_max_u64(in, 2);
 }
 
+// CHECK-LABEL: @test_wave_shuffle_u32
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.shuffle.i32
+void test_wave_shuffle_u32(global unsigned* out, unsigned in, int idx)
+{
+  *out = __builtin_amdgcn_wave_shuffle(in, idx);
+}
+
+// CHECK-LABEL: @test_wave_shuffle_i32
+// CHECK: {{.*}}call{{.*}} i32 @llvm.amdgcn.wave.shuffle.i32
+void test_wave_shuffle_i32(global int* out, int in, int idx)
+{
+  *out = __builtin_amdgcn_wave_shuffle(in, idx);
+}
+
+// CHECK-LABEL: @test_wave_shuffle_f32
+// CHECK: {{.*}}call{{.*}} float @llvm.amdgcn.wave.shuffle.f32
+void test_wave_shuffle_f32(global float* out, float in, int idx)
+{
+  *out = __builtin_amdgcn_wave_shuffle(in, idx);
+}
+
 // CHECK-LABEL: @test_s_barrier
 // CHECK: {{.*}}call{{.*}} void @llvm.amdgcn.s.barrier(
 void test_s_barrier()
