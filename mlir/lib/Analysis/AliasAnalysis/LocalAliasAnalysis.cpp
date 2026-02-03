@@ -31,6 +31,10 @@ using namespace mlir;
 
 #define DEBUG_TYPE "local-alias-analysis"
 
+/// The `RegionCallSiteMap` uses both the Region and the
+/// CallSite(CallOpInterface) to locate values along a Value's definition and
+/// use chain. The Region represents the scope, and the indexed Values are the
+/// operands passed into the CallSite.
 using RegionCallSiteMap =
     DenseMap<Region *, DenseMap<CallOpInterface, SmallVector<Value>>>;
 
@@ -201,6 +205,19 @@ static void collectUnderlyingAddressValues(BlockArgument arg, unsigned maxDepth,
     LDBG() << "  No matching region successor found, adding argument to output";
     output[getScope(arg)][callSite].push_back(arg);
     return;
+  } else if (auto func = dyn_cast<FunctionOpInterface>(op)) {
+    if (func.isPrivate()) {
+      std::optional<SymbolTable::UseRange> uses =
+          func.getSymbolUses(func->getParentOfType<ModuleOp>());
+      if (uses && !(*uses).empty()) {
+        for (SymbolTable::SymbolUse use : *uses) {
+          CallOpInterface callSite = cast<CallOpInterface>(use.getUser());
+          collectUnderlyingAddressValues(callSite->getOperand(argNumber),
+                                         maxDepth, visited, callSite, output);
+        }
+        return;
+      }
+    }
   }
 
   LDBG()
@@ -477,27 +494,18 @@ AliasResult LocalAliasAnalysis::alias(Value lhs, Value rhs) {
 
   // Check the alias results against each of the underlying values.
   std::optional<AliasResult> result;
-  /*
-  for (Value lhsVal : lhsValues) {
-    for (Value rhsVal : rhsValues) {
-      LDBG() << "  Checking underlying values: " << lhsVal << " vs " << rhsVal;
-      AliasResult nextResult = aliasImpl(lhsVal, rhsVal);
-      LDBG() << "  Result: "
-             << (nextResult == AliasResult::MustAlias ? "MustAlias"
-                 : nextResult == AliasResult::NoAlias ? "NoAlias"
-                                                      : "MayAlias");
-      result = result ? result->merge(nextResult) : nextResult;
-    }
-  }*/
   for (Region *lhsRegion : lhsValues.keys()) {
     for (auto &&lhsRegionMap : lhsValues[lhsRegion]) {
       for (Region *rhsRegion : rhsValues.keys()) {
+        // Since the scopes differ, we do not perform a comparison.
         if (lhsRegion != rhsRegion)
           continue;
         for (auto &&rhsRegionMap : rhsValues[rhsRegion]) {
-          bool callSityNull = !lhsRegionMap.first || !rhsRegionMap.first;
-          bool callSityEqual = lhsRegionMap.first == rhsRegionMap.first;
-          if (!callSityNull && !callSityEqual)
+          bool callSityNull = !lhsRegionMap.first && !rhsRegionMap.first;
+          bool callSityNotEqual = lhsRegionMap.first != rhsRegionMap.first;
+          // If the call sites differ, we skip the comparison because they are
+          // not passed to the call site at the same time.
+          if (callSityNull && callSityNotEqual)
             continue;
           for (Value lhsVal : lhsRegionMap.second) {
             for (Value rhsVal : rhsRegionMap.second) {
@@ -515,9 +523,9 @@ AliasResult LocalAliasAnalysis::alias(Value lhs, Value rhs) {
       }
     }
   }
-  if (!result.has_value()) {
-    return AliasResult::MustAlias;
-  }
+  if (!result.has_value())
+    return AliasResult::MayAlias;
+
   // We should always have a valid result here.
   LDBG() << "  Final result: "
          << (result->isMust() ? "MustAlias"
