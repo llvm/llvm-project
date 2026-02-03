@@ -3255,6 +3255,11 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
       }
 
       if (NewLdexp) {
+        if (!ProfcheckDisableMetadataFixes)
+          if (auto *I = dyn_cast<Instruction>(Select)) {
+            setExplicitlyUnknownBranchWeightsIfProfiled(*I, DEBUG_TYPE, &F);
+            I->copyMetadata(*II);
+          }
         Select->takeName(II);
         return replaceInstUsesWith(*II, Select);
       }
