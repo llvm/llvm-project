@@ -8,8 +8,8 @@
 
 #include "lldb/DataFormatters/TypeSummary.h"
 
-#include "FormatterBytecode.h"
 #include "lldb/Core/FormatEntity.h"
+#include "lldb/DataFormatters/FormatterBytecode.h"
 #include "lldb/lldb-enumerations.h"
 #include "lldb/lldb-public.h"
 
