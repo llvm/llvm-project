@@ -1181,6 +1181,11 @@ LLT RegBankLegalizeHelper::getBTyFromID(RegBankLLTMappingApplyID ID, LLT Ty) {
         isAnyPtr(Ty, 128))
       return Ty;
     return LLT();
+  case VgprB160:
+  case UniInVgprB160:
+    if (Ty == LLT::scalar(160) || Ty == LLT::fixed_vector(5, 32))
+      return Ty;
+    return LLT();
   case SgprB256:
   case VgprB256:
   case UniInVgprB256:
@@ -1242,6 +1247,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case UniInVgprB64:
   case UniInVgprB96:
   case UniInVgprB128:
+  case UniInVgprB160:
   case UniInVgprB256:
   case UniInVgprB512:
   case Sgpr32Trunc:
@@ -1272,6 +1278,7 @@ RegBankLegalizeHelper::getRegBankFromID(RegBankLLTMappingApplyID ID) {
   case VgprB64:
   case VgprB96:
   case VgprB128:
+  case VgprB160:
   case VgprB256:
   case VgprB512:
   case Vgpr32AExt:
@@ -1344,6 +1351,7 @@ bool RegBankLegalizeHelper::applyMappingDst(
     case VgprB64:
     case VgprB96:
     case VgprB128:
+    case VgprB160:
     case VgprB256:
     case VgprB512:
     case VgprPtr32:
@@ -1395,6 +1403,7 @@ bool RegBankLegalizeHelper::applyMappingDst(
     case UniInVgprB64:
     case UniInVgprB96:
     case UniInVgprB128:
+    case UniInVgprB160:
     case UniInVgprB256:
     case UniInVgprB512: {
       assert(Ty == getBTyFromID(MethodIDs[OpIdx], Ty));
@@ -1516,6 +1525,7 @@ bool RegBankLegalizeHelper::applyMappingSrc(
     case VgprB64:
     case VgprB96:
     case VgprB128:
+    case VgprB160:
     case VgprB256:
     case VgprB512:
     case VgprPtr32:
