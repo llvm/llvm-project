@@ -5375,11 +5375,12 @@ llvm::Expected<bool> EvaluateExpressionOptions::GetBooleanLanguageOption(
   const StructuredData::Dictionary &opts = GetLanguageOptions();
 
   if (!opts.HasKey(option_name))
-    return llvm::createStringErrorV("Option {0} does not exist.", option_name);
+    return llvm::createStringErrorV("Option '{0}' does not exist.",
+                                    option_name);
 
   bool result;
   if (!opts.GetValueForKeyAsBoolean(option_name, result))
-    return llvm::createStringErrorV("Failed to get option {0} as boolean.",
+    return llvm::createStringErrorV("Failed to get option '{0}' as boolean.",
                                     option_name);
 
   return result;

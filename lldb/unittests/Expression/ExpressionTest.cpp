@@ -132,23 +132,37 @@ INSTANTIATE_TEST_SUITE_P(FunctionCallLabelTest, ExpressionTestFixture,
 TEST(ExpressionTests, ExpressionOptions_Basic) {
   EvaluateExpressionOptions options;
 
-  ASSERT_FALSE(options.GetLanguageOptionAsBoolean("foo"));
-  ASSERT_FALSE(options.GetLanguageOptionAsBoolean("bar"));
+  EXPECT_THAT_EXPECTED(options.GetBooleanLanguageOption("foo"),
+                       llvm::FailedWithMessage("Option 'foo' does not exist."));
+  EXPECT_THAT_EXPECTED(options.GetBooleanLanguageOption("bar"),
+                       llvm::FailedWithMessage("Option 'bar' does not exist."));
 
-  options.SetLanguageOption("foo", true);
-  options.SetLanguageOption("bar", true);
+  EXPECT_THAT_ERROR(options.SetBooleanLanguageOption("foo", true),
+                    llvm::Succeeded());
+  EXPECT_THAT_ERROR(options.SetBooleanLanguageOption("bar", false),
+                    llvm::Succeeded());
 
-  ASSERT_TRUE(options.GetLanguageOptionAsBoolean("foo"));
-  ASSERT_TRUE(options.GetLanguageOptionAsBoolean("bar"));
+  EXPECT_THAT_EXPECTED(options.GetBooleanLanguageOption("foo"),
+                       llvm::HasValue(true));
+  EXPECT_THAT_EXPECTED(options.GetBooleanLanguageOption("bar"),
+                       llvm::HasValue(false));
 
-  options.SetLanguageOption("foo", false);
-  options.SetLanguageOption("bar", false);
+  EXPECT_THAT_ERROR(options.SetBooleanLanguageOption("foo", false),
+                    llvm::Succeeded());
+  EXPECT_THAT_ERROR(options.SetBooleanLanguageOption("bar", true),
+                    llvm::Succeeded());
 
-  ASSERT_FALSE(options.GetLanguageOptionAsBoolean("foo"));
-  ASSERT_FALSE(options.GetLanguageOptionAsBoolean("bar"));
+  EXPECT_THAT_EXPECTED(options.GetBooleanLanguageOption("foo"),
+                       llvm::HasValue(false));
+  EXPECT_THAT_EXPECTED(options.GetBooleanLanguageOption("bar"),
+                       llvm::HasValue(true));
 
   // Empty option names not allowed.
-  ASSERT_FALSE(options.GetLanguageOptionAsBoolean(""));
-  options.SetLanguageOption("", true);
-  ASSERT_FALSE(options.GetLanguageOptionAsBoolean(""));
+  EXPECT_THAT_EXPECTED(options.GetBooleanLanguageOption(""),
+                       llvm::FailedWithMessage("Option '' does not exist."));
+  EXPECT_THAT_ERROR(
+      options.SetBooleanLanguageOption("", true),
+      llvm::FailedWithMessage("Can't set an option with an empty name."));
+  EXPECT_THAT_EXPECTED(options.GetBooleanLanguageOption(""),
+                       llvm::FailedWithMessage("Option '' does not exist."));
 }
