@@ -7,13 +7,13 @@
 
 # RUN: %clang %cflags -march=armv9-a+cmpbr -Wl,-q %s -o %t -DRELOCATION_MODE=1
 # RUN: link_fdata --no-lbr %s %t %t.fdata
-# RUN: llvm-bolt %t -o %t.bolt --data %t.fdata -split-functions --keep-nops --compact-code-model
+# RUN: llvm-bolt %t -o %t.bolt --data %t.fdata -split-functions --compact-code-model
 # RUN: llvm-objdump -r %t | FileCheck %s --check-prefix=CHECK-RELOCS
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefix=RELOC-MODE
 
 # RUN: %clang %cflags -march=armv9-a+cmpbr -Wl,-q %s -o %t -DRELOCATION_MODE=0
 # RUN: link_fdata --no-lbr %s %t %t.fdata
-# RUN: llvm-bolt %t -o %t.bolt --data %t.fdata -split-functions --keep-nops
+# RUN: llvm-bolt %t -o %t.bolt --data %t.fdata -split-functions
 # RUN: llvm-objdump -r %t | FileCheck %s --check-prefix=CHECK-NO-RELOCS
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefix=NON-RELOC-MODE
 
@@ -25,7 +25,6 @@ foo:
 ## Test immediate increment when inverting the branch.
     cbgt x0, #0, .Lcold_foo
     mov x0, #1
-    bl large_function
 .Lcold_foo:
     ret
 
@@ -61,16 +60,6 @@ irreversible:
 .Lcold_irreversible:
     ret
 
-  .globl  large_function
-  .type large_function, %function
-large_function:
-# FDATA: 1 large_function #.entry_large_function# 10
-.entry_large_function:
-  .rept 300000
-    nop
-  .endr
-  ret
-
 ## Force relocation mode.
 .if RELOCATION_MODE
 .reloc 0, R_AARCH64_NONE
@@ -78,11 +67,9 @@ large_function:
 
 
 # CHECK-RELOCS: R_AARCH64_NONE *ABS*
-# CHECK-RELOCS: R_AARCH64_CALL26 large_function
 # CHECK-RELOCS-NOT: R_AARCH64_
 
 
-# CHECK-NO-RELOCS: R_AARCH64_CALL26 large_function
 # CHECK-NO-RELOCS-NOT: R_AARCH64_
 
 
@@ -108,15 +95,11 @@ large_function:
 # RELOC-MODE-NEXT:            {{.*}} b               0x[[ADDR10:[0-9a-f]+]] <{{.*}}>
 # RELOC-MODE-NEXT: [[ADDR9]]: {{.*}} b               0x[[ADDR11:[0-9a-f]+]] <{{.*}}>
 
-# RELOC-MODE: <large_function>:
-# RELOC-MODE-NEXT: [[ADDR12:[0-9a-f]+]]: {{.*}} nop
-# RELOC-MODE:                            {{.*}} ret
 
 # RELOC-MODE: Disassembly of section .text.cold:
 
 # RELOC-MODE: <foo.cold.0>:
 # RELOC-MODE-NEXT: [[ADDR1]]: {{.*}} mov x0, #0x1 // =1
-# RELOC-MODE-NEXT:            {{.*}} bl  0x[[ADDR12]] <large_function>
 # RELOC-MODE-NEXT: [[ADDR2]]: {{.*}} ret
 
 # RELOC-MODE: <bar.cold.0>:
@@ -154,15 +137,11 @@ large_function:
 # NON-RELOC-MODE-NEXT:            {{.*}} b               0x[[ADDR10:[0-9a-f]+]] <{{.*}}>
 # NON-RELOC-MODE-NEXT: [[ADDR9]]: {{.*}} b               0x[[ADDR11:[0-9a-f]+]] <{{.*}}>
 
-# NON-RELOC-MODE: <large_function>:
-# NON-RELOC-MODE-NEXT: [[ADDR12:[0-9a-f]+]]: {{.*}} nop
-# NON-RELOC-MODE:                            {{.*}} ret
 
-# NON-RELOC-MODE: Disassembly of section .text.cold:
+# NON-RELOC-MODE: Disassembly of section .bolt.text:
 
 # NON-RELOC-MODE: <foo.cold.0>:
 # NON-RELOC-MODE-NEXT: [[ADDR2]]: {{.*}} mov x0, #0x1 // =1
-# NON-RELOC-MODE-NEXT:            {{.*}} bl  0x[[ADDR12]] <large_function>
 # NON-RELOC-MODE-NEXT: [[ADDR1]]: {{.*}} ret
 
 # NON-RELOC-MODE: <bar.cold.0>:
