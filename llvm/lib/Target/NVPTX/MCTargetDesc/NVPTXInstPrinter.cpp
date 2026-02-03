@@ -535,3 +535,15 @@ void NVPTXInstPrinter::printCallOperand(const MCInst *MI, int OpNum,
   }
   llvm_unreachable("Invalid modifier");
 }
+
+template <unsigned Bits>
+void NVPTXInstPrinter::printHexUImm(const MCInst *MI, int OpNum,
+                                    raw_ostream &O) {
+  const MCOperand &MO = MI->getOperand(OpNum);
+  assert(MO.isImm() && "Expected immediate operand");
+  assert(isInt<Bits>(MO.getImm()) &&
+         "Immediate value does not fit in specified bits");
+  uint64_t Imm = MO.getImm();
+  Imm &= maskTrailingOnes<uint64_t>(Bits);
+  O << formatHex(Imm) << "U";
+}
