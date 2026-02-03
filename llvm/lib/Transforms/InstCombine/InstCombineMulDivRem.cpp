@@ -115,7 +115,17 @@ static Value *foldMulSelectToNegate(BinaryOperator &I,
                         m_Value(OtherOp)))) {
     bool HasAnyNoWrap = I.hasNoSignedWrap() || I.hasNoUnsignedWrap();
     Value *Neg = Builder.CreateNeg(OtherOp, "", HasAnyNoWrap);
-    return Builder.CreateSelect(Cond, OtherOp, Neg);
+    Value *Res = Builder.CreateSelect(Cond, OtherOp, Neg);
+    if (!ProfcheckDisableMetadataFixes) {
+      Value *Sel =
+          match(I.getOperand(0), m_Select(m_Value(), m_One(), m_AllOnes()))
+              ? I.getOperand(0)
+              : I.getOperand(1);
+      if (auto *ResI = dyn_cast<Instruction>(Res))
+        if (auto *SelI = dyn_cast<Instruction>(Sel))
+          ResI->copyMetadata(*SelI);
+    }
+    return Res;
   }
   // mul (select Cond, -1, 1), OtherOp --> select Cond, -OtherOp, OtherOp
   // mul OtherOp, (select Cond, -1, 1) --> select Cond, -OtherOp, OtherOp
@@ -123,24 +133,56 @@ static Value *foldMulSelectToNegate(BinaryOperator &I,
                         m_Value(OtherOp)))) {
     bool HasAnyNoWrap = I.hasNoSignedWrap() || I.hasNoUnsignedWrap();
     Value *Neg = Builder.CreateNeg(OtherOp, "", HasAnyNoWrap);
-    return Builder.CreateSelect(Cond, Neg, OtherOp);
+    Value *Res = Builder.CreateSelect(Cond, Neg, OtherOp);
+    if (!ProfcheckDisableMetadataFixes) {
+      Value *Sel =
+          match(I.getOperand(0), m_Select(m_Value(), m_AllOnes(), m_One()))
+              ? I.getOperand(0)
+              : I.getOperand(1);
+      if (auto *ResI = dyn_cast<Instruction>(Res))
+        if (auto *SelI = dyn_cast<Instruction>(Sel))
+          ResI->copyMetadata(*SelI);
+    }
+    return Res;
   }
 
   // fmul (select Cond, 1.0, -1.0), OtherOp --> select Cond, OtherOp, -OtherOp
   // fmul OtherOp, (select Cond, 1.0, -1.0) --> select Cond, OtherOp, -OtherOp
   if (match(&I, m_c_FMul(m_OneUse(m_Select(m_Value(Cond), m_SpecificFP(1.0),
                                            m_SpecificFP(-1.0))),
-                         m_Value(OtherOp))))
-    return Builder.CreateSelectFMF(Cond, OtherOp,
-                                   Builder.CreateFNegFMF(OtherOp, &I), &I);
+                         m_Value(OtherOp)))) {
+    Value *Res = Builder.CreateSelectFMF(Cond, OtherOp,
+                                         Builder.CreateFNegFMF(OtherOp, &I), &I);
+    if (!ProfcheckDisableMetadataFixes) {
+      Value *Sel = match(I.getOperand(0), m_Select(m_Value(), m_SpecificFP(1.0),
+                                                   m_SpecificFP(-1.0)))
+                       ? I.getOperand(0)
+                       : I.getOperand(1);
+      if (auto *ResI = dyn_cast<Instruction>(Res))
+        if (auto *SelI = dyn_cast<Instruction>(Sel))
+          ResI->copyMetadata(*SelI);
+    }
+    return Res;
+  }
 
   // fmul (select Cond, -1.0, 1.0), OtherOp --> select Cond, -OtherOp, OtherOp
   // fmul OtherOp, (select Cond, -1.0, 1.0) --> select Cond, -OtherOp, OtherOp
   if (match(&I, m_c_FMul(m_OneUse(m_Select(m_Value(Cond), m_SpecificFP(-1.0),
                                            m_SpecificFP(1.0))),
-                         m_Value(OtherOp))))
-    return Builder.CreateSelectFMF(Cond, Builder.CreateFNegFMF(OtherOp, &I),
-                                   OtherOp, &I);
+                         m_Value(OtherOp)))) {
+    Value *Res = Builder.CreateSelectFMF(
+        Cond, Builder.CreateFNegFMF(OtherOp, &I), OtherOp, &I);
+    if (!ProfcheckDisableMetadataFixes) {
+      Value *Sel = match(I.getOperand(0), m_Select(m_Value(), m_SpecificFP(-1.0),
+                                                   m_SpecificFP(1.0)))
+                       ? I.getOperand(0)
+                       : I.getOperand(1);
+      if (auto *ResI = dyn_cast<Instruction>(Res))
+        if (auto *SelI = dyn_cast<Instruction>(Sel))
+          ResI->copyMetadata(*SelI);
+    }
+    return Res;
+  }
 
   return nullptr;
 }
