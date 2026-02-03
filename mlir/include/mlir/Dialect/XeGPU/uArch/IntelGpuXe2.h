@@ -215,48 +215,28 @@ protected:
   const unsigned packedFormatBitSizeB;
 };
 
-struct StoreScatterInstruction : public Instruction {
-  StoreScatterInstruction()
-      : Instruction(InstructionKind::StoreScatter, InstructionScope::Lane) {}
-  static bool classof(const Instruction *B) {
-    return B->getInstructionKind() == InstructionKind::StoreScatter;
+struct LoadGatherInstruction : public LoadGatherInstructionInterface {
+  int32_t getMaxLaneLoadSize(int32_t bitWidth) const override {
+    return 16; // SPIRV restricts vector size
   }
-
-  // SPIRV restricts vector size
-  int32_t getMaxLaneLoadStoreSize() const { return 16; }
 };
 
-struct LoadGatherInstruction : public Instruction {
-  LoadGatherInstruction()
-      : Instruction(InstructionKind::LoadGather, InstructionScope::Lane) {}
-  static bool classof(const Instruction *B) {
-    return B->getInstructionKind() == InstructionKind::LoadGather;
+struct StoreScatterInstruction : public StoreScatterInstructionInterface {
+  int32_t getMaxLaneStoreSize(int32_t bitWidth) const override {
+    return 16; // SPIRV restricts vector size
   }
-
-  // SPIRV restricts vector size
-  int32_t getMaxLaneLoadStoreSize() const { return 16; }
 };
 
-struct StoreMatrixInstruction : public Instruction {
-  StoreMatrixInstruction()
-      : Instruction(InstructionKind::StoreMatrix, InstructionScope::Lane) {}
-  static bool classof(const Instruction *B) {
-    return B->getInstructionKind() == InstructionKind::StoreMatrix;
+struct LoadMatrixInstruction : public LoadMatrixInstructionInterface {
+  int32_t getMaxLaneLoadSize(int32_t bitWidth) const override {
+    return 16; // SPIRV restricts vector size
   }
-
-  // SPIRV restricts vector size
-  int32_t getMaxLaneLoadStoreSize() const { return 16; }
 };
 
-struct LoadMatrixInstruction : public Instruction {
-  LoadMatrixInstruction()
-      : Instruction(InstructionKind::LoadMatrix, InstructionScope::Lane) {}
-  static bool classof(const Instruction *B) {
-    return B->getInstructionKind() == InstructionKind::LoadMatrix;
+struct StoreMatrixInstruction : public StoreMatrixInstructionInterface {
+  int32_t getMaxLaneStoreSize(int32_t bitWidth) const override {
+    return 16; // SPIRV restricts vector size
   }
-
-  // SPIRV restricts vector size
-  int32_t getMaxLaneLoadStoreSize() const { return 16; }
 };
 
 //===----------------------------------------------------------------------===//

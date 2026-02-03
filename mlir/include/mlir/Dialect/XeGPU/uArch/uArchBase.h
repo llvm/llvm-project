@@ -256,6 +256,50 @@ struct MMAInstructionInterface {
   virtual ~MMAInstructionInterface() = default;
 };
 
+struct LoadGatherInstructionInterface : public Instruction {
+  LoadGatherInstructionInterface()
+      : Instruction(InstructionKind::LoadGather, InstructionScope::Lane) {}
+  static bool classof(const Instruction *B) {
+    return B->getInstructionKind() == InstructionKind::LoadGather;
+  }
+
+  virtual int32_t getMaxLaneLoadSize(int32_t bitWidth) const = 0;
+  virtual ~LoadGatherInstructionInterface() = default;
+};
+
+struct StoreScatterInstructionInterface : public Instruction {
+  StoreScatterInstructionInterface()
+      : Instruction(InstructionKind::StoreScatter, InstructionScope::Lane) {}
+  static bool classof(const Instruction *B) {
+    return B->getInstructionKind() == InstructionKind::StoreScatter;
+  }
+
+  virtual int32_t getMaxLaneStoreSize(int32_t bitWidth) const = 0;
+  virtual ~StoreScatterInstructionInterface() = default;
+};
+
+struct LoadMatrixInstructionInterface : public Instruction {
+  LoadMatrixInstructionInterface()
+      : Instruction(InstructionKind::LoadMatrix, InstructionScope::Lane) {}
+  static bool classof(const Instruction *B) {
+    return B->getInstructionKind() == InstructionKind::LoadMatrix;
+  }
+
+  virtual int32_t getMaxLaneLoadSize(int32_t bitWidth) const = 0;
+  virtual ~LoadMatrixInstructionInterface() = default;
+};
+
+struct StoreMatrixInstructionInterface : public Instruction {
+  StoreMatrixInstructionInterface()
+      : Instruction(InstructionKind::StoreMatrix, InstructionScope::Lane) {}
+  static bool classof(const Instruction *B) {
+    return B->getInstructionKind() == InstructionKind::StoreMatrix;
+  }
+
+  virtual int32_t getMaxLaneStoreSize(int32_t bitWidth) const = 0;
+  virtual ~StoreMatrixInstructionInterface() = default;
+};
+
 } // namespace uArch
 } // namespace xegpu
 } // namespace mlir
