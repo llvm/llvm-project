@@ -12,6 +12,7 @@
 // with the fully linked source bitcode file(s), running several SYCL specific
 // post-link steps on the fully linked bitcode file(s), and finally generating
 // target-specific device code.
+//
 //===---------------------------------------------------------------------===//
 
 #include "clang/Basic/OffloadArch.h"
@@ -54,7 +55,7 @@ using namespace clang;
 /// Save intermediary results.
 static bool SaveTemps = false;
 
-/// Print arguments without executing.
+/// Print commands/steps with arguments without executing.
 static bool DryRun = false;
 
 /// Print verbose output.
@@ -312,13 +313,15 @@ Expected<StringRef> linkDeviceCode(ArrayRef<std::string> InputFiles,
   return *BitcodeOutput;
 }
 
-/// Run LLVM to SPIR-V translation.
-/// Converts 'File' from LLVM bitcode to SPIR-V format using SPIR-V backend.
-/// 'Args' encompasses all arguments required for linking device code and will
-/// be parsed to generate options required to be passed into the backend.
-static Error runSPIRVCodeGen(StringRef File, const ArgList &Args,
-                             StringRef OutputFile, LLVMContext &C) {
-  llvm::TimeTraceScope TimeScope("SPIR-V code generation");
+/// Run Code Generation using LLVM backend.
+/// \param 'File' The input LLVM IR bitcode file.
+/// \param 'Args' encompasses all arguments required for linking device code and
+/// will be parsed to generate options required to be passed into the backend.
+/// \param 'OutputFile' The output file name.
+/// \param 'C' The LLVM context.
+static Error runCodeGen(StringRef File, const ArgList &Args,
+                        StringRef OutputFile, LLVMContext &C) {
+  llvm::TimeTraceScope TimeScope("Code generation");
 
   // Parse input module.
   SMDiagnostic Err;
@@ -332,13 +335,13 @@ static Error runSPIRVCodeGen(StringRef File, const ArgList &Args,
   Triple TargetTriple(Args.getLastArgValue(OPT_triple_EQ));
   M->setTargetTriple(TargetTriple);
 
-  // Get a handle to SPIR-V target backend.
+  // Get a handle to a target backend.
   std::string Msg;
   const Target *T = TargetRegistry::lookupTarget(M->getTargetTriple(), Msg);
   if (!T)
     return createStringError(Msg + ": " + M->getTargetTriple().str());
 
-  // Allocate SPIR-V target machine.
+  // Allocate target machine.
   TargetOptions Options;
   std::optional<Reloc::Model> RM;
   std::optional<CodeModel::Model> CM;
@@ -364,11 +367,11 @@ static Error runSPIRVCodeGen(StringRef File, const ArgList &Args,
   CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
   if (TM->addPassesToEmitFile(CodeGenPasses, *OS, nullptr,
                               CodeGenFileType::ObjectFile))
-    return createStringError("Failed to execute SPIR-V Backend");
+    return createStringError("Failed to execute LLVM backend");
   CodeGenPasses.run(*M);
 
   if (Verbose)
-    errs() << formatv("SPIR-V Backend: input: {0}, output: {1}\n", File,
+    errs() << formatv("LLVM backend: input: {0}, output: {1}\n", File,
                       OutputFile);
 
   return Error::success();
@@ -507,11 +510,11 @@ Error runSYCLLink(ArrayRef<std::string> Files, const ArgList &Args) {
   bool IsAOTCompileNeeded = IsIntelOffloadArch(
       StringToOffloadArch(Args.getLastArgValue(OPT_arch_EQ)));
 
-  // SPIR-V code generation step.
+  // Code generation step.
   for (size_t I = 0, E = SplitModules.size(); I != E; ++I) {
     StringRef Stem = OutputFile.rsplit('.').first;
     std::string SPVFile = (Stem + "_" + Twine(I) + ".spv").str();
-    if (Error Err = runSPIRVCodeGen(SplitModules[I], Args, SPVFile, C))
+    if (Error Err = runCodeGen(SplitModules[I], Args, SPVFile, C))
       return Err;
     if (!IsAOTCompileNeeded) {
       SplitModules[I] = SPVFile;
