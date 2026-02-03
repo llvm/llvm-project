@@ -1795,6 +1795,7 @@ define i32 @bcmp_size_31(ptr %s1, ptr %s2) nounwind {
 ; CHECK-UNALIGNED-RV32-V-NEXT:    vmsne.vv v12, v8, v10
 ; CHECK-UNALIGNED-RV32-V-NEXT:    vcpop.m a0, v12
 ; CHECK-UNALIGNED-RV32-V-NEXT:    snez a0, a0
+; CHECK-UNALIGNED-RV32-V-NEXT:    li a1, 32
 ; CHECK-UNALIGNED-RV32-V-NEXT:    ret
 ;
 ; CHECK-UNALIGNED-RV64-V-LABEL: bcmp_size_31:
@@ -1805,6 +1806,7 @@ define i32 @bcmp_size_31(ptr %s1, ptr %s2) nounwind {
 ; CHECK-UNALIGNED-RV64-V-NEXT:    vmsne.vv v12, v8, v10
 ; CHECK-UNALIGNED-RV64-V-NEXT:    vcpop.m a0, v12
 ; CHECK-UNALIGNED-RV64-V-NEXT:    snez a0, a0
+; CHECK-UNALIGNED-RV64-V-NEXT:    li a1, 32
 ; CHECK-UNALIGNED-RV64-V-NEXT:    ret
 entry:
   %bcmp = call signext i32 @bcmp(ptr %s1, ptr %s2, iXLen 31)
@@ -2314,6 +2316,7 @@ define i32 @bcmp_size_63(ptr %s1, ptr %s2) nounwind {
 ; CHECK-UNALIGNED-RV32-V-NEXT:    vmsne.vv v16, v8, v12
 ; CHECK-UNALIGNED-RV32-V-NEXT:    vcpop.m a0, v16
 ; CHECK-UNALIGNED-RV32-V-NEXT:    snez a0, a0
+; CHECK-UNALIGNED-RV32-V-NEXT:    li a1, 64
 ; CHECK-UNALIGNED-RV32-V-NEXT:    ret
 ;
 ; CHECK-UNALIGNED-RV64-V-LABEL: bcmp_size_63:
@@ -2325,6 +2328,7 @@ define i32 @bcmp_size_63(ptr %s1, ptr %s2) nounwind {
 ; CHECK-UNALIGNED-RV64-V-NEXT:    vmsne.vv v16, v8, v12
 ; CHECK-UNALIGNED-RV64-V-NEXT:    vcpop.m a0, v16
 ; CHECK-UNALIGNED-RV64-V-NEXT:    snez a0, a0
+; CHECK-UNALIGNED-RV64-V-NEXT:    li a1, 64
 ; CHECK-UNALIGNED-RV64-V-NEXT:    ret
 entry:
   %bcmp = call signext i32 @bcmp(ptr %s1, ptr %s2, iXLen 63)
@@ -2726,6 +2730,7 @@ define i32 @bcmp_size_127(ptr %s1, ptr %s2) nounwind {
 ; CHECK-UNALIGNED-RV32-V-NEXT:    vmsne.vv v24, v8, v16
 ; CHECK-UNALIGNED-RV32-V-NEXT:    vcpop.m a0, v24
 ; CHECK-UNALIGNED-RV32-V-NEXT:    snez a0, a0
+; CHECK-UNALIGNED-RV32-V-NEXT:    li a1, 128
 ; CHECK-UNALIGNED-RV32-V-NEXT:    ret
 ;
 ; CHECK-UNALIGNED-RV64-V-LABEL: bcmp_size_127:
@@ -2737,6 +2742,7 @@ define i32 @bcmp_size_127(ptr %s1, ptr %s2) nounwind {
 ; CHECK-UNALIGNED-RV64-V-NEXT:    vmsne.vv v24, v8, v16
 ; CHECK-UNALIGNED-RV64-V-NEXT:    vcpop.m a0, v24
 ; CHECK-UNALIGNED-RV64-V-NEXT:    snez a0, a0
+; CHECK-UNALIGNED-RV64-V-NEXT:    li a1, 128
 ; CHECK-UNALIGNED-RV64-V-NEXT:    ret
 entry:
   %bcmp = call signext i32 @bcmp(ptr %s1, ptr %s2, iXLen 127)
