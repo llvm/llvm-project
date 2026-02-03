@@ -259,10 +259,9 @@ size_t ObjectFilePECOFF::GetModuleSpecifications(
     lldb::offset_t data_offset, lldb::offset_t file_offset,
     lldb::offset_t length, lldb_private::ModuleSpecList &specs) {
   const size_t initial_count = specs.GetSize();
-  if (!data_sp || !ObjectFilePECOFF::MagicBytesMatch(data_sp)){
-#if !defined(_AIX)
   if (!extractor_sp || !extractor_sp->HasData() ||
-      !ObjectFilePECOFF::MagicBytesMatch(extractor_sp))
+      !ObjectFilePECOFF::MagicBytesMatch(extractor_sp)) {
+#if !defined(_AIX)
     return initial_count;
 #else
     return specs.GetSize() - initial_count;

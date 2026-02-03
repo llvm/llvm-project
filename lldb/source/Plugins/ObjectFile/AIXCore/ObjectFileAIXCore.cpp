@@ -107,12 +107,12 @@ ObjectFile *ObjectFileAIXCore::CreateMemoryInstance(
 }
 
 size_t ObjectFileAIXCore::GetModuleSpecifications(
-    const lldb_private::FileSpec &file, lldb::DataBufferSP &data_sp,
+    const lldb_private::FileSpec &file, lldb::DataExtractorSP &extractor_sp,
     lldb::offset_t data_offset, lldb::offset_t file_offset,
     lldb::offset_t length, lldb_private::ModuleSpecList &specs) {
   const size_t initial_count = specs.GetSize();
 
-  if (ObjectFileAIXCore::MagicBytesMatch(data_sp, 0, data_sp->GetByteSize())) {
+  if (ObjectFileAIXCore::MagicBytesMatch(extractor_sp, 0, extractor_sp->GetByteSize())) {
     // Need new ArchType???
     ArchSpec arch_spec = ArchSpec(eArchTypeXCOFF, XCOFF::TCPU_PPC64, LLDB_INVALID_CPUTYPE);
     ModuleSpec spec(file, arch_spec);
@@ -138,14 +138,12 @@ static bool AIXCoreHeaderCheckFromMagic(uint32_t magic) {
     return ret;
 }
 
-bool ObjectFileAIXCore::MagicBytesMatch(DataBufferSP &data_sp,
+bool ObjectFileAIXCore::MagicBytesMatch(DataExtractorSP &extractor_sp,
                                     lldb::addr_t data_offset,
                                     lldb::addr_t data_length) {
-  lldb_private::DataExtractor data; 
-  data.SetData(data_sp, data_offset, data_length);
   lldb::offset_t offset = 0;
   offset += 4; // Skipping to the coredump version
-  uint32_t magic = data.GetU32(&offset);
+  uint32_t magic = extractor_sp->GetU32(&offset);
   return AIXCoreHeaderCheckFromMagic(magic);
 }
 
