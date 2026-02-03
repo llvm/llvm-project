@@ -2,7 +2,7 @@
 // Tests basic device-side compilation with NVPTX target.
 
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -x cuda \
-// RUN:   -I%S/../inputs -fcuda-is-device -emit-cir %s -o %t.cir
+// RUN:   -I%S/../Inputs -fcuda-is-device -emit-cir %s -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s
 
 #include "cuda.h"

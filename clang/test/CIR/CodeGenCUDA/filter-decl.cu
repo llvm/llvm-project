@@ -2,19 +2,19 @@
 // Tests that host/device functions are emitted only on the appropriate side.
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-sdk-version=9.2 \
-// RUN:   -x cuda -I%S/../inputs -emit-cir %s -o %t.host.cir
+// RUN:   -x cuda -I%S/../Inputs -emit-cir %s -o %t.host.cir
 // RUN: FileCheck --input-file=%t.host.cir %s --check-prefix=CIR-HOST
 
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -x cuda \
-// RUN:   -I%S/../inputs -fcuda-is-device -emit-cir %s -o %t.device.cir
+// RUN:   -I%S/../Inputs -fcuda-is-device -emit-cir %s -o %t.device.cir
 // RUN: FileCheck --input-file=%t.device.cir %s --check-prefix=CIR-DEVICE
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-sdk-version=9.2 \
-// RUN:   -x cuda -I%S/../inputs -emit-llvm %s -o %t.host.ll
+// RUN:   -x cuda -I%S/../Inputs -emit-llvm %s -o %t.host.ll
 // RUN: FileCheck --input-file=%t.host.ll %s --check-prefix=OGCG-HOST
 
 // RUN: %clang_cc1 -triple nvptx64-nvidia-cuda -x cuda \
-// RUN:   -I%S/../inputs -fcuda-is-device -emit-llvm %s -o %t.device.ll
+// RUN:   -I%S/../Inputs -fcuda-is-device -emit-llvm %s -o %t.device.ll
 // RUN: FileCheck --input-file=%t.device.ll %s --check-prefix=OGCG-DEVICE
 
 #include "cuda.h"
