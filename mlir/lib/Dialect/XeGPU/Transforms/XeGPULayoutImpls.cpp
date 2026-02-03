@@ -330,22 +330,42 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
     auto resLaneLayout = resLayout.getEffectiveLaneLayoutAsInt();
     auto resLaneData = resLayout.getEffectiveLaneDataAsInt();
 
-    // get the layout info from the innermost dim of result layout
+    // Extract layout info from result's innermost dimension and apply to
+    // source's innermost dimension while setting all other dimensions to 1.
+    // The inferred layout is restricted by srcShape to ensure it fits within
+    // the source dimensions.
+    // Examples:
+    //   srcShape=[8, 16, 32], resShape=[1, 4096], resInstData=[1, 16]
+    //   -> inferredInstData=[1, 1, min(16, 32)]=[1, 1, 16]
+    //   srcShape=[4, 8, 64], resShape=[2048], resLaneLayout=[16],
+    //   resLaneData=[2]
+    //   -> inferredLaneData=[1, 1, min(2, 64/16)]=[1, 1, 2]
+    //   -> inferredLaneLayout=[1, 1, 16]
     if (resInstData.size() != 0) {
+      // assert resInstData must be 1 for all but the innermost dim
+      for (int i = 0; i < resShapeSize - 1; i++) {
+        assert(resInstData[i] == 1 &&
+               "only innermost dim can have non-unit instData");
+      }
       SmallVector<int> inferredInstData(srcShapeSize, 1);
-      assert((resShapeSize == 1 || resInstData[0] == 1) &&
-             "only innermost dim can have data and instData layout");
-      inferredInstData[srcShapeSize - 1] = resInstData[resShapeSize - 1];
+      inferredInstData[srcShapeSize - 1] =
+          std::min(resLaneData[resShapeSize - 1], srcShape[srcShapeSize - 1]);
       return xegpu::LayoutAttr::get(context, inferredInstData);
     }
 
     if (resLaneLayout.size() != 0) {
+      for (int i = 0; i < resShapeSize - 1; i++) {
+        assert(resLaneData[i] == 1 &&
+               "only innermost dim can have non-unit instData");
+      }
+      assert("srcShape[srcShapeSize - 1] >= resLaneLayout[resShapeSize - 1]" &&
+             "source innermost dim must be >= result lane layout");
       SmallVector<int> inferredLaneLayout(srcShapeSize, 1);
       SmallVector<int> inferredLaneData(srcShapeSize, 1);
-      assert((resShapeSize == 1 || resLaneLayout[0] == 1) &&
-             "only innermost dim can have data and lane layout");
       inferredLaneLayout[srcShapeSize - 1] = resLaneLayout[resShapeSize - 1];
-      inferredLaneData[srcShapeSize - 1] = resLaneData[resShapeSize - 1];
+      inferredLaneData[srcShapeSize - 1] = std::min(
+          resLaneData[resShapeSize - 1],
+          srcShape[srcShapeSize - 1] / inferredLaneLayout[srcShapeSize - 1]);
       return xegpu::LayoutAttr::get(context, inferredLaneLayout,
                                     inferredLaneData);
     }
@@ -365,12 +385,36 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
 /// For subgroup layouts, it first tries to align the source layout's subgroup
 /// layout and data with the consumer's layout on non-reduction dimensions.
 /// Then, it distributes remaining subgroups across reduction dimensions. This
-/// avoid subgroup data redistribution overhead between the reduced result and
+/// avoids subgroup data redistribution overhead between the reduced result and
 /// its consumer.
 ///
 /// InstData requries {1, ..., min(maxReduceVectorSize, srcShape),subgroupSize}
 /// Lane Layout requires {1, ..., 1, subgroupSize}
 /// Lane data requires {1, ..., min(maxReduceVectorSize, srcShape), 1}
+///
+/// Examples:
+///   1. Subgroup layout - Row reduction on 2D tensor:
+///      srcShape=[32, 64], reductionDims=[1], resShape=[32], subgroupSize=16,
+///      workgroupSize=32
+///      Consumer Layout:
+///      #xegpu.slice<#xegpu.layout<sg_layout=[4, 8], sg_data=[8, 8]>, dims =
+///      [0]>} Result: srcLayout with sgLayout=[4, 8], sgData=[8, 8] (matches
+///      consumer on non-reduction dim, minimizing data redistribution on
+///      reduction dim)
+///   2. Subgroup layout - Same example above but consumer has different layout:
+///      sgLayout=[32], sgData=[1]
+///      Result: srcLayout with sgLayout=[32,1], sgData=[1, 64]
+///      (distributes all subgroups on non reduction dim)
+///
+///   2. InstData layout - Column reduction:
+///      srcShape=[32, 64], reductionDims=[0], subgroupSize=16
+///      Result: instData=[1, 16] (maxReduceVectorSize=1, subgroupSize on
+///      innermost)
+///
+///   3. Lane layout - Multi-dimensional reduction:
+///      srcShape=[16, 32, 64], reductionDims=[1], subgroupSize=16
+///      Result: laneLayout=[1, 1, 16], laneData=[1, 1, 1]
+///      (subgroupSize on innermost dim, max vector size on reduction dim)
 
 xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
     xegpu::LayoutKind layoutKind, VectorType srcVecTy,
@@ -438,9 +482,10 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
     }
 
     assert(remainingSgCount == 1 && "not all subgroups distributed");
-    srcLayout =
-        xegpu::LayoutAttr::get(context, toInt32Attr(sgLayout),
-                               toInt32Attr(sgData), consumerLayout.getOrder());
+    srcLayout = xegpu::LayoutAttr::get(
+        context, toInt32Attr(sgLayout), toInt32Attr(sgData),
+        /*inst_data =*/nullptr, /*lane_layout =*/nullptr,
+        /*lane_data =*/nullptr, /*order =*/nullptr);
 
   } else if (layoutKind == xegpu::LayoutKind::InstData) {
 
@@ -470,6 +515,23 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
 /// instData, or laneData) by multiplying by the bitwidth ratio to ensure the
 /// result layout can be correctly divided back to the source layout during
 /// inference.
+///
+/// Examples:
+///   1. Casting f32 -> f16 (32-bit to 16-bit, bitWidthRatio = 2):
+///      Consumer layout: instData=[1, 16], subgroupSize=16
+///      Source shape: [8, 32]
+///      Result layout: instData=[1, 32] (16 * 2)
+///      The innermost dimension is multiplied by 2 to maintain consistency.
+///
+///   2. Casting f32 -> i8 (32-bit to 8-bit, bitWidthRatio = 4):
+///      Consumer instData=[1, 16], subgroupSize=16
+///      Source shape: [4, 128]
+///      adjust the instData from [1, 16] to [1, 16 * 4 = 64]
+///
+///   3. Casting i8 -> i32 (8-bit to 32-bit, bitWidthRatio = 1/4):
+///      Consumer layout: laneLayout=[1, 16], laneData=[1, 4]
+///      No adjustment needed - returns consumer layout directly.
+///
 xegpu::DistributeLayoutAttr xegpu::setupBitCastResultLayout(
     xegpu::LayoutKind layoutKind, VectorType srcVecTy, VectorType resVecTy,
     DistributeLayoutAttr consumerLayout, const xegpu::uArch::uArch *uArch) {
@@ -534,9 +596,31 @@ xegpu::DistributeLayoutAttr xegpu::setupBitCastResultLayout(
 /// Lane layout is first set to be {1, ..., subgroupSize} with lane data {1,
 /// ..., 1}. The instData and laneData is then adjusted to contain packed data,
 /// by checking if the consumerLayout's innermost dimension.
+///
+/// Examples:
+///   1. InstData layout without packing:
+///      resShape=[8, 32], subgroupSize=16, bitwidth=32
+///      packingFactor=1, packedDataSize=16
+///      consumerLayout: instData=[1, 16]
+///      Result: instData=[1, 16]
+///
+///   2. InstData layout with packing:
+///      resShape=[8, 64], subgroupSize=16, bitwidth=8, packingFactor=4
+///      consumerLayout: instData=[1, 64]
+///      Result: instData=[1, 64] (adjusted for packed data)
+///
+///   3. Lane layout without packing:
+///      resShape=[4, 64], subgroupSize=16, bitwidth=32
+///      consumerLayout: laneLayout=[1, 16], laneData=[1, 1]
+///      Result: laneLayout=[1, 16], laneData=[1, 1]
+///
+///   4. Lane layout with packing:
+///      resShape=[4, 64], subgroupSize=16, bitwidth=16, packingFactor=2
+///      consumerLayout: laneLayout=[1, 16], laneData=[1, 2]
+///      Result: laneLayout=[1, 16], laneData=[1, 2] (adjusted for packed data)
 xegpu::DistributeLayoutAttr xegpu::setupInsertStridedSliceResultLayout(
-    xegpu::LayoutKind layoutKind, VectorType resVectorTy,
-    xegpu::DistributeLayoutAttr consumerLayout,
+    xegpu::LayoutKind layoutKind, VectorType srcVectorTy,
+    VectorType resVectorTy, xegpu::DistributeLayoutAttr consumerLayout,
     const xegpu::uArch::uArch *uArch) {
 
   xegpu::DistributeLayoutAttr requiredResLayout;
@@ -544,6 +628,8 @@ xegpu::DistributeLayoutAttr xegpu::setupInsertStridedSliceResultLayout(
   auto context = resVectorTy.getContext();
   auto resShape = resVectorTy.getShape();
   int resShapeSize = resShape.size();
+  auto srcShape = srcVectorTy.getShape();
+  int srcShapeSize = srcVectorTy.getShape().size();
   SmallVector<int64_t> consumerInstData =
       consumerLayout.getEffectiveInstDataAsInt();
   SmallVector<int64_t> consumerLaneData =
@@ -562,14 +648,18 @@ xegpu::DistributeLayoutAttr xegpu::setupInsertStridedSliceResultLayout(
     assert(true &&
            "subgroup layout assignment not supported for insertStridedSlice.");
   } else if (layoutKind == xegpu::LayoutKind::InstData) {
+    assert(srcShape[srcShapeSize - 1] >= subgroupSize &&
+           "source innermost dim must be >= subgroupSize");
     instData[resShapeSize - 1] = subgroupSize;
-    if (consumerInstData[resShapeSize - 1] == packedDataSize)
+    if (consumerInstData[resShapeSize - 1] == packedDataSize &&
+        srcShape[srcShapeSize - 1] >= packedDataSize)
       instData[resShapeSize - 1] = packedDataSize;
     requiredResLayout = xegpu::LayoutAttr::get(context, instData);
   } else if (layoutKind == xegpu::LayoutKind::Lane) {
     laneLayout[resShapeSize - 1] = subgroupSize;
     laneData[resShapeSize - 1] = 1;
-    if (consumerLaneData[resShapeSize - 1] == packingFactor)
+    if (consumerLaneData[resShapeSize - 1] == packingFactor &&
+        srcShape[srcShapeSize - 1] >= packedDataSize)
       laneData[resShapeSize - 1] = packingFactor;
     requiredResLayout = xegpu::LayoutAttr::get(context, laneLayout, laneData);
   }

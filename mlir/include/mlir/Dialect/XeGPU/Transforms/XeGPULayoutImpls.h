@@ -135,7 +135,7 @@ DistributeLayoutAttr setupBitCastResultLayout(
 /// Creates a result layout based on the specified layout kind (InstData or
 /// Lane).
 DistributeLayoutAttr setupInsertStridedSliceResultLayout(
-    LayoutKind layoutKind, VectorType resVectorTy,
+    LayoutKind layoutKind, VectorType srcVectorTy, VectorType resVectorTy,
     DistributeLayoutAttr consumerLayout, const uArch::uArch *uArch);
 
 /// Sets up the anchor layout for a load gather operation.
