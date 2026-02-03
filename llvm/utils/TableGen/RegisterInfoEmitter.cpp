@@ -1079,7 +1079,7 @@ void RegisterInfoEmitter::runMCDesc(raw_ostream &OS, raw_ostream &MainOS,
         OS << "\n  };\n\n";
       }
     }
-  } // emit end of anynymous namespace.
+  }
 
   RegClassStrings.layout();
   RegClassStrings.emitStringLiteralDef(
