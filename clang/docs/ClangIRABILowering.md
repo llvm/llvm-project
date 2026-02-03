@@ -668,65 +668,33 @@ class ABILowering {
 - **Description**: Edge cases and corner cases in ABI handling are complex
 - **Mitigation**: Incremental development, frequent validation against classic codegen, comprehensive testing
 
-## 6. Success Metrics
+## 6. References
 
-### 6.1 Functional Metrics
-
-- ✅ CIR can lower x86_64 calling conventions correctly (100% test pass rate)
-- ✅ CIR can lower AArch64 calling conventions correctly (100% test pass rate)
-- ✅ ABI output matches classic Clang codegen (validated by comparison tests)
-- ✅ All CIR incubator tests pass with new implementation
-
-### 6.2 Quality Metrics
-
-- ✅ Code coverage > 90% for ABI classification logic
-- ✅ Zero known ABI compliance bugs
-- ✅ Documentation complete (API, user guide, design rationale)
-
-### 6.3 Performance Metrics
-
-- ✅ CallConvLowering pass overhead < 5% compilation time
-  - **Context**: This refers to **compile-time overhead**, not runtime performance
-  - **Baseline**: Classic Clang ABI lowering adds ~1-2% to compile time
-  - **Target**: MLIR-agnostic version should be ≤2.5× classic overhead (5% total)
-  - **Measurement**: Profile on LLVM test-suite, measure time in ABI classification
-  - **Optimization Strategies**: Cache ABITypeInterface queries, fast-path for primitives
-- ✅ No degradation in generated code quality vs direct implementation
-  - **Runtime performance unchanged**: ABI lowering is compile-time only
-
-### 6.4 Reusability Metrics
-
-- ✅ FIR can adopt infrastructure with < 2 weeks integration effort
-- ✅ New target can be added with < 1 week effort (given ABI spec)
-- ✅ ABITypeInterface requires < 10 methods implementation per dialect
-
-## 7. References
-
-### 7.1 ABI Specifications
+### 6.1 ABI Specifications
 
 - [System V AMD64 ABI](https://refspecs.linuxbase.org/elf/x86_64-abi-0.99.pdf)
 - [ARM AArch64 PCS](https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst)
 - [Itanium C++ ABI](https://itanium-cxx-abi.github.io/cxx-abi/abi.html)
 
-### 7.2 LLVM/MLIR Documentation
+### 6.2 LLVM/MLIR Documentation
 
 - [MLIR Interfaces](https://mlir.llvm.org/docs/Interfaces/)
 - [MLIR Type System](https://mlir.llvm.org/docs/DefiningDialects/AttributesAndTypes/)
 - [MLIR Pass Infrastructure](https://mlir.llvm.org/docs/PassManagement/)
 
-### 7.3 Related Projects
+### 6.3 Related Projects
 
 - [GSoC ABI Lowering RFC](https://discourse.llvm.org/t/rfc-an-abi-lowering-library-for-llvm/84495)
 - [GSoC PR #140112](https://github.com/llvm/llvm-project/pull/140112)
 - [CIR Project](https://github.com/llvm/clangir)
 
-### 7.4 Related Implementation
+### 6.4 Related Implementation
 
 - Clang CodeGen: `clang/lib/CodeGen/`
 - CIR Incubator: `clang/lib/CIR/Dialect/Transforms/TargetLowering/`
 - SPIR-V ABI: `mlir/lib/Dialect/SPIRV/IR/TargetAndABI.cpp`
 
-## 8. Appendices
+## 7. Appendices
 
 ### A. Glossary
 
