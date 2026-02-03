@@ -1811,8 +1811,9 @@ __tree<_Tp, _Compare, _Allocator>::__find_equal(const _Key& __v) {
   }
 
   __node_base_pointer* __node_ptr = __root_ptr();
-  auto&& __transparent            = std::__as_transparent(value_comp());
-  auto __comp = __lazy_synth_three_way_comparator<__make_transparent_t<_Compare>, _Key, value_type>(__transparent);
+  auto&& __transparent            = std::__as_transparent<_Key>(value_comp());
+  auto __comp =
+      __lazy_synth_three_way_comparator<__make_transparent_t<_Key, _Compare>, _Key, value_type>(__transparent);
 
   while (true) {
     auto __comp_res = __comp(__v, __nd->__get_value());
