@@ -153,11 +153,9 @@ void IR2VecTool::writeEntitiesToStream(raw_ostream &OS) {
 
 std::optional<Embedding>
 IR2VecTool::getFunctionEmbedding(const Function &F, IR2VecKind Kind) const {
-  if (!Vocab || !Vocab->isValid()) {
-    WithColor::error(errs(), ToolName)
-        << "Vocabulary not initialized properly.\n";
-    return std::nullopt;
-  }
+  if (!Vocab || !Vocab->isValid())
+    return createStringError(errc::invalid_argument,
+                             "Failed to initialize IR2Vec vocabulary");
 
   if (F.isDeclaration())
     return std::nullopt;
@@ -172,11 +170,9 @@ IR2VecTool::getFunctionEmbedding(const Function &F, IR2VecKind Kind) const {
 }
 
 FuncEmbMap IR2VecTool::getFunctionEmbeddingsMap(IR2VecKind Kind) const {
-  if (!Vocab || !Vocab->isValid()) {
-    WithColor::error(errs(), ToolName)
-        << "Vocabulary not initialized properly.\n";
-    return {};
-  }
+  if (!Vocab || !Vocab->isValid())
+    return createStringError(errc::invalid_argument,
+                             "Failed to initialize IR2Vec vocabulary");
 
   FuncEmbMap Result;
 
@@ -194,11 +190,9 @@ FuncEmbMap IR2VecTool::getFunctionEmbeddingsMap(IR2VecKind Kind) const {
 
 void IR2VecTool::writeEmbeddingsToStream(raw_ostream &OS,
                                          EmbeddingLevel Level) const {
-  if (!Vocab || !Vocab->isValid()) {
-    WithColor::error(errs(), ToolName)
-        << "Vocabulary is not valid. IR2VecTool not initialized.\n";
-    return;
-  }
+  if (!Vocab || !Vocab->isValid())
+    return createStringError(errc::invalid_argument,
+                             "Failed to initialize IR2Vec vocabulary");
 
   for (const Function &F : M.getFunctionDefs())
     writeEmbeddingsToStream(F, OS, Level);
@@ -206,11 +200,10 @@ void IR2VecTool::writeEmbeddingsToStream(raw_ostream &OS,
 
 void IR2VecTool::writeEmbeddingsToStream(const Function &F, raw_ostream &OS,
                                          EmbeddingLevel Level) const {
-  if (!Vocab || !Vocab->isValid()) {
-    WithColor::error(errs(), ToolName)
-        << "Vocabulary is not valid. IR2VecTool not initialized.\n";
-    return;
-  }
+  if (!Vocab || !Vocab->isValid())
+    return createStringError(errc::invalid_argument,
+                             "Failed to initialize IR2Vec vocabulary");
+
   if (F.isDeclaration()) {
     OS << "Function " << F.getName() << " is a declaration, skipping.\n";
     return;
