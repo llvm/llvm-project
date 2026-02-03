@@ -10,8 +10,8 @@ static int set_unused; // expected-warning {{variable 'set_unused' set but not u
 static int set_and_used;
 static int only_used;
 static int addr_taken;
-extern int external_var;  // no warning (external linkage)
-extern int global_var;  // no warning (not static)
+extern int external_var;  // No warning (external linkage).
+extern int global_var;  // No warning (not static).
 
 void f1() {
   set_unused = 1;
@@ -30,7 +30,7 @@ void f1() {
   global_var = 4;
 }
 
-// test across multiple functions
+// Test across multiple functions.
 static int set_used1;
 static int set_used2;
 
@@ -58,7 +58,7 @@ void f4() {
   vol_set = 1;
 }
 
-// read and use
+// Read and use
 static int compound; // expected-warning{{variable 'compound' set but not used}}
 static volatile int vol_compound;
 static int unary; // expected-warning{{variable 'unary' set but not used}}
@@ -81,7 +81,7 @@ void f6() {
   t = s_used;
 }
 
-// multiple assignments
+// Multiple assignments
 static int multi; // expected-warning{{variable 'multi' set but not used}}
 void f7() {
   multi = 1;
@@ -89,7 +89,7 @@ void f7() {
   multi = 3;
 }
 
-// unused pointers
+// Unused pointers
 static int *unused_ptr; // expected-warning{{variable 'unused_ptr' set but not used}}
 static char *str_ptr; // expected-warning{{variable 'str_ptr' set but not used}}
 void f8() {
@@ -97,7 +97,7 @@ void f8() {
   str_ptr = "hello";
 }
 
-// used pointers
+// Used pointers
 void a(void *);
 static int *used_ptr;
 static int *param_ptr;
@@ -113,7 +113,7 @@ void f9() {
   if (null_check_ptr == NULL) {}
 }
 
-// function pointers
+// Function pointers
 static void (*sandboxing_callback)();
 void SetSandboxingCallback(void (*f)()) {
   sandboxing_callback = f;
