@@ -152,19 +152,22 @@ int FileAction::GetActionArgument() const {
 }
 
 void FileAction::Dump(Stream &stream) const {
+  int file = std::holds_alternative<HANDLE>(m_file)
+                 ? (int)std::get<HANDLE>(m_file)
+                 : std::get<int>(m_file);
   stream.PutCString("file action: ");
   switch (m_action) {
   case eFileActionClose:
-    stream.Printf("close fd %d", m_file);
+    stream.Printf("close fd %d", file);
     break;
   case eFileActionDuplicate:
-    stream.Printf("duplicate fd %d to %d", m_file, m_arg);
+    stream.Printf("duplicate fd %d to %d", file, m_arg);
     break;
   case eFileActionNone:
     stream.PutCString("no action");
     break;
   case eFileActionOpen:
-    stream.Printf("open fd %d with '%s', OFLAGS = 0x%x", m_file,
+    stream.Printf("open fd %d with '%s', OFLAGS = 0x%x", file,
                   m_file_spec.GetPath().c_str(), m_arg);
     break;
   }
