@@ -4919,25 +4919,25 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
       Value *NewTrueVal = IsAnd ? V : TrueVal;
       Value *NewFalseVal = IsAnd ? FalseVal : V;
 
-      // If the True and False values don't change, then preserve the branch
-      // metadata of the original select as the net effect of this change is to
-      // simplify the conditional.
-      Instruction *MDFrom = nullptr;
-      if (NewTrueVal == TrueVal && NewFalseVal == FalseVal &&
-          !ProfcheckDisableMetadataFixes) {
-        MDFrom = &SI;
+      if (!ProfcheckDisableMetadataFixes) {
+        if (NewTrueVal == TrueVal && NewFalseVal == FalseVal)
+          return SelectInst::Create(A, NewTrueVal, NewFalseVal, "", nullptr,
+                                    &SI);
+        return createSelectInstWithUnknownProfile(A, NewTrueVal, NewFalseVal);
       }
-      return SelectInst::Create(A, NewTrueVal, NewFalseVal, "", nullptr,
-                                MDFrom);
+      return SelectInst::Create(A, NewTrueVal, NewFalseVal);
     }
 
     // Is (select B, T, F) a SPF?
     if (CondVal->hasOneUse() && SelType->isIntOrIntVectorTy()) {
       if (ICmpInst *Cmp = dyn_cast<ICmpInst>(B))
         if (Value *V = canonicalizeSPF(SI, *Cmp, *this)) {
-          Instruction *MDFrom = ProfcheckDisableMetadataFixes ? nullptr : &SI;
-          return SelectInst::Create(A, IsAnd ? V : TrueVal,
-                                    IsAnd ? FalseVal : V, "", nullptr, MDFrom);
+          Value *NewTrueVal = IsAnd ? V : TrueVal;
+          Value *NewFalseVal = IsAnd ? FalseVal : V;
+          if (!ProfcheckDisableMetadataFixes)
+            return createSelectInstWithUnknownProfile(A, NewTrueVal,
+                                                      NewFalseVal);
+          return SelectInst::Create(A, NewTrueVal, NewFalseVal);
         }
     }
 
