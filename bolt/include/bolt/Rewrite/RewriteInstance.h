@@ -230,6 +230,10 @@ private:
   /// disassembleFunctions(), also preserve the original version.
   void rewriteFile();
 
+  /// Rewrite functions in place by overwriting their original locations.
+  /// Used by non-relocation mode and for patched functions.
+  void rewriteFunctionsInPlace(raw_fd_ostream &OS);
+
   /// Return address of a function in the new binary corresponding to
   /// \p OldAddress address in the original binary.
   uint64_t getNewFunctionAddress(uint64_t OldAddress);

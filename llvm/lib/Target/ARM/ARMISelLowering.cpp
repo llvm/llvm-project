@@ -939,6 +939,14 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setIndexedStoreAction(ISD::POST_INC, MVT::i32,  Legal);
   }
 
+  // Custom loads/stores to possible use __aeabi_uread/write*
+  if (TT.isTargetAEABI() && !Subtarget->allowsUnalignedMem()) {
+    setOperationAction(ISD::STORE, MVT::i32, Custom);
+    setOperationAction(ISD::STORE, MVT::i64, Custom);
+    setOperationAction(ISD::LOAD, MVT::i32, Custom);
+    setOperationAction(ISD::LOAD, MVT::i64, Custom);
+  }
+
   setOperationAction(ISD::SADDO, MVT::i32, Custom);
   setOperationAction(ISD::UADDO, MVT::i32, Custom);
   setOperationAction(ISD::SSUBO, MVT::i32, Custom);
@@ -1262,7 +1270,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
 
   // FP-ARMv8 implements a lot of rounding-like FP operations.
-  if (Subtarget->hasFPARMv8Base()) {    
+  if (Subtarget->hasFPARMv8Base()) {
     for (auto Op :
          {ISD::FFLOOR,            ISD::FCEIL,             ISD::FROUND,
           ISD::FTRUNC,            ISD::FNEARBYINT,        ISD::FRINT,
@@ -1290,7 +1298,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::LRINT, MVT::f16, Expand);
     setOperationAction(ISD::LROUND, MVT::f16, Expand);
     setOperationAction(ISD::FCOPYSIGN, MVT::f16, Expand);
-  
+
     for (auto Op : {ISD::FREM,          ISD::FPOW,         ISD::FPOWI,
                   ISD::FCOS,          ISD::FSIN,         ISD::FSINCOS,
                   ISD::FSINCOSPI,     ISD::FMODF,        ISD::FACOS,
@@ -1312,11 +1320,11 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     // because the result type is integer.
     for (auto Op : {ISD::STRICT_LROUND, ISD::STRICT_LLROUND, ISD::STRICT_LRINT, ISD::STRICT_LLRINT})
       setOperationAction(Op, MVT::f16, Custom);
-  
+
     for (auto Op : {ISD::FROUND,         ISD::FROUNDEVEN,        ISD::FTRUNC,
-                    ISD::FNEARBYINT,     ISD::FRINT,             ISD::FFLOOR, 
+                    ISD::FNEARBYINT,     ISD::FRINT,             ISD::FFLOOR,
                     ISD::FCEIL,          ISD::STRICT_FROUND,     ISD::STRICT_FROUNDEVEN,
-                    ISD::STRICT_FTRUNC,  ISD::STRICT_FNEARBYINT, ISD::STRICT_FRINT, 
+                    ISD::STRICT_FTRUNC,  ISD::STRICT_FNEARBYINT, ISD::STRICT_FRINT,
                     ISD::STRICT_FFLOOR,  ISD::STRICT_FCEIL}) {
       setOperationAction(Op, MVT::f16, Legal);
     }
@@ -1551,10 +1559,10 @@ bool ARMTargetLowering::shouldAlignPointerArgs(CallInst *CI, unsigned &MinSize,
 }
 
 // Create a fast isel object.
-FastISel *
-ARMTargetLowering::createFastISel(FunctionLoweringInfo &funcInfo,
-                                  const TargetLibraryInfo *libInfo) const {
-  return ARM::createFastISel(funcInfo, libInfo);
+FastISel *ARMTargetLowering::createFastISel(
+    FunctionLoweringInfo &funcInfo, const TargetLibraryInfo *libInfo,
+    const LibcallLoweringInfo *libcallLowering) const {
+  return ARM::createFastISel(funcInfo, libInfo, libcallLowering);
 }
 
 Sched::Preference ARMTargetLowering::getSchedulingPreference(SDNode *N) const {
@@ -2429,17 +2437,18 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
   bool isDirect = false;
 
   const TargetMachine &TM = getTargetMachine();
+  const Triple &TT = TM.getTargetTriple();
   const GlobalValue *GVal = nullptr;
   if (GlobalAddressSDNode *G = dyn_cast<GlobalAddressSDNode>(Callee))
     GVal = G->getGlobal();
-  bool isStub = !TM.shouldAssumeDSOLocal(GVal) && Subtarget->isTargetMachO();
+  bool isStub = !TM.shouldAssumeDSOLocal(GVal) && TT.isOSBinFormatMachO();
 
   bool isARMFunc = !Subtarget->isThumb() || (isStub && !Subtarget->isMClass());
   bool isLocalARMFunc = false;
   auto PtrVt = getPointerTy(DAG.getDataLayout());
 
   if (Subtarget->genLongCalls()) {
-    assert((!isPositionIndependent() || Subtarget->isTargetWindows()) &&
+    assert((!isPositionIndependent() || TT.isOSWindows()) &&
            "long-calls codegen is not position independent!");
     // Handle a global address or an external symbol. If it's not one of
     // those, the target's already in a register, so we don't need to do
@@ -2494,7 +2503,7 @@ ARMTargetLowering::LowerCall(TargetLowering::CallLoweringInfo &CLI,
       isLocalARMFunc = !Subtarget->isThumb() && (isDef || !ARMInterworking);
       // tBX takes a register source operand.
       if (isStub && Subtarget->isThumb1Only() && !Subtarget->hasV5TOps()) {
-        assert(Subtarget->isTargetMachO() && "WrapperPIC use on non-MachO?");
+        assert(TT.isOSBinFormatMachO() && "WrapperPIC use on non-MachO?");
         Callee = DAG.getNode(
             ARMISD::WrapperPIC, dl, PtrVt,
             DAG.getTargetGlobalAddress(GVal, dl, PtrVt, 0, ARMII::MO_NONLAZY));
@@ -3286,7 +3295,7 @@ SDValue ARMTargetLowering::LowerBlockAddress(SDValue Op,
 SDValue
 ARMTargetLowering::LowerGlobalTLSAddressDarwin(SDValue Op,
                                                SelectionDAG &DAG) const {
-  assert(Subtarget->isTargetDarwin() &&
+  assert(getTargetMachine().getTargetTriple().isOSDarwin() &&
          "This function expects a Darwin target");
   SDLoc DL(Op);
 
@@ -3330,7 +3339,8 @@ ARMTargetLowering::LowerGlobalTLSAddressDarwin(SDValue Op,
 SDValue
 ARMTargetLowering::LowerGlobalTLSAddressWindows(SDValue Op,
                                                 SelectionDAG &DAG) const {
-  assert(Subtarget->isTargetWindows() && "Windows specific TLS lowering");
+  assert(getTargetMachine().getTargetTriple().isOSWindows() &&
+         "Windows specific TLS lowering");
 
   SDValue Chain = DAG.getEntryNode();
   EVT PtrVT = getPointerTy(DAG.getDataLayout());
@@ -3480,14 +3490,15 @@ ARMTargetLowering::LowerGlobalTLSAddress(SDValue Op, SelectionDAG &DAG) const {
   if (DAG.getTarget().useEmulatedTLS())
     return LowerToTLSEmulatedModel(GA, DAG);
 
-  if (Subtarget->isTargetDarwin())
+  const Triple &TT = getTargetMachine().getTargetTriple();
+  if (TT.isOSDarwin())
     return LowerGlobalTLSAddressDarwin(Op, DAG);
 
-  if (Subtarget->isTargetWindows())
+  if (TT.isOSWindows())
     return LowerGlobalTLSAddressWindows(Op, DAG);
 
   // TODO: implement the "local dynamic" model
-  assert(Subtarget->isTargetELF() && "Only ELF implemented here");
+  assert(TT.isOSBinFormatELF() && "Only ELF implemented here");
   TLSModel::Model model = getTargetMachine().getTLSModel(GA->getGlobal());
 
   switch (model) {
@@ -3731,7 +3742,8 @@ SDValue ARMTargetLowering::LowerGlobalAddressDarwin(SDValue Op,
 
 SDValue ARMTargetLowering::LowerGlobalAddressWindows(SDValue Op,
                                                      SelectionDAG &DAG) const {
-  assert(Subtarget->isTargetWindows() && "non-Windows COFF is not supported");
+  assert(getTargetMachine().getTargetTriple().isOSWindows() &&
+         "non-Windows COFF is not supported");
   assert(Subtarget->useMovt() &&
          "Windows on ARM expects to use movw/movt");
   assert(!Subtarget->isROPI() && !Subtarget->isRWPI() &&
@@ -9631,7 +9643,7 @@ SDValue ARMTargetLowering::LowerWindowsDIVLibCall(SDValue Op, SelectionDAG &DAG,
   else
     LC = VT == MVT::i32 ? RTLIB::UDIVREM_I32 : RTLIB::UDIVREM_I64;
 
-  RTLIB::LibcallImpl LCImpl = getLibcallImpl(LC);
+  RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
   SDValue ES = DAG.getExternalSymbol(LCImpl, getPointerTy(DL));
 
   ARMTargetLowering::ArgListTy Args;
@@ -9644,8 +9656,8 @@ SDValue ARMTargetLowering::LowerWindowsDIVLibCall(SDValue Op, SelectionDAG &DAG,
 
   CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl).setChain(Chain).setCallee(
-      getLibcallImplCallingConv(LCImpl), VT.getTypeForEVT(*DAG.getContext()),
-      ES, std::move(Args));
+      DAG.getLibcalls().getLibcallImplCallingConv(LCImpl),
+      VT.getTypeForEVT(*DAG.getContext()), ES, std::move(Args));
 
   return LowerCallTo(CLI).first;
 }
@@ -9737,6 +9749,95 @@ void ARMTargetLowering::ExpandDIV_Windows(
   Results.push_back(DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Lower, Upper));
 }
 
+std::pair<SDValue, SDValue>
+ARMTargetLowering::LowerAEABIUnalignedLoad(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  // If we have an unaligned load from a i32 or i64 that would normally be
+  // split into separate ldrb's, we can use the __aeabi_uread4/__aeabi_uread8
+  // functions instead.
+  LoadSDNode *LD = cast<LoadSDNode>(Op.getNode());
+  EVT MemVT = LD->getMemoryVT();
+  if (MemVT != MVT::i32 && MemVT != MVT::i64)
+    return std::make_pair(SDValue(), SDValue());
+
+  const auto &MF = DAG.getMachineFunction();
+  unsigned AS = LD->getAddressSpace();
+  Align Alignment = LD->getAlign();
+  const DataLayout &DL = DAG.getDataLayout();
+  bool AllowsUnaligned = Subtarget->allowsUnalignedMem();
+
+  if (MF.getFunction().hasMinSize() && !AllowsUnaligned &&
+      Alignment <= llvm::Align(2)) {
+
+    RTLIB::Libcall LC =
+        (MemVT == MVT::i32) ? RTLIB::AEABI_UREAD4 : RTLIB::AEABI_UREAD8;
+
+    MakeLibCallOptions Opts;
+    SDLoc dl(Op);
+
+    auto Pair = makeLibCall(DAG, LC, MemVT.getSimpleVT(), LD->getBasePtr(),
+                            Opts, dl, LD->getChain());
+
+    // If necessary, extend the node to 64bit
+    if (LD->getExtensionType() != ISD::NON_EXTLOAD) {
+      unsigned ExtType = LD->getExtensionType() == ISD::SEXTLOAD
+                             ? ISD::SIGN_EXTEND
+                             : ISD::ZERO_EXTEND;
+      SDValue EN = DAG.getNode(ExtType, dl, LD->getValueType(0), Pair.first);
+      Pair.first = EN;
+    }
+    return Pair;
+  }
+
+  // Default expand to individual loads
+  if (!allowsMemoryAccess(*DAG.getContext(), DL, MemVT, AS, Alignment))
+    return expandUnalignedLoad(LD, DAG);
+  return std::make_pair(SDValue(), SDValue());
+}
+
+SDValue ARMTargetLowering::LowerAEABIUnalignedStore(SDValue Op,
+                                                    SelectionDAG &DAG) const {
+  // If we have an unaligned store to a i32 or i64 that would normally be
+  // split into separate ldrb's, we can use the __aeabi_uwrite4/__aeabi_uwrite8
+  // functions instead.
+  StoreSDNode *ST = cast<StoreSDNode>(Op.getNode());
+  EVT MemVT = ST->getMemoryVT();
+  if (MemVT != MVT::i32 && MemVT != MVT::i64)
+    return SDValue();
+
+  const auto &MF = DAG.getMachineFunction();
+  unsigned AS = ST->getAddressSpace();
+  Align Alignment = ST->getAlign();
+  const DataLayout &DL = DAG.getDataLayout();
+  bool AllowsUnaligned = Subtarget->allowsUnalignedMem();
+
+  if (MF.getFunction().hasMinSize() && !AllowsUnaligned &&
+      Alignment <= llvm::Align(2)) {
+
+    SDLoc dl(Op);
+
+    // If necessary, trunc the value to 32bit
+    SDValue StoreVal = ST->getOperand(1);
+    if (ST->isTruncatingStore())
+      StoreVal = DAG.getNode(ISD::TRUNCATE, dl, MemVT, ST->getOperand(1));
+
+    RTLIB::Libcall LC =
+        (MemVT == MVT::i32) ? RTLIB::AEABI_UWRITE4 : RTLIB::AEABI_UWRITE8;
+
+    MakeLibCallOptions Opts;
+    auto CallResult =
+        makeLibCall(DAG, LC, MVT::isVoid, {StoreVal, ST->getBasePtr()}, Opts,
+                    dl, ST->getChain());
+
+    return CallResult.second;
+  }
+
+  // Default expand to individual stores
+  if (!allowsMemoryAccess(*DAG.getContext(), DL, MemVT, AS, Alignment))
+    return expandUnalignedStore(ST, DAG);
+  return SDValue();
+}
+
 static SDValue LowerPredicateLoad(SDValue Op, SelectionDAG &DAG) {
   LoadSDNode *LD = cast<LoadSDNode>(Op.getNode());
   EVT MemVT = LD->getMemoryVT();
@@ -9779,11 +9880,11 @@ void ARMTargetLowering::LowerLOAD(SDNode *N, SmallVectorImpl<SDValue> &Results,
                                   SelectionDAG &DAG) const {
   LoadSDNode *LD = cast<LoadSDNode>(N);
   EVT MemVT = LD->getMemoryVT();
-  assert(LD->isUnindexed() && "Loads should be unindexed at this point.");
 
   if (MemVT == MVT::i64 && Subtarget->hasV5TEOps() &&
       !Subtarget->isThumb1Only() && LD->isVolatile() &&
       LD->getAlign() >= Subtarget->getDualLoadStoreAlignment()) {
+    assert(LD->isUnindexed() && "Loads should be unindexed at this point.");
     SDLoc dl(N);
     SDValue Result = DAG.getMemIntrinsicNode(
         ARMISD::LDRD, dl, DAG.getVTList({MVT::i32, MVT::i32, MVT::Other}),
@@ -9792,6 +9893,12 @@ void ARMTargetLowering::LowerLOAD(SDNode *N, SmallVectorImpl<SDValue> &Results,
     SDValue Hi = Result.getValue(DAG.getDataLayout().isLittleEndian() ? 1 : 0);
     SDValue Pair = DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Lo, Hi);
     Results.append({Pair, Result.getValue(2)});
+  } else if (MemVT == MVT::i32 || MemVT == MVT::i64) {
+    auto Pair = LowerAEABIUnalignedLoad(SDValue(N, 0), DAG);
+    if (Pair.first) {
+      Results.push_back(Pair.first);
+      Results.push_back(Pair.second);
+    }
   }
 }
 
@@ -9833,15 +9940,15 @@ static SDValue LowerPredicateStore(SDValue Op, SelectionDAG &DAG) {
       ST->getMemOperand());
 }
 
-static SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG,
-                          const ARMSubtarget *Subtarget) {
+SDValue ARMTargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG,
+                                      const ARMSubtarget *Subtarget) const {
   StoreSDNode *ST = cast<StoreSDNode>(Op.getNode());
   EVT MemVT = ST->getMemoryVT();
-  assert(ST->isUnindexed() && "Stores should be unindexed at this point.");
 
   if (MemVT == MVT::i64 && Subtarget->hasV5TEOps() &&
       !Subtarget->isThumb1Only() && ST->isVolatile() &&
       ST->getAlign() >= Subtarget->getDualLoadStoreAlignment()) {
+    assert(ST->isUnindexed() && "Stores should be unindexed at this point.");
     SDNode *N = Op.getNode();
     SDLoc dl(N);
 
@@ -9861,8 +9968,9 @@ static SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG,
              ((MemVT == MVT::v2i1 || MemVT == MVT::v4i1 || MemVT == MVT::v8i1 ||
                MemVT == MVT::v16i1))) {
     return LowerPredicateStore(Op, DAG);
+  } else if (MemVT == MVT::i32 || MemVT == MVT::i64) {
+    return LowerAEABIUnalignedStore(Op, DAG);
   }
-
   return SDValue();
 }
 
@@ -10373,11 +10481,13 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerRESET_FPMODE(Op, DAG);
   case ISD::MUL:           return LowerMUL(Op, DAG);
   case ISD::SDIV:
-    if (Subtarget->isTargetWindows() && !Op.getValueType().isVector())
+    if (getTargetMachine().getTargetTriple().isOSWindows() &&
+        !Op.getValueType().isVector())
       return LowerDIV_Windows(Op, DAG, /* Signed */ true);
     return LowerSDIV(Op, DAG, Subtarget);
   case ISD::UDIV:
-    if (Subtarget->isTargetWindows() && !Op.getValueType().isVector())
+    if (getTargetMachine().getTargetTriple().isOSWindows() &&
+        !Op.getValueType().isVector())
       return LowerDIV_Windows(Op, DAG, /* Signed */ false);
     return LowerUDIV(Op, DAG, Subtarget);
   case ISD::UADDO_CARRY:
@@ -10394,8 +10504,19 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::UADDSAT:
   case ISD::USUBSAT:
     return LowerADDSUBSAT(Op, DAG, Subtarget);
-  case ISD::LOAD:
-    return LowerPredicateLoad(Op, DAG);
+  case ISD::LOAD: {
+    auto *LD = cast<LoadSDNode>(Op);
+    EVT MemVT = LD->getMemoryVT();
+    if (Subtarget->hasMVEIntegerOps() &&
+        (MemVT == MVT::v2i1 || MemVT == MVT::v4i1 || MemVT == MVT::v8i1 ||
+         MemVT == MVT::v16i1))
+      return LowerPredicateLoad(Op, DAG);
+
+    auto Pair = LowerAEABIUnalignedLoad(Op, DAG);
+    if (Pair.first)
+      return DAG.getMergeValues({Pair.first, Pair.second}, SDLoc(Pair.first));
+    return SDValue();
+  }
   case ISD::STORE:
     return LowerSTORE(Op, DAG, Subtarget);
   case ISD::MLOAD:
@@ -10421,7 +10542,7 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::SDIVREM:
   case ISD::UDIVREM:       return LowerDivRem(Op, DAG);
   case ISD::DYNAMIC_STACKALLOC:
-    if (Subtarget->isTargetWindows())
+    if (getTargetMachine().getTargetTriple().isOSWindows())
       return LowerDYNAMIC_STACKALLOC(Op, DAG);
     llvm_unreachable("Don't know how to custom lower this!");
   case ISD::STRICT_FP_ROUND:
@@ -10525,7 +10646,8 @@ void ARMTargetLowering::ReplaceNodeResults(SDNode *N,
     return;
   case ISD::UDIV:
   case ISD::SDIV:
-    assert(Subtarget->isTargetWindows() && "can only expand DIV on Windows");
+    assert(getTargetMachine().getTargetTriple().isOSWindows() &&
+           "can only expand DIV on Windows");
     return ExpandDIV_Windows(SDValue(N, 0), DAG, N->getOpcode() == ISD::SDIV,
                              Results);
   case ISD::ATOMIC_CMP_SWAP:
@@ -10535,6 +10657,9 @@ void ARMTargetLowering::ReplaceNodeResults(SDNode *N,
     return ReplaceLongIntrinsic(N, Results, DAG);
   case ISD::LOAD:
     LowerLOAD(N, Results, DAG);
+    break;
+  case ISD::STORE:
+    Res = LowerAEABIUnalignedStore(SDValue(N, 0), DAG);
     break;
   case ISD::TRUNCATE:
     Res = LowerTruncate(N, DAG, Subtarget);
@@ -11465,7 +11590,7 @@ ARMTargetLowering::EmitLowered__chkstk(MachineInstr &MI,
   const TargetInstrInfo &TII = *Subtarget->getInstrInfo();
   DebugLoc DL = MI.getDebugLoc();
 
-  assert(Subtarget->isTargetWindows() &&
+  assert(TM.getTargetTriple().isOSWindows() &&
          "__chkstk is only supported on Windows");
   assert(Subtarget->isThumb2() && "Windows on ARM requires Thumb-2 mode");
 
@@ -19591,30 +19716,44 @@ ARMTargetLowering::getPreIndexedAddressParts(SDNode *N, SDValue &Base,
   EVT VT;
   SDValue Ptr;
   Align Alignment;
+  unsigned AS = 0;
   bool isSEXTLoad = false;
   bool IsMasked = false;
   if (LoadSDNode *LD = dyn_cast<LoadSDNode>(N)) {
     Ptr = LD->getBasePtr();
     VT = LD->getMemoryVT();
     Alignment = LD->getAlign();
+    AS = LD->getAddressSpace();
     isSEXTLoad = LD->getExtensionType() == ISD::SEXTLOAD;
   } else if (StoreSDNode *ST = dyn_cast<StoreSDNode>(N)) {
     Ptr = ST->getBasePtr();
     VT = ST->getMemoryVT();
     Alignment = ST->getAlign();
+    AS = ST->getAddressSpace();
   } else if (MaskedLoadSDNode *LD = dyn_cast<MaskedLoadSDNode>(N)) {
     Ptr = LD->getBasePtr();
     VT = LD->getMemoryVT();
     Alignment = LD->getAlign();
+    AS = LD->getAddressSpace();
     isSEXTLoad = LD->getExtensionType() == ISD::SEXTLOAD;
     IsMasked = true;
   } else if (MaskedStoreSDNode *ST = dyn_cast<MaskedStoreSDNode>(N)) {
     Ptr = ST->getBasePtr();
     VT = ST->getMemoryVT();
     Alignment = ST->getAlign();
+    AS = ST->getAddressSpace();
     IsMasked = true;
   } else
     return false;
+
+  unsigned Fast = 0;
+  if (!allowsMisalignedMemoryAccesses(VT, AS, Alignment,
+                                      MachineMemOperand::MONone, &Fast)) {
+    // Only generate post-increment or pre-increment forms when a real
+    // hardware instruction exists for them. Do not emit postinc/preinc
+    // if the operation will end up as a libcall.
+    return false;
+  }
 
   bool isInc;
   bool isLegal = false;
@@ -20370,7 +20509,7 @@ static TargetLowering::ArgListTy getDivRemArgList(
     Entry.IsZExt = !isSigned;
     Args.push_back(Entry);
   }
-  if (Subtarget->isTargetWindows() && Args.size() >= 2)
+  if (Subtarget->getTargetTriple().isOSWindows() && Args.size() >= 2)
     std::swap(Args[0], Args[1]);
   return Args;
 }
@@ -20423,26 +20562,27 @@ SDValue ARMTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
 
   RTLIB::Libcall LC = getDivRemLibcall(Op.getNode(),
                                        VT.getSimpleVT().SimpleTy);
+  RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
+
   SDValue InChain = DAG.getEntryNode();
 
   TargetLowering::ArgListTy Args = getDivRemArgList(Op.getNode(),
                                                     DAG.getContext(),
                                                     Subtarget);
 
-  RTLIB::LibcallImpl LCImpl = getLibcallImpl(LC);
   SDValue Callee =
       DAG.getExternalSymbol(LCImpl, getPointerTy(DAG.getDataLayout()));
 
   Type *RetTy = StructType::get(Ty, Ty);
 
-  if (Subtarget->isTargetWindows())
+  if (getTM().getTargetTriple().isOSWindows())
     InChain = WinDBZCheckDenominator(DAG, Op.getNode(), InChain);
 
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
       .setChain(InChain)
-      .setCallee(getLibcallImplCallingConv(LCImpl), RetTy, Callee,
-                 std::move(Args))
+      .setCallee(DAG.getLibcalls().getLibcallImplCallingConv(LCImpl), RetTy,
+                 Callee, std::move(Args))
       .setInRegister()
       .setSExtResult(isSigned)
       .setZExtResult(!isSigned);
@@ -20482,23 +20622,23 @@ SDValue ARMTargetLowering::LowerREM(SDNode *N, SelectionDAG &DAG) const {
 
   RTLIB::Libcall LC = getDivRemLibcall(N, N->getValueType(0).getSimpleVT().
                                                              SimpleTy);
+  RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
   SDValue InChain = DAG.getEntryNode();
   TargetLowering::ArgListTy Args = getDivRemArgList(N, DAG.getContext(),
                                                     Subtarget);
   bool isSigned = N->getOpcode() == ISD::SREM;
 
-  RTLIB::LibcallImpl LCImpl = getLibcallImpl(LC);
   SDValue Callee =
       DAG.getExternalSymbol(LCImpl, getPointerTy(DAG.getDataLayout()));
 
-  if (Subtarget->isTargetWindows())
+  if (getTM().getTargetTriple().isOSWindows())
     InChain = WinDBZCheckDenominator(DAG, N, InChain);
 
   // Lower call
   CallLoweringInfo CLI(DAG);
   CLI.setChain(InChain)
-      .setCallee(getLibcallImplCallingConv(LCImpl), RetTy, Callee,
-                 std::move(Args))
+      .setCallee(DAG.getLibcalls().getLibcallImplCallingConv(LCImpl), RetTy,
+                 Callee, std::move(Args))
       .setSExtResult(isSigned)
       .setZExtResult(!isSigned)
       .setDebugLoc(SDLoc(N));
@@ -20512,7 +20652,8 @@ SDValue ARMTargetLowering::LowerREM(SDNode *N, SelectionDAG &DAG) const {
 
 SDValue
 ARMTargetLowering::LowerDYNAMIC_STACKALLOC(SDValue Op, SelectionDAG &DAG) const {
-  assert(Subtarget->isTargetWindows() && "unsupported target platform");
+  assert(getTM().getTargetTriple().isOSWindows() &&
+         "unsupported target platform");
   SDLoc DL(Op);
 
   // Get the inputs.
@@ -20680,10 +20821,10 @@ bool ARMTargetLowering::isFPImmLegal(const APFloat &Imm, EVT VT,
 /// getTgtMemIntrinsic - Represent NEON load and store intrinsics as
 /// MemIntrinsicNodes.  The associated MachineMemOperands record the alignment
 /// specified in the intrinsic calls.
-bool ARMTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                           const CallBase &I,
-                                           MachineFunction &MF,
-                                           unsigned Intrinsic) const {
+void ARMTargetLowering::getTgtMemIntrinsic(
+    SmallVectorImpl<IntrinsicInfo> &Infos, const CallBase &I,
+    MachineFunction &MF, unsigned Intrinsic) const {
+  IntrinsicInfo Info;
   switch (Intrinsic) {
   case Intrinsic::arm_neon_vld1:
   case Intrinsic::arm_neon_vld2:
@@ -20706,7 +20847,8 @@ bool ARMTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.align = cast<ConstantInt>(AlignArg)->getMaybeAlignValue();
     // volatile loads with NEON intrinsics not supported
     Info.flags = MachineMemOperand::MOLoad;
-    return true;
+    Infos.push_back(Info);
+    return;
   }
   case Intrinsic::arm_neon_vld1x2:
   case Intrinsic::arm_neon_vld1x3:
@@ -20721,7 +20863,8 @@ bool ARMTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.align = I.getParamAlign(I.arg_size() - 1).valueOrOne();
     // volatile loads with NEON intrinsics not supported
     Info.flags = MachineMemOperand::MOLoad;
-    return true;
+    Infos.push_back(Info);
+    return;
   }
   case Intrinsic::arm_neon_vst1:
   case Intrinsic::arm_neon_vst2:
@@ -20747,7 +20890,8 @@ bool ARMTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.align = cast<ConstantInt>(AlignArg)->getMaybeAlignValue();
     // volatile stores with NEON intrinsics not supported
     Info.flags = MachineMemOperand::MOStore;
-    return true;
+    Infos.push_back(Info);
+    return;
   }
   case Intrinsic::arm_neon_vst1x2:
   case Intrinsic::arm_neon_vst1x3:
@@ -20768,7 +20912,8 @@ bool ARMTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.align = I.getParamAlign(0).valueOrOne();
     // volatile stores with NEON intrinsics not supported
     Info.flags = MachineMemOperand::MOStore;
-    return true;
+    Infos.push_back(Info);
+    return;
   }
   case Intrinsic::arm_mve_vld2q:
   case Intrinsic::arm_mve_vld4q: {
@@ -20782,7 +20927,8 @@ bool ARMTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.align = Align(VecTy->getScalarSizeInBits() / 8);
     // volatile loads with MVE intrinsics not supported
     Info.flags = MachineMemOperand::MOLoad;
-    return true;
+    Infos.push_back(Info);
+    return;
   }
   case Intrinsic::arm_mve_vst2q:
   case Intrinsic::arm_mve_vst4q: {
@@ -20796,7 +20942,8 @@ bool ARMTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.align = Align(VecTy->getScalarSizeInBits() / 8);
     // volatile stores with MVE intrinsics not supported
     Info.flags = MachineMemOperand::MOStore;
-    return true;
+    Infos.push_back(Info);
+    return;
   }
   case Intrinsic::arm_mve_vldr_gather_base:
   case Intrinsic::arm_mve_vldr_gather_base_predicated: {
@@ -20805,7 +20952,8 @@ bool ARMTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = MVT::getVT(I.getType());
     Info.align = Align(1);
     Info.flags |= MachineMemOperand::MOLoad;
-    return true;
+    Infos.push_back(Info);
+    return;
   }
   case Intrinsic::arm_mve_vldr_gather_base_wb:
   case Intrinsic::arm_mve_vldr_gather_base_wb_predicated: {
@@ -20814,7 +20962,8 @@ bool ARMTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = MVT::getVT(I.getType()->getContainedType(0));
     Info.align = Align(1);
     Info.flags |= MachineMemOperand::MOLoad;
-    return true;
+    Infos.push_back(Info);
+    return;
   }
   case Intrinsic::arm_mve_vldr_gather_offset:
   case Intrinsic::arm_mve_vldr_gather_offset_predicated: {
@@ -20826,7 +20975,8 @@ bool ARMTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                   DataVT.getVectorNumElements());
     Info.align = Align(1);
     Info.flags |= MachineMemOperand::MOLoad;
-    return true;
+    Infos.push_back(Info);
+    return;
   }
   case Intrinsic::arm_mve_vstr_scatter_base:
   case Intrinsic::arm_mve_vstr_scatter_base_predicated: {
@@ -20835,7 +20985,8 @@ bool ARMTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = MVT::getVT(I.getArgOperand(2)->getType());
     Info.align = Align(1);
     Info.flags |= MachineMemOperand::MOStore;
-    return true;
+    Infos.push_back(Info);
+    return;
   }
   case Intrinsic::arm_mve_vstr_scatter_base_wb:
   case Intrinsic::arm_mve_vstr_scatter_base_wb_predicated: {
@@ -20844,7 +20995,8 @@ bool ARMTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = MVT::getVT(I.getArgOperand(2)->getType());
     Info.align = Align(1);
     Info.flags |= MachineMemOperand::MOStore;
-    return true;
+    Infos.push_back(Info);
+    return;
   }
   case Intrinsic::arm_mve_vstr_scatter_offset:
   case Intrinsic::arm_mve_vstr_scatter_offset_predicated: {
@@ -20856,7 +21008,8 @@ bool ARMTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
                                   DataVT.getVectorNumElements());
     Info.align = Align(1);
     Info.flags |= MachineMemOperand::MOStore;
-    return true;
+    Infos.push_back(Info);
+    return;
   }
   case Intrinsic::arm_ldaex:
   case Intrinsic::arm_ldrex: {
@@ -20868,7 +21021,8 @@ bool ARMTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.align = DL.getABITypeAlign(ValTy);
     Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOVolatile;
-    return true;
+    Infos.push_back(Info);
+    return;
   }
   case Intrinsic::arm_stlex:
   case Intrinsic::arm_strex: {
@@ -20880,7 +21034,8 @@ bool ARMTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.align = DL.getABITypeAlign(ValTy);
     Info.flags = MachineMemOperand::MOStore | MachineMemOperand::MOVolatile;
-    return true;
+    Infos.push_back(Info);
+    return;
   }
   case Intrinsic::arm_stlexd:
   case Intrinsic::arm_strexd:
@@ -20890,7 +21045,8 @@ bool ARMTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.align = Align(8);
     Info.flags = MachineMemOperand::MOStore | MachineMemOperand::MOVolatile;
-    return true;
+    Infos.push_back(Info);
+    return;
 
   case Intrinsic::arm_ldaexd:
   case Intrinsic::arm_ldrexd:
@@ -20900,13 +21056,12 @@ bool ARMTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.align = Align(8);
     Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOVolatile;
-    return true;
+    Infos.push_back(Info);
+    return;
 
   default:
     break;
   }
-
-  return false;
 }
 
 /// Returns true if it is beneficial to convert a load of a constant
@@ -21101,13 +21256,14 @@ bool ARMTargetLowering::useLoadStackGuardNode(const Module &M) const {
   return !Subtarget->isROPI() && !Subtarget->isRWPI();
 }
 
-void ARMTargetLowering::insertSSPDeclarations(Module &M) const {
+void ARMTargetLowering::insertSSPDeclarations(
+    Module &M, const LibcallLoweringInfo &Libcalls) const {
   // MSVC CRT provides functionalities for stack protection.
   RTLIB::LibcallImpl SecurityCheckCookieLibcall =
-      getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
+      Libcalls.getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
 
   RTLIB::LibcallImpl SecurityCookieVar =
-      getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
+      Libcalls.getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
   if (SecurityCheckCookieLibcall != RTLIB::Unsupported &&
       SecurityCookieVar != RTLIB::Unsupported) {
     // MSVC CRT has a global variable holding security cookie.
@@ -21123,7 +21279,7 @@ void ARMTargetLowering::insertSSPDeclarations(Module &M) const {
       F->addParamAttr(0, Attribute::AttrKind::InReg);
   }
 
-  TargetLowering::insertSSPDeclarations(M);
+  TargetLowering::insertSSPDeclarations(M, Libcalls);
 }
 
 bool ARMTargetLowering::canCombineStoreAndExtract(Type *VectorTy, Value *Idx,
@@ -21194,7 +21350,7 @@ bool ARMTargetLowering::isMaskAndCmp0FoldingBeneficial(
 TargetLowering::ShiftLegalizationStrategy
 ARMTargetLowering::preferredShiftLegalizationStrategy(
     SelectionDAG &DAG, SDNode *N, unsigned ExpansionFactor) const {
-  if (Subtarget->hasMinSize() && !Subtarget->isTargetWindows())
+  if (Subtarget->hasMinSize() && !getTM().getTargetTriple().isOSWindows())
     return ShiftLegalizationStrategy::LowerToLibcall;
   return TargetLowering::preferredShiftLegalizationStrategy(DAG, N,
                                                             ExpansionFactor);

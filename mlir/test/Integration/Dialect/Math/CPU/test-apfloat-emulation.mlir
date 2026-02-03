@@ -24,15 +24,18 @@ func.func @entry() {
   // CHECK: 16
   vector.print %fmafp8 : f8E8M0FNU
 
-  // CHECK: 0
   %isinffp8 = math.isinf %neg14fp8 : f8E4M3FN
-  vector.print %isinffp8 : i1
   // CHECK: 0
+  vector.print %isinffp8 : i1
+
   %isnanfp8 = math.isnan %neg14fp8 : f8E4M3FN
+  // CHECK: 0
   vector.print %isnanfp8 : i1
+
   %isnormalfp8 = math.isnormal %neg14fp8 : f8E4M3FN
   // CHECK: 1
   vector.print %isnormalfp8 : i1
+
   %isfinitefp8 = math.isfinite %neg14fp8 : f8E4M3FN
   // CHECK: 1
   vector.print %isfinitefp8 : i1
@@ -51,15 +54,18 @@ func.func @entry() {
   // CHECK: 16
   vector.print %fmafp32 : f32
 
-  // CHECK: 0
   %isinffp32 = math.isinf %neg14fp32 : f32
-  vector.print %isinffp32 : i1
   // CHECK: 0
+  vector.print %isinffp32 : i1
+
   %isnanfp32 = math.isnan %neg14fp32 : f32
+  // CHECK: 0
   vector.print %isnanfp32 : i1
+
   %isnormalfp32 = math.isnormal %neg14fp32 : f32
   // CHECK: 1
   vector.print %isnormalfp32 : i1
+
   %isfinitefp32 = math.isfinite %neg14fp32 : f32
   // CHECK: 1
   vector.print %isfinitefp32 : i1
