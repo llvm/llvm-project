@@ -1641,7 +1641,7 @@
 // RUN: %clang --target=riscv64 -menable-experimental-extensions \
 // RUN:   -march=rv64i_zve32x_zvdot4a8i0p1 -E -dM %s \
 // RUN:   -o - | FileCheck --check-prefix=CHECK-ZVDOT4A8I-EXT %s
-// CHECK-ZVDOT4A8I-EXT: __riscv_zvdot4a8i 0{{$}}
+// CHECK-ZVDOT4A8I-EXT: __riscv_zvdot4a8i 1000{{$}}
 
 // RUN: %clang -target riscv32 -menable-experimental-extensions \
 // RUN:   -march=rv32izicfiss1p0 -E -dM %s \

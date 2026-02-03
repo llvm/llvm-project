@@ -1908,7 +1908,7 @@ let TargetPrefix = "riscv" in {
 } // TargetPrefix = "riscv"
 
 //===----------------------------------------------------------------------===//
-// Zvdot4a8i - Vector quad widening 4D Dot Product
+// Zvdot4a8i - Vector 4-element Dot Product of packed 8-bit Integers
 //
 // 8-bit Integer dot-product instructions performing the dot product between two
 // 4-element vectors of 8-bit integer elements and accumulating it into a 32-bit
