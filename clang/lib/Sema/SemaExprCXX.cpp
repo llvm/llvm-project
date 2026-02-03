@@ -2662,18 +2662,13 @@ static std::string formatAddressSpaceForDiag(QualType T,
                                              const ASTContext &Ctx) {
   LangAS AS = T.getAddressSpace();
   if (isTargetAddressSpace(AS))
-    return llvm::utostr(toTargetAddressSpace(AS));
-
+    return Qualifiers::getAddrSpaceAsString(AS);
   PrintingPolicy PP(LangOpts);
-
   std::string Sugared, Desugared;
   llvm::raw_string_ostream OS(Sugared);
   llvm::raw_string_ostream KO(Desugared);
-
   T.print(OS, PP);
-
   T.getDesugaredType(Ctx).print(KO, PP);
-
   return OS.str() + " (" + KO.str() + ")";
 }
 
