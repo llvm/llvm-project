@@ -86,7 +86,7 @@ class ExprOptionsTestCase(TestBase):
         self.assertFalse(val.GetError().Success())
 
     def test_expr_options_language_options(self):
-        """Test SetLanguageOption/GetLanguageOption SBAPIs"""
+        """Test SetBooleanLanguageOption/GetBooleanLanguageOption SBAPIs"""
 
         error = lldb.SBError()
         options = lldb.SBExpressionOptions()
