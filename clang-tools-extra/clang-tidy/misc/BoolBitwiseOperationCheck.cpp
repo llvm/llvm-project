@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "BoolBitwiseOperationCheck.h"
+#include "clang/AST/ASTTypeTraits.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
 #include "clang/AST/Expr.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
@@ -169,7 +170,7 @@ void BoolBitwiseOperationCheck::storeOptions(
 
 void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
   auto BooleanLeaves = hasAllLeavesOfBitwiseSatisfying(hasType(booleanType()));
-  auto NonVolatile = ignoringImpCasts(unless(hasType(isVolatileQualified())));
+  auto NonVolatile = unless(hasType(isVolatileQualified()));
 
   auto FixItMatcher = binaryOperator(
       // Both operands must be non-volatile at the top level.
@@ -182,7 +183,9 @@ void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
           // Compound assignments ('|=' / '&='): require a simple
           // LHS so that we can safely duplicate it on the RHS.
           allOf(hasAnyOperatorName("|=", "&="),
-                hasLHS(ignoringImpCasts(anyOf(declRefExpr(), memberExpr()))))));
+                hasLHS(anyOf(declRefExpr(), memberExpr())))));
+
+  auto LhsOfCompoundMatcher = traverse(TK_AsIs, expr().bind("lhsOfCompound"));
 
   // Parentheses decision logic:
   // Case 1: | with parent && → parens needed around BinOp (the || result)
@@ -229,7 +232,7 @@ void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
       binaryOperator(hasAnyOperatorName("|", "&", "|=", "&="),
                      hasLHS(BooleanLeaves), hasRHS(BooleanLeaves),
                      optionally(allOf(hasAnyOperatorName("|=", "&="),
-                                      hasLHS(expr().bind("lhsOfCompound")))),
+                                      hasLHS(LhsOfCompoundMatcher))),
                      optionally(FixItMatcher.bind("fixit")),
                      optionally(anyOf(ParensCase1, ParensCase2, ParensCase3)));
 
