@@ -650,6 +650,10 @@ Value *llvm::lowerObjectSizeCall(IntrinsicInst *ObjectSize,
                              MustSucceed);
 }
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
+
 Value *llvm::lowerObjectSizeCall(
     IntrinsicInst *ObjectSize, const DataLayout &DL,
     const TargetLibraryInfo *TLI, AAResults *AA, bool MustSucceed,
@@ -704,6 +708,10 @@ Value *llvm::lowerObjectSizeCall(
       ResultSize = Builder.CreateZExtOrTrunc(ResultSize, ResultType);
       Value *Ret = Builder.CreateSelect(
           UseZero, ConstantInt::get(ResultType, 0), ResultSize);
+
+      if (!ProfcheckDisableMetadataFixes)
+        if (auto *Inst = dyn_cast<Instruction>(Ret))
+          Inst->copyMetadata(*ObjectSize);
 
       // The non-constant size expression cannot evaluate to -1.
       if (!isa<Constant>(Size) || !isa<Constant>(Offset))
@@ -1461,6 +1469,14 @@ SizeOffsetValue ObjectSizeOffsetEvaluator::visitSelectInst(SelectInst &I) {
       Builder.CreateSelect(I.getCondition(), TrueSide.Size, FalseSide.Size);
   Value *Offset =
       Builder.CreateSelect(I.getCondition(), TrueSide.Offset, FalseSide.Offset);
+
+  if (!ProfcheckDisableMetadataFixes) {
+    if (auto *Inst = dyn_cast<Instruction>(Size))
+      Inst->copyMetadata(I);
+    if (auto *Inst = dyn_cast<Instruction>(Offset))
+      Inst->copyMetadata(I);
+  }
+
   return SizeOffsetValue(Size, Offset);
 }
 
