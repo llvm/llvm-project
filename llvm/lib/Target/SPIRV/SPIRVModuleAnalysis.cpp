@@ -2151,7 +2151,6 @@ void addInstrRequirements(const MachineInstr &MI,
     addImageOperandReqs(MI, Reqs, ST, 4);
     break;
   case SPIRV::OpImageSampleExplicitLod:
-    Reqs.addCapability(SPIRV::Capability::Shader);
     addImageOperandReqs(MI, Reqs, ST, 4);
     break;
   case SPIRV::OpImageSampleDrefImplicitLod:
