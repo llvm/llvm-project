@@ -3323,7 +3323,10 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
       // Replace insert_on_range with a constant dense attribute if the
       // initialization is on the full range.
       auto insertOnRangeOps = gr.front().getOps<fir::InsertOnRangeOp>();
+      unsigned nbZeroInitializers = 0;
+      unsigned nbRanges = 0;
       for (auto insertOp : insertOnRangeOps) {
+        ++nbRanges;
         if (insertOp.isFullRange()) {
           auto seqTyAttr = convertType(insertOp.getType());
           auto *op = insertOp.getVal().getDefiningOp();
@@ -3342,8 +3345,13 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
           rewriter.setInsertionPointAfter(insertOp);
           rewriter.replaceOpWithNewOp<mlir::arith::ConstantOp>(
               insertOp, seqTyAttr, denseAttr);
+          if (auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(constant.getValue()))
+            if (intAttr.getInt() == 0)
+              ++nbZeroInitializers;
         }
       }
+      if (nbRanges > 0 && nbRanges == nbZeroInitializers && linkage == mlir::LLVM::Linkage::External)
+        g.setLinkage(mlir::LLVM::Linkage::Common);
     }
 
     if (global.getDataAttr() &&
