@@ -27,6 +27,11 @@
 #endif
 #pragma OPENCL EXTENSION __cl_clang_variadic_functions : enable
 
+#ifndef __cl_clang_function_scope_local_variables
+#error "Missing __cl_clang_function_scope_local_variables define"
+#endif
+#pragma OPENCL EXTENSION __cl_clang_function_scope_local_variables : enable
+
 #ifndef cl_khr_fp16
 #error "Missing cl_khr_fp16 define"
 #endif

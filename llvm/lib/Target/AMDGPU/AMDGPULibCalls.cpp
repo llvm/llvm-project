@@ -47,9 +47,7 @@ namespace llvm {
 
 class AMDGPULibCalls {
 private:
-  const TargetLibraryInfo *TLInfo = nullptr;
-  AssumptionCache *AC = nullptr;
-  DominatorTree *DT = nullptr;
+  SimplifyQuery SQ;
 
   using FuncInfo = llvm::AMDGPULibFunc;
 
@@ -129,11 +127,10 @@ protected:
   }
 
 public:
-  AMDGPULibCalls() = default;
+  AMDGPULibCalls(Function &F, FunctionAnalysisManager &FAM);
 
   bool fold(CallInst *CI);
 
-  void initFunction(Function &F, FunctionAnalysisManager &FAM);
   void initNativeFuncs();
 
   // Replace a normal math function call with that native version
@@ -422,11 +419,11 @@ bool AMDGPULibCalls::canIncreasePrecisionOfConstantFold(
   return FPOp->isFast();
 }
 
-void AMDGPULibCalls::initFunction(Function &F, FunctionAnalysisManager &FAM) {
-  AC = &FAM.getResult<AssumptionAnalysis>(F);
-  TLInfo = &FAM.getResult<TargetLibraryAnalysis>(F);
-  DT = FAM.getCachedResult<DominatorTreeAnalysis>(F);
-}
+AMDGPULibCalls::AMDGPULibCalls(Function &F, FunctionAnalysisManager &FAM)
+    : SQ(F.getParent()->getDataLayout(),
+         &FAM.getResult<TargetLibraryAnalysis>(F),
+         FAM.getCachedResult<DominatorTreeAnalysis>(F),
+         &FAM.getResult<AssumptionAnalysis>(F)) {}
 
 bool AMDGPULibCalls::useNativeFunc(const StringRef F) const {
   return AllNative || llvm::is_contained(UseNative, F);
@@ -563,74 +560,6 @@ bool AMDGPULibCalls::fold_read_write_pipe(CallInst *CI, IRBuilder<> &B,
   return true;
 }
 
-static bool isKnownIntegral(const Value *V, const DataLayout &DL,
-                            FastMathFlags FMF) {
-  if (isa<PoisonValue>(V))
-    return true;
-  if (isa<UndefValue>(V))
-    return false;
-
-  if (const ConstantFP *CF = dyn_cast<ConstantFP>(V))
-    return CF->getValueAPF().isInteger();
-
-  auto *VFVTy = dyn_cast<FixedVectorType>(V->getType());
-  const Constant *CV = dyn_cast<Constant>(V);
-  if (VFVTy && CV) {
-    unsigned NumElts = VFVTy->getNumElements();
-    for (unsigned i = 0; i != NumElts; ++i) {
-      Constant *Elt = CV->getAggregateElement(i);
-      if (!Elt)
-        return false;
-      if (isa<PoisonValue>(Elt))
-        continue;
-
-      const ConstantFP *CFP = dyn_cast<ConstantFP>(Elt);
-      if (!CFP || !CFP->getValue().isInteger())
-        return false;
-    }
-
-    return true;
-  }
-
-  const Instruction *I = dyn_cast<Instruction>(V);
-  if (!I)
-    return false;
-
-  switch (I->getOpcode()) {
-  case Instruction::SIToFP:
-  case Instruction::UIToFP:
-    // TODO: Could check nofpclass(inf) on incoming argument
-    if (FMF.noInfs())
-      return true;
-
-    // Need to check int size cannot produce infinity, which computeKnownFPClass
-    // knows how to do already.
-    return isKnownNeverInfinity(I, SimplifyQuery(DL));
-  case Instruction::Call: {
-    const CallInst *CI = cast<CallInst>(I);
-    switch (CI->getIntrinsicID()) {
-    case Intrinsic::trunc:
-    case Intrinsic::floor:
-    case Intrinsic::ceil:
-    case Intrinsic::rint:
-    case Intrinsic::nearbyint:
-    case Intrinsic::round:
-    case Intrinsic::roundeven:
-      return (FMF.noInfs() && FMF.noNaNs()) ||
-             isKnownNeverInfOrNaN(I, SimplifyQuery(DL));
-    default:
-      break;
-    }
-
-    break;
-  }
-  default:
-    break;
-  }
-
-  return false;
-}
-
 // This function returns false if no change; return true otherwise.
 bool AMDGPULibCalls::fold(CallInst *CI) {
   Function *Callee = CI->getCalledFunction();
@@ -753,16 +682,14 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
 
       // pow(x, y) -> powr(x, y) for x >= -0.0
       // TODO: Account for flags on current call
-      if (PowrFunc &&
-          cannotBeOrderedLessThanZero(
-              FPOp->getOperand(0),
-              SimplifyQuery(M->getDataLayout(), TLInfo, DT, AC, Call))) {
+      if (PowrFunc && cannotBeOrderedLessThanZero(
+                          FPOp->getOperand(0), SQ.getWithInstruction(Call))) {
         Call->setCalledFunction(PowrFunc);
         return fold_pow(FPOp, B, PowrInfo) || true;
       }
 
       // pow(x, y) -> pown(x, y) for known integral y
-      if (isKnownIntegral(FPOp->getOperand(1), M->getDataLayout(),
+      if (isKnownIntegral(FPOp->getOperand(1), SQ.getWithInstruction(CI),
                           FPOp->getFastMathFlags())) {
         FunctionType *PownType = getPownType(CI->getFunctionType());
         AMDGPULibFunc PownInfo(AMDGPULibFunc::EI_POWN, PownType, true);
@@ -1084,7 +1011,8 @@ bool AMDGPULibCalls::fold_pow(FPMathOperator *FPOp, IRBuilder<> &B,
   if (needcopysign && (FInfo.getId() == AMDGPULibFunc::EI_POW)) {
     // We cannot handle corner cases for a general pow() function, give up
     // unless y is a constant integral value. Then proceed as if it were pown.
-    if (!isKnownIntegral(opr1, M->getDataLayout(), FPOp->getFastMathFlags()))
+    if (!isKnownIntegral(opr1, SQ.getWithInstruction(cast<Instruction>(FPOp)),
+                         FPOp->getFastMathFlags()))
       return false;
   }
 
@@ -1699,9 +1627,8 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
 
 PreservedAnalyses AMDGPUSimplifyLibCallsPass::run(Function &F,
                                                   FunctionAnalysisManager &AM) {
-  AMDGPULibCalls Simplifier;
+  AMDGPULibCalls Simplifier(F, AM);
   Simplifier.initNativeFuncs();
-  Simplifier.initFunction(F, AM);
 
   bool Changed = false;
 
@@ -1728,9 +1655,8 @@ PreservedAnalyses AMDGPUUseNativeCallsPass::run(Function &F,
   if (UseNative.empty())
     return PreservedAnalyses::all();
 
-  AMDGPULibCalls Simplifier;
+  AMDGPULibCalls Simplifier(F, AM);
   Simplifier.initNativeFuncs();
-  Simplifier.initFunction(F, AM);
 
   bool Changed = false;
   for (auto &BB : F) {

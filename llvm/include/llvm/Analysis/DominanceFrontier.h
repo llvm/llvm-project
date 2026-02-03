@@ -116,7 +116,7 @@ public:
     calculate(DT, DT[this->Roots[0]]);
   }
 
-  const DomSetType &calculate(const DomTreeT &DT, const DomTreeNodeT *Node);
+  void calculate(const DomTreeT &DT, const DomTreeNodeT *Node);
 };
 
 class DominanceFrontier : public ForwardDominanceFrontierBase<BasicBlock> {

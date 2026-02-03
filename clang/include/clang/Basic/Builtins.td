@@ -4970,8 +4970,7 @@ def OSLogFormatBufferSize : Builtin {
 
 def OSLogFormat : Builtin {
   let Spellings = ["__builtin_os_log_format"];
-  // FIXME: The printf attribute looks suspiciously like it should be argument #1.
-  let Attributes = [PrintfFormat<0>, NoThrow, CustomTypeChecking];
+  let Attributes = [PrintfFormat<1>, NoThrow, CustomTypeChecking];
   let Prototype = "void*(void*, char const*, ...)";
 }
 
@@ -4997,6 +4996,12 @@ def HLSLResourceGetPointer : LangBuiltin<"HLSL_LANG"> {
 
 def HLSLResourceLoadWithStatus : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_resource_load_with_status"];
+  let Attributes = [NoThrow];
+  let Prototype = "void(...)";
+}
+
+def HLSLResourceSample : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_resource_sample"];
   let Attributes = [NoThrow];
   let Prototype = "void(...)";
 }
@@ -5125,6 +5130,12 @@ def HLSLWaveIsFirstLane : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_wave_is_first_lane"];
   let Attributes = [NoThrow, Const];
   let Prototype = "bool()";
+}
+
+def HLSLWavePrefixCountBits : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_wave_prefix_count_bits"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "unsigned int(bool)";
 }
 
 def HLSLWaveReadLaneAt : LangBuiltin<"HLSL_LANG"> {
@@ -5310,6 +5321,12 @@ def HLSLGetSpirvSpecConstant : LangBuiltin<"HLSL_LANG">, HLSLScalarTemplate {
 
 def HLSLF16ToF32 : LangBuiltin<"HLSL_LANG"> {
   let Spellings = ["__builtin_hlsl_elementwise_f16tof32"];
+  let Attributes = [NoThrow, Const, CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def HLSLF32ToF16 : LangBuiltin<"HLSL_LANG"> {
+  let Spellings = ["__builtin_hlsl_elementwise_f32tof16"];
   let Attributes = [NoThrow, Const, CustomTypeChecking];
   let Prototype = "void(...)";
 }
