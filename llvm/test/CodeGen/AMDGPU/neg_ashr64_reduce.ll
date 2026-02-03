@@ -51,17 +51,17 @@ define <3 x i64> @v3_ashr_metadata(ptr %arg0.ptr, ptr %arg1.ptr) {
 ; CHECK-NEXT:    flat_load_dwordx4 v[4:7], v[0:1]
 ; CHECK-NEXT:    v_add_co_u32_e32 v0, vcc, 20, v0
 ; CHECK-NEXT:    v_addc_co_u32_e32 v1, vcc, 0, v1, vcc
+; CHECK-NEXT:    flat_load_dwordx4 v[8:11], v[2:3]
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    flat_load_dword v4, v[2:3] offset:16
-; CHECK-NEXT:    flat_load_dwordx4 v[8:11], v[2:3]
 ; CHECK-NEXT:    v_mov_b32_e32 v3, -1
 ; CHECK-NEXT:    flat_load_dword v1, v[0:1]
-; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_ashrrev_i32_e32 v0, v8, v5
 ; CHECK-NEXT:    v_ashrrev_i32_e32 v2, v10, v7
+; CHECK-NEXT:    v_mov_b32_e32 v5, -1
+; CHECK-NEXT:    s_waitcnt vmcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    v_ashrrev_i32_e32 v4, v4, v1
 ; CHECK-NEXT:    v_mov_b32_e32 v1, -1
-; CHECK-NEXT:    v_mov_b32_e32 v5, -1
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
   %val = load <3 x i64>, ptr %arg0.ptr, !range !4, !noundef !{}
   %shift.amt = load <3 x i64>, ptr %arg1.ptr, !range !5, !noundef !{}

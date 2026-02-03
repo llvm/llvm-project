@@ -313,13 +313,13 @@ define amdgpu_kernel void @ds_wmma_permute(ptr addrspace(3) %base, ptr addrspace
 ; COEXEC-NEXT:    ds_load_tr16_b128 v[120:123], v124 offset:896
 ; COEXEC-NEXT:    s_wait_dscnt 0x13
 ; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[24:31], v[32:39], v[40:47], v[24:31]
-; COEXEC-NEXT:    ds_load_tr16_b128 v[124:127], v124 offset:960
 ; COEXEC-NEXT:    ds_load_tr16_b128 v[128:131], v156 offset:128
 ; COEXEC-NEXT:    ds_load_tr16_b128 v[132:135], v156 offset:192
 ; COEXEC-NEXT:    ds_load_tr16_b128 v[136:139], v156 offset:384
 ; COEXEC-NEXT:    ds_load_tr16_b128 v[140:143], v156 offset:448
 ; COEXEC-NEXT:    ds_load_tr16_b128 v[144:147], v156 offset:640
 ; COEXEC-NEXT:    ds_load_tr16_b128 v[148:151], v156 offset:704
+; COEXEC-NEXT:    ds_load_tr16_b128 v[124:127], v124 offset:960
 ; COEXEC-NEXT:    s_wait_dscnt 0x16
 ; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[48:55], v[56:63], v[16:23]
 ; COEXEC-NEXT:    ds_load_tr16_b128 v[152:155], v156 offset:896
@@ -332,11 +332,11 @@ define amdgpu_kernel void @ds_wmma_permute(ptr addrspace(3) %base, ptr addrspace
 ; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[48:55], v[56:63], v[16:23]
 ; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[8:15], v[64:71], v[72:79], v[8:15]
 ; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[0:7], v[80:87], v[88:95], v[0:7]
-; COEXEC-NEXT:    s_wait_dscnt 0x6
+; COEXEC-NEXT:    s_wait_dscnt 0x7
 ; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[24:31], v[96:103], v[128:135], v[24:31]
-; COEXEC-NEXT:    s_wait_dscnt 0x4
+; COEXEC-NEXT:    s_wait_dscnt 0x5
 ; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[16:23], v[104:111], v[136:143], v[16:23]
-; COEXEC-NEXT:    s_wait_dscnt 0x2
+; COEXEC-NEXT:    s_wait_dscnt 0x3
 ; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[8:15], v[112:119], v[144:151], v[8:15]
 ; COEXEC-NEXT:    s_wait_dscnt 0x0
 ; COEXEC-NEXT:    v_wmma_f32_16x16x32_f16 v[0:7], v[120:127], v[152:159], v[0:7]
