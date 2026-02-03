@@ -17,10 +17,10 @@
 using namespace clang;
 using namespace clang::interp;
 
-InterpState::InterpState(State &Parent, Program &P, InterpStack &Stk,
+InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
                          Context &Ctx, SourceMapper *M)
-    : Parent(Parent), M(M), P(P), Stk(Stk), Ctx(Ctx), BottomFrame(*this),
-      Current(&BottomFrame) {
+    : State(Ctx.getASTContext(), Parent.getEvalStatus()), M(M), P(P), Stk(Stk),
+      Ctx(Ctx), BottomFrame(*this), Current(&BottomFrame) {
   InConstantContext = Parent.InConstantContext;
   CheckingPotentialConstantExpression =
       Parent.CheckingPotentialConstantExpression;
@@ -28,9 +28,10 @@ InterpState::InterpState(State &Parent, Program &P, InterpStack &Stk,
   EvalMode = Parent.EvalMode;
 }
 
-InterpState::InterpState(State &Parent, Program &P, InterpStack &Stk,
+InterpState::InterpState(const State &Parent, Program &P, InterpStack &Stk,
                          Context &Ctx, const Function *Func)
-    : Parent(Parent), M(nullptr), P(P), Stk(Stk), Ctx(Ctx),
+    : State(Ctx.getASTContext(), Parent.getEvalStatus()), M(nullptr), P(P),
+      Stk(Stk), Ctx(Ctx),
       BottomFrame(*this, Func, nullptr, CodePtr(), Func->getArgSize()),
       Current(&BottomFrame) {
   InConstantContext = Parent.InConstantContext;
@@ -75,7 +76,7 @@ void InterpState::cleanup() {
     Alloc->cleanup();
 }
 
-Frame *InterpState::getCurrentFrame() { return Current; }
+const Frame *InterpState::getCurrentFrame() { return Current; }
 
 void InterpState::deallocate(Block *B) {
   assert(B);

@@ -35,16 +35,20 @@ def MOPSTIndexedUnord : RISCVMOP<0b01>;
 def MOPSTStrided      : RISCVMOP<0b10>;
 def MOPSTIndexedOrder : RISCVMOP<0b11>;
 
-class RISCVLSUMOP<bits<5> val> {
+class RISCVLUMOP<bits<5> val> {
   bits<5> Value = val;
 }
-def LUMOPUnitStride  : RISCVLSUMOP<0b00000>;
-def LUMOPUnitStrideMask : RISCVLSUMOP<0b01011>;
-def LUMOPUnitStrideWholeReg : RISCVLSUMOP<0b01000>;
-def LUMOPUnitStrideFF: RISCVLSUMOP<0b10000>;
-def SUMOPUnitStride  : RISCVLSUMOP<0b00000>;
-def SUMOPUnitStrideMask : RISCVLSUMOP<0b01011>;
-def SUMOPUnitStrideWholeReg : RISCVLSUMOP<0b01000>;
+def LUMOPUnitStride  : RISCVLUMOP<0b00000>;
+def LUMOPUnitStrideMask : RISCVLUMOP<0b01011>;
+def LUMOPUnitStrideWholeReg : RISCVLUMOP<0b01000>;
+def LUMOPUnitStrideFF: RISCVLUMOP<0b10000>;
+
+class RISCVSUMOP<bits<5> val> {
+  bits<5> Value = val;
+}
+def SUMOPUnitStride  : RISCVSUMOP<0b00000>;
+def SUMOPUnitStrideMask : RISCVSUMOP<0b01011>;
+def SUMOPUnitStrideWholeReg : RISCVSUMOP<0b01000>;
 
 class RISCVWidth<bits<4> val> {
   bits<4> Value = val;
@@ -158,7 +162,7 @@ class RVInstVUnaryRd<bits<6> funct6, bits<5> vs1, RISCVVFormat opv, dag outs,
   let RVVConstraint = NoConstraint;
 }
 
-class RVInstVLU<bits<3> nf, bit mew, RISCVLSUMOP lumop,
+class RVInstVLU<bits<3> nf, bit mew, RISCVLUMOP lumop,
                 bits<3> width, dag outs, dag ins, string opcodestr,
                 string argstr>
     : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
@@ -224,7 +228,7 @@ class RVInstVLX<bits<3> nf, bit mew, RISCVMOP mop, bits<3> width,
   let RVVConstraint = VMConstraint;
 }
 
-class RVInstVSU<bits<3> nf, bit mew, RISCVLSUMOP sumop,
+class RVInstVSU<bits<3> nf, bit mew, RISCVSUMOP sumop,
                 bits<3> width, dag outs, dag ins, string opcodestr,
                 string argstr>
     : RVInst<outs, ins, opcodestr, argstr, [], InstFormatR> {
