@@ -39297,8 +39297,8 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       }
     }
 
-    // If the mask control minimum value is >= bitwidth, 
-    // the src knownbits are valid and can be returned 
+    // If the mask control minimum value is >= bitwidth,
+    // the src knownbits are valid and can be returned
     APInt MaskMinValue = Known2.getMinValue();
     if (MaskMinValue.uge(BitWidth))
       break;
