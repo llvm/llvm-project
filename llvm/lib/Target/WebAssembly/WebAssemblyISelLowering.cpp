@@ -2773,6 +2773,12 @@ SDValue WebAssemblyTargetLowering::LowerVECREDUCE(SDValue Op,
   if (!Subtarget->hasSIMD128())
     return SDValue();
 
+  // Expand to a sequence of scalar operations when the vector is small.
+  SDValue Vec = Op.getOperand(0);
+  EVT VecVT = Vec.getValueType();
+  if (VecVT.getVectorNumElements() < 16)
+    return SDValue();
+
   SDValue ReducedVec =
       emitShuffleReduceTree(DAG, DL, Op.getOperand(0), BaseOpc);
   if (!ReducedVec)
