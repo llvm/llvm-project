@@ -1,5 +1,18 @@
 // RUN: %clang_cc1 -fsyntax-only -Wunused-but-set-variable -verify -std=c++11 %s
 
+static thread_local int tl_set_unused;  // expected-warning {{variable 'tl_set_unused' set but not used}}
+static thread_local int tl_set_and_used;
+thread_local int tl_no_static_set_unused;
+
+void f0() {
+  tl_set_unused = 1;
+  tl_set_and_used = 2;
+  int x = tl_set_and_used;
+  (void)x;
+
+  tl_no_static_set_unused = 3;
+}
+
 namespace test {
   static int set_unused;  // expected-warning {{variable 'set_unused' set but not used}}
   static int set_and_used;
