@@ -1620,9 +1620,8 @@ void Sema::ActOnEndOfTranslationUnit() {
   if (Context.hasAnyFunctionEffects())
     performFunctionEffectAnalysis(Context.getTranslationUnitDecl());
 
-  // diagnose unused-but-set static globals in a deterministic order
-  //
-  // not trackings shadowing info for static globals; there's nothing to shadow
+  // Diagnose unused-but-set static globals in a deterministic order.
+  // Not tracking shadowing info for static globals; there's nothing to shadow.
   struct LocAndDiag {
     SourceLocation Loc;
     PartialDiagnostic PD;
@@ -1632,12 +1631,12 @@ void Sema::ActOnEndOfTranslationUnit() {
     DeclDiags.push_back(LocAndDiag{Loc, std::move(PD)});
   };
 
-  // for -Wunused-but-set-variable we only care about variables that were
-  // referenced by the TU end
+  // For -Wunused-but-set-variable we only care about variables that were
+  // referenced by the TU end.
   for (const auto &Ref : RefsMinusAssignments) {
     const VarDecl *VD = Ref.first;
-    // only diagnose static file vars defined in the main file to match
-    // -Wunused-variable behavior and avoid false positives from header vars
+    // Only diagnose static file vars defined in the main file to match
+    // -Wunused-variable behavior and avoid false positives from header vars.
     if (VD->isStaticFileVar() && SourceMgr.isInMainFile(VD->getLocation())) {
       DiagnoseUnusedButSetDecl(VD, addDiag);
       RefsMinusAssignments.erase(VD);
@@ -1646,8 +1645,8 @@ void Sema::ActOnEndOfTranslationUnit() {
 
   llvm::sort(DeclDiags,
              [](const LocAndDiag &LHS, const LocAndDiag &RHS) -> bool {
-               // sorting purely for determinism; matches behavior in
-               // SemaDecl.cpp
+               // Sorting purely for determinism; matches behavior in
+               // SemaDecl.cpp.
                return LHS.Loc.getRawEncoding() < RHS.Loc.getRawEncoding();
              });
   for (const LocAndDiag &D : DeclDiags) {

@@ -11,7 +11,7 @@ namespace test {
     (void)x;
   }
 
-  // function pointer in namespace
+  // Function pointer in namespace.
   static void (*sandboxing_callback)();
   void SetSandboxingCallback(void (*f)()) {
     sandboxing_callback = f;
