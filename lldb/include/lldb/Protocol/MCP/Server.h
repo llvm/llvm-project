@@ -70,7 +70,6 @@ private:
 
   LogCallback m_log_callback;
   struct Client {
-    ReadHandleUP handle;
     MCPTransportUP transport;
     MCPBinderUP binder;
   };

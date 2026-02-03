@@ -156,12 +156,10 @@ llvm::Error Server::Accept(MainLoop &loop, MCPTransportUP transport) {
     Logv("Transport error: {0}", llvm::toString(std::move(err)));
   });
 
-  auto handle = transport->RegisterMessageHandler(loop, *binder);
-  if (!handle)
-    return handle.takeError();
+  if (llvm::Error err = transport->RegisterMessageHandler(*binder))
+    return err;
 
-  m_instances[transport_ptr] =
-      Client{std::move(*handle), std::move(transport), std::move(binder)};
+  m_instances[transport_ptr] = Client{std::move(transport), std::move(binder)};
   return llvm::Error::success();
 }
 
