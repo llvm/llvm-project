@@ -612,6 +612,11 @@ void RISCVPassConfig::addMachineSSAOptimization() {
   addPass(createRISCVVectorPeepholePass());
   addPass(createRISCVFoldMemOffsetPass());
 
+  // It's beneficial to reduce the VL to enable more
+  // Machine SSA optimizations.
+  if (TM->getOptLevel() != CodeGenOptLevel::None)
+    addPass(createRISCVVLOptimizerPass());
+
   TargetPassConfig::addMachineSSAOptimization();
 
   if (TM->getTargetTriple().isRISCV64()) {
