@@ -21,15 +21,17 @@ namespace MyNamespace {
 // CHECK-GLOBAL-NEXT:                <div class="sidebar">
 // CHECK-GLOBAL-NEXT:                    <h2>Global Namespace</h2>
 // CHECK-GLOBAL-NEXT:                    <ul>
-// CHECK-GLOBAL-NEXT:                        <li class="sidebar-section">
-// CHECK-GLOBAL-NEXT:                            <a class="sidebar-item" href="#Namespaces">Namespaces</a>
-// CHECK-GLOBAL-NEXT:                        </li>
 // CHECK-GLOBAL-NEXT:                        <li>
-// CHECK-GLOBAL-NEXT:                            <ul>
-// CHECK-GLOBAL-NEXT:                                <li class="sidebar-item-container">
-// CHECK-GLOBAL-NEXT:                                    <a class="sidebar-item" href="#{{[0-9A-F]*}}">MyNamespace</a>
-// CHECK-GLOBAL-NEXT:                                </li>
-// CHECK-GLOBAL-NEXT:                            </ul>
+// CHECK-GLOBAL-NEXT:                            <details open>
+// CHECK-GLOBAL-NEXT:                                <summary class="sidebar-section">
+// CHECK-GLOBAL-NEXT:                                    <a class="sidebar-item" href="#Namespaces">Namespaces</a>
+// CHECK-GLOBAL-NEXT:                                </summary>
+// CHECK-GLOBAL-NEXT:                                <ul>
+// CHECK-GLOBAL-NEXT:                                    <li class="sidebar-item-container">
+// CHECK-GLOBAL-NEXT:                                        <a class="sidebar-item" href="#{{[0-9A-F]*}}">MyNamespace</a>
+// CHECK-GLOBAL-NEXT:                                    </li>
+// CHECK-GLOBAL-NEXT:                                </ul>
+// CHECK-GLOBAL-NEXT:                            </details>
 // CHECK-GLOBAL-NEXT:                        </li>
 // CHECK-GLOBAL-NEXT:                    </ul>
 // CHECK-GLOBAL-NEXT:                </div>

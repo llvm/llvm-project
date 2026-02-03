@@ -436,7 +436,7 @@ bool IdentifierNamingCheck::HungarianNotation::isOptionEnabled(
   if (Iter == StrMap.end())
     return false;
 
-  return *llvm::yaml::parseBool(Iter->getValue());
+  return llvm::yaml::parseBool(Iter->getValue()).value_or(false);
 }
 
 void IdentifierNamingCheck::HungarianNotation::loadFileConfig(
@@ -829,26 +829,28 @@ void IdentifierNamingCheck::storeOptions(ClangTidyOptions::OptionMap &Opts) {
   const ArrayRef<std::optional<NamingStyle>> Styles =
       MainFileStyle->getStyles();
   for (size_t I = 0; I < SK_Count; ++I) {
-    if (!Styles[I])
+    const auto &StyleOpt = Styles[I];
+    if (!StyleOpt)
       continue;
+    const NamingStyle &Style = *StyleOpt;
     const size_t StyleSize = StyleNames[I].size();
     StyleString.assign({StyleNames[I], "HungarianPrefix"});
 
-    Options.store(Opts, StyleString, Styles[I]->HPType);
+    Options.store(Opts, StyleString, Style.HPType);
 
     memcpy(&StyleString[StyleSize], "IgnoredRegexp", 13);
     StyleString.truncate(StyleSize + 13);
-    Options.store(Opts, StyleString, Styles[I]->IgnoredRegexpStr);
+    Options.store(Opts, StyleString, Style.IgnoredRegexpStr);
     memcpy(&StyleString[StyleSize], "Prefix", 6);
     StyleString.truncate(StyleSize + 6);
-    Options.store(Opts, StyleString, Styles[I]->Prefix);
+    Options.store(Opts, StyleString, Style.Prefix);
     // Fast replacement of [Pre]fix -> [Suf]fix.
     memcpy(&StyleString[StyleSize], "Suf", 3);
-    Options.store(Opts, StyleString, Styles[I]->Suffix);
-    if (Styles[I]->Case) {
+    Options.store(Opts, StyleString, Style.Suffix);
+    if (Style.Case) {
       memcpy(&StyleString[StyleSize], "Case", 4);
       StyleString.pop_back_n(2);
-      Options.store(Opts, StyleString, *Styles[I]->Case);
+      Options.store(Opts, StyleString, *Style.Case);
     }
   }
   Options.store(Opts, "GetConfigPerFile", GetConfigPerFile);
@@ -1336,10 +1338,14 @@ IdentifierNamingCheck::getFailureInfo(
     ArrayRef<std::optional<IdentifierNamingCheck::NamingStyle>> NamingStyles,
     const IdentifierNamingCheck::HungarianNotationOption &HNOption,
     StyleKind SK, const SourceManager &SM, bool IgnoreFailedSplit) const {
-  if (SK == SK_Invalid || !NamingStyles[SK])
+  if (SK == SK_Invalid)
     return std::nullopt;
 
-  const IdentifierNamingCheck::NamingStyle &Style = *NamingStyles[SK];
+  const auto &StyleOpt = NamingStyles[SK];
+  if (!StyleOpt)
+    return std::nullopt;
+
+  const IdentifierNamingCheck::NamingStyle &Style = *StyleOpt;
   if (Style.IgnoredRegexp.isValid() && Style.IgnoredRegexp.match(Name))
     return std::nullopt;
 

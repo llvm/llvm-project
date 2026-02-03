@@ -74,6 +74,6 @@ void g(A a, B b, C c) { f(a, b, c); }
 // CHECK-NEXT:    [[TMP0:%.*]] = load i64, ptr [[COERCE_DIVE3]], align 4
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 1 [[BYVAL_TEMP]], ptr align 1 [[B]], i64 6, i1 false)
 // CHECK-NEXT:    call void @llvm.memcpy.p0.p0.i64(ptr align 4 [[BYVAL_TEMP4]], ptr align 4 [[C]], i64 16, i1 false)
-// CHECK-NEXT:    call void (i64, ...) @f(i64 [[TMP0]], ptr dead_on_return noundef [[BYVAL_TEMP]], ptr dead_on_return noundef [[BYVAL_TEMP4]])
+// CHECK-NEXT:    call void (i64, ...) @f(i64 [[TMP0]], ptr noundef dead_on_return [[BYVAL_TEMP]], ptr noundef dead_on_return [[BYVAL_TEMP4]])
 // CHECK-NEXT:    ret void
 //

@@ -353,7 +353,7 @@ bool X86InstructionSelector::selectCopy(MachineInstr &I,
       } else {
         // Handle if there is no super.
         BuildMI(*I.getParent(), I, DL, TII.get(TargetOpcode::COPY), DstReg)
-            .addReg(Temp32, 0, X86::sub_16bit);
+            .addReg(Temp32, {}, X86::sub_16bit);
       }
 
       I.eraseFromParent();
@@ -1399,7 +1399,7 @@ bool X86InstructionSelector::emitExtractSubreg(Register DstReg, Register SrcReg,
   }
 
   BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::COPY), DstReg)
-      .addReg(SrcReg, 0, SubIdx);
+      .addReg(SrcReg, {}, SubIdx);
 
   return true;
 }
@@ -1862,7 +1862,7 @@ bool X86InstructionSelector::selectMulDivRem(MachineInstr &I,
       if (RegTy.getSizeInBits() == 16) {
         BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Copy),
                 TypeEntry.HighInReg)
-            .addReg(Zero32, 0, X86::sub_16bit);
+            .addReg(Zero32, {}, X86::sub_16bit);
       } else if (RegTy.getSizeInBits() == 32) {
         BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Copy),
                 TypeEntry.HighInReg)
@@ -1904,7 +1904,7 @@ bool X86InstructionSelector::selectMulDivRem(MachineInstr &I,
     // Now reference the 8-bit subreg of the result.
     BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
             DstReg)
-        .addReg(ResultSuperReg, 0, X86::sub_8bit);
+        .addReg(ResultSuperReg, {}, X86::sub_8bit);
   } else {
     BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
             DstReg)

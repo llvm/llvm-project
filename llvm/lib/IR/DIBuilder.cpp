@@ -647,7 +647,7 @@ DIBuilder::createVariantPart(DIScope *Scope, StringRef Name, DIFile *File,
   return R;
 }
 
-DISubroutineType *DIBuilder::createSubroutineType(DITypeRefArray ParameterTypes,
+DISubroutineType *DIBuilder::createSubroutineType(DITypeArray ParameterTypes,
                                                   DINode::DIFlags Flags,
                                                   unsigned CC) {
   return DISubroutineType::get(VMContext, Flags, CC, ParameterTypes);
@@ -814,7 +814,7 @@ DIBuilder::getOrCreateMacroArray(ArrayRef<Metadata *> Elements) {
   return MDTuple::get(VMContext, Elements);
 }
 
-DITypeRefArray DIBuilder::getOrCreateTypeArray(ArrayRef<Metadata *> Elements) {
+DITypeArray DIBuilder::getOrCreateTypeArray(ArrayRef<Metadata *> Elements) {
   SmallVector<llvm::Metadata *, 16> Elts;
   for (Metadata *E : Elements) {
     if (isa_and_nonnull<MDNode>(E))
@@ -822,7 +822,7 @@ DITypeRefArray DIBuilder::getOrCreateTypeArray(ArrayRef<Metadata *> Elements) {
     else
       Elts.push_back(E);
   }
-  return DITypeRefArray(MDNode::get(VMContext, Elts));
+  return DITypeArray(MDNode::get(VMContext, Elts));
 }
 
 DISubrange *DIBuilder::getOrCreateSubrange(int64_t Lo, int64_t Count) {

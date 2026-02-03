@@ -13,7 +13,7 @@
 
 namespace clang::tidy::utils::lexer {
 
-std::pair<Token, SourceLocation>
+std::pair<std::optional<Token>, SourceLocation>
 getPreviousTokenAndStart(SourceLocation Location, const SourceManager &SM,
                          const LangOptions &LangOpts, bool SkipComments) {
   const std::optional<Token> Tok =
@@ -22,13 +22,13 @@ getPreviousTokenAndStart(SourceLocation Location, const SourceManager &SM,
   if (Tok.has_value())
     return {*Tok, Lexer::GetBeginningOfToken(Tok->getLocation(), SM, LangOpts)};
 
-  Token Token;
-  Token.setKind(tok::unknown);
-  return {Token, SourceLocation()};
+  return {std::nullopt, SourceLocation()};
 }
 
-Token getPreviousToken(SourceLocation Location, const SourceManager &SM,
-                       const LangOptions &LangOpts, bool SkipComments) {
+std::optional<Token> getPreviousToken(SourceLocation Location,
+                                      const SourceManager &SM,
+                                      const LangOptions &LangOpts,
+                                      bool SkipComments) {
   auto [Token, Start] =
       getPreviousTokenAndStart(Location, SM, LangOpts, SkipComments);
   return Token;
@@ -75,21 +75,6 @@ SourceLocation findNextTerminator(SourceLocation Start, const SourceManager &SM,
   return findNextAnyTokenKind(Start, SM, LangOpts, tok::comma, tok::semi);
 }
 
-std::optional<Token>
-findNextTokenSkippingComments(SourceLocation Start, const SourceManager &SM,
-                              const LangOptions &LangOpts) {
-  while (Start.isValid()) {
-    std::optional<Token> CurrentToken =
-        Lexer::findNextToken(Start, SM, LangOpts);
-    if (!CurrentToken || !CurrentToken->is(tok::comment))
-      return CurrentToken;
-
-    Start = CurrentToken->getLocation();
-  }
-
-  return std::nullopt;
-}
-
 bool rangeContainsExpansionsOrDirectives(SourceRange Range,
                                          const SourceManager &SM,
                                          const LangOptions &LangOpts) {
@@ -100,7 +85,7 @@ bool rangeContainsExpansionsOrDirectives(SourceRange Range,
     if (Loc.isMacroID())
       return true;
 
-    std::optional<Token> Tok = Lexer::findNextToken(Loc, SM, LangOpts);
+    std::optional<Token> Tok = findNextTokenSkippingComments(Loc, SM, LangOpts);
 
     if (!Tok)
       return true;

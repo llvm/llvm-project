@@ -15,6 +15,8 @@
 #define LLVM_CLANG_ANALYSIS_ANALYSES_LIFETIMESAFETY_LOANS_H
 
 #include "clang/AST/Decl.h"
+#include "clang/AST/DeclCXX.h"
+#include "clang/AST/ExprCXX.h"
 #include "clang/Analysis/Analyses/LifetimeSafety/Utils.h"
 #include "llvm/Support/raw_ostream.h"
 
@@ -29,9 +31,27 @@ inline llvm::raw_ostream &operator<<(llvm::raw_ostream &OS, LoanID ID) {
 /// variable.
 /// TODO: Model access paths of other types, e.g., s.field, heap and globals.
 struct AccessPath {
-  const clang::ValueDecl *D;
+private:
+  // An access path can be:
+  // - ValueDecl * , to represent the storage location corresponding to the
+  //   variable declared in ValueDecl.
+  // - MaterializeTemporaryExpr * , to represent the storage location of the
+  //   temporary object materialized via this MaterializeTemporaryExpr.
+  const llvm::PointerUnion<const clang::ValueDecl *,
+                           const clang::MaterializeTemporaryExpr *>
+      P;
 
-  AccessPath(const clang::ValueDecl *D) : D(D) {}
+public:
+  AccessPath(const clang::ValueDecl *D) : P(D) {}
+  AccessPath(const clang::MaterializeTemporaryExpr *MTE) : P(MTE) {}
+
+  const clang::ValueDecl *getAsValueDecl() const {
+    return P.dyn_cast<const clang::ValueDecl *>();
+  }
+
+  const clang::MaterializeTemporaryExpr *getAsMaterializeTemporaryExpr() const {
+    return P.dyn_cast<const clang::MaterializeTemporaryExpr *>();
+  }
 };
 
 /// An abstract base class for a single "Loan" which represents lending a
@@ -81,10 +101,11 @@ public:
   static bool classof(const Loan *L) { return L->getKind() == Kind::Path; }
 };
 
-/// A placeholder loan held by a function parameter, representing a borrow from
-/// the caller's scope.
+/// A placeholder loan held by a function parameter or an implicit 'this'
+/// object, representing a borrow from the caller's scope.
 ///
-/// Created at function entry for each pointer or reference parameter with an
+/// Created at function entry for each pointer or reference parameter or for
+/// the implicit 'this' parameter of instance methods, with an
 /// origin. Unlike PathLoan, placeholder loans:
 /// - Have no IssueExpr (created at function entry, not at a borrow site)
 /// - Have no AccessPath (the borrowed object is not visible to the function)
@@ -92,17 +113,27 @@ public:
 ///   invalidations (e.g., vector::push_back)
 ///
 /// When a placeholder loan escapes the function (e.g., via return), it
-/// indicates the parameter should be marked [[clang::lifetimebound]], enabling
-/// lifetime annotation suggestions.
+/// indicates the parameter or method should be marked [[clang::lifetimebound]],
+/// enabling lifetime annotation suggestions.
 class PlaceholderLoan : public Loan {
-  /// The function parameter that holds this placeholder loan.
-  const ParmVarDecl *PVD;
+  /// The function parameter or method (representing 'this') that holds this
+  /// placeholder loan.
+  llvm::PointerUnion<const ParmVarDecl *, const CXXMethodDecl *> ParamOrMethod;
 
 public:
   PlaceholderLoan(LoanID ID, const ParmVarDecl *PVD)
-      : Loan(Kind::Placeholder, ID), PVD(PVD) {}
+      : Loan(Kind::Placeholder, ID), ParamOrMethod(PVD) {}
 
-  const ParmVarDecl *getParmVarDecl() const { return PVD; }
+  PlaceholderLoan(LoanID ID, const CXXMethodDecl *MD)
+      : Loan(Kind::Placeholder, ID), ParamOrMethod(MD) {}
+
+  const ParmVarDecl *getParmVarDecl() const {
+    return ParamOrMethod.dyn_cast<const ParmVarDecl *>();
+  }
+
+  const CXXMethodDecl *getMethodDecl() const {
+    return ParamOrMethod.dyn_cast<const CXXMethodDecl *>();
+  }
 
   void dump(llvm::raw_ostream &OS) const override;
 

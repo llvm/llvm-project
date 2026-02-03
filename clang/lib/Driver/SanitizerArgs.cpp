@@ -408,6 +408,8 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
                                 // unused-argument diagnostics.
   SanitizerMask DiagnosedKinds; // All Kinds we have diagnosed up to now.
                                 // Used to deduplicate diagnostics.
+  SanitizerMask IgnoreForUbsanFeature; // Accumulated set of values passed to
+                                       // `-fsanitize-ignore-for-ubsan-feature`.
   SanitizerMask Kinds;
   const SanitizerMask Supported = setGroupBits(TC.getSupportedSanitizers());
 
@@ -612,6 +614,11 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
       Arg->claim();
       SanitizerMask Remove = parseArgValues(D, Arg, DiagnoseErrors);
       AllRemove |= expandSanitizerGroups(Remove);
+    } else if (Arg->getOption().matches(
+                   options::OPT_fsanitize_ignore_for_ubsan_feature_EQ)) {
+      Arg->claim();
+      IgnoreForUbsanFeature |=
+          expandSanitizerGroups(parseArgValues(D, Arg, DiagnoseErrors));
     }
   }
 
@@ -1212,6 +1219,7 @@ SanitizerArgs::SanitizerArgs(const ToolChain &TC,
   MergeHandlers.Mask |= MergeKinds;
 
   AnnotateDebugInfo.Mask |= AnnotateDebugInfoKinds;
+  SuppressUBSanFeature.Mask |= IgnoreForUbsanFeature;
 
   // Zero out SkipHotCutoffs for unused sanitizers
   SkipHotCutoffs.clear(~Sanitizers.Mask);
@@ -1391,6 +1399,11 @@ void SanitizerArgs::addArgs(const ToolChain &TC, const llvm::opt::ArgList &Args,
   if (Sanitizers.empty())
     return;
   CmdArgs.push_back(Args.MakeArgString("-fsanitize=" + toString(Sanitizers)));
+
+  if (!SuppressUBSanFeature.empty())
+    CmdArgs.push_back(
+        Args.MakeArgString("-fsanitize-ignore-for-ubsan-feature=" +
+                           toString(SuppressUBSanFeature)));
 
   if (!RecoverableSanitizers.empty())
     CmdArgs.push_back(Args.MakeArgString("-fsanitize-recover=" +
@@ -1615,7 +1628,9 @@ SanitizerMask parseArgValues(const Driver &D, const llvm::opt::Arg *A,
        A->getOption().matches(options::OPT_fno_sanitize_merge_handlers_EQ) ||
        A->getOption().matches(options::OPT_fsanitize_annotate_debug_info_EQ) ||
        A->getOption().matches(
-           options::OPT_fno_sanitize_annotate_debug_info_EQ)) &&
+           options::OPT_fno_sanitize_annotate_debug_info_EQ) ||
+       A->getOption().matches(
+           options::OPT_fsanitize_ignore_for_ubsan_feature_EQ)) &&
       "Invalid argument in parseArgValues!");
   SanitizerMask Kinds;
   for (int i = 0, n = A->getNumValues(); i != n; ++i) {

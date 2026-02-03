@@ -119,6 +119,10 @@ bool CodeGenTarget::getAllowRegisterRenaming() const {
   return TargetRec->getValueAsInt("AllowRegisterRenaming");
 }
 
+bool CodeGenTarget::getRegistersAreIntervals() const {
+  return TargetRec->getValueAsInt("RegistersAreIntervals");
+}
+
 /// getAsmParser - Return the AssemblyParser definition for this target.
 ///
 const Record *CodeGenTarget::getAsmParser() const {
@@ -162,7 +166,8 @@ const Record *CodeGenTarget::getAsmWriter() const {
 
 CodeGenRegBank &CodeGenTarget::getRegBank() const {
   if (!RegBank)
-    RegBank = std::make_unique<CodeGenRegBank>(Records, getHwModes());
+    RegBank = std::make_unique<CodeGenRegBank>(Records, getHwModes(),
+                                               getRegistersAreIntervals());
   return *RegBank;
 }
 

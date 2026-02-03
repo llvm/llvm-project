@@ -1042,6 +1042,38 @@ struct TestUndoPropertiesModification : public ConversionPattern {
   }
 };
 
+/// A pattern that tests the undo mechanism for a block move if the block was
+/// moved to a detached region. The block is first moved to a detached region
+/// and then a new operation is created with that region. During rollback, first
+/// the `CreateOperationRewrite` is rolled back, causing the block to be
+/// orphaned, i.e., removed from the region. Only then the `MoveBlockRewrite` is
+/// rolled back, which now can't access the region anymore. The test ensures
+/// that the rollback still works and doesn't try to access the orphaned block's
+/// containing region, leading to segfault.
+struct TestUndoMoveDetachedBlock : public ConversionPattern {
+  TestUndoMoveDetachedBlock(MLIRContext *ctx)
+      : ConversionPattern("test.undo_detached_block_move", /*benefit=*/1, ctx) {
+  }
+
+  LogicalResult
+  matchAndRewrite(Operation *op, ArrayRef<Value> operands,
+                  ConversionPatternRewriter &rewriter) const final {
+    if (op->getNumRegions() != 1)
+      return failure();
+    // Create an illegal operation to trigger rollback.
+    OperationState state(op->getLoc(), "test.illegal_op_created_after_move",
+                         operands, op->getResultTypes(), {}, BlockRange());
+    // Create detached region.
+    Region *newRegion = state.addRegion();
+    // Move blocks to the still detached region
+    rewriter.inlineRegionBefore(op->getRegion(0), *newRegion,
+                                newRegion->begin());
+    Operation *newOp = rewriter.create(state);
+    rewriter.replaceOp(op, newOp->getResults());
+    return success();
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // Type-Conversion Rewrite Testing
 //===----------------------------------------------------------------------===//
@@ -1548,7 +1580,7 @@ struct TestLegalizePatternDriver
         TestUpdateConsumerType, TestNonRootReplacement,
         TestBoundedRecursiveRewrite, TestNestedOpCreationUndoRewrite,
         TestReplaceEraseOp, TestCreateUnregisteredOp, TestUndoMoveOpBefore,
-        TestUndoPropertiesModification, TestEraseOp,
+        TestUndoPropertiesModification, TestUndoMoveDetachedBlock, TestEraseOp,
         TestReplaceWithValidProducer, TestReplaceWithValidConsumer,
         TestRepetitive1ToNConsumer>(&getContext());
     patterns.add<TestDropOpSignatureConversion, TestDropAndReplaceInvalidOp,
@@ -2092,7 +2124,7 @@ struct TestTypeConversionDriver
           }
 
           conversionCallStack.push_back(type);
-          auto popConversionCallStack = llvm::make_scope_exit(
+          llvm::scope_exit popConversionCallStack(
               [&conversionCallStack]() { conversionCallStack.pop_back(); });
 
           // If the type is on the call stack more than once (it is there at

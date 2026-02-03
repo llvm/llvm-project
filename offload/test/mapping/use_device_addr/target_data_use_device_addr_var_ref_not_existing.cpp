@@ -6,15 +6,6 @@
 // Test for various cases of use_device_addr on a reference variable.
 // The corresponding data is not previously mapped.
 
-// Note that this tests for the current behavior wherein if a lookup fails,
-// the runtime returns nullptr, instead of the original host-address.
-// That was compatible with OpenMP 5.0, where it was a user error if
-// corresponding storage didn't exist, but with 5.1+, the runtime needs to
-// return the host address, as it needs to assume that the host-address is
-// device-accessible, as the user has guaranteed it.
-// Once the runtime returns the original host-address when the lookup fails, the
-// test will need to be updated.
-
 int g_ptee;
 int &g = g_ptee;
 
@@ -43,7 +34,7 @@ struct S {
       void *mapped_ptr_g =
           omp_get_mapped_ptr(original_addr_g, omp_get_default_device());
       printf("A: %d %d %d\n", mapped_ptr_g == nullptr,
-             mapped_ptr_g != original_addr_g, (void *)&g == nullptr);
+             mapped_ptr_g != original_addr_g, &g == original_addr_g);
     }
 
 // (B) Lookup should succeed.
@@ -63,7 +54,7 @@ struct S {
       void *mapped_ptr_h =
           omp_get_mapped_ptr(original_addr_h, omp_get_default_device());
       printf("C: %d %d %d\n", mapped_ptr_h == nullptr,
-             mapped_ptr_h != original_addr_h, (void *)&h == nullptr);
+             mapped_ptr_h != original_addr_h, &h == original_addr_h);
     }
 
 // (D) Lookup should succeed.
@@ -83,7 +74,7 @@ struct S {
       void *mapped_ptr_ph =
           omp_get_mapped_ptr(original_addr_ph, omp_get_default_device());
       printf("E: %d %d %d\n", mapped_ptr_ph == nullptr,
-             mapped_ptr_ph != original_addr_ph, (void *)&ph == nullptr);
+             mapped_ptr_ph != original_addr_ph, &ph == original_addr_ph);
     }
 
 // (F) Lookup should succeed.
@@ -104,7 +95,7 @@ struct S {
       void *mapped_ptr_ph =
           omp_get_mapped_ptr(original_addr_ph, omp_get_default_device());
       printf("G: %d %d %d\n", mapped_ptr_ph == nullptr,
-             mapped_ptr_ph != original_addr_ph, (void *)&ph == nullptr);
+             mapped_ptr_ph != original_addr_ph, &ph == original_addr_ph);
     }
 
 // (H) Maps both pointee and pointer. Lookup for pointer should succeed.
@@ -124,7 +115,7 @@ struct S {
       void *mapped_ptr_paa =
           omp_get_mapped_ptr(original_addr_paa, omp_get_default_device());
       printf("I: %d %d %d\n", mapped_ptr_paa == nullptr,
-             mapped_ptr_paa != original_addr_paa, (void *)&paa == nullptr);
+             mapped_ptr_paa != original_addr_paa, &paa == original_addr_paa);
     }
 
 // (J) Maps pointee only, but use_device_addr operand is pointer.
@@ -135,7 +126,7 @@ struct S {
       void *mapped_ptr_paa =
           omp_get_mapped_ptr(original_addr_paa, omp_get_default_device());
       printf("J: %d %d %d\n", mapped_ptr_paa == nullptr,
-             mapped_ptr_paa != original_addr_paa, (void *)&paa == nullptr);
+             mapped_ptr_paa != original_addr_paa, &paa == original_addr_paa);
     }
 
 // (K) Lookup should succeed.

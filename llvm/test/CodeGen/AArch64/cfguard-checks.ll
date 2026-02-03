@@ -40,8 +40,7 @@ entry:
 	; CHECK:        adrp x8, target_func
 	; CHECK:        add x8, x8, :lo12:target_func
 	; CHECK:        adrp x9, __guard_check_icall_fptr
-	; CHECK:        add x9, x9, :lo12:__guard_check_icall_fptr
-	; CHECK:        ldr x9, [x9]
+	; CHECK:        ldr x9, [x9, :lo12:__guard_check_icall_fptr]
 	; CHECK:        mov x15, x8
 	; CHECK:        blr x9
 	; CHECK-NEXT:   blr x8

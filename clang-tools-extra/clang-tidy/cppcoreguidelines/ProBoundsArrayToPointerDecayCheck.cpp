@@ -57,6 +57,7 @@ void ProBoundsArrayToPointerDecayCheck::registerMatchers(MatchFinder *Finder) {
       traverse(
           TK_AsIs,
           implicitCastExpr(
+              hasCastKind(CK_ArrayToPointerDecay),
               unless(hasParent(arraySubscriptExpr())),
               unless(hasSourceExpression(predefinedExpr())),
               unless(hasParentIgnoringImpCasts(explicitCastExpr())),
@@ -72,9 +73,6 @@ void ProBoundsArrayToPointerDecayCheck::registerMatchers(MatchFinder *Finder) {
 void ProBoundsArrayToPointerDecayCheck::check(
     const MatchFinder::MatchResult &Result) {
   const auto *MatchedCast = Result.Nodes.getNodeAs<ImplicitCastExpr>("cast");
-  if (MatchedCast->getCastKind() != CK_ArrayToPointerDecay)
-    return;
-
   diag(MatchedCast->getExprLoc(), "do not implicitly decay an array into a "
                                   "pointer; consider using gsl::array_view or "
                                   "an explicit cast instead");

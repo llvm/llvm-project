@@ -60,6 +60,7 @@ enum UniformityLLTOpPredicateID {
   // pointers
   P0,
   P1,
+  P2,
   P3,
   P4,
   P5,
@@ -70,6 +71,7 @@ enum UniformityLLTOpPredicateID {
 
   UniP0,
   UniP1,
+  UniP2,
   UniP3,
   UniP4,
   UniP5,
@@ -80,6 +82,7 @@ enum UniformityLLTOpPredicateID {
 
   DivP0,
   DivP1,
+  DivP2,
   DivP3,
   DivP4,
   DivP5,
@@ -90,14 +93,17 @@ enum UniformityLLTOpPredicateID {
   // vectors
   V2S16,
   V2S32,
+  V2S64,
   V3S32,
   V4S32,
 
   UniV2S16,
   UniV2S32,
+  UniV2S64,
 
   DivV2S16,
   DivV2S32,
+  DivV2S64,
 
   // B types
   B32,
@@ -113,6 +119,7 @@ enum UniformityLLTOpPredicateID {
   UniB128,
   UniB256,
   UniB512,
+  UniBRC,
 
   DivB32,
   DivB64,
@@ -120,6 +127,7 @@ enum UniformityLLTOpPredicateID {
   DivB128,
   DivB256,
   DivB512,
+  DivBRC
 };
 
 // How to apply register bank on register operand.
@@ -140,6 +148,7 @@ enum RegBankLLTMappingApplyID {
   Sgpr128,
   SgprP0,
   SgprP1,
+  SgprP2,
   SgprP3,
   SgprP4,
   SgprP5,
@@ -164,6 +173,7 @@ enum RegBankLLTMappingApplyID {
   Vgpr128,
   VgprP0,
   VgprP1,
+  VgprP2,
   VgprP3,
   VgprP4,
   VgprP5,
@@ -172,6 +182,7 @@ enum RegBankLLTMappingApplyID {
   VgprPtr128,
   VgprV2S16,
   VgprV2S32,
+  VgprV3S32,
   VgprB32,
   VgprB64,
   VgprB96,
@@ -179,6 +190,7 @@ enum RegBankLLTMappingApplyID {
   VgprB256,
   VgprB512,
   VgprV4S32,
+  VgprV2S64,
 
   // Dst only modifiers: read-any-lane and truncs
   UniInVcc,
@@ -188,6 +200,7 @@ enum RegBankLLTMappingApplyID {
   UniInVgprV2S16,
   UniInVgprV2S32,
   UniInVgprV4S32,
+  UniInVgprV2S64,
   UniInVgprB32,
   UniInVgprB64,
   UniInVgprB96,
@@ -206,6 +219,7 @@ enum RegBankLLTMappingApplyID {
   Sgpr32AExtBoolInReg,
   Sgpr32SExt,
   Sgpr32ZExt,
+  Vgpr32AExt,
   Vgpr32SExt,
   Vgpr32ZExt,
 };
@@ -224,7 +238,11 @@ enum LoweringMethodID {
   S_BFE,
   V_BFE,
   VgprToVccCopy,
+  UniMAD64,
+  UniMul64,
+  DivSMulToMAD,
   SplitTo32,
+  SplitTo32Mul,
   ScalarizeToS16,
   SplitTo32Select,
   SplitTo32SExtInReg,
@@ -233,7 +251,10 @@ enum LoweringMethodID {
   SplitLoad,
   WidenLoad,
   WidenMMOToS32,
-  UnpackAExt
+  UnpackAExt,
+  VerifyAllSgpr,
+  ApplyAllVgpr,
+  UnmergeToShiftTrunc
 };
 
 enum FastRulesTypes {
@@ -307,7 +328,7 @@ private:
 class RegBankLegalizeRules {
   const GCNSubtarget *ST;
   MachineRegisterInfo *MRI;
-  // Separate maps for G-opcodes and instrinsics since they are in different
+  // Separate maps for G-opcodes and intrinsics since they are in different
   // enums. Multiple opcodes can share same set of rules.
   // RulesAlias = map<Opcode, KeyOpcode>
   // Rules = map<KeyOpcode, SetOfRulesForOpcode>

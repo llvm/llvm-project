@@ -3435,7 +3435,7 @@ bb:
   call void @llvm.amdgcn.init.exec(i64 -1)
   call void @llvm.amdgcn.raw.buffer.store.v4f32(<4 x float> zeroinitializer, <4 x i32> zeroinitializer, i32 0, i32 0, i32 0)
   %i = call i32 @llvm.amdgcn.wqm.i32(i32 0)
-  store i32 %i, i32 addrspace(3)* null, align 4
+  store i32 %i, ptr addrspace(3) null, align 4
   ret void
 }
 

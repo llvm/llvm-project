@@ -196,6 +196,14 @@
     __attribute__((availability(bridgeos, strict, introduced = 6.0)))                                             \
     __attribute__((availability(driverkit, strict, introduced = 21.3)))
 
+#  if (defined(__ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__)  && __ENVIRONMENT_MAC_OS_X_VERSION_MIN_REQUIRED__  < 101300) || \
+      (defined(__ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_IPHONE_OS_VERSION_MIN_REQUIRED__ < 150000) || \
+      (defined(__ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__)     && __ENVIRONMENT_TV_OS_VERSION_MIN_REQUIRED__     < 150000) || \
+      (defined(__ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__)  && __ENVIRONMENT_WATCH_OS_VERSION_MIN_REQUIRED__  < 70000)  || \
+      (defined(__ENVIRONMENT_DRIVERKIT_VERSION_MIN_REQUIRED__) && __ENVIRONMENT_DRIVERKIT_VERSION_MIN_REQUIRED__ < 190000)
+#  warning "The selected platform is no longer supported by libc++."
+#  endif
+
 #else
 
 // ...New vendors can add availability markup here...
@@ -287,13 +295,11 @@
 #define _LIBCPP_AVAILABILITY_HAS_BAD_FUNCTION_CALL_GOOD_WHAT_MESSAGE _LIBCPP_INTRODUCED_IN_LLVM_21
 // No attribute, since we've had bad_function_call::what() in the headers before
 
-// Define availability attributes that depend on both
-// _LIBCPP_HAS_EXCEPTIONS and _LIBCPP_HAS_RTTI.
-#if !_LIBCPP_HAS_EXCEPTIONS || !_LIBCPP_HAS_RTTI
-#  undef _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
-#  undef _LIBCPP_AVAILABILITY_INIT_PRIMARY_EXCEPTION
-#  define _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION 0
-#  define _LIBCPP_AVAILABILITY_INIT_PRIMARY_EXCEPTION
-#endif
+// Only define a bunch of symbols in the dylib if we need to be compatible with LLVM 7 headers or older
+#  if defined(_LIBCPP_BUILDING_LIBRARY) && _LIBCPP_AVAILABILITY_MINIMUM_HEADER_VERSION < 8
+#    define _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8
+#  else
+#    define _LIBCPP_HIDE_FROM_ABI_SINCE_LLVM8 _LIBCPP_HIDE_FROM_ABI
+#  endif
 
 #endif // _LIBCPP___CONFIGURATION_AVAILABILITY_H

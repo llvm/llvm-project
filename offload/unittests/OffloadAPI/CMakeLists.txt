@@ -29,7 +29,8 @@ add_offload_unittest("memory"
     memory/olMemFree.cpp
     memory/olMemcpy.cpp
     memory/olGetMemInfo.cpp
-    memory/olGetMemInfoSize.cpp)
+    memory/olGetMemInfoSize.cpp
+    memory/olMemRegister.cpp)
 
 add_offload_unittest("platform"
     platform/olGetPlatformInfo.cpp
@@ -47,7 +48,8 @@ add_offload_unittest("queue"
     queue/olGetQueueInfo.cpp
     queue/olGetQueueInfoSize.cpp
     queue/olWaitEvents.cpp
-    queue/olLaunchHostFunction.cpp)
+    queue/olLaunchHostFunction.cpp
+    queue/olQueryQueue.cpp)
 
 add_offload_unittest("symbol"
     symbol/olGetSymbol.cpp

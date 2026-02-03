@@ -2063,6 +2063,11 @@ public:
     return buildInstr(TargetOpcode::G_CTTZ_ZERO_UNDEF, {Dst}, {Src0});
   }
 
+  /// Build and insert \p Res = G_CTLS \p Op0, \p Src0
+  MachineInstrBuilder buildCTLS(const DstOp &Dst, const SrcOp &Src0) {
+    return buildInstr(TargetOpcode::G_CTLS, {Dst}, {Src0});
+  }
+
   /// Build and insert \p Dst = G_BSWAP \p Src0
   MachineInstrBuilder buildBSwap(const DstOp &Dst, const SrcOp &Src0) {
     return buildInstr(TargetOpcode::G_BSWAP, {Dst}, {Src0});

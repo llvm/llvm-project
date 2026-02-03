@@ -643,20 +643,24 @@ struct LoadOps {
 // (ZExt(L1) << shift1) | (ZExt(L2) << shift2) -> ZExt(L3) << shift1
 // (ZExt(L1) << shift1) | ZExt(L2) -> ZExt(L3)
 static bool foldLoadsRecursive(Value *V, LoadOps &LOps, const DataLayout &DL,
-                               AliasAnalysis &AA) {
+                               AliasAnalysis &AA, bool IsRoot = false) {
   uint64_t ShAmt2;
   Value *X;
   Instruction *L1, *L2;
 
-  // Go to the last node with loads.
-  if (match(V,
-            m_OneUse(m_c_Or(m_Value(X), m_OneUse(m_ShlOrSelf(
-                                            m_OneUse(m_ZExt(m_Instruction(L2))),
-                                            ShAmt2)))))) {
-    if (!foldLoadsRecursive(X, LOps, DL, AA) && LOps.FoundRoot)
-      // Avoid Partial chain merge.
-      return false;
-  } else
+  // For the root instruction, allow multiple uses since the final result
+  // may legitimately be used in multiple places. For intermediate values,
+  // require single use to avoid creating duplicate loads.
+  if (!IsRoot && !V->hasOneUse())
+    return false;
+
+  if (!match(V, m_c_Or(m_Value(X),
+                       m_OneUse(m_ShlOrSelf(m_OneUse(m_ZExt(m_Instruction(L2))),
+                                            ShAmt2)))))
+    return false;
+
+  if (!foldLoadsRecursive(X, LOps, DL, AA, /*IsRoot=*/false) && LOps.FoundRoot)
+    // Avoid Partial chain merge.
     return false;
 
   // Check if the pattern has loads
@@ -795,7 +799,7 @@ static bool foldConsecutiveLoads(Instruction &I, const DataLayout &DL,
     return false;
 
   LoadOps LOps;
-  if (!foldLoadsRecursive(&I, LOps, DL, AA) || !LOps.FoundRoot)
+  if (!foldLoadsRecursive(&I, LOps, DL, AA, /*IsRoot=*/true) || !LOps.FoundRoot)
     return false;
 
   IRBuilder<> Builder(&I);
@@ -1401,7 +1405,8 @@ static bool foldMemChr(CallInst *Call, DomTreeUpdater *DTU,
 
   SmallPtrSet<ConstantInt *, 4> Cases;
   for (uint64_t I = 0; I < N; ++I) {
-    ConstantInt *CaseVal = ConstantInt::get(ByteTy, Str[I]);
+    ConstantInt *CaseVal =
+        ConstantInt::get(ByteTy, static_cast<unsigned char>(Str[I]));
     if (!Cases.insert(CaseVal).second)
       continue;
 

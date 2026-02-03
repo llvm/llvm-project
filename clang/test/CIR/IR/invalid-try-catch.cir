@@ -59,7 +59,7 @@ cir.func dso_local @invalid_catch_empty_block() {
 module {
 
 cir.func dso_local @invalid_catch_not_terminated() {
-  %a = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init]
+  %a = cir.alloca !s32i, !cir.ptr<!s32i>, ["a", init] {alignment = 4 : i64}
   cir.scope {
     cir.try {
       cir.yield

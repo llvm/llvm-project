@@ -62,7 +62,6 @@ define <vscale x 4 x i32> @sti64ldi32(ptr nocapture %P, <vscale x 2 x i64> %v) {
 ; CHECK-LABEL: sti64ldi32:
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    str z0, [x0, #1, mul vl]
-; CHECK-NEXT:    ldr z0, [x0, #1, mul vl]
 ; CHECK-NEXT:    ret
 entry:
   %0 = bitcast ptr %P to ptr

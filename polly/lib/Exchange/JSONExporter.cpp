@@ -542,17 +542,6 @@ static bool areArraysEqual(ScopArrayInfo *SAI, const json::Object &Array) {
   if (SAI->getName() != *Array.getString("name"))
     return false;
 
-  if (SAI->getNumberOfDimensions() != Array.getArray("sizes")->size())
-    return false;
-
-  for (unsigned i = 1; i < Array.getArray("sizes")->size(); i++) {
-    SAI->getDimensionSize(i)->print(RawStringOstream);
-    const json::Array &SizesArray = *Array.getArray("sizes");
-    if (Buffer != SizesArray[i].getAsString().value())
-      return false;
-    Buffer.clear();
-  }
-
   // Check if key 'type' differs from the current one or is not valid.
   SAI->getElementType()->print(RawStringOstream);
   if (Buffer != Array.getString("type").value()) {
@@ -616,10 +605,45 @@ static bool importArrays(Scop &S, const json::Object &JScop) {
       errs() << "Not enough array entries in JScop file.\n";
       return false;
     }
-    if (!areArraysEqual(SAI, *Arrays[ArrayIdx].getAsObject())) {
+    const json::Object &Array = *Arrays[ArrayIdx].getAsObject();
+    if (!areArraysEqual(SAI, Array)) {
       errs() << "No match for array '" << SAI->getName() << "' in JScop.\n";
       return false;
     }
+
+    auto *DimSizeType = Type::getInt64Ty(S.getSE()->getContext());
+    const json::Array &SizesArray = *Array.getArray("sizes");
+
+    SmallVector<const SCEV *> SCEVSizes;
+    for (unsigned i = 0; i < SizesArray.size(); i++) {
+      std::string StrSize = SizesArray[i].getAsString()->str();
+      if (StrSize == "*") {
+        if (i != 0) {
+          errs() << "undefined size only allowed for outermost dimension\n";
+          return false;
+        }
+        SCEVSizes.push_back(nullptr);
+        continue;
+      }
+
+      int Size = std::stoi(StrSize);
+
+      // Check if the size if positive.
+      if (Size <= 0) {
+        errs() << "The size at index " << i << " is =< 0.\n";
+        return false;
+      }
+
+      const SCEV *ScevSize = S.getSE()->getConstant(DimSizeType, Size);
+      SCEVSizes.push_back(ScevSize);
+    }
+
+    // TODO: If changing the dimensionality of an array, all its accesses must
+    //       be updated to that dimensionality. Currently there is no check
+    //       whether all accesses are really updated.
+    if (!SAI->updateSizes(SCEVSizes, /*CheckConsistency=*/false))
+      return false;
+
     ArrayIdx++;
   }
 

@@ -713,7 +713,7 @@ void HexagonTargetLowering::AdjustHvxInstrPostInstrSelection(
       Register SplatV = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
       const MachineOperand &InpOp = MI.getOperand(1);
       BuildMI(MB, At, DL, TII.get(Hexagon::S2_vsplatrb), SplatV)
-          .addReg(InpOp.getReg(), 0, InpOp.getSubReg());
+          .addReg(InpOp.getReg(), {}, InpOp.getSubReg());
       Register OutV = MI.getOperand(0).getReg();
       BuildMI(MB, At, DL, TII.get(Hexagon::V6_lvsplatw), OutV)
           .addReg(SplatV);
@@ -756,8 +756,8 @@ void HexagonTargetLowering::AdjustHvxInstrPostInstrSelection(
       Register SplatV = MRI.createVirtualRegister(&Hexagon::IntRegsRegClass);
       const MachineOperand &InpOp = MI.getOperand(1);
       BuildMI(MB, At, DL, TII.get(Hexagon::A2_combine_ll), SplatV)
-          .addReg(InpOp.getReg(), 0, InpOp.getSubReg())
-          .addReg(InpOp.getReg(), 0, InpOp.getSubReg());
+          .addReg(InpOp.getReg(), {}, InpOp.getSubReg())
+          .addReg(InpOp.getReg(), {}, InpOp.getSubReg());
       Register OutV = MI.getOperand(0).getReg();
       BuildMI(MB, At, DL, TII.get(Hexagon::V6_lvsplatw), OutV).addReg(SplatV);
     }
@@ -910,8 +910,9 @@ HexagonTargetLowering::buildHvxVectorReg(ArrayRef<SDValue> Values,
                             (Constant**)Consts.end());
     Constant *CV = ConstantVector::get(Tmp);
     Align Alignment(HwLen);
-    SDValue CP =
-        LowerConstantPool(DAG.getConstantPool(CV, VecTy, Alignment), DAG);
+    SDValue CP = LowerConstantPool(
+        DAG.getConstantPool(CV, getPointerTy(DAG.getDataLayout()), Alignment),
+        DAG);
     return DAG.getLoad(VecTy, dl, DAG.getEntryNode(), CP,
                        MachinePointerInfo::getConstantPool(MF), Alignment);
   }
@@ -1623,8 +1624,9 @@ HexagonTargetLowering::compressHvxPred(SDValue VecQ, const SDLoc &dl,
   }
   Constant *CV = ConstantVector::get(Tmp);
   Align Alignment(HwLen);
-  SDValue CP =
-      LowerConstantPool(DAG.getConstantPool(CV, ByteTy, Alignment), DAG);
+  SDValue CP = LowerConstantPool(
+      DAG.getConstantPool(CV, getPointerTy(DAG.getDataLayout()), Alignment),
+      DAG);
   SDValue Bytes =
       DAG.getLoad(ByteTy, dl, DAG.getEntryNode(), CP,
                   MachinePointerInfo::getConstantPool(MF), Alignment);

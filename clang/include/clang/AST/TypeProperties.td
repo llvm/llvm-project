@@ -659,6 +659,9 @@ let Class = HLSLAttributedResourceType in {
   def : Property<"resClass", UInt32> {
     let Read = [{ static_cast<uint32_t>(node->getAttrs().ResourceClass) }];
   }
+  def : Property<"resDimension", UInt32> {
+    let Read = [{ static_cast<uint32_t>(node->getAttrs().ResourceDimension) }];
+  }
   def : Property<"isROV", Bool> {
     let Read = [{ node->getAttrs().IsROV }];
   }
@@ -675,7 +678,10 @@ let Class = HLSLAttributedResourceType in {
     let Read = [{ node->getContainedType() }];
   }
   def : Creator<[{
-    HLSLAttributedResourceType::Attributes attrs(static_cast<llvm::dxil::ResourceClass>(resClass), isROV, rawBuffer, isCounter);
+    HLSLAttributedResourceType::Attributes attrs(
+        static_cast<llvm::dxil::ResourceClass>(resClass),
+        static_cast<llvm::dxil::ResourceDimension>(resDimension), isROV,
+        rawBuffer, isCounter);
     return ctx.getHLSLAttributedResourceType(wrappedTy, containedTy, attrs);
   }]>;
 }

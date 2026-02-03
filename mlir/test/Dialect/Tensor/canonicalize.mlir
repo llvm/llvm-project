@@ -567,6 +567,23 @@ func.func @rank_reducing_slice_canonicalize(%arg0 : tensor<?x?x?xf32>, %arg1 : i
 
 // -----
 
+func.func @rank_reducing_slice_preserve_dropped_dims(
+    %arg0 : tensor<1x1x8x1xf16>, %arg1 : index) -> tensor<1x4xf16> {
+  %c0 = arith.constant 0 : index
+  %0 = tensor.extract_slice %arg0[%c0, 0, %arg1, 0] [1, 1, 4, 1] [1, 1, 1, 1]
+    : tensor<1x1x8x1xf16> to tensor<1x4xf16>
+  return %0 : tensor<1x4xf16>
+}
+// CHECK-LABEL: func @rank_reducing_slice_preserve_dropped_dims
+//  CHECK-SAME:   %[[ARG0:.+]]: tensor<1x1x8x1xf16>
+//  CHECK-SAME:   %[[ARG1:.+]]: index
+//       CHECK:   %[[SLICE:.+]] = tensor.extract_slice %[[ARG0]]
+//  CHECK-SAME:      [0, 0, %[[ARG1]], 0] [1, 1, 4, 1] [1, 1, 1, 1]
+//  CHECK-SAME:      : tensor<1x1x8x1xf16> to tensor<1x4xf16>
+//       CHECK:   return %[[SLICE]]
+
+// -----
+
 // CHECK-LABEL: func @trivial_slice
 //  CHECK-SAME:   %[[ARG0:.[a-z0-9A-Z_]+]]: tensor<4x6x16x32xi8>
 //   CHECK-NOT:   tensor.extract_slice
@@ -1264,7 +1281,7 @@ func.func @compose_collapse_of_expand_partially_dynamic(%arg0: tensor<?xf16>, %a
 //  CHECK-SAME:   %[[ORIG_D2:.[a-zA-Z0-9]+]]
 //  CHECK-SAME:   %[[ORIG_D3:.[a-zA-Z0-9]+]]
 //   CHECK-DAG:   %[[C32:.+]] = arith.constant 32
-//       CHECK:   %[[COLLAPSED_D2:.+]] = arith.muli %[[ORIG_D3]], %[[C32]]
+//       CHECK:   %[[COLLAPSED_D2:.+]] = arith.muli %[[ORIG_D3]], %[[C32]] overflow<nsw>
 //       CHECK:   %[[RESULT:.+]] = tensor.expand_shape %[[SRC]]
 //  CHECK-SAME:     [0, 1, 2]
 //  CHECK-SAME:     output_shape [8, %[[ORIG_D2]], %[[COLLAPSED_D2]]]

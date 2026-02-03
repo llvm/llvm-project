@@ -14,6 +14,7 @@
 #define FORTRAN_OPTIMIZER_OPENACC_ANALYSIS_FIROPENACCSUPPORTANALYSIS_H
 
 #include "mlir/Dialect/OpenACC/OpenACC.h"
+#include "mlir/IR/Region.h"
 #include "mlir/IR/Value.h"
 #include <string>
 
@@ -43,6 +44,8 @@ public:
 
   mlir::InFlightDiagnostic emitNYI(mlir::Location loc,
                                    const mlir::Twine &message);
+
+  bool isValidValueUse(mlir::Value v, mlir::Region &region);
 };
 
 } // namespace acc

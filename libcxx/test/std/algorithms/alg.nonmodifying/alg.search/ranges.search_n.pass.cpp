@@ -186,18 +186,50 @@ constexpr void test_iterators() {
   }
 
   { // check that the first match is returned
-    {
-      int a[] = {6, 6, 8, 6, 6, 8, 6, 6, 8};
-      auto ret = std::ranges::search_n(Iter(a), Sent(Iter(a + 9)), 2, 6);
-      assert(base(ret.begin()) == a);
-      assert(base(ret.end()) == a + 2);
+    { // Match is at the start
+      {
+        int a[]  = {6, 6, 8, 6, 6, 8, 6, 6, 8};
+        auto ret = std::ranges::search_n(Iter(a), Sent(Iter(a + 9)), 2, 6);
+        assert(base(ret.begin()) == a);
+        assert(base(ret.end()) == a + 2);
+      }
+      {
+        int a[]    = {6, 6, 8, 6, 6, 8, 6, 6, 8};
+        auto range = std::ranges::subrange(Iter(a), Sent(Iter(a + 9)));
+        auto ret   = std::ranges::search_n(range, 2, 6);
+        assert(base(ret.begin()) == a);
+        assert(base(ret.end()) == a + 2);
+      }
     }
-    {
-      int a[] = {6, 6, 8, 6, 6, 8, 6, 6, 8};
-      auto range = std::ranges::subrange(Iter(a), Sent(Iter(a + 9)));
-      auto ret = std::ranges::search_n(range, 2, 6);
-      assert(base(ret.begin()) == a);
-      assert(base(ret.end()) == a + 2);
+    { // Match is in the middle
+      {
+        int a[]  = {6, 8, 8, 6, 6, 8, 6, 6, 8};
+        auto ret = std::ranges::search_n(Iter(a), Sent(Iter(a + 9)), 2, 6);
+        assert(base(ret.begin()) == a + 3);
+        assert(base(ret.end()) == a + 5);
+      }
+      {
+        int a[]    = {6, 8, 8, 6, 6, 8, 6, 6, 8};
+        auto range = std::ranges::subrange(Iter(a), Sent(Iter(a + 9)));
+        auto ret   = std::ranges::search_n(range, 2, 6);
+        assert(base(ret.begin()) == a + 3);
+        assert(base(ret.end()) == a + 5);
+      }
+    }
+    { // Match is at the end
+      {
+        int a[]  = {6, 6, 8, 6, 6, 8, 6, 6, 6};
+        auto ret = std::ranges::search_n(Iter(a), Sent(Iter(a + 9)), 3, 6);
+        assert(base(ret.begin()) == a + 6);
+        assert(base(ret.end()) == a + 9);
+      }
+      {
+        int a[]    = {6, 6, 8, 6, 6, 8, 6, 6, 6};
+        auto range = std::ranges::subrange(Iter(a), Sent(Iter(a + 9)));
+        auto ret   = std::ranges::search_n(range, 3, 6);
+        assert(base(ret.begin()) == a + 6);
+        assert(base(ret.end()) == a + 9);
+      }
     }
   }
 

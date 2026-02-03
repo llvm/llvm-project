@@ -203,6 +203,8 @@ class ProfiledBinary {
   std::string Path;
   // Path of the debug info binary.
   std::string DebugBinaryPath;
+  // Path of the pseudo probe binary, either Path or DebugBinaryPath if present.
+  StringRef PseudoProbeBinPath;
   // The target triple.
   Triple TheTriple;
   // Path of symbolizer path which should be pointed to binary with debug info.
@@ -319,8 +321,6 @@ class ProfiledBinary {
   // Function name to probe frame map for top-level outlined functions.
   StringMap<MCDecodedPseudoProbeInlineTree *> TopLevelProbeFrameMap;
 
-  bool UsePseudoProbes = false;
-
   bool UseFSDiscriminator = false;
 
   // Whether we need to symbolize all instructions to get function context size.
@@ -355,7 +355,8 @@ class ProfiledBinary {
   void setPreferredTextSegmentAddresses(const object::COFFObjectFile *Obj,
                                         StringRef FileName);
 
-  void checkPseudoProbe(const object::ObjectFile *Obj);
+  // Return true if pseudo probe in Obj is usable.
+  bool checkPseudoProbe(const object::ObjectFile *Obj, StringRef ObjPath);
 
   void decodePseudoProbe(const object::ObjectFile *Obj);
 
@@ -482,7 +483,7 @@ public:
 
   size_t getCodeAddrVecSize() const { return CodeAddressVec.size(); }
 
-  bool usePseudoProbes() const { return UsePseudoProbes; }
+  bool usePseudoProbes() const { return !PseudoProbeBinPath.empty(); }
   bool useFSDiscriminator() const { return UseFSDiscriminator; }
   bool isKernel() const { return IsKernel; }
 

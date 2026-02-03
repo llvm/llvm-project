@@ -124,67 +124,67 @@ static void replaceOp(T op, PatternRewriter &rewriter, Value flatMemref,
                       Value offset) {
   Location loc = op->getLoc();
   llvm::TypeSwitch<Operation *>(op.getOperation())
-      .template Case<memref::AllocOp>([&](auto oper) {
+      .Case([&](memref::AllocOp oper) {
         auto newAlloc = memref::AllocOp::create(
             rewriter, loc, cast<MemRefType>(flatMemref.getType()),
             oper.getAlignmentAttr());
         castAllocResult(oper, newAlloc, loc, rewriter);
       })
-      .template Case<memref::AllocaOp>([&](auto oper) {
+      .Case([&](memref::AllocaOp oper) {
         auto newAlloca = memref::AllocaOp::create(
             rewriter, loc, cast<MemRefType>(flatMemref.getType()),
             oper.getAlignmentAttr());
         castAllocResult(oper, newAlloca, loc, rewriter);
       })
-      .template Case<memref::LoadOp>([&](auto op) {
+      .Case([&](memref::LoadOp op) {
         auto newLoad =
             memref::LoadOp::create(rewriter, loc, op->getResultTypes(),
                                    flatMemref, ValueRange{offset});
         newLoad->setAttrs(op->getAttrs());
         rewriter.replaceOp(op, newLoad.getResult());
       })
-      .template Case<memref::StoreOp>([&](auto op) {
+      .Case([&](memref::StoreOp op) {
         auto newStore =
             memref::StoreOp::create(rewriter, loc, op->getOperands().front(),
                                     flatMemref, ValueRange{offset});
         newStore->setAttrs(op->getAttrs());
         rewriter.replaceOp(op, newStore);
       })
-      .template Case<vector::LoadOp>([&](auto op) {
+      .Case([&](vector::LoadOp op) {
         auto newLoad =
             vector::LoadOp::create(rewriter, loc, op->getResultTypes(),
                                    flatMemref, ValueRange{offset});
         newLoad->setAttrs(op->getAttrs());
         rewriter.replaceOp(op, newLoad.getResult());
       })
-      .template Case<vector::StoreOp>([&](auto op) {
+      .Case([&](vector::StoreOp op) {
         auto newStore =
             vector::StoreOp::create(rewriter, loc, op->getOperands().front(),
                                     flatMemref, ValueRange{offset});
         newStore->setAttrs(op->getAttrs());
         rewriter.replaceOp(op, newStore);
       })
-      .template Case<vector::MaskedLoadOp>([&](auto op) {
+      .Case([&](vector::MaskedLoadOp op) {
         auto newMaskedLoad = vector::MaskedLoadOp::create(
             rewriter, loc, op.getType(), flatMemref, ValueRange{offset},
             op.getMask(), op.getPassThru());
         newMaskedLoad->setAttrs(op->getAttrs());
         rewriter.replaceOp(op, newMaskedLoad.getResult());
       })
-      .template Case<vector::MaskedStoreOp>([&](auto op) {
+      .Case([&](vector::MaskedStoreOp op) {
         auto newMaskedStore = vector::MaskedStoreOp::create(
             rewriter, loc, flatMemref, ValueRange{offset}, op.getMask(),
             op.getValueToStore());
         newMaskedStore->setAttrs(op->getAttrs());
         rewriter.replaceOp(op, newMaskedStore);
       })
-      .template Case<vector::TransferReadOp>([&](auto op) {
+      .Case([&](vector::TransferReadOp op) {
         auto newTransferRead = vector::TransferReadOp::create(
             rewriter, loc, op.getType(), flatMemref, ValueRange{offset},
             op.getPadding());
         rewriter.replaceOp(op, newTransferRead.getResult());
       })
-      .template Case<vector::TransferWriteOp>([&](auto op) {
+      .Case([&](vector::TransferWriteOp op) {
         auto newTransferWrite = vector::TransferWriteOp::create(
             rewriter, loc, op.getVector(), flatMemref, ValueRange{offset});
         rewriter.replaceOp(op, newTransferWrite);

@@ -161,6 +161,9 @@ def warn_drv_unsupported_diag_option_for_flang : Warning<
 def warn_drv_unsupported_option_for_processor : Warning<
   "ignoring '%0' option as it is not currently supported for processor '%1'">,
   InGroup<OptionIgnored>;
+def warn_drv_unsupported_option_for_runtime : Warning<
+  "ignoring '%0' option as it is not currently supported for runtime '%1'">,
+  InGroup<OptionIgnored>;
 def warn_drv_unsupported_openmp_library : Warning<
   "the library '%0=%1' is not supported, OpenMP will not be enabled">,
   InGroup<OptionIgnored>;
@@ -488,7 +491,7 @@ def warn_drv_deprecated_arg_ofast : Warning<
   " or '-O3' to enable only conforming optimizations">,
   InGroup<DeprecatedOFast>;
 def warn_drv_deprecated_arg_ofast_for_flang : Warning<
-  "argument '-Ofast' is deprecated; use '-O3 -ffast-math -fstack-arrays' for the same behavior,"
+  "argument '-Ofast' is deprecated; use '-O3 -ffast-math -fstack-arrays -fno-protect-parens' for the same behavior,"
   " or '-O3 -fstack-arrays' to enable only conforming optimizations">,
   InGroup<DeprecatedOFast>;
 def warn_drv_deprecated_custom : Warning<
@@ -867,9 +870,6 @@ def err_drv_loongarch_invalid_simd_option_combination : Error<
 def err_drv_loongarch_invalid_msimd_EQ : Error<
   "invalid argument '%0' to -msimd=; must be one of: none, lsx, lasx">;
 
-def err_drv_loongarch_unsupported_with_linker_relaxation : Error<
-  "%0 is unsupported with LoongArch linker relaxation (-mrelax)">;
-
 def err_drv_expand_response_file : Error<
   "failed to expand response file: %0">;
 
@@ -887,6 +887,10 @@ def warn_drv_multilib_not_available_for_target: Warning<
 def err_drv_experimental_crel : Error<
   "-Wa,--allow-experimental-crel must be specified to use -Wa,--crel. "
   "CREL is experimental and uses a non-standard section type code">;
+
+def err_drv_experimental_sframe : Error<
+  "-Wa,--allow-experimental-sframe must be specified to use -Wa,--gsframe. "
+  "SFrames are experimental and may be removed at any time without warning">;
 
 def warn_android_unversioned_fallback : Warning<
   "using unversioned Android target directory %0 for target %1; unversioned "

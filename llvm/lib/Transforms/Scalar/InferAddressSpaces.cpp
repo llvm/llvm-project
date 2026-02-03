@@ -206,6 +206,12 @@ class InferAddressSpacesImpl {
 
   bool isSafeToCastConstAddrSpace(Constant *C, unsigned NewAS) const;
 
+  Value *clonePtrMaskWithNewAddressSpace(
+      IntrinsicInst *I, unsigned NewAddrSpace,
+      const ValueToValueMapTy &ValueWithNewAddrSpace,
+      const PredicatedAddrSpaceMapTy &PredicatedAS,
+      SmallVectorImpl<const Use *> *PoisonUsesToFix) const;
+
   Value *cloneInstructionWithNewAddressSpace(
       Instruction *I, unsigned NewAddrSpace,
       const ValueToValueMapTy &ValueWithNewAddrSpace,
@@ -690,6 +696,66 @@ static Value *operandWithNewAddressSpaceOrCreatePoison(
   return PoisonValue::get(NewPtrTy);
 }
 
+// A helper function for cloneInstructionWithNewAddressSpace. Handles the
+// conversion of a ptrmask intrinsic instruction.
+Value *InferAddressSpacesImpl::clonePtrMaskWithNewAddressSpace(
+    IntrinsicInst *I, unsigned NewAddrSpace,
+    const ValueToValueMapTy &ValueWithNewAddrSpace,
+    const PredicatedAddrSpaceMapTy &PredicatedAS,
+    SmallVectorImpl<const Use *> *PoisonUsesToFix) const {
+  const Use &PtrOpUse = I->getArgOperandUse(0);
+  unsigned OldAddrSpace = PtrOpUse->getType()->getPointerAddressSpace();
+  Value *MaskOp = I->getArgOperand(1);
+  Type *MaskTy = MaskOp->getType();
+
+  KnownBits OldPtrBits{DL->getPointerSizeInBits(OldAddrSpace)};
+  KnownBits NewPtrBits{DL->getPointerSizeInBits(NewAddrSpace)};
+  if (!TTI->isNoopAddrSpaceCast(OldAddrSpace, NewAddrSpace)) {
+    std::tie(OldPtrBits, NewPtrBits) =
+        TTI->computeKnownBitsAddrSpaceCast(NewAddrSpace, *PtrOpUse.get());
+  }
+
+  // If the pointers in both addrspaces have a bitwise representation and if the
+  // representation of the new pointer is smaller (fewer bits) than the old one,
+  // check if the mask is applicable to the ptr in the new addrspace. Any
+  // masking only clearing the low bits will also apply in the new addrspace
+  // Note: checking if the mask clears high bits is not sufficient as those
+  // might have already been 0 in the old ptr.
+  if (OldPtrBits.getBitWidth() > NewPtrBits.getBitWidth()) {
+    KnownBits MaskBits =
+        computeKnownBits(MaskOp, *DL, /*AssumptionCache=*/nullptr, I);
+    // Set all unknown bits of the old ptr to 1, so that we are conservative in
+    // checking which bits are cleared by the mask.
+    OldPtrBits.One |= ~OldPtrBits.Zero;
+    // Check which bits are cleared by the mask in the old ptr.
+    KnownBits ClearedBits = KnownBits::sub(OldPtrBits, OldPtrBits & MaskBits);
+
+    // If the mask isn't applicable to the new ptr, leave the ptrmask as-is and
+    // insert an addrspacecast after it.
+    if (ClearedBits.countMaxActiveBits() > NewPtrBits.countMaxActiveBits()) {
+      std::optional<BasicBlock::iterator> InsertPoint =
+          I->getInsertionPointAfterDef();
+      assert(InsertPoint && "insertion after ptrmask should be possible");
+      Type *NewPtrType = getPtrOrVecOfPtrsWithNewAS(I->getType(), NewAddrSpace);
+      Instruction *AddrSpaceCast =
+          new AddrSpaceCastInst(I, NewPtrType, "", *InsertPoint);
+      AddrSpaceCast->setDebugLoc(I->getDebugLoc());
+      return AddrSpaceCast;
+    }
+  }
+
+  IRBuilder<> B(I);
+  if (NewPtrBits.getBitWidth() < MaskTy->getScalarSizeInBits()) {
+    MaskTy = MaskTy->getWithNewBitWidth(NewPtrBits.getBitWidth());
+    MaskOp = B.CreateTrunc(MaskOp, MaskTy);
+  }
+  Value *NewPtr = operandWithNewAddressSpaceOrCreatePoison(
+      PtrOpUse, NewAddrSpace, ValueWithNewAddrSpace, PredicatedAS,
+      PoisonUsesToFix);
+  return B.CreateIntrinsic(Intrinsic::ptrmask, {NewPtr->getType(), MaskTy},
+                           {NewPtr, MaskOp});
+}
+
 // Returns a clone of `I` with its operands converted to those specified in
 // ValueWithNewAddrSpace. Due to potential cycles in the data flow graph, an
 // operand whose address space needs to be modified might not exist in
@@ -699,9 +765,6 @@ static Value *operandWithNewAddressSpaceOrCreatePoison(
 // Note that we do not necessarily clone `I`, e.g., if it is an addrspacecast
 // from a pointer whose type already matches. Therefore, this function returns a
 // Value* instead of an Instruction*.
-//
-// This may also return nullptr in the case the instruction could not be
-// rewritten.
 Value *InferAddressSpacesImpl::cloneInstructionWithNewAddressSpace(
     Instruction *I, unsigned NewAddrSpace,
     const ValueToValueMapTy &ValueWithNewAddrSpace,
@@ -722,17 +785,8 @@ Value *InferAddressSpacesImpl::cloneInstructionWithNewAddressSpace(
     // Technically the intrinsic ID is a pointer typed argument, so specially
     // handle calls early.
     assert(II->getIntrinsicID() == Intrinsic::ptrmask);
-    Value *NewPtr = operandWithNewAddressSpaceOrCreatePoison(
-        II->getArgOperandUse(0), NewAddrSpace, ValueWithNewAddrSpace,
-        PredicatedAS, PoisonUsesToFix);
-    Value *Rewrite =
-        TTI->rewriteIntrinsicWithAddressSpace(II, II->getArgOperand(0), NewPtr);
-    if (Rewrite) {
-      assert(Rewrite != II && "cannot modify this pointer operation in place");
-      return Rewrite;
-    }
-
-    return nullptr;
+    return clonePtrMaskWithNewAddressSpace(
+        II, NewAddrSpace, ValueWithNewAddrSpace, PredicatedAS, PoisonUsesToFix);
   }
 
   unsigned AS = TTI->getAssumedAddrSpace(I);
@@ -1370,7 +1424,10 @@ bool InferAddressSpacesImpl::rewriteWithNewAddressSpaces(
 
     unsigned OperandNo = PoisonUse->getOperandNo();
     assert(isa<PoisonValue>(NewV->getOperand(OperandNo)));
-    NewV->setOperand(OperandNo, ValueWithNewAddrSpace.lookup(PoisonUse->get()));
+    WeakTrackingVH NewOp = ValueWithNewAddrSpace.lookup(PoisonUse->get());
+    assert(NewOp &&
+           "poison replacements in ValueWithNewAddrSpace shouldn't be null");
+    NewV->setOperand(OperandNo, NewOp);
   }
 
   SmallVector<Instruction *, 16> DeadInstructions;

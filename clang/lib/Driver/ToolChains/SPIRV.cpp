@@ -75,6 +75,20 @@ void SPIRV::constructAssembleCommand(Compilation &C, const Tool &T,
                                          Exec, CmdArgs, Input, Output));
 }
 
+void SPIRV::constructLLVMLinkCommand(Compilation &C, const Tool &T,
+                                     const JobAction &JA,
+                                     const InputInfo &Output,
+                                     const InputInfoList &Inputs,
+                                     const llvm::opt::ArgList &Args) {
+
+  ArgStringList LlvmLinkArgs;
+
+  for (auto Input : Inputs)
+    LlvmLinkArgs.push_back(Input.getFilename());
+
+  tools::constructLLVMLinkCommand(C, T, JA, Inputs, LlvmLinkArgs, Output, Args);
+}
+
 void SPIRV::Translator::ConstructJob(Compilation &C, const JobAction &JA,
                                      const InputInfo &Output,
                                      const InputInfoList &Inputs,
@@ -126,6 +140,10 @@ void SPIRV::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                  const InputInfoList &Inputs,
                                  const ArgList &Args,
                                  const char *LinkingOutput) const {
+  if (JA.getType() == types::TY_LLVM_BC) {
+    constructLLVMLinkCommand(C, *this, JA, Output, Inputs, Args);
+    return;
+  }
   const ToolChain &ToolChain = getToolChain();
   std::string Linker = ToolChain.GetProgramPath(getShortName());
   ArgStringList CmdArgs;
@@ -154,6 +172,9 @@ SPIRVToolChain::SPIRVToolChain(const Driver &D, const llvm::Triple &Triple,
   // TODO: Revisit need/use of --sycl-link option once SYCL toolchain is
   // available and SYCL linking support is moved there.
   NativeLLVMSupport = Args.hasArg(options::OPT_sycl_link);
+
+  // Lookup binaries into the driver directory.
+  getProgramPaths().push_back(getDriver().Dir);
 }
 
 bool SPIRVToolChain::HasNativeLLVMSupport() const { return NativeLLVMSupport; }

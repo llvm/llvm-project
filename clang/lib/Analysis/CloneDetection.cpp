@@ -13,6 +13,7 @@
 #include "clang/Analysis/CloneDetection.h"
 #include "clang/AST/Attr.h"
 #include "clang/AST/DataCollection.h"
+#include "clang/AST/StmtVisitor.h"
 #include "clang/Basic/SourceManager.h"
 #include "llvm/Support/MD5.h"
 #include "llvm/Support/Path.h"

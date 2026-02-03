@@ -45,177 +45,12 @@
 #include "lldb/API/SBProcess.h"
 #include "lldb/API/SBTarget.h"
 #include "lldb/API/SBThread.h"
+#include "lldb/lldb-enumerations.h"
 
 #include <memory>
 
 using namespace lldb;
 using namespace lldb_private;
-
-class ValueImpl {
-public:
-  ValueImpl() = default;
-
-  ValueImpl(lldb::ValueObjectSP in_valobj_sp,
-            lldb::DynamicValueType use_dynamic, bool use_synthetic,
-            const char *name = nullptr)
-      : m_use_dynamic(use_dynamic), m_use_synthetic(use_synthetic),
-        m_name(name) {
-    if (in_valobj_sp) {
-      if ((m_valobj_sp = in_valobj_sp->GetQualifiedRepresentationIfAvailable(
-               lldb::eNoDynamicValues, false))) {
-        if (!m_name.IsEmpty())
-          m_valobj_sp->SetName(m_name);
-      }
-    }
-  }
-
-  ValueImpl(const ValueImpl &rhs) = default;
-
-  ValueImpl &operator=(const ValueImpl &rhs) {
-    if (this != &rhs) {
-      m_valobj_sp = rhs.m_valobj_sp;
-      m_use_dynamic = rhs.m_use_dynamic;
-      m_use_synthetic = rhs.m_use_synthetic;
-      m_name = rhs.m_name;
-    }
-    return *this;
-  }
-
-  bool IsValid() {
-    if (m_valobj_sp.get() == nullptr)
-      return false;
-    else {
-      // FIXME: This check is necessary but not sufficient.  We for sure don't
-      // want to touch SBValues whose owning
-      // targets have gone away.  This check is a little weak in that it
-      // enforces that restriction when you call IsValid, but since IsValid
-      // doesn't lock the target, you have no guarantee that the SBValue won't
-      // go invalid after you call this... Also, an SBValue could depend on
-      // data from one of the modules in the target, and those could go away
-      // independently of the target, for instance if a module is unloaded.
-      // But right now, neither SBValues nor ValueObjects know which modules
-      // they depend on.  So I have no good way to make that check without
-      // tracking that in all the ValueObject subclasses.
-      TargetSP target_sp = m_valobj_sp->GetTargetSP();
-      return target_sp && target_sp->IsValid();
-    }
-  }
-
-  lldb::ValueObjectSP GetRootSP() { return m_valobj_sp; }
-
-  lldb::ValueObjectSP GetSP(Process::StopLocker &stop_locker,
-                            std::unique_lock<std::recursive_mutex> &lock,
-                            Status &error) {
-    if (!m_valobj_sp) {
-      error = Status::FromErrorString("invalid value object");
-      return m_valobj_sp;
-    }
-
-    lldb::ValueObjectSP value_sp = m_valobj_sp;
-
-    Target *target = value_sp->GetTargetSP().get();
-    // If this ValueObject holds an error, then it is valuable for that.
-    if (value_sp->GetError().Fail())
-      return value_sp;
-
-    if (!target)
-      return ValueObjectSP();
-
-    lock = std::unique_lock<std::recursive_mutex>(target->GetAPIMutex());
-
-    ProcessSP process_sp(value_sp->GetProcessSP());
-    if (process_sp && !stop_locker.TryLock(&process_sp->GetRunLock())) {
-      // We don't allow people to play around with ValueObject if the process
-      // is running. If you want to look at values, pause the process, then
-      // look.
-      error = Status::FromErrorString("process must be stopped.");
-      return ValueObjectSP();
-    }
-
-    if (m_use_dynamic != eNoDynamicValues) {
-      ValueObjectSP dynamic_sp = value_sp->GetDynamicValue(m_use_dynamic);
-      if (dynamic_sp)
-        value_sp = dynamic_sp;
-    }
-
-    if (m_use_synthetic) {
-      ValueObjectSP synthetic_sp = value_sp->GetSyntheticValue();
-      if (synthetic_sp)
-        value_sp = synthetic_sp;
-    }
-
-    if (!value_sp)
-      error = Status::FromErrorString("invalid value object");
-    if (!m_name.IsEmpty())
-      value_sp->SetName(m_name);
-
-    return value_sp;
-  }
-
-  void SetUseDynamic(lldb::DynamicValueType use_dynamic) {
-    m_use_dynamic = use_dynamic;
-  }
-
-  void SetUseSynthetic(bool use_synthetic) { m_use_synthetic = use_synthetic; }
-
-  lldb::DynamicValueType GetUseDynamic() { return m_use_dynamic; }
-
-  bool GetUseSynthetic() { return m_use_synthetic; }
-
-  // All the derived values that we would make from the m_valobj_sp will share
-  // the ExecutionContext with m_valobj_sp, so we don't need to do the
-  // calculations in GetSP to return the Target, Process, Thread or Frame.  It
-  // is convenient to provide simple accessors for these, which I do here.
-  TargetSP GetTargetSP() {
-    if (m_valobj_sp)
-      return m_valobj_sp->GetTargetSP();
-    else
-      return TargetSP();
-  }
-
-  ProcessSP GetProcessSP() {
-    if (m_valobj_sp)
-      return m_valobj_sp->GetProcessSP();
-    else
-      return ProcessSP();
-  }
-
-  ThreadSP GetThreadSP() {
-    if (m_valobj_sp)
-      return m_valobj_sp->GetThreadSP();
-    else
-      return ThreadSP();
-  }
-
-  StackFrameSP GetFrameSP() {
-    if (m_valobj_sp)
-      return m_valobj_sp->GetFrameSP();
-    else
-      return StackFrameSP();
-  }
-
-private:
-  lldb::ValueObjectSP m_valobj_sp;
-  lldb::DynamicValueType m_use_dynamic;
-  bool m_use_synthetic;
-  ConstString m_name;
-};
-
-class ValueLocker {
-public:
-  ValueLocker() = default;
-
-  ValueObjectSP GetLockedSP(ValueImpl &in_value) {
-    return in_value.GetSP(m_stop_locker, m_lock, m_lock_error);
-  }
-
-  Status &GetError() { return m_lock_error; }
-
-private:
-  Process::StopLocker m_stop_locker;
-  std::unique_lock<std::recursive_mutex> m_lock;
-  Status m_lock_error;
-};
 
 SBValue::SBValue() { LLDB_INSTRUMENT_VA(this); }
 
@@ -1262,14 +1097,45 @@ lldb::SBValue SBValue::EvaluateExpression(const char *expr,
 bool SBValue::GetDescription(SBStream &description) {
   LLDB_INSTRUMENT_VA(this, description);
 
+  return GetDescription(description, eDescriptionLevelFull);
+}
+
+static DumpValueObjectOptions
+GetDumpOptions(lldb::DescriptionLevel description_level,
+               lldb::DynamicValueType dyn, bool use_synthetic) {
+  DumpValueObjectOptions options;
+  switch (description_level) {
+  case eDescriptionLevelInitial:
+    return options;
+  case eDescriptionLevelBrief:
+    options.SetAllowOnelinerMode(true);
+    options.SetHideRootName(true);
+    options.SetHideRootType(true);
+    break;
+  case eDescriptionLevelVerbose:
+    options.SetShowTypes(true);
+    options.SetShowLocation(true);
+    break;
+  default:
+    break;
+  }
+  options.SetUseDynamicType(dyn);
+  options.SetUseSyntheticValue(use_synthetic);
+  return options;
+}
+
+bool SBValue::GetDescription(SBStream &description,
+                             lldb::DescriptionLevel description_level) {
+  LLDB_INSTRUMENT_VA(this, description, description_level);
+
   Stream &strm = description.ref();
 
   ValueLocker locker;
   lldb::ValueObjectSP value_sp(GetSP(locker));
   if (value_sp) {
-    DumpValueObjectOptions options;
-    options.SetUseDynamicType(m_opaque_sp->GetUseDynamic());
-    options.SetUseSyntheticValue(m_opaque_sp->GetUseSynthetic());
+    const DumpValueObjectOptions options =
+        GetDumpOptions(description_level, m_opaque_sp->GetUseDynamic(),
+                       m_opaque_sp->GetUseSynthetic());
     if (llvm::Error error = value_sp->Dump(strm, options)) {
       strm << "error: " << toString(std::move(error));
       return false;

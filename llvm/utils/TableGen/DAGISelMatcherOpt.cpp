@@ -12,7 +12,7 @@
 
 #include "Basic/SDNodeProperties.h"
 #include "Common/CodeGenDAGPatterns.h"
-#include "Common/DAGISelMatcher.h"
+#include "DAGISelMatcher.h"
 #include "llvm/ADT/StringSet.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/raw_ostream.h"
@@ -282,7 +282,7 @@ static void ContractNodes(std::unique_ptr<Matcher> &InputMatcherPtr,
 #endif
 
         if (ResultsMatch) {
-          ArrayRef<MVT> VTs = EN->getVTList();
+          ArrayRef<ValueTypeByHwMode> VTs = EN->getVTList();
           ArrayRef<unsigned> Operands = EN->getOperandList();
           MatcherPtr->reset(new MorphNodeToMatcher(
               EN->getInstruction(), VTs, Operands, EN->hasChain(),
@@ -293,29 +293,29 @@ static void ContractNodes(std::unique_ptr<Matcher> &InputMatcherPtr,
       }
     }
 
-  // If we have a Record node followed by a CheckOpcode, invert the two nodes.
-  // We prefer to do structural checks before type checks, as this opens
-  // opportunities for factoring on targets like X86 where many operations are
-  // valid on multiple types.
-  if (isa<RecordMatcher>(N) && isa<CheckOpcodeMatcher>(N->getNext())) {
-    // Unlink the two nodes from the list.
-    Matcher *CheckType = MatcherPtr->release();
-    Matcher *CheckOpcode = CheckType->takeNext();
-    Matcher *Tail = CheckOpcode->takeNext();
+    // If we have a Record node followed by a CheckOpcode, invert the two nodes.
+    // We prefer to do structural checks before type checks, as this opens
+    // opportunities for factoring on targets like X86 where many operations are
+    // valid on multiple types.
+    if (isa<RecordMatcher>(N) && isa<CheckOpcodeMatcher>(N->getNext())) {
+      // Unlink the two nodes from the list.
+      Matcher *CheckType = MatcherPtr->release();
+      Matcher *CheckOpcode = CheckType->takeNext();
+      Matcher *Tail = CheckOpcode->takeNext();
 
-    // Relink them.
-    MatcherPtr->reset(CheckOpcode);
-    CheckOpcode->setNext(CheckType);
-    CheckType->setNext(Tail);
-    continue;
-  }
+      // Relink them.
+      MatcherPtr->reset(CheckOpcode);
+      CheckOpcode->setNext(CheckType);
+      CheckType->setNext(Tail);
+      continue;
+    }
 
-  // No contractions were performed, go to next node.
-  MatcherPtr = &(MatcherPtr->get()->getNextPtr());
+    // No contractions were performed, go to next node.
+    MatcherPtr = &(MatcherPtr->get()->getNextPtr());
 
-  // If we reached the end of the chain, we're done.
-  if (!*MatcherPtr)
-    return;
+    // If we reached the end of the chain, we're done.
+    if (!*MatcherPtr)
+      return;
   }
 }
 
@@ -346,21 +346,24 @@ static void FactorNodes(std::unique_ptr<Matcher> &InputMatcherPtr);
 static void FactorScope(std::unique_ptr<Matcher> &MatcherPtr) {
   ScopeMatcher *Scope = cast<ScopeMatcher>(MatcherPtr.get());
 
-  // Okay, pull together the children of the scope node into a vector so we can
-  // inspect it more easily.
-  SmallVector<Matcher *, 32> OptionsToMatch;
+  SmallVectorImpl<Matcher *> &OptionsToMatch = Scope->getChildren();
 
-  for (unsigned i = 0, e = Scope->getNumChildren(); i != e; ++i) {
+  for (auto I = OptionsToMatch.begin(); I != OptionsToMatch.end();) {
+    // TODO: Store unique_ptr in ScopeMatcher.
     // Factor the subexpression.
-    std::unique_ptr<Matcher> Child(Scope->takeChild(i));
+    std::unique_ptr<Matcher> Child(*I);
     FactorNodes(Child);
 
     // If the child is a ScopeMatcher we can just merge its contents.
     if (auto *SM = dyn_cast<ScopeMatcher>(Child.get())) {
-      for (unsigned j = 0, e = SM->getNumChildren(); j != e; ++j)
-        OptionsToMatch.push_back(SM->takeChild(j));
+      SmallVectorImpl<Matcher *> &Children = SM->getChildren();
+      *I++ = *Children.begin();
+      I = OptionsToMatch.insert(I, Children.begin() + 1, Children.end());
+      I += Children.size() - 1;
+      Children.clear();
     } else {
-      OptionsToMatch.push_back(Child.release());
+      Child.release();
+      ++I;
     }
   }
 
@@ -487,7 +490,7 @@ static void FactorScope(std::unique_ptr<Matcher> &MatcherPtr) {
   // If we're down to a single pattern to match, then we don't need this scope
   // anymore.
   if (OptionsToMatch.size() == 1) {
-    MatcherPtr.reset(OptionsToMatch[0]);
+    MatcherPtr.reset(OptionsToMatch.pop_back_val());
     return;
   }
 
@@ -518,10 +521,11 @@ static void FactorScope(std::unique_ptr<Matcher> &MatcherPtr) {
     if (AllTypeChecks) {
       CheckTypeMatcher *CTM = cast_or_null<CheckTypeMatcher>(
           FindNodeWithKind(Optn, Matcher::CheckType));
-      if (!CTM ||
+      if (!CTM || !CTM->getType().isSimple() ||
           // iPTR/cPTR checks could alias any other case without us knowing,
           // don't bother with them.
-          CTM->getType() == MVT::iPTR || CTM->getType() == MVT::cPTR ||
+          CTM->getType().getSimple() == MVT::iPTR ||
+          CTM->getType().getSimple() == MVT::cPTR ||
           // SwitchType only works for result #0.
           CTM->getResNo() != 0 ||
           // If the CheckType isn't at the start of the list, see if we can move
@@ -548,6 +552,7 @@ static void FactorScope(std::unique_ptr<Matcher> &MatcherPtr) {
       Cases.emplace_back(&COM->getOpcode(), COM->takeNext());
       delete COM;
     }
+    OptionsToMatch.clear();
 
     MatcherPtr.reset(new SwitchOpcodeMatcher(std::move(Cases)));
     return;
@@ -563,7 +568,7 @@ static void FactorScope(std::unique_ptr<Matcher> &MatcherPtr) {
 
       auto *CTM = cast<CheckTypeMatcher>(M);
       Matcher *MatcherWithoutCTM = Optn->unlinkNode(CTM);
-      MVT CTMTy = CTM->getType();
+      MVT CTMTy = CTM->getType().getSimple();
       delete CTM;
 
       unsigned &Entry = TypeEntry[CTMTy.SimpleTy];
@@ -571,8 +576,7 @@ static void FactorScope(std::unique_ptr<Matcher> &MatcherPtr) {
         // If we have unfactored duplicate types, then we should factor them.
         Matcher *PrevMatcher = Cases[Entry - 1].second;
         if (ScopeMatcher *SM = dyn_cast<ScopeMatcher>(PrevMatcher)) {
-          SM->setNumChildren(SM->getNumChildren() + 1);
-          SM->resetChild(SM->getNumChildren() - 1, MatcherWithoutCTM);
+          SM->getChildren().push_back(MatcherWithoutCTM);
           continue;
         }
 
@@ -584,6 +588,7 @@ static void FactorScope(std::unique_ptr<Matcher> &MatcherPtr) {
       Entry = Cases.size() + 1;
       Cases.emplace_back(CTMTy, MatcherWithoutCTM);
     }
+    OptionsToMatch.clear();
 
     // Make sure we recursively factor any scopes we may have created.
     for (auto &M : Cases) {
@@ -604,11 +609,6 @@ static void FactorScope(std::unique_ptr<Matcher> &MatcherPtr) {
     }
     return;
   }
-
-  // Reassemble the Scope node with the adjusted children.
-  Scope->setNumChildren(OptionsToMatch.size());
-  for (unsigned i = 0, e = OptionsToMatch.size(); i != e; ++i)
-    Scope->resetChild(i, OptionsToMatch[i]);
 }
 
 /// Search a ScopeMatcher to factor with FactorScope.

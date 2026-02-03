@@ -559,7 +559,7 @@ void native(SmallVectorImpl<char> &Path, Style style) {
       SmallString<128> PathHome;
       home_directory(PathHome);
       PathHome.append(Path.begin() + 1, Path.end());
-      Path = PathHome;
+      Path = std::move(PathHome);
     }
   } else {
     llvm::replace(Path, '\\', '/');
@@ -894,6 +894,10 @@ static std::error_code
 createTemporaryFile(const Twine &Model, int &ResultFD,
                     llvm::SmallVectorImpl<char> &ResultPath, FSEntity Type,
                     sys::fs::OpenFlags Flags = sys::fs::OF_None) {
+  // Any *temporary* file is assumed to be a compiler-internal output, not
+  // a formal one.
+  auto BypassSandbox = sys::sandbox::scopedDisable();
+
   SmallString<128> Storage;
   StringRef P = Model.toNullTerminatedStringRef(Storage);
   assert(P.find_first_of(separators(Style::native)) == StringRef::npos &&
@@ -1196,7 +1200,7 @@ Error readNativeFileToEOF(file_t FileHandle, SmallVectorImpl<char> &Buffer,
 
   // Install a handler to truncate the buffer to the correct size on exit.
   size_t Size = Buffer.size();
-  auto TruncateOnExit = make_scope_exit([&]() { Buffer.truncate(Size); });
+  llvm::scope_exit TruncateOnExit([&]() { Buffer.truncate(Size); });
 
   // Read into Buffer until we hit EOF.
   for (;;) {

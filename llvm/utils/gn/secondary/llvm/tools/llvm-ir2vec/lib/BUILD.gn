@@ -1,0 +1,11 @@
+static_library("lib") {
+  output_name = "LLVMEmbUtils"
+  deps = [
+    "//llvm/lib/Analysis",
+    "//llvm/lib/CodeGen",
+    "//llvm/lib/CodeGen/MIRParser",
+    "//llvm/lib/IR",
+    "//llvm/lib/Support",
+  ]
+  sources = [ "Utils.cpp" ]
+}

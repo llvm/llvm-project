@@ -37,16 +37,16 @@ void SuspiciousSemicolonCheck::check(const MatchFinder::MatchResult &Result) {
     return;
 
   ASTContext &Ctxt = *Result.Context;
-  auto Token = utils::lexer::getPreviousToken(LocStart, Ctxt.getSourceManager(),
-                                              Ctxt.getLangOpts());
-  auto &SM = *Result.SourceManager;
+  const auto &SM = *Result.SourceManager;
   const unsigned SemicolonLine = SM.getSpellingLineNumber(LocStart);
 
   const auto *Statement = Result.Nodes.getNodeAs<Stmt>("stmt");
   const bool IsIfStmt = isa<IfStmt>(Statement);
 
-  if (!IsIfStmt &&
-      SM.getSpellingLineNumber(Token.getLocation()) != SemicolonLine)
+  const std::optional<Token> PrevTok = utils::lexer::getPreviousToken(
+      LocStart, Ctxt.getSourceManager(), Ctxt.getLangOpts());
+  if (!PrevTok || (!IsIfStmt && SM.getSpellingLineNumber(
+                                    PrevTok->getLocation()) != SemicolonLine))
     return;
 
   const SourceLocation LocEnd = Semicolon->getEndLoc();
@@ -55,6 +55,7 @@ void SuspiciousSemicolonCheck::check(const MatchFinder::MatchResult &Result) {
   Lexer Lexer(SM.getLocForStartOfFile(FID), Ctxt.getLangOpts(),
               Buffer.getBufferStart(), SM.getCharacterData(LocEnd) + 1,
               Buffer.getBufferEnd());
+  Token Token;
   if (Lexer.LexFromRawLexer(Token))
     return;
 

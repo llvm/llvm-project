@@ -202,6 +202,34 @@ enum {
 #include "CorePropertiesEnum.inc"
 };
 
+#ifndef NDEBUG
+#define LLDB_PROPERTIES_testing
+#include "CoreProperties.inc"
+
+enum {
+#define LLDB_PROPERTIES_testing
+#include "CorePropertiesEnum.inc"
+};
+#endif
+
+#ifndef NDEBUG
+TestingProperties::TestingProperties() {
+  m_collection_sp = std::make_shared<OptionValueProperties>("testing");
+  m_collection_sp->Initialize(g_testing_properties);
+}
+
+bool TestingProperties::GetInjectVarLocListError() const {
+  const uint32_t idx = ePropertyInjectVarLocListError;
+  return GetPropertyAtIndexAs<bool>(
+      idx, g_testing_properties[idx].default_uint_value != 0);
+}
+
+TestingProperties &TestingProperties::GetGlobalTestingProperties() {
+  static TestingProperties g_testing_properties;
+  return g_testing_properties;
+}
+#endif
+
 LoadPluginCallbackType Debugger::g_load_plugin_callback = nullptr;
 
 Status Debugger::SetPropertyValue(const ExecutionContext *exe_ctx,
@@ -1607,8 +1635,9 @@ bool Debugger::FormatDisassemblerAddress(const FormatEntity::Entry *format,
       (prev_sc->function == nullptr && prev_sc->symbol == nullptr)) {
     initial_function = true;
   }
-  return FormatEntity::Format(*format, s, sc, exe_ctx, addr, nullptr,
-                              function_changed, initial_function);
+  return FormatEntity::Formatter(sc, exe_ctx, addr, function_changed,
+                                 initial_function)
+      .Format(*format, s);
 }
 
 void Debugger::AssertCallback(llvm::StringRef message,
@@ -2482,6 +2511,9 @@ StructuredData::DictionarySP Debugger::GetBuildConfiguration() {
   AddBoolConfigEntry(*config_up, "editline_wchar", LLDB_EDITLINE_USE_WCHAR,
                      "A boolean value that indicates if editline wide "
                      "characters support is enabled in LLDB");
+  AddBoolConfigEntry(
+      *config_up, "zlib", LLVM_ENABLE_ZLIB,
+      "A boolean value that indicates if zlib support is enabled in LLDB");
   AddBoolConfigEntry(
       *config_up, "lzma", LLDB_ENABLE_LZMA,
       "A boolean value that indicates if lzma support is enabled in LLDB");

@@ -16,6 +16,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "MCTargetDesc/WebAssemblyMCTargetDesc.h"
+#include "Utils/WasmAddressSpaces.h"
 #include "Utils/WebAssemblyTypeUtilities.h"
 #include "WebAssemblyMachineFunctionInfo.h"
 #include "WebAssemblySubtarget.h"
@@ -194,8 +195,10 @@ private:
 public:
   // Backend specific FastISel code.
   WebAssemblyFastISel(FunctionLoweringInfo &FuncInfo,
-                      const TargetLibraryInfo *LibInfo)
-      : FastISel(FuncInfo, LibInfo, /*SkipTargetIndependentISel=*/true) {
+                      const TargetLibraryInfo *LibInfo,
+                      const LibcallLoweringInfo *LibcallLowering)
+      : FastISel(FuncInfo, LibInfo, LibcallLowering,
+                 /*SkipTargetIndependentISel=*/true) {
     Subtarget = &FuncInfo.MF->getSubtarget<WebAssemblySubtarget>();
     Context = &FuncInfo.Fn->getContext();
   }
@@ -769,6 +772,11 @@ bool WebAssemblyFastISel::fastLowerArguments() {
 
 bool WebAssemblyFastISel::selectCall(const Instruction *I) {
   const auto *Call = cast<CallInst>(I);
+
+  // FastISel does not support calls through funcref
+  if (Call->getCalledOperand()->getType()->getPointerAddressSpace() !=
+      WebAssembly::WasmAddressSpace::WASM_ADDRESS_SPACE_DEFAULT)
+    return false;
 
   // TODO: Support tail calls in FastISel
   if (Call->isMustTailCall() || Call->isInlineAsm() ||
@@ -1464,7 +1472,9 @@ bool WebAssemblyFastISel::fastSelectInstruction(const Instruction *I) {
   return selectOperator(I, I->getOpcode());
 }
 
-FastISel *WebAssembly::createFastISel(FunctionLoweringInfo &FuncInfo,
-                                      const TargetLibraryInfo *LibInfo) {
-  return new WebAssemblyFastISel(FuncInfo, LibInfo);
+FastISel *
+WebAssembly::createFastISel(FunctionLoweringInfo &FuncInfo,
+                            const TargetLibraryInfo *LibInfo,
+                            const LibcallLoweringInfo *LibcallLowering) {
+  return new WebAssemblyFastISel(FuncInfo, LibInfo, LibcallLowering);
 }

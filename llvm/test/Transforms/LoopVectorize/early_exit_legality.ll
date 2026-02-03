@@ -318,7 +318,7 @@ return:
 ; support this yet.
 define i64 @uncountable_exit_on_last_block() {
 ; CHECK-LABEL: LV: Checking a loop in 'uncountable_exit_on_last_block'
-; CHECK:       LV: Not vectorizing: Early exit is not the latch predecessor.
+; CHECK:       LV: Not vectorizing: Last early exiting block in the chain is not the latch predecessor.
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -346,10 +346,12 @@ loop.end:
 }
 
 
-; We don't currently support multiple uncountable early exits.
+; Multiple uncountable early exits pass legality but are not yet supported
+; in VPlan transformations.
 define i64 @multiple_uncountable_exits() {
 ; CHECK-LABEL: LV: Checking a loop in 'multiple_uncountable_exits'
-; CHECK:       LV: Not vectorizing: Loop has too many uncountable exits.
+; CHECK:       LV: We can vectorize this loop!
+; CHECK:       LV: Not vectorizing: Auto-vectorization of loops with multiple uncountable early exits is not yet supported.
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -494,7 +496,7 @@ exit:                                             ; preds = %for.body
 
 define i64 @uncountable_exit_in_conditional_block(ptr %mask) {
 ; CHECK-LABEL: LV: Checking a loop in 'uncountable_exit_in_conditional_block'
-; CHECK:       LV: Not vectorizing: Early exit is not the latch predecessor.
+; CHECK:       LV: Not vectorizing: Last early exiting block in the chain is not the latch predecessor.
 entry:
   %p1 = alloca [1024 x i8]
   %p2 = alloca [1024 x i8]
@@ -589,6 +591,45 @@ loop.surprise:
 
 loop.end:
   %retval = phi i64 [ %index, %loop ], [ 67, %loop.inc ]
+  ret i64 %retval
+}
+
+
+; Two early exits on parallel branches (neither dominates the other).
+define i64 @uncountable_exits_on_parallel_branches() {
+; CHECK-LABEL: LV: Checking a loop in 'uncountable_exits_on_parallel_branches'
+; CHECK:       LV: Not vectorizing: Uncountable early exits do not form a dominance chain.
+entry:
+  %p1 = alloca [1024 x i8]
+  %p2 = alloca [1024 x i8]
+  call void @init_mem(ptr %p1, i64 1024)
+  call void @init_mem(ptr %p2, i64 1024)
+  br label %header
+
+header:
+  %index = phi i64 [ %index.next, %latch ], [ 3, %entry ]
+  %arrayidx = getelementptr inbounds i8, ptr %p1, i64 %index
+  %ld1 = load i8, ptr %arrayidx, align 1
+  %branch.cond = icmp sgt i8 %ld1, 0
+  br i1 %branch.cond, label %left, label %right
+
+left:
+  %arrayidx.left = getelementptr inbounds i8, ptr %p2, i64 %index
+  %ld.left = load i8, ptr %arrayidx.left, align 1
+  %cmp.left = icmp eq i8 %ld1, %ld.left
+  br i1 %cmp.left, label %loop.end, label %latch
+
+right:
+  %cmp.right = icmp ult i8 %ld1, 34
+  br i1 %cmp.right, label %loop.end, label %latch
+
+latch:
+  %index.next = add i64 %index, 1
+  %exitcond = icmp ne i64 %index.next, 67
+  br i1 %exitcond, label %header, label %loop.end
+
+loop.end:
+  %retval = phi i64 [ %index, %left ], [ 100, %right ], [ 43, %latch ]
   ret i64 %retval
 }
 

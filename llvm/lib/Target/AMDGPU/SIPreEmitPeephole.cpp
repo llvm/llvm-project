@@ -22,10 +22,11 @@
 #include "GCNSubtarget.h"
 #include "MCTargetDesc/AMDGPUMCTargetDesc.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/CodeGen/MachineDominators.h"
 #include "llvm/CodeGen/MachineFunctionPass.h"
+#include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/TargetSchedule.h"
 #include "llvm/Support/BranchProbability.h"
-
 using namespace llvm;
 
 #define DEBUG_TYPE "si-pre-emit-peephole"
@@ -153,11 +154,12 @@ bool SIPreEmitPeephole::optimizeVccBranch(MachineInstr &MI) const {
 
   MachineOperand &Op1 = A->getOperand(1);
   MachineOperand &Op2 = A->getOperand(2);
-  if (Op1.getReg() != ExecReg && Op2.isReg() && Op2.getReg() == ExecReg) {
+  if ((!Op1.isReg() || Op1.getReg() != ExecReg) && Op2.isReg() &&
+      Op2.getReg() == ExecReg) {
     TII->commuteInstruction(*A);
     Changed = true;
   }
-  if (Op1.getReg() != ExecReg)
+  if (!Op1.isReg() || Op1.getReg() != ExecReg)
     return Changed;
   if (Op2.isImm() && !(Op2.getImm() == -1 || Op2.getImm() == 0))
     return Changed;
@@ -705,10 +707,17 @@ MachineInstrBuilder SIPreEmitPeephole::createUnpackedMI(MachineInstr &I,
 PreservedAnalyses
 llvm::SIPreEmitPeepholePass::run(MachineFunction &MF,
                                  MachineFunctionAnalysisManager &MFAM) {
-  if (!SIPreEmitPeephole().run(MF))
-    return PreservedAnalyses::all();
+  auto *MDT = MFAM.getCachedResult<MachineDominatorTreeAnalysis>(MF);
+  auto *MPDT = MFAM.getCachedResult<MachinePostDominatorTreeAnalysis>(MF);
 
-  return getMachineFunctionPassPreservedAnalyses();
+  if (SIPreEmitPeephole().run(MF))
+    return getMachineFunctionPassPreservedAnalyses();
+
+  if (MDT)
+    MDT->updateBlockNumbers();
+  if (MPDT)
+    MPDT->updateBlockNumbers();
+  return PreservedAnalyses::all();
 }
 
 bool SIPreEmitPeephole::run(MachineFunction &MF) {

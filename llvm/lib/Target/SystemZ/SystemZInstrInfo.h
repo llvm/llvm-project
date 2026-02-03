@@ -282,8 +282,7 @@ public:
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI,
       Register DestReg, int FrameIdx, const TargetRegisterClass *RC,
-
-      Register VReg,
+      Register VReg, unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
   MachineInstr *convertToThreeAddress(MachineInstr &MI, LiveVariables *LV,
                                       LiveIntervals *LIS) const override;
@@ -392,6 +391,8 @@ public:
 
   ArrayRef<std::pair<unsigned, const char *>>
   getSerializableDirectMachineOperandTargetFlags() const override;
+
+  MCInst getNop() const override;
 };
 
 } // end namespace llvm

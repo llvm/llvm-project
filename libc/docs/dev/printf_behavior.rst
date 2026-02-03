@@ -71,6 +71,13 @@ conversions (%r, %k); any fixed point number conversion will be treated as
 invalid. This reduces code size. This has no effect if the current compiler does
 not support fixed point numbers.
 
+LIBC_COPT_PRINTF_DISABLE_WIDE
+--------------------------------
+When set, this flag disables support for wide characters (%lc and %ls). Any
+conversions will be ignored. This reduces code size. This will be set by default
+on windows platforms as current printf implementation does not support UTF-16 wide
+characters.
+
 LIBC_COPT_PRINTF_NO_NULLPTR_CHECKS
 ----------------------------------
 When set, this flag disables the nullptr checks in %n and %s.

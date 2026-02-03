@@ -20,6 +20,8 @@
 #include "hsa_ext_amd.h"
 #include <memory>
 
+using namespace llvm::offload::debug;
+
 DLWRAP_INITIALIZE()
 
 DLWRAP_INTERNAL(hsa_init, 0)
@@ -93,7 +95,7 @@ static bool checkForHSA() {
   auto DynlibHandle = std::make_unique<llvm::sys::DynamicLibrary>(
       llvm::sys::DynamicLibrary::getPermanentLibrary(HsaLib, &ErrMsg));
   if (!DynlibHandle->isValid()) {
-    DP("Unable to load library '%s': %s!\n", HsaLib, ErrMsg.c_str());
+    ODBG(OLDT_Init) << "Unable to load library '" << HsaLib << "': " << ErrMsg;
     return false;
   }
 
@@ -102,10 +104,12 @@ static bool checkForHSA() {
 
     void *P = DynlibHandle->getAddressOfSymbol(Sym);
     if (P == nullptr) {
-      DP("Unable to find '%s' in '%s'!\n", Sym, HsaLib);
+      ODBG(OLDT_Init) << "Unable to find '" << Sym << "' in '" << HsaLib
+                      << "'!";
       return false;
     }
-    DP("Implementing %s with dlsym(%s) -> %p\n", Sym, Sym, P);
+    ODBG(OLDT_Init) << "Implementing " << Sym << " with dlsym(" << Sym
+                    << ") -> " << P;
 
     *dlwrap::pointer(I) = P;
   }

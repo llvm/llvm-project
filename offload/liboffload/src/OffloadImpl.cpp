@@ -391,6 +391,12 @@ Error olGetPlatformInfoSize_impl(ol_platform_handle_t Platform,
                                      PropSizeRet);
 }
 
+Error olPlatformRegisterRPCCallback_impl(ol_platform_handle_t Platform,
+                                         ol_platform_rpc_cb_t Callback) {
+  Platform->Plugin->getRPCServer().registerCallback(Callback);
+  return Error::success();
+}
+
 Error olGetDeviceInfoImplDetail(ol_device_handle_t Device,
                                 ol_device_info_t PropName, size_t PropSize,
                                 void *PropValue, size_t *PropSizeRet) {
@@ -1005,10 +1011,28 @@ Error olMemcpy_impl(ol_queue_handle_t Queue, void *DstPtr,
     if (auto Res =
             DstDevice->Device->dataSubmit(DstPtr, SrcPtr, Size, QueueImpl))
       return Res;
-  } else {
+  } else if (SrcDevice->Platform.Plugin == DstDevice->Platform.Plugin &&
+             SrcDevice->Platform.Plugin->isDataExchangable(
+                 SrcDevice->Device->getDeviceId(),
+                 DstDevice->Device->getDeviceId())) {
     if (auto Res = SrcDevice->Device->dataExchange(SrcPtr, *DstDevice->Device,
                                                    DstPtr, Size, QueueImpl))
       return Res;
+  } else {
+    if (Queue)
+      if (auto Res = olSyncQueue_impl(Queue))
+        return Res;
+
+    void *Buffer = malloc(Size);
+    if (!Buffer)
+      return createOffloadError(ErrorCode::OUT_OF_RESOURCES,
+                                "Couldn't allocate a buffer for transfer");
+    Error Res = SrcDevice->Device->dataRetrieve(Buffer, SrcPtr, Size, nullptr);
+    if (!Res)
+      Res = DstDevice->Device->dataSubmit(DstPtr, Buffer, Size, nullptr);
+
+    free(Buffer);
+    return Res;
   }
 
   return Error::success();
@@ -1214,6 +1238,33 @@ Error olLaunchHostFunction_impl(ol_queue_handle_t Queue,
                                 void *UserData) {
   return Queue->Device->Device->enqueueHostCall(Callback, UserData,
                                                 Queue->AsyncInfo);
+}
+
+Error olMemRegister_impl(ol_device_handle_t Device, void *Ptr, size_t Size,
+                         ol_memory_register_flags_t flags, void **LockedPtr) {
+  Expected<void *> LockedPtrOrErr = Device->Device->dataLock(Ptr, Size);
+  if (!LockedPtrOrErr)
+    return LockedPtrOrErr.takeError();
+
+  *LockedPtr = *LockedPtrOrErr;
+
+  return Error::success();
+}
+
+Error olMemUnregister_impl(ol_device_handle_t Device, void *Ptr) {
+  return Device->Device->dataUnlock(Ptr);
+}
+
+Error olQueryQueue_impl(ol_queue_handle_t Queue, bool *IsQueueWorkCompleted) {
+  if (Queue->AsyncInfo->Queue) {
+    if (auto Err = Queue->Device->Device->queryAsync(Queue->AsyncInfo, false,
+                                                     IsQueueWorkCompleted))
+      return Err;
+  } else if (IsQueueWorkCompleted) {
+    // No underlying queue means there's no work to complete.
+    *IsQueueWorkCompleted = true;
+  }
+  return Error::success();
 }
 
 } // namespace offload

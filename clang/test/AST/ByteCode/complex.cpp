@@ -410,3 +410,46 @@ namespace ComplexConstexpr {
   static_assert(__imag test6 == 6, "");
   static_assert(&__imag test6 == &__real test6 + 1, "");
 }
+
+namespace Discard {
+  constexpr int test1() {
+    __imag(0);
+    __imag(0.0);
+    __real(0);
+    __real(0.0);
+
+    return 10;
+  }
+  static_assert(test1() == 10, "");
+
+  constexpr int test2() {
+    __imag(bar()); // both-error {{use of undeclared identifier}}
+    return 10;
+  }
+  static_assert(test2() == 10, ""); // both-error {{not an integral constant expression}}
+
+  constexpr int test3() {
+    __real(barz()); // both-error {{use of undeclared identifier}}
+    return 10;
+  }
+  static_assert(test3() == 10, ""); // both-error {{not an integral constant expression}}
+
+  constexpr void V() {
+    (void)(1 + 2i);
+  }
+  static_assert((V(), true));
+
+  void test_discard_complex_comparison() {
+    _Complex int x = 1i;
+    (void)(x == 1i);
+    x == 1i;
+    (void)(x != 1i);
+  }
+
+  constexpr int test_side_effect() {
+    int k = 0;
+    (void)(1i == (++k, 1i));
+    return k;
+  }
+  static_assert(test_side_effect() == 1);
+}

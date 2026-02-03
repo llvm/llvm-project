@@ -94,12 +94,11 @@ class LLVMFuzzerInputBuffer : public MemoryBuffer
         init(Data, Data+Size, false);
       }
 
-
-    virtual BufferKind getBufferKind() const {
-      return MemoryBuffer_Malloc; // it's not disk-backed so I think that's
-                                  // the intent ... though AFAIK it
-                                  // probably came from an mmap or sbrk
-    }
+      virtual BufferKind getBufferKind() const override {
+        return MemoryBuffer_Malloc; // it's not disk-backed so I think that's
+                                    // the intent ... though AFAIK it
+                                    // probably came from an mmap or sbrk
+      }
 
   private:
     const char *Data;

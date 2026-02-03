@@ -2,6 +2,7 @@ add_clang_library(MLIRCIRTargetLowering
   CIRCXXABI.cpp
   LowerModule.cpp
   LowerItaniumCXXABI.cpp
+  TargetLoweringInfo.cpp
 
   DEPENDS
   clangBasic
@@ -17,4 +18,5 @@ add_clang_library(MLIRCIRTargetLowering
   MLIRDLTIDialect
   MLIRCIR
   MLIRCIRInterfaces
+  MLIRLLVMDialect
 )

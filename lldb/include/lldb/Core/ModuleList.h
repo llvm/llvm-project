@@ -88,11 +88,8 @@ public:
   uint64_t GetLLDBIndexCacheExpirationDays();
   FileSpec GetLLDBIndexCachePath() const;
   bool SetLLDBIndexCachePath(const FileSpec &path);
-
-  bool GetLoadSymbolOnDemand();
-
+  bool GetLoadSymbolOnDemand() const;
   lldb::SymbolDownload GetSymbolAutoDownload() const;
-
   PathMappingList GetSymlinkMappings() const;
 };
 
@@ -477,8 +474,7 @@ public:
   static Status
   GetSharedModule(const ModuleSpec &module_spec, lldb::ModuleSP &module_sp,
                   llvm::SmallVectorImpl<lldb::ModuleSP> *old_modules,
-                  bool *did_create_ptr, bool always_create = false,
-                  bool invoke_locate_callback = true);
+                  bool *did_create_ptr, bool invoke_locate_callback = true);
 
   static bool RemoveSharedModule(lldb::ModuleSP &module_sp);
 

@@ -215,6 +215,18 @@ protected:
   const unsigned packedFormatBitSizeB;
 };
 
+struct SpirvLoadGatherInstruction : public LoadGatherInstructionInterface {
+  int32_t getMaxLaneLoadStoreSize(int32_t bitWidth) const override {
+    return 16;
+  }
+};
+
+struct SpirvStoreScatterInstruction : public StoreScatterInstructionInterface {
+  int32_t getMaxLaneLoadStoreSize(int32_t bitWidth) const override {
+    return 16;
+  }
+};
+
 //===----------------------------------------------------------------------===//
 // uArch instances
 //===----------------------------------------------------------------------===//
@@ -225,8 +237,11 @@ struct PVCuArch final : public Xe2Plus {
     static const Subgroup2DBlockLoadInstruction loadNdInst;
     static const Subgroup2DBlockStoreInstruction storeNdInst;
     static const Subgroup2DBlockPrefetchInstruction prefetchNdInst;
-    static const Instruction *arr[] = {&dpasInst, &loadNdInst, &storeNdInst,
-                                       &prefetchNdInst};
+    static const SpirvStoreScatterInstruction storeScatterInst;
+    static const SpirvLoadGatherInstruction loadGatherInst;
+    static const Instruction *arr[] = {&dpasInst,         &loadNdInst,
+                                       &storeNdInst,      &prefetchNdInst,
+                                       &storeScatterInst, &loadGatherInst};
     return arr;
   }
 
@@ -248,8 +263,11 @@ struct BMGuArch : public Xe2Plus {
     static const Subgroup2DBlockLoadInstruction loadNdInst;
     static const Subgroup2DBlockStoreInstruction storeNdInst;
     static const Subgroup2DBlockPrefetchInstruction prefetchNdInst;
-    static const Instruction *arr[] = {&dpasInst, &loadNdInst, &storeNdInst,
-                                       &prefetchNdInst};
+    static const SpirvStoreScatterInstruction storeScatterInst;
+    static const SpirvLoadGatherInstruction loadGatherInst;
+    static const Instruction *arr[] = {&dpasInst,         &loadNdInst,
+                                       &storeNdInst,      &prefetchNdInst,
+                                       &storeScatterInst, &loadGatherInst};
     return arr;
   }
 

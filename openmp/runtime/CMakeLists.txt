@@ -118,6 +118,19 @@ if(NOT DEFINED CMAKE_MACOSX_RPATH)
   set(CMAKE_MACOSX_RPATH TRUE)
 endif()
 
+# Remove any cmake-automatic linking of the standard C++ library.
+# We neither need (nor want) the standard C++ library dependency even though we compile C++ files.
+if(NOT LIBOMP_USE_STDCPPLIB)
+  set(LIBOMP_LINKER_LANGUAGE C)
+  set(CMAKE_CXX_IMPLICIT_LINK_LIBRARIES)
+else()
+  set(LIBOMP_LINKER_LANGUAGE CXX)
+endif()
+
+if(UNIX)
+  set(LIBOMP_DL_LIBS ${CMAKE_DL_LIBS})
+endif()
+
 # User specified flags.  These are appended to the configured flags.
 set(LIBOMP_CXXFLAGS "" CACHE STRING
   "Appended user specified C++ compiler flags.")
@@ -446,6 +459,7 @@ endif()
 
 add_subdirectory(src)
 add_subdirectory(test)
+add_subdirectory(unittests)
 
 # make these variables available for tools:
 set(LIBOMP_LIBRARY_DIR ${LIBOMP_LIBRARY_DIR} PARENT_SCOPE)

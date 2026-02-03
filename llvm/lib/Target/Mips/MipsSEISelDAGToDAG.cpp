@@ -48,7 +48,7 @@ void MipsSEDAGToDAGISel::addDSPCtrlRegOperands(bool IsDef, MachineInstr &MI,
                                                MachineFunction &MF) {
   MachineInstrBuilder MIB(MF, &MI);
   unsigned Mask = MI.getOperand(1).getImm();
-  unsigned Flag =
+  RegState Flag =
       IsDef ? RegState::ImplicitDefine : RegState::Implicit | RegState::Undef;
 
   if (Mask & 1)

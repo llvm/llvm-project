@@ -454,6 +454,30 @@ bool TestConstMemorySpaceAttr::isValidPtrIntCast(
 }
 
 //===----------------------------------------------------------------------===//
+// TestAttrNewlineAndIndent
+//===----------------------------------------------------------------------===//
+
+Attribute TestAttrNewlineAndIndentAttr::parse(::mlir::AsmParser &parser,
+                                              ::mlir::Type type) {
+  Type indentType;
+  if (parser.parseLess() || parser.parseType(indentType) ||
+      parser.parseGreater()) {
+    return Attribute();
+  }
+  return get(parser.getContext(), indentType);
+}
+
+void TestAttrNewlineAndIndentAttr::print(::mlir::AsmPrinter &printer) const {
+  printer << "<";
+  printer.increaseIndent();
+  printer.printNewline();
+  printer << getIndentType();
+  printer.decreaseIndent();
+  printer.printNewline();
+  printer << ">";
+}
+
+//===----------------------------------------------------------------------===//
 // Tablegen Generated Definitions
 //===----------------------------------------------------------------------===//
 

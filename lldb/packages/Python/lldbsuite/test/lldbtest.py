@@ -406,13 +406,24 @@ class _BaseProcess(object, metaclass=abc.ABCMeta):
 
 class _LocalProcess(_BaseProcess):
     def __init__(self, trace_on):
-        self._proc = None
+        self._proc: Optional[Popen] = None
         self._trace_on = trace_on
         self._delayafterterminate = 0.1
 
     @property
     def pid(self):
+        assert self._proc is not None, "No process"
         return self._proc.pid
+
+    @property
+    def stdout(self):
+        assert self._proc is not None, "No process"
+        return self._proc.stdout
+
+    @property
+    def stderr(self):
+        assert self._proc is not None, "No process"
+        return self._proc.stderr
 
     def launch(self, executable, args, extra_env, **kwargs):
         env = None
@@ -2336,7 +2347,7 @@ class TestBase(Base, metaclass=LLDBTestCaseFactory):
             msg="FileCheck'ing result of `{0}`".format(command),
         )
 
-        self.assertTrue((not expect_cmd_failure) == self.res.Succeeded())
+        self.assertNotEqual(expect_cmd_failure, self.res.Succeeded())
 
         # Get the error text if there was an error, and the regular text if not.
         output = self.res.GetOutput() if self.res.Succeeded() else self.res.GetError()
@@ -2384,7 +2395,7 @@ FileCheck output:
         with recording(self, trace) as sbuf:
             print(filecheck_trace, file=sbuf)
 
-        self.assertTrue(cmd_status == 0)
+        self.assertEqual(cmd_status, 0)
 
     def expect(
         self,

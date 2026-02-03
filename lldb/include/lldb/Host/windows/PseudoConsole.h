@@ -21,6 +21,14 @@ namespace lldb_private {
 class PseudoConsole {
 
 public:
+  PseudoConsole() = default;
+  ~PseudoConsole();
+
+  PseudoConsole(const PseudoConsole &) = delete;
+  PseudoConsole(PseudoConsole &&) = delete;
+  PseudoConsole &operator=(const PseudoConsole &) = delete;
+  PseudoConsole &operator=(PseudoConsole &&) = delete;
+
   llvm::Error OpenPseudoConsole();
 
   /// Close the ConPTY, its read/write handles and invalidate them.
@@ -58,6 +66,6 @@ protected:
   HANDLE m_conpty_output = ((HANDLE)(long long)-1);
   HANDLE m_conpty_input = ((HANDLE)(long long)-1);
 };
-}; // namespace lldb_private
+} // namespace lldb_private
 
 #endif // LIBLLDB_HOST_WINDOWS_PSEUDOCONSOLE_H_

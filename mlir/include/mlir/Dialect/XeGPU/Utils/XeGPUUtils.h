@@ -26,6 +26,10 @@ namespace xegpu {
 class DistributeLayoutAttr;
 class LayoutAttr;
 class TensorDescType;
+
+namespace uArch {
+struct uArch;
+} // namespace uArch
 } // namespace xegpu
 
 namespace xegpu {
@@ -62,6 +66,21 @@ FailureOr<VectorType> getDistributedVectorType(xegpu::TensorDescType tdescTy);
 /// to a given LayoutAttr.
 FailureOr<VectorType> getDistributedVectorType(VectorType originalType,
                                                LayoutAttr layout);
+
+/// Helper function to get distributed vector type for a source vector type
+/// according to the lane_layout. We simply divide each dimension of tensor
+/// descriptor shape by corresponding lane_layout dimension. If
+/// array_length > 1, that is appended to the front of the distributed shape.
+///
+/// Examples:
+/// | original vector shape | lane_layout | distributed vector shape |
+/// |-----------------------|-------------|--------------------------|
+/// | 32x16                 | [1, 16]     | 32x1                     |
+/// | 32x16                 | [2, 8]      | 16x2                     |
+/// | 2x32x16               | [1, 16]     | 2x32x1                   |
+FailureOr<VectorType>
+getDistVecTypeBasedOnLaneLayout(DistributeLayoutAttr layout,
+                                VectorType originalType);
 
 /// Extract a set of small vectors from a value with a given shape using
 /// vector.extract_stride_slice
@@ -147,6 +166,15 @@ void removeLayoutAttr(const T &operandOrResult);
 /// applied recursively to the contained operations
 void removeLayoutAttrs(Operation *op);
 
+/// Updates the NamedAttribute sequence by dropping sg-layout and
+/// sg-data information from any DistributeLayoutAttr found.
+SmallVector<NamedAttribute>
+dropSgLayoutAndDataOnAttrs(ArrayRef<NamedAttribute> attrs);
+
+/// Updates the NamedAttribute sequence by dropping inst-data information from
+/// any DistributeLayoutAttr found.
+SmallVector<NamedAttribute> dropInstDataOnAttrs(ArrayRef<NamedAttribute> attrs);
+
 /// [to-be-deprecated] Sets the DistributeLayoutAttr for a given OpResult
 /// user should use setAnchorLayout instead
 void setDistributeLayoutAttr(const OpResult &Result,
@@ -180,6 +208,14 @@ void recoverTemporaryLayoutsDeprecated(Operation *op);
 /// the given operation's region. Reports an error if any vector operand lacks
 /// a layout attribute.
 bool recoverTemporaryLayouts(Operation *rootOp);
+
+/// Helper function to check if the layout is packed. Layout is packed if it is
+/// 2D and lane_data[0] != 1 (data packed from col dimension).
+/// TODO: Move to target info.
+bool requirePacked(const LayoutAttr layout);
+
+/// Helper function to check if the layout requires a transpose effect.
+bool requireTranspose(const LayoutAttr layout, const uArch::uArch *uArch);
 
 } // namespace xegpu
 

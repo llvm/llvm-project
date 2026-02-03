@@ -265,6 +265,7 @@ enum GlobalValueSummarySymtabCodes {
   // strings in strtab.
   // [n * name]
   FS_CFI_FUNCTION_DECLS = 18,
+  // Deprecated, but still needed to read old bitcode files.
   // Per-module summary that also adds relative block frequency to callee info.
   // PERMODULE_RELBF: [valueid, flags, instcount, numrefs,
   //                   numrefs x valueid,

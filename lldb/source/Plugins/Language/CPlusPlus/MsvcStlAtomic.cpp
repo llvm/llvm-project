@@ -99,11 +99,11 @@ lldb_private::formatters::MsvcStlAtomicSyntheticFrontEndCreator(
 
 bool lldb_private::formatters::MsvcStlAtomicSummaryProvider(
     ValueObject &valobj, Stream &stream, const TypeSummaryOptions &options) {
-  auto synth_sp = valobj.GetSyntheticValue();
+  ValueObjectSP synth_sp = valobj.GetSyntheticValue();
   if (!synth_sp)
     return false;
 
-  auto value_sp = synth_sp->GetChildAtIndex(0);
+  ValueObjectSP value_sp = synth_sp->GetChildAtIndex(0);
   std::string summary;
   if (value_sp->GetSummaryAsCString(summary, options) && !summary.empty()) {
     stream << summary;

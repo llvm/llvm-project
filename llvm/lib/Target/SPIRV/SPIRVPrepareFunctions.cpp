@@ -385,15 +385,40 @@ static void lowerExpectAssume(IntrinsicInst *II) {
 }
 
 static bool toSpvLifetimeIntrinsic(IntrinsicInst *II, Intrinsic::ID NewID) {
+  auto *LifetimeArg0 = II->getArgOperand(0);
+
+  // If the lifetime argument is a poison value, the intrinsic has no effect.
+  if (isa<PoisonValue>(LifetimeArg0)) {
+    II->eraseFromParent();
+    return true;
+  }
+
   IRBuilder<> Builder(II);
-  auto *Alloca = cast<AllocaInst>(II->getArgOperand(0));
+  auto *Alloca = cast<AllocaInst>(LifetimeArg0);
   std::optional<TypeSize> Size =
       Alloca->getAllocationSize(Alloca->getDataLayout());
   Value *SizeVal = Builder.getInt64(Size ? *Size : -1);
-  Builder.CreateIntrinsic(NewID, Alloca->getType(),
-                          {SizeVal, II->getArgOperand(0)});
+  Builder.CreateIntrinsic(NewID, Alloca->getType(), {SizeVal, LifetimeArg0});
   II->eraseFromParent();
   return true;
+}
+
+static void
+lowerConstrainedFmuladd(IntrinsicInst *II,
+                        SmallVector<Instruction *> &EraseFromParent) {
+  auto *FPI = cast<ConstrainedFPIntrinsic>(II);
+  Value *A = FPI->getArgOperand(0);
+  Value *Mul = FPI->getArgOperand(1);
+  Value *Add = FPI->getArgOperand(2);
+  IRBuilder<> Builder(II->getParent());
+  Builder.SetInsertPoint(II);
+  std::optional<RoundingMode> Rounding = FPI->getRoundingMode();
+  Value *Product = Builder.CreateFMul(A, Mul, II->getName() + ".mul");
+  Value *Result = Builder.CreateConstrainedFPBinOp(
+      Intrinsic::experimental_constrained_fadd, Product, Add, {},
+      II->getName() + ".add", nullptr, Rounding);
+  II->replaceAllUsesWith(Result);
+  EraseFromParent.push_back(II);
 }
 
 // Substitutes calls to LLVM intrinsics with either calls to SPIR-V intrinsics
@@ -447,6 +472,10 @@ bool SPIRVPrepareFunctions::substituteIntrinsicCalls(Function *F) {
         break;
       case Intrinsic::ptr_annotation:
         lowerPtrAnnotation(II);
+        Changed = true;
+        break;
+      case Intrinsic::experimental_constrained_fmuladd:
+        lowerConstrainedFmuladd(II, EraseFromParent);
         Changed = true;
         break;
       case Intrinsic::experimental_constrained_fcmp:

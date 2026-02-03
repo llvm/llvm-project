@@ -536,52 +536,51 @@ TEST(ParseArchString, RejectsDuplicateExtensionNames) {
 TEST(ParseArchString,
      RejectsExperimentalExtensionsIfNotEnableExperimentalExtension) {
   EXPECT_EQ(
-      toString(RISCVISAInfo::parseArchString("rv64izalasr", false).takeError()),
+      toString(RISCVISAInfo::parseArchString("rv64izibi", false).takeError()),
       "requires '-menable-experimental-extensions' for experimental extension "
-      "'zalasr'");
+      "'zibi'");
 }
 
 TEST(ParseArchString,
      AcceptsExperimentalExtensionsIfEnableExperimentalExtension) {
-  // Note: If zalasr becomes none-experimental, this test will need
+  // Note: If zibi becomes none-experimental, this test will need
   // updating (and unfortunately, it will still pass). The failure of
   // RejectsExperimentalExtensionsIfNotEnableExperimentalExtension will
   // hopefully serve as a reminder to update.
-  auto MaybeISAInfo = RISCVISAInfo::parseArchString("rv64izalasr", true, false);
+  auto MaybeISAInfo = RISCVISAInfo::parseArchString("rv64izibi", true, false);
   ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
   const auto &Exts = (*MaybeISAInfo)->getExtensions();
   EXPECT_EQ(Exts.size(), 2UL);
-  EXPECT_EQ(Exts.count("zalasr"), 1U);
-  auto MaybeISAInfo2 = RISCVISAInfo::parseArchString("rv64izalasr0p9", true);
+  EXPECT_EQ(Exts.count("zibi"), 1U);
+  auto MaybeISAInfo2 = RISCVISAInfo::parseArchString("rv64izibi0p1", true);
   ASSERT_THAT_EXPECTED(MaybeISAInfo2, Succeeded());
   const auto &Exts2 = (*MaybeISAInfo2)->getExtensions();
   EXPECT_EQ(Exts2.size(), 2UL);
-  EXPECT_EQ(Exts2.count("zalasr"), 1U);
+  EXPECT_EQ(Exts2.count("zibi"), 1U);
 }
 
 TEST(ParseArchString,
      RequiresExplicitVersionNumberForExperimentalExtensionByDefault) {
   EXPECT_EQ(
-      toString(RISCVISAInfo::parseArchString("rv64izalasr", true).takeError()),
-      "experimental extension requires explicit version number `zalasr`");
+      toString(RISCVISAInfo::parseArchString("rv64izibi", true).takeError()),
+      "experimental extension requires explicit version number `zibi`");
 }
 
 TEST(ParseArchString,
      AcceptsUnrecognizedVersionIfNotExperimentalExtensionVersionCheck) {
   auto MaybeISAInfo =
-      RISCVISAInfo::parseArchString("rv64izalasr9p9", true, false);
+      RISCVISAInfo::parseArchString("rv64izibi9p9", true, false);
   ASSERT_THAT_EXPECTED(MaybeISAInfo, Succeeded());
   const auto &Exts = (*MaybeISAInfo)->getExtensions();
   EXPECT_EQ(Exts.size(), 2UL);
-  EXPECT_TRUE(Exts.at("zalasr") == (RISCVISAUtils::ExtensionVersion{9, 9}));
+  EXPECT_TRUE(Exts.at("zibi") == (RISCVISAUtils::ExtensionVersion{9, 9}));
 }
 
 TEST(ParseArchString, RejectsUnrecognizedVersionForExperimentalExtension) {
   EXPECT_EQ(
-      toString(
-          RISCVISAInfo::parseArchString("rv64izalasr9p9", true).takeError()),
-      "unsupported version number 9.9 for experimental extension 'zalasr' "
-      "(this compiler supports 0.9)");
+      toString(RISCVISAInfo::parseArchString("rv64izibi9p9", true).takeError()),
+      "unsupported version number 9.9 for experimental extension 'zibi' "
+      "(this compiler supports 0.1)");
 }
 
 TEST(ParseArchString, RejectsExtensionVersionForG) {
@@ -832,13 +831,13 @@ TEST(ToFeatures, IIsDroppedAndExperimentalExtensionsArePrefixed) {
       RISCVISAInfo::parseArchString("rv64im_zalasr", true, false);
   ASSERT_THAT_EXPECTED(MaybeISAInfo1, Succeeded());
   EXPECT_THAT((*MaybeISAInfo1)->toFeatures(),
-              ElementsAre("+i", "+m", "+zmmul", "+experimental-zalasr"));
+              ElementsAre("+i", "+m", "+zmmul", "+zalasr"));
 
   auto MaybeISAInfo2 = RISCVISAInfo::parseArchString(
       "rv32e_zalasr_xventanacondops", true, false);
   ASSERT_THAT_EXPECTED(MaybeISAInfo2, Succeeded());
   EXPECT_THAT((*MaybeISAInfo2)->toFeatures(),
-              ElementsAre("+e", "+experimental-zalasr", "+xventanacondops"));
+              ElementsAre("+e", "+zalasr", "+xventanacondops"));
 }
 
 TEST(ToFeatures, UnsupportedExtensionsAreDropped) {
@@ -1045,6 +1044,92 @@ TEST(ParseArchString, ZcaImpliesC) {
   EXPECT_EQ(ExtsRV64IDZca.count("c"), 0U);
 }
 
+TEST(ParseArchString, ZcaZcbZcmpZcmtImpliesZce) {
+  // Test Zca+Zcb+Zcmp+Zcmt implies Zce behavior.
+
+  // RV32 Zca+Zcb+Zcmp+Zcmt without F implies Zce
+  auto MaybeRV32IZcaZcbZcmpZcmt =
+      RISCVISAInfo::parseArchString("rv32i_zca_zcb_zcmp_zcmt", true);
+  ASSERT_THAT_EXPECTED(MaybeRV32IZcaZcbZcmpZcmt, Succeeded());
+  const auto &ExtsRV32IZcaZcbZcmpZcmt =
+      (*MaybeRV32IZcaZcbZcmpZcmt)->getExtensions();
+  EXPECT_EQ(ExtsRV32IZcaZcbZcmpZcmt.size(), 8UL);
+  EXPECT_EQ(ExtsRV32IZcaZcbZcmpZcmt.count("i"), 1U);
+  EXPECT_EQ(ExtsRV32IZcaZcbZcmpZcmt.count("c"), 1U);
+  EXPECT_EQ(ExtsRV32IZcaZcbZcmpZcmt.count("zicsr"), 1U);
+  EXPECT_EQ(ExtsRV32IZcaZcbZcmpZcmt.count("zca"), 1U);
+  EXPECT_EQ(ExtsRV32IZcaZcbZcmpZcmt.count("zcb"), 1U);
+  EXPECT_EQ(ExtsRV32IZcaZcbZcmpZcmt.count("zce"), 1U);
+  EXPECT_EQ(ExtsRV32IZcaZcbZcmpZcmt.count("zcmp"), 1U);
+  EXPECT_EQ(ExtsRV32IZcaZcbZcmpZcmt.count("zcmt"), 1U);
+
+  // RV32 Zca+Zcb+Zcmp+Zcmt with Zcf implies Zce
+  auto MaybeRV32IZcaZcbZcfZcmpZcmt =
+      RISCVISAInfo::parseArchString("rv32i_zca_zcb_zcf_zcmp_zcmt", true);
+  ASSERT_THAT_EXPECTED(MaybeRV32IZcaZcbZcfZcmpZcmt, Succeeded());
+  const auto &ExtsRV32IZcaZcbZcfZcmpZcmt =
+      (*MaybeRV32IZcaZcbZcfZcmpZcmt)->getExtensions();
+  EXPECT_EQ(ExtsRV32IZcaZcbZcfZcmpZcmt.size(), 10UL);
+  EXPECT_EQ(ExtsRV32IZcaZcbZcfZcmpZcmt.count("i"), 1U);
+  EXPECT_EQ(ExtsRV32IZcaZcbZcfZcmpZcmt.count("f"), 1U);
+  EXPECT_EQ(ExtsRV32IZcaZcbZcfZcmpZcmt.count("c"), 1U);
+  EXPECT_EQ(ExtsRV32IZcaZcbZcfZcmpZcmt.count("zicsr"), 1U);
+  EXPECT_EQ(ExtsRV32IZcaZcbZcfZcmpZcmt.count("zca"), 1U);
+  EXPECT_EQ(ExtsRV32IZcaZcbZcfZcmpZcmt.count("zcb"), 1U);
+  EXPECT_EQ(ExtsRV32IZcaZcbZcfZcmpZcmt.count("zcf"), 1U);
+  EXPECT_EQ(ExtsRV32IZcaZcbZcfZcmpZcmt.count("zce"), 1U);
+  EXPECT_EQ(ExtsRV32IZcaZcbZcfZcmpZcmt.count("zcmp"), 1U);
+  EXPECT_EQ(ExtsRV32IZcaZcbZcfZcmpZcmt.count("zcmt"), 1U);
+
+  // RV32 with F but not Zcf, does not imply Zce
+  auto MaybeRV32IFZcaZcbZcmpZcmt =
+      RISCVISAInfo::parseArchString("rv32if_zca_zcb_zcmp_zcmt", true);
+  ASSERT_THAT_EXPECTED(MaybeRV32IFZcaZcbZcmpZcmt, Succeeded());
+  const auto &ExtsRV32IFZcaZcbZcfZcmpZcmt =
+      (*MaybeRV32IFZcaZcbZcmpZcmt)->getExtensions();
+  EXPECT_EQ(ExtsRV32IFZcaZcbZcfZcmpZcmt.size(), 7UL);
+  EXPECT_EQ(ExtsRV32IFZcaZcbZcfZcmpZcmt.count("i"), 1U);
+  EXPECT_EQ(ExtsRV32IFZcaZcbZcfZcmpZcmt.count("f"), 1U);
+  EXPECT_EQ(ExtsRV32IFZcaZcbZcfZcmpZcmt.count("zicsr"), 1U);
+  EXPECT_EQ(ExtsRV32IFZcaZcbZcfZcmpZcmt.count("zca"), 1U);
+  EXPECT_EQ(ExtsRV32IFZcaZcbZcfZcmpZcmt.count("zcb"), 1U);
+  EXPECT_EQ(ExtsRV32IFZcaZcbZcfZcmpZcmt.count("zcmp"), 1U);
+  EXPECT_EQ(ExtsRV32IFZcaZcbZcfZcmpZcmt.count("zcmt"), 1U);
+
+  // RV64 Zca+Zcb+Zcmp+Zcmt without F implies Zce
+  auto MaybeRV64IZcaZcbZcmpZcmt =
+      RISCVISAInfo::parseArchString("rv64i_zca_zcb_zcmp_zcmt", true);
+  ASSERT_THAT_EXPECTED(MaybeRV64IZcaZcbZcmpZcmt, Succeeded());
+  const auto &ExtsRV64IZcaZcbZcmpZcmt =
+      (*MaybeRV64IZcaZcbZcmpZcmt)->getExtensions();
+  EXPECT_EQ(ExtsRV64IZcaZcbZcmpZcmt.size(), 8UL);
+  EXPECT_EQ(ExtsRV64IZcaZcbZcmpZcmt.count("i"), 1U);
+  EXPECT_EQ(ExtsRV64IZcaZcbZcmpZcmt.count("c"), 1U);
+  EXPECT_EQ(ExtsRV64IZcaZcbZcmpZcmt.count("zicsr"), 1U);
+  EXPECT_EQ(ExtsRV64IZcaZcbZcmpZcmt.count("zca"), 1U);
+  EXPECT_EQ(ExtsRV64IZcaZcbZcmpZcmt.count("zcb"), 1U);
+  EXPECT_EQ(ExtsRV64IZcaZcbZcmpZcmt.count("zce"), 1U);
+  EXPECT_EQ(ExtsRV64IZcaZcbZcmpZcmt.count("zcmp"), 1U);
+  EXPECT_EQ(ExtsRV64IZcaZcbZcmpZcmt.count("zcmt"), 1U);
+
+  // RV64 Zca+Zcb+Zcmp+Zcmt with F implies Zce
+  auto MaybeRV64IFZcaZcbZcmpZcmt =
+      RISCVISAInfo::parseArchString("rv64if_zca_zcb_zcmp_zcmt", true);
+  ASSERT_THAT_EXPECTED(MaybeRV64IFZcaZcbZcmpZcmt, Succeeded());
+  const auto &ExtsRV64IFZcaZcbZcmpZcmt =
+      (*MaybeRV64IFZcaZcbZcmpZcmt)->getExtensions();
+  EXPECT_EQ(ExtsRV64IFZcaZcbZcmpZcmt.size(), 9UL);
+  EXPECT_EQ(ExtsRV64IFZcaZcbZcmpZcmt.count("i"), 1U);
+  EXPECT_EQ(ExtsRV64IFZcaZcbZcmpZcmt.count("f"), 1U);
+  EXPECT_EQ(ExtsRV64IFZcaZcbZcmpZcmt.count("c"), 1U);
+  EXPECT_EQ(ExtsRV64IFZcaZcbZcmpZcmt.count("zicsr"), 1U);
+  EXPECT_EQ(ExtsRV64IFZcaZcbZcmpZcmt.count("zca"), 1U);
+  EXPECT_EQ(ExtsRV64IFZcaZcbZcmpZcmt.count("zcb"), 1U);
+  EXPECT_EQ(ExtsRV64IFZcaZcbZcmpZcmt.count("zce"), 1U);
+  EXPECT_EQ(ExtsRV64IFZcaZcbZcmpZcmt.count("zcmp"), 1U);
+  EXPECT_EQ(ExtsRV64IFZcaZcbZcmpZcmt.count("zcmt"), 1U);
+}
+
 TEST(isSupportedExtensionWithVersion, AcceptsSingleExtensionWithVersion) {
   EXPECT_TRUE(RISCVISAInfo::isSupportedExtensionWithVersion("zbb1p0"));
   EXPECT_FALSE(RISCVISAInfo::isSupportedExtensionWithVersion("zbb"));
@@ -1106,6 +1191,7 @@ R"(All available -march extensions for RISC-V
     zaamo                1.0
     zabha                1.0
     zacas                1.0
+    zalasr               1.0
     zalrsc               1.0
     zama16b              1.0
     zawrs                1.0
@@ -1226,7 +1312,9 @@ R"(All available -march extensions for RISC-V
     svinval              1.0
     svnapot              1.0
     svpbmt               1.0
+    svrsw60t59b          1.0
     svvptc               1.0
+    xaifet               1.0
     xandesbfhcvt         5.0
     xandesperf           5.0
     xandesvbfhcvt        5.0
@@ -1245,6 +1333,7 @@ R"(All available -march extensions for RISC-V
     xmipscmov            1.0
     xmipsexectl          1.0
     xmipslsp             1.0
+    xqccmp               0.3
     xqci                 0.13
     xqcia                0.7
     xqciac               0.3
@@ -1303,11 +1392,11 @@ R"(All available -march extensions for RISC-V
     xwchc                2.2
 
 Experimental extensions
-    p                    0.18
+    p                    0.19
+    y                    0.96
     zibi                 0.1
     zicfilp              1.0       This is a long dummy description
     zicfiss              1.0
-    zalasr               0.9
     zvbc32e              0.7
     zvfbfa               0.1
     zvfofp8min           0.2
@@ -1315,7 +1404,6 @@ Experimental extensions
     zvqdotq              0.0
     smpmpmt              0.6
     svukte               0.3
-    xqccmp               0.3
     xrivosvisni          0.1
     xrivosvizip          0.1
     xsfmclic             0.1

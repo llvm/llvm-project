@@ -45,6 +45,7 @@
 // C libraries
 #cmakedefine01 _LIBCPP_LIBC_PICOLIBC
 #cmakedefine01 _LIBCPP_LIBC_NEWLIB
+#cmakedefine01 _LIBCPP_LIBC_LLVM_LIBC
 
 // __USE_MINGW_ANSI_STDIO gets redefined on MinGW
 #ifdef __clang__

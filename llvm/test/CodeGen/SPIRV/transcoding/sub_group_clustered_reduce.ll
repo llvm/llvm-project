@@ -204,18 +204,18 @@
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformSMax %[[#char]] %[[#ScopeSubgroup]] ClusteredReduce %[[#char_0]] %[[#int_2]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testClusteredArithmeticChar(i8 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testClusteredArithmeticChar(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func signext i8 @_Z30sub_group_clustered_reduce_addcj(i8 signext 0, i32 2)
-  store i8 %2, i8 addrspace(1)* %0, align 1
+  store i8 %2, ptr addrspace(1) %0, align 1
   %3 = tail call spir_func signext i8 @_Z30sub_group_clustered_reduce_mulcj(i8 signext 0, i32 2)
-  %4 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 1
-  store i8 %3, i8 addrspace(1)* %4, align 1
+  %4 = getelementptr inbounds i8, ptr addrspace(1) %0, i64 1
+  store i8 %3, ptr addrspace(1) %4, align 1
   %5 = tail call spir_func signext i8 @_Z30sub_group_clustered_reduce_mincj(i8 signext 0, i32 2)
-  %6 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 2
-  store i8 %5, i8 addrspace(1)* %6, align 1
+  %6 = getelementptr inbounds i8, ptr addrspace(1) %0, i64 2
+  store i8 %5, ptr addrspace(1) %6, align 1
   %7 = tail call spir_func signext i8 @_Z30sub_group_clustered_reduce_maxcj(i8 signext 0, i32 2)
-  %8 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 3
-  store i8 %7, i8 addrspace(1)* %8, align 1
+  %8 = getelementptr inbounds i8, ptr addrspace(1) %0, i64 3
+  store i8 %7, ptr addrspace(1) %8, align 1
   ret void
 }
 
@@ -234,18 +234,18 @@ declare dso_local spir_func signext i8 @_Z30sub_group_clustered_reduce_maxcj(i8 
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformUMax %[[#char]] %[[#ScopeSubgroup]] ClusteredReduce %[[#char_0]] %[[#int_2]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testClusteredArithmeticUChar(i8 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testClusteredArithmeticUChar(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func zeroext i8 @_Z30sub_group_clustered_reduce_addhj(i8 zeroext 0, i32 2)
-  store i8 %2, i8 addrspace(1)* %0, align 1
+  store i8 %2, ptr addrspace(1) %0, align 1
   %3 = tail call spir_func zeroext i8 @_Z30sub_group_clustered_reduce_mulhj(i8 zeroext 0, i32 2)
-  %4 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 1
-  store i8 %3, i8 addrspace(1)* %4, align 1
+  %4 = getelementptr inbounds i8, ptr addrspace(1) %0, i64 1
+  store i8 %3, ptr addrspace(1) %4, align 1
   %5 = tail call spir_func zeroext i8 @_Z30sub_group_clustered_reduce_minhj(i8 zeroext 0, i32 2)
-  %6 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 2
-  store i8 %5, i8 addrspace(1)* %6, align 1
+  %6 = getelementptr inbounds i8, ptr addrspace(1) %0, i64 2
+  store i8 %5, ptr addrspace(1) %6, align 1
   %7 = tail call spir_func zeroext i8 @_Z30sub_group_clustered_reduce_maxhj(i8 zeroext 0, i32 2)
-  %8 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 3
-  store i8 %7, i8 addrspace(1)* %8, align 1
+  %8 = getelementptr inbounds i8, ptr addrspace(1) %0, i64 3
+  store i8 %7, ptr addrspace(1) %8, align 1
   ret void
 }
 
@@ -264,18 +264,18 @@ declare dso_local spir_func zeroext i8 @_Z30sub_group_clustered_reduce_maxhj(i8 
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformSMax %[[#short]] %[[#ScopeSubgroup]] ClusteredReduce %[[#short_0]] %[[#int_2]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testClusteredArithmeticShort(i16 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testClusteredArithmeticShort(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func signext i16 @_Z30sub_group_clustered_reduce_addsj(i16 signext 0, i32 2)
-  store i16 %2, i16 addrspace(1)* %0, align 2
+  store i16 %2, ptr addrspace(1) %0, align 2
   %3 = tail call spir_func signext i16 @_Z30sub_group_clustered_reduce_mulsj(i16 signext 0, i32 2)
-  %4 = getelementptr inbounds i16, i16 addrspace(1)* %0, i64 1
-  store i16 %3, i16 addrspace(1)* %4, align 2
+  %4 = getelementptr inbounds i16, ptr addrspace(1) %0, i64 1
+  store i16 %3, ptr addrspace(1) %4, align 2
   %5 = tail call spir_func signext i16 @_Z30sub_group_clustered_reduce_minsj(i16 signext 0, i32 2)
-  %6 = getelementptr inbounds i16, i16 addrspace(1)* %0, i64 2
-  store i16 %5, i16 addrspace(1)* %6, align 2
+  %6 = getelementptr inbounds i16, ptr addrspace(1) %0, i64 2
+  store i16 %5, ptr addrspace(1) %6, align 2
   %7 = tail call spir_func signext i16 @_Z30sub_group_clustered_reduce_maxsj(i16 signext 0, i32 2)
-  %8 = getelementptr inbounds i16, i16 addrspace(1)* %0, i64 3
-  store i16 %7, i16 addrspace(1)* %8, align 2
+  %8 = getelementptr inbounds i16, ptr addrspace(1) %0, i64 3
+  store i16 %7, ptr addrspace(1) %8, align 2
   ret void
 }
 
@@ -294,18 +294,18 @@ declare dso_local spir_func signext i16 @_Z30sub_group_clustered_reduce_maxsj(i1
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformUMax %[[#short]] %[[#ScopeSubgroup]] ClusteredReduce %[[#short_0]] %[[#int_2]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testClusteredArithmeticUShort(i16 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testClusteredArithmeticUShort(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func zeroext i16 @_Z30sub_group_clustered_reduce_addtj(i16 zeroext 0, i32 2)
-  store i16 %2, i16 addrspace(1)* %0, align 2
+  store i16 %2, ptr addrspace(1) %0, align 2
   %3 = tail call spir_func zeroext i16 @_Z30sub_group_clustered_reduce_multj(i16 zeroext 0, i32 2)
-  %4 = getelementptr inbounds i16, i16 addrspace(1)* %0, i64 1
-  store i16 %3, i16 addrspace(1)* %4, align 2
+  %4 = getelementptr inbounds i16, ptr addrspace(1) %0, i64 1
+  store i16 %3, ptr addrspace(1) %4, align 2
   %5 = tail call spir_func zeroext i16 @_Z30sub_group_clustered_reduce_mintj(i16 zeroext 0, i32 2)
-  %6 = getelementptr inbounds i16, i16 addrspace(1)* %0, i64 2
-  store i16 %5, i16 addrspace(1)* %6, align 2
+  %6 = getelementptr inbounds i16, ptr addrspace(1) %0, i64 2
+  store i16 %5, ptr addrspace(1) %6, align 2
   %7 = tail call spir_func zeroext i16 @_Z30sub_group_clustered_reduce_maxtj(i16 zeroext 0, i32 2)
-  %8 = getelementptr inbounds i16, i16 addrspace(1)* %0, i64 3
-  store i16 %7, i16 addrspace(1)* %8, align 2
+  %8 = getelementptr inbounds i16, ptr addrspace(1) %0, i64 3
+  store i16 %7, ptr addrspace(1) %8, align 2
   ret void
 }
 
@@ -324,18 +324,18 @@ declare dso_local spir_func zeroext i16 @_Z30sub_group_clustered_reduce_maxtj(i1
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformSMax %[[#int]] %[[#ScopeSubgroup]] ClusteredReduce %[[#int_0]] %[[#int_2]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testClusteredArithmeticInt(i32 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testClusteredArithmeticInt(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func i32 @_Z30sub_group_clustered_reduce_addij(i32 0, i32 2)
-  store i32 %2, i32 addrspace(1)* %0, align 4
+  store i32 %2, ptr addrspace(1) %0, align 4
   %3 = tail call spir_func i32 @_Z30sub_group_clustered_reduce_mulij(i32 0, i32 2)
-  %4 = getelementptr inbounds i32, i32 addrspace(1)* %0, i64 1
-  store i32 %3, i32 addrspace(1)* %4, align 4
+  %4 = getelementptr inbounds i32, ptr addrspace(1) %0, i64 1
+  store i32 %3, ptr addrspace(1) %4, align 4
   %5 = tail call spir_func i32 @_Z30sub_group_clustered_reduce_minij(i32 0, i32 2)
-  %6 = getelementptr inbounds i32, i32 addrspace(1)* %0, i64 2
-  store i32 %5, i32 addrspace(1)* %6, align 4
+  %6 = getelementptr inbounds i32, ptr addrspace(1) %0, i64 2
+  store i32 %5, ptr addrspace(1) %6, align 4
   %7 = tail call spir_func i32 @_Z30sub_group_clustered_reduce_maxij(i32 0, i32 2)
-  %8 = getelementptr inbounds i32, i32 addrspace(1)* %0, i64 3
-  store i32 %7, i32 addrspace(1)* %8, align 4
+  %8 = getelementptr inbounds i32, ptr addrspace(1) %0, i64 3
+  store i32 %7, ptr addrspace(1) %8, align 4
   ret void
 }
 
@@ -354,18 +354,18 @@ declare dso_local spir_func i32 @_Z30sub_group_clustered_reduce_maxij(i32, i32) 
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformUMax %[[#int]] %[[#ScopeSubgroup]] ClusteredReduce %[[#int_0]] %[[#int_2]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testClusteredArithmeticUInt(i32 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testClusteredArithmeticUInt(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func i32 @_Z30sub_group_clustered_reduce_addjj(i32 0, i32 2)
-  store i32 %2, i32 addrspace(1)* %0, align 4
+  store i32 %2, ptr addrspace(1) %0, align 4
   %3 = tail call spir_func i32 @_Z30sub_group_clustered_reduce_muljj(i32 0, i32 2)
-  %4 = getelementptr inbounds i32, i32 addrspace(1)* %0, i64 1
-  store i32 %3, i32 addrspace(1)* %4, align 4
+  %4 = getelementptr inbounds i32, ptr addrspace(1) %0, i64 1
+  store i32 %3, ptr addrspace(1) %4, align 4
   %5 = tail call spir_func i32 @_Z30sub_group_clustered_reduce_minjj(i32 0, i32 2)
-  %6 = getelementptr inbounds i32, i32 addrspace(1)* %0, i64 2
-  store i32 %5, i32 addrspace(1)* %6, align 4
+  %6 = getelementptr inbounds i32, ptr addrspace(1) %0, i64 2
+  store i32 %5, ptr addrspace(1) %6, align 4
   %7 = tail call spir_func i32 @_Z30sub_group_clustered_reduce_maxjj(i32 0, i32 2)
-  %8 = getelementptr inbounds i32, i32 addrspace(1)* %0, i64 3
-  store i32 %7, i32 addrspace(1)* %8, align 4
+  %8 = getelementptr inbounds i32, ptr addrspace(1) %0, i64 3
+  store i32 %7, ptr addrspace(1) %8, align 4
   ret void
 }
 
@@ -384,18 +384,18 @@ declare dso_local spir_func i32 @_Z30sub_group_clustered_reduce_maxjj(i32, i32) 
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformSMax %[[#long]] %[[#ScopeSubgroup]] ClusteredReduce %[[#long_0]] %[[#int_2]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testClusteredArithmeticLong(i64 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testClusteredArithmeticLong(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func i64 @_Z30sub_group_clustered_reduce_addlj(i64 0, i32 2)
-  store i64 %2, i64 addrspace(1)* %0, align 8
+  store i64 %2, ptr addrspace(1) %0, align 8
   %3 = tail call spir_func i64 @_Z30sub_group_clustered_reduce_mullj(i64 0, i32 2)
-  %4 = getelementptr inbounds i64, i64 addrspace(1)* %0, i64 1
-  store i64 %3, i64 addrspace(1)* %4, align 8
+  %4 = getelementptr inbounds i64, ptr addrspace(1) %0, i64 1
+  store i64 %3, ptr addrspace(1) %4, align 8
   %5 = tail call spir_func i64 @_Z30sub_group_clustered_reduce_minlj(i64 0, i32 2)
-  %6 = getelementptr inbounds i64, i64 addrspace(1)* %0, i64 2
-  store i64 %5, i64 addrspace(1)* %6, align 8
+  %6 = getelementptr inbounds i64, ptr addrspace(1) %0, i64 2
+  store i64 %5, ptr addrspace(1) %6, align 8
   %7 = tail call spir_func i64 @_Z30sub_group_clustered_reduce_maxlj(i64 0, i32 2)
-  %8 = getelementptr inbounds i64, i64 addrspace(1)* %0, i64 3
-  store i64 %7, i64 addrspace(1)* %8, align 8
+  %8 = getelementptr inbounds i64, ptr addrspace(1) %0, i64 3
+  store i64 %7, ptr addrspace(1) %8, align 8
   ret void
 }
 
@@ -414,18 +414,18 @@ declare dso_local spir_func i64 @_Z30sub_group_clustered_reduce_maxlj(i64, i32) 
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformUMax %[[#long]] %[[#ScopeSubgroup]] ClusteredReduce %[[#long_0]] %[[#int_2]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testClusteredArithmeticULong(i64 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testClusteredArithmeticULong(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func i64 @_Z30sub_group_clustered_reduce_addmj(i64 0, i32 2)
-  store i64 %2, i64 addrspace(1)* %0, align 8
+  store i64 %2, ptr addrspace(1) %0, align 8
   %3 = tail call spir_func i64 @_Z30sub_group_clustered_reduce_mulmj(i64 0, i32 2)
-  %4 = getelementptr inbounds i64, i64 addrspace(1)* %0, i64 1
-  store i64 %3, i64 addrspace(1)* %4, align 8
+  %4 = getelementptr inbounds i64, ptr addrspace(1) %0, i64 1
+  store i64 %3, ptr addrspace(1) %4, align 8
   %5 = tail call spir_func i64 @_Z30sub_group_clustered_reduce_minmj(i64 0, i32 2)
-  %6 = getelementptr inbounds i64, i64 addrspace(1)* %0, i64 2
-  store i64 %5, i64 addrspace(1)* %6, align 8
+  %6 = getelementptr inbounds i64, ptr addrspace(1) %0, i64 2
+  store i64 %5, ptr addrspace(1) %6, align 8
   %7 = tail call spir_func i64 @_Z30sub_group_clustered_reduce_maxmj(i64 0, i32 2)
-  %8 = getelementptr inbounds i64, i64 addrspace(1)* %0, i64 3
-  store i64 %7, i64 addrspace(1)* %8, align 8
+  %8 = getelementptr inbounds i64, ptr addrspace(1) %0, i64 3
+  store i64 %7, ptr addrspace(1) %8, align 8
   ret void
 }
 
@@ -444,18 +444,18 @@ declare dso_local spir_func i64 @_Z30sub_group_clustered_reduce_maxmj(i64, i32) 
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformFMax %[[#float]] %[[#ScopeSubgroup]] ClusteredReduce %[[#float_0]] %[[#int_2]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testClusteredArithmeticFloat(float addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testClusteredArithmeticFloat(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func float @_Z30sub_group_clustered_reduce_addfj(float 0.000000e+00, i32 2)
-  store float %2, float addrspace(1)* %0, align 4
+  store float %2, ptr addrspace(1) %0, align 4
   %3 = tail call spir_func float @_Z30sub_group_clustered_reduce_mulfj(float 0.000000e+00, i32 2)
-  %4 = getelementptr inbounds float, float addrspace(1)* %0, i64 1
-  store float %3, float addrspace(1)* %4, align 4
+  %4 = getelementptr inbounds float, ptr addrspace(1) %0, i64 1
+  store float %3, ptr addrspace(1) %4, align 4
   %5 = tail call spir_func float @_Z30sub_group_clustered_reduce_minfj(float 0.000000e+00, i32 2)
-  %6 = getelementptr inbounds float, float addrspace(1)* %0, i64 2
-  store float %5, float addrspace(1)* %6, align 4
+  %6 = getelementptr inbounds float, ptr addrspace(1) %0, i64 2
+  store float %5, ptr addrspace(1) %6, align 4
   %7 = tail call spir_func float @_Z30sub_group_clustered_reduce_maxfj(float 0.000000e+00, i32 2)
-  %8 = getelementptr inbounds float, float addrspace(1)* %0, i64 3
-  store float %7, float addrspace(1)* %8, align 4
+  %8 = getelementptr inbounds float, ptr addrspace(1) %0, i64 3
+  store float %7, ptr addrspace(1) %8, align 4
   ret void
 }
 
@@ -474,18 +474,18 @@ declare dso_local spir_func float @_Z30sub_group_clustered_reduce_maxfj(float, i
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformFMax %[[#half]] %[[#ScopeSubgroup]] ClusteredReduce %[[#half_0]] %[[#int_2]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testClusteredArithmeticHalf(half addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testClusteredArithmeticHalf(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func half @_Z30sub_group_clustered_reduce_addDhj(half 0xH0000, i32 2)
-  store half %2, half addrspace(1)* %0, align 2
+  store half %2, ptr addrspace(1) %0, align 2
   %3 = tail call spir_func half @_Z30sub_group_clustered_reduce_mulDhj(half 0xH0000, i32 2)
-  %4 = getelementptr inbounds half, half addrspace(1)* %0, i64 1
-  store half %3, half addrspace(1)* %4, align 2
+  %4 = getelementptr inbounds half, ptr addrspace(1) %0, i64 1
+  store half %3, ptr addrspace(1) %4, align 2
   %5 = tail call spir_func half @_Z30sub_group_clustered_reduce_minDhj(half 0xH0000, i32 2)
-  %6 = getelementptr inbounds half, half addrspace(1)* %0, i64 2
-  store half %5, half addrspace(1)* %6, align 2
+  %6 = getelementptr inbounds half, ptr addrspace(1) %0, i64 2
+  store half %5, ptr addrspace(1) %6, align 2
   %7 = tail call spir_func half @_Z30sub_group_clustered_reduce_maxDhj(half 0xH0000, i32 2)
-  %8 = getelementptr inbounds half, half addrspace(1)* %0, i64 3
-  store half %7, half addrspace(1)* %8, align 2
+  %8 = getelementptr inbounds half, ptr addrspace(1) %0, i64 3
+  store half %7, ptr addrspace(1) %8, align 2
   ret void
 }
 
@@ -504,18 +504,18 @@ declare dso_local spir_func half @_Z30sub_group_clustered_reduce_maxDhj(half, i3
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformFMax %[[#double]] %[[#ScopeSubgroup]] ClusteredReduce %[[#double_0]] %[[#int_2]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testClusteredArithmeticDouble(double addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testClusteredArithmeticDouble(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func double @_Z30sub_group_clustered_reduce_adddj(double 0.000000e+00, i32 2)
-  store double %2, double addrspace(1)* %0, align 8
+  store double %2, ptr addrspace(1) %0, align 8
   %3 = tail call spir_func double @_Z30sub_group_clustered_reduce_muldj(double 0.000000e+00, i32 2)
-  %4 = getelementptr inbounds double, double addrspace(1)* %0, i64 1
-  store double %3, double addrspace(1)* %4, align 8
+  %4 = getelementptr inbounds double, ptr addrspace(1) %0, i64 1
+  store double %3, ptr addrspace(1) %4, align 8
   %5 = tail call spir_func double @_Z30sub_group_clustered_reduce_mindj(double 0.000000e+00, i32 2)
-  %6 = getelementptr inbounds double, double addrspace(1)* %0, i64 2
-  store double %5, double addrspace(1)* %6, align 8
+  %6 = getelementptr inbounds double, ptr addrspace(1) %0, i64 2
+  store double %5, ptr addrspace(1) %6, align 8
   %7 = tail call spir_func double @_Z30sub_group_clustered_reduce_maxdj(double 0.000000e+00, i32 2)
-  %8 = getelementptr inbounds double, double addrspace(1)* %0, i64 3
-  store double %7, double addrspace(1)* %8, align 8
+  %8 = getelementptr inbounds double, ptr addrspace(1) %0, i64 3
+  store double %7, ptr addrspace(1) %8, align 8
   ret void
 }
 
@@ -533,15 +533,15 @@ declare dso_local spir_func double @_Z30sub_group_clustered_reduce_maxdj(double,
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformBitwiseXor %[[#char]] %[[#ScopeSubgroup]] ClusteredReduce %[[#char_0]] %[[#int_2]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testClusteredBitwiseChar(i8 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testClusteredBitwiseChar(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func signext i8 @_Z30sub_group_clustered_reduce_andcj(i8 signext 0, i32 2)
-  store i8 %2, i8 addrspace(1)* %0, align 1
+  store i8 %2, ptr addrspace(1) %0, align 1
   %3 = tail call spir_func signext i8 @_Z29sub_group_clustered_reduce_orcj(i8 signext 0, i32 2)
-  %4 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 1
-  store i8 %3, i8 addrspace(1)* %4, align 1
+  %4 = getelementptr inbounds i8, ptr addrspace(1) %0, i64 1
+  store i8 %3, ptr addrspace(1) %4, align 1
   %5 = tail call spir_func signext i8 @_Z30sub_group_clustered_reduce_xorcj(i8 signext 0, i32 2)
-  %6 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 2
-  store i8 %5, i8 addrspace(1)* %6, align 1
+  %6 = getelementptr inbounds i8, ptr addrspace(1) %0, i64 2
+  store i8 %5, ptr addrspace(1) %6, align 1
   ret void
 }
 
@@ -557,15 +557,15 @@ declare dso_local spir_func signext i8 @_Z30sub_group_clustered_reduce_xorcj(i8 
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformBitwiseXor %[[#char]] %[[#ScopeSubgroup]] ClusteredReduce %[[#char_0]] %[[#int_2]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testClusteredBitwiseUChar(i8 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testClusteredBitwiseUChar(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func zeroext i8 @_Z30sub_group_clustered_reduce_andhj(i8 zeroext 0, i32 2)
-  store i8 %2, i8 addrspace(1)* %0, align 1
+  store i8 %2, ptr addrspace(1) %0, align 1
   %3 = tail call spir_func zeroext i8 @_Z29sub_group_clustered_reduce_orhj(i8 zeroext 0, i32 2)
-  %4 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 1
-  store i8 %3, i8 addrspace(1)* %4, align 1
+  %4 = getelementptr inbounds i8, ptr addrspace(1) %0, i64 1
+  store i8 %3, ptr addrspace(1) %4, align 1
   %5 = tail call spir_func zeroext i8 @_Z30sub_group_clustered_reduce_xorhj(i8 zeroext 0, i32 2)
-  %6 = getelementptr inbounds i8, i8 addrspace(1)* %0, i64 2
-  store i8 %5, i8 addrspace(1)* %6, align 1
+  %6 = getelementptr inbounds i8, ptr addrspace(1) %0, i64 2
+  store i8 %5, ptr addrspace(1) %6, align 1
   ret void
 }
 
@@ -581,15 +581,15 @@ declare dso_local spir_func zeroext i8 @_Z30sub_group_clustered_reduce_xorhj(i8 
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformBitwiseXor %[[#short]] %[[#ScopeSubgroup]] ClusteredReduce %[[#short_0]] %[[#int_2]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testClusteredBitwiseShort(i16 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testClusteredBitwiseShort(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func signext i16 @_Z30sub_group_clustered_reduce_andsj(i16 signext 0, i32 2)
-  store i16 %2, i16 addrspace(1)* %0, align 2
+  store i16 %2, ptr addrspace(1) %0, align 2
   %3 = tail call spir_func signext i16 @_Z29sub_group_clustered_reduce_orsj(i16 signext 0, i32 2)
-  %4 = getelementptr inbounds i16, i16 addrspace(1)* %0, i64 1
-  store i16 %3, i16 addrspace(1)* %4, align 2
+  %4 = getelementptr inbounds i16, ptr addrspace(1) %0, i64 1
+  store i16 %3, ptr addrspace(1) %4, align 2
   %5 = tail call spir_func signext i16 @_Z30sub_group_clustered_reduce_xorsj(i16 signext 0, i32 2)
-  %6 = getelementptr inbounds i16, i16 addrspace(1)* %0, i64 2
-  store i16 %5, i16 addrspace(1)* %6, align 2
+  %6 = getelementptr inbounds i16, ptr addrspace(1) %0, i64 2
+  store i16 %5, ptr addrspace(1) %6, align 2
   ret void
 }
 
@@ -605,15 +605,15 @@ declare dso_local spir_func signext i16 @_Z30sub_group_clustered_reduce_xorsj(i1
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformBitwiseXor %[[#short]] %[[#ScopeSubgroup]] ClusteredReduce %[[#short_0]] %[[#int_2]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testClusteredBitwiseUShort(i16 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testClusteredBitwiseUShort(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func zeroext i16 @_Z30sub_group_clustered_reduce_andtj(i16 zeroext 0, i32 2)
-  store i16 %2, i16 addrspace(1)* %0, align 2
+  store i16 %2, ptr addrspace(1) %0, align 2
   %3 = tail call spir_func zeroext i16 @_Z29sub_group_clustered_reduce_ortj(i16 zeroext 0, i32 2)
-  %4 = getelementptr inbounds i16, i16 addrspace(1)* %0, i64 1
-  store i16 %3, i16 addrspace(1)* %4, align 2
+  %4 = getelementptr inbounds i16, ptr addrspace(1) %0, i64 1
+  store i16 %3, ptr addrspace(1) %4, align 2
   %5 = tail call spir_func zeroext i16 @_Z30sub_group_clustered_reduce_xortj(i16 zeroext 0, i32 2)
-  %6 = getelementptr inbounds i16, i16 addrspace(1)* %0, i64 2
-  store i16 %5, i16 addrspace(1)* %6, align 2
+  %6 = getelementptr inbounds i16, ptr addrspace(1) %0, i64 2
+  store i16 %5, ptr addrspace(1) %6, align 2
   ret void
 }
 
@@ -629,15 +629,15 @@ declare dso_local spir_func zeroext i16 @_Z30sub_group_clustered_reduce_xortj(i1
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformBitwiseXor %[[#int]] %[[#ScopeSubgroup]] ClusteredReduce %[[#int_0]] %[[#int_2]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testClusteredBitwiseInt(i32 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testClusteredBitwiseInt(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func i32 @_Z30sub_group_clustered_reduce_andij(i32 0, i32 2)
-  store i32 %2, i32 addrspace(1)* %0, align 4
+  store i32 %2, ptr addrspace(1) %0, align 4
   %3 = tail call spir_func i32 @_Z29sub_group_clustered_reduce_orij(i32 0, i32 2)
-  %4 = getelementptr inbounds i32, i32 addrspace(1)* %0, i64 1
-  store i32 %3, i32 addrspace(1)* %4, align 4
+  %4 = getelementptr inbounds i32, ptr addrspace(1) %0, i64 1
+  store i32 %3, ptr addrspace(1) %4, align 4
   %5 = tail call spir_func i32 @_Z30sub_group_clustered_reduce_xorij(i32 0, i32 2)
-  %6 = getelementptr inbounds i32, i32 addrspace(1)* %0, i64 2
-  store i32 %5, i32 addrspace(1)* %6, align 4
+  %6 = getelementptr inbounds i32, ptr addrspace(1) %0, i64 2
+  store i32 %5, ptr addrspace(1) %6, align 4
   ret void
 }
 
@@ -653,15 +653,15 @@ declare dso_local spir_func i32 @_Z30sub_group_clustered_reduce_xorij(i32, i32) 
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformBitwiseXor %[[#int]] %[[#ScopeSubgroup]] ClusteredReduce %[[#int_0]] %[[#int_2]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testClusteredBitwiseUInt(i32 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testClusteredBitwiseUInt(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func i32 @_Z30sub_group_clustered_reduce_andjj(i32 0, i32 2)
-  store i32 %2, i32 addrspace(1)* %0, align 4
+  store i32 %2, ptr addrspace(1) %0, align 4
   %3 = tail call spir_func i32 @_Z29sub_group_clustered_reduce_orjj(i32 0, i32 2)
-  %4 = getelementptr inbounds i32, i32 addrspace(1)* %0, i64 1
-  store i32 %3, i32 addrspace(1)* %4, align 4
+  %4 = getelementptr inbounds i32, ptr addrspace(1) %0, i64 1
+  store i32 %3, ptr addrspace(1) %4, align 4
   %5 = tail call spir_func i32 @_Z30sub_group_clustered_reduce_xorjj(i32 0, i32 2)
-  %6 = getelementptr inbounds i32, i32 addrspace(1)* %0, i64 2
-  store i32 %5, i32 addrspace(1)* %6, align 4
+  %6 = getelementptr inbounds i32, ptr addrspace(1) %0, i64 2
+  store i32 %5, ptr addrspace(1) %6, align 4
   ret void
 }
 
@@ -677,15 +677,15 @@ declare dso_local spir_func i32 @_Z30sub_group_clustered_reduce_xorjj(i32, i32) 
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformBitwiseXor %[[#long]] %[[#ScopeSubgroup]] ClusteredReduce %[[#long_0]] %[[#int_2]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testClusteredBitwiseLong(i64 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testClusteredBitwiseLong(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func i64 @_Z30sub_group_clustered_reduce_andlj(i64 0, i32 2)
-  store i64 %2, i64 addrspace(1)* %0, align 8
+  store i64 %2, ptr addrspace(1) %0, align 8
   %3 = tail call spir_func i64 @_Z29sub_group_clustered_reduce_orlj(i64 0, i32 2)
-  %4 = getelementptr inbounds i64, i64 addrspace(1)* %0, i64 1
-  store i64 %3, i64 addrspace(1)* %4, align 8
+  %4 = getelementptr inbounds i64, ptr addrspace(1) %0, i64 1
+  store i64 %3, ptr addrspace(1) %4, align 8
   %5 = tail call spir_func i64 @_Z30sub_group_clustered_reduce_xorlj(i64 0, i32 2)
-  %6 = getelementptr inbounds i64, i64 addrspace(1)* %0, i64 2
-  store i64 %5, i64 addrspace(1)* %6, align 8
+  %6 = getelementptr inbounds i64, ptr addrspace(1) %0, i64 2
+  store i64 %5, ptr addrspace(1) %6, align 8
   ret void
 }
 
@@ -701,15 +701,15 @@ declare dso_local spir_func i64 @_Z30sub_group_clustered_reduce_xorlj(i64, i32) 
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformBitwiseXor %[[#long]] %[[#ScopeSubgroup]] ClusteredReduce %[[#long_0]] %[[#int_2]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testClusteredBitwiseULong(i64 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testClusteredBitwiseULong(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func i64 @_Z30sub_group_clustered_reduce_andmj(i64 0, i32 2)
-  store i64 %2, i64 addrspace(1)* %0, align 8
+  store i64 %2, ptr addrspace(1) %0, align 8
   %3 = tail call spir_func i64 @_Z29sub_group_clustered_reduce_ormj(i64 0, i32 2)
-  %4 = getelementptr inbounds i64, i64 addrspace(1)* %0, i64 1
-  store i64 %3, i64 addrspace(1)* %4, align 8
+  %4 = getelementptr inbounds i64, ptr addrspace(1) %0, i64 1
+  store i64 %3, ptr addrspace(1) %4, align 8
   %5 = tail call spir_func i64 @_Z30sub_group_clustered_reduce_xormj(i64 0, i32 2)
-  %6 = getelementptr inbounds i64, i64 addrspace(1)* %0, i64 2
-  store i64 %5, i64 addrspace(1)* %6, align 8
+  %6 = getelementptr inbounds i64, ptr addrspace(1) %0, i64 2
+  store i64 %5, ptr addrspace(1) %6, align 8
   ret void
 }
 
@@ -725,15 +725,15 @@ declare dso_local spir_func i64 @_Z30sub_group_clustered_reduce_xormj(i64, i32) 
 ; CHECK-SPIRV: %[[#]] = OpGroupNonUniformLogicalXor %[[#bool]] %[[#ScopeSubgroup]] ClusteredReduce %[[#false]] %[[#int_2]]
 ; CHECK-SPIRV: OpFunctionEnd
 
-define dso_local spir_kernel void @testClusteredLogical(i32 addrspace(1)* nocapture) local_unnamed_addr {
+define dso_local spir_kernel void @testClusteredLogical(ptr addrspace(1) nocapture) local_unnamed_addr {
   %2 = tail call spir_func i32 @_Z38sub_group_clustered_reduce_logical_andij(i32 0, i32 2)
-  store i32 %2, i32 addrspace(1)* %0, align 4
+  store i32 %2, ptr addrspace(1) %0, align 4
   %3 = tail call spir_func i32 @_Z37sub_group_clustered_reduce_logical_orij(i32 0, i32 2)
-  %4 = getelementptr inbounds i32, i32 addrspace(1)* %0, i64 1
-  store i32 %3, i32 addrspace(1)* %4, align 4
+  %4 = getelementptr inbounds i32, ptr addrspace(1) %0, i64 1
+  store i32 %3, ptr addrspace(1) %4, align 4
   %5 = tail call spir_func i32 @_Z38sub_group_clustered_reduce_logical_xorij(i32 0, i32 2)
-  %6 = getelementptr inbounds i32, i32 addrspace(1)* %0, i64 2
-  store i32 %5, i32 addrspace(1)* %6, align 4
+  %6 = getelementptr inbounds i32, ptr addrspace(1) %0, i64 2
+  store i32 %5, ptr addrspace(1) %6, align 4
   ret void
 }
 

@@ -123,6 +123,7 @@ public:
   void loadRegFromStackSlot(
       MachineBasicBlock &MBB, MachineBasicBlock::iterator MBBI, Register DstReg,
       int FrameIndex, const TargetRegisterClass *RC, Register VReg,
+      unsigned SubReg = 0,
       MachineInstr::MIFlag Flags = MachineInstr::NoFlags) const override;
 
   using TargetInstrInfo::foldMemoryOperandImpl;
@@ -235,6 +236,7 @@ public:
 
   bool shouldOutlineFromFunctionByDefault(MachineFunction &MF) const override;
 
+  bool analyzeCandidate(outliner::Candidate &C) const;
   // Calculate target-specific information for a set of outlining candidates.
   std::optional<std::unique_ptr<outliner::OutlinedFunction>>
   getOutliningCandidateInfo(
@@ -372,6 +374,9 @@ namespace RISCV {
 // expect to see a FrameIndex operand.
 bool isRVVSpill(const MachineInstr &MI);
 
+/// Return true if \p MI is a copy that will be lowered to one or more vmvNr.vs.
+bool isVectorCopy(const TargetRegisterInfo *TRI, const MachineInstr &MI);
+
 std::optional<std::pair<unsigned, unsigned>>
 isRVVSpillForZvlsseg(unsigned Opcode);
 
@@ -416,6 +421,9 @@ namespace RISCVVPseudosTable {
 struct PseudoInfo {
   uint16_t Pseudo;
   uint16_t BaseInstr;
+  uint16_t VLMul : 3;
+  uint16_t SEW : 8;
+  uint16_t IsAltFmt : 1;
 };
 
 #define GET_RISCVVPseudosTable_DECL

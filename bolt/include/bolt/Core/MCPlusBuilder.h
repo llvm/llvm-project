@@ -14,7 +14,6 @@
 #ifndef BOLT_CORE_MCPLUSBUILDER_H
 #define BOLT_CORE_MCPLUSBUILDER_H
 
-#include "bolt/Core/BinaryBasicBlock.h"
 #include "bolt/Core/MCPlus.h"
 #include "bolt/Core/Relocation.h"
 #include "llvm/ADT/ArrayRef.h"
@@ -1784,6 +1783,10 @@ public:
     return 0;
   }
 
+  virtual void patchPLTEntryForBTI(BinaryFunction &PLTFunction, MCInst &Call) {
+    llvm_unreachable("not implemented");
+  }
+
   virtual bool analyzeVirtualMethodCall(InstructionIterator Begin,
                                         InstructionIterator End,
                                         std::vector<MCInst *> &MethodFetchInsns,
@@ -2042,7 +2045,7 @@ public:
   /// targets).
   virtual std::optional<uint64_t>
   findMemcpySizeInBytes(const BinaryBasicBlock &BB,
-                        BinaryBasicBlock::iterator CallInst) const {
+                        InstructionListType::iterator CallInst) const {
     return std::nullopt;
   }
 

@@ -33,6 +33,7 @@
 #include "llvm/CodeGen/TargetOpcodes.h"
 #include "llvm/CodeGen/TargetSubtargetInfo.h"
 #include "llvm/CodeGen/VirtRegMap.h"
+#include "llvm/MC/MCInstBuilder.h"
 #include "llvm/MC/MCInstrDesc.h"
 #include "llvm/MC/MCRegisterInfo.h"
 #include "llvm/Support/BranchProbability.h"
@@ -82,8 +83,8 @@ void SystemZInstrInfo::splitMove(MachineBasicBlock::iterator MI,
   MachineOperand &HighRegOp = HighPartMI->getOperand(0);
   MachineOperand &LowRegOp = LowPartMI->getOperand(0);
   Register Reg128 = LowRegOp.getReg();
-  unsigned Reg128Killed = getKillRegState(LowRegOp.isKill());
-  unsigned Reg128Undef  = getUndefRegState(LowRegOp.isUndef());
+  RegState Reg128Killed = getKillRegState(LowRegOp.isKill());
+  RegState Reg128Undef = getUndefRegState(LowRegOp.isUndef());
   HighRegOp.setReg(RI.getSubReg(HighRegOp.getReg(), SystemZ::subreg_h64));
   LowRegOp.setReg(RI.getSubReg(LowRegOp.getReg(), SystemZ::subreg_l64));
 
@@ -107,7 +108,7 @@ void SystemZInstrInfo::splitMove(MachineBasicBlock::iterator MI,
     // undefined. We could track liveness and skip storing an undefined
     // subreg, but this is hopefully rare (discovered with llvm-stress).
     // If Reg128 was killed, set kill flag on MI.
-    unsigned Reg128UndefImpl = (Reg128Undef | RegState::Implicit);
+    RegState Reg128UndefImpl = (Reg128Undef | RegState::Implicit);
     MachineInstrBuilder(MF, HighPartMI).addReg(Reg128, Reg128UndefImpl);
     MachineInstrBuilder(MF, LowPartMI).addReg(Reg128, (Reg128UndefImpl | Reg128Killed));
   } else {
@@ -999,6 +1000,8 @@ void SystemZInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
     Opcode = SystemZ::LDR;
   else if (SystemZ::FP128BitRegClass.contains(DestReg, SrcReg))
     Opcode = SystemZ::LXR;
+  else if (SystemZ::VR16BitRegClass.contains(DestReg, SrcReg))
+    Opcode = SystemZ::VLR16;
   else if (SystemZ::VR32BitRegClass.contains(DestReg, SrcReg))
     Opcode = SystemZ::VLR32;
   else if (SystemZ::VR64BitRegClass.contains(DestReg, SrcReg))
@@ -1040,7 +1043,7 @@ void SystemZInstrInfo::loadRegFromStackSlot(MachineBasicBlock &MBB,
                                             MachineBasicBlock::iterator MBBI,
                                             Register DestReg, int FrameIdx,
                                             const TargetRegisterClass *RC,
-                                            Register VReg,
+                                            Register VReg, unsigned SubReg,
                                             MachineInstr::MIFlag Flags) const {
   DebugLoc DL = MBBI != MBB.end() ? MBBI->getDebugLoc() : DebugLoc();
 
@@ -2375,4 +2378,8 @@ SystemZInstrInfo::getSerializableDirectMachineOperandTargetFlags() const {
       {MO_ADA_INDIRECT_FUNC_DESC, "systemz-ada-indirectfuncdesc"},
       {MO_ADA_DIRECT_FUNC_DESC, "systemz-ada-directfuncdesc"}};
   return ArrayRef(TargetFlags);
+}
+
+MCInst SystemZInstrInfo::getNop() const {
+  return MCInstBuilder(SystemZ::NOPR).addReg(0);
 }

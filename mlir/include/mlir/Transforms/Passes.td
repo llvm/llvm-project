@@ -246,7 +246,17 @@ def RemoveDeadValues : Pass<"remove-dead-values"> {
     do = square_and_double_of_y(5)
     print(do)
     ```
+
+    Note: If `canonicalize` is set to "false", this pass does not remove any
+    block arguments / op results from ops that implement the
+    RegionBranchOpInterface. Instead, it just sets dead operands to
+    "ub.poison".
   }];
+
+  let options = [
+    Option<"canonicalize", "canonicalize", "bool", /*default=*/"true",
+           "Canonicalize region branch ops">,
+  ];
   let constructor = "mlir::createRemoveDeadValuesPass()";
   let dependentDialects = ["ub::UBDialect"];
 }

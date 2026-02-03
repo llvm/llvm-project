@@ -45,11 +45,18 @@ void OriginFlowFact::dump(llvm::raw_ostream &OS, const LoanManager &,
   OS << "\n";
 }
 
-void OriginEscapesFact::dump(llvm::raw_ostream &OS, const LoanManager &,
-                             const OriginManager &OM) const {
+void ReturnEscapeFact::dump(llvm::raw_ostream &OS, const LoanManager &,
+                            const OriginManager &OM) const {
   OS << "OriginEscapes (";
   OM.dump(getEscapedOriginID(), OS);
-  OS << ")\n";
+  OS << ", via Return)\n";
+}
+
+void FieldEscapeFact::dump(llvm::raw_ostream &OS, const LoanManager &,
+                           const OriginManager &OM) const {
+  OS << "OriginEscapes (";
+  OM.dump(getEscapedOriginID(), OS);
+  OS << ", via Field)\n";
 }
 
 void UseFact::dump(llvm::raw_ostream &OS, const LoanManager &,

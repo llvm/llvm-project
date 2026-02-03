@@ -268,7 +268,7 @@ def TestFirstSameRegFusion: Fusion<"test-first-same-reg-fusion", "HasTestFirstSa
 // CHECK-SUBTARGET: { "test-single-fusion", "Test SingleFusion", Test::TestSingleFusion
 
 // Check that we have generated `getMacroFusions()` function.
-// CHECK-SUBTARGET:      std::vector<MacroFusionPredTy> getMacroFusions() const override;
+// CHECK-SUBTARGET:      std::vector<MacroFusionPredTy> getMacroFusions() const final;
 
 // CHECK-SUBTARGET:      std::vector<MacroFusionPredTy> TestGenSubtargetInfo::getMacroFusions() const {
 // CHECK-SUBTARGET-NEXT:   std::vector<MacroFusionPredTy> Fusions;

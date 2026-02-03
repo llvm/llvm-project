@@ -184,12 +184,12 @@ define amdgpu_kernel void @fpext_v2f16_to_v2f32(
 ; SI-NEXT:    s_waitcnt lgkmcnt(0)
 ; SI-NEXT:    s_mov_b32 s8, s2
 ; SI-NEXT:    s_mov_b32 s9, s3
-; SI-NEXT:    buffer_load_dword v1, off, s[8:11], 0
+; SI-NEXT:    buffer_load_dword v0, off, s[8:11], 0
 ; SI-NEXT:    s_mov_b32 s4, s0
 ; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, v1
-; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v1
+; SI-NEXT:    v_lshrrev_b32_e32 v1, 16, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, v1
 ; SI-NEXT:    buffer_store_dwordx2 v[0:1], off, s[4:7], 0
 ; SI-NEXT:    s_endpgm
@@ -681,7 +681,7 @@ define amdgpu_kernel void @fneg_multi_use_fpext_f16_to_f32(
 ; SI-NEXT:    s_mov_b32 s4, s0
 ; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_xor_b32_e32 v0, 0x8000, v0
+; SI-NEXT:    v_xor_b32_e32 v0, 0xffff8000, v0
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, v0
 ; SI-NEXT:    buffer_store_dword v1, off, s[4:7], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
@@ -985,13 +985,13 @@ define amdgpu_kernel void @fabs_multi_foldable_use_fpext_f16_to_f32(
 ; SI-NEXT:    s_mov_b32 s4, s0
 ; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
+; SI-NEXT:    v_cvt_f32_f16_e64 v1, |v0|
 ; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-NEXT:    v_mul_f32_e64 v1, |v0|, v0
-; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; SI-NEXT:    v_and_b32_e32 v0, 0x7fffffff, v0
-; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
+; SI-NEXT:    v_mul_f32_e32 v0, v1, v0
+; SI-NEXT:    v_cvt_f16_f32_e32 v0, v0
+; SI-NEXT:    buffer_store_dword v1, off, s[4:7], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    buffer_store_short v1, off, s[4:7], 0
+; SI-NEXT:    buffer_store_short v0, off, s[4:7], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    s_endpgm
 ;
@@ -1087,7 +1087,7 @@ define amdgpu_kernel void @fabs_fneg_multi_use_fpext_f16_to_f32(
 ; SI-NEXT:    s_mov_b32 s4, s0
 ; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_or_b32_e32 v0, 0x8000, v0
+; SI-NEXT:    v_or_b32_e32 v0, 0xffff8000, v0
 ; SI-NEXT:    v_cvt_f32_f16_e32 v1, v0
 ; SI-NEXT:    buffer_store_dword v1, off, s[4:7], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
@@ -1189,10 +1189,10 @@ define amdgpu_kernel void @fabs_fneg_multi_foldable_use_fpext_f16_to_f32(
 ; SI-NEXT:    s_mov_b32 s4, s0
 ; SI-NEXT:    s_mov_b32 s5, s1
 ; SI-NEXT:    s_waitcnt vmcnt(0)
-; SI-NEXT:    v_cvt_f32_f16_e32 v0, v0
-; SI-NEXT:    v_mul_f32_e64 v1, -|v0|, v0
+; SI-NEXT:    v_cvt_f32_f16_e32 v1, v0
+; SI-NEXT:    v_cvt_f32_f16_e64 v0, -|v0|
+; SI-NEXT:    v_mul_f32_e32 v1, v0, v1
 ; SI-NEXT:    v_cvt_f16_f32_e32 v1, v1
-; SI-NEXT:    v_or_b32_e32 v0, 0x80000000, v0
 ; SI-NEXT:    buffer_store_dword v0, off, s[4:7], 0
 ; SI-NEXT:    s_waitcnt vmcnt(0)
 ; SI-NEXT:    buffer_store_short v1, off, s[4:7], 0

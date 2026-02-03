@@ -149,8 +149,8 @@ void Statusline::Redraw(std::optional<ExecutionContextRef> exe_ctx_ref) {
 
   StreamString stream;
   FormatEntity::Entry format = m_debugger.GetStatuslineFormat();
-  FormatEntity::Format(format, stream, &sym_ctx, &exe_ctx, nullptr, nullptr,
-                       false, false);
+  FormatEntity::Formatter(&sym_ctx, &exe_ctx, nullptr, false, false)
+      .Format(format, stream);
 
   Draw(stream.GetString().str());
 }

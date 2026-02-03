@@ -793,6 +793,9 @@ for llvm users and not imposing a big burden on llvm developers:
   it is to drop it. That is not very user friendly and a bit more effort is
   expected, but no promises are made.
 
+* Legacy bitcode may have degraded performance when compared to
+  the compiled output with the legacy compiler.
+
 C API Changes
 -------------
 
@@ -1480,29 +1483,4 @@ permission.
 AI generated contributions
 --------------------------
 
-Artificial intelligence systems raise many questions around copyright that have
-yet to be answered. Our policy on AI tools is guided by our copyright policy:
-Contributors are responsible for ensuring that they have the right to contribute
-code under the terms of our license, typically meaning that either they, their
-employer, or their collaborators hold the copyright. Using AI tools to
-regenerate copyrighted material does not remove the copyright, and contributors
-are responsible for ensuring that such material does not appear in their
-contributions.
-
-As such, the LLVM policy is that contributors are permitted to use artificial
-intelligence tools to produce contributions, provided that they have the right
-to license that code under the project license. Contributions found to violate
-this policy will be removed just like any other offending contribution.
-
-While the LLVM project has a liberal policy on AI tool use, contributors are
-considered responsible for their contributions. We encourage contributors to
-review all generated code before sending it for review to verify its
-correctness and to understand it so that they can answer questions during code
-review. Reviewing and maintaining generated code that the original contributor
-does not understand is not a good use of limited project resources.
-
-The one exception we reserve is for GitHub issues labelled with the
-"good first issue" label. These issues are selected by LLVM contributors
-to help newcomers get familiar with the code base. Thus, it makes no sense to
-fix them using AI tools. **Using AI tools to fix issues labelled as
-"good first issues" is forbidden**.
+This section has moved into a :doc:`separate policy document <AIToolPolicy>`.

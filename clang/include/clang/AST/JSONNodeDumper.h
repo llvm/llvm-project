@@ -20,9 +20,10 @@
 #include "clang/AST/AttrVisitor.h"
 #include "clang/AST/CommentCommandTraits.h"
 #include "clang/AST/CommentVisitor.h"
-#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/Mangle.h"
+#include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "llvm/Support/JSON.h"
 

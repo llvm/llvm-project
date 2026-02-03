@@ -1635,6 +1635,21 @@ CodeGenFunction::EmitAutoVarAlloca(const VarDecl &D) {
         assert(!emission.useLifetimeMarkers());
       }
     }
+
+    if (D.hasAttr<StackProtectorIgnoreAttr>()) {
+      if (auto *AI = dyn_cast<llvm::AllocaInst>(address.getBasePointer())) {
+        llvm::LLVMContext &Ctx = Builder.getContext();
+        auto *Operand = llvm::ConstantAsMetadata::get(Builder.getInt32(0));
+        AI->setMetadata("stack-protector", llvm::MDNode::get(Ctx, {Operand}));
+      }
+
+      std::optional<llvm::Attribute::AttrKind> Attr =
+          CGM.StackProtectorAttribute(&D);
+      if (Attr && (*Attr == llvm::Attribute::StackProtectReq)) {
+        CGM.getDiags().Report(D.getLocation(),
+                              diag::warn_stack_protection_ignore_attribute);
+      }
+    }
   } else {
     EnsureInsertPoint();
 

@@ -210,6 +210,10 @@ def X86call_rvmarker  : SDNode<"X86ISD::CALL_RVMARKER",     SDT_X86Call,
                         [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
                          SDNPVariadic]>;
 
+def X86call_globaladdr  : SDNode<"X86ISD::CALL_GLOBALADDR",     SDT_X86Call,
+                        [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
+                         SDNPVariadic]>;
+
 def X86imp_call  : SDNode<"X86ISD::IMP_CALL",     SDT_X86Call,
                         [SDNPHasChain, SDNPOutGlue, SDNPOptInGlue,
                          SDNPVariadic]>;
@@ -257,6 +261,9 @@ def X86eh_sjlj_setup_dispatch : SDNode<"X86ISD::EH_SJLJ_SETUP_DISPATCH",
                                        [SDNPHasChain, SDNPSideEffect]>;
 
 def X86tcret : SDNode<"X86ISD::TC_RETURN", SDT_X86TCRET,
+                        [SDNPHasChain,  SDNPOptInGlue, SDNPVariadic]>;
+
+def X86tcret_globaladdr : SDNode<"X86ISD::TC_RETURN_GLOBALADDR", SDT_X86TCRET,
                         [SDNPHasChain,  SDNPOptInGlue, SDNPVariadic]>;
 
 def X86add_flag  : SDNode<"X86ISD::ADD",  SDTBinaryArithWithFlags,

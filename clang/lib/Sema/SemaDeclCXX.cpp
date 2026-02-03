@@ -6158,7 +6158,7 @@ struct CheckAbstractUsage {
       Sel = Sema::AbstractArrayType;
       T = Info.S.Context.getBaseElementType(T);
     }
-    CanQualType CT = T->getCanonicalTypeUnqualified().getUnqualifiedType();
+    CanQualType CT = T->getCanonicalTypeUnqualified();
     if (CT != Info.AbstractType) return;
 
     // It matched; do some magic.
@@ -10990,18 +10990,18 @@ void Sema::ActOnFinishDelayedCXXMethodDeclaration(Scope *S, Decl *MethodD) {
 static void checkMethodTypeQualifiers(Sema &S, Declarator &D, unsigned DiagID) {
   const DeclaratorChunk::FunctionTypeInfo &FTI = D.getFunctionTypeInfo();
   if (FTI.hasMethodTypeQualifiers() && !D.isInvalidType()) {
-    bool DiagOccured = false;
+    bool DiagOccurred = false;
     FTI.MethodQualifiers->forEachQualifier(
-        [DiagID, &S, &DiagOccured](DeclSpec::TQ, StringRef QualName,
-                                   SourceLocation SL) {
+        [DiagID, &S, &DiagOccurred](DeclSpec::TQ, StringRef QualName,
+                                    SourceLocation SL) {
           // This diagnostic should be emitted on any qualifier except an addr
           // space qualifier. However, forEachQualifier currently doesn't visit
           // addr space qualifiers, so there's no way to write this condition
           // right now; we just diagnose on everything.
           S.Diag(SL, DiagID) << QualName << SourceRange(SL);
-          DiagOccured = true;
+          DiagOccurred = true;
         });
-    if (DiagOccured)
+    if (DiagOccurred)
       D.setInvalidType();
   }
 }
@@ -11600,6 +11600,7 @@ void Sema::CheckExplicitObjectMemberFunction(Declarator &D,
     Diag(ExplicitObjectParam->getLocation(),
          diag::err_explicit_object_default_arg)
         << ExplicitObjectParam->getSourceRange();
+    D.setInvalidType();
   }
 
   if (D.getDeclSpec().getStorageClassSpec() == DeclSpec::SCS_static ||
@@ -12990,8 +12991,7 @@ static CXXBaseSpecifier *findDirectBaseWithType(CXXRecordDecl *Derived,
                                                 QualType DesiredBase,
                                                 bool &AnyDependentBases) {
   // Check whether the named type is a direct base class.
-  CanQualType CanonicalDesiredBase = DesiredBase->getCanonicalTypeUnqualified()
-    .getUnqualifiedType();
+  CanQualType CanonicalDesiredBase = DesiredBase->getCanonicalTypeUnqualified();
   for (auto &Base : Derived->bases()) {
     CanQualType BaseType = Base.getType()->getCanonicalTypeUnqualified();
     if (CanonicalDesiredBase == BaseType)
@@ -19636,10 +19636,10 @@ void Sema::ActOnFinishFunctionDeclarationDeclarator(Declarator &Declarator) {
               ExplicitParams->getRAngleLoc(),
               ExplicitParams->getRequiresClause()));
     } else {
-      Declarator.setInventedTemplateParameterList(
-          TemplateParameterList::Create(
-              Context, SourceLocation(), SourceLocation(), FSI.TemplateParams,
-              SourceLocation(), /*RequiresClause=*/nullptr));
+      Declarator.setInventedTemplateParameterList(TemplateParameterList::Create(
+          Context, Declarator.getBeginLoc(), SourceLocation(),
+          FSI.TemplateParams, Declarator.getEndLoc(),
+          /*RequiresClause=*/nullptr));
     }
   }
   InventedParameterInfos.pop_back();

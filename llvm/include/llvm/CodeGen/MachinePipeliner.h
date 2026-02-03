@@ -51,7 +51,6 @@
 #include "llvm/CodeGen/ScheduleDAGMutation.h"
 #include "llvm/CodeGen/TargetInstrInfo.h"
 #include "llvm/CodeGen/WindowScheduler.h"
-#include "llvm/InitializePasses.h"
 
 #include <deque>
 
@@ -96,9 +95,7 @@ public:
 
   static char ID;
 
-  MachinePipeliner() : MachineFunctionPass(ID) {
-    initializeMachinePipelinerPass(*PassRegistry::getPassRegistry());
-  }
+  MachinePipeliner() : MachineFunctionPass(ID) {}
 
   bool runOnMachineFunction(MachineFunction &MF) override;
 

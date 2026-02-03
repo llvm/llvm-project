@@ -88,18 +88,15 @@ define internal void @test_matrix_multiply_i32_2x2_2x2() {
 
 ; Test Matrix Multiply 2x3 * 3x2 float (Result 2x2 float)
 ; CHECK-LABEL: ; -- Begin function test_matrix_multiply_f32_2x3_3x2
-; CHECK-DAG:   %[[B:[0-9]+]] = OpCompositeInsert %[[V4F32_ID]]
-; CHECK-DAG:   %[[A:[0-9]+]] = OpCompositeInsert %[[V4F32_ID]]
+; CHECK:       %[[Col0B:[0-9]+]] = OpCompositeConstruct %[[V3F32_ID]] {{.*}} {{.*}} {{.*}}
+; CHECK:       %[[Col1B:[0-9]+]] = OpCompositeConstruct %[[V3F32_ID]] {{.*}} {{.*}} {{.*}}
+; CHECK:       %[[Row0A:[0-9]+]] = OpCompositeConstruct %[[V3F32_ID]] {{.*}} {{.*}} {{.*}}
+; CHECK:       %[[Row1A:[0-9]+]] = OpCompositeConstruct %[[V3F32_ID]] {{.*}} {{.*}} {{.*}}
 ;
-; CHECK-DAG:   %[[B_Col0:[0-9]+]] = OpCompositeConstruct %[[V3F32_ID]]
-; CHECK-DAG:   %[[B_Col1:[0-9]+]] = OpCompositeConstruct %[[V3F32_ID]]
-; CHECK-DAG:   %[[A_Row0:[0-9]+]] = OpCompositeConstruct %[[V3F32_ID]]
-; CHECK-DAG:   %[[A_Row1:[0-9]+]] = OpCompositeConstruct %[[V3F32_ID]]
-;
-; CHECK-DAG:   %[[C00:[0-9]+]] = OpDot %[[Float_ID]] %[[A_Row0]] %[[B_Col0]]
-; CHECK-DAG:   %[[C10:[0-9]+]] = OpDot %[[Float_ID]] %[[A_Row1]] %[[B_Col0]]
-; CHECK-DAG:   %[[C01:[0-9]+]] = OpDot %[[Float_ID]] %[[A_Row0]] %[[B_Col1]]
-; CHECK-DAG:   %[[C11:[0-9]+]] = OpDot %[[Float_ID]] %[[A_Row1]] %[[B_Col1]]
+; CHECK-DAG:   %[[C00:[0-9]+]] = OpDot %[[Float_ID]] %[[Row0A]] %[[Col0B]]
+; CHECK-DAG:   %[[C10:[0-9]+]] = OpDot %[[Float_ID]] %[[Row1A]] %[[Col0B]]
+; CHECK-DAG:   %[[C01:[0-9]+]] = OpDot %[[Float_ID]] %[[Row0A]] %[[Col1B]]
+; CHECK-DAG:   %[[C11:[0-9]+]] = OpDot %[[Float_ID]] %[[Row1A]] %[[Col1B]]
 ; CHECK:       OpCompositeConstruct %[[V4F32_ID]] %[[C00]] %[[C10]] %[[C01]] %[[C11]]
 define internal void @test_matrix_multiply_f32_2x3_3x2() {
   %1 = load <6 x float>, ptr addrspace(10) @private_v6f32

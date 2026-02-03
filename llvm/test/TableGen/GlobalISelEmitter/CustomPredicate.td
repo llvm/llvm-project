@@ -5,6 +5,7 @@
 // CHECK: // PatFrag predicates.
 // CHECK-NEXT: enum {
 // CHECK-NEXT:   GICXXPred_MI_Predicate_and_or_pat = GICXXPred_Invalid + 1,
+// CHECK-NEXT:   GICXXPred_MI_Predicate_ffloor_nnan,
 // CHECK-NEXT:   GICXXPred_MI_Predicate_mul_pat,
 // CHECK-NEXT:   GICXXPred_MI_Predicate_or_disjoint,
 // CHECK-NEXT:   GICXXPred_MI_Predicate_or_oneuse,
@@ -17,6 +18,8 @@
 // CHECK: bool MyTargetInstructionSelector::testMIPredicate_MI(
 // CHECK:    case GICXXPred_MI_Predicate_and_or_pat: {
 // CHECK:      return doesComplexCheck(MI);
+// CHECK:    case GICXXPred_MI_Predicate_ffloor_nnan: {
+// CHECK:      return MI.getFlag(MachineInstr::FmNoNans);
 // CHECK:    case GICXXPred_MI_Predicate_mul_pat: {
 // CHECK:      return doesComplexCheck(MI);
 // CHECK:    case GICXXPred_MI_Predicate_or_oneuse: {
