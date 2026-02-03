@@ -121,12 +121,14 @@ define i1 @test_extra_cmp_user(ptr nocapture noundef %dst, ptr nocapture noundef
 ; CHECK-NEXT: Cost of 0 for VF 8: induction instruction   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
 ; CHECK-NEXT: Cost of 0 for VF 8: EMIT vp<{{.+}}> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK: Cost of 4 for VF 8: WIDEN ir<%exitcond.not> = icmp eq ir<%indvars.iv.next>, ir<16>
-; CHECK: Cost of 1 for VF 8: EMIT branch-on-count vp<%index.next>, vp<{{.+}}>
-; CHECK: Cost for VF 8: 13
+; CHECK: Cost of 1 for VF 8: EMIT vp<%cmp.n> = icmp eq ir<16>, vp<%2>
+; CHECK-NEXT: Cost of 0 for VF 8: EMIT branch-on-cond vp<%cmp.n>
+; CHECK: Cost for VF 8: 9
 ; CHECK-NEXT: Cost of 0 for VF 16: induction instruction   %indvars.iv = phi i64 [ 0, %entry ], [ %indvars.iv.next, %for.body ]
 ; CHECK-NEXT: Cost of 0 for VF 16: EMIT vp<{{.+}}> = CANONICAL-INDUCTION ir<0>, vp<%index.next>
 ; CHECK: Cost of 0 for VF 16: WIDEN ir<%exitcond.not> = icmp eq ir<%indvars.iv.next>, ir<16>
-; CHECK: Cost of 0 for VF 16: EMIT branch-on-count vp<%index.next>, vp<{{.+}}>
+; CHECK: Cost of 1 for VF 16: EMIT vp<%cmp.n> = icmp eq ir<16>, vp<%2>
+; CHECK-NEXT: Cost of 0 for VF 16: EMIT branch-on-cond vp<%cmp.n>
 ; CHECK: Cost for VF 16: 4
 ; CHECK: LV: Selecting VF: 16
 entry:

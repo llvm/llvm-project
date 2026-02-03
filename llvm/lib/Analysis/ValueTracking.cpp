@@ -5136,9 +5136,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       if ((InterestedClasses & fcNegative) == fcNone)
         break;
 
-      if (II->getArgOperand(0) == II->getArgOperand(1) &&
-          isGuaranteedNotToBeUndef(II->getArgOperand(0), Q.AC, Q.CxtI, Q.DT,
-                                   Depth + 1)) {
+      // FIXME: This should check isGuaranteedNotToBeUndef
+      if (II->getArgOperand(0) == II->getArgOperand(1)) {
         KnownFPClass KnownSrc, KnownAddend;
         computeKnownFPClass(II->getArgOperand(2), DemandedElts,
                             InterestedClasses, KnownAddend, Q, Depth + 1);
@@ -5218,9 +5217,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       KnownFPClass KnownSrc;
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
                           KnownSrc, Q, Depth + 1);
-      Known.knownNot(fcInf);
-      if (KnownSrc.isKnownNeverNaN() && KnownSrc.isKnownNeverInfinity())
-        Known.knownNot(fcNan);
+      Known = IID == Intrinsic::sin ? KnownFPClass::sin(KnownSrc)
+                                    : KnownFPClass::cos(KnownSrc);
       break;
     }
     case Intrinsic::maxnum:
@@ -5350,8 +5348,6 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
         Known = KnownFPClass::log(KnownSrc, Mode);
       }
 
-      if (IID == Intrinsic::amdgcn_log && EltTy->isFloatTy())
-        Known.knownNot(fcSubnormal);
       break;
     }
     case Intrinsic::powi: {
@@ -5365,88 +5361,36 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
       computeKnownBits(Exp, isa<VectorType>(ExpTy) ? DemandedElts : APInt(1, 1),
                        ExponentKnownBits, Q, Depth + 1);
 
-      if (ExponentKnownBits.Zero[0]) { // Is even
-        Known.knownNot(fcNegative);
-        break;
+      KnownFPClass KnownSrc;
+      if (!ExponentKnownBits.isEven()) {
+        computeKnownFPClass(II->getArgOperand(0), DemandedElts, fcNegative,
+                            KnownSrc, Q, Depth + 1);
       }
 
-      // Given that exp is an integer, here are the
-      // ways that pow can return a negative value:
-      //
-      //   pow(-x, exp)   --> negative if exp is odd and x is negative.
-      //   pow(-0, exp)   --> -inf if exp is negative odd.
-      //   pow(-0, exp)   --> -0 if exp is positive odd.
-      //   pow(-inf, exp) --> -0 if exp is negative odd.
-      //   pow(-inf, exp) --> -inf if exp is positive odd.
-      KnownFPClass KnownSrc;
-      computeKnownFPClass(II->getArgOperand(0), DemandedElts, fcNegative,
-                          KnownSrc, Q, Depth + 1);
-      if (KnownSrc.isKnownNever(fcNegative))
-        Known.knownNot(fcNegative);
+      Known = KnownFPClass::powi(KnownSrc, ExponentKnownBits);
       break;
     }
     case Intrinsic::ldexp: {
       KnownFPClass KnownSrc;
       computeKnownFPClass(II->getArgOperand(0), DemandedElts, InterestedClasses,
                           KnownSrc, Q, Depth + 1);
-      Known.propagateNaN(KnownSrc, /*PropagateSign=*/true);
-
-      // Sign is preserved, but underflows may produce zeroes.
-      if (KnownSrc.isKnownNever(fcNegative))
-        Known.knownNot(fcNegative);
-      else if (KnownSrc.cannotBeOrderedLessThanZero())
-        Known.knownNot(KnownFPClass::OrderedLessThanZeroMask);
-
-      if (KnownSrc.isKnownNever(fcPositive))
-        Known.knownNot(fcPositive);
-      else if (KnownSrc.cannotBeOrderedGreaterThanZero())
-        Known.knownNot(KnownFPClass::OrderedGreaterThanZeroMask);
-
       // Can refine inf/zero handling based on the exponent operand.
       const FPClassTest ExpInfoMask = fcZero | fcSubnormal | fcInf;
-      if ((InterestedClasses & ExpInfoMask) == fcNone)
-        break;
-      if ((KnownSrc.KnownFPClasses & ExpInfoMask) == fcNone)
-        break;
+
+      KnownBits ExpBits;
+      if ((KnownSrc.KnownFPClasses & ExpInfoMask) != fcNone) {
+        const Value *ExpArg = II->getArgOperand(1);
+        ExpBits = computeKnownBits(ExpArg, DemandedElts, Q, Depth + 1);
+      }
 
       const fltSemantics &Flt =
           II->getType()->getScalarType()->getFltSemantics();
-      unsigned Precision = APFloat::semanticsPrecision(Flt);
-      const Value *ExpArg = II->getArgOperand(1);
-      ConstantRange ExpRange = computeConstantRange(
-          ExpArg, true, Q.IIQ.UseInstrInfo, Q.AC, Q.CxtI, Q.DT, Depth + 1);
-
-      const int MantissaBits = Precision - 1;
-      if (ExpRange.getSignedMin().sge(static_cast<int64_t>(MantissaBits)))
-        Known.knownNot(fcSubnormal);
 
       const Function *F = II->getFunction();
-      const APInt *ConstVal = ExpRange.getSingleElement();
-      const fltSemantics &FltSem =
-          II->getType()->getScalarType()->getFltSemantics();
-      if (ConstVal && ConstVal->isZero()) {
-        // ldexp(x, 0) -> x, so propagate everything.
-        Known.propagateCanonicalizingSrc(KnownSrc, F->getDenormalMode(FltSem));
-      } else if (ExpRange.isAllNegative()) {
-        // If we know the power is <= 0, can't introduce inf
-        if (KnownSrc.isKnownNeverPosInfinity())
-          Known.knownNot(fcPosInf);
-        if (KnownSrc.isKnownNeverNegInfinity())
-          Known.knownNot(fcNegInf);
-      } else if (ExpRange.isAllNonNegative()) {
-        // If we know the power is >= 0, can't introduce subnormal or zero
-        if (KnownSrc.isKnownNeverPosSubnormal())
-          Known.knownNot(fcPosSubnormal);
-        if (KnownSrc.isKnownNeverNegSubnormal())
-          Known.knownNot(fcNegSubnormal);
-        if (F &&
-            KnownSrc.isKnownNeverLogicalPosZero(F->getDenormalMode(FltSem)))
-          Known.knownNot(fcPosZero);
-        if (F &&
-            KnownSrc.isKnownNeverLogicalNegZero(F->getDenormalMode(FltSem)))
-          Known.knownNot(fcNegZero);
-      }
+      DenormalMode Mode =
+          F ? F->getDenormalMode(Flt) : DenormalMode::getDynamic();
 
+      Known = KnownFPClass::ldexp(KnownSrc, ExpBits, Flt, Mode);
       break;
     }
     case Intrinsic::arithmetic_fence: {
@@ -5609,8 +5553,8 @@ void computeKnownFPClass(const Value *V, const APInt &DemandedElts,
           : DenormalMode::getDynamic();
 
     // X * X is always non-negative or a NaN.
-    if (Op->getOperand(0) == Op->getOperand(1) &&
-        isGuaranteedNotToBeUndef(Op->getOperand(0), Q.AC, Q.CxtI, Q.DT)) {
+    // FIXME: Should check isGuaranteedNotToBeUndef
+    if (Op->getOperand(0) == Op->getOperand(1)) {
       KnownFPClass KnownSrc;
       computeKnownFPClass(Op->getOperand(0), DemandedElts, fcAllFlags, KnownSrc,
                           Q, Depth + 1);
