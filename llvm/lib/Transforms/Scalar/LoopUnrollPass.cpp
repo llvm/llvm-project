@@ -39,6 +39,7 @@
 #include "llvm/IR/DiagnosticInfo.h"
 #include "llvm/IR/Dominators.h"
 #include "llvm/IR/Function.h"
+#include "llvm/IR/InlineAsm.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Metadata.h"
@@ -575,7 +576,8 @@ static std::optional<EstimatedUnrollCost> analyzeLoopUnrollCost(
         // FIXME: With a proper cost model we should be able to do it.
         if (auto *CI = dyn_cast<CallInst>(&I)) {
           const Function *Callee = CI->getCalledFunction();
-          if (!Callee || TTI.isLoweredToCall(Callee)) {
+          if (!isa<InlineAsm>(CI->getCalledOperand()) &&
+              (!Callee || TTI.isLoweredToCall(Callee))) {
             LLVM_DEBUG(dbgs() << "Can't analyze cost of loop with call\n");
             return std::nullopt;
           }
