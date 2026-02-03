@@ -221,7 +221,6 @@ Transforms/InstCombine/div-shift.ll
 Transforms/InstCombine/fcmp-select.ll
 Transforms/InstCombine/ffs-i16.ll
 Transforms/InstCombine/intrinsic-select.ll
-Transforms/InstCombine/ldexp-ext.ll
 Transforms/InstCombine/ldexp.ll
 Transforms/InstCombine/load-bitcast-select.ll
 Transforms/InstCombine/load.ll
