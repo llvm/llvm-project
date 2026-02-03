@@ -19,32 +19,30 @@
 #include <arm_sve.h>
 #endif
 namespace LIBC_NAMESPACE_DECL {
-#if defined(LIBC_TARGET_CPU_HAS_SVE)
-[[maybe_unused, gnu::always_inline]] LIBC_INLINE void
-inline_memcpy_aarch64_sve_32_bytes(Ptr __restrict dst, CPtr __restrict src,
-                                   size_t count) {
-  auto src_ptr = reinterpret_cast<const uint8_t *>(src);
-  auto dst_ptr = reinterpret_cast<uint8_t *>(dst);
-  const size_t vlen = svcntb();
-  svbool_t less_than_count_fst = svwhilelt_b8_u64(0, count);
-  svbool_t less_than_count_snd = svwhilelt_b8_u64(vlen, count);
-  svuint8_t fst = svld1_u8(less_than_count_fst, &src_ptr[0]);
-  svuint8_t snd = svld1_u8(less_than_count_snd, &src_ptr[vlen]);
-  svst1_u8(less_than_count_fst, &dst_ptr[0], fst);
-  svst1_u8(less_than_count_snd, &dst_ptr[vlen], snd);
-}
-#endif
 [[maybe_unused]] LIBC_INLINE void
 inline_memcpy_aarch64(Ptr __restrict dst, CPtr __restrict src, size_t count) {
-#if defined(LIBC_TARGET_CPU_HAS_SVE)
-  // SVE register is at least 16 bytes, we can use it to avoid branching in
-  // small cases. Here we use 2 SVE registers to always cover cases where count
-  // <= 32.
-  if (count <= 32)
-    return inline_memcpy_aarch64_sve_32_bytes(dst, src, count);
-#else
+  // Always avoid emit any memory operation if count == 0.
   if (count == 0)
     return;
+  // Use predicated load/store on SVE available targets to avoid branching in
+  // small cases.
+#ifdef LIBC_TARGET_CPU_HAS_SVE
+  auto src_ptr = reinterpret_cast<const uint8_t *>(src);
+  auto dst_ptr = reinterpret_cast<uint8_t *>(dst);
+  if (count <= 16) {
+    const svbool_t mask = svwhilelt_b8_u64(0, count);
+    svst1_u8(mask, dst_ptr, svld1_u8(mask, src_ptr));
+    return;
+  }
+  if (count <= 32) {
+    const size_t vlen = svcntb();
+    svbool_t m0 = svwhilelt_b8_u64(0, count);
+    svbool_t m1 = svwhilelt_b8_u64(vlen, count);
+    svst1_u8(m0, dst_ptr, svld1_u8(m0, src_ptr));
+    svst1_u8(m1, dst_ptr + vlen, svld1_u8(m1, src_ptr + vlen));
+    return;
+  }
+#else
   if (count == 1)
     return builtin::Memcpy<1>::block(dst, src);
   if (count == 2)
