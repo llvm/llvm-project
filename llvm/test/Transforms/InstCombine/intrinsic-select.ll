@@ -611,13 +611,25 @@ define i32 @select_of_ctlz(i1 %cond, i32 %x, i32 %y) {
   ret i32 %sel
 }
 
-define i32 @select_of_ctlz_zero_poison(i1 %cond, i32 %x, i32 %y) {
-; CHECK-LABEL: @select_of_ctlz_zero_poison(
+define i32 @select_of_ctlz_zero_poison_false(i1 %cond, i32 %x, i32 %y) {
+; CHECK-LABEL: @select_of_ctlz_zero_poison_false(
 ; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]]
 ; CHECK-NEXT:    [[SEL:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 false)
 ; CHECK-NEXT:    ret i32 [[SEL]]
 ;
   %ctlz1 = call i32 @llvm.ctlz.i32(i32 %x, i1 false)
+  %ctlz2 = call i32 @llvm.ctlz.i32(i32 %y, i1 true)
+  %sel = select i1 %cond, i32 %ctlz1, i32 %ctlz2
+  ret i32 %sel
+}
+
+define i32 @select_of_ctlz_zero_poison_true(i1 %cond, i32 %x, i32 %y) {
+; CHECK-LABEL: @select_of_ctlz_zero_poison_true(
+; CHECK-NEXT:    [[TMP1:%.*]] = select i1 [[COND:%.*]], i32 [[X:%.*]], i32 [[Y:%.*]]
+; CHECK-NEXT:    [[SEL:%.*]] = call range(i32 0, 33) i32 @llvm.ctlz.i32(i32 [[TMP1]], i1 true)
+; CHECK-NEXT:    ret i32 [[SEL]]
+;
+  %ctlz1 = call i32 @llvm.ctlz.i32(i32 %x, i1 true)
   %ctlz2 = call i32 @llvm.ctlz.i32(i32 %y, i1 true)
   %sel = select i1 %cond, i32 %ctlz1, i32 %ctlz2
   ret i32 %sel
