@@ -6475,8 +6475,6 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
   unsigned VTHalfBitWidth = Ty->getScalarSizeInBits() / 2;
   Type *LegalTy = Ty->getWithNewBitWidth(VTHalfBitWidth);
 
-  SmallVector<DominatorTree::UpdateType, 8> DTUpdates;
-
   // New BBs:
   BasicBlock *OverflowEntryBB =
       splitBlockBefore(I->getParent(), I, DTU, LI, nullptr, "");
@@ -6522,8 +6520,6 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
     IsAnyBitTrue = Builder.CreateOr(CmpLHS, CmpRHS, "or.lhs.rhs");
   }
   Builder.CreateCondBr(IsAnyBitTrue, OverflowBB, NoOverflowBB);
-  DTUpdates.push_back({DominatorTree::Insert, OverflowEntryBB, OverflowBB});
-  DTUpdates.push_back({DominatorTree::Insert, OverflowEntryBB, NoOverflowBB});
 
   // BB overflow.no:
   Builder.SetInsertPoint(NoOverflowBB);
@@ -6547,9 +6543,6 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
   Builder.CreateBr(OverflowResBB);
   // No we don't need the old terminator in overflow.entry BB, erase it:
   OldTerminator->eraseFromParent();
-
-  DTUpdates.push_back({DominatorTree::Insert, NoOverflowBB, OverflowResBB});
-  DTUpdates.push_back({DominatorTree::Delete, OverflowEntryBB, OverflowResBB});
 
   // BB overflow.res:
   Builder.SetInsertPoint(OverflowResBB, OverflowResBB->getFirstInsertionPt());
@@ -6583,13 +6576,16 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
   Value *MulOverflow = Builder.CreateExtractValue(I, {0}, "mul.overflow");
   Value *OverflowFlag = Builder.CreateExtractValue(I, {1}, "overflow.flag");
   Builder.CreateBr(OverflowResBB);
-  DTUpdates.push_back({DominatorTree::Insert, OverflowBB, OverflowResBB});
 
   // Add The Extracted values to the PHINodes in the overflow.res BB.
   OverflowResPHI->addIncoming(MulOverflow, OverflowBB);
   OverflowFlagPHI->addIncoming(OverflowFlag, OverflowBB);
 
-  DTU->applyUpdates(DTUpdates);
+  DTU->applyUpdates({{DominatorTree::Insert, OverflowEntryBB, OverflowBB},
+                     {DominatorTree::Insert, OverflowEntryBB, NoOverflowBB},
+                     {DominatorTree::Insert, NoOverflowBB, OverflowResBB},
+                     {DominatorTree::Delete, OverflowEntryBB, OverflowResBB},
+                     {DominatorTree::Insert, OverflowBB, OverflowResBB}});
 
   ModifiedDT = ModifyDT::ModifyBBDT;
   return true;
