@@ -6604,11 +6604,10 @@ SDValue DAGTypeLegalizer::WidenVecRes_MLOAD(MaskedLoadSDNode *N) {
                       N->getMemoryVT(), N->getMemOperand());
     SDValue NewVal = NewLoad;
 
-    // Manually merge with vp.select
+    // Manually merge with vselect
     if (!N->getPassThru()->isUndef()) {
       assert(WidenVT.isScalableVector());
-      NewVal =
-          DAG.getNode(ISD::VP_SELECT, dl, WidenVT, Mask, NewVal, PassThru, EVL);
+      NewVal = DAG.getNode(ISD::VSELECT, dl, WidenVT, Mask, NewVal, PassThru);
     }
 
     // Modified the chain - switch anything that used the old chain to use
