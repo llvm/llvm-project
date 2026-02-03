@@ -2487,6 +2487,40 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
   else if (isSplatValue(LHS) && match(RHS, m_OneUse(m_VecReverse(m_Value(V2)))))
     return createBinOpReverse(LHS, V2);
 
+  auto createBinOpSpliceReverse = [&](Value *X, Value *Y, Value *Offset) {
+    Value *V = Builder.CreateBinOp(Opcode, X, Y, Inst.getName());
+    if (auto *BO = dyn_cast<BinaryOperator>(V))
+      BO->copyIRFlags(&Inst);
+    Module *M = Inst.getModule();
+    Function *F = Intrinsic::getOrInsertDeclaration(
+        M, Intrinsic::vector_splice_right, V->getType());
+    return CallInst::Create(F, {Builder.CreateVectorReverse(V),
+                                PoisonValue::get(X->getType()), Offset});
+  };
+  auto m_SpliceReverse = [](auto V, auto Offset) {
+    return m_Intrinsic<Intrinsic::vector_splice_right>(m_OneUse(m_VecReverse(V)),
+                                                      m_Poison(), Offset);
+  };
+  Value *Offset;
+  if (match(LHS, m_SpliceReverse(m_Value(V1), m_Value(Offset)))) {
+    // Op(splice.right(rev(V1),poison,offset),splice.right(rev(V2),poison,offset))
+    // -> splice.right(rev(Op(V1, V2)), poison, offset)
+    if (match(RHS, m_SpliceReverse(m_Value(V2), m_Specific(Offset))) &&
+        (LHS->hasOneUse() || RHS->hasOneUse() ||
+         (LHS == RHS && LHS->hasNUses(2))))
+      return createBinOpSpliceReverse(V1, V2, Offset);
+
+    // Op(splice.right(rev(V1) poison, offset), RHSSplat))
+    // -> splice.right(rev(Op(V1, RHSSplat)), poison, offset)
+    if (LHS->hasOneUse() && isSplatValue(RHS))
+      return createBinOpSpliceReverse(V1, RHS, Offset);
+  }
+  // Op(LHSSplat, splice.right(rev(V2), poison, offset))
+  // -> splice.right(rev(Op(LHSSplat, V2)), poison, offset)
+  else if (isSplatValue(LHS) &&
+           match(RHS, m_OneUse(m_SpliceReverse(m_Value(V2), m_Value(Offset)))))
+    return createBinOpSpliceReverse(LHS, V2, Offset);
+
   auto createBinOpVPReverse = [&](Value *X, Value *Y, Value *EVL) {
     Value *V = Builder.CreateBinOp(Opcode, X, Y, Inst.getName());
     if (auto *BO = dyn_cast<BinaryOperator>(V))

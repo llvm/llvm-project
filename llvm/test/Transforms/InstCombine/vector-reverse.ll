@@ -845,12 +845,10 @@ define <vscale x 4 x float> @reverse_unop_intrinsic_reverse_scalar_arg(<vscale x
 
 define <vscale x 4 x i32> @binop_reverse_splice(<vscale x 4 x i32> %a, <vscale x 4 x i32> %b, i32 %offset) {
 ; CHECK-LABEL: @binop_reverse_splice(
-; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> [[A1:%.*]])
-; CHECK-NEXT:    [[A:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> [[A_REV]], <vscale x 4 x i32> poison, i32 [[OFFSET:%.*]])
-; CHECK-NEXT:    [[B_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> [[B1:%.*]])
-; CHECK-NEXT:    [[B:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> [[B_REV]], <vscale x 4 x i32> poison, i32 [[OFFSET]])
-; CHECK-NEXT:    [[ADD1:%.*]] = add <vscale x 4 x i32> [[A]], [[B]]
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[ADD1]]
+; CHECK-NEXT:    [[ADD1:%.*]] = add <vscale x 4 x i32> [[A:%.*]], [[B:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> [[ADD1]])
+; CHECK-NEXT:    [[ADD:%.*]] = call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32> poison, i32 [[OFFSET:%.*]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[ADD]]
 ;
   %a.rev = tail call <vscale x 4 x i32> @llvm.vector.reverse(<vscale x 4 x i32> %a)
   %a.splice = tail call <vscale x 4 x i32> @llvm.vector.splice.right(<vscale x 4 x i32> %a.rev, <vscale x 4 x i32> poison, i32 %offset)
@@ -900,12 +898,12 @@ define <vscale x 4 x i32> @binop_reverse_splice_multiuse(<vscale x 4 x i32> %a, 
 
 define <vscale x 4 x i32> @binop_reverse_splice_rhs_splat(<vscale x 4 x i32> %a, i32 %b, i32 %offset) {
 ; CHECK-LABEL: @binop_reverse_splice_rhs_splat(
-; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> [[A1:%.*]])
-; CHECK-NEXT:    [[A:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> [[A_REV]], <vscale x 4 x i32> poison, i32 [[OFFSET:%.*]])
 ; CHECK-NEXT:    [[B_INSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[B_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[B_INSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[ADD1:%.*]] = add <vscale x 4 x i32> [[A]], [[B_SPLAT]]
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[ADD1]]
+; CHECK-NEXT:    [[ADD1:%.*]] = add <vscale x 4 x i32> [[A:%.*]], [[B_SPLAT]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> [[ADD1]])
+; CHECK-NEXT:    [[ADD:%.*]] = call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32> poison, i32 [[OFFSET:%.*]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[ADD]]
 ;
   %a.rev = tail call <vscale x 4 x i32> @llvm.vector.reverse(<vscale x 4 x i32> %a)
   %a.splice = tail call <vscale x 4 x i32> @llvm.vector.splice.right(<vscale x 4 x i32> %a.rev, <vscale x 4 x i32> poison, i32 %offset)
@@ -917,12 +915,12 @@ define <vscale x 4 x i32> @binop_reverse_splice_rhs_splat(<vscale x 4 x i32> %a,
 
 define <vscale x 4 x i32> @binop_reverse_splice_lhs_splat(<vscale x 4 x i32> %a, i32 %b, i32 %offset) {
 ; CHECK-LABEL: @binop_reverse_splice_lhs_splat(
-; CHECK-NEXT:    [[A_REV:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> [[A1:%.*]])
-; CHECK-NEXT:    [[A:%.*]] = tail call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> [[A_REV]], <vscale x 4 x i32> poison, i32 [[OFFSET:%.*]])
 ; CHECK-NEXT:    [[B_INSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[B:%.*]], i64 0
 ; CHECK-NEXT:    [[B_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[B_INSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[ADD1:%.*]] = add <vscale x 4 x i32> [[B_SPLAT]], [[A]]
-; CHECK-NEXT:    ret <vscale x 4 x i32> [[ADD1]]
+; CHECK-NEXT:    [[ADD1:%.*]] = add <vscale x 4 x i32> [[B_SPLAT]], [[A:%.*]]
+; CHECK-NEXT:    [[TMP1:%.*]] = call <vscale x 4 x i32> @llvm.vector.reverse.nxv4i32(<vscale x 4 x i32> [[ADD1]])
+; CHECK-NEXT:    [[ADD:%.*]] = call <vscale x 4 x i32> @llvm.vector.splice.right.nxv4i32(<vscale x 4 x i32> [[TMP1]], <vscale x 4 x i32> poison, i32 [[OFFSET:%.*]])
+; CHECK-NEXT:    ret <vscale x 4 x i32> [[ADD]]
 ;
   %a.rev = tail call <vscale x 4 x i32> @llvm.vector.reverse(<vscale x 4 x i32> %a)
   %a.splice = tail call <vscale x 4 x i32> @llvm.vector.splice.right(<vscale x 4 x i32> %a.rev, <vscale x 4 x i32> poison, i32 %offset)
