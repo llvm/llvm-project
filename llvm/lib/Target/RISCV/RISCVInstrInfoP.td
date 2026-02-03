@@ -1486,6 +1486,12 @@ def riscv_pmulhr : RVSDNode<"PMULHR", SDT_RISCVPBinOp>;
 def riscv_pmulhru : RVSDNode<"PMULHRU", SDT_RISCVPBinOp>;
 def riscv_pmulhrsu : RVSDNode<"PMULHRSU", SDT_RISCVPBinOp>;
 
+def SDT_RISCVMVM : SDTypeProfile<1, 3, [SDTCisInt<0>,
+                                        SDTCisSameAs<0, 1>,
+                                        SDTCisSameAs<0, 2>,
+                                        SDTCisSameAs<0, 3>]>;
+def riscv_mvm : RVSDNode<"MVM", SDT_RISCVMVM>;
+
 let Predicates = [HasStdExtP] in {
   def : PatGpr<abs, ABS>;
   def : PatGpr<ctls, CLS>;
@@ -1494,6 +1500,10 @@ let Predicates = [HasStdExtP] in {
             (SLX GPR:$rd, GPR:$rs1, shiftMaskXLen:$rs2)>;
   def : Pat<(XLenVT (fshr GPR:$rs1, GPR:$rd, shiftMaskXLen:$rs2)),
             (SRX GPR:$rd, GPR:$rs1, shiftMaskXLen:$rs2)>;
+
+  // Pattern for insert_vector_elt
+  def : Pat<(XLenVT (riscv_mvm GPR:$rd, GPR:$rs1, GPR:$rs2)),
+            (MVM GPR:$rd, GPR:$rs1, GPR:$rs2)>;
 
   // Basic 8-bit arithmetic patterns
   def: Pat<(XLenVecI8VT (add GPR:$rs1, GPR:$rs2)), (PADD_B GPR:$rs1, GPR:$rs2)>;
