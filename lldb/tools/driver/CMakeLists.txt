@@ -16,6 +16,16 @@ if (UNIX AND "${CMAKE_SYSTEM_NAME}" MATCHES "AIX")
   add_definitions("-D_ALL_SOURCE")                                             
 endif()
 
+set(LLDB_DRIVER_LINK_LIBS
+  liblldb
+  lldbHost
+  lldbUtility
+)
+
+if(WIN32)
+  list(APPEND LLDB_DRIVER_LINK_LIBS lldbUtilityPythonPathSetup)
+endif()
+
 add_lldb_tool(lldb
   Driver.cpp
   Platform.cpp
@@ -24,10 +34,7 @@ add_lldb_tool(lldb
     Option
     Support
   LINK_LIBS
-    lldbUtilityPythonPathSetup
-    liblldb
-    lldbHost
-    lldbUtility
+    ${LLDB_DRIVER_LINK_LIBS}
   )
 
 add_dependencies(lldb
