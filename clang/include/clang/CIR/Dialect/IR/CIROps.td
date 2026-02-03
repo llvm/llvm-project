@@ -869,8 +869,9 @@ def CIR_ConditionOp : CIR_Op<"condition", [
 //===----------------------------------------------------------------------===//
 
 defvar CIR_YieldableScopes = [
-  "ArrayCtor", "ArrayDtor", "AwaitOp", "CaseOp", "DoWhileOp", "ForOp",
-  "GlobalOp", "IfOp", "ScopeOp", "SwitchOp", "TernaryOp", "WhileOp", "TryOp"
+  "ArrayCtor", "ArrayDtor", "AwaitOp", "CaseOp", "CleanupScopeOp", "DoWhileOp",
+  "ForOp", "GlobalOp", "IfOp", "ScopeOp", "SwitchOp", "TernaryOp", "TryOp",
+  "WhileOp"
 ];
 
 def CIR_YieldOp : CIR_Op<"yield", [
@@ -1082,6 +1083,112 @@ def CIR_ScopeOp : CIR_Op<"scope", [
               "llvm::function_ref<void(mlir::OpBuilder &, mlir::Type &, mlir::Location)>":$scopeBuilder)>,
     // Scopes without yielding values.
     OpBuilder<(ins "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$scopeBuilder)>
+  ];
+
+  let hasLLVMLowering = false;
+}
+
+//===----------------------------------------------------------------------===//
+// CleanupScopeOp
+//===----------------------------------------------------------------------===//
+
+def CIR_CleanupKind : CIR_I32EnumAttr<"CleanupKind", "cleanup kind", [
+  I32EnumAttrCase<"Normal", 1, "normal">,
+  I32EnumAttrCase<"EH", 2, "eh">,
+  I32EnumAttrCase<"All", 3, "all">
+]> {
+  let genSpecializedAttr = 0;
+}
+
+def CIR_CleanupKindAttr : CIR_EnumAttr<CIR_CleanupKind, "cleanup_kind"> {
+  let summary = "Cleanup kind attribute";
+  let description = [{
+    Cleanup kind attributes.
+  }];
+
+  let cppClassName = "CleanupKindAttr";
+
+  let skipDefaultBuilders = 1;
+  let builders = [
+    AttrBuilder<(ins CArg<"CleanupKind",
+                          "cir::CleanupKind::All">:$value), [{
+      return $_get($_ctxt, value);
+    }]>
+  ];
+
+  let assemblyFormat = [{
+    $value
+  }];
+
+  let extraClassDeclaration = [{
+    bool isNormal() const {
+      return getValue() == CleanupKind::Normal ||
+             getValue() == CleanupKind::All;
+    };
+    bool isEH() const {
+      return getValue() == CleanupKind::EH || getValue() == CleanupKind::All;
+    };
+    bool isNormalAndEH() const { return getValue() == CleanupKind::All; };
+  }];
+}
+
+def CIR_CleanupScopeOp : CIR_Op<"cleanup.scope", [
+  DeclareOpInterfaceMethods<RegionBranchOpInterface, ["getSuccessorInputs"]>,
+  RecursivelySpeculatable, AutomaticAllocationScope, NoRegionArguments,
+  RecursiveMemoryEffects
+]> {
+  let summary = "Represents a scope with associated cleanup code";
+  let description = [{
+    `cir.cleanup.scope` contains a body region and a cleanup region. The body
+    region is executed first, and the cleanup region is executed when the body
+    region is exited, either normally or due to an exception.
+
+    The cleanup kind attribute specifies when the cleanup region should be
+    executed:
+    - `none`: No cleanup (cleanup region is empty/unused)
+    - `normal`: Cleanup is executed only on normal exit
+    - `eh`: Cleanup is executed only on exception unwinding
+    - `all`: Cleanup is executed on both normal exit and exception unwinding
+
+    Examples:
+
+    ```mlir
+    // Cleanup that runs on both normal and exception paths
+    cir.cleanup.scope {
+      cir.call @mayThrow() : () -> ()
+      cir.yield
+    } cleanup all {
+      cir.call @destructor() : () -> ()
+      cir.yield
+    }
+
+    // EH-only cleanup (destructor only called on exception)
+    cir.cleanup.scope {
+      cir.call @mayThrow() : () -> ()
+      cir.yield
+    } cleanup eh {
+      cir.call @destructor() : () -> ()
+      cir.yield
+    }
+    ```
+
+    Both regions must be terminated. If a region has only one block, the
+    terminator can be left out, and `cir.yield` will be inserted implicitly.
+  }];
+
+  let arguments = (ins CIR_CleanupKindAttr:$cleanupKind);
+  let regions = (region AnyRegion:$bodyRegion, AnyRegion:$cleanupRegion);
+
+  let skipDefaultBuilders = 1;
+
+  let assemblyFormat = [{
+    $bodyRegion `cleanup` $cleanupKind $cleanupRegion attr-dict
+  }];
+
+  let builders = [
+    OpBuilder<(ins "CleanupKind":$cleanupKind,
+      "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$bodyBuilder,
+      "llvm::function_ref<void(mlir::OpBuilder &, mlir::Location)>":$cleanupBuilder)>
   ];
 
   let hasLLVMLowering = false;
@@ -1505,7 +1612,7 @@ def CIR_LabelOp : CIR_Op<"label", [AlwaysSpeculatable]> {
   let hasVerifier = 1;
 
   let customLLVMLoweringConstructorDecl =
-    LoweringBuilders<(ins "[[maybe_unused]] LLVMBlockAddressInfo &":$blockInfoAddr)>;
+    LoweringBuilders<(ins "LLVMBlockAddressInfo &":$blockInfoAddr)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -3541,6 +3648,39 @@ def CIR_MemCpyOp : CIR_MemOp<"libc.memcpy"> {
 // TODO: MemMoveOp
 
 //===----------------------------------------------------------------------===//
+// MemSetOp
+//===----------------------------------------------------------------------===//
+
+def CIR_MemSetOp : CIR_Op<"libc.memset"> {
+  let summary = "Equivalent to libc's `memset`";
+  let description = [{
+    Given the CIR pointer, `dst`, `cir.libc.memset` will set the first `len`
+    bytes of the memory pointed by `dst` to the specified `val`.
+
+    Examples:
+
+    ```mlir
+      // Set 2 bytes in a record to 0:
+      %len = cir.const #cir.int<2> : !u32i
+      %zero = cir.const #cir.int<0> : !u8i
+      cir.libc.memset %len bytes at %record to %zero : !cir.ptr<!void>,
+                                                       !s32i, !u64i
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_VoidPtrType, "", [MemWrite]>:$dst,
+    CIR_UInt8:$val,
+    CIR_AnyFundamentalUIntType:$len
+  );
+
+  let assemblyFormat = [{
+    $len `bytes` `at` $dst `to` $val attr-dict
+    `:` qualified(type($dst)) `,` type($val) `,` type($len)
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // ReturnAddrOp and FrameAddrOp
 //===----------------------------------------------------------------------===//
 
@@ -5255,6 +5395,44 @@ def CIR_PrefetchOp : CIR_Op<"prefetch"> {
 }
 
 //===----------------------------------------------------------------------===//
+// ClearCacheOp
+//===----------------------------------------------------------------------===//
+
+def CIR_ClearCacheOp : CIR_Op<"clear_cache", [
+  AllTypesMatch<["begin", "end"]>
+]> {
+  let summary = "Clear the processor's instruction cache if required.";
+  let description = [{
+    The `cir.clear_cache` operation provides a representation for the
+    `__builtin__clear_cache` builtin and corresponds to the
+    `llvm.clear_cache` intrinsic in LLVM IR.
+
+    This operation ensures visibility of modifications in the specified
+    range to the execution unit of the processor. On targets with
+    non-unified instruction and data cache, the implementation flushes
+    the instruction cache.
+
+    On platforms with coherent instruction and data caches (e.g., x86),
+    this intrinsic is a nop. On platforms with non-coherent instruction
+    and data cache (e.g., ARM, MIPS), the operation will be lowered
+    either to appropriate instructions or a system call, if cache
+    flushing requires special privileges.
+
+    The default behavior is to emit a call to `__clear_cache` from the
+    runtime library.
+
+    This operation does not empty the instruction pipeline. Modifications
+    of the current function are outside the scope of the operation.
+  }];
+
+  let arguments = (ins CIR_VoidPtrType:$begin, CIR_VoidPtrType:$end);
+  let assemblyFormat = [{
+    $begin `,` $end `:` qualified(type($begin))
+    attr-dict
+  }];
+}
+
+//===----------------------------------------------------------------------===//
 // ObjSizeOp
 //===----------------------------------------------------------------------===//
 
@@ -6454,7 +6632,7 @@ def CIR_BlockAddressOp : CIR_Op<"block_address", [Pure]> {
   }];
 
   let customLLVMLoweringConstructorDecl =
-    LoweringBuilders<(ins "[[maybe_unused]] LLVMBlockAddressInfo &":$blockInfoAddr)>;
+    LoweringBuilders<(ins "LLVMBlockAddressInfo &":$blockInfoAddr)>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -6496,6 +6674,37 @@ def CIR_CpuIdOp : CIR_Op<"cpuid"> {
         type($function_id) `,`
         type($sub_function_id) attr-dict
     }];
+}
+
+//===----------------------------------------------------------------------===//
+// MemChrOp
+//===----------------------------------------------------------------------===//
+
+def CIR_MemChrOp : CIR_Op<"libc.memchr"> {
+  let summary = "libc's `memchr`";
+  let description = [{
+    Search for `pattern` in data range from `src` to `src` + `len`.
+    `len` provides a bound to the search in `src`. `result` is a pointer to
+    found `pattern` or a null pointer.
+
+    Examples:
+
+    ```mlir
+    %p = cir.libc.memchr(%src, %pattern, %len)
+    ```
+  }];
+
+  let arguments = (ins
+    Arg<CIR_VoidPtrType, "", [MemRead]>:$src,
+    CIR_SInt32:$pattern,
+    CIR_UInt64:$len
+  );
+
+  let results = (outs CIR_VoidPtrType:$result);
+
+  let assemblyFormat = [{
+    `(` $src `,` $pattern `,` $len `)` attr-dict
+  }];
 }
 
 #endif // CLANG_CIR_DIALECT_IR_CIROPS_TD

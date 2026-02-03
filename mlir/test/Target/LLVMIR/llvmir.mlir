@@ -2642,6 +2642,135 @@ llvm.func @noreturn() attributes { noreturn } {
 
 // -----
 
+// CHECK-LABEL: @returnstwice
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @returnstwice() attributes { returns_twice } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: returns_twice
+
+// -----
+
+// CHECK-LABEL: @hot
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @hot() attributes { hot } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: hot
+
+// -----
+
+// CHECK-LABEL: @cold
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @cold() attributes { cold } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME:cold
+
+// -----
+
+// CHECK-LABEL: @noduplicate
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @noduplicate() attributes { noduplicate } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: noduplicate
+
+// -----
+
+// CHECK-LABEL: @no_caller_saved_registers
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @no_caller_saved_registers() attributes { no_caller_saved_registers } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: no_caller_saved_registers
+
+// -----
+
+// CHECK-LABEL: @nocallback
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @nocallback() attributes { nocallback } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: nocallback 
+
+// -----
+
+// CHECK-LABEL: @modular_format
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @modular_format(%arg : i32) attributes { modular_format = "ident,1,1,foo,bar" } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: "modular-format"="ident,1,1,foo,bar"
+
+// -----
+
+// CHECK-LABEL: @no_builtins_all
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @no_builtins_all() attributes { nobuiltins = [] } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: no-builtins
+
+// -----
+
+// CHECK-LABEL: @no_builtins_2
+// CHECK-SAME: #[[ATTRS:[0-9]+]]
+llvm.func @no_builtins_2() attributes { nobuiltins = ["asdf", "defg"] } {
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: no-builtin-asdf
+// CHECK-SAME: no-builtin-defg
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @no_builtins_call_all
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @no_builtins_call_all() {
+  llvm.call @f() {nobuiltins = [] } : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: no-builtins
+
+// -----
+
+llvm.func @f()
+
+// CHECK-LABEL: @no_builtins_call_2
+// CHECK: call void @f() #[[ATTRS:[0-9]+]]
+llvm.func @no_builtins_call_2() {
+  llvm.call @f() {nobuiltins = ["asdf", "defg"] } : () -> ()
+  llvm.return
+}
+
+// CHECK: #[[ATTRS]]
+// CHECK-SAME: no-builtin-asdf
+// CHECK-SAME: no-builtin-defg
+
+// -----
+
 llvm.func @f()
 
 // CHECK-LABEL: @convergent_call

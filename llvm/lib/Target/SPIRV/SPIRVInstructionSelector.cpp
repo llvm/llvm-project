@@ -224,6 +224,14 @@ private:
   bool selectDot4AddPackedExpansion(Register ResVReg, const SPIRVType *ResType,
                                     MachineInstr &I) const;
 
+  bool selectWavePrefixBitCount(Register ResVReg, const SPIRVType *ResType,
+                                MachineInstr &I) const;
+
+  template <typename PickOpcodeFn>
+  bool selectWaveReduce(Register ResVReg, const SPIRVType *ResType,
+                        MachineInstr &I, bool IsUnsigned,
+                        PickOpcodeFn &&PickOpcode) const;
+
   bool selectWaveReduceMax(Register ResVReg, const SPIRVType *ResType,
                            MachineInstr &I, bool IsUnsigned) const;
 
@@ -232,6 +240,14 @@ private:
 
   bool selectWaveReduceSum(Register ResVReg, const SPIRVType *ResType,
                            MachineInstr &I) const;
+
+  template <typename PickOpcodeFn>
+  bool selectWaveExclusiveScan(Register ResVReg, const SPIRVType *ResType,
+                               MachineInstr &I, bool IsUnsigned,
+                               PickOpcodeFn &&PickOpcode) const;
+
+  bool selectWaveExclusiveScanSum(Register ResVReg, const SPIRVType *ResType,
+                                  MachineInstr &I) const;
 
   bool selectConst(Register ResVReg, const SPIRVType *ResType,
                    MachineInstr &I) const;
@@ -950,8 +966,20 @@ bool SPIRVInstructionSelector::spvSelect(Register ResVReg,
     return MIB.constrainAllUses(TII, TRI, RBI);
   }
   case TargetOpcode::G_STRICT_FMA:
-  case TargetOpcode::G_FMA:
+  case TargetOpcode::G_FMA: {
+    if (STI.canUseExtension(SPIRV::Extension::SPV_KHR_fma)) {
+      MachineBasicBlock &BB = *I.getParent();
+      auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpFmaKHR))
+                     .addDef(ResVReg)
+                     .addUse(GR.getSPIRVTypeID(ResType))
+                     .addUse(I.getOperand(1).getReg())
+                     .addUse(I.getOperand(2).getReg())
+                     .addUse(I.getOperand(3).getReg())
+                     .setMIFlags(I.getFlags());
+      return MIB.constrainAllUses(TII, TRI, RBI);
+    }
     return selectExtInst(ResVReg, ResType, I, CL::fma, GL::Fma);
+  }
 
   case TargetOpcode::G_STRICT_FLDEXP:
     return selectExtInst(ResVReg, ResType, I, CL::ldexp);
@@ -2715,39 +2743,102 @@ bool SPIRVInstructionSelector::selectWaveActiveCountBits(
   return Result;
 }
 
-bool SPIRVInstructionSelector::selectWaveReduceMax(Register ResVReg,
-                                                   const SPIRVType *ResType,
-                                                   MachineInstr &I,
-                                                   bool IsUnsigned) const {
+bool SPIRVInstructionSelector::selectWavePrefixBitCount(
+    Register ResVReg, const SPIRVType *ResType, MachineInstr &I) const {
+
   assert(I.getNumOperands() == 3);
-  assert(I.getOperand(2).isReg());
+
+  auto Op = I.getOperand(2);
+  assert(Op.isReg());
+
   MachineBasicBlock &BB = *I.getParent();
-  Register InputRegister = I.getOperand(2).getReg();
+  DebugLoc DL = I.getDebugLoc();
+
+  Register InputRegister = Op.getReg();
   SPIRVType *InputType = GR.getSPIRVTypeForVReg(InputRegister);
 
   if (!InputType)
     report_fatal_error("Input Type could not be determined.");
 
-  SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
-  // Retreive the operation to use based on input type
-  bool IsFloatTy = GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeFloat);
-  auto IntegerOpcodeType =
-      IsUnsigned ? SPIRV::OpGroupNonUniformUMax : SPIRV::OpGroupNonUniformSMax;
-  auto Opcode = IsFloatTy ? SPIRV::OpGroupNonUniformFMax : IntegerOpcodeType;
-  return BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
+  if (InputType->getOpcode() != SPIRV::OpTypeBool)
+    report_fatal_error("WavePrefixBitCount requires boolean input");
+
+  // Types
+  SPIRVType *Int32Ty = GR.getOrCreateSPIRVIntegerType(32, I, TII);
+
+  // Ballot result type: vector<uint32>
+  // Match DXC: %v4uint for Subgroup size
+  SPIRVType *BallotTy = GR.getOrCreateSPIRVVectorType(Int32Ty, 4, I, TII);
+
+  // Create a vreg for the ballot result
+  Register BallotVReg = MRI->createVirtualRegister(&SPIRV::IDRegClass);
+
+  // 1. OpGroupNonUniformBallot
+  BuildMI(BB, I, DL, TII.get(SPIRV::OpGroupNonUniformBallot))
+      .addDef(BallotVReg)
+      .addUse(GR.getSPIRVTypeID(BallotTy))
+      .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, Int32Ty, TII))
+      .addUse(InputRegister)
+      .constrainAllUses(TII, TRI, RBI);
+
+  // 2. OpGroupNonUniformBallotBitCount
+  BuildMI(BB, I, DL, TII.get(SPIRV::OpGroupNonUniformBallotBitCount))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
-      .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII,
-                                     !STI.isShader()))
-      .addImm(SPIRV::GroupOperation::Reduce)
-      .addUse(I.getOperand(2).getReg())
+      .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, Int32Ty, TII))
+      .addImm(SPIRV::GroupOperation::ExclusiveScan)
+      .addUse(BallotVReg)
       .constrainAllUses(TII, TRI, RBI);
+
+  return true;
+}
+
+bool SPIRVInstructionSelector::selectWaveReduceMax(Register ResVReg,
+                                                   const SPIRVType *ResType,
+                                                   MachineInstr &I,
+                                                   bool IsUnsigned) const {
+  return selectWaveReduce(
+      ResVReg, ResType, I, IsUnsigned,
+      [&](Register InputRegister, bool IsUnsigned) {
+        const bool IsFloatTy =
+            GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeFloat);
+        const unsigned IntOp = IsUnsigned ? SPIRV::OpGroupNonUniformUMax
+                                          : SPIRV::OpGroupNonUniformSMax;
+        return IsFloatTy ? SPIRV::OpGroupNonUniformFMax : IntOp;
+      });
 }
 
 bool SPIRVInstructionSelector::selectWaveReduceMin(Register ResVReg,
                                                    const SPIRVType *ResType,
                                                    MachineInstr &I,
                                                    bool IsUnsigned) const {
+  return selectWaveReduce(
+      ResVReg, ResType, I, IsUnsigned,
+      [&](Register InputRegister, bool IsUnsigned) {
+        const bool IsFloatTy =
+            GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeFloat);
+        const unsigned IntOp = IsUnsigned ? SPIRV::OpGroupNonUniformUMin
+                                          : SPIRV::OpGroupNonUniformSMin;
+        return IsFloatTy ? SPIRV::OpGroupNonUniformFMin : IntOp;
+      });
+}
+
+bool SPIRVInstructionSelector::selectWaveReduceSum(Register ResVReg,
+                                                   const SPIRVType *ResType,
+                                                   MachineInstr &I) const {
+  return selectWaveReduce(ResVReg, ResType, I, /*IsUnsigned*/ false,
+                          [&](Register InputRegister, bool IsUnsigned) {
+                            bool IsFloatTy = GR.isScalarOrVectorOfType(
+                                InputRegister, SPIRV::OpTypeFloat);
+                            return IsFloatTy ? SPIRV::OpGroupNonUniformFAdd
+                                             : SPIRV::OpGroupNonUniformIAdd;
+                          });
+}
+
+template <typename PickOpcodeFn>
+bool SPIRVInstructionSelector::selectWaveReduce(
+    Register ResVReg, const SPIRVType *ResType, MachineInstr &I,
+    bool IsUnsigned, PickOpcodeFn &&PickOpcode) const {
   assert(I.getNumOperands() == 3);
   assert(I.getOperand(2).isReg());
   MachineBasicBlock &BB = *I.getParent();
@@ -2758,11 +2849,7 @@ bool SPIRVInstructionSelector::selectWaveReduceMin(Register ResVReg,
     report_fatal_error("Input Type could not be determined.");
 
   SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
-  // Retreive the operation to use based on input type
-  bool IsFloatTy = GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeFloat);
-  auto IntegerOpcodeType =
-      IsUnsigned ? SPIRV::OpGroupNonUniformUMin : SPIRV::OpGroupNonUniformSMin;
-  auto Opcode = IsFloatTy ? SPIRV::OpGroupNonUniformFMin : IntegerOpcodeType;
+  const unsigned Opcode = PickOpcode(InputRegister, IsUnsigned);
   return BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
@@ -2773,9 +2860,22 @@ bool SPIRVInstructionSelector::selectWaveReduceMin(Register ResVReg,
       .constrainAllUses(TII, TRI, RBI);
 }
 
-bool SPIRVInstructionSelector::selectWaveReduceSum(Register ResVReg,
-                                                   const SPIRVType *ResType,
-                                                   MachineInstr &I) const {
+bool SPIRVInstructionSelector::selectWaveExclusiveScanSum(
+    Register ResVReg, const SPIRVType *ResType, MachineInstr &I) const {
+  return selectWaveExclusiveScan(ResVReg, ResType, I, /*IsUnsigned*/ false,
+                                 [&](Register InputRegister, bool IsUnsigned) {
+                                   bool IsFloatTy = GR.isScalarOrVectorOfType(
+                                       InputRegister, SPIRV::OpTypeFloat);
+                                   return IsFloatTy
+                                              ? SPIRV::OpGroupNonUniformFAdd
+                                              : SPIRV::OpGroupNonUniformIAdd;
+                                 });
+}
+
+template <typename PickOpcodeFn>
+bool SPIRVInstructionSelector::selectWaveExclusiveScan(
+    Register ResVReg, const SPIRVType *ResType, MachineInstr &I,
+    bool IsUnsigned, PickOpcodeFn &&PickOpcode) const {
   assert(I.getNumOperands() == 3);
   assert(I.getOperand(2).isReg());
   MachineBasicBlock &BB = *I.getParent();
@@ -2786,17 +2886,15 @@ bool SPIRVInstructionSelector::selectWaveReduceSum(Register ResVReg,
     report_fatal_error("Input Type could not be determined.");
 
   SPIRVType *IntTy = GR.getOrCreateSPIRVIntegerType(32, I, TII);
-  // Retreive the operation to use based on input type
-  bool IsFloatTy = GR.isScalarOrVectorOfType(InputRegister, SPIRV::OpTypeFloat);
-  auto Opcode =
-      IsFloatTy ? SPIRV::OpGroupNonUniformFAdd : SPIRV::OpGroupNonUniformIAdd;
+  const unsigned Opcode = PickOpcode(InputRegister, IsUnsigned);
   return BuildMI(BB, I, I.getDebugLoc(), TII.get(Opcode))
       .addDef(ResVReg)
       .addUse(GR.getSPIRVTypeID(ResType))
       .addUse(GR.getOrCreateConstInt(SPIRV::Scope::Subgroup, I, IntTy, TII,
                                      !STI.isShader()))
-      .addImm(SPIRV::GroupOperation::Reduce)
-      .addUse(I.getOperand(2).getReg());
+      .addImm(SPIRV::GroupOperation::ExclusiveScan)
+      .addUse(I.getOperand(2).getReg())
+      .constrainAllUses(TII, TRI, RBI);
 }
 
 bool SPIRVInstructionSelector::selectBitreverse(Register ResVReg,
@@ -3644,6 +3742,13 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     }
     return MIB.constrainAllUses(TII, TRI, RBI);
   }
+  case Intrinsic::spv_loop_control_intel: {
+    auto MIB =
+        BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpLoopControlINTEL));
+    for (unsigned J = 1; J < I.getNumExplicitOperands(); ++J)
+      MIB.addImm(foldImm(I.getOperand(J), MRI));
+    return MIB.constrainAllUses(TII, TRI, RBI);
+  }
   case Intrinsic::spv_selection_merge: {
     auto MIB =
         BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpSelectionMerge));
@@ -3859,6 +3964,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
     return selectExtInst(ResVReg, ResType, I, CL::u_clamp, GL::UClamp);
   case Intrinsic::spv_sclamp:
     return selectExtInst(ResVReg, ResType, I, CL::s_clamp, GL::SClamp);
+  case Intrinsic::spv_subgroup_prefix_bit_count:
+    return selectWavePrefixBitCount(ResVReg, ResType, I);
   case Intrinsic::spv_wave_active_countbits:
     return selectWaveActiveCountBits(ResVReg, ResType, I);
   case Intrinsic::spv_wave_all:
@@ -3883,6 +3990,8 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
   case Intrinsic::spv_wave_readlane:
     return selectWaveOpInst(ResVReg, ResType, I,
                             SPIRV::OpGroupNonUniformShuffle);
+  case Intrinsic::spv_wave_prefix_sum:
+    return selectWaveExclusiveScanSum(ResVReg, ResType, I);
   case Intrinsic::spv_step:
     return selectExtInst(ResVReg, ResType, I, CL::step, GL::Step);
   case Intrinsic::spv_radians:

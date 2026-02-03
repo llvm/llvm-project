@@ -1,4 +1,4 @@
-! RUN: bbc -hlfir=false %s -o - | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir %s -o - | FileCheck %s
 
 ! CHECK-LABEL: substring_main
 subroutine substring_main
@@ -13,26 +13,23 @@ interface
 end interface
 
   ival = 1
-  ! CHECK: %[[a0:.*]] = fir.alloca i32 {bindc_name = "ival", uniq_name = "_QFsubstring_mainEival"}
-  ! CHECK: %[[a2:.*]] = fir.address_of(@_QFsubstring_mainEstring) : !fir.ref<!fir.array<2x!fir.char<1,7>>>
-  ! CHECK: fir.store {{.*}} to %[[a0]] : !fir.ref<i32>
-  ! CHECK: %[[a3:.*]] = fir.shape {{.*}} : (index) -> !fir.shape<1>
-  ! CHECK: %[[a4:.*]] = fir.slice {{.*}}, {{.*}}, {{.*}} : (index, index, index) -> !fir.slice<1>
-  ! CHECK: br ^bb1({{.*}}, {{.*}} : index, index)
-  ! CHECK: ^bb1(%[[a5:.*]]: index, %[[a6:.*]]: index):  // 2 preds: ^bb0, ^bb2
-  ! CHECK: %[[a7:.*]] = arith.cmpi sgt, %[[a6]], {{.*}} : index
-  ! CHECK: cond_br %[[a7]], ^bb2, ^bb3
-  ! CHECK: ^bb2:  // pred: ^bb1
-  ! CHECK: %[[a8:.*]] = arith.addi %[[a5]], {{.*}} : index
-  ! CHECK: %[[a9:.*]] = fir.array_coor %[[a2]](%[[a3]]) [%[[a4]]] %[[a8]] : (!fir.ref<!fir.array<2x!fir.char<1,7>>>, !fir.shape<1>, !fir.slice<1>, index) -> !fir.ref<!fir.char<1,7>>
-  ! CHECK: %[[a10:.*]] = fir.load %[[a0]] : !fir.ref<i32>
-  ! CHECK: %[[a11:.*]] = fir.convert %[[a10]] : (i32) -> index
-  ! CHECK: %[[a12:.*]] = arith.subi %[[a11]], {{.*}} : index
-  ! CHECK: %[[a13:.*]] = fir.convert %[[a9]] : (!fir.ref<!fir.char<1,7>>) -> !fir.ref<!fir.array<7x!fir.char<1>>>
-  ! CHECK: %[[a14:.*]] = fir.coordinate_of %[[a13]], %[[a12]] : (!fir.ref<!fir.array<7x!fir.char<1>>>, index) -> !fir.ref<!fir.char<1>>
-  ! CHECK: %[[a15:.*]] = fir.convert %[[a14]] : (!fir.ref<!fir.char<1>>) -> !fir.ref<!fir.char<1,?>>
-  ! CHECK: %[[a16:.*]] = fir.emboxchar %[[a15]], {{.*}} : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-  ! CHECK: %[[a17:.*]] = fir.call @_QPinner(%[[a16]]) {{.*}}: (!fir.boxchar<1>) -> i32
+  ! CHECK: %[[VAL_1:.*]] = fir.alloca i32 {bindc_name = "ival", uniq_name = "_QFsubstring_mainEival"}
+  ! CHECK: %[[VAL_2:.*]]:2 = hlfir.declare %[[VAL_1]] {uniq_name = "_QFsubstring_mainEival"} : (!fir.ref<i32>) -> (!fir.ref<i32>, !fir.ref<i32>)
+  ! CHECK: %[[VAL_6:.*]] = fir.address_of(@_QFsubstring_mainEstring) : !fir.ref<!fir.array<2x!fir.char<1,7>>>
+  ! CHECK: %[[VAL_8:.*]]:2 = hlfir.declare %[[VAL_6]](%{{.*}}) typeparams %{{.*}} {uniq_name = "_QFsubstring_mainEstring"} : (!fir.ref<!fir.array<2x!fir.char<1,7>>>, !fir.shape<1>, index) -> (!fir.ref<!fir.array<2x!fir.char<1,7>>>, !fir.ref<!fir.array<2x!fir.char<1,7>>>)
+  ! CHECK: %[[VAL_10:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<i32>
+  ! CHECK: %[[VAL_11:.*]] = fir.convert %[[VAL_10]] : (i32) -> i64
+  ! CHECK: %[[VAL_12:.*]] = fir.load %[[VAL_2]]#0 : !fir.ref<i32>
+  ! CHECK: %[[VAL_13:.*]] = fir.convert %[[VAL_12]] : (i32) -> i64
+  ! CHECK: %[[VAL_14:.*]] = fir.convert %[[VAL_11]] : (i64) -> index
+  ! CHECK: %[[VAL_15:.*]] = fir.convert %[[VAL_13]] : (i64) -> index
+  ! CHECK: %[[VAL_20:.*]] = hlfir.designate %[[VAL_8]]#0 (%{{.*}}:%{{.*}}:%{{.*}}) substr %[[VAL_14]], %[[VAL_15]]  shape %{{.*}} typeparams %{{.*}} : (!fir.ref<!fir.array<2x!fir.char<1,7>>>, index, index, index, index, index, !fir.shape<1>, index) -> !fir.box<!fir.array<2x!fir.char<1,?>>>
+  ! CHECK: %[[VAL_21:.*]] = hlfir.elemental %{{.*}} unordered : (!fir.shape<1>) -> !hlfir.expr<2xi32> {
+  ! CHECK: ^bb0(%[[VAL_22:.*]]: index):
+  ! CHECK:   %[[VAL_23:.*]] = hlfir.designate %[[VAL_20]] (%[[VAL_22]])  typeparams %{{.*}} : (!fir.box<!fir.array<2x!fir.char<1,?>>>, index, index) -> !fir.boxchar<1>
+  ! CHECK:   %[[VAL_24:.*]] = fir.call @_QPinner(%[[VAL_23]]) {{.*}} : (!fir.boxchar<1>) -> i32
+  ! CHECK:   hlfir.yield_element %[[VAL_24]] : i32
+  ! CHECK: }
   result = inner(string(1:2)(ival:ival))
   print *, result
 end subroutine substring_main
