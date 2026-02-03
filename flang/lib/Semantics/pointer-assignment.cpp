@@ -362,7 +362,12 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
         msg = "Pointer type must be unlimited polymorphic or non-extensible"
               " derived type when target is unlimited polymorphic"_err_en_US;
       }
-    } else if (!lhsType_->type().IsTkLenCompatibleWith(rhsType->type())) {
+    } else if (!lhsType_->type().IsTkLenCompatibleWith(rhsType->type()) &&
+        // Turn off target type mismatch error if we have ignore_tkr(tc)
+        // or ignore_tkr(kc)
+        !((ignoreTKR_.test(common::IgnoreTKR::Type) ||
+            ignoreTKR_.test(common::IgnoreTKR::Kind)) &&
+          ignoreTKR_.test(common::IgnoreTKR::Contiguous))) {
       msg = MessageFormattedText{
           "Target type %s is not compatible with pointer type %s"_err_en_US,
           rhsType->type().AsFortran(), lhsType_->type().AsFortran()};
