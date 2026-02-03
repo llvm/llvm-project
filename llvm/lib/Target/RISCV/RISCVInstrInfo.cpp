@@ -3849,10 +3849,6 @@ std::string RISCVInstrInfo::createMIROperandComment(
   if (!GenericComment.empty())
     return GenericComment;
 
-  // If not, we must have an immediate operand.
-  if (!Op.isImm())
-    return std::string();
-
   const MCInstrDesc &Desc = MI.getDesc();
   if (OpIdx >= Desc.getNumOperands())
     return std::string();
@@ -3889,12 +3885,30 @@ std::string RISCVInstrInfo::createMIROperandComment(
     OS << "e" << SEW;
     break;
   }
-  case RISCVOp::OPERAND_VEC_POLICY:
+  case RISCVOp::OPERAND_VEC_POLICY: {
     unsigned Policy = Op.getImm();
     assert(Policy <= (RISCVVType::TAIL_AGNOSTIC | RISCVVType::MASK_AGNOSTIC) &&
            "Invalid Policy Value");
     OS << (Policy & RISCVVType::TAIL_AGNOSTIC ? "ta" : "tu") << ", "
        << (Policy & RISCVVType::MASK_AGNOSTIC ? "ma" : "mu");
+    break;
+  }
+  case RISCVOp::OPERAND_AVL:
+    if (Op.isImm() && Op.getImm() == -1)
+      OS << "vl=VLMAX";
+    else
+      OS << "vl";
+    break;
+  case RISCVOp::OPERAND_VEC_RM:
+    if (RISCVII::usesVXRM(Desc.TSFlags)) {
+      assert(RISCVVXRndMode::isValidRoundingMode(Op.getImm()));
+      auto VXRM = static_cast<RISCVVXRndMode::RoundingMode>(Op.getImm());
+      OS << "vxrm=" << RISCVVXRndMode::roundingModeToString(VXRM);
+    } else {
+      assert(RISCVFPRndMode::isValidRoundingMode(Op.getImm()));
+      auto FRM = static_cast<RISCVFPRndMode::RoundingMode>(Op.getImm());
+      OS << "frm=" << RISCVFPRndMode::roundingModeToString(FRM);
+    }
     break;
   }
 

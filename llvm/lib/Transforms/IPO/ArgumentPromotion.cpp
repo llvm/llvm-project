@@ -50,6 +50,7 @@
 #include "llvm/IR/BasicBlock.h"
 #include "llvm/IR/CFG.h"
 #include "llvm/IR/Constants.h"
+#include "llvm/IR/DIBuilder.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/DerivedTypes.h"
 #include "llvm/IR/Dominators.h"
@@ -430,6 +431,16 @@ doPromotion(Function *F, FunctionAnalysisManager &FAM,
     auto &DT = FAM.getResult<DominatorTreeAnalysis>(*NF);
     auto &AC = FAM.getResult<AssumptionAnalysis>(*NF);
     PromoteMemToReg(Allocas, DT, &AC);
+  }
+
+  // If argument(s) are dead (hence removed) or promoted, the function probably
+  // does not follow the standard calling convention anymore. Add DW_CC_nocall
+  // to DISubroutineType to inform debugger that it may not be safe to call this
+  // function.
+  DISubprogram *SP = NF->getSubprogram();
+  if (SP) {
+    auto Temp = SP->getType()->cloneWithCC(llvm::dwarf::DW_CC_nocall);
+    SP->replaceType(MDNode::replaceWithPermanent(std::move(Temp)));
   }
 
   return NF;

@@ -48,5 +48,10 @@
     "LIBC_ADD_NULL_CHECKS": {
       "value": false
     }
+  },
+  "codegen": {
+    "LIBC_CONF_ENABLE_STRONG_STACK_PROTECTOR": {
+      "value": false
+    }
   }
 }
