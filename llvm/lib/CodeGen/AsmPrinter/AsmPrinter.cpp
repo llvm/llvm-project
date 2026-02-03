@@ -2558,9 +2558,6 @@ void AsmPrinter::emitGlobalAlias(const Module &M, const GlobalAlias &GA) {
 }
 
 void AsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
-  assert(!TM.getTargetTriple().isOSBinFormatXCOFF() &&
-         "IFunc is not supported on AIX.");
-
   auto EmitLinkage = [&](MCSymbol *Sym) {
     if (GI.hasExternalLinkage() || !MAI->getWeakRefDirective())
       OutStreamer->emitSymbolAttribute(Sym, MCSA_Global);
@@ -2905,6 +2902,15 @@ bool AsmPrinter::doFinalization(Module &M) {
   // sections after DWARF.
   for (const auto &IFunc : M.ifuncs())
     emitGlobalIFunc(M, IFunc);
+  if (TM.getTargetTriple().isOSBinFormatXCOFF() && hasDebugInfo()) {
+    // Emit section end. This is used to tell the debug line section where the
+    // end is for a text section if we don't use .loc to represent the debug
+    // line.
+    auto *Sec = OutContext.getObjectFileInfo()->getTextSection();
+    OutStreamer->switchSectionNoPrint(Sec);
+    MCSymbol *Sym = Sec->getEndSymbol(OutContext);
+    OutStreamer->emitLabel(Sym);
+  }
 
   // Finalize debug and EH information.
   for (auto &Handler : Handlers)
