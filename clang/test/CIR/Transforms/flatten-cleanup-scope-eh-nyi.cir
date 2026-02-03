@@ -1,0 +1,38 @@
+// RUN: cir-opt %s -cir-flatten-cfg -verify-diagnostics -o -
+
+!s32i = !cir.int<s, 32>
+!rec_SomeClass = !cir.record<struct "SomeClass" {!s32i}>
+
+// Test that we issue a diagnostic for EH-only cleanup scopes.
+cir.func @test_eh_only_cleanup() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  // expected-error @below {{EH cleanup flattening is not yet implemented}}
+  cir.cleanup.scope {
+    cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  } cleanup eh {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+// Test that we issue a diagnostic for Normal+EH cleanup scopes.
+cir.func @test_all_cleanup() {
+  %0 = cir.alloca !rec_SomeClass, !cir.ptr<!rec_SomeClass>, ["c", init] {alignment = 4 : i64}
+  cir.call @ctor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+  // expected-error @below {{EH cleanup flattening is not yet implemented}}
+  cir.cleanup.scope {
+    cir.call @doSomething(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  } cleanup all {
+    cir.call @dtor(%0) : (!cir.ptr<!rec_SomeClass>) -> ()
+    cir.yield
+  }
+  cir.return
+}
+
+cir.func private @ctor(!cir.ptr<!rec_SomeClass>)
+cir.func private @dtor(!cir.ptr<!rec_SomeClass>)
+cir.func private @doSomething(!cir.ptr<!rec_SomeClass>)
