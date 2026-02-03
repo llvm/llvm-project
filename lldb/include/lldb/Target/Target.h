@@ -485,13 +485,14 @@ public:
 
   /// Set language-plugin specific option called \c option_name to
   /// the specified boolean \c value.
-  void SetLanguageOption(llvm::StringRef option_name, bool value);
+  llvm::Error SetBooleanLanguageOption(llvm::StringRef option_name, bool value);
 
   /// Get the language-plugin specific boolean option called \c option_name.
   ///
   /// If the option doesn't exist or is not a boolean option, returns false.
   /// Otherwise returns the boolean value of the option.
-  bool GetLanguageOptionAsBoolean(llvm::StringRef option_name) const;
+  llvm::Expected<bool>
+  GetBooleanLanguageOption(llvm::StringRef option_name) const;
 
 private:
   const StructuredData::Dictionary &GetLanguageOptions() const;

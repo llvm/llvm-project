@@ -70,6 +70,7 @@
 
 #include "llvm/ADT/ScopeExit.h"
 #include "llvm/ADT/SetVector.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/ThreadPool.h"
 
 #include <memory>
@@ -5358,19 +5359,28 @@ void Target::NotifyBreakpointChanged(
     BroadcastEvent(Target::eBroadcastBitBreakpointChanged, breakpoint_data_sp);
 }
 
-void EvaluateExpressionOptions::SetLanguageOption(llvm::StringRef option_name,
-                                                  bool value) {
+llvm::Error
+EvaluateExpressionOptions::SetBooleanLanguageOption(llvm::StringRef option_name,
+                                                    bool value) {
   if (option_name.empty())
-    return;
+    return llvm::createStringError("Can't set an option with an empty name.");
 
   GetLanguageOptions().AddBooleanItem(option_name, value);
+
+  return llvm::Error::success();
 }
 
-bool EvaluateExpressionOptions::GetLanguageOptionAsBoolean(
+llvm::Expected<bool> EvaluateExpressionOptions::GetBooleanLanguageOption(
     llvm::StringRef option_name) const {
+  const StructuredData::Dictionary &opts = GetLanguageOptions();
+
+  if (!opts.HasKey(option_name))
+    return llvm::createStringErrorV("Option {0} does not exist.", option_name);
+
   bool result;
-  if (!GetLanguageOptions().GetValueForKeyAsBoolean(option_name, result))
-    return false;
+  if (!opts.GetValueForKeyAsBoolean(option_name, result))
+    return llvm::createStringErrorV("Failed to get option {0} as boolean.",
+                                    option_name);
 
   return result;
 }

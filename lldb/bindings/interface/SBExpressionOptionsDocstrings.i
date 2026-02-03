@@ -63,7 +63,7 @@
 ) lldb::SBExpressionOptions::SetAllowJIT;
 
 %feature("docstring", "Sets language-plugin specific boolean option for expression evaluation."
-) lldb::SBExpressionOptions::SetLanguageOption;
+) lldb::SBExpressionOptions::SetBooleanLanguageOption;
 
 %feature("docstring", "Gets language-plugin specific boolean option for expression evaluation."
-) lldb::SBExpressionOptions::GetLanguageOptionAsBoolean;
+) lldb::SBExpressionOptions::GetBooleanLanguageOption;
