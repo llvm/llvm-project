@@ -306,361 +306,59 @@ This layered separation enables three key benefits: target logic reuse where `AB
 
 ## 4. Detailed Component Design
 
-### 4.1 ABIArgInfo (Already Exists in CIR)
+### 4.1 ABIArgInfo
 
-**Location**: `mlir/include/mlir/Interfaces/ABI/ABIArgInfo.h`
+The `ABIArgInfo` class captures the result of ABI classification for a single argument or return value. When a target-specific `ABIInfo` implementation analyzes a type (such as a struct or primitive), it produces an `ABIArgInfo` describing whether the value should be passed directly in registers, indirectly through memory, expanded into multiple arguments, or handled through other specialized mechanisms. This separation between classification (producing `ABIArgInfo`) and rewriting (consuming `ABIArgInfo`) is fundamental to achieving dialect independence: the classification logic operates purely on type metadata and doesn't need to know about specific MLIR operations like `cir.call` or `fir.call`.
 
-**Purpose**: Describes how a single argument or return value should be passed.
+The classification is captured through a `Kind` enum with variants like `Direct` (pass value as-is, potentially with type coercion), `Indirect` (pass via hidden pointer), `Expand` (split aggregate into individual field arguments), and several others for edge cases like sign/zero extension or Windows-specific calling conventions. Each kind may carry additional information such as coercion types (for example, passing `{float, float}` as `<2 x float>` on x86_64) or padding requirements. This design is adapted directly from Clang's existing `ABIArgInfo` in `clang/lib/CodeGen/CGCall.h`, which has proven robust and comprehensive across years of production ABI implementation work spanning dozens of targets.
 
-**Structure**:
-```cpp
-class ABIArgInfo {
-  enum Kind {
-    Direct,          // Pass directly (possibly coerced)
-    Extend,          // Pass with sign/zero extension
-    Indirect,        // Pass via hidden pointer
-    IndirectAliased, // Pass indirectly, may alias
-    Ignore,          // Ignore (empty struct/void)
-    Expand,          // Expand into constituent fields
-    CoerceAndExpand, // Coerce and expand
-    InAlloca         // Windows inalloca
-  };
-  
-  mlir::Type CoerceToType;  // Target type for coercion
-  mlir::Type PaddingType;   // Padding type if needed
-  // Flags: InReg, CanBeFlattened, SignExt, etc.
-};
-```
-
-**Status**: ✅ Exists in CIR, already dialect-agnostic, just needs to be moved.
+This component already exists in the CIR incubator codebase and is dialect-agnostic by design—it describes "how to pass a value" without prescribing "how to create operations." The only work required is moving it from `clang/lib/CIR/` to `mlir/include/mlir/Interfaces/ABI/ABIArgInfo.h` to make it available to all MLIR dialects.
 
 ### 4.2 LowerFunctionInfo
 
-**Location**: `mlir/include/mlir/Interfaces/ABI/LowerFunctionInfo.h`
+The `LowerFunctionInfo` class represents a complete, ABI-classified function signature. It associates each argument and the return value with both its original high-level type (e.g., `!cir.struct<"Point", !s32, !s32>`) and the `ABIArgInfo` describing how it should be lowered (e.g., `Direct` with coercion to `i64`). This pairing of original type and ABI classification is essential because the dialect-specific rewriter needs both pieces of information: the original type tells it which operations to rewrite, while the `ABIArgInfo` tells it how to perform the transformation.
 
-**Purpose**: Represents function signature with ABI classification for each argument/return.
+The class also captures metadata like the calling convention (C, fastcc, etc.) and whether the function accepts variable arguments, which affect classification rules. The internal storage treats the return value as argument index 0, followed by actual arguments—a convention inherited from Clang's implementation that simplifies iteration over all classified values. This design choice means that a function with N parameters contains N+1 entries in the classification vector, and helper methods like `getReturnInfo()` and `getArgInfo(i)` provide convenient access with proper index translation.
 
-**Structure**:
-```cpp
-class LowerFunctionInfo {
-  struct ArgInfo {
-    mlir::Type originalType;
-    ABIArgInfo abiInfo;
-  };
-  
-  unsigned CallingConvention;
-  unsigned EffectiveCallingConvention;
-  RequiredArgs Required;  // For varargs
-  
-  // Return type at index 0, args follow
-  SmallVector<ArgInfo> Args;
-};
-```
-
-**Methods**:
-```cpp
-ABIArgInfo &getReturnInfo();
-mlir::Type getReturnType();
-unsigned getNumArgs();
-ABIArgInfo &getArgInfo(unsigned i);
-mlir::Type getArgType(unsigned i);
-```
-
-**Status**: 🔄 Exists in CIR, needs minor adaptation for MLIR-agnostic use.
+Like `ABIArgInfo`, this component already exists in CIR and requires only minor adaptations to be fully dialect-agnostic. The primary change is ensuring it doesn't directly reference CIR-specific types in its implementation, instead relying on the generic `mlir::Type` interface. Once moved to `mlir/include/mlir/Interfaces/ABI/`, it becomes available for use by any MLIR dialect that needs ABI lowering.
 
 ### 4.3 ABITypeInterface
 
-**Location**: `mlir/include/mlir/Interfaces/ABI/ABITypeInterface.td`
+The `ABITypeInterface` is an MLIR `TypeInterface` that defines the contract for exposing ABI-relevant type metadata. Target-specific ABI classification algorithms need to answer questions like "Is this an integer type?", "How large is this struct?", "What are the types and offsets of its fields?", and "Does this C++ class have a non-trivial destructor?" Without a common interface, the classification code would need to perform dialect-specific type casting (e.g., `dyn_cast<cir::StructType>` vs `dyn_cast<fir::RecordType>`), making it impossible to share the complex ABI logic across dialects. This interface solves that problem by requiring each dialect's types to implement a standard set of query methods.
 
-**Purpose**: Provides type queries needed for ABI classification.
+The interface defines 15-25 methods covering basic type classification (`isInteger()`, `isRecord()`, `isPointer()`), type navigation (`getPointeeType()`, `getFieldType(unsigned index)`), size and alignment queries (`getSizeInBits()`, `getABIAlignmentInBits()`), and specialized predicates for edge cases like `__int128`, `_BitInt(N)`, and C++ non-trivial lifecycle operations. The exact method list will be finalized during Phase 1 Week 1 by auditing the existing x86_64 and AArch64 classification code to identify every type query used in practice. The TableGen-based interface definition ensures compile-time enforcement: if a type advertises `ABITypeInterface::Trait`, the compiler verifies that all required methods are implemented.
 
-**Interface Definition** (TableGen):
-
-> **TableGen Syntax Note**: `InterfaceMethod<description, return_type, method_name, parameters>` defines a polymorphic method that types can implement. `(ins)` means no parameters. This generates C++ virtual methods that each type overrides.
-
-```
-def ABITypeInterface : TypeInterface<"ABITypeInterface"> {
-  let methods = [
-    // Basic type queries
-    InterfaceMethod<"Check if type is an integer",
-      "bool", "isInteger", (ins)>,
-    InterfaceMethod<"Check if type is a record (struct/class)",
-      "bool", "isRecord", (ins)>,
-    InterfaceMethod<"Check if type is a pointer",
-      "bool", "isPointer", (ins)>,
-    InterfaceMethod<"Check if type is floating point",
-      "bool", "isFloatingPoint", (ins)>,
-    InterfaceMethod<"Check if type is an array",
-      "bool", "isArray", (ins)>,
-      
-    // Type navigation
-    InterfaceMethod<"Get pointee type for pointers",
-      "mlir::Type", "getPointeeType", (ins)>,
-    InterfaceMethod<"Get element type for arrays",
-      "mlir::Type", "getElementType", (ins)>,
-      
-    // Size and alignment queries
-    InterfaceMethod<"Get type size in bits",
-      "uint64_t", "getSizeInBits", (ins "mlir::DataLayout", "$layout")>,
-    InterfaceMethod<"Get ABI alignment in bits",
-      "uint32_t", "getABIAlignmentInBits", (ins "mlir::DataLayout", "$layout")>,
-    InterfaceMethod<"Get preferred alignment in bits",
-      "uint32_t", "getPreferredAlignmentInBits", (ins "mlir::DataLayout", "$layout")>,
-      
-    // Record (struct/class) queries - CRITICAL FOR ABI CLASSIFICATION
-    InterfaceMethod<"Get number of fields in record",
-      "unsigned", "getNumFields", (ins)>,
-    InterfaceMethod<"Get field type by index",
-      "mlir::Type", "getFieldType", (ins "unsigned", "$index")>,
-    InterfaceMethod<"Get field offset in bits",
-      "uint64_t", "getFieldOffsetInBits", 
-      (ins "unsigned", "$index", "mlir::DataLayout", "$layout")>,
-    InterfaceMethod<"Check if record is empty (no fields)",
-      "bool", "isEmpty", (ins)>,
-      
-    // Additional methods for ABI decisions
-    InterfaceMethod<"Check if integer type is signed",
-      "bool", "isSignedInteger", (ins)>,
-    InterfaceMethod<"Get integer width in bits",
-      "unsigned", "getIntegerBitWidth", (ins)>,
-    
-    // Additional methods that may be needed for edge cases (15-25 total)
-    InterfaceMethod<"Check if type is a union",
-      "bool", "isUnion", (ins)>,
-    InterfaceMethod<"Check if type is complex",
-      "bool", "isComplexType", (ins)>,
-    InterfaceMethod<"Get complex element type",
-      "mlir::Type", "getComplexElementType", (ins)>,
-    
-    // x86_64-specific edge cases (CRITICAL for ABI correctness)
-    InterfaceMethod<"Check if type is __int128",
-      "bool", "isInt128", (ins)>,
-    InterfaceMethod<"Check if type is _BitInt(N)",
-      "bool", "isBitInt", (ins)>,
-    InterfaceMethod<"Get _BitInt width",
-      "unsigned", "getBitIntWidth", (ins)>,
-    
-    // C++ ABI support (required if targeting C++)
-    InterfaceMethod<"Has non-trivial copy constructor",
-      "bool", "hasNonTrivialCopyCtor", (ins)>,
-    InterfaceMethod<"Has non-trivial destructor",
-      "bool", "hasNonTrivialDtor", (ins)>,
-    InterfaceMethod<"Check if type is trivially copyable",
-      "bool", "isTriviallyCopyable", (ins)>,
-    InterfaceMethod<"Check if type is vector",
-      "bool", "isVectorType", (ins)>,
-    InterfaceMethod<"Get vector element count",
-      "unsigned", "getVectorNumElements", (ins)>,
-  ];
-  
-  let description = [{
-    Interface for types to provide ABI-relevant information.
-    
-    Key Design Notes:
-    - Field iteration (getNumFields, getFieldType, getFieldOffsetInBits) is 
-      CRITICAL for struct classification in x86_64 and AArch64 ABIs
-    - DataLayout is passed to size/alignment queries to support target-specific layouts
-    - Not all types implement all methods (e.g., integers don't have fields)
-    
-    **Method Count**: 15-20 methods shown, potentially 20-25 with edge cases
-    
-    **Additional Methods That May Be Needed**:
-    - Union handling (isUnion, getActiveUnionMember)
-    - Complex types (isComplexType, getComplexElementType) - shown above
-    - Vector types (isVectorType, getVectorNumElements) - shown above
-    - Flexible array members (isVariablySized)
-    - Padding queries (hasPaddingBetweenFields)
-    
-    **Week 1 Task**: Audit x86_64/AArch64 classification code to determine exact method list
-  }];
-}
-```
-
-**Dialects Implement**:
-```cpp
-// CIR
-class IntType : public Type<IntType, ..., ABITypeInterface::Trait> {
-  bool isInteger() { return true; }
-  bool isRecord() { return false; }
-  // ...
-};
-
-// FIR
-class fir::IntType : public Type<fir::IntType, ..., ABITypeInterface::Trait> {
-  bool isInteger() { return true; }
-  // ...
-};
-```
-
-**Status**: ✨ New, needs to be created.
+Each dialect must implement this interface for its types once. For CIR, this means adding the interface methods to types like `cir::IntType`, `cir::StructType`, and `cir::PointerType`. For FIR, it means implementing them for `fir::IntType`, `fir::RecordType`, and so on. The implementation cost is approximately 200-300 lines per dialect—a manageable one-time investment that enables reuse of thousands of lines of ABI classification logic.
 
 ### 4.4 ABIInfo Base Class
 
-**Location**: `mlir/lib/Target/ABI/ABIInfo.h`
+The `ABIInfo` abstract base class defines the interface for target-specific ABI classification. Each supported target (x86_64, AArch64, ARM, etc.) provides a concrete subclass that encodes that platform's calling convention rules. The core responsibility is implementing the `computeInfo()` method, which takes a `LowerFunctionInfo` object and populates it with `ABIArgInfo` classifications for each argument and the return value. This architecture allows the complexity of each ABI—which can span thousands of lines for targets like x86_64 with its intricate struct classification rules—to be isolated in dedicated implementation files.
 
-**Purpose**: Abstract base for target-specific ABI classification.
+The `computeInfo()` implementation queries type metadata through the `ABITypeInterface` methods defined in Section 4.3, enabling classification logic to work across dialects. When analyzing a function argument, the code calls methods like `type.isRecord()`, `type.getNumFields()`, and `type.getFieldType(i)` to understand the type's structure without knowing whether it's a `cir::StructType`, `fir::RecordType`, or some other dialect's representation. This interface-based approach is what makes the entire classification infrastructure dialect-agnostic.
 
-**Structure**:
-```cpp
-class ABIInfo {
-protected:
-  const clang::TargetInfo &Target;
-  
-public:
-  explicit ABIInfo(const clang::TargetInfo &Target);
-  virtual ~ABIInfo();
-  
-  // Pure virtual - must implement per target
-  virtual void computeInfo(LowerFunctionInfo &FI) const = 0;
-  
-  // Helpers
-  ABIArgInfo getNaturalAlignIndirect(mlir::Type Ty, mlir::DataLayout &DL);
-  bool isPromotableIntegerTypeForABI(mlir::Type Ty);
-};
-```
-
-**Status**: 🔄 Exists in CIR, needs adaptation to remove CIR-specific dependencies.
+The base class also provides common utility methods that are frequently needed across multiple targets, such as `getNaturalAlignIndirect()` for creating indirect-passing descriptors or `isPromotableIntegerTypeForABI()` for integer promotion checks. These helpers reduce code duplication and ensure consistent behavior for common patterns. The class takes a `clang::TargetInfo` reference at construction, which provides access to target-specific data like pointer size, register sizes, and platform conventions.
 
 ### 4.5 Target-Specific ABIInfo Implementations
 
-**Location**: `mlir/lib/Target/ABI/X86/`, `mlir/lib/Target/ABI/AArch64/`
+Concrete `ABIInfo` subclasses implement the classification rules for specific platforms. The `X86_64ABIInfo` class, for example, implements the x86-64 System V ABI's complex struct classification algorithm, which assigns each 8-byte chunk of a struct to register classes (Integer, SSE, X87, etc.) and then merges those classifications to determine whether the struct can be passed in registers or must go to memory. The `AArch64ABIInfo` class similarly implements the ARM Architecture Procedure Call Standard (AAPCS64), which has different rules for homogeneous floating-point aggregates and different register usage conventions.
 
-**Example: X86_64ABIInfo**:
-```cpp
-class X86_64ABIInfo : public ABIInfo {
-  enum Class { Integer, SSE, SSEUp, X87, X87Up, NoClass, Memory };
-  
-  void classify(mlir::Type Ty, uint64_t offset, Class &Lo, Class &Hi);
-  Class merge(Class A, Class B);
-  
-public:
-  ABIArgInfo classifyReturnType(mlir::Type Ty);
-  ABIArgInfo classifyArgumentType(mlir::Type Ty, ...);
-  
-  void computeInfo(LowerFunctionInfo &FI) const override;
-};
-```
+These implementations represent thousands of lines of battle-tested code with extensive edge case handling. The x86_64 implementation alone handles over 20 distinct scenarios in its struct classification logic, covering cases like `__int128` (which passes in two integer registers), `_BitInt(N)` (which may pass indirectly depending on bit width), complex numbers (where `_Complex double` may pass in two SSE registers or via memory depending on surrounding struct members), and C++ objects with non-trivial lifecycle operations (which typically pass indirectly to enable proper copy construction and destruction). Rather than rewriting this complexity from scratch, the proposal reuses CIR's existing implementations—originally ported from Clang's `CodeGen/TargetInfo.cpp`—with targeted refactoring to replace CIR-specific type operations with `ABITypeInterface` queries.
 
-**Status**: 🔄 Exists in CIR, needs minor adaptation (remove CIR type casts, use ABITypeInterface).
+The practical adaptation work involves identifying type casting sites (estimated at 100-200 locations across both targets) and replacing them with interface calls. For example, code that currently checks `if (auto ST = dyn_cast<cir::StructType>(Ty))` becomes `if (Ty.isa<ABITypeInterface>() && Ty.cast<ABITypeInterface>().isRecord())`. This transformation maintains the classification algorithms' correctness while making them callable from any MLIR dialect.
 
 ### 4.6 ABIRewriteContext Interface
 
-**Location**: `mlir/include/mlir/Interfaces/ABI/ABIRewriteContext.h`
+The `ABIRewriteContext` interface is where dialect-specific code generation occurs. While the classification phase (handled by `ABIInfo`) operates purely on type metadata and is dialect-agnostic, the rewriting phase must create concrete MLIR operations—and operation creation is inherently dialect-specific. A CIR dialect needs to emit `cir.call`, `cir.cast`, and `cir.load` operations, while FIR needs `fir.call`, `fir.convert`, and `fir.load`. The `ABIRewriteContext` abstracts these differences through virtual methods for common operation patterns.
 
-**Purpose**: Dialect-specific callbacks for operation rewriting.
+The interface defines approximately 15-20 methods covering function operations (`createFunction`, `createCall`), value manipulation (`createCast`, `createLoad`, `createStore`, `createAlloca`), type coercion (`createBitcast`, `createTrunc`, `createZExt`, `createSExt`), aggregate operations (`createExtractValue`, `createInsertValue`, `createGEP`), and housekeeping (`createFunctionType`, `replaceOp`). This set was chosen based on analyzing the operations actually needed by existing ABI lowering code: struct expansion requires extract/insert operations, indirect passing requires alloca and pointer operations, and coercion requires bitcasts and truncations.
 
-**Interface**:
-```cpp
-class ABIRewriteContext {
-public:
-  virtual ~ABIRewriteContext() = default;
-  
-  // Operation creation
-  virtual Operation *createFunction(
-      Location loc, StringRef name, FunctionType type) = 0;
-  
-  virtual Operation *createCall(
-      Location loc, Value callee, TypeRange results, ValueRange args) = 0;
-  
-  virtual Value createCast(
-      Location loc, Value value, Type targetType) = 0;
-  
-  virtual Value createLoad(Location loc, Value ptr) = 0;
-  virtual void createStore(Location loc, Value value, Value ptr) = 0;
-  
-  virtual Value createAlloca(Location loc, Type type, unsigned align) = 0;
-  
-  // Value coercion (CRITICAL for ABI lowering)
-  virtual Value createBitcast(
-      Location loc, Value value, Type targetType) = 0;
-  
-  virtual Value createTrunc(
-      Location loc, Value value, Type targetType) = 0;
-  
-  virtual Value createZExt(
-      Location loc, Value value, Type targetType) = 0;
-  
-  virtual Value createSExt(
-      Location loc, Value value, Type targetType) = 0;
-  
-  // Aggregate operations (CRITICAL for struct expansion)
-  virtual Value createExtractValue(
-      Location loc, Value aggregate, ArrayRef<unsigned> indices) = 0;
-  
-  virtual Value createInsertValue(
-      Location loc, Value aggregate, Value element, 
-      ArrayRef<unsigned> indices) = 0;
-  
-  virtual Value createGEP(
-      Location loc, Value ptr, ArrayRef<Value> indices) = 0;
-  
-  // Type conversion
-  virtual FunctionType createFunctionType(
-      ArrayRef<Type> inputs, ArrayRef<Type> results) = 0;
-  
-  // Operation replacement
-  virtual void replaceOp(Operation *old, Operation *new_op) = 0;
-};
-```
-
-**Implementation Complexity**: **HIGH**
-- 15-20 methods total (not just 5-6 shown in original design)
-- Each dialect must implement all methods
-- Per-dialect cost: ~800-1000 lines (revised from 500)
-
-**Dialect Implements**:
-```cpp
-class CIRABIRewriteContext : public ABIRewriteContext {
-  OpBuilder &builder;
-  
-  Operation *createFunction(...) override {
-    return builder.create<cir::FuncOp>(...);
-  }
-  // ... other CIR-specific implementations
-};
-```
-
-**Status**: ✨ New, needs to be created.
+Each dialect implementing ABI lowering must provide a concrete `ABIRewriteContext` subclass—estimated at 800-1000 lines of implementation code that wraps the dialect's builder API. This is a significant but one-time cost: CIR implements `CIRABIRewriteContext`, FIR implements `FIRABIRewriteContext`, and any future dialect reuses the shared classification infrastructure by providing its own context implementation. The alternative—reimplementing the entire ABI classification logic per dialect—would require 8,000-15,000 lines per dialect (the combined size of x86_64 and AArch64 classification code plus all supporting infrastructure), introduce divergent behavior across dialects, and create a maintenance burden where ABI bug fixes must be propagated to every dialect independently.
 
 ### 4.7 Target Registry
 
-**Location**: `mlir/lib/Target/ABI/TargetRegistry.h`
+The `TargetABIRegistry` provides a simple factory mechanism for instantiating the correct target-specific `ABIInfo` implementation based on the target triple (e.g., `x86_64-unknown-linux-gnu` or `aarch64-apple-darwin`). When a dialect needs to perform ABI lowering, it queries the registry with the compilation target, and the registry returns the appropriate `X86_64ABIInfo`, `AArch64ABIInfo`, or other implementation. This design mirrors LLVM's existing target registry patterns and ensures that adding support for new architectures doesn't require changes to the core infrastructure or to dialect-specific code—it only requires implementing a new `ABIInfo` subclass and registering it.
 
-**Purpose**: Map target triple to ABIInfo implementation.
-
-**Interface**:
-```cpp
-class TargetABIRegistry {
-public:
-  static std::unique_ptr<ABIInfo> createABIInfo(
-      const llvm::Triple &triple,
-      const clang::TargetInfo &targetInfo);
-  
-private:
-  // Factory functions
-  static std::unique_ptr<ABIInfo> createX86_64ABIInfo(...);
-  static std::unique_ptr<ABIInfo> createAArch64ABIInfo(...);
-};
-```
-
-**Implementation**:
-```cpp
-std::unique_ptr<ABIInfo> TargetABIRegistry::createABIInfo(
-    const llvm::Triple &triple,
-    const clang::TargetInfo &targetInfo) {
-  
-  switch (triple.getArch()) {
-  case llvm::Triple::x86_64:
-    return createX86_64ABIInfo(targetInfo);
-  case llvm::Triple::aarch64:
-    return createAArch64ABIInfo(targetInfo);
-  default:
-    return nullptr;  // Unsupported target
-  }
-}
-```
-
-**Status**: ✨ New, straightforward to create.
+The implementation is straightforward: a `createABIInfo()` method switches on the target architecture enum and constructs the corresponding concrete class. For unsupported targets, it returns `nullptr`, allowing graceful handling of architectures that haven't yet been ported. This extensibility is important for a shared infrastructure that may eventually support ARM32, RISC-V, PowerPC, and other platforms beyond the initial x86_64 and AArch64 focus.
 
 ## 5. Implementation Phases
 
