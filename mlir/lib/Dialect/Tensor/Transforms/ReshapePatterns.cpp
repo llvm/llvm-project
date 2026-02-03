@@ -11,6 +11,7 @@
 #include "mlir/Dialect/Tensor/IR/Tensor.h"
 #include "mlir/Dialect/Tensor/Transforms/Transforms.h"
 #include "mlir/IR/PatternMatch.h"
+#include "mlir/IR/Value.h"
 #include "mlir/Interfaces/ValueBoundsOpInterface.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/LogicalResult.h"
@@ -579,12 +580,17 @@ LogicalResult mlir::tensor::getCollapsedExtractSliceInfo(
   return success();
 }
 
-// Checks if the `value` is a multiple of the `factor`.
-// Otherwise, returns false.
-// For now we are handling only the case where the value
-// is resulted from an affine.apply op, where affine ops
-// can be lowered to.
-static bool isValueMultipleOf(Value value, int64_t factor) {
+// Checks if the `ofr` is a multiple of the `factor`.
+// Handles both static integer and dynamic values
+// where the value is the result of an affine.apply.
+static bool isMultipleOf(OpFoldResult ofr, int64_t factor) {
+  std::optional<int64_t> staticValue = getConstantIntValue(ofr);
+  if (staticValue.has_value())
+    return staticValue.value() % factor == 0;
+
+  Value value = dyn_cast<Value>(ofr);
+  if (!value)
+    return false;
   auto applyOp = value.getDefiningOp<affine::AffineApplyOp>();
   if (!applyOp)
     return false;
@@ -595,6 +601,147 @@ static bool isValueMultipleOf(Value value, int64_t factor) {
   if (map.getNumResults() != 1)
     return false;
   return map.getResult(0).isMultipleOf(factor);
+}
+
+static LogicalResult computeExpandedSliceInfoForReassocGroup(
+    OpBuilder &b, OpFoldResult collapsedSize, OpFoldResult collapsedOffset,
+    const ReassociationIndices &reassocIndices, ArrayRef<int64_t> expandedShape,
+    SmallVectorImpl<OpFoldResult> &groupSizes,
+    SmallVectorImpl<OpFoldResult> &groupOffsets) {
+  assert(groupSizes.empty() && "Group sizes must be empty");
+  assert(groupOffsets.empty() && "Group offsets must be empty");
+  // The first case is when there's only one non-unit dimension in the
+  // reassociation group.
+  // When there's only one non-unit dimension, the slice is trivially
+  // contiguous - offset and size go directly on that dimension.
+  // This works for both dynamic size and dynamic offset.
+  int nonUnitSizeCount = llvm::count_if(
+      reassocIndices, [&expandedShape](int64_t expandedShapeIdx) {
+        return expandedShape[expandedShapeIdx] != 1;
+      });
+  if (nonUnitSizeCount == 1) {
+    for (int64_t expandedShapeIdx : reassocIndices) {
+      if (expandedShape[expandedShapeIdx] != 1) {
+        groupSizes.push_back(collapsedSize);
+        groupOffsets.push_back(collapsedOffset);
+        continue;
+      }
+      groupSizes.push_back(b.getIndexAttr(1));
+      groupOffsets.push_back(b.getIndexAttr(0));
+    }
+    return success();
+  }
+
+  // Having dynamic extracted size requires additional complex
+  // analysis to guarantee contiguous slicing.
+  if (isa<Value>(collapsedSize))
+    return failure();
+
+  std::optional<int64_t> staticSize = getConstantIntValue(collapsedSize);
+  assert(staticSize.has_value() && "Expected static size");
+
+  // The extracted size is only one element, offset may be static
+  // or dynamic, It's a trivial case where we always can guarantee
+  // contiguous slicing.
+  if (staticSize.value() == 1) {
+    SmallVector<int64_t> basis;
+    for (size_t i = 0; i < reassocIndices.size(); ++i)
+      groupSizes.push_back(b.getIndexAttr(1));
+
+    return success();
+  }
+
+  // Size is static and greater than 1, offset may be static or dynamic.
+  // Use traversal to find dimension k where slicing occurs.
+  // Verify that the slice can be represented as a contiguous slice of the
+  // src of the collapse_shape.
+  // Checking this is done on order of most internal dimensions first,
+  // so traversal is done in reverse order of the reassociation group.
+  // If the expected slice shape is [1, 1, ..., 1, Sk, Ak + 1, Ak + 2,
+  // ...,An] then we first find the size and offset for n...k+1 then for k
+  // and then for k-1...0.
+
+  // currentCollapsedsize is initialized with the original collapsed size
+  // and divided by the expanded shape size in each dimension as we go along
+  // the reassociation group. In essence we are spreading the original
+  // collapsed size over the various expanded slice dimensions.
+  // currentOffsetDivisor is initialized with 1 and multiplied by the expanded
+  // shape size in each dimension as we go along the reassociation group.
+  // These variables are used both to check the validity of the slice and to
+  // compute the expanded sizes and offsets.
+  assert(staticSize.value() > 1 && "Expected size to be greater than 1");
+  int64_t currentCollapsedsize = staticSize.value();
+  int64_t currentOffsetDivisor = 1;
+
+  ReassociationIndices reversedReassocIndices(reassocIndices.rbegin(),
+                                              reassocIndices.rend());
+  int64_t idx = 0;
+  int64_t reassocGroupSize = reassocIndices.size();
+
+  SmallVector<OpFoldResult> groupExpandedSizes;
+
+  // First handle the trailing dimensions where the slice size should be
+  // equal to the tensor shape and the offset should be 0 (n...k+1).
+  for (; idx < reassocGroupSize; ++idx) {
+    int64_t expandedShapeSize = expandedShape[reversedReassocIndices[idx]];
+
+    if (currentCollapsedsize < expandedShapeSize)
+      break;
+
+    // Check size divisibility.
+    if ((currentCollapsedsize % expandedShapeSize) != 0)
+      return failure();
+
+    // Check dynamic/static offset divisibility.
+    currentOffsetDivisor *= expandedShapeSize;
+    if (!isMultipleOf(collapsedOffset, currentOffsetDivisor))
+      return failure();
+
+    // Trailing dims get full shape and zero offset.
+    groupSizes.push_back(b.getIndexAttr(expandedShapeSize));
+    currentCollapsedsize /= expandedShapeSize;
+  }
+
+  // Now handle the first dim where slicing occurs on (k).
+  if (idx < reassocGroupSize) {
+    int64_t expandedShapeSize = expandedShape[reversedReassocIndices[idx]];
+    std::optional<int64_t> staticOffset = getConstantIntValue(collapsedOffset);
+
+    if (staticOffset.has_value()) {
+      // Static offset: check that offset + size doesn't exceed dimension.
+      int64_t offsetInDim =
+          (staticOffset.value() / currentOffsetDivisor) % expandedShapeSize;
+      if ((currentCollapsedsize + offsetInDim) >= expandedShapeSize)
+        return failure();
+    } else {
+      // If the offset is dynamic, We could have more restricted conditions
+      // to guarantee contiguous slicing.
+      // For example, we could require that the dimension is divisible by the
+      // slice size and the offset is a multiple of the slice size.
+      // For more complex cases, we could use valueBoundsInterface
+      // to check the validity of the range.
+      if ((expandedShapeSize % currentCollapsedsize) != 0)
+        return failure();
+      if (!isMultipleOf(collapsedOffset, currentCollapsedsize))
+        return failure();
+    }
+    // Slicing dimension gets the remaining collapsed size.
+    groupSizes.push_back(b.getIndexAttr(currentCollapsedsize));
+  }
+
+  // Now handle the leading dimensions where the slice size is equal to 1
+  // (k-1...0).
+  // The size for these dimensions must be 1 because of how we constructed
+  // the slice size of the expanded shape. We spread the original collapsed
+  // size over the expanded shape sizes until we reached dimension k where
+  // the remaining size was smaller than the expanded shape size, and spread
+  // the remaining size on it. So, now we are left with only 1s.
+  for (idx++; idx < reassocGroupSize; ++idx)
+    groupSizes.push_back(b.getIndexAttr(1));
+
+  // Sizes were built in reverse order, so reverse them.
+  groupSizes = llvm::to_vector(llvm::reverse(groupSizes));
+  return success();
 }
 
 LogicalResult mlir::tensor::getExpandedExtractSliceInfo(
@@ -620,193 +767,48 @@ LogicalResult mlir::tensor::getExpandedExtractSliceInfo(
     return failure();
   }
 
+  using ReassocGroupResult =
+      std::pair<SmallVector<OpFoldResult>, SmallVector<OpFoldResult>>;
+  SmallVector<ReassocGroupResult> groupResults;
+
   // Compute new offsets, sizes, and strides for tensor.extract_slice.
   // The new tensor.extract_slice will work on a tensor that has has a rank
   // equal to the rank of the src of the collapse_shape. In each iteration of
   // the loop, the offsets and sizes will be computed per reassociation group.
-  expandedStrides.resize(expandedShape.size(), b.getIndexAttr(1));
   for (auto [collapsedSize, collapsedOffset, reassocIndices] :
        llvm::zip_equal(collapsedSizes, collapsedOffsets, reassociation)) {
-    // CASE #1 - size and/or offset are dynamic.
-    if (isa<Value>(collapsedSize) || isa<Value>(collapsedOffset)) {
-      // When the size is dynamic, We will handle a simple case where there
-      // is a single dimension in the reassociation group that has a size
-      // not equal to 1, which guarantees it is a contiguous slice.
-      int nonUnitSizeCount = 0;
-      SmallVector<OpFoldResult> tentativeSizes, tentativeOffsets;
-      for (int64_t expandedShapeIdx : reassocIndices) {
-        if (expandedShape[expandedShapeIdx] != 1) {
-          nonUnitSizeCount++;
-          tentativeSizes.push_back(collapsedSize);
-          tentativeOffsets.push_back(collapsedOffset);
-          continue;
-        }
 
-        tentativeSizes.push_back(b.getIndexAttr(1));
-        tentativeOffsets.push_back(b.getIndexAttr(0));
-      }
+    SmallVector<OpFoldResult> groupSizes;
+    SmallVector<OpFoldResult> groupOffsets;
+    LogicalResult result = computeExpandedSliceInfoForReassocGroup(
+        b, collapsedSize, collapsedOffset, reassocIndices, expandedShape,
+        groupSizes, groupOffsets);
+    if (failed(result))
+      return failure();
+    groupResults.emplace_back(std::make_pair(groupSizes, groupOffsets));
+  }
 
-      if (nonUnitSizeCount == 1) {
-        // Only one non-unit dimension, slice is contiguous.
-        expandedSizes.append(tentativeSizes);
-        expandedOffsets.append(tentativeOffsets);
-        continue;
-      }
+  expandedStrides.resize(expandedShape.size(), b.getIndexAttr(1));
+  for (auto [groupIdx, reassocIndices] : llvm::enumerate(reassociation)) {
+    auto &[sizes, offsets] = groupResults[groupIdx];
+    expandedSizes.append(sizes);
 
-      std::optional<int64_t> staticSize = getConstantIntValue(collapsedSize);
-      if (!staticSize.has_value())
-        return failure();
-
-      // If the size is statically 1, it means we're extracting a
-      // single element. In this case, we can always handle this by
-      // delinearizing the dynamic offset and get a contiguous slice.
-      if (staticSize.value() == 1) {
-        SmallVector<int64_t> basis;
-        for (int64_t expandedShapeIdx : reassocIndices) {
-          expandedSizes.push_back(b.getIndexAttr(1));
-          basis.push_back(expandedShape[expandedShapeIdx]);
-        }
-
-        Value offsetVal = getValueOrCreateConstantIndexOp(b, sliceOp.getLoc(),
-                                                          collapsedOffset);
-        auto delinearizeOp = affine::AffineDelinearizeIndexOp::create(
-            b, sliceOp.getLoc(), offsetVal, basis, /*hasOuterBound=*/true);
-        for (auto result : delinearizeOp.getResults())
-          expandedOffsets.push_back(result);
-
-        continue;
-      }
-
-      // If the size is greater than 1, we will take a more
-      // restrictive case where both the offset and the innermost
-      // expanded dimension are divisible by the size.
-      //
-      // Example:
-      //   collapse_shape tensor<6x10xf32> -> tensor<60xf32>
-      //   extract_slice at offset_a with some size_b.
-      //
-      // Contiguity is guaranteed when:
-      //   1. innermost dim (10) % size_b == 0 i.e.
-      //      the slice fits within a single row.
-      //   2. offset_a is multiple of size_b i.e.
-      //      the slice starts at row-aligned boundary.
-      //
-      // Result: delinearize offset_a -> [row, col], extract [1, size_b]
-      //         from expanded shape.
-      assert(staticSize.value() > 1 && "Expected size to be greater than 1");
-      int64_t sizeVal = staticSize.value();
-      int64_t innermostDim = expandedShape[reassocIndices.back()];
-
-      // Only try this path if offset is from affine.apply
-      Value offsetVal = cast<Value>(collapsedOffset);
-      if (!offsetVal.getDefiningOp<affine::AffineApplyOp>())
-        return failure();
-
-      if (innermostDim % sizeVal != 0)
-        return failure();
-
-      if (!isValueMultipleOf(offsetVal, sizeVal))
-        return failure();
-
-      SmallVector<int64_t> basis;
-      for (int64_t expandedShapeIdx : reassocIndices)
-        basis.push_back(expandedShape[expandedShapeIdx]);
-
-      auto delinearizeOp = affine::AffineDelinearizeIndexOp::create(
-          b, sliceOp.getLoc(), offsetVal, basis, /*hasOuterBound=*/true);
-
-      // Sizes: [1, 1, ..., 1, sizeVal] - size goes on innermost dimension.
-      for (size_t i = 0; i < reassocIndices.size() - 1; ++i)
-        expandedSizes.push_back(b.getIndexAttr(1));
-
-      expandedSizes.push_back(collapsedSize);
-
-      // Offsets from delinearization.
-      for (auto result : delinearizeOp.getResults())
-        expandedOffsets.push_back(result);
-
+    if (!offsets.empty()) {
+      expandedOffsets.append(offsets);
       continue;
     }
 
-    // CASE #2 = size and offset are static.
-    // Verify that the slice can be represented as a contiguous slice of the
-    // src of the collapse_shape.
-    // Checking this is done on order of most internal dimensions first,
-    // so traversal is done in reverse order of the reassociation group.
-    // If the expected slice shape is [1, 1, ..., 1, Sk, Ak + 1, Ak + 2,
-    // ...,An] then we first find the size and offset for n...k+1 then for k
-    // and then for k-1...0.
+    SmallVector<int64_t> basis;
+    for (int64_t expandedShapeIdx : reassocIndices)
+      basis.push_back(expandedShape[expandedShapeIdx]);
 
-    // currentCollapsedsize and currentCollapsedOffset are initialized with
-    // the original collapsed size and offset and divided by the expanded
-    // shape size in each dimension as we go along the reassociation group.
-    // In essence we are spreading the original collapsed size and offset over
-    // the various expanded slice dimensions.
-    // The variables are used both to check the validity of the slice and to
-    // compute the expanded sizes and offsets.
-    int64_t currentCollapsedsize = getConstantIntValue(collapsedSize).value();
-    int64_t currentCollapsedOffset =
-        getConstantIntValue(collapsedOffset).value();
-    SmallVector<OpFoldResult> groupExpandedSizes, groupExpandedOffsets;
-    ReassociationIndices reversedReassocIndices(reassocIndices.rbegin(),
-                                                reassocIndices.rend());
-    int64_t idx = 0;
-    int64_t reassocGroupSize = reassocIndices.size();
-
-    // First handle the trailing dimensions where the slice size should be
-    // equal to the tensor shape and the offset should be 0 (n...k+1).
-    for (; idx < reassocGroupSize; ++idx) {
-      int64_t expandedShapeSize = expandedShape[reversedReassocIndices[idx]];
-
-      if (currentCollapsedsize < expandedShapeSize)
-        break;
-
-      // We need to make sure that the slice size can be set to the shape size
-      // and the offset to 0.
-      if ((currentCollapsedsize % expandedShapeSize) != 0 ||
-          (currentCollapsedOffset % expandedShapeSize) != 0) {
-        return failure();
-      }
-
-      groupExpandedSizes.push_back(b.getIndexAttr(expandedShapeSize));
-      groupExpandedOffsets.push_back(b.getIndexAttr(0));
-
-      currentCollapsedsize /= expandedShapeSize;
-      currentCollapsedOffset /= expandedShapeSize;
-    }
-
-    // Now handle the first dim where slicing occurs on (k).
-    if (idx < reassocGroupSize) {
-      int64_t expandedShapeSize = expandedShape[reversedReassocIndices[idx]];
-      int64_t offsetInDim = currentCollapsedOffset % expandedShapeSize;
-      // We need to make sure that the slice size in this dim + offset will
-      // not exceed the shape size.
-      if ((currentCollapsedsize + offsetInDim) >= expandedShapeSize) {
-        return failure();
-      }
-      groupExpandedSizes.push_back(b.getIndexAttr(currentCollapsedsize));
-      groupExpandedOffsets.push_back(b.getIndexAttr(offsetInDim));
-      currentCollapsedOffset /= expandedShapeSize;
-    }
-
-    // Now handle the leading dimensions where the slice size is equal to 1
-    // (k-1...0).
-    // The size for these dimensions must be 1 because of how we constructed
-    // the slice size of the expanded shape. We spread the original collapsed
-    // size over the expanded shape sizes until we reached dimension k where
-    // the remaining size was smaller than the expanded shape size, and spread
-    // the remaining size on it. So, now we are left with only 1s.
-    for (idx++; idx < reassocGroupSize; ++idx) {
-      int64_t expandedShapeSize = expandedShape[reversedReassocIndices[idx]];
-      int64_t offsetInDim = currentCollapsedOffset % expandedShapeSize;
-      groupExpandedSizes.push_back(b.getIndexAttr(1));
-      groupExpandedOffsets.push_back(b.getIndexAttr(offsetInDim));
-      currentCollapsedOffset /= expandedShapeSize;
-    }
-    expandedSizes.append(groupExpandedSizes.rbegin(),
-                         groupExpandedSizes.rend());
-    expandedOffsets.append(groupExpandedOffsets.rbegin(),
-                           groupExpandedOffsets.rend());
+    OpFoldResult collapsedOffset = collapsedOffsets[groupIdx];
+    Value offsetVal =
+        getValueOrCreateConstantIndexOp(b, sliceOp.getLoc(), collapsedOffset);
+    auto delinearizeOp = affine::AffineDelinearizeIndexOp::create(
+        b, sliceOp.getLoc(), offsetVal, basis, /*hasOuterBound=*/true);
+    for (OpResult result : delinearizeOp.getResults())
+      expandedOffsets.push_back(result);
   }
   return success();
 }

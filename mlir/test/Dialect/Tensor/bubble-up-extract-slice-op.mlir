@@ -135,7 +135,8 @@ func.func @bubble_up_extract_slice_affine_apply_not_folded(%src: tensor<60xf32>,
 
 // CHECK-LABEL:   func.func @bubble_up_extract_slice_through_collapse_shape_single_reassoc_group(
 // CHECK-SAME:                   %[[SRC:.*]]: tensor<6x5x2xf32>) -> tensor<1xf32> {
-// CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice %[[SRC]][0, 0, 0] [1, 1, 1] [1, 1, 1]
+// CHECK:           %[[C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice %[[SRC]][%[[C0]], %[[C0]], %[[C0]]] [1, 1, 1] [1, 1, 1]
 // CHECK:           %[[COLLAPSE:.*]] = tensor.collapse_shape %[[EXTRACT]] {{\[\[}}0, 1, 2]]
 // CHECK:           return %[[COLLAPSE]]
 func.func @bubble_up_extract_slice_through_collapse_shape_single_reassoc_group(%src: tensor<6x5x2xf32>) -> tensor<1xf32> {
@@ -146,7 +147,9 @@ func.func @bubble_up_extract_slice_through_collapse_shape_single_reassoc_group(%
 
 // CHECK-LABEL:   func.func @bubble_up_extract_slice_through_collapse_shape_multiple_reassoc_group(
 // CHECK-SAME:                      %[[SRC:.*]]: tensor<6x5x3x10xf32>) -> tensor<15x10xf32> {
-// CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice %[[SRC]][1, 0, 1, 0] [3, 5, 1, 10] [1, 1, 1, 1]
+// CHECK-DAG:       %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG:       %[[C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice %[[SRC]][%[[C1]], %[[C0]], %[[C1]], %[[C0]]] [3, 5, 1, 10] [1, 1, 1, 1]
 // CHECK:           %[[COLLAPSE:.*]] = tensor.collapse_shape %[[EXTRACT]] {{\[\[}}0, 1], [2, 3]]
 // CHECK:           return %[[COLLAPSE]]
 func.func @bubble_up_extract_slice_through_collapse_shape_multiple_reassoc_group(%src: tensor<6x5x3x10xf32>) -> tensor<15x10xf32> {
@@ -157,7 +160,9 @@ func.func @bubble_up_extract_slice_through_collapse_shape_multiple_reassoc_group
 
 // CHECK-LABEL:   func.func @bubble_up_extract_slice_through_collapse_shape_offset_on_leading_dim(
 // CHECK-SAME:                         %[[SRC:.*]]: tensor<6x5x2xf32>) -> tensor<4xf32> {
-// CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice %[[SRC]][2, 0, 0] [1, 2, 2] [1, 1, 1] 
+// CHECK-DAG:       %[[C2:.*]] = arith.constant 2 : index
+// CHECK-DAG:       %[[C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice %[[SRC]][%[[C2]], %[[C0]], %[[C0]]] [1, 2, 2] [1, 1, 1]
 // CHECK:           %[[COLLAPSE:.*]] = tensor.collapse_shape %[[EXTRACT]] {{\[\[}}0, 1, 2]]
 // CHECK:           return %[[COLLAPSE]]
 func.func @bubble_up_extract_slice_through_collapse_shape_offset_on_leading_dim(%src: tensor<6x5x2xf32>) -> tensor<4xf32> {
@@ -219,7 +224,9 @@ func.func @bubble_up_extract_slice_through_collapse_shape_dynamic_offset_and_siz
 // CHECK-SAME:                      %[[SRC:.*]]: tensor<5x10x1x1x40xf32>,
 // CHECK-SAME:                      %[[OFFSET:.*]]: index,
 // CHECK-SAME:                      %[[SIZE:.*]]: index) -> tensor<20x?xf32> {
-// CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice %[[SRC]][1, 0, 0, 0, %[[OFFSET]]] [2, 10, 1, 1, %[[SIZE]]] [1, 1, 1, 1, 1]
+// CHECK-DAG:       %[[C1:.*]] = arith.constant 1 : index
+// CHECK-DAG:       %[[C0:.*]] = arith.constant 0 : index
+// CHECK:           %[[EXTRACT:.*]] = tensor.extract_slice %[[SRC]][%[[C1]], %[[C0]], 0, 0, %[[OFFSET]]] [2, 10, 1, 1, %[[SIZE]]] [1, 1, 1, 1, 1]
 // CHECK:           %[[COLLAPSE:.*]] = tensor.collapse_shape %[[EXTRACT]] {{\[\[}}0, 1], [2, 3, 4]]
 // CHECK:           return %[[COLLAPSE]]
 func.func @bubble_up_extract_slice_through_collapse_shape_dynamic_and_static_groups(%src: tensor<5x10x1x1x40xf32>, %offset : index, %size : index) -> tensor<20x?xf32> {
