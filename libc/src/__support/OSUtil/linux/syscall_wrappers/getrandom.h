@@ -19,10 +19,10 @@
 namespace LIBC_NAMESPACE_DECL {
 namespace internal {
 
-LIBC_INLINE static ErrorOr<ssize_t> getrandom(void *buf, size_t buflen,
+LIBC_INLINE ErrorOr<ssize_t> getrandom(void *buf, size_t buflen,
                                               unsigned int flags) {
   ssize_t ret =
-      LIBC_NAMESPACE::syscall_impl<ssize_t>(SYS_getrandom, buf, buflen, flags);
+      syscall_impl<ssize_t>(SYS_getrandom, buf, buflen, flags);
   if (ret < 0) {
     return Error(-static_cast<int>(ret));
   }
