@@ -33,20 +33,13 @@ entry:
 
 
 ; Check that frame debug info is generated
-
 ; Key validation: Check that nested structs have the correct scope hierarchy
 ; 1. Promise should be scoped to the frame
-
 ; 2. Members of Promise should be scoped to Promise (check this before Outer since it comes first in output)
-
 ; 3. Outer should be scoped to Promise (not the frame!)
-
 ; 4. First Outer member should be scoped to Outer
-
 ; 5. Inner should be scoped to Outer (proper nesting)
-
 ; 6. Members of Inner should be scoped to Inner
-
 ; 7. Second Outer member comes after Inner (due to output order)
 
 declare token @llvm.coro.id(i32, ptr readnone, ptr readonly, ptr)

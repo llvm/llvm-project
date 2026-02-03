@@ -64,8 +64,6 @@ suspend:
 }
 
 
-;
-
 declare ptr @llvm.coro.free(token, ptr)
 declare i32 @llvm.coro.size.i32()
 declare i8  @llvm.coro.suspend(token, i1)

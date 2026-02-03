@@ -44,8 +44,6 @@ suspend:
   ret ptr %hdl
 }
 
-; %x needs to go to the frame since it's escaped; %y will stay as local since it doesn't escape.
-
 declare ptr @llvm.coro.free(token, ptr)
 declare i32 @llvm.coro.size.i32()
 declare i32 @llvm.coro.align.i32()

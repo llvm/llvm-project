@@ -79,8 +79,6 @@ ret:
   ret void
 }
 
-; check that we were haven't accidentally went out of @f.resume body
-
 declare void @await_suspend_wrapper_void(ptr, ptr)
 declare i1 @await_suspend_wrapper_bool(ptr, ptr)
 declare ptr @await_suspend_wrapper_handle(ptr, ptr)

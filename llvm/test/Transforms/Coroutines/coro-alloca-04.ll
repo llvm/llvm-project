@@ -23,6 +23,7 @@ define ptr @f(i1 %n) presplitcoroutine {
 ; CHECK-NEXT:    ret ptr [[HDL]]
 ;
 entry:
+  ; both %x and %alias_phi would go to the frame.
   %x = alloca i64
   br i1 %n, label %flag_true, label %flag_false
 
@@ -54,8 +55,6 @@ suspend:
   call void @llvm.coro.end(ptr %hdl, i1 0, token none)
   ret ptr %hdl
 }
-
-; both %x and %alias_phi would go to the frame.
 
 declare ptr @llvm.coro.free(token, ptr)
 declare i32 @llvm.coro.size.i32()

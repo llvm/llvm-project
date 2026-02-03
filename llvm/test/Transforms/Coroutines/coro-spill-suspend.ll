@@ -3,16 +3,12 @@
 ; if it may be used across suspend points.
 ; RUN: opt < %s -passes='cgscc(coro-split),simplifycfg,early-cse' -S | FileCheck %s
 
-
 ; %sp1 should be part of the frame (the i8 value).
-
+;
 ; If the coro resumes, %sp1 is set to 0.
-
+;
 ; In the coro destroy function, %sp1 is reloaded from the frame. Its value
 ; depends on whether the coroutine was resumed or not.
-
-
-
 define ptr @f(i32 %n) presplitcoroutine {
 entry:
   %id = call token @llvm.coro.id(i32 0, ptr null, ptr null, ptr null)
