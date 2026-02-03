@@ -7,6 +7,6 @@
 //===----------------------------------------------------------------------===//
 
 _CLC_OVERLOAD _CLC_DEF __CLC_GENTYPE __clc_native_recip(__CLC_GENTYPE val) {
-  _Pragma("clang fp reciprocal(on)");
+#pragma clang fp reciprocal(on) contract(fast)
   return 1.0f / val;
 }
