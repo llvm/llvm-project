@@ -226,7 +226,6 @@ Transforms/InstCombine/load.ll
 Transforms/InstCombine/load-select.ll
 Transforms/InstCombine/loadstore-metadata.ll
 Transforms/InstCombine/logical-select.ll
-Transforms/InstCombine/memchr-2.ll
 Transforms/InstCombine/memchr-3.ll
 Transforms/InstCombine/memchr-6.ll
 Transforms/InstCombine/memchr-7.ll
