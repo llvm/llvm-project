@@ -10,7 +10,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include "ABIInfoImpl.h"
 #include "CGBlocks.h"
 #include "CGCXXABI.h"
 #include "CGDebugInfo.h"
@@ -913,7 +912,7 @@ public:
   }
 
   void addMemcpyableField(FieldDecl *F) {
-    if (isEmptyFieldForLayout(CGF.getContext(), F))
+    if (F->isZeroSize(CGF.getContext()))
       return;
     if (!FirstField)
       addInitialField(F);
@@ -1964,7 +1963,7 @@ public:
                              const CXXDestructorDecl *DD)
       : Context(Context), EHStack(EHStack), DD(DD), StartIndex(std::nullopt) {}
   void PushCleanupForField(const FieldDecl *Field) {
-    if (isEmptyFieldForLayout(Context, Field))
+    if (Field->isZeroSize(Context))
       return;
     unsigned FieldIndex = Field->getFieldIndex();
     if (FieldHasTrivialDestructorBody(Context, Field)) {
