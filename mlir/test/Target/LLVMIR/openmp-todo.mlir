@@ -443,10 +443,10 @@ llvm.func @teams_num_teams_multi_dim(%lb : i32, %ub : i32) {
 
 // -----
 
-llvm.func @parallel_num_threads_multi_dim(%lb : i32, %ub : i32) {
-  // expected-error@below {{not yet implemented: Unhandled clause num_threads with multi-dimensional values in omp.parallel operation}}
+llvm.func @parallel_num_threads_too_many_dims(%lb : i32, %ub : i32) {
+  // expected-error@below {{not yet implemented: Unhandled clause num_threads with more than 3 dimensions in omp.parallel operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.parallel}}
-  omp.parallel num_threads(%lb, %ub : i32, i32) {
+  omp.parallel num_threads(%lb, %ub, %lb, %ub : i32, i32, i32, i32) {
     omp.terminator
   }
   llvm.return
