@@ -15,11 +15,6 @@
 // operator+(x, n)
 // operator+=(x, n)
 // operator-=(x, n)
-// operator<(x, y)
-// operator<=(x, y)
-// operator>=(x, y)
-// operator>(x, y)
-// operator<=>(x, y)
 
 #include <array>
 #include <concepts>
@@ -53,16 +48,24 @@ constexpr bool test() {
 
     auto it2 = it1 + 3;
     auto x2  = *it2;
+    it2       = it2 + (-2);
+    auto x2_1 = *it2;
     assert(x2 == buffer1[3]);
+    assert(x2_1 == buffer1[1]);
 
     auto it3 = 3 + it1;
     auto x3  = *it3;
+    it3       = (-2) + it3;
+    auto x3_1 = *it3;
     assert(x3 == buffer1[3]);
+    assert(x3_1 == buffer1[1]);
 
     it1 += 3;
-    assert(it1 == it2);
-    auto x1 = *it2;
+    auto x1 = *it1;
+    it1 += (-2);
+    auto x1_1 = *it1;
     assert(x1 == buffer1[3]);
+    assert(x1_1 == buffer1[1]);
 
     //  reaches the end of one range so it should jump to the beginning of next range
     auto it = v.begin() + 5;
@@ -81,16 +84,24 @@ constexpr bool test() {
 
     auto it2 = it1 + 3;
     auto x2  = *it2;
+    it2       = it2 + (-2);
+    auto x2_1 = *it2;
     assert(x2 == buffer1[3]);
+    assert(x2_1 == buffer1[1]);
 
     auto it3 = 3 + it1;
     auto x3  = *it3;
+    it3       = (-2) + it3;
+    auto x3_1 = *it3;
     assert(x3 == buffer1[3]);
+    assert(x3_1 == buffer1[1]);
 
     it1 += 3;
-    assert(it1 == it2);
-    auto x1 = *it2;
+    auto x1 = *it1;
+    it1 += (-2);
+    auto x1_1 = *it1;
     assert(x1 == buffer1[3]);
+    assert(x1_1 == buffer1[1]);
 
     // jumps over to next range but next range is empty, so it should go futher
     auto it = v.begin() + 5;
@@ -109,24 +120,35 @@ constexpr bool test() {
 
     auto it2 = it1 + 3;
     auto x2  = *it2;
+    it2       = it2 + (-2);
+    auto x2_1 = *it2;
     assert(x2 == buffer1[3]);
+    assert(x2_1 == buffer1[1]);
 
     auto it3 = 3 + it1;
     auto x3  = *it3;
+    it3       = (-2) + it3;
+    auto x3_1 = *it3;
     assert(x3 == buffer1[3]);
+    assert(x3_1 == buffer1[1]);
 
     it1 += 3;
-    assert(it1 == it2);
-    auto x1 = *it2;
+    auto x1 = *it1;
+    it1 += (-2);
+    auto x1_1 = *it1;
     assert(x1 == buffer1[3]);
-
+    assert(x1_1 == buffer1[1]);
     // jumps over to next range but next range is empty, so it should go futher
     auto it = v.begin() + 5;
     assert(*it == buffer2[0]);
 
     // jumps big enough to skip several number of ranges
     it = v.begin() + 14;
-    assert(*it == buffer3[0]);
+    auto x   = *it;
+    it       = it + (-3);
+    auto x_1 = *it;
+    assert(x == buffer3[0]);
+    assert(x_1 == buffer2[6]);
 
     using Iter = decltype(it1);
     static_assert(canPlusEqual<Iter, std::intptr_t>);
@@ -139,18 +161,28 @@ constexpr bool test() {
 
     auto it2 = it1 - 3;
     auto x2  = *it2;
+    it2       = it2 - (-1);
+    auto x2_1 = *it2;
     assert(x2 == buffer2[6]);
+    assert(x2_1 == buffer2[7]);
 
-    it1 -= 3;
+    it1 -= 2;
     assert(it1 == it2);
-    auto x1 = *it2;
-    assert(x1 == buffer2[6]);
+    auto x1 = *it1;
+    it1 -= (-1);
+    auto x1_1 = *it1;
+    assert(x1 == buffer2[7]);
+    assert(x1_1 == buffer2[8]);
 
     // move back to one past the begining,
-    // so it should point to the last element of the previous range
+    // so it should point to the elements of the previous range
 
-    auto it = v.end() - 10;
-    assert(*it == buffer1[4]);
+    auto it = v.end() - 12;
+    auto x  = *it;
+    it -= (-1);
+    auto x_1 = *it;
+    assert(x == buffer1[2]);
+    assert(x_1 == buffer1[3]);
 
     using Iter = decltype(it1);
     static_assert(canMinusEqual<Iter, std::intptr_t>);
@@ -165,18 +197,28 @@ constexpr bool test() {
 
     auto it2 = it1 - 3;
     auto x2  = *it2;
+    it2       = it2 - (-1);
+    auto x2_1 = *it2;
     assert(x2 == buffer2[6]);
+    assert(x2_1 == buffer2[7]);
 
-    it1 -= 3;
+    it1 -= 2;
     assert(it1 == it2);
-    auto x1 = *it2;
-    assert(x1 == buffer2[6]);
+    auto x1 = *it1;
+    it1 -= (-1);
+    auto x1_1 = *it1;
+    assert(x1 == buffer2[7]);
+    assert(x1_1 == buffer2[8]);
 
     // move back to an empty range
-    // so it should skip empty range point to the last element of the previous range
+    // so it should skip empty range point to the elements of the previous range
 
-    auto it = v.end() - 10;
-    assert(*it == buffer1[4]);
+    auto it = v.end() - 12;
+    auto x  = *it;
+    it -= (-1);
+    auto x_1 = *it;
+    assert(x == buffer1[2]);
+    assert(x_1 == buffer1[3]);
 
     using Iter = decltype(it1);
     static_assert(canMinusEqual<Iter, std::intptr_t>);
@@ -191,17 +233,30 @@ constexpr bool test() {
 
     auto it2 = it1 - 3;
     auto x2  = *it2;
+    it2 -= (-1);
+    auto x2_1 = *it2;
     assert(x2 == buffer3[1]);
+    assert(x2_1 == buffer3[2]);
 
-    it1 -= 3;
+    it1 -= 2;
     assert(it1 == it2);
-    auto x1 = *it2;
-    assert(x1 == buffer3[1]);
+    auto x1 = *it1;
+    it1 -= (-1);
+    auto x1_1 = *it1;
+    assert(x1 == buffer3[2]);
+    assert(x1_1 == buffer3[3]);
 
     // move back to multiple ranges
 
-    auto it = v.end() - 14;
-    assert(*it == buffer1[4]);
+    auto it  = v.end() - 16;
+    auto x   = *it;
+    it       = it - (-1);
+    auto x_1 = *it;
+    it -= (-1);
+    auto x_2 = *it;
+    assert(x == buffer1[2]);
+    assert(x_1 == buffer1[3]);
+    assert(x_2 == buffer1[4]);
 
     using Iter = decltype(it1);
     static_assert(canMinusEqual<Iter, std::intptr_t>);
@@ -347,42 +402,6 @@ constexpr bool test() {
       static_assert(!std::random_access_iterator<Iter>);
       static_assert(!std::random_access_iterator<CIter>);
     }
-  }
-
-  {
-    // operator <, <=, >, >=
-    std::array<int, 4> arr_a{1, 2, 3, 4};
-    std::array<int, 3> arr_b{5, 6, 7};
-    std::span<const int> s1{arr_a};
-    std::span<const int> s2{arr_b};
-    auto v = std::views::concat(s1, s2);
-    auto i = v.begin();
-    auto j = v.begin();
-    std::ranges::advance(j, arr_a.size());
-
-    assert(i < j);
-    assert(i <= j);
-    assert(!(i > j));
-    assert(!(i >= j));
-    auto ord1 = (i <=> j);
-    assert(ord1 < 0);
-    assert((j <=> i) > 0);
-
-    auto k = j;
-    assert(!(j < k));
-    assert(j <= k);
-    assert(!(j > k));
-    assert(j >= k);
-    auto ord2 = (j <=> k);
-    assert(ord2 == 0);
-
-    // const-iterator
-    const auto& cv = v;
-    auto ci        = cv.begin();
-    auto cj        = cv.begin();
-    std::ranges::advance(cj, arr_a.size());
-    assert(ci < cj);
-    assert((ci <=> cj) < 0);
   }
 
   {

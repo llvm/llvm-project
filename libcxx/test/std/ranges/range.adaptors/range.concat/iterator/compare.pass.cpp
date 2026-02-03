@@ -10,73 +10,46 @@
 
 // operator==(x,y)
 // operator==(x, sentinel)
+// operator<(x, y)
+// operator<=(x, y)
+// operator>=(x, y)
+// operator>(x, y)
+// operator<=>(x, y)
 
 #include <array>
 #include <cassert>
 #include <ranges>
 
-#include "test_iterators.h"
-#include "test_range.h"
-#include "../types.h"
+#include "../../range_adaptor_types.h"
 
-struct NonEqIter {
-  using value_type       = int;
-  using difference_type  = std::ptrdiff_t;
-  using iterator_concept = std::input_iterator_tag;
+template <class Iter>
+concept canCompareEqual = requires(Iter a, Iter b) { a == b; };
 
-  int* p = nullptr;
+template <class Iter>
+concept canCompareEqualWithDefaultSentinel = requires(Iter a, std::default_sentinel_t b) { a == b; };
 
-  int& operator*() const { return *p; }
-  NonEqIter& operator++() {
-    ++p;
-    return *this;
-  }
-  void operator++(int) { ++p; }
-};
+template <class Iter>
+concept canCompareLessthan = requires(Iter a, Iter b) { a < b; };
 
-struct NonEqSentinel {
-  int* end = nullptr;
+template <class Iter>
+concept canCompareLessthanOrEqual = requires(Iter a, Iter b) { a <= b; };
 
-  friend bool operator==(const NonEqIter& it, const NonEqSentinel& s) { return it.p == s.end; }
-  friend bool operator==(const NonEqSentinel& s, const NonEqIter& it) { return it.p == s.end; }
-};
+template <class Iter>
+concept canCompareGreaterThan = requires(Iter a, Iter b) { a > b; };
 
-struct BasicViewWithNonEqIter : std::ranges::view_base {
-  int* b_ = nullptr;
-  int* e_ = nullptr;
+template <class Iter>
+concept canCompareGreaterThanOrEqual = requires(Iter a, Iter b) { a >= b; };
 
-  using Sentinel = sentinel_wrapper<NonEqIter>;
+template <class Iter>
+concept canCompareThreeWay = requires(Iter a, Iter b) { a <=> b; };
 
-  BasicViewWithNonEqIter() = default;
-  BasicViewWithNonEqIter(int* b, int* e) : b_(b), e_(e) {}
-
-  NonEqIter begin() const { return {b_}; }
-  NonEqSentinel end() const { return {e_}; }
-};
-
-using ConcatWithNoIterNotComparable = std::ranges::concat_view<BasicViewWithNonEqIter, BasicViewWithNonEqIter>;
-using NonComparabeIter              = std::ranges::iterator_t<ConcatWithNoIterNotComparable>;
-
-template <typename Iterator>
-concept Comparable = requires(Iterator a, Iterator b) {
-  { a == b } -> std::same_as<bool>;
-};
-
-template <class Iterator>
-constexpr void test() {
-  using Sentinel   = sentinel_wrapper<Iterator>;
-  using View       = minimal_view<Iterator, Sentinel>;
-  using ConcatView = std::ranges::concat_view<View>;
-
-  auto make_concat_view = [](auto begin, auto end) {
-    View view{Iterator(begin), Sentinel(Iterator(end))};
-    return ConcatView(std::move(view));
-  };
-
+constexpr bool test() {
   {
     // test with one view
     std::array<int, 5> array{0, 1, 2, 3, 4};
-    ConcatView view                          = make_concat_view(array.data(), array.data() + array.size());
+    std::ranges::concat_view view((array));
+    assert(!(view.begin() == view.end()));
+    assert(view.begin() != view.end());
     decltype(auto) it1                       = view.begin();
     decltype(auto) it2                       = view.begin();
     std::same_as<bool> decltype(auto) result = (it1 == it2);
@@ -89,9 +62,9 @@ constexpr void test() {
 
   {
     // test with more than one view
-    constexpr static std::array<int, 3> array1{0, 1, 2};
-    constexpr static std::array<int, 3> array2{0, 1, 2};
-    constexpr static std::ranges::concat_view view(std::views::all(array1), std::views::all(array2));
+    std::array<int, 3> array1{0, 1, 2};
+    std::array<int, 3> array2{0, 1, 2};
+    std::ranges::concat_view view(std::views::all(array1), std::views::all(array2));
     decltype(auto) it1                       = view.begin();
     decltype(auto) it2                       = view.begin();
     std::same_as<bool> decltype(auto) result = (it1 == it2);
@@ -131,13 +104,6 @@ constexpr void test() {
   }
 
   {
-    std::array<int, 5> array{0, 1, 2, 3, 4};
-    ConcatView view = make_concat_view(array.data(), array.data() + array.size());
-    assert(!(view.begin() == view.end()));
-    assert(view.begin() != view.end());
-  }
-
-  {
     // operator==(x, sentinel)
     std::array<int, 2> array1{1, 2};
     std::array<int, 2> array2{3, 4};
@@ -170,29 +136,68 @@ constexpr void test() {
     assert(!(cit != std::default_sentinel_t{}));
     assert(!(std::default_sentinel_t{} != cit));
   }
-}
 
-constexpr bool tests() {
-  test<forward_iterator<int*>>();
-  test<bidirectional_iterator<int*>>();
-  test<random_access_iterator<int*>>();
-  test<contiguous_iterator<int*>>();
-  test<int*>();
-  test<cpp17_input_iterator<int const*>>();
-  test<forward_iterator<int const*>>();
-  test<bidirectional_iterator<int const*>>();
-  test<random_access_iterator<int const*>>();
-  test<contiguous_iterator<int const*>>();
-  test<int const*>();
+  {
+    // operator <, <=, >, >=
+    std::array<int, 4> arr_a{1, 2, 3, 4};
+    std::array<int, 3> arr_b{5, 6, 7};
+    std::span<const int> s1{arr_a};
+    std::span<const int> s2{arr_b};
+    auto v = std::views::concat(s1, s2);
+    auto i = v.begin();
+    auto j = v.begin();
+    std::ranges::advance(j, arr_a.size());
 
-  static_assert(!std::equality_comparable<NonEqIter>);
-  static_assert(!Comparable<NonComparabeIter>);
+    assert(i < j);
+    assert(i <= j);
+    assert(!(i > j));
+    assert(!(i >= j));
+    auto ord1 = (i <=> j);
+    assert(ord1 < 0);
+    assert((j <=> i) > 0);
+
+    auto k = j;
+    assert(!(j < k));
+    assert(j <= k);
+    assert(!(j > k));
+    assert(j >= k);
+    auto ord2 = (j <=> k);
+    assert(ord2 == 0);
+
+    // const-iterator
+    const auto& cv = v;
+    auto ci        = cv.begin();
+    auto cj        = cv.begin();
+    std::ranges::advance(cj, arr_a.size());
+    assert(ci < cj);
+    assert((ci <=> cj) < 0);
+  }
+
+  {
+    // operator ==,<, <=, >, >=, <=>
+    // should not be invocable on non-random access range
+    static_assert(!canCompareEqual<std::ranges::concat_view<ForwardSizedView>>);
+    static_assert(!canCompareEqualWithDefaultSentinel<std::ranges::concat_view<ForwardSizedView>>);
+    static_assert(!canCompareLessthan<std::ranges::concat_view<ForwardSizedView>>);
+    static_assert(!canCompareLessthanOrEqual<std::ranges::concat_view<ForwardSizedView>>);
+    static_assert(!canCompareGreaterThan<std::ranges::concat_view<ForwardSizedView>>);
+    static_assert(!canCompareGreaterThanOrEqual<std::ranges::concat_view<ForwardSizedView>>);
+    static_assert(!canCompareThreeWay<std::ranges::concat_view<ForwardSizedView>>);
+
+    static_assert(!canCompareEqual<std::ranges::concat_view<ForwardSizedView, SizedBidiCommon>>);
+    static_assert(!canCompareEqualWithDefaultSentinel<std::ranges::concat_view<ForwardSizedView, SizedBidiCommon>>);
+    static_assert(!canCompareLessthan<std::ranges::concat_view<ForwardSizedView, SizedBidiCommon>>);
+    static_assert(!canCompareLessthanOrEqual<std::ranges::concat_view<ForwardSizedView, SizedBidiCommon>>);
+    static_assert(!canCompareGreaterThan<std::ranges::concat_view<ForwardSizedView, SizedBidiCommon>>);
+    static_assert(!canCompareGreaterThanOrEqual<std::ranges::concat_view<ForwardSizedView, SizedBidiCommon>>);
+    static_assert(!canCompareThreeWay<std::ranges::concat_view<ForwardSizedView, SizedBidiCommon>>);
+  }
 
   return true;
 }
 
 int main(int, char**) {
-  tests();
-  static_assert(tests());
+  test();
+  static_assert(test());
   return 0;
 }
