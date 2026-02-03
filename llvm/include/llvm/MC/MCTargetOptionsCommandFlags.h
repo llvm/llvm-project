@@ -63,6 +63,8 @@ LLVM_ABI bool getX86RelaxRelocations();
 
 LLVM_ABI bool getX86Sse2Avx();
 
+LLVM_ABI bool getLargeFDEEncoding();
+
 LLVM_ABI StringRef getABIName();
 
 LLVM_ABI StringRef getAsSecureLogFile();

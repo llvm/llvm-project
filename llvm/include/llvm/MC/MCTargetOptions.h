@@ -108,6 +108,10 @@ public:
   // Whether or not to use full register names on PowerPC.
   bool PPCUseFullRegisterNames : 1;
 
+  // Use 8-byte pointer size for ELF FDE CFI encoding, regardless of code model.
+  // Useful when text sections may exceed 2GB even with medium code model
+  bool LargeFDEEncoding : 1;
+
   LLVM_ABI MCTargetOptions();
 
   /// getABIName - If this returns a non-empty string this represents the
