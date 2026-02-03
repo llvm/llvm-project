@@ -2151,11 +2151,10 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
   OI.Inputs.insert(FakeStep);
   if (TaskContextStructPtrVal)
     OI.Inputs.insert(TaskContextStructPtrVal);
-  assert(
-      (TaskContextStructPtrVal && DupCB) ||
-      (!TaskContextStructPtrVal && !DupCB) &&
-          "Task context struct ptr and duplication callback must be both set "
-          "or both null");
+  assert(((TaskContextStructPtrVal && DupCB) ||
+          (!TaskContextStructPtrVal && !DupCB)) &&
+         "Task context struct ptr and duplication callback must be both set "
+         "or both null");
 
   // It isn't safe to run the duplication bodygen callback inside the post
   // outlining callback so this has to be run now before we know the real task
@@ -5831,8 +5830,8 @@ OpenMPIRBuilder::InsertPointTy OpenMPIRBuilder::applyWorkshareLoopTarget(
 
   // Mark the body loop as region which needs to be extracted
   OI.EntryBB = CLI->getBody();
-  OI.ExitBB = CLI->getLatch()->splitBasicBlock(CLI->getLatch()->begin(),
-                                               "omp.prelatch", true);
+  OI.ExitBB = CLI->getLatch()->splitBasicBlockBefore(CLI->getLatch()->begin(),
+                                                     "omp.prelatch");
 
   // Prepare loop body for extraction
   Builder.restoreIP({CLI->getPreheader(), CLI->getPreheader()->begin()});
@@ -5956,11 +5955,11 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::applyWorkshareLoop(
   case OMPScheduleType::BaseGreedy:
   case OMPScheduleType::BaseBalanced:
   case OMPScheduleType::BaseSteal:
-  case OMPScheduleType::BaseGuidedSimd:
   case OMPScheduleType::BaseRuntimeSimd:
     assert(!ChunkSize &&
            "schedule type does not support user-defined chunk sizes");
     [[fallthrough]];
+  case OMPScheduleType::BaseGuidedSimd:
   case OMPScheduleType::BaseDynamicChunked:
   case OMPScheduleType::BaseGuidedChunked:
   case OMPScheduleType::BaseGuidedIterativeChunked:
@@ -6650,8 +6649,8 @@ void OpenMPIRBuilder::createIfVersion(CanonicalLoopInfo *CanonicalLoop,
 
   // The loop latch must have only one predecessor. Currently it is branched to
   // from both the 'then' and 'else' branches.
-  L->getLoopLatch()->splitBasicBlock(
-      L->getLoopLatch()->begin(), NamePrefix + ".pre_latch", /*Before=*/true);
+  L->getLoopLatch()->splitBasicBlockBefore(L->getLoopLatch()->begin(),
+                                           NamePrefix + ".pre_latch");
 
   // Ensure that the then block is added to the loop so we add the attributes in
   // the next step
@@ -7851,17 +7850,6 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTargetData(
     return InsertPointTy();
 
   Builder.restoreIP(CodeGenIP);
-  // Disable TargetData CodeGen on Device pass.
-  if (Config.IsTargetDevice.value_or(false)) {
-    if (BodyGenCB) {
-      InsertPointOrErrorTy AfterIP =
-          BodyGenCB(Builder.saveIP(), BodyGenTy::NoPriv);
-      if (!AfterIP)
-        return AfterIP.takeError();
-      Builder.restoreIP(*AfterIP);
-    }
-    return Builder.saveIP();
-  }
 
   bool IsStandAlone = !BodyGenCB;
   MapInfosTy *MapInfo;
@@ -9466,14 +9454,6 @@ void OpenMPIRBuilder::emitUDMapperArrayInitOrDel(
   if (IsInit) {
     // base != begin?
     Value *BaseIsBegin = Builder.CreateICmpNE(Base, Begin);
-    // IsPtrAndObj?
-    Value *PtrAndObjBit = Builder.CreateAnd(
-        MapType,
-        Builder.getInt64(
-            static_cast<std::underlying_type_t<OpenMPOffloadMappingFlags>>(
-                OpenMPOffloadMappingFlags::OMP_MAP_PTR_AND_OBJ)));
-    PtrAndObjBit = Builder.CreateIsNotNull(PtrAndObjBit);
-    BaseIsBegin = Builder.CreateAnd(BaseIsBegin, PtrAndObjBit);
     Cond = Builder.CreateOr(IsArray, BaseIsBegin);
     DeleteCond = Builder.CreateIsNull(
         DeleteBit,

@@ -556,6 +556,15 @@ Every processor supports every OS ABI (see :ref:`amdgpu-os`) with the following 
                                                                       - Workgroup
                                                                         Clusters
 
+     **GCN GFX13 (RDNA 5)**
+     -----------------------------------------------------------------------------------------------------------------------
+     ``gfx1310``                 ``amdgcn``   dGPU  - cumode          - Architected                   *TBA*
+                                                    - wavefrontsize64   flat
+                                                                        scratch                       .. TODO::
+                                                                      - Packed
+                                                                        work-item                       Add product
+                                                                        IDs                             names.
+
      =========== =============== ============ ===== ================= =============== =============== ======================
 
 Generic processors allow execution of a single code object on any of the processors that
@@ -1378,9 +1387,22 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    0: Target default preference,
                                                    1: `Iterative strategy`, and
                                                    2: `DPP`.
-                                                   If target does not support the DPP operations (e.g. gfx6/7),
+                                                   If the target does not support the DPP operations (e.g. gfx6/7),
                                                    reduction will be performed using default iterative strategy.
-                                                   Intrinsic is currently only implemented for i32.
+                                                   Intrinsic is implemented for i32 and i64 types.
+
+  llvm.amdgcn.wave.reduce.min                      Similar to `llvm.amdgcn.wave.reduce.umin`, but performs a signed min
+                                                   reduction on signed integers.
+                                                   Intrinsic is implemented for i32 and i64 types.
+
+  llvm.amdgcn.wave.reduce.fmin                     Similar to `llvm.amdgcn.wave.reduce.umin`, but performs a floating point min
+                                                   reduction on floating point values.
+                                                   Intrinsic is implemented for float and double types.
+                                                   Intrinsic is modelled similar to `llvm.minnum` intrinsic.
+                                                   For a reduction between two NAN values, a NAN is returned.
+                                                   For a reduction between a NAN and a number, the number is returned.
+                                                   -0.0 < +0.0 is true for this reduction.
+                                                   The ordering behaviour of SNANs is non-deterministic.
 
   llvm.amdgcn.wave.reduce.umax                     Performs an arithmetic unsigned max reduction on the unsigned values
                                                    provided by each lane in the wavefront.
@@ -1388,9 +1410,68 @@ The AMDGPU backend implements the following LLVM IR intrinsics.
                                                    0: Target default preference,
                                                    1: `Iterative strategy`, and
                                                    2: `DPP`.
-                                                   If target does not support the DPP operations (e.g. gfx6/7),
+                                                   If the target does not support the DPP operations (e.g. gfx6/7),
                                                    reduction will be performed using default iterative strategy.
-                                                   Intrinsic is currently only implemented for i32.
+                                                   Intrinsic is implemented for i32 and i64 types.
+
+  llvm.amdgcn.wave.reduce.max                      Similar to `llvm.amdgcn.wave.reduce.umax`, but performs a signed max
+                                                   reduction on signed integers.
+                                                   Intrinsic is implemented for i32 and i64 types.
+
+  llvm.amdgcn.wave.reduce.fmax                     Similar to `llvm.amdgcn.wave.reduce.umax`, but performs a floating point max
+                                                   reduction on floating point values.
+                                                   Intrinsic is implemented for float and double types.
+                                                   Intrinsic is modelled similar to `llvm.maxnum` intrinsic.
+                                                   For a reduction between two NAN values, a NAN is returned.
+                                                   For a reduction between a NAN and a number, the number is returned.
+                                                   -0.0 < +0.0 is true for this reduction.
+                                                   The ordering behaviour of SNANs is non-deterministic.
+
+  llvm.amdgcn.wave.reduce.add                      Performs an arithmetic add reduction on the signed/unsigned values
+                                                   provided by each lane in the wavefront.
+                                                   Intrinsic takes a hint for reduction strategy using second operand
+                                                   0: Target default preference,
+                                                   1: `Iterative strategy`, and
+                                                   2: `DPP`.
+                                                   If the target does not support the DPP operations (e.g. gfx6/7),
+                                                   reduction will be performed using default iterative strategy.
+                                                   Intrinsic is implemented for signed/unsigned i32 and i64 types.
+
+  llvm.amdgcn.wave.reduce.fadd                     Similar to `llvm.amdgcn.wave.reduce.add`, but performs a floating point add
+                                                   reduction on floating point values.
+                                                   Intrinsic is implemented for float and double types.
+
+  llvm.amdgcn.wave.reduce.sub                      Performs an arithmetic sub reduction on the signed/unsigned values
+                                                   provided by each lane in the wavefront.
+                                                   Intrinsic takes a hint for reduction strategy using second operand
+                                                   0: Target default preference,
+                                                   1: `Iterative strategy`, and
+                                                   2: `DPP`.
+                                                   If the target does not support the DPP operations (e.g. gfx6/7),
+                                                   reduction will be performed using default iterative strategy.
+                                                   Intrinsic is implemented for signed/unsigned i32 and i64 types.
+
+  llvm.amdgcn.wave.reduce.fsub                     Similar to `llvm.amdgcn.wave.reduce.sub`, but performs a floating point sub
+                                                   reduction on floating point values.
+                                                   Intrinsic is implemented for float and double types.
+
+  llvm.amdgcn.wave.reduce.and                      Performs a bitwise-and reduction on the values
+                                                   provided by each lane in the wavefront.
+                                                   Intrinsic takes a hint for reduction strategy using second operand
+                                                   0: Target default preference,
+                                                   1: `Iterative strategy`, and
+                                                   2: `DPP`.
+                                                   If the target does not support the DPP operations (e.g. gfx6/7),
+                                                   reduction will be performed using default iterative strategy.
+                                                   Intrinsic is implemented for i32 and i64 types.
+
+  llvm.amdgcn.wave.reduce.or                       Similar to `llvm.amdgcn.wave.reduce.and`, but performs a bitwise-or
+                                                   reduction on the values provided by each wavefront.
+                                                   Intrinsic is implemented for i32 and i64 types.
+
+  llvm.amdgcn.wave.reduce.xor                      Similar to `llvm.amdgcn.wave.reduce.and`, but performs a bitwise-xor
+                                                   reduction on the values provided by each wavefront.
+                                                   Intrinsic is implemented for i32 and i64 types.
 
   llvm.amdgcn.permlane16                           Provides direct access to v_permlane16_b32. Performs arbitrary gather-style
                                                    operation within a row (16 contiguous lanes) of the second input operand.
@@ -2579,7 +2660,7 @@ The AMDGPU backend uses the following ELF header:
      *reserved*                                 0x04d      Reserved.
      ``EF_AMDGPU_MACH_AMDGCN_GFX1201``          0x04e      ``gfx1201``
      ``EF_AMDGPU_MACH_AMDGCN_GFX950``           0x04f      ``gfx950``
-     *reserved*                                 0x050      Reserved.
+     ``EF_AMDGPU_MACH_AMDGCN_GFX1310``          0x050      ``gfx1310``
      ``EF_AMDGPU_MACH_AMDGCN_GFX9_GENERIC``     0x051      ``gfx9-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX10_1_GENERIC``  0x052      ``gfx10-1-generic``
      ``EF_AMDGPU_MACH_AMDGCN_GFX10_3_GENERIC``  0x053      ``gfx10-3-generic``
