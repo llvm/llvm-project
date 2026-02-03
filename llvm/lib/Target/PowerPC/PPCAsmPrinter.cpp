@@ -3584,7 +3584,7 @@ void PPCAIXAsmPrinter::emitGlobalIFunc(Module &M, const GlobalIFunc &GI) {
     if (!IFuncWarnInsteadOfError)
       reportFatalUsageError(Msg);
     else
-      dbgs() << Msg;
+      dbgs() << Msg << "\n";
   }
 
   auto FnDescTOCEntryType = getTOCEntryTypeForLinkage(GI.getLinkage());
