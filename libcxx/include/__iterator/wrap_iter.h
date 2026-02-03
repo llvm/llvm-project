@@ -179,8 +179,8 @@ operator<(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXC
 
 #if _LIBCPP_STD_VER <= 17
 template <class _Iter1>
-_LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR bool
-operator!=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT {
+_LIBCPP_HIDE_FROM_ABI
+_LIBCPP_CONSTEXPR bool operator!=(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter1>& __y) _NOEXCEPT {
   return !(__x == __y);
 }
 

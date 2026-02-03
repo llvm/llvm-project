@@ -13,8 +13,11 @@
 .attribute arch, "foo"
 # CHECK: [[@LINE-1]]:18: error: invalid arch name 'foo', string must begin with rv32{i,e,g}, rv64{i,e,g}, or a supported profile name{{$}}
 
-.attribute arch, "rv32i2p1_y2p0"
-# CHECK: [[@LINE-1]]:18: error: invalid arch name 'rv32i2p1_y2p0', invalid standard user-level extension 'y'
+.attribute arch, "rv32i2p1_z2p0"
+# CHECK: [[@LINE-1]]:18: error: invalid arch name 'rv32i2p1_z2p0', standard user-level extension name missing after 'z'
+
+.attribute arch, "rv32i2p1_t2p0"
+# CHECK: [[@LINE-1]]:18: error: invalid arch name 'rv32i2p1_t2p0', unsupported standard user-level extension 't'
 
 .attribute stack_align, "16"
 # CHECK: [[@LINE-1]]:25: error: expected numeric constant

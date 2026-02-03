@@ -14,6 +14,7 @@
 #include "llvm/ADT/DenseMap.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
+#include "llvm/Analysis/AssumeBundleQueries.h"
 #include "llvm/Analysis/AssumptionCache.h"
 #include "llvm/IR/AssemblyAnnotationWriter.h"
 #include "llvm/IR/Dominators.h"
@@ -217,7 +218,7 @@ class PredicateInfoBuilder {
   ValueInfo &getOrCreateValueInfo(Value *);
   const ValueInfo &getValueInfo(Value *) const;
 
-  void processAssume(IntrinsicInst *, BasicBlock *,
+  void processAssume(AssumeInst *, BasicBlock *,
                      SmallVectorImpl<Value *> &OpsToRename);
   void processBranch(BranchInst *, BasicBlock *,
                      SmallVectorImpl<Value *> &OpsToRename);
@@ -359,8 +360,20 @@ void PredicateInfoBuilder::addInfoFor(SmallVectorImpl<Value *> &OpsToRename,
 // Process an assume instruction and place relevant operations we want to rename
 // into OpsToRename.
 void PredicateInfoBuilder::processAssume(
-    IntrinsicInst *II, BasicBlock *AssumeBB,
+    AssumeInst *II, BasicBlock *AssumeBB,
     SmallVectorImpl<Value *> &OpsToRename) {
+  if (II->hasOperandBundles()) {
+    for (auto BOI : II->bundle_op_infos()) {
+      if (RetainedKnowledge RK = getKnowledgeFromBundle(*II, BOI)) {
+        if (RK.AttrKind == Attribute::NonNull)
+          addInfoFor(OpsToRename, RK.WasOn,
+                     new (Allocator) PredicateBundleAssume(RK.WasOn, II,
+                                                           Attribute::NonNull));
+      }
+    }
+    return;
+  }
+
   SmallVector<Value *, 4> Worklist;
   SmallPtrSet<Value *, 4> Visited;
   Worklist.push_back(II->getOperand(0));
@@ -386,7 +399,7 @@ void PredicateInfoBuilder::processAssume(
 
     for (Value *V : Values) {
       if (shouldRename(V)) {
-        auto *PA = new (Allocator) PredicateAssume(V, II, Cond);
+        auto *PA = new (Allocator) PredicateConditionAssume(V, II, Cond);
         addInfoFor(OpsToRename, V, PA);
       }
     }
@@ -489,7 +502,7 @@ void PredicateInfoBuilder::buildPredicateInfo() {
     }
   }
   for (auto &Assume : AC.assumptions()) {
-    if (auto *II = dyn_cast_or_null<IntrinsicInst>(Assume))
+    if (auto *II = cast_or_null<AssumeInst>(Assume))
       if (DT.isReachableFromEntry(II->getParent()))
         processAssume(II, II->getParent(), OpsToRename);
   }
@@ -712,7 +725,14 @@ PredicateInfo::PredicateInfo(Function &F, DominatorTree &DT,
 
 std::optional<PredicateConstraint> PredicateBase::getConstraint() const {
   switch (Type) {
-  case PT_Assume:
+  case PT_BundleAssume: {
+    assert(cast<PredicateBundleAssume>(this)->AttrKind == Attribute::NonNull &&
+           "Cannot handle anything other than NonNull");
+    return {{CmpInst::ICMP_NE, ConstantPointerNull::get(
+                                   cast<PointerType>(OriginalOp->getType()))}};
+  }
+
+  case PT_ConditionAssume:
   case PT_Branch: {
     bool TrueEdge = true;
     if (auto *PBranch = dyn_cast<PredicateBranch>(this))
@@ -824,8 +844,13 @@ public:
         PS->To->printAsOperand(OS);
         OS << "]";
       } else if (const auto *PA = dyn_cast<PredicateAssume>(PI)) {
-        OS << "; assume predicate info {"
-           << " Comparison:" << *PA->Condition;
+        OS << "; assume predicate info {";
+        if (auto *PBA = dyn_cast<PredicateBundleAssume>(PA)) {
+          OS << " Attribute: " << Attribute::getNameFromAttrKind(PBA->AttrKind);
+        } else {
+          assert(isa<PredicateConditionAssume>(PA));
+          OS << " Comparison:" << *PA->Condition;
+        }
       }
       OS << ", RenamedOp: ";
       PI->RenamedOp->printAsOperand(OS, false);

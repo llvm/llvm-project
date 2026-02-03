@@ -189,10 +189,6 @@ void M68kAsmPrinter::emitFunctionBodyStart() {}
 
 void M68kAsmPrinter::emitFunctionBodyEnd() {}
 
-void M68kAsmPrinter::emitStartOfAsmFile(Module &M) {
-  OutStreamer->emitSyntaxDirective();
-}
-
 void M68kAsmPrinter::emitEndOfAsmFile(Module &M) {}
 
 char M68kAsmPrinter::ID = 0;

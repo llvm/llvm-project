@@ -29,9 +29,9 @@ HTML-SHAPE:                     <a href="../index.html" class="navbar__link">Hom
 HTML-SHAPE:                 </li>
 HTML-SHAPE:             </ul>
 HTML-SHAPE:         </div>
-HTML-SHAPE:         <div class="navbar-breadcrumb-container">
-HTML-SHAPE:             <a href="./index.html"><div class="navbar-breadcrumb-item">Global Namespace</div></a>
-HTML-SHAPE:         </div>
+HTML-SHAPE:     </div>
+HTML-SHAPE:     <div class="navbar-breadcrumb-container">
+HTML-SHAPE:         <a href="./index.html"><div class="navbar-breadcrumb-item">Global Namespace</div></a>
 HTML-SHAPE:     </div>
 HTML-SHAPE: </nav>
 HTML-SHAPE: <main>
@@ -42,7 +42,7 @@ HTML-SHAPE:             <ul>
 HTML-SHAPE:                 <li>
 HTML-SHAPE:                     <details open>
 HTML-SHAPE:                         <summary class="sidebar-section">
-HTML-SHAPE:                             <a class="sidebar-item" href="#PublicMethods">Public Method</a>
+HTML-SHAPE:                             <a class="sidebar-item" href="#PublicMethods">Public Methods</a>
 HTML-SHAPE:                         </summary>
 HTML-SHAPE:                         <ul>
 HTML-SHAPE:                             <li class="sidebar-item-container">
@@ -139,9 +139,9 @@ HTML-CALC:                     <a href="../index.html" class="navbar__link">Home
 HTML-CALC:                 </li>
 HTML-CALC:             </ul>
 HTML-CALC:         </div>
-HTML-CALC:         <div class="navbar-breadcrumb-container">
-HTML-CALC:             <a href="./index.html"><div class="navbar-breadcrumb-item">Global Namespace</div></a>
-HTML-CALC:         </div>
+HTML-CALC:     </div>
+HTML-CALC:     <div class="navbar-breadcrumb-container">
+HTML-CALC:         <a href="./index.html"><div class="navbar-breadcrumb-item">Global Namespace</div></a>
 HTML-CALC:     </div>
 HTML-CALC: </nav>
 HTML-CALC: <main>
@@ -167,7 +167,7 @@ HTML-CALC:                 </li>
 HTML-CALC:                 <li>
 HTML-CALC:                     <details open>
 HTML-CALC:                         <summary class="sidebar-section">
-HTML-CALC:                             <a class="sidebar-item" href="#PublicMethods">Public Method</a>
+HTML-CALC:                             <a class="sidebar-item" href="#PublicMethods">Public Methods</a>
 HTML-CALC:                         </summary>
 HTML-CALC:                         <ul>
 HTML-CALC:                             <li class="sidebar-item-container">
@@ -353,9 +353,9 @@ HTML-RECTANGLE:                     <a href="../index.html" class="navbar__link"
 HTML-RECTANGLE:                 </li>
 HTML-RECTANGLE:             </ul>
 HTML-RECTANGLE:         </div>
-HTML-RECTANGLE:         <div class="navbar-breadcrumb-container">
-HTML-RECTANGLE:             <a href="./index.html"><div class="navbar-breadcrumb-item">Global Namespace</div></a>
-HTML-RECTANGLE:         </div>
+HTML-RECTANGLE:     </div>
+HTML-RECTANGLE:     <div class="navbar-breadcrumb-container">
+HTML-RECTANGLE:         <a href="./index.html"><div class="navbar-breadcrumb-item">Global Namespace</div></a>
 HTML-RECTANGLE:     </div>
 HTML-RECTANGLE: </nav>
 HTML-RECTANGLE: <main>
@@ -366,7 +366,7 @@ HTML-RECTANGLE:             <ul>
 HTML-RECTANGLE:                 <li>
 HTML-RECTANGLE:                     <details open>
 HTML-RECTANGLE:                         <summary class="sidebar-section">
-HTML-RECTANGLE:                             <a class="sidebar-item" href="#PublicMethods">Public Method</a>
+HTML-RECTANGLE:                             <a class="sidebar-item" href="#PublicMethods">Public Methods</a>
 HTML-RECTANGLE:                         </summary>
 HTML-RECTANGLE:                         <ul>
 HTML-RECTANGLE:                             <li class="sidebar-item-container">
@@ -467,9 +467,9 @@ HTML-CIRCLE:                     <a href="../index.html" class="navbar__link">Ho
 HTML-CIRCLE:                 </li>
 HTML-CIRCLE:             </ul>
 HTML-CIRCLE:         </div>
-HTML-CIRCLE:         <div class="navbar-breadcrumb-container">
-HTML-CIRCLE:             <a href="./index.html"><div class="navbar-breadcrumb-item">Global Namespace</div></a>
-HTML-CIRCLE:         </div>
+HTML-CIRCLE:     </div>
+HTML-CIRCLE:     <div class="navbar-breadcrumb-container">
+HTML-CIRCLE:         <a href="./index.html"><div class="navbar-breadcrumb-item">Global Namespace</div></a>
 HTML-CIRCLE:     </div>
 HTML-CIRCLE: </nav>
 HTML-CIRCLE: <main>
@@ -480,7 +480,7 @@ HTML-CIRCLE:             <ul>
 HTML-CIRCLE:                 <li>
 HTML-CIRCLE:                     <details open>
 HTML-CIRCLE:                         <summary class="sidebar-section">
-HTML-CIRCLE:                             <a class="sidebar-item" href="#PublicMethods">Public Method</a>
+HTML-CIRCLE:                             <a class="sidebar-item" href="#PublicMethods">Public Methods</a>
 HTML-CIRCLE:                         </summary>
 HTML-CIRCLE:                         <ul>
 HTML-CIRCLE:                             <li class="sidebar-item-container">

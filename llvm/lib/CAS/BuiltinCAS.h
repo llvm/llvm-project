@@ -85,6 +85,10 @@ std::unique_ptr<ObjectStore> createObjectStoreFromUnifiedOnDiskCache(
 std::unique_ptr<ActionCache> createActionCacheFromUnifiedOnDiskCache(
     std::shared_ptr<ondisk::UnifiedOnDiskCache> UniDB);
 
+/// Convenience wrapper for \c BuiltinObjectHasher.
+void hashingFunc(ArrayRef<ArrayRef<uint8_t>> Refs, ArrayRef<char> Data,
+                 SmallVectorImpl<uint8_t> &Result);
+
 // FIXME: Proxy not portable. Maybe also error-prone?
 constexpr StringLiteral DefaultDirProxy = "/^llvm::cas::builtin::default";
 constexpr StringLiteral DefaultDir = "llvm.cas.builtin.default";

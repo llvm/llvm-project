@@ -14,6 +14,7 @@
 #include "lldb/Protocol/MCP/Protocol.h"
 #include "lldb/Protocol/MCP/Transport.h"
 #include "llvm/ADT/SmallString.h"
+#include "llvm/Support/ErrorExtras.h"
 #include "llvm/Support/FileSystem.h"
 #include "llvm/Support/JSON.h"
 #include "llvm/Support/Signals.h"
@@ -190,7 +191,7 @@ Server::ToolsCallHandler(const CallToolParams &params) {
 
   auto it = m_tools.find(tool_name);
   if (it == m_tools.end())
-    return llvm::createStringError(llvm::formatv("no tool \"{0}\"", tool_name));
+    return llvm::createStringErrorV("no tool \"{0}\"", tool_name);
 
   ToolArguments tool_args;
   if (params.arguments)
