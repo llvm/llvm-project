@@ -76,8 +76,8 @@ private:
   bool sincosUseNative(CallInst *aCI, const FuncInfo &FInfo);
 
   // evaluate calls if calls' arguments are constants.
-  bool evaluateScalarMathFunc(const FuncInfo &FInfo, double &Res0, double &Res1,
-                              Constant *copr0, Constant *copr1);
+  bool evaluateScalarMathFunc(const FuncInfo &FInfo, APFloat &Res0,
+                              APFloat &Res1, Constant *copr0, Constant *copr1);
   bool evaluateCall(CallInst *aCI, const FuncInfo &FInfo);
 
   /// Insert a value to sincos function \p Fsincos. Returns (value of sin, value
@@ -743,38 +743,24 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
   return false;
 }
 
-static Constant *getConstantFloatVectorForArgType(LLVMContext &Ctx,
-                                                  AMDGPULibFunc::EType ArgType,
-                                                  ArrayRef<double> Values,
-                                                  Type *Ty) {
-  switch (ArgType) {
-  case AMDGPULibFunc::F16: {
-    SmallVector<uint16_t, 4> HalfIntValues;
-    HalfIntValues.reserve(Values.size());
-    for (double D : Values) {
-      APFloat APF16 = APFloat(D);
-      bool Unused;
-      APF16.convert(llvm::APFloat::IEEEhalf(),
-                    llvm::RoundingMode::NearestTiesToEven, &Unused);
-      uint16_t APF16Int = APF16.bitcastToAPInt().getZExtValue();
-      HalfIntValues.push_back(APF16Int);
-    }
-    ArrayRef<uint16_t> Tmp(HalfIntValues);
-    return ConstantDataVector::getFP(Ty->getScalarType(), Tmp);
+static Constant *
+getConstantFloatVectorForArgType(LLVMContext &Ctx, AMDGPULibFunc::EType ArgType,
+                                 const ArrayRef<APFloat> Values,
+                                 const Type *Ty) {
+  SmallVector<Constant *, 4> ConstValues;
+  ConstValues.reserve(Values.size());
+  for (const APFloat &APF : Values) {
+    APFloat APFCopy = APF;
+    const auto &FltSem =
+        ArgType == AMDGPULibFunc::F16
+            ? APFloat::IEEEhalf()
+            : (ArgType == AMDGPULibFunc::F32 ? APFloat::IEEEsingle()
+                                             : APFloat::IEEEdouble());
+    bool Unused;
+    APFCopy.convert(FltSem, APFloat::rmNearestTiesToEven, &Unused);
+    ConstValues.push_back(ConstantFP::get(Ty->getScalarType(), APFCopy));
   }
-  case AMDGPULibFunc::F32: {
-    SmallVector<float, 4> FValues;
-    FValues.reserve(Values.size());
-    for (double D : Values)
-      FValues.push_back((float)D);
-    ArrayRef<float> Tmp(FValues);
-    return ConstantDataVector::get(Ty->getContext(), Tmp);
-  }
-  case AMDGPULibFunc::F64:
-    return ConstantDataVector::get(Ty->getContext(), Values);
-  default:
-    llvm_unreachable("Unsupported argument type");
-  }
+  return ConstantVector::get(ConstValues);
 }
 
 bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
@@ -791,7 +777,8 @@ bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
     // Vector version
     Constant *CV = dyn_cast<Constant>(opr0);
     if (CV && CV->getType()->isVectorTy()) {
-      SmallVector<double, 4> DValues(vecSize);
+      SmallVector<APFloat, 4> Values;
+      Values.reserve(vecSize);
       for (int eltNo = 0; eltNo < vecSize; ++eltNo) {
         ConstantFP *eltval =
             cast<ConstantFP>(CV->getAggregateElement((unsigned)eltNo));
@@ -801,10 +788,10 @@ bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
             });
         if (MatchingRow == tr.end())
           return false;
-        DValues[eltNo] = MatchingRow->result;
+        Values.push_back(APFloat(MatchingRow->result));
       }
       Constant *NewValues = getConstantFloatVectorForArgType(
-          CI->getContext(), getArgType(FInfo), DValues, CI->getType());
+          CI->getContext(), getArgType(FInfo), Values, CI->getType());
       LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> " << *NewValues << "\n");
       replaceCall(CI, NewValues);
       return true;
@@ -1400,9 +1387,9 @@ bool AMDGPULibCalls::fold_sincos(FPMathOperator *FPOp, IRBuilder<> &B,
   return true;
 }
 
-bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo, double &Res0,
-                                            double &Res1, Constant *copr0,
-                                            Constant *copr1) {
+bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo,
+                                            APFloat &Res0, APFloat &Res1,
+                                            Constant *copr0, Constant *copr1) {
   // By default, opr0/opr1/opr3 holds values of float/double type.
   // If they are not float/double, each function has to its
   // operand separately.
@@ -1421,148 +1408,97 @@ bool AMDGPULibCalls::evaluateScalarMathFunc(const FuncInfo &FInfo, double &Res0,
              : (double)fpopr1->getValueAPF().convertToFloat();
   }
 
-  switch (FInfo.getId()) {
-  default : return false;
-
-  case AMDGPULibFunc::EI_ACOS:
-    Res0 = acos(opr0);
-    return true;
-
-  case AMDGPULibFunc::EI_ACOSH:
-    // acosh(x) == log(x + sqrt(x*x - 1))
-    Res0 = log(opr0 + sqrt(opr0*opr0 - 1.0));
-    return true;
-
-  case AMDGPULibFunc::EI_ACOSPI:
-    Res0 = acos(opr0) / MATH_PI;
-    return true;
-
-  case AMDGPULibFunc::EI_ASIN:
-    Res0 = asin(opr0);
-    return true;
-
-  case AMDGPULibFunc::EI_ASINH:
-    // asinh(x) == log(x + sqrt(x*x + 1))
-    Res0 = log(opr0 + sqrt(opr0*opr0 + 1.0));
-    return true;
-
-  case AMDGPULibFunc::EI_ASINPI:
-    Res0 = asin(opr0) / MATH_PI;
-    return true;
-
-  case AMDGPULibFunc::EI_ATAN:
-    Res0 = atan(opr0);
-    return true;
-
-  case AMDGPULibFunc::EI_ATANH:
-    // atanh(x) == (log(x+1) - log(x-1))/2;
-    Res0 = (log(opr0 + 1.0) - log(opr0 - 1.0))/2.0;
-    return true;
-
-  case AMDGPULibFunc::EI_ATANPI:
-    Res0 = atan(opr0) / MATH_PI;
-    return true;
-
-  case AMDGPULibFunc::EI_CBRT:
-    Res0 = (opr0 < 0.0) ? -pow(-opr0, 1.0/3.0) : pow(opr0, 1.0/3.0);
-    return true;
-
-  case AMDGPULibFunc::EI_COS:
-    Res0 = cos(opr0);
-    return true;
-
-  case AMDGPULibFunc::EI_COSH:
-    Res0 = cosh(opr0);
-    return true;
-
-  case AMDGPULibFunc::EI_COSPI:
-    Res0 = cos(MATH_PI * opr0);
-    return true;
-
-  case AMDGPULibFunc::EI_EXP:
-    Res0 = exp(opr0);
-    return true;
-
-  case AMDGPULibFunc::EI_EXP2:
-    Res0 = pow(2.0, opr0);
-    return true;
-
-  case AMDGPULibFunc::EI_EXP10:
-    Res0 = pow(10.0, opr0);
-    return true;
-
-  case AMDGPULibFunc::EI_LOG:
-    Res0 = log(opr0);
-    return true;
-
-  case AMDGPULibFunc::EI_LOG2:
-    Res0 = log(opr0) / log(2.0);
-    return true;
-
-  case AMDGPULibFunc::EI_LOG10:
-    Res0 = log(opr0) / log(10.0);
-    return true;
-
-  case AMDGPULibFunc::EI_RSQRT:
-    Res0 = 1.0 / sqrt(opr0);
-    return true;
-
-  case AMDGPULibFunc::EI_SIN:
-    Res0 = sin(opr0);
-    return true;
-
-  case AMDGPULibFunc::EI_SINH:
-    Res0 = sinh(opr0);
-    return true;
-
-  case AMDGPULibFunc::EI_SINPI:
-    Res0 = sin(MATH_PI * opr0);
-    return true;
-
-  case AMDGPULibFunc::EI_TAN:
-    Res0 = tan(opr0);
-    return true;
-
-  case AMDGPULibFunc::EI_TANH:
-    Res0 = tanh(opr0);
-    return true;
-
-  case AMDGPULibFunc::EI_TANPI:
-    Res0 = tan(MATH_PI * opr0);
-    return true;
-
-  // two-arg functions
-  case AMDGPULibFunc::EI_POW:
-  case AMDGPULibFunc::EI_POWR:
-    Res0 = pow(opr0, opr1);
-    return true;
-
-  case AMDGPULibFunc::EI_POWN: {
-    if (ConstantInt *iopr1 = dyn_cast_or_null<ConstantInt>(copr1)) {
-      double val = (double)iopr1->getSExtValue();
-      Res0 = pow(opr0, val);
-      return true;
+  auto Res = [&FInfo, opr0, opr1,
+              copr1]() -> std::optional<std::pair<double, double>> {
+    switch (FInfo.getId()) {
+    default:
+      return std::nullopt;
+    case AMDGPULibFunc::EI_ACOS:
+      return std::make_pair(acos(opr0), 0.0);
+    case AMDGPULibFunc::EI_ACOSH:
+      // acosh(x) == log(x + sqrt(x*x - 1))
+      return std::make_pair(log(opr0 + sqrt(opr0 * opr0 - 1.0)), 0.0);
+    case AMDGPULibFunc::EI_ACOSPI:
+      return std::make_pair(acos(opr0) / MATH_PI, 0.0);
+    case AMDGPULibFunc::EI_ASIN:
+      return std::make_pair(asin(opr0), 0.0);
+    case AMDGPULibFunc::EI_ASINH:
+      // asinh(x) == log(x + sqrt(x*x + 1))
+      return std::make_pair(log(opr0 + sqrt(opr0 * opr0 + 1.0)), 0.0);
+    case AMDGPULibFunc::EI_ASINPI:
+      return std::make_pair(asin(opr0) / MATH_PI, 0.0);
+    case AMDGPULibFunc::EI_ATAN:
+      return std::make_pair(atan(opr0), 0.0);
+    case AMDGPULibFunc::EI_ATANH:
+      // atanh(x) == (log(x+1) - log(x-1))/2;
+      return std::make_pair((log(opr0 + 1.0) - log(opr0 - 1.0)) / 2.0, 0.0);
+    case AMDGPULibFunc::EI_ATANPI:
+      return std::make_pair(atan(opr0) / MATH_PI, 0.0);
+    case AMDGPULibFunc::EI_CBRT:
+      return std::make_pair(
+          (opr0 < 0.0) ? -pow(-opr0, 1.0 / 3.0) : pow(opr0, 1.0 / 3.0), 0.0);
+    case AMDGPULibFunc::EI_COS:
+      return std::make_pair(cos(opr0), 0.0);
+    case AMDGPULibFunc::EI_COSH:
+      return std::make_pair(cosh(opr0), 0.0);
+    case AMDGPULibFunc::EI_COSPI:
+      return std::make_pair(cos(MATH_PI * opr0), 0.0);
+    case AMDGPULibFunc::EI_EXP:
+      return std::make_pair(exp(opr0), 0.0);
+    case AMDGPULibFunc::EI_EXP2:
+      return std::make_pair(pow(2.0, opr0), 0.0);
+    case AMDGPULibFunc::EI_EXP10:
+      return std::make_pair(pow(10.0, opr0), 0.0);
+    case AMDGPULibFunc::EI_LOG:
+      return std::make_pair(log(opr0), 0.0);
+    case AMDGPULibFunc::EI_LOG2:
+      return std::make_pair(log(opr0) / log(2.0), 0.0);
+    case AMDGPULibFunc::EI_LOG10:
+      return std::make_pair(log(opr0) / log(10.0), 0.0);
+    case AMDGPULibFunc::EI_RSQRT:
+      return std::make_pair(1.0 / sqrt(opr0), 0.0);
+    case AMDGPULibFunc::EI_SIN:
+      return std::make_pair(sin(opr0), 0.0);
+    case AMDGPULibFunc::EI_SINH:
+      return std::make_pair(sinh(opr0), 0.0);
+    case AMDGPULibFunc::EI_SINPI:
+      return std::make_pair(sin(MATH_PI * opr0), 0.0);
+    case AMDGPULibFunc::EI_TAN:
+      return std::make_pair(tan(opr0), 0.0);
+    case AMDGPULibFunc::EI_TANH:
+      return std::make_pair(tanh(opr0), 0.0);
+    case AMDGPULibFunc::EI_TANPI:
+      return std::make_pair(tan(MATH_PI * opr0), 0.0);
+    // two-arg functions
+    case AMDGPULibFunc::EI_POW:
+    case AMDGPULibFunc::EI_POWR:
+      return std::make_pair(pow(opr0, opr1), 0.0);
+    case AMDGPULibFunc::EI_POWN: {
+      if (ConstantInt *iopr1 = dyn_cast_or_null<ConstantInt>(copr1)) {
+        double val = (double)iopr1->getSExtValue();
+        return std::make_pair(pow(opr0, val), 0.0);
+      }
+      return std::nullopt;
     }
-    return false;
-  }
 
-  case AMDGPULibFunc::EI_ROOTN: {
-    if (ConstantInt *iopr1 = dyn_cast_or_null<ConstantInt>(copr1)) {
-      double val = (double)iopr1->getSExtValue();
-      Res0 = pow(opr0, 1.0 / val);
-      return true;
+    case AMDGPULibFunc::EI_ROOTN: {
+      if (ConstantInt *iopr1 = dyn_cast_or_null<ConstantInt>(copr1)) {
+        double val = (double)iopr1->getSExtValue();
+        return std::make_pair(pow(opr0, 1.0 / val), 0.0);
+      }
+      return std::nullopt;
     }
+    // with ptr arg
+    case AMDGPULibFunc::EI_SINCOS:
+      return std::make_pair(sin(opr0), cos(opr0));
+    }
+  }();
+
+  if (!Res.has_value())
     return false;
-  }
-
-  // with ptr arg
-  case AMDGPULibFunc::EI_SINCOS:
-    Res0 = sin(opr0);
-    Res1 = cos(opr0);
-    return true;
-  }
-
-  return false;
+  Res0 = APFloat(Res->first);
+  Res1 = APFloat(Res->second);
+  return true;
 }
 
 bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
@@ -1587,11 +1523,12 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
   // At this point, all arguments to aCI are constants.
 
   // max vector size is 16, and sincos will generate two results.
-  double DVal0[16], DVal1[16];
+  SmallVector<APFloat, 16> Val0, Val1;
   int FuncVecSize = getVecSize(FInfo);
   bool hasTwoResults = (FInfo.getId() == AMDGPULibFunc::EI_SINCOS);
   if (FuncVecSize == 1) {
-    if (!evaluateScalarMathFunc(FInfo, DVal0[0], DVal1[0], copr0, copr1)) {
+    if (!evaluateScalarMathFunc(FInfo, Val0.emplace_back(0.0),
+                                Val1.emplace_back(0.0), copr0, copr1)) {
       return false;
     }
   } else {
@@ -1600,7 +1537,8 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
     for (int i = 0; i < FuncVecSize; ++i) {
       Constant *celt0 = CDV0 ? CDV0->getElementAsConstant(i) : nullptr;
       Constant *celt1 = CDV1 ? CDV1->getElementAsConstant(i) : nullptr;
-      if (!evaluateScalarMathFunc(FInfo, DVal0[i], DVal1[i], celt0, celt1)) {
+      if (!evaluateScalarMathFunc(FInfo, Val0.emplace_back(0.0),
+                                  Val1.emplace_back(0.0), celt0, celt1)) {
         return false;
       }
     }
@@ -1609,15 +1547,15 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
   LLVMContext &context = aCI->getContext();
   Constant *nval0, *nval1;
   if (FuncVecSize == 1) {
-    nval0 = ConstantFP::get(aCI->getType(), DVal0[0]);
+    nval0 = ConstantFP::get(aCI->getType(), Val0[0]);
     if (hasTwoResults)
-      nval1 = ConstantFP::get(aCI->getType(), DVal1[0]);
+      nval1 = ConstantFP::get(aCI->getType(), Val1[0]);
   } else {
-    nval0 = getConstantFloatVectorForArgType(context, getArgType(FInfo), DVal0,
+    nval0 = getConstantFloatVectorForArgType(context, getArgType(FInfo), Val0,
                                              aCI->getType());
     if (hasTwoResults)
-      nval1 = getConstantFloatVectorForArgType(context, getArgType(FInfo),
-                                               DVal1, aCI->getType());
+      nval1 = getConstantFloatVectorForArgType(context, getArgType(FInfo), Val1,
+                                               aCI->getType());
   }
 
   if (hasTwoResults) {
