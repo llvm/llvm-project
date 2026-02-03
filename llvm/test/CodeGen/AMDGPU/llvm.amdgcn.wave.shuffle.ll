@@ -193,16 +193,16 @@ define float @test_wave_shuffle_float(float %val, i32 %idx) {
 ; GFX11-W64-GISEL-NEXT:    v_permlane64_b32 v2, v0
 ; GFX11-W64-GISEL-NEXT:    ds_bpermute_b32 v2, v1, v2
 ; GFX11-W64-GISEL-NEXT:    s_mov_b64 exec, s[0:1]
-; GFX11-W64-GISEL-NEXT:    ds_bpermute_b32 v0, v1, v0
 ; GFX11-W64-GISEL-NEXT:    v_mbcnt_lo_u32_b32 v3, -1, 0
-; GFX11-W64-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_2) | instid1(VALU_DEP_2)
+; GFX11-W64-GISEL-NEXT:    ds_bpermute_b32 v0, v1, v0
 ; GFX11-W64-GISEL-NEXT:    v_xor_b32_e32 v1, v3, v1
 ; GFX11-W64-GISEL-NEXT:    s_waitcnt lgkmcnt(1)
 ; GFX11-W64-GISEL-NEXT:    v_mov_b32_e32 v3, v2
+; GFX11-W64-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_2) | instskip(NEXT) | instid1(VALU_DEP_1)
 ; GFX11-W64-GISEL-NEXT:    v_and_b32_e32 v1, 32, v1
-; GFX11-W64-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_1) | instskip(SKIP_1) | instid1(VALU_DEP_3)
 ; GFX11-W64-GISEL-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v1
 ; GFX11-W64-GISEL-NEXT:    s_waitcnt lgkmcnt(0)
+; GFX11-W64-GISEL-NEXT:    s_delay_alu instid0(VALU_DEP_3)
 ; GFX11-W64-GISEL-NEXT:    v_cndmask_b32_e32 v0, v3, v0, vcc
 ; GFX11-W64-GISEL-NEXT:    s_xor_saveexec_b64 s[0:1], -1
 ; GFX11-W64-GISEL-NEXT:    scratch_load_b32 v2, off, s32 ; 4-byte Folded Reload
