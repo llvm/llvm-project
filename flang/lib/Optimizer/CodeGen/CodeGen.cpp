@@ -3345,12 +3345,14 @@ struct GlobalOpConversion : public fir::FIROpConversion<fir::GlobalOp> {
           rewriter.setInsertionPointAfter(insertOp);
           rewriter.replaceOpWithNewOp<mlir::arith::ConstantOp>(
               insertOp, seqTyAttr, denseAttr);
-          if (auto intAttr = mlir::dyn_cast<mlir::IntegerAttr>(constant.getValue()))
+          if (auto intAttr =
+                  mlir::dyn_cast<mlir::IntegerAttr>(constant.getValue()))
             if (intAttr.getInt() == 0)
               ++nbZeroInitializers;
         }
       }
-      if (nbRanges > 0 && nbRanges == nbZeroInitializers && linkage == mlir::LLVM::Linkage::External)
+      if (nbRanges > 0 && nbRanges == nbZeroInitializers &&
+          linkage == mlir::LLVM::Linkage::External)
         g.setLinkage(mlir::LLVM::Linkage::Common);
     }
 
