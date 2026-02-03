@@ -398,7 +398,8 @@ bool ReorderBasicBlocks::shouldPrint(const BinaryFunction &BF) const {
 
 bool ReorderBasicBlocks::shouldOptimize(const BinaryFunction &BF) const {
   // Apply execution count threshold
-  if (BF.getKnownExecutionCount() < opts::ExecutionCountThreshold)
+  if (BF.getKnownExecutionCount() < opts::ExecutionCountThreshold ||
+      BF.isPLTFunction())
     return false;
 
   return BinaryFunctionPass::shouldOptimize(BF);
