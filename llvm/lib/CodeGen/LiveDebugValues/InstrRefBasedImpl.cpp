@@ -444,7 +444,7 @@ public:
       if (!Op.IsConst)
         ActiveMLocs[Op.Loc].insert(VarID);
     auto NewValue = ResolvedDbgValue{ResolvedDbgOps, Value.Properties};
-    ActiveVLocs.insert_or_assign(std::make_pair(VarID, std::move(NewValue)));
+    ActiveVLocs.insert_or_assign(VarID, std::move(NewValue));
   }
 
   /// Load object with live-in variable values. \p mlocs contains the live-in
