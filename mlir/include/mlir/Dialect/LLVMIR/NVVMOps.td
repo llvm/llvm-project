@@ -6278,10 +6278,9 @@ def NVVM_Tcgen05MMAWsSparseOp : NVVM_Op<"tcgen05.mma.ws.sp",
   }];
 }
 
-def NVVMFloatType : AnyTypeOf<[F16, BF16, F32, F64, VectorOfLengthAndType<[2], [F16, BF16]>]>;
+def SIMTFloatType : AnyTypeOf<[F16, BF16, F32, F64, VectorOfLengthAndType<[2], [F16, BF16, F32, F64]>]>;
 
-def NVVM_FloatAdditionOp : 
-  NVVM_SingleResultIntrinsicOp<"fadd", [Pure, Commutative]> {
+def NVVM_FAddOp : NVVM_Op<"fadd", [Pure, Commutative]> {
   let summary = [{
     Performs floating point addition operation with support for mixed precision 
     operands
@@ -6301,29 +6300,26 @@ def NVVM_FloatAdditionOp :
     [mixed precision floating point addition](https://docs.nvidia.com/cuda/parallel-thread-execution/#mixed-precision-floating-point-instructions-add).
   }];
   let arguments = (ins
-    NVVMFloatType:$lhs,
-    NVVMFloatType:$rhs,
+    SIMTFloatType:$lhs,
+    SIMTFloatType:$rhs,
     DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::NONE">:$rnd,
     DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
-    UnitAttr:$ftz
+    DefaultValuedAttr<BoolAttr, "false">:$ftz
   );
-  let results = (outs NVVMFloatType:$res);
+  let results = (outs SIMTFloatType:$res);
   let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type(operands) `->` type($res)";
   let hasVerifier = 1;
   
+  let extraClassDeclaration = [{
+    static void lowerFAddToLLVMIR(
+        Operation &op, LLVM::ModuleTranslation &mt, llvm::IRBuilderBase &builder);
+  }];
   let llvmBuilder = [{
-    auto [ID, args] = NVVM::FloatAdditionOp::getIntrinsicIDAndArgs(*op, moduleTranslation, builder);
-    if(ID != llvm::Intrinsic::not_intrinsic) {
-      llvm::Value *addResult = createIntrinsicCall(builder, ID, args);
-      $res = ($_resultType->getScalarSizeInBits() > 
-              addResult->getType()->getScalarSizeInBits()) 
-             ? builder.CreateFPExt(addResult, $_resultType) : addResult;
-    }
+    NVVM::FAddOp::lowerFAddToLLVMIR(*op, moduleTranslation, builder);
   }];
 }
 
-def NVVM_FloatSubtractionOp : 
-  NVVM_Op<"fsub", [Pure]> {
+def NVVM_FSubOp : NVVM_Op<"fsub", [Pure]> {
   let summary = [{
     Performs floating point subtraction operation with support for mixed 
     precision operands
@@ -6341,13 +6337,13 @@ def NVVM_FloatSubtractionOp :
  
   }];
   let arguments = (ins
-    NVVMFloatType:$lhs,
-    NVVMFloatType:$rhs,
+    SIMTFloatType:$lhs,
+    SIMTFloatType:$rhs,
     DefaultValuedAttr<FPRoundingModeAttr, "FPRoundingMode::NONE">:$rnd,
     DefaultValuedAttr<SaturationModeAttr, "SaturationMode::NONE">:$sat,
     UnitAttr:$ftz
   );
-  let results = (outs NVVMFloatType:$res);
+  let results = (outs SIMTFloatType:$res);
   let assemblyFormat = "$lhs `,` $rhs attr-dict `:` type(operands) `->` type($res)";
   let hasCanonicalizer = 1;
 }
