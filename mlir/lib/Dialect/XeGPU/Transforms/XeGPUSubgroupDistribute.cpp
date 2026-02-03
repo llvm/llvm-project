@@ -65,48 +65,6 @@ namespace {
 /// priorities to patterns.
 enum PatternHierarchy : unsigned { Regular = 1, AboveRegular = 2 };
 
-/// Helper function to get  distributed vector type for a source vector type
-/// according to the lane_layout. We simply divide each dimension of tensor
-/// descriptor shape by corresponding lane_layout dimension. If
-/// array_length > 1, that is appended to the front of the ditributed shape.
-/// NOTE: This is the vector type that will be returned by the
-/// gpu.warp_execute_on_lane0 op.
-///
-/// Examples:
-/// | original vector shape | lane_layout | distributed vector shape |
-/// |-----------------------|-------------|--------------------------|
-/// | 32x16                 | [1, 16]     | 32x1                     |
-/// | 32x16                 | [2, 8]      | 16x2                     |
-/// | 2x32x16               | [1, 16]     | 2x32x1                   |
-static FailureOr<VectorType>
-getDistVecTypeBasedOnLaneLayout(xegpu::DistributeLayoutAttr layout,
-                                VectorType originalType) {
-  if (!layout)
-    return failure();
-  assert((isa<xegpu::LayoutAttr>(layout) || isa<xegpu::SliceAttr>(layout)) &&
-         "Expecting a valid layout.");
-  SmallVector<int64_t> effectiveLaneLayout =
-      layout.getEffectiveLaneLayoutAsInt();
-  assert(static_cast<size_t>(originalType.getRank()) >=
-             effectiveLaneLayout.size() &&
-         "Rank of the original vector type should be greater or equal to the "
-         "size of the lane layout to distribute the vector type.");
-  SmallVector<int64_t> distributedShape(originalType.getShape());
-  // Only distribute the last `laneLayout.size()` dimensions. The remaining
-  // dimensions are not distributed.
-  unsigned distributionStart =
-      originalType.getRank() - effectiveLaneLayout.size();
-  for (auto [i, dim] : llvm::enumerate(originalType.getShape())) {
-    if (i < distributionStart)
-      continue;
-    // Check if the dimension can be distributed evenly.
-    if (dim % effectiveLaneLayout[i - distributionStart] != 0)
-      return failure();
-    distributedShape[i] = dim / effectiveLaneLayout[i - distributionStart];
-  }
-  return VectorType::get(distributedShape, originalType.getElementType());
-}
-
 /// Helper function to resolve types if the distributed type out of
 /// gpu.warp_execute_on_lane0 is different from the expected xegpu SIMT type.
 /// Example 1:
@@ -143,34 +101,6 @@ static Value resolveDistributedTy(Value orig, T expected,
   }
   llvm_unreachable("Unsupported type for reconciliation");
   return orig;
-}
-
-/// Helper function to check if the layout is packed. Layout is packed if it is
-/// 2D and lane_data[0] != 1 (data packed from col dimension).
-/// TODO: Move to target info.
-static bool requirePacked(const xegpu::LayoutAttr layout) {
-  if (!layout)
-    return false;
-  auto laneData = layout.getEffectiveLaneDataAsInt();
-  if (laneData.size() != 2)
-    return false;
-  return laneData[0] != 1;
-}
-
-/// Helper function to check if the layout requires a transpose effect.
-static bool requireTranspose(const xegpu::LayoutAttr layout,
-                             const xegpu::uArch::uArch *uArch) {
-  // Return false for unsupported targets.
-  // TODO: Add more support or move to target info.
-  if (uArch->getName().equals_insensitive("pvc") &&
-      uArch->getName().equals_insensitive("bmg"))
-    return false;
-  if (!layout)
-    return false;
-  auto laneLayout = layout.getEffectiveLaneLayoutAsInt();
-  if (laneLayout.size() != 2)
-    return false;
-  return laneLayout[0] == uArch->getSubgroupSize() && laneLayout[1] == 1;
 }
 
 /// Given a vector type and its distributed vector type, return the list of
@@ -409,7 +339,7 @@ struct StoreNdDistribution final : public gpu::WarpDistributionPattern {
           storeOp, "the source tensor descriptor lacks layout attribute");
 
     FailureOr<VectorType> distributedTypeByWarpOpOrFailure =
-        getDistVecTypeBasedOnLaneLayout(layout, storeOp.getValueType());
+        xegpu::getDistVecTypeBasedOnLaneLayout(layout, storeOp.getValueType());
     if (failed(distributedTypeByWarpOpOrFailure))
       return rewriter.notifyMatchFailure(storeOp,
                                          "Failed to distribute the type");
@@ -575,9 +505,9 @@ struct LoadNdDistribution final : public gpu::WarpDistributionPattern {
         newLoadOperands, loadOp->getAttrs());
     xegpu::removeLayoutAttrs(newLoadOp);
     // Set the packed attribute if the layout requires it.
-    newLoadOp.setPacked(requirePacked(layout));
+    newLoadOp.setPacked(xegpu::requirePacked(layout));
     // Set the transpose attribute if the layout requires it.
-    if (requireTranspose(layout, uArch))
+    if (xegpu::requireTranspose(layout, uArch))
       newLoadOp.setTranspose(
           DenseI64ArrayAttr::get(rewriter.getContext(), {1, 0}));
     Value distributedVal = newWarpOp.getResult(operandIdx);
@@ -1681,19 +1611,6 @@ struct VectorShapeCastDistribution : public gpu::WarpDistributionPattern {
           warpOp,
           "the source or result of shape_cast op lacks distribution layout");
 
-    // For rank reducing or increasing shape_cast ops, the lower rank layout
-    // must be a slice of higher rank layout.
-    int64_t sourceRank = shapeCastOp.getSourceVectorType().getRank();
-    int64_t resultRank = shapeCastOp.getResultVectorType().getRank();
-    if (sourceRank < resultRank && !sourceLayout.isSliceOf(resultLayout))
-      return rewriter.notifyMatchFailure(
-          warpOp, "shape_cast is rank reducing but source layout is not a "
-                  "slice of result layout");
-    if (sourceRank > resultRank && !resultLayout.isSliceOf(sourceLayout))
-      return rewriter.notifyMatchFailure(
-          warpOp, "shape_cast is rank increasing but result layout is not a "
-                  "slice of source layout");
-
     FailureOr<VectorType> sourceDistTypeOrFailure =
         getDistVecTypeBasedOnLaneLayout(sourceLayout,
                                         shapeCastOp.getSourceVectorType());
@@ -1972,8 +1889,8 @@ struct MemrefExtractAlignedPointerAsIndexDistribution final
     auto newExtractOp = memref::ExtractAlignedPointerAsIndexOp::create(
         rewriter, newWarpOp.getLoc(), extractOp.getType(),
         newWarpOp.getResult(newRetIndices[0]));
-    Value distributedVal = newWarpOp.getResult(operandIdx);
-    rewriter.replaceAllUsesWith(distributedVal, newExtractOp.getResult());
+    Value resultVal = newWarpOp.getResult(operandIdx);
+    rewriter.replaceAllUsesWith(resultVal, newExtractOp.getResult());
     return success();
   }
 };
