@@ -45,6 +45,18 @@ void ConvertibleNonTrivialMoveAssignFromLValue(NonTrivialMoveAssign& target, Non
 // Check moving from various storage
 // ---------------------------------
 
+void NonConvertibleNonTrivialMoveAssignFromLocal(NonTrivialMoveAssign& target) {
+  const NonTrivialMoveAssign source;
+  // No message, moving a const-qualified value is not valid.
+  target = source;
+}
+
+void NonConvertibleNonTrivialMoveAssignFromConst(NonTrivialMoveAssign& target) {
+  NonTrivialMoveAssign source;
+  // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-inefficient-copy-assign]
+  target = source;
+}
+
 void NonConvertibleNonTrivialMoveAssignFromStatic(NonTrivialMoveAssign& target) {
   static NonTrivialMoveAssign source;
   // No message, the lifetime of `source' does not end with the scope of the function.
