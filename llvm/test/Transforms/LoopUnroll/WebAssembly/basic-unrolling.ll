@@ -133,7 +133,7 @@ define hidden void @runtime(ptr nocapture %a, ptr nocapture readonly %b, ptr noc
 ; CHECK-NEXT:    br i1 [[LCMP_MOD_NOT]], label [[FOR_COND_CLEANUP]], label [[FOR_BODY_EPIL_PREHEADER]]
 ; CHECK:       for.body.epil.preheader:
 ; CHECK-NEXT:    [[I_09_UNR:%.*]] = phi i32 [ 0, [[FOR_BODY_PREHEADER]] ], [ [[INC_1:%.*]], [[FOR_COND_CLEANUP_LOOPEXIT_UNR_LCSSA:%.*]] ]
-; CHECK-NEXT:    [[LCMP_MOD1:%.*]] = icmp ne i32 [[XTRAITER]], 0
+; CHECK-NEXT:    [[LCMP_MOD1:%.*]] = trunc i32 [[N]] to i1
 ; CHECK-NEXT:    call void @llvm.assume(i1 [[LCMP_MOD1]])
 ; CHECK-NEXT:    [[ARRAYIDX_EPIL:%.*]] = getelementptr inbounds i32, ptr [[B:%.*]], i32 [[I_09_UNR]]
 ; CHECK-NEXT:    [[I_EPIL:%.*]] = load i32, ptr [[ARRAYIDX_EPIL]], align 4

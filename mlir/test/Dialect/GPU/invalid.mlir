@@ -135,7 +135,7 @@ module attributes {gpu.container_module} {
 module attributes {gpu.container_module} {
   gpu.module @kernels {
     // expected-note@+1 {{see the kernel definition here}}
-    memref.global "private" @kernel_1 : memref<4xi32>
+    memref.global @kernel_1 : memref<4xi32>
   }
 
   func.func @launch_func_undefined_function(%sz : index) {

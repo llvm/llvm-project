@@ -448,8 +448,11 @@ void Intrinsic::getIntrinsicInfoTableEntries(
 
   FixedEncodingTy TableVal = IIT_Table[id - 1];
 
-  // Decode the TableVal into an array of IITValues.
-  SmallVector<unsigned char> IITValues;
+  // Array to hold the inlined fixed encoding values expanded from nibbles to
+  // bytes. Its size can be be atmost FixedEncodingBits / 4 i.e., number
+  // of nibbles that can fit in `FixedEncodingTy`.
+  unsigned char IITValues[FixedEncodingBits / 4];
+
   ArrayRef<unsigned char> IITEntries;
   unsigned NextElt = 0;
   // Check to see if the intrinsic's type was inlined in the fixed encoding
@@ -464,11 +467,11 @@ void Intrinsic::getIntrinsicInfoTableEntries(
     // If the entry was encoded into a single word in the table itself, decode
     // it from an array of nibbles to an array of bytes.
     do {
-      IITValues.push_back(TableVal & 0xF);
+      IITValues[NextElt++] = TableVal & 0xF;
       TableVal >>= 4;
     } while (TableVal);
 
-    IITEntries = IITValues;
+    IITEntries = ArrayRef(IITValues).take_front(NextElt);
     NextElt = 0;
   }
 

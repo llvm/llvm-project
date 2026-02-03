@@ -1786,11 +1786,8 @@ Instruction *InstCombinerImpl::foldICmpAndConstConst(ICmpInst &Cmp,
                                                      const APInt &C1) {
   bool isICMP_NE = Cmp.getPredicate() == ICmpInst::ICMP_NE;
 
-  // For vectors: icmp ne (and X, 1), 0 --> trunc X to N x i1
-  // TODO: We canonicalize to the longer form for scalars because we have
-  // better analysis/folds for icmp, and codegen may be better with icmp.
-  if (isICMP_NE && Cmp.getType()->isVectorTy() && C1.isZero() &&
-      match(And->getOperand(1), m_One()))
+  // icmp ne (and X, 1), 0 --> trunc X to i1
+  if (isICMP_NE && C1.isZero() && match(And->getOperand(1), m_One()))
     return new TruncInst(And->getOperand(0), Cmp.getType());
 
   const APInt *C2;
