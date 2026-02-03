@@ -77,7 +77,6 @@ public:
   void initAvailableExtInstSets();
 
   // If Env is Unknown, scan module for "hlsl.shader" attributes to resolve it.
-  // Must be called before any pass that depends on isShader()/isKernel().
   void resolveEnvFromModule(const Module &M);
 
   // Parses features string setting specified subtarget options.
