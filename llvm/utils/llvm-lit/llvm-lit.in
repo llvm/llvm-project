@@ -17,6 +17,9 @@ def map_config(source_dir, site_config):
 # configuration file knows how to find the object tree.
 builtin_parameters = { 'build_mode' : '@BUILD_MODE@' }
 
+if "@LLVM_WINDOWS_PREFER_FORWARD_SLASH@".upper() in ["ON", "TRUE", "1"]:
+    builtin_parameters["use_normalized_slashes"] = True
+
 @LLVM_LIT_CONFIG_MAP@
 
 builtin_parameters['config_map'] = config_map
