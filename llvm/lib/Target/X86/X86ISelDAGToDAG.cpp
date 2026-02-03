@@ -1852,13 +1852,15 @@ bool X86DAGToDAGISel::foldOffsetIntoAddress(uint64_t Offset,
         !isDispSafeForFrameIndexOrRegBase((uint32_t)Val) &&
         !AM.hasBaseOrIndexReg())
       return true;
-  } else if (Subtarget->is16Bit() || (AM.hasBaseOrIndexReg() &&
-                                      !isDispSafeForFrameIndexOrRegBase(Val))) {
-    // In 16-bit mode, displacements are limited to [-65535,65535] (
-    // R_386_16 relocation). For simplicity, don't fold offsets. For
-    // 32-bit, ensure the displacement isn't close to the limit.
+  } else if (Subtarget->is16Bit()) {
+    // In 16-bit mode, displacements are limited to [-65535,65535] (R_386_16
+    // relocation).
+    if (Val < -65535 || Val > 65535)
+      return true;
+  } else if (AM.hasBaseOrIndexReg() && !isDispSafeForFrameIndexOrRegBase(Val))
+    // For 32-bit X86, make sure the displacement still isn't close to the
+    // expressible limit.
     return true;
-  }
   AM.Disp = Val;
   return false;
 }
