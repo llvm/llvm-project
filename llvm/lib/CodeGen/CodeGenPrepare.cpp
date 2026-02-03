@@ -691,7 +691,7 @@ bool CodeGenPrepare::_run(Function &F) {
     MadeChange |= optimizePhiTypes(F);
 
     if (MadeChange)
-      eliminateFallThrough(F, &getDT(F));
+      eliminateFallThrough(F, DT.get());
 
 #ifndef NDEBUG
     if (MadeChange && VerifyLoopInfo)
