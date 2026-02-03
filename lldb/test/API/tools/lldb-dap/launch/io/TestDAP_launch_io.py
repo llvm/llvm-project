@@ -46,13 +46,13 @@ class DAP_launchIO(lldbdap_testcase.DAPTestCaseBase):
         ) as stdout, NamedTemporaryFile("rt") as stderr:
             stdin.write(input_text)
             stdin.flush()
-            self.launch(
+            self.launch_and_configurationDone(
                 program,
                 stdio=[stdin.name, stdout.name, stderr.name],
                 console=console,
                 args=program_args,
             )
-            self.continue_to_exit()
+            self.verify_process_exited()
 
             all_stdout = stdout.read()
             all_stderr = stderr.read()
@@ -82,8 +82,10 @@ class DAP_launchIO(lldbdap_testcase.DAPTestCaseBase):
         with NamedTemporaryFile("w+t") as stdin:
             stdin.write(input_text)
             stdin.flush()
-            self.launch(program, stdio=[stdin.name], console=console, args=program_args)
-            self.continue_to_exit()
+            self.launch_and_configurationDone(
+                program, stdio=[stdin.name], console=console, args=program_args
+            )
+            self.verify_process_exited()
 
             stdout_text = self._get_debuggee_stdout()
             stderr_text = self._get_debuggee_stderr()
@@ -111,14 +113,14 @@ class DAP_launchIO(lldbdap_testcase.DAPTestCaseBase):
         env = {"FROM_ENV": env_text} if with_env else {}
 
         with NamedTemporaryFile("rt") as stdout:
-            self.launch(
+            self.launch_and_configurationDone(
                 program,
                 stdio=[None, stdout.name],
                 console=console,
                 args=program_args,
                 env=env,
             )
-            self.continue_to_exit()
+            self.verify_process_exited()
 
             # check stdout
             stdout_text = stdout.read()
@@ -172,14 +174,14 @@ class DAP_launchIO(lldbdap_testcase.DAPTestCaseBase):
         env = {"FROM_ENV": env_text} if with_env else {}
 
         with NamedTemporaryFile("rt") as stderr:
-            self.launch(
+            self.launch_and_configurationDone(
                 program,
                 stdio=[None, None, stderr.name],
                 console=console,
                 args=program_args,
                 env=env,
             )
-            self.continue_to_exit()
+            self.verify_process_exited()
             stdout_text = self._get_debuggee_stdout()
             stderr_text = stderr.read()
             if with_env:

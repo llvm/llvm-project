@@ -1,0 +1,148 @@
+// RUN: cir-opt %s -verify-diagnostics -split-input-file
+
+!u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
+!void = !cir.void
+
+module {
+
+cir.global "private" constant external @_ZTIi : !cir.ptr<!u8i>
+cir.global "private" constant external @_ZTIPKc : !cir.ptr<!u8i>
+
+cir.func @eh_dispatch_no_default(%eh_token: !cir.eh_token) {
+  // expected-error @+5 {{must have either 'catch_all' or 'unwind' handler}}
+  cir.eh.dispatch %eh_token : !cir.eh_token [
+    catch(#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>) : ^bb1,
+    catch(#cir.global_view<@_ZTIPKc> : !cir.ptr<!u8i>) : ^bb2
+  ]
+^bb1:
+  cir.return
+^bb2:
+  cir.return
+}
+
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
+!void = !cir.void
+
+module {
+
+cir.global "private" constant external @_ZTIi : !cir.ptr<!u8i>
+cir.global "private" constant external @_ZTIPKc : !cir.ptr<!u8i>
+
+cir.func @eh_dispatch_catch_all_and_unwind(%eh_token: !cir.eh_token) {
+  // expected-error @+5 {{cannot have both 'catch_all' and 'unwind'}}
+  cir.eh.dispatch %eh_token : !cir.eh_token [
+    catch(#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>) : ^bb1,
+    catch(#cir.global_view<@_ZTIPKc> : !cir.ptr<!u8i>) : ^bb2,
+    catch_all : ^bb3,
+    unwind : ^bb4
+  ]
+^bb1:
+  cir.return
+^bb2:
+  cir.return
+^bb3:
+  cir.return
+^bb4:
+  cir.resume
+}
+
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
+!void = !cir.void
+
+module {
+
+cir.global "private" constant external @_ZTIi : !cir.ptr<!u8i>
+cir.global "private" constant external @_ZTIPKc : !cir.ptr<!u8i>
+
+cir.func @eh_dispatch_unwind_and_catch_all(%eh_token: !cir.eh_token) {
+  // expected-error @+5 {{cannot have both 'catch_all' and 'unwind'}}
+  cir.eh.dispatch %eh_token : !cir.eh_token [
+    catch(#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>) : ^bb1,
+    catch(#cir.global_view<@_ZTIPKc> : !cir.ptr<!u8i>) : ^bb2,
+    unwind : ^bb3,
+    catch_all : ^bb4
+  ]
+^bb1:
+  cir.return
+^bb2:
+  cir.return
+^bb3:
+  cir.resume
+^bb4:
+  cir.return
+}
+
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
+!void = !cir.void
+
+module {
+
+cir.global "private" constant external @_ZTIi : !cir.ptr<!u8i>
+cir.global "private" constant external @_ZTIPKc : !cir.ptr<!u8i>
+
+cir.func @eh_dispatch_duplicate_unwind(%eh_token: !cir.eh_token) {
+  // expected-error @+5 {{duplicate 'unwind' handler}}
+  cir.eh.dispatch %eh_token : !cir.eh_token [
+    catch(#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>) : ^bb1,
+    catch(#cir.global_view<@_ZTIPKc> : !cir.ptr<!u8i>) : ^bb2,
+    unwind : ^bb3,
+    unwind : ^bb4
+  ]
+^bb1:
+  cir.return
+^bb2:
+  cir.return
+^bb3:
+  cir.resume
+^bb4:
+  cir.resume
+}
+
+}
+
+// -----
+
+!u8i = !cir.int<u, 8>
+!s32i = !cir.int<s, 32>
+!void = !cir.void
+
+module {
+
+cir.global "private" constant external @_ZTIi : !cir.ptr<!u8i>
+cir.global "private" constant external @_ZTIPKc : !cir.ptr<!u8i>
+
+cir.func @eh_dispatch_duplicate_catch_all(%eh_token: !cir.eh_token) {
+  // expected-error @+5 {{duplicate 'catch_all' handler}}
+  cir.eh.dispatch %eh_token : !cir.eh_token [
+    catch(#cir.global_view<@_ZTIi> : !cir.ptr<!u8i>) : ^bb1,
+    catch(#cir.global_view<@_ZTIPKc> : !cir.ptr<!u8i>) : ^bb2,
+    catch_all : ^bb3,
+    catch_all : ^bb4
+  ]
+^bb1:
+  cir.return
+^bb2:
+  cir.return
+^bb3:
+  cir.return
+^bb4:
+  cir.return
+}
+
+}

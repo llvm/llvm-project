@@ -814,7 +814,7 @@ Interpreter::VerifyArithmeticCast(CompilerType source_type,
                                   CompilerType target_type, int location) {
   if (source_type.IsPointerType() || source_type.IsNullPtrType()) {
     // Cast from pointer to float/double is not allowed.
-    if (target_type.IsFloatingPointType()) {
+    if (target_type.GetTypeInfo() & lldb::eTypeIsFloat) {
       std::string errMsg = llvm::formatv("Cast from {0} to {1} is not allowed",
                                          source_type.TypeDescription(),
                                          target_type.TypeDescription());
@@ -951,7 +951,8 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode &node) {
 
   switch (cast_kind) {
   case CastKind::eEnumeration: {
-    if (op_type.IsFloatingPointType() || op_type.IsInteger() ||
+    // FIXME: is this correct for float vector types?
+    if (op_type.GetTypeInfo() & lldb::eTypeIsFloat || op_type.IsInteger() ||
         op_type.IsEnumerationType())
       return operand->CastToEnumType(target_type);
     break;

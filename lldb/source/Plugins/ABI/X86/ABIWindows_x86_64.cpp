@@ -572,7 +572,8 @@ static bool FlattenAggregateType(
     const uint32_t field_type_flags = field_compiler_type.GetTypeInfo();
     if (field_compiler_type.IsIntegerOrEnumerationType(is_signed) ||
         field_compiler_type.IsPointerType() ||
-        field_compiler_type.IsFloatingPointType()) {
+        // FIXME: is this correct for complex floats or float vector types?
+        field_type_flags & eTypeIsFloat) {
       aggregate_field_offsets.push_back(field_byte_offset);
       aggregate_compiler_types.push_back(field_compiler_type);
     } else if (field_type_flags & eTypeHasChildren) {
@@ -679,7 +680,8 @@ ValueObjectSP ABIWindows_x86_64::GetReturnValueObjectImpl(
       uint32_t copy_from_offset = 0;
       if (field_compiler_type.IsIntegerOrEnumerationType(is_signed) ||
           field_compiler_type.IsPointerType() ||
-          field_compiler_type.IsFloatingPointType()) {
+          // FIXME: is this correct for complex floats or float vector types?
+          field_compiler_type.GetTypeInfo() & eTypeIsFloat) {
         copy_from_extractor = &rax_data;
         copy_from_offset = used_bytes;
         used_bytes += field_byte_width;
