@@ -248,7 +248,7 @@ define <4 x i32> @shuf_icmp_eq_v4i64_v4i32_mismatch_type(<4 x i64> %x, <4 x i64>
   ret <4 x i32> %r
 }
 
-; Multi-use test - fold benaviour depends on enabled extensions
+; Multi-use test - folding depends on enabled extensions
 
 define <4 x i32> @shuf_icmp_ugt_v4i32_use(<4 x i32> %x, <4 x i32> %y, <4 x i32> %z, <4 x i32> %w) {
 ; SSE-LABEL: define <4 x i32> @shuf_icmp_ugt_v4i32_use(
