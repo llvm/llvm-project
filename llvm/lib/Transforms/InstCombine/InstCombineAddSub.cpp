@@ -22,6 +22,7 @@
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Instruction.h"
 #include "llvm/IR/Instructions.h"
+#include "llvm/IR/MDBuilder.h"
 #include "llvm/IR/Operator.h"
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/IR/Type.h"
@@ -2504,12 +2505,24 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
 
   if (Constant *C = dyn_cast<Constant>(Op0)) {
     Value *X;
-    if (match(Op1, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1))
+    if (match(Op1, m_ZExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)) {
       // C - (zext bool) --> bool ? C - 1 : C
-      return SelectInst::Create(X, InstCombiner::SubOne(C), C);
-    if (match(Op1, m_SExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1))
+      SelectInst *SI = SelectInst::Create(X, InstCombiner::SubOne(C), C);
+      if (!ProfcheckDisableMetadataFixes && I.getFunction()->hasProfileData()) {
+        MDBuilder MDB(I.getContext());
+        SI->setMetadata(LLVMContext::MD_prof, MDB.createBranchWeights(1, 1));
+      }
+      return SI;
+    }
+    if (match(Op1, m_SExt(m_Value(X))) && X->getType()->isIntOrIntVectorTy(1)) {
       // C - (sext bool) --> bool ? C + 1 : C
-      return SelectInst::Create(X, InstCombiner::AddOne(C), C);
+      SelectInst *SI = SelectInst::Create(X, InstCombiner::AddOne(C), C);
+      if (!ProfcheckDisableMetadataFixes && I.getFunction()->hasProfileData()) {
+        MDBuilder MDB(I.getContext());
+        SI->setMetadata(LLVMContext::MD_prof, MDB.createBranchWeights(1, 1));
+      }
+      return SI;
+    }
 
     // C - ~X == X + (1+C)
     if (match(Op1, m_Not(m_Value(X))))

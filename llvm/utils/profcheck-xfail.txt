@@ -261,7 +261,6 @@ Transforms/InstCombine/wcslen-3.ll
 Transforms/InstCombine/X86/x86-avx512-inseltpoison.ll
 Transforms/InstCombine/X86/x86-avx512.ll
 Transforms/InstCombine/xor-and-or.ll
-Transforms/InstCombine/zext-bool-add-sub.ll
 Transforms/IROutliner/alloca-addrspace-1.ll
 Transforms/IROutliner/alloca-addrspace.ll
 Transforms/IROutliner/different-intrinsics.ll
