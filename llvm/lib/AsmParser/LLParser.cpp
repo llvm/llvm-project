@@ -428,6 +428,9 @@ bool LLParser::validateEndOfModule(bool UpgradeDebugInfo) {
       N.second->resolveCycles();
   }
 
+  DISubprogram::cleanupRetainedNodes(NewDistinctSPs);
+  NewDistinctSPs.clear();
+
   for (auto *Inst : InstsWithTBAATag) {
     MDNode *MD = Inst->getMetadata(LLVMContext::MD_tbaa);
     // With incomplete IR, the tbaa metadata may have been dropped.
@@ -6042,6 +6045,10 @@ bool LLParser::parseDISubprogram(MDNode *&Result, bool IsDistinct) {
        thisAdjustment.Val, flags.Val, SPFlags, unit.Val, templateParams.Val,
        declaration.Val, retainedNodes.Val, thrownTypes.Val, annotations.Val,
        targetFuncName.Val, keyInstructions.Val));
+
+  if (IsDistinct)
+    NewDistinctSPs.push_back(cast<DISubprogram>(Result));
+
   return false;
 }
 

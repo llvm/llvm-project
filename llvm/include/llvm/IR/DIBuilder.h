@@ -49,7 +49,7 @@ namespace llvm {
 
     DICompileUnit *CUNode; ///< The one compile unit created by this DIBuiler.
 
-    SmallVector<TrackingMDNodeRef, 4> AllEnumTypes;
+    SmallVector<TrackingMDNodeRef, 4> EnumTypes;
     /// Track the RetainTypes, since they can be updated later on.
     SmallVector<TrackingMDNodeRef, 4> AllRetainTypes;
     SmallVector<DISubprogram *, 4> AllSubprograms;
@@ -64,8 +64,8 @@ namespace llvm {
     SmallVector<TrackingMDNodeRef, 4> UnresolvedNodes;
     bool AllowUnresolvedNodes;
 
-    /// Each subprogram's preserved local variables, labels and imported
-    /// entities.
+    /// Each subprogram's preserved local variables, labels, imported entities,
+    /// and types.
     ///
     /// Do not use a std::vector.  Some versions of libc++ apparently copy
     /// instead of move on grow operations, and TrackingMDRef is expensive to
