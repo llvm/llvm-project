@@ -129,8 +129,10 @@ add_header_library(
     .writer
     libc.include.inttypes
     libc.hdr.limits_macros
+    libc.src.string.string_length
     libc.src.__support.big_int
     libc.src.__support.common
+    libc.src.__support.CPP.algorithm
     libc.src.__support.CPP.limits
     libc.src.__support.CPP.span
     libc.src.__support.CPP.string_view
