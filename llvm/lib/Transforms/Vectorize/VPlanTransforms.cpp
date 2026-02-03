@@ -223,7 +223,7 @@ canHoistOrSinkWithNoAliasCheck(const MemoryLocation &MemLoc,
 
       // For reads, check if they don't alias in the reverse direction and
       // skip if so.
-      if (CheckReads && R.mayReadFromMemory() &&
+      if (!(CheckReads && R.mayReadFromMemory()) ||
           !ScopedNoAliasAAResult::mayAliasInScopes(Loc->AATags.Scope,
                                                    MemAA.NoAlias))
         continue;
