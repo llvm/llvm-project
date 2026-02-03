@@ -50,8 +50,6 @@ SMEAttrs::SMEAttrs(const AttributeList &Attrs) {
     Bitmask |= SM_Body;
   if (Attrs.hasFnAttr("aarch64_za_state_agnostic"))
     Bitmask |= ZA_State_Agnostic;
-  if (Attrs.hasFnAttr("aarch64_zt0_undef"))
-    Bitmask |= ZT0_Undef;
   if (Attrs.hasFnAttr("aarch64_in_za"))
     Bitmask |= encodeZAState(StateValue::In);
   if (Attrs.hasFnAttr("aarch64_out_za"))
@@ -133,8 +131,7 @@ SMECallAttrs::SMECallAttrs(const CallBase &CB,
 
   // FIXME: We probably should not allow SME attributes on direct calls but
   // clang duplicates streaming mode attributes at each callsite.
-  assert((IsIndirect ||
-          ((Callsite.withoutPerCallsiteFlags() | CalledFn) == CalledFn)) &&
+  assert((IsIndirect || ((Callsite | CalledFn) == CalledFn)) &&
          "SME attributes at callsite do not match declaration");
 
   // An `invoke` of an agnostic ZA function may not return normally (it may
