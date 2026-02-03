@@ -6868,7 +6868,8 @@ bool CodeGenPrepare::splitLargeGEPOffsets() {
           NewBaseInsertPt = NewBaseInsertBB->getFirstInsertionPt();
         else if (InvokeInst *Invoke = dyn_cast<InvokeInst>(BaseI)) {
           NewBaseInsertBB =
-              SplitEdge(NewBaseInsertBB, Invoke->getNormalDest(), &getDT(*NewBaseInsertBB->getParent()), LI);
+              SplitEdge(NewBaseInsertBB, Invoke->getNormalDest(),
+                        &getDT(*NewBaseInsertBB->getParent()), LI);
           NewBaseInsertPt = NewBaseInsertBB->getFirstInsertionPt();
         } else
           NewBaseInsertPt = std::next(BaseI->getIterator());
