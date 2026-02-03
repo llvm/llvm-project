@@ -35,8 +35,12 @@ namespace clang::tidy {
 // NoLintType
 //===----------------------------------------------------------------------===//
 
+namespace {
+
 // The type - one of NOLINT[NEXTLINE/BEGIN/END].
 enum class NoLintType { NoLint, NoLintNextLine, NoLintBegin, NoLintEnd };
+
+} // namespace
 
 // Convert a string like "NOLINTNEXTLINE" to its enum `Type::NoLintNextLine`.
 // Return `std::nullopt` if the string is unrecognized.

@@ -22,8 +22,22 @@ def vector_select_to_faceforward_lowering : GICombineRule <
   (apply [{ Helper.applySPIRVFaceForward(*${root}); }])
 >;
 
+def matrix_transpose_lowering
+    : GICombineRule<(defs root:$root),
+                    (match (wip_match_opcode G_INTRINSIC):$root,
+                        [{ return Helper.matchMatrixTranspose(*${root}); }]),
+                    (apply [{ Helper.applyMatrixTranspose(*${root}); }])>;
+
+def matrix_multiply_lowering
+    : GICombineRule<(defs root:$root),
+                    (match (wip_match_opcode G_INTRINSIC):$root,
+                        [{ return Helper.matchMatrixMultiply(*${root}); }]),
+                    (apply [{ Helper.applyMatrixMultiply(*${root}); }])>;
+
 def SPIRVPreLegalizerCombiner
     : GICombiner<"SPIRVPreLegalizerCombinerImpl",
-                       [vector_length_sub_to_distance_lowering, vector_select_to_faceforward_lowering]> {
-    let CombineAllMethodName = "tryCombineAllImpl";
+                 [vector_length_sub_to_distance_lowering,
+                  vector_select_to_faceforward_lowering,
+                  matrix_transpose_lowering, matrix_multiply_lowering]> {
+  let CombineAllMethodName = "tryCombineAllImpl";
 }

@@ -533,24 +533,39 @@ def Dangling : DiagGroup<"dangling", [DanglingAssignment,
                                       DanglingGsl,
                                       ReturnStackAddress]>;
 
-def LifetimeSafetyPermissive : DiagGroup<"experimental-lifetime-safety-permissive">;
-def LifetimeSafetyStrict : DiagGroup<"experimental-lifetime-safety-strict">;
-def LifetimeSafety : DiagGroup<"experimental-lifetime-safety",
-                               [LifetimeSafetyPermissive, LifetimeSafetyStrict]> {
+def LifetimeSafetyDanglingField : DiagGroup<"lifetime-safety-dangling-field"> {
   code Documentation = [{
-    Experimental warnings to detect use-after-free and related temporal safety bugs based on lifetime safety analysis.
+    Warning to detect dangling field references.
   }];
 }
+
+def LifetimeSafetyPermissive : DiagGroup<"lifetime-safety-permissive",
+                                         [LifetimeSafetyDanglingField]>;
+def LifetimeSafetyStrict : DiagGroup<"lifetime-safety-strict">;
+
+def LifetimeSafety : DiagGroup<"lifetime-safety",
+                               [LifetimeSafetyPermissive, LifetimeSafetyStrict]> {
+  code Documentation = [{
+    Warnings to detect use-after-free and related temporal safety bugs based on lifetime safety analysis.
+  }];
+}
+
 def LifetimeSafetyCrossTUSuggestions
-    : DiagGroup<"experimental-lifetime-safety-cross-tu-suggestions">;
+    : DiagGroup<"lifetime-safety-cross-tu-suggestions">;
 def LifetimeSafetyIntraTUSuggestions
-    : DiagGroup<"experimental-lifetime-safety-intra-tu-suggestions">;
+    : DiagGroup<"lifetime-safety-intra-tu-suggestions">;
 def LifetimeSafetySuggestions
-    : DiagGroup<"experimental-lifetime-safety-suggestions",
+    : DiagGroup<"lifetime-safety-suggestions",
                 [LifetimeSafetyCrossTUSuggestions,
                  LifetimeSafetyIntraTUSuggestions]> {
   code Documentation = [{
     Lifetime annotation suggestions for function parameters that should be marked [[clang::lifetimebound]] based on lifetime analysis.
+  }];
+}
+def LifetimeSafetyNoescape
+    : DiagGroup<"lifetime-safety-noescape"> {
+  code Documentation = [{
+    Detects misuse of [[clang::noescape]] annotation where the parameter escapes (for example, through return).
   }];
 }
 
@@ -1774,7 +1789,9 @@ def ReadOnlyPlacementChecks : DiagGroup<"read-only-types">;
 def UnsafeBufferUsageInContainer : DiagGroup<"unsafe-buffer-usage-in-container">;
 def UnsafeBufferUsageInLibcCall : DiagGroup<"unsafe-buffer-usage-in-libc-call">;
 def UnsafeBufferUsageInUniquePtrArrayAccess : DiagGroup<"unsafe-buffer-usage-in-unique-ptr-array-access">;
-def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInContainer, UnsafeBufferUsageInLibcCall, UnsafeBufferUsageInUniquePtrArrayAccess]>;
+def UnsafeBufferUsageInStaticSizedArray : DiagGroup<"unsafe-buffer-usage-in-static-sized-array">;
+def UnsafeBufferUsageInFormatAttrCall : DiagGroup<"unsafe-buffer-usage-in-format-attr-call">;
+def UnsafeBufferUsage : DiagGroup<"unsafe-buffer-usage", [UnsafeBufferUsageInContainer, UnsafeBufferUsageInLibcCall, UnsafeBufferUsageInUniquePtrArrayAccess, UnsafeBufferUsageInStaticSizedArray, UnsafeBufferUsageInFormatAttrCall]>;
 
 // Warnings and notes InstallAPI verification.
 def InstallAPIViolation : DiagGroup<"installapi-violation">;
@@ -1788,6 +1805,15 @@ def ExtractAPIMisuse : DiagGroup<"extractapi-misuse">;
 // Warnings about using the non-standard extension having an explicit specialization
 // with a storage class specifier.
 def ExplicitSpecializationStorageClass : DiagGroup<"explicit-specialization-storage-class">;
+
+// Warnings related to the simdlen intrinsic
+def SIMDLen : DiagGroup<"simdlen">;
+
+// Warnings related to PGO coverage limitations
+def PGOCoverage : DiagGroup<"pgo-coverage">;
+
+// Warnings related to -ftrivial-auto-var-init
+def TrivialAutoVarInit : DiagGroup<"trivial-auto-var-init">;
 
 // A warning for options that enable a feature that is not yet complete
 def ExperimentalOption : DiagGroup<"experimental-option">;

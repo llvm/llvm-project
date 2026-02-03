@@ -1084,11 +1084,11 @@ EmitSchedule(MachineBasicBlock::iterator &InsertPos) {
       // The DBG_VALUE was referencing a value produced by a terminator. By
       // moving the DBG_VALUE, the referenced value also needs invalidating.
       if (MI.isDebugValueList()) {
-        for (auto &Op : MI.operands())
+        for (MachineOperand &Op : MI.operands())
           if (Op.isReg())
-            Op.ChangeToRegister(0, false);
+            Op.ChangeToRegister(Register(), false);
       } else {
-        MI.getOperand(0).ChangeToRegister(0, false);
+        MI.getOperand(0).ChangeToRegister(Register(), false);
       }
       MI.moveBefore(&*FirstTerm);
     }

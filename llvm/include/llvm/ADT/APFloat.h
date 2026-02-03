@@ -407,6 +407,11 @@ public:
   /// Returns the size of the floating point number (in bits) in the given
   /// semantics.
   LLVM_ABI static unsigned getSizeInBits(const fltSemantics &Sem);
+
+  /// Returns true if the given string is a valid arbitrary floating-point
+  /// format interpretation for llvm.convert.to.arbitrary.fp and
+  /// llvm.convert.from.arbitrary.fp intrinsics.
+  LLVM_ABI static bool isValidArbitraryFPFormat(StringRef Format);
 };
 
 namespace detail {
@@ -934,6 +939,82 @@ LLVM_ABI DoubleAPFloat scalbn(const DoubleAPFloat &Arg, int Exp,
 LLVM_ABI DoubleAPFloat frexp(const DoubleAPFloat &X, int &Exp, roundingMode);
 
 } // End detail namespace
+
+// How the nonfinite values Inf and NaN are represented.
+enum class fltNonfiniteBehavior {
+  // Represents standard IEEE 754 behavior. A value is nonfinite if the
+  // exponent field is all 1s. In such cases, a value is Inf if the
+  // significand bits are all zero, and NaN otherwise
+  IEEE754,
+
+  // This behavior is present in the Float8ExMyFN* types (Float8E4M3FN,
+  // Float8E5M2FNUZ, Float8E4M3FNUZ, and Float8E4M3B11FNUZ). There is no
+  // representation for Inf, and operations that would ordinarily produce Inf
+  // produce NaN instead.
+  // The details of the NaN representation(s) in this form are determined by the
+  // `fltNanEncoding` enum. We treat all NaNs as quiet, as the available
+  // encodings do not distinguish between signalling and quiet NaN.
+  NanOnly,
+
+  // This behavior is present in Float6E3M2FN, Float6E2M3FN, and
+  // Float4E2M1FN types, which do not support Inf or NaN values.
+  FiniteOnly,
+};
+
+// How NaN values are represented. This is curently only used in combination
+// with fltNonfiniteBehavior::NanOnly, and using a variant other than IEEE
+// while having IEEE non-finite behavior is liable to lead to unexpected
+// results.
+enum class fltNanEncoding {
+  // Represents the standard IEEE behavior where a value is NaN if its
+  // exponent is all 1s and the significand is non-zero.
+  IEEE,
+
+  // Represents the behavior in the Float8E4M3FN floating point type where NaN
+  // is represented by having the exponent and mantissa set to all 1s.
+  // This behavior matches the FP8 E4M3 type described in
+  // https://arxiv.org/abs/2209.05433. We treat both signed and unsigned NaNs
+  // as non-signalling, although the paper does not state whether the NaN
+  // values are signalling or not.
+  AllOnes,
+
+  // Represents the behavior in Float8E{5,4}E{2,3}FNUZ floating point types
+  // where NaN is represented by a sign bit of 1 and all 0s in the exponent
+  // and mantissa (i.e. the negative zero encoding in a IEEE float). Since
+  // there is only one NaN value, it is treated as quiet NaN. This matches the
+  // behavior described in https://arxiv.org/abs/2206.02915 .
+  NegativeZero,
+};
+/* Represents floating point arithmetic semantics.  */
+struct fltSemantics {
+  /* The largest E such that 2^E is representable; this matches the
+     definition of IEEE 754.  */
+  APFloatBase::ExponentType maxExponent;
+
+  /* The smallest E such that 2^E is a normalized number; this
+     matches the definition of IEEE 754.  */
+  APFloatBase::ExponentType minExponent;
+
+  /* Number of bits in the significand.  This includes the integer
+     bit.  */
+  unsigned int precision;
+
+  /* Number of bits actually used in the semantics. */
+  unsigned int sizeInBits;
+
+  fltNonfiniteBehavior nonFiniteBehavior = fltNonfiniteBehavior::IEEE754;
+
+  fltNanEncoding nanEncoding = fltNanEncoding::IEEE;
+
+  /* Whether this semantics has an encoding for Zero */
+  bool hasZero = true;
+
+  /* Whether this semantics can represent signed values */
+  bool hasSignedRepr = true;
+
+  /* Whether the sign bit of this semantics is the most significant bit */
+  bool hasSignBitInMSB = true;
+};
 
 // This is a interface class that is currently forwarding functionalities from
 // detail::IEEEFloat.

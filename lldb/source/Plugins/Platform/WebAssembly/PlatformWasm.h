@@ -12,10 +12,11 @@
 #include "lldb/Host/Host.h"
 #include "lldb/Host/HostInfo.h"
 #include "lldb/Target/Platform.h"
+#include "lldb/Target/RemoteAwarePlatform.h"
 
 namespace lldb_private {
 
-class PlatformWasm : public Platform {
+class PlatformWasm : public RemoteAwarePlatform {
 public:
   static void Initialize();
   static void Terminate();
@@ -40,22 +41,9 @@ public:
                                Status &error) override;
 
   lldb::ProcessSP Attach(ProcessAttachInfo &attach_info, Debugger &debugger,
-                         Target *target, Status &status) override {
-    status = Status::FromErrorString("Not supported");
-    return nullptr;
-  }
+                         Target *target, Status &status) override;
 
-  uint32_t FindProcesses(const ProcessInstanceInfoMatch &match_info,
-                         ProcessInstanceInfoList &proc_infos) override {
-    return 0;
-  }
-
-  bool GetProcessInfo(lldb::pid_t pid,
-                      ProcessInstanceInfo &proc_info) override {
-    return false;
-  }
-
-  bool IsConnected() const override { return true; }
+  Status ConnectRemote(Args &args) override;
 
   void CalculateTrapHandlerSymbolNames() override {}
 
@@ -71,7 +59,7 @@ private:
   static lldb::PlatformSP CreateInstance(bool force, const ArchSpec *arch);
   static void DebuggerInitialize(Debugger &debugger);
 
-  PlatformWasm() : Platform(/*is_host=*/true) {}
+  PlatformWasm() : RemoteAwarePlatform(/*is_host=*/false) {}
 };
 
 } // namespace lldb_private

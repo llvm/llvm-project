@@ -5736,6 +5736,20 @@ option.
     }];
 }
 
+def StackProtectorIgnoreDocs : Documentation {
+  let Category = DocCatFunction;
+  let Content = [{
+The ``stack_protector_ignore`` attribute skips analysis of the given local
+variable when determining if a function should use a stack protector.
+
+The ``-fstack-protector`` option uses a heuristic to only add stack protectors
+to functions which contain variables or buffers over some size threshold.  This
+attribute overrides that heuristic for the attached variable, opting
+them out.  If this results in no variables or buffers remaining over the stack
+protector threshold, then the function will no longer use a stack protector.
+  }];
+}
+
 def StrictGuardStackCheckDocs : Documentation {
   let Category = DocCatFunction;
   let Content = [{
@@ -6749,7 +6763,7 @@ if omitted.``Section`` defaults  to the ``-fpatchable-function-entry`` section n
 set, or to ``__patchable_function_entries`` otherwise.
 
 This attribute is only supported on
-aarch64/aarch64-be/loongarch32/loongarch64/riscv32/riscv64/i386/x86-64/ppc/ppc64/ppc64le targets.
+aarch64/aarch64-be/loongarch32/loongarch64/riscv32/riscv64/i386/x86-64/ppc/ppc64/ppc64le/s390x targets.
 For ppc/ppc64 targets, AIX is still not supported.
 }];
 }
@@ -7065,7 +7079,9 @@ def CFIUncheckedCalleeDocs : Documentation {
   let Content = [{
 ``cfi_unchecked_callee`` is a function type attribute which prevents the compiler from instrumenting
 `Control Flow Integrity <https://clang.llvm.org/docs/ControlFlowIntegrity.html>`_ checks on indirect
-function calls. Specifically, the attribute has the following semantics:
+function calls. This also includes control flow checks added by
+`-fsanitize=function <https://clang.llvm.org/docs/UndefinedBehaviorSanitizer.html#available-checks>`.
+Specifically, the attribute has the following semantics:
 
 1. Indirect calls to a function type with this attribute will not be instrumented with CFI. That is,
    the indirect call will not be checked. Note that this only changes the behavior for indirect calls
@@ -7662,6 +7678,46 @@ When the Owner's lifetime ends, it will consider the Pointer to be dangling.
     IntPointer P(IntOwner{}); // P "points into" a temporary IntOwner object
     P.getInt(); // P is dangling
   }
+
+**Transparent Member Functions**
+
+The analysis automatically tracks certain member functions of ``[[gsl::Pointer]]`` types
+that provide transparent access to the pointed-to object. These include:
+
+* Dereference operators: ``operator*``, ``operator->``
+* Data access methods: ``data()``, ``c_str()``, ``get()``
+* Iterator methods: ``begin()``, ``end()``, ``rbegin()``, ``rend()``, ``cbegin()``, ``cend()``, ``crbegin()``, ``crend()``
+
+When these methods return pointers, view types, or references, the analysis treats them as
+transparently borrowing from the same object that the pointer itself borrows from,
+enabling detection of use-after-free through these access patterns:
+
+.. code-block:: c++
+
+  // For example, .data() here returns a borrow to 's' instead of 'v'.
+  const char* f() {
+    std::string s = "hello";
+    std::string_view v = s; // warning: address of stack memory returned
+    return v.data();        // note: returned here
+  }
+
+  const MyObj& g(MyObj obj) {
+    View v = obj; // warning: address of stack memory returned
+    return *v;    // note: returned here
+  }
+
+This tracking also applies to range-based for loops, where the ``begin()`` and ``end()``
+iterators are used to access elements:
+
+.. code-block:: c++
+
+  std::string_view f(std::vector<std::string> vec) {
+    for (const std::string& s : vec) {  // warning: address of stack memory returned
+      return s; // note: returned here
+    }
+  }
+
+**Container Template Specialization**
 
 If a template class is annotated with ``[[gsl::Owner]]``, and the first
 instantiated template argument is a pointer type (raw pointer, or ``[[gsl::Pointer]]``),

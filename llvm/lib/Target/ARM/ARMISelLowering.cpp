@@ -939,6 +939,14 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setIndexedStoreAction(ISD::POST_INC, MVT::i32,  Legal);
   }
 
+  // Custom loads/stores to possible use __aeabi_uread/write*
+  if (Subtarget->isTargetAEABI() && !Subtarget->allowsUnalignedMem()) {
+    setOperationAction(ISD::STORE, MVT::i32, Custom);
+    setOperationAction(ISD::STORE, MVT::i64, Custom);
+    setOperationAction(ISD::LOAD, MVT::i32, Custom);
+    setOperationAction(ISD::LOAD, MVT::i64, Custom);
+  }
+
   setOperationAction(ISD::SADDO, MVT::i32, Custom);
   setOperationAction(ISD::UADDO, MVT::i32, Custom);
   setOperationAction(ISD::SSUBO, MVT::i32, Custom);
@@ -1262,7 +1270,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
   setOperationAction(ISD::FSINCOS, MVT::f32, Expand);
 
   // FP-ARMv8 implements a lot of rounding-like FP operations.
-  if (Subtarget->hasFPARMv8Base()) {    
+  if (Subtarget->hasFPARMv8Base()) {
     for (auto Op :
          {ISD::FFLOOR,            ISD::FCEIL,             ISD::FROUND,
           ISD::FTRUNC,            ISD::FNEARBYINT,        ISD::FRINT,
@@ -1290,7 +1298,7 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     setOperationAction(ISD::LRINT, MVT::f16, Expand);
     setOperationAction(ISD::LROUND, MVT::f16, Expand);
     setOperationAction(ISD::FCOPYSIGN, MVT::f16, Expand);
-  
+
     for (auto Op : {ISD::FREM,          ISD::FPOW,         ISD::FPOWI,
                   ISD::FCOS,          ISD::FSIN,         ISD::FSINCOS,
                   ISD::FSINCOSPI,     ISD::FMODF,        ISD::FACOS,
@@ -1312,11 +1320,11 @@ ARMTargetLowering::ARMTargetLowering(const TargetMachine &TM_,
     // because the result type is integer.
     for (auto Op : {ISD::STRICT_LROUND, ISD::STRICT_LLROUND, ISD::STRICT_LRINT, ISD::STRICT_LLRINT})
       setOperationAction(Op, MVT::f16, Custom);
-  
+
     for (auto Op : {ISD::FROUND,         ISD::FROUNDEVEN,        ISD::FTRUNC,
-                    ISD::FNEARBYINT,     ISD::FRINT,             ISD::FFLOOR, 
+                    ISD::FNEARBYINT,     ISD::FRINT,             ISD::FFLOOR,
                     ISD::FCEIL,          ISD::STRICT_FROUND,     ISD::STRICT_FROUNDEVEN,
-                    ISD::STRICT_FTRUNC,  ISD::STRICT_FNEARBYINT, ISD::STRICT_FRINT, 
+                    ISD::STRICT_FTRUNC,  ISD::STRICT_FNEARBYINT, ISD::STRICT_FRINT,
                     ISD::STRICT_FFLOOR,  ISD::STRICT_FCEIL}) {
       setOperationAction(Op, MVT::f16, Legal);
     }
@@ -1551,10 +1559,10 @@ bool ARMTargetLowering::shouldAlignPointerArgs(CallInst *CI, unsigned &MinSize,
 }
 
 // Create a fast isel object.
-FastISel *
-ARMTargetLowering::createFastISel(FunctionLoweringInfo &funcInfo,
-                                  const TargetLibraryInfo *libInfo) const {
-  return ARM::createFastISel(funcInfo, libInfo);
+FastISel *ARMTargetLowering::createFastISel(
+    FunctionLoweringInfo &funcInfo, const TargetLibraryInfo *libInfo,
+    const LibcallLoweringInfo *libcallLowering) const {
+  return ARM::createFastISel(funcInfo, libInfo, libcallLowering);
 }
 
 Sched::Preference ARMTargetLowering::getSchedulingPreference(SDNode *N) const {
@@ -9631,7 +9639,7 @@ SDValue ARMTargetLowering::LowerWindowsDIVLibCall(SDValue Op, SelectionDAG &DAG,
   else
     LC = VT == MVT::i32 ? RTLIB::UDIVREM_I32 : RTLIB::UDIVREM_I64;
 
-  RTLIB::LibcallImpl LCImpl = getLibcallImpl(LC);
+  RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
   SDValue ES = DAG.getExternalSymbol(LCImpl, getPointerTy(DL));
 
   ARMTargetLowering::ArgListTy Args;
@@ -9644,8 +9652,8 @@ SDValue ARMTargetLowering::LowerWindowsDIVLibCall(SDValue Op, SelectionDAG &DAG,
 
   CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl).setChain(Chain).setCallee(
-      getLibcallImplCallingConv(LCImpl), VT.getTypeForEVT(*DAG.getContext()),
-      ES, std::move(Args));
+      DAG.getLibcalls().getLibcallImplCallingConv(LCImpl),
+      VT.getTypeForEVT(*DAG.getContext()), ES, std::move(Args));
 
   return LowerCallTo(CLI).first;
 }
@@ -9737,6 +9745,95 @@ void ARMTargetLowering::ExpandDIV_Windows(
   Results.push_back(DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Lower, Upper));
 }
 
+std::pair<SDValue, SDValue>
+ARMTargetLowering::LowerAEABIUnalignedLoad(SDValue Op,
+                                           SelectionDAG &DAG) const {
+  // If we have an unaligned load from a i32 or i64 that would normally be
+  // split into separate ldrb's, we can use the __aeabi_uread4/__aeabi_uread8
+  // functions instead.
+  LoadSDNode *LD = cast<LoadSDNode>(Op.getNode());
+  EVT MemVT = LD->getMemoryVT();
+  if (MemVT != MVT::i32 && MemVT != MVT::i64)
+    return std::make_pair(SDValue(), SDValue());
+
+  const auto &MF = DAG.getMachineFunction();
+  unsigned AS = LD->getAddressSpace();
+  Align Alignment = LD->getAlign();
+  const DataLayout &DL = DAG.getDataLayout();
+  bool AllowsUnaligned = Subtarget->allowsUnalignedMem();
+
+  if (MF.getFunction().hasMinSize() && !AllowsUnaligned &&
+      Alignment <= llvm::Align(2)) {
+
+    RTLIB::Libcall LC =
+        (MemVT == MVT::i32) ? RTLIB::AEABI_UREAD4 : RTLIB::AEABI_UREAD8;
+
+    MakeLibCallOptions Opts;
+    SDLoc dl(Op);
+
+    auto Pair = makeLibCall(DAG, LC, MemVT.getSimpleVT(), LD->getBasePtr(),
+                            Opts, dl, LD->getChain());
+
+    // If necessary, extend the node to 64bit
+    if (LD->getExtensionType() != ISD::NON_EXTLOAD) {
+      unsigned ExtType = LD->getExtensionType() == ISD::SEXTLOAD
+                             ? ISD::SIGN_EXTEND
+                             : ISD::ZERO_EXTEND;
+      SDValue EN = DAG.getNode(ExtType, dl, LD->getValueType(0), Pair.first);
+      Pair.first = EN;
+    }
+    return Pair;
+  }
+
+  // Default expand to individual loads
+  if (!allowsMemoryAccess(*DAG.getContext(), DL, MemVT, AS, Alignment))
+    return expandUnalignedLoad(LD, DAG);
+  return std::make_pair(SDValue(), SDValue());
+}
+
+SDValue ARMTargetLowering::LowerAEABIUnalignedStore(SDValue Op,
+                                                    SelectionDAG &DAG) const {
+  // If we have an unaligned store to a i32 or i64 that would normally be
+  // split into separate ldrb's, we can use the __aeabi_uwrite4/__aeabi_uwrite8
+  // functions instead.
+  StoreSDNode *ST = cast<StoreSDNode>(Op.getNode());
+  EVT MemVT = ST->getMemoryVT();
+  if (MemVT != MVT::i32 && MemVT != MVT::i64)
+    return SDValue();
+
+  const auto &MF = DAG.getMachineFunction();
+  unsigned AS = ST->getAddressSpace();
+  Align Alignment = ST->getAlign();
+  const DataLayout &DL = DAG.getDataLayout();
+  bool AllowsUnaligned = Subtarget->allowsUnalignedMem();
+
+  if (MF.getFunction().hasMinSize() && !AllowsUnaligned &&
+      Alignment <= llvm::Align(2)) {
+
+    SDLoc dl(Op);
+
+    // If necessary, trunc the value to 32bit
+    SDValue StoreVal = ST->getOperand(1);
+    if (ST->isTruncatingStore())
+      StoreVal = DAG.getNode(ISD::TRUNCATE, dl, MemVT, ST->getOperand(1));
+
+    RTLIB::Libcall LC =
+        (MemVT == MVT::i32) ? RTLIB::AEABI_UWRITE4 : RTLIB::AEABI_UWRITE8;
+
+    MakeLibCallOptions Opts;
+    auto CallResult =
+        makeLibCall(DAG, LC, MVT::isVoid, {StoreVal, ST->getBasePtr()}, Opts,
+                    dl, ST->getChain());
+
+    return CallResult.second;
+  }
+
+  // Default expand to individual stores
+  if (!allowsMemoryAccess(*DAG.getContext(), DL, MemVT, AS, Alignment))
+    return expandUnalignedStore(ST, DAG);
+  return SDValue();
+}
+
 static SDValue LowerPredicateLoad(SDValue Op, SelectionDAG &DAG) {
   LoadSDNode *LD = cast<LoadSDNode>(Op.getNode());
   EVT MemVT = LD->getMemoryVT();
@@ -9779,11 +9876,11 @@ void ARMTargetLowering::LowerLOAD(SDNode *N, SmallVectorImpl<SDValue> &Results,
                                   SelectionDAG &DAG) const {
   LoadSDNode *LD = cast<LoadSDNode>(N);
   EVT MemVT = LD->getMemoryVT();
-  assert(LD->isUnindexed() && "Loads should be unindexed at this point.");
 
   if (MemVT == MVT::i64 && Subtarget->hasV5TEOps() &&
       !Subtarget->isThumb1Only() && LD->isVolatile() &&
       LD->getAlign() >= Subtarget->getDualLoadStoreAlignment()) {
+    assert(LD->isUnindexed() && "Loads should be unindexed at this point.");
     SDLoc dl(N);
     SDValue Result = DAG.getMemIntrinsicNode(
         ARMISD::LDRD, dl, DAG.getVTList({MVT::i32, MVT::i32, MVT::Other}),
@@ -9792,6 +9889,12 @@ void ARMTargetLowering::LowerLOAD(SDNode *N, SmallVectorImpl<SDValue> &Results,
     SDValue Hi = Result.getValue(DAG.getDataLayout().isLittleEndian() ? 1 : 0);
     SDValue Pair = DAG.getNode(ISD::BUILD_PAIR, dl, MVT::i64, Lo, Hi);
     Results.append({Pair, Result.getValue(2)});
+  } else if (MemVT == MVT::i32 || MemVT == MVT::i64) {
+    auto Pair = LowerAEABIUnalignedLoad(SDValue(N, 0), DAG);
+    if (Pair.first) {
+      Results.push_back(Pair.first);
+      Results.push_back(Pair.second);
+    }
   }
 }
 
@@ -9833,15 +9936,15 @@ static SDValue LowerPredicateStore(SDValue Op, SelectionDAG &DAG) {
       ST->getMemOperand());
 }
 
-static SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG,
-                          const ARMSubtarget *Subtarget) {
+SDValue ARMTargetLowering::LowerSTORE(SDValue Op, SelectionDAG &DAG,
+                                      const ARMSubtarget *Subtarget) const {
   StoreSDNode *ST = cast<StoreSDNode>(Op.getNode());
   EVT MemVT = ST->getMemoryVT();
-  assert(ST->isUnindexed() && "Stores should be unindexed at this point.");
 
   if (MemVT == MVT::i64 && Subtarget->hasV5TEOps() &&
       !Subtarget->isThumb1Only() && ST->isVolatile() &&
       ST->getAlign() >= Subtarget->getDualLoadStoreAlignment()) {
+    assert(ST->isUnindexed() && "Stores should be unindexed at this point.");
     SDNode *N = Op.getNode();
     SDLoc dl(N);
 
@@ -9861,8 +9964,9 @@ static SDValue LowerSTORE(SDValue Op, SelectionDAG &DAG,
              ((MemVT == MVT::v2i1 || MemVT == MVT::v4i1 || MemVT == MVT::v8i1 ||
                MemVT == MVT::v16i1))) {
     return LowerPredicateStore(Op, DAG);
+  } else if (MemVT == MVT::i32 || MemVT == MVT::i64) {
+    return LowerAEABIUnalignedStore(Op, DAG);
   }
-
   return SDValue();
 }
 
@@ -10394,8 +10498,19 @@ SDValue ARMTargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
   case ISD::UADDSAT:
   case ISD::USUBSAT:
     return LowerADDSUBSAT(Op, DAG, Subtarget);
-  case ISD::LOAD:
-    return LowerPredicateLoad(Op, DAG);
+  case ISD::LOAD: {
+    auto *LD = cast<LoadSDNode>(Op);
+    EVT MemVT = LD->getMemoryVT();
+    if (Subtarget->hasMVEIntegerOps() &&
+        (MemVT == MVT::v2i1 || MemVT == MVT::v4i1 || MemVT == MVT::v8i1 ||
+         MemVT == MVT::v16i1))
+      return LowerPredicateLoad(Op, DAG);
+
+    auto Pair = LowerAEABIUnalignedLoad(Op, DAG);
+    if (Pair.first)
+      return DAG.getMergeValues({Pair.first, Pair.second}, SDLoc(Pair.first));
+    return SDValue();
+  }
   case ISD::STORE:
     return LowerSTORE(Op, DAG, Subtarget);
   case ISD::MLOAD:
@@ -10535,6 +10650,9 @@ void ARMTargetLowering::ReplaceNodeResults(SDNode *N,
     return ReplaceLongIntrinsic(N, Results, DAG);
   case ISD::LOAD:
     LowerLOAD(N, Results, DAG);
+    break;
+  case ISD::STORE:
+    Res = LowerAEABIUnalignedStore(SDValue(N, 0), DAG);
     break;
   case ISD::TRUNCATE:
     Res = LowerTruncate(N, DAG, Subtarget);
@@ -16929,10 +17047,12 @@ static SDValue PerformVECREDUCE_ADDCombine(SDNode *N, SelectionDAG &DAG,
   auto ExtendIfNeeded = [&](SDValue A, unsigned ExtendCode) {
     EVT AVT = A.getValueType();
     if (!AVT.is128BitVector())
-      A = DAG.getNode(ExtendCode, dl,
-                      AVT.changeVectorElementType(MVT::getIntegerVT(
-                          128 / AVT.getVectorMinNumElements())),
-                      A);
+      A = DAG.getNode(
+          ExtendCode, dl,
+          AVT.changeVectorElementType(
+              *DAG.getContext(),
+              MVT::getIntegerVT(128 / AVT.getVectorMinNumElements())),
+          A);
     return A;
   };
   auto IsVADDV = [&](MVT RetTy, unsigned ExtendCode, ArrayRef<MVT> ExtTypes) {
@@ -19589,30 +19709,44 @@ ARMTargetLowering::getPreIndexedAddressParts(SDNode *N, SDValue &Base,
   EVT VT;
   SDValue Ptr;
   Align Alignment;
+  unsigned AS = 0;
   bool isSEXTLoad = false;
   bool IsMasked = false;
   if (LoadSDNode *LD = dyn_cast<LoadSDNode>(N)) {
     Ptr = LD->getBasePtr();
     VT = LD->getMemoryVT();
     Alignment = LD->getAlign();
+    AS = LD->getAddressSpace();
     isSEXTLoad = LD->getExtensionType() == ISD::SEXTLOAD;
   } else if (StoreSDNode *ST = dyn_cast<StoreSDNode>(N)) {
     Ptr = ST->getBasePtr();
     VT = ST->getMemoryVT();
     Alignment = ST->getAlign();
+    AS = ST->getAddressSpace();
   } else if (MaskedLoadSDNode *LD = dyn_cast<MaskedLoadSDNode>(N)) {
     Ptr = LD->getBasePtr();
     VT = LD->getMemoryVT();
     Alignment = LD->getAlign();
+    AS = LD->getAddressSpace();
     isSEXTLoad = LD->getExtensionType() == ISD::SEXTLOAD;
     IsMasked = true;
   } else if (MaskedStoreSDNode *ST = dyn_cast<MaskedStoreSDNode>(N)) {
     Ptr = ST->getBasePtr();
     VT = ST->getMemoryVT();
     Alignment = ST->getAlign();
+    AS = ST->getAddressSpace();
     IsMasked = true;
   } else
     return false;
+
+  unsigned Fast = 0;
+  if (!allowsMisalignedMemoryAccesses(VT, AS, Alignment,
+                                      MachineMemOperand::MONone, &Fast)) {
+    // Only generate post-increment or pre-increment forms when a real
+    // hardware instruction exists for them. Do not emit postinc/preinc
+    // if the operation will end up as a libcall.
+    return false;
+  }
 
   bool isInc;
   bool isLegal = false;
@@ -20421,13 +20555,14 @@ SDValue ARMTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
 
   RTLIB::Libcall LC = getDivRemLibcall(Op.getNode(),
                                        VT.getSimpleVT().SimpleTy);
+  RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
+
   SDValue InChain = DAG.getEntryNode();
 
   TargetLowering::ArgListTy Args = getDivRemArgList(Op.getNode(),
                                                     DAG.getContext(),
                                                     Subtarget);
 
-  RTLIB::LibcallImpl LCImpl = getLibcallImpl(LC);
   SDValue Callee =
       DAG.getExternalSymbol(LCImpl, getPointerTy(DAG.getDataLayout()));
 
@@ -20439,8 +20574,8 @@ SDValue ARMTargetLowering::LowerDivRem(SDValue Op, SelectionDAG &DAG) const {
   TargetLowering::CallLoweringInfo CLI(DAG);
   CLI.setDebugLoc(dl)
       .setChain(InChain)
-      .setCallee(getLibcallImplCallingConv(LCImpl), RetTy, Callee,
-                 std::move(Args))
+      .setCallee(DAG.getLibcalls().getLibcallImplCallingConv(LCImpl), RetTy,
+                 Callee, std::move(Args))
       .setInRegister()
       .setSExtResult(isSigned)
       .setZExtResult(!isSigned);
@@ -20480,12 +20615,12 @@ SDValue ARMTargetLowering::LowerREM(SDNode *N, SelectionDAG &DAG) const {
 
   RTLIB::Libcall LC = getDivRemLibcall(N, N->getValueType(0).getSimpleVT().
                                                              SimpleTy);
+  RTLIB::LibcallImpl LCImpl = DAG.getLibcalls().getLibcallImpl(LC);
   SDValue InChain = DAG.getEntryNode();
   TargetLowering::ArgListTy Args = getDivRemArgList(N, DAG.getContext(),
                                                     Subtarget);
   bool isSigned = N->getOpcode() == ISD::SREM;
 
-  RTLIB::LibcallImpl LCImpl = getLibcallImpl(LC);
   SDValue Callee =
       DAG.getExternalSymbol(LCImpl, getPointerTy(DAG.getDataLayout()));
 
@@ -20495,8 +20630,8 @@ SDValue ARMTargetLowering::LowerREM(SDNode *N, SelectionDAG &DAG) const {
   // Lower call
   CallLoweringInfo CLI(DAG);
   CLI.setChain(InChain)
-      .setCallee(getLibcallImplCallingConv(LCImpl), RetTy, Callee,
-                 std::move(Args))
+      .setCallee(DAG.getLibcalls().getLibcallImplCallingConv(LCImpl), RetTy,
+                 Callee, std::move(Args))
       .setSExtResult(isSigned)
       .setZExtResult(!isSigned)
       .setDebugLoc(SDLoc(N));
@@ -21040,7 +21175,7 @@ ARMTargetLowering::shouldExpandAtomicLoadInIR(LoadInst *LI) const {
 // For the real atomic operations, we have ldrex/strex up to 32 bits,
 // and up to 64 bits on the non-M profiles
 TargetLowering::AtomicExpansionKind
-ARMTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
+ARMTargetLowering::shouldExpandAtomicRMWInIR(const AtomicRMWInst *AI) const {
   if (AI->isFloatingPointOperation())
     return AtomicExpansionKind::CmpXChg;
 
@@ -21068,7 +21203,8 @@ ARMTargetLowering::shouldExpandAtomicRMWInIR(AtomicRMWInst *AI) const {
 // Similar to shouldExpandAtomicRMWInIR, ldrex/strex can be used  up to 32
 // bits, and up to 64 bits on the non-M profiles.
 TargetLowering::AtomicExpansionKind
-ARMTargetLowering::shouldExpandAtomicCmpXchgInIR(AtomicCmpXchgInst *AI) const {
+ARMTargetLowering::shouldExpandAtomicCmpXchgInIR(
+    const AtomicCmpXchgInst *AI) const {
   // At -O0, fast-regalloc cannot cope with the live vregs necessary to
   // implement cmpxchg without spilling. If the address being exchanged is also
   // on the stack and close enough to the spill slot, this can lead to a
@@ -21098,13 +21234,14 @@ bool ARMTargetLowering::useLoadStackGuardNode(const Module &M) const {
   return !Subtarget->isROPI() && !Subtarget->isRWPI();
 }
 
-void ARMTargetLowering::insertSSPDeclarations(Module &M) const {
+void ARMTargetLowering::insertSSPDeclarations(
+    Module &M, const LibcallLoweringInfo &Libcalls) const {
   // MSVC CRT provides functionalities for stack protection.
   RTLIB::LibcallImpl SecurityCheckCookieLibcall =
-      getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
+      Libcalls.getLibcallImpl(RTLIB::SECURITY_CHECK_COOKIE);
 
   RTLIB::LibcallImpl SecurityCookieVar =
-      getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
+      Libcalls.getLibcallImpl(RTLIB::STACK_CHECK_GUARD);
   if (SecurityCheckCookieLibcall != RTLIB::Unsupported &&
       SecurityCookieVar != RTLIB::Unsupported) {
     // MSVC CRT has a global variable holding security cookie.
@@ -21120,7 +21257,7 @@ void ARMTargetLowering::insertSSPDeclarations(Module &M) const {
       F->addParamAttr(0, Attribute::AttrKind::InReg);
   }
 
-  TargetLowering::insertSSPDeclarations(M);
+  TargetLowering::insertSSPDeclarations(M, Libcalls);
 }
 
 bool ARMTargetLowering::canCombineStoreAndExtract(Type *VectorTy, Value *Idx,

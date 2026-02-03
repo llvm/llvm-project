@@ -2,9 +2,9 @@
 ; RUN: llc --mtriple=riscv64-linux-gnu --mattr=+v,+zvfh,+zvfbfmin < %s | FileCheck %s --check-prefixes=CHECK,ZVFBFMIN,ZVFH
 ; RUN: llc --mtriple=riscv64-linux-gnu --mattr=+v,+zvfhmin,+zfh,+zvfbfmin < %s | FileCheck %s --check-prefixes=CHECK,ZVFBFMIN,ZVFHMIN
 ; RUN: llc -mtriple=riscv32 -mattr=+d,+zvfhmin,+experimental-zvfbfa,+v \
-; RUN:   -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFBFA,ZVFHMIN
+; RUN:   -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFHMIN,ZVFBFA
 ; RUN: llc -mtriple=riscv64 -mattr=+d,+zvfhmin,+experimental-zvfbfa,+v \
-; RUN:   -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFBFA,ZVFHMIN
+; RUN:   -verify-machineinstrs < %s | FileCheck %s --check-prefixes=CHECK,ZVFHMIN,ZVFBFA
 
 define <2 x double> @min_v2f64(<2 x double> %a, <2 x double> %b) {
 ; CHECK-LABEL: min_v2f64:

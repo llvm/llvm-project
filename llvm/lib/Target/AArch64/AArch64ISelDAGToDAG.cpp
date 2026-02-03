@@ -74,8 +74,6 @@ public:
   template <signed Low, signed High>
   bool SelectRDSVLShiftImm(SDValue N, SDValue &Imm);
 
-  bool SelectAddUXTXRegister(SDValue N, SDValue &Reg, SDValue &Shift);
-
   bool SelectArithExtendedRegister(SDValue N, SDValue &Reg, SDValue &Shift);
   bool SelectArithUXTXRegister(SDValue N, SDValue &Reg, SDValue &Shift);
   bool SelectArithImmed(SDValue N, SDValue &Val, SDValue &Shift);
@@ -481,8 +479,13 @@ private:
   bool SelectCVTFixedPosOperand(SDValue N, SDValue &FixedPos) {
     return SelectCVTFixedPosOperand(N, FixedPos, RegWidth);
   }
-
   bool SelectCVTFixedPosOperand(SDValue N, SDValue &FixedPos, unsigned Width);
+
+  template <unsigned RegWidth>
+  bool SelectCVTFixedPointVec(SDValue N, SDValue &FixedPos) {
+    return SelectCVTFixedPointVec(N, FixedPos, RegWidth);
+  }
+  bool SelectCVTFixedPointVec(SDValue N, SDValue &FixedPos, unsigned Width);
 
   template<unsigned RegWidth>
   bool SelectCVTFixedPosRecipOperand(SDValue N, SDValue &FixedPos) {
@@ -959,19 +962,6 @@ bool AArch64DAGToDAGISel::SelectRDSVLShiftImm(SDValue N, SDValue &Imm) {
   }
 
   return false;
-}
-
-/// SelectAddUXTXRegister - Select a "UXTX register" operand. This
-/// operand is referred by the instructions have SP operand
-bool AArch64DAGToDAGISel::SelectAddUXTXRegister(SDValue N, SDValue &Reg,
-                                                SDValue &Shift) {
-  // TODO: Relax condition to apply to more scenarios
-  if (N.getOpcode() != ISD::LOAD)
-    return false;
-  Reg = N;
-  Shift = CurDAG->getTargetConstant(getArithExtendImm(AArch64_AM::UXTX, 0),
-                                    SDLoc(N), MVT::i32);
-  return true;
 }
 
 /// SelectArithExtendedRegister - Select a "extended register" operand.  This
@@ -1994,27 +1984,28 @@ void AArch64DAGToDAGISel::SelectDestructiveMultiIntrinsic(SDNode *N,
 
   SDLoc DL(N);
   EVT VT = N->getValueType(0);
-  unsigned FirstVecIdx = HasPred ? 2 : 1;
+  SDUse *OpsIter = N->op_begin() + 1; // Skip intrinsic ID
+  SmallVector<SDValue, 4> Ops;
 
-  auto GetMultiVecOperand = [=](unsigned StartIdx) {
-    SmallVector<SDValue, 4> Regs(N->ops().slice(StartIdx, NumVecs));
+  auto GetMultiVecOperand = [&]() {
+    SmallVector<SDValue, 4> Regs(OpsIter, OpsIter + NumVecs);
+    OpsIter += NumVecs;
     return createZMulTuple(Regs);
   };
 
-  SDValue Zdn = GetMultiVecOperand(FirstVecIdx);
-
-  SDValue Zm;
-  if (IsZmMulti)
-    Zm = GetMultiVecOperand(NumVecs + FirstVecIdx);
-  else
-    Zm = N->getOperand(NumVecs + FirstVecIdx);
-
-  SDNode *Intrinsic;
   if (HasPred)
-    Intrinsic = CurDAG->getMachineNode(Opcode, DL, MVT::Untyped,
-                                       N->getOperand(1), Zdn, Zm);
+    Ops.push_back(*OpsIter++);
+
+  Ops.push_back(GetMultiVecOperand());
+  if (IsZmMulti)
+    Ops.push_back(GetMultiVecOperand());
   else
-    Intrinsic = CurDAG->getMachineNode(Opcode, DL, MVT::Untyped, Zdn, Zm);
+    Ops.push_back(*OpsIter++);
+
+  // Append any remaining operands.
+  Ops.append(OpsIter, N->op_end());
+  SDNode *Intrinsic;
+  Intrinsic = CurDAG->getMachineNode(Opcode, DL, MVT::Untyped, Ops);
   SDValue SuperReg = SDValue(Intrinsic, 0);
   for (unsigned i = 0; i < NumVecs; ++i)
     ReplaceUses(SDValue(N, i), CurDAG->getTargetExtractSubreg(
@@ -3994,6 +3985,38 @@ bool AArch64DAGToDAGISel::tryShiftAmountMod(SDNode *N) {
   return true;
 }
 
+static unsigned CheckFixedPointOperandConstant(APFloat &FVal, unsigned RegWidth,
+                                               bool isReciprocal) {
+  // An FCVT[SU] instruction performs: convertToInt(Val * 2^fbits) where fbits
+  // is between 1 and 32 for a destination w-register, or 1 and 64 for an
+  // x-register.
+  //
+  // By this stage, we've detected (fp_to_[su]int (fmul Val, THIS_NODE)) so we
+  // want THIS_NODE to be 2^fbits. This is much easier to deal with using
+  // integers.
+  bool IsExact;
+
+  if (isReciprocal)
+    if (!FVal.getExactInverse(&FVal))
+      return 0;
+
+  // fbits is between 1 and 64 in the worst-case, which means the fmul
+  // could have 2^64 as an actual operand. Need 65 bits of precision.
+  APSInt IntVal(65, true);
+  FVal.convertToInteger(IntVal, APFloat::rmTowardZero, &IsExact);
+
+  // N.b. isPowerOf2 also checks for > 0.
+  if (!IsExact || !IntVal.isPowerOf2())
+    return 0;
+  unsigned FBits = IntVal.logBase2();
+
+  // Checks above should have guaranteed that we haven't lost information in
+  // finding FBits, but it must still be in range.
+  if (FBits == 0 || FBits > RegWidth)
+    return 0;
+  return FBits;
+}
+
 static bool checkCVTFixedPointOperandWithFBits(SelectionDAG *CurDAG, SDValue N,
                                                SDValue &FixedPos,
                                                unsigned RegWidth,
@@ -4013,48 +4036,81 @@ static bool checkCVTFixedPointOperandWithFBits(SelectionDAG *CurDAG, SDValue N,
   } else
     return false;
 
-  // An FCVT[SU] instruction performs: convertToInt(Val * 2^fbits) where fbits
-  // is between 1 and 32 for a destination w-register, or 1 and 64 for an
-  // x-register.
-  //
-  // By this stage, we've detected (fp_to_[su]int (fmul Val, THIS_NODE)) so we
-  // want THIS_NODE to be 2^fbits. This is much easier to deal with using
-  // integers.
-  bool IsExact;
+  if (unsigned FBits =
+          CheckFixedPointOperandConstant(FVal, RegWidth, isReciprocal)) {
+    FixedPos = CurDAG->getTargetConstant(FBits, SDLoc(N), MVT::i32);
+    return true;
+  }
 
-  if (isReciprocal)
-    if (!FVal.getExactInverse(&FVal))
-      return false;
-
-  // fbits is between 1 and 64 in the worst-case, which means the fmul
-  // could have 2^64 as an actual operand. Need 65 bits of precision.
-  APSInt IntVal(65, true);
-  FVal.convertToInteger(IntVal, APFloat::rmTowardZero, &IsExact);
-
-  // N.b. isPowerOf2 also checks for > 0.
-  if (!IsExact || !IntVal.isPowerOf2())
-    return false;
-  unsigned FBits = IntVal.logBase2();
-
-  // Checks above should have guaranteed that we haven't lost information in
-  // finding FBits, but it must still be in range.
-  if (FBits == 0 || FBits > RegWidth) return false;
-
-  FixedPos = CurDAG->getTargetConstant(FBits, SDLoc(N), MVT::i32);
-  return true;
+  return false;
 }
 
 bool AArch64DAGToDAGISel::SelectCVTFixedPosOperand(SDValue N, SDValue &FixedPos,
                                                    unsigned RegWidth) {
   return checkCVTFixedPointOperandWithFBits(CurDAG, N, FixedPos, RegWidth,
-                                            false);
+                                            /*isReciprocal*/ false);
+}
+
+bool AArch64DAGToDAGISel::SelectCVTFixedPointVec(SDValue N, SDValue &FixedPos,
+                                                 unsigned RegWidth) {
+  if ((N.getOpcode() == AArch64ISD::NVCAST || N.getOpcode() == ISD::BITCAST) &&
+      N.getValueType().getScalarSizeInBits() ==
+          N.getOperand(0).getValueType().getScalarSizeInBits())
+    N = N.getOperand(0);
+
+  auto ImmToFloat = [RegWidth](APInt Imm) {
+    switch (RegWidth) {
+    case 16:
+      return APFloat(APFloat::IEEEhalf(), Imm);
+    case 32:
+      return APFloat(APFloat::IEEEsingle(), Imm);
+    case 64:
+      return APFloat(APFloat::IEEEdouble(), Imm);
+    default:
+      llvm_unreachable("Unexpected RegWidth!");
+    };
+  };
+
+  APFloat FVal(0.0);
+  switch (N->getOpcode()) {
+  case AArch64ISD::MOVIshift:
+    FVal = ImmToFloat(APInt(RegWidth, N.getConstantOperandVal(0)
+                                          << N.getConstantOperandVal(1)));
+    break;
+  case AArch64ISD::FMOV:
+    assert(RegWidth == 32 || RegWidth == 64);
+    if (RegWidth == 32)
+      FVal = ImmToFloat(
+          APInt(RegWidth, (uint32_t)AArch64_AM::decodeAdvSIMDModImmType11(
+                              N.getConstantOperandVal(0))));
+    else
+      FVal = ImmToFloat(APInt(RegWidth, AArch64_AM::decodeAdvSIMDModImmType12(
+                                            N.getConstantOperandVal(0))));
+    break;
+  case AArch64ISD::DUP:
+    if (isa<ConstantSDNode>(N.getOperand(0)))
+      FVal = ImmToFloat(N.getConstantOperandAPInt(0).trunc(RegWidth));
+    else
+      return false;
+    break;
+  default:
+    return false;
+  }
+
+  if (unsigned FBits = CheckFixedPointOperandConstant(FVal, RegWidth,
+                                                      /*isReciprocal*/ false)) {
+    FixedPos = CurDAG->getTargetConstant(FBits, SDLoc(N), MVT::i32);
+    return true;
+  }
+
+  return false;
 }
 
 bool AArch64DAGToDAGISel::SelectCVTFixedPosRecipOperand(SDValue N,
                                                         SDValue &FixedPos,
                                                         unsigned RegWidth) {
   return checkCVTFixedPointOperandWithFBits(CurDAG, N, FixedPos, RegWidth,
-                                            true);
+                                            /*isReciprocal*/ true);
 }
 
 // Inspects a register string of the form o0:op1:CRn:CRm:op2 gets the fields
@@ -4432,31 +4488,8 @@ bool AArch64DAGToDAGISel::SelectSVELogicalImm(SDValue N, MVT VT, SDValue &Imm,
   if (Invert)
     ImmVal = ~ImmVal;
 
-  // Shift mask depending on type size.
-  switch (VT.SimpleTy) {
-  case MVT::i8:
-    ImmVal &= 0xFF;
-    ImmVal |= ImmVal << 8;
-    ImmVal |= ImmVal << 16;
-    ImmVal |= ImmVal << 32;
-    break;
-  case MVT::i16:
-    ImmVal &= 0xFFFF;
-    ImmVal |= ImmVal << 16;
-    ImmVal |= ImmVal << 32;
-    break;
-  case MVT::i32:
-    ImmVal &= 0xFFFFFFFF;
-    ImmVal |= ImmVal << 32;
-    break;
-  case MVT::i64:
-    break;
-  default:
-    llvm_unreachable("Unexpected type");
-  }
-
   uint64_t encoding;
-  if (!AArch64_AM::processLogicalImmediate(ImmVal, 64, encoding))
+  if (!AArch64_AM::isSVELogicalImm(VT.getScalarSizeInBits(), ImmVal, encoding))
     return false;
 
   Imm = CurDAG->getTargetConstant(encoding, SDLoc(N), MVT::i64);
@@ -6292,6 +6325,46 @@ void AArch64DAGToDAGISel::Select(SDNode *Node) {
                AArch64::FMINNM_VG4_4Z4Z_S, AArch64::FMINNM_VG4_4Z4Z_D}))
         SelectDestructiveMultiIntrinsic(Node, 4, true, Op);
       return;
+    case Intrinsic::aarch64_sve_aese_lane_x2:
+      SelectDestructiveMultiIntrinsic(Node, 2, false, AArch64::AESE_2ZZI_B);
+      return;
+    case Intrinsic::aarch64_sve_aesd_lane_x2:
+      SelectDestructiveMultiIntrinsic(Node, 2, false, AArch64::AESD_2ZZI_B);
+      return;
+    case Intrinsic::aarch64_sve_aesemc_lane_x2:
+      SelectDestructiveMultiIntrinsic(Node, 2, false, AArch64::AESEMC_2ZZI_B);
+      return;
+    case Intrinsic::aarch64_sve_aesdimc_lane_x2:
+      SelectDestructiveMultiIntrinsic(Node, 2, false, AArch64::AESDIMC_2ZZI_B);
+      return;
+    case Intrinsic::aarch64_sve_aese_lane_x4:
+      SelectDestructiveMultiIntrinsic(Node, 4, false, AArch64::AESE_4ZZI_B);
+      return;
+    case Intrinsic::aarch64_sve_aesd_lane_x4:
+      SelectDestructiveMultiIntrinsic(Node, 4, false, AArch64::AESD_4ZZI_B);
+      return;
+    case Intrinsic::aarch64_sve_aesemc_lane_x4:
+      SelectDestructiveMultiIntrinsic(Node, 4, false, AArch64::AESEMC_4ZZI_B);
+      return;
+    case Intrinsic::aarch64_sve_aesdimc_lane_x4:
+      SelectDestructiveMultiIntrinsic(Node, 4, false, AArch64::AESDIMC_4ZZI_B);
+      return;
+    case Intrinsic::aarch64_sve_pmlal_pair_x2:
+      SelectDestructiveMultiIntrinsic(Node, 2, false, AArch64::PMLAL_2ZZZ_Q);
+      return;
+    case Intrinsic::aarch64_sve_pmull_pair_x2: {
+      SDLoc DL(Node);
+      SmallVector<SDValue, 4> Regs(Node->ops().slice(1, 2));
+      SDNode *Res =
+          CurDAG->getMachineNode(AArch64::PMULL_2ZZZ_Q, DL, MVT::Untyped, Regs);
+      SDValue SuperReg = SDValue(Res, 0);
+      for (unsigned I = 0; I < 2; I++)
+        ReplaceUses(SDValue(Node, I),
+                    CurDAG->getTargetExtractSubreg(AArch64::zsub0 + I, DL, VT,
+                                                   SuperReg));
+      CurDAG->RemoveDeadNode(Node);
+      return;
+    }
     case Intrinsic::aarch64_sve_fscale_x4:
       SelectDestructiveMultiIntrinsic(Node, 4, true, AArch64::BFSCALE_4Z4Z);
       return;
@@ -7484,7 +7557,7 @@ static EVT getMemVTFromNode(LLVMContext &Ctx, SDNode *Root) {
     else
       llvm_unreachable("Unexpected MemSDNode!");
 
-    return DataVT.changeVectorElementType(MemVT.getVectorElementType());
+    return DataVT.changeVectorElementType(Ctx, MemVT.getVectorElementType());
   }
 
   const unsigned Opcode = Root->getOpcode();

@@ -42,6 +42,7 @@
 #include "llvm/IR/PatternMatch.h"
 #include "llvm/InitializePasses.h"
 #include "llvm/Pass.h"
+#include "llvm/Support/MathExtras.h"
 #include "llvm/Target/TargetMachine.h"
 #include "llvm/Transforms/Utils/SSAUpdater.h"
 
@@ -370,7 +371,7 @@ bool AMDGPUPromoteAllocaImpl::run(Function &F, bool PromoteToLDS) {
   DL = &Mod->getDataLayout();
 
   const AMDGPUSubtarget &ST = AMDGPUSubtarget::get(TM, F);
-  if (!ST.isPromoteAllocaEnabled())
+  if (!ST.enablePromoteAlloca())
     return false;
 
   bool SufficientLDS = PromoteToLDS && hasSufficientLocalMem(F);
@@ -649,6 +650,36 @@ static Value *promoteAllocaUserToVector(Instruction *Inst, const DataLayout &DL,
       const unsigned NumLoadedElts = AccessSize / DL.getTypeStoreSize(VecEltTy);
       auto *SubVecTy = FixedVectorType::get(VecEltTy, NumLoadedElts);
       assert(DL.getTypeStoreSize(SubVecTy) == DL.getTypeStoreSize(AccessTy));
+
+      // If idx is dynamic, then sandwich load with bitcasts.
+      // ie. VectorTy                 SubVecTy  AccessTy
+      //     <64 x i8> ->             <16 x i8> <8 x i16>
+      //     <64 x i8> -> <4 x i128> -> i128 -> <8 x i16>
+      // Extracting subvector with dynamic index has very large expansion in
+      // the amdgpu backend. Limit to pow2.
+      FixedVectorType *VectorTy = AA.Vector.Ty;
+      TypeSize NumBits = DL.getTypeStoreSize(SubVecTy) * 8u;
+      uint64_t LoadAlign = cast<LoadInst>(Inst)->getAlign().value();
+      bool IsAlignedLoad = NumBits <= (LoadAlign * 8u);
+      unsigned TotalNumElts = VectorTy->getNumElements();
+      bool IsProperlyDivisible = TotalNumElts % NumLoadedElts == 0;
+      if (!isa<ConstantInt>(Index) &&
+          llvm::isPowerOf2_32(SubVecTy->getNumElements()) &&
+          IsProperlyDivisible && IsAlignedLoad) {
+        IntegerType *NewElemTy = Builder.getIntNTy(NumBits);
+        const unsigned NewNumElts =
+            DL.getTypeStoreSize(VectorTy) * 8u / NumBits;
+        const unsigned LShrAmt = llvm::Log2_32(SubVecTy->getNumElements());
+        FixedVectorType *BitCastTy =
+            FixedVectorType::get(NewElemTy, NewNumElts);
+        Value *BCVal = Builder.CreateBitCast(CurVal, BitCastTy);
+        Value *NewIdx = Builder.CreateLShr(
+            Index, ConstantInt::get(Index->getType(), LShrAmt));
+        Value *ExtVal = Builder.CreateExtractElement(BCVal, NewIdx);
+        Value *BCOut = Builder.CreateBitCast(ExtVal, AccessTy);
+        Inst->replaceAllUsesWith(BCOut);
+        return nullptr;
+      }
 
       Value *SubVec = PoisonValue::get(SubVecTy);
       for (unsigned K = 0; K < NumLoadedElts; ++K) {
@@ -1135,9 +1166,18 @@ void AMDGPUPromoteAllocaImpl::promoteAllocaToVector(AllocaAnalysis &AA) {
   });
 
   // Now fixup the placeholders.
-  for (Instruction *Placeholder : Placeholders) {
-    Placeholder->replaceAllUsesWith(
-        Updater.GetValueInMiddleOfBlock(Placeholder->getParent()));
+  SmallVector<Value *> PlaceholderToNewVal(Placeholders.size());
+  for (auto [Index, Placeholder] : enumerate(Placeholders)) {
+    Value *NewVal = Updater.GetValueInMiddleOfBlock(Placeholder->getParent());
+    PlaceholderToNewVal[Index] = NewVal;
+    Placeholder->replaceAllUsesWith(NewVal);
+  }
+  // Note: we cannot merge this loop with the previous one because it is
+  // possible that the placeholder itself can be used in the SSAUpdater. The
+  // replaceAllUsesWith doesn't replace those uses.
+  for (auto [Index, Placeholder] : enumerate(Placeholders)) {
+    if (!Placeholder->use_empty())
+      Placeholder->replaceAllUsesWith(PlaceholderToNewVal[Index]);
     Placeholder->eraseFromParent();
   }
 
@@ -1498,7 +1538,7 @@ bool AMDGPUPromoteAllocaImpl::hasSufficientLocalMem(const Function &F) {
   for (const GlobalVariable *GV : UsedLDS) {
     Align Alignment =
         DL.getValueOrABITypeAlignment(GV->getAlign(), GV->getValueType());
-    uint64_t AllocSize = DL.getTypeAllocSize(GV->getValueType());
+    uint64_t AllocSize = GV->getGlobalSize(DL);
 
     // HIP uses an extern unsized array in local address space for dynamically
     // allocated shared memory.  In that case, we have to disable the promotion.

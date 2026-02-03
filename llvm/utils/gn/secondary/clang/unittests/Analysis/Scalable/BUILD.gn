@@ -14,7 +14,12 @@ unittest("ClangScalableAnalysisTests") {
   sources = [
     "ASTEntityMappingTest.cpp",
     "BuildNamespaceTest.cpp",
+    "EntityIdTableTest.cpp",
+    "EntityIdTest.cpp",
     "EntityNameTest.cpp",
+    "Registries/MockSummaryExtractor1.cpp",
+    "Registries/MockSummaryExtractor2.cpp",
+    "Registries/SummaryExtractorRegistryTest.cpp",
     "SummaryNameTest.cpp",
   ]
 }

@@ -4,15 +4,11 @@
 define i1 @test() {
 ; CHECK-LABEL: define i1 @test() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    [[E0:%.*]] = extractelement <4 x float> zeroinitializer, i64 0
-; CHECK-NEXT:    [[E3:%.*]] = extractelement <4 x float> splat (float 3.000000e+00), i64 0
-; CHECK-NEXT:    [[E4:%.*]] = extractelement <4 x float> splat (float 4.000000e+00), i64 0
-; CHECK-NEXT:    [[TMP0:%.*]] = insertelement <4 x float> <float 0.000000e+00, float 5.000000e+00, float undef, float undef>, float [[E4]], i32 2
-; CHECK-NEXT:    [[TMP1:%.*]] = insertelement <4 x float> [[TMP0]], float [[E3]], i32 3
-; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x float> <float undef, float undef, float undef, float undef, float 2.000000e+00, float 1.000000e+00, float 0.000000e+00, float undef>, float [[E0]], i32 7
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x float> [[TMP1]], <4 x float> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 poison, i32 poison, i32 poison, i32 poison>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x float> [[TMP2]], <8 x float> [[TMP3]], <8 x i32> <i32 8, i32 9, i32 10, i32 11, i32 4, i32 5, i32 6, i32 7>
-; CHECK-NEXT:    [[TMP5:%.*]] = fpext <8 x float> [[TMP4]] to <8 x double>
+; CHECK-NEXT:    [[C2:%.*]] = fpext float 0.000000e+00 to double
+; CHECK-NEXT:    [[TMP0:%.*]] = shufflevector <8 x double> <double 0.000000e+00, double 5.000000e+00, double undef, double undef, double undef, double undef, double undef, double undef>, <8 x double> <double 4.000000e+00, double 3.000000e+00, double undef, double undef, double undef, double undef, double undef, double undef>, <8 x i32> <i32 0, i32 1, i32 8, i32 9, i32 poison, i32 poison, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP1:%.*]] = shufflevector <8 x double> [[TMP0]], <8 x double> <double 2.000000e+00, double 1.000000e+00, double undef, double undef, double undef, double undef, double undef, double undef>, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 poison, i32 poison>
+; CHECK-NEXT:    [[TMP2:%.*]] = insertelement <8 x double> [[TMP1]], double [[C2]], i32 6
+; CHECK-NEXT:    [[TMP5:%.*]] = shufflevector <8 x double> [[TMP2]], <8 x double> poison, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 4, i32 5, i32 6, i32 0>
 ; CHECK-NEXT:    [[TMP6:%.*]] = fmul <8 x double> zeroinitializer, [[TMP5]]
 ; CHECK-NEXT:    [[TMP7:%.*]] = select <8 x i1> zeroinitializer, <8 x double> [[TMP6]], <8 x double> zeroinitializer
 ; CHECK-NEXT:    [[TMP8:%.*]] = fcmp olt <8 x double> [[TMP7]], zeroinitializer

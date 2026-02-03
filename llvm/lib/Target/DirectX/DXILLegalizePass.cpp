@@ -265,16 +265,10 @@ static bool upcastI8AllocasAndUses(Instruction &I,
 
   auto ProcessLoad = [&](LoadInst *Load) {
     for (User *LU : Load->users()) {
-      Type *Ty = nullptr;
-      if (CastInst *Cast = dyn_cast<CastInst>(LU))
-        Ty = Cast->getType();
-      else if (CallInst *CI = dyn_cast<CallInst>(LU)) {
-        assert(CI->getIntrinsicID() != Intrinsic::memset &&
-               "memset should have been eliminated in an earlier pass");
-      }
-
-      if (!Ty)
+      CastInst *Cast = dyn_cast<CastInst>(LU);
+      if (!Cast)
         continue;
+      Type *Ty = Cast->getType();
 
       if (!SmallestType ||
           Ty->getPrimitiveSizeInBits() < SmallestType->getPrimitiveSizeInBits())

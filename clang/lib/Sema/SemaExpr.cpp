@@ -30,6 +30,7 @@
 #include "clang/AST/ExprObjC.h"
 #include "clang/AST/MangleNumberingContext.h"
 #include "clang/AST/OperationKinds.h"
+#include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "clang/AST/TypeLoc.h"
 #include "clang/Basic/Builtins.h"
@@ -7899,8 +7900,6 @@ ExprResult Sema::prepareMatrixSplat(QualType MatrixTy, Expr *SplattedExpr) {
   assert(DestElemTy->isFloatingType() ||
          DestElemTy->isIntegralOrEnumerationType());
 
-  // TODO: Add support for boolean matrix once exposed
-  // https://github.com/llvm/llvm-project/issues/170920
   ExprResult CastExprRes = SplattedExpr;
   CastKind CK = PrepareScalarCast(CastExprRes, DestElemTy);
   if (CastExprRes.isInvalid())
@@ -10276,7 +10275,8 @@ static ExprResult convertVector(Expr *E, QualType ElementType, Sema &S) {
 /// IntTy without losing precision.
 static bool canConvertIntToOtherIntTy(Sema &S, ExprResult *Int,
                                       QualType OtherIntTy) {
-  if (Int->get()->containsErrors())
+  Expr *E = Int->get();
+  if (E->containsErrors() || E->isInstantiationDependent())
     return false;
 
   QualType IntTy = Int->get()->getType().getUnqualifiedType();
@@ -13445,6 +13445,25 @@ QualType Sema::CheckVectorLogicalOperands(ExprResult &LHS, ExprResult &RHS,
   return GetSignedVectorType(LHS.get()->getType());
 }
 
+QualType Sema::CheckMatrixLogicalOperands(ExprResult &LHS, ExprResult &RHS,
+                                          SourceLocation Loc,
+                                          BinaryOperatorKind Opc) {
+
+  if (!getLangOpts().HLSL) {
+    assert(false && "Logical operands are not supported in C\\C++");
+    return QualType();
+  }
+
+  if (getLangOpts().getHLSLVersion() >= LangOptionsBase::HLSL_2021) {
+    (void)InvalidOperands(Loc, LHS, RHS);
+    HLSL().emitLogicalOperatorFixIt(LHS.get(), RHS.get(), Opc);
+    return QualType();
+  }
+  SemaRef.Diag(LHS.get()->getBeginLoc(), diag::err_hlsl_langstd_unimplemented)
+      << getLangOpts().getHLSLVersion();
+  return QualType();
+}
+
 QualType Sema::CheckMatrixElementwiseOperands(ExprResult &LHS, ExprResult &RHS,
                                               SourceLocation Loc,
                                               bool IsCompAssign) {
@@ -13616,6 +13635,10 @@ inline QualType Sema::CheckLogicalOperands(ExprResult &LHS, ExprResult &RHS,
   if (LHS.get()->getType()->isVectorType() ||
       RHS.get()->getType()->isVectorType())
     return CheckVectorLogicalOperands(LHS, RHS, Loc, Opc);
+
+  if (LHS.get()->getType()->isConstantMatrixType() ||
+      RHS.get()->getType()->isConstantMatrixType())
+    return CheckMatrixLogicalOperands(LHS, RHS, Loc, Opc);
 
   bool EnumConstantInBoolContext = false;
   for (const ExprResult &HS : {LHS, RHS}) {
