@@ -439,7 +439,7 @@ entry:
 
 declare ptr @memccpy(ptr noundef, ptr noundef, i32 noundef signext, i64 noundef)
 
-define signext i32 @test_strcmp(ptr noundef %s1, ptr noundef %s2) nounwind {
+define  i32 @test_strcmp(ptr noundef %s1, ptr noundef %s2) nounwind {
 ; CHECK-LE-P9-LABEL: test_strcmp:
 ; CHECK-LE-P9:       # %bb.0: # %entry
 ; CHECK-LE-P9-NEXT:    mflr r0
@@ -469,14 +469,14 @@ define signext i32 @test_strcmp(ptr noundef %s1, ptr noundef %s2) nounwind {
 ; CHECK-AIX-64-P9-NEXT:    mflr r0
 ; CHECK-AIX-64-P9-NEXT:    stdu r1, -112(r1)
 ; CHECK-AIX-64-P9-NEXT:    std r0, 128(r1)
-; CHECK-AIX-64-P9-NEXT:    bl .strcmp[PR]
+; CHECK-AIX-64-P9-NEXT:    bl .___strcmp64[PR]
 ; CHECK-AIX-64-P9-NEXT:    nop
 ; CHECK-AIX-64-P9-NEXT:    addi r1, r1, 112
 ; CHECK-AIX-64-P9-NEXT:    ld r0, 16(r1)
 ; CHECK-AIX-64-P9-NEXT:    mtlr r0
 ; CHECK-AIX-64-P9-NEXT:    blr
 entry:
-  %call = call signext i32 @strcmp(ptr noundef %s1, ptr noundef %s2)
+  %call = call i32 @strcmp(ptr noundef %s1, ptr noundef %s2)
   ret i32 %call
 }
 

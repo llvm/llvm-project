@@ -8,8 +8,6 @@
 
 #include "mlir/Dialect/UB/IR/UBOps.h"
 #include "mlir/Conversion/ConvertToLLVM/ToLLVMInterface.h"
-#include "mlir/Interfaces/ControlFlowInterfaces.h"
-#include "mlir/Interfaces/ExecutionProgressOpInterface.h"
 #include "mlir/Transforms/InliningUtils.h"
 
 #include "mlir/IR/Builders.h"
@@ -68,40 +66,3 @@ OpFoldResult PoisonOp::fold(FoldAdaptor /*adaptor*/) { return getValue(); }
 
 #define GET_OP_CLASSES
 #include "mlir/Dialect/UB/IR/UBOps.cpp.inc"
-
-namespace {
-/// Canonicalization pattern for RegionBranchOpInterface ops that loop
-/// infinitely. Such ops are replaced with poisoned values if they "must
-/// progress".
-struct EraseInfiniteRegionBranchLoop : public RewritePattern {
-  EraseInfiniteRegionBranchLoop(MLIRContext *context, StringRef name,
-                                PatternBenefit benefit = 1)
-      : RewritePattern(name, benefit, context) {}
-
-  LogicalResult matchAndRewrite(Operation *op,
-                                PatternRewriter &rewriter) const override {
-    auto regionBranchOp = cast<RegionBranchOpInterface>(op);
-    if (!mustProgress(op))
-      return rewriter.notifyMatchFailure(
-          op, "only loops that must progress are removed");
-    if (!wouldOpBeTriviallyDead(op))
-      return rewriter.notifyMatchFailure(op,
-                                         "only trivially dead ops are removed");
-    if (!isGuaranteedToLoopInfinitely(regionBranchOp))
-      return rewriter.notifyMatchFailure(
-          op, "only loops that loop infinitely are removed");
-    SmallVector<Value> replacements =
-        llvm::map_to_vector(op->getResultTypes(), [&](Type type) {
-          return PoisonOp::create(rewriter, op->getLoc(), type).getResult();
-        });
-    rewriter.replaceOp(op, replacements);
-    return success();
-  }
-};
-} // namespace
-
-void mlir::ub::populateEraseInfiniteRegionBranchLoopPattern(
-    RewritePatternSet &patterns, StringRef opName, PatternBenefit benefit) {
-  patterns.add<EraseInfiniteRegionBranchLoop>(patterns.getContext(), opName,
-                                              benefit);
-}
