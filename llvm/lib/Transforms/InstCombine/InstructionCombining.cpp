@@ -2396,40 +2396,40 @@ template <Intrinsic::ID SpliceID>
 static Instruction *foldSpliceBinOp(BinaryOperator &Inst,
                                     InstCombiner::BuilderTy &Builder) {
   Value *LHS = Inst.getOperand(0), *RHS = Inst.getOperand(1);
-  auto CreateBinOpSplice = [&](Value *X, Value *Y, Value *Z, Value *Offset) {
+  auto CreateBinOpSplice = [&](Value *X, Value *Y, Value *Offset) {
     Value *V = Builder.CreateBinOp(Inst.getOpcode(), X, Y, Inst.getName());
     if (auto *BO = dyn_cast<BinaryOperator>(V))
       BO->copyIRFlags(&Inst);
     Module *M = Inst.getModule();
     Function *F = Intrinsic::getOrInsertDeclaration(M, SpliceID, V->getType());
-    return CallInst::Create(F, {V, Z, Offset});
+    return CallInst::Create(F, {V, PoisonValue::get(V->getType()), Offset});
   };
-  Value *V1, *V2, *V3, *Offset;
+  Value *V1, *V2, *Offset;
   if (match(LHS,
-            m_Intrinsic<SpliceID>(m_Value(V1), m_Value(V3), m_Value(Offset)))) {
-    // Op(splice(V1, V3, offset), splice(V2, V3, offset))
-    // -> splice(Op(V1, V2), V3, offset)
-    if (match(RHS, m_Intrinsic<SpliceID>(m_Value(V2), m_Specific(V3),
+            m_Intrinsic<SpliceID>(m_Value(V1), m_Poison(), m_Value(Offset)))) {
+    // Op(splice(V1, poison, offset), splice(V2, poison, offset))
+    // -> splice(Op(V1, V2), poison, offset)
+    if (match(RHS, m_Intrinsic<SpliceID>(m_Value(V2), m_Poison(),
                                          m_Specific(Offset))) &&
         (LHS->hasOneUse() || RHS->hasOneUse() ||
          (LHS == RHS && LHS->hasNUses(2))))
-      return CreateBinOpSplice(V1, V2, V3, Offset);
+      return CreateBinOpSplice(V1, V2, Offset);
 
-    // Op(splice(V1, V3, offset), RHSSplat)
-    // -> splice(Op(V1, RHSSplat), V3, offset)
+    // Op(splice(V1, poison, offset), RHSSplat)
+    // -> splice(Op(V1, RHSSplat), poison, offset)
     if (LHS->hasOneUse() && isSplatValue(RHS))
-      return CreateBinOpSplice(V1, RHS, V3, Offset);
+      return CreateBinOpSplice(V1, RHS, Offset);
   }
-  // Op(LHSSplat, splice(V2, V3, offset))
-  // -> splice(Op(LHSSplat, V2), V3, offset)
+  // Op(LHSSplat, splice(V2, poison, offset))
+  // -> splice(Op(LHSSplat, V2), poison, offset)
   else if (isSplatValue(LHS) &&
-           match(RHS, m_OneUse(m_Intrinsic<SpliceID>(m_Value(V2), m_Value(V3),
+           match(RHS, m_OneUse(m_Intrinsic<SpliceID>(m_Value(V2), m_Poison(),
                                                      m_Value(Offset)))))
-    return CreateBinOpSplice(LHS, V2, V3, Offset);
+    return CreateBinOpSplice(LHS, V2, Offset);
 
   // TODO: Fold binops of the form
-  // Op(splice(V3, V1, offset), splice(V3, V2, offset))
-  // -> splice(V3, Op(V1, V2), offset)
+  // Op(splice(poison, V1, offset), splice(poison, V2, offset))
+  // -> splice(poison, Op(V1, V2), offset)
 
   return nullptr;
 }
