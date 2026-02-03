@@ -1705,22 +1705,22 @@ define void @splat2_v4i64_load_store(ptr %s, ptr %d) nounwind {
 define void @splat4_v8f32_load_store(ptr %s, ptr %d) nounwind {
 ; AVX1-LABEL: splat4_v8f32_load_store:
 ; AVX1:       # %bb.0:
-; AVX1-NEXT:    vbroadcastss 16(%rdi), %xmm0
-; AVX1-NEXT:    vbroadcastss 20(%rdi), %xmm1
-; AVX1-NEXT:    vbroadcastss 24(%rdi), %xmm2
-; AVX1-NEXT:    vbroadcastss 28(%rdi), %xmm3
-; AVX1-NEXT:    vbroadcastss (%rdi), %xmm4
-; AVX1-NEXT:    vbroadcastss 4(%rdi), %xmm5
-; AVX1-NEXT:    vbroadcastss 8(%rdi), %xmm6
-; AVX1-NEXT:    vbroadcastss 12(%rdi), %xmm7
-; AVX1-NEXT:    vmovups %xmm7, 48(%rsi)
-; AVX1-NEXT:    vmovups %xmm6, 32(%rsi)
-; AVX1-NEXT:    vmovups %xmm5, 16(%rsi)
-; AVX1-NEXT:    vmovups %xmm4, (%rsi)
-; AVX1-NEXT:    vmovups %xmm3, 112(%rsi)
-; AVX1-NEXT:    vmovups %xmm2, 96(%rsi)
-; AVX1-NEXT:    vmovups %xmm1, 80(%rsi)
-; AVX1-NEXT:    vmovups %xmm0, 64(%rsi)
+; AVX1-NEXT:    vbroadcastss (%rdi), %xmm0
+; AVX1-NEXT:    vbroadcastss 4(%rdi), %xmm1
+; AVX1-NEXT:    vbroadcastss 8(%rdi), %xmm2
+; AVX1-NEXT:    vbroadcastss 12(%rdi), %xmm3
+; AVX1-NEXT:    vbroadcastss 16(%rdi), %xmm4
+; AVX1-NEXT:    vbroadcastss 20(%rdi), %xmm5
+; AVX1-NEXT:    vbroadcastss 24(%rdi), %xmm6
+; AVX1-NEXT:    vbroadcastss 28(%rdi), %xmm7
+; AVX1-NEXT:    vmovups %xmm7, 112(%rsi)
+; AVX1-NEXT:    vmovups %xmm6, 96(%rsi)
+; AVX1-NEXT:    vmovups %xmm5, 80(%rsi)
+; AVX1-NEXT:    vmovups %xmm4, 64(%rsi)
+; AVX1-NEXT:    vmovups %xmm3, 48(%rsi)
+; AVX1-NEXT:    vmovups %xmm2, 32(%rsi)
+; AVX1-NEXT:    vmovups %xmm1, 16(%rsi)
+; AVX1-NEXT:    vmovups %xmm0, (%rsi)
 ; AVX1-NEXT:    retq
 ;
 ; AVX2-LABEL: splat4_v8f32_load_store:

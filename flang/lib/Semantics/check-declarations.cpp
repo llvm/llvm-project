@@ -1188,10 +1188,10 @@ void CheckHelper::CheckObjectEntity(
       }
       break;
     case common::CUDADataAttr::Managed:
-      if (!IsAutomatic(symbol) && !IsAllocatable(symbol) &&
+      if (!IsAutomatic(symbol) && !IsAllocatableOrPointer(symbol) &&
           !details.isDummy() && !evaluate::IsExplicitShape(symbol)) {
         messages_.Say(
-            "Object '%s' with ATTRIBUTES(MANAGED) must also be allocatable, automatic, explicit shape, or a dummy argument"_err_en_US,
+            "Object '%s' with ATTRIBUTES(MANAGED) must also be allocatable, pointer, automatic, explicit shape, or a dummy argument"_err_en_US,
             symbol.name());
       }
       break;
@@ -3862,9 +3862,15 @@ void CheckHelper::CheckSymbolType(const Symbol &symbol) {
   } else if (auto dyType{evaluate::DynamicType::From(relevant)}) {
     if (dyType->IsPolymorphic() && !dyType->IsAssumedType() &&
         !(IsDummy(symbol) && !IsProcedure(relevant))) { // C708
-      messages_.Say(
-          "CLASS entity '%s' must be a dummy argument, allocatable, or object pointer"_err_en_US,
-          symbol.name());
+      if (IsProcedure(symbol)) {
+        messages_.Say(
+            "Polymorphic function%s '%s' must have an explicit interface whose result is ALLOCATABLE or POINTER"_err_en_US,
+            IsPointer(symbol) ? " pointer" : "", symbol.name());
+      } else {
+        messages_.Say(
+            "CLASS entity '%s' must be a dummy argument, allocatable, or object pointer"_err_en_US,
+            symbol.name());
+      }
     }
     if (dyType->HasDeferredTypeParameter()) { // C702
       messages_.Say(

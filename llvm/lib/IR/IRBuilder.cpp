@@ -135,6 +135,15 @@ Value *IRBuilderBase::CreateTypeSize(Type *Ty, TypeSize Size) {
   return CreateVScaleMultiple(*this, Ty, Size.getKnownMinValue());
 }
 
+Value *IRBuilderBase::CreateAllocationSize(Type *DestTy, AllocaInst *AI) {
+  const DataLayout &DL = BB->getDataLayout();
+  TypeSize ElemSize = DL.getTypeAllocSize(AI->getAllocatedType());
+  Value *Size = CreateTypeSize(DestTy, ElemSize);
+  if (AI->isArrayAllocation())
+    Size = CreateMul(CreateZExtOrTrunc(AI->getArraySize(), DestTy), Size);
+  return Size;
+}
+
 Value *IRBuilderBase::CreateStepVector(Type *DstType, const Twine &Name) {
   Type *STy = DstType->getScalarType();
   if (isa<ScalableVectorType>(DstType)) {
@@ -1107,35 +1116,47 @@ Value *IRBuilderBase::CreateVectorReverse(Value *V, const Twine &Name) {
   return CreateShuffleVector(V, ShuffleMask, Name);
 }
 
-Value *IRBuilderBase::CreateVectorSplice(Value *V1, Value *V2, int64_t Imm,
-                                         const Twine &Name) {
-  assert(isa<VectorType>(V1->getType()) && "Unexpected type");
-  assert(V1->getType() == V2->getType() &&
-         "Splice expects matching operand types!");
-
-  if (auto *VTy = dyn_cast<ScalableVectorType>(V1->getType())) {
-    Module *M = BB->getParent()->getParent();
-    Function *F = Intrinsic::getOrInsertDeclaration(
-        M,
-        Imm >= 0 ? Intrinsic::vector_splice_left
-                 : Intrinsic::vector_splice_right,
-        VTy);
-
-    Value *Ops[] = {V1, V2, getInt32(std::abs(Imm))};
-    return Insert(CallInst::Create(F, Ops), Name);
-  }
-
-  unsigned NumElts = cast<FixedVectorType>(V1->getType())->getNumElements();
-  assert(((-Imm <= NumElts) || (Imm < NumElts)) &&
-         "Invalid immediate for vector splice!");
-
-  // Keep the original behaviour for fixed vector
+static SmallVector<int, 8> getSpliceMask(int64_t Imm, unsigned NumElts) {
   unsigned Idx = (NumElts + Imm) % NumElts;
   SmallVector<int, 8> Mask;
   for (unsigned I = 0; I < NumElts; ++I)
     Mask.push_back(Idx + I);
+  return Mask;
+}
 
-  return CreateShuffleVector(V1, V2, Mask);
+Value *IRBuilderBase::CreateVectorSpliceLeft(Value *V1, Value *V2,
+                                             Value *Offset, const Twine &Name) {
+  assert(isa<VectorType>(V1->getType()) && "Unexpected type");
+  assert(V1->getType() == V2->getType() &&
+         "Splice expects matching operand types!");
+
+  // Emit a shufflevector for fixed vectors with a constant offset
+  if (auto *COffset = dyn_cast<ConstantInt>(Offset))
+    if (auto *FVTy = dyn_cast<FixedVectorType>(V1->getType()))
+      return CreateShuffleVector(
+          V1, V2,
+          getSpliceMask(COffset->getZExtValue(), FVTy->getNumElements()));
+
+  return CreateIntrinsic(Intrinsic::vector_splice_left, V1->getType(),
+                         {V1, V2, Offset}, {}, Name);
+}
+
+Value *IRBuilderBase::CreateVectorSpliceRight(Value *V1, Value *V2,
+                                              Value *Offset,
+                                              const Twine &Name) {
+  assert(isa<VectorType>(V1->getType()) && "Unexpected type");
+  assert(V1->getType() == V2->getType() &&
+         "Splice expects matching operand types!");
+
+  // Emit a shufflevector for fixed vectors with a constant offset
+  if (auto *COffset = dyn_cast<ConstantInt>(Offset))
+    if (auto *FVTy = dyn_cast<FixedVectorType>(V1->getType()))
+      return CreateShuffleVector(
+          V1, V2,
+          getSpliceMask(-COffset->getZExtValue(), FVTy->getNumElements()));
+
+  return CreateIntrinsic(Intrinsic::vector_splice_right, V1->getType(),
+                         {V1, V2, Offset}, {}, Name);
 }
 
 Value *IRBuilderBase::CreateVectorSplat(unsigned NumElts, Value *V,

@@ -1,6 +1,6 @@
 ! RUN: bbc -emit-hlfir -fcuda %s -o - | FileCheck %s
 
-! Test CUDA Fortran instrinsics lowerings for synchronization.
+! Test CUDA Fortran intrinsics lowerings for synchronization.
 
 attributes(global) subroutine sync()
   call threadfence()

@@ -48,6 +48,8 @@ availability:
 
  - ``rewind``, suggested replacement: ``fseek``
  - ``setbuf``, suggested replacement: ``setvbuf``
+ - ``std::get_temporary_buffer``, suggested replacement: "plain" allocation
+   with ``operator new[]``
 
 If :option:`ReportMoreUnsafeFunctions` is enabled,
 the following functions are also checked:
