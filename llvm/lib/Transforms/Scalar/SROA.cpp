@@ -1448,9 +1448,8 @@ private:
 };
 
 AllocaSlices::AllocaSlices(const DataLayout &DL, AllocaInst &AI)
-    :
-      AI(AI),
-      PointerEscapingInstr(nullptr), PointerEscapingInstrReadOnly(nullptr) {
+    : AI(AI), PointerEscapingInstr(nullptr),
+      PointerEscapingInstrReadOnly(nullptr) {
   SliceBuilder PB(DL, AI, *this);
   SliceBuilder::PtrInfo PtrI = PB.visitPtr(AI);
   if (PtrI.isEscaped() || PtrI.isAborted()) {
@@ -1469,7 +1468,6 @@ AllocaSlices::AllocaSlices(const DataLayout &DL, AllocaInst &AI)
   // and the sizes to be in descending order.
   llvm::stable_sort(Slices);
 }
-
 
 void AllocaSlices::print(raw_ostream &OS, const_iterator I,
                          StringRef Indent) const {
@@ -1510,7 +1508,6 @@ LLVM_DUMP_METHOD void AllocaSlices::dump(const_iterator I) const {
   print(dbgs(), I);
 }
 LLVM_DUMP_METHOD void AllocaSlices::dump() const { print(dbgs()); }
-
 
 /// Walk the range of a partitioning looking for a common type to cover this
 /// sequence of slices.

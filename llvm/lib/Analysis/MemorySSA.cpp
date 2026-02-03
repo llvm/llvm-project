@@ -2268,7 +2268,7 @@ void MemoryUse::print(raw_ostream &OS) const {
 }
 
 void MemoryAccess::dump() const {
-// Cannot completely remove virtual function even in release mode.
+  // Cannot completely remove virtual function even in release mode.
   print(dbgs());
   dbgs() << "\n";
 }

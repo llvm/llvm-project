@@ -1238,7 +1238,6 @@ VPIRBasicBlock *VPlan::createVPIRBasicBlock(BasicBlock *IRBB) {
   return VPIRBB;
 }
 
-
 Twine VPlanPrinter::getUID(const VPBlockBase *Block) {
   return (isa<VPRegionBlock>(Block) ? "cluster_N" : "N") +
          Twine(getOrCreateBID(Block));
@@ -1366,7 +1365,6 @@ void VPlanPrinter::dumpRegion(const VPRegionBlock *Region) {
   OS << Indent << "}\n";
   dumpEdges(Region);
 }
-
 
 /// Returns true if there is a vector loop region and \p VPV is defined in a
 /// loop region.

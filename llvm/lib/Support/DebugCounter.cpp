@@ -193,6 +193,4 @@ bool DebugCounter::shouldExecuteImpl(CounterInfo &Counter) {
   return Res;
 }
 
-LLVM_DUMP_METHOD void DebugCounter::dump() const {
-  print(dbgs());
-}
+LLVM_DUMP_METHOD void DebugCounter::dump() const { print(dbgs()); }

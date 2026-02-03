@@ -147,7 +147,6 @@ void RegPressureDelta::dump() const {
   dbgs() << "]\n";
 }
 
-
 void RegPressureTracker::increaseRegPressure(VirtRegOrUnit VRegOrUnit,
                                              LaneBitmask PreviousMask,
                                              LaneBitmask NewMask) {

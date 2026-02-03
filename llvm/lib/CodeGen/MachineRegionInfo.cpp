@@ -119,9 +119,7 @@ void MachineRegionInfoPass::print(raw_ostream &OS, const Module *) const {
   RI.print(OS);
 }
 
-LLVM_DUMP_METHOD void MachineRegionInfoPass::dump() const {
-  RI.dump();
-}
+LLVM_DUMP_METHOD void MachineRegionInfoPass::dump() const { RI.dump(); }
 
 char MachineRegionInfoPass::ID = 0;
 char &llvm::MachineRegionInfoPassID = MachineRegionInfoPass::ID;

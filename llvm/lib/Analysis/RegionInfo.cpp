@@ -150,9 +150,7 @@ void RegionInfoPass::print(raw_ostream &OS, const Module *) const {
   RI.print(OS);
 }
 
-LLVM_DUMP_METHOD void RegionInfoPass::dump() const {
-  RI.dump();
-}
+LLVM_DUMP_METHOD void RegionInfoPass::dump() const { RI.dump(); }
 
 char RegionInfoPass::ID = 0;
 

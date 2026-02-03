@@ -3165,7 +3165,6 @@ SUnit *SchedBoundary::pickOnlyChoice() {
   return nullptr;
 }
 
-
 /// Dump the content of the \ref ReservedCycles vector for the
 /// resources that are used in the basic block.
 ///
@@ -3711,8 +3710,7 @@ void GenericScheduler::dumpPolicy() const {
   dbgs() << "GenericScheduler RegionPolicy: "
          << " ShouldTrackPressure=" << RegionPolicy.ShouldTrackPressure
          << " OnlyTopDown=" << RegionPolicy.OnlyTopDown
-         << " OnlyBottomUp=" << RegionPolicy.OnlyBottomUp
-         << "\n";
+         << " OnlyBottomUp=" << RegionPolicy.OnlyBottomUp << "\n";
 }
 
 /// Set IsAcyclicLatencyLimited if the acyclic path is longer than the cyclic

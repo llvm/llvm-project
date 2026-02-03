@@ -118,9 +118,7 @@ void DIEAbbrev::print(raw_ostream &O) const {
   }
 }
 
-LLVM_DUMP_METHOD void DIEAbbrev::dump() const {
-  print(dbgs());
-}
+LLVM_DUMP_METHOD void DIEAbbrev::dump() const { print(dbgs()); }
 
 //===----------------------------------------------------------------------===//
 // DIEAbbrevSet Implementation
@@ -255,9 +253,7 @@ void DIE::print(raw_ostream &O, unsigned IndentCount) const {
   O << "\n";
 }
 
-LLVM_DUMP_METHOD void DIE::dump() const {
-  print(dbgs());
-}
+LLVM_DUMP_METHOD void DIE::dump() const { print(dbgs()); }
 
 unsigned DIE::computeOffsetsAndAbbrevs(const dwarf::FormParams &FormParams,
                                        DIEAbbrevSet &AbbrevSet,
@@ -345,9 +341,7 @@ void DIEValue::print(raw_ostream &O) const {
   }
 }
 
-LLVM_DUMP_METHOD void DIEValue::dump() const {
-  print(dbgs());
-}
+LLVM_DUMP_METHOD void DIEValue::dump() const { print(dbgs()); }
 
 //===----------------------------------------------------------------------===//
 // DIEInteger Implementation

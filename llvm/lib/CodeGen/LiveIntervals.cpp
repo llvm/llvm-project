@@ -209,9 +209,7 @@ void LiveIntervals::printInstrs(raw_ostream &OS) const {
   MF->print(OS, Indexes);
 }
 
-LLVM_DUMP_METHOD void LiveIntervals::dumpInstrs() const {
-  printInstrs(dbgs());
-}
+LLVM_DUMP_METHOD void LiveIntervals::dumpInstrs() const { printInstrs(dbgs()); }
 
 LLVM_DUMP_METHOD void LiveIntervals::dump() const { print(dbgs()); }
 

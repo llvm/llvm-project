@@ -308,7 +308,6 @@ BaseIndexOffset BaseIndexOffset::match(const SDNode *N,
   return BaseIndexOffset();
 }
 
-
 LLVM_DUMP_METHOD void BaseIndexOffset::dump() const {
   print(dbgs());
 }
@@ -321,4 +320,3 @@ void BaseIndexOffset::print(raw_ostream& OS) const {
     Index->print(OS);
   OS << "] offset=" << Offset;
 }
-

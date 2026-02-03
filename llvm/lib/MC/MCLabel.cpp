@@ -18,6 +18,4 @@ void MCLabel::print(raw_ostream &OS) const {
   OS << '"' << getInstance() << '"';
 }
 
-LLVM_DUMP_METHOD void MCLabel::dump() const {
-  print(dbgs());
-}
+LLVM_DUMP_METHOD void MCLabel::dump() const { print(dbgs()); }

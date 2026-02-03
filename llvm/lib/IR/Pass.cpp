@@ -142,9 +142,7 @@ void Pass::print(raw_ostream &OS, const Module *) const {
 }
 
 // dump - call print(cerr);
-LLVM_DUMP_METHOD void Pass::dump() const {
-  print(dbgs(), nullptr);
-}
+LLVM_DUMP_METHOD void Pass::dump() const { print(dbgs(), nullptr); }
 
 #ifdef EXPENSIVE_CHECKS
 uint64_t Pass::structuralHash(Module &M) const {

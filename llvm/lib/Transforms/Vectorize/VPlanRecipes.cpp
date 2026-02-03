@@ -2944,7 +2944,6 @@ bool VPExpressionRecipe::isSingleScalar() const {
   return RR && !RR->isPartialReduction();
 }
 
-
 void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                      VPSlotTracker &SlotTracker) const {
   O << Indent << "EXPRESSION ";
@@ -3077,7 +3076,6 @@ void VPReductionEVLRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   }
   O << ")";
 }
-
 
 /// A helper function to scalarize a single Instruction in the innermost loop.
 /// Generates a sequence of scalar instances for lane \p Lane. Uses the VPValue

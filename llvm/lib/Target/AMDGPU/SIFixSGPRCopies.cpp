@@ -109,7 +109,7 @@ public:
   SetVector<unsigned> Siblings;
   V2SCopyInfo() : Copy(nullptr), ID(0){};
   V2SCopyInfo(unsigned Id, MachineInstr *C, unsigned Width)
-      : Copy(C), NumReadfirstlanes(Width / 32), ID(Id){};
+      : Copy(C), NumReadfirstlanes(Width / 32), ID(Id) {};
   void dump() const {
     dbgs() << ID << " : " << *Copy << "\n\tS:" << SChain.size()
            << "\n\tSV:" << NumSVCopies << "\n\tSP: " << SiblingPenalty

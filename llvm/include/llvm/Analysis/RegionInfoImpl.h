@@ -752,8 +752,7 @@ void RegionInfoBase<Tr>::print(raw_ostream &OS) const {
   OS << "End region tree\n";
 }
 
-template <class Tr>
-void RegionInfoBase<Tr>::dump() const { print(dbgs()); }
+template <class Tr> void RegionInfoBase<Tr>::dump() const { print(dbgs()); }
 
 template <class Tr> void RegionInfoBase<Tr>::releaseMemory() {
   BBtoRegion.clear();

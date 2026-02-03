@@ -1508,7 +1508,6 @@ bool AttributeListImpl::hasAttrSomewhere(Attribute::AttrKind Kind,
   return true;
 }
 
-
 LLVM_DUMP_METHOD void AttributeListImpl::dump() const {
   AttributeList(const_cast<AttributeListImpl *>(this)).dump();
 }

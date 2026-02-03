@@ -1584,7 +1584,6 @@ TEST_F(VPRecipeTest, dumpRecipeUnnamedVPValuesNotInPlanOrBlock) {
   delete AI;
 }
 
-
 TEST_F(VPRecipeTest, CastVPReductionRecipeToVPUser) {
   IntegerType *Int32 = IntegerType::get(C, 32);
   VPValue *ChainOp = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));

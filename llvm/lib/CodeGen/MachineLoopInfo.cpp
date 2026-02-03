@@ -287,6 +287,4 @@ bool MachineLoop::isLoopInvariant(MachineInstr &I,
   return true;
 }
 
-LLVM_DUMP_METHOD void MachineLoop::dump() const {
-  print(dbgs());
-}
+LLVM_DUMP_METHOD void MachineLoop::dump() const { print(dbgs()); }

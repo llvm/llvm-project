@@ -154,7 +154,7 @@ public:
   uint64_t getSrcMods(const SIInstrInfo *TII,
                       const MachineOperand *SrcOp) const;
 
-  void print(raw_ostream& OS) const override;
+  void print(raw_ostream &OS) const override;
 };
 
 class SDWADstOperand : public SDWAOperand {
@@ -177,7 +177,7 @@ public:
   SdwaSel getDstSel() const { return DstSel; }
   DstUnused getDstUnused() const { return DstUn; }
 
-  void print(raw_ostream& OS) const override;
+  void print(raw_ostream &OS) const override;
 };
 
 class SDWADstPreserveOperand : public SDWADstOperand {
@@ -196,7 +196,7 @@ public:
 
   MachineOperand *getPreservedOperand() const { return Preserve; }
 
-  void print(raw_ostream& OS) const override;
+  void print(raw_ostream &OS) const override;
 };
 
 } // end anonymous namespace
@@ -255,7 +255,6 @@ void SDWADstPreserveOperand::print(raw_ostream& OS) const {
     << " dst_sel:" << getDstSel()
     << " preserve:" << *getPreservedOperand() << '\n';
 }
-
 
 static void copyRegOperand(MachineOperand &To, const MachineOperand &From) {
   assert(To.isReg() && From.isReg());

@@ -2285,9 +2285,7 @@ void ConstantRange::print(raw_ostream &OS) const {
     OS << "[" << Lower << "," << Upper << ")";
 }
 
-LLVM_DUMP_METHOD void ConstantRange::dump() const {
-  print(dbgs());
-}
+LLVM_DUMP_METHOD void ConstantRange::dump() const { print(dbgs()); }
 
 ConstantRange llvm::getConstantRangeFromMetadata(const MDNode &Ranges) {
   const unsigned NumRanges = Ranges.getNumOperands() / 2;

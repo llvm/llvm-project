@@ -636,9 +636,7 @@ ArrayRef<int> MachineFunction::allocateShuffleMask(ArrayRef<int> Mask) {
   return {AllocMask, Mask.size()};
 }
 
-LLVM_DUMP_METHOD void MachineFunction::dump() const {
-  print(dbgs());
-}
+LLVM_DUMP_METHOD void MachineFunction::dump() const { print(dbgs()); }
 
 StringRef MachineFunction::getName() const {
   return getFunction().getName();

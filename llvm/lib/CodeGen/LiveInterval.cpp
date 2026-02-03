@@ -1052,9 +1052,7 @@ LLVM_DUMP_METHOD void LiveInterval::SubRange::dump() const {
   dbgs() << *this << '\n';
 }
 
-LLVM_DUMP_METHOD void LiveInterval::dump() const {
-  dbgs() << *this << '\n';
-}
+LLVM_DUMP_METHOD void LiveInterval::dump() const { dbgs() << *this << '\n'; }
 
 #ifndef NDEBUG
 bool LiveRange::verify() const {
@@ -1171,9 +1169,7 @@ void LiveRangeUpdater::print(raw_ostream &OS) const {
   OS << '\n';
 }
 
-LLVM_DUMP_METHOD void LiveRangeUpdater::dump() const {
-  print(errs());
-}
+LLVM_DUMP_METHOD void LiveRangeUpdater::dump() const { print(errs()); }
 
 // Determine if A and B should be coalesced.
 static inline bool coalescable(const LiveRange::Segment &A,

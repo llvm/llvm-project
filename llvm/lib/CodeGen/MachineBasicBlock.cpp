@@ -295,9 +295,7 @@ bool MachineBasicBlock::isEntryBlock() const {
   return getParent()->begin() == getIterator();
 }
 
-LLVM_DUMP_METHOD void MachineBasicBlock::dump() const {
-  print(dbgs());
-}
+LLVM_DUMP_METHOD void MachineBasicBlock::dump() const { print(dbgs()); }
 
 bool MachineBasicBlock::mayHaveInlineAsmBr() const {
   for (const MachineBasicBlock *Succ : successors()) {

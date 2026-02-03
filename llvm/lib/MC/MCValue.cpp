@@ -37,6 +37,4 @@ void MCValue::print(raw_ostream &OS) const {
     OS << " + " << getConstant();
 }
 
-LLVM_DUMP_METHOD void MCValue::dump() const {
-  print(dbgs());
-}
+LLVM_DUMP_METHOD void MCValue::dump() const { print(dbgs()); }
