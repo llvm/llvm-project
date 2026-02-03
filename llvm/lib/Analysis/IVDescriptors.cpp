@@ -266,11 +266,11 @@ static bool isMinMaxReductionPhiWithUsersOutsideReductionChain(
 static bool isFindLastLikePhi(PHINode *Phi, PHINode *HeaderPhi,
                               SmallPtrSetImpl<Instruction *> &ReductionInstrs) {
   unsigned NumNonReduxInputs = 0;
-  for (const Use &Use : Phi->operands()) {
-    if (!ReductionInstrs.contains(dyn_cast<Instruction>(Use))) {
+  for (const Value *Op : Phi->operands()) {
+    if (!ReductionInstrs.contains(dyn_cast<Instruction>(Op))) {
       if (++NumNonReduxInputs > 1)
         return false;
-    } else if (Use.get() != HeaderPhi) {
+    } else if (Op != HeaderPhi) {
       // TODO: Remove this restriction once chained phis are supported.
       return false;
     }

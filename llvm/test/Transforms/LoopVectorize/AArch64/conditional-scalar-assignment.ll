@@ -1303,6 +1303,14 @@ exit:
   ret i32 %select.data.1
 }
 
+; This test is derived from an (unsupported) loop like:
+;  int result = default_val;
+;  for (int i = 0; i < N; ++i) {
+;    if (a[i] > threshold)
+;      result = b[i];
+;    res[i] = result;
+;  }
+;  return result;
 define i32 @simple_csa_int_load_multi_user(ptr noalias %a, ptr noalias %b, ptr noalias %results, i32 %default_val, i64 %N, i32 %threshold) {
 ; NEON-LABEL: define i32 @simple_csa_int_load_multi_user(
 ; NEON-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[RESULTS:%.*]], i32 [[DEFAULT_VAL:%.*]], i64 [[N:%.*]], i32 [[THRESHOLD:%.*]]) {

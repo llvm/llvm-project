@@ -1305,6 +1305,7 @@ bool VPlanTransforms::handleMaxMinNumReductions(VPlan &Plan) {
 bool VPlanTransforms::handleFindLastReductions(VPlan &Plan) {
   if (Plan.hasScalarVFOnly())
     return false;
+
   // We want to create the following nodes:
   // vector.body:
   //   ...new WidenPHI recipe introduced to keep the mask value for the latest
