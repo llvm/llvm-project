@@ -1024,7 +1024,7 @@ Error PinnedAllocationMapTy::unregisterHostBuffer(void *HstPtr) {
   return eraseEntry(*Entry);
 }
 
-Expected<void *> PinnedAllocationMapTy::lockHostBuffer(
+Expected<void *> PinnedAllocationMapTy::registerMemory(
     void *HstPtr, size_t Size, bool LockMemory) {
   assert(HstPtr && "Invalid pointer");
   assert(Size && "Invalid size");
@@ -1078,7 +1078,7 @@ Expected<void *> PinnedAllocationMapTy::lockHostBuffer(
   return *DevAccessiblePtrOrErr;
 }
 
-Error PinnedAllocationMapTy::unlockHostBuffer(void *HstPtr, bool LockMemory) {
+Error PinnedAllocationMapTy::unregisterMemory(void *HstPtr, bool UnlockMemory) {
   assert(HstPtr && "Invalid pointer");
 
   std::lock_guard<std::shared_mutex> Lock(Mutex);
@@ -1087,7 +1087,7 @@ Error PinnedAllocationMapTy::unlockHostBuffer(void *HstPtr, bool LockMemory) {
 
   // No entry but automatic locking of mapped buffers is disabled, so
   // nothing to do.
-  if (!Entry && !LockMemory)
+  if (!Entry && !UnlockMemory)
     return Plugin::success();
 
   if (!Entry)
@@ -1849,7 +1849,7 @@ int32_t GenericPluginTy::data_delete(int32_t DeviceId, void *TgtPtr,
 
 int32_t GenericPluginTy::data_lock(int32_t DeviceId, void *Ptr, int64_t Size,
                                    void **LockedPtr) {
-  auto LockedPtrOrErr = getDevice(DeviceId).dataLock(Ptr, Size);
+  auto LockedPtrOrErr = getDevice(DeviceId).registerMemory(Ptr, Size);
   if (!LockedPtrOrErr) {
     auto Err = LockedPtrOrErr.takeError();
     REPORT() << "Failure to lock memory " << Ptr << ": "
@@ -1868,7 +1868,7 @@ int32_t GenericPluginTy::data_lock(int32_t DeviceId, void *Ptr, int64_t Size,
 }
 
 int32_t GenericPluginTy::data_unlock(int32_t DeviceId, void *Ptr) {
-  auto Err = getDevice(DeviceId).dataUnlock(Ptr);
+  auto Err = getDevice(DeviceId).unregisterMemory(Ptr);
   if (Err) {
     REPORT() << "Failure to unlock memory " << Ptr << ": "
              << toString(std::move(Err));

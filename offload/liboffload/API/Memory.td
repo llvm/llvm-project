@@ -28,7 +28,8 @@ def ol_memory_register_flag_t : Enum {
   let desc = "Memory registering/locking flags";
   let is_bit_field = 1;
   let etors =[
-    Etor<"LOCK_MEMORY", "Lock the memory">,
+    Etor<"LOCK_MEMORY", "Page-lock the memory">,
+    Etor<"UNLOCK_MEMORY", "Page-unlock the memory">,
   ];
 }
 
@@ -181,7 +182,7 @@ def olMemUnregister : Function {
   let params = [
     Param<"ol_device_handle_t", "Device", "handle of the device", PARAM_IN>,
     Param<"void *", "Ptr", "host pointer", PARAM_IN>,
-    Param<"ol_memory_register_flags_t", "Flags", "flags controlling various aspects of registration", PARAM_IN>,
+    Param<"ol_memory_register_flags_t", "Flags", "flags controlling various aspects of unregistration", PARAM_IN>,
   ];
   let returns = [];
 }
