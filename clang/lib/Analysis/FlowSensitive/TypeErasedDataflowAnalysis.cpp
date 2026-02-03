@@ -19,18 +19,23 @@
 #include "clang/AST/ASTDumper.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/OperationKinds.h"
+#include "clang/AST/Stmt.h"
 #include "clang/AST/StmtCXX.h"
 #include "clang/AST/StmtVisitor.h"
 #include "clang/Analysis/Analyses/PostOrderCFGView.h"
 #include "clang/Analysis/CFG.h"
+#include "clang/Analysis/CFGBackEdges.h"
 #include "clang/Analysis/FlowSensitive/DataflowEnvironment.h"
 #include "clang/Analysis/FlowSensitive/DataflowLattice.h"
 #include "clang/Analysis/FlowSensitive/DataflowWorklist.h"
 #include "clang/Analysis/FlowSensitive/Transfer.h"
 #include "clang/Analysis/FlowSensitive/TypeErasedDataflowAnalysis.h"
 #include "clang/Analysis/FlowSensitive/Value.h"
+#include "clang/Basic/LLVM.h"
 #include "clang/Support/Compiler.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/DenseSet.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/Error.h"
@@ -64,14 +69,23 @@ static int blockIndexInPredecessor(const CFGBlock &Pred,
   return BlockPos - Pred.succ_begin();
 }
 
-// A "backedge" node is a block introduced in the CFG exclusively to indicate a
-// loop backedge. They are exactly identified by the presence of a non-null
-// pointer to the entry block of the loop condition. Note that this is not
-// necessarily the block with the loop statement as terminator, because
-// short-circuit operators will result in multiple blocks encoding the loop
-// condition, only one of which will contain the loop statement as terminator.
-static bool isBackedgeNode(const CFGBlock &B) {
-  return B.getLoopTarget() != nullptr;
+// A "backedge node" is a node that is the source of a backedge in the CFG
+// (given backedge from U to V, U is the "backedge node").
+// This can be either:
+// - A block introduced in the CFG exclusively to indicate a structured loop's
+//   backedge. They are exactly identified by the presence of a non-null
+//   pointer to the entry block of the loop condition. Note that this is not
+//   necessarily the block with the loop statement as terminator, because
+//   short-circuit operators will result in multiple blocks encoding the loop
+//   condition, only one of which will contain the loop statement as terminator.
+// - Or, a block that is part of a backedge in a CFG with unstructured loops
+//   (e.g., a CFG with a `goto` statement). Note that this is not
+//   necessarily the block with the goto statement as terminator. The choice
+//   depends on how blocks and edges are ordered.
+static bool isBackedgeNode(
+    const CFGBlock &B,
+    const llvm::SmallDenseSet<const CFGBlock *> &NonLoopBackedgeNodes) {
+  return B.getLoopTarget() != nullptr || NonLoopBackedgeNodes.contains(&B);
 }
 
 namespace {
@@ -484,6 +498,35 @@ transferCFGBlock(const CFGBlock &Block, AnalysisContext &AC,
   return State;
 }
 
+// Returns true if the CFG contains any goto statements (direct or indirect).
+static bool hasGotoInCFG(const clang::CFG &CFG) {
+  for (const CFGBlock *Block : CFG) {
+    const Stmt *Term = Block->getTerminatorStmt();
+    if (Term == nullptr) continue;
+    if (isa<GotoStmt>(Term) || isa<IndirectGotoStmt>(Term))
+      return true;
+  }
+  return false;
+}
+
+// Returns a set of CFG blocks that is the source of a backedge and is not
+// tracked part of a structured loop (according to `CFGBlock::getLoopTarget`).
+static llvm::SmallDenseSet<const CFGBlock *>
+findNonLoopBackedgeNodes(const clang::CFG &CFG) {
+  llvm::SmallDenseSet<const CFGBlock *> NonLoopBackedgeNodes;
+  // We should only need this if the function has gotos.
+  if (!hasGotoInCFG(CFG))
+    return NonLoopBackedgeNodes;
+
+  llvm::DenseMap<const CFGBlock *, const CFGBlock *> BackEdges =
+      findCFGBackEdges(CFG);
+  for (const auto &[From, To] : BackEdges) {
+    if (From->getLoopTarget() == nullptr)
+      NonLoopBackedgeNodes.insert(From);
+  }
+  return NonLoopBackedgeNodes;
+}
+
 llvm::Expected<std::vector<std::optional<TypeErasedDataflowAnalysisState>>>
 runTypeErasedDataflowAnalysis(
     const AdornedCFG &ACFG, TypeErasedDataflowAnalysis &Analysis,
@@ -503,6 +546,8 @@ runTypeErasedDataflowAnalysis(
   const clang::CFG &CFG = ACFG.getCFG();
   PostOrderCFGView POV(&CFG);
   ForwardDataflowWorklist Worklist(CFG, &POV);
+  llvm::SmallDenseSet<const CFGBlock *> NonLoopBackedgeNodes =
+      findNonLoopBackedgeNodes(CFG);
 
   std::vector<std::optional<TypeErasedDataflowAnalysisState>> BlockStates(
       CFG.size());
@@ -537,7 +582,7 @@ runTypeErasedDataflowAnalysis(
         llvm::errs() << "Old Env:\n";
         OldBlockState->Env.dump();
       });
-      if (isBackedgeNode(*Block)) {
+      if (isBackedgeNode(*Block, NonLoopBackedgeNodes)) {
         LatticeJoinEffect Effect1 = Analysis.widenTypeErased(
             NewBlockState.Lattice, OldBlockState->Lattice);
         LatticeJoinEffect Effect2 =
