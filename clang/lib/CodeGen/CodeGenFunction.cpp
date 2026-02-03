@@ -1248,7 +1248,15 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     ReturnValue = Address(Addr, ConvertType(RetTy),
                           CGM.getNaturalTypeAlignment(RetTy), KnownNonNull);
   } else {
-    ReturnValue = CreateIRTemp(RetTy, "retval");
+    // For CoerceAndExpand returns where IR and memory types differ
+    // (e.g., _BitInt(121) has IR type i121 but memory type i128),
+    // use CreateMemTemp so the alloca has the memory type. This ensures
+    // proper coercion when the epilog reads it as the coerced type.
+    if (CurFnInfo->getReturnInfo().getKind() == ABIArgInfo::CoerceAndExpand &&
+        ConvertType(RetTy) != ConvertTypeForMem(RetTy))
+      ReturnValue = CreateMemTemp(RetTy, "retval");
+    else
+      ReturnValue = CreateIRTemp(RetTy, "retval");
 
     // Tell the epilog emitter to autorelease the result.  We do this
     // now so that various specialized functions can suppress it

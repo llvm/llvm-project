@@ -252,4 +252,13 @@ void bitField() {
   // LIN64: store i64 %bf.set4, ptr %s1, align 8
 }
 
+// GH#179448: Ensure the return value alloca uses the memory type (i128)
+// instead of the IR type (i121) to avoid miscompilation when coercing
+// the return value to {i64, i64}.
+// LIN64: define {{.*}}{ i64, i64 } @returnBitInt121(i64 {{.*}}, i64 {{.*}})
+// LIN64: %retval = alloca i128, align 8
+_BitInt(121) returnBitInt121(_BitInt(121) a) {
+  return a;
+}
+
 #endif
