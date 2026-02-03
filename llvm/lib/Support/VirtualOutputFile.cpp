@@ -21,9 +21,11 @@ using namespace llvm::vfs;
 
 char OutputFileImpl::ID = 0;
 char NullOutputFileImpl::ID = 0;
+char StringBackedOutputFileImpl::ID = 0;
 
 void OutputFileImpl::anchor() {}
 void NullOutputFileImpl::anchor() {}
+void StringBackedOutputFileImpl::anchor() {}
 
 class OutputFile::TrackedProxy : public raw_pwrite_stream_proxy {
 public:

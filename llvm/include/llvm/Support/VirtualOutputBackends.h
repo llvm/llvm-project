@@ -23,8 +23,11 @@
 #define LLVM_SUPPORT_VIRTUALOUTPUTBACKENDS_H
 
 #include "llvm/ADT/IntrusiveRefCntPtr.h"
+#include "llvm/ADT/SmallString.h"
+#include "llvm/ADT/iterator_range.h"
 #include "llvm/Support/VirtualOutputBackend.h"
 #include "llvm/Support/VirtualOutputConfig.h"
+#include <map>
 
 namespace llvm::vfs {
 
@@ -37,6 +40,10 @@ LLVM_ABI IntrusiveRefCntPtr<OutputBackend> makeNullOutputBackend();
 LLVM_ABI IntrusiveRefCntPtr<OutputBackend> makeFilteringOutputBackend(
     IntrusiveRefCntPtr<OutputBackend> UnderlyingBackend,
     std::function<bool(StringRef, std::optional<OutputConfig>)> Filter);
+
+/// Make a backend where \a OutputBackend::createFile() creates a file in a map,
+/// backed by a string buffer.
+LLVM_ABI IntrusiveRefCntPtr<OutputBackend> makeInMemoryOutputBackend();
 
 /// Create a backend that forwards \a OutputBackend::createFile() to both \p
 /// Backend1 and \p Backend2. Writing to such backend will create identical
@@ -117,6 +124,29 @@ public:
   ///
   /// Access is not thread-safe.
   OutputSettings Settings;
+};
+
+/// And output backend that creates files in memory, backed by string buffers in
+/// a map. This is useful for unittesting.
+class InMemoryOutputBackend : public OutputBackend {
+protected:
+  Expected<std::unique_ptr<OutputFileImpl>>
+  createFileImpl(StringRef Path, std::optional<OutputConfig> Config) override {
+    (void)Config; // FIXME: Not implemented.
+    return std::make_unique<StringBackedOutputFileImpl>(Buffers[Path.str()]);
+  }
+
+  IntrusiveRefCntPtr<OutputBackend> cloneImpl() const override {
+    return const_cast<InMemoryOutputBackend *>(this);
+  }
+
+public:
+  auto getBuffers() const & { return llvm::iterator_range(Buffers); }
+
+private:
+  LLVM_ABI void anchor() override;
+
+  std::map<std::string, llvm::SmallString<100>> Buffers;
 };
 
 } // namespace llvm::vfs

@@ -52,6 +52,24 @@ private:
   raw_null_ostream OS;
 };
 
+class StringBackedOutputFileImpl final
+    : public RTTIExtends<StringBackedOutputFileImpl, OutputFileImpl> {
+public:
+  LLVM_ABI static char ID;
+  explicit StringBackedOutputFileImpl(
+      llvm::SmallVectorImpl<char> &BackingBuffer)
+      : OS(BackingBuffer) {}
+
+  Error keep() final { return Error::success(); }
+  Error discard() final { return Error::success(); }
+  raw_pwrite_stream &getOS() final { return OS; }
+
+private:
+  LLVM_ABI void anchor() override;
+
+  llvm::raw_svector_ostream OS;
+};
+
 /// A virtualized output file that writes to a specific backend.
 ///
 /// One of \a keep(), \a discard(), or \a discardOnDestroy() must be called

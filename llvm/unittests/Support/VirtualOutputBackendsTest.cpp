@@ -8,6 +8,7 @@
 
 #include "llvm/Support/VirtualOutputBackends.h"
 #include "llvm/ADT/StringMap.h"
+#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/BLAKE3.h"
 #include "llvm/Support/HashingOutputBackend.h"
 #include "llvm/Support/MemoryBuffer.h"
@@ -272,6 +273,29 @@ public:
   Error checkDiscarded(StringRef) override { return Error::success(); }
 };
 
+class InMemoryOutputBackendProvider : public OutputBackendProvider {
+public:
+  bool rejectsMissingDirectories() override { return false; }
+
+  IntrusiveRefCntPtr<OutputBackend> createBackend() override {
+    return makeInMemoryOutputBackend();
+  }
+  std::string getFilePathToCreate() override { return "ignored.data"; }
+  std::string getFilePathToCreateUnder(StringRef Parent1,
+                                       StringRef Parent2) override {
+    SmallString<128> Path;
+    sys::path::append(Path, Parent1, Parent2, getFilePathToCreate());
+    return Path.str().str();
+  }
+  Error checkCreated(StringRef, OutputConfig) override {
+    return Error::success();
+  }
+  Error checkWrote(StringRef, StringRef) override { return Error::success(); }
+  Error checkFlushed(StringRef, StringRef) override { return Error::success(); }
+  Error checkKept(StringRef, StringRef) override { return Error::success(); }
+  Error checkDiscarded(StringRef) override { return Error::success(); }
+};
+
 struct OnDiskFile {
   const unittest::TempDir &D;
   SmallString<128> Path;
@@ -395,6 +419,8 @@ struct ProviderGeneratorList {
 
 ProviderGeneratorList BackendGenerators = {
     {"Null", []() { return std::make_unique<NullOutputBackendProvider>(); }},
+    {"InMemory",
+     []() { return std::make_unique<InMemoryOutputBackendProvider>(); }},
     {"OnDisk",
      []() { return std::make_unique<OnDiskOutputBackendProvider>(); }},
     {"OnDisk_DisableRemoveOnSignal",
@@ -943,4 +969,33 @@ TEST(HashingBackendTest, ParallelHashOutput) {
     EXPECT_TRUE(Hash);
   }
 }
+
+TEST(InMemoryOutputBackendTest, EnumerateBuffers) {
+  InMemoryOutputBackend Backend;
+
+  auto CreateFileWithContent = [&Backend](StringRef FileName,
+                                          StringRef FileContent) {
+    OutputFile File;
+    ASSERT_THAT_ERROR(Backend.createFile(FileName).moveInto(File), Succeeded());
+    File << FileContent;
+    ASSERT_THAT_ERROR(File.keep(), Succeeded());
+  };
+
+  CreateFileWithContent("file.1", "file 1 content");
+  CreateFileWithContent("file.2", "file 2 content");
+  CreateFileWithContent("file.3", "file 3 content");
+
+  std::map<std::string, std::string> Contents;
+  for (const auto &[FName, Content] : Backend.getBuffers()) {
+    bool Inserted = Contents.try_emplace(FName, Content.str().str()).second;
+    EXPECT_TRUE(Inserted);
+  }
+
+  EXPECT_EQ(Contents, (std::map<std::string, std::string>{
+                          {"file.1", "file 1 content"},
+                          {"file.2", "file 2 content"},
+                          {"file.3", "file 3 content"},
+                      }));
+}
+
 } // end namespace

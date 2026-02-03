@@ -32,6 +32,7 @@ using namespace llvm::vfs;
 
 void ProxyOutputBackend::anchor() {}
 void OnDiskOutputBackend::anchor() {}
+void InMemoryOutputBackend::anchor() {}
 
 IntrusiveRefCntPtr<OutputBackend> vfs::makeNullOutputBackend() {
   struct NullOutputBackend : public OutputBackend {
@@ -76,6 +77,10 @@ IntrusiveRefCntPtr<OutputBackend> vfs::makeFilteringOutputBackend(
 
   return makeIntrusiveRefCnt<FilteringOutputBackend>(
       std::move(UnderlyingBackend), std::move(Filter));
+}
+
+IntrusiveRefCntPtr<OutputBackend> vfs::makeInMemoryOutputBackend() {
+  return makeIntrusiveRefCnt<InMemoryOutputBackend>();
 }
 
 IntrusiveRefCntPtr<OutputBackend>
