@@ -567,6 +567,10 @@ public:
 
   static void setInitializer(cir::GlobalOp &op, mlir::Attribute value);
 
+  // Whether a global variable should be emitted by CUDA/HIP host/device
+  // related attributes.
+  bool shouldEmitCUDAGlobalVar(const VarDecl *global) const;
+
   void replaceUsesOfNonProtoTypeWithRealFunction(mlir::Operation *old,
                                                  cir::FuncOp newFn);
 
