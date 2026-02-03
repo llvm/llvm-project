@@ -11,14 +11,14 @@ entry:
   ret float %c
 }
 
-define <2 x float> @test_tdo_v2_f32_atan() {
-; CHECK-LABEL: define <2 x float> @test_tdo_v2_f32_atan() {
+define <4 x float> @test_tdo_v2_f32_atan() {
+; CHECK-LABEL: define <4 x float> @test_tdo_v2_f32_atan() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret <2 x float> <float 0.000000e+00, float 0x3FE921FB60000000>
+; CHECK-NEXT:    ret <4 x float> <float 0.000000e+00, float -0.000000e+00, float 0x3FE921FB60000000, float 0xBFE921FB60000000>
 ;
 entry:
-  %c = call <2 x float> @_Z4atanDv2_f(<2 x float> <float 0.000000e+00, float 1.000000e+00>)
-  ret <2 x float> %c
+  %c = call <4 x float> @_Z4atanDv4_f(<4 x float> <float 0.000000e+00, float -0.000000e+00, float 1.000000e+00, float -1.000000e+00>)
+  ret <4 x float> %c
 }
 
 define half @test_tdo_scalar_f16_atan() {
@@ -31,14 +31,14 @@ entry:
   ret half %c
 }
 
-define <2 x half> @test_tdo_v2_f16_atan() {
-; CHECK-LABEL: define <2 x half> @test_tdo_v2_f16_atan() {
+define <4 x half> @test_tdo_v2_f16_atan() {
+; CHECK-LABEL: define <4 x half> @test_tdo_v2_f16_atan() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret <2 x half> <half 0xH0000, half 0xH3A48>
+; CHECK-NEXT:    ret <4 x half> <half 0xH0000, half 0xH8000, half 0xH3A48, half 0xHBA48>
 ;
 entry:
-  %c = call <2 x half> @_Z4atanDv2_Dh(<2 x half> <half 0.000000e+00, half 1.000000e+00>)
-  ret <2 x half> %c
+  %c = call <4 x half> @_Z4atanDv4_Dh(<4 x half> <half 0.000000e+00, half -0.000000e+00, half 1.000000e+00, half -1.000000e+00>)
+  ret <4 x half> %c
 }
 
 define double @test_tdo_scalar_f64_atan() {
@@ -51,19 +51,19 @@ entry:
   ret double %c
 }
 
-define <2 x double> @test_tdo_v2_f64_atan() {
-; CHECK-LABEL: define <2 x double> @test_tdo_v2_f64_atan() {
+define <4 x double> @test_tdo_v2_f64_atan() {
+; CHECK-LABEL: define <4 x double> @test_tdo_v2_f64_atan() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret <2 x double> <double 0.000000e+00, double 0x3FE921FB54442D18>
+; CHECK-NEXT:    ret <4 x double> <double 0.000000e+00, double -0.000000e+00, double 0x3FE921FB54442D18, double 0xBFE921FB54442D18>
 ;
 entry:
-  %c = call <2 x double> @_Z4atanDv2_d(<2 x double> <double 0.000000e+00, double 1.000000e+00>)
-  ret <2 x double> %c
+  %c = call <4 x double> @_Z4atanDv4_d(<4 x double> <double 0.000000e+00, double -0.000000e+00, double 1.000000e+00, double -1.000000e+00>)
+  ret <4 x double> %c
 }
 
 declare float        @_Z4atanf(float)
-declare <2 x float>  @_Z4atanDv2_f(<2 x float>)
+declare <4 x float>  @_Z4atanDv4_f(<4 x float>)
 declare half         @_Z4atanDh(half)
-declare <2 x half>   @_Z4atanDv2_Dh(<2 x half>)
+declare <4 x half>   @_Z4atanDv4_Dh(<4 x half>)
 declare double       @_Z4atand(double)
-declare <2 x double> @_Z4atanDv2_d(<2 x double>)
+declare <4 x double> @_Z4atanDv4_d(<4 x double>)

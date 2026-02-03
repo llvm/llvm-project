@@ -11,14 +11,14 @@ entry:
   ret float %c
 }
 
-define <2 x float> @test_tdo_v2_f32_exp10() {
-; CHECK-LABEL: define <2 x float> @test_tdo_v2_f32_exp10() {
+define <3 x float> @test_tdo_v2_f32_exp10() {
+; CHECK-LABEL: define <3 x float> @test_tdo_v2_f32_exp10() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret <2 x float> <float 1.000000e+00, float 1.000000e+01>
+; CHECK-NEXT:    ret <3 x float> <float 1.000000e+00, float 1.000000e+00, float 1.000000e+01>
 ;
 entry:
-  %c = call <2 x float> @_Z5exp10Dv2_f(<2 x float> <float 0.000000e+00, float 1.000000e+00>)
-  ret <2 x float> %c
+  %c = call <3 x float> @_Z5exp10Dv3_f(<3 x float> <float 0.000000e+00, float -0.000000e+00, float 1.000000e+00>)
+  ret <3 x float> %c
 }
 
 define half @test_tdo_scalar_f16_exp10() {
@@ -31,14 +31,14 @@ entry:
   ret half %c
 }
 
-define <2 x half> @test_tdo_v2_f16_exp10() {
-; CHECK-LABEL: define <2 x half> @test_tdo_v2_f16_exp10() {
+define <3 x half> @test_tdo_v2_f16_exp10() {
+; CHECK-LABEL: define <3 x half> @test_tdo_v2_f16_exp10() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret <2 x half> <half 0xH3C00, half 0xH4900>
+; CHECK-NEXT:    ret <3 x half> <half 0xH3C00, half 0xH3C00, half 0xH4900>
 ;
 entry:
-  %c = call <2 x half> @_Z5exp10Dv2_Dh(<2 x half> <half 0.000000e+00, half 1.000000e+00>)
-  ret <2 x half> %c
+  %c = call <3 x half> @_Z5exp10Dv3_Dh(<3 x half> <half 0.000000e+00, half -0.000000e+00, half 1.000000e+00>)
+  ret <3 x half> %c
 }
 
 define double @test_tdo_scalar_f64_exp10() {
@@ -51,19 +51,19 @@ entry:
   ret double %c
 }
 
-define <2 x double> @test_tdo_v2_f64_exp10() {
-; CHECK-LABEL: define <2 x double> @test_tdo_v2_f64_exp10() {
+define <3 x double> @test_tdo_v2_f64_exp10() {
+; CHECK-LABEL: define <3 x double> @test_tdo_v2_f64_exp10() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret <2 x double> <double 1.000000e+00, double 1.000000e+01>
+; CHECK-NEXT:    ret <3 x double> <double 1.000000e+00, double 1.000000e+00, double 1.000000e+01>
 ;
 entry:
-  %c = call <2 x double> @_Z5exp10Dv2_d(<2 x double> <double 0.000000e+00, double 1.000000e+00>)
-  ret <2 x double> %c
+  %c = call <3 x double> @_Z5exp10Dv3_d(<3 x double> <double 0.000000e+00, double -0.000000e+00, double 1.000000e+00>)
+  ret <3 x double> %c
 }
 
 declare float        @_Z5exp10f(float)
-declare <2 x float>  @_Z5exp10Dv2_f(<2 x float>)
+declare <3 x float>  @_Z5exp10Dv3_f(<3 x float>)
 declare half         @_Z5exp10Dh(half)
-declare <2 x half>   @_Z5exp10Dv2_Dh(<2 x half>)
+declare <3 x half>   @_Z5exp10Dv3_Dh(<3 x half>)
 declare double       @_Z5exp10d(double)
-declare <2 x double> @_Z5exp10Dv2_d(<2 x double>)
+declare <3 x double> @_Z5exp10Dv3_d(<3 x double>)

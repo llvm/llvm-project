@@ -11,14 +11,14 @@ entry:
   ret float %c
 }
 
-define <2 x float> @test_tdo_v2_f32_tgamma() {
-; CHECK-LABEL: define <2 x float> @test_tdo_v2_f32_tgamma() {
+define <4 x float> @test_tdo_v2_f32_tgamma() {
+; CHECK-LABEL: define <4 x float> @test_tdo_v2_f32_tgamma() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret <2 x float> splat (float 1.000000e+00)
+; CHECK-NEXT:    ret <4 x float> <float 1.000000e+00, float 1.000000e+00, float 2.000000e+00, float 6.000000e+00>
 ;
 entry:
-  %c = call <2 x float> @_Z6tgammaDv2_f(<2 x float> <float 1.000000e+00, float 2.000000e+00>)
-  ret <2 x float> %c
+  %c = call <4 x float> @_Z6tgammaDv4_f(<4 x float> <float 1.000000e+00, float 2.000000e+00, float 3.000000e+00, float 4.000000e+00>)
+  ret <4 x float> %c
 }
 
 define half @test_tdo_scalar_f16_tgamma() {
@@ -31,14 +31,14 @@ entry:
   ret half %c
 }
 
-define <2 x half> @test_tdo_v2_f16_tgamma() {
-; CHECK-LABEL: define <2 x half> @test_tdo_v2_f16_tgamma() {
+define <4 x half> @test_tdo_v2_f16_tgamma() {
+; CHECK-LABEL: define <4 x half> @test_tdo_v2_f16_tgamma() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret <2 x half> splat (half 0xH3C00)
+; CHECK-NEXT:    ret <4 x half> <half 0xH3C00, half 0xH3C00, half 0xH4000, half 0xH4600>
 ;
 entry:
-  %c = call <2 x half> @_Z6tgammaDv2_Dh(<2 x half> <half 1.000000e+00, half 2.000000e+00>)
-  ret <2 x half> %c
+  %c = call <4 x half> @_Z6tgammaDv4_Dh(<4 x half> <half 1.000000e+00, half 2.000000e+00, half 3.000000e+00, half 4.000000e+00>)
+  ret <4 x half> %c
 }
 
 define double @test_tdo_scalar_f64_tgamma() {
@@ -51,19 +51,19 @@ entry:
   ret double %c
 }
 
-define <2 x double> @test_tdo_v2_f64_tgamma() {
-; CHECK-LABEL: define <2 x double> @test_tdo_v2_f64_tgamma() {
+define <4 x double> @test_tdo_v2_f64_tgamma() {
+; CHECK-LABEL: define <4 x double> @test_tdo_v2_f64_tgamma() {
 ; CHECK-NEXT:  [[ENTRY:.*:]]
-; CHECK-NEXT:    ret <2 x double> splat (double 1.000000e+00)
+; CHECK-NEXT:    ret <4 x double> <double 1.000000e+00, double 1.000000e+00, double 2.000000e+00, double 6.000000e+00>
 ;
 entry:
-  %c = call <2 x double> @_Z6tgammaDv2_d(<2 x double> <double 1.000000e+00, double 2.000000e+00>)
-  ret <2 x double> %c
+  %c = call <4 x double> @_Z6tgammaDv4_d(<4 x double> <double 1.000000e+00, double 2.000000e+00, double 3.000000e+00, double 4.000000e+00>)
+  ret <4 x double> %c
 }
 
 declare float        @_Z6tgammaf(float)
-declare <2 x float>  @_Z6tgammaDv2_f(<2 x float>)
+declare <4 x float>  @_Z6tgammaDv4_f(<4 x float>)
 declare half         @_Z6tgammaDh(half)
-declare <2 x half>   @_Z6tgammaDv2_Dh(<2 x half>)
+declare <4 x half>   @_Z6tgammaDv4_Dh(<4 x half>)
 declare double       @_Z6tgammad(double)
-declare <2 x double> @_Z6tgammaDv2_d(<2 x double>)
+declare <4 x double> @_Z6tgammaDv4_d(<4 x double>)
