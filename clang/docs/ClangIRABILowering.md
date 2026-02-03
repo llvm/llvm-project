@@ -362,71 +362,9 @@ The `TargetABIRegistry` provides a simple factory mechanism for instantiating th
 
 The implementation is straightforward: a `createABIInfo()` method switches on the target architecture enum and constructs the corresponding concrete class. For unsupported targets, it returns `nullptr`, allowing graceful handling of architectures that haven't yet been ported. This extensibility is important for a shared infrastructure that may eventually support ARM32, RISC-V, PowerPC, and other platforms beyond the initial x86_64 and AArch64 focus.
 
-## 5. Future Work
+## 5. Open Questions and Risks
 
-### 5.1 Additional Targets
-
-- RISC-V (emerging ISA, growing importance)
-- WebAssembly (for web-based backends)
-- ARM32 (for embedded systems)
-- PowerPC (for HPC)
-
-### 5.2 Advanced Features
-
-**Varargs Support**:
-- Currently marked NYI in CIR
-- Need to handle variable argument lowering
-- Different per target (va_list representation varies)
-
-**Microsoft ABI**:
-- Windows calling conventions
-- MSVC C++ ABI
-- Different from Itanium C++ ABI
-
-**Swift Calling Convention**:
-- Swift-specific argument passing
-- Error handling conventions
-- Async conventions
-
-**Vector ABI**:
-- SIMD type passing
-- SVE (ARM Scalable Vector Extension)
-- AVX-512 considerations
-
-### 5.3 Optimization Opportunities
-
-**Return Value Optimization (RVO)**:
-- Avoid copies for returned aggregates
-- Requires coordination with frontend
-
-**Tail Call Optimization**:
-- Recognize tail call patterns
-- Lower to tail call convention
-
-**Inlining-Aware Lowering**:
-- Delay ABI lowering until after inlining
-- Can avoid unnecessary marshalling
-
-### 5.4 GSoC Integration
-
-**Monitor GSoC Progress**:
-- Track PR #140112 development
-- Assess fit with MLIR needs
-- Plan integration if beneficial
-
-**Potential Integration**:
-- Use GSoC's ABI type system
-- Wrap GSoC ABIInfo implementations
-- Share test cases and validation
-
-**Timeline**:
-- Short term (Q1 2026): Implement MLIR-native solution
-- Medium term (Q2-Q3 2026): Evaluate GSoC library
-- Long term (Q4 2026+): Potentially refactor to use GSoC
-
-## 6. Open Questions and Risks
-
-### 6.1 Open Questions
+### 5.1 Open Questions
 
 1. **Should we use TypeInterface or helper class for type queries?**
    - TypeInterface is more MLIR-idiomatic but requires modifying type definitions
@@ -681,7 +619,7 @@ class ABILowering {
    - Who owns the shared infrastructure?
    - **Recommendation**: Build CIR-first, engage FIR team at Phase 7 (after CIR proven)
 
-### 6.2 Risks
+### 5.2 Risks
 
 **Risk 1: TargetInfo Dependency Rejected** ⚠️ **CRITICAL**
 - **Impact**: High (could add 1-3 weeks to timeline)
@@ -730,22 +668,22 @@ class ABILowering {
 - **Description**: Edge cases and corner cases in ABI handling are complex
 - **Mitigation**: Incremental development, frequent validation against classic codegen, comprehensive testing
 
-## 7. Success Metrics
+## 6. Success Metrics
 
-### 7.1 Functional Metrics
+### 6.1 Functional Metrics
 
 - ✅ CIR can lower x86_64 calling conventions correctly (100% test pass rate)
 - ✅ CIR can lower AArch64 calling conventions correctly (100% test pass rate)
 - ✅ ABI output matches classic Clang codegen (validated by comparison tests)
 - ✅ All CIR incubator tests pass with new implementation
 
-### 7.2 Quality Metrics
+### 6.2 Quality Metrics
 
 - ✅ Code coverage > 90% for ABI classification logic
 - ✅ Zero known ABI compliance bugs
 - ✅ Documentation complete (API, user guide, design rationale)
 
-### 7.3 Performance Metrics
+### 6.3 Performance Metrics
 
 - ✅ CallConvLowering pass overhead < 5% compilation time
   - **Context**: This refers to **compile-time overhead**, not runtime performance
@@ -756,39 +694,39 @@ class ABILowering {
 - ✅ No degradation in generated code quality vs direct implementation
   - **Runtime performance unchanged**: ABI lowering is compile-time only
 
-### 7.4 Reusability Metrics
+### 6.4 Reusability Metrics
 
 - ✅ FIR can adopt infrastructure with < 2 weeks integration effort
 - ✅ New target can be added with < 1 week effort (given ABI spec)
 - ✅ ABITypeInterface requires < 10 methods implementation per dialect
 
-## 8. References
+## 7. References
 
-### 8.1 ABI Specifications
+### 7.1 ABI Specifications
 
 - [System V AMD64 ABI](https://refspecs.linuxbase.org/elf/x86_64-abi-0.99.pdf)
 - [ARM AArch64 PCS](https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst)
 - [Itanium C++ ABI](https://itanium-cxx-abi.github.io/cxx-abi/abi.html)
 
-### 8.2 LLVM/MLIR Documentation
+### 7.2 LLVM/MLIR Documentation
 
 - [MLIR Interfaces](https://mlir.llvm.org/docs/Interfaces/)
 - [MLIR Type System](https://mlir.llvm.org/docs/DefiningDialects/AttributesAndTypes/)
 - [MLIR Pass Infrastructure](https://mlir.llvm.org/docs/PassManagement/)
 
-### 8.3 Related Projects
+### 7.3 Related Projects
 
 - [GSoC ABI Lowering RFC](https://discourse.llvm.org/t/rfc-an-abi-lowering-library-for-llvm/84495)
 - [GSoC PR #140112](https://github.com/llvm/llvm-project/pull/140112)
 - [CIR Project](https://github.com/llvm/clangir)
 
-### 8.4 Related Implementation
+### 7.4 Related Implementation
 
 - Clang CodeGen: `clang/lib/CodeGen/`
 - CIR Incubator: `clang/lib/CIR/Dialect/Transforms/TargetLowering/`
 - SPIR-V ABI: `mlir/lib/Dialect/SPIRV/IR/TargetAndABI.cpp`
 
-## 9. Appendices
+## 8. Appendices
 
 ### A. Glossary
 
