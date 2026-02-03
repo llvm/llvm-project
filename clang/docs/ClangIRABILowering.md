@@ -41,7 +41,7 @@ This architecture avoids duplicating complex ABI logic across MLIR dialects, red
 
 ### 1.4 Success Criteria
 
-The framework will be considered successful when CIR can correctly lower x86_64 and AArch64 calling conventions with full ABI compliance. FIR should be able to adopt the same infrastructure with minimal dialect-specific adaptation. A comprehensive test suite must validate ABI compliance across all supported targets. Finally, the performance overhead should remain under 5% compared to a direct, dialect-specific implementation.
+The framework will be considered successful when CIR can correctly lower x86_64 and AArch64 calling conventions with full ABI compliance. FIR should be able to adopt the same infrastructure with minimal dialect-specific adaptation. ABI compliance will be validated through differential testing, comparing output against classic Clang codegen to ensure correct calling convention implementation. Finally, the performance overhead should remain under 5% compared to a direct, dialect-specific implementation.
 
 ## 2. Background and Context
 
@@ -362,7 +362,7 @@ The implementation is straightforward: a `createABIInfo()` method switches on th
 
 ## 5. Target-Specific Details
 
-### 6.1 x86_64 System V ABI
+### 5.1 x86_64 System V ABI
 
 **Reference**: [System V AMD64 ABI](https://refspecs.linuxbase.org/elf/x86_64-abi-0.99.pdf)
 
@@ -393,7 +393,7 @@ These types have the same size (16 bytes) but **different ABI classification**:
 
 **Migration Effort**: Low - mainly replacing CIR type checks
 
-### 6.2 AArch64 Procedure Call Standard
+### 5.2 AArch64 Procedure Call Standard
 
 **Reference**: [ARM AArch64 ABI](https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst)
 
@@ -413,7 +413,7 @@ These types have the same size (16 bytes) but **different ABI classification**:
 
 **Migration Effort**: Low - similar to x86_64
 
-### 6.3 Future Targets
+### 5.3 Future Targets
 
 **Candidates** (if time permits):
 - ARM32 (for embedded systems)
@@ -423,76 +423,9 @@ These types have the same size (16 bytes) but **different ABI classification**:
 
 **Not Priority**: MIPS, Sparc, Hexagon, etc. (less common)
 
-## 6. Testing Strategy
+## 6. Migration from CIR Incubator
 
-### 6.1 Unit Tests
-
-**Type Interface Tests**:
-```cpp
-TEST(ABITypeInterface, IntegerQueries) {
-  MLIRContext ctx;
-  Type intTy = cir::IntType::get(&ctx, 32, true);
-  auto abiTy = dyn_cast<ABITypeInterface>(intTy);
-  EXPECT_TRUE(abiTy.isInteger());
-  EXPECT_FALSE(abiTy.isRecord());
-}
-```
-
-**Classification Tests**:
-```cpp
-TEST(X86_64ABI, SimpleIntReturn) {
-  // Setup
-  MLIRContext ctx;
-  X86_64ABIInfo abi(...);
-  Type i32 = IntegerType::get(&ctx, 32);
-  
-  // Classify
-  ABIArgInfo info = abi.classifyReturnType(i32);
-  
-  // Verify
-  EXPECT_TRUE(info.isDirect());
-  EXPECT_FALSE(info.isIndirect());
-}
-```
-
-**Lowering Tests**:
-```cpp
-TEST(CIRCallConv, FunctionRewrite) {
-  // Create function with struct argument
-  // Run CallConvLowering pass
-  // Verify function signature changed correctly
-  // Verify call sites updated
-}
-```
-
-### 7.2 Integration Tests
-
-**ABI Compliance Tests**:
-- Generate test cases using Clang classic codegen
-- Lower same functions with CIR
-- Compare LLVM IR output after lowering to LLVM
-- Ensure calling conventions match
-
-**Cross-Dialect Tests** (future):
-- CIR function calling FIR function
-- FIR function calling CIR function
-- Verify ABI compatibility
-
-### 6.3 Performance Tests
-
-**Compilation Time**:
-- Measure time to run CallConvLowering pass
-- Compare with CIR incubator implementation
-- Target: < 5% overhead
-
-**Generated Code Quality**:
-- Compare with classic codegen output
-- Check for unnecessary copies or spills
-- Verify register allocation is similar
-
-## 7. Migration from CIR Incubator
-
-### 7.1 Migration Steps
+### 6.1 Migration Steps
 
 1. **Parallel Implementation**:
    - Build new MLIR-agnostic infrastructure
@@ -516,7 +449,7 @@ TEST(CIRCallConv, FunctionRewrite) {
    - Submit CIR adaptations to CIR upstream
    - Deprecate incubator implementation
 
-### 7.2 Compatibility Considerations
+### 6.2 Compatibility Considerations
 
 **Source Compatibility**:
 - New ABIArgInfo API should match old API where possible
@@ -531,7 +464,7 @@ TEST(CIRCallConv, FunctionRewrite) {
 - Ensure all test cases still pass
 - Add new tests for edge cases
 
-### 7.3 Deprecation Plan
+### 6.3 Deprecation Plan
 
 Once new implementation is stable:
 1. Mark CIR incubator implementation as deprecated (Month 1)
@@ -539,16 +472,16 @@ Once new implementation is stable:
 3. Keep old code for 1-2 releases for safety (Months 1-6)
 4. Remove old implementation (Month 6+)
 
-## 8. Future Work
+## 7. Future Work
 
-### 8.1 Additional Targets
+### 7.1 Additional Targets
 
 - RISC-V (emerging ISA, growing importance)
 - WebAssembly (for web-based backends)
 - ARM32 (for embedded systems)
 - PowerPC (for HPC)
 
-### 8.2 Advanced Features
+### 7.2 Advanced Features
 
 **Varargs Support**:
 - Currently marked NYI in CIR
@@ -570,7 +503,7 @@ Once new implementation is stable:
 - SVE (ARM Scalable Vector Extension)
 - AVX-512 considerations
 
-### 8.3 Optimization Opportunities
+### 7.3 Optimization Opportunities
 
 **Return Value Optimization (RVO)**:
 - Avoid copies for returned aggregates
@@ -584,7 +517,7 @@ Once new implementation is stable:
 - Delay ABI lowering until after inlining
 - Can avoid unnecessary marshalling
 
-### 8.4 GSoC Integration
+### 7.4 GSoC Integration
 
 **Monitor GSoC Progress**:
 - Track PR #140112 development
@@ -601,9 +534,9 @@ Once new implementation is stable:
 - Medium term (Q2-Q3 2026): Evaluate GSoC library
 - Long term (Q4 2026+): Potentially refactor to use GSoC
 
-## 9. Open Questions and Risks
+## 8. Open Questions and Risks
 
-### 9.1 Open Questions
+### 8.1 Open Questions
 
 1. **Should we use TypeInterface or helper class for type queries?**
    - TypeInterface is more MLIR-idiomatic but requires modifying type definitions
@@ -858,7 +791,7 @@ class ABILowering {
    - Who owns the shared infrastructure?
    - **Recommendation**: Build CIR-first, engage FIR team at Phase 7 (after CIR proven)
 
-### 9.2 Risks
+### 8.2 Risks
 
 **Risk 1: TargetInfo Dependency Rejected** ⚠️ **CRITICAL**
 - **Impact**: High (could add 1-3 weeks to timeline)
@@ -907,22 +840,22 @@ class ABILowering {
 - **Description**: Edge cases and corner cases in ABI handling are complex
 - **Mitigation**: Incremental development, frequent validation against classic codegen, comprehensive testing
 
-## 10. Success Metrics
+## 9. Success Metrics
 
-### 10.1 Functional Metrics
+### 9.1 Functional Metrics
 
 - ✅ CIR can lower x86_64 calling conventions correctly (100% test pass rate)
 - ✅ CIR can lower AArch64 calling conventions correctly (100% test pass rate)
 - ✅ ABI output matches classic Clang codegen (validated by comparison tests)
 - ✅ All CIR incubator tests pass with new implementation
 
-### 10.2 Quality Metrics
+### 9.2 Quality Metrics
 
 - ✅ Code coverage > 90% for ABI classification logic
 - ✅ Zero known ABI compliance bugs
 - ✅ Documentation complete (API, user guide, design rationale)
 
-### 10.3 Performance Metrics
+### 9.3 Performance Metrics
 
 - ✅ CallConvLowering pass overhead < 5% compilation time
   - **Context**: This refers to **compile-time overhead**, not runtime performance
@@ -933,39 +866,39 @@ class ABILowering {
 - ✅ No degradation in generated code quality vs direct implementation
   - **Runtime performance unchanged**: ABI lowering is compile-time only
 
-### 10.4 Reusability Metrics
+### 9.4 Reusability Metrics
 
 - ✅ FIR can adopt infrastructure with < 2 weeks integration effort
 - ✅ New target can be added with < 1 week effort (given ABI spec)
 - ✅ ABITypeInterface requires < 10 methods implementation per dialect
 
-## 11. References
+## 10. References
 
-### 11.1 ABI Specifications
+### 10.1 ABI Specifications
 
 - [System V AMD64 ABI](https://refspecs.linuxbase.org/elf/x86_64-abi-0.99.pdf)
 - [ARM AArch64 PCS](https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst)
 - [Itanium C++ ABI](https://itanium-cxx-abi.github.io/cxx-abi/abi.html)
 
-### 11.2 LLVM/MLIR Documentation
+### 10.2 LLVM/MLIR Documentation
 
 - [MLIR Interfaces](https://mlir.llvm.org/docs/Interfaces/)
 - [MLIR Type System](https://mlir.llvm.org/docs/DefiningDialects/AttributesAndTypes/)
 - [MLIR Pass Infrastructure](https://mlir.llvm.org/docs/PassManagement/)
 
-### 11.3 Related Projects
+### 10.3 Related Projects
 
 - [GSoC ABI Lowering RFC](https://discourse.llvm.org/t/rfc-an-abi-lowering-library-for-llvm/84495)
 - [GSoC PR #140112](https://github.com/llvm/llvm-project/pull/140112)
 - [CIR Project](https://github.com/llvm/clangir)
 
-### 11.4 Related Implementation
+### 10.4 Related Implementation
 
 - Clang CodeGen: `clang/lib/CodeGen/`
 - CIR Incubator: `clang/lib/CIR/Dialect/Transforms/TargetLowering/`
 - SPIR-V ABI: `mlir/lib/Dialect/SPIRV/IR/TargetAndABI.cpp`
 
-## 12. Appendices
+## 11. Appendices
 
 ### A. Glossary
 
