@@ -159,6 +159,7 @@ void X86CodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) const {
   // analyses needed by the LVIHardening pass when compiling at -O0.
   if (getOptLevel() != CodeGenOptLevel::None) {
     addMachineFunctionPass(X86LoadValueInjectionRetHardeningPass(), PMW);
+    addMachineFunctionPass(X86LoadValueInjectionLoadHardeningPass(), PMW);
   }
 }
 
@@ -233,8 +234,6 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) const {
     // TODO(boomanaiden154): Add EHContGuardTargetsPass when it has been
     // ported.
   }
-
-  addMachineFunctionPass(X86LoadValueInjectionLoadHardeningPass(), PMW);
 
   // Insert pseudo probe annotation for callsite profiling
   // TODO(boomanaiden154): Add PseudoProberInserterPass here once it has been
