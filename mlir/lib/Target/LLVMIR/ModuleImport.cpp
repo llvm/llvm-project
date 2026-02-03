@@ -2734,13 +2734,14 @@ static void convertAllocsizeAttr(MLIRContext *ctx,
     return;
 
   auto [elemSize, numElems] = attr.getAllocSizeArgs();
-  if (numElems)
+  if (numElems) {
     target.setAllocsizeAttr(
         DenseI32ArrayAttr::get(ctx, {static_cast<int32_t>(elemSize),
                                      static_cast<int32_t>(*numElems)}));
-  else
+  } else {
     target.setAllocsizeAttr(
         DenseI32ArrayAttr::get(ctx, {static_cast<int32_t>(elemSize)}));
+  }
 }
 
 /// Converts LLVM attributes from `func` into MLIR attributes and adds them
