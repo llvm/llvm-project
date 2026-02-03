@@ -56,7 +56,7 @@ enum ImageKind : uint16_t {
 enum OffloadEntryFlags : uint32_t {
   OIF_None = 0,
   // Entry doesn't contain image. Used to keep metadata only entries.
-  OIF_NoImage = (1 << 0),
+  OIF_Metadata = (1 << 0),
 };
 
 /// A simple binary serialization of an offloading file. We use this format to
@@ -220,7 +220,7 @@ public:
     assert(NewBinaryOrErr && "Failed to parse a copy of the binary?");
     if (!NewBinaryOrErr)
       llvm::consumeError(NewBinaryOrErr.takeError());
-    return OffloadFile(std::move(NewBinaryOrErr.get()[0]), std::move(Buffer));
+    return OffloadFile(std::move((*NewBinaryOrErr)[0]), std::move(Buffer));
   }
 
   /// We use the Triple and Architecture pair to group linker inputs together.

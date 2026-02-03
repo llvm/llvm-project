@@ -920,16 +920,16 @@ private:
     const char *End = Current + Entries.size();
     while (Current < End) {
       StringRef Name(Current);
-      if (Name.empty()) {
-        ++Current;
+      Current += Name.size() + 1;
+
+      if (Name.empty())
         continue;
-      }
+
       GlobalVariable *GV = emitOffloadingEntry(
           M, /*Kind*/ OffloadKind::OFK_SYCL,
           Constant::getNullValue(PointerType::getUnqual(C)), Name, /*Size*/ 0,
           /*Flags*/ 0, /*Data*/ 0);
       EntriesInits.push_back(GV->getInitializer());
-      Current += Name.size() + 1;
     }
 
     Constant *Arr = ConstantArray::get(

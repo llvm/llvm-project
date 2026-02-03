@@ -97,7 +97,7 @@ Expected<std::unique_ptr<Binary>> object::createBinary(MemoryBufferRef Buffer,
     auto OffloadBinaryOrErr = OffloadBinary::create(Buffer);
     if (!OffloadBinaryOrErr)
       return OffloadBinaryOrErr.takeError();
-    return std::unique_ptr<Binary>(std::move(OffloadBinaryOrErr.get()[0]));
+    return std::move((*OffloadBinaryOrErr)[0]);
   }
   case file_magic::minidump:
     return MinidumpFile::create(Buffer);
