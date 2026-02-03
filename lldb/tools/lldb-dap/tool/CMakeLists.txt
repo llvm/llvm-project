@@ -6,6 +6,8 @@ add_lldb_tool(lldb-dap
   lldb-dap.cpp
 
   LINK_LIBS
+    lldbUtilityPythonPathSetup
+    liblldb # delay load liblldb
     lldbDAP
   )
 

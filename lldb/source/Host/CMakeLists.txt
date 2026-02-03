@@ -1,3 +1,5 @@
+add_subdirectory(PythonPathSetup)
+
 if (APPLE AND LLVM_ENABLE_LOCAL_SUBMODULE_VISIBILITY)
   # The arpa/inet.h header used in the files here is providing a miscompiled
   # htonl function on macOS < 14 when local submodule visibility is active.

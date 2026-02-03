@@ -71,6 +71,7 @@
 #undef GetObject
 #include <io.h>
 typedef int socklen_t;
+#include "lldb/Host/windows/PythonPathSetup/PythonPathSetup.h"
 #else
 #include <netinet/in.h>
 #include <sys/socket.h>
@@ -521,6 +522,11 @@ int main(int argc, char *argv[]) {
   llvm::setBugReportMsg("PLEASE submit a bug report to " LLDB_BUG_REPORT_URL
                         " and include the crash report from "
                         "~/Library/Logs/DiagnosticReports/.\n");
+#endif
+
+#ifdef _WIN32
+  if (llvm::Error error = SetupPythonRuntimeLibrary())
+    llvm::WithColor::error() << llvm::toString(std::move(error)) << '\n';
 #endif
 
   llvm::SmallString<256> program_path(argv[0]);
