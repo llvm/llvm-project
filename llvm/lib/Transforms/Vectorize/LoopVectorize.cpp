@@ -9361,12 +9361,31 @@ static void fixScalarResumeValuesFromBypass(BasicBlock *BypassBlock, Loop *L,
   // Fix induction resume values from the additional bypass block.
   IRBuilder<> BypassBuilder(BypassBlock, BypassBlock->getFirstInsertionPt());
   for (const auto &[IVPhi, II] : LVL.getInductionVars()) {
-    auto *Inc = cast<PHINode>(IVPhi->getIncomingValueForBlock(PH));
+    Value *IncomingFromPH = IVPhi->getIncomingValueForBlock(PH);
     Value *V = createInductionAdditionalBypassValues(
         IVPhi, II, BypassBuilder, ExpandedSCEVs, MainVectorTripCount,
         LVL.getPrimaryInduction());
-    // TODO: Directly add as extra operand to the VPResumePHI recipe.
-    Inc->setIncomingValueForBlock(BypassBlock, V);
+
+    if (auto *Inc = dyn_cast<PHINode>(IncomingFromPH)) {
+      // TODO: Directly add as extra operand to the VPResumePHI recipe.
+      Inc->setIncomingValueForBlock(BypassBlock, V);
+    } else {
+      // If the incoming value from preheader is not a PHI node (e.g., a
+      // constant in functions with GC statepoint), we need to create a PHI node
+      // in the preheader that merges the original value and the bypass value,
+      // then update IVPhi to use this new PHI node.
+      PHINode *NewPhi = PHINode::Create(IncomingFromPH->getType(), 2,
+                                        IVPhi->getName() + ".phi.merge",
+                                        PH->getFirstNonPHIIt());
+      for (BasicBlock *Pred : predecessors(PH)) {
+        if (Pred == BypassBlock)
+          NewPhi->addIncoming(V, BypassBlock);
+        else
+          NewPhi->addIncoming(IncomingFromPH, Pred);
+      }
+      // Update IVPhi to use the new PHI node for the incoming value from PH.
+      IVPhi->setIncomingValueForBlock(PH, NewPhi);
+    }
   }
 }
 
