@@ -1194,9 +1194,7 @@ static bool isUnsafeVaListPrintfFunc(const FunctionDecl &Node) {
   StringRef Name = LibcFunNamePrefixSuffixParser().matchName(
       II->getName(), Node.getBuiltinID());
 
-  if (!Name.ends_with("printf"))
-    return false; // neither printf nor scanf
-  return Name.starts_with("v");
+  return Name.starts_with("v") && Name.ends_with("printf");
 }
 
 // Matches a call to one of the `sprintf` functions as they are always unsafe
@@ -1210,16 +1208,7 @@ static bool isUnsafeSprintfFunc(const FunctionDecl &Node) {
   StringRef Name = LibcFunNamePrefixSuffixParser().matchName(
       II->getName(), Node.getBuiltinID());
 
-  if (!Name.ends_with("printf") ||
-      // Let `isUnsafeVaListPrintfFunc` check for cases with va-list:
-      Name.starts_with("v"))
-    return false;
-
-  StringRef Prefix = Name.drop_back(6);
-
-  if (Prefix.ends_with("w"))
-    Prefix = Prefix.drop_back(1);
-  return Prefix == "s";
+  return Name == "sprintf" || Name == "swprintf";
 }
 
 // Match function declarations of `printf`, `fprintf`, `snprintf` and their wide
@@ -1234,7 +1223,7 @@ static bool isNormalPrintfFunc(const FunctionDecl &Node) {
   StringRef Name = LibcFunNamePrefixSuffixParser().matchName(
       II->getName(), Node.getBuiltinID());
 
-  if (!Name.ends_with("printf") || Name.starts_with("v"))
+  if (!Name.ends_with("printf"))
     return false;
 
   StringRef Prefix = Name.drop_back(6);

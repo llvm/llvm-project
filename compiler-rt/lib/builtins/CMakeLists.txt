@@ -843,6 +843,16 @@ if (NOT OS_NAME MATCHES "AIX")
     ${powerpc64_SOURCES}
   )
 endif()
+if (OS_NAME MATCHES "AIX")
+  set(powerpc_SOURCES
+    ppc/init_ifuncs.c
+    ${powerpc_SOURCES}
+  )
+  set(powerpc64_SOURCES
+    ppc/init_ifuncs.c
+    ${powerpc64_SOURCES}
+  )
+endif()
 set(powerpc64le_SOURCES ${powerpc64_SOURCES})
 
 set(riscv_SOURCES
