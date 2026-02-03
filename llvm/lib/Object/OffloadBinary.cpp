@@ -241,16 +241,22 @@ OffloadBinary::create(MemoryBufferRef Buf, std::optional<uint64_t> Index) {
   const Entry *Entries =
       reinterpret_cast<const Entry *>(&Start[TheHeader->EntriesOffset]);
 
-  SmallVector<std::unique_ptr<OffloadBinary>> Binaries;
-  if (TheHeader->Version > 1 && Index.has_value()) {
-    if (*Index >= TheHeader->EntriesCount)
-      return errorCodeToError(object_error::parse_failed);
-    const Entry *TheEntry = &Entries[*Index];
+  auto validateEntry = [&](const Entry *TheEntry) -> Error {
     if (TheEntry->ImageOffset > Buf.getBufferSize() ||
         TheEntry->StringOffset > Buf.getBufferSize() ||
         TheEntry->StringOffset + TheEntry->NumStrings * sizeof(StringEntry) >
             Buf.getBufferSize())
       return errorCodeToError(object_error::unexpected_eof);
+    return Error::success();
+  };
+
+  SmallVector<std::unique_ptr<OffloadBinary>> Binaries;
+  if (TheHeader->Version > 1 && Index.has_value()) {
+    if (*Index >= TheHeader->EntriesCount)
+      return errorCodeToError(object_error::parse_failed);
+    const Entry *TheEntry = &Entries[*Index];
+    if (auto Err = validateEntry(TheEntry))
+      return std::move(Err);
 
     Binaries.emplace_back(new OffloadBinary(Buf, TheHeader, TheEntry, *Index));
     return Binaries;
@@ -260,11 +266,8 @@ OffloadBinary::create(MemoryBufferRef Buf, std::optional<uint64_t> Index) {
       TheHeader->Version == 1 ? 1 : TheHeader->EntriesCount;
   for (uint64_t I = 0; I < EntriesCount; ++I) {
     const Entry *TheEntry = &Entries[I];
-    if (TheEntry->ImageOffset > Buf.getBufferSize() ||
-        TheEntry->StringOffset > Buf.getBufferSize() ||
-        TheEntry->StringOffset + TheEntry->NumStrings * sizeof(StringEntry) >
-            Buf.getBufferSize())
-      return errorCodeToError(object_error::unexpected_eof);
+    if (auto Err = validateEntry(TheEntry))
+      return std::move(Err);
 
     Binaries.emplace_back(new OffloadBinary(Buf, TheHeader, TheEntry, I));
   }
