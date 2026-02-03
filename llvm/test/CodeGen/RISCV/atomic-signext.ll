@@ -157,7 +157,6 @@ define signext i32 @atomic_load_i32_unordered(ptr %a) nounwind {
   ret i32 %1
 }
 
-
 define signext i8 @atomicrmw_xchg_i8_monotonic(ptr %a, i8 %b) nounwind {
 ; RV32I-LABEL: atomicrmw_xchg_i8_monotonic:
 ; RV32I:       # %bb.0:
@@ -7508,7 +7507,6 @@ merge:
   %4 = phi i32 [ %1, %then ], [ %2, %else ]
   ret i32 %4
 }
-declare i32 @llvm.smax.i32(i32, i32)
 
 define signext i32 @atomicrmw_min_i32_monotonic_crossbb(ptr %a, i1 %c) nounwind {
 ; RV32I-LABEL: atomicrmw_min_i32_monotonic_crossbb:
@@ -7720,7 +7718,6 @@ merge:
   %4 = phi i32 [ %1, %then ], [ %2, %else ]
   ret i32 %4
 }
-declare i32 @llvm.smin.i32(i32, i32)
 
 define signext i32 @atomicrmw_umax_i32_monotonic_crossbb(ptr %a, i1 %c) nounwind {
 ; RV32I-LABEL: atomicrmw_umax_i32_monotonic_crossbb:
@@ -7904,7 +7901,6 @@ merge:
   %4 = phi i32 [ %1, %then ], [ %2, %else ]
   ret i32 %4
 }
-declare i32 @llvm.umax.i32(i32, i32)
 
 define signext i32 @atomicrmw_umin_i32_monotonic_crossbb(ptr %a, i1 %c) nounwind {
 ; RV32I-LABEL: atomicrmw_umin_i32_monotonic_crossbb:
@@ -8122,7 +8118,6 @@ merge:
   %4 = phi i32 [ %1, %then ], [ %2, %else ]
   ret i32 %4
 }
-declare i32 @llvm.umin.i32(i32, i32)
 
 define signext i32 @cmpxchg_i32_monotonic_crossbb(ptr %ptr, i32 signext %cmp, i32 signext %val, i1 zeroext %c) nounwind {
 ; RV32I-LABEL: cmpxchg_i32_monotonic_crossbb:

@@ -178,9 +178,8 @@ public:
 
     // Look through deref of this.
     if (const auto *UnOp = dyn_cast_or_null<UnaryOperator>(Parent)) {
-      if (UnOp->getOpcode() == UO_Deref) {
+      if (UnOp->getOpcode() == UO_Deref)
         Parent = getParentExprIgnoreParens(UnOp);
-      }
     }
 
     // It's okay to

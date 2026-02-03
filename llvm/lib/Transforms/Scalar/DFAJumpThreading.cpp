@@ -625,8 +625,12 @@ private:
         NewPath.setDeterminator(PhiBB);
         NewPath.setExitValue(C);
         // Don't add SwitchBlock at the start, this is handled later.
-        if (IncomingBB != SwitchBlock)
+        if (IncomingBB != SwitchBlock) {
+          // Don't add a cycle to the path.
+          if (VB.contains(IncomingBB))
+            continue;
           NewPath.push_back(IncomingBB);
+        }
         NewPath.push_back(PhiBB);
         Res.push_back(NewPath);
         continue;
@@ -815,7 +819,12 @@ private:
 
     std::vector<ThreadingPath> TempList;
     for (const ThreadingPath &Path : PathsToPhiDef) {
+      SmallPtrSet<BasicBlock *, 32> PathSet(Path.getPath().begin(),
+                                            Path.getPath().end());
       for (const PathType &PathToSw : PathsToSwitchBB) {
+        if (any_of(llvm::drop_begin(PathToSw),
+                   [&](const BasicBlock *BB) { return PathSet.contains(BB); }))
+          continue;
         ThreadingPath PathCopy(Path);
         PathCopy.appendExcludingFirst(PathToSw);
         TempList.push_back(PathCopy);

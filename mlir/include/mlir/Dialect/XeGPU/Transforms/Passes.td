@@ -37,6 +37,23 @@ def XeGPUPropagateLayout : Pass<"xegpu-propagate-layout"> {
     propagate the layouts required for their operands to the producers. With
     this propagated layout information, pass will then update op result type
     with the layout information.
+
+    `layout-kind` option values:
+    - `inst`
+      Propagate the `inst_data` field of the layout attribute. The default is chosen to
+       maximize instruction-level granularity so that the user shape can be processed
+       with the fewest instructions. For N-D operations, this granularity depends on
+       W (width) and H (height) of the instruction shape.
+       The B (block) dimension (or array length) is not included in the default
+       configuration and must be enabled via a separate optimization pass.
+
+    - `lane`
+      Propagate the `lane_layout` and `lane_data` fields of the layout attribute.
+      Default values are selected to align with hardware.
+
+    - `subgroup`
+      Propagate the `sg_layout` and `sg_data` fields of the layout attribute.
+      Default values are selected to align with hardware.
   }];
   let dependentDialects = ["memref::MemRefDialect", "xegpu::XeGPUDialect",
                            "vector::VectorDialect"];
@@ -47,7 +64,7 @@ def XeGPUPropagateLayout : Pass<"xegpu-propagate-layout"> {
     Option<
     "layoutKind", "layout-kind", "std::string",
     /*default=*/"\"lane\"",
-    "Propagate `inst` / `lane` level of xegpu layouts.">
+    "Propagate `subgroup` / `inst` / `lane` level of xegpu layouts.">
   ];
 }
 
@@ -85,7 +102,7 @@ def XeGPUVectorLinearize : Pass<"xegpu-vector-linearize"> {
                            "scf::SCFDialect", "ub::UBDialect", "vector::VectorDialect"];
 }
 
-def XeGPUOptimizeBlockLoads : Pass<"xegpu-optimize-block-loads"> {
+def XeGPUPeepHoleOptimizer : Pass<"xegpu-optimize-peephole"> {
   let summary = "Optimize XeGPU block load operations";
   let description = [{
     This pass rewrites XeGPU loadNd operations into more optimal forms
@@ -96,5 +113,15 @@ def XeGPUOptimizeBlockLoads : Pass<"xegpu-optimize-block-loads"> {
   let dependentDialects = ["memref::MemRefDialect", "xegpu::XeGPUDialect",
                            "vector::VectorDialect"];
 }
+
+def XeGPUSgToWiDistributeExperimental : Pass<"xegpu-sg-to-wi-distribute-experimental"> {
+  let summary = "Distribute XeGPU ops to work items";
+  let description = [{
+    The pass distributes subgroup level XeGPU ops to work item level XeGPU ops.
+  }];
+  let dependentDialects = ["memref::MemRefDialect", "xegpu::XeGPUDialect",
+                           "vector::VectorDialect", "index::IndexDialect"];
+}
+
 
 #endif // MLIR_DIALECT_XEGPU_TRANSFORMS_PASSES_TD

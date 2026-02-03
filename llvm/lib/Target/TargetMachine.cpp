@@ -133,7 +133,7 @@ bool TargetMachine::isLargeGlobalValue(const GlobalValue *GVal) const {
             .isReadOnlyWithRel())
       return false;
     const DataLayout &DL = GV->getDataLayout();
-    uint64_t Size = DL.getTypeAllocSize(GV->getValueType());
+    uint64_t Size = GV->getGlobalSize(DL);
     return Size == 0 || Size > LargeDataThreshold;
   }
 

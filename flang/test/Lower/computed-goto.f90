@@ -1,30 +1,32 @@
-! RUN: bbc -emit-fir -hlfir=false -o - %s | FileCheck %s
+! RUN: %flang_fc1 -emit-hlfir -o - %s | FileCheck %s
 
 ! CHECK-LABEL: func @_QPm
 function m(index)
-    ! CHECK:   %[[V_0:[0-9]+]] = fir.alloca i32 {bindc_name = "m"
-    ! CHECK:   %[[V_1:[0-9]+]] = fir.load %arg0 : !fir.ref<i32>
+    ! CHECK:   %[[INDEX_DECL:.*]]:2 = hlfir.declare %arg0
+    ! CHECK:   %[[M_REF:.*]] = fir.alloca i32 {bindc_name = "m"
+    ! CHECK:   %[[M_DECL:.*]]:2 = hlfir.declare %[[M_REF]]
+    ! CHECK:   %[[V_1:[0-9]+]] = fir.load %[[INDEX_DECL]]#0 : !fir.ref<i32>
     ! CHECK:   fir.select %[[V_1]] : i32 [1, ^bb6, 2, ^bb5, 3, ^bb4, 4, ^bb3, 5, ^bb2, unit, ^bb1]
     ! CHECK: ^bb1:  // pred: ^bb0
-    ! CHECK:   fir.store %c0{{.*}} to %[[V_0]] : !fir.ref<i32>
+    ! CHECK:   hlfir.assign %c0{{.*}} to %[[M_DECL]]#0 : i32, !fir.ref<i32>
     ! CHECK:   cf.br ^bb7
     ! CHECK: ^bb2:  // pred: ^bb0
-    ! CHECK:   fir.store %c1{{.*}} to %[[V_0]] : !fir.ref<i32>
+    ! CHECK:   hlfir.assign %c1{{.*}} to %[[M_DECL]]#0 : i32, !fir.ref<i32>
     ! CHECK:   cf.br ^bb7
     ! CHECK: ^bb3:  // pred: ^bb0
-    ! CHECK:   fir.store %c3{{.*}} to %[[V_0]] : !fir.ref<i32>
+    ! CHECK:   hlfir.assign %c3{{.*}} to %[[M_DECL]]#0 : i32, !fir.ref<i32>
     ! CHECK:   cf.br ^bb7
     ! CHECK: ^bb4:  // pred: ^bb0
-    ! CHECK:   fir.store %c5{{.*}} to %[[V_0]] : !fir.ref<i32>
+    ! CHECK:   hlfir.assign %c5{{.*}} to %[[M_DECL]]#0 : i32, !fir.ref<i32>
     ! CHECK:   cf.br ^bb7
     ! CHECK: ^bb5:  // pred: ^bb0
-    ! CHECK:   fir.store %c7{{.*}} to %[[V_0]] : !fir.ref<i32>
+    ! CHECK:   hlfir.assign %c7{{.*}} to %[[M_DECL]]#0 : i32, !fir.ref<i32>
     ! CHECK:   cf.br ^bb7
     ! CHECK: ^bb6:  // pred: ^bb0
-    ! CHECK:   fir.store %c9{{.*}} to %[[V_0]] : !fir.ref<i32>
+    ! CHECK:   hlfir.assign %c9{{.*}} to %[[M_DECL]]#0 : i32, !fir.ref<i32>
     ! CHECK:   cf.br ^bb7
     ! CHECK: ^bb7:  // 6 preds: ^bb1, ^bb2, ^bb3, ^bb4, ^bb5, ^bb6
-    ! CHECK:   %[[V_2:[0-9]+]] = fir.load %[[V_0]] : !fir.ref<i32>
+    ! CHECK:   %[[V_2:[0-9]+]] = fir.load %[[M_DECL]]#0 : !fir.ref<i32>
     ! CHECK:   return %[[V_2]] : i32
     goto (9,7,5,3,1) index ! + 1
     m = 0; return
@@ -37,9 +39,11 @@ end
 
 ! CHECK-LABEL: func @_QPm1
 function m1(index)
-    ! CHECK:   %[[V_0:[0-9]+]] = fir.alloca i32 {bindc_name = "m1"
+    ! CHECK:   %[[INDEX_DECL:.*]]:2 = hlfir.declare %arg0
+    ! CHECK:   %[[M_REF:.*]] = fir.alloca i32 {bindc_name = "m1"
+    ! CHECK:   %[[M_DECL:.*]]:2 = hlfir.declare %[[M_REF]]
     ! CHECK:   %[[V_1:[0-9]+]] = llvm.intr.stacksave : !llvm.ptr
-    ! CHECK:   %[[V_2:[0-9]+]] = fir.load %arg0 : !fir.ref<i32>
+    ! CHECK:   %[[V_2:[0-9]+]] = fir.load %[[INDEX_DECL]]#0 : !fir.ref<i32>
     ! CHECK:   %[[V_3:[0-9]+]] = arith.cmpi eq, %[[V_2]], %c1{{.*}} : i32
     ! CHECK:   cf.cond_br %[[V_3]], ^bb1, ^bb2
     ! CHECK: ^bb1:  // pred: ^bb0
@@ -47,13 +51,13 @@ function m1(index)
     ! CHECK:   cf.br ^bb3
     ! CHECK: ^bb2:  // pred: ^bb0
     ! CHECK:   llvm.intr.stackrestore %[[V_1]] : !llvm.ptr
-    ! CHECK:   fir.store %c0{{.*}} to %[[V_0]] : !fir.ref<i32>
+    ! CHECK:   hlfir.assign %c0{{.*}} to %[[M_DECL]]#0 : i32, !fir.ref<i32>
     ! CHECK:   cf.br ^bb4
     ! CHECK: ^bb3:  // pred: ^bb1
-    ! CHECK:   fir.store %c10{{.*}} to %[[V_0]] : !fir.ref<i32>
+    ! CHECK:   hlfir.assign %c10{{.*}} to %[[M_DECL]]#0 : i32, !fir.ref<i32>
     ! CHECK:   cf.br ^bb4
     ! CHECK: ^bb4:  // 2 preds: ^bb2, ^bb3
-    ! CHECK:   %[[V_4:[0-9]+]] = fir.load %[[V_0]] : !fir.ref<i32>
+    ! CHECK:   %[[V_4:[0-9]+]] = fir.load %[[M_DECL]]#0 : !fir.ref<i32>
     ! CHECK:   return %[[V_4]] : i32
     block
       goto (10) index
@@ -64,9 +68,11 @@ end
 
 ! CHECK-LABEL: func @_QPm2
 function m2(index)
-    ! CHECK:   %[[V_0:[0-9]+]] = fir.alloca i32 {bindc_name = "m2"
+    ! CHECK:   %[[INDEX_DECL:.*]]:2 = hlfir.declare %arg0
+    ! CHECK:   %[[M_REF:.*]] = fir.alloca i32 {bindc_name = "m2"
+    ! CHECK:   %[[M_DECL:.*]]:2 = hlfir.declare %[[M_REF]]
     ! CHECK:   %[[V_1:[0-9]+]] = llvm.intr.stacksave : !llvm.ptr
-    ! CHECK:   %[[V_2:[0-9]+]] = fir.load %arg0 : !fir.ref<i32>
+    ! CHECK:   %[[V_2:[0-9]+]] = fir.load %[[INDEX_DECL]]#0 : !fir.ref<i32>
     ! CHECK:   %[[V_3:[0-9]+]] = arith.cmpi eq, %[[V_2]], %c1{{.*}} : i32
     ! CHECK:   cf.cond_br %[[V_3]], ^bb1, ^bb2
     ! CHECK: ^bb1:  // pred: ^bb0
@@ -80,16 +86,16 @@ function m2(index)
     ! CHECK:   cf.br ^bb6
     ! CHECK: ^bb4:  // pred: ^bb2
     ! CHECK:   llvm.intr.stackrestore %[[V_1]] : !llvm.ptr
-    ! CHECK:   fir.store %c0{{.*}} to %[[V_0]] : !fir.ref<i32>
+    ! CHECK:   hlfir.assign %c0{{.*}} to %[[M_DECL]]#0 : i32, !fir.ref<i32>
     ! CHECK:   cf.br ^bb7
     ! CHECK: ^bb5:  // pred: ^bb1
-    ! CHECK:   fir.store %c10{{.*}} to %[[V_0]] : !fir.ref<i32>
+    ! CHECK:   hlfir.assign %c10{{.*}} to %[[M_DECL]]#0 : i32, !fir.ref<i32>
     ! CHECK:   cf.br ^bb7
     ! CHECK: ^bb6:  // pred: ^bb3
-    ! CHECK:   fir.store %c20{{.*}} to %[[V_0]] : !fir.ref<i32>
+    ! CHECK:   hlfir.assign %c20{{.*}} to %[[M_DECL]]#0 : i32, !fir.ref<i32>
     ! CHECK:   cf.br ^bb7
     ! CHECK: ^bb7:  // 3 preds: ^bb4, ^bb5, ^bb6
-    ! CHECK:   %[[V_5:[0-9]+]] = fir.load %[[V_0]] : !fir.ref<i32>
+    ! CHECK:   %[[V_5:[0-9]+]] = fir.load %[[M_DECL]]#0 : !fir.ref<i32>
     ! CHECK:   return %[[V_5]] : i32
     block
       goto (10,20) index
@@ -101,9 +107,11 @@ end
 
 ! CHECK-LABEL: func @_QPm3
 function m3(index)
-    ! CHECK:   %[[V_0:[0-9]+]] = fir.alloca i32 {bindc_name = "m3"
+    ! CHECK:   %[[INDEX_DECL:.*]]:2 = hlfir.declare %arg0
+    ! CHECK:   %[[M_REF:.*]] = fir.alloca i32 {bindc_name = "m3"
+    ! CHECK:   %[[M_DECL:.*]]:2 = hlfir.declare %[[M_REF]]
     ! CHECK:   %[[V_1:[0-9]+]] = llvm.intr.stacksave : !llvm.ptr
-    ! CHECK:   %[[V_2:[0-9]+]] = fir.load %arg0 : !fir.ref<i32>
+    ! CHECK:   %[[V_2:[0-9]+]] = fir.load %[[INDEX_DECL]]#0 : !fir.ref<i32>
     ! CHECK:   %[[V_3:[0-9]+]] = arith.cmpi eq, %[[V_2]], %c1{{.*}} : i32
     ! CHECK:   cf.cond_br %[[V_3]], ^bb1, ^bb2
     ! CHECK: ^bb1:  // pred: ^bb0
@@ -123,19 +131,19 @@ function m3(index)
     ! CHECK:   cf.br ^bb9
     ! CHECK: ^bb6:  // pred: ^bb4
     ! CHECK:   llvm.intr.stackrestore %[[V_1]] : !llvm.ptr
-    ! CHECK:   fir.store %c0{{.*}} to %[[V_0]] : !fir.ref<i32>
+    ! CHECK:   hlfir.assign %c0{{.*}} to %[[M_DECL]]#0 : i32, !fir.ref<i32>
     ! CHECK:   cf.br ^bb10
     ! CHECK: ^bb7:  // pred: ^bb1
-    ! CHECK:   fir.store %c10{{.*}} to %[[V_0]] : !fir.ref<i32>
+    ! CHECK:   hlfir.assign %c10{{.*}} to %[[M_DECL]]#0 : i32, !fir.ref<i32>
     ! CHECK:   cf.br ^bb10
     ! CHECK: ^bb8:  // pred: ^bb3
-    ! CHECK:   fir.store %c20{{.*}} to %[[V_0]] : !fir.ref<i32>
+    ! CHECK:   hlfir.assign %c20{{.*}} to %[[M_DECL]]#0 : i32, !fir.ref<i32>
     ! CHECK:   cf.br ^bb10
     ! CHECK: ^bb9:  // pred: ^bb5
-    ! CHECK:   fir.store %c30{{.*}} to %[[V_0]] : !fir.ref<i32>
+    ! CHECK:   hlfir.assign %c30{{.*}} to %[[M_DECL]]#0 : i32, !fir.ref<i32>
     ! CHECK:   cf.br ^bb10
     ! CHECK: ^bb10:  // 4 preds: ^bb6, ^bb7, ^bb8, ^bb9
-    ! CHECK:   %[[V_6:[0-9]+]] = fir.load %[[V_0]] : !fir.ref<i32>
+    ! CHECK:   %[[V_6:[0-9]+]] = fir.load %[[M_DECL]]#0 : !fir.ref<i32>
     ! CHECK:   return %[[V_6]] : i32
     block
       goto (10,20,30) index

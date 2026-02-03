@@ -371,7 +371,7 @@ define amdgpu_kernel void @test_fold_canonicalize_fabs_value_f32(ptr addrspace(1
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds float, ptr addrspace(1) %arg, i32 %id
   %load = load float, ptr addrspace(1) %gep, align 4
-  %v0 = fadd float %load, 0.0
+  %v0 = fadd float %load, 1.0
   %v = tail call float @llvm.fabs.f32(float %v0)
   %canonicalized = tail call float @llvm.canonicalize.f32(float %v)
   store float %canonicalized, ptr addrspace(1) %gep, align 4
@@ -497,10 +497,12 @@ define amdgpu_kernel void @test_fold_canonicalize_minnum_value_f32(ptr addrspace
   ret void
 }
 
-; FIXME: Should there be more checks here? minnum with sNaN operand is simplified to qNaN.
+; FIXME: Should there be more checks here? minnum with sNaN operand might get simplified away.
 
 ; GCN-LABEL: test_fold_canonicalize_sNaN_value_f32:
-; GCN: v_mov_b32_e32 v{{.+}}, 0x7fc00000
+; GCN: {{flat|global}}_load_dword [[LOAD:v[0-9]+]]
+; VI: v_mul_f32_e32 v{{[0-9]+}}, 1.0, [[LOAD]]
+; GFX9: v_max_f32_e32 v{{[0-9]+}}, [[LOAD]], [[LOAD]]
 define amdgpu_kernel void @test_fold_canonicalize_sNaN_value_f32(ptr addrspace(1) %arg) {
   %id = tail call i32 @llvm.amdgcn.workitem.id.x()
   %gep = getelementptr inbounds float, ptr addrspace(1) %arg, i32 %id

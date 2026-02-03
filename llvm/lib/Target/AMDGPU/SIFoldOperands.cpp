@@ -187,7 +187,7 @@ public:
   unsigned convertToVALUOp(unsigned Opc, bool UseVOP3 = false) const {
     switch (Opc) {
     case AMDGPU::S_ADD_I32: {
-      if (ST->hasAddNoCarry())
+      if (ST->hasAddNoCarryInsts())
         return UseVOP3 ? AMDGPU::V_ADD_U32_e64 : AMDGPU::V_ADD_U32_e32;
       return UseVOP3 ? AMDGPU::V_ADD_CO_U32_e64 : AMDGPU::V_ADD_CO_U32_e32;
     }
@@ -242,7 +242,6 @@ public:
                    SmallVectorImpl<FoldCandidate> &FoldList,
                    SmallVectorImpl<MachineInstr *> &CopiesToReplace) const;
 
-  std::optional<int64_t> getImmOrMaterializedImm(MachineOperand &Op) const;
   bool tryConstantFoldOp(MachineInstr *MI) const;
   bool tryFoldCndMask(MachineInstr &MI) const;
   bool tryFoldZeroHighBits(MachineInstr &MI) const;
@@ -766,6 +765,29 @@ static void appendFoldCandidate(SmallVectorImpl<FoldCandidate> &FoldList,
                       FoldCandidate(MI, OpNo, FoldOp, Commuted, ShrinkOp));
 }
 
+// Returns true if the instruction is a packed F32 instruction and the
+// corresponding scalar operand reads 32 bits and replicates the bits to both
+// channels.
+static bool isPKF32InstrReplicatesLower32BitsOfScalarOperand(
+    const GCNSubtarget *ST, MachineInstr *MI, unsigned OpNo) {
+  if (!ST->hasPKF32InstsReplicatingLower32BitsOfScalarInput())
+    return false;
+  const MCOperandInfo &OpDesc = MI->getDesc().operands()[OpNo];
+  return OpDesc.OperandType == AMDGPU::OPERAND_REG_IMM_V2FP32;
+}
+
+// Packed FP32 instructions only read 32 bits from a scalar operand (SGPR or
+// literal) and replicates the bits to both channels. Therefore, if the hi and
+// lo are not same, we can't fold it.
+static bool checkImmOpForPKF32InstrReplicatesLower32BitsOfScalarOperand(
+    const FoldableDef &OpToFold) {
+  assert(OpToFold.isImm() && "Expected immediate operand");
+  uint64_t ImmVal = OpToFold.getEffectiveImmVal().value();
+  uint32_t Lo = Lo_32(ImmVal);
+  uint32_t Hi = Hi_32(ImmVal);
+  return Lo == Hi;
+}
+
 bool SIFoldOperandsImpl::tryAddToFoldList(
     SmallVectorImpl<FoldCandidate> &FoldList, MachineInstr *MI, unsigned OpNo,
     const FoldableDef &OpToFold) const {
@@ -918,6 +940,13 @@ bool SIFoldOperandsImpl::tryAddToFoldList(
     if (tryToFoldAsFMAAKorMK())
       return true;
   }
+
+  // Special case for PK_F32 instructions if we are trying to fold an imm to
+  // src0 or src1.
+  if (OpToFold.isImm() &&
+      isPKF32InstrReplicatesLower32BitsOfScalarOperand(ST, MI, OpNo) &&
+      !checkImmOpForPKF32InstrReplicatesLower32BitsOfScalarOperand(OpToFold))
+    return false;
 
   appendFoldCandidate(FoldList, MI, OpNo, OpToFold);
   return true;
@@ -1134,6 +1163,9 @@ bool SIFoldOperandsImpl::tryToFoldACImm(
     return false;
 
   if (OpToFold.isImm() && OpToFold.isOperandLegal(*TII, *UseMI, UseOpIdx)) {
+    if (isPKF32InstrReplicatesLower32BitsOfScalarOperand(ST, UseMI, UseOpIdx) &&
+        !checkImmOpForPKF32InstrReplicatesLower32BitsOfScalarOperand(OpToFold))
+      return false;
     appendFoldCandidate(FoldList, UseMI, UseOpIdx, OpToFold);
     return true;
   }
@@ -1534,24 +1566,6 @@ static unsigned getMovOpc(bool IsScalar) {
   return IsScalar ? AMDGPU::S_MOV_B32 : AMDGPU::V_MOV_B32_e32;
 }
 
-std::optional<int64_t>
-SIFoldOperandsImpl::getImmOrMaterializedImm(MachineOperand &Op) const {
-  if (Op.isImm())
-    return Op.getImm();
-
-  if (!Op.isReg() || !Op.getReg().isVirtual())
-    return std::nullopt;
-
-  const MachineInstr *Def = MRI->getVRegDef(Op.getReg());
-  if (Def && Def->isMoveImmediate()) {
-    const MachineOperand &ImmSrc = Def->getOperand(1);
-    if (ImmSrc.isImm())
-      return TII->extractSubregFromImm(ImmSrc.getImm(), Op.getSubReg());
-  }
-
-  return std::nullopt;
-}
-
 // Try to simplify operations with a constant that may appear after instruction
 // selection.
 // TODO: See if a frame index with a fixed offset can fold.
@@ -1566,7 +1580,7 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
     return false;
 
   MachineOperand *Src0 = &MI->getOperand(Src0Idx);
-  std::optional<int64_t> Src0Imm = getImmOrMaterializedImm(*Src0);
+  std::optional<int64_t> Src0Imm = TII->getImmOrMaterializedImm(*Src0);
 
   if ((Opc == AMDGPU::V_NOT_B32_e64 || Opc == AMDGPU::V_NOT_B32_e32 ||
        Opc == AMDGPU::S_NOT_B32) &&
@@ -1582,7 +1596,7 @@ bool SIFoldOperandsImpl::tryConstantFoldOp(MachineInstr *MI) const {
     return false;
 
   MachineOperand *Src1 = &MI->getOperand(Src1Idx);
-  std::optional<int64_t> Src1Imm = getImmOrMaterializedImm(*Src1);
+  std::optional<int64_t> Src1Imm = TII->getImmOrMaterializedImm(*Src1);
 
   if (!Src0Imm && !Src1Imm)
     return false;
@@ -1673,11 +1687,11 @@ bool SIFoldOperandsImpl::tryFoldCndMask(MachineInstr &MI) const {
   MachineOperand *Src0 = TII->getNamedOperand(MI, AMDGPU::OpName::src0);
   MachineOperand *Src1 = TII->getNamedOperand(MI, AMDGPU::OpName::src1);
   if (!Src1->isIdenticalTo(*Src0)) {
-    std::optional<int64_t> Src1Imm = getImmOrMaterializedImm(*Src1);
+    std::optional<int64_t> Src1Imm = TII->getImmOrMaterializedImm(*Src1);
     if (!Src1Imm)
       return false;
 
-    std::optional<int64_t> Src0Imm = getImmOrMaterializedImm(*Src0);
+    std::optional<int64_t> Src0Imm = TII->getImmOrMaterializedImm(*Src0);
     if (!Src0Imm || *Src0Imm != *Src1Imm)
       return false;
   }
@@ -1711,7 +1725,8 @@ bool SIFoldOperandsImpl::tryFoldZeroHighBits(MachineInstr &MI) const {
       MI.getOpcode() != AMDGPU::V_AND_B32_e32)
     return false;
 
-  std::optional<int64_t> Src0Imm = getImmOrMaterializedImm(MI.getOperand(1));
+  std::optional<int64_t> Src0Imm =
+      TII->getImmOrMaterializedImm(MI.getOperand(1));
   if (!Src0Imm || *Src0Imm != 0xffff || !MI.getOperand(2).isReg())
     return false;
 
@@ -2400,7 +2415,7 @@ bool SIFoldOperandsImpl::tryFoldRegSequence(MachineInstr &MI) {
     } else { // This is a copy
       MachineInstr *SubDef = MRI->getVRegDef(Def->getReg());
       SubDef->getOperand(1).setIsKill(false);
-      RS.addReg(SubDef->getOperand(1).getReg(), 0, Def->getSubReg());
+      RS.addReg(SubDef->getOperand(1).getReg(), {}, Def->getSubReg());
     }
     RS.addImm(SubIdx);
   }
@@ -2724,7 +2739,7 @@ bool SIFoldOperandsImpl::tryOptimizeAGPRPhis(MachineBasicBlock &MBB) {
     MachineInstr *VGPRCopy =
         BuildMI(*DefMBB, ++Def->getIterator(), Def->getDebugLoc(),
                 TII->get(AMDGPU::V_ACCVGPR_READ_B32_e64), TempVGPR)
-            .addReg(Reg, /* flags */ 0, SubReg);
+            .addReg(Reg, /* flags */ {}, SubReg);
 
     // Copy back to an AGPR and use that instead of the AGPR subreg in all MOs.
     Register TempAGPR = MRI->createVirtualRegister(ARC);
@@ -2758,7 +2773,6 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF) {
   //
   // FIXME: Also need to check strictfp
   bool IsIEEEMode = MFI->getMode().IEEE;
-  bool HasNSZ = MFI->hasNoSignedZerosFPMath();
 
   bool Changed = false;
   for (MachineBasicBlock *MBB : depth_first(&MF)) {
@@ -2797,8 +2811,7 @@ bool SIFoldOperandsImpl::run(MachineFunction &MF) {
 
       // TODO: Omod might be OK if there is NSZ only on the source
       // instruction, and not the omod multiply.
-      if (IsIEEEMode || (!HasNSZ && !MI.getFlag(MachineInstr::FmNsz)) ||
-          !tryFoldOMod(MI))
+      if (IsIEEEMode || !MI.getFlag(MachineInstr::FmNsz) || !tryFoldOMod(MI))
         Changed |= tryFoldClamp(MI);
     }
 

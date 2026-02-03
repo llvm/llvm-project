@@ -24,6 +24,10 @@
 
 using namespace llvm;
 
+SPIRVTargetLowering::SPIRVTargetLowering(const TargetMachine &TM,
+                                         const SPIRVSubtarget &ST)
+    : TargetLowering(TM, ST), STI(ST) {}
+
 // Returns true of the types logically match, as defined in
 // https://registry.khronos.org/SPIR-V/specs/unified1/SPIRV.html#OpCopyLogical.
 static bool typesLogicallyMatch(const SPIRVType *Ty1, const SPIRVType *Ty2,
@@ -89,10 +93,10 @@ MVT SPIRVTargetLowering::getRegisterTypeForCallingConv(LLVMContext &Context,
   return getRegisterType(Context, VT);
 }
 
-bool SPIRVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                             const CallInst &I,
-                                             MachineFunction &MF,
-                                             unsigned Intrinsic) const {
+void SPIRVTargetLowering::getTgtMemIntrinsic(
+    SmallVectorImpl<IntrinsicInfo> &Infos, const CallBase &I,
+    MachineFunction &MF, unsigned Intrinsic) const {
+  IntrinsicInfo Info;
   unsigned AlignIdx = 3;
   switch (Intrinsic) {
   case Intrinsic::spv_load:
@@ -108,13 +112,12 @@ bool SPIRVTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.memVT = MVT::i64;
     // TODO: take into account opaque pointers (don't use getElementType).
     // MVT::getVT(PtrTy->getElementType());
-    return true;
-    break;
+    Infos.push_back(Info);
+    return;
   }
   default:
     break;
   }
-  return false;
 }
 
 std::pair<unsigned, const TargetRegisterClass *>
@@ -606,8 +609,7 @@ bool SPIRVTargetLowering::insertLogicalCopyOnResult(
       createVirtualRegister(NewResultType, &GR, MRI, *I.getMF());
   Register NewTypeReg = GR.getSPIRVTypeID(NewResultType);
 
-  assert(std::distance(I.defs().begin(), I.defs().end()) == 1 &&
-         "Expected only one def");
+  assert(llvm::size(I.defs()) == 1 && "Expected only one def");
   MachineOperand &OldResult = *I.defs().begin();
   Register OldResultReg = OldResult.getReg();
   MachineOperand &OldType = *I.uses().begin();

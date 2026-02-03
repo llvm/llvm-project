@@ -16,10 +16,10 @@ class TestDAP_exception_objc(lldbdap_testcase.DAPTestCaseBase):
         program = self.getBuildArtifact("a.out")
         self.build_and_launch(program)
         self.dap_server.request_continue()
-        self.assertTrue(self.verify_stop_exception_info("signal SIGABRT"))
+        self.verify_stop_exception_info("signal SIGABRT")
         exception_info = self.get_exceptionInfo()
         self.assertEqual(exception_info["breakMode"], "always")
-        self.assertEqual(exception_info["description"], "signal SIGABRT")
+        self.assertIn("signal SIGABRT", exception_info["description"])
         self.assertEqual(exception_info["exceptionId"], "signal")
         exception_details = exception_info["details"]
         self.assertRegex(exception_details["message"], "SomeReason")
@@ -44,7 +44,10 @@ class TestDAP_exception_objc(lldbdap_testcase.DAPTestCaseBase):
         if response:
             self.assertTrue(response["success"])
 
-        self.continue_to_exception_breakpoint("Objective-C Throw")
+        self.continue_to_exception_breakpoint(
+            expected_description="hit Objective-C exception",
+            expected_text="Objective-C Throw",
+        )
 
         # FIXME: Catching objc exceptions do not appear to be working.
         # Xcode appears to set a breakpoint on '__cxa_begin_catch' for objc
@@ -54,10 +57,10 @@ class TestDAP_exception_objc(lldbdap_testcase.DAPTestCaseBase):
 
         self.do_continue()
 
-        self.assertTrue(self.verify_stop_exception_info("signal SIGABRT"))
+        self.verify_stop_exception_info("signal SIGABRT")
         exception_info = self.get_exceptionInfo()
         self.assertEqual(exception_info["breakMode"], "always")
-        self.assertEqual(exception_info["description"], "signal SIGABRT")
+        self.assertIn("signal SIGABRT", exception_info["description"])
         self.assertEqual(exception_info["exceptionId"], "signal")
         exception_details = exception_info["details"]
         self.assertRegex(exception_details["message"], "SomeReason")

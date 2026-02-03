@@ -354,9 +354,9 @@ void IntrinsicEmitter::EmitGenerator(const CodeGenIntrinsicTable &Ints,
   using FixedEncodingTy =
       std::conditional_t<Use16BitFixedEncoding, uint16_t, uint32_t>;
   constexpr unsigned FixedEncodingBits = sizeof(FixedEncodingTy) * CHAR_BIT;
+  constexpr unsigned MSBPosition = FixedEncodingBits - 1;
   // Mask with all bits 1 except the most significant bit.
-  const unsigned Mask = (1U << (FixedEncodingBits - 1)) - 1;
-  const unsigned MSBPostion = FixedEncodingBits - 1;
+  constexpr unsigned Mask = (1U << MSBPosition) - 1;
   StringRef FixedEncodingTypeName =
       Use16BitFixedEncoding ? "uint16_t" : "uint32_t";
 
@@ -374,7 +374,7 @@ void IntrinsicEmitter::EmitGenerator(const CodeGenIntrinsicTable &Ints,
 
     // Check to see if we can encode it into a 16/32 bit word.
     std::optional<uint32_t> Result = encodePacked(TypeSig);
-    if (Result && (*Result & Mask) == Result) {
+    if (Result && (*Result & Mask) == *Result) {
       FixedEncodings.push_back(static_cast<FixedEncodingTy>(*Result));
       continue;
     }
@@ -389,7 +389,8 @@ void IntrinsicEmitter::EmitGenerator(const CodeGenIntrinsicTable &Ints,
 
   OS << formatv(R"(// Global intrinsic function declaration type table.
 #ifdef GET_INTRINSIC_GENERATOR_GLOBAL
-static constexpr {} IIT_Table[] = {{
+using FixedEncodingTy = {};
+static constexpr FixedEncodingTy IIT_Table[] = {{
   )",
                 FixedEncodingTypeName);
 
@@ -410,7 +411,7 @@ static constexpr {} IIT_Table[] = {{
 
     // Otherwise, emit the offset into the long encoding table.  We emit it this
     // way so that it is easier to read the offset in the .def file.
-    OS << formatv("(1U<<{}) | {}, ", MSBPostion, Offset);
+    OS << formatv("(1U<<{}) | {}, ", MSBPosition, Offset);
   }
 
   OS << "0\n};\n\n";
@@ -599,10 +600,10 @@ static AttributeSet getIntrinsicFnAttributeSet(LLVMContext &C, unsigned ID) {
     if (!UniqFnAttributes.try_emplace(&Int, ID).second)
       continue;
     OS << formatv(R"(
-  case {}:
+  case {}: // {}
     return AttributeSet::get(C, {{
 )",
-                  ID);
+                  ID, Int.Name);
     auto addAttribute = [&OS](StringRef Attr) {
       OS << formatv("      Attribute::get(C, Attribute::{}),\n", Attr);
     };

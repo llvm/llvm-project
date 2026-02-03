@@ -44,7 +44,7 @@ nouses-argworn-funro_entry:
 @d-ccc = internal global %_type_of_d-ccc <{ ptr null, i8 1, i8 13, i8 0, i8 -127 }>, align 8
 
 define void @nouses-argworn-funwo(ptr writeonly %.aaa) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: none, inaccessiblemem: none)
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(write, argmem: none, inaccessiblemem: none, target_mem0: none, target_mem1: none)
 ; FNATTRS-LABEL: define {{[^@]+}}@nouses-argworn-funwo
 ; FNATTRS-SAME: (ptr readnone captures(none) [[DOTAAA:%.*]]) #[[ATTR2:[0-9]+]] {
 ; FNATTRS-NEXT:  nouses-argworn-funwo_entry:
@@ -82,7 +82,7 @@ define void @test_store(ptr %p) {
 
 @G = external global ptr
 define i8 @test_store_capture(ptr %p) {
-; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, argmem: read, inaccessiblemem: none)
+; FNATTRS: Function Attrs: mustprogress nofree norecurse nosync nounwind willreturn memory(readwrite, argmem: read, inaccessiblemem: none, target_mem0: none, target_mem1: none)
 ; FNATTRS-LABEL: define {{[^@]+}}@test_store_capture
 ; FNATTRS-SAME: (ptr [[P:%.*]]) #[[ATTR4:[0-9]+]] {
 ; FNATTRS-NEXT:    store ptr [[P]], ptr @G, align 8

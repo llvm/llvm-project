@@ -52,6 +52,12 @@ public:
   StructuredData::DictionarySP GetRegisterInfo() override;
 
   std::optional<std::string> GetRegisterContext() override;
+
+  lldb::ValueObjectListSP GetVariables() override;
+
+  lldb::ValueObjectSP
+  GetValueObjectForVariableExpression(llvm::StringRef expr, uint32_t options,
+                                      Status &status) override;
 };
 } // namespace lldb_private
 
