@@ -149,6 +149,14 @@ LogicalResult DeadCodeAnalysis::initialize(Operation *top) {
            << OpWithFlags(top, OpPrintingFlags().skipRegions());
   }
 
+  // If the top level op is a callable, we cannot identify all of its callers.
+  if (isa<CallableOpInterface>(top)) {
+    auto *state = getOrCreate<PredecessorState>(getProgramPointAfter(top));
+    propagateIfChanged(state, state->setHasUnknownPredecessors());
+    LDBG() << "[init] Marked callable root as having unknown predecessors: "
+           << OpWithFlags(top, OpPrintingFlags().skipRegions());
+  }
+
   // Mark as overdefined the predecessors of symbol callables with potentially
   // unknown predecessors.
   initializeSymbolCallables(top);
