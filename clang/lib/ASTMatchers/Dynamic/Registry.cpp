@@ -556,6 +556,7 @@ RegistryMaps::RegistryMaps() {
   REGISTER_MATCHER(referenceType);
   REGISTER_MATCHER(referenceTypeLoc);
   REGISTER_MATCHER(refersToDeclaration);
+  REGISTER_MATCHER(refersToPack);
   REGISTER_MATCHER(refersToIntegralType);
   REGISTER_MATCHER(refersToTemplate);
   REGISTER_MATCHER(refersToType);
