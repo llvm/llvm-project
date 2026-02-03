@@ -129,14 +129,13 @@ elimination and inlining), but you might lose the ability to modify the program
 and call functions which were optimized out of the program, or inlined away
 completely.
 
-The :doc:`LLVM test-suite <TestSuiteMakefileGuide>` provides a framework to
-test the optimizer's handling of debugging information.  It can be run like
-this:
+The :doc:`LLVM test-suite <TestSuiteGuide>` provides a framework to test the
+optimizer's handling of debugging information.  It can be run like this:
 
 .. code-block:: bash
 
-  % cd llvm/projects/test-suite/MultiSource/Benchmarks  # or some other level
-  % make TEST=dbgopt
+  % cd llvm-test-suite/MultiSource/Benchmarks  # or some other level
+  % make TEST=dbgopt # TODO
 
 This will test impact of debugging information on optimization passes.  If
 debugging information influences optimization passes then it will be reported
