@@ -45,7 +45,7 @@ template < class _Sent, class _Iter, class _Unwrapped>
 _LIBCPP_HIDE_FROM_ABI constexpr _Iter __rewrap_range(_Iter __orig_iter, _Unwrapped __iter) {
   if constexpr (is_same_v<_Iter, _Sent>)
     return std::__rewrap_iter(std::move(__orig_iter), std::move(__iter));
-  if constexpr (random_access_iterator<_Iter> && sized_sentinel_for<_Sent, _Iter>)
+  else if constexpr (random_access_iterator<_Iter> && sized_sentinel_for<_Sent, _Iter>)
     return std::__rewrap_iter(std::move(__orig_iter), std::move(__iter));
   else
     return __iter;
