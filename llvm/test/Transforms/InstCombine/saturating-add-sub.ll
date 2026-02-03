@@ -2388,11 +2388,7 @@ define i8 @fold_add_umax_to_usub_multiuse(i8 %a) {
 
 define i32 @uadd_with_zext(i32 %x, i32 %y) {
 ; CHECK-LABEL: @uadd_with_zext(
-; CHECK-NEXT:    [[CONV:%.*]] = zext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[CONV1:%.*]] = zext i32 [[Y:%.*]] to i64
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[CONV]], [[CONV1]]
-; CHECK-NEXT:    [[COND1:%.*]] = call i64 @llvm.umin.i64(i64 [[ADD]], i64 4294967295)
-; CHECK-NEXT:    [[COND:%.*]] = trunc nuw i64 [[COND1]] to i32
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[X:%.*]], i32 [[Y:%.*]])
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %conv = zext i32 %x to i64
@@ -2406,13 +2402,9 @@ define i32 @uadd_with_zext(i32 %x, i32 %y) {
 
 define i32 @uadd_with_zext_multi_use(i32 %x, i32 %y) {
 ; CHECK-LABEL: @uadd_with_zext_multi_use(
-; CHECK-NEXT:    [[CONV:%.*]] = zext i32 [[X:%.*]] to i64
-; CHECK-NEXT:    [[CONV1:%.*]] = zext i32 [[Y:%.*]] to i64
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i64 [[CONV]], [[CONV1]]
-; CHECK-NEXT:    [[TRUNCADD:%.*]] = trunc i64 [[ADD]] to i32
+; CHECK-NEXT:    [[TRUNCADD:%.*]] = add i32 [[X:%.*]], [[Y:%.*]]
 ; CHECK-NEXT:    call void @usei32(i32 [[TRUNCADD]])
-; CHECK-NEXT:    [[COND1:%.*]] = call i64 @llvm.umin.i64(i64 [[ADD]], i64 4294967295)
-; CHECK-NEXT:    [[COND:%.*]] = trunc nuw i64 [[COND1]] to i32
+; CHECK-NEXT:    [[COND:%.*]] = call i32 @llvm.uadd.sat.i32(i32 [[X]], i32 [[Y]])
 ; CHECK-NEXT:    ret i32 [[COND]]
 ;
   %conv = zext i32 %x to i64
