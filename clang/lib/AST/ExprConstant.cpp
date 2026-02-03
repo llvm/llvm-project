@@ -21664,7 +21664,7 @@ bool Expr::isPotentialConstantExprUnevaluated(Expr *E,
 std::optional<uint64_t> Expr::tryEvaluateObjectSize(const ASTContext &Ctx,
                                                     unsigned Type) const {
   if (!getType()->isPointerType())
-    return false;
+    return std::nullopt;
 
   Expr::EvalStatus Status;
   EvalInfo Info(Ctx, Status, EvaluationMode::ConstantFold);
