@@ -76,91 +76,91 @@ int testSwitch(int x) { // CHECK-NEXT: File 0, [[@LINE]]:23 -> [[@LINE+20]]:2 = 
 int testWhile() {       // CHECK-NEXT: File 0, [[@LINE]]:17 -> [[@LINE+12]]:2 = [[C40:#0]]
   int i = 0;
   int sum = 0;
-  while (i < 10) {      // CHECK-NEXT: File 0, [[@LINE]]:10 -> [[@LINE]]:16 = [[C4C:#1]]
-
-                        // CHECK-NEXT: Gap,File 0, [[@LINE-2]]:17 -> [[@LINE-2]]:18 = [[C4T:#2]]
+  while (i < 10) {      // CHECK-NEXT: File 0, [[@LINE]]:10 -> [[@LINE]]:16 = ([[C40]] + [[C4T:#1]])
+                        // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:10 -> [[@LINE-1]]:16 = [[C4T]], [[C4F:#0]]
+                        // CHECK-NEXT: Gap,File 0, [[@LINE-2]]:17 -> [[@LINE-2]]:18 = [[C4T]]
                         // CHECK-NEXT: File 0, [[@LINE-3]]:18 -> [[@LINE+3]]:4 = [[C4T]]
     sum += i;
     i++;
   }
 
-  return sum;           // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE]]:13 = [[C4E:#3]]
+  return sum;           // #0
 }
 
 // CHECK-NEXT: testContinueBreak
-int testContinueBreak() { // CHECK-NEXT: File 0, [[@LINE]]:25 -> [[@LINE+23]]:2 = #0
+int testContinueBreak() { // CHECK-NEXT: File 0, [[@LINE]]:25 -> [[@LINE+23]]:2 = [[C50:#0]]
   int i = 0;
   int sum = 0;
-  while (i < 10) {   // CHECK-NEXT: File 0, [[@LINE]]:10 -> [[@LINE]]:16 = #1
-
-                     // CHECK-NEXT: Gap,File 0, [[@LINE-2]]:17 -> [[@LINE-2]]:18 = [[C5B:#2]]
+  while (i < 10) {   // CHECK-NEXT: File 0, [[@LINE]]:10 -> [[@LINE]]:16 = (([[C50]] + [[C5T:#2]]) + [[C5F1:#5]])
+                     // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:10 -> [[@LINE-1]]:16 = [[C5B:#1]], [[C5E:#6]]
+                     // CHECK-NEXT: Gap,File 0, [[@LINE-2]]:17 -> [[@LINE-2]]:18 = [[C5B]]
                      // CHECK-NEXT: File 0, [[@LINE-3]]:18 -> [[@LINE+14]]:4 = [[C5B]]
     if (i == 4)      // CHECK-NEXT: File 0, [[@LINE]]:9 -> [[@LINE]]:15 = [[C5B]]
 
-                     // CHECK-NEXT: Gap,File 0, [[@LINE-2]]:16 -> [[@LINE+1]]:7 = [[C5T:#4]]
+                     // CHECK-NEXT: Gap,File 0, [[@LINE-2]]:16 -> [[@LINE+1]]:7 = [[C5T]]
       continue;      // CHECK-NEXT: File 0, [[@LINE]]:7 -> [[@LINE]]:15 = [[C5T]]
-                     // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:16 -> [[@LINE+2]]:5 = [[C5F:#5]]
+                     // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:16 -> [[@LINE+2]]:5 = [[C5F:#3]]
                      // CHECK-NEXT: File 0, [[@LINE+1]]:5 -> [[@LINE+8]]:4 = [[C5F]]
     if (i == 5)      // CHECK-NEXT: File 0, [[@LINE]]:9 -> [[@LINE]]:15 = [[C5F]]
 
-                     // CHECK-NEXT: Gap,File 0, [[@LINE-2]]:16 -> [[@LINE+1]]:7 = [[C5T1:#6]]
+                     // CHECK-NEXT: Gap,File 0, [[@LINE-2]]:16 -> [[@LINE+1]]:7 = [[C5T1:#4]]
       break;         // CHECK-NEXT: File 0, [[@LINE]]:7 -> [[@LINE]]:12 = [[C5T1]]
-                     // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:13 -> [[@LINE+1]]:5 = [[C5F1:#7]]
+                     // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:13 -> [[@LINE+1]]:5 = [[C5F1]]
     sum += i;        // CHECK-NEXT: File 0, [[@LINE]]:5 -> [[@LINE+2]]:4 = [[C5F1]]
     i++;
   }
-                     // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:4 -> [[@LINE+1]]:3 = [[C5E:#3]]
-  return sum;        // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE]]:13 = [[C5E]]
+                     // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:4 -> [[@LINE+1]]:3 = ([[C5T1]] + [[C5E]])
+  return sum;        // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE]]:13 = ([[C5T1]] + [[C5E]])
 }
 
 // CHECK-NEXT: testFor
 int testFor() { // CHECK-NEXT: File 0, [[@LINE]]:15 -> [[@LINE+13]]:2 = [[C60:#0]]
   int i;
   int sum = 0;
-                // CHECK-NEXT: File 0, [[@LINE+3]]:19 -> [[@LINE+3]]:25 = [[C61:#1]]
-
-                // CHECK-NEXT: File 0, [[@LINE+1]]:27 -> [[@LINE+1]]:30 = [[C6C:#2]]
+                // CHECK-NEXT: File 0, [[@LINE+3]]:19 -> [[@LINE+3]]:25 = ([[C60]] + [[C6B:#1]])
+                // CHECK-NEXT: Branch,File 0, [[@LINE+2]]:19 -> [[@LINE+2]]:25 = [[C6B]], [[C6E:#0]]
+                // CHECK-NEXT: File 0, [[@LINE+1]]:27 -> [[@LINE+1]]:30 = [[C6B]]
   for (int i = 0; i < 10; i++) {
-                // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:31 -> [[@LINE-1]]:32 = [[C6B:#3]]
+                // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:31 -> [[@LINE-1]]:32 = [[C6B]]
                 // CHECK-NEXT: File 0, [[@LINE-2]]:32 -> [[@LINE+2]]:4 = [[C6B]]
     sum += i;
   }
 
-  return sum;   // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE]]:13 = [[C6E:#4]]
+  return sum;   // #0
 }
 
 // CHECK-NEXT: testForRange
 int testForRange() {    // CHECK-NEXT: File 0, [[@LINE]]:20 -> [[@LINE+11]]:2 = [[C70:#0]]
   int sum = 0;
   int array[] = {1, 2, 3, 4, 5};
-
+                        // CHECK-NEXT: Branch,File 0, [[@LINE+1]]:20 -> [[@LINE+1]]:21 = [[C7B:#1]], [[C7E:#0]]
   for (int element : array) {
-                        // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:28 -> [[@LINE-1]]:29 = [[C7B:#1]]
+                        // CHECK-NEXT: Gap,File 0, [[@LINE-1]]:28 -> [[@LINE-1]]:29 = [[C7B]]
                         // CHECK-NEXT: File 0, [[@LINE-2]]:29 -> [[@LINE+2]]:4 = [[C7B]]
       sum += element;
   }
 
-  return sum;           // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE]]:13 = [[C7E:#2]]
+  return sum;           // #0
 }
 
 // CHECK-NEXT: testDo
 int testDo() {          // CHECK-NEXT: File 0, [[@LINE]]:14 -> [[@LINE+9]]:2 = [[C80:#0]]
   int i = 0;
   int sum = 0;
-  do {                  // CHECK-NEXT: File 0, [[@LINE]]:6 -> [[@LINE+3]]:4 = [[C8B:#1]]
+  do {                  // CHECK-NEXT: File 0, [[@LINE]]:6 -> [[@LINE+3]]:4 = ([[C80]] + [[C8B:#1]])
     sum += i;
     i++;
-  } while (i < 5);      // CHECK-NEXT: File 0, [[@LINE]]:12 -> [[@LINE]]:17 = [[C8C:#2]]
-
-  return sum;           // CHECK-NEXT: File 0, [[@LINE]]:3 -> [[@LINE]]:13 = [[C8E:#3]]
+  } while (i < 5);      // CHECK-NEXT: File 0, [[@LINE]]:12 -> [[@LINE]]:17 = ([[C80]] + [[C8B]])
+                        // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:12 -> [[@LINE-1]]:17 = [[C8B]], [[C8E:#0]]
+  return sum;           // #0
 }
 
 // CHECK-NEXT: testConditional
 int testConditional(int x) {    // CHECK-NEXT: File 0, [[@LINE]]:28 -> [[@LINE+7]]:2 = [[C90:#0]]
  int result = (x > 0) ? 1 : -1; // CHECK-NEXT: File 0, [[@LINE]]:15 -> [[@LINE]]:22 = [[C90]]
-
-                                // CHECK-NEXT: Gap,File 0, [[@LINE-2]]:24 -> [[@LINE-2]]:25 = [[C9T:#2]]
+                                // CHECK-NEXT: Branch,File 0, [[@LINE-1]]:15 -> [[@LINE-1]]:22 = [[C9T:#1]], [[C9F:#2]]
+                                // CHECK-NEXT: Gap,File 0, [[@LINE-2]]:24 -> [[@LINE-2]]:25 = [[C9T]]
                                 // CHECK-NEXT: File 0, [[@LINE-3]]:25 -> [[@LINE-3]]:26 = [[C9T]]
-                                // CHECK-NEXT: File 0, [[@LINE-4]]:29 -> [[@LINE-4]]:31 = [[C9F:#3]]
- return result;                 // CHECK-NEXT: File 0, [[@LINE]]:2 -> [[@LINE]]:15 = [[C9E:#1]]
+                                // CHECK-NEXT: File 0, [[@LINE-4]]:29 -> [[@LINE-4]]:31 = [[C9F]]
+ return result;                 // #0
 }

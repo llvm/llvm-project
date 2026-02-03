@@ -88,8 +88,7 @@ ObjectFileSP ObjectFile::FindPlugin(const lldb::ModuleSP &module_sp,
       // not 0 size, but we can't make a data buffer for it.
       if (DataBufferSP buffer_sp = FileSystem::Instance().CreateDataBuffer(
               file->GetPath(), g_initial_bytes_to_read, file_offset)) {
-        extractor_sp = std::make_shared<DataExtractor>();
-        extractor_sp->SetData(buffer_sp, data_offset, buffer_sp->GetByteSize());
+        extractor_sp = std::make_shared<DataExtractor>(buffer_sp);
         data_offset = 0;
       }
     }
@@ -322,7 +321,7 @@ bool ObjectFile::SetModulesArchitecture(const ArchSpec &new_arch) {
 AddressClass ObjectFile::GetAddressClass(addr_t file_addr) {
   Symtab *symtab = GetSymtab();
   if (symtab) {
-    Symbol *symbol = symtab->FindSymbolContainingFileAddress(file_addr);
+    const Symbol *symbol = symtab->FindSymbolContainingFileAddress(file_addr);
     if (symbol) {
       if (symbol->ValueIsAddress()) {
         const SectionSP section_sp(symbol->GetAddressRef().GetSection());
@@ -494,7 +493,7 @@ size_t ObjectFile::GetData(lldb::offset_t offset, size_t length,
                            DataExtractor &data) const {
   // The entire file has already been mmap'ed into m_data_nsp, so just copy from
   // there as the back mmap buffer will be shared with shared pointers.
-  return data.SetData(*m_data_nsp.get(), offset, length);
+  return data.SetData(*m_data_nsp, offset, length);
 }
 
 size_t ObjectFile::CopyData(lldb::offset_t offset, size_t length,

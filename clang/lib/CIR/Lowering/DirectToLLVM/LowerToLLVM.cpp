@@ -310,7 +310,8 @@ mlir::Value lowerCirAttrAsValue(mlir::Operation *parentOp,
 void convertSideEffectForCall(mlir::Operation *callOp, bool isNothrow,
                               cir::SideEffect sideEffect,
                               mlir::LLVM::MemoryEffectsAttr &memoryEffect,
-                              bool &noUnwind, bool &willReturn) {
+                              bool &noUnwind, bool &willReturn,
+                              bool &noReturn) {
   using mlir::LLVM::ModRefInfo;
 
   switch (sideEffect) {
@@ -344,6 +345,8 @@ void convertSideEffectForCall(mlir::Operation *callOp, bool isNothrow,
     willReturn = true;
     break;
   }
+
+  noReturn = callOp->hasAttr(CIRDialect::getNoReturnAttrName());
 }
 
 static mlir::LLVM::CallIntrinsicOp
@@ -1603,6 +1606,22 @@ mlir::LogicalResult CIRToLLVMRotateOpLowering::matchAndRewrite(
   return mlir::LogicalResult::success();
 }
 
+static void lowerCallAttributes(cir::CIRCallOpInterface op,
+                                SmallVectorImpl<mlir::NamedAttribute> &result) {
+  for (mlir::NamedAttribute attr : op->getAttrs()) {
+    assert(!cir::MissingFeatures::opFuncCallingConv());
+    if (attr.getName() == CIRDialect::getCalleeAttrName() ||
+        attr.getName() == CIRDialect::getSideEffectAttrName() ||
+        attr.getName() == CIRDialect::getNoThrowAttrName() ||
+        attr.getName() == CIRDialect::getNoUnwindAttrName() ||
+        attr.getName() == CIRDialect::getNoReturnAttrName())
+      continue;
+
+    assert(!cir::MissingFeatures::opFuncExtraAttrs());
+    result.push_back(attr);
+  }
+}
+
 static mlir::LogicalResult
 rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
                     mlir::ConversionPatternRewriter &rewriter,
@@ -1620,8 +1639,12 @@ rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
   mlir::LLVM::MemoryEffectsAttr memoryEffects;
   bool noUnwind = false;
   bool willReturn = false;
+  bool noReturn = false;
   convertSideEffectForCall(op, call.getNothrow(), call.getSideEffect(),
-                           memoryEffects, noUnwind, willReturn);
+                           memoryEffects, noUnwind, willReturn, noReturn);
+
+  SmallVector<mlir::NamedAttribute, 4> attributes;
+  lowerCallAttributes(call, attributes);
 
   mlir::LLVM::LLVMFunctionType llvmFnTy;
 
@@ -1680,10 +1703,12 @@ rewriteCallOrInvoke(mlir::Operation *op, mlir::ValueRange callOperands,
 
   auto newOp = rewriter.replaceOpWithNewOp<mlir::LLVM::CallOp>(
       op, llvmFnTy, calleeAttr, callOperands);
+  newOp->setAttrs(attributes);
   if (memoryEffects)
     newOp.setMemoryEffectsAttr(memoryEffects);
   newOp.setNoUnwind(noUnwind);
   newOp.setWillReturn(willReturn);
+  newOp.setNoreturn(noReturn);
 
   return mlir::success();
 }
@@ -2035,6 +2060,8 @@ void CIRToLLVMFuncOpLowering::lowerFuncAttributes(
         attr.getName() == func.getGlobalVisibilityAttrName() ||
         attr.getName() == func.getDsoLocalAttrName() ||
         attr.getName() == func.getInlineKindAttrName() ||
+        attr.getName() == func.getSideEffectAttrName() ||
+        attr.getName() == CIRDialect::getNoReturnAttrName() ||
         (filterArgAndResAttrs &&
          (attr.getName() == func.getArgAttrsAttrName() ||
           attr.getName() == func.getResAttrsAttrName())))
@@ -2118,6 +2145,40 @@ mlir::LogicalResult CIRToLLVMFuncOpLowering::matchAndRewrite(
       mlir::SymbolRefAttr(), attributes);
 
   assert(!cir::MissingFeatures::opFuncMultipleReturnVals());
+
+  if (std::optional<cir::SideEffect> sideEffectKind = op.getSideEffect()) {
+    switch (*sideEffectKind) {
+    case cir::SideEffect::All:
+      break;
+    case cir::SideEffect::Pure:
+      fn.setMemoryEffectsAttr(mlir::LLVM::MemoryEffectsAttr::get(
+          fn.getContext(),
+          /*other=*/mlir::LLVM::ModRefInfo::Ref,
+          /*argMem=*/mlir::LLVM::ModRefInfo::Ref,
+          /*inaccessibleMem=*/mlir::LLVM::ModRefInfo::Ref,
+          /*errnoMem=*/mlir::LLVM::ModRefInfo::Ref,
+          /*targetMem0=*/mlir::LLVM::ModRefInfo::Ref,
+          /*targetMem1=*/mlir::LLVM::ModRefInfo::Ref));
+      fn.setNoUnwind(true);
+      fn.setWillReturn(true);
+      break;
+    case cir::SideEffect::Const:
+      fn.setMemoryEffectsAttr(mlir::LLVM::MemoryEffectsAttr::get(
+          fn.getContext(),
+          /*other=*/mlir::LLVM::ModRefInfo::NoModRef,
+          /*argMem=*/mlir::LLVM::ModRefInfo::NoModRef,
+          /*inaccessibleMem=*/mlir::LLVM::ModRefInfo::NoModRef,
+          /*errnoMem=*/mlir::LLVM::ModRefInfo::NoModRef,
+          /*targetMem0=*/mlir::LLVM::ModRefInfo::NoModRef,
+          /*targetMem1=*/mlir::LLVM::ModRefInfo::NoModRef));
+      fn.setNoUnwind(true);
+      fn.setWillReturn(true);
+      break;
+    }
+  }
+
+  if (op->hasAttr(CIRDialect::getNoReturnAttrName()))
+    fn.setNoreturn(true);
 
   if (std::optional<cir::InlineKind> inlineKind = op.getInlineKind()) {
     fn.setNoInline(*inlineKind == cir::InlineKind::NoInline);
@@ -3239,7 +3300,14 @@ void ConvertCIRToLLVMPass::runOnOperation() {
   std::unique_ptr<cir::LowerModule> lowerModule = prepareLowerModule(module);
   prepareTypeConverter(converter, dl, lowerModule.get());
 
+  /// Tracks the state required to lower CIR `LabelOp` and `BlockAddressOp`.
+  /// Maps labels to their corresponding `BlockTagOp` and keeps bookkeeping
+  /// of unresolved `BlockAddressOp`s until they are matched with the
+  /// corresponding `BlockTagOp` in `resolveBlockAddressOp`.
+  LLVMBlockAddressInfo blockInfoAddr;
   mlir::RewritePatternSet patterns(&getContext());
+  patterns.add<CIRToLLVMBlockAddressOpLowering, CIRToLLVMLabelOpLowering>(
+      converter, patterns.getContext(), lowerModule.get(), dl, blockInfoAddr);
 
   patterns.add<
 #define GET_LLVM_LOWERING_PATTERNS_LIST
@@ -3333,6 +3401,24 @@ mlir::LogicalResult CIRToLLVMExtractMemberOpLowering::matchAndRewrite(
     return mlir::failure();
   }
   llvm_unreachable("Unexpected record kind");
+}
+
+mlir::LogicalResult CIRToLLVMInsertMemberOpLowering::matchAndRewrite(
+    cir::InsertMemberOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  std::int64_t indecies[1] = {static_cast<std::int64_t>(op.getIndex())};
+  mlir::Type recordTy = op.getRecord().getType();
+
+  if (auto cirRecordTy = mlir::dyn_cast<cir::RecordType>(recordTy)) {
+    if (cirRecordTy.getKind() == cir::RecordType::Union) {
+      op.emitError("cir.update_member cannot update member of a union");
+      return mlir::failure();
+    }
+  }
+
+  rewriter.replaceOpWithNewOp<mlir::LLVM::InsertValueOp>(
+      op, adaptor.getRecord(), adaptor.getValue(), indecies);
+  return mlir::success();
 }
 
 mlir::LogicalResult CIRToLLVMUnreachableOpLowering::matchAndRewrite(
@@ -4286,6 +4372,12 @@ mlir::LogicalResult CIRToLLVMVAArgOpLowering::matchAndRewrite(
 
   rewriter.replaceOpWithNewOp<mlir::LLVM::VaArgOp>(op, llvmType, vaList);
   return mlir::success();
+}
+
+mlir::LogicalResult CIRToLLVMLabelOpLowering::matchAndRewrite(
+    cir::LabelOp op, OpAdaptor adaptor,
+    mlir::ConversionPatternRewriter &rewriter) const {
+  return mlir::failure();
 }
 
 mlir::LogicalResult CIRToLLVMBlockAddressOpLowering::matchAndRewrite(

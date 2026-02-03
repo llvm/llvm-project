@@ -689,6 +689,13 @@ def constant_fold_fsqrt : constant_fold_unary_fp_op_rule<G_FSQRT>;
 def constant_fold_flog2 : constant_fold_unary_fp_op_rule<G_FLOG2>;
 def constant_fold_fptrunc : constant_fold_unary_fp_op_rule<G_FPTRUNC>;
 def constant_fold_fpext : constant_fold_unary_fp_op_rule<G_FPEXT>;
+def constant_fold_fceil : constant_fold_unary_fp_op_rule<G_FCEIL>;
+def constant_fold_ffloor : constant_fold_unary_fp_op_rule<G_FFLOOR>;
+def constant_fold_intrinsic_trunc : constant_fold_unary_fp_op_rule<G_INTRINSIC_TRUNC>;
+def constant_fold_intrinsic_round : constant_fold_unary_fp_op_rule<G_INTRINSIC_ROUND>;
+def constant_fold_intrinsic_roundeven : constant_fold_unary_fp_op_rule<G_INTRINSIC_ROUNDEVEN>;
+def constant_fold_frint : constant_fold_unary_fp_op_rule<G_FRINT>;
+def constant_fold_fnearbyint : constant_fold_unary_fp_op_rule<G_FNEARBYINT>;
 
 // Fold constant zero int to fp conversions.
 class itof_const_zero_fold_rule<Instruction opcode> : GICombineRule <
@@ -708,6 +715,13 @@ def constant_fold_fp_ops : GICombineGroup<[
   constant_fold_flog2,
   constant_fold_fptrunc,
   constant_fold_fpext,
+  constant_fold_fceil,
+  constant_fold_ffloor,
+  constant_fold_intrinsic_trunc,
+  constant_fold_intrinsic_round,
+  constant_fold_intrinsic_roundeven,
+  constant_fold_frint,
+  constant_fold_fnearbyint,
   itof_const_zero_fold_si,
   itof_const_zero_fold_ui
 ]>;

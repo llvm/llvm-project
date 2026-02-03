@@ -16,6 +16,7 @@
 #include "lldb/lldb-forward.h"
 #include "lldb/lldb-types.h"
 #include "llvm/ADT/ArrayRef.h"
+#include "llvm/DebugInfo/DWARF/DWARFDataExtractor.h"
 #include "llvm/Support/DataExtractor.h"
 #include "llvm/Support/SwapByteOrder.h"
 
@@ -818,6 +819,33 @@ public:
   ///     The extracted unsigned integer value.
   uint64_t GetULEB128(lldb::offset_t *offset_ptr) const;
 
+  /// Return a new DataExtractor which represents a subset of an existing
+  /// data extractor's bytes, copying all other fields from the existing
+  /// data extractor.
+  ///
+  /// \param[in] offset
+  ///     The starting byte offset into the shared data buffer.
+  /// \param[in] length
+  ///     The length of bytes that the new extractor can operate on.
+  ///
+  /// \return
+  ///     A shared pointer to a new DataExtractor.
+  virtual lldb::DataExtractorSP GetSubsetExtractorSP(lldb::offset_t offset,
+                                                     lldb::offset_t length);
+
+  /// Return a new DataExtractor which represents a subset of an existing
+  /// data extractor's bytes, copying all other fields from the existing
+  /// data extractor.  The length will be the largest contiguous region that
+  /// can be provided starting at \a offset; it is safe to read any bytes
+  /// within the returned subset Extractor.
+  ///
+  /// \param[in] offset
+  ///     The starting byte offset into the shared data buffer.
+  ///
+  /// \return
+  ///     A shared pointer to a new DataExtractor.
+  virtual lldb::DataExtractorSP GetSubsetExtractorSP(lldb::offset_t offset);
+
   lldb::DataBufferSP &GetSharedDataBuffer() { return m_data_sp; }
 
   bool HasData() { return m_start && m_end && m_end - m_start > 0; }
@@ -997,8 +1025,14 @@ public:
 
   void Checksum(llvm::SmallVectorImpl<uint8_t> &dest, uint64_t max_data = 0);
 
-  llvm::ArrayRef<uint8_t> GetData() const {
+  virtual llvm::ArrayRef<uint8_t> GetData() const {
     return {GetDataStart(), size_t(GetByteSize())};
+  }
+
+  llvm::DWARFDataExtractor GetAsLLVMDWARF() const {
+    return llvm::DWARFDataExtractor(GetData(),
+                                    GetByteOrder() == lldb::eByteOrderLittle,
+                                    GetAddressByteSize());
   }
 
   llvm::DataExtractor GetAsLLVM() const {

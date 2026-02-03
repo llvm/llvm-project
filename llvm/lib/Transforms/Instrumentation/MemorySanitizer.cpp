@@ -4082,10 +4082,28 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
   }
 
   // Instrument compare-packed intrinsic.
-  // Basically, an or followed by sext(icmp ne 0) to end up with all-zeros or
-  // all-ones shadow.
-  void handleVectorComparePackedIntrinsic(IntrinsicInst &I) {
+  //
+  // x86 has the predicate as the third operand, which is ImmArg e.g.,
+  // - <4 x double> @llvm.x86.avx.cmp.pd.256(<4 x double>, <4 x double>, i8)
+  // - <2 x double> @llvm.x86.sse2.cmp.pd(<2 x double>, <2 x double>, i8)
+  //
+  // while Arm has separate intrinsics for >= and > e.g.,
+  // - <2 x i32> @llvm.aarch64.neon.facge.v2i32.v2f32
+  //                 (<2 x float> %A, <2 x float>)
+  // - <2 x i32> @llvm.aarch64.neon.facgt.v2i32.v2f32
+  //                 (<2 x float> %A, <2 x float>)
+  void handleVectorComparePackedIntrinsic(IntrinsicInst &I,
+                                          bool PredicateAsOperand) {
+    if (PredicateAsOperand) {
+      assert(I.arg_size() == 3);
+      assert(I.paramHasAttr(2, Attribute::ImmArg));
+    } else
+      assert(I.arg_size() == 2);
+
     IRBuilder<> IRB(&I);
+
+    // Basically, an or followed by sext(icmp ne 0) to end up with all-zeros or
+    // all-ones shadow.
     Type *ResTy = getShadowTy(&I);
     auto *Shadow0 = getShadow(&I, 0);
     auto *Shadow1 = getShadow(&I, 1);
@@ -6212,7 +6230,7 @@ struct MemorySanitizerVisitor : public InstVisitor<MemorySanitizerVisitor> {
     case Intrinsic::x86_avx_cmp_ps_256:
     case Intrinsic::x86_sse2_cmp_pd:
     case Intrinsic::x86_sse_cmp_ps:
-      handleVectorComparePackedIntrinsic(I);
+      handleVectorComparePackedIntrinsic(I, /*PredicateAsOperand=*/true);
       break;
 
     case Intrinsic::x86_bmi_bextr_32:

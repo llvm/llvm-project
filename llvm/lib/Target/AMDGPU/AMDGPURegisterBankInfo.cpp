@@ -1870,11 +1870,11 @@ bool AMDGPURegisterBankInfo::buildVCopy(MachineIRBuilder &B, Register DstReg,
   Register TmpReg1 = MRI.createVirtualRegister(&AMDGPU::VGPR_32RegClass);
 
   B.buildInstr(AMDGPU::V_MOV_B32_e32)
-    .addDef(TmpReg0)
-    .addUse(SrcReg, 0, AMDGPU::sub0);
+      .addDef(TmpReg0)
+      .addUse(SrcReg, {}, AMDGPU::sub0);
   B.buildInstr(AMDGPU::V_MOV_B32_e32)
-    .addDef(TmpReg1)
-    .addUse(SrcReg, 0, AMDGPU::sub1);
+      .addDef(TmpReg1)
+      .addUse(SrcReg, {}, AMDGPU::sub1);
   B.buildInstr(AMDGPU::REG_SEQUENCE)
     .addDef(DstReg)
     .addUse(TmpReg0)

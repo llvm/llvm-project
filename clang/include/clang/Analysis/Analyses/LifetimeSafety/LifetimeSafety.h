@@ -42,29 +42,59 @@ enum class SuggestionScope {
   IntraTU  // For suggestions on definitions local to a Translation Unit.
 };
 
-class LifetimeSafetyReporter {
+/// Abstract interface for operations requiring Sema access.
+///
+/// This class exists to break a circular dependency: the LifetimeSafety
+/// analysis target cannot directly depend on clangSema (which would create the
+/// cycle: clangSema -> clangAnalysis -> clangAnalysisLifetimeSafety ->
+/// clangSema).
+///
+/// Instead, this interface is implemented in AnalysisBasedWarnings.cpp (part of
+/// clangSema), allowing the analysis to report diagnostics and modify the AST
+/// through Sema without introducing a circular dependency.
+class LifetimeSafetySemaHelper {
 public:
-  LifetimeSafetyReporter() = default;
-  virtual ~LifetimeSafetyReporter() = default;
+  LifetimeSafetySemaHelper() = default;
+  virtual ~LifetimeSafetySemaHelper() = default;
 
   virtual void reportUseAfterFree(const Expr *IssueExpr, const Expr *UseExpr,
                                   SourceLocation FreeLoc,
                                   Confidence Confidence) {}
 
   virtual void reportUseAfterReturn(const Expr *IssueExpr,
-                                    const Expr *EscapeExpr,
+                                    const Expr *ReturnExpr,
                                     SourceLocation ExpiryLoc,
                                     Confidence Confidence) {}
 
-  // Suggests lifetime bound annotations for function paramters
-  virtual void suggestAnnotation(SuggestionScope Scope,
-                                 const ParmVarDecl *ParmToAnnotate,
-                                 const Expr *EscapeExpr) {}
+  virtual void reportDanglingField(const Expr *IssueExpr,
+                                   const FieldDecl *Field,
+                                   SourceLocation ExpiryLoc) {}
+
+  // Suggests lifetime bound annotations for function paramters.
+  virtual void suggestLifetimeboundToParmVar(SuggestionScope Scope,
+                                             const ParmVarDecl *ParmToAnnotate,
+                                             const Expr *EscapeExpr) {}
+
+  // Reports misuse of [[clang::noescape]] when parameter escapes through return
+  virtual void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
+                                       const Expr *EscapeExpr) {}
+  // Reports misuse of [[clang::noescape]] when parameter escapes through field
+  virtual void reportNoescapeViolation(const ParmVarDecl *ParmWithNoescape,
+                                       const FieldDecl *EscapeField) {}
+
+  // Suggests lifetime bound annotations for implicit this.
+  virtual void suggestLifetimeboundToImplicitThis(SuggestionScope Scope,
+                                                  const CXXMethodDecl *MD,
+                                                  const Expr *EscapeExpr) {}
+
+  // Adds inferred lifetime bound attribute for implicit this to its
+  // TypeSourceInfo.
+  virtual void addLifetimeBoundToImplicitThis(const CXXMethodDecl *MD) {}
 };
 
 /// The main entry point for the analysis.
 void runLifetimeSafetyAnalysis(AnalysisDeclContext &AC,
-                               LifetimeSafetyReporter *Reporter,
+                               LifetimeSafetySemaHelper *SemaHelper,
                                LifetimeSafetyStats &Stats, bool CollectStats);
 
 namespace internal {
@@ -85,7 +115,7 @@ struct LifetimeFactory {
 class LifetimeSafetyAnalysis {
 public:
   LifetimeSafetyAnalysis(AnalysisDeclContext &AC,
-                         LifetimeSafetyReporter *Reporter);
+                         LifetimeSafetySemaHelper *SemaHelper);
 
   void run();
 
@@ -98,7 +128,7 @@ public:
 
 private:
   AnalysisDeclContext &AC;
-  LifetimeSafetyReporter *Reporter;
+  LifetimeSafetySemaHelper *SemaHelper;
   LifetimeFactory Factory;
   std::unique_ptr<FactManager> FactMgr;
   std::unique_ptr<LiveOriginsAnalysis> LiveOrigins;

@@ -472,14 +472,24 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
   // This ABI will make it into Android API level 35.
   // The ThreadLong format is the same as with HWASan, but the entries for
   // stack MTE take two slots (16 bytes).
-  if (ClRecordStackHistory == instr && TargetTriple.isAndroid() &&
-      TargetTriple.isAArch64() && !TargetTriple.isAndroidVersionLT(35) &&
-      !AllocasToInstrument.empty()) {
-    constexpr int StackMteSlot = -3;
+  //
+  // Stack history is recorded by default on Darwin.
+  if (ClRecordStackHistory == instr ||
+      (!ClRecordStackHistory.getNumOccurrences() &&
+       TargetTriple.isOSDarwin())) {
     constexpr uint64_t TagMask = 0xFULL << 56;
+    Value *SlotPtr = nullptr;
+    if (TargetTriple.isAndroid() && TargetTriple.isAArch64() &&
+        !TargetTriple.isAndroidVersionLT(35) && !AllocasToInstrument.empty()) {
+      SlotPtr = memtag::getAndroidSlotPtr(IRB, -3);
+    } else if (TargetTriple.isOSDarwin() && TargetTriple.isAArch64() &&
+               !TargetTriple.isSimulatorEnvironment()) {
+      SlotPtr = memtag::getDarwinSlotPtr(IRB, 231);
+    } else {
+      return Base;
+    }
 
     auto *IntptrTy = IRB.getIntPtrTy(M.getDataLayout());
-    Value *SlotPtr = memtag::getAndroidSlotPtr(IRB, StackMteSlot);
     auto *ThreadLong = IRB.CreateLoad(IntptrTy, SlotPtr);
     Value *FP = memtag::getFP(IRB);
     Value *Tag = IRB.CreateAnd(IRB.CreatePtrToInt(Base, IntptrTy), TagMask);
@@ -489,7 +499,9 @@ Instruction *AArch64StackTagging::insertBaseTaggedPointer(
     IRB.CreateStore(PC, RecordPtr);
     IRB.CreateStore(TaggedFP, IRB.CreateConstGEP1_64(IntptrTy, RecordPtr, 1));
 
-    IRB.CreateStore(memtag::incrementThreadLong(IRB, ThreadLong, 16), SlotPtr);
+    IRB.CreateStore(memtag::incrementThreadLong(IRB, ThreadLong, 16,
+                                                TargetTriple.isOSDarwin()),
+                    SlotPtr);
   }
   return Base;
 }
@@ -583,15 +595,15 @@ bool AArch64StackTagging::runOnFunction(Function &Fn) {
         memtag::isStandardLifetime(Info.LifetimeStart, Info.LifetimeEnd, DT, LI,
                                    ClMaxLifetimes);
     if (StandardLifetime) {
-      IntrinsicInst *Start = Info.LifetimeStart[0];
       uint64_t Size = *Info.AI->getAllocationSize(*DL);
       Size = alignTo(Size, kTagGranuleSize);
-      tagAlloca(AI, Start->getNextNode(), TagPCall, Size);
+      for (IntrinsicInst *Start : Info.LifetimeStart)
+        tagAlloca(AI, Start->getNextNode(), TagPCall, Size);
 
       auto TagEnd = [&](Instruction *Node) { untagAlloca(AI, Node, Size); };
       if (!DT || !PDT ||
-          !memtag::forAllReachableExits(*DT, *PDT, *LI, Start, Info.LifetimeEnd,
-                                        SInfo.RetVec, TagEnd)) {
+          !memtag::forAllReachableExits(*DT, *PDT, *LI, Info, SInfo.RetVec,
+                                        TagEnd)) {
         for (auto *End : Info.LifetimeEnd)
           End->eraseFromParent();
       }

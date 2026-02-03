@@ -9608,13 +9608,6 @@ void SelectionDAGBuilder::visitCall(const CallInst &I) {
           return;
         }
         break;
-      case LibFunc_fabs:
-      case LibFunc_fabsf:
-      case LibFunc_fabsl:
-        // TODO: Remove this, already canonicalized by the middle-end.
-        if (visitUnaryFloatCall(I, ISD::FABS))
-          return;
-        break;
       case LibFunc_sin:
       case LibFunc_sinf:
       case LibFunc_sinl:

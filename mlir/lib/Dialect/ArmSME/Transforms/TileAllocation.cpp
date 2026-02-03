@@ -417,11 +417,11 @@ static void forEachPredecessorTileValue(BlockArgument blockArg,
   unsigned argNumber = blockArg.getArgNumber();
   for (Block *pred : block->getPredecessors()) {
     TypeSwitch<Operation *>(pred->getTerminator())
-        .Case<cf::BranchOp>([&](auto branch) {
+        .Case([&](cf::BranchOp branch) {
           Value predecessorOperand = branch.getDestOperands()[argNumber];
           callback(predecessorOperand);
         })
-        .Case<cf::CondBranchOp>([&](auto condBranch) {
+        .Case([&](cf::CondBranchOp condBranch) {
           if (condBranch.getFalseDest() == block) {
             Value predecessorOperand =
                 condBranch.getFalseDestOperands()[argNumber];

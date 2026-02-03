@@ -3333,6 +3333,8 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
 
   KnownBits Known2;
   unsigned NumElts = DemandedElts.getBitWidth();
+  assert((!Op.getValueType().isScalableVector() || NumElts == 1) &&
+         "DemandedElts for scalable vectors must be 1 to represent all lanes");
   assert((!Op.getValueType().isFixedLengthVector() ||
           NumElts == Op.getValueType().getVectorNumElements()) &&
          "Unexpected vector size");
@@ -3511,12 +3513,15 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::EXTRACT_SUBVECTOR: {
     // Offset the demanded elts by the subvector index.
     SDValue Src = Op.getOperand(0);
-    // Bail until we can represent demanded elements for scalable vectors.
-    if (Op.getValueType().isScalableVector() || Src.getValueType().isScalableVector())
-      break;
-    uint64_t Idx = Op.getConstantOperandVal(1);
-    unsigned NumSrcElts = Src.getValueType().getVectorNumElements();
-    APInt DemandedSrcElts = DemandedElts.zext(NumSrcElts).shl(Idx);
+
+    APInt DemandedSrcElts;
+    if (Src.getValueType().isScalableVector())
+      DemandedSrcElts = APInt(1, 1); // <=> 'demand all elements'
+    else {
+      uint64_t Idx = Op.getConstantOperandVal(1);
+      unsigned NumSrcElts = Src.getValueType().getVectorNumElements();
+      DemandedSrcElts = DemandedElts.zext(NumSrcElts).shl(Idx);
+    }
     Known = computeKnownBits(Src, DemandedSrcElts, Depth + 1);
     break;
   }
@@ -3916,11 +3921,7 @@ KnownBits SelectionDAG::computeKnownBits(SDValue Op, const APInt &DemandedElts,
   case ISD::CLMUL: {
     Known = computeKnownBits(Op.getOperand(1), DemandedElts, Depth + 1);
     Known2 = computeKnownBits(Op.getOperand(0), DemandedElts, Depth + 1);
-    // TODO: Trailing zeros, known LSBs.
-    unsigned ActiveBits = std::min(
-        BitWidth, Known.countMaxActiveBits() + Known2.countMaxActiveBits() - 1);
-    Known.Zero = APInt::getBitsSetFrom(BitWidth, ActiveBits);
-    Known.One.clearAllBits();
+    Known = KnownBits::clmul(Known, Known2);
     break;
   }
   case ISD::MGATHER:
@@ -14465,7 +14466,7 @@ void SelectionDAG::copyExtraInfo(SDNode *From, SDNode *To) {
         return false;
     }
     // Copy only if entry node was not reached.
-    SDEI[N] = NEI;
+    SDEI[N] = std::move(NEI);
     return true;
   };
 

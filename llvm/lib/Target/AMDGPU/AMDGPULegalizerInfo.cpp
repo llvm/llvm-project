@@ -6153,7 +6153,7 @@ AMDGPULegalizerInfo::splitBufferOffsets(MachineIRBuilder &B,
   // On GFX1250+, voffset and immoffset are zero-extended from 32 bits before
   // being added, so we can only safely match a 32-bit addition with no unsigned
   // overflow.
-  bool CheckNUW = AMDGPU::isGFX1250(ST);
+  bool CheckNUW = ST.hasGFX1250Insts();
   std::tie(BaseReg, ImmOffset) = AMDGPU::getBaseWithConstantOffset(
       MRI, OrigOffset, /*KnownBits=*/nullptr, CheckNUW);
 

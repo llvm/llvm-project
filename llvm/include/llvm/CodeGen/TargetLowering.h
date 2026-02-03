@@ -218,15 +218,14 @@ public:
     TypeScalarizeVector, // Replace this one-element vector with its element.
     TypeSplitVector,     // Split this vector into two of half the size.
     TypeWidenVector,     // This vector should be widened into a larger vector.
-    TypePromoteFloat,    // Replace this float with a larger one.
     TypeSoftPromoteHalf, // Soften half to i16 and use float to do arithmetic.
-    TypeScalarizeScalableVector, // This action is explicitly left unimplemented.
-                                 // While it is theoretically possible to
-                                 // legalize operations on scalable types with a
-                                 // loop that handles the vscale * #lanes of the
-                                 // vector, this is non-trivial at SelectionDAG
-                                 // level and these types are better to be
-                                 // widened or promoted.
+    TypeScalarizeScalableVector, // This action is explicitly left
+                                 // unimplemented. While it is theoretically
+                                 // possible to legalize operations on scalable
+                                 // types with a loop that handles the vscale *
+                                 // #lanes of the vector, this is non-trivial at
+                                 // SelectionDAG level and these types are
+                                 // better to be widened or promoted.
   };
 
   /// LegalizeKind holds the legalization kind that needs to happen to EVT
@@ -545,20 +544,6 @@ public:
     // The default action for other vectors is to promote
     return TypePromoteInteger;
   }
-
-  /// Warning: this option is problem-prone and tends to introduce
-  /// float miscompilations:
-  ///
-  /// - https://github.com/llvm/llvm-project/issues/97975
-  /// - https://github.com/llvm/llvm-project/issues/97981
-  ///
-  /// It should not be overridden to `false` except for special cases.
-  ///
-  /// Return true if the half type should be promoted using soft promotion rules
-  /// where each operation is promoted to f32 individually, then converted to
-  /// fp16. The default behavior is to promote chains of operations, keeping
-  /// intermediate results in f32 precision and range.
-  virtual bool softPromoteHalfType() const { return true; }
 
   // Return true if, for soft-promoted half, the half type should be passed to
   // and returned from functions as f32. The default behavior is to pass as
@@ -1762,12 +1747,12 @@ public:
     if (auto *VTy = dyn_cast<VectorType>(Ty)) {
       Type *EltTy = VTy->getElementType();
       // Lower vectors of pointers to native pointer types.
-      if (auto *PTy = dyn_cast<PointerType>(EltTy)) {
-        EVT PointerTy(getPointerTy(DL, PTy->getAddressSpace()));
-        EltTy = PointerTy.getTypeForEVT(Ty->getContext());
-      }
-      return EVT::getVectorVT(Ty->getContext(), EVT::getEVT(EltTy, false),
-                              VTy->getElementCount());
+      EVT EltVT;
+      if (auto *PTy = dyn_cast<PointerType>(EltTy))
+        EltVT = getPointerTy(DL, PTy->getAddressSpace());
+      else
+        EltVT = EVT::getEVT(EltTy, false);
+      return EVT::getVectorVT(Ty->getContext(), EltVT, VTy->getElementCount());
     }
 
     return EVT::getEVT(Ty, AllowUnknown);
@@ -1781,12 +1766,12 @@ public:
 
     if (auto *VTy = dyn_cast<VectorType>(Ty)) {
       Type *EltTy = VTy->getElementType();
-      if (auto *PTy = dyn_cast<PointerType>(EltTy)) {
-        EVT PointerTy(getPointerMemTy(DL, PTy->getAddressSpace()));
-        EltTy = PointerTy.getTypeForEVT(Ty->getContext());
-      }
-      return EVT::getVectorVT(Ty->getContext(), EVT::getEVT(EltTy, false),
-                              VTy->getElementCount());
+      EVT EltVT;
+      if (auto *PTy = dyn_cast<PointerType>(EltTy))
+        EltVT = getPointerMemTy(DL, PTy->getAddressSpace());
+      else
+        EltVT = EVT::getEVT(EltTy, false);
+      return EVT::getVectorVT(Ty->getContext(), EltVT, VTy->getElementCount());
     }
 
     return getValueType(DL, Ty, AllowUnknown);
