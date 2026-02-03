@@ -407,6 +407,11 @@ public:
   /// Returns the size of the floating point number (in bits) in the given
   /// semantics.
   LLVM_ABI static unsigned getSizeInBits(const fltSemantics &Sem);
+
+  /// Returns true if the given string is a valid arbitrary floating-point
+  /// format interpretation for llvm.convert.to.arbitrary.fp and
+  /// llvm.convert.from.arbitrary.fp intrinsics.
+  LLVM_ABI static bool isValidArbitraryFPFormat(StringRef Format);
 };
 
 namespace detail {

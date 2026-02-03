@@ -355,7 +355,8 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
                                    unsigned MinSVEVectorSizeInBitsOverride,
                                    unsigned MaxSVEVectorSizeInBitsOverride,
                                    bool IsStreaming, bool IsStreamingCompatible,
-                                   bool HasMinSize)
+                                   bool HasMinSize,
+                                   bool EnableSRLTSubregToRegMitigation)
     : AArch64GenSubtargetInfo(TT, CPU, TuneCPU, FS),
       ReserveXRegister(AArch64::GPR64commonRegClass.getNumRegs()),
       ReserveXRegisterForRA(AArch64::GPR64commonRegClass.getNumRegs()),
@@ -367,7 +368,9 @@ AArch64Subtarget::AArch64Subtarget(const Triple &TT, StringRef CPU,
               ? std::optional<unsigned>(AArch64StreamingHazardSize)
               : std::nullopt),
       MinSVEVectorSizeInBits(MinSVEVectorSizeInBitsOverride),
-      MaxSVEVectorSizeInBits(MaxSVEVectorSizeInBitsOverride), TargetTriple(TT),
+      MaxSVEVectorSizeInBits(MaxSVEVectorSizeInBitsOverride),
+      EnableSRLTSubregToRegMitigation(EnableSRLTSubregToRegMitigation),
+      TargetTriple(TT),
       InstrInfo(initializeSubtargetDependencies(FS, CPU, TuneCPU, HasMinSize)),
       TLInfo(TM, *this) {
   if (AArch64::isX18ReservedByDefault(TT))

@@ -151,7 +151,6 @@ define void @test_svprf_vnum_over(<vscale x 16 x i1> %pg, ptr %base) {
 ; CHECK-NEXT:    rdvl x8, #1
 ; CHECK-NEXT:    mov w9, #512 // =0x200
 ; CHECK-NEXT:    lsr x8, x8, #4
-; CHECK-NEXT:    // kill: def $x9 killed $w9
 ; CHECK-NEXT:    mul x8, x8, x9
 ; CHECK-NEXT:    prfb pstl3strm, p0, [x0, x8]
 ; CHECK-NEXT:    ret
