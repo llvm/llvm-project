@@ -45,7 +45,7 @@ atomicrmw_func = Template(
 
 run_statement = Template(
     """; RUN: llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} | FileCheck %s --check-prefix=SM${sm}
-; RUN: %if ptxas %{ llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} | %ptxas-verify -arch=sm_${sm} %}
+; RUN: %if ptxas-sm_${sm} && ptxas-isa-${ptxfp} %{ llc < %s -march=nvptx64 -mcpu=sm_${sm} -mattr=+ptx${ptx} | %ptxas-verify -arch=sm_${sm} %}
 """
 )
 
@@ -61,7 +61,7 @@ if __name__ == "__main__":
     for sm, ptx in TESTS:
         # Slice 1: Keep addrspace, llvm_scope, ordering fixed, generate all possible operations and sizes
         with open("atomicrmw-sm{}.ll".format(str(sm)), "w") as fp:
-            print(run_statement.substitute(sm=sm, ptx=ptx), file=fp)
+            print(run_statement.substitute(sm=sm, ptx=ptx, ptxfp=ptx / 10.0), file=fp)
             # Integer operations
             addrspace, llvm_scope, ordering = 1, "block", "acq_rel"
             for operation, datatype in product(
