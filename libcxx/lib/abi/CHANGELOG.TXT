@@ -13,7 +13,7 @@ To generate a summary, re-generate the new ABI list using the
 New entries should be added directly below the "Version" header.
 
 ------------
-Version 22.0
+Version 23.0
 ------------
 
 * [libc++] Add a thread-safe version of std::lgamma in the dylib
@@ -26,9 +26,13 @@ Version 22.0
   -------------
   Symbol added: _ZNSt3__125__lgamma_thread_safe_implEd
 
+------------
+Version 22.0
+------------
+
 * [libc++] Allows any types of size 4 and 8 to use native platform ulock_wait
 
-  This patch added symbols for platform wait functions with the size of the type 
+  This patch added symbols for platform wait functions with the size of the type
 
   All platforms
   -------------
