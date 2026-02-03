@@ -573,9 +573,13 @@ void EhFrameSection::writeTo(uint8_t *buf) {
   };
 
   uint8_t *hdrBuf = ctx.bufferStart + hdr->getParent()->offset + hdr->outSecOff;
+  // version
   hdrBuf[0] = 1;
+  // eh_frame_ptr_enc
   hdrBuf[1] = DW_EH_PE_pcrel | (large ? DW_EH_PE_sdata8 : DW_EH_PE_sdata4);
+  // fde_count_enc
   hdrBuf[2] = DW_EH_PE_udata4;
+  // table_enc
   hdrBuf[3] = DW_EH_PE_datarel | (large ? DW_EH_PE_sdata8 : DW_EH_PE_sdata4);
   hdrBuf += 4;
   writeField(hdrBuf, ehFramePtr);
