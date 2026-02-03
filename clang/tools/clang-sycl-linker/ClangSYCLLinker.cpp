@@ -361,7 +361,6 @@ static Error runCodeGen(StringRef File, const ArgList &Args,
     return errorCodeToError(EC);
   auto OS = std::make_unique<llvm::raw_fd_ostream>(FD, true);
 
-  // Run SPIR-V codegen passes to generate SPIR-V file.
   legacy::PassManager CodeGenPasses;
   TargetLibraryInfoImpl TLII(M->getTargetTriple());
   CodeGenPasses.add(new TargetLibraryInfoWrapperPass(TLII));
