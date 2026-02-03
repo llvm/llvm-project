@@ -1855,7 +1855,7 @@ bool X86DAGToDAGISel::foldOffsetIntoAddress(uint64_t Offset,
   } else if (Subtarget->is16Bit()) {
     // In 16-bit mode, displacements are limited to [-65535,65535] for FK_Data_2
     // fixups of unknown signedness. See X86AsmBackend::applyFixup.
-    if (Val < -65535 || Val > 65535)
+    if (Val < -(int64_t)UINT16_MAX || Val > (int64_t)UINT16_MAX)
       return true;
   } else if (AM.hasBaseOrIndexReg() && !isDispSafeForFrameIndexOrRegBase(Val))
     // For 32-bit X86, make sure the displacement still isn't close to the
