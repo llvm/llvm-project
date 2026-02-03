@@ -2392,6 +2392,49 @@ static Constant *constantFoldBinOpWithSplat(unsigned Opcode, Constant *Vector,
   return ConstantFoldBinaryOpOperands(Opcode, LHS, RHS, DL);
 }
 
+template <Intrinsic::ID SpliceID>
+static Instruction *foldSpliceBinOp(BinaryOperator &Inst,
+                                    InstCombiner::BuilderTy &Builder) {
+  Value *LHS = Inst.getOperand(0), *RHS = Inst.getOperand(1);
+  auto CreateBinOpSplice = [&](Value *X, Value *Y, Value *Z, Value *Offset) {
+    Value *V = Builder.CreateBinOp(Inst.getOpcode(), X, Y, Inst.getName());
+    if (auto *BO = dyn_cast<BinaryOperator>(V))
+      BO->copyIRFlags(&Inst);
+    Module *M = Inst.getModule();
+    Function *F = Intrinsic::getOrInsertDeclaration(
+        M, Intrinsic::vector_splice_right, V->getType());
+    return CallInst::Create(F, {V, Z, Offset});
+  };
+  Value *V1, *V2, *V3, *Offset;
+  if (match(LHS,
+            m_Intrinsic<SpliceID>(m_Value(V1), m_Value(V3), m_Value(Offset)))) {
+    // Op(splice(V1, V3, offset), splice(V2, V3, offset))
+    // -> splice(Op(V1, V2), V3, offset)
+    if (match(RHS, m_Intrinsic<SpliceID>(m_Value(V2), m_Specific(V3),
+                                         m_Specific(Offset))) &&
+        (LHS->hasOneUse() || RHS->hasOneUse() ||
+         (LHS == RHS && LHS->hasNUses(2))))
+      return CreateBinOpSplice(V1, V2, V3, Offset);
+
+    // Op(splice(V1, V3, offset), RHSSplat)
+    // -> splice(Op(V1, RHSSplat), V3, offset)
+    if (LHS->hasOneUse() && isSplatValue(RHS))
+      return CreateBinOpSplice(V1, RHS, V3, Offset);
+  }
+  // Op(LHSSplat, splice(V2, V3, offset))
+  // -> splice(Op(LHSSplat, V2), V3, offset)
+  else if (isSplatValue(LHS) &&
+           match(RHS, m_OneUse(m_Intrinsic<SpliceID>(m_Value(V2), m_Value(V3),
+                                                     m_Value(Offset)))))
+    return CreateBinOpSplice(LHS, V2, V3, Offset);
+
+  // TODO: Fold binops of the form
+  // Op(splice(V3, V1, offset), splice(V3, V2, offset))
+  // -> splice(V3, Op(V1, V2), offset)
+
+  return nullptr;
+}
+
 Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
   if (!isa<VectorType>(Inst.getType()))
     return nullptr;
@@ -2487,40 +2530,6 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
   else if (isSplatValue(LHS) && match(RHS, m_OneUse(m_VecReverse(m_Value(V2)))))
     return createBinOpReverse(LHS, V2);
 
-  auto createBinOpSpliceReverse = [&](Value *X, Value *Y, Value *Offset) {
-    Value *V = Builder.CreateBinOp(Opcode, X, Y, Inst.getName());
-    if (auto *BO = dyn_cast<BinaryOperator>(V))
-      BO->copyIRFlags(&Inst);
-    Module *M = Inst.getModule();
-    Function *F = Intrinsic::getOrInsertDeclaration(
-        M, Intrinsic::vector_splice_right, V->getType());
-    return CallInst::Create(F, {Builder.CreateVectorReverse(V),
-                                PoisonValue::get(X->getType()), Offset});
-  };
-  auto m_SpliceReverse = [](auto V, auto Offset) {
-    return m_Intrinsic<Intrinsic::vector_splice_right>(
-        m_OneUse(m_VecReverse(V)), m_Poison(), Offset);
-  };
-  Value *Offset;
-  if (match(LHS, m_SpliceReverse(m_Value(V1), m_Value(Offset)))) {
-    // Op(splice.right(rev(V1),poison,offset),splice.right(rev(V2),poison,offset))
-    // -> splice.right(rev(Op(V1, V2)), poison, offset)
-    if (match(RHS, m_SpliceReverse(m_Value(V2), m_Specific(Offset))) &&
-        (LHS->hasOneUse() || RHS->hasOneUse() ||
-         (LHS == RHS && LHS->hasNUses(2))))
-      return createBinOpSpliceReverse(V1, V2, Offset);
-
-    // Op(splice.right(rev(V1) poison, offset), RHSSplat))
-    // -> splice.right(rev(Op(V1, RHSSplat)), poison, offset)
-    if (LHS->hasOneUse() && isSplatValue(RHS))
-      return createBinOpSpliceReverse(V1, RHS, Offset);
-  }
-  // Op(LHSSplat, splice.right(rev(V2), poison, offset))
-  // -> splice.right(rev(Op(LHSSplat, V2)), poison, offset)
-  else if (isSplatValue(LHS) &&
-           match(RHS, m_OneUse(m_SpliceReverse(m_Value(V2), m_Value(Offset)))))
-    return createBinOpSpliceReverse(LHS, V2, Offset);
-
   auto createBinOpVPReverse = [&](Value *X, Value *Y, Value *EVL) {
     Value *V = Builder.CreateBinOp(Opcode, X, Y, Inst.getName());
     if (auto *BO = dyn_cast<BinaryOperator>(V))
@@ -2553,6 +2562,13 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
            match(RHS, m_Intrinsic<Intrinsic::experimental_vp_reverse>(
                           m_Value(V2), m_AllOnes(), m_Value(EVL))))
     return createBinOpVPReverse(LHS, V2, EVL);
+
+  if (Instruction *Folded =
+          foldSpliceBinOp<Intrinsic::vector_splice_left>(Inst, Builder))
+    return Folded;
+  if (Instruction *Folded =
+          foldSpliceBinOp<Intrinsic::vector_splice_right>(Inst, Builder))
+    return Folded;
 
   // It may not be safe to reorder shuffles and things like div, urem, etc.
   // because we may trap when executing those ops on unknown vector elements.
