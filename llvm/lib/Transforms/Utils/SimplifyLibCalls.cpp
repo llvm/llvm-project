@@ -485,10 +485,19 @@ static Value* memChrToCharCompare(CallInst *CI, Value *NBytes,
     Value *Zero = ConstantInt::get(NBytes->getType(), 0);
     Value *And = B.CreateICmpNE(NBytes, Zero);
     Cmp = B.CreateLogicalAnd(And, Cmp);
+    if (!ProfcheckDisableMetadataFixes)
+      if (auto *I = dyn_cast<Instruction>(Cmp))
+        setExplicitlyUnknownBranchWeightsIfProfiled(*I, DEBUG_TYPE,
+                                                    CI->getFunction());
   }
 
   Value *NullPtr = Constant::getNullValue(CI->getType());
-  return B.CreateSelect(Cmp, Src, NullPtr);
+  Value *Res = B.CreateSelect(Cmp, Src, NullPtr);
+  if (!ProfcheckDisableMetadataFixes)
+    if (auto *I = dyn_cast<Instruction>(Res))
+      setExplicitlyUnknownBranchWeightsIfProfiled(*I, DEBUG_TYPE,
+                                                  CI->getFunction());
+  return Res;
 }
 
 Value *LibCallSimplifier::optimizeStrChr(CallInst *CI, IRBuilderBase &B) {
