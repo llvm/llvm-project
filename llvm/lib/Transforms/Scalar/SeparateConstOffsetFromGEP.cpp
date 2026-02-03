@@ -1095,9 +1095,8 @@ bool SeparateConstOffsetFromGEP::splitGEP(GetElementPtrInst *GEP) {
             /*BaseGV=*/nullptr, AccumulativeByteOffset.getSExtValue(),
             /*HasBaseReg=*/true, /*Scale=*/0, AddrSpace)) {
       // If the addressing mode was not legal and the base byte offset was not
-      // 0, it could be a case where the total offset became too large to what
-      // the addressing mode can represent. Try again without extracting the
-      // base offset.
+      // 0, it could be a case where the total offset became too large for
+      // the addressing mode. Try again without extracting the base offset.
       if (ExtractBase) {
         ExtractBase = false;
         BaseByteOffset = APInt(IdxWidth, 0);
