@@ -115,11 +115,11 @@ public:
   static EntityList collectEntityMappings();
 
   // Get embedding for a single function
-  std::pair<const Function *, Embedding>
-  getFunctionEmbedding(const Function &F, IR2VecKind Kind) const;
+  std::optional<Embedding> getFunctionEmbedding(const Function &F,
+                                                IR2VecKind Kind) const;
 
   /// Get embeddings for all functions in the module
-  FuncEmbMap getFunctionEmbeddings(IR2VecKind Kind) const;
+  FuncEmbMap getFunctionEmbeddingsMap(IR2VecKind Kind) const;
 
   /// Dump entity ID to string mappings
   static void writeEntitiesToStream(raw_ostream &OS);

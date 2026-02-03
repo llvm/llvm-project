@@ -13,6 +13,7 @@
 #include "llvm/Support/SourceMgr.h"
 
 #include <nanobind/nanobind.h>
+#include <nanobind/ndarray.h>
 #include <nanobind/stl/string.h>
 #include <nanobind/stl/unique_ptr.h>
 
@@ -42,12 +43,12 @@ private:
   std::unique_ptr<LLVMContext> Ctx;
   std::unique_ptr<Module> M;
   std::unique_ptr<IR2VecTool> Tool;
-  IR2VecKind EmbKind;
+  IR2VecKind OutputEmbeddingMode;
 
 public:
   PyIR2VecTool(const std::string &Filename, const std::string &Mode,
                const std::string &VocabPath) {
-    EmbKind = [](const std::string &Mode) -> IR2VecKind {
+    OutputEmbeddingMode = [](const std::string &Mode) -> IR2VecKind {
       if (Mode == "sym")
         return IR2VecKind::Symbolic;
       if (Mode == "fa")
@@ -70,24 +71,24 @@ public:
   }
 
   nb::dict getFuncEmbMap() {
-    auto result = Tool->getFunctionEmbeddings(EmbKind);
-    nb::dict nb_result;
+    auto ToolFuncEmbMap = Tool->getFunctionEmbeddingsMap(OutputEmbeddingMode);
+    nb::dict NBFuncEmbMap;
 
-    for (const auto &[func_ptr, embedding] : result) {
-      std::string func_name = func_ptr->getName().str();
-      auto data = embedding.getData();
-      size_t shape[1] = {data.size()};
-      double *data_ptr = new double[data.size()];
-      std::copy(data.data(), data.data() + data.size(), data_ptr);
+    for (const auto &[FuncPtr, FuncEmb] : ToolFuncEmbMap) {
+      std::string FuncName = FuncPtr->getName().str();
+      auto Data = FuncEmb.getData();
+      size_t Shape[1] = {Data.size()};
+      double *DataPtr = new double[Data.size()];
+      std::copy(Data.data(), Data.data() + Data.size(), DataPtr);
 
-      auto nb_array = nb::ndarray<nb::numpy, double>(
-          data_ptr, {data.size()}, nb::capsule(data_ptr, [](void *p) noexcept {
-            delete[] static_cast<double *>(p);
+      auto NbArray = nb::ndarray<nb::numpy, double>(
+          DataPtr, {Data.size()}, nb::capsule(DataPtr, [](void *P) noexcept {
+            delete[] static_cast<double *>(P);
           }));
-      nb_result[nb::str(func_name.c_str())] = nb_array;
+      NBFuncEmbMap[nb::str(FuncName.c_str())] = NbArray;
     }
 
-    return nb_result;
+    return NBFuncEmbMap;
   }
 };
 
