@@ -1523,6 +1523,7 @@ td_library(
     deps = [":OpBaseTdFiles"],
 )
 
+
 td_library(
     name = "LoopLikeInterfaceTdFiles",
     srcs = ["include/mlir/Interfaces/LoopLikeInterface.td"],
@@ -4569,6 +4570,7 @@ cc_library(
         ":SideEffectInterfaces",
         ":TensorDialect",
         ":TransformUtils",
+        ":UBDialect",
         ":ValueBoundsOpInterface",
         ":ViewLikeInterface",
         "//llvm:Support",
@@ -4657,6 +4659,7 @@ cc_library(
         "//llvm:Support",
     ],
 )
+
 
 cc_library(
     name = "MemorySlotInterfaces",
@@ -8058,6 +8061,7 @@ gentbl_cc_library(
     td_file = "include/mlir/Interfaces/LoopLikeInterface.td",
     deps = [":LoopLikeInterfaceTdFiles"],
 )
+
 
 gentbl_cc_library(
     name = "MemorySlotInterfacesIncGen",
@@ -14514,6 +14518,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":BytecodeOpInterface",
+        ":ControlFlowInterfaces",
         ":ConvertToLLVMInterface",
         ":IR",
         ":InliningUtils",
