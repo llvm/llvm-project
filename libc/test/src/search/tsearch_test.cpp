@@ -14,7 +14,6 @@
 #include "src/search/twalk.h"
 #include "src/search/twalk_r.h"
 #include "test/UnitTest/Test.h"
-#include <search.h>
 
 static void *encode(int val) {
   return reinterpret_cast<void *>(static_cast<intptr_t>(val));
@@ -75,16 +74,26 @@ TEST(LlvmLibcTSearchTest, TSearch) {
   ASSERT_EQ(root, nullptr);
 }
 
-static void free_node(void *) {
-  // Do nothing for integer keys
+constexpr size_t MAX_VALUE = 64;
+static bool free_flags[MAX_VALUE + 1];
+static void clear_free_flags() {
+  for (bool &flag : free_flags)
+    flag = false;
+}
+static void free_node(void *node) {
+  int key = decode(node);
+  free_flags[key] = true;
 }
 
 TEST(LlvmLibcTSearchTest, TDestroy) {
   void *root = nullptr;
+  clear_free_flags();
   for (int i = 0; i < 10; ++i)
     LIBC_NAMESPACE::tsearch(encode(i), &root, compare);
 
   LIBC_NAMESPACE::tdestroy(root, free_node);
+  for (int i = 0; i < 10; ++i)
+    ASSERT_TRUE(free_flags[i]);
 }
 
 static int walk_sum = 0;
@@ -119,6 +128,7 @@ static void action_closure(const __llvm_libc_tnode *node, VISIT visit,
 
 TEST(LlvmLibcTSearchTest, TWalkR) {
   void *root = nullptr;
+  clear_free_flags();
   constexpr int LIMIT = 64;
   int sorted[LIMIT];
   for (int i = 0; i < LIMIT; ++i) {
@@ -134,4 +144,6 @@ TEST(LlvmLibcTSearchTest, TWalkR) {
     ASSERT_EQ(sorted[i], i);
 
   LIBC_NAMESPACE::tdestroy(root, free_node);
+  for (int i = 0; i < LIMIT; ++i)
+    ASSERT_TRUE(free_flags[i]);
 }
