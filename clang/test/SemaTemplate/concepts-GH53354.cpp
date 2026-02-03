@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -std=c++20 -verify %s
-// expected-no-diagnostics
 
 template <template <class> class>
 struct S
@@ -8,7 +7,7 @@ struct S
 template <class T>
 concept C1 = requires
 {
-  typename S<T::template value_types>;
+  typename S<T::template value_types>; // expected-warning {{the use of the keyword template before the qualified name of a class or alias template without a template argument list is deprecated}}
 };
 
 template <class T>

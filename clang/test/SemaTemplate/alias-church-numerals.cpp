@@ -1,5 +1,4 @@
 // RUN: %clang_cc1 -std=c++11 -fsyntax-only -verify %s
-// expected-no-diagnostics
 
 template<template<template<typename> class, typename> class T, template<typename> class V> struct PartialApply {
   template<typename W> using R = T<V, W>;
@@ -20,7 +19,7 @@ template<template<template<typename> class, typename> class A,
 template<template<template<typename> class, typename> class A,
          template<template<typename> class, typename> class B,
          template<typename> class F,
-         typename X> using Mul = A<PartialApply<B,F>::template R, X>;
+         typename X> using Mul = A<PartialApply<B,F>::template R, X>; // expected-warning {{the use of the keyword template before the qualified name of a class or alias template without a template argument list is deprecated}}
 
 template<template<typename> class F, typename X> using Four = Add<Two, Two, F, X>;
 template<template<typename> class F, typename X> using Sixteen = Mul<Four, Four, F, X>;

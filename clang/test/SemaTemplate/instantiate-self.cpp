@@ -137,7 +137,7 @@ namespace test13 {
     // Cycle via default template argument.
     template<typename T, typename U = typename T::template X<T>> struct X {};
     template<typename T, int U = T::template Y<T>::value> struct Y { static const int value = 0; };
-    template<typename T, template<typename> typename U = T::template Z<T>::template nested> struct Z { template<typename> struct nested; };
+    template<typename T, template<typename> typename U = T::template Z<T>::template nested> struct Z { template<typename> struct nested; }; // expected-warning {{the use of the keyword template before the qualified name of a class or alias template without a template argument list is deprecated}}
   };
   template<typename T> struct Wrap {
     template<typename U> struct W : A::W<T> {};

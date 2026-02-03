@@ -41,7 +41,8 @@ namespace cwg1004 { // cwg1004: 5
   // This example (from the standard) is actually ill-formed, because
   // name lookup of "T::template A" names the constructor.
   template<class T, template<class> class U = T::template A> struct Third { };
-  // expected-error@-1 {{is a constructor name}}
+  // expected-warning@-1 {{the use of the keyword template before the qualified name of a class or alias template without a template argument list is deprecated}}
+  // expected-error@-2 {{is a constructor name}}
   //   expected-note@#cwg1004-t {{in instantiation of default argument}}
   Third<A<int> > t; // #cwg1004-t
 } // namespace cwg1004

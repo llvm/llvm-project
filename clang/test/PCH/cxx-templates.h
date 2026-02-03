@@ -451,9 +451,6 @@ namespace DependentMemberExpr {
 namespace DependentTemplateName {
   template <template <class> class Template>
   struct TakesClassTemplate {};
-
-  template <class T>
-  TakesClassTemplate<T::template Member> getWithIdentifier();
 }
 
 namespace ClassTemplateCycle {

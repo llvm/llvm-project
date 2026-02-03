@@ -109,10 +109,12 @@ namespace cwg1310 { // cwg1310: 5
     TT<W<int>::template W> tt2;
     // expected-error@-1 {{ISO C++ specifies that qualified reference to 'W' is a constructor name rather than a template name in this context, despite preceding 'template' keyword}}
     // cxx98-error@-2 {{'template' keyword outside of a template}}
+    // expected-warning@-3 {{the use of the keyword template before the qualified name of a class or alias template without a template argument list is deprecated}}
     TT<W<int>::WBase> tt3;
     TTy<W<int>::WBase> tt3a;
     TT<W<int>::template WBase> tt4;
     // cxx98-error@-1 {{'template' keyword outside of a template}}
+    // expected-warning@-2 {{the use of the keyword template before the qualified name of a class or alias template without a template argument list is deprecated}}
 
     W<int> w;
     (void)w.W::W::n;
@@ -134,6 +136,7 @@ namespace cwg1310 { // cwg1310: 5
     // expected-error@-1 {{ISO C++ specifies that qualified reference to 'W' is a constructor name rather than a type in this context, despite preceding 'typename' keyword}}
     TT<W::template W> tt3;
     // expected-error@-1 {{ISO C++ specifies that qualified reference to 'W' is a constructor name rather than a template name in this context, despite preceding 'template' keyword}}
+    // expected-warning@-2 {{the use of the keyword template before the qualified name of a class or alias template without a template argument list is deprecated}}
   }
   template<typename W>
   void wt_test_good() {
@@ -141,6 +144,7 @@ namespace cwg1310 { // cwg1310: 5
     typename W::template W<int>::X w4x;
     TTy<typename W::WBase> tt4;
     TT<W::template WBase> tt5;
+    // expected-warning@-1 {{the use of the keyword template before the qualified name of a class or alias template without a template argument list is deprecated}}
 
     W w;
     (void)w.W::W::n;

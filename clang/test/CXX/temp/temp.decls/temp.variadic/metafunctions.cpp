@@ -204,6 +204,7 @@ namespace TemplateTemplateApply {
   template<typename T, typename ...Meta>
   struct apply_each_nested {
     typedef typename apply_each<T, Meta::template apply...>::type type;
+    // expected-warning@-1 {{the use of the keyword template before the qualified name of a class or alias template without a template argument list is deprecated}}
   };
 
   struct add_reference_meta {

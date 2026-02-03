@@ -87,11 +87,11 @@ template<place...X> struct takedrop_impl<places<X...>> {
 
 template<unsigned N, typename...Ts> struct take {
   using type = typename takedrop_impl<typename make_places<N>::type>::
-    template inner<wrap<Ts>::template inner...>::take; // expected-error {{too few template arguments}}
+    template inner<wrap<Ts>::template inner...>::take; // expected-error {{too few template arguments}} // expected-warning {{the use of the keyword template before the qualified name of a class or alias template without a template argument list is deprecated}}
 };
 template<unsigned N, typename...Ts> struct drop {
   using type = typename takedrop_impl<typename make_places<N>::type>::
-    template inner<wrap<Ts>::template inner...>::drop; // expected-error {{too few template arguments}}
+    template inner<wrap<Ts>::template inner...>::drop; // expected-error {{too few template arguments}} // expected-warning {{the use of the keyword template before the qualified name of a class or alias template without a template argument list is deprecated}}
 };
 
 using T1 = take<3, int, char, double, long>::type; // expected-note {{previous}}
