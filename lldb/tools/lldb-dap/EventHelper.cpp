@@ -20,6 +20,7 @@
 #include "Protocol/ProtocolRequests.h"
 #include "Protocol/ProtocolTypes.h"
 #include "ProtocolUtils.h"
+#include "SBAPIExtras.h"
 #include "lldb/API/SBEvent.h"
 #include "lldb/API/SBFileSpec.h"
 #include "lldb/API/SBListener.h"
@@ -264,11 +265,9 @@ llvm::Error SendThreadStoppedEvent(DAP &dap, bool on_entry) {
 
   llvm::DenseSet<lldb::tid_t> old_thread_ids;
   old_thread_ids.swap(dap.thread_ids);
-  const uint32_t num_threads = process.GetNumThreads();
 
   lldb::tid_t focused_tid = LLDB_INVALID_THREAD_ID;
-  for (uint32_t thread_idx = 0; thread_idx < num_threads; ++thread_idx) {
-    lldb::SBThread thread = process.GetThreadAtIndex(thread_idx);
+  for (auto thread : process) {
     // Collect all known thread ids for sending thread events.
     dap.thread_ids.insert(thread.GetThreadID());
 
@@ -292,14 +291,12 @@ llvm::Error SendThreadStoppedEvent(DAP &dap, bool on_entry) {
   // Update focused thread.
   dap.focus_tid = focused_tid;
 
-  for (const auto &tid : old_thread_ids) {
-    auto end = dap.thread_ids.end();
-    auto pos = dap.thread_ids.find(tid);
-    if (pos == end)
+  for (const auto &tid : old_thread_ids)
+    if (!dap.thread_ids.contains(tid))
       SendThreadExitedEvent(dap, tid);
-  }
 
   dap.RunStopCommands();
+
   return Error::success();
 }
 

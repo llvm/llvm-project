@@ -300,7 +300,7 @@ class DebugCommunication(object):
         self.stopped_thread: Optional[dict] = None
         self.thread_stacks: Optional[Dict[int, List[dict]]]
         self.thread_stop_reasons: Dict[str, Any] = {}
-        self.focused_tid = None
+        self.focused_tid: Optional[int] = None
         self.frame_scopes: Dict[str, Any] = {}
         # keyed by breakpoint id
         self.resolved_breakpoints: dict[int, Breakpoint] = {}
