@@ -178,6 +178,15 @@ public:
                          const TargetMachine &TM) const override;
 
   MCSection *getSectionForCommandLines() const override;
+
+  MCSection *
+  getSectionForMachineBasicBlock(const Function &F,
+                                 const MachineBasicBlock &MBB,
+                                 const TargetMachine &TM) const override;
+
+  MCSection *
+  getUniqueSectionForFunction(const Function &F,
+                              const TargetMachine &TM) const override;
 };
 
 class TargetLoweringObjectFileCOFF : public TargetLoweringObjectFile {
