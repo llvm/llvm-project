@@ -225,7 +225,6 @@ xegpu::inferBitCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
     }
   }
 
-  // Now set only instData and laneData, preserving sgData
   xegpu::DistributeLayoutAttr finalSrcLayout;
   finalSrcLayout =
       resLayout.setDimData(dim, sgDataValue, instDataValue, laneDataValue);
@@ -327,11 +326,11 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
                             ArrayRef<int64_t> dst) -> bool {
     // each dim in src can be mapped to one or more dims in dst whose product
     // equals to the src dim
-    splitDimGroups.clear();
     size_t srcIdx = 0;
     int64_t accumulatedSize = 1;
     SmallVector<int64_t> currentDstDims;
 
+    splitDimGroups.clear();
     for (size_t dstIdx = 0; dstIdx < dst.size(); ++dstIdx) {
       if (srcIdx >= src.size())
         return false;

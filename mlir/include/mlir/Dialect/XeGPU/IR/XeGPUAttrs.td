@@ -246,8 +246,8 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
                           "int64_t": $instData,
                           "int64_t": $laneData)>,              
     InterfaceMethod<[{Derive a new layout by collapsing groups of dimensions. Each inner array in
-                      `dimGroups` specifies a group of dimensions that are collapsed into a single
-                      dimension in the derived layout.}],
+                      `dimGroups` specifies a group of adjacent dimensions that are collapsed into
+                       a single dimension in the derived layout.}],
                     "xegpu::DistributeLayoutAttr",
                     "collapseDims",
                     (ins "SmallVector<SmallVector<int64_t>>": $dimGroups)>,                                                   
@@ -527,7 +527,7 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
     DistributeLayoutAttr setDimData(int64_t dim, int64_t sgData, int64_t instData, int64_t laneData);
 
     // Derive a new layout by collapsing groups of dimensions.
-    // Each inner array in `dimGroups` specifies a set of dimensions
+    // Each inner array in `dimGroups` specifies a set of adjacent dimensions
     // that are collapsed into a single dimension in the derived layout.
     DistributeLayoutAttr collapseDims(SmallVector<SmallVector<int64_t>> dimGroups) const;
 
@@ -708,7 +708,7 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
     DistributeLayoutAttr setDimData(int64_t dim, int64_t sgData, int64_t instData, int64_t laneData);
 
     // Derive a new layout by collapsing groups of dimensions.
-    // Each inner array in `dimGroups` specifies a set of dimensions
+    // Each inner array in `dimGroups` specifies a set of adjacent dimensions
     // that are collapsed into a single dimension in the derived layout.
     DistributeLayoutAttr collapseDims(SmallVector<SmallVector<int64_t>> dimGroups) const;
 

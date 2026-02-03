@@ -502,7 +502,7 @@ DistributeLayoutAttr LayoutAttr::setDimData(int64_t dim, int64_t sgData,
 }
 
 // Derive a new layout by collapsing groups of dimensions.
-// Each inner array in `dimGroups` specifies a set of dimensions
+// Each inner array in `dimGroups` specifies a set of adjacent dimensions
 // that are collapsed into a single dimension in the derived layout.
 DistributeLayoutAttr
 LayoutAttr::collapseDims(SmallVector<SmallVector<int64_t>> dimGroups) const {
@@ -527,6 +527,7 @@ LayoutAttr::collapseDims(SmallVector<SmallVector<int64_t>> dimGroups) const {
   SmallVector<int64_t> collapsedLaneLayout;
   SmallVector<int64_t> collapsedLaneData;
   SmallVector<int64_t> collapsedOrder;
+  SetVector<int64_t> coveredDims;
 
   for (const auto &group : dimGroups) {
 
@@ -534,8 +535,17 @@ LayoutAttr::collapseDims(SmallVector<SmallVector<int64_t>> dimGroups) const {
     int64_t collapsedSg = 1, collapsedSgD = 1, collapsedInst = 1;
     int64_t collapsedLaneL = 1, collapsedLaneD = 1;
     int64_t collapsedOrderValue = -1;
-
+    int64_t dimBeforeCurrent = group.front() - 1;
     for (int64_t dimIdx : group) {
+      // no two groups can cover the same dimension
+      if (!coveredDims.insert(dimIdx))
+        llvm::report_fatal_error(Twine("dimension ") + Twine(dimIdx) +
+                                 " is covered more than once");
+      // dims within group must be adjacent
+      if (dimBeforeCurrent != (dimIdx - 1))
+        llvm::report_fatal_error("dimensions being collapsed must be adjacent");
+      dimBeforeCurrent = dimIdx;
+
       collapsedSg *= sgLayout[dimIdx];
       collapsedSgD *= sgData[dimIdx];
       collapsedInst *= instData[dimIdx];
@@ -552,6 +562,11 @@ LayoutAttr::collapseDims(SmallVector<SmallVector<int64_t>> dimGroups) const {
     collapsedLaneData.push_back(collapsedLaneD);
     collapsedOrder.push_back(collapsedOrderValue);
   }
+
+  // check covered all dimensions
+  if (coveredDims.size() != sgLayout.size())
+    llvm::report_fatal_error(
+        "not all dimensions are covered in collapseGroups");
 
   // Create collapsed layout
   SmallVector<int32_t> collapsedSgLayout32(collapsedSgLayout.begin(),
