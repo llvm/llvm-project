@@ -2072,7 +2072,7 @@ Error RemoveNops::runOnFunctions(BinaryContext &BC) {
   };
 
   ParallelUtilities::PredicateTy SkipFunc = [&](const BinaryFunction &BF) {
-    return BF.shouldPreserveNops() || !BinaryFunctionPass::shouldOptimize(BF);
+    return BF.shouldPreserveNops() || BF.isPLTFunction();
   };
 
   ParallelUtilities::runOnEachFunction(
