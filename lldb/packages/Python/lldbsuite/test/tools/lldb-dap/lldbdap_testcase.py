@@ -480,6 +480,9 @@ class DAPTestCaseBase(TestBase):
 
     def continue_to_exit(self, exitCode=0):
         self.do_continue()
+        self.verify_process_exited(exitCode)
+
+    def verify_process_exited(self, exitCode: int = 0):
         stopped_events = self.dap_server.wait_for_stopped()
         self.assertEqual(
             len(stopped_events), 1, "stopped_events = {}".format(stopped_events)
