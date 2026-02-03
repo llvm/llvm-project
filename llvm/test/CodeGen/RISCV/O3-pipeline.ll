@@ -127,6 +127,7 @@
 ; CHECK-NEXT:       RISC-V Merge Base Offset
 ; CHECK-NEXT:       MachineDominator Tree Construction
 ; CHECK-NEXT:       RISC-V VL Optimizer
+; CHECK-NEXT:       Remove dead machine instructions
 ; CHECK-NEXT:       RISC-V pre-allocation Zilsd load/store optimization
 ; CHECK-NEXT:       RISC-V Insert Read/Write CSR Pass
 ; CHECK-NEXT:       RISC-V Insert Write VXRM Pass

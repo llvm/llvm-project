@@ -624,6 +624,7 @@ void RISCVPassConfig::addPreRegAlloc() {
   if (TM->getOptLevel() != CodeGenOptLevel::None) {
     addPass(createRISCVMergeBaseOffsetOptPass());
     addPass(createRISCVVLOptimizerPass());
+    addPass(&DeadMachineInstructionElimID);
     // Add Zilsd pre-allocation load/store optimization
     addPass(createRISCVPreAllocZilsdOptPass());
   }
