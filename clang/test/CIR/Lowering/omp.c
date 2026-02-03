@@ -1,7 +1,46 @@
+// RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fopenmp -emit-cir %s -o %t.cir
+// RUN: cir-opt %t.cir -cir-to-llvm -o - | FileCheck %s -check-prefix=MLIR
+// RUN: cir-translate %t.cir -cir-to-llvmir --target x86_64-unknown-linux-gnu --disable-cc-lowering  | FileCheck %s -check-prefix=CIR
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fclangir -fopenmp -emit-llvm %s -o %t-cir.ll
 // RUN: FileCheck %s -check-prefix=CIR --input-file %t-cir.ll
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -fopenmp -emit-llvm %s -o %t.ll
 // RUN: FileCheck %s -check-prefix=OGCG --input-file %t.ll
+
+// MLIR-LABEL: llvm.func @main() -> i32
+// MLIR-SAME: attributes {dso_local, no_inline, no_proto}
+// MLIR: %[[C1:.*]] = llvm.mlir.constant(1 : i64) : i64
+// MLIR: %[[ALLOCA1:.*]] = llvm.alloca %[[C1]] x i32 {alignment = 4 : i64}
+// MLIR: %[[ALLOCA2:.*]] = llvm.alloca %{{.*}} x i32 {alignment = 4 : i64}
+// MLIR: %[[ALLOCA3:.*]] = llvm.alloca %{{.*}} x i32 {alignment = 4 : i64}
+// MLIR: omp.parallel {
+// MLIR: llvm.br ^bb{{[0-9]+}}
+// MLIR: ^bb{{[0-9]+}}:
+// MLIR: %[[ZERO1:.*]] = llvm.mlir.constant(0 : i32) : i32
+// MLIR: llvm.store %[[ZERO1]], %{{.*}} {alignment = 4 : i64}
+// MLIR: llvm.br ^bb{{[0-9]+}}
+// MLIR: ^bb{{[0-9]+}}:
+// MLIR: %[[LOAD1:.*]] = llvm.load %{{.*}} {alignment = 4 : i64}
+// MLIR: %[[C10000:.*]] = llvm.mlir.constant(10000 : i32) : i32
+// MLIR: %[[CMP:.*]] = llvm.icmp "slt" %[[LOAD1]], %[[C10000]] : i32
+// MLIR: llvm.cond_br %[[CMP]], ^bb{{[0-9]+}}, ^bb{{[0-9]+}}
+// MLIR: ^bb{{[0-9]+}}:
+// MLIR: %[[ZERO2:.*]] = llvm.mlir.constant(0 : i32) : i32
+// MLIR: llvm.store %[[ZERO2]], %{{.*}} {alignment = 4 : i64}
+// MLIR: llvm.br ^bb{{[0-9]+}}
+// MLIR: ^bb{{[0-9]+}}:
+// MLIR: %[[LOAD2:.*]] = llvm.load %{{.*}} {alignment = 4 : i64}
+// MLIR: %[[C1_I32:.*]] = llvm.mlir.constant(1 : i32) : i32
+// MLIR: %[[ADD:.*]] = llvm.add %[[LOAD2]], %[[C1_I32]] overflow<nsw> : i32
+// MLIR: llvm.store %[[ADD]], %{{.*}} {alignment = 4 : i64}
+// MLIR: llvm.br ^bb{{[0-9]+}}
+// MLIR: ^bb{{[0-9]+}}:
+// MLIR: llvm.br ^bb{{[0-9]+}}
+// MLIR: ^bb{{[0-9]+}}:
+// MLIR: omp.terminator
+// MLIR: %[[ZERO3:.*]] = llvm.mlir.constant(0 : i32) : i32
+// MLIR: llvm.store %[[ZERO3]], %{{.*}} {alignment = 4 : i64}
+// MLIR: %[[RETVAL:.*]] = llvm.load %{{.*}} {alignment = 4 : i64}
+// MLIR: llvm.return %[[RETVAL]] : i32
 
 // CIR-LABEL: define dso_local i32 @main()
 // CIR: %[[STRUCTARG:.*]] = alloca { ptr, ptr }, align 8
