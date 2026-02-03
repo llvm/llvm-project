@@ -17,14 +17,10 @@
 #include <__iterator/segmented_iterator.h>
 #include <__type_traits/invoke.h>
 #include <__type_traits/is_same.h>
-#include <__utility/forward.h>
 
 #if !defined(_LIBCPP_HAS_NO_PRAGMA_SYSTEM_HEADER)
 #  pragma GCC system_header
 #endif
-
-_LIBCPP_PUSH_MACROS
-#include <__undef_macros>
 
 _LIBCPP_BEGIN_NAMESPACE_STD
 
@@ -59,7 +55,5 @@ for_each(_InputIterator __first, _InputIterator __last, _Func __f) {
 }
 
 _LIBCPP_END_NAMESPACE_STD
-
-_LIBCPP_POP_MACROS
 
 #endif // _LIBCPP___ALGORITHM_FOR_EACH_H
