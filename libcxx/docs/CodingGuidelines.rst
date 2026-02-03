@@ -165,7 +165,7 @@ have a recommended practice where to put them, so libc++ applies it whenever it 
   This protects programmers from assuming too much about how the internals of a function work, making code more robust
   in the presence of future optimizations.
 
-``[[nodiscard]]`` should not be applied to functions if Clang already diagnoses unused results, such as:
+``[[nodiscard]]`` should not be applied to functions if Clang already diagnoses unused results, for example:
 - conversion functions
 - equality operators
 - relational operators
