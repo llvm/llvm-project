@@ -16,34 +16,23 @@
 // RUN: --no-offload-new-driver -nogpuinc -nogpulib %s \
 // RUN: 2>&1 | FileCheck --check-prefixes=ALL,NO-PLUGIN %s
 
-// RUN: %clang -target x86_64-linux-gnu --offload-new-driver \
-// RUN:   -nogpuinc -nogpulib \
-// RUN:   --offload=spirv64-unknown-chipstar \
-// RUN:   --hip-path=%S/Inputs/hipspv -Xoffload-compiler \
-// RUN:   '-###' -c %s -o /dev/null 2>&1 \
-// RUN: | FileCheck %s --check-prefixes=ALL,FROM-HIP-PATH
+// Run commands for the new offload driver:
 
-// RUN: %clang -target x86_64-linux-gnu --offload-new-driver \
-// RUN:   -nogpuinc -nogpulib \
-// RUN:   --offload=spirv64-unknown-chipstar \
-// RUN:   -Xoffload-compiler-spirv64-unknown-chipstar \
-// RUN:   --hipspv-pass-plugin=%S/Inputs/pass-plugin.so -Xoffload-compiler \
-// RUN:   '-###' -c %s -o /dev/null 2>&1 \
-// RUN: | FileCheck %s --check-prefixes=ALL,FROM-OPTION
+// RUN: touch %t.dummy.o
+// RUN: %clang -### --no-default-config -o /dev/null --target=spirv64-unknown-chipstar \
+// RUN:   %t.dummy.o --hip-path=%S/Inputs/hipspv \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FROM-HIP-PATH
 
-// RUN: not %clang -target x86_64-linux-gnu --offload-new-driver \
-// RUN:   -nogpuinc -nogpulib \
-// RUN:   --offload=spirv64-unknown-chipstar \
-// RUN:   -Xoffload-compiler-spirv64-unknown-chipstar \
-// RUN:   --hipspv-pass-plugin=foo.so -Xoffload-compiler \
-// RUN:   '-###' -c %s -o /dev/null 2>&1 \
-// RUN: | FileCheck %s --check-prefixes=ALL,FROM-OPTION-INVALID
+// RUN: %clang -### --no-default-config -o /dev/null --target=spirv64-unknown-chipstar \
+// RUN:   %t.dummy.o --hipspv-pass-plugin=%S/Inputs/pass-plugin.so \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FROM-OPTION
 
-// RUN: %clang -target x86_64-linux-gnu --offload-new-driver \
-// RUN:   -nogpuinc -nogpulib \
-// RUN:   --offload=spirv64-unknown-chipstar -Xoffload-compiler \
-// RUN:   '-###' -c %s -o /dev/null 2>&1 \
-// RUN: | FileCheck %s --check-prefixes=ALL,NO-PLUGIN
+// RUN: not %clang -### --no-default-config -o /dev/null --target=spirv64-unknown-chipstar \
+// RUN:   %t.dummy.o --hipspv-pass-plugin=foo.so \
+// RUN: 2>&1 | FileCheck %s --check-prefixes=ALL,FROM-OPTION-INVALID
+
+// RUN: %clang -### --no-default-config -o /dev/null --target=spirv64-unknown-chipstar \
+// RUN:   %t.dummy.o 2>&1 | FileCheck %s --check-prefixes=ALL,NO-PLUGIN
 
 // FROM-HIP-PATH: {{".*opt"}} {{".*.bc"}} "-load-pass-plugin"
 // FROM-HIP-PATH-SAME: {{".*/Inputs/hipspv/lib/libLLVMHipSpvPasses.so"}}

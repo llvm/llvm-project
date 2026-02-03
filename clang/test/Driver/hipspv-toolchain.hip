@@ -1,3 +1,4 @@
+// REQUIRES: spirv-registered-target
 // UNSUPPORTED: system-windows, system-cygwin
 
 // RUN: %clang -### -target x86_64-linux-gnu --offload=spirv64 \
@@ -54,39 +55,54 @@
 // Check the clang command, invoked by the linker wrapper, selects the HIPSPV
 // toolchain for the new offload driver.
 
-// RUN: %clang -target x86_64-linux-gnu --offload-new-driver -nogpuinc \
-// RUN:   -nogpulib --offload=spirv64-unknown-chipstar \
-// RUN:   --hip-path=%S/Inputs/hipspv -Xoffload-compiler \
-// RUN:   '-###' -c %s -o /dev/null 2>&1 \
-// RUN: | FileCheck %s --check-prefix=CHIPSTAR
+// RUN: %clang -cc1 %s -triple spirv64-unknown-chipstar -emit-llvm-bc -o %t.dev.bc
+// RUN: llvm-offload-binary -o %t.dev.out \
+// RUN:   --image=file=%t.dev.bc,kind=hip,triple=spirv64-unknown-chipstar,arch=generic
+
+// RUN: clang-linker-wrapper --dry-run \
+// RUN:   --device-compiler=spirv64-unknown-chipstar=--hip-path="%S/Inputs/hipspv" \
+// RUN:   --host-triple=spirv64-unknown-chipstar \
+// RUN:   --linker-path=clang-offload-bundler \
+// RUN:   --emit-fatbin-only -o /dev/null %t.dev.out \
+// RUN: 2>&1 | FileCheck %s --check-prefix=WRAPPER -DHIP_PATH=%S/Inputs/hipspv
+
+// WRAPPER: clang{{.*}}" --no-default-config -o {{[^ ]*.img}}
+// WRAPPER-SAME: --target=spirv64-unknown-chipstar
+// WRAPPER-SAME: {{[^ ]*.o}}
+// WRAPPER-SAME: --hip-path=[[HIP_PATH]]
+
+// RUN: touch %t.dummy.o
+// RUN: %clang -### --no-default-config -o %t.dummy.img \
+// RUN:   --target=spirv64-unknown-chipstar %t.dummy.o \
+// RUN:   --hip-path="%S/Inputs/hipspv" \
+// RUN: 2>&1 | FileCheck %s --check-prefix=CHIPSTAR -DHIP_PATH=%S/Inputs/hipspv
 
 //      CHIPSTAR: {{".*llvm-link"}}
 // CHIPSTAR-SAME: "-o" [[LINK_BC:".*bc"]] "{{[^ ]*.o}}"
 
 //      CHIPSTAR: {{".*opt"}} [[LINK_BC]] "-load-pass-plugin"
-// CHIPSTAR-SAME: {{".*/hipspv/lib/libLLVMHipSpvPasses.so"}}
+// CHIPSTAR-SAME: "[[HIP_PATH]]/lib/libLLVMHipSpvPasses.so"
 // CHIPSTAR-SAME: "-passes=hip-post-link-passes" "-o" [[LOWER_BC:".*bc"]]
 
 //      CHIPSTAR: {{".*llvm-spirv"}} "--spirv-max-version=1.2"
 // CHIPSTAR-SAME: "--spirv-ext=-all,+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups"
 // CHIPSTAR-SAME: [[LOWER_BC]] "-o" "[[SPIRV_OUT:.*img]]"
 
-// RUN: %clang -target x86_64-linux-gnu --offload-new-driver -nogpuinc \
-// RUN:   -nogpulib --offload=spirv64v1.3-unknown-chipstar \
-// RUN:   --hip-path=%S/Inputs/hipspv -Xoffload-compiler \
-// RUN:   '-###' -c %s -o /dev/null 2>&1 \
-// RUN: | FileCheck %s --check-prefix=CHIPSTAR_SUBARCH
+// RUN: %clang -### --no-default-config -o %t.dummy.img \
+// RUN:   --target=spirv64v1.3-unknown-chipstar \
+// RUN:   %t.dummy.o --hip-path="%S/Inputs/hipspv" \
+// RUN: 2>&1 | FileCheck %s --check-prefix=CHIPSTAR-SUBARCH -DHIP_PATH=%S/Inputs/hipspv
 
-//      CHIPSTAR_SUBARCH: {{".*llvm-link"}}
-// CHIPSTAR_SUBARCH-SAME: "-o" [[LINK_BC:".*bc"]] "{{[^ ]*.o}}"
+//      CHIPSTAR-SUBARCH: {{".*llvm-link"}}
+// CHIPSTAR-SUBARCH-SAME: "-o" [[LINK_BC:".*bc"]] "{{[^ ]*.o}}"
 
-//      CHIPSTAR_SUBARCH: {{".*opt"}} [[LINK_BC]] "-load-pass-plugin"
-// CHIPSTAR_SUBARCH-SAME: {{".*/hipspv/lib/libLLVMHipSpvPasses.so"}}
-// CHIPSTAR_SUBARCH-SAME: "-passes=hip-post-link-passes" "-o" [[LOWER_BC:".*bc"]]
+//      CHIPSTAR-SUBARCH: {{".*opt"}} [[LINK_BC]] "-load-pass-plugin"
+// CHIPSTAR-SUBARCH-SAME: "[[HIP_PATH]]/lib/libLLVMHipSpvPasses.so"
+// CHIPSTAR-SUBARCH-SAME: "-passes=hip-post-link-passes" "-o" [[LOWER_BC:".*bc"]]
 
-//      CHIPSTAR_SUBARCH: {{".*llvm-spirv"}}
-// CHIPSTAR_SUBARCH-SAME: "--spirv-ext=-all,+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups"
-// CHIPSTAR_SUBARCH-SAME: [[LOWER_BC]] "-o" "[[SPIRV_OUT:.*img]]"
+//      CHIPSTAR-SUBARCH: {{".*llvm-spirv"}}
+// CHIPSTAR-SUBARCH-SAME: "--spirv-ext=-all,+SPV_INTEL_function_pointers,+SPV_INTEL_subgroups"
+// CHIPSTAR-SUBARCH-SAME: [[LOWER_BC]] "-o" "[[SPIRV_OUT:.*img]]"
 
 //-----------------------------------------------------------------------------
 // Check llvm-spirv-<LLVM_VERSION_MAJOR> is used if it is found in PATH.
@@ -99,11 +115,9 @@
 // RUN:   | FileCheck -DVERSION=%llvm-version-major \
 // RUN:   --check-prefix=VERSIONED %s
 
-// RUN: env "PATH=%t/versioned" %clang -target x86_64-linux-gnu \
-// RUN:   --offload-new-driver -nogpuinc \
-// RUN:   -nogpulib --offload=spirv64-unknown-chipstar \
-// RUN:   --hip-path=%S/Inputs/hipspv -Xoffload-compiler '-###' -c %s \
-// RUN:   -o /dev/null 2>&1 \
+// RUN: env "PATH=%t/versioned" %clang -### --no-default-config \
+// RUN:  -o %t.dummy.img --target=spirv64-unknown-chipstar %t.dummy.o \
+// RUN:  --hip-path="%S/Inputs/hipspv" -o /dev/null 2>&1 \
 // RUN: | FileCheck -DVERSION=%llvm-version-major --check-prefix=VERSIONED %s
 
 // VERSIONED: {{.*}}llvm-spirv-[[VERSION]]
