@@ -104,7 +104,7 @@ endif()
 # This allows an easy way of setting up a build directory for llvm and another
 # one for llvm+clang+... using the same sources.
 # These projects will be included when "all" is included in LLVM_ENABLE_PROJECTS.
-set(LLVM_ALL_PROJECTS "bolt;clang;clang-tools-extra;cross-project-tests;libclc;lld;lldb;mlir;polly")
+set(LLVM_ALL_PROJECTS "bolt;clang;clang-tools-extra;cross-project-tests;lld;lldb;mlir;polly")
 
 # The libc and compiler-rt projects are not part of LLVM_ALL_PROJECTS, because
 # it is preferred to use LLVM_ENABLE_RUNTIMES for them instead.
