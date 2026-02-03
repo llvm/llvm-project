@@ -908,8 +908,11 @@ private:
           GetPointerBaseWithConstantOffset(S->getPointerOperand(), Offset, DL);
       if (Dst == &Array) {
         int64_t Idx = Offset / PointerSize;
-        StoredValues[Idx] = getUnderlyingObject(S->getValueOperand());
-        LastAccesses[Idx] = S;
+        // Ignore updates that must be UB (probably in dead code at runtime)
+        if ((uint64_t)Idx < NumValues) {
+          StoredValues[Idx] = getUnderlyingObject(S->getValueOperand());
+          LastAccesses[Idx] = S;
+        }
       }
     }
 
