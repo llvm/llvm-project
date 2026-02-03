@@ -2904,8 +2904,9 @@ static bool mayFoldIntoVector(SDValue Op, const X86Subtarget &Subtarget,
   if (isa<ConstantSDNode>(Op) || isa<ConstantFPSDNode>(Op))
     return true;
   EVT VT = Op.getValueType();
-  if (ISD::isBitwiseLogicOp(Op.getOpcode()) &&
-      (VT == MVT::i128 || VT == MVT::i256 || VT == MVT::i512))
+  bool ValidOp = (ISD::isBitwiseLogicOp(Op.getOpcode()) ||
+                  ISD::isAddSubOp(Op.getOpcode()));
+  if (ValidOp && (VT == MVT::i128 || VT == MVT::i256 || VT == MVT::i512))
     return mayFoldIntoVector(Op.getOperand(0), Subtarget) &&
            mayFoldIntoVector(Op.getOperand(1), Subtarget);
   return X86::mayFoldLoad(Op, Subtarget, AssumeSingleUse,
@@ -34267,7 +34268,6 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
     SDValue RHS = N->getOperand(1);
     EVT VT = N->getValueType(0);
     bool IsAdd = Opc == ISD::ADD;
-
     assert(Subtarget.useAVX512Regs() && "AVX512 required");
     assert(VT == MVT::i512 && "Unexpected VT!");
 
@@ -34275,11 +34275,21 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
         !mayFoldIntoVector(RHS, Subtarget))
       return;
 
-    MVT VecVT = MVT::getVectorVT(MVT::i64, 8);
-    MVT BoolVT = MVT::getVectorVT(MVT::i1, 8);
+    MVT VecVT = MVT::v8i64;
+    MVT BoolVT = MVT::v8i1;
+    SDValue AllOnes = DAG.getAllOnesConstant(dl, VecVT);
+
+    if (isOneConstant(RHS)) {
+      RHS = AllOnes;
+      Opc = (IsAdd ? ISD::SUB : ISD::ADD);
+      IsAdd = !IsAdd;
+      // LHS + 1 => LHS - (- 1 , LHS - 1 => LHS + (- 1)
+      // we utilize var `AllOnes` to do less work, this optimization makes snese
+      // since inc/dec operations are common :)
+    }
+
     SDValue Vec0 = DAG.getBitcast(VecVT, LHS);
     SDValue Vec1 = DAG.getBitcast(VecVT, RHS);
-    SDValue AllOnes = DAG.getAllOnesConstant(dl, VecVT);
 
     SDValue Partial = DAG.getNode(Opc, dl, VecVT, Vec0, Vec1);
 
