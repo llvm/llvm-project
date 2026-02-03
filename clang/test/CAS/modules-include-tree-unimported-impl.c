@@ -18,7 +18,7 @@
 // RUN: %clang @%t/tu.rsp -o - | FileCheck %s
 
 // CHECK-NOT: @record = global
-// CHECK: @record = external global
+// CHECK: @record = external {{(dso_local )?}}global
 
 //--- cdb.json.template
 [{

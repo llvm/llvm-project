@@ -39,4 +39,4 @@
 // RUN: grep llvmcas %t.dir/cache-key1
 // RUN: diff -u %t.dir/cache-key1 %t.dir/cache-key2
 
-// REMAP: -fprofile-instrument-use-path=/^testdir/a.profdata
+// REMAP: -fprofile-instrument-use-path=/^testdir{{/|\\\\}}a.profdata

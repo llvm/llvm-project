@@ -1,3 +1,4 @@
+// REQUIRES: symlinks
 // RUN: rm -rf %t
 // RUN: split-file %s %t
 // RUN: ln -s s2.h %t/s2-link.h

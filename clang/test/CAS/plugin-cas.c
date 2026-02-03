@@ -4,7 +4,7 @@
 
 // RUN: %clang -cc1depscan -o %t/t1.rsp -fdepscan=inline -cc1-args \
 // RUN:   -cc1 -emit-obj %s -fcas-path %t/cas \
-// RUN:   -fcas-plugin-path %llvmshlibdir/libCASPluginTest%pluginext \
+// RUN:   -fcas-plugin-path %llvmshlibdir/%pluginpreCASPluginTest%pluginext \
 // RUN:   -fcas-plugin-option first-prefix=myfirst- -fcas-plugin-option second-prefix=mysecond- \
 // RUN:   -fcas-plugin-option upstream-path=%t/cas-upstream
 // RUN: %clang @%t/t1.rsp -o %t/t1.o -Rcompile-job-cache 2>&1 | FileCheck %s --check-prefix=CACHE-MISS
@@ -13,7 +13,7 @@
 // RUN: rm -rf %t/cas
 // RUN: %clang -cc1depscan -o %t/t2.rsp -fdepscan=inline -cc1-args \
 // RUN:   -cc1 -emit-obj %s -fcas-path %t/cas \
-// RUN:   -fcas-plugin-path %llvmshlibdir/libCASPluginTest%pluginext \
+// RUN:   -fcas-plugin-path %llvmshlibdir/%pluginpreCASPluginTest%pluginext \
 // RUN:   -fcas-plugin-option first-prefix=myfirst- -fcas-plugin-option second-prefix=mysecond- \
 // RUN:   -fcas-plugin-option upstream-path=%t/cas-upstream
 // RUN: %clang @%t/t2.rsp -o %t/t2.o -Rcompile-job-cache 2>&1 | FileCheck %s --check-prefix=CACHE-HIT
@@ -23,7 +23,7 @@
 // RUN: rm -rf %t/cas
 // RUN: %clang -cc1depscan -o %t/t3.rsp -fdepscan=inline -cc1-args \
 // RUN:   -cc1 -emit-obj %s -fcas-path %t/cas \
-// RUN:   -fcas-plugin-path %llvmshlibdir/libCASPluginTest%pluginext \
+// RUN:   -fcas-plugin-path %llvmshlibdir/%pluginpreCASPluginTest%pluginext \
 // RUN:   -fcas-plugin-option first-prefix=myfirst- -fcas-plugin-option second-prefix=mysecond- \
 // RUN:   -fcas-plugin-option upstream-path=%t/cas-upstream \
 // RUN:   -fcas-plugin-option simulate-missing-objects
@@ -46,7 +46,7 @@
 
 // RUN: not %clang -cc1depscan -o %t/t.rsp -fdepscan=inline -cc1-args \
 // RUN:   -cc1 %s -fcas-path %t/cas \
-// RUN:   -fcas-plugin-path %llvmshlibdir/libCASPluginTest%pluginext \
+// RUN:   -fcas-plugin-path %llvmshlibdir/%pluginpreCASPluginTest%pluginext \
 // RUN:   -fcas-plugin-option no-such-option=2 2>&1 | FileCheck %s --check-prefix=FAIL-PLUGIN-OPT
 // FAIL-PLUGIN-OPT: fatal error: CAS cannot be initialized from the specified '-fcas-*' options: unknown option: no-such-option
 

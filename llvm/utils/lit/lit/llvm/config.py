@@ -652,6 +652,10 @@ class LLVMConfig(object):
             self.config.substitutions.append(("%llvmshlibdir", shl))
         if pext:
             self.config.substitutions.append(("%pluginext", pext))
+        if platform.system() != "Windows":
+            self.config.substitutions.append(("%pluginpre", "lib"))
+        else:
+            self.config.substitutions.append(("%pluginpre", ""))
 
         # There will be no default target triple if one was not specifically
         # set, and the host's architecture is not an enabled target.

@@ -1582,6 +1582,8 @@ def getDefaultSubstitutions(test, tmpDir, tmpBase, normalize_slashes=False):
             # %t (tmpName) in tree path forms for Windows
             ("%{t-tree}", "\\" + tmpName if kIsWindows else tmpName),
             ("%{t-tree-/}", "/" + tmpName.replace("\\", "/") if kIsWindows else tmpName),
+            # $t (tmpName) in lower case for Windows
+            ("%{t-lower}", tmpName.lower() if kIsWindows else tmpName)
         ]
     )
 

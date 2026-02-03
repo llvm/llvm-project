@@ -17,7 +17,7 @@
 // CHECK: -fsanitize-ignorelist=[[OUT_DIR]]{{/|\\}}asan_ignorelist.txt \
 // CHECK: -fsanitize-ignorelist=[[OUT_DIR]]{{/|\\}}sys_asan_ignorelist.txt \
 
-// RUN: env LLVM_CACHE_CAS_PATH=%t/cas LLVM_CACHE_PREFIX_MAPS="%S=/^src;%t=/^out" %clang-cache \
+// RUN: env LLVM_CACHE_CAS_PATH=%t/cas LLVM_CACHE_PREFIX_MAPS="%S=/^src;%{t-lower}=/^out" %clang-cache \
 // RUN:   %clang -fsanitize=address -Xclang -fsanitize-ignorelist=%t/asan_ignorelist.txt -Xclang -fsanitize-system-ignorelist=%t/sys_asan_ignorelist.txt \
 // RUN:   -target x86_64-apple-macos11 -c %s -o %t/output.o -Rcompile-job-cache 2> %t/output-tree2.txt
 

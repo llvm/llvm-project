@@ -37,27 +37,27 @@
 
 // RUN: %clang -cc1depscan -fdepscan=inline -o %t/t.rsp -cc1-args \
 // RUN:   -cc1 -triple x86_64-apple-macos12 -fcas-path %t/cas -emit-obj %s -o %t/output.o \
-// RUN:   -fcas-plugin-path %llvmshlibdir/libCASPluginTest%pluginext
+// RUN:   -fcas-plugin-path %llvmshlibdir/%pluginpreCASPluginTest%pluginext
 // RUN: %clang @%t/t.rsp
 // RUN: ls %t/cas | wc -l | grep 2
 // RUN: ls %t/cas | grep v1.1
 
 // Limit too high, no change.
-// RUN: c-index-test core -prune-cas -cas-path %t/cas 100000000 -fcas-plugin-path %llvmshlibdir/libCASPluginTest%pluginext
+// RUN: c-index-test core -prune-cas -cas-path %t/cas 100000000 -fcas-plugin-path %llvmshlibdir/%pluginpreCASPluginTest%pluginext
 // RUN: ls %t/cas | wc -l | grep 2
 
 // Under the limit, starts a chain.
-// RUN: c-index-test core -prune-cas -cas-path %t/cas 10 -fcas-plugin-path %llvmshlibdir/libCASPluginTest%pluginext
+// RUN: c-index-test core -prune-cas -cas-path %t/cas 10 -fcas-plugin-path %llvmshlibdir/%pluginpreCASPluginTest%pluginext
 // RUN: ls %t/cas | wc -l | grep 3
 // RUN: ls %t/cas | grep v1.2
 
 // Under the limit, starts a chain and abandons oldest dir.
-// RUN: c-index-test core -prune-cas -cas-path %t/cas 10 -fcas-plugin-path %llvmshlibdir/libCASPluginTest%pluginext
+// RUN: c-index-test core -prune-cas -cas-path %t/cas 10 -fcas-plugin-path %llvmshlibdir/%pluginpreCASPluginTest%pluginext
 // RUN: ls %t/cas | wc -l | grep 4
 // RUN: ls %t/cas | grep v1.3
 
 // Under the limit, removes abandonded dir, starts a chain and abandons oldest dir.
-// RUN: c-index-test core -prune-cas -cas-path %t/cas 10 -fcas-plugin-path %llvmshlibdir/libCASPluginTest%pluginext
+// RUN: c-index-test core -prune-cas -cas-path %t/cas 10 -fcas-plugin-path %llvmshlibdir/%pluginpreCASPluginTest%pluginext
 // RUN: ls %t/cas | wc -l | grep 4
 // RUN: ls %t/cas | grep v1.4
 // RUN: ls %t/cas | grep -v v1.1

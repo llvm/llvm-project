@@ -1,3 +1,6 @@
+// TODO: Enable for Windows when cc1depscand is implemented
+// REQUIRES: !system-windows, clang-cc1daemon
+
 // RUN: rm -rf %t
 
 // RUN: llvm-cas --cas %t/cas --ingest %s
