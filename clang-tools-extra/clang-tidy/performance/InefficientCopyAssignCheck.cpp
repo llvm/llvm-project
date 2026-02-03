@@ -1,5 +1,4 @@
-//===--- InefficientCopyAssignCheck.cpp - clang-tidy
-//-------------------------------===//
+//===--- InefficientCopyAssignCheck.cpp - clang-tidy ----------------------===//
 //
 // Part of the LLVM Project, under the Apache License v2.0 with LLVM Exceptions.
 // See https://llvm.org/LICENSE.txt for license information.
@@ -59,9 +58,12 @@ void InefficientCopyAssignCheck::check(const MatchFinder::MatchResult &Result) {
       Result.Nodes.getNodeAs<FunctionDecl>("within-func");
 
   const QualType AssignValueQual = AssignValueDecl->getType();
-  if (AssignValueQual->isReferenceType() ||
+  if (AssignValueQual->isLValueReferenceType() ||
       AssignValueQual.isConstQualified() || AssignValueQual->isPointerType() ||
       AssignValueQual->isScalarType())
+    return;
+
+  if (!AssignValueDecl->hasLocalStorage())
     return;
 
   if (AssignTargetType->hasTrivialMoveAssignment())

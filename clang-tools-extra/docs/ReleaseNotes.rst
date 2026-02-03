@@ -115,12 +115,18 @@ New checks
 
   Looks for functions returning ``std::[w|u8|u16|u32]string`` and suggests to
   change it to ``std::[...]string_view`` for performance reasons if possible.
-  
+
 - New :doc:`modernize-use-structured-binding
   <clang-tidy/checks/modernize/use-structured-binding>` check.
 
   Finds places where structured bindings could be used to decompose pairs and
   suggests replacing them.
+
+- New :doc:`performance-inefficient-copy-assign
+  <clang-tidy/checks/performance/inefficient-copy-assign>` check.
+
+  Suggests insertion of ``std::move(...)`` to turn copy assignment operator
+  calls into move assignment ones, when deemed valid and profitable.
 
 - New :doc:`performance-string-view-conversions
   <clang-tidy/checks/performance/string-view-conversions>` check.

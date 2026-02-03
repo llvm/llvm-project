@@ -354,12 +354,6 @@ Static Analyzer
 
 .. _release-notes-sanitizers:
 
-New features
-^^^^^^^^^^^^
-
-- Added a new checker ``performance.InefficientCopyAssign`` to detect
-  *copy-assignments* that could profitably be turned into *move-assignments*.
-
 Sanitizers
 ----------
 

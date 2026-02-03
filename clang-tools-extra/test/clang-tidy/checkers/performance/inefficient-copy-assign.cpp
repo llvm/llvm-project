@@ -1,5 +1,8 @@
 // RUN: %check_clang_tidy %s performance-inefficient-copy-assign %t
 
+// Definitions used in the tests
+// -----------------------------
+
 struct NonTrivialMoveAssign {
   NonTrivialMoveAssign& operator=(const NonTrivialMoveAssign&);
   NonTrivialMoveAssign& operator=(NonTrivialMoveAssign&&);
@@ -18,8 +21,84 @@ struct NoMoveAssign {
   NoMoveAssign& operator=(NoMoveAssign&&) = delete;
 };
 
+template<class T>
+void use(T&) {}
+
+// Check moving from various reference/pointer type
+// ------------------------------------------------
+
 void ConvertibleNonTrivialMoveAssign(NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
-  // CHECK-MESSAGES: [[@LINE+1]]:{{[0-9]*}}: warning: 'source' could be moved here [performance-inefficient-copy-assign]
+  // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-inefficient-copy-assign]
+  target = source;
+}
+
+void NonProfitableNonTrivialMoveAssignPointer(NonTrivialMoveAssign*& target, NonTrivialMoveAssign* source) {
+  // No message expected, moving is possible but non profitable for pointer.
+  target = source;
+}
+
+void ConvertibleNonTrivialMoveAssignFromLValue(NonTrivialMoveAssign& target, NonTrivialMoveAssign&& source) {
+  // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-inefficient-copy-assign]
+  target = source;
+}
+
+// Check moving from various storage
+// ---------------------------------
+
+void NonConvertibleNonTrivialMoveAssignFromStatic(NonTrivialMoveAssign& target) {
+  static NonTrivialMoveAssign source;
+  // No message, the lifetime of `source' does not end with the scope of the function.
+  target = source;
+}
+
+void NonConvertibleNonTrivialMoveAssignFromExtern(NonTrivialMoveAssign& target) {
+  extern NonTrivialMoveAssign source;
+  // No message, the lifetime of `source' does not end with the scope of the function.
+  target = source;
+}
+
+void NonConvertibleNonTrivialMoveAssignFromTLS(NonTrivialMoveAssign& target) {
+  thread_local NonTrivialMoveAssign source;
+  // No message, the lifetime of `source' does not end with the scope of the function.
+  target = source;
+}
+
+NonTrivialMoveAssign global_source;
+void NonConvertibleNonTrivialMoveAssignToGlobal(NonTrivialMoveAssign& target) {
+  // No message, the lifetime of `source' does not end with the scope of the function.
+  target = global_source;
+}
+
+
+// Check moving to various storage
+// -------------------------------
+
+void ConvertibleNonTrivialMoveAssignToStatic(NonTrivialMoveAssign source) {
+  static NonTrivialMoveAssign target;
+  // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-inefficient-copy-assign]
+  target = source;
+}
+
+void ConvertibleNonTrivialMoveAssignToExtern(NonTrivialMoveAssign source) {
+  extern NonTrivialMoveAssign target;
+  // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-inefficient-copy-assign]
+  target = source;
+}
+
+void ConvertibleNonTrivialMoveAssignToTLS(NonTrivialMoveAssign source) {
+  thread_local NonTrivialMoveAssign target;
+  // CHECK-MESSAGES: [[@LINE+1]]:12: warning: 'source' could be moved here [performance-inefficient-copy-assign]
+  target = source;
+}
+
+NonTrivialMoveAssign global_target;
+void ConvertibleNonTrivialMoveAssignToGlobal(NonTrivialMoveAssign source) {
+  // CHECK-MESSAGES: [[@LINE+1]]:19: warning: 'source' could be moved here [performance-inefficient-copy-assign]
+  global_target = source;
+}
+
+void NonConvertibleNonTrivialMoveAssignRValue(NonTrivialMoveAssign& target, NonTrivialMoveAssign const& source) {
+  // No message expected, moving a reference is invalid there.
   target = source;
 }
 
@@ -28,21 +107,32 @@ void NonProfitableTrivialMoveAssign(TrivialMoveAssign& target, TrivialMoveAssign
   target = source;
 }
 
+// Check moving in presence of control flow or use
+// -----------------------------------------------
+
 void ConvertibleNonTrivialMoveAssignWithBranching(bool cond, NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
   if(cond) {
-    // CHECK-MESSAGES: [[@LINE+1]]:{{[0-9]*}}: warning: 'source' could be moved here [performance-inefficient-copy-assign]
+    // CHECK-MESSAGES: [[@LINE+1]]:14: warning: 'source' could be moved here [performance-inefficient-copy-assign]
     target = source;
   }
 }
 
+void NonConvertibleNonTrivialMoveAssignWithBranchingAndUse(bool cond, NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
+  if(cond) {
+    // No message expected, moving would make use invalid.
+    target = source;
+  }
+  use(source);
+}
+
 void ConvertibleNonTrivialMoveAssignBothBranches(bool cond, NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
   if(cond) {
-    // CHECK-MESSAGES: [[@LINE+1]]:{{[0-9]*}}: warning: 'source' could be moved here [performance-inefficient-copy-assign]
+    // CHECK-MESSAGES: [[@LINE+1]]:14: warning: 'source' could be moved here [performance-inefficient-copy-assign]
     target = source;
   }
   else {
     source.stuff();
-    // CHECK-MESSAGES: [[@LINE+1]]:{{[0-9]*}}: warning: 'source' could be moved here [performance-inefficient-copy-assign]
+    // CHECK-MESSAGES: [[@LINE+1]]:14: warning: 'source' could be moved here [performance-inefficient-copy-assign]
     target = source;
   }
 }
@@ -58,6 +148,9 @@ void NonConvertibleNonTrivialMoveAssignInLoop(NonTrivialMoveAssign& target, NonT
   for(int i = 0; i < 10; ++i)
     target = source;
 }
+
+// Check moving for invalid / non profitable type or operation
+// -----------------------------------------------------------
 
 void NonConvertibleNonTrivialMoveUpdateAssign(NonTrivialMoveAssign& target, NonTrivialMoveAssign source) {
   // No message currently expected, we only consider assignment.

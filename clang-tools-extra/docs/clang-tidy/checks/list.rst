@@ -354,6 +354,7 @@ Clang-Tidy Checks
    :doc:`performance-for-range-copy <performance/for-range-copy>`, "Yes"
    :doc:`performance-implicit-conversion-in-loop <performance/implicit-conversion-in-loop>`,
    :doc:`performance-inefficient-algorithm <performance/inefficient-algorithm>`, "Yes"
+   :doc:`performance-inefficient-copy-assign <performance/inefficient-copy-assign>`, "No"
    :doc:`performance-inefficient-string-concatenation <performance/inefficient-string-concatenation>`,
    :doc:`performance-inefficient-vector-operation <performance/inefficient-vector-operation>`, "Yes"
    :doc:`performance-move-const-arg <performance/move-const-arg>`, "Yes"
