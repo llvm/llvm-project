@@ -191,7 +191,7 @@ struct GPUSubgroupIdOpToROCDL : ConvertOpToLLVMPattern<gpu::SubgroupIdOp> {
       if (auto upperBoundAttr = op.getUpperBoundAttr())
         bounds = rewriter.getAttr<LLVM::ConstantRangeAttr>(
             /*bitWidth=*/32, /*lower=*/0,
-            /*upper=*/upperBoundAttr.getInt() + 1);
+            /*upper=*/upperBoundAttr.getInt());
       subgroupId = ROCDL::WaveId::create(rewriter, loc, int32Type, bounds);
     } else {
       // For older architectures, compute:

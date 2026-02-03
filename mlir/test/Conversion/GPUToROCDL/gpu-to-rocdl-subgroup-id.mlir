@@ -23,7 +23,7 @@ func.func @subgroup_id() -> index {
 
 // CHECK-LABEL: func @subgroup_id_with_upper_bound()
 func.func @subgroup_id_with_upper_bound() -> index {
-  // GFX12: rocdl.wave.id range <i32, 0, 5> : i32
+  // GFX12: rocdl.wave.id range <i32, 0, 4> : i32
   // GFX12: llvm.sext %{{.*}} : i32 to i64
 
   // GFX9-DAG: rocdl.workitem.id.x : i32
