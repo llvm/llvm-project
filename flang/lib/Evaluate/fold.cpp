@@ -80,7 +80,7 @@ Expr<SomeDerived> FoldOperation(
       } else if (IsProcedure(symbol)) {
         isConstant &= IsInitialProcedureTarget(expr);
       } else {
-        isConstant &= IsInitialDataTarget(expr);
+        isConstant &= IsInitialDataTarget(expr, /*messages=*/nullptr, &context);
       }
     } else if (IsAllocatable(symbol)) {
       // F2023: 10.1.12 (3)(a)
