@@ -2057,7 +2057,10 @@ void OMPClausePrinter::VisitOMPThreadsetClause(OMPThreadsetClause *Node) {
 
 void OMPClausePrinter::VisitOMPTransparentClause(OMPTransparentClause *Node) {
   OS << "transparent(";
-  Node->getImpexType()->printPretty(OS, nullptr, Policy, 0);
+  if (Node->getImpexType())
+    Node->getImpexType()->printPretty(OS, nullptr, Policy, 0);
+  else
+    OS << "omp_impex";
   OS << ")";
 }
 
