@@ -328,7 +328,7 @@ define void @invalid_legacy_cost(i64 %N, ptr %x) #0 {
 ; COST1-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <2 x ptr> poison, ptr [[TMP1]], i64 0
 ; COST1-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <2 x ptr> [[BROADCAST_SPLATINSERT]], <2 x ptr> poison, <2 x i32> zeroinitializer
 ; COST1-NEXT:    [[TMP2:%.*]] = getelementptr ptr, ptr [[X]], i64 [[INDEX]]
-; COST1-NEXT:    [[TMP3:%.*]] = getelementptr ptr, ptr [[TMP2]], i64 2
+; COST1-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[TMP2]], i64 16
 ; COST1-NEXT:    store <2 x ptr> [[BROADCAST_SPLAT]], ptr [[TMP2]], align 8
 ; COST1-NEXT:    store <2 x ptr> [[BROADCAST_SPLAT]], ptr [[TMP3]], align 8
 ; COST1-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 4

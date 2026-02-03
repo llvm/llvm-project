@@ -338,8 +338,14 @@ void UnrollState::unrollRecipeByUF(VPRecipeBase &R) {
       VPValue *VFxPart = Builder.createOverflowingOp(
           Instruction::Mul, {VF, Plan.getConstantInt(IndexTy, Part)},
           {true, true});
+      VPValue *Offset = Builder.createOverflowingOp(
+          Instruction::Mul,
+          {VFxPart,
+           Plan.getConstantInt(
+               IndexTy, DL.getTypeAllocSize(VPR->getSourceElementType()))},
+          {true, true});
       Copy->setOperand(0, VPR->getOperand(0));
-      Copy->addOperand(VFxPart);
+      Copy->addOperand(Offset);
       continue;
     }
     if (auto *Red = dyn_cast<VPReductionRecipe>(&R)) {

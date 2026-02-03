@@ -2637,7 +2637,7 @@ void VPVectorPointerRecipe::execute(VPTransformState &State) {
          "Expected prior simplification of recipe without offset");
   Value *Ptr = State.get(getOperand(0), VPLane(0));
   Value *Offset = State.get(getOffset(), true);
-  Value *ResultPtr = Builder.CreateGEP(getSourceElementType(), Ptr, Offset, "",
+  Value *ResultPtr = Builder.CreateGEP(Builder.getInt8Ty(), Ptr, Offset, "",
                                        getGEPNoWrapFlags());
   State.set(this, ResultPtr, /*IsScalar*/ true);
 }

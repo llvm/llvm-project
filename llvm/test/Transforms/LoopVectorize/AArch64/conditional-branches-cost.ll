@@ -63,7 +63,7 @@ define void @loop_dependent_cond(ptr %src, ptr noalias %dst, i64 %N) {
 ; DEFAULT:       [[VECTOR_BODY]]:
 ; DEFAULT-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[PRED_STORE_CONTINUE7:.*]] ]
 ; DEFAULT-NEXT:    [[TMP3:%.*]] = getelementptr double, ptr [[SRC]], i64 [[INDEX]]
-; DEFAULT-NEXT:    [[TMP6:%.*]] = getelementptr double, ptr [[TMP3]], i64 2
+; DEFAULT-NEXT:    [[TMP6:%.*]] = getelementptr i8, ptr [[TMP3]], i64 16
 ; DEFAULT-NEXT:    [[WIDE_LOAD:%.*]] = load <2 x double>, ptr [[TMP3]], align 8
 ; DEFAULT-NEXT:    [[WIDE_LOAD1:%.*]] = load <2 x double>, ptr [[TMP6]], align 8
 ; DEFAULT-NEXT:    [[TMP7:%.*]] = call <2 x double> @llvm.fabs.v2f64(<2 x double> [[WIDE_LOAD]])
@@ -599,11 +599,14 @@ define void @multiple_exit_conditions(ptr %src, ptr noalias %dst) #1 {
 ; DEFAULT-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i16> poison, i16 [[TMP8]], i64 0
 ; DEFAULT-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i16> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer
 ; DEFAULT-NEXT:    [[TMP9:%.*]] = uitofp <vscale x 4 x i16> [[BROADCAST_SPLAT]] to <vscale x 4 x double>
+; DEFAULT-NEXT:    [[TMP16:%.*]] = shl nuw nsw i64 [[TMP11]], 3
 ; DEFAULT-NEXT:    [[TMP14:%.*]] = shl nuw nsw i64 [[TMP11]], 1
+; DEFAULT-NEXT:    [[TMP13:%.*]] = shl nuw nsw i64 [[TMP14]], 3
 ; DEFAULT-NEXT:    [[TMP17:%.*]] = mul nuw nsw i64 [[TMP11]], 3
-; DEFAULT-NEXT:    [[TMP12:%.*]] = getelementptr double, ptr [[NEXT_GEP1]], i64 [[TMP11]]
-; DEFAULT-NEXT:    [[TMP15:%.*]] = getelementptr double, ptr [[NEXT_GEP1]], i64 [[TMP14]]
-; DEFAULT-NEXT:    [[TMP18:%.*]] = getelementptr double, ptr [[NEXT_GEP1]], i64 [[TMP17]]
+; DEFAULT-NEXT:    [[TMP20:%.*]] = shl nuw nsw i64 [[TMP17]], 3
+; DEFAULT-NEXT:    [[TMP12:%.*]] = getelementptr i8, ptr [[NEXT_GEP1]], i64 [[TMP16]]
+; DEFAULT-NEXT:    [[TMP15:%.*]] = getelementptr i8, ptr [[NEXT_GEP1]], i64 [[TMP13]]
+; DEFAULT-NEXT:    [[TMP18:%.*]] = getelementptr i8, ptr [[NEXT_GEP1]], i64 [[TMP20]]
 ; DEFAULT-NEXT:    store <vscale x 4 x double> [[TMP9]], ptr [[NEXT_GEP1]], align 8
 ; DEFAULT-NEXT:    store <vscale x 4 x double> [[TMP9]], ptr [[TMP12]], align 8
 ; DEFAULT-NEXT:    store <vscale x 4 x double> [[TMP9]], ptr [[TMP15]], align 8

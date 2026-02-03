@@ -32,9 +32,9 @@ define void @uaddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr noca
 ; CHECK-NEXT:    [[NEXT_GEP:%.*]] = getelementptr i8, ptr [[PSRC:%.*]], i64 [[OFFSET_IDX]]
 ; CHECK-NEXT:    [[OFFSET_IDX2:%.*]] = mul i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[NEXT_GEP3:%.*]] = getelementptr i8, ptr [[PDST:%.*]], i64 [[OFFSET_IDX2]]
-; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i16, ptr [[NEXT_GEP]], i64 16
-; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i16, ptr [[NEXT_GEP]], i64 32
-; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i16, ptr [[NEXT_GEP]], i64 48
+; CHECK-NEXT:    [[TMP1:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 32
+; CHECK-NEXT:    [[TMP2:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 64
+; CHECK-NEXT:    [[TMP3:%.*]] = getelementptr i8, ptr [[NEXT_GEP]], i64 96
 ; CHECK-NEXT:    [[WIDE_LOAD:%.*]] = load <16 x i16>, ptr [[NEXT_GEP]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD4:%.*]] = load <16 x i16>, ptr [[TMP1]], align 2
 ; CHECK-NEXT:    [[WIDE_LOAD5:%.*]] = load <16 x i16>, ptr [[TMP2]], align 2
@@ -43,9 +43,9 @@ define void @uaddsat(ptr nocapture readonly %pSrc, i16 signext %offset, ptr noca
 ; CHECK-NEXT:    [[TMP5:%.*]] = call <16 x i16> @llvm.uadd.sat.v16i16(<16 x i16> [[WIDE_LOAD4]], <16 x i16> [[BROADCAST_SPLAT]])
 ; CHECK-NEXT:    [[TMP6:%.*]] = call <16 x i16> @llvm.uadd.sat.v16i16(<16 x i16> [[WIDE_LOAD5]], <16 x i16> [[BROADCAST_SPLAT]])
 ; CHECK-NEXT:    [[TMP7:%.*]] = call <16 x i16> @llvm.uadd.sat.v16i16(<16 x i16> [[WIDE_LOAD6]], <16 x i16> [[BROADCAST_SPLAT]])
-; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i16, ptr [[NEXT_GEP3]], i64 16
-; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i16, ptr [[NEXT_GEP3]], i64 32
-; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i16, ptr [[NEXT_GEP3]], i64 48
+; CHECK-NEXT:    [[TMP8:%.*]] = getelementptr i8, ptr [[NEXT_GEP3]], i64 32
+; CHECK-NEXT:    [[TMP9:%.*]] = getelementptr i8, ptr [[NEXT_GEP3]], i64 64
+; CHECK-NEXT:    [[TMP10:%.*]] = getelementptr i8, ptr [[NEXT_GEP3]], i64 96
 ; CHECK-NEXT:    store <16 x i16> [[TMP4]], ptr [[NEXT_GEP3]], align 2
 ; CHECK-NEXT:    store <16 x i16> [[TMP5]], ptr [[TMP8]], align 2
 ; CHECK-NEXT:    store <16 x i16> [[TMP6]], ptr [[TMP9]], align 2
