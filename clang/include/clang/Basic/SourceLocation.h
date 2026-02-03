@@ -217,10 +217,10 @@ inline bool operator>=(const SourceLocation &LHS, const SourceLocation &RHS) {
 
 /// A trivial tuple used to represent a source range.
 ///
-/// SourceRange is an inclusive range [begin, end] that contains its endpoints,
-/// and when referring to tokens, its begin SourceLocation usually points to
-/// the first character of the first token and its end SourceLocation points to
-/// the last character of the last token.
+/// When referring to tokens, a SourceRange is an inclusive range [begin, end]
+/// that contains its endpoints, its begin SourceLocation points to the first
+/// character of the first token and its end SourceLocation points to the first
+/// character of the last token.
 class SourceRange {
   SourceLocation B;
   SourceLocation E;
