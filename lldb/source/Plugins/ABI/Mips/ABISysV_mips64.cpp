@@ -935,7 +935,7 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
               return_compiler_type.GetFieldAtIndex(idx, name, &field_bit_offset,
                                                    nullptr, nullptr);
 
-          if (field_compiler_type.IsFloatingPointType())
+          if (field_compiler_type.GetTypeInfo() & eTypeIsFloat)
             use_fp_regs = true;
           else
             found_non_fp_field = true;
@@ -1042,7 +1042,7 @@ ValueObjectSP ABISysV_mips64::GetReturnValueObjectImpl(
 
         if (field_compiler_type.IsIntegerOrEnumerationType(is_signed) ||
             field_compiler_type.IsPointerType() ||
-            field_compiler_type.IsFloatingPointType()) {
+            field_compiler_type.GetTypeInfo() & eTypeIsFloat) {
           padding = field_byte_offset - integer_bytes;
 
           if (integer_bytes < 8) {
