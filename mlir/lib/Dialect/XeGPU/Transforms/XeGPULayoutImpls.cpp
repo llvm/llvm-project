@@ -120,18 +120,14 @@ xegpu::removeLayoutAttr<mlir::OpOperand>(const mlir::OpOperand &operand);
 
 void xegpu::removeLayoutAttrs(Operation *op) {
   op->walk([&](Operation *nestOp) {
-    for (OpOperand &opr : nestOp->getOpOperands())
-      removeLayoutAttr(opr);
-    for (OpResult result : nestOp->getOpResults())
-      removeLayoutAttr(result);
-    if (op->hasAttrOfType<DistributeLayoutAttr>("layout"))
-      op->removeAttr("layout");
-    if (op->hasAttrOfType<DistributeLayoutAttr>("layout_a"))
-      op->removeAttr("layout_a");
-    if (op->hasAttrOfType<DistributeLayoutAttr>("layout_b"))
-      op->removeAttr("layout_b");
-    if (op->hasAttrOfType<DistributeLayoutAttr>("layout_cd"))
-      op->removeAttr("layout_cd");
+    // Remove all attributes of DistributeLayoutAttr type
+    SmallVector<StringAttr> attrsToRemove;
+    for (auto namedAttr : nestOp->getAttrs()) {
+      if (isa<DistributeLayoutAttr>(namedAttr.getValue()))
+        attrsToRemove.push_back(namedAttr.getName());
+    }
+    for (auto attrName : attrsToRemove)
+      nestOp->removeAttr(attrName);
   });
 }
 
@@ -448,15 +444,15 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
       consumerSliceLayout ? consumerSliceLayout.flatten().getParent()
                           : consumerLayout;
 
-  auto sgLayoutVec = plainLayout.getEffectiveSgLayoutAsInt();
-  const int workgroupSize = std::accumulate(
-      sgLayoutVec.begin(), sgLayoutVec.end(), 1, std::multiplies<int64_t>());
   const int subgroupSize = uArch->getSubgroupSize();
   int64_t maxReduceVectorSize = 1; // could extend to spirv vector Size
 
   xegpu::DistributeLayoutAttr srcLayout;
 
   if (layoutKind == xegpu::LayoutKind::Subgroup) {
+    auto sgLayoutVec = plainLayout.getEffectiveSgLayoutAsInt();
+    const int workgroupSize = std::accumulate(
+        sgLayoutVec.begin(), sgLayoutVec.end(), 1, std::multiplies<int64_t>());
     SmallVector<int64_t> sgLayout(srcRank), sgData(srcRank);
     SmallVector<int64_t> consumerSgLayout =
         consumerLayout.getEffectiveSgLayoutAsInt();
@@ -631,17 +627,21 @@ xegpu::DistributeLayoutAttr xegpu::setupInsertStridedSliceResultLayout(
 /// same layout setup logic.
 /// For Subgroup layout, uses the consumer layout directly.
 /// non-chunked loads:
-///   InstData = {1, ..., min(consumer, maxLaneLoadStoreSize * subgroupSize)}
+///   InstData = {1, ..., min(consumer, maxLaneLoadSize * subgroupSize)}
 ///   LaneLayout = {1, ..., subgroupSize}
-///   lane_data = {1, ..., min(consumer, maxLaneLoadStoreSize)}
+///   lane_data = {1, ..., min(consumer, maxLaneLoadSize)}
 /// chunked loads:
-///   InstData = {subgroupSize, min(consumer, maxLaneLoadStoreSize)}
+///   InstData = {subgroupSize, min(consumer, maxLaneLoadSize)}
 ///   LaneLayout = {subgroupSize, 1}
-///   lane_data={1,min(consumer, maxLaneLoadStoreSize)}
+///   lane_data={1,min(consumer, maxLaneLoadSize)}
 static xegpu::DistributeLayoutAttr setupGenericLoadAnchorLayout(
     xegpu::LayoutKind layoutKind, mlir::MLIRContext *context,
     xegpu::DistributeLayoutAttr consumerLayout, bool isChunkedLoad,
     int maxChunkSize, int valShapeSize, int subgroupSize) {
+
+  if (layoutKind == xegpu::LayoutKind::Subgroup)
+    return consumerLayout;
+
   SmallVector<int64_t> consumerInstData =
       consumerLayout.getEffectiveInstDataAsInt();
   SmallVector<int64_t> consumerLaneData =
@@ -650,10 +650,6 @@ static xegpu::DistributeLayoutAttr setupGenericLoadAnchorLayout(
   SmallVector<int> instData(valShapeSize, 1);
   SmallVector<int> laneLayout(valShapeSize, 1);
   SmallVector<int> laneData(valShapeSize, 1);
-
-  if (layoutKind == xegpu::LayoutKind::Subgroup) {
-    return consumerLayout;
-  }
 
   if (!isChunkedLoad) {
     if (layoutKind == xegpu::LayoutKind::InstData) {
@@ -731,9 +727,9 @@ xegpu::setupLoadMatrixAnchorLayout(xegpu::LayoutKind layoutKind,
 ///   LaneLayout = {1, ..., subgroupSize}
 ///   lane_data = {1, ..., 1}
 /// chunked stores:
-///   InstData = {subgroupSize, min(srcVec, maxLaneLoadStoreSize)}
+///   InstData = {subgroupSize, min(srcVec, maxLaneStoreSize)}
 ///   LaneLayout = {subgroupSize, 1}
-///   lane_data={1,min(srcVec, maxLaneLoadStoreSize)}
+///   lane_data={1,min(srcVec, maxLaneStoreSize)}
 static xegpu::DistributeLayoutAttr
 setupGenericStoreAnchorLayout(xegpu::LayoutKind layoutKind,
                               mlir::MLIRContext *context, bool isChunkedStore,

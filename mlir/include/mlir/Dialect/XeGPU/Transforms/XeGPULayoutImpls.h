@@ -72,7 +72,7 @@ dropSgLayoutAndDataOnAttrs(ArrayRef<NamedAttribute> attrs);
 SmallVector<NamedAttribute> dropInstDataOnAttrs(ArrayRef<NamedAttribute> attrs);
 
 /// Infers the source layout attribute for a broadcast operation given the
-/// result layout attribute, result shape, source shape, and broadcasted dims.
+/// result layout attribute, result shape, and source shape.
 DistributeLayoutAttr inferBroadcastSourceLayout(DistributeLayoutAttr resLayout,
                                                 ArrayRef<int64_t> resShape,
                                                 ArrayRef<int64_t> srcShape);
