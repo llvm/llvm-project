@@ -128,9 +128,9 @@ define i32 @test3(i64 %y) {
 ; CHECK-NEXT:    [[TMP1:%.*]] = icmp eq i64 [[Y:%.*]], 0
 ; CHECK-NEXT:    br label [[FOR_BODY:%.*]]
 ; CHECK:       vector.body:
-; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> splat (i32 55)
 ; CHECK-NEXT:    br label [[MIDDLE_BLOCK:%.*]]
 ; CHECK:       middle.block:
+; CHECK-NEXT:    [[PREDPHI:%.*]] = select i1 [[TMP1]], <4 x i32> <i32 0, i32 1, i32 2, i32 3>, <4 x i32> splat (i32 55)
 ; CHECK-NEXT:    [[TMP2:%.*]] = call i64 @llvm.experimental.cttz.elts.i64.v4i1(<4 x i1> <i1 false, i1 false, i1 false, i1 true>, i1 false)
 ; CHECK-NEXT:    [[TMP3:%.*]] = sub i64 [[TMP2]], 1
 ; CHECK-NEXT:    [[TMP4:%.*]] = extractelement <4 x i32> [[PREDPHI]], i64 [[TMP3]]

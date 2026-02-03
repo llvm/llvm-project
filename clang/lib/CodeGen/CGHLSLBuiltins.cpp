@@ -359,6 +359,23 @@ static Intrinsic::ID getPrefixCountBitsIntrinsic(llvm::Triple::ArchType Arch) {
   }
 }
 
+// Return wave prefix sum that corresponds to the QT scalar type
+static Intrinsic::ID getWavePrefixSumIntrinsic(llvm::Triple::ArchType Arch,
+                                               CGHLSLRuntime &RT, QualType QT) {
+  switch (Arch) {
+  case llvm::Triple::spirv:
+    return Intrinsic::spv_wave_prefix_sum;
+  case llvm::Triple::dxil: {
+    if (QT->isUnsignedIntegerType())
+      return Intrinsic::dx_wave_prefix_usum;
+    return Intrinsic::dx_wave_prefix_sum;
+  }
+  default:
+    llvm_unreachable("Intrinsic WavePrefixSum"
+                     " not supported by target architecture");
+  }
+}
+
 // Returns the mangled name for a builtin function that the SPIR-V backend
 // will expand into a spec Constant.
 static std::string getSpecConstantFunctionName(clang::QualType SpecConstantType,
@@ -1037,6 +1054,15 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
             &CGM.getModule(), CGM.getHLSLRuntime().getWaveReadLaneAtIntrinsic(),
             {OpExpr->getType()}),
         ArrayRef{OpExpr, OpIndex}, "hlsl.wave.readlane");
+  }
+  case Builtin::BI__builtin_hlsl_wave_prefix_sum: {
+    Value *OpExpr = EmitScalarExpr(E->getArg(0));
+    Intrinsic::ID IID = getWavePrefixSumIntrinsic(
+        getTarget().getTriple().getArch(), CGM.getHLSLRuntime(),
+        E->getArg(0)->getType());
+    return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
+                               &CGM.getModule(), IID, {OpExpr->getType()}),
+                           ArrayRef{OpExpr}, "hlsl.wave.prefix.sum");
   }
   case Builtin::BI__builtin_hlsl_elementwise_sign: {
     auto *Arg0 = E->getArg(0);
