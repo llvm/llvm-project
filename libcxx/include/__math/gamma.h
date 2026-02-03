@@ -73,7 +73,11 @@ inline _LIBCPP_HIDE_FROM_ABI __lgamma_result __lgamma_thread_safe(double __d) _N
 #else
 // When deploying to older targets, call `lgamma_r` directly but avoid declaring the actual
 // function since different platforms declare the function slightly differently.
+#  if defined(_LIBCPP_OBJECT_FORMAT_MACHO)
+double __lgamma_r_shim(double, int*) _NOEXCEPT __asm__("_lgamma_r");
+#  else
 double __lgamma_r_shim(double, int*) _NOEXCEPT __asm__("lgamma_r");
+#  endif
 
 inline _LIBCPP_HIDE_FROM_ABI __lgamma_result __lgamma_thread_safe(double __d) _NOEXCEPT {
   int __sign;
