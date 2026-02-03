@@ -12,11 +12,6 @@
 #
 # https://llvm.org/PR117630
 
-# Some parts of the code like <fstream> use non-standard functions in their implementation,
-# and these functions are not provided when _XOPEN_SOURCE is set to older values. This
-# breaks when building with modules even when we don't use the offending headers directly.
-# ADDITIONAL_COMPILE_FLAGS: -fno-modules
-
 # The AIX localization support uses some functions as part of their headers that require a
 # recent value of _XOPEN_SOURCE.
 # UNSUPPORTED: LIBCXX-AIX-FIXME
@@ -49,6 +44,11 @@ for header in public_headers:
 {lit_header_undeprecations.get(header, '')}
 
 // ADDITIONAL_COMPILE_FLAGS: -D_XOPEN_SOURCE={version}
+
+// Some parts of the code like <fstream> use non-standard functions in their implementation,
+// and these functions are not provided when _XOPEN_SOURCE is set to older values. This
+// breaks when building with modules even when we don't use the offending headers directly.
+// ADDITIONAL_COMPILE_FLAGS: -fno-modules
 
 #include <{header}>
 """
