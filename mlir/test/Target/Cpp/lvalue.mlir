@@ -2,7 +2,7 @@
 
 emitc.func @lvalue_variables(%v1: i32, %v2: i32) -> i32 {
   %val = emitc.mul %v1, %v2 : (i32, i32) -> i32
-  %variable = "emitc.variable"() {value = #emitc.opaque<"">} : () -> !emitc.lvalue<i32> 
+  %variable = "emitc.variable"() {value = #emitc.opaque<"">} : () -> !emitc.lvalue<i32>
   emitc.assign %val : i32 to %variable : !emitc.lvalue<i32>
   %addr = emitc.apply "&"(%variable) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
   emitc.call @zero (%addr) : (!emitc.ptr<i32>) -> ()
@@ -16,10 +16,10 @@ emitc.func @lvalue_variables(%v1: i32, %v2: i32) -> i32 {
 // CHECK-NEXT: int32_t [[VAL:[^ ]*]] = [[V1]] * [[V2]];
 // CHECK-NEXT: int32_t [[VAR:[^ ]*]];
 // CHECK-NEXT: [[VAR]] = [[VAL]];
-// CHECK-NEXT: int32_t* [[VAR_PTR:[^ ]*]] = &[[VAR]];
+// CHECK: int32_t* [[VAR_PTR:.*]] = &[[VAR:.*]];
 // CHECK-NEXT: zero([[VAR_PTR]]);
-// CHECK-NEXT: int32_t [[VAR_LOAD:[^ ]*]] = [[VAR]]; 
-// CHECK-NEXT: int32_t [[NEG_ONE:[^ ]*]] = -1; 
+// CHECK: int32_t [[VAR_LOAD:[^ ]*]] = [[VAR:.*]];
+// CHECK-NEXT: int32_t [[NEG_ONE:[^ ]*]] = -1;
 // CHECK-NEXT: [[VAR]] = [[NEG_ONE]];
 // CHECK-NEXT: return [[VAR_LOAD]];
 

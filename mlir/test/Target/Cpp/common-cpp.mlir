@@ -97,7 +97,7 @@ func.func @apply() -> !emitc.ptr<i32> {
   %1 = emitc.apply "&"(%0) : (!emitc.lvalue<i32>) -> !emitc.ptr<i32>
   // CHECK-NEXT: int32_t [[V3:[^ ]*]];
   %2 = "emitc.variable"() {value = #emitc.opaque<"">} : () -> !emitc.lvalue<i32>
-  // CHECK-NEXT: int32_t [[V4:[^ ]*]] = *[[V2]];
+  // CHECK-NEXT: int32_t [[V4:[^ ]+]] = *[[V2]];
   %3 = emitc.apply "*"(%1) : (!emitc.ptr<i32>) -> i32
   // CHECK-NEXT: [[V3]] = [[V4]];
   emitc.assign %3 : i32 to %2 : !emitc.lvalue<i32>
@@ -134,5 +134,12 @@ func.func @call_opaque_with_template_arg() {
   emitc.call_opaque "init_tile"() {template_args = [512 : index]} : () -> ()
   // CHECK-NEXT: init_tile<512>();
   // CHECK-NEXT: return
+  return
+}
+
+// CHECK : void ptr_to_array() {
+func.func @ptr_to_array() {
+  // CHECK: int16_t (*)[9] v1 = NULL;
+  %v = "emitc.variable"(){value = #emitc.opaque<"NULL">} : () -> !emitc.lvalue<!emitc.ptr<!emitc.array<9xi16>>>
   return
 }

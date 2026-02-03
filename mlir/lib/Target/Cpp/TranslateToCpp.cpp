@@ -1461,6 +1461,7 @@ CppEmitter::CppEmitter(raw_ostream &os, bool declareVariablesAtTop,
   labelInScopeCount.push(0);
 }
 
+
 void CppEmitter::cacheDeferredOpResult(Value value, StringRef str) {
   if (!valueMapper.count(value))
     valueMapper.insert(value, str.str());
@@ -1879,9 +1880,8 @@ LogicalResult CppEmitter::emitOperation(Operation &op, bool trailingSemicolon) {
   // Never emit a semicolon for some operations, especially if endening with
   // `}`.
   trailingSemicolon &=
-      !isa<cf::CondBranchOp, emitc::DeclareFuncOp, emitc::DoOp, emitc::FileOp,
-           emitc::ForOp, emitc::IfOp, emitc::IncludeOp, emitc::SwitchOp,
-           emitc::VerbatimOp>(op);
+      !isa<cf::CondBranchOp, emitc::DeclareFuncOp, emitc::FileOp, emitc::ForOp,
+           emitc::IfOp, emitc::IncludeOp, emitc::SwitchOp, emitc::VerbatimOp>(op);
 
   os << (trailingSemicolon ? ";\n" : "\n");
 
@@ -1898,6 +1898,17 @@ LogicalResult CppEmitter::emitVariableDeclaration(Location loc, Type type,
       os << "[" << dim << "]";
     }
     return success();
+  }
+  // Handle pointer-to-array types: e.g., int (*ptr)[4][8];
+  if (auto pType = dyn_cast<emitc::PointerType>(type)) {
+    if (auto arrayPointee = dyn_cast<emitc::ArrayType>(pType.getPointee())) {
+      if (failed(emitType(loc, arrayPointee.getElementType())))
+        return failure();
+      os << " (*" << name << ")";
+      for (auto dim : arrayPointee.getShape())
+        os << "[" << dim << "]";
+      return success();
+    }
   }
   if (failed(emitType(loc, type)))
     return failure();
@@ -1982,8 +1993,21 @@ LogicalResult CppEmitter::emitType(Location loc, Type type) {
   if (auto lType = dyn_cast<emitc::LValueType>(type))
     return emitType(loc, lType.getValueType());
   if (auto pType = dyn_cast<emitc::PointerType>(type)) {
-    if (isa<ArrayType>(pType.getPointee()))
-      return emitError(loc, "cannot emit pointer to array type ") << type;
+    if (auto arrayPointee = dyn_cast<emitc::ArrayType>(pType.getPointee())) {
+      if (!arrayPointee.hasStaticShape())
+        return emitError(
+            loc, "cannot emit pointer to array type with non-static shape");
+      if (arrayPointee.getShape().empty())
+        return emitError(loc, "cannot emit pointer to empty array type");
+
+      if (failed(emitType(loc, arrayPointee.getElementType())))
+        return failure();
+
+      os << " (*)";
+      for (int64_t dim : arrayPointee.getShape())
+        os << "[" << dim << "]";
+      return success();
+    }
     if (failed(emitType(loc, pType.getPointee())))
       return failure();
     os << "*";
