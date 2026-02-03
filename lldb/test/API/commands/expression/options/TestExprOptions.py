@@ -112,10 +112,10 @@ class ExprOptionsTestCase(TestBase):
 
         self.assertFalse(options.GetBooleanLanguageOption("", error))
         self.assertTrue(error.Fail())
-        self.assertFalse(options.SetBooleanLanguageOption("", True).Fail())
+        self.assertTrue(options.SetBooleanLanguageOption("", True).Fail())
         self.assertFalse(options.GetBooleanLanguageOption("", error))
         self.assertTrue(error.Fail())
 
-        self.assertFalse(options.SetBooleanLanguageOption(None, True).Fail())
+        self.assertTrue(options.SetBooleanLanguageOption(None, True).Fail())
         self.assertFalse(options.GetBooleanLanguageOption(None, error))
         self.assertTrue(error.Fail())
