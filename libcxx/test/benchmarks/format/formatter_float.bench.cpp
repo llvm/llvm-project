@@ -17,245 +17,327 @@
 #include <random>
 #include <string>
 
-#include "../CartesianBenchmarks.h"
 #include "benchmark/benchmark.h"
 
-// *** Localization ***
-enum class LocalizationE { False, True };
-struct AllLocalizations : EnumValuesAsTuple<AllLocalizations, LocalizationE, 2> {
-  static constexpr const char* Names[] = {"LocFalse", "LocTrue"};
-};
-
-template <LocalizationE E>
-struct Localization {};
+template <class>
+inline constexpr std::string to_string = "";
 
 template <>
-struct Localization<LocalizationE::False> {
-  static constexpr const char* fmt = "";
-};
+inline constexpr std::string to_string<float> = "float";
 
 template <>
-struct Localization<LocalizationE::True> {
-  static constexpr const char* fmt = "L";
-};
+inline constexpr std::string to_string<double> = "double";
 
-// *** Types ***
-enum class TypeE { Float, Double, LongDouble };
-// TODO FMT Set to 3 after to_chars has long double suport.
-struct AllTypes : EnumValuesAsTuple<AllTypes, TypeE, 2> {
-  static constexpr const char* Names[] = {"Float", "Double", "LongDouble"};
-};
-
-template <TypeE E>
-struct Type {};
-
-template <>
-struct Type<TypeE::Float> {
-  using type = float;
-};
-
-template <>
-struct Type<TypeE::Double> {
-  using type = double;
-};
-
-template <>
-struct Type<TypeE::LongDouble> {
-  using type = long double;
-};
-
-// *** Values ***
 enum class ValueE { Inf, Random };
-struct AllValues : EnumValuesAsTuple<AllValues, ValueE, 2> {
-  static constexpr const char* Names[] = {"Inf", "Random"};
-};
-
-template <ValueE E>
-struct Value {};
-
-template <>
-struct Value<ValueE::Inf> {
-  template <class F>
-  static std::array<F, 1000> make_data() {
-    std::array<F, 1000> result;
-    std::fill(result.begin(), result.end(), -std::numeric_limits<F>::infinity());
-    return result;
-  }
-};
-
-template <>
-struct Value<ValueE::Random> {
-  template <class F>
-  static std::array<F, 1000> make_data() {
-    std::random_device seed;
-    std::mt19937 generator(seed());
-    std::uniform_int_distribution<std::conditional_t<sizeof(F) == sizeof(uint32_t), uint32_t, uint64_t>> distribution;
-
-    std::array<F, 1000> result;
-    std::generate(result.begin(), result.end(), [&] {
-      while (true) {
-        auto val = std::bit_cast<F>(distribution(generator));
-        if (std::isfinite(val))
-          return val;
-      }
-    });
-    return result;
-  }
-};
-
-// *** Display Type ***
-enum class DisplayTypeE {
-  Default,
-  Hex,
-  Scientific,
-  Fixed,
-  General,
-};
-struct AllDisplayTypes : EnumValuesAsTuple<AllDisplayTypes, DisplayTypeE, 5> {
-  static constexpr const char* Names[] = {
-      "DisplayDefault", "DisplayHex", "DisplayScientific", "DisplayFixed", "DisplayGeneral"};
-};
-
-template <DisplayTypeE E>
-struct DisplayType {};
-
-template <>
-struct DisplayType<DisplayTypeE::Default> {
-  static constexpr const char* fmt = "";
-};
-
-template <>
-struct DisplayType<DisplayTypeE::Hex> {
-  static constexpr const char* fmt = "a";
-};
-
-template <>
-struct DisplayType<DisplayTypeE::Scientific> {
-  static constexpr const char* fmt = "e";
-};
-
-template <>
-struct DisplayType<DisplayTypeE::Fixed> {
-  static constexpr const char* fmt = "f";
-};
-
-template <>
-struct DisplayType<DisplayTypeE::General> {
-  static constexpr const char* fmt = "g";
-};
-
-// *** Alignment ***
-enum class AlignmentE { None, Left, Center, Right, ZeroPadding };
-struct AllAlignments : EnumValuesAsTuple<AllAlignments, AlignmentE, 5> {
-  static constexpr const char* Names[] = {
-      "AlignNone", "AlignmentLeft", "AlignmentCenter", "AlignmentRight", "ZeroPadding"};
-};
-
-template <AlignmentE E>
-struct Alignment {};
-
-template <>
-struct Alignment<AlignmentE::None> {
-  static constexpr const char* fmt = "";
-};
-
-template <>
-struct Alignment<AlignmentE::Left> {
-  // Width > PrecisionE::Huge
-  static constexpr const char* fmt = "0<17500";
-};
-
-template <>
-struct Alignment<AlignmentE::Center> {
-  // Width > PrecisionE::Huge
-  static constexpr const char* fmt = "0^17500";
-};
-
-template <>
-struct Alignment<AlignmentE::Right> {
-  // Width > PrecisionE::Huge
-  static constexpr const char* fmt = "0>17500";
-};
-
-template <>
-struct Alignment<AlignmentE::ZeroPadding> {
-  // Width > PrecisionE::Huge
-  static constexpr const char* fmt = "017500";
-};
-
-enum class PrecisionE { None, Zero, Small, Huge };
-struct AllPrecisions : EnumValuesAsTuple<AllPrecisions, PrecisionE, 4> {
-  static constexpr const char* Names[] = {"PrecNone", "PrecZero", "PrecSmall", "PrecHuge"};
-};
-
-template <PrecisionE E>
-struct Precision {};
-
-template <>
-struct Precision<PrecisionE::None> {
-  static constexpr const char* fmt = "";
-};
-
-template <>
-struct Precision<PrecisionE::Zero> {
-  static constexpr const char* fmt = ".0";
-};
-
-template <>
-struct Precision<PrecisionE::Small> {
-  static constexpr const char* fmt = ".10";
-};
-
-template <>
-struct Precision<PrecisionE::Huge> {
-  // The maximum precision for a minimal sub normal long double is +/- 0x1p-16494.
-  // This value is always larger than that value forcing the trailing zero path
-  // to be executed.
-  static constexpr const char* fmt = ".17000";
-};
-
-template <class L, class DT, class T, class V, class A, class P>
-struct FloatingPoint {
-  using F = typename Type<T::value>::type;
-
-  void run(benchmark::State& state) const {
-    std::array<F, 1000> data{Value<V::value>::template make_data<F>()};
-    std::array<char, 20'000> output;
-
-    while (state.KeepRunningBatch(1000))
-      for (F value : data)
-        benchmark::DoNotOptimize(std::format_to(output.begin(), std::string_view{fmt.data(), fmt.size()}, value));
-  }
-
-  std::string name() const {
-    return "FloatingPoint" + L::name() + DT::name() + T::name() + V::name() + A::name() + P::name();
-  }
-
-  static constexpr std::string make_fmt() {
-    return std::string("{:") + Alignment<A::value>::fmt + Precision<P::value>::fmt + Localization<L::value>::fmt +
-           DisplayType<DT::value>::fmt + "}";
-  }
-
-  static constexpr auto fmt = []() {
-    constexpr size_t s = make_fmt().size();
-    std::array<char, s> r;
-    std::ranges::copy(make_fmt(), r.begin());
-    return r;
-  }();
-};
 
 int main(int argc, char** argv) {
+  auto bm = []<class FloatingPoint>(std::type_identity<FloatingPoint>, ValueE v, std::string fmt) {
+    benchmark::RegisterBenchmark(
+        "std::format(" + to_string<FloatingPoint> + ") (fmt: " + fmt + ")", [fmt, v](benchmark::State& state) {
+          std::array<FloatingPoint, 1000> data = [&] {
+            std::array<FloatingPoint, 1000> result;
+            if (v == ValueE::Inf) {
+              std::fill(result.begin(), result.end(), -std::numeric_limits<FloatingPoint>::infinity());
+            } else {
+              std::mt19937 generator(123456);
+              std::uniform_int_distribution<
+                  std::conditional_t<sizeof(FloatingPoint) == sizeof(uint32_t), uint32_t, uint64_t>>
+                  distribution;
+
+              std::generate(result.begin(), result.end(), [&] {
+                while (true) {
+                  auto val = std::bit_cast<FloatingPoint>(distribution(generator));
+                  if (std::isfinite(val))
+                    return val;
+                }
+              });
+            }
+            return result;
+          }();
+          std::array<char, 20'000> output;
+
+          while (state.KeepRunningBatch(1000))
+            for (auto value : data)
+              benchmark::DoNotOptimize(std::vformat_to(output.begin(), fmt, std::make_format_args(value)));
+        });
+  };
+
+  bm(std::type_identity<float>(), ValueE::Inf, "{:.0}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:.0}");
+  bm(std::type_identity<float>(), ValueE::Inf, "{:0<17500.0}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0<17500.0}");
+  bm(std::type_identity<float>(), ValueE::Inf, "{:0^17500.0}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0^17500.0}");
+  bm(std::type_identity<float>(), ValueE::Inf, "{:0>17500.0}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0>17500.0}");
+  bm(std::type_identity<float>(), ValueE::Inf, "{:017500.0}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:017500.0}");
+
+  bm(std::type_identity<float>(), ValueE::Random, "{:.10}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0<17500.10}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0^17500.10}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0>17500.10}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:017500.10}");
+
+  bm(std::type_identity<float>(), ValueE::Random, "{:.17000}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0<17500.17000}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0^17500.17000}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0>17500.17000}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:017500.17000}");
+
+  bm(std::type_identity<float>(), ValueE::Random, "{:.0L}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0<17500.0L}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0^17500.0L}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0>17500.0L}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:017500.0L}");
+
+  bm(std::type_identity<float>(), ValueE::Random, "{:.10L}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0<17500.10L}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0^17500.10L}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0>17500.10L}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:017500.10L}");
+
+  bm(std::type_identity<float>(), ValueE::Random, "{:.17000L}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0<17500.17000L}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0^17500.17000L}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0>17500.17000L}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:017500.17000L}");
+
+  bm(std::type_identity<float>(), ValueE::Random, "{:.0a}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0<17500.0a}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0^17500.0a}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0>17500.0a}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:017500.0a}");
+
+  bm(std::type_identity<float>(), ValueE::Random, "{:.10a}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0<17500.10a}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0^17500.10a}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0>17500.10a}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:017500.10a}");
+
+  bm(std::type_identity<float>(), ValueE::Random, "{:.0La}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0<17500.0La}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0^17500.0La}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0>17500.0La}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:017500.0La}");
+
+  bm(std::type_identity<float>(), ValueE::Random, "{:.10La}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0<17500.10La}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0^17500.10La}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0>17500.10La}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:017500.10La}");
+
+  bm(std::type_identity<float>(), ValueE::Random, "{:.0e}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0<17500.0e}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0^17500.0e}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0>17500.0e}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:017500.0e}");
+
+  bm(std::type_identity<float>(), ValueE::Random, "{:.10e}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0<17500.10e}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0^17500.10e}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0>17500.10e}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:017500.10e}");
+
+  bm(std::type_identity<float>(), ValueE::Random, "{:.0Le}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0<17500.0Le}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0^17500.0Le}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0>17500.0Le}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:017500.0Le}");
+
+  bm(std::type_identity<float>(), ValueE::Random, "{:.10Le}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0<17500.10Le}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0^17500.10Le}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0>17500.10Le}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:017500.10Le}");
+
+  bm(std::type_identity<float>(), ValueE::Random, "{:.0f}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0<17500.0f}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0^17500.0f}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0>17500.0f}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:017500.0f}");
+
+  bm(std::type_identity<float>(), ValueE::Random, "{:.10f}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0<17500.10f}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0^17500.10f}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0>17500.10f}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:017500.10f}");
+
+  bm(std::type_identity<float>(), ValueE::Random, "{:.0Lf}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0<17500.0Lf}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0^17500.0Lf}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0>17500.0Lf}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:017500.0Lf}");
+
+  bm(std::type_identity<float>(), ValueE::Random, "{:.10Lf}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0<17500.10Lf}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0^17500.10Lf}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0>17500.10Lf}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:017500.10Lf}");
+
+  bm(std::type_identity<float>(), ValueE::Random, "{:.0g}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0<17500.0g}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0^17500.0g}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0>17500.0g}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:017500.0g}");
+
+  bm(std::type_identity<float>(), ValueE::Random, "{:.10g}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0<17500.10g}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0^17500.10g}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0>17500.10g}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:017500.10g}");
+
+  bm(std::type_identity<float>(), ValueE::Random, "{:.0Lg}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0<17500.0Lg}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0^17500.0Lg}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0>17500.0Lg}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:017500.0Lg}");
+
+  bm(std::type_identity<float>(), ValueE::Random, "{:.10Lg}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0<17500.10Lg}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0^17500.10Lg}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:0>17500.10Lg}");
+  bm(std::type_identity<float>(), ValueE::Random, "{:017500.10Lg}");
+
+  bm(std::type_identity<double>(), ValueE::Inf, "{:.0}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:.0}");
+  bm(std::type_identity<double>(), ValueE::Inf, "{:0<17500.0}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0<17500.0}");
+  bm(std::type_identity<double>(), ValueE::Inf, "{:0^17500.0}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0^17500.0}");
+  bm(std::type_identity<double>(), ValueE::Inf, "{:0>17500.0}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0>17500.0}");
+  bm(std::type_identity<double>(), ValueE::Inf, "{:017500.0}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:017500.0}");
+
+  bm(std::type_identity<double>(), ValueE::Random, "{:.10}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0<17500.10}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0^17500.10}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0>17500.10}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:017500.10}");
+
+  bm(std::type_identity<double>(), ValueE::Random, "{:.17000}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0<17500.17000}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0^17500.17000}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0>17500.17000}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:017500.17000}");
+
+  bm(std::type_identity<double>(), ValueE::Random, "{:.0L}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0<17500.0L}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0^17500.0L}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0>17500.0L}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:017500.0L}");
+
+  bm(std::type_identity<double>(), ValueE::Random, "{:.10L}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0<17500.10L}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0^17500.10L}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0>17500.10L}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:017500.10L}");
+
+  bm(std::type_identity<double>(), ValueE::Random, "{:.17000L}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0<17500.17000L}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0^17500.17000L}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0>17500.17000L}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:017500.17000L}");
+
+  bm(std::type_identity<double>(), ValueE::Random, "{:.0a}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0<17500.0a}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0^17500.0a}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0>17500.0a}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:017500.0a}");
+
+  bm(std::type_identity<double>(), ValueE::Random, "{:.10a}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0<17500.10a}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0^17500.10a}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0>17500.10a}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:017500.10a}");
+
+  bm(std::type_identity<double>(), ValueE::Random, "{:.0La}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0<17500.0La}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0^17500.0La}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0>17500.0La}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:017500.0La}");
+
+  bm(std::type_identity<double>(), ValueE::Random, "{:.10La}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0<17500.10La}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0^17500.10La}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0>17500.10La}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:017500.10La}");
+
+  bm(std::type_identity<double>(), ValueE::Random, "{:.0e}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0<17500.0e}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0^17500.0e}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0>17500.0e}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:017500.0e}");
+
+  bm(std::type_identity<double>(), ValueE::Random, "{:.10e}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0<17500.10e}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0^17500.10e}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0>17500.10e}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:017500.10e}");
+
+  bm(std::type_identity<double>(), ValueE::Random, "{:.0Le}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0<17500.0Le}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0^17500.0Le}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0>17500.0Le}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:017500.0Le}");
+
+  bm(std::type_identity<double>(), ValueE::Random, "{:.10Le}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0<17500.10Le}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0^17500.10Le}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0>17500.10Le}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:017500.10Le}");
+
+  bm(std::type_identity<double>(), ValueE::Random, "{:.0f}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0<17500.0f}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0^17500.0f}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0>17500.0f}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:017500.0f}");
+
+  bm(std::type_identity<double>(), ValueE::Random, "{:.10f}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0<17500.10f}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0^17500.10f}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0>17500.10f}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:017500.10f}");
+
+  bm(std::type_identity<double>(), ValueE::Random, "{:.0Lf}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0<17500.0Lf}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0^17500.0Lf}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0>17500.0Lf}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:017500.0Lf}");
+
+  bm(std::type_identity<double>(), ValueE::Random, "{:.10Lf}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0<17500.10Lf}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0^17500.10Lf}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0>17500.10Lf}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:017500.10Lf}");
+
+  bm(std::type_identity<double>(), ValueE::Random, "{:.0g}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0<17500.0g}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0^17500.0g}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0>17500.0g}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:017500.0g}");
+
+  bm(std::type_identity<double>(), ValueE::Random, "{:.10g}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0<17500.10g}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0^17500.10g}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0>17500.10g}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:017500.10g}");
+
+  bm(std::type_identity<double>(), ValueE::Random, "{:.0Lg}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0<17500.0Lg}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0^17500.0Lg}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0>17500.0Lg}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:017500.0Lg}");
+
+  bm(std::type_identity<double>(), ValueE::Random, "{:.10Lg}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0<17500.10Lg}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0^17500.10Lg}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:0>17500.10Lg}");
+  bm(std::type_identity<double>(), ValueE::Random, "{:017500.10Lg}");
+
   benchmark::Initialize(&argc, argv);
-  if (benchmark::ReportUnrecognizedArguments(argc, argv))
-    return 1;
-
-  makeCartesianProductBenchmark<FloatingPoint,
-                                AllLocalizations,
-                                AllDisplayTypes,
-                                AllTypes,
-                                AllValues,
-                                AllAlignments,
-                                AllPrecisions>();
-
   benchmark::RunSpecifiedBenchmarks();
+  benchmark::Shutdown();
+  return 0;
 }

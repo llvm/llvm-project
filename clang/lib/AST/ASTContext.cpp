@@ -13224,6 +13224,18 @@ MangleContext *ASTContext::createDeviceMangleContext(const TargetInfo &T) {
   llvm_unreachable("Unsupported ABI");
 }
 
+MangleContext *ASTContext::cudaNVInitDeviceMC() {
+  // If the host and device have different C++ ABIs, mark it as the device
+  // mangle context so that the mangling needs to retrieve the additional
+  // device lambda mangling number instead of the regular host one.
+  if (getAuxTargetInfo() && getTargetInfo().getCXXABI().isMicrosoft() &&
+      getAuxTargetInfo()->getCXXABI().isItaniumFamily()) {
+    return createDeviceMangleContext(*getAuxTargetInfo());
+  }
+
+  return createMangleContext(getAuxTargetInfo());
+}
+
 CXXABI::~CXXABI() = default;
 
 size_t ASTContext::getSideTableAllocatedMemory() const {

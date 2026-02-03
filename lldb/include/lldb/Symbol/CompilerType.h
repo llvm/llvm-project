@@ -144,8 +144,10 @@ public:
 
   bool IsDefined() const;
 
+  bool IsComplexType() const;
+
   /// Returns \c true for floating point types (including complex floats).
-  bool IsFloatingPointType(bool &is_complex) const;
+  bool IsFloatingPointType() const;
 
   /// Returns \c true for non-complex float types.
   bool IsRealFloatingPointType() const;

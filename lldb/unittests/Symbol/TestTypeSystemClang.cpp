@@ -1371,6 +1371,21 @@ TEST_F(TestTypeSystemClang, TestIsRealFloatingPointType) {
   EXPECT_FALSE(m_ast->GetType(ast.Ibm128Ty).IsRealFloatingPointType());
 }
 
+TEST_F(TestTypeSystemClang, TestGetIsComplexType) {
+  // Tests CompilerType::IsComplexType
+
+  const ASTContext &ast = m_ast->getASTContext();
+
+  EXPECT_TRUE(m_ast->GetType(ast.getComplexType(ast.IntTy)).IsComplexType());
+  EXPECT_TRUE(m_ast->GetType(ast.getComplexType(ast.FloatTy)).IsComplexType());
+  EXPECT_TRUE(m_ast->GetType(ast.getComplexType(ast.VoidTy)).IsComplexType());
+  EXPECT_FALSE(m_ast
+                   ->GetType(ast.getIncompleteArrayType(
+                       ast.getComplexType(ast.FloatTy), /*ASM=*/{},
+                       /*IndexTypeQuals=*/{}))
+                   .IsComplexType());
+}
+
 TEST_F(TestTypeSystemClang, AsmLabel_CtorDtor) {
   // Tests TypeSystemClang::DeclGetMangledName for constructors/destructors
   // with and without AsmLabels.
