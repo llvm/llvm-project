@@ -4513,8 +4513,10 @@ SelectionDAG::computeOverflowForUnsignedSub(SDValue N0, SDValue N1) const {
   if (isNullConstant(N1))
     return OFK_Never;
 
-  ConstantRange N0Range = computeConstantRangeIncludingKnownBits(N1, /*ForSigned=*/false);
-  ConstantRange N1Range = computeConstantRangeIncludingKnownBits(N1, /*ForSigned=*/false);
+  ConstantRange N0Range =
+      computeConstantRangeIncludingKnownBits(N1, /*ForSigned=*/false);
+  ConstantRange N1Range =
+      computeConstantRangeIncludingKnownBits(N1, /*ForSigned=*/false);
   return mapOverflowResult(N0Range.unsignedSubMayOverflow(N1Range));
 }
 
