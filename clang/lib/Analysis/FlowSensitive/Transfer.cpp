@@ -96,7 +96,7 @@ static BoolValue &unpackValue(BoolValue &V, Environment &Env) {
 }
 
 // Unpacks the value (if any) associated with `E` and updates `E` to the new
-// value, if any unpacking occured. Also, does the lvalue-to-rvalue conversion,
+// value, if any unpacking occurred. Also, does the lvalue-to-rvalue conversion,
 // by skipping past the reference.
 static Value *maybeUnpackLValueExpr(const Expr &E, Environment &Env) {
   auto *Loc = Env.getStorageLocation(E);
@@ -170,7 +170,7 @@ public:
 
       auto *RHSVal = Env.getValue(*RHS);
       if (RHSVal == nullptr)
-        break;
+        RHSVal = Env.createValue(LHS->getType());
 
       // Assign a value to the storage location of the left-hand side.
       Env.setValue(*LHSLoc, *RHSVal);

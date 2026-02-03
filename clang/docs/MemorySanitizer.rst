@@ -101,37 +101,56 @@ positives and therefore should be used with care, and only if absolutely
 required; for example for certain code that cannot tolerate any instrumentation
 and resulting side-effects. This attribute overrides ``no_sanitize("memory")``.
 
-Conditional Sanitizer Checks with ``__builtin_allow_sanitize_check``
---------------------------------------------------------------------
+Interaction of Inlining with Disabling Sanitizer Instrumentation
+-----------------------------------------------------------------
+
+* A `no_sanitize` function will not be inlined heuristically by the compiler into a sanitized function.
+* An `always_inline` function will adopt the instrumentation status of the function it is inlined into.
+* Forcibly combining `no_sanitize` and ``__attribute__((always_inline))`` is not supported, and will often lead to unexpected results. To avoid mixing these attributes, use:
+
+. code-block:: c
+
+    // Note, __has_feature test for sanitizers is deprecated, and Clang will support __SANITIZE_<sanitizer>__ similar to GCC.
+    #if __has_feature(memory_sanitizer) || defined(__SANITIZE_MEMORY__) || ... <other sanitizers>
+    #define ALWAYS_INLINE_IF_UNINSTRUMENTED
+    #else
+    #define ALWAYS_INLINE_IF_UNINSTRUMENTED __attribute__((always_inline))
+    #endif
+
+Explicit Sanitizer Checks with ``__builtin_allow_sanitize_check``
+-----------------------------------------------------------------
 
 The ``__builtin_allow_sanitize_check("memory")`` builtin can be used to
-conditionally execute code only when MemorySanitizer is active for the current
-function (after inlining). This is particularly useful for inserting explicit,
-sanitizer-specific checks around operations like syscalls or inline assembly,
-which might otherwise be unchecked by the sanitizer.
+conditionally execute code depending on whether MemorySanitizer checks are
+enabled and permitted by the current policy (after inlining). This is
+particularly useful for inserting explicit, sanitizer-specific checks around
+operations like syscalls or inline assembly, which might otherwise be unchecked
+by the sanitizer.
 
 Example:
 
 .. code-block:: c
 
+    void __msan_check_mem_is_initialized(const void *, size_t);
+
     inline __attribute__((always_inline))
-    void copy_to_device(void *addr, size_t size) {
-      if (__builtin_allow_sanitize_check("memory")) {
-        // Custom checks if `data` is initialized.
-      }
-      // ... actual device memory copy logic, potentially a syscall ...
+    void my_send(void *addr, size_t size) {
+      if (__builtin_allow_sanitize_check("memory"))
+        __msan_check_mem_is_initialized(addr, size);
+      // ... syscall or other logic where MSan may not see the access ...
+      send(addr, size);
     }
 
     void instrumented_function() {
       ...
-      copy_to_device(buf, sizeof(buf)); // checks are active
+      my_send(buf, sizeof(buf)); // checks are active
       ...
     }
 
     __attribute__((no_sanitize("memory")))
     void uninstrumented_function() {
       ...
-      copy_to_device(buf, sizeof(buf)); // checks are skipped
+      my_send(buf, sizeof(buf)); // checks are skipped
       ...
     }
 

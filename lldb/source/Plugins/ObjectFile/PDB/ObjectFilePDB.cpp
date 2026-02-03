@@ -112,7 +112,7 @@ ObjectFile *ObjectFilePDB::CreateMemoryInstance(const ModuleSP &module_sp,
 }
 
 size_t ObjectFilePDB::GetModuleSpecifications(
-    const FileSpec &file, DataBufferSP &data_sp, offset_t data_offset,
+    const FileSpec &file, DataExtractorSP &extractor_sp, offset_t data_offset,
     offset_t file_offset, offset_t length, ModuleSpecList &specs) {
   const size_t initial_count = specs.GetSize();
   ModuleSpec module_spec(file);

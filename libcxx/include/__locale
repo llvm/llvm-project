@@ -1477,9 +1477,6 @@ public:
 
 protected:
   ~numpunct_byname() override;
-
-private:
-  void __init(const char*);
 };
 
 #  if _LIBCPP_HAS_WIDE_CHARACTERS
@@ -1494,9 +1491,6 @@ public:
 
 protected:
   ~numpunct_byname() override;
-
-private:
-  void __init(const char*);
 };
 #  endif // _LIBCPP_HAS_WIDE_CHARACTERS
 
