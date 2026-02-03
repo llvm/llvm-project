@@ -569,7 +569,7 @@ void NVVM::FAddOp::lowerFAddToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
     mt.mapValue(thisOp.getRes(), addIntrinsic(f64IDs[index], lhsF64, rhsF64));
     return;
   } else if (isVectorF64Add) {
-    llvm::Value *result = llvm::UndefValue::get(
+    llvm::Value *result = llvm::PoisonValue::get(
         llvm::FixedVectorType::get(builder.getDoubleTy(), 2));
     unsigned index = static_cast<unsigned>(rndMode);
     result = addVector(builder.getDoubleTy(), f64IDs[index], result);
@@ -590,7 +590,7 @@ void NVVM::FAddOp::lowerFAddToLLVMIR(Operation &op, LLVM::ModuleTranslation &mt,
     mt.mapValue(thisOp.getRes(), addIntrinsic(f32IDs[index], lhsF32, rhsF32));
     return;
   } else if (isVectorF32Add) {
-    llvm::Value *result = llvm::UndefValue::get(
+    llvm::Value *result = llvm::PoisonValue::get(
         llvm::FixedVectorType::get(builder.getFloatTy(), 2));
     unsigned index =
         ((isFTZ << 1) | isSat) * 5 + static_cast<unsigned>(rndMode);
