@@ -97,7 +97,7 @@ Error dumpDebugStrings(DWARFContext &DCtx, DWARFYAML::Data &Y) {
     DebugStr.push_back(CStr);
   }
 
-  Y.DebugStrings = std::move(DebugStr);
+  Y.DebugStrings = DebugStr;
   return Err;
 }
 
@@ -132,7 +132,7 @@ Error dumpDebugARanges(DWARFContext &DCtx, DWARFYAML::Data &Y) {
     DebugAranges.push_back(Range);
   }
 
-  Y.DebugAranges = std::move(DebugAranges);
+  Y.DebugAranges = DebugAranges;
   return ErrorSuccess();
 }
 
@@ -166,7 +166,7 @@ Error dumpDebugRanges(DWARFContext &DCtx, DWARFYAML::Data &Y) {
     DebugRanges.push_back(std::move(YamlRanges));
   }
 
-  Y.DebugRanges = std::move(DebugRanges);
+  Y.DebugRanges = DebugRanges;
   return ErrorSuccess();
 }
 
