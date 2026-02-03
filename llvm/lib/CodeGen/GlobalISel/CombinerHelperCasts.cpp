@@ -412,58 +412,58 @@ bool CombinerHelper::matchRedundantSextInReg(MachineInstr &Root,
   }
 
   return true;
-// trunc(abs(sext(x) - sext(y))) -> abds(x, y)
-bool CombinerHelper::matchTruncAbds(const MachineInstr &MI) {
-  const GTrunc *Trunc = cast<GTrunc>(&MI);
-  const GAbs *Abs = cast<GAbs>(MRI.getVRegDef(Trunc->getSrcReg()));
-  const GSub *Sub = cast<GSub>(MRI.getVRegDef(Abs->getSourceReg()));
+  // trunc(abs(sext(x) - sext(y))) -> abds(x, y)
+  bool CombinerHelper::matchTruncAbds(const MachineInstr &MI) {
+    const GTrunc *Trunc = cast<GTrunc>(&MI);
+    const GAbs *Abs = cast<GAbs>(MRI.getVRegDef(Trunc->getSrcReg()));
+    const GSub *Sub = cast<GSub>(MRI.getVRegDef(Abs->getSourceReg()));
 
-  Register Dst = Trunc->getReg(0);
-  LLT DstTy = MRI.getType(Dst);
+    Register Dst = Trunc->getReg(0);
+    LLT DstTy = MRI.getType(Dst);
 
-  GSext *SextLHS = cast<GSext>(MRI.getVRegDef(Sub->getLHSReg()));
-  GSext *SextRHS = cast<GSext>(MRI.getVRegDef(Sub->getRHSReg()));
+    GSext *SextLHS = cast<GSext>(MRI.getVRegDef(Sub->getLHSReg()));
+    GSext *SextRHS = cast<GSext>(MRI.getVRegDef(Sub->getRHSReg()));
 
-  LLT SextLHSTy = MRI.getType(SextLHS->getSrcReg());
-  LLT SextRHSTy = MRI.getType(SextRHS->getSrcReg());
+    LLT SextLHSTy = MRI.getType(SextLHS->getSrcReg());
+    LLT SextRHSTy = MRI.getType(SextRHS->getSrcReg());
 
-  if (SextLHSTy != SextRHSTy || DstTy != SextLHSTy)
-    return false;
+    if (SextLHSTy != SextRHSTy || DstTy != SextLHSTy)
+      return false;
 
-  // one-use
-  if (!MRI.hasOneNonDBGUse(Abs->getReg(0)) ||
-      !MRI.hasOneNonDBGUse(Sub->getReg(0)) ||
-      !MRI.hasOneNonDBGUse(Sub->getLHSReg()) ||
-      !MRI.hasOneNonDBGUse(Sub->getRHSReg()))
-    return false;
+    // one-use
+    if (!MRI.hasOneNonDBGUse(Abs->getReg(0)) ||
+        !MRI.hasOneNonDBGUse(Sub->getReg(0)) ||
+        !MRI.hasOneNonDBGUse(Sub->getLHSReg()) ||
+        !MRI.hasOneNonDBGUse(Sub->getRHSReg()))
+      return false;
 
-  return isLegalOrBeforeLegalizer({TargetOpcode::G_ABDS, {DstTy}});
-}
+    return isLegalOrBeforeLegalizer({TargetOpcode::G_ABDS, {DstTy}});
+  }
 
-// trunc(abs(zext(x) - zext(y))) -> abdu(x, y)
-bool CombinerHelper::matchTruncAbdu(const MachineInstr &MI) {
-  const GTrunc *Trunc = cast<GTrunc>(&MI);
-  const GAbs *Abs = cast<GAbs>(MRI.getVRegDef(Trunc->getSrcReg()));
-  const GSub *Sub = cast<GSub>(MRI.getVRegDef(Abs->getSourceReg()));
+  // trunc(abs(zext(x) - zext(y))) -> abdu(x, y)
+  bool CombinerHelper::matchTruncAbdu(const MachineInstr &MI) {
+    const GTrunc *Trunc = cast<GTrunc>(&MI);
+    const GAbs *Abs = cast<GAbs>(MRI.getVRegDef(Trunc->getSrcReg()));
+    const GSub *Sub = cast<GSub>(MRI.getVRegDef(Abs->getSourceReg()));
 
-  Register Dst = Trunc->getReg(0);
-  LLT DstTy = MRI.getType(Dst);
+    Register Dst = Trunc->getReg(0);
+    LLT DstTy = MRI.getType(Dst);
 
-  GZext *ZextLHS = cast<GZext>(MRI.getVRegDef(Sub->getLHSReg()));
-  GZext *ZextRHS = cast<GZext>(MRI.getVRegDef(Sub->getRHSReg()));
+    GZext *ZextLHS = cast<GZext>(MRI.getVRegDef(Sub->getLHSReg()));
+    GZext *ZextRHS = cast<GZext>(MRI.getVRegDef(Sub->getRHSReg()));
 
-  LLT ZextLHSTy = MRI.getType(ZextLHS->getSrcReg());
-  LLT ZextRHSTy = MRI.getType(ZextRHS->getSrcReg());
+    LLT ZextLHSTy = MRI.getType(ZextLHS->getSrcReg());
+    LLT ZextRHSTy = MRI.getType(ZextRHS->getSrcReg());
 
-  if (ZextLHSTy != ZextRHSTy || DstTy != ZextLHSTy)
-    return false;
+    if (ZextLHSTy != ZextRHSTy || DstTy != ZextLHSTy)
+      return false;
 
-  // one-use
-  if (!MRI.hasOneNonDBGUse(Abs->getReg(0)) ||
-      !MRI.hasOneNonDBGUse(Sub->getReg(0)) ||
-      !MRI.hasOneNonDBGUse(Sub->getLHSReg()) ||
-      !MRI.hasOneNonDBGUse(Sub->getRHSReg()))
-    return false;
+    // one-use
+    if (!MRI.hasOneNonDBGUse(Abs->getReg(0)) ||
+        !MRI.hasOneNonDBGUse(Sub->getReg(0)) ||
+        !MRI.hasOneNonDBGUse(Sub->getLHSReg()) ||
+        !MRI.hasOneNonDBGUse(Sub->getRHSReg()))
+      return false;
 
-  return isLegalOrBeforeLegalizer({TargetOpcode::G_ABDU, {DstTy}});
-}
+    return isLegalOrBeforeLegalizer({TargetOpcode::G_ABDU, {DstTy}});
+  }
