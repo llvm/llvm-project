@@ -456,6 +456,11 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
           noBuiltins, call, ModuleTranslation::convertNoBuiltin);
     }
 
+    if (llvm::Attribute attr =
+            moduleTranslation.convertAllocsizeAttr(callOp.getAllocsizeAttr());
+        attr.isValid())
+      call->addFnAttr(attr);
+
     if (failed(moduleTranslation.convertArgAndResultAttrs(callOp, call)))
       return failure();
 

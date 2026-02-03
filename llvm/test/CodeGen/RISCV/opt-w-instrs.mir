@@ -54,7 +54,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gprnox0 = COPY $x10
-    ; CHECK-NEXT: [[PseudoVFIRST_M_B1_:%[0-9]+]]:gpr = PseudoVFIRST_M_B1 [[COPY]], [[COPY1]], 0 /* e8 */
+    ; CHECK-NEXT: [[PseudoVFIRST_M_B1_:%[0-9]+]]:gpr = PseudoVFIRST_M_B1 [[COPY]], [[COPY1]] /* vl */, 0 /* e8 */
     ; CHECK-NEXT: $x11 = COPY [[PseudoVFIRST_M_B1_]]
     ; CHECK-NEXT: PseudoRET
      %0:vr = COPY $v8
@@ -77,7 +77,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:vr = COPY $v8
     ; CHECK-NEXT: [[COPY1:%[0-9]+]]:gprnox0 = COPY $x10
-    ; CHECK-NEXT: [[PseudoVCPOP_M_B1_:%[0-9]+]]:gpr = PseudoVCPOP_M_B1 [[COPY]], [[COPY1]], 0 /* e8 */
+    ; CHECK-NEXT: [[PseudoVCPOP_M_B1_:%[0-9]+]]:gpr = PseudoVCPOP_M_B1 [[COPY]], [[COPY1]] /* vl */, 0 /* e8 */
     ; CHECK-NEXT: $x11 = COPY [[PseudoVCPOP_M_B1_]]
     ; CHECK-NEXT: PseudoRET
      %0:vr = COPY $v8

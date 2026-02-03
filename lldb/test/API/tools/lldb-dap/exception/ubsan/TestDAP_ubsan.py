@@ -1,5 +1,5 @@
 """
-Test that we stop at runtime instrumentation locations.
+Test that we stop at runtime instrumentation locations (ubsan).
 """
 
 from lldbsuite.test.decorators import *
@@ -7,7 +7,7 @@ from lldbsuite.test.lldbtest import *
 import lldbdap_testcase
 
 
-class TestDAP_runtime_instruments(lldbdap_testcase.DAPTestCaseBase):
+class TestDAP_ubsan(lldbdap_testcase.DAPTestCaseBase):
     @skipUnlessUndefinedBehaviorSanitizer
     def test_ubsan(self):
         """
@@ -23,7 +23,7 @@ class TestDAP_runtime_instruments(lldbdap_testcase.DAPTestCaseBase):
         self.assertRegex(exceptionInfo["description"], r"Out of bounds index")
         self.assertEqual(exceptionInfo["exceptionId"], "runtime-instrumentation")
 
-        # FIXME: Check on non macOS platform the stop infomation location heuristic
+        # FIXME: Check on non macOS platform the stop information location heuristic
         # may be wrong. enable when we have updated Ubsan stopInfo heuristic.
         if self.platformIsDarwin():
             self.assertIn("main.c", exceptionInfo["details"]["stackTrace"])

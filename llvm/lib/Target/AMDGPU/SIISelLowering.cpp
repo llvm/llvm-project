@@ -6985,6 +6985,8 @@ SDValue SITargetLowering::LowerOperation(SDValue Op, SelectionDAG &DAG) const {
     return LowerBRCOND(Op, DAG);
   case ISD::RETURNADDR:
     return LowerRETURNADDR(Op, DAG);
+  case ISD::SPONENTRY:
+    return LowerSPONENTRY(Op, DAG);
   case ISD::LOAD: {
     SDValue Result = LowerLOAD(Op, DAG);
     assert((!Result.getNode() || Result.getNode()->getNumValues() == 2) &&
@@ -7996,6 +7998,20 @@ SDValue SITargetLowering::LowerRETURNADDR(SDValue Op, SelectionDAG &DAG) const {
                               getRegClassFor(VT, Op.getNode()->isDivergent()));
 
   return DAG.getCopyFromReg(DAG.getEntryNode(), DL, Reg, VT);
+}
+
+SDValue SITargetLowering::LowerSPONENTRY(SDValue Op, SelectionDAG &DAG) const {
+  MachineFunction &MF = DAG.getMachineFunction();
+  SIMachineFunctionInfo *MFI = MF.getInfo<SIMachineFunctionInfo>();
+
+  // For functions that set up their own stack, select the GET_STACK_BASE
+  // pseudo.
+  if (MFI->isBottomOfStack())
+    return Op;
+
+  // For everything else, create a dummy stack object.
+  int FI = MF.getFrameInfo().CreateFixedObject(1, 0, /*IsImmutable=*/false);
+  return DAG.getFrameIndex(FI, Op.getValueType());
 }
 
 SDValue SITargetLowering::getFPExtOrFPRound(SelectionDAG &DAG, SDValue Op,
