@@ -1878,6 +1878,29 @@ and
 
   !0 = !{}
 
+.. _amdgpu_non_volatile:
+
+'``amdgpu.non.volatile``' Metadata
+----------------------------------
+
+Explicitly marks memory accesses (load, store, rmw) to locations that are never written to by other threads during the execution of the shader.
+
+This metadata is a performance optimization and can be dropped if necessary.
+Using this metadata on a memory access to a location that is written to by other threads is undefined behavior.
+
+Sets ``NV=1`` on the instruction if the target supports it.
+
+.. code-block:: llvm
+
+  %val = load i32, ptr %in, align 4, !amdgpu.non.volatile !{}
+
+
+.. note::
+
+  This metadata is used to request ``NV=1`` on an operation, but the compiler may also set ``NV=1``
+  on memory accesses that do not have the metadata when it is safe to do so. For example, it may
+  set it on accesses to constant memory, when loading from or storing to scratch memory used for
+  spills, etc.
 
 LLVM IR Attributes
 ==================
