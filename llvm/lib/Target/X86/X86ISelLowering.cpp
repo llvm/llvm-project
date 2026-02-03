@@ -39302,6 +39302,18 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
     if (MaskMinValue.uge(BitWidth))
       break;
 
+    APInt MaskMaxValue = Known2.getMaxValue();
+    if (MaskMaxValue.ult(BitWidth)) {
+      auto MinValue = MaskMinValue.getZExtValue();
+      auto MaxValue = MaskMaxValue.getZExtValue();
+      Known.One.clearBits(MaxValue, BitWidth);
+      Known.Zero.setBits(MaxValue, BitWidth);
+
+      Known.One.clearBits(MinValue, MaxValue);
+      if (Known.isConstant())
+        break;
+    }
+
     // Zeros are retained from the src operand. But not necessarily ones.
     Known.One.clearAllBits();
     break;
