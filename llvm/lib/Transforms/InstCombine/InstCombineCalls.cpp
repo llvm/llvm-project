@@ -3086,6 +3086,9 @@ Instruction *InstCombinerImpl::visitCallInst(CallInst &CI) {
         CallInst *AbsT = Builder.CreateCall(II->getCalledFunction(), {TVal});
         CallInst *AbsF = Builder.CreateCall(II->getCalledFunction(), {FVal});
         SelectInst *SI = SelectInst::Create(Cond, AbsT, AbsF);
+        if (!ProfcheckDisableMetadataFixes)
+          if (auto *Sel = dyn_cast<Instruction>(Arg))
+            SI->copyMetadata(*Sel);
         FastMathFlags FMF1 = II->getFastMathFlags();
         FastMathFlags FMF2 = cast<SelectInst>(Arg)->getFastMathFlags();
         FMF2.setNoSignedZeros(false);
