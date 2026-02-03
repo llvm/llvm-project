@@ -6,6 +6,14 @@ lldb_tablegen(ProcessKDPPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE ProcessKDPProperties.td
   TARGET LLDBPluginProcessMacOSXKernelPropertiesEnumGen)
 
+lldb_tablegen(ProcessKDPProperties.json -gen-lldb-property-docs-json
+  SOURCE ProcessKDPProperties.td
+  TARGET LLDBPluginProcessMacOSXKernelPropertiesJsonGen)
+
+if (NOT CMAKE_SYSTEM_NAME MATCHES "Darwin")
+  return()
+endif()
+
 add_lldb_library(lldbPluginProcessMacOSXKernel PLUGIN
   CommunicationKDP.cpp
   ProcessKDP.cpp

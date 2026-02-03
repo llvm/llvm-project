@@ -6,6 +6,10 @@ lldb_tablegen(TargetPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE TargetProperties.td
   TARGET LLDBTargetPropertiesEnumGen)
 
+lldb_tablegen(TargetProperties.json -gen-lldb-property-docs-json
+  SOURCE TargetProperties.td
+  TARGET LLDBTargetPropertiesJsonGen)
+
 # TODO: Add property `NO_PLUGIN_DEPENDENCIES` to lldbTarget
 add_lldb_library(lldbTarget
   ABI.cpp

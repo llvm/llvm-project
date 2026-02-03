@@ -1,0 +1,86 @@
+/* 
+  Terms use normal weight and upper case by default.
+  For settings, the term should be bold and use the original case.
+*/
+dl[class]:not(
+    .option-list,
+    .field-list,
+    .footnote,
+    .glossary,
+    .simple
+  ).lldbsetting
+  .field-list
+  > dt {
+  text-transform: none;
+  font-weight: bold;
+}
+
+.lldb-setting-type {
+  --setting-color: var(--light-color);
+  --background-opacity: 0.1;
+}
+
+.lldb-setting-type {
+  float: right;
+  text-align: right;
+  text-indent: 0;
+  line-height: 1.4;
+  background-color: rgba(var(--setting-color), var(--background-opacity));
+  padding: 0px 8px;
+  border-radius: 99999px;
+  border: rgba(var(--setting-color), 1) 1px solid;
+  font-size: 0.9em;
+  color: rgba(var(--setting-color), 1);
+}
+
+body[data-theme="dark"] .lldb-setting-type {
+  --setting-color: var(--dark-color);
+  --background-opacity: 0.2;
+}
+@media (prefers-color-scheme: dark) {
+  body[data-theme="auto"] .lldb-setting-type {
+    --setting-color: var(--dark-color);
+    --background-opacity: 0.2;
+  }
+}
+
+/* anything string-like (default) */
+.lldb-setting-type-string,
+.lldb-setting-type /* fallback */ {
+  --dark-color: 255, 177, 38;
+  --light-color: 125, 98, 1;
+}
+
+/* array-like */
+.lldb-setting-type-arguments,
+.lldb-setting-type-array,
+.lldb-setting-type-file-list {
+  --dark-color: 211, 131, 255;
+  --light-color: 64, 33, 242;
+}
+
+/* map-like */
+.lldb-setting-type-dictionary,
+.lldb-setting-type-path-map {
+  --dark-color: 243, 0, 255;
+  --light-color: 157, 0, 183;
+}
+
+/* boolean */
+.lldb-setting-type-boolean {
+  --dark-color: 29, 180, 8;
+  --light-color: 0, 123, 33;
+}
+
+/* numbers */
+.lldb-setting-type-int,
+.lldb-setting-type-unsigned {
+  --dark-color: 80, 164, 198;
+  --light-color: 1, 108, 140;
+}
+
+/* enum */
+.lldb-setting-type-enum {
+  --dark-color: 255, 87, 73;
+  --light-color: 191, 3, 10;
+}

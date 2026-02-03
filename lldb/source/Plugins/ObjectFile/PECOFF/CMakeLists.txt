@@ -13,6 +13,10 @@ lldb_tablegen(ObjectFilePECOFFPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE ObjectFilePECOFFProperties.td
   TARGET LLDBPluginObjectFilePECOFFPropertiesEnumGen)
 
+lldb_tablegen(ObjectFilePECOFFProperties.json -gen-lldb-property-docs-json
+  SOURCE ObjectFilePECOFFProperties.td
+  TARGET LLDBPluginObjectFilePECOFFPropertiesJsonGen)
+
 add_lldb_library(lldbPluginObjectFilePECOFF PLUGIN
   ObjectFilePECOFF.cpp
   PECallFrameInfo.cpp

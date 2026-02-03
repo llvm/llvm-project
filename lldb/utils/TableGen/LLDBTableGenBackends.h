@@ -32,6 +32,7 @@ namespace lldb_private {
 void EmitOptionDefs(const RecordKeeper &RK, raw_ostream &OS);
 void EmitPropertyDefs(const RecordKeeper &RK, raw_ostream &OS);
 void EmitPropertyEnumDefs(const RecordKeeper &RK, raw_ostream &OS);
+void EmitPropertyDocsJson(const RecordKeeper &RK, raw_ostream &OS);
 int EmitSBAPIDWARFEnum(int argc, char **argv);
 
 } // namespace lldb_private

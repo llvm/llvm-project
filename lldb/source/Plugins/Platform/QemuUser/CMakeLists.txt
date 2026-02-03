@@ -6,6 +6,10 @@ lldb_tablegen(PlatformQemuUserPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE PlatformQemuUserProperties.td
   TARGET LLDBPluginPlatformQemuUserPropertiesEnumGen)
 
+lldb_tablegen(PlatformQemuUserProperties.json -gen-lldb-property-docs-json
+  SOURCE PlatformQemuUserProperties.td
+  TARGET LLDBPluginPlatformQemuUserPropertiesJsonGen)
+
 add_lldb_library(lldbPluginPlatformQemuUser PLUGIN
   PlatformQemuUser.cpp
 

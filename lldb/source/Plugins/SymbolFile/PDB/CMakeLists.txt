@@ -6,6 +6,10 @@ lldb_tablegen(SymbolFilePDBPropertiesEnum.inc -gen-lldb-property-enum-defs
   SOURCE SymbolFilePDBProperties.td
   TARGET LLDBPluginSymbolFilePDBPropertiesEnumGen)
 
+lldb_tablegen(SymbolFilePDBProperties.json -gen-lldb-property-docs-json
+  SOURCE SymbolFilePDBProperties.td
+  TARGET LLDBPluginSymbolFilePDBPropertiesJsonGen)
+
 add_lldb_library(lldbPluginSymbolFilePDB PLUGIN
   PDBASTParser.cpp
   PDBLocationToDWARFExpression.cpp

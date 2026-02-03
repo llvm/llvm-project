@@ -12,6 +12,7 @@
 # serve to show the default.
 import sys, os, re, shutil
 from datetime import date
+from pathlib import Path
 
 # Add path for llvm_slug module.
 sys.path.insert(0, os.path.abspath(os.path.join("..", "..", "llvm", "docs")))
@@ -41,9 +42,16 @@ automodapi_toctreedirnm = "python_api"
 # If your documentation needs a minimal Sphinx version, state it here.
 # needs_sphinx = '1.0'
 
+sys.path.append(str(Path("_ext").resolve()))
+
 # Add any Sphinx extension module names here, as strings. They can be extensions
 # coming with Sphinx (named 'sphinx.ext.*') or your custom ones.
-extensions = ["sphinx.ext.todo", "sphinx.ext.mathjax", "sphinx.ext.intersphinx"]
+extensions = [
+    "sphinx.ext.todo",
+    "sphinx.ext.mathjax",
+    "sphinx.ext.intersphinx",
+    "lldb_setting",
+]
 
 # When building man pages, we do not use the markdown pages,
 # So, we can continue without the myst_parser dependencies.
@@ -59,6 +67,7 @@ except ImportError:
 # Automatic anchors for markdown titles
 myst_heading_anchors = 6
 myst_heading_slug_func = "llvm_slug.make_slug"
+myst_enable_extensions = ["fieldlist"]
 
 autodoc_default_options = {"special-members": True}
 
@@ -192,7 +201,10 @@ html_title = "🐛 LLDB"
 # Add any paths that contain custom static files (such as style sheets) here,
 # relative to this directory. They are copied after the builtin static files,
 # so a file named "default.css" will overwrite the builtin "default.css".
-# html_static_path = ["_static"]
+html_static_path = ["_static"]
+html_css_files = [
+    "lldb-setting.css",
+]
 
 html_extra_path = [".htaccess"]
 
