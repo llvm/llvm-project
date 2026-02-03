@@ -64,6 +64,7 @@ private:
   std::unique_ptr<InlineAsmLowering> InlineAsmInfo;
 
   void accountForAMDShaderTrinaryMinmax();
+  void initAvailableExtInstSets();
 
 public:
   // This constructor initializes the data members to match that
@@ -74,8 +75,6 @@ public:
 
   void initAvailableExtensions(
       const std::set<SPIRV::Extension::Extension> &AllowedExtIds);
-  void initAvailableExtInstSets();
-
   void resolveEnvFromModule(const Module &M);
 
   // Parses features string setting specified subtarget options.
@@ -84,14 +83,7 @@ public:
   unsigned getPointerSize() const { return PointerSize; }
   unsigned getBound() const { return GR->getBound(); }
   bool canDirectlyComparePointers() const;
-  void setEnv(SPIRVEnvType E) {
-    if (E == Unknown)
-      report_fatal_error("Unknown environment is not allowed.");
-    if (Env != Unknown && Env != E)
-      report_fatal_error("Environment is already set to a different value.");
-
-    Env = E;
-  }
+  void setEnv(SPIRVEnvType E);
   SPIRVEnvType getEnv() const { return Env; }
   bool isKernel() const { return getEnv() == Kernel; }
   bool isShader() const { return getEnv() == Shader; }

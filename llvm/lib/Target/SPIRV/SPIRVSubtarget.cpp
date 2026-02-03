@@ -173,9 +173,31 @@ void SPIRVSubtarget::initAvailableExtInstSets() {
   accountForAMDShaderTrinaryMinmax();
 }
 
-void SPIRVSubtarget::resolveEnvFromModule(const Module &M) {
-  if (Env != Unknown)
+void SPIRVSubtarget::setEnv(SPIRVEnvType E) {
+  if (E == Unknown)
+    report_fatal_error("Unknown environment is not allowed.");
+  if (Env != Unknown && Env != E)
+    report_fatal_error("Environment is already set to a different value.");
+  if (Env == E)
     return;
+
+  Env = E;
+
+  // Reinitialize Env-dependent state aka ExtInstSet and legalizer info.
+  initAvailableExtInstSets();
+  Legalizer = std::make_unique<SPIRVLegalizerInfo>(*this);
+}
+
+void SPIRVSubtarget::resolveEnvFromModule(const Module &M) {
+  if (Env != Unknown) {
+    assert(
+        any_of(M,
+               [](const Function &F) {
+                 return F.hasFnAttribute("hlsl.shader");
+               }) == isShader() &&
+        "Module environment conflicts with the already resolved environment");
+    return;
+  }
 
   bool HasShaderAttr = false;
   for (const Function &F : M) {
@@ -185,11 +207,7 @@ void SPIRVSubtarget::resolveEnvFromModule(const Module &M) {
     }
   }
 
-  Env = HasShaderAttr ? Shader : Kernel;
-
-  // Reinitialize Env-dependent state: ext inst sets and legalizer info.
-  initAvailableExtInstSets();
-  Legalizer = std::make_unique<SPIRVLegalizerInfo>(*this);
+  setEnv(HasShaderAttr ? Shader : Kernel);
 }
 
 // Set available extensions after SPIRVSubtarget is created.

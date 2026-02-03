@@ -222,7 +222,7 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
 static SPIRV::ExecutionModel::ExecutionModel
 getExecutionModel(const SPIRVSubtarget &STI, const Function &F) {
   assert(STI.getEnv() != SPIRVSubtarget::Unknown &&
-         "Environment must be resolved before lowering entry points. ");
+         "Environment must be resolved before lowering entry points.");
 
   if (STI.isKernel())
     return SPIRV::ExecutionModel::Kernel;
