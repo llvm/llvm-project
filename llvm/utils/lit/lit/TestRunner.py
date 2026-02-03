@@ -2457,7 +2457,11 @@ def executeShTest(
     tmpDir, tmpBase = getTempPaths(test)
     substitutions = list(extra_substitutions)
     substitutions += getDefaultSubstitutions(
-        test, tmpDir, tmpBase, normalize_slashes=useExternalSh
+        test,
+        tmpDir,
+        tmpBase,
+        normalize_slashes=useExternalSh
+        or litConfig.params.get("use_normalized_slashes", False),
     )
     conditions = {feature: True for feature in test.config.available_features}
     script = applySubstitutions(

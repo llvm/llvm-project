@@ -14,7 +14,7 @@ Test link.exe-style /linkreprofullpathrsp: flag.
 # RUN: lld-link /subsystem:console %t.obj %p/Inputs/std32.lib /defaultlib:%p/Inputs/library.lib \
 # RUN:  /libpath:%p/Inputs /defaultlib:std64.lib ret42.lib /entry:main@0 /linkreprofullpathrsp:%t.rsp \
 # RUN:   %t.pdb /wholearchive:%t.archive.lib /out:%t.exe /timestamp:0
-# # RUN: FileCheck %s --check-prefix=RSP -DT=%t -DP=%p < %t.rsp
+# RUN: FileCheck %s --check-prefix=RSP -DT=%t -DP=%p < %t.rsp
 
 # RUN: lld-link /subsystem:console @%t.rsp /out:%t2.exe /entry:main@0 /timestamp:0
 # RUN: diff %t.exe %t2.exe
