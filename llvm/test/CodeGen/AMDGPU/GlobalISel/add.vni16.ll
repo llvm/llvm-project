@@ -561,13 +561,13 @@ define void @add_v9i16(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb, ptr addrs
 ; GFX9-LABEL: add_v9i16:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    global_load_dwordx4 v[6:9], v[0:1], off
 ; GFX9-NEXT:    global_load_ushort v14, v[0:1], off offset:16
 ; GFX9-NEXT:    global_load_ushort v15, v[2:3], off offset:16
+; GFX9-NEXT:    global_load_dwordx4 v[6:9], v[0:1], off
 ; GFX9-NEXT:    global_load_dwordx4 v[10:13], v[2:3], off
-; GFX9-NEXT:    s_waitcnt vmcnt(2)
+; GFX9-NEXT:    s_waitcnt vmcnt(3)
 ; GFX9-NEXT:    v_and_b32_e32 v14, 0xffff, v14
-; GFX9-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-NEXT:    s_waitcnt vmcnt(2)
 ; GFX9-NEXT:    v_and_b32_e32 v15, 0xffff, v15
 ; GFX9-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-NEXT:    v_pk_add_u16 v0, v6, v10
@@ -742,9 +742,9 @@ define void @add_v11i16(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb, ptr addr
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; GFX9-NEXT:    global_load_ushort v14, v[0:1], off offset:16
 ; GFX9-NEXT:    global_load_ushort v15, v[0:1], off offset:20
-; GFX9-NEXT:    global_load_dwordx4 v[6:9], v[2:3], off
 ; GFX9-NEXT:    global_load_ushort v16, v[2:3], off offset:16
 ; GFX9-NEXT:    global_load_ushort v17, v[2:3], off offset:20
+; GFX9-NEXT:    global_load_dwordx4 v[6:9], v[2:3], off
 ; GFX9-NEXT:    global_load_dwordx4 v[10:13], v[0:1], off
 ; GFX9-NEXT:    global_load_ushort v18, v[0:1], off offset:18
 ; GFX9-NEXT:    global_load_ushort v19, v[2:3], off offset:18
@@ -752,9 +752,9 @@ define void @add_v11i16(ptr addrspace(1) %ptra, ptr addrspace(1) %ptrb, ptr addr
 ; GFX9-NEXT:    v_and_b32_e32 v14, 0xffff, v14
 ; GFX9-NEXT:    s_waitcnt vmcnt(6)
 ; GFX9-NEXT:    v_and_b32_e32 v15, 0xffff, v15
-; GFX9-NEXT:    s_waitcnt vmcnt(4)
+; GFX9-NEXT:    s_waitcnt vmcnt(5)
 ; GFX9-NEXT:    v_and_b32_e32 v16, 0xffff, v16
-; GFX9-NEXT:    s_waitcnt vmcnt(3)
+; GFX9-NEXT:    s_waitcnt vmcnt(4)
 ; GFX9-NEXT:    v_and_b32_e32 v17, 0xffff, v17
 ; GFX9-NEXT:    s_waitcnt vmcnt(2)
 ; GFX9-NEXT:    v_pk_add_u16 v0, v10, v6

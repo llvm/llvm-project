@@ -2238,8 +2238,8 @@ define <32 x half> @v_vselect_v32f16(<32 x half> %a, <32 x half> %b, <32 x i32> 
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v31
 ; SI-NEXT:    s_waitcnt vmcnt(11)
 ; SI-NEXT:    v_cmp_eq_u32_e64 s[4:5], 0, v32
-; SI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:84
 ; SI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:92
+; SI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:84
 ; SI-NEXT:    s_waitcnt vmcnt(12)
 ; SI-NEXT:    v_cmp_eq_u32_e64 s[6:7], 0, v33
 ; SI-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:88
@@ -2275,10 +2275,10 @@ define <32 x half> @v_vselect_v32f16(<32 x half> %a, <32 x half> %b, <32 x i32> 
 ; SI-NEXT:    v_cndmask_b32_e64 v12, v28, v12, s[8:9]
 ; SI-NEXT:    s_waitcnt vmcnt(8)
 ; SI-NEXT:    v_cmp_eq_u32_e64 s[8:9], 0, v51
-; SI-NEXT:    buffer_load_dword v29, off, s[0:3], s32 offset:36
-; SI-NEXT:    buffer_load_dword v49, off, s[0:3], s32 offset:44
 ; SI-NEXT:    v_cndmask_b32_e64 v28, v27, v11, s[8:9]
-; SI-NEXT:    s_waitcnt vmcnt(8)
+; SI-NEXT:    buffer_load_dword v49, off, s[0:3], s32 offset:44
+; SI-NEXT:    buffer_load_dword v29, off, s[0:3], s32 offset:36
+; SI-NEXT:    s_waitcnt vmcnt(9)
 ; SI-NEXT:    v_cmp_eq_u32_e64 s[8:9], 0, v32
 ; SI-NEXT:    v_cndmask_b32_e64 v11, v27, v11, s[8:9]
 ; SI-NEXT:    s_waitcnt vmcnt(7)
@@ -2287,8 +2287,8 @@ define <32 x half> @v_vselect_v32f16(<32 x half> %a, <32 x half> %b, <32 x i32> 
 ; SI-NEXT:    v_cmp_eq_u32_e64 s[8:9], 0, v31
 ; SI-NEXT:    v_cndmask_b32_e64 v10, v26, v10, s[8:9]
 ; SI-NEXT:    buffer_load_dword v26, off, s[0:3], s32 offset:48
-; SI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:32
 ; SI-NEXT:    buffer_load_dword v32, off, s[0:3], s32 offset:40
+; SI-NEXT:    buffer_load_dword v31, off, s[0:3], s32 offset:32
 ; SI-NEXT:    buffer_load_dword v33, off, s[0:3], s32 offset:24
 ; SI-NEXT:    buffer_load_dword v51, off, s[0:3], s32 offset:16
 ; SI-NEXT:    s_waitcnt vmcnt(11)
@@ -2302,8 +2302,8 @@ define <32 x half> @v_vselect_v32f16(<32 x half> %a, <32 x half> %b, <32 x i32> 
 ; SI-NEXT:    s_waitcnt vmcnt(10)
 ; SI-NEXT:    v_cmp_eq_u32_e64 s[6:7], 0, v36
 ; SI-NEXT:    v_cndmask_b32_e64 v8, v24, v8, s[6:7]
-; SI-NEXT:    buffer_load_dword v24, off, s[0:3], s32 offset:12
 ; SI-NEXT:    buffer_load_dword v36, off, s[0:3], s32 offset:20
+; SI-NEXT:    buffer_load_dword v24, off, s[0:3], s32 offset:12
 ; SI-NEXT:    s_waitcnt vmcnt(11)
 ; SI-NEXT:    v_cmp_eq_u32_e64 s[6:7], 0, v38
 ; SI-NEXT:    v_cndmask_b32_e64 v38, v23, v7, s[6:7]
@@ -2330,11 +2330,12 @@ define <32 x half> @v_vselect_v32f16(<32 x half> %a, <32 x half> %b, <32 x i32> 
 ; SI-NEXT:    v_cndmask_b32_e32 v26, v21, v5, vcc
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v49
 ; SI-NEXT:    v_cndmask_b32_e32 v5, v21, v5, vcc
-; SI-NEXT:    s_waitcnt vmcnt(7)
+; SI-NEXT:    s_waitcnt vmcnt(8)
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v32
 ; SI-NEXT:    v_cndmask_b32_e32 v21, v20, v4, vcc
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v29
 ; SI-NEXT:    v_cndmask_b32_e32 v4, v20, v4, vcc
+; SI-NEXT:    s_waitcnt vmcnt(7)
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v31
 ; SI-NEXT:    v_cndmask_b32_e32 v20, v19, v3, vcc
 ; SI-NEXT:    s_waitcnt vmcnt(4)
@@ -2342,11 +2343,12 @@ define <32 x half> @v_vselect_v32f16(<32 x half> %a, <32 x half> %b, <32 x i32> 
 ; SI-NEXT:    v_cndmask_b32_e32 v3, v19, v3, vcc
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v33
 ; SI-NEXT:    v_cndmask_b32_e32 v19, v18, v2, vcc
-; SI-NEXT:    s_waitcnt vmcnt(2)
+; SI-NEXT:    s_waitcnt vmcnt(3)
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v36
 ; SI-NEXT:    v_cndmask_b32_e32 v2, v18, v2, vcc
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v51
 ; SI-NEXT:    v_cndmask_b32_e32 v18, v17, v1, vcc
+; SI-NEXT:    s_waitcnt vmcnt(2)
 ; SI-NEXT:    v_cmp_eq_u32_e32 vcc, 0, v24
 ; SI-NEXT:    v_cndmask_b32_e32 v1, v17, v1, vcc
 ; SI-NEXT:    s_waitcnt vmcnt(1)
