@@ -3,57 +3,92 @@
 
 ; RUN: llc < %s -mtriple=powerpc64-ibm-aix-xcoff -test-ifunc-warn-noerror -filetype=obj -o /dev/null 2>&1 | FileCheck %s
 
-; CHECK: TOC register save/restore needed for ifunc "foo_extern"
-; CHECK: TOC register save/restore needed for ifunc "foo_decl"
-; CHECK: TOC register save/restore needed for ifunc "foo_weak_hidden"
-; CHECK: TOC register save/restore needed for ifunc "foo_weak_protected"
-; CHECK: TOC register save/restore needed for ifunc "foo_weak_extern"
+; CHECK: TOC register save/restore needed for ifunc "foo_ext_decl_ifunc"
+; CHECK: TOC register save/restore needed for ifunc "foo_ext_default_decl_ifunc"
+; CHECK: TOC register save/restore needed for ifunc "foo_ext_weak_decl_ifunc"
+; CHECK: TOC register save/restore needed for ifunc "foo_ext_hidden_weak_decl_ifunc"
+; CHECK: TOC register save/restore needed for ifunc "foo_ext_protected_weak_decl_ifunc"
+; CHECK: TOC register save/restore needed for ifunc "foo_ext_default_weak_decl_ifunc"
+; CHECK: TOC register save/restore needed for ifunc "foo_ext_def_ifunc"
+; CHECK: TOC register save/restore needed for ifunc "foo_ext_default_def_ifunc"
+; CHECK: TOC register save/restore needed for ifunc "foo_ext_weak_def_ifunc"
+; CHECK: TOC register save/restore needed for ifunc "foo_ext_default_weak_def_ifunc"
 
-@foo_extern = ifunc i32 (...), ptr @resolve_extern
-@foo_decl = ifunc i32 (...), ptr @resolve_decl
-@foo_weak_hidden = ifunc i32 (...), ptr @resolve_weak_hidden
-@foo_weak_protected = ifunc i32 (...), ptr @resolve_weak_protected
-@foo_weak_extern = ifunc i32 (...), ptr @resolve_weak_extern
 
-define i32 @bar_extern() {
+define void @foo_ext_def() {
 entry:
-  ret i32 5
+  ret void
 }
-define internal nonnull ptr @resolve_extern() {
+define void @foo_ext_default_def() {
 entry:
-  ret ptr @bar_extern
+  ret void
+}
+define weak void @foo_ext_default_weak_def() {
+entry:
+  ret void
+}
+define weak void @foo_ext_weak_def() {
+entry:
+  ret void
+}
+declare void @foo_ext_decl(...) 
+declare void @foo_ext_default_decl(...) 
+declare extern_weak void @foo_ext_weak_decl(...) 
+declare extern_weak hidden void @foo_ext_hidden_weak_decl(...) 
+declare extern_weak protected void @foo_ext_protected_weak_decl(...) 
+declare extern_weak void @foo_ext_default_weak_decl(...) 
+
+
+define internal ptr @foo_ext_decl_resolver() {
+entry:
+  ret ptr @foo_ext_decl
+}
+define internal ptr @foo_ext_default_decl_resolver() {
+entry:
+  ret ptr @foo_ext_default_decl
+}
+define internal ptr @foo_ext_weak_decl_resolver() {
+entry:
+  ret ptr @foo_ext_weak_decl
+}
+define internal ptr @foo_ext_hidden_weak_decl_resolver() {
+entry:
+  ret ptr @foo_ext_hidden_weak_decl
+}
+define internal ptr @foo_ext_protected_weak_decl_resolver() {
+entry:
+  ret ptr @foo_ext_protected_weak_decl
+}
+define internal ptr @foo_ext_default_weak_decl_resolver() {
+entry:
+  ret ptr @foo_ext_default_weak_decl
+}
+define internal ptr @foo_ext_def_resolver() {
+entry:
+  ret ptr @foo_ext_def
+}
+define internal ptr @foo_ext_default_def_resolver() {
+entry:
+  ret ptr @foo_ext_default_def
+}
+define internal ptr @foo_ext_weak_def_resolver() {
+entry:
+  ret ptr @foo_ext_weak_def
+}
+define internal ptr @foo_ext_default_weak_def_resolver() {
+entry:
+  ret ptr @foo_ext_default_weak_def
 }
 
-declare i32 @bar_decl()
-define internal nonnull ptr @resolve_decl() {
-entry:
-  ret ptr @bar_decl
-}
+@foo_ext_decl_ifunc = ifunc i32 (...), ptr @foo_ext_decl_resolver
+@foo_ext_default_decl_ifunc = ifunc i32 (...), ptr @foo_ext_default_decl_resolver
+@foo_ext_weak_decl_ifunc = ifunc i32 (...), ptr @foo_ext_weak_decl_resolver
+@foo_ext_hidden_weak_decl_ifunc = ifunc i32 (...), ptr @foo_ext_hidden_weak_decl_resolver
+@foo_ext_protected_weak_decl_ifunc = ifunc i32 (...), ptr @foo_ext_protected_weak_decl_resolver
+@foo_ext_default_weak_decl_ifunc = ifunc i32 (...), ptr @foo_ext_default_weak_decl_resolver
+@foo_ext_def_ifunc = ifunc i32 (...), ptr @foo_ext_def_resolver
+@foo_ext_default_def_ifunc = ifunc i32 (...), ptr @foo_ext_default_def_resolver
+@foo_ext_weak_def_ifunc = ifunc i32 (...), ptr @foo_ext_weak_def_resolver
+@foo_ext_default_weak_def_ifunc = ifunc i32 (...), ptr @foo_ext_default_weak_def_resolver
 
-define weak hidden i32 @bar_weak_hidden() {
-entry:
-  ret i32 2
-}
-define internal nonnull ptr @resolve_weak_hidden() {
-entry:
-  ret ptr @bar_weak_hidden
-}
-
-define weak protected i32 @bar_weak_protected() {
-entry:
-  ret i32 3
-}
-define internal nonnull ptr @resolve_weak_protected() {
-entry:
-  ret ptr @bar_weak_protected
-}
-
-define weak i32 @bar_weak_extern() {
-entry:
-  ret i32 5
-}
-define internal nonnull ptr @resolve_weak_extern() {
-entry:
-  ret ptr @bar_weak_extern
-}
 
