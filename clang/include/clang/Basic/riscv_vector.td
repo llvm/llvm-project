@@ -2095,14 +2095,17 @@ multiclass RVVVDOTA4QBuiltinSet<list<list<string>> suffixes_prototypes> {
   }
 }
 
-// Only SEW=32 is defined for zvdot4a8i so far, and since inputs are in fact four
-// 8-bit integer bundles, we use unsigned type to represent all of them
+// Only SEW=32 is defined for zvdot4a8i so far, and since inputs are in fact
+// four 8-bit integer bundles, we use unsigned type to represent all of them
 let RequiredFeatures = ["zvdot4a8i"] in {
-  defm vdota4 : RVVVDOTA4QBuiltinSet<[["vv", "v", "vv(FixedSEW:8)v(FixedSEW:8)v"],
-                                    ["vx", "v", "vv(FixedSEW:8)vUe"]]>;
-  defm vdota4u : RVVVDOTA4QBuiltinSet<[["vv", "Uv", "UvUv(FixedSEW:8)Uv(FixedSEW:8)Uv"],
-                                     ["vx", "Uv", "UvUv(FixedSEW:8)UvUe"]]>;
-  defm vdota4su : RVVVDOTA4QBuiltinSet<[["vv", "v", "vv(FixedSEW:8)v(FixedSEW:8)Uv"],
-                                      ["vx", "v", "vv(FixedSEW:8)vUe"]]>;
+  defm vdota4
+      : RVVVDOTA4QBuiltinSet<[["vv", "v", "vv(FixedSEW:8)v(FixedSEW:8)v"],
+                              ["vx", "v", "vv(FixedSEW:8)vUe"]]>;
+  defm vdota4u
+      : RVVVDOTA4QBuiltinSet<[["vv", "Uv", "UvUv(FixedSEW:8)Uv(FixedSEW:8)Uv"],
+                              ["vx", "Uv", "UvUv(FixedSEW:8)UvUe"]]>;
+  defm vdota4su
+      : RVVVDOTA4QBuiltinSet<[["vv", "v", "vv(FixedSEW:8)v(FixedSEW:8)Uv"],
+                              ["vx", "v", "vv(FixedSEW:8)vUe"]]>;
   defm vdota4us : RVVVDOTA4QBuiltinSet<[["vx", "v", "vv(FixedSEW:8)UvUe"]]>;
 }

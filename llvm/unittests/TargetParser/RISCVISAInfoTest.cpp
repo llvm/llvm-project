@@ -1398,7 +1398,7 @@ Experimental extensions
     zicfilp              1.0       This is a long dummy description
     zicfiss              1.0
     zvbc32e              0.7
-    zvdot4a8i            0.0
+    zvdot4a8i            0.1
     zvfbfa               0.1
     zvfofp8min           0.2
     zvkgs                0.7
