@@ -32,6 +32,10 @@
 using namespace llvm;
 using namespace PatternMatch;
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
+
 #define DEBUG_TYPE "instcombine"
 
 using EvaluatedMap = SmallDenseMap<Value *, Value *, 8>;
@@ -93,6 +97,8 @@ static Value *EvaluateInDifferentTypeImpl(Value *V, Type *Ty, bool isSigned,
     Value *False = EvaluateInDifferentTypeImpl(I->getOperand(2), Ty, isSigned,
                                                IC, Processed);
     Res = SelectInst::Create(I->getOperand(0), True, False);
+    if (!ProfcheckDisableMetadataFixes)
+      Res->copyMetadata(*I);
     break;
   }
   case Instruction::PHI: {

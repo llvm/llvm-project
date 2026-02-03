@@ -215,7 +215,6 @@ Transforms/InstCombine/binop-cast.ll
 Transforms/InstCombine/binop-select-cast-of-select-cond.ll
 Transforms/InstCombine/bit-checks.ll
 Transforms/InstCombine/canonicalize-clamp-like-pattern-between-zero-and-positive-threshold.ll
-Transforms/InstCombine/cast-mul-select.ll
 Transforms/InstCombine/clamp-to-minmax.ll
 Transforms/InstCombine/fabs.ll
 Transforms/InstCombine/fcmp-select.ll
