@@ -294,22 +294,8 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
   // Use case 1: Check if shapes only differ by expanding unit dimensions (like
   // expand_dims)
   SmallVector<int64_t> expandedUnitDims;
-  auto checkOnlyExpandUnitDims = [&](ArrayRef<int64_t> src,
-                                     ArrayRef<int64_t> dst) -> bool {
-    // All unit dimensions in dst that don't appear in src are the expanded
-    // unit dimensions
-    size_t srcIdx = 0;
-    for (size_t dstIdx = 0; dstIdx < dst.size(); ++dstIdx)
-      if (srcIdx < src.size() && src[srcIdx] == dst[dstIdx])
-        srcIdx++;
-      else if (dst[dstIdx] == 1)
-        expandedUnitDims.push_back(dstIdx);
-      else
-        return false;
-    return srcIdx == src.size();
-  };
 
-  if (checkOnlyExpandUnitDims(srcShape, resShape)) {
+  if (xegpu::matchUnitDimExpansion(srcShape, resShape, expandedUnitDims)) {
     // create a slice layout for the source by removing the expanded unit dims
     auto sliceDimsAttr = DenseI64ArrayAttr::get(
         resLayout.getContext(), ArrayRef<int64_t>(expandedUnitDims));
@@ -321,42 +307,11 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
   // Maps each source dimension to the range of destination dimensions it splits
   // into
   SmallVector<SmallVector<int64_t>> splitDimGroups;
-
-  auto checkSplitDims = [&](ArrayRef<int64_t> src,
-                            ArrayRef<int64_t> dst) -> bool {
-    // each dim in src can be mapped to one or more dims in dst whose product
-    // equals to the src dim
-    size_t srcIdx = 0;
-    int64_t accumulatedSize = 1;
-    SmallVector<int64_t> currentDstDims;
-
-    splitDimGroups.clear();
-    for (size_t dstIdx = 0; dstIdx < dst.size(); ++dstIdx) {
-      if (srcIdx >= src.size())
-        return false;
-      accumulatedSize *= dst[dstIdx];
-      currentDstDims.push_back(dstIdx);
-
-      if (accumulatedSize == src[srcIdx]) {
-        // Record the mapping: srcIdx -> currentDstDims
-        splitDimGroups.push_back(currentDstDims);
-        // move to next src dim
-        srcIdx++;
-        accumulatedSize = 1;
-        currentDstDims.clear();
-      } else if (accumulatedSize > src[srcIdx]) {
-        return false;
-      }
-    }
-    return srcIdx == src.size();
-  };
-
-  if (checkSplitDims(srcShape, resShape)) {
+  if (xegpu::matchSplitDimExpansion(srcShape, resShape, splitDimGroups))
     return resLayout.collapseDims(splitDimGroups);
-  }
 
-  auto checkCombineToInnerMostDim = [&](ArrayRef<int64_t> src,
-                                        ArrayRef<int64_t> dst) -> bool {
+  auto matchCollapseToInnermostDim = [&](ArrayRef<int64_t> src,
+                                         ArrayRef<int64_t> dst) -> bool {
     // only one non-unit dim in dst which is the innermost dim
     if ((dst.size() != 2) && (dst.size() != 1))
       return false;
@@ -367,7 +322,7 @@ xegpu::inferShapeCastSourceLayout(xegpu::DistributeLayoutAttr resLayout,
     return (dst[0] == 1) && (dst[1] == srcSize);
   };
 
-  if (checkCombineToInnerMostDim(srcShape, resShape)) {
+  if (matchCollapseToInnermostDim(srcShape, resShape)) {
     int srcShapeSize = srcShape.size();
     int resShapeSize = resShape.size();
     auto context = resLayout.getContext();

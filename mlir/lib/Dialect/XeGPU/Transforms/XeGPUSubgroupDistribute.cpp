@@ -1533,8 +1533,9 @@ struct VectorBroadcastDistribution : public gpu::WarpDistributionPattern {
       }
       // case 2: source and result have same rank
       if (rankDiff == 0) {
-        SetVector<int64_t> broadcastUnitDims =
-            broadcastOp.computeBroadcastedUnitDims();
+        auto broadcastUnitDimsSet = broadcastOp.computeBroadcastedUnitDims();
+        SmallVector<int64_t> broadcastUnitDims(broadcastUnitDimsSet.begin(),
+                                               broadcastUnitDimsSet.end());
         bool isEqualTo = sourceLayout.isEqualTo(resultLayout);
         if (!isEqualTo)
           return rewriter.notifyMatchFailure(

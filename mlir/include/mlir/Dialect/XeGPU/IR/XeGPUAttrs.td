@@ -226,11 +226,11 @@ def DistributeLayoutAttr: AttrInterface<"DistributeLayoutAttr"> {
     InterfaceMethod<"Derive a new layout with sg_data, inst_data and lane_data set to 1 for the specified unit dims",
                     "xegpu::DistributeLayoutAttr",
                     "setUnitDimData",
-                    /*args=*/(ins "const llvm::SetVector<int64_t>": $unitDims)>,
+                    /*args=*/(ins "const SmallVector<int64_t>": $unitDims)>,
     InterfaceMethod<"Derive a new layout with sg_lane and lane_layout set to 1 for the specified unit dims",
                     "xegpu::DistributeLayoutAttr",
                     "setUnitDimLayout",
-                    /*args=*/(ins "const llvm::SetVector<int64_t>": $unitDims)>,
+                    /*args=*/(ins "const SmallVector<int64_t>": $unitDims)>,
     InterfaceMethod<[{Delinearizes a linear ID into its multidimensional
                       indices based on the effective layout level.}],
                     "FailureOr<SmallVector<Value>>",
@@ -516,10 +516,10 @@ def XeGPU_LayoutAttr : XeGPUAttr<"Layout", "layout", [DistributeLayoutAttr]> {
     }
 
     //set the layout for the sepcified unit dims: sg_data, inst_data and lane_data to 1
-    DistributeLayoutAttr setUnitDimData(SetVector<int64_t> unitDims) const;
+    DistributeLayoutAttr setUnitDimData(SmallVector<int64_t> unitDims) const;
 
     //set the layout for the sepcified unit dims: sg_lane and lane_layout to 1
-    DistributeLayoutAttr setUnitDimLayout(SetVector<int64_t> unitDims) const;
+    DistributeLayoutAttr setUnitDimLayout(SmallVector<int64_t> unitDims) const;
 
     // Derive a new layout with sg_data, inst_data and lane_data set to the 
     // specified values for the given dimension. Passing -1 for any parameter 
@@ -697,10 +697,10 @@ def XeGPU_SliceAttr : XeGPUAttr<"Slice", "slice", [DistributeLayoutAttr]> {
     }
 
     //set the layout for the sepcified unit dims: sg_data, inst_data and lane_data to 1
-    DistributeLayoutAttr setUnitDimData(SetVector<int64_t> unitDims) const;
+    DistributeLayoutAttr setUnitDimData(SmallVector<int64_t> unitDims) const;
 
     //set the layout for the sepcified unit dims: sg_lane and lane_layout to 1
-    DistributeLayoutAttr setUnitDimLayout(SetVector<int64_t> unitDims) const;
+    DistributeLayoutAttr setUnitDimLayout(SmallVector<int64_t> unitDims) const;
 
     // Derive a new layout with sg_data, inst_data and lane_data set to the 
     // specified values for the given dimension. Passing -1 for any parameter 

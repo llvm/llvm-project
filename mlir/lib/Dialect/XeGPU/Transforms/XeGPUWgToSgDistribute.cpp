@@ -1114,27 +1114,10 @@ struct WgToSgVectorShapeCastOp
       return failure();
 
     ArrayRef<int64_t> srcShape = srcType.getShape();
-    llvm::SetVector<int64_t> expandedUnitDims;
 
-    // Check if shapes only differ by expanding unit dimensions (like
-    // expand_dims)
-    auto checkOnlyExpandUnitDims = [&](ArrayRef<int64_t> src,
-                                       ArrayRef<int64_t> dst) -> bool {
-      // All unit dimensions in dst that don't appear in src are the expanded
-      // unit dimensions
-      size_t srcIdx = 0;
-      for (size_t dstIdx = 0; dstIdx < dst.size(); ++dstIdx)
-        if (srcIdx < src.size() && src[srcIdx] == dst[dstIdx])
-          srcIdx++;
-        else if (dst[dstIdx] == 1)
-          expandedUnitDims.insert(dstIdx);
-        else
-          return false;
-      return srcIdx == src.size();
-    };
     xegpu::DistributeLayoutAttr layoutToDistribute = layout;
-
-    if (checkOnlyExpandUnitDims(srcShape, wgShape)) {
+    SmallVector<int64_t> expandedUnitDims;
+    if (xegpu::matchUnitDimExpansion(srcShape, wgShape, expandedUnitDims)) {
       xegpu::DistributeLayoutAttr sourceLayout =
           xegpu::getTemporaryLayout(op->getOpOperand(0));
 

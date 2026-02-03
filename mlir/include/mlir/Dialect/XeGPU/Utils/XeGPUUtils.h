@@ -186,6 +186,15 @@ bool requirePacked(const LayoutAttr layout);
 /// Helper function to check if the layout requires a transpose effect.
 bool requireTranspose(const LayoutAttr layout, const uArch::uArch *uArch);
 
+// Check if dst shape is an expansion of src shape by inserting unit dimensions.
+bool matchUnitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
+                           SmallVector<int64_t> &expandedUnitDims);
+
+// Checks if dst shape is an expansion of src shape where each dimension in src
+// is split into one or more consecutive dimensions in dst
+bool matchSplitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
+                            SmallVector<SmallVector<int64_t>> &splitDimGroups);
+
 } // namespace xegpu
 
 } // namespace mlir

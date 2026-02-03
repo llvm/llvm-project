@@ -681,3 +681,58 @@ bool xegpu::requireTranspose(const xegpu::LayoutAttr layout,
     return false;
   return laneLayout[0] == uArch->getSubgroupSize() && laneLayout[1] == 1;
 }
+
+// Check if dst shape is an expansion of src shape by inserting unit dimensions.
+// Returns true if all dimensions in src match corresponding dimensions in dst
+// (after skipping unit dimensions), and populates expandedUnitDims with the
+// indices of the unit dimensions in dst that were added (not present in src).
+// Example: src=[2,3], dst=[1,2,3,1] -> true, expandedUnitDims=[0,3]
+bool xegpu::matchUnitDimExpansion(ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
+                                  SmallVector<int64_t> &expandedUnitDims) {
+  // All unit dimensions in dst that don't appear in src are the expanded
+  // unit dimensions
+  size_t srcIdx = 0;
+  for (size_t dstIdx = 0; dstIdx < dst.size(); ++dstIdx)
+    if (srcIdx < src.size() && src[srcIdx] == dst[dstIdx])
+      srcIdx++;
+    else if (dst[dstIdx] == 1)
+      expandedUnitDims.push_back(dstIdx);
+    else
+      return false;
+  return srcIdx == src.size();
+};
+
+// Checks if dst shape is an expansion of src shape where each dimension in src
+// is split into one or more consecutive dimensions in dst whose product equals
+// the original dimension. Populates splitDimGroups with groups of dst indices
+// that correspond to each src dimension. Example: src=[6,4], dst=[2,3,2,2] ->
+// true
+bool xegpu::matchSplitDimExpansion(
+    ArrayRef<int64_t> src, ArrayRef<int64_t> dst,
+    SmallVector<SmallVector<int64_t>> &splitDimGroups) {
+  // each dim in src can be mapped to one or more dims in dst whose product
+  // equals to the src dim
+  size_t srcIdx = 0;
+  int64_t accumulatedSize = 1;
+  SmallVector<int64_t> currentDstDims;
+
+  splitDimGroups.clear();
+  for (size_t dstIdx = 0; dstIdx < dst.size(); ++dstIdx) {
+    if (srcIdx >= src.size())
+      return false;
+    accumulatedSize *= dst[dstIdx];
+    currentDstDims.push_back(dstIdx);
+
+    if (accumulatedSize == src[srcIdx]) {
+      // Record the mapping: srcIdx -> currentDstDims
+      splitDimGroups.push_back(currentDstDims);
+      // move to next src dim
+      srcIdx++;
+      accumulatedSize = 1;
+      currentDstDims.clear();
+    } else if (accumulatedSize > src[srcIdx]) {
+      return false;
+    }
+  }
+  return srcIdx == src.size();
+};

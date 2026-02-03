@@ -398,7 +398,7 @@ bool LayoutAttr::isEqualTo(const xegpu::DistributeLayoutAttr &other) {
 
 // set the layout for unit dims: sg_data, inst_data and lane_data to 1
 DistributeLayoutAttr
-LayoutAttr::setUnitDimData(SetVector<int64_t> unitDims) const {
+LayoutAttr::setUnitDimData(SmallVector<int64_t> unitDims) const {
   auto sgDataOpt = getSgData();
   auto instDataOpt = getInstData();
   auto laneDataOpt = getLaneData();
@@ -439,7 +439,7 @@ LayoutAttr::setUnitDimData(SetVector<int64_t> unitDims) const {
 
 // set the layout for the sepcified unit dims: sg_lane and lane_layout to 1
 DistributeLayoutAttr
-LayoutAttr::setUnitDimLayout(SetVector<int64_t> unitDims) const {
+LayoutAttr::setUnitDimLayout(SmallVector<int64_t> unitDims) const {
   auto sgLayoutOpt = getSgLayout();
   auto laneLayoutOpt = getLaneLayout();
 
@@ -767,8 +767,8 @@ bool SliceAttr::isEqualTo(const xegpu::DistributeLayoutAttr &other) {
 // shape is of rank 2, if we want to set unit dim [0] in sliced space, it maps
 // to dim [0] in parent space; if we want to set unit dim [1] in sliced space,
 // it maps to dim [2] in parent space.
-static SetVector<int64_t>
-mapSlicedDimsToParentSpace(const SetVector<int64_t> &dimsToMap,
+static SmallVector<int64_t>
+mapSlicedDimsToParentSpace(const SmallVector<int64_t> &dimsToMap,
                            ArrayRef<int64_t> sliceDims) {
   // Rather than recovering the exact parent rank, we compute a safe upper bound
   // so that dimsToMap can be adjusted safely. This upper bound is defined as
@@ -791,10 +791,10 @@ mapSlicedDimsToParentSpace(const SetVector<int64_t> &dimsToMap,
   }
 
   // Map unit dims from sliced space to parent space
-  SetVector<int64_t> adjustUnitDims;
+  SmallVector<int64_t> adjustUnitDims;
   for (auto dim : dimsToMap) {
     int64_t mappedDim = remainingDims[dim];
-    adjustUnitDims.insert(mappedDim);
+    adjustUnitDims.push_back(mappedDim);
   }
 
   return adjustUnitDims;
@@ -802,12 +802,12 @@ mapSlicedDimsToParentSpace(const SetVector<int64_t> &dimsToMap,
 
 // set the layout for unit dims: sg_data, inst_data and lane_data to 1
 DistributeLayoutAttr
-SliceAttr::setUnitDimData(SetVector<int64_t> unitDims) const {
+SliceAttr::setUnitDimData(SmallVector<int64_t> unitDims) const {
   DistributeLayoutAttr parentLayout = getParent();
 
   ArrayRef<int64_t> sliceDims = getDims().asArrayRef();
 
-  SetVector<int64_t> adjustUnitDims =
+  SmallVector<int64_t> adjustUnitDims =
       mapSlicedDimsToParentSpace(unitDims, sliceDims);
 
   return SliceAttr::get(getContext(),
@@ -816,12 +816,12 @@ SliceAttr::setUnitDimData(SetVector<int64_t> unitDims) const {
 
 // set the layout for the sepcified unit dims: sg_lane and lane_layout to 1
 DistributeLayoutAttr
-SliceAttr::setUnitDimLayout(SetVector<int64_t> unitDims) const {
+SliceAttr::setUnitDimLayout(SmallVector<int64_t> unitDims) const {
   DistributeLayoutAttr parentLayout = getParent();
 
   ArrayRef<int64_t> sliceDims = getDims().asArrayRef();
 
-  SetVector<int64_t> adjustUnitDims =
+  SmallVector<int64_t> adjustUnitDims =
       mapSlicedDimsToParentSpace(unitDims, sliceDims);
 
   return SliceAttr::get(
@@ -835,10 +835,10 @@ DistributeLayoutAttr SliceAttr::setDimData(int64_t dim, int64_t sgData,
   ArrayRef<int64_t> sliceDims = getDims().asArrayRef();
   auto parent = dyn_cast<LayoutAttr>(getParent());
 
-  SetVector<int64_t> dimSet;
-  dimSet.insert(dim);
-  SetVector<int64_t> adjustDims = mapSlicedDimsToParentSpace(dimSet, sliceDims);
-
+  SmallVector<int64_t> dimSet;
+  dimSet.push_back(dim);
+  SmallVector<int64_t> adjustDims =
+      mapSlicedDimsToParentSpace(dimSet, sliceDims);
   return SliceAttr::get(
       getContext(),
       parent.setDimData(adjustDims[0], sgData, instData, laneData), getDims());
@@ -856,8 +856,8 @@ SliceAttr::collapseDims(SmallVector<SmallVector<int64_t>> dimGroups) const {
   // go through dimGroups and map each dim from sliced space to parent space
   SmallVector<SmallVector<int64_t>> adjustedDimGroups;
   for (const auto &group : dimGroups) {
-    SetVector<int64_t> groupSet(group.begin(), group.end());
-    SetVector<int64_t> mappedDims =
+    SmallVector<int64_t> groupSet(group.begin(), group.end());
+    SmallVector<int64_t> mappedDims =
         mapSlicedDimsToParentSpace(groupSet, sliceDims);
     adjustedDimGroups.push_back(
         SmallVector<int64_t>(mappedDims.begin(), mappedDims.end()));
