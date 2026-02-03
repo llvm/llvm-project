@@ -237,6 +237,7 @@ struct PragmaCommentHandler : public PragmaHandler {
 
 private:
   Sema &Actions;
+  bool SeenCopyrightInTU = false; // TU-scoped
 };
 
 struct PragmaDetectMismatchHandler : public PragmaHandler {
@@ -480,7 +481,8 @@ void Parser::initializePragmaHandlers() {
   PP.AddPragmaHandler(OpenACCHandler.get());
 
   if (getLangOpts().MicrosoftExt ||
-      getTargetInfo().getTriple().isOSBinFormatELF()) {
+      getTargetInfo().getTriple().isOSBinFormatELF() ||
+      getTargetInfo().getTriple().isOSAIX()) {
     MSCommentHandler = std::make_unique<PragmaCommentHandler>(Actions);
     PP.AddPragmaHandler(MSCommentHandler.get());
   }
@@ -607,7 +609,8 @@ void Parser::resetPragmaHandlers() {
   OpenACCHandler.reset();
 
   if (getLangOpts().MicrosoftExt ||
-      getTargetInfo().getTriple().isOSBinFormatELF()) {
+      getTargetInfo().getTriple().isOSBinFormatELF() ||
+      getTargetInfo().getTriple().isOSAIX()) {
     PP.RemovePragmaHandler(MSCommentHandler.get());
     MSCommentHandler.reset();
   }
@@ -3287,13 +3290,21 @@ void PragmaCommentHandler::HandlePragma(Preprocessor &PP,
   // Verify that this is one of the 5 explicitly listed options.
   IdentifierInfo *II = Tok.getIdentifierInfo();
   PragmaMSCommentKind Kind =
-    llvm::StringSwitch<PragmaMSCommentKind>(II->getName())
-    .Case("linker",   PCK_Linker)
-    .Case("lib",      PCK_Lib)
-    .Case("compiler", PCK_Compiler)
-    .Case("exestr",   PCK_ExeStr)
-    .Case("user",     PCK_User)
-    .Default(PCK_Unknown);
+      llvm::StringSwitch<PragmaMSCommentKind>(II->getName())
+          .Case("linker", PCK_Linker)
+          .Case("lib", PCK_Lib)
+          .Case("compiler", PCK_Compiler)
+          .Case("exestr", PCK_ExeStr)
+          .Case("user", PCK_User)
+          .Case("copyright", PCK_Copyright)
+          .Default(PCK_Unknown);
+
+  // Restrict copyright to AIX targets only. This could be applied for z/OS
+  // and extended with other IBM pragma comment kinds.
+  if (!PP.getTargetInfo().getTriple().isOSAIX() && Kind == PCK_Copyright) {
+    Kind = PCK_Unknown;
+  }
+
   if (Kind == PCK_Unknown) {
     PP.Diag(Tok.getLocation(), diag::err_pragma_comment_unknown_kind);
     return;
@@ -3303,6 +3314,18 @@ void PragmaCommentHandler::HandlePragma(Preprocessor &PP,
     PP.Diag(Tok.getLocation(), diag::warn_pragma_comment_ignored)
         << II->getName();
     return;
+  }
+
+  // On AIX, pragma comment copyright can each appear only once in a TU.
+  if (Kind == PCK_Copyright) {
+    assert(PP.getTargetInfo().getTriple().isOSAIX() &&
+           "Pragma Comment Copyright is supported only on AIX");
+    if (SeenCopyrightInTU) {
+      PP.Diag(Tok.getLocation(), diag::warn_pragma_comment_once)
+          << II->getName();
+      return;
+    }
+    SeenCopyrightInTU = true;
   }
 
   // Read the optional string if present.
@@ -3330,6 +3353,10 @@ void PragmaCommentHandler::HandlePragma(Preprocessor &PP,
     PP.Diag(Tok.getLocation(), diag::err_pragma_comment_malformed);
     return;
   }
+
+  // Accept and ignore well-formed copyright with empty string.
+  if (Kind == PCK_Copyright && ArgumentString.empty())
+    return;
 
   // If the pragma is lexically sound, notify any interested PPCallbacks.
   if (PP.getPPCallbacks())

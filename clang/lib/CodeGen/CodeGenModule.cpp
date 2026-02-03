@@ -1621,6 +1621,12 @@ void CodeGenModule::Release() {
 
   EmitBackendOptionsMetadata(getCodeGenOpts());
 
+  // Emit copyright metadata
+  if (LoadTimeComment) {
+    auto *NMD = getModule().getOrInsertNamedMetadata("comment_string.loadtime");
+    NMD->addOperand(LoadTimeComment);
+  }
+
   // If there is device offloading code embed it in the host now.
   EmbedObject(&getModule(), CodeGenOpts, *getFileSystem(), getDiags());
 
@@ -3512,6 +3518,31 @@ void CodeGenModule::AddDependentLib(StringRef Lib) {
   getTargetCodeGenInfo().getDependentLibraryOption(Lib, Opt);
   auto *MDOpts = llvm::MDString::get(getLLVMContext(), Opt);
   LinkerOptionsMetadata.push_back(llvm::MDNode::get(C, MDOpts));
+}
+
+/// Process AIX copyright pragma and create LLVM metadata.
+/// #pragma comment(copyright, "string") embed copyright
+/// information into the object file's loader section.
+///
+/// Example: #pragma comment(copyright, "Copyright IBM Corp. 2024")
+///
+/// This should only be called once per translation unit.
+void CodeGenModule::ProcessPragmaComment(PragmaMSCommentKind Kind,
+                                         StringRef Comment) {
+  // Ensure we are only processing Copyright Pragmas
+  assert(Kind == PCK_Copyright &&
+         "Unexpected pragma comment kind, ProcessPragmaComment should only be "
+         "called for PCK_Copyright");
+
+  // Only one copyright pragma allowed per translation unit
+  if (LoadTimeComment) {
+    return;
+  }
+
+  // Create llvm metadata with the comment string
+  auto &C = getLLVMContext();
+  llvm::Metadata *Ops[] = {llvm::MDString::get(C, Comment)};
+  LoadTimeComment = llvm::MDNode::get(C, Ops);
 }
 
 /// Add link options implied by the given module, including modules
@@ -7711,6 +7742,12 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
       break;
     case PCK_Lib:
         AddDependentLib(PCD->getArg());
+      break;
+    case PCK_Copyright:
+      // Skip pragmas deserialized from modules/PCHs. Process the pragma comment
+      // only if it originated in this TU and the target OS is AIX.
+      if (!PCD->isFromASTFile() && getTriple().isOSAIX())
+        ProcessPragmaComment(PCD->getCommentKind(), PCD->getArg());
       break;
     case PCK_Compiler:
     case PCK_ExeStr:
