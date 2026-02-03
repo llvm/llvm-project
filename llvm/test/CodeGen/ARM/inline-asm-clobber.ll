@@ -32,3 +32,28 @@ define i32 @bar(i32 %i) {
   %1 = load volatile i32, ptr %vla, align 4
   ret i32 %1
 }
+
+; r14 is an alias for lr.
+define void @clobber_r14() nounwind {
+; CHECK-LABEL: clobber_r14:
+; CHECK:       .save {r11, lr}
+; CHECK:       push {r11, lr}
+; CHECK-NEXT:  @APP
+; CHECK-NEXT:  @NO_APP
+; CHECK-NEXT:  pop {r11, lr}
+  tail call void asm sideeffect "", "~{r14}"()
+  ret void
+}
+
+; r14 is an alias for lr.
+define i32 @read_r14() nounwind {
+start:
+; CHECK-LABEL: read_r14:
+; CHECK:       push {r11, lr}
+; CHECK-NEXT:  @APP
+; CHECK-NEXT:  @NO_APP
+; CHECK-NEXT:  mov r0, lr
+; CHECK-NEXT:  pop {r11, lr}
+  %1 = tail call i32 asm sideeffect alignstack "", "=&{r14},~{cc},~{memory}"()
+  ret i32 %1
+}

@@ -91,6 +91,9 @@ Changes to the AMDGPU Backend
 Changes to the ARM Backend
 --------------------------
 
+* The `r14` register can now be used as an alias for the link register `lr`.
+  Clang always canonicalizes the name to `lr`, but other frontends may not.
+
 Changes to the AVR Backend
 --------------------------
 
