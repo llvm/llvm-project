@@ -1898,12 +1898,6 @@ static MachineInstr *canFoldAsPredicatedOp(Register Reg,
   return MI;
 }
 
-bool RISCVInstrInfo::analyzeSelect(const MachineInstr &MI) const {
-  assert(MI.getOpcode() == RISCV::PseudoCCMOVGPR &&
-         "Unknown select instruction");
-  return false;
-}
-
 MachineInstr *
 RISCVInstrInfo::optimizeSelect(MachineInstr &MI,
                                SmallPtrSetImpl<MachineInstr *> &SeenMIs,

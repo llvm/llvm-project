@@ -436,11 +436,6 @@ bool LanaiInstrInfo::optimizeCompareInstr(
   return false;
 }
 
-bool LanaiInstrInfo::analyzeSelect(const MachineInstr &MI) const {
-  assert(MI.getOpcode() == Lanai::SELECT && "unknown select instruction");
-  return false;
-}
-
 // Identify instructions that can be folded into a SELECT instruction, and
 // return the defining instruction.
 static MachineInstr *canFoldIntoSelect(Register Reg,

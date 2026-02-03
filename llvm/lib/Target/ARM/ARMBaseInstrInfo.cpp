@@ -2167,12 +2167,6 @@ ARMBaseInstrInfo::canFoldIntoMOVCC(Register Reg, const MachineRegisterInfo &MRI,
   return MI;
 }
 
-bool ARMBaseInstrInfo::analyzeSelect(const MachineInstr &MI) const {
-  assert((MI.getOpcode() == ARM::MOVCCr || MI.getOpcode() == ARM::t2MOVCCr) &&
-         "Unknown select instruction");
-  return false;
-}
-
 MachineInstr *
 ARMBaseInstrInfo::optimizeSelect(MachineInstr &MI,
                                  SmallPtrSetImpl<MachineInstr *> &SeenMIs,
