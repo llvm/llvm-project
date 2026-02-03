@@ -2182,6 +2182,34 @@ mlir::Speculation::Speculatability fir::EmboxOp::getSpeculatability() {
              : mlir::Speculation::Speculatable;
 }
 
+/// Helper to add allocation effect if EmboxOp or ReboxOp are not inside of a
+/// global initializer.
+/// This is used because both of these operations will alloca a temporary box
+/// on the stack during FIR to LLVM conversion unless they are in a global op.
+/// See `placeInMemoryIfNotGlobalInit`.
+static void allocateResultIfNotInGlobal(
+    mlir::Operation *op,
+    mlir::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  auto isInGlobalOp = [](mlir::Operation *op) -> bool {
+    return op->getParentOfType<fir::GlobalOp>();
+  };
+  // If it is not inside of a global op then it will allocate a new box
+  // temporary on the stack (see FIR to LLVM dialect conversion).
+  if (!isInGlobalOp(op))
+    effects.emplace_back(
+        mlir::MemoryEffects::Allocate::get(),
+        mlir::SideEffects::AutomaticAllocationScopeResource::get());
+}
+
+void fir::EmboxOp::getEffects(
+    mlir::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  allocateResultIfNotInGlobal(getOperation(), effects);
+}
+
 //===----------------------------------------------------------------------===//
 // EmboxCharOp
 //===----------------------------------------------------------------------===//
@@ -3046,6 +3074,13 @@ void fir::LoadOp::getEffects(
   effects.emplace_back(mlir::MemoryEffects::Read::get(), &getMemrefMutable(),
                        mlir::SideEffects::DefaultResource::get());
   addVolatileMemoryEffects({getMemref().getType()}, effects);
+
+  // Box loads create an implicit alloca when translating FIR to LLVM dialect.
+  if (fir::isa_box_type(getType())) {
+    effects.emplace_back(
+        mlir::MemoryEffects::Allocate::get(),
+        mlir::SideEffects::AutomaticAllocationScopeResource::get());
+  }
 }
 
 //===----------------------------------------------------------------------===//
@@ -3481,6 +3516,13 @@ std::optional<std::int64_t> fir::ReboxOp::getViewOffset(mlir::OpResult) {
 mlir::Speculation::Speculatability fir::ReboxOp::getSpeculatability() {
   return mayBeAbsentBox(getBox()) ? mlir::Speculation::NotSpeculatable
                                   : mlir::Speculation::Speculatable;
+}
+
+void fir::ReboxOp::getEffects(
+    mlir::SmallVectorImpl<
+        mlir::SideEffects::EffectInstance<mlir::MemoryEffects::Effect>>
+        &effects) {
+  allocateResultIfNotInGlobal(getOperation(), effects);
 }
 
 //===----------------------------------------------------------------------===//

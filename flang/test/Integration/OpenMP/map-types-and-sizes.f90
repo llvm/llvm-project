@@ -595,9 +595,11 @@ end subroutine mapType_common_block_members
 
 !CHECK-LABEL: define {{.*}} @{{.*}}maptype_alloca_derived_type_{{.*}}
 !CHECK: %{{.*}} = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, align 8
+!CHECK: %{{.*}} = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, align 8
 !CHECK: %[[DTYPE_DESC_ALLOCA:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, align 8
+!CHECK: %{{.*}} = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, align 8
+!CHECK: %[[DTYPE_DESC_COPY:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, align 8
 !CHECK: %[[DTYPE_ARRAY_MEMBER_DESC_ALLOCA:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, align 8
-!CHECK: %[[DTYPE_DESC_ALLOCA_2:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, align 8
 !CHECK: %[[DTYPE_DESC_ALLOCA_3:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, i64 1, align 8
 !CHECK: %{{.*}} = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %{{.*}}, i32 0, i32 0
 !CHECK: %{{.*}} = load ptr, ptr %{{.*}}, align 8
@@ -608,7 +610,8 @@ end subroutine mapType_common_block_members
 !CHECK: %[[ACCESS_DESC_MEMBER_UB:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[DTYPE_ARRAY_MEMBER_DESC_ALLOCA]], i32 0, i32 7, i64 0, i32 1
 !CHECK: %[[LOAD_DESC_MEMBER_UB:.*]] = load i64, ptr %[[ACCESS_DESC_MEMBER_UB]], align 8
 !CHECK: %[[OFFSET_MEMBER_UB:.*]] = sub i64 %[[LOAD_DESC_MEMBER_UB]], 1
-!CHECK: %[[DTYPE_BASE_ADDR_ACCESS:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[DTYPE_DESC_ALLOCA_2]], i32 0, i32 0
+!CHECK: call void @llvm.memcpy.p0.p0.i32(ptr %[[DTYPE_DESC_COPY]], ptr %{{.*}}, i32 40, i1 false)
+!CHECK: %[[DTYPE_BASE_ADDR_ACCESS:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[DTYPE_DESC_COPY]], i32 0, i32 0
 !CHECK: %[[DTYPE_BASE_ADDR_LOAD:.*]] = load ptr, ptr %[[DTYPE_BASE_ADDR_ACCESS]], align 8
 !CHECK: %[[DTYPE_ALLOCA_MEMBER_ACCESS:.*]] = getelementptr %_QFmaptype_alloca_derived_typeTone_layer, ptr %[[DTYPE_BASE_ADDR_LOAD]], i32 0, i32 4
 !CHECK: %[[DTYPE_ALLOCA_MEMBER_BASE_ADDR_ACCESS:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[DTYPE_ALLOCA_MEMBER_ACCESS]], i32 0, i32 0
@@ -683,14 +686,18 @@ end subroutine mapType_common_block_members
 
 !CHECK-LABEL: define {{.*}} @{{.*}}maptype_alloca_nested_derived_type{{.*}}
 !CHECK: %{{.*}} = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, align 8
+!CHECK: %{{.*}} = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, align 8
 !CHECK: %[[DTYPE_DESC_ALLOCA_1:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, align 8
+!CHECK: %{{.*}} = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, align 8
+!CHECK: %[[DTYPE_DESC_COPY_2:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, align 8
 !CHECK: %[[ALLOCATABLE_MEMBER_ALLOCA:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, align 8
-!CHECK: %[[DTYPE_DESC_ALLOCA_2:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, align 8
 !CHECK: %[[DTYPE_DESC_ALLOCA_3:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, i64 1, align 8
+
 !CHECK: %[[ALLOCATABLE_MEMBER_ALLOCA_UB:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[ALLOCATABLE_MEMBER_ALLOCA]], i32 0, i32 7, i64 0, i32 1
 !CHECK: %[[ALLOCATABLE_MEMBER_ALLOCA_UB_LOAD:.*]] = load i64, ptr %[[ALLOCATABLE_MEMBER_ALLOCA_UB]], align 8
 !CHECK: %[[ALLOCATABLE_MEMBER_SIZE_CALC_1:.*]] = sub i64 %[[ALLOCATABLE_MEMBER_ALLOCA_UB_LOAD]], 1
-!CHECK: %[[DTYPE_DESC_BASE_ADDR_ACCESS:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[DTYPE_DESC_ALLOCA_2]], i32 0, i32 0
+!CHECK: call void @llvm.memcpy.p0.p0.i32(ptr %[[DTYPE_DESC_COPY_2]], ptr %{{.*}}, i32 40, i1 false)
+!CHECK: %[[DTYPE_DESC_BASE_ADDR_ACCESS:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, ptr, [1 x i64] }, ptr %[[DTYPE_DESC_COPY_2]], i32 0, i32 0
 !CHECK: %[[DTYPE_DESC_BASE_ADDR_LOAD:.*]] = load ptr, ptr %[[DTYPE_DESC_BASE_ADDR_ACCESS]], align 8
 !CHECK: %[[NESTED_DTYPE_ACCESS:.*]] = getelementptr %_QFmaptype_alloca_nested_derived_typeTtop_layer, ptr %[[DTYPE_DESC_BASE_ADDR_LOAD]], i32 0, i32 6
 !CHECK: %[[MAPPED_MEMBER_ACCESS:.*]] = getelementptr %_QFmaptype_alloca_nested_derived_typeTmiddle_layer, ptr %[[NESTED_DTYPE_ACCESS]], i32 0, i32 2
@@ -808,7 +815,10 @@ end subroutine mapType_common_block_members
 
 !CHECK-LABEL: define {{.*}} @{{.*}}maptype_nested_derived_type_member_idx{{.*}}
 !CHECK: %[[ALLOCA_0:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, align 8
+!CHECK: %[[OFF_PTR_DESC:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, align 8
 !CHECK: %[[ALLOCA_1:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, align 8
+!CHECK: %[[ALLOCA_UNUSED1:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, align 8
+!CHECK: %[[ALLOCA_UNUSED2:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, align 8
 !CHECK: %[[ALLOCA:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, align 8
 !CHECK: %[[BASE_PTR_1:.*]] = alloca %_QFmaptype_nested_derived_type_member_idxTdtype, i64 1, align 8
 !CHECK: %[[OFF_PTR_1:.*]] = getelementptr %_QFmaptype_nested_derived_type_member_idxTdtype, ptr %[[BASE_PTR_1]], i32 0, i32 1
@@ -817,7 +827,10 @@ end subroutine mapType_common_block_members
 !CHECK: %[[BOUNDS_ACC_2:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, ptr %[[ALLOCA_1]], i32 0, i32 7, i64 0, i32 1
 !CHECK: %[[BOUNDS_LD_2:.*]] = load i64, ptr %[[BOUNDS_ACC_2]], align 8
 !CHECK: %[[BOUNDS_CALC:.*]] = sub i64 %[[BOUNDS_LD_2]], 1
-!CHECK: %[[OFF_PTR_CALC_0:.*]] = sub i64 %[[BOUNDS_LD]], 1
+!CHECK: call void @llvm.memcpy.p0.p0.i32(ptr %[[OFF_PTR_DESC]], ptr %{{.*}}, i32 64, i1 false)
+!CHECK: %[[OFF_PTR_SRC_GEP:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %[[OFF_PTR_DESC]], i32 0, i32 7, i64 0, i32 1
+!CHECK: %[[OFF_PTR_SRC:.*]] = load i64, ptr %[[OFF_PTR_SRC_GEP]], align 8
+!CHECK: %[[OFF_PTR_CALC_0:.*]] = sub i64 %[[OFF_PTR_SRC]], 1
 !CHECK: %[[OFF_PTR_2:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %[[OFF_PTR_1]], i32 0, i32 0
 !CHECK: %[[GEP_LB:.*]] = getelementptr { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]], ptr, [1 x i64] }, ptr %[[ALLOCA_0]], i32 0, i32 7, i64 0, i32 0
 !CHECK: %[[LOAD_LB:.*]] = load i64, ptr %[[GEP_LB]], align 8

@@ -874,7 +874,8 @@ subroutine charDyn()
 end subroutine
 
 ! CHECK: %[[BOX_ELESIZE:.*]] = fir.box_elesize %{{.*}} : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>) -> index
-! CHECK: %[[CHRTMP:.*]] = fir.alloca !fir.char<1,?>(%[[BOX_ELESIZE]] : index) {bindc_name = ".chrtmp"}
+! CHECK: %[[BOX_ELESIZE_2:.*]] = fir.box_elesize %{{.*}} : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>) -> index
+! CHECK: %[[CHRTMP:.*]] = fir.alloca !fir.char<1,?>(%[[BOX_ELESIZE_2]] : index) {bindc_name = ".chrtmp"}
 ! CHECK: %[[RESULT:.*]] = fir.convert %[[CHRTMP]] : (!fir.ref<!fir.char<1,?>>) -> !fir.ref<i8>
 ! CHECK: fir.call @_FortranAReduceChar1(%[[RESULT]], {{.*}})
 

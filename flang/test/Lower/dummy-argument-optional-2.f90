@@ -40,9 +40,10 @@ subroutine pass_pointer_scalar(i)
   integer, pointer :: i
   call takes_opt_scalar(i)
 ! CHECK:         %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
-! CHECK:         %[[VAL_2:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
-! CHECK:         %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.ptr<i32>) -> !fir.ref<i32>
-! CHECK:         fir.call @_QPtakes_opt_scalar(%[[VAL_3]]) {{.*}}: (!fir.ref<i32>) -> ()
+! CHECK:         %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
+! CHECK:         %[[VAL_3:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<!fir.ptr<i32>>) -> !fir.ptr<i32>
+! CHECK:         %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ptr<i32>) -> !fir.ref<i32>
+! CHECK:         fir.call @_QPtakes_opt_scalar(%[[VAL_4]]) {{.*}}: (!fir.ref<i32>) -> ()
 end subroutine
 
 ! CHECK-LABEL: func @_QMoptional_testsPpass_allocatable_scalar(
@@ -51,9 +52,10 @@ subroutine pass_allocatable_scalar(i)
   integer, allocatable :: i
   call takes_opt_scalar(i)
 ! CHECK:         %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<i32>>>
-! CHECK:         %[[VAL_2:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
-! CHECK:         %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.heap<i32>) -> !fir.ref<i32>
-! CHECK:         fir.call @_QPtakes_opt_scalar(%[[VAL_3]]) {{.*}}: (!fir.ref<i32>) -> ()
+! CHECK:         %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<i32>>>
+! CHECK:         %[[VAL_3:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<!fir.heap<i32>>) -> !fir.heap<i32>
+! CHECK:         %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.heap<i32>) -> !fir.ref<i32>
+! CHECK:         fir.call @_QPtakes_opt_scalar(%[[VAL_4]]) {{.*}}: (!fir.ref<i32>) -> ()
 end subroutine
 
 ! CHECK-LABEL: func @_QMoptional_testsPpass_pointer_scalar_char(
@@ -62,10 +64,11 @@ subroutine pass_pointer_scalar_char(c)
   character(:), pointer :: c
   call takes_opt_scalar_char(c)
 ! CHECK:         %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>
-! CHECK:         %[[VAL_2:.*]] = fir.box_elesize %[[VAL_1]] : (!fir.box<!fir.ptr<!fir.char<1,?>>>) -> index
-! CHECK:         %[[VAL_3:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.ptr<!fir.char<1,?>>>) -> !fir.ptr<!fir.char<1,?>>
-! CHECK:         %[[VAL_5:.*]] = fir.emboxchar %[[VAL_3]], %[[VAL_2]] : (!fir.ptr<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-! CHECK:         fir.call @_QPtakes_opt_scalar_char(%[[VAL_5]]) {{.*}}: (!fir.boxchar<1>) -> ()
+! CHECK:         %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.char<1,?>>>>
+! CHECK:         %[[VAL_3:.*]] = fir.box_elesize %[[VAL_2]] : (!fir.box<!fir.ptr<!fir.char<1,?>>>) -> index
+! CHECK:         %[[VAL_4:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<!fir.ptr<!fir.char<1,?>>>) -> !fir.ptr<!fir.char<1,?>>
+! CHECK:         %[[VAL_6:.*]] = fir.emboxchar %[[VAL_4]], %[[VAL_3]] : (!fir.ptr<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+! CHECK:         fir.call @_QPtakes_opt_scalar_char(%[[VAL_6]]) {{.*}}: (!fir.boxchar<1>) -> ()
 end subroutine
 
 ! CHECK-LABEL: func @_QMoptional_testsPpass_allocatable_scalar_char(
@@ -74,10 +77,11 @@ subroutine pass_allocatable_scalar_char(c)
   character(:), allocatable :: c
   call takes_opt_scalar_char(c)
 ! CHECK:         %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
-! CHECK:         %[[VAL_2:.*]] = fir.box_elesize %[[VAL_1]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> index
-! CHECK:         %[[VAL_3:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> !fir.heap<!fir.char<1,?>>
-! CHECK:         %[[VAL_5:.*]] = fir.emboxchar %[[VAL_3]], %[[VAL_2]] : (!fir.heap<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-! CHECK:         fir.call @_QPtakes_opt_scalar_char(%[[VAL_5]]) {{.*}}: (!fir.boxchar<1>) -> ()
+! CHECK:         %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.char<1,?>>>>
+! CHECK:         %[[VAL_3:.*]] = fir.box_elesize %[[VAL_2]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> index
+! CHECK:         %[[VAL_4:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<!fir.heap<!fir.char<1,?>>>) -> !fir.heap<!fir.char<1,?>>
+! CHECK:         %[[VAL_6:.*]] = fir.emboxchar %[[VAL_4]], %[[VAL_3]] : (!fir.heap<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+! CHECK:         fir.call @_QPtakes_opt_scalar_char(%[[VAL_6]]) {{.*}}: (!fir.boxchar<1>) -> ()
 end subroutine
 
 ! -----------------------------------------------------------------------------
@@ -322,9 +326,10 @@ subroutine pass_allocatable_array(i)
   real, allocatable :: i(:)
   call takes_opt_explicit_shape(i)
 ! CHECK:         %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
-! CHECK:         %[[VAL_2:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
-! CHECK:         %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.heap<!fir.array<?xf32>>) -> !fir.ref<!fir.array<100xf32>>
-! CHECK:         fir.call @_QPtakes_opt_explicit_shape(%[[VAL_3]]) {{.*}}: (!fir.ref<!fir.array<100xf32>>) -> ()
+! CHECK:         %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?xf32>>>>
+! CHECK:         %[[VAL_3:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<!fir.heap<!fir.array<?xf32>>>) -> !fir.heap<!fir.array<?xf32>>
+! CHECK:         %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.heap<!fir.array<?xf32>>) -> !fir.ref<!fir.array<100xf32>>
+! CHECK:         fir.call @_QPtakes_opt_explicit_shape(%[[VAL_4]]) {{.*}}: (!fir.ref<!fir.array<100xf32>>) -> ()
 end subroutine
 
 ! CHECK-LABEL: func @_QMoptional_testsPpass_allocatable_array_char(
@@ -333,11 +338,12 @@ subroutine pass_allocatable_array_char(c)
   character(:), allocatable :: c(:)
   call takes_opt_explicit_shape_char(c)
 ! CHECK:         %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
-! CHECK:         %[[VAL_2:.*]] = fir.box_elesize %[[VAL_1]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>) -> index
-! CHECK:         %[[VAL_3:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>) -> !fir.heap<!fir.array<?x!fir.char<1,?>>>
-! CHECK:         %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.heap<!fir.array<?x!fir.char<1,?>>>) -> !fir.ref<!fir.char<1,?>>
-! CHECK:         %[[VAL_5:.*]] = fir.emboxchar %[[VAL_4]], %[[VAL_2]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-! CHECK:         fir.call @_QPtakes_opt_explicit_shape_char(%[[VAL_5]]) {{.*}}: (!fir.boxchar<1>) -> ()
+! CHECK:         %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>>
+! CHECK:         %[[VAL_3:.*]] = fir.box_elesize %[[VAL_2]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>) -> index
+! CHECK:         %[[VAL_4:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<!fir.heap<!fir.array<?x!fir.char<1,?>>>>) -> !fir.heap<!fir.array<?x!fir.char<1,?>>>
+! CHECK:         %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (!fir.heap<!fir.array<?x!fir.char<1,?>>>) -> !fir.ref<!fir.char<1,?>>
+! CHECK:         %[[VAL_6:.*]] = fir.emboxchar %[[VAL_5]], %[[VAL_3]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+! CHECK:         fir.call @_QPtakes_opt_explicit_shape_char(%[[VAL_6]]) {{.*}}: (!fir.boxchar<1>) -> ()
 end subroutine
 
 ! CHECK-LABEL: func @_QMoptional_testsPpass_contiguous_pointer_array(
@@ -346,9 +352,10 @@ subroutine pass_contiguous_pointer_array(i)
   real, pointer, contiguous :: i(:)
   call takes_opt_explicit_shape(i)
 ! CHECK:         %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
-! CHECK:         %[[VAL_2:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.ptr<!fir.array<?xf32>>
-! CHECK:         %[[VAL_3:.*]] = fir.convert %[[VAL_2]] : (!fir.ptr<!fir.array<?xf32>>) -> !fir.ref<!fir.array<100xf32>>
-! CHECK:         fir.call @_QPtakes_opt_explicit_shape(%[[VAL_3]]) {{.*}}: (!fir.ref<!fir.array<100xf32>>) -> ()
+! CHECK:         %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?xf32>>>>
+! CHECK:         %[[VAL_3:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<!fir.ptr<!fir.array<?xf32>>>) -> !fir.ptr<!fir.array<?xf32>>
+! CHECK:         %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ptr<!fir.array<?xf32>>) -> !fir.ref<!fir.array<100xf32>>
+! CHECK:         fir.call @_QPtakes_opt_explicit_shape(%[[VAL_4]]) {{.*}}: (!fir.ref<!fir.array<100xf32>>) -> ()
 end subroutine
 
 ! CHECK-LABEL: func @_QMoptional_testsPpass_contiguous_pointer_array_char(
@@ -357,11 +364,12 @@ subroutine pass_contiguous_pointer_array_char(c)
   character(:), pointer, contiguous :: c(:)
   call takes_opt_explicit_shape_char(c)
 ! CHECK:         %[[VAL_1:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>
-! CHECK:         %[[VAL_2:.*]] = fir.box_elesize %[[VAL_1]] : (!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>) -> index
-! CHECK:         %[[VAL_3:.*]] = fir.box_addr %[[VAL_1]] : (!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>) -> !fir.ptr<!fir.array<?x!fir.char<1,?>>>
-! CHECK:         %[[VAL_4:.*]] = fir.convert %[[VAL_3]] : (!fir.ptr<!fir.array<?x!fir.char<1,?>>>) -> !fir.ref<!fir.char<1,?>>
-! CHECK:         %[[VAL_5:.*]] = fir.emboxchar %[[VAL_4]], %[[VAL_2]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
-! CHECK:         fir.call @_QPtakes_opt_explicit_shape_char(%[[VAL_5]]) {{.*}}: (!fir.boxchar<1>) -> ()
+! CHECK:         %[[VAL_2:.*]] = fir.load %[[VAL_0]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>>
+! CHECK:         %[[VAL_3:.*]] = fir.box_elesize %[[VAL_2]] : (!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>) -> index
+! CHECK:         %[[VAL_4:.*]] = fir.box_addr %[[VAL_2]] : (!fir.box<!fir.ptr<!fir.array<?x!fir.char<1,?>>>>) -> !fir.ptr<!fir.array<?x!fir.char<1,?>>>
+! CHECK:         %[[VAL_5:.*]] = fir.convert %[[VAL_4]] : (!fir.ptr<!fir.array<?x!fir.char<1,?>>>) -> !fir.ref<!fir.char<1,?>>
+! CHECK:         %[[VAL_6:.*]] = fir.emboxchar %[[VAL_5]], %[[VAL_3]] : (!fir.ref<!fir.char<1,?>>, index) -> !fir.boxchar<1>
+! CHECK:         fir.call @_QPtakes_opt_explicit_shape_char(%[[VAL_6]]) {{.*}}: (!fir.boxchar<1>) -> ()
 end subroutine
 
 ! -----------------------------------------------------------------------------

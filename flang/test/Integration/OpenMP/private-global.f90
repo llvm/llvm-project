@@ -24,6 +24,7 @@ End Program
 ! CHECK:         %[[PRIV_BOX_ALLOC:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, align 8
 ! CHECK:         %[[ELEMENTAL_TMP:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, align 8
 ! CHECK:         %[[ELEMENTAL_TMP_2:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, align 8
+! CHECK:         %[[TABLE_BOX_ADDR_INIT:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, align 8
 ! CHECK:         %[[TABLE_BOX_ADDR:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8, [1 x [3 x i64]] }, align 8
 ! CHECK:         %[[BOXED_FIFTY:.*]] = alloca { ptr, i64, i32, i8, i8, i8, i8 }, align 8
 ! CHECK:         %[[FIFTY:.*]] = alloca i32, i64 1, align 4

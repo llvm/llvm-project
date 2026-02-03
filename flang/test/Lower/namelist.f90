@@ -54,11 +54,13 @@ program p
   ccc(4) = "zz "
   ! CHECK:     %[[V_58:[0-9]+]] = fir.call @_FortranAioBeginExternalListOutput
   ! CHECK:     %[[V_59:[0-9]+]] = fir.alloca !fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>
-  ! CHECK:     fir.store %[[V_29]] to %[[V_2]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
+  ! CHECK:     %[[V_29_2:[0-9]+]] = fir.embox %[[V_9]] : (!fir.ref<i32>) -> !fir.box<!fir.ptr<i32>>
+  ! CHECK:     fir.store %[[V_29_2]] to %[[V_2]] : !fir.ref<!fir.box<!fir.ptr<i32>>>
   ! CHECK:     %[[V_60:[0-9]+]] = fir.convert %[[V_2]] : (!fir.ref<!fir.box<!fir.ptr<i32>>>) -> !fir.ref<!fir.box<none>>
   ! CHECK:     %[[V_61:[0-9]+]] = fir.insert_value %[[V_28]], %[[V_60]], [0 : index, 1 : index] : (!fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>, !fir.ref<!fir.box<none>>) -> !fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>
   ! CHECK:     %[[V_62:[0-9]+]] = fir.insert_value %[[V_61]], %[[V_33]], [1 : index, 0 : index] : (!fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>, !fir.ref<i8>) -> !fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>
-  ! CHECK:     fir.store %[[V_35]] to %[[V_1]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<4x!fir.char<1,3>>>>>
+  ! CHECK:     %[[V_35_2:[0-9]+]] = fir.embox %[[V_7]](%[[V_6]]) : (!fir.ref<!fir.array<4x!fir.char<1,3>>>, !fir.shape<1>) -> !fir.box<!fir.ptr<!fir.array<4x!fir.char<1,3>>>>
+  ! CHECK:     fir.store %[[V_35_2]] to %[[V_1]] : !fir.ref<!fir.box<!fir.ptr<!fir.array<4x!fir.char<1,3>>>>>
   ! CHECK:     %[[V_63:[0-9]+]] = fir.convert %[[V_1]] : (!fir.ref<!fir.box<!fir.ptr<!fir.array<4x!fir.char<1,3>>>>>) -> !fir.ref<!fir.box<none>>
   ! CHECK:     %[[V_64:[0-9]+]] = fir.insert_value %[[V_62]], %[[V_63]], [1 : index, 1 : index] : (!fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>, !fir.ref<!fir.box<none>>) -> !fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>
   ! CHECK:     fir.store %[[V_64]] to %[[V_59]] : !fir.ref<!fir.array<2xtuple<!fir.ref<i8>, !fir.ref<!fir.box<none>>>>>

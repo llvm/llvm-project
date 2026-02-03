@@ -38,7 +38,9 @@ end subroutine
 ! CHECK:  %[[VAL_23:.*]] = arith.cmpi eq, %[[VAL_2]], %[[VAL_22]] : i1
 ! CHECK:  %[[VAL_24:.*]] = fir.shape %[[VAL_21]]#1 : (index) -> !fir.shape<1>
 ! CHECK:  %[[VAL_25:.*]] = fir.embox %[[VAL_3]](%[[VAL_24]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
-! CHECK:  fir.call @_QPtakes_contiguous(%[[VAL_25]]) {{.*}}: (!fir.box<!fir.array<?xf32>>) -> ()
+! CHECK:  %[[VAL_26:.*]] = fir.shape %[[VAL_21]]#1 : (index) -> !fir.shape<1>
+! CHECK:  %[[VAL_27:.*]] = fir.embox %[[VAL_3]](%[[VAL_26]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
+! CHECK:  fir.call @_QPtakes_contiguous(%[[VAL_27]]) {{.*}}: (!fir.box<!fir.array<?xf32>>) -> ()
 ! CHECK:  fir.if %[[VAL_23]] {
 ! CHECK:    fir.call @_FortranACopyOutAssign
 ! CHECK:  }
@@ -82,7 +84,9 @@ end subroutine
 ! CHECK:  %[[VAL_23:.*]] = arith.cmpi eq, %[[VAL_2]], %[[VAL_22]] : i1
 ! CHECK:  %[[VAL_24:.*]] = fir.shape %[[VAL_21]]#1 : (index) -> !fir.shape<1>
 ! CHECK:  %[[VAL_25:.*]] = fir.embox %[[VAL_3]](%[[VAL_24]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
-! CHECK:  fir.call @_QPtakes_contiguous(%[[VAL_25]]) {{.*}}: (!fir.box<!fir.array<?xf32>>) -> ()
+! CHECK:  %[[VAL_26:.*]] = fir.shape %[[VAL_21]]#1 : (index) -> !fir.shape<1>
+! CHECK:  %[[VAL_27:.*]] = fir.embox %[[VAL_3]](%[[VAL_26]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
+! CHECK:  fir.call @_QPtakes_contiguous(%[[VAL_27]]) {{.*}}: (!fir.box<!fir.array<?xf32>>) -> ()
 ! CHECK:  fir.if %[[VAL_23]] {
 ! CHECK:    fir.call @_FortranACopyOutAssign
 ! CHECK:  }
@@ -127,7 +131,9 @@ end subroutine
 ! CHECK:  %[[VAL_23:.*]] = arith.cmpi eq, %[[VAL_2]], %[[VAL_22]] : i1
 ! CHECK:  %[[VAL_24:.*]] = fir.shape %[[VAL_21]]#1 : (index) -> !fir.shape<1>
 ! CHECK:  %[[VAL_25:.*]] = fir.embox %[[VAL_3]](%[[VAL_24]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
-! CHECK:  fir.call @_QPtakes_contiguous_optional(%[[VAL_25]]) {{.*}}: (!fir.box<!fir.array<?xf32>>) -> ()
+! CHECK:  %[[VAL_26:.*]] = fir.shape %[[VAL_21]]#1 : (index) -> !fir.shape<1>
+! CHECK:  %[[VAL_27:.*]] = fir.embox %[[VAL_3]](%[[VAL_26]]) : (!fir.heap<!fir.array<?xf32>>, !fir.shape<1>) -> !fir.box<!fir.array<?xf32>>
+! CHECK:  fir.call @_QPtakes_contiguous_optional(%[[VAL_27]]) {{.*}}: (!fir.box<!fir.array<?xf32>>) -> ()
 ! CHECK:  fir.if %[[VAL_23]] {
 ! CHECK:    fir.call @_FortranACopyOutAssign
 ! CHECK:  }
