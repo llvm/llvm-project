@@ -8,7 +8,9 @@
 
 #include "BoolBitwiseOperationCheck.h"
 #include "clang/AST/DynamicRecursiveASTVisitor.h"
+#include "clang/AST/Expr.h"
 #include "clang/ASTMatchers/ASTMatchFinder.h"
+#include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/Support/Casting.h"
 #include <array>
@@ -158,21 +160,40 @@ void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
   // Case 3: &= with RHS || → parens needed around RHS
   //         e.g., a &= b || c → a = a && (b || c)
 
+  // This matcher doesn't handle `ImplicitCastExpr` inside `ParenExpr` because
+  // Clang's AST construction makes this case impossible:
+  // - `ParenExpr` is syntactic (created during parsing)
+  // - `ImplicitCastExpr` is semantic (added during Sema phase)
+  // According to the Clang CFE Internals Manual, syntactic structure
+  // (`ParenExpr`) is established before semantic transformations
+  // (`ImplicitCastExpr`).
+  auto NotAlreadyInParenExpr =
+      traverse(TK_AsIs, unless(hasParent(parenExpr())));
+  // Reference:
+  // - "Faithfulness" design principle and AST layering
+  // - "How to add an expression or statement" the order of establishing AST
+  // nodes.
+  // https://clang.llvm.org/docs/InternalsManual.html#faithfulness
+  // https://clang.llvm.org/docs/InternalsManual.html#how-to-add-an-expression-or-statement
+
   // Case 1: | with && parent
   auto ParensCase1 = allOf(
-      hasOperatorName("|"),
-      hasParent(binaryOperator(hasOperatorName("&&")).bind("parensParent")));
+      hasOperatorName("|"), NotAlreadyInParenExpr,
+      binaryOperator().bind("parensExpr"),
+      hasParent(binaryOperator(hasOperatorName("&&"))));
 
   // Case 2: & with ^ or | parent
   auto ParensCase2 = allOf(
-      hasOperatorName("&"),
+      hasOperatorName("&"), NotAlreadyInParenExpr,
+      binaryOperator().bind("parensExpr"),
       hasParent(
-          binaryOperator(hasAnyOperatorName("^", "|")).bind("parensParent")));
+          binaryOperator(hasAnyOperatorName("^", "|"))));
 
   // Case 3: &= with || RHS
-  auto ParensCase3 =
-      allOf(hasOperatorName("&="),
-            hasRHS(binaryOperator(hasOperatorName("||")).bind("parensExpr")));
+  auto ParensCase3 = allOf(
+      hasOperatorName("&="),
+      hasRHS(allOf(binaryOperator(hasOperatorName("||")).bind("parensExpr"),
+                   NotAlreadyInParenExpr)));
 
   auto BaseMatcher = binaryOperator(
       hasAnyOperatorName("|", "&", "|=", "&="), hasLHS(BooleanLeaves),
@@ -268,68 +289,17 @@ void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
                 << InsertBrace2;
 }
 
-/// Checks if an expression is already wrapped in a ParenExpr in the source.
-static bool isAlreadyInParenExpr(const Expr *E, ASTContext &Ctx) {
-  TraversalKindScope RAII(Ctx, TK_AsIs);
-  const Expr *Current = E;
-  while (Current) {
-    const DynTypedNodeList Parents = Ctx.getParents(*Current);
-    if (Parents.empty())
-      break;
-
-    for (const DynTypedNode &Parent : Parents) {
-      // If we find a ParenExpr, the expression is already parenthesized
-      if (Parent.get<ParenExpr>())
-        return true;
-      // Skip ImplicitCastExpr, FullExpr, and MaterializeTemporaryExpr
-      if (const auto *Cast = Parent.get<ImplicitCastExpr>()) {
-        Current = Cast;
-        break;
-      }
-      if (const auto *Full = Parent.get<FullExpr>()) {
-        Current = Full;
-        break;
-      }
-      if (const auto *Materialize = Parent.get<MaterializeTemporaryExpr>()) {
-        Current = Materialize;
-        break;
-      }
-      // If we hit something else (like a BinaryOperator), stop searching
-      return false;
-    }
-  }
-  return false;
-}
-
 void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *BinOp = Result.Nodes.getNodeAs<BinaryOperator>("binOp");
   const auto *FixItBinOp = Result.Nodes.getNodeAs<BinaryOperator>("fixit");
+  const auto *ParensExpr = Result.Nodes.getNodeAs<Expr>("parensExpr");
   assert(BinOp);
-
-  // Determine if parentheses are needed and around which expression.
-  // - parensParent bound → cases 1 & 2: parens around BinOp itself
-  // - parensExpr bound → case 3: parens around the bound RHS expression
-  const auto *ParensParent =
-      Result.Nodes.getNodeAs<BinaryOperator>("parensParent");
-  const auto *ParensExprRHS = Result.Nodes.getNodeAs<Expr>("parensExpr");
-
-  const Expr *PE = nullptr;
-  if (ParensParent) {
-    // Cases 1 & 2: parens around BinOp (| or &)
-    PE = BinOp;
-  } else if (ParensExprRHS) {
-    // Case 3: parens around RHS (||)
-    PE = ParensExprRHS;
-  }
 
   const SourceManager &SM = *Result.SourceManager;
   ASTContext &Ctx = *Result.Context;
 
-  if (PE && isAlreadyInParenExpr(PE, Ctx))
-    PE = nullptr;
-
   const bool CanApplyFixIt = (FixItBinOp != nullptr && FixItBinOp == BinOp);
-  emitWarningAndChangeOperatorsIfPossible(BinOp, PE, SM, Ctx, CanApplyFixIt);
+  emitWarningAndChangeOperatorsIfPossible(BinOp, ParensExpr, SM, Ctx, CanApplyFixIt);
 }
 
 } // namespace clang::tidy::misc
