@@ -2498,8 +2498,8 @@ Instruction *InstCombinerImpl::foldVectorBinop(BinaryOperator &Inst) {
                                 PoisonValue::get(X->getType()), Offset});
   };
   auto m_SpliceReverse = [](auto V, auto Offset) {
-    return m_Intrinsic<Intrinsic::vector_splice_right>(m_OneUse(m_VecReverse(V)),
-                                                      m_Poison(), Offset);
+    return m_Intrinsic<Intrinsic::vector_splice_right>(
+        m_OneUse(m_VecReverse(V)), m_Poison(), Offset);
   };
   Value *Offset;
   if (match(LHS, m_SpliceReverse(m_Value(V1), m_Value(Offset)))) {
