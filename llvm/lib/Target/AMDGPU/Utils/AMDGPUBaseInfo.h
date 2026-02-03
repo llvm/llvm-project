@@ -1128,40 +1128,66 @@ struct Waitcnt {
   unsigned VmVsrc = ~0u;    // gfx12+ expert scheduling mode only.
 
   unsigned get(InstCounterType T) const {
-    // clang-format off
     switch (T) {
-    case LOAD_CNT:   return LoadCnt;
-    case EXP_CNT:    return ExpCnt;
-    case DS_CNT:     return DsCnt;
-    case STORE_CNT:  return StoreCnt;
-    case SAMPLE_CNT: return SampleCnt;
-    case BVH_CNT:    return BvhCnt;
-    case KM_CNT:     return KmCnt;
-    case X_CNT:      return XCnt;
-    case VA_VDST:    return VaVdst;
-    case VM_VSRC:    return VmVsrc;
+    case LOAD_CNT:
+      return LoadCnt;
+    case EXP_CNT:
+      return ExpCnt;
+    case DS_CNT:
+      return DsCnt;
+    case STORE_CNT:
+      return StoreCnt;
+    case SAMPLE_CNT:
+      return SampleCnt;
+    case BVH_CNT:
+      return BvhCnt;
+    case KM_CNT:
+      return KmCnt;
+    case X_CNT:
+      return XCnt;
+    case VA_VDST:
+      return VaVdst;
+    case VM_VSRC:
+      return VmVsrc;
     default:
       llvm_unreachable("bad InstCounterType");
     }
-    // clang-format on
   }
   void set(InstCounterType T, unsigned Val) {
-    // clang-format off
     switch (T) {
-    case LOAD_CNT:   LoadCnt = Val;   break;
-    case EXP_CNT:    ExpCnt = Val;    break;
-    case DS_CNT:     DsCnt = Val;     break;
-    case STORE_CNT:  StoreCnt = Val;  break;
-    case SAMPLE_CNT: SampleCnt = Val; break;
-    case BVH_CNT:    BvhCnt = Val;    break;
-    case KM_CNT:     KmCnt = Val;     break;
-    case X_CNT:      XCnt = Val;      break;
-    case VA_VDST:    VaVdst = Val;    break;
-    case VM_VSRC:    VmVsrc = Val;    break;
+    case LOAD_CNT:
+      LoadCnt = Val;
+      break;
+    case EXP_CNT:
+      ExpCnt = Val;
+      break;
+    case DS_CNT:
+      DsCnt = Val;
+      break;
+    case STORE_CNT:
+      StoreCnt = Val;
+      break;
+    case SAMPLE_CNT:
+      SampleCnt = Val;
+      break;
+    case BVH_CNT:
+      BvhCnt = Val;
+      break;
+    case KM_CNT:
+      KmCnt = Val;
+      break;
+    case X_CNT:
+      XCnt = Val;
+      break;
+    case VA_VDST:
+      VaVdst = Val;
+      break;
+    case VM_VSRC:
+      VmVsrc = Val;
+      break;
     default:
       llvm_unreachable("bad InstCounterType");
     }
-    // clang-format on
   }
 
   Waitcnt() = default;
