@@ -151,7 +151,7 @@ public:
   /// Declaration we're initializing/evaluting, if any.
   const VarDecl *EvaluatingDecl = nullptr;
   /// Steps left during evaluation.
-  unsigned StepsLeft = 0;
+  unsigned StepsLeft = 1;
   /// Whether infinite evaluation steps have been requested. If this is false,
   /// we use the StepsLeft value above.
   const bool InfiniteSteps = false;
