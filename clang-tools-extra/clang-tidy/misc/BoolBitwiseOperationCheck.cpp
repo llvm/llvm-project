@@ -13,6 +13,7 @@
 #include "clang/ASTMatchers/ASTMatchers.h"
 #include "clang/Lex/Lexer.h"
 #include <array>
+#include <type_traits>
 #include <utility>
 
 using namespace clang::ast_matchers;
@@ -28,6 +29,9 @@ static constexpr std::array<std::pair<StringRef, StringRef>, 8U>
                              {"and_eq", "and"},
                              {"bitor", "or"},
                              {"or_eq", "or"}}};
+
+static constexpr std::integral_constant<bool, true> RespectStrictMode{};
+static constexpr std::integral_constant<bool, false> IgnoreStrictMode{};
 
 static StringRef translate(StringRef Value) {
   for (const auto &[Bitwise, Logical] : OperatorsTransformation)
@@ -232,84 +236,94 @@ void BoolBitwiseOperationCheck::registerMatchers(MatchFinder *Finder) {
   Finder->addMatcher(BaseMatcher.bind("binOp"), this);
 }
 
-void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
-    const BinaryOperator *BinOp, const Expr *ParensExpr,
-    const Expr *LhsOfCompound, const clang::SourceManager &SM,
-    clang::ASTContext &Ctx, bool CanApplyFixIt) {
-  auto DiagEmitter = [BinOp, this] {
+template <bool RespectStrictMode>
+auto BoolBitwiseOperationCheck::createDiagBuilder(
+    std::integral_constant<bool, RespectStrictMode>,
+    const BinaryOperator *BinOp) {
+  if constexpr (RespectStrictMode) {
+    if (StrictMode)
+      createDiagBuilder(IgnoreStrictMode, BinOp);
+    return;
+  } else {
     return diag(BinOp->getOperatorLoc(),
                 "use logical operator '%0' for boolean semantics instead of "
                 "bitwise operator '%1'")
            << translate(BinOp->getOpcodeStr()) << BinOp->getOpcodeStr();
-  };
+  }
+}
 
-  auto DiagEmitterForStrictMode = [&] {
-    if (StrictMode)
-      DiagEmitter();
-    return true;
-  };
-
+void BoolBitwiseOperationCheck::emitWarningAndChangeOperatorsIfPossible(
+    const BinaryOperator *BinOp, const Expr *ParensExpr,
+    const Expr *LhsOfCompound, const clang::SourceManager &SM,
+    clang::ASTContext &Ctx, bool CanApplyFixIt) {
+  // Early exit: the matcher proved that no fix-it possible
   if (!CanApplyFixIt) {
-    DiagEmitterForStrictMode();
+    createDiagBuilder(RespectStrictMode, BinOp);
     return;
   }
 
+  // Try to build fix-its, but fall back to warning-only if any step fails
+  bool CanBuildFixIts = true;
+
+  // Get operator token range
   const auto MaybeTokenRange =
       getOperatorTokenRangeForFixIt(BinOp, SM, Ctx.getLangOpts());
-  if (!MaybeTokenRange) {
-    IgnoreMacros || DiagEmitterForStrictMode();
-    return;
-  }
-  const CharSourceRange TokenRange = *MaybeTokenRange;
+  if (!MaybeTokenRange)
+    CanBuildFixIts = false;
 
-  const StringRef FixSpelling =
-      translate(Lexer::getSourceText(TokenRange, SM, Ctx.getLangOpts()));
+  FixItHint ReplaceOperator;
 
-  if (FixSpelling.empty()) {
-    DiagEmitterForStrictMode();
-    return;
+  // Replace '&' to '&&' and so on.
+  if (CanBuildFixIts) {
+    const CharSourceRange TokenRange = *MaybeTokenRange;
+    const StringRef FixSpelling =
+        translate(Lexer::getSourceText(TokenRange, SM, Ctx.getLangOpts()));
+    assert(!FixSpelling.empty());
+
+    ReplaceOperator = FixItHint::CreateReplacement(TokenRange, FixSpelling);
   }
+
+  FixItHint InsertEqual;
 
   // Insert ' = a' if it's needed
-  FixItHint InsertEqual;
-  if (LhsOfCompound) {
+  if (CanBuildFixIts && LhsOfCompound) {
     const auto MaybeInsertLoc = getEndOfTokenLocationForFixIt(
         LhsOfCompound->getEndLoc(), SM, Ctx.getLangOpts());
-    if (!MaybeInsertLoc) {
-      IgnoreMacros || DiagEmitterForStrictMode();
-      return;
+    if (!MaybeInsertLoc)
+      CanBuildFixIts = false;
+    else {
+      const SourceLocation InsertLoc = *MaybeInsertLoc;
+      std::string SourceText{Lexer::getSourceText(
+          CharSourceRange::getTokenRange(LhsOfCompound->getSourceRange()), SM,
+          Ctx.getLangOpts())};
+      llvm::erase_if(SourceText,
+                     [](unsigned char Ch) { return std::isspace(Ch); });
+      InsertEqual = FixItHint::CreateInsertion(InsertLoc, " = " + SourceText);
     }
-    const SourceLocation InsertLoc = *MaybeInsertLoc;
-    std::string SourceText{Lexer::getSourceText(
-        CharSourceRange::getTokenRange(LhsOfCompound->getSourceRange()), SM,
-        Ctx.getLangOpts())};
-    llvm::erase_if(SourceText,
-                   [](unsigned char Ch) { return std::isspace(Ch); });
-    InsertEqual = FixItHint::CreateInsertion(InsertLoc, " = " + SourceText);
   }
 
-  // Replace '&' to '&&' and and so on.
-  const auto ReplaceOperator =
-      FixItHint::CreateReplacement(TokenRange, FixSpelling);
+  FixItHint InsertBrace1, InsertBrace2;
 
   // Insert parentheses if it's needed
-  FixItHint InsertBrace1;
-  FixItHint InsertBrace2;
-  if (ParensExpr) {
+  if (CanBuildFixIts && ParensExpr) {
     const auto MaybeInsertFirstLoc =
         getSpellingLocationForFixIt(ParensExpr->getBeginLoc(), SM);
     const auto MaybeInsertSecondLoc = getEndOfTokenLocationForFixIt(
         ParensExpr->getEndLoc(), SM, Ctx.getLangOpts());
-    if (!MaybeInsertFirstLoc || !MaybeInsertSecondLoc) {
-      IgnoreMacros || DiagEmitterForStrictMode();
-      return;
+    if (!MaybeInsertFirstLoc || !MaybeInsertSecondLoc)
+      CanBuildFixIts = false;
+    else {
+      InsertBrace1 = FixItHint::CreateInsertion(*MaybeInsertFirstLoc, "(");
+      InsertBrace2 = FixItHint::CreateInsertion(*MaybeInsertSecondLoc, ")");
     }
-    InsertBrace1 = FixItHint::CreateInsertion(*MaybeInsertFirstLoc, "(");
-    InsertBrace2 = FixItHint::CreateInsertion(*MaybeInsertSecondLoc, ")");
   }
 
-  DiagEmitter() << InsertEqual << ReplaceOperator << InsertBrace1
-                << InsertBrace2;
+  // Emit diagnostic with or without fix-its
+  if (CanBuildFixIts)
+    createDiagBuilder(IgnoreStrictMode, BinOp)
+        << InsertEqual << ReplaceOperator << InsertBrace1 << InsertBrace2;
+  else if (!IgnoreMacros)
+    createDiagBuilder(RespectStrictMode, BinOp);
 }
 
 void BoolBitwiseOperationCheck::check(const MatchFinder::MatchResult &Result) {
