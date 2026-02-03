@@ -420,7 +420,7 @@ class VUnitStrideStore<RISCVWidth width, string opcodestr>
 let vm = 1 in {
 // vs<lmul>r.v vd, (rs1)
 class VWholeStore<int lmul, string opcodestr, RegisterClass VRC>
-    : RVInstVSU<!sub(lmul, 1), LSWidth8, SUMOPUnitStrideWholeReg, (outs)
+    : RVInstVSU<!sub(lmul, 1), LSWidth8, SUMOPUnitStrideWholeReg, (outs),
                 (ins VRC:$vs3, GPRMemZeroOffset:$rs1),
                 opcodestr, "$vs3, $rs1"> {
   assert !and(!ge(lmul, 1), !le(lmul, 8)), "lmul must be 1-8";
