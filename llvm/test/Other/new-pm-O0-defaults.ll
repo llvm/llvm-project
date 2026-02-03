@@ -61,6 +61,7 @@
 ; CHECK-CORO-NEXT: Running analysis: TargetLibraryAnalysis
 ; CHECK-LTO-NEXT: Running pass: AnnotationRemarksPass
 ; CHECK-LTO-NEXT: Running analysis: TargetLibraryAnalysis
+; CHECK-CORO-NEXT: Running pass: LowerCommentStringPass
 ; CHECK-NEXT: Running pass: PrintModulePass
 
 ; Make sure we get the IR back out without changes when we print the module.

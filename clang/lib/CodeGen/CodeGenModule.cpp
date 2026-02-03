@@ -1736,6 +1736,8 @@ void CodeGenModule::Release() {
 
   EmitBackendOptionsMetadata(getCodeGenOpts());
 
+  EmitLoadTimeComment();
+
   // If there is device offloading code embed it in the host now.
   EmbedObject(&getModule(), CodeGenOpts, *getFileSystem(), getDiags());
 
@@ -3679,6 +3681,41 @@ void CodeGenModule::AddDependentLib(StringRef Lib) {
   LinkerOptionsMetadata.push_back(llvm::MDNode::get(C, MDOpts));
 }
 
+/// Process copyright pragma and create LLVM metadata.
+/// #pragma comment(copyright, "string") embeds copyright information into the
+/// .text section of the object file as read-only data. The string is
+/// loaded into memory when the program runs and survives into the final
+/// executable or shared library.
+///
+/// Example: #pragma comment(copyright, "Copyright string")
+///
+/// Only one copyright pragma is allowed per translation unit. Subsequent
+/// pragmas in the same TU are ignored with a warning at the parse level.
+void CodeGenModule::ProcessPragmaCommentCopyright(StringRef Comment,
+                                                  bool isFromASTFile) {
+  assert(getTriple().isOSAIX() &&
+         "pragma comment copyright is supported only when targeting AIX");
+
+  // Interaction with C++20 Modules and PCH:
+  // When a module interface unit containing a copyright pragma is imported,
+  // Clang deserializes the PragmaCommentDecl from the precompiled module file
+  // (.pcm) into the importing TU's AST. isFromASTFile() returns true for such
+  // deserialized declarations. We skip those to ensure only the module
+  // interface TU that originally parsed the pragma emits the copyright metadata
+  // -- not every TU that imports it. This prevents duplicate copyright strings
+  // in the final binary.
+  if (isFromASTFile)
+    return;
+
+  assert(!LoadTimeComment &&
+         "Only one copyright pragma allowed per translation unit.");
+
+  // Create LLVM metadata with the comment string.
+  auto &C = getLLVMContext();
+  llvm::Metadata *Ops[] = {llvm::MDString::get(C, Comment)};
+  LoadTimeComment = llvm::MDNode::get(C, Ops);
+}
+
 /// Add link options implied by the given module, including modules
 /// it depends on, using a postorder walk.
 static void addLinkOptionsPostorder(CodeGenModule &CGM, Module *Mod,
@@ -4197,6 +4234,18 @@ bool CodeGenModule::MustBeEmitted(const ValueDecl *Global) {
     return true;
 
   return getContext().DeclMustBeEmitted(Global);
+}
+
+void CodeGenModule::EmitLoadTimeComment() {
+  // Emit copyright metadata for #pragma comment(copyright, ...).
+  // The LoadTimeComment is set during pragma processing and contains the
+  // copyright string that will be embedded in the .text section of the
+  // XCOFF object file and loaded into memory when the program runs.
+
+  if (LoadTimeComment) {
+    auto *NMD = getModule().getOrInsertNamedMetadata("comment_string.loadtime");
+    NMD->addOperand(LoadTimeComment);
+  }
 }
 
 bool CodeGenModule::MayBeEmittedEagerly(const ValueDecl *Global) {
@@ -7952,6 +8001,9 @@ void CodeGenModule::EmitTopLevelDecl(Decl *D) {
       break;
     case PCK_Lib:
         AddDependentLib(PCD->getArg());
+      break;
+    case PCK_Copyright:
+      ProcessPragmaCommentCopyright(PCD->getArg(), PCD->isFromASTFile());
       break;
     case PCK_Compiler:
     case PCK_ExeStr:
