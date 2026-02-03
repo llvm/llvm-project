@@ -1034,7 +1034,7 @@ def GPU_LaunchOp : GPU_Op<"launch", [
 
     /// Returns the number of buffers located in the private memory.
     unsigned getNumPrivateAttributions() {
-      return getBodyRegion().empty()
+      return getRegion().empty()
                 ? 0
                 : getBody().getNumArguments() - getNumConfigRegionAttributes() -
                       getNumWorkgroupAttributions();
