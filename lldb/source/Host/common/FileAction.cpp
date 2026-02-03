@@ -152,9 +152,12 @@ int FileAction::GetActionArgument() const {
 }
 
 void FileAction::Dump(Stream &stream) const {
-  int file = std::holds_alternative<HANDLE>(m_file)
-                 ? (int)std::get<HANDLE>(m_file)
-                 : std::get<int>(m_file);
+#ifdef _WIN32
+  int file =
+      std::holds_alternative<HANDLE>(m_file) ? (int)GetHandle() : GetFD();
+#else
+  int file = GetFD();
+#endif
   stream.PutCString("file action: ");
   switch (m_action) {
   case eFileActionClose:
