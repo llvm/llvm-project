@@ -19,7 +19,7 @@
 # LLVM-NONRELOC-NEXT:       DirectCallees [
 # LLVM-NONRELOC-NEXT:       ]
 # LLVM-NONRELOC-NEXT:       NumIndirectTargetTypeIDs: 0
-# LLVM-NONRELOC-NEXT:       IndirectTypeIDs: []
+# LLVM-NONRELOC-NEXT:       IndirectTypeIds: []
 # LLVM-NONRELOC-NEXT:     }
 # LLVM-NONRELOC-NEXT:     Function {
 # LLVM-NONRELOC-NEXT:       Names: [bar]
@@ -31,7 +31,7 @@
 # LLVM-NONRELOC-NEXT:       DirectCallees [
 # LLVM-NONRELOC-NEXT:       ]
 # LLVM-NONRELOC-NEXT:       NumIndirectTargetTypeIDs: 0
-# LLVM-NONRELOC-NEXT:       IndirectTypeIDs: []
+# LLVM-NONRELOC-NEXT:       IndirectTypeIds: []
 # LLVM-NONRELOC-NEXT:     }
 # LLVM-NONRELOC-NEXT:     Function {
 # LLVM-NONRELOC-NEXT:       Names: [baz]
@@ -43,7 +43,7 @@
 # LLVM-NONRELOC-NEXT:       DirectCallees [
 # LLVM-NONRELOC-NEXT:       ]
 # LLVM-NONRELOC-NEXT:       NumIndirectTargetTypeIDs: 0
-# LLVM-NONRELOC-NEXT:       IndirectTypeIDs: []
+# LLVM-NONRELOC-NEXT:       IndirectTypeIds: []
 # LLVM-NONRELOC-NEXT:     }
 # LLVM-NONRELOC-NEXT:     Function {
 # LLVM-NONRELOC-NEXT:       Names: [main]
@@ -67,7 +67,7 @@
 # LLVM-NONRELOC-NEXT:         }
 # LLVM-NONRELOC-NEXT:       ]
 # LLVM-NONRELOC-NEXT:       NumIndirectTargetTypeIDs: 2
-# LLVM-NONRELOC-NEXT:       IndirectTypeIDs: [0x3ECBEEF531F74424, 0x308E4B8159BC8654]
+# LLVM-NONRELOC-NEXT:       IndirectTypeIds: [0x3ECBEEF531F74424, 0x308E4B8159BC8654]
 # LLVM-NONRELOC-NEXT:     }
 # LLVM-NONRELOC-NEXT:   ]
 
@@ -84,7 +84,7 @@
 # JSON-NONRELOC-NEXT:          "NumDirectCallees": 0,
 # JSON-NONRELOC-NEXT:          "DirectCallees": [],
 # JSON-NONRELOC-NEXT:          "NumIndirectTargetTypeIDs": 0,
-# JSON-NONRELOC-NEXT:          "IndirectTypeIDs": []
+# JSON-NONRELOC-NEXT:          "IndirectTypeIds": []
 # JSON-NONRELOC-NEXT:        }
 # JSON-NONRELOC-NEXT:      },
 # JSON-NONRELOC-NEXT:      {
@@ -99,7 +99,7 @@
 # JSON-NONRELOC-NEXT:          "NumDirectCallees": 0,
 # JSON-NONRELOC-NEXT:          "DirectCallees": [],
 # JSON-NONRELOC-NEXT:          "NumIndirectTargetTypeIDs": 0,
-# JSON-NONRELOC-NEXT:          "IndirectTypeIDs": []
+# JSON-NONRELOC-NEXT:          "IndirectTypeIds": []
 # JSON-NONRELOC-NEXT:        }
 # JSON-NONRELOC-NEXT:      },
 # JSON-NONRELOC-NEXT:      {
@@ -114,7 +114,7 @@
 # JSON-NONRELOC-NEXT:          "NumDirectCallees": 0,
 # JSON-NONRELOC-NEXT:          "DirectCallees": [],
 # JSON-NONRELOC-NEXT:          "NumIndirectTargetTypeIDs": 0,
-# JSON-NONRELOC-NEXT:          "IndirectTypeIDs": []
+# JSON-NONRELOC-NEXT:          "IndirectTypeIds": []
 # JSON-NONRELOC-NEXT:        }
 # JSON-NONRELOC-NEXT:      },
 # JSON-NONRELOC-NEXT:      {
@@ -148,7 +148,7 @@
 # JSON-NONRELOC-NEXT:            }
 # JSON-NONRELOC-NEXT:          ],
 # JSON-NONRELOC-NEXT:          "NumIndirectTargetTypeIDs": 2,
-# JSON-NONRELOC-NEXT:          "IndirectTypeIDs": [
+# JSON-NONRELOC-NEXT:          "IndirectTypeIds": [
 # JSON-NONRELOC-NEXT:            4524972987496481828,
 # JSON-NONRELOC-NEXT:            3498816979441845844
 # JSON-NONRELOC-NEXT:          ]
@@ -241,7 +241,7 @@ Symbols:
 # LLVM-RELOC-NEXT:     DirectCallees [
 # LLVM-RELOC-NEXT:     ]
 # LLVM-RELOC-NEXT:     NumIndirectTargetTypeIDs: 0
-# LLVM-RELOC-NEXT:     IndirectTypeIDs: []
+# LLVM-RELOC-NEXT:     IndirectTypeIds: []
 # LLVM-RELOC-NEXT:   }
 # LLVM-RELOC-NEXT:   Function {
 # LLVM-RELOC-NEXT:     Name: bar
@@ -252,7 +252,7 @@ Symbols:
 # LLVM-RELOC-NEXT:     DirectCallees [
 # LLVM-RELOC-NEXT:     ]
 # LLVM-RELOC-NEXT:     NumIndirectTargetTypeIDs: 0
-# LLVM-RELOC-NEXT:     IndirectTypeIDs: []
+# LLVM-RELOC-NEXT:     IndirectTypeIds: []
 # LLVM-RELOC-NEXT:   }
 # LLVM-RELOC-NEXT:   Function {
 # LLVM-RELOC-NEXT:     Name: baz
@@ -263,7 +263,7 @@ Symbols:
 # LLVM-RELOC-NEXT:     DirectCallees [
 # LLVM-RELOC-NEXT:     ]
 # LLVM-RELOC-NEXT:     NumIndirectTargetTypeIDs: 0
-# LLVM-RELOC-NEXT:     IndirectTypeIDs: []
+# LLVM-RELOC-NEXT:     IndirectTypeIds: []
 # LLVM-RELOC-NEXT:   }
 # LLVM-RELOC-NEXT:   Function {
 # LLVM-RELOC-NEXT:     Name: caller
@@ -283,7 +283,7 @@ Symbols:
 # LLVM-RELOC-NEXT:       }
 # LLVM-RELOC-NEXT:     ]
 # LLVM-RELOC-NEXT:     NumIndirectTargetTypeIDs: 2
-# LLVM-RELOC-NEXT:     IndirectTypeIDs: [0xF85C699BB8EF20A2, 0x308E4B8159BC8654]
+# LLVM-RELOC-NEXT:     IndirectTypeIds: [0xF85C699BB8EF20A2, 0x308E4B8159BC8654]
 # LLVM-RELOC-NEXT:   }
 # LLVM-RELOC-NEXT: ]
 
@@ -297,7 +297,7 @@ Symbols:
 # JSON-RELOC-NEXT:          "NumDirectCallees": 0,
 # JSON-RELOC-NEXT:          "DirectCallees": [],
 # JSON-RELOC-NEXT:          "NumIndirectTargetTypeIDs": 0,
-# JSON-RELOC-NEXT:          "IndirectTypeIDs": []
+# JSON-RELOC-NEXT:          "IndirectTypeIds": []
 # JSON-RELOC-NEXT:        }
 # JSON-RELOC-NEXT:      },
 # JSON-RELOC-NEXT:      {
@@ -309,7 +309,7 @@ Symbols:
 # JSON-RELOC-NEXT:          "NumDirectCallees": 0,
 # JSON-RELOC-NEXT:          "DirectCallees": [],
 # JSON-RELOC-NEXT:          "NumIndirectTargetTypeIDs": 0,
-# JSON-RELOC-NEXT:          "IndirectTypeIDs": []
+# JSON-RELOC-NEXT:          "IndirectTypeIds": []
 # JSON-RELOC-NEXT:        }
 # JSON-RELOC-NEXT:      },
 # JSON-RELOC-NEXT:      {
@@ -321,7 +321,7 @@ Symbols:
 # JSON-RELOC-NEXT:          "NumDirectCallees": 0,
 # JSON-RELOC-NEXT:          "DirectCallees": [],
 # JSON-RELOC-NEXT:          "NumIndirectTargetTypeIDs": 0,
-# JSON-RELOC-NEXT:          "IndirectTypeIDs": []
+# JSON-RELOC-NEXT:          "IndirectTypeIds": []
 # JSON-RELOC-NEXT:        }
 # JSON-RELOC-NEXT:      },
 # JSON-RELOC-NEXT:      {
@@ -343,7 +343,7 @@ Symbols:
 # JSON-RELOC-NEXT:            }
 # JSON-RELOC-NEXT:          ],
 # JSON-RELOC-NEXT:          "NumIndirectTargetTypeIDs": 2,
-# JSON-RELOC-NEXT:          "IndirectTypeIDs": [
+# JSON-RELOC-NEXT:          "IndirectTypeIds": [
 # JSON-RELOC-NEXT:            17896295136807035042,
 # JSON-RELOC-NEXT:            3498816979441845844
 # JSON-RELOC-NEXT:          ]
@@ -459,7 +459,7 @@ Symbols:
 # LLVM-ARM-THUMB-NEXT:     DirectCallees [
 # LLVM-ARM-THUMB-NEXT:     ]
 # LLVM-ARM-THUMB-NEXT:     NumIndirectTargetTypeIDs: 0
-# LLVM-ARM-THUMB-NEXT:     IndirectTypeIDs: []
+# LLVM-ARM-THUMB-NEXT:     IndirectTypeIds: []
 # LLVM-ARM-THUMB-NEXT:   }
 # LLVM-ARM-THUMB-NEXT: ]
 
@@ -473,7 +473,7 @@ Symbols:
 # JSON-ARM-THUMB-NEXT:        "NumDirectCallees": 0,
 # JSON-ARM-THUMB-NEXT:        "DirectCallees": [],
 # JSON-ARM-THUMB-NEXT:        "NumIndirectTargetTypeIDs": 0,
-# JSON-ARM-THUMB-NEXT:        "IndirectTypeIDs": []
+# JSON-ARM-THUMB-NEXT:        "IndirectTypeIds": []
 # JSON-ARM-THUMB-NEXT:      }
 # JSON-ARM-THUMB-NEXT:    }
 # JSON-ARM-THUMB-NEXT:  ]

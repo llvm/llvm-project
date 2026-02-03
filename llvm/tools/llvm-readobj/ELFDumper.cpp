@@ -190,7 +190,7 @@ struct FunctionCallgraphInfo {
   bool IsIndirectTarget;
   uint64_t FunctionTypeId;
   SmallSet<uint64_t, 4> DirectCallees;
-  SmallSet<uint64_t, 4> IndirectTypeIDs;
+  SmallSet<uint64_t, 4> IndirectTypeIds;
 };
 
 namespace {
@@ -5455,7 +5455,7 @@ bool ELFDumper<ELFT>::processCallGraphSection(const Elf_Shdr *CGSection) {
               FileName);
           return false;
         }
-        CGInfo.IndirectTypeIDs.insert(TargetType);
+        CGInfo.IndirectTypeIds.insert(TargetType);
       }
     }
     FuncCGInfos.push_back(CGInfo);
@@ -8400,10 +8400,10 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
         PrintFunc(CalleePC);
       }
     }
-    W.printNumber("NumIndirectTargetTypeIDs", CGInfo.IndirectTypeIDs.size());
-    SmallVector<uint64_t, 4> IndirectTypeIdsList(CGInfo.IndirectTypeIDs.begin(),
-                                                 CGInfo.IndirectTypeIDs.end());
-    W.printHexList("IndirectTypeIDs", ArrayRef(IndirectTypeIdsList));
+    W.printNumber("NumIndirectTargetTypeIDs", CGInfo.IndirectTypeIds.size());
+    SmallVector<uint64_t, 4> IndirectTypeIdsList(CGInfo.IndirectTypeIds.begin(),
+                                                 CGInfo.IndirectTypeIds.end());
+    W.printHexList("IndirectTypeIds", ArrayRef(IndirectTypeIdsList));
   }
 }
 
