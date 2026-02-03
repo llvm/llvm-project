@@ -254,10 +254,10 @@ define <vscale x 2 x i64> @vwsll_vi_anyext_nxv2i64(<vscale x 2 x i32> %a) {
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vi_anyext_nxv2i64:
 ; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e64, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vzext.vf2 v10, v8
+; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vmv1r.v v10, v8
 ; CHECK-ZVBB-NEXT:    li a0, 32
-; CHECK-ZVBB-NEXT:    vsll.vx v8, v10, a0
+; CHECK-ZVBB-NEXT:    vwsll.vx v8, v10, a0
 ; CHECK-ZVBB-NEXT:    ret
   %x = zext <vscale x 2 x i32> %a to <vscale x 2 x i64>
   %z = shl <vscale x 2 x i64> %x, splat (i64 32)
@@ -485,9 +485,9 @@ define <vscale x 4 x i32> @vwsll_vi_anyext_nxv4i32(<vscale x 4 x i16> %a) {
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vi_anyext_nxv4i32:
 ; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e32, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vzext.vf2 v10, v8
-; CHECK-ZVBB-NEXT:    vsll.vi v8, v10, 16
+; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e16, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vmv1r.v v10, v8
+; CHECK-ZVBB-NEXT:    vwsll.vi v8, v10, 16
 ; CHECK-ZVBB-NEXT:    ret
   %x = zext <vscale x 4 x i16> %a to <vscale x 4 x i32>
   %z = shl <vscale x 4 x i32> %x, splat (i32 16)
@@ -687,9 +687,9 @@ define <vscale x 8 x i16> @vwsll_vi_anyext_nxv8i16(<vscale x 8 x i8> %a) {
 ;
 ; CHECK-ZVBB-LABEL: vwsll_vi_anyext_nxv8i16:
 ; CHECK-ZVBB:       # %bb.0:
-; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e16, m2, ta, ma
-; CHECK-ZVBB-NEXT:    vzext.vf2 v10, v8
-; CHECK-ZVBB-NEXT:    vsll.vi v8, v10, 8
+; CHECK-ZVBB-NEXT:    vsetvli a0, zero, e8, m1, ta, ma
+; CHECK-ZVBB-NEXT:    vmv1r.v v10, v8
+; CHECK-ZVBB-NEXT:    vwsll.vi v8, v10, 8
 ; CHECK-ZVBB-NEXT:    ret
   %x = zext <vscale x 8 x i8> %a to <vscale x 8 x i16>
   %z = shl <vscale x 8 x i16> %x, splat (i16 8)
