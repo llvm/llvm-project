@@ -1838,7 +1838,7 @@ multiclass VPseudoFFLoad {
   }
 }
 
-multiclass VPseudoLoadMask {
+multiclass VPseudoMaskLoad {
   foreach mti = AllMasks in {
     defvar mx = mti.LMul.MX;
     defvar WriteVLDM_MX = !cast<SchedWrite>("WriteVLDM_" # mx);
@@ -1914,7 +1914,7 @@ multiclass VPseudoUSStore {
   }
 }
 
-multiclass VPseudoStoreMask {
+multiclass VPseudoMaskStore {
   foreach mti = AllMasks in {
     defvar mx = mti.LMul.MX;
     defvar WriteVSTM_MX = !cast<SchedWrite>("WriteVSTM_" # mx);
@@ -6074,8 +6074,8 @@ def PseudoVSETIVLI : Pseudo<(outs GPR:$rd), (ins uimm5:$rs1, VTypeIOp10:$vtypei)
 defm PseudoVL : VPseudoUSLoad;
 defm PseudoVS : VPseudoUSStore;
 
-defm PseudoVLM : VPseudoLoadMask;
-defm PseudoVSM : VPseudoStoreMask;
+defm PseudoVLM : VPseudoMaskLoad;
+defm PseudoVSM : VPseudoMaskStore;
 
 //===----------------------------------------------------------------------===//
 // 7.5 Vector Strided Instructions
