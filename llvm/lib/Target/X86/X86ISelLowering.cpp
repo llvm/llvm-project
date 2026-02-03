@@ -39298,6 +39298,10 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       }
     }
 
+    APInt MaskMinValue = Known2.getMinValue();
+    if (MaskMinValue.uge(BitWidth))
+      break;
+
     // Zeros are retained from the src operand. But not necessarily ones.
     Known.One.clearAllBits();
     break;
