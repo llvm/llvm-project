@@ -24,7 +24,6 @@ entry:
 loop:
   %iv = phi i32 [ 0, %entry ], [ %iv.next, %loop ]
   call void asm sideeffect "nop", ""()
-  %c = icmp eq i32 0, 0
   store i32 0, ptr null, align 4
   %iv.next = add i32 %iv, 1
   %cmp = icmp ult i32 %iv, 4
