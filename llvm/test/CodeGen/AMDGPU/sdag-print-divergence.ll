@@ -32,17 +32,3 @@ entry:
   %ret = fadd float %sadd, %vector
   ret float %ret
 }
-
-declare i32 @llvm.amdgcn.workitem.id.x()
-
-; GCN-DEFAULT:      t32: i32 = llvm.amdgcn.readfirstlane TargetConstant:i32<3417>, t30
-; GCN-DEFAULT:    t33: i32,ch = merge_values t32, t30:1
-
-; GCN-VERBOSE:      t32: i32 = llvm.amdgcn.readfirstlane [ORD=1] # D:0 TargetConstant:i32<3417>, t30
-; GCN-VERBOSE:    t33: i32,ch = merge_values [ORD=1] # D:0 t32, t30:1
-declare hidden void @external_void_func_a15i32_inreg([15 x i32] inreg)
-
-define void @test_call_external_void_func_a15i32_inreg([15 x i32] inreg %arg0) {
-  call void @external_void_func_a15i32_inreg([15 x i32] inreg %arg0)
-  ret void
-}

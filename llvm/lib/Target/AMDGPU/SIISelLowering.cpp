@@ -3581,13 +3581,12 @@ SDValue SITargetLowering::LowerFormalArguments(
     Reg = MF.addLiveIn(Reg, RC);
     SDValue Val = DAG.getCopyFromReg(Chain, DL, Reg, VT);
     if (Arg.Flags.isInReg() && RC == &AMDGPU::VGPR_32RegClass) {
+      // FIXME: Need to forward the chains created by `CopyFromReg`s, make sure
+      // they will read physical regs before any side effect instructions.
       SDValue ReadFirstLane =
           DAG.getTargetConstant(Intrinsic::amdgcn_readfirstlane, DL, MVT::i32);
-      Val = DAG.getMergeValues(
-          {DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Val.getValueType(),
-                       ReadFirstLane, Val),
-           Val.getValue(1)},
-          DL);
+      Val = DAG.getNode(ISD::INTRINSIC_WO_CHAIN, DL, Val.getValueType(),
+                        ReadFirstLane, Val);
     }
 
     if (Arg.Flags.isSRet()) {
