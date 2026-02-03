@@ -2608,6 +2608,9 @@ void TextNodeDumper::VisitPragmaCommentDecl(const PragmaCommentDecl *D) {
   case PCK_User:
     OS << "user";
     break;
+  case PCK_Copyright:
+    OS << "copyright";
+    break;
   }
   StringRef Arg = D->getArg();
   if (!Arg.empty())
