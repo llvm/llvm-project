@@ -430,10 +430,13 @@ public:
     return LAI->getDepChecker().getStoreLoadForwardSafeDistanceInBits();
   }
 
-  /// Returns true if vector representation of the instruction \p I
-  /// requires mask.
-  bool isMaskRequired(const Instruction *I) const {
-    return MaskedOp.contains(I);
+  /// Returns true if instruction \p I requires a mask for vectorization.
+  /// This accounts for both control flow masking (conditionally executed
+  /// blocks) and tail-folding masking (predicated loop vectorization).
+  bool isMaskRequired(const Instruction *I, bool LoopPredicated) const {
+    if (LoopPredicated)
+      return PredMaskedOps.contains(I);
+    return UnpredMaskedOps.contains(I);
   }
 
   /// Returns true if there is at least one function call in the loop which
@@ -709,9 +712,16 @@ private:
   AssumptionCache *AC;
 
   /// While vectorizing these instructions we have to generate a
-  /// call to the appropriate masked intrinsic or drop them in case of
-  /// conditional assumes.
-  SmallPtrSet<const Instruction *, 8> MaskedOp;
+  /// call to the appropriate masked intrinsic or drop them.
+  /// In order to differentiate between control flow introduced at the source
+  /// level and that introduced by the loop vectoriser during tail-folding, we
+  /// keep two lists:
+  /// 1) UnpredMaskedOp - instructions that need masking if we are
+  ///    in conditionally executed block.
+  /// 2) PredMaskedOp - instructions that need masking if we are in
+  ///    a predicated loop.
+  SmallPtrSet<const Instruction *, 8> UnpredMaskedOps;
+  SmallPtrSet<const Instruction *, 8> PredMaskedOps;
 
   /// Contains all identified histogram operations, which are sequences of
   /// load -> update -> store instructions where multiple lanes in a vector

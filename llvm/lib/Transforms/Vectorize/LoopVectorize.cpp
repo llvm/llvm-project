@@ -1230,6 +1230,10 @@ public:
   /// \p VF is the vectorization factor that will be used to vectorize \p I.
   bool isScalarWithPredication(Instruction *I, ElementCount VF);
 
+  /// Wrapper function for LoopVectorizationLegality::isMaskRequired,
+  /// that passes the Instruction \p I and if we fold tail.
+  bool isMaskRequired(Instruction *I) const;
+
   /// Returns true if \p I is an instruction that needs to be predicated
   /// at runtime.  The result is independent of the predication mechanism.
   /// Superset of instructions that return true for isScalarWithPredication.
@@ -2860,12 +2864,16 @@ bool LoopVectorizationCostModel::isScalarWithPredication(Instruction *I,
   }
 }
 
+bool LoopVectorizationCostModel::isMaskRequired(Instruction *I) const {
+  return Legal->isMaskRequired(I, foldTailByMasking());
+}
+
 // TODO: Fold into LoopVectorizationLegality::isMaskRequired.
 bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
   // TODO: We can use the loop-preheader as context point here and get
   // context sensitive reasoning for isSafeToSpeculativelyExecute.
   if (isSafeToSpeculativelyExecute(I) ||
-      (isa<LoadInst, StoreInst, CallInst>(I) && !Legal->isMaskRequired(I)) ||
+      (isa<LoadInst, StoreInst, CallInst>(I) && !isMaskRequired(I)) ||
       isa<BranchInst, SwitchInst, PHINode, AllocaInst>(I))
     return false;
 
@@ -2890,7 +2898,7 @@ bool LoopVectorizationCostModel::isPredicatedInst(Instruction *I) const {
   case Instruction::Call:
     // Side-effects of a Call are assumed to be non-invariant, needing a
     // (fold-tail) mask.
-    assert(Legal->isMaskRequired(I) &&
+    assert(isMaskRequired(I) &&
            "should have returned earlier for calls not needing a mask");
     return true;
   case Instruction::Load:
@@ -3037,8 +3045,7 @@ bool LoopVectorizationCostModel::interleavedAccessCanBeWidened(
   // (either a gap at the end of a load-access that may result in a speculative
   // load, or any gaps in a store-access).
   bool PredicatedAccessRequiresMasking =
-      blockNeedsPredicationForAnyReason(I->getParent()) &&
-      Legal->isMaskRequired(I);
+      blockNeedsPredicationForAnyReason(I->getParent()) && isMaskRequired(I);
   bool LoadAccessWithGapsRequiresEpilogMasking =
       isa<LoadInst>(I) && Group->requiresScalarEpilogue() &&
       !isScalarEpilogueAllowed();
@@ -5319,7 +5326,7 @@ LoopVectorizationCostModel::getConsecutiveMemOpCost(Instruction *I,
          "Stride should be 1 or -1 for consecutive memory access");
   const Align Alignment = getLoadStoreAlignment(I);
   InstructionCost Cost = 0;
-  if (Legal->isMaskRequired(I)) {
+  if (isMaskRequired(I)) {
     unsigned IID = I->getOpcode() == Instruction::Load
                        ? Intrinsic::masked_load
                        : Intrinsic::masked_store;
@@ -5388,8 +5395,8 @@ LoopVectorizationCostModel::getGatherScatterCost(Instruction *I,
                      : Intrinsic::masked_scatter;
   return TTI.getAddressComputationCost(PtrTy, nullptr, nullptr, CostKind) +
          TTI.getMemIntrinsicInstrCost(
-             MemIntrinsicCostAttributes(IID, VectorTy, Ptr,
-                                        Legal->isMaskRequired(I), Alignment, I),
+             MemIntrinsicCostAttributes(IID, VectorTy, Ptr, isMaskRequired(I),
+                                        Alignment, I),
              CostKind);
 }
 
@@ -5419,12 +5426,11 @@ LoopVectorizationCostModel::getInterleaveGroupCost(Instruction *I,
       (isa<StoreInst>(I) && !Group->isFull());
   InstructionCost Cost = TTI.getInterleavedMemoryOpCost(
       InsertPos->getOpcode(), WideVecTy, Group->getFactor(), Indices,
-      Group->getAlign(), AS, CostKind, Legal->isMaskRequired(I),
-      UseMaskForGaps);
+      Group->getAlign(), AS, CostKind, isMaskRequired(I), UseMaskForGaps);
 
   if (Group->isReverse()) {
     // TODO: Add support for reversed masked interleaved access.
-    assert(!Legal->isMaskRequired(I) &&
+    assert(!isMaskRequired(I) &&
            "Reverse masked interleaved access not supported.");
     Cost += Group->getNumMembers() *
             TTI.getShuffleCost(TargetTransformInfo::SK_Reverse, VectorTy,
@@ -5972,7 +5978,7 @@ void LoopVectorizationCostModel::setVectorizedCallDecision(ElementCount VF) {
         continue;
       }
 
-      bool MaskRequired = Legal->isMaskRequired(CI);
+      bool MaskRequired = isMaskRequired(CI);
       // Compute corresponding vector type for return value and arguments.
       Type *RetTy = toVectorizedTy(ScalarRetTy, VF);
       for (Type *ScalarTy : ScalarTys)
@@ -7705,7 +7711,7 @@ VPRecipeBase *VPRecipeBuilder::tryToWidenMemory(VPInstruction *VPI,
     return nullptr;
 
   VPValue *Mask = nullptr;
-  if (Legal->isMaskRequired(I))
+  if (CM.isMaskRequired(I))
     Mask = getBlockInMask(Builder.getInsertBlock());
 
   // Determine if the pointer operand of the access is either consecutive or
@@ -7877,7 +7883,7 @@ VPSingleDefRecipe *VPRecipeBuilder::tryToWidenCall(VPInstruction *VPI,
       //   2) No mask is required for the block, but the only available
       //      vector variant at this VF requires a mask, so we synthesize an
       //      all-true mask.
-      VPValue *Mask = Legal->isMaskRequired(CI)
+      VPValue *Mask = CM.isMaskRequired(CI)
                           ? getBlockInMask(Builder.getInsertBlock())
                           : Plan.getTrue();
 
@@ -7975,7 +7981,7 @@ VPHistogramRecipe *VPRecipeBuilder::tryToWidenHistogram(const HistogramInfo *HI,
 
   // In case of predicated execution (due to tail-folding, or conditional
   // execution, or both), pass the relevant mask.
-  if (Legal->isMaskRequired(HI->Store))
+  if (CM.isMaskRequired(HI->Store))
     HGramOps.push_back(getBlockInMask(Builder.getInsertBlock()));
 
   return new VPHistogramRecipe(Opcode, HGramOps, VPI->getDebugLoc());
