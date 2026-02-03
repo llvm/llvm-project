@@ -1754,6 +1754,40 @@ bool VectorCombine::foldBinopOfReductions(Instruction &I) {
     return nullptr;
   };
 
+  // sub (add (a, vector_reduce_add b), vector_reduce_add c) ->
+  // add (a, sub (vector_reduce_add b, vector_reduce_add c))
+  // sub (add (vector_reduce_add b, a), vector_reduce_add c) ->
+  // add (a, sub (vector_reduce_add b, vector_reduce_add c))
+  if (BinOpOpc == Instruction::Sub) {
+    auto *II = dyn_cast<BinaryOperator>(I.getOperand(0));
+    if (II && II->getOpcode() == Instruction::Add) {
+      Value *V1 =
+          checkIntrinsicAndGetItsArgument(I.getOperand(1), ReductionIID);
+      if (V1) {
+        Instruction *I0 = dyn_cast<Instruction>(I.getOperand(0));
+        Value *V00 =
+            checkIntrinsicAndGetItsArgument(I0->getOperand(0), ReductionIID);
+        Value *V01 =
+            checkIntrinsicAndGetItsArgument(I0->getOperand(1), ReductionIID);
+        if (V00) {
+          Value *NewSub =
+              Builder.CreateBinOp(BinOpOpc, I0->getOperand(0), I.getOperand(1));
+          Value *NewAdd =
+              Builder.CreateBinOp(Instruction::Add, I0->getOperand(1), NewSub);
+          replaceValue(I, *NewAdd);
+          return true;
+        } else if (V01) {
+          Value *NewSub =
+              Builder.CreateBinOp(BinOpOpc, I0->getOperand(1), I.getOperand(1));
+          Value *NewAdd =
+              Builder.CreateBinOp(Instruction::Add, I0->getOperand(0), NewSub);
+          replaceValue(I, *NewAdd);
+          return true;
+        }
+      }
+    }
+  }
+
   Value *V0 = checkIntrinsicAndGetItsArgument(I.getOperand(0), ReductionIID);
   if (!V0)
     return false;
