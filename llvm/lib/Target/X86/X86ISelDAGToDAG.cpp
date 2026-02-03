@@ -4033,9 +4033,17 @@ bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
 
   SDLoc DL(Node);
 
-  // Truncate the shift amount.
-  NBits = CurDAG->getNode(ISD::TRUNCATE, DL, MVT::i8, NBits);
-  insertDAGNode(*CurDAG, SDValue(Node, 0), NBits);
+  if (NBits.getSimpleValueType() != MVT::i8) {
+    // Truncate the shift amount.
+    NBits = CurDAG->getNode(ISD::TRUNCATE, DL, MVT::i8, NBits);
+    insertDAGNode(*CurDAG, SDValue(Node, 0), NBits);
+  }
+
+  // Turn (i32)(x & imm8) into (i32)x & imm32.
+  ConstantSDNode *Imm = nullptr;
+  if (NBits->getOpcode() == ISD::AND)
+    if ((Imm = dyn_cast<ConstantSDNode>(NBits->getOperand(1))))
+      NBits = NBits->getOperand(0);
 
   // Insert 8-bit NBits into lowest 8 bits of 32-bit register.
   // All the other bits are undefined, we do not care about them.
@@ -4049,6 +4057,13 @@ bool X86DAGToDAGISel::matchBitExtract(SDNode *Node) {
                                          MVT::i32, ImplDef, NBits, SRIdxVal),
                   0);
   insertDAGNode(*CurDAG, SDValue(Node, 0), NBits);
+
+  if (Imm) {
+    NBits =
+        CurDAG->getNode(ISD::AND, DL, MVT::i32, NBits,
+                        CurDAG->getConstant(Imm->getZExtValue(), DL, MVT::i32));
+    insertDAGNode(*CurDAG, SDValue(Node, 0), NBits);
+  }
 
   // We might have matched the amount of high bits to be cleared,
   // but we want the amount of low bits to be kept, so negate it then.

@@ -114,6 +114,16 @@ gentbl_cc_library(
 )
 
 gentbl_cc_library(
+    name = "OpAsmDialectInterfaceIncGen",
+    tbl_outs = {
+        "include/mlir/IR/OpAsmDialectInterface.h.inc": ["-gen-dialect-interface-decls"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/IR/OpAsmDialectInterface.td",
+    deps = [":OpBaseTdFiles"],
+)
+
+gentbl_cc_library(
     name = "TensorEncodingIncGen",
     tbl_outs = {
         "include/mlir/IR/TensorEncInterfaces.h.inc": ["-gen-attr-interface-decls"],
@@ -397,6 +407,7 @@ cc_library(
         "lib/Bytecode/Writer/*.h",
         "include/mlir/Bytecode/*.h",
     ]) + [
+        "include/mlir/IR/OpAsmDialectInterface.h.inc",
         "include/mlir/IR/OpAsmOpInterface.h.inc",
         "include/mlir/Interfaces/DataLayoutInterfaces.h",
         "include/mlir/Interfaces/InferIntRangeInterface.h",
@@ -505,6 +516,7 @@ mlir_c_api_cc_library(
         ":IR",
         ":Pass",
         ":Support",
+        ":TransformUtils",
         ":config",
         ":FuncTransformsPassIncGen",
         ":Rewrite",
@@ -1511,6 +1523,7 @@ td_library(
     deps = [":OpBaseTdFiles"],
 )
 
+
 td_library(
     name = "LoopLikeInterfaceTdFiles",
     srcs = ["include/mlir/Interfaces/LoopLikeInterface.td"],
@@ -1686,6 +1699,8 @@ cc_library(
         ":TransformDialect",
         ":TransformDialectInterfaces",
         ":TransformUtils",
+        ":VectorDialect",
+        "//llvm:Support",
     ],
 )
 
@@ -1695,7 +1710,14 @@ cc_library(
 
 td_library(
     name = "AMDGPUTdFiles",
-    srcs = ["include/mlir/Dialect/AMDGPU/IR/AMDGPU.td"],
+    srcs = [
+        "include/mlir/Dialect/AMDGPU/IR/AMDGPU.td",
+        "include/mlir/Dialect/AMDGPU/IR/AMDGPUAttrs.td",
+        "include/mlir/Dialect/AMDGPU/IR/AMDGPUBase.td",
+        "include/mlir/Dialect/AMDGPU/IR/AMDGPUEnums.td",
+        "include/mlir/Dialect/AMDGPU/IR/AMDGPUOps.td",
+        "include/mlir/Dialect/AMDGPU/IR/AMDGPUTypes.td",
+    ],
     includes = ["include"],
     deps = [
         ":InferTypeOpInterfaceTdFiles",
@@ -1708,11 +1730,11 @@ td_library(
 gentbl_cc_library(
     name = "AMDGPUIncGen",
     tbl_outs = {
-        "include/mlir/Dialect/AMDGPU/IR/AMDGPUAttributes.h.inc": [
+        "include/mlir/Dialect/AMDGPU/IR/AMDGPUAttrs.h.inc": [
             "-gen-attrdef-decls",
             "-dialect=amdgpu",
         ],
-        "include/mlir/Dialect/AMDGPU/IR/AMDGPUAttributes.cpp.inc": [
+        "include/mlir/Dialect/AMDGPU/IR/AMDGPUAttrs.cpp.inc": [
             "-gen-attrdef-defs",
             "-dialect=amdgpu",
         ],
@@ -1743,7 +1765,13 @@ gentbl_cc_library(
 
 cc_library(
     name = "AMDGPUDialect",
-    srcs = ["lib/Dialect/AMDGPU/IR/AMDGPUDialect.cpp"],
+    srcs = [
+        "lib/Dialect/AMDGPU/IR/AMDGPUAttrs.cpp",
+        "lib/Dialect/AMDGPU/IR/AMDGPUDialect.cpp",
+        "lib/Dialect/AMDGPU/IR/AMDGPUEnums.cpp",
+        "lib/Dialect/AMDGPU/IR/AMDGPUOps.cpp",
+        "lib/Dialect/AMDGPU/IR/AMDGPUTypes.cpp",
+    ],
     hdrs = [
         "include/mlir/Dialect/AMDGPU/IR/AMDGPUDialect.h",
         "lib/Conversion/LLVMCommon/MemRefDescriptor.h",
@@ -3463,6 +3491,7 @@ cc_library(
         ":LinalgDialect",
         ":MPIDialect",
         ":MemRefDialect",
+        ":MemRefUtils",
         ":Pass",
         ":SCFDialect",
         ":ShardDialect",
@@ -3972,6 +4001,7 @@ cc_library(
         ":SCFTransforms",
         ":TransformUtils",
         ":XeGPUDialect",
+        ":XeGPUuArch",
         ":XeVMDialect",
         "//llvm:Support",
     ],
@@ -4540,6 +4570,7 @@ cc_library(
         ":SideEffectInterfaces",
         ":TensorDialect",
         ":TransformUtils",
+        ":UBDialect",
         ":ValueBoundsOpInterface",
         ":ViewLikeInterface",
         "//llvm:Support",
@@ -4628,6 +4659,7 @@ cc_library(
         "//llvm:Support",
     ],
 )
+
 
 cc_library(
     name = "MemorySlotInterfaces",
@@ -7646,7 +7678,6 @@ cc_library(
         "lib/Dialect/Tensor/IR/ValueBoundsOpInterfaceImpl.cpp",
     ],
     hdrs = [
-        "include/mlir/Dialect/Tensor/IR/ShardingInterfaceImpl.h",
         "include/mlir/Dialect/Tensor/IR/Tensor.h",
         "include/mlir/Dialect/Tensor/IR/ValueBoundsOpInterfaceImpl.h",
     ],
@@ -7696,6 +7727,7 @@ cc_library(
         ":IR",
         ":InferTypeOpInterface",
         ":TensorDialect",
+        "//llvm:Support",
     ],
 )
 
@@ -8029,6 +8061,7 @@ gentbl_cc_library(
     td_file = "include/mlir/Interfaces/LoopLikeInterface.td",
     deps = [":LoopLikeInterfaceTdFiles"],
 )
+
 
 gentbl_cc_library(
     name = "MemorySlotInterfacesIncGen",
@@ -9754,6 +9787,7 @@ cc_library(
         ":ArithToLLVM",
         ":ArmNeonTransformOps",
         ":ArmSVEVectorTransformOps",
+        ":BufferizationExtensions",
         ":BufferizationTransformOps",
         ":BuiltinToLLVMIRTranslation",
         ":ComplexToLLVM",
@@ -10371,6 +10405,7 @@ td_library(
     srcs = [
         "include/mlir/Dialect/OpenACC/AccCommon.td",
         "include/mlir/Dialect/OpenACC/OpenACCBase.td",
+        "include/mlir/Dialect/OpenACC/OpenACCCGOps.td",
         "include/mlir/Dialect/OpenACC/OpenACCOps.td",
         "include/mlir/Dialect/OpenACC/OpenACCOpsInterfaces.td",
         "include/mlir/Dialect/OpenACC/OpenACCOpsTypes.td",
@@ -13194,6 +13229,7 @@ cc_library(
         ":MathBaseIncGen",
         ":MathOpsIncGen",
         ":SideEffectInterfaces",
+        ":Support",
         ":UBDialect",
         ":VectorInterfaces",
     ],
@@ -13244,6 +13280,7 @@ cc_library(
         ":Pass",
         ":TransformUtils",
         ":VectorDialect",
+        "//llvm:Support",
     ],
 )
 
@@ -13254,6 +13291,24 @@ td_library(
     deps = [
         ":OpBaseTdFiles",
     ],
+)
+
+td_library(
+    name = "MemoryAccessOpInterfacesTdFiles",
+    srcs = ["include/mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.td"],
+    includes = ["include"],
+    deps = [":OpBaseTdFiles"],
+)
+
+gentbl_cc_library(
+    name = "MemoryAccessOpInterfacesIncGen",
+    tbl_outs = {
+        "include/mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.h.inc": ["-gen-op-interface-decls"],
+        "include/mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.cpp.inc": ["-gen-op-interface-defs"],
+    },
+    tblgen = ":mlir-tblgen",
+    td_file = "include/mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.td",
+    deps = [":MemoryAccessOpInterfacesTdFiles"],
 )
 
 td_library(
@@ -13342,6 +13397,7 @@ cc_library(
     hdrs = [
         "include/mlir/Dialect/MemRef/IR/MemRef.h",
         "include/mlir/Dialect/MemRef/IR/MemRefMemorySlot.h",
+        "include/mlir/Dialect/MemRef/IR/MemoryAccessOpInterfaces.h",
         "include/mlir/Dialect/MemRef/IR/ValueBoundsOpInterfaceImpl.h",
     ],
     includes = ["include"],
@@ -13366,10 +13422,12 @@ cc_library(
         ":MemOpInterfaces",
         ":MemRefBaseIncGen",
         ":MemRefOpsIncGen",
+        ":MemoryAccessOpInterfacesIncGen",
         ":MemorySlotInterfaces",
         ":RuntimeVerifiableOpInterface",
         ":ShapedOpInterfaces",
         ":SideEffectInterfaces",
+        ":Support",
         ":UBDialect",
         ":ValueBoundsOpInterface",
         ":ViewLikeInterface",
@@ -14053,6 +14111,18 @@ cc_library(
 )
 
 cc_library(
+    name = "BufferizationExtensions",
+    srcs = glob(["lib/Dialect/Bufferization/Extensions/*.cpp"]),
+    hdrs = glob(["include/mlir/Dialect/Bufferization/Extensions/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":BufferizationDialect",
+        ":IR",
+        ":ShardingInterface",
+    ],
+)
+
+cc_library(
     name = "BufferizationPipelines",
     srcs = glob(["lib/Dialect/Bufferization/Pipelines/*.cpp"]),
     hdrs = ["include/mlir/Dialect/Bufferization/Pipelines/Passes.h"],
@@ -14448,6 +14518,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":BytecodeOpInterface",
+        ":ControlFlowInterfaces",
         ":ConvertToLLVMInterface",
         ":IR",
         ":InliningUtils",
