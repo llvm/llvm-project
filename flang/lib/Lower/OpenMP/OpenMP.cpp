@@ -3894,17 +3894,14 @@ static void genOMP(lower::AbstractConverter &converter, lower::SymMap &symTable,
   const auto &reductionName = std::get<parser::Name>(designator.u);
 
   for (const auto &typeSpec : typeNameList.v) {
+    (void)typeSpec; // Currently unused
     mlir::Type reductionType = getReductionType(converter, specifier);
-
     ReductionProcessor::GenCombinerCBTy genCombinerCB =
         processReductionCombiner(converter, symTable, semaCtx, combiner);
-
     ReductionProcessor::GenInitValueCBTy genInitValueCB;
     ClauseProcessor cp(converter, semaCtx, clauses);
     cp.processInitializer(symTable, genInitValueCB);
-
     bool isByRef = ReductionProcessor::doReductionByRef(reductionType);
-
     ReductionProcessor::createDeclareReductionHelper<
         mlir::omp::DeclareReductionOp>(
         converter, reductionName.ToString(), reductionType,
