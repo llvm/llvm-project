@@ -235,6 +235,9 @@ void X86CodeGenPassBuilder::addPreEmitPass2(PassManagerWrapper &PMW) const {
     // ported.
   }
 
+  // TODO(boomanaiden154): Add X86LoadValueInjectionRetHardeningPass here once
+  // it has been ported.
+
   // Insert pseudo probe annotation for callsite profiling
   // TODO(boomanaiden154): Add PseudoProberInserterPass here once it has been
   // ported.
