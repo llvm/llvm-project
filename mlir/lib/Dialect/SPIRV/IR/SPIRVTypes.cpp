@@ -551,7 +551,7 @@ void TypeExtensionVisitor::addConcrete(ScalarType type) {
     extensions.push_back(ext);
   }
 
-  if (isa<Float8E4M3FNType>(type) || isa<Float8E5M2Type>(type)) {
+  if (isa<Float8E4M3FNType, Float8E5M2Type>(type)) {
     static constexpr auto ext = Extension::SPV_EXT_float8;
     extensions.push_back(ext);
   }
