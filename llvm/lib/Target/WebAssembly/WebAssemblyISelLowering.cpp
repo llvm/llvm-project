@@ -1065,10 +1065,10 @@ EVT WebAssemblyTargetLowering::getSetCCResultType(const DataLayout &DL,
   return EVT::getIntegerVT(C, 32);
 }
 
-bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                                   const CallBase &I,
-                                                   MachineFunction &MF,
-                                                   unsigned Intrinsic) const {
+void WebAssemblyTargetLowering::getTgtMemIntrinsic(
+    SmallVectorImpl<IntrinsicInfo> &Infos, const CallBase &I,
+    MachineFunction &MF, unsigned Intrinsic) const {
+  IntrinsicInfo Info;
   switch (Intrinsic) {
   case Intrinsic::wasm_memory_atomic_notify:
     Info.opc = ISD::INTRINSIC_W_CHAIN;
@@ -1083,7 +1083,8 @@ bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     // instructions are treated as volatiles in the backend, so we should be
     // consistent. The same applies for wasm_atomic_wait intrinsics too.
     Info.flags = MachineMemOperand::MOVolatile | MachineMemOperand::MOLoad;
-    return true;
+    Infos.push_back(Info);
+    return;
   case Intrinsic::wasm_memory_atomic_wait32:
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::i32;
@@ -1091,7 +1092,8 @@ bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.align = Align(4);
     Info.flags = MachineMemOperand::MOVolatile | MachineMemOperand::MOLoad;
-    return true;
+    Infos.push_back(Info);
+    return;
   case Intrinsic::wasm_memory_atomic_wait64:
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::i64;
@@ -1099,7 +1101,8 @@ bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.align = Align(8);
     Info.flags = MachineMemOperand::MOVolatile | MachineMemOperand::MOLoad;
-    return true;
+    Infos.push_back(Info);
+    return;
   case Intrinsic::wasm_loadf16_f32:
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::f16;
@@ -1107,7 +1110,8 @@ bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.align = Align(2);
     Info.flags = MachineMemOperand::MOLoad;
-    return true;
+    Infos.push_back(Info);
+    return;
   case Intrinsic::wasm_storef16_f32:
     Info.opc = ISD::INTRINSIC_VOID;
     Info.memVT = MVT::f16;
@@ -1115,9 +1119,10 @@ bool WebAssemblyTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.offset = 0;
     Info.align = Align(2);
     Info.flags = MachineMemOperand::MOStore;
-    return true;
+    Infos.push_back(Info);
+    return;
   default:
-    return false;
+    return;
   }
 }
 

@@ -9037,17 +9037,17 @@ bool LoongArchTargetLowering::hasAndNot(SDValue Y) const {
   return VT.isScalarInteger() && !isa<ConstantSDNode>(Y);
 }
 
-bool LoongArchTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
-                                                 const CallBase &I,
-                                                 MachineFunction &MF,
-                                                 unsigned Intrinsic) const {
+void LoongArchTargetLowering::getTgtMemIntrinsic(
+    SmallVectorImpl<IntrinsicInfo> &Infos, const CallBase &I,
+    MachineFunction &MF, unsigned Intrinsic) const {
   switch (Intrinsic) {
   default:
-    return false;
+    return;
   case Intrinsic::loongarch_masked_atomicrmw_xchg_i32:
   case Intrinsic::loongarch_masked_atomicrmw_add_i32:
   case Intrinsic::loongarch_masked_atomicrmw_sub_i32:
-  case Intrinsic::loongarch_masked_atomicrmw_nand_i32:
+  case Intrinsic::loongarch_masked_atomicrmw_nand_i32: {
+    IntrinsicInfo Info;
     Info.opc = ISD::INTRINSIC_W_CHAIN;
     Info.memVT = MVT::i32;
     Info.ptrVal = I.getArgOperand(0);
@@ -9055,8 +9055,10 @@ bool LoongArchTargetLowering::getTgtMemIntrinsic(IntrinsicInfo &Info,
     Info.align = Align(4);
     Info.flags = MachineMemOperand::MOLoad | MachineMemOperand::MOStore |
                  MachineMemOperand::MOVolatile;
-    return true;
+    Infos.push_back(Info);
+    return;
     // TODO: Add more Intrinsics later.
+  }
   }
 }
 
