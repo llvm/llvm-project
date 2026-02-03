@@ -131,8 +131,8 @@ private:
   auto
   operator-(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT->decltype(__x.__i_ - __y.__i_);
 #else
-  typename __wrap_iter<_Iter>::difference_type
-  operator-(const __wrap_iter<_Iter>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT;
+  typename __wrap_iter<_Iter1>::difference_type
+  operator-(const __wrap_iter<_Iter1>& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT;
 #endif // C++03
 
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 explicit __wrap_iter(iterator_type __x) _NOEXCEPT : __i_(__x) {}
