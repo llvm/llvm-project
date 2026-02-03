@@ -9371,20 +9371,11 @@ static void fixScalarResumeValuesFromBypass(BasicBlock *BypassBlock, Loop *L,
       Inc->setIncomingValueForBlock(BypassBlock, V);
     } else {
       // If the incoming value from preheader is not a PHI node (e.g., a
-      // constant in functions with GC statepoint), we need to create a PHI node
-      // in the preheader that merges the original value and the bypass value,
-      // then update IVPhi to use this new PHI node.
-      PHINode *NewPhi = PHINode::Create(IncomingFromPH->getType(), 2,
-                                        IVPhi->getName() + ".phi.merge",
-                                        PH->getFirstNonPHIIt());
-      for (BasicBlock *Pred : predecessors(PH)) {
-        if (Pred == BypassBlock)
-          NewPhi->addIncoming(V, BypassBlock);
-        else
-          NewPhi->addIncoming(IncomingFromPH, Pred);
-      }
-      // Update IVPhi to use the new PHI node for the incoming value from PH.
-      IVPhi->setIncomingValueForBlock(PH, NewPhi);
+      // constant in functions with GC statepoint), directly add an incoming
+      // value from BypassBlock to IVPhi. The incoming value from PH remains
+      // unchanged (IncomingFromPH).
+      if (IVPhi->getBasicBlockIndex(BypassBlock) == -1)
+        IVPhi->addIncoming(V, BypassBlock);
     }
   }
 }
