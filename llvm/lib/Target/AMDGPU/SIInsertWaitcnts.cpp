@@ -3141,21 +3141,19 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
   // Walk over the instructions.
   MachineInstr *OldWaitcntInstr = nullptr;
 
+  // NOTE: We may append instrs after Inst while iterating.
   for (MachineBasicBlock::instr_iterator Iter = Block.instr_begin(),
                                          E = Block.instr_end();
-       Iter != E;) {
+       Iter != E; ++Iter) {
     MachineInstr &Inst = *Iter;
-    if (Inst.isMetaInstruction()) {
-      ++Iter;
+    if (Inst.isMetaInstruction())
       continue;
-    }
     // Track pre-existing waitcnts that were added in earlier iterations or by
     // the memory legalizer.
     if (isWaitInstr(Inst) ||
         (IsExpertMode && Inst.getOpcode() == AMDGPU::S_WAITCNT_DEPCTR)) {
       if (!OldWaitcntInstr)
         OldWaitcntInstr = &Inst;
-      ++Iter;
       continue;
     }
 
@@ -3167,7 +3165,6 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
       // FIXME: Not supported on GFX12 yet. Will need a new feature when we do.
       assert(ST->getGeneration() < AMDGPUSubtarget::GFX12);
       ScoreBrackets.recordAsyncMark(Inst);
-      ++Iter;
       continue;
     }
 
@@ -3223,6 +3220,8 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
 
     updateEventWaitcntAfter(Inst, &ScoreBrackets);
 
+    // Note: insertForcedWaitAfter() may add instrs after Iter that need to be
+    // visited by the loop.
     Modified |= insertForcedWaitAfter(Inst, Block, ScoreBrackets);
 
     LLVM_DEBUG({
@@ -3243,8 +3242,6 @@ bool SIInsertWaitcnts::insertWaitcntInBlock(MachineFunction &MF,
       VCCZCorrect = true;
       Modified = true;
     }
-
-    ++Iter;
   }
 
   // Flush counters at the end of the block if needed (for preheaders with no
