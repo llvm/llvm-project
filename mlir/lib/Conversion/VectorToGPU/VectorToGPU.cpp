@@ -116,12 +116,34 @@ static bool isTransposeMatrixLoadMap(AffineMap permutationMap) {
          permutationMap == AffineMap::get(nDim, 0, {innerDim, zero}, ctx);
 }
 
-// Return the stide for the second-to-last dimension of |type| if it is a memref
+// Return true if the given map represents a minor identity map with "strided"
+// dimensions i.e. (d0, d1, ..., dn-1) -> (da, dn-1) where 0 <= a <= n-1.
+//
+// This currently doesn't support permuted or broadcast dimensions.
+static bool isStridedMinorIdentity(AffineMap permutationMap) {
+  if (permutationMap.getNumResults() != 2)
+    return false;
+
+  AffineExpr innerResult = permutationMap.getResult(1);
+  const unsigned nDim = permutationMap.getNumDims();
+  if (innerResult != getAffineDimExpr(nDim - 1, permutationMap.getContext()))
+    return false;
+
+  return isa<AffineDimExpr>(permutationMap.getResult(0));
+}
+
+// Return the stride for the "row" dimension of |type| if it is a memref
 // and has a constant stride.
-static std::optional<int64_t> getStaticallyKnownRowStride(ShapedType type) {
+static std::optional<int64_t>
+getStaticallyKnownRowStride(ShapedType type, AffineMap permutationMap) {
   auto memrefType = dyn_cast<MemRefType>(type);
   if (!memrefType)
-    return false;
+    return std::nullopt;
+
+  // We only support permutation maps with two results i.e. loading a 2D matrix.
+  if (2 != permutationMap.getNumResults())
+    return std::nullopt;
+
   // If the memref is 0 or 1D the horizontal stride is 0.
   if (memrefType.getRank() < 2)
     return 0;
@@ -130,7 +152,21 @@ static std::optional<int64_t> getStaticallyKnownRowStride(ShapedType type) {
   if (failed(memrefType.getStridesAndOffset(strides, offset)) ||
       strides.back() != 1)
     return std::nullopt;
-  int64_t stride = strides[strides.size() - 2];
+
+  int stridePostion = strides.size() - 2;
+  // We need to be careful if we have a permutation map i.e. (d0, d1) -> (d1,
+  // d0), in this case we want to get the stride of the rows i.e. d0 but the
+  // logic below will extract the column stride d1 because the dims have been
+  // swapped.
+  if (!permutationMap.isPermutation()) {
+    // It's possible we have a constant 0 expression here (the permutation map
+    // must be an affine projection). Projected dimensions are already handled
+    // by the caller.
+    if (auto affineDimExpr =
+            dyn_cast<AffineDimExpr>(permutationMap.getResult(0)))
+      stridePostion = affineDimExpr.getPosition();
+  }
+  const int64_t stride = strides[stridePostion];
   if (stride == ShapedType::kDynamic)
     return std::nullopt;
   return stride;
@@ -141,7 +177,9 @@ static bool transferReadSupportsMMAMatrixType(vector::TransferReadOp readOp) {
   if (readOp.getMask() || readOp.hasOutOfBoundsDim() ||
       readOp.getVectorType().getRank() != 2)
     return false;
-  if (!getStaticallyKnownRowStride(readOp.getShapedType()))
+
+  AffineMap map = readOp.getPermutationMap();
+  if (!getStaticallyKnownRowStride(readOp.getShapedType(), map))
     return false;
 
   // Only allow integer types if the signedness can be inferred.
@@ -150,13 +188,12 @@ static bool transferReadSupportsMMAMatrixType(vector::TransferReadOp readOp) {
                                  !isa<arith::ExtUIOp>(*readOp->user_begin())))
       return false;
 
-  AffineMap map = readOp.getPermutationMap();
   MLIRContext *ctx = readOp.getContext();
   AffineExpr innerDim = getAffineDimExpr(map.getNumDims() - 1, ctx);
   AffineExpr zero = getAffineConstantExpr(0, ctx);
   auto broadcastInnerDim =
       AffineMap::get(map.getNumDims(), 0, {zero, innerDim}, ctx);
-  return map.isMinorIdentity() || map == broadcastInnerDim ||
+  return isStridedMinorIdentity(map) || map == broadcastInnerDim ||
          isTransposeMatrixLoadMap(map);
 }
 
@@ -170,12 +207,12 @@ transferWriteSupportsMMAMatrixType(vector::TransferWriteOp writeOp) {
   if (writeOp.getMask() || writeOp.hasOutOfBoundsDim() ||
       writeOp.getVectorType().getRank() != 2)
     return false;
-  if (!getStaticallyKnownRowStride(writeOp.getShapedType()))
+
+  AffineMap map = writeOp.getPermutationMap();
+  if (!getStaticallyKnownRowStride(writeOp.getShapedType(), map))
     return false;
   // TODO: Support transpose once it is added to GPU dialect ops.
-  if (!writeOp.getPermutationMap().isMinorIdentity())
-    return false;
-  return true;
+  return isStridedMinorIdentity(map);
 }
 
 /// Return true if the constant is a splat to a 2D vector so that it can be
@@ -547,14 +584,14 @@ convertTransferReadOp(RewriterBase &rewriter, vector::TransferReadOp op,
   assert(transferReadSupportsMMAMatrixType(op) &&
          "expected convertible operation");
 
+  AffineMap map = op.getPermutationMap();
   std::optional<int64_t> stride =
-      getStaticallyKnownRowStride(op.getShapedType());
+      getStaticallyKnownRowStride(op.getShapedType(), map);
   if (!stride.has_value()) {
     LDBG() << "no stride";
     return rewriter.notifyMatchFailure(op, "no stride");
   }
 
-  AffineMap map = op.getPermutationMap();
   bool isTranspose = isTransposeMatrixLoadMap(map);
 
   // Handle broadcast by setting the stride to 0.
@@ -597,7 +634,7 @@ convertTransferWriteOp(RewriterBase &rewriter, vector::TransferWriteOp op,
 
   assert(transferWriteSupportsMMAMatrixType(op));
   std::optional<int64_t> stride =
-      getStaticallyKnownRowStride(op.getShapedType());
+      getStaticallyKnownRowStride(op.getShapedType(), op.getPermutationMap());
   if (!stride.has_value()) {
     LDBG() << "no stride";
     return rewriter.notifyMatchFailure(op, "no stride");
