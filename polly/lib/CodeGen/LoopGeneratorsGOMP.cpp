@@ -148,7 +148,7 @@ ParallelLoopGeneratorGOMP::createSubFn(Value *Stride, AllocaInst *StructData,
                          "polly.par.UBAdjusted");
 
   Builder.CreateBr(CheckNextBB);
-  Builder.SetInsertPoint(--Builder.GetInsertPoint());
+  Builder.SetInsertPoint(std::prev(Builder.GetInsertPoint()));
   BasicBlock *AfterBB;
   Value *IV =
       createLoop(LB, UB, Stride, Builder, *SubFnLI, *SubFnDT, AfterBB,

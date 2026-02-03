@@ -337,8 +337,6 @@ bool CompilerType::IsInteger() const {
   return IsIntegerType(is_signed);
 }
 
-bool CompilerType::IsFloat() const { return IsFloatingPointType(); }
-
 bool CompilerType::IsEnumerationType() const {
   bool is_signed = false; // May be reset by the call below.
   return IsEnumerationType(is_signed);

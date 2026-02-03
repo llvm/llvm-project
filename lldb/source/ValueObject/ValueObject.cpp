@@ -1165,7 +1165,7 @@ llvm::Expected<llvm::APSInt> ValueObject::GetValueAsAPSInt() {
 }
 
 llvm::Expected<llvm::APFloat> ValueObject::GetValueAsAPFloat() {
-  if (!GetCompilerType().IsFloat())
+  if (!GetCompilerType().IsFloatingPointType())
     return llvm::make_error<llvm::StringError>(
         "type cannot be converted to APFloat", llvm::inconvertibleErrorCode());
 
@@ -1188,7 +1188,7 @@ llvm::Expected<bool> ValueObject::GetValueAsBool() {
     if (value_or_err)
       return value_or_err->getBoolValue();
   }
-  if (val_type.IsFloat()) {
+  if (val_type.IsFloatingPointType()) {
     auto value_or_err = GetValueAsAPFloat();
     if (value_or_err)
       return value_or_err->isNonZero();
@@ -1204,7 +1204,7 @@ void ValueObject::SetValueFromInteger(const llvm::APInt &value, Status &error) {
   // Verify the current object is an integer object
   CompilerType val_type = GetCompilerType();
   if (!val_type.IsInteger() && !val_type.IsUnscopedEnumerationType() &&
-      !val_type.IsFloat() && !val_type.IsPointerType() &&
+      !val_type.IsFloatingPointType() && !val_type.IsPointerType() &&
       !val_type.IsScalarType()) {
     error =
         Status::FromErrorString("current value object is not an integer objet");
@@ -1244,7 +1244,7 @@ void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
   // Verify the current object is an integer object
   CompilerType val_type = GetCompilerType();
   if (!val_type.IsInteger() && !val_type.IsUnscopedEnumerationType() &&
-      !val_type.IsFloat() && !val_type.IsPointerType() &&
+      !val_type.IsFloatingPointType() && !val_type.IsPointerType() &&
       !val_type.IsScalarType()) {
     error =
         Status::FromErrorString("current value object is not an integer objet");
@@ -1261,7 +1261,7 @@ void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
 
   // Verify the proposed new value is the right type.
   CompilerType new_val_type = new_val_sp->GetCompilerType();
-  if (!new_val_type.IsInteger() && !new_val_type.IsFloat() &&
+  if (!new_val_type.IsInteger() && !new_val_type.IsFloatingPointType() &&
       !new_val_type.IsPointerType()) {
     error = Status::FromErrorString(
         "illegal argument: new value should be of the same size");
@@ -1274,7 +1274,7 @@ void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
       SetValueFromInteger(*value_or_err, error);
     else
       error = Status::FromErrorString("error getting APSInt from new_val_sp");
-  } else if (new_val_type.IsFloat()) {
+  } else if (new_val_type.IsFloatingPointType()) {
     auto value_or_err = new_val_sp->GetValueAsAPFloat();
     if (value_or_err)
       SetValueFromInteger(value_or_err->bitcastToAPInt(), error);
@@ -3142,7 +3142,7 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
   bool is_enum = GetCompilerType().IsEnumerationType();
   bool is_pointer =
       GetCompilerType().IsPointerType() || GetCompilerType().IsNullPtrType();
-  bool is_float = GetCompilerType().IsFloat();
+  bool is_float = GetCompilerType().IsFloatingPointType();
   bool is_integer = GetCompilerType().IsInteger();
   ExecutionContext exe_ctx(GetExecutionContextRef());
 
@@ -3234,7 +3234,7 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
     }
   }
 
-  if (type.IsFloat()) {
+  if (type.IsFloatingPointType()) {
     if (!is_scalar) {
       auto int_value_or_err = GetValueAsAPSInt();
       if (int_value_or_err) {
@@ -3296,7 +3296,7 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
 lldb::ValueObjectSP ValueObject::CastToEnumType(CompilerType type) {
   bool is_enum = GetCompilerType().IsEnumerationType();
   bool is_integer = GetCompilerType().IsInteger();
-  bool is_float = GetCompilerType().IsFloat();
+  bool is_float = GetCompilerType().IsFloatingPointType();
   ExecutionContext exe_ctx(GetExecutionContextRef());
 
   if (!is_enum && !is_integer && !is_float)

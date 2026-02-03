@@ -205,8 +205,6 @@ public:
   /// This is used when you don't care about the signedness of the integer.
   bool IsInteger() const;
 
-  bool IsFloat() const;
-
   /// This is used when you don't care about the signedness of the enum.
   bool IsEnumerationType() const;
 
