@@ -50,9 +50,7 @@ LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE size_t string_length(const char *src) {
 
 LIBC_INLINE static void *calculate_find_first_character_return(
     const char *src, cpp::simd_mask<char> c_mask, size_t n_left) {
-  using bitmask_ty = cpp::internal::get_as_integer_type_t<cpp::simd_mask<char>>;
-  bitmask_ty r = cpp::bit_cast<bitmask_ty>(c_mask);
-  size_t c_offset = cpp::countr_zero(static_cast<unsigned int>(r));
+  size_t c_offset = cpp::find_first_set(c_mask);
   if (n_left < c_offset)
     return nullptr;
   return const_cast<char *>(src) + c_offset;
@@ -62,7 +60,7 @@ LIBC_NO_SANITIZE_OOB_ACCESS LIBC_INLINE static void *
 find_first_character(const unsigned char *s, unsigned char c, size_t n) {
   using Vector = cpp::simd<char>;
   using Mask = cpp::simd_mask<char>;
-  Vector c_byte = cpp::splat(static_cast<char>(c));
+  Vector c_byte = c;
 
   size_t alignment = alignof(Vector);
   const Vector *aligned =
