@@ -120,9 +120,6 @@ Potentially breaking changes
   ``_LIBCPP_ABI_NO_ITERATOR_BASES``. If you are using this flag and care about ABI stability, you should set
   ``_LIBCPP_ABI_NO_REVERSE_ITERATOR_SECOND_MEMBER`` as well.
 
-- The `base()` function exposed by the contiguous iterator type `wrap_iter` has been removed. Code should no longer
-  rely on this function.
-
 Announcements About Future Releases
 -----------------------------------
 
