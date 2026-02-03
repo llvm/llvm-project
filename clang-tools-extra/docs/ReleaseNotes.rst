@@ -97,6 +97,12 @@ Improvements to clang-tidy
 New checks
 ^^^^^^^^^^
 
+- New :doc:`llvm-type-switch-case-types
+  <clang-tidy/checks/llvm/type-switch-case-types>` check.
+
+  Finds ``llvm::TypeSwitch::Case`` calls with redundant explicit template
+  arguments that can be inferred from the lambda parameter type.
+
 - New :doc:`llvm-use-vector-utils
   <clang-tidy/checks/llvm/use-vector-utils>` check.
 
@@ -109,12 +115,24 @@ New checks
 
   Looks for functions returning ``std::[w|u8|u16|u32]string`` and suggests to
   change it to ``std::[...]string_view`` for performance reasons if possible.
+  
+- New :doc:`modernize-use-structured-binding
+  <clang-tidy/checks/modernize/use-structured-binding>` check.
+
+  Finds places where structured bindings could be used to decompose pairs and
+  suggests replacing them.
 
 - New :doc:`performance-string-view-conversions
   <clang-tidy/checks/performance/string-view-conversions>` check.
 
   Finds and removes redundant conversions from ``std::[w|u8|u16|u32]string_view`` to
   ``std::[...]string`` in call expressions expecting ``std::[...]string_view``.
+
+- New :doc:`readability-trailing-comma
+  <clang-tidy/checks/readability/trailing-comma>` check.
+
+  Checks for presence or absence of trailing commas in enum definitions and
+  initializer lists.
 
 New check aliases
 ^^^^^^^^^^^^^^^^^
@@ -170,6 +188,10 @@ Changes in existing checks
   <clang-tidy/checks/readability/enum-initial-value>` check: the warning message
   now uses separate note diagnostics for each uninitialized enumerator, making
   it easier to see which specific enumerators need explicit initialization.
+
+- Improved :doc:`readability-non-const-parameter
+  <clang-tidy/checks/readability/non-const-parameter>` check by avoiding false
+  positives on parameters used in dependent expressions.
 
 Removed checks
 ^^^^^^^^^^^^^^

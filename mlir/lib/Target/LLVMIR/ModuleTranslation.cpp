@@ -1660,7 +1660,7 @@ static void convertFunctionMemoryAttributes(LLVMFuncOp func,
 }
 
 /// Converts function attributes from `func` and attaches them to `llvmFunc`.
-static void convertFunctionAttributes(LLVMFuncOp func,
+static void convertFunctionAttributes(ModuleTranslation &mod, LLVMFuncOp func,
                                       llvm::Function *llvmFunc) {
   if (func.getNoInlineAttr())
     llvmFunc->addFnAttr(llvm::Attribute::NoInline);
@@ -1670,6 +1670,14 @@ static void convertFunctionAttributes(LLVMFuncOp func,
     llvmFunc->addFnAttr(llvm::Attribute::InlineHint);
   if (func.getOptimizeNoneAttr())
     llvmFunc->addFnAttr(llvm::Attribute::OptimizeNone);
+  if (func.getReturnsTwiceAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::ReturnsTwice);
+  if (func.getColdAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::Cold);
+  if (func.getHotAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::Hot);
+  if (func.getNoduplicateAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::NoDuplicate);
   if (func.getConvergentAttr())
     llvmFunc->addFnAttr(llvm::Attribute::Convergent);
   if (func.getNoUnwindAttr())
@@ -1678,6 +1686,12 @@ static void convertFunctionAttributes(LLVMFuncOp func,
     llvmFunc->addFnAttr(llvm::Attribute::WillReturn);
   if (func.getNoreturnAttr())
     llvmFunc->addFnAttr(llvm::Attribute::NoReturn);
+  if (func.getNoCallerSavedRegistersAttr())
+    llvmFunc->addFnAttr("no_caller_saved_registers");
+  if (func.getNocallbackAttr())
+    llvmFunc->addFnAttr(llvm::Attribute::NoCallback);
+  if (StringAttr modFormat = func.getModularFormatAttr())
+    llvmFunc->addFnAttr("modular-format", modFormat.getValue());
   if (TargetFeaturesAttr targetFeatAttr = func.getTargetFeaturesAttr())
     llvmFunc->addFnAttr("target-features", targetFeatAttr.getFeaturesString());
   if (FramePointerKindAttr fpAttr = func.getFramePointerAttr())
@@ -1686,6 +1700,15 @@ static void convertFunctionAttributes(LLVMFuncOp func,
   if (UWTableKindAttr uwTableKindAttr = func.getUwtableKindAttr())
     llvmFunc->setUWTableKind(
         convertUWTableKindToLLVM(uwTableKindAttr.getUwtableKind()));
+
+  if (ArrayAttr noBuiltins = func.getNobuiltinsAttr()) {
+    if (noBuiltins.empty())
+      llvmFunc->addFnAttr("no-builtins");
+
+    mod.convertFunctionArrayAttr(noBuiltins, llvmFunc,
+                                 ModuleTranslation::convertNoBuiltin);
+  }
+
   convertFunctionMemoryAttributes(func, llvmFunc);
 }
 
@@ -1733,20 +1756,20 @@ static LogicalResult convertParameterAttr(llvm::AttrBuilder &attrBuilder,
                                           ModuleTranslation &moduleTranslation,
                                           Location loc) {
   return llvm::TypeSwitch<Attribute, LogicalResult>(namedAttr.getValue())
-      .Case<TypeAttr>([&](auto typeAttr) {
+      .Case([&](TypeAttr typeAttr) {
         attrBuilder.addTypeAttr(
             llvmKind, moduleTranslation.convertType(typeAttr.getValue()));
         return success();
       })
-      .Case<IntegerAttr>([&](auto intAttr) {
+      .Case([&](IntegerAttr intAttr) {
         attrBuilder.addRawIntAttr(llvmKind, intAttr.getInt());
         return success();
       })
-      .Case<UnitAttr>([&](auto) {
+      .Case([&](UnitAttr) {
         attrBuilder.addAttribute(llvmKind);
         return success();
       })
-      .Case<LLVM::ConstantRangeAttr>([&](auto rangeAttr) {
+      .Case([&](LLVM::ConstantRangeAttr rangeAttr) {
         attrBuilder.addConstantRangeAttr(
             llvmKind,
             llvm::ConstantRange(rangeAttr.getLower(), rangeAttr.getUpper()));
@@ -1855,7 +1878,7 @@ LogicalResult ModuleTranslation::convertFunctionSignatures() {
     addRuntimePreemptionSpecifier(function.getDsoLocal(), llvmFunc);
 
     // Convert function attributes.
-    convertFunctionAttributes(function, llvmFunc);
+    convertFunctionAttributes(*this, function, llvmFunc);
 
     // Convert function kernel attributes to metadata.
     convertFunctionKernelAttributes(function, llvmFunc, *this);

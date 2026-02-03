@@ -346,41 +346,16 @@ static Intrinsic::ID getWaveActiveSumIntrinsic(llvm::Triple::ArchType Arch,
   }
 }
 
-// Return wave active max that corresponds to the QT scalar type
-static Intrinsic::ID getWaveActiveMaxIntrinsic(llvm::Triple::ArchType Arch,
-                                               CGHLSLRuntime &RT, QualType QT) {
+static Intrinsic::ID getPrefixCountBitsIntrinsic(llvm::Triple::ArchType Arch) {
   switch (Arch) {
   case llvm::Triple::spirv:
-    if (QT->isUnsignedIntegerType())
-      return Intrinsic::spv_wave_reduce_umax;
-    return Intrinsic::spv_wave_reduce_max;
+    return Intrinsic::spv_subgroup_prefix_bit_count;
   case llvm::Triple::dxil: {
-    if (QT->isUnsignedIntegerType())
-      return Intrinsic::dx_wave_reduce_umax;
-    return Intrinsic::dx_wave_reduce_max;
+    return Intrinsic::dx_wave_prefix_bit_count;
   }
   default:
-    llvm_unreachable("Intrinsic WaveActiveMax"
-                     " not supported by target architecture");
-  }
-}
-
-// Return wave active min that corresponds to the QT scalar type
-static Intrinsic::ID getWaveActiveMinIntrinsic(llvm::Triple::ArchType Arch,
-                                               CGHLSLRuntime &RT, QualType QT) {
-  switch (Arch) {
-  case llvm::Triple::spirv:
-    if (QT->isUnsignedIntegerType())
-      return Intrinsic::spv_wave_reduce_umin;
-    return Intrinsic::spv_wave_reduce_min;
-  case llvm::Triple::dxil: {
-    if (QT->isUnsignedIntegerType())
-      return Intrinsic::dx_wave_reduce_umin;
-    return Intrinsic::dx_wave_reduce_min;
-  }
-  default:
-    llvm_unreachable("Intrinsic WaveActiveMin"
-                     " not supported by target architecture");
+    llvm_unreachable(
+        "WavePrefixOp instruction not supported by target architecture");
   }
 }
 
@@ -492,6 +467,45 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
     return Builder.CreateIntrinsic(
         RetTy, CGM.getHLSLRuntime().getCreateResourceGetPointerIntrinsic(),
         ArrayRef<Value *>{HandleOp, IndexOp});
+  }
+  case Builtin::BI__builtin_hlsl_resource_sample: {
+    Value *HandleOp = EmitScalarExpr(E->getArg(0));
+    Value *SamplerOp = EmitScalarExpr(E->getArg(1));
+    Value *CoordOp = EmitScalarExpr(E->getArg(2));
+
+    SmallVector<Value *, 4> Args;
+    Args.push_back(HandleOp);
+    Args.push_back(SamplerOp);
+    Args.push_back(CoordOp);
+    if (E->getNumArgs() > 3) {
+      Args.push_back(EmitScalarExpr(E->getArg(3)));
+    } else {
+      // Default offset is 0.
+      // We need to know the type of the offset. It should be a vector of i32
+      // with the same number of elements as the coordinate, or scalar i32.
+      llvm::Type *CoordTy = CoordOp->getType();
+      llvm::Type *Int32Ty = Builder.getInt32Ty();
+      llvm::Type *OffsetTy = Int32Ty;
+      if (auto *VT = dyn_cast<llvm::FixedVectorType>(CoordTy))
+        OffsetTy = llvm::FixedVectorType::get(Int32Ty, VT->getNumElements());
+      Args.push_back(llvm::Constant::getNullValue(OffsetTy));
+    }
+
+    llvm::Type *RetTy = ConvertType(E->getType());
+    if (E->getNumArgs() <= 4) {
+      return Builder.CreateIntrinsic(
+          RetTy, CGM.getHLSLRuntime().getSampleIntrinsic(), Args);
+    }
+
+    llvm::Value *Clamp = EmitScalarExpr(E->getArg(4));
+    // The builtin is defined with variadic arguments, so the clamp parameter
+    // might have been promoted to double. The intrinsic requires a 32-bit
+    // float.
+    if (Clamp->getType() != Builder.getFloatTy())
+      Clamp = Builder.CreateFPCast(Clamp, Builder.getFloatTy());
+    Args.push_back(Clamp);
+    return Builder.CreateIntrinsic(
+        RetTy, CGM.getHLSLRuntime().getSampleClampIntrinsic(), Args);
   }
   case Builtin::BI__builtin_hlsl_resource_load_with_status: {
     Value *HandleOp = EmitScalarExpr(E->getArg(0));
@@ -864,6 +878,18 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
         CGM.getHLSLRuntime().getSaturateIntrinsic(), ArrayRef<Value *>{Op0},
         nullptr, "hlsl.saturate");
   }
+  case Builtin::BI__builtin_hlsl_wave_prefix_count_bits: {
+    Value *Op = EmitScalarExpr(E->getArg(0));
+    assert(Op->getType()->isIntegerTy(1) &&
+           "WavePrefixBitCount operand must be a boolean type");
+
+    Intrinsic::ID IID =
+        getPrefixCountBitsIntrinsic(getTarget().getTriple().getArch());
+
+    return EmitRuntimeCall(
+        Intrinsic::getOrInsertDeclaration(&CGM.getModule(), IID), ArrayRef{Op},
+        "hlsl.wave.prefix.bit.count");
+  }
   case Builtin::BI__builtin_hlsl_select: {
     Value *OpCond = EmitScalarExpr(E->getArg(0));
     RValue RValTrue = EmitAnyExpr(E->getArg(1));
@@ -949,9 +975,12 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   case Builtin::BI__builtin_hlsl_wave_active_max: {
     // Due to the use of variadic arguments, explicitly retreive argument
     Value *OpExpr = EmitScalarExpr(E->getArg(0));
-    Intrinsic::ID IID = getWaveActiveMaxIntrinsic(
-        getTarget().getTriple().getArch(), CGM.getHLSLRuntime(),
-        E->getArg(0)->getType());
+    QualType QT = E->getArg(0)->getType();
+    Intrinsic::ID IID;
+    if (QT->isUnsignedIntegerType())
+      IID = CGM.getHLSLRuntime().getWaveActiveUMaxIntrinsic();
+    else
+      IID = CGM.getHLSLRuntime().getWaveActiveMaxIntrinsic();
 
     return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
                                &CGM.getModule(), IID, {OpExpr->getType()}),
@@ -960,9 +989,12 @@ Value *CodeGenFunction::EmitHLSLBuiltinExpr(unsigned BuiltinID,
   case Builtin::BI__builtin_hlsl_wave_active_min: {
     // Due to the use of variadic arguments, explicitly retreive argument
     Value *OpExpr = EmitScalarExpr(E->getArg(0));
-    Intrinsic::ID IID = getWaveActiveMinIntrinsic(
-        getTarget().getTriple().getArch(), CGM.getHLSLRuntime(),
-        E->getArg(0)->getType());
+    QualType QT = E->getArg(0)->getType();
+    Intrinsic::ID IID;
+    if (QT->isUnsignedIntegerType())
+      IID = CGM.getHLSLRuntime().getWaveActiveUMinIntrinsic();
+    else
+      IID = CGM.getHLSLRuntime().getWaveActiveMinIntrinsic();
 
     return EmitRuntimeCall(Intrinsic::getOrInsertDeclaration(
                                &CGM.getModule(), IID, {OpExpr->getType()}),

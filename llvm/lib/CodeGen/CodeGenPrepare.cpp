@@ -6479,7 +6479,7 @@ bool CodeGenPrepare::optimizeMulWithOverflow(Instruction *I, bool IsSigned,
 
   // New BBs:
   BasicBlock *OverflowEntryBB =
-      SplitBlock(I->getParent(), I, DTU, LI, nullptr, "", /*Before*/ true);
+      splitBlockBefore(I->getParent(), I, DTU, LI, nullptr, "");
   OverflowEntryBB->takeName(I->getParent());
   // Keep the 'br' instruction that is generated as a result of the split to be
   // erased/replaced later.
