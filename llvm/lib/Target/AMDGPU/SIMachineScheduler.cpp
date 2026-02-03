@@ -922,7 +922,7 @@ void SIScheduleBlockCreator::colorEndsAccordingToDependencies() {
          // combination of children.
       PendingColoring[SU->NodeNum] = NextNonReservedID++;
   }
-  CurrentColoring = PendingColoring;
+  CurrentColoring = std::move(PendingColoring);
 }
 
 
