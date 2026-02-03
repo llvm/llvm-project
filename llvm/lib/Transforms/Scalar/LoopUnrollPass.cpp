@@ -82,11 +82,10 @@ static cl::opt<unsigned>
     UnrollThreshold("unroll-threshold", cl::Hidden,
                     cl::desc("The cost threshold for loop unrolling"));
 
-static cl::opt<unsigned>
-    UnrollOptSizeThreshold(
-      "unroll-optsize-threshold", cl::init(0), cl::Hidden,
-      cl::desc("The cost threshold for loop unrolling when optimizing for "
-               "size"));
+static cl::opt<unsigned> UnrollOptSizeThreshold(
+    "unroll-optsize-threshold", cl::init(0), cl::Hidden,
+    cl::desc("The cost threshold for loop unrolling when optimizing for "
+             "size"));
 
 static cl::opt<unsigned> UnrollPartialThreshold(
     "unroll-partial-threshold", cl::Hidden,
@@ -151,9 +150,9 @@ static cl::opt<unsigned> FlatLoopTripCountThreshold(
              "threshold, the loop is considered as flat and will be less "
              "aggressively unrolled."));
 
-static cl::opt<bool> UnrollUnrollRemainder(
-  "unroll-remainder", cl::Hidden,
-  cl::desc("Allow the loop remainder to be unrolled."));
+static cl::opt<bool>
+    UnrollUnrollRemainder("unroll-remainder", cl::Hidden,
+                          cl::desc("Allow the loop remainder to be unrolled."));
 
 // This option isn't ever intended to be enabled, it serves to allow
 // experiments to check the assumptions about when this kind of revisit is
@@ -339,7 +338,258 @@ struct PragmaInfo {
   const bool PragmaEnableUnroll;
 };
 
+/// Helper type to estimate per-iteration cost savings coming from fully
+/// unrolling a loop.
+///
+/// The analysis maintains a set of foldable instructions inside the loop (i.e.,
+/// instructions whose result will be statically known after loop unrolling)
+/// that we assume will be entirely removable if the loop is fully unrolled.
+/// These instructions' cost can be deducted from the unrolled cost when
+/// comparing against a threshold.
+struct FullUnrollCostSavings {
+  FullUnrollCostSavings(const Loop *L) : L(L) {}
+
+  /// Returns whether the instruction is foldable.
+  inline bool isFoldable(const Instruction *I) const {
+    return Foldable.contains(I);
+  }
+
+  /// If the value is an instruction, returns whether that instruction is
+  /// foldable, false otherwise.
+  bool isFoldable(const Value *V) const {
+    if (const Instruction *I = dyn_cast<Instruction>(V))
+      return isFoldable(I);
+    return false;
+  }
+
+  /// Adds an instruction to the foldable set and re-evaluates instructions in
+  /// the loop to determine whether they are now foldable.
+  void addFoldable(const Instruction *I) {
+    if (!Foldable.insert(I).second)
+      return;
+
+    // Every time we assume foldability of an additional instruction, we
+    // potentially need to revisit instructions that were previously seen as
+    // unfoldable.
+    Evaluated.clear();
+
+    addUsersToExploreSet(I);
+    while (ToEvaluate.size())
+      evalInstruction(ToEvaluate.pop_back_val());
+  }
+
+  /// Returns savings incurred by all foldable instructions, according to the \p
+  /// TTI.
+  InstructionCost computeSavings(const TargetTransformInfo &TTI) const {
+    TargetTransformInfo::TargetCostKind CostKind =
+        L->getHeader()->getParent()->hasMinSize()
+            ? TargetTransformInfo::TCK_CodeSize
+            : TargetTransformInfo::TCK_SizeAndLatency;
+
+    InstructionCost CostSavings;
+    for (const Value *Val : Foldable)
+      CostSavings += TTI.getInstructionCost(cast<Instruction>(Val), CostKind);
+    return CostSavings;
+  }
+
+private:
+  /// The set of instruction inside the loop which we consider foldable.
+  SmallPtrSet<const Instruction *, 4> Foldable;
+  /// Caches the set of instructions we have already evaluated when adding a new
+  /// instruction to the foldable set.
+  SmallPtrSet<const Instruction *, 4> Evaluated;
+  /// Stack of instructions to evaluate when adding a new instruction to the
+  /// foldable set.
+  SmallVector<const Instruction *, 4> ToEvaluate;
+  /// The loop under consideration.
+  const Loop *L;
+
+  /// Adds all value users to the stack of instructions to evaluate, if they
+  /// have not been evaluated already.
+  void addUsersToExploreSet(const Value *Val) {
+    for (const User *U : Val->users()) {
+      if (const Instruction *I = dyn_cast<Instruction>(U))
+        if (!Evaluated.contains(I))
+          ToEvaluate.push_back(I);
+    }
+  }
+
+  /// Evaluates an instruction to determine whether it is foldable, and returns
+  /// if that is the case. This may recurse on operands that are the result of
+  /// yet unevaluated instructions inside the loop.
+  bool evalInstruction(const Instruction *I) {
+    Evaluated.insert(I);
+    if (isFoldable(I))
+      return true;
+    if (I->mayHaveSideEffects() || I->isTerminator() || isa<PHINode>(I))
+      return false;
+    bool IsFoldable;
+    if (isa<SelectInst>(I)) {
+      // Special case a select instruction; if the select operand is constant
+      // the result equals one of the other operands so the instruction is
+      // foldable.
+      IsFoldable = valWillBeConstant(I->getOperand(0));
+    } else {
+      IsFoldable = true;
+      // All instruction operands must end up as constants for the instruction
+      // to be foldable.
+      for (const Value *Val : I->operand_values()) {
+        if (!valWillBeConstant(Val)) {
+          IsFoldable = false;
+          break;
+        }
+      }
+    }
+    if (IsFoldable) {
+      Foldable.insert(I);
+      addUsersToExploreSet(I);
+    }
+    return IsFoldable;
+  }
+
+  bool valWillBeConstant(const Value *Val) {
+    if (isa<Constant>(Val) || isFoldable(Val))
+      return true;
+    const Instruction *ValInstr = dyn_cast<Instruction>(Val);
+    if (!ValInstr || Evaluated.contains(ValInstr) || !L->contains(ValInstr))
+      return false;
+    return evalInstruction(ValInstr);
+  }
+};
+
 } // end anonymous namespace
+
+/// Runs a fast analysis on the loop to determine whether it is worth it to
+/// fully unroll it. As opposed to analyzeLoopUnrollCost, this does not attempt
+/// to simulate execution of every loop iteration but instead tries to identify
+/// the set of instructions that will be optimizable away if the loop is fully
+/// unrolled. Returns estimated instruction cost savings per loop iteration if
+/// the loop were to be fully unrolled according to the trip count in UP.Count.
+static InstructionCost analyzeFullUnrollCostSavings(
+    const Loop *L, ScalarEvolution &SE, const TargetTransformInfo &TTI,
+    const TargetTransformInfo::UnrollingPreferences &UP) {
+  // Cost savings analysis is all based on unrolling making some instructions
+  // foldable; if we cannot identify the loop's IV then there is nothing we can
+  // do.
+  PHINode *IV = L->getInductionVariable(SE);
+  if (!IV)
+    return {};
+  FullUnrollCostSavings Savings(L);
+
+  // If we were to unroll the loop, everything that is only dependent on the IV
+  // and constants will get simplified away.
+  Savings.addFoldable(IV);
+
+  // Look for subloops whose trip count would go from runtime-dependent to
+  // runtime-independent if we were to unroll the loop. These subloops are
+  // likely to be fully unrollable in the future and yield further cost savings.
+  unsigned NumUnrollableSubloops = 0;
+  for (const Loop *SubLoop : L->getSubLoops()) {
+    // We must be able to determine the loop's IV, initial/final IV value, and
+    // step.
+    PHINode *SubIV = SubLoop->getInductionVariable(SE);
+    if (!SubIV)
+      continue;
+    std::optional<Loop::LoopBounds> Bounds = SubLoop->getBounds(SE);
+    if (!Bounds)
+      continue;
+    Value *StepVal = Bounds->getStepValue();
+    if (!StepVal)
+      continue;
+
+    bool SubBoundsDependsOnIV = false;
+    auto IsValKnown = [&](const Value *Val) -> bool {
+      if (isa<Constant>(Val))
+        return true;
+      if (Savings.isFoldable(Val)) {
+        SubBoundsDependsOnIV = true;
+        return true;
+      }
+      return false;
+    };
+
+    // Determine whether the derivation of the subloop's bounds depends
+    // exclusively on constants and the outer loop's IV.
+    if (IsValKnown(&Bounds->getInitialIVValue()) &&
+        IsValKnown(&Bounds->getFinalIVValue()) && IsValKnown(StepVal) &&
+        SubBoundsDependsOnIV) {
+      // Optimistically assume that we will be able to unroll the subloop in the
+      // future, which means that its IV will also be known on all inner loop
+      // iterations, leading to more instructions being optimized away. Properly
+      // estimating the cost savings per outer loop iteration would require us
+      // to estimate the average subloop trip count, but it is too complicated
+      // for this analysis. When determining cost savings, we will very
+      // conservatively assume that the inner loop will only execute once per
+      // outer loop iteration. This also reduces our cost savings estimation
+      // mistake in the case where the subloop does not end up being unrolled.
+      Savings.addFoldable(SubIV);
+      ++NumUnrollableSubloops;
+
+      LLVM_DEBUG({
+        dbgs() << "  Trip count of subloop ";
+        SubLoop->getHeader()->printAsOperand(dbgs(), false);
+        dbgs() << " will become runtime-independent by fully unrolling loop ";
+        L->getHeader()->printAsOperand(dbgs(), false);
+        dbgs() << '\n';
+      });
+    }
+  }
+
+  // Look for condititional branches whose condition would be statically
+  // determined at each iteration of the loop if it were unrolled. In some
+  // cases, this means we will able to remove the branch entirely.
+  for (const BasicBlock *BB : L->getBlocks()) {
+    const Instruction *TermInstr = BB->getTerminator();
+    if (const BranchInst *Br = dyn_cast<BranchInst>(TermInstr)) {
+      if (Br->isConditional() && Savings.isFoldable(Br->getCondition())) {
+        // The branch condition will be statically determined at each iteration
+        // of the loop.
+        BasicBlock *FalseSucc = Br->getSuccessor(0),
+                   *TrueSucc = Br->getSuccessor(1);
+
+        // Checks whether one of the branch successor has at most two
+        // predecessors which are either the branch's block or the other branch
+        // successor.
+        auto IsIfThen = [&](auto Predecessors, BasicBlock *OtherSucc) -> bool {
+          unsigned NumPreds = 0;
+          for (const BasicBlock *Pred : Predecessors) {
+            if (Pred != BB && Pred != OtherSucc)
+              return false;
+            if (++NumPreds > 2)
+              return false;
+          }
+          return true;
+        };
+
+        if ((TrueSucc->getSinglePredecessor() ||
+             IsIfThen(predecessors(TrueSucc), FalseSucc)) &&
+            (FalseSucc->getSinglePredecessor() ||
+             IsIfThen(predecessors(FalseSucc), TrueSucc))) {
+          // The CFG corresponds to a simple if/then(/else) construct whose
+          // condition we will know, so we will able to remove the branch and
+          // one of the two blocks at each iteration of the outer loop. Only the
+          // branch represents a cost saving, since one successor block will
+          // still be executed.
+          Savings.addFoldable(Br);
+          LLVM_DEBUG({
+            dbgs() << "  Conditional branch will be removed by fully "
+                      "unrolling loop ";
+            L->getHeader()->printAsOperand(dbgs(), false);
+            dbgs() << '\n';
+          });
+        }
+      }
+    }
+  }
+
+  // Compute cost savings from instructions that will likely be optimized away
+  // by unrolling the loop.
+  InstructionCost CostSavings = Savings.computeSavings(TTI);
+  // Finally, for each subloop that we think will become unrollable, account for
+  // the backedge's branch being removed.
+  CostSavings += NumUnrollableSubloops;
+  return CostSavings;
+}
 
 /// Figure out if the loop is worth full unrolling.
 ///
@@ -834,34 +1084,54 @@ shouldPragmaUnroll(Loop *L, const PragmaInfo &PInfo,
   return std::nullopt;
 }
 
-static std::optional<unsigned> shouldFullUnroll(
-    Loop *L, const TargetTransformInfo &TTI, DominatorTree &DT,
-    ScalarEvolution &SE, const SmallPtrSetImpl<const Value *> &EphValues,
-    const unsigned FullUnrollTripCount, const UnrollCostEstimator UCE,
-    const TargetTransformInfo::UnrollingPreferences &UP) {
-  assert(FullUnrollTripCount && "should be non-zero!");
+static bool
+shouldFullUnroll(Loop *L, const TargetTransformInfo &TTI, DominatorTree &DT,
+                 ScalarEvolution &SE,
+                 const SmallPtrSetImpl<const Value *> &EphValues,
+                 const UnrollCostEstimator UCE,
+                 const TargetTransformInfo::UnrollingPreferences &UP) {
+  assert(UP.Count && "should be non-zero!");
 
-  if (FullUnrollTripCount > UP.FullUnrollMaxCount)
-    return std::nullopt;
+  if (UP.Count > UP.FullUnrollMaxCount)
+    return false;
 
   // When computing the unrolled size, note that BEInsns are not replicated
   // like the rest of the loop body.
   if (UCE.getUnrolledLoopSize(UP) < UP.Threshold)
-    return FullUnrollTripCount;
+    return true;
 
   // The loop isn't that small, but we still can fully unroll it if that
-  // helps to remove a significant number of instructions.
-  // To check that, run additional analysis on the loop.
+  // helps to remove a significant number of instructions. To check that, run
+  // additional analyses on the loop. First try a full iteration-by-iteration
+  // analysis on the loop. If that fails, run a simpler structural analysis that
+  // estimates per-iteration cost savings in the unrolled loop.
   if (std::optional<EstimatedUnrollCost> Cost = analyzeLoopUnrollCost(
-          L, FullUnrollTripCount, DT, SE, EphValues, TTI,
+          L, UP.Count, DT, SE, EphValues, TTI,
           UP.Threshold * UP.MaxPercentThresholdBoost / 100,
           UP.MaxIterationsCountToAnalyze)) {
     unsigned Boost =
-      getFullUnrollBoostingFactor(*Cost, UP.MaxPercentThresholdBoost);
+        getFullUnrollBoostingFactor(*Cost, UP.MaxPercentThresholdBoost);
     if (Cost->UnrolledCost < UP.Threshold * Boost / 100)
-      return FullUnrollTripCount;
+      return true;
+  } else {
+    InstructionCost Savings = analyzeFullUnrollCostSavings(L, SE, TTI, UP);
+    if (!Savings.isValid() || !*Savings.getValue())
+      return false;
+    // Savings for one loop iteration are those estimated by the analaysis plus
+    // the loop backedge's branch.
+    uint64_t ItSavings = *Savings.getValue() + 1;
+    // Compute estimated cost of one loop iteration in the unrolled form.
+    uint64_t ItUnrollCost = UCE.getRolledLoopSize();
+    if (ItSavings < ItUnrollCost)
+      ItUnrollCost -= ItSavings;
+    else
+      ItUnrollCost = 1;
+    uint64_t FullUnrollCost = ItUnrollCost * UP.Count + 1;
+    assert(FullUnrollCost && "loop has no cost");
+    if (FullUnrollCost < UP.Threshold)
+      return true;
   }
-  return std::nullopt;
+  return false;
 }
 
 static std::optional<unsigned>
@@ -874,7 +1144,7 @@ shouldPartialUnroll(const unsigned LoopSize, const unsigned TripCount,
 
   if (!UP.Partial) {
     LLVM_DEBUG(dbgs() << "  will not try to unroll partially because "
-               << "-unroll-allow-partial not given\n");
+                      << "-unroll-allow-partial not given\n");
     return 0;
   }
   unsigned count = UP.Count;
@@ -884,7 +1154,7 @@ shouldPartialUnroll(const unsigned LoopSize, const unsigned TripCount,
     // Reduce unroll count to be modulo of TripCount for partial unrolling.
     if (UCE.getUnrolledLoopSize(UP, count) > UP.PartialThreshold)
       count = (std::max(UP.PartialThreshold, UP.BEInsns + 1) - UP.BEInsns) /
-        (LoopSize - UP.BEInsns);
+              (LoopSize - UP.BEInsns);
     if (count > UP.MaxCount)
       count = UP.MaxCount;
     while (count != 0 && TripCount % count != 0)
@@ -983,9 +1253,7 @@ bool llvm::computeUnrollCount(
   UP.Count = 0;
   if (TripCount) {
     UP.Count = TripCount;
-    if (auto UnrollFactor = shouldFullUnroll(L, TTI, DT, SE, EphValues,
-                                             TripCount, UCE, UP)) {
-      UP.Count = *UnrollFactor;
+    if (shouldFullUnroll(L, TTI, DT, SE, EphValues, UCE, UP)) {
       UseUpperBound = false;
       return ExplicitUnroll;
     }
@@ -1006,9 +1274,7 @@ bool llvm::computeUnrollCount(
   if (!TripCount && MaxTripCount && (UP.UpperBound || MaxOrZero) &&
       MaxTripCount <= UP.MaxUpperBound) {
     UP.Count = MaxTripCount;
-    if (auto UnrollFactor = shouldFullUnroll(L, TTI, DT, SE, EphValues,
-                                             MaxTripCount, UCE, UP)) {
-      UP.Count = *UnrollFactor;
+    if (shouldFullUnroll(L, TTI, DT, SE, EphValues, UCE, UP)) {
       UseUpperBound = true;
       return ExplicitUnroll;
     }
