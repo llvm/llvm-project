@@ -15,11 +15,6 @@
 #include "clang/Analysis/Analyses/CFGReachabilityAnalysis.h"
 #include "clang/Lex/Lexer.h"
 #include "llvm/ADT/STLExtras.h"
-#include "llvm/ADT/SmallPtrSet.h"
-
-#include "../utils/ExprSequence.h"
-#include "../utils/Matchers.h"
-#include <optional>
 
 using namespace clang::ast_matchers;
 using namespace clang::tidy::utils;
@@ -44,7 +39,7 @@ CFG *InefficientCopyAssignCheck::getCFG(const FunctionDecl *FD,
                                         ASTContext *Context) {
   std::unique_ptr<CFG> &TheCFG = CFGCache[FD];
   if (!TheCFG) {
-    CFG::BuildOptions Options;
+    const CFG::BuildOptions Options;
     std::unique_ptr<CFG> FCFG =
         CFG::buildCFG(nullptr, FD->getBody(), Context, Options);
     if (!FCFG)
@@ -64,7 +59,7 @@ void InefficientCopyAssignCheck::check(const MatchFinder::MatchResult &Result) {
   const auto *WithinFunctionDecl =
       Result.Nodes.getNodeAs<FunctionDecl>("within-func");
 
-  QualType AssignValueQual = AssignValueDecl->getType();
+  const QualType AssignValueQual = AssignValueDecl->getType();
   if (AssignValueQual->isReferenceType() ||
       AssignValueQual.isConstQualified() || AssignValueQual->isPointerType() ||
       AssignValueQual->isScalarType())
