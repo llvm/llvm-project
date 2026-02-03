@@ -140,6 +140,17 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg).getSizeInBits() == 256 && MUI.isUniform(Reg);
   case UniB512:
     return MRI.getType(Reg).getSizeInBits() == 512 && MUI.isUniform(Reg);
+  case UniBRC: {
+    if (!MUI.isUniform(Reg))
+      return false;
+    // Check if there is SGPR register class of same size as the LLT.
+    const SIRegisterInfo *TRI =
+        static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
+    // There is no 16 bit SGPR register class. Extra size check is required
+    // since getSGPRClassForBitWidth returns SReg_32RegClass for Size 16.
+    unsigned LLTSize = MRI.getType(Reg).getSizeInBits();
+    return LLTSize >= 32 && TRI->getSGPRClassForBitWidth(LLTSize);
+  }
   case DivS1:
     return MRI.getType(Reg) == LLT::scalar(1) && MUI.isDivergent(Reg);
   case DivS16:
@@ -184,6 +195,14 @@ bool matchUniformityAndLLT(Register Reg, UniformityLLTOpPredicateID UniID,
     return MRI.getType(Reg).getSizeInBits() == 256 && MUI.isDivergent(Reg);
   case DivB512:
     return MRI.getType(Reg).getSizeInBits() == 512 && MUI.isDivergent(Reg);
+  case DivBRC: {
+    if (!MUI.isDivergent(Reg))
+      return false;
+    // Check if there is VGPR register class of same size as the LLT.
+    const SIRegisterInfo *TRI =
+        static_cast<const SIRegisterInfo *>(MRI.getTargetRegisterInfo());
+    return TRI->getSGPRClassForBitWidth(MRI.getType(Reg).getSizeInBits());
+  }
   case _:
     return true;
   default:
@@ -292,14 +311,14 @@ void SetOfRulesForOpcode::addFastRuleDivergent(UniformityLLTOpPredicateID Ty,
                                                RegBankLLTMapping RuleApplyIDs) {
   int Slot = getFastPredicateSlot(Ty);
   assert(Slot != -1 && "Ty unsupported in this FastRulesTypes");
-  Div[Slot] = RuleApplyIDs;
+  Div[Slot] = std::move(RuleApplyIDs);
 }
 
 void SetOfRulesForOpcode::addFastRuleUniform(UniformityLLTOpPredicateID Ty,
                                              RegBankLLTMapping RuleApplyIDs) {
   int Slot = getFastPredicateSlot(Ty);
   assert(Slot != -1 && "Ty unsupported in this FastRulesTypes");
-  Uni[Slot] = RuleApplyIDs;
+  Uni[Slot] = std::move(RuleApplyIDs);
 }
 
 int SetOfRulesForOpcode::getFastPredicateSlot(
@@ -604,6 +623,11 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
   addRulesForGOpcs({G_CONSTANT})
       .Any({{UniS1, _}, {{Sgpr32Trunc}, {None}, UniCstExt}});
   addRulesForGOpcs({G_FREEZE}).Any({{DivS1}, {{Vcc}, {Vcc}}});
+
+  addRulesForGOpcs({G_UNMERGE_VALUES})
+      .Any({{UniS16}, {{}, {}, UnmergeToShiftTrunc}})
+      .Any({{UniBRC}, {{}, {}, VerifyAllSgpr}})
+      .Any({{DivBRC}, {{}, {}, ApplyAllVgpr}});
 
   Predicate isSignedICmp([](const MachineInstr &MI) -> bool {
     auto Pred =
@@ -993,7 +1017,8 @@ RegBankLegalizeRules::RegBankLegalizeRules(const GCNSubtarget &_ST,
 
   addRulesForGOpcs({G_AMDGPU_BUFFER_STORE, G_AMDGPU_BUFFER_STORE_FORMAT,
                     G_AMDGPU_BUFFER_STORE_FORMAT_D16,
-                    G_AMDGPU_TBUFFER_STORE_FORMAT})
+                    G_AMDGPU_TBUFFER_STORE_FORMAT,
+                    G_AMDGPU_TBUFFER_STORE_FORMAT_D16})
       .Any({{B32}, {{}, {VgprB32, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
       .Any({{B64}, {{}, {VgprB64, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})
       .Any({{B128}, {{}, {VgprB128, SgprV4S32_WF, Vgpr32, Vgpr32, Sgpr32_WF}}})

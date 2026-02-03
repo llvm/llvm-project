@@ -798,6 +798,30 @@ define void @call_modular_format() {
 ; CHECK: llvm.func @f()
 declare void @f()
 
+; CHECK-LABEL: @call_nobuiltins_all
+define void @call_nobuiltins_all() {
+; CHECK: llvm.call @f() {nobuiltins = []}
+  call void @f() "no-builtins"
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
+; CHECK-LABEL: @call_nobuiltins_2
+define void @call_nobuiltins_2() {
+; CHECK: llvm.call @f() {nobuiltins = ["asdf", "ghij"]}
+  call void @f() "no-builtin-asdf" "no-builtin-ghij"
+  ret void
+}
+
+; // -----
+
+; CHECK: llvm.func @f()
+declare void @f()
+
 ; CHECK-LABEL: @call_memory_effects
 define void @call_memory_effects() {
 ; CHECK: llvm.call @f() {memory_effects = #llvm.memory_effects<other = none, argMem = none, inaccessibleMem = none, errnoMem = none, targetMem0 = none, targetMem1 = none>}

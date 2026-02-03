@@ -170,6 +170,125 @@ entry:
   ret <2 x i32> %out
 }
 
+define <2 x i32> @dupzext_vector_v2i32_v2i64_trunc(<2 x i32> %a, ptr %p) {
+; CHECK-SD-LABEL: dupzext_vector_v2i32_v2i64_trunc:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    ldr d1, [x0]
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    smull v0.2d, v1.2s, v0.s[0]
+; CHECK-SD-NEXT:    xtn v0.2s, v0.2d
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: dupzext_vector_v2i32_v2i64_trunc:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-GI-NEXT:    ldr d1, [x0]
+; CHECK-GI-NEXT:    dup v0.2d, v0.d[0]
+; CHECK-GI-NEXT:    xtn v0.2s, v0.2d
+; CHECK-GI-NEXT:    umull v0.2d, v0.2s, v1.2s
+; CHECK-GI-NEXT:    xtn v0.2s, v0.2d
+; CHECK-GI-NEXT:    ret
+entry:
+  %ext.a = zext <2 x i32> %a to <2 x i64>
+  %broadcast.splat = shufflevector <2 x i64> %ext.a, <2 x i64> poison, <2 x i32> zeroinitializer
+  %l = load <2 x i32>, ptr %p, align 4
+  %ext.l = zext <2 x i32> %l to <2 x i64>
+  %prod = mul nuw <2 x i64> %broadcast.splat, %ext.l
+  %out = trunc <2 x i64> %prod to <2 x i32>
+  ret <2 x i32> %out
+}
+
+define <2 x i32> @shufflezext_vector_v2i32_v2i64_trunc(<2 x i32> %a, <2 x i32> %b, ptr %p) {
+; CHECK-SD-LABEL: shufflezext_vector_v2i32_v2i64_trunc:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    zip1 v0.2s, v0.2s, v1.2s
+; CHECK-SD-NEXT:    ldr d1, [x0]
+; CHECK-SD-NEXT:    smull v0.2d, v0.2s, v1.2s
+; CHECK-SD-NEXT:    xtn v0.2s, v0.2d
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: shufflezext_vector_v2i32_v2i64_trunc:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ushll v0.2d, v0.2s, #0
+; CHECK-GI-NEXT:    ushll v1.2d, v1.2s, #0
+; CHECK-GI-NEXT:    zip1 v0.2d, v0.2d, v1.2d
+; CHECK-GI-NEXT:    ldr d1, [x0]
+; CHECK-GI-NEXT:    xtn v0.2s, v0.2d
+; CHECK-GI-NEXT:    umull v0.2d, v0.2s, v1.2s
+; CHECK-GI-NEXT:    xtn v0.2s, v0.2d
+; CHECK-GI-NEXT:    ret
+entry:
+  %ext.a = zext <2 x i32> %a to <2 x i64>
+  %ext.b = zext <2 x i32> %b to <2 x i64>
+  %broadcast.splat = shufflevector <2 x i64> %ext.a, <2 x i64> %ext.b, <2 x i32> <i32 0, i32 2>
+  %l = load <2 x i32>, ptr %p, align 4
+  %ext.l = zext <2 x i32> %l to <2 x i64>
+  %prod = mul nuw <2 x i64> %broadcast.splat, %ext.l
+  %out = trunc <2 x i64> %prod to <2 x i32>
+  ret <2 x i32> %out
+}
+
+define <8 x i8> @dupzext_vector_v8i8_v8i16_trunc(<8 x i8> %a, ptr %p) {
+; CHECK-SD-LABEL: dupzext_vector_v8i8_v8i16_trunc:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    // kill: def $d0 killed $d0 def $q0
+; CHECK-SD-NEXT:    ldr d1, [x0]
+; CHECK-SD-NEXT:    dup v0.8b, v0.b[0]
+; CHECK-SD-NEXT:    smull v0.8h, v1.8b, v0.8b
+; CHECK-SD-NEXT:    xtn v0.8b, v0.8h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: dupzext_vector_v8i8_v8i16_trunc:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ushll v0.8h, v0.8b, #0
+; CHECK-GI-NEXT:    ldr d1, [x0]
+; CHECK-GI-NEXT:    dup v0.8h, v0.h[0]
+; CHECK-GI-NEXT:    xtn v0.8b, v0.8h
+; CHECK-GI-NEXT:    umull v0.8h, v1.8b, v0.8b
+; CHECK-GI-NEXT:    xtn v0.8b, v0.8h
+; CHECK-GI-NEXT:    ret
+entry:
+  %ext.a = zext <8 x i8> %a to <8 x i16>
+  %broadcast.splat = shufflevector <8 x i16> %ext.a, <8 x i16> poison, <8 x i32> zeroinitializer
+  %l = load <8 x i8>, ptr %p, align 4
+  %ext.l = zext <8 x i8> %l to <8 x i16>
+  %prod = mul <8 x i16> %ext.l, %broadcast.splat
+  %out = trunc <8 x i16> %prod to <8 x i8>
+  ret <8 x i8> %out
+}
+
+define <8 x i8> @shufflezext_v8i8_v8i16_trunc(<8 x i8> %a, <8 x i8> %b, ptr %p) {
+; CHECK-SD-LABEL: shufflezext_v8i8_v8i16_trunc:
+; CHECK-SD:       // %bb.0: // %entry
+; CHECK-SD-NEXT:    zip1 v0.2s, v0.2s, v1.2s
+; CHECK-SD-NEXT:    ldr d1, [x0]
+; CHECK-SD-NEXT:    smull v0.8h, v1.8b, v0.8b
+; CHECK-SD-NEXT:    xtn v0.8b, v0.8h
+; CHECK-SD-NEXT:    ret
+;
+; CHECK-GI-LABEL: shufflezext_v8i8_v8i16_trunc:
+; CHECK-GI:       // %bb.0: // %entry
+; CHECK-GI-NEXT:    ushll v2.8h, v0.8b, #0
+; CHECK-GI-NEXT:    adrp x8, .LCPI10_0
+; CHECK-GI-NEXT:    ushll v3.8h, v1.8b, #0
+; CHECK-GI-NEXT:    ldr q0, [x8, :lo12:.LCPI10_0]
+; CHECK-GI-NEXT:    ldr d1, [x0]
+; CHECK-GI-NEXT:    tbl v0.16b, { v2.16b, v3.16b }, v0.16b
+; CHECK-GI-NEXT:    xtn v0.8b, v0.8h
+; CHECK-GI-NEXT:    umull v0.8h, v1.8b, v0.8b
+; CHECK-GI-NEXT:    xtn v0.8b, v0.8h
+; CHECK-GI-NEXT:    ret
+entry:
+  %ext.a = zext <8 x i8> %a to <8 x i16>
+  %ext.b = zext <8 x i8> %b to <8 x i16>
+  %broadcast.splat = shufflevector <8 x i16> %ext.a, <8 x i16> %ext.b, <8 x i32> <i32 0, i32 1, i32 2, i32 3, i32 8, i32 9, i32 10, i32 11>
+  %l = load <8 x i8>, ptr %p, align 4
+  %ext.l = zext <8 x i8> %l to <8 x i16>
+  %prod = mul nuw <8 x i16> %ext.l, %broadcast.splat
+  %out = trunc <8 x i16> %prod to <8 x i8>
+  ret <8 x i8> %out
+}
+
 ; Unsupported combines
 
 define <2 x i16> @dupsext_v2i8_v2i16(i8 %src, <2 x i8> %b) {

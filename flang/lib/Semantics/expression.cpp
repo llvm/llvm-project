@@ -1731,7 +1731,9 @@ private:
     if (type_) {
       auto len{type_->LEN()};
       if (explicitType_ ||
-          (len && IsConstantExpr(*len) && !ContainsAnyImpliedDoIndex(*len))) {
+          (len &&
+              IsConstantExpr(
+                  *len, &exprAnalyzer_.context().foldingContext()))) {
         return len;
       }
     }
@@ -2419,22 +2421,22 @@ MaybeExpr ExpressionAnalyzer::CheckStructureConstructor(
   for (const Symbol &symbol : components) {
     if (!symbol.test(Symbol::Flag::ParentComp) &&
         unavailable.find(symbol.name()) == unavailable.cend()) {
-      if (IsAllocatable(symbol)) {
-        // Set all remaining allocatables to explicit NULL().
+      if (const auto *object{
+              symbol.detailsIf<semantics::ObjectEntityDetails>()};
+          object && object->init()) {
+        result.Add(symbol, common::Clone(*object->init()));
+      } else if (const auto *proc{
+                     symbol.detailsIf<semantics::ProcEntityDetails>()};
+          proc && proc->init() && *proc->init()) {
+        result.Add(symbol, Expr<SomeType>{ProcedureDesignator{**proc->init()}});
+      } else if (IsAllocatableOrPointer(symbol)) {
         result.Add(symbol, Expr<SomeType>{NullPointer{}});
       } else {
-        const auto *object{symbol.detailsIf<semantics::ObjectEntityDetails>()};
-        if (object && object->init()) {
-          result.Add(symbol, common::Clone(*object->init()));
-        } else if (IsPointer(symbol)) {
-          result.Add(symbol, Expr<SomeType>{NullPointer{}});
-        } else if (object) { // C799
-          AttachDeclaration(
-              Say(typeName,
-                  "Structure constructor lacks a value for component '%s'"_err_en_US,
-                  symbol.name()),
-              symbol);
-        }
+        AttachDeclaration(
+            Say(typeName,
+                "Structure constructor lacks a value for component '%s'"_err_en_US,
+                symbol.name()),
+            symbol);
       }
     }
   }
@@ -3009,7 +3011,6 @@ auto ExpressionAnalyzer::ResolveGeneric(const Symbol &symbol,
           }
           crtMatchingDistance = ComputeCudaMatchingDistance(
               context_.languageFeatures(), *procedure, localActuals);
-        } else {
         }
       }
     }
@@ -3111,14 +3112,12 @@ void ExpressionAnalyzer::EmitGenericResolutionError(const Symbol &symbol,
               ? "No specific subroutine of generic '%s' matches the actual arguments"_err_en_US
               : "No specific function of generic '%s' matches the actual arguments"_err_en_US,
           symbol.name())}) {
-    parser::ContextualMessages &messages{GetContextualMessages()};
-    semantics::Scope &scope{context_.FindScope(messages.at())};
     for (const Symbol &specific : tried) {
       if (auto procChars{characteristics::Procedure::Characterize(
               specific, GetFoldingContext())}) {
         if (procChars->HasExplicitInterface()) {
           auto reasons{semantics::CheckExplicitInterface(*procChars, arguments,
-              context_, &scope, /*intrinsic=*/nullptr,
+              context_, /*scope=*/nullptr, /*intrinsic=*/nullptr,
               /*allocActualArgumentConversions=*/false,
               /*extentErrors=*/false,
               /*ignoreImplicitVsExplicit=*/false)};

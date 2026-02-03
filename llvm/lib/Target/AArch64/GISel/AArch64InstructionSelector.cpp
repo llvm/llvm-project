@@ -1410,7 +1410,8 @@ static Register getTestBitReg(Register Reg, uint64_t &Bit, bool &Invert,
         !MRI.hasOneNonDBGUse(MI->getOperand(0).getReg()))
       break;
 
-    // (tbz (any_ext x), b) -> (tbz x, b) if we don't use the extended bits.
+    // (tbz (any_ext x), b) -> (tbz x, b) and
+    // (tbz (zext x), b) -> (tbz x, b) if we don't use the extended bits.
     //
     // (tbz (trunc x), b) -> (tbz x, b) is always safe, because the bit number
     // on the truncated x is the same as the bit number on x.
@@ -1422,6 +1423,9 @@ static Register getTestBitReg(Register Reg, uint64_t &Bit, bool &Invert,
       Register NextReg = MI->getOperand(1).getReg();
       // Did we find something worth folding?
       if (!NextReg.isValid() || !MRI.hasOneNonDBGUse(NextReg))
+        break;
+      TypeSize InSize = MRI.getType(NextReg).getSizeInBits();
+      if (Bit >= InSize)
         break;
 
       // NextReg is worth folding. Keep looking.
@@ -6608,6 +6612,42 @@ bool AArch64InstructionSelector::selectIntrinsicWithSideEffects(
     Memset.cloneMemRefs(I);
     constrainSelectedInstRegOperands(*Memset, TII, TRI, RBI);
     break;
+  }
+  case Intrinsic::ptrauth_resign_load_relative: {
+    Register DstReg = I.getOperand(0).getReg();
+    Register ValReg = I.getOperand(2).getReg();
+    uint64_t AUTKey = I.getOperand(3).getImm();
+    Register AUTDisc = I.getOperand(4).getReg();
+    uint64_t PACKey = I.getOperand(5).getImm();
+    Register PACDisc = I.getOperand(6).getReg();
+    int64_t Addend = I.getOperand(7).getImm();
+
+    Register AUTAddrDisc = AUTDisc;
+    uint16_t AUTConstDiscC = 0;
+    std::tie(AUTConstDiscC, AUTAddrDisc) =
+        extractPtrauthBlendDiscriminators(AUTDisc, MRI);
+
+    Register PACAddrDisc = PACDisc;
+    uint16_t PACConstDiscC = 0;
+    std::tie(PACConstDiscC, PACAddrDisc) =
+        extractPtrauthBlendDiscriminators(PACDisc, MRI);
+
+    MIB.buildCopy({AArch64::X16}, {ValReg});
+
+    MIB.buildInstr(AArch64::AUTRELLOADPAC)
+        .addImm(AUTKey)
+        .addImm(AUTConstDiscC)
+        .addUse(AUTAddrDisc)
+        .addImm(PACKey)
+        .addImm(PACConstDiscC)
+        .addUse(PACAddrDisc)
+        .addImm(Addend)
+        .constrainAllUses(TII, TRI, RBI);
+    MIB.buildCopy({DstReg}, Register(AArch64::X16));
+
+    RBI.constrainGenericRegister(DstReg, AArch64::GPR64RegClass, MRI);
+    I.eraseFromParent();
+    return true;
   }
   }
 
