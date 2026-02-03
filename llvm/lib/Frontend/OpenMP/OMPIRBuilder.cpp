@@ -2362,7 +2362,7 @@ OpenMPIRBuilder::InsertPointOrErrorTy OpenMPIRBuilder::createTaskloop(
                            CLI->getBody()->getFirstInsertionPt());
 
     if (NumOfCollapseLoops > 1) {
-      std::vector<User *> UsersToReplace;
+      llvm::SmallVector<User *> UsersToReplace;
       // When using the collapse clause, the bounds of the loop have to be
       // adjusted to properly represent the iterator of the outer loop.
       Value *IVPlusTaskLB = Builder.CreateAdd(
