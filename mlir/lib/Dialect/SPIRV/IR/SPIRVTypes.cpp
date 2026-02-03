@@ -551,6 +551,11 @@ void TypeExtensionVisitor::addConcrete(ScalarType type) {
     extensions.push_back(ext);
   }
 
+  if (isa<Float8E4M3FNType, Float8E5M2Type>(type)) {
+    static constexpr auto ext = Extension::SPV_EXT_float8;
+    extensions.push_back(ext);
+  }
+
   // 8- or 16-bit integer/floating-point numbers will require extra extensions
   // to appear in interface storage classes. See SPV_KHR_16bit_storage and
   // SPV_KHR_8bit_storage for more details.
@@ -648,6 +653,15 @@ void TypeCapabilityVisitor::addConcrete(ScalarType type) {
   } else {
     assert(isa<FloatType>(type));
     switch (bitwidth) {
+    case 8: {
+      if (isa<Float8E4M3FNType, Float8E5M2Type>(type)) {
+        static constexpr auto cap = Capability::Float8EXT;
+        capabilities.push_back(cap);
+      } else {
+        llvm_unreachable("invalid 8-bit float type to getCapabilities");
+      }
+      break;
+    }
     case 16: {
       if (isa<BFloat16Type>(type)) {
         static constexpr auto cap = Capability::BFloat16TypeKHR;

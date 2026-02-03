@@ -479,8 +479,7 @@ void DataSharingProcessor::collectSymbols(
         for (const semantics::Scope &child : scope->children())
           collectScopes(&child);
       };
-  parser::CharBlock source =
-      clauses.empty() ? getSource(semaCtx, eval) : clauses.front().source;
+  parser::CharBlock source = getSource(semaCtx, eval);
   const semantics::Scope *curScope = nullptr;
   if (!source.empty()) {
     curScope = &semaCtx.FindScope(source);

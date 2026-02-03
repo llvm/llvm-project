@@ -2504,7 +2504,7 @@ define <vscale x 1 x i9> @vp_ctlz_nxv1i9(<vscale x 1 x i9> %va, <vscale x 1 x i1
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    li a1, 511
 ; CHECK-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; CHECK-NEXT:    vand.vx v8, v8, a1, v0.t
+; CHECK-NEXT:    vand.vx v8, v8, a1
 ; CHECK-NEXT:    li a0, 142
 ; CHECK-NEXT:    vfwcvt.f.xu.v v9, v8, v0.t
 ; CHECK-NEXT:    vsetvli zero, zero, e32, mf2, ta, ma
@@ -2521,7 +2521,7 @@ define <vscale x 1 x i9> @vp_ctlz_nxv1i9(<vscale x 1 x i9> %va, <vscale x 1 x i1
 ; CHECK-ZVBB:       # %bb.0:
 ; CHECK-ZVBB-NEXT:    li a1, 511
 ; CHECK-ZVBB-NEXT:    vsetvli zero, a0, e16, mf4, ta, ma
-; CHECK-ZVBB-NEXT:    vand.vx v8, v8, a1, v0.t
+; CHECK-ZVBB-NEXT:    vand.vx v8, v8, a1
 ; CHECK-ZVBB-NEXT:    vclz.v v8, v8, v0.t
 ; CHECK-ZVBB-NEXT:    vadd.vi v8, v8, -7, v0.t
 ; CHECK-ZVBB-NEXT:    ret

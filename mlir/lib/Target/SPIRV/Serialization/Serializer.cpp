@@ -599,6 +599,15 @@ LogicalResult Serializer::prepareBasicType(
     if (floatType.isBF16()) {
       operands.push_back(static_cast<uint32_t>(spirv::FPEncoding::BFloat16KHR));
     }
+    if (floatType.isF8E4M3FN()) {
+      operands.push_back(
+          static_cast<uint32_t>(spirv::FPEncoding::Float8E4M3EXT));
+    }
+    if (floatType.isF8E5M2()) {
+      operands.push_back(
+          static_cast<uint32_t>(spirv::FPEncoding::Float8E5M2EXT));
+    }
+
     return success();
   }
 
@@ -1253,8 +1262,10 @@ uint32_t Serializer::prepareConstantFp(Location loc, FloatAttr floatAttr,
     } words = llvm::bit_cast<DoubleWord>(value.convertToDouble());
     encodeInstructionInto(typesGlobalValues, opcode,
                           {typeID, resultID, words.word1, words.word2});
-  } else if (semantics == &APFloat::IEEEhalf() ||
-             semantics == &APFloat::BFloat()) {
+  } else if (llvm::is_contained({&APFloat::IEEEhalf(), &APFloat::BFloat(),
+                                 &APFloat::Float8E4M3FN(),
+                                 &APFloat::Float8E5M2()},
+                                semantics)) {
     uint32_t word =
         static_cast<uint32_t>(value.bitcastToAPInt().getZExtValue());
     encodeInstructionInto(typesGlobalValues, opcode, {typeID, resultID, word});
