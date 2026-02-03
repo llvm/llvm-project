@@ -1477,6 +1477,24 @@ public:
     return true;
   }
 
+  InstructionListType materializeConstant(BinaryContext &BC, const MCInst &Inst,
+                                          StringRef ConstantData,
+                                          uint64_t Offset) const override {
+    InstructionListType Instrs;
+    MCInst InstCopy = Inst;
+
+    if (!replaceMemOperandWithImm(InstCopy, ConstantData, Offset))
+      return Instrs;
+
+    Instrs.emplace_back();
+    Instrs.back().setOpcode(InstCopy.getOpcode());
+    Instrs.back().clear();
+    for (unsigned I = 0; I < InstCopy.getNumOperands(); ++I)
+      Instrs.back().addOperand(InstCopy.getOperand(I));
+
+    return Instrs;
+  }
+
   /// TODO: this implementation currently works for the most common opcodes that
   /// load from memory. It can be extended to work with memory store opcodes as
   /// well as more memory load opcodes.
