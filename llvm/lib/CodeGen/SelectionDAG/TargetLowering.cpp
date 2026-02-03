@@ -8428,6 +8428,9 @@ SDValue TargetLowering::expandCLMUL(SDNode *Node, SelectionDAG &DAG) const {
 
   switch (Opcode) {
   case ISD::CLMUL: {
+    // NOTE: If you change this expansion, please update the cost model
+    // calculation in BasicTTIImpl::getTypeBasedIntrinsicInstrCost for
+    // Intrinsic::clmul.
     SDValue Res = DAG.getConstant(0, DL, VT);
     for (unsigned I = 0; I < BW; ++I) {
       SDValue Mask = DAG.getConstant(APInt::getOneBitSet(BW, I), DL, VT);

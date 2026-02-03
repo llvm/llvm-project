@@ -69,11 +69,13 @@ lldb::ProcessSP ProcessMachCore::CreateInstance(lldb::TargetSP target_sp,
     auto data_sp = FileSystem::Instance().CreateDataBuffer(
         crash_file->GetPath(), header_size, 0);
     if (data_sp && data_sp->GetByteSize() == header_size) {
-      DataExtractor data(data_sp, lldb::eByteOrderLittle, 4);
+      DataExtractorSP extractor_sp =
+          std::make_shared<DataExtractor>(data_sp, lldb::eByteOrderLittle, 4);
 
       lldb::offset_t data_offset = 0;
       llvm::MachO::mach_header mach_header;
-      if (ObjectFileMachO::ParseHeader(data, &data_offset, mach_header)) {
+      if (ObjectFileMachO::ParseHeader(extractor_sp, &data_offset,
+                                       mach_header)) {
         if (mach_header.filetype == llvm::MachO::MH_CORE)
           process_sp = std::make_shared<ProcessMachCore>(target_sp, listener_sp,
                                                          *crash_file);

@@ -3853,9 +3853,6 @@ void IntrinsicLibrary::genExit(llvm::ArrayRef<fir::ExtendedValue> args) {
                                           EXIT_SUCCESS)
           : fir::getBase(args[0]);
 
-  assert(status.getType() == builder.getDefaultIntegerType() &&
-         "STATUS parameter must be an INTEGER of default kind");
-
   fir::runtime::genExit(builder, loc, status);
 }
 

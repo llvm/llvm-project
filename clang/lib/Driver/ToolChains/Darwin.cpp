@@ -2043,7 +2043,7 @@ private:
   static std::string getDisplayName(DarwinPlatformKind TargetPlatform,
                                     DarwinEnvironmentKind TargetEnvironment,
                                     VersionTuple Version) {
-    SmallVector<StringRef, 3> Components;
+    SmallVector<std::string, 3> Components;
     switch (TargetPlatform) {
     case DarwinPlatformKind::MacOS:
       Components.push_back("macOS");
