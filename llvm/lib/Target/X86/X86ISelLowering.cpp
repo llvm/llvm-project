@@ -39310,8 +39310,7 @@ void X86TargetLowering::computeKnownBitsForTargetNode(const SDValue Op,
       Known.Zero.setBits(MaxValue, BitWidth);
 
       Known.One.clearBits(MinValue, MaxValue);
-      if (Known.isConstant())
-        break;
+      break;
     }
 
     // Zeros are retained from the src operand. But not necessarily ones.
