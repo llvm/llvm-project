@@ -7,9 +7,8 @@ kernel void foo(global int *p) { *p = 1; }
 // CHECK-SAME: ptr addrspace(1) noundef align 4 [[P:%.*]]) #[[ATTR0:[0-9]+]] !kernel_arg_addr_space [[META7:![0-9]+]] !kernel_arg_access_qual [[META8:![0-9]+]] !kernel_arg_type [[META9:![0-9]+]] !kernel_arg_base_type [[META9]] !kernel_arg_type_qual [[META10:![0-9]+]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
-// CHECK-NEXT:    [[P_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[P_ADDR]] to ptr
-// CHECK-NEXT:    store ptr addrspace(1) [[P]], ptr [[P_ADDR_ASCAST]], align 8, !tbaa [[INTPTR_TBAA11:![0-9]+]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr [[P_ADDR_ASCAST]], align 8, !tbaa [[INTPTR_TBAA11]]
+// CHECK-NEXT:    store ptr addrspace(1) [[P]], ptr addrspace(5) [[P_ADDR]], align 8, !tbaa [[INTPTR_TBAA11:![0-9]+]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[P_ADDR]], align 8, !tbaa [[INTPTR_TBAA11]]
 // CHECK-NEXT:    call void @__clang_ocl_kern_imp_foo(ptr addrspace(1) noundef align 4 [[TMP0]]) #[[ATTR2:[0-9]+]]
 // CHECK-NEXT:    ret void
 //
@@ -19,9 +18,8 @@ kernel void foo(global int *p) { *p = 1; }
 // CHECK-SAME: ptr addrspace(1) noundef align 4 [[P:%.*]]) #[[ATTR1:[0-9]+]] !kernel_arg_addr_space [[META7]] !kernel_arg_access_qual [[META8]] !kernel_arg_type [[META9]] !kernel_arg_base_type [[META9]] !kernel_arg_type_qual [[META10]] {
 // CHECK-NEXT:  [[ENTRY:.*:]]
 // CHECK-NEXT:    [[P_ADDR:%.*]] = alloca ptr addrspace(1), align 8, addrspace(5)
-// CHECK-NEXT:    [[P_ADDR_ASCAST:%.*]] = addrspacecast ptr addrspace(5) [[P_ADDR]] to ptr
-// CHECK-NEXT:    store ptr addrspace(1) [[P]], ptr [[P_ADDR_ASCAST]], align 8, !tbaa [[INTPTR_TBAA11]]
-// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr [[P_ADDR_ASCAST]], align 8, !tbaa [[INTPTR_TBAA11]]
+// CHECK-NEXT:    store ptr addrspace(1) [[P]], ptr addrspace(5) [[P_ADDR]], align 8, !tbaa [[INTPTR_TBAA11]]
+// CHECK-NEXT:    [[TMP0:%.*]] = load ptr addrspace(1), ptr addrspace(5) [[P_ADDR]], align 8, !tbaa [[INTPTR_TBAA11]]
 // CHECK-NEXT:    store i32 1, ptr addrspace(1) [[TMP0]], align 4, !tbaa [[INT_TBAA3:![0-9]+]]
 // CHECK-NEXT:    ret void
 //
