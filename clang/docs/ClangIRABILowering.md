@@ -360,203 +360,7 @@ The `TargetABIRegistry` provides a simple factory mechanism for instantiating th
 
 The implementation is straightforward: a `createABIInfo()` method switches on the target architecture enum and constructs the corresponding concrete class. For unsupported targets, it returns `nullptr`, allowing graceful handling of architectures that haven't yet been ported. This extensibility is important for a shared infrastructure that may eventually support ARM32, RISC-V, PowerPC, and other platforms beyond the initial x86_64 and AArch64 focus.
 
-## 5. Implementation Phases
-
-### Implementation Timeline & Risk Assessment
-
-**Baseline Timeline**: 13 weeks (aggressive)  
-**Realistic Timeline**: 15 weeks (with contingency)  
-**With Varargs**: 17 weeks (if required for graduation)
-
-**Risk Factors**:
-1. CIR coupling depth: 100-200 type cast sites expected, could be 300-400 (+0.5-1 week)
-2. ABITypeInterface complexity: 15-20 methods with field iteration (+0.5 week)
-3. ABIRewriteContext complexity: 15-20 methods needed vs 5-6 shown (+0.5 week)
-4. Testing infrastructure: Differential testing setup takes time (+1 week)
-
-**Contingency Recommendation**: Budget 15-16 weeks (20% buffer over 13 week baseline)
-
----
-
-### Phase 1: Infrastructure Setup (Weeks 1-2)
-1. Create directory structure in `mlir/include/mlir/Interfaces/ABI/` and `mlir/include/mlir/Target/ABI/`
-2. Move ABIArgInfo from CIR to shared location
-3. Adapt LowerFunctionInfo for MLIR-agnostic use
-4. Define ABITypeInterface in TableGen
-5. Create ABIRewriteContext interface
-6. Set up build system (CMakeLists.txt)
-
-**Deliverable**: Compiling but empty infrastructure
-
-### Phase 2: CIR Integration - Type Interface (Weeks 3-4)
-1. Implement ABITypeInterface for CIR types
-   - cir::IntType, cir::BoolType
-   - cir::RecordType
-   - cir::PointerType
-   - cir::ArrayType
-   - cir::FuncType
-   - cir::FloatType, cir::DoubleType
-2. Test type queries
-3. Implement CIRABIRewriteContext
-
-**Deliverable**: CIR types implement ABITypeInterface
-
-**Implementation Notes**:
-- Must implement 15-20 methods per type (not just basic queries)
-- Field iteration for RecordType is critical and potentially complex
-- Estimated 1.5-2 weeks (upper end of range due to interface complexity)
-
-### Phase 3: Extract Target ABI Logic (Weeks 5-7)
-1. Move X86_64ABIInfo from CIR to `mlir/lib/Target/ABI/X86/`
-2. Replace CIR type casts with ABITypeInterface queries
-3. Move AArch64ABIInfo similarly
-4. Create TargetABIRegistry
-5. Add unit tests for classification
-
-**Deliverable**: Target ABI logic is MLIR-agnostic
-
-**Implementation Notes**:
-- Expected: 100-200 `dyn_cast<cir::Type>` replacement sites
-- Risk: Could be 300-400 sites if coupling deeper than expected
-- Each site must be refactored to use ABITypeInterface
-- Estimated 3-3.5 weeks (upper end if coupling is deeper)
-
-### Phase 4: CIR Calling Convention Pass (Weeks 8-10)
-1. Create new CallConvLowering pass using shared infrastructure
-2. Implement function signature rewriting
-3. Implement call site rewriting
-4. Handle value coercion (direct, indirect, expand)
-5. Add integration tests
-
-**Deliverable**: CIR can lower calling conventions using shared infrastructure
-
-### Phase 5: Testing and Validation (Weeks 11-12)
-
-**Duration**: 2-3 weeks
-
-**Testing Strategy Definition**:
-
-1. **Differential Testing** (1 week setup + ongoing):
-   - Create harness to compare CIR output with classic Clang codegen
-   - Assembly-level comparison for ABI compliance
-   - Automated regression detection
-
-2. **ABI Compliance Tests** (1 week):
-   - Port existing ABI test suites (x86_64 System V, AArch64 PCS)
-   - Create **500+ systematic test cases** covering:
-     - **x86_64 System V** (250+ tests):
-       - Basic types: int, float, pointer, __int128, _BitInt(20 tests)
-       - Structs: 1-byte, 2-byte, 4-byte, 8-byte, 9-byte, 16-byte (varying sizes/alignments) (100 tests)
-       - Unions: FP+integer, multiple FP, nested unions (30 tests)
-       - Arrays: Fixed-size, multi-dimensional (20 tests)
-       - Edge cases: empty structs, __int128 vs _BitInt, bitfields, over-aligned (50 tests)
-       - Varargs: printf/scanf edge cases (30 tests, if varargs implemented)
-     - **AArch64 PCS** (250+ tests):
-       - Basic types (20 tests)
-       - HFA/HVA detection: 1-5 fields, nested, mixed types (80 tests - CRITICAL)
-       - Structs: various sizes and alignments (80 tests)
-       - Over-alignment: 16, 32, 64-byte aligned structs (30 tests)
-       - Edge cases: empty structs, padding (40 tests)
-   - **Differential Tests** (100+ tests):
-     - Real-world struct layouts from open-source projects
-     - Compare assembly output with classic Clang
-   - **Interop Tests** (50+ tests):
-     - Actual C→CIR→C function calls
-     - Runtime binary compatibility verification
-
-3. **Performance Benchmarks** (3-5 days):
-   - Compilation time overhead measurement
-   - Generated code quality comparison
-   - 10-20 representative benchmarks
-
-4. **C++ Non-Trivial Types Testing** (Phase 2 only, 20 tests):
-   - Copy constructors (passed by value → call copy constructor)
-   - Destructors (temporary destruction)
-   - Deleted copy constructors (must pass by reference)
-   - Move-only types (std::unique_ptr, etc.)
-   - Note: Phase 1 is C-only; this testing applies to Phase 2 C++ support
-
-5. **Bug Fixing & Iteration** (1-2 weeks):
-   - Fix issues discovered by tests
-   - Handle edge cases
-   - Performance optimization if needed
-
-**Deliverable**: Production-ready CIR calling convention lowering
-
-**Implementation Notes**:
-- Testing infrastructure setup (differential testing harness) takes significant time (~1 week)
-- If infrastructure setup exceeds 1 week, may extend Phase 5 duration
-- Estimated 2-3 weeks (upper end due to testing infrastructure complexity)
-
-### Phase 6: Varargs Support (Conditional - If Required for Graduation)
-
-**Duration**: 3-4 weeks (not currently in baseline)
-
-**Probability Required**: **70-80%** (most C programs use `printf`/`scanf`)
-
-**Rationale**:
-- CIR incubator has many `NYI` assertions for varargs
-- Real-world C code heavily uses varargs (printf, scanf, logging)
-- ~40% of C code would be unusable without varargs support
-- Graduation reviewers may block without varargs
-- Complex state management (GP vs FP register tracking, register save area, 30+ tests per target)
-
-**Work Required**:
-
-1. **x86_64 System V Varargs** (1.5-2 weeks):
-   - Implement `va_list` type lowering
-   - Implement `va_start` (initialize va_list from register save area)
-   - Implement `va_arg` (extract next argument, handle types)
-   - Implement `va_end` (cleanup)
-   - Handle register save area allocation (176 bytes: 6 GP * 8 + 8 FP * 16)
-   - Track GP registers (RDI, RSI, RDX, RCX, R8, R9) vs FP registers (XMM0-XMM7) separately
-   - Handle overflow to stack for arguments beyond 6+8 registers
-   - Test with printf/scanf (30+ tests)
-
-2. **AArch64 PCS Varargs** (1.5-2 weeks):
-   - Different `va_list` structure (5 fields: gp_offset, fp_offset, overflow_arg_area, reg_save_area, etc.)
-   - Stack-based varargs with register overflow area
-   - Implement va_start/va_arg/va_end/va_copy
-   - Handle alignment requirements (8-byte GP, 16-byte FP)
-   - Register save area is stack-based (not pre-allocated)
-   - Test with printf/scanf (30+ tests)
-
-3. **Testing & Edge Cases** (3-5 days):
-   - Test varargs calling conventions (60+ tests total)
-   - Handle va_copy edge cases
-   - Validate against classic codegen
-   - Mixed GP/FP argument scenarios
-
-**Decision Point**: **Week 1** - ask Andy if varargs is graduation blocker (don't wait for Week 2)
-
-**Impact on Timeline**:
-- **If Required**: 15 weeks → 17-19 weeks total
-- **If Deferred**: Stay on 13-15 week timeline, add varargs post-graduation
-
-**Recommendation**: **Assume varargs IS required** and budget 17-19 weeks, not 15 weeks
-
-### Phase 7: Documentation (Week 19)
-
-1. API documentation
-2. User guide for adding new dialects
-3. Target implementation guide
-4. Design rationale document
-
-**Deliverable**: Comprehensive documentation
-
-### Phase 8: FIR Prototype (Future)
-
-1. Work with FIR team on requirements
-2. Implement ABITypeInterface for FIR types
-3. Implement FIRABIRewriteContext
-4. Create FIR calling convention pass
-5. Validate with Fortran test cases
-
-**Deliverable**: Proof of concept for FIR
-
-**Note**: This phase is post-graduation and not included in the 17-19 week timeline.
-
-## 6. Target-Specific Details
+## 5. Target-Specific Details
 
 ### 6.1 x86_64 System V ABI
 
@@ -619,9 +423,9 @@ These types have the same size (16 bytes) but **different ABI classification**:
 
 **Not Priority**: MIPS, Sparc, Hexagon, etc. (less common)
 
-## 7. Testing Strategy
+## 6. Testing Strategy
 
-### 7.1 Unit Tests
+### 6.1 Unit Tests
 
 **Type Interface Tests**:
 ```cpp
@@ -674,7 +478,7 @@ TEST(CIRCallConv, FunctionRewrite) {
 - FIR function calling CIR function
 - Verify ABI compatibility
 
-### 7.3 Performance Tests
+### 6.3 Performance Tests
 
 **Compilation Time**:
 - Measure time to run CallConvLowering pass
@@ -686,9 +490,9 @@ TEST(CIRCallConv, FunctionRewrite) {
 - Check for unnecessary copies or spills
 - Verify register allocation is similar
 
-## 8. Migration from CIR Incubator
+## 7. Migration from CIR Incubator
 
-### 8.1 Migration Steps
+### 7.1 Migration Steps
 
 1. **Parallel Implementation**:
    - Build new MLIR-agnostic infrastructure
@@ -712,7 +516,7 @@ TEST(CIRCallConv, FunctionRewrite) {
    - Submit CIR adaptations to CIR upstream
    - Deprecate incubator implementation
 
-### 8.2 Compatibility Considerations
+### 7.2 Compatibility Considerations
 
 **Source Compatibility**:
 - New ABIArgInfo API should match old API where possible
@@ -727,7 +531,7 @@ TEST(CIRCallConv, FunctionRewrite) {
 - Ensure all test cases still pass
 - Add new tests for edge cases
 
-### 8.3 Deprecation Plan
+### 7.3 Deprecation Plan
 
 Once new implementation is stable:
 1. Mark CIR incubator implementation as deprecated (Month 1)
@@ -735,16 +539,16 @@ Once new implementation is stable:
 3. Keep old code for 1-2 releases for safety (Months 1-6)
 4. Remove old implementation (Month 6+)
 
-## 9. Future Work
+## 8. Future Work
 
-### 9.1 Additional Targets
+### 8.1 Additional Targets
 
 - RISC-V (emerging ISA, growing importance)
 - WebAssembly (for web-based backends)
 - ARM32 (for embedded systems)
 - PowerPC (for HPC)
 
-### 9.2 Advanced Features
+### 8.2 Advanced Features
 
 **Varargs Support**:
 - Currently marked NYI in CIR
@@ -766,7 +570,7 @@ Once new implementation is stable:
 - SVE (ARM Scalable Vector Extension)
 - AVX-512 considerations
 
-### 9.3 Optimization Opportunities
+### 8.3 Optimization Opportunities
 
 **Return Value Optimization (RVO)**:
 - Avoid copies for returned aggregates
@@ -780,7 +584,7 @@ Once new implementation is stable:
 - Delay ABI lowering until after inlining
 - Can avoid unnecessary marshalling
 
-### 9.4 GSoC Integration
+### 8.4 GSoC Integration
 
 **Monitor GSoC Progress**:
 - Track PR #140112 development
@@ -797,9 +601,9 @@ Once new implementation is stable:
 - Medium term (Q2-Q3 2026): Evaluate GSoC library
 - Long term (Q4 2026+): Potentially refactor to use GSoC
 
-## 10. Open Questions and Risks
+## 9. Open Questions and Risks
 
-### 10.1 Open Questions
+### 9.1 Open Questions
 
 1. **Should we use TypeInterface or helper class for type queries?**
    - TypeInterface is more MLIR-idiomatic but requires modifying type definitions
@@ -1054,7 +858,7 @@ class ABILowering {
    - Who owns the shared infrastructure?
    - **Recommendation**: Build CIR-first, engage FIR team at Phase 7 (after CIR proven)
 
-### 10.2 Risks
+### 9.2 Risks
 
 **Risk 1: TargetInfo Dependency Rejected** ⚠️ **CRITICAL**
 - **Impact**: High (could add 1-3 weeks to timeline)
@@ -1103,22 +907,22 @@ class ABILowering {
 - **Description**: Edge cases and corner cases in ABI handling are complex
 - **Mitigation**: Incremental development, frequent validation against classic codegen, comprehensive testing
 
-## 11. Success Metrics
+## 10. Success Metrics
 
-### 11.1 Functional Metrics
+### 10.1 Functional Metrics
 
 - ✅ CIR can lower x86_64 calling conventions correctly (100% test pass rate)
 - ✅ CIR can lower AArch64 calling conventions correctly (100% test pass rate)
 - ✅ ABI output matches classic Clang codegen (validated by comparison tests)
 - ✅ All CIR incubator tests pass with new implementation
 
-### 11.2 Quality Metrics
+### 10.2 Quality Metrics
 
 - ✅ Code coverage > 90% for ABI classification logic
 - ✅ Zero known ABI compliance bugs
 - ✅ Documentation complete (API, user guide, design rationale)
 
-### 11.3 Performance Metrics
+### 10.3 Performance Metrics
 
 - ✅ CallConvLowering pass overhead < 5% compilation time
   - **Context**: This refers to **compile-time overhead**, not runtime performance
@@ -1129,39 +933,39 @@ class ABILowering {
 - ✅ No degradation in generated code quality vs direct implementation
   - **Runtime performance unchanged**: ABI lowering is compile-time only
 
-### 11.4 Reusability Metrics
+### 10.4 Reusability Metrics
 
 - ✅ FIR can adopt infrastructure with < 2 weeks integration effort
 - ✅ New target can be added with < 1 week effort (given ABI spec)
 - ✅ ABITypeInterface requires < 10 methods implementation per dialect
 
-## 12. References
+## 11. References
 
-### 12.1 ABI Specifications
+### 11.1 ABI Specifications
 
 - [System V AMD64 ABI](https://refspecs.linuxbase.org/elf/x86_64-abi-0.99.pdf)
 - [ARM AArch64 PCS](https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst)
 - [Itanium C++ ABI](https://itanium-cxx-abi.github.io/cxx-abi/abi.html)
 
-### 12.2 LLVM/MLIR Documentation
+### 11.2 LLVM/MLIR Documentation
 
 - [MLIR Interfaces](https://mlir.llvm.org/docs/Interfaces/)
 - [MLIR Type System](https://mlir.llvm.org/docs/DefiningDialects/AttributesAndTypes/)
 - [MLIR Pass Infrastructure](https://mlir.llvm.org/docs/PassManagement/)
 
-### 12.3 Related Projects
+### 11.3 Related Projects
 
 - [GSoC ABI Lowering RFC](https://discourse.llvm.org/t/rfc-an-abi-lowering-library-for-llvm/84495)
 - [GSoC PR #140112](https://github.com/llvm/llvm-project/pull/140112)
 - [CIR Project](https://github.com/llvm/clangir)
 
-### 12.4 Related Implementation
+### 11.4 Related Implementation
 
 - Clang CodeGen: `clang/lib/CodeGen/`
 - CIR Incubator: `clang/lib/CIR/Dialect/Transforms/TargetLowering/`
 - SPIR-V ABI: `mlir/lib/Dialect/SPIRV/IR/TargetAndABI.cpp`
 
-## 13. Appendices
+## 12. Appendices
 
 ### A. Glossary
 
