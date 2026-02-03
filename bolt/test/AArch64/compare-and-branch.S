@@ -17,40 +17,40 @@
 # RUN: llvm-objdump -r %t | FileCheck %s --check-prefix=CHECK-NO-RELOCS
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s --check-prefix=NON-RELOC-MODE
 
-  .globl  foo
-  .type foo, %function
-foo:
-# FDATA: 1 foo #.entry_foo# 10
-.entry_foo:
+  .globl immediate_increment
+  .type immediate_increment, %function
+immediate_increment:
+# FDATA: 1 immediate_increment #.entry_immediate_increment# 10
+.entry_immediate_increment:
 ## Test immediate increment when inverting the branch.
-    cbgt x0, #0, .Lcold_foo
+    cbgt x0, #0, .Lcold_immediate_increment
     mov x0, #1
-.Lcold_foo:
+.Lcold_immediate_increment:
     ret
 
-  .globl  bar
-  .type bar, %function
-bar:
-# FDATA: 1 bar #.entry_bar# 10
-.entry_bar:
+  .globl immediate_decrement
+  .type immediate_decrement, %function
+immediate_decrement:
+# FDATA: 1 immediate_decrement #.entry_immediate_decrement# 10
+.entry_immediate_decrement:
 ## Test immediate decrement when inverting the branch.
-    cblo x0, #1, .Lcold_bar
+    cblo x0, #1, .Lcold_immediate_decrement
     mov x0, #2
-.Lcold_bar:
+.Lcold_immediate_decrement:
     ret
 
-  .globl  baz
-  .type baz, %function
-baz:
-# FDATA: 1 baz #.entry_baz# 10
-.entry_baz:
+  .globl register_swap
+  .type register_swap, %function
+register_swap:
+# FDATA: 1 register_swap #.entry_register_swap# 10
+.entry_register_swap:
 ## Test register swap when inverting the branch.
-    cbge x0, x1, .Lcold_baz
+    cbge x0, x1, .Lcold_register_swap
     mov x0, #3
-.Lcold_baz:
+.Lcold_register_swap:
     ret
 
-  .globl  irreversible
+  .globl irreversible
   .type irreversible, %function
 irreversible:
 # FDATA: 1 irreversible #.entry_irreversible# 10
@@ -75,17 +75,17 @@ irreversible:
 
 # RELOC-MODE: Disassembly of section .text:
 
-# RELOC-MODE: <foo>:
+# RELOC-MODE: <immediate_increment>:
 # RELOC-MODE-NEXT:            {{.*}} cbgt x0, #0x0, 0x[[ADDR0:[0-9a-f]+]] <{{.*}}>
 # RELOC-MODE-NEXT:            {{.*}} b              0x[[ADDR1:[0-9a-f]+]] <{{.*}}>
 # RELOC-MODE-NEXT: [[ADDR0]]: {{.*}} b              0x[[ADDR2:[0-9a-f]+]] <{{.*}}>
 
-# RELOC-MODE: <bar>:
+# RELOC-MODE: <immediate_decrement>:
 # RELOC-MODE-NEXT:            {{.*}} cblo x0, #0x1, 0x[[ADDR3:[0-9a-f]+]] <{{.*}}>
 # RELOC-MODE-NEXT:            {{.*}} b              0x[[ADDR4:[0-9a-f]+]] <{{.*}}>
 # RELOC-MODE-NEXT: [[ADDR3]]: {{.*}} b              0x[[ADDR5:[0-9a-f]+]] <{{.*}}>
 
-# RELOC-MODE: <baz>:
+# RELOC-MODE: <register_swap>:
 # RELOC-MODE-NEXT:            {{.*}} cbge x0, x1, 0x[[ADDR6:[0-9a-f]+]] <{{.*}}>
 # RELOC-MODE-NEXT:            {{.*}} b            0x[[ADDR7:[0-9a-f]+]] <{{.*}}>
 # RELOC-MODE-NEXT: [[ADDR6]]: {{.*}} b            0x[[ADDR8:[0-9a-f]+]] <{{.*}}>
@@ -98,15 +98,15 @@ irreversible:
 
 # RELOC-MODE: Disassembly of section .text.cold:
 
-# RELOC-MODE: <foo.cold.0>:
+# RELOC-MODE: <immediate_increment.cold.0>:
 # RELOC-MODE-NEXT: [[ADDR1]]: {{.*}} mov x0, #0x1 // =1
 # RELOC-MODE-NEXT: [[ADDR2]]: {{.*}} ret
 
-# RELOC-MODE: <bar.cold.0>:
+# RELOC-MODE: <immediate_decrement.cold.0>:
 # RELOC-MODE-NEXT: [[ADDR4]]: {{.*}} mov x0, #0x2 // =2
 # RELOC-MODE-NEXT: [[ADDR5]]: {{.*}} ret
 
-# RELOC-MODE: <baz.cold.0>:
+# RELOC-MODE: <register_swap.cold.0>:
 # RELOC-MODE-NEXT: [[ADDR7]]: {{.*}} mov x0, #0x3 // =3
 # RELOC-MODE-NEXT: [[ADDR8]]: {{.*}} ret
 
@@ -117,17 +117,17 @@ irreversible:
 
 # NON-RELOC-MODE: Disassembly of section .text:
 
-# NON-RELOC-MODE: <foo>:
+# NON-RELOC-MODE: <immediate_increment>:
 # NON-RELOC-MODE-NEXT:            {{.*}} cblt x0, #0x1, 0x[[ADDR0:[0-9a-f]+]] <{{.*}}>
 # NON-RELOC-MODE-NEXT:            {{.*}} b              0x[[ADDR1:[0-9a-f]+]] <{{.*}}>
 # NON-RELOC-MODE-NEXT: [[ADDR0]]: {{.*}} b              0x[[ADDR2:[0-9a-f]+]] <{{.*}}>
 
-# NON-RELOC-MODE: <bar>:
+# NON-RELOC-MODE: <immediate_decrement>:
 # NON-RELOC-MODE-NEXT:            {{.*}} cbhi x0, #0x0, 0x[[ADDR3:[0-9a-f]+]] <{{.*}}>
 # NON-RELOC-MODE-NEXT:            {{.*}} b              0x[[ADDR4:[0-9a-f]+]] <{{.*}}>
 # NON-RELOC-MODE-NEXT: [[ADDR3]]: {{.*}} b              0x[[ADDR5:[0-9a-f]+]] <{{.*}}>
 
-# NON-RELOC-MODE: <baz>:
+# NON-RELOC-MODE: <register_swap>:
 # NON-RELOC-MODE-NEXT:            {{.*}} cbgt x1, x0, 0x[[ADDR6:[0-9a-f]+]] <{{.*}}>
 # NON-RELOC-MODE-NEXT:            {{.*}} b            0x[[ADDR7:[0-9a-f]+]] <{{.*}}>
 # NON-RELOC-MODE-NEXT: [[ADDR6]]: {{.*}} b            0x[[ADDR8:[0-9a-f]+]] <{{.*}}>
@@ -140,15 +140,15 @@ irreversible:
 
 # NON-RELOC-MODE: Disassembly of section .bolt.text:
 
-# NON-RELOC-MODE: <foo.cold.0>:
+# NON-RELOC-MODE: <immediate_increment.cold.0>:
 # NON-RELOC-MODE-NEXT: [[ADDR2]]: {{.*}} mov x0, #0x1 // =1
 # NON-RELOC-MODE-NEXT: [[ADDR1]]: {{.*}} ret
 
-# NON-RELOC-MODE: <bar.cold.0>:
+# NON-RELOC-MODE: <immediate_decrement.cold.0>:
 # NON-RELOC-MODE-NEXT: [[ADDR5]]: {{.*}} mov x0, #0x2 // =2
 # NON-RELOC-MODE-NEXT: [[ADDR4]]: {{.*}} ret
 
-# NON-RELOC-MODE: <baz.cold.0>:
+# NON-RELOC-MODE: <register_swap.cold.0>:
 # NON-RELOC-MODE-NEXT: [[ADDR8]]: {{.*}} mov x0, #0x3 // =3
 # NON-RELOC-MODE-NEXT: [[ADDR7]]: {{.*}} ret
 
