@@ -12,8 +12,11 @@
 CONSTATTR struct redret
 MATH_PRIVATE(trigredlarge)(float x)
 {
-    int xe = BUILTIN_FREXP_EXP_F32(x) - 1;
-    uint xm = (uint)BUILTIN_FLDEXP_F32(BUILTIN_FREXP_MANT_F32(x), 24);
+    int xe;
+    float m = BUILTIN_FREXP_F32(x, &xe);
+    --xe;
+
+    uint xm = (uint)BUILTIN_FLDEXP_F32(m, 24);
 
     // 224 bits of 2/PI: . A2F9836E 4E441529 FC2757D1 F534DDC0 DB629599 3C439041 FE5163AB
     const uint b6 = 0xA2F9836EU;
