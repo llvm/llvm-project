@@ -1248,7 +1248,13 @@ void CodeGenFunction::StartFunction(GlobalDecl GD, QualType RetTy,
     ReturnValue = Address(Addr, ConvertType(RetTy),
                           CGM.getNaturalTypeAlignment(RetTy), KnownNonNull);
   } else {
-    ReturnValue = CreateIRTemp(RetTy, "retval");
+    // Use CreateMemTemp for types where IR and memory representations differ
+    // (e.g., _BitInt(121) has IR type i121 but memory type i128).
+    // This ensures proper coercion when the return value is converted for ABI.
+    if (ConvertType(RetTy) != ConvertTypeForMem(RetTy))
+      ReturnValue = CreateMemTemp(RetTy, "retval");
+    else
+      ReturnValue = CreateIRTemp(RetTy, "retval");
 
     // Tell the epilog emitter to autorelease the result.  We do this
     // now so that various specialized functions can suppress it
