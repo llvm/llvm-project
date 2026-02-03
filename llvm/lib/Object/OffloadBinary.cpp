@@ -262,8 +262,7 @@ OffloadBinary::create(MemoryBufferRef Buf, std::optional<uint64_t> Index) {
     return Binaries;
   }
 
-  uint64_t EntriesCount =
-      TheHeader->Version == 1 ? 1 : TheHeader->EntriesCount;
+  uint64_t EntriesCount = TheHeader->Version == 1 ? 1 : TheHeader->EntriesCount;
   for (uint64_t I = 0; I < EntriesCount; ++I) {
     const Entry *TheEntry = &Entries[I];
     if (auto Err = validateEntry(TheEntry))
