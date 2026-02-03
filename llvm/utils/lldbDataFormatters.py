@@ -488,11 +488,19 @@ class ExpectedSynthetic:
         # Anonymous union.
         union = self.expected.child[0]
         storage = union.GetChildMemberWithName(member)
-        # For reference types, storage_type is std::reference_wrapper<T>,
-        # so we need to unwrap it. For non-reference types, storage_type is T directly.
-        if storage.type.GetNumberOfTemplateArguments() > 0:
-            stored_type = storage.type.template_args[0]
-            self.stored_value = storage.Cast(stored_type).Clone(name)
+        # For reference types, storage is std::reference_wrapper<T>, so we
+        # unwrap to get T. For non-reference types, storage is T directly.
+        # Use GetCanonicalType() to resolve the typedef to the underlying type.
+        canonical_type_name = storage.type.GetCanonicalType().name
+        if "reference_wrapper<" in canonical_type_name:
+            # reference_wrapper<T> stores a T* pointer to the referenced value.
+            # Get the first child (the pointer member) and dereference it.
+            ptr_member = storage.GetChildAtIndex(0)
+            if ptr_member and ptr_member.IsValid() and ptr_member.type.IsPointerType():
+                self.stored_value = ptr_member.Dereference().Clone(name)
+            else:
+                # Fallback: just use storage as-is.
+                self.stored_value = storage.Clone(name)
         else:
             self.stored_value = storage.Clone(name)
 
