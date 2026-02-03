@@ -15,7 +15,7 @@
 #include "src/__support/macros/config.h"
 #if defined(LIBC_HASHTABLE_USE_GETRANDOM)
 #include "hdr/errno_macros.h"
-#include "src/__support/OSUtil/linux/getrandom.h"
+#include "src/__support/OSUtil/linux/syscall_wrappers/getrandom.h"
 #endif
 
 namespace LIBC_NAMESPACE_DECL {

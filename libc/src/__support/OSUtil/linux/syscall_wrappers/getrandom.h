@@ -6,8 +6,8 @@
 //
 //===----------------------------------------------------------------------===//
 
-#ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_GETRANDOM_H
-#define LLVM_LIBC_SRC___SUPPORT_OSUTIL_GETRANDOM_H
+#ifndef LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_WRAPPERS_GETRANDOM_H
+#define LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_WRAPPERS_GETRANDOM_H
 
 #include "hdr/types/ssize_t.h"
 #include "src/__support/OSUtil/linux/syscall.h" // syscall_impl
@@ -32,4 +32,4 @@ LIBC_INLINE static ErrorOr<ssize_t> getrandom(void *buf, size_t buflen,
 } // namespace internal
 } // namespace LIBC_NAMESPACE_DECL
 
-#endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_GETRANDOM_H
+#endif // LLVM_LIBC_SRC___SUPPORT_OSUTIL_SYSCALL_WRAPPERS_GETRANDOM_H

@@ -1,0 +1,12 @@
+add_header_library(
+  getrandom
+  HDRS
+    getrandom.h
+  DEPENDS
+    libc.src.__support.OSUtil.osutil
+    libc.src.__support.common
+    libc.src.__support.error_or
+    libc.src.__support.macros.config
+    libc.hdr.types.ssize_t
+    libc.include.sys_syscall
+)
