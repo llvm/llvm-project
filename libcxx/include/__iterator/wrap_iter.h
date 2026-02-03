@@ -47,7 +47,7 @@ public:
 private:
   iterator_type __i_;
 
-  friend struct pointer_traits<__wrap_iter<_Iter>>;
+  friend struct pointer_traits<__wrap_iter<_Iter> >;
 
 public:
   _LIBCPP_HIDE_FROM_ABI _LIBCPP_CONSTEXPR_SINCE_CXX14 __wrap_iter() _NOEXCEPT : __i_() {}
