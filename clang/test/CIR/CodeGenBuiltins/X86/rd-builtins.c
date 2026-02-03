@@ -8,8 +8,7 @@
 #include <x86intrin.h>
 
 // CIR-LABEL: @__rdpmc
-// CIR: cir.call_llvm_intrinsic "x86.rdpmc"
-// CIR: cir.cast integral %{{.*}} : !s64i -> !u64i
+// CIR: cir.call_llvm_intrinsic "x86.rdpmc" %{{.*}} : (!s32i) -> !u64i
 
 unsigned long long test_rdpmc(int a) {
     // CIR-LABEL: test_rdpmc

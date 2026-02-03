@@ -727,8 +727,10 @@ static RValue tryEmitFPMathIntrinsic(CIRGenFunction &cgf, const CallExpr *e,
   return RValue::getIgnored();
 }
 
+// FIXME: Remove cgf parameter when all descriptor kinds are implemented
 static mlir::Type
-decodeFixedType(ArrayRef<llvm::Intrinsic::IITDescriptor> &infos,
+decodeFixedType(CIRGenFunction &cgf,
+                ArrayRef<llvm::Intrinsic::IITDescriptor> &infos,
                 mlir::MLIRContext *context) {
   using namespace llvm::Intrinsic;
 
@@ -738,6 +740,8 @@ decodeFixedType(ArrayRef<llvm::Intrinsic::IITDescriptor> &infos,
   switch (descriptor.Kind) {
   case IITDescriptor::Void:
     return cir::VoidType::get(context);
+  // If the intrinsic expects unsigned integers, the signedness is corrected in
+  // correctIntegerSignedness()
   case IITDescriptor::Integer:
     return cir::IntType::get(context, descriptor.Integer_Width,
                              /*isSigned=*/true);
@@ -746,39 +750,23 @@ decodeFixedType(ArrayRef<llvm::Intrinsic::IITDescriptor> &infos,
   case IITDescriptor::Double:
     return cir::DoubleType::get(context);
   default:
-    llvm_unreachable("NYI");
+    cgf.cgm.errorNYI("Unimplemented intrinsic type descriptor");
+    return cir::VoidType::get(context);
   }
 }
 
-/// Helper function to correct integer signedness for intrinsic arguments.
-/// IIT always returns signed integers, but the actual intrinsic may expect
-/// unsigned integers based on the AST FunctionDecl parameter types.
-static mlir::Type getIntrinsicArgumentTypeFromAST(mlir::Type iitType,
-                                                  const CallExpr *E,
-                                                  unsigned argIndex,
-                                                  mlir::MLIRContext *context) {
-  // If it's not an integer type, return as-is
+/// Helper function to correct integer signedness for intrinsic arguments and
+/// return type. IIT always returns signed integers, but the actual intrinsic
+/// may expect unsigned integers based on the AST FunctionDecl parameter types.
+static mlir::Type correctIntegerSignedness(mlir::Type iitType, QualType astType,
+                                           mlir::MLIRContext *context) {
   auto intTy = dyn_cast<cir::IntType>(iitType);
   if (!intTy)
     return iitType;
 
-  // Get the FunctionDecl from the CallExpr
-  const FunctionDecl *FD = nullptr;
-  if (const auto *DRE =
-          dyn_cast<DeclRefExpr>(E->getCallee()->IgnoreImpCasts())) {
-    FD = dyn_cast<FunctionDecl>(DRE->getDecl());
+  if (astType->isUnsignedIntegerType()) {
+    return cir::IntType::get(context, intTy.getWidth(), /*isSigned=*/false);
   }
-
-  // If we have FunctionDecl and this argument exists, check its signedness
-  if (FD && argIndex < FD->getNumParams()) {
-    QualType paramType = FD->getParamDecl(argIndex)->getType();
-    if (paramType->isUnsignedIntegerType()) {
-      // Create unsigned version of the type
-      return cir::IntType::get(context, intTy.getWidth(), /*isSigned=*/false);
-    }
-  }
-
-  // Default: keep IIT type (signed)
   return iitType;
 }
 
@@ -788,8 +776,7 @@ static mlir::Value getCorrectedPtr(mlir::Value argValue, mlir::Type expectedTy,
   assert(ptrType && "expected pointer type");
 
   auto expectedPtrType = mlir::cast<cir::PointerType>(expectedTy);
-  assert(ptrType.getPointee() != expectedPtrType.getPointee() &&
-         "types should not match");
+  assert(ptrType != expectedPtrType && "types should not match");
 
   if (ptrType.getAddrSpace() != expectedPtrType.getAddrSpace()) {
     auto newPtrType = cir::PointerType::get(ptrType.getPointee(),
@@ -797,10 +784,11 @@ static mlir::Value getCorrectedPtr(mlir::Value argValue, mlir::Type expectedTy,
     return builder.createAddrSpaceCast(argValue, newPtrType);
   }
 
-  return argValue;
+  return builder.createBitcast(argValue, expectedTy);
 }
 
-static cir::FuncType getIntrinsicType(mlir::MLIRContext *context,
+static cir::FuncType getIntrinsicType(CIRGenFunction &cgf,
+                                      mlir::MLIRContext *context,
                                       llvm::Intrinsic::ID id) {
   using namespace llvm::Intrinsic;
 
@@ -808,17 +796,18 @@ static cir::FuncType getIntrinsicType(mlir::MLIRContext *context,
   getIntrinsicInfoTableEntries(id, table);
 
   ArrayRef<IITDescriptor> tableRef = table;
-  mlir::Type resultTy = decodeFixedType(tableRef, context);
+  mlir::Type resultTy = decodeFixedType(cgf, tableRef, context);
 
   SmallVector<mlir::Type, 8> argTypes;
   bool isVarArg = false;
   while (!tableRef.empty()) {
-    auto kind = tableRef.front().Kind;
+    llvm::Intrinsic::IITDescriptor::IITDescriptorKind kind =
+        tableRef.front().Kind;
     if (kind == IITDescriptor::VarArg) {
       isVarArg = true;
       break; // VarArg is last
     }
-    argTypes.push_back(decodeFixedType(tableRef, context));
+    argTypes.push_back(decodeFixedType(cgf, tableRef, context));
   }
 
   // CIR convention: no explicit void return type
@@ -836,8 +825,12 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
 
   // See if we can constant fold this builtin.  If so, don't emit it at all.
   // TODO: Extend this handling to all builtin calls that we can constant-fold.
+  // Do not constant-fold immediate (target-specific) builtins; their ASTs can
+  // trigger the constant evaluator in cases it cannot safely handle.
+  // Skip EvaluateAsRValue for those.
   Expr::EvalResult result;
-  if (e->isPRValue() && e->EvaluateAsRValue(result, cgm.getASTContext()) &&
+  if (e->isPRValue() && !getContext().BuiltinInfo.isImmediate(builtinID) &&
+      e->EvaluateAsRValue(result, cgm.getASTContext()) &&
       !result.hasSideEffects()) {
     if (result.Val.isInt())
       return RValue::get(builder.getConstInt(loc, result.Val.getInt()));
@@ -1947,9 +1940,10 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
       assert(false && "bad intrinsic name!");
 
     cir::FuncType intrinsicType =
-        getIntrinsicType(&getMLIRContext(), intrinsicID);
+        getIntrinsicType(*this, &getMLIRContext(), intrinsicID);
 
     SmallVector<mlir::Value> args;
+    const FunctionDecl *fd = e->getDirectCallee();
     for (unsigned i = 0; i < e->getNumArgs(); i++) {
       mlir::Value argValue =
           emitScalarOrConstFoldImmArg(iceArguments, i, e->getArg(i));
@@ -1958,9 +1952,12 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
       mlir::Type argType = argValue.getType();
       mlir::Type expectedTy = intrinsicType.getInput(i);
 
-      // Use helper to get the correct integer type based on AST signedness
-      mlir::Type correctedExpectedTy =
-          getIntrinsicArgumentTypeFromAST(expectedTy, e, i, &getMLIRContext());
+      // Correct integer signedness based on AST parameter type
+      mlir::Type correctedExpectedTy = expectedTy;
+      if (fd && i < fd->getNumParams()) {
+        correctedExpectedTy = correctIntegerSignedness(
+            expectedTy, fd->getParamDecl(i)->getType(), &getMLIRContext());
+      }
 
       if (argType != correctedExpectedTy)
         argValue = getCorrectedPtr(argValue, expectedTy, builder);
@@ -1968,49 +1965,22 @@ RValue CIRGenFunction::emitBuiltinExpr(const GlobalDecl &gd, unsigned builtinID,
       args.push_back(argValue);
     }
 
-    cir::LLVMIntrinsicCallOp intrinsicCall = cir::LLVMIntrinsicCallOp::create(
-        builder, getLoc(e->getExprLoc()), builder.getStringAttr(name),
-        intrinsicType.getReturnType(), args);
-
-    // Convert the intrinsic result to the CallExpr/AST expected return type if
-    // they differ. This can happen when an intrinsic's IIT uses a signed
-    // integer type while the AST declares an unsigned type, or when an
-    // intrinsic returns an integer but the AST expects a pointer (or vice
-    // versa). Coerce conservatively so subsequent stores/verifications succeed.
-    mlir::Value intrinsicRes = intrinsicCall.getResult();
-    mlir::Type builtinReturnType = intrinsicRes.getType();
-    mlir::Type expectedRetTy = convertType(e->getType());
-
-    if (builtinReturnType != expectedRetTy) {
-      // Integer -> Integer or width/signage differences.
-      if (cir::IntType fromInt =
-              mlir::dyn_cast<cir::IntType>(builtinReturnType)) {
-        if (cir::IntType toInt = mlir::dyn_cast<cir::IntType>(expectedRetTy))
-          intrinsicRes = builder.createIntCast(intrinsicRes, expectedRetTy);
-        else if (mlir::dyn_cast<cir::PointerType>(expectedRetTy))
-          intrinsicRes = builder.createIntToPtr(intrinsicRes, expectedRetTy);
-        else
-          intrinsicRes = builder.createBitcast(intrinsicRes, expectedRetTy);
-
-      } else if (cir::PointerType fromPtr =
-                     mlir::dyn_cast<cir::PointerType>(builtinReturnType)) {
-        if (mlir::dyn_cast<cir::IntType>(expectedRetTy))
-          intrinsicRes = builder.createPtrToInt(intrinsicRes, expectedRetTy);
-        else if (cir::PointerType toPtr =
-                     mlir::dyn_cast<cir::PointerType>(expectedRetTy)) {
-          if (fromPtr.getAddrSpace() != toPtr.getAddrSpace())
-            intrinsicRes =
-                builder.createAddrSpaceCast(intrinsicRes, expectedRetTy);
-          else if (fromPtr.getPointee() != toPtr.getPointee())
-            intrinsicRes = builder.createBitcast(intrinsicRes, expectedRetTy);
-        } else
-          intrinsicRes = builder.createBitcast(intrinsicRes, expectedRetTy);
-
-      } else
-        intrinsicRes = builder.createBitcast(intrinsicRes, expectedRetTy);
+    // Correct return type signedness based on AST return type before creating
+    // the call, avoiding unnecessary casts in the IR.
+    mlir::Type correctedReturnType = intrinsicType.getReturnType();
+    if (fd) {
+      correctedReturnType =
+          correctIntegerSignedness(intrinsicType.getReturnType(),
+                                   fd->getReturnType(), &getMLIRContext());
     }
 
-    if (isa<cir::VoidType>(expectedRetTy))
+    cir::LLVMIntrinsicCallOp intrinsicCall = cir::LLVMIntrinsicCallOp::create(
+        builder, getLoc(e->getExprLoc()), builder.getStringAttr(name),
+        correctedReturnType, args);
+
+    mlir::Value intrinsicRes = intrinsicCall.getResult();
+
+    if (isa<cir::VoidType>(correctedReturnType))
       return RValue::get(nullptr);
 
     return RValue::get(intrinsicRes);
