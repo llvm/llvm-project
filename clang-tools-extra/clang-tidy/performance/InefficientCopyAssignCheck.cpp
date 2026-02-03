@@ -17,7 +17,6 @@
 #include "llvm/ADT/STLExtras.h"
 
 using namespace clang::ast_matchers;
-using namespace clang::tidy::utils;
 
 namespace clang::tidy::performance {
 
