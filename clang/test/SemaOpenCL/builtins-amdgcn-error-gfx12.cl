@@ -15,4 +15,3 @@ void test(global uint* out, uint a, uint b, uint c) {
   *out = __builtin_amdgcn_permlanex16_var(a, b, c, 1, 1); // expected-error {{'__builtin_amdgcn_permlanex16_var' needs target feature gfx12-insts}}
   (void)__builtin_amdgcn_wave_id(); // expected-error {{'__builtin_amdgcn_wave_id' needs target feature architected-sgprs}}
 }
-
