@@ -46,14 +46,6 @@ class ImmediateOpWithEncoder<ValueType vt, string asmop, int width,
   let EncoderMethod = "getImmEncoding<" # encoder # ">";
 }
 
-// Multiclass for signed immediate operands with both regular and
-// PC-relative versions.
-multiclass SignedImmOpWithPCRel<ValueType vt, string asmop, int width,
-                                string fixup_imm, string fixup_pcrel> {
-  def "" : ImmediateOpWithEncoder<vt, asmop, width, 1, fixup_imm>;
-  def _pcrel : ImmediateOpWithEncoder<vt, asmop, width, 1, fixup_pcrel>;
-}
-
 //===----------------------------------------------------------------------===//
 // Multiclasses for complete immediate definitions
 // (AsmOperand + Operand + ImmLeaf).
@@ -62,8 +54,7 @@ multiclass SignedImmOpWithPCRel<ValueType vt, string asmop, int width,
 // Creates Operand and separate ImmLeaf definitions for unsigned immediates.
 // ImmLeaf is preferred over PatLeaf because it allows better code generator
 // reasoning and is FastISel-compatible. This approach keeps Operand and
-// ImmLeaf separate for GlobalISel compatibility while maintaining
-// SystemZ-style organization and naming.
+// ImmLeaf separate for GlobalISel compatibility.
 multiclass UnsignedImmediate<ValueType vt, code pred, SDNodeXForm xform,
                              string asmop, int width, string encoder = ""> {
   // Operand definition (for instruction operands).
@@ -74,11 +65,9 @@ multiclass UnsignedImmediate<ValueType vt, code pred, SDNodeXForm xform,
   }
 
   // ImmLeaf for imm nodes (for DAG pattern matching).
-  // Uses Imm (int64_t) for FastISel compatibility.
   def _pat : ImmLeaf<vt, pred, xform>;
 
-  // TImmLeaf for timm nodes (for target-specific pattern matching,
-  // e.g., intrinsics).
+  // TImmLeaf for timm nodes (for target-specific pattern matching eg: intrinsics).
   def _timm : TImmLeaf<vt, pred, xform>;
 }
 
@@ -93,12 +82,23 @@ multiclass SignedImmediate<ValueType vt, code pred, SDNodeXForm xform,
   }
 
   // ImmLeaf for imm nodes (for DAG pattern matching).
-  // Uses Imm (int64_t) for FastISel compatibility.
   def _pat : ImmLeaf<vt, pred, xform>;
 
-  // TImmLeaf for timm nodes (for target-specific pattern matching,
-  // e.g., intrinsics).
+  // TImmLeaf for timm nodes (for target-specific pattern matching eg: intrinsics).
   def _timm : TImmLeaf<vt, pred, xform>;
+}
+
+// Multiclass for signed immediate operands with both regular and
+// PC-relative versions.
+multiclass SignedImmediateWithPCRel<ValueType vt, code pred,
+                                    SDNodeXForm xform, string asmop,
+                                    int width, string fixup_imm,
+                                    string fixup_pcrel> {
+  // Regular immediate: instantiate SignedImmediate with regular fixup
+  defm "" : SignedImmediate<vt, pred, xform, asmop, width, fixup_imm>;
+
+  // PC-relative immediate: instantiate SignedImmediate with PC-relative fixup
+  defm _pcrel : SignedImmediate<vt, pred, xform, asmop, width, fixup_pcrel>;
 }
 
 //===----------------------------------------------------------------------===//
@@ -116,7 +116,7 @@ def U10Imm : ImmediateAsmOperand<"isUImm<10>">;
 def U12Imm : ImmediateAsmOperand<"isUImm<12>">;
 def S5Imm : ImmediateAsmOperand<"isSImm<5>">;
 
-// Special cases that have custom predicate and/or render method.
+// Special cases that have custom predicat and/or render method.
 def ATBitsAsHint : ImmediateAsmOperand<"isATBitsAsHint">; //Predicate always fails.
 def ImmZero : ImmediateAsmOperand<"isImmZero">;
 def U16Imm : ImmediateAsmOperand<"isU16Imm","addU16ImmOperands">;
@@ -164,18 +164,40 @@ defm s5imm : SignedImmediate<i32,
   [{ return isInt<5>(Imm); }], NOOP_SDNodeXForm,
   "S5Imm", 5>;
 
-// Special case: atimm has custom print method and no decoder.
-def atimm : Operand<i32> {
-  let PrintMethod = "printATBitsAsHint";
-  let ParserMatchClass = ATBitsAsHint;
-  let OperandType = "OPERAND_IMMEDIATE";
-}
+defm s32imm : SignedImmediateWithPCRel<i32,
+  [{ return isInt<32>(Imm); }], NOOP_SDNodeXForm,
+  "S32Imm", 32, "PPC::fixup_ppc_imm32", "PPC::fixup_ppc_pcrel32">;
+defm s34imm : SignedImmediate<i32,
+  [{ return isInt<34>(Imm); }], NOOP_SDNodeXForm,
+  "S34Imm", 34, "PPC::fixup_ppc_imm34">;
 
-// Special case: immZero has custom print and decoder methods.
+//===----------------------------------------------------------------------===//
+// i64 immediate operands
+//===----------------------------------------------------------------------===//
+
+defm s32imm64 : SignedImmediateWithPCRel<i64,
+  [{ return isInt<32>(Imm); }], NOOP_SDNodeXForm,
+  "S32Imm", 32, "PPC::fixup_ppc_imm32", "PPC::fixup_ppc_pcrel32">;
+defm s34imm64 : SignedImmediateWithPCRel<i64,
+  [{ return isInt<34>(Imm); }], NOOP_SDNodeXForm,
+  "S34Imm", 34, "PPC::fixup_ppc_imm34", "PPC::fixup_ppc_pcrel34">;
+
+//===----------------------------------------------------------------------===//
+// Special case immediate operands
+//===----------------------------------------------------------------------===//
+
+// immZero has custom print and decoder methods.
 def immZero : Operand<i32> {
   let PrintMethod = "printImmZeroOperand";
   let ParserMatchClass = ImmZero;
   let DecoderMethod = "decodeImmZeroOperand";
+  let OperandType = "OPERAND_IMMEDIATE";
+}
+
+// Special case: atimm has custom print method and no decoder.
+def atimm : Operand<i32> {
+  let PrintMethod = "printATBitsAsHint";
+  let ParserMatchClass = ATBitsAsHint;
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
@@ -186,10 +208,6 @@ defm s16imm : SignedImmediate<i32,
 defm u16imm : UnsignedImmediate<i32,
   [{ return isUInt<16>(Imm); }], NOOP_SDNodeXForm,
   "U16Imm", 16, "PPC::fixup_ppc_half16">;
-
-//===----------------------------------------------------------------------===//
-// i64 immediate operands
-//===----------------------------------------------------------------------===//
 
 // Special handing for target matching.
 def s16imm64 : ImmediateOpWithEncoder<i64, "S16Imm", 16, 1, "PPC::fixup_ppc_half16">;
@@ -205,10 +223,3 @@ def s17imm : ImmediateOpWithEncoder<i32, "S17Imm", 16, 1, "PPC::fixup_ppc_half16
 def s17imm64 : ImmediateOpWithEncoder<i64, "S17Imm", 16, 1, "PPC::fixup_ppc_half16"> {
   let PrintMethod = "printS16ImmOperand";
 }
-
-defm s32imm : SignedImmOpWithPCRel<i64, "S32Imm", 32,
-                                   "PPC::fixup_ppc_imm32",
-                                   "PPC::fixup_ppc_pcrel32">;
-defm s34imm : SignedImmOpWithPCRel<i64, "S34Imm", 34,
-                                   "PPC::fixup_ppc_imm34",
-                                   "PPC::fixup_ppc_pcrel34">;

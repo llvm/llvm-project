@@ -343,7 +343,8 @@ class VXBX_Int_Ty<bits<11> xo, string opc, Intrinsic IntID, ValueType Ty>
 class VXCR_Int_Ty<bits<11> xo, string opc, Intrinsic IntID, ValueType Ty>
   : VXForm_CR<xo, (outs vrrc:$VD), (ins vrrc:$VA, u1imm:$ST, u4imm:$SIX),
               !strconcat(opc, " $VD, $VA, $ST, $SIX"), IIC_VecFP,
-              [(set Ty:$VD, (IntID Ty:$VA, u1imm_timm:$ST, timm:$SIX))]>;
+              [(set Ty:$VD, (IntID Ty:$VA, u1imm_timm:$ST,
+                                           u4imm_timm:$SIX))]>;
 
 //===----------------------------------------------------------------------===//
 // Instruction Definitions.

@@ -657,18 +657,18 @@ def RCCp {
 let Predicates = [PrefixInstrs] in {
   let Interpretation64Bit = 1, isCodeGenOnly = 1 in {
     defm PADDI8 :
-      MLS_DForm_R_SI34_RTA5_p<14, (outs g8rc:$RT), (ins g8rc_nox0:$RA, s34imm:$SI),
-                              (ins immZero:$RA, s34imm_pcrel:$SI),
+      MLS_DForm_R_SI34_RTA5_p<14, (outs g8rc:$RT), (ins g8rc_nox0:$RA, s34imm64:$SI),
+                              (ins immZero:$RA, s34imm64_pcrel:$SI),
                               "paddi $RT, $RA, $SI", IIC_LdStLFD>;
     let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveImm = 1 in {
       def PLI8 : MLS_DForm_SI34_RT5<14, (outs g8rc:$RT),
-                                    (ins s34imm:$SI),
+                                    (ins s34imm64:$SI),
                                     "pli $RT, $SI", IIC_IntSimple, []>;
     }
   }
   defm PADDI :
     MLS_DForm_R_SI34_RTA5_p<14, (outs gprc:$RT), (ins gprc_nor0:$RA, s34imm:$SI),
-                            (ins immZero:$RA, s34imm_pcrel:$SI),
+                            (ins immZero:$RA, s34imm64_pcrel:$SI),
                             "paddi $RT, $RA, $SI", IIC_LdStLFD>;
   let isReMaterializable = 1, isAsCheapAsAMove = 1, isMoveImm = 1 in {
     def PLI : MLS_DForm_SI34_RT5<14, (outs gprc:$RT),
@@ -681,59 +681,59 @@ let Predicates = [PrefixInstrs] in {
       defm PLBZ8 :
         MLS_DForm_R_SI34_RTA5_MEM_p<34, (outs g8rc:$RST), (ins (memri34 $D, $RA):$addr),
                                     (ins (memri34_pcrel $D, $RA):$addr),
-                                    (ins s34imm_pcrel:$D), "plbz $RST, $addr",
+                                    (ins s34imm64_pcrel:$D), "plbz $RST, $addr",
                                     "plbz $RST, $D", IIC_LdStLFD>;
       defm PLHZ8 :
         MLS_DForm_R_SI34_RTA5_MEM_p<40, (outs g8rc:$RST), (ins (memri34 $D, $RA):$addr),
                                     (ins (memri34_pcrel $D, $RA):$addr),
-                                    (ins s34imm_pcrel:$D), "plhz $RST, $addr",
+                                    (ins s34imm64_pcrel:$D), "plhz $RST, $addr",
                                     "plhz $RST, $D", IIC_LdStLFD>;
       defm PLHA8 :
         MLS_DForm_R_SI34_RTA5_MEM_p<42, (outs g8rc:$RST), (ins (memri34 $D, $RA):$addr),
                                     (ins (memri34_pcrel $D, $RA):$addr),
-                                    (ins s34imm_pcrel:$D), "plha $RST, $addr",
+                                    (ins s34imm64_pcrel:$D), "plha $RST, $addr",
                                     "plha $RST, $D", IIC_LdStLFD>;
       defm PLWA8 :
         8LS_DForm_R_SI34_RTA5_MEM_p<41, (outs g8rc:$RST), (ins (memri34 $D, $RA):$addr),
                                     (ins (memri34_pcrel $D, $RA):$addr),
-                                    (ins s34imm_pcrel:$D),
+                                    (ins s34imm64_pcrel:$D),
                                     "plwa $RST, $addr", "plwa $RST, $D",  IIC_LdStLFD>;
       defm PLWZ8 :
         MLS_DForm_R_SI34_RTA5_MEM_p<32, (outs g8rc:$RST), (ins (memri34 $D, $RA):$addr),
                                     (ins (memri34_pcrel $D, $RA):$addr),
-                                    (ins s34imm_pcrel:$D), "plwz $RST, $addr",
+                                    (ins s34imm64_pcrel:$D), "plwz $RST, $addr",
                                     "plwz $RST, $D", IIC_LdStLFD>;
     }
     defm PLBZ :
       MLS_DForm_R_SI34_RTA5_MEM_p<34, (outs gprc:$RST), (ins (memri34 $D, $RA):$addr),
                                   (ins (memri34_pcrel $D, $RA):$addr),
-                                  (ins s34imm_pcrel:$D), "plbz $RST, $addr",
+                                  (ins s34imm64_pcrel:$D), "plbz $RST, $addr",
                                   "plbz $RST, $D", IIC_LdStLFD>;
     defm PLHZ :
       MLS_DForm_R_SI34_RTA5_MEM_p<40, (outs gprc:$RST), (ins (memri34 $D, $RA):$addr),
                                   (ins (memri34_pcrel $D, $RA):$addr),
-                                  (ins s34imm_pcrel:$D), "plhz $RST, $addr",
+                                  (ins s34imm64_pcrel:$D), "plhz $RST, $addr",
                                   "plhz $RST, $D", IIC_LdStLFD>;
     defm PLHA :
       MLS_DForm_R_SI34_RTA5_MEM_p<42, (outs gprc:$RST), (ins (memri34 $D, $RA):$addr),
                                   (ins (memri34_pcrel $D, $RA):$addr),
-                                  (ins s34imm_pcrel:$D), "plha $RST, $addr",
+                                  (ins s34imm64_pcrel:$D), "plha $RST, $addr",
                                   "plha $RST, $D", IIC_LdStLFD>;
     defm PLWZ :
       MLS_DForm_R_SI34_RTA5_MEM_p<32, (outs gprc:$RST), (ins (memri34 $D, $RA):$addr),
                                   (ins (memri34_pcrel $D, $RA):$addr),
-                                  (ins s34imm_pcrel:$D), "plwz $RST, $addr",
+                                  (ins s34imm64_pcrel:$D), "plwz $RST, $addr",
                                   "plwz $RST, $D", IIC_LdStLFD>;
     defm PLWA :
       8LS_DForm_R_SI34_RTA5_MEM_p<41, (outs gprc:$RST), (ins (memri34 $D, $RA):$addr),
                                   (ins (memri34_pcrel $D, $RA):$addr),
-                                  (ins s34imm_pcrel:$D),
+                                  (ins s34imm64_pcrel:$D),
                                   "plwa $RST, $addr", "plwa $RST, $D",
                                   IIC_LdStLFD>;
     defm PLD :
       8LS_DForm_R_SI34_RTA5_MEM_p<57, (outs g8rc:$RST), (ins (memri34 $D, $RA):$addr),
                                   (ins (memri34_pcrel $D, $RA):$addr),
-                                  (ins s34imm_pcrel:$D),
+                                  (ins s34imm64_pcrel:$D),
                                   "pld $RST, $addr", "pld $RST, $D",
                                   IIC_LdStLFD>;
   }
@@ -743,38 +743,38 @@ let Predicates = [PrefixInstrs] in {
       defm PSTB8 :
         MLS_DForm_R_SI34_RTA5_MEM_p<38, (outs), (ins g8rc:$RST, (memri34 $D, $RA):$addr),
                                     (ins g8rc:$RST, (memri34_pcrel $D, $RA):$addr),
-                                    (ins g8rc:$RST, s34imm_pcrel:$D),
+                                    (ins g8rc:$RST, s34imm64_pcrel:$D),
                                     "pstb $RST, $addr", "pstb $RST, $D", IIC_LdStLFD>;
       defm PSTH8 :
         MLS_DForm_R_SI34_RTA5_MEM_p<44, (outs), (ins g8rc:$RST, (memri34 $D, $RA):$addr),
                                     (ins g8rc:$RST, (memri34_pcrel $D, $RA):$addr),
-                                    (ins g8rc:$RST, s34imm_pcrel:$D),
+                                    (ins g8rc:$RST, s34imm64_pcrel:$D),
                                     "psth $RST, $addr", "psth $RST, $D", IIC_LdStLFD>;
       defm PSTW8 :
         MLS_DForm_R_SI34_RTA5_MEM_p<36, (outs), (ins g8rc:$RST, (memri34 $D, $RA):$addr),
                                     (ins g8rc:$RST, (memri34_pcrel $D, $RA):$addr),
-                                    (ins g8rc:$RST, s34imm_pcrel:$D),
+                                    (ins g8rc:$RST, s34imm64_pcrel:$D),
                                     "pstw $RST, $addr", "pstw $RST, $D", IIC_LdStLFD>;
     }
     defm PSTB :
       MLS_DForm_R_SI34_RTA5_MEM_p<38, (outs), (ins gprc:$RST, (memri34 $D, $RA):$addr),
                                   (ins gprc:$RST, (memri34_pcrel $D, $RA):$addr),
-                                  (ins gprc:$RST, s34imm_pcrel:$D),
+                                  (ins gprc:$RST, s34imm64_pcrel:$D),
                                   "pstb $RST, $addr", "pstb $RST, $D", IIC_LdStLFD>;
     defm PSTH :
       MLS_DForm_R_SI34_RTA5_MEM_p<44, (outs), (ins gprc:$RST, (memri34 $D, $RA):$addr),
                                   (ins gprc:$RST, (memri34_pcrel $D, $RA):$addr),
-                                  (ins gprc:$RST, s34imm_pcrel:$D),
+                                  (ins gprc:$RST, s34imm64_pcrel:$D),
                                   "psth $RST, $addr", "psth $RST, $D", IIC_LdStLFD>;
     defm PSTW :
       MLS_DForm_R_SI34_RTA5_MEM_p<36, (outs), (ins gprc:$RST, (memri34 $D, $RA):$addr),
                                   (ins gprc:$RST, (memri34_pcrel $D, $RA):$addr),
-                                  (ins gprc:$RST, s34imm_pcrel:$D),
+                                  (ins gprc:$RST, s34imm64_pcrel:$D),
                                   "pstw $RST, $addr", "pstw $RST, $D", IIC_LdStLFD>;
     defm PSTD :
       8LS_DForm_R_SI34_RTA5_MEM_p<61, (outs), (ins g8rc:$RST, (memri34 $D, $RA):$addr),
                                   (ins g8rc:$RST, (memri34_pcrel $D, $RA):$addr),
-                                  (ins g8rc:$RST, s34imm_pcrel:$D),
+                                  (ins g8rc:$RST, s34imm64_pcrel:$D),
                                   "pstd $RST, $addr", "pstd $RST, $D", IIC_LdStLFD>;
   }
 }
@@ -784,24 +784,24 @@ let Predicates = [PrefixInstrs, HasFPU] in {
     defm PLFS :
       MLS_DForm_R_SI34_RTA5_MEM_p<48, (outs f4rc:$RST), (ins (memri34 $D, $RA):$addr),
                                   (ins (memri34_pcrel $D, $RA):$addr),
-                                  (ins s34imm_pcrel:$D), "plfs $RST, $addr",
+                                  (ins s34imm64_pcrel:$D), "plfs $RST, $addr",
                                   "plfs $RST, $D", IIC_LdStLFD>;
     defm PLFD :
       MLS_DForm_R_SI34_RTA5_MEM_p<50, (outs f8rc:$RST), (ins (memri34 $D, $RA):$addr),
                                   (ins  (memri34_pcrel $D, $RA):$addr),
-                                  (ins s34imm_pcrel:$D), "plfd $RST, $addr",
+                                  (ins s34imm64_pcrel:$D), "plfd $RST, $addr",
                                   "plfd $RST, $D", IIC_LdStLFD>;
   }
   let mayStore = 1, mayLoad = 0 in {
     defm PSTFS :
       MLS_DForm_R_SI34_RTA5_MEM_p<52, (outs), (ins f4rc:$RST, (memri34 $D, $RA):$addr),
                                   (ins f4rc:$RST, (memri34_pcrel $D, $RA):$addr),
-                                  (ins f4rc:$RST, s34imm_pcrel:$D),
+                                  (ins f4rc:$RST, s34imm64_pcrel:$D),
                                   "pstfs $RST, $addr", "pstfs $RST, $D", IIC_LdStLFD>;
     defm PSTFD :
       MLS_DForm_R_SI34_RTA5_MEM_p<54, (outs), (ins f8rc:$RST, (memri34 $D, $RA):$addr),
                                   (ins f8rc:$RST, (memri34_pcrel $D, $RA):$addr),
-                                  (ins f8rc:$RST, s34imm_pcrel:$D),
+                                  (ins f8rc:$RST, s34imm64_pcrel:$D),
                                   "pstfd $RST, $addr", "pstfd $RST, $D", IIC_LdStLFD>;
   }
 }
@@ -811,18 +811,18 @@ let Predicates = [PrefixInstrs, HasP10Vector] in {
     defm PLXV :
       8LS_DForm_R_SI34_XT6_RA5_MEM_p<25, (outs vsrc:$XST), (ins (memri34 $D, $RA):$addr),
                                      (ins (memri34_pcrel $D, $RA):$addr),
-                                     (ins s34imm_pcrel:$D),
+                                     (ins s34imm64_pcrel:$D),
                                      "plxv $XST, $addr", "plxv $XST, $D", IIC_LdStLFD>;
     defm PLXSSP :
       8LS_DForm_R_SI34_RTA5_MEM_p<43, (outs vfrc:$RST), (ins (memri34 $D, $RA):$addr),
                                   (ins (memri34_pcrel $D, $RA):$addr),
-                                  (ins s34imm_pcrel:$D),
+                                  (ins s34imm64_pcrel:$D),
                                   "plxssp $RST, $addr",  "plxssp $RST, $D",
                                   IIC_LdStLFD>;
     defm PLXSD :
       8LS_DForm_R_SI34_RTA5_MEM_p<42, (outs vfrc:$RST), (ins (memri34 $D, $RA):$addr),
                                   (ins (memri34_pcrel $D, $RA):$addr),
-                                  (ins s34imm_pcrel:$D),
+                                  (ins s34imm64_pcrel:$D),
                                   "plxsd $RST, $addr", "plxsd $RST, $D",
                                   IIC_LdStLFD>;
   }
@@ -830,17 +830,17 @@ let Predicates = [PrefixInstrs, HasP10Vector] in {
     defm PSTXV :
       8LS_DForm_R_SI34_XT6_RA5_MEM_p<27, (outs), (ins vsrc:$XST, (memri34 $D, $RA):$addr),
                                      (ins vsrc:$XST, (memri34_pcrel $D, $RA):$addr),
-                                     (ins vsrc:$XST, s34imm_pcrel:$D),
+                                     (ins vsrc:$XST, s34imm64_pcrel:$D),
                                      "pstxv $XST, $addr", "pstxv $XST, $D", IIC_LdStLFD>;
     defm PSTXSSP :
       8LS_DForm_R_SI34_RTA5_MEM_p<47, (outs), (ins vfrc:$RST, (memri34 $D, $RA):$addr),
                                   (ins vfrc:$RST, (memri34_pcrel $D, $RA):$addr),
-                                  (ins vfrc:$RST, s34imm_pcrel:$D),
+                                  (ins vfrc:$RST, s34imm64_pcrel:$D),
                                   "pstxssp $RST, $addr", "pstxssp $RST, $D", IIC_LdStLFD>;
     defm PSTXSD :
       8LS_DForm_R_SI34_RTA5_MEM_p<46, (outs), (ins vfrc:$RST, (memri34 $D, $RA):$addr),
                                   (ins vfrc:$RST, (memri34_pcrel $D, $RA):$addr),
-                                  (ins vfrc:$RST, s34imm_pcrel:$D),
+                                  (ins vfrc:$RST, s34imm64_pcrel:$D),
                                   "pstxsd $RST, $addr", "pstxsd $RST, $D", IIC_LdStLFD>;
   }
   def XXPERMX :
@@ -1189,7 +1189,7 @@ let mayLoad = 1, mayStore = 0, Predicates = [PairedVectorMemops, PrefixInstrs, H
   defm PLXVP :
     8LS_DForm_R_XTp5_SI34_MEM_p<58, (outs vsrprc:$XTp), (ins (memri34 $D, $RA):$addr),
                                 (ins (memri34_pcrel $D, $RA):$addr),
-                                (ins s34imm_pcrel:$D),
+                                (ins s34imm64_pcrel:$D),
                                 "plxvp $XTp, $addr", "plxvp $XTp, $D",
                                 IIC_LdStLFD>;
 }
@@ -1198,7 +1198,7 @@ let mayLoad = 0, mayStore = 1, Predicates = [PairedVectorMemops, PrefixInstrs, H
   defm PSTXVP :
     8LS_DForm_R_XTp5_SI34_MEM_p<62, (outs), (ins vsrprc:$XTp, (memri34 $D, $RA):$addr),
                                 (ins vsrprc:$XTp, (memri34_pcrel $D, $RA):$addr),
-                                (ins vsrprc:$XTp, s34imm_pcrel:$D),
+                                (ins vsrprc:$XTp, s34imm64_pcrel:$D),
                                 "pstxvp $XTp, $addr", "pstxvp $XTp, $D", IIC_LdStLFD>;
 }
 
@@ -2760,8 +2760,8 @@ let Predicates = [PrefixInstrs, HasP10Vector] in {
     }
 
 
-  def : Pat<(i32 imm34:$imm), (PLI (getImmAs64BitInt imm:$imm))>;
-  def : Pat<(i64 imm34:$imm), (PLI8 (getImmAs64BitInt imm:$imm))>;
+  def : Pat<(i32 s34imm_pat:$imm), (PLI (getImmAs64BitInt imm:$imm))>;
+  def : Pat<(i64 s34imm64_pat:$imm), (PLI8 (getImmAs64BitInt imm:$imm))>;
   def : Pat<(v16i8 (int_ppc_vsx_xxpermx v16i8:$A, v16i8:$B, v16i8:$C, u3imm_timm:$D)),
             (COPY_TO_REGCLASS (XXPERMX (COPY_TO_REGCLASS $A, VSRC),
                                        (COPY_TO_REGCLASS $B, VSRC),
@@ -2964,26 +2964,26 @@ let Predicates = [IsISA3_1] in {
   def : InstAlias<"stcisync", (SYNCP10 0, 2)>;
   def : InstAlias<"stsync", (SYNCP10 0, 3)>;
 
-  def : InstAlias<"paddi $RT, $RA, $SI", (PADDI8 g8rc:$RT, g8rc_nox0:$RA, s34imm:$SI)>;
+  def : InstAlias<"paddi $RT, $RA, $SI", (PADDI8 g8rc:$RT, g8rc_nox0:$RA, s34imm64:$SI)>;
 }
 
 let Predicates = [IsISA3_1, PrefixInstrs], isAsmParserOnly = 1, hasNoSchedulingInfo = 1 in {
   let Interpretation64Bit = 1 in {
     def PLA8 : MLS_DForm_SI34_RT5<14, (outs g8rc:$RT),
-                                  (ins g8rc_nox0:$RA, s34imm:$SI),
+                                  (ins g8rc_nox0:$RA, s34imm64:$SI),
                                   "pla $RT, ${SI} ${RA}", IIC_IntSimple, []>, MemriOp;
     def PLA8pc : MLS_DForm_SI34_RT5<14, (outs g8rc:$RT),
-                                    (ins s34imm_pcrel:$SI),
+                                    (ins s34imm64_pcrel:$SI),
                                     "pla $RT, $SI", IIC_IntSimple, []>, isPCRel;
   }
 
   def PSUBI : PPCAsmPseudo<"psubi $RT, $RA, $SI",
-                           (ins g8rc:$RT, g8rc_nox0:$RA, s34imm:$SI)>;
+                           (ins g8rc:$RT, g8rc_nox0:$RA, s34imm64:$SI)>;
 
   def PLA : MLS_DForm_SI34_RT5<14, (outs gprc:$RT),
-                               (ins gprc_nor0:$RA, s34imm:$SI),
+                               (ins gprc_nor0:$RA, s34imm64:$SI),
                                "pla $RT, ${SI} ${RA}", IIC_IntSimple, []>, MemriOp;
   def PLApc : MLS_DForm_SI34_RT5<14, (outs gprc:$RT),
-                                 (ins s34imm_pcrel:$SI),
+                                 (ins s34imm64_pcrel:$SI),
                                  "pla $RT, $SI", IIC_IntSimple, []>, isPCRel;
 }

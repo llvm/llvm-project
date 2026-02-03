@@ -518,7 +518,8 @@ let Predicates = [MMA, IsISAFuture] in {
       : XForm_ATp2_SR5<31, 15, 177, (outs dmrp:$ATp),
                        (ins dmrp:$ATpi, u5imm:$SR), "dmsha3hash $ATp, $SR",
                        [(set v2048i1:$ATp,
-                           (int_ppc_mma_dmsha3hash v2048i1:$ATpi, timm:$SR))]>,
+                           (int_ppc_mma_dmsha3hash v2048i1:$ATpi,
+                                                   u5imm_timm:$SR))]>,
         RegConstraint<"$ATpi = $ATp">;
   def DMXXSHAPAD
       : XX2Form_AT3_XB6_ID2_E1_BL2<60, 421, (outs dmr:$AT),
@@ -592,8 +593,8 @@ let Predicates = [MMA, IsISAFuture] in {
             (DMXVF16GERX2NN $ATi, $XAp, RCCp.BToVSRC)>;
 
   // Cryptography Intrinsic
-  def : Pat<(v1024i1 (int_ppc_mma_dmxxshapad v1024i1:$ATi, v16i8:$XB, timm:$ID,
-                u1imm_timm:$E, timm:$BL)),
+  def : Pat<(v1024i1 (int_ppc_mma_dmxxshapad v1024i1:$ATi, v16i8:$XB,
+                u2imm_timm:$ID, u1imm_timm:$E, u2imm_timm:$BL)),
             (DMXXSHAPAD $ATi, RCCp.BToVSRC, $ID, $E, $BL)>;
 }
 

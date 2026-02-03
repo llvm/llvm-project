@@ -780,9 +780,6 @@ def getFPAs64BitIntLo : SDNodeXForm<fpimm, [{
   return CurDAG->getTargetConstant(Lo, SDLoc(N), MVT::i32);
 }]>;
 
-def imm34 : PatLeaf<(imm), [{
-  return isInt<34>(N->getSExtValue());
-}]>;
 
 def getImmAs64BitInt : SDNodeXForm<imm, [{
   return getI64Imm(N->getSExtValue(), SDLoc(N));
@@ -1465,12 +1462,16 @@ multiclass Z22Form_FRTA5_SH6r<bits<6> opcode, bits<9> xo, dag OOL, dag IOL,
 
 let hasCtrlDep = 1 in {
 let Defs = [R1], Uses = [R1] in {
-def ADJCALLSTACKDOWN : PPCEmitTimePseudo<(outs), (ins u16imm:$amt1, u16imm:$amt2),
+def ADJCALLSTACKDOWN : PPCEmitTimePseudo<(outs),
+                              (ins u16imm:$amt1, u16imm:$amt2),
                               "#ADJCALLSTACKDOWN $amt1 $amt2",
-                              [(callseq_start timm:$amt1, timm:$amt2)]>;
-def ADJCALLSTACKUP   : PPCEmitTimePseudo<(outs), (ins u16imm:$amt1, u16imm:$amt2),
+                              [(callseq_start u16imm_timm:$amt1,
+                                              u16imm_timm:$amt2)]>;
+def ADJCALLSTACKUP   : PPCEmitTimePseudo<(outs),
+                              (ins u16imm:$amt1, u16imm:$amt2),
                               "#ADJCALLSTACKUP $amt1 $amt2",
-                              [(callseq_end timm:$amt1, timm:$amt2)]>;
+                              [(callseq_end u16imm_timm:$amt1,
+                                            u16imm_timm:$amt2)]>;
 }
 } // hasCtrlDep
 
