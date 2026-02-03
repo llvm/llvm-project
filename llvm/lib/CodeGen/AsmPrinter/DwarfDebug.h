@@ -558,6 +558,8 @@ private:
 
   void finishSubprogramDefinitions();
 
+  void addChangedSubprograms();
+
   /// Finish off debug information after all functions have been
   /// processed.
   void finalizeModuleInfo();

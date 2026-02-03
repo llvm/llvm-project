@@ -1324,10 +1324,76 @@ void DwarfDebug::finishSubprogramDefinitions() {
   }
 }
 
+void DwarfDebug::addChangedSubprograms() {
+  // Generate additional dwarf for functions with signature changed.
+  DICompileUnit *ExtraCU = nullptr;
+  for (DICompileUnit *CUNode : MMI->getModule()->debug_compile_units()) {
+    if (CUNode->getFile()->getFilename() == "<changed_signatures>") {
+      ExtraCU = CUNode;
+      break;
+    }
+  }
+  if (!ExtraCU)
+    return;
+
+  llvm::DebugInfoFinder DIF;
+  DIF.processModule(*MMI->getModule());
+  for (auto *ExtraSP : DIF.subprograms()) {
+    if (ExtraSP->getUnit() != ExtraCU)
+      continue;
+
+    DISubprogram *SP = cast<DISubprogram>(ExtraSP->getScope());
+    DwarfCompileUnit &Cu = getOrCreateDwarfCompileUnit(SP->getUnit());
+    DIE *ScopeDIE =
+        DIE::get(DIEValueAllocator, dwarf::DW_TAG_inlined_subroutine);
+    Cu.getUnitDie().addChild(ScopeDIE);
+
+    Cu.addString(*ScopeDIE, dwarf::DW_AT_name, ExtraSP->getName());
+    if (!ExtraSP->getLinkageName().empty())
+      Cu.addString(*ScopeDIE, dwarf::DW_AT_linkage_name,
+                   ExtraSP->getLinkageName());
+
+    DITypeRefArray Args = ExtraSP->getType()->getTypeArray();
+
+    if (Args[0])
+      Cu.addType(*ScopeDIE, Args[0]);
+
+    if (ExtraSP->getType()->getCC() == llvm::dwarf::DW_CC_nocall) {
+      Cu.addUInt(*ScopeDIE, dwarf::DW_AT_calling_convention,
+                 dwarf::DW_FORM_data1, llvm::dwarf::DW_CC_nocall);
+    }
+
+    Cu.addFlag(*ScopeDIE, dwarf::DW_AT_artificial);
+
+    // dereference the DIE* for DIEEntry
+    DIE *OriginDIE = Cu.getOrCreateSubprogramDIE(SP, nullptr);
+    Cu.addDIEEntry(*ScopeDIE, dwarf::DW_AT_specification, DIEEntry(*OriginDIE));
+
+    SmallVector<const DILocalVariable *> ArgVars(Args.size());
+    for (const DINode *DN : ExtraSP->getRetainedNodes()) {
+      if (const auto *DV = dyn_cast<DILocalVariable>(DN)) {
+        uint32_t Arg = DV->getArg();
+        if (Arg)
+          ArgVars[Arg - 1] = DV;
+      }
+    }
+
+    for (unsigned i = 1, N = Args.size(); i < N; ++i) {
+      const DIType *Ty = Args[i];
+      DIE &Arg = Cu.createAndAddDIE(dwarf::DW_TAG_formal_parameter, *ScopeDIE);
+      const DILocalVariable *DV = ArgVars[i - 1];
+      Cu.addString(Arg, dwarf::DW_AT_name, DV->getName());
+      Cu.addType(Arg, Ty);
+    }
+  }
+}
+
 void DwarfDebug::finalizeModuleInfo() {
   const TargetLoweringObjectFile &TLOF = Asm->getObjFileLowering();
 
   finishSubprogramDefinitions();
+
+  addChangedSubprograms();
 
   finishEntityDefinitions();
 
