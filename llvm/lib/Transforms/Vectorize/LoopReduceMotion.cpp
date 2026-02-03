@@ -193,7 +193,7 @@ bool LoopReduceMotionPass::matchAndTransform(Loop &L, DominatorTree &DT,
 
     // replace use of phi and erase use empty value
     if (!PN.use_empty())
-      PN.replaceAllUsesWith(UndefValue::get(PN.getType()));
+      PN.replaceAllUsesWith(PoisonValue::get(PN.getType()));
     if (PN.use_empty())
       PN.eraseFromParent();
     RecurrenceInst->replaceAllUsesWith(dyn_cast<Instruction>(LastAdd));
