@@ -321,18 +321,15 @@ define <2 x double> @test_modf_v2f64_only_use_integer(<2 x double> %x) {
   ret <2 x double> %result.1
 }
 
-define { float, float } @test_modf_fast(float %x) {
-; GFX9-LABEL: test_modf_fast:
+define { float, float } @test_modf_ninf(float %x) {
+; GFX9-LABEL: test_modf_ninf:
 ; GFX9:       ; %bb.0:
 ; GFX9-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; GFX9-NEXT:    s_mov_b32 s4, 0x7f800000
 ; GFX9-NEXT:    v_trunc_f32_e32 v1, v0
 ; GFX9-NEXT:    v_sub_f32_e32 v2, v0, v1
-; GFX9-NEXT:    v_cmp_neq_f32_e64 vcc, |v0|, s4
-; GFX9-NEXT:    v_cndmask_b32_e32 v2, 0, v2, vcc
 ; GFX9-NEXT:    s_brev_b32 s4, -2
 ; GFX9-NEXT:    v_bfi_b32 v0, s4, v2, v0
 ; GFX9-NEXT:    s_setpc_b64 s[30:31]
-  %result = call fast { float, float } @llvm.modf.f32(float %x)
+  %result = call ninf { float, float } @llvm.modf.f32(float %x)
   ret { float, float } %result
 }

@@ -49,6 +49,17 @@ define { float, float } @modf_fraction() {
   ret { float, float } %ret
 }
 
+define { float, float } @modf_negfraction() {
+; CHECK-LABEL: modf_negfraction:
+; CHECK:       ; %bb.0:
+; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
+; CHECK-NEXT:    v_mov_b32_e32 v0, -0.5
+; CHECK-NEXT:    v_bfrev_b32_e32 v1, 1
+; CHECK-NEXT:    s_setpc_b64 s[30:31]
+  %ret = call { float, float } @llvm.modf.f32(float -0.5)
+  ret { float, float } %ret
+}
+
 define { float, float } @modf_zero() {
 ; CHECK-LABEL: modf_zero:
 ; CHECK:       ; %bb.0:

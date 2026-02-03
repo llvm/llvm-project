@@ -2781,16 +2781,22 @@ SDValue SelectionDAGLegalize::expandModf(SDNode *Node) const {
   SDValue IntPart = DAG.getNode(ISD::FTRUNC, dl, VT, Val, Flags);
   SDValue FracPart = DAG.getNode(ISD::FSUB, dl, VT, Val, IntPart, Flags);
 
-  SDValue Abs = DAG.getNode(ISD::FABS, dl, VT, Val, Flags);
-  SDValue Inf =
-      DAG.getConstantFP(APFloat::getInf(VT.getFltSemantics()), dl, VT);
-  EVT SetCCVT =
-      TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
-  SDValue IsInf = DAG.getSetCC(dl, SetCCVT, Abs, Inf, ISD::SETOEQ);
-  SDValue Zero = DAG.getConstantFP(0.0, dl, VT);
-  SDValue RawFrac = DAG.getNode(ISD::SELECT, dl, VT, IsInf, Zero, FracPart);
-  SDValue ResultFrac = DAG.getNode(ISD::FCOPYSIGN, dl, VT, RawFrac, Val, Flags);
+  SDValue FracToUse;
+  if (Flags.hasNoInfs()) {
+    FracToUse = FracPart;
+  } else {
+    SDValue Abs = DAG.getNode(ISD::FABS, dl, VT, Val, Flags);
+    SDValue Inf =
+        DAG.getConstantFP(APFloat::getInf(VT.getFltSemantics()), dl, VT);
+    EVT SetCCVT =
+        TLI.getSetCCResultType(DAG.getDataLayout(), *DAG.getContext(), VT);
+    SDValue IsInf = DAG.getSetCC(dl, SetCCVT, Abs, Inf, ISD::SETOEQ);
+    SDValue Zero = DAG.getConstantFP(0.0, dl, VT);
+    FracToUse = DAG.getNode(ISD::SELECT, dl, VT, IsInf, Zero, FracPart);
+  }
 
+  SDValue ResultFrac =
+      DAG.getNode(ISD::FCOPYSIGN, dl, VT, FracToUse, Val, Flags);
   return DAG.getMergeValues({ResultFrac, IntPart}, dl);
 }
 
