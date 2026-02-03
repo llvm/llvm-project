@@ -2085,8 +2085,8 @@ let UnMaskedPolicyScheme = HasPolicyOperand, HasMasked = false in {
   }
 }
 
-// Zvqdotq
-multiclass RVVVQDOTQBuiltinSet<list<list<string>> suffixes_prototypes> {
+// Zvdot4a8i
+multiclass RVVVDOTA4QBuiltinSet<list<list<string>> suffixes_prototypes> {
   let UnMaskedPolicyScheme = HasPolicyOperand,
       HasMaskedOffOperand = false,
       OverloadedName = NAME,
@@ -2095,14 +2095,14 @@ multiclass RVVVQDOTQBuiltinSet<list<list<string>> suffixes_prototypes> {
   }
 }
 
-// Only SEW=32 is defined for zvqdotq so far, and since inputs are in fact four
+// Only SEW=32 is defined for zvdot4a8i so far, and since inputs are in fact four
 // 8-bit integer bundles, we use unsigned type to represent all of them
-let RequiredFeatures = ["zvqdotq"] in {
-  defm vqdot : RVVVQDOTQBuiltinSet<[["vv", "v", "vv(FixedSEW:8)v(FixedSEW:8)v"],
+let RequiredFeatures = ["zvdot4a8i"] in {
+  defm vdota4 : RVVVDOTA4QBuiltinSet<[["vv", "v", "vv(FixedSEW:8)v(FixedSEW:8)v"],
                                     ["vx", "v", "vv(FixedSEW:8)vUe"]]>;
-  defm vqdotu : RVVVQDOTQBuiltinSet<[["vv", "Uv", "UvUv(FixedSEW:8)Uv(FixedSEW:8)Uv"],
+  defm vdota4u : RVVVDOTA4QBuiltinSet<[["vv", "Uv", "UvUv(FixedSEW:8)Uv(FixedSEW:8)Uv"],
                                      ["vx", "Uv", "UvUv(FixedSEW:8)UvUe"]]>;
-  defm vqdotsu : RVVVQDOTQBuiltinSet<[["vv", "v", "vv(FixedSEW:8)v(FixedSEW:8)Uv"],
+  defm vdota4su : RVVVDOTA4QBuiltinSet<[["vv", "v", "vv(FixedSEW:8)v(FixedSEW:8)Uv"],
                                       ["vx", "v", "vv(FixedSEW:8)vUe"]]>;
-  defm vqdotus : RVVVQDOTQBuiltinSet<[["vx", "v", "vv(FixedSEW:8)UvUe"]]>;
+  defm vdota4us : RVVVDOTA4QBuiltinSet<[["vx", "v", "vv(FixedSEW:8)UvUe"]]>;
 }

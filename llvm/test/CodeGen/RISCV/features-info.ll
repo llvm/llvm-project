@@ -40,10 +40,10 @@
 ; CHECK-NEXT:   experimental-zicfilp             - 'Zicfilp' (Landing pad).
 ; CHECK-NEXT:   experimental-zicfiss             - 'Zicfiss' (Shadow stack).
 ; CHECK-NEXT:   experimental-zvbc32e             - 'Zvbc32e' (Vector Carryless Multiplication with 32-bits elements).
+; CHECK-NEXT:   experimental-zvdot4a8i           - 'Zvdot4a8i' (Vector quad widening 4D Dot Product).
 ; CHECK-NEXT:   experimental-zvfbfa              - 'Zvfbfa' (Additional BF16 vector compute support).
 ; CHECK-NEXT:   experimental-zvfofp8min          - 'Zvfofp8min' (Vector OFP8 Converts).
 ; CHECK-NEXT:   experimental-zvkgs               - 'Zvkgs' (Vector-Scalar GCM instructions for Cryptography).
-; CHECK-NEXT:   experimental-zvqdotq             - 'Zvqdotq' (Vector quad widening 4D Dot Product).
 ; CHECK-NEXT:   f                                - 'F' (Single-Precision Floating-Point).
 ; CHECK-NEXT:   forced-atomics                   - Assume that lock-free native-width atomics are available.
 ; CHECK-NEXT:   h                                - 'H' (Hypervisor).

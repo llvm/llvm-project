@@ -2352,7 +2352,7 @@ include "RISCVInstrInfoZk.td"
 // Vector
 include "RISCVInstrInfoV.td"
 include "RISCVInstrInfoZvk.td"
-include "RISCVInstrInfoZvqdotq.td"
+include "RISCVInstrInfoZvdot4a8i.td"
 include "RISCVInstrInfoZvfofp8min.td"
 
 // Packed SIMD
