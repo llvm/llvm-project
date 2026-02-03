@@ -668,33 +668,7 @@ class ABILowering {
 - **Description**: Edge cases and corner cases in ABI handling are complex
 - **Mitigation**: Incremental development, frequent validation against classic codegen, comprehensive testing
 
-## 6. References
-
-### 6.1 ABI Specifications
-
-- [System V AMD64 ABI](https://refspecs.linuxbase.org/elf/x86_64-abi-0.99.pdf)
-- [ARM AArch64 PCS](https://github.com/ARM-software/abi-aa/blob/main/aapcs64/aapcs64.rst)
-- [Itanium C++ ABI](https://itanium-cxx-abi.github.io/cxx-abi/abi.html)
-
-### 6.2 LLVM/MLIR Documentation
-
-- [MLIR Interfaces](https://mlir.llvm.org/docs/Interfaces/)
-- [MLIR Type System](https://mlir.llvm.org/docs/DefiningDialects/AttributesAndTypes/)
-- [MLIR Pass Infrastructure](https://mlir.llvm.org/docs/PassManagement/)
-
-### 6.3 Related Projects
-
-- [GSoC ABI Lowering RFC](https://discourse.llvm.org/t/rfc-an-abi-lowering-library-for-llvm/84495)
-- [GSoC PR #140112](https://github.com/llvm/llvm-project/pull/140112)
-- [CIR Project](https://github.com/llvm/clangir)
-
-### 6.4 Related Implementation
-
-- Clang CodeGen: `clang/lib/CodeGen/`
-- CIR Incubator: `clang/lib/CIR/Dialect/Transforms/TargetLowering/`
-- SPIR-V ABI: `mlir/lib/Dialect/SPIRV/IR/TargetAndABI.cpp`
-
-## 7. Appendices
+## 6. Appendices
 
 ### A. Glossary
 
