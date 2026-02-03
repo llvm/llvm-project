@@ -1806,15 +1806,12 @@ const MCExpr *SystemZAsmPrinter::lowerConstant(const Constant *CV,
 
     if (IsFunc) {
       OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeFunction);
-      if (FV->hasExternalLinkage()) {
-        llvm::dbgs() << "TONY generating lower constant ext func for " << Sym->getName() << "\n";
+      if (FV->hasExternalLinkage())
         return MCSpecifierExpr::create(MCSymbolRefExpr::create(Sym, OutContext),
                                        SystemZ::S_VCon, OutContext);
-      }
       // Trigger creation of function descriptor in ADA for internal
       // functions.
       unsigned Disp = ADATable.insert(Sym, SystemZII::MO_ADA_DIRECT_FUNC_DESC);
-      llvm::dbgs() << "TONY generating lower constant static func for " << Sym->getName() << "\n";
       return MCBinaryExpr::createAdd(
           MCSpecifierExpr::create(
               MCSymbolRefExpr::create(
@@ -1824,7 +1821,6 @@ const MCExpr *SystemZAsmPrinter::lowerConstant(const Constant *CV,
           MCConstantExpr::create(Disp, OutContext), OutContext);
     }
     if (Sym) {
-      llvm::dbgs() << "TONY generating lower constant sym for " << Sym->getName() << "\n";
       OutStreamer->emitSymbolAttribute(Sym, MCSA_ELF_TypeObject);
       return MCSymbolRefExpr::create(Sym, OutContext);
     }

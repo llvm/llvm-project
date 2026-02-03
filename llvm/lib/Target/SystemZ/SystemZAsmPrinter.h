@@ -132,7 +132,9 @@ public:
   void emitFunctionEntryLabel() override;
   void emitFunctionBodyEnd() override;
   void emitStartOfAsmFile(Module &M) override;
-  const MCExpr *lowerConstant(const Constant *CV, const Constant *BaseCV = nullptr, uint64_t Offset = 0) override;
+  const MCExpr *lowerConstant(const Constant *CV,
+                              const Constant *BaseCV = nullptr,
+                              uint64_t Offset = 0) override;
 
 private:
   void emitCallInformation(CallType CT);
