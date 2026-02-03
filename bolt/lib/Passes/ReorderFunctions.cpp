@@ -270,6 +270,9 @@ Error ReorderFunctions::readFunctionOrderFile(
 }
 
 Error ReorderFunctions::runOnFunctions(BinaryContext &BC) {
+  if (opts::ReorderFunctions == RT_NONE)
+    return Error::success();
+
   auto &BFs = BC.getBinaryFunctions();
   if (opts::ReorderFunctions != RT_NONE &&
       opts::ReorderFunctions != RT_EXEC_COUNT &&
