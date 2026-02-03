@@ -446,7 +446,7 @@ public:
     auto NewValue = ResolvedDbgValue{ResolvedDbgOps, Value.Properties};
     auto Result = ActiveVLocs.insert(std::make_pair(VarID, NewValue));
     if (!Result.second)
-      Result.first->second = NewValue;
+      Result.first->second = std::move(NewValue);
   }
 
   /// Load object with live-in variable values. \p mlocs contains the live-in
