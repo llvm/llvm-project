@@ -485,37 +485,18 @@ public:
 
   /// Set language-plugin specific option called \c option_name to
   /// the specified boolean \c value.
-  void SetLanguageOption(llvm::StringRef option_name, bool value) {
-    if (option_name.empty())
-      return;
-
-    GetLanguageOptions().AddBooleanItem(option_name, value);
-  }
+  void SetLanguageOption(llvm::StringRef option_name, bool value);
 
   /// Get the language-plugin specific boolean option called \c option_name.
   ///
   /// If the option doesn't exist or is not a boolean option, returns false.
   /// Otherwise returns the boolean value of the option.
-  bool GetLanguageOptionAsBoolean(llvm::StringRef option_name) const {
-    bool result;
-    if (!GetLanguageOptions().GetValueForKeyAsBoolean(option_name, result))
-      return false;
-
-    return result;
-  }
+  bool GetLanguageOptionAsBoolean(llvm::StringRef option_name) const;
 
 private:
-  const StructuredData::Dictionary &GetLanguageOptions() const {
-    assert(m_language_options_sp);
+  const StructuredData::Dictionary &GetLanguageOptions() const;
 
-    return *m_language_options_sp;
-  }
-
-  StructuredData::Dictionary &GetLanguageOptions() {
-    assert(m_language_options_sp);
-
-    return *m_language_options_sp;
-  }
+  StructuredData::Dictionary &GetLanguageOptions();
 
   ExecutionPolicy m_execution_policy = default_execution_policy;
   SourceLanguage m_language;

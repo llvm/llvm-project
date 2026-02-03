@@ -5357,3 +5357,33 @@ void Target::NotifyBreakpointChanged(
   if (EventTypeHasListeners(Target::eBroadcastBitBreakpointChanged))
     BroadcastEvent(Target::eBroadcastBitBreakpointChanged, breakpoint_data_sp);
 }
+
+void EvaluateExpressionOptions::SetLanguageOption(llvm::StringRef option_name,
+                                                  bool value) {
+  if (option_name.empty())
+    return;
+
+  GetLanguageOptions().AddBooleanItem(option_name, value);
+}
+
+bool EvaluateExpressionOptions::GetLanguageOptionAsBoolean(
+    llvm::StringRef option_name) const {
+  bool result;
+  if (!GetLanguageOptions().GetValueForKeyAsBoolean(option_name, result))
+    return false;
+
+  return result;
+}
+
+const StructuredData::Dictionary &
+EvaluateExpressionOptions::GetLanguageOptions() const {
+  assert(m_language_options_sp);
+
+  return *m_language_options_sp;
+}
+
+StructuredData::Dictionary &EvaluateExpressionOptions::GetLanguageOptions() {
+  assert(m_language_options_sp);
+
+  return *m_language_options_sp;
+}
