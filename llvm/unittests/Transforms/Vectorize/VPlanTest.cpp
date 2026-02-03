@@ -136,7 +136,9 @@ TEST_F(VPInstructionTest, setOperand) {
   IntegerType *Int32 = IntegerType::get(C, 32);
   VPValue *VPV1 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *VPV2 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 2));
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {VPV1, VPV2});
+  VPInstruction *I1 =
+      new VPInstruction(Instruction::Add, {VPV1, VPV2},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
   EXPECT_EQ(1u, VPV1->getNumUsers());
   EXPECT_EQ(I1, *VPV1->user_begin());
   EXPECT_EQ(1u, VPV2->getNumUsers());
@@ -179,7 +181,9 @@ TEST_F(VPInstructionTest, replaceAllUsesWith) {
   IntegerType *Int32 = IntegerType::get(C, 32);
   VPValue *VPV1 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *VPV2 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 2));
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {VPV1, VPV2});
+  VPInstruction *I1 =
+      new VPInstruction(Instruction::Add, {VPV1, VPV2},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
 
   // Replace all uses of VPV1 with VPV3.
   VPValue *VPV3 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 3));
@@ -210,7 +214,9 @@ TEST_F(VPInstructionTest, replaceAllUsesWith) {
   EXPECT_EQ(0u, VPV2->getNumUsers());
   EXPECT_EQ(0u, VPV3->getNumUsers());
 
-  VPInstruction *I2 = new VPInstruction(Instruction::Add, {VPV1, VPV2});
+  VPInstruction *I2 =
+      new VPInstruction(Instruction::Add, {VPV1, VPV2},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
   EXPECT_EQ(3u, VPV1->getNumUsers());
   VPV1->replaceAllUsesWith(VPV3);
   EXPECT_EQ(3u, VPV3->getNumUsers());
@@ -223,7 +229,9 @@ TEST_F(VPInstructionTest, releaseOperandsAtDeletion) {
   IntegerType *Int32 = IntegerType::get(C, 32);
   VPValue *VPV1 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *VPV2 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {VPV1, VPV2});
+  VPInstruction *I1 =
+      new VPInstruction(Instruction::Add, {VPV1, VPV2},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
 
   EXPECT_EQ(1u, VPV1->getNumUsers());
   EXPECT_EQ(I1, *VPV1->user_begin());
@@ -725,8 +733,12 @@ TEST_F(VPBasicBlockTest, print) {
   VPValue *Val = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPBasicBlock *VPBB0 = Plan.getEntry();
 
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {Val, Val});
-  VPInstruction *I2 = new VPInstruction(Instruction::Sub, {I1, Val});
+  VPInstruction *I1 =
+      new VPInstruction(Instruction::Add, {Val, Val},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
+  VPInstruction *I2 =
+      new VPInstruction(Instruction::Sub, {I1, Val},
+                        VPIRFlags::getDefaultFlags(Instruction::Sub));
   VPInstruction *I3 = new VPInstruction(Instruction::Store, {I1, I2});
 
   VPBasicBlock *VPBB1 = Plan.createVPBasicBlock("");
@@ -735,7 +747,8 @@ TEST_F(VPBasicBlockTest, print) {
   VPBB1->appendRecipe(I3);
   VPBB1->setName("bb1");
 
-  VPInstruction *I4 = new VPInstruction(Instruction::Mul, {I2, I1});
+  VPInstruction *I4 = new VPInstruction(
+      Instruction::Mul, {I2, I1}, VPIRFlags::getDefaultFlags(Instruction::Mul));
   VPInstruction *I5 = new VPInstruction(Instruction::Freeze, {I4});
   VPBasicBlock *VPBB2 = Plan.createVPBasicBlock("");
   VPBB2->appendRecipe(I4);
@@ -836,7 +849,9 @@ TEST_F(VPBasicBlockTest, printPlanWithVFsAndUFs) {
   VPValue *Val = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPBasicBlock *VPBB0 = Plan.getEntry();
 
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {Val, Val});
+  VPInstruction *I1 =
+      new VPInstruction(Instruction::Add, {Val, Val},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
   VPBasicBlock *VPBB1 = Plan.createVPBasicBlock("");
   VPBB1->appendRecipe(I1);
   VPBB1->setName("bb1");
@@ -922,8 +937,12 @@ TEST_F(VPBasicBlockTest, cloneAndPrint) {
   IntegerType *Int32 = IntegerType::get(C, 32);
   VPValue *Val = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
 
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {Val, Val});
-  VPInstruction *I2 = new VPInstruction(Instruction::Sub, {I1, Val});
+  VPInstruction *I1 =
+      new VPInstruction(Instruction::Add, {Val, Val},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
+  VPInstruction *I2 =
+      new VPInstruction(Instruction::Sub, {I1, Val},
+                        VPIRFlags::getDefaultFlags(Instruction::Sub));
   VPInstruction *I3 = new VPInstruction(Instruction::Store, {I1, I2});
 
   VPBasicBlock *VPBB1 = Plan.createVPBasicBlock("");
@@ -994,7 +1013,8 @@ TEST_F(VPRecipeTest, CastVPInstructionToVPUser) {
   VPlan &Plan = getPlan();
   VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *Op2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
-  VPInstruction Recipe(Instruction::Add, {Op1, Op2});
+  VPInstruction Recipe(Instruction::Add, {Op1, Op2},
+                       VPIRFlags::getDefaultFlags(Instruction::Add));
 
   checkVPRecipeCastImpl<VPInstruction, VPUser, VPIRMetadata>(&Recipe);
 }
@@ -1067,7 +1087,8 @@ TEST_F(VPRecipeTest, CastVPWidenCastRecipeToVPUser) {
   IntegerType *Int64 = IntegerType::get(C, 64);
   auto *Cast = CastInst::CreateZExtOrBitCast(PoisonValue::get(Int32), Int64);
   VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
-  VPWidenCastRecipe Recipe(Instruction::ZExt, Op1, Int64, Cast);
+  VPWidenCastRecipe Recipe(Instruction::ZExt, Op1, Int64, Cast,
+                           VPIRFlags::getDefaultFlags(Instruction::ZExt));
 
   checkVPRecipeCastImpl<VPWidenCastRecipe, VPUser, VPIRMetadata>(&Recipe);
   delete Cast;
@@ -1381,7 +1402,8 @@ TEST_F(VPRecipeTest, MayHaveSideEffectsAndMayReadWriteMemory) {
   {
     VPValue *Op1 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 1));
     VPValue *Op2 = Plan.getOrAddLiveIn(ConstantInt::get(Int32, 2));
-    VPInstruction VPInst(Instruction::Add, {Op1, Op2});
+    VPInstruction VPInst(Instruction::Add, {Op1, Op2},
+                         VPIRFlags::getDefaultFlags(Instruction::Add));
     VPRecipeBase &Recipe = VPInst;
     EXPECT_FALSE(Recipe.mayHaveSideEffects());
     EXPECT_FALSE(Recipe.mayReadFromMemory());
@@ -1474,8 +1496,11 @@ TEST_F(VPRecipeTest, dumpRecipeUnnamedVPValuesInPlan) {
   VPValue *ExtVPV2 = Plan.getOrAddLiveIn(AI);
   Args.push_back(ExtVPV1);
   Args.push_back(ExtVPV2);
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {ExtVPV1, ExtVPV2});
-  VPInstruction *I2 = new VPInstruction(Instruction::Mul, {I1, I1});
+  VPInstruction *I1 =
+      new VPInstruction(Instruction::Add, {ExtVPV1, ExtVPV2},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
+  VPInstruction *I2 = new VPInstruction(
+      Instruction::Mul, {I1, I1}, VPIRFlags::getDefaultFlags(Instruction::Mul));
   VPBB1->appendRecipe(I1);
   VPBB1->appendRecipe(I2);
 
@@ -1534,8 +1559,11 @@ TEST_F(VPRecipeTest, dumpRecipeUnnamedVPValuesNotInPlanOrBlock) {
   VPValue *ExtVPV1 = getPlan().getOrAddLiveIn(ConstantInt::get(Int32, 1));
   VPValue *ExtVPV2 = getPlan().getOrAddLiveIn(AI);
 
-  VPInstruction *I1 = new VPInstruction(Instruction::Add, {ExtVPV1, ExtVPV2});
-  VPInstruction *I2 = new VPInstruction(Instruction::Mul, {I1, I1});
+  VPInstruction *I1 =
+      new VPInstruction(Instruction::Add, {ExtVPV1, ExtVPV2},
+                        VPIRFlags::getDefaultFlags(Instruction::Add));
+  VPInstruction *I2 = new VPInstruction(
+      Instruction::Mul, {I1, I1}, VPIRFlags::getDefaultFlags(Instruction::Mul));
 
   // Check printing I1.
   {
@@ -1642,8 +1670,9 @@ TEST(VPDoubleValueDefTest, traverseUseLists) {
   VPDoubleValueDef DoubleValueDef({&Op0, &Op1});
 
   // Create a new users of the defined values.
-  VPInstruction I1(Instruction::Add, {DoubleValueDef.getVPValue(0),
-                                      DoubleValueDef.getVPValue(1)});
+  VPInstruction I1(Instruction::Add,
+                   {DoubleValueDef.getVPValue(0), DoubleValueDef.getVPValue(1)},
+                   VPIRFlags::getDefaultFlags(Instruction::Add));
   VPInstruction I2(Instruction::Freeze, {DoubleValueDef.getVPValue(0)});
   VPInstruction I3(Instruction::Freeze, {DoubleValueDef.getVPValue(1)});
 
