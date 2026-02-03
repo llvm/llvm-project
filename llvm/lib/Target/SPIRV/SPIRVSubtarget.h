@@ -76,7 +76,6 @@ public:
       const std::set<SPIRV::Extension::Extension> &AllowedExtIds);
   void initAvailableExtInstSets();
 
-  // If Env is Unknown, scan module for "hlsl.shader" attributes to resolve it.
   void resolveEnvFromModule(const Module &M);
 
   // Parses features string setting specified subtarget options.
