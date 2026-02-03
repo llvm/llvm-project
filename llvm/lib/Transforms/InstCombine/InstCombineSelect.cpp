@@ -4430,6 +4430,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
           FMF.setNoInfs(true);
         Value *NewSel =
             Builder.CreateSelectFMF(NewCond, FalseVal, TrueVal, FMF);
+        if (!ProfcheckDisableMetadataFixes)
+          if (auto *NewSelI = dyn_cast<Instruction>(NewSel))
+            NewSelI->copyMetadata(SI);
         return replaceInstUsesWith(SI, NewSel);
       }
     }
@@ -4634,10 +4637,22 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
         if (CmpInst::isIntPredicate(MinMaxPred))
           Cmp = Builder.CreateICmp(MinMaxPred, LHS, RHS);
         else
-          Cmp = Builder.CreateFCmpFMF(MinMaxPred, LHS, RHS,
+        Cmp = Builder.CreateFCmpFMF(MinMaxPred, LHS, RHS,
                                       cast<Instruction>(SI.getCondition()));
 
-        Value *NewSI = Builder.CreateSelect(Cmp, LHS, RHS, SI.getName(), &SI);
+        Value *NewSI;
+        if (!ProfcheckDisableMetadataFixes) {
+          NewSI =
+              createSelectInstWithUnknownProfile(Cmp, LHS, RHS, SI.getName());
+          auto *NewInst = cast<Instruction>(NewSI);
+          NewInst->copyMetadata(SI);
+          if (auto *SIFPOp = dyn_cast<FPMathOperator>(&SI))
+            if (isa<FPMathOperator>(NewInst))
+              NewInst->setFastMathFlags(SIFPOp->getFastMathFlags());
+          Builder.Insert(NewInst);
+        } else {
+          NewSI = Builder.CreateSelect(Cmp, LHS, RHS, SI.getName(), &SI);
+        }
         if (!IsCastNeeded)
           return replaceInstUsesWith(SI, NewSI);
 
