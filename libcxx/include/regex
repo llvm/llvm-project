@@ -5167,7 +5167,7 @@ regex_search(__wrap_iter<_Iter> __first,
              const basic_regex<_CharT, _Traits>& __e,
              regex_constants::match_flag_type __flags = regex_constants::match_default) {
   match_results<const _CharT*> __mc;
-  bool __r = __e.__search(__first.base(), __last.base(), __mc, __flags);
+  bool __r = __e.__search(__first.operator->(), __last.operator->(), __mc, __flags);
   __m.__assign(__first, __last, __mc, __flags & regex_constants::__no_update_pos);
   return __r;
 }
