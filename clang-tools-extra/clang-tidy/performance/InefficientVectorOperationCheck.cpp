@@ -111,10 +111,10 @@ void InefficientVectorOperationCheck::addMatcher(
   const auto RefersToLoopVar = ignoringParenImpCasts(
       declRefExpr(to(varDecl(equalsBoundNode(LoopInitVarName)))));
 
-  // Matchers for the loop whose body has only 1 push_back/emplace_back calling
+  // Matchers for the loop whose body contains a push_back/emplace_back calling
   // statement.
   const auto HasInterestingLoopBody = hasBody(
-      anyOf(compoundStmt(statementCountIs(1), has(AppendCall)), AppendCall));
+      anyOf(compoundStmt(has(AppendCall)), AppendCall));
   const auto InInterestingCompoundStmt =
       hasParent(compoundStmt(has(TargetVarDefStmt)).bind(LoopParentName));
 

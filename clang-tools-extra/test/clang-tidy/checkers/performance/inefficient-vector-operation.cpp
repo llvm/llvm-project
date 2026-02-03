@@ -424,3 +424,16 @@ void f(std::vector<int>& t) {
 }
 
 } // namespace gh95596
+
+void multiple_statements_in_loop() {
+  std::vector<int> v1;
+  std::vector<int> v2;
+  // CHECK-FIXES: v1.reserve(10);
+  // CHECK-FIXES: v2.reserve(10);
+  for (int i = 0; i < 10; ++i) {
+    v1.push_back(i);
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'push_back' is called inside a loop
+    v2.push_back(i);
+    // CHECK-MESSAGES: :[[@LINE-1]]:5: warning: 'push_back' is called inside a loop
+  }
+}
