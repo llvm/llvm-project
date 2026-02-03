@@ -17,6 +17,7 @@
 #include "llvm/CodeGen/MachinePostDominators.h"
 #include "llvm/CodeGen/MachineRegisterInfo.h"
 #include "llvm/CodeGen/MachineSSAUpdater.h"
+#include "AMDGPULaneMaskUtils.h"
 
 namespace llvm {
 
@@ -42,7 +43,6 @@ public:
   virtual ~PhiLoweringHelper() = default;
 
 protected:
-  unsigned WavefrontSize;
   MachineFunction *MF = nullptr;
   MachineDominatorTree *DT = nullptr;
   MachinePostDominatorTree *PDT = nullptr;
@@ -50,20 +50,11 @@ protected:
   const GCNSubtarget *ST = nullptr;
   const SIInstrInfo *TII = nullptr;
   MachineRegisterInfo::VRegAttrs LaneMaskRegAttrs;
+  const AMDGPU::LaneMaskConstants &LMC;
 
 #ifndef NDEBUG
   DenseSet<Register> PhiRegisters;
 #endif
-
-  Register ExecReg;
-  unsigned MovOp;
-  unsigned AndOp;
-  unsigned OrOp;
-  unsigned XorOp;
-  unsigned AndN2Op;
-  unsigned OrN2Op;
-  unsigned CSelectOp;
-  unsigned CmpLGOp;
 
 public:
   bool lowerPhis();

@@ -391,7 +391,8 @@ insertUndefLaneMask(MachineBasicBlock *MBB, MachineRegisterInfo *MRI,
 
 #ifndef NDEBUG
 static bool isVRegCompatibleReg(const SIRegisterInfo &TRI,
-                                const MachineRegisterInfo &MRI, Register Reg) {
+                                const MachineRegisterInfo &MRI,
+                                Register Reg) {
   unsigned Size = TRI.getRegSizeInBits(Reg, MRI);
   return Size == 1 || Size == 32;
 }
@@ -443,35 +444,12 @@ bool Vreg1LoweringHelper::lowerCopiesFromI1() {
 PhiLoweringHelper::PhiLoweringHelper(MachineFunction *MF,
                                      MachineDominatorTree *DT,
                                      MachinePostDominatorTree *PDT)
-    : MF(MF), DT(DT), PDT(PDT) {
+    : MF(MF), DT(DT), PDT(PDT),
+      LMC(AMDGPU::LaneMaskConstants::get(MF->getSubtarget<GCNSubtarget>())) {
   MRI = &MF->getRegInfo();
 
   ST = &MF->getSubtarget<GCNSubtarget>();
   TII = ST->getInstrInfo();
-  WavefrontSize = ST->getWavefrontSize();
-  assert((WavefrontSize == 32 || WavefrontSize == 64));
-
-  if (WavefrontSize == 32) {
-    ExecReg = AMDGPU::EXEC_LO;
-    MovOp = AMDGPU::S_MOV_B32;
-    AndOp = AMDGPU::S_AND_B32;
-    OrOp = AMDGPU::S_OR_B32;
-    XorOp = AMDGPU::S_XOR_B32;
-    AndN2Op = AMDGPU::S_ANDN2_B32;
-    OrN2Op = AMDGPU::S_ORN2_B32;
-    CSelectOp = AMDGPU::S_CSELECT_B32;
-    CmpLGOp = AMDGPU::S_CMP_LG_U32;
-  } else {
-    ExecReg = AMDGPU::EXEC;
-    MovOp = AMDGPU::S_MOV_B64;
-    AndOp = AMDGPU::S_AND_B64;
-    OrOp = AMDGPU::S_OR_B64;
-    XorOp = AMDGPU::S_XOR_B64;
-    AndN2Op = AMDGPU::S_ANDN2_B64;
-    OrN2Op = AMDGPU::S_ORN2_B64;
-    CSelectOp = AMDGPU::S_CSELECT_B64;
-    CmpLGOp = AMDGPU::S_CMP_LG_U64;
-  }
 }
 
 static void instrDefsUsesSCC(const MachineInstr &MI, bool &Def, bool &Use) {
@@ -491,9 +469,10 @@ static void instrDefsUsesSCC(const MachineInstr &MI, bool &Def, bool &Use) {
 /// Move instruction to a new position inside the same MBB, if there is no
 /// operand's dependencies. Change the InstrToMovePos after the moved
 /// instruction. returns true if instruction moved, false if not.
-static bool moveIfPossible(MachineBasicBlock &MBB,
-                    llvm::MachineBasicBlock::iterator &InstrToMovePos,
-                    const llvm::MachineBasicBlock::iterator &MoveAfterPos) {
+static bool
+moveIfPossible(MachineBasicBlock &MBB,
+               llvm::MachineBasicBlock::iterator &InstrToMovePos,
+               const llvm::MachineBasicBlock::iterator &MoveAfterPos) {
   MachineInstr &MI = *InstrToMovePos;
 
   for (const MachineOperand &MO : MI.operands()) {
@@ -595,9 +574,9 @@ void PhiLoweringHelper::insertMask(const Incoming &Incoming, Register DstReg) {
 
   /// store SCC
   Register SavedSCC = MRI->createVirtualRegister(
-      WavefrontSize == 32 ? &AMDGPU::SReg_32RegClass
+      ST->getWavefrontSize() == 32 ? &AMDGPU::SReg_32RegClass
                           : &AMDGPU::SReg_64RegClass);
-  BuildMI(MBB, curRegDefPos.value(), {}, TII->get(CSelectOp), SavedSCC)
+  BuildMI(MBB, curRegDefPos.value(), {}, TII->get(LMC.CSelectOpc), SavedSCC)
       .addImm(1)
       .addImm(0);
 
@@ -605,7 +584,7 @@ void PhiLoweringHelper::insertMask(const Incoming &Incoming, Register DstReg) {
                       DstReg, Incoming.Reg);
 
   /// restore SCC
-  BuildMI(MBB, curRegDefPos.value(), {}, TII->get(CmpLGOp))
+  BuildMI(MBB, curRegDefPos.value(), {}, TII->get(LMC.CmpLGOp))
       .addReg(SavedSCC)
       .addImm(0)
       .addReg(AMDGPU::SCC, RegState::ImplicitDefine);
@@ -816,7 +795,7 @@ bool PhiLoweringHelper::isConstantLaneMask(Register Reg, bool &Val) const {
       return false;
   }
 
-  if (MI->getOpcode() != MovOp)
+  if (MI->getOpcode() != LMC.MovOpc)
     return false;
 
   if (!MI->getOperand(1).isImm())
@@ -920,10 +899,10 @@ void Vreg1LoweringHelper::buildMergeLaneMasks(MachineBasicBlock &MBB,
     if (PrevVal == CurVal) {
       BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), DstReg).addReg(CurReg);
     } else if (CurVal) {
-      BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), DstReg).addReg(ExecReg);
+      BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), DstReg).addReg(LMC.ExecReg);
     } else {
-      BuildMI(MBB, I, DL, TII->get(XorOp), DstReg)
-          .addReg(ExecReg)
+      BuildMI(MBB, I, DL, TII->get(LMC.XorOpc), DstReg)
+          .addReg(LMC.ExecReg)
           .addImm(-1);
     }
     return;
@@ -936,9 +915,9 @@ void Vreg1LoweringHelper::buildMergeLaneMasks(MachineBasicBlock &MBB,
       PrevMaskedReg = PrevReg;
     } else {
       PrevMaskedReg = createLaneMaskReg(MRI, LaneMaskRegAttrs);
-      BuildMI(MBB, I, DL, TII->get(AndN2Op), PrevMaskedReg)
+      BuildMI(MBB, I, DL, TII->get(LMC.AndN2Opc), PrevMaskedReg)
           .addReg(PrevReg)
-          .addReg(ExecReg);
+          .addReg(LMC.ExecReg);
     }
   }
   if (!CurConstant) {
@@ -947,9 +926,9 @@ void Vreg1LoweringHelper::buildMergeLaneMasks(MachineBasicBlock &MBB,
       CurMaskedReg = CurReg;
     } else {
       CurMaskedReg = createLaneMaskReg(MRI, LaneMaskRegAttrs);
-      BuildMI(MBB, I, DL, TII->get(AndOp), CurMaskedReg)
+      BuildMI(MBB, I, DL, TII->get(LMC.AndOpc), CurMaskedReg)
           .addReg(CurReg)
-          .addReg(ExecReg);
+          .addReg(LMC.ExecReg);
     }
   }
 
@@ -960,13 +939,13 @@ void Vreg1LoweringHelper::buildMergeLaneMasks(MachineBasicBlock &MBB,
     BuildMI(MBB, I, DL, TII->get(AMDGPU::COPY), DstReg)
         .addReg(PrevMaskedReg);
   } else if (PrevConstant && PrevVal) {
-    BuildMI(MBB, I, DL, TII->get(OrN2Op), DstReg)
+    BuildMI(MBB, I, DL, TII->get(LMC.OrN2Op), DstReg)
         .addReg(CurMaskedReg)
-        .addReg(ExecReg);
+        .addReg(LMC.ExecReg);
   } else {
-    BuildMI(MBB, I, DL, TII->get(OrOp), DstReg)
+    BuildMI(MBB, I, DL, TII->get(LMC.OrOpc), DstReg)
         .addReg(PrevMaskedReg)
-        .addReg(CurMaskedReg ? CurMaskedReg : ExecReg);
+        .addReg(CurMaskedReg ? CurMaskedReg : LMC.ExecReg);
   }
 }
 
