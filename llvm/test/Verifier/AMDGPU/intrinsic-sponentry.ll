@@ -1,4 +1,4 @@
-; RUN: not opt -mtriple=amdgcn -mcpu=gfx1250 -passes=verify  -disable-output <%s 2>&1 | FileCheck %s
+; RUN: not llvm-as --data-layout="A5" -disable-output %s 2>&1 | FileCheck %s
 
 ; CHECK: llvm.sponentry must return a pointer to the stack
 define ptr addrspace(0) @p0()  {
