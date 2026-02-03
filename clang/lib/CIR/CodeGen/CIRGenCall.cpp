@@ -246,11 +246,20 @@ void CIRGenModule::constructAttributeList(llvm::StringRef name,
 
     // TODO(cir): Detecting 'OptimizeNone' is done here in classic codegen, when
     // we figure out when to do that, we should do it here.
-    // TODO(cir): AllocSize attr should be done here, but it has some additional
-    // work with forming the correct value for it.  Typically this calls into
-    // LLVM to set it correctly, which flattens the elem size and num-elems into
-    // a single value.  CIR should probably represent these as two values and
-    // handle the combination during lowering by calling into LLVM.
+
+    if (auto *allocSizeAttr = targetDecl->getAttr<AllocSizeAttr>()) {
+      unsigned size = allocSizeAttr->getElemSizeParam().getLLVMIndex();
+
+      if (allocSizeAttr->getNumElemsParam().isValid()) {
+        unsigned numElts = allocSizeAttr->getNumElemsParam().getLLVMIndex();
+        attrs.set(cir::CIRDialect::getAllocSizeAttrName(),
+                  builder.getDenseI32ArrayAttr(
+                      {static_cast<int>(size), static_cast<int>(numElts)}));
+      } else {
+        attrs.set(cir::CIRDialect::getAllocSizeAttrName(),
+                  builder.getDenseI32ArrayAttr({static_cast<int>(size)}));
+      }
+    }
 
     // TODO(cir): Quite a few CUDA and OpenCL attributes are added here, like
     // uniform-work-group-size.
