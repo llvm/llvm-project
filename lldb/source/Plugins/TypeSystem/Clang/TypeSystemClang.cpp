@@ -885,11 +885,15 @@ lldb::BasicType TypeSystemClang::GetBasicTypeEnumeration(llvm::StringRef name) {
 }
 
 uint32_t TypeSystemClang::GetPointerByteSize() {
-  if (m_pointer_byte_size == 0)
-    if (auto size = GetBasicType(lldb::eBasicTypeVoid)
-                        .GetPointerType()
-                        .GetByteSize(nullptr))
-      m_pointer_byte_size = *size;
+  if (m_pointer_byte_size != 0)
+    return m_pointer_byte_size;
+  auto size_or_err =
+      GetBasicType(lldb::eBasicTypeVoid).GetPointerType().GetByteSize(nullptr);
+  if (!size_or_err) {
+    LLDB_LOG_ERROR(GetLog(LLDBLog::Types), size_or_err.takeError(), "{0}");
+    return m_pointer_byte_size;
+  }
+  m_pointer_byte_size = *size_or_err;
   return m_pointer_byte_size;
 }
 
@@ -3469,8 +3473,7 @@ bool TypeSystemClang::IsReferenceType(lldb::opaque_compiler_type_t type,
   return false;
 }
 
-bool TypeSystemClang::IsFloatingPointType(lldb::opaque_compiler_type_t type,
-                                          bool &is_complex) {
+bool TypeSystemClang::IsFloatingPointType(lldb::opaque_compiler_type_t type) {
   if (type) {
     clang::QualType qual_type(GetCanonicalQualType(type));
 
@@ -3478,28 +3481,20 @@ bool TypeSystemClang::IsFloatingPointType(lldb::opaque_compiler_type_t type,
             qual_type->getCanonicalTypeInternal())) {
       clang::BuiltinType::Kind kind = BT->getKind();
       if (kind >= clang::BuiltinType::Float &&
-          kind <= clang::BuiltinType::LongDouble) {
-        is_complex = false;
+          kind <= clang::BuiltinType::LongDouble)
         return true;
-      }
     } else if (const clang::ComplexType *CT =
                    llvm::dyn_cast<clang::ComplexType>(
                        qual_type->getCanonicalTypeInternal())) {
-      if (IsFloatingPointType(CT->getElementType().getAsOpaquePtr(),
-                              is_complex)) {
-        is_complex = true;
+      if (IsFloatingPointType(CT->getElementType().getAsOpaquePtr()))
         return true;
-      }
     } else if (const clang::VectorType *VT = llvm::dyn_cast<clang::VectorType>(
                    qual_type->getCanonicalTypeInternal())) {
-      if (IsFloatingPointType(VT->getElementType().getAsOpaquePtr(),
-                              is_complex)) {
-        is_complex = false;
+      if (IsFloatingPointType(VT->getElementType().getAsOpaquePtr()))
         return true;
-      }
     }
   }
-  is_complex = false;
+
   return false;
 }
 
@@ -9702,7 +9697,8 @@ TypeSystemClang::DeclContextGetTypeSystemClang(const CompilerDeclContext &dc) {
 void TypeSystemClang::RequireCompleteType(CompilerType type) {
   // Technically, enums can be incomplete too, but we don't handle those as they
   // are emitted even under -flimit-debug-info.
-  if (!TypeSystemClang::IsCXXClassType(type))
+  if (!TypeSystemClang::IsCXXClassType(type) &&
+      !TypeSystemClang::IsObjCObjectOrInterfaceType(type))
     return;
 
   if (type.GetCompleteType())

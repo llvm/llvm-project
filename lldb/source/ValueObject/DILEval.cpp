@@ -50,6 +50,9 @@ GetTypeSystemFromCU(std::shared_ptr<ExecutionContextScope> ctx) {
     return llvm::createStringError("no stack frame in this context");
   SymbolContext symbol_context =
       stack_frame->GetSymbolContext(lldb::eSymbolContextCompUnit);
+
+  if (!symbol_context.comp_unit)
+    return llvm::createStringError("no compile unit in this context");
   lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
 
   symbol_context = stack_frame->GetSymbolContext(lldb::eSymbolContextModule);
@@ -811,7 +814,7 @@ Interpreter::VerifyArithmeticCast(CompilerType source_type,
                                   CompilerType target_type, int location) {
   if (source_type.IsPointerType() || source_type.IsNullPtrType()) {
     // Cast from pointer to float/double is not allowed.
-    if (target_type.IsFloat()) {
+    if (target_type.IsFloatingPointType()) {
       std::string errMsg = llvm::formatv("Cast from {0} to {1} is not allowed",
                                          source_type.TypeDescription(),
                                          target_type.TypeDescription());
@@ -948,7 +951,8 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode &node) {
 
   switch (cast_kind) {
   case CastKind::eEnumeration: {
-    if (op_type.IsFloat() || op_type.IsInteger() || op_type.IsEnumerationType())
+    if (op_type.IsFloatingPointType() || op_type.IsInteger() ||
+        op_type.IsEnumerationType())
       return operand->CastToEnumType(target_type);
     break;
   }

@@ -261,15 +261,6 @@
 #define _LIBCPP_AVAILABILITY_HAS_PRINT _LIBCPP_INTRODUCED_IN_LLVM_18
 #define _LIBCPP_AVAILABILITY_PRINT _LIBCPP_INTRODUCED_IN_LLVM_18_ATTRIBUTE
 
-// Define availability attributes that depend on both
-// _LIBCPP_HAS_EXCEPTIONS and _LIBCPP_HAS_RTTI.
-#if !_LIBCPP_HAS_EXCEPTIONS || !_LIBCPP_HAS_RTTI
-#  undef _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION
-#  undef _LIBCPP_AVAILABILITY_INIT_PRIMARY_EXCEPTION
-#  define _LIBCPP_AVAILABILITY_HAS_INIT_PRIMARY_EXCEPTION 0
-#  define _LIBCPP_AVAILABILITY_INIT_PRIMARY_EXCEPTION
-#endif
-
 // This controls the availability of the C++17 std::pmr library,
 // which is implemented in large part in the built library.
 //

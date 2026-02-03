@@ -2,6 +2,8 @@
 # See https://llvm.org/LICENSE.txt for license information.
 # SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 
+load("@bazel_skylib//rules:run_binary.bzl", "run_binary")
+load("@bazel_skylib//rules:write_file.bzl", "write_file")
 load("@rules_cc//cc:defs.bzl", "cc_binary", "cc_library")
 load("@rules_python//python:defs.bzl", "py_binary")
 load(
@@ -585,23 +587,18 @@ exports_files(
     glob(["include/**/*.td"]),
 )
 
-genrule(
+write_file(
     name = "basic_version_gen",
-    outs = ["include/clang/Basic/Version.inc"],
-    cmd = (
-        "echo '#define CLANG_VERSION {vers}' >> $@\n" +
-        "echo '#define CLANG_VERSION_MAJOR {major}' >> $@\n" +
-        "echo '#define CLANG_VERSION_MAJOR_STRING \"{major}\"' >> $@\n" +
-        "echo '#define CLANG_VERSION_MINOR {minor}' >> $@\n" +
-        "echo '#define CLANG_VERSION_PATCHLEVEL {patch}' >> $@\n" +
-        "echo '#define MAX_CLANG_ABI_COMPAT_VERSION {major}' >> $@\n" +
-        "echo '#define CLANG_VERSION_STRING \"{vers}\"' >> $@\n"
-    ).format(
-        major = LLVM_VERSION_MAJOR,
-        minor = LLVM_VERSION_MINOR,
-        patch = LLVM_VERSION_PATCH,
-        vers = PACKAGE_VERSION,
-    ),
+    out = "include/clang/Basic/Version.inc",
+    content = [
+        "#define CLANG_VERSION {}".format(PACKAGE_VERSION),
+        "#define CLANG_VERSION_MAJOR {}".format(LLVM_VERSION_MAJOR),
+        "#define CLANG_VERSION_MAJOR_STRING \"{}\"".format(LLVM_VERSION_MAJOR),
+        "#define CLANG_VERSION_MINOR {}".format(LLVM_VERSION_MINOR),
+        "#define CLANG_VERSION_PATCHLEVEL {}".format(LLVM_VERSION_PATCH),
+        "#define MAX_CLANG_ABI_COMPAT_VERSION {}".format(LLVM_VERSION_MAJOR),
+        "#define CLANG_VERSION_STRING \"{}\"".format(PACKAGE_VERSION),
+    ],
 )
 
 cc_library(
@@ -619,13 +616,15 @@ cc_library(
 
 # TODO: This should get replaced with something that actually generates the
 # correct version number.
-genrule(
+write_file(
     name = "vcs_version_gen",
     # This should be under lib/Basic, but because of how the include paths
     # are passed through bazel, it's easier to drop generated files next to
     # the other includes.
-    outs = ["include/VCSVersion.inc"],
-    cmd = "echo '#undef CLANG_REVISION' > $@",
+    out = "include/VCSVersion.inc",
+    content = [
+        "#undef CLANG_REVISION",
+    ],
 )
 
 py_binary(
@@ -988,16 +987,21 @@ cc_library(
     ],
 )
 
-genrule(
+run_binary(
     name = "analysis_htmllogger_gen",
     srcs = [
-        "lib/Analysis/FlowSensitive/HTMLLogger.html",
         "lib/Analysis/FlowSensitive/HTMLLogger.css",
+        "lib/Analysis/FlowSensitive/HTMLLogger.html",
         "lib/Analysis/FlowSensitive/HTMLLogger.js",
     ],
     outs = ["lib/Analysis/FlowSensitive/HTMLLogger.inc"],
-    cmd = "$(location :bundle_resources) $@ $(SRCS)",
-    tools = [":bundle_resources"],
+    args = [
+        "$(execpath lib/Analysis/FlowSensitive/HTMLLogger.inc)",
+        "$(execpath lib/Analysis/FlowSensitive/HTMLLogger.html)",
+        "$(execpath lib/Analysis/FlowSensitive/HTMLLogger.css)",
+        "$(execpath lib/Analysis/FlowSensitive/HTMLLogger.js)",
+    ],
+    tool = ":bundle_resources",
 )
 
 cc_library(
@@ -1559,7 +1563,9 @@ cc_library(
         "lib/Driver",
     ],
     linkopts = select({
-        "@platforms//os:windows": ["version.lib"],
+        "//llvm:is_windows_clang_mingw": ["-lversion"],
+        "//llvm:is_windows_clang_cl": ["version.lib"],
+        "//llvm:is_windows_msvc": ["version.lib"],
         "//conditions:default": [],
     }),
     textual_hdrs = glob([
@@ -1693,6 +1699,11 @@ builtin_headers = glob(
     "lib/Headers/openmp_wrappers/new",
     "lib/Headers/riscv_vector.h",
 ]
+
+filegroup(
+    name = "builtin_headers_files",
+    srcs = builtin_headers,
+)
 
 genrule(
     name = "builtin_headers_gen",

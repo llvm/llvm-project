@@ -308,8 +308,14 @@ struct DebugSettings {
       return;
 
     Settings.Enabled = true;
-    if (EnvRef.equals_insensitive("all"))
-      return;
+
+    if (EnvRef.starts_with_insensitive("all")) {
+      auto Spec = parseDebugFilter(EnvRef);
+      if (Spec.Type.equals_insensitive("all")) {
+        Settings.DefaultLevel = Spec.Level;
+        return;
+      }
+    }
 
     if (!EnvRef.getAsInteger(10, Settings.DefaultLevel))
       return;
@@ -620,8 +626,6 @@ static inline odbg_ostream reportErrorStream() {
 #define FORMAT_TO_STR(Format, ...)                                             \
   ::llvm::omp::target::debug::formatToStr(Format __VA_OPT__(, ) __VA_ARGS__)
 
-#define DP(...) ODBG() << FORMAT_TO_STR(__VA_ARGS__);
-
 template <uint32_t InfoId> static constexpr const char *InfoIdToODT() {
   constexpr auto getId = []() {
     switch (InfoId) {
@@ -662,12 +666,11 @@ static inline raw_ostream &operator<<(raw_ostream &Os, void *Ptr) {
 }
 
 #else
-#define DP(...)                                                                \
-  {                                                                            \
-  }
+
 #define INFO_DEBUG_INT(_flags, _id, ...)                                       \
   {                                                                            \
   }
+
 #endif // OMPTARGET_DEBUG
 
 // New REPORT macro in the same style as ODBG

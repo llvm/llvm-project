@@ -1,4 +1,5 @@
-// RUN: %clang_cc1 -fsyntax-only -fexperimental-lifetime-safety -Wexperimental-lifetime-safety -Wno-dangling -verify %s
+// RUN: %clang_cc1 -fsyntax-only -Wlifetime-safety -Wno-dangling -verify=expected,function %s
+// RUN: %clang_cc1 -fsyntax-only -flifetime-safety-inference -fexperimental-lifetime-safety-tu-analysis -Wlifetime-safety -Wno-dangling -verify=expected,tu %s
 
 #include "Inputs/lifetime-analysis.h"
 
@@ -13,6 +14,7 @@ struct [[gsl::Owner]] MyObj {
   MyObj operator+(MyObj);
   
   View getView() const [[clang::lifetimebound]];
+  const int* getData() const [[clang::lifetimebound]];
 };
 
 struct [[gsl::Owner]] MyTrivialObj {
@@ -24,6 +26,10 @@ struct [[gsl::Pointer()]] View {
   View(const MyTrivialObj &); // Borrows from MyTrivialObj
   View();
   void use() const;
+
+  const MyObj* data() const;
+  const MyObj& operator*() const;
+  const MyObj* operator->() const;
 };
 
 class TriviallyDestructedClass {
@@ -949,7 +955,7 @@ View lifetimebound_return_by_value_param_template(T t) {
                       // expected-note@-1 {{returned here}}
 }
 void use_lifetimebound_return_by_value_param_template() { 
-  lifetimebound_return_by_value_param_template(MyObj{}); // expected-note {{in instantiation of}}
+  lifetimebound_return_by_value_param_template(MyObj{}); // function-note {{in instantiation of}}
 }
 
 void lambda_uar_param() {
@@ -1454,6 +1460,76 @@ void bar() {
 }
 }
 
+namespace DereferenceViews {
+const MyObj& testDeref(MyObj obj) {
+  View v = obj; // expected-warning {{address of stack memory is returned later}}
+  return *v;    // expected-note {{returned here}}
+}
+const MyObj* testDerefAddr(MyObj obj) {
+  View v = obj; // expected-warning {{address of stack memory is returned later}}
+  return &*v;   // expected-note {{returned here}}
+}
+const MyObj* testData(MyObj obj) {
+  View v = obj;     // expected-warning {{address of stack memory is returned later}}
+  return v.data();  // expected-note {{returned here}}
+}
+const int* testLifetimeboundAccessorOfMyObj(MyObj obj) {
+  View v = obj;           // expected-warning {{address of stack memory is returned later}}
+  const MyObj* ptr = v.data();
+  return ptr->getData();  // expected-note {{returned here}}
+}
+const int* testLifetimeboundAccessorOfMyObjThroughDeref(MyObj obj) {
+  View v = obj;         // expected-warning {{address of stack memory is returned later}}
+  return v->getData();  // expected-note {{returned here}}
+}
+} // namespace DereferenceViews
+
+namespace ViewsBeginEndIterators {
+template <typename T>
+struct [[gsl::Pointer]] Iterator {
+  Iterator operator++();
+  T& operator*() const;
+  T* operator->() const;
+  bool operator!=(const Iterator& other) const;
+};
+
+template <typename T>
+struct [[gsl::Owner]] Container {
+using It = Iterator<T>;
+It begin() const [[clang::lifetimebound]];
+It end() const [[clang::lifetimebound]];
+};
+
+MyObj Global;
+
+const MyObj& ContainerMyObjReturnRef(Container<MyObj> c) {
+  for (const MyObj& x : c) {  // expected-warning {{address of stack memory is returned later}}
+    return x;                 // expected-note {{returned here}}
+  }
+  return Global;
+}
+
+View ContainerMyObjReturnView(Container<MyObj> c) {
+  for (const MyObj& x : c) {  // expected-warning {{address of stack memory is returned later}}
+    return x;                 // expected-note {{returned here}}
+  }
+  for (View x : c) {  // expected-warning {{address of stack memory is returned later}}
+    return x;         // expected-note {{returned here}}
+  }
+  return Global;
+}
+
+View ContainerViewsOk(Container<View> c) {
+  for (View x : c) {
+    return x;
+  }
+  for (const View& x : c) {
+    return x;
+  }
+  return Global;
+}
+} // namespace ViewsBeginEndIterators
+
 namespace reference_type_decl_ref_expr {
 struct S {
   S();
@@ -1552,4 +1628,88 @@ void uaf_anonymous_union() {
   } // expected-note {{destroyed here}}
   (void)ip;  // expected-note {{later used here}}
 }
+
+struct RefMember {
+  std::string& str_ref;
+  std::string* str_ptr;
+  std::string str;
+  std::string_view view;
+  std::string_view& view_ref;
+  RefMember();
+  ~RefMember();
+};
+
+std::string_view refMemberReturnView1(RefMember a) { return a.str_ref; }
+std::string_view refMemberReturnView2(RefMember a) { return *a.str_ptr; }
+std::string_view refMemberReturnView3(RefMember a) { return a.str; } // expected-warning {{address of stack memory is returned later}} expected-note {{returned here}}
+std::string& refMemberReturnRef1(RefMember a) { return a.str_ref; }
+std::string& refMemberReturnRef2(RefMember a) { return *a.str_ptr; }
+std::string& refMemberReturnRef3(RefMember a) { return a.str; } // expected-warning {{address of stack memory is returned later}} expected-note {{returned here}}
+std::string_view refViewMemberReturnView1(RefMember a) { return a.view; }
+std::string_view& refViewMemberReturnView2(RefMember a) { return a.view; } // expected-warning {{address of stack memory is returned later}} expected-note {{returned here}}
+std::string_view refViewMemberReturnRefView1(RefMember a) { return a.view_ref; }
+std::string_view& refViewMemberReturnRefView2(RefMember a) { return a.view_ref; }
 } // namespace field_access
+
+namespace attr_on_template_params {
+struct MyObj {
+  ~MyObj();
+};
+
+template <typename T>
+struct MemberFuncsTpl {
+  ~MemberFuncsTpl();
+  // Template Version A: Attribute on declaration only
+  const T* memberA(const T& x [[clang::lifetimebound]]);
+  // Template Version B: Attribute on definition only
+  const T* memberB(const T& x);
+  // Template Version C: Attribute on BOTH declaration and definition
+  const T* memberC(const T& x [[clang::lifetimebound]]);
+};
+
+template <typename T>
+const T* MemberFuncsTpl<T>::memberA(const T& x) {
+    return &x;
+}
+template <typename T>
+const T* MemberFuncsTpl<T>::memberB(const T& x [[clang::lifetimebound]]) {
+    return &x;
+}
+template <typename T>
+const T* MemberFuncsTpl<T>::memberC(const T& x [[clang::lifetimebound]]) {
+    return &x;
+}
+
+void test() {
+  MemberFuncsTpl<MyObj> mtf;
+  const MyObj* pTMA = mtf.memberA(MyObj()); // expected-warning {{object whose reference is captured does not live long enough}} // expected-note {{destroyed here}}
+  const MyObj* pTMB = mtf.memberB(MyObj()); // tu-warning {{object whose reference is captured does not live long enough}} // tu-note {{destroyed here}}
+  const MyObj* pTMC = mtf.memberC(MyObj()); // expected-warning {{object whose reference is captured does not live long enough}} // expected-note {{destroyed here}}
+  (void)pTMA; // expected-note {{later used here}}
+  (void)pTMB; // tu-note {{later used here}}
+  (void)pTMC; // expected-note {{later used here}}
+}
+
+} // namespace attr_on_template_params
+
+namespace non_trivial_views {
+struct [[gsl::Pointer]] View {
+    View(const std::string&);
+    ~View(); // Forces a CXXBindTemporaryExpr.
+};
+
+View test1(std::string a) {
+  // Make sure we handle CXXBindTemporaryExpr of view types.
+  return View(a); // expected-warning {{address of stack memory is returned later}} expected-note {{returned here}}
+}
+
+View test2(std::string a) {
+  View b = View(a); // expected-warning {{address of stack memory is returned later}}
+  return b;         // expected-note {{returned here}}
+}
+
+View test3(std::string a) {
+  const View& b = View(a);  // expected-warning {{address of stack memory is returned later}}
+  return b;                 // expected-note {{returned here}}
+}
+} // namespace non_trivial_views

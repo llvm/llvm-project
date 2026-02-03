@@ -102,6 +102,29 @@ struct GCNRegPressure {
                                                 DynamicVGPRBlockSize));
   }
 
+  unsigned getVGPRSpills(MachineFunction &MF, unsigned ArchVGPRThreshold,
+                         unsigned AGPRThreshold, unsigned CombinedThreshold) {
+    const GCNSubtarget &ST = MF.getSubtarget<GCNSubtarget>();
+    if (!ST.hasGFX90AInsts())
+      return 0;
+
+    unsigned ArchPressure = getArchVGPRNum();
+    unsigned AGPRPressure = getAGPRNum();
+
+    unsigned ArchSpill = ArchPressure > ArchVGPRThreshold
+                             ? (ArchPressure - ArchVGPRThreshold)
+                             : 0;
+    unsigned AGPRSpill =
+        AGPRPressure > AGPRThreshold ? (AGPRPressure - AGPRThreshold) : 0;
+
+    unsigned UnifiedPressure = getVGPRNum(/*UnifiedVGPRFile=*/true);
+    unsigned UnifiedSpill = UnifiedPressure > CombinedThreshold
+                                ? (UnifiedPressure - CombinedThreshold)
+                                : 0;
+
+    return std::max(UnifiedSpill, ArchSpill + AGPRSpill);
+  }
+
   void inc(unsigned Reg,
            LaneBitmask PrevMask,
            LaneBitmask NewMask,
