@@ -3501,11 +3501,15 @@ static Instruction *foldNestedSelects(SelectInst &OuterSelVal,
 
   Value *SelInner = Builder.CreateSelect(
       AltCond, IsAndVariant ? OuterSel.TrueVal : InnerSel.FalseVal,
-      IsAndVariant ? InnerSel.TrueVal : OuterSel.FalseVal);
+      IsAndVariant ? InnerSel.TrueVal : OuterSel.FalseVal, "",
+      ProfcheckDisableMetadataFixes ? nullptr : &OuterSelVal);
   SelInner->takeName(InnerSelVal);
   return SelectInst::Create(InnerSel.Cond,
                             IsAndVariant ? SelInner : InnerSel.TrueVal,
-                            !IsAndVariant ? SelInner : InnerSel.FalseVal);
+                            !IsAndVariant ? SelInner : InnerSel.FalseVal, "",
+                            nullptr,
+                            ProfcheckDisableMetadataFixes ? nullptr
+                                                          : &OuterSelVal);
 }
 
 /// Return true if V is poison or \p Expected given that ValAssumedPoison is
