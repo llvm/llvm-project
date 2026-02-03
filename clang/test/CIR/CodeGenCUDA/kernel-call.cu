@@ -2,7 +2,7 @@
 // Tests device stub body emission for CUDA kernels.
 
 // RUN: %clang_cc1 -triple x86_64-unknown-linux-gnu -target-sdk-version=9.2 \
-// RUN:   -emit-cir %s -I%S/../inputs/ -x cuda -o %t.cir
+// RUN:   -emit-cir %s -I%S/../Inputs/ -x cuda -o %t.cir
 // RUN: FileCheck --input-file=%t.cir %s --check-prefix=CUDA-NEW
 
 
