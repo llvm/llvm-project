@@ -174,12 +174,15 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
         addressSpaceToStorageClass(getPointerAddressSpace(ArgType), ST));
   }
 
-  // In case OriginalArgType is of untyped pointer type, there are three
+  // In case OriginalArgType is of untyped pointer type, there are four
   // possibilities:
   // 1) This is a pointer of an LLVM IR element type, passed byval/byref.
   // 2) This is an OpenCL/SPIR-V builtin type if there is spv_assign_type
   //    intrinsic assigning a TargetExtType.
-  // 3) This is a pointer, try to retrieve pointer element type from a
+  // 3) This is an OpenCL/SPIR-V builtin type if the mangled function name
+  //    contains type information (the Arg's function is a builtin, has no
+  //    body).
+  // 4) This is a pointer, try to retrieve pointer element type from a
   // spv_assign_ptr_type intrinsic or otherwise use default pointer element
   // type.
   if (hasPointeeTypeAttr(Arg)) {
@@ -211,6 +214,15 @@ static SPIRVType *getArgSPIRVType(const Function &F, unsigned ArgIdx,
         ElementTy, MIRBuilder,
         addressSpaceToStorageClass(
             cast<ConstantInt>(II->getOperand(2))->getZExtValue(), ST));
+  }
+
+  std::string DemangledFuncName =
+      getOclOrSpirvBuiltinDemangledName(F.getName());
+  if (!DemangledFuncName.empty()) {
+    Type *BuiltinType = SPIRV::parseBuiltinCallArgumentBaseType(
+        DemangledFuncName, ArgIdx, F.getContext());
+    if (BuiltinType && BuiltinType->isTargetExtTy())
+      return GR->getOrCreateSPIRVType(BuiltinType, MIRBuilder, ArgAccessQual);
   }
 
   // Replace PointerType with TypedPointerType to be able to map SPIR-V types to
