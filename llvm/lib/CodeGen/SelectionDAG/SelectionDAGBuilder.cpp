@@ -6582,7 +6582,10 @@ void SelectionDAGBuilder::visitVectorExtractLastActive(const CallInst &I,
 
 /// Fallback implementation for constant-time select using DAG chaining.
 /// This implementation uses data dependencies through virtual registers to
-/// prevent optimizations from breaking the constant-time property.
+/// prevent optimizations from breaking the constant-time property. It is a
+/// best-effort safeguard; for stronger guarantees we prefer target-specific
+/// lowering pipelines that preserve the select pattern by construction.
+///
 /// It handles scalars, vectors (fixed and scalable), and floating-point types.
 SDValue SelectionDAGBuilder::createProtectedCtSelectFallback(
     SelectionDAG &DAG, const SDLoc &DL, SDValue Cond, SDValue T, SDValue F,
@@ -6599,28 +6602,12 @@ SDValue SelectionDAGBuilder::createProtectedCtSelectFallback(
   if (VT.isVector() && !Cond.getValueType().isVector()) {
     ElementCount NumElems = VT.getVectorElementCount();
     EVT CondVT = EVT::getVectorVT(*DAG.getContext(), MVT::i1, NumElems);
-
-    if (VT.isScalableVector()) {
-      Cond = DAG.getSplatVector(CondVT, DL, Cond);
-    } else {
-      Cond = DAG.getSplatBuildVector(CondVT, DL, Cond);
-    }
+    Cond = DAG.getSplat(CondVT, DL, Cond);
   }
 
   // Handle floating-point types: bitcast to integer for bitwise operations
   if (VT.isFloatingPoint()) {
-    if (VT.isVector()) {
-      // float vector -> int vector
-      EVT ElemVT = VT.getVectorElementType();
-      unsigned int ElemBitWidth = ElemVT.getScalarSizeInBits();
-      EVT IntElemVT = EVT::getIntegerVT(*DAG.getContext(), ElemBitWidth);
-
-      WorkingVT = EVT::getVectorVT(*DAG.getContext(), IntElemVT,
-                                   VT.getVectorElementCount());
-    } else {
-      WorkingVT = EVT::getIntegerVT(*DAG.getContext(), VT.getSizeInBits());
-    }
-
+    WorkingVT = VT.changeTypeToInteger();
     WorkingT = DAG.getBitcast(WorkingVT, T);
     WorkingF = DAG.getBitcast(WorkingVT, F);
   }
@@ -6628,24 +6615,10 @@ SDValue SelectionDAGBuilder::createProtectedCtSelectFallback(
   // Create mask: sign-extend condition to all bits
   SDValue Mask = DAG.getSExtOrTrunc(Cond, DL, WorkingVT);
 
-  // Create all-ones constant for inversion
-  SDValue AllOnes;
-  if (WorkingVT.isScalableVector()) {
-    unsigned BitWidth = WorkingVT.getScalarSizeInBits();
-    APInt AllOnesVal = APInt::getAllOnes(BitWidth);
-    SDValue ScalarAllOnes =
-        DAG.getConstant(AllOnesVal, DL, WorkingVT.getScalarType());
-    AllOnes = DAG.getSplatVector(WorkingVT, DL, ScalarAllOnes);
-  } else {
-    AllOnes = DAG.getAllOnesConstant(DL, WorkingVT);
-  }
-
-  // Invert mask for false value
-  SDValue Invert = DAG.getNode(ISD::XOR, DL, WorkingVT, Mask, AllOnes);
-
-  // Compute: (T & Mask) | (F & ~Mask)
+  // Compute: F ^ ((T ^ F) & Mask)
   // This is constant-time because both branches are always computed
-  SDValue TM = DAG.getNode(ISD::AND, DL, WorkingVT, Mask, WorkingT);
+  SDValue XorTF = DAG.getNode(ISD::XOR, DL, WorkingVT, WorkingT, WorkingF);
+  SDValue TM = DAG.getNode(ISD::AND, DL, WorkingVT, XorTF, Mask);
 
   // DAG chaining: create data dependency through virtual register
   // This prevents optimizations from reordering or eliminating operations
@@ -6653,10 +6626,15 @@ SDValue SelectionDAGBuilder::createProtectedCtSelectFallback(
   bool CanUseChaining = false;
 
   if (!WorkingVT.isScalableVector()) {
-    // For fixed-size vectors and scalars, check if type is legal
+    // For fixed-size vectors and scalars, chaining is a best-effort hardening
+    // step. The CT guarantee comes from the dataflow-only select
+    // pattern (both sides computed, no control-flow). Chaining only adds an
+    // extra dependency to discourage later combines.
     CanUseChaining = TLI.isTypeLegal(WorkingVT.getSimpleVT());
   } else {
-    // For scalable vectors, disable chaining (conservative approach)
+    // For scalable vectors, skip chaining because there is no stable register
+    // class to copy through. CT behavior still relies on the masking/select
+    // pattern above.
     CanUseChaining = false;
   }
 
@@ -6668,8 +6646,7 @@ SDValue SelectionDAGBuilder::createProtectedCtSelectFallback(
     TM = DAG.getCopyFromReg(Chain, DL, TMReg, WorkingVT);
   }
 
-  SDValue FM = DAG.getNode(ISD::AND, DL, WorkingVT, Invert, WorkingF);
-  SDValue Result = DAG.getNode(ISD::OR, DL, WorkingVT, TM, FM);
+  SDValue Result = DAG.getNode(ISD::XOR, DL, WorkingVT, WorkingF, TM);
 
   // Convert back to original type if needed
   if (WorkingVT != VT) {
@@ -6878,9 +6855,7 @@ void SelectionDAGBuilder::visitIntrinsicCall(const CallInst &I,
     assert(!CondVT.isVector() && "Vector type cond not supported yet");
 
     // Handle scalar types
-    if (TLI.isSelectSupported(
-            TargetLoweringBase::SelectSupportKind::CtSelect) &&
-        !CondVT.isVector()) {
+    if (TLI.isCtSelectSupported(VT) && !CondVT.isVector()) {
       SDValue Result = DAG.getNode(ISD::CTSELECT, DL, VT, Cond, A, B);
       setValue(&I, Result);
       return;

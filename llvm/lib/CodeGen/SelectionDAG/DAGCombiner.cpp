@@ -484,7 +484,8 @@ namespace {
     SDValue visitCTTZ_ZERO_UNDEF(SDNode *N);
     SDValue visitCTPOP(SDNode *N);
     SDValue visitSELECT(SDNode *N);
-    SDValue visitCTSELECT(SDNode *N);
+    // visit CTSELECT Node
+    SDValue visitConstantTimeSelect(SDNode *N);
     SDValue visitVSELECT(SDNode *N);
     SDValue visitVP_SELECT(SDNode *N);
     SDValue visitSELECT_CC(SDNode *N);
@@ -1905,7 +1906,6 @@ void DAGCombiner::Run(CombineLevel AtLevel) {
 }
 
 SDValue DAGCombiner::visit(SDNode *N) {
-
   // clang-format off
   switch (N->getOpcode()) {
   default: break;
@@ -1976,7 +1976,7 @@ SDValue DAGCombiner::visit(SDNode *N) {
   case ISD::CTTZ_ZERO_UNDEF:    return visitCTTZ_ZERO_UNDEF(N);
   case ISD::CTPOP:              return visitCTPOP(N);
   case ISD::SELECT:             return visitSELECT(N);
-  case ISD::CTSELECT:           return visitCTSELECT(N);
+  case ISD::CTSELECT:           return visitConstantTimeSelect(N);
   case ISD::VSELECT:            return visitVSELECT(N);
   case ISD::SELECT_CC:          return visitSELECT_CC(N);
   case ISD::SETCC:              return visitSETCC(N);
@@ -12583,7 +12583,7 @@ SDValue DAGCombiner::visitSELECT(SDNode *N) {
   return SDValue();
 }
 
-SDValue DAGCombiner::visitCTSELECT(SDNode *N) {
+SDValue DAGCombiner::visitConstantTimeSelect(SDNode *N) {
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
   SDValue N2 = N->getOperand(2);

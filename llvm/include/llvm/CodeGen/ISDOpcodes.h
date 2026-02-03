@@ -783,8 +783,8 @@ enum NodeType {
   /// i1 then the high bits must conform to getBooleanContents.
   SELECT,
 
-  /// Constant-time Select, implemented with CMOV instruction. This is used to
-  /// implement constant-time select.
+  /// CTSELECT(Cond, TrueVal, FalseVal). Cond is i1 and the value operands must
+  /// have the same type. Used to lower the constant-time select intrinsic.
   CTSELECT,
 
   /// Select with a vector condition (op #0) and two vector operands (ops #1

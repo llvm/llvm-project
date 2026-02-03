@@ -436,8 +436,6 @@ public:
     FastMathFlags = NoNaNs | NoInfs | NoSignedZeros | AllowReciprocal |
                     AllowContract | ApproximateFuncs | AllowReassociation,
 
-    // Flag for disabling optimization
-    NoMerge = 1 << 15,
   };
 
   /// Default constructor turns off all optimization flags.

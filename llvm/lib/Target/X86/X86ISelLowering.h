@@ -1078,6 +1078,8 @@ namespace llvm {
     unsigned getJumpTableEncoding() const override;
     bool useSoftFloat() const override;
 
+    bool isCtSelectSupported(EVT VT) const override { return false; }
+
     void markLibCallAttributes(MachineFunction *MF, unsigned CC,
                                ArgListTy &Args) const override;
 
