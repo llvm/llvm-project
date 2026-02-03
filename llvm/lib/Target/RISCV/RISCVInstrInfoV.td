@@ -317,8 +317,8 @@ class VSXSEGSched<int nfields, int eew, bit isOrdered, string emul,
 class VSXSEGSchedMC<int nfields, int eew, bit isOrdered>:
   VSXSEGSched<nfields, eew, isOrdered, "WorstCase", forceMasked=1>;
 
-class RISCVVXMemOpMC<bits<3> E, bit Ordered, bit Store, bits<4> N = 0> {
-  bits<3> Log2EEW = E;
+class RISCVVXMemOpMC<int EEW, bit Ordered, bit Store, bits<4> N = 0> {
+  bits<3> Log2EEW = !logtwo(EEW);
   bits<1> IsOrdered = Ordered;
   bits<1> IsStore = Store;
   bits<4> NFields = N;
@@ -601,20 +601,20 @@ multiclass VIndexLoadStore<int eew> {
 
   def VLUXEI # eew # _V :
     VIndexedLoad<MOPLDIndexedUnord, w, "vluxei" # eew # ".v">,
-    RISCVVXMemOpMC<!logtwo(eew), Ordered=false, Store=false>,
+    RISCVVXMemOpMC<eew, Ordered=false, Store=false>,
     VLXSchedMC<eew, isOrdered=0>;
   def VLOXEI # eew # _V :
     VIndexedLoad<MOPLDIndexedOrder, w, "vloxei" # eew # ".v">,
-    RISCVVXMemOpMC<!logtwo(eew), Ordered=true, Store=false>,
+    RISCVVXMemOpMC<eew, Ordered=true, Store=false>,
     VLXSchedMC<eew, isOrdered=1>;
 
   def VSUXEI # eew # _V :
     VIndexedStore<MOPSTIndexedUnord, w, "vsuxei" # eew # ".v">,
-    RISCVVXMemOpMC<!logtwo(eew), Ordered=false, Store=true>,
+    RISCVVXMemOpMC<eew, Ordered=false, Store=true>,
     VSXSchedMC<eew, isOrdered=0>;
   def VSOXEI # eew # _V :
     VIndexedStore<MOPSTIndexedOrder, w, "vsoxei" # eew # ".v">,
-    RISCVVXMemOpMC<!logtwo(eew), Ordered=true, Store=true>,
+    RISCVVXMemOpMC<eew, Ordered=true, Store=true>,
     VSXSchedMC<eew, isOrdered=1>;
 }
 
@@ -1812,22 +1812,22 @@ let Predicates = [HasVInstructions] in {
       def VLUXSEG#nfields#EI#eew#_V :
         VIndexedSegmentLoad<nfields, MOPLDIndexedUnord, w,
                             "vluxseg"#nfields#"ei"#eew#".v">,
-        RISCVVXMemOpMC<!logtwo(eew), Ordered=false, Store=false, N=nfields>,
+        RISCVVXMemOpMC<eew, Ordered=false, Store=false, N=nfields>,
         VLXSEGSchedMC<nfields, eew, isOrdered=0>;
       def VLOXSEG#nfields#EI#eew#_V :
         VIndexedSegmentLoad<nfields, MOPLDIndexedOrder, w,
                             "vloxseg"#nfields#"ei"#eew#".v">,
-        RISCVVXMemOpMC<!logtwo(eew), Ordered=true, Store=false, N=nfields>,
+        RISCVVXMemOpMC<eew, Ordered=true, Store=false, N=nfields>,
         VLXSEGSchedMC<nfields, eew, isOrdered=1>;
       def VSUXSEG#nfields#EI#eew#_V :
         VIndexedSegmentStore<nfields, MOPSTIndexedUnord, w,
                              "vsuxseg"#nfields#"ei"#eew#".v">,
-        RISCVVXMemOpMC<!logtwo(eew), Ordered=false, Store=true, N=nfields>,
+        RISCVVXMemOpMC<eew, Ordered=false, Store=true, N=nfields>,
         VSXSEGSchedMC<nfields, eew, isOrdered=0>;
       def VSOXSEG#nfields#EI#eew#_V :
         VIndexedSegmentStore<nfields, MOPSTIndexedOrder, w,
                              "vsoxseg"#nfields#"ei"#eew#".v">,
-        RISCVVXMemOpMC<!logtwo(eew), Ordered=true, Store=true, N=nfields>,
+        RISCVVXMemOpMC<eew, Ordered=true, Store=true, N=nfields>,
         VSXSEGSchedMC<nfields, eew, isOrdered=1>;
     }
   }
