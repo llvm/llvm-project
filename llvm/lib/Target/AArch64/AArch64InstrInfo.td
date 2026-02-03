@@ -2275,6 +2275,26 @@ let Predicates = [HasPAuth] in {
     let Uses = [X16];
   }
 
+  // Similiar to AUTPAC, except a 32bit value is loaded at Addend offset from
+  // pointer and this value is added to the pointer before signing. This
+  // directly manipulates x16/x17, which are the only registers the OS
+  // guarantees are safe to use for sensitive operations.
+  def AUTRELLOADPAC
+      : Pseudo<(outs),
+               (ins i32imm:$AUTKey, i64imm:$AUTDisc, GPR64:$AUTAddrDisc,
+                   i32imm:$PACKey, i64imm:$PACDisc, GPR64noip:$PACAddrDisc,
+                   i64imm:$Addend),
+               []>,
+        Sched<[WriteI, ReadI]> {
+    let isCodeGenOnly = 1;
+    let hasSideEffects = 1;
+    let mayStore = 0;
+    let mayLoad = 1;
+    let Size = 84;
+    let Defs = [X16, X17, NZCV];
+    let Uses = [X16];
+  }
+
   // Materialize a signed global address, with adrp+add and PAC.
   def MOVaddrPAC : Pseudo<(outs),
                           (ins i64imm:$Addr, i32imm:$Key,

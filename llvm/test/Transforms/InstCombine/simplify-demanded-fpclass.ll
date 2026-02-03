@@ -1879,7 +1879,7 @@ define nofpclass(snan) float @arithmetic_fence__noinf_callsite_param_attr_select
 define nofpclass(pinf) float @ret_nofpclass_pinf__minnum_pinf(i1 %cond, float %x) {
 ; CHECK-LABEL: define nofpclass(pinf) float @ret_nofpclass_pinf__minnum_pinf
 ; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]]) {
-; CHECK-NEXT:    [[MIN:%.*]] = call float @llvm.minnum.f32(float [[X]], float 0x7FF0000000000000)
+; CHECK-NEXT:    [[MIN:%.*]] = call nsz float @llvm.minnum.f32(float [[X]], float 0x7FF0000000000000)
 ; CHECK-NEXT:    ret float [[MIN]]
 ;
   %min = call float @llvm.minnum.f32(float %x, float 0x7FF0000000000000)
@@ -1900,7 +1900,7 @@ define nofpclass(pinf) float @ret_nofpclass_pinf__minnum_ninf(i1 %cond, float %x
 define nofpclass(ninf) float @ret_nofpclass_ninf__maxnum_ninf(i1 %cond, float %x) {
 ; CHECK-LABEL: define nofpclass(ninf) float @ret_nofpclass_ninf__maxnum_ninf
 ; CHECK-SAME: (i1 [[COND:%.*]], float [[X:%.*]]) {
-; CHECK-NEXT:    [[MAX:%.*]] = call float @llvm.maxnum.f32(float [[X]], float 0xFFF0000000000000)
+; CHECK-NEXT:    [[MAX:%.*]] = call nsz float @llvm.maxnum.f32(float [[X]], float 0xFFF0000000000000)
 ; CHECK-NEXT:    ret float [[MAX]]
 ;
   %max = call float @llvm.maxnum.f32(float %x, float 0xFFF0000000000000)

@@ -2212,8 +2212,10 @@ simplifyDemandedFPClassMinMax(KnownFPClass &Known, Intrinsic::ID IID,
 
     break;
   }
+  case Intrinsic::maxnum:
   case Intrinsic::maximumnum: {
-    OpKind = KnownFPClass::MinMaxKind::maximumnum;
+    OpKind = IID == Intrinsic::maxnum ? KnownFPClass::MinMaxKind::maxnum
+                                      : KnownFPClass::MinMaxKind::maximumnum;
 
     if (cannotOrderStrictlyLess(KnownLHS.KnownFPClasses,
                                 KnownRHS.KnownFPClasses, OrderedZeroSign) &&
@@ -2227,8 +2229,10 @@ simplifyDemandedFPClassMinMax(KnownFPClass &Known, Intrinsic::ID IID,
 
     break;
   }
+  case Intrinsic::minnum:
   case Intrinsic::minimumnum: {
-    OpKind = KnownFPClass::MinMaxKind::minimumnum;
+    OpKind = IID == Intrinsic::minnum ? KnownFPClass::MinMaxKind::minnum
+                                      : KnownFPClass::MinMaxKind::minimumnum;
 
     if (cannotOrderStrictlyGreater(KnownLHS.KnownFPClasses,
                                    KnownRHS.KnownFPClasses, OrderedZeroSign) &&
@@ -2870,7 +2874,9 @@ Value *InstCombinerImpl::SimplifyDemandedUseFPClass(Instruction *I,
     case Intrinsic::maximum:
     case Intrinsic::minimum:
     case Intrinsic::maximumnum:
-    case Intrinsic::minimumnum: {
+    case Intrinsic::minimumnum:
+    case Intrinsic::maxnum:
+    case Intrinsic::minnum: {
       const bool PropagateNaN =
           IID == Intrinsic::maximum || IID == Intrinsic::minimum;
 
@@ -3480,6 +3486,8 @@ Value *InstCombinerImpl::SimplifyMultipleUseDemandedFPClass(
       Known = KnownFPClass::copysign(KnownMag, KnownSign);
       break;
     }
+    case Intrinsic::maxnum:
+    case Intrinsic::minnum:
     case Intrinsic::maximum:
     case Intrinsic::minimum:
     case Intrinsic::maximumnum:

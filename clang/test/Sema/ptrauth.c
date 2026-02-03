@@ -121,6 +121,29 @@ void test_auth_and_resign(int *dp, int (*fp)(int)) {
 
   float *mismatch = __builtin_ptrauth_auth_and_resign(dp, VALID_DATA_KEY, 0, VALID_DATA_KEY, dp); // expected-error {{incompatible pointer types initializing 'float *' with an expression of type 'int *'}}
 }
+void test_auth_load_relative_and_sign(int *dp, int (*fp)(int)) {
+  __builtin_ptrauth_auth_load_relative_and_sign(dp, VALID_DATA_KEY, 0, VALID_DATA_KEY, 0); // expected-error {{too few arguments}}
+  __builtin_ptrauth_auth_load_relative_and_sign(dp, VALID_DATA_KEY, dp, VALID_DATA_KEY, dp, 0, 0); // expected-error {{too many arguments}}
+  int n = *dp;
+  __builtin_ptrauth_auth_load_relative_and_sign(dp, VALID_DATA_KEY, dp, VALID_DATA_KEY, dp,n); // expected-error {{last argument to '__builtin_ptrauth_auth_load_relative_and_sign' must be a constant integer}}
+  __builtin_ptrauth_auth_load_relative_and_sign(mismatched_type, VALID_DATA_KEY, 0, VALID_DATA_KEY, dp, 0); // expected-error {{signed value must have pointer type; type here is 'struct A'}}
+  __builtin_ptrauth_auth_load_relative_and_sign(dp, mismatched_type, 0, VALID_DATA_KEY, dp, 0); // expected-error {{passing 'struct A' to parameter of incompatible type 'int'}}
+  __builtin_ptrauth_auth_load_relative_and_sign(dp, VALID_DATA_KEY, mismatched_type, VALID_DATA_KEY, dp, 0); // expected-error {{extra discriminator must have pointer or integer type; type here is 'struct A'}}
+  __builtin_ptrauth_auth_load_relative_and_sign(dp, VALID_DATA_KEY, 0, mismatched_type, dp, 0); // expected-error {{passing 'struct A' to parameter of incompatible type 'int'}}
+  __builtin_ptrauth_auth_load_relative_and_sign(dp, VALID_DATA_KEY, 0, VALID_DATA_KEY, mismatched_type, 0); // expected-error {{extra discriminator must have pointer or integer type; type here is 'struct A'}}
+
+  (void) __builtin_ptrauth_auth_and_resign(NULL, VALID_DATA_KEY, 0, VALID_DATA_KEY, dp); // expected-warning {{authenticating a null pointer will almost certainly trap}}
+
+  int *dr = __builtin_ptrauth_auth_load_relative_and_sign(dp, VALID_DATA_KEY, 0, VALID_DATA_KEY, dp, 10);
+  dr = __builtin_ptrauth_auth_load_relative_and_sign(dp, INVALID_KEY, 0, VALID_DATA_KEY, dp, 10); // expected-error {{does not identify a valid pointer authentication key for the current target}}
+  dr = __builtin_ptrauth_auth_load_relative_and_sign(dp, VALID_DATA_KEY, 0, INVALID_KEY, dp, 10); // expected-error {{does not identify a valid pointer authentication key for the current target}}
+
+  int (*fr)(int) = __builtin_ptrauth_auth_load_relative_and_sign(fp, VALID_CODE_KEY, 0, VALID_CODE_KEY, dp, 10);
+  fr = __builtin_ptrauth_auth_load_relative_and_sign(fp, INVALID_KEY, 0, VALID_CODE_KEY, dp, 10); // expected-error {{does not identify a valid pointer authentication key for the current target}}
+  fr = __builtin_ptrauth_auth_load_relative_and_sign(fp, VALID_CODE_KEY, 0, INVALID_KEY, dp, 10); // expected-error {{does not identify a valid pointer authentication key for the current target}}
+
+  float *mismatch = __builtin_ptrauth_auth_load_relative_and_sign(dp, VALID_DATA_KEY, 0, VALID_DATA_KEY, dp,0); // expected-error {{incompatible pointer types initializing 'float *' with an expression of type 'int *'}}
+}
 
 void test_sign_generic_data(int *dp) {
   __builtin_ptrauth_sign_generic_data(dp); // expected-error {{too few arguments}}

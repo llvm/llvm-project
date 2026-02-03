@@ -178,6 +178,31 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
   __builtin_ptrauth_auth_and_resign(__value, __old_key, __old_data, __new_key, \
                                     __new_data)
 
+/* Authenticate a pointer using one scheme, load 32bit value at offset addend
+   from the pointer, and add this value to the pointer, sign using specified
+   scheme.
+
+   If the result is subsequently authenticated using the new scheme, that
+   authentication is guaranteed to fail if and only if the initial
+   authentication failed.
+
+   The value must be an expression of pointer type.
+   The key must be a constant expression of type ptrauth_key.
+   The extra data must be an expression of pointer or integer type;
+   if an integer, it will be coerced to ptrauth_extra_data_t.
+   The addend must be an immediate ptrdiff_t value.
+   The result will have the same type as the original value.
+
+   This operation is guaranteed to not leave the intermediate value
+   available for attack before it is re-signed.
+
+   Do not pass a null pointer to this function. A null pointer
+   will not successfully authenticate. */
+#define ptrauth_auth_load_relative_and_sign(__value, __old_key, __old_data,    \
+                                            __new_key, __new_data, __offset)   \
+  __builtin_ptrauth_auth_load_relative_and_sign(                               \
+      __value, __old_key, __old_data, __new_key, __new_data, __offset)
+
 /* Authenticate a pointer using one scheme and resign it as a C
    function pointer.
 
@@ -361,6 +386,17 @@ typedef __UINTPTR_TYPE__ ptrauth_generic_signature_t;
     (void)__new_key;                                                           \
     (void)__new_data;                                                          \
     __value;                                                                   \
+  })
+
+#define ptrauth_auth_load_relative_and_sign(__value, __old_key, __old_data,    \
+                                            __new_key, __new_data, __offset)   \
+  ({                                                                           \
+    (void)__old_key;                                                           \
+    (void)__old_data;                                                          \
+    (void)__new_key;                                                           \
+    (void)__new_data;                                                          \
+    const char *__value_tmp = (const char *)(__value);                         \
+    (void *)(__value_tmp + *(const int *)(__value_tmp + (__offset)));          \
   })
 
 #define ptrauth_auth_function(__value, __old_key, __old_data)                  \

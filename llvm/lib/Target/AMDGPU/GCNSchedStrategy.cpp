@@ -2975,43 +2975,40 @@ void PreRARematStage::rematerialize(const RematReg &Remat,
     DAG.deleteMI(Remat.DefRegion, &DefMI);
   }
 
-  // Remove the register from all regions where it is a live-in or live-out
-  // and adjust RP targets.
-  for (unsigned I : Remat.Live.set_bits()) {
 #ifdef EXPENSIVE_CHECKS
-    if (!Remat.LiveIn[I] && Remat.LiveOut[I]) {
-      // All uses are known to be available / live at the remat point. Thus,
-      // the uses should already be live in to the region.
-      for (MachineOperand &MO : DefMI.operands()) {
-        if (!MO.isReg() || !MO.getReg() || !MO.readsReg())
-          continue;
+  // All uses are known to be available / live at the remat point. Thus,
+  // the uses should already be live in to the using region.
+  for (MachineOperand &MO : DefMI.operands()) {
+    if (!MO.isReg() || !MO.getReg() || !MO.readsReg())
+      continue;
 
-        Register UseReg = MO.getReg();
-        if (!UseReg.isVirtual())
-          continue;
+    Register UseReg = MO.getReg();
+    if (!UseReg.isVirtual())
+      continue;
 
-        LiveInterval &LI = DAG.LIS->getInterval(UseReg);
-        LaneBitmask LM = DAG.MRI.getMaxLaneMaskForVReg(MO.getReg());
-        if (LI.hasSubRanges() && MO.getSubReg())
-          LM = DAG.TRI->getSubRegIndexLaneMask(MO.getSubReg());
+    LiveInterval &LI = DAG.LIS->getInterval(UseReg);
+    LaneBitmask LM = DAG.MRI.getMaxLaneMaskForVReg(MO.getReg());
+    if (LI.hasSubRanges() && MO.getSubReg())
+      LM = DAG.TRI->getSubRegIndexLaneMask(MO.getSubReg());
 
-        LaneBitmask LiveInMask = DAG.LiveIns[I].at(UseReg);
-        LaneBitmask UncoveredLanes = LM & ~(LiveInMask & LM);
-        // If this register has lanes not covered by the LiveIns, be sure they
-        // do not map to any subrange. ref:
-        // machine-scheduler-sink-trivial-remats.mir::omitted_subrange
-        if (UncoveredLanes.any()) {
-          assert(LI.hasSubRanges());
-          for (LiveInterval::SubRange &SR : LI.subranges())
-            assert((SR.LaneMask & UncoveredLanes).none());
-        }
-      }
+    LaneBitmask LiveInMask = DAG.LiveIns[Remat.UseRegion].at(UseReg);
+    LaneBitmask UncoveredLanes = LM & ~(LiveInMask & LM);
+    // If this register has lanes not covered by the LiveIns, be sure they
+    // do not map to any subrange. ref:
+    // machine-scheduler-sink-trivial-remats.mir::omitted_subrange
+    if (UncoveredLanes.any()) {
+      assert(LI.hasSubRanges());
+      for (LiveInterval::SubRange &SR : LI.subranges())
+        assert((SR.LaneMask & UncoveredLanes).none());
     }
+  }
 #endif
 
-    // This save is guaranteed in regions in which the register is live-through
-    // and unused but optimistic in all other regions where the register is
-    // live.
+  // Remove the register from all regions where it is a live-in or live-out
+  // and adjust RP targets. The save is guaranteed in regions in which the
+  // register is live-through and unused but optimistic in all other regions
+  // where the register is live.
+  for (unsigned I : Remat.Live.set_bits()) {
     RPTargets[I].saveReg(Reg, Remat.Mask, DAG.MRI);
     DAG.LiveIns[I].erase(Reg);
     DAG.RegionLiveOuts.getLiveRegsForRegionIdx(I).erase(Reg);
