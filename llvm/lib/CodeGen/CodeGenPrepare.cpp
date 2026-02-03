@@ -691,7 +691,7 @@ bool CodeGenPrepare::_run(Function &F) {
     MadeChange |= optimizePhiTypes(F);
 
     if (MadeChange)
-      eliminateFallThrough(F, DT.get());
+      eliminateFallThrough(F, &getDT(F));
 
 #ifndef NDEBUG
     if (MadeChange && VerifyLoopInfo)
@@ -6868,7 +6868,7 @@ bool CodeGenPrepare::splitLargeGEPOffsets() {
           NewBaseInsertPt = NewBaseInsertBB->getFirstInsertionPt();
         else if (InvokeInst *Invoke = dyn_cast<InvokeInst>(BaseI)) {
           NewBaseInsertBB =
-              SplitEdge(NewBaseInsertBB, Invoke->getNormalDest(), DT.get(), LI);
+              SplitEdge(NewBaseInsertBB, Invoke->getNormalDest(), &getDT(*NewBaseInsertBB->getParent()), LI);
           NewBaseInsertPt = NewBaseInsertBB->getFirstInsertionPt();
         } else
           NewBaseInsertPt = std::next(BaseI->getIterator());
