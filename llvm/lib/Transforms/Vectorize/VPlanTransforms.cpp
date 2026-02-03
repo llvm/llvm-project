@@ -2559,8 +2559,8 @@ static void licm(VPlan &Plan) {
 #ifndef NDEBUG
   VPDominatorTree VPDT(Plan);
 #endif
-  // Sink recipes with no users inside the vector loop region into a dedicated
-  // exit block.
+  // Sink recipes with no users inside the vector loop region if all users are
+  // in the same exit block of the region.
   // TODO: Extend to sink recipes from inner loops.
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(
            vp_post_order_shallow(LoopRegion->getEntry()))) {
