@@ -1,4 +1,3 @@
-subnormal_config.cl
 ../generic/async/async_work_group_strided_copy.cl
 ../generic/async/wait_group_events.cl
 ../generic/common/degrees.cl

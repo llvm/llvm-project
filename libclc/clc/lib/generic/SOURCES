@@ -143,6 +143,7 @@ math/clc_sincos_helpers.cl
 math/clc_sinh.cl
 math/clc_sinpi.cl
 math/clc_sqrt.cl
+math/clc_subnormal_config.cl
 math/clc_sw_fma.cl
 math/clc_tables.cl
 math/clc_tan.cl

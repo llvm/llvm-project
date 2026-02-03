@@ -65,14 +65,18 @@ bool __attribute__((noinline)) __clc_runtime_has_hw_fma32(void);
 
 #define LOG_MAGIC_NUM_SP32 (1 + NUMEXPBITS_SP32 - EXPBIAS_SP32)
 
-_CLC_OVERLOAD _CLC_INLINE float __clc_flush_denormal_if_not_supported(float x) {
-  int ix = __clc_as_int(x);
-  if (!__clc_fp32_subnormals_supported() && ((ix & EXPBITS_SP32) == 0) &&
-      ((ix & MANTBITS_SP32) != 0)) {
-    ix &= SIGNBIT_SP32;
-    x = __clc_as_float(ix);
-  }
+static _CLC_INLINE float __clc_flush_denormal_if_not_supported(float x) {
+#ifdef CLC_SPIRV
+  // The function is only used in __clc_sw_fma.
+  // FIXME delete this once SPIR-V backend supports SPV_KHR_fma.
+  return __builtin_elementwise_abs(x) < 0x1p-149f
+             ? __builtin_elementwise_copysign(0.0f, x)
+             : x;
+#else
+  if (!__builtin_isfpclass(x, __FPCLASS_SNAN))
+    return __builtin_elementwise_canonicalize(x);
   return x;
+#endif
 }
 
 #ifdef cl_khr_fp64
