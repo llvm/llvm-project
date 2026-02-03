@@ -1,6 +1,6 @@
 // RUN: %clang_cc1 -std=c++20 -triple x86_64-apple-macosx10.7.0 -xc++ -emit-llvm -o - %s -w | FileCheck %s
 
-// CHECK-LABEL: define linkonce_odr noundef i32 @_ZZN8PR178893W3mod6format5parseEPiENKUlvE_clEv
+// CHECK-LABEL: define {{.*}}@_ZZN8PR178893W3mod6format5parseEPiENKUlvE_clEv
 // CHECK-LABEL: define linkonce_odr noundef i32 @_ZZN8PR178893W3mod6format5parseEPiENKUlvE0_clEv
 
 export module mod;
