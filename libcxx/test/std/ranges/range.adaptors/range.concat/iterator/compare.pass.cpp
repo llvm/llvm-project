@@ -19,6 +19,7 @@
 #include <array>
 #include <cassert>
 #include <ranges>
+#include <vector>
 
 #include "../../range_adaptor_types.h"
 
@@ -63,7 +64,7 @@ constexpr bool test() {
   {
     // test with more than one view
     std::array<int, 3> array1{0, 1, 2};
-    std::array<int, 3> array2{0, 1, 2};
+    std::vector<int> array2{0, 1, 2};
     std::ranges::concat_view view(std::views::all(array1), std::views::all(array2));
     decltype(auto) it1                       = view.begin();
     decltype(auto) it2                       = view.begin();
@@ -86,7 +87,7 @@ constexpr bool test() {
   {
     // test with more than one view and iterators are in different range
     std::array<int, 3> array1{0, 1, 2};
-    std::array<int, 3> array2{4, 5, 6};
+    std::vector<int> array2{4, 5, 6};
     std::ranges::concat_view view(std::views::all(array1), std::views::all(array2));
     decltype(auto) it1 = view.begin();
     decltype(auto) it2 = view.begin() + 3;
@@ -106,7 +107,7 @@ constexpr bool test() {
   {
     // operator==(x, sentinel)
     std::array<int, 2> array1{1, 2};
-    std::array<int, 2> array2{3, 4};
+    std::vector<int> array2{3, 4};
     std::ranges::concat_view v(std::views::all(array1), std::views::all(array2));
 
     auto it = v.begin();
@@ -140,10 +141,8 @@ constexpr bool test() {
   {
     // operator <, <=, >, >=
     std::array<int, 4> arr_a{1, 2, 3, 4};
-    std::array<int, 3> arr_b{5, 6, 7};
-    std::span<const int> s1{arr_a};
-    std::span<const int> s2{arr_b};
-    auto v = std::views::concat(s1, s2);
+    std::vector<int> arr_b{5, 6, 7};
+    auto v = std::views::concat(arr_a, arr_b);
     auto i = v.begin();
     auto j = v.begin();
     std::ranges::advance(j, arr_a.size());
