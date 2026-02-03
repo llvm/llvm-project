@@ -285,14 +285,14 @@ unsigned RISCVInstrumentManager::getSchedClassID(
     } else {
       // Segmented Indexed Load / Store.
       if (VXMO->IsStore) {
-        if (const auto *VXP =
-                RISCV::getVSXSEGPseudo(VXMO->NFields, /*Masked=*/0, VXMO->IsOrdered,
-                                       VXMO->Log2IdxEEW, LMUL, IndexEMUL))
+        if (const auto *VXP = RISCV::getVSXSEGPseudo(
+                VXMO->NFields, /*Masked=*/0, VXMO->IsOrdered, VXMO->Log2IdxEEW,
+                LMUL, IndexEMUL))
           VPOpcode = VXP->Pseudo;
       } else {
-        if (const auto *VXP =
-                RISCV::getVLXSEGPseudo(VXMO->NFields, /*Masked=*/0, VXMO->IsOrdered,
-                                       VXMO->Log2IdxEEW, LMUL, IndexEMUL))
+        if (const auto *VXP = RISCV::getVLXSEGPseudo(
+                VXMO->NFields, /*Masked=*/0, VXMO->IsOrdered, VXMO->Log2IdxEEW,
+                LMUL, IndexEMUL))
           VPOpcode = VXP->Pseudo;
       }
     }
