@@ -28,6 +28,8 @@ namespace LIBC_NAMESPACE_DECL {
 using fputil::DoubleDouble;
 using fputil::TripleDouble;
 
+namespace {
+
 using namespace common_constants_internal;
 
 #ifdef LIBC_MATH_HAS_SKIP_ACCURATE_PASS
@@ -640,6 +642,8 @@ double powf_double_double(int idx_x, double dx, double y6, double lo6_hi,
   return cpp::bit_cast<double>(r_bits);
 }
 #endif // LIBC_MATH_HAS_SKIP_ACCURATE_PASS
+
+} // namespace
 
 LLVM_LIBC_FUNCTION(float, powf, (float x, float y)) {
   using FloatBits = typename fputil::FPBits<float>;
