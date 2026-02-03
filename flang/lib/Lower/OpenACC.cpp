@@ -4297,20 +4297,26 @@ genACC(Fortran::lower::AbstractConverter &converter,
           fir::substBase(hostExv, cacheOp.getAccVar());
       converter.bindSymbol(symbol, cacheExv);
     } else {
-      // Must be a derived type component reference.
+      // Derived type component reference.
       assert(designator && "expected designator for non-symbol cache operand");
       std::optional<Fortran::evaluate::Component> componentRef =
           extractComponentFromDesignator(designator);
       assert(componentRef &&
              "expected component reference for derived type cache operand");
-      // Component references are lowered to designate operations.
-      auto designate = base.getDefiningOp<hlfir::DesignateOp>();
-      assert(designate && "expected designate op for component reference");
+      // When component is mapped via a data clause, base may be a declare op
+      // instead of a designate op.
+      auto varIface = base.getDefiningOp<fir::FortranVariableOpInterface>();
+      assert(varIface &&
+             "expected FortranVariableOpInterface for component reference");
+      fir::FortranVariableFlagsAttr attrs;
+      if (auto fortranAttrs = varIface.getFortranAttrs())
+        attrs = fir::FortranVariableFlagsAttr::get(builder.getContext(),
+                                                   *fortranAttrs);
       auto declareOp = hlfir::DeclareOp::create(
           builder, operandLocation, cacheOp.getAccVar(), asFortran.str(),
-          designate.getShape(), designate.getTypeparams(),
+          varIface.getShape(), varIface.getExplicitTypeParams(),
           /*dummyScope=*/nullptr, /*storage=*/nullptr,
-          /*storageOffset=*/0, designate.getFortranAttrsAttr());
+          /*storageOffset=*/0, attrs);
       converter.getSymbolMap().addComponentOverride(*componentRef, declareOp);
     }
   }
