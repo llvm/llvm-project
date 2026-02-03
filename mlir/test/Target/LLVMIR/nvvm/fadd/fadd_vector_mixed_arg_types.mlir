@@ -8,7 +8,7 @@ llvm.func @fadd_vector_f16_bf16_f32(%a : vector<2xf16>, %b : vector<2xbf16>) -> 
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = fpext bfloat %4 to float
   // CHECK-NEXT: %7 = call float @llvm.nvvm.add.rn.f(float %5, float %6)
-  // CHECK-NEXT: %8 = insertelement <2 x float> undef, float %7, i32 0
+  // CHECK-NEXT: %8 = insertelement <2 x float> poison, float %7, i32 0
   // CHECK-NEXT: %9 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %10 = extractelement <2 x bfloat> %1, i32 1
   // CHECK-NEXT: %11 = fpext half %9 to float
@@ -28,7 +28,7 @@ llvm.func @fadd_vector_f16_bf16_f32_rn(%a : vector<2xf16>, %b : vector<2xbf16>) 
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = fpext bfloat %4 to float
   // CHECK-NEXT: %7 = call float @llvm.nvvm.add.rn.f(float %5, float %6)
-  // CHECK-NEXT: %8 = insertelement <2 x float> undef, float %7, i32 0
+  // CHECK-NEXT: %8 = insertelement <2 x float> poison, float %7, i32 0
   // CHECK-NEXT: %9 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %10 = extractelement <2 x bfloat> %1, i32 1
   // CHECK-NEXT: %11 = fpext half %9 to float
@@ -48,7 +48,7 @@ llvm.func @fadd_vector_f16_bf16_f32_rn_sat(%a : vector<2xf16>, %b : vector<2xbf1
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = fpext bfloat %4 to float
   // CHECK-NEXT: %7 = call float @llvm.nvvm.add.rn.sat.f(float %5, float %6)
-  // CHECK-NEXT: %8 = insertelement <2 x float> undef, float %7, i32 0
+  // CHECK-NEXT: %8 = insertelement <2 x float> poison, float %7, i32 0
   // CHECK-NEXT: %9 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %10 = extractelement <2 x bfloat> %1, i32 1
   // CHECK-NEXT: %11 = fpext half %9 to float
@@ -68,7 +68,7 @@ llvm.func @fadd_vector_f16_bf16_f32_rn_ftz(%a : vector<2xf16>, %b : vector<2xbf1
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = fpext bfloat %4 to float
   // CHECK-NEXT: %7 = call float @llvm.nvvm.add.rn.ftz.f(float %5, float %6)
-  // CHECK-NEXT: %8 = insertelement <2 x float> undef, float %7, i32 0
+  // CHECK-NEXT: %8 = insertelement <2 x float> poison, float %7, i32 0
   // CHECK-NEXT: %9 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %10 = extractelement <2 x bfloat> %1, i32 1
   // CHECK-NEXT: %11 = fpext half %9 to float
@@ -88,7 +88,7 @@ llvm.func @fadd_vector_f16_bf16_f32_rn_sat_ftz(%a : vector<2xf16>, %b : vector<2
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = fpext bfloat %4 to float
   // CHECK-NEXT: %7 = call float @llvm.nvvm.add.rn.ftz.sat.f(float %5, float %6)
-  // CHECK-NEXT: %8 = insertelement <2 x float> undef, float %7, i32 0
+  // CHECK-NEXT: %8 = insertelement <2 x float> poison, float %7, i32 0
   // CHECK-NEXT: %9 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %10 = extractelement <2 x bfloat> %1, i32 1
   // CHECK-NEXT: %11 = fpext half %9 to float
@@ -108,7 +108,7 @@ llvm.func @fadd_vector_f16_bf16_f32_rm(%a : vector<2xf16>, %b : vector<2xbf16>) 
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = fpext bfloat %4 to float
   // CHECK-NEXT: %7 = call float @llvm.nvvm.add.rm.f(float %5, float %6)
-  // CHECK-NEXT: %8 = insertelement <2 x float> undef, float %7, i32 0
+  // CHECK-NEXT: %8 = insertelement <2 x float> poison, float %7, i32 0
   // CHECK-NEXT: %9 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %10 = extractelement <2 x bfloat> %1, i32 1
   // CHECK-NEXT: %11 = fpext half %9 to float
@@ -128,7 +128,7 @@ llvm.func @fadd_vector_f16_bf16_f32_rm_sat(%a : vector<2xf16>, %b : vector<2xbf1
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = fpext bfloat %4 to float
   // CHECK-NEXT: %7 = call float @llvm.nvvm.add.rm.sat.f(float %5, float %6)
-  // CHECK-NEXT: %8 = insertelement <2 x float> undef, float %7, i32 0
+  // CHECK-NEXT: %8 = insertelement <2 x float> poison, float %7, i32 0
   // CHECK-NEXT: %9 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %10 = extractelement <2 x bfloat> %1, i32 1
   // CHECK-NEXT: %11 = fpext half %9 to float
@@ -148,7 +148,7 @@ llvm.func @fadd_vector_f16_bf16_f32_rm_ftz(%a : vector<2xf16>, %b : vector<2xbf1
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = fpext bfloat %4 to float
   // CHECK-NEXT: %7 = call float @llvm.nvvm.add.rm.ftz.f(float %5, float %6)
-  // CHECK-NEXT: %8 = insertelement <2 x float> undef, float %7, i32 0
+  // CHECK-NEXT: %8 = insertelement <2 x float> poison, float %7, i32 0
   // CHECK-NEXT: %9 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %10 = extractelement <2 x bfloat> %1, i32 1
   // CHECK-NEXT: %11 = fpext half %9 to float
@@ -168,7 +168,7 @@ llvm.func @fadd_vector_f16_bf16_f32_rm_sat_ftz(%a : vector<2xf16>, %b : vector<2
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = fpext bfloat %4 to float
   // CHECK-NEXT: %7 = call float @llvm.nvvm.add.rm.ftz.sat.f(float %5, float %6)
-  // CHECK-NEXT: %8 = insertelement <2 x float> undef, float %7, i32 0
+  // CHECK-NEXT: %8 = insertelement <2 x float> poison, float %7, i32 0
   // CHECK-NEXT: %9 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %10 = extractelement <2 x bfloat> %1, i32 1
   // CHECK-NEXT: %11 = fpext half %9 to float
@@ -188,7 +188,7 @@ llvm.func @fadd_vector_f16_bf16_f32_rp(%a : vector<2xf16>, %b : vector<2xbf16>) 
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = fpext bfloat %4 to float
   // CHECK-NEXT: %7 = call float @llvm.nvvm.add.rp.f(float %5, float %6)
-  // CHECK-NEXT: %8 = insertelement <2 x float> undef, float %7, i32 0
+  // CHECK-NEXT: %8 = insertelement <2 x float> poison, float %7, i32 0
   // CHECK-NEXT: %9 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %10 = extractelement <2 x bfloat> %1, i32 1
   // CHECK-NEXT: %11 = fpext half %9 to float
@@ -208,7 +208,7 @@ llvm.func @fadd_vector_f16_bf16_f32_rp_sat(%a : vector<2xf16>, %b : vector<2xbf1
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = fpext bfloat %4 to float
   // CHECK-NEXT: %7 = call float @llvm.nvvm.add.rp.sat.f(float %5, float %6)
-  // CHECK-NEXT: %8 = insertelement <2 x float> undef, float %7, i32 0
+  // CHECK-NEXT: %8 = insertelement <2 x float> poison, float %7, i32 0
   // CHECK-NEXT: %9 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %10 = extractelement <2 x bfloat> %1, i32 1
   // CHECK-NEXT: %11 = fpext half %9 to float
@@ -228,7 +228,7 @@ llvm.func @fadd_vector_f16_bf16_f32_rp_ftz(%a : vector<2xf16>, %b : vector<2xbf1
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = fpext bfloat %4 to float
   // CHECK-NEXT: %7 = call float @llvm.nvvm.add.rp.ftz.f(float %5, float %6)
-  // CHECK-NEXT: %8 = insertelement <2 x float> undef, float %7, i32 0
+  // CHECK-NEXT: %8 = insertelement <2 x float> poison, float %7, i32 0
   // CHECK-NEXT: %9 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %10 = extractelement <2 x bfloat> %1, i32 1
   // CHECK-NEXT: %11 = fpext half %9 to float
@@ -248,7 +248,7 @@ llvm.func @fadd_vector_f16_bf16_f32_rp_sat_ftz(%a : vector<2xf16>, %b : vector<2
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = fpext bfloat %4 to float
   // CHECK-NEXT: %7 = call float @llvm.nvvm.add.rp.ftz.sat.f(float %5, float %6)
-  // CHECK-NEXT: %8 = insertelement <2 x float> undef, float %7, i32 0
+  // CHECK-NEXT: %8 = insertelement <2 x float> poison, float %7, i32 0
   // CHECK-NEXT: %9 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %10 = extractelement <2 x bfloat> %1, i32 1
   // CHECK-NEXT: %11 = fpext half %9 to float
@@ -268,7 +268,7 @@ llvm.func @fadd_vector_f16_bf16_f32_rz(%a : vector<2xf16>, %b : vector<2xbf16>) 
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = fpext bfloat %4 to float
   // CHECK-NEXT: %7 = call float @llvm.nvvm.add.rz.f(float %5, float %6)
-  // CHECK-NEXT: %8 = insertelement <2 x float> undef, float %7, i32 0
+  // CHECK-NEXT: %8 = insertelement <2 x float> poison, float %7, i32 0
   // CHECK-NEXT: %9 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %10 = extractelement <2 x bfloat> %1, i32 1
   // CHECK-NEXT: %11 = fpext half %9 to float
@@ -288,7 +288,7 @@ llvm.func @fadd_vector_f16_bf16_f32_rz_sat(%a : vector<2xf16>, %b : vector<2xbf1
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = fpext bfloat %4 to float
   // CHECK-NEXT: %7 = call float @llvm.nvvm.add.rz.sat.f(float %5, float %6)
-  // CHECK-NEXT: %8 = insertelement <2 x float> undef, float %7, i32 0
+  // CHECK-NEXT: %8 = insertelement <2 x float> poison, float %7, i32 0
   // CHECK-NEXT: %9 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %10 = extractelement <2 x bfloat> %1, i32 1
   // CHECK-NEXT: %11 = fpext half %9 to float
@@ -308,7 +308,7 @@ llvm.func @fadd_vector_f16_bf16_f32_rz_ftz(%a : vector<2xf16>, %b : vector<2xbf1
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = fpext bfloat %4 to float
   // CHECK-NEXT: %7 = call float @llvm.nvvm.add.rz.ftz.f(float %5, float %6)
-  // CHECK-NEXT: %8 = insertelement <2 x float> undef, float %7, i32 0
+  // CHECK-NEXT: %8 = insertelement <2 x float> poison, float %7, i32 0
   // CHECK-NEXT: %9 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %10 = extractelement <2 x bfloat> %1, i32 1
   // CHECK-NEXT: %11 = fpext half %9 to float
@@ -328,7 +328,7 @@ llvm.func @fadd_vector_f16_bf16_f32_rz_sat_ftz(%a : vector<2xf16>, %b : vector<2
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = fpext bfloat %4 to float
   // CHECK-NEXT: %7 = call float @llvm.nvvm.add.rz.ftz.sat.f(float %5, float %6)
-  // CHECK-NEXT: %8 = insertelement <2 x float> undef, float %7, i32 0
+  // CHECK-NEXT: %8 = insertelement <2 x float> poison, float %7, i32 0
   // CHECK-NEXT: %9 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %10 = extractelement <2 x bfloat> %1, i32 1
   // CHECK-NEXT: %11 = fpext half %9 to float
@@ -348,7 +348,7 @@ llvm.func @fadd_vector_f16_f32_f32(%a : vector<2xf16>, %b : vector<2xf32>) -> ve
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rn.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext half %8 to float
@@ -366,7 +366,7 @@ llvm.func @fadd_vector_f16_f32_f32_rn(%a : vector<2xf16>, %b : vector<2xf32>) ->
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rn.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext half %8 to float
@@ -384,7 +384,7 @@ llvm.func @fadd_vector_f16_f32_f32_rn_sat(%a : vector<2xf16>, %b : vector<2xf32>
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rn.sat.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext half %8 to float
@@ -402,7 +402,7 @@ llvm.func @fadd_vector_f16_f32_f32_rn_ftz(%a : vector<2xf16>, %b : vector<2xf32>
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rn.ftz.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext half %8 to float
@@ -420,7 +420,7 @@ llvm.func @fadd_vector_f16_f32_f32_rn_sat_ftz(%a : vector<2xf16>, %b : vector<2x
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rn.ftz.sat.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext half %8 to float
@@ -438,7 +438,7 @@ llvm.func @fadd_vector_f16_f32_f32_rm(%a : vector<2xf16>, %b : vector<2xf32>) ->
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rm.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext half %8 to float
@@ -456,7 +456,7 @@ llvm.func @fadd_vector_f16_f32_f32_rm_sat(%a : vector<2xf16>, %b : vector<2xf32>
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rm.sat.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext half %8 to float
@@ -474,7 +474,7 @@ llvm.func @fadd_vector_f16_f32_f32_rm_ftz(%a : vector<2xf16>, %b : vector<2xf32>
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rm.ftz.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext half %8 to float
@@ -492,7 +492,7 @@ llvm.func @fadd_vector_f16_f32_f32_rm_sat_ftz(%a : vector<2xf16>, %b : vector<2x
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rm.ftz.sat.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext half %8 to float
@@ -510,7 +510,7 @@ llvm.func @fadd_vector_f16_f32_f32_rp(%a : vector<2xf16>, %b : vector<2xf32>) ->
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rp.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext half %8 to float
@@ -528,7 +528,7 @@ llvm.func @fadd_vector_f16_f32_f32_rp_sat(%a : vector<2xf16>, %b : vector<2xf32>
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rp.sat.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext half %8 to float
@@ -546,7 +546,7 @@ llvm.func @fadd_vector_f16_f32_f32_rp_ftz(%a : vector<2xf16>, %b : vector<2xf32>
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rp.ftz.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext half %8 to float
@@ -564,7 +564,7 @@ llvm.func @fadd_vector_f16_f32_f32_rp_sat_ftz(%a : vector<2xf16>, %b : vector<2x
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rp.ftz.sat.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext half %8 to float
@@ -582,7 +582,7 @@ llvm.func @fadd_vector_f16_f32_f32_rz(%a : vector<2xf16>, %b : vector<2xf32>) ->
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rz.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext half %8 to float
@@ -600,7 +600,7 @@ llvm.func @fadd_vector_f16_f32_f32_rz_sat(%a : vector<2xf16>, %b : vector<2xf32>
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rz.sat.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext half %8 to float
@@ -618,7 +618,7 @@ llvm.func @fadd_vector_f16_f32_f32_rz_ftz(%a : vector<2xf16>, %b : vector<2xf32>
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rz.ftz.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext half %8 to float
@@ -636,7 +636,7 @@ llvm.func @fadd_vector_f16_f32_f32_rz_sat_ftz(%a : vector<2xf16>, %b : vector<2x
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rz.ftz.sat.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext half %8 to float
@@ -655,7 +655,7 @@ llvm.func @fadd_vector_f16_f64_f64(%a : vector<2xf16>, %b : vector<2xf64>) -> ve
   // CHECK-NEXT: %4 = extractelement <2 x double> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to double
   // CHECK-NEXT: %6 = call double @llvm.nvvm.add.rn.d(double %5, double %4)
-  // CHECK-NEXT: %7 = insertelement <2 x double> undef, double %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x double> poison, double %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x double> %1, i32 1
   // CHECK-NEXT: %10 = fpext half %8 to double
@@ -673,7 +673,7 @@ llvm.func @fadd_vector_f16_f64_f64_rn(%a : vector<2xf16>, %b : vector<2xf64>) ->
   // CHECK-NEXT: %4 = extractelement <2 x double> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to double
   // CHECK-NEXT: %6 = call double @llvm.nvvm.add.rn.d(double %5, double %4)
-  // CHECK-NEXT: %7 = insertelement <2 x double> undef, double %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x double> poison, double %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x double> %1, i32 1
   // CHECK-NEXT: %10 = fpext half %8 to double
@@ -691,7 +691,7 @@ llvm.func @fadd_vector_f16_f64_f64_rm(%a : vector<2xf16>, %b : vector<2xf64>) ->
   // CHECK-NEXT: %4 = extractelement <2 x double> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to double
   // CHECK-NEXT: %6 = call double @llvm.nvvm.add.rm.d(double %5, double %4)
-  // CHECK-NEXT: %7 = insertelement <2 x double> undef, double %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x double> poison, double %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x double> %1, i32 1
   // CHECK-NEXT: %10 = fpext half %8 to double
@@ -709,7 +709,7 @@ llvm.func @fadd_vector_f16_f64_f64_rp(%a : vector<2xf16>, %b : vector<2xf64>) ->
   // CHECK-NEXT: %4 = extractelement <2 x double> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to double
   // CHECK-NEXT: %6 = call double @llvm.nvvm.add.rp.d(double %5, double %4)
-  // CHECK-NEXT: %7 = insertelement <2 x double> undef, double %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x double> poison, double %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x double> %1, i32 1
   // CHECK-NEXT: %10 = fpext half %8 to double
@@ -727,7 +727,7 @@ llvm.func @fadd_vector_f16_f64_f64_rz(%a : vector<2xf16>, %b : vector<2xf64>) ->
   // CHECK-NEXT: %4 = extractelement <2 x double> %1, i32 0
   // CHECK-NEXT: %5 = fpext half %3 to double
   // CHECK-NEXT: %6 = call double @llvm.nvvm.add.rz.d(double %5, double %4)
-  // CHECK-NEXT: %7 = insertelement <2 x double> undef, double %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x double> poison, double %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x half> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x double> %1, i32 1
   // CHECK-NEXT: %10 = fpext half %8 to double
@@ -746,7 +746,7 @@ llvm.func @fadd_vector_bf16_f32_f32(%a : vector<2xbf16>, %b : vector<2xf32>) -> 
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rn.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x bfloat> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext bfloat %8 to float
@@ -764,7 +764,7 @@ llvm.func @fadd_vector_bf16_f32_f32_rn(%a : vector<2xbf16>, %b : vector<2xf32>) 
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rn.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x bfloat> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext bfloat %8 to float
@@ -782,7 +782,7 @@ llvm.func @fadd_vector_bf16_f32_f32_rn_sat(%a : vector<2xbf16>, %b : vector<2xf3
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rn.sat.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x bfloat> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext bfloat %8 to float
@@ -800,7 +800,7 @@ llvm.func @fadd_vector_bf16_f32_f32_rn_ftz(%a : vector<2xbf16>, %b : vector<2xf3
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rn.ftz.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x bfloat> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext bfloat %8 to float
@@ -818,7 +818,7 @@ llvm.func @fadd_vector_bf16_f32_f32_rn_sat_ftz(%a : vector<2xbf16>, %b : vector<
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rn.ftz.sat.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x bfloat> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext bfloat %8 to float
@@ -836,7 +836,7 @@ llvm.func @fadd_vector_bf16_f32_f32_rm(%a : vector<2xbf16>, %b : vector<2xf32>) 
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rm.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x bfloat> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext bfloat %8 to float
@@ -854,7 +854,7 @@ llvm.func @fadd_vector_bf16_f32_f32_rm_sat(%a : vector<2xbf16>, %b : vector<2xf3
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rm.sat.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x bfloat> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext bfloat %8 to float
@@ -872,7 +872,7 @@ llvm.func @fadd_vector_bf16_f32_f32_rm_ftz(%a : vector<2xbf16>, %b : vector<2xf3
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rm.ftz.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x bfloat> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext bfloat %8 to float
@@ -890,7 +890,7 @@ llvm.func @fadd_vector_bf16_f32_f32_rm_sat_ftz(%a : vector<2xbf16>, %b : vector<
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rm.ftz.sat.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x bfloat> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext bfloat %8 to float
@@ -908,7 +908,7 @@ llvm.func @fadd_vector_bf16_f32_f32_rp(%a : vector<2xbf16>, %b : vector<2xf32>) 
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rp.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x bfloat> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext bfloat %8 to float
@@ -926,7 +926,7 @@ llvm.func @fadd_vector_bf16_f32_f32_rp_sat(%a : vector<2xbf16>, %b : vector<2xf3
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rp.sat.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x bfloat> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext bfloat %8 to float
@@ -944,7 +944,7 @@ llvm.func @fadd_vector_bf16_f32_f32_rp_ftz(%a : vector<2xbf16>, %b : vector<2xf3
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rp.ftz.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x bfloat> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext bfloat %8 to float
@@ -962,7 +962,7 @@ llvm.func @fadd_vector_bf16_f32_f32_rp_sat_ftz(%a : vector<2xbf16>, %b : vector<
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rp.ftz.sat.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x bfloat> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext bfloat %8 to float
@@ -980,7 +980,7 @@ llvm.func @fadd_vector_bf16_f32_f32_rz(%a : vector<2xbf16>, %b : vector<2xf32>) 
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rz.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x bfloat> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext bfloat %8 to float
@@ -998,7 +998,7 @@ llvm.func @fadd_vector_bf16_f32_f32_rz_sat(%a : vector<2xbf16>, %b : vector<2xf3
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rz.sat.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x bfloat> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext bfloat %8 to float
@@ -1016,7 +1016,7 @@ llvm.func @fadd_vector_bf16_f32_f32_rz_ftz(%a : vector<2xbf16>, %b : vector<2xf3
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rz.ftz.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x bfloat> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext bfloat %8 to float
@@ -1034,7 +1034,7 @@ llvm.func @fadd_vector_bf16_f32_f32_rz_sat_ftz(%a : vector<2xbf16>, %b : vector<
   // CHECK-NEXT: %4 = extractelement <2 x float> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to float
   // CHECK-NEXT: %6 = call float @llvm.nvvm.add.rz.ftz.sat.f(float %5, float %4)
-  // CHECK-NEXT: %7 = insertelement <2 x float> undef, float %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x float> poison, float %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x bfloat> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x float> %1, i32 1
   // CHECK-NEXT: %10 = fpext bfloat %8 to float
@@ -1053,7 +1053,7 @@ llvm.func @fadd_vector_bf16_f64_f64(%a : vector<2xbf16>, %b : vector<2xf64>) -> 
   // CHECK-NEXT: %4 = extractelement <2 x double> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to double
   // CHECK-NEXT: %6 = call double @llvm.nvvm.add.rn.d(double %5, double %4)
-  // CHECK-NEXT: %7 = insertelement <2 x double> undef, double %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x double> poison, double %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x bfloat> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x double> %1, i32 1
   // CHECK-NEXT: %10 = fpext bfloat %8 to double
@@ -1071,7 +1071,7 @@ llvm.func @fadd_vector_bf16_f64_f64_rn(%a : vector<2xbf16>, %b : vector<2xf64>) 
   // CHECK-NEXT: %4 = extractelement <2 x double> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to double
   // CHECK-NEXT: %6 = call double @llvm.nvvm.add.rn.d(double %5, double %4)
-  // CHECK-NEXT: %7 = insertelement <2 x double> undef, double %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x double> poison, double %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x bfloat> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x double> %1, i32 1
   // CHECK-NEXT: %10 = fpext bfloat %8 to double
@@ -1089,7 +1089,7 @@ llvm.func @fadd_vector_bf16_f64_f64_rm(%a : vector<2xbf16>, %b : vector<2xf64>) 
   // CHECK-NEXT: %4 = extractelement <2 x double> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to double
   // CHECK-NEXT: %6 = call double @llvm.nvvm.add.rm.d(double %5, double %4)
-  // CHECK-NEXT: %7 = insertelement <2 x double> undef, double %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x double> poison, double %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x bfloat> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x double> %1, i32 1
   // CHECK-NEXT: %10 = fpext bfloat %8 to double
@@ -1107,7 +1107,7 @@ llvm.func @fadd_vector_bf16_f64_f64_rp(%a : vector<2xbf16>, %b : vector<2xf64>) 
   // CHECK-NEXT: %4 = extractelement <2 x double> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to double
   // CHECK-NEXT: %6 = call double @llvm.nvvm.add.rp.d(double %5, double %4)
-  // CHECK-NEXT: %7 = insertelement <2 x double> undef, double %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x double> poison, double %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x bfloat> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x double> %1, i32 1
   // CHECK-NEXT: %10 = fpext bfloat %8 to double
@@ -1125,7 +1125,7 @@ llvm.func @fadd_vector_bf16_f64_f64_rz(%a : vector<2xbf16>, %b : vector<2xf64>) 
   // CHECK-NEXT: %4 = extractelement <2 x double> %1, i32 0
   // CHECK-NEXT: %5 = fpext bfloat %3 to double
   // CHECK-NEXT: %6 = call double @llvm.nvvm.add.rz.d(double %5, double %4)
-  // CHECK-NEXT: %7 = insertelement <2 x double> undef, double %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x double> poison, double %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x bfloat> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x double> %1, i32 1
   // CHECK-NEXT: %10 = fpext bfloat %8 to double
@@ -1144,7 +1144,7 @@ llvm.func @fadd_vector_f32_f64_f64(%a : vector<2xf32>, %b : vector<2xf64>) -> ve
   // CHECK-NEXT: %4 = extractelement <2 x double> %1, i32 0
   // CHECK-NEXT: %5 = fpext float %3 to double
   // CHECK-NEXT: %6 = call double @llvm.nvvm.add.rn.d(double %5, double %4)
-  // CHECK-NEXT: %7 = insertelement <2 x double> undef, double %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x double> poison, double %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x float> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x double> %1, i32 1
   // CHECK-NEXT: %10 = fpext float %8 to double
@@ -1162,7 +1162,7 @@ llvm.func @fadd_vector_f32_f64_f64_rn(%a : vector<2xf32>, %b : vector<2xf64>) ->
   // CHECK-NEXT: %4 = extractelement <2 x double> %1, i32 0
   // CHECK-NEXT: %5 = fpext float %3 to double
   // CHECK-NEXT: %6 = call double @llvm.nvvm.add.rn.d(double %5, double %4)
-  // CHECK-NEXT: %7 = insertelement <2 x double> undef, double %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x double> poison, double %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x float> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x double> %1, i32 1
   // CHECK-NEXT: %10 = fpext float %8 to double
@@ -1180,7 +1180,7 @@ llvm.func @fadd_vector_f32_f64_f64_rm(%a : vector<2xf32>, %b : vector<2xf64>) ->
   // CHECK-NEXT: %4 = extractelement <2 x double> %1, i32 0
   // CHECK-NEXT: %5 = fpext float %3 to double
   // CHECK-NEXT: %6 = call double @llvm.nvvm.add.rm.d(double %5, double %4)
-  // CHECK-NEXT: %7 = insertelement <2 x double> undef, double %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x double> poison, double %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x float> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x double> %1, i32 1
   // CHECK-NEXT: %10 = fpext float %8 to double
@@ -1198,7 +1198,7 @@ llvm.func @fadd_vector_f32_f64_f64_rp(%a : vector<2xf32>, %b : vector<2xf64>) ->
   // CHECK-NEXT: %4 = extractelement <2 x double> %1, i32 0
   // CHECK-NEXT: %5 = fpext float %3 to double
   // CHECK-NEXT: %6 = call double @llvm.nvvm.add.rp.d(double %5, double %4)
-  // CHECK-NEXT: %7 = insertelement <2 x double> undef, double %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x double> poison, double %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x float> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x double> %1, i32 1
   // CHECK-NEXT: %10 = fpext float %8 to double
@@ -1216,7 +1216,7 @@ llvm.func @fadd_vector_f32_f64_f64_rz(%a : vector<2xf32>, %b : vector<2xf64>) ->
   // CHECK-NEXT: %4 = extractelement <2 x double> %1, i32 0
   // CHECK-NEXT: %5 = fpext float %3 to double
   // CHECK-NEXT: %6 = call double @llvm.nvvm.add.rz.d(double %5, double %4)
-  // CHECK-NEXT: %7 = insertelement <2 x double> undef, double %6, i32 0
+  // CHECK-NEXT: %7 = insertelement <2 x double> poison, double %6, i32 0
   // CHECK-NEXT: %8 = extractelement <2 x float> %0, i32 1
   // CHECK-NEXT: %9 = extractelement <2 x double> %1, i32 1
   // CHECK-NEXT: %10 = fpext float %8 to double
