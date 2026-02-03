@@ -792,7 +792,8 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
       // Make all vregs 64 bits (for SPIR-V IDs).
       MRI->setType(I.getOperand(0).getReg(), LLT::scalar(64));
     }
-    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    return true;
   }
 
   if (DeadMIs.contains(&I)) {
@@ -3099,7 +3100,7 @@ SPIRVInstructionSelector::buildI32Constant(uint32_t Val, MachineInstr &I,
                   .addDef(NewReg)
                   .addUse(GR.getSPIRVTypeID(SpvI32Ty))
                   .addImm(APInt(32, Val).getZExtValue());
-    Result &= constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
     GR.add(ConstInt, MI);
   }
   return {NewReg, Result};
@@ -3698,8 +3699,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
           GR.getSPIRVTypeID(ResType));
       for (auto *Instr : Instructions) {
         Instr->setDebugLoc(I.getDebugLoc());
-        if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
-          return false;
+        constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI);
       }
       return true;
     } else {
