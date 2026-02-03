@@ -13,10 +13,10 @@ Calling convention lowering is currently implemented separately for each MLIR di
 This design proposes a shared MLIR ABI lowering infrastructure that multiple dialects can leverage. The framework sits at the top, providing common interfaces and target-specific ABI classification logic. Each MLIR dialect (CIR, FIR, and future dialects) implements a small amount of dialect-specific glue code to connect to this infrastructure. At the bottom, target-specific implementations handle the complex ABI rules for architectures like x86_64 and AArch64. This approach enables code reuse while maintaining the flexibility for each dialect to handle its own operation creation patterns.
 
 ```
-┌──────────────────────────────────────────────────────────────┐
-│         MLIR ABI Lowering Infrastructure                     │
-│         mlir/include/mlir/Interfaces/ABI/                    │
-└──────────────────────────────────────────────────────────────┘
+┌─────────────────────────────────────────────────────────┐
+│         MLIR ABI Lowering Infrastructure                │
+│         mlir/include/mlir/Interfaces/ABI/               │
+└─────────────────────────────────────────────────────────┘
                               │
             ┌─────────────────┼─────────────────┐
             │                 │                 │
@@ -41,7 +41,7 @@ This architecture avoids duplicating complex ABI logic across MLIR dialects, red
 
 ### 1.4 Success Criteria
 
-The framework will be considered successful when CIR can correctly lower x86_64 and AArch64 calling conventions with full ABI compliance. FIR should be able to adopt the same infrastructure with minimal dialect-specific adaptation. ABI compliance will be validated through differential testing, comparing output against classic Clang codegen to ensure correct calling convention implementation. Finally, the performance overhead should remain under 5% compared to a direct, dialect-specific implementation.
+The framework will be considered successful when CIR can correctly lower x86_64 and AArch64 calling conventions with full ABI compliance. FIR should be able to adopt the same infrastructure with minimal dialect-specific adaptation. ABI compliance will be validated through differential testing, comparing output against classic Clang codegen to ensure correct calling convention implementation. Finally, the performance overhead should remain under 5% compared to a direct, dialect-specific implementation. Initial scope focuses on fixed-argument functions; variadic function support (varargs) is deferred as future work given its complexity and the need to establish the core framework first.
 
 ## 2. Background and Context
 
@@ -75,9 +75,15 @@ Classic Clang codegen (located in `clang/lib/CodeGen/`) transforms calling conve
 
 The CIR incubator includes a calling convention lowering pass in `clang/lib/CIR/Dialect/Transforms/TargetLowering/` that transforms CIR operations into ABI-lowered CIR operations as an MLIR pass. This implementation successfully adapted logic from classic codegen to work within the MLIR framework. However, it relies on CIR-specific types and operations, preventing reuse by other MLIR dialects.
 
-#### GSoC ABI Lowering Library (WIP)
+#### GSoC ABI Lowering Library
 
-The Google Summer of Code project (PR #140112, not yet merged) proposes an independent ABI type system extracted from Clang's codegen. This library aims to be frontend-agnostic and reusable across different language frontends. While promising, it's still under development and currently focuses on Clang and LLVM IR rather than MLIR abstractions.
+A 2024 Google Summer of Code project produced PR #140112, which proposes extracting Clang's ABI logic into a reusable library. The design centers on a shadow type system (`abi::Type*`) separate from both Clang's AST types and LLVM IR types, enabling the ABI classification algorithms to work independently of any specific frontend representation. The library includes abstract `ABIInfo` base classes and target-specific implementations for platforms like x86_64 and BPF.
+
+While this work represents valuable progress toward making Clang's ABI knowledge reusable, several factors make it unsuitable as a foundation for MLIR dialect support. First, the PR is incomplete—it lacks AArch64 implementation (a primary target for CIR) and has been inactive since the GSoC program concluded. Second, and more fundamentally, the shadow type system creates an architectural mismatch with MLIR. Using the GSoC library from MLIR would require converting `mlir::Type` → `abi::Type*` → performing classification → converting results back to `mlir::Type`, introducing both complexity and runtime overhead. MLIR's TypeInterface mechanism already provides a native solution for type abstraction, eliminating the need for a shadow type system.
+
+Even if the GSoC PR were already completed and merged, adapting it for MLIR use would require building the same MLIR-native infrastructure this design proposes: TypeInterfaces for querying dialect types, and dialect-specific operation rewriting. The effort to finish the GSoC library (implementing missing targets, adding tests, addressing review feedback) plus building an adapter layer would exceed the effort of implementing an MLIR-native solution directly—particularly given that the CIR incubator already contains working implementations of the core algorithms for both x86_64 and AArch64.
+
+This design takes an MLIR-native approach, using `ABITypeInterface` to enable classification algorithms to work directly with dialect types without intermediate conversion. The two approaches serve different needs: the GSoC library targets Clang and LLVM IR frontends, while this design targets MLIR dialects. Both extract ABI knowledge from Clang's codegen; they differ in their type abstraction strategy, with each approach optimized for its target ecosystem. The chosen design does not preclude using the GSoC library should it become mature and provide value for MLIR dialect integration in the future.
 
 ### 2.4 Requirements for MLIR Dialects
 
@@ -90,50 +96,50 @@ CIR needs to lower C/C++ calling conventions correctly, with initial support for
 The following diagram provides a detailed view of the three-layer architecture introduced in Section 1.2. At the top (Layer 3), each dialect provides its own rewrite context for creating dialect-specific operations. In the middle (Layer 2), the `ABITypeInterface` provides a dialect-agnostic way to query type properties, allowing the classification logic below to work with any dialect's types. At the bottom (Layer 1), target-specific `ABIInfo` implementations (e.g., X86_64, AArch64) perform the actual ABI classification using only the abstract type information from Layer 2. Data flows downward for classification, then back upward for operation rewriting.
 
 ```
-┌─────────────────────────────────────────────────────────────────────┐
-│                    MLIR-Agnostic ABI Lowering                       │
-│                         (Three-Layer Design)                        │
-└─────────────────────────────────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────┐
+│                    MLIR-Agnostic ABI Lowering              │
+│                         (Three-Layer Design)               │
+└────────────────────────────────────────────────────────────┘
 
-┌─────────────────────────────────────────────────────────────────────┐
-│ Layer 3: Dialect-Specific Operation Rewriting                       │
-│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐                  │
-│  │ CIR Rewrite │  │ FIR Rewrite │  │ Other       │                  │
-│  │ Context     │  │ Context     │  │ Dialects    │                  │
-│  └──────┬──────┘  └───────┬─────┘  └────────┬────┘                  │
-│         │                 │                 │                       │
-│         └─────────────────┼─────────────────┘                       │
-│                           │                                         │
-└───────────────────────────┼─────────────────────────────────────────┘
+┌────────────────────────────────────────────────────────────┐
+│ Layer 3: Dialect-Specific Operation Rewriting              │
+│  ┌─────────────┐  ┌─────────────┐  ┌─────────────┐         │
+│  │ CIR Rewrite │  │ FIR Rewrite │  │ Other       │         │
+│  │ Context     │  │ Context     │  │ Dialects    │         │
+│  └──────┬──────┘  └───────┬─────┘  └────────┬────┘         │
+│         │                 │                 │              │
+│         └─────────────────┼─────────────────┘              │
+│                           │                                │
+└───────────────────────────┼────────────────────────────────┘
                             │ ABIRewriteContext Interface
-┌───────────────────────────┼─────────────────────────────────────────┐
-│ Layer 2: Interface-Based Type Abstractions                          │
-│                           │                                         │
-│  ┌────────────────────────▼──────────────────────────┐              │
-│  │ ABITypeInterface (TypeInterface)                  │              │
-│  │  - isRecord(), isInteger(), isFloatingPoint()     │              │
-│  │  - getNumFields(), getFieldType()                 │              │
-│  │  - getAlignof(), getSizeof()                      │              │
-│  └────────────────────────┬──────────────────────────┘              │
-│                           │                                         │
-└───────────────────────────┼─────────────────────────────────────────┘
+┌───────────────────────────┼────────────────────────────────┐
+│ Layer 2: Interface-Based Type Abstractions                 │
+│                           │                                │
+│  ┌────────────────────────▼──────────────────────────┐     │
+│  │ ABITypeInterface (TypeInterface)                  │     │
+│  │  - isRecord(), isInteger(), isFloatingPoint()     │     │
+│  │  - getNumFields(), getFieldType()                 │     │
+│  │  - getAlignof(), getSizeof()                      │     │
+│  └────────────────────────┬──────────────────────────┘     │
+│                           │                                │
+└───────────────────────────┼────────────────────────────────┘
                             │ Abstract Type Queries
-┌───────────────────────────┼─────────────────────────────────────────┐
-│ Layer 1: Pure ABI Classification Logic (Dialect-Agnostic)           │
-│                           │                                         │
-│  ┌────────────────────────▼──────────────────────────┐              │
-│  │ ABIInfo (Target-Specific)                         │              │
-│  │  - classifyArgumentType()                         │              │
-│  │  - classifyReturnType()                           │              │
-│  └──────┬─────────────────────────┬──────────────┬───┘              │
-│         │                         │              │                  │
-│  ┌──────▼──────┐  ┌───────────────▼───┐  ┌───────▼──────┐           │
-│  │ X86_64      │  │ AArch64           │  │ Other        │           │
-│  │ ABIInfo     │  │ ABIInfo           │  │ Targets      │           │
-│  └─────────────┘  └───────────────────┘  └──────────────┘           │
-│                                                                     │
-│  Output: LowerFunctionInfo + ABIArgInfo                             │
-└─────────────────────────────────────────────────────────────────────┘
+┌───────────────────────────┼────────────────────────────────┐
+│ Layer 1: Pure ABI Classification Logic (Dialect-Agnostic)  │
+│                           │                                │
+│  ┌────────────────────────▼──────────────────────────┐     │
+│  │ ABIInfo (Target-Specific)                         │     │
+│  │  - classifyArgumentType()                         │     │
+│  │  - classifyReturnType()                           │     │
+│  └──────┬─────────────────────────┬──────────────┬───┘     │
+│         │                         │              │         │
+│  ┌──────▼──────┐  ┌───────────────▼───┐  ┌───────▼──────┐  │
+│  │ X86_64      │  │ AArch64           │  │ Other        │  │
+│  │ ABIInfo     │  │ ABIInfo           │  │ Targets      │  │
+│  └─────────────┘  └───────────────────┘  └──────────────┘  │
+│                                                            │
+│  Output: LowerFunctionInfo + ABIArgInfo                    │
+└────────────────────────────────────────────────────────────┘
 
 ```
 
