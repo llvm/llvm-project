@@ -67,7 +67,8 @@ static void rename(GlobalValue *GV) { GV->setName(GV->getName() + ".old"); }
 // Call Instruction which caused the error
 [[noreturn]] static void reportFatalUsageErrorWithCI(StringRef reason,
                                                      CallBase *CI) {
-  CI->print(llvm::outs());
+  CI->print(llvm::errs());
+  llvm::errs() << "\n";
   reportFatalUsageError(reason);
 }
 
