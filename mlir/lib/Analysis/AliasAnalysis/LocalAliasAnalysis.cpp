@@ -31,6 +31,9 @@ using namespace mlir;
 
 #define DEBUG_TYPE "local-alias-analysis"
 
+using RegionCallSiteMap =
+    DenseMap<Region *, DenseMap<CallOpInterface, SmallVector<Value>>>;
+
 //===----------------------------------------------------------------------===//
 // Underlying Address Computation
 //===----------------------------------------------------------------------===//
@@ -39,10 +42,22 @@ using namespace mlir;
 /// value.
 static constexpr unsigned maxUnderlyingValueSearchDepth = 10;
 
+static Region *getScope(Value value) {
+  if (BlockArgument argument = dyn_cast<BlockArgument>(value)) {
+    return argument.getParentRegion()
+        ->getParentOfType<FunctionOpInterface>()
+        .getCallableRegion();
+  }
+  return value.getDefiningOp()
+      ->getParentOfType<FunctionOpInterface>()
+      .getCallableRegion();
+}
+
 /// Given a value, collect all of the underlying values being addressed.
 static void collectUnderlyingAddressValues(Value value, unsigned maxDepth,
                                            DenseSet<Value> &visited,
-                                           SmallVectorImpl<Value> &output);
+                                           CallOpInterface callSite,
+                                           RegionCallSiteMap &output);
 
 /// Given a RegionBranchOpInterface operation  (`branch`), a Value`inputValue`
 /// which is an input for the provided successor (`initialSuccessor`), try to
@@ -50,7 +65,8 @@ static void collectUnderlyingAddressValues(Value value, unsigned maxDepth,
 static void collectUnderlyingAddressValues2(
     RegionBranchOpInterface branch, RegionSuccessor initialSuccessor,
     Value inputValue, unsigned inputIndex, unsigned maxDepth,
-    DenseSet<Value> &visited, SmallVectorImpl<Value> &output) {
+    DenseSet<Value> &visited, CallOpInterface callSite,
+    RegionCallSiteMap &output) {
   LDBG() << "collectUnderlyingAddressValues2: "
          << OpWithFlags(branch.getOperation(), OpPrintingFlags().skipRegions());
   LDBG() << " with initialSuccessor " << initialSuccessor;
@@ -60,7 +76,7 @@ static void collectUnderlyingAddressValues2(
   ValueRange inputs = branch.getSuccessorInputs(initialSuccessor);
   if (inputs.empty()) {
     LDBG() << "  input is empty, enqueue value";
-    output.push_back(inputValue);
+    output[getScope(inputValue)][callSite].push_back(inputValue);
     return;
   }
   unsigned firstInputIndex, lastInputIndex;
@@ -75,7 +91,7 @@ static void collectUnderlyingAddressValues2(
     LDBG() << "  !! Input index " << inputIndex << " out of range "
            << firstInputIndex << " to " << lastInputIndex
            << ", adding input value to output";
-    output.push_back(inputValue);
+    output[getScope(inputValue)][callSite].push_back(inputValue);
     return;
   }
   SmallVector<Value> predecessorValues;
@@ -84,14 +100,16 @@ static void collectUnderlyingAddressValues2(
   LDBG() << "  Found " << predecessorValues.size() << " predecessor values";
   for (Value predecessorValue : predecessorValues) {
     LDBG() << "    Processing predecessor value: " << predecessorValue;
-    collectUnderlyingAddressValues(predecessorValue, maxDepth, visited, output);
+    collectUnderlyingAddressValues(predecessorValue, maxDepth, visited,
+                                   callSite, output);
   }
 }
 
 /// Given a result, collect all of the underlying values being addressed.
 static void collectUnderlyingAddressValues(OpResult result, unsigned maxDepth,
                                            DenseSet<Value> &visited,
-                                           SmallVectorImpl<Value> &output) {
+                                           CallOpInterface callSite,
+                                           RegionCallSiteMap &output) {
   LDBG() << "collectUnderlyingAddressValues (OpResult): " << result;
   LDBG() << "  maxDepth: " << maxDepth;
 
@@ -102,7 +120,7 @@ static void collectUnderlyingAddressValues(OpResult result, unsigned maxDepth,
     if (result == view.getViewDest()) {
       LDBG() << "  Unwrapping view to source: " << view.getViewSource();
       return collectUnderlyingAddressValues(view.getViewSource(), maxDepth,
-                                            visited, output);
+                                            visited, callSite, output);
     }
   }
   // Check to see if we can reason about the control flow of this op.
@@ -110,18 +128,19 @@ static void collectUnderlyingAddressValues(OpResult result, unsigned maxDepth,
     LDBG() << "  Processing region branch operation";
     return collectUnderlyingAddressValues2(branch, RegionSuccessor::parent(),
                                            result, result.getResultNumber(),
-                                           maxDepth, visited, output);
+                                           maxDepth, visited, callSite, output);
   }
 
   LDBG() << "  Adding result to output: " << result;
-  output.push_back(result);
+  output[getScope(result)][callSite].push_back(result);
 }
 
 /// Given a block argument, collect all of the underlying values being
 /// addressed.
 static void collectUnderlyingAddressValues(BlockArgument arg, unsigned maxDepth,
                                            DenseSet<Value> &visited,
-                                           SmallVectorImpl<Value> &output) {
+                                           CallOpInterface callSite,
+                                           RegionCallSiteMap &output) {
   LDBG() << "collectUnderlyingAddressValues (BlockArgument): " << arg;
   LDBG() << "  maxDepth: " << maxDepth;
   LDBG() << "  argNumber: " << arg.getArgNumber();
@@ -140,7 +159,7 @@ static void collectUnderlyingAddressValues(BlockArgument arg, unsigned maxDepth,
       if (!branch) {
         LDBG() << "    Cannot analyze control flow, adding argument to output";
         // We can't analyze the control flow, so bail out early.
-        output.push_back(arg);
+        output[getScope(arg)][callSite].push_back(arg);
         return;
       }
 
@@ -150,11 +169,12 @@ static void collectUnderlyingAddressValues(BlockArgument arg, unsigned maxDepth,
       if (!operand) {
         LDBG() << "    No operand found for argument, adding to output";
         // We can't analyze the control flow, so bail out early.
-        output.push_back(arg);
+        output[getScope(arg)][callSite].push_back(arg);
         return;
       }
       LDBG() << "    Processing operand from predecessor: " << operand;
-      collectUnderlyingAddressValues(operand, maxDepth, visited, output);
+      collectUnderlyingAddressValues(operand, maxDepth, visited, callSite,
+                                     output);
     }
     return;
   }
@@ -173,25 +193,27 @@ static void collectUnderlyingAddressValues(BlockArgument arg, unsigned maxDepth,
     for (RegionSuccessor &successor : successors) {
       if (successor.getSuccessor() == region) {
         LDBG() << "  Found matching region successor: " << successor;
-        return collectUnderlyingAddressValues2(
-            branch, successor, arg, argNumber, maxDepth, visited, output);
+        return collectUnderlyingAddressValues2(branch, successor, arg,
+                                               argNumber, maxDepth, visited,
+                                               callSite, output);
       }
     }
     LDBG() << "  No matching region successor found, adding argument to output";
-    output.push_back(arg);
+    output[getScope(arg)][callSite].push_back(arg);
     return;
   }
 
   LDBG()
       << "  Cannot reason about underlying address, adding argument to output";
   // We can't reason about the underlying address of this argument.
-  output.push_back(arg);
+  output[getScope(arg)][callSite].push_back(arg);
 }
 
 /// Given a value, collect all of the underlying values being addressed.
 static void collectUnderlyingAddressValues(Value value, unsigned maxDepth,
                                            DenseSet<Value> &visited,
-                                           SmallVectorImpl<Value> &output) {
+                                           CallOpInterface callSite,
+                                           RegionCallSiteMap &output) {
   LDBG() << "collectUnderlyingAddressValues: " << value;
   LDBG() << "  maxDepth: " << maxDepth;
 
@@ -202,27 +224,28 @@ static void collectUnderlyingAddressValues(Value value, unsigned maxDepth,
   }
   if (maxDepth == 0) {
     LDBG() << "  Max depth reached, adding value to output";
-    output.push_back(value);
+    output[getScope(value)][callSite].push_back(value);
     return;
   }
   --maxDepth;
 
   if (BlockArgument arg = dyn_cast<BlockArgument>(value)) {
     LDBG() << "  Processing as BlockArgument";
-    return collectUnderlyingAddressValues(arg, maxDepth, visited, output);
+    return collectUnderlyingAddressValues(arg, maxDepth, visited, callSite,
+                                          output);
   }
   LDBG() << "  Processing as OpResult";
   collectUnderlyingAddressValues(cast<OpResult>(value), maxDepth, visited,
-                                 output);
+                                 callSite, output);
 }
 
 /// Given a value, collect all of the underlying values being addressed.
 static void collectUnderlyingAddressValues(Value value,
-                                           SmallVectorImpl<Value> &output) {
+                                           RegionCallSiteMap &output) {
   LDBG() << "collectUnderlyingAddressValues: " << value;
   DenseSet<Value> visited;
   collectUnderlyingAddressValues(value, maxUnderlyingValueSearchDepth, visited,
-                                 output);
+                                 CallOpInterface(), output);
   LDBG() << "  Collected " << output.size() << " underlying values";
 }
 
@@ -438,7 +461,7 @@ AliasResult LocalAliasAnalysis::alias(Value lhs, Value rhs) {
   }
 
   // Get the underlying values being addressed.
-  SmallVector<Value, 8> lhsValues, rhsValues;
+  RegionCallSiteMap lhsValues, rhsValues;
   collectUnderlyingAddressValues(lhs, lhsValues);
   collectUnderlyingAddressValues(rhs, rhsValues);
 
@@ -454,6 +477,7 @@ AliasResult LocalAliasAnalysis::alias(Value lhs, Value rhs) {
 
   // Check the alias results against each of the underlying values.
   std::optional<AliasResult> result;
+  /*
   for (Value lhsVal : lhsValues) {
     for (Value rhsVal : rhsValues) {
       LDBG() << "  Checking underlying values: " << lhsVal << " vs " << rhsVal;
@@ -464,8 +488,36 @@ AliasResult LocalAliasAnalysis::alias(Value lhs, Value rhs) {
                                                       : "MayAlias");
       result = result ? result->merge(nextResult) : nextResult;
     }
+  }*/
+  for (Region *lhsRegion : lhsValues.keys()) {
+    for (auto &&lhsRegionMap : lhsValues[lhsRegion]) {
+      for (Region *rhsRegion : rhsValues.keys()) {
+        if (lhsRegion != rhsRegion)
+          continue;
+        for (auto &&rhsRegionMap : rhsValues[rhsRegion]) {
+          bool callSityNull = !lhsRegionMap.first || !rhsRegionMap.first;
+          bool callSityEqual = lhsRegionMap.first == rhsRegionMap.first;
+          if (!callSityNull && !callSityEqual)
+            continue;
+          for (Value lhsVal : lhsRegionMap.second) {
+            for (Value rhsVal : rhsRegionMap.second) {
+              LDBG() << "  Checking underlying values: " << lhsVal << " vs "
+                     << rhsVal;
+              AliasResult nextResult = aliasImpl(lhsVal, rhsVal);
+              LDBG() << "  Result: "
+                     << (nextResult == AliasResult::MustAlias ? "MustAlias"
+                         : nextResult == AliasResult::NoAlias ? "NoAlias"
+                                                              : "MayAlias");
+              result = result ? result->merge(nextResult) : nextResult;
+            }
+          }
+        }
+      }
+    }
   }
-
+  if (!result.has_value()) {
+    return AliasResult::MustAlias;
+  }
   // We should always have a valid result here.
   LDBG() << "  Final result: "
          << (result->isMust() ? "MustAlias"
@@ -486,10 +538,10 @@ ModRefResult LocalAliasAnalysis::getModRef(Operation *op, Value location) {
   if (op->hasTrait<OpTrait::HasRecursiveMemoryEffects>()) {
     LDBG() << "  Operation has recursive memory effects, returning ModAndRef";
     // TODO: To check recursive operations we need to check all of the nested
-    // operations, which can result in a quadratic number of queries. We should
-    // introduce some caching of some kind to help alleviate this, especially as
-    // this caching could be used in other areas of the codebase (e.g. when
-    // checking `wouldOpBeTriviallyDead`).
+    // operations, which can result in a quadratic number of queries. We
+    // should introduce some caching of some kind to help alleviate this,
+    // especially as this caching could be used in other areas of the codebase
+    // (e.g. when checking `wouldOpBeTriviallyDead`).
     return ModRefResult::getModAndRef();
   }
 
