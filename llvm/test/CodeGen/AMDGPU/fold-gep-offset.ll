@@ -499,11 +499,11 @@ define void @flat_offset_inbounds_very_wide(ptr %p, ptr %pout, i32 %i) {
 ; GFX90A-SDAG-MUBUF-NEXT:    v_add_co_u32_e64 v8, s[4:5], 44, v0
 ; GFX90A-SDAG-MUBUF-NEXT:    v_add_co_u32_e32 v4, vcc, 0x8c, v0
 ; GFX90A-SDAG-MUBUF-NEXT:    v_addc_co_u32_e64 v9, s[4:5], 0, v1, s[4:5]
-; GFX90A-SDAG-MUBUF-NEXT:    flat_load_dwordx4 v[10:13], v[8:9] offset:16
-; GFX90A-SDAG-MUBUF-NEXT:    flat_load_dwordx4 v[14:17], v[8:9] offset:32
-; GFX90A-SDAG-MUBUF-NEXT:    flat_load_dwordx4 v[18:21], v[8:9] offset:48
 ; GFX90A-SDAG-MUBUF-NEXT:    flat_load_dwordx4 v[22:25], v[8:9] offset:64
 ; GFX90A-SDAG-MUBUF-NEXT:    flat_load_dwordx4 v[26:29], v[8:9] offset:80
+; GFX90A-SDAG-MUBUF-NEXT:    flat_load_dwordx4 v[14:17], v[8:9] offset:32
+; GFX90A-SDAG-MUBUF-NEXT:    flat_load_dwordx4 v[18:21], v[8:9] offset:48
+; GFX90A-SDAG-MUBUF-NEXT:    flat_load_dwordx4 v[10:13], v[8:9] offset:16
 ; GFX90A-SDAG-MUBUF-NEXT:    flat_load_dwordx4 v[30:33], v[6:7]
 ; GFX90A-SDAG-MUBUF-NEXT:    s_nop 0
 ; GFX90A-SDAG-MUBUF-NEXT:    flat_load_dwordx4 v[6:9], v[8:9]
@@ -540,11 +540,11 @@ define void @flat_offset_inbounds_very_wide(ptr %p, ptr %pout, i32 %i) {
 ; GFX90A-SDAG-FLATSCR-NEXT:    v_add_co_u32_e64 v8, s[0:1], 44, v0
 ; GFX90A-SDAG-FLATSCR-NEXT:    v_add_co_u32_e32 v4, vcc, 0x8c, v0
 ; GFX90A-SDAG-FLATSCR-NEXT:    v_addc_co_u32_e64 v9, s[0:1], 0, v1, s[0:1]
-; GFX90A-SDAG-FLATSCR-NEXT:    flat_load_dwordx4 v[10:13], v[8:9] offset:16
-; GFX90A-SDAG-FLATSCR-NEXT:    flat_load_dwordx4 v[14:17], v[8:9] offset:32
-; GFX90A-SDAG-FLATSCR-NEXT:    flat_load_dwordx4 v[18:21], v[8:9] offset:48
 ; GFX90A-SDAG-FLATSCR-NEXT:    flat_load_dwordx4 v[22:25], v[8:9] offset:64
 ; GFX90A-SDAG-FLATSCR-NEXT:    flat_load_dwordx4 v[26:29], v[8:9] offset:80
+; GFX90A-SDAG-FLATSCR-NEXT:    flat_load_dwordx4 v[14:17], v[8:9] offset:32
+; GFX90A-SDAG-FLATSCR-NEXT:    flat_load_dwordx4 v[18:21], v[8:9] offset:48
+; GFX90A-SDAG-FLATSCR-NEXT:    flat_load_dwordx4 v[10:13], v[8:9] offset:16
 ; GFX90A-SDAG-FLATSCR-NEXT:    flat_load_dwordx4 v[30:33], v[6:7]
 ; GFX90A-SDAG-FLATSCR-NEXT:    s_nop 0
 ; GFX90A-SDAG-FLATSCR-NEXT:    flat_load_dwordx4 v[6:9], v[8:9]

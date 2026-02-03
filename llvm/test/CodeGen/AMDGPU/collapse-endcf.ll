@@ -724,9 +724,9 @@ define amdgpu_kernel void @nested_if_else_if(ptr addrspace(1) nocapture %arg) {
 ; GCN-O0-NEXT:    s_waitcnt expcnt(0)
 ; GCN-O0-NEXT:    buffer_load_dword v6, off, s[12:15], 0 ; 4-byte Folded Reload
 ; GCN-O0-NEXT:    s_mov_b64 exec, s[8:9]
-; GCN-O0-NEXT:    buffer_load_dword v0, off, s[12:15], 0 offset:12 ; 4-byte Folded Reload
 ; GCN-O0-NEXT:    buffer_load_dword v2, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
 ; GCN-O0-NEXT:    buffer_load_dword v3, off, s[12:15], 0 offset:8 ; 4-byte Folded Reload
+; GCN-O0-NEXT:    buffer_load_dword v0, off, s[12:15], 0 offset:12 ; 4-byte Folded Reload
 ; GCN-O0-NEXT:    s_mov_b32 s0, 0xf000
 ; GCN-O0-NEXT:    s_mov_b32 s2, 0
 ; GCN-O0-NEXT:    s_mov_b32 s4, s2
@@ -736,9 +736,10 @@ define amdgpu_kernel void @nested_if_else_if(ptr addrspace(1) nocapture %arg) {
 ; GCN-O0-NEXT:    ; kill: def $sgpr0_sgpr1 killed $sgpr0_sgpr1 def $sgpr0_sgpr1_sgpr2_sgpr3
 ; GCN-O0-NEXT:    s_mov_b64 s[2:3], s[4:5]
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, 1
-; GCN-O0-NEXT:    s_waitcnt vmcnt(0)
+; GCN-O0-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-O0-NEXT:    buffer_store_dword v1, v[2:3], s[0:3], 0 addr64 offset:4
 ; GCN-O0-NEXT:    s_mov_b32 s0, 2
+; GCN-O0-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-O0-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s0
 ; GCN-O0-NEXT:    s_mov_b64 s[0:1], exec
 ; GCN-O0-NEXT:    v_writelane_b32 v6, s0, 4
@@ -770,9 +771,9 @@ define amdgpu_kernel void @nested_if_else_if(ptr addrspace(1) nocapture %arg) {
 ; GCN-O0-NEXT:    s_waitcnt expcnt(0)
 ; GCN-O0-NEXT:    buffer_load_dword v6, off, s[12:15], 0 ; 4-byte Folded Reload
 ; GCN-O0-NEXT:    s_mov_b64 exec, s[8:9]
-; GCN-O0-NEXT:    buffer_load_dword v0, off, s[12:15], 0 offset:12 ; 4-byte Folded Reload
 ; GCN-O0-NEXT:    buffer_load_dword v2, off, s[12:15], 0 offset:4 ; 4-byte Folded Reload
 ; GCN-O0-NEXT:    buffer_load_dword v3, off, s[12:15], 0 offset:8 ; 4-byte Folded Reload
+; GCN-O0-NEXT:    buffer_load_dword v0, off, s[12:15], 0 offset:12 ; 4-byte Folded Reload
 ; GCN-O0-NEXT:    s_mov_b32 s1, 0xf000
 ; GCN-O0-NEXT:    s_mov_b32 s0, 0
 ; GCN-O0-NEXT:    s_mov_b32 s2, s0
@@ -782,8 +783,9 @@ define amdgpu_kernel void @nested_if_else_if(ptr addrspace(1) nocapture %arg) {
 ; GCN-O0-NEXT:    ; kill: def $sgpr4_sgpr5 killed $sgpr4_sgpr5 def $sgpr4_sgpr5_sgpr6_sgpr7
 ; GCN-O0-NEXT:    s_mov_b64 s[6:7], s[2:3]
 ; GCN-O0-NEXT:    v_mov_b32_e32 v1, 3
-; GCN-O0-NEXT:    s_waitcnt vmcnt(0)
+; GCN-O0-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-O0-NEXT:    buffer_store_dword v1, v[2:3], s[4:7], 0 addr64 offset:12
+; GCN-O0-NEXT:    s_waitcnt vmcnt(1)
 ; GCN-O0-NEXT:    v_cmp_eq_u32_e64 s[2:3], v0, s0
 ; GCN-O0-NEXT:    s_mov_b64 s[0:1], exec
 ; GCN-O0-NEXT:    v_writelane_b32 v6, s0, 6
@@ -1319,15 +1321,12 @@ define void @scc_liveness(i32 %arg) local_unnamed_addr #0 {
 ; GCN-O0-NEXT:    v_readlane_b32 s5, v7, 19
 ; GCN-O0-NEXT:    s_or_b64 exec, exec, s[4:5]
 ; GCN-O0-NEXT:  ; %bb.11: ; %bb12
-; GCN-O0-NEXT:    s_waitcnt expcnt(3)
-; GCN-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:56 ; 4-byte Folded Reload
-; GCN-O0-NEXT:    s_waitcnt expcnt(2)
-; GCN-O0-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
-; GCN-O0-NEXT:    s_waitcnt expcnt(1)
-; GCN-O0-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
 ; GCN-O0-NEXT:    s_waitcnt expcnt(0)
 ; GCN-O0-NEXT:    buffer_load_dword v3, off, s[0:3], s32 offset:68 ; 4-byte Folded Reload
-; GCN-O0-NEXT:    s_waitcnt vmcnt(0)
+; GCN-O0-NEXT:    buffer_load_dword v2, off, s[0:3], s32 offset:64 ; 4-byte Folded Reload
+; GCN-O0-NEXT:    buffer_load_dword v1, off, s[0:3], s32 offset:60 ; 4-byte Folded Reload
+; GCN-O0-NEXT:    buffer_load_dword v0, off, s[0:3], s32 offset:56 ; 4-byte Folded Reload
+; GCN-O0-NEXT:    s_waitcnt vmcnt(3)
 ; GCN-O0-NEXT:    v_mov_b32_e32 v4, v3
 ; GCN-O0-NEXT:    ; implicit-def: $sgpr4
 ; GCN-O0-NEXT:    v_mov_b32_e32 v5, s4

@@ -648,15 +648,15 @@ define amdgpu_kernel void @udot2_8(ptr addrspace(1) %src1,
 ; GFX9-DL-NEXT:    s_load_dwordx2 s[6:7], s[4:5], 0x34
 ; GFX9-DL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX9-DL-NEXT:    s_waitcnt lgkmcnt(0)
-; GFX9-DL-NEXT:    global_load_dword v1, v0, s[0:1]
 ; GFX9-DL-NEXT:    global_load_dword v2, v0, s[2:3]
+; GFX9-DL-NEXT:    global_load_dword v1, v0, s[0:1]
 ; GFX9-DL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX9-DL-NEXT:    global_load_ubyte v3, v0, s[6:7]
 ; GFX9-DL-NEXT:    s_mov_b32 s0, 0xc0c0100
 ; GFX9-DL-NEXT:    s_waitcnt vmcnt(2)
-; GFX9-DL-NEXT:    v_perm_b32 v1, v1, v1, s0
-; GFX9-DL-NEXT:    s_waitcnt vmcnt(1)
 ; GFX9-DL-NEXT:    v_perm_b32 v2, v2, v2, s0
+; GFX9-DL-NEXT:    s_waitcnt vmcnt(1)
+; GFX9-DL-NEXT:    v_perm_b32 v1, v1, v1, s0
 ; GFX9-DL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX9-DL-NEXT:    v_dot4_u32_u8 v1, v1, v2, v3
 ; GFX9-DL-NEXT:    global_store_byte v0, v1, s[6:7]
@@ -670,14 +670,14 @@ define amdgpu_kernel void @udot2_8(ptr addrspace(1) %src1,
 ; GFX10-DL-NEXT:    v_lshlrev_b32_e32 v0, 2, v0
 ; GFX10-DL-NEXT:    s_waitcnt lgkmcnt(0)
 ; GFX10-DL-NEXT:    s_clause 0x1
-; GFX10-DL-NEXT:    global_load_dword v1, v0, s[0:1]
 ; GFX10-DL-NEXT:    global_load_dword v2, v0, s[2:3]
+; GFX10-DL-NEXT:    global_load_dword v1, v0, s[0:1]
 ; GFX10-DL-NEXT:    v_mov_b32_e32 v0, 0
 ; GFX10-DL-NEXT:    global_load_ubyte v3, v0, s[6:7]
 ; GFX10-DL-NEXT:    s_waitcnt vmcnt(2)
-; GFX10-DL-NEXT:    v_perm_b32 v1, v1, v1, 0xc0c0100
-; GFX10-DL-NEXT:    s_waitcnt vmcnt(1)
 ; GFX10-DL-NEXT:    v_perm_b32 v2, v2, v2, 0xc0c0100
+; GFX10-DL-NEXT:    s_waitcnt vmcnt(1)
+; GFX10-DL-NEXT:    v_perm_b32 v1, v1, v1, 0xc0c0100
 ; GFX10-DL-NEXT:    s_waitcnt vmcnt(0)
 ; GFX10-DL-NEXT:    v_dot4_u32_u8 v1, v1, v2, v3
 ; GFX10-DL-NEXT:    global_store_byte v0, v1, s[6:7]

@@ -237,21 +237,24 @@ define amdgpu_kernel void @ds8align1(ptr addrspace(3) %in, ptr addrspace(3) %out
 ; ALIGNED-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; ALIGNED-SDAG-NEXT:    v_mov_b32_e32 v0, s0
+; ALIGNED-SDAG-NEXT:    ds_read_u8 v5, v0 offset:4
+; ALIGNED-SDAG-NEXT:    ds_read_u8 v6, v0 offset:5
 ; ALIGNED-SDAG-NEXT:    ds_read_u8 v2, v0
 ; ALIGNED-SDAG-NEXT:    ds_read_u8 v3, v0 offset:1
 ; ALIGNED-SDAG-NEXT:    ds_read_u8 v4, v0 offset:2
-; ALIGNED-SDAG-NEXT:    ds_read_u8 v5, v0 offset:4
-; ALIGNED-SDAG-NEXT:    ds_read_u8 v6, v0 offset:5
 ; ALIGNED-SDAG-NEXT:    ds_read_u8 v7, v0 offset:3
 ; ALIGNED-SDAG-NEXT:    ds_read_u8 v8, v0 offset:6
 ; ALIGNED-SDAG-NEXT:    ds_read_u8 v0, v0 offset:7
 ; ALIGNED-SDAG-NEXT:    v_mov_b32_e32 v1, s1
-; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(4)
+; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(7)
 ; ALIGNED-SDAG-NEXT:    ds_write_b8 v1, v5 offset:4
-; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(4)
+; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(7)
 ; ALIGNED-SDAG-NEXT:    ds_write_b8 v1, v6 offset:5
+; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(7)
 ; ALIGNED-SDAG-NEXT:    ds_write_b8 v1, v2
+; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(7)
 ; ALIGNED-SDAG-NEXT:    ds_write_b8 v1, v3 offset:1
+; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(7)
 ; ALIGNED-SDAG-NEXT:    ds_write_b8 v1, v4 offset:2
 ; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(7)
 ; ALIGNED-SDAG-NEXT:    ds_write_b8 v1, v7 offset:3
@@ -449,30 +452,38 @@ define amdgpu_kernel void @ds12align1(ptr addrspace(3) %in, ptr addrspace(3) %ou
 ; ALIGNED-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; ALIGNED-SDAG-NEXT:    v_mov_b32_e32 v0, s0
+; ALIGNED-SDAG-NEXT:    ds_read_u8 v9, v0 offset:8
+; ALIGNED-SDAG-NEXT:    ds_read_u8 v10, v0 offset:9
+; ALIGNED-SDAG-NEXT:    ds_read_u8 v5, v0 offset:4
+; ALIGNED-SDAG-NEXT:    ds_read_u8 v6, v0 offset:5
 ; ALIGNED-SDAG-NEXT:    ds_read_u8 v1, v0
 ; ALIGNED-SDAG-NEXT:    ds_read_u8 v2, v0 offset:1
 ; ALIGNED-SDAG-NEXT:    ds_read_u8 v3, v0 offset:2
 ; ALIGNED-SDAG-NEXT:    ds_read_u8 v4, v0 offset:3
-; ALIGNED-SDAG-NEXT:    ds_read_u8 v5, v0 offset:4
-; ALIGNED-SDAG-NEXT:    ds_read_u8 v6, v0 offset:5
 ; ALIGNED-SDAG-NEXT:    ds_read_u8 v7, v0 offset:6
 ; ALIGNED-SDAG-NEXT:    ds_read_u8 v8, v0 offset:7
-; ALIGNED-SDAG-NEXT:    ds_read_u8 v9, v0 offset:8
-; ALIGNED-SDAG-NEXT:    ds_read_u8 v10, v0 offset:9
 ; ALIGNED-SDAG-NEXT:    ds_read_u8 v11, v0 offset:10
 ; ALIGNED-SDAG-NEXT:    ds_read_u8 v0, v0 offset:11
 ; ALIGNED-SDAG-NEXT:    v_mov_b32_e32 v12, s1
-; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(3)
+; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(11)
 ; ALIGNED-SDAG-NEXT:    ds_write_b8 v12, v9 offset:8
-; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(3)
+; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(11)
 ; ALIGNED-SDAG-NEXT:    ds_write_b8 v12, v10 offset:9
+; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(11)
 ; ALIGNED-SDAG-NEXT:    ds_write_b8 v12, v5 offset:4
+; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(11)
 ; ALIGNED-SDAG-NEXT:    ds_write_b8 v12, v6 offset:5
+; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(11)
 ; ALIGNED-SDAG-NEXT:    ds_write_b8 v12, v1
+; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(11)
 ; ALIGNED-SDAG-NEXT:    ds_write_b8 v12, v2 offset:1
+; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(11)
 ; ALIGNED-SDAG-NEXT:    ds_write_b8 v12, v3 offset:2
+; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(11)
 ; ALIGNED-SDAG-NEXT:    ds_write_b8 v12, v4 offset:3
+; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(11)
 ; ALIGNED-SDAG-NEXT:    ds_write_b8 v12, v7 offset:6
+; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(11)
 ; ALIGNED-SDAG-NEXT:    ds_write_b8 v12, v8 offset:7
 ; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(11)
 ; ALIGNED-SDAG-NEXT:    ds_write_b8 v12, v11 offset:10
@@ -596,17 +607,18 @@ define amdgpu_kernel void @ds12align2(ptr addrspace(3) %in, ptr addrspace(3) %ou
 ; ALIGNED-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; ALIGNED-SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; ALIGNED-SDAG-NEXT:    ds_read_u16 v2, v0
 ; ALIGNED-SDAG-NEXT:    ds_read_u16 v3, v0 offset:8
 ; ALIGNED-SDAG-NEXT:    ds_read_u16 v4, v0 offset:4
+; ALIGNED-SDAG-NEXT:    ds_read_u16 v2, v0
 ; ALIGNED-SDAG-NEXT:    ds_read_u16 v5, v0 offset:2
 ; ALIGNED-SDAG-NEXT:    ds_read_u16 v6, v0 offset:6
 ; ALIGNED-SDAG-NEXT:    ds_read_u16 v0, v0 offset:10
 ; ALIGNED-SDAG-NEXT:    v_mov_b32_e32 v1, s1
-; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(4)
+; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(5)
 ; ALIGNED-SDAG-NEXT:    ds_write_b16 v1, v3 offset:8
-; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(4)
+; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(5)
 ; ALIGNED-SDAG-NEXT:    ds_write_b16 v1, v4 offset:4
+; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(5)
 ; ALIGNED-SDAG-NEXT:    ds_write_b16 v1, v2
 ; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(5)
 ; ALIGNED-SDAG-NEXT:    ds_write_b16 v1, v5 offset:2
@@ -799,37 +811,42 @@ define amdgpu_kernel void @ds16align1(ptr addrspace(3) %in, ptr addrspace(3) %ou
 ; ALIGNED-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; ALIGNED-SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; ALIGNED-SDAG-NEXT:    ds_read_u8 v1, v0
-; ALIGNED-SDAG-NEXT:    ds_read_u8 v2, v0 offset:1
-; ALIGNED-SDAG-NEXT:    ds_read_u8 v3, v0 offset:2
-; ALIGNED-SDAG-NEXT:    ds_read_u8 v4, v0 offset:3
-; ALIGNED-SDAG-NEXT:    ds_read_u8 v5, v0 offset:4
-; ALIGNED-SDAG-NEXT:    ds_read_u8 v6, v0 offset:5
-; ALIGNED-SDAG-NEXT:    ds_read_u8 v7, v0 offset:6
-; ALIGNED-SDAG-NEXT:    ds_read_u8 v8, v0 offset:7
-; ALIGNED-SDAG-NEXT:    ds_read_u8 v9, v0 offset:8
-; ALIGNED-SDAG-NEXT:    ds_read_u8 v10, v0 offset:9
-; ALIGNED-SDAG-NEXT:    ds_read_u8 v11, v0 offset:10
-; ALIGNED-SDAG-NEXT:    ds_read_u8 v12, v0 offset:11
 ; ALIGNED-SDAG-NEXT:    ds_read_u8 v13, v0 offset:12
 ; ALIGNED-SDAG-NEXT:    ds_read_u8 v14, v0 offset:13
+; ALIGNED-SDAG-NEXT:    ds_read_u8 v1, v0
+; ALIGNED-SDAG-NEXT:    ds_read_u8 v2, v0 offset:1
+; ALIGNED-SDAG-NEXT:    ds_read_u8 v5, v0 offset:4
+; ALIGNED-SDAG-NEXT:    ds_read_u8 v6, v0 offset:5
+; ALIGNED-SDAG-NEXT:    ds_read_u8 v9, v0 offset:8
+; ALIGNED-SDAG-NEXT:    ds_read_u8 v10, v0 offset:9
+; ALIGNED-SDAG-NEXT:    ds_read_u8 v3, v0 offset:2
+; ALIGNED-SDAG-NEXT:    ds_read_u8 v4, v0 offset:3
+; ALIGNED-SDAG-NEXT:    ds_read_u8 v7, v0 offset:6
+; ALIGNED-SDAG-NEXT:    ds_read_u8 v8, v0 offset:7
+; ALIGNED-SDAG-NEXT:    ds_read_u8 v11, v0 offset:10
+; ALIGNED-SDAG-NEXT:    ds_read_u8 v12, v0 offset:11
 ; ALIGNED-SDAG-NEXT:    ds_read_u8 v15, v0 offset:14
 ; ALIGNED-SDAG-NEXT:    ds_read_u8 v0, v0 offset:15
 ; ALIGNED-SDAG-NEXT:    v_mov_b32_e32 v16, s1
-; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(3)
+; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(14)
 ; ALIGNED-SDAG-NEXT:    ds_write_b8 v16, v13 offset:12
-; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(3)
 ; ALIGNED-SDAG-NEXT:    ds_write_b8 v16, v14 offset:13
+; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(14)
 ; ALIGNED-SDAG-NEXT:    ds_write_b8 v16, v1
 ; ALIGNED-SDAG-NEXT:    ds_write_b8 v16, v2 offset:1
+; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(14)
 ; ALIGNED-SDAG-NEXT:    ds_write_b8 v16, v5 offset:4
 ; ALIGNED-SDAG-NEXT:    ds_write_b8 v16, v6 offset:5
+; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(14)
 ; ALIGNED-SDAG-NEXT:    ds_write_b8 v16, v9 offset:8
 ; ALIGNED-SDAG-NEXT:    ds_write_b8 v16, v10 offset:9
+; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(14)
 ; ALIGNED-SDAG-NEXT:    ds_write_b8 v16, v3 offset:2
 ; ALIGNED-SDAG-NEXT:    ds_write_b8 v16, v4 offset:3
+; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(14)
 ; ALIGNED-SDAG-NEXT:    ds_write_b8 v16, v7 offset:6
 ; ALIGNED-SDAG-NEXT:    ds_write_b8 v16, v8 offset:7
+; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(14)
 ; ALIGNED-SDAG-NEXT:    ds_write_b8 v16, v11 offset:10
 ; ALIGNED-SDAG-NEXT:    ds_write_b8 v16, v12 offset:11
 ; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(14)
@@ -982,22 +999,26 @@ define amdgpu_kernel void @ds16align2(ptr addrspace(3) %in, ptr addrspace(3) %ou
 ; ALIGNED-SDAG-NEXT:    s_load_dwordx2 s[0:1], s[4:5], 0x24
 ; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(0)
 ; ALIGNED-SDAG-NEXT:    v_mov_b32_e32 v0, s0
-; ALIGNED-SDAG-NEXT:    ds_read_u16 v2, v0
-; ALIGNED-SDAG-NEXT:    ds_read_u16 v3, v0 offset:2
-; ALIGNED-SDAG-NEXT:    ds_read_u16 v4, v0 offset:4
 ; ALIGNED-SDAG-NEXT:    ds_read_u16 v5, v0 offset:12
-; ALIGNED-SDAG-NEXT:    ds_read_u16 v6, v0 offset:6
+; ALIGNED-SDAG-NEXT:    ds_read_u16 v2, v0
+; ALIGNED-SDAG-NEXT:    ds_read_u16 v4, v0 offset:4
 ; ALIGNED-SDAG-NEXT:    ds_read_u16 v7, v0 offset:8
+; ALIGNED-SDAG-NEXT:    ds_read_u16 v3, v0 offset:2
+; ALIGNED-SDAG-NEXT:    ds_read_u16 v6, v0 offset:6
 ; ALIGNED-SDAG-NEXT:    ds_read_u16 v8, v0 offset:10
 ; ALIGNED-SDAG-NEXT:    ds_read_u16 v0, v0 offset:14
 ; ALIGNED-SDAG-NEXT:    v_mov_b32_e32 v1, s1
-; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(4)
+; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(7)
 ; ALIGNED-SDAG-NEXT:    ds_write_b16 v1, v5 offset:12
+; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(7)
 ; ALIGNED-SDAG-NEXT:    ds_write_b16 v1, v2
+; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(7)
 ; ALIGNED-SDAG-NEXT:    ds_write_b16 v1, v4 offset:4
-; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(5)
+; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(7)
 ; ALIGNED-SDAG-NEXT:    ds_write_b16 v1, v7 offset:8
+; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(7)
 ; ALIGNED-SDAG-NEXT:    ds_write_b16 v1, v3 offset:2
+; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(7)
 ; ALIGNED-SDAG-NEXT:    ds_write_b16 v1, v6 offset:6
 ; ALIGNED-SDAG-NEXT:    s_waitcnt lgkmcnt(7)
 ; ALIGNED-SDAG-NEXT:    ds_write_b16 v1, v8 offset:10

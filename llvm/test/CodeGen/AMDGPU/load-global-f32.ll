@@ -712,8 +712,8 @@ define amdgpu_kernel void @global_load_v16f32(ptr addrspace(1) %out, ptr addrspa
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v5, s3
 ; GCN-HSA-NEXT:    flat_load_dwordx4 v[0:3], v[0:1]
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v4, s2
-; GCN-HSA-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
 ; GCN-HSA-NEXT:    flat_load_dwordx4 v[8:11], v[8:9]
+; GCN-HSA-NEXT:    flat_load_dwordx4 v[4:7], v[4:5]
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v13, s5
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v12, s4
 ; GCN-HSA-NEXT:    flat_load_dwordx4 v[12:15], v[12:13]
@@ -734,8 +734,9 @@ define amdgpu_kernel void @global_load_v16f32(ptr addrspace(1) %out, ptr addrspa
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v3, s1
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v1, s3
 ; GCN-HSA-NEXT:    v_mov_b32_e32 v2, s0
-; GCN-HSA-NEXT:    s_waitcnt vmcnt(2)
+; GCN-HSA-NEXT:    s_waitcnt vmcnt(3)
 ; GCN-HSA-NEXT:    flat_store_dwordx4 v[16:17], v[8:11]
+; GCN-HSA-NEXT:    s_waitcnt vmcnt(3)
 ; GCN-HSA-NEXT:    flat_store_dwordx4 v[0:1], v[4:7]
 ; GCN-HSA-NEXT:    s_waitcnt vmcnt(3)
 ; GCN-HSA-NEXT:    flat_store_dwordx4 v[2:3], v[12:15]

@@ -65,24 +65,24 @@ body:             |
   ; GFX11-NEXT:     renamable $vgpr5 = BUFFER_LOAD_USHORT_IDXEN killed renamable $vgpr5, renamable $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s16), align 1, addrspace 8)
   ; GFX11-NEXT:     renamable $vgpr6 = BUFFER_LOAD_USHORT_IDXEN killed renamable $vgpr6, renamable $sgpr0_sgpr1_sgpr2_sgpr3, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s16), align 1, addrspace 8)
   ; GFX11-NEXT:   }
-  ; GFX11-NEXT:   BUNDLE implicit-def $vgpr9, implicit-def $vgpr10, implicit-def $vgpr11, implicit-def $vgpr8, implicit-def $vgpr12, implicit-def $vgpr13, implicit-def $vgpr14, implicit-def $vgpr7, implicit killed $vgpr9, implicit $sgpr4_sgpr5_sgpr6_sgpr7, implicit $exec, implicit killed $vgpr10, implicit killed $vgpr11, implicit killed $vgpr8, implicit killed $vgpr12, implicit killed $vgpr13, implicit killed $vgpr14, implicit killed $vgpr7 :: (dereferenceable invariant load (s16), align 1, addrspace 8) {
+  ; GFX11-NEXT:   BUNDLE implicit-def $vgpr9, implicit-def $vgpr12, implicit-def $vgpr10, implicit-def $vgpr13, implicit-def $vgpr11, implicit-def $vgpr14, implicit-def $vgpr8, implicit-def $vgpr7, implicit killed $vgpr9, implicit $sgpr4_sgpr5_sgpr6_sgpr7, implicit $exec, implicit killed $vgpr12, implicit killed $vgpr10, implicit killed $vgpr13, implicit killed $vgpr11, implicit killed $vgpr14, implicit killed $vgpr8, implicit killed $vgpr7 :: (dereferenceable invariant load (s16), align 1, addrspace 8) {
   ; GFX11-NEXT:     S_CLAUSE 7
   ; GFX11-NEXT:     renamable $vgpr9 = BUFFER_LOAD_USHORT_IDXEN killed renamable $vgpr9, renamable $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s16), align 1, addrspace 8)
-  ; GFX11-NEXT:     renamable $vgpr10 = BUFFER_LOAD_USHORT_IDXEN killed renamable $vgpr10, renamable $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s16), align 1, addrspace 8)
-  ; GFX11-NEXT:     renamable $vgpr11 = BUFFER_LOAD_USHORT_IDXEN killed renamable $vgpr11, renamable $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s16), align 1, addrspace 8)
-  ; GFX11-NEXT:     renamable $vgpr8 = BUFFER_LOAD_USHORT_IDXEN killed renamable $vgpr8, renamable $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s16), align 1, addrspace 8)
   ; GFX11-NEXT:     renamable $vgpr12 = BUFFER_LOAD_USHORT_IDXEN killed renamable $vgpr12, renamable $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s16), align 1, addrspace 8)
+  ; GFX11-NEXT:     renamable $vgpr10 = BUFFER_LOAD_USHORT_IDXEN killed renamable $vgpr10, renamable $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s16), align 1, addrspace 8)
   ; GFX11-NEXT:     renamable $vgpr13 = BUFFER_LOAD_USHORT_IDXEN killed renamable $vgpr13, renamable $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s16), align 1, addrspace 8)
+  ; GFX11-NEXT:     renamable $vgpr11 = BUFFER_LOAD_USHORT_IDXEN killed renamable $vgpr11, renamable $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s16), align 1, addrspace 8)
   ; GFX11-NEXT:     renamable $vgpr14 = BUFFER_LOAD_USHORT_IDXEN killed renamable $vgpr14, renamable $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s16), align 1, addrspace 8)
+  ; GFX11-NEXT:     renamable $vgpr8 = BUFFER_LOAD_USHORT_IDXEN killed renamable $vgpr8, renamable $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s16), align 1, addrspace 8)
   ; GFX11-NEXT:     renamable $vgpr7 = BUFFER_LOAD_USHORT_IDXEN killed renamable $vgpr7, renamable $sgpr4_sgpr5_sgpr6_sgpr7, 0, 0, 0, 0, implicit $exec :: (dereferenceable invariant load (s16), align 1, addrspace 8)
   ; GFX11-NEXT:   }
   ; GFX11-NEXT:   S_WAITCNT 9207
   ; GFX11-NEXT:   renamable $vgpr5 = V_PERM_B32_e64 killed $vgpr6, killed $vgpr5, 84148480, implicit $exec
-  ; GFX11-NEXT:   S_WAITCNT 4087
+  ; GFX11-NEXT:   S_WAITCNT 7159
   ; GFX11-NEXT:   renamable $vgpr6 = V_PERM_B32_e64 killed $vgpr12, killed $vgpr9, 84148480, implicit $exec
-  ; GFX11-NEXT:   S_WAITCNT 3063
+  ; GFX11-NEXT:   S_WAITCNT 5111
   ; GFX11-NEXT:   renamable $vgpr9 = V_PERM_B32_e64 killed $vgpr13, killed $vgpr10, 84148480, implicit $exec
-  ; GFX11-NEXT:   S_WAITCNT 2039
+  ; GFX11-NEXT:   S_WAITCNT 3063
   ; GFX11-NEXT:   renamable $vgpr10 = V_PERM_B32_e64 killed $vgpr14, killed $vgpr11, 84148480, implicit $exec
   ; GFX11-NEXT:   S_WAITCNT 1015
   ; GFX11-NEXT:   renamable $vgpr7 = V_PERM_B32_e64 killed $vgpr7, killed $vgpr8, 84148480, implicit $exec
