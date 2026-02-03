@@ -1848,21 +1848,29 @@ static bool generateDotOrFMulInst(const StringRef DemangledCall,
                                   const SPIRV::IncomingCall *Call,
                                   MachineIRBuilder &MIRBuilder,
                                   SPIRVGlobalRegistry *GR) {
-  if (Call->isSpirvOp())
-    return buildOpFromWrapper(MIRBuilder, SPIRV::OpDot, Call,
-                              GR->getSPIRVTypeID(Call->ReturnType));
-
   bool IsVec = GR->getSPIRVTypeForVReg(Call->Arguments[0])->getOpcode() ==
                SPIRV::OpTypeVector;
+  bool IsInt =
+      GR->isScalarOrVectorOfType(Call->ReturnRegister, SPIRV::OpTypeInt);
+
+  const auto *ST =
+      static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
+  bool HasIntDotOps =
+      ST->canUseExtension(SPIRV::Extension::SPV_KHR_integer_dot_product) ||
+      ST->isAtLeastSPIRVVer(VersionTuple(1, 6));
+
+  // For integer vectors without native OpSDot/OpUDot support, expand to
+  // element-wise multiply and add.
+  if (IsInt && IsVec && !HasIntDotOps)
+    return generateIntegerDotExpansion(MIRBuilder, Call->ReturnRegister,
+                                       Call->Arguments[0], Call->Arguments[1],
+                                       GR);
+
   // Use OpDot only in case of vector args and OpFMul in case of scalar args.
   uint32_t OC = IsVec ? SPIRV::OpDot : SPIRV::OpFMulS;
   bool IsSwapReq = false;
 
-  const auto *ST =
-      static_cast<const SPIRVSubtarget *>(&MIRBuilder.getMF().getSubtarget());
-  if (GR->isScalarOrVectorOfType(Call->ReturnRegister, SPIRV::OpTypeInt) &&
-      (ST->canUseExtension(SPIRV::Extension::SPV_KHR_integer_dot_product) ||
-       ST->isAtLeastSPIRVVer(VersionTuple(1, 6)))) {
+  if (IsInt && HasIntDotOps) {
     const SPIRV::DemangledBuiltin *Builtin = Call->Builtin;
     const SPIRV::IntegerDotProductBuiltin *IntDot =
         SPIRV::lookupIntegerDotProductBuiltin(Builtin->Name);
@@ -1875,8 +1883,8 @@ static bool generateDotOrFMulInst(const StringRef DemangledCall,
       LLVMContext &Ctx = MIRBuilder.getContext();
       SmallVector<StringRef, 10> TypeStrs;
       SPIRV::parseBuiltinTypeStr(TypeStrs, DemangledCall, Ctx);
-      bool IsFirstSigned = TypeStrs[0].trim()[0] != 'u';
-      bool IsSecondSigned = TypeStrs[1].trim()[0] != 'u';
+      bool IsFirstSigned = TypeStrs.size() > 0 && TypeStrs[0].trim()[0] != 'u';
+      bool IsSecondSigned = TypeStrs.size() > 1 && TypeStrs[1].trim()[0] != 'u';
 
       if (Call->BuiltinName == "dot") {
         if (IsFirstSigned && IsSecondSigned)

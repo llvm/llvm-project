@@ -586,5 +586,12 @@ getFirstValidInstructionInsertPoint(MachineBasicBlock &BB);
 
 std::optional<SPIRV::LinkageType::LinkageType>
 getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV);
+
+// Expand integer dot product to multiply and add operations.
+// Used when OpSDot/OpUDot are not available (SPIRV < 1.6 without
+// SPV_KHR_integer_dot_product extension).
+bool generateIntegerDotExpansion(MachineIRBuilder &MIRBuilder, Register ResVReg,
+                                 Register Vec0, Register Vec1,
+                                 SPIRVGlobalRegistry *GR);
 } // namespace llvm
 #endif // LLVM_LIB_TARGET_SPIRV_SPIRVUTILS_H

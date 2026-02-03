@@ -2442,58 +2442,16 @@ bool SPIRVInstructionSelector::selectIntegerDotExpansion(
   assert(I.getNumOperands() == 4);
   assert(I.getOperand(2).isReg());
   assert(I.getOperand(3).isReg());
-  MachineBasicBlock &BB = *I.getParent();
 
-  // Multiply the vectors, then sum the results
   Register Vec0 = I.getOperand(2).getReg();
   Register Vec1 = I.getOperand(3).getReg();
-  Register TmpVec = MRI->createVirtualRegister(GR.getRegClass(ResType));
-  SPIRVType *VecType = GR.getSPIRVTypeForVReg(Vec0);
 
-  bool Result = BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIMulV))
-                    .addDef(TmpVec)
-                    .addUse(GR.getSPIRVTypeID(VecType))
-                    .addUse(Vec0)
-                    .addUse(Vec1)
-                    .constrainAllUses(TII, TRI, RBI);
+  MachineIRBuilder MIRBuilder;
+  MIRBuilder.setMF(*I.getParent()->getParent());
+  MIRBuilder.setMBB(*I.getParent());
+  MIRBuilder.setInstr(I);
 
-  assert(VecType->getOpcode() == SPIRV::OpTypeVector &&
-         GR.getScalarOrVectorComponentCount(VecType) > 1 &&
-         "dot product requires a vector of at least 2 components");
-
-  Register Res = MRI->createVirtualRegister(GR.getRegClass(ResType));
-  Result &= BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCompositeExtract))
-                .addDef(Res)
-                .addUse(GR.getSPIRVTypeID(ResType))
-                .addUse(TmpVec)
-                .addImm(0)
-                .constrainAllUses(TII, TRI, RBI);
-
-  for (unsigned i = 1; i < GR.getScalarOrVectorComponentCount(VecType); i++) {
-    Register Elt = MRI->createVirtualRegister(GR.getRegClass(ResType));
-
-    Result &=
-        BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpCompositeExtract))
-            .addDef(Elt)
-            .addUse(GR.getSPIRVTypeID(ResType))
-            .addUse(TmpVec)
-            .addImm(i)
-            .constrainAllUses(TII, TRI, RBI);
-
-    Register Sum = i < GR.getScalarOrVectorComponentCount(VecType) - 1
-                       ? MRI->createVirtualRegister(GR.getRegClass(ResType))
-                       : ResVReg;
-
-    Result &= BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIAddS))
-                  .addDef(Sum)
-                  .addUse(GR.getSPIRVTypeID(ResType))
-                  .addUse(Res)
-                  .addUse(Elt)
-                  .constrainAllUses(TII, TRI, RBI);
-    Res = Sum;
-  }
-
-  return Result;
+  return generateIntegerDotExpansion(MIRBuilder, ResVReg, Vec0, Vec1, &GR);
 }
 
 bool SPIRVInstructionSelector::selectOpIsInf(Register ResVReg,

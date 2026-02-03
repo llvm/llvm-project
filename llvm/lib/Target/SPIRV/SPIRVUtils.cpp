@@ -1208,4 +1208,58 @@ getSpirvLinkageTypeFor(const SPIRVSubtarget &ST, const GlobalValue &GV) {
   return SPIRV::LinkageType::Export;
 }
 
+bool generateIntegerDotExpansion(MachineIRBuilder &MIRBuilder, Register ResVReg,
+                                 Register Vec0, Register Vec1,
+                                 SPIRVGlobalRegistry *GR) {
+  // Expand integer dot product to element-wise multiply and sum:
+  //   dot(a, b) = a[0]*b[0] + a[1]*b[1] + ... + a[n-1]*b[n-1]
+  MachineRegisterInfo *MRI = MIRBuilder.getMRI();
+  SPIRVType *VecType = GR->getSPIRVTypeForVReg(Vec0);
+  SPIRVType *ResType = GR->getSPIRVTypeForVReg(ResVReg);
+
+  assert(VecType && VecType->getOpcode() == SPIRV::OpTypeVector &&
+         "Expected vector type for integer dot product");
+  unsigned NumComponents = GR->getScalarOrVectorComponentCount(VecType);
+  assert(NumComponents > 1 && "dot product requires vector of at least 2");
+
+  // Multiply the vectors element-wise.
+  Register TmpVec = MRI->createVirtualRegister(GR->getRegClass(VecType));
+  MIRBuilder.buildInstr(SPIRV::OpIMulV)
+      .addDef(TmpVec)
+      .addUse(GR->getSPIRVTypeID(VecType))
+      .addUse(Vec0)
+      .addUse(Vec1);
+
+  // Extract first element as initial sum.
+  Register Sum = MRI->createVirtualRegister(GR->getRegClass(ResType));
+  MIRBuilder.buildInstr(SPIRV::OpCompositeExtract)
+      .addDef(Sum)
+      .addUse(GR->getSPIRVTypeID(ResType))
+      .addUse(TmpVec)
+      .addImm(0);
+
+  // Extract remaining elements and add to sum.
+  for (unsigned i = 1; i < NumComponents; ++i) {
+    Register Elt = MRI->createVirtualRegister(GR->getRegClass(ResType));
+    MIRBuilder.buildInstr(SPIRV::OpCompositeExtract)
+        .addDef(Elt)
+        .addUse(GR->getSPIRVTypeID(ResType))
+        .addUse(TmpVec)
+        .addImm(i);
+
+    Register NewSum =
+        (i == NumComponents - 1)
+            ? ResVReg
+            : MRI->createVirtualRegister(GR->getRegClass(ResType));
+    MIRBuilder.buildInstr(SPIRV::OpIAddS)
+        .addDef(NewSum)
+        .addUse(GR->getSPIRVTypeID(ResType))
+        .addUse(Sum)
+        .addUse(Elt);
+    Sum = NewSum;
+  }
+
+  return true;
+}
+
 } // namespace llvm
