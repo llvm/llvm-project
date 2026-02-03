@@ -2543,8 +2543,8 @@ bool VectorCombine::foldPermuteOfBinops(Instruction &I) {
 bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
   ArrayRef<int> OldMask;
   Instruction *LHS, *RHS;
-  if (!match(&I, m_Shuffle(m_OneUse(m_Instruction(LHS)),
-                           m_OneUse(m_Instruction(RHS)), m_Mask(OldMask))))
+  if (!match(&I, m_Shuffle(m_Instruction(LHS), m_Instruction(RHS),
+                           m_Mask(OldMask))))
     return false;
 
   // TODO: Add support for addlike etc.
@@ -2660,6 +2660,13 @@ bool VectorCombine::foldShuffleOfBinops(Instruction &I) {
         TTI.getCmpSelInstrCost(LHS->getOpcode(), ShuffleCmpTy, ShuffleDstTy,
                                PredLHS, CostKind, Op0Info, Op1Info);
   }
+
+  // If LHS/RHS have other uses, we need to account for the cost of keeping
+  // the original instructions.
+  if (!LHS->hasOneUse())
+    NewCost += TTI.getInstructionCost(LHS, CostKind);
+  if (!RHS->hasOneUse())
+    NewCost += TTI.getInstructionCost(RHS, CostKind);
 
   LLVM_DEBUG(dbgs() << "Found a shuffle feeding two binops: " << I
                     << "\n  OldCost: " << OldCost << " vs NewCost: " << NewCost
