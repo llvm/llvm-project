@@ -501,12 +501,15 @@ TEST_F(MainLoopTest, DetectsEOF) {
 
   Status error;
   MainLoop loop;
-  auto handle =
-      loop.RegisterReadObject(conn->GetReadObject(), make_callback(), error);
+  auto handle = loop.RegisterReadObject(
+      conn->GetReadObject(), [&](auto &loop) { callback_count++; }, error);
+  loop.AddCallback([](MainLoopBase &loop) { loop.RequestTermination(); },
+                   std::chrono::milliseconds(100));
   ASSERT_TRUE(error.Success());
   term.CloseSecondaryFileDescriptor();
 
   ASSERT_TRUE(loop.Run().Success());
+  // Ensure we only receive one event for the EOF event.
   ASSERT_EQ(1u, callback_count);
 }
 

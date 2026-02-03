@@ -107,6 +107,11 @@ private:
 
 #if HAVE_SYS_EVENT_H
   std::vector<struct kevent> in_events;
+  enum FDState : bool {
+    eFDStateReading = false,
+    eFDStateEOF = true,
+  };
+  std::map<int, FDState> eof_fds;
   struct kevent out_events[4];
   int num_events = -1;
 
@@ -123,8 +128,12 @@ MainLoopPosix::RunImpl::RunImpl(MainLoopPosix &loop) : loop(loop) {
 Status MainLoopPosix::RunImpl::Poll() {
   in_events.resize(loop.m_read_fds.size());
   unsigned i = 0;
-  for (auto &fd : loop.m_read_fds)
-    EV_SET(&in_events[i++], fd.first, EVFILT_READ, EV_ADD, 0, 0, 0);
+  for (auto &fd : loop.m_read_fds) {
+    if (eof_fds.find(fd.first) == eof_fds.end())
+      eof_fds[fd.first] = eFDStateReading;
+    EV_SET(&in_events[i++], fd.first, EVFILT_READ,
+           eof_fds[fd.first] == eFDStateEOF ? EV_DELETE : EV_ADD, 0, 0, 0);
+  }
 
   num_events =
       kevent(loop.m_kqueue, in_events.data(), in_events.size(), out_events,
@@ -149,6 +158,10 @@ void MainLoopPosix::RunImpl::ProcessReadEvents() {
     switch (out_events[i].filter) {
     case EVFILT_READ:
       loop.ProcessReadObject(out_events[i].ident);
+      // A read event with `data == 0` indicates the file has reached EOF and is
+      // closed. Remember this to prevent triggering the callback again.
+      if (out_events[i].data == 0)
+        eof_fds[out_events[i].ident] = eFDStateEOF;
       break;
     default:
       llvm_unreachable("Unknown event");
