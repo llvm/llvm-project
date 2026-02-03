@@ -654,7 +654,7 @@ void TypeCapabilityVisitor::addConcrete(ScalarType type) {
     assert(isa<FloatType>(type));
     switch (bitwidth) {
     case 8: {
-      if (isa<Float8E4M3FNType>(type) || isa<Float8E5M2Type>(type)) {
+      if (isa<Float8E4M3FNType, Float8E5M2Type>(type)) {
         static constexpr auto cap = Capability::Float8EXT;
         capabilities.push_back(cap);
       } else {
