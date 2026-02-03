@@ -619,6 +619,9 @@ private:
   /// A vector of metadata strings for dependent libraries for ELF.
   SmallVector<llvm::MDNode *, 16> ELFDependentLibraries;
 
+  /// Metadata for copyright pragma comment (if present).
+  llvm::MDNode *LoadTimeComment = nullptr;
+
   /// @name Cache for Objective-C runtime types
   /// @{
 
@@ -1544,7 +1547,6 @@ public:
   /// Appends a dependent lib to the appropriate metadata value.
   void AddDependentLib(StringRef Lib);
 
-
   llvm::GlobalVariable::LinkageTypes getFunctionLinkage(GlobalDecl GD);
 
   void setFunctionLinkage(GlobalDecl GD, llvm::Function *F) {
@@ -1953,6 +1955,9 @@ private:
   ABIArgInfo convertABIArgInfo(const llvm::abi::ArgInfo &AbiInfo,
                                QualType Type);
 
+  /// Process #pragma comment(copyright, ...).
+  void ProcessPragmaCommentCopyright(StringRef Comment, bool isFromASTFile);
+
   bool shouldDropDLLAttribute(const Decl *D, const llvm::GlobalValue *GV) const;
 
   llvm::Constant *GetOrCreateLLVMFunction(
@@ -2166,6 +2171,10 @@ private:
   /// Emit deactivation symbols for any PFP fields whose offset is taken with
   /// offsetof.
   void emitPFPFieldsWithEvaluatedOffset();
+
+  /// Emit the load-time comment metadata (e.g., from
+  /// #pragma comment(copyright, ...)) for the translation unit.
+  void EmitLoadTimeComment();
 };
 
 }  // end namespace CodeGen
