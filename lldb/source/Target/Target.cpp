@@ -185,6 +185,8 @@ Target::Target(Debugger &debugger, const ArchSpec &target_arch,
       m_internal_stop_hooks(), m_latest_stop_hook_id(0), m_valid(true),
       m_suppress_stop_hooks(false), m_is_dummy_target(is_dummy_target),
       m_target_unique_id(g_target_unique_id++),
+      m_target_session_name(
+          llvm::formatv("Session {0}", m_target_unique_id).str()),
       m_frame_recognizer_manager_up(
           std::make_unique<StackFrameRecognizerManager>()) {
   SetEventName(eBroadcastBitBreakpointChanged, "breakpoint-changed");
@@ -192,6 +194,7 @@ Target::Target(Debugger &debugger, const ArchSpec &target_arch,
   SetEventName(eBroadcastBitModulesUnloaded, "modules-unloaded");
   SetEventName(eBroadcastBitWatchpointChanged, "watchpoint-changed");
   SetEventName(eBroadcastBitSymbolsLoaded, "symbols-loaded");
+  SetEventName(eBroadcastBitNewTargetCreated, "new-target-created");
 
   CheckInWithManager();
 
@@ -2280,8 +2283,10 @@ size_t Target::ReadScalarIntegerFromMemory(const Address &addr, uint32_t byte_si
       else
         scalar = data.GetMaxU64(&offset, byte_size);
 
-      if (is_signed)
+      if (is_signed) {
+        scalar.MakeSigned();
         scalar.SignExtend(byte_size * 8);
+      }
       return bytes_read;
     }
   } else {
@@ -2296,7 +2301,7 @@ int64_t Target::ReadSignedIntegerFromMemory(const Address &addr,
                                             int64_t fail_value, Status &error,
                                             bool force_live_memory) {
   Scalar scalar;
-  if (ReadScalarIntegerFromMemory(addr, integer_byte_size, false, scalar, error,
+  if (ReadScalarIntegerFromMemory(addr, integer_byte_size, true, scalar, error,
                                   force_live_memory))
     return scalar.SLongLong(fail_value);
   return fail_value;
@@ -2859,7 +2864,7 @@ ExpressionResults Target::EvaluateExpression(
   // We shouldn't run stop hooks in expressions.
   bool old_suppress_value = m_suppress_stop_hooks;
   m_suppress_stop_hooks = true;
-  auto on_exit = llvm::make_scope_exit([this, old_suppress_value]() {
+  llvm::scope_exit on_exit([this, old_suppress_value]() {
     m_suppress_stop_hooks = old_suppress_value;
   });
 
@@ -3195,7 +3200,7 @@ bool Target::RunStopHooks(bool at_initial_stop) {
   }
 
   StreamSP output_sp = m_debugger.GetAsyncOutputStream();
-  auto on_exit = llvm::make_scope_exit([output_sp] { output_sp->Flush(); });
+  llvm::scope_exit on_exit([output_sp] { output_sp->Flush(); });
 
   size_t num_hooks_with_output = llvm::count_if(
       active_hooks, [](auto h) { return !h->GetSuppressOutput(); });
@@ -3713,6 +3718,61 @@ Status Target::Attach(ProcessAttachInfo &attach_info, Stream *stream) {
     }
   }
   return error;
+}
+
+llvm::Expected<uint32_t> Target::AddScriptedFrameProviderDescriptor(
+    const ScriptedFrameProviderDescriptor &descriptor) {
+  if (!descriptor.IsValid())
+    return llvm::createStringError("invalid frame provider descriptor");
+
+  llvm::StringRef name = descriptor.GetName();
+  if (name.empty())
+    return llvm::createStringError(
+        "frame provider descriptor has no class name");
+
+  std::lock_guard<std::recursive_mutex> guard(
+      m_frame_provider_descriptors_mutex);
+
+  uint32_t descriptor_id = descriptor.GetID();
+  m_frame_provider_descriptors[descriptor_id] = descriptor;
+
+  // Clear frame providers on existing threads so they reload with new config.
+  if (ProcessSP process_sp = GetProcessSP())
+    for (ThreadSP thread_sp : process_sp->Threads())
+      thread_sp->ClearScriptedFrameProvider();
+
+  return descriptor_id;
+}
+
+bool Target::RemoveScriptedFrameProviderDescriptor(uint32_t id) {
+  std::lock_guard<std::recursive_mutex> guard(
+      m_frame_provider_descriptors_mutex);
+  bool removed = m_frame_provider_descriptors.erase(id);
+
+  if (removed)
+    if (ProcessSP process_sp = GetProcessSP())
+      for (ThreadSP thread_sp : process_sp->Threads())
+        thread_sp->ClearScriptedFrameProvider();
+
+  return removed;
+}
+
+void Target::ClearScriptedFrameProviderDescriptors() {
+  std::lock_guard<std::recursive_mutex> guard(
+      m_frame_provider_descriptors_mutex);
+
+  m_frame_provider_descriptors.clear();
+
+  if (ProcessSP process_sp = GetProcessSP())
+    for (ThreadSP thread_sp : process_sp->Threads())
+      thread_sp->ClearScriptedFrameProvider();
+}
+
+const llvm::DenseMap<uint32_t, ScriptedFrameProviderDescriptor> &
+Target::GetScriptedFrameProviderDescriptors() const {
+  std::lock_guard<std::recursive_mutex> guard(
+      m_frame_provider_descriptors_mutex);
+  return m_frame_provider_descriptors;
 }
 
 void Target::FinalizeFileActions(ProcessLaunchInfo &info) {
@@ -5085,17 +5145,17 @@ void TargetProperties::SetProcessLaunchInfo(
   const FileAction *input_file_action =
       launch_info.GetFileActionForFD(STDIN_FILENO);
   if (input_file_action) {
-    SetStandardInputPath(input_file_action->GetPath());
+    SetStandardInputPath(input_file_action->GetFileSpec().GetPath());
   }
   const FileAction *output_file_action =
       launch_info.GetFileActionForFD(STDOUT_FILENO);
   if (output_file_action) {
-    SetStandardOutputPath(output_file_action->GetPath());
+    SetStandardOutputPath(output_file_action->GetFileSpec().GetPath());
   }
   const FileAction *error_file_action =
       launch_info.GetFileActionForFD(STDERR_FILENO);
   if (error_file_action) {
-    SetStandardErrorPath(error_file_action->GetPath());
+    SetStandardErrorPath(error_file_action->GetFileSpec().GetPath());
   }
   SetDetachOnError(launch_info.GetFlags().Test(lldb::eLaunchFlagDetachOnError));
   SetDisableASLR(launch_info.GetFlags().Test(lldb::eLaunchFlagDisableASLR));
@@ -5198,6 +5258,11 @@ Target::TargetEventData::TargetEventData(const lldb::TargetSP &target_sp,
                                          const ModuleList &module_list)
     : EventData(), m_target_sp(target_sp), m_module_list(module_list) {}
 
+Target::TargetEventData::TargetEventData(
+    const lldb::TargetSP &target_sp, const lldb::TargetSP &created_target_sp)
+    : EventData(), m_target_sp(target_sp),
+      m_created_target_sp(created_target_sp), m_module_list() {}
+
 Target::TargetEventData::~TargetEventData() = default;
 
 llvm::StringRef Target::TargetEventData::GetFlavorString() {
@@ -5230,6 +5295,15 @@ TargetSP Target::TargetEventData::GetTargetFromEvent(const Event *event_ptr) {
   if (event_data)
     target_sp = event_data->m_target_sp;
   return target_sp;
+}
+
+TargetSP
+Target::TargetEventData::GetCreatedTargetFromEvent(const Event *event_ptr) {
+  TargetSP created_target_sp;
+  const TargetEventData *event_data = GetEventDataFromEvent(event_ptr);
+  if (event_data)
+    created_target_sp = event_data->m_created_target_sp;
+  return created_target_sp;
 }
 
 ModuleList

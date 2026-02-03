@@ -7,6 +7,7 @@
 
 // FIXME: Fails due to optimized debugging in 'ptxas'.
 // UNSUPPORTED: nvptx64-nvidia-cuda-LTO
+// XFAIL: intelgpu
 
 #include <omp.h>
 #include <stdio.h>

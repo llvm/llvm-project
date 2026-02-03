@@ -246,6 +246,63 @@ define <4 x float> @vtrnQf(ptr %A, ptr %B) nounwind {
 	ret <4 x float> %tmp5
 }
 
+define <8 x i8> @vtrni8_trn1_flipped(<8 x i8> %A, <8 x i8> %B) nounwind {
+; CHECKLE-LABEL: vtrni8_trn1_flipped:
+; CHECKLE:       // %bb.0:
+; CHECKLE-NEXT:    trn1 v0.8b, v1.8b, v0.8b
+; CHECKLE-NEXT:    ret
+;
+; CHECKBE-LABEL: vtrni8_trn1_flipped:
+; CHECKBE:       // %bb.0:
+; CHECKBE-NEXT:    rev64 v0.8b, v0.8b
+; CHECKBE-NEXT:    rev64 v1.8b, v1.8b
+; CHECKBE-NEXT:    trn1 v0.8b, v1.8b, v0.8b
+; CHECKBE-NEXT:    rev64 v0.8b, v0.8b
+; CHECKBE-NEXT:    ret
+  %tmp1 = shufflevector <8 x i8> %A, <8 x i8> %B, <8 x i32> <i32 8, i32 0, i32 10, i32 2, i32 12, i32 4, i32 14, i32 6>
+  ret <8 x i8> %tmp1
+}
+
+define <8 x i8> @vtrni8_trn2_flipped(<8 x i8> %A, <8 x i8> %B) nounwind {
+; CHECKLE-LABEL: vtrni8_trn2_flipped:
+; CHECKLE:       // %bb.0:
+; CHECKLE-NEXT:    trn2 v0.8b, v1.8b, v0.8b
+; CHECKLE-NEXT:    ret
+;
+; CHECKBE-LABEL: vtrni8_trn2_flipped:
+; CHECKBE:       // %bb.0:
+; CHECKBE-NEXT:    rev64 v0.8b, v0.8b
+; CHECKBE-NEXT:    rev64 v1.8b, v1.8b
+; CHECKBE-NEXT:    trn2 v0.8b, v1.8b, v0.8b
+; CHECKBE-NEXT:    rev64 v0.8b, v0.8b
+; CHECKBE-NEXT:    ret
+  %tmp1 = shufflevector <8 x i8> %A, <8 x i8> %B, <8 x i32> <i32 9, i32 1, i32 11, i32 3, i32 13, i32 5, i32 15, i32 7>
+  ret <8 x i8> %tmp1
+}
+
+define <8 x i8> @vtrni8_both_flipped_with_poison_values(<8 x i8> %A, <8 x i8> %B) nounwind {
+; CHECKLE-LABEL: vtrni8_both_flipped_with_poison_values:
+; CHECKLE:       // %bb.0:
+; CHECKLE-NEXT:    trn1 v2.8b, v1.8b, v0.8b
+; CHECKLE-NEXT:    trn2 v0.8b, v1.8b, v0.8b
+; CHECKLE-NEXT:    add v0.8b, v2.8b, v0.8b
+; CHECKLE-NEXT:    ret
+;
+; CHECKBE-LABEL: vtrni8_both_flipped_with_poison_values:
+; CHECKBE:       // %bb.0:
+; CHECKBE-NEXT:    rev64 v0.8b, v0.8b
+; CHECKBE-NEXT:    rev64 v1.8b, v1.8b
+; CHECKBE-NEXT:    trn1 v2.8b, v1.8b, v0.8b
+; CHECKBE-NEXT:    trn2 v0.8b, v1.8b, v0.8b
+; CHECKBE-NEXT:    add v0.8b, v2.8b, v0.8b
+; CHECKBE-NEXT:    rev64 v0.8b, v0.8b
+; CHECKBE-NEXT:    ret
+  %tmp1 = shufflevector <8 x i8> %A, <8 x i8> %B, <8 x i32> <i32 poison, i32 0, i32 poison, i32 2, i32 poison, i32 4, i32 14, i32 6>
+  %tmp2 = shufflevector <8 x i8> %A, <8 x i8> %B, <8 x i32> <i32 poison, i32 1, i32 poison, i32 3, i32 13, i32 5, i32 15, i32 poison>
+  %tmp3 = add <8 x i8> %tmp1, %tmp2
+  ret <8 x i8> %tmp3
+}
+
 ; Undef shuffle indices (even at the start of the shuffle mask) should not prevent matching to VTRN:
 
 define <8 x i8> @vtrni8_undef(ptr %A, ptr %B) nounwind {

@@ -534,10 +534,20 @@ public:
 
   // Held in ExtraFields for most common OpTypes, exceptions follow.
   struct CommonFields {
-    unsigned Register = std::numeric_limits<unsigned>::max();
-    int64_t Offset = 0;
-    unsigned Register2 = std::numeric_limits<unsigned>::max();
-    unsigned AddressSpace = 0;
+    unsigned Register;
+    int64_t Offset;
+    unsigned Register2;
+    unsigned AddressSpace;
+    // FIXME: Workaround for GCC7 bug with nested class used as std::variant
+    // alternative where the compiler really wants a user-defined default
+    // constructor. Once we no longer support GCC7 these constructors can be
+    // replaced with default member initializers and aggregate initialization.
+    CommonFields(unsigned Reg, int64_t Off = 0,
+                 unsigned Reg2 = std::numeric_limits<unsigned>::max(),
+                 unsigned AddrSpace = 0)
+        : Register(Reg), Offset(Off), Register2(Reg2), AddressSpace(AddrSpace) {
+    }
+    CommonFields() : CommonFields(std::numeric_limits<unsigned>::max()) {}
   };
   // Held in ExtraFields when OpEscape.
   struct EscapeFields {

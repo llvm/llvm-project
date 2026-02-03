@@ -4,7 +4,7 @@
 # RUN: llvm-mc -filetype=obj -triple=mips64-unknown-linux %s -o %t1.o
 # RUN: not ld.lld %t1.o -o /dev/null 2>&1 | FileCheck %s
 
-# CHECK: relocation R_MIPS_CALL16 out of range: 32768 is not in [-32768, 32767]
+# CHECK: error: {{.*}}:(.text+0x{{.*}}): relocation R_MIPS_CALL16 out of range: 32768 is not in [-32768, 32767]
 
 .macro generate_values
   .irp i, 0, 1, 2, 3, 4, 5, 6, 7, 8, 9,

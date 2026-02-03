@@ -247,7 +247,9 @@ OffloadBinary::create(MemoryBufferRef Buf, std::optional<uint64_t> Index) {
       return errorCodeToError(object_error::parse_failed);
     const Entry *TheEntry = &Entries[*Index];
     if (TheEntry->ImageOffset > Buf.getBufferSize() ||
-        TheEntry->StringOffset > Buf.getBufferSize())
+        TheEntry->StringOffset > Buf.getBufferSize() ||
+        TheEntry->StringOffset + TheEntry->NumStrings * sizeof(StringEntry) >
+            Buf.getBufferSize())
       return errorCodeToError(object_error::unexpected_eof);
 
     Binaries.emplace_back(new OffloadBinary(Buf, TheHeader, TheEntry, *Index));
@@ -259,7 +261,9 @@ OffloadBinary::create(MemoryBufferRef Buf, std::optional<uint64_t> Index) {
   for (uint64_t I = 0; I < EntriesCount; ++I) {
     const Entry *TheEntry = &Entries[I];
     if (TheEntry->ImageOffset > Buf.getBufferSize() ||
-        TheEntry->StringOffset > Buf.getBufferSize())
+        TheEntry->StringOffset > Buf.getBufferSize() ||
+        TheEntry->StringOffset + TheEntry->NumStrings * sizeof(StringEntry) >
+            Buf.getBufferSize())
       return errorCodeToError(object_error::unexpected_eof);
 
     Binaries.emplace_back(new OffloadBinary(Buf, TheHeader, TheEntry, I));
