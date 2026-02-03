@@ -961,7 +961,11 @@ void CheckHelper::CheckObjectEntity(
         messages_.Say(
             "!DIR$ IGNORE_TKR(R) may not apply in an ELEMENTAL procedure"_err_en_US);
       }
-      if (IsPassedViaDescriptor(symbol)) {
+      // Descriptor based dummy args passed with ignore_tkr(rc) are allowed
+      // to have rank differences
+      const bool ignoreTKRrc{ignoreTKR.test(common::IgnoreTKR::Rank) &&
+          ignoreTKR.test(common::IgnoreTKR::Contiguous)};
+      if (IsPassedViaDescriptor(symbol) && !ignoreTKRrc) {
         if (IsAllocatableOrObjectPointer(&symbol) &&
             !ignoreTKR.test(common::IgnoreTKR::Pointer)) {
           if (inExplicitExternalInterface) {
