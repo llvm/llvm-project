@@ -5,7 +5,7 @@ define <4 x i32> @binop_splice_left(<4 x i32> %v1, <4 x i32> %v2, <4 x i32> %v3,
 ; CHECK-LABEL: define <4 x i32> @binop_splice_left(
 ; CHECK-SAME: <4 x i32> [[V1:%.*]], <4 x i32> [[V2:%.*]], <4 x i32> [[V3:%.*]], i32 [[OFFSET:%.*]]) {
 ; CHECK-NEXT:    [[RES1:%.*]] = add <4 x i32> [[V1]], [[V2]]
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.vector.splice.right.v4i32(<4 x i32> [[RES1]], <4 x i32> [[V3]], i32 [[OFFSET]])
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.vector.splice.left.v4i32(<4 x i32> [[RES1]], <4 x i32> [[V3]], i32 [[OFFSET]])
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
   %splice1 = call <4 x i32> @llvm.vector.splice.left(<4 x i32> %v1, <4 x i32> %v3, i32 %offset)
@@ -20,7 +20,7 @@ define <4 x i32> @binop_splice_left_rhs_splat(<4 x i32> %v1, i32 %x, <4 x i32> %
 ; CHECK-NEXT:    [[HEAD:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
 ; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <4 x i32> [[HEAD]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[RES1:%.*]] = add <4 x i32> [[V1]], [[SPLAT]]
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.vector.splice.right.v4i32(<4 x i32> [[RES1]], <4 x i32> [[V3]], i32 [[OFFSET]])
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.vector.splice.left.v4i32(<4 x i32> [[RES1]], <4 x i32> [[V3]], i32 [[OFFSET]])
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
   %splice = call <4 x i32> @llvm.vector.splice.left(<4 x i32> %v1, <4 x i32> %v3, i32 %offset)
@@ -36,7 +36,7 @@ define <4 x i32> @binop_splice_left_lhs_splat(<4 x i32> %v1, i32 %x, <4 x i32> %
 ; CHECK-NEXT:    [[HEAD:%.*]] = insertelement <4 x i32> poison, i32 [[X]], i64 0
 ; CHECK-NEXT:    [[SPLAT:%.*]] = shufflevector <4 x i32> [[HEAD]], <4 x i32> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    [[RES1:%.*]] = add <4 x i32> [[SPLAT]], [[V1]]
-; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.vector.splice.right.v4i32(<4 x i32> [[RES1]], <4 x i32> [[V3]], i32 [[OFFSET]])
+; CHECK-NEXT:    [[RES:%.*]] = call <4 x i32> @llvm.vector.splice.left.v4i32(<4 x i32> [[RES1]], <4 x i32> [[V3]], i32 [[OFFSET]])
 ; CHECK-NEXT:    ret <4 x i32> [[RES]]
 ;
   %splice = call <4 x i32> @llvm.vector.splice.left(<4 x i32> %v1, <4 x i32> %v3, i32 %offset)

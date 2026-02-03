@@ -2401,8 +2401,7 @@ static Instruction *foldSpliceBinOp(BinaryOperator &Inst,
     if (auto *BO = dyn_cast<BinaryOperator>(V))
       BO->copyIRFlags(&Inst);
     Module *M = Inst.getModule();
-    Function *F = Intrinsic::getOrInsertDeclaration(
-        M, Intrinsic::vector_splice_right, V->getType());
+    Function *F = Intrinsic::getOrInsertDeclaration(M, SpliceID, V->getType());
     return CallInst::Create(F, {V, Z, Offset});
   };
   Value *V1, *V2, *V3, *Offset;
