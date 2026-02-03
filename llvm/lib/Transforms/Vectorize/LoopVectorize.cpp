@@ -7170,6 +7170,13 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
             PHISelects[PHI]++;
           }
         }
+
+        // Recipes with underlying instructions being moved out of the loop
+        // region by LICM may cause discrepancies between the legacy cost model
+        // and the VPlan-based cost model.
+        if (!VPBB->getEnclosingLoopRegion())
+          return true;
+
         SeenInstrs.insert(UI);
       }
     }
