@@ -15,6 +15,7 @@
 #define CLANG_ANALYSIS_SCALABLE_SERIALIZATION_SERIALIZATION_FORMAT_H
 
 #include "clang/Analysis/Scalable/Model/BuildNamespace.h"
+#include "clang/Analysis/Scalable/Model/SummaryName.h"
 #include "clang/Analysis/Scalable/TUSummary/TUSummary.h"
 #include "llvm/ADT/SmallString.h"
 #include "llvm/ADT/StringRef.h"
@@ -26,8 +27,7 @@ namespace clang::ssaf {
 class EntityId;
 class EntityIdTable;
 class EntityName;
-class TUSummary;
-class TUSummaryData;
+class EntitySummary;
 
 /// Abstract base class for serialization formats.
 class SerializationFormat {
@@ -48,6 +48,8 @@ protected:
   static const llvm::SmallString<16> &getEntityNameSuffix(const EntityName &EN);
   static const NestedBuildNamespace &
   getEntityNameNamespace(const EntityName &EN);
+  static decltype(TUSummary::Data) &getData(TUSummary &S);
+  static const decltype(TUSummary::Data) &getData(const TUSummary &S);
 
 public:
   explicit SerializationFormat(
@@ -61,6 +63,17 @@ public:
 
 protected:
   llvm::IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS;
+};
+
+template <class SerializerFn, class DeserializerFn> struct FormatInfoEntry {
+  FormatInfoEntry(SummaryName ForSummary, SerializerFn Serialize,
+                  DeserializerFn Deserialize)
+      : ForSummary(ForSummary), Serialize(Serialize), Deserialize(Deserialize) {
+  }
+
+  SummaryName ForSummary;
+  SerializerFn Serialize;
+  DeserializerFn Deserialize;
 };
 
 } // namespace clang::ssaf
