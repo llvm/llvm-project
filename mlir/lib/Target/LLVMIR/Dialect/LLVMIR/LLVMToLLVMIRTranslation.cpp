@@ -437,6 +437,24 @@ convertOperationImpl(Operation &opInst, llvm::IRBuilderBase &builder,
       call->addFnAttr(llvm::Attribute::AlwaysInline);
     if (callOp.getInlineHintAttr())
       call->addFnAttr(llvm::Attribute::InlineHint);
+    if (callOp.getNoCallerSavedRegistersAttr())
+      call->addFnAttr(llvm::Attribute::get(moduleTranslation.getLLVMContext(),
+                                           "no_caller_saved_registers"));
+    if (callOp.getNocallbackAttr())
+      call->addFnAttr(llvm::Attribute::NoCallback);
+    if (StringAttr modFormat = callOp.getModularFormatAttr())
+      call->addFnAttr(llvm::Attribute::get(moduleTranslation.getLLVMContext(),
+                                           "modular-format",
+                                           modFormat.getValue()));
+
+    if (ArrayAttr noBuiltins = callOp.getNobuiltinsAttr()) {
+      if (noBuiltins.empty())
+        call->addFnAttr(llvm::Attribute::get(moduleTranslation.getLLVMContext(),
+                                             "no-builtins"));
+
+      moduleTranslation.convertFunctionArrayAttr(
+          noBuiltins, call, ModuleTranslation::convertNoBuiltin);
+    }
 
     if (failed(moduleTranslation.convertArgAndResultAttrs(callOp, call)))
       return failure();

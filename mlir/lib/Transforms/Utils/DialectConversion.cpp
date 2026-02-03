@@ -21,6 +21,7 @@
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/Support/Debug.h"
 #include "llvm/Support/DebugLog.h"
+#include "llvm/Support/ErrorHandling.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/SaveAndRestore.h"
 #include "llvm/Support/ScopedPrinter.h"
@@ -1596,7 +1597,7 @@ Block *ConversionPatternRewriterImpl::applySignatureConversion(
 #if MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
   // A block cannot be converted multiple times.
   if (hasRewrite<BlockTypeConversionRewrite>(rewrites, block))
-    llvm::report_fatal_error("block was already converted");
+    llvm::reportFatalInternalError("block was already converted");
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 
   OpBuilder::InsertionGuard g(rewriter);
@@ -2027,7 +2028,7 @@ void ConversionPatternRewriterImpl::replaceValueUses(
 #endif // NDEBUG
 
   if (functor)
-    llvm::report_fatal_error(
+    llvm::reportFatalInternalError(
         "conditional value replacement is not supported in rollback mode");
   mapping.map(from, to);
   appendRewrite<ReplaceValueRewrite>(from, converter);
@@ -2687,7 +2688,7 @@ LogicalResult OperationLegalizer::legalizeWithFold(Operation *op) {
                             newOp->getName()));
       if (!rewriter.getConfig().allowPatternRollback) {
         // Rolling back a folder is like rolling back a pattern.
-        llvm::report_fatal_error(
+        llvm::reportFatalInternalError(
             "op '" + opName +
             "' folder rollback of IR modifications requested");
       }
@@ -2711,11 +2712,11 @@ reportNewIrLegalizationFatalError(const Pattern &pattern,
       newOps, [](Operation *op) { return op->getName().getStringRef(); });
   auto modifiedOpNames = llvm::map_range(
       modifiedOps, [](Operation *op) { return op->getName().getStringRef(); });
-  llvm::report_fatal_error("pattern '" + pattern.getDebugName() +
-                           "' produced IR that could not be legalized. " +
-                           "new ops: {" + llvm::join(newOpNames, ", ") + "}, " +
-                           "modified ops: {" +
-                           llvm::join(modifiedOpNames, ", ") + "}");
+  llvm::reportFatalInternalError("pattern '" + pattern.getDebugName() +
+                                 "' produced IR that could not be legalized. " +
+                                 "new ops: {" + llvm::join(newOpNames, ", ") +
+                                 "}, " + "modified ops: {" +
+                                 llvm::join(modifiedOpNames, ", ") + "}");
 }
 
 LogicalResult OperationLegalizer::legalizeWithPattern(Operation *op) {
@@ -2772,8 +2773,9 @@ LogicalResult OperationLegalizer::legalizeWithPattern(Operation *op) {
       if (checkOp && topLevelFingerPrint) {
         OperationFingerPrint fingerPrintAfterPattern(checkOp);
         if (fingerPrintAfterPattern != *topLevelFingerPrint)
-          llvm::report_fatal_error("pattern '" + pattern.getDebugName() +
-                                   "' returned failure but IR did change");
+          llvm::reportFatalInternalError(
+              "pattern '" + pattern.getDebugName() +
+              "' returned failure but IR did change");
       }
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
     }
@@ -2870,8 +2872,9 @@ LogicalResult OperationLegalizer::legalizePatternResult(
       return hasRewrite<ModifyOperationRewrite>(newRewrites, op);
     };
     if (!replacedRoot() && !updatedRootInPlace())
-      llvm::report_fatal_error("expected pattern to replace the root operation "
-                               "or modify it in place");
+      llvm::reportFatalInternalError(
+          "expected pattern to replace the root operation "
+          "or modify it in place");
   }
 #endif // MLIR_ENABLE_EXPENSIVE_PATTERN_API_CHECKS
 

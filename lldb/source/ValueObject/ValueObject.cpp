@@ -744,8 +744,8 @@ size_t ValueObject::GetPointeeData(DataExtractor &data, uint32_t item_idx,
       }
     } break;
     case eAddressTypeHost: {
-      auto max_bytes =
-          GetCompilerType().GetByteSize(exe_ctx.GetBestExecutionContextScope());
+      auto max_bytes = llvm::expectedToOptional(GetCompilerType().GetByteSize(
+          exe_ctx.GetBestExecutionContextScope()));
       if (max_bytes && *max_bytes > offset) {
         size_t bytes_read = std::min<uint64_t>(*max_bytes - offset, bytes);
         addr = m_value.GetScalar().ULongLong(LLDB_INVALID_ADDRESS);
@@ -1165,7 +1165,7 @@ llvm::Expected<llvm::APSInt> ValueObject::GetValueAsAPSInt() {
 }
 
 llvm::Expected<llvm::APFloat> ValueObject::GetValueAsAPFloat() {
-  if (!GetCompilerType().IsFloat())
+  if (!GetCompilerType().IsFloatingPointType())
     return llvm::make_error<llvm::StringError>(
         "type cannot be converted to APFloat", llvm::inconvertibleErrorCode());
 
@@ -1188,7 +1188,7 @@ llvm::Expected<bool> ValueObject::GetValueAsBool() {
     if (value_or_err)
       return value_or_err->getBoolValue();
   }
-  if (val_type.IsFloat()) {
+  if (val_type.IsFloatingPointType()) {
     auto value_or_err = GetValueAsAPFloat();
     if (value_or_err)
       return value_or_err->isNonZero();
@@ -1204,7 +1204,7 @@ void ValueObject::SetValueFromInteger(const llvm::APInt &value, Status &error) {
   // Verify the current object is an integer object
   CompilerType val_type = GetCompilerType();
   if (!val_type.IsInteger() && !val_type.IsUnscopedEnumerationType() &&
-      !val_type.IsFloat() && !val_type.IsPointerType() &&
+      !val_type.IsFloatingPointType() && !val_type.IsPointerType() &&
       !val_type.IsScalarType()) {
     error =
         Status::FromErrorString("current value object is not an integer objet");
@@ -1244,7 +1244,7 @@ void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
   // Verify the current object is an integer object
   CompilerType val_type = GetCompilerType();
   if (!val_type.IsInteger() && !val_type.IsUnscopedEnumerationType() &&
-      !val_type.IsFloat() && !val_type.IsPointerType() &&
+      !val_type.IsFloatingPointType() && !val_type.IsPointerType() &&
       !val_type.IsScalarType()) {
     error =
         Status::FromErrorString("current value object is not an integer objet");
@@ -1261,7 +1261,7 @@ void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
 
   // Verify the proposed new value is the right type.
   CompilerType new_val_type = new_val_sp->GetCompilerType();
-  if (!new_val_type.IsInteger() && !new_val_type.IsFloat() &&
+  if (!new_val_type.IsInteger() && !new_val_type.IsFloatingPointType() &&
       !new_val_type.IsPointerType()) {
     error = Status::FromErrorString(
         "illegal argument: new value should be of the same size");
@@ -1274,7 +1274,7 @@ void ValueObject::SetValueFromInteger(lldb::ValueObjectSP new_val_sp,
       SetValueFromInteger(*value_or_err, error);
     else
       error = Status::FromErrorString("error getting APSInt from new_val_sp");
-  } else if (new_val_type.IsFloat()) {
+  } else if (new_val_type.IsFloatingPointType()) {
     auto value_or_err = new_val_sp->GetValueAsAPFloat();
     if (value_or_err)
       SetValueFromInteger(value_or_err->bitcastToAPInt(), error);
@@ -3142,7 +3142,7 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
   bool is_enum = GetCompilerType().IsEnumerationType();
   bool is_pointer =
       GetCompilerType().IsPointerType() || GetCompilerType().IsNullPtrType();
-  bool is_float = GetCompilerType().IsFloat();
+  bool is_float = GetCompilerType().IsFloatingPointType();
   bool is_integer = GetCompilerType().IsInteger();
   ExecutionContext exe_ctx(GetExecutionContextRef());
 
@@ -3234,7 +3234,7 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
     }
   }
 
-  if (type.IsFloat()) {
+  if (type.IsFloatingPointType()) {
     if (!is_scalar) {
       auto int_value_or_err = GetValueAsAPSInt();
       if (int_value_or_err) {
@@ -3296,7 +3296,7 @@ lldb::ValueObjectSP ValueObject::CastToBasicType(CompilerType type) {
 lldb::ValueObjectSP ValueObject::CastToEnumType(CompilerType type) {
   bool is_enum = GetCompilerType().IsEnumerationType();
   bool is_integer = GetCompilerType().IsInteger();
-  bool is_float = GetCompilerType().IsFloat();
+  bool is_float = GetCompilerType().IsFloatingPointType();
   ExecutionContext exe_ctx(GetExecutionContextRef());
 
   if (!is_enum && !is_integer && !is_float)
@@ -3767,4 +3767,95 @@ ValueObjectSP ValueObject::Persist() {
 
 lldb::ValueObjectSP ValueObject::GetVTable() {
   return ValueObjectVTable::Create(*this);
+}
+
+ValueImpl::ValueImpl(lldb::ValueObjectSP in_valobj_sp,
+                     lldb::DynamicValueType use_dynamic, bool use_synthetic,
+                     const char *name)
+    : m_use_dynamic(use_dynamic), m_use_synthetic(use_synthetic), m_name(name) {
+  if (in_valobj_sp) {
+    if ((m_valobj_sp = in_valobj_sp->GetQualifiedRepresentationIfAvailable(
+             lldb::eNoDynamicValues, false))) {
+      if (!m_name.IsEmpty())
+        m_valobj_sp->SetName(m_name);
+    }
+  }
+}
+
+ValueImpl &ValueImpl::operator=(const ValueImpl &rhs) {
+  if (this != &rhs) {
+    m_valobj_sp = rhs.m_valobj_sp;
+    m_use_dynamic = rhs.m_use_dynamic;
+    m_use_synthetic = rhs.m_use_synthetic;
+    m_name = rhs.m_name;
+  }
+  return *this;
+}
+
+bool ValueImpl::IsValid() {
+  if (m_valobj_sp.get() == nullptr)
+    return false;
+
+  // FIXME: This check is necessary but not sufficient.  We for sure don't
+  // want to touch SBValues whose owning
+  // targets have gone away.  This check is a little weak in that it
+  // enforces that restriction when you call IsValid, but since IsValid
+  // doesn't lock the target, you have no guarantee that the SBValue won't
+  // go invalid after you call this... Also, an SBValue could depend on
+  // data from one of the modules in the target, and those could go away
+  // independently of the target, for instance if a module is unloaded.
+  // But right now, neither SBValues nor ValueObjects know which modules
+  // they depend on.  So I have no good way to make that check without
+  // tracking that in all the ValueObject subclasses.
+  TargetSP target_sp = m_valobj_sp->GetTargetSP();
+  return target_sp && target_sp->IsValid();
+}
+
+lldb::ValueObjectSP
+ValueImpl::GetSP(Process::StopLocker &stop_locker,
+                 std::unique_lock<std::recursive_mutex> &lock, Status &error) {
+  if (!m_valobj_sp) {
+    error = Status::FromErrorString("invalid value object");
+    return m_valobj_sp;
+  }
+
+  lldb::ValueObjectSP value_sp = m_valobj_sp;
+
+  Target *target = value_sp->GetTargetSP().get();
+  // If this ValueObject holds an error, then it is valuable for that.
+  if (value_sp->GetError().Fail())
+    return value_sp;
+
+  if (!target)
+    return ValueObjectSP();
+
+  lock = std::unique_lock<std::recursive_mutex>(target->GetAPIMutex());
+
+  ProcessSP process_sp(value_sp->GetProcessSP());
+  if (process_sp && !stop_locker.TryLock(&process_sp->GetRunLock())) {
+    // We don't allow people to play around with ValueObject if the process
+    // is running. If you want to look at values, pause the process, then
+    // look.
+    error = Status::FromErrorString("process must be stopped.");
+    return ValueObjectSP();
+  }
+
+  if (m_use_dynamic != eNoDynamicValues) {
+    ValueObjectSP dynamic_sp = value_sp->GetDynamicValue(m_use_dynamic);
+    if (dynamic_sp)
+      value_sp = dynamic_sp;
+  }
+
+  if (m_use_synthetic) {
+    ValueObjectSP synthetic_sp = value_sp->GetSyntheticValue();
+    if (synthetic_sp)
+      value_sp = synthetic_sp;
+  }
+
+  if (!value_sp)
+    error = Status::FromErrorString("invalid value object");
+  if (!m_name.IsEmpty())
+    value_sp->SetName(m_name);
+
+  return value_sp;
 }
