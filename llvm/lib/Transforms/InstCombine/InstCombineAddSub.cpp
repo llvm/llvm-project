@@ -38,6 +38,10 @@ using namespace PatternMatch;
 
 #define DEBUG_TYPE "instcombine"
 
+namespace llvm {
+extern cl::opt<bool> ProfcheckDisableMetadataFixes;
+}
+
 namespace {
 
   /// Class representing coefficient of floating-point addend.
@@ -3085,6 +3089,8 @@ Instruction *InstCombinerImpl::visitFNeg(UnaryOperator &I) {
     auto propagateSelectFMF = [&](SelectInst *S, bool CommonOperand) {
       S->copyFastMathFlags(&I);
       if (auto *OldSel = dyn_cast<SelectInst>(Op)) {
+        if (!ProfcheckDisableMetadataFixes)
+          S->copyMetadata(*OldSel);
         FastMathFlags FMF = I.getFastMathFlags() | OldSel->getFastMathFlags();
         S->setFastMathFlags(FMF);
         if (!OldSel->hasNoSignedZeros() && !CommonOperand &&
