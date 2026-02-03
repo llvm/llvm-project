@@ -158,6 +158,7 @@ void X86CodeGenPassBuilder::addPostRegAlloc(PassManagerWrapper &PMW) const {
   // mitigation. This is to prevent slow downs due to
   // analyses needed by the LVIHardening pass when compiling at -O0.
   if (getOptLevel() != CodeGenOptLevel::None) {
+    // TODO(nigham): Move LoadValueInjectionRetHardeningPass to PreEmitPass2.
     addMachineFunctionPass(X86LoadValueInjectionRetHardeningPass(), PMW);
     addMachineFunctionPass(X86LoadValueInjectionLoadHardeningPass(), PMW);
   }
