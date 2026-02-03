@@ -15,12 +15,15 @@
 
 // XFAIL: has-no-cxx-module-support
 
-// Make sure that the compile flags contain the expected elements.
-// The tests only look for the expected components and not the exact flags.
-// Otherwise changing the location of the module would break this test.
+// Apple Clang 17 advertises C++ Modules support but fails to compile this test.
+// XFAIL: apple-clang-17
 
 // C++20 modules are incompatible with Clang modules
 // ADDITIONAL_COMPILE_FLAGS: -fno-modules
+
+// Make sure that the compile flags contain the expected elements.
+// The tests only look for the expected components and not the exact flags.
+// Otherwise changing the location of the module would break this test.
 
 // MODULE_DEPENDENCIES: std std.compat
 

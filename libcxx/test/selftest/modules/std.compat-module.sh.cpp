@@ -15,6 +15,9 @@
 
 // XFAIL: has-no-cxx-module-support
 
+// Apple Clang 17 advertises C++ Modules support but fails to compile this test.
+// XFAIL: apple-clang-17
+
 // C++20 modules are incompatible with Clang modules
 // ADDITIONAL_COMPILE_FLAGS: -fno-modules
 
