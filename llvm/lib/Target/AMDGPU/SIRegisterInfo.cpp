@@ -1843,7 +1843,7 @@ void SIRegisterInfo::buildSpillLoadStore(
     // used for spills will not be used outside the thread.
     MachinePointerInfo PInfo = BasePtrInfo.getWithOffset(RegOffset);
     MachineMemOperand *NewMMO = MF->getMachineMemOperand(
-        PInfo, MMO->getFlags() | MONonVolatile, RemEltSize,
+        PInfo, MMO->getFlags() | MOThreadPrivate, RemEltSize,
         commonAlignment(Alignment, RegOffset));
 
     auto MIB =
