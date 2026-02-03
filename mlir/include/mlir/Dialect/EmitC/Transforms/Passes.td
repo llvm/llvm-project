@@ -25,7 +25,7 @@ def WrapFuncInClassPass : Pass<"wrap-emitc-func-in-class"> {
   let description = [{
     This pass transforms `emitc.func` operations into `emitc.class` operations.
     Function arguments become fields of the class, and the function body is moved
-    to a new member method within the class. By default, this is `operator()`.
+    to a new member method within the class. By default, this is `operator()()`.
 
     If the corresponding function argument has attributes (accessed via `argAttrs`), 
     these attributes are attached to the field operation. 
