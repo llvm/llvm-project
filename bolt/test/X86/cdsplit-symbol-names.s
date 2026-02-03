@@ -7,6 +7,7 @@
 # RUN: llvm-strip --strip-unneeded %t.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q
 # RUN: llvm-bolt %t.exe -o %t.bolt --split-functions --split-strategy=cdsplit \
+# RUN:         --reorder-functions=exec-count \
 # RUN:         --call-scale=2 --data=%t.fdata --reorder-blocks=ext-tsp
 # RUN: llvm-objdump --syms %t.bolt | FileCheck %s --check-prefix=CHECK-SYMS-WARM
 

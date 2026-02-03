@@ -36,7 +36,8 @@
 ## YAML BAT test of calling BAT secondary entry from non-BAT function
 ## Now force-split func and skip main (making it call secondary entries)
 # RUN: llvm-bolt %t.exe -o %t.bat --data %t.fdata --funcs=func \
-# RUN:   --split-functions --split-strategy=all --split-all-cold --enable-bat
+# RUN:   --split-functions --split-strategy=all --split-all-cold --enable-bat \
+# RUN:   --reorder-functions=exec-count
 
 ## Prepare pre-aggregated profile using %t.bat
 # RUN: link_fdata %s %t.bat %t.preagg PREAGG
@@ -57,7 +58,8 @@
 
 ## YAML BAT test of calling BAT secondary entry from BAT function
 # RUN: llvm-bolt %t.exe -o %t.bat2 --data %t.fdata --funcs=main,func \
-# RUN:   --split-functions --split-strategy=all --split-all-cold --enable-bat
+# RUN:   --split-functions --split-strategy=all --split-all-cold --enable-bat \
+# RUN:   --reorder-functions=exec-count
 
 ## Prepare pre-aggregated profile using %t.bat
 # RUN: link_fdata %s %t.bat2 %t.preagg2 PREAGG2

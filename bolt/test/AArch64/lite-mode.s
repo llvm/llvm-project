@@ -8,9 +8,10 @@
 # RUN: llvm-strip --strip-unneeded %t*.o
 # RUN: %clang %cflags %t.o -o %t.exe -Wl,-q -static
 # RUN: %clang %cflags %t.compact.o -o %t.compact.exe -Wl,-q -static
-# RUN: llvm-bolt %t.exe -o %t.bolt --data %t.fdata --lite
+# RUN: llvm-bolt %t.exe -o %t.bolt --data %t.fdata --lite \
+# RUN:   --reorder-functions=exec-count
 # RUN: llvm-bolt %t.compact.exe -o %t.compact.bolt --data %t.fdata --lite \
-# RUN:   --compact-code-model
+# RUN:   --compact-code-model --reorder-functions=exec-count
 # RUN: llvm-objdump -d --disassemble-symbols=cold_function %t.exe \
 # RUN:   | FileCheck %s --check-prefix=CHECK-INPUT
 # RUN: llvm-objdump -d --disassemble-symbols=cold_function %t.bolt \

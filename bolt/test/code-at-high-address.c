@@ -8,6 +8,7 @@
 // RUN: link_fdata %s %t %t.fdata
 // RUN: llvm-bolt %t -o %t.bolt --data %t.fdata --use-old-text \
 // RUN:   --align-functions=1 --no-huge-pages --align-text=1 --use-gnu-stack \
+// RUN:   --reorder-functions=cdsort \
 // RUN:    --hot-functions-at-end | FileCheck %s --check-prefix=CHECK-BOLT
 // RUN: llvm-readelf --sections %t.bolt | FileCheck %s
 
