@@ -7195,17 +7195,20 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
 static bool planContainsDifferentCompares(VPlan &Plan, VPCostContext &CostCtx,
                                           Loop *TheLoop, ElementCount VF) {
   // Count how many compare instructions there are in the legacy cost model.
-  unsigned NumLegacyCompares = 0;
+  unsigned NumLegacyScalarCompares = 0, NumLegacyVectorCompares = 0;
   for (BasicBlock *BB : TheLoop->blocks()) {
     for (auto &I : *BB) {
       if (isa<CmpInst>(I)) {
-        NumLegacyCompares += 1;
+        if (CostCtx.CM.isUniformAfterVectorization(&I, VF))
+          NumLegacyScalarCompares += 1;
+        else
+          NumLegacyVectorCompares += 1;
       }
     }
   }
 
   // Count how many compare instructions there are in the VPlan.
-  unsigned NumVPlanCompares = 0;
+  unsigned NumVPlanScalarCompares = 0, NumVPlanVectorCompares = 0;
   VPRegionBlock *VectorRegion = Plan.getVectorLoopRegion();
   auto Iter = vp_depth_first_deep(VectorRegion->getEntry());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
@@ -7215,14 +7218,27 @@ static bool planContainsDifferentCompares(VPlan &Plan, VPCostContext &CostCtx,
     for (VPRecipeBase &R : *VPBB) {
       using namespace VPlanPatternMatch;
       if (match(&R, m_BranchOnCount(m_VPValue(), m_VPValue())) ||
-          match(&R, m_Cmp(m_VPValue(), m_VPValue())))
-        NumVPlanCompares += 1;
+          match(&R, m_Cmp(m_VPValue(), m_VPValue()))) {
+        if (vputils::onlyFirstLaneUsed(cast<VPSingleDefRecipe>(&R)))
+          NumVPlanScalarCompares += 1;
+        else
+          NumVPlanVectorCompares += 1;
+      }
     }
   }
 
   // If we have a different amount, then the legacy cost model and vplan will
   // disagree.
-  return NumLegacyCompares != NumVPlanCompares;
+  bool Disagree = NumLegacyScalarCompares != NumVPlanScalarCompares ||
+                  NumLegacyVectorCompares != NumVPlanVectorCompares;
+  if (Disagree)
+    LLVM_DEBUG(
+        dbgs() << "LV: Legacy and VPlan disagree about number of compares."
+               << " Legacy Scalar=" << NumLegacyScalarCompares
+               << " Vector=" << NumLegacyVectorCompares
+               << ", VPlan Scalar=" << NumVPlanScalarCompares
+               << " Vector=" << NumVPlanVectorCompares << "\n");
+  return Disagree;
 }
 #endif
 
