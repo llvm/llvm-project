@@ -4582,7 +4582,7 @@ SelectionDAG::computeOverflowForUnsignedSub(SDValue N0, SDValue N1) const {
     return OFK_Never;
 
   ConstantRange N0Range =
-      computeConstantRangeIncludingKnownBits(N1, /*ForSigned=*/false);
+      computeConstantRangeIncludingKnownBits(N0, /*ForSigned=*/false);
   ConstantRange N1Range =
       computeConstantRangeIncludingKnownBits(N1, /*ForSigned=*/false);
   return mapOverflowResult(N0Range.unsignedSubMayOverflow(N1Range));
@@ -4627,6 +4627,15 @@ SelectionDAG::computeOverflowForSignedMul(SDValue N0, SDValue N1) const {
   }
 
   return OFK_Sometime;
+}
+
+ConstantRange SelectionDAG::computeConstantRange(SDValue Op,
+                                                 unsigned Depth) const {
+  EVT VT = Op.getValueType();
+  APInt DemandedElts = VT.isFixedLengthVector()
+                           ? APInt::getAllOnes(VT.getVectorNumElements())
+                           : APInt(1, 1);
+  return computeConstantRange(Op, DemandedElts, Depth);
 }
 
 ConstantRange SelectionDAG::computeConstantRange(SDValue Op,
