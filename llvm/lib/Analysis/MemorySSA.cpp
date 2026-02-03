@@ -277,17 +277,6 @@ static bool areLoadsReorderable(const LoadInst *Use,
   return !(SeqCstUse || MayClobberIsAcquire);
 }
 
-bool writeToSameTargetMemLoc(const CallBase *CallFirst,
-                             const CallBase *CallSecond) {
-
-  MemoryEffects ME1 = CallFirst->getMemoryEffects();
-  MemoryEffects ME2 = CallSecond->getMemoryEffects();
-  if (CallFirst->onlyAccessesTargetMemory() ||
-      CallSecond->onlyAccessesTargetMemory())
-    return !(ME1 & ME2 & MemoryEffects::writeOnly()).onlyReadsMemory();
-  return true;
-}
-
 template <typename AliasAnalysisType>
 static bool
 instructionClobbersQuery(const MemoryDef *MD, const MemoryLocation &UseLoc,
@@ -322,9 +311,6 @@ instructionClobbersQuery(const MemoryDef *MD, const MemoryLocation &UseLoc,
   }
 
   if (auto *CB = dyn_cast_or_null<CallBase>(UseInst)) {
-    if (auto *CU = dyn_cast_or_null<CallBase>(DefInst))
-      if (!writeToSameTargetMemLoc(CB, CU))
-        return false;
     ModRefInfo I = AA.getModRefInfo(DefInst, CB);
     return isModSet(I);
   }

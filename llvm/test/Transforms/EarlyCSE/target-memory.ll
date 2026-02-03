@@ -15,21 +15,6 @@ define void @foo(){
   ret void
 }
 
-define void @goo(){
-; CHECK-LABEL: define void @goo() {
-; CHECK-NEXT:    call void @fn_read_target0_read_target1()
-; CHECK-NEXT:    call void @fn_read_target0()
-; CHECK-NEXT:    call void @fn_read_target0_read_target1()
-; CHECK-NEXT:    call void @fn_read_target0_read_target1()
-; CHECK-NEXT:    ret void
-;
-  call void @fn_read_target0_read_target1()
-  call void @fn_read_target0()
-  call void @fn_read_target0_read_target1()
-  call void @fn_read_target0()
-  call void @fn_read_target0_read_target1()
-  ret void
-}
 
 ;; In this case the clobber function is not even called
 define void @neg_foo(){
@@ -47,8 +32,8 @@ define void @neg_foo(){
   ret void
 }
 
-define void @foo_neg_foo(){
-; CHECK-LABEL: define void @foo_neg_foo() {
+define void @neg_foo_call(){
+; CHECK-LABEL: define void @neg_foo_call() {
 ; CHECK-NEXT:    call void @fn_write_target1()
 ; CHECK-NEXT:    call void @fn_readwrite_target0_read_target1()
 ; CHECK-NEXT:    call void @neg_foo()
@@ -64,17 +49,52 @@ define void @foo_neg_foo(){
   ret void
 }
 
+
+define void @neg_foo_x(i64 %x, i64 %y){
+; CHECK-LABEL: define void @neg_foo_x(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:    call void @fn_write_target1_x(i64 [[X]])
+; CHECK-NEXT:    call void @fn_readwrite_target0_read_target1_x(i64 [[X]])
+; CHECK-NEXT:    call void @fn_write_target1_x(i64 [[Y]])
+; CHECK-NEXT:    call void @fn_readwrite_target0_read_target1_x(i64 [[X]])
+; CHECK-NEXT:    ret void
+;
+  call void @fn_write_target1_x(i64 %x)
+  call void @fn_readwrite_target0_read_target1_x(i64 %x)
+  call void @fn_write_target1_x(i64 %y)
+  call void @fn_readwrite_target0_read_target1_x(i64 %x)
+  ret void
+}
+
+define void @f1(i64 %x, i64 %y){
+; CHECK-LABEL: define void @f1(
+; CHECK-SAME: i64 [[X:%.*]], i64 [[Y:%.*]]) {
+; CHECK-NEXT:    call void @fn_read_target1()
+; CHECK-NEXT:    call void @fn_readwrite_target0_read_target1()
+; CHECK-NEXT:    call void @fn_readwrite_target0_read_target1()
+; CHECK-NEXT:    ret void
+;
+  call void @fn_read_target1()
+  call void @fn_readwrite_target0_read_target1()
+  call void @fn_read_target1()
+  call void @fn_readwrite_target0_read_target1()
+  ret void
+}
+
+
 declare void @fn_write_target1()
-  memory(target_mem1:  write)
-
-declare void @fn_read_target0_read_target1()
-  memory(target_mem0: readwrite, target_mem1: read)
-
-declare void @fn_read_target0()
-  memory( target_mem0: read)
+  memory(target_mem1: write)
+declare void @fn_read_target1()
+  memory(target_mem1: read)
 
 declare void @fn_read_target0_readwrite_target1()
   memory(target_mem0: read, target_mem1: readwrite)
 
 declare void @fn_readwrite_target0_read_target1()
+  memory(target_mem0: readwrite, target_mem1: read)
+
+declare void @fn_write_target1_x(i64)
+  memory(target_mem1:  write)
+
+declare void @fn_readwrite_target0_read_target1_x(i64)
   memory(target_mem0: readwrite, target_mem1: read)

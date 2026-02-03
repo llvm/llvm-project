@@ -244,6 +244,26 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call,
   return Result;
 }
 
+ModRefInfo getModRefTargetMemLoc(const MemoryEffects CallUse,
+                                 const MemoryEffects CallDef) {
+
+  ModRefInfo Result = ModRefInfo::NoModRef;
+  unsigned First = static_cast<unsigned>(IRMemLocation::FirstTarget);
+  unsigned Last = static_cast<unsigned>(IRMemLocation::Last);
+  for (unsigned ILoc = First; ILoc <= Last; ++ILoc) {
+    const auto Loc = static_cast<IRMemLocation>(ILoc);
+    if (CallUse.getModRef(Loc) == ModRefInfo::NoModRef)
+      continue;
+    if (CallDef.getModRef(Loc) == ModRefInfo::NoModRef)
+      continue;
+    if (CallDef.getModRef(Loc) == ModRefInfo::Ref &&
+        CallDef.getModRef(Loc) == CallUse.getModRef(Loc))
+      continue;
+    Result |= CallUse.getModRef(Loc);
+  }
+  return Result;
+}
+
 ModRefInfo AAResults::getModRefInfo(const CallBase *Call1,
                                     const CallBase *Call2, AAQueryInfo &AAQI) {
   ModRefInfo Result = ModRefInfo::ModRef;
@@ -347,6 +367,11 @@ ModRefInfo AAResults::getModRefInfo(const CallBase *Call1,
 
     return R;
   }
+
+  // Only the Target Memory Location have set ModRefInfo
+  // then checks the relation between the same locations.
+  if (Call1B.onlyAccessesTargetMem() && Call2B.onlyAccessesTargetMem())
+    return getModRefTargetMemLoc(Call1B, Call2B);
 
   return Result;
 }
