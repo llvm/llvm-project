@@ -102,9 +102,7 @@ public:
     /// Is this a variable with a location attribute referencing address?
     bool HasLocationExpressionAddr : 1;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
     LLVM_DUMP_METHOD void dump();
-#endif // if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   };
 
   CompileUnit(DWARFUnit &OrigUnit, unsigned ID, bool CanUseODR,

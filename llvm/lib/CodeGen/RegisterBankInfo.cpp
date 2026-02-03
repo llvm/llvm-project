@@ -512,12 +512,10 @@ TypeSize RegisterBankInfo::getSizeInBits(Register Reg,
 //------------------------------------------------------------------------------
 // Helper classes implementation.
 //------------------------------------------------------------------------------
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void RegisterBankInfo::PartialMapping::dump() const {
   print(dbgs());
   dbgs() << '\n';
 }
-#endif
 
 bool RegisterBankInfo::PartialMapping::verify(
     const RegisterBankInfo &RBI) const {
@@ -582,12 +580,10 @@ bool RegisterBankInfo::ValueMapping::verify(const RegisterBankInfo &RBI,
   return true;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void RegisterBankInfo::ValueMapping::dump() const {
   print(dbgs());
   dbgs() << '\n';
 }
-#endif
 
 void RegisterBankInfo::ValueMapping::print(raw_ostream &OS) const {
   OS << "#BreakDown: " << NumBreakDowns << " ";
@@ -641,12 +637,10 @@ bool RegisterBankInfo::InstructionMapping::verify(
   return true;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void RegisterBankInfo::InstructionMapping::dump() const {
   print(dbgs());
   dbgs() << '\n';
 }
-#endif
 
 void RegisterBankInfo::InstructionMapping::print(raw_ostream &OS) const {
   OS << "ID: " << getID() << " Cost: " << getCost() << " Mapping: ";
@@ -764,12 +758,10 @@ RegisterBankInfo::OperandsMapper::getVRegs(unsigned OpIdx,
   return Res;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void RegisterBankInfo::OperandsMapper::dump() const {
   print(dbgs(), true);
   dbgs() << '\n';
 }
-#endif
 
 void RegisterBankInfo::OperandsMapper::print(raw_ostream &OS,
                                              bool ForDebug) const {

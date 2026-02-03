@@ -126,7 +126,6 @@ const TargetRegisterClass *const HexagonSplitDoubleRegs::DoubleRC =
 INITIALIZE_PASS(HexagonSplitDoubleRegs, "hexagon-split-double",
   "Hexagon Split Double Registers", false, false)
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void HexagonSplitDoubleRegs::dump_partition(raw_ostream &os,
       const USet &Part, const TargetRegisterInfo &TRI) {
   dbgs() << '{';
@@ -134,7 +133,6 @@ LLVM_DUMP_METHOD void HexagonSplitDoubleRegs::dump_partition(raw_ostream &os,
     dbgs() << ' ' << printReg(I, &TRI);
   dbgs() << " }";
 }
-#endif
 
 bool HexagonSplitDoubleRegs::isInduction(unsigned Reg, LoopRegMap &IRM) const {
   for (auto I : IRM) {

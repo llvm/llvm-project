@@ -309,10 +309,8 @@ void GCOVFile::print(raw_ostream &OS) const {
     f.print(OS);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// dump - Dump GCOVFile content to dbgs() for debugging purposes.
 LLVM_DUMP_METHOD void GCOVFile::dump() const { print(dbgs()); }
-#endif
 
 unsigned GCOVFile::addNormalizedPathToMap(StringRef filename) {
   // unify filename, as the same path can have different form
@@ -428,10 +426,8 @@ void GCOVFunction::print(raw_ostream &OS) const {
     Block->print(OS);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// dump - Dump GCOVFunction content to dbgs() for debugging purposes.
 LLVM_DUMP_METHOD void GCOVFunction::dump() const { print(dbgs()); }
-#endif
 
 /// collectLineCounts - Collect line counts. This must be used after
 /// reading .gcno and .gcda files.
@@ -466,10 +462,8 @@ void GCOVBlock::print(raw_ostream &OS) const {
   }
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// dump - Dump GCOVBlock content to dbgs() for debugging purposes.
 LLVM_DUMP_METHOD void GCOVBlock::dump() const { print(dbgs()); }
-#endif
 
 uint64_t
 GCOVBlock::augmentOneCycle(GCOVBlock *src,

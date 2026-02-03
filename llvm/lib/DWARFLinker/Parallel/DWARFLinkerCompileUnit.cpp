@@ -1634,7 +1634,6 @@ void CompileUnit::insertLineSequence(std::vector<DWARFDebugLine::Row> &Seq,
   Seq.clear();
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void CompileUnit::DIEInfo::dump() {
   llvm::errs() << "{";
   llvm::errs() << "  Placement: ";
@@ -1663,7 +1662,6 @@ LLVM_DUMP_METHOD void CompileUnit::DIEInfo::dump() {
   llvm::errs() << "  TrackLiveness: " << getTrackLiveness();
   llvm::errs() << "}\n";
 }
-#endif // if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 
 std::optional<std::pair<StringRef, StringRef>>
 CompileUnit::getDirAndFilenameFromLineTable(

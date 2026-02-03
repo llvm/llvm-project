@@ -71,12 +71,10 @@ bool MCOperand::isBareSymbolRef() const {
          cast<MCSymbolRefExpr>(Expr)->getSpecifier() == 0;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MCOperand::dump() const {
   print(dbgs());
   dbgs() << "\n";
 }
-#endif
 
 void MCInst::print(raw_ostream &OS, const MCContext *Ctx) const {
   OS << "<MCInst " << getOpcode();
@@ -108,9 +106,7 @@ void MCInst::dump_pretty(raw_ostream &OS, StringRef Name, StringRef Separator,
   OS << ">";
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MCInst::dump() const {
   print(dbgs());
   dbgs() << "\n";
 }
-#endif

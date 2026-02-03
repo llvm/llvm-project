@@ -996,7 +996,6 @@ bool GCNRegPressurePrinter::runOnMachineFunction(MachineFunction &MF) {
 #undef PFX
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void llvm::dumpMaxRegPressure(MachineFunction &MF,
                                                GCNRegPressure::RegKind Kind,
                                                LiveIntervals &LIS,
@@ -1119,4 +1118,3 @@ LLVM_DUMP_METHOD void llvm::dumpMaxRegPressure(MachineFunction &MF,
     PrintRegInfo(Reg, LiveSet->lookup(Reg));
   }
 }
-#endif

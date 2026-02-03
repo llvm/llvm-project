@@ -202,7 +202,6 @@ public:
       return Erase;
     }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
     void dump() const {
       if (VALUCycles)
         dbgs() << " VALUCycles=" << (int)VALUCycles;
@@ -217,7 +216,6 @@ public:
       if (SALUCycles)
         dbgs() << " SALUCycles=" << (int)SALUCycles;
     }
-#endif
   };
 
   // A map from regunits to the delay info for that regunit.
@@ -255,7 +253,6 @@ public:
       }
     }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
     void dump(const TargetRegisterInfo *TRI) const {
       if (empty()) {
         dbgs() << "    empty\n";
@@ -276,7 +273,6 @@ public:
         dbgs() << "\n";
       }
     }
-#endif
   };
 
   // The saved delay state at the end of each basic block.

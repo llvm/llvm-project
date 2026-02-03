@@ -285,7 +285,6 @@ struct FusionCandidate {
                : GuardBranch->getSuccessor(0);
   }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const {
     dbgs() << "\tGuardBranch: ";
     if (GuardBranch)
@@ -306,7 +305,6 @@ struct FusionCandidate {
            << (getEntryBlock() ? getEntryBlock()->getName() : "nullptr")
            << "\n";
   }
-#endif
 
   /// Determine if a fusion candidate (representing a loop) is eligible for
   /// fusion. Note that this only checks whether a single loop can be fused - it

@@ -109,9 +109,7 @@ struct WasmRelocationEntry {
         << ", FixupSection=" << FixupSection->getName();
   }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const { print(dbgs()); }
-#endif
 };
 
 static const uint32_t InvalidIndex = -1;

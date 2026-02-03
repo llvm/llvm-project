@@ -498,10 +498,8 @@ bool ARCOptAddrMode::runOnMachineFunction(MachineFunction &MF) {
   if (skipFunction(MF.getFunction()) || KILL_PASS())
     return false;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   if (DUMP_BEFORE())
     MF.dump();
-#endif
   if (VIEW_BEFORE())
     MF.viewCFG();
 
@@ -514,10 +512,8 @@ bool ARCOptAddrMode::runOnMachineFunction(MachineFunction &MF) {
   for (auto &MBB : MF)
     Changed |= processBasicBlock(MBB);
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   if (DUMP_AFTER())
     MF.dump();
-#endif
   if (VIEW_AFTER())
     MF.viewCFG();
   return Changed;

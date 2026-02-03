@@ -872,7 +872,6 @@ const TypeSetByHwMode &TypeInfer::getLegalTypes() const {
 
 TypeInfer::ValidateOnExit::~ValidateOnExit() {
   if (Infer.Validate && !VTS.validate()) {
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
     errs() << "Type set is empty for each HW mode:\n"
               "possible type contradiction in the pattern below "
               "(use -print-records with llvm-tblgen to see all "
@@ -880,7 +879,6 @@ TypeInfer::ValidateOnExit::~ValidateOnExit() {
     Infer.TP.dump();
     errs() << "Generated from record:\n";
     Infer.TP.getRecord()->dump();
-#endif
     PrintFatalError(Infer.TP.getRecord()->getLoc(),
                     "Type set is empty for each HW mode in '" +
                         Infer.TP.getRecord()->getName() + "'");

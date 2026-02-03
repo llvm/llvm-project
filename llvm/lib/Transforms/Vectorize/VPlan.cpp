@@ -73,14 +73,12 @@ static cl::opt<bool> PrintVPlansInDotFormat(
 
 #define DEBUG_TYPE "loop-vectorize"
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 raw_ostream &llvm::operator<<(raw_ostream &OS, const VPRecipeBase &R) {
   const VPBasicBlock *Parent = R.getParent();
   VPSlotTracker SlotTracker(Parent ? Parent->getPlan() : nullptr);
   R.print(OS, "", SlotTracker);
   return OS;
 }
-#endif
 
 Value *VPLane::getAsRuntimeExpr(IRBuilderBase &Builder,
                                 const ElementCount &VF) const {
@@ -95,7 +93,6 @@ Value *VPLane::getAsRuntimeExpr(IRBuilderBase &Builder,
   llvm_unreachable("Unknown lane kind");
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPValue::print(raw_ostream &OS, VPSlotTracker &SlotTracker) const {
   if (const VPRecipeBase *R = getDefiningRecipe())
     R->print(OS, "", SlotTracker);
@@ -116,7 +113,6 @@ void VPRecipeBase::dump() const {
   print(dbgs(), "", SlotTracker);
   dbgs() << "\n";
 }
-#endif
 
 #if !defined(NDEBUG)
 bool VPRecipeValue::isDefinedBy(const VPDef *D) const { return Def == D; }
@@ -650,7 +646,6 @@ bool VPBasicBlock::isExiting() const {
   return getParent() && getParent()->getExitingBasicBlock() == this;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPBlockBase::print(raw_ostream &O) const {
   VPSlotTracker SlotTracker(getPlan());
   print(O, "", SlotTracker);
@@ -680,7 +675,6 @@ void VPBasicBlock::print(raw_ostream &O, const Twine &Indent,
 
   printSuccessors(O, Indent);
 }
-#endif
 
 static std::pair<VPBlockBase *, VPBlockBase *> cloneFrom(VPBlockBase *Entry);
 
@@ -828,7 +822,6 @@ InstructionCost VPRegionBlock::cost(ElementCount VF, VPCostContext &Ctx) {
   return Then->cost(VF, Ctx);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
   O << Indent << (isReplicator() ? "<xVFxUF> " : "<x1> ") << getName() << ": {";
@@ -841,7 +834,6 @@ void VPRegionBlock::print(raw_ostream &O, const Twine &Indent,
 
   printSuccessors(O, Indent);
 }
-#endif
 
 void VPRegionBlock::dissolveToCFGLoop() {
   auto *Header = cast<VPBasicBlock>(getEntry());
@@ -1043,7 +1035,6 @@ const VPRegionBlock *VPlan::getVectorLoopRegion() const {
   return nullptr;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPlan::printLiveIns(raw_ostream &O) const {
   VPSlotTracker SlotTracker(this);
 
@@ -1130,7 +1121,6 @@ void VPlan::printDOT(raw_ostream &O) const {
 
 LLVM_DUMP_METHOD
 void VPlan::dump() const { print(dbgs()); }
-#endif
 
 static void remapOperands(VPBlockBase *Entry, VPBlockBase *NewEntry,
                           DenseMap<VPValue *, VPValue *> &Old2NewVPValues) {
@@ -1248,7 +1238,6 @@ VPIRBasicBlock *VPlan::createVPIRBasicBlock(BasicBlock *IRBB) {
   return VPIRBB;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 
 Twine VPlanPrinter::getUID(const VPBlockBase *Block) {
   return (isa<VPRegionBlock>(Block) ? "cluster_N" : "N") +
@@ -1378,7 +1367,6 @@ void VPlanPrinter::dumpRegion(const VPRegionBlock *Region) {
   dumpEdges(Region);
 }
 
-#endif
 
 /// Returns true if there is a vector loop region and \p VPV is defined in a
 /// loop region.
@@ -1429,7 +1417,6 @@ void VPUser::replaceUsesOfWith(VPValue *From, VPValue *To) {
   }
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPValue::printAsOperand(raw_ostream &OS, VPSlotTracker &Tracker) const {
   OS << Tracker.getOrCreateName(this);
 }
@@ -1439,7 +1426,6 @@ void VPUser::printOperands(raw_ostream &O, VPSlotTracker &SlotTracker) const {
     Op->printAsOperand(O, SlotTracker);
   });
 }
-#endif
 
 void VPSlotTracker::assignName(const VPValue *V) {
   assert(!VPValue2Name.contains(V) && "VPValue already has a name!");
@@ -1734,7 +1720,6 @@ void LoopVectorizationPlanner::updateLoopMetadataAndProfileInfo(
   }
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void LoopVectorizationPlanner::printPlans(raw_ostream &O) {
   if (VPlans.empty()) {
     O << "LV: No VPlans built.\n";
@@ -1746,7 +1731,6 @@ void LoopVectorizationPlanner::printPlans(raw_ostream &O) {
     else
       Plan->print(O);
 }
-#endif
 
 bool llvm::canConstantBeExtended(const APInt *C, Type *NarrowType,
                                  TTI::PartialReductionExtendKind ExtKind) {

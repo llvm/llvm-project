@@ -150,10 +150,8 @@ void DXILMetadataAnalysisWrapperPass::print(raw_ostream &OS,
   MetadataInfo->print(dbgs());
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD
 void DXILMetadataAnalysisWrapperPass::dump() const { print(dbgs(), nullptr); }
-#endif
 
 INITIALIZE_PASS(DXILMetadataAnalysisWrapperPass, "dxil-metadata-analysis",
                 "DXIL Module Metadata analysis", false, true)

@@ -209,15 +209,11 @@ void LiveIntervals::printInstrs(raw_ostream &OS) const {
   MF->print(OS, Indexes);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void LiveIntervals::dumpInstrs() const {
   printInstrs(dbgs());
 }
-#endif
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void LiveIntervals::dump() const { print(dbgs()); }
-#endif
 
 LiveInterval *LiveIntervals::createInterval(Register reg) {
   float Weight = reg.isPhysical() ? huge_valf : 0.0F;

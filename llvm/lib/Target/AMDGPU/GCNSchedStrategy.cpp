@@ -84,7 +84,6 @@ static cl::opt<unsigned> PendingQueueLimit(
         "Max (Available+Pending) size to inspect pending queue (0 disables)"),
     cl::init(256));
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 #define DUMP_MAX_REG_PRESSURE
 static cl::opt<bool> PrintMaxRPRegUsageBeforeScheduler(
     "amdgpu-print-max-reg-pressure-regusage-before-scheduler", cl::Hidden,
@@ -97,7 +96,6 @@ static cl::opt<bool> PrintMaxRPRegUsageAfterScheduler(
     cl::desc("Print a list of live registers along with their def/uses at the "
              "point of maximum register pressure after scheduling."),
     cl::init(false));
-#endif
 
 static cl::opt<bool> DisableRewriteMFMAFormSchedStage(
     "amdgpu-disable-rewrite-mfma-form-sched-stage", cl::Hidden,
@@ -1396,13 +1394,11 @@ bool ClusteredLowOccStage::initGCNSchedStage() {
 #define REMAT_PREFIX "[PreRARemat] "
 #define REMAT_DEBUG(X) LLVM_DEBUG(dbgs() << REMAT_PREFIX; X;)
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 Printable PreRARematStage::ScoredRemat::print() const {
   return Printable([&](raw_ostream &OS) {
     OS << '(' << MaxFreq << ", " << FreqDiff << ", " << RegionImpact << ')';
   });
 }
-#endif
 
 bool PreRARematStage::initGCNSchedStage() {
   // FIXME: This pass will invalidate cached BBLiveInMap and MBBLiveIns for

@@ -87,19 +87,15 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
     if (IsHeaderVPBB &&
         !isa<VPHeaderPHIRecipe, VPWidenPHIRecipe, VPPhi>(*RecipeI)) {
       errs() << "Found non-header PHI recipe in header VPBB";
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       errs() << ": ";
       RecipeI->dump();
-#endif
       return false;
     }
 
     if (!IsHeaderVPBB && isa<VPHeaderPHIRecipe>(*RecipeI)) {
       errs() << "Found header PHI recipe in non-header VPBB";
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       errs() << ": ";
       RecipeI->dump();
-#endif
       return false;
     }
 
@@ -133,12 +129,10 @@ bool VPlanVerifier::verifyPhiRecipes(const VPBasicBlock *VPBB) {
     if (RecipeI->isPhi() && !isa<VPBlendRecipe>(&*RecipeI)) {
       errs() << "Found phi-like recipe after non-phi recipe";
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       errs() << ": ";
       RecipeI->dump();
       errs() << "after\n";
       std::prev(RecipeI)->dump();
-#endif
       return false;
     }
     RecipeI++;
@@ -249,10 +243,8 @@ bool VPlanVerifier::verifyLastActiveLaneRecipe(
       continue;
 
     errs() << "LastActiveLane operand ";
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
     VPSlotTracker Tracker(&Plan);
     Op->printAsOperand(errs(), Tracker);
-#endif
     errs() << " must be prefix mask (a header mask or an "
               "EVL-derived mask currently)\n";
     return false;
@@ -274,10 +266,8 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
   for (const VPRecipeBase &R : *VPBB) {
     if (isa<VPIRInstruction>(&R) && !isa<VPIRBasicBlock>(VPBB)) {
       errs() << "VPIRInstructions ";
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       R.dump();
       errs() << " ";
-#endif
       errs() << "not in a VPIRBasicBlock!\n";
       return false;
     }
@@ -309,13 +299,11 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
               continue;
 
             errs() << "Incoming def does not dominate incoming block!\n";
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
             VPSlotTracker Tracker(VPBB->getPlan());
             IncomingVPV->getDefiningRecipe()->print(errs(), "  ", Tracker);
             errs() << "\n  does not dominate " << IncomingVPBB->getName()
                    << " for\n";
             UI->print(errs(), "  ", Tracker);
-#endif
             return false;
           }
           continue;
@@ -335,13 +323,11 @@ bool VPlanVerifier::verifyVPBasicBlock(const VPBasicBlock *VPBB) {
         }
 
         errs() << "Use before def!\n";
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
         VPSlotTracker Tracker(VPBB->getPlan());
         UI->print(errs(), "  ", Tracker);
         errs() << "\n  before\n";
         R.print(errs(), "  ", Tracker);
         errs() << "\n";
-#endif
         return false;
       }
     }

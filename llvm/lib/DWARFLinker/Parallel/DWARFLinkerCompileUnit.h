@@ -257,9 +257,7 @@ public:
     /// Erase all flags.
     void eraseData() { Flags = 0; }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
     LLVM_DUMP_METHOD void dump();
-#endif
 
     bool needToPlaceInTypeTable() const {
       return (getKeep() && (getPlacement() == CompileUnit::TypeTable ||

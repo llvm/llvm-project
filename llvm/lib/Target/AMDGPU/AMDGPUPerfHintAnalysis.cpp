@@ -75,14 +75,12 @@ private:
     int64_t Offset = 0;
     MemAccessInfo() = default;
     bool isLargeStride(MemAccessInfo &Reference) const;
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
     Printable print() const {
       return Printable([this](raw_ostream &OS) {
         OS << "Value: " << *V << '\n'
            << "Base: " << *Base << " Offset: " << Offset << '\n';
       });
     }
-#endif
   };
 
   MemAccessInfo makeMemAccessInfo(Instruction *) const;

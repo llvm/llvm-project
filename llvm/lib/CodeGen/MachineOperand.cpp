@@ -1053,9 +1053,7 @@ void MachineOperand::print(raw_ostream &OS, ModuleSlotTracker &MST,
   }
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MachineOperand::dump() const { dbgs() << *this << '\n'; }
-#endif
 
 //===----------------------------------------------------------------------===//
 // MachineMemOperand Implementation

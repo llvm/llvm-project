@@ -107,7 +107,6 @@ namespace {
       Base_Reg = Reg;
     }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
     void dump(SelectionDAG *DAG = nullptr) {
       dbgs() << "X86ISelAddressMode " << this << '\n';
       dbgs() << "Base_Reg ";
@@ -149,7 +148,6 @@ namespace {
         dbgs() << "nul";
       dbgs() << " JT" << JT << " Align" << Alignment.value() << '\n';
     }
-#endif
   };
 }
 

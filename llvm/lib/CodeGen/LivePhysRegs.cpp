@@ -132,11 +132,9 @@ void LivePhysRegs::print(raw_ostream &OS) const {
   OS << "\n";
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void LivePhysRegs::dump() const {
   dbgs() << "  " << *this;
 }
-#endif
 
 bool LivePhysRegs::available(const MachineRegisterInfo &MRI,
                              MCRegister Reg) const {

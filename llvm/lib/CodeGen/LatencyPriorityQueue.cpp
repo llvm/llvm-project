@@ -135,7 +135,6 @@ void LatencyPriorityQueue::remove(SUnit *SU) {
   Queue.pop_back();
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void LatencyPriorityQueue::dump(ScheduleDAG *DAG) const {
   dbgs() << "Latency Priority Queue\n";
   dbgs() << "  Number of Queue Entries: " << Queue.size() << "\n";
@@ -144,4 +143,3 @@ LLVM_DUMP_METHOD void LatencyPriorityQueue::dump(ScheduleDAG *DAG) const {
     DAG->dumpNode(*SU);
   }
 }
-#endif

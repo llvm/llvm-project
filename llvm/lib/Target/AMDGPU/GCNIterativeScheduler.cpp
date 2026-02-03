@@ -40,7 +40,6 @@ static inline MachineInstr *getMachineInstr(const SUnit &SU) {
   return SU.getInstr();
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD
 static void printRegion(raw_ostream &OS,
                         MachineBasicBlock::iterator Begin,
@@ -117,7 +116,6 @@ void GCNIterativeScheduler::printSchedRP(raw_ostream &OS,
   OS << "RP before: " << print(Before, &ST)
      << "RP after:  " << print(After, &ST);
 }
-#endif
 
 void GCNIterativeScheduler::swapIGLPMutations(const Region &R, bool IsReentry) {
   bool HasIGLPInstrs = false;

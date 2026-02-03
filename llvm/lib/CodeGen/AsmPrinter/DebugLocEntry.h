@@ -91,7 +91,6 @@ public:
   MachineLocation getLoc() const { return Loc; }
   TargetIndexLocation getTargetIndexLocation() const { return TIL; }
   friend bool operator==(const DbgValueLocEntry &, const DbgValueLocEntry &);
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const {
     if (isLocation()) {
       llvm::dbgs() << "Loc = { reg=" << Loc.getReg() << " ";
@@ -103,7 +102,6 @@ public:
     else if (isConstantFP())
       Constant.CFP->dump();
   }
-#endif
 };
 
 /// The location of a single variable, composed of an expression and 0 or more
@@ -168,14 +166,12 @@ public:
   ArrayRef<DbgValueLocEntry> getLocEntries() const { return ValueLocEntries; }
   friend bool operator==(const DbgValueLoc &, const DbgValueLoc &);
   friend bool operator<(const DbgValueLoc &, const DbgValueLoc &);
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const {
     for (const DbgValueLocEntry &DV : ValueLocEntries)
       DV.dump();
     if (Expression)
       Expression->dump();
   }
-#endif
 };
 
 /// This struct describes location entries emitted in the .debug_loc

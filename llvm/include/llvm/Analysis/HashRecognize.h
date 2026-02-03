@@ -30,9 +30,7 @@ class LPMUpdater;
 struct CRCTable : public std::array<APInt, 256> {
   void print(raw_ostream &OS) const;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
-#endif
 };
 
 /// The structure that is returned when a polynomial algorithm was recognized by
@@ -88,9 +86,7 @@ public:
 
   void print(raw_ostream &OS) const;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
-#endif
 };
 
 class HashRecognizePrinterPass

@@ -101,9 +101,7 @@ public:
 
   LLVM_ABI void print(raw_ostream &Out) const;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
-#endif
 };
 
 struct WasmSection {

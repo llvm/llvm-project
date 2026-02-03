@@ -6008,12 +6008,10 @@ void APFloat::print(raw_ostream &OS) const {
   OS << Buffer;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void APFloat::dump() const {
   print(dbgs());
   dbgs() << '\n';
 }
-#endif
 
 void APFloat::Profile(FoldingSetNodeID &NID) const {
   NID.Add(bitcastToAPInt());

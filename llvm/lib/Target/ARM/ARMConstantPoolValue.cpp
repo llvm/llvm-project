@@ -98,11 +98,9 @@ ARMConstantPoolValue::hasSameValue(ARMConstantPoolValue *ACPV) {
   return false;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void ARMConstantPoolValue::dump() const {
   errs() << "  " << *this;
 }
-#endif
 
 void ARMConstantPoolValue::print(raw_ostream &O) const {
   if (Modifier) O << "(" << getModifierText() << ")";

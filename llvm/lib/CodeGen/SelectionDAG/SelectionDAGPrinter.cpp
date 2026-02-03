@@ -167,12 +167,10 @@ void SelectionDAG::viewGraph() {
 /// without any path separators then the file
 /// will be created in the current directory.
 /// Error will be emitted if the path is insane.
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void SelectionDAG::dumpDotGraph(const Twine &FileName,
                                                  const Twine &Title) {
   dumpDotGraphToFile(this, FileName, Title);
 }
-#endif
 
 /// clearGraphAttrs - Clear all previously defined node graph attributes.
 /// Intended to be used from a debugging tool (eg. gdb).

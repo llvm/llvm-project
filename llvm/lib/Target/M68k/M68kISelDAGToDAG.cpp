@@ -147,7 +147,6 @@ struct M68kISelAddressMode {
 
   void setIndexReg(SDValue Reg) { IndexReg = Reg; }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump() {
     dbgs() << "M68kISelAddressMode " << this;
     dbgs() << "\nDisp: " << Disp;
@@ -166,7 +165,6 @@ struct M68kISelAddressMode {
     }
     dbgs() << '\n';
   }
-#endif
 };
 } // end anonymous namespace
 

@@ -1262,13 +1262,11 @@ AttributeSet::iterator AttributeSet::end() const {
   return SetNode ? SetNode->end() : nullptr;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void AttributeSet::dump() const {
   dbgs() << "AS =\n";
     dbgs() << "  { ";
     dbgs() << getAsString(true) << " }\n";
 }
-#endif
 
 //===----------------------------------------------------------------------===//
 // AttributeSetNode Definition
@@ -1511,11 +1509,9 @@ bool AttributeListImpl::hasAttrSomewhere(Attribute::AttrKind Kind,
 }
 
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void AttributeListImpl::dump() const {
   AttributeList(const_cast<AttributeListImpl *>(this)).dump();
 }
-#endif
 
 //===----------------------------------------------------------------------===//
 // AttributeList Construction and Mutation Methods
@@ -2101,9 +2097,7 @@ void AttributeList::print(raw_ostream &O) const {
   O << "]\n";
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void AttributeList::dump() const { print(dbgs()); }
-#endif
 
 //===----------------------------------------------------------------------===//
 // AttrBuilder Method Implementations

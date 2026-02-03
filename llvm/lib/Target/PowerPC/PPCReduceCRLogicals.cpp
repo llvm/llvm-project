@@ -439,7 +439,6 @@ public:
 };
 } // end anonymous namespace
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void PPCReduceCRLogicals::CRLogicalOpInfo::dump() {
   dbgs() << "CRLogicalOpMI: ";
   MI->dump();
@@ -465,7 +464,6 @@ LLVM_DUMP_METHOD void PPCReduceCRLogicals::CRLogicalOpInfo::dump() {
     CopyDefs.second->dump();
   }
 }
-#endif
 
 PPCReduceCRLogicals::CRLogicalOpInfo
 PPCReduceCRLogicals::createCRLogicalOpInfo(MachineInstr &MIParam) {

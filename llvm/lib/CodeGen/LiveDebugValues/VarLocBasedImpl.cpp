@@ -711,7 +711,6 @@ private:
       return LS.dominates(MI.getDebugLoc().get(), &MBB);
     }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
     // TRI and TII can be null.
     void dump(const TargetRegisterInfo *TRI, const TargetInstrInfo *TII,
               raw_ostream &Out = dbgs()) const {
@@ -765,7 +764,6 @@ private:
       else
         Out << "\n";
     }
-#endif
 
     bool operator==(const VarLoc &Other) const {
       return std::tie(EVKind, Var, Expr, Locs) ==

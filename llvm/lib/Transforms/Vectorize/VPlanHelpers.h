@@ -441,7 +441,6 @@ public:
   const Module *getModule() const { return M; }
 };
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// VPlanPrinter prints a given VPlan to a given output stream. The printing is
 /// indented and follows the dot format.
 class VPlanPrinter {
@@ -490,7 +489,6 @@ public:
 
   LLVM_DUMP_METHOD void dump();
 };
-#endif
 
 /// Check if a constant \p CI can be safely treated as having been extended
 /// from a narrower type with the given extension kind.

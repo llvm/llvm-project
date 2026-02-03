@@ -3071,10 +3071,8 @@ void InlineCostCallAnalyzer::print(raw_ostream &OS) {
 #undef DEBUG_PRINT_STAT
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// Dump stats about this call's analysis.
 LLVM_DUMP_METHOD void InlineCostCallAnalyzer::dump() { print(dbgs()); }
-#endif
 
 /// Test that there are no attribute conflicts between Caller and Callee
 ///        that prevent inlining.

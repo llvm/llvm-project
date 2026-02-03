@@ -495,12 +495,10 @@ void RegionBase<Tr>::print(raw_ostream &OS, bool print_tree, unsigned level,
     OS.indent(level * 2) << "} \n";
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 template <class Tr>
 void RegionBase<Tr>::dump() const {
   print(dbgs(), true, getDepth(), RegionInfoBase<Tr>::printStyle);
 }
-#endif
 
 template <class Tr>
 void RegionBase<Tr>::clearNodeCache() {
@@ -754,10 +752,8 @@ void RegionInfoBase<Tr>::print(raw_ostream &OS) const {
   OS << "End region tree\n";
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 template <class Tr>
 void RegionInfoBase<Tr>::dump() const { print(dbgs()); }
-#endif
 
 template <class Tr> void RegionInfoBase<Tr>::releaseMemory() {
   BBtoRegion.clear();

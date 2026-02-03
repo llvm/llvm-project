@@ -156,10 +156,8 @@ public:
   LLVM_ABI const_filtered_target_range
   targets(ArchitectureSet architectures) const;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump(raw_ostream &OS) const;
   void dump() const { dump(llvm::errs()); }
-#endif
 
   LLVM_ABI bool operator==(const Symbol &O) const;
 

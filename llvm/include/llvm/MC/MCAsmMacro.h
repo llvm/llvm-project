@@ -125,10 +125,8 @@ struct MCAsmMacroParameter {
   bool Required = false;
   bool Vararg = false;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump() const { dump(dbgs()); }
   LLVM_DUMP_METHOD void dump(raw_ostream &OS) const;
-#endif
 };
 
 typedef std::vector<MCAsmMacroParameter> MCAsmMacroParameters;
@@ -148,10 +146,8 @@ public:
       : Name(N), Body(B), Parameters(std::move(P)), Locals(std::move(L)),
         IsFunction(F) {}
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump() const { dump(dbgs()); }
   LLVM_DUMP_METHOD void dump(raw_ostream &OS) const;
-#endif
 };
 } // namespace llvm
 

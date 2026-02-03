@@ -653,9 +653,6 @@ void AnnotateIgnoreWritesEnd(const char *file, int line);
 
 /// Mark debug helper function definitions like dump() that should not be
 /// stripped from debug builds.
-/// Note that you should also surround dump() functions with
-/// `#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)` so they do always
-/// get stripped in release builds.
 // FIXME: Move this to a private config.h as it's not usable in public headers.
 #if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 #define LLVM_DUMP_METHOD                                                       \

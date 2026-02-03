@@ -93,11 +93,9 @@ static cl::opt<unsigned> ReductionSize(
     cl::desc("A huge scheduling region will have maps reduced by this many "
              "nodes at a time. Defaults to HugeRegion / 2."));
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 static cl::opt<bool> SchedPrintCycles(
     "sched-print-cycles", cl::Hidden, cl::init(false),
     cl::desc("Report top/bottom cycles when dumping SUnit instances"));
-#endif
 
 static unsigned getReductionSize() {
   // Always reduce a huge region with half of the elements, except
@@ -108,7 +106,6 @@ static unsigned getReductionSize() {
 }
 
 static void dumpSUList(const ScheduleDAGInstrs::SUList &L) {
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   dbgs() << "{ ";
   for (const SUnit *SU : L) {
     dbgs() << "SU(" << SU->NodeNum << ")";
@@ -116,7 +113,6 @@ static void dumpSUList(const ScheduleDAGInstrs::SUList &L) {
       dbgs() << ", ";
   }
   dbgs() << "}\n";
-#endif
 }
 
 ScheduleDAGInstrs::ScheduleDAGInstrs(MachineFunction &mf,
@@ -1193,25 +1189,21 @@ void ScheduleDAGInstrs::fixupKills(MachineBasicBlock &MBB) {
 }
 
 void ScheduleDAGInstrs::dumpNode(const SUnit &SU) const {
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   dumpNodeName(SU);
   if (SchedPrintCycles)
     dbgs() << " [TopReadyCycle = " << SU.TopReadyCycle
            << ", BottomReadyCycle = " << SU.BotReadyCycle << "]";
   dbgs() << ": ";
   SU.getInstr()->dump();
-#endif
 }
 
 void ScheduleDAGInstrs::dump() const {
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   if (EntrySU.getInstr() != nullptr)
     dumpNodeAll(EntrySU);
   for (const SUnit &SU : SUnits)
     dumpNodeAll(SU);
   if (ExitSU.getInstr() != nullptr)
     dumpNodeAll(ExitSU);
-#endif
 }
 
 std::string ScheduleDAGInstrs::getGraphNodeLabel(const SUnit *SU) const {
@@ -1538,7 +1530,6 @@ void SchedDFSResult::scheduleTree(unsigned SubtreeID) {
   }
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void ILPValue::print(raw_ostream &OS) const {
   OS << InstrCount << " / " << Length << " = ";
   if (!Length)
@@ -1557,4 +1548,3 @@ raw_ostream &llvm::operator<<(raw_ostream &OS, const ILPValue &Val) {
   return OS;
 }
 
-#endif

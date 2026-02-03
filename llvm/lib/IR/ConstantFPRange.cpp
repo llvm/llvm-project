@@ -373,9 +373,7 @@ void ConstantFPRange::print(raw_ostream &OS) const {
   }
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void ConstantFPRange::dump() const { print(dbgs()); }
-#endif
 
 ConstantFPRange
 ConstantFPRange::intersectWith(const ConstantFPRange &CR) const {

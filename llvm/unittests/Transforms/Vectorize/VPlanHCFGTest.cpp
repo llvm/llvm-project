@@ -93,7 +93,6 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoop) {
   EXPECT_EQ(2u, ICmp->getNumOperands());
   EXPECT_EQ(IndvarAdd, ICmp->getOperand(0));
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   // Add an external value to check we do not print the list of external values,
   // as this is not required with the new printing.
   Plan->getOrAddLiveIn(&*F->arg_begin());
@@ -168,7 +167,6 @@ compound=true
 }
 )";
   EXPECT_EQ(ExpectedStr, FullDump);
-#endif
 }
 
 TEST_F(VPlanHCFGTest, testVPInstructionToVPRecipesInner) {
@@ -262,7 +260,6 @@ TEST_F(VPlanHCFGTest, testBuildHCFGInnerLoopMultiExit) {
   BasicBlock *LoopHeader = F->getEntryBlock().getSingleSuccessor();
   auto Plan = buildVPlan(LoopHeader);
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   // Add an external value to check we do not print the list of external values,
   // as this is not required with the new printing.
   Plan->getOrAddLiveIn(&*F->arg_begin());
@@ -340,7 +337,6 @@ compound=true
 }
 )";
   EXPECT_EQ(ExpectedStr, FullDump);
-#endif
 }
 
 } // namespace

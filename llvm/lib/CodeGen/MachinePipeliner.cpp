@@ -3896,7 +3896,6 @@ void NodeSet::print(raw_ostream &os) const {
   os << "\n";
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 /// Print the schedule information to the given output.
 void SMSchedule::print(raw_ostream &os) const {
   // Iterate over each cycle.
@@ -3936,7 +3935,6 @@ void ResourceManager::dumpMRT() const {
     dbgs() << SS.str();
   });
 }
-#endif
 
 void ResourceManager::initProcResourceVectors(
     const MCSchedModel &SM, SmallVectorImpl<uint64_t> &Masks) {

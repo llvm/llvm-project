@@ -381,7 +381,6 @@ FastMathFlags VPIRFlags::getFastMathFlags() const {
   return Res;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPSingleDefRecipe::dump() const { VPRecipeBase::dump(); }
 
 void VPRecipeBase::print(raw_ostream &O, const Twine &Indent,
@@ -395,7 +394,6 @@ void VPRecipeBase::print(raw_ostream &O, const Twine &Indent,
   if (auto *Metadata = dyn_cast<VPIRMetadata>(this))
     Metadata->print(O, SlotTracker);
 }
-#endif
 
 template <unsigned PartOpIdx>
 VPValue *
@@ -1408,7 +1406,6 @@ bool VPInstruction::usesFirstPartOnly(const VPValue *Op) const {
   llvm_unreachable("switch should return");
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPInstruction::dump() const {
   VPSlotTracker SlotTracker(getParent()->getPlan());
   printRecipe(dbgs(), "", SlotTracker);
@@ -1524,7 +1521,6 @@ void VPInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
   printFlags(O);
   printOperands(O, SlotTracker);
 }
-#endif
 
 void VPInstructionWithType::execute(VPTransformState &State) {
   State.setDebugLocFrom(getDebugLoc());
@@ -1553,7 +1549,6 @@ void VPInstructionWithType::execute(VPTransformState &State) {
   }
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPInstructionWithType::printRecipe(raw_ostream &O, const Twine &Indent,
                                         VPSlotTracker &SlotTracker) const {
   O << Indent << "EMIT" << (isSingleScalar() ? "-SCALAR" : "") << " ";
@@ -1578,7 +1573,6 @@ void VPInstructionWithType::printRecipe(raw_ostream &O, const Twine &Indent,
     O << " to " << *ResultTy;
   }
 }
-#endif
 
 void VPPhi::execute(VPTransformState &State) {
   State.setDebugLocFrom(getDebugLoc());
@@ -1598,7 +1592,6 @@ void VPPhi::execute(VPTransformState &State) {
   State.set(this, NewPhi, VPLane(0));
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPPhi::printRecipe(raw_ostream &O, const Twine &Indent,
                         VPSlotTracker &SlotTracker) const {
   O << Indent << "EMIT" << (isSingleScalar() ? "-SCALAR" : "") << " ";
@@ -1606,7 +1599,6 @@ void VPPhi::printRecipe(raw_ostream &O, const Twine &Indent,
   O << " = phi ";
   printPhiOperands(O, SlotTracker);
 }
-#endif
 
 VPIRInstruction *VPIRInstruction ::create(Instruction &I) {
   if (auto *Phi = dyn_cast<PHINode>(&I))
@@ -1643,12 +1635,10 @@ void VPIRInstruction::extractLastLaneOfLastPartOfFirstOperand(
   setOperand(0, Exiting);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPIRInstruction::printRecipe(raw_ostream &O, const Twine &Indent,
                                   VPSlotTracker &SlotTracker) const {
   O << Indent << "IR " << I;
 }
-#endif
 
 void VPIRPhi::execute(VPTransformState &State) {
   PHINode *Phi = &getIRPhi();
@@ -1685,7 +1675,6 @@ void VPPhiAccessors::removeIncomingValueFor(VPBlockBase *IncomingBlock) const {
   R->removeOperand(Position);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPPhiAccessors::printPhiOperands(raw_ostream &O,
                                       VPSlotTracker &SlotTracker) const {
   interleaveComma(enumerate(getAsRecipe()->operands()), O,
@@ -1697,9 +1686,7 @@ void VPPhiAccessors::printPhiOperands(raw_ostream &O,
                     O << " ]";
                   });
 }
-#endif
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPIRPhi::printRecipe(raw_ostream &O, const Twine &Indent,
                           VPSlotTracker &SlotTracker) const {
   VPIRInstruction::printRecipe(O, Indent, SlotTracker);
@@ -1715,7 +1702,6 @@ void VPIRPhi::printRecipe(raw_ostream &O, const Twine &Indent,
     O << ")";
   }
 }
-#endif
 
 void VPIRMetadata::applyMetadata(Instruction &I) const {
   for (const auto &[Kind, Node] : Metadata)
@@ -1735,7 +1721,6 @@ void VPIRMetadata::intersect(const VPIRMetadata &Other) {
   Metadata = std::move(MetadataIntersection);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPIRMetadata::print(raw_ostream &O, VPSlotTracker &SlotTracker) const {
   const Module *M = SlotTracker.getModule();
   if (Metadata.empty() || !M)
@@ -1752,7 +1737,6 @@ void VPIRMetadata::print(raw_ostream &O, VPSlotTracker &SlotTracker) const {
   });
   O << ")";
 }
-#endif
 
 void VPWidenCallRecipe::execute(VPTransformState &State) {
   assert(State.VF.isVector() && "not widening");
@@ -1794,7 +1778,6 @@ InstructionCost VPWidenCallRecipe::computeCost(ElementCount VF,
                                   Ctx.CostKind);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenCallRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                     VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN-CALL ";
@@ -1820,7 +1803,6 @@ void VPWidenCallRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
     O << ": " << Variant->getName();
   O << ")";
 }
-#endif
 
 void VPWidenIntrinsicRecipe::execute(VPTransformState &State) {
   assert(State.VF.isVector() && "not widening");
@@ -1937,7 +1919,6 @@ bool VPWidenIntrinsicRecipe::usesFirstLaneOnly(const VPValue *Op) const {
   });
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenIntrinsicRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                          VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN-INTRINSIC ";
@@ -1957,7 +1938,6 @@ void VPWidenIntrinsicRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   });
   O << ")";
 }
-#endif
 
 void VPHistogramRecipe::execute(VPTransformState &State) {
   IRBuilderBase &Builder = State.Builder;
@@ -2021,7 +2001,6 @@ InstructionCost VPHistogramRecipe::computeCost(ElementCount VF,
          Ctx.TTI.getArithmeticInstrCost(Opcode, VTy, Ctx.CostKind);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPHistogramRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                     VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN-HISTOGRAM buckets: ";
@@ -2040,7 +2019,6 @@ void VPHistogramRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
     Mask->printAsOperand(O, SlotTracker);
   }
 }
-#endif
 
 VPIRFlags::FastMathFlagsTy::FastMathFlagsTy(const FastMathFlags &FMF) {
   AllowReassoc = FMF.allowReassoc();
@@ -2093,7 +2071,6 @@ bool VPIRFlags::flagsValidForOpcode(unsigned Opcode) const {
 }
 #endif
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPIRFlags::printFlags(raw_ostream &O) const {
   switch (OpType) {
   case OperationType::Cmp:
@@ -2192,7 +2169,6 @@ void VPIRFlags::printFlags(raw_ostream &O) const {
   }
   O << " ";
 }
-#endif
 
 void VPWidenRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
@@ -2337,7 +2313,6 @@ InstructionCost VPWidenRecipe::computeCost(ElementCount VF,
   }
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                 VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN ";
@@ -2346,7 +2321,6 @@ void VPWidenRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   printFlags(O);
   printOperands(O, SlotTracker);
 }
-#endif
 
 void VPWidenCastRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
@@ -2373,7 +2347,6 @@ InstructionCost VPWidenCastRecipe::computeCost(ElementCount VF,
   return getCostForRecipeWithOpcode(getOpcode(), VF, Ctx);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenCastRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                     VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN-CAST ";
@@ -2383,14 +2356,12 @@ void VPWidenCastRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   printOperands(O, SlotTracker);
   O << " to " << *getResultType();
 }
-#endif
 
 InstructionCost VPHeaderPHIRecipe::computeCost(ElementCount VF,
                                                VPCostContext &Ctx) const {
   return Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenIntOrFpInductionRecipe::printRecipe(
     raw_ostream &O, const Twine &Indent, VPSlotTracker &SlotTracker) const {
   O << Indent;
@@ -2402,7 +2373,6 @@ void VPWidenIntOrFpInductionRecipe::printRecipe(
   if (auto *TI = getTruncInst())
     O << " (truncated to " << *TI->getType() << ")";
 }
-#endif
 
 bool VPWidenIntOrFpInductionRecipe::isCanonical() const {
   // The step may be defined by a recipe in the preheader (e.g. if it requires
@@ -2431,7 +2401,6 @@ void VPDerivedIVRecipe::execute(VPTransformState &State) {
   State.set(this, DerivedIV, VPLane(0));
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPDerivedIVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                     VPSlotTracker &SlotTracker) const {
   O << Indent;
@@ -2443,7 +2412,6 @@ void VPDerivedIVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << " * ";
   getStepValue()->printAsOperand(O, SlotTracker);
 }
-#endif
 
 void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
   // Fast-math-flags propagate from the original induction instruction.
@@ -2507,7 +2475,6 @@ void VPScalarIVStepsRecipe::execute(VPTransformState &State) {
   }
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPScalarIVStepsRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                         VPSlotTracker &SlotTracker) const {
   O << Indent;
@@ -2515,7 +2482,6 @@ void VPScalarIVStepsRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << " = SCALAR-STEPS ";
   printOperands(O, SlotTracker);
 }
-#endif
 
 bool VPWidenGEPRecipe::usesFirstLaneOnly(const VPValue *Op) const {
   assert(is_contained(operands(), Op) && "Op must be an operand of the recipe");
@@ -2576,7 +2542,6 @@ void VPWidenGEPRecipe::execute(VPTransformState &State) {
   State.set(this, NewGEP);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenGEPRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                    VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN-GEP ";
@@ -2590,7 +2555,6 @@ void VPWidenGEPRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   printFlags(O);
   printOperands(O, SlotTracker);
 }
-#endif
 
 void VPVectorEndPointerRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
@@ -2620,7 +2584,6 @@ void VPVectorEndPointerRecipe::execute(VPTransformState &State) {
   State.set(this, ResultPtr, /*IsScalar*/ true);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPVectorEndPointerRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                            VPSlotTracker &SlotTracker) const {
   O << Indent;
@@ -2629,7 +2592,6 @@ void VPVectorEndPointerRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   printFlags(O);
   printOperands(O, SlotTracker);
 }
-#endif
 
 void VPVectorPointerRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
@@ -2642,7 +2604,6 @@ void VPVectorPointerRecipe::execute(VPTransformState &State) {
   State.set(this, ResultPtr, /*IsScalar*/ true);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPVectorPointerRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                         VPSlotTracker &SlotTracker) const {
   O << Indent;
@@ -2651,7 +2612,6 @@ void VPVectorPointerRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   printFlags(O);
   printOperands(O, SlotTracker);
 }
-#endif
 
 InstructionCost VPBlendRecipe::computeCost(ElementCount VF,
                                            VPCostContext &Ctx) const {
@@ -2667,7 +2627,6 @@ InstructionCost VPBlendRecipe::computeCost(ElementCount VF,
                                     CmpInst::BAD_ICMP_PREDICATE, Ctx.CostKind);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPBlendRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                 VPSlotTracker &SlotTracker) const {
   O << Indent << "BLEND ";
@@ -2689,7 +2648,6 @@ void VPBlendRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
     }
   }
 }
-#endif
 
 void VPReductionRecipe::execute(VPTransformState &State) {
   assert(!State.Lane && "Reduction being replicated.");
@@ -2986,7 +2944,6 @@ bool VPExpressionRecipe::isSingleScalar() const {
   return RR && !RR->isPartialReduction();
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 
 void VPExpressionRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                      VPSlotTracker &SlotTracker) const {
@@ -3121,7 +3078,6 @@ void VPReductionEVLRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << ")";
 }
 
-#endif
 
 /// A helper function to scalarize a single Instruction in the innermost loop.
 /// Generates a sequence of scalar instances for lane \p Lane. Uses the VPValue
@@ -3490,7 +3446,6 @@ InstructionCost VPReplicateRecipe::computeCost(ElementCount VF,
   return Ctx.getLegacyCost(UI, VF);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPReplicateRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                     VPSlotTracker &SlotTracker) const {
   O << Indent << (IsSingleScalar ? "CLONE " : "REPLICATE ");
@@ -3517,7 +3472,6 @@ void VPReplicateRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   if (shouldPack())
     O << " (S->V)";
 }
-#endif
 
 void VPBranchOnMaskRecipe::execute(VPTransformState &State) {
   assert(State.Lane && "Branch on Mask works only on single instance.");
@@ -3603,7 +3557,6 @@ void VPPredInstPHIRecipe::execute(VPTransformState &State) {
   }
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPPredInstPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                       VPSlotTracker &SlotTracker) const {
   O << Indent << "PHI-PREDICATED-INSTRUCTION ";
@@ -3611,7 +3564,6 @@ void VPPredInstPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << " = ";
   printOperands(O, SlotTracker);
 }
-#endif
 
 InstructionCost VPWidenMemoryRecipe::computeCost(ElementCount VF,
                                                  VPCostContext &Ctx) const {
@@ -3696,7 +3648,6 @@ void VPWidenLoadRecipe::execute(VPTransformState &State) {
   State.set(this, NewLI);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenLoadRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                     VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN ";
@@ -3704,7 +3655,6 @@ void VPWidenLoadRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << " = load ";
   printOperands(O, SlotTracker);
 }
-#endif
 
 /// Use all-true mask for reverse rather than actual mask, as it avoids a
 /// dependence w/o affecting the result.
@@ -3768,7 +3718,6 @@ InstructionCost VPWidenLoadEVLRecipe::computeCost(ElementCount VF,
       Ctx.CostKind);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenLoadEVLRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                        VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN ";
@@ -3776,7 +3725,6 @@ void VPWidenLoadEVLRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << " = vp.load ";
   printOperands(O, SlotTracker);
 }
-#endif
 
 void VPWidenStoreRecipe::execute(VPTransformState &State) {
   VPValue *StoredVPValue = getStoredValue();
@@ -3805,13 +3753,11 @@ void VPWidenStoreRecipe::execute(VPTransformState &State) {
   applyMetadata(*NewSI);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenStoreRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                      VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN store ";
   printOperands(O, SlotTracker);
 }
-#endif
 
 void VPWidenStoreEVLRecipe::execute(VPTransformState &State) {
   VPValue *StoredValue = getStoredValue();
@@ -3863,13 +3809,11 @@ InstructionCost VPWidenStoreEVLRecipe::computeCost(ElementCount VF,
       Ctx.CostKind);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenStoreEVLRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                         VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN vp.store ";
   printOperands(O, SlotTracker);
 }
-#endif
 
 static Value *createBitOrPointerCast(IRBuilderBase &Builder, Value *V,
                                      VectorType *DstVTy, const DataLayout &DL) {
@@ -4127,7 +4071,6 @@ void VPInterleaveRecipe::execute(VPTransformState &State) {
   Group->addMetadata(NewStoreInstr);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPInterleaveRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                      VPSlotTracker &SlotTracker) const {
   const InterleaveGroup<Instruction> *IG = getInterleaveGroup();
@@ -4157,7 +4100,6 @@ void VPInterleaveRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
     ++OpIdx;
   }
 }
-#endif
 
 void VPInterleaveEVLRecipe::execute(VPTransformState &State) {
   assert(!State.Lane && "Interleave group being replicated.");
@@ -4270,7 +4212,6 @@ void VPInterleaveEVLRecipe::execute(VPTransformState &State) {
   Group->addMetadata(NewStore);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPInterleaveEVLRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                         VPSlotTracker &SlotTracker) const {
   const InterleaveGroup<Instruction> *IG = getInterleaveGroup();
@@ -4301,7 +4242,6 @@ void VPInterleaveEVLRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
     ++OpIdx;
   }
 }
-#endif
 
 InstructionCost VPInterleaveBase::computeCost(ElementCount VF,
                                               VPCostContext &Ctx) const {
@@ -4344,7 +4284,6 @@ InstructionCost VPInterleaveBase::computeCost(ElementCount VF,
                                            0);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPCanonicalIVPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                          VPSlotTracker &SlotTracker) const {
   O << Indent << "EMIT ";
@@ -4352,14 +4291,12 @@ void VPCanonicalIVPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << " = CANONICAL-INDUCTION ";
   printOperands(O, SlotTracker);
 }
-#endif
 
 bool VPWidenPointerInductionRecipe::onlyScalarsGenerated(bool IsScalable) {
   return vputils::onlyScalarValuesUsed(this) &&
          (!IsScalable || vputils::onlyFirstLaneUsed(this));
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenPointerInductionRecipe::printRecipe(
     raw_ostream &O, const Twine &Indent, VPSlotTracker &SlotTracker) const {
   assert((getNumOperands() == 3 || getNumOperands() == 5) &&
@@ -4386,7 +4323,6 @@ void VPExpandSCEVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   printAsOperand(O, SlotTracker);
   O << " = EXPAND SCEV " << *Expr;
 }
-#endif
 
 void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
   Value *CanonicalIV = State.get(getOperand(0), /*IsScalar*/ true);
@@ -4406,7 +4342,6 @@ void VPWidenCanonicalIVRecipe::execute(VPTransformState &State) {
   State.set(this, CanonicalVectorIV);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenCanonicalIVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                            VPSlotTracker &SlotTracker) const {
   O << Indent << "EMIT ";
@@ -4414,7 +4349,6 @@ void VPWidenCanonicalIVRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << " = WIDEN-CANONICAL-INDUCTION ";
   printOperands(O, SlotTracker);
 }
-#endif
 
 void VPFirstOrderRecurrencePHIRecipe::execute(VPTransformState &State) {
   auto &Builder = State.Builder;
@@ -4454,7 +4388,6 @@ VPFirstOrderRecurrencePHIRecipe::computeCost(ElementCount VF,
   return 0;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPFirstOrderRecurrencePHIRecipe::printRecipe(
     raw_ostream &O, const Twine &Indent, VPSlotTracker &SlotTracker) const {
   O << Indent << "FIRST-ORDER-RECURRENCE-PHI ";
@@ -4462,7 +4395,6 @@ void VPFirstOrderRecurrencePHIRecipe::printRecipe(
   O << " = phi ";
   printOperands(O, SlotTracker);
 }
-#endif
 
 void VPReductionPHIRecipe::execute(VPTransformState &State) {
   // Reductions do not have to start at zero. They can start with
@@ -4489,7 +4421,6 @@ void VPReductionPHIRecipe::execute(VPTransformState &State) {
   Phi->addIncoming(StartV, VectorPH);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPReductionPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                        VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN-REDUCTION-PHI ";
@@ -4500,7 +4431,6 @@ void VPReductionPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   if (getVFScaleFactor() > 1)
     O << " (VF scaled by 1/" << getVFScaleFactor() << ")";
 }
-#endif
 
 void VPWidenPHIRecipe::execute(VPTransformState &State) {
   Value *Op0 = State.get(getOperand(0));
@@ -4514,7 +4444,6 @@ InstructionCost VPWidenPHIRecipe::computeCost(ElementCount VF,
   return Ctx.TTI.getCFInstrCost(Instruction::PHI, Ctx.CostKind);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPWidenPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                    VPSlotTracker &SlotTracker) const {
   O << Indent << "WIDEN-PHI ";
@@ -4523,7 +4452,6 @@ void VPWidenPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << " = phi ";
   printPhiOperands(O, SlotTracker);
 }
-#endif
 
 void VPActiveLaneMaskPHIRecipe::execute(VPTransformState &State) {
   BasicBlock *VectorPH =
@@ -4535,7 +4463,6 @@ void VPActiveLaneMaskPHIRecipe::execute(VPTransformState &State) {
   State.set(this, Phi);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPActiveLaneMaskPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                             VPSlotTracker &SlotTracker) const {
   O << Indent << "ACTIVE-LANE-MASK-PHI ";
@@ -4544,9 +4471,7 @@ void VPActiveLaneMaskPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << " = phi ";
   printOperands(O, SlotTracker);
 }
-#endif
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void VPEVLBasedIVPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
                                         VPSlotTracker &SlotTracker) const {
   O << Indent << "EXPLICIT-VECTOR-LENGTH-BASED-IV-PHI ";
@@ -4555,4 +4480,3 @@ void VPEVLBasedIVPHIRecipe::printRecipe(raw_ostream &O, const Twine &Indent,
   O << " = phi ";
   printOperands(O, SlotTracker);
 }
-#endif

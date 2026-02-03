@@ -105,7 +105,6 @@ struct RematGraph {
     }
   }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   static void dumpBasicBlockLabel(const BasicBlock *BB,
                                   ModuleSlotTracker &MST) {
     if (BB->hasName()) {
@@ -132,7 +131,6 @@ struct RematGraph {
         dbgs() << "  " << *U->Node << "\n";
     }
   }
-#endif
 };
 
 } // namespace

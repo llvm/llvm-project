@@ -95,13 +95,11 @@ class SuspendCrossingInfo {
   bool computeBlockData(const ReversePostOrderTraversal<Function *> &RPOT);
 
 public:
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   // Print order is in RPO
   void dump() const;
   void dump(StringRef Label, BitVector const &BV,
             const ReversePostOrderTraversal<Function *> &RPOT,
             ModuleSlotTracker &MST) const;
-#endif
 
   LLVM_ABI
   SuspendCrossingInfo(Function &F,

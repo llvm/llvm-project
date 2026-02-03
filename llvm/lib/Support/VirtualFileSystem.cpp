@@ -162,9 +162,7 @@ llvm::ErrorOr<bool> FileSystem::equivalent(const Twine &A, const Twine &B) {
   return StatusA->equivalent(*StatusB);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void FileSystem::dump() const { print(dbgs(), PrintType::RecursiveContents); }
-#endif
 
 #ifndef NDEBUG
 static bool isTraversalComponent(StringRef Component) {

@@ -134,9 +134,7 @@ struct RecurrenceInfo {
     }
   }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const { print(dbgs()); }
-#endif
 
   bool matchSimpleRecurrence(const PHINode *P);
   bool matchConditionalRecurrence(
@@ -528,9 +526,7 @@ void CRCTable::print(raw_ostream &OS) const {
   }
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void CRCTable::dump() const { print(dbgs()); }
-#endif
 
 void HashRecognize::print(raw_ostream &OS) const {
   if (!L.isInnermost())
@@ -568,9 +564,7 @@ void HashRecognize::print(raw_ostream &OS) const {
   genSarwateTable(Info.RHS, Info.ByteOrderSwapped).print(OS);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void HashRecognize::dump() const { print(dbgs()); }
-#endif
 
 std::optional<PolynomialInfo> HashRecognize::getResult() const {
   auto Res = HashRecognize(L, SE).recognizeCRC();

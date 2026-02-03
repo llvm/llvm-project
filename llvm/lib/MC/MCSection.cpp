@@ -42,7 +42,6 @@ Align MCSection::getAlignmentForObjectFile(uint64_t Size) const {
 
 bool MCSection::hasEnded() const { return End && End->isInSection(); }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void MCSection::dump(
     DenseMap<const MCFragment *, SmallVector<const MCSymbol *, 0>> *FragToSyms)
     const {
@@ -66,7 +65,6 @@ LLVM_DUMP_METHOD void MCSection::dump(
     }
   }
 }
-#endif
 
 void MCFragment::setVarContents(ArrayRef<char> Contents) {
   auto &S = getParent()->ContentStorage;

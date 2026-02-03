@@ -357,9 +357,7 @@ void WebAssemblyException::print(raw_ostream &OS, unsigned Depth) const {
     SubE->print(OS, Depth + 2);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void WebAssemblyException::dump() const { print(dbgs()); }
-#endif
 
 raw_ostream &operator<<(raw_ostream &OS, const WebAssemblyException &WE) {
   WE.print(OS);

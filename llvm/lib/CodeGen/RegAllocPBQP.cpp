@@ -892,7 +892,6 @@ static Printable PrintNodeInfo(PBQP::RegAlloc::PBQPRAGraph::NodeId NId,
   });
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void PBQP::RegAlloc::PBQPRAGraph::dump(raw_ostream &OS) const {
   for (auto NId : nodeIds()) {
     const Vector &Costs = getNodeCosts(NId);
@@ -917,7 +916,6 @@ LLVM_DUMP_METHOD void PBQP::RegAlloc::PBQPRAGraph::dump(raw_ostream &OS) const {
 LLVM_DUMP_METHOD void PBQP::RegAlloc::PBQPRAGraph::dump() const {
   dump(dbgs());
 }
-#endif
 
 void PBQP::RegAlloc::PBQPRAGraph::printDot(raw_ostream &OS) const {
   OS << "graph {\n";

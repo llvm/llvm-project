@@ -987,7 +987,6 @@ bool PPCVSXSwapRemoval::removeSwaps() {
   return Changed;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 // For debug purposes, dump the contents of the swap vector.
 LLVM_DUMP_METHOD void PPCVSXSwapRemoval::dumpSwapVector() {
 
@@ -1058,7 +1057,6 @@ LLVM_DUMP_METHOD void PPCVSXSwapRemoval::dumpSwapVector() {
 
   dbgs() << "\n";
 }
-#endif
 
 INITIALIZE_PASS_BEGIN(PPCVSXSwapRemoval, DEBUG_TYPE,
                       "PowerPC VSX Swap Removal", false, false)

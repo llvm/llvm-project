@@ -100,7 +100,6 @@ struct DemandedFields {
     TWiden |= B.TWiden;
   }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Support for debugging, callable in GDB: V->dump()
   LLVM_DUMP_METHOD void dump() const {
     print(dbgs());
@@ -149,16 +148,13 @@ struct DemandedFields {
     OS << "TWiden=" << TWiden;
     OS << "}";
   }
-#endif
 };
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_ATTRIBUTE_USED
 inline raw_ostream &operator<<(raw_ostream &OS, const DemandedFields &DF) {
   DF.print(OS);
   return OS;
 }
-#endif
 
 bool areCompatibleVTYPEs(uint64_t CurVType, uint64_t NewVType,
                          const DemandedFields &Used);
@@ -508,7 +504,6 @@ public:
     return VSETVLIInfo::getUnknown();
   }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Support for debugging, callable in GDB: V->dump()
   LLVM_DUMP_METHOD void dump() const {
     print(dbgs());
@@ -557,16 +552,13 @@ public:
 
     OS << '}';
   }
-#endif
 };
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_ATTRIBUTE_USED
 inline raw_ostream &operator<<(raw_ostream &OS, const VSETVLIInfo &V) {
   V.print(OS);
   return OS;
 }
-#endif
 
 class RISCVVSETVLIInfoAnalysis {
   const RISCVSubtarget *ST;

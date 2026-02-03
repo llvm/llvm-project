@@ -1164,10 +1164,8 @@ void DXILResourceWrapperPass::print(raw_ostream &OS, const Module *M) const {
   Map->print(OS, *DRTM, M->getDataLayout());
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD
 void DXILResourceWrapperPass::dump() const { print(dbgs(), nullptr); }
-#endif
 
 INITIALIZE_PASS(DXILResourceWrapperPass, "dxil-resources",
                 "DXIL Resources Analysis", false, true)

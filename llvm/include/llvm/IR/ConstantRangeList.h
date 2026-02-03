@@ -95,9 +95,7 @@ public:
   /// Print out the ranges to a stream.
   LLVM_ABI void print(raw_ostream &OS) const;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump() const;
-#endif
 };
 
 } // end namespace llvm

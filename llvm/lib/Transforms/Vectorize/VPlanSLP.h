@@ -120,10 +120,8 @@ class VPlanSlp {
                                        SmallPtrSetImpl<VPValue *> &Candidates,
                                        VPInterleavedAccessInfo &IAI);
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   /// Print bundle \p Values to dbgs().
   void dumpBundle(ArrayRef<VPValue *> Values);
-#endif
 
 public:
   VPlanSlp(VPInterleavedAccessInfo &IAI, VPBasicBlock &BB) : IAI(IAI), BB(BB) {}

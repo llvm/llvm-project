@@ -37,9 +37,7 @@ struct VFRange;
 LLVM_ABI_FOR_TEST extern cl::opt<bool> VerifyEachVPlan;
 LLVM_ABI_FOR_TEST extern cl::opt<bool> EnableWideActiveLaneMask;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_ABI_FOR_TEST extern cl::opt<bool> PrintAfterEachVPlanPass;
-#endif
 
 struct VPlanTransforms {
   /// Helper to run a VPlan pass \p Pass on \p VPlan, forwarding extra arguments
@@ -49,14 +47,12 @@ struct VPlanTransforms {
   static decltype(auto) runPass(StringRef PassName, PassTy &&Pass, VPlan &Plan,
                                 ArgsTy &&...Args) {
     scope_exit PostTransformActions{[&]() {
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
       // Make sure to print before verification, so that output is more useful
       // in case of failures:
       if (PrintAfterEachVPlanPass) {
         dbgs() << "VPlan after " << PassName << '\n';
         dbgs() << Plan << '\n';
       }
-#endif
       if (VerifyEachVPlan && EnableVerify)
         verifyVPlanIsValid(Plan);
     }};

@@ -308,7 +308,6 @@ BaseIndexOffset BaseIndexOffset::match(const SDNode *N,
   return BaseIndexOffset();
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 
 LLVM_DUMP_METHOD void BaseIndexOffset::dump() const {
   print(dbgs());
@@ -323,4 +322,3 @@ void BaseIndexOffset::print(raw_ostream& OS) const {
   OS << "] offset=" << Offset;
 }
 
-#endif

@@ -990,11 +990,9 @@ raw_ostream& llvm::operator<<(raw_ostream& OS, const LiveRange::Segment &S) {
   return OS << '[' << S.start << ',' << S.end << ':' << S.valno->id << ')';
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void LiveRange::Segment::dump() const {
   dbgs() << *this << '\n';
 }
-#endif
 
 void VNInfo::print(raw_ostream &OS) const {
   OS << id << '@';
@@ -1046,7 +1044,6 @@ void LiveInterval::print(raw_ostream &OS) const {
   OS << "  weight:" << Weight;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void VNInfo::dump() const { dbgs() << *this << '\n'; }
 
 LLVM_DUMP_METHOD void LiveRange::dump() const { dbgs() << *this << '\n'; }
@@ -1058,7 +1055,6 @@ LLVM_DUMP_METHOD void LiveInterval::SubRange::dump() const {
 LLVM_DUMP_METHOD void LiveInterval::dump() const {
   dbgs() << *this << '\n';
 }
-#endif
 
 #ifndef NDEBUG
 bool LiveRange::verify() const {
@@ -1152,7 +1148,6 @@ bool LiveInterval::verify(const MachineRegisterInfo *MRI) const {
 // When they exist, Spills.back().start <= LastStart,
 //                 and WriteI[-1].start <= LastStart.
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void LiveRangeUpdater::print(raw_ostream &OS) const {
   if (!isDirty()) {
     if (LR)
@@ -1179,7 +1174,6 @@ void LiveRangeUpdater::print(raw_ostream &OS) const {
 LLVM_DUMP_METHOD void LiveRangeUpdater::dump() const {
   print(errs());
 }
-#endif
 
 // Determine if A and B should be coalesced.
 static inline bool coalescable(const LiveRange::Segment &A,

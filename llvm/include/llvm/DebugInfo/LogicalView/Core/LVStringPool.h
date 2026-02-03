@@ -80,9 +80,7 @@ public:
     }
   }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump() const { print(dbgs()); }
-#endif
 };
 
 } // namespace logicalview

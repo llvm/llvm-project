@@ -3489,7 +3489,6 @@ public:
       }
     }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
     LLVM_DUMP_METHOD static StringRef getModeStr(ReorderingMode RMode) {
       switch (RMode) {
       case ReorderingMode::Load:
@@ -3540,7 +3539,6 @@ public:
 
     /// Debug print.
     LLVM_DUMP_METHOD void dump() const { print(dbgs()); }
-#endif
   };
 
   /// Evaluate each pair in \p Candidates and return index into \p Candidates
@@ -4862,7 +4860,6 @@ private:
 
     static bool classof(const ScheduleEntity *) { return true; }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
     void dump(raw_ostream &OS) const {
       if (const auto *SD = dyn_cast<ScheduleData>(this))
         return SD->dump(OS);
@@ -4875,16 +4872,13 @@ private:
       dump(dbgs());
       dbgs() << '\n';
     }
-#endif // if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   };
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   friend inline raw_ostream &operator<<(raw_ostream &OS,
                                         const BoUpSLP::ScheduleEntity &SE) {
     SE.dump(OS);
     return OS;
   }
-#endif
 
   /// Contains all scheduling relevant data for an instruction.
   /// A ScheduleData either represents a single instruction or a member of an
@@ -5250,14 +5244,12 @@ private:
     ScheduleBundle &getBundle() { return Bundle; }
     const ScheduleBundle &getBundle() const { return Bundle; }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
     void dump(raw_ostream &OS) const { OS << "[Copyable]" << *getInst(); }
 
     LLVM_DUMP_METHOD void dump() const {
       dump(dbgs());
       dbgs() << '\n';
     }
-#endif // !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 
   private:
     /// true, if it has valid dependency information. These nodes always have

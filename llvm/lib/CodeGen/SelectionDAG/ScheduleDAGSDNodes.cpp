@@ -670,7 +670,6 @@ void ScheduleDAGSDNodes::computeOperandLatency(SDNode *Def, SDNode *Use,
 }
 
 void ScheduleDAGSDNodes::dumpNode(const SUnit &SU) const {
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   dumpNodeName(SU);
   dbgs() << ": ";
 
@@ -690,21 +689,17 @@ void ScheduleDAGSDNodes::dumpNode(const SUnit &SU) const {
     dbgs() << "\n";
     GluedNodes.pop_back();
   }
-#endif
 }
 
 void ScheduleDAGSDNodes::dump() const {
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   if (EntrySU.getNode() != nullptr)
     dumpNodeAll(EntrySU);
   for (const SUnit &SU : SUnits)
     dumpNodeAll(SU);
   if (ExitSU.getNode() != nullptr)
     dumpNodeAll(ExitSU);
-#endif
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 void ScheduleDAGSDNodes::dumpSchedule() const {
   for (const SUnit *SU : Sequence) {
     if (SU)
@@ -713,7 +708,6 @@ void ScheduleDAGSDNodes::dumpSchedule() const {
       dbgs() << "**** NOOP ****\n";
   }
 }
-#endif
 
 #ifndef NDEBUG
 /// VerifyScheduledSequence - Verify that all SUnits were scheduled and that

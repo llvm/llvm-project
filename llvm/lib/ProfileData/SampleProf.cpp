@@ -168,9 +168,7 @@ std::error_code SampleRecord::serialize(
   return sampleprof_error::success;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void LineLocation::dump() const { print(dbgs()); }
-#endif
 
 void LineLocation::serialize(raw_ostream &OS) const {
   encodeULEB128(LineOffset, OS);
@@ -188,9 +186,7 @@ void SampleRecord::print(raw_ostream &OS, unsigned Indent) const {
   OS << "\n";
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void SampleRecord::dump() const { print(dbgs(), 0); }
-#endif
 
 raw_ostream &llvm::sampleprof::operator<<(raw_ostream &OS,
                                           const SampleRecord &Sample) {
@@ -394,9 +390,7 @@ const FunctionSamples *FunctionSamples::findFunctionSamplesAt(
   return R;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void FunctionSamples::dump() const { print(dbgs(), 0); }
-#endif
 
 std::error_code ProfileSymbolList::read(const uint8_t *Data,
                                         uint64_t ListSize) {

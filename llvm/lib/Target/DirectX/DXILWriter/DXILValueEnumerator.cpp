@@ -527,14 +527,12 @@ unsigned ValueEnumerator::getValueID(const Value *V) const {
   return I->second - 1;
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void ValueEnumerator::dump() const {
   print(dbgs(), ValueMap, "Default");
   dbgs() << '\n';
   print(dbgs(), MetadataMap, "MetaData");
   dbgs() << '\n';
 }
-#endif
 
 void ValueEnumerator::print(raw_ostream &OS, const ValueMapType &Map,
                             const char *Name) const {

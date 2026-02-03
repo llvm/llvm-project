@@ -50,9 +50,7 @@ public:
 
   LLVM_ABI void print(raw_ostream &OS, bool Full = true) const;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   void dump() const { print(dbgs()); }
-#endif
 };
 
 class LLVM_ABI LVLocation : public LVObject {

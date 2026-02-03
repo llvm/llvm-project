@@ -131,9 +131,7 @@ void detail::RecordKeeperImpl::dumpAllocationStats(raw_ostream &OS) const {
 //    Type implementations
 //===----------------------------------------------------------------------===//
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void RecTy::dump() const { print(errs()); }
-#endif
 
 const ListRecTy *RecTy::getListTy() const {
   if (!ListTy)
@@ -374,9 +372,7 @@ const RecTy *llvm::resolveTypes(const RecTy *T1, const RecTy *T2) {
 
 void Init::anchor() {}
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void Init::dump() const { return print(errs()); }
-#endif
 
 RecordKeeper &Init::getRecordKeeper() const {
   if (auto *TyInit = dyn_cast<TypedInit>(this))
@@ -2915,9 +2911,7 @@ bool RecordVal::setValue(const Init *V, SMLoc NewLoc) {
   return setValue(V);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void RecordVal::dump() const { errs() << *this; }
-#endif
 
 void RecordVal::print(raw_ostream &OS, bool PrintSem) const {
   if (isNonconcreteOK()) OS << "field ";
@@ -3030,9 +3024,7 @@ void Record::resolveReferences(const Init *NewName) {
   resolveReferences(R);
 }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void Record::dump() const { errs() << *this; }
-#endif
 
 raw_ostream &llvm::operator<<(raw_ostream &OS, const Record &R) {
   OS << R.getNameInitAsString();
@@ -3278,9 +3270,7 @@ RecordKeeper::RecordKeeper()
 
 RecordKeeper::~RecordKeeper() = default;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
 LLVM_DUMP_METHOD void RecordKeeper::dump() const { errs() << *this; }
-#endif
 
 raw_ostream &llvm::operator<<(raw_ostream &OS, const RecordKeeper &RK) {
   OS << "------------- Classes -----------------\n";

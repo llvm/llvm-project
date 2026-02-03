@@ -91,9 +91,7 @@ public:
   static void *operator new(size_t Size) { return ::operator new(Size); }
   void operator delete(void *Ptr) { ::operator delete(Ptr); }
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   LLVM_DUMP_METHOD void dump() const;
-#endif
 
   LLVM_ABI void print(raw_ostream &OS) const;
 
@@ -218,9 +216,7 @@ public:
   using ThreadSafeTrieRawHashMapBase::operator delete;
   using HashType = HashT;
 
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   using ThreadSafeTrieRawHashMapBase::dump;
-#endif
 
   using ThreadSafeTrieRawHashMapBase::print;
 

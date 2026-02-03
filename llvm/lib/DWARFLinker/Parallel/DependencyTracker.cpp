@@ -26,7 +26,6 @@ struct BrokenLink {
 /// Verify the keep chain by looking for DIEs that are kept but who's parent
 /// isn't.
 void DependencyTracker::verifyKeepChain() {
-#if !defined(NDEBUG) || defined(LLVM_ENABLE_DUMP)
   SmallVector<DWARFDie> Worklist;
   Worklist.push_back(CU.getOrigUnit().getUnitDIE());
 
@@ -102,7 +101,6 @@ void DependencyTracker::verifyKeepChain() {
     }
     report_fatal_error("invalid keep chain");
   }
-#endif
 }
 
 bool DependencyTracker::resolveDependenciesAndMarkLiveness(
