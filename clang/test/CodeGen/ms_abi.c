@@ -144,7 +144,7 @@ struct i128 {
 };
 
 __attribute__((ms_abi)) struct i128 f7(struct i128 a) {
-  // WIN64: define dso_local void @f7(ptr dead_on_unwind noalias writable sret(%struct.i128) align 8 %agg.result, ptr dead_on_return noundef %a)
-  // FREEBSD: define{{.*}} win64cc void @f7(ptr dead_on_unwind noalias writable sret(%struct.i128) align 8 %agg.result, ptr dead_on_return noundef %a)
+  // WIN64: define dso_local void @f7(ptr dead_on_unwind noalias writable sret(%struct.i128) align 8 %agg.result, ptr noundef dead_on_return %a)
+  // FREEBSD: define{{.*}} win64cc void @f7(ptr dead_on_unwind noalias writable sret(%struct.i128) align 8 %agg.result, ptr noundef dead_on_return %a)
   return a;
 }

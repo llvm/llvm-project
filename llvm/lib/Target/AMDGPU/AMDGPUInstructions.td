@@ -746,20 +746,9 @@ int FP64_NEG_ONE = 0xbff0000000000000;
 }
 def CONST : Constants;
 
-def FP_ZERO : PatLeaf <
-  (fpimm),
-  [{return N->getValueAPF().isZero();}]
->;
-
-def FP_ONE : PatLeaf <
-  (fpimm),
-  [{return N->isExactlyValue(1.0);}]
->;
-
-def FP_HALF : PatLeaf <
-  (fpimm),
-  [{return N->isExactlyValue(0.5);}]
->;
+def fpimm_zero : FPImmLeaf<fAny, [{ return Imm.isZero(); }]> ;
+def fpimm_one : FPImmLeaf<fAny, [{ return Imm.isExactlyValue(+1.0); }]> ;
+def fpimm_half : FPImmLeaf<fAny, [{ return Imm.isExactlyValue(+0.5); }]> ;
 
 /* Generic helper patterns for intrinsics */
 /* -------------------------------------- */
@@ -806,16 +795,15 @@ class DwordAddrPat<ValueType vt, RegisterClass rc> : AMDGPUPat <
 
 // Special conversion patterns
 
-def cvt_rpi_i32_f32 : PatFrag <
+let GIIgnoreCopies = 1 in
+def cvt_rpi_i32_f32 : PatFrag<
   (ops node:$src),
-  (fp_to_sint (ffloor (fadd $src, FP_HALF))),
-  [{ (void) N; return TM.Options.NoNaNsFPMath; }]
->;
+  (fp_to_sint (ffloor_nnan (fadd $src, fpimm_half)))
+>, GISelFlags;
 
-def cvt_flr_i32_f32 : PatFrag <
+def cvt_flr_i32_f32 : PatFrag<
   (ops node:$src),
-  (fp_to_sint (ffloor $src)),
-  [{ (void)N; return TM.Options.NoNaNsFPMath; }]
+  (fp_to_sint (ffloor_nnan $src))
 >;
 
 let AddedComplexity = 2 in {
@@ -833,7 +821,7 @@ class UMad24Pat<Instruction Inst, bit HasClamp = 0> : AMDGPUPat <
 } // AddedComplexity.
 
 class RcpPat<Instruction RcpInst, ValueType vt> : AMDGPUPat <
-  (fdiv FP_ONE, vt:$src),
+  (fdiv fpimm_one, vt:$src),
   (RcpInst $src)
 >;
 

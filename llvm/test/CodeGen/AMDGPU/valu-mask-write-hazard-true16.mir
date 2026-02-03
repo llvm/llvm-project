@@ -8,7 +8,7 @@ body:            |
     ; GCN-LABEL: name: mask_hazard_cndmask_t16_dpp4
     ; GCN: $vgpr0_lo16 = V_CNDMASK_B16_t16_e64_dpp $vgpr0_lo16, 0, $vgpr1_lo16, 0, $vgpr2_lo16, $sgpr2_sgpr3, 0, 1, 15, 15, 1, implicit $exec
     ; GCN-NEXT: $sgpr2_sgpr3 = S_CSELECT_B64 -1, 0, implicit $scc
-    ; GCN-NEXT: S_WAITCNT_DEPCTR 65438
+    ; GCN-NEXT: S_WAITCNT_DEPCTR .SaSdst_0
     ; GCN-NEXT: S_ENDPGM 0
     $vgpr0_lo16 = V_CNDMASK_B16_t16_e64_dpp $vgpr0_lo16, 0, $vgpr1_lo16, 0, $vgpr2_lo16, $sgpr2_sgpr3, 0, 1, 15, 15, 1, implicit $exec
     $sgpr2_sgpr3 = S_CSELECT_B64 -1, 0, implicit $scc

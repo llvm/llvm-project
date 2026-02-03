@@ -240,6 +240,29 @@ static BuiltinTypeDeclBuilder setupBufferType(CXXRecordDecl *Decl, Sema &S,
       .addStaticInitializationFunctions(HasCounter);
 }
 
+/// Set up common members and attributes for sampler types
+static BuiltinTypeDeclBuilder setupSamplerType(CXXRecordDecl *Decl, Sema &S) {
+  return BuiltinTypeDeclBuilder(S, Decl)
+      .addSamplerHandle()
+      .addDefaultHandleConstructor()
+      .addCopyConstructor()
+      .addCopyAssignmentOperator()
+      .addStaticInitializationFunctions(false);
+}
+
+/// Set up common members and attributes for texture types
+static BuiltinTypeDeclBuilder setupTextureType(CXXRecordDecl *Decl, Sema &S,
+                                               ResourceClass RC, bool IsROV,
+                                               ResourceDimension Dim) {
+  return BuiltinTypeDeclBuilder(S, Decl)
+      .addTextureHandle(RC, IsROV, Dim)
+      .addDefaultHandleConstructor()
+      .addCopyConstructor()
+      .addCopyAssignmentOperator()
+      .addStaticInitializationFunctions(false)
+      .addSampleMethods(Dim);
+}
+
 // This function is responsible for constructing the constraint expression for
 // this concept:
 // template<typename T> concept is_typed_resource_element_compatible =
@@ -500,6 +523,28 @@ void HLSLExternalSemaSource::defineHLSLTypesWithForwardDeclarations() {
         .addGetDimensionsMethodForBuffer()
         .completeDefinition();
   });
+
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "SamplerState")
+             .finalizeForwardDeclaration();
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupSamplerType(Decl, *SemaPtr).completeDefinition();
+  });
+
+  Decl =
+      BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "SamplerComparisonState")
+          .finalizeForwardDeclaration();
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupSamplerType(Decl, *SemaPtr).completeDefinition();
+  });
+
+  Decl = BuiltinTypeDeclBuilder(*SemaPtr, HLSLNamespace, "Texture2D")
+             .addSimpleTemplateParams({"element_type"}, TypedBufferConcept)
+             .finalizeForwardDeclaration();
+  onCompletion(Decl, [this](CXXRecordDecl *Decl) {
+    setupTextureType(Decl, *SemaPtr, ResourceClass::SRV, /*IsROV=*/false,
+                     ResourceDimension::Dim2D)
+        .completeDefinition();
+  });
 }
 
 void HLSLExternalSemaSource::onCompletion(CXXRecordDecl *Record,
@@ -522,4 +567,5 @@ void HLSLExternalSemaSource::CompleteType(TagDecl *Tag) {
   if (It == Completions.end())
     return;
   It->second(Record);
+  Completions.erase(It);
 }

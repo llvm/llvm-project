@@ -122,7 +122,7 @@ bool elf::isAbsolute(const Symbol &sym) {
   return false;
 }
 
-static bool isAbsoluteValue(const Symbol &sym) {
+static bool isAbsoluteOrTls(const Symbol &sym) {
   return isAbsolute(sym) || sym.isTls();
 }
 
@@ -148,7 +148,7 @@ static bool isRelExpr(RelExpr expr) {
   return oneof<R_PC, R_GOTREL, R_GOTPLTREL, RE_ARM_PCA, RE_MIPS_GOTREL,
                RE_PPC64_CALL, RE_PPC64_RELAX_TOC, RE_AARCH64_PAGE_PC,
                R_RELAX_GOT_PC, RE_RISCV_PC_INDIRECT, RE_PPC64_RELAX_GOT_PC,
-               RE_LOONGARCH_PAGE_PC>(expr);
+               RE_LOONGARCH_PAGE_PC, RE_LOONGARCH_PC_INDIRECT>(expr);
 }
 
 static RelExpr toPlt(RelExpr expr) {
@@ -704,6 +704,8 @@ static void addRelativeReloc(Ctx &ctx, InputSectionBase &isec,
                              uint64_t offsetInSec, Symbol &sym, int64_t addend,
                              RelExpr expr, RelType type) {
   Partition &part = isec.getPartition(ctx);
+  bool isAArch64Auth =
+      ctx.arg.emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64;
 
   // Add a relative relocation. If relrDyn section is enabled, and the
   // relocation offset is guaranteed to be even, add the relocation to
@@ -712,9 +714,14 @@ static void addRelativeReloc(Ctx &ctx, InputSectionBase &isec,
   // don't store the addend values, so we must write it to the relocated
   // address.
   //
+  // When symbol values are determined in finalizeAddressDependentContent,
+  // some .relr.auth.dyn relocations may be moved to .rela.dyn.
+  //
   // MTE globals may need to store the original addend as well so cannot use
   // relrDyn. TODO: It should be unambiguous when not using R_ADDEND_NEG below?
   RelrBaseSection *relrDyn = part.relrDyn.get();
+  if (isAArch64Auth)
+    relrDyn = part.relrAuthDyn.get();
   if (sym.isTagged())
     relrDyn = nullptr;
   if (relrDyn && isec.addralign >= 2 && offsetInSec % 2 == 0) {
@@ -722,8 +729,11 @@ static void addRelativeReloc(Ctx &ctx, InputSectionBase &isec,
                                      expr);
     return;
   }
-  part.relaDyn->addRelativeReloc<shard>(ctx.target->relativeRel, isec,
-                                        offsetInSec, sym, addend, type, expr);
+  RelType relativeType = ctx.target->relativeRel;
+  if (isAArch64Auth)
+    relativeType = R_AARCH64_AUTH_RELATIVE;
+  part.relaDyn->addRelativeReloc<shard>(relativeType, isec, offsetInSec, sym,
+                                        addend, type, expr);
   // With MTE globals, we always want to derive the address tag by `ldg`-ing
   // the symbol. When we have a RELATIVE relocation though, we no longer have
   // a reference to the symbol. Because of this, when we have an addend that
@@ -866,7 +876,7 @@ bool RelocScan::isStaticLinkTimeConstant(RelExpr e, RelType type,
 
   // For the target and the relocation, we want to know if they are
   // absolute or relative.
-  bool absVal = isAbsoluteValue(sym) && e != RE_PPC64_TOCBASE;
+  bool absVal = isAbsoluteOrTls(sym) && e != RE_PPC64_TOCBASE;
   bool relE = isRelExpr(e);
   if (absVal && !relE)
     return true;
@@ -914,7 +924,7 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
   // If non-ifunc non-preemptible, change PLT to direct call and optimize GOT
   // indirection.
   const bool isIfunc = sym.isGnuIFunc();
-  if (!sym.isPreemptible && (!isIfunc || ctx.arg.zIfuncNoplt)) {
+  if (!sym.isPreemptible && !isIfunc) {
     if (expr != R_GOT_PC) {
       // The 0x8000 bit of r_addend of R_PPC_PLTREL24 is used to choose call
       // stub type. It should be ignored if optimized to R_PC.
@@ -927,7 +937,7 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
              type == R_HEX_GD_PLT_B22_PCREL_X ||
              type == R_HEX_GD_PLT_B32_PCREL_X)))
         expr = fromPlt(expr);
-    } else if (!isAbsoluteValue(sym) ||
+    } else if (!isAbsoluteOrTls(sym) ||
                (type == R_PPC64_PCREL_OPT && ctx.arg.emachine == EM_PPC64)) {
       expr = ctx.target->adjustGotPcExpr(type, addend,
                                          sec->content().data() + offset);
@@ -993,7 +1003,9 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
   if (canWrite) {
     RelType rel = ctx.target->getDynRel(type);
     if (oneof<R_GOT, RE_LOONGARCH_GOT>(expr) ||
-        (rel == ctx.target->symbolicRel && !sym.isPreemptible)) {
+        ((rel == ctx.target->symbolicRel ||
+          (ctx.arg.emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64)) &&
+         !sym.isPreemptible)) {
       addRelativeReloc<true>(ctx, *sec, offset, sym, addend, expr, type);
       return;
     }
@@ -1002,23 +1014,6 @@ void RelocScan::process(RelExpr expr, RelType type, uint64_t offset,
         rel = ctx.target->relativeRel;
       std::lock_guard<std::mutex> lock(ctx.relocMutex);
       Partition &part = sec->getPartition(ctx);
-      // For a preemptible symbol, we can't use a relative relocation. For an
-      // undefined symbol, we can't compute offset at link-time and use a
-      // relative relocation. Use a symbolic relocation instead.
-      if (ctx.arg.emachine == EM_AARCH64 && type == R_AARCH64_AUTH_ABS64 &&
-          !sym.isPreemptible) {
-        if (part.relrAuthDyn && sec->addralign >= 2 && offset % 2 == 0) {
-          // When symbol values are determined in
-          // finalizeAddressDependentContent, some .relr.auth.dyn relocations
-          // may be moved to .rela.dyn.
-          part.relrAuthDyn->addRelativeReloc(*sec, offset, sym, addend, type,
-                                             expr);
-        } else {
-          part.relaDyn->addReloc({R_AARCH64_AUTH_RELATIVE, sec, offset, false,
-                                  sym, addend, R_ABS});
-        }
-        return;
-      }
       if (LLVM_UNLIKELY(type == ctx.target->iRelSymbolicRel)) {
         if (sym.isPreemptible) {
           auto diag = Err(ctx);
@@ -1459,42 +1454,25 @@ RelocationBaseSection &elf::getIRelativeSection(Ctx &ctx) {
 }
 
 static bool handleNonPreemptibleIfunc(Ctx &ctx, Symbol &sym, uint16_t flags) {
-  // Handle a reference to a non-preemptible ifunc. These are special in a
-  // few ways:
+  // Non-preemptible ifuncs are called via a PLT entry that resolves the actual
+  // address at runtime. We create an IPLT entry and an IGOTPLT slot. The
+  // IGOTPLT slot is relocated by an IRELATIVE relocation, whose addend encodes
+  // the resolver address. At startup, the runtime calls the resolver and
+  // fills the IGOTPLT slot.
   //
-  // - Unlike most non-preemptible symbols, non-preemptible ifuncs do not have
-  //   a fixed value. But assuming that all references to the ifunc are
-  //   GOT-generating or PLT-generating, the handling of an ifunc is
-  //   relatively straightforward. We create a PLT entry in Iplt, which is
-  //   usually at the end of .plt, which makes an indirect call using a
-  //   matching GOT entry in igotPlt, which is usually at the end of .got.plt.
-  //   The GOT entry is relocated using an IRELATIVE relocation in relaDyn,
-  //   which is usually at the end of .rela.dyn.
+  // For direct (non-GOT/PLT) relocations, the symbol must have a constant
+  // address. We achieve this by redirecting the symbol to its IPLT entry
+  // ("canonicalizing" it), so all references see the same address, and the
+  // resolver is called exactly once. This may result in two GOT entries: one
+  // in .got.plt for the IRELATIVE, and one in .got pointing to the canonical
+  // IPLT entry (for GOT-generating relocations).
   //
-  // - Despite the fact that an ifunc does not have a fixed value, compilers
-  //   that are not passed -fPIC will assume that they do, and will emit
-  //   direct (non-GOT-generating, non-PLT-generating) relocations to the
-  //   symbol. This means that if a direct relocation to the symbol is
-  //   seen, the linker must set a value for the symbol, and this value must
-  //   be consistent no matter what type of reference is made to the symbol.
-  //   This can be done by creating a PLT entry for the symbol in the way
-  //   described above and making it canonical, that is, making all references
-  //   point to the PLT entry instead of the resolver. In lld we also store
-  //   the address of the PLT entry in the dynamic symbol table, which means
-  //   that the symbol will also have the same value in other modules.
-  //   Because the value loaded from the GOT needs to be consistent with
-  //   the value computed using a direct relocation, a non-preemptible ifunc
-  //   may end up with two GOT entries, one in .got.plt that points to the
-  //   address returned by the resolver and is used only by the PLT entry,
-  //   and another in .got that points to the PLT entry and is used by
-  //   GOT-generating relocations.
+  // We clone the symbol to preserve the original resolver address for the
+  // IRELATIVE addend. The clone is tracked in ctx.irelativeSyms so that linker
+  // relaxation can adjust its value when the resolver address changes.
   //
-  // - The fact that these symbols do not have a fixed value makes them an
-  //   exception to the general rule that a statically linked executable does
-  //   not require any form of dynamic relocation. To handle these relocations
-  //   correctly, the IRELATIVE relocations are stored in an array which a
-  //   statically linked executable's startup code must enumerate using the
-  //   linker-defined symbols __rela?_iplt_{start,end}.
+  // Note: IRELATIVE relocations are needed even in static executables; see
+  // `addRelIpltSymbols`.
   if (!sym.isGnuIFunc() || sym.isPreemptible || ctx.arg.zIfuncNoplt)
     return false;
   // Skip unreferenced non-preemptible ifunc.
@@ -1503,17 +1481,14 @@ static bool handleNonPreemptibleIfunc(Ctx &ctx, Symbol &sym, uint16_t flags) {
 
   sym.isInIplt = true;
 
-  // Create an Iplt and the associated IRELATIVE relocation pointing to the
-  // original section/value pairs. For non-GOT non-PLT relocation case below, we
-  // may alter section/value, so create a copy of the symbol to make
-  // section/value fixed.
-  auto *directSym = makeDefined(cast<Defined>(sym));
-  directSym->allocateAux(ctx);
+  auto *irelativeSym = makeDefined(cast<Defined>(sym));
+  irelativeSym->allocateAux(ctx);
+  ctx.irelativeSyms.push_back(irelativeSym);
   auto &dyn = getIRelativeSection(ctx);
   addPltEntry(ctx, *ctx.in.iplt, *ctx.in.igotPlt, dyn, ctx.target->iRelativeRel,
-              *directSym);
+              *irelativeSym);
   sym.allocateAux(ctx);
-  ctx.symAux.back().pltIdx = ctx.symAux[directSym->auxIdx].pltIdx;
+  ctx.symAux.back().pltIdx = ctx.symAux[irelativeSym->auxIdx].pltIdx;
 
   if (flags & HAS_DIRECT_RELOC) {
     // Change the value to the IPLT and redirect all references to it.

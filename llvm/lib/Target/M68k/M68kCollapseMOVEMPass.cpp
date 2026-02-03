@@ -104,6 +104,11 @@ public:
   }
 
   bool update(int O, int M) {
+    if (Mask & M)
+      // We've already seen this register and are planning on collapsing it
+      // into a MOVEM. This cannot be done twice for the same register in the
+      // same MOVEM, so bail out now.
+      return false;
     UpdateType Type = classifyUpdateByMask(M);
     if (Type == Intermixed)
       return false;
