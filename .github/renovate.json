@@ -16,7 +16,7 @@
       "enabled": false
     },
     {
-      "matchPackageNames": ["actions/python-versions"],
+      "matchPackageNames": ["python"],
       "matchManagers": ["github-actions"],
       "matchFileNames": ["release-binaries.yml"],
       "enabled": false
