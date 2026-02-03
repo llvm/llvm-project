@@ -1210,11 +1210,11 @@ unsigned int test_encodekey128_u32(unsigned int htype, __m128i key, void *h) {
   // LLVM: store <2 x i64> %[[X0]], ptr %[[OUT_PTR:.*]], align 1
 
   // LLVM: %[[X1:.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %[[CALL]], 2
-  // LLVM: %[[P1:.*]] = getelementptr <2 x i64>, ptr %[[OUT_PTR]], i{{32|64}} 1
+  // LLVM: %[[P1:.*]] = getelementptr <2 x i64>, ptr %[[OUT_PTR]], i64 1
   // LLVM: store <2 x i64> %[[X1]], ptr %[[P1]], align 1
 
   // LLVM: %[[X2:.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %[[CALL]], 3
-  // LLVM: %[[P2:.*]] = getelementptr <2 x i64>, ptr %[[OUT_PTR]], i{{32|64}} 2
+  // LLVM: %[[P2:.*]] = getelementptr <2 x i64>, ptr %[[OUT_PTR]], i64 2
   // LLVM: store <2 x i64> %[[X2]], ptr %[[P2]], align 1
 
   // LLVM: %[[RET_EXT:.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %[[CALL]], 0
@@ -1225,18 +1225,18 @@ unsigned int test_encodekey128_u32(unsigned int htype, __m128i key, void *h) {
   // LLVM: ret i32 %[[RET]]
 
   // OGCG-LABEL: test_encodekey128_u32
-  // OGCG: %[[OUT_PTR:.*]] = load ptr, ptr %__h.addr.i, align {{4|8}}
+  // OGCG: %[[OUT_PTR:.*]] = load ptr, ptr %__h.addr.i, align 8
   // OGCG: %[[CALL:.*]] = call { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.encodekey128(i32 %{{.*}}, <2 x i64> %{{.*}})
 
   // OGCG: %[[X0:.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %[[CALL]], 1
   // OGCG: store <2 x i64> %[[X0]], ptr %[[OUT_PTR]], align 1
 
   // OGCG: %[[X1:.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %[[CALL]], 2
-  // OGCG: %[[P1:.*]] = getelementptr i8, ptr %[[OUT_PTR]], i{{32|64}} 16
+  // OGCG: %[[P1:.*]] = getelementptr i8, ptr %[[OUT_PTR]], i32 16
   // OGCG: store <2 x i64> %[[X1]], ptr %[[P1]], align 1
 
   // OGCG: %[[X2:.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %[[CALL]], 3
-  // OGCG: %[[P2:.*]] = getelementptr i8, ptr %[[OUT_PTR]], i{{32|64}} 32
+  // OGCG: %[[P2:.*]] = getelementptr i8, ptr %[[OUT_PTR]], i32 32
   // OGCG: store <2 x i64> %[[X2]], ptr %[[P2]], align 1
 
   // OGCG: %[[RET:.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %[[CALL]], 0
@@ -1283,15 +1283,15 @@ unsigned int test_encodekey256_u32(unsigned int htype, __m128i key_lo,
   // LLVM: store <2 x i64> %[[X0]], ptr %[[OUT_PTR:.*]], align 1
 
   // LLVM: %[[X1:.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %[[CALL]], 2
-  // LLVM: %[[P1:.*]] = getelementptr <2 x i64>, ptr %[[OUT_PTR]], i{{32|64}} 1
+  // LLVM: %[[P1:.*]] = getelementptr <2 x i64>, ptr %[[OUT_PTR]], i64 1
   // LLVM: store <2 x i64> %[[X1]], ptr %[[P1]], align 1
 
   // LLVM: %[[X2:.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %[[CALL]], 3
-  // LLVM: %[[P2:.*]] = getelementptr <2 x i64>, ptr %[[OUT_PTR]], i{{32|64}} 2
+  // LLVM: %[[P2:.*]] = getelementptr <2 x i64>, ptr %[[OUT_PTR]], i64 2
   // LLVM: store <2 x i64> %[[X2]], ptr %[[P2]], align 1
 
   // LLVM: %[[X3:.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %[[CALL]], 4
-  // LLVM: %[[P3:.*]] = getelementptr <2 x i64>, ptr %[[OUT_PTR]], i{{32|64}} 3
+  // LLVM: %[[P3:.*]] = getelementptr <2 x i64>, ptr %[[OUT_PTR]], i64 3
   // LLVM: store <2 x i64> %[[X3]], ptr %[[P3]], align 1
 
   // LLVM: %[[RET_EXT:.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %[[CALL]], 0
@@ -1302,22 +1302,22 @@ unsigned int test_encodekey256_u32(unsigned int htype, __m128i key_lo,
   // LLVM: ret i32 %[[RET]]
 
   // OGCG-LABEL: test_encodekey256_u32
-  // OGCG: %[[OUT_PTR:.*]] = load ptr, ptr %__h.addr.i, align {{4|8|16}}
+  // OGCG: %[[OUT_PTR:.*]] = load ptr, ptr %__h.addr.i, align 8
   // OGCG: %[[CALL:.*]] = call { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } @llvm.x86.encodekey256(i32 %{{.*}}, <2 x i64> %{{.*}}, <2 x i64> %{{.*}})
 
   // OGCG: %[[X0:.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %[[CALL]], 1
   // OGCG: store <2 x i64> %[[X0]], ptr %[[OUT_PTR]], align 1
 
   // OGCG: %[[X1:.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %[[CALL]], 2
-  // OGCG: %[[P1:.*]] = getelementptr i8, ptr %[[OUT_PTR]], i{{32|64}} 16
+  // OGCG: %[[P1:.*]] = getelementptr i8, ptr %[[OUT_PTR]], i32 16
   // OGCG: store <2 x i64> %[[X1]], ptr %[[P1]], align 1
 
   // OGCG: %[[X2:.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %[[CALL]], 3
-  // OGCG: %[[P2:.*]] = getelementptr i8, ptr %[[OUT_PTR]], i{{32|64}} 32
+  // OGCG: %[[P2:.*]] = getelementptr i8, ptr %[[OUT_PTR]], i32 32
   // OGCG: store <2 x i64> %[[X2]], ptr %[[P2]], align 1
 
   // OGCG: %[[X3:.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %[[CALL]], 4
-  // OGCG: %[[P3:.*]] = getelementptr i8, ptr %[[OUT_PTR]], i{{32|64}} 48
+  // OGCG: %[[P3:.*]] = getelementptr i8, ptr %[[OUT_PTR]], i32 48
   // OGCG: store <2 x i64> %[[X3]], ptr %[[P3]], align 1
 
   // OGCG: %[[RET_EXT:.*]] = extractvalue { i32, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64>, <2 x i64> } %[[CALL]], 0

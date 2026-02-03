@@ -15,29 +15,17 @@
 #include "CIRGenFunction.h"
 #include "CIRGenModule.h"
 #include "mlir/IR/Attributes.h"
-#include "mlir/IR/Builders.h"
 #include "mlir/IR/BuiltinAttributes.h"
 #include "mlir/IR/Location.h"
-#include "mlir/IR/MLIRContext.h"
 #include "mlir/IR/Types.h"
-#include "mlir/IR/Value.h"
 #include "mlir/IR/ValueRange.h"
-#include "clang/AST/CharUnits.h"
-#include "clang/AST/TypeBase.h"
 #include "clang/Basic/Builtins.h"
 #include "clang/Basic/TargetBuiltins.h"
 #include "clang/CIR/Dialect/IR/CIRAttrs.h"
-#include "clang/CIR/Dialect/IR/CIRDialect.h"
 #include "clang/CIR/Dialect/IR/CIRTypes.h"
 #include "clang/CIR/MissingFeatures.h"
-#include "llvm/ADT/ArrayRef.h"
-#include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/Sequence.h"
-#include "llvm/ADT/SmallVector.h"
-#include "llvm/ADT/StringRef.h"
 #include "llvm/Support/ErrorHandling.h"
-#include <cstddef>
-#include <numeric>
 #include <string>
 
 using namespace clang;
@@ -202,7 +190,7 @@ static mlir::Value
 emitEncodeKey(mlir::MLIRContext *context, CIRGenBuilderTy &builder,
               const mlir::Location &location, mlir::ValueRange inputOperands,
               mlir::Value outputOperand, std::uint8_t vecOutputCount,
-              const std::string &intrinsicName) {
+              const std::string &intrinsicName, std::uint8_t numResults) {
   cir::VectorType resVector = cir::VectorType::get(builder.getUInt64Ty(), 2);
   llvm::SmallVector<mlir::Type> members{builder.getUInt32Ty()};
   llvm::append_range(members,
@@ -214,7 +202,7 @@ emitEncodeKey(mlir::MLIRContext *context, CIRGenBuilderTy &builder,
       builder.createBitcast(outputOperand, cir::PointerType::get(resVector));
   mlir::Value call = builder.emitIntrinsicCallOp(location, intrinsicName,
                                                  resRecord, inputOperands);
-  for (std::size_t i = 0; i < inputOperands.size() + 1; ++i) {
+  for (std::uint8_t i = 0; i < numResults; ++i) {
     mlir::Value vecValue =
         cir::ExtractMemberOp::create(builder, location, call, i + 1);
     mlir::Value index = builder.getSInt32(i, location);
@@ -2439,17 +2427,22 @@ CIRGenFunction::emitX86BuiltinExpr(unsigned builtinID, const CallExpr *expr) {
   case X86::BI__readfsqword:
   case X86::BI__readgsbyte:
   case X86::BI__readgsword:
-  case X86::BI__readgsdword:
+  case X86::BI__readgsdword: {
+    cgm.errorNYI(expr->getSourceRange(),
+                 std::string("unimplemented X86 builtin call: ") +
+                     getContext().BuiltinInfo.getName(builtinID));
+    return mlir::Value{};
+  }
   case X86::BI__readgsqword:
   case X86::BI__builtin_ia32_encodekey128_u32: {
     return emitEncodeKey(&getMLIRContext(), builder, getLoc(expr->getExprLoc()),
-                         {ops[0], ops[1]}, ops[2], 6, "x86.encodekey128");
+                         {ops[0], ops[1]}, ops[2], 6, "x86.encodekey128", 3);
   }
   case X86::BI__builtin_ia32_encodekey256_u32: {
 
     return emitEncodeKey(&getMLIRContext(), builder, getLoc(expr->getExprLoc()),
                          {ops[0], ops[1], ops[2]}, ops[3], 7,
-                         "x86.encodekey256");
+                         "x86.encodekey256", 4);
   }
 
   case X86::BI__builtin_ia32_aesenc128kl_u8:
