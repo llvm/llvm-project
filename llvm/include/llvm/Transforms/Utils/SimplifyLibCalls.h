@@ -65,7 +65,7 @@ private:
   Value *optimizeMemPCpyChk(CallInst *CI, IRBuilderBase &B);
   Value *optimizeMemCCpyChk(CallInst *CI, IRBuilderBase &B);
   Value *optimizeSNPrintfChk(CallInst *CI, IRBuilderBase &B);
-  Value *optimizeSPrintfChk(CallInst *CI,IRBuilderBase &B);
+  Value *optimizeSPrintfChk(CallInst *CI, IRBuilderBase &B);
   Value *optimizeStrCatChk(CallInst *CI, IRBuilderBase &B);
   Value *optimizeStrLCat(CallInst *CI, IRBuilderBase &B);
   Value *optimizeStrNCatChk(CallInst *CI, IRBuilderBase &B);
@@ -215,6 +215,9 @@ private:
   Value *optimizeSymmetric(CallInst *CI, LibFunc Func, IRBuilderBase &B);
   Value *optimizeRemquo(CallInst *CI, IRBuilderBase &B);
   Value *optimizeFdim(CallInst *CI, IRBuilderBase &B);
+
+  Value *foldLdexp(CallInst *CI, IRBuilderBase &B);
+
   // Wrapper for all floating point library call optimizations
   Value *optimizeFloatingPointLibCall(CallInst *CI, LibFunc Func,
                                       IRBuilderBase &B);
@@ -241,7 +244,7 @@ private:
   Value *optimizePuts(CallInst *CI, IRBuilderBase &B);
 
   // Helper methods
-  Value* emitSnPrintfMemCpy(CallInst *CI, Value *StrArg, StringRef Str,
+  Value *emitSnPrintfMemCpy(CallInst *CI, Value *StrArg, StringRef Str,
                             uint64_t N, IRBuilderBase &B);
   Value *emitStrLenMemCpy(Value *Src, Value *Dst, uint64_t Len,
                           IRBuilderBase &B);
@@ -265,6 +268,6 @@ private:
   Value *optimizeStringLength(CallInst *CI, IRBuilderBase &B, unsigned CharSize,
                               Value *Bound = nullptr);
 };
-} // End llvm namespace
+} // namespace llvm
 
 #endif
