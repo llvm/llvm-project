@@ -2776,11 +2776,12 @@ SDValue SelectionDAGLegalize::expandModf(SDNode *Node) const {
   SDLoc dl(Node);
   SDValue Val = Node->getOperand(0);
   EVT VT = Val.getValueType();
+  SDNodeFlags Flags = Node->getFlags();
 
-  SDValue IntPart = DAG.getNode(ISD::FTRUNC, dl, VT, Val);
-  SDValue FracPart = DAG.getNode(ISD::FSUB, dl, VT, Val, IntPart);
+  SDValue IntPart = DAG.getNode(ISD::FTRUNC, dl, VT, Val, Flags);
+  SDValue FracPart = DAG.getNode(ISD::FSUB, dl, VT, Val, IntPart, Flags);
 
-  SDValue Abs = DAG.getNode(ISD::FABS, dl, VT, Val);
+  SDValue Abs = DAG.getNode(ISD::FABS, dl, VT, Val, Flags);
   SDValue Inf =
       DAG.getConstantFP(APFloat::getInf(VT.getFltSemantics()), dl, VT);
   EVT SetCCVT =
@@ -2788,11 +2789,9 @@ SDValue SelectionDAGLegalize::expandModf(SDNode *Node) const {
   SDValue IsInf = DAG.getSetCC(dl, SetCCVT, Abs, Inf, ISD::SETOEQ);
   SDValue Zero = DAG.getConstantFP(0.0, dl, VT);
   SDValue RawFrac = DAG.getNode(ISD::SELECT, dl, VT, IsInf, Zero, FracPart);
+  SDValue ResultFrac = DAG.getNode(ISD::FCOPYSIGN, dl, VT, RawFrac, Val, Flags);
 
-  SDValue Result0 = DAG.getNode(ISD::FCOPYSIGN, dl, VT, RawFrac, Val);
-  SDValue Result1 = IntPart;
-
-  return DAG.getMergeValues({Result0, Result1}, dl);
+  return DAG.getMergeValues({ResultFrac, IntPart}, dl);
 }
 
 /// This function is responsible for legalizing a

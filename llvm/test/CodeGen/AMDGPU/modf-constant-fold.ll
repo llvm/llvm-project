@@ -156,32 +156,6 @@ define { <2 x float>, <2 x float> } @modf_posion_vector() {
   ret { <2 x float>, <2 x float> } %ret
 }
 
-define { float, float } @modf_undef() {
-; CHECK-LABEL: modf_undef:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_and_b32 s4, 0x80000000, s4
-; CHECK-NEXT:    v_trunc_f32_e32 v1, s4
-; CHECK-NEXT:    v_mov_b32_e32 v0, s4
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %ret = call { float, float } @llvm.modf.f32(float undef)
-  ret { float, float } %ret
-}
-
-define { <2 x float>, <2 x float> } @modf_undef_vector() {
-; CHECK-LABEL: modf_undef_vector:
-; CHECK:       ; %bb.0:
-; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
-; CHECK-NEXT:    s_and_b32 s4, 0x80000000, s4
-; CHECK-NEXT:    v_trunc_f32_e32 v2, s4
-; CHECK-NEXT:    v_mov_b32_e32 v0, s4
-; CHECK-NEXT:    v_mov_b32_e32 v1, s4
-; CHECK-NEXT:    v_mov_b32_e32 v3, v2
-; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %ret = call { <2 x float>, <2 x float> } @llvm.modf.v2f32(<2 x float> undef)
-  ret { <2 x float>, <2 x float> } %ret
-}
-
 define { <2 x float>, <2 x float> } @modf_zero_vector() {
 ; CHECK-LABEL: modf_zero_vector:
 ; CHECK:       ; %bb.0:
@@ -291,7 +265,7 @@ define { <4 x float>, <4 x float> } @modf_nonsplat_vector() {
 ; CHECK-NEXT:    v_mov_b32_e32 v5, 0xc2000000
 ; CHECK-NEXT:    v_mov_b32_e32 v7, 0x4479c000
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %ret = call { <4 x float>, <4 x float> } @llvm.modf.v4f32(<4 x float> <float 0x400A000000000000, float -32.0, float undef, float 999.0>)
+  %ret = call { <4 x float>, <4 x float> } @llvm.modf.v4f32(<4 x float> <float 0x400A000000000000, float -32.0, float poison, float 999.0>)
   ret { <4 x float>, <4 x float> } %ret
 }
 
@@ -347,8 +321,8 @@ define { <2 x float>, <2 x float> } @modf_splat_neginf() {
   ret { <2 x float>, <2 x float> } %ret
 }
 
-define { <2 x float>, <2 x float> } @modf_splat_undef_inf() {
-; CHECK-LABEL: modf_splat_undef_inf:
+define { <2 x float>, <2 x float> } @modf_splat_poison_inf() {
+; CHECK-LABEL: modf_splat_poison_inf:
 ; CHECK:       ; %bb.0:
 ; CHECK-NEXT:    s_waitcnt vmcnt(0) expcnt(0) lgkmcnt(0)
 ; CHECK-NEXT:    s_and_b32 s4, 0x80000000, s4
@@ -357,6 +331,6 @@ define { <2 x float>, <2 x float> } @modf_splat_undef_inf() {
 ; CHECK-NEXT:    v_mov_b32_e32 v1, 0
 ; CHECK-NEXT:    v_mov_b32_e32 v3, 0x7f800000
 ; CHECK-NEXT:    s_setpc_b64 s[30:31]
-  %ret = call { <2 x float>, <2 x float> } @llvm.modf.v2f32(<2 x float> <float undef, float 0x7FF0000000000000>)
+  %ret = call { <2 x float>, <2 x float> } @llvm.modf.v2f32(<2 x float> <float poison, float 0x7FF0000000000000>)
   ret { <2 x float>, <2 x float> } %ret
 }
