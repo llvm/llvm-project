@@ -73,6 +73,7 @@ bool VPRecipeBase::mayWriteToMemory() const {
                 ->onlyReadsMemory();
   case VPWidenIntrinsicSC:
     return cast<VPWidenIntrinsicRecipe>(this)->mayWriteToMemory();
+  case VPActiveLaneMaskPHISC:
   case VPCanonicalIVPHISC:
   case VPBranchOnMaskSC:
   case VPDerivedIVSC:
@@ -161,6 +162,7 @@ bool VPRecipeBase::mayHaveSideEffects() const {
   switch (getVPRecipeID()) {
   case VPExpressionSC:
     return cast<VPExpressionRecipe>(this)->mayHaveSideEffects();
+  case VPActiveLaneMaskPHISC:
   case VPDerivedIVSC:
   case VPFirstOrderRecurrencePHISC:
   case VPReductionPHISC:
@@ -2610,9 +2612,9 @@ void VPVectorEndPointerRecipe::execute(VPTransformState &State) {
     LastLane =
         Builder.CreateMul(ConstantInt::getSigned(IndexTy, Stride), LastLane);
   Value *Ptr = State.get(getOperand(0), VPLane(0));
-  Value *ResultPtr =
-      Builder.CreateGEP(IndexedTy, Ptr, NumElt, "", getGEPNoWrapFlags());
-  ResultPtr = Builder.CreateGEP(IndexedTy, ResultPtr, LastLane, "",
+  Value *ResultPtr = Builder.CreateGEP(getSourceElementType(), Ptr, NumElt, "",
+                                       getGEPNoWrapFlags());
+  ResultPtr = Builder.CreateGEP(getSourceElementType(), ResultPtr, LastLane, "",
                                 getGEPNoWrapFlags());
 
   State.set(this, ResultPtr, /*IsScalar*/ true);
@@ -2912,19 +2914,22 @@ InstructionCost VPExpressionRecipe::computeCost(ElementCount VF,
     unsigned Opcode = RecurrenceDescriptor::getOpcode(
         cast<VPReductionRecipe>(ExpressionRecipes[1])->getRecurrenceKind());
     auto *ExtR = cast<VPWidenCastRecipe>(ExpressionRecipes[0]);
+    auto *RedR = cast<VPReductionRecipe>(ExpressionRecipes.back());
 
-    return cast<VPReductionRecipe>(ExpressionRecipes.back())
-                   ->isPartialReduction()
-               ? Ctx.TTI.getPartialReductionCost(
-                     Opcode, Ctx.Types.inferScalarType(getOperand(0)), nullptr,
-                     RedTy, VF,
-                     TargetTransformInfo::getPartialReductionExtendKind(
-                         ExtR->getOpcode()),
-                     TargetTransformInfo::PR_None, std::nullopt, Ctx.CostKind,
-                     std::nullopt)
-               : Ctx.TTI.getExtendedReductionCost(
-                     Opcode, ExtR->getOpcode() == Instruction::ZExt, RedTy,
-                     SrcVecTy, std::nullopt, Ctx.CostKind);
+    if (RedR->isPartialReduction())
+      return Ctx.TTI.getPartialReductionCost(
+          Opcode, Ctx.Types.inferScalarType(getOperand(0)), nullptr, RedTy, VF,
+          TargetTransformInfo::getPartialReductionExtendKind(ExtR->getOpcode()),
+          TargetTransformInfo::PR_None, std::nullopt, Ctx.CostKind,
+          RedTy->isFloatingPointTy() ? std::optional{RedR->getFastMathFlags()}
+                                     : std::nullopt);
+    else if (!RedTy->isFloatingPointTy())
+      // TTI::getExtendedReductionCost only supports integer types.
+      return Ctx.TTI.getExtendedReductionCost(
+          Opcode, ExtR->getOpcode() == Instruction::ZExt, RedTy, SrcVecTy,
+          std::nullopt, Ctx.CostKind);
+    else
+      return InstructionCost::getInvalid();
   }
   case ExpressionTypes::MulAccReduction:
     return Ctx.TTI.getMulAccReductionCost(false, Opcode, RedTy, SrcVecTy,
