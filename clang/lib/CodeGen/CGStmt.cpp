@@ -2894,8 +2894,8 @@ void CodeGenFunction::EmitAsmStmt(const AsmStmt &S) {
 
     // - If this is a register output, then make the inline asm return it
     //   by-value.
-    // - If this is an "rm" constraint on x86, then treat it like a register
-    //   output. (We'll correct this before ISel if using the FastRA.)
+    // - If this is an "rm" constraint, then treat it like a register output.
+    //   (We'll correct this before ISel if using the fast register allocator.)
     // - If this is a memory result, return the value by-reference.
     QualType QTy = OutExpr->getType();
     const bool IsScalarOrAggregate = hasScalarEvaluationKind(QTy) ||

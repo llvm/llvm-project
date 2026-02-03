@@ -5980,11 +5980,11 @@ TargetLowering::ParseConstraints(const DataLayout &DL,
 
     OpInfo.ConstraintVT = MVT::Other;
 
-    // Special treatment for all platforms (currently only x86) that can fold a
-    // register into a spill. This is used for the "rm" constraint, where we
-    // would vastly prefer to use 'r' over 'm', but can't because of LLVM's
-    // architecture picks the most "conservative" constraint to ensure that (in
-    // the case of "rm") register pressure cause bad things to happen.
+    // Special treatment for all platforms that can fold a register into a
+    // spill. This is used for the "rm" constraint, where we would vastly
+    // prefer to use 'r' over 'm'. The non-fast register allocators are able to
+    // handle the 'r' default by folding. The fast register allocator needs
+    // special handling to convert the instruction to use 'm' instead.
     if (!OpInfo.hasMatchingInput() && OpInfo.Codes.size() == 2 &&
         llvm::is_contained(OpInfo.Codes, "r") &&
         llvm::is_contained(OpInfo.Codes, "m"))
@@ -6286,9 +6286,14 @@ TargetLowering::ConstraintGroup TargetLowering::getConstraintPreferences(
 
   // If we can fold the register (i.e. it has an "rm" constraint), opt for the
   // 'r' constraint, and allow the register allocator to spill if need be.
-  // Applies only to the greedy and default register allocators.
+  //
+  // Note: This code is a holdover from when the Clang front-end defaulted to
+  // using the memory constriaint. This should be reviewed at some point to
+  // remove that assumption from the back-end.
   const TargetMachine &TM = getTargetMachine();
-  if (TM.getOptLevel() != CodeGenOptLevel::None && OpInfo.MayFoldRegister) {
+  if (TM.getOptLevel() != CodeGenOptLevel::None && OpInfo.MayFoldRegister &&
+      llvm::is_contained(OpInfo.Codes, "r") &&
+      llvm::is_contained(OpInfo.Codes, "m")) {
     Ret.emplace_back(ConstraintPair("r", getConstraintType("r")));
     Ret.emplace_back(ConstraintPair("m", getConstraintType("m")));
     return Ret;
