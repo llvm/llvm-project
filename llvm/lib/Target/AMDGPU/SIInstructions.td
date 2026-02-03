@@ -952,8 +952,8 @@ def ADJCALLSTACKDOWN : SPseudoInstSI<
 
 // Get the offset of the base of the stack, skipping any reserved areas.
 def GET_STACK_BASE : SPseudoInstSI<(outs SGPR_32:$dst), (ins),
-  [(set p5:$dst, (AMDGPUsponentry))]> {
-  let FixedSize = 0;
+  [(set p5:$dst, (sponentry))]> {
+  let Size = 16; // Worst case (s_getreg, s_cmp, s_cselect + constant).
   let SchedRW = [WriteSALU];
 }
 } // End Defs = [SCC]

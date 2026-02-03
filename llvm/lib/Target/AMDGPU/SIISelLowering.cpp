@@ -7915,14 +7915,12 @@ SDValue SITargetLowering::LowerSPONENTRY(SDValue Op, SelectionDAG &DAG) const {
 
   // For functions that set up their own stack, select the GET_STACK_BASE
   // pseudo.
-  if (MFI->isBottomOfStack()) {
+  if (MFI->isBottomOfStack())
     return Op;
-  }
 
   // For everything else, create a dummy stack object.
-  EVT VT = getPointerTy(DAG.getDataLayout(), AMDGPUAS::PRIVATE_ADDRESS);
   int FI = MF.getFrameInfo().CreateFixedObject(1, 0, /*IsImmutable=*/false);
-  return DAG.getFrameIndex(FI, VT);
+  return DAG.getFrameIndex(FI, Op.getValueType());
 }
 
 SDValue SITargetLowering::getFPExtOrFPRound(SelectionDAG &DAG, SDValue Op,

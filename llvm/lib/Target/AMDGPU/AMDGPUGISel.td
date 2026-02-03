@@ -329,7 +329,7 @@ def : GINodeEquiv<G_AMDGPU_WHOLE_WAVE_FUNC_SETUP, AMDGPUwhole_wave_setup>;
 // G_AMDGPU_WHOLE_WAVE_FUNC_RETURN is simpler than AMDGPUwhole_wave_return,
 // so we don't mark it as equivalent.
 
-def : GINodeEquiv<G_AMDGPU_SPONENTRY, AMDGPUsponentry>;
+def : GINodeEquiv<G_AMDGPU_SPONENTRY, sponentry>;
 
 class GISelSop2Pat <
   SDPatternOperator node,

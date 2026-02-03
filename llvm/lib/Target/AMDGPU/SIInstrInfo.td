@@ -3545,11 +3545,6 @@ def getVOPDInfoFromComponentOpcodes : SearchIndex {
   let Key = ["OpX", "OpY", "SubTgt", "VOPD3"];
 }
 
-def AMDGPUsponentry : SDNode<
-  "ISD::SPONENTRY", SDTypeProfile <1, 0, [SDTCisPtrTy<0>]>
->;
-
-
 include "SIInstructions.td"
 
 include "DSInstructions.td"
