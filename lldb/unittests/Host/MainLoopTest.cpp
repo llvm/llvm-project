@@ -104,6 +104,52 @@ TEST_F(MainLoopTest, ReadPipeObject) {
   ASSERT_EQ(1u, callback_count);
 }
 
+TEST_F(MainLoopTest, ReadAcrossMultipleRuns) {
+  Pipe pipe;
+
+  ASSERT_TRUE(pipe.CreateNew().Success());
+
+  MainLoop loop;
+
+  char X = 'X';
+  size_t len = sizeof(X);
+  ASSERT_THAT_EXPECTED(pipe.Write(&X, len), llvm::HasValue(1));
+
+  Status error;
+  auto handle = loop.RegisterReadObject(
+      std::make_shared<NativeFile>(pipe.GetReadFileDescriptor(),
+                                   File::eOpenOptionReadOnly, false),
+      make_callback(), error);
+  ASSERT_TRUE(error.Success());
+  ASSERT_TRUE(handle);
+
+  // Callback invoked once per 'Run' since data is not consumed.
+  ASSERT_TRUE(loop.Run().Success());
+  ASSERT_TRUE(loop.Run().Success());
+  ASSERT_EQ(2u, callback_count);
+
+  // Consume buffer, so next 'Run' should NOT trigger the handle.
+  char buf[10];
+  ASSERT_THAT_EXPECTED(pipe.Read(buf, sizeof(buf)), llvm::HasValue(1));
+  loop.AddCallback([](auto &loop) { loop.RequestTermination(); },
+                   std::chrono::milliseconds(10));
+
+  // This run operation should NOT trigger the read handle, since the data has
+  // already been consumed.
+  ASSERT_TRUE(loop.Run().Success());
+  ASSERT_EQ(2u, callback_count);
+
+  // Close the write side of the pair to ensure we have a callback for the
+  // hangup.
+  pipe.CloseWriteFileDescriptor();
+  ASSERT_TRUE(loop.Run().Success());
+  ASSERT_EQ(3u, callback_count);
+
+  // The file handle is still registered, so it will trigger the handle again.
+  ASSERT_TRUE(loop.Run().Success());
+  ASSERT_EQ(4u, callback_count);
+}
+
 TEST_F(MainLoopTest, MultipleReadsPipeObject) {
   Pipe pipe;
 
