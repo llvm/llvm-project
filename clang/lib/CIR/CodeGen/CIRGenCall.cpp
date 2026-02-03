@@ -111,6 +111,40 @@ static void addAttributesFromFunctionProtoType(CIRGenBuilderTy &builder,
               mlir::UnitAttr::get(builder.getContext()));
 }
 
+static void addNoBuiltinAttributes(mlir::MLIRContext &ctx,
+                                   mlir::NamedAttrList &attrs,
+                                   const LangOptions &langOpts,
+                                   const NoBuiltinAttr *nba = nullptr) {
+  // First, handle the language options passed through -fno-builtin.
+  // or, if there is a wildcard in the builtin names specified through the
+  // attribute, disable them all.
+  if (langOpts.NoBuiltin ||
+      (nba && llvm::is_contained(nba->builtinNames(), "*"))) {
+    // -fno-builtin disables them all.
+    // Empty attribute means 'all'.
+    attrs.set(cir::CIRDialect::getNoBuiltinsAttrName(),
+              mlir::ArrayAttr::get(&ctx, {}));
+    return;
+  }
+
+  llvm::SetVector<mlir::Attribute> nbFuncs;
+  auto addNoBuiltinAttr = [&ctx, &nbFuncs](StringRef builtinName) {
+    nbFuncs.insert(mlir::StringAttr::get(&ctx, builtinName));
+  };
+
+  // Then, add attributes for builtins specified through -fno-builtin-<name>.
+  llvm::for_each(langOpts.NoBuiltinFuncs, addNoBuiltinAttr);
+
+  // Now, let's check the __attribute__((no_builtin("...")) attribute added to
+  // the source.
+  if (nba)
+    llvm::for_each(nba->builtinNames(), addNoBuiltinAttr);
+
+  if (!nbFuncs.empty())
+    attrs.set(cir::CIRDialect::getNoBuiltinsAttrName(),
+              mlir::ArrayAttr::get(&ctx, nbFuncs.getArrayRef()));
+}
+
 /// Construct the CIR attribute list of a function or call.
 void CIRGenModule::constructAttributeList(llvm::StringRef name,
                                           const CIRGenFunctionInfo &info,
@@ -136,6 +170,13 @@ void CIRGenModule::constructAttributeList(llvm::StringRef name,
                                      calleeInfo.getCalleeFunctionProtoType());
 
   const Decl *targetDecl = calleeInfo.getCalleeDecl().getDecl();
+
+  // TODO(cir): OMP Assume Attributes should be here.
+
+  const NoBuiltinAttr *nba = nullptr;
+
+  // TODO(cir): Some work for arg memory effects can be done here, as it is in
+  // classic codegen.
 
   if (targetDecl) {
     if (targetDecl->hasAttr<NoThrowAttr>())
@@ -173,7 +214,7 @@ void CIRGenModule::constructAttributeList(llvm::StringRef name,
       if (!(attrOnCallSite && isVirtualCall)) {
         if (func->isNoReturn())
           addUnitAttr(cir::CIRDialect::getNoReturnAttrName());
-        // TODO(cir): Set NoBuiltinAttr here.
+        nba = func->getAttr<NoBuiltinAttr>();
       }
     }
 
@@ -229,13 +270,15 @@ void CIRGenModule::constructAttributeList(llvm::StringRef name,
       attrs.set(cir::CIRDialect::getModularFormatAttrName(),
                 builder.getStringAttr(llvm::join(args, ",")));
     }
-
-    // TODO(cir): We should set nobuiltin and default function attrs here.
-
-    // TODO(cir): There is another region of `if (targetDecl)` that handles
-    // removing some attributes that are necessary modifications of the
-    // default-function attrs.  We should do that here.
   }
+
+  addNoBuiltinAttributes(getMLIRContext(), attrs, getLangOpts(), nba);
+
+  // TODO(cir): We should set default function attrs here.
+
+  // TODO(cir): There is another region of `if (targetDecl)` that handles
+  // removing some attributes that are necessary modifications of the
+  // default-function attrs.  We should do that here.
   assert(!cir::MissingFeatures::opCallAttrs());
 }
 
