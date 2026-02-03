@@ -915,6 +915,7 @@ void SemaCUDA::MaybeAddConstantAttr(VarDecl *VD) {
       (VD->isFileVarDecl() || VD->isStaticDataMember()) &&
       !IsDependentVar(VD) &&
       ((VD->isConstexpr() || VD->getType().isConstQualified()) &&
+       VD->getStorageClass() != SC_Extern &&
        HasAllowedCUDADeviceStaticInitializer(*this, VD,
                                              CICK_DeviceOrConstant))) {
     VD->addAttr(CUDAConstantAttr::CreateImplicit(getASTContext()));
