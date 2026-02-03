@@ -23,6 +23,7 @@
 #include "mlir/IR/Operation.h"
 #include "mlir/IR/Value.h"
 #include "mlir/IR/ValueRange.h"
+#include "mlir/Support/LLVM.h"
 #include "mlir/Transforms/DialectConversion.h"
 #include "llvm/ADT/SetVector.h"
 #include "llvm/Support/LogicalResult.h"
@@ -362,6 +363,59 @@ struct SgToWiPrefetchNd : public OpConversionPattern<xegpu::PrefetchNdOp> {
   }
 };
 
+struct SgToWiVectorReduction : public OpConversionPattern<vector::ReductionOp> {
+  using OpConversionPattern<vector::ReductionOp>::OpConversionPattern;
+
+  LogicalResult
+  matchAndRewrite(vector::ReductionOp op, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+    auto layout = xegpu::getDistributeLayoutAttr(op.getVector());
+
+    // If no layout, nothing to do.
+    if (!layout || !layout.isForSubgroup())
+      return failure();
+
+    VectorType vectorType = op.getSourceVectorType();
+
+    // Only rank 1 vectors supported.
+    if (vectorType.getRank() != 1)
+      return rewriter.notifyMatchFailure(
+          op, "Only rank 1 reductions can be distributed.");
+    // Lane layout must have the same rank as the vector.
+    if (layout.getRank() != vectorType.getRank())
+      return rewriter.notifyMatchFailure(
+          op, "Layout rank does not match vector rank.");
+
+    // Get the subgroup size from the layout.
+    int64_t sgSize = layout.getEffectiveLaneLayoutAsInt()[0];
+
+    // Only subgroup-sized vectors supported.
+    if (vectorType.getShape()[0] % sgSize != 0)
+      return rewriter.notifyMatchFailure(
+          op, "Reduction vector dimension must match subgroup size.");
+
+    if (!op.getType().isIntOrFloat())
+      return rewriter.notifyMatchFailure(
+          op, "Reduction distribution currently only supports floats and "
+              "integer types.");
+
+    // Get the distributed vector (per work-item portion).
+    Value laneValVec = adaptor.getVector();
+
+    // Distribute and reduce across work-items in the subgroup.
+    Value fullReduce = xegpu::subgroupReduction(
+        op.getLoc(), rewriter, laneValVec, op.getKind(), sgSize);
+
+    // If there's an accumulator, combine it with the reduced value.
+    if (adaptor.getAcc())
+      fullReduce = vector::makeArithReduction(
+          rewriter, op.getLoc(), op.getKind(), fullReduce, adaptor.getAcc());
+
+    rewriter.replaceOp(op, fullReduce);
+    return success();
+  }
+};
+
 struct XeGPUSgToWiDistributeExperimentalPass
     : public xegpu::impl::XeGPUSgToWiDistributeExperimentalBase<
           XeGPUSgToWiDistributeExperimentalPass> {
@@ -551,8 +605,15 @@ void xegpu::populateXeGPUSgToWiDistributeTypeConversionAndLegality(
         }
         return !xegpu::getTemporaryLayout(dyn_cast<OpResult>(op->getResult(0)));
       });
+  // VectorReductionOp is legal only if its source has no distribute layout
+  // attribute.
+  target.addDynamicallyLegalOp<vector::ReductionOp>(
+      [=](vector::ReductionOp op) -> bool {
+        auto layout = xegpu::getDistributeLayoutAttr(op.getVector());
+        return !layout;
+      });
   target.markUnknownOpDynamicallyLegal([](Operation *op) { return true; });
   patterns.add<SgToWiCreateNdDesc, SgToWiLoadNd, SgToWiStoreNd, SgToWiDpas,
-               SgToWiElementWise, SgToWiArithConstant, SgToWiPrefetchNd>(
-      typeConverter, patterns.getContext());
+               SgToWiElementWise, SgToWiArithConstant, SgToWiPrefetchNd,
+               SgToWiVectorReduction>(typeConverter, patterns.getContext());
 }

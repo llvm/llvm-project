@@ -149,4 +149,32 @@ gpu.func @prefetch_nd() {
     : !xegpu.tensor_desc<16x16xf16, #xegpu.layout<lane_layout = [1, 16], lane_data = [1, 1]>>
   gpu.return
 }
+
+// CHECK-LABEL: gpu.func @vector_reduction
+// CHECK: %[[CST:.*]] = arith.constant 1.000000e+00 : f32
+// CHECK: %[[LANE_RED:.*]] = vector.reduction <add>, %[[CAST:.*]] : vector<2xf32> into f32
+// CHECK: %[[C16_1:.*]] = arith.constant 16 : i32
+// CHECK: %[[C1:.*]] = arith.constant 1 : i32
+// CHECK: %[[SHUFFLE1:.*]], %{{.*}} = gpu.shuffle  xor %[[LANE_RED]], %[[C1]], %[[C16_1]] : f32
+// CHECK: %[[ADD1:.*]] = arith.addf %[[LANE_RED]], %[[SHUFFLE1]] : f32
+// CHECK: %[[C16_2:.*]] = arith.constant 16 : i32
+// CHECK: %[[C2:.*]] = arith.constant 2 : i32
+// CHECK: %[[SHUFFLE2:.*]], %{{.*}} = gpu.shuffle  xor %[[ADD1]], %[[C2]], %[[C16_2]] : f32
+// CHECK: %[[ADD2:.*]] = arith.addf %[[ADD1]], %[[SHUFFLE2]] : f32
+// CHECK: %[[C16_3:.*]] = arith.constant 16 : i32
+// CHECK: %[[C4:.*]] = arith.constant 4 : i32
+// CHECK: %[[SHUFFLE3:.*]], %{{.*}} = gpu.shuffle  xor %[[ADD2]], %[[C4]], %[[C16_3]] : f32
+// CHECK: %[[ADD3:.*]] = arith.addf %[[ADD2]], %[[SHUFFLE3]] : f32
+// CHECK: %[[C16_4:.*]] = arith.constant 16 : i32
+// CHECK: %[[C8:.*]] = arith.constant 8 : i32
+// CHECK: %[[SHUFFLE4:.*]], %{{.*}} = gpu.shuffle  xor %[[ADD3]], %[[C8]], %[[C16_4]] : f32
+// CHECK: %[[ADD4:.*]] = arith.addf %[[ADD3]], %[[SHUFFLE4]] : f32
+// CHECK: %[[FINAL:.*]] = arith.addf %[[ADD4]], %[[CST]] : f32
+gpu.func @vector_reduction() {
+  %acc = arith.constant 1.0 : f32
+  %0 = "some_op"() {layout_result_0 = #xegpu.layout<lane_layout = [16], lane_data = [1]>} : () -> vector<32xf32>
+  %2 = vector.reduction <add>, %0, %acc : vector<32xf32> into f32
+  gpu.return
+}
+
 }
