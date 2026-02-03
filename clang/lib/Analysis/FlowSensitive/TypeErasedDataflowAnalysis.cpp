@@ -502,7 +502,8 @@ transferCFGBlock(const CFGBlock &Block, AnalysisContext &AC,
 static bool hasGotoInCFG(const clang::CFG &CFG) {
   for (const CFGBlock *Block : CFG) {
     const Stmt *Term = Block->getTerminatorStmt();
-    if (Term == nullptr) continue;
+    if (Term == nullptr)
+      continue;
     if (isa<GotoStmt>(Term) || isa<IndirectGotoStmt>(Term))
       return true;
   }

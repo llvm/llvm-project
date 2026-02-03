@@ -24,4 +24,4 @@ findCFGBackEdges(const CFG &CFG);
 
 } // namespace clang
 
-#endif  // LLVM_CLANG_ANALYSIS_CFG_BACKEDGES_H
+#endif // LLVM_CLANG_ANALYSIS_CFG_BACKEDGES_H
