@@ -524,12 +524,11 @@ MachineSMEABI::assignBundleZAStates(const EdgeBundles &Bundles,
     std::optional<ZAState> BundleState;
     for (unsigned BlockID : Bundles.getBlocks(I)) {
       const BlockInfo &Block = FnInfo.Blocks[BlockID];
-      // Check if the block is an incoming in the bundle. Note: We skip
+      // Check if the block is an incoming block in the bundle. Note: We skip
       // Block.FixedEntryState != ANY to ignore EH pads (which are only
       // reachable via exceptions).
-      bool InBlock = Block.FixedEntryState == ZAState::ANY &&
-                     Bundles.getBundle(BlockID, /*Out=*/false) == I;
-      if (!InBlock)
+      if (Block.FixedEntryState != ZAState::ANY ||
+          Bundles.getBundle(BlockID, /*Out=*/false) != I)
         continue;
 
       // Pick a state that matches all incoming blocks. Fallback to "ACTIVE" if
