@@ -280,7 +280,13 @@ FunctionPass *createX86CompressEVEXLegacyPass();
 FunctionPass *createX86IndirectThunksPass();
 
 /// This pass replaces ret instructions with jmp's to __x86_return thunk.
-FunctionPass *createX86ReturnThunksPass();
+class X86ReturnThunksPass : public PassInfoMixin<X86ReturnThunksPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86ReturnThunksLegacyPass();
 
 /// This pass insert wait instruction after X87 instructions which could raise
 /// fp exceptions when strict-fp enabled.
@@ -301,7 +307,14 @@ public:
 FunctionPass *createX86PartialReductionLegacyPass();
 
 /// // Analyzes and emits pseudos to support Win x64 Unwind V2.
-FunctionPass *createX86WinEHUnwindV2Pass();
+class X86WinEHUnwindV2Pass : public PassInfoMixin<X86WinEHUnwindV2Pass> {
+public:
+  X86WinEHUnwindV2Pass() = default;
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86WinEHUnwindV2LegacyPass();
 
 /// The pass transforms load/store <256 x i32> to AMX load/store intrinsics
 /// or split the data to two <128 x i32>.
@@ -346,17 +359,50 @@ InstructionSelector *createX86InstructionSelector(const X86TargetMachine &TM,
                                                   const X86Subtarget &,
                                                   const X86RegisterBankInfo &);
 
+FunctionPass *createX86PostLegalizerCombiner();
 FunctionPass *createX86PreLegalizerCombiner();
 FunctionPass *createX86LoadValueInjectionLoadHardeningPass();
-FunctionPass *createX86LoadValueInjectionRetHardeningPass();
-FunctionPass *createX86SpeculativeLoadHardeningPass();
-FunctionPass *createX86SpeculativeExecutionSideEffectSuppression();
-FunctionPass *createX86ArgumentStackSlotPass();
+
+class X86LoadValueInjectionRetHardeningPass
+    : public PassInfoMixin<X86LoadValueInjectionRetHardeningPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86LoadValueInjectionRetHardeningLegacyPass();
+
+class X86SpeculativeExecutionSideEffectSuppressionPass
+    : public PassInfoMixin<X86SpeculativeExecutionSideEffectSuppressionPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86SpeculativeExecutionSideEffectSuppressionLegacyPass();
+
+class X86SpeculativeLoadHardeningPass
+    : public PassInfoMixin<X86SpeculativeLoadHardeningPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86SpeculativeLoadHardeningLegacyPass();
+
+class X86ArgumentStackSlotPass
+    : public PassInfoMixin<X86ArgumentStackSlotPass> {
+public:
+  PreservedAnalyses run(MachineFunction &MF,
+                        MachineFunctionAnalysisManager &MFAM);
+};
+
+FunctionPass *createX86ArgumentStackSlotLegacyPass();
 
 void initializeCompressEVEXLegacyPass(PassRegistry &);
 void initializeX86FixupBWInstLegacyPass(PassRegistry &);
 void initializeFixupLEAsLegacyPass(PassRegistry &);
-void initializeX86ArgumentStackSlotPassPass(PassRegistry &);
+void initializeX86ArgumentStackSlotLegacyPass(PassRegistry &);
 void initializeX86AsmPrinterPass(PassRegistry &);
 void initializeX86FixupInstTuningLegacyPass(PassRegistry &);
 void initializeX86FixupVectorConstantsLegacyPass(PassRegistry &);
@@ -376,20 +422,22 @@ void initializeX86FastTileConfigLegacyPass(PassRegistry &);
 void initializeX86FixupSetCCLegacyPass(PassRegistry &);
 void initializeX86FlagsCopyLoweringLegacyPass(PassRegistry &);
 void initializeX86LoadValueInjectionLoadHardeningPassPass(PassRegistry &);
-void initializeX86LoadValueInjectionRetHardeningPassPass(PassRegistry &);
+void initializeX86LoadValueInjectionRetHardeningLegacyPass(PassRegistry &);
 void initializeX86LowerAMXIntrinsicsLegacyPassPass(PassRegistry &);
 void initializeX86LowerAMXTypeLegacyPassPass(PassRegistry &);
 void initializeX86LowerTileCopyLegacyPass(PassRegistry &);
 void initializeX86OptimizeLEAsLegacyPass(PassRegistry &);
 void initializeX86PartialReductionLegacyPass(PassRegistry &);
 void initializeX86PreTileConfigLegacyPass(PassRegistry &);
-void initializeX86ReturnThunksPass(PassRegistry &);
-void initializeX86SpeculativeExecutionSideEffectSuppressionPass(PassRegistry &);
-void initializeX86SpeculativeLoadHardeningPassPass(PassRegistry &);
+void initializeX86ReturnThunksLegacyPass(PassRegistry &);
+void initializeX86SpeculativeExecutionSideEffectSuppressionLegacyPass(
+    PassRegistry &);
+void initializeX86SpeculativeLoadHardeningLegacyPass(PassRegistry &);
 void initializeX86SuppressAPXForRelocationLegacyPass(PassRegistry &);
 void initializeX86TileConfigLegacyPass(PassRegistry &);
-void initializeX86WinEHUnwindV2Pass(PassRegistry &);
+void initializeX86WinEHUnwindV2LegacyPass(PassRegistry &);
 void initializeX86PreLegalizerCombinerPass(PassRegistry &);
+void initializeX86PostLegalizerCombinerPass(PassRegistry &);
 
 namespace X86AS {
 enum : unsigned {

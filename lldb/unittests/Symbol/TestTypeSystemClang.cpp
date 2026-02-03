@@ -360,6 +360,16 @@ TEST_F(TestTypeSystemClang, TestBuiltinTypeForEmptyTriple) {
   TypeSystemClang::CompleteTagDeclarationDefinition(record_type);
 }
 
+TEST_F(TestTypeSystemClang, TestGetBuiltinTypeByName_BitInt) {
+  auto holder =
+      std::make_unique<clang_utils::TypeSystemClangHolder>("bitint_ast");
+  auto &ast = *holder->GetAST();
+
+  EXPECT_TRUE(ast.GetBuiltinTypeByName(ConstString("_BitInt(26)")).IsSigned());
+  EXPECT_FALSE(
+      ast.GetBuiltinTypeByName(ConstString("unsigned _BitInt(26)")).IsSigned());
+}
+
 TEST_F(TestTypeSystemClang, TestDisplayName) {
   TypeSystemClang ast("some name", llvm::Triple());
   EXPECT_EQ("some name", ast.getDisplayName());
@@ -1338,6 +1348,42 @@ TEST_F(TestTypeSystemClang, TestGetTypeInfo) {
       m_ast->GetType(ast.getVectorType(ast.FloatTy, 1, VectorKind::Generic));
   EXPECT_EQ(vector_of_float.GetTypeInfo(),
             (eTypeIsFloat | eTypeIsVector | eTypeHasChildren));
+}
+
+TEST_F(TestTypeSystemClang, TestIsRealFloatingPointType) {
+  // Tests CompilerType::IsRealFloatingPointType
+
+  const ASTContext &ast = m_ast->getASTContext();
+
+  EXPECT_FALSE(m_ast->GetType(ast.getComplexType(ast.FloatTy))
+                   .IsRealFloatingPointType());
+  EXPECT_FALSE(
+      m_ast->GetType(ast.getVectorType(ast.FloatTy, 1, VectorKind::Generic))
+          .IsRealFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.FloatTy).IsRealFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.DoubleTy).IsRealFloatingPointType());
+  EXPECT_TRUE(m_ast->GetType(ast.LongDoubleTy).IsRealFloatingPointType());
+
+  // FIXME: these should be true
+  EXPECT_FALSE(m_ast->GetType(ast.HalfTy).IsRealFloatingPointType());
+  EXPECT_FALSE(m_ast->GetType(ast.Float128Ty).IsRealFloatingPointType());
+  EXPECT_FALSE(m_ast->GetType(ast.BFloat16Ty).IsRealFloatingPointType());
+  EXPECT_FALSE(m_ast->GetType(ast.Ibm128Ty).IsRealFloatingPointType());
+}
+
+TEST_F(TestTypeSystemClang, TestGetIsComplexType) {
+  // Tests CompilerType::IsComplexType
+
+  const ASTContext &ast = m_ast->getASTContext();
+
+  EXPECT_TRUE(m_ast->GetType(ast.getComplexType(ast.IntTy)).IsComplexType());
+  EXPECT_TRUE(m_ast->GetType(ast.getComplexType(ast.FloatTy)).IsComplexType());
+  EXPECT_TRUE(m_ast->GetType(ast.getComplexType(ast.VoidTy)).IsComplexType());
+  EXPECT_FALSE(m_ast
+                   ->GetType(ast.getIncompleteArrayType(
+                       ast.getComplexType(ast.FloatTy), /*ASM=*/{},
+                       /*IndexTypeQuals=*/{}))
+                   .IsComplexType());
 }
 
 TEST_F(TestTypeSystemClang, AsmLabel_CtorDtor) {

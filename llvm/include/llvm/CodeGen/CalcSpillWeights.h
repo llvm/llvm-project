@@ -97,15 +97,8 @@ class VirtRegMap;
     /// start and end - compute future expected spill weight of a split
     /// artifact of LI that will span between start and end slot indexes.
     /// \param LI     The live interval for which to compute the weight.
-    /// \param Start  The expected beginning of the split artifact. Instructions
-    ///               before start will not affect the weight. Relevant for
-    ///               weight calculation of future split artifact.
-    /// \param End    The expected end of the split artifact. Instructions
-    ///               after end will not affect the weight. Relevant for
-    ///               weight calculation of future split artifact.
     /// \return The spill weight. Returns negative weight for unspillable LI.
-    float weightCalcHelper(LiveInterval &LI, SlotIndex *Start = nullptr,
-                           SlotIndex *End = nullptr);
+    float weightCalcHelper(LiveInterval &LI);
 
     /// Weight normalization function.
     virtual float normalize(float UseDefFreq, unsigned Size,

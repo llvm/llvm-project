@@ -831,7 +831,6 @@ shouldPragmaUnroll(Loop *L, const PragmaInfo &PInfo,
       MaxTripCount <= UP.MaxUpperBound)
     return MaxTripCount;
 
-  // if didn't return until here, should continue to other priorties
   return std::nullopt;
 }
 
@@ -895,6 +894,8 @@ shouldPartialUnroll(const unsigned LoopSize, const unsigned TripCount,
       // largest power-of-two factor that satisfies the threshold limit.
       // As we'll create fixup loop, do the type of unrolling only if
       // remainder loop is allowed.
+      // Note: DefaultUnrollRuntimeCount is used as a reasonable starting point
+      // even though this is partial unrolling (not runtime unrolling).
       count = UP.DefaultUnrollRuntimeCount;
       while (count != 0 &&
              UCE.getUnrolledLoopSize(UP, count) > UP.PartialThreshold)
@@ -916,7 +917,7 @@ shouldPartialUnroll(const unsigned LoopSize, const unsigned TripCount,
 // Returns true if unroll count was set explicitly.
 // Calculates unroll count and writes it to UP.Count.
 // Unless IgnoreUser is true, will also use metadata and command-line options
-// that are specific to to the LoopUnroll pass (which, for instance, are
+// that are specific to the LoopUnroll pass (which, for instance, are
 // irrelevant for the LoopUnrollAndJam pass).
 // FIXME: This function is used by LoopUnroll and LoopUnrollAndJam, but consumes
 // many LoopUnroll-specific options. The shared functionality should be
@@ -1309,21 +1310,19 @@ tryToUnrollLoop(Loop *L, DominatorTree &DT, LoopInfo *LI, ScalarEvolution &SE,
     ORE.emit([&]() {
       return OptimizationRemark(DEBUG_TYPE, "Peeled", L->getStartLoc(),
                                 L->getHeader())
-             << " peeled loop by " << ore::NV("PeelCount", PP.PeelCount)
+             << "peeled loop by " << ore::NV("PeelCount", PP.PeelCount)
              << " iterations";
     });
 
     ValueToValueMapTy VMap;
-    if (peelLoop(L, PP.PeelCount, PP.PeelLast, LI, &SE, DT, &AC, PreserveLCSSA,
-                 VMap)) {
-      simplifyLoopAfterUnroll(L, true, LI, &SE, &DT, &AC, &TTI, nullptr);
-      // If the loop was peeled, we already "used up" the profile information
-      // we had, so we don't want to unroll or peel again.
-      if (PP.PeelProfiledIterations)
-        L->setLoopAlreadyUnrolled();
-      return LoopUnrollResult::PartiallyUnrolled;
-    }
-    return LoopUnrollResult::Unmodified;
+    peelLoop(L, PP.PeelCount, PP.PeelLast, LI, &SE, DT, &AC, PreserveLCSSA,
+             VMap);
+    simplifyLoopAfterUnroll(L, true, LI, &SE, &DT, &AC, &TTI, nullptr);
+    // If the loop was peeled, we already "used up" the profile information
+    // we had, so we don't want to unroll or peel again.
+    if (PP.PeelProfiledIterations)
+      L->setLoopAlreadyUnrolled();
+    return LoopUnrollResult::PartiallyUnrolled;
   }
 
   // Do not attempt partial/runtime unrolling in FullLoopUnrolling

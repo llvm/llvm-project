@@ -1852,11 +1852,9 @@ namespace WithinLifetime {
   } xstd; // both-error {{is not a constant expression}} \
           // both-note {{in call to}}
 
-  /// FIXME: We do not have per-element lifetime information for primitive arrays.
-  /// See https://github.com/llvm/llvm-project/issues/147528
   consteval bool test_dynamic(bool read_after_deallocate) {
     std::allocator<int> a;
-    int* p = a.allocate(1); // expected-note 2{{allocation performed here was not deallocated}}
+    int* p = a.allocate(1);
     // a.allocate starts the lifetime of an array,
     // the complete object of *p has started its lifetime
     if (__builtin_is_within_lifetime(p))
@@ -1869,12 +1867,12 @@ namespace WithinLifetime {
       return false;
     a.deallocate(p, 1);
     if (read_after_deallocate)
-      __builtin_is_within_lifetime(p); // ref-note {{read of heap allocated object that has been deleted}}
+      __builtin_is_within_lifetime(p); // both-note {{read of heap allocated object that has been deleted}}
     return true;
   }
-  static_assert(test_dynamic(false)); // expected-error {{not an integral constant expression}}
+  static_assert(test_dynamic(false));
   static_assert(test_dynamic(true)); // both-error {{not an integral constant expression}} \
-                                     // ref-note {{in call to}}
+                                     // both-note {{in call to}}
 }
 
 #ifdef __SIZEOF_INT128__
@@ -1904,4 +1902,16 @@ namespace NonBlockPointerStore {
   int a;
   void foo(void) { a *= __builtin_sadd_overflow(1, 2, 0); }
   void foo2(void) { a *= __builtin_addc(1, 2, 0, 0); }
+}
+
+namespace WcslenInvalidArg {
+
+  static_assert(__builtin_wcslen("x") == 'x'); // both-error {{cannot initialize a parameter of type 'const wchar_t *' with an lvalue of type 'const char[2]'}}
+  static_assert(__builtin_wcslen((const wchar_t *)"x") == 1); // both-error {{static assertion expression is not an integral constant expression}} \
+                                                              // both-note {{cast that performs the conversions of a reinterpret_cast}}
+  const unsigned char u8s[] = "hi";
+  static_assert(__builtin_wcslen((const wchar_t *)u8s) == 2); // both-error {{static assertion expression is not an integral constant expression}} \
+                                                              // both-note {{cast that performs the conversions of a reinterpret_cast}}
+  static_assert(__builtin_wcslen(L"x") == 1);
+
 }

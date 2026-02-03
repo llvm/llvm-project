@@ -50,6 +50,9 @@ GetTypeSystemFromCU(std::shared_ptr<ExecutionContextScope> ctx) {
     return llvm::createStringError("no stack frame in this context");
   SymbolContext symbol_context =
       stack_frame->GetSymbolContext(lldb::eSymbolContextCompUnit);
+
+  if (!symbol_context.comp_unit)
+    return llvm::createStringError("no compile unit in this context");
   lldb::LanguageType language = symbol_context.comp_unit->GetLanguage();
 
   symbol_context = stack_frame->GetSymbolContext(lldb::eSymbolContextModule);
@@ -270,7 +273,7 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Evaluate(const ASTNode &node) {
     return llvm::make_error<DILDiagnosticError>(m_expr, "invalid value object",
                                                 node.GetLocation());
   // Return the computed value-or-error. The caller is responsible for
-  // checking if an error occured during the evaluation.
+  // checking if an error occurred during the evaluation.
   return value_or_error;
 }
 
@@ -618,7 +621,7 @@ Interpreter::Visit(const ArraySubscriptNode &node) {
         base->GetSyntheticBitFieldChild(child_idx, child_idx, true);
     if (!child_valobj_sp) {
       std::string err_msg = llvm::formatv(
-          "bitfield range {0}-{1} is not valid for \"({2}) {3}\"", child_idx,
+          "bitfield range {0}:{1} is not valid for \"({2}) {3}\"", child_idx,
           child_idx, base->GetTypeName().AsCString("<invalid type>"),
           var_expr_path_strm.GetData());
       return llvm::make_error<DILDiagnosticError>(m_expr, std::move(err_msg),
@@ -706,7 +709,7 @@ Interpreter::Visit(const BitFieldExtractionNode &node) {
       base->GetSyntheticBitFieldChild(first_index, last_index, true);
   if (!child_valobj_sp) {
     std::string message = llvm::formatv(
-        "bitfield range {0}-{1} is not valid for \"({2}) {3}\"", first_index,
+        "bitfield range {0}:{1} is not valid for \"({2}) {3}\"", first_index,
         last_index, base->GetTypeName().AsCString("<invalid type>"),
         base->GetName().AsCString());
     return llvm::make_error<DILDiagnosticError>(m_expr, message,
@@ -811,7 +814,7 @@ Interpreter::VerifyArithmeticCast(CompilerType source_type,
                                   CompilerType target_type, int location) {
   if (source_type.IsPointerType() || source_type.IsNullPtrType()) {
     // Cast from pointer to float/double is not allowed.
-    if (target_type.IsFloat()) {
+    if (target_type.IsFloatingPointType()) {
       std::string errMsg = llvm::formatv("Cast from {0} to {1} is not allowed",
                                          source_type.TypeDescription(),
                                          target_type.TypeDescription());
@@ -948,7 +951,8 @@ llvm::Expected<lldb::ValueObjectSP> Interpreter::Visit(const CastNode &node) {
 
   switch (cast_kind) {
   case CastKind::eEnumeration: {
-    if (op_type.IsFloat() || op_type.IsInteger() || op_type.IsEnumerationType())
+    if (op_type.IsFloatingPointType() || op_type.IsInteger() ||
+        op_type.IsEnumerationType())
       return operand->CastToEnumType(target_type);
     break;
   }

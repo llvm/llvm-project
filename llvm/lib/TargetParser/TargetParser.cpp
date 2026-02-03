@@ -176,6 +176,7 @@ constexpr GPUInfo AMDGCNGPUs[] = {
     {{"gfx1201"},   {"gfx1201"}, GK_GFX1201, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
     {{"gfx1250"},   {"gfx1250"}, GK_GFX1250, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK_ALWAYS},
     {{"gfx1251"},   {"gfx1251"}, GK_GFX1251, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK_ALWAYS},
+    {{"gfx1310"},   {"gfx1310"}, GK_GFX1310, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_WGP},
 
     {{"gfx9-generic"},      {"gfx9-generic"},    GK_GFX9_GENERIC,    FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_XNACK},
     {{"gfx10-1-generic"},   {"gfx10-1-generic"}, GK_GFX10_1_GENERIC, FEATURE_FAST_FMA_F32|FEATURE_FAST_DENORMAL_F32|FEATURE_WAVE32|FEATURE_XNACK|FEATURE_WGP},
@@ -332,6 +333,7 @@ AMDGPU::IsaVersion AMDGPU::getIsaVersion(StringRef GPU) {
   case GK_GFX1201: return {12, 0, 1};
   case GK_GFX1250: return {12, 5, 0};
   case GK_GFX1251: return {12, 5, 1};
+  case GK_GFX1310: return {13, 1, 0};
 
   // Generic targets return the lowest common denominator
   // within their family. That is, the ISA that is the most
@@ -373,21 +375,44 @@ insertWaveSizeFeature(StringRef GPU, const Triple &T,
   const bool IsNullGPU = GPU.empty();
   const bool TargetHasWave32 = DefaultFeatures.count("wavefrontsize32");
   const bool TargetHasWave64 = DefaultFeatures.count("wavefrontsize64");
-  const bool HaveWave32 = Features.count("wavefrontsize32");
-  const bool HaveWave64 = Features.count("wavefrontsize64");
-  if (HaveWave32 && HaveWave64)
+
+  auto Wave32Itr = Features.find("wavefrontsize32");
+  auto Wave64Itr = Features.find("wavefrontsize64");
+  const bool EnableWave32 =
+      Wave32Itr != Features.end() && Wave32Itr->getValue();
+  const bool EnableWave64 =
+      Wave64Itr != Features.end() && Wave64Itr->getValue();
+  const bool DisableWave32 =
+      Wave32Itr != Features.end() && !Wave32Itr->getValue();
+  const bool DisableWave64 =
+      Wave64Itr != Features.end() && !Wave64Itr->getValue();
+
+  if (EnableWave32 && EnableWave64)
     return {AMDGPU::INVALID_FEATURE_COMBINATION,
-            "'wavefrontsize32' and 'wavefrontsize64' are mutually exclusive"};
+            "'+wavefrontsize32' and '+wavefrontsize64' are mutually exclusive"};
+  if (DisableWave32 && DisableWave64)
+    return {AMDGPU::INVALID_FEATURE_COMBINATION,
+            "'-wavefrontsize32' and '-wavefrontsize64' are mutually exclusive"};
 
-  if (HaveWave32 && !IsNullGPU && TargetHasWave64)
-    return {AMDGPU::UNSUPPORTED_TARGET_FEATURE, "wavefrontsize32"};
+  if (!IsNullGPU) {
+    if (TargetHasWave64) {
+      if (EnableWave32)
+        return {AMDGPU::UNSUPPORTED_TARGET_FEATURE, "+wavefrontsize32"};
+      if (DisableWave64)
+        return {AMDGPU::UNSUPPORTED_TARGET_FEATURE, "-wavefrontsize64"};
+    }
 
-  if (HaveWave64 && !IsNullGPU && TargetHasWave32)
-    return {AMDGPU::UNSUPPORTED_TARGET_FEATURE, "wavefrontsize64"};
+    if (TargetHasWave32) {
+      if (EnableWave64)
+        return {AMDGPU::UNSUPPORTED_TARGET_FEATURE, "+wavefrontsize64"};
+      if (DisableWave32)
+        return {AMDGPU::UNSUPPORTED_TARGET_FEATURE, "-wavefrontsize32"};
+    }
+  }
 
   // Don't assume any wavesize with an unknown subtarget.
   // Default to wave32 if target supports both.
-  if (!IsNullGPU && !HaveWave32 && !HaveWave64 && !TargetHasWave32 &&
+  if (!IsNullGPU && !EnableWave32 && !EnableWave64 && !TargetHasWave32 &&
       !TargetHasWave64)
     Features.insert(std::make_pair("wavefrontsize32", true));
 
@@ -406,6 +431,7 @@ static void fillAMDGCNFeatureMap(StringRef GPU, const Triple &T,
                                  StringMap<bool> &Features) {
   AMDGPU::GPUKind Kind = parseArchAMDGCN(GPU);
   switch (Kind) {
+  case GK_GFX1310:
   case GK_GFX1251:
   case GK_GFX1250:
     Features["ci-insts"] = true;
