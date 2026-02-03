@@ -187,7 +187,12 @@ struct GPUSubgroupIdOpToROCDL : ConvertOpToLLVMPattern<gpu::SubgroupIdOp> {
     Value subgroupId;
     if (chipset.majorVersion >= 12) {
       // For gfx12+, use the hardware wave.id register directly.
-      subgroupId = ROCDL::WaveId::create(rewriter, loc, int32Type);
+      LLVM::ConstantRangeAttr bounds;
+      if (auto upperBoundAttr = op.getUpperBoundAttr())
+        bounds = rewriter.getAttr<LLVM::ConstantRangeAttr>(
+            /*bitWidth=*/32, /*lower=*/0,
+            /*upper=*/upperBoundAttr.getInt() + 1);
+      subgroupId = ROCDL::WaveId::create(rewriter, loc, int32Type, bounds);
     } else {
       // For older architectures, compute:
       // subgroup_id = linearized_thread_id / subgroup_size
