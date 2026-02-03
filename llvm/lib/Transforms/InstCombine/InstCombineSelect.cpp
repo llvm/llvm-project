@@ -1904,13 +1904,23 @@ static Value *canonicalizeClampLike(SelectInst &Sel0, ICmpInst &Cmp0,
   // All good, finally emit the new pattern.
   Value *ShouldReplaceLow = Builder.CreateICmpSLT(X, ThresholdLowIncl);
   Value *ShouldReplaceHigh = Builder.CreateICmpSGE(X, ThresholdHighExcl);
-  Value *MaybeReplacedLow =
-      Builder.CreateSelect(ShouldReplaceLow, ReplacementLow, X);
+  Value *MaybeReplacedLow;
+  Value *MaybeReplacedHigh;
+  if (!ProfcheckDisableMetadataFixes) {
+    auto &Impl = static_cast<InstCombinerImpl &>(IC);
+    MaybeReplacedLow = Impl.createSelectInstWithUnknownProfile(
+        ShouldReplaceLow, ReplacementLow, X);
+    Builder.Insert(MaybeReplacedLow);
+    MaybeReplacedHigh = Impl.createSelectInstWithUnknownProfile(
+        ShouldReplaceHigh, ReplacementHigh, MaybeReplacedLow);
+    Builder.Insert(MaybeReplacedHigh);
+  } else {
+    MaybeReplacedLow =
+        Builder.CreateSelect(ShouldReplaceLow, ReplacementLow, X);
+    MaybeReplacedHigh = Builder.CreateSelect(
+        ShouldReplaceHigh, ReplacementHigh, MaybeReplacedLow);
+  }
 
-  // Create the final select. If we looked through a truncate above, we will
-  // need to retruncate the result.
-  Value *MaybeReplacedHigh = Builder.CreateSelect(
-      ShouldReplaceHigh, ReplacementHigh, MaybeReplacedLow);
   return Builder.CreateTrunc(MaybeReplacedHigh, Sel0.getType());
 }
 
