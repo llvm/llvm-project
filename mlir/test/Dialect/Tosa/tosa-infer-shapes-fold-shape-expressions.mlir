@@ -12,6 +12,7 @@ func.func @test_simple_shape_expression(%arg0: tensor<7x12xi32>, %arg1: tensor<8
   // CHECK: %[[TILE:.+]] = tosa.tile %[[RESHAPE]], %[[SHAPE]] : (tensor<84xi32>, !tosa.shape<1>) -> tensor<7056xi32>
   // DEFAULT: %[[CAST:.+]] = tensor.cast %[[TILE]] : tensor<7056xi32> to tensor<?xi32>
   // DEFAULT: return %[[CAST]] : tensor<?xi32>
+  // FUNCBOUND-NOT: tensor.cast
   // FUNCBOUND: return %[[TILE]] : tensor<7056xi32>
   %a = tosa.dim %arg1 {axis = 0: i32} : (tensor<80xi32>) -> !tosa.shape<1>
   %b = tosa.dim %arg2 {axis = 0: i32} : (tensor<4xi32>) -> !tosa.shape<1>

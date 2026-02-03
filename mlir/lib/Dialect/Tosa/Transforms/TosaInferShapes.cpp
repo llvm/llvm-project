@@ -302,6 +302,9 @@ private:
     OperationFolder folder(ctx);
 
     for (auto &block : region) {
+      // The loop body may erase operations, so we need to be careful
+      // when iterating. Fetch the next operation before the current
+      // operation is modified.
       for (auto it = block.begin(); it != block.end();) {
         Operation &op = *it++;
         if (op.getDialect() != tosaDialect)
@@ -371,16 +374,17 @@ private:
     // Rewrite func.return ops, removing dead tensor.cast ops if possible
     func.walk([&rewriter, &newReturnTypes](func::ReturnOp ret) {
       SmallVector<Value> newReturnValues;
+      SmallVector<Value> maybeDeadCasts;
       OperandRange returnOperands = ret.getOperands();
       newReturnValues.reserve(returnOperands.size());
-      newReturnTypes.reserve(returnOperands.size());
+      maybeDeadCasts.reserve(returnOperands.size());
+      newReturnTypes.reserve(newReturnTypes.size() + returnOperands.size());
 
       for (const Value &v : returnOperands) {
         Value newReturnValue = v;
         if (auto castOp = v.getDefiningOp<tensor::CastOp>()) {
           newReturnValue = castOp.getSource();
-          if (castOp->use_empty())
-            rewriter.eraseOp(castOp);
+          maybeDeadCasts.push_back(castOp);
         }
         newReturnValues.push_back(newReturnValue);
         newReturnTypes.push_back(newReturnValue.getType());
@@ -388,6 +392,14 @@ private:
 
       rewriter.setInsertionPoint(ret);
       rewriter.replaceOpWithNewOp<func::ReturnOp>(ret, newReturnValues);
+
+      if (!maybeDeadCasts.empty()) {
+        llvm::for_each(maybeDeadCasts, [&](Value castVal) {
+          if (castVal.use_empty()) {
+            rewriter.eraseOp(castVal.getDefiningOp());
+          }
+        });
+      }
     });
 
     // Update function return types with newly inferred types
