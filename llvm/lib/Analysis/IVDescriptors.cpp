@@ -279,14 +279,12 @@ bool RecurrenceDescriptor::AddReductionVar(
   if (isMinMaxReductionPhiWithUsersOutsideReductionChain(Phi, Kind, TheLoop,
                                                          RedDes))
     return true;
-
   // Obtain the reduction start value from the value that comes from the loop
   // preheader.
-  Value *RdxStart;
   if (!TheLoop->getLoopPreheader())
     return false;
 
-  RdxStart = Phi->getIncomingValueForBlock(TheLoop->getLoopPreheader());
+  Value *RdxStart = Phi->getIncomingValueForBlock(TheLoop->getLoopPreheader());
   // ExitInstruction is the single value which is used outside the loop.
   // We only allow for a single reduction value to be used outside the loop.
   // This includes users of the reduction, variables (which form a cycle
