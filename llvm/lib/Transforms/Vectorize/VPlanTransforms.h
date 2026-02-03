@@ -369,7 +369,8 @@ struct VPlanTransforms {
   /// Hoist single-scalar loads with invariant addresses out of the vector loop
   /// to the preheader, if they are proven not to alias with any stores in the
   /// plan using noalias metadata.
-  static void hoistInvariantLoads(VPlan &Plan);
+  static void hoistInvariantLoads(VPlan &Plan, PredicatedScalarEvolution &PSE,
+                                  const Loop *L);
 
   /// Hoist predicated loads from the same address to the loop entry block, if
   /// they are guaranteed to execute on both paths (i.e., in replicate regions
