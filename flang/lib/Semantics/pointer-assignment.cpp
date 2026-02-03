@@ -366,8 +366,8 @@ bool PointerAssignmentChecker::Check(const evaluate::Designator<T> &d) {
         // Turn off target type mismatch error if we have ignore_tkr(tc)
         // or ignore_tkr(kc)
         !((ignoreTKR_.test(common::IgnoreTKR::Type) ||
-            ignoreTKR_.test(common::IgnoreTKR::Kind)) &&
-          ignoreTKR_.test(common::IgnoreTKR::Contiguous))) {
+              ignoreTKR_.test(common::IgnoreTKR::Kind)) &&
+            ignoreTKR_.test(common::IgnoreTKR::Contiguous))) {
       msg = MessageFormattedText{
           "Target type %s is not compatible with pointer type %s"_err_en_US,
           rhsType->type().AsFortran(), lhsType_->type().AsFortran()};
