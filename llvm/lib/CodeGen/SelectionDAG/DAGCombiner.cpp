@@ -1208,7 +1208,7 @@ bool DAGCombiner::reassociationCanBreakAddressingModePattern(unsigned Opc,
 
     for (SDNode *Node : N->users()) {
       auto *LoadStore = dyn_cast<MemSDNode>(Node);
-      if (!LoadStore)
+      if (!LoadStore || !LoadStore->hasUniqueMemOperand())
         return false;
 
       // Is x[offset2] a legal addressing mode? If so then
@@ -11742,10 +11742,29 @@ SDValue DAGCombiner::foldABSToABD(SDNode *N, const SDLoc &DL) {
   EVT VT = N->getValueType(0);
   SDValue Op0, Op1;
 
-  if (!sd_match(N, m_Abs(m_Sub(m_Value(Op0), m_Value(Op1)))))
+  if (!sd_match(N, m_Abs(m_AnyOf(m_Sub(m_Value(Op0), m_Value(Op1)),
+                                 m_Add(m_Value(Op0), m_Value(Op1))))))
     return SDValue();
 
   SDValue AbsOp0 = N->getOperand(0);
+  bool IsAdd = AbsOp0.getOpcode() == ISD::ADD;
+  // Make sure (neg B) is positive.
+  if (IsAdd) {
+    // Elements of Op1 must be constant and != VT.minSignedValue() (or undef)
+    std::function<bool(ConstantSDNode *)> IsNotMinSignedInt =
+        [VT](ConstantSDNode *C) {
+          if (C == nullptr)
+            return true;
+          return !C->getAPIntValue()
+                      .trunc(VT.getScalarSizeInBits())
+                      .isMinSignedValue();
+        };
+
+    if (!ISD::matchUnaryPredicate(Op1, IsNotMinSignedInt, /*AllowUndefs=*/true,
+                                  /*AllowTruncation=*/true))
+      return SDValue();
+  }
+
   unsigned Opc0 = Op0.getOpcode();
 
   // Check if the operands of the sub are (zero|sign)-extended, otherwise
@@ -11754,21 +11773,35 @@ SDValue DAGCombiner::foldABSToABD(SDNode *N, const SDLoc &DL) {
       (Opc0 != ISD::ZERO_EXTEND && Opc0 != ISD::SIGN_EXTEND &&
        Opc0 != ISD::SIGN_EXTEND_INREG)) {
     // fold (abs (sub nsw x, y)) -> abds(x, y)
+    // fold (abs (add nsw x, -y)) -> abds(x, y)
+    bool AbsOpWillNSW =
+        AbsOp0->getFlags().hasNoSignedWrap() ||
+        (IsAdd ? DAG.willNotOverflowAdd(/*IsSigned=*/true, Op0, Op1)
+               : DAG.willNotOverflowSub(/*IsSigned=*/true, Op0, Op1));
+
     // Don't fold this for unsupported types as we lose the NSW handling.
     if (hasOperation(ISD::ABDS, VT) && TLI.preferABDSToABSWithNSW(VT) &&
-        (AbsOp0->getFlags().hasNoSignedWrap() ||
-         DAG.willNotOverflowSub(/*IsSigned=*/true, Op0, Op1))) {
+        AbsOpWillNSW) {
+      if (IsAdd)
+        Op1 = DAG.getNegative(Op1, SDLoc(Op1), VT);
       SDValue ABD = DAG.getNode(ISD::ABDS, DL, VT, Op0, Op1);
       return DAG.getZExtOrTrunc(ABD, DL, SrcVT);
     }
     // fold (abs (sub x, y)) -> abdu(x, y)
     if (hasOperation(ISD::ABDU, VT) && DAG.SignBitIsZero(Op0) &&
         DAG.SignBitIsZero(Op1)) {
+      if (IsAdd)
+        Op1 = DAG.getNegative(Op1, SDLoc(Op1), VT);
       SDValue ABD = DAG.getNode(ISD::ABDU, DL, VT, Op0, Op1);
       return DAG.getZExtOrTrunc(ABD, DL, SrcVT);
     }
     return SDValue();
   }
+
+  // The IsAdd case explicitly checks for const/bv-of-const. This implies either
+  // (Opc0 != Op1.getOpcode() || Opc0 is not in {zext/sext/sign_ext_inreg}. This
+  // implies it was alrady handled by the above if statement.
+  assert(!IsAdd && "Unexpected abs(add(x,y)) pattern");
 
   EVT VT0, VT1;
   if (Opc0 == ISD::SIGN_EXTEND_INREG) {
