@@ -6665,41 +6665,39 @@ SDValue DAGCombiner::foldLogicSetCCToMul(SDNode *N, const SDLoc &DL) {
   else
     return SDValue();
 
-  SDValue A, B;
-  ISD::CondCode CC0, CC1;
+  SDValue X, Y;
   SDValue N0 = N->getOperand(0);
   SDValue N1 = N->getOperand(1);
 
   if (!N0.hasOneUse() || !N1.hasOneUse())
     return SDValue();
 
-  if (!sd_match(N0, m_SetCC(m_Value(A), m_Zero(), m_CondCode(CC0))) ||
-      !sd_match(N1, m_SetCC(m_Value(B), m_Zero(), m_CondCode(CC1))))
+  if (!sd_match(
+          N0, m_SetCC(m_Value(X), m_Zero(), m_SpecificCondCode(ExpectedCC))) ||
+      !sd_match(N1,
+                m_SetCC(m_Value(Y), m_Zero(), m_SpecificCondCode(ExpectedCC))))
     return SDValue();
 
-  if (CC0 != ExpectedCC || CC1 != ExpectedCC)
-    return SDValue();
-
-  EVT VT = A.getValueType();
-  if (!VT.isInteger() || VT != B.getValueType())
+  EVT VT = X.getValueType();
+  if (!VT.isInteger() || VT != Y.getValueType())
     return SDValue();
 
   if (!hasOperation(ISD::MUL, VT))
     return SDValue();
 
-  unsigned BitWidth = A.getScalarValueSizeInBits();
-  KnownBits KnownA = DAG.computeKnownBits(A);
+  unsigned BitWidth = X.getScalarValueSizeInBits();
+  KnownBits KnownX = DAG.computeKnownBits(X);
 
-  if (KnownA.countMaxActiveBits() >= BitWidth)
+  if (KnownX.countMaxActiveBits() >= BitWidth)
     return SDValue();
 
-  KnownBits KnownB = DAG.computeKnownBits(B);
+  KnownBits KnownY = DAG.computeKnownBits(Y);
 
-  if (KnownA.countMaxActiveBits() + KnownB.countMaxActiveBits() > BitWidth)
+  if (KnownX.countMaxActiveBits() + KnownY.countMaxActiveBits() > BitWidth)
     return SDValue();
 
   SDValue Mul =
-      DAG.getNode(ISD::MUL, DL, VT, A, B, SDNodeFlags::NoUnsignedWrap);
+      DAG.getNode(ISD::MUL, DL, VT, X, Y, SDNodeFlags::NoUnsignedWrap);
 
   return DAG.getSetCC(DL, N->getValueType(0), Mul, DAG.getConstant(0, DL, VT),
                       ExpectedCC);
