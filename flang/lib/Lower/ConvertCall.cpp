@@ -1930,14 +1930,14 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
   prepareUserCallArguments(loweredActuals, caller, callSiteType, callContext,
                            callCleanUps);
 
+  bool isElemental = callContext.isElementalProcWithArrayArgs();
   // Prepare lowered arguments according to the interface
   // and map the lowered values to the dummy
   // arguments.
   auto [loweredResult, resultIsFinalized, callOp] =
       Fortran::lower::genCallOpAndResult(
           loc, callContext.converter, callContext.symMap, callContext.stmtCtx,
-          caller, callSiteType, callContext.resultType,
-          callContext.isElementalProcWithArrayArgs());
+          caller, callSiteType, callContext.resultType, isElemental);
 
   // Clean-up associations and copy-in.
   // The association clean-ups are postponed to the end of the statement
@@ -1983,9 +1983,13 @@ genUserCall(Fortran::lower::PreparedActualArguments &loweredActuals,
       // If the result has no finalization, it can be moved into an expression.
       mlir::Value asExpr = hlfir::AsExprOp::create(
           builder, loc, resultEntity, builder.createBool(loc, mustFree));
-      callContext.stmtCtx.attachCleanup([bldr = &builder, loc, asExpr]() {
-        hlfir::DestroyOp::create(*bldr, loc, asExpr, /*finalize=*/false);
-      });
+      if (!isElemental) {
+        // Insert clean-up for the expression, except for elemental call where
+        // the cleaned-up is inserted at the array level.
+        callContext.stmtCtx.attachCleanup([bldr = &builder, loc, asExpr]() {
+          hlfir::DestroyOp::create(*bldr, loc, asExpr, /*finalize=*/false);
+        });
+      }
       return hlfir::EntityWithAttributes{asExpr};
     }
     if (allocatable)
