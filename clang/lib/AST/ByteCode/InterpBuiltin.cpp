@@ -2559,7 +2559,7 @@ static bool interp__builtin_scalar_fp_round_mask_binop(
   const auto *VT = Call->getArg(0)->getType()->castAs<VectorType>();
   unsigned NumElems = VT->getNumElements();
 
-  uint64_t Rounding = popToUInt64(S, Call->getArg(4));
+  APSInt RoundingMode = popToAPSInt(S, Call->getArg(4));
   uint64_t MaskVal = popToUInt64(S, Call->getArg(3));
   const Pointer &SrcPtr = S.Stk.pop<Pointer>();
   const Pointer &BPtr = S.Stk.pop<Pointer>();
@@ -2571,7 +2571,6 @@ static bool interp__builtin_scalar_fp_round_mask_binop(
   if (MaskVal & 1) {
     APFloat ElemA = APtr.elem<T>(0).getAPFloat();
     APFloat ElemB = BPtr.elem<T>(0).getAPFloat();
-    APSInt RoundingMode(APInt(32, Rounding), /*isUnsigned=*/true);
     std::optional<APFloat> Result = Fn(ElemA, ElemB, RoundingMode);
     if (!Result)
       return false;

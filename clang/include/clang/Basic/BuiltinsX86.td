@@ -173,8 +173,6 @@ let Features = "sse2", Attributes = [NoThrow] in {
 let Features = "sse2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def cvtpd2ps : X86Builtin<"_Vector<4, float>(_Vector<2, double>)">;
   def cvtsd2ss : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<2, double>)">;
-  def minsd    : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>)">;
-  def maxsd    : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>)">;
 }
 let Features = "avx512f", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWidth<128>] in {
   def cvtsd2ss_round_mask : X86Builtin<"_Vector<4, float>(_Vector<4, float>, _Vector<2, double>, _Vector<4, float>, unsigned char, _Constant int)">;
@@ -245,6 +243,8 @@ let Features = "sse2", Attributes = [NoThrow, Const, Constexpr, RequiredVectorWi
 
   def minpd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>)">;
   def maxpd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>)">;
+  def minsd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>)">;
+  def maxsd : X86Builtin<"_Vector<2, double>(_Vector<2, double>, _Vector<2, double>)">;
 
   def psllwi128 : X86Builtin<"_Vector<8, short>(_Vector<8, short>, int)">;
   def pslldi128 : X86Builtin<"_Vector<4, int>(_Vector<4, int>, int)">;
