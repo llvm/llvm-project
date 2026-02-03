@@ -334,7 +334,9 @@ bool Context::tryEvaluateObjectSize(State &Parent, const Expr *E, unsigned Kind,
 
   auto PtrRes = C.interpretAsPointer(E, [&](const Pointer &Ptr) {
     const Descriptor *DeclDesc = Ptr.getDeclDesc();
-    assert(DeclDesc);
+    if (!DeclDesc)
+      return false;
+
     QualType T = DeclDesc->getType().getNonReferenceType();
     if (T->isIncompleteType() || T->isFunctionType() ||
         !T->isConstantSizeType())
