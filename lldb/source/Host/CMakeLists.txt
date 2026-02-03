@@ -1,5 +1,3 @@
-add_subdirectory(PythonPathSetup)
-
 if (APPLE AND LLVM_ENABLE_LOCAL_SUBMODULE_VISIBILITY)
   # The arpa/inet.h header used in the files here is providing a miscompiled
   # htonl function on macOS < 14 when local submodule visibility is active.
@@ -67,6 +65,7 @@ add_host_subdirectory(posix
   )
 
 if (CMAKE_SYSTEM_NAME MATCHES "Windows")
+  add_subdirectory(windows/PythonPathSetup)
   add_host_subdirectory(windows
     windows/ConnectionGenericFileWindows.cpp
     windows/FileSystem.cpp
