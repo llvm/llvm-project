@@ -893,7 +893,10 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *C1,
 
       Value *NewShift = Builder.CreateBinOp(I.getOpcode(), FalseVal, C1);
       Value *NewOp = Builder.CreateBinOp(TBO->getOpcode(), NewShift, NewRHS);
-      return SelectInst::Create(Cond, NewOp, NewShift);
+      SelectInst *NewSI = SelectInst::Create(Cond, NewOp, NewShift);
+      if (!ProfcheckDisableMetadataFixes)
+        NewSI->copyMetadata(*cast<SelectInst>(Op0));
+      return NewSI;
     }
   }
 
@@ -910,7 +913,10 @@ Instruction *InstCombinerImpl::FoldShiftByConstant(Value *Op0, Constant *C1,
 
       Value *NewShift = Builder.CreateBinOp(I.getOpcode(), TrueVal, C1);
       Value *NewOp = Builder.CreateBinOp(FBO->getOpcode(), NewShift, NewRHS);
-      return SelectInst::Create(Cond, NewShift, NewOp);
+      SelectInst *NewSI = SelectInst::Create(Cond, NewShift, NewOp);
+      if (!ProfcheckDisableMetadataFixes)
+        NewSI->copyMetadata(*cast<SelectInst>(Op0));
+      return NewSI;
     }
   }
 
