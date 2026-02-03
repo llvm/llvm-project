@@ -3655,6 +3655,9 @@ static Value *upgradeX86IntrinsicCall(StringRef Name, CallBase *CI, Function *F,
     unsigned Imm = cast<ConstantInt>(CI->getArgOperand(1))->getZExtValue();
     unsigned NumElts = cast<FixedVectorType>(CI->getType())->getNumElements();
 
+    if (Name == "sse2.pshufh.w" && NumElts % 8 != 0)
+      reportFatalUsageErrorWithCI("Intrinsic has invalid signature", CI);
+
     SmallVector<int, 16> Idxs(NumElts);
     for (unsigned l = 0; l != NumElts; l += 8) {
       for (unsigned i = 0; i != 4; ++i)
