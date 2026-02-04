@@ -1,9 +1,9 @@
 add_llvm_component_library(LLVMVectorize
   LoadStoreVectorizer.cpp
   LoopIdiomVectorize.cpp
+  LoopReduceMotion.cpp
   LoopVectorizationLegality.cpp
   LoopVectorize.cpp
-  LoopReduceMotion.cpp
   SandboxVectorizer/DependencyGraph.cpp
   SandboxVectorizer/InstrMaps.cpp
   SandboxVectorizer/Interval.cpp

@@ -5,10 +5,10 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
-// This pass is designed to hoist `ReduceCall` operations out of loops to reduce
+// This pass is designed to sink `ReduceCall` operations out of loops to reduce
 // the number of instructions within the loop body.
 //
-// Below are the target pattern to be matched and the resulting pattern
+// Below is the target pattern to be matched and the resulting pattern
 // after the transformation.
 //
 // before                    | after
@@ -160,11 +160,7 @@ bool LoopReduceMotionPass::matchAndTransform(Loop &L, DominatorTree &DT,
                       << Header->getName() << "!\n");
 
     VectorType *VecTy = cast<VectorType>(VecBin->getType());
-    IRBuilder<> PreheaderBuilder(Preheader->getTerminator());
-
-    Value *VecZero = PreheaderBuilder.CreateVectorSplat(
-        VecTy->getElementCount(), ConstantInt::get(VecTy->getElementType(), 0),
-        "vec.zero");
+    Value *VecZero = ConstantInt::get(VecTy, 0);
 
     // build new Vector Add to replace Scalar Add
     IRBuilder<> HeaderBuilder(Header, Header->getFirstNonPHIIt());
@@ -196,7 +192,12 @@ bool LoopReduceMotionPass::matchAndTransform(Loop &L, DominatorTree &DT,
       PN.replaceAllUsesWith(PoisonValue::get(PN.getType()));
     if (PN.use_empty())
       PN.eraseFromParent();
-    RecurrenceInst->replaceAllUsesWith(dyn_cast<Instruction>(LastAdd));
+
+    Instruction *FinalNode = dyn_cast<Instruction>(LastAdd);
+    if (!FinalNode)
+      return false;
+    RecurrenceInst->replaceAllUsesWith(FinalNode);
+
     if (RecurrenceInst->use_empty())
       RecurrenceInst->eraseFromParent();
     if (ReduceCall->use_empty())
