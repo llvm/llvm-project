@@ -8,7 +8,7 @@
 # RUN: llvm-bolt %t -o %t.bolt --data %t.fdata --reorder-blocks=ext-tsp --compact-code-model
 # RUN: llvm-objdump -d %t.bolt | FileCheck %s
 
-# RUN: %clang %cflags -march=armv9-a+cmpbr -Wl,-q %s -o %t -DNUM_NOPS=300
+# RUN: %clang %cflags -march=armv9-a+cmpbr -Wl,-q %s -o %t -DNUM_NOPS=256
 # RUN: link_fdata --no-lbr %s %t %t.fdata
 # RUN: not llvm-bolt %t -o %t.bolt --data %t.fdata --reorder-blocks=ext-tsp --compact-code-model --keep-nops 2>&1 \
 # RUN:   | FileCheck %s --check-prefix=FIXUP_OUT_OF_RANGE
