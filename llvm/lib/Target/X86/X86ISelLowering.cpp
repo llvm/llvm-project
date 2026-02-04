@@ -2917,9 +2917,12 @@ static bool mayFoldIntoVector(SDValue Op, const X86Subtarget &Subtarget,
   if (isa<ConstantSDNode>(Op) || isa<ConstantFPSDNode>(Op))
     return true;
   EVT VT = Op.getValueType();
-  bool ValidOp = (ISD::isBitwiseLogicOp(Op.getOpcode()) ||
-                  ISD::isAddSubOp(Op.getOpcode()));
-  if (ValidOp && (VT == MVT::i128 || VT == MVT::i256 || VT == MVT::i512))
+  // TODO : might have better handling by using
+  // `TargetLowering::LegalizeAction::Custom`
+  bool BitwiseCase = (ISD::isBitwiseLogicOp(Op.getOpcode()) &&
+                      (VT == MVT::i128 || VT == MVT::i256 || VT == MVT::i512));
+  bool AddSubCase = (ISD::isAddSubOp(Op.getOpcode()) && (VT == MVT::i512));
+  if (BitwiseCase || AddSubCase)
     return mayFoldIntoVector(Op.getOperand(0), Subtarget) &&
            mayFoldIntoVector(Op.getOperand(1), Subtarget);
   return X86::mayFoldLoad(Op, Subtarget, AssumeSingleUse,
@@ -54657,10 +54660,6 @@ static SDValue combineStore(SDNode *N, SelectionDAG &DAG,
   // vector type or the operation is likely to expand to a vector type
   // (legalization can scalarize back if it the op failed).
   if (VT == MVT::i256 || VT == MVT::i512) {
-    // Issue : 173996 , PRs : [174761,179503] : when add/sub lowered on avx512
-    // we hit   a regression issue. my approach is to allow the combine only
-    // when the operation is done by our custome handling.
-    // X86TargetLowering::ReplaceNodeResults (ADD/SUB) cases.
     MVT VecVT = MVT::getVectorVT(MVT::i64, VT.getSizeInBits() / 64);
     if (TLI.isTypeLegal(VecVT) && ISD::isNormalStore(St) &&
         mayFoldIntoVector(StoredVal, Subtarget))
