@@ -325,19 +325,31 @@ entry:
   ret void
 }
 
+; Vector UDiv costs 7 (4 for the division, 3 to load constants)
+; Scalar UDiv costs 5, (4 for the div by 9, 1 for the div by 2
 define void @udiv_pow2(ptr %d, ptr %s) {
 ; CHECK-LABEL: @udiv_pow2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr [[S:%.*]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = udiv <2 x i16> [[TMP0]], <i16 2, i16 9>
-; CHECK-NEXT:    store <2 x i16> [[TMP1]], ptr [[D:%.*]], align 2
+; CHECK-NEXT:    [[L0:%.*]] = load i16, ptr [[S:%.*]], align 2
+; CHECK-NEXT:    [[S1:%.*]] = getelementptr i16, ptr [[S]], i64 1
+; CHECK-NEXT:    [[L1:%.*]] = load i16, ptr [[S1]], align 2
+; CHECK-NEXT:    [[A0:%.*]] = udiv i16 [[L0]], 2
+; CHECK-NEXT:    [[A1:%.*]] = udiv i16 [[L1]], 9
+; CHECK-NEXT:    store i16 [[A0]], ptr [[D:%.*]], align 2
+; CHECK-NEXT:    [[D1:%.*]] = getelementptr i16, ptr [[D]], i64 1
+; CHECK-NEXT:    store i16 [[A1]], ptr [[D1]], align 2
 ; CHECK-NEXT:    ret void
 ;
 ; DEFAULT-LABEL: @udiv_pow2(
 ; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr [[S:%.*]], align 2
-; DEFAULT-NEXT:    [[TMP1:%.*]] = udiv <2 x i16> [[TMP0]], <i16 2, i16 9>
-; DEFAULT-NEXT:    store <2 x i16> [[TMP1]], ptr [[D:%.*]], align 2
+; DEFAULT-NEXT:    [[L0:%.*]] = load i16, ptr [[S:%.*]], align 2
+; DEFAULT-NEXT:    [[S1:%.*]] = getelementptr i16, ptr [[S]], i64 1
+; DEFAULT-NEXT:    [[L1:%.*]] = load i16, ptr [[S1]], align 2
+; DEFAULT-NEXT:    [[A0:%.*]] = udiv i16 [[L0]], 2
+; DEFAULT-NEXT:    [[A1:%.*]] = udiv i16 [[L1]], 9
+; DEFAULT-NEXT:    store i16 [[A0]], ptr [[D:%.*]], align 2
+; DEFAULT-NEXT:    [[D1:%.*]] = getelementptr i16, ptr [[D]], i64 1
+; DEFAULT-NEXT:    store i16 [[A1]], ptr [[D1]], align 2
 ; DEFAULT-NEXT:    ret void
 ;
 entry:
@@ -354,6 +366,8 @@ entry:
   ret void
 }
 
+; Vector UDiv costs 1 since shift by single constant
+; Scalar UDiv costs 2 since can be implemented as 2 shifts
 define void @udiv_pow2_all_same(ptr %d, ptr %s) {
 ; CHECK-LABEL: @udiv_pow2_all_same(
 ; CHECK-NEXT:  entry:
@@ -383,19 +397,31 @@ entry:
   ret void
 }
 
+; Vector UDiv costs 4 (1 for the shift, 3 to load constants)
+; Scalar UDiv cost 2 since can be implemented as 2 shifts
 define void @udiv_all_pow2(ptr %d, ptr %s) {
 ; CHECK-LABEL: @udiv_all_pow2(
 ; CHECK-NEXT:  entry:
-; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr [[S:%.*]], align 2
-; CHECK-NEXT:    [[TMP1:%.*]] = udiv <2 x i16> [[TMP0]], <i16 2, i16 4>
-; CHECK-NEXT:    store <2 x i16> [[TMP1]], ptr [[D:%.*]], align 2
+; CHECK-NEXT:    [[L0:%.*]] = load i16, ptr [[S:%.*]], align 2
+; CHECK-NEXT:    [[S1:%.*]] = getelementptr i16, ptr [[S]], i64 1
+; CHECK-NEXT:    [[L1:%.*]] = load i16, ptr [[S1]], align 2
+; CHECK-NEXT:    [[A0:%.*]] = udiv i16 [[L0]], 2
+; CHECK-NEXT:    [[A1:%.*]] = udiv i16 [[L1]], 4
+; CHECK-NEXT:    store i16 [[A0]], ptr [[D:%.*]], align 2
+; CHECK-NEXT:    [[D1:%.*]] = getelementptr i16, ptr [[D]], i64 1
+; CHECK-NEXT:    store i16 [[A1]], ptr [[D1]], align 2
 ; CHECK-NEXT:    ret void
 ;
 ; DEFAULT-LABEL: @udiv_all_pow2(
 ; DEFAULT-NEXT:  entry:
-; DEFAULT-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr [[S:%.*]], align 2
-; DEFAULT-NEXT:    [[TMP1:%.*]] = udiv <2 x i16> [[TMP0]], <i16 2, i16 4>
-; DEFAULT-NEXT:    store <2 x i16> [[TMP1]], ptr [[D:%.*]], align 2
+; DEFAULT-NEXT:    [[L0:%.*]] = load i16, ptr [[S:%.*]], align 2
+; DEFAULT-NEXT:    [[S1:%.*]] = getelementptr i16, ptr [[S]], i64 1
+; DEFAULT-NEXT:    [[L1:%.*]] = load i16, ptr [[S1]], align 2
+; DEFAULT-NEXT:    [[A0:%.*]] = udiv i16 [[L0]], 2
+; DEFAULT-NEXT:    [[A1:%.*]] = udiv i16 [[L1]], 4
+; DEFAULT-NEXT:    store i16 [[A0]], ptr [[D:%.*]], align 2
+; DEFAULT-NEXT:    [[D1:%.*]] = getelementptr i16, ptr [[D]], i64 1
+; DEFAULT-NEXT:    store i16 [[A1]], ptr [[D1]], align 2
 ; DEFAULT-NEXT:    ret void
 ;
 entry:
