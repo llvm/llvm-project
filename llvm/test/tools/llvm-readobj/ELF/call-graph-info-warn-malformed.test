@@ -270,3 +270,83 @@ Symbols:
   - Name:  bar
   - Name:  baz
 ...
+
+## Check that the first call graph section is processed and the second call graph section is ignored.
+# RUN: yaml2obj --docnum=7 %s -o %t12
+# RUN: llvm-readobj --elf-output-style=LLVM --call-graph-info %t12 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t12 --check-prefix=LLVM-FIRST-CGSECTION --match-full-lines
+# RUN: llvm-readobj --elf-output-style=JSON --pretty-print --call-graph-info %t12 2>&1 | \
+# RUN:   FileCheck %s -DFILE=%t12 --check-prefix=JSON-FIRST-CGSECTION --match-full-lines
+
+# LLVM-FIRST-CGSECTION:      CallGraph [
+# LLVM-FIRST-CGSECTION-NEXT:     Function {
+# LLVM-FIRST-CGSECTION-NEXT:       Names: [foo]
+# LLVM-FIRST-CGSECTION-NEXT:       Address: 0x1790
+# LLVM-FIRST-CGSECTION-NEXT:       Version: 0
+# LLVM-FIRST-CGSECTION-NEXT:       IsIndirectTarget: Yes
+# LLVM-FIRST-CGSECTION-NEXT:       TypeId: 0x3ECBEEF531F74424
+# LLVM-FIRST-CGSECTION-NEXT:       NumDirectCallees: 0
+# LLVM-FIRST-CGSECTION-NEXT:       DirectCallees [
+# LLVM-FIRST-CGSECTION-NEXT:       ]
+# LLVM-FIRST-CGSECTION-NEXT:       NumIndirectTargetTypeIds: 0
+# LLVM-FIRST-CGSECTION-NEXT:       IndirectTypeIds: []
+# LLVM-FIRST-CGSECTION-NEXT:     }
+# LLVM-FIRST-CGSECTION-NEXT:    ]
+# LLVM-FIRST-CGSECTION-NOT: {{.}}
+
+# JSON-FIRST-CGSECTION:     "CallGraph": [
+# JSON-FIRST-CGSECTION-NEXT:      {
+# JSON-FIRST-CGSECTION-NEXT:        "Function": {
+# JSON-FIRST-CGSECTION-NEXT:          "Names": [
+# JSON-FIRST-CGSECTION-NEXT:            "foo"
+# JSON-FIRST-CGSECTION-NEXT:          ],
+# JSON-FIRST-CGSECTION-NEXT:          "Address": 6032,
+# JSON-FIRST-CGSECTION-NEXT:          "Version": 0,
+# JSON-FIRST-CGSECTION-NEXT:          "IsIndirectTarget": true,
+# JSON-FIRST-CGSECTION-NEXT:          "TypeId": 4524972987496481828,
+# JSON-FIRST-CGSECTION-NEXT:          "NumDirectCallees": 0,
+# JSON-FIRST-CGSECTION-NEXT:          "DirectCallees": [],
+# JSON-FIRST-CGSECTION-NEXT:          "NumIndirectTargetTypeIds": 0,
+# JSON-FIRST-CGSECTION-NEXT:          "IndirectTypeIds": []
+# JSON-FIRST-CGSECTION-NEXT:        }
+# JSON-FIRST-CGSECTION-NEXT:      }
+# JSON-FIRST-CGSECTION-NEXT:    ]
+# JSON-FIRST-CGSECTION-NEXT:   }
+# JSON-FIRST-CGSECTION-NEXT:  ]
+# JSON-FIRST-CGSECTION-NOT: {{.}}
+
+--- !ELF
+FileHeader:
+  Class:    ELFCLASS64
+  Data:     ELFDATA2LSB
+  Type:     ET_DYN
+Sections:
+  - Name:   .text
+    Type:   SHT_PROGBITS
+    Flags:  [ SHF_ALLOC, SHF_EXECINSTR ]
+  - Type:   SHT_LLVM_CALL_GRAPH
+    Flags:  [ SHF_LINK_ORDER ]
+    Link:   .text
+    ContentArray: [
+      ## --- foo ---
+      0x00, ## Version
+      0x01, ## Flags
+      0x90, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## FunctionEntryPC: 0x1790
+      0x24, 0x44, 0xF7, 0x31, 0xF5, 0xEE, 0xCB, 0x3E, ## FunctionTypeID: 0x3ECBEEF531F74424
+    ]
+  ## This following second call graph section will be completely ignored.
+  - Type:   SHT_LLVM_CALL_GRAPH
+    Flags:  [ SHF_LINK_ORDER ]
+    Link:   .text
+    ContentArray: [
+      ## --- bar ---
+      0x00, ## Version
+      0x01, ## Flags
+      0xA0, 0x17, 0x00, 0x00, 0x00, 0x00, 0x00, 0x00, ## FunctionEntryPC: 0x17A0
+      0x24, 0x44, 0xF7, 0x31, 0xF5, 0xEE, 0xCB, 0x3E, ## FunctionTypeID: 0x3ECBEEF531F74424
+    ]
+Symbols:
+  - Name:     foo
+    Type:     STT_FUNC
+    Section:  .text
+    Value:    0x1790

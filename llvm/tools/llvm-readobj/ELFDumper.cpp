@@ -8315,6 +8315,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
                   this->FileName);
     return;
   }
+  // Process and print the first SHT_LLVM_CALL_GRAPH type section found.
   if (!this->processCallGraphSection(MapOrErr->begin()->first) ||
       this->FuncCGInfos.empty())
     return;
@@ -8324,12 +8325,12 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
   if (this->Obj.getHeader().e_type == ELF::ET_REL) {
     const Elf_Shdr *CGRelSection = MapOrErr->front().second;
     if (CGRelSection) {
+      RelocSymTab = unwrapOrError(this->FileName,
+                                  this->Obj.getSection(CGRelSection->sh_link));
       this->forEachRelocationDo(
-          *CGRelSection, [&](const Relocation<ELFT> &R, unsigned Ndx,
-                             const Elf_Shdr &Sec, const Elf_Shdr *SymTab) {
-            RelocSymTab = SymTab;
-            Relocations.push_back(R);
-          });
+          *CGRelSection,
+          [&](const Relocation<ELFT> &R, unsigned, const Elf_Shdr &,
+              const Elf_Shdr *) { Relocations.push_back(R); });
       llvm::stable_sort(Relocations, [](const auto &LHS, const auto &RHS) {
         return LHS.Offset < RHS.Offset;
       });
