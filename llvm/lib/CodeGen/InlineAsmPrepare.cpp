@@ -10,7 +10,8 @@
 // allocator---e.g., by converting "rm" (register-or-memory) constraints to "m"
 // (memory-only) constraints, simplifying register allocation by forcing
 // operands to memory locations, avoiding the complexity of handling dual
-// register/memory options.
+// register/memory options. The other register allocators are equipped to
+// handle folding registers all ready.
 //
 //===----------------------------------------------------------------------===//
 
