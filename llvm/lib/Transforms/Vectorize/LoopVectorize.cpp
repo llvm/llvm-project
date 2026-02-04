@@ -7087,6 +7087,7 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
     }
   }
 
+  SmallDenseMap<PHINode *, unsigned> PHISelects;
   DenseSet<Instruction *> SeenInstrs;
   auto Iter = vp_depth_first_deep(Plan.getVectorLoopRegion()->getEntry());
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(Iter)) {
@@ -7139,12 +7140,6 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
         }
       }
 
-      // The legacy cost model costs non-header phis with a scalar VF as a phi,
-      // but scalar unrolled VPlans will have VPBlendRecipes which emit selects.
-      if (isa<VPBlendRecipe>(&R) &&
-          vputils::onlyFirstLaneUsed(R.getVPSingleValue()))
-        return true;
-
       /// If a VPlan transform folded a recipe to one producing a single-scalar,
       /// but the original instruction wasn't uniform-after-vectorization in the
       /// legacy cost model, the legacy cost overestimates the actual cost.
@@ -7164,6 +7159,18 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
                 cast<CmpInst>(UI)->getPredicate())
           return true;
 
+        // Keep track of how many select VPInstructions (not replicates) are
+        // used for a phi.
+        if (auto *PHI = dyn_cast<PHINode>(UI)) {
+          if (match(&R, m_VPInstruction<Instruction::Select>())) {
+            // The legacy cost model costs uniform non-header phis as a phi, not
+            // a select.
+            if (vputils::onlyFirstLaneUsed(R.getVPSingleValue()))
+              return true;
+            PHISelects[PHI]++;
+          }
+        }
+
         // Recipes with underlying instructions being moved out of the loop
         // region by LICM may cause discrepancies between the legacy cost model
         // and the VPlan-based cost model.
@@ -7174,6 +7181,11 @@ static bool planContainsAdditionalSimplifications(VPlan &Plan,
       }
     }
   }
+
+  // If some of the selects for a phi are missing, it's been simplified.
+  for (auto [PHI, NumSelects] : PHISelects)
+    if (PHI->getNumIncomingValues() != NumSelects)
+      return true;
 
   // Return true if the loop contains any instructions that are not also part of
   // the VPlan or are skipped for VPlan-based cost computations. This indicates

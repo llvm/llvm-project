@@ -187,7 +187,7 @@ define void @print_replicate_predicated_phi(i64 %n, ptr %x) {
 ; CHECK-NEXT: Successor(s): if.then.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT: if.then.0:
-; CHECK-NEXT:   BLEND ir<%d> = ir<0> vp<[[PRED]]>/ir<%cmp>
+; CHECK-NEXT:   EMIT ir<%d> = select ir<%cmp>, vp<[[PRED]]>, ir<0>
 ; CHECK-NEXT:   CLONE ir<%idx> = getelementptr ir<%x>, vp<[[STEPS]]>
 ; CHECK-NEXT:   vp<[[VEC_PTR:%.+]]> = vector-pointer ir<%idx>
 ; CHECK-NEXT:   WIDEN store vp<[[VEC_PTR]]>, ir<%d>
@@ -374,7 +374,7 @@ define void @recipe_debug_loc_location(ptr nocapture %src) !dbg !5 {
 ; CHECK-NEXT:  Successor(s): if.then.0
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  if.then.0:
-; CHECK-NEXT:    BLEND ir<%ysd.0> = ir<%psd> vp<[[PHI]]>/vp<[[OR1]]>, !dbg /tmp/s.c:14:3
+; CHECK-NEXT:    EMIT ir<%ysd.0> = select vp<[[OR1]]>, vp<[[PHI]]>, ir<%psd>, !dbg /tmp/s.c:14:3
 ; CHECK-NEXT:    vp<[[VEC_PTR2:%.+]]> = vector-pointer inbounds ir<%isd>, !dbg /tmp/s.c:15:3
 ; CHECK-NEXT:    WIDEN store vp<[[VEC_PTR2]]>, ir<%ysd.0>, !dbg /tmp/s.c:15:3
 ; CHECK-NEXT:    EMIT vp<[[CAN_IV_NEXT]]> = add nuw vp<[[CAN_IV]]>, vp<[[VFxUF]]>
@@ -756,7 +756,7 @@ define void @print_call_flags(ptr readonly %src, ptr noalias %dest, i64 %n) {
 ; CHECK-EMPTY:
 ; CHECK-NEXT:  if.then.1:
 ; CHECK-NEXT:    WIDEN ir<%fadd> = fadd vp<[[PHI1]]>, vp<[[PHI2]]>
-; CHECK-NEXT:    BLEND ir<%st.value> = ir<%ld.value> ir<%fadd>/ir<%ifcond>
+; CHECK-NEXT:    EMIT ir<%st.value> = select ir<%ifcond>, ir<%fadd>, ir<%ld.value>
 ; CHECK-NEXT:    CLONE ir<%st.addr> = getelementptr inbounds ir<%dest>, vp<[[STEPS]]>
 ; CHECK-NEXT:    vp<[[VEC_PTR2:%.+]]> = vector-pointer inbounds ir<%st.addr>
 ; CHECK-NEXT:    WIDEN store vp<[[VEC_PTR2]]>, ir<%st.value>

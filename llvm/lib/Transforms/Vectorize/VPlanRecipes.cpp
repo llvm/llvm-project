@@ -3304,14 +3304,23 @@ static bool isUsedByLoadStoreAddress(const VPUser *V) {
     if (!Cur || !Seen.insert(Cur).second)
       continue;
 
-    auto *Blend = dyn_cast<VPBlendRecipe>(Cur);
+    bool Blend = isa_and_nonnull<PHINode>(Cur->getUnderlyingValue()) &&
+                 match(Cur, m_VPInstruction<Instruction::Select>());
+    // Check if any V* in m_Select(C1, V1, m_Select(C2, V2, ...)) was visited.
+    auto VisitedIncomingValue = [&Seen](const VPSingleDefRecipe *Blend) {
+      const VPValue *V = Blend;
+      SmallVector<const VPValue *> IncomingVals;
+      while (V->getUnderlyingValue() == Blend->getUnderlyingValue()) {
+        const VPRecipeBase *Select = V->getDefiningRecipe();
+        if (Seen.contains(Select->getOperand(1)->getDefiningRecipe()))
+          return true;
+        V = Select->getOperand(2);
+      }
+      return Seen.contains(V->getDefiningRecipe());
+    };
     // Skip blends that use V only through a compare by checking if any incoming
     // value was already visited.
-    if (Blend && none_of(seq<unsigned>(0, Blend->getNumIncomingValues()),
-                         [&](unsigned I) {
-                           return Seen.contains(
-                               Blend->getIncomingValue(I)->getDefiningRecipe());
-                         }))
+    if (Blend && !VisitedIncomingValue(Cur))
       continue;
 
     for (VPUser *U : Cur->users()) {
