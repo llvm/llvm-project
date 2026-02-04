@@ -629,6 +629,20 @@ void amdgpu::Linker::ConstructJob(Compilation &C, const JobAction &JA,
                                  Args.getLastArgValue(options::OPT_mcpu_EQ))));
   }
   addLinkerCompressDebugSectionsOption(getToolChain(), Args, CmdArgs);
+
+  // ASan instrumented OpenMP+Offload libraries are installed in default ROCm
+  // LLVM ASan custom path.
+  // Below code prepends the LLVM ASan custom path to pick ASan instrumented
+  // libompdevice.a.
+  const SanitizerArgs &SanArgs = getToolChain().getSanitizerArgs(Args);
+  if (SanArgs.needsAsanRt()) {
+    const AMDGPUToolChain &AMDGPU =
+        static_cast<const AMDGPUToolChain &>(getToolChain());
+    StringRef ASanPath = Args.MakeArgString(
+        AMDGPU.getRocmInstallationPath().str() + "/lib/llvm/lib/asan");
+    CmdArgs.push_back(Args.MakeArgString("-L" + ASanPath.str()));
+  }
+
   getToolChain().AddFilePathLibArgs(Args, CmdArgs);
   Args.AddAllArgs(CmdArgs, options::OPT_L);
   AddLinkerInputs(getToolChain(), Inputs, Args, CmdArgs, JA);
@@ -1041,17 +1055,18 @@ RocmInstallationDetector::getCommonBitcodeLibs(
     BCLib.ShouldInternalize = Internalize;
     BCLibs.emplace_back(BCLib);
   };
-  auto AddSanBCLibs = [&]() {
-    if (Pref.GPUSan)
-      AddBCLib(getAsanRTLPath(), false);
-  };
 
-  AddSanBCLibs();
+  // For OpenMP, openmp-devicertl(libompdevice.a) already contains ASan GPU
+  // runtime and Ockl functions (via POST_BUILD). Don't add it again at driver
+  // level to avoid duplicates as most of the symbols have USED attribute and
+  // duplicates entries in llvm.compiler.used & llvm.used makes their
+  // duplicate definitions persist even with internalization enabled
+  if (Pref.GPUSan && !Pref.IsOpenMP)
+    // Add Gpu Sanitizer RTL bitcode lib required for AMDGPU Sanitizer
+    AddBCLib(getAsanRTLPath());
   AddBCLib(getOCMLPath());
   if (!Pref.IsOpenMP)
     AddBCLib(getOCKLPath());
-  else if (Pref.GPUSan && Pref.IsOpenMP)
-    AddBCLib(getOCKLPath(), false);
   AddBCLib(getUnsafeMathPath(Pref.UnsafeMathOpt || Pref.FastRelaxedMath));
   AddBCLib(getFiniteOnlyPath(Pref.FiniteOnly || Pref.FastRelaxedMath));
   AddBCLib(getCorrectlyRoundedSqrtPath(Pref.CorrectSqrt));

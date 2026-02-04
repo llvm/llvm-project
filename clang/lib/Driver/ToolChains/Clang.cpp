@@ -9227,6 +9227,7 @@ void LinkerWrapper::ConstructJob(Compilation &C, const JobAction &JA,
   // compilation job.
   const llvm::DenseSet<unsigned> CompilerOptions{
       OPT_v,
+      OPT_fsanitize_EQ,
       OPT_cuda_path_EQ,
       OPT_rocm_path_EQ,
       OPT_hip_path_EQ,
