@@ -10,10 +10,12 @@
 #define LLVM_ANALYSIS_TARGETLIBRARYINFO_H
 
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/StringTable.h"
 #include "llvm/IR/Constants.h"
 #include "llvm/IR/InstrTypes.h"
 #include "llvm/IR/Module.h"
 #include "llvm/IR/PassManager.h"
+#include "llvm/IR/SystemLibraries.h"
 #include "llvm/Pass.h"
 #include "llvm/Support/Compiler.h"
 #include "llvm/TargetParser/Triple.h"
@@ -69,13 +71,8 @@ public:
   LLVM_ABI std::string getVectorFunctionABIVariantString() const;
 };
 
-  enum LibFunc : unsigned {
-#define TLI_DEFINE_ENUM
-#include "llvm/Analysis/TargetLibraryInfo.def"
-
-    NumLibFuncs,
-    NotLibFunc
-  };
+#define GET_TARGET_LIBRARY_INFO_ENUM
+#include "llvm/Analysis/TargetLibraryInfo.inc"
 
 /// Implementation of the target library information.
 ///
@@ -88,7 +85,8 @@ class TargetLibraryInfoImpl {
 
   unsigned char AvailableArray[(NumLibFuncs+3)/4];
   DenseMap<unsigned, std::string> CustomNames;
-  LLVM_ABI static StringLiteral const StandardNames[NumLibFuncs];
+#define GET_TARGET_LIBRARY_INFO_IMPL_DECL
+#include "llvm/Analysis/TargetLibraryInfo.inc"
   bool ShouldExtI32Param, ShouldExtI32Return, ShouldSignExtI32Param, ShouldSignExtI32Return;
   unsigned SizeOfInt;
 
@@ -117,27 +115,9 @@ class TargetLibraryInfoImpl {
                                        const Module &M) const;
 
 public:
-  /// List of known vector-functions libraries.
-  ///
-  /// The vector-functions library defines, which functions are vectorizable
-  /// and with which factor. The library can be specified by either frontend,
-  /// or a commandline option, and then used by
-  /// addVectorizableFunctionsFromVecLib for filling up the tables of
-  /// vectorizable functions.
-  enum VectorLibrary {
-    NoLibrary,        // Don't use any vector library.
-    Accelerate,       // Use Accelerate framework.
-    DarwinLibSystemM, // Use Darwin's libsystem_m.
-    LIBMVEC,          // GLIBC Vector Math library.
-    MASSV,            // IBM MASS vector library.
-    SVML,             // Intel short vector math library.
-    SLEEFGNUABI, // SLEEF - SIMD Library for Evaluating Elementary Functions.
-    ArmPL,       // Arm Performance Libraries.
-    AMDLIBM      // AMD Math Vector library.
-  };
-
   TargetLibraryInfoImpl() = delete;
-  LLVM_ABI explicit TargetLibraryInfoImpl(const Triple &T);
+  LLVM_ABI explicit TargetLibraryInfoImpl(
+      const Triple &T, VectorLibrary VecLib = VectorLibrary::NoLibrary);
 
   // Provide value semantics.
   LLVM_ABI TargetLibraryInfoImpl(const TargetLibraryInfoImpl &TLI);
@@ -177,7 +157,8 @@ public:
   /// Forces a function to be marked as available and provide an alternate name
   /// that must be used.
   void setAvailableWithName(LibFunc F, StringRef Name) {
-    if (StandardNames[F] != Name) {
+    if (StringRef(StandardNamesStrTable.getCString(StandardNamesOffsets[F]),
+                  StandardNamesSizeTable[F]) != Name) {
       setState(F, CustomName);
       CustomNames[F] = std::string(Name);
       assert(CustomNames.contains(F));
@@ -373,12 +354,10 @@ public:
   /// Disables all builtins.
   ///
   /// This can be used for options like -fno-builtin.
-  void disableAllFunctions() LLVM_ATTRIBUTE_UNUSED {
-    OverrideAsUnavailable.set();
-  }
+  [[maybe_unused]] void disableAllFunctions() { OverrideAsUnavailable.set(); }
 
   /// Forces a function to be marked as unavailable.
-  void setUnavailable(LibFunc F) LLVM_ATTRIBUTE_UNUSED {
+  [[maybe_unused]] void setUnavailable(LibFunc F) {
     assert(F < OverrideAsUnavailable.size() && "out-of-bounds LibFunc");
     OverrideAsUnavailable.set(F);
   }
@@ -421,33 +400,25 @@ public:
     case LibFunc_asin:         case LibFunc_asinf:      case LibFunc_asinl:
     case LibFunc_atan2:        case LibFunc_atan2f:     case LibFunc_atan2l:
     case LibFunc_atan:         case LibFunc_atanf:      case LibFunc_atanl:
-    case LibFunc_ceil:         case LibFunc_ceilf:      case LibFunc_ceill:
     case LibFunc_copysign:     case LibFunc_copysignf:  case LibFunc_copysignl:
     case LibFunc_cos:          case LibFunc_cosf:       case LibFunc_cosl:
     case LibFunc_cosh:         case LibFunc_coshf:      case LibFunc_coshl:
     case LibFunc_exp2:         case LibFunc_exp2f:      case LibFunc_exp2l:
     case LibFunc_exp10:        case LibFunc_exp10f:     case LibFunc_exp10l:
-    case LibFunc_fabs:         case LibFunc_fabsf:      case LibFunc_fabsl:
-    case LibFunc_floor:        case LibFunc_floorf:     case LibFunc_floorl:
-    case LibFunc_fmax:         case LibFunc_fmaxf:      case LibFunc_fmaxl:
-    case LibFunc_fmin:         case LibFunc_fminf:      case LibFunc_fminl:
     case LibFunc_ldexp:        case LibFunc_ldexpf:     case LibFunc_ldexpl:
     case LibFunc_log2:         case LibFunc_log2f:      case LibFunc_log2l:
     case LibFunc_memcmp:       case LibFunc_bcmp:       case LibFunc_strcmp:
     case LibFunc_memcpy:       case LibFunc_memset:     case LibFunc_memmove:
-    case LibFunc_nearbyint:    case LibFunc_nearbyintf: case LibFunc_nearbyintl:
-    case LibFunc_rint:         case LibFunc_rintf:      case LibFunc_rintl:
-    case LibFunc_round:        case LibFunc_roundf:     case LibFunc_roundl:
     case LibFunc_sin:          case LibFunc_sinf:       case LibFunc_sinl:
     case LibFunc_sinh:         case LibFunc_sinhf:      case LibFunc_sinhl:
     case LibFunc_sqrt:         case LibFunc_sqrtf:      case LibFunc_sqrtl:
     case LibFunc_sqrt_finite:  case LibFunc_sqrtf_finite:
                                                    case LibFunc_sqrtl_finite:
     case LibFunc_strcpy:       case LibFunc_stpcpy:     case LibFunc_strlen:
-    case LibFunc_strnlen:      case LibFunc_memchr:     case LibFunc_mempcpy:
-    case LibFunc_tan:          case LibFunc_tanf:       case LibFunc_tanl:
-    case LibFunc_tanh:         case LibFunc_tanhf:      case LibFunc_tanhl:
-    case LibFunc_trunc:        case LibFunc_truncf:     case LibFunc_truncl:
+    case LibFunc_strnlen:      case LibFunc_strstr:     case LibFunc_memchr:
+    case LibFunc_mempcpy:      case LibFunc_tan:        case LibFunc_tanf:
+    case LibFunc_tanl:         case LibFunc_tanh:       case LibFunc_tanhf:
+    case LibFunc_tanhl:
       // clang-format on
       return true;
     }
@@ -457,7 +428,9 @@ public:
   /// Return the canonical name for a LibFunc. This should not be used for
   /// semantic purposes, use getName instead.
   static StringRef getStandardName(LibFunc F) {
-    return TargetLibraryInfoImpl::StandardNames[F];
+    return StringRef(TargetLibraryInfoImpl::StandardNamesStrTable.getCString(
+                         TargetLibraryInfoImpl::StandardNamesOffsets[F]),
+                     TargetLibraryInfoImpl::StandardNamesSizeTable[F]);
   }
 
   StringRef getName(LibFunc F) const {
@@ -465,7 +438,9 @@ public:
     if (State == TargetLibraryInfoImpl::Unavailable)
       return StringRef();
     if (State == TargetLibraryInfoImpl::StandardName)
-      return Impl->StandardNames[F];
+      return StringRef(
+          Impl->StandardNamesStrTable.getCString(Impl->StandardNamesOffsets[F]),
+          Impl->StandardNamesSizeTable[F]);
     assert(State == TargetLibraryInfoImpl::CustomName);
     return Impl->CustomNames.find(F)->second;
   }

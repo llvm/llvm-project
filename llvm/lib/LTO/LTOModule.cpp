@@ -401,7 +401,7 @@ void LTOModule::addDefinedFunctionSymbol(ModuleSymbolTable::Symbol Sym) {
   }
 
   auto *GV = cast<GlobalValue *>(Sym);
-  assert((isa<Function>(GV) ||
+  assert((isa<Function>(GV) || isa<GlobalIFunc>(GV) ||
           (isa<GlobalAlias>(GV) &&
            isa<Function>(cast<GlobalAlias>(GV)->getAliasee()))) &&
          "Not function or function alias");
@@ -611,6 +611,11 @@ void LTOModule::parseSymbols() {
       continue;
     }
 
+    if (getTargetTriple().isOSBinFormatXCOFF() && isa<GlobalIFunc>(GV)) {
+      addDefinedFunctionSymbol(Sym);
+      continue;
+    }
+
     assert(isa<GlobalAlias>(GV));
 
     if (isa<Function>(cast<GlobalAlias>(GV)->getAliasee()))
@@ -620,13 +625,11 @@ void LTOModule::parseSymbols() {
   }
 
   // make symbols for all undefines
-  for (StringMap<NameAndAttributes>::iterator u =_undefines.begin(),
-         e = _undefines.end(); u != e; ++u) {
+  for (const auto &[Key, Value] : _undefines) {
     // If this symbol also has a definition, then don't make an undefine because
     // it is a tentative definition.
-    if (_defines.count(u->getKey())) continue;
-    NameAndAttributes info = u->getValue();
-    _symbols.push_back(info);
+    if (!_defines.contains(Key))
+      _symbols.push_back(Value);
   }
 }
 

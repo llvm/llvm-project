@@ -312,6 +312,53 @@ bool X86InstructionSelector::selectCopy(MachineInstr &I,
       }
     }
 
+    // Special case GPR16 -> XMM
+    if (SrcSize == 16 && SrcRegBank.getID() == X86::GPRRegBankID &&
+        (DstRegBank.getID() == X86::VECRRegBankID)) {
+
+      const DebugLoc &DL = I.getDebugLoc();
+
+      // Any extend GPR16 -> GPR32
+      Register ExtReg = MRI.createVirtualRegister(&X86::GR32RegClass);
+      BuildMI(*I.getParent(), I, DL, TII.get(TargetOpcode::SUBREG_TO_REG),
+              ExtReg)
+          .addImm(0)
+          .addReg(SrcReg)
+          .addImm(X86::sub_16bit);
+
+      // Copy GR32 -> XMM
+      BuildMI(*I.getParent(), I, DL, TII.get(TargetOpcode::COPY), DstReg)
+          .addReg(ExtReg);
+
+      I.eraseFromParent();
+    }
+
+    // Special case XMM -> GR16
+    if (DstSize == 16 && DstRegBank.getID() == X86::GPRRegBankID &&
+        (SrcRegBank.getID() == X86::VECRRegBankID)) {
+
+      const DebugLoc &DL = I.getDebugLoc();
+
+      // Move XMM to GR32 register.
+      Register Temp32 = MRI.createVirtualRegister(&X86::GR32RegClass);
+      BuildMI(*I.getParent(), I, DL, TII.get(TargetOpcode::COPY), Temp32)
+          .addReg(SrcReg);
+
+      // Extract the lower 16 bits
+      if (Register Dst32 = TRI.getMatchingSuperReg(DstReg, X86::sub_16bit,
+                                                   &X86::GR32RegClass)) {
+        // Optimization for Physical Dst (e.g. AX): Copy to EAX directly.
+        BuildMI(*I.getParent(), I, DL, TII.get(TargetOpcode::COPY), Dst32)
+            .addReg(Temp32);
+      } else {
+        // Handle if there is no super.
+        BuildMI(*I.getParent(), I, DL, TII.get(TargetOpcode::COPY), DstReg)
+            .addReg(Temp32, {}, X86::sub_16bit);
+      }
+
+      I.eraseFromParent();
+    }
+
     return true;
   }
 
@@ -1352,7 +1399,7 @@ bool X86InstructionSelector::emitExtractSubreg(Register DstReg, Register SrcReg,
   }
 
   BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(X86::COPY), DstReg)
-      .addReg(SrcReg, 0, SubIdx);
+      .addReg(SrcReg, {}, SubIdx);
 
   return true;
 }
@@ -1815,7 +1862,7 @@ bool X86InstructionSelector::selectMulDivRem(MachineInstr &I,
       if (RegTy.getSizeInBits() == 16) {
         BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Copy),
                 TypeEntry.HighInReg)
-            .addReg(Zero32, 0, X86::sub_16bit);
+            .addReg(Zero32, {}, X86::sub_16bit);
       } else if (RegTy.getSizeInBits() == 32) {
         BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(Copy),
                 TypeEntry.HighInReg)
@@ -1857,7 +1904,7 @@ bool X86InstructionSelector::selectMulDivRem(MachineInstr &I,
     // Now reference the 8-bit subreg of the result.
     BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
             DstReg)
-        .addReg(ResultSuperReg, 0, X86::sub_8bit);
+        .addReg(ResultSuperReg, {}, X86::sub_8bit);
   } else {
     BuildMI(*I.getParent(), I, I.getDebugLoc(), TII.get(TargetOpcode::COPY),
             DstReg)
@@ -1879,28 +1926,34 @@ bool X86InstructionSelector::selectSelect(MachineInstr &I,
 
   unsigned OpCmp;
   LLT Ty = MRI.getType(DstReg);
-  switch (Ty.getSizeInBits()) {
-  default:
-    return false;
-  case 8:
-    OpCmp = X86::CMOV_GR8;
-    break;
-  case 16:
-    OpCmp = STI.canUseCMOV() ? X86::CMOV16rr : X86::CMOV_GR16;
-    break;
-  case 32:
-    OpCmp = STI.canUseCMOV() ? X86::CMOV32rr : X86::CMOV_GR32;
-    break;
-  case 64:
-    assert(STI.is64Bit() && STI.canUseCMOV());
-    OpCmp = X86::CMOV64rr;
-    break;
+  if (Ty.getSizeInBits() == 80) {
+    BuildMI(*Sel.getParent(), Sel, Sel.getDebugLoc(), TII.get(X86::CMOVE_Fp80),
+            DstReg)
+        .addReg(Sel.getTrueReg())
+        .addReg(Sel.getFalseReg());
+  } else {
+    switch (Ty.getSizeInBits()) {
+    default:
+      return false;
+    case 8:
+      OpCmp = X86::CMOV_GR8;
+      break;
+    case 16:
+      OpCmp = STI.canUseCMOV() ? X86::CMOV16rr : X86::CMOV_GR16;
+      break;
+    case 32:
+      OpCmp = STI.canUseCMOV() ? X86::CMOV32rr : X86::CMOV_GR32;
+      break;
+    case 64:
+      assert(STI.is64Bit() && STI.canUseCMOV());
+      OpCmp = X86::CMOV64rr;
+      break;
+    }
+    BuildMI(*Sel.getParent(), Sel, Sel.getDebugLoc(), TII.get(OpCmp), DstReg)
+        .addReg(Sel.getTrueReg())
+        .addReg(Sel.getFalseReg())
+        .addImm(X86::COND_E);
   }
-  BuildMI(*Sel.getParent(), Sel, Sel.getDebugLoc(), TII.get(OpCmp), DstReg)
-      .addReg(Sel.getTrueReg())
-      .addReg(Sel.getFalseReg())
-      .addImm(X86::COND_E);
-
   const TargetRegisterClass *DstRC = getRegClass(Ty, DstReg, MRI);
   if (!RBI.constrainGenericRegister(DstReg, *DstRC, MRI)) {
     LLVM_DEBUG(dbgs() << "Failed to constrain CMOV\n");

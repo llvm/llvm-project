@@ -1,5 +1,5 @@
 {
-    "entities": {
+    "Opcodes": {
         "ADD": [],
         "SUB": [],
         "MUL": [],
@@ -8,5 +8,14 @@
         "JMP": [],
         "CALL": [],
         "RET": []
+    },
+    "CommonOperands": {
+        "Immediate": []
+    },
+    "PhysicalRegisters": {
+        "GR32": []
+    },
+    "VirtualRegisters": {
+        "GR32": []
     }
 }

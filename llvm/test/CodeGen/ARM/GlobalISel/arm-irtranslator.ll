@@ -441,8 +441,7 @@ entry:
 define i32 @test_shufflevector_s32_v2s32(i32 %arg) {
 ; CHECK-LABEL: name: test_shufflevector_s32_v2s32
 ; CHECK: [[ARG:%[0-9]+]]:_(s32) = COPY $r0
-; CHECK-DAG: [[UNDEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-; CHECK: [[VEC:%[0-9]+]]:_(<2 x s32>) = G_SHUFFLE_VECTOR [[ARG]](s32), [[UNDEF]], shufflemask(0, 0)
+; CHECK: [[VEC:%[0-9]+]]:_(<2 x s32>) = G_BUILD_VECTOR [[ARG]](s32), [[ARG]](s32)
 ; CHECK: G_EXTRACT_VECTOR_ELT [[VEC]](<2 x s32>)
   %vec = insertelement <1 x i32> undef, i32 %arg, i32 0
   %shuffle = shufflevector <1 x i32> %vec, <1 x i32> undef, <2 x i32> zeroinitializer
@@ -453,8 +452,7 @@ define i32 @test_shufflevector_s32_v2s32(i32 %arg) {
 define i32 @test_shufflevector_s32_s32_s32(i32 %arg) {
 ; CHECK-LABEL: name: test_shufflevector_s32_s32_s32
 ; CHECK: [[ARG:%[0-9]+]]:_(s32) = COPY $r0
-; CHECK-DAG: [[UNDEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
-; CHECK: [[VEC:%[0-9]+]]:_(s32) = G_SHUFFLE_VECTOR [[ARG]](s32), [[UNDEF]], shufflemask(0)
+; CHECK: r0 = COPY [[ARG]](s32)
   %vec = insertelement <1 x i32> undef, i32 %arg, i32 0
   %shuffle = shufflevector <1 x i32> %vec, <1 x i32> undef, <1 x i32> zeroinitializer
   %res = extractelement <1 x i32> %shuffle, i32 0

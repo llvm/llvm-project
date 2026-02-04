@@ -3325,7 +3325,7 @@ struct LLVM_ABI AbstractAttribute : public IRPosition, public AADepGraphNode {
   AbstractAttribute(const IRPosition &IRP) : IRPosition(IRP) {}
 
   /// Virtual destructor.
-  virtual ~AbstractAttribute() = default;
+  ~AbstractAttribute() override = default;
 
   /// Compile time access to the IR attribute kind.
   static constexpr Attribute::AttrKind IRAttributeKind = Attribute::None;
@@ -5339,6 +5339,19 @@ struct AAPotentialConstantValues
     return nullptr;
   }
 
+  /// Return the minimum trailing zeros of potential constants
+  unsigned getAssumedMinTrailingZeros() const {
+    if (!isValidState() || getAssumedSet().empty())
+      return 0;
+    unsigned TrailingZeros = getAssumedSet().begin()->getBitWidth() + 1;
+    for (const APInt &It : getAssumedSet()) {
+      if (It.countTrailingZeros() < TrailingZeros)
+        TrailingZeros = It.countTrailingZeros();
+    }
+    if (TrailingZeros > getAssumedSet().begin()->getBitWidth())
+      return 0;
+    return TrailingZeros;
+  }
   /// See AbstractAttribute::getName()
   StringRef getName() const override { return "AAPotentialConstantValues"; }
 
@@ -5588,7 +5601,7 @@ struct AACallEdges : public StateWrapper<BooleanState, AbstractAttribute>,
 // Synthetic root node for the Attributor's internal call graph.
 struct AttributorCallGraph : public AACallGraphNode {
   AttributorCallGraph(Attributor &A) : AACallGraphNode(A) {}
-  virtual ~AttributorCallGraph() = default;
+  ~AttributorCallGraph() override = default;
 
   AACallEdgeIterator optimisticEdgesBegin() const override {
     return AACallEdgeIterator(A, A.Functions.begin());
@@ -6612,7 +6625,11 @@ enum AttributorRunOption {
   NONE = 0,
   MODULE = 1 << 0,
   CGSCC = 1 << 1,
-  ALL = MODULE | CGSCC
+  MODULE_LIGHT = 1 << 2,
+  CGSCC_LIGHT = 1 << 3,
+
+  FULL = MODULE | CGSCC,
+  LIGHT = MODULE_LIGHT | CGSCC_LIGHT
 };
 
 namespace AA {

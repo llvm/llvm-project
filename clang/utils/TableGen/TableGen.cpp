@@ -43,6 +43,7 @@ enum ActionType {
   GenClangAttrParsedAttrList,
   GenClangAttrParsedAttrImpl,
   GenClangAttrParsedAttrKinds,
+  GenClangAttrIsTypeDependent,
   GenClangAttrTextNodeDump,
   GenClangAttrNodeTraverse,
   GenClangBasicReader,
@@ -179,6 +180,9 @@ cl::opt<ActionType> Action(
         clEnumValN(GenClangAttrParsedAttrKinds,
                    "gen-clang-attr-parsed-attr-kinds",
                    "Generate a clang parsed attribute kinds"),
+        clEnumValN(GenClangAttrIsTypeDependent,
+                   "gen-clang-attr-is-type-dependent",
+                   "Generate clang is type dependent attribute code"),
         clEnumValN(GenClangAttrTextNodeDump, "gen-clang-attr-text-node-dump",
                    "Generate clang attribute text node dumper"),
         clEnumValN(GenClangAttrNodeTraverse, "gen-clang-attr-node-traverse",
@@ -422,6 +426,9 @@ bool ClangTableGenMain(raw_ostream &OS, const RecordKeeper &Records) {
     break;
   case GenClangAttrParsedAttrKinds:
     EmitClangAttrParsedAttrKinds(Records, OS);
+    break;
+  case GenClangAttrIsTypeDependent:
+    EmitClangAttrIsTypeDependent(Records, OS);
     break;
   case GenClangAttrTextNodeDump:
     EmitClangAttrTextNodeDump(Records, OS);

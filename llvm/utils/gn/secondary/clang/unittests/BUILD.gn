@@ -9,6 +9,7 @@ group("unittests") {
     "Basic:BasicTests",
     "CodeGen:ClangCodeGenTests",
     "CrossTU:CrossTUTests",
+    "DependencyScanning:ClangDependencyScanningTests",
     "Driver:ClangDriverTests",
     "Format:FormatTests",
     "Frontend:FrontendTests",
@@ -28,6 +29,7 @@ group("unittests") {
     deps += [
       "Analysis:ClangAnalysisTests",
       "Analysis/FlowSensitive:ClangAnalysisFlowSensitiveTests",
+      "Analysis/Scalable:ClangScalableAnalysisTests",
       "StaticAnalyzer:StaticAnalysisTests",
     ]
   }

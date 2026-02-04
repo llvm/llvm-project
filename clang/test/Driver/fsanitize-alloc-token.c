@@ -5,6 +5,7 @@
 // CHECK-NO-TOKEN-ALLOC-NOT: "-fsanitize=alloc-token"
 
 // RUN: %clang --target=x86_64-linux-gnu -flto -fvisibility=hidden -fno-sanitize-ignorelist -fsanitize=alloc-token,undefined,cfi %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-COMPATIBLE
+// RUN: %clang --target=aarch64-linux-android -march=armv8-a+memtag -flto -fvisibility=hidden -fsanitize=alloc-token,kcfi,memtag %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-COMPATIBLE
 // CHECK-COMPATIBLE: "-fsanitize={{.*}}alloc-token"
 
 // RUN: %clang --target=x86_64-linux-gnu -fsanitize=alloc-token -fsanitize-minimal-runtime %s -### 2>&1 | FileCheck %s --check-prefix=CHECK-MINIMAL
@@ -41,3 +42,14 @@
 // CHECK-MAX: "-falloc-token-max=42"
 // RUN: not %clang --target=x86_64-linux-gnu -fsanitize=alloc-token -falloc-token-max=-1 %s 2>&1 | FileCheck -check-prefix=CHECK-INVALID-MAX %s
 // CHECK-INVALID-MAX: error: invalid value
+
+// RUN: %clang --target=x86_64-linux-gnu -Xclang -falloc-token-mode=increment %s -### 2>&1 | FileCheck -check-prefix=CHECK-MODE-INCREMENT %s
+// CHECK-MODE-INCREMENT: "-falloc-token-mode=increment"
+// RUN: %clang --target=x86_64-linux-gnu -Xclang -falloc-token-mode=random %s -### 2>&1 | FileCheck -check-prefix=CHECK-MODE-RANDOM %s
+// CHECK-MODE-RANDOM: "-falloc-token-mode=random"
+// RUN: %clang --target=x86_64-linux-gnu -Xclang -falloc-token-mode=typehash %s -### 2>&1 | FileCheck -check-prefix=CHECK-MODE-TYPEHASH %s
+// CHECK-MODE-TYPEHASH: "-falloc-token-mode=typehash"
+// RUN: %clang --target=x86_64-linux-gnu -Xclang -falloc-token-mode=typehashpointersplit %s -### 2>&1 | FileCheck -check-prefix=CHECK-MODE-TYPEHASHPTRSPLIT %s
+// CHECK-MODE-TYPEHASHPTRSPLIT: "-falloc-token-mode=typehashpointersplit"
+// RUN: not %clang --target=x86_64-linux-gnu -Xclang -falloc-token-mode=asdf %s 2>&1 | FileCheck -check-prefix=CHECK-INVALID-MODE %s
+// CHECK-INVALID-MODE: error: invalid value 'asdf'

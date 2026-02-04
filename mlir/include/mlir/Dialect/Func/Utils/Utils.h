@@ -60,6 +60,29 @@ mlir::FailureOr<std::pair<mlir::func::FuncOp, mlir::func::CallOp>>
 deduplicateArgsOfFuncOp(mlir::RewriterBase &rewriter, mlir::func::FuncOp funcOp,
                         mlir::ModuleOp moduleOp);
 
+/// Look up a FuncOp with signature `resultTypes`(`paramTypes`)` and name
+/// `name`. Return a failure if the FuncOp is found but with a different
+/// signature.
+FailureOr<FuncOp> lookupFnDecl(SymbolOpInterface symTable, StringRef name,
+                               FunctionType funcT,
+                               SymbolTableCollection *symbolTables = nullptr);
+
+/// Create a FuncOp decl and insert it into `symTable` operation. If
+/// `symbolTables` is provided, then the decl will be inserted into the
+/// SymbolTableCollection.
+FuncOp createFnDecl(OpBuilder &b, SymbolOpInterface symTable, StringRef name,
+                    FunctionType funcT, bool setPrivate,
+                    SymbolTableCollection *symbolTables = nullptr);
+
+/// Helper function to look up or create the symbol for a runtime library
+/// function with the given parameter types. Returns an int64_t, unless a
+/// different result type is specified.
+FailureOr<FuncOp>
+lookupOrCreateFnDecl(OpBuilder &b, SymbolOpInterface symTable, StringRef name,
+                     TypeRange paramTypes,
+                     SymbolTableCollection *symbolTables = nullptr,
+                     Type resultType = {});
+
 } // namespace func
 } // namespace mlir
 

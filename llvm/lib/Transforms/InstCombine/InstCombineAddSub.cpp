@@ -863,6 +863,9 @@ Instruction *InstCombinerImpl::foldAddWithConstant(BinaryOperator &Add) {
   if (Instruction *NV = foldBinOpIntoSelectOrPhi(Add))
     return NV;
 
+  if (Instruction *FoldedLogic = foldBinOpSelectBinOp(Add))
+    return FoldedLogic;
+
   Value *X;
   Constant *Op00C;
 
@@ -2760,21 +2763,34 @@ Instruction *InstCombinerImpl::visitSub(BinaryOperator &I) {
   // Optimize pointer differences into the same array into a size.  Consider:
   //  &A[10] - &A[0]: we should compile this to "10".
   Value *LHSOp, *RHSOp;
-  if (match(Op0, m_PtrToInt(m_Value(LHSOp))) &&
-      match(Op1, m_PtrToInt(m_Value(RHSOp))))
+  if (match(Op0, m_PtrToIntOrAddr(m_Value(LHSOp))) &&
+      match(Op1, m_PtrToIntOrAddr(m_Value(RHSOp))))
     if (Value *Res = OptimizePointerDifference(LHSOp, RHSOp, I.getType(),
                                                I.hasNoUnsignedWrap()))
       return replaceInstUsesWith(I, Res);
 
   // trunc(p)-trunc(q) -> trunc(p-q)
-  if (match(Op0, m_Trunc(m_PtrToInt(m_Value(LHSOp)))) &&
-      match(Op1, m_Trunc(m_PtrToInt(m_Value(RHSOp)))))
+  if (match(Op0, m_Trunc(m_PtrToIntOrAddr(m_Value(LHSOp)))) &&
+      match(Op1, m_Trunc(m_PtrToIntOrAddr(m_Value(RHSOp)))))
     if (Value *Res = OptimizePointerDifference(LHSOp, RHSOp, I.getType(),
                                                /* IsNUW */ false))
       return replaceInstUsesWith(I, Res);
 
-  if (match(Op0, m_ZExt(m_PtrToIntSameSize(DL, m_Value(LHSOp)))) &&
-      match(Op1, m_ZExtOrSelf(m_PtrToInt(m_Value(RHSOp))))) {
+  auto MatchSubOfZExtOfPtrToIntOrAddr = [&]() {
+    if (match(Op0, m_ZExt(m_PtrToIntSameSize(DL, m_Value(LHSOp)))) &&
+        match(Op1, m_ZExt(m_PtrToIntSameSize(DL, m_Value(RHSOp)))))
+      return true;
+    if (match(Op0, m_ZExt(m_PtrToAddr(m_Value(LHSOp)))) &&
+        match(Op1, m_ZExt(m_PtrToAddr(m_Value(RHSOp)))))
+      return true;
+    // Special case for non-canonical ptrtoint in constant expression,
+    // where the zext has been folded into the ptrtoint.
+    if (match(Op0, m_ZExt(m_PtrToIntSameSize(DL, m_Value(LHSOp)))) &&
+        match(Op1, m_PtrToInt(m_Value(RHSOp))))
+      return true;
+    return false;
+  };
+  if (MatchSubOfZExtOfPtrToIntOrAddr()) {
     if (auto *GEP = dyn_cast<GEPOperator>(LHSOp)) {
       if (GEP->getPointerOperand() == RHSOp) {
         if (GEP->hasNoUnsignedWrap() || GEP->hasNoUnsignedSignedWrap()) {
@@ -2971,9 +2987,13 @@ static Instruction *foldFNegIntoConstant(Instruction &I, const DataLayout &DL) {
       return BinaryOperator::CreateFMulFMF(X, NegC, FMF);
     }
   // -(X / C) --> X / (-C)
-  if (match(FNegOp, m_FDiv(m_Value(X), m_Constant(C))))
-    if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL))
-      return BinaryOperator::CreateFDivFMF(X, NegC, &I);
+  if (match(FNegOp, m_FDiv(m_Value(X), m_Constant(C)))) {
+    if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL)) {
+      Instruction *FDiv = BinaryOperator::CreateFDivFMF(X, NegC, &I);
+      FDiv->copyMetadata(*FNegOp);
+      return FDiv;
+    }
+  }
   // -(C / X) --> (-C) / X
   if (match(FNegOp, m_FDiv(m_Constant(C), m_Value(X))))
     if (Constant *NegC = ConstantFoldUnaryOpOperand(Instruction::FNeg, C, DL)) {
@@ -2986,6 +3006,7 @@ static Instruction *foldFNegIntoConstant(Instruction &I, const DataLayout &DL) {
       FastMathFlags OpFMF = FNegOp->getFastMathFlags();
       FDiv->setHasNoSignedZeros(FMF.noSignedZeros() && OpFMF.noSignedZeros());
       FDiv->setHasNoInfs(FMF.noInfs() && OpFMF.noInfs());
+      FDiv->copyMetadata(*FNegOp);
       return FDiv;
     }
   // With NSZ [ counter-example with -0.0: -(-0.0 + 0.0) != 0.0 + -0.0 ]:
@@ -3008,8 +3029,10 @@ Instruction *InstCombinerImpl::hoistFNegAboveFMulFDiv(Value *FNegOp,
   }
 
   if (match(FNegOp, m_FDiv(m_Value(X), m_Value(Y)))) {
-    return cast<Instruction>(Builder.CreateFDivFMF(
+    auto *FDiv = cast<Instruction>(Builder.CreateFDivFMF(
         Builder.CreateFNegFMF(X, &FMFSource), Y, &FMFSource));
+    FDiv->copyMetadata(*cast<Instruction>(FNegOp));
+    return FDiv;
   }
 
   if (IntrinsicInst *II = dyn_cast<IntrinsicInst>(FNegOp)) {

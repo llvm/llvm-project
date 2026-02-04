@@ -287,11 +287,11 @@ using llvm::MCPhysReg;
 
 namespace llvm {
 namespace PPC {
-static inline bool isVFRegister(unsigned Reg) {
+static inline bool isVFRegister(MCRegister Reg) {
   return Reg >= PPC::VF0 && Reg <= PPC::VF31;
 }
 
-static inline bool isVRRegister(unsigned Reg) {
+static inline bool isVRRegister(MCRegister Reg) {
   return Reg >= PPC::V0 && Reg <= PPC::V31;
 }
 

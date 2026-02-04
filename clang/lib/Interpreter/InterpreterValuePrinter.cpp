@@ -66,10 +66,10 @@ static std::string QualTypeToString(ASTContext &Ctx, QualType QT) {
   const QualType NonRefTy = QT.getNonReferenceType();
 
   if (const auto *TTy = llvm::dyn_cast<TagType>(NonRefTy))
-    return DeclTypeToString(NonRefTy, TTy->getOriginalDecl());
+    return DeclTypeToString(NonRefTy, TTy->getDecl());
 
   if (const auto *TRy = dyn_cast<RecordType>(NonRefTy))
-    return DeclTypeToString(NonRefTy, TRy->getOriginalDecl());
+    return DeclTypeToString(NonRefTy, TRy->getDecl());
 
   const QualType Canon = NonRefTy.getCanonicalType();
 
@@ -411,7 +411,8 @@ public:
   }
 
   InterfaceKind VisitReferenceType(const ReferenceType *Ty) {
-    ExprResult AddrOfE = S.CreateBuiltinUnaryOp(SourceLocation(), UO_AddrOf, E);
+    ExprResult AddrOfE = S.CreateBuiltinUnaryOp(SourceLocation(), UO_AddrOf,
+                                                E->IgnoreImpCasts());
     assert(!AddrOfE.isInvalid() && "Can not create unary expression");
     Args.push_back(AddrOfE.get());
     return InterfaceKind::NoAlloc;
@@ -537,7 +538,7 @@ llvm::Expected<Expr *> Interpreter::convertExprToValue(Expr *E) {
   QualType DesugaredTy = Ty.getDesugaredType(Ctx);
 
   // For lvalue struct, we treat it as a reference.
-  if (DesugaredTy->isRecordType() && E->isLValue()) {
+  if (DesugaredTy->isRecordType() && E->IgnoreImpCasts()->isLValue()) {
     DesugaredTy = Ctx.getLValueReferenceType(DesugaredTy);
     Ty = Ctx.getLValueReferenceType(Ty);
   }

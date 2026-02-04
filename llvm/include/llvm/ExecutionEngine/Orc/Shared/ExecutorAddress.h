@@ -14,7 +14,7 @@
 #define LLVM_EXECUTIONENGINE_ORC_SHARED_EXECUTORADDRESS_H
 
 #include "llvm/ADT/DenseMapInfo.h"
-#include "llvm/ADT/identity.h"
+#include "llvm/ADT/STLForwardCompat.h"
 #include "llvm/ExecutionEngine/Orc/Shared/SimplePackedSerialization.h"
 #include "llvm/Support/FormatVariadic.h"
 #include "llvm/Support/raw_ostream.h"
@@ -34,7 +34,7 @@ using ExecutorAddrDiff = uint64_t;
 class ExecutorAddr {
 public:
   /// A wrap/unwrap function that leaves pointers unmodified.
-  template <typename T> using rawPtr = llvm::identity<T *>;
+  using rawPtr = llvm::identity;
 
 #if __has_feature(ptrauth_calls)
   template <typename T> class PtrauthSignDefault {
@@ -63,10 +63,10 @@ public:
 #else
 
   /// Default wrap function to use on this host.
-  template <typename T> using defaultWrap = rawPtr<T>;
+  template <typename T> using defaultWrap = rawPtr;
 
   /// Default unwrap function to use on this host.
-  template <typename T> using defaultUnwrap = rawPtr<T>;
+  template <typename T> using defaultUnwrap = rawPtr;
 
 #endif
 

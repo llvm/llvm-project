@@ -1,5 +1,5 @@
 # RUN: split-file %s %t
-# RUN: %clang_host -g %t/main.cpp -o %t.out
+# RUN: %clangxx_host -g %t/main.cpp -o %t.out
 #
 # RUN: %lldb -x -b -o "settings set interpreter.stop-command-source-on-error false" \
 # RUN:       -s %t/no-target.input 2>&1 | FileCheck %s --check-prefix=CHECK-NO-TARGET

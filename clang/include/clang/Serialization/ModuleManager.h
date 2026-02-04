@@ -18,7 +18,6 @@
 #include "clang/Basic/SourceLocation.h"
 #include "clang/Serialization/ModuleFile.h"
 #include "llvm/ADT/DenseMap.h"
-#include "llvm/ADT/IntrusiveRefCntPtr.h"
 #include "llvm/ADT/STLExtras.h"
 #include "llvm/ADT/SmallPtrSet.h"
 #include "llvm/ADT/SmallVector.h"
@@ -65,7 +64,7 @@ class ModuleManager {
   FileManager &FileMgr;
 
   /// Cache of PCM files.
-  IntrusiveRefCntPtr<ModuleCache> ModCache;
+  ModuleCache &ModCache;
 
   /// Knows how to unwrap module containers.
   const PCHContainerReader &PCHContainerRdr;
@@ -306,7 +305,7 @@ public:
   /// View the graphviz representation of the module graph.
   void viewGraph();
 
-  ModuleCache &getModuleCache() const { return *ModCache; }
+  ModuleCache &getModuleCache() const { return ModCache; }
 };
 
 } // namespace serialization

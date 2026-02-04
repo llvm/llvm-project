@@ -108,7 +108,8 @@ constexpr bool f4() {
 template <typename T>
 concept C = f4<T>(); // expected-note 3 {{in instantiation of}}
                      // expected-note@-1 3 {{while substituting}}
-                     // expected-error@-2 2 {{resulted in a non-constant expression}}
+                     // expected-error@-2 {{resulted in a non-constant expression}}
+                     // expected-note@-3 {{because substituted constraint expression is ill-formed: substitution into constraint expression resulted in a non-constant expression}}
 
 struct D {
   int x;
@@ -130,13 +131,13 @@ constexpr int f5() requires C<T> { return 1; } // expected-note {{while checking
                                                // expected-note@-1 {{candidate template ignored}}
 
 template <typename T>
-constexpr int f5() requires (!C<T>) { return 2; } // expected-note 4 {{while checking the satisfaction}} \
-                                                  // expected-note 4 {{while substituting template arguments}} \
+constexpr int f5() requires (!C<T>) { return 2; } // expected-note 3 {{while checking the satisfaction}} \
+                                                  // expected-note 3 {{while substituting template arguments}} \
                                                   // expected-note {{candidate template ignored}}
 
 static_assert(f5<int>() == 1);
-static_assert(f5<D>() == 1); // expected-note 3 {{while checking constraint satisfaction}}
-                             // expected-note@-1 3 {{while substituting deduced template arguments}}
+static_assert(f5<D>() == 1); // expected-note 2 {{while checking constraint satisfaction}}
+                             // expected-note@-1 2 {{while substituting deduced template arguments}}
                              // expected-error@-2 {{no matching function for call}}
 
 static_assert(f5<double>() == 2);
@@ -170,7 +171,7 @@ foo (int x, int y)
 
 // Do not crash when assumptions are unreachable.
 namespace gh106898 {
-int foo () { 
+int foo () {
     while(1);
     int a = 0, b = 1;
     __attribute__((assume (a < b)));

@@ -149,8 +149,8 @@ define void @interleaved_with_cond_store_1(ptr %p, i64 %x, i64 %n) {
 ; CHECK:       pred.store.continue2:
 ; CHECK-NEXT:    [[WIDE_VEC3:%.*]] = load <4 x i64>, ptr [[TMP1]], align 8
 ; CHECK-NEXT:    [[TMP11:%.*]] = extractelement <4 x i64> [[WIDE_VEC3]], i64 0
-; CHECK-NEXT:    store i64 [[TMP11]], ptr [[TMP2]], align 8
 ; CHECK-NEXT:    [[TMP12:%.*]] = extractelement <4 x i64> [[WIDE_VEC3]], i64 2
+; CHECK-NEXT:    store i64 [[TMP11]], ptr [[TMP2]], align 8
 ; CHECK-NEXT:    store i64 [[TMP12]], ptr [[TMP3]], align 8
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 2
 ; CHECK-NEXT:    [[TMP13:%.*]] = icmp eq i64 [[INDEX_NEXT]], [[N_VEC]]

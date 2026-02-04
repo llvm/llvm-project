@@ -67,12 +67,18 @@ std::optional<int64_t> GetIndexValue(ValueObject &valobj) {
 ValueObjectSP GetNthStorage(ValueObject &outer, int64_t index) {
   // We need to find the std::_Variant_storage base class.
 
-  // -> std::_SMF_control (typedef to std::_Variant_base)
-  ValueObjectSP container_sp = outer.GetSP()->GetChildAtIndex(0);
-  if (!container_sp)
+  // Navigate "down" to std::_Variant_base by finding the holder of "_Which".
+  // This might be down a few levels if a variant member isn't trivially
+  // destructible/copyable/etc.
+  ValueObjectSP which_sp = outer.GetChildMemberWithName("_Which");
+  if (!which_sp)
     return nullptr;
-  // -> std::_Variant_storage
-  container_sp = container_sp->GetChildAtIndex(0);
+  ValueObject *parent = which_sp->GetParent();
+  if (!parent)
+    return nullptr;
+
+  // Now go to std::_Variant_storage.
+  ValueObjectSP container_sp = parent->GetChildAtIndex(0);
   if (!container_sp)
     return nullptr;
 
@@ -119,8 +125,16 @@ bool formatters::MsvcStlVariantSummaryProvider(
     storage_type = storage_type.GetTypedefedType();
 
   CompilerType active_type = storage_type.GetTypeTemplateArgument(1, true);
-  if (!active_type)
-    return false;
+  if (!active_type) {
+    // PDB: get the type from the head as we don't have template arguments
+    // there.
+    ValueObjectSP head = GetHead(*storage);
+    if (!head)
+      return false;
+    active_type = head->GetCompilerType();
+    if (!active_type)
+      return false;
+  }
 
   stream << " Active Type = " << active_type.GetDisplayTypeName() << " ";
   return true;

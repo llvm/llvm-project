@@ -378,6 +378,31 @@ bb1:
   EXPECT_TRUE(DT.verify());
 }
 
+TEST(BasicBlockUtils, splitBlockBefore) {
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"IR(
+define i32 @basic_func(i1 %cond) {
+entry:
+  br i1 %cond, label %bb0, label %bb1
+bb0:
+  br label %bb1
+bb1:
+  %phi = phi i32 [ 0, %entry ], [ 1, %bb0 ]
+  ret i32 %phi
+}
+)IR");
+  Function *F = M->getFunction("basic_func");
+  DominatorTree DT(*F);
+  DomTreeUpdater DTU(DT, DomTreeUpdater::UpdateStrategy::Eager);
+  BasicBlock *EntryBB = &F->getEntryBlock();
+  Instruction *TI = EntryBB->getTerminator();
+
+  // Make sure the dominator tree is properly updated if calling this on the
+  // entry block.
+  splitBlockBefore(EntryBB, TI, &DTU, nullptr, nullptr);
+  EXPECT_TRUE(DTU.getDomTree().verify());
+}
+
 TEST(BasicBlockUtils, SplitBlockPredecessors) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C, R"IR(
@@ -484,9 +509,9 @@ exit:
 TEST(BasicBlockUtils, SplitIndirectBrCriticalEdgesIgnorePHIs) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C, R"IR(
-define void @crit_edge(i8* %tgt, i1 %cond0, i1 %cond1) {
+define void @crit_edge(ptr %tgt, i1 %cond0, i1 %cond1) {
 entry:
-  indirectbr i8* %tgt, [label %bb0, label %bb1, label %bb2]
+  indirectbr ptr %tgt, [label %bb0, label %bb1, label %bb2]
 bb0:
   br i1 %cond0, label %bb1, label %bb2
 bb1:
@@ -526,9 +551,9 @@ bb4:
 TEST(BasicBlockUtils, SplitIndirectBrCriticalEdges) {
   LLVMContext C;
   std::unique_ptr<Module> M = parseIR(C, R"IR(
-define void @crit_edge(i8* %tgt, i1 %cond0, i1 %cond1) {
+define void @crit_edge(ptr %tgt, i1 %cond0, i1 %cond1) {
 entry:
-  indirectbr i8* %tgt, [label %bb0, label %bb1, label %bb2]
+  indirectbr ptr %tgt, [label %bb0, label %bb1, label %bb2]
 bb0:
   br i1 %cond0, label %bb1, label %bb2
 bb1:
@@ -715,4 +740,33 @@ attributes #0 = { presplitcoroutine }
   const auto &ExitN = *FindExit(*N);
   EXPECT_FALSE(llvm::isPresplitCoroSuspendExitEdge(
       *ExitN.getSinglePredecessor(), ExitN));
+}
+
+TEST(BasicBlockUtils, BasicBlockPrintable) {
+  std::string S;
+  std::string SCheck;
+  llvm::raw_string_ostream OS{S};
+  llvm::raw_string_ostream OSCheck{SCheck};
+
+  LLVMContext C;
+  std::unique_ptr<Module> M = parseIR(C, R"IR(
+define void @foo() {
+  br label %bb0
+bb0:
+  br label %.exit
+.exit:
+  ret void
+}
+)IR");
+
+  Function *F = M->getFunction("foo");
+  for (const BasicBlock &BB : *F) {
+    OS << printBasicBlock(&BB);
+    BB.printAsOperand(OSCheck);
+    EXPECT_EQ(OS.str(), OSCheck.str());
+    S.clear();
+    SCheck.clear();
+  }
+  OS << printBasicBlock(nullptr);
+  EXPECT_EQ(OS.str(), "<nullptr>");
 }

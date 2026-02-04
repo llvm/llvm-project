@@ -416,8 +416,8 @@ define <4 x double> @test_x86_avx_hadd_pd_256(<4 x double> %a0, <4 x double> %a1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> [[TMP2]], <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> [[TMP2]], <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> [[TMP2]], <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> [[TMP2]], <4 x i32> <i32 1, i32 5, i32 3, i32 7>
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <4 x i64> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[RES1:%.*]] = call <4 x double> @llvm.x86.avx.hadd.pd.256(<4 x double> [[A2:%.*]], <4 x double> [[A3:%.*]])
 ; CHECK-NEXT:    store <4 x i64> [[_MSPROP]], ptr @__msan_retval_tls, align 8
@@ -434,8 +434,8 @@ define <8 x float> @test_x86_avx_hadd_ps_256(<8 x float> %a0, <8 x float> %a1) #
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> [[TMP2]], <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> [[TMP2]], <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> [[TMP2]], <8 x i32> <i32 0, i32 2, i32 8, i32 10, i32 4, i32 6, i32 12, i32 14>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> [[TMP2]], <8 x i32> <i32 1, i32 3, i32 9, i32 11, i32 5, i32 7, i32 13, i32 15>
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <8 x i32> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[RES1:%.*]] = call <8 x float> @llvm.x86.avx.hadd.ps.256(<8 x float> [[A2:%.*]], <8 x float> [[A3:%.*]])
 ; CHECK-NEXT:    store <8 x i32> [[_MSPROP]], ptr @__msan_retval_tls, align 8
@@ -452,8 +452,8 @@ define <4 x double> @test_x86_avx_hsub_pd_256(<4 x double> %a0, <4 x double> %a1
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <4 x i64>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <4 x i64>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> [[TMP2]], <4 x i32> <i32 0, i32 2, i32 4, i32 6>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> [[TMP2]], <4 x i32> <i32 1, i32 3, i32 5, i32 7>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> [[TMP2]], <4 x i32> <i32 0, i32 4, i32 2, i32 6>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <4 x i64> [[TMP1]], <4 x i64> [[TMP2]], <4 x i32> <i32 1, i32 5, i32 3, i32 7>
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <4 x i64> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[RES1:%.*]] = call <4 x double> @llvm.x86.avx.hsub.pd.256(<4 x double> [[A2:%.*]], <4 x double> [[A3:%.*]])
 ; CHECK-NEXT:    store <4 x i64> [[_MSPROP]], ptr @__msan_retval_tls, align 8
@@ -470,8 +470,8 @@ define <8 x float> @test_x86_avx_hsub_ps_256(<8 x float> %a0, <8 x float> %a1) #
 ; CHECK-NEXT:    [[TMP1:%.*]] = load <8 x i32>, ptr @__msan_param_tls, align 8
 ; CHECK-NEXT:    [[TMP2:%.*]] = load <8 x i32>, ptr getelementptr (i8, ptr @__msan_param_tls, i64 32), align 8
 ; CHECK-NEXT:    call void @llvm.donothing()
-; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> [[TMP2]], <8 x i32> <i32 0, i32 2, i32 4, i32 6, i32 8, i32 10, i32 12, i32 14>
-; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> [[TMP2]], <8 x i32> <i32 1, i32 3, i32 5, i32 7, i32 9, i32 11, i32 13, i32 15>
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> [[TMP2]], <8 x i32> <i32 0, i32 2, i32 8, i32 10, i32 4, i32 6, i32 12, i32 14>
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <8 x i32> [[TMP1]], <8 x i32> [[TMP2]], <8 x i32> <i32 1, i32 3, i32 9, i32 11, i32 5, i32 7, i32 13, i32 15>
 ; CHECK-NEXT:    [[_MSPROP:%.*]] = or <8 x i32> [[TMP3]], [[TMP4]]
 ; CHECK-NEXT:    [[RES1:%.*]] = call <8 x float> @llvm.x86.avx.hsub.ps.256(<8 x float> [[A2:%.*]], <8 x float> [[A3:%.*]])
 ; CHECK-NEXT:    store <8 x i32> [[_MSPROP]], ptr @__msan_retval_tls, align 8

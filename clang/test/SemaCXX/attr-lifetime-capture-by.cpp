@@ -44,4 +44,7 @@ struct T {
   {
     s.captureInt(x);
   }
+
+  void explicit_this1(this T& self, const int &x [[clang::lifetime_capture_by(self)]]);
+  void explicit_this2(this T& self, const int &x [[clang::lifetime_capture_by(this)]]); // expected-error {{argument references unavailable implicit 'this'}}
 };

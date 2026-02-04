@@ -11,6 +11,7 @@
 
 #include "mlir/Support/LLVM.h"
 #include "llvm/ADT/SmallVector.h"
+#include "llvm/ADT/StringMap.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/iterator.h"
 
@@ -45,6 +46,9 @@ public:
 
   // Return if this method is static.
   bool isStatic() const;
+
+  // Return if the method is only a declaration.
+  bool isDeclaration() const;
 
   // Return the body for this method if it has one.
   std::optional<StringRef> getBody() const;
@@ -157,6 +161,13 @@ struct TypeInterface : public Interface {
 
   static bool classof(const Interface *interface);
 };
+// An interface that is registered to a Dialect.
+struct DialectInterface : public Interface {
+  using Interface::Interface;
+
+  static bool classof(const Interface *interface);
+};
+
 } // namespace tblgen
 } // namespace mlir
 

@@ -24,7 +24,7 @@ entry:
 define <4 x i32> @shuffle3(<4 x i32> %a, <4 x i32> %b) {
 ; CHECK-LABEL: shuffle3:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov v0.d[0], v1.d[1]
+; CHECK-NEXT:    zip2 v0.2d, v1.2d, v0.2d
 ; CHECK-NEXT:    ret
 entry:
   %res = shufflevector <4 x i32> %a, <4 x i32> %b, <4 x i32> <i32 6, i32 7, i32 2, i32 3>
@@ -113,8 +113,7 @@ define <8 x i16> @shuffle10(<8 x i16> %a) {
 define <4 x i16> @shuffle11(<8 x i16> %a, <8 x i16> %b) {
 ; CHECK-LABEL: shuffle11:
 ; CHECK:       // %bb.0: // %entry
-; CHECK-NEXT:    mov v1.s[1], v0.s[0]
-; CHECK-NEXT:    fmov d0, d1
+; CHECK-NEXT:    zip1 v0.2s, v1.2s, v0.2s
 ; CHECK-NEXT:    ret
 entry:
   %res = shufflevector <8 x i16> %a, <8 x i16> %b, <4 x i32> <i32 8, i32 9, i32 0, i32 1>

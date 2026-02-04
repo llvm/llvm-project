@@ -38,6 +38,7 @@
 #include "clang/Basic/Stack.h"
 #include "clang/Basic/TargetInfo.h"
 #include "clang/Basic/Version.h"
+#include "clang/Driver/CreateASTUnitFromArgs.h"
 #include "clang/Frontend/ASTUnit.h"
 #include "clang/Frontend/CompilerInstance.h"
 #include "clang/Index/CommentToXML.h"
@@ -1644,9 +1645,9 @@ bool CursorVisitor::VisitTagTypeLoc(TagTypeLoc TL) {
     return true;
 
   if (TL.isDefinition())
-    return Visit(MakeCXCursor(TL.getOriginalDecl(), TU, RegionOfInterest));
+    return Visit(MakeCXCursor(TL.getDecl(), TU, RegionOfInterest));
 
-  return Visit(MakeCursorTypeRef(TL.getOriginalDecl(), TL.getNameLoc(), TU));
+  return Visit(MakeCursorTypeRef(TL.getDecl(), TL.getNameLoc(), TU));
 }
 
 bool CursorVisitor::VisitTemplateTypeParmTypeLoc(TemplateTypeParmTypeLoc TL) {
@@ -1852,7 +1853,7 @@ bool CursorVisitor::VisitPackIndexingTypeLoc(PackIndexingTypeLoc TL) {
 }
 
 bool CursorVisitor::VisitInjectedClassNameTypeLoc(InjectedClassNameTypeLoc TL) {
-  return Visit(MakeCursorTypeRef(TL.getOriginalDecl(), TL.getNameLoc(), TU));
+  return Visit(MakeCursorTypeRef(TL.getDecl(), TL.getNameLoc(), TU));
 }
 
 bool CursorVisitor::VisitAtomicTypeLoc(AtomicTypeLoc TL) {
@@ -2406,6 +2407,13 @@ void OMPClauseEnqueue::VisitOMPCompareClause(const OMPCompareClause *) {}
 
 void OMPClauseEnqueue::VisitOMPFailClause(const OMPFailClause *) {}
 
+void OMPClauseEnqueue::VisitOMPThreadsetClause(const OMPThreadsetClause *) {}
+
+void OMPClauseEnqueue::VisitOMPTransparentClause(
+    const OMPTransparentClause *C) {
+  Visitor->AddStmt(C->getImpexType());
+}
+
 void OMPClauseEnqueue::VisitOMPAbsentClause(const OMPAbsentClause *) {}
 
 void OMPClauseEnqueue::VisitOMPHoldsClause(const OMPHoldsClause *) {}
@@ -2752,6 +2760,11 @@ void OMPClauseEnqueue::VisitOMPAffinityClause(const OMPAffinityClause *C) {
 void OMPClauseEnqueue::VisitOMPBindClause(const OMPBindClause *C) {}
 void OMPClauseEnqueue::VisitOMPXDynCGroupMemClause(
     const OMPXDynCGroupMemClause *C) {
+  VisitOMPClauseWithPreInit(C);
+  Visitor->AddStmt(C->getSize());
+}
+void OMPClauseEnqueue::VisitOMPDynGroupprivateClause(
+    const OMPDynGroupprivateClause *C) {
   VisitOMPClauseWithPreInit(C);
   Visitor->AddStmt(C->getSize());
 }
@@ -4354,7 +4367,7 @@ clang_parseTranslationUnit_Impl(CXIndex CIdx, const char *source_filename,
   LibclangInvocationReporter InvocationReporter(
       *CXXIdx, LibclangInvocationReporter::OperationKind::ParseOperation,
       options, llvm::ArrayRef(*Args), /*InvocationArgs=*/{}, unsaved_files);
-  std::unique_ptr<ASTUnit> Unit = ASTUnit::LoadFromCommandLine(
+  std::unique_ptr<ASTUnit> Unit = CreateASTUnitFromCommandLine(
       Args->data(), Args->data() + Args->size(),
       CXXIdx->getPCHContainerOperations(), DiagOpts, Diags,
       CXXIdx->getClangResourcesPath(), CXXIdx->getStorePreamblesInMemory(),

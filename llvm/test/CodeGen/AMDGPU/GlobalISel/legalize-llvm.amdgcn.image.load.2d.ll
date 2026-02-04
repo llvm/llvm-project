@@ -279,10 +279,9 @@ define amdgpu_ps <2 x float> @image_load_v2f32_dmask_0000(<8 x i32> inreg %rsrc,
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(<2 x s32>) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](<2 x s32>)
-  ; GCN-NEXT:   $vgpr0 = COPY [[UV]](s32)
-  ; GCN-NEXT:   $vgpr1 = COPY [[UV1]](s32)
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   $vgpr0 = COPY [[DEF]](s32)
+  ; GCN-NEXT:   $vgpr1 = COPY [[DEF]](s32)
   ; GCN-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1
   %tex = call <2 x float> @llvm.amdgcn.image.load.2d.v2f32.i32(i32 0, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret <2 x float> %tex
@@ -350,11 +349,10 @@ define amdgpu_ps <3 x float> @image_load_v3f32_dmask_0000(<8 x i32> inreg %rsrc,
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(<3 x s32>) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](<3 x s32>)
-  ; GCN-NEXT:   $vgpr0 = COPY [[UV]](s32)
-  ; GCN-NEXT:   $vgpr1 = COPY [[UV1]](s32)
-  ; GCN-NEXT:   $vgpr2 = COPY [[UV2]](s32)
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   $vgpr0 = COPY [[DEF]](s32)
+  ; GCN-NEXT:   $vgpr1 = COPY [[DEF]](s32)
+  ; GCN-NEXT:   $vgpr2 = COPY [[DEF]](s32)
   ; GCN-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2
   %tex = call <3 x float> @llvm.amdgcn.image.load.2d.v3f32.i32(i32 0, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret <3 x float> %tex
@@ -453,12 +451,11 @@ define amdgpu_ps <4 x float> @image_load_v4f32_dmask_0000(<8 x i32> inreg %rsrc,
   ; GCN-NEXT: {{  $}}
   ; GCN-NEXT:   [[COPY:%[0-9]+]]:_(s32) = COPY $vgpr0
   ; GCN-NEXT:   [[COPY1:%[0-9]+]]:_(s32) = COPY $vgpr1
-  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(<4 x s32>) = G_IMPLICIT_DEF
-  ; GCN-NEXT:   [[UV:%[0-9]+]]:_(s32), [[UV1:%[0-9]+]]:_(s32), [[UV2:%[0-9]+]]:_(s32), [[UV3:%[0-9]+]]:_(s32) = G_UNMERGE_VALUES [[DEF]](<4 x s32>)
-  ; GCN-NEXT:   $vgpr0 = COPY [[UV]](s32)
-  ; GCN-NEXT:   $vgpr1 = COPY [[UV1]](s32)
-  ; GCN-NEXT:   $vgpr2 = COPY [[UV2]](s32)
-  ; GCN-NEXT:   $vgpr3 = COPY [[UV3]](s32)
+  ; GCN-NEXT:   [[DEF:%[0-9]+]]:_(s32) = G_IMPLICIT_DEF
+  ; GCN-NEXT:   $vgpr0 = COPY [[DEF]](s32)
+  ; GCN-NEXT:   $vgpr1 = COPY [[DEF]](s32)
+  ; GCN-NEXT:   $vgpr2 = COPY [[DEF]](s32)
+  ; GCN-NEXT:   $vgpr3 = COPY [[DEF]](s32)
   ; GCN-NEXT:   SI_RETURN_TO_EPILOG implicit $vgpr0, implicit $vgpr1, implicit $vgpr2, implicit $vgpr3
   %tex = call <4 x float> @llvm.amdgcn.image.load.2d.v4f32.i32(i32 0, i32 %s, i32 %t, <8 x i32> %rsrc, i32 0, i32 0)
   ret <4 x float> %tex

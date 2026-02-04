@@ -94,7 +94,7 @@ def: Flag<["-"], "s">,
   Group<grp_general>;
 
 def flat: F<"flat">,
-  HelpText<"Produce a flat dSYM file (not a bundle).">,
+  HelpText<"Produce a flat dSYM file (not a bundle). Intended for testing and generally unsupported by tools that consume dSYMs.">,
   Group<grp_general>;
 def: Flag<["-"], "f">,
   Alias<flat>,
@@ -108,6 +108,13 @@ def fat64: F<"fat64">,
 def update: F<"update">,
   HelpText<"Updates existing dSYM files to contain the latest accelerator tables and other DWARF optimizations.">,
   Group<grp_general>;
+
+def allow_section_header_offset_overflow : F<"allow-section-header-offset-overflow">,
+  HelpText<"Allow emitting a 32-bit section offset that, when applied, may exceed the Mach-O 4 GB limit. "
+           "This leverages the fact that the offset can be computed as a 64-bit value when sections are ordered (which is always the case for dsymutil). "
+           "Note that this produces an invalid Mach-O and requires explicit support from the tools that consume it.">,
+  Group<grp_general>;
+
 def: Flag<["-"], "u">,
   Alias<update>,
   HelpText<"Alias for --update">,
@@ -200,6 +207,14 @@ def: Joined<["--", "-"], "remarks-output-format=">, Alias<remarks_output_format>
 def remarks_drop_without_debug: Flag<["--", "-"], "remarks-drop-without-debug">,
   HelpText<"Drop remarks without valid debug locations. Without this flags, "
            "all remarks are kept.">,
+  Group<grp_general>;
+
+def include_swiftmodules_from_interface: Flag<["--", "-"], "include-swiftmodules-from-interface">,
+  HelpText<"Whether or not to copy binary swiftmodules built from textual "
+  ".swiftinterface files into the dSYM bundle. These typically come only "
+  "from the SDK (since textual interfaces require library evolution) and "
+  "thus are a waste of space to copy into the bundle. Turn this on if the "
+  "swiftmodules are different from those in the SDK.">,
   Group<grp_general>;
 
 def linker: Separate<["--", "-"], "linker">,

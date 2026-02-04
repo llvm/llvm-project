@@ -817,6 +817,50 @@ struct LinearizeVectorToElements final
   }
 };
 
+/// Convert broadcasts from scalars or 1-element vectors, such as
+///
+/// ```mlir
+///   vector.broadcast %value : f32 to vector<4x4xf32>
+/// ```
+///
+/// to broadcasts to rank-1 vectors, with shape_casts before/after as needed.
+/// The above becomes,
+///
+/// ```mlir
+///   %out_1d = vector.broadcast %value : f32 to vector<16xf32>
+///   %out_nd = vector.shape_cast %out_1d : vector<16xf32> to vector<4x4xf32>
+/// ```
+struct LinearizeVectorBroadcast final
+    : public OpConversionPattern<vector::BroadcastOp> {
+  using Base::Base;
+
+  LinearizeVectorBroadcast(const TypeConverter &typeConverter,
+                           MLIRContext *context, PatternBenefit benefit = 1)
+      : OpConversionPattern(typeConverter, context, benefit) {}
+
+  LogicalResult
+  matchAndRewrite(vector::BroadcastOp broadcastOp, OpAdaptor adaptor,
+                  ConversionPatternRewriter &rewriter) const override {
+
+    int numElements = 1;
+    Type sourceType = broadcastOp.getSourceType();
+    if (auto vecType = dyn_cast<VectorType>(sourceType)) {
+      numElements = vecType.getNumElements();
+    }
+
+    if (numElements != 1) {
+      return rewriter.notifyMatchFailure(
+          broadcastOp, "only broadcasts of single elements can be linearized.");
+    }
+
+    auto dstTy = getTypeConverter()->convertType(broadcastOp.getType());
+    rewriter.replaceOpWithNewOp<vector::BroadcastOp>(broadcastOp, dstTy,
+                                                     adaptor.getSource());
+
+    return success();
+  }
+};
+
 } // namespace
 
 /// This method defines the set of operations that are linearizable, and hence
@@ -837,7 +881,7 @@ static bool isLinearizable(Operation *op) {
       // As type legalization is done with vector.shape_cast, shape_cast
       // itself cannot be linearized (will create new shape_casts to linearize
       // ad infinitum).
-      .Case<vector::ShapeCastOp>([&](auto) { return false; })
+      .Case([&](vector::ShapeCastOp) { return false; })
       // The operations
       // - vector.extract_strided_slice
       // - vector.extract
@@ -847,18 +891,16 @@ static bool isLinearizable(Operation *op) {
       // vector.shuffle only supports fixed size vectors, so it is impossible to
       // use this approach to linearize these ops if they operate on scalable
       // vectors.
-      .Case<vector::ExtractStridedSliceOp>(
-          [&](vector::ExtractStridedSliceOp extractOp) {
-            return !extractOp.getType().isScalable();
-          })
-      .Case<vector::InsertStridedSliceOp>(
-          [&](vector::InsertStridedSliceOp insertOp) {
-            return !insertOp.getType().isScalable();
-          })
-      .Case<vector::InsertOp>([&](vector::InsertOp insertOp) {
+      .Case([&](vector::ExtractStridedSliceOp extractOp) {
+        return !extractOp.getType().isScalable();
+      })
+      .Case([&](vector::InsertStridedSliceOp insertOp) {
         return !insertOp.getType().isScalable();
       })
-      .Case<vector::ExtractOp>([&](vector::ExtractOp extractOp) {
+      .Case([&](vector::InsertOp insertOp) {
+        return !insertOp.getType().isScalable();
+      })
+      .Case([&](vector::ExtractOp extractOp) {
         return !extractOp.getSourceVectorType().isScalable();
       })
       .Default([&](auto) { return true; });
@@ -909,8 +951,8 @@ void mlir::vector::populateVectorLinearizeBasePatterns(
   patterns
       .add<LinearizeConstantLike, LinearizeVectorizable, LinearizeVectorBitCast,
            LinearizeVectorCreateMask, LinearizeVectorLoad, LinearizeVectorStore,
-           LinearizeVectorFromElements, LinearizeVectorToElements>(
-          typeConverter, patterns.getContext());
+           LinearizeVectorBroadcast, LinearizeVectorFromElements,
+           LinearizeVectorToElements>(typeConverter, patterns.getContext());
 }
 
 void mlir::vector::populateVectorLinearizeShuffleLikeOpsPatterns(

@@ -76,9 +76,6 @@ def SecurityAlpha : Package<"security">, ParentPackage<Alpha>;
 def CERT : Package<"cert">, ParentPackage<Security>;
 def ENV : Package<"env">, ParentPackage<CERT>;
 
-def CERTAlpha : Package<"cert">, ParentPackage<SecurityAlpha>;
-def POSAlpha : Package<"pos">, ParentPackage<CERTAlpha>;
-
 def Unix : Package<"unix">;
 def UnixAlpha : Package<"unix">, ParentPackage<Alpha>;
 def CString : Package<"cstring">, ParentPackage<Unix>;
@@ -175,13 +172,19 @@ def CallAndMessageChecker
                          "false", InAlpha>,
            CmdLineOption<
                Boolean, "NilReceiver",
-               "Check whether the reciever in the message expression is nil",
+               "Check whether the receiver in the message expression is nil",
                "true", Released>,
            CmdLineOption<
                Boolean, "UndefReceiver",
-               "Check whether the reciever in the message expression is "
+               "Check whether the receiver in the message expression is "
                "undefined",
                "true", Released>,
+           CmdLineOption<
+               Boolean, "ArgPointeeInitializednessComplete",
+               "If set to true, treat a struct as initialized when all of its "
+               "members are initialized, otherwise when it has any initialized "
+               "member (used only at ArgPointeeInitializedness)",
+               "false", Released>,
 ]>,
       Documentation<HasDocumentation>;
 
@@ -193,6 +196,11 @@ def FixedAddressDereferenceChecker
 def NullDereferenceChecker
     : Checker<"NullDereference">,
       HelpText<"Check for dereferences of null pointers">,
+      Documentation<HasDocumentation>;
+
+def NullPointerArithmChecker
+    : Checker<"NullPointerArithm">,
+      HelpText<"Check for undefined arithmetic operations on null pointers">,
       Documentation<HasDocumentation>;
 
 def NonNullParamChecker : Checker<"NonNullParamChecker">,
@@ -899,12 +907,25 @@ def UncheckedReturn : Checker<"UncheckedReturn">,
   Dependencies<[SecuritySyntaxChecker]>,
   Documentation<HasDocumentation>;
 
-def DeprecatedOrUnsafeBufferHandling :
-  Checker<"DeprecatedOrUnsafeBufferHandling">,
-  HelpText<"Warn on uses of unsecure or deprecated buffer manipulating "
-           "functions">,
-  Dependencies<[SecuritySyntaxChecker]>,
-  Documentation<HasDocumentation>;
+def DeprecatedOrUnsafeBufferHandling
+    : Checker<"DeprecatedOrUnsafeBufferHandling">,
+      HelpText<"Warn on uses of unsecure or deprecated buffer manipulating "
+               "functions">,
+      Dependencies<[SecuritySyntaxChecker]>,
+      CheckerOptions<
+          [CmdLineOption<
+               String, "ReportMode",
+               "Controls when warnings are reported. \"all\" reports all "
+               "unsafe functions regardless of C standard or Annex K "
+               "availability. \"actionable\" only reports when Annex K is "
+               "available (C11 with __STDC_LIB_EXT1__ and "
+               "__STDC_WANT_LIB_EXT1__=1). \"c11-only\" reports when C11 "
+               "standard is enabled (does not take Annex K availability into "
+               "account).",
+               "c11-only",
+               Released>,
+      ]>,
+      Documentation<HasDocumentation>;
 
 def decodeValueOfObjCType : Checker<"decodeValueOfObjCType">,
   HelpText<"Warn on uses of the '-decodeValueOfObjCType:at:' method">,
@@ -1613,6 +1634,14 @@ def TaintPropagationChecker : Checker<"TaintPropagation">, // Modelling checker
                   "Config",
                   "Specifies the name of the configuration file.",
                   "",
+                  Released>,
+    CmdLineOption<Boolean,
+                  "EnableDefaultConfig",
+                  "If set to false, the default source, "
+                  "sink and propagation rules are not loaded."
+                  "This way, advanced users can fully customize "
+                  "their taint configuration model.",
+                  "true",
                   Released>
   ]>,
   Documentation<NotDocumented>,
@@ -1687,6 +1716,10 @@ def ForwardDeclChecker : Checker<"ForwardDeclChecker">,
 
 def MemoryUnsafeCastChecker : Checker<"MemoryUnsafeCastChecker">,
   HelpText<"Check for memory unsafe casts from base type to derived type.">,
+  Documentation<HasDocumentation>;
+
+def NoDeleteChecker : Checker<"NoDeleteChecker">,
+  HelpText<"Check for [[clang::annotate_type(\"webkit.nodelete\")]] annotation">,
   Documentation<HasDocumentation>;
 
 def NoUncheckedPtrMemberChecker : Checker<"NoUncheckedPtrMemberChecker">,

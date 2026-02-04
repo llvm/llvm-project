@@ -1,13 +1,19 @@
-# Demonstrate dumping DW_AT_language_version.
-# RUN: llvm-mc -triple=x86_64--linux -filetype=obj < %s | \
-# RUN:     llvm-dwarfdump -v - | FileCheck %s
+# Demonstrate dumping DW_AT_language_version without an
+# accompanying DW_AT_language_name.
+# RUN: llvm-mc -triple=x86_64--linux -filetype=obj -o %t.o < %s
+# RUN: llvm-dwarfdump -v %t.o | FileCheck %s --check-prefix=VERBOSE
+# RUN: llvm-dwarfdump %t.o | FileCheck %s --check-prefix=NO-VERBOSE
 
-# CHECK: .debug_abbrev contents:
-# CHECK: DW_AT_language_version DW_FORM_data4
-# CHECK: DW_AT_language_version DW_FORM_data2
-# CHECK: .debug_info contents:
-# CHECK: DW_AT_language_version [DW_FORM_data4] (201402)
-# CHECK: DW_AT_language_version [DW_FORM_data2] (0)
+# VERBOSE: .debug_abbrev contents:
+# VERBOSE: DW_AT_language_version DW_FORM_data4
+# VERBOSE: DW_AT_language_version DW_FORM_data2
+# VERBOSE: .debug_info contents:
+# VERBOSE: DW_AT_language_version [DW_FORM_data4] (201402)
+# VERBOSE: DW_AT_language_version [DW_FORM_data2] (0)
+
+# NO-VERBOSE: .debug_info contents:
+# NO-VERBOSE: DW_AT_language_version (201402)
+# NO-VERBOSE: DW_AT_language_version (0)
 
         .section        .debug_abbrev,"",@progbits
         .byte   1                       # Abbreviation Code

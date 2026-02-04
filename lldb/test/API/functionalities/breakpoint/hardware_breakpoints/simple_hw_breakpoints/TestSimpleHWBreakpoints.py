@@ -7,13 +7,7 @@ from functionalities.breakpoint.hardware_breakpoints.base import *
 
 
 class SimpleHWBreakpointTest(HardwareBreakpointTestBase):
-    def does_not_support_hw_breakpoints(self):
-        # FIXME: Use HardwareBreakpointTestBase.supports_hw_breakpoints
-        if super().supports_hw_breakpoints() is None:
-            return "Hardware breakpoints are unsupported"
-        return None
-
-    @skipTestIfFn(does_not_support_hw_breakpoints)
+    @skipTestIfFn(HardwareBreakpointTestBase.hw_breakpoints_unsupported)
     def test(self):
         """Test SBBreakpoint::SetIsHardware"""
         self.build()
@@ -35,16 +29,13 @@ class SimpleHWBreakpointTest(HardwareBreakpointTestBase):
         # breakpoint will be marked as a hardware breakpoint.
         self.assertTrue(break_on_me_bp.IsHardware())
 
-        if super().supports_hw_breakpoints():
-            self.assertSuccess(error)
+        self.assertSuccess(error)
 
-            # Continue to our Hardware breakpoint and verify that's the reason
-            # we're stopped.
-            process.Continue()
-            self.expect(
-                "thread list",
-                STOPPED_DUE_TO_BREAKPOINT,
-                substrs=["stopped", "stop reason = breakpoint"],
-            )
-        else:
-            self.assertFailure(error)
+        # Continue to our Hardware breakpoint and verify that's the reason
+        # we're stopped.
+        process.Continue()
+        self.expect(
+            "thread list",
+            STOPPED_DUE_TO_BREAKPOINT,
+            substrs=["stopped", "stop reason = breakpoint"],
+        )

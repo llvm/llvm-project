@@ -153,26 +153,23 @@ PreservedAnalyses CoroAnnotationElidePass::run(LazyCallGraph::SCC &C,
       bool IsCallerPresplitCoroutine = Caller->isPresplitCoroutine();
       bool HasAttr = CB->hasFnAttr(llvm::Attribute::CoroElideSafe);
       if (IsCallerPresplitCoroutine && HasAttr) {
-        BranchProbability MinBranchProbability(
-            static_cast<int>(CoroElideBranchRatio * MinBlockCounterExecution),
-            MinBlockCounterExecution);
-
         auto &BFI = FAM.getResult<BlockFrequencyAnalysis>(*Caller);
 
-        auto Prob = BranchProbability::getBranchProbability(
-            BFI.getBlockFreq(CB->getParent()).getFrequency(),
-            BFI.getEntryFreq().getFrequency());
+        auto BlockFreq = BFI.getBlockFreq(CB->getParent()).getFrequency();
+        auto EntryFreq = BFI.getEntryFreq().getFrequency();
+        uint64_t MinFreq =
+            static_cast<uint64_t>(EntryFreq * CoroElideBranchRatio);
 
-        if (Prob < MinBranchProbability) {
+        if (BlockFreq < MinFreq) {
           ORE.emit([&]() {
             return OptimizationRemarkMissed(
                        DEBUG_TYPE, "CoroAnnotationElideUnlikely", Caller)
                    << "'" << ore::NV("callee", Callee->getName())
                    << "' not elided in '"
                    << ore::NV("caller", Caller->getName())
-                   << "' because of low probability: "
-                   << ore::NV("probability", Prob) << " (threshold: "
-                   << ore::NV("threshold", MinBranchProbability) << ")";
+                   << "' because of low frequency: "
+                   << ore::NV("block_freq", BlockFreq)
+                   << " (threshold: " << ore::NV("min_freq", MinFreq) << ")";
           });
           continue;
         }
@@ -188,7 +185,8 @@ PreservedAnalyses CoroAnnotationElidePass::run(LazyCallGraph::SCC &C,
           return OptimizationRemark(DEBUG_TYPE, "CoroAnnotationElide", Caller)
                  << "'" << ore::NV("callee", Callee->getName())
                  << "' elided in '" << ore::NV("caller", Caller->getName())
-                 << "' (probability: " << ore::NV("probability", Prob) << ")";
+                 << "' (block_freq: " << ore::NV("block_freq", BlockFreq)
+                 << ")";
         });
 
         FAM.invalidate(*Caller, PreservedAnalyses::none());

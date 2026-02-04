@@ -16,6 +16,7 @@
 // CHECK-NOT:          "-flto"
 // CHECK-NOT:          "-fno-autolink"
 // CHECK-NOT:          "-mrelax-relocations=no"
+// CHECK-NOT:          "-mspeculative-load-hardening"
 // CHECK:            ]
 // CHECK:            "name": "A"
 // CHECK:          }
@@ -38,6 +39,11 @@
     "directory": "DIR",
     "command": "clang -Imodules/A -fmodules -fmodules-cache-path=DIR/module-cache -fimplicit-modules -O2 -flto=full -fsyntax-only DIR/t3.m",
     "file": "DIR/t2.m"
+  }
+  {
+    "directory": "DIR",
+    "command": "clang -Imodules/A -fmodules -fmodules-cache-path=DIR/module-cache -fimplicit-modules -O2 -mspeculative-load-hardening -fsyntax-only DIR/t3.m",
+    "file": "DIR/t3.m"
   }
 ]
 
