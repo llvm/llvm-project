@@ -42,7 +42,7 @@ multiclass VPatUSLoadStoreSDNode<ValueType type,
             (store_instr reg_class:$rs2, GPR:$rs1, avl, log2sew)>;
 }
 
-multiclass VPatUSLoadStoreMaskSDNode<MTypeInfo m> {
+multiclass VPatUSMaskLoadStoreSDNode<MTypeInfo m> {
   defvar load_instr = !cast<Instruction>("PseudoVLM_V_"#m.BX);
   defvar store_instr = !cast<Instruction>("PseudoVSM_V_"#m.BX);
   // Load
@@ -879,7 +879,7 @@ foreach vti = AllVectors in
                                vti.AVL, vti.RegClass>;
 foreach mti = AllMasks in
   let Predicates = [HasVInstructions] in
-  defm : VPatUSLoadStoreMaskSDNode<mti>;
+  defm : VPatUSMaskLoadStoreSDNode<mti>;
 
 // 11. Vector Integer Arithmetic Instructions
 

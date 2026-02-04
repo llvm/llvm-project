@@ -354,7 +354,7 @@ class VWholeLoad<bits<3> nf, RISCVWidth width, string opcodestr, RegisterClass V
 }
 
 // unit-stride mask load vd, (rs1)
-class VUnitStrideLoadMask<string opcodestr>
+class VUnitStrideMaskLoad<string opcodestr>
     : RVInstVLU<0b000, LSWidth8.Value{3}, LUMOPUnitStrideMask, LSWidth8.Value{2-0},
                 (outs VR:$vd),
                 (ins GPRMemZeroOffset:$rs1), opcodestr, "$vd, $rs1">;
@@ -425,7 +425,7 @@ class VWholeStore<bits<3> nf, string opcodestr, RegisterClass VRC>
 }
 
 // unit-stride mask store vd, vs3, (rs1)
-class VUnitStrideStoreMask<string opcodestr>
+class VUnitStrideMaskStore<string opcodestr>
     : RVInstVSU<0b000, LSWidth8.Value{3}, SUMOPUnitStrideMask, LSWidth8.Value{2-0},
                 (outs), (ins VR:$vs3, GPRMemZeroOffset:$rs1), opcodestr,
                 "$vs3, $rs1">;
@@ -1116,9 +1116,9 @@ foreach eew = [8, 16, 32, 64] in {
 }
 
 let Predicates = [HasVInstructions] in {
-def VLM_V : VUnitStrideLoadMask<"vlm.v">,
+def VLM_V : VUnitStrideMaskLoad<"vlm.v">,
              Sched<[WriteVLDM_WorstCase, ReadVLDX]>;
-def VSM_V : VUnitStrideStoreMask<"vsm.v">,
+def VSM_V : VUnitStrideMaskStore<"vsm.v">,
              Sched<[WriteVSTM_WorstCase, ReadVSTM_WorstCase, ReadVSTX]>;
 def : MnemonicAlias<"vle1.v", "vlm.v">;
 def : MnemonicAlias<"vse1.v", "vsm.v">;
