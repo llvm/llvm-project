@@ -958,10 +958,9 @@ void Verifier::visitGlobalVariable(const GlobalVariable &GV) {
   // Check that the the address space can hold all bits of the type, recognized
   // by an access in the address space being able to reach all bytes of the
   // type.
-  Check(GVType->isScalableTy() || !GVType->isSized() ||
-            GV.getGlobalSize(DL) == 0 ||
+  Check(!GVType->isSized() ||
             isUIntN(DL.getAddressSizeInBits(GV.getAddressSpace()),
-                    GV.getGlobalSize(DL) - 1),
+                    GV.getGlobalSize(DL)),
         "Global variable is too large to fit into the address space", &GV,
         GVType);
 
