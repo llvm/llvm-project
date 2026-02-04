@@ -21,6 +21,7 @@
 #include "SIMachineFunctionInfo.h"
 #include "llvm/ADT/BitmaskEnum.h"
 #include "llvm/ADT/DenseMap.h"
+#include "llvm/ADT/STLExtras.h"
 #include "llvm/CodeGen/MachineScheduler.h"
 #include "llvm/CodeGen/TargetOpcodes.h"
 
@@ -61,6 +62,10 @@ static cl::opt<bool> UseCostHeur(
              "attempting to put the later nodes in the later sched groups. "
              "Experimentally, results are mixed, so this should be set on a "
              "case-by-case basis."));
+
+static cl::opt<bool> DisableMfmaChainOrderingDeps(
+    "amdgpu-disable-mfma-chain-order-deps", cl::init(false), cl::Hidden,
+    cl::desc("Disable artificial false dependencies between MFMA chains"));
 
 // Components of the mask that determines which instruction types may be may be
 // classified into a SchedGroup.
@@ -2344,6 +2349,10 @@ private:
   // Add DAG edges that enforce SCHED_BARRIER ordering.
   void addSchedBarrierEdges(SUnit &SU);
 
+  // Add artificial false-dependencies between MFMA consumers of adjacent
+  // DS_READ_B128 streams to enforce MFMA(newer) -> MFMA(older-last) ordering.
+  void addMfmaFalseDeps();
+
   // Use a SCHED_BARRIER's mask to identify instruction SchedGroups that should
   // not be reordered accross the SCHED_BARRIER. This is used for the base
   // SCHED_BARRIER, and not SCHED_GROUP_BARRIER. The difference is that
@@ -2642,6 +2651,9 @@ void IGroupLPDAGMutation::apply(ScheduleDAGInstrs *DAGInstrs) {
     }
   }
 
+  if (!DisableMfmaChainOrderingDeps && ST.hasMAIInsts())
+    addMfmaFalseDeps();
+
   if (FoundSB || (FoundIGLP && ShouldApplyIGLP)) {
     PipelineSolver PS(SyncedSchedGroups, SyncedInstrs, DAG, IsBottomUp);
     // PipelineSolver performs the mutation by adding the edges it
@@ -2737,6 +2749,81 @@ bool IGroupLPDAGMutation::initIGLPOpt(SUnit &SU) {
 }
 
 } // namespace
+
+void IGroupLPDAGMutation::addMfmaFalseDeps() {
+  SmallVector<SUnit *, 10> MFMAChainLeaders;
+  DenseMap<SUnit *, SUnit *> MFMAChainNext;
+  for (auto &SU : DAG->SUnits) {
+    if (!TII->isMFMAorWMMA(*SU.getInstr()) || MFMAChainNext.count(&SU))
+      continue;
+
+    // CurrMFMA marks the start of the chain.
+    SUnit *CurrMFMA = &SU;
+    MFMAChainLeaders.push_back(&SU);
+    while (!CurrMFMA->Succs.empty()) {
+      // Count the number of successor MFMA/WMMA instructions of
+      // the current MFMA instruction.
+      MFMAChainNext[CurrMFMA] = nullptr;
+      unsigned MFMADataDepSuccCount = 0;
+      for (const auto &Succ : CurrMFMA->Succs) {
+        SUnit *SuccSU = Succ.getSUnit();
+        if (!SuccSU->isInstr() || !TII->isMFMAorWMMA(*SuccSU->getInstr()))
+          continue;
+
+        // Check if the successor is MFMA/WMMA and the edge is a data dependency
+        if (Succ.getKind() == SDep::Data) {
+          MFMAChainNext[CurrMFMA] =
+              MFMADataDepSuccCount == 0 ? SuccSU : nullptr;
+          ++MFMADataDepSuccCount;
+        }
+      }
+
+      if (!MFMAChainNext[CurrMFMA])
+        break;
+      CurrMFMA = MFMAChainNext[CurrMFMA];
+    }
+
+    assert(MFMAChainNext[CurrMFMA] == nullptr &&
+           "Expected the last MFMA in the chain to have no successor or "
+           "multiple MFMA/WMMA successors");
+  }
+
+  // Compute the tail and length of each chain in a single loop.
+  auto GetTailAndLength = [&](SUnit *Leader) -> std::pair<SUnit *, unsigned> {
+    unsigned Length = 1;
+    SUnit *Curr = Leader;
+    while (MFMAChainNext.count(Curr)) {
+      if (!MFMAChainNext[Curr])
+        break;
+      Curr = MFMAChainNext[Curr];
+      ++Length;
+    }
+    return {Curr, Length};
+  };
+
+  // Assert that all MFMA chains are ordered by NodeNum
+  // Add artificial false dependencies between MFMA chains if two given
+  // chains are at least 2 SUs long.
+  // Iterate over all pairs of contiguous MFMA chains and add artificial edges
+  // if chains are at least 2 SUs long.
+  for (size_t I = 0; I + 1 < MFMAChainLeaders.size(); ++I) {
+    SUnit *ChainLeaderA = MFMAChainLeaders[I];
+    SUnit *ChainLeaderB = MFMAChainLeaders[I + 1];
+
+    auto [TailA, LengthA] = GetTailAndLength(ChainLeaderA);
+    auto [TailB, LengthB] = GetTailAndLength(ChainLeaderB);
+
+    // Only add if both chains are at least two SUs long.
+    if (LengthA >= 2 && LengthB >= 2) {
+      // Add an artificial dependency edge from the tail of chain A to the
+      // leader of chain B.
+      LLVM_DEBUG(dbgs() << "Adding artificial dependency edge from "
+                        << TailA->NodeNum << " to " << ChainLeaderB->NodeNum
+                        << "\n");
+      DAG->addEdge(ChainLeaderB, SDep(TailA, SDep::Artificial));
+    }
+  }
+}
 
 /// \p Phase specifes whether or not this is a reentry into the
 /// IGroupLPDAGMutation. Since there may be multiple scheduling passes on the
