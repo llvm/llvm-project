@@ -319,41 +319,6 @@ public:
   void addNodes(ExplodedNode *N) { Frontier.Add(N); }
 };
 
-/// \class NodeBuilderWithSinks
-/// This node builder keeps track of the generated sink nodes.
-class NodeBuilderWithSinks: public NodeBuilder {
-  void anchor() override;
-
-protected:
-  SmallVector<ExplodedNode*, 2> sinksGenerated;
-  ProgramPoint &Location;
-
-public:
-  NodeBuilderWithSinks(ExplodedNode *Pred, ExplodedNodeSet &DstSet,
-                       const NodeBuilderContext &Ctx, ProgramPoint &L)
-      : NodeBuilder(Pred, DstSet, Ctx), Location(L) {}
-
-  ExplodedNode *generateNode(ProgramStateRef State,
-                             ExplodedNode *Pred,
-                             const ProgramPointTag *Tag = nullptr) {
-    const ProgramPoint &LocalLoc = (Tag ? Location.withTag(Tag) : Location);
-    return NodeBuilder::generateNode(LocalLoc, State, Pred);
-  }
-
-  ExplodedNode *generateSink(ProgramStateRef State, ExplodedNode *Pred,
-                             const ProgramPointTag *Tag = nullptr) {
-    const ProgramPoint &LocalLoc = (Tag ? Location.withTag(Tag) : Location);
-    ExplodedNode *N = NodeBuilder::generateSink(LocalLoc, State, Pred);
-    if (N && N->isSink())
-      sinksGenerated.push_back(N);
-    return N;
-  }
-
-  const SmallVectorImpl<ExplodedNode*> &getSinks() const {
-    return sinksGenerated;
-  }
-};
-
 /// \class StmtNodeBuilder
 /// This builder class is useful for generating nodes that resulted from
 /// visiting a statement. The main difference from its parent NodeBuilder is
