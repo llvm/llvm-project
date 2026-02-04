@@ -26,9 +26,10 @@ template <typename Callable> class scope_exit {
 
 public:
   template <typename Fp>
-  explicit scope_exit(Fp &&F) : ExitFunction(std::forward<Fp>(F)) {}
+  [[nodiscard]] explicit scope_exit(Fp &&F)
+      : ExitFunction(std::forward<Fp>(F)) {}
 
-  scope_exit(scope_exit &&Rhs)
+  [[nodiscard]] scope_exit(scope_exit &&Rhs)
       : ExitFunction(std::move(Rhs.ExitFunction)), Engaged(Rhs.Engaged) {
     Rhs.release();
   }
