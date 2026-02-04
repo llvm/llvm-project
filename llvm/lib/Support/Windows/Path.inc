@@ -607,10 +607,12 @@ std::error_code rename(const Twine &From, const Twine &To) {
   for (unsigned Retry = 0; Retry != 200; ++Retry) {
     if (Retry != 0)
       ::Sleep(10);
+    // `FILE_FLAG_BACKUP_SEMANTICS` must be used to create a handle to a
+    // directory.
     FromHandle =
         ::CreateFileW(WideFrom.begin(), GENERIC_READ | DELETE,
                       FILE_SHARE_READ | FILE_SHARE_WRITE | FILE_SHARE_DELETE,
-                      NULL, OPEN_EXISTING, FILE_ATTRIBUTE_NORMAL, NULL);
+                      NULL, OPEN_EXISTING, FILE_FLAG_BACKUP_SEMANTICS, NULL);
     if (FromHandle)
       break;
 

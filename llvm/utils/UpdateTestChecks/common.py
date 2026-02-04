@@ -1184,6 +1184,7 @@ class NamelessValue:
     # Create a FileCheck variable name based on an IR name.
     def get_value_name(self, var: str, check_prefix: str):
         var = var.replace("!", "")
+        var = var.replace("%", "")
         if self.replace_number_with_counter:
             assert var
             replacement = self.variable_mapping.get(var, None)
@@ -1412,15 +1413,23 @@ def make_analyze_generalizer(version):
         NamelessValue(
             r"GRP",
             "#",
-            r"",
+            r"group",
             r"0x[0-9a-f]+",
             None,
             replace_number_with_counter=True,
         ),
+        NamelessValue(
+            r"VP",
+            r"vp",
+            r"vp<",
+            r"%[0-9]+",
+            None,
+            ir_suffix=r">",
+        ),
     ]
 
     prefix = r"(\s*)"
-    suffix = r"(\)?:)"
+    suffix = r"([,\s\(\)\}\]:]|\Z)"
 
     return GeneralizerInfo(
         version, GeneralizerInfo.MODE_ANALYZE, values, prefix, suffix
@@ -2268,7 +2277,9 @@ def add_checks(
                             "{} {}-EMPTY:".format(comment_marker, checkprefix)
                         )
                     else:
-                        check_suffix = "-NEXT" if not is_filtered else ""
+                        # TODO: Remove once only -vplan-print-after is supported.
+                        check_next = not is_filtered and "VPlan" not in func_line
+                        check_suffix = "-NEXT" if check_next else ""
                         output_lines.append(
                             "{} {}{}:  {}".format(
                                 comment_marker, checkprefix, check_suffix, func_line

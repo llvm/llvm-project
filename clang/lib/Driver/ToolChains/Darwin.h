@@ -363,7 +363,7 @@ public:
     WatchOS,
     DriverKit,
     XROS,
-    LastDarwinPlatform = XROS
+    Firmware,
   };
   enum DarwinEnvironmentKind {
     NativeEnvironment,
@@ -519,6 +519,8 @@ public:
     assert(TargetInitialized && "Target not initialized!");
     return TargetPlatform == DriverKit;
   }
+
+  bool isTargetFirmware() const { return TargetPlatform == Firmware; }
 
   bool isTargetMacCatalyst() const {
     return TargetPlatform == IPhoneOS && TargetEnvironment == MacCatalyst;
