@@ -167,7 +167,7 @@ public:
       return getPointerTo(ty);
 
     mlir::ptr::MemorySpaceAttrInterface addrSpaceAttr =
-        cir::toCIRAddressSpaceAttr(getContext(), langAS);
+        cir::toCIRAddressSpaceAttr(*getContext(), langAS);
     return getPointerTo(ty, addrSpaceAttr);
   }
 

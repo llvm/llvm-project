@@ -1458,7 +1458,7 @@ LValue CIRGenFunction::emitCastLValue(const CastExpr *e) {
     clang::LangAS srcLangAS = e->getSubExpr()->getType().getAddressSpace();
     mlir::ptr::MemorySpaceAttrInterface srcAS;
     if (clang::isTargetAddressSpace(srcLangAS))
-      srcAS = cir::toCIRAddressSpaceAttr(&getMLIRContext(), srcLangAS);
+      srcAS = cir::toCIRAddressSpaceAttr(getMLIRContext(), srcLangAS);
     else
       cgm.errorNYI(
           e->getSourceRange(),
