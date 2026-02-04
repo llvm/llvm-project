@@ -596,12 +596,14 @@ def : InstAlias<"c.srli64 $rs1", (C_SRLI GPRC:$rs1, 0), 0>;
 def : InstAlias<"c.srai64 $rs1", (C_SRAI GPRC:$rs1, 0), 0>;
 }
 
-let Predicates = [HasStdExtC, HasStdExtZihintntl] in {
+// c.ntl.* hints are always available when Zca is present, even without
+// enabling Zihintntl, per psABI decision (riscv-non-isa/riscv-elf-psabi-doc#474).
+let Predicates = [HasStdExtZca] in {
 def : InstAlias<"c.ntl.p1", (C_ADD X0, X2)>;
 def : InstAlias<"c.ntl.pall", (C_ADD X0, X3)>;
 def : InstAlias<"c.ntl.s1", (C_ADD X0, X4)>;
 def : InstAlias<"c.ntl.all", (C_ADD X0, X5)>;
-} // Predicates = [HasStdExtC, HasStdExtZihintntl]
+} // Predicates = [HasStdExtZca]
 
 let EmitPriority = 0 in {
 let Predicates = [HasStdExtZca] in {
