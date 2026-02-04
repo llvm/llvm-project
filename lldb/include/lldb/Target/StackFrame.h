@@ -557,17 +557,17 @@ public:
   GetVariableNotCapturedDiagnostic(llvm::StringRef missing_var_name);
   // END SWIFT
 
-  /// Get the StackFrameList that contains this frame.
+  /// Get the identifier of the StackFrameList that contains this frame.
   ///
-  /// Returns the StackFrameList that contains this frame, allowing
+  /// Returns the StackFrameList identifier that contains this frame, allowing
   /// frames to resolve execution contexts without calling
   /// Thread::GetStackFrameList(), which can cause circular dependencies
   /// during frame provider initialization.
   ///
   /// \return
-  ///   The StackFrameList that contains this frame, or nullptr if not set.
-  virtual lldb::StackFrameListSP GetContainingStackFrameList() const {
-    return m_frame_list_wp.lock();
+  ///   The identifier of the containing StackFrameList
+  lldb::frame_list_id_t GetContainingStackFrameListIdentifier() const {
+    return m_frame_list_id;
   }
 
 protected:
@@ -613,8 +613,8 @@ protected:
   /// be the first address of its function). True for actual frame zero as
   /// well as any other frame with the same trait.
   bool m_behaves_like_zeroth_frame;
+  lldb::frame_list_id_t m_frame_list_id = 0;
   lldb::VariableListSP m_variable_list_sp;
-  lldb::StackFrameListWP m_frame_list_wp;
   /// Value objects for each variable in m_variable_list_sp.
   ValueObjectList m_variable_list_value_objects;
   std::optional<lldb::RecognizedStackFrameSP> m_recognized_frame_sp;
