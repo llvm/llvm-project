@@ -71,6 +71,7 @@ DEFAULT_PLUGINS = [
     "ProcessElfCore",
     "ProcessMachCore",
     "ProcessMinidump",
+    "ProtocolServerMCP",
     "RegisterTypeBuilderClang",
     "ScriptedProcess",
     "StructuredDataDarwinLog",
