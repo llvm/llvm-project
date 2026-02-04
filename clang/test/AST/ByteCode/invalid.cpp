@@ -143,3 +143,11 @@ namespace BitCastWithErrors {
   template<class T> int f(); // both-note {{candidate template ignored}}
   static union { char *x = f(); }; // both-error {{no matching function for call to 'f'}}
 }
+
+namespace NullRecord {
+  struct S1; // both-note {{forward declaration}}
+  struct S2 {
+    S1 s[2]; // both-error {{field has incomplete type 'S1'}}
+  };
+  S2 s = S2();
+}
