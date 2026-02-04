@@ -18,8 +18,6 @@ void emit_simple_parallel() {
   // CHECK-NEXT: }
 #pragma omp parallel
   {
-    // TODO(OMP): We don't yet emit captured stmt, so the body of this is lost,x
-    // thus we don't emit the 'during' call.
     during(i);
   }
   // CHECK-NEXT: omp.parallel {
