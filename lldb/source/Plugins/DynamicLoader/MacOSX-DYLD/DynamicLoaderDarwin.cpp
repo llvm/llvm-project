@@ -147,9 +147,16 @@ ModuleSP DynamicLoaderDarwin::FindTargetModuleForImageInfo(
   // added to the target, don't let it be called for every one.
   if (!module_sp)
     module_sp = target.GetOrCreateModule(module_spec, false /* notify */);
-  if (!module_sp || module_sp->GetObjectFile() == nullptr)
-    module_sp = m_process->ReadModuleFromMemory(image_info.file_spec,
-                                                image_info.address);
+  if (!module_sp || module_sp->GetObjectFile() == nullptr) {
+    llvm::Expected<ModuleSP> module_sp_or_err = m_process->ReadModuleFromMemory(
+        image_info.file_spec, image_info.address);
+    if (auto err = module_sp_or_err.takeError()) {
+      LLDB_LOG_ERROR(GetLog(LLDBLog::DynamicLoader), std::move(err),
+                     "Failed to load module from memory: {0}");
+      return {};
+    }
+    module_sp = *module_sp_or_err;
+  }
 
   if (did_create_ptr)
     *did_create_ptr = (bool)module_sp;
@@ -722,19 +729,27 @@ bool DynamicLoaderDarwin::AddModulesUsingPreloadedModules(
                                                                true /* notify */);
               if (!commpage_image_module_sp ||
                   commpage_image_module_sp->GetObjectFile() == nullptr) {
-                commpage_image_module_sp = m_process->ReadModuleFromMemory(
-                    image_info.file_spec, image_info.address);
-                // Always load a memory image right away in the target in case
-                // we end up trying to read the symbol table from memory... The
-                // __LINKEDIT will need to be mapped so we can figure out where
-                // the symbol table bits are...
-                bool changed = false;
-                UpdateImageLoadAddress(commpage_image_module_sp.get(),
-                                       image_info);
-                target.GetImages().Append(commpage_image_module_sp);
-                if (changed) {
-                  image_info.load_stop_id = m_process->GetStopID();
-                  loaded_module_list.AppendIfNeeded(commpage_image_module_sp);
+                llvm::Expected<ModuleSP> module_sp_or_err =
+                    m_process->ReadModuleFromMemory(image_info.file_spec,
+                                                    image_info.address);
+                if (auto err = module_sp_or_err.takeError()) {
+                  LLDB_LOG_ERROR(log, std::move(err),
+                                 "Failed to read module from memory: {0}");
+                } else {
+                  // Always load a memory image right away in the target in case
+                  // we end up trying to read the symbol table from memory...
+                  // The
+                  // __LINKEDIT will need to be mapped so we can figure out
+                  // where the symbol table bits are...
+                  commpage_image_module_sp = *module_sp_or_err;
+                  bool changed = false;
+                  UpdateImageLoadAddress(commpage_image_module_sp.get(),
+                                         image_info);
+                  target.GetImages().Append(commpage_image_module_sp);
+                  if (changed) {
+                    image_info.load_stop_id = m_process->GetStopID();
+                    loaded_module_list.AppendIfNeeded(commpage_image_module_sp);
+                  }
                 }
               }
             }

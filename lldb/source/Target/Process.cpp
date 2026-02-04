@@ -2619,32 +2619,30 @@ bool Process::GetWatchpointReportedAfter() {
   return reported_after;
 }
 
-ModuleSP Process::ReadModuleFromMemory(const FileSpec &file_spec,
-                                       lldb::addr_t header_addr,
-                                       size_t size_to_read) {
-  Log *log = GetLog(LLDBLog::Host);
-  if (log) {
-    LLDB_LOGF(log,
-              "Process::ReadModuleFromMemory reading %s binary from memory",
-              file_spec.GetPath().c_str());
-  }
-  ModuleSP module_sp(new Module(file_spec, ArchSpec()));
-  if (module_sp) {
-    Status error;
-    std::unique_ptr<Progress> progress_up;
-    // Reading an ObjectFile from a local corefile is very fast,
-    // only print a progress update if we're reading from a
-    // live session which might go over gdb remote serial protocol.
-    if (IsLiveDebugSession())
-      progress_up = std::make_unique<Progress>(
-          "Reading binary from memory", file_spec.GetFilename().GetString());
+llvm::Expected<ModuleSP>
+Process::ReadModuleFromMemory(const FileSpec &file_spec,
+                              lldb::addr_t header_addr, size_t size_to_read) {
+  LLDB_LOGF(GetLog(LLDBLog::Host),
+            "Process::ReadModuleFromMemory reading %s binary from memory",
+            file_spec.GetPath().c_str());
+  ModuleSP module_sp = std::make_shared<Module>(file_spec, ArchSpec());
+  if (!module_sp)
+    return llvm::createStringError("Failed to allocate Module");
 
-    ObjectFile *objfile = module_sp->GetMemoryObjectFile(
-        shared_from_this(), header_addr, error, size_to_read);
-    if (objfile)
-      return module_sp;
-  }
-  return ModuleSP();
+  Status error;
+  std::unique_ptr<Progress> progress_up;
+  // Reading an ObjectFile from a local corefile is very fast,
+  // only print a progress update if we're reading from a
+  // live session which might go over gdb remote serial protocol.
+  if (IsLiveDebugSession())
+    progress_up = std::make_unique<Progress>(
+        "Reading binary from memory", file_spec.GetFilename().GetString());
+
+  if (ObjectFile *objfile = module_sp->GetMemoryObjectFile(
+          shared_from_this(), header_addr, error, size_to_read))
+    return module_sp;
+
+  return error.takeError();
 }
 
 bool Process::GetLoadAddressPermissions(lldb::addr_t load_addr,

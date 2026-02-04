@@ -2016,9 +2016,20 @@ public:
   ///     the instruction has completed executing.
   bool GetWatchpointReportedAfter();
 
-  lldb::ModuleSP ReadModuleFromMemory(const FileSpec &file_spec,
-                                      lldb::addr_t header_addr,
-                                      size_t size_to_read = 512);
+  /// Creates and populates a module using an in-memory object file.
+  ///
+  /// \param[in] file_spec
+  ///   The name or path to the module file. May be empty.
+  ///
+  /// \param[in] header_addr
+  ///   The address pointing to the beginning of the object file's header.
+  ///
+  /// \param[in] size_to_read
+  ///   The number of bytes to read from memory. This should be large enough to
+  ///   identify the object file format. Defaults to 512.
+  llvm::Expected<lldb::ModuleSP>
+  ReadModuleFromMemory(const FileSpec &file_spec, lldb::addr_t header_addr,
+                       size_t size_to_read = 512);
 
   /// Attempt to get the attributes for a region of memory in the process.
   ///
