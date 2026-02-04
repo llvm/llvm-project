@@ -23,10 +23,12 @@ SYCLInstallationDetector::SYCLInstallationDetector(
   // filesystem. This is used to determine whether a usable SYCL installation
   // is available for the current driver invocation.
   StringRef SysRoot = D.SysRoot;
-  if (StringRef(D.Dir).starts_with(SysRoot) &&
+  SmallString<128> DriverDir(D.Dir);
+  if (DriverDir.starts_with(SysRoot) &&
       (Args.hasArg(options::OPT_fsycl) ||
-       D.getVFS().exists(D.Dir + "/../lib/libsycl.so"))) {
-    SYCLRTLibPath = D.Dir + "/../lib";
+       D.getVFS().exists(DriverDir + "/../lib/libsycl.so"))) {
+    llvm::sys::path::append(DriverDir, "/../lib");
+    SYCLRTLibPath = DriverDir;
   }
 }
 
