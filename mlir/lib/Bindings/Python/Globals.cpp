@@ -189,8 +189,8 @@ std::optional<nb::callable> PyGlobals::lookupValueCaster(MlirTypeID mlirTypeID,
 std::optional<nb::object>
 PyGlobals::lookupDialectClass(const std::string &dialectNamespace) {
   // Make sure dialect module is loaded.
-  if (!loadDialectModule(dialectNamespace))
-    return std::nullopt;
+  (void)loadDialectModule(dialectNamespace);
+
   nb::ft_lock_guard lock(mutex);
   const auto foundIt = dialectClassMap.find(dialectNamespace);
   if (foundIt != dialectClassMap.end()) {
@@ -206,8 +206,7 @@ PyGlobals::lookupOperationClass(llvm::StringRef operationName) {
   // Make sure dialect module is loaded.
   auto split = operationName.split('.');
   llvm::StringRef dialectNamespace = split.first;
-  if (!loadDialectModule(dialectNamespace))
-    return std::nullopt;
+  (void)loadDialectModule(dialectNamespace);
 
   nb::ft_lock_guard lock(mutex);
   auto foundIt = operationClassMap.find(operationName);
@@ -224,8 +223,7 @@ PyGlobals::lookupOpAdaptorClass(llvm::StringRef operationName) {
   // Make sure dialect module is loaded.
   auto split = operationName.split('.');
   llvm::StringRef dialectNamespace = split.first;
-  if (!loadDialectModule(dialectNamespace))
-    return std::nullopt;
+  (void)loadDialectModule(dialectNamespace);
 
   nb::ft_lock_guard lock(mutex);
   auto foundIt = opAdaptorClassMap.find(operationName);
