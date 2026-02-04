@@ -619,6 +619,7 @@ private:
   void visitStore(const StoreInst &I);
   void visitMaskedLoad(const CallInst &I, bool IsExpanding = false);
   void visitMaskedStore(const CallInst &I, bool IsCompressing = false);
+  void visitSpeculativeLoad(const CallInst &I);
   void visitMaskedGather(const CallInst &I);
   void visitMaskedScatter(const CallInst &I);
   void visitAtomicCmpXchg(const AtomicCmpXchgInst &I);
