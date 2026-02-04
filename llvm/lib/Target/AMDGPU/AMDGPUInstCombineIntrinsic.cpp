@@ -569,12 +569,6 @@ static bool isThreadID(const GCNSubtarget &ST, Value *V) {
   if (ST.isWave64() && match(V, W64Pred))
     return true;
 
-  // Case 2:
-  //   workitem.x()
-  auto WIdXPred = m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>();
-  if (match(V, WIdXPred))
-    return true;
-
   return false;
 }
 
@@ -587,54 +581,55 @@ tryWaveShuffleDPP(const GCNSubtarget &ST, InstCombiner &IC, IntrinsicInst &II) {
   auto &B = IC.Builder;
 
   // DPP16 Row Share requires known wave size, architecture support
-  if (ST.isWaveSizeKnown() && ST.hasDPPRowShare()) {
-    Value *Tid;
-    uint64_t Mask;
-    uint64_t RowIdx;
-    bool CanDPP16RowShare = false;
+  if (!ST.isWaveSizeKnown() || !ST.hasDPPRowShare())
+    return std::nullopt;
 
-    // wave32 requires Mask & 0x1F == 0x10
-    // wave64 requires Mask & 0x3F == 0x30
-    uint64_t MaskCheck = (1UL << ST.getWavefrontSizeLog2()) - 1;
-    uint64_t MaskTarget = MaskCheck & 0xF0;
+  Value *Tid;
+  uint64_t Mask;
+  uint64_t RowIdx;
+  bool CanDPP16RowShare = false;
 
-    // DPP16 Row Share 0: Idx = Tid & Mask
-    auto RowShare0Pred = m_And(m_Value(Tid), m_ConstantInt(Mask));
+  // wave32 requires Mask & 0x1F == 0x10
+  // wave64 requires Mask & 0x3F == 0x30
+  uint64_t MaskCheck = (1UL << ST.getWavefrontSizeLog2()) - 1;
+  uint64_t MaskTarget = MaskCheck & 0xF0;
 
-    // DPP16 Row Share (0 < Row < 15): Idx = (Tid & Mask) | RowIdx
-    auto RowSharePred =
-        m_Or(m_And(m_Value(Tid), m_ConstantInt(Mask)), m_ConstantInt(RowIdx));
+  // DPP16 Row Share 0: Idx = Tid & Mask
+  auto RowShare0Pred = m_And(m_Value(Tid), m_ConstantInt(Mask));
 
-    // DPP16 Row Share 15: Idx = Tid | 0xF
-    auto RowShare15Pred = m_Or(m_Value(Tid), m_ConstantInt<0xF>());
+  // DPP16 Row Share (0 < Row < 15): Idx = (Tid & Mask) | RowIdx
+  auto RowSharePred =
+      m_Or(m_And(m_Value(Tid), m_ConstantInt(Mask)), m_ConstantInt(RowIdx));
 
-    if (match(Idx, RowShare0Pred) && isThreadID(ST, Tid)) {
-      if ((Mask & MaskCheck) != MaskTarget)
-        return std::nullopt;
+  // DPP16 Row Share 15: Idx = Tid | 0xF
+  auto RowShare15Pred = m_Or(m_Value(Tid), m_ConstantInt<0xF>());
 
-      RowIdx = 0;
-      CanDPP16RowShare = true;
-    } else if (match(Idx, RowSharePred) && isThreadID(ST, Tid) && RowIdx < 15 &&
-               RowIdx > 0) {
-      if ((Mask & MaskCheck) != MaskTarget)
-        return std::nullopt;
+  if (match(Idx, RowShare0Pred) && isThreadID(ST, Tid)) {
+    if ((Mask & MaskCheck) != MaskTarget)
+      return std::nullopt;
 
-      CanDPP16RowShare = true;
-    } else if (match(Idx, RowShare15Pred) && isThreadID(ST, Tid)) {
-      RowIdx = 15;
-      CanDPP16RowShare = true;
-    }
+    RowIdx = 0;
+    CanDPP16RowShare = true;
+  } else if (match(Idx, RowSharePred) && isThreadID(ST, Tid) && RowIdx < 15 &&
+             RowIdx > 0) {
+    if ((Mask & MaskCheck) != MaskTarget)
+      return std::nullopt;
 
-    if (CanDPP16RowShare) {
-      CallInst *UpdateDPP =
-          B.CreateIntrinsic(Intrinsic::amdgcn_update_dpp, Val->getType(),
-                            {PoisonValue::get(Val->getType()), Val,
-                             B.getInt32(AMDGPU::DPP::ROW_SHARE0 | RowIdx),
-                             B.getInt32(0xF), B.getInt32(0xF), B.getFalse()});
-      UpdateDPP->takeName(&II);
-      UpdateDPP->copyMetadata(II);
-      return IC.replaceInstUsesWith(II, UpdateDPP);
-    }
+    CanDPP16RowShare = true;
+  } else if (match(Idx, RowShare15Pred) && isThreadID(ST, Tid)) {
+    RowIdx = 15;
+    CanDPP16RowShare = true;
+  }
+
+  if (CanDPP16RowShare) {
+    CallInst *UpdateDPP =
+        B.CreateIntrinsic(Intrinsic::amdgcn_update_dpp, Val->getType(),
+                          {PoisonValue::get(Val->getType()), Val,
+                           B.getInt32(AMDGPU::DPP::ROW_SHARE0 | RowIdx),
+                           B.getInt32(0xF), B.getInt32(0xF), B.getFalse()});
+    UpdateDPP->takeName(&II);
+    UpdateDPP->copyMetadata(II);
+    return IC.replaceInstUsesWith(II, UpdateDPP);
   }
 
   // No valid DPP detected
