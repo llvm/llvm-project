@@ -1,4 +1,5 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -passes=amdgpu-attributor %s -o %t.bc
+; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -passes=amdgpu-attributor-cgscc %s -o %t.bc
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -filetype=obj < %t.bc | llvm-readelf --notes - | FileCheck %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %t.bc | FileCheck --check-prefix=CHECK %s
 

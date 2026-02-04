@@ -1,6 +1,9 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -passes=amdgpu-attributor -o %t.gfx7.bc %s
+; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 -passes=amdgpu-attributor-cgscc -o %t.gfx7.bc %s
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -passes=amdgpu-attributor -o %t.gfx8.bc %s
+; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 -passes=amdgpu-attributor-cgscc -o %t.gfx8.bc %s
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -passes=amdgpu-attributor -o %t.gfx9.bc %s
+; RUN: opt -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 -passes=amdgpu-attributor-cgscc -o %t.gfx9.bc %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx700 < %t.gfx7.bc | FileCheck --check-prefixes=CHECK,PRE-GFX9 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx803 < %t.gfx8.bc | FileCheck --check-prefixes=CHECK,PRE-GFX9 %s
 ; RUN: llc -mtriple=amdgcn-amd-amdhsa -mcpu=gfx900 < %t.gfx9.bc | FileCheck --check-prefixes=CHECK,GFX9 %s

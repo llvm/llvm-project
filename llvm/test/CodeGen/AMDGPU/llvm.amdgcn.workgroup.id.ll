@@ -1,4 +1,5 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-attributor %s -o %t.bc
+; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-attributor-cgscc %s -o %t.bc
 ; RUN: llc -mtriple=amdgcn -mcpu=tahiti < %t.bc | FileCheck --check-prefixes=ALL,UNKNOWN-OS %s
 ; RUN: llc -mtriple=amdgcn -mcpu=tonga < %t.bc | FileCheck --check-prefixes=ALL,UNKNOWN-OS %s
 ; RUN: llc -mtriple=amdgcn-unknown-mesa3d -mcpu=tahiti < %t.bc | FileCheck -check-prefixes=ALL,MESA3D %s

@@ -1,4 +1,5 @@
 ; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-attributor %s -o %t.bc
+; RUN: opt -mtriple=amdgcn-amd-amdhsa -passes=amdgpu-attributor-cgscc %s -o %t.bc
 ; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-- -mcpu=hawaii < %t.bc | FileCheck --check-prefixes=ALL,UNKNOWN-OS %s
 ; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-- -mcpu=tonga  < %t.bc | FileCheck --check-prefixes=ALL,UNKNOWN-OS %s
 ; RUN: llc -global-isel -new-reg-bank-select -mtriple=amdgcn-unknown-mesa3d -mcpu=hawaii < %t.bc | FileCheck -check-prefixes=ALL,MESA3D %s

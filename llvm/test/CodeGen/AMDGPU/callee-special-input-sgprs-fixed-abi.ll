@@ -1,5 +1,7 @@
 ; RUN: opt -passes=amdgpu-attributor -mcpu=kaveri < %s | llc -enable-ipra=0 | FileCheck -enable-var-scope -check-prefixes=GCN,CIVI %s
+; RUN: opt -passes=amdgpu-attributor-cgscc -mcpu=kaveri < %s | llc -enable-ipra=0 | FileCheck -enable-var-scope -check-prefixes=GCN,CIVI %s
 ; RUN: opt -passes=amdgpu-attributor -mcpu=gfx900 < %s | llc -enable-ipra=0 | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
+; RUN: opt -passes=amdgpu-attributor-cgscc -mcpu=gfx900 < %s | llc -enable-ipra=0 | FileCheck -enable-var-scope -check-prefixes=GCN,GFX9 %s
 
 target triple = "amdgcn-amd-amdhsa"
 
