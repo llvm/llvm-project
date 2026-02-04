@@ -324,3 +324,90 @@ entry:
   store i16 %a1, ptr %inc2, align 2
   ret void
 }
+
+define void @udiv_pow2(ptr %d, ptr %s) {
+; CHECK-LABEL: @udiv_pow2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr [[S:%.*]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv <2 x i16> [[TMP0]], <i16 2, i16 9>
+; CHECK-NEXT:    store <2 x i16> [[TMP1]], ptr [[D:%.*]], align 2
+; CHECK-NEXT:    ret void
+;
+; DEFAULT-LABEL: @udiv_pow2(
+; DEFAULT-NEXT:  entry:
+; DEFAULT-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr [[S:%.*]], align 2
+; DEFAULT-NEXT:    [[TMP1:%.*]] = udiv <2 x i16> [[TMP0]], <i16 2, i16 9>
+; DEFAULT-NEXT:    store <2 x i16> [[TMP1]], ptr [[D:%.*]], align 2
+; DEFAULT-NEXT:    ret void
+;
+entry:
+  %l0 = load i16, ptr %s
+  %s1 = getelementptr i16, ptr %s, i64 1
+  %l1 = load i16, ptr %s1
+
+  %a0 = udiv i16 %l0, 2
+  %a1 = udiv i16 %l1, 9
+
+  store i16 %a0, ptr %d
+  %d1 = getelementptr i16, ptr %d, i64 1
+  store i16 %a1, ptr %d1
+  ret void
+}
+
+define void @udiv_pow2_all_same(ptr %d, ptr %s) {
+; CHECK-LABEL: @udiv_pow2_all_same(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr [[S:%.*]], align 2
+; CHECK-NEXT:    [[TMP2:%.*]] = udiv <2 x i16> [[TMP1]], splat (i16 2)
+; CHECK-NEXT:    store <2 x i16> [[TMP2]], ptr [[D:%.*]], align 2
+; CHECK-NEXT:    ret void
+;
+; DEFAULT-LABEL: @udiv_pow2_all_same(
+; DEFAULT-NEXT:  entry:
+; DEFAULT-NEXT:    [[TMP1:%.*]] = load <2 x i16>, ptr [[S:%.*]], align 2
+; DEFAULT-NEXT:    [[TMP2:%.*]] = udiv <2 x i16> [[TMP1]], splat (i16 2)
+; DEFAULT-NEXT:    store <2 x i16> [[TMP2]], ptr [[D:%.*]], align 2
+; DEFAULT-NEXT:    ret void
+;
+entry:
+  %l0 = load i16, ptr %s
+  %s1 = getelementptr i16, ptr %s, i64 1
+  %l1 = load i16, ptr %s1
+
+  %a0 = udiv i16 %l0, 2
+  %a1 = udiv i16 %l1, 2
+
+  store i16 %a0, ptr %d
+  %d1 = getelementptr i16, ptr %d, i64 1
+  store i16 %a1, ptr %d1
+  ret void
+}
+
+define void @udiv_all_pow2(ptr %d, ptr %s) {
+; CHECK-LABEL: @udiv_all_pow2(
+; CHECK-NEXT:  entry:
+; CHECK-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr [[S:%.*]], align 2
+; CHECK-NEXT:    [[TMP1:%.*]] = udiv <2 x i16> [[TMP0]], <i16 2, i16 4>
+; CHECK-NEXT:    store <2 x i16> [[TMP1]], ptr [[D:%.*]], align 2
+; CHECK-NEXT:    ret void
+;
+; DEFAULT-LABEL: @udiv_all_pow2(
+; DEFAULT-NEXT:  entry:
+; DEFAULT-NEXT:    [[TMP0:%.*]] = load <2 x i16>, ptr [[S:%.*]], align 2
+; DEFAULT-NEXT:    [[TMP1:%.*]] = udiv <2 x i16> [[TMP0]], <i16 2, i16 4>
+; DEFAULT-NEXT:    store <2 x i16> [[TMP1]], ptr [[D:%.*]], align 2
+; DEFAULT-NEXT:    ret void
+;
+entry:
+  %l0 = load i16, ptr %s
+  %s1 = getelementptr i16, ptr %s, i64 1
+  %l1 = load i16, ptr %s1
+
+  %a0 = udiv i16 %l0, 2
+  %a1 = udiv i16 %l1, 4
+
+  store i16 %a0, ptr %d
+  %d1 = getelementptr i16, ptr %d, i64 1
+  store i16 %a1, ptr %d1
+  ret void
+}
