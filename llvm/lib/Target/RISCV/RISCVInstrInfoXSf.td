@@ -195,7 +195,7 @@ class CustomSiFiveVMACC<bits<6> funct6, RISCVVFormat opv, string opcodestr>
   let Constraints = "$vd = $vd_wb";
   let RVVConstraint = NoConstraint;
   let ElementsDependOn = EltDepsVLMask;
-  let ReadsPastVL = 1;
+  let ReadsPastVL = true;
 }
 }
 
