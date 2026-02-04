@@ -200,10 +200,34 @@ def dup_v4f32 :
              [(v2f32 (extract_subvector (v4f32 (AArch64duplane32 (v4f32 node:$LHS), node:$RHS)), (i64 0))),
               (v2f32 (AArch64duplane32 (v4f32 node:$LHS), node:$RHS))]>;
 
+// Match scalar_to_vector values, optionally wrapped in a bitcast through
+// f32/f64.
+def scalar_to_vector_v1f64 : PatFrags<(ops node:$src),
+                          [(scalar_to_vector node:$src),
+                           (bitconvert (v1f64 (scalar_to_vector (f64 (bitconvert node:$src)))))]>;
+def scalar_to_vector_v2f32 : PatFrags<(ops node:$src),
+                          [(scalar_to_vector node:$src),
+                           (bitconvert (v2f32 (scalar_to_vector (f32 (bitconvert node:$src)))))]>;
+def scalar_to_vector_v2f64 : PatFrags<(ops node:$src),
+                          [(scalar_to_vector node:$src),
+                           (bitconvert (v2f64 (scalar_to_vector (f64 (bitconvert node:$src)))))]>;
+def scalar_to_vector_v4f32 : PatFrags<(ops node:$src),
+                          [(scalar_to_vector node:$src),
+                           (bitconvert (v4f32 (scalar_to_vector (f32 (bitconvert node:$src)))))]>;
+
 // Match either a scalar_to_vector (from SDAG) or a vector_insert of undef (from GISel)
 def vec_ins_or_scal_vec : PatFrags<(ops node:$src),
                           [(vector_insert undef, node:$src, (i64 0)),
                            (scalar_to_vector node:$src)]>;
+def vec_ins_or_scal_vec_v2f32 : PatFrags<(ops node:$src),
+                             [(vector_insert undef, node:$src, (i64 0)),
+                              (scalar_to_vector_v2f32 node:$src)]>;
+def vec_ins_or_scal_vec_v2f64 : PatFrags<(ops node:$src),
+                              [(vector_insert undef, node:$src, (i64 0)),
+                               (scalar_to_vector_v2f64 node:$src)]>;
+def vec_ins_or_scal_vec_v4f32 : PatFrags<(ops node:$src),
+                              [(vector_insert undef, node:$src, (i64 0)),
+                               (scalar_to_vector_v4f32 node:$src)]>;
 
 //===----------------------------------------------------------------------===//
 // Asm Operand Classes.
@@ -8804,7 +8828,7 @@ multiclass SIMDScalarDUP<string asm> {
     let Inst{19-16} = 0b1000;
   }
 
-  def : Pat<(v1i64 (scalar_to_vector (i64 (vector_extract (v2i64 V128:$src),
+  def : Pat<(v1i64 (scalar_to_vector_v1f64 (i64 (vector_extract (v2i64 V128:$src),
                                                           VectorIndexD:$idx)))),
             (!cast<Instruction>(NAME # i64) V128:$src, VectorIndexD:$idx)>;
 

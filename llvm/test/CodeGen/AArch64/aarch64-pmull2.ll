@@ -9,9 +9,9 @@ define void @test1(ptr %0, ptr %1) {
 ; CHECK-LABEL: test1:
 ; CHECK:       // %bb.0:
 ; CHECK-NEXT:    mov w8, #56824 // =0xddf8
-; CHECK-NEXT:    mov w9, #61186 // =0xef02
+; CHECK-NEXT:    mov x9, #61186 // =0xef02
 ; CHECK-NEXT:    movk w8, #40522, lsl #16
-; CHECK-NEXT:    movk w9, #29710, lsl #16
+; CHECK-NEXT:    movk x9, #29710, lsl #16
 ; CHECK-NEXT:    ldp q0, q1, [x1]
 ; CHECK-NEXT:    dup v2.2d, x8
 ; CHECK-NEXT:    fmov d3, x9

@@ -395,24 +395,24 @@ entry:
 define <3 x i128> @v3i128(<3 x i128> %d) {
 ; CHECK-SD-LABEL: v3i128:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fmov d0, x4
+; CHECK-SD-NEXT:    fmov d0, x0
 ; CHECK-SD-NEXT:    fmov d1, x2
-; CHECK-SD-NEXT:    fmov d2, x0
-; CHECK-SD-NEXT:    mov v0.d[1], x5
+; CHECK-SD-NEXT:    fmov d2, x4
+; CHECK-SD-NEXT:    mov v2.d[1], x5
 ; CHECK-SD-NEXT:    mov v1.d[1], x3
-; CHECK-SD-NEXT:    mov v2.d[1], x1
+; CHECK-SD-NEXT:    mov v0.d[1], x1
 ; CHECK-SD-NEXT:    mov x1, xzr
 ; CHECK-SD-NEXT:    mov x3, xzr
 ; CHECK-SD-NEXT:    mov x5, xzr
-; CHECK-SD-NEXT:    cnt v0.16b, v0.16b
-; CHECK-SD-NEXT:    cnt v1.16b, v1.16b
 ; CHECK-SD-NEXT:    cnt v2.16b, v2.16b
-; CHECK-SD-NEXT:    addv b0, v0.16b
-; CHECK-SD-NEXT:    addv b1, v1.16b
+; CHECK-SD-NEXT:    cnt v1.16b, v1.16b
+; CHECK-SD-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-SD-NEXT:    addv b2, v2.16b
-; CHECK-SD-NEXT:    fmov x0, d2
+; CHECK-SD-NEXT:    addv b1, v1.16b
+; CHECK-SD-NEXT:    addv b0, v0.16b
+; CHECK-SD-NEXT:    fmov x0, d0
 ; CHECK-SD-NEXT:    fmov x2, d1
-; CHECK-SD-NEXT:    fmov x4, d0
+; CHECK-SD-NEXT:    fmov x4, d2
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v3i128:
@@ -444,30 +444,30 @@ entry:
 define <4 x i128> @v4i128(<4 x i128> %d) {
 ; CHECK-SD-LABEL: v4i128:
 ; CHECK-SD:       // %bb.0: // %entry
-; CHECK-SD-NEXT:    fmov d0, x6
-; CHECK-SD-NEXT:    fmov d1, x4
-; CHECK-SD-NEXT:    fmov d2, x2
-; CHECK-SD-NEXT:    fmov d3, x0
-; CHECK-SD-NEXT:    mov v1.d[1], x5
-; CHECK-SD-NEXT:    mov v2.d[1], x3
-; CHECK-SD-NEXT:    mov v0.d[1], x7
-; CHECK-SD-NEXT:    mov v3.d[1], x1
+; CHECK-SD-NEXT:    fmov d0, x0
+; CHECK-SD-NEXT:    fmov d1, x2
+; CHECK-SD-NEXT:    fmov d2, x4
+; CHECK-SD-NEXT:    fmov d3, x6
+; CHECK-SD-NEXT:    mov v2.d[1], x5
+; CHECK-SD-NEXT:    mov v1.d[1], x3
+; CHECK-SD-NEXT:    mov v0.d[1], x1
+; CHECK-SD-NEXT:    mov v3.d[1], x7
 ; CHECK-SD-NEXT:    mov x1, xzr
 ; CHECK-SD-NEXT:    mov x3, xzr
 ; CHECK-SD-NEXT:    mov x5, xzr
 ; CHECK-SD-NEXT:    mov x7, xzr
-; CHECK-SD-NEXT:    cnt v1.16b, v1.16b
 ; CHECK-SD-NEXT:    cnt v2.16b, v2.16b
+; CHECK-SD-NEXT:    cnt v1.16b, v1.16b
 ; CHECK-SD-NEXT:    cnt v0.16b, v0.16b
 ; CHECK-SD-NEXT:    cnt v3.16b, v3.16b
-; CHECK-SD-NEXT:    addv b1, v1.16b
 ; CHECK-SD-NEXT:    addv b2, v2.16b
+; CHECK-SD-NEXT:    addv b1, v1.16b
 ; CHECK-SD-NEXT:    addv b0, v0.16b
 ; CHECK-SD-NEXT:    addv b3, v3.16b
-; CHECK-SD-NEXT:    fmov x2, d2
-; CHECK-SD-NEXT:    fmov x4, d1
-; CHECK-SD-NEXT:    fmov x6, d0
-; CHECK-SD-NEXT:    fmov x0, d3
+; CHECK-SD-NEXT:    fmov x0, d0
+; CHECK-SD-NEXT:    fmov x2, d1
+; CHECK-SD-NEXT:    fmov x4, d2
+; CHECK-SD-NEXT:    fmov x6, d3
 ; CHECK-SD-NEXT:    ret
 ;
 ; CHECK-GI-LABEL: v4i128:

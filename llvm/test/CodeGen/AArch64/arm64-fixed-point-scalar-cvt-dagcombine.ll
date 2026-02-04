@@ -21,8 +21,7 @@ define double @bar(ptr %iVals, ptr %fVals, ptr %dVals) {
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    ldr d0, [x2, #128]
 ; CHECK-NEXT:    frinti d0, d0
-; CHECK-NEXT:    fcvtzs x8, d0
-; CHECK-NEXT:    fmov d0, x8
+; CHECK-NEXT:    fcvtzs d0, d0
 ; CHECK-NEXT:    sri d0, d0, #1
 ; CHECK-NEXT:    scvtf.2d v0, v0, #1
 ; CHECK-NEXT:    // kill: def $d0 killed $d0 killed $q0
