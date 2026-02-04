@@ -564,3 +564,45 @@ func.func @isnormal_fold_vec() -> (vector<4xi1>) {
   %0 = math.isnormal %v1 : vector<4xf32>
   return %0 : vector<4xi1>
 }
+
+// CHECK-LABEL: func.func @ipowi_i1_0_pow_0
+// CHECK: %[[T0:.+]] = arith.constant true
+// CHECK: return %[[T0]] : i1
+func.func @ipowi_i1_0_pow_0() -> i1 {
+  %b = arith.constant false
+  %e = arith.constant false
+  %r = math.ipowi %b, %e : i1
+  return %r : i1
+}
+
+// CHECK-LABEL: func.func @ipowi_i1_0_pow_1
+// CHECK: %false = arith.constant false
+// CHECK: %true = arith.constant true
+// CHECK: %[[R01:.+]] = math.ipowi %false, %true : i1
+// CHECK: return %[[R01]] : i1
+func.func @ipowi_i1_0_pow_1() -> i1 {
+  %b = arith.constant false
+  %e = arith.constant true
+  %r = math.ipowi %b, %e : i1
+  return %r : i1
+}
+
+// CHECK-LABEL: func.func @ipowi_i1_1_pow_0
+// CHECK: %[[T10:.+]] = arith.constant true
+// CHECK: return %[[T10]] : i1
+func.func @ipowi_i1_1_pow_0() -> i1 {
+  %b = arith.constant true
+  %e = arith.constant false
+  %r = math.ipowi %b, %e : i1
+  return %r : i1
+}
+
+// CHECK-LABEL: func.func @ipowi_i1_1_pow_1
+// CHECK: %[[T11:.+]] = arith.constant true
+// CHECK: return %[[T11]] : i1
+func.func @ipowi_i1_1_pow_1() -> i1 {
+  %b = arith.constant true
+  %e = arith.constant true
+  %r = math.ipowi %b, %e : i1
+  return %r : i1
+}
