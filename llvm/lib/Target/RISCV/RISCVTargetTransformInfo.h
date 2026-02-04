@@ -373,7 +373,7 @@ public:
                  ->getElementType()
                  ->getIntegerBitWidth() != 1))
       return VPLegalization(VPLegalization::Discard, VPLegalization::Convert);
-    static Intrinsic::ID Supported[] = {
+    static const Intrinsic::ID Supported[] = {
         Intrinsic::vp_load,
         Intrinsic::vp_gather,
         Intrinsic::experimental_vp_strided_load,
