@@ -1382,9 +1382,6 @@ struct WgToSgMultiDimReductionOp
       for (auto localResult : localReductions) {
         auto finalResult = vector::makeArithReduction(
             rewriter, loc, op.getKind(), localResult, adaptor.getAcc()[0]);
-        if (auto defOp = finalResult.getDefiningOp())
-          xegpu::setDistributeLayoutAttr(defOp->getResult(0),
-                                         layout.dropSgLayoutAndData());
         results.push_back(finalResult);
       }
       rewriter.replaceOpWithMultiple(op, {results});
@@ -1527,10 +1524,6 @@ struct WgToSgMultiDimReductionOp
 
     auto finalResult = vector::makeArithReduction(
         rewriter, loc, op.getKind(), finalReduce.getResult(), accToAdd);
-
-    if (auto defOp = finalResult.getDefiningOp())
-      xegpu::setDistributeLayoutAttr(defOp->getResult(0),
-                                     layout.dropSgLayoutAndData());
 
     rewriter.replaceOp(op, finalResult);
     return success();
