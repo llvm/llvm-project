@@ -135,7 +135,8 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
     InterfaceMethod<
       /*desc=*/[{
         Return the indices that specify the starting offsets into the source
-        operand. The starting offsets are guaranteed to be in-bounds.
+        operand. The starting offsets are guaranteed to be in-bounds except
+        when the transfer operation is masked.
       }],
       /*retTy=*/"::mlir::OperandRange",
       /*methodName=*/"getIndices",
@@ -174,6 +175,71 @@ def VectorTransferOpInterface : OpInterface<"VectorTransferOpInterface"> {
       /*retTy=*/"Value",
       /*methodName=*/"getMask",
       /*args=*/(ins)
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Returns whether replacing the base operand with a shaped value of
+        `newBaseType` and updating the permutation map according to
+        `newPermutationMap`, where the replacement would adhere to the
+        conditinos specified by `updateStartingPosition`, passes any addihtional
+        op-specific constraints.
+
+        (Note: this method has been added in case it ends up being needed
+        and, if some upstream or downstream use requires additional argument,
+        they should be added.)
+      }],
+      /*retTy=*/"::mlir::LogicalResult",
+      /*methodName=*/"mayUpdateStartingPosition",
+      /*args=*/(ins "::mlir::ShapedType":$newBaseType,
+        "::mlir::AffineMap":$newPermutationMap),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        return ::mlir::success();
+      }]
+    >,
+    InterfaceMethod<
+      /*desc=*/[{
+        Updates the base of this transfer operation to `newBase`, the indices into
+        that base into `newIndices`, and the permutation map to `newPermutationMap`.
+        The new base, indices, and map must:
+        - Keep the same element type as the base (this condition could be relaxed
+          in the future)
+        - Preserve the number of transefr dimensions and avoid inserting new
+          dimensions unaccounted for in the permutation map - that is, if the transfer operation is
+          reading or writing a 4x2 vector to/from an Nx4x2 tensor or memref, it is
+          not valid to update that base to an Nx8 one, but updating in an N0xN1x4x2
+          base - or even an Nx16x32 one - is acceptable. Similarly, if the transfer
+          rank is 2 and the base is MxN, replacing it with a base that is Mx1xN or
+          MxKxN is only permitted if the permutation map is updated to skip the new
+          dimension. This restriction means that the updater does not need to reshape
+          or otherwise adjust the vector type of the transfer or other related attributes
+          like the inbounds attribute array.
+        - Must not shrink the size of a transfer dimension such that an `inbounds`
+          annotation becomes incorrect.
+        - Must pass any op-specific conditions in `mayUpdateStartingPosition`
+
+        The update is performed in-place. Implementations of the interface
+        should use `RewriterBase::modifyOpInPlace` to ensure proper pattern
+        rewriter operation.
+
+        Note: The initial motivating factcor for adding this interface method is to
+        enable folding operations like `memref.subview` with transfer opes in a
+        generic way. If future usecases require extending this method, it should be
+        done.
+      }],
+      /*retTy=*/"void",
+      /*methodName=*/"updateStartingPosition",
+      /*args=*/(ins "::mlir::RewriterBase&":$rewriter, "::mlir::Value":$newBase,
+      "::mlir::ValueRange":$newIndices,
+        "::mlir::AffineMapAttr":$newPermutationMap),
+      /*methodBody=*/"",
+      /*defaultImplementation=*/[{
+        rewriter.modifyOpInPlace($_op, [&]() {
+          $_op.getBaseMutable().assign(newBase);
+          $_op.getIndicesMutable().assign(newIndices);
+          $_op.setPermutationMapAttr(newPermutationMap);
+        });
+      }]
     >
   ];
 
