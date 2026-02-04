@@ -1911,9 +1911,9 @@ public:
   bool isReversibleBranch(const MCInst &Inst) const override {
     if (isCompAndBranch(Inst)) {
       unsigned InvertedOpcode = getInvertedBranchOpcode(Inst.getOpcode());
-      if (needsImmDec(InvertedOpcode) && Inst.getOperand(1).getImm() <= 0)
+      if (needsImmDec(InvertedOpcode) && Inst.getOperand(1).getImm() == 0)
         return false;
-      if (needsImmInc(InvertedOpcode) && Inst.getOperand(1).getImm() >= 63)
+      if (needsImmInc(InvertedOpcode) && Inst.getOperand(1).getImm() == 63)
         return false;
     }
     return MCPlusBuilder::isReversibleBranch(Inst);
@@ -2343,6 +2343,10 @@ public:
         Inst, MCSymbolRefExpr::create(Target, *Ctx), *Ctx, 0)));
     if (IsTailCall)
       convertJmpToTailCall(Inst);
+  }
+
+  bool isShortRangeBranch(const MCInst &Inst) const override {
+    return isCompAndBranch(Inst);
   }
 
   bool analyzeBranch(InstructionIterator Begin, InstructionIterator End,
