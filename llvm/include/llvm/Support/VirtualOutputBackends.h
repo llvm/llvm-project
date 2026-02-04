@@ -127,8 +127,7 @@ public:
 class InMemoryOutputBackend : public OutputBackend {
 protected:
   Expected<std::unique_ptr<OutputFileImpl>>
-  createFileImpl(StringRef Path, std::optional<OutputConfig> Config) override {
-    (void)Config; // FIXME: Not implemented.
+  createFileImpl(StringRef Path, std::optional<OutputConfig>) override {
     return std::make_unique<StringBackedOutputFileImpl>(Buffers[Path.str()]);
   }
 
