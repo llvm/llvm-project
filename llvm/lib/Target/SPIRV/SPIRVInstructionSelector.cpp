@@ -3524,9 +3524,8 @@ bool SPIRVInstructionSelector::selectExtractVal(Register ResVReg,
   StringRef ResName;
   if (GR.findValueAttrs(&I, MaybeResTy, ResName) &&
       MaybeResTy != GR.getTypeForSPIRVType(ResType)) {
-    assert(!MaybeResTy ||
-           MaybeResTy->isAggregateType() &&
-               "Expected aggregate type for extractv instruction");
+    assert((!MaybeResTy || MaybeResTy->isAggregateType()) &&
+           "Expected aggregate type for extractv instruction");
     ResType = GR.getOrCreateSPIRVType(MaybeResTy, I,
                                       SPIRV::AccessQualifier::ReadWrite, false);
     GR.assignSPIRVTypeToVReg(ResType, ResVReg, *I.getMF());
