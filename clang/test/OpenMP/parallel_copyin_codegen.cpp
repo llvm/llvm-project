@@ -1760,11 +1760,13 @@ void foo() {
 // CHECK16-LABEL: define {{[^@]+}}@__tls_init
 // CHECK16-SAME: () #[[ATTR0]] {
 // CHECK16-NEXT:  entry:
-// CHECK16-NEXT:    [[TMP0:%.*]] = load i8, ptr @__tls_guard, align 1
+// CHECK16-NEXT:    [[TLS_ADR_1:%.*]] = call align 1 ptr @llvm.threadlocal.address.p0(ptr align 1 @__tls_guard)
+// CHECK16-NEXT:    [[TMP0:%.*]] = load i8, ptr [[TLS_ADR_1]], align 1
 // CHECK16-NEXT:    [[GUARD_UNINITIALIZED:%.*]] = icmp eq i8 [[TMP0]], 0
 // CHECK16-NEXT:    br i1 [[GUARD_UNINITIALIZED]], label [[INIT:%.*]], label [[EXIT:%.*]], !prof [[PROF5:![0-9]+]]
 // CHECK16:       init:
-// CHECK16-NEXT:    store i8 1, ptr @__tls_guard, align 1
+// CHECK16-NEXT:    [[TLS_ADR_2:%.*]] = call align 1 ptr @llvm.threadlocal.address.p0(ptr align 1 @__tls_guard)
+// CHECK16-NEXT:    store i8 1, ptr [[TLS_ADR_2]], align 1
 // CHECK16-NEXT:    call void @__cxx_global_var_init()
 // CHECK16-NEXT:    br label [[EXIT]]
 // CHECK16:       exit:

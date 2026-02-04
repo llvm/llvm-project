@@ -358,12 +358,15 @@ void set_anon_i() {
 
 
 // CHECK: define {{.*}}@__tls_init()
-// CHECK: load i8, ptr @__tls_guard
+// CHECK: [[TLS_GUARD_ADDR_1:%.+]] = call align 1 ptr @llvm.threadlocal.address.p0(ptr align 1 @__tls_guard)
+// CHECK: load i8, ptr [[TLS_GUARD_ADDR_1]]
 // CHECK: %[[NEED_TLS_INIT:.*]] = icmp eq i8 %{{.*}}, 0
 // CHECK: br i1 %[[NEED_TLS_INIT]],
 // init:
-// CHECK: store i8 1, ptr @__tls_guard
-// CHECK-OPT: call ptr @llvm.invariant.start.p0(i64 1, ptr @__tls_guard)
+// CHECK: [[TLS_GUARD_ADDR_2:%.+]] = call align 1 ptr @llvm.threadlocal.address.p0(ptr align 1 @__tls_guard)
+// CHECK: store i8 1, ptr [[TLS_GUARD_ADDR_2]]
+// CHECK-OPT: [[TLS_GUARD_ADDR_3:%.+]] = call align 1 ptr @llvm.threadlocal.address.p0(ptr align 1 @__tls_guard)
+// CHECK-OPT: call ptr @llvm.invariant.start.p0(i64 1, ptr [[TLS_GUARD_ADDR_3]])
 // CHECK-NOT: call void @[[V_M_INIT]]()
 // CHECK: call void @[[A_INIT]]()
 // CHECK-NOT: call void @[[V_M_INIT]]()
