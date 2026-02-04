@@ -678,7 +678,6 @@ def PureVirtualCallChecker
       HelpText<
           "Check pure virtual function calls during construction/destruction">,
       Documentation<HasDocumentation>;
-
 } // end: "cplusplus"
 
 let ParentPackage = CplusplusOptIn in {
