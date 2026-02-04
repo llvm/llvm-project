@@ -454,7 +454,11 @@ define void @disable_tailcallopt(ptr %callee) "aarch64_inout_zt0" nounwind {
   ret void
 }
 
-define void @za_zt0_private_za_to_shared_za(ptr %callee) "aarch64_inout_za" "aarch64_in_zt0" nounwind {
+; Expected new lowering (not CHECK-SDAG)
+; - Lazy save and spill of ZT0 before first call
+; - Restore of ZA before second call
+; - Reload of ZT0 after second call
+define void @za_zt0_private_za_to_shared_za(ptr %callee) "aarch64_inout_za" "aarch64_inout_zt0" nounwind {
 ; CHECK-SDAG-LABEL: za_zt0_private_za_to_shared_za:
 ; CHECK-SDAG:       // %bb.0:
 ; CHECK-SDAG-NEXT:    stp x29, x30, [sp, #-32]! // 16-byte Folded Spill
