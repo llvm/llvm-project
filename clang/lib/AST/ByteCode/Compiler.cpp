@@ -1780,6 +1780,9 @@ bool Compiler<Emitter>::VisitImplicitValueInitExpr(
 
 template <class Emitter>
 bool Compiler<Emitter>::VisitArraySubscriptExpr(const ArraySubscriptExpr *E) {
+  if (E->getType()->isVoidType())
+    return false;
+
   const Expr *LHS = E->getLHS();
   const Expr *RHS = E->getRHS();
   const Expr *Index = E->getIdx();
@@ -7585,8 +7588,6 @@ bool Compiler<Emitter>::emitDummyPtr(const DeclTy &D, const Expr *E) {
 
 template <class Emitter>
 bool Compiler<Emitter>::emitFloat(const APFloat &F, const Expr *E) {
-  assert(!DiscardResult && "Should've been checked before");
-
   if (Floating::singleWord(F.getSemantics()))
     return this->emitConstFloat(Floating(F), E);
 
