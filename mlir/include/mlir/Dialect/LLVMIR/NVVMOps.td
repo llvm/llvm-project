@@ -6308,8 +6308,8 @@ def NVVM_AddFOp : NVVM_FloatBinaryOp<"addf", [Commutative]> {
     - The result type must be at least as wide as both operands.
     - Operands and result must be all scalars or all vectors (no mixing).
     - When operands are narrower than the result, they are extended to the 
-      result type before addition. When this occurs, the modifiers that are 
-      supported for the addition will depend upon the result type.
+      result type before addition. When this occurs, the modifiers 
+      supported for the addition are determined by the result type.
 
     **Supported type combinations:**
 
