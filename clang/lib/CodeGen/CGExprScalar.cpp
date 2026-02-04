@@ -2459,8 +2459,8 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
     assert(LoadList.size() >= VecTy->getNumElements() &&
            "Flattened type on RHS must have the same number or more elements "
            "than vector on LHS.");
-    llvm::Value *V =
-        CGF.Builder.CreateLoad(CGF.CreateIRTemp(DestTy, "flatcast.tmp"));
+    llvm::Value *V = CGF.Builder.CreateLoad(
+        CGF.CreateIRTempWithoutCast(DestTy, "flatcast.tmp"));
     // write to V.
     for (unsigned I = 0, E = VecTy->getNumElements(); I < E; I++) {
       RValue RVal = CGF.EmitLoadOfLValue(LoadList[I], Loc);
@@ -2478,8 +2478,8 @@ static Value *EmitHLSLElementwiseCast(CodeGenFunction &CGF, LValue SrcVal,
            "Flattened type on RHS must have the same number or more elements "
            "than vector on LHS.");
 
-    llvm::Value *V =
-        CGF.Builder.CreateLoad(CGF.CreateIRTemp(DestTy, "flatcast.tmp"));
+    llvm::Value *V = CGF.Builder.CreateLoad(
+        CGF.CreateIRTempWithoutCast(DestTy, "flatcast.tmp"));
     // V is an allocated temporary to build the truncated matrix into.
     for (unsigned I = 0, E = MatTy->getNumElementsFlattened(); I < E; I++) {
       unsigned ColMajorIndex =

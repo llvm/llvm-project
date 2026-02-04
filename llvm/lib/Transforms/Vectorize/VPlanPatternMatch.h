@@ -1053,6 +1053,10 @@ template <typename T> inline OneUse_match<T> m_OneUse(const T &SubPattern) {
   return SubPattern;
 }
 
+inline bind_ty<VPReductionPHIRecipe> m_ReductionPhi(VPReductionPHIRecipe *&V) {
+  return V;
+}
+
 } // namespace llvm::VPlanPatternMatch
 
 #endif
