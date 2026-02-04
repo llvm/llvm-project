@@ -63,8 +63,8 @@ private:
   std::unique_ptr<InstructionSelector> InstSelector;
   std::unique_ptr<InlineAsmLowering> InlineAsmInfo;
 
-  void accountForAMDShaderTrinaryMinmax();
   void initAvailableExtInstSets();
+  void accountForAMDShaderTrinaryMinmax();
 
 public:
   // This constructor initializes the data members to match that
