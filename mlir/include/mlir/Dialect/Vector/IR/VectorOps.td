@@ -1836,6 +1836,7 @@ def Vector_StoreOp : Vector_Op<"store", [
       [MemWrite]>:$base,
       Variadic<Index>:$indices,
       DefaultValuedOptionalAttr<BoolAttr, "false">:$nontemporal,
+      DefaultValuedOptionalAttr<BoolAttr, "false">:$volatile,
       OptionalAttr<IntValidAlignment<I64Attr>>: $alignment);
 
   let builders = [
@@ -1843,8 +1844,9 @@ def Vector_StoreOp : Vector_Op<"store", [
                    "Value":$base,
                    "ValueRange":$indices,
                    CArg<"bool", "false">:$nontemporal,
+                   CArg<"bool", "false">:$volatile,
                    CArg<"llvm::MaybeAlign", "llvm::MaybeAlign()">:$alignment), [{
-      return build($_builder, $_state, valueToStore, base, indices, nontemporal,
+      return build($_builder, $_state, valueToStore, base, indices, nontemporal, volatile,
                    alignment.has_value() ? $_builder.getI64IntegerAttr(alignment->value()) :
                                     nullptr);
     }]>
