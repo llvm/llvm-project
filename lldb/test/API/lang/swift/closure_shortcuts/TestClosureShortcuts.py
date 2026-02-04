@@ -39,4 +39,4 @@ class TestClosureShortcuts(TestBase):
         )
         self.expect("expr tinky.map({$0 * 2})", substrs=["[0] = 4", "[1] = 8"])
         self.expect("expr [2,4].map({$0 * 2})", substrs=["[0] = 4", "[1] = 8"])
-        self.expect("expr $0", substrs=["cannot find '$0' in scope"], error=True)
+        self.expect("expr $0", substrs=["anonymous closure argument not contained in a closure"], error=True)
