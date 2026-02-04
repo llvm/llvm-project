@@ -743,10 +743,8 @@ bool AMDGPULibCalls::fold(CallInst *CI) {
   return false;
 }
 
-static Constant *
-getConstantFloatVectorForArgType(LLVMContext &Ctx, AMDGPULibFunc::EType ArgType,
-                                 const ArrayRef<APFloat> Values,
-                                 const Type *Ty) {
+static Constant *getConstantFloatVector(const ArrayRef<APFloat> Values,
+                                        const Type *Ty) {
   Type *ElemTy = Ty->getScalarType();
   const fltSemantics &FltSem = ElemTy->getFltSemantics();
 
@@ -787,8 +785,7 @@ bool AMDGPULibCalls::TDOFold(CallInst *CI, const FuncInfo &FInfo) {
           return false;
         Values.push_back(APFloat(MatchingRow->result));
       }
-      Constant *NewValues = getConstantFloatVectorForArgType(
-          CI->getContext(), getArgType(FInfo), Values, CI->getType());
+      Constant *NewValues = getConstantFloatVector(Values, CI->getType());
       LLVM_DEBUG(errs() << "AMDIC: " << *CI << " ---> " << *NewValues << "\n");
       replaceCall(CI, NewValues);
       return true;
@@ -1548,11 +1545,9 @@ bool AMDGPULibCalls::evaluateCall(CallInst *aCI, const FuncInfo &FInfo) {
     if (hasTwoResults)
       nval1 = ConstantFP::get(aCI->getType(), Val1[0]);
   } else {
-    nval0 = getConstantFloatVectorForArgType(context, getArgType(FInfo), Val0,
-                                             aCI->getType());
+    nval0 = getConstantFloatVector(Val0, aCI->getType());
     if (hasTwoResults)
-      nval1 = getConstantFloatVectorForArgType(context, getArgType(FInfo), Val1,
-                                               aCI->getType());
+      nval1 = getConstantFloatVector(Val1, aCI->getType());
   }
 
   if (hasTwoResults) {
