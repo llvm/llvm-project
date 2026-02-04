@@ -73,9 +73,6 @@ static lldb::SBValue EvaluateVariableExpression(lldb::SBTarget &target,
 /// The expression has access to any variables and arguments that are in scope.
 Expected<EvaluateResponseBody>
 EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
-  const lldb::StateType process_state = dap.target.GetProcess().GetState();
-  if (!lldb::SBDebugger::StateIsStoppedState(process_state))
-    return llvm::make_error<NotStoppedError>();
 
   EvaluateResponseBody body;
   lldb::SBFrame frame = dap.GetLLDBFrame(arguments.frameId);
@@ -100,6 +97,14 @@ EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
     return body;
   }
 
+  const lldb::StateType process_state = dap.target.GetProcess().GetState();
+  if (!lldb::SBDebugger::StateIsStoppedState(process_state))
+    return llvm::make_error<DAPError>(
+        "Cannot evaluate expressions while the process is running. Pause "
+        "the process and try again.",
+        /**error_code=*/llvm::inconvertibleErrorCode(),
+        /**show_user=*/false);
+
   // If the user expression is empty, evaluate the last valid variable
   // expression.
   if (expression.empty() && is_repl_context)
@@ -114,7 +119,7 @@ EvaluateRequestHandler::Run(const EvaluateArguments &arguments) const {
 
   if (is_repl_context) {
     // save the new variable expression
-    dap.last_valid_variable_expression = expression;
+    dap.last_valid_variable_expression = std::move(expression);
 
     // Freeze dry the value in case users expand it later in the debug console
     value = value.Persist();
