@@ -1116,7 +1116,33 @@ struct ModFoldAdaptor {
   }
 };
 
-struct FoldGreaterAdaptor {
+struct MaxFoldAdaptor {
+  static FailureOr<APInt> fold(const APInt &lhs, const APInt &rhs,
+                               bool isUnsigned) {
+    if (lhs.getBitWidth() != rhs.getBitWidth())
+      return failure();
+    return lhs.getSExtValue() >= rhs.getSExtValue() ? lhs : rhs;
+  }
+
+  static FailureOr<APFloat> fold(const APFloat &lhs, const APFloat &rhs) {
+    return lhs >= rhs ? lhs : rhs;
+  }
+};
+
+struct MinFoldAdaptor {
+  static FailureOr<APInt> fold(const APInt &lhs, const APInt &rhs,
+                               bool isUnsigned) {
+    if (lhs.getBitWidth() != rhs.getBitWidth())
+      return failure();
+    return lhs.getSExtValue() <= rhs.getSExtValue() ? lhs : rhs;
+  }
+
+  static FailureOr<APFloat> fold(const APFloat &lhs, const APFloat &rhs) {
+    return lhs <= rhs ? lhs : rhs;
+  }
+};
+
+struct GreaterFoldAdaptor {
   static FailureOr<APInt> fold(const APInt &lhs, const APInt &rhs,
                                const bool isUnsigned) {
     return isUnsigned ? APInt(1, lhs.ugt(rhs)) : APInt(1, lhs.sgt(rhs));
@@ -1127,7 +1153,7 @@ struct FoldGreaterAdaptor {
   }
 };
 
-struct FoldGreaterEqualAdaptor {
+struct GreaterEqualFoldAdaptor {
   static FailureOr<APInt> fold(const APInt &lhs, const APInt &rhs,
                                const bool isUnsigned) {
     return isUnsigned ? APInt(1, lhs.uge(rhs)) : APInt(1, lhs.sge(rhs));
@@ -1138,7 +1164,7 @@ struct FoldGreaterEqualAdaptor {
   }
 };
 
-struct FoldEqualAdaptor {
+struct EqualFoldAdaptor {
   static FailureOr<APInt> fold(const APInt &lhs, const APInt &rhs,
                                const bool isUnsigned) {
     return APInt(1, lhs == rhs);
@@ -1247,8 +1273,9 @@ OpFoldResult IntDivOp::fold(FoldAdaptor adaptor) {
     APInt l = lhsAttr.getSplatValue<APInt>();
     APInt r = rhsAttr.getSplatValue<APInt>();
     if (!r.isZero()) {
+      auto intTy = dyn_cast<mlir::IntegerType>(resultETy);
       auto const result =
-          DivFoldAdaptor</*Ceil*/ false>::fold(l, r, /*isUnsigned*/ false);
+          DivFoldAdaptor</*Ceil*/ false>::fold(l, r, intTy.isUnsigned());
       if (failed(result))
         return {};
       return DenseElementsAttr::get(resultTy, result.value());
@@ -1396,7 +1423,7 @@ OpFoldResult GreaterOp::fold(FoldAdaptor adaptor) {
   if (!lhsAttr || !rhsAttr)
     return {};
 
-  return binaryFolder<FoldGreaterAdaptor>(lhsAttr, rhsAttr, resultTy);
+  return binaryFolder<GreaterFoldAdaptor>(lhsAttr, rhsAttr, resultTy);
 }
 
 OpFoldResult GreaterEqualOp::fold(FoldAdaptor adaptor) {
@@ -1409,7 +1436,7 @@ OpFoldResult GreaterEqualOp::fold(FoldAdaptor adaptor) {
   if (!lhsAttr || !rhsAttr)
     return {};
 
-  return binaryFolder<FoldGreaterEqualAdaptor>(lhsAttr, rhsAttr, resultTy);
+  return binaryFolder<GreaterEqualFoldAdaptor>(lhsAttr, rhsAttr, resultTy);
 }
 
 OpFoldResult EqualOp::fold(FoldAdaptor adaptor) {
@@ -1432,7 +1459,7 @@ OpFoldResult EqualOp::fold(FoldAdaptor adaptor) {
   if (!lhsAttr || !rhsAttr)
     return {};
 
-  return binaryFolder<FoldEqualAdaptor>(lhsAttr, rhsAttr, resultTy);
+  return binaryFolder<EqualFoldAdaptor>(lhsAttr, rhsAttr, resultTy);
 }
 
 OpFoldResult CastOp::fold(FoldAdaptor adaptor) {
@@ -1908,4 +1935,12 @@ OpFoldResult tosa::DivFloorShapeOp::fold(FoldAdaptor adaptor) {
 
 OpFoldResult tosa::ModShapeOp::fold(FoldAdaptor adaptor) {
   return binaryFold<ModShapeOp, ModFoldAdaptor>(this);
+}
+
+OpFoldResult tosa::MaxShapeOp::fold(FoldAdaptor adaptor) {
+  return binaryFold<MaxShapeOp, MaxFoldAdaptor>(this);
+}
+
+OpFoldResult tosa::MinShapeOp::fold(FoldAdaptor adaptor) {
+  return binaryFold<MinShapeOp, MinFoldAdaptor>(this);
 }
