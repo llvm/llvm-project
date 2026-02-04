@@ -114,7 +114,7 @@ void InefficientVectorOperationCheck::addMatcher(
   // Matchers for the loop whose body contains a push_back/emplace_back calling
   // statement.
   const auto HasInterestingLoopBody =
-      hasBody(anyOf(compoundStmt(has(AppendCall)), AppendCall));
+      hasBody(anyOf(compoundStmt(forEachDescendant(AppendCall)), AppendCall));
   const auto InInterestingCompoundStmt =
       hasParent(compoundStmt(has(TargetVarDefStmt)).bind(LoopParentName));
 
