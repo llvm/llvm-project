@@ -1746,6 +1746,7 @@ bool LoopVectorizationLegality::isVectorizableEarlyExitLoop() {
   }
 
   // Sort exiting blocks by dominance order to establish a clear chain.
+  DT->updateDFSNumbers();
   llvm::sort(UncountableExitingBlocks, [this](BasicBlock *A, BasicBlock *B) {
     return DT->getNode(A)->getDFSNumIn() < DT->getNode(B)->getDFSNumIn();
   });
