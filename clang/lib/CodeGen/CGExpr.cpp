@@ -6979,14 +6979,15 @@ void CodeGenFunction::SetFPAccuracy(llvm::Value *Val, float Accuracy) {
 
 void CodeGenFunction::SetSqrtFPAccuracy(llvm::Value *Val) {
   llvm::Type *EltTy = Val->getType()->getScalarType();
-  if (!EltTy->isFloatTy())
+  if (!EltTy->isFloatTy() && !EltTy->isHalfTy())
     return;
 
   if ((getLangOpts().OpenCL &&
        !CGM.getCodeGenOpts().OpenCLCorrectlyRoundedDivSqrt) ||
       (getLangOpts().HIP && getLangOpts().CUDAIsDevice &&
        !CGM.getCodeGenOpts().HIPCorrectlyRoundedDivSqrt)) {
-    // OpenCL v1.1 s7.4: minimum accuracy of single precision / is 3ulp
+    // OpenCL v1.1 s7.4: minimum accuracy of single precision sqrt is 3 ulp.
+    // OpenCL v3.0 s7.4: minimum accuracy of half precision sqrt is 1.5 ulp.
     //
     // OpenCL v1.2 s5.6.4.2: The -cl-fp32-correctly-rounded-divide-sqrt
     // build option allows an application to specify that single precision
@@ -6994,20 +6995,21 @@ void CodeGenFunction::SetSqrtFPAccuracy(llvm::Value *Val) {
     // source are correctly rounded.
     //
     // TODO: CUDA has a prec-sqrt flag
-    SetFPAccuracy(Val, 3.0f);
+    SetFPAccuracy(Val, EltTy->isFloatTy() ? 3.0f : 1.5f);
   }
 }
 
 void CodeGenFunction::SetDivFPAccuracy(llvm::Value *Val) {
   llvm::Type *EltTy = Val->getType()->getScalarType();
-  if (!EltTy->isFloatTy())
+  if (!EltTy->isFloatTy() && !EltTy->isHalfTy())
     return;
 
   if ((getLangOpts().OpenCL &&
        !CGM.getCodeGenOpts().OpenCLCorrectlyRoundedDivSqrt) ||
       (getLangOpts().HIP && getLangOpts().CUDAIsDevice &&
        !CGM.getCodeGenOpts().HIPCorrectlyRoundedDivSqrt)) {
-    // OpenCL v1.1 s7.4: minimum accuracy of single precision / is 2.5ulp
+    // OpenCL v1.1 s7.4: minimum accuracy of single precision / is 2.5 ulp.
+    // OpenCL v3.0 s7.4: minimum accuracy of half precision / is 1 ulp.
     //
     // OpenCL v1.2 s5.6.4.2: The -cl-fp32-correctly-rounded-divide-sqrt
     // build option allows an application to specify that single precision
@@ -7015,7 +7017,7 @@ void CodeGenFunction::SetDivFPAccuracy(llvm::Value *Val) {
     // source are correctly rounded.
     //
     // TODO: CUDA has a prec-div flag
-    SetFPAccuracy(Val, 2.5f);
+    SetFPAccuracy(Val, EltTy->isFloatTy() ? 2.5f : 1.f);
   }
 }
 
