@@ -353,7 +353,7 @@ def testExtDialectWithRegion():
         result: Result[Any]
         then: Region
         else_: Region
-    
+
     class YieldOp(TestRegion.Operation, name="yield"):
         value: Operand[Any]
 
@@ -411,7 +411,7 @@ def testExtDialectWithRegion():
             with InsertionPoint(if_.else_.blocks[0]):
                 v = arith.constant(i32, 3)
                 YieldOp(v)
-            
+
             nt = NoTermOp()
             nt.body.blocks.append()
 
