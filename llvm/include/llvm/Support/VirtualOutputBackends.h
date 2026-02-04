@@ -125,6 +125,8 @@ public:
 
 /// And output backend that creates files in memory, backed by string buffers in
 /// a map. This is useful for unittesting.
+/// Cloning it will result in a copy of the current state.
+/// This clone operation is not thread-safe.
 class InMemoryOutputBackend : public OutputBackend {
 protected:
   Expected<std::unique_ptr<OutputFileImpl>>
@@ -136,8 +138,9 @@ protected:
         Path, std::make_error_code(std::errc::file_exists));
   }
 
+  // Not thread-safe.
   IntrusiveRefCntPtr<OutputBackend> cloneImpl() const override {
-    return const_cast<InMemoryOutputBackend *>(this);
+    return makeIntrusiveRefCnt<InMemoryOutputBackend>(*this); // Deep copy
   }
 
 public:
