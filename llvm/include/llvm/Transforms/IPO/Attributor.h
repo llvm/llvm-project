@@ -6631,7 +6631,11 @@ enum AttributorRunOption {
   NONE = 0,
   MODULE = 1 << 0,
   CGSCC = 1 << 1,
-  ALL = MODULE | CGSCC
+  MODULE_LIGHT = 1 << 2,
+  CGSCC_LIGHT = 1 << 3,
+
+  FULL = MODULE | CGSCC,
+  LIGHT = MODULE_LIGHT | CGSCC_LIGHT
 };
 
 namespace AA {
