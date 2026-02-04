@@ -8328,9 +8328,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
       RelocSymTab = unwrapOrError(this->FileName,
                                   this->Obj.getSection(CGRelSection->sh_link));
       this->forEachRelocationDo(
-          *CGRelSection,
-          [&](const Relocation<ELFT> &R, unsigned, const Elf_Shdr &,
-              const Elf_Shdr *) { Relocations.push_back(R); });
+          *CGRelSection, [&](const auto &R, ...) { Relocations.push_back(R); });
       llvm::stable_sort(Relocations, [](const auto &LHS, const auto &RHS) {
         return LHS.Offset < RHS.Offset;
       });
@@ -8369,8 +8367,7 @@ template <class ELFT> void LLVMELFDumper<ELFT>::printCallGraphInfo() {
       this->reportUniqueWarning(RelSymOrErr.takeError());
       return;
     }
-    if (!RelSymOrErr->Name.empty())
-      W.printString("Name", RelSymOrErr->Name);
+    W.printString("Name", RelSymOrErr->Name);
   };
 
   auto PrintFunc = [&](uint64_t FuncPC) {
