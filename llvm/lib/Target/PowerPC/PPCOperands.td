@@ -166,7 +166,10 @@ defm s34imm64 : SignedImmediateWithPCRel<i64,
 // Special case immediate operands
 //===----------------------------------------------------------------------===//
 
-// immZero has custom print and decoder methods.
+// immZero represents a hardcoded zero register encoding, it is NOT used in DAG
+// patterns. It is only used as an instruction operand for assembly/disassembly,
+// specifically to represent a hardcoded zero register value in PC-relative
+// addressing modes.
 def immZero : Operand<i32> {
   let PrintMethod = "printImmZeroOperand";
   let ParserMatchClass = ImmZero;
@@ -174,7 +177,10 @@ def immZero : Operand<i32> {
   let OperandType = "OPERAND_IMMEDIATE";
 }
 
-// Special case: atimm has custom print method and no decoder.
+// atimm is used to represent branch prediction hints, not a general immediate
+// value. It's a 2-bit AT (Address Translation) field in PPC branch instructions
+// and is an assembly-only operand that prints as `+` or `-` symbols, not
+// numeric values.
 def atimm : Operand<i32> {
   let PrintMethod = "printATBitsAsHint";
   let ParserMatchClass = ATBitsAsHint;
