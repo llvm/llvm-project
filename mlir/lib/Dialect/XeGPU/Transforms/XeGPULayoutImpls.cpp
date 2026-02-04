@@ -472,8 +472,8 @@ xegpu::SliceAttr xegpu::setupMultiReductionResultLayout(
     // Second pass: Distribute remaining subgroups across reduction dimensions
     for (int i = srcRank - 1; i >= 0; i--) {
       if (llvm::is_contained(reductionDims, i)) {
-        sgLayout[i] = std::min(srcShape[i] / subgroupSize,
-                               static_cast<int64_t>(remainingSgCount));
+        sgLayout[i] =
+            std::min(srcShape[i], static_cast<int64_t>(remainingSgCount));
         assert((srcShape[i] % sgLayout[i] == 0) &&
                "source shape not divisible by sg_layout");
         sgData[i] = srcShape[i] / sgLayout[i];
