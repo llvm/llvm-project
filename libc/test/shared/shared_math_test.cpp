@@ -7,6 +7,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "shared/math.h"
+#include "src/__support/macros/properties/types.h"
 #include "test/UnitTest/FPMatcher.h"
 #include "test/UnitTest/Test.h"
 
@@ -166,3 +167,7 @@ TEST(LlvmLibcSharedMathTest, AllFloat128) {
 }
 
 #endif // LIBC_TYPES_HAS_FLOAT128
+
+TEST(LlvmLibcSharedMathTest, AllBFloat16) {
+  EXPECT_FP_EQ(bfloat16(0.0), LIBC_NAMESPACE::shared::log2bf16(bfloat16(1.0)));
+}
