@@ -650,13 +650,8 @@ bool RegBankLegalizeHelper::lowerS_BFE(MachineInstr &MI) {
   // copies from reg class to reg bank.
   auto S_BFE = B.buildInstr(Opc, {{SgprRB, Ty}},
                             {B.buildCopy(Ty, Src), B.buildCopy(S32, Src1)});
-  if (!constrainSelectedInstRegOperands(*S_BFE, *ST.getInstrInfo(),
-                                        *ST.getRegisterInfo(), RBI)) {
-    reportGISelFailure(
-        MF, MORE, "amdgpu-regbanklegalize",
-        "AMDGPU RegBankLegalize: lowerS_BFE, failed to constrain BFE", MI);
-    return false;
-  }
+  constrainSelectedInstRegOperands(*S_BFE, *ST.getInstrInfo(),
+                                   *ST.getRegisterInfo(), RBI);
 
   B.buildCopy(DstReg, S_BFE->getOperand(0).getReg());
   MI.eraseFromParent();

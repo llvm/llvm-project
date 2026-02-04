@@ -205,7 +205,8 @@ bool PPCInstructionSelector::selectIntToFP(MachineInstr &I,
       BuildMI(MBB, I, DbgLoc, TII.get(ConvOp), DstReg).addReg(MoveReg);
 
   I.eraseFromParent();
-  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+  constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+  return true;
 }
 
 bool PPCInstructionSelector::selectFPToInt(MachineInstr &I,
@@ -235,7 +236,8 @@ bool PPCInstructionSelector::selectFPToInt(MachineInstr &I,
       BuildMI(MBB, I, DbgLoc, TII.get(PPC::MFVSRD), DstReg).addReg(ConvReg);
 
   I.eraseFromParent();
-  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+  constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+  return true;
 }
 
 bool PPCInstructionSelector::selectZExt(MachineInstr &I, MachineBasicBlock &MBB,
@@ -269,7 +271,8 @@ bool PPCInstructionSelector::selectZExt(MachineInstr &I, MachineBasicBlock &MBB,
           .addImm(32);
 
   I.eraseFromParent();
-  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+  constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+  return true;
 }
 
 // For any 32 < Num < 64, check if the Imm contains at least Num consecutive
@@ -702,7 +705,8 @@ bool PPCInstructionSelector::selectConstantPool(
   }
 
   I.eraseFromParent();
-  return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+  constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+  return true;
 }
 
 bool PPCInstructionSelector::select(MachineInstr &I) {
@@ -760,7 +764,8 @@ bool PPCInstructionSelector::select(MachineInstr &I) {
     if (!LoadStore)
       return false;
 
-    return constrainSelectedInstRegOperands(*LoadStore, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(*LoadStore, TII, TRI, RBI);
+    return true;
   }
   case TargetOpcode::G_SITOFP:
   case TargetOpcode::G_UITOFP:

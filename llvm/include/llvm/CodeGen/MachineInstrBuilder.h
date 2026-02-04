@@ -441,7 +441,8 @@ public:
   bool constrainAllUses(const TargetInstrInfo &TII,
                         const TargetRegisterInfo &TRI,
                         const RegisterBankInfo &RBI) const {
-    return constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+    return true;
   }
 };
 

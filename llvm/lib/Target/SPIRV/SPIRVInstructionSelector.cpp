@@ -794,7 +794,8 @@ bool SPIRVInstructionSelector::select(MachineInstr &I) {
       // Make all vregs 64 bits (for SPIR-V IDs).
       MRI->setType(I.getOperand(0).getReg(), LLT::scalar(64));
     }
-    return constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(I, TII, TRI, RBI);
+    return true;
   }
 
   if (DeadMIs.contains(&I)) {
@@ -2594,19 +2595,21 @@ bool SPIRVInstructionSelector::selectDot4AddPacked(Register ResVReg,
 
   auto DotOp = Signed ? SPIRV::OpSDot : SPIRV::OpUDot;
   Register Dot = MRI->createVirtualRegister(GR.getRegClass(ResType));
-  bool Result = BuildMI(BB, I, I.getDebugLoc(), TII.get(DotOp))
-                    .addDef(Dot)
-                    .addUse(GR.getSPIRVTypeID(ResType))
-                    .addUse(X)
-                    .addUse(Y)
-                    .constrainAllUses(TII, TRI, RBI);
+  auto MIB = BuildMI(BB, I, I.getDebugLoc(), TII.get(DotOp))
+                 .addDef(Dot)
+                 .addUse(GR.getSPIRVTypeID(ResType))
+                 .addUse(X)
+                 .addUse(Y);
+  MIB.addImm(SPIRV::BuiltIn::PackedVectorFormat4x8Bit);
+  MIB.constrainAllUses(TII, TRI, RBI);
 
-  return Result && BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIAddS))
-                       .addDef(ResVReg)
-                       .addUse(GR.getSPIRVTypeID(ResType))
-                       .addUse(Dot)
-                       .addUse(Acc)
-                       .constrainAllUses(TII, TRI, RBI);
+  BuildMI(BB, I, I.getDebugLoc(), TII.get(SPIRV::OpIAddS))
+      .addDef(ResVReg)
+      .addUse(GR.getSPIRVTypeID(ResType))
+      .addUse(Dot)
+      .addUse(Acc)
+      .constrainAllUses(TII, TRI, RBI);
+  return true;
 }
 
 // Since pre-1.6 SPIRV has no DotProductInput4x8BitPacked implementation,
@@ -3159,7 +3162,7 @@ SPIRVInstructionSelector::buildI32Constant(uint32_t Val, MachineInstr &I,
                   .addDef(NewReg)
                   .addUse(GR.getSPIRVTypeID(SpvI32Ty))
                   .addImm(APInt(32, Val).getZExtValue());
-    Result &= constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
+    constrainSelectedInstRegOperands(*MI, TII, TRI, RBI);
     GR.add(ConstInt, MI);
   }
   return {NewReg, Result};
@@ -3758,8 +3761,7 @@ bool SPIRVInstructionSelector::selectIntrinsic(Register ResVReg,
           GR.getSPIRVTypeID(ResType));
       for (auto *Instr : Instructions) {
         Instr->setDebugLoc(I.getDebugLoc());
-        if (!constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI))
-          return false;
+        constrainSelectedInstRegOperands(*Instr, TII, TRI, RBI);
       }
       return true;
     } else {
