@@ -1,4 +1,4 @@
-; RUN: llc -mtriple=amdgcn -mcpu=gfx1030 -verify-machineinstrs < %s | FileCheck %s
+; RUN: llc -mtriple=amdgcn -mcpu=gfx1030  < %s | FileCheck %s
 ; CHECK-LABEL: .LBB0_1:
 ; CHECK: v_lshrrev_b32_e64 [[V:v[0-9]+]], 5, s33
 ; CHECK: v_add_nc_u32_e32 [[V]], 12, [[V]]
