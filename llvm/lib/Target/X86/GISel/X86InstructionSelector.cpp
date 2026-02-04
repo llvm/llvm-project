@@ -304,7 +304,6 @@ bool X86InstructionSelector::selectCopy(MachineInstr &I,
         BuildMI(*I.getParent(), I, I.getDebugLoc(),
                 TII.get(TargetOpcode::SUBREG_TO_REG))
             .addDef(ExtSrc)
-            .addImm(0)
             .addReg(SrcReg)
             .addImm(getSubRegIndex(SrcRC));
 
@@ -322,7 +321,6 @@ bool X86InstructionSelector::selectCopy(MachineInstr &I,
       Register ExtReg = MRI.createVirtualRegister(&X86::GR32RegClass);
       BuildMI(*I.getParent(), I, DL, TII.get(TargetOpcode::SUBREG_TO_REG),
               ExtReg)
-          .addImm(0)
           .addReg(SrcReg)
           .addImm(X86::sub_16bit);
 
@@ -1043,7 +1041,6 @@ bool X86InstructionSelector::selectAnyext(MachineInstr &I,
   BuildMI(*I.getParent(), I, I.getDebugLoc(),
           TII.get(TargetOpcode::SUBREG_TO_REG))
       .addDef(DstReg)
-      .addImm(0)
       .addReg(SrcReg)
       .addImm(getSubRegIndex(SrcRC));
 
@@ -1875,7 +1872,6 @@ bool X86InstructionSelector::selectMulDivRem(MachineInstr &I,
       } else if (RegTy.getSizeInBits() == 64) {
         BuildMI(*I.getParent(), I, I.getDebugLoc(),
                 TII.get(TargetOpcode::SUBREG_TO_REG), TypeEntry.HighInReg)
-            .addImm(0)
             .addReg(Zero32)
             .addImm(X86::sub_32bit);
       }

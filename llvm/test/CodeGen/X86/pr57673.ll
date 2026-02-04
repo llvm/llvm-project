@@ -46,7 +46,7 @@ define void @foo() {
   ; NORMAL-NEXT:   successors: %bb.1(0x80000000)
   ; NORMAL-NEXT: {{  $}}
   ; NORMAL-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; NORMAL-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG 0, [[MOV32r0_1]], %subreg.sub_32bit
+  ; NORMAL-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG [[MOV32r0_1]], %subreg.sub_32bit
   ; NORMAL-NEXT:   $rdi = COPY [[SUBREG_TO_REG]]
   ; NORMAL-NEXT:   $rsi = COPY [[SUBREG_TO_REG]]
   ; NORMAL-NEXT:   $rdx = COPY [[SUBREG_TO_REG]]
@@ -86,7 +86,7 @@ define void @foo() {
   ; INSTRREF-NEXT:   successors: %bb.1(0x80000000)
   ; INSTRREF-NEXT: {{  $}}
   ; INSTRREF-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
-  ; INSTRREF-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG 0, [[MOV32r0_1]], %subreg.sub_32bit
+  ; INSTRREF-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG [[MOV32r0_1]], %subreg.sub_32bit
   ; INSTRREF-NEXT:   $rdi = COPY [[SUBREG_TO_REG]]
   ; INSTRREF-NEXT:   $rsi = COPY [[SUBREG_TO_REG]]
   ; INSTRREF-NEXT:   $rdx = COPY [[SUBREG_TO_REG]]

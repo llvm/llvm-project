@@ -24,7 +24,7 @@ body:             |
     ; CHECK-NEXT: {{  $}}
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:gpr64common = IMPLICIT_DEF
     ; CHECK-NEXT: [[LDRBBui:%[0-9]+]]:gpr32 = LDRBBui [[DEF]], 0 :: (load (s8))
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG 0, [[LDRBBui]], %subreg.sub_32
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64all = SUBREG_TO_REG [[LDRBBui]], %subreg.sub_32
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr64 = COPY [[SUBREG_TO_REG]]
     ; CHECK-NEXT: [[ANDXri:%[0-9]+]]:gpr64sp = ANDXri [[COPY]], 4096
     ; CHECK-NEXT: $x0 = COPY [[ANDXri]]

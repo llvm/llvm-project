@@ -16,7 +16,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $w0
   ; CHECK-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 457873110
-  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64common = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64common = SUBREG_TO_REG [[MOVi32imm]], %subreg.sub_32
   ; CHECK-NEXT:   [[MOVi32imm1:%[0-9]+]]:gpr32 = MOVi32imm 1
   ; CHECK-NEXT:   TBNZW [[MOVi32imm1]], 0, %bb.2
   ; CHECK-NEXT:   B %bb.1
@@ -132,7 +132,7 @@ body:             |
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   [[COPY:%[0-9]+]]:gpr32 = COPY $w0
   ; CHECK-NEXT:   [[MOVi32imm:%[0-9]+]]:gpr32 = MOVi32imm 457873110
-  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64common = SUBREG_TO_REG 0, [[MOVi32imm]], %subreg.sub_32
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gpr64common = SUBREG_TO_REG [[MOVi32imm]], %subreg.sub_32
   ; CHECK-NEXT:   [[MOVi32imm1:%[0-9]+]]:gpr32 = MOVi32imm 1
   ; CHECK-NEXT:   TBNZW [[MOVi32imm1]], 0, %bb.2
   ; CHECK-NEXT:   B %bb.1

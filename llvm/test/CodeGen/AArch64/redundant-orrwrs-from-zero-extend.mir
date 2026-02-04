@@ -27,7 +27,7 @@ body:             |
     ; CHECK-NOT: %3:gpr32 = ORRWrs $wzr, %2, 0
     ; The ORRWrs should be removed.
     %3:gpr32 = ORRWrs $wzr, %2, 0
-    %4:gpr64 = SUBREG_TO_REG 0, %3, %subreg.sub_32
+    %4:gpr64 = SUBREG_TO_REG %3, %subreg.sub_32
     B %bb.3
 
   bb.3:
@@ -60,7 +60,7 @@ body:             |
     ; CHECK: %2:gpr32 = ORRWrs $wzr, %1, 0
     ; The ORRWrs should not be removed.
     %2:gpr32 = ORRWrs $wzr, %1, 0
-    %3:gpr64 = SUBREG_TO_REG 0, %2, %subreg.sub_32
+    %3:gpr64 = SUBREG_TO_REG %2, %subreg.sub_32
     B %bb.3
 
   bb.3:

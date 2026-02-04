@@ -44,7 +44,7 @@ body: |
     ; CHECK-NEXT: [[COPY:%[0-9]+]]:gpr32common = COPY $w0
     ; CHECK-NEXT: [[SUBWri:%[0-9]+]]:gpr32common = SUBWri [[COPY]], 1, 0
     ; CHECK-NEXT: [[DEF:%[0-9]+]]:gpr64all = IMPLICIT_DEF
-    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG 0, killed [[SUBWri]], %subreg.sub_32
+    ; CHECK-NEXT: [[SUBREG_TO_REG:%[0-9]+]]:gpr64 = SUBREG_TO_REG killed [[SUBWri]], %subreg.sub_32
     ; CHECK-NEXT: [[UBFMXri:%[0-9]+]]:gpr64 = nuw nsw UBFMXri killed [[SUBREG_TO_REG]], 63, 31
     ; CHECK-NEXT: $x0 = COPY [[UBFMXri]]
     ; CHECK-NEXT: RET_ReallyLR implicit $x0

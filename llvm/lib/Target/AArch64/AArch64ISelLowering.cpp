@@ -3378,7 +3378,7 @@ static const MachineInstr *stripVRegCopies(const MachineRegisterInfo &MRI,
       continue;
     }
     if (Opcode == AArch64::SUBREG_TO_REG) {
-      Reg = DefMI->getOperand(2).getReg();
+      Reg = DefMI->getOperand(1).getReg();
       continue;
     }
 

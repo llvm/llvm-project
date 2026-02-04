@@ -96,7 +96,7 @@ define void @ceph_con_v2_try_read(i32 %__trans_tmp_3.sroa.0.0.copyload, i1 %tobo
   ; CHECK-NEXT: {{  $}}
   ; CHECK-NEXT:   ADJCALLSTACKDOWN64 0, 0, 0, implicit-def dead $rsp, implicit-def dead $eflags, implicit-def dead $ssp, implicit $rsp, implicit $ssp
   ; CHECK-NEXT:   [[MOV32r0_:%[0-9]+]]:gr32 = MOV32r0 implicit-def dead $eflags
-  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG 0, killed [[MOV32r0_]], %subreg.sub_32bit
+  ; CHECK-NEXT:   [[SUBREG_TO_REG:%[0-9]+]]:gr64 = SUBREG_TO_REG killed [[MOV32r0_]], %subreg.sub_32bit
   ; CHECK-NEXT:   [[LEA64r:%[0-9]+]]:gr64 = LEA64r %stack.0.skip.i.i, 1, $noreg, 0, $noreg
   ; CHECK-NEXT:   $rdi = COPY [[LEA64r]]
   ; CHECK-NEXT:   CALL64r killed [[SUBREG_TO_REG]], csr_64, implicit $rsp, implicit $ssp, implicit $rdi, implicit-def $rsp, implicit-def $ssp, implicit-def $eax

@@ -9,7 +9,7 @@
 
 ; Before aarch64-isel
 ; %11:gpr32 = ORRWrr $wzr, killed %10:gpr32, debug-location !5; :0
-; %0:gpr64all = SUBREG_TO_REG 0, killed %11:gpr32, %subreg.sub_32, debug-location !5; :0
+; %0:gpr64all = SUBREG_TO_REG killed %11:gpr32, %subreg.sub_32, debug-location !5; :0
 ; DBG_INSTR_REF !7, !DIExpression(DW_OP_LLVM_arg, 0), %0:gpr64all, debug-location !11; :0 @[ :0 ] line no:0
 
 ; Before livedebugvalues

@@ -430,9 +430,9 @@ INITIALIZE_PASS_END(RegisterCoalescerLegacy, "register-coalescer",
   } else if (MI->isSubregToReg()) {
     Dst = MI->getOperand(0).getReg();
     DstSub = tri.composeSubRegIndices(MI->getOperand(0).getSubReg(),
-                                      MI->getOperand(3).getImm());
-    Src = MI->getOperand(2).getReg();
-    SrcSub = MI->getOperand(2).getSubReg();
+                                      MI->getOperand(2).getImm());
+    Src = MI->getOperand(1).getReg();
+    SrcSub = MI->getOperand(1).getSubReg();
   } else
     return false;
   return true;

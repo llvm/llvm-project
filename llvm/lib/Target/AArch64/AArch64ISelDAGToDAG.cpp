@@ -1756,12 +1756,9 @@ bool AArch64DAGToDAGISel::tryIndexedLoad(SDNode *N) {
   SDValue LoadedVal = SDValue(Res, 1);
   if (InsertTo64) {
     SDValue SubReg = CurDAG->getTargetConstant(AArch64::sub_32, dl, MVT::i32);
-    LoadedVal =
-        SDValue(CurDAG->getMachineNode(
-                    AArch64::SUBREG_TO_REG, dl, MVT::i64,
-                    CurDAG->getTargetConstant(0, dl, MVT::i64), LoadedVal,
-                    SubReg),
-                0);
+    LoadedVal = SDValue(CurDAG->getMachineNode(AArch64::SUBREG_TO_REG, dl,
+                                               MVT::i64, LoadedVal, SubReg),
+                        0);
   }
 
   ReplaceUses(SDValue(N, 0), LoadedVal);
@@ -3989,9 +3986,8 @@ bool AArch64DAGToDAGISel::tryShiftAmountMod(SDNode *N) {
     NewShiftAmt = narrowIfNeeded(CurDAG, NewShiftAmt);
   else if (VT == MVT::i64 && NewShiftAmt->getValueType(0) == MVT::i32) {
     SDValue SubReg = CurDAG->getTargetConstant(AArch64::sub_32, DL, MVT::i32);
-    MachineSDNode *Ext = CurDAG->getMachineNode(
-        AArch64::SUBREG_TO_REG, DL, VT,
-        CurDAG->getTargetConstant(0, DL, MVT::i64), NewShiftAmt, SubReg);
+    MachineSDNode *Ext = CurDAG->getMachineNode(AArch64::SUBREG_TO_REG, DL, VT,
+                                                NewShiftAmt, SubReg);
     NewShiftAmt = SDValue(Ext, 0);
   }
 
@@ -4710,8 +4706,8 @@ bool AArch64DAGToDAGISel::trySelectXAR(SDNode *N) {
       SDValue MOVIV = SDValue(MOV, 0);
 
       SDValue ZSub = CurDAG->getTargetConstant(AArch64::zsub, DL, MVT::i32);
-      SDNode *SubRegToReg = CurDAG->getMachineNode(AArch64::SUBREG_TO_REG, DL,
-                                                   VT, Zero, MOVIV, ZSub);
+      SDNode *SubRegToReg =
+          CurDAG->getMachineNode(AArch64::SUBREG_TO_REG, DL, VT, MOVIV, ZSub);
 
       R1 = N1->getOperand(1);
       R2 = SDValue(SubRegToReg, 0);

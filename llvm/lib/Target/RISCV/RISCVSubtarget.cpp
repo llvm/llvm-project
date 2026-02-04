@@ -98,6 +98,15 @@ RISCVSubtarget::initializeSubtargetDependencies(const Triple &TT, StringRef CPU,
   assert(TuneInfo && "TuneInfo shouldn't be nullptr!");
 
   ParseSubtargetFeatures(CPU, TuneCPU, FS);
+
+  RISCV::updateCZceFeatureImplications(*this);
+
+  // Re-sync the flags.
+  HasStdExtZcd = hasFeature(RISCV::FeatureStdExtZcd);
+  HasStdExtZcf = hasFeature(RISCV::FeatureStdExtZcf);
+  HasStdExtC = hasFeature(RISCV::FeatureStdExtC);
+  HasStdExtZce = hasFeature(RISCV::FeatureStdExtZce);
+
   TargetABI = RISCVABI::computeTargetABI(TT, getFeatureBits(), ABIName);
   RISCVFeatures::validate(TT, getFeatureBits());
   return *this;
