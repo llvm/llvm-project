@@ -109,8 +109,8 @@ bool ExpandPostRA::LowerSubregToReg(MachineInstr *MI) {
     // %rax = SUBREG_TO_REG 0, killed %eax, 3
     // We must leave %rax live.
     MI->setDesc(TII->get(TargetOpcode::KILL));
-    MI->removeOperand(3);     // SubIdx
-    MI->removeOperand(1);     // Imm
+    MI->removeOperand(3); // SubIdx
+    MI->removeOperand(1); // Imm
     LLVM_DEBUG(dbgs() << "subreg: replaced by: " << *MI);
     return true;
   }
