@@ -181,10 +181,11 @@ public:
   mlir::Value VisitCoawaitExpr(CoawaitExpr *s) {
     return cgf.emitCoawaitExpr(*s).getValue();
   }
+
   mlir::Value VisitCoyieldExpr(CoyieldExpr *e) {
-    cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: coyield");
-    return {};
+    return cgf.emitCoyieldExpr(*e).getValue();
   }
+
   mlir::Value VisitUnaryCoawait(const UnaryOperator *e) {
     cgf.cgm.errorNYI(e->getSourceRange(), "ScalarExprEmitter: unary coawait");
     return {};
@@ -2071,6 +2072,17 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     llvm_unreachable("dependent cast kind in CIR gen!");
   case clang::CK_BuiltinFnToFnPtr:
     llvm_unreachable("builtin functions are handled elsewhere");
+  case CK_LValueBitCast:
+  case CK_LValueToRValueBitCast: {
+    LValue sourceLVal = cgf.emitLValue(subExpr);
+    Address sourceAddr = sourceLVal.getAddress();
+
+    mlir::Type destElemTy = cgf.convertTypeForMem(destTy);
+    Address destAddr = sourceAddr.withElementType(cgf.getBuilder(), destElemTy);
+    LValue destLVal = cgf.makeAddrLValue(destAddr, destTy);
+    assert(!cir::MissingFeatures::opTBAA());
+    return emitLoadOfLValue(destLVal, ce->getExprLoc());
+  }
 
   case CK_CPointerToObjCPointerCast:
   case CK_BlockPointerToObjCPointerCast:
@@ -2234,15 +2246,19 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
 
     const MemberPointerType *mpt = ce->getType()->getAs<MemberPointerType>();
     if (mpt->isMemberFunctionPointerType()) {
-      cgf.cgm.errorNYI(subExpr->getSourceRange(),
-                       "CK_NullToMemberPointer: member function pointer");
-      return {};
+      auto ty = mlir::cast<cir::MethodType>(cgf.convertType(destTy));
+      return builder.getNullMethodPtr(ty, cgf.getLoc(subExpr->getExprLoc()));
     }
 
     auto ty = mlir::cast<cir::DataMemberType>(cgf.convertType(destTy));
     return builder.getNullDataMemberPtr(ty, cgf.getLoc(subExpr->getExprLoc()));
   }
 
+  case CK_ReinterpretMemberPointer: {
+    mlir::Value src = Visit(subExpr);
+    return builder.createBitcast(cgf.getLoc(subExpr->getExprLoc()), src,
+                                 cgf.convertType(destTy));
+  }
   case CK_BaseToDerivedMemberPointer:
   case CK_DerivedToBaseMemberPointer: {
     mlir::Value src = Visit(subExpr);
@@ -2265,9 +2281,10 @@ mlir::Value ScalarExprEmitter::VisitCastExpr(CastExpr *ce) {
     mlir::IntegerAttr offsetAttr = builder.getIndexAttr(offset.getQuantity());
 
     if (subExpr->getType()->isMemberFunctionPointerType()) {
-      cgf.cgm.errorNYI(subExpr->getSourceRange(),
-                       "VisitCastExpr: member function pointer");
-      return {};
+      if (kind == CK_BaseToDerivedMemberPointer)
+        return cir::DerivedMethodOp::create(builder, loc, resultTy, src,
+                                            offsetAttr);
+      return cir::BaseMethodOp::create(builder, loc, resultTy, src, offsetAttr);
     }
 
     if (kind == CK_BaseToDerivedMemberPointer)

@@ -43,11 +43,21 @@ public:
                        lldb::ByteOrder byte_order, uint32_t addr_size,
                        LookupTable lookup_table);
 
+  VirtualDataExtractor(const lldb::DataBufferSP &data_sp,
+                       LookupTable lookup_table);
+
   const void *GetData(lldb::offset_t *offset_ptr,
                       lldb::offset_t length) const override;
 
   const uint8_t *PeekData(lldb::offset_t offset,
                           lldb::offset_t length) const override;
+
+  lldb::DataExtractorSP GetSubsetExtractorSP(lldb::offset_t offset,
+                                             lldb::offset_t length) override;
+
+  lldb::DataExtractorSP GetSubsetExtractorSP(lldb::offset_t offset) override;
+
+  llvm::ArrayRef<uint8_t> GetData() const override;
 
   /// Unchecked overrides
   /// @{
