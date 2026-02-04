@@ -498,8 +498,10 @@ bool RecurrenceDescriptor::AddReductionVar(
 
     if (IsAPhi && Cur != Phi) {
       if (!areAllUsesIn(Cur, VisitedInsts)) {
-        // A "FindLast-like" Phi acts like a conditional select between the
-        // previous reduction value, and an arbitrary value.
+        // A "FindLast-like" phi acts like a conditional select between the
+        // previous reduction value, and an arbitrary value. Note: Multiple
+        // "FindLast-like" phis are not supported see:
+        // IVDescriptorsTest.UnsupportedFindLastPhi.
         FoundFindLastLikePhi =
             Kind == RecurKind::FindLast && !FoundFindLastLikePhi &&
             isFindLastLikePhi(cast<PHINode>(Cur), Phi, VisitedInsts);
