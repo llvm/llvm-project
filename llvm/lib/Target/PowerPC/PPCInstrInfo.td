@@ -1465,13 +1465,11 @@ let Defs = [R1], Uses = [R1] in {
 def ADJCALLSTACKDOWN : PPCEmitTimePseudo<(outs),
                               (ins u16imm:$amt1, u16imm:$amt2),
                               "#ADJCALLSTACKDOWN $amt1 $amt2",
-                              [(callseq_start u16imm_timm:$amt1,
-                                              u16imm_timm:$amt2)]>;
+                              [(callseq_start timm:$amt1, timm:$amt2)]>;
 def ADJCALLSTACKUP   : PPCEmitTimePseudo<(outs),
                               (ins u16imm:$amt1, u16imm:$amt2),
                               "#ADJCALLSTACKUP $amt1 $amt2",
-                              [(callseq_end u16imm_timm:$amt1,
-                                            u16imm_timm:$amt2)]>;
+                              [(callseq_end timm:$amt1, timm:$amt2)]>;
 }
 } // hasCtrlDep
 
