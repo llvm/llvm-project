@@ -554,13 +554,15 @@ static void expandFPToI(Instruction *FPToI) {
 
   // entry:
   Builder.SetInsertPoint(Entry);
-  Value *FloatVal0 = FloatVal;
+  // We're going to introduce branches on the value, so freeze it.
+  if (!isGuaranteedNotToBeUndefOrPoison(FloatVal))
+    FloatVal = Builder.CreateFreeze(FloatVal);
   // fp80 conversion is implemented by fpext to fp128 first then do the
   // conversion.
   if (FloatVal->getType()->isX86_FP80Ty())
-    FloatVal0 =
+    FloatVal =
         Builder.CreateFPExt(FloatVal, Type::getFP128Ty(Builder.getContext()));
-  Value *ARep = Builder.CreateBitCast(FloatVal0, FloatIntTy);
+  Value *ARep = Builder.CreateBitCast(FloatVal, FloatIntTy);
   Value *PosOrNeg =
       Builder.CreateICmpSGT(ARep, ConstantInt::getSigned(FloatIntTy, -1));
   Value *Sign = Builder.CreateSelect(PosOrNeg, ConstantInt::getSigned(IntTy, 1),
