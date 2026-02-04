@@ -107,6 +107,10 @@ public:
   // Sets whether we will JIT an expression if it cannot be interpreted
   void SetAllowJIT(bool allow);
 
+  bool GetBooleanLanguageOption(const char *option_name, SBError &error) const;
+
+  SBError SetBooleanLanguageOption(const char *option_name, bool value);
+
 protected:
   lldb_private::EvaluateExpressionOptions *get() const;
 

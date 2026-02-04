@@ -14,6 +14,7 @@
 #include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
 
+#include "clang/AST/CharUnits.h"
 #include "clang/AST/DeclCXX.h"
 #include "clang/AST/ExprCXX.h"
 #include "clang/AST/ExprObjC.h"
@@ -574,6 +575,7 @@ void CIRGenFunction::emitNewArrayInitializer(
   unsigned initListElements = 0;
 
   const Expr *init = e->getInitializer();
+  Address endOfInit = Address::invalid();
   QualType::DestructionKind dtorKind = elementType.isDestructedType();
   assert(!cir::MissingFeatures::cleanupDeactivationScope());
 
@@ -652,10 +654,30 @@ void CIRGenFunction::emitNewArrayInitializer(
       return;
     }
 
-    if (!initExprs.empty()) {
-      cgm.errorNYI(ile->getSourceRange(),
-                   "emitNewArrayInitializer: non-empty init list");
-      return;
+    CharUnits elementSize = getContext().getTypeSizeInChars(elementType);
+    CharUnits startAlign = curPtr.getAlignment();
+    unsigned i = 0;
+    for (const Expr *ie : initExprs) {
+      // Tell the cleanup that it needs to destroy up to this
+      // element.  TODO: some of these stores can be trivially
+      // observed to be unnecessary.
+      if (endOfInit.isValid()) {
+        cgm.errorNYI(ie->getSourceRange(),
+                     "emitNewArrayInitializer: update dtor cleanup ptr");
+        return;
+      }
+      // FIXME: If the last initializer is an incomplete initializer list for
+      // an array, and we have an array filler, we can fold together the two
+      // initialization loops.
+      storeAnyExprIntoOneUnit(*this, ie, ie->getType(), curPtr,
+                              AggValueSlot::DoesNotOverlap);
+      mlir::Location loc = getLoc(ie->getExprLoc());
+      mlir::Value castOp = builder.createPtrBitcast(
+          curPtr.getPointer(), convertTypeForMem(allocType));
+      mlir::Value offsetOp = builder.getSignedInt(loc, 1, /*width=*/32);
+      mlir::Value dataPtr = builder.createPtrStride(loc, castOp, offsetOp);
+      curPtr = Address(dataPtr, curPtr.getElementType(),
+                       startAlign.alignmentAtOffset((++i) * elementSize));
     }
 
     // The remaining elements are filled with the array filler expression.
