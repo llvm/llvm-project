@@ -3,7 +3,7 @@
 // RUN: %clang -### -target x86_64 -c -gno-key-instructions %s 2>&1 | FileCheck %s --check-prefixes=NO-DEBUG
 
 //// Help.
-// RUN %clang --help | FileCheck %s --check-prefix=HELP
+// RUN: %clang --help | FileCheck %s --check-prefix=HELP
 // HELP: -gkey-instructions  Enable Key Instructions, which reduces the jumpiness of debug stepping in optimized C/C++ code in some debuggers. DWARF only.
 
 // KEY-INSTRUCTIONS: "-gkey-instructions"
@@ -13,10 +13,6 @@
 // NO-DEBUG: -fdwarf2-cfi-asm
 // NO-DEBUG-NOT: debug-info-kind
 // NO-DEBUG-NOT: dwarf
-
-//// Help hidden: flag should not be visible.
-// RUN: %clang --help | FileCheck %s --check-prefix=HELP
-// HELP-NOT: key-instructions
 
 // Smoke test: check for Key Instructions keywords in the IR.
 void f() {}

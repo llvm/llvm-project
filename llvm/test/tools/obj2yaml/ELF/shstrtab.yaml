@@ -296,9 +296,9 @@ Sections:
 ## Show that an error is reported if the section header string table name cannot
 ## be read.
 # RUN: yaml2obj --docnum=11 %s -o %t11.o
-# RUNasda: not obj2yaml %t11.o 2>&1 | FileCheck %s --check-prefix=ERR -DFILE=%t11.o
+# RUN: not obj2yaml %t11.o 2>&1 | FileCheck %s --check-prefix=ERR -DFILE=%t11.o
 
-# ERR: Error reading file: [[FILE]]: unable to read section header string table name: a section [index 1] has an invalid sh_name (0x10000) offset which goes past the end of the section name string table
+# ERR: Error reading file: [[FILE]]: a section [index 1] has an invalid sh_name (0x10000) offset which goes past the end of the section name string table
 
 --- !ELF
 FileHeader:
