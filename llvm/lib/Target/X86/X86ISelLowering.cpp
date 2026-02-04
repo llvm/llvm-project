@@ -2919,9 +2919,11 @@ static bool mayFoldIntoVector(SDValue Op, const X86Subtarget &Subtarget,
   EVT VT = Op.getValueType();
   // TODO : might have better handling by using
   // `TargetLowering::LegalizeAction::Custom`
-  bool BitwiseCase = (ISD::isBitwiseLogicOp(Op.getOpcode()) &&
+  unsigned Opcode = Op.getOpcode();
+  bool BitwiseCase = (ISD::isBitwiseLogicOp(Opcode) &&
                       (VT == MVT::i128 || VT == MVT::i256 || VT == MVT::i512));
-  bool AddSubCase = (ISD::isAddSubOp(Op.getOpcode()) && (VT == MVT::i512));
+  bool AddSubCase =
+      ((Opcode == ISD::ADD || Opcode == ISD::SUB) && (VT == MVT::i512));
   if (BitwiseCase || AddSubCase)
     return mayFoldIntoVector(Op.getOperand(0), Subtarget) &&
            mayFoldIntoVector(Op.getOperand(1), Subtarget);
@@ -34267,9 +34269,6 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
   }
   case ISD::ADD:
   case ISD::SUB: {
-    // Use Kogge-Stone parallel carry/borrow propagation for i512 add/sub.
-    // Article : https://www.numberworld.org/y-cruncher/internals/addition.html
-    // related work : combineStore -> if (VT == MVT::i256 || VT == MVT::i512)
     // TODO: ISD::UADDO_CARRY
     SDValue LHS = N->getOperand(0);
     SDValue RHS = N->getOperand(1);
@@ -34320,7 +34319,7 @@ void X86TargetLowering::ReplaceNodeResults(SDNode *N,
 
     SDValue CorrMask = DAG.getNode(ISD::XOR, dl, MVT::i32, PropIn, CarryOut);
     CorrMask = DAG.getNode(ISD::TRUNCATE, dl, MVT::i8, CorrMask);
-    SDValue CorrVec = DAG.getNode(ISD::BITCAST, dl, BoolVT, CorrMask);
+    SDValue CorrVec = DAG.getBitcast(BoolVT, CorrMask);
 
     unsigned AdjustOpc = IsAdd ? ISD::SUB : ISD::ADD;
     SDValue Adjusted = DAG.getNode(AdjustOpc, dl, VecVT, Partial,

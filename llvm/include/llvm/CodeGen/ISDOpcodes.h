@@ -1618,11 +1618,6 @@ inline bool isBitwiseLogicOp(unsigned Opcode) {
   return Opcode == ISD::AND || Opcode == ISD::OR || Opcode == ISD::XOR;
 }
 
-/// Whether this is add/sub opcode.
-inline bool isAddSubOp(unsigned Opcode) {
-  return Opcode == ISD::ADD || Opcode == ISD::SUB;
-}
-
 /// Given a \p MinMaxOpc of ISD::(U|S)MIN or ISD::(U|S)MAX, returns
 /// ISD::(U|S)MAX and ISD::(U|S)MIN, respectively.
 LLVM_ABI NodeType getInverseMinMaxOpcode(unsigned MinMaxOpc);
