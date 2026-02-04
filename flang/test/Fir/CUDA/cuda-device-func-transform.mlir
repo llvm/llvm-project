@@ -45,7 +45,7 @@ func.func private @_QMmod1Psub1(!fir.ref<!fir.array<10xi32>> {cuf.data_attr = #c
 
 // CHECK: gpu.func @_QPsub_host_device1()
 
-// CHECK: func.func private @_QMmod1Psub1(!fir.ref<!fir.array<10xi32>> {cuf.data_attr = #cuf.cuda<device>}) attributes {gpu.kernel}
+// CHECK: func.func nested @_QMmod1Psub1(!fir.ref<!fir.array<10xi32>> {cuf.data_attr = #cuf.cuda<device>}) attributes {gpu.kernel}
 
 // CHECK: func.func @_QPsub_global1() attributes {cuf.proc_attr = #cuf.cuda_proc<global>}
 // CHECK-NEXT: return
