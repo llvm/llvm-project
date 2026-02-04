@@ -7429,9 +7429,10 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   // Retrieving VectorPH now when it's easier while VPlan still has Regions.
   VPBasicBlock *VectorPH = cast<VPBasicBlock>(BestVPlan.getVectorPreheader());
 
-  VPlanTransforms::optimizeForVFAndUF(BestVPlan, BestVF, BestUF, PSE);
-  VPlanTransforms::simplifyRecipes(BestVPlan);
-  VPlanTransforms::removeBranchOnConst(BestVPlan);
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::optimizeForVFAndUF, BestVPlan,
+                           BestVF, BestUF, PSE);
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::simplifyRecipes, BestVPlan);
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::removeBranchOnConst, BestVPlan);
   if (BestVPlan.getEntry()->getSingleSuccessor() ==
       BestVPlan.getScalarPreheader()) {
     // TODO: The vector loop would be dead, should not even try to vectorize.
@@ -7445,36 +7446,39 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
     return DenseMap<const SCEV *, Value *>();
   }
 
-  VPlanTransforms::narrowInterleaveGroups(
-      BestVPlan, BestVF,
+  RUN_VPLAN_PASS_NO_VERIFY(
+      VPlanTransforms::narrowInterleaveGroups, BestVPlan, BestVF,
       TTI.getRegisterBitWidth(BestVF.isScalable()
                                   ? TargetTransformInfo::RGK_ScalableVector
                                   : TargetTransformInfo::RGK_FixedWidthVector));
-  VPlanTransforms::removeDeadRecipes(BestVPlan);
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::removeDeadRecipes, BestVPlan);
 
-  VPlanTransforms::convertToConcreteRecipes(BestVPlan);
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::convertToConcreteRecipes,
+                           BestVPlan);
   // Convert the exit condition to AVLNext == 0 for EVL tail folded loops.
-  VPlanTransforms::convertEVLExitCond(BestVPlan);
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::convertEVLExitCond, BestVPlan);
   // Regions are dissolved after optimizing for VF and UF, which completely
   // removes unneeded loop regions first.
-  VPlanTransforms::dissolveLoopRegions(BestVPlan);
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::dissolveLoopRegions, BestVPlan);
   // Expand BranchOnTwoConds after dissolution, when latch has direct access to
   // its successors.
-  VPlanTransforms::expandBranchOnTwoConds(BestVPlan);
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::expandBranchOnTwoConds, BestVPlan);
   // Canonicalize EVL loops after regions are dissolved.
-  VPlanTransforms::canonicalizeEVLLoops(BestVPlan);
-  VPlanTransforms::materializeBackedgeTakenCount(BestVPlan, VectorPH);
-  VPlanTransforms::materializeVectorTripCount(
-      BestVPlan, VectorPH, CM.foldTailByMasking(),
-      CM.requiresScalarEpilogue(BestVF.isVector()));
-  VPlanTransforms::materializeVFAndVFxUF(BestVPlan, VectorPH, BestVF);
-  VPlanTransforms::cse(BestVPlan);
-  VPlanTransforms::simplifyRecipes(BestVPlan);
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::canonicalizeEVLLoops, BestVPlan);
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::materializeBackedgeTakenCount,
+                           BestVPlan, VectorPH);
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::materializeVectorTripCount,
+                           BestVPlan, VectorPH, CM.foldTailByMasking(),
+                           CM.requiresScalarEpilogue(BestVF.isVector()));
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::materializeVFAndVFxUF, BestVPlan,
+                           VectorPH, BestVF);
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::cse, BestVPlan);
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::simplifyRecipes, BestVPlan);
 
   // 0. Generate SCEV-dependent code in the entry, including TripCount, before
   // making any changes to the CFG.
-  DenseMap<const SCEV *, Value *> ExpandedSCEVs =
-      VPlanTransforms::expandSCEVs(BestVPlan, *PSE.getSE());
+  DenseMap<const SCEV *, Value *> ExpandedSCEVs = RUN_VPLAN_PASS_NO_VERIFY(
+      VPlanTransforms::expandSCEVs, BestVPlan, *PSE.getSE());
   if (!ILV.getTripCount()) {
     ILV.setTripCount(BestVPlan.getTripCount()->getLiveInIRValue());
   } else {
@@ -7496,7 +7500,7 @@ DenseMap<const SCEV *, Value *> LoopVectorizationPlanner::executePlan(
   State.CFG.PrevBB = ILV.createVectorizedLoopSkeleton();
   replaceVPBBWithIRVPBB(BestVPlan.getScalarPreheader(),
                         State.CFG.PrevBB->getSingleSuccessor(), &BestVPlan);
-  VPlanTransforms::removeDeadRecipes(BestVPlan);
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::removeDeadRecipes, BestVPlan);
 
   assert(verifyVPlanIsValid(BestVPlan, true /*VerifyLate*/) &&
          "final VPlan is invalid");
@@ -8125,10 +8129,11 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
       getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE, &LVer);
 
   // Create recipes for header phis.
-  VPlanTransforms::createHeaderPhiRecipes(
-      *VPlan0, PSE, *OrigLoop, Legal->getInductionVars(),
-      Legal->getReductionVars(), Legal->getFixedOrderRecurrences(),
-      CM.getInLoopReductions(), Hints.allowReordering());
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::createHeaderPhiRecipes, *VPlan0,
+                           PSE, *OrigLoop, Legal->getInductionVars(),
+                           Legal->getReductionVars(),
+                           Legal->getFixedOrderRecurrences(),
+                           CM.getInLoopReductions(), Hints.allowReordering());
 
   auto MaxVFTimes2 = MaxVF * 2;
   for (ElementCount VF = MinVF; ElementCount::isKnownLT(VF, MaxVFTimes2);) {
@@ -8136,8 +8141,10 @@ void LoopVectorizationPlanner::buildVPlansWithVPRecipes(ElementCount MinVF,
     if (auto Plan = tryToBuildVPlanWithVPRecipes(
             std::unique_ptr<VPlan>(VPlan0->duplicate()), SubRange, &LVer)) {
       // Now optimize the initial VPlan.
-      VPlanTransforms::hoistPredicatedLoads(*Plan, PSE, OrigLoop);
-      VPlanTransforms::sinkPredicatedStores(*Plan, PSE, OrigLoop);
+      RUN_VPLAN_PASS(VPlanTransforms::hoistPredicatedLoads, *Plan, PSE,
+                     OrigLoop);
+      RUN_VPLAN_PASS(VPlanTransforms::sinkPredicatedStores, *Plan, PSE,
+                     OrigLoop);
       RUN_VPLAN_PASS(VPlanTransforms::truncateToMinimalBitwidths, *Plan,
                      CM.getMinimalBitwidths());
       RUN_VPLAN_PASS(VPlanTransforms::optimize, *Plan);
@@ -8171,11 +8178,12 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
             return !CM.requiresScalarEpilogue(VF.isVector());
           },
           Range);
-  VPlanTransforms::handleEarlyExits(*Plan, Legal->hasUncountableEarlyExit());
-  VPlanTransforms::addMiddleCheck(*Plan, RequiresScalarEpilogueCheck,
-                                  CM.foldTailByMasking());
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::handleEarlyExits, *Plan,
+                           Legal->hasUncountableEarlyExit());
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::addMiddleCheck, *Plan,
+                           RequiresScalarEpilogueCheck, CM.foldTailByMasking());
 
-  VPlanTransforms::createLoopRegions(*Plan);
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::createLoopRegions, *Plan);
 
   // Don't use getDecisionAndClampRange here, because we don't know the UF
   // so this function is better to be conservative, rather than to split
@@ -8230,7 +8238,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
   // ---------------------------------------------------------------------------
   // Predicate and linearize the top-level loop region.
   // ---------------------------------------------------------------------------
-  VPlanTransforms::introduceMasksAndLinearize(*Plan, CM.foldTailByMasking());
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::introduceMasksAndLinearize, *Plan,
+                           CM.foldTailByMasking());
 
   // ---------------------------------------------------------------------------
   // Construct wide recipes and apply predication for original scalar
@@ -8253,8 +8262,8 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     if (CM.blockNeedsPredicationForAnyReason(BB))
       BlocksNeedingPredication.insert(BB);
 
-  VPlanTransforms::createInLoopReductionRecipes(*Plan, BlocksNeedingPredication,
-                                                Range.Start);
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::createInLoopReductionRecipes, *Plan,
+                           BlocksNeedingPredication, Range.Start);
 
   // Now process all other blocks and instructions.
   for (VPBasicBlock *VPBB : VPBlockUtils::blocksOnly<VPBasicBlock>(RPOT)) {
@@ -8320,11 +8329,11 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
          "entry block must be set to a VPRegionBlock having a non-empty entry "
          "VPBasicBlock");
 
-  // TODO: We can't call runPass on these transforms yet, due to verifier
-  // failures.
-  VPlanTransforms::addExitUsersForFirstOrderRecurrences(*Plan, Range);
+  RUN_VPLAN_PASS_NO_VERIFY(
+      VPlanTransforms::addExitUsersForFirstOrderRecurrences, *Plan, Range);
   DenseMap<VPValue *, VPValue *> IVEndValues;
-  VPlanTransforms::updateScalarResumePhis(*Plan, IVEndValues);
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::updateScalarResumePhis, *Plan,
+                           IVEndValues);
 
   // ---------------------------------------------------------------------------
   // Transform initial VPlan: Apply previously taken decisions, in order, to
@@ -8396,10 +8405,11 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlanWithVPRecipes(
     bool ForControlFlow = useActiveLaneMaskForControlFlow(Style);
     bool WithoutRuntimeCheck =
         Style == TailFoldingStyle::DataAndControlFlowWithoutRuntimeCheck;
-    VPlanTransforms::addActiveLaneMask(*Plan, ForControlFlow,
-                                       WithoutRuntimeCheck);
+    RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::addActiveLaneMask, *Plan,
+                             ForControlFlow, WithoutRuntimeCheck);
   }
-  VPlanTransforms::optimizeInductionExitUsers(*Plan, IVEndValues, PSE);
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::optimizeInductionExitUsers, *Plan,
+                           IVEndValues, PSE);
 
   assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
   return Plan;
@@ -8417,22 +8427,24 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
       OrigLoop, *LI, Legal->getWidestInductionType(),
       getDebugLocFromInstOrOperands(Legal->getPrimaryInduction()), PSE);
 
-  VPlanTransforms::createHeaderPhiRecipes(
-      *Plan, PSE, *OrigLoop, Legal->getInductionVars(),
-      MapVector<PHINode *, RecurrenceDescriptor>(),
+  RUN_VPLAN_PASS_NO_VERIFY(
+      VPlanTransforms::createHeaderPhiRecipes, *Plan, PSE, *OrigLoop,
+      Legal->getInductionVars(), MapVector<PHINode *, RecurrenceDescriptor>(),
       SmallPtrSet<const PHINode *, 1>(), SmallPtrSet<PHINode *, 1>(),
       /*AllowReordering=*/false);
-  VPlanTransforms::handleEarlyExits(*Plan,
-                                    /*HasUncountableExit*/ false);
-  VPlanTransforms::addMiddleCheck(*Plan, /*RequiresScalarEpilogue*/ true,
-                                  /*TailFolded*/ false);
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::handleEarlyExits, *Plan,
+                           /*HasUncountableExit*/ false);
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::addMiddleCheck, *Plan,
+                           /*RequiresScalarEpilogue*/ true,
+                           /*TailFolded*/ false);
 
-  VPlanTransforms::createLoopRegions(*Plan);
+  RUN_VPLAN_PASS_NO_VERIFY(VPlanTransforms::createLoopRegions, *Plan);
 
   for (ElementCount VF : Range)
     Plan->addVF(VF);
 
-  if (!VPlanTransforms::tryToConvertVPInstructionsToVPRecipes(*Plan, *TLI))
+  if (!RUN_VPLAN_PASS_NO_VERIFY(
+          VPlanTransforms::tryToConvertVPInstructionsToVPRecipes, *Plan, *TLI))
     return nullptr;
 
   // TODO: IVEndValues are not used yet in the native path, to optimize exit
@@ -8440,9 +8452,7 @@ VPlanPtr LoopVectorizationPlanner::tryToBuildVPlan(VFRange &Range) {
   // TODO: We can't call runPass on the transform yet, due to verifier
   // failures.
   DenseMap<VPValue *, VPValue *> IVEndValues;
-  VPlanTransforms::updateScalarResumePhis(*Plan, IVEndValues);
-
-  assert(verifyVPlanIsValid(*Plan) && "VPlan is invalid");
+  RUN_VPLAN_PASS(VPlanTransforms::updateScalarResumePhis, *Plan, IVEndValues);
   return Plan;
 }
 
