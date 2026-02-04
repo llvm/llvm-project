@@ -264,12 +264,70 @@ constexpr bool test() {
 
   {
     // operator-(x, y)
+    // x and y are in different ranges
+    // underlying ranges are the same
+    // x'index < y's index
     std::ranges::concat_view v(a, b);
     assert((v.end() - v.begin()) == 14);
 
+    // x'index < y's index
     auto it1 = v.begin() + 2;
     auto it2 = v.end() - 1;
     assert((it1 - it2) == -11);
+
+    // x'index > y's index
+    assert((it2 - it1) == 11);
+
+    // x'index == y's index
+    it1 = it1 + 11;
+    assert((it2 - it1) == 0);
+  }
+
+  {
+    // opeartor-(x,y)
+    // x and y are in different ranges
+    // underlying ranges are different types
+    std::array<int, 3> arr_a{1, 2, 3};
+    std::vector<int> arr_b{4, 5, 6};
+    std::ranges::concat_view v(arr_a, arr_b);
+
+    // x'index < y's index
+    auto it1 = v.begin() + 1;
+    auto it2 = v.end() - 1;
+    assert(*it1 == 2);
+    assert(*it2 == 6);
+    assert((it1 - it2) == -4);
+
+    // x'index > y's index
+    assert((it2 - it1) == 4);
+
+    // x'index == y's index
+    it1 = it1 + 4;
+    assert((it2 - it1) == 0);
+  }
+
+  {
+    // opeartor-(x,y)
+    // x and y are in different ranges
+    // underlying ranges are different types, and there are empty ranges in the middle
+    std::array<int, 0> e_1{};
+    std::array<int, 0> e_2{};
+    std::vector<int> arr_b{4, 5, 6};
+    std::ranges::concat_view v(a, e_1, e_2, arr_b);
+
+    // x'index < y's index
+    auto it1 = v.begin() + 1;
+    auto it2 = v.end() - 1;
+    assert(*it1 == 2);
+    assert(*it2 == 6);
+    assert((it1 - it2) == -6);
+
+    // x'index > y's index
+    assert((it2 - it1) == 6);
+
+    // x'index == y's index
+    it1 = it1 + 6;
+    assert((it2 - it1) == 0);
   }
 
   {

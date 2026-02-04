@@ -261,7 +261,7 @@ private:
     if constexpr (_Idx == sizeof...(_Views) - 1) {
       std::get<_Idx>(__it_) += static_cast<__underlying_diff_type>(__steps);
     } else {
-      difference_type __n_size = ranges::size(std::get<_Idx>(__parent_->__views_));
+      auto __n_size = ranges::distance(std::get<_Idx>(__parent_->__views_));
       if (__offset + __steps < __n_size) {
         std::get<_Idx>(__it_) += static_cast<__underlying_diff_type>(__steps);
       } else {
@@ -549,7 +549,7 @@ public:
         "Trying to subtract two iterators of concat_view where at least one iterator is valueless.");
     return __x.__invoke_at_index([&]<std::size_t __index_x>() -> difference_type {
       return __y.__invoke_at_index([&]<std::size_t __index_y>() -> difference_type {
-        if (__index_x > __index_y) {
+        if constexpr (__index_x > __index_y) {
           auto __dx = ranges::distance(
               ranges::begin(std::get<__index_x>(__x.__parent_->__views_)), std::get<__index_x>(__x.__it_));
           auto __dy = ranges::distance(
@@ -562,7 +562,7 @@ public:
             return 0;
           }.template operator()<__index_y + 1, __index_x>();
           return __dy + __s + __dx;
-        } else if (__index_x < __index_y) {
+        } else if constexpr (__index_x < __index_y) {
           return -(__y - __x);
         } else {
           return std::get<__index_x>(__x.__it_) - std::get<__index_y>(__y.__it_);
