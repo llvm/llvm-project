@@ -2302,14 +2302,14 @@ def ScopedAtomicMaxFetch : AtomicBuiltin {
   let Prototype = "void(...)";
 }
 
-def ScopedAtomicUIncWrap : AtomicBuiltin {
-  let Spellings = ["__scoped_atomic_uinc_wrap"];
+def ScopedAtomicUInc : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_fetch_uinc"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";
 }
 
-def ScopedAtomicUDecWrap : AtomicBuiltin {
-  let Spellings = ["__scoped_atomic_udec_wrap"];
+def ScopedAtomicUDec : AtomicBuiltin {
+  let Spellings = ["__scoped_atomic_fetch_udec"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";
 }
@@ -2402,6 +2402,18 @@ def AtomicFetchMax : AtomicBuiltin {
 
 def AtomicFetchMin : AtomicBuiltin {
   let Spellings = ["__atomic_fetch_min"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def AtomicFetchUInc : AtomicBuiltin {
+  let Spellings = ["__atomic_fetch_uinc"];
+  let Attributes = [CustomTypeChecking];
+  let Prototype = "void(...)";
+}
+
+def AtomicFetchUDec : AtomicBuiltin {
+  let Spellings = ["__atomic_fetch_udec"];
   let Attributes = [CustomTypeChecking];
   let Prototype = "void(...)";
 }
