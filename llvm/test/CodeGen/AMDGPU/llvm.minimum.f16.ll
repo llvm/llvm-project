@@ -523,13 +523,13 @@ define void @s_minimum_f16(half inreg %src0, half inreg %src1) {
 ; GFX12-NEXT:    s_wait_bvhcnt 0x0
 ; GFX12-NEXT:    s_wait_kmcnt 0x0
 ; GFX12-NEXT:    s_minimum_f16 s0, s0, s1
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_delay_alu instid0(SALU_CYCLE_2)
 ; GFX12-NEXT:    s_and_b32 s0, 0xffff, s0
 ; GFX12-NEXT:    ;;#ASMSTART
 ; GFX12-NEXT:    ; use s0
 ; GFX12-NEXT:    ;;#ASMEND
-; GFX12-NEXT:    s_wait_alu 0xfffe
+; GFX12-NEXT:    s_wait_alu depctr_sa_sdst(0)
 ; GFX12-NEXT:    s_setpc_b64 s[30:31]
   %op = call half @llvm.minimum.f16(half %src0, half %src1)
   %cast = bitcast half %op to i16

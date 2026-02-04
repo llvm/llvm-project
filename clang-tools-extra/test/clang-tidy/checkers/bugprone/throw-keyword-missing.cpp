@@ -49,7 +49,7 @@ struct RegularException {
 
 // --------------
 
-void stdExceptionNotTrownTest(int i) {
+void stdExceptionNotThrownTest(int i) {
   if (i < 0)
     // CHECK-MESSAGES-DAG: :[[@LINE+1]]:5: warning: suspicious exception object created but not thrown; did you mean 'throw {{.*}}'? [bugprone-throw-keyword-missing]
     std::exception();
@@ -205,3 +205,24 @@ void placeMentNewTest() {
   alignas(RegularException) unsigned char expr[sizeof(RegularException)];
   new (expr) RegularException{};
 }
+
+void lambdaAsVariableInitializerTest() {
+  const auto var = [] {
+    // CHECK-MESSAGES: :[[@LINE+1]]:5: warning: suspicious exception
+    RegularException{0};
+  };
+}
+
+void lambdaInReturnTest() {
+  return [] {
+    // CHECK-MESSAGES: :[[@LINE+1]]:5: warning: suspicious exception
+    RegularException{0};
+  }();
+}
+
+struct ExceptionInConstructorTest {
+  ExceptionInConstructorTest() {
+    // CHECK-MESSAGES: :[[@LINE+1]]:5: warning: suspicious exception
+    RegularException{0};
+  }
+};

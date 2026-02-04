@@ -52,6 +52,7 @@ static const LangASMap FakeAddrSpaceMap = {
     15, // hlsl_private
     16, // hlsl_device
     17, // hlsl_input
+    18, // hlsl_push_constant
     20, // wasm_funcref
 };
 
@@ -156,7 +157,7 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
   Float128Format = &llvm::APFloat::IEEEquad();
   Ibm128Format = &llvm::APFloat::PPCDoubleDouble();
   MCountName = "mcount";
-  UserLabelPrefix = "_";
+  UserLabelPrefix = Triple.isOSBinFormatMachO() ? "_" : "";
   RegParmMax = 0;
   SSERegParmMax = 0;
   HasAlignMac68kSupport = false;
@@ -196,9 +197,10 @@ TargetInfo::TargetInfo(const llvm::Triple &T) : Triple(T) {
 // Out of line virtual dtor for TargetInfo.
 TargetInfo::~TargetInfo() {}
 
-void TargetInfo::resetDataLayout(StringRef DL, const char *ULP) {
-  DataLayoutString = DL.str();
-  UserLabelPrefix = ULP;
+void TargetInfo::resetDataLayout(StringRef DL) { DataLayoutString = DL.str(); }
+
+void TargetInfo::resetDataLayout() {
+  DataLayoutString = Triple.computeDataLayout(getABI());
 }
 
 bool
@@ -645,6 +647,17 @@ bool TargetInfo::emitVectorDeletingDtors(const LangOptions &LangOpts) const {
 
 bool TargetInfo::areDefaultedSMFStillPOD(const LangOptions &LangOpts) const {
   return LangOpts.getClangABICompat() > LangOptions::ClangABI::Ver15;
+}
+
+void TargetInfo::setDependentOpenCLOpts() {
+  auto &Opts = getSupportedOpenCLOpts();
+  if (!hasFeatureEnabled(Opts, "cl_khr_fp64") ||
+      !hasFeatureEnabled(Opts, "__opencl_c_fp64")) {
+    setFeatureEnabled(Opts, "__opencl_c_ext_fp64_global_atomic_add", false);
+    setFeatureEnabled(Opts, "__opencl_c_ext_fp64_local_atomic_add", false);
+    setFeatureEnabled(Opts, "__opencl_c_ext_fp64_global_atomic_min_max", false);
+    setFeatureEnabled(Opts, "__opencl_c_ext_fp64_local_atomic_min_max", false);
+  }
 }
 
 LangAS TargetInfo::getOpenCLTypeAddrSpace(OpenCLTypeKind TK) const {

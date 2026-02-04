@@ -19,6 +19,7 @@
 #include "clang/Basic/CodeGenOptions.h"
 #include "clang/Basic/Diagnostic.h"
 #include "clang/Basic/TargetInfo.h"
+#include "clang/Frontend/CompilerInstance.h"
 #include "llvm/ADT/StringRef.h"
 #include "llvm/IR/DataLayout.h"
 #include "llvm/IR/LLVMContext.h"
@@ -31,7 +32,7 @@ using namespace clang;
 using namespace CodeGen;
 
 namespace {
-  class CodeGeneratorImpl : public CodeGenerator {
+  class CodeGeneratorImpl final : public CodeGenerator {
     DiagnosticsEngine &Diags;
     ASTContext *Ctx;
     IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS; // Only used for debug info.
@@ -60,12 +61,8 @@ namespace {
     };
 
     CoverageSourceInfo *CoverageInfo;
-
-  protected:
     std::unique_ptr<llvm::Module> M;
     std::unique_ptr<CodeGen::CodeGenModule> Builder;
-
-  private:
     SmallVector<FunctionDecl *, 8> DeferredInlineMemberFuncDefs;
 
     static llvm::StringRef ExpandModuleName(llvm::StringRef ModuleName,
@@ -107,8 +104,8 @@ namespace {
       return Builder->getModuleDebugInfo();
     }
 
-    llvm::Module *ReleaseModule() {
-      return M.release();
+    std::unique_ptr<llvm::Module> ReleaseModule() {
+      return std::exchange(M, nullptr);
     }
 
     const Decl *GetDeclForMangledName(StringRef MangledName) {
@@ -143,6 +140,7 @@ namespace {
 
       std::unique_ptr<CodeGenModule> OldBuilder = std::move(Builder);
 
+      assert(Ctx && "must call Initialize() before calling StartModule()");
       Initialize(*Ctx);
 
       if (OldBuilder)
@@ -251,6 +249,7 @@ namespace {
 
       // For MSVC compatibility, treat declarations of static data members with
       // inline initializers as definitions.
+      assert(Ctx && "Initialize() not called");
       if (Ctx->getTargetInfo().getCXXABI().isMicrosoft()) {
         for (Decl *Member : D->decls()) {
           if (VarDecl *VD = dyn_cast<VarDecl>(Member)) {
@@ -341,7 +340,7 @@ llvm::Module *CodeGenerator::GetModule() {
   return static_cast<CodeGeneratorImpl*>(this)->GetModule();
 }
 
-llvm::Module *CodeGenerator::ReleaseModule() {
+std::unique_ptr<llvm::Module> CodeGenerator::ReleaseModule() {
   return static_cast<CodeGeneratorImpl*>(this)->ReleaseModule();
 }
 
@@ -368,16 +367,26 @@ llvm::Module *CodeGenerator::StartModule(llvm::StringRef ModuleName,
   return static_cast<CodeGeneratorImpl*>(this)->StartModule(ModuleName, C);
 }
 
-CodeGenerator *
+std::unique_ptr<CodeGenerator>
 clang::CreateLLVMCodeGen(DiagnosticsEngine &Diags, llvm::StringRef ModuleName,
                          IntrusiveRefCntPtr<llvm::vfs::FileSystem> FS,
                          const HeaderSearchOptions &HeaderSearchOpts,
                          const PreprocessorOptions &PreprocessorOpts,
                          const CodeGenOptions &CGO, llvm::LLVMContext &C,
                          CoverageSourceInfo *CoverageInfo) {
-  return new CodeGeneratorImpl(Diags, ModuleName, std::move(FS),
-                               HeaderSearchOpts, PreprocessorOpts, CGO, C,
-                               CoverageInfo);
+  return std::make_unique<CodeGeneratorImpl>(Diags, ModuleName, std::move(FS),
+                                             HeaderSearchOpts, PreprocessorOpts,
+                                             CGO, C, CoverageInfo);
+}
+
+std::unique_ptr<CodeGenerator>
+clang::CreateLLVMCodeGen(const CompilerInstance &CI, StringRef ModuleName,
+                         llvm::LLVMContext &C,
+                         CoverageSourceInfo *CoverageInfo) {
+  return CreateLLVMCodeGen(CI.getDiagnostics(), ModuleName,
+                           CI.getVirtualFileSystemPtr(),
+                           CI.getHeaderSearchOpts(), CI.getPreprocessorOpts(),
+                           CI.getCodeGenOpts(), C, CoverageInfo);
 }
 
 namespace clang {

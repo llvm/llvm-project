@@ -7,14 +7,13 @@
 // CHECK: [[CLANG:".*clang.*"]] "-cc1" "-triple" "spirv64"
 // CHECK-SAME: "-aux-triple" "{{.*}}" "-emit-llvm-bc"
 // CHECK-SAME: "-fcuda-is-device"
-// CHECK-SAME: "-fcuda-allow-variadic-functions"
 // CHECK-SAME: "-mlink-builtin-bitcode" {{".*/hipspv/lib/hip-device-lib/hipspv-spirv64.bc"}}
 // CHECK-SAME: "-isystem" {{".*/hipspv/include"}}
 // CHECK-SAME: "-fhip-new-launch-api"
 // CHECK-SAME: "-o" [[DEV_BC:".*bc"]]
 // CHECK-SAME: "-x" "hip"
 
-// CHECK: {{".*llvm-link"}} [[DEV_BC]] "-o" [[LINK_BC:".*bc"]]
+// CHECK: {{".*llvm-link"}} "-o" [[LINK_BC:".*bc"]] [[DEV_BC]]
 
 // CHECK: {{".*opt"}} [[LINK_BC]] "-load-pass-plugin"
 // CHECK-SAME: {{".*/hipspv/lib/libLLVMHipSpvPasses.so"}}

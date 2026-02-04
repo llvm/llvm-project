@@ -248,6 +248,35 @@ void test_stl_ranges_captures() {
   // CHECK-FIXES-DEFAULT: std::ranges::none_of(arr, [](int i) { return i < 0; });
 }
 
+// Test that nested lambdas inside STL function calls are also ignored
+// when IgnoreInSTL is enabled (due to hasAncestor matching).
+// This is intentional: the nested lambda is still immediately executed
+// within the STL algorithm and won't outlive the call.
+void test_stl_nested_lambda() {
+  int x = 10;
+  int arr[] = {1, 2, 3};
+
+  std::for_each(arr, arr + 3, [](int i) {
+    // Outer lambda has no default capture - OK
+
+    // Nested lambda with default capture inside STL call.
+    // With IgnoreInSTL=true, this also doesn't warn because
+    // it has an ancestor in std namespace.
+    auto nested = [&]() { return i; };
+    // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:19: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
+    // CHECK-FIXES-DEFAULT: auto nested = [&i]() { return i; };
+    (void)nested;
+  });
+
+  std::ranges::all_of(arr, [](int i) {
+    auto nested = [=]() { return i * 2; };
+    // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:19: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
+    // CHECK-FIXES-DEFAULT: auto nested = [i]() { return i * 2; };
+    (void)nested;
+    return true;
+  });
+}
+
 // Lambdas in macros should warn but not provide fix-its
 #define MACRO_WITH_LAMBDA(x) [=]() { return x; }
 #define BY_VALUE =

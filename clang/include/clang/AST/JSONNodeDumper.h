@@ -20,9 +20,10 @@
 #include "clang/AST/AttrVisitor.h"
 #include "clang/AST/CommentCommandTraits.h"
 #include "clang/AST/CommentVisitor.h"
-#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/ExprCXX.h"
+#include "clang/AST/ExprConcepts.h"
 #include "clang/AST/Mangle.h"
+#include "clang/AST/StmtVisitor.h"
 #include "clang/AST/Type.h"
 #include "llvm/Support/JSON.h"
 
@@ -315,6 +316,7 @@ public:
   void VisitRequiresExpr(const RequiresExpr *RE);
   void VisitCXXDefaultArgExpr(const CXXDefaultArgExpr *Node);
   void VisitCXXDefaultInitExpr(const CXXDefaultInitExpr *Node);
+  void VisitLambdaExpr(const LambdaExpr *LE);
 
   void VisitObjCEncodeExpr(const ObjCEncodeExpr *OEE);
   void VisitObjCMessageExpr(const ObjCMessageExpr *OME);

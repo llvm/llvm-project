@@ -6,7 +6,6 @@
 //
 //===----------------------------------------------------------------------===//
 
-#include <clc/opencl/shared/clamp.h>
 #include <clc/shared/clc_clamp.h>
 
 #define __CLC_BODY <clamp.inc>

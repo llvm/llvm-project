@@ -1,5 +1,5 @@
-// RUN: %clang_cc1 -fcxx-exceptions -std=c++20 -fexperimental-new-constant-interpreter -verify=expected,both %s
-// RUN: %clang_cc1 -fcxx-exceptions -std=c++20                                         -verify=ref,both %s
+// RUN: %clang_cc1 -triple x86_64 -fcxx-exceptions -std=c++20 -fexperimental-new-constant-interpreter -verify=expected,both %s
+// RUN: %clang_cc1 -triple x86_64 -fcxx-exceptions -std=c++20                                         -verify=ref,both %s
 
 namespace Throw {
 
@@ -57,6 +57,12 @@ namespace Casts {
 
   /// Just make sure this doesn't crash.
   float PR9558 = reinterpret_cast<const float&>("asd");
+
+  /// Ensure we don't crash when trying to dereference a cast pointer where the
+  /// target type is larger than the source allocation (GH#179015).
+  void GH179015() {
+    *(int **)""; // both-warning {{expression result unused}}
+  }
 }
 
 
@@ -110,4 +116,38 @@ namespace InvalidBitCast {
   struct s { int a; int b[1]; };
   struct s myx;
   int *myy = ((struct s *)&myx.a)->b;
+}
+
+namespace InvalidIntPtrRecord {
+  typedef __SIZE_TYPE__ Size_t;
+
+#define bufsize ((1LL << (8 * sizeof(Size_t) - 2)) - 256)
+
+  struct S {
+    short buf[bufsize]; // both-error {{array is too large}}
+    int a;
+  };
+  Size_t foo() { return (Size_t)(&((struct S *)0)->a); }
+}
+
+namespace RetVoidInInvalidFunc {
+
+  constexpr bool foo() { return; } // both-error {{non-void constexpr function 'foo' should return a value}}
+  template <int N> struct X {
+    int v = N;
+  };
+  X<foo()> x; // both-error {{non-type template argument is not a constant expression}}
+}
+
+namespace BitCastWithErrors {
+  template<class T> int f(); // both-note {{candidate template ignored}}
+  static union { char *x = f(); }; // both-error {{no matching function for call to 'f'}}
+}
+
+namespace NullRecord {
+  struct S1; // both-note {{forward declaration}}
+  struct S2 {
+    S1 s[2]; // both-error {{field has incomplete type 'S1'}}
+  };
+  S2 s = S2();
 }

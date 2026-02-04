@@ -62,6 +62,23 @@ TinyPtrVector<DbgVariableRecord *> llvm::findDVRDeclares(Value *V) {
   return Declares;
 }
 
+TinyPtrVector<DbgVariableRecord *> llvm::findDVRDeclareValues(Value *V) {
+  // This function is hot. Check whether the value has any metadata to avoid a
+  // DenseMap lookup. This check is a bitfield datamember lookup.
+  if (!V->isUsedByMetadata())
+    return {};
+  auto *L = ValueAsMetadata::getIfExists(V);
+  if (!L)
+    return {};
+
+  TinyPtrVector<DbgVariableRecord *> DEclareValues;
+  for (DbgVariableRecord *DVR : L->getAllDbgVariableRecordUsers())
+    if (DVR->getType() == DbgVariableRecord::LocationType::DeclareValue)
+      DEclareValues.push_back(DVR);
+
+  return DEclareValues;
+}
+
 TinyPtrVector<DbgVariableRecord *> llvm::findDVRValues(Value *V) {
   // This function is hot. Check whether the value has any metadata to avoid a
   // DenseMap lookup. This check is a bitfield datamember lookup.
@@ -307,9 +324,9 @@ void DebugInfoFinder::processSubprogram(DISubprogram *SP) {
   }
 
   SP->forEachRetainedNode(
-      [this](const DILocalVariable *LV) { processVariable(LV); },
-      [](const DILabel *L) {},
-      [this](const DIImportedEntity *IE) { processImportedEntity(IE); });
+      [this](DILocalVariable *LV) { processVariable(LV); }, [](DILabel *L) {},
+      [this](DIImportedEntity *IE) { processImportedEntity(IE); },
+      [this](DIType *T) { processType(T); });
 }
 
 void DebugInfoFinder::processVariable(const DILocalVariable *DV) {

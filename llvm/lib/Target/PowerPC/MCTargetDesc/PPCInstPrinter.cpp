@@ -430,6 +430,17 @@ void PPCInstPrinter::printS16ImmOperand(const MCInst *MI, unsigned OpNo,
     printOperand(MI, OpNo, STI, O);
 }
 
+void PPCInstPrinter::printS32ImmOperand(const MCInst *MI, unsigned OpNo,
+                                        const MCSubtargetInfo &STI,
+                                        raw_ostream &O) {
+  if (MI->getOperand(OpNo).isImm()) {
+    long long Value = MI->getOperand(OpNo).getImm();
+    assert(isInt<32>(Value) && "Invalid s32imm argument!");
+    O << (long long)Value;
+  } else
+    printOperand(MI, OpNo, STI, O);
+}
+
 void PPCInstPrinter::printS34ImmOperand(const MCInst *MI, unsigned OpNo,
                                         const MCSubtargetInfo &STI,
                                         raw_ostream &O) {

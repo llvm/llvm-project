@@ -13,6 +13,7 @@
 #include "ClauseProcessor.h"
 #include "Utils.h"
 
+#include "flang/Lower/ConvertCall.h"
 #include "flang/Lower/ConvertExprToHLFIR.h"
 #include "flang/Lower/OpenMP/Clauses.h"
 #include "flang/Lower/PFTBuilder.h"
@@ -41,15 +42,6 @@ mlir::omp::ReductionModifier translateReductionModifier(ReductionModifier mod) {
     return mlir::omp::ReductionModifier::task;
   }
   return mlir::omp::ReductionModifier::defaultmod;
-}
-
-/// Check for unsupported map operand types.
-static void checkMapType(mlir::Location location, mlir::Type type) {
-  if (auto refType = mlir::dyn_cast<fir::ReferenceType>(type))
-    type = refType.getElementType();
-  if (auto boxType = mlir::dyn_cast_or_null<fir::BoxType>(type))
-    if (!mlir::isa<fir::PointerType>(boxType.getElementType()))
-      TODO(location, "OMPD_target_data MapOperand BoxType");
 }
 
 static mlir::omp::ScheduleModifier
@@ -208,18 +200,6 @@ getIfClauseOperand(lower::AbstractConverter &converter,
       converter.genExprValue(std::get<omp::SomeExpr>(clause.t), stmtCtx));
   return firOpBuilder.createConvert(clauseLocation, firOpBuilder.getI1Type(),
                                     ifVal);
-}
-
-static void addUseDeviceClause(
-    lower::AbstractConverter &converter, const omp::ObjectList &objects,
-    llvm::SmallVectorImpl<mlir::Value> &operands,
-    llvm::SmallVectorImpl<const semantics::Symbol *> &useDeviceSyms) {
-  genObjectList(objects, converter, operands);
-  for (mlir::Value &operand : operands)
-    checkMapType(operand.getLoc(), operand.getType());
-
-  for (const omp::Object &object : objects)
-    useDeviceSyms.push_back(object.sym());
 }
 
 //===----------------------------------------------------------------------===//
@@ -402,6 +382,68 @@ bool ClauseProcessor::processInclusive(
   return false;
 }
 
+bool ClauseProcessor::processInitializer(
+    lower::SymMap &symMap,
+    ReductionProcessor::GenInitValueCBTy &genInitValueCB) const {
+  if (auto *clause = findUniqueClause<omp::clause::Initializer>()) {
+    genInitValueCB = [&, clause](fir::FirOpBuilder &builder, mlir::Location loc,
+                                 mlir::Type type, mlir::Value ompOrig) {
+      lower::SymMapScope scope(symMap);
+      mlir::Value ompPrivVar;
+      const StylizedInstance &inst = clause->v.front();
+
+      for (const Object &object :
+           std::get<StylizedInstance::Variables>(inst.t)) {
+        mlir::Value addr = builder.createTemporary(loc, ompOrig.getType());
+        fir::StoreOp::create(builder, loc, ompOrig, addr);
+        fir::FortranVariableFlagsEnum extraFlags = {};
+        fir::FortranVariableFlagsAttr attributes =
+            Fortran::lower::translateSymbolAttributes(
+                builder.getContext(), *object.sym(), extraFlags);
+        std::string name = object.sym()->name().ToString();
+        auto declareOp =
+            hlfir::DeclareOp::create(builder, loc, addr, name, nullptr, {},
+                                     nullptr, nullptr, 0, attributes);
+        if (name == "omp_priv")
+          ompPrivVar = declareOp.getResult(0);
+        symMap.addVariableDefinition(*object.sym(), declareOp);
+      }
+
+      // Lower the expression/function call
+      lower::StatementContext stmtCtx;
+      const semantics::SomeExpr &initExpr =
+          std::get<StylizedInstance::Instance>(inst.t);
+      mlir::Value result = common::visit(
+          common::visitors{
+              [&](const evaluate::ProcedureRef &procRef) -> mlir::Value {
+                convertCallToHLFIR(loc, converter, procRef, std::nullopt,
+                                   symMap, stmtCtx);
+                auto privVal = fir::LoadOp::create(builder, loc, ompPrivVar);
+                return privVal;
+              },
+              [&](const auto &expr) -> mlir::Value {
+                mlir::Value exprResult = fir::getBase(convertExprToValue(
+                    loc, converter, initExpr, symMap, stmtCtx));
+                // Conversion can either give a value or a refrence to a value,
+                // we need to return the reduction type, so an optional load may
+                // be generated.
+                if (auto refType = llvm::dyn_cast<fir::ReferenceType>(
+                        exprResult.getType()))
+                  if (ompPrivVar.getType() == refType)
+                    exprResult = fir::LoadOp::create(builder, loc, exprResult);
+                return exprResult;
+              }},
+          initExpr.u);
+      stmtCtx.finalizeAndPop();
+      return result;
+    };
+    return true;
+  }
+  TODO(converter.getCurrentLocation(),
+       "declare reduction without an initializer clause is not yet "
+       "supported");
+}
+
 bool ClauseProcessor::processMergeable(
     mlir::omp::MergeableClauseOps &result) const {
   return markClauseOccurrence<omp::clause::Mergeable>(result.mergeable);
@@ -453,17 +495,27 @@ bool ClauseProcessor::processSizes(StatementContext &stmtCtx,
 bool ClauseProcessor::processNumTeams(
     lower::StatementContext &stmtCtx,
     mlir::omp::NumTeamsClauseOps &result) const {
-  // TODO Get lower and upper bounds for num_teams when parser is updated to
-  // accept both.
   if (auto *clause = findUniqueClause<omp::clause::NumTeams>()) {
-    // The num_teams directive accepts a list of team lower/upper bounds.
-    // This is an extension to support grid specification for ompx_bare.
-    // Here, only expect a single element in the list.
-    assert(clause->v.size() == 1);
-    // auto lowerBound = std::get<std::optional<ExprTy>>(clause->v[0]->t);
-    auto &upperBound = std::get<ExprTy>(clause->v[0].t);
-    result.numTeamsUpper =
-        fir::getBase(converter.genExprValue(upperBound, stmtCtx));
+    // Structure: {LB?, [UB]} - single optional lower bound, list of upper
+    // bounds
+    auto &lowerBound = std::get<std::optional<ExprTy>>(clause->t);
+    auto &upperBounds =
+        std::get<omp::clause::NumTeams::UpperBoundList>(clause->t);
+    assert(!upperBounds.empty());
+
+    // Extract optional lower bound
+    if (lowerBound) {
+      result.numTeamsLower =
+          fir::getBase(converter.genExprValue(*lowerBound, stmtCtx));
+    }
+
+    // Extract all upper bounds
+    result.numTeamsUpperVars.reserve(upperBounds.size());
+    for (const auto &ub : upperBounds) {
+      result.numTeamsUpperVars.push_back(
+          fir::getBase(converter.genExprValue(ub, stmtCtx)));
+    }
+
     return true;
   }
   return false;
@@ -473,9 +525,11 @@ bool ClauseProcessor::processNumThreads(
     lower::StatementContext &stmtCtx,
     mlir::omp::NumThreadsClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::NumThreads>()) {
-    // OMPIRBuilder expects `NUM_THREADS` clause as a `Value`.
-    result.numThreads =
-        fir::getBase(converter.genExprValue(clause->v, stmtCtx));
+    // OMPIRBuilder expects `NUM_THREADS` clause as a list of Values.
+    for (const ExprTy &expr : clause->v) {
+      result.numThreadsVars.push_back(
+          fir::getBase(converter.genExprValue(expr, stmtCtx)));
+    }
     return true;
   }
   return false;
@@ -626,8 +680,10 @@ bool ClauseProcessor::processThreadLimit(
     lower::StatementContext &stmtCtx,
     mlir::omp::ThreadLimitClauseOps &result) const {
   if (auto *clause = findUniqueClause<omp::clause::ThreadLimit>()) {
-    result.threadLimit =
-        fir::getBase(converter.genExprValue(clause->v, stmtCtx));
+    result.threadLimitVars.reserve(clause->v.size());
+    for (const ExprTy &vv : clause->v)
+      result.threadLimitVars.push_back(
+          fir::getBase(converter.genExprValue(vv, stmtCtx)));
     return true;
   }
   return false;
@@ -652,6 +708,23 @@ static llvm::StringMap<bool> getTargetFeatures(mlir::ModuleOp module) {
     }
   }
   return featuresMap;
+}
+
+bool ClauseProcessor::processAffinity(
+    mlir::omp::AffinityClauseOps &result) const {
+  return findRepeatableClause<omp::clause::Affinity>(
+      [&](const omp::clause::Affinity &clause, const parser::CharBlock &) {
+        if (std::get<std::optional<omp::clause::Iterator>>(clause.t)) {
+          TODO(converter.getCurrentLocation(),
+               "Support for iterator modifiers is not implemented yet");
+        }
+
+        const auto &objects = std::get<omp::ObjectList>(clause.t);
+        if (!objects.empty())
+          genObjectList(objects, converter, result.affinityVars);
+
+        return true;
+      });
 }
 
 static void
@@ -979,17 +1052,11 @@ bool ClauseProcessor::processDepend(lower::SymMap &symMap,
                                     mlir::omp::DependClauseOps &result) const {
   auto process = [&](const omp::clause::Depend &clause,
                      const parser::CharBlock &) {
-    using Depend = omp::clause::Depend;
-    if (!std::holds_alternative<Depend::TaskDep>(clause.u)) {
-      TODO(converter.getCurrentLocation(),
-           "DEPEND clause with SINK or SOURCE is not supported yet");
-    }
-    auto &taskDep = std::get<Depend::TaskDep>(clause.u);
-    auto depType = std::get<clause::DependenceType>(taskDep.t);
-    auto &objects = std::get<omp::ObjectList>(taskDep.t);
+    auto depType = std::get<clause::DependenceType>(clause.t);
+    auto &objects = std::get<omp::ObjectList>(clause.t);
     fir::FirOpBuilder &builder = converter.getFirOpBuilder();
 
-    if (std::get<std::optional<omp::clause::Iterator>>(taskDep.t)) {
+    if (std::get<std::optional<omp::clause::Iterator>>(clause.t)) {
       TODO(converter.getCurrentLocation(),
            "Support for iterator modifiers is not implemented yet");
     }
@@ -1165,14 +1232,26 @@ bool ClauseProcessor::processInReduction(
 }
 
 bool ClauseProcessor::processIsDevicePtr(
-    mlir::omp::IsDevicePtrClauseOps &result,
+    lower::StatementContext &stmtCtx, mlir::omp::IsDevicePtrClauseOps &result,
     llvm::SmallVectorImpl<const semantics::Symbol *> &isDeviceSyms) const {
-  return findRepeatableClause<omp::clause::IsDevicePtr>(
-      [&](const omp::clause::IsDevicePtr &devPtrClause,
-          const parser::CharBlock &) {
-        addUseDeviceClause(converter, devPtrClause.v, result.isDevicePtrVars,
-                           isDeviceSyms);
+  std::map<Object, OmpMapParentAndMemberData> parentMemberIndices;
+  bool clauseFound = findRepeatableClause<omp::clause::IsDevicePtr>(
+      [&](const omp::clause::IsDevicePtr &clause,
+          const parser::CharBlock &source) {
+        mlir::Location location = converter.genLocation(source);
+        // Force a map so the descriptor is materialized on the device with the
+        // device address inside.
+        mlir::omp::ClauseMapFlags mapTypeBits =
+            mlir::omp::ClauseMapFlags::is_device_ptr |
+            mlir::omp::ClauseMapFlags::to;
+        processMapObjects(stmtCtx, location, clause.v, mapTypeBits,
+                          parentMemberIndices, result.isDevicePtrVars,
+                          isDeviceSyms);
       });
+
+  insertChildMapInfoIntoParent(converter, semaCtx, stmtCtx, parentMemberIndices,
+                               result.isDevicePtrVars, isDeviceSyms);
+  return clauseFound;
 }
 
 bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result) const {
@@ -1181,11 +1260,20 @@ bool ClauseProcessor::processLinear(mlir::omp::LinearClauseOps &result) const {
       omp::clause::Linear>([&](const omp::clause::Linear &clause,
                                const parser::CharBlock &) {
     auto &objects = std::get<omp::ObjectList>(clause.t);
+    static std::vector<mlir::Attribute> typeAttrs;
+
+    if (!result.linearVars.size())
+      typeAttrs.clear();
+
     for (const omp::Object &object : objects) {
       semantics::Symbol *sym = object.sym();
       const mlir::Value variable = converter.getSymbolAddress(*sym);
       result.linearVars.push_back(variable);
+      mlir::Type ty = converter.genType(*sym);
+      typeAttrs.push_back(mlir::TypeAttr::get(ty));
     }
+    result.linearVarTypes =
+        mlir::ArrayAttr::get(&converter.getMLIRContext(), typeAttrs);
     if (objects.size()) {
       if (auto &mod =
               std::get<std::optional<omp::clause::Linear::StepComplexModifier>>(
@@ -1657,6 +1745,34 @@ bool ClauseProcessor::processUseDevicePtr(
   insertChildMapInfoIntoParent(converter, semaCtx, stmtCtx, parentMemberIndices,
                                result.useDevicePtrVars, useDeviceSyms);
   return clauseFound;
+}
+
+bool ClauseProcessor::processUniform(
+    mlir::omp::UniformClauseOps &result) const {
+  return findRepeatableClause<omp::clause::Uniform>(
+      [&](const omp::clause::Uniform &clause, const parser::CharBlock &) {
+        const auto &objects = clause.v;
+        if (!objects.empty())
+          genObjectList(objects, converter, result.uniformVars);
+      });
+}
+
+bool ClauseProcessor::processInbranch(
+    mlir::omp::InbranchClauseOps &result) const {
+  if (findUniqueClause<omp::clause::Inbranch>()) {
+    result.inbranch = converter.getFirOpBuilder().getUnitAttr();
+    return true;
+  }
+  return false;
+}
+
+bool ClauseProcessor::processNotinbranch(
+    mlir::omp::NotinbranchClauseOps &result) const {
+  if (findUniqueClause<omp::clause::Notinbranch>()) {
+    result.notinbranch = converter.getFirOpBuilder().getUnitAttr();
+    return true;
+  }
+  return false;
 }
 
 } // namespace omp

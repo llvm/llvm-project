@@ -25,7 +25,7 @@
 // CHECK: [[CLANG]] "-cc1" "-triple" "spirv64"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-emit-llvm-bc"
-// CHECK-SAME: "-fcuda-is-device" "-fcuda-allow-variadic-functions"
+// CHECK-SAME: "-fcuda-is-device"
 // CHECK-SAME: "-fvisibility=hidden" "-fapply-global-visibility-to-externs"
 // CHECK-SAME: "-fgpu-rdc"
 // CHECK-SAME: {{.*}} "-o" [[A_BC1:".*bc"]] "-x" "hip"
@@ -34,14 +34,14 @@
 // CHECK: [[CLANG]] "-cc1" "-triple" "spirv64"
 // CHECK-SAME: "-aux-triple" "x86_64-unknown-linux-gnu"
 // CHECK-SAME: "-emit-llvm-bc"
-// CHECK-SAME: "-fcuda-is-device" "-fcuda-allow-variadic-functions"
+// CHECK-SAME: "-fcuda-is-device"
 // CHECK-SAME: "-fvisibility=hidden" "-fapply-global-visibility-to-externs"
 // CHECK-SAME: "-fgpu-rdc"
 // CHECK-SAME: {{.*}} "-o" [[B_BC1:".*bc"]] "-x" "hip"
 // CHECK-SAME: {{.*}} [[B_SRC]]
 
 // Link device code, lower it with HIPSPV passes and emit SPIR-V binary.
-// CHECK: {{".*llvm-link.*"}} [[A_BC1]] [[B_BC1]] "-o" [[AB_LINK:".*bc"]]
+// CHECK: {{".*llvm-link.*"}} "-o" [[AB_LINK:".*bc"]] [[A_BC1]] [[B_BC1]]
 // CHECK: {{".*opt.*"}} [[AB_LINK]] "-load-pass-plugin"
 // CHECK-SAME: "{{.*}}/Inputs/hipspv/lib/libLLVMHipSpvPasses.so"
 // CHECK-SAME: "-o" [[AB_LOWER:".*bc"]]

@@ -457,6 +457,7 @@ const Loop *SCEVExpander::getRelevantLoop(const SCEV *S) {
   case scTruncate:
   case scZeroExtend:
   case scSignExtend:
+  case scPtrToAddr:
   case scPtrToInt:
   case scAddExpr:
   case scMulExpr:
@@ -1433,6 +1434,12 @@ Value *SCEVExpander::visitAddRecExpr(const SCEVAddRecExpr *S) {
   return expand(T);
 }
 
+Value *SCEVExpander::visitPtrToAddrExpr(const SCEVPtrToAddrExpr *S) {
+  Value *V = expand(S->getOperand());
+  return ReuseOrCreateCast(V, S->getType(), CastInst::PtrToAddr,
+                           GetOptimalInsertionPointForCastOf(V));
+}
+
 Value *SCEVExpander::visitPtrToIntExpr(const SCEVPtrToIntExpr *S) {
   Value *V = expand(S->getOperand());
   return ReuseOrCreateCast(V, S->getType(), CastInst::PtrToInt,
@@ -1957,6 +1964,9 @@ template<typename T> static InstructionCost costAndCollectOperands(
   case scConstant:
   case scVScale:
     return 0;
+  case scPtrToAddr:
+    Cost = CastCost(Instruction::PtrToAddr);
+    break;
   case scPtrToInt:
     Cost = CastCost(Instruction::PtrToInt);
     break;
@@ -2080,6 +2090,7 @@ bool SCEVExpander::isHighCostExpansionHelper(
     return Cost > Budget;
   }
   case scTruncate:
+  case scPtrToAddr:
   case scPtrToInt:
   case scZeroExtend:
   case scSignExtend: {
@@ -2208,17 +2219,6 @@ Value *SCEVExpander::generateOverflowCheck(const SCEVAddRecExpr *AR,
   // negative. If Step is known to be positive or negative, only create
   // either 1. or 2.
   auto ComputeEndCheck = [&]() -> Value * {
-    // Checking <u 0 is always false, if (Step * trunc ExitCount) does not wrap.
-    // TODO: Predicates that can be proven true/false should be discarded when
-    // the predicates are created, not late during expansion.
-    if (!Signed && Start->isZero() && SE.isKnownPositive(Step) &&
-        DstBits < SrcBits &&
-        ExitCount == SE.getZeroExtendExpr(SE.getTruncateExpr(ExitCount, ARTy),
-                                          ExitCount->getType()) &&
-        SE.willNotOverflow(Instruction::Mul, Signed, Step,
-                           SE.getTruncateExpr(ExitCount, ARTy)))
-      return ConstantInt::getFalse(Loc->getContext());
-
     // Get the backedge taken count and truncate or extended to the AR type.
     Value *TruncTripCount = Builder.CreateZExtOrTrunc(TripCountVal, Ty);
 
@@ -2343,8 +2343,7 @@ Value *SCEVExpander::fixupLCSSAFormFor(Value *V) {
     ToTy = Type::getInt32Ty(DefI->getContext());
   Instruction *User =
       CastInst::CreateBitOrPointerCast(DefI, ToTy, "tmp.lcssa.user", InsertPt);
-  auto RemoveUserOnExit =
-      make_scope_exit([User]() { User->eraseFromParent(); });
+  llvm::scope_exit RemoveUserOnExit([User]() { User->eraseFromParent(); });
 
   SmallVector<Instruction *, 1> ToUpdate;
   ToUpdate.push_back(DefI);

@@ -72,7 +72,7 @@ body:             |
   ; R6-LABEL: name: a
   ; R6: bb.0.entry:
   ; R6:   successors: %bb.2(0x50000000), %bb.1(0x30000000)
-  ; R6:   $f0 = CMP_EQ_D killed $d12_64, killed $d14_64
+  ; R6:   $d0_64 = CMP_EQ_D killed $d12_64, killed $d14_64
   ; R6:   BC1NEZ $d0_64, %bb.2 {
   ; R6:     $zero = SLL $zero, 0
   ; R6:   }
@@ -91,7 +91,7 @@ body:             |
   ; PIC-LABEL: name: a
   ; PIC: bb.0.entry:
   ; PIC:   successors: %bb.3(0x50000000), %bb.1(0x30000000)
-  ; PIC:   $f0 = CMP_EQ_D killed $d12_64, killed $d14_64
+  ; PIC:   $d0_64 = CMP_EQ_D killed $d12_64, killed $d14_64
   ; PIC:   BC1NEZ $d0_64, %bb.3 {
   ; PIC:     $zero = SLL $zero, 0
   ; PIC:   }
@@ -121,7 +121,7 @@ body:             |
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $d12_64, $d14_64
 
-    $f0 = CMP_EQ_D killed $d12_64, killed $d14_64
+    $d0_64 = CMP_EQ_D killed $d12_64, killed $d14_64
     BC1EQZ killed $d0_64, %bb.2, implicit-def $at
 
   bb.1.if.then:
@@ -172,7 +172,7 @@ body:             |
   ; R6-LABEL: name: b
   ; R6: bb.0.entry:
   ; R6:   successors: %bb.2(0x50000000), %bb.1(0x30000000)
-  ; R6:   $f0 = CMP_EQ_D killed $d12_64, killed $d14_64
+  ; R6:   $d0_64 = CMP_EQ_D killed $d12_64, killed $d14_64
   ; R6:   BC1EQZ $d0_64, %bb.2 {
   ; R6:     $zero = SLL $zero, 0
   ; R6:   }
@@ -191,7 +191,7 @@ body:             |
   ; PIC-LABEL: name: b
   ; PIC: bb.0.entry:
   ; PIC:   successors: %bb.3(0x50000000), %bb.1(0x30000000)
-  ; PIC:   $f0 = CMP_EQ_D killed $d12_64, killed $d14_64
+  ; PIC:   $d0_64 = CMP_EQ_D killed $d12_64, killed $d14_64
   ; PIC:   BC1EQZ $d0_64, %bb.3 {
   ; PIC:     $zero = SLL $zero, 0
   ; PIC:   }
@@ -221,7 +221,7 @@ body:             |
     successors: %bb.1(0x50000000), %bb.2(0x30000000)
     liveins: $d12_64, $d14_64
 
-    $f0 = CMP_EQ_D killed $d12_64, killed $d14_64
+    $d0_64 = CMP_EQ_D killed $d12_64, killed $d14_64
     BC1NEZ killed $d0_64, %bb.2, implicit-def $at
 
   bb.1.if.then:

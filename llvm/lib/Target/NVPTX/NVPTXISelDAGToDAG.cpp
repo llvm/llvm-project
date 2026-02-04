@@ -16,6 +16,7 @@
 #include "llvm/ADT/APInt.h"
 #include "llvm/Analysis/ValueTracking.h"
 #include "llvm/CodeGen/ISDOpcodes.h"
+#include "llvm/CodeGen/MachineJumpTableInfo.h"
 #include "llvm/CodeGen/SelectionDAG.h"
 #include "llvm/CodeGen/SelectionDAGNodes.h"
 #include "llvm/IR/GlobalValue.h"
@@ -105,6 +106,7 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
   switch (N->getOpcode()) {
   case ISD::LOAD:
   case ISD::ATOMIC_LOAD:
+  case NVPTXISD::MLoad:
     if (tryLoad(N))
       return;
     break;
@@ -189,6 +191,8 @@ void NVPTXDAGToDAGISel::Select(SDNode *N) {
     if (tryBF16ArithToFMA(N))
       return;
     break;
+  case ISD::BR_JT:
+    return selectBR_JT(N);
   default:
     break;
   }
@@ -1132,6 +1136,19 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
           ? NVPTX::PTXLdStInstCode::Signed
           : NVPTX::PTXLdStInstCode::Untyped;
 
+  uint32_t UsedBytesMask;
+  switch (N->getOpcode()) {
+  case ISD::LOAD:
+  case ISD::ATOMIC_LOAD:
+    UsedBytesMask = UINT32_MAX;
+    break;
+  case NVPTXISD::MLoad:
+    UsedBytesMask = N->getConstantOperandVal(3);
+    break;
+  default:
+    llvm_unreachable("Unexpected opcode");
+  }
+
   assert(isPowerOf2_32(FromTypeWidth) && FromTypeWidth >= 8 &&
          FromTypeWidth <= 128 && "Invalid width for load");
 
@@ -1142,6 +1159,7 @@ bool NVPTXDAGToDAGISel::tryLoad(SDNode *N) {
                    getI32Imm(CodeAddrSpace, DL),
                    getI32Imm(FromType, DL),
                    getI32Imm(FromTypeWidth, DL),
+                   getI32Imm(UsedBytesMask, DL),
                    Base,
                    Offset,
                    Chain};
@@ -1196,14 +1214,14 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
   //          type is integer
   // Float  : ISD::NON_EXTLOAD or ISD::EXTLOAD and the type is float
   // Read at least 8 bits (predicates are stored as 8-bit values)
-  // The last operand holds the original LoadSDNode::getExtensionType() value
-  const unsigned ExtensionType =
-      N->getConstantOperandVal(N->getNumOperands() - 1);
+  // Get the original LoadSDNode::getExtensionType() value
+  const unsigned ExtensionType = N->getConstantOperandVal(4);
   const unsigned FromType = (ExtensionType == ISD::SEXTLOAD)
                                 ? NVPTX::PTXLdStInstCode::Signed
                                 : NVPTX::PTXLdStInstCode::Untyped;
 
   const unsigned FromTypeWidth = getFromTypeWidthForLoad(LD);
+  const uint32_t UsedBytesMask = N->getConstantOperandVal(3);
 
   assert(!(EltVT.isVector() && ExtensionType != ISD::NON_EXTLOAD));
 
@@ -1213,6 +1231,7 @@ bool NVPTXDAGToDAGISel::tryLoadVector(SDNode *N) {
                    getI32Imm(CodeAddrSpace, DL),
                    getI32Imm(FromType, DL),
                    getI32Imm(FromTypeWidth, DL),
+                   getI32Imm(UsedBytesMask, DL),
                    Base,
                    Offset,
                    Chain};
@@ -1250,10 +1269,13 @@ bool NVPTXDAGToDAGISel::tryLDG(MemSDNode *LD) {
   SDLoc DL(LD);
 
   unsigned ExtensionType;
+  uint32_t UsedBytesMask;
   if (const auto *Load = dyn_cast<LoadSDNode>(LD)) {
     ExtensionType = Load->getExtensionType();
+    UsedBytesMask = UINT32_MAX;
   } else {
-    ExtensionType = LD->getConstantOperandVal(LD->getNumOperands() - 1);
+    ExtensionType = LD->getConstantOperandVal(4);
+    UsedBytesMask = LD->getConstantOperandVal(3);
   }
   const unsigned FromType = (ExtensionType == ISD::SEXTLOAD)
                                 ? NVPTX::PTXLdStInstCode::Signed
@@ -1265,8 +1287,12 @@ bool NVPTXDAGToDAGISel::tryLDG(MemSDNode *LD) {
            ExtensionType != ISD::NON_EXTLOAD));
 
   const auto [Base, Offset] = selectADDR(LD->getOperand(1), CurDAG);
-  SDValue Ops[] = {getI32Imm(FromType, DL), getI32Imm(FromTypeWidth, DL), Base,
-                   Offset, LD->getChain()};
+  SDValue Ops[] = {getI32Imm(FromType, DL),
+                   getI32Imm(FromTypeWidth, DL),
+                   getI32Imm(UsedBytesMask, DL),
+                   Base,
+                   Offset,
+                   LD->getChain()};
 
   const MVT::SimpleValueType TargetVT = LD->getSimpleValueType(0).SimpleTy;
   std::optional<unsigned> Opcode;
@@ -1276,6 +1302,10 @@ bool NVPTXDAGToDAGISel::tryLDG(MemSDNode *LD) {
   case ISD::LOAD:
     Opcode = pickOpcodeForVT(TargetVT, NVPTX::LD_GLOBAL_NC_i16,
                              NVPTX::LD_GLOBAL_NC_i32, NVPTX::LD_GLOBAL_NC_i64);
+    break;
+  case NVPTXISD::MLoad:
+    Opcode = pickOpcodeForVT(TargetVT, std::nullopt, NVPTX::LD_GLOBAL_NC_i32,
+                             NVPTX::LD_GLOBAL_NC_i64);
     break;
   case NVPTXISD::LoadV2:
     Opcode =
@@ -2245,4 +2275,39 @@ void NVPTXDAGToDAGISel::selectAtomicSwap128(SDNode *N) {
   CurDAG->setNodeMemRefs(ATOM, AN->getMemOperand());
 
   ReplaceNode(N, ATOM);
+}
+
+void NVPTXDAGToDAGISel::selectBR_JT(SDNode *N) {
+  assert(Subtarget->hasBrx() &&
+         "BR_JT should be expanded during legalization on unsupported targets");
+
+  SDLoc DL(N);
+  const SDValue InChain = N->getOperand(0);
+  const auto *JT = cast<JumpTableSDNode>(N->getOperand(1));
+  const SDValue Index = N->getOperand(2);
+
+  unsigned JId = JT->getIndex();
+  MachineJumpTableInfo *MJTI = CurDAG->getMachineFunction().getJumpTableInfo();
+  ArrayRef<MachineBasicBlock *> MBBs = MJTI->getJumpTables()[JId].MBBs;
+
+  SDValue IdV = getI32Imm(JId, DL);
+
+  // Generate BrxStart node
+  MachineSDNode *Chain = CurDAG->getMachineNode(
+      NVPTX::BRX_START, DL, {MVT::Other, MVT::Glue}, {IdV, InChain});
+
+  // Generate BrxItem nodes
+  assert(!MBBs.empty());
+  for (MachineBasicBlock *MBB : MBBs.drop_back())
+    Chain = CurDAG->getMachineNode(
+        NVPTX::BRX_ITEM, DL, {MVT::Other, MVT::Glue},
+        {CurDAG->getBasicBlock(MBB), SDValue(Chain, 0), SDValue(Chain, 1)});
+
+  // Generate BrxEnd nodes
+  MachineSDNode *BrxEnd =
+      CurDAG->getMachineNode(NVPTX::BRX_END, DL, MVT::Other,
+                             {CurDAG->getBasicBlock(MBBs.back()), Index, IdV,
+                              SDValue(Chain, 0), SDValue(Chain, 1)});
+
+  ReplaceNode(N, BrxEnd);
 }
