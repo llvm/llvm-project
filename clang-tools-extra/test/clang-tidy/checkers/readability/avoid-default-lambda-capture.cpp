@@ -1,7 +1,7 @@
 // RUN: %check_clang_tidy -std=c++11,c++14,c++17 -check-suffixes=,DEFAULT %s readability-avoid-default-lambda-capture %t -- -- -Wno-vla-extension
 // RUN: %check_clang_tidy -std=c++20-or-later -check-suffixes=,DEFAULT,20 %s readability-avoid-default-lambda-capture %t -- -- -Wno-vla-extension
-// RUN: %check_clang_tidy -std=c++11,c++14,c++17 -check-suffix= %s readability-avoid-default-lambda-capture %t -- -config="{CheckOptions: {readability-avoid-default-lambda-capture.IgnoreImplicitCapturesInSTL: true}}" -- -Wno-vla-extension
-// RUN: %check_clang_tidy -std=c++20-or-later -check-suffixes=,20 %s readability-avoid-default-lambda-capture %t -- -config="{CheckOptions: {readability-avoid-default-lambda-capture.IgnoreImplicitCapturesInSTL: true}}" -- -Wno-vla-extension
+// RUN: %check_clang_tidy -std=c++11,c++14,c++17 -check-suffix= %s readability-avoid-default-lambda-capture %t -- -config="{CheckOptions: {readability-avoid-default-lambda-capture.IgnoreInSTL: true}}" -- -Wno-vla-extension
+// RUN: %check_clang_tidy -std=c++20-or-later -check-suffixes=,20 %s readability-avoid-default-lambda-capture %t -- -config="{CheckOptions: {readability-avoid-default-lambda-capture.IgnoreInSTL: true}}" -- -Wno-vla-extension
 
 void test_default_captures() {
   int value = 42;
@@ -196,12 +196,31 @@ namespace std {
   T accumulate(InputIt first, InputIt last, T init, BinaryOperation op) {
     return init;
   }
+
+  // Mock std::ranges with member function-like callables
+  namespace ranges {
+    struct {
+      template<class Range, class Pred>
+      bool operator()(Range&& r, Pred pred) const { return true; }
+    } all_of;
+
+    struct {
+      template<class Range, class Pred>
+      bool operator()(Range&& r, Pred pred) const { return true; }
+    } any_of;
+
+    struct {
+      template<class Range, class Pred>
+      bool operator()(Range&& r, Pred pred) const { return true; }
+    } none_of;
+  }
 }
 
 void test_stl_captures() {
   int x = 10;
   int arr[] = {1, 2, 3};
 
+  // Test free functions in std namespace - should be ignored with IgnoreInSTL
   std::for_each(arr, arr + 3, [=](int i) { });
   // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:32: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
   // CHECK-FIXES-DEFAULT: std::for_each(arr, arr + 3, [](int i) { });
@@ -209,6 +228,24 @@ void test_stl_captures() {
   std::accumulate(arr, arr + 3, 0, [&](int a, int b) { return a + b + x; });
   // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:37: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
   // CHECK-FIXES-DEFAULT: std::accumulate(arr, arr + 3, 0, [&x](int a, int b) { return a + b + x; });
+}
+
+// Test that IgnoreInSTL option also applies to niebloids (algorithmic function objects)
+void test_stl_ranges_captures() {
+  int x = 10;
+  int arr[] = {1, 2, 3};
+
+  std::ranges::all_of(arr, [=](int i) { return i > x; });
+  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:28: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
+  // CHECK-FIXES-DEFAULT: std::ranges::all_of(arr, [x](int i) { return i > x; });
+
+  std::ranges::any_of(arr, [&](int i) { return i > x; });
+  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:28: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
+  // CHECK-FIXES-DEFAULT: std::ranges::any_of(arr, [&x](int i) { return i > x; });
+
+  std::ranges::none_of(arr, [=](int i) { return i < 0; });
+  // CHECK-MESSAGES-DEFAULT: :[[@LINE-1]]:29: warning: lambda uses default capture mode; explicitly capture variables instead [readability-avoid-default-lambda-capture]
+  // CHECK-FIXES-DEFAULT: std::ranges::none_of(arr, [](int i) { return i < 0; });
 }
 
 // Lambdas in macros should warn but not provide fix-its

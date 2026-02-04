@@ -17,16 +17,6 @@ namespace clang::tidy::readability {
 
 namespace {
 
-/// Matches lambda expressions that have default capture modes.
-///
-/// Given
-/// \code
-///   auto l1 = [=]() {};  // matches
-///   auto l2 = [&]() {};  // matches
-///   auto l3 = []() {};   // does not match
-/// \endcode
-/// lambdaExpr(hasDefaultCapture())
-///   matches l1 and l2, but not l3.
 AST_MATCHER(LambdaExpr, hasDefaultCapture) {
   return Node.getCaptureDefault() != LCD_None;
 }
@@ -57,11 +47,17 @@ void AvoidDefaultLambdaCaptureCheck::storeOptions(
 
 void AvoidDefaultLambdaCaptureCheck::registerMatchers(MatchFinder *Finder) {
   if (IgnoreInSTL) {
-    Finder->addMatcher(lambdaExpr(hasDefaultCapture(),
-                                  unless(hasAncestor(callExpr(callee(
-                                      functionDecl(isInStdNamespace()))))))
-                           .bind("lambda"),
-                       this);
+    auto StdFunctionCall =
+        callExpr(callee(functionDecl(isInStdNamespace())));
+    auto StdNiebloidCall = cxxOperatorCallExpr(
+        hasOverloadedOperatorName("()"),
+        hasArgument(0, declRefExpr(to(varDecl(isInStdNamespace())))));
+
+    Finder->addMatcher(
+        lambdaExpr(hasDefaultCapture(),
+                   unless(hasAncestor(anyOf(StdFunctionCall, StdNiebloidCall))))
+            .bind("lambda"),
+        this);
   } else {
     Finder->addMatcher(lambdaExpr(hasDefaultCapture()).bind("lambda"), this);
   }
