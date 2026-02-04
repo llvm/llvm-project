@@ -418,12 +418,14 @@ void FactsGenerator::VisitInitListExpr(const InitListExpr *ILE) {
     killAndFlowOrigin(*ILE, *ILE->getInit(0));
 }
 
+void FactsGenerator::VisitCXXBindTemporaryExpr(
+    const CXXBindTemporaryExpr *BTE) {
+  killAndFlowOrigin(*BTE, *BTE->getSubExpr());
+}
+
 void FactsGenerator::VisitMaterializeTemporaryExpr(
     const MaterializeTemporaryExpr *MTE) {
   assert(MTE->isGLValue());
-  // We defer from handling lifetime extended materializations.
-  if (MTE->getStorageDuration() != SD_FullExpression)
-    return;
   OriginList *MTEList = getOriginsList(*MTE);
   if (!MTEList)
     return;
@@ -431,15 +433,16 @@ void FactsGenerator::VisitMaterializeTemporaryExpr(
   assert((!SubExprList ||
           MTEList->getLength() == (SubExprList->getLength() + 1)) &&
          "MTE top level origin should contain a loan to the MTE itself");
-  MTEList = getRValueOrigins(MTE, MTEList);
+
+  OriginList *RValMTEList = getRValueOrigins(MTE, MTEList);
+  flow(RValMTEList, SubExprList, /*Kill=*/true);
+  OriginID OuterMTEID = MTEList->getOuterOriginID();
   if (getChildBinding(MTE)) {
     // Issue a loan to MTE for the storage location represented by MTE.
     const Loan *L = createLoan(FactMgr, MTE);
-    OriginList *List = getOriginsList(*MTE);
     CurrentBlockFacts.push_back(
-        FactMgr.createFact<IssueFact>(L->getID(), List->getOuterOriginID()));
+        FactMgr.createFact<IssueFact>(L->getID(), OuterMTEID));
   }
-  flow(MTEList, SubExprList, /*Kill=*/true);
 }
 
 void FactsGenerator::handleLifetimeEnds(const CFGLifetimeEnds &LifetimeEnds) {

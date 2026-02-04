@@ -381,6 +381,8 @@ class RVPBinary_rr<bits<4> f, bits<2> w, bits<3> funct3, string opcodestr,
                    bit Commutable = 0>
     : RVInstRBase<funct3, OPC_OP_32, (outs GPR:$rd),
                   (ins GPR:$rs1, GPR:$rs2), opcodestr, "$rd, $rs1, $rs2"> {
+  assert !or(!eq(funct3{0}, 0), !eq(f{0}, 0)),
+         "LSB of f should be zero if LSB of funct3 is one";
   let Inst{31} = 0b1;
   let Inst{30-27} = f;
   let Inst{26-25} = w;
@@ -393,6 +395,7 @@ class RVPWideningBinary_rr<bits<4> f, bits<2> w, string opcodestr,
                            bit Commutable = 0>
     : RVPWideningBase<f, w, 0b1, (outs GPRPairRV32:$rd),
                       (ins GPR:$rs1, GPR:$rs2), opcodestr> {
+  assert !eq(f{0}, 0), "LSB of f should be zero";
   let isCommutable = Commutable;
 }
 
@@ -434,6 +437,8 @@ class RVPTernary_rrr<bits<4> f, bits<2> w, bits<3> funct3, string opcodestr>
     : RVInstRBase<funct3, OPC_OP_32, (outs GPR:$rd_wb),
                   (ins GPR:$rd, GPR:$rs1, GPR:$rs2), opcodestr,
                   "$rd, $rs1, $rs2"> {
+  assert !eq(funct3{0}, 1), "LSB of funct3 should be one";
+  assert !eq(f{0}, 1), "LSB of f should be one";
   let Inst{31} = 0b1;
   let Inst{30-27} = f;
   let Inst{26-25} = w;
@@ -445,6 +450,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
 class RVPWideningTernary_rrr<bits<4> f, bits<2> w, string opcodestr>
     : RVPWideningBase<f, w, 0b1, (outs GPRPairRV32:$rd_wb),
                       (ins GPRPairRV32:$rd, GPR:$rs1, GPR:$rs2), opcodestr> {
+  assert !eq(f{0}, 1), "LSB of f should be one";
   let Constraints = "$rd = $rd_wb";
 }
 
@@ -1237,9 +1243,9 @@ let Predicates = [HasStdExtP, IsRV32] in {
   def PM2WADDASU_H : RVPWideningTernary_rrr<0b1101, 0b11, "pm2waddasu.h">;
 
   def PMQWACC_H    : RVPWideningTernary_rrr<0b1111, 0b00, "pmqwacc.h">;
-  def PMQWACC      : RVPWideningTernary_rrr<0b1111, 0b01, "pmqwacc">;
+  def MQWACC       : RVPWideningTernary_rrr<0b1111, 0b01, "mqwacc">;
   def PMQRWACC_H   : RVPWideningTernary_rrr<0b1111, 0b10, "pmqrwacc.h">;
-  def PMQRWACC     : RVPWideningTernary_rrr<0b1111, 0b11, "pmqrwacc">;
+  def MQRWACC      : RVPWideningTernary_rrr<0b1111, 0b11, "mqrwacc">;
 
   def PREDSUM_DHS  : RVPNarrowingBinary_rr<0b001, 0b00, "predsum.dhs">;
   def PREDSUM_DBS  : RVPNarrowingBinary_rr<0b001, 0b10, "predsum.dbs">;

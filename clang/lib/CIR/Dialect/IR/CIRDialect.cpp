@@ -1307,6 +1307,49 @@ LogicalResult cir::ScopeOp::fold(FoldAdaptor /*adaptor*/,
 }
 
 //===----------------------------------------------------------------------===//
+// CleanupScopeOp
+//===----------------------------------------------------------------------===//
+
+void cir::CleanupScopeOp::getSuccessorRegions(
+    mlir::RegionBranchPoint point, SmallVectorImpl<RegionSuccessor> &regions) {
+  if (!point.isParent()) {
+    regions.push_back(RegionSuccessor::parent());
+    return;
+  }
+
+  // Execution always proceeds from the body region to the cleanup region.
+  regions.push_back(RegionSuccessor(&getBodyRegion()));
+  regions.push_back(RegionSuccessor(&getCleanupRegion()));
+}
+
+mlir::ValueRange
+cir::CleanupScopeOp::getSuccessorInputs(RegionSuccessor successor) {
+  return ValueRange();
+}
+
+void cir::CleanupScopeOp::build(
+    OpBuilder &builder, OperationState &result, CleanupKind cleanupKind,
+    function_ref<void(OpBuilder &, Location)> bodyBuilder,
+    function_ref<void(OpBuilder &, Location)> cleanupBuilder) {
+  result.addAttribute(getCleanupKindAttrName(result.name),
+                      CleanupKindAttr::get(builder.getContext(), cleanupKind));
+
+  OpBuilder::InsertionGuard guard(builder);
+
+  // Build body region.
+  Region *bodyRegion = result.addRegion();
+  builder.createBlock(bodyRegion);
+  if (bodyBuilder)
+    bodyBuilder(builder, result.location);
+
+  // Build cleanup region.
+  Region *cleanupRegion = result.addRegion();
+  builder.createBlock(cleanupRegion);
+  if (cleanupBuilder)
+    cleanupBuilder(builder, result.location);
+}
+
+//===----------------------------------------------------------------------===//
 // BrOp
 //===----------------------------------------------------------------------===//
 
@@ -3836,6 +3879,148 @@ cir::EhTypeIdOp::verifySymbolUses(SymbolTableCollection &symbolTable) {
     return emitOpError("'")
            << getTypeSym() << "' does not reference a valid cir.global";
   return success();
+}
+
+//===----------------------------------------------------------------------===//
+// EhDispatchOp
+//===----------------------------------------------------------------------===//
+
+static ParseResult
+parseEhDispatchDestinations(OpAsmParser &parser, mlir::ArrayAttr &catchTypes,
+                            SmallVectorImpl<Block *> &catchDestinations,
+                            Block *&defaultDestination,
+                            mlir::UnitAttr &defaultIsCatchAll) {
+  // Parse: [ ... ]
+  if (parser.parseLSquare())
+    return failure();
+
+  SmallVector<Attribute> handlerTypes;
+  bool hasCatchAll = false;
+  bool hasUnwind = false;
+
+  // Parse handler list.
+  auto parseHandler = [&]() -> ParseResult {
+    // Check for 'catch_all' or 'unwind' keywords.
+    if (succeeded(parser.parseOptionalKeyword("catch_all"))) {
+      if (hasCatchAll)
+        return parser.emitError(parser.getCurrentLocation(),
+                                "duplicate 'catch_all' handler");
+      if (hasUnwind)
+        return parser.emitError(parser.getCurrentLocation(),
+                                "cannot have both 'catch_all' and 'unwind'");
+      hasCatchAll = true;
+
+      if (parser.parseColon().failed())
+        return failure();
+
+      if (parser.parseSuccessor(defaultDestination).failed())
+        return failure();
+
+      return success();
+    }
+
+    if (succeeded(parser.parseOptionalKeyword("unwind"))) {
+      if (hasUnwind)
+        return parser.emitError(parser.getCurrentLocation(),
+                                "duplicate 'unwind' handler");
+      if (hasCatchAll)
+        return parser.emitError(parser.getCurrentLocation(),
+                                "cannot have both 'catch_all' and 'unwind'");
+      hasUnwind = true;
+
+      if (parser.parseColon().failed())
+        return failure();
+
+      if (parser.parseSuccessor(defaultDestination).failed())
+        return failure();
+      return success();
+    }
+
+    // Otherwise, expect 'catch(<attr> : <type>) : ^block'.
+    // The 'catch(...)' wrapper allows the attribute to include its type
+    // without conflicting with the ':' used for the block destination.
+    if (parser.parseKeyword("catch").failed())
+      return failure();
+
+    if (parser.parseLParen().failed())
+      return failure();
+
+    mlir::Attribute catchTypeAttr;
+    if (parser.parseAttribute(catchTypeAttr).failed())
+      return failure();
+    handlerTypes.push_back(catchTypeAttr);
+
+    if (parser.parseRParen().failed())
+      return failure();
+
+    if (parser.parseColon().failed())
+      return failure();
+
+    Block *dest;
+    if (parser.parseSuccessor(dest).failed())
+      return failure();
+    catchDestinations.push_back(dest);
+    return success();
+  };
+
+  if (parser.parseCommaSeparatedList(parseHandler).failed())
+    return failure();
+
+  if (parser.parseRSquare().failed())
+    return failure();
+
+  // Verify we have catch_all or unwind.
+  if (!hasCatchAll && !hasUnwind)
+    return parser.emitError(parser.getCurrentLocation(),
+                            "must have either 'catch_all' or 'unwind' handler");
+
+  // Add attributes and successors.
+  if (!handlerTypes.empty())
+    catchTypes = parser.getBuilder().getArrayAttr(handlerTypes);
+
+  if (hasCatchAll)
+    defaultIsCatchAll = parser.getBuilder().getUnitAttr();
+
+  return success();
+}
+
+static void printEhDispatchDestinations(OpAsmPrinter &p, cir::EhDispatchOp op,
+                                        mlir::ArrayAttr catchTypes,
+                                        SuccessorRange catchDestinations,
+                                        Block *defaultDestination,
+                                        mlir::UnitAttr defaultIsCatchAll) {
+  p << " [";
+  p.printNewline();
+
+  // If we have at least one catch type, print them.
+  if (catchTypes) {
+    // Print type handlers using 'catch(<attr>) : ^block' syntax.
+    llvm::interleave(
+        llvm::zip(catchTypes, catchDestinations),
+        [&](auto i) {
+          p << "  catch(";
+          p.printAttribute(std::get<0>(i));
+          p << ") : ";
+          p.printSuccessor(std::get<1>(i));
+        },
+        [&] {
+          p << ',';
+          p.printNewline();
+        });
+
+    p << ", ";
+    p.printNewline();
+  }
+
+  // Print catch_all or unwind handler.
+  if (defaultIsCatchAll)
+    p << "  catch_all : ";
+  else
+    p << "  unwind : ";
+  p.printSuccessor(defaultDestination);
+  p.printNewline();
+
+  p << "]";
 }
 
 //===----------------------------------------------------------------------===//
