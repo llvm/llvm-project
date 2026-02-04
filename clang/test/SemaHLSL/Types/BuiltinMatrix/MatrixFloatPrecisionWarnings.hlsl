@@ -43,12 +43,12 @@ void TestConstantExactlyRepresentable() {
 
 // Test 3: Constant matrix values that are NOT exactly representable SHOULD warn
 // Note: The precision loss check compares if the value survives a round-trip
-// conversion (source -> target -> source). Values like 0.1 in double that
-// round-trip through float may not lose precision, but 0.1f going to half will.
+// conversion (source -> target -> source).
 
 void TestConstantNotExactlyRepresentable() {
   constexpr float2x2 F_inexact = {0.1f, 0.2f, 0.3f, 0.4f};
-  constexpr double2x2 D_inexact = {0.1, 0.2, 0.3, 0.4};
+  constexpr double2x2 D_inexact = {0.1l, 0.2l, 0.3l, 0.4l};
+  constexpr double2x2 D_inexact2 = {0.1, 0.2, 0.3, 0.4};
 
   // Float to half with values that lose precision - should warn
   TakesHalf2x2(F_inexact);
@@ -57,6 +57,14 @@ void TestConstantNotExactlyRepresentable() {
   // Double to half with values that lose precision - should warn
   TakesHalf2x2(D_inexact);
   // expected-warning@-1{{implicit conversion loses floating-point precision: 'const double2x2' (aka 'matrix<double const, 2, 2>') to 'half2x2' (aka 'matrix<half, 2, 2>')}}
+
+  // Double to float with values that lose precision - should warn
+  TakesFloat2x2(D_inexact);
+  // expected-warning@-1{{implicit conversion loses floating-point precision: 'const double2x2' (aka 'matrix<double const, 2, 2>') to 'float2x2' (aka 'matrix<float, 2, 2>')}}
+
+  // Double to float, where the doubles are float literals that were upcast to double - should not warn
+  TakesFloat2x2(D_inexact2);
+  // No expected warning because the floating point literals are upcast to double. As a result, D_inexact2 survives the double -> float -> double round-trip.
 }
 
 // Test 4: Assignment with precision loss
