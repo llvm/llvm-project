@@ -6608,6 +6608,10 @@ SDValue DAGTypeLegalizer::WidenVecRes_MLOAD(MaskedLoadSDNode *N) {
     if (!N->getPassThru()->isUndef()) {
       assert(WidenVT.isScalableVector());
       NewVal = DAG.getNode(ISD::VSELECT, dl, WidenVT, Mask, NewVal, PassThru);
+      // The lanes past EVL are poison.
+      NewVal = DAG.getNode(ISD::VP_MERGE, dl, WidenVT,
+                           DAG.getAllOnesConstant(dl, WideMaskVT), NewVal,
+                           DAG.getPOISON(WidenVT), EVL);
     }
 
     // Modified the chain - switch anything that used the old chain to use

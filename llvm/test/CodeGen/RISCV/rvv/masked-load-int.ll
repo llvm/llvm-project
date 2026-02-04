@@ -36,7 +36,6 @@ define <vscale x 1 x i8> @masked_load_passthru_nxv1i8(ptr %a, <vscale x 1 x i1> 
 ; ZVE32-NEXT:    srli a1, a1, 3
 ; ZVE32-NEXT:    vsetvli zero, a1, e8, mf4, ta, ma
 ; ZVE32-NEXT:    vle8.v v8, (a0), v0.t
-; ZVE32-NEXT:    vsetvli a0, zero, e8, mf4, ta, ma
 ; ZVE32-NEXT:    vmv.v.i v9, 0
 ; ZVE32-NEXT:    vmerge.vvm v8, v9, v8, v0
 ; ZVE32-NEXT:    ret
