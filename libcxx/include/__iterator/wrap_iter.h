@@ -143,8 +143,8 @@ private:
   }
 
 #if _LIBCPP_STD_VER <= 17
-  _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR bool
-  operator!=(const __wrap_iter& __x, const __wrap_iter& __y) _NOEXCEPT {
+  _LIBCPP_HIDE_FROM_ABI friend
+      _LIBCPP_CONSTEXPR bool operator!=(const __wrap_iter& __x, const __wrap_iter& __y) _NOEXCEPT {
     return !(__x == __y);
   }
 
@@ -211,8 +211,8 @@ private:
   operator-(const __wrap_iter& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT->decltype(__x.base() - __y.base())
 #else
   template <class _Iter2>
-  _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX14 typename __wrap_iter::difference_type
-  operator-(const __wrap_iter& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
+  _LIBCPP_HIDE_FROM_ABI friend _LIBCPP_CONSTEXPR_SINCE_CXX14
+  typename __wrap_iter::difference_type operator-(const __wrap_iter& __x, const __wrap_iter<_Iter2>& __y) _NOEXCEPT
 #endif // C++03
   {
     return __x.base() - __y.base();
