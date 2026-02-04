@@ -880,7 +880,8 @@ public:
         IntrusiveRefCntPtr<llvm::vfs::FileSystem> VFS,
         DiagnosticConsumer &DiagConsumer, std::shared_ptr<ModuleCache> ModCache,
         std::shared_ptr<ModuleDependencyCollector> ModuleDepCollector = nullptr)
-        : VFS(std::move(VFS)), DiagConsumer(DiagConsumer), ModCache(ModCache),
+        : VFS(std::move(VFS)), DiagConsumer(DiagConsumer),
+          ModCache(std::move(ModCache)),
           ModuleDepCollector(std::move(ModuleDepCollector)) {
       assert(this->VFS && "Clone config requires non-null VFS");
       assert(this->ModCache && "Clone config requires non-null ModuleCache");
