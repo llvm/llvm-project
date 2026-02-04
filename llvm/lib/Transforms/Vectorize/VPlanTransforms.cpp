@@ -5576,12 +5576,6 @@ static bool transformToPartialReduction(const VPPartialReductionChain &Chain,
     auto *NewScaleFactor = Plan.getConstantInt(32, ScaleFactor);
     StartInst->setOperand(2, NewScaleFactor);
 
-    // Find the ComputeReductionResult that uses the WidenRecipe (the exit
-    // value). Look through selects for predicated reductions.
-    if (auto *RdxResult = vputils::findComputeReductionResult(RdxPhi)) {
-      ExitValue = RdxResult->getOperand(0);
-      match(ExitValue, m_Select(m_VPValue(Cond), m_VPValue(), m_VPValue()));
-    }
   }
 
   // Handle SUB by negating the operand and using ADD for the partial reduction.
@@ -5597,6 +5591,16 @@ static bool transformToPartialReduction(const VPPartialReductionChain &Chain,
     Builder.insert(NegRecipe);
     BinOp = NegRecipe;
   }
+
+  // Check if WidenRecipe is the final result of the reduction. If so look
+  // through selects for predicated reductions.
+  VPReductionPHIRecipe *RdxPhi;
+  ExitValue = cast_or_null<VPInstruction>(vputils::findUserOf(
+      WidenRecipe, m_Select(m_VPValue(Cond), m_Specific(WidenRecipe),
+                            m_ReductionPhi(RdxPhi))));
+  assert(!ExitValue || RdxPhi->getBackedgeValue() == WidenRecipe ||
+         RdxPhi->getBackedgeValue() == ExitValue &&
+             "if we found ExitValue, it must match RdxPhi's backedge value");
 
   RecurKind RdxKind =
       PhiType->isFloatingPointTy() ? RecurKind::FAdd : RecurKind::Add;

@@ -8175,7 +8175,7 @@ SDValue PPCTargetLowering::LowerSELECT_CC(SDValue Op, SelectionDAG &DAG) const {
   // general, fsel-based lowering of select is a finite-math-only optimization.
   // For more information, see section F.3 of the 2.06 ISA specification.
   // With ISA 3.0
-  if ((!DAG.getTarget().Options.NoInfsFPMath && !Flags.hasNoInfs()) ||
+  if (!Flags.hasNoInfs() ||
       (!DAG.getTarget().Options.NoNaNsFPMath && !Flags.hasNoNaNs()) ||
       ResVT == MVT::f128)
     return Op;
@@ -14645,7 +14645,6 @@ PPCTargetLowering::EmitInstrWithCustomInserter(MachineInstr &MI,
     Register Val64 = MRI.createVirtualRegister(&PPC::G8RCRegClass);
     if (IsLwat)
       BuildMI(*BB, MI, DL, TII->get(TargetOpcode::SUBREG_TO_REG), Val64)
-          .addImm(0)
           .addReg(ValReg)
           .addImm(PPC::sub_32);
     else
