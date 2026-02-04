@@ -42,12 +42,7 @@ class GCEmptyBasicBlocksLegacy : public MachineFunctionPass {
 public:
   static char ID;
 
-  GCEmptyBasicBlocksLegacy() : MachineFunctionPass(ID) {
-    // TODO: Move this call to llvm::initializeCodeGen() once
-    // `gc-empty-basic-blocks` command line alias in TargetPassConfig.cpp has
-    // been removed.
-    initializeGCEmptyBasicBlocksLegacyPass(*PassRegistry::getPassRegistry());
-  }
+  GCEmptyBasicBlocksLegacy() : MachineFunctionPass(ID) {}
 
   StringRef getPassName() const override {
     return "Remove Empty Basic Blocks.";

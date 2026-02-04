@@ -2173,11 +2173,14 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     Register DstLo = RI.getSubReg(Dst, AMDGPU::sub0);
     Register DstHi = RI.getSubReg(Dst, AMDGPU::sub1);
 
+    const MCInstrDesc &Mov64Desc = get(AMDGPU::V_MOV_B64_e32);
+    const TargetRegisterClass *Mov64RC = getRegClass(Mov64Desc, /*OpNum=*/0);
+
     const MachineOperand &SrcOp = MI.getOperand(1);
     // FIXME: Will this work for 64-bit floating point immediates?
     assert(!SrcOp.isFPImm());
-    if (ST.hasMovB64()) {
-      MI.setDesc(get(AMDGPU::V_MOV_B64_e32));
+    if (ST.hasMovB64() && Mov64RC->contains(Dst)) {
+      MI.setDesc(Mov64Desc);
       if (SrcOp.isReg() || isInlineConstant(MI, 1) ||
           isUInt<32>(SrcOp.getImm()) || ST.has64BitLiterals())
         break;
@@ -2186,17 +2189,21 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
       APInt Imm(64, SrcOp.getImm());
       APInt Lo(32, Imm.getLoBits(32).getZExtValue());
       APInt Hi(32, Imm.getHiBits(32).getZExtValue());
-      if (ST.hasPkMovB32() && Lo == Hi && isInlineConstant(Lo)) {
-        BuildMI(MBB, MI, DL, get(AMDGPU::V_PK_MOV_B32), Dst)
-          .addImm(SISrcMods::OP_SEL_1)
-          .addImm(Lo.getSExtValue())
-          .addImm(SISrcMods::OP_SEL_1)
-          .addImm(Lo.getSExtValue())
-          .addImm(0)  // op_sel_lo
-          .addImm(0)  // op_sel_hi
-          .addImm(0)  // neg_lo
-          .addImm(0)  // neg_hi
-          .addImm(0); // clamp
+      const MCInstrDesc &PkMovDesc = get(AMDGPU::V_PK_MOV_B32);
+      const TargetRegisterClass *PkMovRC = getRegClass(PkMovDesc, /*OpNum=*/0);
+
+      if (ST.hasPkMovB32() && Lo == Hi && isInlineConstant(Lo) &&
+          PkMovRC->contains(Dst)) {
+        BuildMI(MBB, MI, DL, PkMovDesc, Dst)
+            .addImm(SISrcMods::OP_SEL_1)
+            .addImm(Lo.getSExtValue())
+            .addImm(SISrcMods::OP_SEL_1)
+            .addImm(Lo.getSExtValue())
+            .addImm(0)  // op_sel_lo
+            .addImm(0)  // op_sel_hi
+            .addImm(0)  // neg_lo
+            .addImm(0)  // neg_hi
+            .addImm(0); // clamp
       } else {
         BuildMI(MBB, MI, DL, get(AMDGPU::V_MOV_B32_e32), DstLo)
           .addImm(Lo.getSExtValue())
@@ -2560,6 +2567,38 @@ bool SIInstrInfo::expandPostRAPseudo(MachineInstr &MI) const {
     Op1->setImm(Op1->getImm() | SISrcMods::OP_SEL_1);
     break;
   }
+
+  case AMDGPU::GET_STACK_BASE:
+    // The stack starts at offset 0 unless we need to reserve some space at the
+    // bottom.
+    if (ST.getFrameLowering()->mayReserveScratchForCWSR(*MBB.getParent())) {
+      // When CWSR is used in dynamic VGPR mode, the trap handler needs to save
+      // some of the VGPRs. The size of the required scratch space has already
+      // been computed by prolog epilog insertion.
+      const SIMachineFunctionInfo *MFI =
+          MBB.getParent()->getInfo<SIMachineFunctionInfo>();
+      unsigned VGPRSize = MFI->getScratchReservedForDynamicVGPRs();
+      Register DestReg = MI.getOperand(0).getReg();
+      BuildMI(MBB, MI, DL, get(AMDGPU::S_GETREG_B32), DestReg)
+          .addImm(AMDGPU::Hwreg::HwregEncoding::encode(
+              AMDGPU::Hwreg::ID_HW_ID2, AMDGPU::Hwreg::OFFSET_ME_ID, 2));
+      // The MicroEngine ID is 0 for the graphics queue, and 1 or 2 for compute
+      // (3 is unused, so we ignore it). Unfortunately, S_GETREG doesn't set
+      // SCC, so we need to check for 0 manually.
+      BuildMI(MBB, MI, DL, get(AMDGPU::S_CMP_LG_U32)).addImm(0).addReg(DestReg);
+      // Change the implicif-def of SCC to an explicit use (but first remove
+      // the dead flag if present).
+      MI.getOperand(MI.getNumExplicitOperands()).setIsDead(false);
+      MI.getOperand(MI.getNumExplicitOperands()).setIsUse();
+      MI.setDesc(get(AMDGPU::S_CMOVK_I32));
+      MI.addOperand(MachineOperand::CreateImm(VGPRSize));
+    } else {
+      MI.setDesc(get(AMDGPU::S_MOV_B32));
+      MI.addOperand(MachineOperand::CreateImm(0));
+      MI.removeOperand(
+          MI.getNumExplicitOperands()); // Drop implicit def of SCC.
+    }
+    break;
   }
 
   return true;
@@ -4482,13 +4521,14 @@ bool SIInstrInfo::mayAccessScratch(const MachineInstr &MI) const {
   if ((!isFLAT(MI) || isFLATGlobal(MI)) && !isBUF(MI))
     return false;
 
-  // If scratch is not initialized, we can never access it.
-  if (MI.getMF()->getFunction().hasFnAttribute("amdgpu-no-flat-scratch-init"))
-    return false;
-
   // SCRATCH instructions always access scratch.
   if (isFLATScratch(MI))
     return true;
+
+  // If FLAT_SCRATCH registers are not initialized, we can never access scratch
+  // via the aperture.
+  if (MI.getMF()->getFunction().hasFnAttribute("amdgpu-no-flat-scratch-init"))
+    return false;
 
   // If there are no memory operands then conservatively assume the flat
   // operation may access scratch.
@@ -5258,7 +5298,8 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
     // aligned register constraint.
     // FIXME: We do not verify inline asm operands, but custom inline asm
     // verification is broken anyway
-    if (ST.needsAlignedVGPRs() && Opcode != AMDGPU::AV_MOV_B64_IMM_PSEUDO) {
+    if (ST.needsAlignedVGPRs() && Opcode != AMDGPU::AV_MOV_B64_IMM_PSEUDO &&
+        Opcode != AMDGPU::V_MOV_B64_PSEUDO) {
       const TargetRegisterClass *RC = RI.getRegClassForReg(MRI, Reg);
       if (RI.hasVectorRegisters(RC) && MO.getSubReg()) {
         if (const TargetRegisterClass *SubRC =
@@ -10677,6 +10718,12 @@ SIInstrInfo::getGenericInstructionUniformity(const MachineInstr &MI) const {
     return InstructionUniformity::NeverUniform;
   }
   return InstructionUniformity::Default;
+}
+
+const MIRFormatter *SIInstrInfo::getMIRFormatter() const {
+  if (!Formatter)
+    Formatter = std::make_unique<AMDGPUMIRFormatter>(ST);
+  return Formatter.get();
 }
 
 InstructionUniformity

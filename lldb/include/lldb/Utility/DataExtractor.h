@@ -846,6 +846,18 @@ public:
   ///     A shared pointer to a new DataExtractor.
   virtual lldb::DataExtractorSP GetSubsetExtractorSP(lldb::offset_t offset);
 
+  /// Return a new DataExtractor which represents a subset of an existing
+  /// data extractor's bytes, copying all other fields from the existing
+  /// data extractor.  The length will be the largest contiguous region that
+  /// can be provided starting the beginning of this extractor; it is safe
+  /// to read any bytes within the returned subset Extractor.
+  ///
+  /// \return
+  ///     A shared pointer to a new DataExtractor.
+  virtual lldb::DataExtractorSP GetContiguousDataExtractorSP() {
+    return GetSubsetExtractorSP(0);
+  }
+
   lldb::DataBufferSP &GetSharedDataBuffer() { return m_data_sp; }
 
   bool HasData() { return m_start && m_end && m_end - m_start > 0; }
