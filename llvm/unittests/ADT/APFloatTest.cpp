@@ -1506,7 +1506,10 @@ TEST(APFloatTest, fromZeroDecimalLargeExponentString) {
          {SR("0e1234"), SR("+0e1234"), SR("-0e1234"), SR("0e+1234"),
           SR("+0e+1234"), SR("-0e+1234"), SR("0e-1234"), SR("+0e-1234"),
           SR("-0e-1234"), SR("000.0000e1234"), SR("000.0000e-1234"),
-          SR("0e1234" "\0" "2", 6) }) {
+          SR("0e1234"
+             "\0"
+             "2",
+             6)}) {
       const bool ExpectNegative = ('-' == s[0]);
       // set to something known not to be zero so we know we are
       // converting the string
@@ -1713,8 +1716,7 @@ TEST(APFloatTest, fromDecimalString) {
       { "1.1",   "1.1e" },    { "1.1",  "+1.1e" },  { "-1.1",  "-1.1e" },
       { "1",     "1e+" },     { "1",    "1e-" },    { "0.1",   ".1e" },
       { "0.1",   ".1e+" },    { "0.1",  ".1e-" },   { "1",     "1.0e" },
-      { "1",     "1.0e+" },   { "1",    "1.0e-" }
-      // clang-format on
+      { "1",     "1.0e+" },   { "1",    "1.0e-" } // clang-format on
   };
 
   bool HasError;
@@ -1731,9 +1733,8 @@ TEST(APFloatTest, fromDecimalString) {
       EXPECT_TRUE(HFP.isZero());
       HasError = !HFP.convertFromString(test.value, APFloat::rmTowardZero);
       EXPECT_FALSE(HasError);
-      EXPECT_TRUE(HFP.isNonZero())
-          << " Semantics: " << SemanticsName << "\n"
-          << " value is " << test.value;
+      EXPECT_TRUE(HFP.isNonZero()) << " Semantics: " << SemanticsName << "\n"
+                                   << " value is " << test.value;
       EXPECT_EQ(ExpectNegative, HFP.isNegative())
           << " Semantics: " << SemanticsName << "\n"
           << " value is " << test.value;
@@ -5554,78 +5555,64 @@ TEST(APFloatTest, frexpHexFloat) {
     // having to deal with the exact encoding, which is tricky
     // for the low exponent in the 128 case.
     Frac = frexp(One, Exp, RM);
-    EXPECT_EQ(1, Exp)
-        << " Semantics: " << SemanticsName;
+    EXPECT_EQ(1, Exp) << " Semantics: " << SemanticsName;
     EXPECT_EQ(APFloat::opOK, Frac.subtract(APFloat(*S, "0.5"), RM))
         << " Semantics: " << SemanticsName;
-    EXPECT_TRUE(Frac.isZero())
-        << " Semantics: " << SemanticsName;
+    EXPECT_TRUE(Frac.isZero()) << " Semantics: " << SemanticsName;
 
     Frac = frexp(MOne, Exp, RM);
-    EXPECT_EQ(1, Exp)
-        << " Semantics: " << SemanticsName;
+    EXPECT_EQ(1, Exp) << " Semantics: " << SemanticsName;
     EXPECT_EQ(APFloat::opOK, Frac.add(APFloat(*S, "0.5"), RM))
         << " Semantics: " << SemanticsName;
-    EXPECT_TRUE(Frac.isZero())
-        << " Semantics: " << SemanticsName;
+    EXPECT_TRUE(Frac.isZero()) << " Semantics: " << SemanticsName;
 
     Frac = frexp(LargestDenormal, Exp, RM);
-    EXPECT_EQ(-260, Exp)
-        << " Semantics: " << SemanticsName;
+    EXPECT_EQ(-260, Exp) << " Semantics: " << SemanticsName;
     Expected = "0x.";
     Expected.append(APFloat::semanticsPrecision(*S) - 1, 'f');
     Expected.push_back('0');
     EXPECT_EQ(APFloat::opOK, Frac.subtract(APFloat(*S, Expected), RM))
         << " Semantics: " << SemanticsName;
-    EXPECT_TRUE(Frac.isZero())
-        << " Semantics: " << SemanticsName;
+    EXPECT_TRUE(Frac.isZero()) << " Semantics: " << SemanticsName;
 
     Frac = frexp(NegLargestDenormal, Exp, RM);
-    EXPECT_EQ(-260, Exp)
-        << " Semantics: " << SemanticsName;
+    EXPECT_EQ(-260, Exp) << " Semantics: " << SemanticsName;
     Expected = "0x.";
     Expected.append(APFloat::semanticsPrecision(*S) - 1, 'f');
     Expected.push_back('0');
     EXPECT_EQ(APFloat::opOK, Frac.add(APFloat(*S, Expected), RM))
         << " Semantics: " << SemanticsName;
-    EXPECT_TRUE(Frac.isZero())
-        << " Semantics: " << SemanticsName;
+    EXPECT_TRUE(Frac.isZero()) << " Semantics: " << SemanticsName;
 
     Frac = frexp(Smallest, Exp, RM);
     EXPECT_EQ(-256 - 4 * ((int)APFloat::semanticsPrecision(*S) - 1) - 3, Exp)
         << " Semantics: " << APFloat::semanticsName(*S);
     EXPECT_EQ(APFloat::opOK, Frac.subtract(APFloat(*S, "0.5"), RM))
         << " Semantics: " << SemanticsName;
-    EXPECT_TRUE(Frac.isZero())
-        << " Semantics: " << SemanticsName;
+    EXPECT_TRUE(Frac.isZero()) << " Semantics: " << SemanticsName;
 
     Frac = frexp(NegSmallest, Exp, RM);
     EXPECT_EQ(-256 - 4 * ((int)APFloat::semanticsPrecision(*S) - 1) - 3, Exp)
         << " Semantics: " << SemanticsName;
     EXPECT_EQ(APFloat::opOK, Frac.add(APFloat(*S, "0.5"), RM))
         << " Semantics: " << SemanticsName;
-    EXPECT_TRUE(Frac.isZero())
-        << " Semantics: " << SemanticsName;
+    EXPECT_TRUE(Frac.isZero()) << " Semantics: " << SemanticsName;
 
     Frac = frexp(Largest, Exp, RM);
-    EXPECT_EQ(252, Exp)
-        << " Semantics: " << SemanticsName;
+    EXPECT_EQ(252, Exp) << " Semantics: " << SemanticsName;
     Expected = "0x.";
     Expected.append(APFloat::semanticsPrecision(*S), 'f');
     EXPECT_EQ(APFloat::opOK, Frac.subtract(APFloat(*S, Expected), RM))
         << " Semantics: " << APFloat::semanticsName(*S);
-    EXPECT_TRUE(Frac.isZero())
-        << " Semantics: " << SemanticsName;
+    EXPECT_TRUE(Frac.isZero()) << " Semantics: " << SemanticsName;
 
-    Frac = frexp(NegLargest, Exp, RM);
-    EXPECT_EQ(252, Exp)
+    Frac = frexp(NegLargest, Exp, RM); EXPECT_EQ(252, Exp)
         << " Semantics: " << SemanticsName;
     Expected = "0x.";
     Expected.append(APFloat::semanticsPrecision(*S), 'f');
     EXPECT_EQ(APFloat::opOK, Frac.add(APFloat(*S, Expected), RM))
         << " Semantics: " << SemanticsName;
-    EXPECT_TRUE(Frac.isZero())
-        << " Semantics: " << SemanticsName;
+    EXPECT_TRUE(Frac.isZero()) << " Semantics: " << SemanticsName;
   }
 }
 

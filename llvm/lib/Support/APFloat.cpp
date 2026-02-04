@@ -76,13 +76,7 @@ constexpr fltSemantics APFloatBase::semFloat8E5M2FNUZ = {
     fltNanEncoding::NegativeZero};
 constexpr fltSemantics APFloatBase::semFloat8E4M3 = {"Float8E4M3", 7, -6, 4, 8};
 constexpr fltSemantics APFloatBase::semFloat8E4M3FN = {
-    "Float8E4M3FN",
-    8,
-    -6,
-    4,
-    8,
-    2,
-    fltNonfiniteBehavior::NanOnly,
+    "Float8E4M3FN",         8, -6, 4, 8, 2, fltNonfiniteBehavior::NanOnly,
     fltNanEncoding::AllOnes};
 constexpr fltSemantics APFloatBase::semFloat8E4M3FNUZ = {
     "Float8E4M3FNUZ",
@@ -94,13 +88,7 @@ constexpr fltSemantics APFloatBase::semFloat8E4M3FNUZ = {
     fltNonfiniteBehavior::NanOnly,
     fltNanEncoding::NegativeZero};
 constexpr fltSemantics APFloatBase::semFloat8E4M3B11FNUZ = {
-    "Float8E4M3B11FNUZ",
-    4,
-    -10,
-    4,
-    8,
-    2,
-    fltNonfiniteBehavior::NanOnly,
+    "Float8E4M3B11FNUZ",         4, -10, 4, 8, 2, fltNonfiniteBehavior::NanOnly,
     fltNanEncoding::NegativeZero};
 constexpr fltSemantics APFloatBase::semFloat8E3M4 = {"Float8E3M4", 3, -2, 5, 8};
 constexpr fltSemantics APFloatBase::semFloatTF32 = {"FloatTF32", 127, -126, 11,
@@ -7922,7 +7910,7 @@ APFloat::Storage::Storage(IEEEFloat F, const fltSemantics &Semantics) {
     return;
   }
   if (usesLayout<DoubleAPFloat>(Semantics)) {
-    const fltSemantics& S = F.getSemantics();
+    const fltSemantics &S = F.getSemantics();
     new (&Double) DoubleAPFloat(Semantics, APFloat(std::move(F), S),
                                 APFloat(APFloatBase::IEEEdouble()));
     return;
