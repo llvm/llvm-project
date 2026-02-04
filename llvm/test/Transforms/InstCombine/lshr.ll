@@ -141,9 +141,9 @@ define i8 @lshr_cttz_zero_is_undef_vec(<2 x i8> %x) {
 
 define i8 @lshr_exact(i8 %x) {
 ; CHECK-LABEL: @lshr_exact(
-; CHECK-NEXT:    [[LSHR:%.*]] = and i8 [[TMP1:%.*]], 63
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw i8 [[LSHR]], 1
-; CHECK-NEXT:    ret i8 [[ADD]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add i8 [[X:%.*]], 1
+; CHECK-NEXT:    [[LSHR:%.*]] = and i8 [[TMP1]], 63
+; CHECK-NEXT:    ret i8 [[LSHR]]
 ;
   %shl = shl i8 %x, 2
   %add = add i8 %shl, 4
@@ -153,9 +153,9 @@ define i8 @lshr_exact(i8 %x) {
 
 define <2 x i8> @lshr_exact_splat_vec(<2 x i8> %x) {
 ; CHECK-LABEL: @lshr_exact_splat_vec(
-; CHECK-NEXT:    [[LSHR:%.*]] = and <2 x i8> [[TMP1:%.*]], splat (i8 63)
-; CHECK-NEXT:    [[ADD:%.*]] = add nuw nsw <2 x i8> [[LSHR]], splat (i8 1)
-; CHECK-NEXT:    ret <2 x i8> [[ADD]]
+; CHECK-NEXT:    [[TMP1:%.*]] = add <2 x i8> [[X:%.*]], splat (i8 1)
+; CHECK-NEXT:    [[LSHR:%.*]] = and <2 x i8> [[TMP1]], splat (i8 63)
+; CHECK-NEXT:    ret <2 x i8> [[LSHR]]
 ;
   %shl = shl <2 x i8> %x, <i8 2, i8 2>
   %add = add <2 x i8> %shl, <i8 4, i8 4>

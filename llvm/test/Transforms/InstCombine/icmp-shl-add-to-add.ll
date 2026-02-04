@@ -113,8 +113,8 @@ define i1 @shl_add_const_eq_multi_use(i64 %v0, i64 %v3) {
 ; CHECK-LABEL: @shl_add_const_eq_multi_use(
 ; CHECK-NEXT:    [[V1:%.*]] = shl nsw i64 [[V0:%.*]], 5
 ; CHECK-NEXT:    call void @use_i64(i64 [[V1]])
-; CHECK-NEXT:    [[TMP1:%.*]] = add nsw i64 [[V3:%.*]], 1
-; CHECK-NEXT:    [[V6:%.*]] = icmp eq i64 [[V0]], [[TMP1]]
+; CHECK-NEXT:    [[V5:%.*]] = add nsw i64 [[V3:%.*]], 1
+; CHECK-NEXT:    [[V6:%.*]] = icmp eq i64 [[V0]], [[V5]]
 ; CHECK-NEXT:    ret i1 [[V6]]
 ;
   %v1 = shl nsw i64 %v0, 5

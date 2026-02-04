@@ -644,8 +644,13 @@ bool InstCombinerImpl::canEvaluateShifted(Value *V, unsigned NumBits,
            MulConst->isNegatedPowerOf2() && MulConst->countr_zero() == NumBits;
   }
   case Instruction::Add: {
-    return canEvaluateShifted(I->getOperand(0), NumBits, ShiftOp, I) &&
-           canEvaluateShifted(I->getOperand(1), NumBits, ShiftOp, I);
+    auto *BinOp = cast<BinaryOperator>(I);
+    if (ShiftOp == Instruction::Shl || BinOp->hasNoUnsignedWrap() ||
+        BinOp->hasNoSignedWrap())
+      return canEvaluateShifted(I->getOperand(0), NumBits, ShiftOp, I) &&
+             canEvaluateShifted(I->getOperand(1), NumBits, ShiftOp, I);
+
+    return false;
   }
   }
 }
