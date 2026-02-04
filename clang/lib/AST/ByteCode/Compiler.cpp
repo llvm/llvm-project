@@ -3598,6 +3598,9 @@ bool Compiler<Emitter>::VisitCXXNewExpr(const CXXNewExpr *E) {
   const Expr *PlacementDest = nullptr;
   bool IsNoThrow = false;
 
+  if (E->containsErrors())
+    return false;
+
   if (PlacementArgs != 0) {
     // FIXME: There is no restriction on this, but it's not clear that any
     // other form makes any sense. We get here for cases such as:
