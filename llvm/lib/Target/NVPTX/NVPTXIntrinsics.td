@@ -1331,10 +1331,14 @@ def INT_NVVM_NANOSLEEP_R : BasicNVPTXInst<(outs), (ins B32:$i), "nanosleep.u32",
                              [(int_nvvm_nanosleep i32:$i)]>,
         Requires<[hasPTX<63>, hasSM<70>]>;
 
+def Hexu16imm : Operand<i16> {
+  let PrintMethod = "printHexUImm<16>";
+}
+
 let hasSideEffects = 1 in {
 // Performance Monitor events
 def INT_PM_EVENT_MASK : BasicNVPTXInst<(outs),
-                        (ins i16imm:$mask),
+                        (ins Hexu16imm:$mask),
                         "pmevent.mask",
                         [(int_nvvm_pm_event_mask timm:$mask)]>,
                         Requires<[hasSM<20>, hasPTX<30>]>;
