@@ -1155,7 +1155,7 @@ void SIInstrInfo::copyPhysReg(MachineBasicBlock &MBB,
 }
 
 int SIInstrInfo::commuteOpcode(unsigned Opcode) const {
-  int NewOpc;
+  int64_t NewOpc;
 
   // Try to map original to commuted opcode
   NewOpc = AMDGPU::getCommuteRev(Opcode);
@@ -4510,7 +4510,7 @@ bool SIInstrInfo::isSchedulingBoundary(const MachineInstr &MI,
          changesVGPRIndexingMode(MI);
 }
 
-bool SIInstrInfo::isAlwaysGDS(uint16_t Opcode) const {
+bool SIInstrInfo::isAlwaysGDS(uint32_t Opcode) const {
   return Opcode == AMDGPU::DS_ORDERED_COUNT ||
          Opcode == AMDGPU::DS_ADD_GS_REG_RTN ||
          Opcode == AMDGPU::DS_SUB_GS_REG_RTN || isGWS(Opcode);
@@ -5138,7 +5138,7 @@ bool SIInstrInfo::verifyCopy(const MachineInstr &MI,
 
 bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
                                     StringRef &ErrInfo) const {
-  uint16_t Opcode = MI.getOpcode();
+  uint32_t Opcode = MI.getOpcode();
   const MachineFunction *MF = MI.getMF();
   const MachineRegisterInfo &MRI = MF->getRegInfo();
 
@@ -5395,7 +5395,7 @@ bool SIInstrInfo::verifyInstruction(const MachineInstr &MI,
       }
     }
 
-    uint16_t BasicOpcode = AMDGPU::getBasicFromSDWAOp(Opcode);
+    uint32_t BasicOpcode = AMDGPU::getBasicFromSDWAOp(Opcode);
     if (isVOPC(BasicOpcode)) {
       if (!ST.hasSDWASdst() && DstIdx != -1) {
         // Only vcc allowed as dst on VI for VOPC
@@ -9945,7 +9945,7 @@ unsigned SIInstrInfo::getLiveRangeSplitOpcode(Register SrcReg,
 }
 
 bool SIInstrInfo::canAddToBBProlog(const MachineInstr &MI) const {
-  uint16_t Opcode = MI.getOpcode();
+  uint32_t Opcode = MI.getOpcode();
   // Check if it is SGPR spill or wwm-register spill Opcode.
   if (isSGPRSpill(Opcode) || isWWMRegSpillOpcode(Opcode))
     return true;
@@ -10346,9 +10346,9 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
       Opcode = MFMAOp;
   }
 
-  int MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
+  int64_t MCOp = AMDGPU::getMCOpcode(Opcode, Gen);
 
-  if (MCOp == (uint16_t)-1 && ST.hasGFX1250Insts())
+  if (MCOp == (uint32_t)-1 && ST.hasGFX1250Insts())
     MCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX12);
 
   // -1 means that Opcode is already a native instruction.
@@ -10356,20 +10356,20 @@ int SIInstrInfo::pseudoToMCOpcode(int Opcode) const {
     return Opcode;
 
   if (ST.hasGFX90AInsts()) {
-    uint16_t NMCOp = (uint16_t)-1;
+    uint32_t NMCOp = (uint32_t)-1;
     if (ST.hasGFX940Insts())
       NMCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX940);
-    if (NMCOp == (uint16_t)-1)
+    if (NMCOp == (uint32_t)-1)
       NMCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX90A);
-    if (NMCOp == (uint16_t)-1)
+    if (NMCOp == (uint32_t)-1)
       NMCOp = AMDGPU::getMCOpcode(Opcode, SIEncodingFamily::GFX9);
-    if (NMCOp != (uint16_t)-1)
+    if (NMCOp != (uint32_t)-1)
       MCOp = NMCOp;
   }
 
-  // (uint16_t)-1 means that Opcode is a pseudo instruction that has
+  // (uint32_t)-1 means that Opcode is a pseudo instruction that has
   // no encoding in the given subtarget generation.
-  if (MCOp == (uint16_t)-1)
+  if (MCOp == (uint32_t)-1)
     return -1;
 
   if (isAsmOnlyOpcode(MCOp))
