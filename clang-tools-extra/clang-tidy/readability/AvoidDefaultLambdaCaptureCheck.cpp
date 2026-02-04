@@ -47,8 +47,7 @@ void AvoidDefaultLambdaCaptureCheck::storeOptions(
 
 void AvoidDefaultLambdaCaptureCheck::registerMatchers(MatchFinder *Finder) {
   if (IgnoreInSTL) {
-    auto StdFunctionCall =
-        callExpr(callee(functionDecl(isInStdNamespace())));
+    auto StdFunctionCall = callExpr(callee(functionDecl(isInStdNamespace())));
     auto StdNiebloidCall = cxxOperatorCallExpr(
         hasOverloadedOperatorName("()"),
         hasArgument(0, declRefExpr(to(varDecl(isInStdNamespace())))));
