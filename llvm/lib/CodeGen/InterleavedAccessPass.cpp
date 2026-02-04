@@ -141,9 +141,7 @@ class InterleavedAccess : public FunctionPass {
 public:
   static char ID;
 
-  InterleavedAccess() : FunctionPass(ID) {
-    initializeInterleavedAccessPass(*PassRegistry::getPassRegistry());
-  }
+  InterleavedAccess() : FunctionPass(ID) {}
 
   StringRef getPassName() const override { return "Interleaved Access Pass"; }
 

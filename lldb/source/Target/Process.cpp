@@ -1640,7 +1640,8 @@ Process::CreateBreakpointSite(const BreakpointLocationSP &constituent,
   constituent->SetIsIndirect(false);
 
   if (constituent->ShouldResolveIndirectFunctions()) {
-    Symbol *symbol = constituent->GetAddress().CalculateSymbolContextSymbol();
+    const Symbol *symbol =
+        constituent->GetAddress().CalculateSymbolContextSymbol();
     if (symbol && symbol->IsIndirect()) {
       Status error;
       Address symbol_address = symbol->GetAddress();
@@ -6122,7 +6123,7 @@ addr_t Process::ResolveIndirectFunction(const Address *address, Status &error) {
     function_addr = (*iter).second;
   } else {
     if (!CallVoidArgVoidPtrReturn(address, function_addr)) {
-      Symbol *symbol = address->CalculateSymbolContextSymbol();
+      const Symbol *symbol = address->CalculateSymbolContextSymbol();
       error = Status::FromErrorStringWithFormat(
           "Unable to call resolver for indirect function %s",
           symbol ? symbol->GetName().AsCString() : "<UNKNOWN>");

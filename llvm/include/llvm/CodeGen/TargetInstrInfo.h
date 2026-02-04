@@ -2195,7 +2195,7 @@ public:
                                             unsigned SrcSubReg,
                                             Register Dst) const {
     return BuildMI(MBB, InsPt, DL, get(TargetOpcode::COPY), Dst)
-        .addReg(Src, 0, SrcSubReg);
+        .addReg(Src, {}, SrcSubReg);
   }
 
   /// Returns a \p outliner::OutlinedFunction struct containing target-specific

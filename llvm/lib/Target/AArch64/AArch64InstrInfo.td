@@ -1224,8 +1224,8 @@ def AArch64rshrnb_pf : PatFrags<(ops node:$rs, node:$i),
                             [(AArch64rshrnb node:$rs, node:$i),
                             (int_aarch64_sve_rshrnb node:$rs, node:$i)]>;
 
-def AArch64CttzElts : SDNode<"AArch64ISD::CTTZ_ELTS", SDTypeProfile<1, 1,
-                             [SDTCisInt<0>, SDTCisVec<1>]>, []>;
+def AArch64CttzElts : SDNode<"AArch64ISD::CTTZ_ELTS", SDTypeProfile<1, 2,
+                             [SDTCisInt<0>, SDTCisVec<1>, SDTCisInt<2>]>, []>;
 
 // NEON Load/Store with post-increment base updates.
 // TODO: Complete SDTypeProfile constraints.
@@ -1310,7 +1310,12 @@ def add_and_or_is_add : PatFrags<(ops node:$lhs, node:$rhs),
 def smullwithsignbits : PatFrag<(ops node:$l, node:$r), (mul node:$l, node:$r), [{
   return CurDAG->ComputeNumSignBits(N->getOperand(0)) > 32 &&
          CurDAG->ComputeNumSignBits(N->getOperand(1)) > 32;
-}]>;
+}]> {
+  let GISelPredicateCode = [{
+     return VT->computeNumSignBits(MI.getOperand(1).getReg()) > 32 &&
+            VT->computeNumSignBits(MI.getOperand(2).getReg()) > 32;
+  }];
+}
 
 // Match "nnan" flagged calls to fminnum and fmmaxnum. Then semantically equivalent
 // to fmaximum/fminimum.
@@ -2208,10 +2213,21 @@ let Predicates = [HasPAuth] in {
     let Uses = [X16];
   }
 
+  // AArch64AsmPrinter can clobber the $AddrDisc register as long as it is
+  // marked "killed", otherwise an assertion in emitPtrauthDiscriminator checks
+  // that $Scratch != $AddrDisc. The problem is that it is always correct to
+  // *omit* the "killed" flag, thus an instruction like this is valid:
+  //
+  //     $x8, $x9 = AUTxMxN $x8, 0, 12345, /* is actually killed */ $x9, implicit-def $nzcv
+  //     // $x9 is dead past this point
+  //
+  // While it is possible to allow emitPtrauthDiscriminator to clobber $Scratch
+  // iff ($AddrDisc is killed OR $Scratch == $AddrDisc), it is easier and more
+  // straightforward to mark $Scratch as @earlyclobber.
   def AUTxMxN : Pseudo<(outs GPR64:$AuthVal, GPR64common:$Scratch),
                        (ins GPR64:$Val, i32imm:$Key,
                             i64imm:$Disc, GPR64:$AddrDisc),
-                       [], "$AuthVal = $Val">, Sched<[WriteI, ReadI]> {
+                       [], "$AuthVal = $Val,@earlyclobber $Scratch">, Sched<[WriteI, ReadI]> {
     let isCodeGenOnly = 1;
     let hasSideEffects = 1;
     let mayStore = 0;
@@ -2256,6 +2272,26 @@ let Predicates = [HasPAuth] in {
     let mayLoad = 0;
     let Size = 48;
     let Defs = [X16,X17,NZCV];
+    let Uses = [X16];
+  }
+
+  // Similiar to AUTPAC, except a 32bit value is loaded at Addend offset from
+  // pointer and this value is added to the pointer before signing. This
+  // directly manipulates x16/x17, which are the only registers the OS
+  // guarantees are safe to use for sensitive operations.
+  def AUTRELLOADPAC
+      : Pseudo<(outs),
+               (ins i32imm:$AUTKey, i64imm:$AUTDisc, GPR64:$AUTAddrDisc,
+                   i32imm:$PACKey, i64imm:$PACDisc, GPR64noip:$PACAddrDisc,
+                   i64imm:$Addend),
+               []>,
+        Sched<[WriteI, ReadI]> {
+    let isCodeGenOnly = 1;
+    let hasSideEffects = 1;
+    let mayStore = 0;
+    let mayLoad = 1;
+    let Size = 84;
+    let Defs = [X16, X17, NZCV];
     let Uses = [X16];
   }
 
@@ -3786,8 +3822,15 @@ defm LDNPQ : LoadPairNoAlloc<0b10, 1, FPR128Op, simm7s16, "ldnp">;
 def : Pat<(AArch64ldp (am_indexed7s64 GPR64sp:$Rn, simm7s8:$offset)),
           (LDPXi GPR64sp:$Rn, simm7s8:$offset)>;
 
-def : Pat<(AArch64ldnp (am_indexed7s128 GPR64sp:$Rn, simm7s16:$offset)),
-          (LDNPQi GPR64sp:$Rn, simm7s16:$offset)>;
+// Currently we only support NT loads lowering for little-endian targets.
+//
+// Coordinated with LDNP constraints in `AArch64TargetLowering::ReplaceNodeResults`
+// and `AArch64TTIImpl::isLegalNTLoad`.
+let Predicates = [IsLE] in {
+  def : Pat<(AArch64ldnp(am_indexed7s128 GPR64sp:$Rn, simm7s16:$offset)),
+            (LDNPQi GPR64sp:$Rn, simm7s16:$offset)>;
+}
+
 //---
 // (register offset)
 //---
@@ -5735,7 +5778,7 @@ let Predicates = [HasFullFP16] in {
 //===----------------------------------------------------------------------===//
 
 defm ABS    : SIMDTwoVectorBHSD<0, 0b01011, "abs", abs>;
-defm CLS    : SIMDTwoVectorBHS<0, 0b00100, "cls", int_aarch64_neon_cls>;
+defm CLS    : SIMDTwoVectorBHS<0, 0b00100, "cls", ctls>;
 defm CLZ    : SIMDTwoVectorBHS<1, 0b00100, "clz", ctlz>;
 defm CMEQ   : SIMDCmpTwoVector<0, 0b01001, "cmeq", AArch64cmeqz>;
 defm CMGE   : SIMDCmpTwoVector<1, 0b01000, "cmge", AArch64cmgez>;
@@ -5836,6 +5879,57 @@ multiclass SIMDTwoVectorFPToIntSatPats<SDNode to_int_sat, SDNode to_int_sat_gi, 
 }
 defm : SIMDTwoVectorFPToIntSatPats<fp_to_sint_sat, fp_to_sint_sat_gi, "FCVTZS">;
 defm : SIMDTwoVectorFPToIntSatPats<fp_to_uint_sat, fp_to_uint_sat_gi, "FCVTZU">;
+
+// Fused round + convert to int patterns for vectors
+multiclass SIMDTwoVectorFPToIntRoundPats<SDNode to_int, SDNode to_int_sat, SDNode to_int_sat_gi, SDNode round, string INST> {
+  let Predicates = [HasFullFP16] in {
+    def : Pat<(v4i16 (to_int (round v4f16:$Rn))),
+              (!cast<Instruction>(INST # v4f16) v4f16:$Rn)>;
+    def : Pat<(v8i16 (to_int (round v8f16:$Rn))),
+              (!cast<Instruction>(INST # v8f16) v8f16:$Rn)>;
+
+    def : Pat<(v4i16 (to_int_sat (round v4f16:$Rn), i16)),
+              (!cast<Instruction>(INST # v4f16) v4f16:$Rn)>;
+    def : Pat<(v8i16 (to_int_sat (round v8f16:$Rn), i16)),
+              (!cast<Instruction>(INST # v8f16) v8f16:$Rn)>;
+
+    def : Pat<(v4i16 (to_int_sat_gi (round v4f16:$Rn))),
+              (!cast<Instruction>(INST # v4f16) v4f16:$Rn)>;
+    def : Pat<(v8i16 (to_int_sat_gi (round v8f16:$Rn))),
+              (!cast<Instruction>(INST # v8f16) v8f16:$Rn)>;
+  }
+  def : Pat<(v2i32 (to_int (round v2f32:$Rn))),
+            (!cast<Instruction>(INST # v2f32) v2f32:$Rn)>;
+  def : Pat<(v4i32 (to_int (round v4f32:$Rn))),
+            (!cast<Instruction>(INST # v4f32) v4f32:$Rn)>;
+  def : Pat<(v2i64 (to_int (round v2f64:$Rn))),
+            (!cast<Instruction>(INST # v2f64) v2f64:$Rn)>;
+
+  def : Pat<(v2i32 (to_int_sat (round v2f32:$Rn), i32)),
+            (!cast<Instruction>(INST # v2f32) v2f32:$Rn)>;
+  def : Pat<(v4i32 (to_int_sat (round v4f32:$Rn), i32)),
+            (!cast<Instruction>(INST # v4f32) v4f32:$Rn)>;
+  def : Pat<(v2i64 (to_int_sat (round v2f64:$Rn), i64)),
+            (!cast<Instruction>(INST # v2f64) v2f64:$Rn)>;
+
+  def : Pat<(v2i32 (to_int_sat_gi (round v2f32:$Rn))),
+            (!cast<Instruction>(INST # v2f32) v2f32:$Rn)>;
+  def : Pat<(v4i32 (to_int_sat_gi (round v4f32:$Rn))),
+            (!cast<Instruction>(INST # v4f32) v4f32:$Rn)>;
+  def : Pat<(v2i64 (to_int_sat_gi (round v2f64:$Rn))),
+            (!cast<Instruction>(INST # v2f64) v2f64:$Rn)>;
+}
+
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, fceil,      "FCVTPS">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, fceil,      "FCVTPU">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, ffloor,     "FCVTMS">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, ffloor,     "FCVTMU">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, ftrunc,     "FCVTZS">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, ftrunc,     "FCVTZU">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, fround,     "FCVTAS">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, fround,     "FCVTAU">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, froundeven, "FCVTNS">;
+defm : SIMDTwoVectorFPToIntRoundPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, froundeven, "FCVTNU">;
 
 def : Pat<(v4i16 (int_aarch64_neon_fcvtzs v4f16:$Rn)), (FCVTZSv4f16 $Rn)>;
 def : Pat<(v8i16 (int_aarch64_neon_fcvtzs v8f16:$Rn)), (FCVTZSv8f16 $Rn)>;
@@ -6062,7 +6156,7 @@ defm MLS      : SIMDThreeSameVectorBHSTied<1, 0b10010, "mls", null_frag>;
 
 defm MUL      : SIMDThreeSameVectorBHS<0, 0b10011, "mul", mul>;
 let isCommutable = 1 in
-defm PMUL     : SIMDThreeSameVectorB<1, 0b10011, "pmul", int_aarch64_neon_pmul>;
+defm PMUL     : SIMDThreeSameVectorB<1, 0b10011, "pmul", clmul>;
 defm SABA     : SIMDThreeSameVectorBHSTied<0, 0b01111, "saba",
       TriOpFrag<(add node:$LHS, (abds node:$MHS, node:$RHS))> >;
 defm SABD     : SIMDThreeSameVectorBHS<0,0b01110,"sabd", abds>;
@@ -6804,6 +6898,21 @@ multiclass FPToIntegerPats<SDNode to_int, SDNode to_int_sat, SDNode to_int_sat_g
   def : Pat<(i64 (to_int_sat (round f64:$Rn), i64)),
             (!cast<Instruction>(INST # UXDr) f64:$Rn)>;
 
+  let Predicates = [HasFullFP16] in {
+  def : Pat<(i32 (to_int_sat_gi (round f16:$Rn))),
+            (!cast<Instruction>(INST # UWHr) f16:$Rn)>;
+  def : Pat<(i64 (to_int_sat_gi (round f16:$Rn))),
+            (!cast<Instruction>(INST # UXHr) f16:$Rn)>;
+  }
+  def : Pat<(i32 (to_int_sat_gi (round f32:$Rn))),
+            (!cast<Instruction>(INST # UWSr) f32:$Rn)>;
+  def : Pat<(i64 (to_int_sat_gi (round f32:$Rn))),
+            (!cast<Instruction>(INST # UXSr) f32:$Rn)>;
+  def : Pat<(i32 (to_int_sat_gi (round f64:$Rn))),
+            (!cast<Instruction>(INST # UWDr) f64:$Rn)>;
+  def : Pat<(i64 (to_int_sat_gi (round f64:$Rn))),
+            (!cast<Instruction>(INST # UXDr) f64:$Rn)>;
+
   // For global-isel we can use register classes to determine
   // which FCVT instruction to use.
   let Predicates = [HasFPRCVT] in {
@@ -6837,14 +6946,16 @@ multiclass FPToIntegerPats<SDNode to_int, SDNode to_int_sat, SDNode to_int_sat_g
             (!cast<Instruction>(INST # v1i64) f64:$Rn)>;
 }
 
-defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, fceil,  "FCVTPS">;
-defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, fceil,  "FCVTPU">;
-defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, ffloor, "FCVTMS">;
-defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, ffloor, "FCVTMU">;
-defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, ftrunc, "FCVTZS">;
-defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, ftrunc, "FCVTZU">;
-defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, fround, "FCVTAS">;
-defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, fround, "FCVTAU">;
+defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, fceil,      "FCVTPS">;
+defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, fceil,      "FCVTPU">;
+defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, ffloor,     "FCVTMS">;
+defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, ffloor,     "FCVTMU">;
+defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, ftrunc,     "FCVTZS">;
+defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, ftrunc,     "FCVTZU">;
+defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, fround,     "FCVTAS">;
+defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, fround,     "FCVTAU">;
+defm : FPToIntegerPats<fp_to_sint, fp_to_sint_sat, fp_to_sint_sat_gi, froundeven, "FCVTNS">;
+defm : FPToIntegerPats<fp_to_uint, fp_to_uint_sat, fp_to_uint_sat_gi, froundeven, "FCVTNU">;
 
 // For global-isel we can use register classes to determine
 // which FCVT instruction to use.
@@ -9001,13 +9112,30 @@ defm SCVTF: SIMDVectorRShiftToFP<0, 0b11100, "scvtf",
 defm RSHRN   : SIMDVectorRShiftNarrowBHS<0, 0b10001, "rshrn", AArch64rshrn>;
 defm SHL     : SIMDVectorLShiftBHSD<0, 0b01010, "shl", AArch64vshl>;
 
+class fixedpoint_vec_f64<ValueType FloatVT>
+    : ComplexPattern<FloatVT, 1, "SelectCVTFixedPointVec<64>">;
+class fixedpoint_vec_f32<ValueType FloatVT>
+    : ComplexPattern<FloatVT, 1, "SelectCVTFixedPointVec<32>">;
+class fixedpoint_vec_f16<ValueType FloatVT>
+    : ComplexPattern<FloatVT, 1, "SelectCVTFixedPointVec<16>">;
+// This thing just allows us to change the type of the node produced. The imm
+// value we want is already in V from SelectCVTFixedPointVec.
+def fixedpoint_vec_xform : SDNodeXForm<timm, [{
+  (void)N;
+  return V;
+}]>;
+
+def fixedpoint_v2f64 : fixedpoint_vec_f64<v2f64>;
+def fixedpoint_v2f32 : fixedpoint_vec_f32<v2f32>;
+def fixedpoint_v4f32 : fixedpoint_vec_f32<v4f32>;
+def fixedpoint_v4f16 : fixedpoint_vec_f16<v4f16>;
+def fixedpoint_v8f16 : fixedpoint_vec_f16<v8f16>;
+
 let Predicates = [HasNEON] in {
 def : Pat<(v2f32 (sint_to_fp (v2i32 (AArch64vashr_exact v2i32:$Vn, i32:$shift)))),
           (SCVTFv2i32_shift $Vn, vecshiftR32:$shift)>;
-
 def : Pat<(v4f32 (sint_to_fp (v4i32 (AArch64vashr_exact v4i32:$Vn, i32:$shift)))),
           (SCVTFv4i32_shift $Vn, vecshiftR32:$shift)>;
-
 def : Pat<(v2f64 (sint_to_fp (v2i64 (AArch64vashr_exact v2i64:$Vn, i32:$shift)))),
           (SCVTFv2i64_shift $Vn, vecshiftR64:$shift)>;
 }
@@ -9015,9 +9143,48 @@ def : Pat<(v2f64 (sint_to_fp (v2i64 (AArch64vashr_exact v2i64:$Vn, i32:$shift)))
 let Predicates = [HasNEON, HasFullFP16] in {
 def : Pat<(v4f16 (sint_to_fp (v4i16 (AArch64vashr_exact v4i16:$Vn, i32:$shift)))),
           (SCVTFv4i16_shift $Vn, vecshiftR16:$shift)>;
-
 def : Pat<(v8f16 (sint_to_fp (v8i16 (AArch64vashr_exact v8i16:$Vn, i32:$shift)))),
           (SCVTFv8i16_shift $Vn, vecshiftR16:$shift)>;
+}
+
+multiclass FCVTPat<ValueType FVT, ValueType IVT, ValueType ScalarVT, RegisterOperand RC, ComplexPattern fixedpoint> {
+  // fptosi(fadd(x, x)) -> FCVTZS_shift x, 1
+  def : Pat<(IVT (fp_to_sint (FVT (fadd RC:$Vn, RC:$Vn)))),
+            (!cast<Instruction>("FCVTZS"#IVT#"_shift") (FVT RC:$Vn), (i32 1))>;
+  def : Pat<(IVT (fp_to_sint_sat (FVT (fadd RC:$Vn, RC:$Vn)), ScalarVT)),
+            (!cast<Instruction>("FCVTZS"#IVT#"_shift") (FVT RC:$Vn), (i32 1))>;
+  def : Pat<(IVT (fp_to_sint_sat_gi (FVT (fadd RC:$Vn, RC:$Vn)))),
+            (!cast<Instruction>("FCVTZS"#IVT#"_shift") (FVT RC:$Vn), (i32 1))>;
+
+  // fptoui(fadd(x, x)) -> FCVTZU_shift x, 1
+  def : Pat<(IVT (fp_to_uint (FVT (fadd RC:$Vn, RC:$Vn)))),
+            (!cast<Instruction>("FCVTZU"#IVT#"_shift") (FVT RC:$Vn), (i32 1))>;
+  def : Pat<(IVT (fp_to_uint_sat (FVT (fadd RC:$Vn, RC:$Vn)), ScalarVT)),
+            (!cast<Instruction>("FCVTZU"#IVT#"_shift") (FVT RC:$Vn), (i32 1))>;
+  def : Pat<(IVT (fp_to_uint_sat_gi (FVT (fadd RC:$Vn, RC:$Vn)))),
+            (!cast<Instruction>("FCVTZU"#IVT#"_shift") (FVT RC:$Vn), (i32 1))>;
+
+  // fptosi(fmul(x, power2)) -> FCVTZS_shift x, log2(power2)
+  def : Pat<(IVT (fp_to_sint (FVT (fmul FVT:$Vn, fixedpoint:$scale)))),
+            (!cast<Instruction>("FCVTZS"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
+  def : Pat<(IVT (fp_to_sint_sat (FVT (fmul FVT:$Vn, fixedpoint:$scale)), ScalarVT)),
+            (!cast<Instruction>("FCVTZS"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
+
+  // fptoui(fmul(x, power2)) -> FCVTZU_shift x, log2(power2)
+  def : Pat<(IVT (fp_to_uint (FVT (fmul FVT:$Vn, fixedpoint:$scale)))),
+            (!cast<Instruction>("FCVTZU"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
+  def : Pat<(IVT (fp_to_uint_sat (FVT (fmul FVT:$Vn, fixedpoint:$scale)), ScalarVT)),
+            (!cast<Instruction>("FCVTZU"#IVT#"_shift") $Vn, (fixedpoint_vec_xform fixedpoint:$scale))>;
+}
+
+let Predicates = [HasNEON] in {
+defm : FCVTPat<v2f64, v2i64, i64, V128, fixedpoint_v2f64>;
+defm : FCVTPat<v2f32, v2i32, i32, V64, fixedpoint_v2f32>;
+defm : FCVTPat<v4f32, v4i32, i32, V128, fixedpoint_v4f32>;
+}
+let Predicates = [HasNEON, HasFullFP16] in {
+defm : FCVTPat<v4f16, v4i16, i16, V64, fixedpoint_v4f16>;
+defm : FCVTPat<v8f16, v8i16, i16, V128, fixedpoint_v8f16>;
 }
 
 // X << 1 ==> X + X
@@ -10723,6 +10890,11 @@ def : Pat<(i64 (int_aarch64_neon_urshl (i64 FPR64:$Rn), (i64 FPR64:$Rm))),
 // Patterns for nontemporal/no-allocate stores.
 // We have to resort to tricks to turn a single-input store into a store pair,
 // because there is no single-input nontemporal store, only STNP.
+//
+// Currently we only support NT stores lowering for little-endian targets.
+//
+// Coordinated with STNP constraints in `AArch64TargetLowering::LowerNTStore`
+// and `AArch64TTIImpl::isLegalNTStore`.
 //
 // Currently, STNP lowering can only either keep or increase code size, thus
 // we predicate it to not apply when optimizing for code size.
