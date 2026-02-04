@@ -28,6 +28,7 @@ add_fp_unittest(
     libc.src.__support.math.atanhf16
     libc.src.__support.math.cbrt
     libc.src.__support.math.cbrtf
+    libc.src.__support.math.cbrtf16
     libc.src.__support.math.cos
     libc.src.__support.math.cosf
     libc.src.__support.math.cosf16
