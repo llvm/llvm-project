@@ -956,9 +956,6 @@ def LLVM_DenormalFPEnvAttr : LLVM_Attr<"DenormalFPEnv", "denormal_fpenv"> {
   let extraClassDeclaration = [{
      bool isReadWrite();
   }];
-  // let builders = [
-  //   TypeBuilder<(ins "ArrayRef<ModRefInfo>":$memInfoArgs)>
-  // ];
   let assemblyFormat = "`<` struct(params) `>`";
 }
 
