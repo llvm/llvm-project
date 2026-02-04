@@ -20,6 +20,18 @@ Coding guidelines that recommend against defaulted lambda captures include:
 
 * Item 31 of Effective Modern C++ by Scott Meyers.
 
+Options
+-------
+
+.. option:: IgnoreInSTL
+
+   When `true`, the check does not warn about lambdas passed to functions
+   declared in the ``std`` namespace. This can be useful for algorithms like
+   ``std::sort`` where the lambda is invoked synchronously and does not outlive
+   the call. Note that this option only works for free functions in the ``std``
+   namespace; it does not apply to member functions such as
+   ``std::ranges::all_of``. Default is `false`.
+
 Example
 -------
 

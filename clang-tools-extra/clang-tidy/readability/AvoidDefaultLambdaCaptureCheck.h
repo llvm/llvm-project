@@ -31,7 +31,7 @@ public:
   }
 
 private:
-  const bool IgnoreImplicitCapturesInSTL;
+  const bool IgnoreInSTL;
 };
 
 } // namespace clang::tidy::readability
