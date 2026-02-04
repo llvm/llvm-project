@@ -102,6 +102,13 @@ static mlir::Value createIntCast(mlir::OpBuilder &bld, mlir::Value src,
   return mlir::LLVM::BitcastOp::create(bld, loc, dstTy, src);
 }
 
+static unsigned convertCIRAddrSpaceToTarget(cir::LangAddressSpaceAttr addrSpace,
+                                            cir::LowerModule *lowerModule) {
+  assert(lowerModule && "CIR AS map is not available");
+  return lowerModule->getTargetLoweringInfo()
+      .getTargetAddrSpaceFromCIRAddrSpace(addrSpace.getValue());
+}
+
 static unsigned
 getNumericASFromCIRAS(mlir::ptr::MemorySpaceAttrInterface asAttr,
                       [[maybe_unused]] cir::LowerModule *lowerModule) {
@@ -111,10 +118,11 @@ getNumericASFromCIRAS(mlir::ptr::MemorySpaceAttrInterface asAttr,
           mlir::dyn_cast_if_present<cir::TargetAddressSpaceAttr>(asAttr))
     return targetAddrSpaceAttr.getValue();
 
-  if (mlir::isa_and_present<cir::LangAddressSpaceAttr>(asAttr))
-    llvm_unreachable("lowering LangAddressSpaceAttr NYI");
+  if (auto langAddressSpaceAttr =
+          mlir::dyn_cast<cir::LangAddressSpaceAttr>(asAttr))
+    return convertCIRAddrSpaceToTarget(langAddressSpaceAttr, lowerModule);
 
-  llvm_unreachable("unexpected address Space attribute kindI");
+  llvm_unreachable("unexpected address space attribute kind");
 }
 
 static mlir::LLVM::Visibility
@@ -3058,11 +3066,12 @@ std::unique_ptr<cir::LowerModule> prepareLowerModule(mlir::ModuleOp module) {
 static void prepareTypeConverter(mlir::LLVMTypeConverter &converter,
                                  mlir::DataLayout &dataLayout,
                                  cir::LowerModule *lowerModule) {
-  converter.addConversion([&](cir::PointerType type) -> mlir::Type {
-    mlir::ptr::MemorySpaceAttrInterface addrSpaceAttr = type.getAddrSpace();
-    unsigned numericAS = getNumericASFromCIRAS(addrSpaceAttr, lowerModule);
-    return mlir::LLVM::LLVMPointerType::get(type.getContext(), numericAS);
-  });
+  converter.addConversion(
+      [&, lowerModule](cir::PointerType type) -> mlir::Type {
+        mlir::ptr::MemorySpaceAttrInterface addrSpaceAttr = type.getAddrSpace();
+        unsigned numericAS = getNumericASFromCIRAS(addrSpaceAttr, lowerModule);
+        return mlir::LLVM::LLVMPointerType::get(type.getContext(), numericAS);
+      });
   converter.addConversion([&](cir::VPtrType type) -> mlir::Type {
     assert(!cir::MissingFeatures::addressSpace());
     return mlir::LLVM::LLVMPointerType::get(type.getContext());
