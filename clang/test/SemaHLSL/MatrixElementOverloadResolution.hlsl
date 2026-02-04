@@ -1,4 +1,4 @@
-// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -fnative-half-type -finclude-default-header -Wconversion -verify -o - %s -DERROR=1
+// RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -fnative-half-type -finclude-default-header -verify -o - %s -DERROR=1
 // RUN: %clang_cc1 -triple dxil-pc-shadermodel6.3-library -fnative-half-type -finclude-default-header -ast-dump %s | FileCheck %s
 
 // This test verifies floating point type implicit conversion ranks for overload
@@ -239,7 +239,7 @@ void matOrVec3(float4x4 F) {}
 export void Case8(float2x3 f23, float4x4 f44, float3x3 f33, float3x2 f32) {
   int2x2 i22 = f23;
   // expected-warning@-1{{implicit conversion truncates matrix: 'float2x3' (aka 'matrix<float, 2, 3>') to 'int2x2' (aka 'matrix<int, 2, 2>')}}
-  // expected-warning@-2{{implicit conversion turns floating-point number into integer: 'float2x3' (aka 'matrix<float, 2, 3>') to 'int2x2' (aka 'matrix<int, 2, 2>')}}
+  // expected-warning@-2{{implicit conversion turns floating-point numbers into integers: 'float2x3' (aka 'matrix<float, 2, 3>') to 'int2x2' (aka 'matrix<int, 2, 2>')}}
   //CHECK: VarDecl {{.*}} i22 'int2x2':'matrix<int, 2, 2>' cinit
   //CHECK-NEXT: ImplicitCastExpr {{.*}} 'int2x2':'matrix<int, 2, 2>' <FloatingToIntegral>
   //CHECK-NEXT: ImplicitCastExpr {{.*}} 'float2x3':'matrix<float, 2, 3>' <LValueToRValue>

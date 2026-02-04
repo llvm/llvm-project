@@ -12392,7 +12392,8 @@ static void DiagnoseImpCast(Sema &S, const Expr *E, QualType T,
 
 /// Diagnose an implicit cast from a floating point value to an integer value.
 static void DiagnoseFloatingImpCast(Sema &S, const Expr *E, QualType T,
-                                    SourceLocation CContext) {
+                                    SourceLocation CContext,
+                                    unsigned Diag) {
   bool IsBool = T->isSpecificBuiltinType(BuiltinType::Bool);
   bool PruneWarnings = S.inTemplateInstantiation();
 
@@ -12414,8 +12415,7 @@ static void DiagnoseFloatingImpCast(Sema &S, const Expr *E, QualType T,
                  << E->getType());
     }
 
-    return DiagnoseImpCast(S, E, T, CContext,
-                           diag::warn_impcast_float_integer, PruneWarnings);
+    return DiagnoseImpCast(S, E, T, CContext, Diag, PruneWarnings);
   }
 
   bool isExact = false;
@@ -12443,8 +12443,7 @@ static void DiagnoseFloatingImpCast(Sema &S, const Expr *E, QualType T,
 
   if (Result == llvm::APFloat::opOK && isExact) {
     if (IsLiteral) return;
-    return DiagnoseImpCast(S, E, T, CContext, diag::warn_impcast_float_integer,
-                           PruneWarnings);
+    return DiagnoseImpCast(S, E, T, CContext, Diag, PruneWarnings);
   }
 
   // Conversion of a floating-point value to a non-bool integer where the
@@ -12462,22 +12461,19 @@ static void DiagnoseFloatingImpCast(Sema &S, const Expr *E, QualType T,
     DiagID = diag::warn_impcast_literal_float_to_integer;
   } else if (IntegerValue == 0) {
     if (Value.isZero()) {  // Skip -0.0 to 0 conversion.
-      return DiagnoseImpCast(S, E, T, CContext,
-                             diag::warn_impcast_float_integer, PruneWarnings);
+      return DiagnoseImpCast(S, E, T, CContext, Diag, PruneWarnings);
     }
     // Warn on non-zero to zero conversion.
     DiagID = diag::warn_impcast_float_to_integer_zero;
   } else {
     if (IntegerValue.isUnsigned()) {
       if (!IntegerValue.isMaxValue()) {
-        return DiagnoseImpCast(S, E, T, CContext,
-                               diag::warn_impcast_float_integer, PruneWarnings);
+        return DiagnoseImpCast(S, E, T, CContext, Diag, PruneWarnings);
       }
     } else {  // IntegerValue.isSigned()
       if (!IntegerValue.isMaxSignedValue() &&
           !IntegerValue.isMinSignedValue()) {
-        return DiagnoseImpCast(S, E, T, CContext,
-                               diag::warn_impcast_float_integer, PruneWarnings);
+        return DiagnoseImpCast(S, E, T, CContext, Diag, PruneWarnings);
       }
     }
     // Warn on evaluatable floating point expression to integer conversion.
@@ -12892,7 +12888,8 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
     Target = VecTy->getElementType().getTypePtr();
 
   // Strip matrix types.
-  if (isa<ConstantMatrixType>(Source)) {
+  bool SourceIsAMatrixTy = isa<ConstantMatrixType>(Source);
+  if (SourceIsAMatrixTy) {
     if (Target->isScalarType())
       return DiagnoseImpCast(*this, E, T, CC, diag::warn_impcast_matrix_scalar);
 
@@ -12977,7 +12974,10 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
         if (SourceMgr.isInSystemMacro(CC))
           return;
 
-        DiagnoseImpCast(*this, E, T, CC, diag::warn_impcast_float_precision);
+        unsigned DiagID = diag::warn_impcast_float_precision;
+        if (SourceIsAMatrixTy)
+          DiagID = diag::warn_impcast_matrix_float_precision;
+        DiagnoseImpCast(*this, E, T, CC, DiagID);
       }
       // ... or possibly if we're increasing rank, too
       else if (Order < 0) {
@@ -12994,7 +12994,10 @@ void Sema::CheckImplicitConversion(Expr *E, QualType T, SourceLocation CC,
       if (SourceMgr.isInSystemMacro(CC))
         return;
 
-      DiagnoseFloatingImpCast(*this, E, T, CC);
+      unsigned DiagID = diag::warn_impcast_float_integer;
+      if (SourceIsAMatrixTy)
+        DiagID = diag::warn_impcast_matrix_float_integer;
+      DiagnoseFloatingImpCast(*this, E, T, CC, DiagID);
     }
 
     // Detect the case where a call result is converted from floating-point to
