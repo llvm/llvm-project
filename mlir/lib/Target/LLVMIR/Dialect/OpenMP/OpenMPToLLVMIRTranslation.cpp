@@ -1182,7 +1182,12 @@ static bool mustAllocPrivateVarInDeviceSharedMemory(BlockArgument value) {
     if (auto parallelOp = dyn_cast<omp::ParallelOp>(user)) {
       if (llvm::is_contained(parallelOp.getReductionVars(), value))
         return true;
-    } else if (auto parallelOp = user->getParentOfType<omp::ParallelOp>()) {
+    } else if (auto callOp = dyn_cast<CallOpInterface>(user)) {
+      if (llvm::is_contained(callOp.getArgOperands(), value))
+        return true;
+    }
+
+    if (auto parallelOp = user->getParentOfType<omp::ParallelOp>()) {
       if (parentOp->isProperAncestor(parallelOp)) {
         // If it is used directly inside of a parallel region, skip private
         // clause uses.
