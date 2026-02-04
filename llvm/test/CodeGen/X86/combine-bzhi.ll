@@ -53,10 +53,10 @@ define i32 @test_bzhi32_minvaluefold(i32 %arg) nounwind readnone {
 define i64 @test_bzhi64_minvaluefold(i64 %arg) nounwind readnone {
 ; CHECK-LABEL: test_bzhi64_minvaluefold:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl $5, %eax
+; CHECK-NEXT:    movabsq $30064771072, %rax # imm = 0x700000000
 ; CHECK-NEXT:    retq
   %2 = or i64 %arg, 64
-  %3 = tail call i64 @llvm.x86.bmi.bzhi.64(i64 5, i64 %2)
+  %3 = tail call i64 @llvm.x86.bmi.bzhi.64(i64 30064771072, i64 %2)
   ret i64 %3
 }
 
@@ -74,10 +74,10 @@ define i32 @test_bzhi32_range(i32 %arg) nounwind readnone {
 define i64 @test_bzhi64_range(i64 %arg) nounwind readnone {
 ; CHECK-LABEL: test_bzhi64_range:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    movl $42, %eax
+; CHECK-NEXT:    movl $40, %eax
 ; CHECK-NEXT:    retq
   %2 = or i64 %arg, 6
   %3 = and i64 %2, 7
-  %4 = tail call i64 @llvm.x86.bmi.bzhi.64(i64 699050, i64 %3)
+  %4 = tail call i64 @llvm.x86.bmi.bzhi.64(i64 30064771240, i64 %3)
   ret i64 %4
 }
