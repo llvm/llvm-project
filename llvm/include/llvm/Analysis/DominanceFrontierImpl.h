@@ -103,10 +103,10 @@ void DominanceFrontierBase<BlockT, IsPostDom>::calculate(const DomTreeT &DT) {
       // virtual node's CFG successors).
       if (currentBB) {
         DomSetType &S = this->Frontiers[currentBB];
-        for (const auto Succ : children<GraphTy>(currentBB)) {
+        for (const auto Child : children<GraphTy>(currentBB)) {
           // Does Node immediately dominate this successor?
-          if (DT[Succ]->getIDom() != currentNode)
-            S.insert(Succ);
+          if (DT[Child]->getIDom() != currentNode)
+            S.insert(Child);
         }
       }
     }
