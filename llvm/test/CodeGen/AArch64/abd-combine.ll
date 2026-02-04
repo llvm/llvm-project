@@ -10,11 +10,7 @@ define <8 x i16> @abdu_base(<8 x i16> %src1, <8 x i16> %src2) {
 ;
 ; CHECK-GI-LABEL: abdu_base:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    usubl v2.4s, v0.4h, v1.4h
-; CHECK-GI-NEXT:    usubl2 v0.4s, v0.8h, v1.8h
-; CHECK-GI-NEXT:    abs v1.4s, v2.4s
-; CHECK-GI-NEXT:    abs v0.4s, v0.4s
-; CHECK-GI-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
+; CHECK-GI-NEXT:    uabd v0.8h, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
   %zextsrc1 = zext <8 x i16> %src1 to <8 x i32>
   %zextsrc2 = zext <8 x i16> %src2 to <8 x i32>
@@ -122,11 +118,9 @@ define <8 x i16> @abdu_const_bothhigh() {
 ;
 ; CHECK-GI-LABEL: abdu_const_bothhigh:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d0, #0xffffffffffffffff
-; CHECK-GI-NEXT:    mvni v1.4h, #1
-; CHECK-GI-NEXT:    usubl v0.4s, v1.4h, v0.4h
-; CHECK-GI-NEXT:    abs v0.4s, v0.4s
-; CHECK-GI-NEXT:    uzp1 v0.8h, v0.8h, v0.8h
+; CHECK-GI-NEXT:    movi v0.2d, #0xffffffffffffffff
+; CHECK-GI-NEXT:    mvni v1.8h, #1
+; CHECK-GI-NEXT:    uabd v0.8h, v1.8h, v0.8h
 ; CHECK-GI-NEXT:    ret
   %zextsrc1 = zext <8 x i16> <i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534> to <8 x i32>
   %zextsrc2 = zext <8 x i16> <i16 65535, i16 65535, i16 65535, i16 65535, i16 65535, i16 65535, i16 65535, i16 65535> to <8 x i32>
@@ -143,11 +137,7 @@ define <8 x i16> @abdu_undef(<8 x i16> %src1) {
 ;
 ; CHECK-GI-LABEL: abdu_undef:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ushll v1.4s, v0.4h, #0
-; CHECK-GI-NEXT:    ushll2 v0.4s, v0.8h, #0
-; CHECK-GI-NEXT:    abs v1.4s, v1.4s
-; CHECK-GI-NEXT:    abs v0.4s, v0.4s
-; CHECK-GI-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
+; CHECK-GI-NEXT:    uabd v0.8h, v0.8h, v0.8h
 ; CHECK-GI-NEXT:    ret
   %zextsrc1 = zext <8 x i16> %src1 to <8 x i32>
   %zextsrc2 = zext <8 x i16> undef to <8 x i32>
@@ -205,10 +195,7 @@ define <8 x i16> @abdu_ult(<8 x i16>, <8 x i16>) {
 ;
 ; CHECK-GI-LABEL: abdu_ult:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    cmhi v2.8h, v1.8h, v0.8h
-; CHECK-GI-NEXT:    sub v3.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    sub v0.8h, v1.8h, v0.8h
-; CHECK-GI-NEXT:    bif v0.16b, v3.16b, v2.16b
+; CHECK-GI-NEXT:    uabd v0.8h, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
   %3 = icmp ult <8 x i16> %0, %1
   %4 = sub <8 x i16> %0, %1
@@ -285,10 +272,7 @@ define <8 x i16> @abds_slt(<8 x i16>, <8 x i16>) {
 ;
 ; CHECK-GI-LABEL: abds_slt:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    cmgt v2.8h, v1.8h, v0.8h
-; CHECK-GI-NEXT:    sub v3.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    sub v0.8h, v1.8h, v0.8h
-; CHECK-GI-NEXT:    bif v0.16b, v3.16b, v2.16b
+; CHECK-GI-NEXT:    sabd v0.8h, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
   %3 = icmp slt <8 x i16> %0, %1
   %4 = sub <8 x i16> %0, %1
@@ -489,11 +473,7 @@ define <8 x i16> @abds_base(<8 x i16> %src1, <8 x i16> %src2) {
 ;
 ; CHECK-GI-LABEL: abds_base:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    ssubl v2.4s, v0.4h, v1.4h
-; CHECK-GI-NEXT:    ssubl2 v0.4s, v0.8h, v1.8h
-; CHECK-GI-NEXT:    abs v1.4s, v2.4s
-; CHECK-GI-NEXT:    abs v0.4s, v0.4s
-; CHECK-GI-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
+; CHECK-GI-NEXT:    sabd v0.8h, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
   %zextsrc1 = sext <8 x i16> %src1 to <8 x i32>
   %zextsrc2 = sext <8 x i16> %src2 to <8 x i32>
@@ -605,11 +585,9 @@ define <8 x i16> @abds_const_bothhigh() {
 ;
 ; CHECK-GI-LABEL: abds_const_bothhigh:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    movi d0, #0xffffffffffffffff
-; CHECK-GI-NEXT:    mvni v1.4h, #1
-; CHECK-GI-NEXT:    ssubl v0.4s, v1.4h, v0.4h
-; CHECK-GI-NEXT:    abs v0.4s, v0.4s
-; CHECK-GI-NEXT:    uzp1 v0.8h, v0.8h, v0.8h
+; CHECK-GI-NEXT:    movi v0.2d, #0xffffffffffffffff
+; CHECK-GI-NEXT:    mvni v1.8h, #1
+; CHECK-GI-NEXT:    sabd v0.8h, v1.8h, v0.8h
 ; CHECK-GI-NEXT:    ret
   %zextsrc1 = sext <8 x i16> <i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534, i16 65534> to <8 x i32>
   %zextsrc2 = sext <8 x i16> <i16 65535, i16 65535, i16 65535, i16 65535, i16 65535, i16 65535, i16 65535, i16 65535> to <8 x i32>
@@ -631,11 +609,7 @@ define <8 x i16> @abds_undef(<8 x i16> %src1) {
 ;
 ; CHECK-GI-LABEL: abds_undef:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    sshll v1.4s, v0.4h, #0
-; CHECK-GI-NEXT:    sshll2 v0.4s, v0.8h, #0
-; CHECK-GI-NEXT:    abs v1.4s, v1.4s
-; CHECK-GI-NEXT:    abs v0.4s, v0.4s
-; CHECK-GI-NEXT:    uzp1 v0.8h, v1.8h, v0.8h
+; CHECK-GI-NEXT:    sabd v0.8h, v0.8h, v0.8h
 ; CHECK-GI-NEXT:    ret
   %zextsrc1 = sext <8 x i16> %src1 to <8 x i32>
   %zextsrc2 = sext <8 x i16> undef to <8 x i32>
@@ -851,9 +825,7 @@ define <8 x i16> @abds_sub_smax(<8 x i16> %src1, <8 x i16> %src2) {
 ;
 ; CHECK-GI-LABEL: abds_sub_smax:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    smax v2.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    smin v0.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    sub v0.8h, v2.8h, v0.8h
+; CHECK-GI-NEXT:    sabd v0.8h, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
   %smax = call <8 x i16> @llvm.smax(<8 x i16> %src1, <8 x i16> %src2)
   %smin = call <8 x i16> @llvm.smin(<8 x i16> %src1, <8 x i16> %src2)
@@ -869,9 +841,7 @@ define <8 x i16> @abdu_sub_umax(<8 x i16> %src1, <8 x i16> %src2) {
 ;
 ; CHECK-GI-LABEL: abdu_sub_umax:
 ; CHECK-GI:       // %bb.0:
-; CHECK-GI-NEXT:    umax v2.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    umin v0.8h, v0.8h, v1.8h
-; CHECK-GI-NEXT:    sub v0.8h, v2.8h, v0.8h
+; CHECK-GI-NEXT:    uabd v0.8h, v0.8h, v1.8h
 ; CHECK-GI-NEXT:    ret
   %umax = call <8 x i16> @llvm.umax(<8 x i16> %src1, <8 x i16> %src2)
   %umin = call <8 x i16> @llvm.umin(<8 x i16> %src1, <8 x i16> %src2)
