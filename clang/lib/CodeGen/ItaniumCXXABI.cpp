@@ -35,8 +35,8 @@
 #include "llvm/IR/Instructions.h"
 #include "llvm/IR/Intrinsics.h"
 #include "llvm/IR/Value.h"
+#include "llvm/Support/ConvertEBCDIC.h"
 #include "llvm/Support/ScopedPrinter.h"
-#include "llvm/Support/TextEncoding.h"
 
 #include <optional>
 
@@ -3624,10 +3624,7 @@ llvm::GlobalVariable *ItaniumRTTIBuilder::GetAddrOfTypeName(
   if (CGM.getTriple().isOSzOS()) {
     // On z/OS, typename is stored as 2 encodings: EBCDIC followed by ASCII.
     SmallString<256> DualEncodedName;
-    llvm::ErrorOr<llvm::TextEncodingConverter> Converter =
-        llvm::TextEncodingConverter::create(
-            "UTF-8", CGM.getTriple().getDefaultNarrowTextEncoding());
-    Converter->convert(Name.substr(4), DualEncodedName);
+    llvm::ConverterEBCDIC::convertToEBCDIC(Name.substr(4), DualEncodedName);
     DualEncodedName += '\0';
     DualEncodedName += Name.substr(4);
     Init = llvm::ConstantDataArray::getString(VMContext, DualEncodedName);
