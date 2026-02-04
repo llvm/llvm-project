@@ -108,26 +108,22 @@ bool ExpandPostRA::LowerSubregToReg(MachineInstr *MI) {
     // Watch out for case like this:
     // %rax = SUBREG_TO_REG 0, killed %eax, 3
     // We must leave %rax live.
-    if (DstReg != InsReg) {
-      MI->setDesc(TII->get(TargetOpcode::KILL));
-      MI->removeOperand(3);     // SubIdx
-      MI->removeOperand(1);     // Imm
-      LLVM_DEBUG(dbgs() << "subreg: replace by: " << *MI);
-      return true;
-    }
-    LLVM_DEBUG(dbgs() << "subreg: eliminated!");
-  } else {
-    TII->copyPhysReg(*MBB, MI, MI->getDebugLoc(), DstSubReg, InsReg,
-                     MI->getOperand(2).isKill());
-
-    // Implicitly define DstReg for subsequent uses.
-    MachineBasicBlock::iterator CopyMI = MI;
-    --CopyMI;
-    CopyMI->addRegisterDefined(DstReg);
-    LLVM_DEBUG(dbgs() << "subreg: " << *CopyMI);
+    MI->setDesc(TII->get(TargetOpcode::KILL));
+    MI->removeOperand(3);     // SubIdx
+    MI->removeOperand(1);     // Imm
+    LLVM_DEBUG(dbgs() << "subreg: replaced by: " << *MI);
+    return true;
   }
 
-  LLVM_DEBUG(dbgs() << '\n');
+  TII->copyPhysReg(*MBB, MI, MI->getDebugLoc(), DstSubReg, InsReg,
+                   MI->getOperand(2).isKill());
+
+  // Implicitly define DstReg for subsequent uses.
+  MachineBasicBlock::iterator CopyMI = MI;
+  --CopyMI;
+  CopyMI->addRegisterDefined(DstReg);
+  LLVM_DEBUG(dbgs() << "subreg: " << *CopyMI);
+
   MBB->erase(MI);
   return true;
 }
