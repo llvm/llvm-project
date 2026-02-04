@@ -429,7 +429,7 @@ define <vscale x 2 x i32> @vpmerge_trunc(<vscale x 2 x i32> %passthru, <vscale x
 define <vscale x 2 x i32> @vpselect_vpadd(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vpadd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vadd.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x i32> @llvm.vp.add.nxv2i32(<vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> splat (i1 -1), i32 %vl)
@@ -441,7 +441,7 @@ define <vscale x 2 x i32> @vpselect_vpadd(<vscale x 2 x i32> %passthru, <vscale 
 define <vscale x 2 x i32> @vpselect_vpadd2(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vpadd2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vmseq.vv v0, v9, v10
 ; CHECK-NEXT:    vadd.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
@@ -455,7 +455,7 @@ define <vscale x 2 x i32> @vpselect_vpadd2(<vscale x 2 x i32> %passthru, <vscale
 define <vscale x 2 x i32> @vpselect_vpadd3(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vpadd3:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vadd.vv v8, v9, v10
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x i32> @llvm.vp.add.nxv2i32(<vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> splat (i1 -1), i32 %vl)
@@ -467,7 +467,7 @@ define <vscale x 2 x i32> @vpselect_vpadd3(<vscale x 2 x i32> %passthru, <vscale
 define <vscale x 2 x float> @vpselect_vpfadd(<vscale x 2 x float> %passthru, <vscale x 2 x float> %x, <vscale x 2 x float> %y, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vpfadd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vfadd.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x float> @llvm.vp.fadd.nxv2f32(<vscale x 2 x float> %x, <vscale x 2 x float> %y, <vscale x 2 x i1> splat (i1 -1), i32 %vl)
@@ -492,7 +492,7 @@ define <vscale x 2 x i32> @vpselect_vrgatherei16(<vscale x 2 x i32> %passthru, <
 define <vscale x 2 x i16> @vpselect_vpfptosi(<vscale x 2 x i16> %passthru, <vscale x 2 x float> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vpfptosi:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, mu
 ; CHECK-NEXT:    vfncvt.rtz.x.f.w v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x i16> @llvm.vp.fptosi.nxv2i16.nxv2f32(<vscale x 2 x float> %x, <vscale x 2 x i1> splat (i1 -1), i32 %vl)
@@ -504,7 +504,7 @@ define <vscale x 2 x i16> @vpselect_vpfptosi(<vscale x 2 x i16> %passthru, <vsca
 define <vscale x 2 x float> @vpselect_vpsitofp(<vscale x 2 x float> %passthru, <vscale x 2 x i64> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vpsitofp:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vfncvt.f.x.w v8, v10, v0.t
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x float> @llvm.vp.sitofp.nxv2f32.nxv2i64(<vscale x 2 x i64> %x, <vscale x 2 x i1> splat (i1 -1), i32 %vl)
@@ -516,7 +516,7 @@ define <vscale x 2 x float> @vpselect_vpsitofp(<vscale x 2 x float> %passthru, <
 define <vscale x 2 x i32> @vpselect_vpzext(<vscale x 2 x i32> %passthru, <vscale x 2 x i8> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vpzext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vzext.vf4 v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x i32> @llvm.vp.zext.nxv2i32.nxv2i8(<vscale x 2 x i8> %x, <vscale x 2 x i1> splat (i1 -1), i32 %vl)
@@ -528,7 +528,7 @@ define <vscale x 2 x i32> @vpselect_vpzext(<vscale x 2 x i32> %passthru, <vscale
 define <vscale x 2 x i32> @vpselect_vptrunc(<vscale x 2 x i32> %passthru, <vscale x 2 x i64> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vptrunc:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vnsrl.wi v8, v10, 0, v0.t
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x i32> @llvm.vp.trunc.nxv2i32.nxv2i64(<vscale x 2 x i64> %x, <vscale x 2 x i1> splat (i1 -1), i32 %vl)
@@ -540,7 +540,7 @@ define <vscale x 2 x i32> @vpselect_vptrunc(<vscale x 2 x i32> %passthru, <vscal
 define <vscale x 2 x double> @vpselect_vpfpext(<vscale x 2 x double> %passthru, <vscale x 2 x float> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vpfpext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vfwcvt.f.f.v v8, v10, v0.t
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x double> @llvm.vp.fpext.nxv2f64.nxv2f32(<vscale x 2 x float> %x, <vscale x 2 x i1> splat (i1 -1), i32 %vl)
@@ -552,7 +552,7 @@ define <vscale x 2 x double> @vpselect_vpfpext(<vscale x 2 x double> %passthru, 
 define <vscale x 2 x float> @vpselect_vpfptrunc(<vscale x 2 x float> %passthru, <vscale x 2 x double> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vpfptrunc:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vfncvt.f.f.w v8, v10, v0.t
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x float> @llvm.vp.fptrunc.nxv2f32.nxv2f64(<vscale x 2 x double> %x, <vscale x 2 x i1> splat (i1 -1), i32 %vl)
@@ -564,7 +564,7 @@ define <vscale x 2 x float> @vpselect_vpfptrunc(<vscale x 2 x float> %passthru, 
 define <vscale x 2 x i32> @vpselect_vpload(<vscale x 2 x i32> %passthru, ptr %p, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vpload:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, tu, mu
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x i32> @llvm.vp.load.nxv2i32.p0(ptr %p, <vscale x 2 x i1> splat (i1 -1), i32 %vl)
@@ -576,8 +576,9 @@ define <vscale x 2 x i32> @vpselect_vpload(<vscale x 2 x i32> %passthru, ptr %p,
 define <vscale x 2 x i32> @vpselect_vpload2(<vscale x 2 x i32> %passthru, ptr %p, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vpload2:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a2, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vmseq.vv v0, v9, v10
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, tu, mu
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   %a = call <vscale x 2 x i32> @llvm.vp.load.nxv2i32.p0(ptr %p, <vscale x 2 x i1> splat (i1 -1), i32 %vl)
@@ -590,7 +591,7 @@ define <vscale x 2 x i32> @vpselect_vpload2(<vscale x 2 x i32> %passthru, ptr %p
 define void @vpselect_vpload_store(<vscale x 2 x i32> %passthru, ptr %p, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vpload_store:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, tu, mu
 ; CHECK-NEXT:    vle32.v v8, (a0), v0.t
 ; CHECK-NEXT:    vs1r.v v8, (a0)
 ; CHECK-NEXT:    ret
@@ -603,7 +604,7 @@ define void @vpselect_vpload_store(<vscale x 2 x i32> %passthru, ptr %p, <vscale
 define <vscale x 2 x i32> @vpselect_vleff(<vscale x 2 x i32> %passthru, ptr %p, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vleff:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, tu, mu
 ; CHECK-NEXT:    vle32ff.v v8, (a0), v0.t
 ; CHECK-NEXT:    ret
   %1 = zext i32 %vl to i64
@@ -617,7 +618,7 @@ define <vscale x 2 x i32> @vpselect_vleff(<vscale x 2 x i32> %passthru, ptr %p, 
 define <vscale x 2 x i32> @vpselect_vlse(<vscale x 2 x i32> %passthru,  ptr %p, <vscale x 2 x i1> %m, i64 %s, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vlse:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, tu, mu
 ; CHECK-NEXT:    vlse32.v v8, (a0), a1, v0.t
 ; CHECK-NEXT:    ret
   %1 = zext i32 %vl to i64
@@ -630,7 +631,7 @@ define <vscale x 2 x i32> @vpselect_vlse(<vscale x 2 x i32> %passthru,  ptr %p, 
 define <vscale x 2 x i32> @vpselect_vluxei(<vscale x 2 x i32> %passthru,  ptr %p, <vscale x 2 x i64> %idx, <vscale x 2 x i1> %m, i64 %s, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vluxei:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a2, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a2, e32, m1, tu, mu
 ; CHECK-NEXT:    vluxei64.v v8, (a0), v10, v0.t
 ; CHECK-NEXT:    ret
   %1 = zext i32 %vl to i64
@@ -643,7 +644,7 @@ define <vscale x 2 x i32> @vpselect_vluxei(<vscale x 2 x i32> %passthru,  ptr %p
 define <vscale x 2 x i32> @vpselect_vid(<vscale x 2 x i32> %passthru, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vid:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
 ; CHECK-NEXT:    vid.v v8, v0.t
 ; CHECK-NEXT:    ret
   %1 = zext i32 %vl to i64
@@ -658,6 +659,7 @@ define <vscale x 2 x i32> @vpselect_viota(<vscale x 2 x i32> %passthru, <vscale 
 ; CHECK:       # %bb.0:
 ; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, ma
 ; CHECK-NEXT:    viota.m v10, v9
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, ma
 ; CHECK-NEXT:    vmerge.vvm v8, v8, v10, v0
 ; CHECK-NEXT:    ret
   %1 = zext i32 %vl to i64
@@ -670,7 +672,7 @@ define <vscale x 2 x i32> @vpselect_viota(<vscale x 2 x i32> %passthru, <vscale 
 define <vscale x 2 x i32> @vpselect_vflcass(<vscale x 2 x i32> %passthru, <vscale x 2 x float> %vf, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vflcass:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
 ; CHECK-NEXT:    vfclass.v v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %1 = zext i32 %vl to i64
@@ -683,7 +685,7 @@ define <vscale x 2 x i32> @vpselect_vflcass(<vscale x 2 x i32> %passthru, <vscal
 define <vscale x 2 x float> @vpselect_vfsqrt(<vscale x 2 x float> %passthru, <vscale x 2 x float> %vf, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vfsqrt:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
 ; CHECK-NEXT:    vfsqrt.v v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %1 = zext i32 %vl to i64
@@ -696,7 +698,7 @@ define <vscale x 2 x float> @vpselect_vfsqrt(<vscale x 2 x float> %passthru, <vs
 define <vscale x 2 x float> @vpselect_vfrec7(<vscale x 2 x float> %passthru, <vscale x 2 x float> %vf, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vfrec7:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a0, e32, m1, tu, mu
 ; CHECK-NEXT:    vfrec7.v v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %1 = zext i32 %vl to i64
@@ -709,7 +711,7 @@ define <vscale x 2 x float> @vpselect_vfrec7(<vscale x 2 x float> %passthru, <vs
 define <vscale x 2 x i32> @vpselect_vslideup(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %v, i64 %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vslideup:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, tu, mu
 ; CHECK-NEXT:    vslideup.vx v8, v9, a0, v0.t
 ; CHECK-NEXT:    ret
   %1 = zext i32 %vl to i64
@@ -721,7 +723,7 @@ define <vscale x 2 x i32> @vpselect_vslideup(<vscale x 2 x i32> %passthru, <vsca
 define <vscale x 2 x i32> @vpselect_vslidedown(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %v, i64 %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vslidedown:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, tu, mu
 ; CHECK-NEXT:    vslidedown.vx v8, v9, a0, v0.t
 ; CHECK-NEXT:    ret
   %1 = zext i32 %vl to i64
@@ -733,7 +735,7 @@ define <vscale x 2 x i32> @vpselect_vslidedown(<vscale x 2 x i32> %passthru, <vs
 define <vscale x 2 x i32> @vpselect_vslide1up(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %v, i32 %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vslide1up:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, tu, mu
 ; CHECK-NEXT:    vslide1up.vx v8, v9, a0, v0.t
 ; CHECK-NEXT:    ret
   %1 = zext i32 %vl to i64
@@ -745,7 +747,7 @@ define <vscale x 2 x i32> @vpselect_vslide1up(<vscale x 2 x i32> %passthru, <vsc
 define <vscale x 2 x i32> @vpselect_vslide1down(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %v, i32 %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_vslide1down:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a1, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli zero, a1, e32, m1, tu, mu
 ; CHECK-NEXT:    vslide1down.vx v8, v9, a0, v0.t
 ; CHECK-NEXT:    ret
   %1 = zext i32 %vl to i64
@@ -760,7 +762,7 @@ define <vscale x 2 x i32> @vpselect_vslide1down(<vscale x 2 x i32> %passthru, <v
 define <vscale x 2 x i32> @vpselect_add(<vscale x 2 x i32> %passthru, <vscale x 2 x i32> %x, <vscale x 2 x i32> %y, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_add:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vadd.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
   %a = add <vscale x 2 x i32> %x, %y
@@ -772,7 +774,7 @@ define <vscale x 2 x i32> @vpselect_add(<vscale x 2 x i32> %passthru, <vscale x 
 define <vscale x 2 x float> @vpselect_fadd(<vscale x 2 x float> %passthru, <vscale x 2 x float> %x, <vscale x 2 x float> %y, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_fadd:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vfadd.vv v8, v9, v10, v0.t
 ; CHECK-NEXT:    ret
   %a = fadd <vscale x 2 x float> %x, %y
@@ -784,7 +786,7 @@ define <vscale x 2 x float> @vpselect_fadd(<vscale x 2 x float> %passthru, <vsca
 define <vscale x 2 x i16> @vpselect_fptosi(<vscale x 2 x i16> %passthru, <vscale x 2 x float> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_fptosi:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e16, mf2, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e16, mf2, ta, mu
 ; CHECK-NEXT:    vfncvt.rtz.x.f.w v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %a = fptosi <vscale x 2 x float> %x to <vscale x 2 x i16>
@@ -796,7 +798,7 @@ define <vscale x 2 x i16> @vpselect_fptosi(<vscale x 2 x i16> %passthru, <vscale
 define <vscale x 2 x float> @vpselect_sitofp(<vscale x 2 x float> %passthru, <vscale x 2 x i64> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_sitofp:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vfncvt.f.x.w v8, v10, v0.t
 ; CHECK-NEXT:    ret
   %a = sitofp <vscale x 2 x i64> %x to <vscale x 2 x float>
@@ -808,7 +810,7 @@ define <vscale x 2 x float> @vpselect_sitofp(<vscale x 2 x float> %passthru, <vs
 define <vscale x 2 x double> @vpselect_fpext(<vscale x 2 x double> %passthru, <vscale x 2 x float> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_fpext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vfwcvt.f.f.v v8, v10, v0.t
 ; CHECK-NEXT:    ret
   %a = fpext <vscale x 2 x float> %x to <vscale x 2 x double>
@@ -820,7 +822,7 @@ define <vscale x 2 x double> @vpselect_fpext(<vscale x 2 x double> %passthru, <v
 define <vscale x 2 x float> @vpselect_fptrunc(<vscale x 2 x float> %passthru, <vscale x 2 x double> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_fptrunc:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vfncvt.f.f.w v8, v10, v0.t
 ; CHECK-NEXT:    ret
   %a = fptrunc <vscale x 2 x double> %x to <vscale x 2 x float>
@@ -832,7 +834,7 @@ define <vscale x 2 x float> @vpselect_fptrunc(<vscale x 2 x float> %passthru, <v
 define <vscale x 2 x i32> @vpselect_zext(<vscale x 2 x i32> %passthru, <vscale x 2 x i8> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_zext:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vzext.vf4 v8, v9, v0.t
 ; CHECK-NEXT:    ret
   %a = zext <vscale x 2 x i8> %x to <vscale x 2 x i32>
@@ -844,7 +846,7 @@ define <vscale x 2 x i32> @vpselect_zext(<vscale x 2 x i32> %passthru, <vscale x
 define <vscale x 2 x i32> @vpselect_trunc(<vscale x 2 x i32> %passthru, <vscale x 2 x i64> %x, <vscale x 2 x i1> %m, i32 zeroext %vl) {
 ; CHECK-LABEL: vpselect_trunc:
 ; CHECK:       # %bb.0:
-; CHECK-NEXT:    vsetvli zero, a0, e32, m1, ta, mu
+; CHECK-NEXT:    vsetvli a0, zero, e32, m1, ta, mu
 ; CHECK-NEXT:    vnsrl.wi v8, v10, 0, v0.t
 ; CHECK-NEXT:    ret
   %a = trunc <vscale x 2 x i64> %x to <vscale x 2 x i32>

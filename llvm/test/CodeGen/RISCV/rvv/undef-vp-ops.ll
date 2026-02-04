@@ -73,6 +73,8 @@ define void @vscatter_v4i32_false_mask(<4 x i32> %val, <4 x ptr> %ptrs, i32 %evl
 define <4 x i32> @vadd_v4i32_zero_evl(<4 x i32> %va, <4 x i32> %vb, <4 x i1> %m) {
 ; CHECK-LABEL: vadd_v4i32_zero_evl:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %s = call <4 x i32> @llvm.vp.add.v4i32(<4 x i32> %va, <4 x i32> %vb, <4 x i1> %m, i32 0)
   ret <4 x i32> %s
@@ -81,6 +83,8 @@ define <4 x i32> @vadd_v4i32_zero_evl(<4 x i32> %va, <4 x i32> %vb, <4 x i1> %m)
 define <4 x i32> @vadd_v4i32_false_mask(<4 x i32> %va, <4 x i32> %vb, i32 %evl) {
 ; CHECK-LABEL: vadd_v4i32_false_mask:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %s = call <4 x i32> @llvm.vp.add.v4i32(<4 x i32> %va, <4 x i32> %vb, <4 x i1> zeroinitializer, i32 %evl)
   ret <4 x i32> %s
@@ -89,6 +93,8 @@ define <4 x i32> @vadd_v4i32_false_mask(<4 x i32> %va, <4 x i32> %vb, i32 %evl) 
 define <4 x i32> @vand_v4i32_zero_evl(<4 x i32> %va, <4 x i32> %vb, <4 x i1> %m) {
 ; CHECK-LABEL: vand_v4i32_zero_evl:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vand.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %s = call <4 x i32> @llvm.vp.and.v4i32(<4 x i32> %va, <4 x i32> %vb, <4 x i1> %m, i32 0)
   ret <4 x i32> %s
@@ -97,6 +103,8 @@ define <4 x i32> @vand_v4i32_zero_evl(<4 x i32> %va, <4 x i32> %vb, <4 x i1> %m)
 define <4 x i32> @vand_v4i32_false_mask(<4 x i32> %va, <4 x i32> %vb, i32 %evl) {
 ; CHECK-LABEL: vand_v4i32_false_mask:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vand.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %s = call <4 x i32> @llvm.vp.and.v4i32(<4 x i32> %va, <4 x i32> %vb, <4 x i1> zeroinitializer, i32 %evl)
   ret <4 x i32> %s
@@ -105,6 +113,8 @@ define <4 x i32> @vand_v4i32_false_mask(<4 x i32> %va, <4 x i32> %vb, i32 %evl) 
 define <4 x i32> @vlshr_v4i32_zero_evl(<4 x i32> %va, <4 x i32> %vb, <4 x i1> %m) {
 ; CHECK-LABEL: vlshr_v4i32_zero_evl:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vsrl.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %s = call <4 x i32> @llvm.vp.lshr.v4i32(<4 x i32> %va, <4 x i32> %vb, <4 x i1> %m, i32 0)
   ret <4 x i32> %s
@@ -113,6 +123,8 @@ define <4 x i32> @vlshr_v4i32_zero_evl(<4 x i32> %va, <4 x i32> %vb, <4 x i1> %m
 define <4 x i32> @vlshr_v4i32_false_mask(<4 x i32> %va, <4 x i32> %vb, i32 %evl) {
 ; CHECK-LABEL: vlshr_v4i32_false_mask:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vsrl.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %s = call <4 x i32> @llvm.vp.lshr.v4i32(<4 x i32> %va, <4 x i32> %vb, <4 x i1> zeroinitializer, i32 %evl)
   ret <4 x i32> %s
@@ -121,6 +133,8 @@ define <4 x i32> @vlshr_v4i32_false_mask(<4 x i32> %va, <4 x i32> %vb, i32 %evl)
 define <4 x i32> @vmul_v4i32_zero_evl(<4 x i32> %va, <4 x i32> %vb, <4 x i1> %m) {
 ; CHECK-LABEL: vmul_v4i32_zero_evl:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmul.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %s = call <4 x i32> @llvm.vp.mul.v4i32(<4 x i32> %va, <4 x i32> %vb, <4 x i1> %m, i32 0)
   ret <4 x i32> %s
@@ -129,6 +143,8 @@ define <4 x i32> @vmul_v4i32_zero_evl(<4 x i32> %va, <4 x i32> %vb, <4 x i1> %m)
 define <4 x i32> @vmul_v4i32_false_mask(<4 x i32> %va, <4 x i32> %vb, i32 %evl) {
 ; CHECK-LABEL: vmul_v4i32_false_mask:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vmul.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %s = call <4 x i32> @llvm.vp.mul.v4i32(<4 x i32> %va, <4 x i32> %vb, <4 x i1> zeroinitializer, i32 %evl)
   ret <4 x i32> %s
@@ -137,6 +153,8 @@ define <4 x i32> @vmul_v4i32_false_mask(<4 x i32> %va, <4 x i32> %vb, i32 %evl) 
 define <4 x i32> @vor_v4i32_zero_evl(<4 x i32> %va, <4 x i32> %vb, <4 x i1> %m) {
 ; CHECK-LABEL: vor_v4i32_zero_evl:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vor.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %s = call <4 x i32> @llvm.vp.or.v4i32(<4 x i32> %va, <4 x i32> %vb, <4 x i1> %m, i32 0)
   ret <4 x i32> %s
@@ -145,6 +163,8 @@ define <4 x i32> @vor_v4i32_zero_evl(<4 x i32> %va, <4 x i32> %vb, <4 x i1> %m) 
 define <4 x i32> @vor_v4i32_false_mask(<4 x i32> %va, <4 x i32> %vb, i32 %evl) {
 ; CHECK-LABEL: vor_v4i32_false_mask:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vor.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %s = call <4 x i32> @llvm.vp.or.v4i32(<4 x i32> %va, <4 x i32> %vb, <4 x i1> zeroinitializer, i32 %evl)
   ret <4 x i32> %s
@@ -185,6 +205,8 @@ define <4 x i32> @vsrem_v4i32_false_mask(<4 x i32> %va, <4 x i32> %vb, i32 %evl)
 define <4 x i32> @vsub_v4i32_zero_evl(<4 x i32> %va, <4 x i32> %vb, <4 x i1> %m) {
 ; CHECK-LABEL: vsub_v4i32_zero_evl:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vsub.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %s = call <4 x i32> @llvm.vp.sub.v4i32(<4 x i32> %va, <4 x i32> %vb, <4 x i1> %m, i32 0)
   ret <4 x i32> %s
@@ -193,6 +215,8 @@ define <4 x i32> @vsub_v4i32_zero_evl(<4 x i32> %va, <4 x i32> %vb, <4 x i1> %m)
 define <4 x i32> @vsub_v4i32_false_mask(<4 x i32> %va, <4 x i32> %vb, i32 %evl) {
 ; CHECK-LABEL: vsub_v4i32_false_mask:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vsub.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %s = call <4 x i32> @llvm.vp.sub.v4i32(<4 x i32> %va, <4 x i32> %vb, <4 x i1> zeroinitializer, i32 %evl)
   ret <4 x i32> %s
@@ -233,6 +257,8 @@ define <4 x i32> @vurem_v4i32_false_mask(<4 x i32> %va, <4 x i32> %vb, i32 %evl)
 define <4 x i32> @vxor_v4i32_zero_evl(<4 x i32> %va, <4 x i32> %vb, <4 x i1> %m) {
 ; CHECK-LABEL: vxor_v4i32_zero_evl:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vxor.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %s = call <4 x i32> @llvm.vp.xor.v4i32(<4 x i32> %va, <4 x i32> %vb, <4 x i1> %m, i32 0)
   ret <4 x i32> %s
@@ -241,6 +267,8 @@ define <4 x i32> @vxor_v4i32_zero_evl(<4 x i32> %va, <4 x i32> %vb, <4 x i1> %m)
 define <4 x i32> @vxor_v4i32_false_mask(<4 x i32> %va, <4 x i32> %vb, i32 %evl) {
 ; CHECK-LABEL: vxor_v4i32_false_mask:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vxor.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %s = call <4 x i32> @llvm.vp.xor.v4i32(<4 x i32> %va, <4 x i32> %vb, <4 x i1> zeroinitializer, i32 %evl)
   ret <4 x i32> %s
@@ -249,6 +277,8 @@ define <4 x i32> @vxor_v4i32_false_mask(<4 x i32> %va, <4 x i32> %vb, i32 %evl) 
 define <4 x float> @vfadd_v4f32_zero_evl(<4 x float> %va, <4 x float> %vb, <4 x i1> %m) {
 ; CHECK-LABEL: vfadd_v4f32_zero_evl:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vfadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %s = call <4 x float> @llvm.vp.fadd.v4f32(<4 x float> %va, <4 x float> %vb, <4 x i1> %m, i32 0)
   ret <4 x float> %s
@@ -257,6 +287,8 @@ define <4 x float> @vfadd_v4f32_zero_evl(<4 x float> %va, <4 x float> %vb, <4 x 
 define <4 x float> @vfadd_v4f32_false_mask(<4 x float> %va, <4 x float> %vb, i32 %evl) {
 ; CHECK-LABEL: vfadd_v4f32_false_mask:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vfadd.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %s = call <4 x float> @llvm.vp.fadd.v4f32(<4 x float> %va, <4 x float> %vb, <4 x i1> zeroinitializer, i32 %evl)
   ret <4 x float> %s
@@ -265,6 +297,8 @@ define <4 x float> @vfadd_v4f32_false_mask(<4 x float> %va, <4 x float> %vb, i32
 define <4 x float> @vfsub_v4f32_zero_evl(<4 x float> %va, <4 x float> %vb, <4 x i1> %m) {
 ; CHECK-LABEL: vfsub_v4f32_zero_evl:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vfsub.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %s = call <4 x float> @llvm.vp.fsub.v4f32(<4 x float> %va, <4 x float> %vb, <4 x i1> %m, i32 0)
   ret <4 x float> %s
@@ -273,6 +307,8 @@ define <4 x float> @vfsub_v4f32_zero_evl(<4 x float> %va, <4 x float> %vb, <4 x 
 define <4 x float> @vfsub_v4f32_false_mask(<4 x float> %va, <4 x float> %vb, i32 %evl) {
 ; CHECK-LABEL: vfsub_v4f32_false_mask:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vfsub.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %s = call <4 x float> @llvm.vp.fsub.v4f32(<4 x float> %va, <4 x float> %vb, <4 x i1> zeroinitializer, i32 %evl)
   ret <4 x float> %s
@@ -281,6 +317,8 @@ define <4 x float> @vfsub_v4f32_false_mask(<4 x float> %va, <4 x float> %vb, i32
 define <4 x float> @vfmul_v4f32_zero_evl(<4 x float> %va, <4 x float> %vb, <4 x i1> %m) {
 ; CHECK-LABEL: vfmul_v4f32_zero_evl:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vfmul.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %s = call <4 x float> @llvm.vp.fmul.v4f32(<4 x float> %va, <4 x float> %vb, <4 x i1> %m, i32 0)
   ret <4 x float> %s
@@ -289,6 +327,8 @@ define <4 x float> @vfmul_v4f32_zero_evl(<4 x float> %va, <4 x float> %vb, <4 x 
 define <4 x float> @vfmul_v4f32_false_mask(<4 x float> %va, <4 x float> %vb, i32 %evl) {
 ; CHECK-LABEL: vfmul_v4f32_false_mask:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vfmul.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %s = call <4 x float> @llvm.vp.fmul.v4f32(<4 x float> %va, <4 x float> %vb, <4 x i1> zeroinitializer, i32 %evl)
   ret <4 x float> %s
@@ -297,6 +337,8 @@ define <4 x float> @vfmul_v4f32_false_mask(<4 x float> %va, <4 x float> %vb, i32
 define <4 x float> @vfdiv_v4f32_zero_evl(<4 x float> %va, <4 x float> %vb, <4 x i1> %m) {
 ; CHECK-LABEL: vfdiv_v4f32_zero_evl:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vfdiv.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %s = call <4 x float> @llvm.vp.fdiv.v4f32(<4 x float> %va, <4 x float> %vb, <4 x i1> %m, i32 0)
   ret <4 x float> %s
@@ -305,23 +347,19 @@ define <4 x float> @vfdiv_v4f32_zero_evl(<4 x float> %va, <4 x float> %vb, <4 x 
 define <4 x float> @vfdiv_v4f32_false_mask(<4 x float> %va, <4 x float> %vb, i32 %evl) {
 ; CHECK-LABEL: vfdiv_v4f32_false_mask:
 ; CHECK:       # %bb.0:
+; CHECK-NEXT:    vsetivli zero, 4, e32, m1, ta, ma
+; CHECK-NEXT:    vfdiv.vv v8, v8, v9
 ; CHECK-NEXT:    ret
   %s = call <4 x float> @llvm.vp.fdiv.v4f32(<4 x float> %va, <4 x float> %vb, <4 x i1> zeroinitializer, i32 %evl)
   ret <4 x float> %s
 }
 
 define <4 x float> @vfrem_v4f32_zero_evl(<4 x float> %va, <4 x float> %vb, <4 x i1> %m) {
-; CHECK-LABEL: vfrem_v4f32_zero_evl:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    ret
   %s = call <4 x float> @llvm.vp.frem.v4f32(<4 x float> %va, <4 x float> %vb, <4 x i1> %m, i32 0)
   ret <4 x float> %s
 }
 
 define <4 x float> @vfrem_v4f32_false_mask(<4 x float> %va, <4 x float> %vb, i32 %evl) {
-; CHECK-LABEL: vfrem_v4f32_false_mask:
-; CHECK:       # %bb.0:
-; CHECK-NEXT:    ret
   %s = call <4 x float> @llvm.vp.frem.v4f32(<4 x float> %va, <4 x float> %vb, <4 x i1> zeroinitializer, i32 %evl)
   ret <4 x float> %s
 }
