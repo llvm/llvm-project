@@ -138,6 +138,7 @@ expand_template(
 
         # Defaults that could be configurable if needed
         "#cmakedefine01 LLDB_ENABLE_POSIX": "#define LLDB_ENABLE_POSIX 1",
+        "#cmakedefine01 LLDB_ENABLE_PROTOCOL_SERVERS": "#define LLDB_ENABLE_PROTOCOL_SERVERS 1",
         "#cmakedefine LLDB_GLOBAL_INIT_DIRECTORY R\"(${LLDB_GLOBAL_INIT_DIRECTORY})\"": "#define LLDB_GLOBAL_INIT_DIRECTORY \"\"",
         "${LLDB_INSTALL_LIBDIR_BASENAME}": "lib",
         "${LLDB_BUG_REPORT_URL}": "",
@@ -755,6 +756,27 @@ cc_library(
     name = "UtilityHeaders",
     hdrs = glob(["include/lldb/Utility/**/*.h"]),
     includes = ["include"],
+)
+
+cc_library(
+    name = "ProtocolHeaders",
+    hdrs = glob(["include/lldb/Protocol/**/*.h"]),
+    includes = ["include"],
+    deps = [
+        ":Headers",
+        "//llvm:Telemetry",
+    ],
+)
+
+cc_library(
+    name = "ProtocolMCP",
+    srcs = glob(["source/Protocol/MCP/*.cpp"]),
+    deps = [
+        ":Host",
+        ":ProtocolHeaders",
+        ":Utility",
+        "//llvm:Support",
+    ],
 )
 
 cc_library(
