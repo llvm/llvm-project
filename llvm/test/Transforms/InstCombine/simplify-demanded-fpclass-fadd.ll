@@ -20,6 +20,7 @@ declare nofpclass(nan ninf nzero nsub nnorm) half @returns_positive()
 declare nofpclass(nan pinf pzero psub pnorm) half @returns_negative()
 
 declare nofpclass(inf zero sub norm) half @returns_nan()
+declare nofpclass(qnan inf zero sub norm) half @returns_snan()
 
 declare nofpclass(nan inf zero sub) half @returns_norm()
 declare nofpclass(nan inf zero sub pnorm) half @returns_nnorm()
@@ -2040,6 +2041,48 @@ define nofpclass(snan) half @inf_or_nan__fadd__not_nan(half nofpclass(nan) %not.
 ;
   %inf.or.nan = call half @returns_inf_or_nan()
   %result = fadd half %inf.or.nan, %not.nan
+  ret half %result
+}
+
+define nofpclass(snan) half @qnan_result_self_demands_snan(i1 noundef %cond, half noundef %unknown) {
+; CHECK-LABEL: define nofpclass(snan) half @qnan_result_self_demands_snan(
+; CHECK-SAME: i1 noundef [[COND:%.*]], half noundef [[UNKNOWN:%.*]]) {
+; CHECK-NEXT:    [[SNAN:%.*]] = call noundef half @returns_snan()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[SNAN]], half [[UNKNOWN]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[SELECT]], [[SELECT]]
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %snan = call noundef half @returns_snan()
+  %select = select i1 %cond, half %snan, half %unknown
+  %result = fadd half %select, %select
+  ret half %result
+}
+
+define nofpclass(snan) half @qnan_result_demands_snan_lhs(i1 %cond, half %unknown0, half %unknown1) {
+; CHECK-LABEL: define nofpclass(snan) half @qnan_result_demands_snan_lhs(
+; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[SNAN:%.*]] = call half @returns_snan()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[SNAN]], half [[UNKNOWN0]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[SELECT]], [[UNKNOWN1]]
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %snan = call half @returns_snan()
+  %select = select i1 %cond, half %snan, half %unknown0
+  %result = fadd half %select, %unknown1
+  ret half %result
+}
+
+define nofpclass(snan) half @qnan_result_demands_snan_rhs(i1 %cond, half %unknown0, half %unknown1) {
+; CHECK-LABEL: define nofpclass(snan) half @qnan_result_demands_snan_rhs(
+; CHECK-SAME: i1 [[COND:%.*]], half [[UNKNOWN0:%.*]], half [[UNKNOWN1:%.*]]) {
+; CHECK-NEXT:    [[SNAN:%.*]] = call half @returns_snan()
+; CHECK-NEXT:    [[SELECT:%.*]] = select i1 [[COND]], half [[SNAN]], half [[UNKNOWN0]]
+; CHECK-NEXT:    [[RESULT:%.*]] = fadd half [[UNKNOWN1]], [[SELECT]]
+; CHECK-NEXT:    ret half [[RESULT]]
+;
+  %snan = call half @returns_snan()
+  %select = select i1 %cond, half %snan, half %unknown0
+  %result = fadd half %unknown1, %select
   ret half %result
 }
 

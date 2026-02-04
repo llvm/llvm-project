@@ -6698,6 +6698,13 @@ Not all targets support this attribute:
   with an indirect call. The function pointer is initialized by a constructor
   that calls the resolver.
 - Baremetal target supports it on AVR.
+- AIX/XCOFF supports it via a compiler-only solution. An ifunc appears as a
+  regular function (has an entry point ``.foo[PR]`` and a function descriptor
+  ``foo[DS]``). The entry point is a stub that branches to the function address
+  in the descriptor, and the descriptor is initialized via a constructor
+  function (``__init_ifuncs``) that is linked into every shared object and
+  executable. ``__init_ifuncs`` calls the resolver of each ifunc and stores the
+  result in the corresponding descriptor.
 - Other targets currently do not support this attribute.
   }];
 }

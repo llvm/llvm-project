@@ -4569,6 +4569,7 @@ cc_library(
         ":SideEffectInterfaces",
         ":TensorDialect",
         ":TransformUtils",
+        ":UBDialect",
         ":ValueBoundsOpInterface",
         ":ViewLikeInterface",
         "//llvm:Support",
@@ -14514,6 +14515,7 @@ cc_library(
     includes = ["include"],
     deps = [
         ":BytecodeOpInterface",
+        ":ControlFlowInterfaces",
         ":ConvertToLLVMInterface",
         ":IR",
         ":InliningUtils",

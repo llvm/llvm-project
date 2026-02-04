@@ -53,7 +53,22 @@ define void @caller(ptr %Y, ptr %P) {
 
 !0 = !{i32 2, !"Debug Info Version", i32 3}
 !1 = !DILocation(line: 8, scope: !2)
-!2 = distinct !DISubprogram(name: "test", file: !5, line: 3, isLocal: true, isDefinition: true, virtualIndex: 6, flags: DIFlagPrototyped, isOptimized: false, unit: !3, scopeLine: 3, scope: null)
+!2 = distinct !DISubprogram(name: "test", file: !5, line: 3, type: !7, isLocal: true, isDefinition: true, flags: DIFlagPrototyped, isOptimized: false, unit: !3, scopeLine: 3, scope: null)
 !3 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, producer: "clang version 3.5.0 ", isOptimized: false, emissionKind: LineTablesOnly, file: !5)
 !5 = !DIFile(filename: "test.c", directory: "")
 !6 = !DILocation(line: 9, scope: !2)
+!7 = !DISubroutineType(types: !8)
+!8 = !{null, !9}
+!9 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !10)
+!10 = !DIBasicType(name: "int",  size: 32, encoding: DW_ATE_signed)
+
+; CHECK:      !0 = !{i32 2, !"Debug Info Version", i32 3}
+; CHECK-NEXT: !1 = distinct !DICompileUnit(language: DW_LANG_C_plus_plus, file: !2, producer: "clang version 3.5.0 ", isOptimized: false, runtimeVersion: 0, emissionKind: LineTablesOnly)
+; CHECK-NEXT: !2 = !DIFile(filename: "test.c", directory: "")
+; CHECK-NEXT: !3 = distinct !DISubprogram(name: "test", scope: null, file: !2, line: 3, type: !4, scopeLine: 3, flags: DIFlagPrototyped, spFlags: DISPFlagLocalToUnit | DISPFlagDefinition, unit: !1)
+; CHECK-NEXT: !4 = !DISubroutineType(cc: DW_CC_nocall, types: !5)
+; CHECK-NEXT: !5 = !{null, !6}
+; CHECK-NEXT: !6 = !DIDerivedType(tag: DW_TAG_pointer_type, baseType: !7)
+; CHECK-NEXT: !7 = !DIBasicType(name: "int", size: 32, encoding: DW_ATE_signed)
+; CHECK-NEXT: !8 = !DILocation(line: 8, scope: !3)
+; CHECK-NEXT: !9 = !DILocation(line: 9, scope: !3)
