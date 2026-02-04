@@ -16,7 +16,6 @@
 #include "llvm/ADT/StringRef.h"
 #include "llvm/ADT/Twine.h"
 #include "llvm/Support/DataTypes.h"
-#include "llvm/Support/raw_ostream.h"
 
 #include <fstream>
 #include <sstream>
@@ -165,16 +164,27 @@ public:
       : binary(binary) {
     std::string filePath;
     if (nanobind::try_cast<std::string>(fileOrStringObject, filePath)) {
-      std::error_code ec;
-      writeTarget.emplace<llvm::raw_fd_ostream>(filePath, ec);
-      if (ec) {
+      std::string errorMessage;
+      auto errorCallback = [](MlirStringRef message, void *userData) {
+        auto *storage = static_cast<std::string *>(userData);
+        storage->assign(message.data, message.length);
+      };
+      MlirLlvmRawFdOstream stream = mlirLlvmRawFdOstreamCreate(
+          filePath.c_str(), binary, errorCallback, &errorMessage);
+      if (mlirLlvmRawFdOstreamIsNull(stream)) {
         throw nanobind::value_error(
-            (std::string("Unable to open file for writing: ") + ec.message())
+            (std::string("Unable to open file for writing: ") + errorMessage)
                 .c_str());
       }
+      writeTarget.emplace<MlirLlvmRawFdOstream>(stream);
     } else {
       writeTarget.emplace<nanobind::object>(fileOrStringObject.attr("write"));
     }
+  }
+
+  ~PyFileAccumulator() {
+    if (writeTarget.index() == 1)
+      mlirLlvmRawFdOstreamDestroy(std::get<MlirLlvmRawFdOstream>(writeTarget));
   }
 
   MlirStringCallback getCallback() {
@@ -204,12 +214,12 @@ private:
   MlirStringCallback getOstreamCallback() {
     return [](MlirStringRef part, void *userData) {
       PyFileAccumulator *accum = static_cast<PyFileAccumulator *>(userData);
-      std::get<llvm::raw_fd_ostream>(accum->writeTarget)
-          .write(part.data, part.length);
+      mlirLlvmRawFdOstreamWrite(
+          std::get<MlirLlvmRawFdOstream>(accum->writeTarget), part);
     };
   }
 
-  std::variant<nanobind::object, llvm::raw_fd_ostream> writeTarget;
+  std::variant<nanobind::object, MlirLlvmRawFdOstream> writeTarget;
   bool binary;
 };
 
