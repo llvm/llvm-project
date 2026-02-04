@@ -201,10 +201,10 @@ void Lowerer::lowerCoroNoop(IntrinsicInst *II) {
 }
 
 void NoopCoroElider::run(IntrinsicInst *II) {
-  visitPtr(*II);
+  visitPtr(*II, /*TrackOffsets=*/false);
 
   Worklist.clear();
-  VisitedUses.clear();
+  Visited.clear();
 }
 
 void NoopCoroElider::visitCallBase(CallBase &CB) {
@@ -250,8 +250,12 @@ bool NoopCoroElider::tryEraseCallInvoke(Instruction *I) {
 
 void NoopCoroElider::eraseFromWorklist(Instruction *I) {
   erase_if(Worklist, [I](UseToVisit &U) {
-    return I == U.UseAndIsOffsetKnown.getPointer()->getUser();
+    return I == U.UseInfo.getPointer().getPointer()->getUser();
   });
+  remove_if(Visited, [I](UseWithOffset &U) {
+    return I == U.first.getPointer()->getUser();
+  });
+  InstsInPath.erase(I);
 }
 
 static bool declaresCoroCleanupIntrinsics(const Module &M) {
