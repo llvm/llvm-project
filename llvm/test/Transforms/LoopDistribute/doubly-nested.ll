@@ -3,17 +3,19 @@
 ; RUN:   < %s | FileCheck %s
 
 ; Doubly nested loop with two statements in the innermost loop.
-; Statement 2 is distributable because there is no dependence between S1 and S2.
+; Statement S2 can be put into a separate loop because there is no dependence between S1 and S2.
 ;
 ;   for (int i = 0; i < N; i++) {
 ;     for (int j = 0; j < M; j++) {
 ;       S1: A[i][j] = B[i][j] + C[i][j];      // Statement 1
 ;       ================================
-;       S2: D[i][j] = E[i][j] * F[i][j];      // Statement 2 - distributable
+;       S2: D[i][j] = E[i][j] * F[i][j];      // Statement 2
 ;     }
 ;   }
 
 define void @doubly_nested_distributable(ptr noalias %A, ptr noalias %B, ptr noalias %C,
+                                         ptr noalias %D, ptr noalias %E, ptr noalias %F,
+                                         i64 %N, i64 %M) {
 ; CHECK-LABEL: define void @doubly_nested_distributable(
 ; CHECK-SAME: ptr noalias [[A:%.*]], ptr noalias [[B:%.*]], ptr noalias [[C:%.*]], ptr noalias [[D:%.*]], ptr noalias [[E:%.*]], ptr noalias [[F:%.*]], i64 [[N:%.*]], i64 [[M:%.*]]) {
 ; CHECK-NEXT:  [[ENTRY:.*]]:
@@ -66,8 +68,6 @@ define void @doubly_nested_distributable(ptr noalias %A, ptr noalias %B, ptr noa
 ; CHECK:       [[FOR_END]]:
 ; CHECK-NEXT:    ret void
 ;
-  ptr noalias %D, ptr noalias %E, ptr noalias %F,
-  i64 %N, i64 %M) {
 entry:
   br label %for.i.header
 
@@ -86,7 +86,6 @@ for.j.body:                                       ; preds = %for.j.body, %for.j.
   %idx = add i64 %idx.i, %j
 
   ; Statement 1: A[i][j] = B[i][j] + C[i][j]
-  ; Create a carried dependence on A to make S1 non-distributable
   %arrayidxA = getelementptr inbounds i32, ptr %A, i64 %idx
   %loadA = load i32, ptr %arrayidxA, align 4
 
@@ -104,7 +103,7 @@ for.j.body:                                       ; preds = %for.j.body, %for.j.
   %arrayidxA_next = getelementptr inbounds i32, ptr %A, i64 %idx.next
   store i32 %addWithDep, ptr %arrayidxA_next, align 4
 
-  ; Statement 2: D[i][j] = E[i][j] * F[i][j]  (distributable - no dependence)
+  ; Statement 2: D[i][j] = E[i][j] * F[i][j]
   %arrayidxD = getelementptr inbounds i32, ptr %D, i64 %idx
   %arrayidxE = getelementptr inbounds i32, ptr %E, i64 %idx
   %loadE = load i32, ptr %arrayidxE, align 4
@@ -115,7 +114,6 @@ for.j.body:                                       ; preds = %for.j.body, %for.j.
   %mulS2 = mul i32 %loadE, %loadF
   store i32 %mulS2, ptr %arrayidxD, align 4
 
-  ; Inner loop exit condition
   %exitcond.j = icmp eq i64 %j.next, %M
   br i1 %exitcond.j, label %for.j.end, label %for.j.body
 
