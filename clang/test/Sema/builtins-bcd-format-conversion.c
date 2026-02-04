@@ -15,6 +15,7 @@
 vector unsigned char test_bcdsetsign(void) {
   DECL_COMMON_VARS
   vector unsigned char res_a = __builtin_ppc_bcdsetsign(scalar, '\1'); // expected-error {{argument 0 must be of type '__vector unsigned char' (vector of 16 'unsigned char' values}}
+  vector unsigned char res_d = __builtin_ppc_bcdsetsign(vec, f); // expected-error-re {{argument to {{.*}} must be a constant integer}}
   vector unsigned char res_b = __builtin_ppc_bcdsetsign(vec, 2); // expected-error-re {{argument value {{.*}} is outside the valid range}}
   vector unsigned char res_c = __builtin_ppc_bcdsetsign(vec, -1); // expected-error-re {{argument value {{.*}} is outside the valid range}}
   return __builtin_ppc_bcdsetsign(vec, '\1');
