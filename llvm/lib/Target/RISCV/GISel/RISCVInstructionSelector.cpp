@@ -1229,8 +1229,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
                         : Size == 32 ? RISCV::FMV_W_X
                                      : RISCV::FMV_H_X;
       auto FMV = MIB.buildInstr(Opcode, {DstReg}, {GPRReg});
-      if (!FMV.constrainAllUses(TII, TRI, RBI))
-        return false;
+      FMV.constrainAllUses(TII, TRI, RBI);
     } else {
       // s64 on rv32
       assert(Size == 64 && !Subtarget->is64Bit() &&
@@ -1241,8 +1240,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
         MachineInstrBuilder FCVT =
             MIB.buildInstr(RISCV::FCVT_D_W, {DstReg}, {Register(RISCV::X0)})
                 .addImm(RISCVFPRndMode::RNE);
-        if (!FCVT.constrainAllUses(TII, TRI, RBI))
-          return false;
+        FCVT.constrainAllUses(TII, TRI, RBI);
 
         MI.eraseFromParent();
         return true;
@@ -1259,8 +1257,7 @@ bool RISCVInstructionSelector::select(MachineInstr &MI) {
         return false;
       MachineInstrBuilder PairF64 = MIB.buildInstr(
           RISCV::BuildPairF64Pseudo, {DstReg}, {GPRRegLow, GPRRegHigh});
-      if (!PairF64.constrainAllUses(TII, TRI, RBI))
-        return false;
+      PairF64.constrainAllUses(TII, TRI, RBI);
     }
 
     MI.eraseFromParent();
@@ -1860,51 +1857,43 @@ bool RISCVInstructionSelector::selectFPCompare(MachineInstr &MI,
     if (NeedInvert)
       TmpReg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
     auto Cmp = MIB.buildInstr(getFCmpOpcode(Pred, Size), {TmpReg}, {LHS, RHS});
-    if (!Cmp.constrainAllUses(TII, TRI, RBI))
-      return false;
+    Cmp.constrainAllUses(TII, TRI, RBI);
   } else if (Pred == CmpInst::FCMP_ONE || Pred == CmpInst::FCMP_UEQ) {
     // fcmp one LHS, RHS => (OR (FLT LHS, RHS), (FLT RHS, LHS))
     NeedInvert = Pred == CmpInst::FCMP_UEQ;
     auto Cmp1 = MIB.buildInstr(getFCmpOpcode(CmpInst::FCMP_OLT, Size),
                                {&RISCV::GPRRegClass}, {LHS, RHS});
-    if (!Cmp1.constrainAllUses(TII, TRI, RBI))
-      return false;
+    Cmp1.constrainAllUses(TII, TRI, RBI);
     auto Cmp2 = MIB.buildInstr(getFCmpOpcode(CmpInst::FCMP_OLT, Size),
                                {&RISCV::GPRRegClass}, {RHS, LHS});
-    if (!Cmp2.constrainAllUses(TII, TRI, RBI))
-      return false;
+    Cmp2.constrainAllUses(TII, TRI, RBI);
     if (NeedInvert)
       TmpReg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
     auto Or =
         MIB.buildInstr(RISCV::OR, {TmpReg}, {Cmp1.getReg(0), Cmp2.getReg(0)});
-    if (!Or.constrainAllUses(TII, TRI, RBI))
-      return false;
+    Or.constrainAllUses(TII, TRI, RBI);
   } else if (Pred == CmpInst::FCMP_ORD || Pred == CmpInst::FCMP_UNO) {
     // fcmp ord LHS, RHS => (AND (FEQ LHS, LHS), (FEQ RHS, RHS))
     // FIXME: If LHS and RHS are the same we can use a single FEQ.
     NeedInvert = Pred == CmpInst::FCMP_UNO;
     auto Cmp1 = MIB.buildInstr(getFCmpOpcode(CmpInst::FCMP_OEQ, Size),
                                {&RISCV::GPRRegClass}, {LHS, LHS});
-    if (!Cmp1.constrainAllUses(TII, TRI, RBI))
-      return false;
+    Cmp1.constrainAllUses(TII, TRI, RBI);
     auto Cmp2 = MIB.buildInstr(getFCmpOpcode(CmpInst::FCMP_OEQ, Size),
                                {&RISCV::GPRRegClass}, {RHS, RHS});
-    if (!Cmp2.constrainAllUses(TII, TRI, RBI))
-      return false;
+    Cmp2.constrainAllUses(TII, TRI, RBI);
     if (NeedInvert)
       TmpReg = MRI->createVirtualRegister(&RISCV::GPRRegClass);
     auto And =
         MIB.buildInstr(RISCV::AND, {TmpReg}, {Cmp1.getReg(0), Cmp2.getReg(0)});
-    if (!And.constrainAllUses(TII, TRI, RBI))
-      return false;
+    And.constrainAllUses(TII, TRI, RBI);
   } else
     llvm_unreachable("Unhandled predicate");
 
   // Emit an XORI to invert the result if needed.
   if (NeedInvert) {
     auto Xor = MIB.buildInstr(RISCV::XORI, {DstReg}, {TmpReg}).addImm(1);
-    if (!Xor.constrainAllUses(TII, TRI, RBI))
-      return false;
+    Xor.constrainAllUses(TII, TRI, RBI);
   }
 
   MI.eraseFromParent();
