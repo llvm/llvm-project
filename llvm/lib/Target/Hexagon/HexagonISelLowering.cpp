@@ -3403,15 +3403,34 @@ HexagonTargetLowering::ReplaceNodeResults(SDNode *N,
 SDValue
 HexagonTargetLowering::PerformDAGCombine(SDNode *N,
                                          DAGCombinerInfo &DCI) const {
+  SDValue Op(N, 0);
+  const SDLoc &dl(Op);
+  unsigned Opc = Op.getOpcode();
+
+  // Combining transformations applicable for arbitrary vector sizes.
+  if (!DCI.isBeforeLegalizeOps()) {
+    switch (Opc) {
+    case ISD::VSELECT: {
+      // (vselect (xor x, ptrue), v0, v1) -> (vselect x, v1, v0)
+      SDValue Cond = Op.getOperand(0);
+      if (Cond->getOpcode() == ISD::XOR) {
+        SDValue C0 = Cond.getOperand(0), C1 = Cond.getOperand(1);
+        if (C1->getOpcode() == HexagonISD::PTRUE) {
+          SDValue VSel = DCI.DAG.getNode(ISD::VSELECT, dl, ty(Op), C0,
+                                         Op.getOperand(2), Op.getOperand(1));
+          return VSel;
+        }
+      }
+      return SDValue();
+    }
+    }
+  }
+
   if (isHvxOperation(N, DCI.DAG)) {
     if (SDValue V = PerformHvxDAGCombine(N, DCI))
       return V;
     return SDValue();
   }
-
-  SDValue Op(N, 0);
-  const SDLoc &dl(Op);
-  unsigned Opc = Op.getOpcode();
 
   if (Opc == ISD::TRUNCATE) {
     SDValue Op0 = Op.getOperand(0);
@@ -3441,21 +3460,6 @@ HexagonTargetLowering::PerformDAGCombine(SDNode *N,
       return getZero(dl, ty(Op), DCI.DAG);
     default:
       break;
-    }
-    break;
-  }
-  case ISD::VSELECT: {
-    // This is pretty much duplicated in HexagonISelLoweringHVX...
-    //
-    // (vselect (xor x, ptrue), v0, v1) -> (vselect x, v1, v0)
-    SDValue Cond = Op.getOperand(0);
-    if (Cond->getOpcode() == ISD::XOR) {
-      SDValue C0 = Cond.getOperand(0), C1 = Cond.getOperand(1);
-      if (C1->getOpcode() == HexagonISD::PTRUE) {
-        SDValue VSel = DCI.DAG.getNode(ISD::VSELECT, dl, ty(Op), C0,
-                                       Op.getOperand(2), Op.getOperand(1));
-        return VSel;
-      }
     }
     break;
   }

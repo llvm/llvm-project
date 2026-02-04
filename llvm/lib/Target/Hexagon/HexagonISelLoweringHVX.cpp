@@ -3924,43 +3924,33 @@ HexagonTargetLowering::PerformHvxDAGCombine(SDNode *N, DAGCombinerInfo &DCI)
     return SDValue();
 
   switch (Opc) {
-    case ISD::VSELECT: {
-      // (vselect (xor x, qtrue), v0, v1) -> (vselect x, v1, v0)
-      SDValue Cond = Ops[0];
-      if (Cond->getOpcode() == ISD::XOR) {
-        SDValue C0 = Cond.getOperand(0), C1 = Cond.getOperand(1);
-        if (C1->getOpcode() == HexagonISD::QTRUE)
-          return DAG.getNode(ISD::VSELECT, dl, ty(Op), C0, Ops[2], Ops[1]);
-      }
-      break;
+  case HexagonISD::V2Q:
+    if (Ops[0].getOpcode() == ISD::SPLAT_VECTOR) {
+      if (const auto *C = dyn_cast<ConstantSDNode>(Ops[0].getOperand(0)))
+        return C->isZero() ? DAG.getNode(HexagonISD::QFALSE, dl, ty(Op))
+                           : DAG.getNode(HexagonISD::QTRUE, dl, ty(Op));
     }
-    case HexagonISD::V2Q:
-      if (Ops[0].getOpcode() == ISD::SPLAT_VECTOR) {
-        if (const auto *C = dyn_cast<ConstantSDNode>(Ops[0].getOperand(0)))
-          return C->isZero() ? DAG.getNode(HexagonISD::QFALSE, dl, ty(Op))
-                             : DAG.getNode(HexagonISD::QTRUE, dl, ty(Op));
-      }
-      break;
-    case HexagonISD::Q2V:
-      if (Ops[0].getOpcode() == HexagonISD::QTRUE)
-        return DAG.getNode(ISD::SPLAT_VECTOR, dl, ty(Op),
-                           DAG.getAllOnesConstant(dl, MVT::i32));
-      if (Ops[0].getOpcode() == HexagonISD::QFALSE)
-        return getZero(dl, ty(Op), DAG);
-      break;
-    case HexagonISD::VINSERTW0:
-      if (isUndef(Ops[1]))
-        return Ops[0];
-      break;
-    case HexagonISD::VROR: {
-      if (Ops[0].getOpcode() == HexagonISD::VROR) {
-        SDValue Vec = Ops[0].getOperand(0);
-        SDValue Rot0 = Ops[1], Rot1 = Ops[0].getOperand(1);
-        SDValue Rot = DAG.getNode(ISD::ADD, dl, ty(Rot0), {Rot0, Rot1});
-        return DAG.getNode(HexagonISD::VROR, dl, ty(Op), {Vec, Rot});
-      }
-      break;
+    break;
+  case HexagonISD::Q2V:
+    if (Ops[0].getOpcode() == HexagonISD::QTRUE)
+      return DAG.getNode(ISD::SPLAT_VECTOR, dl, ty(Op),
+                         DAG.getAllOnesConstant(dl, MVT::i32));
+    if (Ops[0].getOpcode() == HexagonISD::QFALSE)
+      return getZero(dl, ty(Op), DAG);
+    break;
+  case HexagonISD::VINSERTW0:
+    if (isUndef(Ops[1]))
+      return Ops[0];
+    break;
+  case HexagonISD::VROR: {
+    if (Ops[0].getOpcode() == HexagonISD::VROR) {
+      SDValue Vec = Ops[0].getOperand(0);
+      SDValue Rot0 = Ops[1], Rot1 = Ops[0].getOperand(1);
+      SDValue Rot = DAG.getNode(ISD::ADD, dl, ty(Rot0), {Rot0, Rot1});
+      return DAG.getNode(HexagonISD::VROR, dl, ty(Op), {Vec, Rot});
     }
+    break;
+  }
   }
 
   return SDValue();
