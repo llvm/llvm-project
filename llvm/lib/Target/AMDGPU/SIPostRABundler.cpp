@@ -146,7 +146,7 @@ void SIPostRABundler::reorderLoads(
     return;
 
   // Search to find the usage distance of each defined register in the clause.
-  const unsigned SearchDistance = std::max(Defs.size(), 100UL);
+  const unsigned SearchDistance = std::max(Defs.size(), (size_t)100);
   SmallDenseMap<Register, unsigned> UseDistance;
   unsigned MaxDistance = 0;
   for (MachineBasicBlock::iterator SearchI = Next;
@@ -157,7 +157,7 @@ void SIPostRABundler::reorderLoads(
       if (UseDistance.contains(Reg))
         continue;
       if (SearchI->readsRegister(Reg, TRI))
-        UseDistance[Reg] = MaxDistance;
+        UseDistance.insert(std::pair(Reg, MaxDistance));
     }
   }
 
@@ -174,9 +174,7 @@ void SIPostRABundler::reorderLoads(
   for (auto II = BundleStart; II != Next; ++II, ++NativeOrder) {
     // Bail out if we encounter anything that seems risky to reorder.
     if (!II->getNumExplicitDefs() || II->isKill() ||
-        llvm::any_of(II->memoperands(), [&](const MachineMemOperand *MMO) {
-          return MMO->isAtomic() || MMO->isVolatile();
-        })) {
+        II->hasOrderedMemoryRef()) {
       LLVM_DEBUG(dbgs() << " Abort\n");
       return;
     }
