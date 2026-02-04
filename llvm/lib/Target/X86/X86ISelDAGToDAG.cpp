@@ -486,8 +486,7 @@ namespace {
       if (VT == MVT::i64) {
         Zero = SDValue(
             CurDAG->getMachineNode(
-                TargetOpcode::SUBREG_TO_REG, dl, MVT::i64,
-                CurDAG->getTargetConstant(0, dl, MVT::i64), Zero,
+                TargetOpcode::SUBREG_TO_REG, dl, MVT::i64, Zero,
                 CurDAG->getTargetConstant(X86::sub_32bit, dl, MVT::i32)),
             0);
       }
@@ -1720,11 +1719,11 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
     }
     // Attempt to remove vectors moves that were inserted to zero upper bits.
     case TargetOpcode::SUBREG_TO_REG: {
-      unsigned SubRegIdx = N->getConstantOperandVal(2);
+      unsigned SubRegIdx = N->getConstantOperandVal(1);
       if (SubRegIdx != X86::sub_xmm && SubRegIdx != X86::sub_ymm)
         continue;
 
-      SDValue Move = N->getOperand(1);
+      SDValue Move = N->getOperand(0);
       if (!Move.isMachineOpcode())
         continue;
 
@@ -1764,7 +1763,7 @@ void X86DAGToDAGISel::PostprocessISelDAG() {
 
     // Producing instruction is another vector instruction. We can drop the
     // move.
-    CurDAG->UpdateNodeOperands(N, N->getOperand(0), In, N->getOperand(2));
+    CurDAG->UpdateNodeOperands(N, In, N->getOperand(1));
     MadeChange = true;
     }
     }
@@ -5974,13 +5973,11 @@ void X86DAGToDAGISel::Select(SDNode *Node) {
         case MVT::i32:
           break;
         case MVT::i64:
-          ClrNode =
-              SDValue(CurDAG->getMachineNode(
-                          TargetOpcode::SUBREG_TO_REG, dl, MVT::i64,
-                          CurDAG->getTargetConstant(0, dl, MVT::i64), ClrNode,
-                          CurDAG->getTargetConstant(X86::sub_32bit, dl,
-                                                    MVT::i32)),
-                      0);
+          ClrNode = SDValue(
+              CurDAG->getMachineNode(
+                  TargetOpcode::SUBREG_TO_REG, dl, MVT::i64, ClrNode,
+                  CurDAG->getTargetConstant(X86::sub_32bit, dl, MVT::i32)),
+              0);
           break;
         default:
           llvm_unreachable("Unexpected division source");
