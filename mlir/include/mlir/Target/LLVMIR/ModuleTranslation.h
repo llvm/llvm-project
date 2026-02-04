@@ -370,6 +370,8 @@ public:
     }
   }
 
+  llvm::Attribute convertAllocsizeAttr(DenseI32ArrayAttr allocsizeAttr);
+
 private:
   ModuleTranslation(Operation *module,
                     std::unique_ptr<llvm::Module> llvmModule);

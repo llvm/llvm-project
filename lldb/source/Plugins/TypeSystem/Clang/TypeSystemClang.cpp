@@ -3473,38 +3473,15 @@ bool TypeSystemClang::IsReferenceType(lldb::opaque_compiler_type_t type,
   return false;
 }
 
-bool TypeSystemClang::IsFloatingPointType(lldb::opaque_compiler_type_t type,
-                                          bool &is_complex) {
-  if (type) {
-    clang::QualType qual_type(GetCanonicalQualType(type));
+bool TypeSystemClang::IsFloatingPointType(lldb::opaque_compiler_type_t type) {
+  if (!type)
+    return false;
 
-    if (const clang::BuiltinType *BT = llvm::dyn_cast<clang::BuiltinType>(
-            qual_type->getCanonicalTypeInternal())) {
-      clang::BuiltinType::Kind kind = BT->getKind();
-      if (kind >= clang::BuiltinType::Float &&
-          kind <= clang::BuiltinType::LongDouble) {
-        is_complex = false;
-        return true;
-      }
-    } else if (const clang::ComplexType *CT =
-                   llvm::dyn_cast<clang::ComplexType>(
-                       qual_type->getCanonicalTypeInternal())) {
-      if (IsFloatingPointType(CT->getElementType().getAsOpaquePtr(),
-                              is_complex)) {
-        is_complex = true;
-        return true;
-      }
-    } else if (const clang::VectorType *VT = llvm::dyn_cast<clang::VectorType>(
-                   qual_type->getCanonicalTypeInternal())) {
-      if (IsFloatingPointType(VT->getElementType().getAsOpaquePtr(),
-                              is_complex)) {
-        is_complex = false;
-        return true;
-      }
-    }
-  }
-  is_complex = false;
-  return false;
+  clang::QualType qual_type(GetCanonicalQualType(type));
+  if (qual_type.isNull())
+    return false;
+
+  return qual_type->isFloatingType();
 }
 
 bool TypeSystemClang::IsDefined(lldb::opaque_compiler_type_t type) {

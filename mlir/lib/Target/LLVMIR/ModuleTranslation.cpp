@@ -1659,6 +1659,20 @@ static void convertFunctionMemoryAttributes(LLVMFuncOp func,
   llvmFunc->setMemoryEffects(newMemEffects);
 }
 
+llvm::Attribute
+ModuleTranslation::convertAllocsizeAttr(DenseI32ArrayAttr allocSizeAttr) {
+  if (!allocSizeAttr || allocSizeAttr.empty())
+    return llvm::Attribute{};
+
+  unsigned elemSize = static_cast<unsigned>(allocSizeAttr[0]);
+  std::optional<unsigned> numElems;
+  if (allocSizeAttr.size() > 1)
+    numElems = static_cast<unsigned>(allocSizeAttr[1]);
+
+  return llvm::Attribute::getWithAllocSizeArgs(getLLVMContext(), elemSize,
+                                               numElems);
+}
+
 /// Converts function attributes from `func` and attaches them to `llvmFunc`.
 static void convertFunctionAttributes(ModuleTranslation &mod, LLVMFuncOp func,
                                       llvm::Function *llvmFunc) {
@@ -1708,6 +1722,10 @@ static void convertFunctionAttributes(ModuleTranslation &mod, LLVMFuncOp func,
     mod.convertFunctionArrayAttr(noBuiltins, llvmFunc,
                                  ModuleTranslation::convertNoBuiltin);
   }
+
+  if (llvm::Attribute attr = mod.convertAllocsizeAttr(func.getAllocsizeAttr());
+      attr.isValid())
+    llvmFunc->addFnAttr(attr);
 
   convertFunctionMemoryAttributes(func, llvmFunc);
 }
