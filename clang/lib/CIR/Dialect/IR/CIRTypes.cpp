@@ -1074,6 +1074,8 @@ cir::toCIRAddressSpaceAttr(mlir::MLIRContext &ctx, clang::LangAS langAS) {
 
 bool cir::isMatchingAddressSpace(mlir::ptr::MemorySpaceAttrInterface cirAS,
                                  clang::LangAS as) {
+  if (!cirAS)
+    return as == clang::LangAS::Default;
   return cir::toCIRAddressSpaceAttr(*cirAS.getContext(), as) == cirAS;
 }
 
