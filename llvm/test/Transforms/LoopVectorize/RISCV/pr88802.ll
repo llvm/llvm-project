@@ -14,7 +14,10 @@ define void @test(ptr %p, i64 %a, i8 %b) {
 ; CHECK-NEXT:    [[BROADCAST_SPLAT2:%.*]] = shufflevector <vscale x 2 x i64> [[BROADCAST_SPLATINSERT1]], <vscale x 2 x i64> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP6:%.*]] = ashr <vscale x 2 x i64> [[BROADCAST_SPLAT2]], splat (i64 52)
 ; CHECK-NEXT:    [[TMP7:%.*]] = trunc <vscale x 2 x i64> [[TMP6]] to <vscale x 2 x i32>
-; CHECK-NEXT:    [[TMP8:%.*]] = zext <vscale x 2 x i8> [[BROADCAST_SPLAT]] to <vscale x 2 x i32>
+; CHECK-NEXT:    [[TMP3:%.*]] = extractelement <vscale x 2 x i8> [[BROADCAST_SPLAT]], i32 0
+; CHECK-NEXT:    [[TMP4:%.*]] = zext i8 [[TMP3]] to i32
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT8:%.*]] = insertelement <vscale x 2 x i32> poison, i32 [[TMP4]], i64 0
+; CHECK-NEXT:    [[TMP8:%.*]] = shufflevector <vscale x 2 x i32> [[BROADCAST_SPLATINSERT8]], <vscale x 2 x i32> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT3:%.*]] = insertelement <vscale x 2 x ptr> poison, ptr [[P]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT4:%.*]] = shufflevector <vscale x 2 x ptr> [[BROADCAST_SPLATINSERT3]], <vscale x 2 x ptr> poison, <vscale x 2 x i32> zeroinitializer
 ; CHECK-NEXT:    [[TMP9:%.*]] = call <vscale x 2 x i32> @llvm.stepvector.nxv2i32()

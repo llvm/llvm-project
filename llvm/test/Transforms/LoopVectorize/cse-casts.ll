@@ -361,10 +361,7 @@ define void @simplified_cast_preserves_irflag_type(ptr noalias %p, ptr noalias %
 ; CHECK:       [[VECTOR_BODY]]:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, %[[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], %[[VECTOR_BODY]] ]
 ; CHECK-NEXT:    [[TMP0:%.*]] = load i8, ptr [[P]], align 1
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i8> poison, i8 [[TMP0]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i8> [[BROADCAST_SPLATINSERT]], <4 x i8> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP1:%.*]] = zext <4 x i8> [[BROADCAST_SPLAT]] to <4 x i16>
-; CHECK-NEXT:    [[TMP2:%.*]] = extractelement <4 x i16> [[TMP1]], i32 3
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i8 [[TMP0]] to i16
 ; CHECK-NEXT:    store i16 [[TMP2]], ptr [[Q]], align 2
 ; CHECK-NEXT:    store i16 [[TMP2]], ptr [[R]], align 2
 ; CHECK-NEXT:    [[INDEX_NEXT]] = add nuw i64 [[INDEX]], 8

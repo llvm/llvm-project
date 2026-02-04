@@ -11,7 +11,10 @@ define void @pr77468(ptr noalias %src, ptr noalias %dst, i1 %x) {
 ; CHECK:       vector.ph:
 ; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <4 x i1> poison, i1 [[X]], i64 0
 ; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <4 x i1> [[BROADCAST_SPLATINSERT]], <4 x i1> poison, <4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP3:%.*]] = zext <4 x i1> [[BROADCAST_SPLAT]] to <4 x i16>
+; CHECK-NEXT:    [[TMP0:%.*]] = extractelement <4 x i1> [[BROADCAST_SPLAT]], i32 0
+; CHECK-NEXT:    [[TMP2:%.*]] = zext i1 [[TMP0]] to i16
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <4 x i16> poison, i16 [[TMP2]], i64 0
+; CHECK-NEXT:    [[TMP3:%.*]] = shufflevector <4 x i16> [[BROADCAST_SPLATINSERT1]], <4 x i16> poison, <4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i32 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]

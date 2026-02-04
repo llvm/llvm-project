@@ -13,9 +13,9 @@ define void @trunc_minimal_bitwidth(ptr %bptr, ptr noalias %hptr, i32 %val, i64 
 ; CHECK-NEXT:    [[TMP3:%.*]] = shl nuw i64 [[TMP2]], 2
 ; CHECK-NEXT:    [[N_MOD_VF:%.*]] = urem i64 [[N]], [[TMP3]]
 ; CHECK-NEXT:    [[N_VEC:%.*]] = sub i64 [[N]], [[N_MOD_VF]]
-; CHECK-NEXT:    [[BROADCAST_SPLATINSERT:%.*]] = insertelement <vscale x 4 x i32> poison, i32 [[VAL:%.*]], i64 0
-; CHECK-NEXT:    [[BROADCAST_SPLAT:%.*]] = shufflevector <vscale x 4 x i32> [[BROADCAST_SPLATINSERT]], <vscale x 4 x i32> poison, <vscale x 4 x i32> zeroinitializer
-; CHECK-NEXT:    [[TMP4:%.*]] = trunc <vscale x 4 x i32> [[BROADCAST_SPLAT]] to <vscale x 4 x i16>
+; CHECK-NEXT:    [[TMP6:%.*]] = trunc i32 [[VAL:%.*]] to i16
+; CHECK-NEXT:    [[BROADCAST_SPLATINSERT1:%.*]] = insertelement <vscale x 4 x i16> poison, i16 [[TMP6]], i64 0
+; CHECK-NEXT:    [[TMP4:%.*]] = shufflevector <vscale x 4 x i16> [[BROADCAST_SPLATINSERT1]], <vscale x 4 x i16> poison, <vscale x 4 x i32> zeroinitializer
 ; CHECK-NEXT:    br label [[VECTOR_BODY:%.*]]
 ; CHECK:       vector.body:
 ; CHECK-NEXT:    [[INDEX:%.*]] = phi i64 [ 0, [[VECTOR_PH]] ], [ [[INDEX_NEXT:%.*]], [[VECTOR_BODY]] ]
