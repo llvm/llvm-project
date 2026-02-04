@@ -388,6 +388,29 @@ public:
   explicit OmpAttributeVisitor(SemanticsContext &context)
       : DirectiveAttributeVisitor(context) {}
 
+  static bool HasStaticStorageDuration(const Symbol &symbol) {
+    auto &ultSym = symbol.GetUltimate();
+    // Module-scope variable
+    return ultSym.owner().kind() == Scope::Kind::Module ||
+        // Data statement variable
+        ultSym.flags().test(Symbol::Flag::InDataStmt) ||
+        // Save attribute variable
+        ultSym.attrs().test(Attr::SAVE) ||
+        // Referenced in a common block
+        ultSym.flags().test(Symbol::Flag::InCommonBlock);
+  }
+
+  // Recognize symbols that are not created as a part of the OpenMP data-
+  // sharing processing, and that are declared inside of the construct.
+  // These symbols are predetermined private, but they shouldn't be marked
+  // in any special way, because there is nothing to be done for them.
+  // They are not symbols for which private copies need to be created,
+  // they are already themselves private.
+  static bool IsLocalInsideScope(const Symbol &symbol, const Scope &scope) {
+    return symbol.owner() != scope && scope.Contains(symbol.owner()) &&
+        !HasStaticStorageDuration(symbol);
+  }
+
   template <typename A> void Walk(const A &x) { parser::Walk(x, *this); }
   template <typename A> bool Pre(const A &) { return true; }
   template <typename A> void Post(const A &) {}
@@ -2076,6 +2099,9 @@ void OmpAttributeVisitor::ResolveSeqLoopIndexInParallelOrTaskConstruct(
       break;
     }
   }
+  if (IsLocalInsideScope(*iv.symbol, targetIt->scope)) {
+    return;
+  }
   // If this symbol already has a data-sharing attribute then there is nothing
   // to do here.
   if (const Symbol * symbol{iv.symbol}) {
@@ -2400,14 +2426,14 @@ void OmpAttributeVisitor::PrivatizeAssociatedLoopIndexAndCheckLoopLevel(
           }
         }
         // go through all the nested do-loops and resolve index variables
-        const parser::Name *iv{GetLoopIndex(*loop)};
-        if (iv) {
-          if (auto *symbol{ResolveOmp(*iv, ivDSA, currScope())}) {
-            SetSymbolDSA(*symbol, {Symbol::Flag::OmpPreDetermined, ivDSA});
-            iv->symbol = symbol; // adjust the symbol within region
-            AddToContextObjectWithDSA(*symbol, ivDSA);
+        if (const parser::Name *iv{GetLoopIndex(*loop)}) {
+          if (!iv->symbol || !IsLocalInsideScope(*iv->symbol, currScope())) {
+            if (auto *symbol{ResolveOmp(*iv, ivDSA, currScope())}) {
+              SetSymbolDSA(*symbol, {Symbol::Flag::OmpPreDetermined, ivDSA});
+              iv->symbol = symbol; // adjust the symbol within region
+              AddToContextObjectWithDSA(*symbol, ivDSA);
+            }
           }
-
           const auto &block{std::get<parser::Block>(loop->t)};
           const auto it{block.begin()};
           loop = it != block.end() ? GetDoConstructIf(*it) : nullptr;
@@ -2651,20 +2677,6 @@ static bool IsPrivatizable(const Symbol *sym) {
               misc->kind() != MiscDetails::Kind::ConstructName));
 }
 
-static bool IsSymbolStaticStorageDuration(const Symbol &symbol) {
-  LLVM_DEBUG(llvm::dbgs() << "IsSymbolStaticStorageDuration(" << symbol.name()
-                          << "):\n");
-  auto ultSym = symbol.GetUltimate();
-  // Module-scope variable
-  return (ultSym.owner().kind() == Scope::Kind::Module) ||
-      // Data statement variable
-      (ultSym.flags().test(Symbol::Flag::InDataStmt)) ||
-      // Save attribute variable
-      (ultSym.attrs().test(Attr::SAVE)) ||
-      // Referenced in a common block
-      (ultSym.flags().test(Symbol::Flag::InCommonBlock));
-}
-
 static bool IsTargetCaptureImplicitlyFirstprivatizeable(const Symbol &symbol,
     const Symbol::Flags &dsa, const Symbol::Flags &dataSharingAttributeFlags,
     const Symbol::Flags &dataMappingAttributeFlags,
@@ -2823,7 +2835,9 @@ void OmpAttributeVisitor::CreateImplicitSymbols(const Symbol *symbol) {
     bool targetDir = llvm::omp::allTargetSet.test(dirContext.directive);
     bool parallelDir = llvm::omp::topParallelSet.test(dirContext.directive);
     bool teamsDir = llvm::omp::allTeamsSet.test(dirContext.directive);
-    bool isStaticStorageDuration = IsSymbolStaticStorageDuration(*symbol);
+    bool isStaticStorageDuration = HasStaticStorageDuration(*symbol);
+    LLVM_DEBUG(llvm::dbgs()
+        << "HasStaticStorageDuration(" << symbol->name() << "):\n");
 
     if (dsa.any()) {
       if (parallelDir || taskGenDir || teamsDir) {
@@ -2977,7 +2991,8 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
   auto *symbol{name.symbol};
 
   if (symbol && WithinConstruct()) {
-    if (IsPrivatizable(symbol) && !IsObjectWithDSA(*symbol)) {
+    if (IsPrivatizable(symbol) && !IsObjectWithDSA(*symbol) &&
+        !IsLocalInsideScope(*symbol, currScope())) {
       // TODO: create a separate function to go through the rules for
       //       predetermined, explicitly determined, and implicitly
       //       determined data-sharing attributes (2.15.1.1).
@@ -3046,7 +3061,17 @@ void OmpAttributeVisitor::Post(const parser::Name &name) {
         return;
     }
 
-    CreateImplicitSymbols(symbol);
+    // We should only create any additional symbols, if the one mentioned
+    // in the source code was declared outside of the construct. This was
+    // always the case before Fortran 2008. F2008 introduced the BLOCK
+    // construct, and allowed local variable declarations.
+    // In OpenMP local (non-static) variables are always private in a given
+    // construct, if they are declared inside the construct. In those cases
+    // we don't need to do anything here (i.e. no flags are needed or
+    // anything else).
+    if (!IsLocalInsideScope(*symbol, currScope())) {
+      CreateImplicitSymbols(symbol);
+    }
   } // within OpenMP construct
 }
 
