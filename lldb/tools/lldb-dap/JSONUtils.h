@@ -234,36 +234,6 @@ void FillResponse(const llvm::json::Object &request,
 ///     definition outlined by Microsoft.
 llvm::json::Object CreateEventObject(const llvm::StringRef event_name);
 
-/// Create a "StoppedEvent" object for a LLDB thread object.
-///
-/// This function will fill in the following keys in the returned
-/// object's "body" object:
-///   "reason" - With a valid stop reason enumeration string value
-///              that Microsoft specifies
-///   "threadId" - The thread ID as an integer
-///   "description" - a stop description (like "breakpoint 12.3") as a
-///                   string
-///   "preserveFocusHint" - a boolean value that states if this thread
-///                         should keep the focus in the GUI.
-///   "allThreadsStopped" - set to True to indicate that all threads
-///                         stop when any thread stops.
-///
-/// \param[in] dap
-///     The DAP session associated with the stopped thread.
-///
-/// \param[in] thread
-///     The LLDB thread to use when populating out the "StoppedEvent"
-///     object.
-///
-/// \param[in] stop_id
-///     The stop id for this event.
-///
-/// \return
-///     A "StoppedEvent" JSON object with that follows the formal JSON
-///     definition outlined by Microsoft.
-llvm::json::Value CreateThreadStopped(DAP &dap, lldb::SBThread &thread,
-                                      uint32_t stop_id);
-
 /// \return
 ///     The variable name of \a value or a default placeholder.
 llvm::StringRef GetNonNullVariableName(lldb::SBValue &value);

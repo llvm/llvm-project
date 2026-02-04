@@ -29,6 +29,11 @@
 ; RUN: llc < %s -mtriple aarch64-linux-gnu -mattr=+pauth -global-isel -global-isel-abort=1 -verify-machineinstrs \
 ; RUN:   -aarch64-ptrauth-auth-checks=trap | FileCheck %s -DL=".L" --check-prefixes=TRAP,TRAP-ELF
 
+; Make sure codegen at -O0 does not crash:
+;
+; RUN: llc < %s -mtriple aarch64-linux-gnu -mattr=+pauth -O0 -verify-machineinstrs -global-isel=0
+; RUN: llc < %s -mtriple aarch64-linux-gnu -mattr=+pauth -O0 -verify-machineinstrs -global-isel=1 -global-isel-abort=1
+
 target datalayout = "e-m:o-i64:64-i128:128-n32:64-S128"
 
 define i64 @test_auth_blend(i64 %arg, i64 %arg1) {
@@ -297,6 +302,28 @@ define i64 @test_auth_too_large_discriminator(i64 %arg, i64 %arg1) {
   %tmp0 = call i64 @llvm.ptrauth.blend(i64 %arg1, i64 65536)
   %tmp1 = call i64 @llvm.ptrauth.auth(i64 %arg, i32 2, i64 %tmp0)
   ret i64 %tmp1
+}
+
+; Without "@earlyclobber $Scratch" constraint on AUTxMxN pseudo, the following
+; instruction was fed to AArch64AsmPrinter at -O0
+;
+;     renamable $x8, dead renamable $x9 = AUTxMxN renamable $x8(tied-def 0), 0, 1, renamable $x9, implicit-def dead $nzcv
+;
+; resulting in an assertion:
+;
+;     Assertion `ScratchReg != AddrDisc && "Forbidden to clobber AddrDisc, but have to"
+;
+define i64 @autxmxn_scratch_is_earlyclobber(i64 %ptr, i64 %arg) {
+entry:
+  %discr = call i64 @llvm.ptrauth.blend(i64 %arg, i64 1)
+  br label %some.bb
+
+some.bb:
+  %authed = call i64 @llvm.ptrauth.auth(i64 %ptr, i32 0, i64 %discr)
+  br label %some.other.bb
+
+some.other.bb:
+  ret i64 %authed
 }
 
 declare i64 @llvm.ptrauth.auth(i64, i32, i64)
