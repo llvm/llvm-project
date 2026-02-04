@@ -17476,6 +17476,10 @@ OMPClause *SemaOpenMP::ActOnOpenMPTransparentClause(Expr *ImpexTypeArg,
                                                     SourceLocation StartLoc,
                                                     SourceLocation LParenLoc,
                                                     SourceLocation EndLoc) {
+  if (!ImpexTypeArg) {
+    return new (getASTContext())
+        OMPTransparentClause(ImpexTypeArg, StartLoc, LParenLoc, EndLoc);
+  }
   QualType Ty = ImpexTypeArg->getType();
 
   if (const auto *TT = Ty->getAs<TypedefType>()) {
