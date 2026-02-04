@@ -289,7 +289,7 @@ public:
   static XCOFF::StorageClass getStorageClassForGlobal(const GlobalValue *GV);
 
   MCSection *
-  getSectionForFunctionDescriptor(const Function *F,
+  getSectionForFunctionDescriptor(const GlobalObject *F,
                                   const TargetMachine &TM) const override;
   MCSection *getSectionForTOCEntry(const MCSymbol *Sym,
                                    const TargetMachine &TM) const override;
