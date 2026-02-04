@@ -3431,7 +3431,8 @@ HexagonTargetLowering::PerformDAGCombine(SDNode *N,
   if (DCI.isBeforeLegalizeOps())
     return SDValue();
 
-  if (Opc == HexagonISD::P2D) {
+  switch (Opc) {
+  case HexagonISD::P2D: {
     SDValue P = Op.getOperand(0);
     switch (P.getOpcode()) {
     case HexagonISD::PTRUE:
@@ -3441,7 +3442,9 @@ HexagonTargetLowering::PerformDAGCombine(SDNode *N,
     default:
       break;
     }
-  } else if (Opc == ISD::VSELECT) {
+    break;
+  }
+  case ISD::VSELECT: {
     // This is pretty much duplicated in HexagonISelLoweringHVX...
     //
     // (vselect (xor x, ptrue), v0, v1) -> (vselect x, v1, v0)
@@ -3454,7 +3457,9 @@ HexagonTargetLowering::PerformDAGCombine(SDNode *N,
         return VSel;
       }
     }
-  } else if (Opc == ISD::TRUNCATE) {
+    break;
+  }
+  case ISD::TRUNCATE: {
     SDValue Op0 = Op.getOperand(0);
     // fold (truncate (build pair x, y)) -> (truncate x) or x
     if (Op0.getOpcode() == ISD::BUILD_PAIR) {
@@ -3467,7 +3472,9 @@ HexagonTargetLowering::PerformDAGCombine(SDNode *N,
       if (ty(Elem0).bitsGT(TruncTy))
         return DCI.DAG.getNode(ISD::TRUNCATE, dl, TruncTy, Elem0);
     }
-  } else if (Opc == ISD::OR) {
+    break;
+  }
+  case ISD::OR: {
     // fold (or (shl xx, s), (zext y)) -> (COMBINE (shl xx, s-32), y)
     // if s >= 32
     auto fold0 = [&, this](SDValue Op) {
@@ -3497,6 +3504,8 @@ HexagonTargetLowering::PerformDAGCombine(SDNode *N,
 
     if (SDValue R = fold0(Op))
       return R;
+    break;
+  }
   }
 
   return SDValue();
