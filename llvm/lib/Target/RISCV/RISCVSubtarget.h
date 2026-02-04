@@ -172,10 +172,9 @@ public:
 
   LLVM_DEPRECATED("Now Equivalent to hasStdExtZca", "hasStdExtZca")
   bool hasStdExtCOrZca() const { return HasStdExtZca; }
-  bool hasStdExtCOrZcd() const { return HasStdExtC || HasStdExtZcd; }
-  bool hasStdExtCOrZcfOrZce() const {
-    return HasStdExtC || HasStdExtZcf || HasStdExtZce;
-  }
+  // FIXME: Remove these and use hasStdExtZcd/hasStdExtZcf() instead.
+  bool hasStdExtCOrZcd() const { return HasStdExtZcd; }
+  bool hasStdExtCOrZcfOrZce() const { return HasStdExtZcf; }
   bool hasStdExtZvl() const { return ZvlLen != 0; }
   bool hasStdExtFOrZfinx() const { return HasStdExtF || HasStdExtZfinx; }
   bool hasStdExtDOrZdinx() const { return HasStdExtD || HasStdExtZdinx; }
