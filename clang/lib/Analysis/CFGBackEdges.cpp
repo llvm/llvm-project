@@ -27,7 +27,7 @@ struct VisitClockTimes {
 
 llvm::DenseMap<const CFGBlock *, const CFGBlock *>
 findCFGBackEdges(const clang::CFG &CFG) {
-  // Do a simple textbook DFS with pre-post numberings to find back edges.
+  // Do a simple textbook DFS with pre and post numberings to find back edges.
   llvm::DenseMap<const CFGBlock *, const CFGBlock *> BackEdges;
 
   std::vector<VisitClockTimes> VisitState;
