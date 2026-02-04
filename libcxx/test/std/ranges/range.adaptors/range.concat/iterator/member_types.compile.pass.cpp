@@ -129,10 +129,28 @@ constexpr bool test() {
   }
 
   {
+    // value_type of single view
+    std::ranges::concat_view v{DiffTypeRange<std::intptr_t>{}};
+    using Iter = decltype(v.begin());
+    static_assert(std::is_same_v<Iter::value_type, int>);
+  }
+
+  {
     // difference_type of multiple views should be the common type
     std::ranges::concat_view v{DiffTypeRange<std::intptr_t>{}, DiffTypeRange<std::ptrdiff_t>{}};
     using Iter = decltype(v.begin());
-    static_assert(std::is_same_v<Iter::difference_type, std::common_type_t<std::intptr_t, std::ptrdiff_t>>);
+    static_assert(std::is_same_v<Iter::difference_type,
+                                 std::common_type_t< std::ranges::range_difference_t<DiffTypeRange<std::intptr_t>>,
+                                                     std::ranges::range_difference_t<DiffTypeRange<std::ptrdiff_t>>>>);
+  }
+
+  {
+    // value_type of multiple views should be the common type
+    std::ranges::concat_view v{DiffTypeRange<std::intptr_t>{}, DiffTypeRange<std::ptrdiff_t>{}};
+    using Iter = decltype(v.begin());
+    static_assert(std::is_same_v<Iter::value_type,
+                                 std::common_type_t< std::ranges::range_value_t<DiffTypeRange<std::intptr_t>>,
+                                                     std::ranges::range_value_t<DiffTypeRange<std::ptrdiff_t>>>>);
   }
 
   const std::array foos{Foo{}};
