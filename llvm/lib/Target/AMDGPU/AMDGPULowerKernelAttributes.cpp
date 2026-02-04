@@ -383,9 +383,11 @@ static bool processUse(CallInst *CI, bool IsV5OrAbove) {
     Constant *Replacement = nullptr;
 
     if (auto *VecTy = dyn_cast<VectorType>(GroupSizeType)) {
-      Constant *CastElt = ConstantFoldIntegerCast(
-          KnownSize, VecTy->getElementType(), false, DL);
-      Replacement = ConstantVector::getSplat(VecTy->getElementCount(), CastElt);
+      if (VecTy->getElementCount().isScalar()) {
+        Constant *CastElt = ConstantFoldIntegerCast(
+            KnownSize, VecTy->getElementType(), false, DL);
+        Replacement = ConstantVector::getSplat(VecTy->getElementCount(), CastElt);
+      }
     } else {
       Replacement =
           ConstantFoldIntegerCast(KnownSize, GroupSizeType, false, DL);

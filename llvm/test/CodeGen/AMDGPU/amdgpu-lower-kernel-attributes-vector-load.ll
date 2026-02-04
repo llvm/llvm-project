@@ -113,6 +113,42 @@ define amdgpu_kernel void @load_group_size_z_v2i64(ptr addrspace(1) %out) #0 !re
   ret void
 }
 
+; Multi-element vector <2 x i8> (16 bits total) should NOT be folded.
+; CHECK-LABEL: @load_group_size_x_v2i8(
+; CHECK-NEXT:    [[IMPLICITARG_PTR:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; CHECK-NEXT:    [[GEP_GROUP_SIZE_X:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 12
+; CHECK-NEXT:    [[GROUP_SIZE_X:%.*]] = load <2 x i8>, ptr addrspace(4) [[GEP_GROUP_SIZE_X]], align 2
+; CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr inbounds <2 x i8>, ptr addrspace(1) [[OUT:%.*]], i64 0
+; CHECK-NEXT:    store <2 x i8> [[GROUP_SIZE_X]], ptr addrspace(1) [[OUT_PTR]], align 2
+; CHECK-NEXT:    ret void
+;
+define amdgpu_kernel void @load_group_size_x_v2i8(ptr addrspace(1) %out) #0 !reqd_work_group_size !0 {
+  %implicitarg.ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %gep.group.size.x = getelementptr inbounds i8, ptr addrspace(4) %implicitarg.ptr, i64 12
+  %group.size.x = load <2 x i8>, ptr addrspace(4) %gep.group.size.x, align 2
+  %out.ptr = getelementptr inbounds <2 x i8>, ptr addrspace(1) %out, i64 0
+  store <2 x i8> %group.size.x, ptr addrspace(1) %out.ptr, align 2
+  ret void
+}
+
+; Multi-element vector <4 x i4> (16 bits total) should NOT be folded.
+; CHECK-LABEL: @load_group_size_y_v4i4(
+; CHECK-NEXT:    [[IMPLICITARG_PTR:%.*]] = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+; CHECK-NEXT:    [[GEP_GROUP_SIZE_Y:%.*]] = getelementptr inbounds i8, ptr addrspace(4) [[IMPLICITARG_PTR]], i64 14
+; CHECK-NEXT:    [[GROUP_SIZE_Y:%.*]] = load <4 x i4>, ptr addrspace(4) [[GEP_GROUP_SIZE_Y]], align 2
+; CHECK-NEXT:    [[OUT_PTR:%.*]] = getelementptr inbounds <4 x i4>, ptr addrspace(1) [[OUT:%.*]], i64 0
+; CHECK-NEXT:    store <4 x i4> [[GROUP_SIZE_Y]], ptr addrspace(1) [[OUT_PTR]], align 2
+; CHECK-NEXT:    ret void
+;
+define amdgpu_kernel void @load_group_size_y_v4i4(ptr addrspace(1) %out) #0 !reqd_work_group_size !0 {
+  %implicitarg.ptr = tail call ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr()
+  %gep.group.size.y = getelementptr inbounds i8, ptr addrspace(4) %implicitarg.ptr, i64 14
+  %group.size.y = load <4 x i4>, ptr addrspace(4) %gep.group.size.y, align 2
+  %out.ptr = getelementptr inbounds <4 x i4>, ptr addrspace(1) %out, i64 0
+  store <4 x i4> %group.size.y, ptr addrspace(1) %out.ptr, align 2
+  ret void
+}
+
 declare ptr addrspace(4) @llvm.amdgcn.implicitarg.ptr() #1
 
 attributes #0 = { nounwind "uniform-work-group-size"="true" }
