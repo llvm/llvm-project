@@ -25,6 +25,9 @@ CIRGenCUDARuntime::~CIRGenCUDARuntime() {}
 RValue CIRGenCUDARuntime::emitCUDAKernelCallExpr(CIRGenFunction &cgf,
                                                  const CUDAKernelCallExpr *expr,
                                                  ReturnValueSlot retValue) {
+  if (cgm.getLangOpts().HIP)
+    cgm.errorNYI("HIP kernel Launch support");
+
   CIRGenBuilderTy &builder = cgm.getBuilder();
   mlir::Location loc =
       cgf.currSrcLoc ? cgf.currSrcLoc.value() : builder.getUnknownLoc();
