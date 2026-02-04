@@ -341,8 +341,8 @@ let hasSideEffects = 0, mayLoad = 1, mayStore = 0 in {
 // unit-stride load vd, (rs1), vm
 class VUnitStrideLoad<RISCVWidth width, string opcodestr>
     : RVInstVLU<0b000, width, LUMOPUnitStride,
-                (outs VR:$vd),
-                (ins GPRMemZeroOffset:$rs1, VMaskOp:$vm), opcodestr, "$vd, ${rs1}$vm">;
+                (outs VR:$vd), (ins GPRMemZeroOffset:$rs1, VMaskOp:$vm),
+                opcodestr, "$vd, $rs1$vm">;
 
 let vm = 1, RVVConstraint = NoConstraint in {
 // unit-stride whole register load vl<nf>r.v vd, (rs1)
@@ -364,7 +364,8 @@ class VUnitStrideMaskLoad<string opcodestr>
 // unit-stride fault-only-first load vd, (rs1), vm
 class VUnitStrideLoadFF<RISCVWidth width, string opcodestr>
     : RVInstVLU<0b000, width, LUMOPUnitStrideFF, (outs VR:$vd),
-                (ins GPRMemZeroOffset:$rs1, VMaskOp:$vm), opcodestr, "$vd, ${rs1}$vm">;
+                (ins GPRMemZeroOffset:$rs1, VMaskOp:$vm), opcodestr,
+                "$vd, $rs1$vm">;
 
 // strided load vd, (rs1), rs2, vm
 class VStridedLoad<RISCVWidth width, string opcodestr>
@@ -381,14 +382,16 @@ class VIndexedLoad<RISCVMOP mop, RISCVWidth width, string opcodestr>
 // unit-stride segment load vd, (rs1), vm
 class VUnitStrideSegmentLoad<int nfields, RISCVWidth width, string opcodestr>
     : RVInstVLU<!sub(nfields, 1), width, LUMOPUnitStride, (outs VR:$vd),
-                (ins GPRMemZeroOffset:$rs1, VMaskOp:$vm), opcodestr, "$vd, ${rs1}$vm"> {
+                (ins GPRMemZeroOffset:$rs1, VMaskOp:$vm), opcodestr,
+                "$vd, $rs1$vm"> {
   assert !and(!ge(nfields, 2), !le(nfields, 8)), "nfields must be 2-8";
 }
 
 // segment fault-only-first load vd, (rs1), vm
 class VUnitStrideSegmentLoadFF<int nfields, RISCVWidth width, string opcodestr>
     : RVInstVLU<!sub(nfields, 1), width, LUMOPUnitStrideFF, (outs VR:$vd),
-                (ins GPRMemZeroOffset:$rs1, VMaskOp:$vm), opcodestr, "$vd, ${rs1}$vm"> {
+                (ins GPRMemZeroOffset:$rs1, VMaskOp:$vm), opcodestr,
+                "$vd, $rs1$vm"> {
   assert !and(!ge(nfields, 2), !le(nfields, 8)), "nfields must be 2-8";
 }
 
@@ -415,7 +418,7 @@ let hasSideEffects = 0, mayLoad = 0, mayStore = 1 in {
 class VUnitStrideStore<RISCVWidth width, string opcodestr>
     : RVInstVSU<0b000, width, SUMOPUnitStride, (outs),
                 (ins VR:$vs3, GPRMemZeroOffset:$rs1, VMaskOp:$vm), opcodestr,
-                "$vs3, ${rs1}$vm">;
+                "$vs3, $rs1$vm">;
 
 let vm = 1 in {
 // vs<lmul>r.v vd, (rs1)
@@ -451,7 +454,7 @@ class VIndexedStore<RISCVMOP mop, RISCVWidth width, string opcodestr>
 class VUnitStrideSegmentStore<int nfields, RISCVWidth width, string opcodestr>
     : RVInstVSU<!sub(nfields, 1), width, SUMOPUnitStride, (outs),
                 (ins VR:$vs3, GPRMemZeroOffset:$rs1, VMaskOp:$vm), opcodestr,
-                "$vs3, ${rs1}$vm"> {
+                "$vs3, $rs1$vm"> {
   assert !and(!ge(nfields, 2), !le(nfields, 8)), "nfields must be 2-8";
 }
 
