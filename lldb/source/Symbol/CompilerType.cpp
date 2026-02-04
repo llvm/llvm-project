@@ -249,6 +249,11 @@ bool CompilerType::IsFloatingPointType(bool &is_complex) const {
   return false;
 }
 
+bool CompilerType::IsRealFloatingPointType() const {
+  bool is_complex = false;
+  return IsFloatingPointType(is_complex) && !is_complex && !IsVectorType();
+}
+
 bool CompilerType::IsDefined() const {
   if (IsValid())
     if (auto type_system_sp = GetTypeSystem())

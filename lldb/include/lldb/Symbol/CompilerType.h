@@ -154,7 +154,11 @@ public:
   bool IsBoundsSafetyBidiIndexable() const;
   /* TO_UPSTREAM(BoundsSafety) OFF */
 
+  /// Returns \c true for floating point types (including complex floats).
   bool IsFloatingPointType(bool &is_complex) const;
+
+  /// Returns \c true for non-complex float types.
+  bool IsRealFloatingPointType() const;
 
   bool IsFunctionType() const;
 
