@@ -747,18 +747,15 @@ static Constant *
 getConstantFloatVectorForArgType(LLVMContext &Ctx, AMDGPULibFunc::EType ArgType,
                                  const ArrayRef<APFloat> Values,
                                  const Type *Ty) {
+  Type *ElemTy = Ty->getScalarType();
+  const fltSemantics &FltSem = ElemTy->getFltSemantics();
+
   SmallVector<Constant *, 4> ConstValues;
   ConstValues.reserve(Values.size());
-  for (const APFloat &APF : Values) {
-    APFloat APFCopy = APF;
-    const auto &FltSem =
-        ArgType == AMDGPULibFunc::F16
-            ? APFloat::IEEEhalf()
-            : (ArgType == AMDGPULibFunc::F32 ? APFloat::IEEEsingle()
-                                             : APFloat::IEEEdouble());
+  for (APFloat APF : Values) {
     bool Unused;
-    APFCopy.convert(FltSem, APFloat::rmNearestTiesToEven, &Unused);
-    ConstValues.push_back(ConstantFP::get(Ty->getScalarType(), APFCopy));
+    APF.convert(FltSem, APFloat::rmNearestTiesToEven, &Unused);
+    ConstValues.push_back(ConstantFP::get(ElemTy, APF));
   }
   return ConstantVector::get(ConstValues);
 }
