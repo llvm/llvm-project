@@ -454,10 +454,10 @@ llvm.func @parallel_num_threads_too_many_dims(%lb : i32, %ub : i32) {
 
 // -----
 
-llvm.func @teams_thread_limit_multi_dim(%lb : i32, %ub : i32) {
-  // expected-error@below {{not yet implemented: Unhandled clause thread_limit with multi-dimensional values in omp.teams operation}}
+llvm.func @teams_thread_limit_too_many_dims(%lb : i32, %ub : i32) {
+  // expected-error@below {{not yet implemented: Unhandled clause thread_limit with more than 3 dimensions in omp.teams operation}}
   // expected-error@below {{LLVM Translation failed for operation: omp.teams}}
-  omp.teams thread_limit(%lb, %ub : i32, i32) {
+  omp.teams thread_limit(%lb, %ub, %lb, %ub : i32, i32, i32, i32) {
     omp.terminator
   }
   llvm.return
