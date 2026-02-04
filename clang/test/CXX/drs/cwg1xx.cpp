@@ -910,7 +910,7 @@ namespace cwg152 { // cwg152: 2.7
 
 namespace cwg154 { // cwg154: 2.7
   union { int a; };
-  // expected-error@-1 {{nonymous unions at namespace or global scope must be declared 'static'}}
+  // expected-error@-1 {{anonymous unions at namespace or global scope must be declared 'static'}}
   namespace {
     union { int b; };
   }
@@ -960,7 +960,7 @@ namespace cwg161 { // cwg161: 3.1
       f();
       sf();
       c.f();
-      // expected-error@-1 {{protected}}
+      // expected-error@-1 {{'f' is a protected member of 'cwg161::A'}}
       //   expected-note@#cwg161-f {{declared protected here}}
       c.sf();
       A::f();

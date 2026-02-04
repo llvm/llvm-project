@@ -1125,7 +1125,7 @@ static bool interp__builtin_atomic_lock_free(InterpState &S, CodePtr OpPC,
   if (BuiltinOp == Builtin::BI__atomic_always_lock_free)
     return returnBool(false);
 
-  return false;
+  return Invalid(S, OpPC);
 }
 
 /// bool __c11_atomic_is_lock_free(size_t)
