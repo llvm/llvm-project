@@ -2779,8 +2779,8 @@ void SIInsertWaitcnts::updateEventWaitcntAfter(MachineInstr &Inst,
     if (!SIInstrInfo::isLDSDMA(Inst) && FlatASCount > 1)
       ScoreBrackets->setPendingFlat();
   } else if (SIInstrInfo::isVMEM(Inst) &&
-             ((!AMDGPU::getMUBUFIsBufferInv(Inst.getOpcode()) ||
-               Inst.getOpcode() == AMDGPU::BUFFER_WBL2))) {
+             (!AMDGPU::getMUBUFIsBufferInv(Inst.getOpcode()) ||
+              Inst.getOpcode() == AMDGPU::BUFFER_WBL2)) {
     // BUFFER_WBL2 is included here because unlike invalidates, has to be
     // followed "S_WAITCNT vmcnt(0)" is needed after to ensure the writeback has
     // completed.
