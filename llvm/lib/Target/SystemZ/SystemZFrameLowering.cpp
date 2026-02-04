@@ -1153,6 +1153,10 @@ bool SystemZXPLINKFrameLowering::spillCalleeSavedRegisters(
   }
 
   // Spill FPRs to the stack in the normal TargetInstrInfo way
+  // Registers in CSI are in inverted order so registers with large
+  // numbers will be assigned to high address.
+  // Reverse the order at spilling and restoring so instructions on
+  // registers with small numbers are emitted first.
   for (const CalleeSavedInfo &I : llvm::reverse(CSI)) {
     MCRegister Reg = I.getReg();
     if (SystemZ::FP64BitRegClass.contains(Reg)) {
