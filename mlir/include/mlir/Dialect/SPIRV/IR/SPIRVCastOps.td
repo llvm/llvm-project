@@ -212,8 +212,8 @@ def SPIRV_FConvertOp : SPIRV_CastOp<"FConvert",
     #### Example:
 
     ```mlir
-    %1 = spirv.FConvertOp %0 : f32 to f64
-    %3 = spirv.FConvertOp %2 : vector<3xf32> to vector<3xf64>
+    %1 = spirv.FConvert %0 : f32 to f64
+    %3 = spirv.FConvert %2 : vector<3xf32> to vector<3xf64>
     ```
   }];
 }
@@ -240,8 +240,8 @@ def SPIRV_SConvertOp : SPIRV_CastOp<"SConvert",
     #### Example:
 
     ```mlir
-    %1 = spirv.SConvertOp %0 : i32 to i64
-    %3 = spirv.SConvertOp %2 : vector<3xi32> to vector<3xi64>
+    %1 = spirv.SConvert %0 : i32 to i64
+    %3 = spirv.SConvert %2 : vector<3xi32> to vector<3xi64>
     ```
   }];
 }
@@ -269,8 +269,8 @@ def SPIRV_UConvertOp : SPIRV_CastOp<"UConvert",
     #### Example:
 
     ```mlir
-    %1 = spirv.UConvertOp %0 : i32 to i64
-    %3 = spirv.UConvertOp %2 : vector<3xi32> to vector<3xi64>
+    %1 = spirv.UConvert %0 : i32 to i64
+    %3 = spirv.UConvert %2 : vector<3xi32> to vector<3xi64>
     ```
   }];
 }
@@ -390,7 +390,7 @@ def SPIRV_PtrCastToGenericOp : SPIRV_Op<"PtrCastToGeneric", [Pure]> {
     #### Example:
 
     ```mlir
-    %1 = spirv.PtrCastToGenericOp %0 : !spirv.ptr<f32, CrossWorkGroup> to
+    %1 = spirv.PtrCastToGeneric %0 : !spirv.ptr<f32, CrossWorkgroup> to
          !spirv.ptr<f32, Generic>
     ```
   }];
@@ -433,8 +433,8 @@ def SPIRV_GenericCastToPtrOp : SPIRV_Op<"GenericCastToPtr", [Pure]> {
     #### Example:
 
     ```mlir
-       %1 = spirv.GenericCastToPtrOp %0 : !spirv.ptr<f32, Generic> to
-       !spirv.ptr<f32, CrossWorkGroup>
+    %1 = spirv.GenericCastToPtr %0 : !spirv.ptr<f32, Generic> to
+         !spirv.ptr<f32, CrossWorkgroup>
     ```
   }];
 
@@ -482,8 +482,8 @@ def SPIRV_GenericCastToPtrExplicitOp : SPIRV_Op<"GenericCastToPtrExplicit", [Pur
     #### Example:
 
     ```mlir
-       %1 = spirv.GenericCastToPtrExplicitOp %0 : !spirv.ptr<f32, Generic> to
-       !spirv.ptr<f32, CrossWorkGroup>
+    %1 = spirv.GenericCastToPtrExplicit %0 : !spirv.ptr<f32, Generic> to
+         !spirv.ptr<f32, CrossWorkgroup>
     ```
   }];
 

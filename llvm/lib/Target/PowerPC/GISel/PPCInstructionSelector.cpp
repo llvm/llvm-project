@@ -304,16 +304,20 @@ std::optional<bool> PPCInstructionSelector::selectI64ImmDirect(MachineInstr &I,
 
   // 1-1) Patterns : {zeros}{15-bit valve}
   //                 {ones}{15-bit valve}
-  if (isInt<16>(Imm))
-    return BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::LI8), Reg)
+  if (isInt<16>(Imm)) {
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::LI8), Reg)
         .addImm(Imm)
         .constrainAllUses(TII, TRI, RBI);
+    return true;
+  }
   // 1-2) Patterns : {zeros}{15-bit valve}{16 zeros}
   //                 {ones}{15-bit valve}{16 zeros}
-  if (TZ > 15 && (LZ > 32 || LO > 32))
-    return BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::LIS8), Reg)
+  if (TZ > 15 && (LZ > 32 || LO > 32)) {
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::LIS8), Reg)
         .addImm((Imm >> 16) & 0xffff)
         .constrainAllUses(TII, TRI, RBI);
+    return true;
+  }
 
   // Following patterns use 2 instructions to materialize the Imm.
 
@@ -326,14 +330,14 @@ std::optional<bool> PPCInstructionSelector::selectI64ImmDirect(MachineInstr &I,
     uint64_t ImmHi16 = (Imm >> 16) & 0xffff;
     unsigned Opcode = ImmHi16 ? PPC::LIS8 : PPC::LI8;
     Register TmpReg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
-    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(Opcode), TmpReg)
-             .addImm((Imm >> 16) & 0xffff)
-             .constrainAllUses(TII, TRI, RBI))
-      return false;
-    return BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORI8), Reg)
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(Opcode), TmpReg)
+        .addImm((Imm >> 16) & 0xffff)
+        .constrainAllUses(TII, TRI, RBI);
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORI8), Reg)
         .addReg(TmpReg, RegState::Kill)
         .addImm(Imm & 0xffff)
         .constrainAllUses(TII, TRI, RBI);
+    return true;
   }
   // 2-2) Patterns : {zeros}{ones}{15-bit value}{zeros}
   //                 {zeros}{15-bit value}{zeros}
@@ -343,15 +347,15 @@ std::optional<bool> PPCInstructionSelector::selectI64ImmDirect(MachineInstr &I,
   // ones, and then use RLDIC to mask off the ones in both sides after rotation.
   if ((LZ + FO + TZ) > 48) {
     Register TmpReg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
-    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::LI8), TmpReg)
-             .addImm((Imm >> TZ) & 0xffff)
-             .constrainAllUses(TII, TRI, RBI))
-      return false;
-    return BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDIC), Reg)
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::LI8), TmpReg)
+        .addImm((Imm >> TZ) & 0xffff)
+        .constrainAllUses(TII, TRI, RBI);
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDIC), Reg)
         .addReg(TmpReg, RegState::Kill)
         .addImm(TZ)
         .addImm(LZ)
         .constrainAllUses(TII, TRI, RBI);
+    return true;
   }
   // 2-3) Pattern : {zeros}{15-bit value}{ones}
   // Shift right the Imm by (48 - LZ) bits to construct a negtive 16 bits value,
@@ -374,15 +378,15 @@ std::optional<bool> PPCInstructionSelector::selectI64ImmDirect(MachineInstr &I,
     // the Imm by a negative value.
     assert(LZ <= 32 && "Unexpected shift value.");
     Register TmpReg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
-    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::LI8), TmpReg)
-             .addImm(Imm >> (48 - LZ) & 0xffff)
-             .constrainAllUses(TII, TRI, RBI))
-      return false;
-    return BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDICL), Reg)
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::LI8), TmpReg)
+        .addImm(Imm >> (48 - LZ) & 0xffff)
+        .constrainAllUses(TII, TRI, RBI);
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDICL), Reg)
         .addReg(TmpReg, RegState::Kill)
         .addImm(48 - LZ)
         .addImm(LZ)
         .constrainAllUses(TII, TRI, RBI);
+    return true;
   }
   // 2-4) Patterns : {zeros}{ones}{15-bit value}{ones}
   //                 {ones}{15-bit value}{ones}
@@ -402,15 +406,15 @@ std::optional<bool> PPCInstructionSelector::selectI64ImmDirect(MachineInstr &I,
   // LI8: sext many leading zeros   RLDICL: rotate left TO, clear left LZ
   if ((LZ + FO + TO) > 48) {
     Register TmpReg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
-    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::LI8), TmpReg)
-             .addImm((Imm >> TO) & 0xffff)
-             .constrainAllUses(TII, TRI, RBI))
-      return false;
-    return BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDICL), Reg)
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::LI8), TmpReg)
+        .addImm((Imm >> TO) & 0xffff)
+        .constrainAllUses(TII, TRI, RBI);
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDICL), Reg)
         .addReg(TmpReg, RegState::Kill)
         .addImm(TO)
         .addImm(LZ)
         .constrainAllUses(TII, TRI, RBI);
+    return true;
   }
   // 2-5) Pattern : {32 zeros}{****}{0}{15-bit value}
   // If Hi32 is zero and the Lo16(in Lo32) can be presented as a positive 16 bit
@@ -418,14 +422,14 @@ std::optional<bool> PPCInstructionSelector::selectI64ImmDirect(MachineInstr &I,
   // Hi16(in Lo32).
   if (LZ == 32 && ((Lo32 & 0x8000) == 0)) {
     Register TmpReg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
-    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::LI8), TmpReg)
-             .addImm(Lo32 & 0xffff)
-             .constrainAllUses(TII, TRI, RBI))
-      return false;
-    return BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORIS8), Reg)
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::LI8), TmpReg)
+        .addImm(Lo32 & 0xffff)
+        .constrainAllUses(TII, TRI, RBI);
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORIS8), Reg)
         .addReg(TmpReg, RegState::Kill)
         .addImm(Lo32 >> 16)
         .constrainAllUses(TII, TRI, RBI);
+    return true;
   }
   // 2-6) Patterns : {******}{49 zeros}{******}
   //                 {******}{49 ones}{******}
@@ -449,15 +453,15 @@ std::optional<bool> PPCInstructionSelector::selectI64ImmDirect(MachineInstr &I,
       (Shift = findContiguousZerosAtLeast(~Imm, 49))) {
     uint64_t RotImm = APInt(64, Imm).rotr(Shift).getZExtValue();
     Register TmpReg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
-    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::LI8), TmpReg)
-             .addImm(RotImm & 0xffff)
-             .constrainAllUses(TII, TRI, RBI))
-      return false;
-    return BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDICL), Reg)
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::LI8), TmpReg)
+        .addImm(RotImm & 0xffff)
+        .constrainAllUses(TII, TRI, RBI);
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDICL), Reg)
         .addReg(TmpReg, RegState::Kill)
         .addImm(Shift)
         .addImm(0)
         .constrainAllUses(TII, TRI, RBI);
+    return true;
   }
 
   // Following patterns use 3 instructions to materialize the Imm.
@@ -474,20 +478,19 @@ std::optional<bool> PPCInstructionSelector::selectI64ImmDirect(MachineInstr &I,
     unsigned Opcode = ImmHi16 ? PPC::LIS8 : PPC::LI8;
     Register TmpReg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
     Register Tmp2Reg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
-    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(Opcode), TmpReg)
-             .addImm(ImmHi16)
-             .constrainAllUses(TII, TRI, RBI))
-      return false;
-    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORI8), Tmp2Reg)
-             .addReg(TmpReg, RegState::Kill)
-             .addImm((Imm >> TZ) & 0xffff)
-             .constrainAllUses(TII, TRI, RBI))
-      return false;
-    return BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDIC), Reg)
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(Opcode), TmpReg)
+        .addImm(ImmHi16)
+        .constrainAllUses(TII, TRI, RBI);
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORI8), Tmp2Reg)
+        .addReg(TmpReg, RegState::Kill)
+        .addImm((Imm >> TZ) & 0xffff)
+        .constrainAllUses(TII, TRI, RBI);
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDIC), Reg)
         .addReg(Tmp2Reg, RegState::Kill)
         .addImm(TZ)
         .addImm(LZ)
         .constrainAllUses(TII, TRI, RBI);
+    return true;
   }
   // 3-2) Pattern : {zeros}{31-bit value}{ones}
   // Shift right the Imm by (32 - LZ) bits to construct a negative 32 bits
@@ -501,20 +504,19 @@ std::optional<bool> PPCInstructionSelector::selectI64ImmDirect(MachineInstr &I,
     assert(LZ <= 32 && "Unexpected shift value.");
     Register TmpReg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
     Register Tmp2Reg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
-    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::LIS8), TmpReg)
-            .addImm((Imm >> (48 - LZ)) & 0xffff)
-            .constrainAllUses(TII, TRI, RBI))
-      return false;
-    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORI8), Tmp2Reg)
-             .addReg(TmpReg, RegState::Kill)
-             .addImm((Imm >> (32 - LZ)) & 0xffff)
-             .constrainAllUses(TII, TRI, RBI))
-      return false;
-    return BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDICL), Reg)
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::LIS8), TmpReg)
+        .addImm((Imm >> (48 - LZ)) & 0xffff)
+        .constrainAllUses(TII, TRI, RBI);
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORI8), Tmp2Reg)
+        .addReg(TmpReg, RegState::Kill)
+        .addImm((Imm >> (32 - LZ)) & 0xffff)
+        .constrainAllUses(TII, TRI, RBI);
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDICL), Reg)
         .addReg(Tmp2Reg, RegState::Kill)
         .addImm(32 - LZ)
         .addImm(LZ)
         .constrainAllUses(TII, TRI, RBI);
+    return true;
   }
   // 3-3) Patterns : {zeros}{ones}{31-bit value}{ones}
   //                 {ones}{31-bit value}{ones}
@@ -525,20 +527,19 @@ std::optional<bool> PPCInstructionSelector::selectI64ImmDirect(MachineInstr &I,
   if ((LZ + FO + TO) > 32) {
     Register TmpReg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
     Register Tmp2Reg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
-    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::LIS8), TmpReg)
-             .addImm((Imm >> (TO + 16)) & 0xffff)
-             .constrainAllUses(TII, TRI, RBI))
-      return false;
-    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORI8), Tmp2Reg)
-             .addReg(TmpReg, RegState::Kill)
-             .addImm((Imm >> TO) & 0xffff)
-             .constrainAllUses(TII, TRI, RBI))
-      return false;
-    return BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDICL), Reg)
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::LIS8), TmpReg)
+        .addImm((Imm >> (TO + 16)) & 0xffff)
+        .constrainAllUses(TII, TRI, RBI);
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORI8), Tmp2Reg)
+        .addReg(TmpReg, RegState::Kill)
+        .addImm((Imm >> TO) & 0xffff)
+        .constrainAllUses(TII, TRI, RBI);
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDICL), Reg)
         .addReg(Tmp2Reg, RegState::Kill)
         .addImm(TO)
         .addImm(LZ)
         .constrainAllUses(TII, TRI, RBI);
+    return true;
   }
   // 3-4) Patterns : High word == Low word
   if (Hi32 == Lo32) {
@@ -547,21 +548,20 @@ std::optional<bool> PPCInstructionSelector::selectI64ImmDirect(MachineInstr &I,
     unsigned Opcode = ImmHi16 ? PPC::LIS8 : PPC::LI8;
     Register TmpReg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
     Register Tmp2Reg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
-    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(Opcode), TmpReg)
-             .addImm(ImmHi16)
-             .constrainAllUses(TII, TRI, RBI))
-      return false;
-    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORI8), Tmp2Reg)
-             .addReg(TmpReg, RegState::Kill)
-             .addImm(Lo32 & 0xffff)
-             .constrainAllUses(TII, TRI, RBI))
-      return false;
-    return BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDIMI), Reg)
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(Opcode), TmpReg)
+        .addImm(ImmHi16)
+        .constrainAllUses(TII, TRI, RBI);
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORI8), Tmp2Reg)
+        .addReg(TmpReg, RegState::Kill)
+        .addImm(Lo32 & 0xffff)
+        .constrainAllUses(TII, TRI, RBI);
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDIMI), Reg)
         .addReg(Tmp2Reg)
         .addReg(Tmp2Reg, RegState::Kill)
         .addImm(32)
         .addImm(0)
         .constrainAllUses(TII, TRI, RBI);
+    return true;
   }
   // 3-5) Patterns : {******}{33 zeros}{******}
   //                 {******}{33 ones}{******}
@@ -577,20 +577,19 @@ std::optional<bool> PPCInstructionSelector::selectI64ImmDirect(MachineInstr &I,
     unsigned Opcode = ImmHi16 ? PPC::LIS8 : PPC::LI8;
     Register TmpReg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
     Register Tmp2Reg = MRI.createVirtualRegister(&PPC::G8RCRegClass);
-    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(Opcode), TmpReg)
-             .addImm(ImmHi16)
-             .constrainAllUses(TII, TRI, RBI))
-      return false;
-    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORI8), Tmp2Reg)
-             .addReg(TmpReg, RegState::Kill)
-             .addImm(RotImm & 0xffff)
-             .constrainAllUses(TII, TRI, RBI))
-      return false;
-    return BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDICL), Reg)
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(Opcode), TmpReg)
+        .addImm(ImmHi16)
+        .constrainAllUses(TII, TRI, RBI);
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORI8), Tmp2Reg)
+        .addReg(TmpReg, RegState::Kill)
+        .addImm(RotImm & 0xffff)
+        .constrainAllUses(TII, TRI, RBI);
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::RLDICL), Reg)
         .addReg(Tmp2Reg, RegState::Kill)
         .addImm(Shift)
         .addImm(0)
         .constrainAllUses(TII, TRI, RBI);
+    return true;
   }
 
   // If we end up here then no instructions were inserted.
@@ -630,19 +629,17 @@ bool PPCInstructionSelector::selectI64Imm(MachineInstr &I,
   if (Hi16) {
     Register TmpReg =
         Lo16 ? MRI.createVirtualRegister(&PPC::G8RCRegClass) : DstReg;
-    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORIS8), TmpReg)
-             .addReg(Reg, RegState::Kill)
-             .addImm(Hi16)
-             .constrainAllUses(TII, TRI, RBI))
-      return false;
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORIS8), TmpReg)
+        .addReg(Reg, RegState::Kill)
+        .addImm(Hi16)
+        .constrainAllUses(TII, TRI, RBI);
     Reg = TmpReg;
   }
   if (Lo16) {
-    if (!BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORI8), DstReg)
-             .addReg(Reg, RegState::Kill)
-             .addImm(Lo16)
-             .constrainAllUses(TII, TRI, RBI))
-      return false;
+    BuildMI(MBB, I, I.getDebugLoc(), TII.get(PPC::ORI8), DstReg)
+        .addReg(Reg, RegState::Kill)
+        .addImm(Lo16)
+        .constrainAllUses(TII, TRI, RBI);
   }
   I.eraseFromParent();
   return true;

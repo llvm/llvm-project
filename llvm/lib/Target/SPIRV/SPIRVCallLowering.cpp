@@ -47,12 +47,14 @@ bool SPIRVCallLowering::lowerReturn(MachineIRBuilder &MIRBuilder,
   // TODO: handle the case of multiple registers.
   if (VRegs.size() > 1)
     return false;
+
   if (Val) {
     const auto &STI = MIRBuilder.getMF().getSubtarget();
-    return MIRBuilder.buildInstr(SPIRV::OpReturnValue)
+    MIRBuilder.buildInstr(SPIRV::OpReturnValue)
         .addUse(VRegs[0])
         .constrainAllUses(MIRBuilder.getTII(), *STI.getRegisterInfo(),
                           *STI.getRegBankInfo());
+    return true;
   }
   MIRBuilder.buildInstr(SPIRV::OpReturn);
   return true;
@@ -698,6 +700,7 @@ bool SPIRVCallLowering::lowerCall(MachineIRBuilder &MIRBuilder,
     }
   }
 
-  return MIB.constrainAllUses(MIRBuilder.getTII(), *ST->getRegisterInfo(),
-                              *ST->getRegBankInfo());
+  MIB.constrainAllUses(MIRBuilder.getTII(), *ST->getRegisterInfo(),
+                       *ST->getRegBankInfo());
+  return true;
 }

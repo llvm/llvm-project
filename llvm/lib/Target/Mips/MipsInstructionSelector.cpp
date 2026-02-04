@@ -588,8 +588,7 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
 
       MachineInstrBuilder MTC1 =
           B.buildInstr(Mips::MTC1, {I.getOperand(0).getReg()}, {GPRReg});
-      if (!MTC1.constrainAllUses(TII, TRI, RBI))
-        return false;
+      MTC1.constrainAllUses(TII, TRI, RBI);
     }
     if (Size == 64) {
       Register GPRRegHigh = MRI.createVirtualRegister(&Mips::GPR32RegClass);
@@ -603,8 +602,7 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
       MachineInstrBuilder PairF64 = B.buildInstr(
           STI.isFP64bit() ? Mips::BuildPairF64_64 : Mips::BuildPairF64,
           {I.getOperand(0).getReg()}, {GPRRegLow, GPRRegHigh});
-      if (!PairF64.constrainAllUses(TII, TRI, RBI))
-        return false;
+      PairF64.constrainAllUses(TII, TRI, RBI);
     }
 
     I.eraseFromParent();
@@ -791,8 +789,7 @@ bool MipsInstructionSelector::select(MachineInstr &I) {
       else
         MIB.addUse(Instruction.RHS);
 
-      if (!MIB.constrainAllUses(TII, TRI, RBI))
-        return false;
+      MIB.constrainAllUses(TII, TRI, RBI);
     }
 
     I.eraseFromParent();

@@ -254,30 +254,29 @@ void x86::getX86TargetFeatures(const Driver &D, const llvm::Triple &Triple,
 
     if (IsNegative)
       Name = Name.substr(3);
+
     if (A->getOption().matches(options::OPT_mapxf) ||
-        A->getOption().matches(options::OPT_mno_apxf) ||
-        A->getOption().matches(options::OPT_mapx_features_EQ) ||
-        A->getOption().matches(options::OPT_mno_apx_features_EQ)) {
+        A->getOption().matches(options::OPT_mno_apxf)) {
+      if (IsNegative) {
+        Features.insert(Features.end(),
+                        {"-egpr", "-ndd", "-ccmp", "-nf", "-zu"});
+        if (!Triple.isOSWindows())
+          Features.insert(Features.end(), {"-push2pop2", "-ppx"});
+      } else {
+        Features.insert(Features.end(),
+                        {"+egpr", "+ndd", "+ccmp", "+nf", "+zu"});
+        if (!Triple.isOSWindows())
+          Features.insert(Features.end(), {"+push2pop2", "+ppx"});
 
-      if (Name == "apxf") {
-        if (IsNegative) {
-          Features.insert(Features.end(),
-                          {"-egpr", "-ndd", "-ccmp", "-nf", "-zu"});
-          if (!Triple.isOSWindows())
-            Features.insert(Features.end(), {"-push2pop2", "-ppx"});
-        } else {
-          Features.insert(Features.end(),
-                          {"+egpr", "+ndd", "+ccmp", "+nf", "+zu"});
-          if (!Triple.isOSWindows())
-            Features.insert(Features.end(), {"+push2pop2", "+ppx"});
-
-          if (Not64Bit)
-            D.Diag(diag::err_drv_unsupported_opt_for_target)
-                << StringRef("-mapxf") << Triple.getTriple();
-        }
-        continue;
+        if (Not64Bit)
+          D.Diag(diag::err_drv_unsupported_opt_for_target)
+              << StringRef("-mapxf") << Triple.getTriple();
       }
+      continue;
+    }
 
+    if (A->getOption().matches(options::OPT_mapx_features_EQ) ||
+        A->getOption().matches(options::OPT_mno_apx_features_EQ)) {
       if (Not64Bit && !IsNegative)
         D.Diag(diag::err_drv_unsupported_opt_for_target)
             << StringRef("-mapx-features=") << Triple.getTriple();
