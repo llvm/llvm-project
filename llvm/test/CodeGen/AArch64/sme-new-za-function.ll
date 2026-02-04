@@ -51,7 +51,6 @@ define void @private_za() "aarch64_new_za" {
 }
 
 ; Note: This test must run at -O0 as otherwise the multiple exits are optimized out.
-; TODO: We should be able to omit the ZA save here (as this function does not use ZA).
 define i32 @private_za_multiple_exit(i32 %a, i32 %b, i64 %cond) "aarch64_new_za" {
 ; CHECK-SDAG-LABEL: private_za_multiple_exit:
 ; CHECK-SDAG:       // %bb.0: // %prelude
@@ -99,33 +98,21 @@ define i32 @private_za_multiple_exit(i32 %a, i32 %b, i64 %cond) "aarch64_new_za"
 ; CHECK:       // %bb.0: // %entry
 ; CHECK-NEXT:    sub sp, sp, #16
 ; CHECK-NEXT:    .cfi_def_cfa_offset 16
-; CHECK-NEXT:    mrs x8, TPIDR2_EL0
-; CHECK-NEXT:    cbnz x8, .LBB1_1
-; CHECK-NEXT:    b .LBB1_2
-; CHECK-NEXT:  .LBB1_1: // %entry
-; CHECK-NEXT:    bl __arm_tpidr2_save
-; CHECK-NEXT:    msr TPIDR2_EL0, xzr
-; CHECK-NEXT:    zero {za}
-; CHECK-NEXT:    b .LBB1_2
-; CHECK-NEXT:  .LBB1_2: // %entry
-; CHECK-NEXT:    smstart za
 ; CHECK-NEXT:    str w1, [sp, #8] // 4-byte Spill
 ; CHECK-NEXT:    str w0, [sp, #12] // 4-byte Spill
 ; CHECK-NEXT:    subs x8, x2, #1
-; CHECK-NEXT:    b.ne .LBB1_4
-; CHECK-NEXT:    b .LBB1_3
-; CHECK-NEXT:  .LBB1_3: // %if.else
+; CHECK-NEXT:    b.ne .LBB1_2
+; CHECK-NEXT:    b .LBB1_1
+; CHECK-NEXT:  .LBB1_1: // %if.else
 ; CHECK-NEXT:    ldr w8, [sp, #12] // 4-byte Reload
 ; CHECK-NEXT:    ldr w9, [sp, #8] // 4-byte Reload
 ; CHECK-NEXT:    add w0, w8, w9
-; CHECK-NEXT:    smstop za
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
-; CHECK-NEXT:  .LBB1_4: // %if.end
+; CHECK-NEXT:  .LBB1_2: // %if.end
 ; CHECK-NEXT:    ldr w8, [sp, #12] // 4-byte Reload
 ; CHECK-NEXT:    ldr w9, [sp, #8] // 4-byte Reload
 ; CHECK-NEXT:    subs w0, w8, w9
-; CHECK-NEXT:    smstop za
 ; CHECK-NEXT:    add sp, sp, #16
 ; CHECK-NEXT:    ret
 entry:
