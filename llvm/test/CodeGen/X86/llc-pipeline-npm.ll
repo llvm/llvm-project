@@ -103,6 +103,7 @@
 ; O2-NEXT: stack-protector
 ; O2-NEXT: verify)
 ; O2-NEXT: function(machine-function(x86-isel
+; O2-NEXT: x86-cleanup-local-dynamic-tls
 ; O2-NEXT: x86-argument-stack-slot
 ; O2-NEXT: finalize-isel
 ; O2-NEXT: early-tailduplication

@@ -80,6 +80,7 @@ extern "C" LLVM_C_ABI void LLVMInitializeX86Target() {
   initializeX86FPStackifierLegacyPass(PR);
   initializeX86FixupSetCCLegacyPass(PR);
   initializeX86CallFrameOptimizationLegacyPass(PR);
+  initializeX86CleanupLocalDynamicTLSLegacyPass(PR);
   initializeX86CmovConversionLegacyPass(PR);
   initializeX86TileConfigLegacyPass(PR);
   initializeX86FastPreTileConfigLegacyPass(PR);
@@ -460,7 +461,7 @@ bool X86PassConfig::addInstSelector() {
   // For ELF, cleanup any local-dynamic TLS accesses.
   if (TM->getTargetTriple().isOSBinFormatELF() &&
       getOptLevel() != CodeGenOptLevel::None)
-    addPass(createCleanupLocalDynamicTLSPass());
+    addPass(createCleanupLocalDynamicTLSLegacyPass());
 
   addPass(createX86GlobalBaseRegPass());
   addPass(createX86ArgumentStackSlotLegacyPass());
