@@ -493,6 +493,51 @@ Instruction *InstCombinerImpl::foldSelectOpOp(SelectInst &SI, Instruction *TI,
   return nullptr;
 }
 
+/// This transforms patterns of the form:
+///   select cond, intrinsic(x, ...), intrinsic(y, ...)
+/// into:
+///   intrinsic(select cond, x, y, ...)
+Instruction *InstCombinerImpl::foldSelectIntrinsic(SelectInst &SI) {
+  auto *LHSIntrinsic = dyn_cast<IntrinsicInst>(SI.getTrueValue());
+  if (!LHSIntrinsic)
+    return nullptr;
+  auto *RHSIntrinsic = dyn_cast<IntrinsicInst>(SI.getFalseValue());
+  if (!RHSIntrinsic ||
+      LHSIntrinsic->getIntrinsicID() != RHSIntrinsic->getIntrinsicID() ||
+      !LHSIntrinsic->hasOneUse() || !RHSIntrinsic->hasOneUse())
+    return nullptr;
+
+  const Intrinsic::ID IID = LHSIntrinsic->getIntrinsicID();
+  switch (IID) {
+  case Intrinsic::abs:
+  case Intrinsic::cttz:
+  case Intrinsic::ctlz: {
+    auto *TZ = cast<ConstantInt>(LHSIntrinsic->getArgOperand(1));
+    auto *FZ = cast<ConstantInt>(RHSIntrinsic->getArgOperand(1));
+
+    Value *TV = LHSIntrinsic->getArgOperand(0);
+    Value *FV = RHSIntrinsic->getArgOperand(0);
+
+    Value *NewSel = Builder.CreateSelect(SI.getCondition(), TV, FV, "", &SI);
+    Value *NewPoisonFlag = Builder.CreateAnd(TZ, FZ);
+    Value *NewCall = Builder.CreateBinaryIntrinsic(IID, NewSel, NewPoisonFlag);
+
+    return replaceInstUsesWith(SI, NewCall);
+  }
+  case Intrinsic::ctpop: {
+    Value *TV = LHSIntrinsic->getArgOperand(0);
+    Value *FV = RHSIntrinsic->getArgOperand(0);
+
+    Value *NewSel = Builder.CreateSelect(SI.getCondition(), TV, FV, "", &SI);
+    Value *NewCall = Builder.CreateUnaryIntrinsic(IID, NewSel);
+
+    return replaceInstUsesWith(SI, NewCall);
+  }
+  default:
+    return nullptr;
+  }
+}
+
 static bool isSelect01(const APInt &C1I, const APInt &C2I) {
   if (!C1I.isZero() && !C2I.isZero()) // One side must be zero.
     return false;
@@ -4484,6 +4529,9 @@ Instruction *InstCombinerImpl::visitSelectInst(SelectInst &SI) {
   if (TI && FI && TI->getOpcode() == FI->getOpcode())
     if (Instruction *IV = foldSelectOpOp(SI, TI, FI))
       return IV;
+
+  if (Instruction *I = foldSelectIntrinsic(SI))
+    return I;
 
   if (Instruction *I = foldSelectExtConst(SI))
     return I;
