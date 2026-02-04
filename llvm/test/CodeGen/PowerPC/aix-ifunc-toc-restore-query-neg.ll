@@ -1,3 +1,4 @@
+; REQUIRES: target=powerpc{{.*}}
 ; This testcase is for testing the negative return values of the
 ; TOCRestoreNeededForCallToImplementation query.
 
