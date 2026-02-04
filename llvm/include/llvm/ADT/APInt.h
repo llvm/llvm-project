@@ -1923,6 +1923,10 @@ public:
     return tcAddPart(dst, 1, parts);
   }
 
+  /// Unsigned comparison. Returns -1, 0, or 1 if this APInt is less than, equal
+  /// to, or greater than RHS.
+  LLVM_ABI int compare(const APInt &RHS) const LLVM_READONLY;
+
   /// Decrement a bignum in-place.  Return the borrow flag.
   static WordType tcDecrement(WordType *dst, unsigned parts) {
     return tcSubtractPart(dst, 1, parts);
@@ -2105,10 +2109,6 @@ private:
 
   /// out-of-line slow case for operator^=.
   LLVM_ABI void xorAssignSlowCase(const APInt &RHS);
-
-  /// Unsigned comparison. Returns -1, 0, or 1 if this APInt is less than, equal
-  /// to, or greater than RHS.
-  LLVM_ABI int compare(const APInt &RHS) const LLVM_READONLY;
 
   /// Signed comparison. Returns -1, 0, or 1 if this APInt is less than, equal
   /// to, or greater than RHS.
