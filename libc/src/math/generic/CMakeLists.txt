@@ -2023,12 +2023,7 @@ add_entrypoint_object(
   HDRS
     ../log2bf16.h
   DEPENDS
-    libc.src.__support.common
-    libc.src.__support.FPUtil.bfloat16
-    libc.src.__support.FPUtil.cast
-    libc.src.__support.FPUtil.fp_bits
-    libc.src.__support.macros.config
-    libc.src.__support.macros.optimization
+    libc.src.__support.math.log2bf16
 )
 
 add_entrypoint_object(
