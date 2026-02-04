@@ -9,6 +9,7 @@
 #include "lldb/Core/Debugger.h"
 #include "lldb/Core/Module.h"
 #include "lldb/Core/PluginManager.h"
+#include "lldb/Interpreter/CommandInterpreter.h"
 #include "lldb/Symbol/Type.h"
 #include "lldb/Target/DynamicLoader.h"
 #include "lldb/Utility/StreamString.h"
@@ -286,6 +287,12 @@ lldb::addr_t ProcessFreeBSDKernel::FindSymbol(const char *name) {
 }
 
 void ProcessFreeBSDKernel::ShowCrashInfo() {
+  Target &target = GetTarget();
+  Debugger &debugger = target.GetDebugger();
+
+  if (!debugger.GetCommandInterpreter().IsInteractive())
+    return;
+
   Status error;
 
   // Find msgbufp symbol (pointer to message buffer)
@@ -301,7 +308,7 @@ void ProcessFreeBSDKernel::ShowCrashInfo() {
   // Get the type information for struct msgbuf from DWARF
   TypeQuery query("msgbuf");
   TypeResults results;
-  GetTarget().GetImages().FindTypes(nullptr, query, results);
+  target.GetImages().FindTypes(nullptr, query, results);
 
   uint64_t offset_msg_ptr = 0;
   uint64_t offset_msg_size = 0;
@@ -376,26 +383,42 @@ void ProcessFreeBSDKernel::ShowCrashInfo() {
     return;
 
   // Print crash info at once using stream
-  lldb::StreamSP stream_sp = GetTarget().GetDebugger().GetAsyncOutputStream();
+  lldb::StreamSP stream_sp = debugger.GetAsyncOutputStream();
   if (!stream_sp)
     return;
 
-  stream_sp->Printf("\nUnread portion of the kernel message buffer:\n");
+  stream_sp->PutCString("\nUnread portion of the kernel message buffer:\n");
 
-  uint8_t c = 0;
-  while (rseq_pos != wseq_pos) {
-    size_t bytes_read = ReadMemory(bufp + rseq_pos, &c, 1, error);
-    if (!error.Success() || bytes_read != 1)
-      break;
+  // Read ring buffer in at most two chunks
+  if (rseq_pos < wseq_pos) {
+    // No wrap: read from rseq_pos to wseq_pos
+    size_t len = wseq_pos - rseq_pos;
+    std::string buf(len, '\0');
+    size_t bytes_read = ReadMemory(bufp + rseq_pos, &buf[0], len, error);
+    if (error.Success() && bytes_read > 0) {
+      buf.resize(bytes_read);
+      *stream_sp << buf;
+    }
+  } else {
+    // Wrap around: read from rseq_pos to end, then from start to wseq_pos
+    size_t len1 = size - rseq_pos;
+    std::string buf1(len1, '\0');
+    size_t bytes_read1 = ReadMemory(bufp + rseq_pos, &buf1[0], len1, error);
+    if (error.Success() && bytes_read1 > 0) {
+      buf1.resize(bytes_read1);
+      *stream_sp << buf1;
+    }
 
-    stream_sp->PutChar(c);
-    rseq_pos++;
-    if (rseq_pos >= size)
-      rseq_pos = 0;
+    if (wseq_pos > 0) {
+      std::string buf2(wseq_pos, '\0');
+      size_t bytes_read2 = ReadMemory(bufp, &buf2[0], wseq_pos, error);
+      if (error.Success() && bytes_read2 > 0) {
+        buf2.resize(bytes_read2);
+        *stream_sp << buf2;
+      }
+    }
   }
 
-  if (c != '\n')
-    stream_sp->PutChar('\n');
   stream_sp->PutChar('\n');
   stream_sp->Flush();
 }
