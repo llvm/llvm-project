@@ -29,10 +29,12 @@ using namespace llvm;
 SPIRVTargetLowering::SPIRVTargetLowering(const TargetMachine &TM,
                                          const SPIRVSubtarget &ST)
     : TargetLowering(TM, ST), STI(ST) {
-  // Avoid AtomicExpand treating all atomics as unsupported and lowering them
-  // to libcalls.
+  // Even with SPV_ALTERA_arbitrary_precision_integers enabled, atomic sizes are
+  // limited by atomicrmw xchg operation, which only supports operand up to 64
+  // bits wide, as defined in SPIR-V legalizer. Currently, spirv-val doesn't
+  // consider 128-bit OpTypeInt as valid either.
   setMaxAtomicSizeInBitsSupported(64);
-  setMinCmpXchgSizeInBits(32);
+  setMinCmpXchgSizeInBits(8);
 }
 
 // Returns true of the types logically match, as defined in
