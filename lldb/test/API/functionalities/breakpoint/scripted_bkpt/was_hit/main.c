@@ -2,9 +2,7 @@
 
 int g_change_me = 0;
 
-int change_him() {
-  return ++g_change_me;
-}
+int change_him() { return ++g_change_me; }
 
 int stop_symbol() {
   static int s_cnt = 0;

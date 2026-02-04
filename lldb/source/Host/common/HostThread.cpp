@@ -46,7 +46,8 @@ bool HostThread::EqualsThread(lldb::thread_t thread) const {
 }
 
 bool HostThread::EqualsThread(const HostThread &thread) const {
-  return m_native_thread->EqualsThread(thread.GetNativeThread().GetSystemHandle());
+  return m_native_thread->EqualsThread(
+      thread.GetNativeThread().GetSystemHandle());
 }
 
 bool HostThread::HasThread() const {

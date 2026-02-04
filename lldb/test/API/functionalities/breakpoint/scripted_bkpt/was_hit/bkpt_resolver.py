@@ -47,7 +47,7 @@ class FacadeExample:
         options = lldb.SBExpressionOptions()
         options.SetStopOthers(True)
         options.SetTryAllThreads(False)
-        
+
         result = frame.EvaluateExpression("change_him()", options)
         if not result.error.success:
             print("****** I got an error running the expression")
