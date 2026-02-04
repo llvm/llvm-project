@@ -23,7 +23,6 @@ public:
   bool evalCall(const CallEvent &Call, CheckerContext &C) const;
 
 private:
-  using CDM = CallDescription::Mode;
   const CallDescriptionSet ModeledFunctions{
       {CDM::SimpleFunc, {"std", "sort"}},
       {CDM::SimpleFunc, {"std", "stable_sort"}},
