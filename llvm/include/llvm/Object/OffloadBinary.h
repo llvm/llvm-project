@@ -55,7 +55,7 @@ enum ImageKind : uint16_t {
 /// Flags associated with the Entry.
 enum OffloadEntryFlags : uint32_t {
   OIF_None = 0,
-  // Entry doesn't contain image. Used to keep metadata only entries.
+  // Entry doesn't contain an image. Used to keep metadata only entries.
   OIF_Metadata = (1 << 0),
 };
 
@@ -164,22 +164,24 @@ private:
                 const Entry *TheEntry, const uint64_t Index = 0)
       : Binary(Binary::ID_Offload, Source), Buffer(Source.getBufferStart()),
         TheHeader(TheHeader), TheEntry(TheEntry), Index(Index) {
-    if (TheHeader->Version == 1) {
-      const StringEntryV1 *StringMapBegin =
-          reinterpret_cast<const StringEntryV1 *>(
-              &Buffer[TheEntry->StringOffset]);
-      for (uint64_t I = 0, E = TheEntry->NumStrings; I != E; ++I) {
-        StringRef Key = &Buffer[StringMapBegin[I].KeyOffset];
-        StringData[Key] = &Buffer[StringMapBegin[I].ValueOffset];
-      }
-      return;
-    }
-    const StringEntry *StringMapBegin =
-        reinterpret_cast<const StringEntry *>(&Buffer[TheEntry->StringOffset]);
+    // StringEntryV1 and StringEntry have ABI compatible Key/ValueOffset fields,
+    // but different sizes, so we need to manually calculate offset.
+    const char *StringMapBegin = &Buffer[TheEntry->StringOffset];
+    const size_t StringEntrySize =
+        TheHeader->Version == 1 ? sizeof(StringEntryV1) : sizeof(StringEntry);
     for (uint64_t I = 0, E = TheEntry->NumStrings; I != E; ++I) {
-      StringRef Key = &Buffer[StringMapBegin[I].KeyOffset];
-      StringData[Key] = StringRef(&Buffer[StringMapBegin[I].ValueOffset],
-                                  StringMapBegin[I].ValueSize);
+      const char *StringEntryPtr = StringMapBegin + I * StringEntrySize;
+      const StringEntryV1 *EntryV1 =
+          reinterpret_cast<const StringEntryV1 *>(StringEntryPtr);
+      StringRef Key = &Buffer[EntryV1->KeyOffset];
+      if (TheHeader->Version == 1) {
+        StringData[Key] = &Buffer[EntryV1->ValueOffset];
+      } else {
+        const StringEntry *Entry =
+            reinterpret_cast<const StringEntry *>(StringEntryPtr);
+        StringData[Key] =
+            StringRef(&Buffer[Entry->ValueOffset], Entry->ValueSize);
+      }
     }
   }
 
