@@ -1076,7 +1076,6 @@ bool GCNTTIImpl::isAlwaysUniform(const Value *V) const {
   using namespace llvm::PatternMatch;
   uint64_t C;
   auto MatchTidXCall = m_Intrinsic<Intrinsic::amdgcn_workitem_id_x>();
-  ;
   auto MaybeMaskedTidX =
       m_CombineOr(m_c_And(MatchTidXCall, m_Value()), MatchTidXCall);
   auto MaybeCastTidX = m_CastOrSelf(MaybeMaskedTidX);

@@ -143,13 +143,16 @@ define amdgpu_kernel void @workitem_id_x_masked(ptr %o) #3 !reqd_work_group_size
 
 ; CHECK-LABEL: UniformityInfo for function 'workitem_id_x_zext_masked'
 ; CHECK: DIVERGENT: %id.x = call i32 @llvm.amdgcn.workitem.id.x()
-; CHECK: DIVERGENT: %id.x.zext = zext i32 %id.x to i64
+; CHECK: DIVERGENT: %id.x.zext = zext nneg i32 %id.x to i64
+; CHECK: DIVERGENT: %my.out = getelementptr i64, ptr %o, i64 %id.x.zext
 ; CHECK-NOT: DIVERGENT
+; CHECK: DIVERGENT: store i64 %id.sg.shl.6, ptr %my.out
 define amdgpu_kernel void @workitem_id_x_zext_masked(ptr %o) #3 !reqd_work_group_size !5 {
   %id.x = call i32 @llvm.amdgcn.workitem.id.x()
-  %id.x.zext = zext i32 %id.x to i64
+  %id.x.zext = zext nneg i32 %id.x to i64
+  %my.out = getelementptr i64, ptr %o, i64 %id.x.zext
   %id.sg.shl.6 = and i64 %id.x.zext, 192
-  store i64 %id.sg.shl.6, ptr %o
+  store i64 %id.sg.shl.6, ptr %my.out
   ret void
 }
 
@@ -167,15 +170,20 @@ define amdgpu_kernel void @workitem_id_x_div_wavefront_size_masked(ptr %o) #3 !r
 
 ; CHECK-LABEL: UniformityInfo for function 'workitem_id_x_div_wavefront_size_trunc_masked'
 ; CHECK: DIVERGENT: %id.x = call i32 @llvm.amdgcn.workitem.id.x()
-; CHECK: DIVERGENT: %id.x.trunc = trunc i32 %id.x to i16
+; CHECK: DIVERGENT: %id.x.trunc = trunc nuw nsw i32 %id.x to i16
 ; CHECK: DIVERGENT: %id.x.masked = and i16 %id.x.trunc, 127
+; CHECK: DIVERGENT: %offset = zext nneg i16 %id.x.masked to i64
+; CHECK: DIVERGENT: %my.out = getelementptr i16, ptr %o, i64 %offset
 ; CHECK-NOT: DIVERGENT
+; CHECK: DIVERGENT: store i16 %id.sg, ptr %my.out
 define amdgpu_kernel void @workitem_id_x_div_wavefront_size_trunc_masked(ptr %o) #3 !reqd_work_group_size !5 {
   %id.x = call i32 @llvm.amdgcn.workitem.id.x()
-  %id.x.trunc = trunc i32 %id.x to i16
+  %id.x.trunc = trunc nuw nsw i32 %id.x to i16
   %id.x.masked = and i16 %id.x.trunc, 127
+  %offset = zext nneg i16 %id.x.masked to i64
+  %my.out = getelementptr i16, ptr %o, i64 %offset
   %id.sg = lshr i16 %id.x.masked, 6
-  store i16 %id.sg, ptr %o
+  store i16 %id.sg, ptr %my.out
   ret void
 }
 
