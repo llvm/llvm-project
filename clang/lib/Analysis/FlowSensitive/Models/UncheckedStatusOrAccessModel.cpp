@@ -238,18 +238,18 @@ static auto possiblyReferencedStatusOrType() {
   return anyOf(statusOrType(), referenceType(pointee(statusOrType())));
 }
 
-static auto isConstStatusOrAccessorMemberCall() {
+static auto isConstAccessorMemberCall() {
   using namespace ::clang::ast_matchers; // NOLINT: Too many names
-  return cxxMemberCallExpr(callee(
-      cxxMethodDecl(parameterCountIs(0), isConst(),
-                    returns(qualType(possiblyReferencedStatusOrType())))));
+  return cxxMemberCallExpr(callee(cxxMethodDecl(
+      parameterCountIs(0), isConst(),
+      returns(hasCanonicalType(anyOf(referenceType(), recordType()))))));
 }
 
-static auto isConstStatusOrAccessorMemberOperatorCall() {
+static auto isConstAccessorMemberOperatorCall() {
   using namespace ::clang::ast_matchers; // NOLINT: Too many names
-  return cxxOperatorCallExpr(
-      callee(cxxMethodDecl(parameterCountIs(0), isConst(),
-                           returns(possiblyReferencedStatusOrType()))));
+  return cxxOperatorCallExpr(callee(cxxMethodDecl(
+      parameterCountIs(0), isConst(),
+      returns(hasCanonicalType(anyOf(referenceType(), recordType()))))));
 }
 
 static auto isConstPointerAccessorMemberCall() {
@@ -872,10 +872,9 @@ static void transferStatusOrReturningCall(const CallExpr *Expr,
     initializeStatusOr(*StatusOrLoc, State.Env);
 }
 
-static bool doHandleConstStatusOrAccessorMemberCall(
+static bool doHandleConstAccessorMemberCall(
     const CallExpr *Expr, RecordStorageLocation *RecordLoc,
     const MatchFinder::MatchResult &Result, LatticeTransferState &State) {
-  assert(isStatusOrType(Expr->getType()));
   if (RecordLoc == nullptr)
     return false;
   const FunctionDecl *DirectCallee = Expr->getDirectCallee();
@@ -884,7 +883,8 @@ static bool doHandleConstStatusOrAccessorMemberCall(
   StorageLocation &Loc =
       State.Lattice.getOrCreateConstMethodReturnStorageLocation(
           *RecordLoc, DirectCallee, State.Env, [&](StorageLocation &Loc) {
-            initializeStatusOr(cast<RecordStorageLocation>(Loc), State.Env);
+            if (isStatusOrType(Expr->getType()))
+              initializeStatusOr(cast<RecordStorageLocation>(Loc), State.Env);
           });
   if (Expr->isPRValue()) {
     auto &ResultLoc = State.Env.getResultObjectLocation(*Expr);
@@ -895,10 +895,11 @@ static bool doHandleConstStatusOrAccessorMemberCall(
   return true;
 }
 
-static void handleConstStatusOrAccessorMemberCall(
+static void handleConstAccessorMemberCall(
     const CallExpr *Expr, RecordStorageLocation *RecordLoc,
     const MatchFinder::MatchResult &Result, LatticeTransferState &State) {
-  if (!doHandleConstStatusOrAccessorMemberCall(Expr, RecordLoc, Result, State))
+  if (!doHandleConstAccessorMemberCall(Expr, RecordLoc, Result, State) &&
+      isStatusOrType(Expr->getType()))
     transferStatusOrReturningCall(Expr, State);
 }
 static void handleConstPointerAccessorMemberCall(
@@ -912,19 +913,26 @@ static void handleConstPointerAccessorMemberCall(
 }
 
 static void
-transferConstStatusOrAccessorMemberCall(const CXXMemberCallExpr *Expr,
-                                        const MatchFinder::MatchResult &Result,
-                                        LatticeTransferState &State) {
-  handleConstStatusOrAccessorMemberCall(
+transferConstAccessorMemberCall(const CXXMemberCallExpr *Expr,
+                                const MatchFinder::MatchResult &Result,
+                                LatticeTransferState &State) {
+  auto Type = Expr->getType();
+  if (!Type->isRecordType() && !Type->isReferenceType())
+    return;
+  handleConstAccessorMemberCall(
       Expr, getImplicitObjectLocation(*Expr, State.Env), Result, State);
 }
 
-static void transferConstStatusOrAccessorMemberOperatorCall(
-    const CXXOperatorCallExpr *Expr, const MatchFinder::MatchResult &Result,
-    LatticeTransferState &State) {
+static void
+transferConstAccessorMemberOperatorCall(const CXXOperatorCallExpr *Expr,
+                                        const MatchFinder::MatchResult &Result,
+                                        LatticeTransferState &State) {
+  auto Type = Expr->getArg(0)->getType();
+  if (!Type->isRecordType() && !Type->isReferenceType())
+    return;
   auto *RecordLoc = cast_or_null<RecordStorageLocation>(
       State.Env.getStorageLocation(*Expr->getArg(0)));
-  handleConstStatusOrAccessorMemberCall(Expr, RecordLoc, Result, State);
+  handleConstAccessorMemberCall(Expr, RecordLoc, Result, State);
 }
 
 static void
@@ -1264,11 +1272,11 @@ buildTransferMatchSwitch(ASTContext &Ctx,
                 [](StorageLocation &Loc) {});
           })
       // const accessor calls
-      .CaseOfCFGStmt<CXXMemberCallExpr>(isConstStatusOrAccessorMemberCall(),
-                                        transferConstStatusOrAccessorMemberCall)
+      .CaseOfCFGStmt<CXXMemberCallExpr>(isConstAccessorMemberCall(),
+                                        transferConstAccessorMemberCall)
       .CaseOfCFGStmt<CXXOperatorCallExpr>(
-          isConstStatusOrAccessorMemberOperatorCall(),
-          transferConstStatusOrAccessorMemberOperatorCall)
+          isConstAccessorMemberOperatorCall(),
+          transferConstAccessorMemberOperatorCall)
       .CaseOfCFGStmt<CXXMemberCallExpr>(isConstPointerAccessorMemberCall(),
                                         transferConstPointerAccessorMemberCall)
       .CaseOfCFGStmt<CXXOperatorCallExpr>(
