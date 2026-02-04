@@ -2,6 +2,7 @@
 ; TOCRestoreNeededForCallToImplementation query, specifically the type of
 ; functions that are considered DSO local on AIX.
 
+; REQUIRES: asserts
 ; RUN: llc < %s -mtriple=powerpc64-ibm-aix-xcoff --function-sections  -filetype=obj -o /dev/null -debug-only=asmprinter 2>&1 | FileCheck %s
 ; RUN: llc < %s -mtriple=powerpc-ibm-aix-xcoff --function-sections  -filetype=obj -o /dev/null -debug-only=asmprinter 2>&1 | FileCheck %s
 ; RUN: llc < %s -mtriple=powerpc64-ibm-aix-xcoff -ifunc-local-if-proven=1 -o /dev/null -debug-only=asmprinter 2>&1 | FileCheck %s
