@@ -99,54 +99,13 @@ RISCVSubtarget::initializeSubtargetDependencies(const Triple &TT, StringRef CPU,
 
   ParseSubtargetFeatures(CPU, TuneCPU, FS);
 
-  // Add Zcd if C and D are enabled.
-  if (!HasStdExtZcd && HasStdExtC && HasStdExtD) {
-    ToggleFeature(RISCV::FeatureStdExtZcd);
-    HasStdExtZcd = true;
-  }
+  RISCV::updateCZceFeatureImplications(*this);
 
-  // Add Zcf if F and C or Zce are enabled on RV32.
-  if (!HasStdExtZcf && !Is64Bit && HasStdExtF && (HasStdExtC || HasStdExtZce)) {
-    ToggleFeature(RISCV::FeatureStdExtZcf);
-    HasStdExtZcf = true;
-  }
-
-  // Add C if Zca is enabled and the conditions are met.
-  // This follows the RISC-V spec rules for MISA.C and matches GCC behavior
-  // (PR119122). The rule is:
-  // For RV32:
-  //   - No F and no D: Zca alone implies C
-  //   - F but no D: Zca + Zcf implies C
-  //   - F and D: Zca + Zcf + Zcd implies C
-  // For RV64:
-  //   - No D: Zca alone implies C
-  //   - D: Zca + Zcd implies C
-  if (!HasStdExtC && HasStdExtZca) {
-    bool ShouldAddC = false;
-    if (!Is64Bit)
-      ShouldAddC =
-          (!HasStdExtD || HasStdExtZcd) && (!HasStdExtF || HasStdExtZcf);
-    else
-      ShouldAddC = !HasStdExtD || HasStdExtZcd;
-    if (ShouldAddC) {
-      ToggleFeature(RISCV::FeatureStdExtC);
-      HasStdExtC = true;
-    }
-  }
-
-  // Add Zce if Zca+Zcb+Zcmp+Zcmt are enabled and the conditions are met.
-  // For RV32:
-  //   - No F and no D: Zca+Zcb+Zcmp+Zcmt alone implies Zce
-  //   - F: Zca+Zcb+Zcmp+Zcmt + Zcf implies Zce
-  // For RV64:
-  //   - Zca+Zcb+Zcmp+Zcmt alone implies Zce
-  if (!HasStdExtZce && HasStdExtZca && HasStdExtZcb && HasStdExtZcmp &&
-      HasStdExtZcmt) {
-    if (Is64Bit || !HasStdExtF || HasStdExtZcf) {
-      ToggleFeature(RISCV::FeatureStdExtZce);
-      HasStdExtZce = true;
-    }
-  }
+  // Re-sync the flags.
+  HasStdExtZcd = hasFeature(RISCV::FeatureStdExtZcd);
+  HasStdExtZcf = hasFeature(RISCV::FeatureStdExtZcf);
+  HasStdExtC = hasFeature(RISCV::FeatureStdExtC);
+  HasStdExtZce = hasFeature(RISCV::FeatureStdExtZce);
 
   TargetABI = RISCVABI::computeTargetABI(TT, getFeatureBits(), ABIName);
   RISCVFeatures::validate(TT, getFeatureBits());

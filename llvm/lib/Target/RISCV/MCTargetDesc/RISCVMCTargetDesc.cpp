@@ -83,8 +83,66 @@ createRISCVMCObjectFileInfo(MCContext &Ctx, bool PIC,
   return MOFI;
 }
 
-static MCSubtargetInfo *createRISCVMCSubtargetInfo(const Triple &TT,
-                                                   StringRef CPU, StringRef FS) {
+void RISCV::updateCZceFeatureImplications(MCSubtargetInfo &STI) {
+  // Add Zcd if C and D are enabled.
+  if (STI.hasFeature(RISCV::FeatureStdExtC) &&
+      STI.hasFeature(RISCV::FeatureStdExtD) &&
+      !STI.hasFeature(RISCV::FeatureStdExtZcd))
+    STI.ToggleFeature(RISCV::FeatureStdExtZcd);
+
+  // Add Zcf if F and C or Zce are enabled on RV32.
+  if (!STI.hasFeature(RISCV::FeatureStdExtZcf) &&
+      !STI.hasFeature(RISCV::Feature64Bit) &&
+      STI.hasFeature(RISCV::FeatureStdExtF) &&
+      (STI.hasFeature(RISCV::FeatureStdExtC) ||
+       STI.hasFeature(RISCV::FeatureStdExtZce)))
+    STI.ToggleFeature(RISCV::FeatureStdExtZcf);
+
+  // Add C if Zca is enabled and the conditions are met.
+  // This follows the RISC-V spec rules for MISA.C and matches GCC behavior
+  // (PR119122). The rule is:
+  // For RV32:
+  //   - No F and no D: Zca alone implies C
+  //   - F but no D: Zca + Zcf implies C
+  //   - F and D: Zca + Zcf + Zcd implies C
+  // For RV64:
+  //   - No D: Zca alone implies C
+  //   - D: Zca + Zcd implies C
+  if (!STI.hasFeature(RISCV::FeatureStdExtC) &&
+      STI.hasFeature(RISCV::FeatureStdExtZca)) {
+    bool ShouldAddC = false;
+    if (!STI.hasFeature(RISCV::Feature64Bit))
+      ShouldAddC = (!STI.hasFeature(RISCV::FeatureStdExtD) ||
+                    STI.hasFeature(RISCV::FeatureStdExtZcd)) &&
+                   (!STI.hasFeature(RISCV::FeatureStdExtF) ||
+                    STI.hasFeature(RISCV::FeatureStdExtZcf));
+    else
+      ShouldAddC = (!STI.hasFeature(RISCV::FeatureStdExtD) ||
+                    STI.hasFeature(RISCV::FeatureStdExtZcd));
+    if (ShouldAddC)
+      STI.ToggleFeature(RISCV::FeatureStdExtC);
+  }
+
+  // Add Zce if Zca+Zcb+Zcmp+Zcmt are enabled and the conditions are met.
+  // For RV32:
+  //   - No F and no D: Zca+Zcb+Zcmp+Zcmt alone implies Zce
+  //   - F: Zca+Zcb+Zcmp+Zcmt + Zcf implies Zce
+  // For RV64:
+  //   - Zca+Zcb+Zcmp+Zcmt alone implies Zce
+  if (!STI.hasFeature(RISCV::FeatureStdExtZce) &&
+      STI.hasFeature(RISCV::FeatureStdExtZca) &&
+      STI.hasFeature(RISCV::FeatureStdExtZcb) &&
+      STI.hasFeature(RISCV::FeatureStdExtZcmp) &&
+      STI.hasFeature(RISCV::FeatureStdExtZcmt)) {
+    if (STI.hasFeature(RISCV::Feature64Bit) ||
+        !STI.hasFeature(RISCV::FeatureStdExtF) ||
+        STI.hasFeature(RISCV::FeatureStdExtZcf))
+      STI.ToggleFeature(RISCV::FeatureStdExtZce);
+  }
+}
+
+static MCSubtargetInfo *
+createRISCVMCSubtargetInfo(const Triple &TT, StringRef CPU, StringRef FS) {
   if (CPU.empty() || CPU == "generic")
     CPU = TT.isArch64Bit() ? "generic-rv64" : "generic-rv32";
 
@@ -103,61 +161,7 @@ static MCSubtargetInfo *createRISCVMCSubtargetInfo(const Triple &TT,
     X->setFeatureBits(Features);
   }
 
-  // Add Zcd if C and D are enabled.
-  if (X->hasFeature(RISCV::FeatureStdExtC) &&
-      X->hasFeature(RISCV::FeatureStdExtD) &&
-      !X->hasFeature(RISCV::FeatureStdExtZcd))
-    X->ToggleFeature(RISCV::FeatureStdExtZcd);
-
-  // Add Zcf if F and C or Zce are enabled on RV32.
-  if (!X->hasFeature(RISCV::FeatureStdExtZcf) &&
-      !X->hasFeature(RISCV::Feature64Bit) &&
-      X->hasFeature(RISCV::FeatureStdExtF) &&
-      (X->hasFeature(RISCV::FeatureStdExtC) ||
-       X->hasFeature(RISCV::FeatureStdExtZce)))
-    X->ToggleFeature(RISCV::FeatureStdExtZcf);
-
-  // Add C if Zca is enabled and the conditions are met.
-  // This follows the RISC-V spec rules for MISA.C and matches GCC behavior
-  // (PR119122). The rule is:
-  // For RV32:
-  //   - No F and no D: Zca alone implies C
-  //   - F but no D: Zca + Zcf implies C
-  //   - F and D: Zca + Zcf + Zcd implies C
-  // For RV64:
-  //   - No D: Zca alone implies C
-  //   - D: Zca + Zcd implies C
-  if (!X->hasFeature(RISCV::FeatureStdExtC) &&
-      X->hasFeature(RISCV::FeatureStdExtZca)) {
-    bool ShouldAddC = false;
-    if (!X->hasFeature(RISCV::Feature64Bit))
-      ShouldAddC = (!X->hasFeature(RISCV::FeatureStdExtD) ||
-                    X->hasFeature(RISCV::FeatureStdExtZcd)) &&
-                   (!X->hasFeature(RISCV::FeatureStdExtF) ||
-                    X->hasFeature(RISCV::FeatureStdExtZcf));
-    else
-      ShouldAddC = (!X->hasFeature(RISCV::FeatureStdExtD) ||
-                    X->hasFeature(RISCV::FeatureStdExtZcd));
-    if (ShouldAddC)
-      X->ToggleFeature(RISCV::FeatureStdExtC);
-  }
-
-  // Add Zce if Zca+Zcb+Zcmp+Zcmt are enabled and the conditions are met.
-  // For RV32:
-  //   - No F and no D: Zca+Zcb+Zcmp+Zcmt alone implies Zce
-  //   - F: Zca+Zcb+Zcmp+Zcmt + Zcf implies Zce
-  // For RV64:
-  //   - Zca+Zcb+Zcmp+Zcmt alone implies Zce
-  if (!X->hasFeature(RISCV::FeatureStdExtZce) &&
-      X->hasFeature(RISCV::FeatureStdExtZca) &&
-      X->hasFeature(RISCV::FeatureStdExtZcb) &&
-      X->hasFeature(RISCV::FeatureStdExtZcmp) &&
-      X->hasFeature(RISCV::FeatureStdExtZcmt)) {
-    if (X->hasFeature(RISCV::Feature64Bit) ||
-        !X->hasFeature(RISCV::FeatureStdExtF) ||
-        X->hasFeature(RISCV::FeatureStdExtZcf))
-      X->ToggleFeature(RISCV::FeatureStdExtZce);
-  }
+  RISCV::updateCZceFeatureImplications(*X);
 
   return X;
 }
