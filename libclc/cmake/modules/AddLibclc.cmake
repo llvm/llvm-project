@@ -394,12 +394,15 @@ function(add_libclc_builtin_set)
     set( libclc_builtins_lib ${library_dir}/${LIBCLC_OUTPUT_FILENAME}.spv )
     if ( LIBCLC_USE_SPIRV_BACKEND )
       add_custom_command( OUTPUT ${libclc_builtins_lib}
-        COMMAND ${clang_exe} -c --target=${ARG_TRIPLE} -x ir -o ${libclc_builtins_lib} ${builtins_link_lib}
+        COMMAND ${clang_exe} -c --target=${ARG_TRIPLE}
+                -mllvm --spirv-ext=+SPV_KHR_fma
+                -x ir -o ${libclc_builtins_lib} ${builtins_link_lib}
         DEPENDS ${clang_target} ${builtins_link_lib} ${builtins_link_lib_tgt}
       )
     else()
       add_custom_command( OUTPUT ${libclc_builtins_lib}
-        COMMAND ${llvm-spirv_exe} ${spvflags} -o ${libclc_builtins_lib} ${builtins_link_lib}
+        COMMAND ${llvm-spirv_exe} ${spvflags} --spirv-ext=+SPV_KHR_fma
+                -o ${libclc_builtins_lib} ${builtins_link_lib}
         DEPENDS ${llvm-spirv_target} ${builtins_link_lib} ${builtins_link_lib_tgt}
       )
     endif()

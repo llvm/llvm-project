@@ -18,6 +18,15 @@
 #include <clc/relational/clc_isnan.h>
 #include <clc/shared/clc_max.h>
 
+static _CLC_INLINE float __clc_flush_denormal(float x) {
+  int ix = __clc_as_int(x);
+  if (((ix & EXPBITS_SP32) == 0) && ((ix & MANTBITS_SP32) != 0)) {
+    ix &= SIGNBIT_SP32;
+    x = __clc_as_float(ix);
+  }
+  return x;
+}
+
 struct fp {
   ulong mantissa;
   int exponent;
@@ -36,9 +45,9 @@ _CLC_DEF _CLC_OVERLOAD float __clc_sw_fma(float a, float b, float c) {
     return c;
   }
 
-  a = __clc_flush_denormal_if_not_supported(a);
-  b = __clc_flush_denormal_if_not_supported(b);
-  c = __clc_flush_denormal_if_not_supported(c);
+  a = __clc_flush_denormal(a);
+  b = __clc_flush_denormal(b);
+  c = __clc_flush_denormal(c);
 
   if (c == 0) {
     return a * b;
