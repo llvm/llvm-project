@@ -276,6 +276,11 @@ InstructionCost X86TTIImpl::getArithmeticInstrCost(
   int ISD = TLI->InstructionOpcodeToISD(Opcode);
   assert(ISD && "Invalid opcode");
 
+  InstructionCost ConvertedCost;
+  if (getConvertedArithmeticInstructionCost(ISD, Ty, CostKind, Op1Info, Op2Info,
+                                            Args, CxtI, ConvertedCost))
+    return ConvertedCost;
+
   if (ISD == ISD::MUL && Args.size() == 2 && LT.second.isVector() &&
       (LT.second.getScalarType() == MVT::i32 ||
        LT.second.getScalarType() == MVT::i64)) {
