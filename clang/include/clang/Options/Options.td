@@ -8324,8 +8324,7 @@ def verify_ignore_unexpected_EQ : CommaJoined<["-"], "verify-ignore-unexpected="
   HelpText<"Ignore unexpected diagnostic messages">;
 def verify_directives
     : Flag<["-"], "verify-directives">,
-      HelpText<
-          "Enable additional checks on 'expected' directives themselves">;
+      HelpText<"Enable additional checks on 'expected' directives themselves">;
 def Wno_rewrite_macros : Flag<["-"], "Wno-rewrite-macros">,
   HelpText<"Silence ObjC rewriting warnings">,
   MarshallingInfoFlag<DiagnosticOpts<"NoRewriteMacros">>;

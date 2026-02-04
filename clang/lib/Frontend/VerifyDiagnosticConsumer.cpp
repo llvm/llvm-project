@@ -322,10 +322,10 @@ void attachDirective(DiagnosticsEngine &Diags, const UnattachedDirective &UD,
                      bool MatchAnyFileAndLine = false,
                      bool MatchAnyLine = false) {
   // Construct new directive.
-  std::unique_ptr<Directive> D = Directive::create(
-      UD.RegexKind, UD.DirectivePos, ExpectedLoc, UD.Spelling,
-      MatchAnyFileAndLine, MatchAnyLine, UD.Text, UD.Min, UD.Max,
-      Diags.getDiagnosticOptions().VerifyDirectives);
+  std::unique_ptr<Directive> D =
+      Directive::create(UD.RegexKind, UD.DirectivePos, ExpectedLoc, UD.Spelling,
+                        MatchAnyFileAndLine, MatchAnyLine, UD.Text, UD.Min,
+                        UD.Max, Diags.getDiagnosticOptions().VerifyDirectives);
 
   std::string Error;
   if (!D->isValid(Error)) {
@@ -743,8 +743,7 @@ VerifyDiagnosticConsumer::VerifyDiagnosticConsumer(DiagnosticsEngine &Diags_)
     setSourceManager(Diags.getSourceManager());
   CheckOrderOfDirectives = Diags.getDiagnosticOptions().VerifyDirectives;
   OneDiagPerDirective = Diags.getDiagnosticOptions().VerifyDirectives;
-  DisableWildcardInDiagLoc =
-      Diags.getDiagnosticOptions().VerifyDirectives;
+  DisableWildcardInDiagLoc = Diags.getDiagnosticOptions().VerifyDirectives;
 }
 
 VerifyDiagnosticConsumer::~VerifyDiagnosticConsumer() {
