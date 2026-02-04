@@ -11,6 +11,7 @@
 //===----------------------------------------------------------------------===//
 
 #include "CIRGenModule.h"
+#include "CIRGenCUDARuntime.h"
 #include "CIRGenCXXABI.h"
 #include "CIRGenConstantEmitter.h"
 #include "CIRGenFunction.h"
@@ -31,6 +32,7 @@
 #include "mlir/IR/BuiltinOps.h"
 #include "mlir/IR/Location.h"
 #include "mlir/IR/MLIRContext.h"
+#include "mlir/IR/Operation.h"
 #include "mlir/IR/Verifier.h"
 
 #include <algorithm>
@@ -126,6 +128,10 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
                        cir::OptInfoAttr::get(&mlirContext,
                                              cgo.OptimizationLevel,
                                              cgo.OptimizeSize));
+
+  if (langOpts.CUDA)
+    createCUDARuntime();
+
   // Set the module name to be the name of the main file. TranslationUnitDecl
   // often contains invalid source locations and isn't a reliable source for the
   // module location.
@@ -142,6 +148,10 @@ CIRGenModule::CIRGenModule(mlir::MLIRContext &mlirContext,
 }
 
 CIRGenModule::~CIRGenModule() = default;
+
+void CIRGenModule::createCUDARuntime() {
+  cudaRuntime.reset(createNVCUDARuntime(*this));
+}
 
 /// FIXME: this could likely be a common helper and not necessarily related
 /// with codegen.
@@ -1745,6 +1755,15 @@ cir::FuncOp CIRGenModule::getAddrOfFunction(clang::GlobalDecl gd,
   cir::FuncOp func =
       getOrCreateCIRFunction(mangledName, funcType, gd, forVTable, dontDefer,
                              /*isThunk=*/false, isForDefinition);
+  // Returns kernel handle for HIP kernel stub function.
+  if (langOpts.CUDA && !langOpts.CUDAIsDevice &&
+      cast<FunctionDecl>(gd.getDecl())->hasAttr<CUDAGlobalAttr>()) {
+    mlir::Operation *handle = getCUDARuntime().getKernelHandle(func, gd);
+
+    if (isForDefinition)
+      return func;
+    return mlir::dyn_cast<cir::FuncOp>(*handle);
+  }
   return func;
 }
 
@@ -1769,9 +1788,15 @@ static std::string getMangledNameImpl(CIRGenModule &cgm, GlobalDecl gd,
       cgm.errorNYI(nd->getSourceRange(), "getMangledName: X86RegCall");
     } else if (fd && fd->hasAttr<CUDAGlobalAttr>() &&
                gd.getKernelReferenceKind() == KernelReferenceKind::Stub) {
-      cgm.errorNYI(nd->getSourceRange(), "getMangledName: CUDA device stub");
+      out << "__device_stub__" << ii->getName();
+    } else if (fd &&
+               DeviceKernelAttr::isOpenCLSpelling(
+                   fd->getAttr<DeviceKernelAttr>()) &&
+               gd.getKernelReferenceKind() == KernelReferenceKind::Stub) {
+      cgm.errorNYI(nd->getSourceRange(), "getMangledName: OpenCL Stub");
+    } else {
+      out << ii->getName();
     }
-    out << ii->getName();
   }
 
   // Check if the module name hash should be appended for internal linkage
