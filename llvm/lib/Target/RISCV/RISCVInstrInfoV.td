@@ -344,7 +344,6 @@ class VUnitStrideLoad<RISCVWidth width, string opcodestr>
                 (outs VR:$vd), (ins GPRMemZeroOffset:$rs1, VMaskOp:$vm),
                 opcodestr, "$vd, $rs1$vm">;
 
-let vm = 1, RVVConstraint = NoConstraint in {
 // unit-stride whole register load vl<nf>r.v vd, (rs1)
 class VWholeLoad<int lmul, RISCVWidth width, string opcodestr, RegisterClass VRC>
     : RVInstVLU<!sub(lmul, 1), width, LUMOPUnitStrideWholeReg, (outs VRC:$vd),
@@ -352,14 +351,20 @@ class VWholeLoad<int lmul, RISCVWidth width, string opcodestr, RegisterClass VRC
                 opcodestr, "$vd, $rs1"> {
   assert !and(!ge(lmul, 1), !le(lmul, 8)), "lmul must be 1-8";
 
+  let vm = 1;
+
   let Uses = [];
+  let RVVConstraint = NoConstraint;
 }
 
 // unit-stride mask load vd, (rs1)
 class VUnitStrideMaskLoad<string opcodestr>
     : RVInstVLU<0b000, LSWidth8, LUMOPUnitStrideMask, (outs VR:$vd),
-                (ins GPRMemZeroOffset:$rs1), opcodestr, "$vd, $rs1">;
-} // vm = 1, RVVConstraint = NoConstraint
+                (ins GPRMemZeroOffset:$rs1), opcodestr, "$vd, $rs1"> {
+  let vm = 1;
+
+  let RVVConstraint = NoConstraint;
+}
 
 // unit-stride fault-only-first load vd, (rs1), vm
 class VUnitStrideLoadFF<RISCVWidth width, string opcodestr>
@@ -420,13 +425,14 @@ class VUnitStrideStore<RISCVWidth width, string opcodestr>
                 (ins VR:$vs3, GPRMemZeroOffset:$rs1, VMaskOp:$vm), opcodestr,
                 "$vs3, $rs1$vm">;
 
-let vm = 1 in {
 // vs<lmul>r.v vd, (rs1)
 class VWholeStore<int lmul, string opcodestr, RegisterClass VRC>
     : RVInstVSU<!sub(lmul, 1), LSWidth8, SUMOPUnitStrideWholeReg, (outs),
                 (ins VRC:$vs3, GPRMemZeroOffset:$rs1),
                 opcodestr, "$vs3, $rs1"> {
   assert !and(!ge(lmul, 1), !le(lmul, 8)), "lmul must be 1-8";
+
+  let vm = 1;
 
   let Uses = [];
 }
@@ -435,8 +441,9 @@ class VWholeStore<int lmul, string opcodestr, RegisterClass VRC>
 class VUnitStrideMaskStore<string opcodestr>
     : RVInstVSU<0b000, LSWidth8, SUMOPUnitStrideMask, (outs),
                 (ins VR:$vs3, GPRMemZeroOffset:$rs1), opcodestr,
-                "$vs3, $rs1">;
-} // vm = 1
+                "$vs3, $rs1"> {
+  let vm = 1;
+}
 
 // strided store vd, vs3, (rs1), rs2, vm
 class VStridedStore<RISCVWidth width, string opcodestr>
@@ -684,6 +691,20 @@ multiclass VMRG_IV_V_X_I<string opcodestr, bits<6> funct6> {
            SchedBinaryMC<"WriteVIMergeX", "ReadVIMergeV", "ReadVIMergeX">;
   def IM : VALUmVI<funct6, opcodestr # ".vim">,
            SchedUnaryMC<"WriteVIMergeI", "ReadVIMergeV">;
+}
+
+multiclass VMV_IV_V_X_I<string opcodestr, bits<6> funct6> {
+  let vs2 = 0, vm = 1, RVVConstraint = NoConstraint in {
+    def _V : RVInstVV<funct6, OPIVV, (outs VR:$vd),
+                     (ins VR:$vs1), opcodestr # ".v", "$vd, $vs1">,
+             SchedUnaryMC<"WriteVIMovV", "ReadVIMovV", forceMasked=0>;
+    def _X : RVInstVX<funct6, OPIVX, (outs VR:$vd),
+                     (ins GPR:$rs1), "vmv.v.x", "$vd, $rs1">,
+             SchedUnaryMC<"WriteVIMovX", "ReadVIMovX", forceMasked=0>;
+    def _I : RVInstIVI<funct6, (outs VR:$vd),
+                       (ins simm5:$imm), "vmv.v.i", "$vd, $imm">,
+             SchedNullaryMC<"WriteVIMovI", forceMasked=0>;
+  }
 }
 
 multiclass VALUm_IV_V_X<string opcodestr, bits<6> funct6> {
@@ -1352,21 +1373,8 @@ defm VWMACCUS_V : VWMAC_MV_X<"vwmaccus", 0b111110>;
 defm VMERGE_V : VMRG_IV_V_X_I<"vmerge", 0b010111>;
 
 // Vector Integer Move Instructions
-let hasSideEffects = 0, mayLoad = 0, mayStore = 0, vs2 = 0, vm = 1,
-    RVVConstraint = NoConstraint  in {
-// op vd, vs1
-def VMV_V_V : RVInstVV<0b010111, OPIVV, (outs VR:$vd),
-                       (ins VR:$vs1), "vmv.v.v", "$vd, $vs1">,
-              SchedUnaryMC<"WriteVIMovV", "ReadVIMovV", forceMasked=0>;
-// op vd, rs1
-def VMV_V_X : RVInstVX<0b010111, OPIVX, (outs VR:$vd),
-                       (ins GPR:$rs1), "vmv.v.x", "$vd, $rs1">,
-              SchedUnaryMC<"WriteVIMovX", "ReadVIMovX", forceMasked=0>;
-// op vd, imm
-def VMV_V_I : RVInstIVI<0b010111, (outs VR:$vd),
-                       (ins simm5:$imm), "vmv.v.i", "$vd, $imm">,
-              SchedNullaryMC<"WriteVIMovI", forceMasked=0>;
-} // hasSideEffects = 0, mayLoad = 0, mayStore = 0
+let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in
+defm VMV_V : VMV_IV_V_X_I<"vmv.v", 0b010111>;
 
 // Vector Fixed-Point Arithmetic Instructions
 defm VSADDU_V : VSALU_IV_V_X_I<"vsaddu", 0b100000>;
@@ -1512,11 +1520,14 @@ def VFMERGE_VFM : RVInstVX<0b010111, OPFVF, (outs VR:$vd),
 }
 
 // Vector Floating-Point Move Instruction
-let RVVConstraint = NoConstraint in
-let vm = 1, vs2 = 0 in
 def VFMV_V_F : RVInstVX<0b010111, OPFVF, (outs VR:$vd),
                        (ins FPR32:$rs1), "vfmv.v.f", "$vd, $rs1">,
-               SchedUnaryMC<"WriteVFMovV", "ReadVFMovF", forceMasked=0>;
+               SchedUnaryMC<"WriteVFMovV", "ReadVFMovF", forceMasked=0> {
+  let vm = 1;
+  let vs2 = 0;
+
+  let RVVConstraint = NoConstraint;
+}
 
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
@@ -1683,27 +1694,28 @@ defm VIOTA_M : VIOTA_MV_V<"viota.m", 0b010100, 0b10000>;
 // Vector Element Index Instruction
 let hasSideEffects = 0, mayLoad = 0, mayStore = 0 in {
 
-let vs2 = 0 in
 def VID_V : RVInstVUnary<0b010100, 0b10001, OPMVV, (outs VR:$vd),
                          (ins VMaskOp:$vm), "vid.v", "$vd$vm">,
-            SchedNullaryMC<"WriteVIdxV">;
+            SchedNullaryMC<"WriteVIdxV"> {
+  let vs2 = 0;
+}
 
 // Integer Scalar Move Instructions
-let vm = 1 in {
 def VMV_X_S : RVInstVUnaryRd<0b010000, 0b00000, OPMVV, (outs GPR:$rd),
                              (ins VR:$vs2), "vmv.x.s", "$rd, $vs2">,
               Sched<[WriteVMovXS, ReadVMovXS]> {
+  let vm = 1;
   let Uses = [VTYPE];
 }
 def VMV_S_X : RVInstVX<0b010000, OPMVX, (outs VR:$vd_wb),
                       (ins VR:$vd, GPR:$rs1), "vmv.s.x", "$vd, $rs1">,
               Sched<[WriteVMovSX, ReadVMovSX_V, ReadVMovSX_X]> {
+  let vm = 1;
   let vs2 = 0;
 
   let Constraints = "$vd = $vd_wb";
   let RVVConstraint = NoConstraint;
 }
-} // vm = 1
 
 } // hasSideEffects = 0, mayLoad = 0, mayStore = 0
 
