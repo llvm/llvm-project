@@ -5,6 +5,12 @@
 // SPDX-License-Identifier: Apache-2.0 WITH LLVM-exception
 //
 //===----------------------------------------------------------------------===//
+//
+// Models STL functions whose best accurate model is to invalidate their
+// arguments. Only functions where this simple approach is sufficient and won't
+// interfere with the modeling of other checkers should be put here.
+//
+//===----------------------------------------------------------------------===//
 
 #include "clang/StaticAnalyzer/Checkers/BuiltinCheckerRegistration.h"
 #include "clang/StaticAnalyzer/Core/Checker.h"
