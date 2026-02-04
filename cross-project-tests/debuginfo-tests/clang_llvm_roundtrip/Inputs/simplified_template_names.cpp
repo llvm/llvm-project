@@ -281,7 +281,5 @@ struct S {
   int data_mem;
 };
 template <int S::*P> void f() {}
-void test() {
-  f<&S::data_mem>();
-}
+void test() { f<&S::data_mem>(); }
 } // namespace ptr_to_member_test
