@@ -78,7 +78,7 @@ class TestDAP_evaluate(lldbdap_testcase.DAPTestCaseBase):
         response = self.dap_server.request_evaluate(expression, context=self.context)
         self.assertFalse(
             response["success"],
-            f"Expression:'{expression}' should fail in {self.context} context \n got {response["body"]!r}",
+            f"Expression:'{expression}' should fail in {self.context} context, got {response["body"]!r}",
         )
         self.assertNotIn(
             "result",
